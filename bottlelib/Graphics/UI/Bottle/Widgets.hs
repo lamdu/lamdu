@@ -19,7 +19,6 @@ import           Prelude.Compat
 
 import           Control.Lens.Operators
 import           Control.Monad (when)
-import           Control.MonadA (MonadA)
 import           Data.ByteString.Char8 (pack)
 import           Data.List (intersperse)
 import           Data.Store.Property (Property)
@@ -44,40 +43,40 @@ import qualified Graphics.UI.Bottle.WidgetsEnvT as WE
 import qualified Graphics.UI.GLFW as GLFW
 
 makeTextView ::
-    MonadA m => String -> AnimId -> WidgetEnvT m View
+    Monad m => String -> AnimId -> WidgetEnvT m View
 makeTextView text myId = do
     style <- WE.readTextStyle
     return $
         TextView.make (style ^. TextEdit.sTextViewStyle) text myId
 
-makeTextViewWidget :: MonadA m => String -> AnimId -> WidgetEnvT m (Widget f)
+makeTextViewWidget :: Monad m => String -> AnimId -> WidgetEnvT m (Widget f)
 makeTextViewWidget text myId =
     Widget.fromView <$> makeTextView text myId
 
-makeLabel :: MonadA m => String -> AnimId -> WidgetEnvT m (Widget f)
+makeLabel :: Monad m => String -> AnimId -> WidgetEnvT m (Widget f)
 makeLabel text prefix =
     makeTextViewWidget text $ mappend prefix [pack text]
 
-verticalSpace :: MonadA m => WidgetEnvT m (Widget f)
+verticalSpace :: Monad m => WidgetEnvT m (Widget f)
 verticalSpace = do
     env <- WE.readEnv
     return $ vspaceWidget $ realToFrac $ WE.verticalSpacing env
 
-liftLayerInterval :: MonadA m => Widget f -> WidgetEnvT m (Widget f)
+liftLayerInterval :: Monad m => Widget f -> WidgetEnvT m (Widget f)
 liftLayerInterval widget =
     do
         env <- WE.readEnv
         let layerDiff = WE.layerInterval env
         widget & Widget.animLayers -~ layerDiff & return
 
-readEnv :: MonadA m => WidgetEnvT m Widget.Env
+readEnv :: Monad m => WidgetEnvT m Widget.Env
 readEnv =
     do
         env <- WE.readEnv
         Widget.Env (env ^. WE.envCursor) (WE.backgroundCursorId env) & return
 
 respondToCursorPrefix ::
-    MonadA m => Widget.Id -> Widget f -> WidgetEnvT m (Widget f)
+    Monad m => Widget.Id -> Widget f -> WidgetEnvT m (Widget f)
 respondToCursorPrefix myIdPrefix widget = do
     env <- WE.readEnv
     widgetEnv <- readEnv
@@ -89,7 +88,7 @@ respondToCursorPrefix myIdPrefix widget = do
         & return
 
 makeFocusableView ::
-    (Applicative f, MonadA m) => Widget.Id ->
+    (Applicative f, Monad m) => Widget.Id ->
     Widget f -> WidgetEnvT m (Widget f)
 makeFocusableView myIdPrefix widget =
     widget
@@ -99,7 +98,7 @@ makeFocusableView myIdPrefix widget =
     & respondToCursorPrefix myIdPrefix
 
 makeFocusableTextView
-    :: (Applicative f, MonadA m)
+    :: (Applicative f, Monad m)
     => String -> Widget.Id
     -> WidgetEnvT m (Widget f)
 makeFocusableTextView text myId = do
@@ -107,7 +106,7 @@ makeFocusableTextView text myId = do
     makeFocusableView myId textView
 
 makeFocusableLabel
-    :: (Applicative f, MonadA m)
+    :: (Applicative f, Monad m)
     => String -> Widget.Id
     -> WidgetEnvT m (Widget f)
 makeFocusableLabel text myIdPrefix =
@@ -120,7 +119,7 @@ fdStyle env = FocusDelegator.Style
     }
 
 makeFocusDelegator ::
-    (Applicative f, MonadA m) =>
+    (Applicative f, Monad m) =>
     FocusDelegator.Config ->
     FocusDelegator.FocusEntryTarget ->
     Widget.Id ->
@@ -132,7 +131,7 @@ makeFocusDelegator fdConfig focusEntryTarget myId childWidget =
         FocusDelegator.make fdEnv focusEntryTarget myId env childWidget & return
 
 makeTextEdit ::
-    MonadA m =>
+    Monad m =>
     String -> Widget.Id ->
     WidgetEnvT m (Widget ((,) String))
 makeTextEdit text myId =
@@ -142,7 +141,7 @@ makeTextEdit text myId =
         TextEdit.make style text myId env & return
 
 makeTextEditor
-    :: (MonadA m, Applicative f)
+    :: (Monad m, Applicative f)
     => Property f String
     -> Widget.Id
     -> WidgetEnvT m (Widget f)
@@ -161,7 +160,7 @@ deleteKeyEventHandler key =
 
 -- TODO: Editor, not Edit (consistent with makeTextEditor vs. makeTextEdit)
 makeLineEdit ::
-    (MonadA m, Applicative f) =>
+    (Monad m, Applicative f) =>
     Property f String ->
     Widget.Id ->
     WidgetEnvT m (Widget f)
@@ -169,7 +168,7 @@ makeLineEdit textRef myId =
     makeTextEditor textRef myId <&> deleteKeyEventHandler (ModKey mempty GLFW.Key'Enter)
 
 makeWordEdit ::
-    (MonadA m, Applicative f) =>
+    (Monad m, Applicative f) =>
     Property f String ->
     Widget.Id ->
     WidgetEnvT m (Widget f)
@@ -182,31 +181,31 @@ hspaceWidget = Widget.fromView . Spacer.makeHorizontal
 vspaceWidget :: Widget.R -> Widget f
 vspaceWidget = Widget.fromView . Spacer.makeVertical
 
-stdSpaceWidget :: MonadA m => WidgetEnvT m (Widget f)
+stdSpaceWidget :: Monad m => WidgetEnvT m (Widget f)
 stdSpaceWidget =
     WE.readEnv
     <&> Widget.fromView . Spacer.make . realToFrac . WE.stdSpaceWidth
 
-hboxSpaced :: MonadA m => [(Box.Alignment, Widget f)] -> WidgetEnvT m (Widget f)
+hboxSpaced :: Monad m => [(Box.Alignment, Widget f)] -> WidgetEnvT m (Widget f)
 hboxSpaced widgets =
     stdSpaceWidget
     <&> Box.hbox . (`intersperse` widgets) . (,) 0.5
 
-hboxCenteredSpaced :: MonadA m => [Widget f] -> WidgetEnvT m (Widget f)
+hboxCenteredSpaced :: Monad m => [Widget f] -> WidgetEnvT m (Widget f)
 hboxCenteredSpaced widgets =
     stdSpaceWidget
     <&> Box.hboxAlign 0.5 . (`intersperse` widgets)
 
-gridHSpaced :: MonadA m => [[(Grid.Alignment, Widget f)]] -> WidgetEnvT m (Widget f)
+gridHSpaced :: Monad m => [[(Grid.Alignment, Widget f)]] -> WidgetEnvT m (Widget f)
 gridHSpaced xs =
     stdSpaceWidget
     <&> Grid.toWidget . Grid.make . (`map` xs) . intersperse . (,) 0
 
-gridHSpacedCentered :: MonadA m => [[Widget f]] -> WidgetEnvT m (Widget f)
+gridHSpacedCentered :: Monad m => [[Widget f]] -> WidgetEnvT m (Widget f)
 gridHSpacedCentered = gridHSpaced . (map . map) ((,) 0.5)
 
 makeChoiceWidget ::
-    (Eq a, MonadA m, Applicative f) =>
+    (Eq a, Monad m, Applicative f) =>
     (a -> f ()) -> [(a, Widget f)] -> a ->
     Choice.Config -> Widget.Id -> WidgetEnvT m (Widget f)
 makeChoiceWidget choose children curChild choiceConfig myId = do

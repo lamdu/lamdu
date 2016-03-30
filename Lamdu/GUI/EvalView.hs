@@ -7,7 +7,6 @@ module Lamdu.GUI.EvalView
 import           Control.Lens.Operators
 import           Control.Lens.Tuple
 import           Control.Monad (void)
-import           Control.MonadA (MonadA)
 
 import qualified Data.Binary.Utils as BinUtils
 import qualified Data.ByteString.UTF8 as UTF8
@@ -47,19 +46,19 @@ extractFields (V.RecExtend tag val (Val _ rest)) =
           & EvalTypeError & RecordExtendsError
         )
 
-textView :: MonadA m => String -> AnimId -> ExprGuiM m View
+textView :: Monad m => String -> AnimId -> ExprGuiM m View
 textView x animId = BWidgets.makeTextView x animId & ExprGuiM.widgetEnv
 
-label :: MonadA m => String -> AnimId -> ExprGuiM m View
+label :: Monad m => String -> AnimId -> ExprGuiM m View
 label x animId = BWidgets.makeTextView x (Anim.augmentId animId x) & ExprGuiM.widgetEnv
 
-makeTag :: MonadA m => AnimId -> T.Tag -> ExprGuiM m View
+makeTag :: Monad m => AnimId -> T.Tag -> ExprGuiM m View
 makeTag animId tag =
     Anchors.assocNameRef tag & Transaction.getP & ExprGuiM.transaction
     >>= (`textView` animId)
 
 makeField ::
-    MonadA m =>
+    Monad m =>
     AnimId -> T.Tag -> Val Type -> ExprGuiM m [(GridView.Alignment, View)]
 makeField parentAnimId tag val =
     do
@@ -76,7 +75,7 @@ makeField parentAnimId tag val =
     where
         baseId = parentAnimId ++ [BinUtils.encodeS tag]
 
-makeError :: MonadA m => EvalError -> AnimId -> ExprGuiM m View
+makeError :: Monad m => EvalError -> AnimId -> ExprGuiM m View
 makeError err animId = textView msg $ animId ++ ["error"]
     where
         msg =
@@ -87,7 +86,7 @@ makeError err animId = textView msg $ animId ++ ["error"]
 hbox :: [View] -> View
 hbox = GridView.horizontalAlign 0.5
 
-makeArray :: MonadA m => AnimId -> [Val Type] -> ExprGuiM m View
+makeArray :: Monad m => AnimId -> [Val Type] -> ExprGuiM m View
 makeArray animId items =
     do
         itemViews <- zipWith makeItem [0..cutoff] items & sequence
@@ -106,7 +105,7 @@ makeArray animId items =
             where
                 itemId = Anim.augmentId animId (idx :: Int)
 
-make :: MonadA m => AnimId -> Val Type -> ExprGuiM m View
+make :: Monad m => AnimId -> Val Type -> ExprGuiM m View
 make animId (Val typ val) =
     case val of
     RError err -> makeError err animId
@@ -153,7 +152,7 @@ make animId (Val typ val) =
           PrimVal.Float x -> toText x
         where
             pv = PrimVal.toKnown primVal
-            toText :: (Format r, MonadA m) => r -> ExprGuiM m View
+            toText :: (Format r, Monad m) => r -> ExprGuiM m View
             toText = asText . format
     RArray items -> makeArray animId items
     & ExprGuiM.advanceDepth return animId

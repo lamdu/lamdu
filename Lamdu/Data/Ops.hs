@@ -17,7 +17,6 @@ module Lamdu.Data.Ops
 
 import           Control.Lens.Operators
 import           Control.Monad (when)
-import           Control.MonadA (MonadA)
 import           Data.Store.Property (Property(..))
 import qualified Data.Store.Property as Property
 import           Data.Store.Transaction (Transaction, getP, setP, modP)
@@ -39,7 +38,7 @@ import           Prelude.Compat
 
 type T = Transaction
 
-setToWrapper :: MonadA m => ValI m -> ValIProperty m -> T m (ValI m)
+setToWrapper :: Monad m => ValI m -> ValIProperty m -> T m (ValI m)
 setToWrapper wrappedI destP =
     do
         newFuncI <- newHole
@@ -47,7 +46,7 @@ setToWrapper wrappedI destP =
         Property.set destP resI
         return resI
 
-wrap :: MonadA m => ValIProperty m -> T m (ValI m)
+wrap :: Monad m => ValIProperty m -> T m (ValI m)
 wrap exprP =
     do
         newFuncI <- newHole
@@ -55,26 +54,26 @@ wrap exprP =
         Property.set exprP applyI
         return applyI
 
-newHole :: MonadA m => T m (ValI m)
+newHole :: Monad m => T m (ValI m)
 newHole = ExprIRef.newValBody $ V.BLeaf V.LHole
 
-replace :: MonadA m => ValIProperty m -> ValI m -> T m (ValI m)
+replace :: Monad m => ValIProperty m -> ValI m -> T m (ValI m)
 replace exprP newExprI =
     do
         Property.set exprP newExprI
         return newExprI
 
-replaceWithHole :: MonadA m => ValIProperty m -> T m (ValI m)
+replaceWithHole :: Monad m => ValIProperty m -> T m (ValI m)
 replaceWithHole exprP = replace exprP =<< newHole
 
-setToHole :: MonadA m => ValIProperty m -> T m (ValI m)
+setToHole :: Monad m => ValIProperty m -> T m (ValI m)
 setToHole exprP =
     exprI <$ ExprIRef.writeValBody exprI hole
     where
         hole = V.BLeaf V.LHole
         exprI = Property.value exprP
 
-lambdaWrap :: MonadA m => ValIProperty m -> T m (V.Var, ValI m)
+lambdaWrap :: Monad m => ValIProperty m -> T m (V.Var, ValI m)
 lambdaWrap exprP =
     do
         newParam <- ExprIRef.newVar
@@ -84,7 +83,7 @@ lambdaWrap exprP =
         Property.set exprP newExprI
         return (newParam, newExprI)
 
-redexWrapWithGivenParam :: MonadA m => V.Var -> ValI m -> ValIProperty m -> T m (ValIProperty m)
+redexWrapWithGivenParam :: Monad m => V.Var -> ValI m -> ValIProperty m -> T m (ValIProperty m)
 redexWrapWithGivenParam param newValueI exprP =
     do
         newLambdaI <- ExprIRef.newValBody $ mkLam $ Property.value exprP
@@ -96,7 +95,7 @@ redexWrapWithGivenParam param newValueI exprP =
     where
         mkLam = V.BAbs . V.Lam param
 
-redexWrap :: MonadA m => ValIProperty m -> T m V.Var
+redexWrap :: Monad m => ValIProperty m -> T m V.Var
 redexWrap exprP =
     do
         newValueI <- newHole
@@ -110,7 +109,7 @@ data RecExtendResult m = RecExtendResult
     , rerResult :: ValI m
     }
 
-recExtend :: MonadA m => ValIProperty m -> T m (RecExtendResult m)
+recExtend :: Monad m => ValIProperty m -> T m (RecExtendResult m)
 recExtend valP =
     do
         tag <- fst . GenIds.randomTag . RandomUtils.genFromHashable <$> Transaction.newKey
@@ -127,7 +126,7 @@ data CaseResult m = CaseResult
     , crResult :: ValI m
     }
 
-case_ :: MonadA m => ValIProperty m -> T m (CaseResult m)
+case_ :: Monad m => ValIProperty m -> T m (CaseResult m)
 case_ valP =
     do
         tag <- fst . GenIds.randomTag . RandomUtils.genFromHashable <$> Transaction.newKey
@@ -138,7 +137,7 @@ case_ valP =
         Property.set valP resultI
         return $ CaseResult tag newValueI resultI
 
-addListItem :: MonadA m => ValIProperty m -> T m (ValI m, ValI m)
+addListItem :: Monad m => ValIProperty m -> T m (ValI m, ValI m)
 addListItem exprP =
     do
         newItemI <- newHole
@@ -158,7 +157,7 @@ addListItem exprP =
         recEx tag val rest = v $ V.BRecExtend $ V.RecExtend tag val rest
         recEmpty           = v $ V.BLeaf V.LRecEmpty
 
-newPane :: MonadA m => Anchors.CodeProps m -> DefI m -> T m ()
+newPane :: Monad m => Anchors.CodeProps m -> DefI m -> T m ()
 newPane codeProps defI =
     do
         let panesProp = Anchors.panes codeProps
@@ -166,10 +165,10 @@ newPane codeProps defI =
         when (defI `notElem` panes) $
             setP panesProp $ Anchors.makePane defI : panes
 
-savePreJumpPosition :: MonadA m => Anchors.CodeProps m -> WidgetId.Id -> T m ()
+savePreJumpPosition :: Monad m => Anchors.CodeProps m -> WidgetId.Id -> T m ()
 savePreJumpPosition codeProps pos = modP (Anchors.preJumps codeProps) $ (pos :) . take 19
 
-jumpBack :: MonadA m => Anchors.CodeProps m -> T m (Maybe (T m WidgetId.Id))
+jumpBack :: Monad m => Anchors.CodeProps m -> T m (Maybe (T m WidgetId.Id))
 jumpBack codeProps =
     do
         preJumps <- getP (Anchors.preJumps codeProps)
@@ -190,7 +189,7 @@ presentationModeOfName x
     | otherwise = Verbose
 
 newDefinition ::
-    MonadA m => String -> PresentationMode ->
+    Monad m => String -> PresentationMode ->
     Definition.Body (ValI m) -> T m (DefI m)
 newDefinition name presentationMode defBody =
     do
@@ -200,7 +199,7 @@ newDefinition name presentationMode defBody =
         return newDef
 
 newPublicDefinition ::
-    MonadA m => Anchors.CodeProps m -> ValI m -> String -> T m (DefI m)
+    Monad m => Anchors.CodeProps m -> ValI m -> String -> T m (DefI m)
 newPublicDefinition codeProps bodyI name =
     do
         defI <-
@@ -213,7 +212,7 @@ newPublicDefinition codeProps bodyI name =
 -- Used when writing a definition into an identifier which was a variable.
 -- Used in float.
 newPublicDefinitionToIRef ::
-    MonadA m => Anchors.CodeProps m -> ValI m -> DefI m -> T m ()
+    Monad m => Anchors.CodeProps m -> ValI m -> DefI m -> T m ()
 newPublicDefinitionToIRef codeProps bodyI defI =
     do
         Definition.Expr bodyI Definition.NoExportedType mempty
@@ -226,14 +225,14 @@ newPublicDefinitionToIRef codeProps bodyI defI =
         newPane codeProps defI
 
 newPublicDefinitionWithPane ::
-    MonadA m => String -> Anchors.CodeProps m -> ValI m -> T m (DefI m)
+    Monad m => String -> Anchors.CodeProps m -> ValI m -> T m (DefI m)
 newPublicDefinitionWithPane name codeProps bodyI =
     do
         defI <- newPublicDefinition codeProps bodyI name
         newPane codeProps defI
         return defI
 
-newIdentityLambda :: MonadA m => T m (ValI m, ValI m)
+newIdentityLambda :: Monad m => T m (ValI m, ValI m)
 newIdentityLambda =
     do
         paramId <- ExprIRef.newVar

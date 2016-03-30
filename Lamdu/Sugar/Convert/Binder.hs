@@ -7,7 +7,6 @@ import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Lens.Tuple
 import           Control.Monad (void)
-import           Control.MonadA (MonadA)
 import qualified Data.Map as Map
 import           Data.Set (Set)
 import qualified Data.Set as Set
@@ -40,7 +39,7 @@ import           Lamdu.Sugar.Types
 import           Prelude.Compat
 
 mkLetIActions ::
-    MonadA m =>
+    Monad m =>
     ValIProperty m -> Redex (ValIProperty m) ->
     ConvertM m (LetActions m)
 mkLetIActions topLevelProp redex =
@@ -59,7 +58,7 @@ mkLetIActions topLevelProp redex =
         V.Lam param body = redexLam redex
 
 localNewExtractDestPos ::
-    MonadA m => Val (Input.Payload m x) -> ConvertM m a -> ConvertM m a
+    Monad m => Val (Input.Payload m x) -> ConvertM m a -> ConvertM m a
 localNewExtractDestPos val =
     ConvertM.scScopeInfo . ConvertM.siOuter .~
     ConvertM.OuterScopeInfo
@@ -69,12 +68,12 @@ localNewExtractDestPos val =
     & ConvertM.local
 
 localVarsUnderExtractDestPos ::
-    MonadA m => [V.Var] -> ConvertM m a -> ConvertM m a
+    Monad m => [V.Var] -> ConvertM m a -> ConvertM m a
 localVarsUnderExtractDestPos vars =
     ConvertM.scScopeInfo . ConvertM.siOuter . ConvertM.osiVarsUnderPos <>~ vars
     & ConvertM.local
 
-makeInline :: MonadA m => ValIProperty m -> Redex (Input.Payload m a) -> BinderVarInline m
+makeInline :: Monad m => ValIProperty m -> Redex (Input.Payload m a) -> BinderVarInline m
 makeInline stored redex =
     case redexParamRefs redex of
     [_singleUsage] ->
@@ -84,7 +83,7 @@ makeInline stored redex =
     uses -> CannotInlineDueToUses uses
 
 convertRedex ::
-    (MonadA m, Monoid a) =>
+    (Monad m, Monoid a) =>
     Val (Input.Payload m a) ->
     Redex (Input.Payload m a) ->
     ConvertM m (Let Guid m (ExpressionU m a))
@@ -127,7 +126,7 @@ convertRedex expr redex =
       defEntityId = EntityId.ofLambdaParam param
 
 makeBinderContent ::
-    (MonadA m, Monoid a) =>
+    (Monad m, Monoid a) =>
     Val (Input.Payload m a) ->
     ConvertM m (BinderContent Guid m (ExpressionU m a))
 makeBinderContent expr =
@@ -138,7 +137,7 @@ makeBinderContent expr =
     Just redex -> convertRedex expr redex <&> BinderLet
 
 makeBinderBody ::
-    (MonadA m, Monoid a) =>
+    (Monad m, Monoid a) =>
     Val (Input.Payload m a) ->
     ConvertM m (BinderBody Guid m (ExpressionU m a))
 makeBinderBody expr =
@@ -151,7 +150,7 @@ makeBinderBody expr =
             , _bbContent = content
             } & return
 
-makeBinder :: (MonadA m, Monoid a) =>
+makeBinder :: (Monad m, Monoid a) =>
     MkProperty m (Maybe BinderParamScopeId) ->
     Maybe (MkProperty m PresentationMode) ->
     ConventionalParams m -> Val (Input.Payload m a) ->
@@ -180,7 +179,7 @@ makeBinder chosenScopeProp mPresentationModeProp ConventionalParams{..} funcBody
             _ -> Set.empty
 
 convertLam ::
-    (MonadA m, Monoid a) =>
+    (Monad m, Monoid a) =>
     V.Lam (Val (Input.Payload m a)) ->
     Input.Payload m a -> ConvertM m (ExpressionU m a)
 convertLam lam@(V.Lam _ lamBody) exprPl =
@@ -240,7 +239,7 @@ allParamsUsed paramGuids binder =
             & Set.fromList
 
 markLightParams ::
-    MonadA m => Set Guid -> ExpressionU m a -> ExpressionU m a
+    Monad m => Set Guid -> ExpressionU m a -> ExpressionU m a
 markLightParams paramGuids (Expression body pl) =
     case body of
     BodyGetVar (GetParam n)
@@ -259,7 +258,7 @@ markLightParams paramGuids (Expression body pl) =
 
 -- Let-item or definition (form of <name> [params] = <body>)
 convertBinder ::
-    (MonadA m, Monoid a) => BinderKind m -> Guid ->
+    (Monad m, Monoid a) => BinderKind m -> Guid ->
     Val (Input.Payload m a) -> ConvertM m (Binder Guid m (ExpressionU m a))
 convertBinder binderKind defGuid expr =
     do
@@ -272,7 +271,7 @@ convertBinder binderKind defGuid expr =
             convParams funcBody
 
 convertDefinitionBinder ::
-    (MonadA m, Monoid a) =>
+    (Monad m, Monoid a) =>
     DefI m -> Val (Input.Payload m a) ->
     ConvertM m (Binder Guid m (ExpressionU m a))
 convertDefinitionBinder defI =

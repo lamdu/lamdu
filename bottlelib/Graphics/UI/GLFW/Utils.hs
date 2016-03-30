@@ -8,11 +8,10 @@ module Graphics.UI.GLFW.Utils
 import           Control.Exception (bracket_)
 import           Control.Lens.Operators
 import           Control.Monad (unless)
-import           Control.MonadA (MonadA)
 import           Data.Vector.Vector2 (Vector2(..))
 import qualified Graphics.UI.GLFW as GLFW
 
-assert :: MonadA m => String -> Bool -> m ()
+assert :: Monad m => String -> Bool -> m ()
 assert msg p = unless p (fail msg)
 
 withGLFW :: IO a -> IO a

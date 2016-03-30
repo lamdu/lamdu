@@ -8,7 +8,6 @@ import           Control.Lens.Operators
 import           Control.Monad (unless)
 import           Control.Monad.Trans.Class (MonadTrans(..))
 import qualified Control.Monad.Trans.State as State
-import           Control.MonadA (MonadA)
 import           Data.CurAndPrev (CurAndPrev)
 import           Data.Map (Map)
 import qualified Data.Map as Map
@@ -50,7 +49,7 @@ import           Prelude.Compat
 type T = Transaction
 
 convertDefIBuiltin ::
-    MonadA m => Definition.Builtin -> DefI m ->
+    Monad m => Definition.Builtin -> DefI m ->
     DefinitionBody Guid m (ExpressionU m [EntityId])
 convertDefIBuiltin (Definition.Builtin name scheme) defI =
     DefinitionBodyBuiltin DefinitionBuiltin
@@ -63,19 +62,19 @@ convertDefIBuiltin (Definition.Builtin name scheme) defI =
             Transaction.writeIRef defI .
             Definition.BodyBuiltin . (`Definition.Builtin` scheme)
 
-assertRunInfer :: MonadA m => IRefInfer.M m a -> T m (a, Infer.Context)
+assertRunInfer :: Monad m => IRefInfer.M m a -> T m (a, Infer.Context)
 assertRunInfer action =
     IRefInfer.run action
     <&> either (error . ("Type inference failed: " ++) . show . pPrint) id
 
-readValAndAddProperties :: MonadA m => ValI m -> T m (Val (ValIProperty m))
+readValAndAddProperties :: Monad m => ValI m -> T m (Val (ValIProperty m))
 readValAndAddProperties valI =
     ExprIRef.readVal valI
     <&> fmap (flip (,) ())
     <&> ExprIRef.addProperties (error "TODO: DefExpr root setIRef")
     <&> fmap fst
 
-reinferCheckDefinition :: MonadA m => DefI m -> T m Bool
+reinferCheckDefinition :: Monad m => DefI m -> T m Bool
 reinferCheckDefinition defI =
     do
         defBody <- Transaction.readIRef defI
@@ -89,7 +88,7 @@ reinferCheckDefinition defI =
                         & IRefInfer.run
                 <&> Lens.has Lens._Right
 
-reinferCheckExpression :: MonadA m => ValI m -> T m Bool
+reinferCheckExpression :: Monad m => ValI m -> T m Bool
 reinferCheckExpression valI =
     do
         val <- readValAndAddProperties valI
@@ -141,7 +140,7 @@ preparePayloads evalRes inferredVal =
             (r ^. erAppliesOfLam . Lens.at pl . Lens._Just)
 
 loadInferPrepareInput ::
-    MonadA m =>
+    Monad m =>
     CurAndPrev (EvalResults (ValI m)) ->
     Val (Infer.Payload, ValIProperty m) ->
     IRefInfer.M m (Val (Input.Payload m [EntityId]))
@@ -174,7 +173,7 @@ makeNominalsMap val =
                                     N.nScheme nom ^. schemeType & loadForType
 
 convertInferDefExpr ::
-    MonadA m =>
+    Monad m =>
     CurAndPrev (EvalResults (ValI m)) -> Anchors.CodeProps m ->
     Definition.Expr (Val (ValIProperty m)) -> DefI m ->
     T m (DefinitionBody Guid m (ExpressionU m [EntityId]))
@@ -202,7 +201,7 @@ convertInferDefExpr evalRes cp defExpr defI =
         val = defExpr ^. Definition.expr
 
 convertDefI ::
-    MonadA m =>
+    Monad m =>
     CurAndPrev (EvalResults (ValI m)) ->
     Anchors.CodeProps m ->
     Definition.Definition (Val (ValIProperty m)) (DefI m) ->
@@ -222,7 +221,7 @@ convertDefI evalRes cp (Definition.Definition body defI) =
             convertInferDefExpr evalRes cp defExpr defI
 
 convertExpr ::
-    MonadA m => CurAndPrev (EvalResults (ValI m)) -> Anchors.CodeProps m ->
+    Monad m => CurAndPrev (EvalResults (ValI m)) -> Anchors.CodeProps m ->
     Val (ValIProperty m) -> T m (ExpressionU m [EntityId])
 convertExpr evalRes cp val =
     do

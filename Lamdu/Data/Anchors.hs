@@ -15,7 +15,6 @@ module Lamdu.Data.Anchors
     ) where
 
 import qualified Control.Lens as Lens
-import           Control.MonadA (MonadA)
 import           Data.Binary (Binary)
 import           Data.ByteString.Char8 ()
 import           Data.Store.Rev.Branch (Branch)
@@ -67,20 +66,20 @@ type RevisionProps m = Revision (MkProperty m) m
 makePane :: DefI m -> Pane m
 makePane = id
 
-assocNameRef :: (UniqueId.ToGuid a, MonadA m) => a -> MkProperty m String
+assocNameRef :: (UniqueId.ToGuid a, Monad m) => a -> MkProperty m String
 assocNameRef = Transaction.assocDataRefDef "" "Name" . UniqueId.toGuid
 
 assocScopeRef ::
-    (UniqueId.ToGuid a, MonadA m) => a -> MkProperty m (Maybe BinderParamScopeId)
+    (UniqueId.ToGuid a, Monad m) => a -> MkProperty m (Maybe BinderParamScopeId)
 assocScopeRef = Transaction.assocDataRef "ScopeId" . UniqueId.toGuid
 
-assocTagOrder :: MonadA m => T.Tag -> MkProperty m Int
+assocTagOrder :: Monad m => T.Tag -> MkProperty m Int
 assocTagOrder = Transaction.assocDataRefDef 0 "Order" . UniqueId.toGuid
 
 type ParamList = [T.Tag]
 
 assocFieldParamList ::
-    MonadA m => ValI m -> Transaction.MkProperty m (Maybe ParamList)
+    Monad m => ValI m -> Transaction.MkProperty m (Maybe ParamList)
 assocFieldParamList lambdaI =
     Transaction.assocDataRef "field param list" $ UniqueId.toGuid lambdaI
 
@@ -89,7 +88,7 @@ data PresentationMode = OO | Verbose | Infix Int
 instance Binary PresentationMode
 
 assocPresentationMode ::
-    (UniqueId.ToGuid a, MonadA m) =>
+    (UniqueId.ToGuid a, Monad m) =>
     a -> Transaction.MkProperty m PresentationMode
 assocPresentationMode =
     Transaction.assocDataRefDef Verbose "PresentationMode" . UniqueId.toGuid

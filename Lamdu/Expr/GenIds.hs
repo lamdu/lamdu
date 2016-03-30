@@ -22,7 +22,6 @@ import           Control.Monad.Trans.Class (MonadTrans(..))
 import           Control.Monad.Trans.Reader (ReaderT(..))
 import qualified Control.Monad.Trans.Reader as Reader
 import           Control.Monad.Trans.State (evalState, state, runState)
-import           Control.MonadA (MonadA)
 import qualified Data.ByteString as BS
 import           Data.Map (Map)
 import qualified Data.Map as Map
@@ -37,7 +36,7 @@ import           System.Random (Random, RandomGen, random)
 import qualified System.Random as Random
 import qualified System.Random.Utils as RandomUtils
 
-transaction :: MonadA m =>
+transaction :: Monad m =>
     (Random.StdGen -> (a, Random.StdGen)) -> Transaction m a
 transaction f = Transaction.newKey <&> fst . f . RandomUtils.genFromHashable
 

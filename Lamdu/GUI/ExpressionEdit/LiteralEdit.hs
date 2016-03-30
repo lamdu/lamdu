@@ -6,7 +6,6 @@ module Lamdu.GUI.ExpressionEdit.LiteralEdit
 
 import           Control.Lens.Operators
 import           Control.Lens.Tuple
-import           Control.MonadA (MonadA)
 import           Data.Store.Guid (Guid)
 import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
@@ -37,7 +36,7 @@ import           Prelude.Compat
 type T = Transaction.Transaction
 
 mkEditEventMap ::
-    MonadA m => String -> T m (Guid, Sugar.EntityId) -> Widget.EventHandlers (T m)
+    Monad m => String -> T m (Guid, Sugar.EntityId) -> Widget.EventHandlers (T m)
 mkEditEventMap valText setToHole =
     Widget.keysEventMapMovesCursor [ModKey mempty GLFW.Key'Enter]
     (E.Doc ["Edit", "Double"]) $
@@ -46,7 +45,7 @@ mkEditEventMap valText setToHole =
         setHoleStateAndJump guid (HoleState valText) entityId
 
 genericEdit ::
-    (MonadA m, Format a) =>
+    (Monad m, Format a) =>
     (Style -> TextEdit.Style) -> Transaction.Property m a ->
     Sugar.Payload m ExprGuiT.Payload -> ExprGuiM m (ExpressionGui m)
 genericEdit getStyle prop pl =
@@ -76,7 +75,7 @@ fdConfig Config.LiteralText{..} = FocusDelegator.Config
     }
 
 textEdit ::
-    MonadA m => Transaction.Property m String ->
+    Monad m => Transaction.Property m String ->
     Sugar.Payload m ExprGuiT.Payload -> ExprGuiM m (ExpressionGui m)
 textEdit prop pl =
     do
@@ -103,7 +102,7 @@ textEdit prop pl =
         myId = WidgetIds.fromExprPayload pl
 
 make ::
-    MonadA m =>
+    Monad m =>
     Sugar.Literal (Transaction.Property m) -> Sugar.Payload m ExprGuiT.Payload ->
     ExprGuiM m (ExpressionGui m)
 make lit pl =

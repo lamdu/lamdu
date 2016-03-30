@@ -9,7 +9,6 @@ import           Control.Monad (guard)
 import           Control.Monad.Trans.Class (MonadTrans(..))
 import           Control.Monad.Trans.Either.Utils (runMatcherT, justToLeft)
 import           Control.Monad.Trans.Maybe (MaybeT)
-import           Control.MonadA (MonadA)
 import           Data.Maybe.Utils (maybeToMPlus)
 import           Data.Store.Guid (Guid)
 import           Data.Store.Transaction (Transaction)
@@ -32,11 +31,11 @@ import           Lamdu.Sugar.Types
 import           Prelude.Compat
 
 jumpToDefI ::
-    MonadA m => Anchors.CodeProps m -> DefI m -> Transaction m EntityId
+    Monad m => Anchors.CodeProps m -> DefI m -> Transaction m EntityId
 jumpToDefI cp defI = EntityId.ofIRef defI <$ DataOps.newPane cp defI
 
 convertGlobal ::
-    MonadA m => V.Var -> Input.Payload m a -> MaybeT (ConvertM m) (GetVar Guid m)
+    Monad m => V.Var -> Input.Payload m a -> MaybeT (ConvertM m) (GetVar Guid m)
 convertGlobal param exprPl =
     do
         ctx <- lift ConvertM.readContext
@@ -65,7 +64,7 @@ usesAround x xs =
     where
         (before, after) = break (== x) xs
 
-paramNameRef :: MonadA m => V.Var -> NameRef Guid m
+paramNameRef :: Monad m => V.Var -> NameRef Guid m
 paramNameRef param =
     NameRef
     { _nrName = UniqueId.toGuid param
@@ -73,7 +72,7 @@ paramNameRef param =
     }
 
 convertGetBinder ::
-    MonadA m => V.Var -> Input.Payload m a -> MaybeT (ConvertM m) (GetVar Guid m)
+    Monad m => V.Var -> Input.Payload m a -> MaybeT (ConvertM m) (GetVar Guid m)
 convertGetBinder param exprPl =
     do
         inline <-
@@ -89,7 +88,7 @@ convertGetBinder param exprPl =
             } & return
 
 convertParamsRecord ::
-    MonadA m => V.Var -> Input.Payload m a -> MaybeT (ConvertM m) (GetVar Guid m)
+    Monad m => V.Var -> Input.Payload m a -> MaybeT (ConvertM m) (GetVar Guid m)
 convertParamsRecord param exprPl =
     do
         lift ConvertM.readContext
@@ -106,7 +105,7 @@ convertParamsRecord param exprPl =
             } & return
 
 convert ::
-    MonadA m =>
+    Monad m =>
     V.Var -> Input.Payload m a -> ConvertM m (ExpressionU m a)
 convert param exprPl =
     do

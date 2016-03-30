@@ -6,7 +6,6 @@ module Lamdu.Sugar.Convert.GetField
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Monad (guard)
-import           Control.MonadA (MonadA)
 import qualified Lamdu.Expr.Lens as ExprLens
 import qualified Lamdu.Expr.UniqueId as UniqueId
 import           Lamdu.Expr.Val (Val(..))
@@ -22,7 +21,7 @@ import           Lamdu.Sugar.Types
 import           Prelude.Compat
 
 convertGetFieldParam ::
-    MonadA m =>
+    Monad m =>
     V.GetField (Val a) -> Input.Payload m b ->
     ConvertM m (Maybe (ExpressionU m b))
 convertGetFieldParam (V.GetField recExpr tag) exprPl =
@@ -43,7 +42,7 @@ convertGetFieldParam (V.GetField recExpr tag) exprPl =
             & Lens._Just %%~ addActions exprPl
 
 convertGetFieldNonParam ::
-    (MonadA m, Monoid a) =>
+    (Monad m, Monoid a) =>
     V.GetField (Val (Input.Payload m a)) -> Input.Payload m a ->
     ConvertM m (ExpressionU m a)
 convertGetFieldNonParam (V.GetField recExpr tag) exprPl =
@@ -63,7 +62,7 @@ convertGetFieldNonParam (V.GetField recExpr tag) exprPl =
         entityId = exprPl ^. Input.entityId
 
 convert ::
-    (MonadA m, Monoid a) =>
+    (Monad m, Monoid a) =>
     V.GetField (Val (Input.Payload m a)) ->
     Input.Payload m a ->
     ConvertM m (ExpressionU m a)

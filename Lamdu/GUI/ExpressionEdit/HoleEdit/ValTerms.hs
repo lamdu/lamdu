@@ -4,7 +4,6 @@ module Lamdu.GUI.ExpressionEdit.HoleEdit.ValTerms
     ) where
 
 import           Control.Lens.Operators
-import           Control.MonadA (MonadA)
 import           Data.Monoid ((<>))
 import qualified Data.Store.Property as Property
 import           Data.Store.Property (Property)
@@ -51,11 +50,11 @@ bodyShape = \case
     Sugar.BodyFromNom {} -> []
     Sugar.BodyHole {} -> []
 
-bodyNames :: MonadA m => Sugar.Body (Name m) m expr -> [String]
+bodyNames :: Monad m => Sugar.Body (Name m) m expr -> [String]
 bodyNames = \case
     Sugar.BodyGetVar Sugar.GetParamsRecord {} -> []
     Sugar.BodyLam {} -> []
     b -> NamesGet.fromBody b <&> ofName
 
-body :: MonadA m => Sugar.Body (Name m) m expr -> [String]
+body :: Monad m => Sugar.Body (Name m) m expr -> [String]
 body = bodyShape <> bodyNames

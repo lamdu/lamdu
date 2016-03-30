@@ -6,7 +6,6 @@ module Lamdu.Expr.Load
 import           Prelude.Compat
 
 import           Control.Lens.Operators
-import           Control.MonadA (MonadA)
 import           Data.Store.Property (Property(..))
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
@@ -20,18 +19,18 @@ import           Lamdu.Expr.Val (Val(..))
 
 type T = Transaction
 
-expr :: MonadA m => (ValI m -> T m ()) -> ValI m -> T m (Val (ValIProperty m))
+expr :: Monad m => (ValI m -> T m ()) -> ValI m -> T m (Val (ValIProperty m))
 expr writeRoot valI =
     ExprIRef.readVal valI
     <&> fmap (flip (,) ())
     <&> ExprIRef.addProperties writeRoot
     <&> fmap fst
 
-exprProperty :: MonadA m => ValIProperty m -> T m (Val (ValIProperty m))
+exprProperty :: Monad m => ValIProperty m -> T m (Val (ValIProperty m))
 exprProperty (Property val set) = expr set val
 
 defExpr ::
-    MonadA m =>
+    Monad m =>
     (Definition.Expr (ValI m) -> T m ()) ->
     Definition.Expr (ValI m) -> T m (Definition.Expr (Val (ValIProperty m)))
 defExpr writeDefExpr d =
@@ -41,7 +40,7 @@ defExpr writeDefExpr d =
         wrap :: val -> Definition.Expr val
         wrap v = d & Definition.expr .~ v
 
-def :: MonadA m => DefI m -> T m (Definition (Val (ValIProperty m)) (DefI m))
+def :: Monad m => DefI m -> T m (Definition (Val (ValIProperty m)) (DefI m))
 def defI =
     do
         defBody <- Transaction.readIRef defI
@@ -52,7 +51,7 @@ def defI =
                 defExpr (Transaction.writeIRef defI . Definition.BodyExpr) e
             Definition.BodyBuiltin bi -> return $ Definition.BodyBuiltin bi
 
-nominal :: MonadA m => T.NominalId -> T m (Maybe Nominal)
+nominal :: Monad m => T.NominalId -> T m (Maybe Nominal)
 nominal tid =
     do
         e <- Transaction.irefExists iref

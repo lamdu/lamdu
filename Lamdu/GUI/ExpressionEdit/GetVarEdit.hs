@@ -5,7 +5,6 @@ module Lamdu.GUI.ExpressionEdit.GetVarEdit
 
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
-import           Control.MonadA (MonadA)
 import qualified Data.ByteString.Char8 as SBS8
 import           Data.Monoid ((<>))
 import           Data.Store.Transaction (Transaction)
@@ -29,7 +28,7 @@ import qualified Lamdu.Sugar.Types as Sugar
 import           Prelude.Compat
 
 makeSimpleView ::
-    MonadA m => Draw.Color -> Name m -> Widget.Id ->
+    Monad m => Draw.Color -> Name m -> Widget.Id ->
     ExprGuiM m (ExpressionGui m)
 makeSimpleView color name myId =
     ExpressionGui.makeNameView name (Widget.toAnimId myId)
@@ -38,7 +37,7 @@ makeSimpleView color name myId =
     & ExprGuiM.withFgColor color
 
 makeParamsRecord ::
-    MonadA m => Widget.Id -> Sugar.ParamsRecordVar (Name m) -> ExprGuiM m (ExpressionGui m)
+    Monad m => Widget.Id -> Sugar.ParamsRecordVar (Name m) -> ExprGuiM m (ExpressionGui m)
 makeParamsRecord myId paramsRecordVar =
     do
         config <- ExprGuiM.readConfig
@@ -57,7 +56,7 @@ makeParamsRecord myId paramsRecordVar =
         Sugar.ParamsRecordVar fieldNames = paramsRecordVar
 
 makeNameRef ::
-    MonadA m => Widget.Id -> Sugar.NameRef name m ->
+    Monad m => Widget.Id -> Sugar.NameRef name m ->
     (name -> Widget.Id -> ExprGuiM m (ExpressionGui m)) ->
     ExprGuiM m (ExpressionGui m)
 makeNameRef myId nameRef makeView =
@@ -75,7 +74,7 @@ makeNameRef myId nameRef makeView =
             <&> ExpressionGui.egWidget %~ Widget.weakerEvents jumpToDefinitionEventMap
 
 makeInlineEventMap ::
-    MonadA m =>
+    Monad m =>
     Config -> Sugar.BinderVarInline m -> Widget.EventHandlers (Transaction m)
 makeInlineEventMap config (Sugar.InlineVar inline) =
     inline <&> WidgetIds.fromEntityId
@@ -88,7 +87,7 @@ makeInlineEventMap config (Sugar.CannotInlineDueToUses (x:_)) =
 makeInlineEventMap _ _ = mempty
 
 make ::
-    MonadA m =>
+    Monad m =>
     Sugar.GetVar (Name m) m ->
     Sugar.Payload m ExprGuiT.Payload ->
     ExprGuiM m (ExpressionGui m)

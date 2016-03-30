@@ -22,7 +22,6 @@ import qualified Control.Lens as Lens
 import           Control.Monad.Trans.Class (MonadTrans(..))
 import           Control.Monad.Trans.Reader (ReaderT, runReaderT)
 import qualified Control.Monad.Trans.Reader as Reader
-import           Control.MonadA (MonadA)
 import           Data.Map (Map)
 import           Data.Set (Set)
 import qualified Data.Store.Property as Property
@@ -94,7 +93,7 @@ data Context m = Context
 Lens.makeLenses ''Context
 Lens.makePrisms ''TagFieldParam
 
-typeProtectTransaction :: MonadA m => ConvertM m (T m a -> T m (Maybe a))
+typeProtectTransaction :: Monad m => ConvertM m (T m a -> T m (Maybe a))
 typeProtectTransaction =
     do
         checkOk <- (^. scReinferCheckRoot) <$> readContext
@@ -113,7 +112,7 @@ typeProtectTransaction =
         return protect
 
 typeProtectedSetToVal ::
-    MonadA m =>
+    Monad m =>
     ConvertM m
     (ExprIRef.ValIProperty m -> ExprIRef.ValI m -> T m (ExprIRef.ValI m))
 typeProtectedSetToVal =
@@ -128,7 +127,7 @@ typeProtectedSetToVal =
         return setToVal
 
 wrapOnTypeError ::
-    MonadA m =>
+    Monad m =>
     ConvertM m (ExprIRef.ValIProperty m -> T m (ExprIRef.ValI m))
 wrapOnTypeError =
     do
@@ -136,25 +135,25 @@ wrapOnTypeError =
         let wrap prop = protectedSetToVal prop (Property.value prop)
         return wrap
 
-run :: MonadA m => Context m -> ConvertM m a -> T m a
+run :: Monad m => Context m -> ConvertM m a -> T m a
 run ctx (ConvertM action) = runReaderT action ctx
 
-readContext :: MonadA m => ConvertM m (Context m)
+readContext :: Monad m => ConvertM m (Context m)
 readContext = ConvertM Reader.ask
 
 local :: Monad m => (Context m -> Context m) -> ConvertM m a -> ConvertM m a
 local f (ConvertM act) = ConvertM $ Reader.local f act
 
-liftTransaction :: MonadA m => T m a -> ConvertM m a
+liftTransaction :: Monad m => T m a -> ConvertM m a
 liftTransaction = ConvertM . lift
 
-codeAnchor :: MonadA m => (Anchors.CodeProps m -> a) -> ConvertM m a
+codeAnchor :: Monad m => (Anchors.CodeProps m -> a) -> ConvertM m a
 codeAnchor f = f . (^. scCodeAnchors) <$> readContext
 
-getP :: MonadA m => Transaction.MkProperty m a -> ConvertM m a
+getP :: Monad m => Transaction.MkProperty m a -> ConvertM m a
 getP = liftTransaction . Transaction.getP
 
-convertSubexpression :: (MonadA m, Monoid a) => Val (Input.Payload m a) -> ConvertM m (ExpressionU m a)
+convertSubexpression :: (Monad m, Monoid a) => Val (Input.Payload m a) -> ConvertM m (ExpressionU m a)
 convertSubexpression exprI =
     do
         convertSub <- scConvertSubexpression <$> readContext

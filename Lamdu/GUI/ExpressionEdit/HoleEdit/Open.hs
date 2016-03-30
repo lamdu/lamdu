@@ -9,7 +9,6 @@ import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Lens.Tuple
 import           Control.Monad (guard, msum)
-import           Control.MonadA (MonadA)
 import           Data.List.Lens (suffixed)
 import qualified Data.Map as Map
 import           Data.Maybe (isJust, fromMaybe)
@@ -127,7 +126,7 @@ afterPick holeInfo resultId mFirstHoleInside pr =
                 | otherwise -> "obliterated" : animId
 
 fixNumWithDotEventMap ::
-    MonadA m =>
+    Monad m =>
     HoleInfo m -> Sugar.HoleResult name m -> Widget.EventHandlers (T m)
 fixNumWithDotEventMap holeInfo res
     | endsWithDot
@@ -157,7 +156,7 @@ fixNumWithDotEventMap holeInfo res
         hrWrapAction = Sugar.rPayload . Sugar.plActions . Sugar.wrap
 
 makeShownResult ::
-    MonadA m => HoleInfo m -> Result m -> ExprGuiM m (Widget (T m), ShownResult m)
+    Monad m => HoleInfo m -> Result m -> ExprGuiM m (Widget (T m), ShownResult m)
 makeShownResult holeInfo result =
     do
         -- Warning: rHoleResult should be ran at most once!
@@ -183,7 +182,7 @@ makeShownResult holeInfo result =
               }
             )
 
-makeExtraSymbolWidget :: MonadA m => AnimId -> Bool -> ResultsList n -> ExprGuiM m (Widget f)
+makeExtraSymbolWidget :: Monad m => AnimId -> Bool -> ResultsList n -> ExprGuiM m (Widget f)
 makeExtraSymbolWidget animId isSelected results
     | Lens.nullOf (HoleResults.rlExtra . traverse) results = pure Widget.empty
     | otherwise =
@@ -217,7 +216,7 @@ rgwPadding f ResultGroupWidgets{..} =
     f _rgwPadding <&> \_rgwPadding -> ResultGroupWidgets{..}
 
 makeResultGroup ::
-    MonadA m =>
+    Monad m =>
     HoleInfo m ->
     ResultsList m ->
     ExprGuiM m (ResultGroupWidgets m)
@@ -261,7 +260,7 @@ makeResultGroup holeInfo results =
         focusFirstExtraResult (result:_) = makeFocusable (rId result)
 
 makeExtraResultsWidget ::
-    MonadA m => HoleInfo m -> Anim.R -> [Result m] ->
+    Monad m => HoleInfo m -> Anim.R -> [Result m] ->
     ExprGuiM m (Maybe (ShownResult m), Widget (T m), Widget.R)
 makeExtraResultsWidget _ _ [] = return (Nothing, Widget.empty, 0)
 makeExtraResultsWidget holeInfo mainResultHeight extraResults@(firstResult:_) =
@@ -296,11 +295,11 @@ makeExtraResultsWidget holeInfo mainResultHeight extraResults@(firstResult:_) =
             )
 
 makeFocusable ::
-    (MonadA m, Applicative f) => Widget.Id -> Widget f -> ExprGuiM m (Widget f)
+    (Monad m, Applicative f) => Widget.Id -> Widget f -> ExprGuiM m (Widget f)
 makeFocusable wId = ExprGuiM.widgetEnv . BWidgets.makeFocusableView wId
 
 makeHoleResultWidget ::
-    MonadA m => Widget.Id ->
+    Monad m => Widget.Id ->
     Sugar.HoleResult (Name m) m ->
     ExprGuiM m (Widget (T m), ExprGuiM m (Widget.EventHandlers (T m)))
 makeHoleResultWidget resultId holeResult =
@@ -338,7 +337,7 @@ makeHoleResultWidget resultId holeResult =
         holeResultConverted = holeResult ^. Sugar.holeResultConverted
 
 postProcessSugar ::
-    MonadA m =>
+    Monad m =>
     ExpressionN m Sugar.IsInjected ->
     ExpressionN m ExprGuiT.Payload
 postProcessSugar expr =
@@ -356,17 +355,17 @@ toPayload isInjected =
       Sugar.NotInjected -> []
       Sugar.Injected -> [True]
 
-makeNoResults :: MonadA m => AnimId -> ExprGuiM m (Widget (T m))
+makeNoResults :: Monad m => AnimId -> ExprGuiM m (Widget (T m))
 makeNoResults animId =
     ExpressionGui.makeLabel "(No results)" animId
     <&> (^. ExpressionGui.egWidget)
 
-makeHiddenResultsMWidget :: MonadA m => HaveHiddenResults -> Widget.Id -> ExprGuiM m (Maybe (Widget f))
+makeHiddenResultsMWidget :: Monad m => HaveHiddenResults -> Widget.Id -> ExprGuiM m (Maybe (Widget f))
 makeHiddenResultsMWidget HaveHiddenResults myId =
     Just <$> ExprGuiM.makeLabel "..." (Widget.toAnimId myId)
 makeHiddenResultsMWidget NoHiddenResults _ = return Nothing
 
-addMResultPicker :: MonadA m => Maybe (ShownResult m) -> ExprGuiM m ()
+addMResultPicker :: Monad m => Maybe (ShownResult m) -> ExprGuiM m ()
 addMResultPicker mSelectedResult =
     case mSelectedResult of
     Nothing -> return ()
@@ -381,7 +380,7 @@ calcPadding =
             + (item ^. rgwPadding)
 
 layoutResults ::
-    MonadA m =>
+    Monad m =>
     [ResultGroupWidgets m] -> HaveHiddenResults -> Widget.Id ->
     ExprGuiM m (Widget (T m))
 layoutResults groups hiddenResults myId
@@ -406,7 +405,7 @@ layoutResults groups hiddenResults myId
         rows = groups ^.. Lens.traversed . rgwRow
 
 makeResultsWidget ::
-    MonadA m => HoleInfo m ->
+    Monad m => HoleInfo m ->
     [ResultsList m] -> HaveHiddenResults ->
     ExprGuiM m (Maybe (ShownResult m), Widget (T m))
 makeResultsWidget holeInfo shownResultsLists hiddenResults =
@@ -420,7 +419,7 @@ makeResultsWidget holeInfo shownResultsLists hiddenResults =
         return (mResult, widget)
 
 assignHoleEditCursor ::
-    MonadA m =>
+    Monad m =>
     HoleInfo m -> [Widget.Id] -> [Widget.Id] -> Widget.Id ->
     ExprGuiM m a ->
     ExprGuiM m a
@@ -443,7 +442,7 @@ assignHoleEditCursor holeInfo shownMainResultsIds allShownResultIds searchTermId
             | otherwise = head (shownMainResultsIds ++ [searchTermId])
 
 makeUnderCursorAssignment ::
-    MonadA m =>
+    Monad m =>
     [ResultsList m] -> HaveHiddenResults ->
     HoleInfo m -> ExprGuiM m (ExpressionGui m)
 makeUnderCursorAssignment shownResultsLists hasHiddenResults holeInfo =
@@ -490,7 +489,7 @@ makeUnderCursorAssignment shownResultsLists hasHiddenResults holeInfo =
         WidgetIds{..} = hiIds holeInfo
 
 makeOpenSearchTermGui ::
-    MonadA m =>
+    Monad m =>
     Sugar.Payload m ExprGuiT.Payload -> HoleInfo m -> ExprGuiM m (ExpressionGui m)
 makeOpenSearchTermGui pl holeInfo =
     do

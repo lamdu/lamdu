@@ -15,7 +15,6 @@ import           Control.Monad.Trans.Class (lift)
 import           Control.Monad.Trans.Either (EitherT(..))
 import           Control.Monad.Trans.State (StateT(..), mapStateT)
 import qualified Control.Monad.Trans.State as State
-import           Control.MonadA (MonadA)
 import qualified Data.ByteString.UTF8 as UTF8
 import           Data.CurAndPrev (CurAndPrev(..))
 import           Data.Functor.Identity (Identity(..))
@@ -65,14 +64,14 @@ type T = Transaction
 type ExprStorePoint m a = Val (Maybe (ExprIRef.ValI m), a)
 
 convert ::
-    (MonadA m, Monoid a) =>
+    (Monad m, Monoid a) =>
     Input.Payload m a -> ConvertM m (ExpressionU m a)
 convert exprPl =
     convertCommon Nothing exprPl
     <&> rPayload . plActions . setToHole .~ AlreadyAHole
 
 convertCommon ::
-    (MonadA m, Monoid a) =>
+    (Monad m, Monoid a) =>
     Maybe (Val (Input.Payload m a)) -> Input.Payload m a -> ConvertM m (ExpressionU m a)
 convertCommon mInjectedArg exprPl =
     mkHole mInjectedArg exprPl
@@ -81,7 +80,7 @@ convertCommon mInjectedArg exprPl =
     <&> rPayload . plActions . wrap .~ WrapNotAllowed
 
 mkHoleOptionFromInjected ::
-    MonadA m =>
+    Monad m =>
     ConvertM.Context m ->
     Input.Payload m a -> ExprIRef.ValIProperty m ->
     Val (Type, Maybe (Input.Payload m a)) -> HoleOption Guid m
@@ -113,7 +112,7 @@ getBaseExprVal (SuggestedExpr v) = void v
 getBaseExprVal (SeedExpr v) = v
 
 mkHoleOption ::
-    MonadA m => ConvertM.Context m ->
+    Monad m => ConvertM.Context m ->
     Maybe (Val (Input.Payload m a)) ->
     Input.Payload m a -> ExprIRef.ValIProperty m ->
     BaseExpr -> HoleOption Guid m
@@ -127,7 +126,7 @@ mkHoleOption sugarContext mInjectedArg exprPl stored val =
         v = getBaseExprVal val
 
 mkHoleSuggesteds ::
-    MonadA m =>
+    Monad m =>
     ConvertM.Context m -> Maybe (Val (Input.Payload m a)) ->
     Input.Payload m a -> ExprIRef.ValIProperty m -> [HoleOption Guid m]
 mkHoleSuggesteds sugarContext mInjectedArg exprPl stored =
@@ -137,7 +136,7 @@ mkHoleSuggesteds sugarContext mInjectedArg exprPl stored =
     <&> mkHoleOption sugarContext mInjectedArg exprPl stored
 
 addSuggestedOptions ::
-    MonadA m =>
+    Monad m =>
     [HoleOption Guid m] -> [HoleOption Guid m] -> [HoleOption Guid m]
 addSuggestedOptions suggesteds options
     | null nonTrivial = options
@@ -148,7 +147,7 @@ addSuggestedOptions suggesteds options
         nonTrivial = filter (Lens.nullOf (hoVal . ExprLens.valHole)) suggesteds
 
 mkOptions ::
-    MonadA m => ConvertM.Context m ->
+    Monad m => ConvertM.Context m ->
     Maybe (Val (Input.Payload m a)) ->
     Input.Payload m a -> ExprIRef.ValIProperty m ->
     T m [HoleOption Guid m]
@@ -187,7 +186,7 @@ mkOptions sugarContext mInjectedArg exprPl stored =
             Lens.contains (ExprIRef.defI varId)
 
 mkWritableHoleActions ::
-    (MonadA m) =>
+    (Monad m) =>
     Maybe (Val (Input.Payload m a)) ->
     Input.Payload m a -> ExprIRef.ValIProperty m ->
     ConvertM m (HoleActions Guid m)
@@ -221,7 +220,7 @@ consistentExprIds :: EntityId -> Val (EntityId -> a) -> Val a
 consistentExprIds = EntityId.randomizeExprAndParams . genFromHashable
 
 infer ::
-    MonadA m => Infer.Payload -> Val a -> IRefInfer.M m (Val (Infer.Payload, a))
+    Monad m => Infer.Payload -> Val a -> IRefInfer.M m (Val (Infer.Payload, a))
 infer holeInferred =
     IRefInfer.loadInferScope scopeAtHole
     where
@@ -249,7 +248,7 @@ prepareUnstoredPayloads val =
             )
 
 sugar ::
-    (MonadA m, Monoid a) =>
+    (Monad m, Monoid a) =>
     ConvertM.Context m -> Input.Payload m dummy -> Val a -> T m (ExpressionU m a)
 sugar sugarContext exprPl val =
     val
@@ -271,7 +270,7 @@ sugar sugarContext exprPl val =
             }
 
 mkHole ::
-    (MonadA m, Monoid a) =>
+    (Monad m, Monoid a) =>
     Maybe (Val (Input.Payload m a)) ->
     Input.Payload m a -> ConvertM m (Hole Guid m (ExpressionU m a))
 mkHole mInjectedArg exprPl = do
@@ -281,7 +280,7 @@ mkHole mInjectedArg exprPl = do
         , _holeMArg = Nothing
         }
 
-getLocalScopeGetVars :: MonadA m => ConvertM.Context m -> V.Var -> [Val ()]
+getLocalScopeGetVars :: Monad m => ConvertM.Context m -> V.Var -> [Val ()]
 getLocalScopeGetVars sugarContext par
     | sugarContext ^. ConvertM.scScopeInfo . ConvertM.siNullParams . Lens.contains par = []
     | otherwise = map mkFieldParam fieldTags ++ [var]
@@ -302,7 +301,7 @@ markNotInjected :: HoleResultVal n () -> HoleResultVal n IsInjected
 markNotInjected val = val <&> _2 . _2 .~ NotInjected
 
 writeConvertTypeChecked ::
-    (MonadA m, Monoid a) =>
+    (Monad m, Monoid a) =>
     EntityId -> ConvertM.Context m -> ExprIRef.ValIProperty m ->
     HoleResultVal m a ->
     T m
@@ -428,7 +427,7 @@ eitherToListT (Left _) = mempty
 eitherToListT (Right x) = return x
 
 applyForms ::
-    MonadA m =>
+    Monad m =>
     a -> Val (Infer.Payload, a) ->
     StateT Infer.Context (ListT (T m)) (Val (Infer.Payload, a))
 applyForms _ v@(Val _ V.BAbs {}) = return v
@@ -565,7 +564,7 @@ holeResultsInject injectedArg val =
         injectedType = injectedArg ^. V.payload . Input.inferredType
 
 mkHoleResultValInjected ::
-    MonadA m =>
+    Monad m =>
     Input.Payload m dummy ->
     Val (Type, Maybe (Input.Payload m a)) ->
     StateT Infer.Context (T m) (HoleResultVal m IsInjected)
@@ -583,7 +582,7 @@ mkHoleResultValInjected exprPl val =
             )
 
 mkHoleResultVals ::
-    MonadA m =>
+    Monad m =>
     Maybe (Val (Input.Payload m a)) ->
     Input.Payload m dummy ->
     BaseExpr ->
@@ -603,7 +602,7 @@ mkHoleResultVals mInjectedArg exprPl base =
         inferred = exprPl ^. Input.inferred
 
 mkHoleResult ::
-    MonadA m =>
+    Monad m =>
     ConvertM.Context m -> EntityId ->
     ExprIRef.ValIProperty m -> HoleResultVal m IsInjected ->
     T m (HoleResult Guid m)
@@ -633,7 +632,7 @@ mkHoleResult sugarContext entityId stored val =
             }
 
 mkHoleResults ::
-    MonadA m =>
+    Monad m =>
     Maybe (Val (Input.Payload m a)) ->
     ConvertM.Context m ->
     Input.Payload m dummy -> ExprIRef.ValIProperty m ->
@@ -660,7 +659,7 @@ randomizeNonStoredParamIds gen =
         f _ prevFunc prevEntityId pl@(Nothing, _) = prevFunc prevEntityId pl
 
 writeExprMStored ::
-    MonadA m =>
+    Monad m =>
     ExprIRef.ValI m ->
     ExprStorePoint m a ->
     T m (Val (ExprIRef.ValI m, a))

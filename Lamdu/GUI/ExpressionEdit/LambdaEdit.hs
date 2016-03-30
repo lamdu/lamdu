@@ -6,7 +6,6 @@ module Lamdu.GUI.ExpressionEdit.LambdaEdit
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Lens.Tuple
-import           Control.MonadA (MonadA)
 import           Graphics.UI.Bottle.Animation (AnimId)
 import qualified Graphics.UI.Bottle.EventMap as E
 import           Graphics.UI.Bottle.ModKey (ModKey(..))
@@ -26,17 +25,17 @@ import qualified Lamdu.Sugar.Lens as SugarLens
 import           Lamdu.Sugar.Names.Types (Name(..))
 import qualified Lamdu.Sugar.Types as Sugar
 
-addScopeEdit :: MonadA m => Maybe (ExpressionGui m) -> ExpressionGui m -> ExpressionGui m
+addScopeEdit :: Monad m => Maybe (ExpressionGui m) -> ExpressionGui m -> ExpressionGui m
 addScopeEdit mScopeEdit e =
     e : (mScopeEdit ^.. Lens._Just)
     <&> ExpressionGui.egAlignment . _1 .~ 0.5
     & ExpressionGui.vboxTopFocal
 
-mkLhsEdits :: MonadA m => Maybe (ExpressionGui m) -> Maybe (ExpressionGui m) -> [ExpressionGui m]
+mkLhsEdits :: Monad m => Maybe (ExpressionGui m) -> Maybe (ExpressionGui m) -> [ExpressionGui m]
 mkLhsEdits mParamsEdit mScopeEdit =
     mParamsEdit <&> addScopeEdit mScopeEdit & (^.. Lens._Just)
 
-mkExpanded :: MonadA m => Maybe (ExpressionGui m) -> Maybe (ExpressionGui m) -> AnimId -> ExprGuiM m [ExpressionGui m]
+mkExpanded :: Monad m => Maybe (ExpressionGui m) -> Maybe (ExpressionGui m) -> AnimId -> ExprGuiM m [ExpressionGui m]
 mkExpanded mParamsEdit mScopeEdit animId =
     do
         labelEdit <- ExpressionGui.grammarLabel "→" animId
@@ -48,7 +47,7 @@ lamId :: Widget.Id -> Widget.Id
 lamId = (`Widget.joinId` ["lam"])
 
 mkShrunk ::
-    MonadA m => [Sugar.EntityId] -> Maybe (ExpressionGui m) -> Widget.Id ->
+    Monad m => [Sugar.EntityId] -> Maybe (ExpressionGui m) -> Widget.Id ->
     ExprGuiM m [ExpressionGui m]
 mkShrunk paramIds mScopeEdit myId =
     do
@@ -70,7 +69,7 @@ mkShrunk paramIds mScopeEdit myId =
         animId = Widget.toAnimId myId
 
 mkLightLambda ::
-    MonadA n =>
+    Monad n =>
     Maybe (ExpressionGui n) ->
     Maybe (ExpressionGui n) ->
     Sugar.BinderParams a m -> Widget.Id ->
@@ -95,7 +94,7 @@ mkLightLambda mParamsEdit mScopeEdit params myId =
         animId = Widget.toAnimId myId
 
 make ::
-    MonadA m =>
+    Monad m =>
     Sugar.Lambda (Name m) m (ExprGuiT.SugarExpr m) ->
     Sugar.Payload m ExprGuiT.Payload ->
     ExprGuiM m (ExpressionGui m)

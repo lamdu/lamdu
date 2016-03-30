@@ -10,7 +10,6 @@ import           Control.Lens.Operators
 import           Control.Lens.Tuple
 import           Control.Monad.Trans.Class (MonadTrans(..))
 import           Control.Monad.Trans.State (StateT, state, evalStateT)
-import           Control.MonadA (MonadA)
 import qualified Data.ByteString.Char8 as BS8
 import           Data.Map (Map)
 import qualified Data.Map as Map
@@ -46,12 +45,12 @@ newtype M m a = M
     } deriving (Functor, Applicative, Monad)
 egui :: Monad m => ExprGuiM m a -> M m a
 egui = M . lift
-transaction :: MonadA m => T m a -> M m a
+transaction :: Monad m => T m a -> M m a
 transaction = egui . ExprGuiM.transaction
 rand :: (Random r, Monad m) => M m r
 rand = M $ state random
 
-wenv :: MonadA m => WidgetEnvT (T m) a -> M m a
+wenv :: Monad m => WidgetEnvT (T m) a -> M m a
 wenv = egui . ExprGuiM.widgetEnv
 
 split :: Monad m => M m a -> M m a
@@ -60,24 +59,24 @@ split (M act) =
         splitGen <- M $ state Random.split
         M $ lift $ evalStateT act splitGen
 
-randAnimId :: MonadA m => M m AnimId
+randAnimId :: Monad m => M m AnimId
 randAnimId = WidgetId.toAnimId . WidgetIds.fromGuid <$> rand
 
-text :: MonadA m => String -> M m View
+text :: Monad m => String -> M m View
 text str = wenv . BWidgets.makeTextView str =<< randAnimId
 
-showIdentifier :: MonadA m => Identifier -> M m View
+showIdentifier :: Monad m => Identifier -> M m View
 showIdentifier (Identifier bs) = text (BS8.unpack bs)
 
 hbox :: [View] -> View
 hbox = GridView.horizontalAlign 0.5
 
-mkSpace :: MonadA m => M m View
+mkSpace :: Monad m => M m View
 mkSpace =
     egui ExprGuiM.readConfig
     <&> Spacer.makeHorizontal . realToFrac . Config.spaceWidth
 
-parensAround :: MonadA m => View -> M m View
+parensAround :: Monad m => View -> M m View
 parensAround view =
     do
         openParenView <- text "("
@@ -85,15 +84,15 @@ parensAround view =
         return $ hbox [openParenView, view, closeParenView]
 
 parens ::
-    MonadA m => ParentPrecedence -> MyPrecedence -> View -> M m View
+    Monad m => ParentPrecedence -> MyPrecedence -> View -> M m View
 parens parent my view
     | needParens parent my = parensAround view
     | otherwise = return view
 
-makeTVar :: MonadA m => T.Var p -> M m View
+makeTVar :: Monad m => T.Var p -> M m View
 makeTVar (T.Var name) = showIdentifier name
 
-makeTFun :: MonadA m => ParentPrecedence -> Type -> Type -> M m View
+makeTFun :: Monad m => ParentPrecedence -> Type -> Type -> M m View
 makeTFun parentPrecedence a b =
     case a of
     T.TRecord T.CEmpty -> [text "◗ "]
@@ -106,7 +105,7 @@ makeTFun parentPrecedence a b =
     <&> hbox
     >>= parens parentPrecedence (MyPrecedence 0)
 
-makeTInst :: MonadA m => ParentPrecedence -> T.NominalId -> Map T.ParamId Type -> M m View
+makeTInst :: Monad m => ParentPrecedence -> T.NominalId -> Map T.ParamId Type -> M m View
 makeTInst _parentPrecedence tid typeParams =
     do
         nameView <-
@@ -133,14 +132,14 @@ makeTInst _parentPrecedence tid typeParams =
                 >>= addBackgroundFrame
                 >>= afterName
 
-addValPadding :: MonadA m => View -> M m View
+addValPadding :: Monad m => View -> M m View
 addValPadding view =
     do
         config <- egui ExprGuiM.readConfig
         let padding = realToFrac <$> Config.valFramePadding config
         View.pad padding view & return
 
-addBGColor :: MonadA m => View -> M m View
+addBGColor :: Monad m => View -> M m View
 addBGColor view =
     do
         config <- egui ExprGuiM.readConfig
@@ -151,18 +150,18 @@ addBGColor view =
             & View.backgroundColor bgId layer color
             & return
 
-addBackgroundFrame :: MonadA m => View -> M m View
+addBackgroundFrame :: Monad m => View -> M m View
 addBackgroundFrame v = v & addValPadding >>= addBGColor
 
-makeEmptyRecord :: MonadA m => M m View
+makeEmptyRecord :: Monad m => M m View
 makeEmptyRecord = text "Ø"
 
-makeTag :: MonadA m => T.Tag -> M m View
+makeTag :: Monad m => T.Tag -> M m View
 makeTag tag =
     Anchors.assocNameRef tag & Transaction.getP & transaction
     >>= text
 
-makeField :: MonadA m => (T.Tag, Type) -> M m [(Vector2 Anim.R, View)]
+makeField :: Monad m => (T.Tag, Type) -> M m [(Vector2 Anim.R, View)]
 makeField (tag, fieldType) =
     Lens.sequenceOf (Lens.traversed . _2)
     [ (Vector2 1 0.5, makeTag tag)
@@ -170,7 +169,7 @@ makeField (tag, fieldType) =
     , (Vector2 0 0.5, splitMake (ParentPrecedence 0) fieldType)
     ]
 
-makeSumField :: MonadA m => (T.Tag, Type) -> M m [(Vector2 Anim.R, View)]
+makeSumField :: Monad m => (T.Tag, Type) -> M m [(Vector2 Anim.R, View)]
 makeSumField (tag, T.TRecord T.CEmpty) =
     makeTag tag <&> (,) (Vector2 1 0.5) <&> (:[])
 makeSumField (tag, fieldType) =
@@ -181,7 +180,7 @@ makeSumField (tag, fieldType) =
     ]
 
 makeComposite ::
-    MonadA m =>
+    Monad m =>
     ((T.Tag, Type) -> M m [(Vector2 Anim.R, View)]) -> T.Composite t -> M m View
 makeComposite _ T.CEmpty = makeEmptyRecord
 makeComposite mkField composite =
@@ -205,10 +204,10 @@ makeComposite mkField composite =
     where
         (fields, extension) = composite ^. orderedFlatComposite
 
-splitMake :: MonadA m => ParentPrecedence -> Type -> M m View
+splitMake :: Monad m => ParentPrecedence -> Type -> M m View
 splitMake parentPrecedence typ = split $ makeInternal parentPrecedence typ
 
-makeInternal :: MonadA m => ParentPrecedence -> Type -> M m View
+makeInternal :: Monad m => ParentPrecedence -> Type -> M m View
 makeInternal parentPrecedence typ =
     case typ of
     T.TVar var -> makeTVar var
@@ -221,7 +220,7 @@ makeInternal parentPrecedence typ =
         ] & sequenceA
         <&> hbox
 
-make :: MonadA m => AnimId -> Type -> ExprGuiM m View
+make :: Monad m => AnimId -> Type -> ExprGuiM m View
 make prefix t =
     do
         config <- ExprGuiM.readConfig

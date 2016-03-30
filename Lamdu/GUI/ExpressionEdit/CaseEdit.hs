@@ -6,7 +6,6 @@ module Lamdu.GUI.ExpressionEdit.CaseEdit
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Lens.Tuple
-import           Control.MonadA (MonadA)
 import qualified Data.List as List
 import           Data.Maybe (fromMaybe)
 import           Data.Monoid ((<>))
@@ -45,7 +44,7 @@ destCursorId (alt : _) _ =
     alt ^. Sugar.caHandler . Sugar.rPayload & WidgetIds.fromExprPayload
 
 make ::
-    MonadA m =>
+    Monad m =>
     Sugar.Case (Name m) m (ExprGuiT.SugarExpr m) ->
     Sugar.Payload m ExprGuiT.Payload ->
     ExprGuiM m (ExpressionGui m)
@@ -112,7 +111,7 @@ make (Sugar.Case mArg alts caseTail addAlt cEntityId) pl =
             <&> ExpressionGui.egWidget %~ Widget.weakerEvents addAltEventMap
 
 makeAltRow ::
-    MonadA m =>
+    Monad m =>
     Maybe Tag ->
     Sugar.CaseAlt (Name m) m (Sugar.Expression (Name m) m ExprGuiT.Payload) ->
     ExprGuiM m [ExpressionGui m]
@@ -138,7 +137,7 @@ makeAltRow mActiveTag (Sugar.CaseAlt delete tag altExpr) =
             & return
 
 makeAltsWidget ::
-    MonadA m =>
+    Monad m =>
     Maybe Tag ->
     [Sugar.CaseAlt (Name m) m (Sugar.Expression (Name m) m ExprGuiT.Payload)] ->
     Widget.Id -> ExprGuiM m (ExpressionGui m)
@@ -162,7 +161,7 @@ separationBar config width animId =
     & ExpressionGui.fromValueWidget
 
 makeOpenCase ::
-    MonadA m =>
+    Monad m =>
     ExprGuiT.SugarExpr m -> AnimId -> ExpressionGui m ->
     ExprGuiM m (ExpressionGui m)
 makeOpenCase rest animId altsGui =
@@ -182,21 +181,21 @@ makeOpenCase rest animId altsGui =
         targetWidth = altsGui ^. ExpressionGui.egWidget . Widget.width
 
 caseOpenEventMap ::
-    MonadA m =>
+    Monad m =>
     Config -> T m Sugar.EntityId -> Widget.EventHandlers (T m)
 caseOpenEventMap config open =
     Widget.keysEventMapMovesCursor (Config.caseOpenKeys config)
     (E.Doc ["Edit", "Case", "Open"]) $ WidgetIds.fromEntityId <$> open
 
 caseDelEventMap ::
-    MonadA m =>
+    Monad m =>
     Config -> T m Sugar.EntityId -> Widget.EventHandlers (T m)
 caseDelEventMap config delete =
     Widget.keysEventMapMovesCursor (Config.delKeys config)
     (E.Doc ["Edit", "Case", "Delete Alt"]) $ WidgetIds.fromEntityId <$> delete
 
 toLambdaCaseEventMap ::
-    MonadA m =>
+    Monad m =>
     Config -> T m Sugar.EntityId -> Widget.EventHandlers (T m)
 toLambdaCaseEventMap config toLamCase =
     Widget.keysEventMapMovesCursor (Config.delKeys config)

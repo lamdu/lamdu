@@ -6,7 +6,6 @@ module Lamdu.Sugar.Convert.Binder.Float
 
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
-import           Control.MonadA (MonadA)
 import qualified Data.Set as Set
 import qualified Data.Store.Property as Property
 import           Data.Store.Transaction (Transaction)
@@ -31,7 +30,7 @@ import           Prelude.Compat
 
 type T = Transaction
 
-moveToGlobalScope :: MonadA m => ConvertM.Context m -> V.Var -> ValI m -> T m ()
+moveToGlobalScope :: Monad m => ConvertM.Context m -> V.Var -> ValI m -> T m ()
 moveToGlobalScope ctx param letI =
     DataOps.newPublicDefinitionToIRef
     (ctx ^. ConvertM.scCodeAnchors) letI (ExprIRef.defI param)
@@ -140,7 +139,7 @@ sameLet redex =
     }
 
 floatLetToOuterScope ::
-    MonadA m =>
+    Monad m =>
     ValIProperty m -> Redex (ValIProperty m) -> ConvertM.Context m ->
     T m LetFloatResult
 floatLetToOuterScope topLevelProp redex ctx =
@@ -175,7 +174,7 @@ floatLetToOuterScope topLevelProp redex ctx =
             & Set.fromList
 
 makeFloatLetToOuterScope ::
-    MonadA m =>
+    Monad m =>
     ValIProperty m -> Redex (ValIProperty m) ->
     ConvertM m (T m LetFloatResult)
 makeFloatLetToOuterScope topLevelProp redex =

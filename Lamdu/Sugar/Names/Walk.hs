@@ -9,7 +9,6 @@ module Lamdu.Sugar.Names.Walk
     ) where
 
 import           Control.Lens.Operators
-import           Control.MonadA (MonadA)
 import           Data.Store.Transaction (Transaction)
 import           Lamdu.Expr.Type (Type)
 import qualified Lamdu.Expr.Type as T
@@ -29,7 +28,7 @@ newtype InTransaction m tm = InTransaction (forall a. m a -> T tm a)
 data NameType = DefName | TagName | NominalName | ParamName
 
 -- TODO: Rename MonadNameWalk
-class (MonadA m, MonadA (TM m)) => MonadNaming m where
+class (Monad m, Monad (TM m)) => MonadNaming m where
     type OldName m
     type NewName m
     type TM m :: * -> *

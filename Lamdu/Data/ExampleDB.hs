@@ -9,7 +9,6 @@ import           Control.Monad (unless, void)
 import           Control.Monad.Trans.Class (lift)
 import           Control.Monad.Trans.Writer (WriterT)
 import qualified Control.Monad.Trans.Writer as Writer
-import           Control.MonadA (MonadA)
 import           Data.Foldable (traverse_)
 import           Data.List.Split (splitOn)
 import qualified Data.Map as Map
@@ -46,14 +45,14 @@ import           Prelude.Compat
 
 type T = Transaction
 
-setName :: (MonadA m, UniqueId.ToGuid a) => a -> String -> T m ()
+setName :: (Monad m, UniqueId.ToGuid a) => a -> String -> T m ()
 setName x = setP . Db.assocNameRef $ x
 
-setTagOrder :: MonadA m => T.Tag -> Builtins.Order -> T m ()
+setTagOrder :: Monad m => T.Tag -> Builtins.Order -> T m ()
 setTagOrder = Transaction.setP . assocTagOrder
 
 namedId ::
-    forall a m. (MonadA m, IsString a, UniqueId.ToGuid a) => String -> T m a
+    forall a m. (Monad m, IsString a, UniqueId.ToGuid a) => String -> T m a
 namedId name =
     do
         setName tag name
@@ -102,7 +101,7 @@ publicize act g =
 
 type M m = WriterT (Public m) (T m)
 
-blessAnchors :: MonadA m => M m ()
+blessAnchors :: Monad m => M m ()
 blessAnchors =
     do
         mapM_ describeAnchorTag Builtins.anchorTags
@@ -120,7 +119,7 @@ blessAnchors =
                 lift $ setTagOrder tag order
                 Writer.tell $ mempty { publicTags = [tag] }
 
-newTId :: MonadA m => String -> M m T.NominalId
+newTId :: Monad m => String -> M m T.NominalId
 newTId n = publicize (namedId n) $ \x -> mempty { publicTIds = [x] }
 
 newPublicDef ::
@@ -130,7 +129,7 @@ newPublicDef act = publicize act $ \x -> mempty { publicDefs = [x] }
 type TypeCtor = [Type] -> Type
 
 newNominal ::
-    MonadA m =>
+    Monad m =>
     T.NominalId -> [(T.ParamId, T.TypeVar)] ->
     ({-fixpoint:-}TypeCtor -> Scheme) ->
     T m TypeCtor
@@ -150,12 +149,12 @@ data Ctor = Ctor
     }
 
 nominalSum ::
-    MonadA m => T.NominalId -> [(T.ParamId, T.TypeVar)] -> (TypeCtor -> [Ctor]) ->
+    Monad m => T.NominalId -> [(T.ParamId, T.TypeVar)] -> (TypeCtor -> [Ctor]) ->
     M m TypeCtor
 nominalSum tid params ctors =
     newNominal tid params (Scheme.mono . sumType . ctors) & lift
 
-createMaybe :: MonadA m => M m TypeCtor
+createMaybe :: Monad m => M m TypeCtor
 createMaybe =
     do
         tid <- newTId "Maybe"
@@ -166,7 +165,7 @@ createMaybe =
     where
         valT = "a"
 
-createStream :: MonadA m => M m TypeCtor
+createStream :: Monad m => M m TypeCtor
 createStream =
     lift $
     newNominal Builtins.streamTid [(Builtins.valTypeParamId, valT)] $
@@ -182,7 +181,7 @@ createStream =
     where
         valT = "a"
 
-createInfiniteStream :: MonadA m => M m TypeCtor
+createInfiniteStream :: Monad m => M m TypeCtor
 createInfiniteStream =
     do
         tid <- newTId "InfStream"
@@ -201,7 +200,7 @@ array [typeParam] =
     & T.TInst Builtins.arrayTid
 array _ = error "array bad number of args"
 
-createBool :: MonadA m => M m Type
+createBool :: Monad m => M m Type
 createBool =
     do
         tid <- newTId "Bool"
@@ -218,12 +217,12 @@ bytes = PrimVal.bytesType
 float :: Type
 float = PrimVal.floatType
 
-createText :: MonadA m => M m Type
+createText :: Monad m => M m Type
 createText =
     Scheme.mono bytes
     & const & newNominal Builtins.textTid [] & lift <&> ($ [])
 
-createPublics :: MonadA m => T m (Public m)
+createPublics :: Monad m => T m (Public m)
 createPublics =
     do
         blessAnchors
@@ -296,7 +295,7 @@ createPublics =
         newPublicBuiltinQualified_ fullyQualifiedName presMode typ =
             void $ newPublicBuiltinQualified fullyQualifiedName presMode typ
 
-newBranch :: MonadA m => String -> Version m -> T m (Branch m)
+newBranch :: Monad m => String -> Version m -> T m (Branch m)
 newBranch name ver =
     do
         branch <- Branch.new ver

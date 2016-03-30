@@ -6,7 +6,6 @@ module Lamdu.GUI.ParamEdit
 
 import           Control.Lens.Operators
 import           Control.Lens.Tuple
-import           Control.MonadA (MonadA)
 import qualified Data.Map as Map
 import           Data.Store.Transaction (Transaction)
 import qualified Graphics.UI.Bottle.EventMap as E
@@ -69,13 +68,13 @@ eventMapAddNextParam config fpAdd =
         (E.Doc ["Edit", "Add next parameter"])
 
 eventMapOrderParam ::
-    MonadA m => [ModKey] -> String -> T m () -> Widget.EventHandlers (T m)
+    Monad m => [ModKey] -> String -> T m () -> Widget.EventHandlers (T m)
 eventMapOrderParam keys docSuffix action =
     Widget.keysEventMap keys (E.Doc ["Edit", "Parameter", "Move " ++ docSuffix])
     action
 
 eventParamDelEventMap ::
-    MonadA m =>
+    Monad m =>
     T m Sugar.ParamDelResult -> [ModKey] -> String -> Widget.Id ->
     Widget.EventHandlers (T m)
 eventParamDelEventMap fpDel keys docSuffix dstPosId =
@@ -103,7 +102,7 @@ data Info m = Info
 
 -- exported for use in definition sugaring.
 make ::
-    MonadA m =>
+    Monad m =>
     ExpressionGui.EvalAnnotationOptions ->
     ExprGuiT.ShowAnnotation -> Widget.Id -> Widget.Id ->
     Sugar.FuncParam (Info m) -> ExprGuiM m (ExpressionGui m)

@@ -4,7 +4,6 @@ module Lamdu.GUI.ExpressionEdit.InjectEdit
     ) where
 
 import           Control.Lens.Operators
-import           Control.MonadA (MonadA)
 import qualified Lamdu.GUI.ExpressionEdit.TagEdit as TagEdit
 import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
@@ -19,7 +18,7 @@ import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Prelude.Compat
 
 makeCommon ::
-    MonadA m =>
+    Monad m =>
     Sugar.TagG (Name m) ->
     NearestHoles -> [ExpressionGui m] ->
     ExprGuiM m (ExpressionGui m)
@@ -29,7 +28,7 @@ makeCommon tagG nearestHoles valEdits =
         ExpressionGui.hboxSpaced $ tagEdit : valEdits
 
 make ::
-    MonadA m =>
+    Monad m =>
     Sugar.Inject (Name m) (ExprGuiT.SugarExpr m) ->
     Sugar.Payload m ExprGuiT.Payload ->
     ExprGuiM m (ExpressionGui m)

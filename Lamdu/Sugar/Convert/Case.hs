@@ -9,7 +9,6 @@ import           Prelude.Compat
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Monad (void)
-import           Control.MonadA (MonadA)
 import           Data.Maybe.Utils (unsafeUnjust)
 import           Data.Store.Guid (Guid)
 import qualified Data.Store.Property as Property
@@ -39,7 +38,7 @@ plValI = Input.stored . Property.pVal
 convertTag :: EntityId -> T.Tag -> TagG Guid
 convertTag inst tag = TagG inst tag $ UniqueId.toGuid tag
 
-makeAddAlt :: MonadA m =>
+makeAddAlt :: Monad m =>
     ExprIRef.ValIProperty m ->
     ConvertM m (Transaction m CaseAddAltResult)
 makeAddAlt stored =
@@ -66,7 +65,7 @@ makeAddAlt stored =
             where
                 resultEntity = EntityId.ofValI resultI
 
-convertAbsurd :: MonadA m => Input.Payload m a -> ConvertM m (ExpressionU m a)
+convertAbsurd :: Monad m => Input.Payload m a -> ConvertM m (ExpressionU m a)
 convertAbsurd exprPl =
     do
         addAlt <- exprPl ^. Input.stored & makeAddAlt
@@ -84,7 +83,7 @@ convertAbsurd exprPl =
             & addActions exprPl
 
 deleteAlt ::
-    MonadA m =>
+    Monad m =>
     ExprIRef.ValIProperty m -> ExprIRef.ValI m ->
     Case name0 m (Expression name2 m a1) -> Val (Input.Payload m a) ->
     Expression name1 m0 a0 ->
@@ -122,7 +121,7 @@ deleteAlt stored restI restS expr exprS =
                         ClosedCase open -> delete >> open & Just
 
 convertAlt ::
-    (MonadA m, Monoid a) =>
+    (Monad m, Monoid a) =>
     ExprIRef.ValIProperty m -> ExprIRef.ValI m ->
     Case name m (ExpressionU m a) ->
     EntityId -> T.Tag -> Val (Input.Payload m a) ->
@@ -138,14 +137,14 @@ convertAlt stored restI restS inst tag expr =
             }
 
 setTagOrder ::
-    MonadA m => Int -> CaseAddAltResult -> Transaction m CaseAddAltResult
+    Monad m => Int -> CaseAddAltResult -> Transaction m CaseAddAltResult
 setTagOrder i r =
     do
         Transaction.setP (assocTagOrder (r ^. caarNewTag . tagVal)) i
         return r
 
 convert ::
-    (MonadA m, Monoid a) => V.Case (Val (Input.Payload m a)) ->
+    (Monad m, Monoid a) => V.Case (Val (Input.Payload m a)) ->
     Input.Payload m a -> ConvertM m (ExpressionU m a)
 convert (V.Case tag val rest) exprPl = do
     restS <- ConvertM.convertSubexpression rest

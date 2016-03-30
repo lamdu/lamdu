@@ -7,7 +7,6 @@ import           Prelude.Compat
 
 import           Control.Lens.Operators
 import           Control.Lens.Tuple
-import           Control.MonadA (MonadA)
 import qualified Data.List as List
 import           Data.Monoid ((<>))
 import           Data.Store.Transaction (Transaction)
@@ -39,12 +38,12 @@ defaultPos [] myId = myId
 defaultPos (f : _) _ =
     f ^. Sugar.rfExpr . Sugar.rPayload & WidgetIds.fromExprPayload
 
-shouldAddBg :: MonadA m => Sugar.Record name m a -> Bool
+shouldAddBg :: Monad m => Sugar.Record name m a -> Bool
 shouldAddBg (Sugar.Record [] Sugar.ClosedRecord{} _) = False
 shouldAddBg _ = True
 
 make ::
-    MonadA m =>
+    Monad m =>
     Sugar.Record (Name m) m (ExprGuiT.SugarExpr m) ->
     Sugar.Payload m ExprGuiT.Payload ->
     ExprGuiM m (ExpressionGui m)
@@ -83,7 +82,7 @@ make record@(Sugar.Record fields recordTail addField) pl =
         addBg = shouldAddBg record
 
 makeFieldRow ::
-    MonadA m =>
+    Monad m =>
     Sugar.RecordField (Name m) m (Sugar.Expression (Name m) m ExprGuiT.Payload) ->
     ExprGuiM m [ExpressionGui m]
 makeFieldRow (Sugar.RecordField delete tag fieldExpr) =
@@ -103,7 +102,7 @@ makeFieldRow (Sugar.RecordField delete tag fieldExpr) =
             & return
 
 makeFieldsWidget ::
-    MonadA m =>
+    Monad m =>
     [Sugar.RecordField (Name m) m (Sugar.Expression (Name m) m ExprGuiT.Payload)] ->
     Widget.Id -> ExprGuiM m (ExpressionGui m)
 makeFieldsWidget [] myId =
@@ -127,7 +126,7 @@ separationBar config width animId =
     & ExpressionGui.fromValueWidget
 
 makeOpenRecord ::
-    MonadA m =>
+    Monad m =>
     ExpressionGui m -> ExprGuiT.SugarExpr m -> AnimId ->
     ExprGuiM m (ExpressionGui m)
 makeOpenRecord fieldsGui rest animId =
@@ -147,14 +146,14 @@ makeOpenRecord fieldsGui rest animId =
         targetWidth = fieldsGui ^. ExpressionGui.egWidget . Widget.width
 
 recordOpenEventMap ::
-    MonadA m =>
+    Monad m =>
     Config -> T m Sugar.EntityId -> Widget.EventHandlers (T m)
 recordOpenEventMap config open =
     Widget.keysEventMapMovesCursor (Config.recordOpenKeys config)
     (E.Doc ["Edit", "Record", "Open"]) $ WidgetIds.fromEntityId <$> open
 
 recordDelEventMap ::
-    MonadA m =>
+    Monad m =>
     Config -> T m Sugar.EntityId -> Widget.EventHandlers (T m)
 recordDelEventMap config delete =
     Widget.keysEventMapMovesCursor (Config.delKeys config)

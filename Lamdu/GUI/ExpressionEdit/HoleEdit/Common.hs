@@ -4,7 +4,6 @@ module Lamdu.GUI.ExpressionEdit.HoleEdit.Common
     ) where
 
 import           Control.Lens.Operators
-import           Control.MonadA (MonadA)
 import           Data.Monoid ((<>))
 import qualified Graphics.DrawingCombinators as Draw
 import           Graphics.UI.Bottle.Animation (AnimId)
@@ -21,7 +20,7 @@ addBackground myId layers =
     Widget.backgroundColor (Config.layerHoleBG layers)
     (myId <> ["hole background"])
 
-addDarkBackground :: MonadA m => AnimId -> ExpressionGui f -> ExprGuiM m (ExpressionGui f)
+addDarkBackground :: Monad m => AnimId -> ExpressionGui f -> ExprGuiM m (ExpressionGui f)
 addDarkBackground animId widget =
     do
         config <- ExprGuiM.readConfig

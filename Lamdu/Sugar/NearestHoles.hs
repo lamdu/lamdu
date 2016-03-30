@@ -14,7 +14,6 @@ import           Control.Lens.Operators
 import           Control.Lens.Tuple
 import           Control.Monad.Trans.State (State, evalState)
 import qualified Control.Monad.Trans.State as State
-import           Control.MonadA (MonadA)
 import qualified Lamdu.Sugar.Lens as SugarLens
 import qualified Lamdu.Sugar.Types as Sugar
 
@@ -36,7 +35,7 @@ none :: NearestHoles
 none = NearestHoles Nothing Nothing
 
 add ::
-    MonadA m =>
+    Monad m =>
     (forall a b.
       Lens.Traversal
       (f (Sugar.Expression name m a))

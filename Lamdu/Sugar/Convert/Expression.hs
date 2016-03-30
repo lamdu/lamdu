@@ -4,7 +4,6 @@ module Lamdu.Sugar.Convert.Expression
     ) where
 
 import           Control.Lens.Operators
-import           Control.MonadA (MonadA)
 import qualified Data.ByteString as SBS
 import           Data.Store.Property (Property(..))
 import qualified Data.Store.Property as Property
@@ -46,14 +45,14 @@ convertLiteralCommon mkLit mkBody val exprPl =
         iref = exprPl ^. Input.stored . Property.pVal
 
 convertLiteralFloat ::
-    MonadA m => Double -> Input.Payload m a -> ConvertM m (ExpressionU m a)
+    Monad m => Double -> Input.Payload m a -> ConvertM m (ExpressionU m a)
 convertLiteralFloat = convertLiteralCommon LiteralNum PrimVal.Float
 
 convertLiteralBytes ::
-    MonadA m => SBS.ByteString -> Input.Payload m a -> ConvertM m (ExpressionU m a)
+    Monad m => SBS.ByteString -> Input.Payload m a -> ConvertM m (ExpressionU m a)
 convertLiteralBytes = convertLiteralCommon LiteralBytes PrimVal.Bytes
 
-convert :: (MonadA m, Monoid a) => Val (Input.Payload m a) -> ConvertM m (ExpressionU m a)
+convert :: (Monad m, Monoid a) => Val (Input.Payload m a) -> ConvertM m (ExpressionU m a)
 convert v =
     v ^. V.payload
     & case v ^. V.body of

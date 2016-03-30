@@ -8,7 +8,6 @@ module Lamdu.GUI.ExpressionEdit.TagEdit
 import           Prelude.Compat
 
 import           Control.Lens.Operators
-import           Control.MonadA (MonadA)
 import           Data.Store.Transaction (Transaction)
 import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.Bottle.EventMap as E
@@ -29,7 +28,7 @@ import qualified Lamdu.Sugar.Types as Sugar
 type T = Transaction
 
 makeTagNameEdit ::
-    MonadA m => Widget.EventHandlers (T m) -> Draw.Color ->
+    Monad m => Widget.EventHandlers (T m) -> Draw.Color ->
     Sugar.TagG (Name m) -> ExprGuiM m (Widget (T m))
 makeTagNameEdit jumpNextEventMap tagColor tagG =
     ExpressionGui.makeNameEditWith (Widget.weakerEvents jumpNextEventMap)
@@ -39,7 +38,7 @@ makeTagNameEdit jumpNextEventMap tagColor tagG =
         myId = WidgetIds.fromEntityId (tagG ^. Sugar.tagInstance)
 
 makeTagH ::
-    MonadA m =>
+    Monad m =>
     Draw.Color -> NearestHoles -> Sugar.TagG (Name m) ->
     ExprGuiM m (ExpressionGui m)
 makeTagH tagColor nearestHoles tagG =
@@ -59,14 +58,14 @@ makeTagH tagColor nearestHoles tagG =
             <&> ExpressionGui.fromValueWidget
 
 makeRecordTag ::
-    MonadA m => NearestHoles -> Sugar.TagG (Name m) -> ExprGuiM m (ExpressionGui m)
+    Monad m => NearestHoles -> Sugar.TagG (Name m) -> ExprGuiM m (ExpressionGui m)
 makeRecordTag nearestHoles tagG =
     do
         Config.Name{..} <- Config.name <$> ExprGuiM.readConfig
         makeTagH recordTagColor nearestHoles tagG
 
 makeCaseTag ::
-    MonadA m => NearestHoles -> Sugar.TagG (Name m) -> ExprGuiM m (ExpressionGui m)
+    Monad m => NearestHoles -> Sugar.TagG (Name m) -> ExprGuiM m (ExpressionGui m)
 makeCaseTag nearestHoles tagG =
     do
         Config.Name{..} <- Config.name <$> ExprGuiM.readConfig
@@ -74,7 +73,7 @@ makeCaseTag nearestHoles tagG =
 
 -- | Unfocusable tag view (e.g: in apply params)
 makeParamTag ::
-    MonadA m => Sugar.TagG (Name m) -> ExprGuiM m (ExpressionGui m)
+    Monad m => Sugar.TagG (Name m) -> ExprGuiM m (ExpressionGui m)
 makeParamTag t =
     do
         Config.Name{..} <- Config.name <$> ExprGuiM.readConfig

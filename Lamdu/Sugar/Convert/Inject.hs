@@ -5,7 +5,6 @@ module Lamdu.Sugar.Convert.Inject
 
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
-import           Control.MonadA (MonadA)
 import qualified Lamdu.Expr.Lens as ExprLens
 import qualified Lamdu.Expr.UniqueId as UniqueId
 import           Lamdu.Expr.Val (Val)
@@ -20,7 +19,7 @@ import           Lamdu.Sugar.Types
 
 import           Prelude.Compat
 
-convert :: (MonadA m, Monoid a) => V.Inject (Val (Input.Payload m a)) -> Input.Payload m a -> ConvertM m (ExpressionU m a)
+convert :: (Monad m, Monoid a) => V.Inject (Val (Input.Payload m a)) -> Input.Payload m a -> ConvertM m (ExpressionU m a)
 convert (V.Inject tag val) exprPl =
     -- TODO: Lots of duplication here from getField, generalize both!
     Inject

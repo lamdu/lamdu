@@ -11,7 +11,6 @@ import           Control.Lens.Operators
 import           Control.Monad.Trans.Class (MonadTrans(..))
 import           Control.Monad.Trans.State (mapStateT)
 import qualified Control.Monad.Trans.State as State
-import           Control.MonadA (MonadA)
 import qualified Data.Store.Property as Property
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
@@ -32,7 +31,7 @@ import qualified Lamdu.Sugar.Convert.Input as Input
 
 type T = Transaction
 
-loadStored :: MonadA m => ExprIRef.ValIProperty m -> T m (Maybe ParamList)
+loadStored :: Monad m => ExprIRef.ValIProperty m -> T m (Maybe ParamList)
 loadStored = Transaction.getP . assocFieldParamList . Property.value
 
 mkFuncType :: Infer.Scope -> ParamList -> Infer Type
@@ -44,7 +43,7 @@ mkFuncType scope paramList =
         step tag rest = T.CExtend tag <$> Infer.freshInferredVar scope "t" <*> rest
 
 loadForLambdas ::
-    MonadA m => Val (Input.Payload m a) -> IRefInfer.M m (Val (Input.Payload m a))
+    Monad m => Val (Input.Payload m a) -> IRefInfer.M m (Val (Input.Payload m a))
 loadForLambdas val =
     do
         Lens.itraverseOf_ ExprLens.subExprPayloads loadLambdaParamList val

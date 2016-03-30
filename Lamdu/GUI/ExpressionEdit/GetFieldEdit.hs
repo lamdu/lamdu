@@ -4,7 +4,6 @@ module Lamdu.GUI.ExpressionEdit.GetFieldEdit
     ) where
 
 import           Control.Lens.Operators
-import           Control.MonadA (MonadA)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Lamdu.GUI.ExpressionEdit.TagEdit as TagEdit
 import           Lamdu.GUI.ExpressionGui (ExpressionGui)
@@ -19,7 +18,7 @@ import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Prelude.Compat
 
 make ::
-    MonadA m =>
+    Monad m =>
     Sugar.GetField (Name m) (ExprGuiT.SugarExpr m) ->
     Sugar.Payload m ExprGuiT.Payload ->
     ExprGuiM m (ExpressionGui m)

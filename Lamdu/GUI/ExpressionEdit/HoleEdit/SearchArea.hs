@@ -4,7 +4,6 @@ module Lamdu.GUI.ExpressionEdit.HoleEdit.SearchArea
     ) where
 
 import           Control.Lens.Operators
-import           Control.MonadA (MonadA)
 import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widgets as BWidgets
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
@@ -34,7 +33,7 @@ fdConfig Config.Hole{..} = FocusDelegator.Config
 
 -- Has an ExpressionGui.stdWrap/typeView under the search term
 makeStdWrapped ::
-    MonadA m =>
+    Monad m =>
     Sugar.Payload m ExprGuiT.Payload -> HoleInfo m -> ExprGuiM m (ExpressionGui m)
 makeStdWrapped pl holeInfo =
     do

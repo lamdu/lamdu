@@ -6,7 +6,6 @@ module Lamdu.GUI.ExpressionEdit.HoleEdit.Wrapper
 
 import           Control.Lens.Operators
 import           Control.Lens.Tuple
-import           Control.MonadA (MonadA)
 import           Data.Monoid ((<>))
 import qualified Data.Store.Transaction as Transaction
 import qualified Graphics.UI.Bottle.EventMap as E
@@ -29,7 +28,7 @@ import           Prelude.Compat
 type T = Transaction.Transaction
 
 modifyWrappedEventMap ::
-    (MonadA m, Applicative f) =>
+    (Monad m, Applicative f) =>
     Config -> Bool -> Sugar.HoleArg m (ExpressionN m a) -> WidgetIds ->
     Widget.EventHandlers f ->
     Widget.EventHandlers f
@@ -46,7 +45,7 @@ modifyWrappedEventMap config argIsFocused arg WidgetIds{..} eventMap
         arg ^. Sugar.haExpr . Sugar.rPayload
 
 makeUnwrapEventMap ::
-    (MonadA m, MonadA f) =>
+    (Monad m, Monad f) =>
     Sugar.HoleArg f (ExpressionN f a) -> WidgetIds ->
     ExprGuiM m (Widget.EventHandlers (T f))
 makeUnwrapEventMap arg WidgetIds{..} =
@@ -65,7 +64,7 @@ makeUnwrapEventMap arg WidgetIds{..} =
                         doc = E.Doc ["Navigation", "Hole", "Open"]
 
 make ::
-    MonadA m => WidgetIds ->
+    Monad m => WidgetIds ->
     Sugar.HoleArg m (ExpressionN m ExprGuiT.Payload) ->
     ExprGuiM m (ExpressionGui m)
 make WidgetIds{..} arg =

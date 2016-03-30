@@ -7,7 +7,6 @@ module Lamdu.Sugar.Convert.Binder.Inline
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Lens.Tuple
-import           Control.MonadA (MonadA)
 import qualified Data.Store.Property as Property
 import           Data.Store.Transaction (Transaction)
 import           Lamdu.Expr.IRef (ValIProperty, ValI)
@@ -68,7 +67,7 @@ cursorDest val =
     & (^. _2 . V.payload)
 
 inlineLet ::
-    MonadA m => ValIProperty m -> Redex (ValI m) -> Transaction m EntityId
+    Monad m => ValIProperty m -> Redex (ValI m) -> Transaction m EntityId
 inlineLet topLevelProp redex =
     redexLam redex ^. V.lamResult
     <&> Just

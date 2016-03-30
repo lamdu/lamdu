@@ -16,7 +16,6 @@ import           Control.Lens.Tuple
 import           Control.Monad.Trans.Class (lift)
 import           Control.Monad.Trans.Either (EitherT(..), hoistEither)
 import           Control.Monad.Trans.State (StateT(..), mapStateT)
-import           Control.MonadA (MonadA)
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
 import qualified Lamdu.Data.Definition as Definition
@@ -56,7 +55,7 @@ typeOfDefBody (Definition.BodyExpr defExpr) =
     Definition.NoExportedType -> unknownGlobalType
 typeOfDefBody (Definition.BodyBuiltin (Definition.Builtin _ scheme)) = scheme
 
-loader :: MonadA m => Loader (EitherT Error (T m))
+loader :: Monad m => Loader (EitherT Error (T m))
 loader =
     Loader
     { InferLoad.loadTypeOf =
@@ -74,12 +73,12 @@ liftInfer :: Monad m => Infer a -> M m a
 liftInfer = mapStateT toEitherT . Infer.run
 
 loadInferScope ::
-    MonadA m => Infer.Scope -> Val a -> M m (Val (Infer.Payload, a))
+    Monad m => Infer.Scope -> Val a -> M m (Val (Infer.Payload, a))
 loadInferScope scope val =
     InferLoad.loadInfer loader scope val & lift >>= liftInfer
 
 loadInferInto ::
-    MonadA m => Infer.Payload -> Val a -> M m (Val (Infer.Payload, a))
+    Monad m => Infer.Payload -> Val a -> M m (Val (Infer.Payload, a))
 loadInferInto pl val =
     do
         inferredVal <- loadInferScope (pl ^. Infer.plScope) val
@@ -90,7 +89,7 @@ loadInferInto pl val =
                 Update.inferredVal inferredVal & Update.liftInfer
 
 loadInferRecursive ::
-    MonadA m => ExprIRef.DefI m -> Val a -> M m (Val (Infer.Payload, a))
+    Monad m => ExprIRef.DefI m -> Val a -> M m (Val (Infer.Payload, a))
 loadInferRecursive defI val =
     do
         defType <- Infer.freshInferredVar Infer.emptyScope "r" & liftInfer

@@ -33,7 +33,6 @@ import           Control.Lens.Tuple
 import           Control.Monad.Trans.Class (lift)
 import           Control.Monad.Trans.RWS (RWST, runRWST)
 import qualified Control.Monad.Trans.RWS as RWS
-import           Control.MonadA (MonadA)
 import           Data.Binary (Binary)
 import qualified Data.Char as Char
 import           Data.CurAndPrev (CurAndPrev)
@@ -77,7 +76,7 @@ holePickersAddDocPrefix (_:_) doc =
     & Lens.element 0 %~ Char.toLower
     & ("Pick result and " ++)
 
-holePickersAction :: MonadA m => HolePickers m -> T m Widget.EventResult
+holePickersAction :: Monad m => HolePickers m -> T m Widget.EventResult
 holePickersAction = fmap mconcat . sequence
 
 newtype Output m = Output
@@ -110,36 +109,36 @@ Lens.makeLenses ''Askable
 Lens.makeLenses ''ExprGuiM
 
 -- TODO: To lens
-localEnv :: MonadA m => (WE.Env -> WE.Env) -> ExprGuiM m a -> ExprGuiM m a
+localEnv :: Monad m => (WE.Env -> WE.Env) -> ExprGuiM m a -> ExprGuiM m a
 localEnv = (exprGuiM %~) . RWS.mapRWST . WE.localEnv
 
-withFgColor :: MonadA m => Draw.Color -> ExprGuiM m a -> ExprGuiM m a
+withFgColor :: Monad m => Draw.Color -> ExprGuiM m a -> ExprGuiM m a
 withFgColor = localEnv . WE.setTextColor
 
-withLocalUnderline :: MonadA m => TextView.Underline -> ExprGuiM m a -> ExprGuiM m a
+withLocalUnderline :: Monad m => TextView.Underline -> ExprGuiM m a -> ExprGuiM m a
 withLocalUnderline underline =
     WE.envTextStyle . TextEdit.sTextViewStyle .
     TextView.styleUnderline ?~ underline
     & localEnv
 
-readStyle :: MonadA m => ExprGuiM m Style
+readStyle :: Monad m => ExprGuiM m Style
 readStyle = ExprGuiM $ Lens.view aStyle
 
-readSettings :: MonadA m => ExprGuiM m Settings
+readSettings :: Monad m => ExprGuiM m Settings
 readSettings = ExprGuiM $ Lens.view aSettings
 
-readConfig :: MonadA m => ExprGuiM m Config
+readConfig :: Monad m => ExprGuiM m Config
 readConfig = ExprGuiM $ Lens.view aConfig
 
-readCodeAnchors :: MonadA m => ExprGuiM m (Anchors.CodeProps m)
+readCodeAnchors :: Monad m => ExprGuiM m (Anchors.CodeProps m)
 readCodeAnchors = ExprGuiM $ Lens.view aCodeAnchors
 
-mkPrejumpPosSaver :: MonadA m => ExprGuiM m (T m ())
+mkPrejumpPosSaver :: Monad m => ExprGuiM m (T m ())
 mkPrejumpPosSaver =
     DataOps.savePreJumpPosition <$> readCodeAnchors <*> widgetEnv WE.readCursor
 
 makeSubexpression ::
-    MonadA m =>
+    Monad m =>
     (Precedence -> Precedence) -> ExprGuiT.SugarExpr m -> ExprGuiM m (ExpressionGui m)
 makeSubexpression onPrecedence expr =
     advanceDepth (return . Layout.fromCenteredWidget . Widget.fromView) animId $
@@ -150,7 +149,7 @@ makeSubexpression onPrecedence expr =
         animId = toAnimId $ WidgetIds.fromExprPayload $ expr ^. Sugar.rPayload
 
 advanceDepth ::
-    MonadA m => (View -> ExprGuiM m r) ->
+    Monad m => (View -> ExprGuiM m r) ->
     AnimId -> ExprGuiM m r -> ExprGuiM m r
 advanceDepth f animId action =
     do
@@ -165,7 +164,7 @@ advanceDepth f animId action =
             & widgetEnv
 
 run ::
-    MonadA m =>
+    Monad m =>
     (ExprGuiT.SugarExpr m -> ExprGuiM m (ExpressionGui m)) ->
     Anchors.CodeProps m -> Config -> Settings -> Style -> ExprGuiM m a ->
     WidgetEnvT (T m) a
@@ -185,35 +184,35 @@ run makeSubexpr codeAnchors config settings style (ExprGuiM action) =
     where
         f (x, (), _output) = x
 
-widgetEnv :: MonadA m => WidgetEnvT (T m) a -> ExprGuiM m a
+widgetEnv :: Monad m => WidgetEnvT (T m) a -> ExprGuiM m a
 widgetEnv = ExprGuiM . lift
 
 makeLabel ::
-    MonadA m => String -> AnimId -> ExprGuiM m (Widget f)
+    Monad m => String -> AnimId -> ExprGuiM m (Widget f)
 makeLabel text animId = widgetEnv $ BWidgets.makeLabel text animId
 
-transaction :: MonadA m => T m a -> ExprGuiM m a
+transaction :: Monad m => T m a -> ExprGuiM m a
 transaction = widgetEnv . lift
 
-getP :: MonadA m => Transaction.MkProperty m a -> ExprGuiM m a
+getP :: Monad m => Transaction.MkProperty m a -> ExprGuiM m a
 getP = transaction . Transaction.getP
 
 getCodeAnchor ::
-    MonadA m => (Anchors.CodeProps m -> Transaction.MkProperty m b) -> ExprGuiM m b
+    Monad m => (Anchors.CodeProps m -> Transaction.MkProperty m b) -> ExprGuiM m b
 getCodeAnchor anchor = getP . anchor =<< readCodeAnchors
 
 assignCursor ::
-    MonadA m => Widget.Id -> Widget.Id ->
+    Monad m => Widget.Id -> Widget.Id ->
     ExprGuiM m a -> ExprGuiM m a
 assignCursor x y = localEnv $ WE.envAssignCursor x y
 
 assignCursorPrefix ::
-    MonadA m => Widget.Id -> (AnimId -> Widget.Id) ->
+    Monad m => Widget.Id -> (AnimId -> Widget.Id) ->
     ExprGuiM m a -> ExprGuiM m a
 assignCursorPrefix x y = localEnv $ WE.envAssignCursorPrefix x y
 
 makeFocusDelegator ::
-    (Applicative f, MonadA m) =>
+    (Applicative f, Monad m) =>
     FocusDelegator.Config ->
     FocusDelegator.FocusEntryTarget ->
     Widget.Id ->
@@ -224,29 +223,29 @@ makeFocusDelegator =
 
 -- Used vars:
 
-listener :: MonadA m => (Output m -> b) -> ExprGuiM m a -> ExprGuiM m (a, b)
+listener :: Monad m => (Output m -> b) -> ExprGuiM m a -> ExprGuiM m (a, b)
 listener f =
     exprGuiM %~ RWS.listen
     & Lens.mapped . Lens.mapped . _2 %~ f
 
-listenResultPickers :: MonadA m => ExprGuiM m a -> ExprGuiM m (a, HolePickers m)
+listenResultPickers :: Monad m => ExprGuiM m a -> ExprGuiM m (a, HolePickers m)
 listenResultPickers = listener oHolePickers
 
-addResultPicker :: MonadA m => T m Widget.EventResult -> ExprGuiM m ()
+addResultPicker :: Monad m => T m Widget.EventResult -> ExprGuiM m ()
 addResultPicker picker = ExprGuiM $ RWS.tell mempty { oHolePickers = [picker] }
 
-readMScopeId :: MonadA m => ExprGuiM m (CurAndPrev (Maybe ScopeId))
+readMScopeId :: Monad m => ExprGuiM m (CurAndPrev (Maybe ScopeId))
 readMScopeId = ExprGuiM $ Lens.view aMScopeId
 
 withLocalMScopeId ::
-    MonadA m => CurAndPrev (Maybe ScopeId) -> ExprGuiM m a -> ExprGuiM m a
+    Monad m => CurAndPrev (Maybe ScopeId) -> ExprGuiM m a -> ExprGuiM m a
 withLocalMScopeId mScopeId = exprGuiM %~ RWS.local (aMScopeId .~ mScopeId)
 
-isExprSelected :: MonadA m => Sugar.Payload f a -> ExprGuiM m Bool
+isExprSelected :: Monad m => Sugar.Payload f a -> ExprGuiM m Bool
 isExprSelected = widgetEnv . WE.isSubCursor . WidgetIds.fromExprPayload
 
-outerPrecedence :: MonadA m => ExprGuiM m Precedence
+outerPrecedence :: Monad m => ExprGuiM m Precedence
 outerPrecedence = ExprGuiM $ Lens.view aOuterPrecedence
 
-withLocalPrecedence :: MonadA m => (Precedence -> Precedence) -> ExprGuiM m a -> ExprGuiM m a
+withLocalPrecedence :: Monad m => (Precedence -> Precedence) -> ExprGuiM m a -> ExprGuiM m a
 withLocalPrecedence f = exprGuiM %~ RWS.local (aOuterPrecedence %~ f)

@@ -5,7 +5,6 @@ module Lamdu.GUI.DefinitionEdit
 
 import           Control.Lens.Operators
 import           Control.Lens.Tuple
-import           Control.MonadA (MonadA)
 import           Data.Store.Transaction (Transaction)
 import           Data.Vector.Vector2 (Vector2(..))
 import qualified Graphics.DrawingCombinators as Draw
@@ -34,7 +33,7 @@ import           Prelude.Compat
 
 type T = Transaction
 
-make :: MonadA m => DefinitionN m ExprGuiT.Payload -> ExprGuiM m (Widget (T m))
+make :: Monad m => DefinitionN m ExprGuiT.Payload -> ExprGuiM m (Widget (T m))
 make exprGuiDefS =
     case exprGuiDefS ^. Sugar.drBody of
     Sugar.DefinitionBodyExpression bodyExpr ->
@@ -51,7 +50,7 @@ expandTo width eg
         padding = width - eg ^. ExpressionGui.egWidget . Widget.width
 
 topLevelSchemeTypeView ::
-    MonadA m => Widget.R -> Scheme -> Sugar.EntityId -> AnimId -> ExprGuiM m (ExpressionGui m)
+    Monad m => Widget.R -> Scheme -> Sugar.EntityId -> AnimId -> ExprGuiM m (ExpressionGui m)
 topLevelSchemeTypeView width scheme entityId suffix =
     -- At the definition-level, Schemes can be shown as ordinary
     -- types to avoid confusing forall's:
@@ -62,7 +61,7 @@ topLevelSchemeTypeView width scheme entityId suffix =
     <&> expandTo width
 
 makeBuiltinDefinition ::
-    MonadA m =>
+    Monad m =>
     Sugar.Definition (Name m) m (ExprGuiT.SugarExpr m) ->
     Sugar.DefinitionBuiltin m -> ExprGuiM m (ExpressionGui m)
 makeBuiltinDefinition def builtin =
@@ -90,7 +89,7 @@ typeIndicatorId :: Widget.Id -> Widget.Id
 typeIndicatorId myId = Widget.joinId myId ["type indicator"]
 
 typeIndicator ::
-    MonadA m => Widget.R -> Draw.Color -> Widget.Id -> ExprGuiM m (ExpressionGui m)
+    Monad m => Widget.R -> Draw.Color -> Widget.Id -> ExprGuiM m (ExpressionGui m)
 typeIndicator width color myId =
     do
         config <- ExprGuiM.readConfig
@@ -105,7 +104,7 @@ typeIndicator width color myId =
             & return
 
 acceptableTypeIndicator ::
-    MonadA m =>
+    Monad m =>
     Widget.R -> T m a -> Draw.Color -> Widget.Id ->
     ExprGuiM m (ExpressionGui m)
 acceptableTypeIndicator width accept color myId =
@@ -121,7 +120,7 @@ acceptableTypeIndicator width accept color myId =
                 Widget.weakerEvents acceptKeyMap
 
 makeExprDefinition ::
-    MonadA m =>
+    Monad m =>
     Sugar.Definition (Name m) m (ExprGuiT.SugarExpr m) ->
     Sugar.DefinitionExpression (Name m) m (ExprGuiT.SugarExpr m) ->
     ExprGuiM m (ExpressionGui m)

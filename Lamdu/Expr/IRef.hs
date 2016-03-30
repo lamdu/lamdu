@@ -22,7 +22,6 @@ import           Control.DeepSeq (NFData)
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Lens.Tuple
-import           Control.MonadA (MonadA)
 import           Data.Binary (Binary(..))
 import           Data.Function.Decycle (decycle)
 import qualified Data.Store.Guid as Guid
@@ -61,25 +60,25 @@ type ValBody m = V.Body (ValI m)
 type Lam m = V.Lam (ValI m)
 type Apply m = V.Apply (ValI m)
 
-newValBody :: MonadA m => ValBody m -> T m (ValI m)
+newValBody :: Monad m => ValBody m -> T m (ValI m)
 newValBody = fmap ValI . Transaction.newIRef
 
-newVar :: MonadA m => T m V.Var
+newVar :: Monad m => T m V.Var
 newVar = V.Var . Identifier . Guid.bs <$> Transaction.newKey
 
-readValBody :: MonadA m => ValI m -> T m (ValBody m)
+readValBody :: Monad m => ValI m -> T m (ValBody m)
 readValBody = Transaction.readIRef . unValI
 
 writeValBody ::
-    MonadA m => ValI m -> ValBody m -> T m ()
+    Monad m => ValI m -> ValBody m -> T m ()
 writeValBody = Transaction.writeIRef . unValI
 
-newVal :: MonadA m => Val () -> T m (ValI m)
+newVal :: Monad m => Val () -> T m (ValI m)
 newVal = fmap (^. V.payload . _1) . writeValWithStoredSubexpressions . ((,) Nothing <$>)
 
 -- Returns expression with new Guids
 writeVal ::
-    MonadA m =>
+    Monad m =>
     ValI m -> Val a ->
     T m (Val (ValI m, a))
 writeVal iref =
@@ -87,7 +86,7 @@ writeVal iref =
     (V.payload . _1 .~ Just iref) .
     fmap ((,) Nothing)
 
-readVal :: MonadA m => ValI m -> T m (Val (ValI m))
+readVal :: Monad m => ValI m -> T m (Val (ValI m))
 readVal =
     decycle loop
     where
@@ -97,12 +96,12 @@ readVal =
             Just go -> readValBody valI >>= traverse go <&> Val valI
 
 expressionBodyFrom ::
-    MonadA m =>
+    Monad m =>
     Val (Maybe (ValI m), a) ->
     T m (V.Body (Val (ValI m, a)))
 expressionBodyFrom = traverse writeValWithStoredSubexpressions . (^. V.body)
 
-writeValWithStoredSubexpressions :: MonadA m => Val (Maybe (ValI m), a) -> T m (Val (ValI m, a))
+writeValWithStoredSubexpressions :: Monad m => Val (Maybe (ValI m), a) -> T m (Val (ValI m, a))
 writeValWithStoredSubexpressions expr =
     do
         body <- expressionBodyFrom expr
@@ -119,7 +118,7 @@ writeValWithStoredSubexpressions expr =
         (mIRef, pl) = expr ^. V.payload
 
 addProperties ::
-    MonadA m =>
+    Monad m =>
     (ValI m -> T m ()) ->
     Val (ValI m, a) ->
     Val (ValIProperty m, a)
@@ -139,6 +138,6 @@ data ValTree m
     deriving (Show)
 type ValTreeM m = ValTree m
 
-writeValTree :: MonadA m => ValTreeM m -> T m (ValI m)
+writeValTree :: Monad m => ValTreeM m -> T m (ValI m)
 writeValTree (ValTreeLeaf valI) = return valI
 writeValTree (ValTreeNode body) = newValBody =<< traverse writeValTree body

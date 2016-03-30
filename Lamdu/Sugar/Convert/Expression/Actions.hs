@@ -10,7 +10,6 @@ import           Prelude.Compat
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Monad (guard)
-import           Control.MonadA (MonadA)
 import qualified Data.Map as Map
 import qualified Data.Store.Property as Property
 import           Data.Store.Transaction (Transaction)
@@ -31,7 +30,7 @@ import           Lamdu.Sugar.Types
 type T = Transaction
 
 mkExtract ::
-    MonadA m => ExprIRef.ValIProperty m -> ConvertM m (T m ExtractToDestination)
+    Monad m => ExprIRef.ValIProperty m -> ConvertM m (T m ExtractToDestination)
 mkExtract stored =
     do
         ctx <- ConvertM.readContext
@@ -41,7 +40,7 @@ mkExtract stored =
             & return
 
 mkExtractToDef ::
-    MonadA m => Anchors.CodeProps m -> ExprIRef.ValIProperty m -> T m EntityId
+    Monad m => Anchors.CodeProps m -> ExprIRef.ValIProperty m -> T m EntityId
 mkExtractToDef cp stored =
     do
         newDefI <- DataOps.newPublicDefinitionWithPane "" cp (Property.value stored)
@@ -50,7 +49,7 @@ mkExtractToDef cp stored =
         EntityId.ofIRef newDefI & return
 
 mkExtractToLet ::
-    MonadA m => ExprIRef.ValIProperty m -> ExprIRef.ValIProperty m -> T m EntityId
+    Monad m => ExprIRef.ValIProperty m -> ExprIRef.ValIProperty m -> T m EntityId
 mkExtractToLet outerScope stored =
     do
         (lamI, getVarI) <-
@@ -78,7 +77,7 @@ mkExtractToLet outerScope stored =
         extractPosI = Property.value outerScope
         oldStored = Property.value stored
 
-mkActions :: MonadA m => ExprIRef.ValIProperty m -> ConvertM m (Actions m)
+mkActions :: Monad m => ExprIRef.ValIProperty m -> ConvertM m (Actions m)
 mkActions stored =
     do
         ext <- mkExtract stored
@@ -107,7 +106,7 @@ makeSetToInner outerPl inner
     | otherwise = return NoInnerExpr
 
 addActions ::
-    MonadA m => Input.Payload m a -> BodyU m a -> ConvertM m (ExpressionU m a)
+    Monad m => Input.Payload m a -> BodyU m a -> ConvertM m (ExpressionU m a)
 addActions exprPl body =
     do
         actions <- exprPl ^. Input.stored & mkActions
@@ -120,7 +119,7 @@ addActions exprPl body =
             }
 
 addActionsWithSetToInner ::
-    MonadA m =>
+    Monad m =>
     Input.Payload m a -> V.Val (Input.Payload m b) ->
     BodyU m a -> ConvertM m (ExpressionU m a)
 addActionsWithSetToInner exprPl inner body =

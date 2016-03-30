@@ -34,7 +34,6 @@ Library
                   , Control.Monad.Trans.Either.Utils
                   , Control.Monad.Trans.State.Utils
                   , Control.Monad.Unit
-                  , Control.MonadA
                   , Data.Binary.Utils
                   , Data.ByteString.Hex
                   , Data.ByteString.NFData

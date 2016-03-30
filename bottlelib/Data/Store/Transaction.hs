@@ -33,7 +33,6 @@ import           Control.Monad.Trans.Reader (ReaderT, runReaderT)
 import qualified Control.Monad.Trans.Reader as Reader
 import           Control.Monad.Trans.State (StateT, runStateT)
 import qualified Control.Monad.Trans.State as State
-import           Control.MonadA (MonadA)
 import           Data.Binary (Binary)
 import           Data.Binary.Utils (encodeS, decodeS)
 import           Data.ByteString (ByteString)
@@ -76,9 +75,9 @@ newtype Transaction m a =
     deriving (Functor, Applicative, Monad)
 liftAskable :: ReaderT (Askable m) (StateT ChangesMap m) a -> Transaction m a
 liftAskable = Transaction
-liftChangesMap :: MonadA m => StateT ChangesMap m a -> Transaction m a
+liftChangesMap :: Monad m => StateT ChangesMap m a -> Transaction m a
 liftChangesMap = liftAskable . lift
-liftInner :: MonadA m => m a -> Transaction m a
+liftInner :: Monad m => m a -> Transaction m a
 liftInner = Transaction . lift . lift
 
 getStore :: Monad m => Transaction m (Store m)
@@ -87,7 +86,7 @@ getStore = liftAskable $ Reader.asks (Lens.view aStore)
 getBase :: Monad m => Transaction m ChangesMap
 getBase = liftAskable $ Reader.asks (Lens.view aBase)
 
-run :: MonadA m => Store m -> Transaction m a -> m a
+run :: Monad m => Store m -> Transaction m a -> m a
 run store (Transaction transaction) = do
     (res, changes) <-
         transaction
@@ -101,7 +100,7 @@ newtype Changes = Changes ChangesMap
 -- | Fork the given transaction into its own space.  Unless the
 -- transaction is later "merged" into the main transaction, its
 -- changes will not be committed anywhere.
-fork :: MonadA m => Transaction m a -> Transaction m (a, Changes)
+fork :: Monad m => Transaction m a -> Transaction m (a, Changes)
 fork (Transaction discardableTrans) = do
     changes <- liftChangesMap State.get
     -- Map.union is left-biased, so changes correctly override base:
@@ -112,14 +111,14 @@ fork (Transaction discardableTrans) = do
         & liftInner
         <&> _2 %~ Changes
 
-merge :: MonadA m => Changes -> Transaction m ()
+merge :: Monad m => Changes -> Transaction m ()
 merge (Changes changes) =
     liftChangesMap . State.modify $ Map.union changes
 
-isEmpty :: MonadA m => Transaction m Bool
+isEmpty :: Monad m => Transaction m Bool
 isEmpty = liftChangesMap (State.gets Map.null)
 
-lookupBS :: MonadA m => Guid -> Transaction m (Maybe Value)
+lookupBS :: Monad m => Guid -> Transaction m (Maybe Value)
 lookupBS guid = do
     base <- getBase
     changes <- liftChangesMap State.get
@@ -129,55 +128,55 @@ lookupBS guid = do
             liftInner $ storeLookup store guid
         Just res -> return res
 
-insertBS :: MonadA m => Guid -> ByteString -> Transaction m ()
+insertBS :: Monad m => Guid -> ByteString -> Transaction m ()
 insertBS key = liftChangesMap . State.modify . Map.insert key . Just
 
-delete :: MonadA m => Guid -> Transaction m ()
+delete :: Monad m => Guid -> Transaction m ()
 delete key = liftChangesMap . State.modify . Map.insert key $ Nothing
 
-lookup :: (MonadA m, Binary a) => Guid -> Transaction m (Maybe a)
+lookup :: (Monad m, Binary a) => Guid -> Transaction m (Maybe a)
 lookup = (fmap . fmap) decodeS . lookupBS
 
-insert :: (MonadA m, Binary a) => Guid -> a -> Transaction m ()
+insert :: (Monad m, Binary a) => Guid -> a -> Transaction m ()
 insert key = insertBS key . encodeS
 
-writeGuid :: (MonadA m, Binary a) => Guid -> a -> Transaction m ()
+writeGuid :: (Monad m, Binary a) => Guid -> a -> Transaction m ()
 writeGuid = insert
 
-guidExists :: MonadA m => Guid -> Transaction m Bool
+guidExists :: Monad m => Guid -> Transaction m Bool
 guidExists = fmap isJust . lookupBS
 
-readGuidMb :: (MonadA m, Binary a) => Transaction m a -> Guid -> Transaction m a
+readGuidMb :: (Monad m, Binary a) => Transaction m a -> Guid -> Transaction m a
 readGuidMb nothingCase guid =
     maybe nothingCase return =<< lookup guid
 
-readGuidDef :: (MonadA m, Binary a) => a -> Guid -> Transaction m a
+readGuidDef :: (Monad m, Binary a) => a -> Guid -> Transaction m a
 readGuidDef = readGuidMb . return
 
-readGuid :: (MonadA m, Binary a) => Guid -> Transaction m a
+readGuid :: (Monad m, Binary a) => Guid -> Transaction m a
 readGuid guid = readGuidMb failure guid
     where
         failure = fail $ "Inexistent guid: " ++ show guid ++ " referenced"
 
-deleteIRef :: MonadA m => IRef m a -> Transaction m ()
+deleteIRef :: Monad m => IRef m a -> Transaction m ()
 deleteIRef = delete . IRef.guid
 
-readIRefDef :: (MonadA m, Binary a) => a -> IRef m a -> Transaction m a
+readIRefDef :: (Monad m, Binary a) => a -> IRef m a -> Transaction m a
 readIRefDef def = readGuidDef def . IRef.guid
 
-readIRef :: (MonadA m, Binary a) => IRef m a -> Transaction m a
+readIRef :: (Monad m, Binary a) => IRef m a -> Transaction m a
 readIRef = readGuid . IRef.guid
 
-irefExists :: (MonadA m, Binary a) => IRef m a -> Transaction m Bool
+irefExists :: (Monad m, Binary a) => IRef m a -> Transaction m Bool
 irefExists = guidExists . IRef.guid
 
-writeIRef :: (MonadA m, Binary a) => IRef m a -> a -> Transaction m ()
+writeIRef :: (Monad m, Binary a) => IRef m a -> a -> Transaction m ()
 writeIRef = writeGuid . IRef.guid
 
-newKey :: MonadA m => Transaction m Key
+newKey :: Monad m => Transaction m Key
 newKey = liftInner . storeNewKey =<< getStore
 
-newIRef :: (MonadA m, Binary a) => a -> Transaction m (IRef m a)
+newIRef :: (Monad m, Binary a) => a -> Transaction m (IRef m a)
 newIRef val = do
     newGuid <- newKey
     insert newGuid val
@@ -187,46 +186,46 @@ newIRef val = do
 
 type Property m = Property.Property (Transaction m)
 
-fromIRef :: (MonadA m, Binary a) => IRef m a -> Transaction m (Property m a)
+fromIRef :: (Monad m, Binary a) => IRef m a -> Transaction m (Property m a)
 fromIRef iref = flip Property.Property (writeIRef iref) <$> readIRef iref
 
-fromIRefDef :: (MonadA m, Binary a) => IRef m a -> a -> Transaction m (Property m a)
+fromIRefDef :: (Monad m, Binary a) => IRef m a -> a -> Transaction m (Property m a)
 fromIRefDef iref def = flip Property.Property (writeIRef iref) <$> readIRefDef def iref
 
 -- Dereference the *current* value of the IRef (Will not track new
 -- values of IRef, by-value and not by-name)
-followBy :: (MonadA m, Binary a) =>
+followBy :: (Monad m, Binary a) =>
                         (b -> IRef m a) ->
                         Property m b ->
                         Transaction m (Property m a)
 followBy conv = fromIRef . conv . Property.value
 
-anchorRef :: (MonadA m, Binary a) => String -> Transaction m (Property m a)
+anchorRef :: (Monad m, Binary a) => String -> Transaction m (Property m a)
 anchorRef = fromIRef . IRef.anchor
 
-anchorRefDef :: (MonadA m, Binary a) => String -> a -> Transaction m (Property m a)
+anchorRefDef :: (Monad m, Binary a) => String -> a -> Transaction m (Property m a)
 anchorRefDef name def = flip fromIRefDef def $ IRef.anchor name
 
 newtype MkProperty m a = MkProperty { _mkProperty :: Transaction m (Property m a) }
 Lens.makeLenses ''MkProperty
 
-mkPropertyFromIRef :: (MonadA m, Binary a) => IRef m a -> MkProperty m a
+mkPropertyFromIRef :: (Monad m, Binary a) => IRef m a -> MkProperty m a
 mkPropertyFromIRef = MkProperty . fromIRef
 
-getP :: MonadA m => MkProperty m a -> Transaction m a
+getP :: Monad m => MkProperty m a -> Transaction m a
 getP = fmap Property.value . (^. mkProperty)
 
-setP :: MonadA m => MkProperty m a -> a -> Transaction m ()
+setP :: Monad m => MkProperty m a -> a -> Transaction m ()
 setP (MkProperty mkProp) val = do
     prop <- mkProp
     Property.set prop val
 
-modP :: MonadA m => MkProperty m a -> (a -> a) -> Transaction m ()
+modP :: Monad m => MkProperty m a -> (a -> a) -> Transaction m ()
 modP (MkProperty mkProp) f = do
     prop <- mkProp
     Property.pureModify prop f
 
-assocDataRef :: (Binary a, MonadA m) => ByteString -> Guid -> MkProperty m (Maybe a)
+assocDataRef :: (Binary a, Monad m) => ByteString -> Guid -> MkProperty m (Maybe a)
 assocDataRef str guid = MkProperty $ do
     val <- lookup assocGuid
     return $ Property.Property val set
@@ -235,7 +234,7 @@ assocDataRef str guid = MkProperty $ do
         set Nothing = delete assocGuid
         set (Just x) = writeGuid assocGuid x
 
-assocDataRefDef :: (Eq a, Binary a, MonadA m) => a -> ByteString -> Guid -> MkProperty m a
+assocDataRefDef :: (Eq a, Binary a, Monad m) => a -> ByteString -> Guid -> MkProperty m a
 assocDataRefDef def str guid =
     assocDataRef str guid
     & mkProperty . Lens.mapped %~ Property.pureCompose (fromMaybe def) f

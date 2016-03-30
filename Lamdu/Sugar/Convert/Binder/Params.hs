@@ -15,7 +15,6 @@ import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Lens.Tuple
 import           Control.Monad (guard, void, when)
-import           Control.MonadA (MonadA)
 import           Data.CurAndPrev (CurAndPrev)
 import           Data.Foldable (traverse_)
 import qualified Data.List as List
@@ -90,7 +89,7 @@ data StoredLam m = StoredLam
 slLam :: Lens' (StoredLam m) (V.Lam (Val (ValIProperty m)))
 slLam f StoredLam{..} = f _slLam <&> \_slLam -> StoredLam{..}
 
-slParamList :: MonadA m => StoredLam m -> Transaction.MkProperty m (Maybe ParamList)
+slParamList :: Monad m => StoredLam m -> Transaction.MkProperty m (Maybe ParamList)
 slParamList = Anchors.assocFieldParamList . Property.value . slLambdaProp
 
 mkStoredLam ::
@@ -101,10 +100,10 @@ mkStoredLam lam pl =
     (lam & Lens.mapped . Lens.mapped %~ (^. Input.stored))
     (pl ^. Input.stored)
 
-newTag :: MonadA m => T m T.Tag
+newTag :: Monad m => T m T.Tag
 newTag = GenIds.transaction GenIds.randomTag
 
-setParamList :: MonadA m => MkProperty m (Maybe [T.Tag]) -> [T.Tag] -> T m ()
+setParamList :: Monad m => MkProperty m (Maybe [T.Tag]) -> [T.Tag] -> T m ()
 setParamList paramListProp newParamList =
     do
         zip newParamList [0..] & mapM_ (uncurry setParamOrder)
@@ -131,7 +130,7 @@ isUnappliedVar var (cur : parent : _) =
 isUnappliedVar var [cur] = Lens.has (ExprLens.valVar . Lens.only var) cur
 isUnappliedVar _ _ = False
 
-wrapUnappliedUsesOfVar :: MonadA m => V.Var -> Val (ValIProperty m) -> T m ()
+wrapUnappliedUsesOfVar :: Monad m => V.Var -> Val (ValIProperty m) -> T m ()
 wrapUnappliedUsesOfVar var =
     SubExprs.onMatchingSubexprsWithPath holeWrap (isUnappliedVar var)
     where
@@ -142,7 +141,7 @@ wrapUnappliedUsesOfVar var =
             >>= Property.set prop
 
 changeCallArgs ::
-    MonadA m =>
+    Monad m =>
     (ValI m -> T m (ValI m)) -> Val (ValIProperty m) -> V.Var -> T m ()
 changeCallArgs change val var  =
     do
@@ -153,7 +152,7 @@ changeCallArgs change val var  =
             Property.value prop & change >>= Property.set prop
 
 fixUsagesOfLamBinder ::
-    MonadA m => (ValI m -> T m (ValI m)) -> BinderKind m -> StoredLam m -> T m ()
+    Monad m => (ValI m -> T m (ValI m)) -> BinderKind m -> StoredLam m -> T m ()
 fixUsagesOfLamBinder fixOp binderKind storedLam =
     case binderKind of
     BinderKindDef defI ->
@@ -163,7 +162,7 @@ fixUsagesOfLamBinder fixOp binderKind storedLam =
     BinderKindLambda -> return ()
 
 addFieldParam ::
-    MonadA m =>
+    Monad m =>
     T m (ValI m) -> BinderKind m -> (T.Tag -> ParamList) -> StoredLam m ->
     T m (TagG ())
 addFieldParam mkArg binderKind mkNewTags storedLam =
@@ -200,18 +199,18 @@ getFieldOnVar = V.body . ExprLens._BGetField . inGetField
         pack pl (v, t) =
             V.GetField (Val pl (V.BLeaf (V.LVar v))) t
 
-getFieldParamsToHole :: MonadA m => T.Tag -> V.Lam (Val (ValIProperty m)) -> T m ()
+getFieldParamsToHole :: Monad m => T.Tag -> V.Lam (Val (ValIProperty m)) -> T m ()
 getFieldParamsToHole tag (V.Lam param lamBody) =
     SubExprs.onMatchingSubexprs SubExprs.toHole (getFieldOnVar . Lens.only (param, tag)) lamBody
 
-getFieldParamsToParams :: MonadA m => V.Lam (Val (ValIProperty m)) -> T.Tag -> T m ()
+getFieldParamsToParams :: Monad m => V.Lam (Val (ValIProperty m)) -> T.Tag -> T m ()
 getFieldParamsToParams (V.Lam param lamBody) tag =
     SubExprs.onMatchingSubexprs (toParam . Property.value)
     (getFieldOnVar . Lens.only (param, tag)) lamBody
     where
         toParam bodyI = ExprIRef.writeValBody bodyI $ V.BLeaf $ V.LVar param
 
-fixCallArgRemoveField :: MonadA m => T.Tag -> ValI m -> T m (ValI m)
+fixCallArgRemoveField :: Monad m => T.Tag -> ValI m -> T m (ValI m)
 fixCallArgRemoveField tag argI =
     do
         body <- ExprIRef.readValBody argI
@@ -228,7 +227,7 @@ fixCallArgRemoveField tag argI =
             _ -> return argI
 
 fixCallToSingleArg ::
-    MonadA m => T.Tag -> ValI m -> T m (ValI m)
+    Monad m => T.Tag -> ValI m -> T m (ValI m)
 fixCallToSingleArg tag argI =
     do
         body <- ExprIRef.readValBody argI
@@ -242,7 +241,7 @@ tagGForLambdaTagParam :: V.Var -> T.Tag -> TagG ()
 tagGForLambdaTagParam paramVar tag = TagG (EntityId.ofLambdaTagParam paramVar tag) tag ()
 
 delFieldParamAndFixCalls ::
-    MonadA m =>
+    Monad m =>
     BinderKind m -> [T.Tag] -> FieldParam -> StoredLam m -> T m ParamDelResult
 delFieldParamAndFixCalls binderKind tags fp storedLam =
     do
@@ -273,7 +272,7 @@ delFieldParamAndFixCalls binderKind tags fp storedLam =
             xs -> (Just xs, Nothing, ParamDelResultDelTag)
 
 fieldParamActions ::
-    MonadA m =>
+    Monad m =>
     BinderKind m -> [T.Tag] -> FieldParam -> StoredLam m -> FuncParamActions m
 fieldParamActions binderKind tags fp storedLam =
     FuncParamActions
@@ -308,7 +307,7 @@ mkParamInfo param fp =
     & Map.singleton (fpTag fp)
 
 convertRecordParams ::
-    (MonadA m, Monoid a) =>
+    (Monad m, Monoid a) =>
     BinderKind m -> [FieldParam] ->
     V.Lam (Val (Input.Payload m a)) -> Input.Payload m a ->
     ConventionalParams m
@@ -351,7 +350,7 @@ convertRecordParams binderKind fieldParams lam@(V.Lam param _) pl =
                 }
             )
 
-removeCallsToVar :: MonadA m => V.Var -> Val (ValIProperty m) -> T m ()
+removeCallsToVar :: Monad m => V.Var -> Val (ValIProperty m) -> T m ()
 removeCallsToVar funcVar val =
     do
         SubExprs.onMatchingSubexprs changeRecursion
@@ -368,7 +367,7 @@ removeCallsToVar funcVar val =
                     _ -> error "assertion: expected BApp"
 
 makeDeleteLambda ::
-    MonadA m => BinderKind m -> StoredLam m ->
+    Monad m => BinderKind m -> StoredLam m ->
     ConvertM m (T m ParamDelResult)
 makeDeleteLambda binderKind (StoredLam (V.Lam paramVar lamBodyStored) lambdaProp) =
     do
@@ -389,7 +388,7 @@ makeDeleteLambda binderKind (StoredLam (V.Lam paramVar lamBodyStored) lambdaProp
                 return ParamDelResultDelVar
 
 convertVarToGetField ::
-    MonadA m => T.Tag -> V.Var -> Val (Property (T m) (ValI m)) -> T m ()
+    Monad m => T.Tag -> V.Var -> Val (Property (T m) (ValI m)) -> T m ()
 convertVarToGetField tagForVar paramVar =
     SubExprs.onGetVars (convertVar . Property.value) paramVar
     where
@@ -399,7 +398,7 @@ convertVarToGetField tagForVar paramVar =
             >>= ExprIRef.writeValBody bodyI
 
 wrapArgWithRecord ::
-    MonadA m => T m (ValI m) -> VarToTags -> ValI m -> T m (ValI m)
+    Monad m => T m (ValI m) -> VarToTags -> ValI m -> T m (ValI m)
 wrapArgWithRecord mkNewArg varToTags oldArg =
     do
         newArg <- mkNewArg
@@ -412,7 +411,7 @@ wrapArgWithRecord mkNewArg varToTags oldArg =
 data NewParamPosition = NewParamBefore | NewParamAfter
 
 convertToRecordParams ::
-    MonadA m =>
+    Monad m =>
     T m (ValI m) -> BinderKind m -> StoredLam m -> NewParamPosition ->
     T m VarToTags
 convertToRecordParams mkNewArg binderKind storedLam newParamPosition =
@@ -448,7 +447,7 @@ lamParamType lamExprPl =
     lamExprPl ^? Input.inferredType . ExprLens._TFun . _1
 
 makeNonRecordParamActions ::
-    MonadA m => BinderKind m -> StoredLam m -> ConvertM m (FuncParamActions m)
+    Monad m => BinderKind m -> StoredLam m -> ConvertM m (FuncParamActions m)
 makeNonRecordParamActions binderKind storedLam =
     do
         delete <- makeDeleteLambda binderKind storedLam
@@ -464,7 +463,7 @@ makeNonRecordParamActions binderKind storedLam =
             }
 
 mkFuncParam ::
-    MonadA m =>
+    Monad m =>
     EntityId -> Input.Payload m a -> info -> ConvertM m (FuncParam info)
 mkFuncParam paramEntityId lamExprPl info =
     do
@@ -492,7 +491,7 @@ mkFuncParam paramEntityId lamExprPl info =
         typ = lamParamType lamExprPl
 
 convertNonRecordParam ::
-    MonadA m => BinderKind m ->
+    Monad m => BinderKind m ->
     V.Lam (Val (Input.Payload m a)) -> Input.Payload m a ->
     ConvertM m (ConventionalParams m)
 convertNonRecordParam binderKind lam@(V.Lam param _) lamExprPl =
@@ -542,7 +541,7 @@ isParamAlwaysUsedWithGetField (V.Lam param body) =
                 checkChildren x = all go (x ^.. V.body . Lens.traverse)
 
 convertLamParams ::
-    (MonadA m, Monoid a) =>
+    (Monad m, Monoid a) =>
     V.Lam (Val (Input.Payload m a)) -> Input.Payload m a ->
     ConvertM m (ConventionalParams m)
 convertLamParams lambda lambdaPl =
@@ -557,7 +556,7 @@ convertLamParams lambda lambdaPl =
         lambdaProp = lambdaPl ^. Input.stored
 
 convertNonEmptyParams ::
-    (MonadA m, Monoid a) =>
+    (Monad m, Monoid a) =>
     BinderKind m -> V.Lam (Val (Input.Payload m a)) -> Input.Payload m a ->
     ConvertM m (ConventionalParams m)
 convertNonEmptyParams binderKind lambda lambdaPl =
@@ -609,7 +608,7 @@ convertNonEmptyParams binderKind lambda lambdaPl =
         mkCollidingInfo fp = mkParamInfo param fp <&> ConvertM.CollidingFieldParam
 
 convertVarToCalls ::
-    MonadA m => T m (ValI m) -> V.Var -> Val (ValIProperty m) -> T m ()
+    Monad m => T m (ValI m) -> V.Var -> Val (ValIProperty m) -> T m ()
 convertVarToCalls mkArg var =
     SubExprs.onMatchingSubexprs change (ExprLens.valVar . Lens.only var)
     where
@@ -653,7 +652,7 @@ convertEmptyParams binderKind val =
     }
 
 convertParams ::
-    (MonadA m, Monoid a) =>
+    (Monad m, Monoid a) =>
     BinderKind m -> Val (Input.Payload m a) ->
     ConvertM m
     ( ConventionalParams m

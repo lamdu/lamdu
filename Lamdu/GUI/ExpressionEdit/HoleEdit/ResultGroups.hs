@@ -10,7 +10,6 @@ import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Lens.Tuple
 import           Control.Monad.ListT (ListT)
-import           Control.MonadA (MonadA)
 import qualified Data.ByteString.Char8 as BS8
 import qualified Data.Char as Char
 import           Data.Function (on)
@@ -91,7 +90,7 @@ mResultsListOf holeInfo baseId (x:xs) = Just
             }
 
 makeResultsList ::
-    MonadA m => HoleInfo m -> Group m ->
+    Monad m => HoleInfo m -> Group m ->
     T m (Maybe (ResultsList m))
 makeResultsList holeInfo group =
     group ^. groupResults
@@ -107,7 +106,7 @@ makeResultsList holeInfo group =
 
 data HaveHiddenResults = HaveHiddenResults | NoHiddenResults
 
-collectResults :: MonadA m => Config.Hole -> ListT m (ResultsList f) -> m ([ResultsList f], HaveHiddenResults)
+collectResults :: Monad m => Config.Hole -> ListT m (ResultsList f) -> m ([ResultsList f], HaveHiddenResults)
 collectResults Config.Hole{..} resultsM =
     do
         (collectedResults, remainingResultsM) <-
@@ -136,7 +135,7 @@ collectResults Config.Hole{..} resultsM =
         isGoodResult = (< [5])
 
 makeAll ::
-    MonadA m => HoleInfo m ->
+    Monad m => HoleInfo m ->
     ExprGuiM m ([ResultsList m], HaveHiddenResults)
 makeAll holeInfo =
     do
@@ -148,7 +147,7 @@ makeAll holeInfo =
             >>= collectResults config
             & ExprGuiM.transaction
 
-mkGroup :: MonadA m => Sugar.HoleOption (Name m) m -> T m (Group m)
+mkGroup :: Monad m => Sugar.HoleOption (Name m) m -> T m (Group m)
 mkGroup option =
     do
         sugaredBaseExpr <- option ^. Sugar.hoSugaredBaseExpr
@@ -159,7 +158,7 @@ mkGroup option =
             }
 
 tryBuildLiteral ::
-    (Format a, MonadA m) => (Identity a -> Sugar.Literal Identity) -> HoleInfo m ->
+    (Format a, Monad m) => (Identity a -> Sugar.Literal Identity) -> HoleInfo m ->
     T m (Maybe (Sugar.HoleOption (Name m) m))
 tryBuildLiteral mkLiteral holeInfo =
     hiSearchTerm holeInfo
@@ -168,7 +167,7 @@ tryBuildLiteral mkLiteral holeInfo =
     <&> mkLiteral
     & Lens._Just %%~ hiHole holeInfo ^. Sugar.holeActions . Sugar.holeOptionLiteral
 
-literalGroups :: MonadA m => HoleInfo m -> T m [Sugar.HoleOption (Name m) m]
+literalGroups :: Monad m => HoleInfo m -> T m [Sugar.HoleOption (Name m) m]
 literalGroups holeInfo =
     [ tryBuildLiteral Sugar.LiteralNum holeInfo
     , tryBuildLiteral Sugar.LiteralBytes holeInfo
@@ -181,7 +180,7 @@ insensitivePrefixOf = isPrefixOf `on` map Char.toLower
 insensitiveInfixOf :: String -> String -> Bool
 insensitiveInfixOf = isInfixOf `on` map Char.toLower
 
-makeAllGroups :: MonadA m => HoleInfo m -> T m [Group m]
+makeAllGroups :: Monad m => HoleInfo m -> T m [Group m]
 makeAllGroups holeInfo =
     (++)
     <$> (literalGroups holeInfo >>= mapM mkGroup)

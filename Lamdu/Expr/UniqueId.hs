@@ -5,7 +5,6 @@ module Lamdu.Expr.UniqueId
 
 import           Prelude.Compat
 
-import           Control.MonadA (MonadA)
 import           Data.Store.Guid (Guid)
 import qualified Data.Store.Guid as Guid
 import           Data.Store.IRef (IRef)
@@ -35,11 +34,11 @@ instance ToGuid (ValI m)    where toGuid = toGuid . ExprIRef.unValI
 -- TODO: Remove this when all code uses more descritive types than Guid
 instance ToGuid Guid  where toGuid = id
 
-mkNew :: MonadA m => (Identifier -> a) -> Transaction m a
+mkNew :: Monad m => (Identifier -> a) -> Transaction m a
 mkNew f = f . identifierOfGuid <$> Transaction.newKey
 
 -- NOTE: No other code in Lamdu should be creating var or tag ids!
-class ToGuid a => UniqueId a     where new :: MonadA m => Transaction m a
+class ToGuid a => UniqueId a     where new :: Monad m => Transaction m a
 instance          UniqueId V.Var where new = mkNew V.Var
 instance          UniqueId T.Tag where new = mkNew T.Tag
 instance          UniqueId T.NominalId  where new = mkNew T.NominalId

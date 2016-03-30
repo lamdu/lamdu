@@ -24,7 +24,6 @@ import           Control.Lens.Operators
 import           Control.Monad.Trans.Class (MonadTrans(..))
 import           Control.Monad.Trans.Reader (ReaderT, runReaderT)
 import qualified Control.Monad.Trans.Reader as Reader
-import           Control.MonadA (MonadA)
 import           Data.Maybe (isJust)
 import qualified Graphics.DrawingCombinators as Draw
 import           Graphics.UI.Bottle.Animation (AnimId)
@@ -52,32 +51,32 @@ newtype WidgetEnvT m a = WidgetEnvT
 Lens.makeLenses ''WidgetEnvT
 
 runWidgetEnvT ::
-    MonadA m => Env -> WidgetEnvT m a -> m a
+    Monad m => Env -> WidgetEnvT m a -> m a
 runWidgetEnvT env (WidgetEnvT action) = runReaderT action env
 
 mapWidgetEnvT
-    :: MonadA m
+    :: Monad m
     => (m a -> n a)
     -> WidgetEnvT m a
     -> WidgetEnvT n a
 mapWidgetEnvT = (widgetEnvT %~) . Reader.mapReaderT
 
-readEnv :: MonadA m => WidgetEnvT m Env
+readEnv :: Monad m => WidgetEnvT m Env
 readEnv = WidgetEnvT Reader.ask
 
-readCursor :: MonadA m => WidgetEnvT m Widget.Id
+readCursor :: Monad m => WidgetEnvT m Widget.Id
 readCursor = readEnv <&> (^. envCursor)
 
-subCursor :: MonadA m => Widget.Id -> WidgetEnvT m (Maybe AnimId)
+subCursor :: Monad m => Widget.Id -> WidgetEnvT m (Maybe AnimId)
 subCursor folder = readCursor <&> Widget.subId folder
 
-isSubCursor :: MonadA m => Widget.Id -> WidgetEnvT m Bool
+isSubCursor :: Monad m => Widget.Id -> WidgetEnvT m Bool
 isSubCursor = fmap isJust . subCursor
 
-readTextStyle :: MonadA m => WidgetEnvT m TextEdit.Style
+readTextStyle :: Monad m => WidgetEnvT m TextEdit.Style
 readTextStyle = readEnv <&> (^. envTextStyle)
 
-setTextStyle :: MonadA m => TextEdit.Style -> WidgetEnvT m a -> WidgetEnvT m a
+setTextStyle :: Monad m => TextEdit.Style -> WidgetEnvT m a -> WidgetEnvT m a
 setTextStyle style = localEnv (envTextStyle .~ style)
 
 envAssignCursor
@@ -100,12 +99,12 @@ envAssignCursorPrefix srcFolder dest =
             Just suffix -> dest suffix
 
 assignCursor ::
-    MonadA m => Widget.Id -> Widget.Id ->
+    Monad m => Widget.Id -> Widget.Id ->
     WidgetEnvT m a -> WidgetEnvT m a
 assignCursor x y = localEnv $ envAssignCursor x y
 
 assignCursorPrefix ::
-    MonadA m => Widget.Id -> (AnimId -> Widget.Id) ->
+    Monad m => Widget.Id -> (AnimId -> Widget.Id) ->
     WidgetEnvT m a -> WidgetEnvT m a
 assignCursorPrefix x y = localEnv $ envAssignCursorPrefix x y
 
@@ -116,7 +115,7 @@ setTextSizeColor textSize textColor env =
         (TextView.styleFont . SizedFont.fontSize .~ textSize) .
         (TextView.styleColor .~ textColor)
 
-localEnv :: MonadA m => (Env -> Env) -> WidgetEnvT m a -> WidgetEnvT m a
+localEnv :: Monad m => (Env -> Env) -> WidgetEnvT m a -> WidgetEnvT m a
 localEnv = (widgetEnvT %~) . Reader.local
 
 setTextColor :: Draw.Color -> Env -> Env

@@ -12,7 +12,6 @@ import           Control.Lens.Tuple
 import           Control.Monad (mzero)
 import           Control.Monad.Trans.Class (MonadTrans(..))
 import           Control.Monad.Trans.State (StateT(..), mapStateT)
-import           Control.MonadA (MonadA)
 import           Data.Map (Map)
 import qualified Data.Map as Map
 import qualified Data.Set as Set
@@ -53,7 +52,7 @@ loadNominalsForType loadNominal typ =
                     go result newTIds
 
 valueConversion ::
-    MonadA m =>
+    Monad m =>
     (T.NominalId -> m (Maybe Nominal)) -> a ->
     Val (Payload, a) -> m (StateT Context [] (Val (Payload, a)))
 valueConversion loadNominal empty src =

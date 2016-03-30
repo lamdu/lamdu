@@ -6,7 +6,6 @@ module Lamdu.GUI.ExpressionEdit.BuiltinEdit
 import           Prelude.Compat
 
 import           Control.Lens.Operators
-import           Control.MonadA (MonadA)
 import qualified Data.List as List
 import           Data.List.Split (splitOn)
 import           Data.Store.Property (Property(..))
@@ -43,7 +42,7 @@ builtinFFIName :: Widget.Id -> Widget.Id
 builtinFFIName = flip Widget.joinId ["FFIName"]
 
 makeNamePartEditor ::
-    (MonadA f, MonadA m) =>
+    (Monad f, Monad m) =>
     Draw.Color -> String -> (String -> f ()) -> Widget.Id ->
     ExprGuiM m (Widget f)
 makeNamePartEditor color namePartStr setter myId =
@@ -54,7 +53,7 @@ makeNamePartEditor color namePartStr setter myId =
     & ExprGuiM.withFgColor color
 
 make ::
-    MonadA m =>
+    Monad m =>
     Sugar.DefinitionBuiltin m -> Widget.Id -> ExprGuiM m (Widget (T m))
 make def myId =
     do

@@ -43,7 +43,6 @@ import           Control.Lens (Lens, Lens')
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Lens.Tuple
-import           Control.MonadA (MonadA)
 import           Data.Binary.Utils (encodeS)
 import           Data.CurAndPrev (CurAndPrev(..), CurPrevTag(..), curPrevTag, fallbackToPrev)
 import qualified Data.List as List
@@ -128,13 +127,13 @@ pad = Layout.pad
 hbox :: [ExpressionGui m] -> ExpressionGui m
 hbox = Layout.hbox 0.5
 
-stdSpace :: MonadA m => ExprGuiM m (Layout.Layout f)
+stdSpace :: Monad m => ExprGuiM m (Layout.Layout f)
 stdSpace = ExprGuiM.widgetEnv BWidgets.stdSpaceWidget <&> Layout.fromCenteredWidget
 
-verticalSpace :: MonadA m => ExprGuiM m (ExpressionGui f)
+verticalSpace :: Monad m => ExprGuiM m (ExpressionGui f)
 verticalSpace = ExprGuiM.widgetEnv BWidgets.verticalSpace <&> Layout.fromCenteredWidget
 
-hboxSpaced :: MonadA m => [ExpressionGui f] -> ExprGuiM m (ExpressionGui f)
+hboxSpaced :: Monad m => [ExpressionGui f] -> ExprGuiM m (ExpressionGui f)
 hboxSpaced guis =
     stdSpace
     <&> (`List.intersperse` guis)
@@ -149,7 +148,7 @@ vboxTopFocal [] = Layout.empty
 vboxTopFocal (gui:guis) = gui & Layout.addAfter Layout.Vertical guis
 
 vboxTopFocalSpaced ::
-    MonadA m => [ExpressionGui m] -> ExprGuiM m (ExpressionGui m)
+    Monad m => [ExpressionGui m] -> ExprGuiM m (ExpressionGui m)
 vboxTopFocalSpaced guis =
     do
         space <- verticalSpace
@@ -199,7 +198,7 @@ annotationParamsFor wideBehavior entityId eg =
 -- NOTE: Also adds the background color, because it differs based on
 -- whether we're hovering
 applyWideAnnotationBehavior ::
-    MonadA m => Config -> AnimId -> WideAnnotationBehavior -> Vector2 Widget.R -> ExpressionGui m ->
+    Monad m => Config -> AnimId -> WideAnnotationBehavior -> Vector2 Widget.R -> ExpressionGui m ->
     ExprGuiM m (ExpressionGui m)
 applyWideAnnotationBehavior config animId wideAnnotationBehavior shrinkRatio eg =
     case wideAnnotationBehavior of
@@ -219,7 +218,7 @@ applyWideAnnotationBehavior config animId wideAnnotationBehavior shrinkRatio eg 
             & Layout.scaleAround (Vector2 0.5 0) shrinkRatio
 
 makeWithAnnotationBG ::
-    MonadA m => (AnimId -> ExprGuiM m (ExpressionGui m)) ->
+    Monad m => (AnimId -> ExprGuiM m (ExpressionGui m)) ->
     AnnotationParams -> ExprGuiM m (ExpressionGui m)
 makeWithAnnotationBG f (AnnotationParams minWidth animId wideAnnotationBehavior) =
     do
@@ -253,7 +252,7 @@ data EvalResDisplay = EvalResDisplay
     }
 
 makeEvaluationResultView ::
-    MonadA m => AnimId -> EvalResDisplay -> ExprGuiM m (ExpressionGui m)
+    Monad m => AnimId -> EvalResDisplay -> ExprGuiM m (ExpressionGui m)
 makeEvaluationResultView animId res =
     do
         config <- ExprGuiM.readConfig
@@ -266,7 +265,7 @@ makeEvaluationResultView animId res =
     <&> Widget.fromView
     <&> fromValueWidget
 
-makeTypeView :: MonadA m => Type -> AnimId -> ExprGuiM m (ExpressionGui m)
+makeTypeView :: Monad m => Type -> AnimId -> ExprGuiM m (ExpressionGui m)
 makeTypeView typ animId =
     TypeView.make animId typ <&> fromValueWidget . Widget.fromView
 
@@ -276,7 +275,7 @@ data NeighborVals a = NeighborVals
     } deriving (Functor, Foldable, Traversable)
 
 makeEvalView ::
-    MonadA m =>
+    Monad m =>
     NeighborVals (Maybe EvalResDisplay) -> EvalResDisplay ->
     AnimId -> ExprGuiM m (ExpressionGui m)
 makeEvalView (NeighborVals mPrev mNext) evalRes animId =
@@ -301,7 +300,7 @@ makeEvalView (NeighborVals mPrev mNext) evalRes animId =
             & (`Layout.hoverInPlaceOf` evalView)
             & return
 
-annotationSpacer :: MonadA m => ExprGuiM m (ExpressionGui f)
+annotationSpacer :: Monad m => ExprGuiM m (ExpressionGui f)
 annotationSpacer =
     do
         config <- ExprGuiM.readConfig
@@ -313,7 +312,7 @@ annotationSpacer =
             & return
 
 addAnnotationH ::
-    MonadA m =>
+    Monad m =>
     (AnimId -> ExprGuiM m (ExpressionGui m)) ->
     WideAnnotationBehavior -> Sugar.EntityId ->
     ExpressionGui m -> ExprGuiM m (ExpressionGui m)
@@ -329,12 +328,12 @@ addAnnotationH f wideBehavior entityId eg =
             ] & return
 
 addInferredType ::
-    MonadA m => Type -> WideAnnotationBehavior -> Sugar.EntityId ->
+    Monad m => Type -> WideAnnotationBehavior -> Sugar.EntityId ->
     ExpressionGui m -> ExprGuiM m (ExpressionGui m)
 addInferredType typ = addAnnotationH (makeTypeView typ)
 
 addEvaluationResult ::
-    MonadA m =>
+    Monad m =>
     Type -> NeighborVals (Maybe EvalResDisplay) -> EvalResDisplay ->
     WideAnnotationBehavior -> Sugar.EntityId ->
     ExpressionGui m -> ExprGuiM m (ExpressionGui m)
@@ -368,7 +367,7 @@ nameEditFDConfig = FocusDelegator.Config
     , FocusDelegator.focusParentDoc = E.Doc ["Edit", "Done renaming"]
     }
 
-makeNameOriginEdit :: MonadA m => Name m -> Widget.Id -> ExprGuiM m (Widget (T m))
+makeNameOriginEdit :: Monad m => Name m -> Widget.Id -> ExprGuiM m (Widget (T m))
 makeNameOriginEdit name myId =
     do
         style <- ExprGuiM.readStyle
@@ -379,11 +378,11 @@ makeNameOriginEdit name myId =
         makeNameEdit name myId -- myId goes directly to name edit
             & ExprGuiM.localEnv (WE.envTextStyle .~ textEditStyle)
 
-makeNameEdit :: MonadA m => Name m -> Widget.Id -> ExprGuiM m (Widget (T m))
+makeNameEdit :: Monad m => Name m -> Widget.Id -> ExprGuiM m (Widget (T m))
 makeNameEdit = makeNameEditWith id
 
 makeNameEditWith ::
-    MonadA m => (Widget (T m) -> Widget (T m)) -> Name m -> Widget.Id -> ExprGuiM m (Widget (T m))
+    Monad m => (Widget (T m) -> Widget (T m)) -> Name m -> Widget.Id -> ExprGuiM m (Widget (T m))
 makeNameEditWith onActiveEditor (Name nameSrc nameCollision setName name) myId =
     do
         collisionSuffixes <-
@@ -410,7 +409,7 @@ makeNameEditWith onActiveEditor (Name nameSrc nameCollision setName name) myId =
             E.filterChars (`notElem` disallowedNameChars)
 
 stdWrap ::
-    MonadA m => Sugar.Payload m ExprGuiT.Payload ->
+    Monad m => Sugar.Payload m ExprGuiT.Payload ->
     ExprGuiM m (ExpressionGui m) ->
     ExprGuiM m (ExpressionGui m)
 stdWrap pl mkGui =
@@ -419,7 +418,7 @@ stdWrap pl mkGui =
     & wrapExprEventMap pl
 
 parentDelegator ::
-    MonadA m => Widget.Id -> ExpressionGui m -> ExprGuiM m (ExpressionGui m)
+    Monad m => Widget.Id -> ExpressionGui m -> ExprGuiM m (ExpressionGui m)
 parentDelegator myId gui =
     do
         config <- ExprGuiM.readConfig
@@ -429,7 +428,7 @@ parentDelegator myId gui =
             FocusDelegator.FocusEntryChild (WidgetIds.notDelegatingId myId)
 
 stdWrapParentExpr ::
-    MonadA m =>
+    Monad m =>
     Sugar.Payload m ExprGuiT.Payload ->
     (Widget.Id -> ExprGuiM m (ExpressionGui m)) ->
     ExprGuiM m (ExpressionGui m)
@@ -443,14 +442,14 @@ stdWrapParentExpr pl mkGui =
         innerId = WidgetIds.delegatingId myId
 
 makeFocusableView ::
-    (MonadA m, MonadA n) =>
+    (Monad m, Monad n) =>
     Widget.Id -> ExpressionGui n -> ExprGuiM m (ExpressionGui n)
 makeFocusableView myId gui =
     ExprGuiM.widgetEnv $
     egWidget (BWidgets.makeFocusableView myId) gui
 
 parenify ::
-    (MonadA f, MonadA m) =>
+    (Monad f, Monad m) =>
     MyPrecedence -> Widget.Id ->
     ExprGuiM m (ExpressionGui f) -> ExprGuiM m (ExpressionGui f)
 parenify prec myId mkGui =
@@ -461,10 +460,10 @@ parenify prec myId mkGui =
                    & ExprGuiM.withLocalPrecedence (const 0)
               else mkGui
 
-makeLabel :: MonadA m => String -> AnimId -> ExprGuiM m (ExpressionGui m)
+makeLabel :: Monad m => String -> AnimId -> ExprGuiM m (ExpressionGui m)
 makeLabel text animId = ExprGuiM.makeLabel text animId <&> fromValueWidget
 
-grammarLabel :: MonadA m => String -> AnimId -> ExprGuiM m (ExpressionGui m)
+grammarLabel :: Monad m => String -> AnimId -> ExprGuiM m (ExpressionGui m)
 grammarLabel text animId =
     do
         config <- ExprGuiM.readConfig
@@ -472,11 +471,11 @@ grammarLabel text animId =
             & ExprGuiM.localEnv
                 (WE.setTextSizeColor (Config.baseTextSize config) (Config.grammarColor config))
 
-addValBG :: MonadA m => Widget.Id -> Widget f -> ExprGuiM m (Widget f)
+addValBG :: Monad m => Widget.Id -> Widget f -> ExprGuiM m (Widget f)
 addValBG = addValBGWithColor Config.valFrameBGColor
 
 addValBGWithColor ::
-    MonadA m =>
+    Monad m =>
     (Config -> Draw.Color) -> Widget.Id -> Widget f -> ExprGuiM m (Widget f)
 addValBGWithColor color myId gui =
     do
@@ -486,22 +485,22 @@ addValBGWithColor color myId gui =
     where
         animId = Widget.toAnimId myId ++ ["val"]
 
-addValPadding :: MonadA m => ExpressionGui n -> ExprGuiM m (ExpressionGui n)
+addValPadding :: Monad m => ExpressionGui n -> ExprGuiM m (ExpressionGui n)
 addValPadding gui =
     do
         padding <- ExprGuiM.readConfig <&> Config.valFramePadding
         pad (padding <&> realToFrac) gui & return
 
-liftLayers :: MonadA m => ExpressionGui n -> ExprGuiM m (ExpressionGui n)
+liftLayers :: Monad m => ExpressionGui n -> ExprGuiM m (ExpressionGui n)
 liftLayers =
     egWidget %%~ ExprGuiM.widgetEnv . BWidgets.liftLayerInterval
 
 addValFrame ::
-    MonadA m => Widget.Id -> ExpressionGui m -> ExprGuiM m (ExpressionGui m)
+    Monad m => Widget.Id -> ExpressionGui m -> ExprGuiM m (ExpressionGui m)
 addValFrame myId gui = addValPadding gui >>= egWidget %%~ addValBG myId
 
 stdWrapParenify ::
-    MonadA m =>
+    Monad m =>
     Sugar.Payload m ExprGuiT.Payload -> MyPrecedence ->
     (Widget.Id -> ExprGuiM m (ExpressionGui m)) ->
     ExprGuiM m (ExpressionGui m)
@@ -512,7 +511,7 @@ stdWrapParenify pl prec mkGui =
 
 -- TODO: This doesn't belong here
 makeNameView ::
-    (MonadA m, MonadA n) =>
+    (Monad m, Monad n) =>
     Name n -> AnimId -> ExprGuiM m (Widget f)
 makeNameView (Name _ collision _ name) animId =
     do
@@ -522,7 +521,7 @@ makeNameView (Name _ collision _ name) animId =
 
 -- TODO: This doesn't belong here
 makeCollisionSuffixLabels ::
-    MonadA m => NameCollision -> AnimId -> ExprGuiM m [Widget f]
+    Monad m => NameCollision -> AnimId -> ExprGuiM m [Widget f]
 makeCollisionSuffixLabels NoCollision _ = return []
 makeCollisionSuffixLabels (Collision suffix) animId =
     do
@@ -538,7 +537,7 @@ makeCollisionSuffixLabels (Collision suffix) animId =
             & ExprGuiM.widgetEnv
 
 wrapExprEventMap ::
-    MonadA m =>
+    Monad m =>
     Sugar.Payload m ExprGuiT.Payload ->
     ExprGuiM m (ExpressionGui m) ->
     ExprGuiM m (ExpressionGui m)
@@ -551,7 +550,7 @@ wrapExprEventMap pl action =
             & return
 
 maybeAddAnnotationPl ::
-    MonadA m =>
+    Monad m =>
     Sugar.Payload m0 ExprGuiT.Payload ->
     ExpressionGui m -> ExprGuiM m (ExpressionGui m)
 maybeAddAnnotationPl pl eg =
@@ -569,7 +568,7 @@ maybeAddAnnotationPl pl eg =
         showAnnotation = pl ^. Sugar.plData . ExprGuiT.plShowAnnotation
 
 evaluationResult ::
-    MonadA m =>
+    Monad m =>
     Sugar.Payload m ExprGuiT.Payload -> ExprGuiM m (Maybe (ER.Val Type))
 evaluationResult pl =
     ExprGuiM.readMScopeId
@@ -581,7 +580,7 @@ data EvalAnnotationOptions
     | WithNeighbouringEvalAnnotations (NeighborVals (Maybe Sugar.BinderParamScopeId))
 
 maybeAddAnnotation ::
-    MonadA m =>
+    Monad m =>
     WideAnnotationBehavior -> ShowAnnotation -> Sugar.Annotation -> Sugar.EntityId ->
     ExpressionGui m -> ExprGuiM m (ExpressionGui m)
 maybeAddAnnotation = maybeAddAnnotationWith NormalEvalAnnotation
@@ -591,7 +590,7 @@ data AnnotationMode
     | AnnotationModeTypes
     | AnnotationModeEvaluation (NeighborVals (Maybe EvalResDisplay)) EvalResDisplay
 
-getAnnotationMode :: MonadA m => EvalAnnotationOptions -> Sugar.Annotation -> ExprGuiM m AnnotationMode
+getAnnotationMode :: Monad m => EvalAnnotationOptions -> Sugar.Annotation -> ExprGuiM m AnnotationMode
 getAnnotationMode opt annotation =
     do
         settings <- ExprGuiM.readSettings
@@ -609,7 +608,7 @@ getAnnotationMode opt annotation =
                 neighbors <&> (>>= valOfScopePreferCur annotation . (^. Sugar.bParamScopeId))
 
 maybeAddAnnotationWith ::
-    MonadA m =>
+    Monad m =>
     EvalAnnotationOptions -> WideAnnotationBehavior -> ShowAnnotation ->
     Sugar.Annotation -> Sugar.EntityId -> ExpressionGui m ->
     ExprGuiM m (ExpressionGui m)

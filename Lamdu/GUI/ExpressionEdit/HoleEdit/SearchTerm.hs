@@ -7,7 +7,6 @@ module Lamdu.GUI.ExpressionEdit.HoleEdit.SearchTerm
 
 import           Control.Lens.Operators
 import           Control.Monad (when)
-import           Control.MonadA (MonadA)
 import qualified Data.Monoid as Monoid
 import           Data.Store.Property (Property)
 import qualified Data.Store.Property as Property
@@ -34,7 +33,7 @@ textEditNoEmpty textEditStyle =
     & TextEdit.sEmptyUnfocusedString .~ "  "
 
 makeSearchTermPropEdit ::
-    MonadA m => WidgetIds -> Property m String -> WE.WidgetEnvT m (Widget m)
+    Monad m => WidgetIds -> Property m String -> WE.WidgetEnvT m (Widget m)
 makeSearchTermPropEdit WidgetIds{..} searchTermProp =
     BWidgets.makeTextEdit searchTerm hidOpenSearchTerm
     <&> Widget.events %~ \(newSearchTerm, eventRes) ->
@@ -52,7 +51,7 @@ makeSearchTermPropEdit WidgetIds{..} searchTermProp =
     where
         searchTerm = Property.value searchTermProp
 
-make :: MonadA m => HoleInfo m -> ExprGuiM m (ExpressionGui m)
+make :: Monad m => HoleInfo m -> ExprGuiM m (ExpressionGui m)
 make holeInfo =
     do
         config <- ExprGuiM.readConfig

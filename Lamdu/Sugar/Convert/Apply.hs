@@ -12,7 +12,6 @@ import           Control.Monad.Trans.Class (lift)
 import           Control.Monad.Trans.Either.Utils (runMatcherT, justToLeft)
 import           Control.Monad.Trans.Maybe (MaybeT(..))
 import           Control.Monad.Trans.State (evalStateT, runStateT)
-import           Control.MonadA (MonadA)
 import qualified Data.Foldable as Foldable
 import qualified Data.Map as Map
 import           Data.Maybe.Utils (maybeToMPlus)
@@ -46,7 +45,7 @@ import           Lamdu.Sugar.Types
 type T = Transaction
 
 convert ::
-    (MonadA m, Monoid a) => V.Apply (Val (Input.Payload m a)) ->
+    (Monad m, Monoid a) => V.Apply (Val (Input.Payload m a)) ->
     Input.Payload m a -> ConvertM m (ExpressionU m a)
 convert app@(V.Apply funcI argI) exprPl =
     runMatcherT $
@@ -79,7 +78,7 @@ noRepetitions :: Ord a => [a] -> Bool
 noRepetitions x = length x == Set.size (Set.fromList x)
 
 convertLabeled ::
-    (MonadA m, Monoid a) =>
+    (Monad m, Monoid a) =>
     ExpressionU m a -> ExpressionU m a -> Val (Input.Payload m a) -> Input.Payload m a ->
     MaybeT (ConvertM m) (ExpressionU m a)
 convertLabeled funcS argS argI exprPl =
@@ -118,7 +117,7 @@ convertLabeled funcS argS argI exprPl =
         (fieldsI, Val _ (V.BLeaf V.LRecEmpty)) = RecordVal.unpack argI
 
 convertPrefix ::
-    (MonadA m, Monoid a) =>
+    (Monad m, Monoid a) =>
     ExpressionU m a -> ExpressionU m a ->
     Input.Payload m a -> ConvertM m (ExpressionU m a)
 convertPrefix funcS argS applyPl =
@@ -137,7 +136,7 @@ orderedInnerHoles e =
     body -> Foldable.concatMap orderedInnerHoles body
 
 unwrap ::
-    MonadA m =>
+    Monad m =>
     ExprIRef.ValIProperty m ->
     ExprIRef.ValIProperty m ->
     Val (Input.Payload n a) ->
@@ -150,14 +149,14 @@ unwrap outerP argP argExpr =
             (x:_) -> x ^. V.payload . Input.entityId
             _ -> EntityId.ofValI res
 
-checkTypeMatch :: MonadA m => Type -> Type -> ConvertM m Bool
+checkTypeMatch :: Monad m => Type -> Type -> ConvertM m Bool
 checkTypeMatch x y =
     do
         inferContext <- (^. ConvertM.scInferContext) <$> ConvertM.readContext
         return $ Lens.has Lens._Right $ evalStateT (Infer.run (unify x y)) inferContext
 
 mkAppliedHoleOptions ::
-    MonadA m =>
+    Monad m =>
     ConvertM.Context m ->
     Val (Input.Payload m a) ->
     Expression name m a ->
@@ -182,7 +181,7 @@ mkAppliedHoleOptions sugarContext argI argS exprPl stored =
     <&> ConvertHole.mkHoleOption sugarContext (Just argI) exprPl stored
 
 mkAppliedHoleSuggesteds ::
-    MonadA m =>
+    Monad m =>
     ConvertM.Context m ->
     Val (Input.Payload m a) ->
     Input.Payload m a ->
@@ -201,7 +200,7 @@ mkAppliedHoleSuggesteds sugarContext argI exprPl stored =
             (sugg <&> Lens._1 %~ (^. Infer.plType))
 
 convertAppliedHole ::
-    (MonadA m, Monoid a) =>
+    (Monad m, Monoid a) =>
     V.Apply (Val (Input.Payload m a)) -> ExpressionU m a ->
     Input.Payload m a ->
     MaybeT (ConvertM m) (ExpressionU m a)
@@ -246,7 +245,7 @@ convertAppliedHole (V.Apply funcI argI) argS exprPl =
         guidEntityId valI = (UniqueId.toGuid valI, EntityId.ofValI valI)
 
 convertAppliedCase ::
-    (MonadA m, Monoid a) =>
+    (Monad m, Monoid a) =>
     Body Guid m (ExpressionU m a) -> Input.Payload m a ->
     ExpressionU m a -> Input.Payload m a ->
     MaybeT (ConvertM m) (ExpressionU m a)

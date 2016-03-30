@@ -8,7 +8,6 @@ import           Prelude.Compat
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Monad.Trans.Class (lift)
-import           Control.MonadA (MonadA)
 import qualified Data.List.Utils as ListUtils
 import qualified Data.Store.Property as Property
 import           Data.Store.Rev.Branch (Branch)
@@ -81,7 +80,7 @@ branchTextEditId :: Branch t -> Widget.Id
 branchTextEditId = (`Widget.joinId` ["textedit"]) . branchDelegatorId
 
 make ::
-    (MonadA mr, Applicative mw, MonadA n) =>
+    (Monad mr, Applicative mw, Monad n) =>
     VersionControl.Config -> Anim.Layer ->
     (forall a. Transaction n a -> mw a) ->
     (forall a. Transaction n a -> mr a) ->

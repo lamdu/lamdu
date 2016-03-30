@@ -5,7 +5,6 @@ module Lamdu.GUI.ExpressionEdit
 
 import           Control.Lens.Operators
 import           Control.Lens.Tuple
-import           Control.MonadA (MonadA)
 import qualified Data.List as List
 import qualified Graphics.UI.Bottle.SizedFont as SizedFont
 import qualified Graphics.UI.Bottle.Widget as Widget
@@ -32,7 +31,7 @@ import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Sugar.Names.Types (Name(..))
 import qualified Lamdu.Sugar.Types as Sugar
 
-shrinkIfHigherThanLine :: MonadA m => ExpressionGui f -> ExprGuiM m (ExpressionGui f)
+shrinkIfHigherThanLine :: Monad m => ExpressionGui f -> ExprGuiM m (ExpressionGui f)
 shrinkIfHigherThanLine w =
     do
         sizedFont <-
@@ -50,7 +49,7 @@ shrinkIfHigherThanLine w =
                 & ExpressionGui.egAlignment . _2 .~ 0.5
             else w
 
-make :: MonadA m => ExprGuiT.SugarExpr m -> ExprGuiM m (ExpressionGui m)
+make :: Monad m => ExprGuiT.SugarExpr m -> ExprGuiM m (ExpressionGui m)
 make sExpr =
     makeEditor body pl >>= maybeShrink
     & assignCursor
@@ -68,7 +67,7 @@ make sExpr =
             exprHiddenEntityIds <&> WidgetIds.fromEntityId
 
 makeEditor ::
-    MonadA m =>
+    Monad m =>
     Sugar.Body (Name m) m (ExprGuiT.SugarExpr m) ->
     Sugar.Payload m ExprGuiT.Payload ->
     ExprGuiM m (ExpressionGui m)

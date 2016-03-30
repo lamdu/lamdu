@@ -8,7 +8,6 @@ import           Prelude.Compat
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Monad (void)
-import           Control.MonadA (MonadA)
 import           Data.Maybe.Utils (unsafeUnjust)
 import           Data.Store.Guid (Guid)
 import qualified Data.Store.Property as Property
@@ -36,7 +35,7 @@ convertTag :: EntityId -> T.Tag -> TagG Guid
 convertTag inst tag = TagG inst tag $ UniqueId.toGuid tag
 
 deleteField ::
-    MonadA m =>
+    Monad m =>
     ExprIRef.ValIProperty m ->
     ExprIRef.ValI m ->
     Record name0 m (Expression name2 m a1) -> Val (Input.Payload m a) ->
@@ -75,7 +74,7 @@ deleteField stored restI restS expr exprS =
                         ClosedRecord open -> delete >> open & Just
 
 convertField ::
-    (MonadA m, Monoid a) =>
+    (Monad m, Monoid a) =>
     ExprIRef.ValIProperty m ->
     ExprIRef.ValI m -> Record name m (ExpressionU m a) ->
     EntityId -> T.Tag -> Val (Input.Payload m a) ->
@@ -90,7 +89,7 @@ convertField stored restI restS inst tag expr =
             , _rfDelete = delField
             }
 
-makeAddField :: MonadA m =>
+makeAddField :: Monad m =>
     ExprIRef.ValIProperty m ->
     ConvertM m (Transaction m RecordAddFieldResult)
 makeAddField stored =
@@ -117,7 +116,7 @@ makeAddField stored =
             where
                 resultEntity = EntityId.ofValI resultI
 
-convertEmpty :: MonadA m => Input.Payload m a -> ConvertM m (ExpressionU m a)
+convertEmpty :: Monad m => Input.Payload m a -> ConvertM m (ExpressionU m a)
 convertEmpty exprPl = do
     addField <- exprPl ^. Input.stored & makeAddField
     BodyRecord Record
@@ -132,14 +131,14 @@ convertEmpty exprPl = do
         & addActions exprPl
 
 setTagOrder ::
-    MonadA m => Int -> RecordAddFieldResult -> Transaction m RecordAddFieldResult
+    Monad m => Int -> RecordAddFieldResult -> Transaction m RecordAddFieldResult
 setTagOrder i r =
     do
         Transaction.setP (assocTagOrder (r ^. rafrNewTag . tagVal)) i
         return r
 
 convertExtend ::
-    (MonadA m, Monoid a) => V.RecExtend (Val (Input.Payload m a)) ->
+    (Monad m, Monoid a) => V.RecExtend (Val (Input.Payload m a)) ->
     Input.Payload m a -> ConvertM m (ExpressionU m a)
 convertExtend (V.RecExtend tag val rest) exprPl = do
     restS <- ConvertM.convertSubexpression rest

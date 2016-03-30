@@ -7,7 +7,6 @@ import           Prelude.Compat
 
 import           Control.Lens.Operators
 import           Control.Lens.Tuple
-import           Control.MonadA (MonadA)
 import           Data.Store.Transaction (Transaction)
 import           Data.Vector.Vector2 (Vector2(..))
 import qualified Graphics.DrawingCombinators as Draw
@@ -37,7 +36,7 @@ prefixPrecedence :: Int
 prefixPrecedence = 10
 
 mkOverrideModifyEventMap ::
-    MonadA m => Sugar.Actions m ->
+    Monad m => Sugar.Actions m ->
     ExprGuiM m (ExpressionGui m -> ExpressionGui m)
 mkOverrideModifyEventMap actions =
     do
@@ -79,7 +78,7 @@ addInfixMarker widgetId widget =
         frameId = Widget.toAnimId widgetId ++ ["infix"]
 
 makeInfixFuncName ::
-    MonadA m => ExprGuiT.SugarExpr m -> ExprGuiM m (ExpressionGui m)
+    Monad m => ExprGuiT.SugarExpr m -> ExprGuiM m (ExpressionGui m)
 makeInfixFuncName func =
     do
         res <- ExprGuiM.makeSubexpression (const prec) func
@@ -95,7 +94,7 @@ makeInfixFuncName func =
         prec = 20
 
 makeFuncRow ::
-    MonadA m =>
+    Monad m =>
     Sugar.Apply name (ExprGuiT.SugarExpr m) ->
     Sugar.Payload m a -> ExprGuiM m (ExpressionGui m)
 makeFuncRow (Sugar.Apply func specialArgs annotatedArgs) pl =
@@ -131,7 +130,7 @@ makeFuncRow (Sugar.Apply func specialArgs annotatedArgs) pl =
                 >>= ExpressionGui.hboxSpaced
 
 make ::
-    MonadA m =>
+    Monad m =>
     Sugar.Apply (Name m) (ExprGuiT.SugarExpr m) ->
     Sugar.Payload m ExprGuiT.Payload ->
     ExprGuiM m (ExpressionGui m)
@@ -149,7 +148,7 @@ make apply@(Sugar.Apply func specialArgs annotatedArgs) pl =
         isBoxed = not $ null annotatedArgs
 
 makeArgRows ::
-    MonadA m =>
+    Monad m =>
     Sugar.AnnotatedArg (Name m) (ExprGuiT.SugarExpr m) ->
     ExprGuiM m [[(Grid.Alignment, Widget (T m))]]
 makeArgRows arg =
@@ -167,7 +166,7 @@ makeArgRows arg =
             ]
 
 mkBoxed ::
-    MonadA m =>
+    Monad m =>
     [Sugar.AnnotatedArg (Name m) (ExprGuiT.SugarExpr m)] ->
     Widget.Id ->
     ExprGuiM m (ExpressionGui m) ->

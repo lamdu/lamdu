@@ -5,7 +5,6 @@ module Lamdu.GUI.ExpressionEdit.HoleEdit
 
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
-import           Control.MonadA (MonadA)
 import qualified Data.Store.Transaction as Transaction
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.Layout as Layout
@@ -28,7 +27,7 @@ import           Lamdu.Sugar.Names.Types (Name(..))
 import qualified Lamdu.Sugar.Types as Sugar
 
 makeWrapper ::
-    MonadA m => Sugar.Payload m ExprGuiT.Payload ->
+    Monad m => Sugar.Payload m ExprGuiT.Payload ->
     HoleInfo m -> ExprGuiM m (Maybe (ExpressionGui m))
 makeWrapper pl holeInfo =
     hiHole holeInfo ^. Sugar.holeMArg
@@ -36,7 +35,7 @@ makeWrapper pl holeInfo =
         ExpressionGui.wrapExprEventMap pl . Wrapper.make (hiIds holeInfo)
 
 assignHoleCursor ::
-    MonadA m =>
+    Monad m =>
     WidgetIds -> Maybe (Sugar.HoleArg m expr) ->
     ExprGuiM m a -> ExprGuiM m a
 assignHoleCursor WidgetIds{..} Nothing =
@@ -47,7 +46,7 @@ assignHoleCursor WidgetIds{..} (Just _) =
     ExprGuiM.assignCursor (WidgetIds.notDelegatingId hidHole) hidWrapper
 
 addSearchAreaBelow ::
-    MonadA m => WidgetIds ->
+    Monad m => WidgetIds ->
     ExpressionGui f -> ExpressionGui f ->
     ExprGuiM m (ExpressionGui f)
 addSearchAreaBelow WidgetIds{..} wrapperGui searchAreaGui =
@@ -62,7 +61,7 @@ addSearchAreaBelow WidgetIds{..} wrapperGui searchAreaGui =
             & return
 
 addWrapperAbove ::
-    MonadA m =>
+    Monad m =>
     WidgetIds -> ExpressionGui f -> ExpressionGui f ->
     ExprGuiM m (ExpressionGui f)
 addWrapperAbove WidgetIds{..} wrapperGui searchAreaGui =
@@ -78,7 +77,7 @@ addWrapperAbove WidgetIds{..} wrapperGui searchAreaGui =
             & return
 
 make ::
-    MonadA m =>
+    Monad m =>
     Sugar.Hole (Name m) m (ExprGuiT.SugarExpr m) ->
     Sugar.Payload m ExprGuiT.Payload ->
     ExprGuiM m (ExpressionGui m)

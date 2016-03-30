@@ -9,7 +9,6 @@ import           Control.Applicative (liftA2)
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Monad.Trans.Class (lift)
-import           Control.MonadA (MonadA)
 import           Data.CurAndPrev (CurAndPrev(..))
 import           Data.Functor.Identity (Identity(..))
 import           Data.List (intersperse)
@@ -90,7 +89,7 @@ data Env m = Env
     , style :: Style
     }
 
-makePanes :: MonadA m => Widget.Id -> Transaction.Property m [DefI m] -> [Pane m]
+makePanes :: Monad m => Widget.Id -> Transaction.Property m [DefI m] -> [Pane m]
 makePanes defaultDelDest (Property panes setPanes) =
     panes ^@.. Lens.traversed <&> convertPane
     where
@@ -126,7 +125,7 @@ toExprGuiMPayload (entityIds, nearestHoles) =
     ExprGuiT.emptyPayload nearestHoles & ExprGuiT.plStoredEntityIds .~ entityIds
 
 postProcessExpr ::
-    MonadA m =>
+    Monad m =>
     Sugar.Expression name m [Sugar.EntityId] ->
     Sugar.Expression name m ExprGuiT.Payload
 postProcessExpr expr =
@@ -137,7 +136,7 @@ postProcessExpr expr =
     & RedundantAnnotations.markAnnotationsToDisplay
 
 processPane ::
-    MonadA m => Env m -> Pane m ->
+    Monad m => Env m -> Pane m ->
     T m (Pane m, DefinitionN m ExprGuiT.Payload)
 processPane env pane =
     paneDefI pane
@@ -150,7 +149,7 @@ processPane env pane =
     <&> (,) pane
 
 processExpr ::
-    MonadA m => Env m -> Transaction.Property m (ValI m) ->
+    Monad m => Env m -> Transaction.Property m (ValI m) ->
     T m (ExprGuiT.SugarExpr m)
 processExpr env expr =
     Load.exprProperty expr
@@ -161,7 +160,7 @@ processExpr env expr =
     <&> postProcessExpr
 
 gui ::
-    MonadA m =>
+    Monad m =>
     Env m -> Widget.Id -> ExprGuiT.SugarExpr m -> [Pane m] ->
     WidgetEnvT (T m) (Widget (M m))
 gui env rootId replExpr panes =
@@ -186,7 +185,7 @@ gui env rootId replExpr panes =
         space = Spacer.makeWidget 50
         replId = replExpr ^. Sugar.rPayload . Sugar.plEntityId & WidgetIds.fromEntityId
 
-make :: MonadA m => Env m -> Widget.Id -> WidgetEnvT (T m) (Widget (M m))
+make :: Monad m => Env m -> Widget.Id -> WidgetEnvT (T m) (Widget (M m))
 make env rootId =
     do
         replExpr <-
@@ -197,7 +196,7 @@ make env rootId =
         getProp f = f (codeProps env) ^. Transaction.mkProperty & lift
 
 makePaneEdit ::
-    MonadA m =>
+    Monad m =>
     Env m -> Config.Pane -> (Pane m, DefinitionN m ExprGuiT.Payload) ->
     ExprGuiM m (Widget (T m))
 makePaneEdit env paneConfig (pane, defS) =
@@ -218,7 +217,7 @@ makePaneEdit env paneConfig (pane, defS) =
             ] & mconcat
 
 makeNewDefinitionEventMap ::
-    MonadA m => Anchors.CodeProps m ->
+    Monad m => Anchors.CodeProps m ->
     WidgetEnvT (T m) ([ModKey] -> Widget.EventHandlers (T m))
 makeNewDefinitionEventMap cp =
     do
@@ -234,7 +233,7 @@ makeNewDefinitionEventMap cp =
             Widget.keysEventMapMovesCursor newDefinitionKeys
             (E.Doc ["Edit", "New definition"]) newDefinition
 
-makeNewDefinitionButton :: MonadA m => Widget.Id -> ExprGuiM m (Widget (T m))
+makeNewDefinitionButton :: Monad m => Widget.Id -> ExprGuiM m (Widget (T m))
 makeNewDefinitionButton myId =
     do
         codeAnchors <- ExprGuiM.readCodeAnchors
@@ -253,7 +252,7 @@ makeNewDefinitionButton myId =
         newDefinitionButtonId = Widget.joinId myId ["NewDefinition"]
 
 makeReplEventMap ::
-    MonadA m => Env m -> Sugar.Expression name m a -> Config ->
+    Monad m => Env m -> Sugar.Expression name m a -> Config ->
     Widget.EventHandlers (M m)
 makeReplEventMap env replExpr config =
     mconcat
@@ -272,7 +271,7 @@ makeReplEventMap env replExpr config =
             & mLiftTrans
 
 makeReplEdit ::
-    MonadA m => Env m -> Widget.Id -> ExprGuiT.SugarExpr m -> ExprGuiM m (Widget (M m))
+    Monad m => Env m -> Widget.Id -> ExprGuiT.SugarExpr m -> ExprGuiM m (Widget (M m))
 makeReplEdit env myId replExpr =
     do
         replLabel <-
@@ -289,7 +288,7 @@ makeReplEdit env myId replExpr =
         replId = Widget.joinId myId ["repl"]
 
 panesEventMap ::
-    MonadA m => Env m -> WidgetEnvT (T m) (Widget.EventHandlers (M m))
+    Monad m => Env m -> WidgetEnvT (T m) (Widget.EventHandlers (M m))
 panesEventMap Env{config,codeProps,importAll} =
     do
         mJumpBack <- DataOps.jumpBack codeProps & lift <&> fmap mLiftTrans
@@ -309,7 +308,7 @@ panesEventMap Env{config,codeProps,importAll} =
         importAction _ = Nothing
 
 makePaneWidget ::
-    MonadA m => Config -> DefinitionN m ExprGuiT.Payload -> ExprGuiM m (Widget (T m))
+    Monad m => Config -> DefinitionN m ExprGuiT.Payload -> ExprGuiM m (Widget (T m))
 makePaneWidget conf defS =
     DefinitionEdit.make defS <&> colorize
     where

@@ -8,7 +8,6 @@ import           Control.Lens.Operators
 import           Control.Monad (guard, mzero)
 import           Control.Monad.Trans.Class (lift)
 import           Control.Monad.Trans.Maybe (MaybeT(..))
-import           Control.MonadA (MonadA)
 import qualified Data.ByteString.UTF8 as UTF8
 import           Data.Maybe.Utils (maybeToMPlus)
 import           Data.Store.Property (Property(..))
@@ -28,7 +27,7 @@ import           Lamdu.Sugar.Types
 import           Prelude.Compat
 
 text ::
-    (MonadA m, Monoid a) =>
+    (Monad m, Monoid a) =>
     V.Nom (Val (Input.Payload m a)) -> Input.Payload m a ->
     MaybeT (ConvertM m) (ExpressionU m a)
 text (V.Nom tid (Val litPl body)) toNomPl =

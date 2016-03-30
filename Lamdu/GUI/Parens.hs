@@ -7,7 +7,6 @@ import           Prelude.Compat
 
 import           Control.Lens.Operators
 import           Control.Lens.Tuple
-import           Control.MonadA (MonadA)
 import           Graphics.UI.Bottle.Animation (AnimId)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import           Graphics.UI.Bottle.Widgets.Layout (Layout)
@@ -23,7 +22,7 @@ import           Lamdu.GUI.WidgetIds (parensPrefix)
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 
 addTextParensI ::
-    (MonadA m, Applicative f) =>
+    (Monad m, Applicative f) =>
     AnimId -> Widget.Id -> Layout f -> WidgetEnvT m (Layout f)
 addTextParensI parenId rParenId widget =
     do
@@ -44,7 +43,7 @@ highlightExpression config =
     Config.parenHighlightColor config
 
 addHighlightedTextParens ::
-    (MonadA m, Applicative f) => Widget.Id -> Layout f -> ExprGuiM m (Layout f)
+    (Monad m, Applicative f) => Widget.Id -> Layout f -> ExprGuiM m (Layout f)
 addHighlightedTextParens myId widget =
     do
         mInsideParenId <- WE.subCursor rParenId & ExprGuiM.widgetEnv

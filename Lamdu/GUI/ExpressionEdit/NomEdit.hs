@@ -5,7 +5,6 @@ module Lamdu.GUI.ExpressionEdit.NomEdit
 
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
-import           Control.MonadA (MonadA)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.Layout as Layout
 import qualified Graphics.UI.Bottle.WidgetsEnvT as WE
@@ -28,7 +27,7 @@ addRight :: Layout.AddLayout w => [w] -> Layout.LayoutType w -> Layout.LayoutTyp
 addRight = Layout.addAfter Layout.Horizontal
 
 hover ::
-    MonadA m => ExpressionGui n -> ExpressionGui n ->
+    Monad m => ExpressionGui n -> ExpressionGui n ->
     ExprGuiM m (ExpressionGui n)
 hover gui place =
     gui `Layout.hoverInPlaceOf` place
@@ -43,7 +42,7 @@ type LayoutFunc m =
     ExprGuiM m (ExpressionGui m)
 
 expandingName ::
-    MonadA m =>
+    Monad m =>
     ([ExpressionGui m] -> ExpressionGui m -> ExpressionGui m) ->
     LayoutFunc m
 expandingName namePos nomId label nameGui subexprGui showName =
@@ -56,14 +55,14 @@ expandingName namePos nomId label nameGui subexprGui showName =
             <&> (:[]) <&> (`namePos` subexprGui)
 
 makeToNom ::
-    MonadA m =>
+    Monad m =>
     Sugar.Nominal (Name m) (ExprGuiT.SugarExpr m) ->
     Sugar.Payload m ExprGuiT.Payload ->
     ExprGuiM m (ExpressionGui m)
 makeToNom = mkNomGui precLeft "«" $ expandingName addLeft
 
 makeFromNom ::
-    MonadA m =>
+    Monad m =>
     Sugar.Nominal (Name m) (ExprGuiT.SugarExpr m) ->
     Sugar.Payload m ExprGuiT.Payload ->
     ExprGuiM m (ExpressionGui m)
@@ -109,7 +108,7 @@ mkNomGui nameSidePrecLens str layout nom@(Sugar.Nominal _ val) pl =
         valId = val ^. Sugar.rPayload . Sugar.plEntityId & WidgetIds.fromEntityId
 
 mkNameGui ::
-    MonadA m => Sugar.Nominal (Name m) a -> Widget.Id ->
+    Monad m => Sugar.Nominal (Name m) a -> Widget.Id ->
     ExprGuiM m (ExpressionGui m)
 mkNameGui (Sugar.Nominal tidg _val) nameId =
     ExpressionGui.makeNameView (tidg ^. Sugar.tidgName) (Widget.toAnimId nameId)

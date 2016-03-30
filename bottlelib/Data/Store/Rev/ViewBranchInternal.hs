@@ -13,7 +13,6 @@ module Data.Store.Rev.ViewBranchInternal
 where
 
 import qualified Control.Lens as Lens
-import           Control.MonadA (MonadA)
 import           Data.Binary (Binary(..))
 import           Data.Foldable (traverse_)
 import           Data.Store.Guid (Guid)
@@ -50,7 +49,7 @@ Lens.makeLenses ''ViewData
 
 -- | moveView must be given the correct source of the movement
 -- | or it will result in undefined results!
-moveView :: MonadA m => View m -> Version m -> Version m -> Transaction m ()
+moveView :: Monad m => View m -> Version m -> Version m -> Transaction m ()
 moveView vm =
     Version.walk applyBackward applyForward
     where
@@ -62,7 +61,7 @@ makeViewKey :: View m -> Change.Key -> Guid
 makeViewKey (View iref) = Guid.combine . IRef.guid $ iref
 
 applyChangesToView ::
-    MonadA m => View m -> (Change -> Maybe Change.Value) ->
+    Monad m => View m -> (Change -> Maybe Change.Value) ->
     [Change] -> Transaction m ()
 applyChangesToView vm changeDir = traverse_ applyChange
     where

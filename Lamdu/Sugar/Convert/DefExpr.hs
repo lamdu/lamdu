@@ -5,7 +5,6 @@ module Lamdu.Sugar.Convert.DefExpr
 
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
-import           Control.MonadA (MonadA)
 import qualified Data.Map as Map
 import qualified Data.Set as Set
 import           Data.Store.Guid (Guid)
@@ -30,7 +29,7 @@ import           Lamdu.Sugar.Types
 
 import           Prelude.Compat
 
-loadGlobalType :: MonadA m => V.Var -> Transaction m (Maybe Scheme)
+loadGlobalType :: Monad m => V.Var -> Transaction m (Maybe Scheme)
 loadGlobalType globId =
     Transaction.readIRef (ExprIRef.defI globId)
     <&>
@@ -42,7 +41,7 @@ loadGlobalType globId =
     Definition.BodyBuiltin b -> Just (Definition.bType b)
 
 acceptNewType ::
-    MonadA m =>
+    Monad m =>
     Definition.Expr (Val (Input.Payload m a)) -> DefI m -> Scheme ->
     Transaction m ()
 acceptNewType defExpr defI inferredType =
@@ -63,7 +62,7 @@ acceptNewType defExpr defI inferredType =
             <&> Lens._Just %~ (,) globId <&> (^.. Lens._Just)
 
 makeExprDefTypeInfo ::
-    MonadA m =>
+    Monad m =>
     Definition.Expr (Val (Input.Payload m a)) -> DefI m ->
     ConvertM m (DefinitionTypeInfo m)
 makeExprDefTypeInfo defExpr defI =
@@ -86,7 +85,7 @@ makeExprDefTypeInfo defExpr defI =
             & return
 
 convert ::
-    (Monoid a, MonadA m) =>
+    (Monoid a, Monad m) =>
     Definition.Expr (Val (Input.Payload m a)) -> DefI m ->
     ConvertM m (DefinitionBody Guid m (ExpressionU m a))
 convert defExpr defI =
