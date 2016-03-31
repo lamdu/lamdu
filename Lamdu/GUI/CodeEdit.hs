@@ -10,6 +10,7 @@ import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Monad.Trans.Class (lift)
 import           Data.CurAndPrev (CurAndPrev(..))
+import           Data.Foldable (traverse_)
 import           Data.Functor.Identity (Identity(..))
 import           Data.List (intersperse)
 import           Data.List.Utils (insertAt, removeAt)
@@ -303,8 +304,8 @@ panesEventMap Env{config,codeProps,exportActions} =
         return $ mconcat
             [ newDefinitionEventMap (Config.newDefinitionKeys (Config.pane config))
               <&> mLiftTrans
-            , E.dropEventMap "Drag&drop 1 JSON file"
-              (E.Doc ["Collaboration", "Import JSON file"]) importAction
+            , E.dropEventMap "Drag&drop JSON files"
+              (E.Doc ["Collaboration", "Import JSON file"]) (Just . traverse_ importAll)
               <&> fmap (\() -> mempty)
             , maybe mempty
               (Widget.keysEventMapMovesCursor (Config.previousCursorKeys config)
@@ -318,8 +319,6 @@ panesEventMap Env{config,codeProps,exportActions} =
     where
         ExportActions{importAll,exportAll} = exportActions
         Config.Export{exportPath,importKeys,exportAllKeys} = Config.export config
-        importAction [filePath] = Just (importAll filePath)
-        importAction _ = Nothing
 
 makePaneWidget ::
     Monad m => DefinitionN m ExprGuiT.Payload -> ExprGuiM m (Widget (T m))
