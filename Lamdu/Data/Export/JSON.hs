@@ -3,6 +3,7 @@
 module Lamdu.Data.Export.JSON
     ( fileExportRepl
     , fileExportAll
+    , fileExportDef
     , fileImportAll
     ) where
 
@@ -120,7 +121,7 @@ exportSubexpr _ = return ()
 exportVal :: Val (ValI ViewM) -> Export ()
 exportVal val =
     do
-        val ^.. ExprLens.valGlobals mempty & traverse_ exportDef
+        val ^.. ExprLens.valGlobals mempty & traverse_ (exportDef . ExprIRef.defI)
         val ^.. ExprLens.valTags & traverse_ exportTag
         val ^.. ExprLens.valNominals & traverse_ exportNominal
         val ^.. ExprLens.subExprs & traverse_ exportSubexpr
@@ -128,18 +129,20 @@ exportVal val =
 valIToUUID :: ValI m -> UUID
 valIToUUID = IRef.uuid . ExprIRef.unValI
 
-exportDef :: V.Var -> Export ()
-exportDef globalId =
+exportDef :: ExprIRef.DefI ViewM -> Export ()
+exportDef defI =
     do
         presentationMode <- Transaction.getP (Anchors.assocPresentationMode globalId) & trans
         mName <- readAssocName globalId & trans
         def <-
-            ExprIRef.defI globalId & Load.def & trans
+            Load.def defI & trans
             <&> Definition.defBody . Lens.mapped . Lens.mapped %~ Property.value
         traverse_ exportVal (def ^. Definition.defBody)
         let def' = def & Definition.defBody . Lens.mapped . Lens.mapped %~ valIToUUID
         (presentationMode, mName, globalId) <$ def' & Codec.encodeDef & tell
     & withVisited visitedDefs globalId
+    where
+        globalId = ExprIRef.globalId defI
 
 exportRepl :: Export ()
 exportRepl =
@@ -153,10 +156,14 @@ exportRepl =
 fileExportRepl :: FilePath -> T ViewM (IO ())
 fileExportRepl = export "repl" exportRepl
 
+fileExportDef :: ExprIRef.DefI ViewM -> FilePath -> T ViewM (IO ())
+fileExportDef defI =
+    export ("def: " ++ show defI) (exportDef defI)
+
 fileExportAll :: FilePath -> T ViewM (IO ())
 fileExportAll =
     do
-        exportSet DbLayout.globals (exportDef . ExprIRef.globalId)
+        exportSet DbLayout.globals exportDef
         exportSet DbLayout.tags exportTag
         exportSet DbLayout.tids exportNominal
         exportRepl

@@ -82,6 +82,7 @@ data Pane m = Pane
 data ExportActions m = ExportActions
     { exportRepl :: M m ()
     , exportAll :: M m ()
+    , exportDef :: DefI m -> M m ()
     , importAll :: FilePath -> M m ()
     }
 
@@ -209,22 +210,23 @@ makePaneEdit env (pane, defS) =
     where
         Config.Pane{paneCloseKeys, paneMoveDownKeys, paneMoveUpKeys} =
             Config.pane (config env)
+        Config.Export{exportKeys} = Config.export (config env)
         paneEventMap =
-            [ paneDel pane
-              <&> mLiftTrans
+            [ paneDel pane <&> mLiftTrans
               & maybe mempty
                 (Widget.keysEventMapMovesCursor paneCloseKeys
                  (E.Doc ["View", "Pane", "Close"]))
-            , paneMoveDown pane
-              <&> mLiftTrans
+            , paneMoveDown pane <&> mLiftTrans
               & maybe mempty
                 (Widget.keysEventMap paneMoveDownKeys
                  (E.Doc ["View", "Pane", "Move down"]))
-            , paneMoveUp pane
-              <&> mLiftTrans
+            , paneMoveUp pane <&> mLiftTrans
               & maybe mempty
                 (Widget.keysEventMap paneMoveUpKeys
                  (E.Doc ["View", "Pane", "Move up"]))
+            , exportDef (exportActions env) (paneDefI pane)
+              & Widget.keysEventMap exportKeys
+                (E.Doc ["Collaboration", "Export definition to JSON file"])
             ] & mconcat
 
 makeNewDefinitionEventMap ::

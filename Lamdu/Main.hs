@@ -133,6 +133,7 @@ exportActions config =
     GUIMain.ExportActions
     { GUIMain.exportRepl = fileExport Export.fileExportRepl
     , GUIMain.exportAll = fileExport Export.fileExportAll
+    , GUIMain.exportDef = fileExport . Export.fileExportDef
     , GUIMain.importAll = importAll
     }
     where
