@@ -174,7 +174,7 @@ gui env rootId replExpr panes =
         panesEdits <-
             panes
             & ExprGuiM.transaction . traverse (processPane env)
-            >>= traverse (makePaneEdit env (Config.pane (config env)))
+            >>= traverse (makePaneEdit env)
         newDefinitionButton <- makeNewDefinitionButton rootId <&> mLiftWidget
         eventMap <- panesEventMap env & ExprGuiM.widgetEnv
         [replEdit] ++ panesEdits ++ [newDefinitionButton]
@@ -201,14 +201,14 @@ make env rootId =
 
 makePaneEdit ::
     Monad m =>
-    Env m -> Config.Pane -> (Pane m, DefinitionN m ExprGuiT.Payload) ->
-    ExprGuiM m (Widget (M m))
-makePaneEdit env paneConfig (pane, defS) =
-    makePaneWidget (config env) defS
+    Env m -> (Pane m, DefinitionN m ExprGuiT.Payload) -> ExprGuiM m (Widget (M m))
+makePaneEdit env (pane, defS) =
+    makePaneWidget defS
     <&> mLiftWidget
     <&> Widget.weakerEvents paneEventMap
     where
-        Config.Pane{paneCloseKeys, paneMoveDownKeys, paneMoveUpKeys} = paneConfig
+        Config.Pane{paneCloseKeys, paneMoveDownKeys, paneMoveUpKeys} =
+            Config.pane (config env)
         paneEventMap =
             [ paneDel pane
               <&> mLiftTrans
@@ -262,10 +262,8 @@ makeNewDefinitionButton myId =
     where
         newDefinitionButtonId = Widget.joinId myId ["NewDefinition"]
 
-makeReplEventMap ::
-    Monad m => Env m -> Sugar.Expression name m a -> Config ->
-    Widget.EventHandlers (M m)
-makeReplEventMap env replExpr config =
+replEventMap :: Monad m => Env m -> Sugar.Expression name m a -> Widget.EventHandlers (M m)
+replEventMap env replExpr =
     mconcat
     [ replExpr ^. Sugar.rPayload . Sugar.plActions . Sugar.extract
       <&> ExprEventMap.extractCursor & mLiftTrans
@@ -276,8 +274,8 @@ makeReplEventMap env replExpr config =
     ]
     where
         ExportActions{exportRepl} = exportActions env
-        Config.Export{exportKeys} = Config.export config
-        Config.Pane{newDefinitionButtonPressKeys} = Config.pane config
+        Config.Export{exportKeys} = Config.export (config env)
+        Config.Pane{newDefinitionButtonPressKeys} = Config.pane (config env)
 
 makeReplEdit ::
     Monad m => Env m -> Widget.Id -> ExprGuiT.SugarExpr m -> ExprGuiM m (Widget (M m))
@@ -287,12 +285,10 @@ makeReplEdit env myId replExpr =
             ExpressionGui.makeLabel "⋙" (Widget.toAnimId replId)
             >>= ExpressionGui.makeFocusableView replId
         expr <- ExprGuiM.makeSubexpression id replExpr
-        replEventMap <-
-            ExprGuiM.readConfig <&> makeReplEventMap env replExpr
         ExpressionGui.hboxSpaced [replLabel, expr]
             <&> (^. ExpressionGui.egWidget)
             <&> mLiftWidget
-            <&> Widget.weakerEvents replEventMap
+            <&> Widget.weakerEvents (replEventMap env replExpr)
     where
         replId = Widget.joinId myId ["repl"]
 
@@ -324,16 +320,17 @@ panesEventMap Env{config,codeProps,exportActions} =
         importAction _ = Nothing
 
 makePaneWidget ::
-    Monad m => Config -> DefinitionN m ExprGuiT.Payload -> ExprGuiM m (Widget (T m))
-makePaneWidget conf defS =
-    DefinitionEdit.make defS <&> colorize
-    where
-        Config.Pane{paneActiveBGColor,paneInactiveTintColor} = Config.pane conf
-        colorize widget
-            | widget ^. Widget.isFocused = colorizeActivePane widget
-            | otherwise = colorizeInactivePane widget
-        colorizeActivePane =
-            Widget.backgroundColor
-            (Config.layerActivePane (Config.layers conf))
-            WidgetIds.activePaneBackground paneActiveBGColor
-        colorizeInactivePane = Widget.tint paneInactiveTintColor
+    Monad m => DefinitionN m ExprGuiT.Payload -> ExprGuiM m (Widget (T m))
+makePaneWidget defS =
+    do
+        config <- ExprGuiM.readConfig
+        let Config.Pane{paneActiveBGColor,paneInactiveTintColor} = Config.pane config
+        let colorizeInactivePane = Widget.tint paneInactiveTintColor
+        let colorizeActivePane =
+                Widget.backgroundColor
+                (Config.layerActivePane (Config.layers config))
+                WidgetIds.activePaneBackground paneActiveBGColor
+        let colorize widget
+                | widget ^. Widget.isFocused = colorizeActivePane widget
+                | otherwise = colorizeInactivePane widget
+        DefinitionEdit.make defS <&> colorize
