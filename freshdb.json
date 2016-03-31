@@ -9,22 +9,11 @@
             "scheme": {
                 "schemeType": {
                     "funcParam": {
-                        "nomParams": {},
                         "nomId": "42493a666c6f61740000000000000000"
                     },
                     "funcResult": {
-                        "nomParams": {},
                         "nomId": "42493a666c6f61740000000000000000"
                     }
-                },
-                "schemeBinders": {
-                    "sumTypeVars": [],
-                    "constraints": {
-                        "sumTypeVars": {},
-                        "recordTypeVars": {}
-                    },
-                    "typeVars": [],
-                    "recordTypeVars": []
                 }
             }
         },
@@ -54,20 +43,13 @@
                         }
                     },
                     "funcResult": {
-                        "nomParams": {},
                         "nomId": "426f6f6c000000000000000000000000"
                     }
                 },
                 "schemeBinders": {
-                    "sumTypeVars": [],
-                    "constraints": {
-                        "sumTypeVars": {},
-                        "recordTypeVars": {}
-                    },
                     "typeVars": [
                         "61"
-                    ],
-                    "recordTypeVars": []
+                    ]
                 }
             }
         },
@@ -89,28 +71,16 @@
                     "funcParam": {
                         "record": {
                             "42493a696e6669786c00000000000000": {
-                                "nomParams": {},
                                 "nomId": "42493a666c6f61740000000000000000"
                             },
                             "42493a696e6669787200000000000000": {
-                                "nomParams": {},
                                 "nomId": "42493a666c6f61740000000000000000"
                             }
                         }
                     },
                     "funcResult": {
-                        "nomParams": {},
                         "nomId": "42493a666c6f61740000000000000000"
                     }
-                },
-                "schemeBinders": {
-                    "sumTypeVars": [],
-                    "constraints": {
-                        "sumTypeVars": {},
-                        "recordTypeVars": {}
-                    },
-                    "typeVars": [],
-                    "recordTypeVars": []
                 }
             }
         },
@@ -140,20 +110,13 @@
                         }
                     },
                     "funcResult": {
-                        "nomParams": {},
                         "nomId": "426f6f6c000000000000000000000000"
                     }
                 },
                 "schemeBinders": {
-                    "sumTypeVars": [],
-                    "constraints": {
-                        "sumTypeVars": {},
-                        "recordTypeVars": {}
-                    },
                     "typeVars": [
                         "61"
-                    ],
-                    "recordTypeVars": []
+                    ]
                 }
             }
         },
@@ -172,28 +135,16 @@
                     "funcParam": {
                         "record": {
                             "42493a696e6465780000000000000000": {
-                                "nomParams": {},
                                 "nomId": "42493a666c6f61740000000000000000"
                             },
                             "42493a6f626a65637400000000000000": {
-                                "nomParams": {},
                                 "nomId": "42493a62797465730000000000000000"
                             }
                         }
                     },
                     "funcResult": {
-                        "nomParams": {},
                         "nomId": "42493a666c6f61740000000000000000"
                     }
-                },
-                "schemeBinders": {
-                    "sumTypeVars": [],
-                    "constraints": {
-                        "sumTypeVars": {},
-                        "recordTypeVars": {}
-                    },
-                    "typeVars": [],
-                    "recordTypeVars": []
                 }
             }
         },
@@ -223,20 +174,13 @@
                         }
                     },
                     "funcResult": {
-                        "nomParams": {},
                         "nomId": "426f6f6c000000000000000000000000"
                     }
                 },
                 "schemeBinders": {
-                    "sumTypeVars": [],
-                    "constraints": {
-                        "sumTypeVars": {},
-                        "recordTypeVars": {}
-                    },
                     "typeVars": [
                         "61"
-                    ],
-                    "recordTypeVars": []
+                    ]
                 }
             }
         },
@@ -266,20 +210,13 @@
                         }
                     },
                     "funcResult": {
-                        "nomParams": {},
                         "nomId": "426f6f6c000000000000000000000000"
                     }
                 },
                 "schemeBinders": {
-                    "sumTypeVars": [],
-                    "constraints": {
-                        "sumTypeVars": {},
-                        "recordTypeVars": {}
-                    },
                     "typeVars": [
                         "61"
-                    ],
-                    "recordTypeVars": []
+                    ]
                 }
             }
         },
@@ -301,28 +238,16 @@
                     "funcParam": {
                         "record": {
                             "42493a696e6669786c00000000000000": {
-                                "nomParams": {},
                                 "nomId": "42493a666c6f61740000000000000000"
                             },
                             "42493a696e6669787200000000000000": {
-                                "nomParams": {},
                                 "nomId": "42493a666c6f61740000000000000000"
                             }
                         }
                     },
                     "funcResult": {
-                        "nomParams": {},
                         "nomId": "42493a666c6f61740000000000000000"
                     }
-                },
-                "schemeBinders": {
-                    "sumTypeVars": [],
-                    "constraints": {
-                        "sumTypeVars": {},
-                        "recordTypeVars": {}
-                    },
-                    "typeVars": [],
-                    "recordTypeVars": []
                 }
             }
         },
@@ -344,28 +269,16 @@
                     "funcParam": {
                         "record": {
                             "42493a696e6669786c00000000000000": {
-                                "nomParams": {},
                                 "nomId": "42493a666c6f61740000000000000000"
                             },
                             "42493a696e6669787200000000000000": {
-                                "nomParams": {},
                                 "nomId": "42493a666c6f61740000000000000000"
                             }
                         }
                     },
                     "funcResult": {
-                        "nomParams": {},
                         "nomId": "42493a666c6f61740000000000000000"
                     }
-                },
-                "schemeBinders": {
-                    "sumTypeVars": [],
-                    "constraints": {
-                        "sumTypeVars": {},
-                        "recordTypeVars": {}
-                    },
-                    "typeVars": [],
-                    "recordTypeVars": []
                 }
             }
         },
@@ -399,15 +312,9 @@
                     }
                 },
                 "schemeBinders": {
-                    "sumTypeVars": [],
-                    "constraints": {
-                        "sumTypeVars": {},
-                        "recordTypeVars": {}
-                    },
                     "typeVars": [
                         "61"
-                    ],
-                    "recordTypeVars": []
+                    ]
                 }
             }
         },
@@ -426,25 +333,14 @@
                     "funcParam": {
                         "nomParams": {
                             "42493a76616c00000000000000000000": {
-                                "nomParams": {},
                                 "nomId": "42493a666c6f61740000000000000000"
                             }
                         },
                         "nomId": "42493a73747265616d00000000000000"
                     },
                     "funcResult": {
-                        "nomParams": {},
                         "nomId": "42493a62797465730000000000000000"
                     }
-                },
-                "schemeBinders": {
-                    "sumTypeVars": [],
-                    "constraints": {
-                        "sumTypeVars": {},
-                        "recordTypeVars": {}
-                    },
-                    "typeVars": [],
-                    "recordTypeVars": []
                 }
             }
         },
@@ -461,22 +357,11 @@
             "scheme": {
                 "schemeType": {
                     "funcParam": {
-                        "nomParams": {},
                         "nomId": "42493a666c6f61740000000000000000"
                     },
                     "funcResult": {
-                        "nomParams": {},
                         "nomId": "42493a666c6f61740000000000000000"
                     }
-                },
-                "schemeBinders": {
-                    "sumTypeVars": [],
-                    "constraints": {
-                        "sumTypeVars": {},
-                        "recordTypeVars": {}
-                    },
-                    "typeVars": [],
-                    "recordTypeVars": []
                 }
             }
         },
@@ -493,22 +378,11 @@
             "scheme": {
                 "schemeType": {
                     "funcParam": {
-                        "nomParams": {},
                         "nomId": "42493a62797465730000000000000000"
                     },
                     "funcResult": {
-                        "nomParams": {},
                         "nomId": "42493a62797465730000000000000000"
                     }
-                },
-                "schemeBinders": {
-                    "sumTypeVars": [],
-                    "constraints": {
-                        "sumTypeVars": {},
-                        "recordTypeVars": {}
-                    },
-                    "typeVars": [],
-                    "recordTypeVars": []
                 }
             }
         },
@@ -538,20 +412,13 @@
                         }
                     },
                     "funcResult": {
-                        "nomParams": {},
                         "nomId": "426f6f6c000000000000000000000000"
                     }
                 },
                 "schemeBinders": {
-                    "sumTypeVars": [],
-                    "constraints": {
-                        "sumTypeVars": {},
-                        "recordTypeVars": {}
-                    },
                     "typeVars": [
                         "61"
-                    ],
-                    "recordTypeVars": []
+                    ]
                 }
             }
         },
@@ -573,28 +440,16 @@
                     "funcParam": {
                         "record": {
                             "42493a696e6669786c00000000000000": {
-                                "nomParams": {},
                                 "nomId": "42493a666c6f61740000000000000000"
                             },
                             "42493a696e6669787200000000000000": {
-                                "nomParams": {},
                                 "nomId": "42493a666c6f61740000000000000000"
                             }
                         }
                     },
                     "funcResult": {
-                        "nomParams": {},
                         "nomId": "42493a666c6f61740000000000000000"
                     }
-                },
-                "schemeBinders": {
-                    "sumTypeVars": [],
-                    "constraints": {
-                        "sumTypeVars": {},
-                        "recordTypeVars": {}
-                    },
-                    "typeVars": [],
-                    "recordTypeVars": []
                 }
             }
         },
@@ -616,28 +471,16 @@
                     "funcParam": {
                         "record": {
                             "42493a696e6669786c00000000000000": {
-                                "nomParams": {},
                                 "nomId": "42493a666c6f61740000000000000000"
                             },
                             "42493a696e6669787200000000000000": {
-                                "nomParams": {},
                                 "nomId": "42493a666c6f61740000000000000000"
                             }
                         }
                     },
                     "funcResult": {
-                        "nomParams": {},
                         "nomId": "42493a666c6f61740000000000000000"
                     }
-                },
-                "schemeBinders": {
-                    "sumTypeVars": [],
-                    "constraints": {
-                        "sumTypeVars": {},
-                        "recordTypeVars": {}
-                    },
-                    "typeVars": [],
-                    "recordTypeVars": []
                 }
             }
         },
@@ -659,28 +502,16 @@
                     "funcParam": {
                         "record": {
                             "42493a696e6669786c00000000000000": {
-                                "nomParams": {},
                                 "nomId": "42493a666c6f61740000000000000000"
                             },
                             "42493a696e6669787200000000000000": {
-                                "nomParams": {},
                                 "nomId": "42493a666c6f61740000000000000000"
                             }
                         }
                     },
                     "funcResult": {
-                        "nomParams": {},
                         "nomId": "42493a666c6f61740000000000000000"
                     }
-                },
-                "schemeBinders": {
-                    "sumTypeVars": [],
-                    "constraints": {
-                        "sumTypeVars": {},
-                        "recordTypeVars": {}
-                    },
-                    "typeVars": [],
-                    "recordTypeVars": []
                 }
             }
         },
@@ -705,20 +536,13 @@
                         "nomId": "42493a61727261790000000000000000"
                     },
                     "funcResult": {
-                        "nomParams": {},
                         "nomId": "42493a666c6f61740000000000000000"
                     }
                 },
                 "schemeBinders": {
-                    "sumTypeVars": [],
-                    "constraints": {
-                        "sumTypeVars": {},
-                        "recordTypeVars": {}
-                    },
                     "typeVars": [
                         "61"
-                    ],
-                    "recordTypeVars": []
+                    ]
                 }
             }
         },
@@ -740,28 +564,16 @@
                     "funcParam": {
                         "record": {
                             "42493a696e6669786c00000000000000": {
-                                "nomParams": {},
                                 "nomId": "42493a666c6f61740000000000000000"
                             },
                             "42493a696e6669787200000000000000": {
-                                "nomParams": {},
                                 "nomId": "42493a666c6f61740000000000000000"
                             }
                         }
                     },
                     "funcResult": {
-                        "nomParams": {},
                         "nomId": "42493a666c6f61740000000000000000"
                     }
-                },
-                "schemeBinders": {
-                    "sumTypeVars": [],
-                    "constraints": {
-                        "sumTypeVars": {},
-                        "recordTypeVars": {}
-                    },
-                    "typeVars": [],
-                    "recordTypeVars": []
                 }
             }
         },
@@ -780,7 +592,6 @@
                     "funcParam": {
                         "record": {
                             "42493a696e6465780000000000000000": {
-                                "nomParams": {},
                                 "nomId": "42493a666c6f61740000000000000000"
                             },
                             "42493a6f626a65637400000000000000": {
@@ -798,15 +609,9 @@
                     }
                 },
                 "schemeBinders": {
-                    "sumTypeVars": [],
-                    "constraints": {
-                        "sumTypeVars": {},
-                        "recordTypeVars": {}
-                    },
                     "typeVars": [
                         "61"
-                    ],
-                    "recordTypeVars": []
+                    ]
                 }
             }
         },
@@ -825,32 +630,19 @@
                     "funcParam": {
                         "record": {
                             "42493a73746172740000000000000000": {
-                                "nomParams": {},
                                 "nomId": "42493a666c6f61740000000000000000"
                             },
                             "42493a6f626a65637400000000000000": {
-                                "nomParams": {},
                                 "nomId": "42493a62797465730000000000000000"
                             },
                             "42493a73746f70000000000000000000": {
-                                "nomParams": {},
                                 "nomId": "42493a666c6f61740000000000000000"
                             }
                         }
                     },
                     "funcResult": {
-                        "nomParams": {},
                         "nomId": "42493a62797465730000000000000000"
                     }
-                },
-                "schemeBinders": {
-                    "sumTypeVars": [],
-                    "constraints": {
-                        "sumTypeVars": {},
-                        "recordTypeVars": {}
-                    },
-                    "typeVars": [],
-                    "recordTypeVars": []
                 }
             }
         },
@@ -880,20 +672,13 @@
                         }
                     },
                     "funcResult": {
-                        "nomParams": {},
                         "nomId": "426f6f6c000000000000000000000000"
                     }
                 },
                 "schemeBinders": {
-                    "sumTypeVars": [],
-                    "constraints": {
-                        "sumTypeVars": {},
-                        "recordTypeVars": {}
-                    },
                     "typeVars": [
                         "61"
-                    ],
-                    "recordTypeVars": []
+                    ]
                 }
             }
         },
@@ -910,22 +695,11 @@
             "scheme": {
                 "schemeType": {
                     "funcParam": {
-                        "nomParams": {},
                         "nomId": "42493a62797465730000000000000000"
                     },
                     "funcResult": {
-                        "nomParams": {},
                         "nomId": "42493a666c6f61740000000000000000"
                     }
-                },
-                "schemeBinders": {
-                    "sumTypeVars": [],
-                    "constraints": {
-                        "sumTypeVars": {},
-                        "recordTypeVars": {}
-                    },
-                    "typeVars": [],
-                    "recordTypeVars": []
                 }
             }
         },
@@ -1047,40 +821,19 @@
                         "record": {}
                     }
                 }
-            },
-            "schemeBinders": {
-                "sumTypeVars": [],
-                "constraints": {
-                    "sumTypeVars": {},
-                    "recordTypeVars": {}
-                },
-                "typeVars": [],
-                "recordTypeVars": []
             }
         }
     },
     {
-        "typeParams": {},
         "nom": "42493a74657874000000000000000000",
         "name": "Text",
         "scheme": {
             "schemeType": {
-                "nomParams": {},
                 "nomId": "42493a62797465730000000000000000"
-            },
-            "schemeBinders": {
-                "sumTypeVars": [],
-                "constraints": {
-                    "sumTypeVars": {},
-                    "recordTypeVars": {}
-                },
-                "typeVars": [],
-                "recordTypeVars": []
             }
         }
     },
     {
-        "typeParams": {},
         "nom": "426f6f6c000000000000000000000000",
         "name": "Bool",
         "scheme": {
@@ -1093,15 +846,6 @@
                         "record": {}
                     }
                 }
-            },
-            "schemeBinders": {
-                "sumTypeVars": [],
-                "constraints": {
-                    "sumTypeVars": {},
-                    "recordTypeVars": {}
-                },
-                "typeVars": [],
-                "recordTypeVars": []
             }
         }
     },
@@ -1131,15 +875,6 @@
                         "typeVar": "61"
                     }
                 }
-            },
-            "schemeBinders": {
-                "sumTypeVars": [],
-                "constraints": {
-                    "sumTypeVars": {},
-                    "recordTypeVars": {}
-                },
-                "typeVars": [],
-                "recordTypeVars": []
             }
         }
     },
@@ -1159,15 +894,6 @@
                         "typeVar": "61"
                     }
                 }
-            },
-            "schemeBinders": {
-                "sumTypeVars": [],
-                "constraints": {
-                    "sumTypeVars": {},
-                    "recordTypeVars": {}
-                },
-                "typeVars": [],
-                "recordTypeVars": []
             }
         }
     },

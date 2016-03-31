@@ -123,6 +123,21 @@ decodeIdentMap fromIdent decode json =
             <$> (identFromHex k & fromEither <&> fromIdent)
             <*> decode v
 
+encodeSquash ::
+    Aeson.ToJSON j => (a -> Bool) -> String -> (a -> j) -> a -> [AesonTypes.Pair]
+encodeSquash isEmpty name encode val
+    | isEmpty val = []
+    | otherwise = [fromString name .= encode val]
+
+decodeSquashed ::
+    (Aeson.FromJSON j, Monoid a) =>
+    String -> (j -> AesonTypes.Parser a) -> Aeson.Object -> AesonTypes.Parser a
+decodeSquashed name decode o =
+    jsum
+    [ o .: fromString name >>= decode
+    , pure mempty
+    ]
+
 encodeTagId :: Encoder T.Tag
 encodeTagId (T.Tag ident) = encodeIdent ident
 
@@ -171,10 +186,9 @@ encodeType (T.TRecord composite) = Aeson.object ["record" .= encodeComposite com
 encodeType (T.TSum composite) = Aeson.object ["sum" .= encodeComposite composite]
 encodeType (T.TVar (T.Var name)) = Aeson.object ["typeVar" .= encodeIdent name]
 encodeType (T.TInst tId params) =
-    Aeson.object
-    [ "nomId" .= encodeIdent (T.nomId tId)
-    , "nomParams" .= encodeIdentMap T.typeParamId encodeType params
-    ]
+    ("nomId" .= encodeIdent (T.nomId tId)) :
+    encodeSquash null "nomParams" (encodeIdentMap T.typeParamId encodeType) params
+    & Aeson.object
 
 decodeType :: Decoder Type
 decodeType json =
@@ -188,59 +202,65 @@ decodeType json =
     , o .: "typeVar" >>= decodeIdent <&> T.Var <&> T.TVar
     , do
           nomId <- o .: "nomId" >>= decodeIdent <&> T.NominalId
-          params <- o .: "nomParams" >>= decodeIdentMap T.ParamId decodeType
+          params <- decodeSquashed "nomParams" (decodeIdentMap T.ParamId decodeType) o
           T.TInst nomId params & pure
     ]
 
 encodeTypeVars :: Encoder (TypeVars, Constraints)
 encodeTypeVars (TypeVars tvs rtvs stvs, Constraints productConstraints sumConstraints) =
-    Aeson.object
-    [ "typeVars" .= encodeTVs tvs
-    , "recordTypeVars" .= encodeTVs rtvs
-    , "sumTypeVars" .= encodeTVs stvs
-    , "constraints" .= Aeson.object
-      [ "recordTypeVars" .= encodeConstraints productConstraints
-      , "sumTypeVars" .= encodeConstraints sumConstraints
-      ]
-    ]
+    concat
+    [ encodeTVs "typeVars" tvs
+    , encodeTVs "recordTypeVars" rtvs
+    , encodeTVs "sumTypeVars" stvs
+    , encodeSquash null "constraints" Aeson.object
+      (encodeConstraints "recordTypeVars" productConstraints ++
+       encodeConstraints "sumTypeVars" sumConstraints)
+    ] & Aeson.object
     where
-        encodeConstraints (CompositeVarConstraints constraints) =
-            encodeIdentMap T.tvName (map (encodeIdent . T.tagName) . Set.toList)
+        encodeConstraints name (CompositeVarConstraints constraints) =
+            encodeSquash Map.null name
+            (encodeIdentMap T.tvName (map (encodeIdent . T.tagName) . Set.toList))
             constraints
-        encodeTVs = Aeson.toJSON . map (encodeIdent . T.tvName) . Set.toList
+        encodeTVs name =
+            encodeSquash Set.null name
+            (Aeson.toJSON . map (encodeIdent . T.tvName) . Set.toList)
 
 decodeTypeVars :: Decoder (TypeVars, Constraints)
 decodeTypeVars =
     Aeson.withObject "TypeVars" $ \obj ->
     do
-        let getTVs name = obj .: name >>= decodeTVs
-        tvs <- TypeVars <$> getTVs "typeVars" <*> getTVs "recordTypeVars" <*> getTVs "sumTypeVars"
-        constraints <-
-            obj .: "constraints" >>=
+        let getTVs name = decodeSquashed name decodeTVs obj
+        tvs <-
+            TypeVars
+            <$> getTVs "typeVars"
+            <*> getTVs "recordTypeVars"
+            <*> getTVs "sumTypeVars"
+        decodedConstraints <-
+            decodeSquashed "constraints"
             ( Aeson.withObject "constraints" $ \constraints ->
-              let  getCs name = constraints .: name >>= decodeConstraints <&> CompositeVarConstraints
+              let  getCs name = decodeConstraints name constraints <&> CompositeVarConstraints
               in   Constraints <$> getCs "recordTypeVars" <*> getCs "sumTypeVars"
-            )
-        return (tvs, constraints)
+            ) obj
+        return (tvs, decodedConstraints)
     where
         decodeForbiddenFields json =
             traverse decodeIdent json <&> map T.Tag <&> Set.fromList
-        decodeConstraints = decodeIdentMap T.Var decodeForbiddenFields
+        decodeConstraints name =
+            decodeSquashed name (decodeIdentMap T.Var decodeForbiddenFields)
         decodeTV = fmap T.Var . decodeIdent
         decodeTVs = fmap Set.fromList . traverse decodeTV
 
 encodeScheme :: Encoder Scheme
 encodeScheme (Scheme tvs constraints typ) =
-    Aeson.object
-    [ "schemeBinders" .= encodeTypeVars (tvs, constraints)
-    , "schemeType" .= encodeType typ
-    ]
+    ("schemeType" .= encodeType typ) :
+    encodeSquash (== mempty) "schemeBinders" encodeTypeVars (tvs, constraints)
+    & Aeson.object
 
 decodeScheme :: Decoder Scheme
 decodeScheme =
     Aeson.withObject "scheme" $ \obj ->
     do
-        (tvs, constraints) <- obj .: "schemeBinders" >>= decodeTypeVars
+        (tvs, constraints) <- decodeSquashed "schemeBinders" decodeTypeVars obj
         typ <- obj .: "schemeType" >>= decodeType
         Scheme tvs constraints typ & return
 
@@ -354,13 +374,12 @@ encodeDefBody (Definition.BodyBuiltin (Definition.Builtin name scheme)) =
       ]
     ]
 encodeDefBody (Definition.BodyExpr (Definition.Expr val typ frozenDefTypes)) =
-    Aeson.object
     [ "val" .= encodeVal val
     , "typ" .= encodeExportedType typ
-    , "frozenDefTypes" .= encodedFrozen
-    ]
-    where
-        encodedFrozen = encodeIdentMap V.vvName encodeScheme frozenDefTypes
+    ] ++
+    encodeSquash Map.null "frozenDefTypes" (encodeIdentMap V.vvName encodeScheme)
+    frozenDefTypes
+    & Aeson.object
 
 decodeDefBody :: Aeson.FromJSON a => Decoder (Definition.Body (Val a))
 decodeDefBody =
@@ -370,7 +389,7 @@ decodeDefBody =
     , Definition.Expr
       <$> (obj .: "val" >>= decodeVal)
       <*> (obj .: "typ" >>= decodeExportedType)
-      <*> (obj .: "frozenDefTypes" >>= decodeIdentMap V.Var decodeScheme)
+      <*> decodeSquashed "frozenDefTypes" (decodeIdentMap V.Var decodeScheme) obj
       <&> Definition.BodyExpr
     ]
     where
@@ -395,16 +414,16 @@ insertField _ _ o = error $ "insertField: Expecting object, got: " ++ show o
 encodeNominal :: Encoder (Maybe Nominal)
 encodeNominal Nothing = Aeson.object [] -- opaque nominal
 encodeNominal (Just (Nominal paramsMap scheme)) =
-    Aeson.object
-    [ "typeParams" .= encodeIdentMap T.typeParamId (encodeIdent . T.tvName) paramsMap
-    , "scheme" .= encodeScheme scheme
-    ]
+    ("scheme" .= encodeScheme scheme) :
+    encodeSquash Map.null "typeParams"
+    (encodeIdentMap T.typeParamId (encodeIdent . T.tvName)) paramsMap
+    & Aeson.object
 
 decodeNominal :: Decoder (Maybe Nominal)
 decodeNominal json =
     ( Aeson.withObject "nominal" ?? json $ \obj ->
       Nominal
-      <$> (obj .: "typeParams" >>= decodeIdentMap T.ParamId (fmap T.Var . decodeIdent))
+      <$> decodeSquashed "typeParams" (decodeIdentMap T.ParamId (fmap T.Var . decodeIdent)) obj
       <*> (obj .: "scheme" >>= decodeScheme)
     )
     -- TODO: maybe mark opaque nominals somehow? This
