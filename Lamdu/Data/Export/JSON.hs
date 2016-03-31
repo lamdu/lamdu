@@ -144,15 +144,17 @@ exportDef globalId =
         (presentationMode, mName, globalId) <$ def' & Codec.encodeDef & tell
     & withVisited visitedDefs globalId
 
-exportRepl :: FilePath -> T ViewM (IO ())
-exportRepl exportPath =
+exportReplH :: Export ()
+exportReplH =
     do
         repl <-
             DbLayout.repl DbLayout.codeIRefs & Transaction.readIRef
             >>= ExprIRef.readVal & trans
         exportVal repl
         repl <&> valIToUUID & Codec.encodeRepl & tell
-    & export "repl" exportPath
+
+exportRepl :: FilePath -> T ViewM (IO ())
+exportRepl exportPath = export "repl" exportPath exportReplH
 
 exportAll :: FilePath -> T ViewM (IO ())
 exportAll exportPath =
@@ -160,6 +162,7 @@ exportAll exportPath =
         exportSet DbLayout.globals (exportDef . ExprIRef.globalId)
         exportSet DbLayout.tags exportTag
         exportSet DbLayout.tids exportNominal
+        exportReplH
     & export "all" exportPath
     where
         exportSet indexIRef exportFunc =
