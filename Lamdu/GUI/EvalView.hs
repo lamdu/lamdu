@@ -94,10 +94,10 @@ makeArray animId items =
         closer <- label "]" animId
         opener : itemViews ++ [closer] & hbox & return
     where
-        cutoff = 9
+        cutoff = 10
         makeItem idx val =
             [ [ label ", " itemId | idx > 0 ]
-            , [ make (Anim.augmentId itemId ("val" :: String)) val ]
+            , [ make (Anim.augmentId itemId ("val" :: String)) val | idx < cutoff ]
             , [ label "..." itemId | idx == cutoff ]
             ] & concat
             & sequence
