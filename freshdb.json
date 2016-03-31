@@ -1,0 +1,1218 @@
+[
+    {
+        "defPresentationMode": [
+            "Infix",
+            4
+        ],
+        "builtin": {
+            "name": [
+                "Prelude",
+                "<="
+            ],
+            "scheme": {
+                "schemeType": {
+                    "TFun": [
+                        {
+                            "record": {
+                                "42493a696e6669786c00000000000000": {
+                                    "TVar": "61"
+                                },
+                                "42493a696e6669787200000000000000": {
+                                    "TVar": "61"
+                                }
+                            }
+                        },
+                        {
+                            "TParams": {},
+                            "TId": "426f6f6c000000000000000000000000"
+                        }
+                    ]
+                },
+                "schemeBinders": {
+                    "stvs": [],
+                    "constraints": {
+                        "stvs": {},
+                        "rtvs": {}
+                    },
+                    "tvs": [
+                        "61"
+                    ],
+                    "rtvs": []
+                }
+            }
+        },
+        "name": "<=",
+        "def": "127d7c81d20e4cac8a60a3807d735c27"
+    },
+    {
+        "defPresentationMode": "OO",
+        "builtin": {
+            "name": [
+                "Array",
+                "item"
+            ],
+            "scheme": {
+                "schemeType": {
+                    "TFun": [
+                        {
+                            "record": {
+                                "42493a696e6465780000000000000000": {
+                                    "TParams": {},
+                                    "TId": "42493a666c6f61740000000000000000"
+                                },
+                                "42493a6f626a65637400000000000000": {
+                                    "TParams": {
+                                        "42493a76616c00000000000000000000": {
+                                            "TVar": "61"
+                                        }
+                                    },
+                                    "TId": "42493a61727261790000000000000000"
+                                }
+                            }
+                        },
+                        {
+                            "TVar": "61"
+                        }
+                    ]
+                },
+                "schemeBinders": {
+                    "stvs": [],
+                    "constraints": {
+                        "stvs": {},
+                        "rtvs": {}
+                    },
+                    "tvs": [
+                        "61"
+                    ],
+                    "rtvs": []
+                }
+            }
+        },
+        "name": "item",
+        "def": "1638dff706a54be3ac607d7dc3f5f7e0"
+    },
+    {
+        "defPresentationMode": "OO",
+        "builtin": {
+            "name": [
+                "Bytes",
+                "fromStream"
+            ],
+            "scheme": {
+                "schemeType": {
+                    "TFun": [
+                        {
+                            "TParams": {
+                                "42493a76616c00000000000000000000": {
+                                    "TParams": {},
+                                    "TId": "42493a666c6f61740000000000000000"
+                                }
+                            },
+                            "TId": "42493a73747265616d00000000000000"
+                        },
+                        {
+                            "TParams": {},
+                            "TId": "42493a62797465730000000000000000"
+                        }
+                    ]
+                },
+                "schemeBinders": {
+                    "stvs": [],
+                    "constraints": {
+                        "stvs": {},
+                        "rtvs": {}
+                    },
+                    "tvs": [],
+                    "rtvs": []
+                }
+            }
+        },
+        "name": "fromStream",
+        "def": "1dc3c79b7e7a421d8fbd6a1b33a5a2eb"
+    },
+    {
+        "defPresentationMode": [
+            "Infix",
+            6
+        ],
+        "builtin": {
+            "name": [
+                "Prelude",
+                "-"
+            ],
+            "scheme": {
+                "schemeType": {
+                    "TFun": [
+                        {
+                            "record": {
+                                "42493a696e6669786c00000000000000": {
+                                    "TParams": {},
+                                    "TId": "42493a666c6f61740000000000000000"
+                                },
+                                "42493a696e6669787200000000000000": {
+                                    "TParams": {},
+                                    "TId": "42493a666c6f61740000000000000000"
+                                }
+                            }
+                        },
+                        {
+                            "TParams": {},
+                            "TId": "42493a666c6f61740000000000000000"
+                        }
+                    ]
+                },
+                "schemeBinders": {
+                    "stvs": [],
+                    "constraints": {
+                        "stvs": {},
+                        "rtvs": {}
+                    },
+                    "tvs": [],
+                    "rtvs": []
+                }
+            }
+        },
+        "name": "-",
+        "def": "28e0baf1a3b248cb8d48186e28cc747a"
+    },
+    {
+        "defPresentationMode": "OO",
+        "builtin": {
+            "name": [
+                "Array",
+                "length"
+            ],
+            "scheme": {
+                "schemeType": {
+                    "TFun": [
+                        {
+                            "TParams": {
+                                "42493a76616c00000000000000000000": {
+                                    "TVar": "61"
+                                }
+                            },
+                            "TId": "42493a61727261790000000000000000"
+                        },
+                        {
+                            "TParams": {},
+                            "TId": "42493a666c6f61740000000000000000"
+                        }
+                    ]
+                },
+                "schemeBinders": {
+                    "stvs": [],
+                    "constraints": {
+                        "stvs": {},
+                        "rtvs": {}
+                    },
+                    "tvs": [
+                        "61"
+                    ],
+                    "rtvs": []
+                }
+            }
+        },
+        "name": "length",
+        "def": "2a7d11abab5048f8892a8f35dc18542b"
+    },
+    {
+        "defPresentationMode": "OO",
+        "builtin": {
+            "name": [
+                "Prelude",
+                "negate"
+            ],
+            "scheme": {
+                "schemeType": {
+                    "TFun": [
+                        {
+                            "TParams": {},
+                            "TId": "42493a666c6f61740000000000000000"
+                        },
+                        {
+                            "TParams": {},
+                            "TId": "42493a666c6f61740000000000000000"
+                        }
+                    ]
+                },
+                "schemeBinders": {
+                    "stvs": [],
+                    "constraints": {
+                        "stvs": {},
+                        "rtvs": {}
+                    },
+                    "tvs": [],
+                    "rtvs": []
+                }
+            }
+        },
+        "name": "negate",
+        "def": "466d37e8585b4bd7a2c144ec5cb1300f"
+    },
+    {
+        "defPresentationMode": "OO",
+        "builtin": {
+            "name": [
+                "Bytes",
+                "slice"
+            ],
+            "scheme": {
+                "schemeType": {
+                    "TFun": [
+                        {
+                            "record": {
+                                "42493a73746172740000000000000000": {
+                                    "TParams": {},
+                                    "TId": "42493a666c6f61740000000000000000"
+                                },
+                                "42493a6f626a65637400000000000000": {
+                                    "TParams": {},
+                                    "TId": "42493a62797465730000000000000000"
+                                },
+                                "42493a73746f70000000000000000000": {
+                                    "TParams": {},
+                                    "TId": "42493a666c6f61740000000000000000"
+                                }
+                            }
+                        },
+                        {
+                            "TParams": {},
+                            "TId": "42493a62797465730000000000000000"
+                        }
+                    ]
+                },
+                "schemeBinders": {
+                    "stvs": [],
+                    "constraints": {
+                        "stvs": {},
+                        "rtvs": {}
+                    },
+                    "tvs": [],
+                    "rtvs": []
+                }
+            }
+        },
+        "name": "slice",
+        "def": "5995a7ad59c5437ea5ca13d13688635a"
+    },
+    {
+        "defPresentationMode": "OO",
+        "builtin": {
+            "name": [
+                "Bytes",
+                "byteAt"
+            ],
+            "scheme": {
+                "schemeType": {
+                    "TFun": [
+                        {
+                            "record": {
+                                "42493a696e6465780000000000000000": {
+                                    "TParams": {},
+                                    "TId": "42493a666c6f61740000000000000000"
+                                },
+                                "42493a6f626a65637400000000000000": {
+                                    "TParams": {},
+                                    "TId": "42493a62797465730000000000000000"
+                                }
+                            }
+                        },
+                        {
+                            "TParams": {},
+                            "TId": "42493a666c6f61740000000000000000"
+                        }
+                    ]
+                },
+                "schemeBinders": {
+                    "stvs": [],
+                    "constraints": {
+                        "stvs": {},
+                        "rtvs": {}
+                    },
+                    "tvs": [],
+                    "rtvs": []
+                }
+            }
+        },
+        "name": "byteAt",
+        "def": "6073a15b49d84b1795cdc5354dd42059"
+    },
+    {
+        "defPresentationMode": [
+            "Infix",
+            7
+        ],
+        "builtin": {
+            "name": [
+                "Prelude",
+                "mod"
+            ],
+            "scheme": {
+                "schemeType": {
+                    "TFun": [
+                        {
+                            "record": {
+                                "42493a696e6669786c00000000000000": {
+                                    "TParams": {},
+                                    "TId": "42493a666c6f61740000000000000000"
+                                },
+                                "42493a696e6669787200000000000000": {
+                                    "TParams": {},
+                                    "TId": "42493a666c6f61740000000000000000"
+                                }
+                            }
+                        },
+                        {
+                            "TParams": {},
+                            "TId": "42493a666c6f61740000000000000000"
+                        }
+                    ]
+                },
+                "schemeBinders": {
+                    "stvs": [],
+                    "constraints": {
+                        "stvs": {},
+                        "rtvs": {}
+                    },
+                    "tvs": [],
+                    "rtvs": []
+                }
+            }
+        },
+        "name": "%",
+        "def": "750a9e0a09064c11b7f490958b8073a1"
+    },
+    {
+        "defPresentationMode": [
+            "Infix",
+            7
+        ],
+        "builtin": {
+            "name": [
+                "Prelude",
+                "/"
+            ],
+            "scheme": {
+                "schemeType": {
+                    "TFun": [
+                        {
+                            "record": {
+                                "42493a696e6669786c00000000000000": {
+                                    "TParams": {},
+                                    "TId": "42493a666c6f61740000000000000000"
+                                },
+                                "42493a696e6669787200000000000000": {
+                                    "TParams": {},
+                                    "TId": "42493a666c6f61740000000000000000"
+                                }
+                            }
+                        },
+                        {
+                            "TParams": {},
+                            "TId": "42493a666c6f61740000000000000000"
+                        }
+                    ]
+                },
+                "schemeBinders": {
+                    "stvs": [],
+                    "constraints": {
+                        "stvs": {},
+                        "rtvs": {}
+                    },
+                    "tvs": [],
+                    "rtvs": []
+                }
+            }
+        },
+        "name": "/",
+        "def": "7b04074454024b84966ce3434169d078"
+    },
+    {
+        "defPresentationMode": [
+            "Infix",
+            4
+        ],
+        "builtin": {
+            "name": [
+                "Prelude",
+                "=="
+            ],
+            "scheme": {
+                "schemeType": {
+                    "TFun": [
+                        {
+                            "record": {
+                                "42493a696e6669786c00000000000000": {
+                                    "TVar": "61"
+                                },
+                                "42493a696e6669787200000000000000": {
+                                    "TVar": "61"
+                                }
+                            }
+                        },
+                        {
+                            "TParams": {},
+                            "TId": "426f6f6c000000000000000000000000"
+                        }
+                    ]
+                },
+                "schemeBinders": {
+                    "stvs": [],
+                    "constraints": {
+                        "stvs": {},
+                        "rtvs": {}
+                    },
+                    "tvs": [
+                        "61"
+                    ],
+                    "rtvs": []
+                }
+            }
+        },
+        "name": "==",
+        "def": "8130069582ce441bbfbbe5e3ac94fb32"
+    },
+    {
+        "defPresentationMode": "OO",
+        "builtin": {
+            "name": [
+                "Bytes",
+                "length"
+            ],
+            "scheme": {
+                "schemeType": {
+                    "TFun": [
+                        {
+                            "TParams": {},
+                            "TId": "42493a62797465730000000000000000"
+                        },
+                        {
+                            "TParams": {},
+                            "TId": "42493a666c6f61740000000000000000"
+                        }
+                    ]
+                },
+                "schemeBinders": {
+                    "stvs": [],
+                    "constraints": {
+                        "stvs": {},
+                        "rtvs": {}
+                    },
+                    "tvs": [],
+                    "rtvs": []
+                }
+            }
+        },
+        "name": "length",
+        "def": "8757a888d0124cc1a0ca761d4763f10f"
+    },
+    {
+        "defPresentationMode": [
+            "Infix",
+            4
+        ],
+        "builtin": {
+            "name": [
+                "Prelude",
+                "/="
+            ],
+            "scheme": {
+                "schemeType": {
+                    "TFun": [
+                        {
+                            "record": {
+                                "42493a696e6669786c00000000000000": {
+                                    "TVar": "61"
+                                },
+                                "42493a696e6669787200000000000000": {
+                                    "TVar": "61"
+                                }
+                            }
+                        },
+                        {
+                            "TParams": {},
+                            "TId": "426f6f6c000000000000000000000000"
+                        }
+                    ]
+                },
+                "schemeBinders": {
+                    "stvs": [],
+                    "constraints": {
+                        "stvs": {},
+                        "rtvs": {}
+                    },
+                    "tvs": [
+                        "61"
+                    ],
+                    "rtvs": []
+                }
+            }
+        },
+        "name": "/=",
+        "def": "8f2be3650b93440388553d450ec342ca"
+    },
+    {
+        "defPresentationMode": [
+            "Infix",
+            7
+        ],
+        "builtin": {
+            "name": [
+                "Prelude",
+                "div"
+            ],
+            "scheme": {
+                "schemeType": {
+                    "TFun": [
+                        {
+                            "record": {
+                                "42493a696e6669786c00000000000000": {
+                                    "TParams": {},
+                                    "TId": "42493a666c6f61740000000000000000"
+                                },
+                                "42493a696e6669787200000000000000": {
+                                    "TParams": {},
+                                    "TId": "42493a666c6f61740000000000000000"
+                                }
+                            }
+                        },
+                        {
+                            "TParams": {},
+                            "TId": "42493a666c6f61740000000000000000"
+                        }
+                    ]
+                },
+                "schemeBinders": {
+                    "stvs": [],
+                    "constraints": {
+                        "stvs": {},
+                        "rtvs": {}
+                    },
+                    "tvs": [],
+                    "rtvs": []
+                }
+            }
+        },
+        "name": "//",
+        "def": "937175d9b1fd4ecdaeed9b1f7f8cf6e5"
+    },
+    {
+        "defPresentationMode": [
+            "Infix",
+            7
+        ],
+        "builtin": {
+            "name": [
+                "Prelude",
+                "*"
+            ],
+            "scheme": {
+                "schemeType": {
+                    "TFun": [
+                        {
+                            "record": {
+                                "42493a696e6669786c00000000000000": {
+                                    "TParams": {},
+                                    "TId": "42493a666c6f61740000000000000000"
+                                },
+                                "42493a696e6669787200000000000000": {
+                                    "TParams": {},
+                                    "TId": "42493a666c6f61740000000000000000"
+                                }
+                            }
+                        },
+                        {
+                            "TParams": {},
+                            "TId": "42493a666c6f61740000000000000000"
+                        }
+                    ]
+                },
+                "schemeBinders": {
+                    "stvs": [],
+                    "constraints": {
+                        "stvs": {},
+                        "rtvs": {}
+                    },
+                    "tvs": [],
+                    "rtvs": []
+                }
+            }
+        },
+        "name": "*",
+        "def": "942a90bd1f5d46ef852a94231b8a4a72"
+    },
+    {
+        "defPresentationMode": "OO",
+        "builtin": {
+            "name": [
+                "Bytes",
+                "unshare"
+            ],
+            "scheme": {
+                "schemeType": {
+                    "TFun": [
+                        {
+                            "TParams": {},
+                            "TId": "42493a62797465730000000000000000"
+                        },
+                        {
+                            "TParams": {},
+                            "TId": "42493a62797465730000000000000000"
+                        }
+                    ]
+                },
+                "schemeBinders": {
+                    "stvs": [],
+                    "constraints": {
+                        "stvs": {},
+                        "rtvs": {}
+                    },
+                    "tvs": [],
+                    "rtvs": []
+                }
+            }
+        },
+        "name": "unshare",
+        "def": "95df267a36cf4b39814cb62e157728bc"
+    },
+    {
+        "defPresentationMode": "OO",
+        "builtin": {
+            "name": [
+                "Prelude",
+                "sqrt"
+            ],
+            "scheme": {
+                "schemeType": {
+                    "TFun": [
+                        {
+                            "TParams": {},
+                            "TId": "42493a666c6f61740000000000000000"
+                        },
+                        {
+                            "TParams": {},
+                            "TId": "42493a666c6f61740000000000000000"
+                        }
+                    ]
+                },
+                "schemeBinders": {
+                    "stvs": [],
+                    "constraints": {
+                        "stvs": {},
+                        "rtvs": {}
+                    },
+                    "tvs": [],
+                    "rtvs": []
+                }
+            }
+        },
+        "name": "sqrt",
+        "def": "ad34519e7b394bf39ec3798f6b084497"
+    },
+    {
+        "defPresentationMode": "OO",
+        "builtin": {
+            "name": [
+                "Array",
+                "fromStream"
+            ],
+            "scheme": {
+                "schemeType": {
+                    "TFun": [
+                        {
+                            "TParams": {
+                                "42493a76616c00000000000000000000": {
+                                    "TVar": "61"
+                                }
+                            },
+                            "TId": "42493a73747265616d00000000000000"
+                        },
+                        {
+                            "TParams": {
+                                "42493a76616c00000000000000000000": {
+                                    "TVar": "61"
+                                }
+                            },
+                            "TId": "42493a61727261790000000000000000"
+                        }
+                    ]
+                },
+                "schemeBinders": {
+                    "stvs": [],
+                    "constraints": {
+                        "stvs": {},
+                        "rtvs": {}
+                    },
+                    "tvs": [
+                        "61"
+                    ],
+                    "rtvs": []
+                }
+            }
+        },
+        "name": "fromStream",
+        "def": "ad8ae4bcf0bf42f492e67ee3ae7bad50"
+    },
+    {
+        "defPresentationMode": [
+            "Infix",
+            8
+        ],
+        "builtin": {
+            "name": [
+                "Prelude",
+                "^"
+            ],
+            "scheme": {
+                "schemeType": {
+                    "TFun": [
+                        {
+                            "record": {
+                                "42493a696e6669786c00000000000000": {
+                                    "TParams": {},
+                                    "TId": "42493a666c6f61740000000000000000"
+                                },
+                                "42493a696e6669787200000000000000": {
+                                    "TParams": {},
+                                    "TId": "42493a666c6f61740000000000000000"
+                                }
+                            }
+                        },
+                        {
+                            "TParams": {},
+                            "TId": "42493a666c6f61740000000000000000"
+                        }
+                    ]
+                },
+                "schemeBinders": {
+                    "stvs": [],
+                    "constraints": {
+                        "stvs": {},
+                        "rtvs": {}
+                    },
+                    "tvs": [],
+                    "rtvs": []
+                }
+            }
+        },
+        "name": "^",
+        "def": "b0635529a8524cdca8b312c5ef0281ce"
+    },
+    {
+        "defPresentationMode": [
+            "Infix",
+            4
+        ],
+        "builtin": {
+            "name": [
+                "Prelude",
+                ">"
+            ],
+            "scheme": {
+                "schemeType": {
+                    "TFun": [
+                        {
+                            "record": {
+                                "42493a696e6669786c00000000000000": {
+                                    "TVar": "61"
+                                },
+                                "42493a696e6669787200000000000000": {
+                                    "TVar": "61"
+                                }
+                            }
+                        },
+                        {
+                            "TParams": {},
+                            "TId": "426f6f6c000000000000000000000000"
+                        }
+                    ]
+                },
+                "schemeBinders": {
+                    "stvs": [],
+                    "constraints": {
+                        "stvs": {},
+                        "rtvs": {}
+                    },
+                    "tvs": [
+                        "61"
+                    ],
+                    "rtvs": []
+                }
+            }
+        },
+        "name": ">",
+        "def": "b8f979d9dab34800aae4cb79f4fa8cf5"
+    },
+    {
+        "defPresentationMode": [
+            "Infix",
+            6
+        ],
+        "builtin": {
+            "name": [
+                "Prelude",
+                "+"
+            ],
+            "scheme": {
+                "schemeType": {
+                    "TFun": [
+                        {
+                            "record": {
+                                "42493a696e6669786c00000000000000": {
+                                    "TParams": {},
+                                    "TId": "42493a666c6f61740000000000000000"
+                                },
+                                "42493a696e6669787200000000000000": {
+                                    "TParams": {},
+                                    "TId": "42493a666c6f61740000000000000000"
+                                }
+                            }
+                        },
+                        {
+                            "TParams": {},
+                            "TId": "42493a666c6f61740000000000000000"
+                        }
+                    ]
+                },
+                "schemeBinders": {
+                    "stvs": [],
+                    "constraints": {
+                        "stvs": {},
+                        "rtvs": {}
+                    },
+                    "tvs": [],
+                    "rtvs": []
+                }
+            }
+        },
+        "name": "+",
+        "def": "bc139b2184be4e8688f5cc5b964c1e43"
+    },
+    {
+        "defPresentationMode": [
+            "Infix",
+            4
+        ],
+        "builtin": {
+            "name": [
+                "Prelude",
+                "<"
+            ],
+            "scheme": {
+                "schemeType": {
+                    "TFun": [
+                        {
+                            "record": {
+                                "42493a696e6669786c00000000000000": {
+                                    "TVar": "61"
+                                },
+                                "42493a696e6669787200000000000000": {
+                                    "TVar": "61"
+                                }
+                            }
+                        },
+                        {
+                            "TParams": {},
+                            "TId": "426f6f6c000000000000000000000000"
+                        }
+                    ]
+                },
+                "schemeBinders": {
+                    "stvs": [],
+                    "constraints": {
+                        "stvs": {},
+                        "rtvs": {}
+                    },
+                    "tvs": [
+                        "61"
+                    ],
+                    "rtvs": []
+                }
+            }
+        },
+        "name": "<",
+        "def": "d76b3fae8f7f4402997f0e2fd4de0855"
+    },
+    {
+        "defPresentationMode": [
+            "Infix",
+            4
+        ],
+        "builtin": {
+            "name": [
+                "Prelude",
+                ">="
+            ],
+            "scheme": {
+                "schemeType": {
+                    "TFun": [
+                        {
+                            "record": {
+                                "42493a696e6669786c00000000000000": {
+                                    "TVar": "61"
+                                },
+                                "42493a696e6669787200000000000000": {
+                                    "TVar": "61"
+                                }
+                            }
+                        },
+                        {
+                            "TParams": {},
+                            "TId": "426f6f6c000000000000000000000000"
+                        }
+                    ]
+                },
+                "schemeBinders": {
+                    "stvs": [],
+                    "constraints": {
+                        "stvs": {},
+                        "rtvs": {}
+                    },
+                    "tvs": [
+                        "61"
+                    ],
+                    "rtvs": []
+                }
+            }
+        },
+        "name": ">=",
+        "def": "d9b832bd2742440f8709f470bbcb1d25"
+    },
+    {
+        "tagOrder": 1,
+        "tag": "42493a636f6e73000000000000000000",
+        "name": "NonEmpty"
+    },
+    {
+        "tagOrder": 1,
+        "tag": "42493a66616c73650000000000000000",
+        "name": "False"
+    },
+    {
+        "tagOrder": 0,
+        "tag": "42493a68656164000000000000000000",
+        "name": "head"
+    },
+    {
+        "tagOrder": 1,
+        "tag": "42493a696e6465780000000000000000",
+        "name": "index"
+    },
+    {
+        "tagOrder": 0,
+        "tag": "42493a696e6669786c00000000000000",
+        "name": "infixl"
+    },
+    {
+        "tagOrder": 1,
+        "tag": "42493a696e6669787200000000000000",
+        "name": "infixr"
+    },
+    {
+        "tagOrder": 1,
+        "tag": "42493a6a757374000000000000000000",
+        "name": "Just"
+    },
+    {
+        "tagOrder": 0,
+        "tag": "42493a6e696c00000000000000000000",
+        "name": "Empty"
+    },
+    {
+        "tagOrder": 0,
+        "tag": "42493a6e6f7468696e67000000000000",
+        "name": "Nothing"
+    },
+    {
+        "tagOrder": 0,
+        "tag": "42493a6f626a65637400000000000000",
+        "name": "object"
+    },
+    {
+        "tagOrder": 1,
+        "tag": "42493a73746172740000000000000000",
+        "name": "start"
+    },
+    {
+        "tagOrder": 2,
+        "tag": "42493a73746f70000000000000000000",
+        "name": "stop"
+    },
+    {
+        "tagOrder": 1,
+        "tag": "42493a7461696c000000000000000000",
+        "name": "tail"
+    },
+    {
+        "tagOrder": 0,
+        "tag": "42493a74727565000000000000000000",
+        "name": "True"
+    },
+    {
+        "typeParams": {
+            "42493a76616c00000000000000000000": "61"
+        },
+        "nom": "42493a73747265616d00000000000000",
+        "name": "Stream",
+        "scheme": {
+            "schemeType": {
+                "sum": {
+                    "42493a636f6e73000000000000000000": {
+                        "record": {
+                            "42493a7461696c000000000000000000": {
+                                "TFun": [
+                                    {
+                                        "record": {}
+                                    },
+                                    {
+                                        "TParams": {
+                                            "42493a76616c00000000000000000000": {
+                                                "TVar": "61"
+                                            }
+                                        },
+                                        "TId": "42493a73747265616d00000000000000"
+                                    }
+                                ]
+                            },
+                            "42493a68656164000000000000000000": {
+                                "TVar": "61"
+                            }
+                        }
+                    },
+                    "42493a6e696c00000000000000000000": {
+                        "record": {}
+                    }
+                }
+            },
+            "schemeBinders": {
+                "stvs": [],
+                "constraints": {
+                    "stvs": {},
+                    "rtvs": {}
+                },
+                "tvs": [],
+                "rtvs": []
+            }
+        }
+    },
+    {
+        "typeParams": {},
+        "nom": "42493a74657874000000000000000000",
+        "name": "Text",
+        "scheme": {
+            "schemeType": {
+                "TParams": {},
+                "TId": "42493a62797465730000000000000000"
+            },
+            "schemeBinders": {
+                "stvs": [],
+                "constraints": {
+                    "stvs": {},
+                    "rtvs": {}
+                },
+                "tvs": [],
+                "rtvs": []
+            }
+        }
+    },
+    {
+        "typeParams": {},
+        "nom": "426f6f6c000000000000000000000000",
+        "name": "Bool",
+        "scheme": {
+            "schemeType": {
+                "sum": {
+                    "42493a66616c73650000000000000000": {
+                        "record": {}
+                    },
+                    "42493a74727565000000000000000000": {
+                        "record": {}
+                    }
+                }
+            },
+            "schemeBinders": {
+                "stvs": [],
+                "constraints": {
+                    "stvs": {},
+                    "rtvs": {}
+                },
+                "tvs": [],
+                "rtvs": []
+            }
+        }
+    },
+    {
+        "typeParams": {
+            "42493a76616c00000000000000000000": "61"
+        },
+        "nom": "496e6653747265616d00000000000000",
+        "name": "InfStream",
+        "scheme": {
+            "schemeType": {
+                "record": {
+                    "42493a7461696c000000000000000000": {
+                        "TFun": [
+                            {
+                                "record": {}
+                            },
+                            {
+                                "TParams": {
+                                    "42493a76616c00000000000000000000": {
+                                        "TVar": "61"
+                                    }
+                                },
+                                "TId": "496e6653747265616d00000000000000"
+                            }
+                        ]
+                    },
+                    "42493a68656164000000000000000000": {
+                        "TVar": "61"
+                    }
+                }
+            },
+            "schemeBinders": {
+                "stvs": [],
+                "constraints": {
+                    "stvs": {},
+                    "rtvs": {}
+                },
+                "tvs": [],
+                "rtvs": []
+            }
+        }
+    },
+    {
+        "typeParams": {
+            "42493a76616c00000000000000000000": "61"
+        },
+        "nom": "4d617962650000000000000000000000",
+        "name": "Maybe",
+        "scheme": {
+            "schemeType": {
+                "sum": {
+                    "42493a6e6f7468696e67000000000000": {
+                        "record": {}
+                    },
+                    "42493a6a757374000000000000000000": {
+                        "TVar": "61"
+                    }
+                }
+            },
+            "schemeBinders": {
+                "stvs": [],
+                "constraints": {
+                    "stvs": {},
+                    "rtvs": {}
+                },
+                "tvs": [],
+                "rtvs": []
+            }
+        }
+    },
+    {
+        "repl": [
+            "31b978a5-c8eb-404b-8171-a04d2530d5ba",
+            "hole"
+        ]
+    }
+]

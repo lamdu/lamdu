@@ -1,5 +1,5 @@
 module Data.Store.Db
-    ( Db, withDb
+    ( Db, DB.withDB, DB.defaultOptions, DB.Options(..)
     , lookup
     , transaction
     , store
@@ -17,16 +17,6 @@ import           System.Random (randomIO)
 
 -- TODO: Remove this
 type Db = DB
-
-options :: DB.Options
-options =
-    DB.defaultOptions
-    { DB.createIfMissing = True
-    , DB.errorIfExists = False
-    }
-
-withDb :: FilePath -> (Db -> IO a) -> IO a
-withDb filePath = DB.withDB filePath options
 
 lookup :: Db -> UUID -> IO (Maybe ByteString)
 lookup db = DB.get db DB.defaultReadOptions . strictifyBS . UUID.toByteString

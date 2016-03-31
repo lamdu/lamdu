@@ -1,8 +1,7 @@
 -- TODO: Kill this module? Sugar should be providing all the ids the
 -- GUI sees. GUI shouldn't see IRefs directly at all
 
--- This module is used to avoid a dependency on WidgetIds by
--- ExampleDB/tests/etc
+-- This module is used to avoid a dependency on WidgetIds by tests
 module Lamdu.GUI.WidgetIdIRef
     ( fromIRef
     ) where

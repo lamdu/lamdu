@@ -9,7 +9,6 @@ import qualified Data.Store.Transaction as Transaction
 import           Data.String (IsString(..))
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Definition as Definition
-import qualified Lamdu.Data.ExampleDB as ExampleDB
 import qualified Lamdu.Expr.Scheme as Scheme
 import           Lamdu.Expr.Type (Type, (~>))
 import qualified Lamdu.Expr.Type as T
@@ -26,6 +25,8 @@ definitionTypes =
         exampleDBDefs =
             fst . MapStore.runEmpty . Transaction.run MapStore.mapStore $
                 do
+                    -- TODO: ExampleDB killed, this is broken!
+                    -- Use import of a DB? Hard-code the example db here?
                     publics <- ExampleDB.createPublics
                     Map.fromList <$> mapM readDef (ExampleDB.publicDefs publics)
 

@@ -34,8 +34,8 @@ import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
 import           Lamdu.Config.Sampler (Sampler)
 import qualified Lamdu.Config.Sampler as ConfigSampler
+import qualified Lamdu.Data.DbInit as DbInit
 import qualified Lamdu.Data.DbLayout as DbLayout
-import qualified Lamdu.Data.ExampleDB as ExampleDB
 import qualified Lamdu.Data.Export.JSON as Export
 import           Lamdu.DataFile (getLamduDir)
 import qualified Lamdu.Eval.Manager as EvalManager
@@ -72,7 +72,7 @@ main =
         setNumCapabilities =<< getNumProcessors
         lamduDir <- getLamduDir
         opts <- either fail return =<< Opts.get
-        let withDB = ExampleDB.withDB lamduDir
+        let withDB = DbInit.withDB lamduDir
         case opts of
             Opts.Parsed{_poShouldDeleteDB,_poUndoCount,_poWindowMode}
                 | _poShouldDeleteDB -> deleteDB lamduDir
