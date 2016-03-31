@@ -16,7 +16,7 @@ import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
 import qualified Lamdu.Data.DbLayout as DbLayout
 import qualified Lamdu.DataFile as DataFile
-import           Lamdu.Data.Export.JSON (importAll)
+import           Lamdu.Data.Export.JSON (fileImportAll)
 import qualified Lamdu.Expr.UniqueId as UniqueId
 import qualified Lamdu.GUI.WidgetIdIRef as WidgetIdIRef
 import qualified System.Directory as Directory
@@ -72,7 +72,7 @@ withDB lamduDir body =
         e <- Directory.doesDirectoryExist dbPath
         Db.withDB dbPath (options (not e)) $ \db ->
             do
-                unless e $ DataFile.getPath "freshdb.json" >>= importAll >>= initDb db
+                unless e $ DataFile.getPath "freshdb.json" >>= fileImportAll >>= initDb db
                 body db
     where
         options create =

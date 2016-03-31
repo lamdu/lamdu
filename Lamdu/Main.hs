@@ -144,8 +144,8 @@ makeRootWidget db zoom settingsRef evaluator (CachedWidgetInput _fontsVer config
         settings <- readIORef settingsRef
         let env = GUIMain.Env
                 { _envEvalRes = evalResults
-                , _envExportRepl = exportRepl
-                , _envExportAll = exportAll
+                , _envExportRepl = fileExport Export.fileExportRepl
+                , _envExportAll = fileExport Export.fileExportAll
                 , _envImportAll = importAll
                 , _envConfig = config
                 , _envSettings = settings
@@ -162,9 +162,8 @@ makeRootWidget db zoom settingsRef evaluator (CachedWidgetInput _fontsVer config
             <&> Widget.weakerEvents eventMap
             <&> Widget.scale sizeFactor
     where
-        exportRepl = Export.exportRepl exportPath <&> flip (,) () & return & GUIMain.M
-        exportAll = Export.exportAll exportPath <&> flip (,) () & return & GUIMain.M
-        importAll path = Export.importAll path <&> fmap ((,) (pure ())) & GUIMain.M
+        fileExport exporter = exporter exportPath <&> flip (,) () & return & GUIMain.M
+        importAll path = Export.fileImportAll path <&> fmap ((,) (pure ())) & GUIMain.M
         Config.Export{exportPath} = Config.export config
 
 withMVarProtection :: a -> (MVar (Maybe a) -> IO b) -> IO b

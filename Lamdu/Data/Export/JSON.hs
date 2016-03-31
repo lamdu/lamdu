@@ -1,9 +1,9 @@
 -- | Import/Export JSON support
 {-# LANGUAGE NoImplicitPrelude, TemplateHaskell, OverloadedStrings, FlexibleContexts, LambdaCase #-}
 module Lamdu.Data.Export.JSON
-    ( exportRepl
-    , exportAll
-    , importAll
+    ( fileExportRepl
+    , fileExportAll
+    , fileImportAll
     ) where
 
 -- TODO: Schema version? What granularity?
@@ -141,8 +141,8 @@ exportDef globalId =
         (presentationMode, mName, globalId) <$ def' & Codec.encodeDef & tell
     & withVisited visitedDefs globalId
 
-exportReplH :: Export ()
-exportReplH =
+exportRepl :: Export ()
+exportRepl =
     do
         repl <-
             DbLayout.repl DbLayout.codeIRefs & Transaction.readIRef
@@ -150,24 +150,24 @@ exportReplH =
         exportVal repl
         repl <&> valIToUUID & Codec.encodeRepl & tell
 
-exportRepl :: FilePath -> T ViewM (IO ())
-exportRepl exportPath = export "repl" exportPath exportReplH
+fileExportRepl :: FilePath -> T ViewM (IO ())
+fileExportRepl = export "repl" exportRepl
 
-exportAll :: FilePath -> T ViewM (IO ())
-exportAll exportPath =
+fileExportAll :: FilePath -> T ViewM (IO ())
+fileExportAll =
     do
         exportSet DbLayout.globals (exportDef . ExprIRef.globalId)
         exportSet DbLayout.tags exportTag
         exportSet DbLayout.tids exportNominal
-        exportReplH
-    & export "all" exportPath
+        exportRepl
+    & export "all"
     where
         exportSet indexIRef exportFunc =
             indexIRef DbLayout.codeIRefs & Transaction.readIRef & trans
             >>= traverse_ exportFunc
 
-export :: String -> FilePath -> Export a -> T ViewM (IO ())
-export msg exportPath act =
+export :: String -> Export a -> FilePath -> T ViewM (IO ())
+export msg act exportPath =
     runExport act
     <&> snd
     <&> \json ->
@@ -256,8 +256,8 @@ importOne json =
             & fail
         try decode imp = Codec.runDecoder decode json <&> imp
 
-importAll :: FilePath -> IO (T ViewM ())
-importAll importPath =
+fileImportAll :: FilePath -> IO (T ViewM ())
+fileImportAll importPath =
     do
         putStrLn $ "importing from: " ++ show importPath
         LBS.readFile importPath <&> Aeson.eitherDecode
