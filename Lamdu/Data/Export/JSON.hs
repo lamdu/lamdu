@@ -16,8 +16,10 @@ import           Control.Monad.Trans.State (StateT)
 import qualified Control.Monad.Trans.State as State
 import           Control.Monad.Trans.Writer (WriterT(..))
 import qualified Control.Monad.Trans.Writer as Writer
+import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.Encode.Pretty as AesonPretty
 import           Data.Binary (Binary)
+import qualified Data.ByteString.Lazy as LBS
 import qualified Data.ByteString.Lazy.Char8 as BSL8
 import           Data.Either.Combinators (swapEither)
 import           Data.Foldable (traverse_)
@@ -145,15 +147,19 @@ exportDef globalId =
         (presentationMode, mName, globalId) <$ def' & Codec.encodeDef & tell
     & withVisited visitedDefs globalId
 
-exportRepl :: T ViewM Codec.Encoded
-exportRepl =
+exportRepl :: FilePath -> T ViewM (IO ())
+exportRepl exportPath =
     do
         repl <- Transaction.readIRef replIRef >>= ExprIRef.readVal & trans
         exportVal repl
-        repl <&> valIToUUID
-            & Codec.encodeRepl & tell
+        repl <&> valIToUUID & Codec.encodeRepl & tell
     & runExport
     <&> snd
+    <&> \json ->
+        do
+            putStrLn $ "Exporting to " ++ show exportPath
+            LBS.writeFile exportPath (AesonPretty.encodePretty json)
+
 
 setName :: ToUUID a => a -> String -> T ViewM ()
 setName x = Transaction.setP (Anchors.assocNameRef x)
@@ -235,8 +241,14 @@ importOne json =
             & fail
         try decode imp = Codec.runDecoder decode json <&> imp
 
-importAll :: Codec.Encoded -> T ViewM ()
-importAll json =
-    Codec.runDecoder Codec.decodeArray json
-    & either fail return
-    >>= traverse_ importOne
+importAll :: FilePath -> IO (T ViewM ())
+importAll importPath =
+    do
+        putStrLn $ "importing from: " ++ show importPath
+        LBS.readFile importPath <&> Aeson.eitherDecode
+            >>= either fail return
+            <&> \json ->
+                do
+                    Codec.runDecoder Codec.decodeArray json
+                    & either fail return
+                    >>= traverse_ importOne

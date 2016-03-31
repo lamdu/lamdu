@@ -9,9 +9,6 @@ import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Lens.Tuple
 import           Control.Monad (when, join, unless, replicateM_)
-import qualified Data.Aeson.Encode.Pretty as AesonPretty
-import qualified Data.Aeson as Aeson
-import qualified Data.ByteString.Lazy as LBS
 import           Data.IORef
 import           Data.MRUMemo (memoIO)
 import           Data.Maybe
@@ -131,29 +128,6 @@ instance Eq CachedWidgetInput where
     CachedWidgetInput x0 y0 z0 _ == CachedWidgetInput x1 y1 z1 _ =
         (x0, y0, z0) == (x1, y1, z1)
 
-exportRepl :: Config.Export -> GUIMain.M DbLayout.ViewM ()
-exportRepl Config.Export{exportPath} =
-    GUIMain.M $ return $
-    do
-        json <- Export.exportRepl
-        return
-            ( do
-                  putStrLn $ "Exporting to " ++ show exportPath
-                  LBS.writeFile exportPath (AesonPretty.encodePretty json)
-            , ()
-            )
-
-importAll :: FilePath -> GUIMain.M DbLayout.ViewM ()
-importAll filePath =
-    GUIMain.M $
-    do
-        putStrLn $ "importing from: " ++ show filePath
-        fillDbTxn <-
-            LBS.readFile filePath <&> Aeson.eitherDecode
-            >>= either fail return
-            <&> Export.importAll
-        pure ((pure (), ()) <$ fillDbTxn)
-
 makeRootWidget ::
     Db -> Zoom -> IORef Settings -> EvalManager.Evaluator ->
     CachedWidgetInput -> IO (Widget IO)
@@ -170,7 +144,7 @@ makeRootWidget db zoom settingsRef evaluator (CachedWidgetInput _fontsVer config
         settings <- readIORef settingsRef
         let env = GUIMain.Env
                 { _envEvalRes = evalResults
-                , _envExportRepl = exportRepl (Config.export config)
+                , _envExportRepl = exportRepl
                 , _envImportAll = importAll
                 , _envConfig = config
                 , _envSettings = settings
@@ -186,6 +160,10 @@ makeRootWidget db zoom settingsRef evaluator (CachedWidgetInput _fontsVer config
         mkWidgetWithFallback dbToIO env
             <&> Widget.weakerEvents eventMap
             <&> Widget.scale sizeFactor
+    where
+        exportRepl = Export.exportRepl exportPath <&> flip (,) () & return & GUIMain.M
+        importAll path = Export.importAll path <&> fmap ((,) (pure ())) & GUIMain.M
+        Config.Export{exportPath} = Config.export config
 
 withMVarProtection :: a -> (MVar (Maybe a) -> IO b) -> IO b
 withMVarProtection val =
