@@ -393,19 +393,24 @@ insertField k v (Aeson.Object obj) =
     Aeson.Object (HashMap.insert (fromString k) (Aeson.toJSON v) obj)
 insertField _ _ o = error $ "insertField: Expecting object, got: " ++ show o
 
-encodeNominal :: Encoder Nominal
-encodeNominal (Nominal paramsMap scheme) =
+encodeNominal :: Encoder (Maybe Nominal)
+encodeNominal Nothing = Aeson.object [] -- opaque nominal
+encodeNominal (Just (Nominal paramsMap scheme)) =
     Aeson.object
     [ "typeParams" .= encodeIdentMap T.typeParamId (encodeIdent . T.tvName) paramsMap
     , "scheme" .= encodeScheme scheme
     ]
 
-decodeNominal :: Decoder Nominal
-decodeNominal =
-    Aeson.withObject "nominal" $ \obj ->
-    Nominal
-    <$> (obj .: "typeParams" >>= decodeIdentMap T.ParamId (fmap T.Var . decodeIdent))
-    <*> (obj .: "scheme" >>= decodeScheme)
+decodeNominal :: Decoder (Maybe Nominal)
+decodeNominal json =
+    ( Aeson.withObject "nominal" ?? json $ \obj ->
+      Nominal
+      <$> (obj .: "typeParams" >>= decodeIdentMap T.ParamId (fmap T.Var . decodeIdent))
+      <*> (obj .: "scheme" >>= decodeScheme)
+    )
+    -- TODO: maybe mark opaque nominals somehow? This
+    -- will throw stuff under the rug:
+    & optional
 
 encodeNamed :: String -> Encoder a -> Encoder ((Maybe String, Identifier), a)
 encodeNamed idAttrName encoder ((mName, ident), x) =
@@ -501,10 +506,10 @@ decodeNamedLamVar json =
         ((mName, ident), (lamI, mParamList)) <- decodeNamed "lamVar" decodeLam json
         return (mParamList, mName, lamI, V.Var ident)
 
-encodeNamedNominal :: Encoder ((Maybe String, T.NominalId), Nominal)
+encodeNamedNominal :: Encoder ((Maybe String, T.NominalId), Maybe Nominal)
 encodeNamedNominal ((mName, T.NominalId nomId), nom) =
     encodeNamed "nom" encodeNominal ((mName, nomId), nom)
 
-decodeNamedNominal :: Decoder ((Maybe String, T.NominalId), Nominal)
+decodeNamedNominal :: Decoder ((Maybe String, T.NominalId), Maybe Nominal)
 decodeNamedNominal json =
     decodeNamed "nom" decodeNominal json <&> _1 . _2 %~ T.NominalId

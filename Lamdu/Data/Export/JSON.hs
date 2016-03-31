@@ -103,13 +103,10 @@ exportTag tag =
 
 exportNominal :: T.NominalId -> Export ()
 exportNominal nomId =
-    trans (Load.nominal nomId) >>=
-    \case
-    Nothing -> return ()
-    Just nominal ->
-        do
-            mName <- readAssocName nomId & trans
-            Codec.encodeNamedNominal ((mName, nomId), nominal) & tell
+    do
+        mNominal <- trans (Load.nominal nomId)
+        mName <- readAssocName nomId & trans
+        Codec.encodeNamedNominal ((mName, nomId), mNominal) & tell
         & withVisited visitedNominals nomId
 
 exportSubexpr :: Val (ValI ViewM) -> Export ()
@@ -230,11 +227,11 @@ importLamVar (paramList, mName, lamUUID, var) =
     where
         lamI = IRef.unsafeFromUUID lamUUID & ExprIRef.ValI
 
-importNominal :: ((Maybe String, T.NominalId), Nominal) -> T ViewM ()
-importNominal ((mName, nomId), nominal) =
+importNominal :: ((Maybe String, T.NominalId), Maybe Nominal) -> T ViewM ()
+importNominal ((mName, nomId), mNominal) =
     do
         traverse_ (setName nomId) mName
-        Transaction.writeIRef (ExprIRef.nominalI nomId) nominal
+        traverse_ (Transaction.writeIRef (ExprIRef.nominalI nomId)) mNominal
         nomId `insertTo` DbLayout.tids
 
 -- Like asum/msum but collects the errors
