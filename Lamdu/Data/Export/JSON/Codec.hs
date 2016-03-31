@@ -14,7 +14,7 @@ module Lamdu.Data.Export.JSON.Codec
     , Encoded, runDecoder
     ) where
 
-import           Control.Applicative (Alternative(..), optional)
+import           Control.Applicative (optional)
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators hiding ((.=))
 import           Control.Lens.Tuple
@@ -266,97 +266,107 @@ decodeScheme =
         typ <- obj .: "schemeType" >>= decodeType
         Scheme tvs constraints typ & return
 
-encodeLeaf :: Encoder V.Leaf
-encodeLeaf V.LHole = Aeson.String "hole"
-encodeLeaf V.LRecEmpty = Aeson.String "()"
-encodeLeaf V.LAbsurd = Aeson.String "absurd"
-encodeLeaf (V.LLiteral (V.PrimVal (T.NominalId primId) primBytes)) =
-    Aeson.object
-    [ "primId" .= encodeIdent primId
-    , "primBytes" .= showHexBytes primBytes
-    ]
-encodeLeaf (V.LVar (V.Var var)) = encodeIdent var
+encodeLeaf :: V.Leaf -> AesonTypes.Object
+encodeLeaf =
+    \case
+    V.LHole -> leaf "hole"
+    V.LRecEmpty -> leaf "recEmpty"
+    V.LAbsurd -> leaf "absurd"
+    V.LVar (V.Var var) -> HashMap.fromList ["var" .= encodeIdent var]
+    V.LLiteral (V.PrimVal (T.NominalId primId) primBytes) ->
+        HashMap.fromList
+        [ "primId" .= encodeIdent primId
+        , "primBytes" .= showHexBytes primBytes
+        ]
+    where
+        leaf x = HashMap.fromList [x .= Aeson.object []]
 
-decodeLeaf :: Decoder V.Leaf
-decodeLeaf (Aeson.String "hole") = pure V.LHole
-decodeLeaf (Aeson.String "()") = pure V.LRecEmpty
-decodeLeaf (Aeson.String "absurd") = pure V.LAbsurd
-decodeLeaf json =
+decodeLeaf :: AesonTypes.Object -> AesonTypes.Parser V.Leaf
+decodeLeaf obj =
     jsum
-    [ Aeson.withObject "literal" ?? json $ \obj ->
-      do
+    [ leaf "hole" V.LHole
+    , leaf "recEmpty" V.LRecEmpty
+    , leaf "absurd" V.LAbsurd
+    , obj .: "var" >>= decodeIdent <&> V.Var <&> V.LVar
+    , do
           primId <- obj .: "primId" >>= decodeIdent <&> T.NominalId
           primBytes <- obj .: "primBytes" >>= fromEither . parseHexBytes
           V.PrimVal primId primBytes & pure
       <&> V.LLiteral
-    , decodeIdent json <&> V.Var <&> V.LVar
     ]
+    where
+        leaf key val =
+            obj .: key >>=
+            \case
+            AesonTypes.Object x | HashMap.null x -> return val
+            x -> fail ("bad val for leaf " ++ show x)
 
 encodeVal :: Encoder (Val UUID)
-encodeVal (Val pl body) = Aeson.toJSON (pl, encodeValBody body)
+encodeVal (Val uuid body) =
+    encodeValBody body
+    & insertField "id" uuid
+    & AesonTypes.Object
 
 decodeVal :: Decoder (Val UUID)
-decodeVal json =
-    do
-        (pl, body) <- Aeson.parseJSON json
-        Val pl <$> decodeValBody body
+decodeVal =
+    AesonTypes.withObject "val" $ \obj ->
+    Val
+    <$> (obj .: "id")
+    <*> decodeValBody obj
 
-encodeValBody :: V.Body (Val UUID) -> AesonTypes.Value
+encodeValBody :: V.Body (Val UUID) -> AesonTypes.Object
 encodeValBody body =
     case body <&> encodeVal of
     V.BApp (V.Apply func arg) ->
-        Aeson.object ["applyFunc" .= func, "applyArg" .= arg]
+        HashMap.fromList ["applyFunc" .= func, "applyArg" .= arg]
     V.BAbs (V.Lam (V.Var varId) res) ->
-        Aeson.object ["lamVar" .= encodeIdent varId, "lamBody" .= res]
+        HashMap.fromList ["lamVar" .= encodeIdent varId, "lamBody" .= res]
     V.BGetField (V.GetField reco tag) ->
-        Aeson.object ["getFieldRec" .= reco, "getFieldName" .= encodeTagId tag]
+        HashMap.fromList ["getFieldRec" .= reco, "getFieldName" .= encodeTagId tag]
     V.BRecExtend (V.RecExtend tag val rest) ->
-        Aeson.object
+        HashMap.fromList
         ["extendTag" .= encodeTagId tag, "extendVal" .= val, "extendRest" .= rest]
     V.BInject (V.Inject tag val) ->
-        Aeson.object ["injectTag" .= encodeTagId tag, "injectVal" .= val]
+        HashMap.fromList ["injectTag" .= encodeTagId tag, "injectVal" .= val]
     V.BCase (V.Case tag handler restHandler) ->
-        Aeson.object ["caseTag" .= encodeTagId tag, "caseHandler" .= handler, "caseRest" .= restHandler]
+        HashMap.fromList ["caseTag" .= encodeTagId tag, "caseHandler" .= handler, "caseRest" .= restHandler]
     V.BToNom (V.Nom (T.NominalId nomId) val) ->
-        Aeson.object ["toNomId" .= encodeIdent nomId, "toNomVal" .= val]
+        HashMap.fromList ["toNomId" .= encodeIdent nomId, "toNomVal" .= val]
     V.BFromNom (V.Nom (T.NominalId nomId) val) ->
-        Aeson.object ["fromNomId" .= encodeIdent nomId, "fromNomVal" .= val]
+        HashMap.fromList ["fromNomId" .= encodeIdent nomId, "fromNomVal" .= val]
     V.BLeaf leaf -> encodeLeaf leaf
 
-decodeValBody :: Decoder (V.Body (Val UUID))
-decodeValBody json =
-    (decodeLeaf json <&> V.BLeaf)
-    <|>
-    ( Aeson.withObject "Val" ?? json $ \obj ->
-      jsum
-      [ V.Apply <$> obj .: "applyFunc" <*> obj .: "applyArg" <&> V.BApp
-      , V.Lam <$> (obj .: "lamVar" >>= decodeIdent <&> V.Var) <*> (obj .: "lamBody")
-        <&> V.BAbs
-      , V.GetField <$> obj .: "getFieldRec" <*> (obj .: "getFieldName" >>= decodeTagId)
-        <&> V.BGetField
-      , V.RecExtend
-        <$> (obj .: "extendTag" >>= decodeTagId)
-        <*> obj .: "extendVal" <*> obj .: "extendRest"
-        <&> V.BRecExtend
-      , V.Inject
-        <$> (obj .: "injectTag" >>= decodeTagId)
-        <*> obj .: "injectVal"
-        <&> V.BInject
-      , V.Case
-        <$> (obj .: "caseTag" >>= decodeTagId)
-        <*> obj .: "caseHandler"
-        <*> obj .: "caseRest"
-        <&> V.BCase
-      , V.Nom
-        <$> (obj .: "toNomId" >>= decodeIdent <&> T.NominalId)
-        <*> obj .: "toNomVal"
-        <&> V.BToNom
-      , V.Nom
-        <$> (obj .: "fromNomId" >>= decodeIdent <&> T.NominalId)
-        <*> obj .: "fromNomVal"
-        <&> V.BFromNom
-      ] >>= traverse decodeVal
-    )
+decodeValBody :: AesonTypes.Object -> AesonTypes.Parser (V.Body (Val UUID))
+decodeValBody obj =
+    jsum
+    [ V.Apply <$> obj .: "applyFunc" <*> obj .: "applyArg" <&> V.BApp
+    , V.Lam <$> (obj .: "lamVar" >>= decodeIdent <&> V.Var) <*> (obj .: "lamBody")
+      <&> V.BAbs
+    , V.GetField <$> obj .: "getFieldRec" <*> (obj .: "getFieldName" >>= decodeTagId)
+      <&> V.BGetField
+    , V.RecExtend
+      <$> (obj .: "extendTag" >>= decodeTagId)
+      <*> obj .: "extendVal" <*> obj .: "extendRest"
+      <&> V.BRecExtend
+    , V.Inject
+      <$> (obj .: "injectTag" >>= decodeTagId)
+      <*> obj .: "injectVal"
+      <&> V.BInject
+    , V.Case
+      <$> (obj .: "caseTag" >>= decodeTagId)
+      <*> obj .: "caseHandler"
+      <*> obj .: "caseRest"
+      <&> V.BCase
+    , V.Nom
+      <$> (obj .: "toNomId" >>= decodeIdent <&> T.NominalId)
+      <*> obj .: "toNomVal"
+      <&> V.BToNom
+    , V.Nom
+      <$> (obj .: "fromNomId" >>= decodeIdent <&> T.NominalId)
+      <*> obj .: "fromNomVal"
+      <&> V.BFromNom
+    , decodeLeaf obj <&> V.BLeaf
+    ] >>= traverse decodeVal
 
 encodeExportedType :: Encoder Definition.ExportedType
 encodeExportedType Definition.NoExportedType = Aeson.String "NoExportedType"
