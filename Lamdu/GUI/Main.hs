@@ -1,8 +1,8 @@
 {-# LANGUAGE TemplateHaskell, RankNTypes, DisambiguateRecordFields, NamedFieldPuns #-}
 module Lamdu.GUI.Main
     ( make
-    , Env(..)
-      , envEvalRes, envExportRepl, envExportAll, envImportAll
+    , Env(..), CodeEdit.ExportActions(..)
+      , envEvalRes, envExportActions
       , envConfig, envSettings, envStyle, envFullSize, envCursor
     , CodeEdit.M(..), CodeEdit.m
     ) where
@@ -38,9 +38,7 @@ type T = Transaction
 
 data Env = Env
     { _envEvalRes :: CurAndPrev (EvalResults (ExprIRef.ValI DbLayout.ViewM))
-    , _envExportRepl :: CodeEdit.M DbLayout.ViewM ()
-    , _envExportAll :: CodeEdit.M DbLayout.ViewM ()
-    , _envImportAll :: FilePath -> CodeEdit.M DbLayout.ViewM ()
+    , _envExportActions :: CodeEdit.ExportActions DbLayout.ViewM
     , _envConfig :: Config
     , _envSettings :: Settings
     , _envStyle :: Style
@@ -82,16 +80,14 @@ make env rootId =
                     & return
     where
         hoverPadding = Spacer.makeWidget $ Vector2 0 $ Config.paneHoverPadding $ Config.pane config
-        Env evalResults exportRepl exportAll importAll config settings style fullSize cursor = env
+        Env evalResults exportActions config settings style fullSize cursor = env
         codeEditEnv = CodeEdit.Env
             { codeProps = DbLayout.codeProps
             , evalResults
             , config
             , settings
             , style
-            , exportRepl
-            , exportAll
-            , importAll
+            , exportActions
             }
         widgetEnv = WE.Env
             { WE._envCursor = cursor

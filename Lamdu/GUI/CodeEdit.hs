@@ -1,7 +1,7 @@
 {-# LANGUAGE NoImplicitPrelude, OverloadedStrings, DeriveFunctor, TemplateHaskell, NamedFieldPuns, DisambiguateRecordFields #-}
 module Lamdu.GUI.CodeEdit
     ( make
-    , Env(..)
+    , Env(..), ExportActions(..)
     , M(..), m, mLiftTrans
     ) where
 
@@ -79,11 +79,15 @@ data Pane m = Pane
     , paneMoveUp :: Maybe (T m ())
     }
 
-data Env m = Env
-    { codeProps :: Anchors.CodeProps m
-    , exportRepl :: M m ()
+data ExportActions m = ExportActions
+    { exportRepl :: M m ()
     , exportAll :: M m ()
     , importAll :: FilePath -> M m ()
+    }
+
+data Env m = Env
+    { codeProps :: Anchors.CodeProps m
+    , exportActions :: ExportActions m
     , evalResults :: CurAndPrev (EvalResults (ValI m))
     , config :: Config
     , settings :: Settings
@@ -261,11 +265,11 @@ makeReplEventMap env replExpr config =
       <&> ExprEventMap.extractCursor & mLiftTrans
       & Widget.keysEventMapMovesCursor newDefinitionButtonPressKeys
         (E.Doc ["Edit", "Extract to definition"])
-    , exportRepl env
-      & Widget.keysEventMap exportKeys
-        (E.Doc ["Collaboration", "Export repl to JSON file"])
+    , Widget.keysEventMap exportKeys
+      (E.Doc ["Collaboration", "Export repl to JSON file"]) exportRepl
     ]
     where
+        ExportActions{exportRepl} = exportActions env
         Config.Export{exportKeys} = Config.export config
         Config.Pane{newDefinitionButtonPressKeys} = Config.pane config
 
@@ -288,7 +292,7 @@ makeReplEdit env myId replExpr =
 
 panesEventMap ::
     Monad m => Env m -> WidgetEnvT (T m) (Widget.EventHandlers (M m))
-panesEventMap Env{config,codeProps,importAll,exportAll} =
+panesEventMap Env{config,codeProps,exportActions} =
     do
         mJumpBack <- DataOps.jumpBack codeProps & lift <&> fmap mLiftTrans
         newDefinitionEventMap <- makeNewDefinitionEventMap codeProps
@@ -308,6 +312,7 @@ panesEventMap Env{config,codeProps,importAll,exportAll} =
                 (E.Doc ["Collaboration", "Import repl from JSON file"])
             ]
     where
+        ExportActions{importAll,exportAll} = exportActions
         Config.Export{exportPath,importKeys,exportAllKeys} = Config.export config
         importAction [filePath] = Just (importAll filePath)
         importAction _ = Nothing

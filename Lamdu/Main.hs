@@ -128,6 +128,18 @@ instance Eq CachedWidgetInput where
     CachedWidgetInput x0 y0 z0 _ == CachedWidgetInput x1 y1 z1 _ =
         (x0, y0, z0) == (x1, y1, z1)
 
+exportActions :: Config -> GUIMain.ExportActions DbLayout.ViewM
+exportActions config =
+    GUIMain.ExportActions
+    { GUIMain.exportRepl = fileExport Export.fileExportRepl
+    , GUIMain.exportAll = fileExport Export.fileExportAll
+    , GUIMain.importAll = importAll
+    }
+    where
+        Config.Export{exportPath} = Config.export config
+        fileExport exporter = exporter exportPath <&> flip (,) () & return & GUIMain.M
+        importAll path = Export.fileImportAll path <&> fmap ((,) (pure ())) & GUIMain.M
+
 makeRootWidget ::
     Db -> Zoom -> IORef Settings -> EvalManager.Evaluator ->
     CachedWidgetInput -> IO (Widget IO)
@@ -144,9 +156,7 @@ makeRootWidget db zoom settingsRef evaluator (CachedWidgetInput _fontsVer config
         settings <- readIORef settingsRef
         let env = GUIMain.Env
                 { _envEvalRes = evalResults
-                , _envExportRepl = fileExport Export.fileExportRepl
-                , _envExportAll = fileExport Export.fileExportAll
-                , _envImportAll = importAll
+                , _envExportActions = exportActions config
                 , _envConfig = config
                 , _envSettings = settings
                 , _envStyle = Style.style config fonts
@@ -161,10 +171,6 @@ makeRootWidget db zoom settingsRef evaluator (CachedWidgetInput _fontsVer config
         mkWidgetWithFallback dbToIO env
             <&> Widget.weakerEvents eventMap
             <&> Widget.scale sizeFactor
-    where
-        fileExport exporter = exporter exportPath <&> flip (,) () & return & GUIMain.M
-        importAll path = Export.fileImportAll path <&> fmap ((,) (pure ())) & GUIMain.M
-        Config.Export{exportPath} = Config.export config
 
 withMVarProtection :: a -> (MVar (Maybe a) -> IO b) -> IO b
 withMVarProtection val =
