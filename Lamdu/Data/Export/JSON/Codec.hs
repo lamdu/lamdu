@@ -166,42 +166,41 @@ decodeComposite :: Decoder (Composite p)
 decodeComposite = fmap FlatComposite.toComposite . decodeFlatComposite
 
 encodeType :: Encoder Type
-encodeType (T.TFun a b) = Aeson.object ["TFun" .= encodeArray (map encodeType [a, b])]
+encodeType (T.TFun a b) = Aeson.object ["funcParam" .= encodeType a, "funcResult" .= encodeType b]
 encodeType (T.TRecord composite) = Aeson.object ["record" .= encodeComposite composite]
 encodeType (T.TSum composite) = Aeson.object ["sum" .= encodeComposite composite]
-encodeType (T.TVar (T.Var name)) = Aeson.object ["TVar" .= encodeIdent name]
+encodeType (T.TVar (T.Var name)) = Aeson.object ["typeVar" .= encodeIdent name]
 encodeType (T.TInst tId params) =
     Aeson.object
-    [ "TId" .= encodeIdent (T.nomId tId)
-    , "TParams" .= encodeIdentMap T.typeParamId encodeType params
+    [ "nomId" .= encodeIdent (T.nomId tId)
+    , "nomParams" .= encodeIdentMap T.typeParamId encodeType params
     ]
 
 decodeType :: Decoder Type
-decodeType (Aeson.String "TODO:TPrim") = error "TODO:TPrim"
 decodeType json =
     Aeson.withObject "Type" ?? json $ \o ->
     jsum
-    [ do
-          (a, b) <- o .: "TFun"
-          T.TFun <$> decodeType a <*> decodeType b
+    [ T.TFun
+        <$> (o .: "funcParam" >>= decodeType)
+        <*> (o .: "funcResult" >>= decodeType)
     , o .: "record" >>= decodeComposite <&> T.TRecord
     , o .: "sum" >>= decodeComposite <&> T.TSum
-    , o .: "TVar" >>= decodeIdent <&> T.Var <&> T.TVar
+    , o .: "typeVar" >>= decodeIdent <&> T.Var <&> T.TVar
     , do
-          nomId <- o .: "TId" >>= decodeIdent <&> T.NominalId
-          params <- o .: "TParams" >>= decodeIdentMap T.ParamId decodeType
+          nomId <- o .: "nomId" >>= decodeIdent <&> T.NominalId
+          params <- o .: "nomParams" >>= decodeIdentMap T.ParamId decodeType
           T.TInst nomId params & pure
     ]
 
 encodeTypeVars :: Encoder (TypeVars, Constraints)
 encodeTypeVars (TypeVars tvs rtvs stvs, Constraints productConstraints sumConstraints) =
     Aeson.object
-    [ "tvs" .= encodeTVs tvs
-    , "rtvs" .= encodeTVs rtvs
-    , "stvs" .= encodeTVs stvs
+    [ "typeVars" .= encodeTVs tvs
+    , "recordTypeVars" .= encodeTVs rtvs
+    , "sumTypeVars" .= encodeTVs stvs
     , "constraints" .= Aeson.object
-      [ "rtvs" .= encodeConstraints productConstraints
-      , "stvs" .= encodeConstraints sumConstraints
+      [ "recordTypeVars" .= encodeConstraints productConstraints
+      , "sumTypeVars" .= encodeConstraints sumConstraints
       ]
     ]
     where
@@ -215,12 +214,12 @@ decodeTypeVars =
     Aeson.withObject "TypeVars" $ \obj ->
     do
         let getTVs name = obj .: name >>= decodeTVs
-        tvs <- TypeVars <$> getTVs "tvs" <*> getTVs "rtvs" <*> getTVs "stvs"
+        tvs <- TypeVars <$> getTVs "typeVars" <*> getTVs "recordTypeVars" <*> getTVs "sumTypeVars"
         constraints <-
             obj .: "constraints" >>=
             ( Aeson.withObject "constraints" $ \constraints ->
               let  getCs name = constraints .: name >>= decodeConstraints <&> CompositeVarConstraints
-              in   Constraints <$> getCs "rtvs" <*> getCs "stvs"
+              in   Constraints <$> getCs "recordTypeVars" <*> getCs "sumTypeVars"
             )
         return (tvs, constraints)
     where
