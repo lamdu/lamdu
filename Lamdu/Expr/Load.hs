@@ -51,12 +51,7 @@ def defI =
                 defExpr (Transaction.writeIRef defI . Definition.BodyExpr) e
             Definition.BodyBuiltin bi -> return $ Definition.BodyBuiltin bi
 
-nominal :: Monad m => T.NominalId -> T m (Maybe Nominal)
-nominal tid =
-    do
-        e <- Transaction.irefExists iref
-        if e
-            then Transaction.readIRef iref <&> Just
-            else return Nothing
+nominal :: Monad m => T.NominalId -> T m Nominal
+nominal tid = Transaction.readIRef iref
     where
         iref = ExprIRef.nominalI tid

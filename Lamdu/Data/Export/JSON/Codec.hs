@@ -38,7 +38,7 @@ import           Lamdu.Expr.Constraints (Constraints(..), CompositeVarConstraint
 import           Lamdu.Expr.FlatComposite (FlatComposite(..))
 import qualified Lamdu.Expr.FlatComposite as FlatComposite
 import           Lamdu.Expr.Identifier (Identifier, identHex, identFromHex)
-import           Lamdu.Expr.Nominal (Nominal(..))
+import           Lamdu.Expr.Nominal (Nominal(..), NominalType(..))
 import           Lamdu.Expr.Scheme (Scheme(..))
 import           Lamdu.Expr.Type (Type, Composite)
 import qualified Lamdu.Expr.Type as T
@@ -421,24 +421,27 @@ decodeRepl = Aeson.withObject "repl" $ \obj -> obj .: "repl" >>= decodeVal
 insertField :: Aeson.ToJSON a => String -> a -> Aeson.Object -> Aeson.Object
 insertField k v = HashMap.insert (fromString k) (Aeson.toJSON v)
 
-encodeNominal :: Maybe Nominal -> Aeson.Object
-encodeNominal Nothing = HashMap.empty -- opaque nominal
-encodeNominal (Just (Nominal paramsMap scheme)) =
-    ("scheme" .= encodeScheme scheme) :
+encodeNominalType :: Encoder NominalType
+encodeNominalType (NominalType scheme) = encodeScheme scheme
+encodeNominalType OpaqueNominal = "OpaqueNominal"
+
+decodeNominalType :: Decoder NominalType
+decodeNominalType (Aeson.String "OpaqueNominal") = pure OpaqueNominal
+decodeNominalType json = decodeScheme json <&> NominalType
+
+encodeNominal :: Nominal -> Aeson.Object
+encodeNominal (Nominal paramsMap nominalType) =
+    "nomType" .= encodeNominalType nominalType :
     encodeSquash Map.null "typeParams"
     (encodeIdentMap T.typeParamId (encodeIdent . T.tvName)) paramsMap
     & HashMap.fromList
 
-decodeNominal :: Decoder (Maybe Nominal)
+decodeNominal :: Decoder Nominal
 decodeNominal json =
-    ( Aeson.withObject "nominal" ?? json $ \obj ->
-      Nominal
-      <$> decodeSquashed "typeParams" (decodeIdentMap T.ParamId (fmap T.Var . decodeIdent)) obj
-      <*> (obj .: "scheme" >>= decodeScheme)
-    )
-    -- TODO: maybe mark opaque nominals somehow? This
-    -- will throw stuff under the rug:
-    & optional
+    Aeson.withObject "nominal" ?? json $ \obj ->
+    Nominal
+    <$> decodeSquashed "typeParams" (decodeIdentMap T.ParamId (fmap T.Var . decodeIdent)) obj
+    <*> (obj .: "nomType" >>= decodeNominalType)
 
 encodeNamed :: String -> (a -> Aeson.Object) -> ((Maybe String, Identifier), a) -> Aeson.Object
 encodeNamed idAttrName encoder ((mName, ident), x) =
@@ -531,10 +534,10 @@ decodeNamedLamVar json =
         ((mName, ident), (lamI, mParamList)) <- decodeNamed "lamVar" decodeLam json
         return (mParamList, mName, lamI, V.Var ident)
 
-encodeNamedNominal :: Encoder ((Maybe String, T.NominalId), Maybe Nominal)
+encodeNamedNominal :: Encoder ((Maybe String, T.NominalId), Nominal)
 encodeNamedNominal ((mName, T.NominalId nomId), nom) =
     encodeNamed "nom" encodeNominal ((mName, nomId), nom) & Aeson.Object
 
-decodeNamedNominal :: Decoder ((Maybe String, T.NominalId), Maybe Nominal)
+decodeNamedNominal :: Decoder ((Maybe String, T.NominalId), Nominal)
 decodeNamedNominal json =
     decodeNamed "nom" decodeNominal json <&> _1 . _2 %~ T.NominalId

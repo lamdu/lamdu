@@ -16,7 +16,7 @@ import           Data.Map (Map)
 import qualified Data.Map as Map
 import qualified Data.Set as Set
 import qualified Lamdu.Expr.Lens as ExprLens
-import           Lamdu.Expr.Nominal (Nominal)
+import           Lamdu.Expr.Nominal (Nominal, _NominalType)
 import qualified Lamdu.Expr.Nominal as Nominal
 import           Lamdu.Expr.Scheme (schemeType)
 import           Lamdu.Expr.Type (Type)
@@ -32,7 +32,7 @@ import           Prelude.Compat
 
 type Nominals = Map T.NominalId Nominal
 
-loadNominalsForType :: Monad m => (T.NominalId -> m (Maybe Nominal)) -> Type -> m Nominals
+loadNominalsForType :: Monad m => (T.NominalId -> m Nominal) -> Type -> m Nominals
 loadNominalsForType loadNominal typ =
     go Map.empty (typ ^. ExprLens.typeTIds . Lens.to Set.singleton)
     where
@@ -40,20 +40,19 @@ loadNominalsForType loadNominal typ =
             | Set.null toLoad = return res
             | otherwise =
                 do
-                    nominals <-
-                        Map.fromSet loadNominal toLoad & sequenceA
-                        <&> Map.mapMaybe id
+                    nominals <- Map.fromSet loadNominal toLoad & sequenceA
                     let result = mappend res nominals
                     let newTIds =
                             nominals
-                            ^. Lens.traversed . Lens.to Nominal.nScheme . schemeType
+                            ^. Lens.traversed . Lens.to Nominal.nType
+                            . _NominalType . schemeType
                             . ExprLens.typeTIds . Lens.to Set.singleton
                             & (`Set.difference` Map.keysSet result)
                     go result newTIds
 
 valueConversion ::
     Monad m =>
-    (T.NominalId -> m (Maybe Nominal)) -> a ->
+    (T.NominalId -> m Nominal) -> a ->
     Val (Payload, a) -> m (StateT Context [] (Val (Payload, a)))
 valueConversion loadNominal empty src =
     do
@@ -89,7 +88,7 @@ valueConversionNoSplit nominals empty src =
     prependOpt src $
     case srcType of
     T.TInst name _params
-        | Map.member name nominals
+        | Lens.has (Lens.ix name . Nominal.nominalType . Nominal._NominalType) nominals
         && bodyNot ExprLens._BToNom ->
         -- TODO: Expose primitives from Infer to do this without partiality
         do
@@ -103,7 +102,7 @@ valueConversionNoSplit nominals empty src =
             V.Nom name updated & V.BFromNom & mkRes resType & return
         & Infer.run
         & mapStateT
-            (either (error "Infer of FromNom on Nominal shouldn't fail") return)
+            (either (error "Infer of FromNom on non-opaque Nominal shouldn't fail") return)
         >>= valueConversionNoSplit nominals empty
     T.TFun argType resType | bodyNot ExprLens._BAbs ->
         if Lens.has (ExprLens.valLeafs . ExprLens._LHole) arg

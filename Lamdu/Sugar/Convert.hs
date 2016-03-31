@@ -9,14 +9,15 @@ import           Control.Monad (unless)
 import           Control.Monad.Trans.Class (MonadTrans(..))
 import qualified Control.Monad.Trans.State as State
 import           Data.CurAndPrev (CurAndPrev)
+import           Data.Foldable (traverse_)
 import           Data.Map (Map)
 import qualified Data.Map as Map
 import qualified Data.Set as Set
-import           Data.UUID.Types (UUID)
 import           Data.Store.Property (Property)
 import qualified Data.Store.Property as Property
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
+import           Data.UUID.Types (UUID)
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Definition as Definition
 import           Lamdu.Eval.Results (EvalResults, erExprValues, erAppliesOfLam)
@@ -164,13 +165,9 @@ makeNominalsMap val =
                 loaded <- State.get
                 unless (Map.member tid loaded) $
                     do
-                        mNom <- Load.nominal tid & lift
-                        case mNom of
-                            Nothing -> return ()
-                            Just nom ->
-                                do
-                                    Map.insert tid nom loaded & State.put
-                                    N.nScheme nom ^. schemeType & loadForType
+                        nom <- Load.nominal tid & lift
+                        Map.insert tid nom loaded & State.put
+                        N.nType nom ^.. N._NominalType . schemeType & traverse_ loadForType
 
 convertInferDefExpr ::
     Monad m =>

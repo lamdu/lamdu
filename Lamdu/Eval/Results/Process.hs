@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude #-}
+{-# LANGUAGE NoImplicitPrelude, LambdaCase #-}
 module Lamdu.Eval.Results.Process
     ( addTypes
     ) where
@@ -106,9 +106,10 @@ unwrapTInsts :: Map T.NominalId N.Nominal -> T.Type -> T.Type
 unwrapTInsts nomsMap typ =
     case typ of
     T.TInst tid params ->
-        case Map.lookup tid nomsMap of
-        Nothing -> typ -- opaque/builtin nominal
-        Just scheme ->
-            N.apply params scheme & (^. schemeType)
-            & unwrapTInsts nomsMap
+        Map.lookup tid nomsMap
+        & fromMaybe (error "addTypes: nominal missing from map")
+        & N.apply params
+        & \case
+          N.OpaqueNominal -> typ
+          N.NominalType scheme -> scheme ^. schemeType & unwrapTInsts nomsMap
     _ -> typ
