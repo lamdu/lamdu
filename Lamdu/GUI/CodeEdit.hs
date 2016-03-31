@@ -175,7 +175,6 @@ gui env rootId replExpr panes =
             panes
             & ExprGuiM.transaction . traverse (processPane env)
             >>= traverse (makePaneEdit env (Config.pane (config env)))
-            <&> fmap mLiftWidget
         newDefinitionButton <- makeNewDefinitionButton rootId <&> mLiftWidget
         eventMap <- panesEventMap env & ExprGuiM.widgetEnv
         [replEdit] ++ panesEdits ++ [newDefinitionButton]
@@ -203,22 +202,29 @@ make env rootId =
 makePaneEdit ::
     Monad m =>
     Env m -> Config.Pane -> (Pane m, DefinitionN m ExprGuiT.Payload) ->
-    ExprGuiM m (Widget (T m))
+    ExprGuiM m (Widget (M m))
 makePaneEdit env paneConfig (pane, defS) =
     makePaneWidget (config env) defS
+    <&> mLiftWidget
     <&> Widget.weakerEvents paneEventMap
     where
         Config.Pane{paneCloseKeys, paneMoveDownKeys, paneMoveUpKeys} = paneConfig
         paneEventMap =
-            [ maybe mempty
+            [ paneDel pane
+              <&> mLiftTrans
+              & maybe mempty
                 (Widget.keysEventMapMovesCursor paneCloseKeys
-                  (E.Doc ["View", "Pane", "Close"])) $ paneDel pane
-            , maybe mempty
+                 (E.Doc ["View", "Pane", "Close"]))
+            , paneMoveDown pane
+              <&> mLiftTrans
+              & maybe mempty
                 (Widget.keysEventMap paneMoveDownKeys
-                  (E.Doc ["View", "Pane", "Move down"])) $ paneMoveDown pane
-            , maybe mempty
+                 (E.Doc ["View", "Pane", "Move down"]))
+            , paneMoveUp pane
+              <&> mLiftTrans
+              & maybe mempty
                 (Widget.keysEventMap paneMoveUpKeys
-                  (E.Doc ["View", "Pane", "Move up"])) $ paneMoveUp pane
+                 (E.Doc ["View", "Pane", "Move up"]))
             ] & mconcat
 
 makeNewDefinitionEventMap ::
