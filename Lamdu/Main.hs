@@ -145,6 +145,7 @@ makeRootWidget db zoom settingsRef evaluator (CachedWidgetInput _fontsVer config
         let env = GUIMain.Env
                 { _envEvalRes = evalResults
                 , _envExportRepl = exportRepl
+                , _envExportAll = exportAll
                 , _envImportAll = importAll
                 , _envConfig = config
                 , _envSettings = settings
@@ -162,6 +163,7 @@ makeRootWidget db zoom settingsRef evaluator (CachedWidgetInput _fontsVer config
             <&> Widget.scale sizeFactor
     where
         exportRepl = Export.exportRepl exportPath <&> flip (,) () & return & GUIMain.M
+        exportAll = Export.exportAll exportPath <&> flip (,) () & return & GUIMain.M
         importAll path = Export.importAll path <&> fmap ((,) (pure ())) & GUIMain.M
         Config.Export{exportPath} = Config.export config
 

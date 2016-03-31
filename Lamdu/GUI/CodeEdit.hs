@@ -82,6 +82,7 @@ data Pane m = Pane
 data Env m = Env
     { codeProps :: Anchors.CodeProps m
     , exportRepl :: M m ()
+    , exportAll :: M m ()
     , importAll :: FilePath -> M m ()
     , evalResults :: CurAndPrev (EvalResults (ValI m))
     , config :: Config
@@ -256,22 +257,17 @@ makeReplEventMap ::
     Widget.EventHandlers (M m)
 makeReplEventMap env replExpr config =
     mconcat
-    [ Widget.keysEventMapMovesCursor newDefinitionButtonPressKeys
-      (E.Doc ["Edit", "Extract to definition"]) extractAction
-    , Widget.keysEventMap exportKeys
-      (E.Doc ["Collaboration", "Export repl to JSON file"]) exportAction
-    , Widget.keysEventMap importKeys
-      (E.Doc ["Collaboration", "Import repl from JSON file"])
-      (importAll env exportPath)
+    [ replExpr ^. Sugar.rPayload . Sugar.plActions . Sugar.extract
+      <&> ExprEventMap.extractCursor & mLiftTrans
+      & Widget.keysEventMapMovesCursor newDefinitionButtonPressKeys
+        (E.Doc ["Edit", "Extract to definition"])
+    , exportRepl env
+      & Widget.keysEventMap exportKeys
+        (E.Doc ["Collaboration", "Export repl to JSON file"])
     ]
     where
-        Config.Export{exportPath,importKeys,exportKeys} = Config.export config
+        Config.Export{exportKeys} = Config.export config
         Config.Pane{newDefinitionButtonPressKeys} = Config.pane config
-        exportAction = exportRepl env
-        extractAction =
-            replExpr ^. Sugar.rPayload . Sugar.plActions . Sugar.extract
-            <&> ExprEventMap.extractCursor
-            & mLiftTrans
 
 makeReplEdit ::
     Monad m => Env m -> Widget.Id -> ExprGuiT.SugarExpr m -> ExprGuiM m (Widget (M m))
@@ -292,7 +288,7 @@ makeReplEdit env myId replExpr =
 
 panesEventMap ::
     Monad m => Env m -> WidgetEnvT (T m) (Widget.EventHandlers (M m))
-panesEventMap Env{config,codeProps,importAll} =
+panesEventMap Env{config,codeProps,importAll,exportAll} =
     do
         mJumpBack <- DataOps.jumpBack codeProps & lift <&> fmap mLiftTrans
         newDefinitionEventMap <- makeNewDefinitionEventMap codeProps
@@ -305,8 +301,14 @@ panesEventMap Env{config,codeProps,importAll} =
             , maybe mempty
               (Widget.keysEventMapMovesCursor (Config.previousCursorKeys config)
                (E.Doc ["Navigation", "Go back"])) mJumpBack
+            , Widget.keysEventMap exportAllKeys
+              (E.Doc ["Collaboration", "Export everything to JSON file"]) exportAll
+            , importAll exportPath
+              & Widget.keysEventMap importKeys
+                (E.Doc ["Collaboration", "Import repl from JSON file"])
             ]
     where
+        Config.Export{exportPath,importKeys,exportAllKeys} = Config.export config
         importAction [filePath] = Just (importAll filePath)
         importAction _ = Nothing
 

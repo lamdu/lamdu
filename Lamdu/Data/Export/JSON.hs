@@ -2,6 +2,7 @@
 {-# LANGUAGE NoImplicitPrelude, TemplateHaskell, OverloadedStrings, FlexibleContexts, LambdaCase #-}
 module Lamdu.Data.Export.JSON
     ( exportRepl
+    , exportAll
     , importAll
     ) where
 
@@ -51,10 +52,6 @@ import qualified Lamdu.Expr.Val as V
 import           Prelude.Compat
 
 type T = Transaction
-
-replIRef :: IRef ViewM (ValI ViewM)
-replIRef = DbLayout.repl DbLayout.codeIRefs
-
 
 data Visited = Visited
     { _visitedDefs :: Set V.Var
@@ -150,16 +147,33 @@ exportDef globalId =
 exportRepl :: FilePath -> T ViewM (IO ())
 exportRepl exportPath =
     do
-        repl <- Transaction.readIRef replIRef >>= ExprIRef.readVal & trans
+        repl <-
+            DbLayout.repl DbLayout.codeIRefs & Transaction.readIRef
+            >>= ExprIRef.readVal & trans
         exportVal repl
         repl <&> valIToUUID & Codec.encodeRepl & tell
-    & runExport
+    & export "repl" exportPath
+
+exportAll :: FilePath -> T ViewM (IO ())
+exportAll exportPath =
+    do
+        exportSet DbLayout.globals (exportDef . ExprIRef.globalId)
+        exportSet DbLayout.tags exportTag
+        exportSet DbLayout.tids exportNominal
+    & export "all" exportPath
+    where
+        exportSet indexIRef exportFunc =
+            indexIRef DbLayout.codeIRefs & Transaction.readIRef & trans
+            >>= traverse_ exportFunc
+
+export :: String -> FilePath -> Export a -> T ViewM (IO ())
+export msg exportPath act =
+    runExport act
     <&> snd
     <&> \json ->
         do
-            putStrLn $ "Exporting to " ++ show exportPath
+            putStrLn $ "Exporting " ++ msg ++ " to " ++ show exportPath
             LBS.writeFile exportPath (AesonPretty.encodePretty json)
-
 
 setName :: ToUUID a => a -> String -> T ViewM ()
 setName x = Transaction.setP (Anchors.assocNameRef x)
@@ -175,7 +189,7 @@ writeValAtUUID val = val <&> IRef.unsafeFromUUID <&> ExprIRef.ValI & writeValAt
 
 insertTo ::
     (Monad m, Ord a, Binary a) =>
-    a -> (DbLayout.Code (IRef ViewM) ViewM -> IRef m (Set a)) -> Transaction m ()
+    a -> (DbLayout.Code (IRef ViewM) ViewM -> IRef m (Set a)) -> T m ()
 insertTo item setIRef =
     Transaction.readIRef iref
     <&> Set.insert item
@@ -195,7 +209,8 @@ importDef (Definition defBody (presentationMode, mName, globalId)) =
         defI = ExprIRef.defI globalId
 
 importRepl :: Val UUID -> T ViewM ()
-importRepl val = writeValAtUUID val >>= Transaction.writeIRef replIRef
+importRepl val =
+    writeValAtUUID val >>= Transaction.writeIRef (DbLayout.repl DbLayout.codeIRefs)
 
 importTag :: (Int, Maybe String, T.Tag) -> T ViewM ()
 importTag (tagOrder, mName, tag) =
