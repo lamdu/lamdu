@@ -320,6 +320,7 @@ Executable lamdu
                   , Lamdu.VersionControl.Actions
                   , Paths_Lamdu
                   , Text.PrettyPrint.HughesPJClass.Compat
+                  , Text.PrettyPrint.Utils
 
   ghc-options:         -O2 -Wall -threaded
   -- ghc-options is prepended to ghc-prof-options
