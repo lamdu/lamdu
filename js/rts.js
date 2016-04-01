@@ -26,6 +26,7 @@ var infixrTag = biTagName('infixr');
 var indexTag = biTagName('index');
 var startTag = biTagName('start');
 var stopTag = biTagName('stop');
+var valTag = biTagName('val');
 
 var bool = function (x) {
     return {tag: x ? trueTag : falseTag, data: {}};
@@ -152,6 +153,7 @@ module.exports = {
             Array: {
                 length: function (x) { return x.arr.length; },
                 read: function (x) { return function() { return x[objTag].arr[x[indexTag]]; } },
+                write: function (x) { return function() { return x[objTag].arr[x[indexTag]] = x[valTag]; } },
                 fromStream: function (x) { return function () { return new STArray(arrayFromStream(x)); } },
             },
         }
