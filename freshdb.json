@@ -768,6 +768,37 @@
         "def": "0c3623a39c6f4e8cb0729c185ac47ffd"
     },
     {
+        "defPresentationMode": "OO",
+        "builtin": {
+            "name": [ "ST", "return" ],
+            "scheme": {
+                "schemeType": {
+                    "funcParam": {
+                        "typeVar": "61"
+                    },
+                    "funcResult": {
+                        "nomId": "42493a53540000000000000000000000",
+                        "nomParams": {
+                            "73000000000000000000000000000000": {
+                                "typeVar": "73"
+                            },
+                            "42493a76616c00000000000000000000": {
+                                "typeVar": "61"
+                            }
+                        }
+                    }
+                },
+                "schemeBinders": {
+                    "typeVars": [
+                        "61", "73"
+                    ]
+                }
+            }
+        },
+        "name": "return",
+        "def": "39ef52561170446083b20ac9472847fb"
+    },
+    {
         "defPresentationMode": [ "Infix", 1 ],
         "builtin": {
             "name": [ "ST", "bind" ],

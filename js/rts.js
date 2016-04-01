@@ -148,8 +148,9 @@ module.exports = {
             fromStream: arrayFromStream,
         },
         ST: {
-            run: function(st) { return st(); },
+            return: function(x) { return function() { return x; }; },
             bind: function(x) { return x[infixrTag](x[infixlTag]()); },
+            run: function(st) { return st(); },
             Array: {
                 length: function (x) { return x.length; },
                 read: function (x) { return function() { return x[objTag][x[indexTag]]; } },
