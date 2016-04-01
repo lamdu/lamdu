@@ -4,7 +4,6 @@ module Lamdu.Expr.IRef.Infer
     ( ExpressionSetter
     , M
     , loadInferScope
-    , loadInferInto
     , loadInferRecursive
     , run
     , Error(..), toEitherT
