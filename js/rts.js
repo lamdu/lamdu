@@ -149,7 +149,7 @@ module.exports = {
         },
         ST: {
             return: function(x) { return function() { return x; }; },
-            bind: function(x) { return x[infixrTag](x[infixlTag]()); },
+            bind: function(x) { return function () { return x[infixrTag](x[infixlTag]())(); } },
             run: function(st) { return st(); },
             Array: {
                 length: function (x) { return x.length; },
