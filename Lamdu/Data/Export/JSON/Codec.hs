@@ -18,9 +18,15 @@ import           Control.Applicative (optional)
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators hiding ((.=))
 import           Control.Lens.Tuple
-import           Data.Aeson ((.=), (.:))
+import           Control.Monad (unless)
+import           Control.Monad.Trans.Class (lift)
+import           Control.Monad.Trans.Writer (WriterT(..))
+import qualified Control.Monad.Trans.Writer as Writer
+import           Data.Aeson ((.=))
 import qualified Data.Aeson as Aeson
+import qualified Data.Aeson.Encode.Pretty as AesonPretty
 import qualified Data.Aeson.Types as AesonTypes
+import qualified Data.ByteString.Lazy.Char8 as LBS8
 import           Data.ByteString.Hex (showHexBytes, parseHexBytes)
 import           Data.Either.Combinators (swapEither)
 import qualified Data.HashMap.Strict as HashMap
@@ -28,6 +34,7 @@ import           Data.Map (Map)
 import qualified Data.Map as Map
 import qualified Data.Set as Set
 import           Data.String (IsString(..))
+import           Data.Text (Text)
 import           Data.UUID.Aeson ()
 import           Data.UUID.Types (UUID)
 import qualified Data.Vector as Vector
@@ -131,12 +138,46 @@ encodeSquash isEmpty name encode val
     | isEmpty val = []
     | otherwise = [fromString name .= encode val]
 
+jsum :: [AesonTypes.Parser a] -> AesonTypes.Parser a
+jsum parsers =
+    parsers <&> toEither
+    <&> swapEither & sequence <&> unlines & swapEither
+    & fromEither
+
+jsum' :: [Exhaustive a] -> Exhaustive a
+jsum' = WriterT . jsum . map runWriterT
+
+type Exhaustive a = WriterT [Text] AesonTypes.Parser a
+type ExhaustiveDecoder a = Aeson.Object -> Exhaustive a
+
+(.:) :: Aeson.FromJSON a => Aeson.Object -> String -> Exhaustive a
+obj .: name =
+    do
+        Writer.tell [tName]
+        lift (obj Aeson..: tName)
+    where
+        tName = fromString name
+
+withObject :: String -> ExhaustiveDecoder a -> Decoder a
+withObject msg act =
+    Aeson.withObject msg $ \obj ->
+    do
+        (res, accessed) <- runWriterT (act obj)
+        let unaccessed =
+                Set.fromList (HashMap.keys obj) `Set.difference`
+                Set.fromList accessed
+                & Set.toList
+        unless (null unaccessed) $
+            fail $ "Object " ++ LBS8.unpack (AesonPretty.encodePretty obj) ++
+            " has ignored fields: " ++ show unaccessed
+        return res
+
 decodeSquashed ::
     (Aeson.FromJSON j, Monoid a) =>
-    String -> (j -> AesonTypes.Parser a) -> Aeson.Object -> AesonTypes.Parser a
+    String -> (j -> AesonTypes.Parser a) -> ExhaustiveDecoder a
 decodeSquashed name decode o =
-    jsum
-    [ o .: fromString name >>= decode
+    jsum'
+    [ o .: name >>= lift . decode
     , pure mempty
     ]
 
@@ -153,12 +194,6 @@ encodeFlatComposite = \case
         encodeArray [encodedFields fields, encodeIdent name]
     where
         encodedFields = encodeIdentMap T.tagName encodeType
-
-jsum :: [AesonTypes.Parser a] -> AesonTypes.Parser a
-jsum parsers =
-    parsers <&> toEither
-    <&> swapEither & sequence <&> unlines & swapEither
-    & fromEither
 
 decodeFlatComposite :: Decoder (FlatComposite p)
 decodeFlatComposite json =
@@ -194,16 +229,16 @@ encodeType (T.TInst tId params) =
 
 decodeType :: Decoder Type
 decodeType json =
-    Aeson.withObject "Type" ?? json $ \o ->
-    jsum
+    withObject "Type" ?? json $ \o ->
+    jsum'
     [ T.TFun
-        <$> (o .: "funcParam" >>= decodeType)
-        <*> (o .: "funcResult" >>= decodeType)
-    , o .: "record" >>= decodeComposite <&> T.TRecord
-    , o .: "sum" >>= decodeComposite <&> T.TSum
-    , o .: "typeVar" >>= decodeIdent <&> T.Var <&> T.TVar
+        <$> (o .: "funcParam" >>= lift . decodeType)
+        <*> (o .: "funcResult" >>= lift . decodeType)
+    , o .: "record" >>= lift . decodeComposite <&> T.TRecord
+    , o .: "sum" >>= lift . decodeComposite <&> T.TSum
+    , o .: "typeVar" >>= lift . decodeIdent <&> T.Var <&> T.TVar
     , do
-          nomId <- o .: "nomId" >>= decodeIdent <&> T.NominalId
+          nomId <- o .: "nomId" >>= lift . decodeIdent <&> T.NominalId
           params <- decodeSquashed "nomParams" (decodeIdentMap T.ParamId decodeType) o
           T.TInst nomId params & pure
     ]
@@ -229,7 +264,7 @@ encodeTypeVars (TypeVars tvs rtvs stvs, Constraints productConstraints sumConstr
 
 decodeTypeVars :: Decoder (TypeVars, Constraints)
 decodeTypeVars =
-    Aeson.withObject "TypeVars" $ \obj ->
+    withObject "TypeVars" $ \obj ->
     do
         let getTVs name = decodeSquashed name decodeTVs obj
         tvs <-
@@ -239,7 +274,7 @@ decodeTypeVars =
             <*> getTVs "sumTypeVars"
         decodedConstraints <-
             decodeSquashed "constraints"
-            ( Aeson.withObject "constraints" $ \constraints ->
+            ( withObject "constraints" $ \constraints ->
               let  getCs name = decodeConstraints name constraints <&> CompositeVarConstraints
               in   Constraints <$> getCs "recordTypeVars" <*> getCs "sumTypeVars"
             ) obj
@@ -260,10 +295,10 @@ encodeScheme (Scheme tvs constraints typ) =
 
 decodeScheme :: Decoder Scheme
 decodeScheme =
-    Aeson.withObject "scheme" $ \obj ->
+    withObject "scheme" $ \obj ->
     do
         (tvs, constraints) <- decodeSquashed "schemeBinders" decodeTypeVars obj
-        typ <- obj .: "schemeType" >>= decodeType
+        typ <- obj .: "schemeType" >>= lift . decodeType
         Scheme tvs constraints typ & return
 
 encodeLeaf :: V.Leaf -> AesonTypes.Object
@@ -281,16 +316,16 @@ encodeLeaf =
     where
         leaf x = HashMap.fromList [x .= Aeson.object []]
 
-decodeLeaf :: AesonTypes.Object -> AesonTypes.Parser V.Leaf
+decodeLeaf :: ExhaustiveDecoder V.Leaf
 decodeLeaf obj =
-    jsum
+    jsum'
     [ leaf "hole" V.LHole
     , leaf "recEmpty" V.LRecEmpty
     , leaf "absurd" V.LAbsurd
-    , obj .: "var" >>= decodeIdent <&> V.Var <&> V.LVar
+    , obj .: "var" >>= lift . decodeIdent <&> V.Var <&> V.LVar
     , do
-          primId <- obj .: "primId" >>= decodeIdent <&> T.NominalId
-          primBytes <- obj .: "primBytes" >>= fromEither . parseHexBytes
+          primId <- obj .: "primId" >>= lift . decodeIdent <&> T.NominalId
+          primBytes <- obj .: "primBytes" >>= lift . fromEither . parseHexBytes
           V.PrimVal primId primBytes & pure
       <&> V.LLiteral
     ]
@@ -309,7 +344,7 @@ encodeVal (Val uuid body) =
 
 decodeVal :: Decoder (Val UUID)
 decodeVal =
-    AesonTypes.withObject "val" $ \obj ->
+    withObject "val" $ \obj ->
     Val
     <$> (obj .: "id")
     <*> decodeValBody obj
@@ -336,37 +371,37 @@ encodeValBody body =
         HashMap.fromList ["fromNomId" .= encodeIdent nomId, "fromNomVal" .= val]
     V.BLeaf leaf -> encodeLeaf leaf
 
-decodeValBody :: AesonTypes.Object -> AesonTypes.Parser (V.Body (Val UUID))
+decodeValBody :: ExhaustiveDecoder (V.Body (Val UUID))
 decodeValBody obj =
-    jsum
+    jsum'
     [ V.Apply <$> obj .: "applyFunc" <*> obj .: "applyArg" <&> V.BApp
-    , V.Lam <$> (obj .: "lamVar" >>= decodeIdent <&> V.Var) <*> (obj .: "lamBody")
+    , V.Lam <$> (obj .: "lamVar" >>= lift . decodeIdent <&> V.Var) <*> (obj .: "lamBody")
       <&> V.BAbs
-    , V.GetField <$> obj .: "getFieldRec" <*> (obj .: "getFieldName" >>= decodeTagId)
+    , V.GetField <$> obj .: "getFieldRec" <*> (obj .: "getFieldName" >>= lift . decodeTagId)
       <&> V.BGetField
     , V.RecExtend
-      <$> (obj .: "extendTag" >>= decodeTagId)
+      <$> (obj .: "extendTag" >>= lift . decodeTagId)
       <*> obj .: "extendVal" <*> obj .: "extendRest"
       <&> V.BRecExtend
     , V.Inject
-      <$> (obj .: "injectTag" >>= decodeTagId)
+      <$> (obj .: "injectTag" >>= lift . decodeTagId)
       <*> obj .: "injectVal"
       <&> V.BInject
     , V.Case
-      <$> (obj .: "caseTag" >>= decodeTagId)
+      <$> (obj .: "caseTag" >>= lift . decodeTagId)
       <*> obj .: "caseHandler"
       <*> obj .: "caseRest"
       <&> V.BCase
     , V.Nom
-      <$> (obj .: "toNomId" >>= decodeIdent <&> T.NominalId)
+      <$> (obj .: "toNomId" >>= lift . decodeIdent <&> T.NominalId)
       <*> obj .: "toNomVal"
       <&> V.BToNom
     , V.Nom
-      <$> (obj .: "fromNomId" >>= decodeIdent <&> T.NominalId)
+      <$> (obj .: "fromNomId" >>= lift . decodeIdent <&> T.NominalId)
       <*> obj .: "fromNomVal"
       <&> V.BFromNom
     , decodeLeaf obj <&> V.BLeaf
-    ] >>= traverse decodeVal
+    ] >>= traverse (lift . decodeVal)
 
 encodeExportedType :: Encoder Definition.ExportedType
 encodeExportedType Definition.NoExportedType = Aeson.String "NoExportedType"
@@ -393,30 +428,29 @@ encodeDefBody (Definition.BodyExpr (Definition.Expr val typ frozenDefTypes)) =
     frozenDefTypes
     & HashMap.fromList
 
-decodeDefBody :: Decoder (Definition.Body (Val UUID))
-decodeDefBody =
-    Aeson.withObject "DefBody" $ \obj ->
-    jsum
-    [ obj .: "builtin" >>= decodeBuiltin <&> Definition.BodyBuiltin
+decodeDefBody :: ExhaustiveDecoder (Definition.Body (Val UUID))
+decodeDefBody obj =
+    jsum'
+    [ obj .: "builtin" >>= lift . decodeBuiltin <&> Definition.BodyBuiltin
     , Definition.Expr
-      <$> (obj .: "val" >>= decodeVal)
-      <*> (obj .: "typ" >>= decodeExportedType)
+      <$> (obj .: "val" >>= lift . decodeVal)
+      <*> (obj .: "typ" >>= lift . decodeExportedType)
       <*> decodeSquashed "frozenDefTypes" (decodeIdentMap V.Var decodeScheme) obj
       <&> Definition.BodyExpr
     ]
     where
         decodeBuiltin =
-            Aeson.withObject "builtin" $
+            withObject "builtin" $
             \builtin ->
             Definition.Builtin
-            <$> (builtin .: "name" >>= decodeFFIName)
-            <*> (builtin .: "scheme" >>= decodeScheme)
+            <$> (builtin .: "name" >>= lift . decodeFFIName)
+            <*> (builtin .: "scheme" >>= lift . decodeScheme)
 
 encodeRepl :: Encoder (Val UUID)
 encodeRepl val = Aeson.object [ "repl" .= encodeVal val ]
 
 decodeRepl :: Decoder (Val UUID)
-decodeRepl = Aeson.withObject "repl" $ \obj -> obj .: "repl" >>= decodeVal
+decodeRepl = withObject "repl" $ \obj -> obj .: "repl" >>= lift . decodeVal
 
 insertField :: Aeson.ToJSON a => String -> a -> Aeson.Object -> Aeson.Object
 insertField k v = HashMap.insert (fromString k) (Aeson.toJSON v)
@@ -436,12 +470,11 @@ encodeNominal (Nominal paramsMap nominalType) =
     (encodeIdentMap T.typeParamId (encodeIdent . T.tvName)) paramsMap
     & HashMap.fromList
 
-decodeNominal :: Decoder Nominal
-decodeNominal json =
-    Aeson.withObject "nominal" ?? json $ \obj ->
+decodeNominal :: ExhaustiveDecoder Nominal
+decodeNominal obj =
     Nominal
     <$> decodeSquashed "typeParams" (decodeIdentMap T.ParamId (fmap T.Var . decodeIdent)) obj
-    <*> (obj .: "nomType" >>= decodeNominalType)
+    <*> (obj .: "nomType" >>= lift . decodeNominalType)
 
 encodeNamed :: String -> (a -> Aeson.Object) -> ((Maybe String, Identifier), a) -> Aeson.Object
 encodeNamed idAttrName encoder ((mName, ident), x) =
@@ -449,15 +482,14 @@ encodeNamed idAttrName encoder ((mName, ident), x) =
     & insertField idAttrName (encodeIdent ident)
     & maybe id (insertField "name") mName
 
-decodeNamed :: String -> Decoder a -> Decoder ((Maybe String, Identifier), a)
-decodeNamed idAttrName decoder =
-    Aeson.withObject "named" $ \obj ->
+decodeNamed :: String -> ExhaustiveDecoder a -> ExhaustiveDecoder ((Maybe String, Identifier), a)
+decodeNamed idAttrName decoder obj =
     (,)
     <$> ( (,)
           <$> optional (obj .: "name")
-          <*> (obj .: fromString idAttrName >>= decodeIdent)
+          <*> (obj .: fromString idAttrName >>= lift . decodeIdent)
         )
-    <*> decoder (Aeson.Object obj)
+    <*> decoder obj
 
 encodeDef ::
     Encoder (Definition (Val UUID) (Anchors.PresentationMode, Maybe String, V.Var))
@@ -471,19 +503,17 @@ decodeDef ::
     (Definition (Val UUID)
      (Anchors.PresentationMode, Maybe String, V.Var))
 decodeDef =
-    Aeson.withObject "def" $ \obj ->
+    withObject "def" $ \obj ->
     do
-        ((mName, globalId), body) <- decodeNamed "def" decodeDefBody (Aeson.Object obj)
-        presentationMode <- obj .: "defPresentationMode" >>= decodePresentationMode
+        ((mName, globalId), body) <- decodeNamed "def" decodeDefBody obj
+        presentationMode <- obj .: "defPresentationMode" >>= lift . decodePresentationMode
         Definition body (presentationMode, mName, V.Var globalId) & return
 
 encodeTagOrder :: Int -> Aeson.Object
 encodeTagOrder tagOrder = HashMap.fromList ["tagOrder" .= tagOrder]
 
-decodeTagOrder :: Decoder Int
-decodeTagOrder =
-    Aeson.withObject "tagOrder" $ \obj ->
-    obj .: "tagOrder"
+decodeTagOrder :: ExhaustiveDecoder Int
+decodeTagOrder obj = obj .: "tagOrder"
 
 encodeNamedTag :: Encoder (Int, Maybe String, T.Tag)
 encodeNamedTag (tagOrder, mName, T.Tag ident) =
@@ -492,7 +522,8 @@ encodeNamedTag (tagOrder, mName, T.Tag ident) =
 decodeNamedTag :: Decoder (Int, Maybe String, T.Tag)
 decodeNamedTag json =
     do
-        ((mName, tag), tagOrder) <- decodeNamed "tag" decodeTagOrder json
+        ((mName, tag), tagOrder) <-
+            withObject "tag" ?? json $ decodeNamed "tag" decodeTagOrder
         return (tagOrder, mName, T.Tag tag)
 
 encodeParamList :: Encoder Anchors.ParamList
@@ -514,12 +545,11 @@ encodeLam (lamI, mParamList) =
     , "lamFieldParams" .= encodeMaybe encodeParamList mParamList
     ]
 
-decodeLam :: Aeson.FromJSON a => Decoder (a, Maybe Anchors.ParamList)
-decodeLam =
-    Aeson.withObject "lam" $ \obj ->
+decodeLam :: Aeson.FromJSON a => ExhaustiveDecoder (a, Maybe Anchors.ParamList)
+decodeLam obj =
     do
         lamI <- obj .: "lamId"
-        mParamList <- obj .: "lamFieldParams" >>= decodeMaybe decodeParamList
+        mParamList <- obj .: "lamFieldParams" >>= lift . decodeMaybe decodeParamList
         return (lamI, mParamList)
 
 encodeNamedLamVar ::
@@ -531,7 +561,8 @@ decodeNamedLamVar ::
     Aeson.FromJSON a => Decoder (Maybe Anchors.ParamList, Maybe String, a, V.Var)
 decodeNamedLamVar json =
     do
-        ((mName, ident), (lamI, mParamList)) <- decodeNamed "lamVar" decodeLam json
+        ((mName, ident), (lamI, mParamList)) <-
+            withObject "lam" ?? json $ decodeNamed "lamVar" decodeLam
         return (mParamList, mName, lamI, V.Var ident)
 
 encodeNamedNominal :: Encoder ((Maybe String, T.NominalId), Nominal)
@@ -540,4 +571,5 @@ encodeNamedNominal ((mName, T.NominalId nomId), nom) =
 
 decodeNamedNominal :: Decoder ((Maybe String, T.NominalId), Nominal)
 decodeNamedNominal json =
-    decodeNamed "nom" decodeNominal json <&> _1 . _2 %~ T.NominalId
+    withObject "nom" (decodeNamed "nom" decodeNominal) json
+    <&> _1 . _2 %~ T.NominalId
