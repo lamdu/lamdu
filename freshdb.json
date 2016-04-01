@@ -742,6 +742,39 @@
     {
         "defPresentationMode": "OO",
         "builtin": {
+            "name": [ "ST", "Array", "run" ],
+            "scheme": {
+                "schemeType": {
+                    "funcParam": {
+                        "nomId": "6be65ada2aed47ebbda4cb4118df3659",
+                        "nomParams": {
+                            "42493a76616c00000000000000000000": {
+                                "typeVar": "61"
+                            }
+                        }
+                    },
+                    "funcResult": {
+                        "nomId": "42493a61727261790000000000000000",
+                        "nomParams": {
+                            "42493a76616c00000000000000000000": {
+                                "typeVar": "61"
+                            }
+                        }
+                    }
+                },
+                "schemeBinders": {
+                    "typeVars": [
+                        "61"
+                    ]
+                }
+            }
+        },
+        "name": "runSTArray",
+        "def": "65ffba5ecc80478baacf8819f4e27939"
+    },
+    {
+        "defPresentationMode": "OO",
+        "builtin": {
             "name": [ "ST", "run" ],
             "scheme": {
                 "schemeType": {
@@ -1233,7 +1266,40 @@
             "42493a76616c00000000000000000000": "0161"
         },
         "nom": "42493a506f6c79535400000000000000",
-        "name": "PolyST"
+        "name": "ClosedST"
+    },
+    {
+        "nomType": {
+            "schemeType": {
+                "nomParams": {
+                    "73000000000000000000000000000000": {
+                        "typeVar": "73"
+                    },
+                    "42493a76616c00000000000000000000": {
+                        "nomParams": {
+                            "73000000000000000000000000000000": {
+                                "typeVar": "73"
+                            },
+                            "42493a76616c00000000000000000000": {
+                                "typeVar": "61"
+                            }
+                        },
+                        "nomId": "42493a73744172726179000000000000"
+                    }
+                },
+                "nomId": "42493a53540000000000000000000000"
+            },
+            "schemeBinders": {
+                "typeVars": [
+                    "73"
+                ]
+            }
+        },
+        "typeParams": {
+            "42493a76616c00000000000000000000": "61"
+        },
+        "nom": "6be65ada2aed47ebbda4cb4118df3659",
+        "name": "ClosedSTArray"
     },
     {
         "repl": {
