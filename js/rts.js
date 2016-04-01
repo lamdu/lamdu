@@ -78,6 +78,11 @@ var encode = function (x) {
     return JSON.stringify(x, replacer);
 };
 
+var STArray = function(arr) {
+    this.arr = arr;
+    return this;
+};
+
 module.exports = {
     logResult: function (scope, exprId, result) {
         console.log(encode(
@@ -141,5 +146,14 @@ module.exports = {
             item: function (x) { return x[objTag][x[indexTag]]; },
             fromStream: arrayFromStream,
         },
+        ST: {
+            run: function(st) { return st(); },
+            bind: function(x) { return x[infixrTag](x[infixlTag]()); },
+            Array: {
+                length: function (x) { return x.arr.length; },
+                read: function (x) { return function() { return x[objTag].arr[x[indexTag]]; } },
+                fromStream: function (x) { return function () { return new STArray(arrayFromStream(x)); } },
+            },
+        }
     },
 };
