@@ -5,7 +5,6 @@ module Lamdu.Eval.Results.Process
 
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
-import           Control.Monad (guard)
 import           Data.Map (Map)
 import qualified Data.Map as Map
 import           Data.Maybe (fromMaybe)
@@ -75,15 +74,8 @@ addTypesInject (V.Inject tag val) go typ =
 addTypesArray :: [val] -> AddTypes val res
 addTypesArray items go typ =
     do
-        (nomId, params) <- typ ^? ExprLens._TInst
-        nomId == Builtins.arrayTid & guard
-        paramType <-
-            case Map.toList params of
-            [(k, v)] ->
-                do
-                    k == Builtins.valTypeParamId & guard
-                    Just v
-            _ -> Nothing
+        (_nomId, params) <- typ ^? ExprLens._TInst
+        paramType <- params ^. Lens.at Builtins.valTypeParamId
         items <&> go paramType & RArray & Just
     & fromMaybe (ER.EvalTypeError "addTypes bad type for RArray" & RError)
 

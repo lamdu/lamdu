@@ -151,10 +151,10 @@ module.exports = {
             run: function(st) { return st(); },
             bind: function(x) { return x[infixrTag](x[infixlTag]()); },
             Array: {
-                length: function (x) { return x.arr.length; },
-                read: function (x) { return function() { return x[objTag].arr[x[indexTag]]; } },
-                write: function (x) { return function() { return x[objTag].arr[x[indexTag]] = x[valTag]; } },
-                fromStream: function (x) { return function () { return new STArray(arrayFromStream(x)); } },
+                length: function (x) { return x.length; },
+                read: function (x) { return function() { return x[objTag][x[indexTag]]; } },
+                write: function (x) { return function() { return x[objTag][x[indexTag]] = x[valTag]; } },
+                fromStream: function (x) { return function () { return arrayFromStream(x); } },
             },
         }
     },
