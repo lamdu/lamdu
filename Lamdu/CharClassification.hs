@@ -1,9 +1,12 @@
 module Lamdu.CharClassification
-    ( operatorChars, alphaNumericChars, digitChars
+    ( operatorChars, alphaNumericChars, bracketChars, digitChars
     ) where
 
 operatorChars :: String
-operatorChars = "\\+-*/^=><&|%$:.(){}!"
+operatorChars = "\\+-*/^=><&|%$:.!"
+
+bracketChars :: String
+bracketChars = "()[]{}"
 
 digitChars :: String
 digitChars = ['0'..'9']

@@ -1,6 +1,6 @@
 {-# LANGUAGE LambdaCase, NoImplicitPrelude, OverloadedStrings, RecordWildCards #-}
 module Lamdu.GUI.ExpressionEdit.HoleEdit.EventMap
-    ( blockDownEvents, disallowChars
+    ( blockDownEvents, disallowCharsFromSearchTerm
     , makeOpenEventMaps
     ) where
 
@@ -23,7 +23,7 @@ import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.Grid as Grid
 import qualified Graphics.UI.GLFW as GLFW
-import           Lamdu.CharClassification (operatorChars, digitChars)
+import           Lamdu.CharClassification (operatorChars, bracketChars, digitChars)
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.Info (HoleInfo(..))
@@ -55,7 +55,7 @@ adHocTextEditEventMap holeConfig searchTermProp =
             E.allChars "Character"
             (E.Doc ["Edit", "Search Term", "Append character"])
             (changeText . snoc)
-            & disallowChars holeConfig searchTerm
+            & disallowCharsFromSearchTerm holeConfig searchTerm
             & if null searchTerm
               then E.filterChars (`notElem` operatorChars)
               else id
@@ -78,30 +78,29 @@ toLiteralTextKeys =
     , ModKey mempty GLFW.Key'Apostrophe
     ]
 
-disallowChars :: Config.Hole -> String -> E.EventMap a -> E.EventMap a
-disallowChars Config.Hole{..} searchTerm =
+disallowCharsFromSearchTerm :: Config.Hole -> String -> E.EventMap a -> E.EventMap a
+disallowCharsFromSearchTerm Config.Hole{..} searchTerm =
     E.filterChars (`notElem` disallowedHoleChars) .
     deleteKeys
     (holePickAndMoveToNextHoleKeys ++ holePickResultKeys) .
     disallowMix
     where
-        allowDigitsOnly = E.filterChars (`elem` digitChars)
-        allowOperatorsOnly = E.filterChars (`elem` operatorChars)
-        disallowOperators = E.filterChars (`notElem` operatorChars)
-        allowNumCharsOnly = E.filterChars (`elem` ('.':digitChars))
+        allowOnly group = E.filterChars (`elem` group)
+        disallow group = E.filterChars (`notElem` group)
         disallowMix =
             case searchTerm of
             "" -> id
             '"':_ -> id
-            "." -> id
+            "." -> disallow bracketChars
             '.':x:_
-                | x `elem` operatorChars -> allowOperatorsOnly
-                | otherwise -> disallowOperators
+                | x `elem` operatorChars -> allowOnly operatorChars
+                | otherwise -> disallow operatorChars . disallow bracketChars
             x:xs
-                | x `elem` operatorChars -> allowOperatorsOnly
-                | "." `isInfixOf` xs -> allowDigitsOnly
-                | all (`elem` digitChars) searchTerm -> allowNumCharsOnly
-                | all (`notElem` operatorChars) searchTerm -> disallowOperators
+                | x `elem` operatorChars -> allowOnly operatorChars
+                | x `elem` bracketChars -> allowOnly bracketChars
+                | "." `isInfixOf` xs -> allowOnly digitChars
+                | all (`elem` digitChars) searchTerm -> allowOnly ('.':digitChars)
+                | all (`notElem` operatorChars) searchTerm -> disallow operatorChars
                 | otherwise ->
                   -- Mix of operator/non-operator chars happened in search term
                   -- This can happen when editing a literal text, allow everything
