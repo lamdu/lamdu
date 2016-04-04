@@ -41,13 +41,19 @@ data AnimState = AnimState
     }
 Lens.makeLenses ''AnimState
 
-data ThreadSyncVar = ThreadSyncVar
-    { _tsvHaveTicks :: !Bool
-    , _tsvRefreshRequested :: !Bool
-    , _tsvWinSize :: !Anim.Size
-    , _tsvReversedEvents :: [Event]
+data EventsData = EventsData
+    { _edHaveTicks :: !Bool
+    , _edRefreshRequested :: !Bool
+    , _edWinSize :: !Anim.Size
+    , _edReversedEvents :: [Event]
     }
-Lens.makeLenses ''ThreadSyncVar
+Lens.makeLenses ''EventsData
+
+-- The threads communicate via these STM variables
+data ThreadVars = ThreadVars
+    { animStateVar :: TVar AnimState
+    , eventsVar :: TVar EventsData
+    }
 
 data AnimConfig = AnimConfig
     { acTimePeriod :: NominalDiffTime
@@ -74,36 +80,36 @@ initialAnimState initialFrame =
             , _asDestFrame = initialFrame
             }
 
-waitForEvent :: TVar ThreadSyncVar -> IO ThreadSyncVar
+waitForEvent :: TVar EventsData -> IO EventsData
 waitForEvent eventTVar =
     do
-        tsv <- readTVar eventTVar
-        when (not (tsv ^. tsvHaveTicks) &&
-              not (tsv ^. tsvRefreshRequested) &&
-              null (tsv ^. tsvReversedEvents))
+        ed <- readTVar eventTVar
+        when (not (ed ^. edHaveTicks) &&
+              not (ed ^. edRefreshRequested) &&
+              null (ed ^. edReversedEvents))
             STM.retry
-        tsv
-            & tsvHaveTicks .~ False
-            & tsvRefreshRequested .~ False
-            & tsvReversedEvents .~ []
+        ed
+            & edHaveTicks .~ False
+            & edRefreshRequested .~ False
+            & edReversedEvents .~ []
             & writeTVar eventTVar
-        return tsv
+        return ed
     & STM.atomically
 
-eventHandlerThread :: TVar AnimState -> TVar ThreadSyncVar -> IO AnimConfig -> (Anim.Size -> Handlers) -> IO ()
-eventHandlerThread frameStateVar eventTVar getAnimationConfig animHandlers =
+eventHandlerThread :: ThreadVars -> IO AnimConfig -> (Anim.Size -> Handlers) -> IO ()
+eventHandlerThread tvars getAnimationConfig animHandlers =
     forever $
     do
-        tsv <- waitForEvent eventTVar
+        ed <- waitForEvent (eventsVar tvars)
         userEventTime <- getCurrentTime
-        let handlers = animHandlers (tsv ^. tsvWinSize)
+        let handlers = animHandlers (ed ^. edWinSize)
         eventResults <-
-            mapM (eventHandler handlers) $ reverse (tsv ^. tsvReversedEvents)
+            mapM (eventHandler handlers) $ reverse (ed ^. edReversedEvents)
         tickResult <-
-            if tsv ^. tsvHaveTicks
+            if ed ^. edHaveTicks
             then tickHandler handlers
             else return Nothing
-        case (tsv ^. tsvRefreshRequested, mconcat (tickResult : eventResults)) of
+        case (ed ^. edRefreshRequested, mconcat (tickResult : eventResults)) of
             (False, Nothing) -> return ()
             (_, mMapping) ->
                 do
@@ -116,7 +122,7 @@ eventHandlerThread frameStateVar eventTVar getAnimationConfig animHandlers =
                             (addUTCTime timePeriod userEventTime)
                             curTime
                     let animationHalfLife = timeRemaining / realToFrac (logBase 0.5 ratio)
-                    STM.atomically $ modifyTVar frameStateVar $
+                    STM.atomically $ modifyTVar (animStateVar tvars) $
                         \oldFrameState ->
                         oldFrameState
                         & asIsAnimating .~ Animating animationHalfLife
@@ -133,20 +139,20 @@ eventHandlerThread frameStateVar eventTVar getAnimationConfig animHandlers =
                     -- up
                     GLFW.postEmptyEvent
 
-animThread :: TVar AnimState -> TVar ThreadSyncVar -> GLFW.Window -> IO ()
-animThread frameStateVar eventTVar win =
+animThread :: ThreadVars -> GLFW.Window -> IO ()
+animThread tvars win =
     MainImage.mainLoop win $ \size ->
     MainImage.Handlers
-    { MainImage.eventHandler = \event -> (tsvReversedEvents %~ (event :)) & updateTVar
+    { MainImage.eventHandler = \event -> (edReversedEvents %~ (event :)) & updateTVar
     , MainImage.refresh =
         do
-            updateTVar (tsvRefreshRequested .~ True)
+            updateTVar (edRefreshRequested .~ True)
             updateFrameState size <&> _asCurFrame <&> Anim.draw
     , MainImage.update = updateFrameState size <&> frameStateResult
     }
     where
-        updateTVar = STM.atomically . modifyTVar eventTVar
-        tick size = updateTVar $ (tsvHaveTicks .~ True) . (tsvWinSize .~ size)
+        updateTVar = STM.atomically . modifyTVar (eventsVar tvars)
+        tick size = updateTVar $ (edHaveTicks .~ True) . (edWinSize .~ size)
         updateFrameState size =
             do
                 tick size
@@ -154,7 +160,7 @@ animThread frameStateVar eventTVar win =
                 STM.atomically $
                     do
                         AnimState prevAnimating prevTime prevFrame destFrame <-
-                            readTVar frameStateVar
+                            readTVar (animStateVar tvars)
                         let notAnimating = AnimState NotAnimating curTime destFrame destFrame
                             newAnimState =
                                 case prevAnimating of
@@ -167,7 +173,7 @@ animThread frameStateVar eventTVar win =
                                         progress = 1 - 0.5 ** (realToFrac elapsed / realToFrac animationHalfLife)
                                 FinalFrame -> notAnimating
                                 NotAnimating -> notAnimating
-                        writeTVar frameStateVar newAnimState
+                        writeTVar (animStateVar tvars) newAnimState
                         return newAnimState
         frameStateResult (AnimState isAnimating _ frame _) =
             case isAnimating of
@@ -179,15 +185,17 @@ mainLoop :: GLFW.Window -> IO AnimConfig -> (Anim.Size -> Handlers) -> IO ()
 mainLoop win getAnimationConfig animHandlers =
     do
         initialWinSize <- MainImage.windowSize win
-        frameStateVar <-
-            makeFrame (animHandlers initialWinSize)
-            >>= initialAnimState >>= newTVarIO
-        eventTVar <-
-            newTVarIO ThreadSyncVar
-            { _tsvHaveTicks = False
-            , _tsvRefreshRequested = False
-            , _tsvWinSize = initialWinSize
-            , _tsvReversedEvents = []
-            }
-        eventsThread <- forwardExceptions (eventHandlerThread frameStateVar eventTVar getAnimationConfig animHandlers)
-        withForkedIO eventsThread $ animThread frameStateVar eventTVar win
+        tvars <-
+            ThreadVars
+            <$>
+                ( makeFrame (animHandlers initialWinSize)
+                  >>= initialAnimState >>= newTVarIO
+                )
+            <*> newTVarIO EventsData
+                { _edHaveTicks = False
+                , _edRefreshRequested = False
+                , _edWinSize = initialWinSize
+                , _edReversedEvents = []
+                }
+        eventsThread <- forwardExceptions (eventHandlerThread tvars getAnimationConfig animHandlers)
+        withForkedIO eventsThread (animThread tvars win)
