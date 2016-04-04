@@ -30,10 +30,13 @@ mainLoopWidget win widgetTickHandler mkWidgetUnmemod getAnimationConfig =
                     tickResults <-
                         sequenceA (widget ^. Widget.eventMap . E.emTickHandlers)
                     unless (null tickResults) newWidget
-                    return $
-                        case (tickResults, anyUpdate) of
-                        ([], False) -> Nothing
-                        _ -> Just . mconcat $ map (^. Widget.eAnimIdMapping) tickResults
+                    return MainAnim.EventResult
+                        { MainAnim.erAnimIdMapping =
+                            case (tickResults, anyUpdate) of
+                            ([], False) -> Nothing
+                            _ -> Just . mconcat $ map (^. Widget.eAnimIdMapping) tickResults
+                        , MainAnim.erExecuteInMainThread = return ()
+                        }
             , MainAnim.eventHandler = \event ->
                 do
                     widget <- getWidget size
@@ -43,6 +46,9 @@ mainLoopWidget win widgetTickHandler mkWidgetUnmemod getAnimationConfig =
                     case mAnimIdMapping of
                         Nothing -> return ()
                         Just _ -> newWidget
-                    return mAnimIdMapping
+                    return MainAnim.EventResult
+                        { MainAnim.erAnimIdMapping = mAnimIdMapping
+                        , MainAnim.erExecuteInMainThread = return ()
+                        }
             , MainAnim.makeFrame = getWidget size <&> (^. Widget.animFrame)
             }

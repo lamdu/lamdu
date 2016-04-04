@@ -1,10 +1,10 @@
 {-# LANGUAGE NoImplicitPrelude, TemplateHaskell #-}
 
 module Graphics.UI.Bottle.Main.Animation
-    ( mainLoop, AnimConfig(..), Handlers(..)
+    ( mainLoop, AnimConfig(..), Handlers(..), EventResult(..)
     ) where
 
-import           Control.Concurrent.STM.TVar (TVar, newTVarIO, readTVar, writeTVar, modifyTVar)
+import           Control.Concurrent.STM.TVar (TVar, newTVarIO, readTVar, writeTVar, modifyTVar, swapTVar)
 import           Control.Concurrent.Utils (forwardExceptions, withForkedIO)
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
@@ -53,6 +53,7 @@ Lens.makeLenses ''EventsData
 data ThreadVars = ThreadVars
     { animStateVar :: TVar AnimState
     , eventsVar :: TVar EventsData
+    , runInAnimVar :: TVar (IO ())
     }
 
 data AnimConfig = AnimConfig
@@ -60,9 +61,19 @@ data AnimConfig = AnimConfig
     , acRemainingRatioInPeriod :: Anim.R
     }
 
+data EventResult = EventResult
+    { erAnimIdMapping :: Maybe (Monoid.Endo AnimId)
+    , erExecuteInMainThread :: IO ()
+    }
+
+instance Monoid EventResult where
+    mempty = EventResult mempty (return ())
+    mappend (EventResult am ar) (EventResult bm br) =
+        EventResult (mappend am bm) (ar >> br)
+
 data Handlers = Handlers
-    { tickHandler :: IO (Maybe (Monoid.Endo AnimId))
-    , eventHandler :: Event -> IO (Maybe (Monoid.Endo AnimId))
+    { tickHandler :: IO EventResult
+    , eventHandler :: Event -> IO EventResult
     , makeFrame :: IO Anim.Frame
     }
 
@@ -108,8 +119,11 @@ eventHandlerThread tvars getAnimationConfig animHandlers =
         tickResult <-
             if ed ^. edHaveTicks
             then tickHandler handlers
-            else return Nothing
-        case (ed ^. edRefreshRequested, mconcat (tickResult : eventResults)) of
+            else return mempty
+        let result = mconcat (tickResult : eventResults)
+        STM.atomically $
+            modifyTVar (runInAnimVar tvars) (>> erExecuteInMainThread result)
+        case (ed ^. edRefreshRequested, erAnimIdMapping result) of
             (False, Nothing) -> return ()
             (_, mMapping) ->
                 do
@@ -157,7 +171,7 @@ animThread tvars win =
             do
                 tick size
                 curTime <- getCurrentTime
-                STM.atomically $
+                (newAnimState, runInAnim) <- STM.atomically $
                     do
                         AnimState prevAnimating prevTime prevFrame destFrame <-
                             readTVar (animStateVar tvars)
@@ -174,7 +188,10 @@ animThread tvars win =
                                 FinalFrame -> notAnimating
                                 NotAnimating -> notAnimating
                         writeTVar (animStateVar tvars) newAnimState
-                        return newAnimState
+                        runInAnim <- swapTVar (runInAnimVar tvars) (return ())
+                        return (newAnimState, runInAnim)
+                runInAnim
+                return newAnimState
         frameStateResult (AnimState isAnimating _ frame _) =
             case isAnimating of
             Animating _ -> Just $ Anim.draw frame
@@ -197,5 +214,6 @@ mainLoop win getAnimationConfig animHandlers =
                 , _edWinSize = initialWinSize
                 , _edReversedEvents = []
                 }
+            <*> newTVarIO (return ())
         eventsThread <- forwardExceptions (eventHandlerThread tvars getAnimationConfig animHandlers)
         withForkedIO eventsThread (animThread tvars win)
