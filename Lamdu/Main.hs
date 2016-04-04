@@ -9,6 +9,7 @@ import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Lens.Tuple
 import           Control.Monad (when, join, unless, replicateM_)
+import           Control.Monad.IO.Class (MonadIO(..))
 import           Data.IORef
 import           Data.MRUMemo (memoIO)
 import           Data.Maybe
@@ -295,7 +296,9 @@ mainLoop win refreshScheduler configSampler iteration =
                         else shouldRefresh refreshScheduler
         mainLoopWidget win tickHandler makeWidget getAnimHalfLife
 
-memoizeMakeWidget :: Eq a => (a -> IO (Widget IO)) -> IO (IO (), a -> IO (Widget IO))
+memoizeMakeWidget ::
+    (MonadIO m, Eq a) =>
+    (a -> IO (Widget m)) -> IO (IO (), a -> IO (Widget m))
 memoizeMakeWidget mkWidget =
     do
         widgetCacheRef <- newIORef =<< memoIO mkWidget
@@ -305,7 +308,7 @@ memoizeMakeWidget mkWidget =
             , \x ->
                 readIORef widgetCacheRef
                 >>= ($ x)
-                <&> Widget.events %~ (<* invalidateCache)
+                <&> Widget.events %~ (<* liftIO invalidateCache)
             )
 
 rootCursor :: Widget.Id

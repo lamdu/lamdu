@@ -12,6 +12,7 @@ import           Prelude.Compat
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Lens.Tuple
+import           Control.Monad.IO.Class (MonadIO(..))
 import           Data.Function (on)
 import           Data.IORef (newIORef, readIORef, modifyIORef)
 import qualified Data.Map as Map
@@ -169,13 +170,14 @@ toggle HelpShown = HelpNotShown
 toggle HelpNotShown = HelpShown
 
 makeToggledHelpAdder ::
-    IsHelpShown -> IO (Config -> Widget.Size -> Widget IO -> IO (Widget IO))
+    MonadIO m =>
+    IsHelpShown -> IO (Config -> Widget.Size -> Widget m -> IO (Widget m))
 makeToggledHelpAdder startValue =
     do
         showingHelpVar <- newIORef startValue
         return $ \config size widget ->
             do
-                showingHelp <- readIORef showingHelpVar
+                showingHelp <- readIORef showingHelpVar & liftIO
                 let (f, docStr) =
                         case showingHelp of
                         HelpShown ->
@@ -184,6 +186,6 @@ makeToggledHelpAdder startValue =
                             (makeTooltip config (configOverlayDocKeys config), "Show")
                     toggleEventMap =
                         Widget.keysEventMap (configOverlayDocKeys config) (E.Doc ["Help", "Key Bindings", docStr]) $
-                        modifyIORef showingHelpVar toggle
+                        liftIO $ modifyIORef showingHelpVar toggle
                 return . addHelp f size $
                     Widget.strongerEvents toggleEventMap widget

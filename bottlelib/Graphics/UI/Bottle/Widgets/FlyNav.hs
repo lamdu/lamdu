@@ -6,14 +6,13 @@ module Graphics.UI.Bottle.Widgets.FlyNav
     , initState
     ) where
 
-import           Prelude.Compat
-
 import           Control.Applicative (liftA2)
 import           Control.Lens (Lens')
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Lens.Tuple
 import           Control.Monad (void)
+import           Control.Monad.IO.Class (MonadIO(..))
 import           Data.IORef
 import           Data.Monoid ((<>))
 import           Data.Vector.Vector2 (Vector2(..))
@@ -29,6 +28,8 @@ import           Graphics.UI.Bottle.Widget (Widget, Size)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import           Graphics.UI.Bottle.Widgets.StdKeys (DirKeys(..), stdDirKeys)
 import qualified Graphics.UI.GLFW as GLFW
+
+import           Prelude.Compat
 
 newtype Config = Config
     { configLayer :: Anim.Layer
@@ -203,7 +204,7 @@ make config animId (Just (ActiveState pos movements)) setState w =
                 maybe (pure mempty) (^. Widget.enterResultEvent)
                     mEnteredChild
 
-makeIO :: Config -> AnimId -> IO (Widget IO -> IO (Widget IO))
+makeIO :: MonadIO m => Config -> AnimId -> IO (Widget m -> IO (Widget m))
 makeIO config animId =
     do
         flyNavState <- newIORef initState
@@ -211,4 +212,4 @@ makeIO config animId =
             do
                 fnState <- readIORef flyNavState
                 return $
-                    make config animId fnState (writeIORef flyNavState) widget
+                    make config animId fnState (liftIO . writeIORef flyNavState) widget
