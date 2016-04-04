@@ -102,6 +102,17 @@
                 "Key'E"
             ]
         ],
+        "exportFancyKeys": [
+            [
+                {
+                    "modifierKeysSuper": false,
+                    "modifierKeysAlt": true,
+                    "modifierKeysShift": true,
+                    "modifierKeysControl": false
+                },
+                "Key'J"
+            ]
+        ],
         "exportAllKeys": [
             [
                 {

@@ -83,6 +83,13 @@ data Pane m = Pane
 data ExportActions m = ExportActions
     { exportRepl :: M m ()
     , exportAll :: M m ()
+    , -- Fancy export is intended for sending code  to someone who doesn't have
+      -- Lamdu installed. It bundles together in a zipfile a screenshot,
+      -- a README, the repl export, and compiled JS  (that requires a new
+      -- version of nodejs supporting TCO).  It is intended to enable Lamdu
+      -- to be used in competitions such as Google codejam which require
+      -- [readable] code upload.
+      exportFancy :: M m ()
     , exportDef :: DefI m -> M m ()
     , importAll :: FilePath -> M m ()
     }
@@ -274,10 +281,12 @@ replEventMap env replExpr =
         (E.Doc ["Edit", "Extract to definition"])
     , Widget.keysEventMap exportKeys
       (E.Doc ["Collaboration", "Export repl to JSON file"]) exportRepl
+    , Widget.keysEventMap exportFancyKeys
+      (E.Doc ["Collaboration", "Export repl for Codejam"]) exportFancy
     ]
     where
-        ExportActions{exportRepl} = exportActions env
-        Config.Export{exportKeys} = Config.export (config env)
+        ExportActions{exportRepl, exportFancy} = exportActions env
+        Config.Export{exportKeys, exportFancyKeys} = Config.export (config env)
         Config.Pane{newDefinitionButtonPressKeys} = Config.pane (config env)
 
 makeReplEdit ::

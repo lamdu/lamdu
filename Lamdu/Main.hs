@@ -135,6 +135,7 @@ exportActions config =
     GUIMain.ExportActions
     { GUIMain.exportRepl = fileExport Export.fileExportRepl
     , GUIMain.exportAll = fileExport Export.fileExportAll
+    , GUIMain.exportFancy = undefined
     , GUIMain.exportDef = fileExport . Export.fileExportDef
     , GUIMain.importAll = importAll
     }
