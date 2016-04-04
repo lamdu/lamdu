@@ -23,7 +23,7 @@ import           Data.Typeable (Typeable)
 import           GHC.Conc (setNumCapabilities, getNumProcessors)
 import           GHC.Stack (whoCreated)
 import qualified Graphics.DrawingCombinators as Draw
-import           Graphics.UI.Bottle.MainLoop (mainLoopWidget)
+import           Graphics.UI.Bottle.Main (mainLoopWidget)
 import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.EventMapDoc as EventMapDoc

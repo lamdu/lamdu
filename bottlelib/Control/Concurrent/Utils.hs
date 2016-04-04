@@ -1,9 +1,11 @@
 module Control.Concurrent.Utils
-    ( forkIOUnmasked, runAfter
+    ( forkIOUnmasked, runAfter, asyncThrowTo, forwardExceptions, withForkedIO
     ) where
 
-import Control.Concurrent (ThreadId, forkIOWithUnmask, threadDelay)
-import Control.Lens.Operators
+import           Control.Concurrent (ThreadId, forkIOWithUnmask, threadDelay, myThreadId)
+import qualified Control.Exception as E
+import           Control.Lens.Operators
+import           Control.Monad (void)
 
 forkIOUnmasked :: IO () -> IO ThreadId
 forkIOUnmasked action = forkIOWithUnmask $ \unmask -> unmask action
@@ -14,3 +16,19 @@ runAfter delay action =
         threadDelay delay
         action
     & forkIOUnmasked
+
+asyncThrowTo :: E.Exception e => ThreadId -> e -> IO ()
+asyncThrowTo threadId exc = E.throwTo threadId exc & forkIOUnmasked & void
+
+forwardExceptions :: IO a -> IO (IO a)
+forwardExceptions action =
+    do
+        selfId <- myThreadId
+        return $ action `E.catch` \exc@E.SomeException{} ->
+            do
+                asyncThrowTo selfId exc
+                E.throwIO exc
+
+withForkedIO :: IO () -> IO a -> IO a
+withForkedIO action =
+    E.bracket (forkIOUnmasked action) (`asyncThrowTo` E.ThreadKilled) . const

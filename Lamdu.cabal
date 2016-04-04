@@ -68,7 +68,9 @@ Library
                   , Graphics.UI.Bottle.Animation.Id
                   , Graphics.UI.Bottle.Direction
                   , Graphics.UI.Bottle.EventMap
-                  , Graphics.UI.Bottle.MainLoop
+                  , Graphics.UI.Bottle.Main
+                  , Graphics.UI.Bottle.Main.Animation
+                  , Graphics.UI.Bottle.Main.Image
                   , Graphics.UI.Bottle.ModKey
                   , Graphics.UI.Bottle.Rect
                   , Graphics.UI.Bottle.SizedFont

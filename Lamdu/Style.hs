@@ -7,7 +7,7 @@ module Lamdu.Style
     ) where
 
 import qualified Graphics.DrawingCombinators as Draw
-import           Graphics.UI.Bottle.MainLoop (AnimConfig(..))
+import           Graphics.UI.Bottle.Main.Animation (AnimConfig(..))
 import           Graphics.UI.Bottle.SizedFont (SizedFont(..))
 import qualified Graphics.UI.Bottle.Widgets.EventMapDoc as EventMapDoc
 import qualified Graphics.UI.Bottle.Widgets.FlyNav as FlyNav
