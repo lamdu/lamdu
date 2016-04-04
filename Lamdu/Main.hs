@@ -24,6 +24,7 @@ import           Data.Typeable (Typeable)
 import           GHC.Conc (setNumCapabilities, getNumProcessors)
 import           GHC.Stack (whoCreated)
 import qualified Graphics.DrawingCombinators as Draw
+import qualified Graphics.UI.Bottle.Main as MainLoop
 import           Graphics.UI.Bottle.Main (mainLoopWidget)
 import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
@@ -144,7 +145,7 @@ exportActions config =
 
 makeRootWidget ::
     Db -> Zoom -> IORef Settings -> EvalManager.Evaluator ->
-    CachedWidgetInput -> IO (Widget IO)
+    CachedWidgetInput -> IO (Widget MainLoop.M)
 makeRootWidget db zoom settingsRef evaluator (CachedWidgetInput _fontsVer config size fonts) =
     do
         cursor <-
@@ -171,7 +172,7 @@ makeRootWidget db zoom settingsRef evaluator (CachedWidgetInput _fontsVer config
                     EvalManager.runTransactionAndMaybeRestartEvaluator evaluator action
                 _ -> DbLayout.runDbTransaction db action
         mkWidgetWithFallback dbToIO env
-            <&> Widget.weakerEvents eventMap
+            <&> Widget.weakerEvents (eventMap <&> liftIO)
             <&> Widget.scale sizeFactor
 
 withMVarProtection :: a -> (MVar (Maybe a) -> IO b) -> IO b
@@ -269,7 +270,7 @@ withFontLoop configSampler act =
 
 mainLoop ::
     GLFW.Window -> RefreshScheduler -> Sampler Config ->
-    (Int -> Fonts Draw.Font -> Config -> Widget.Size -> IO (Widget IO)) -> IO ()
+    (Int -> Fonts Draw.Font -> Config -> Widget.Size -> IO (Widget MainLoop.M)) -> IO ()
 mainLoop win refreshScheduler configSampler iteration =
     withFontLoop configSampler $ \fontsVer checkFonts fonts ->
     do
@@ -316,7 +317,7 @@ rootCursor = WidgetIds.fromUUID $ IRef.uuid $ DbLayout.panes DbLayout.codeIRefs
 
 mkWidgetWithFallback ::
     (forall a. T DbLayout.DbM a -> IO a) ->
-    GUIMain.Env -> IO (Widget IO)
+    GUIMain.Env -> IO (Widget MainLoop.M)
 mkWidgetWithFallback dbToIO env =
     do
         (isValid, widget) <-
@@ -347,7 +348,7 @@ mkWidgetWithFallback dbToIO env =
 
 makeMainGui ::
     (forall a. T DbLayout.DbM a -> IO a) ->
-    GUIMain.Env -> T DbLayout.DbM (Widget IO)
+    GUIMain.Env -> T DbLayout.DbM (Widget MainLoop.M)
 makeMainGui dbToIO env =
     GUIMain.make env rootCursor
     <&> Widget.events %~ \act ->
@@ -355,10 +356,8 @@ makeMainGui dbToIO env =
     & Lens.mapped %~ (>>= _2 attachCursor)
     <&> dbToIO
     & join
-    >>= runExtraIO
+    <&> uncurry MainLoop.EventResult & MainLoop.M
     where
-        runExtraIO :: (IO (), Widget.EventResult) -> IO Widget.EventResult
-        runExtraIO (extraAct, res) = res <$ extraAct
         attachCursor eventResult =
             do
                 eventResult ^. Widget.eCursor
