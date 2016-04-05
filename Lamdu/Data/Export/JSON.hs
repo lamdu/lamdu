@@ -1,7 +1,7 @@
 -- | Import/Export JSON support
 {-# LANGUAGE NoImplicitPrelude, TemplateHaskell, OverloadedStrings, FlexibleContexts, LambdaCase #-}
 module Lamdu.Data.Export.JSON
-    ( fileExportRepl
+    ( fileExportRepl, jsonExportRepl
     , fileExportAll
     , fileExportDef
     , fileImportAll
@@ -151,6 +151,9 @@ exportRepl =
             >>= ExprIRef.readVal & trans
         exportVal repl
         repl <&> valIToUUID & Codec.encodeRepl & tell
+
+jsonExportRepl :: T ViewM Codec.Encoded
+jsonExportRepl = runExport exportRepl <&> snd
 
 fileExportRepl :: FilePath -> T ViewM (IO ())
 fileExportRepl = export "repl" exportRepl
