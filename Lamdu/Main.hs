@@ -38,6 +38,7 @@ import           Lamdu.Config.Sampler (Sampler)
 import qualified Lamdu.Config.Sampler as ConfigSampler
 import qualified Lamdu.Data.DbInit as DbInit
 import qualified Lamdu.Data.DbLayout as DbLayout
+import           Lamdu.Data.Export.Codejam (exportFancy)
 import qualified Lamdu.Data.Export.JSON as Export
 import           Lamdu.DataFile (getLamduDir)
 import qualified Lamdu.Eval.Manager as EvalManager
@@ -135,13 +136,14 @@ exportActions config =
     GUIMain.ExportActions
     { GUIMain.exportRepl = fileExport Export.fileExportRepl
     , GUIMain.exportAll = fileExport Export.fileExportAll
-    , GUIMain.exportFancy = undefined
+    , GUIMain.exportFancy = export exportFancy
     , GUIMain.exportDef = fileExport . Export.fileExportDef
     , GUIMain.importAll = importAll
     }
     where
         Config.Export{exportPath} = Config.export config
-        fileExport exporter = exporter exportPath <&> flip (,) () & return & GUIMain.M
+        export x = x <&> flip (,) () & return & GUIMain.M
+        fileExport exporter = exporter exportPath & export
         importAll path = Export.fileImportAll path <&> fmap ((,) (pure ())) & GUIMain.M
 
 makeRootWidget ::

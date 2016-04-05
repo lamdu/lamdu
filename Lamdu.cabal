@@ -137,8 +137,10 @@ Executable lamdu
   hs-Source-Dirs: .
                   , submodules/AlgoW
   Build-Depends:    GLFW-b
+                  , JuicyPixels
                   , Lamdu
                   , List >= 0.5.1
+                  , OpenGL
                   , TraceUtils
                   , aeson
                   , aeson-pretty
@@ -188,6 +190,7 @@ Executable lamdu
                   , Lamdu.Data.DbInit
                   , Lamdu.Data.DbLayout
                   , Lamdu.Data.Definition
+                  , Lamdu.Data.Export.Codejam
                   , Lamdu.Data.Export.JSON
                   , Lamdu.Data.Export.JSON.Codec
                   , Lamdu.Data.Ops
