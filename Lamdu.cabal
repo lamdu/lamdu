@@ -173,6 +173,7 @@ Executable lamdu
                   , wl-pprint >= 1.2
                   , uuid-aeson
                   , uuid-types
+                  , zip-archive
   if flag(noprettyclass)
     build-depends:  pretty >=1.1.2 && <1.2
   else
