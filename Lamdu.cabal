@@ -21,6 +21,9 @@ Data-files:          fonts/DejaVuSans.ttf
                    , js/rts.js
                    , js/rtsConfig.js
 
+                   , doc/CodeJamReadMe.md
+                   , js/codeJamRtsConfig.js
+
 Flag noprettyclass
     Description: Using pretty>=1.1.2? If so, mustn't depend on prettyclass which was inlined into the pretty package
 
