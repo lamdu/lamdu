@@ -46,6 +46,7 @@ import           Lamdu.Expr.Identifier (Identifier(..))
 import           Lamdu.Expr.Type (Tag(..))
 import qualified Lamdu.Expr.Val as V
 import           Numeric (readHex)
+import           System.FilePath (splitFileName)
 import           System.IO (IOMode(..), Handle, hClose, hIsEOF, hPutStrLn, withFile)
 import qualified System.Process as Proc
 
@@ -76,8 +77,11 @@ data Evaluator srcId = Evaluator
     , eResultsRef :: IORef (EvalResults srcId)
     }
 
-nodeRepl :: FilePath -> Proc.CreateProcess
-nodeRepl nodeExePath = Proc.proc nodeExePath ["--harmony-tailcalls"]
+nodeRepl :: FilePath -> FilePath -> Proc.CreateProcess
+nodeRepl nodeExePath rtsPath =
+    (Proc.proc nodeExePath ["--harmony-tailcalls"])
+    { Proc.env = Just [("NODE_PATH", rtsPath)]
+    }
 
 withProcess ::
     Proc.CreateProcess ->
@@ -220,8 +224,9 @@ asyncStart ::
 asyncStart toUUID fromUUID depsMVar resultsRef val actions =
     do
         nodeExePath <- DataFile.getPath "submodules/node/node"
-        rtsPath <- DataFile.getPath "js/rts.js"
-        withProcess (nodeRepl nodeExePath) $ \(Just stdin, Just stdout, Nothing, handle) ->
+        rtsPath <- DataFile.getPath "js/rts.js" <&> fst . splitFileName
+        withProcess (nodeRepl nodeExePath rtsPath) $
+            \(Just stdin, Just stdout, Nothing, handle) ->
             withFile "output.js" WriteMode $ \outputFile ->
             do
                 val
@@ -247,7 +252,7 @@ asyncStart toUUID fromUUID depsMVar resultsRef val actions =
                       do
                           hPutStrLn outputFile line
                           hPutStrLn stdin line
-                    , Compiler.jsRtsPath = rtsPath
+                    , Compiler.loggingMode = Compiler.loggingEnabled
                     }
                 hClose stdin
                 let

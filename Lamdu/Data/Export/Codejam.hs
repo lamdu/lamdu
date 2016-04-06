@@ -8,11 +8,14 @@ import qualified Codec.Archive.Zip as Zip
 import           Codec.Picture (Image, PixelRGB8(..), withImage, encodePng)
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
+import           Control.Monad.Trans.Class (MonadTrans(..))
+import           Control.Monad.Trans.Writer (execWriterT, tell)
 import qualified Data.Aeson.Encode.Pretty as AesonPretty
 import qualified Data.ByteString as SBS
 import qualified Data.ByteString.Lazy as LBS
 import           Data.List (isPrefixOf)
 import           Data.Maybe (fromMaybe)
+import qualified Data.Store.IRef as IRef
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
 import           Data.String (IsString(..))
@@ -20,9 +23,11 @@ import           Data.Time.Clock.POSIX (getPOSIXTime)
 import qualified Foreign as F
 import qualified Graphics.Rendering.OpenGL as GL
 import qualified Lamdu.Builtins.PrimVal as PrimVal
+import qualified Lamdu.Data.Anchors as Anchors
 import           Lamdu.Data.DbLayout (ViewM)
 import qualified Lamdu.Data.DbLayout as DbLayout
 import           Lamdu.Data.Export.JSON (jsonExportRepl)
+import qualified Lamdu.Eval.JS.Compiler as Compiler
 import           Lamdu.Eval.Results (EvalResults)
 import qualified Lamdu.Eval.Results as EV
 import           Lamdu.Expr.IRef (ValI)
@@ -63,6 +68,28 @@ readRepl =
     DbLayout.repl DbLayout.codeIRefs & Transaction.readIRef
     >>= ExprIRef.readVal
 
+compile :: Val (ValI ViewM) -> T ViewM String
+compile val =
+    val <&> valId
+    & Compiler.compile actions
+    & execWriterT
+    <&> unlines
+    where
+        valId = Compiler.ValId . IRef.uuid . ExprIRef.unValI
+        actions =
+            Compiler.Actions
+            { Compiler.output = tell . (:[])
+            , Compiler.loggingMode = Compiler.FastSilent
+            , Compiler.readAssocName =
+                lift . Transaction.getP . Anchors.assocNameRef
+            , Compiler.readGlobal =
+                  \globalId ->
+                  ExprIRef.defI globalId & Transaction.readIRef
+                  >>= traverse ExprIRef.readVal
+                  & lift
+                  <&> Lens.mapped . Lens.mapped %~ valId
+            }
+
 formatResult :: EV.Val a -> SBS.ByteString
 formatResult (EV.Val _ b) =
     case b of
@@ -85,6 +112,7 @@ exportFancy evalResults =
                 . Lens.ix EV.topLevelScopeId
                 <&> formatResult
                 & fromMaybe "<NO RESULT>"
+        replJs <- compile repl <&> fromString
         return $
             do
                 now <- getPOSIXTime <&> round
@@ -93,7 +121,7 @@ exportFancy evalResults =
                     readFile "doc/CodeJamReadMe.md"
                     <&> removeReadmeMeta <&> fromString
                 rts <- readFile "js/rts.js" <&> fromString
-                -- TODO create fast js runable in codeExport/js/main.js
+                rtsConf <- readFile "js/codeJamRtsConfig.js" <&> fromString
                 let addFile archive (filename, contents) =
                         Zip.addEntryToArchive
                         (Zip.toEntry ("export/" ++ filename) now contents)
@@ -103,5 +131,7 @@ exportFancy evalResults =
                     [ ("source.lamdu", exportedCode)
                     , ("screenshot.png", screenshot)
                     , ("README.md", readme)
+                    , ("js/main.js", replJs)
                     , ("js/rts.js", rts)
+                    , ("js/rtsConfig.js", rtsConf)
                     ] & Zip.fromArchive & LBS.writeFile "export.zip"

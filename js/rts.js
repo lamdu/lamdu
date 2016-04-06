@@ -1,32 +1,20 @@
 "use strict";
 
+var conf = require('rtsConfig.js')
+
 // Tag names must match those in Lamdu.Builtins.Anchors
-var biTagName = function (x) {
-    var raw = "BI:" + x;
-    raw += "\0".repeat(16 - raw.length);
-    var encoded = "";
-    if (raw.charCodeAt(0) < 10 * 16) {
-        // Hex is not alphanumeric
-        encoded = "_";
-    }
-    for (var i = 0; i < raw.length; i++) {
-        var hexChar = raw.charCodeAt(i).toString(16);
-        encoded += "0".repeat(2 - hexChar.length) + hexChar;
-    }
-    return encoded;
-}
-var trueTag = biTagName('true');
-var falseTag = biTagName('false');
-var consTag = biTagName('cons');
-var headTag = biTagName('head');
-var tailTag = biTagName('tail');
-var objTag = biTagName('object');
-var infixlTag = biTagName('infixl');
-var infixrTag = biTagName('infixr');
-var indexTag = biTagName('index');
-var startTag = biTagName('start');
-var stopTag = biTagName('stop');
-var valTag = biTagName('val');
+var trueTag = conf.builtinTagName('true');
+var falseTag = conf.builtinTagName('false');
+var consTag = conf.builtinTagName('cons');
+var headTag = conf.builtinTagName('head');
+var tailTag = conf.builtinTagName('tail');
+var objTag = conf.builtinTagName('object');
+var infixlTag = conf.builtinTagName('infixl');
+var infixrTag = conf.builtinTagName('infixr');
+var indexTag = conf.builtinTagName('index');
+var startTag = conf.builtinTagName('start');
+var stopTag = conf.builtinTagName('stop');
+var valTag = conf.builtinTagName('val');
 
 var bool = function (x) {
     return {tag: x ? trueTag : falseTag, data: {}};
@@ -85,6 +73,7 @@ var STArray = function(arr) {
 };
 
 module.exports = {
+    logRepl: conf.logRepl,
     logResult: function (scope, exprId, result) {
         console.log(encode(
             { event:"Result"

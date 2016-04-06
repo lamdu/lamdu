@@ -4,7 +4,7 @@
 module Lamdu.Eval.JS.Compiler
     ( Actions(..)
     , ValId(..)
-    , compile
+    , compile, Mode(..), loggingEnabled
     ) where
 
 import qualified Control.Lens as Lens
@@ -41,11 +41,14 @@ import           Prelude.Compat
 
 newtype ValId = ValId UUID
 
+data Mode = FastSilent | SlowLogging LoggingInfo
+    deriving Show
+
 data Actions m = Actions
     { readAssocName :: UUID -> m String
     , readGlobal :: V.Var -> m (Definition.Body (Val ValId))
     , output :: String -> m ()
-    , jsRtsPath :: FilePath
+    , loggingMode :: Mode
     }
 
 type LocalVarName = JSS.Id ()
@@ -56,11 +59,8 @@ newtype LoggingInfo = LoggingInfo
     } deriving Show
 Lens.makeLenses ''LoggingInfo
 
-data Mode = FastSilent | SlowLogging LoggingInfo
-    deriving Show
-
 data Env m = Env
-    { envActions :: Actions m
+    { _envActions :: Actions m
     , _envLocals :: Map V.Var LocalVarName
     , _envMode :: Mode
     }
@@ -98,7 +98,7 @@ pp :: JSS.Statement () -> String
 pp = (`Pretty.displayS`"") . Pretty.renderPretty 1.0 90 . JSPP.prettyPrint
 
 performAction :: Monad m => (Actions m -> m a) -> M m a
-performAction f = RWS.asks (f . envActions) >>= lift & M
+performAction f = RWS.asks (f . _envActions) >>= lift & M
 
 ppOut :: Monad m => JSS.Statement () -> M m ()
 ppOut stmt = performAction (`output` pp stmt)
@@ -135,15 +135,15 @@ isReservedName name =
     , "scopeId_"
     ]
 
-topLevelDecls :: FilePath -> [JSS.Statement ()]
-topLevelDecls rtsPath =
+topLevelDecls :: [JSS.Statement ()]
+topLevelDecls =
     ( [ [jsstmt|"use strict";|]
       , [jsstmt|var scopeId_0 = 0;|]
       , [jsstmt|var scopeCounter = 1;|]
+      , [jsstmt|var rts = require('rts.js');|]
       ] <&> void
     ) ++
-    [ varinit "rts" $ JS.var "require" `JS.call` [JS.string rtsPath]
-    , declLog 0
+    [ declLog 0
     ]
 
 loggingEnabled :: Mode
@@ -155,12 +155,16 @@ compile actions val = compileVal val & run actions
 run :: Monad m => Actions m -> M m CodeGen -> m ()
 run actions act =
     runRWST
-    (traverse ppOut (topLevelDecls (jsRtsPath actions))
-     >> act <&> codeGenExpression <&> JS.expr >>= ppOut & unM)
+    (traverse ppOut topLevelDecls
+     >> act
+     <&> codeGenExpression
+     <&> JS.call (JS.var "rts" $. "logRepl") . (:[])
+     <&> JS.expr
+     >>= ppOut & unM)
     Env
-    { envActions = actions
+    { _envActions = actions
     , _envLocals = mempty
-    , _envMode = loggingEnabled
+    , _envMode = loggingMode actions
     }
     State
     { _freshId = 0
@@ -175,7 +179,7 @@ resetRW (M act) =
     act
     & RWS.censor (const LogUnused)
     & RWS.local (envLocals .~ mempty)
-    & RWS.local (envMode .~ loggingEnabled)
+    & RWS.local (\x -> x & envMode .~ loggingMode (x ^. envActions))
     & M
 
 freshName :: Monad m => String -> M m String

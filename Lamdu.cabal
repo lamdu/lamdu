@@ -19,6 +19,7 @@ Data-files:          fonts/DejaVuSans.ttf
                    , freshdb.json
                    , submodules/node/node
                    , js/rts.js
+                   , js/rtsConfig.js
 
 Flag noprettyclass
     Description: Using pretty>=1.1.2? If so, mustn't depend on prettyclass which was inlined into the pretty package
