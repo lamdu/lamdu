@@ -26,6 +26,7 @@ import qualified Lamdu.Data.Anchors as Anchors
 import           Lamdu.Data.DbLayout (ViewM)
 import qualified Lamdu.Data.DbLayout as DbLayout
 import           Lamdu.Data.Export.JSON (jsonExportRepl)
+import qualified Lamdu.DataFile as DataFile
 import qualified Lamdu.Eval.JS.Compiler as Compiler
 import           Lamdu.Eval.Results (EvalResults)
 import qualified Lamdu.Eval.Results as EV
@@ -99,6 +100,9 @@ formatResult (EV.Val _ b) =
     EV.RInject inj -> inj ^. V.injectVal & formatResult
     _ -> "<TODO: Format result>"
 
+readDataFile :: FilePath -> IO String
+readDataFile path = DataFile.getPath path >>= readFile
+
 exportFancy :: EvalResults (ValI ViewM) -> T ViewM (IO ())
 exportFancy evalResults =
     do
@@ -117,10 +121,10 @@ exportFancy evalResults =
                 now <- getPOSIXTime <&> round
                 screenshot <- takeScreenshot <&> encodePng
                 readme <-
-                    readFile "doc/CodeJamReadMe.md"
+                    readDataFile "doc/CodeJamReadMe.md"
                     <&> removeReadmeMeta <&> fromString
-                rts <- readFile "js/rts.js" <&> fromString
-                rtsConf <- readFile "js/codeJamRtsConfig.js" <&> fromString
+                rts <- readDataFile "js/rts.js" <&> fromString
+                rtsConf <- readDataFile "js/codeJamRtsConfig.js" <&> fromString
                 let addFile archive (filename, contents) =
                         Zip.addEntryToArchive
                         (Zip.toEntry ("export/" ++ filename) now contents)
