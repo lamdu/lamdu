@@ -10,6 +10,7 @@ import           Control.Lens.Operators
 import           Control.Lens.Tuple
 import           Control.Monad (when, join, unless, replicateM_)
 import           Control.Monad.IO.Class (MonadIO(..))
+import           Data.CurAndPrev (current)
 import           Data.IORef
 import           Data.MRUMemo (memoIO)
 import           Data.Maybe
@@ -42,6 +43,8 @@ import           Lamdu.Data.Export.Codejam (exportFancy)
 import qualified Lamdu.Data.Export.JSON as Export
 import           Lamdu.DataFile (getLamduDir)
 import qualified Lamdu.Eval.Manager as EvalManager
+import           Lamdu.Eval.Results (EvalResults)
+import           Lamdu.Expr.IRef (ValI)
 import           Lamdu.Font (Fonts(..))
 import qualified Lamdu.Font as Font
 import           Lamdu.GUI.CodeEdit.Settings (Settings(..))
@@ -131,12 +134,13 @@ instance Eq CachedWidgetInput where
     CachedWidgetInput x0 y0 z0 _ == CachedWidgetInput x1 y1 z1 _ =
         (x0, y0, z0) == (x1, y1, z1)
 
-exportActions :: Config -> GUIMain.ExportActions DbLayout.ViewM
-exportActions config =
+exportActions ::
+    Config -> EvalResults (ValI DbLayout.ViewM) -> GUIMain.ExportActions DbLayout.ViewM
+exportActions config evalResults =
     GUIMain.ExportActions
     { GUIMain.exportRepl = fileExport Export.fileExportRepl
     , GUIMain.exportAll = fileExport Export.fileExportAll
-    , GUIMain.exportFancy = export exportFancy
+    , GUIMain.exportFancy = export (exportFancy evalResults)
     , GUIMain.exportDef = fileExport . Export.fileExportDef
     , GUIMain.importAll = importAll
     }
@@ -162,7 +166,8 @@ makeRootWidget db zoom settingsRef evaluator (CachedWidgetInput _fontsVer config
         settings <- readIORef settingsRef
         let env = GUIMain.Env
                 { _envEvalRes = evalResults
-                , _envExportActions = exportActions config
+                , _envExportActions =
+                    exportActions config (evalResults ^. current)
                 , _envConfig = config
                 , _envSettings = settings
                 , _envStyle = Style.style config fonts

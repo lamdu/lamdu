@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude #-}
+{-# LANGUAGE NoImplicitPrelude, OverloadedStrings #-}
 
 module Lamdu.Data.Export.Codejam
     ( exportFancy
@@ -6,20 +6,29 @@ module Lamdu.Data.Export.Codejam
 
 import qualified Codec.Archive.Zip as Zip
 import           Codec.Picture (Image, PixelRGB8(..), withImage, encodePng)
+import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import qualified Data.Aeson.Encode.Pretty as AesonPretty
+import qualified Data.ByteString as SBS
 import qualified Data.ByteString.Lazy as LBS
 import           Data.List (isPrefixOf)
+import           Data.Maybe (fromMaybe)
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
 import           Data.String (IsString(..))
 import           Data.Time.Clock.POSIX (getPOSIXTime)
 import qualified Foreign as F
 import qualified Graphics.Rendering.OpenGL as GL
+import qualified Lamdu.Builtins.PrimVal as PrimVal
+import           Lamdu.Data.DbLayout (ViewM)
 import qualified Lamdu.Data.DbLayout as DbLayout
 import           Lamdu.Data.Export.JSON (jsonExportRepl)
+import           Lamdu.Eval.Results (EvalResults)
+import qualified Lamdu.Eval.Results as EV
+import           Lamdu.Expr.IRef (ValI)
 import qualified Lamdu.Expr.IRef as ExprIRef
 import           Lamdu.Expr.Val (Val)
+import qualified Lamdu.Expr.Val as V
 
 import           Prelude.Compat
 
@@ -49,18 +58,33 @@ removeReadmeMeta :: String -> String
 removeReadmeMeta =
     unlines . dropWhile (not . isPrefixOf "##") . tail . lines
 
-readRepl :: T DbLayout.ViewM (Val (ExprIRef.ValI DbLayout.ViewM))
+readRepl :: T ViewM (Val (ValI ViewM))
 readRepl =
     DbLayout.repl DbLayout.codeIRefs & Transaction.readIRef
     >>= ExprIRef.readVal
 
-exportFancy :: T DbLayout.ViewM (IO ())
-exportFancy =
+formatResult :: EV.Val a -> SBS.ByteString
+formatResult (EV.Val _ b) =
+    case b of
+    EV.RPrimVal prim ->
+        case PrimVal.toKnown prim of
+        PrimVal.Bytes x -> x
+        PrimVal.Float x -> show x & fromString
+    EV.RInject inj -> inj ^. V.injectVal & formatResult
+    _ -> "<TODO: Format result>"
+
+exportFancy :: EvalResults (ValI ViewM) -> T ViewM (IO ())
+exportFancy evalResults =
     do
-        exportedCode <-
-            jsonExportRepl <&> AesonPretty.encodePretty
-        _todoRepl <- readRepl
-        -- TODO also export RESULT of repl to separate output.txt file
+        exportedCode <- jsonExportRepl <&> AesonPretty.encodePretty
+        repl <- readRepl
+        let replResult =
+                evalResults
+                ^? EV.erExprValues
+                . Lens.ix (repl ^. V.payload)
+                . Lens.ix EV.topLevelScopeId
+                <&> formatResult
+                & fromMaybe "<NO RESULT>"
         return $
             do
                 now <- getPOSIXTime <&> round
@@ -74,6 +98,7 @@ exportFancy =
                         Zip.addEntryToArchive
                         (Zip.toEntry ("export/" ++ filename) now contents)
                         archive
+                SBS.writeFile "output.txt" replResult
                 foldl addFile Zip.emptyArchive
                     [ ("source.lamdu", exportedCode)
                     , ("screenshot.png", screenshot)
