@@ -13,7 +13,6 @@ import           Control.Monad.Trans.Writer (execWriterT, tell)
 import qualified Data.Aeson.Encode.Pretty as AesonPretty
 import qualified Data.ByteString as SBS
 import qualified Data.ByteString.Lazy as LBS
-import           Data.List (isPrefixOf)
 import           Data.Maybe (fromMaybe)
 import qualified Data.Store.IRef as IRef
 import           Data.Store.Transaction (Transaction)
