@@ -61,7 +61,7 @@ takeScreenshot =
 
 removeReadmeMeta :: String -> String
 removeReadmeMeta =
-    unlines . dropWhile (not . isPrefixOf "##") . tail . lines
+    unlines . tail . dropWhile (/= "== ExportFromHere ==") . lines
 
 readRepl :: T ViewM (Val (ValI ViewM))
 readRepl =

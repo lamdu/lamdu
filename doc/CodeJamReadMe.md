@@ -1,9 +1,10 @@
 ## Meta (CodeJamReadMe.md)
 
 When sharing Lamdu code via the "fancy export" option (which is intended to share code with people who don't necessarilly have Lamdu installed),
-this README file is included in the .zip to explain in short what is Lamdu and what's inside the .zip.
-(except for this paragraph which is not included in the export's README)
+this README file is included in the .zip to explain in short what Lamdu is and what's inside the .zip.
+(except for everything prior to the line that contains exactly '== ExportFromHere ==').
 
+== ExportFromHere ==
 ## Lamdu export bundle
 
 This bundle is an export of a Lamdu program.
