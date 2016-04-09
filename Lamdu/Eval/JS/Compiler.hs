@@ -16,6 +16,7 @@ import           Control.Monad.Trans.RWS.Strict (RWST(..))
 import qualified Control.Monad.Trans.RWS.Strict as RWS
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Hex as Hex
+import qualified Data.ByteString.UTF8 as UTF8
 import qualified Data.Char as Char
 import           Data.Default () -- instances
 import           Data.List (isPrefixOf)
@@ -23,10 +24,12 @@ import           Data.Map (Map)
 import qualified Data.Map as Map
 import           Data.UUID.Types (UUID)
 import qualified Data.UUID.Utils as UUIDUtils
+import qualified Lamdu.Builtins.Anchors as Builtins
 import qualified Lamdu.Builtins.PrimVal as PrimVal
 import qualified Lamdu.Compiler.Flatten as Flatten
 import qualified Lamdu.Data.Definition as Definition
 import           Lamdu.Expr.Identifier (identHex)
+import qualified Lamdu.Expr.Lens as ExprLens
 import qualified Lamdu.Expr.Type as T
 import qualified Lamdu.Expr.UniqueId as UniqueId
 import           Lamdu.Expr.Val (Val(..))
@@ -527,6 +530,14 @@ compileLeaf leaf valId =
     V.LVar var -> compileVar var >>= maybeLogSubexprResult valId
     V.LLiteral literal -> compileLiteral literal & return
 
+compileToNom :: Monad m => V.Nom (Val ValId) -> ValId -> M m CodeGen
+compileToNom (V.Nom tId val) valId =
+    case val ^? ExprLens.valLiteral <&> PrimVal.toKnown of
+    Just (PrimVal.Bytes bytes) | tId == Builtins.textTid ->
+        JS.var "rts" $. "bytesFromString" $$ JS.string (UTF8.toString bytes)
+        & codeGenFromExpr & return
+    _ -> compileVal val >>= maybeLogSubexprResult valId
+
 compileVal :: Monad m => Val ValId -> M m CodeGen
 compileVal (Val valId body) =
     case body of
@@ -538,6 +549,6 @@ compileVal (Val valId body) =
     V.BRecExtend x              -> compileRecExtend x
     V.BCase x                   -> compileCase x
     V.BFromNom (V.Nom _tId val) -> compileVal val    >>= maybeLog
-    V.BToNom (V.Nom _tId val)   -> compileVal val    >>= maybeLog
+    V.BToNom x                  -> compileToNom x valId
     where
         maybeLog = maybeLogSubexprResult valId
