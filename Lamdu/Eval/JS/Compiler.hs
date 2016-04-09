@@ -193,7 +193,7 @@ freshName prefix =
 
 avoidReservedNames :: String -> String
 avoidReservedNames name
-    | isReservedName name = "__" ++ name
+    | isReservedName name = "_" ++ name
     | otherwise = name
 
 escapeName :: String -> String
@@ -206,6 +206,7 @@ replaceSpecialChars = concatMap replaceSpecial
     where
         replaceSpecial x
             | Char.isAlphaNum x = [x]
+            | x == '_' = "__"
             | otherwise = '_' : (Hex.showHexByte . fromIntegral . Char.ord) x
 
 readName :: (UniqueId.ToUUID a, Monad m) => a -> M m String -> M m String
