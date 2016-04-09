@@ -128,6 +128,8 @@ isReservedName name =
     [ "x", "repl"
     , "Object", "console", "repl"
     , "log", "scopeCounter", "rts"
+    , "while", "if", "switch", "case", "default"
+    , "var", "return", "function", "throw"
     ]
     || any (`isPrefixOf` name)
     [ "global_"
