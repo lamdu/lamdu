@@ -133,6 +133,7 @@ isReservedName name =
     , "log", "scopeCounter", "rts"
     , "while", "if", "switch", "case", "default"
     , "var", "return", "function", "throw"
+    , "null"
     ]
     || any (`isPrefixOf` name)
     [ "global_"
