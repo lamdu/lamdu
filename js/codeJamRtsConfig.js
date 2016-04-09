@@ -12,5 +12,5 @@ module.exports = {
             return nameMap[x];
         return x;
     },
-    logRepl: function (x) { console.log(x); },
+    logRepl: function (x) { console.log(String.fromCharCode.apply(null, x)); },
 }
