@@ -157,4 +157,12 @@ make animId (Val typ val) =
     RArray items -> makeArray animId items
     & ExprGuiM.advanceDepth return animId
     where
-        asText text = BWidgets.makeTextView text animId & ExprGuiM.widgetEnv
+        asText text =
+            BWidgets.makeTextView cut animId & ExprGuiM.widgetEnv
+            where
+                cut =
+                    start ++
+                    case rest of
+                    "" -> ""
+                    _ -> "..."
+                (start, rest) = splitAt 300 text
