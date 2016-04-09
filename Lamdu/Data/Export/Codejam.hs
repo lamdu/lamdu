@@ -5,7 +5,7 @@ module Lamdu.Data.Export.Codejam
     ) where
 
 import qualified Codec.Archive.Zip as Zip
-import           Codec.Picture (Image, PixelRGB8(..), withImage, encodePng)
+import           Codec.Picture (Image, PixelRGB8(..), withImage)
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Monad.Trans.Class (MonadTrans(..))
@@ -39,8 +39,8 @@ import           Prelude.Compat
 
 type T = Transaction
 
-takeScreenshot :: IO (Image PixelRGB8)
-takeScreenshot =
+_takeScreenshot :: IO (Image PixelRGB8)
+_takeScreenshot =
     do
         (pos, size@(GL.Size wGl hGl)) <- GL.get GL.viewport
         let width = fromIntegral wGl
@@ -119,7 +119,7 @@ exportFancy evalResults =
         return $
             do
                 now <- getPOSIXTime <&> round
-                screenshot <- takeScreenshot <&> encodePng
+                -- screenshot <- takeScreenshot <&> encodePng
                 readme <-
                     readDataFile "doc/CodeJamReadMe.md"
                     <&> removeReadmeMeta <&> fromString
@@ -132,7 +132,7 @@ exportFancy evalResults =
                 SBS.writeFile "output.txt" replResult
                 foldl addFile Zip.emptyArchive
                     [ ("source.lamdu", exportedCode)
-                    , ("screenshot.png", screenshot)
+                    -- , ("screenshot.png", screenshot)
                     , ("README.md", readme)
                     , ("js/main.js", replJs)
                     , ("js/rts.js", rts)
