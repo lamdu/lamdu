@@ -9,17 +9,18 @@ import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Monad (void)
 import           Data.Maybe.Utils (unsafeUnjust)
-import           Data.UUID.Types (UUID)
 import qualified Data.Store.Property as Property
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
+import           Data.UUID.Types (UUID)
 import           Lamdu.Data.Anchors (assocTagOrder)
 import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Type as T
 import qualified Lamdu.Expr.UniqueId as UniqueId
-import           Lamdu.Expr.Val (Val(..))
+import qualified Lamdu.Expr.Val.Annotated as Val
 import qualified Lamdu.Expr.Val as V
+import           Lamdu.Expr.Val.Annotated (Val(..))
 import           Lamdu.Sugar.Convert.Expression.Actions (addActions)
 import qualified Lamdu.Sugar.Convert.Input as Input
 import           Lamdu.Sugar.Convert.Monad (ConvertM)
@@ -56,7 +57,7 @@ deleteField stored restI restS expr exprS =
                         -- When deleting closed one field record
                         -- we replace the record with the field value
                         -- (unless it is a hole)
-                        expr ^. V.payload . plValI & return
+                        expr ^. Val.payload . plValI & return
                 RecordExtending{} -> return restI
                 >>= protectedSetToVal stored
                 <&> EntityId.ofValI
@@ -147,14 +148,14 @@ convertExtend (V.RecExtend tag val rest) exprPl = do
         BodyRecord r -> return (r, restS ^. rPayload . plData)
         _ ->
             do
-                addField <- rest ^. V.payload . Input.stored & makeAddField
+                addField <- rest ^. Val.payload . Input.stored & makeAddField
                 return
                     ( Record [] (RecordExtending restS) addField
                     , mempty
                     )
     fieldS <-
         convertField
-        (exprPl ^. Input.stored) (rest ^. V.payload . plValI) restRecord
+        (exprPl ^. Input.stored) (rest ^. Val.payload . plValI) restRecord
         (EntityId.ofRecExtendTag (exprPl ^. Input.entityId)) tag val
     restRecord
         & rItems %~ (fieldS:)

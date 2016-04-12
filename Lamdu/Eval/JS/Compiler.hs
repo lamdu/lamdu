@@ -32,15 +32,15 @@ import           Lamdu.Expr.Identifier (identHex)
 import qualified Lamdu.Expr.Lens as ExprLens
 import qualified Lamdu.Expr.Type as T
 import qualified Lamdu.Expr.UniqueId as UniqueId
-import           Lamdu.Expr.Val (Val(..))
 import qualified Lamdu.Expr.Val as V
+import           Lamdu.Expr.Val.Annotated (Val(..))
+import qualified Lamdu.Expr.Val.Annotated as Val
 import qualified Language.ECMAScript3.PrettyPrint as JSPP
 import qualified Language.ECMAScript3.Syntax as JSS
 import qualified Language.ECMAScript3.Syntax.CodeGen as JS
 import           Language.ECMAScript3.Syntax.QuasiQuote (jsstmt)
-import qualified Text.PrettyPrint.Leijen as Pretty
-
 import           Prelude.Compat
+import qualified Text.PrettyPrint.Leijen as Pretty
 
 newtype ValId = ValId UUID
 
@@ -502,7 +502,7 @@ compileAppliedFunc :: Monad m => Val ValId -> JSS.Expression () -> M m CodeGen
 compileAppliedFunc func arg' =
     do
         mode <- Lens.view envMode & M
-        case (func ^. V.body, mode) of
+        case (func ^. Val.body, mode) of
             (V.BCase case_, FastSilent) ->
                 compileCaseOnVar case_ (JS.var "x")
                 <&> (varinit "x" arg' :)

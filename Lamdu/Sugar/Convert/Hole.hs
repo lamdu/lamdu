@@ -38,8 +38,9 @@ import qualified Lamdu.Expr.Pure as P
 import qualified Lamdu.Expr.Pure as Pure
 import           Lamdu.Expr.Type (Type(..))
 import qualified Lamdu.Expr.UniqueId as UniqueId
-import           Lamdu.Expr.Val (Val(..))
 import qualified Lamdu.Expr.Val as V
+import           Lamdu.Expr.Val.Annotated (Val(..))
+import qualified Lamdu.Expr.Val.Annotated as Val
 import qualified Lamdu.Infer as Infer
 import           Lamdu.Infer.Unify (unify)
 import           Lamdu.Infer.Update (Update, update)
@@ -144,7 +145,7 @@ addSuggestedOptions suggesteds options
     | otherwise = nonTrivial ++ filter (not . equivalentToSuggested) options
     where
         equivalentToSuggested x =
-            any (V.alphaEq (x ^. hoVal)) (nonTrivial ^.. Lens.traverse . hoVal)
+            any (Val.alphaEq (x ^. hoVal)) (nonTrivial ^.. Lens.traverse . hoVal)
         nonTrivial = filter (Lens.nullOf (hoVal . ExprLens.valHole)) suggesteds
 
 mkOptions ::
@@ -170,7 +171,7 @@ mkOptions sugarContext mInjectedArg exprPl stored =
             , do
                 nominalTid <- nominalTids
                 f <- [V.BFromNom, V.BToNom]
-                [ V.Nom nominalTid P.hole & f & V.Val () ]
+                [ V.Nom nominalTid P.hole & f & Val () ]
             , [ P.abs "NewLambda" P.hole
               , P.recEmpty
               , P.absurd
@@ -377,9 +378,9 @@ idTranslations ::
     Val EntityId ->
     [(EntityId, EntityId)]
 idTranslations consistentExpr dest
-    | V.alphaEq (void src) (void dest)
+    | Val.alphaEq (void src) (void dest)
         = concat
-            [ pairUp V.payload
+            [ pairUp Val.payload
             , pairUp params
             , pairUpTags ExprLens._BRecExtend EntityId.ofRecExtendTag
             , pairUpTags ExprLens._BGetField EntityId.ofGetFieldTag
@@ -393,8 +394,8 @@ idTranslations consistentExpr dest
     where
         pairUpLambdaRecordParams aVal bVal =
             case (aVal, bVal) of
-            (V.Val srcType (V.BLam (V.Lam avar _)),
-              V.Val _ (V.BLam (V.Lam bvar _)))
+            (Val srcType (V.BLam (V.Lam avar _)),
+              Val _ (V.BLam (V.Lam bvar _)))
                 -- TODO: Use a _TRecord prism alternative that verifies the
                 -- record is closed
                 -> [ ( EntityId.ofLambdaTagParam avar tag
@@ -408,16 +409,16 @@ idTranslations consistentExpr dest
             where
                 recurse =
                     zipWith pairUpLambdaRecordParams
-                    (aVal ^.. V.body . Lens.folded)
-                    (bVal ^.. V.body . Lens.folded)
+                    (aVal ^.. Val.body . Lens.folded)
+                    (bVal ^.. Val.body . Lens.folded)
                     & concat
         src = consistentExpr <&> fst
         pairUp l = zip (src ^.. ExprLens.subExprs . l) (dest ^.. ExprLens.subExprs . l)
         pairUpTags prism toEntityId =
             pairUp $
-            Lens.filtered (Lens.has (V.body . prism)) . V.payload . Lens.to toEntityId
+            Lens.filtered (Lens.has (Val.body . prism)) . Val.payload . Lens.to toEntityId
         params =
-            V.body . ExprLens._BLam . V.lamParamId .
+            Val.body . ExprLens._BLam . V.lamParamId .
             Lens.to EntityId.ofLambdaParam
 
 eitherTtoListT :: Monad m => EitherT err m a -> ListT m a
@@ -462,13 +463,13 @@ applyForms empty val =
         -- A "params record" (or just a let item which is a record..)
         return val
     _ ->
-        val & V.payload . _1 . Infer.plType %%~ orderType
+        val & Val.payload . _1 . Infer.plType %%~ orderType
         <&> Suggest.fillHoles empty
         >>= Suggest.valueConversion Load.nominal empty
         <&> mapStateT ListClass.fromList
         & lift & lift & join
     where
-        inferPl = val ^. V.payload . _1
+        inferPl = val ^. Val.payload . _1
 
 holeWrapIfNeeded ::
     Monad m =>
@@ -477,7 +478,7 @@ holeWrapIfNeeded ::
 holeWrapIfNeeded holeType val =
     do
         unifyResult <-
-            unify holeType (val ^. V.payload . _1 . Infer.plType) & liftInfer
+            unify holeType (val ^. Val.payload . _1 . Infer.plType) & liftInfer
         updated <- Update.inferredVal val & liftUpdate
         case unifyResult of
             Right{} -> return updated
@@ -496,7 +497,7 @@ holeWrap resultType val =
             V.Apply func val & V.BApp
             & Val (plSameScope updatedType, emptyPl)
         plSameScope typ = inferPl & Infer.plType .~ typ
-        inferPl = val ^. V.payload . _1
+        inferPl = val ^. Val.payload . _1
         func = Val (plSameScope funcType, emptyPl) $ V.BLeaf V.LHole
         funcType = TFun (inferPl ^. Infer.plType) resultType
         emptyPl = (Nothing, NotInjected)
@@ -560,9 +561,9 @@ holeResultsInject injectedArg val =
                 ( Monoid.First (Just pl)
                 , injectedArg
                     <&> onInjectedPayload
-                    & V.payload . _2 . _2 .~ Injected
+                    & Val.payload . _2 . _2 .~ Injected
                 )
-        injectedType = injectedArg ^. V.payload . Input.inferredType
+        injectedType = injectedArg ^. Val.payload . Input.inferredType
 
 mkHoleResultValInjected ::
     Monad m =>
@@ -669,5 +670,5 @@ writeExprMStored exprIRef exprMStorePoint =
         key <- Transaction.newKey
         exprMStorePoint
             & randomizeNonStoredParamIds (genFromHashable key)
-            & V.payload . _1 .~ Just exprIRef
+            & Val.payload . _1 .~ Just exprIRef
             & ExprIRef.writeValWithStoredSubexpressions

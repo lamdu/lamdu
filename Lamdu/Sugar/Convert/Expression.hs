@@ -10,8 +10,9 @@ import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
 import qualified Lamdu.Builtins.PrimVal as PrimVal
 import qualified Lamdu.Expr.IRef as ExprIRef
-import           Lamdu.Expr.Val (Val(..))
 import qualified Lamdu.Expr.Val as V
+import           Lamdu.Expr.Val.Annotated (Val(..))
+import qualified Lamdu.Expr.Val.Annotated as Val
 import qualified Lamdu.Sugar.Convert.Apply as ConvertApply
 import qualified Lamdu.Sugar.Convert.Binder as ConvertBinder
 import qualified Lamdu.Sugar.Convert.Case as ConvertCase
@@ -54,8 +55,8 @@ convertLiteralBytes = convertLiteralCommon LiteralBytes PrimVal.Bytes
 
 convert :: (Monad m, Monoid a) => Val (Input.Payload m a) -> ConvertM m (ExpressionU m a)
 convert v =
-    v ^. V.payload
-    & case v ^. V.body of
+    v ^. Val.payload
+    & case v ^. Val.body of
       V.BLam x -> ConvertBinder.convertLam x
       V.BApp x -> ConvertApply.convert x
       V.BRecExtend x -> ConvertRecord.convertExtend x

@@ -7,8 +7,9 @@ import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import qualified Lamdu.Expr.Lens as ExprLens
 import qualified Lamdu.Expr.UniqueId as UniqueId
-import           Lamdu.Expr.Val (Val)
 import qualified Lamdu.Expr.Val as V
+import           Lamdu.Expr.Val.Annotated (Val)
+import qualified Lamdu.Expr.Val.Annotated as Val
 import           Lamdu.Sugar.Convert.Expression.Actions (addActions, addActionsWithSetToInner)
 import qualified Lamdu.Sugar.Convert.Input as Input
 import           Lamdu.Sugar.Convert.Monad (ConvertM)
@@ -42,5 +43,5 @@ convert (V.Inject tag val) exprPl =
         isNullary = Lens.has ExprLens.valRecEmpty val
         entityId = exprPl ^. Input.entityId
         (mVal, hiddenPls)
-            | isNullary = (Nothing, val ^. V.payload . Input.userData)
+            | isNullary = (Nothing, val ^. Val.payload . Input.userData)
             | otherwise = (Just val, mempty)

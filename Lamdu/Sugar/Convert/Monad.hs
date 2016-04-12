@@ -17,8 +17,8 @@ module Lamdu.Sugar.Convert.Monad
     , typeProtectTransaction, typeProtectedSetToVal, wrapOnTypeError
     ) where
 
-import           Control.Lens.Operators
 import qualified Control.Lens as Lens
+import           Control.Lens.Operators
 import           Control.Monad.Trans.Class (MonadTrans(..))
 import           Control.Monad.Trans.Reader (ReaderT, runReaderT)
 import qualified Control.Monad.Trans.Reader as Reader
@@ -32,8 +32,8 @@ import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Expr.IRef as ExprIRef
 import           Lamdu.Expr.Nominal (Nominal(..))
 import qualified Lamdu.Expr.Type as T
-import           Lamdu.Expr.Val (Val)
 import qualified Lamdu.Expr.Val as V
+import           Lamdu.Expr.Val.Annotated (Val)
 import qualified Lamdu.Infer as Infer
 import qualified Lamdu.Sugar.Convert.Input as Input
 import           Lamdu.Sugar.Internal

@@ -31,8 +31,8 @@ import qualified Lamdu.Expr.Nominal as N
 import           Lamdu.Expr.Scheme (schemeType)
 import qualified Lamdu.Expr.Type as T
 import qualified Lamdu.Expr.UniqueId as UniqueId
-import           Lamdu.Expr.Val (Val(..))
-import qualified Lamdu.Expr.Val as V
+import           Lamdu.Expr.Val.Annotated (Val(..))
+import qualified Lamdu.Expr.Val.Annotated as Val
 import qualified Lamdu.Infer as Infer
 import qualified Lamdu.Sugar.Convert.DefExpr as ConvertDefExpr
 import qualified Lamdu.Sugar.Convert.Expression as ConvertExpr
@@ -235,7 +235,7 @@ convertExpr evalRes cp val =
                 , _scCodeAnchors = cp
                 , _scScopeInfo = emptyScopeInfo
                 , _scReinferCheckRoot =
-                    reinferCheckExpression (val ^. V.payload . Property.pVal)
+                    reinferCheckExpression (val ^. Val.payload . Property.pVal)
                 , scConvertSubexpression = ConvertExpr.convert
                 }
         ConvertM.convertSubexpression valInferred & ConvertM.run context

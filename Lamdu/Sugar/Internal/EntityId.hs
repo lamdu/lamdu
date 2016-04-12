@@ -22,7 +22,7 @@ import qualified Lamdu.Expr.GenIds as GenIds
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Type as T
 import qualified Lamdu.Expr.UniqueId as UniqueId
-import           Lamdu.Expr.Val (Val)
+import           Lamdu.Expr.Val.Annotated (Val)
 import qualified Lamdu.Expr.Val as V
 import           System.Random (RandomGen)
 

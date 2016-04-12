@@ -7,18 +7,19 @@ import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import qualified Data.Map as Map
 import qualified Data.Set as Set
-import           Data.UUID.Types (UUID)
 import qualified Data.Store.Property as Property
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
+import           Data.UUID.Types (UUID)
 import qualified Lamdu.Data.Definition as Definition
 import           Lamdu.Expr.IRef (DefI)
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Lens as ExprLens
 import           Lamdu.Expr.Scheme (Scheme)
 import qualified Lamdu.Expr.Scheme as Scheme
-import           Lamdu.Expr.Val (Val(..))
 import qualified Lamdu.Expr.Val as V
+import           Lamdu.Expr.Val.Annotated (Val(..))
+import qualified Lamdu.Expr.Val.Annotated as Val
 import qualified Lamdu.Infer as Infer
 import qualified Lamdu.Sugar.Convert.Binder as ConvertBinder
 import qualified Lamdu.Sugar.Convert.Input as Input
@@ -50,7 +51,7 @@ acceptNewType defExpr defI inferredType =
         Definition.BodyExpr
             Definition.Expr
             { Definition._expr =
-                defExpr ^. Definition.expr . V.payload . Input.stored . Property.pVal
+                defExpr ^. Definition.expr . Val.payload . Input.stored . Property.pVal
             , Definition._exprType = Definition.ExportedType inferredType
             , Definition._exprUsedDefinitions = usedDefs
             }
@@ -70,7 +71,7 @@ makeExprDefTypeInfo defExpr defI =
         sugarContext <- ConvertM.readContext
         let inferContext = sugarContext ^. ConvertM.scInferContext
         let inferredType =
-                defExpr ^. Definition.expr . V.payload . Input.inferredType
+                defExpr ^. Definition.expr . Val.payload . Input.inferredType
                 & Infer.makeScheme inferContext
         case defExpr ^. Definition.exprType of
             Definition.ExportedType defType

@@ -22,8 +22,8 @@ import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Load as Load
 import           Lamdu.Expr.Scheme (Scheme(..))
 import qualified Lamdu.Expr.Scheme as Scheme
-import           Lamdu.Expr.Val (Val(..))
-import qualified Lamdu.Expr.Val as V
+import           Lamdu.Expr.Val.Annotated (Val(..))
+import qualified Lamdu.Expr.Val.Annotated as Val
 import           Lamdu.Infer (Infer)
 import qualified Lamdu.Infer as Infer
 import qualified Lamdu.Infer.Error as InferErr
@@ -81,7 +81,7 @@ loadInferInto ::
 loadInferInto pl val =
     do
         inferredVal <- loadInferScope (pl ^. Infer.plScope) val
-        let inferredType = inferredVal ^. V.payload . _1 . Infer.plType
+        let inferredType = inferredVal ^. Val.payload . _1 . Infer.plType
         liftInfer $
             do
                 unify inferredType (pl ^. Infer.plType)

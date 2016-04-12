@@ -25,7 +25,7 @@ import           InferWrappers
 import qualified Lamdu.Expr.Lens as ExprLens
 import           Lamdu.Expr.Type (Type)
 import qualified Lamdu.Expr.Type as T
-import           Lamdu.Expr.Val (Val(..))
+import           Lamdu.Expr.Val.Annotated (Val(..))
 import           Lamdu.Expr.Val.Arbitrary ()
 import           Lamdu.Infer (Infer, InferCtx(..))
 import qualified Lamdu.Infer as Infer

@@ -16,9 +16,9 @@ import qualified Data.Foldable as Foldable
 import qualified Data.Map as Map
 import           Data.Maybe.Utils (maybeToMPlus)
 import qualified Data.Set as Set
-import           Data.UUID.Types (UUID)
 import qualified Data.Store.Property as Property
 import           Data.Store.Transaction (Transaction)
+import           Data.UUID.Types (UUID)
 import qualified Lamdu.Builtins.Anchors as Builtins
 import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Expr.IRef as ExprIRef
@@ -28,8 +28,9 @@ import qualified Lamdu.Expr.Pure as P
 import qualified Lamdu.Expr.RecordVal as RecordVal
 import           Lamdu.Expr.Type (Type)
 import qualified Lamdu.Expr.UniqueId as UniqueId
-import           Lamdu.Expr.Val (Val(..))
 import qualified Lamdu.Expr.Val as V
+import           Lamdu.Expr.Val.Annotated (Val(..))
+import qualified Lamdu.Expr.Val.Annotated as Val
 import qualified Lamdu.Infer as Infer
 import           Lamdu.Infer.Unify (unify)
 import           Lamdu.Sugar.Convert.Expression.Actions (addActions)
@@ -57,7 +58,7 @@ convert app@(V.Apply funcI argI) exprPl =
                 funcS <- ConvertM.convertSubexpression funcI & lift
                 protectedSetToVal <- lift ConvertM.typeProtectedSetToVal
                 let setToFuncAction =
-                        funcI ^. V.payload . Input.stored
+                        funcI ^. Val.payload . Input.stored
                         & Property.value
                         & protectedSetToVal (exprPl ^. Input.stored)
                         <&> EntityId.ofValI
@@ -70,7 +71,7 @@ convert app@(V.Apply funcI argI) exprPl =
                     )
                     else return (funcS, argS)
         justToLeft $
-            convertAppliedCase (funcS ^. rBody) (funcI ^. V.payload) argS exprPl
+            convertAppliedCase (funcS ^. rBody) (funcI ^. Val.payload) argS exprPl
         justToLeft $ convertLabeled funcS argS argI exprPl
         lift $ convertPrefix funcS argS exprPl
 
@@ -98,7 +99,7 @@ convertLabeled funcS argS argI exprPl =
         let setToInnerExprAction =
                 case (filter (Lens.nullOf ExprLens.valHole) . map snd . Map.elems) fieldsI of
                 [x] ->
-                    x ^. V.payload . Input.stored & Property.value
+                    x ^. Val.payload . Input.stored & Property.value
                     & protectedSetToVal (exprPl ^. Input.stored)
                     <&> EntityId.ofValI
                     & SetToInnerExpr
@@ -129,9 +130,9 @@ convertPrefix funcS argS applyPl =
 
 orderedInnerHoles :: Val a -> [Val a]
 orderedInnerHoles e =
-    case e ^. V.body of
+    case e ^. Val.body of
     V.BLeaf V.LHole -> [e]
-    V.BApp (V.Apply func@(V.Val _ (V.BLeaf V.LHole)) arg) ->
+    V.BApp (V.Apply func@(Val _ (V.BLeaf V.LHole)) arg) ->
         orderedInnerHoles arg ++ [func]
     body -> Foldable.concatMap orderedInnerHoles body
 
@@ -146,7 +147,7 @@ unwrap outerP argP argExpr =
         res <- DataOps.replace outerP (Property.value argP)
         return $
             case orderedInnerHoles argExpr of
-            (x:_) -> x ^. V.payload . Input.entityId
+            (x:_) -> x ^. Val.payload . Input.entityId
             _ -> EntityId.ofValI res
 
 checkTypeMatch :: Monad m => Type -> Type -> ConvertM m Bool
@@ -208,7 +209,7 @@ convertAppliedHole (V.Apply funcI argI) argS exprPl =
     do
         guard $ Lens.has ExprLens.valHole funcI
         isTypeMatch <-
-            checkTypeMatch (argI ^. V.payload . Input.inferredType)
+            checkTypeMatch (argI ^. Val.payload . Input.inferredType)
             (exprPl ^. Input.inferredType) & lift
         let holeArg = HoleArg
                 { _haExpr =
@@ -220,7 +221,7 @@ convertAppliedHole (V.Apply funcI argI) argS exprPl =
                 , _haUnwrap =
                       if isTypeMatch
                       then unwrap (exprPl ^. Input.stored)
-                           (argI ^. V.payload . Input.stored) argI & UnwrapAction
+                           (argI ^. Val.payload . Input.stored) argI & UnwrapAction
                       else UnwrapTypeMismatch
                 }
         do
@@ -238,7 +239,7 @@ convertAppliedHole (V.Apply funcI argI) argS exprPl =
                 & return
             & lift
             <&> rBody . _BodyHole . holeMArg .~ Just holeArg
-            <&> rPayload . plData <>~ funcI ^. V.payload . Input.userData
+            <&> rPayload . plData <>~ funcI ^. Val.payload . Input.userData
             <&> rPayload . plActions . wrap .~ WrapperAlready storedEntityId
     where
         storedEntityId = exprPl ^. Input.stored & Property.value & uuidEntityId

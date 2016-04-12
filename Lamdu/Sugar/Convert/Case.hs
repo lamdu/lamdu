@@ -10,17 +10,18 @@ import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Monad (void)
 import           Data.Maybe.Utils (unsafeUnjust)
-import           Data.UUID.Types (UUID)
 import qualified Data.Store.Property as Property
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
+import           Data.UUID.Types (UUID)
 import           Lamdu.Data.Anchors (assocTagOrder)
 import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Type as T
 import qualified Lamdu.Expr.UniqueId as UniqueId
-import           Lamdu.Expr.Val (Val(..))
 import qualified Lamdu.Expr.Val as V
+import           Lamdu.Expr.Val.Annotated (Val(..))
+import qualified Lamdu.Expr.Val.Annotated as Val
 import           Lamdu.Sugar.Convert.Expression.Actions (addActions)
 import qualified Lamdu.Sugar.Convert.Input as Input
 import           Lamdu.Sugar.Convert.Monad (ConvertM)
@@ -103,7 +104,7 @@ deleteAlt stored restI restS expr exprS =
                             -- When deleting closed one alt case
                             -- we replace the case with the alt value
                             -- (unless it is a hole)
-                            return (expr ^. V.payload . plValI)
+                            return (expr ^. Val.payload . plValI)
                 CaseExtending{} -> return restI
                 >>= protectedSetToVal stored
                 <&> EntityId.ofValI
@@ -153,7 +154,7 @@ convert (V.Case tag val rest) exprPl = do
         BodyCase r -> return (r, restS ^. rPayload . plData)
         _ ->
             do
-                addAlt <- rest ^. V.payload . Input.stored & makeAddAlt
+                addAlt <- rest ^. Val.payload . Input.stored & makeAddAlt
                 return
                     ( Case
                         { _cKind = LambdaCase
@@ -166,7 +167,7 @@ convert (V.Case tag val rest) exprPl = do
                     )
     altS <-
         convertAlt
-        (exprPl ^. Input.stored) (rest ^. V.payload . plValI) restCase
+        (exprPl ^. Input.stored) (rest ^. Val.payload . plValI) restCase
         (EntityId.ofCaseTag (exprPl ^. Input.entityId)) tag val
     restCase
         & cAlts %~ (altS:)

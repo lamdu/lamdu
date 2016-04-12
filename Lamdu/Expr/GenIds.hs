@@ -30,7 +30,7 @@ import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
 import           Lamdu.Expr.Identifier (Identifier(..))
 import qualified Lamdu.Expr.Type as T
-import           Lamdu.Expr.Val (Val(..))
+import           Lamdu.Expr.Val.Annotated (Val(..))
 import qualified Lamdu.Expr.Val as V
 import           System.Random (Random, RandomGen, random)
 import qualified System.Random as Random

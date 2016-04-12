@@ -46,8 +46,8 @@ import qualified Lamdu.Expr.Load as Load
 import           Lamdu.Expr.Nominal (Nominal)
 import qualified Lamdu.Expr.Type as T
 import           Lamdu.Expr.UniqueId (ToUUID)
-import           Lamdu.Expr.Val (Val(..))
 import qualified Lamdu.Expr.Val as V
+import           Lamdu.Expr.Val.Annotated (Val(..))
 
 import           Prelude.Compat
 

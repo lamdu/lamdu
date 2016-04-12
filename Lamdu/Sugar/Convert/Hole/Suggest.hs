@@ -21,8 +21,9 @@ import qualified Lamdu.Expr.Nominal as Nominal
 import           Lamdu.Expr.Scheme (schemeType)
 import           Lamdu.Expr.Type (Type)
 import qualified Lamdu.Expr.Type as T
-import           Lamdu.Expr.Val (Val(..))
 import qualified Lamdu.Expr.Val as V
+import           Lamdu.Expr.Val.Annotated (Val(..))
+import qualified Lamdu.Expr.Val.Annotated as Val
 import           Lamdu.Infer (Context, Payload(..))
 import qualified Lamdu.Infer as Infer
 import           Lamdu.Infer.Update (update)
@@ -58,7 +59,7 @@ valueConversion loadNominal empty src =
     do
         nominals <-
             loadNominalsForType loadNominal
-            (src ^. V.payload . _1 . Infer.plType)
+            (src ^. Val.payload . _1 . Infer.plType)
         valueConversionH nominals empty src & return
 
 valueConversionH ::
@@ -73,10 +74,10 @@ valueConversionH nominals empty src =
         where
             getField (tag, typ) =
                 V.GetField src tag & V.BGetField
-                & V.Val (Payload typ (srcInferPl ^. Infer.plScope), empty)
+                & Val (Payload typ (srcInferPl ^. Infer.plScope), empty)
     _ -> valueConversionNoSplit nominals empty src
     where
-        srcInferPl = src ^. V.payload . _1
+        srcInferPl = src ^. Val.payload . _1
 
 prependOpt :: a -> StateT s [] a -> StateT s [] a
 prependOpt opt act = StateT $ \s -> (opt, s) : runStateT act s
@@ -130,11 +131,11 @@ valueConversionNoSplit nominals empty src =
                 & return
     _ -> mzero
     where
-        srcInferPl = src ^. V.payload . _1
+        srcInferPl = src ^. Val.payload . _1
         srcType = srcInferPl ^. Infer.plType
         srcScope = srcInferPl ^. Infer.plScope
         mkRes typ = Val (Payload typ srcScope, empty)
-        bodyNot f = Lens.nullOf (V.body . f) src
+        bodyNot f = Lens.nullOf (Val.body . f) src
 
 value :: Payload -> [Val Payload]
 value pl@(Payload (T.TSum comp) scope) =
@@ -186,8 +187,8 @@ suggestCaseWith sumType resultPl@(Payload resultType scope) =
 
 fillHoles :: a -> Val (Payload, a) -> Val (Payload, a)
 fillHoles empty (Val pl (V.BLeaf V.LHole)) =
-    valueNoSplit (pl ^. _1) <&> flip (,) empty & V.payload . _2 .~ (pl ^. _2)
+    valueNoSplit (pl ^. _1) <&> flip (,) empty & Val.payload . _2 .~ (pl ^. _2)
 fillHoles empty (Val pl (V.BApp (V.Apply func arg))) =
     -- Dont fill in holes inside apply funcs. This may create redexes..
     fillHoles empty arg & V.Apply func & V.BApp & Val pl
-fillHoles empty val = val & V.body . Lens.traversed %~ fillHoles empty
+fillHoles empty val = val & Val.body . Lens.traversed %~ fillHoles empty

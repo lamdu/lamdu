@@ -7,14 +7,14 @@ import           Control.Lens.Operators
 import           Control.Monad.Trans.Class (lift)
 import           Control.Monad.Trans.Either.Utils (runMatcherT, justToLeft)
 import           Data.UUID.Types (UUID)
-import           Lamdu.Expr.Val (Val(..))
 import qualified Lamdu.Expr.Val as V
+import           Lamdu.Expr.Val.Annotated (Val(..))
 import           Lamdu.Sugar.Convert.Expression.Actions (addActionsWithSetToInner)
 import qualified Lamdu.Sugar.Convert.Input as Input
-import qualified Lamdu.Sugar.Convert.Text as ConvertText
 import           Lamdu.Sugar.Convert.Monad (ConvertM)
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
 import qualified Lamdu.Sugar.Convert.TIdG as ConvertTIdG
+import qualified Lamdu.Sugar.Convert.Text as ConvertText
 import           Lamdu.Sugar.Internal
 import           Lamdu.Sugar.Types
 

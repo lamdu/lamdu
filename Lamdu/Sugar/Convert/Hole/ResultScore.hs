@@ -7,7 +7,7 @@ import           Control.Lens.Operators
 import qualified Data.Map as Map
 import qualified Lamdu.Expr.Lens as ExprLens
 import           Lamdu.Expr.Type (Type(..), Composite(..))
-import           Lamdu.Expr.Val (Val(..))
+import           Lamdu.Expr.Val.Annotated (Val(..))
 import qualified Lamdu.Expr.Val as V
 import qualified Lamdu.Infer as Infer
 

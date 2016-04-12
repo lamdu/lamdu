@@ -15,7 +15,7 @@ import           Lamdu.Expr.IRef (DefI, ValI, ValIProperty)
 import qualified Lamdu.Expr.IRef as ExprIRef
 import           Lamdu.Expr.Nominal (Nominal)
 import qualified Lamdu.Expr.Type as T
-import           Lamdu.Expr.Val (Val(..))
+import           Lamdu.Expr.Val.Annotated (Val(..))
 
 type T = Transaction
 

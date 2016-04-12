@@ -10,18 +10,19 @@ import           Control.Monad (void)
 import qualified Data.Map as Map
 import           Data.Set (Set)
 import qualified Data.Set as Set
-import           Data.UUID.Types (UUID)
 import qualified Data.Store.IRef as IRef
 import qualified Data.Store.Property as Property
 import           Data.Store.Transaction (MkProperty)
+import           Data.UUID.Types (UUID)
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Data.Ops.Subexprs as SubExprs
 import           Lamdu.Expr.IRef (DefI, ValIProperty)
 import qualified Lamdu.Expr.Lens as ExprLens
 import qualified Lamdu.Expr.UniqueId as UniqueId
-import           Lamdu.Expr.Val (Val(..))
 import qualified Lamdu.Expr.Val as V
+import           Lamdu.Expr.Val.Annotated (Val(..))
+import qualified Lamdu.Expr.Val.Annotated as Val
 import           Lamdu.Sugar.Convert.Binder.Float (makeFloatLetToOuterScope)
 import           Lamdu.Sugar.Convert.Binder.Inline (inlineLet)
 import           Lamdu.Sugar.Convert.Binder.Params (ConventionalParams(..), cpParams, convertParams, convertLamParams, mkStoredLam, makeDeleteLambda)
@@ -50,7 +51,7 @@ mkLetIActions topLevelProp redex =
             { _laSetToInner =
                 do
                     SubExprs.getVarsToHole param body
-                    body ^. V.payload & replaceWith topLevelProp & void
+                    body ^. Val.payload & replaceWith topLevelProp & void
             , _laSetToHole = DataOps.setToHole topLevelProp <&> EntityId.ofValI
             , _laFloat = float
             }
@@ -62,7 +63,7 @@ localNewExtractDestPos ::
 localNewExtractDestPos val =
     ConvertM.scScopeInfo . ConvertM.siOuter .~
     ConvertM.OuterScopeInfo
-    { _osiPos = val ^. V.payload . Input.stored & Just
+    { _osiPos = val ^. Val.payload . Input.stored & Just
     , _osiVarsUnderPos = []
     }
     & ConvertM.local
@@ -93,7 +94,7 @@ convertRedex expr redex =
             convertBinder binderKind defUUID (redexArg redex)
             & localNewExtractDestPos expr
         actions <-
-            mkLetIActions (expr ^. V.payload . Input.stored)
+            mkLetIActions (expr ^. Val.payload . Input.stored)
             (redex <&> (^. Input.stored))
         letBody <-
             makeBinderBody body
@@ -101,8 +102,8 @@ convertRedex expr redex =
             & localNewExtractDestPos expr
             & ConvertM.local (scScopeInfo . siLetItems <>~
                 Map.singleton param
-                (makeInline (expr ^. V.payload . Input.stored) redex))
-        ann <- redexArg redex ^. V.payload & makeAnnotation
+                (makeInline (expr ^. Val.payload . Input.stored) redex))
+        ann <- redexArg redex ^. Val.payload & makeAnnotation
         return Let
             { _lEntityId = defEntityId
             , _lValue =
@@ -145,7 +146,7 @@ makeBinderBody expr =
         content <- makeBinderContent expr
         BinderBody
             { _bbAddOuterLet =
-              expr ^. V.payload . Input.stored
+              expr ^. Val.payload . Input.stored
               & DataOps.redexWrap <&> EntityId.ofLambdaParam
             , _bbContent = content
             } & return

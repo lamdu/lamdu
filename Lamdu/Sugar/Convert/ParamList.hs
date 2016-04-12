@@ -4,8 +4,6 @@ module Lamdu.Sugar.Convert.ParamList
     ( ParamList, loadForLambdas
     ) where
 
-import           Prelude.Compat
-
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Monad.Trans.Class (MonadTrans(..))
@@ -20,14 +18,16 @@ import qualified Lamdu.Expr.IRef.Infer as IRefInfer
 import qualified Lamdu.Expr.Lens as ExprLens
 import           Lamdu.Expr.Type (Type)
 import qualified Lamdu.Expr.Type as T
-import           Lamdu.Expr.Val (Val(..))
 import qualified Lamdu.Expr.Val as V
+import           Lamdu.Expr.Val.Annotated (Val(..))
 import           Lamdu.Infer (Infer)
 import qualified Lamdu.Infer as Infer
 import           Lamdu.Infer.Unify (unify)
 import           Lamdu.Infer.Update (update)
 import qualified Lamdu.Infer.Update as Update
 import qualified Lamdu.Sugar.Convert.Input as Input
+
+import           Prelude.Compat
 
 type T = Transaction
 
@@ -52,7 +52,7 @@ loadForLambdas val =
             >>= traverse . Input.inferredScope %%~ update
             & Update.run & State.gets
     where
-        loadLambdaParamList (V.Val _ V.BLam {}) pl = loadUnifyParamList pl
+        loadLambdaParamList (Val _ V.BLam {}) pl = loadUnifyParamList pl
         loadLambdaParamList _ _ = return ()
 
         loadUnifyParamList pl =

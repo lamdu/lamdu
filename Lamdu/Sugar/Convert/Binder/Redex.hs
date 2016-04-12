@@ -12,8 +12,9 @@ import           Data.Map (Map)
 import           Lamdu.Eval.Results (ScopeId)
 import qualified Lamdu.Expr.Lens as ExprLens
 import           Lamdu.Expr.Type (Type)
-import           Lamdu.Expr.Val (Val(..))
 import qualified Lamdu.Expr.Val as V
+import           Lamdu.Expr.Val.Annotated (Val(..))
+import qualified Lamdu.Expr.Val.Annotated as Val
 import qualified Lamdu.Infer as Infer
 import qualified Lamdu.Sugar.Convert.Input as Input
 import           Lamdu.Sugar.Types
@@ -32,18 +33,18 @@ data Redex a = Redex
 checkForRedex :: Val (Input.Payload m a) -> Maybe (Redex (Input.Payload m a))
 checkForRedex expr = do
     V.Apply func arg <- expr ^? ExprLens.valApply
-    lam <- func ^? V.body . ExprLens._BLam
+    lam <- func ^? Val.body . ExprLens._BLam
     Just Redex
         { redexLam = lam
         , redexBodyScope =
-            func ^. V.payload . Input.evalResults
+            func ^. Val.payload . Input.evalResults
             <&> (^. Input.eAppliesOfLam)
             <&> Lens.traversed %~ getRedexApplies
         , redexArg = arg
         , redexArgType =
-            arg ^. V.payload . Input.inferred . Infer.plType
-        , redexHiddenPayloads = (^. V.payload) <$> [expr, func]
-        , redexParamRefs = func ^. V.payload . Input.varRefsOfLambda
+            arg ^. Val.payload . Input.inferred . Infer.plType
+        , redexHiddenPayloads = (^. Val.payload) <$> [expr, func]
+        , redexParamRefs = func ^. Val.payload . Input.varRefsOfLambda
         }
     where
         getRedexApplies [(scopeId, _)] = scopeId

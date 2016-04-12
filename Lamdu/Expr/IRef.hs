@@ -32,8 +32,9 @@ import qualified Lamdu.Data.Definition as Definition
 import           Lamdu.Expr.Identifier (Identifier(..))
 import           Lamdu.Expr.Nominal (Nominal)
 import qualified Lamdu.Expr.Type as T
-import           Lamdu.Expr.Val (Val(..))
 import qualified Lamdu.Expr.Val as V
+import           Lamdu.Expr.Val.Annotated (Val(..))
+import qualified Lamdu.Expr.Val.Annotated as Val
 
 import           Prelude.Compat
 
@@ -74,7 +75,7 @@ writeValBody ::
 writeValBody = Transaction.writeIRef . unValI
 
 newVal :: Monad m => Val () -> T m (ValI m)
-newVal = fmap (^. V.payload . _1) . writeValWithStoredSubexpressions . ((,) Nothing <$>)
+newVal = fmap (^. Val.payload . _1) . writeValWithStoredSubexpressions . ((,) Nothing <$>)
 
 -- Returns expression with new UUIDs
 writeVal ::
@@ -83,7 +84,7 @@ writeVal ::
     T m (Val (ValI m, a))
 writeVal iref =
     writeValWithStoredSubexpressions .
-    (V.payload . _1 .~ Just iref) .
+    (Val.payload . _1 .~ Just iref) .
     fmap ((,) Nothing)
 
 readVal :: Monad m => ValI m -> T m (Val (ValI m))
@@ -99,13 +100,13 @@ expressionBodyFrom ::
     Monad m =>
     Val (Maybe (ValI m), a) ->
     T m (V.Body (Val (ValI m, a)))
-expressionBodyFrom = traverse writeValWithStoredSubexpressions . (^. V.body)
+expressionBodyFrom = traverse writeValWithStoredSubexpressions . (^. Val.body)
 
 writeValWithStoredSubexpressions :: Monad m => Val (Maybe (ValI m), a) -> T m (Val (ValI m, a))
 writeValWithStoredSubexpressions expr =
     do
         body <- expressionBodyFrom expr
-        let bodyWithRefs = body <&> (^. V.payload . _1)
+        let bodyWithRefs = body <&> (^. Val.payload . _1)
         case mIRef of
             Just iref ->
                 Val (iref, pl) body <$
@@ -115,7 +116,7 @@ writeValWithStoredSubexpressions expr =
                     exprI <- Transaction.newIRef bodyWithRefs
                     return $ Val (ValI exprI, pl) body
     where
-        (mIRef, pl) = expr ^. V.payload
+        (mIRef, pl) = expr ^. Val.payload
 
 addProperties ::
     Monad m =>
@@ -128,7 +129,7 @@ addProperties setIRef (Val (iref, a) body) =
         f index =
             addProperties $ \newIRef ->
             body
-            <&> (^. V.payload . _1) -- convert to body of IRefs
+            <&> (^. Val.payload . _1) -- convert to body of IRefs
             & Lens.element index .~ newIRef
             & writeValBody iref
 

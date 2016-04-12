@@ -45,6 +45,7 @@ import qualified Lamdu.Eval.Results as ER
 import           Lamdu.Expr.Identifier (Identifier(..))
 import           Lamdu.Expr.Type (Tag(..))
 import qualified Lamdu.Expr.Val as V
+import           Lamdu.Expr.Val.Annotated (Val)
 import           Numeric (readHex)
 import           System.FilePath (splitFileName)
 import           System.IO (IOMode(..), Handle, hClose, hIsEOF, hPutStrLn, withFile)
@@ -53,7 +54,7 @@ import qualified System.Process as Proc
 import           Prelude.Compat
 
 data Actions srcId = Actions
-    { _aLoadGlobal :: V.Var -> IO (Def.Body (V.Val srcId))
+    { _aLoadGlobal :: V.Var -> IO (Def.Body (Val srcId))
     , -- TODO: This is currently not in use but remains here because
       -- it *should* be used for readable JS output
       _aReadAssocName :: UUID -> IO String
@@ -219,7 +220,7 @@ asyncStart ::
     Ord srcId =>
     (srcId -> UUID) -> (UUID -> srcId) ->
     MVar (Dependencies srcId) -> IORef (EvalResults srcId) ->
-    V.Val srcId -> Actions srcId ->
+    Val srcId -> Actions srcId ->
     IO ()
 asyncStart toUUID fromUUID depsMVar resultsRef val actions =
     do
@@ -282,7 +283,7 @@ whilePaused = withMVar . eDeps
 
 start ::
     Ord srcId => (srcId -> UUID) -> (UUID -> srcId) ->
-    Actions srcId -> V.Val srcId -> IO (Evaluator srcId)
+    Actions srcId -> Val srcId -> IO (Evaluator srcId)
 start toUUID fromUUID actions val =
     do
         depsMVar <-

@@ -10,7 +10,7 @@ import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Data.Map (Map)
 import qualified Lamdu.Expr.Type as T
-import           Lamdu.Expr.Val (Val(..))
+import           Lamdu.Expr.Val.Annotated (Val(..))
 import qualified Lamdu.Expr.Val as V
 
 import           Prelude.Compat

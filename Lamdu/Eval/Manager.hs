@@ -21,7 +21,6 @@ import qualified Data.Monoid as Monoid
 import           Data.Set (Set)
 import qualified Data.Set as Set
 import           Data.Store.Db (Db)
-import           Data.UUID.Types (UUID)
 import           Data.Store.IRef (IRef)
 import qualified Data.Store.IRef as IRef
 import qualified Data.Store.Property as Property
@@ -29,6 +28,7 @@ import qualified Data.Store.Rev.Change as Change
 import qualified Data.Store.Rev.Version as Version
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
+import           Data.UUID.Types (UUID)
 import qualified Lamdu.Data.Anchors as Anchors
 import           Lamdu.Data.DbLayout (DbM, ViewM)
 import qualified Lamdu.Data.DbLayout as DbLayout
@@ -39,7 +39,7 @@ import qualified Lamdu.Eval.Results as EvalResults
 import           Lamdu.Expr.IRef (DefI, ValI)
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Load as Load
-import qualified Lamdu.Expr.Val as V
+import           Lamdu.Expr.Val.Annotated (Val)
 import           Lamdu.VersionControl (getVersion)
 import qualified Lamdu.VersionControl as VersionControl
 
@@ -100,7 +100,7 @@ getResults evaluator =
 
 loadDef ::
     Evaluator -> DefI ViewM ->
-    IO (Def.Definition (V.Val (ExprIRef.ValIProperty ViewM)) (DefI ViewM))
+    IO (Def.Definition (Val (ExprIRef.ValIProperty ViewM)) (DefI ViewM))
 loadDef evaluator = runViewTransactionInIO (eDb evaluator) . Load.def
 
 readAssocName :: Evaluator -> UUID -> IO String
@@ -131,7 +131,7 @@ evalActions evaluator =
 replIRef :: IRef ViewM (ValI ViewM)
 replIRef = DbLayout.repl DbLayout.codeIRefs
 
-startBG :: Eval.Actions (ValI m) -> V.Val (ValI m) -> IO (Eval.Evaluator (ValI m))
+startBG :: Eval.Actions (ValI m) -> Val (ValI m) -> IO (Eval.Evaluator (ValI m))
 startBG =
     Eval.start
     (IRef.uuid . ExprIRef.unValI)

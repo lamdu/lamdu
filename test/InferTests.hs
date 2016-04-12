@@ -10,7 +10,7 @@ import           InferCombinators
 import           InferWrappers
 import qualified Lamdu.Expr.Pure as P
 import qualified Lamdu.Expr.Type as T
-import           Lamdu.Expr.Val (Val(..))
+import           Lamdu.Expr.Val.Annotated (Val(..))
 import qualified Lamdu.Infer.Error as InferErr
 import           Test.Framework (testGroup)
 import           Test.Framework.Providers.QuickCheck2 (testProperty)

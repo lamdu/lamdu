@@ -18,6 +18,7 @@ import qualified Lamdu.Eval.Results as ER
 import           Lamdu.Expr.IRef (ValIProperty)
 import           Lamdu.Expr.Type (Type)
 import qualified Lamdu.Expr.Val as V
+import           Lamdu.Expr.Val.Annotated (Val(..))
 import qualified Lamdu.Infer as Infer
 import           Lamdu.Sugar.EntityId (EntityId)
 
@@ -50,19 +51,19 @@ inferredScope = inferred . Infer.plScope
 emptyEvalResults :: EvalResultsForExpr
 emptyEvalResults = EvalResultsForExpr Map.empty Map.empty
 
-preparePayloads :: V.Val (EntityId, [EntityId] -> pl) -> V.Val pl
+preparePayloads :: Val (EntityId, [EntityId] -> pl) -> Val pl
 preparePayloads =
     snd . go
     where
-        go :: V.Val (EntityId, [EntityId] -> pl) -> (Map V.Var [EntityId], V.Val pl)
-        go (V.Val (x, mkPayload) body) =
+        go :: Val (EntityId, [EntityId] -> pl) -> (Map V.Var [EntityId], Val pl)
+        go (Val (x, mkPayload) body) =
             ( childrenVars
               & case body of
                 V.BLeaf (V.LVar var) -> Lens.at var <>~ Just [x]
                 V.BLam (V.Lam var _) -> Lens.at var .~ Nothing
                 _ -> id
             , b <&> snd
-              & V.Val
+              & Val
                 ( case body of
                   V.BLam (V.Lam var _) -> childrenVars ^. Lens.at var . Lens._Just
                   _ -> []

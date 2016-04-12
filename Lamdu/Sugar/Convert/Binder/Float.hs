@@ -15,8 +15,9 @@ import           Lamdu.Expr.IRef (ValI, ValIProperty)
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Lens as ExprLens
 import qualified Lamdu.Expr.Type as T
-import           Lamdu.Expr.Val (Val(..))
 import qualified Lamdu.Expr.Val as V
+import           Lamdu.Expr.Val.Annotated (Val(..))
+import qualified Lamdu.Expr.Val.Annotated as Val
 import qualified Lamdu.Sugar.Convert.Binder.Params as Params
 import           Lamdu.Sugar.Convert.Binder.Redex (Redex(..))
 import           Lamdu.Sugar.Convert.Binder.Types (BinderKind(..))
@@ -46,7 +47,7 @@ isVarAlwaysApplied var =
     where
         go isApplied (Val _ (V.BLeaf (V.LVar v))) | v == var = isApplied
         go _ (Val _ (V.BApp (V.Apply f a))) = go True f && go False a
-        go _ v = all (go False) (v ^.. V.body . Lens.traverse)
+        go _ v = all (go False) (v ^.. Val.body . Lens.traverse)
 
 convertLetToLam ::
     Monad m => V.Var -> Redex (ValIProperty m) -> T m (NewLet m)
@@ -116,7 +117,7 @@ addFieldToLetParamsRecord fieldTags varToReplace letLam storedLam =
 addLetParam ::
     Monad m => V.Var -> Redex (ValIProperty m) -> T m (NewLet m)
 addLetParam varToReplace redex =
-    case redexArg redex ^. V.body of
+    case redexArg redex ^. Val.body of
     V.BLam lam | isVarAlwaysApplied param body ->
         case redexArgType redex of
         T.TFun (T.TRecord composite) _
@@ -126,7 +127,7 @@ addLetParam varToReplace redex =
                 (fields <&> fst) varToReplace (redexLam redex) storedLam
         _ -> convertLetParamToRecord varToReplace (redexLam redex) storedLam
         where
-            storedLam = Params.StoredLam lam (redexArg redex ^. V.payload)
+            storedLam = Params.StoredLam lam (redexArg redex ^. Val.payload)
     _ -> convertLetToLam varToReplace redex
     where
         V.Lam param body = redexLam redex
@@ -134,7 +135,7 @@ addLetParam varToReplace redex =
 sameLet :: Redex (ValIProperty m) -> NewLet m
 sameLet redex =
     NewLet
-    { nlIRef = redexArg redex ^. V.payload & Property.value
+    { nlIRef = redexArg redex ^. Val.payload & Property.value
     , nlMVarToTags = Nothing
     }
 
@@ -149,7 +150,7 @@ floatLetToOuterScope topLevelProp redex ctx =
             [] -> sameLet redex & return
             [x] -> addLetParam x redex
             _ -> error "multiple osiVarsUnderPos not expected!?"
-        redexLam redex ^. V.lamResult . V.payload . Property.pVal
+        redexLam redex ^. V.lamResult . Val.payload . Property.pVal
             & Property.set topLevelProp
         resultEntity <-
             case outerScopeInfo ^. ConvertM.osiPos of

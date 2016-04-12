@@ -24,11 +24,11 @@ import qualified Data.Map as Map
 import           Data.Maybe.Utils (unsafeUnjust)
 import           Data.Set (Set)
 import qualified Data.Set as Set
-import           Data.UUID.Types (UUID)
 import           Data.Store.Property (Property)
 import qualified Data.Store.Property as Property
 import           Data.Store.Transaction (Transaction, MkProperty)
 import qualified Data.Store.Transaction as Transaction
+import           Data.UUID.Types (UUID)
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Data.Ops.Subexprs as SubExprs
@@ -41,8 +41,9 @@ import qualified Lamdu.Expr.Lens as ExprLens
 import           Lamdu.Expr.Type (Type)
 import qualified Lamdu.Expr.Type as T
 import qualified Lamdu.Expr.UniqueId as UniqueId
-import           Lamdu.Expr.Val (Val(..))
 import qualified Lamdu.Expr.Val as V
+import           Lamdu.Expr.Val.Annotated (Val(..))
+import qualified Lamdu.Expr.Val.Annotated as Val
 import           Lamdu.Sugar.Convert.Binder.Types (BinderKind(..))
 import qualified Lamdu.Sugar.Convert.Input as Input
 import           Lamdu.Sugar.Convert.Monad (ConvertM)
@@ -191,7 +192,7 @@ mkCpScopesOfLam x =
     <&> (fmap . map) BinderParamScopeId
 
 getFieldOnVar :: Lens.Traversal' (Val t) (V.Var, T.Tag)
-getFieldOnVar = V.body . ExprLens._BGetField . inGetField
+getFieldOnVar = Val.body . ExprLens._BGetField . inGetField
     where
         inGetField f (V.GetField (Val pl (V.BLeaf (V.LVar v))) t) =
             f (v, t) <&> pack pl
@@ -354,7 +355,7 @@ removeCallsToVar :: Monad m => V.Var -> Val (ValIProperty m) -> T m ()
 removeCallsToVar funcVar val =
     do
         SubExprs.onMatchingSubexprs changeRecursion
-            ( V.body . ExprLens._BApp . V.applyFunc . ExprLens.valVar
+            ( Val.body . ExprLens._BApp . V.applyFunc . ExprLens.valVar
             . Lens.only funcVar
             ) val
         wrapUnappliedUsesOfVar funcVar val
@@ -383,7 +384,7 @@ makeDeleteLambda binderKind (StoredLam (V.Lam paramVar lamBodyStored) lambdaProp
                         removeCallsToVar
                         (redexLam ^. V.lamParamId) (redexLam ^. V.lamResult)
                     BinderKindLambda -> return ()
-                let lamBodyI = Property.value (lamBodyStored ^. V.payload)
+                let lamBodyI = Property.value (lamBodyStored ^. Val.payload)
                 _ <- protectedSetToVal lambdaProp lamBodyI
                 return ParamDelResultDelVar
 
@@ -533,12 +534,12 @@ isParamAlwaysUsedWithGetField (V.Lam param body) =
     go body
     where
         go val =
-            case val ^. V.body of
+            case val ^. Val.body of
             V.BLeaf (V.LVar v) | v == param -> False
             V.BGetField (V.GetField r _) -> checkChildren r
             _ -> checkChildren val
             where
-                checkChildren x = all go (x ^.. V.body . Lens.traverse)
+                checkChildren x = all go (x ^.. Val.body . Lens.traverse)
 
 convertLamParams ::
     (Monad m, Monoid a) =>
@@ -598,7 +599,7 @@ convertNonEmptyParams binderKind lambda lambdaPl =
                     tagsInInnerScope =
                         lambda ^.. V.lamResult . ExprLens.subExprs
                         . Lens.filtered (Lens.has ExprLens.valAbs)
-                        . V.payload
+                        . Val.payload
                         . Input.inferredType . ExprLens._TFun . _1
                         . ExprLens._TRecord . ExprLens.compositeTags
                         & Set.fromList
@@ -623,7 +624,7 @@ convertBinderToFunction ::
     T m (ParamAddResult, ValI m)
 convertBinderToFunction mkArg binderKind val =
     do
-        (newParam, newValI) <- DataOps.lambdaWrap (val ^. V.payload)
+        (newParam, newValI) <- DataOps.lambdaWrap (val ^. Val.payload)
         case binderKind of
             BinderKindDef defI ->
                 convertVarToCalls mkArg (ExprIRef.globalId defI) val
@@ -659,17 +660,17 @@ convertParams ::
     , Val (Input.Payload m a)
     )
 convertParams binderKind expr =
-    case expr ^. V.body of
+    case expr ^. Val.body of
     V.BLam lambda ->
         do
             params <-
-                convertNonEmptyParams binderKind lambda (expr ^. V.payload)
+                convertNonEmptyParams binderKind lambda (expr ^. Val.payload)
                 -- The lambda disappears here, so add its id to the first
                 -- param's hidden ids:
                 <&> cpParams . _VarParam . fpHiddenIds <>~ hiddenIds
                 <&> cpParams . _FieldParams . Lens.ix 0 . _2 . fpHiddenIds <>~ hiddenIds
             return (params, lambda ^. V.lamResult)
         where
-              hiddenIds = [expr ^. V.payload . Input.entityId]
+              hiddenIds = [expr ^. Val.payload . Input.entityId]
     _ ->
         return (convertEmptyParams binderKind expr, expr)

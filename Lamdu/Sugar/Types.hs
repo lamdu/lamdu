@@ -100,8 +100,8 @@ import qualified Data.ByteString as SBS
 import           Data.CurAndPrev (CurAndPrev)
 import           Data.Functor.Identity (Identity(..))
 import           Data.Map (Map)
-import           Data.UUID.Types (UUID)
 import           Data.Store.Transaction (Transaction, MkProperty, Property)
+import           Data.UUID.Types (UUID)
 import           Lamdu.Data.Anchors (BinderParamScopeId(..), bParamScopeId)
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Definition as Definition
@@ -110,6 +110,7 @@ import           Lamdu.Expr.Scheme (Scheme)
 import           Lamdu.Expr.Type (Type)
 import qualified Lamdu.Expr.Type as T
 import qualified Lamdu.Expr.Val as V
+import           Lamdu.Expr.Val.Annotated (Val)
 import           Lamdu.Sugar.Internal.EntityId (EntityId)
 
 import           Prelude.Compat
@@ -244,7 +245,7 @@ data HoleResult name m = HoleResult
 
 data ScopeGetVar name m = ScopeGetVar
     { _sgvGetVar :: GetVar name m
-    , _sgvVal :: V.Val ()
+    , _sgvVal :: Val ()
     }
 
 data TIdG name = TIdG
@@ -253,7 +254,7 @@ data TIdG name = TIdG
     }
 
 data HoleOption name m = HoleOption
-    { _hoVal :: V.Val ()
+    { _hoVal :: Val ()
     , _hoSugaredBaseExpr :: T m (Expression name m ())
     , -- A group in the hole results based on this option
       _hoResults :: ListT (T m) (HoleResultScore, T m (HoleResult name m))

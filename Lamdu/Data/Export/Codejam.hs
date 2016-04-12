@@ -32,8 +32,9 @@ import           Lamdu.Eval.Results (EvalResults)
 import qualified Lamdu.Eval.Results as EV
 import           Lamdu.Expr.IRef (ValI)
 import qualified Lamdu.Expr.IRef as ExprIRef
-import           Lamdu.Expr.Val (Val)
 import qualified Lamdu.Expr.Val as V
+import           Lamdu.Expr.Val.Annotated (Val)
+import qualified Lamdu.Expr.Val.Annotated as Val
 
 import           Prelude.Compat
 
@@ -111,7 +112,7 @@ exportFancy evalResults =
         let replResult =
                 evalResults
                 ^? EV.erExprValues
-                . Lens.ix (repl ^. V.payload)
+                . Lens.ix (repl ^. Val.payload)
                 . Lens.ix EV.topLevelScopeId
                 <&> formatResult
                 & fromMaybe "<NO RESULT>"

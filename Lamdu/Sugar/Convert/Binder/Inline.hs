@@ -11,8 +11,9 @@ import qualified Data.Store.Property as Property
 import           Data.Store.Transaction (Transaction)
 import           Lamdu.Expr.IRef (ValIProperty, ValI)
 import qualified Lamdu.Expr.IRef as ExprIRef
-import           Lamdu.Expr.Val (Val(..))
 import qualified Lamdu.Expr.Val as V
+import           Lamdu.Expr.Val.Annotated (Val(..))
+import qualified Lamdu.Expr.Val.Annotated as Val
 import           Lamdu.Sugar.Convert.Binder.Redex (Redex(..))
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import           Lamdu.Sugar.Types
@@ -20,7 +21,7 @@ import           Lamdu.Sugar.Types
 import           Prelude.Compat
 
 redexes :: Val a -> ([(V.Var, Val a)], Val a)
-redexes (Val _ (V.BApp (V.Apply (V.Val _ (V.BLam lam)) arg))) =
+redexes (Val _ (V.BApp (V.Apply (Val _ (V.BLam lam)) arg))) =
     redexes (lam ^. V.lamResult)
     & _1 %~ (:) (lam ^. V.lamParamId, arg)
 redexes v = ([], v)
@@ -39,7 +40,7 @@ inlineLetH var arg body =
     go body & uncurry wrapWithRedexes
     where
         go (Val stored b) =
-            case (b, arg ^. V.body) of
+            case (b, arg ^. Val.body) of
             (V.BLeaf (V.LVar v), _) | v == var -> redexes arg
             (V.BApp (V.Apply (Val _ (V.BLeaf (V.LVar v))) a)
               , V.BLam (V.Lam param lamBody))
@@ -60,11 +61,11 @@ inlineLetH var arg body =
 
 cursorDest :: Val a -> a
 cursorDest val =
-    case val ^. V.body of
+    case val ^. Val.body of
     V.BLam lam -> lam ^. V.lamResult
     _ -> val
     & redexes
-    & (^. _2 . V.payload)
+    & (^. _2 . Val.payload)
 
 inlineLet ::
     Monad m => ValIProperty m -> Redex (ValI m) -> Transaction m EntityId
@@ -74,6 +75,6 @@ inlineLet topLevelProp redex =
     & inlineLetH (redexLam redex ^. V.lamParamId) (redexArg redex <&> Just)
     <&> flip (,) ()
     & ExprIRef.writeValWithStoredSubexpressions
-    <&> (^. V.payload . _1)
+    <&> (^. Val.payload . _1)
     >>= Property.set topLevelProp
     <&> const (cursorDest (redexArg redex <&> EntityId.ofValI))

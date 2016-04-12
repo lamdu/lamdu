@@ -14,8 +14,8 @@ import           Data.Store.Transaction (Transaction)
 import qualified Lamdu.Data.Ops as DataOps
 import           Lamdu.Expr.IRef (ValIProperty)
 import qualified Lamdu.Expr.Lens as ExprLens
-import           Lamdu.Expr.Val (Val(..))
 import qualified Lamdu.Expr.Val as V
+import           Lamdu.Expr.Val.Annotated (Val(..))
 
 type T = Transaction
 

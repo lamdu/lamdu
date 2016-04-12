@@ -50,7 +50,7 @@ import           Lamdu.Expr.Scheme (Scheme(..))
 import           Lamdu.Expr.Type (Type, Composite)
 import qualified Lamdu.Expr.Type as T
 import           Lamdu.Expr.TypeVars (TypeVars(..))
-import           Lamdu.Expr.Val (Val(..))
+import           Lamdu.Expr.Val.Annotated (Val(..))
 import qualified Lamdu.Expr.Val as V
 
 import           Prelude.Compat

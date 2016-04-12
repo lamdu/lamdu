@@ -20,6 +20,8 @@ import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Lens as ExprLens
 import qualified Lamdu.Expr.UniqueId as UniqueId
 import qualified Lamdu.Expr.Val as V
+import qualified Lamdu.Expr.Val.Annotated as Val
+import           Lamdu.Expr.Val.Annotated (Val)
 import qualified Lamdu.Sugar.Convert.Input as Input
 import           Lamdu.Sugar.Convert.Monad (ConvertM)
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
@@ -91,13 +93,13 @@ mkActions stored =
         addEntityId valI = (UniqueId.toUUID valI, EntityId.ofValI valI)
 
 makeSetToInner ::
-    Monad m => Input.Payload m a -> V.Val (Input.Payload m b) ->
+    Monad m => Input.Payload m a -> Val (Input.Payload m b) ->
     ConvertM m (SetToInnerExpr m)
 makeSetToInner outerPl inner
     | Lens.nullOf ExprLens.valHole inner =
         do
             protectedSetToVal <- ConvertM.typeProtectedSetToVal
-            inner ^. V.payload . Input.stored
+            inner ^. Val.payload . Input.stored
                 & Property.value
                 & protectedSetToVal (outerPl ^. Input.stored)
                 <&> EntityId.ofValI
@@ -120,7 +122,7 @@ addActions exprPl body =
 
 addActionsWithSetToInner ::
     Monad m =>
-    Input.Payload m a -> V.Val (Input.Payload m b) ->
+    Input.Payload m a -> Val (Input.Payload m b) ->
     BodyU m a -> ConvertM m (ExpressionU m a)
 addActionsWithSetToInner exprPl inner body =
     do
