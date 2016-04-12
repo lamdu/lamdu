@@ -354,7 +354,7 @@ encodeValBody body =
     case body <&> encodeVal of
     V.BApp (V.Apply func arg) ->
         HashMap.fromList ["applyFunc" .= func, "applyArg" .= arg]
-    V.BAbs (V.Lam (V.Var varId) res) ->
+    V.BLam (V.Lam (V.Var varId) res) ->
         HashMap.fromList ["lamVar" .= encodeIdent varId, "lamBody" .= res]
     V.BGetField (V.GetField reco tag) ->
         HashMap.fromList ["getFieldRec" .= reco, "getFieldName" .= encodeTagId tag]
@@ -376,7 +376,7 @@ decodeValBody obj =
     jsum'
     [ V.Apply <$> obj .: "applyFunc" <*> obj .: "applyArg" <&> V.BApp
     , V.Lam <$> (obj .: "lamVar" >>= lift . decodeIdent <&> V.Var) <*> (obj .: "lamBody")
-      <&> V.BAbs
+      <&> V.BLam
     , V.GetField <$> obj .: "getFieldRec" <*> (obj .: "getFieldName" >>= lift . decodeTagId)
       <&> V.BGetField
     , V.RecExtend

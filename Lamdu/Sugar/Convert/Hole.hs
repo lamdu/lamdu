@@ -393,8 +393,8 @@ idTranslations consistentExpr dest
     where
         pairUpLambdaRecordParams aVal bVal =
             case (aVal, bVal) of
-            (V.Val srcType (V.BAbs (V.Lam avar _)),
-              V.Val _ (V.BAbs (V.Lam bvar _)))
+            (V.Val srcType (V.BLam (V.Lam avar _)),
+              V.Val _ (V.BLam (V.Lam bvar _)))
                 -- TODO: Use a _TRecord prism alternative that verifies the
                 -- record is closed
                 -> [ ( EntityId.ofLambdaTagParam avar tag
@@ -417,7 +417,7 @@ idTranslations consistentExpr dest
             pairUp $
             Lens.filtered (Lens.has (V.body . prism)) . V.payload . Lens.to toEntityId
         params =
-            V.body . ExprLens._BAbs . V.lamParamId .
+            V.body . ExprLens._BLam . V.lamParamId .
             Lens.to EntityId.ofLambdaParam
 
 eitherTtoListT :: Monad m => EitherT err m a -> ListT m a
@@ -431,7 +431,7 @@ applyForms ::
     Monad m =>
     a -> Val (Infer.Payload, a) ->
     StateT Infer.Context (ListT (T m)) (Val (Infer.Payload, a))
-applyForms _ v@(Val _ V.BAbs {}) = return v
+applyForms _ v@(Val _ V.BLam {}) = return v
 applyForms empty val =
     case inferPl ^. Infer.plType of
     TVar tv

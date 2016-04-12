@@ -56,7 +56,7 @@ convert :: (Monad m, Monoid a) => Val (Input.Payload m a) -> ConvertM m (Express
 convert v =
     v ^. V.payload
     & case v ^. V.body of
-      V.BAbs x -> ConvertBinder.convertLam x
+      V.BLam x -> ConvertBinder.convertLam x
       V.BApp x -> ConvertApply.convert x
       V.BRecExtend x -> ConvertRecord.convertExtend x
       V.BGetField x -> ConvertGetField.convert x

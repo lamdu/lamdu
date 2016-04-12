@@ -110,7 +110,7 @@ exportNominal nomId =
         & withVisited visitedNominals nomId
 
 exportSubexpr :: Val (ValI ViewM) -> Export ()
-exportSubexpr (Val lamI (V.BAbs (V.Lam lamVar _))) =
+exportSubexpr (Val lamI (V.BLam (V.Lam lamVar _))) =
     do
         mName <- readAssocName lamVar & trans
         mParamList <- Transaction.getP (Anchors.assocFieldParamList lamI) & trans

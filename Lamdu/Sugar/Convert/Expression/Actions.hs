@@ -65,7 +65,7 @@ mkExtractToLet outerScope stored =
                 do
                     newParam <- ExprIRef.newVar
                     lamI <-
-                        V.Lam newParam extractPosI & V.BAbs
+                        V.Lam newParam extractPosI & V.BLam
                         & ExprIRef.newValBody
                     getVarI <- V.LVar newParam & V.BLeaf & ExprIRef.newValBody
                     Property.set stored getVarI

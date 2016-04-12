@@ -117,7 +117,7 @@ addLetParam ::
     Monad m => V.Var -> Redex (ValIProperty m) -> T m (NewLet m)
 addLetParam varToReplace redex =
     case redexArg redex ^. V.body of
-    V.BAbs lam | isVarAlwaysApplied param body ->
+    V.BLam lam | isVarAlwaysApplied param body ->
         case redexArgType redex of
         T.TFun (T.TRecord composite) _
             | Just fields <- composite ^? orderedClosedFlatComposite

@@ -79,7 +79,7 @@ lambdaWrap exprP =
     do
         newParam <- ExprIRef.newVar
         newExprI <-
-            Property.value exprP & V.Lam newParam & V.BAbs
+            Property.value exprP & V.Lam newParam & V.BLam
             & ExprIRef.newValBody
         Property.set exprP newExprI
         return (newParam, newExprI)
@@ -94,7 +94,7 @@ redexWrapWithGivenParam param newValueI exprP =
             (ExprIRef.writeValBody newLambdaI . mkLam)
             & return
     where
-        mkLam = V.BAbs . V.Lam param
+        mkLam = V.BLam . V.Lam param
 
 redexWrap :: Monad m => ValIProperty m -> T m V.Var
 redexWrap exprP =
@@ -146,7 +146,7 @@ addListItem exprP =
         newListI <-
             ExprIRef.writeValTree $
             v $ V.BToNom $ V.Nom Builtins.streamTid $
-            v $ V.BAbs $ V.Lam newParam $
+            v $ V.BLam $ V.Lam newParam $
             v $ V.BInject $ V.Inject Builtins.consTag $
             recEx Builtins.headTag (ValTreeLeaf newItemI) $
             recEx Builtins.tailTag (ValTreeLeaf (Property.value exprP))
@@ -238,5 +238,5 @@ newIdentityLambda =
     do
         paramId <- ExprIRef.newVar
         getVar <- V.LVar paramId & V.BLeaf & ExprIRef.newValBody
-        lamI <- V.Lam paramId getVar & V.BAbs & ExprIRef.newValBody
+        lamI <- V.Lam paramId getVar & V.BLam & ExprIRef.newValBody
         return (lamI, getVar)

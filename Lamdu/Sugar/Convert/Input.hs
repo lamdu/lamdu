@@ -59,12 +59,12 @@ preparePayloads =
             ( childrenVars
               & case body of
                 V.BLeaf (V.LVar var) -> Lens.at var <>~ Just [x]
-                V.BAbs (V.Lam var _) -> Lens.at var .~ Nothing
+                V.BLam (V.Lam var _) -> Lens.at var .~ Nothing
                 _ -> id
             , b <&> snd
               & V.Val
                 ( case body of
-                  V.BAbs (V.Lam var _) -> childrenVars ^. Lens.at var . Lens._Just
+                  V.BLam (V.Lam var _) -> childrenVars ^. Lens.at var . Lens._Just
                   _ -> []
                   & mkPayload
                 )

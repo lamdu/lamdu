@@ -165,7 +165,7 @@ lambda ::
     V.Var -> TypeStream ->
     (ExprWithResumptions -> ExprWithResumptions) -> ExprWithResumptions
 lambda name paramType mkResult =
-    mkExprWithResumptions (V.BAbs (V.Lam name result))
+    mkExprWithResumptions (V.BLam (V.Lam name result))
     (T.TFun <$> paramType <*> exprTypeStream result)
     where
         result = mkResult $ mkExprWithResumptions (V.BLeaf (V.LVar name)) paramType

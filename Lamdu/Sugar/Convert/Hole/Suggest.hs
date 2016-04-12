@@ -104,7 +104,7 @@ valueConversionNoSplit nominals empty src =
         & mapStateT
             (either (error "Infer of FromNom on non-opaque Nominal shouldn't fail") return)
         >>= valueConversionNoSplit nominals empty
-    T.TFun argType resType | bodyNot ExprLens._BAbs ->
+    T.TFun argType resType | bodyNot ExprLens._BLam ->
         if Lens.has (ExprLens.valLeafs . ExprLens._LHole) arg
             then
                 -- If the suggested argument has holes in it
@@ -156,7 +156,7 @@ valueNoSplit pl@(Payload typ scope) =
     case typ of
     T.TFun _ r ->
         -- TODO: add var to the scope?
-        valueNoSplit (Payload r scope) & V.Lam "var" & V.BAbs
+        valueNoSplit (Payload r scope) & V.Lam "var" & V.BLam
     _ -> V.BLeaf V.LHole
     & Val pl
 

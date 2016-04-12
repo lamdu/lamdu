@@ -52,7 +52,7 @@ loadForLambdas val =
             >>= traverse . Input.inferredScope %%~ update
             & Update.run & State.gets
     where
-        loadLambdaParamList (V.Val _ V.BAbs {}) pl = loadUnifyParamList pl
+        loadLambdaParamList (V.Val _ V.BLam {}) pl = loadUnifyParamList pl
         loadLambdaParamList _ _ = return ()
 
         loadUnifyParamList pl =

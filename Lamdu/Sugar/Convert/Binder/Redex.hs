@@ -32,7 +32,7 @@ data Redex a = Redex
 checkForRedex :: Val (Input.Payload m a) -> Maybe (Redex (Input.Payload m a))
 checkForRedex expr = do
     V.Apply func arg <- expr ^? ExprLens.valApply
-    lam <- func ^? V.body . ExprLens._BAbs
+    lam <- func ^? V.body . ExprLens._BLam
     Just Redex
         { redexLam = lam
         , redexBodyScope =

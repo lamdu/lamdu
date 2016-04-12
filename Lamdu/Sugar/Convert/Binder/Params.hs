@@ -660,7 +660,7 @@ convertParams ::
     )
 convertParams binderKind expr =
     case expr ^. V.body of
-    V.BAbs lambda ->
+    V.BLam lambda ->
         do
             params <-
                 convertNonEmptyParams binderKind lambda (expr ^. V.payload)

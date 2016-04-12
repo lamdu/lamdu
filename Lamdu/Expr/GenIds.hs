@@ -112,13 +112,13 @@ randomizeParamIdsG preNG gen initMap convertPL =
                 newGen <- lift $ state ngSplit
                 Val (convertPL newGen parMap s) <$>
                     case v of
-                    V.BAbs (V.Lam oldParamId body) ->
+                    V.BLam (V.Lam oldParamId body) ->
                         do
                             newParamId <- lift . state $ makeName oldParamId s
                             go body
                                 & Reader.local (Map.insert oldParamId newParamId)
                                 <&> V.Lam newParamId
-                                <&> V.BAbs
+                                <&> V.BLam
                     V.BLeaf (V.LVar par) ->
                         pure $ V.BLeaf $ V.LVar $ fromMaybe par $ Map.lookup par parMap
                     x@V.BLeaf {}      -> traverse go x

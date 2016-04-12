@@ -20,7 +20,7 @@ import           Lamdu.Sugar.Types
 import           Prelude.Compat
 
 redexes :: Val a -> ([(V.Var, Val a)], Val a)
-redexes (Val _ (V.BApp (V.Apply (V.Val _ (V.BAbs lam)) arg))) =
+redexes (Val _ (V.BApp (V.Apply (V.Val _ (V.BLam lam)) arg))) =
     redexes (lam ^. V.lamResult)
     & _1 %~ (:) (lam ^. V.lamParamId, arg)
 redexes v = ([], v)
@@ -30,7 +30,7 @@ wrapWithRedexes rs body =
     foldr wrapWithRedex body rs
     where
         wrapWithRedex (v, val) b =
-            V.Apply (Val Nothing (V.BAbs (V.Lam v b))) val
+            V.Apply (Val Nothing (V.BLam (V.Lam v b))) val
             & V.BApp
             & Val Nothing
 
@@ -42,14 +42,14 @@ inlineLetH var arg body =
             case (b, arg ^. V.body) of
             (V.BLeaf (V.LVar v), _) | v == var -> redexes arg
             (V.BApp (V.Apply (Val _ (V.BLeaf (V.LVar v))) a)
-              , V.BAbs (V.Lam param lamBody))
+              , V.BLam (V.Lam param lamBody))
               | v == var ->
                 redexes lamBody
                 & _1 %~ (:) (param, a)
-            (V.BAbs (V.Lam param lamBody), _) ->
+            (V.BLam (V.Lam param lamBody), _) ->
                 ( []
                 , go lamBody & uncurry wrapWithRedexes
-                  & V.Lam param & V.BAbs & Val stored
+                  & V.Lam param & V.BLam & Val stored
                 )
             _ ->
                 ( r ^.. Lens.traverse . _1 . Lens.traverse
@@ -61,7 +61,7 @@ inlineLetH var arg body =
 cursorDest :: Val a -> a
 cursorDest val =
     case val ^. V.body of
-    V.BAbs lam -> lam ^. V.lamResult
+    V.BLam lam -> lam ^. V.lamResult
     _ -> val
     & redexes
     & (^. _2 . V.payload)

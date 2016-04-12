@@ -507,7 +507,7 @@ compileAppliedFunc func arg' =
                 compileCaseOnVar case_ (JS.var "x")
                 <&> (varinit "x" arg' :)
                 <&> codeGenFromLamStmts
-            (V.BAbs (V.Lam v res), FastSilent) ->
+            (V.BLam (V.Lam v res), FastSilent) ->
                 do
                     (vId, lamStmts) <- compileVal res <&> codeGenLamStmts & withLocalVar v
                     return CodeGen
@@ -545,7 +545,7 @@ compileVal (Val valId body) =
     V.BLeaf leaf                -> compileLeaf leaf valId
     V.BApp x                    -> compileApply x    >>= maybeLog
     V.BGetField x               -> compileGetField x >>= maybeLog
-    V.BAbs x                    -> compileLambda x valId
+    V.BLam x                    -> compileLambda x valId
     V.BInject x                 -> compileInject x   >>= maybeLog
     V.BRecExtend x              -> compileRecExtend x
     V.BCase x                   -> compileCase x
