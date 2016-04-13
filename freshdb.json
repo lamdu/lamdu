@@ -10177,12 +10177,17 @@
                             "nomId": "42493a666c6f61740000000000000000"
                         },
                         "2083692d67b98b1d0c7849f5dc572d1a": {
-                            "nomParams": {
-                                "42493a76616c00000000000000000000": {
-                                    "typeVar": "6e32"
-                                }
+                            "funcParam": {
+                                "record": {}
                             },
-                            "nomId": "42493a73747265616d00000000000000"
+                            "funcResult": {
+                                "nomParams": {
+                                    "42493a76616c00000000000000000000": {
+                                        "typeVar": "6e32"
+                                    }
+                                },
+                                "nomId": "42493a73747265616d00000000000000"
+                            }
                         }
                     }
                 },
@@ -10249,19 +10254,12 @@
                                                                     },
                                                                     "applyArg": {
                                                                         "extendVal": {
-                                                                            "applyFunc": {
-                                                                                "getFieldName": "42493a7461696c000000000000000000",
-                                                                                "id": "bde47057-73f9-4a2a-97cf-3c1c3e398826",
-                                                                                "getFieldRec": {
-                                                                                    "var": "a66b35f041a73d727c43398906482dcf",
-                                                                                    "id": "6fda854f-6339-424d-a07d-404fbda7955e"
-                                                                                }
-                                                                            },
-                                                                            "applyArg": {
-                                                                                "recEmpty": {},
-                                                                                "id": "44a95cb8-4696-472b-bbb0-4cce90e43df9"
-                                                                            },
-                                                                            "id": "648a533f-978a-4366-a1d3-e94fd47abdd3"
+                                                                            "getFieldName": "42493a7461696c000000000000000000",
+                                                                            "id": "bde47057-73f9-4a2a-97cf-3c1c3e398826",
+                                                                            "getFieldRec": {
+                                                                                "var": "a66b35f041a73d727c43398906482dcf",
+                                                                                "id": "6fda854f-6339-424d-a07d-404fbda7955e"
+                                                                            }
                                                                         },
                                                                         "extendTag": "2083692d67b98b1d0c7849f5dc572d1a",
                                                                         "id": "d0575ce2-5394-453a-bc05-354c6996e93c",
@@ -10342,12 +10340,19 @@
                                         "fromNomId": "42493a73747265616d00000000000000",
                                         "id": "91d59473-ce37-4558-9752-d26905a93327",
                                         "fromNomVal": {
-                                            "getFieldName": "2083692d67b98b1d0c7849f5dc572d1a",
-                                            "id": "6742f594-077b-43fe-b364-375a71bfdfe2",
-                                            "getFieldRec": {
-                                                "var": "d5b4366458e54c53bd0a0e44418ea0a4",
-                                                "id": "513db9cb-1404-4eb4-8acd-8e937fbddd19"
-                                            }
+                                            "applyFunc": {
+                                                "getFieldName": "2083692d67b98b1d0c7849f5dc572d1a",
+                                                "id": "6742f594-077b-43fe-b364-375a71bfdfe2",
+                                                "getFieldRec": {
+                                                    "var": "d5b4366458e54c53bd0a0e44418ea0a4",
+                                                    "id": "513db9cb-1404-4eb4-8acd-8e937fbddd19"
+                                                }
+                                            },
+                                            "applyArg": {
+                                                "recEmpty": {},
+                                                "id": "f1b546c1-625e-45be-bfee-7ef6c47761b7"
+                                            },
+                                            "id": "5ade3209-4bbb-4957-b31c-619eaa1bbbd5"
                                         }
                                     },
                                     "id": "52fa7aeb-8b2d-4779-b705-10c998b93a40"
