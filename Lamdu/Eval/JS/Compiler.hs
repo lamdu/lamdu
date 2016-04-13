@@ -125,16 +125,33 @@ declLog depth =
       ] & JS.returns
     ]
 
-isReservedName :: String -> Bool
-isReservedName name =
-    name `elem`
+-- | Taken from http://www.w3schools.com/js/js_reserved.asp
+jsReservedKeywords :: [String]
+jsReservedKeywords =
+    [ "abstract", "arguments", "boolean", "break", "byte"
+    , "case", "catch", "char", "class", "const", "continue"
+    , "debugger", "default", "delete", "do", "double", "else"
+    , "enum", "eval", "export", "extends", "false", "final"
+    , "finally", "float", "for", "function", "goto", "if"
+    , "implements", "import", "in", "instanceof", "int", "interface"
+    , "let", "long", "native", "new", "null"
+    , "package", "private", "protected", "public", "return"
+    , "short", "static", "super", "switch", "synchronized"
+    , "this", "throw", "throws", "transient", "true"
+    , "try", "typeof", "var", "void", "volatile"
+    , "while", "with", "yield"
+    ]
+
+jsReservedNamespace :: [String]
+jsReservedNamespace =
     [ "x", "repl"
     , "Object", "console", "repl"
     , "log", "scopeCounter", "rts"
-    , "while", "if", "switch", "case", "default"
-    , "var", "return", "function", "throw"
-    , "null"
     ]
+
+isReservedName :: String -> Bool
+isReservedName name =
+    name `elem` (jsReservedNamespace ++ jsReservedKeywords)
     || any (`isPrefixOf` name)
     [ "global_"
     , "local_"
