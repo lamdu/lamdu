@@ -127,22 +127,22 @@ declLog depth =
       ] & JS.returns
     ]
 
--- | Taken from http://www.w3schools.com/js/js_reserved.asp
+-- | Taken from http://www.ecma-international.org/ecma-262/6.0/#sec-keywords
 jsReservedKeywords :: Set String
 jsReservedKeywords =
     Set.fromList
-    [ "abstract", "arguments", "boolean", "break", "byte"
-    , "case", "catch", "char", "class", "const", "continue"
-    , "debugger", "default", "delete", "do", "double", "else"
-    , "enum", "eval", "export", "extends", "false", "final"
-    , "finally", "float", "for", "function", "goto", "if"
-    , "implements", "import", "in", "instanceof", "int", "interface"
-    , "let", "long", "native", "new", "null"
-    , "package", "private", "protected", "public", "return"
-    , "short", "static", "super", "switch", "synchronized"
-    , "this", "throw", "throws", "transient", "true"
-    , "try", "typeof", "var", "void", "volatile"
-    , "while", "with", "yield"
+    [
+      "break"		, "do"		, "in"		, "typeof"
+    , "case"		, "else"	, "instanceof"	, "var"
+    , "catch"		, "export"	, "new"		, "void"
+    , "class"		, "extends"	, "return"	, "while"
+    , "const"		, "finally"	, "super"	, "with"
+    , "continue"	, "for"		, "switch"	, "yield"
+    , "debugger"	, "function"	, "this"	, "default"
+    , "if"		, "throw"	, "delete"	, "import"
+    , "try"		, "let"		, "static"	, "enum"
+    , "await"		, "implements"	, "package",	, "protected"
+    , "interface"	, "private"	, "public"
     ]
 
 jsReservedNamespace :: Set String
