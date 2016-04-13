@@ -7,7 +7,7 @@ License-file:        LICENSE
 Author:              Eyal Lotem, Yair Chuchem
 Maintainer:          eyal.lotem@gmail.com, yairchu@gmail.com
 Category:            Graphics
-Build-type:          Custom
+Build-type:          Simple
 Extra-source-files:  test/*.hs test/Makefile Makefile VerifyConfig.hs
 Cabal-version:       >= 1.8
 Data-files:          fonts/DejaVuSans.ttf
