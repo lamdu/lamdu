@@ -131,18 +131,17 @@ declLog depth =
 jsReservedKeywords :: Set String
 jsReservedKeywords =
     Set.fromList
-    [
-      "break"		, "do"		, "in"		, "typeof"
-    , "case"		, "else"	, "instanceof"	, "var"
-    , "catch"		, "export"	, "new"		, "void"
-    , "class"		, "extends"	, "return"	, "while"
-    , "const"		, "finally"	, "super"	, "with"
-    , "continue"	, "for"		, "switch"	, "yield"
-    , "debugger"	, "function"	, "this"	, "default"
-    , "if"		, "throw"	, "delete"	, "import"
-    , "try"		, "let"		, "static"	, "enum"
-    , "await"		, "implements"	, "package",	, "protected"
-    , "interface"	, "private"	, "public"
+    [ "break"    , "do"        , "in"        , "typeof"
+    , "case"     , "else"      , "instanceof", "var"
+    , "catch"    , "export"    , "new"       , "void"
+    , "class"    , "extends"   , "return"    , "while"
+    , "const"    , "finally"   , "super"     , "with"
+    , "continue" , "for"       , "switch"    , "yield"
+    , "debugger" , "function"  , "this"      , "default"
+    , "if"       , "throw"     , "delete"    , "import"
+    , "try"      , "let"       , "static"    , "enum"
+    , "await"    , "implements", "package"   , "protected"
+    , "interface", "private"   , "public"
     ]
 
 jsReservedNamespace :: Set String
