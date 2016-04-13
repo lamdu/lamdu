@@ -22,6 +22,8 @@ import           Data.Default () -- instances
 import           Data.List (isPrefixOf)
 import           Data.Map (Map)
 import qualified Data.Map as Map
+import           Data.Set (Set)
+import qualified Data.Set as Set
 import           Data.UUID.Types (UUID)
 import qualified Data.UUID.Utils as UUIDUtils
 import qualified Lamdu.Builtins.Anchors as Builtins
@@ -126,8 +128,9 @@ declLog depth =
     ]
 
 -- | Taken from http://www.w3schools.com/js/js_reserved.asp
-jsReservedKeywords :: [String]
+jsReservedKeywords :: Set String
 jsReservedKeywords =
+    Set.fromList
     [ "abstract", "arguments", "boolean", "break", "byte"
     , "case", "catch", "char", "class", "const", "continue"
     , "debugger", "default", "delete", "do", "double", "else"
@@ -142,16 +145,20 @@ jsReservedKeywords =
     , "while", "with", "yield"
     ]
 
-jsReservedNamespace :: [String]
+jsReservedNamespace :: Set String
 jsReservedNamespace =
+    Set.fromList
     [ "x", "repl"
     , "Object", "console", "repl"
     , "log", "scopeCounter", "rts"
     ]
 
+jsAllReserved :: Set String
+jsAllReserved = jsReservedNamespace `mappend` jsReservedKeywords
+
 isReservedName :: String -> Bool
 isReservedName name =
-    name `elem` (jsReservedNamespace ++ jsReservedKeywords)
+    name `Set.member` jsAllReserved
     || any (`isPrefixOf` name)
     [ "global_"
     , "local_"
