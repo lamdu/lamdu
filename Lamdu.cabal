@@ -17,7 +17,6 @@ Data-files:          fonts/DejaVuSans.ttf
                    , fonts/Purisa.ttf
                    , config.json
                    , freshdb.json
-                   , submodules/node/node
                    , js/rts.js
                    , js/rtsConfig.js
 
@@ -162,6 +161,7 @@ Executable lamdu
                   , hashable
                   , language-ecmascript >= 0.17
                   , lens
+                  , nodejs-exec
                   , random
                   , split
                   , text

@@ -49,6 +49,7 @@ import           Lamdu.Expr.Val.Annotated (Val)
 import           Numeric (readHex)
 import           System.FilePath (splitFileName)
 import           System.IO (IOMode(..), Handle, hClose, hIsEOF, hPutStrLn, withFile)
+import qualified System.NodeJS.Path as NodeJS
 import qualified System.Process as Proc
 
 import           Prelude.Compat
@@ -224,7 +225,7 @@ asyncStart ::
     IO ()
 asyncStart toUUID fromUUID depsMVar resultsRef val actions =
     do
-        nodeExePath <- DataFile.getPath "submodules/node/node"
+        nodeExePath <- NodeJS.path
         rtsPath <- DataFile.getPath "js/rts.js" <&> fst . splitFileName
         withProcess (nodeRepl nodeExePath rtsPath) $
             \(Just stdin, Just stdout, Nothing, handle) ->

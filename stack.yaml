@@ -6,6 +6,9 @@ packages:
 - location:
     git: https://github.com/lamdu/language-ecmascript
     commit: 2c71e37ad055163a9926ee53e5297146de9b435c
+- location:
+    git: https://github.com/lamdu/nodejs-exec
+    commit: 52fce18ec3cffac1104b04677cf038eff9629a7c
 
 resolver: lts-5.12
 extra-deps:
