@@ -7,15 +7,12 @@ packages:
     git: https://github.com/lamdu/language-ecmascript
     commit: 2c71e37ad055163a9926ee53e5297146de9b435c
 
-resolver: lts-5.10
+resolver: lts-5.12
 extra-deps:
 - FTGL-2.1
-- TraceUtils-0.1.0.2
 - bitmap-0.0.2
 - bitmap-opengl-0.0.1.5
 - stb-image-0.2.1
-- text-1.2.2.0
-- GLFW-b-1.4.8.0
 - bindings-GLFW-3.1.2.0
 - uuid-aeson-0.1.0.0
 

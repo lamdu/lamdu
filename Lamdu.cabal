@@ -107,7 +107,6 @@ Library
                   , OpenGL
                   , QuickCheck >= 2.8 && < 2.9
                   , StateVar
-                  , TraceUtils
                   , aeson >= 0.6.2.1 && < 0.12
                   , base >= 4
                   , base-compat >= 0.8.2 && < 0.10
@@ -145,7 +144,6 @@ Executable lamdu
                   , Lamdu
                   , List >= 0.5.1
                   , OpenGL
-                  , TraceUtils
                   , aeson
                   , aeson-pretty
                   , base >= 4.7
