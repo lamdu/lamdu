@@ -206,12 +206,10 @@ makeScopeNavEdit binder myId curCursor =
         let mkArrow (txt, mScopeId) =
                 ExpressionGui.makeLabel txt (Widget.toAnimId myId)
                 & ExprGuiM.localEnv
-                ( WE.setTextSizeColor
-                    (Config.navArrowsSize config)
-                    ( case mScopeId of
-                        Nothing -> Config.disabledColor config
-                        Just _ -> Config.grammarColor config
-                    )
+                ( case mScopeId of
+                  Nothing -> Config.disabledColor config
+                  Just _ -> Config.grammarColor config
+                  & WE.setTextColor
                 )
         let Config.Eval{..} = Config.eval config
         settings <- ExprGuiM.readSettings

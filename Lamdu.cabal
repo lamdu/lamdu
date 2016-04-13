@@ -72,7 +72,7 @@ Library
                   , Graphics.UI.Bottle.Main.Image
                   , Graphics.UI.Bottle.ModKey
                   , Graphics.UI.Bottle.Rect
-                  , Graphics.UI.Bottle.SizedFont
+                  , Graphics.UI.Bottle.Font
                   , Graphics.UI.Bottle.View
                   , Graphics.UI.Bottle.Widget
                   , Graphics.UI.Bottle.WidgetId
@@ -114,7 +114,7 @@ Library
                   , directory >= 1.0.1.1
                   , either
                   , filepath >= 1.1
-                  , graphics-drawingcombinators >= 1.5.1.2 && < 1.6
+                  , graphics-drawingcombinators >= 1.6
                   , hashable
                   , lens >= 4.1
                   , leveldb-haskell >= 0.6
@@ -154,7 +154,7 @@ Executable lamdu
                   , directory
                   , either
                   , filepath
-                  , graphics-drawingcombinators >= 1.5.1.2
+                  , graphics-drawingcombinators
                   , hashable
                   , lamdu-calculus
                   , language-ecmascript >= 0.17

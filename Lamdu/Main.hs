@@ -46,7 +46,7 @@ import           Lamdu.DataFile (getLamduDir)
 import qualified Lamdu.Eval.Manager as EvalManager
 import           Lamdu.Eval.Results (EvalResults)
 import           Lamdu.Expr.IRef (ValI)
-import           Lamdu.Font (Fonts(..))
+import           Lamdu.Font (FontSize, Fonts(..))
 import qualified Lamdu.Font as Font
 import           Lamdu.GUI.CodeEdit.Settings (Settings(..))
 import qualified Lamdu.GUI.CodeEdit.Settings as Settings
@@ -67,11 +67,11 @@ import           Prelude.Compat
 
 type T = Transaction
 
-defaultFonts :: Fonts FilePath
+defaultFonts :: Fonts (FontSize, FilePath)
 defaultFonts =
-    Fonts defaultFontName defaultFontName defaultFontName defaultFontName
+    Fonts defaultFont defaultFont defaultFont defaultFont
     where
-        defaultFontName = "fonts/Purisa.ttf"
+        defaultFont = (16, "fonts/Purisa.ttf")
 
 main :: IO ()
 main =
@@ -261,14 +261,14 @@ loopWhileException _ act = loop 0
 
 prependConfigPath ::
     ConfigSampler.Sample Config ->
-    Fonts FilePath ->
-    Fonts FilePath
+    Fonts (FontSize, FilePath) ->
+    Fonts (FontSize, FilePath)
 prependConfigPath sample =
-    fmap (dir </>)
+    Lens.mapped . _2 %~ (dir </>)
     where
         dir = FilePath.takeDirectory (ConfigSampler.sFilePath sample)
 
-absFontsOfSample :: ConfigSampler.Sample Config -> Fonts FilePath
+absFontsOfSample :: ConfigSampler.Sample Config -> Fonts (FontSize, FilePath)
 absFontsOfSample sample =
     prependConfigPath sample $ Config.fonts $ ConfigSampler.sValue sample
 

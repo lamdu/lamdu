@@ -14,10 +14,9 @@ import qualified Data.Aeson.Types as Aeson
 import           Data.Vector.Vector2 (Vector2(..))
 import           GHC.Generics (Generic)
 import qualified Graphics.DrawingCombinators as Draw
-import           Graphics.DrawingCombinators.Utils ()
 import qualified Graphics.UI.Bottle.Animation as Anim
 import           Graphics.UI.Bottle.ModKey (ModKey(..))
-import           Lamdu.Font (Fonts(..))
+import           Lamdu.Font (FontSize, Fonts(..))
 import qualified Lamdu.GUI.VersionControl.Config as VersionControl
 
 data Layers = Layers
@@ -43,7 +42,6 @@ layerInterval Layers{..} = layerMax - layerMin
 
 data Help = Help
     { helpTextColor :: Draw.Color
-    , helpTextSize :: Double
     , helpInputDocColor :: Draw.Color
     , helpBGColor :: Draw.Color
     , helpKeys :: [ModKey]
@@ -159,7 +157,7 @@ instance Aeson.ToJSON LiteralText where
 instance Aeson.FromJSON LiteralText
 
 data Config = Config
-    { fonts :: Fonts FilePath
+    { fonts :: Fonts (FontSize, FilePath)
     , layers :: Layers
     , help :: Help
     , zoom :: Zoom
@@ -179,8 +177,6 @@ data Config = Config
 
     , backgroundColor :: Draw.Color
     , baseColor :: Draw.Color
-    , baseTextSize :: Double
-    , navArrowsSize :: Double
     , spaceWidth :: Double
 
     , quitKeys :: [ModKey]

@@ -468,8 +468,7 @@ grammarLabel text animId =
     do
         config <- ExprGuiM.readConfig
         makeLabel text animId
-            & ExprGuiM.localEnv
-                (WE.setTextSizeColor (Config.baseTextSize config) (Config.grammarColor config))
+            & ExprGuiM.localEnv (WE.setTextColor (Config.grammarColor config))
 
 addValBG :: Monad m => Widget.Id -> Widget f -> ExprGuiM m (Widget f)
 addValBG = addValBGWithColor Config.valFrameBGColor

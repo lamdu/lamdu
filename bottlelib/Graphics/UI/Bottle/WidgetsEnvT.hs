@@ -14,10 +14,8 @@ module Graphics.UI.Bottle.WidgetsEnvT
     , assignCursor, assignCursorPrefix
 
     , readTextStyle, setTextStyle
-    , setTextSizeColor, setTextColor
+    , setTextColor
     ) where
-
-import           Prelude.Compat
 
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
@@ -28,10 +26,11 @@ import           Data.Maybe (isJust)
 import qualified Graphics.DrawingCombinators as Draw
 import           Graphics.UI.Bottle.Animation (AnimId)
 import qualified Graphics.UI.Bottle.Animation as Anim
-import qualified Graphics.UI.Bottle.SizedFont as SizedFont
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.TextEdit as TextEdit
 import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
+
+import           Prelude.Compat
 
 data Env = Env
     { _envCursor :: Widget.Id
@@ -107,13 +106,6 @@ assignCursorPrefix ::
     Monad m => Widget.Id -> (AnimId -> Widget.Id) ->
     WidgetEnvT m a -> WidgetEnvT m a
 assignCursorPrefix x y = localEnv $ envAssignCursorPrefix x y
-
-setTextSizeColor :: Double -> Draw.Color -> Env -> Env
-setTextSizeColor textSize textColor env =
-    env
-    & envTextStyle . TextEdit.sTextViewStyle %~
-        (TextView.styleFont . SizedFont.fontSize .~ textSize) .
-        (TextView.styleColor .~ textColor)
 
 localEnv :: Monad m => (Env -> Env) -> WidgetEnvT m a -> WidgetEnvT m a
 localEnv = (widgetEnvT %~) . Reader.local

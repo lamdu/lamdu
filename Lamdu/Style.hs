@@ -8,7 +8,6 @@ module Lamdu.Style
 
 import qualified Graphics.DrawingCombinators as Draw
 import           Graphics.UI.Bottle.Main.Animation (AnimConfig(..))
-import           Graphics.UI.Bottle.SizedFont (SizedFont(..))
 import qualified Graphics.UI.Bottle.Widgets.EventMapDoc as EventMapDoc
 import qualified Graphics.UI.Bottle.Widgets.FlyNav as FlyNav
 import qualified Graphics.UI.Bottle.Widgets.TextEdit as TextEdit
@@ -39,7 +38,7 @@ help font Config.Help{..} =
     { EventMapDoc.configStyle =
         TextView.Style
         { TextView._styleColor = helpTextColor
-        , TextView._styleFont = SizedFont font helpTextSize
+        , TextView._styleFont = font
         , TextView._styleUnderline = Nothing
         }
     , EventMapDoc.configInputDocColor = helpInputDocColor
@@ -53,7 +52,7 @@ textEdit config color font =
     { TextEdit._sTextViewStyle =
       TextView.Style
       { TextView._styleColor = color
-      , TextView._styleFont = SizedFont font (Config.baseTextSize config)
+      , TextView._styleFont = font
       , TextView._styleUnderline = Nothing
       }
     , TextEdit._sCursorColor = TextEdit.defaultCursorColor

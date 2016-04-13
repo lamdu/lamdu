@@ -14,7 +14,7 @@ See the [Main Page](http://lamdu.org/)
 requires [brew](http://brew.sh/) and [git](https://git-scm.com/):
 
 ```shell
-brew install ftgl leveldb haskell-stack
+brew install leveldb haskell-stack
 git clone --recursive https://github.com/lamdu/lamdu
 cd lamdu
 stack setup
@@ -28,7 +28,7 @@ stack install
 requires [stack](https://github.com/commercialhaskell/stack/releases)
 ```shell
 sudo apt-get update -qq
-sudo apt-get install git libftgl-dev libleveldb-dev libglfw-dev libxrandr-dev libxi-dev libxcursor-dev libxinerama-dev -yq
+sudo apt-get install git libleveldb-dev libglfw-dev libxrandr-dev libxi-dev libxcursor-dev libxinerama-dev -yq
 git clone --recursive https://github.com/lamdu/lamdu
 cd lamdu
 stack setup
@@ -41,7 +41,7 @@ stack install
 
 requires [stack](https://github.com/commercialhaskell/stack/releases)
 ```shell
-sudo dnf install -y gcc gcc-c++ gmp-devel ftgl-devel libXrandr-devel libXi-devel libXcursor-devel mesa-libGL-devel libGLU-devel libXinerama-devel leveldb-devel
+sudo dnf install -y gcc gcc-c++ gmp-devel libXrandr-devel libXi-devel libXcursor-devel mesa-libGL-devel libGLU-devel libXinerama-devel leveldb-devel
 git clone --recursive https://github.com/lamdu/lamdu
 cd lamdu
 stack setup
@@ -52,7 +52,7 @@ stack install
 
 requires [stack](https://github.com/commercialhaskell/stack/releases)
 ```shell
-sudo pacman -S ftgl leveldb glfw libxrandr libxi libxcursor libxinerama
+sudo pacman -S leveldb glfw libxrandr libxi libxcursor libxinerama
 git clone --recursive https://github.com/lamdu/lamdu
 cd lamdu
 stack setup

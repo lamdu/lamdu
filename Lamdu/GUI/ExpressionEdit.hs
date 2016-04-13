@@ -6,7 +6,7 @@ module Lamdu.GUI.ExpressionEdit
 import           Control.Lens.Operators
 import           Control.Lens.Tuple
 import qualified Data.List as List
-import qualified Graphics.UI.Bottle.SizedFont as SizedFont
+import qualified Graphics.UI.Bottle.Font as Font
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.TextEdit as TextEdit
 import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
@@ -39,7 +39,7 @@ shrinkIfHigherThanLine w =
             <&> (^. TextEdit.sTextViewStyle . TextView.styleFont)
         config <- ExprGuiM.readConfig <&> Config.hole
         let ratio =
-                (SizedFont.textHeight sizedFont /
+                (Font.height sizedFont /
                   w ^. ExpressionGui.egWidget . Widget.height)
                 ** realToFrac (Config.holeResultInjectedScaleExponent config)
         return $

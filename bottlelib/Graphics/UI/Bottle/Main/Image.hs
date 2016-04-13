@@ -13,8 +13,6 @@ module Graphics.UI.Bottle.Main.Image
 import           Control.Lens.Operators
 import           Data.Vector.Vector2 (Vector2(..))
 import           Data.IORef (newIORef, readIORef, writeIORef)
-import           Data.Monoid ((<>))
-import           Graphics.DrawingCombinators ((%%))
 import           Graphics.DrawingCombinators.Utils (Image)
 import qualified Graphics.DrawingCombinators.Utils as DrawUtils
 import           Graphics.Rendering.OpenGL.GL (($=))
@@ -76,14 +74,13 @@ mainLoop win imageHandlers =
                             maybe (return ResultNone) (draw winSize)
         eventLoop win handleEvents
     where
-        draw winSize@(Vector2 winSizeX winSizeY) image =
+        draw (Vector2 winSizeX winSizeY) image =
             do
                 GL.viewport $=
                     (GL.Position 0 0,
                      GL.Size (round winSizeX) (round winSizeY))
-                image
-                    & (DrawUtils.translate (Vector2 (-1) 1) <>
-                       DrawUtils.scale (Vector2 (2/winSizeX) (-2/winSizeY)) %%)
-                    & let Vector2 glPixelRatioX glPixelRatioY = winSize / 2 -- GL range is -1..1
-                      in DrawUtils.clearRenderSized (glPixelRatioX, glPixelRatioY)
+                GL.matrixMode $= GL.Projection
+                GL.loadIdentity
+                GL.ortho 0 winSizeX winSizeY 0 (-1) 1
+                DrawUtils.clearRender image
                 return ResultDidDraw

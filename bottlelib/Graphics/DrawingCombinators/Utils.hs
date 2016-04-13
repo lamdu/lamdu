@@ -4,12 +4,12 @@ module Graphics.DrawingCombinators.Utils
     ( Image
     , square
     , TextSize(..)
-    , textHeight, textSize
+    , Draw.fontHeight, textSize
     , textLinesSize
     , drawText, drawTextLines
     , backgroundColor
     , scale, translate
-    , Draw.clearRenderSized
+    , Draw.clearRender
     ) where
 
 import           Control.Applicative (liftA2)
@@ -48,9 +48,6 @@ translate (Vector2 x y) = Draw.translate (roundR x, roundR y)
 square :: Image
 square = void $ Draw.convexPoly [ (0, 0), (1, 0), (1, 1), (0, 1) ]
 
-textHeight :: Draw.R
-textHeight = 2
-
 data TextSize a = TextSize
     { bounding :: a
     , advance :: a
@@ -80,37 +77,32 @@ textWidth font str =
         adv = Draw.textAdvance font str
 
 textSize :: Draw.Font -> String -> TextSize (Vector2 Draw.R)
-textSize font str = (`Vector2` textHeight) <$> textWidth font str
+textSize font str = (`Vector2` Draw.fontHeight font) <$> textWidth font str
 
-drawText :: Draw.Font -> String -> Image
-drawText font str =
-    str
-    & Draw.text font
+{-# NOINLINE drawText #-}
+drawText :: Draw.Font -> Draw.TextAttrs -> String -> Image
+drawText font textAttrs str =
+    Draw.text font str textAttrs
     & void
     -- Text is normally at height -0.5..1.5.  We move it to be -textHeight..0
-    & (translate (Vector2 0 (-textHeight - Draw.fontDescender font)) %%)
+    & (translate (Vector2 0 (-Draw.fontHeight font - Draw.fontDescender font)) %%)
     -- We want to reverse it so that higher y is down, and it is also
     -- moved to 0..2
     & (scale (Vector2 1 (-1)) %%)
 
-textLinesHeight :: [String] -> Draw.R
-textLinesHeight = (textHeight *) . genericLength
+textLinesHeight :: Draw.Font -> [String] -> Draw.R
+textLinesHeight font = (Draw.fontHeight font *) . genericLength
 
 textLinesWidth :: Draw.Font -> [String] -> TextSize Draw.R
 textLinesWidth font = fmap maximum . traverse (textWidth font)
 
 textLinesSize :: Draw.Font -> [String] -> TextSize (Vector2 Draw.R)
 textLinesSize font textLines =
-    (`Vector2` textLinesHeight textLines) <$>
+    (`Vector2` textLinesHeight font textLines) <$>
     textLinesWidth font textLines
 
-drawTextLines :: Draw.Font -> [String] -> Image
-drawTextLines font =
-    foldr (step . drawText font) mempty
-    where
-        step lineImage restImage =
-            mappend lineImage $
-            translate (Vector2 0 textHeight) %% restImage
+drawTextLines :: Draw.Font -> Draw.TextAttrs -> [String] -> Image
+drawTextLines font attrs = drawText font attrs . unlines
 
 backgroundColor :: Draw.Color -> Vector2 Draw.R -> Image -> Image
 backgroundColor color size image =

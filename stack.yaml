@@ -8,7 +8,16 @@ packages:
     commit: 21c8a22a10a820660850fb7d68b928c29af80cb5
 - location:
     git: https://github.com/lamdu/graphics-drawingcombinators
-    commit: 2d8f9efb610dcf69c28ae9fbb8799565cef10612
+    commit: eb09149fbd633f050d86a323f844fc756a0c8be0
+- location:
+    git: https://github.com/Peaker/freetype2
+    commit: b6b3f82b9f8acb925d8f36ecc1520832ad256444
+- location:
+    git: https://github.com/Peaker/bindings-freetype-gl
+    commit: 098317dd81452dab1a280bc6f84d5124138f9b19
+- location:
+    git: https://github.com/Peaker/FreetypeGL
+    commit: c22b9e62bcdd568768a68ded09d9618cff8647ad
 - location:
     git: https://github.com/lamdu/language-ecmascript
     commit: 2c71e37ad055163a9926ee53e5297146de9b435c
@@ -16,7 +25,6 @@ packages:
     git: https://github.com/lamdu/nodejs-exec
     commit: 52fce18ec3cffac1104b04677cf038eff9629a7c
 extra-deps:
-- FTGL-2.1
 - bitmap-0.0.2
 - bitmap-opengl-0.0.1.5
 - stb-image-0.2.1

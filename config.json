@@ -1,9 +1,9 @@
 {
     "fonts": {
-        "fontDefault": "fonts/DejaVuSans.ttf",
-        "fontFancy": "fonts/DejaVuSerif.ttf",
-        "fontAutoName": "fonts/DejaVuSerif-Italic.ttf",
-        "fontMono": "fonts/DejaVuSansMono.ttf"
+        "fontDefault": [18, "fonts/DejaVuSans.ttf"],
+        "fontFancy": [18, "fonts/DejaVuSerif.ttf"],
+        "fontAutoName": [18, "fonts/DejaVuSerif-Italic.ttf"],
+        "fontMono": [18, "fonts/DejaVuSansMono.ttf"]
     },
     "animationTimePeriodSec": 0.11,
     "animationRemainInPeriod": 0.2,
@@ -675,7 +675,6 @@
             "Key'Down"
         ]
     ],
-    "baseTextSize": 13,
     "navArrowsSize": 10,
     "spaceWidth": 10,
     "wrapKeys": [

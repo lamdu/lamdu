@@ -1,6 +1,6 @@
 {-# LANGUAGE NoImplicitPrelude, DeriveGeneric, DeriveFunctor, DeriveFoldable, DeriveTraversable #-}
 module Lamdu.Font
-    ( Fonts(..), with
+    ( FontSize, Fonts(..), with
     ) where
 
 import qualified Control.Exception as E
@@ -26,15 +26,17 @@ instance Aeson.ToJSON a => Aeson.ToJSON (Fonts a) where
     toJSON = Aeson.genericToJSON Aeson.defaultOptions
 instance Aeson.FromJSON a => Aeson.FromJSON (Fonts a)
 
-withPath :: E.Exception e => (e -> IO a) -> FilePath -> (Draw.Font -> IO a) -> IO a
-withPath catchError path action =
+type FontSize = Float
+
+withPath :: E.Exception e => (e -> IO a) -> FontSize -> FilePath -> (Draw.Font -> IO a) -> IO a
+withPath catchError size path action =
     do
         exists <- Directory.doesFileExist path
         if exists
-            then Draw.withFontCatch catchError path action
+            then Draw.withFontCatch catchError size path action
             else
                 let err = MissingFont $ path ++ " does not exist!"
                 in E.throwIO err `E.catch` catchError
 
-with :: E.Exception e => (e -> IO a) -> Fonts FilePath -> (Fonts Draw.Font -> IO a) -> IO a
-with catchError = runContT . traverse (ContT . withPath catchError)
+with :: E.Exception e => (e -> IO a) -> Fonts (FontSize, FilePath) -> (Fonts Draw.Font -> IO a) -> IO a
+with catchError = runContT . traverse (ContT . uncurry (withPath catchError))

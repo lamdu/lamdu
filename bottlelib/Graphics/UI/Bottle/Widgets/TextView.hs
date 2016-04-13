@@ -1,6 +1,6 @@
 {-# LANGUAGE NoImplicitPrelude, BangPatterns, RecordWildCards, TemplateHaskell #-}
 module Graphics.UI.Bottle.Widgets.TextView
-    ( SizedFont.Underline(..), SizedFont.underlineColor, SizedFont.underlineWidth
+    ( Font.Underline(..), Font.underlineColor, Font.underlineWidth
     , Style(..), styleColor, styleFont, styleUnderline
     , lineHeight
 
@@ -25,21 +25,21 @@ import           Graphics.UI.Bottle.Animation (AnimId, Size)
 import qualified Graphics.UI.Bottle.Animation as Anim
 import           Graphics.UI.Bottle.Rect (Rect(Rect))
 import qualified Graphics.UI.Bottle.Rect as Rect
-import           Graphics.UI.Bottle.SizedFont (SizedFont, TextSize(..))
-import qualified Graphics.UI.Bottle.SizedFont as SizedFont
+import           Graphics.UI.Bottle.Font (TextSize(..))
+import qualified Graphics.UI.Bottle.Font as Font
 import           Graphics.UI.Bottle.View (View(..))
 import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
 
 data Style = Style
     { _styleColor :: Draw.Color
-    , _styleFont :: SizedFont
-    , _styleUnderline :: Maybe SizedFont.Underline
+    , _styleFont :: Draw.Font
+    , _styleUnderline :: Maybe Font.Underline
     }
 Lens.makeLenses ''Style
 
 lineHeight :: Style -> Widget.R
-lineHeight Style{..} = SizedFont.textHeight _styleFont
+lineHeight Style{..} = Font.height _styleFont
 
 data RenderedText a = RenderedText
     { _renderedTextSize :: TextSize Size
@@ -49,7 +49,7 @@ Lens.makeLenses ''RenderedText
 
 fontRender :: Style -> String -> RenderedText (Draw.Image ())
 fontRender Style{..} str =
-    SizedFont.render _styleFont _styleColor _styleUnderline str
+    Font.render _styleFont _styleColor _styleUnderline str
     & uncurry RenderedText
 
 drawMany ::
@@ -103,7 +103,7 @@ drawTextAsSingleLetters style text =
     <&> renderedTextSize . Lens.mapped . _2 %~ max minLineSize
     & joinLines
     where
-        minLineSize = SizedFont.textHeight (_styleFont style)
+        minLineSize = Font.height (_styleFont style)
         horizontal = _2 .~ 0
         renderLetter = fontRender style . (:[])
 
@@ -115,7 +115,7 @@ letterRects Style{..} text =
         -- splitWhen returns at least one string:
         textLines = map makeLine $ splitWhen (== '\n') text
         locateLineHeight y = Lens.mapped . Rect.top +~ y
-        height = SizedFont.textHeight _styleFont
+        height = Font.height _styleFont
         makeLine textLine =
             sizes
             <&> fmap (^. _1)
@@ -123,7 +123,7 @@ letterRects Style{..} text =
             & scanl (+) 0
             & zipWith makeLetterRect sizes
             where
-                sizes = textLine <&> SizedFont.textSize _styleFont . (:[])
+                sizes = textLine <&> Font.textSize _styleFont . (:[])
                 makeLetterRect size xpos =
                     Rect (Vector2 (advance xpos) 0) (bounding size)
 
