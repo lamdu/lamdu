@@ -221,6 +221,7 @@ Executable lamdu
                   , Lamdu.Expr.TypeVars
                   , Lamdu.Expr.UniqueId
                   , Lamdu.Expr.Val
+                  , Lamdu.Expr.Val.Annotated
                   , Lamdu.Expr.Val.Arbitrary
                   , Lamdu.Font
                   , Lamdu.Formatting
