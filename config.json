@@ -219,6 +219,7 @@
                 "Key'Down"
             ]
         ],
+        "paneSpacing": 50,
         "paneHoverPadding": 40
     },
     "versionControl": {

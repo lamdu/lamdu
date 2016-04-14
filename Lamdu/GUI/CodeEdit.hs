@@ -212,7 +212,7 @@ gui env rootId replExpr panes =
     & ExprGuiM.run ExpressionEdit.make
       (codeProps env) (config env) (settings env) (style env)
     where
-        space = Spacer.makeWidget 50
+        space = (Spacer.makeWidget . realToFrac . Config.paneSpacing . Config.pane . config) env
         replId = replExpr ^. Sugar.rPayload . Sugar.plEntityId & WidgetIds.fromEntityId
 
 make :: Monad m => Env m -> Widget.Id -> WidgetEnvT (T m) (Widget (M m))

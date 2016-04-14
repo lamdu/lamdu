@@ -82,6 +82,8 @@ data Pane = Pane
     , -- Need some padding on top because of on-top hovers, this decides
       -- how much:
       paneHoverPadding :: Draw.R
+    , -- Space between panes
+      paneSpacing :: Draw.R
     , newDefinitionKeys :: [ModKey]
     , newDefinitionButtonPressKeys :: [ModKey]
     , newDefinitionActionColor :: Draw.Color
