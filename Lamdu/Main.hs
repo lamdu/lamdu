@@ -77,16 +77,17 @@ main :: IO ()
 main =
     do
         setNumCapabilities =<< getNumProcessors
-        Opts.Parsed{_poShouldDeleteDB,_poUndoCount,_poWindowMode,_poCopyJSOutputPath,_poLamduDB} <-
+        Opts.Parsed{_poShouldDeleteDB,_poUndoCount,_poWindowMode,_poCopyJSOutputPath,_poLamduDB,_poWindowTitle} <-
             either fail return =<< Opts.get
         lamduDir <- maybe getLamduDir return _poLamduDB
         let withDB = DbInit.withDB lamduDir
+        let windowTitle = fromMaybe "Lamdu" _poWindowTitle
         if _poShouldDeleteDB
             then deleteDB lamduDir
             else withDB $
                  if _poUndoCount > 0
                  then undoN _poUndoCount
-                 else runEditor _poCopyJSOutputPath _poWindowMode
+                 else runEditor windowTitle _poCopyJSOutputPath _poWindowMode
     `E.catch` \e@E.SomeException{} -> do
     hPutStrLn stderr $ "Main exiting due to exception: " ++ show e
     mapM_ (hPutStrLn stderr) =<< whoCreated e
@@ -109,16 +110,16 @@ undoN n db =
                 actions <- VersionControl.makeActions
                 fromMaybe (fail "Cannot undo any further") $ mUndo actions
 
-createWindow :: Opts.WindowMode -> IO GLFW.Window
-createWindow Opts.VideoModeSize =
+createWindow :: String -> Opts.WindowMode -> IO GLFW.Window
+createWindow title Opts.VideoModeSize =
     GLFWUtils.getVideoModeSize >>=
-    GLFWUtils.createWindow "Lamdu" Nothing
-createWindow (Opts.WindowSize winSize) =
-    GLFWUtils.createWindow "Lamdu" Nothing winSize
-createWindow Opts.FullScreen =
+    GLFWUtils.createWindow title Nothing
+createWindow title (Opts.WindowSize winSize) =
+    GLFWUtils.createWindow title Nothing winSize
+createWindow title Opts.FullScreen =
     do
         mMonitor <- GLFW.getPrimaryMonitor
-        GLFWUtils.getVideoModeSize >>= GLFWUtils.createWindow "Lamdu" mMonitor
+        GLFWUtils.getVideoModeSize >>= GLFWUtils.createWindow title mMonitor
 
 settingsChangeHandler :: EvalManager.Evaluator -> Settings -> IO ()
 settingsChangeHandler evaluator settings =
@@ -196,14 +197,14 @@ printGLVersion =
         ver <- GL.get GL.glVersion
         putStrLn $ "Using GL version: " ++ show ver
 
-runEditor :: Maybe FilePath -> Opts.WindowMode -> Db -> IO ()
-runEditor copyJSOutputPath windowMode db =
+runEditor :: String -> Maybe FilePath -> Opts.WindowMode -> Db -> IO ()
+runEditor title copyJSOutputPath windowMode db =
     do
         -- Load config as early as possible, before we open any windows/etc
         configSampler <- ConfigSampler.new
 
         GLFWUtils.withGLFW $ do
-            win <- createWindow windowMode
+            win <- createWindow title windowMode
             printGLVersion
             -- Fonts must be loaded after the GL context is created..
             wrapFlyNav <- FlyNav.makeIO Style.flyNav WidgetIds.flyNav
