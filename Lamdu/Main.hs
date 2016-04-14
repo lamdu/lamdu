@@ -25,8 +25,9 @@ import           Data.Typeable (Typeable)
 import           GHC.Conc (setNumCapabilities, getNumProcessors)
 import           GHC.Stack (whoCreated)
 import qualified Graphics.DrawingCombinators as Draw
-import qualified Graphics.UI.Bottle.Main as MainLoop
+import qualified Graphics.Rendering.OpenGL.GL as GL
 import           Graphics.UI.Bottle.Main (mainLoopWidget)
+import qualified Graphics.UI.Bottle.Main as MainLoop
 import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.EventMapDoc as EventMapDoc
@@ -187,6 +188,12 @@ withMVarProtection :: a -> (MVar (Maybe a) -> IO b) -> IO b
 withMVarProtection val =
     E.bracket (newMVar (Just val)) (\mvar -> modifyMVar_ mvar (\_ -> return Nothing))
 
+printGLVersion :: IO ()
+printGLVersion =
+    do
+        ver <- GL.get GL.glVersion
+        putStrLn $ "Using GL version: " ++ show ver
+
 runEditor :: Maybe FilePath -> Opts.WindowMode -> Db -> IO ()
 runEditor copyJSOutputPath windowMode db =
     do
@@ -195,6 +202,7 @@ runEditor copyJSOutputPath windowMode db =
 
         GLFWUtils.withGLFW $ do
             win <- createWindow windowMode
+            printGLVersion
             -- Fonts must be loaded after the GL context is created..
             wrapFlyNav <- FlyNav.makeIO Style.flyNav WidgetIds.flyNav
             invalidateCacheRef <- newIORef (return ())
