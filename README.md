@@ -37,6 +37,17 @@ stack install
 
 ```
 
+#### fedora
+
+requires [stack](https://github.com/commercialhaskell/stack/releases)
+```shell
+sudo dnf install -y gcc gcc-c++ gmp-devel ftgl-devel libXrandr-devel libXi-devel libXcursor-devel mesa-libGL-devel libGLU-devel libXinerama-devel leveldb-devel
+git clone --recursive https://github.com/lamdu/lamdu
+cd lamdu
+stack setup
+stack install
+```
+
 #### arch linux
 
 requires [stack](https://github.com/commercialhaskell/stack/releases)
