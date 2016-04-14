@@ -77,14 +77,16 @@ main :: IO ()
 main =
     do
         setNumCapabilities =<< getNumProcessors
-        lamduDir <- getLamduDir
-        opts <- either fail return =<< Opts.get
+        Opts.Parsed{_poShouldDeleteDB,_poUndoCount,_poWindowMode,_poCopyJSOutputPath,_poLamduDB} <-
+            either fail return =<< Opts.get
+        lamduDir <- maybe getLamduDir return _poLamduDB
         let withDB = DbInit.withDB lamduDir
-        case opts of
-            Opts.Parsed{_poShouldDeleteDB,_poUndoCount,_poWindowMode,_poCopyJSOutputPath}
-                | _poShouldDeleteDB -> deleteDB lamduDir
-                | _poUndoCount > 0  -> withDB $ undoN _poUndoCount
-                | otherwise         -> withDB $ runEditor _poCopyJSOutputPath _poWindowMode
+        if _poShouldDeleteDB
+            then deleteDB lamduDir
+            else withDB $
+                 if _poUndoCount > 0
+                 then undoN _poUndoCount
+                 else runEditor _poCopyJSOutputPath _poWindowMode
     `E.catch` \e@E.SomeException{} -> do
     hPutStrLn stderr $ "Main exiting due to exception: " ++ show e
     mapM_ (hPutStrLn stderr) =<< whoCreated e

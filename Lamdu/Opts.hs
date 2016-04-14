@@ -2,7 +2,7 @@
 module Lamdu.Opts
     ( Parsed(..)
     , WindowMode(..)
-    , poShouldDeleteDB, poUndoCount, poWindowMode, poCopyJSOutputPath
+    , poShouldDeleteDB, poUndoCount, poWindowMode, poCopyJSOutputPath, poLamduDB
     , parse, get
     ) where
 
@@ -21,14 +21,16 @@ data Parsed = Parsed
     , _poUndoCount :: Int
     , _poWindowMode :: WindowMode
     , _poCopyJSOutputPath :: Maybe FilePath
+    , _poLamduDB :: Maybe FilePath
     }
 Lens.makeLenses ''Parsed
 
 parse :: [String] -> Either String Parsed
 parse =
-    (`execStateT` Parsed False 0 VideoModeSize Nothing) . go
+    (`execStateT` Parsed False 0 VideoModeSize Nothing Nothing) . go
     where
         go [] = return ()
+        go ("-lamduDB" : path : args) = poLamduDB .= Just path >> go args
         go ("-deletedb" : args) = poShouldDeleteDB .= True >> go args
         go ("-copyjsoutput" : path : args) = poCopyJSOutputPath ?= path >> go args
         go ("-windowsize" : wstr : hstr : args) =
@@ -47,7 +49,7 @@ parse =
             \count -> poUndoCount += count >> go args
         go (arg : _) = failUsage $ "Unexpected arg: " ++ show arg
         failUsage msg = error $ unlines [ msg, usage ]
-        usage = "Usage: lamdu [-copyjsoutput <filename>] [-deletedb] [-font <filename>] [-undo <N>] [-windowsize <w> <h> | -fullscreen]"
+        usage = "Usage: lamdu [-copyjsoutput <filename>] [-lamduDB <path>] [-deletedb] [-font <filename>] [-undo <N>] [-windowsize <w> <h> | -fullscreen]"
         readOrFail msg str k =
             case reads str of
             [(x, "")] -> k x
