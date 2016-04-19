@@ -3,7 +3,7 @@ module Lamdu.CharClassification
     ) where
 
 operatorChars :: String
-operatorChars = "\\+-*/^=><&|%$:.,!"
+operatorChars = "\\+-*/^=><&|%$:.,!;"
 
 bracketChars :: String
 bracketChars = "()[]{}"
