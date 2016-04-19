@@ -80,10 +80,10 @@ main =
         opts <- either fail return =<< Opts.get
         let withDB = DbInit.withDB lamduDir
         case opts of
-            Opts.Parsed{_poShouldDeleteDB,_poUndoCount,_poWindowMode}
+            Opts.Parsed{_poShouldDeleteDB,_poUndoCount,_poWindowMode,_poCopyJSOutputPath}
                 | _poShouldDeleteDB -> deleteDB lamduDir
                 | _poUndoCount > 0  -> withDB $ undoN _poUndoCount
-                | otherwise         -> withDB $ runEditor _poWindowMode
+                | otherwise         -> withDB $ runEditor _poCopyJSOutputPath _poWindowMode
     `E.catch` \e@E.SomeException{} -> do
     hPutStrLn stderr $ "Main exiting due to exception: " ++ show e
     mapM_ (hPutStrLn stderr) =<< whoCreated e
@@ -187,8 +187,8 @@ withMVarProtection :: a -> (MVar (Maybe a) -> IO b) -> IO b
 withMVarProtection val =
     E.bracket (newMVar (Just val)) (\mvar -> modifyMVar_ mvar (\_ -> return Nothing))
 
-runEditor :: Opts.WindowMode -> Db -> IO ()
-runEditor windowMode db =
+runEditor :: Maybe FilePath -> Opts.WindowMode -> Db -> IO ()
+runEditor copyJSOutputPath windowMode db =
     do
         -- Load config as early as possible, before we open any windows/etc
         configSampler <- ConfigSampler.new
@@ -205,6 +205,7 @@ runEditor windowMode db =
                         EvalManager.new EvalManager.NewParams
                         { EvalManager.invalidateCache = invalidateCache
                         , EvalManager.dbMVar = dbMVar
+                        , EvalManager.copyJSOutputPath = copyJSOutputPath
                         }
                     zoom <- Zoom.make =<< GLFWUtils.getDisplayScale win
                     let initialSettings = Settings Settings.defaultInfoMode

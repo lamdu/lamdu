@@ -1,16 +1,18 @@
-{-# LANGUAGE FlexibleContexts, RecordWildCards #-}
+{-# LANGUAGE NoImplicitPrelude, TemplateHaskell, FlexibleContexts, RecordWildCards #-}
 module Lamdu.Opts
     ( Parsed(..)
     , WindowMode(..)
-    , poShouldDeleteDB, poUndoCount, poWindowMode
+    , poShouldDeleteDB, poUndoCount, poWindowMode, poCopyJSOutputPath
     , parse, get
     ) where
 
-import Control.Lens (Lens')
-import Control.Lens.Operators
-import Control.Monad.Trans.State (execStateT)
-import Data.Vector.Vector2 (Vector2(..))
-import System.Environment (getArgs)
+import qualified Control.Lens as Lens
+import           Control.Lens.Operators
+import           Control.Monad.Trans.State (execStateT)
+import           Data.Vector.Vector2 (Vector2(..))
+import           System.Environment (getArgs)
+
+import           Prelude.Compat
 
 data WindowMode = VideoModeSize | WindowSize (Vector2 Int) | FullScreen
 
@@ -18,20 +20,17 @@ data Parsed = Parsed
     { _poShouldDeleteDB :: Bool
     , _poUndoCount :: Int
     , _poWindowMode :: WindowMode
+    , _poCopyJSOutputPath :: Maybe FilePath
     }
-poShouldDeleteDB :: Lens' Parsed Bool
-poShouldDeleteDB f Parsed{..} = f _poShouldDeleteDB <&> \_poShouldDeleteDB -> Parsed{..}
-poUndoCount :: Lens' Parsed Int
-poUndoCount f Parsed{..} = f _poUndoCount <&> \_poUndoCount -> Parsed{..}
-poWindowMode :: Lens' Parsed WindowMode
-poWindowMode f Parsed{..} = f _poWindowMode <&> \_poWindowMode -> Parsed{..}
+Lens.makeLenses ''Parsed
 
 parse :: [String] -> Either String Parsed
 parse =
-    (`execStateT` Parsed False 0 VideoModeSize) . go
+    (`execStateT` Parsed False 0 VideoModeSize Nothing) . go
     where
         go [] = return ()
         go ("-deletedb" : args) = poShouldDeleteDB .= True >> go args
+        go ("-copyjsoutput" : path : args) = poCopyJSOutputPath ?= path >> go args
         go ("-windowsize" : wstr : hstr : args) =
             readOrFail "Invalid window width" wstr $ \w ->
             readOrFail "Invalid window height" hstr $ \h ->
@@ -48,7 +47,7 @@ parse =
             \count -> poUndoCount += count >> go args
         go (arg : _) = failUsage $ "Unexpected arg: " ++ show arg
         failUsage msg = error $ unlines [ msg, usage ]
-        usage = "Usage: lamdu [-deletedb] [-font <filename>] [-undo <N>] [-windowsize <w> <h> | -fullscreen]"
+        usage = "Usage: lamdu [-copyjsoutput <filename>] [-deletedb] [-font <filename>] [-undo <N>] [-windowsize <w> <h> | -fullscreen]"
         readOrFail msg str k =
             case reads str of
             [(x, "")] -> k x

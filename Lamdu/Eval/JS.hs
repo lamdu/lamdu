@@ -61,6 +61,7 @@ data Actions srcId = Actions
       _aReadAssocName :: UUID -> IO String
     , _aReportUpdatesAvailable :: IO ()
     , _aCompleted :: Either E.SomeException (ER.Val srcId) -> IO ()
+    , _aCopyJSOutputPath :: Maybe FilePath
     }
 Lens.makeLenses ''Actions
 
@@ -217,6 +218,11 @@ processEvent fromUUID resultsRef obj =
     where
         Just event = Json.parseMaybe (.: "event") obj
 
+withCopyJSOutputTo :: Maybe FilePath -> ((String -> IO ()) -> IO a) -> IO a
+withCopyJSOutputTo Nothing f = f $ \_js -> return ()
+withCopyJSOutputTo (Just path) f =
+    withFile path WriteMode $ \outputFile -> f (hPutStrLn outputFile)
+
 asyncStart ::
     Ord srcId =>
     (srcId -> UUID) -> (UUID -> srcId) ->
@@ -229,7 +235,7 @@ asyncStart toUUID fromUUID depsMVar resultsRef val actions =
         rtsPath <- DataFile.getPath "js/rts.js" <&> fst . splitFileName
         withProcess (nodeRepl nodeExePath rtsPath) $
             \(Just stdin, Just stdout, Nothing, handle) ->
-            withFile "output.js" WriteMode $ \outputFile ->
+            withCopyJSOutputTo (actions ^. aCopyJSOutputPath) $ \copyJSOutput ->
             do
                 val
                     <&> valId
@@ -252,7 +258,7 @@ asyncStart toUUID fromUUID depsMVar resultsRef val actions =
                     , Compiler.output =
                       \line ->
                       do
-                          hPutStrLn outputFile line
+                          copyJSOutput line
                           hPutStrLn stdin line
                     , Compiler.loggingMode = Compiler.loggingEnabled
                     }

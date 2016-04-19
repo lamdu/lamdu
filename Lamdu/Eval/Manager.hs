@@ -56,6 +56,7 @@ startedEvaluator (Started eval) = Just eval
 data NewParams = NewParams
     { invalidateCache :: IO ()
     , dbMVar :: MVar (Maybe Db)
+    , copyJSOutputPath :: Maybe FilePath
     }
 
 data Evaluator = Evaluator
@@ -124,6 +125,7 @@ evalActions evaluator =
           do
               atomicModifyIORef_ (eResultsRef evaluator) (const EvalResults.empty)
               invalidateCache (eParams evaluator)
+    , Eval._aCopyJSOutputPath = copyJSOutputPath (eParams evaluator)
     }
     where
         loadGlobal globalId =
