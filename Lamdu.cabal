@@ -118,7 +118,7 @@ Library
                   , directory >= 1.0.1.1
                   , either
                   , filepath >= 1.1
-                  , graphics-drawingcombinators >= 1.5.1.2
+                  , graphics-drawingcombinators >= 1.5.1.2 && < 1.6
                   , hashable
                   , lens >= 4.1
                   , leveldb-haskell >= 0.6
