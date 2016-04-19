@@ -15,7 +15,7 @@ import           Control.Monad.Trans.Class (lift)
 import           Control.Monad.Trans.RWS.Strict (RWST(..))
 import qualified Control.Monad.Trans.RWS.Strict as RWS
 import qualified Data.ByteString as BS
-import qualified Data.ByteString.Hex as Hex
+import qualified Data.ByteString.Base16 as Hex
 import qualified Data.ByteString.UTF8 as UTF8
 import qualified Data.Char as Char
 import           Data.Default () -- instances
@@ -41,6 +41,7 @@ import qualified Language.ECMAScript3.PrettyPrint as JSPP
 import qualified Language.ECMAScript3.Syntax as JSS
 import qualified Language.ECMAScript3.Syntax.CodeGen as JS
 import           Language.ECMAScript3.Syntax.QuasiQuote (jsstmt)
+import           Numeric.Lens (hex)
 import           Prelude.Compat
 import qualified Text.PrettyPrint.Leijen as Pretty
 
@@ -234,7 +235,7 @@ replaceSpecialChars = concatMap replaceSpecial
         replaceSpecial x
             | Char.isAlphaNum x = [x]
             | x == '_' = "__"
-            | otherwise = '_' : (Hex.showHexByte . fromIntegral . Char.ord) x
+            | otherwise = '_' : ((hex #) . Char.ord) x ++ "_"
 
 readName :: (UniqueId.ToUUID a, Monad m) => a -> M m String -> M m String
 readName g act =
@@ -450,7 +451,7 @@ declMyScopeDepth depth =
     JS.uassign JSS.PostfixInc "scopeCounter"
 
 jsValId :: ValId -> JSS.Expression ()
-jsValId (ValId uuid) = (JS.string . Hex.showHexBytes . UUIDUtils.toSBS16) uuid
+jsValId (ValId uuid) = (JS.string . UTF8.toString . Hex.encode . UUIDUtils.toSBS16) uuid
 
 callLogNewScope :: Int -> Int -> ValId -> JSS.Expression () -> JSS.Statement ()
 callLogNewScope parentDepth myDepth lamValId argVal =

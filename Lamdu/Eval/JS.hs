@@ -18,7 +18,8 @@ import qualified Data.Aeson as JsonStr
 import           Data.Aeson.Types ((.:))
 import qualified Data.Aeson.Types as Json
 import qualified Data.ByteString as SBS
-import qualified Data.ByteString.Hex as Hex
+import qualified Data.ByteString.Char8 as Char8
+import qualified Data.ByteString.Base16 as Hex
 import qualified Data.ByteString.Lazy as LBS
 import           Data.HashMap.Strict (HashMap)
 import qualified Data.HashMap.Strict as HashMap
@@ -240,7 +241,7 @@ asyncStart toUUID fromUUID depsMVar resultsRef val actions =
                 val
                     <&> valId
                     & Compiler.compile Compiler.Actions
-                    { Compiler.readAssocName = return . Hex.showHexBytes . UUIDUtils.toSBS16
+                    { Compiler.readAssocName = return . Char8.unpack . Hex.encode . UUIDUtils.toSBS16
                     , Compiler.readGlobal =
                       \globalId ->
                       modifyMVar depsMVar $ \oldDeps ->

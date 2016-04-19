@@ -4,11 +4,11 @@ module Lamdu.Formatting
     , formatTextContents
     ) where
 
-import qualified Control.Lens as Lens
 import           Control.Lens.Operators
-import           Control.Monad (mplus)
-import qualified Data.ByteString as SBS
-import           Data.ByteString.Hex (showHexBytes, parseHexBytes)
+import           Control.Monad (guard, mplus)
+import           Data.ByteString (ByteString)
+import qualified Data.ByteString.Char8 as BS
+import qualified Data.ByteString.Base16 as Hex
 import qualified Data.Char as Char
 import           Text.Printf (printf)
 import           Text.Read (readMaybe)
@@ -28,10 +28,15 @@ class Format a where
     tryParse :: String -> Maybe a
     format :: a -> String
 
-instance Format SBS.ByteString where
-    tryParse ('#':xs) = parseHexBytes xs ^? Lens._Right
+instance Format ByteString where
+    tryParse ('#':xs) =
+        do
+            BS.null remain & guard
+            Just result
+        where
+            (result, remain) = BS.pack xs & Hex.decode
     tryParse _ = Nothing
-    format bs = '#' : showHexBytes bs
+    format bs = '#' : BS.unpack (Hex.encode bs)
 
 instance Format Double where
     tryParse ('.':searchTerm) = readMaybe ('0':searchTerm)

@@ -26,8 +26,9 @@ import           Data.Aeson ((.=))
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.Encode.Pretty as AesonPretty
 import qualified Data.Aeson.Types as AesonTypes
+import qualified Data.ByteString.Char8 as BS
+import qualified Data.ByteString.Base16 as Hex
 import qualified Data.ByteString.Lazy.Char8 as LBS8
-import           Data.ByteString.Hex (showHexBytes, parseHexBytes)
 import           Data.Either.Combinators (swapEither)
 import qualified Data.HashMap.Strict as HashMap
 import           Data.Map (Map)
@@ -311,7 +312,7 @@ encodeLeaf =
     V.LLiteral (V.PrimVal (T.NominalId primId) primBytes) ->
         HashMap.fromList
         [ "primId" .= encodeIdent primId
-        , "primBytes" .= showHexBytes primBytes
+        , "primBytes" .= BS.unpack (Hex.encode primBytes)
         ]
     where
         leaf x = HashMap.fromList [x .= Aeson.object []]
@@ -325,7 +326,9 @@ decodeLeaf obj =
     , obj .: "var" >>= lift . decodeIdent <&> V.Var <&> V.LVar
     , do
           primId <- obj .: "primId" >>= lift . decodeIdent <&> T.NominalId
-          primBytes <- obj .: "primBytes" >>= lift . fromEither . parseHexBytes
+          bytesHex <- obj .: "primBytes"
+          let (primBytes, remain) = Hex.decode (BS.pack bytesHex)
+          BS.null remain & guard
           V.PrimVal primId primBytes & pure
       <&> V.LLiteral
     ]

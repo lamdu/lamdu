@@ -2,7 +2,7 @@ packages:
 - .
 - location:
     git: https://github.com/lamdu/lamdu-calculus
-    commit: 257003d90ea0f191ebfd15273cc009cd7463e997
+    commit: f54abe6f1f9b1eb7923e442fa11f3cf16ad5cfcb
 - location:
     git: https://github.com/lamdu/Algorithm-W-Step-By-Step
     commit: e05886d2392005936f46c3fa75aa624317659bc4
