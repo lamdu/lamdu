@@ -14,8 +14,14 @@ import qualified Graphics.UI.GLFW as GLFW
 assert :: Monad m => String -> Bool -> m ()
 assert msg p = unless p (fail msg)
 
+printErrors :: GLFW.ErrorCallback
+printErrors err msg = putStrLn $ unwords ["GLFW error:", show err, msg]
+
 withGLFW :: IO a -> IO a
-withGLFW = bracket_ (GLFW.init >>= assert "initialize failed") GLFW.terminate
+withGLFW act =
+    do
+        GLFW.setErrorCallback (Just printErrors)
+        bracket_ (GLFW.init >>= assert "initialize failed") GLFW.terminate act
 
 createWindow :: String -> Maybe GLFW.Monitor -> Vector2 Int -> IO GLFW.Window
 createWindow title mMonitor (Vector2 w h) = do
