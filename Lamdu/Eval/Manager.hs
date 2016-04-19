@@ -1,7 +1,7 @@
 {-# LANGUAGE NoImplicitPrelude, RankNTypes, LambdaCase #-}
 module Lamdu.Eval.Manager
     ( Evaluator
-    , new
+    , NewParams(..), new
     , start, stop
     , getResults
     , runTransactionAndMaybeRestartEvaluator
@@ -53,23 +53,26 @@ startedEvaluator :: BGEvaluator -> Maybe (Eval.Evaluator (ValI ViewM))
 startedEvaluator NotStarted = Nothing
 startedEvaluator (Started eval) = Just eval
 
+data NewParams = NewParams
+    { invalidateCache :: IO ()
+    , dbMVar :: MVar (Maybe Db)
+    }
+
 data Evaluator = Evaluator
-    { eInvalidateCache :: IO ()
-    , eDb :: MVar (Maybe Db)
+    { eParams :: NewParams
     , eEvaluatorRef :: IORef BGEvaluator
     , eResultsRef :: IORef (EvalResults (ValI ViewM))
     , eCancelTimerRef :: IORef (Maybe ThreadId)
     }
 
-new :: IO () -> MVar (Maybe Db) -> IO Evaluator
-new invalidateCache db =
+new :: NewParams -> IO Evaluator
+new params =
     do
         ref <- newIORef NotStarted
         resultsRef <- newIORef EvalResults.empty
         cancelRef <- newIORef Nothing
         return Evaluator
-            { eInvalidateCache = invalidateCache
-            , eDb = db
+            { eParams = params
             , eEvaluatorRef = ref
             , eResultsRef = resultsRef
             , eCancelTimerRef = cancelRef
@@ -82,8 +85,8 @@ withDb mvar action =
     Just db -> action db
 
 runViewTransactionInIO :: MVar (Maybe Db) -> T ViewM a -> IO a
-runViewTransactionInIO dbMVar trans =
-    withDb dbMVar $ \db ->
+runViewTransactionInIO dbM trans =
+    withDb dbM $ \db ->
     DbLayout.runDbTransaction db (VersionControl.runAction trans)
 
 getLatestResults :: Evaluator -> IO (EvalResults (ValI ViewM))
@@ -97,6 +100,9 @@ getResults evaluator =
         res <- getLatestResults evaluator
         prevResults <- readIORef (eResultsRef evaluator)
         return CurAndPrev { _prev = prevResults, _current = res }
+
+eDb :: Evaluator -> MVar (Maybe Db)
+eDb = dbMVar . eParams
 
 loadDef ::
     Evaluator -> DefI ViewM ->
@@ -113,11 +119,11 @@ evalActions evaluator =
     Eval.Actions
     { Eval._aLoadGlobal = loadGlobal
     , Eval._aReadAssocName = readAssocName evaluator
-    , Eval._aReportUpdatesAvailable = eInvalidateCache evaluator
+    , Eval._aReportUpdatesAvailable = invalidateCache (eParams evaluator)
     , Eval._aCompleted = \_ ->
           do
               atomicModifyIORef_ (eResultsRef evaluator) (const EvalResults.empty)
-              eInvalidateCache evaluator
+              invalidateCache (eParams evaluator)
     }
     where
         loadGlobal globalId =

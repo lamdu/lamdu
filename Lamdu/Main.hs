@@ -201,7 +201,11 @@ runEditor windowMode db =
             let invalidateCache = join (readIORef invalidateCacheRef)
             withMVarProtection db $ \dbMVar ->
                 do
-                    evaluator <- EvalManager.new invalidateCache dbMVar
+                    evaluator <-
+                        EvalManager.new EvalManager.NewParams
+                        { EvalManager.invalidateCache = invalidateCache
+                        , EvalManager.dbMVar = dbMVar
+                        }
                     zoom <- Zoom.make =<< GLFWUtils.getDisplayScale win
                     let initialSettings = Settings Settings.defaultInfoMode
                     settingsRef <- newIORef initialSettings
