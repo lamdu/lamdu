@@ -144,7 +144,7 @@ module.exports = {
             item: function (x) { return x[objTag][x[indexTag]]; },
             fromStream: arrayFromStream,
         },
-        ST: {
+        Mut: {
             return: function(x) { return function() { return x; }; },
             bind: function(x) { return function () { return x[infixrTag](x[infixlTag]())(); } },
             run: function(st) { return st(); },

@@ -403,7 +403,7 @@
         "defPresentationMode": "OO",
         "builtin": {
             "name": [
-                "ST",
+                "Mut",
                 "return"
             ],
             "scheme": {
@@ -441,7 +441,7 @@
         ],
         "builtin": {
             "name": [
-                "ST",
+                "Mut",
                 "bind"
             ],
             "scheme": {
@@ -2550,7 +2550,7 @@
         "defPresentationMode": "OO",
         "builtin": {
             "name": [
-                "ST",
+                "Mut",
                 "run"
             ],
             "scheme": {
@@ -2574,14 +2574,14 @@
                 }
             }
         },
-        "name": "runST",
+        "name": "runMut",
         "def": "0c3623a39c6f4e8cb0729c185ac47ffd"
     },
     {
         "defPresentationMode": "OO",
         "builtin": {
             "name": [
-                "ST",
+                "Mut",
                 "Array",
                 "length"
             ],
@@ -5834,7 +5834,7 @@
         "defPresentationMode": "OO",
         "builtin": {
             "name": [
-                "ST",
+                "Mut",
                 "Array",
                 "run"
             ],
@@ -5864,7 +5864,7 @@
                 }
             }
         },
-        "name": "runSTArray",
+        "name": "runMutArray",
         "def": "65ffba5ecc80478baacf8819f4e27939"
     },
     {
@@ -7977,7 +7977,7 @@
         "defPresentationMode": "OO",
         "builtin": {
             "name": [
-                "ST",
+                "Mut",
                 "Array",
                 "fromStream"
             ],
@@ -8019,7 +8019,7 @@
                 }
             }
         },
-        "name": "newSTArray",
+        "name": "newMutArray",
         "def": "7ef2ad26acde4094820f2a5f5e338100"
     },
     {
@@ -10613,7 +10613,7 @@
         "defPresentationMode": "OO",
         "builtin": {
             "name": [
-                "ST",
+                "Mut",
                 "Array",
                 "read"
             ],
@@ -10657,7 +10657,7 @@
                 }
             }
         },
-        "name": "readSTArray",
+        "name": "readMutArray",
         "def": "aef55a2ce5ec43efa53250446fc1789a"
     },
     {
@@ -12427,7 +12427,7 @@
         "defPresentationMode": "OO",
         "builtin": {
             "name": [
-                "ST",
+                "Mut",
                 "Array",
                 "write"
             ],
@@ -12474,7 +12474,7 @@
                 }
             }
         },
-        "name": "writeSTArray",
+        "name": "writeMutArray",
         "def": "df4de0a832b34d2698e71d05241bb975"
     },
     {
@@ -14144,7 +14144,7 @@
             "42493a76616c00000000000000000000": "0161"
         },
         "nom": "42493a506f6c79535400000000000000",
-        "name": "ClosedST"
+        "name": "LocalMut"
     },
     {
         "nomType": "OpaqueNominal",
@@ -14153,7 +14153,7 @@
             "42493a76616c00000000000000000000": "61"
         },
         "nom": "42493a53540000000000000000000000",
-        "name": "ST"
+        "name": "Mut"
     },
     {
         "nomType": "OpaqueNominal",
@@ -14180,7 +14180,7 @@
             "42493a76616c00000000000000000000": "61"
         },
         "nom": "42493a73744172726179000000000000",
-        "name": "STArray"
+        "name": "MutArray"
     },
     {
         "nomType": {
@@ -14213,7 +14213,7 @@
             "42493a76616c00000000000000000000": "61"
         },
         "nom": "6be65ada2aed47ebbda4cb4118df3659",
-        "name": "ClosedSTArray"
+        "name": "LocalMutArray"
     },
     {
         "repl": {
