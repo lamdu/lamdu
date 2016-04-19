@@ -16,7 +16,6 @@ extra-deps:
 - bitmap-0.0.2
 - bitmap-opengl-0.0.1.5
 - stb-image-0.2.1
-- bindings-GLFW-3.1.2.0
 - uuid-aeson-0.1.0.0
 
 extra-include-dirs:
