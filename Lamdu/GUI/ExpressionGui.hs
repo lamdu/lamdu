@@ -65,11 +65,11 @@ import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
 import qualified Graphics.UI.Bottle.Widgets.TextEdit as TextEdit
 import qualified Graphics.UI.Bottle.WidgetsEnvT as WE
 import qualified Graphics.UI.GLFW as GLFW
+import           Lamdu.Calc.Type (Type)
+import qualified Lamdu.Calc.Type as T
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Eval.Results as ER
-import           Lamdu.Expr.Type (Type)
-import qualified Lamdu.Expr.Type as T
 import qualified Lamdu.GUI.CodeEdit.Settings as CESettings
 import qualified Lamdu.GUI.EvalView as EvalView
 import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap

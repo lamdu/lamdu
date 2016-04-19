@@ -16,11 +16,11 @@ import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.EventMap as E
 import           Graphics.UI.Bottle.View (View(..))
 import qualified Graphics.UI.Bottle.Widget as Widget
+import           Lamdu.Calc.Type (Tag)
+import qualified Lamdu.Calc.Val as V
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Eval.Results as ER
-import           Lamdu.Expr.Type (Tag)
-import qualified Lamdu.Expr.Val as V
 import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
 import qualified Lamdu.GUI.ExpressionEdit.TagEdit as TagEdit
 import           Lamdu.GUI.ExpressionGui (ExpressionGui)

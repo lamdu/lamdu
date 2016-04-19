@@ -1,4 +1,0 @@
-{
-  "cmd": "cabal build",
-  "errorMatch": "\\n(?<file>[^:\\n]+):(?<line>\\d+):(?<col>\\d+):"
-}

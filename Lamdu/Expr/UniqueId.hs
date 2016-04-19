@@ -9,11 +9,11 @@ import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
 import           Data.UUID.Types (UUID)
 import qualified Data.UUID.Utils as UUIDUtils
+import           Lamdu.Calc.Identifier (Identifier(..))
+import qualified Lamdu.Calc.Type as T
+import qualified Lamdu.Calc.Val as V
 import           Lamdu.Expr.IRef (ValI(..))
 import qualified Lamdu.Expr.IRef as ExprIRef
-import           Lamdu.Expr.Identifier (Identifier(..))
-import qualified Lamdu.Expr.Type as T
-import qualified Lamdu.Expr.Val as V
 
 import           Prelude.Compat
 

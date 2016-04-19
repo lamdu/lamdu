@@ -24,6 +24,8 @@ import           Data.Store.Transaction (Transaction, getP, setP, modP)
 import qualified Data.Store.Transaction as Transaction
 import qualified Graphics.UI.Bottle.WidgetId as WidgetId
 import qualified Lamdu.Builtins.Anchors as Builtins
+import qualified Lamdu.Calc.Type as T
+import qualified Lamdu.Calc.Val as V
 import           Lamdu.CharClassification (operatorChars)
 import           Lamdu.Data.Anchors (PresentationMode(..))
 import qualified Lamdu.Data.Anchors as Anchors
@@ -31,8 +33,6 @@ import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Expr.GenIds as GenIds
 import           Lamdu.Expr.IRef (DefI, ValIProperty, ValI, ValTree(..))
 import qualified Lamdu.Expr.IRef as ExprIRef
-import qualified Lamdu.Expr.Type as T
-import qualified Lamdu.Expr.Val as V
 import qualified System.Random.Utils as RandomUtils
 
 import           Prelude.Compat

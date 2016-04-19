@@ -33,6 +33,10 @@ import qualified Data.Store.Property as Property
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
 import           Data.UUID.Types (UUID)
+import qualified Lamdu.Calc.Type as T
+import           Lamdu.Calc.Type.Nominal (Nominal)
+import qualified Lamdu.Calc.Val as V
+import           Lamdu.Calc.Val.Annotated (Val(..))
 import qualified Lamdu.Data.Anchors as Anchors
 import           Lamdu.Data.DbLayout (ViewM)
 import qualified Lamdu.Data.DbLayout as DbLayout
@@ -43,11 +47,7 @@ import           Lamdu.Expr.IRef (ValI)
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Lens as ExprLens
 import qualified Lamdu.Expr.Load as Load
-import           Lamdu.Expr.Nominal (Nominal)
-import qualified Lamdu.Expr.Type as T
 import           Lamdu.Expr.UniqueId (ToUUID)
-import qualified Lamdu.Expr.Val as V
-import           Lamdu.Expr.Val.Annotated (Val(..))
 
 import           Prelude.Compat
 

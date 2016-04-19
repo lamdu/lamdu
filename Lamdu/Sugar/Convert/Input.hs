@@ -14,11 +14,11 @@ import           Control.Lens.Operators
 import           Data.CurAndPrev (CurAndPrev(..))
 import           Data.Map (Map)
 import qualified Data.Map as Map
+import           Lamdu.Calc.Type (Type)
+import qualified Lamdu.Calc.Val as V
+import           Lamdu.Calc.Val.Annotated (Val(..))
 import qualified Lamdu.Eval.Results as ER
 import           Lamdu.Expr.IRef (ValIProperty)
-import           Lamdu.Expr.Type (Type)
-import qualified Lamdu.Expr.Val as V
-import           Lamdu.Expr.Val.Annotated (Val(..))
 import qualified Lamdu.Infer as Infer
 import           Lamdu.Sugar.EntityId (EntityId)
 

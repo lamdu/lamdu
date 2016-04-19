@@ -20,8 +20,8 @@ import           Control.Lens.Operators
 import           Control.Lens.Tuple
 import           Control.Monad (void)
 import           Data.Store.Transaction (Transaction)
+import           Lamdu.Calc.Type.Scheme (Scheme)
 import qualified Lamdu.Data.Definition as Def
-import           Lamdu.Expr.Scheme (Scheme)
 import           Lamdu.Sugar.Types
 
 import           Prelude.Compat

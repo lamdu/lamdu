@@ -29,12 +29,12 @@ import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
 import qualified Data.UUID.Utils as UUIDUtils
 import qualified Lamdu.Data.Definition as Definition
-import           Lamdu.Expr.Identifier (Identifier(..))
-import           Lamdu.Expr.Nominal (Nominal)
-import qualified Lamdu.Expr.Type as T
-import qualified Lamdu.Expr.Val as V
-import           Lamdu.Expr.Val.Annotated (Val(..))
-import qualified Lamdu.Expr.Val.Annotated as Val
+import           Lamdu.Calc.Identifier (Identifier(..))
+import qualified Lamdu.Calc.Type as T
+import           Lamdu.Calc.Type.Nominal (Nominal)
+import qualified Lamdu.Calc.Val as V
+import           Lamdu.Calc.Val.Annotated (Val(..))
+import qualified Lamdu.Calc.Val.Annotated as Val
 
 import           Prelude.Compat
 

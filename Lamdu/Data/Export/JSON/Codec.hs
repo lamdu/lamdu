@@ -38,20 +38,20 @@ import           Data.Text (Text)
 import           Data.UUID.Aeson ()
 import           Data.UUID.Types (UUID)
 import qualified Data.Vector as Vector
+import           Lamdu.Calc.Identifier (Identifier, identHex, identFromHex)
+import           Lamdu.Calc.Type (Type, Composite)
+import qualified Lamdu.Calc.Type as T
+import           Lamdu.Calc.Type.Constraints (Constraints(..), CompositeVarConstraints(..))
+import           Lamdu.Calc.Type.FlatComposite (FlatComposite(..))
+import qualified Lamdu.Calc.Type.FlatComposite as FlatComposite
+import           Lamdu.Calc.Type.Nominal (Nominal(..), NominalType(..))
+import           Lamdu.Calc.Type.Scheme (Scheme(..))
+import           Lamdu.Calc.Type.Vars (TypeVars(..))
+import           Lamdu.Calc.Val.Annotated (Val(..))
+import qualified Lamdu.Calc.Val as V
 import qualified Lamdu.Data.Anchors as Anchors
 import           Lamdu.Data.Definition (Definition(..))
 import qualified Lamdu.Data.Definition as Definition
-import           Lamdu.Expr.Constraints (Constraints(..), CompositeVarConstraints(..))
-import           Lamdu.Expr.FlatComposite (FlatComposite(..))
-import qualified Lamdu.Expr.FlatComposite as FlatComposite
-import           Lamdu.Expr.Identifier (Identifier, identHex, identFromHex)
-import           Lamdu.Expr.Nominal (Nominal(..), NominalType(..))
-import           Lamdu.Expr.Scheme (Scheme(..))
-import           Lamdu.Expr.Type (Type, Composite)
-import qualified Lamdu.Expr.Type as T
-import           Lamdu.Expr.TypeVars (TypeVars(..))
-import           Lamdu.Expr.Val.Annotated (Val(..))
-import qualified Lamdu.Expr.Val as V
 
 import           Prelude.Compat
 

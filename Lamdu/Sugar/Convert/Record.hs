@@ -13,14 +13,14 @@ import qualified Data.Store.Property as Property
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
 import           Data.UUID.Types (UUID)
+import qualified Lamdu.Calc.Type as T
+import qualified Lamdu.Calc.Val as V
+import qualified Lamdu.Calc.Val.Annotated as Val
+import           Lamdu.Calc.Val.Annotated (Val(..))
 import           Lamdu.Data.Anchors (assocTagOrder)
 import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Expr.IRef as ExprIRef
-import qualified Lamdu.Expr.Type as T
 import qualified Lamdu.Expr.UniqueId as UniqueId
-import qualified Lamdu.Expr.Val.Annotated as Val
-import qualified Lamdu.Expr.Val as V
-import           Lamdu.Expr.Val.Annotated (Val(..))
 import           Lamdu.Sugar.Convert.Expression.Actions (addActions)
 import qualified Lamdu.Sugar.Convert.Input as Input
 import           Lamdu.Sugar.Convert.Monad (ConvertM)

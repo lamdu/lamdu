@@ -37,15 +37,15 @@ import qualified Data.UUID.Utils as UUIDUtils
 import qualified Data.Vector as Vec
 import           Data.Word (Word8)
 import qualified Lamdu.Builtins.PrimVal as PrimVal
+import           Lamdu.Calc.Identifier (Identifier(..))
+import           Lamdu.Calc.Type (Tag(..))
+import qualified Lamdu.Calc.Val as V
+import           Lamdu.Calc.Val.Annotated (Val)
 import qualified Lamdu.Data.Definition as Def
 import qualified Lamdu.DataFile as DataFile
 import qualified Lamdu.Eval.JS.Compiler as Compiler
 import           Lamdu.Eval.Results (ScopeId(..), EvalResults(..))
 import qualified Lamdu.Eval.Results as ER
-import           Lamdu.Expr.Identifier (Identifier(..))
-import           Lamdu.Expr.Type (Tag(..))
-import qualified Lamdu.Expr.Val as V
-import           Lamdu.Expr.Val.Annotated (Val)
 import           Numeric (readHex)
 import           System.FilePath (splitFileName)
 import           System.IO (IOMode(..), Handle, hClose, hIsEOF, hPutStrLn, withFile)

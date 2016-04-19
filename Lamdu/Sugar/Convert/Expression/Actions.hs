@@ -13,15 +13,15 @@ import           Control.Monad (guard)
 import qualified Data.Map as Map
 import qualified Data.Store.Property as Property
 import           Data.Store.Transaction (Transaction)
+import qualified Lamdu.Calc.Val as V
+import qualified Lamdu.Calc.Val.Annotated as Val
+import           Lamdu.Calc.Val.Annotated (Val)
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Eval.Results.Process as ResultsProcess
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Lens as ExprLens
 import qualified Lamdu.Expr.UniqueId as UniqueId
-import qualified Lamdu.Expr.Val as V
-import qualified Lamdu.Expr.Val.Annotated as Val
-import           Lamdu.Expr.Val.Annotated (Val)
 import qualified Lamdu.Sugar.Convert.Input as Input
 import           Lamdu.Sugar.Convert.Monad (ConvertM)
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM

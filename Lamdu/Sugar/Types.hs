@@ -102,15 +102,15 @@ import           Data.Functor.Identity (Identity(..))
 import           Data.Map (Map)
 import           Data.Store.Transaction (Transaction, MkProperty, Property)
 import           Data.UUID.Types (UUID)
+import           Lamdu.Calc.Type (Type)
+import qualified Lamdu.Calc.Type as T
+import           Lamdu.Calc.Type.Scheme (Scheme)
+import qualified Lamdu.Calc.Val as V
+import           Lamdu.Calc.Val.Annotated (Val)
 import           Lamdu.Data.Anchors (BinderParamScopeId(..), bParamScopeId)
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Eval.Results as ER
-import           Lamdu.Expr.Scheme (Scheme)
-import           Lamdu.Expr.Type (Type)
-import qualified Lamdu.Expr.Type as T
-import qualified Lamdu.Expr.Val as V
-import           Lamdu.Expr.Val.Annotated (Val)
 import           Lamdu.Sugar.Internal.EntityId (EntityId)
 
 import           Prelude.Compat

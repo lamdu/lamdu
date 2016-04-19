@@ -28,10 +28,10 @@ import qualified Data.Map as Map
 import           Data.Maybe (fromMaybe)
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
-import           Lamdu.Expr.Identifier (Identifier(..))
-import qualified Lamdu.Expr.Type as T
-import           Lamdu.Expr.Val.Annotated (Val(..))
-import qualified Lamdu.Expr.Val as V
+import           Lamdu.Calc.Identifier (Identifier(..))
+import qualified Lamdu.Calc.Type as T
+import qualified Lamdu.Calc.Val as V
+import           Lamdu.Calc.Val.Annotated (Val(..))
 import           System.Random (Random, RandomGen, random)
 import qualified System.Random as Random
 import qualified System.Random.Utils as RandomUtils

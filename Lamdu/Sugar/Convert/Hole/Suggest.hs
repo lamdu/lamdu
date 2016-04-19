@@ -15,15 +15,15 @@ import           Control.Monad.Trans.State (StateT(..), mapStateT)
 import           Data.Map (Map)
 import qualified Data.Map as Map
 import qualified Data.Set as Set
+import           Lamdu.Calc.Type (Type)
+import qualified Lamdu.Calc.Type as T
+import           Lamdu.Calc.Type.Nominal (Nominal, _NominalType)
+import qualified Lamdu.Calc.Type.Nominal as Nominal
+import           Lamdu.Calc.Type.Scheme (schemeType)
+import qualified Lamdu.Calc.Val as V
+import           Lamdu.Calc.Val.Annotated (Val(..))
+import qualified Lamdu.Calc.Val.Annotated as Val
 import qualified Lamdu.Expr.Lens as ExprLens
-import           Lamdu.Expr.Nominal (Nominal, _NominalType)
-import qualified Lamdu.Expr.Nominal as Nominal
-import           Lamdu.Expr.Scheme (schemeType)
-import           Lamdu.Expr.Type (Type)
-import qualified Lamdu.Expr.Type as T
-import qualified Lamdu.Expr.Val as V
-import           Lamdu.Expr.Val.Annotated (Val(..))
-import qualified Lamdu.Expr.Val.Annotated as Val
 import           Lamdu.Infer (Context, Payload(..))
 import qualified Lamdu.Infer as Infer
 import           Lamdu.Infer.Update (update)
@@ -45,7 +45,7 @@ loadNominalsForType loadNominal typ =
                     let result = mappend res nominals
                     let newTIds =
                             nominals
-                            ^. Lens.traversed . Lens.to Nominal.nType
+                            ^. Lens.traversed . Nominal.nomType
                             . _NominalType . schemeType
                             . ExprLens.typeTIds . Lens.to Set.singleton
                             & (`Set.difference` Map.keysSet result)
@@ -89,8 +89,8 @@ valueConversionNoSplit nominals empty src =
     prependOpt src $
     case srcType of
     T.TInst name _params
-        | Lens.has (Lens.ix name . Nominal.nominalType . Nominal._NominalType) nominals
-        && bodyNot ExprLens._BToNom ->
+        | Lens.has (Lens.ix name . Nominal.nomType . Nominal._NominalType) nominals
+        && bodyNot V._BToNom ->
         -- TODO: Expose primitives from Infer to do this without partiality
         do
             (_, resType) <-
@@ -105,8 +105,8 @@ valueConversionNoSplit nominals empty src =
         & mapStateT
             (either (error "Infer of FromNom on non-opaque Nominal shouldn't fail") return)
         >>= valueConversionNoSplit nominals empty
-    T.TFun argType resType | bodyNot ExprLens._BLam ->
-        if Lens.has (ExprLens.valLeafs . ExprLens._LHole) arg
+    T.TFun argType resType | bodyNot V._BLam ->
+        if Lens.has (ExprLens.valLeafs . V._LHole) arg
             then
                 -- If the suggested argument has holes in it
                 -- then stop suggesting there to avoid "overwhelming"..
@@ -117,7 +117,7 @@ valueConversionNoSplit nominals empty src =
                 valueNoSplit (Payload argType srcScope)
                 & Lens.traversed %~ flip (,) empty
             applied = V.Apply src arg & V.BApp & mkRes resType
-    T.TSum composite | bodyNot ExprLens._BInject  ->
+    T.TSum composite | bodyNot V._BInject  ->
         do
             dstType <-
                 Infer.freshInferredVar srcScope "s"

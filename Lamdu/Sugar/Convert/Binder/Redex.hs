@@ -9,12 +9,12 @@ import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Data.CurAndPrev (CurAndPrev)
 import           Data.Map (Map)
+import           Lamdu.Calc.Type (Type)
+import qualified Lamdu.Calc.Val as V
+import           Lamdu.Calc.Val.Annotated (Val(..))
+import qualified Lamdu.Calc.Val.Annotated as Val
 import           Lamdu.Eval.Results (ScopeId)
 import qualified Lamdu.Expr.Lens as ExprLens
-import           Lamdu.Expr.Type (Type)
-import qualified Lamdu.Expr.Val as V
-import           Lamdu.Expr.Val.Annotated (Val(..))
-import qualified Lamdu.Expr.Val.Annotated as Val
 import qualified Lamdu.Infer as Infer
 import qualified Lamdu.Sugar.Convert.Input as Input
 import           Lamdu.Sugar.Types
@@ -33,7 +33,7 @@ data Redex a = Redex
 checkForRedex :: Val (Input.Payload m a) -> Maybe (Redex (Input.Payload m a))
 checkForRedex expr = do
     V.Apply func arg <- expr ^? ExprLens.valApply
-    lam <- func ^? Val.body . ExprLens._BLam
+    lam <- func ^? Val.body . V._BLam
     Just Redex
         { redexLam = lam
         , redexBodyScope =

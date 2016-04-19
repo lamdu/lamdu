@@ -28,15 +28,15 @@ import           Data.UUID.Types (UUID)
 import qualified Data.UUID.Utils as UUIDUtils
 import qualified Lamdu.Builtins.Anchors as Builtins
 import qualified Lamdu.Builtins.PrimVal as PrimVal
+import           Lamdu.Calc.Identifier (identHex)
+import qualified Lamdu.Calc.Type as T
+import qualified Lamdu.Calc.Val as V
+import           Lamdu.Calc.Val.Annotated (Val(..))
+import qualified Lamdu.Calc.Val.Annotated as Val
 import qualified Lamdu.Compiler.Flatten as Flatten
 import qualified Lamdu.Data.Definition as Definition
-import           Lamdu.Expr.Identifier (identHex)
 import qualified Lamdu.Expr.Lens as ExprLens
-import qualified Lamdu.Expr.Type as T
 import qualified Lamdu.Expr.UniqueId as UniqueId
-import qualified Lamdu.Expr.Val as V
-import           Lamdu.Expr.Val.Annotated (Val(..))
-import qualified Lamdu.Expr.Val.Annotated as Val
 import qualified Language.ECMAScript3.PrettyPrint as JSPP
 import qualified Language.ECMAScript3.Syntax as JSS
 import qualified Language.ECMAScript3.Syntax.CodeGen as JS

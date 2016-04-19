@@ -6,10 +6,10 @@ module Lamdu.Sugar.Convert.GetField
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Monad (guard)
+import qualified Lamdu.Calc.Val as V
+import           Lamdu.Calc.Val.Annotated (Val(..))
 import qualified Lamdu.Expr.Lens as ExprLens
 import qualified Lamdu.Expr.UniqueId as UniqueId
-import qualified Lamdu.Expr.Val as V
-import           Lamdu.Expr.Val.Annotated (Val(..))
 import           Lamdu.Sugar.Convert.Expression.Actions (addActions, addActionsWithSetToInner)
 import qualified Lamdu.Sugar.Convert.Input as Input
 import           Lamdu.Sugar.Convert.Monad (ConvertM)

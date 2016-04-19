@@ -9,21 +9,21 @@ import           Data.Map (Map)
 import qualified Data.Map as Map
 import           Data.Maybe (fromMaybe)
 import qualified Lamdu.Builtins.Anchors as Builtins
+import qualified Lamdu.Calc.Type as T
+import qualified Lamdu.Calc.Type.FlatComposite as FlatComposite
+import qualified Lamdu.Calc.Type.Nominal as N
+import           Lamdu.Calc.Type.Scheme (schemeType)
+import qualified Lamdu.Calc.Val as V
 import           Lamdu.Eval.Results (Val(..), Body(..))
 import qualified Lamdu.Eval.Results as ER
-import qualified Lamdu.Expr.FlatComposite as FlatComposite
-import qualified Lamdu.Expr.Lens as ExprLens
-import qualified Lamdu.Expr.Nominal as N
-import           Lamdu.Expr.Scheme (schemeType)
-import qualified Lamdu.Expr.Type as T
-import qualified Lamdu.Expr.Val as V
+import           Lamdu.Infer (applyNominal)
 
 import           Prelude.Compat
 
 extractRecordTypeField :: T.Tag -> T.Type -> Maybe (T.Type, T.Type)
 extractRecordTypeField tag typ =
     do
-        comp <- typ ^? ExprLens._TRecord
+        comp <- typ ^? T._TRecord
         let flat = FlatComposite.fromComposite comp
         fieldType <- flat ^. FlatComposite.fields . Lens.at tag
         Just
@@ -36,7 +36,7 @@ extractRecordTypeField tag typ =
 extractSumTypeField :: T.Tag -> T.Type -> Maybe T.Type
 extractSumTypeField tag typ =
     do
-        comp <- typ ^? ExprLens._TSum
+        comp <- typ ^? T._TSum
         FlatComposite.fromComposite comp ^. FlatComposite.fields . Lens.at tag
 
 type AddTypes val res = (T.Type -> val -> res) -> T.Type -> Body res
@@ -74,7 +74,7 @@ addTypesInject (V.Inject tag val) go typ =
 addTypesArray :: [val] -> AddTypes val res
 addTypesArray items go typ =
     do
-        (_nomId, params) <- typ ^? ExprLens._TInst
+        (_nomId, params) <- typ ^? T._TInst
         paramType <- params ^. Lens.at Builtins.valTypeParamId
         items <&> go paramType & RArray & Just
     & fromMaybe (ER.EvalTypeError "addTypes bad type for RArray" & RError)
@@ -100,7 +100,7 @@ unwrapTInsts nomsMap typ =
     T.TInst tid params ->
         Map.lookup tid nomsMap
         & fromMaybe (error "addTypes: nominal missing from map")
-        & N.apply params
+        & applyNominal params
         & \case
           N.OpaqueNominal -> typ
           N.NominalType scheme -> scheme ^. schemeType & unwrapTInsts nomsMap

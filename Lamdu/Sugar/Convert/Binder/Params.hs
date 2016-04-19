@@ -29,6 +29,11 @@ import qualified Data.Store.Property as Property
 import           Data.Store.Transaction (Transaction, MkProperty)
 import qualified Data.Store.Transaction as Transaction
 import           Data.UUID.Types (UUID)
+import           Lamdu.Calc.Type (Type)
+import qualified Lamdu.Calc.Type as T
+import qualified Lamdu.Calc.Val as V
+import           Lamdu.Calc.Val.Annotated (Val(..))
+import qualified Lamdu.Calc.Val.Annotated as Val
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Data.Ops.Subexprs as SubExprs
@@ -38,12 +43,7 @@ import qualified Lamdu.Expr.GenIds as GenIds
 import           Lamdu.Expr.IRef (ValI, ValIProperty)
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Lens as ExprLens
-import           Lamdu.Expr.Type (Type)
-import qualified Lamdu.Expr.Type as T
 import qualified Lamdu.Expr.UniqueId as UniqueId
-import qualified Lamdu.Expr.Val as V
-import           Lamdu.Expr.Val.Annotated (Val(..))
-import qualified Lamdu.Expr.Val.Annotated as Val
 import           Lamdu.Sugar.Convert.Binder.Types (BinderKind(..))
 import qualified Lamdu.Sugar.Convert.Input as Input
 import           Lamdu.Sugar.Convert.Monad (ConvertM)
@@ -192,7 +192,7 @@ mkCpScopesOfLam x =
     <&> (fmap . map) BinderParamScopeId
 
 getFieldOnVar :: Lens.Traversal' (Val t) (V.Var, T.Tag)
-getFieldOnVar = Val.body . ExprLens._BGetField . inGetField
+getFieldOnVar = Val.body . V._BGetField . inGetField
     where
         inGetField f (V.GetField (Val pl (V.BLeaf (V.LVar v))) t) =
             f (v, t) <&> pack pl
@@ -355,7 +355,7 @@ removeCallsToVar :: Monad m => V.Var -> Val (ValIProperty m) -> T m ()
 removeCallsToVar funcVar val =
     do
         SubExprs.onMatchingSubexprs changeRecursion
-            ( Val.body . ExprLens._BApp . V.applyFunc . ExprLens.valVar
+            ( Val.body . V._BApp . V.applyFunc . ExprLens.valVar
             . Lens.only funcVar
             ) val
         wrapUnappliedUsesOfVar funcVar val
@@ -445,7 +445,7 @@ convertToRecordParams mkNewArg binderKind storedLam newParamPosition =
 lamParamType :: Input.Payload m a -> Type
 lamParamType lamExprPl =
     unsafeUnjust "Lambda value not inferred to a function type?!" $
-    lamExprPl ^? Input.inferredType . ExprLens._TFun . _1
+    lamExprPl ^? Input.inferredType . T._TFun . _1
 
 makeNonRecordParamActions ::
     Monad m => BinderKind m -> StoredLam m -> ConvertM m (FuncParamActions m)
@@ -600,8 +600,8 @@ convertNonEmptyParams binderKind lambda lambdaPl =
                         lambda ^.. V.lamResult . ExprLens.subExprs
                         . Lens.filtered (Lens.has ExprLens.valAbs)
                         . Val.payload
-                        . Input.inferredType . ExprLens._TFun . _1
-                        . ExprLens._TRecord . ExprLens.compositeTags
+                        . Input.inferredType . T._TFun . _1
+                        . T._TRecord . ExprLens.compositeTags
                         & Set.fromList
             _ -> convertNonRecordParam binderKind lambda lambdaPl
     where

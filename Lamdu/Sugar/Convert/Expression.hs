@@ -9,10 +9,10 @@ import           Data.Store.Property (Property(..))
 import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
 import qualified Lamdu.Builtins.PrimVal as PrimVal
+import qualified Lamdu.Calc.Val as V
+import           Lamdu.Calc.Val.Annotated (Val(..))
+import qualified Lamdu.Calc.Val.Annotated as Val
 import qualified Lamdu.Expr.IRef as ExprIRef
-import qualified Lamdu.Expr.Val as V
-import           Lamdu.Expr.Val.Annotated (Val(..))
-import qualified Lamdu.Expr.Val.Annotated as Val
 import qualified Lamdu.Sugar.Convert.Apply as ConvertApply
 import qualified Lamdu.Sugar.Convert.Binder as ConvertBinder
 import qualified Lamdu.Sugar.Convert.Case as ConvertCase

@@ -10,8 +10,8 @@ module Lamdu.Sugar.Names.Walk
 
 import           Control.Lens.Operators
 import           Data.Store.Transaction (Transaction)
-import           Lamdu.Expr.Type (Type)
-import qualified Lamdu.Expr.Type as T
+import           Lamdu.Calc.Type (Type)
+import qualified Lamdu.Calc.Type as T
 import           Lamdu.Sugar.Names.CPS (CPS(..))
 import qualified Lamdu.Sugar.Names.NameGen as NameGen
 import           Lamdu.Sugar.Types

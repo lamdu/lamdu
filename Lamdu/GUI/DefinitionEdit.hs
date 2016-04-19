@@ -15,9 +15,9 @@ import           Graphics.UI.Bottle.View (View(..))
 import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets as BWidgets
+import           Lamdu.Calc.Type.Scheme (Scheme(..), schemeType)
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Data.Definition as Definition
-import           Lamdu.Expr.Scheme (Scheme(..), schemeType)
 import qualified Lamdu.GUI.ExpressionEdit.BinderEdit as BinderEdit
 import qualified Lamdu.GUI.ExpressionEdit.BuiltinEdit as BuiltinEdit
 import           Lamdu.GUI.ExpressionGui (ExpressionGui)

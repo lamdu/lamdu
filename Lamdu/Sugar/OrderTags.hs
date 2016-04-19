@@ -14,12 +14,12 @@ import qualified Data.Map as Map
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
 import           Lamdu.Data.Anchors (assocTagOrder)
-import           Lamdu.Expr.FlatComposite (FlatComposite(..))
-import qualified Lamdu.Expr.FlatComposite as FlatComposite
+import           Lamdu.Calc.Type (Type)
+import qualified Lamdu.Calc.Type as T
+import           Lamdu.Calc.Type.FlatComposite (FlatComposite(..))
+import qualified Lamdu.Calc.Type.FlatComposite as FlatComposite
+import qualified Lamdu.Calc.Type.Scheme as S
 import qualified Lamdu.Expr.Lens as ExprLens
-import qualified Lamdu.Expr.Scheme as S
-import           Lamdu.Expr.Type (Type)
-import qualified Lamdu.Expr.Type as T
 import qualified Lamdu.Sugar.Lens as SugarLens
 import qualified Lamdu.Sugar.Types as Sugar
 
@@ -48,8 +48,8 @@ orderComposite c =
 orderType :: Monad m => Order m Type
 orderType t =
     t
-    & ExprLens._TRecord %%~ orderComposite
-    >>= ExprLens._TSum %%~ orderComposite
+    & T._TRecord %%~ orderComposite
+    >>= T._TSum %%~ orderComposite
     >>= ExprLens.nextLayer orderType
 
 orderRecord :: Monad m => Order m (Sugar.Record name f a)

@@ -9,11 +9,11 @@ import           Control.Lens.Operators
 import           Control.Lens.Tuple
 import qualified Data.Store.Property as Property
 import           Data.Store.Transaction (Transaction)
+import qualified Lamdu.Calc.Val as V
+import           Lamdu.Calc.Val.Annotated (Val(..))
+import qualified Lamdu.Calc.Val.Annotated as Val
 import           Lamdu.Expr.IRef (ValIProperty, ValI)
 import qualified Lamdu.Expr.IRef as ExprIRef
-import qualified Lamdu.Expr.Val as V
-import           Lamdu.Expr.Val.Annotated (Val(..))
-import qualified Lamdu.Expr.Val.Annotated as Val
 import           Lamdu.Sugar.Convert.Binder.Redex (Redex(..))
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import           Lamdu.Sugar.Types

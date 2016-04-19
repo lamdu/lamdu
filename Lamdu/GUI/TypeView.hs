@@ -26,11 +26,11 @@ import qualified Graphics.UI.Bottle.Widgets as BWidgets
 import qualified Graphics.UI.Bottle.Widgets.GridView as GridView
 import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
 import           Graphics.UI.Bottle.WidgetsEnvT (WidgetEnvT)
+import           Lamdu.Calc.Identifier (Identifier(..))
+import           Lamdu.Calc.Type (Type)
+import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Data.Anchors as Anchors
-import           Lamdu.Expr.Identifier (Identifier(..))
-import           Lamdu.Expr.Type (Type)
-import qualified Lamdu.Expr.Type as T
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import           Lamdu.GUI.Precedence (ParentPrecedence(..), MyPrecedence(..), needParens)

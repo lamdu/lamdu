@@ -9,13 +9,13 @@ import           Control.Lens.Operators
 import           Data.Store.Property (Property(..))
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
+import qualified Lamdu.Calc.Type as T
+import           Lamdu.Calc.Type.Nominal (Nominal)
+import           Lamdu.Calc.Val.Annotated (Val(..))
 import           Lamdu.Data.Definition (Definition(..))
 import qualified Lamdu.Data.Definition as Definition
 import           Lamdu.Expr.IRef (DefI, ValI, ValIProperty)
 import qualified Lamdu.Expr.IRef as ExprIRef
-import           Lamdu.Expr.Nominal (Nominal)
-import qualified Lamdu.Expr.Type as T
-import           Lamdu.Expr.Val.Annotated (Val(..))
 
 type T = Transaction
 

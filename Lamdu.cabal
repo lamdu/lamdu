@@ -29,7 +29,6 @@ Flag noprettyclass
 Library
   -- Modules exported by the library.
   hs-Source-Dirs:      bottlelib
-                     , submodules/AlgoW
 
   Exposed-modules:  Control.Applicative.Utils
                   , Control.Concurrent.Utils
@@ -39,7 +38,6 @@ Library
                   , Control.Monad.Trans.State.Utils
                   , Control.Monad.Unit
                   , Data.Binary.Utils
-                  , Data.ByteString.Hex
                   , Data.ByteString.NFData
                   , Data.ByteString.Utils
                   , Data.CurAndPrev
@@ -137,8 +135,8 @@ Library
 
 Executable lamdu
   hs-Source-Dirs: .
-                  , submodules/AlgoW
-  Build-Depends:    GLFW-b
+  Build-Depends:    AlgoW
+                  , GLFW-b
                   , JuicyPixels
                   , Lamdu
                   , List >= 0.5.1
@@ -159,6 +157,7 @@ Executable lamdu
                   , filepath
                   , graphics-drawingcombinators >= 1.5.1.2
                   , hashable
+                  , lamdu-calculus
                   , language-ecmascript >= 0.17
                   , lens
                   , nodejs-exec
@@ -181,9 +180,7 @@ Executable lamdu
   else
     build-depends:  pretty >=1.1 && <1.1.2
                   , prettyclass ==1.0.0.0
-  Other-Modules:    Data.Hashable.Generic
-                  , Data.Map.Utils
-                  , Lamdu.Builtins.Anchors
+  Other-Modules:    Lamdu.Builtins.Anchors
                   , Lamdu.Builtins.PrimVal
                   , Lamdu.CharClassification
                   , Lamdu.Compiler.Flatten
@@ -204,25 +201,12 @@ Executable lamdu
                   , Lamdu.Eval.Manager
                   , Lamdu.Eval.Results
                   , Lamdu.Eval.Results.Process
-                  , Lamdu.Expr.Constraints
-                  , Lamdu.Expr.FlatComposite
                   , Lamdu.Expr.GenIds
                   , Lamdu.Expr.IRef
                   , Lamdu.Expr.IRef.Infer
-                  , Lamdu.Expr.Identifier
-                  , Lamdu.Expr.Lens
                   , Lamdu.Expr.Load
-                  , Lamdu.Expr.Nominal
-                  , Lamdu.Expr.Pure
                   , Lamdu.Expr.RecordVal
-                  , Lamdu.Expr.Scheme
-                  , Lamdu.Expr.Type
-                  , Lamdu.Expr.Type.Match
-                  , Lamdu.Expr.TypeVars
                   , Lamdu.Expr.UniqueId
-                  , Lamdu.Expr.Val
-                  , Lamdu.Expr.Val.Annotated
-                  , Lamdu.Expr.Val.Arbitrary
                   , Lamdu.Font
                   , Lamdu.Formatting
                   , Lamdu.GUI.CodeEdit
@@ -272,17 +256,6 @@ Executable lamdu
                   , Lamdu.GUI.WidgetIdIRef
                   , Lamdu.GUI.WidgetIds
                   , Lamdu.GUI.Zoom
-                  , Lamdu.Infer
-                  , Lamdu.Infer.Error
-                  , Lamdu.Infer.Internal.Constraints
-                  , Lamdu.Infer.Internal.Monad
-                  , Lamdu.Infer.Internal.Scheme
-                  , Lamdu.Infer.Internal.Scope
-                  , Lamdu.Infer.Internal.Subst
-                  , Lamdu.Infer.Internal.Unify
-                  , Lamdu.Infer.Load
-                  , Lamdu.Infer.Unify
-                  , Lamdu.Infer.Update
                   , Lamdu.Main
                   , Lamdu.Opts
                   , Lamdu.Style
@@ -328,8 +301,6 @@ Executable lamdu
                   , Lamdu.VersionControl
                   , Lamdu.VersionControl.Actions
                   , Paths_Lamdu
-                  , Text.PrettyPrint.HughesPJClass.Compat
-                  , Text.PrettyPrint.Utils
 
   ghc-options:         -O2 -Wall -threaded
   -- ghc-options is prepended to ghc-prof-options

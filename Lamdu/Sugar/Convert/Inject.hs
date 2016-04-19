@@ -5,11 +5,11 @@ module Lamdu.Sugar.Convert.Inject
 
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
+import qualified Lamdu.Calc.Val as V
+import           Lamdu.Calc.Val.Annotated (Val)
+import qualified Lamdu.Calc.Val.Annotated as Val
 import qualified Lamdu.Expr.Lens as ExprLens
 import qualified Lamdu.Expr.UniqueId as UniqueId
-import qualified Lamdu.Expr.Val as V
-import           Lamdu.Expr.Val.Annotated (Val)
-import qualified Lamdu.Expr.Val.Annotated as Val
 import           Lamdu.Sugar.Convert.Expression.Actions (addActions, addActionsWithSetToInner)
 import qualified Lamdu.Sugar.Convert.Input as Input
 import           Lamdu.Sugar.Convert.Monad (ConvertM)

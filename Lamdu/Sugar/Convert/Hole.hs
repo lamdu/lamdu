@@ -28,6 +28,11 @@ import qualified Data.Store.Transaction as Transaction
 import           Data.UUID.Types (UUID)
 import qualified Lamdu.Builtins.Anchors as Builtins
 import qualified Lamdu.Builtins.PrimVal as PrimVal
+import           Lamdu.Calc.Type (Type(..))
+import qualified Lamdu.Calc.Type as T
+import qualified Lamdu.Calc.Val as V
+import           Lamdu.Calc.Val.Annotated (Val(..))
+import qualified Lamdu.Calc.Val.Annotated as Val
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Expr.GenIds as GenIds
 import qualified Lamdu.Expr.IRef as ExprIRef
@@ -36,11 +41,7 @@ import qualified Lamdu.Expr.Lens as ExprLens
 import qualified Lamdu.Expr.Load as Load
 import qualified Lamdu.Expr.Pure as P
 import qualified Lamdu.Expr.Pure as Pure
-import           Lamdu.Expr.Type (Type(..))
 import qualified Lamdu.Expr.UniqueId as UniqueId
-import qualified Lamdu.Expr.Val as V
-import           Lamdu.Expr.Val.Annotated (Val(..))
-import qualified Lamdu.Expr.Val.Annotated as Val
 import qualified Lamdu.Infer as Infer
 import           Lamdu.Infer.Unify (unify)
 import           Lamdu.Infer.Update (Update, update)
@@ -382,10 +383,10 @@ idTranslations consistentExpr dest
         = concat
             [ pairUp Val.payload
             , pairUp params
-            , pairUpTags ExprLens._BRecExtend EntityId.ofRecExtendTag
-            , pairUpTags ExprLens._BGetField EntityId.ofGetFieldTag
-            , pairUpTags ExprLens._BCase EntityId.ofCaseTag
-            , pairUpTags ExprLens._BInject EntityId.ofInjectTag
+            , pairUpTags V._BRecExtend EntityId.ofRecExtendTag
+            , pairUpTags V._BGetField EntityId.ofGetFieldTag
+            , pairUpTags V._BCase EntityId.ofCaseTag
+            , pairUpTags V._BInject EntityId.ofInjectTag
             , pairUpLambdaRecordParams (consistentExpr <&> snd) dest
             ]
     | otherwise =
@@ -403,7 +404,7 @@ idTranslations consistentExpr dest
                           )
                       | tag <-
                               srcType ^..
-                              ExprLens._TFun . _1 . ExprLens._TRecord . ExprLens.compositeTags
+                              T._TFun . _1 . T._TRecord . ExprLens.compositeTags
                       ] ++ recurse
             _ -> recurse
             where
@@ -418,7 +419,7 @@ idTranslations consistentExpr dest
             pairUp $
             Lens.filtered (Lens.has (Val.body . prism)) . Val.payload . Lens.to toEntityId
         params =
-            Val.body . ExprLens._BLam . V.lamParamId .
+            Val.body . V._BLam . V.lamParamId .
             Lens.to EntityId.ofLambdaParam
 
 eitherTtoListT :: Monad m => EitherT err m a -> ListT m a

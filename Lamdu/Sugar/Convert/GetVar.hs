@@ -12,13 +12,14 @@ import           Control.Monad.Trans.Maybe (MaybeT)
 import           Data.Maybe.Utils (maybeToMPlus)
 import           Data.UUID.Types (UUID)
 import           Data.Store.Transaction (Transaction)
+import qualified Lamdu.Calc.Type as T
+import qualified Lamdu.Calc.Val as V
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Ops as DataOps
 import           Lamdu.Expr.IRef (DefI)
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Lens as ExprLens
 import qualified Lamdu.Expr.UniqueId as UniqueId
-import qualified Lamdu.Expr.Val as V
 import qualified Lamdu.Infer as Infer
 import           Lamdu.Sugar.Convert.Expression.Actions (addActions)
 import qualified Lamdu.Sugar.Convert.Input as Input
@@ -100,7 +101,7 @@ convertParamsRecord param exprPl =
         GetParamsRecord ParamsRecordVar
             { _prvFieldNames =
                 exprPl
-                ^.. Input.inferredType . ExprLens._TRecord . ExprLens.compositeTags
+                ^.. Input.inferredType . T._TRecord . ExprLens.compositeTags
                 <&> UniqueId.toUUID
             } & return
 

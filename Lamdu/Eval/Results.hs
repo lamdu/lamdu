@@ -15,8 +15,8 @@ import           Data.Binary (Binary)
 import           Data.Map (Map)
 import qualified Data.Map as Map
 import           Lamdu.Data.Definition (FFIName)
-import qualified Lamdu.Expr.Type as T
-import qualified Lamdu.Expr.Val as V
+import qualified Lamdu.Calc.Type as T
+import qualified Lamdu.Calc.Val as V
 
 import           Prelude.Compat
 

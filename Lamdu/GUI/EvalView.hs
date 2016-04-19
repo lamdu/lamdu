@@ -21,12 +21,12 @@ import qualified Graphics.UI.Bottle.Widgets.GridView as GridView
 import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
 import qualified Lamdu.Builtins.Anchors as Builtins
 import qualified Lamdu.Builtins.PrimVal as PrimVal
+import           Lamdu.Calc.Type (Type)
+import qualified Lamdu.Calc.Type as T
+import qualified Lamdu.Calc.Val as V
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Data.Anchors as Anchors
 import           Lamdu.Eval.Results (EvalError(..), Val(..), Body(..))
-import           Lamdu.Expr.Type (Type)
-import qualified Lamdu.Expr.Type as T
-import qualified Lamdu.Expr.Val as V
 import           Lamdu.Formatting (Format(..))
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM

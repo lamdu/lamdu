@@ -12,8 +12,8 @@ module Lamdu.Builtins.Anchors
 
 import           Data.List.Utils (rightPad)
 import           Data.String (IsString(..))
-import           Lamdu.Expr.Type (Tag)
-import qualified Lamdu.Expr.Type as T
+import           Lamdu.Calc.Type (Tag)
+import qualified Lamdu.Calc.Type as T
 
 -- We want the translation to UUID and back to not be lossy, so we
 -- canonize to UUID format

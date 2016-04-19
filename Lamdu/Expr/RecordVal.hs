@@ -6,9 +6,9 @@ import           Control.Lens.Operators
 import           Control.Lens.Tuple
 import           Data.Map (Map)
 import qualified Data.Map as Map
-import qualified Lamdu.Expr.Type as T
-import           Lamdu.Expr.Val.Annotated (Val(..))
-import qualified Lamdu.Expr.Val as V
+import qualified Lamdu.Calc.Type as T
+import           Lamdu.Calc.Val.Annotated (Val(..))
+import qualified Lamdu.Calc.Val as V
 
 unpack :: Val a -> (Map T.Tag (a, Val a), Val a)
 unpack (Val pl (V.BRecExtend (V.RecExtend tag val rest))) =

@@ -11,15 +11,15 @@ import qualified Data.Store.Property as Property
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
 import           Data.UUID.Types (UUID)
+import           Lamdu.Calc.Type.Scheme (Scheme)
+import qualified Lamdu.Calc.Type.Scheme as Scheme
+import qualified Lamdu.Calc.Val as V
+import           Lamdu.Calc.Val.Annotated (Val(..))
+import qualified Lamdu.Calc.Val.Annotated as Val
 import qualified Lamdu.Data.Definition as Definition
 import           Lamdu.Expr.IRef (DefI)
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Lens as ExprLens
-import           Lamdu.Expr.Scheme (Scheme)
-import qualified Lamdu.Expr.Scheme as Scheme
-import qualified Lamdu.Expr.Val as V
-import           Lamdu.Expr.Val.Annotated (Val(..))
-import qualified Lamdu.Expr.Val.Annotated as Val
 import qualified Lamdu.Infer as Infer
 import qualified Lamdu.Sugar.Convert.Binder as ConvertBinder
 import qualified Lamdu.Sugar.Convert.Input as Input

@@ -9,9 +9,9 @@ module Lamdu.Builtins.PrimVal
 import           Data.Binary.Utils (encodeS, decodeS)
 import           Data.ByteString (ByteString)
 import           Lamdu.Builtins.Anchors (bytesTid, floatTid)
-import           Lamdu.Expr.Type (Type)
-import qualified Lamdu.Expr.Type as T
-import qualified Lamdu.Expr.Val as V
+import           Lamdu.Calc.Type (Type)
+import qualified Lamdu.Calc.Type as T
+import qualified Lamdu.Calc.Val as V
 
 data KnownPrim
     = Float Double

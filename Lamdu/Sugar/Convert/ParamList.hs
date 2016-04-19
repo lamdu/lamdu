@@ -12,14 +12,14 @@ import qualified Control.Monad.Trans.State as State
 import qualified Data.Store.Property as Property
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
+import           Lamdu.Calc.Type (Type)
+import qualified Lamdu.Calc.Type as T
+import qualified Lamdu.Calc.Val as V
+import           Lamdu.Calc.Val.Annotated (Val(..))
 import           Lamdu.Data.Anchors (ParamList, assocFieldParamList)
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.IRef.Infer as IRefInfer
 import qualified Lamdu.Expr.Lens as ExprLens
-import           Lamdu.Expr.Type (Type)
-import qualified Lamdu.Expr.Type as T
-import qualified Lamdu.Expr.Val as V
-import           Lamdu.Expr.Val.Annotated (Val(..))
 import           Lamdu.Infer (Infer)
 import qualified Lamdu.Infer as Infer
 import           Lamdu.Infer.Unify (unify)

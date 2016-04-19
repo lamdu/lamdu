@@ -3,7 +3,7 @@ module Lamdu.Sugar.Convert.TIdG
     ) where
 
 import           Data.UUID.Types (UUID)
-import qualified Lamdu.Expr.Type as T
+import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Expr.UniqueId as UniqueId
 import           Lamdu.Sugar.Types
 

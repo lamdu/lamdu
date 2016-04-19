@@ -17,13 +17,13 @@ import           Control.Monad.Trans.Either (EitherT(..), hoistEither)
 import           Control.Monad.Trans.State (StateT(..), mapStateT)
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
+import           Lamdu.Calc.Type.Scheme (Scheme(..))
+import qualified Lamdu.Calc.Type.Scheme as Scheme
+import           Lamdu.Calc.Val.Annotated (Val(..))
+import qualified Lamdu.Calc.Val.Annotated as Val
 import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Load as Load
-import           Lamdu.Expr.Scheme (Scheme(..))
-import qualified Lamdu.Expr.Scheme as Scheme
-import           Lamdu.Expr.Val.Annotated (Val(..))
-import qualified Lamdu.Expr.Val.Annotated as Val
 import           Lamdu.Infer (Infer)
 import qualified Lamdu.Infer as Infer
 import qualified Lamdu.Infer.Error as InferErr

@@ -27,13 +27,13 @@ import           Data.Set (Set)
 import qualified Data.Store.Property as Property
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
+import           Lamdu.Calc.Type.Nominal (Nominal(..))
+import qualified Lamdu.Calc.Type as T
+import qualified Lamdu.Calc.Val as V
+import           Lamdu.Calc.Val.Annotated (Val)
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Expr.IRef as ExprIRef
-import           Lamdu.Expr.Nominal (Nominal(..))
-import qualified Lamdu.Expr.Type as T
-import qualified Lamdu.Expr.Val as V
-import           Lamdu.Expr.Val.Annotated (Val)
 import qualified Lamdu.Infer as Infer
 import qualified Lamdu.Sugar.Convert.Input as Input
 import           Lamdu.Sugar.Internal

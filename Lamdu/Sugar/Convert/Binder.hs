@@ -14,15 +14,15 @@ import qualified Data.Store.IRef as IRef
 import qualified Data.Store.Property as Property
 import           Data.Store.Transaction (MkProperty)
 import           Data.UUID.Types (UUID)
+import qualified Lamdu.Calc.Val as V
+import           Lamdu.Calc.Val.Annotated (Val(..))
+import qualified Lamdu.Calc.Val.Annotated as Val
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Data.Ops.Subexprs as SubExprs
 import           Lamdu.Expr.IRef (DefI, ValIProperty)
 import qualified Lamdu.Expr.Lens as ExprLens
 import qualified Lamdu.Expr.UniqueId as UniqueId
-import qualified Lamdu.Expr.Val as V
-import           Lamdu.Expr.Val.Annotated (Val(..))
-import qualified Lamdu.Expr.Val.Annotated as Val
 import           Lamdu.Sugar.Convert.Binder.Float (makeFloatLetToOuterScope)
 import           Lamdu.Sugar.Convert.Binder.Inline (inlineLet)
 import           Lamdu.Sugar.Convert.Binder.Params (ConventionalParams(..), cpParams, convertParams, convertLamParams, mkStoredLam, makeDeleteLambda)

@@ -18,6 +18,11 @@ import qualified Data.Store.Property as Property
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
 import           Data.UUID.Types (UUID)
+import qualified Lamdu.Calc.Type as T
+import qualified Lamdu.Calc.Type.Nominal as N
+import           Lamdu.Calc.Type.Scheme (schemeType)
+import           Lamdu.Calc.Val.Annotated (Val(..))
+import qualified Lamdu.Calc.Val.Annotated as Val
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Definition as Definition
 import           Lamdu.Eval.Results (EvalResults, erExprValues, erAppliesOfLam)
@@ -27,12 +32,7 @@ import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.IRef.Infer as IRefInfer
 import qualified Lamdu.Expr.Lens as ExprLens
 import qualified Lamdu.Expr.Load as Load
-import qualified Lamdu.Expr.Nominal as N
-import           Lamdu.Expr.Scheme (schemeType)
-import qualified Lamdu.Expr.Type as T
 import qualified Lamdu.Expr.UniqueId as UniqueId
-import           Lamdu.Expr.Val.Annotated (Val(..))
-import qualified Lamdu.Expr.Val.Annotated as Val
 import qualified Lamdu.Infer as Infer
 import qualified Lamdu.Sugar.Convert.DefExpr as ConvertDefExpr
 import qualified Lamdu.Sugar.Convert.Expression as ConvertExpr
@@ -167,7 +167,7 @@ makeNominalsMap val =
                     do
                         nom <- Load.nominal tid & lift
                         Map.insert tid nom loaded & State.put
-                        N.nType nom ^.. N._NominalType . schemeType & traverse_ loadForType
+                        nom ^.. N.nomType . N._NominalType . schemeType & traverse_ loadForType
 
 convertInferDefExpr ::
     Monad m =>

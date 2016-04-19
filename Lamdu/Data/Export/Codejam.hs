@@ -22,6 +22,9 @@ import           Data.Time.Clock.POSIX (getPOSIXTime)
 import qualified Foreign as F
 import qualified Graphics.Rendering.OpenGL as GL
 import qualified Lamdu.Builtins.PrimVal as PrimVal
+import qualified Lamdu.Calc.Val as V
+import           Lamdu.Calc.Val.Annotated (Val)
+import qualified Lamdu.Calc.Val.Annotated as Val
 import qualified Lamdu.Data.Anchors as Anchors
 import           Lamdu.Data.DbLayout (ViewM)
 import qualified Lamdu.Data.DbLayout as DbLayout
@@ -32,9 +35,6 @@ import           Lamdu.Eval.Results (EvalResults)
 import qualified Lamdu.Eval.Results as EV
 import           Lamdu.Expr.IRef (ValI)
 import qualified Lamdu.Expr.IRef as ExprIRef
-import qualified Lamdu.Expr.Val as V
-import           Lamdu.Expr.Val.Annotated (Val)
-import qualified Lamdu.Expr.Val.Annotated as Val
 
 import           Prelude.Compat
 

@@ -29,6 +29,7 @@ import qualified Data.Store.Rev.Version as Version
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
 import           Data.UUID.Types (UUID)
+import           Lamdu.Calc.Val.Annotated (Val)
 import qualified Lamdu.Data.Anchors as Anchors
 import           Lamdu.Data.DbLayout (DbM, ViewM)
 import qualified Lamdu.Data.DbLayout as DbLayout
@@ -39,7 +40,6 @@ import qualified Lamdu.Eval.Results as EvalResults
 import           Lamdu.Expr.IRef (DefI, ValI)
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Load as Load
-import           Lamdu.Expr.Val.Annotated (Val)
 import           Lamdu.VersionControl (getVersion)
 import qualified Lamdu.VersionControl as VersionControl
 

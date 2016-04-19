@@ -1,6 +1,12 @@
 packages:
 - .
 - location:
+    git: https://github.com/lamdu/lamdu-calculus
+    commit: 257003d90ea0f191ebfd15273cc009cd7463e997
+- location:
+    git: https://github.com/lamdu/Algorithm-W-Step-By-Step
+    commit: e05886d2392005936f46c3fa75aa624317659bc4
+- location:
     git: https://github.com/lamdu/graphics-drawingcombinators
     commit: 2d8f9efb610dcf69c28ae9fbb8799565cef10612
 - location:

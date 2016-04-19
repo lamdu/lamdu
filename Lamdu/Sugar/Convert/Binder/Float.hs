@@ -9,15 +9,15 @@ import           Control.Lens.Operators
 import qualified Data.Set as Set
 import qualified Data.Store.Property as Property
 import           Data.Store.Transaction (Transaction)
+import qualified Lamdu.Calc.Type as T
+import qualified Lamdu.Calc.Val as V
+import           Lamdu.Calc.Val.Annotated (Val(..))
+import qualified Lamdu.Calc.Val.Annotated as Val
 import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Data.Ops.Subexprs as SubExprs
 import           Lamdu.Expr.IRef (ValI, ValIProperty)
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Lens as ExprLens
-import qualified Lamdu.Expr.Type as T
-import qualified Lamdu.Expr.Val as V
-import           Lamdu.Expr.Val.Annotated (Val(..))
-import qualified Lamdu.Expr.Val.Annotated as Val
 import qualified Lamdu.Sugar.Convert.Binder.Params as Params
 import           Lamdu.Sugar.Convert.Binder.Redex (Redex(..))
 import           Lamdu.Sugar.Convert.Binder.Types (BinderKind(..))
@@ -171,7 +171,7 @@ floatLetToOuterScope topLevelProp redex ctx =
             (outerScopeInfo ^. ConvertM.osiVarsUnderPos)
         outerScopeInfo = ctx ^. ConvertM.scScopeInfo . ConvertM.siOuter
         usedVars =
-            redexArg redex ^.. ExprLens.valLeafs . ExprLens._LVar
+            redexArg redex ^.. ExprLens.valLeafs . V._LVar
             & Set.fromList
 
 makeFloatLetToOuterScope ::

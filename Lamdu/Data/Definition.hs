@@ -12,8 +12,8 @@ import qualified Control.Lens as Lens
 import           Data.Binary (Binary(..))
 import           Data.Map (Map)
 import           GHC.Generics (Generic)
-import           Lamdu.Expr.Scheme (Scheme)
-import           Lamdu.Expr.Val (Var)
+import           Lamdu.Calc.Type.Scheme (Scheme)
+import           Lamdu.Calc.Val (Var)
 
 import           Prelude.Compat
 

@@ -20,17 +20,17 @@ import qualified Data.Store.Property as Property
 import           Data.Store.Transaction (Transaction)
 import           Data.UUID.Types (UUID)
 import qualified Lamdu.Builtins.Anchors as Builtins
+import           Lamdu.Calc.Type (Type)
+import qualified Lamdu.Calc.Val as V
+import           Lamdu.Calc.Val.Annotated (Val(..))
+import qualified Lamdu.Calc.Val.Annotated as Val
 import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Lens as ExprLens
 import qualified Lamdu.Expr.Load as Load
 import qualified Lamdu.Expr.Pure as P
 import qualified Lamdu.Expr.RecordVal as RecordVal
-import           Lamdu.Expr.Type (Type)
 import qualified Lamdu.Expr.UniqueId as UniqueId
-import qualified Lamdu.Expr.Val as V
-import           Lamdu.Expr.Val.Annotated (Val(..))
-import qualified Lamdu.Expr.Val.Annotated as Val
 import qualified Lamdu.Infer as Infer
 import           Lamdu.Infer.Unify (unify)
 import           Lamdu.Sugar.Convert.Expression.Actions (addActions)
