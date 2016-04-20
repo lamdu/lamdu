@@ -151,7 +151,8 @@ convert (V.Case tag val rest) exprPl = do
     restS <- ConvertM.convertSubexpression rest
     (restCase, hiddenEntities) <-
         case restS ^. rBody of
-        BodyCase r -> return (r, restS ^. rPayload . plData)
+        BodyCase r | Lens.has (cKind . _LambdaCase) r ->
+            return (r, restS ^. rPayload . plData)
         _ ->
             do
                 addAlt <- rest ^. Val.payload . Input.stored & makeAddAlt
