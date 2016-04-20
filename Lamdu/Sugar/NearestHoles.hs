@@ -35,7 +35,6 @@ none :: NearestHoles
 none = NearestHoles Nothing Nothing
 
 add ::
-    Monad m =>
     (forall a b.
       Lens.Traversal
       (f (Sugar.Expression name m a))
