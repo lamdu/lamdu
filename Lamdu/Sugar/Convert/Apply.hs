@@ -7,7 +7,7 @@ import           Prelude.Compat
 
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
-import           Control.Monad (MonadPlus(..), guard, unless)
+import           Control.Monad (guard, unless)
 import           Control.Monad.Trans.Class (lift)
 import           Control.Monad.Trans.Either.Utils (runMatcherT, justToLeft)
 import           Control.Monad.Trans.Maybe (MaybeT(..))
@@ -70,8 +70,7 @@ convert app@(V.Apply funcI argI) exprPl =
                     , argS & rPayload . plActions . setToInnerExpr .~ setToFuncAction
                     )
                     else return (funcS, argS)
-        justToLeft $
-            convertAppliedCase (funcS ^. rBody) (funcI ^. Val.payload) argS exprPl
+        justToLeft $ convertAppliedCase funcS (funcI ^. Val.payload) argS exprPl
         justToLeft $ convertLabeled funcS argS argI exprPl
         lift $ convertPrefix funcS argS exprPl
 
@@ -248,11 +247,11 @@ convertAppliedHole (V.Apply funcI argI) argS exprPl =
 
 convertAppliedCase ::
     (Monad m, Monoid a) =>
-    Body UUID m (ExpressionU m a) -> Input.Payload m a ->
-    ExpressionU m a -> Input.Payload m a ->
+    ExpressionU m a -> Input.Payload m a -> ExpressionU m a -> Input.Payload m a ->
     MaybeT (ConvertM m) (ExpressionU m a)
-convertAppliedCase (BodyCase caseB) casePl argS exprPl =
+convertAppliedCase funcS funcPl argS exprPl =
     do
+        caseB <- funcS ^? rBody . _BodyCase & maybeToMPlus
         Lens.has (cKind . _LambdaCase) caseB & guard
         protectedSetToVal <- lift ConvertM.typeProtectedSetToVal
         caseB
@@ -261,9 +260,8 @@ convertAppliedCase (BodyCase caseB) casePl argS exprPl =
                 { _caVal = argS
                 , _caToLambdaCase =
                     protectedSetToVal (exprPl ^. Input.stored)
-                    (casePl ^. Input.stored & Property.value) <&> EntityId.ofValI
+                    (funcPl ^. Input.stored & Property.value) <&> EntityId.ofValI
                 }
             & BodyCase
             & lift . addActions exprPl
-    <&> rPayload . plData <>~ casePl ^. Input.userData
-convertAppliedCase _ _ _ _ = mzero
+    <&> rPayload . plData <>~ funcS ^. rPayload . plData
