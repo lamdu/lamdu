@@ -18,7 +18,7 @@ import           Control.Applicative (optional)
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators hiding ((.=))
 import           Control.Lens.Tuple
-import           Control.Monad (unless)
+import           Control.Monad (guard, unless)
 import           Control.Monad.Trans.Class (lift)
 import           Control.Monad.Trans.Writer (WriterT(..))
 import qualified Control.Monad.Trans.Writer as Writer
