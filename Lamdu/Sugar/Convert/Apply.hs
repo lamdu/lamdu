@@ -84,6 +84,7 @@ convertLabeled ::
     MaybeT (ConvertM m) (ExpressionU m a)
 convertLabeled funcS argS argI exprPl =
     do
+        guard $ Lens.has (Val.body . V._BLeaf . V._LRecEmpty) recordTail
         guard $ Lens.has (rBody . _BodyGetVar . _GetBinder . bvForm . _GetDefinition) funcS
         record <- maybeToMPlus $ argS ^? rBody . _BodyRecord
         guard $ length (record ^. rItems) >= 2
@@ -115,7 +116,7 @@ convertLabeled funcS argS argI exprPl =
                 ( plActions . setToInnerExpr .~ setToInnerExprAction
                 )
     where
-        (fieldsI, Val _ (V.BLeaf V.LRecEmpty)) = RecordVal.unpack argI
+        (fieldsI, recordTail) = RecordVal.unpack argI
 
 convertPrefix ::
     (Monad m, Monoid a) =>
