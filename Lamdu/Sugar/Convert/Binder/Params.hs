@@ -531,15 +531,13 @@ convertNonRecordParam binderKind lam@(V.Lam param _) lamExprPl =
 
 isParamAlwaysUsedWithGetField :: V.Lam (Val a) -> Bool
 isParamAlwaysUsedWithGetField (V.Lam param body) =
-    go body
+    go False body
     where
-        go val =
+        go isGetFieldChild val =
             case val ^. Val.body of
-            V.BLeaf (V.LVar v) | v == param -> False
-            V.BGetField (V.GetField r _) -> checkChildren r
-            _ -> checkChildren val
-            where
-                checkChildren x = all go (x ^.. Val.body . Lens.traverse)
+            V.BLeaf (V.LVar v) | v == param -> isGetFieldChild
+            V.BGetField (V.GetField r _) -> go True r
+            x -> all (go False) (x ^.. Lens.traverse)
 
 convertLamParams ::
     (Monad m, Monoid a) =>
