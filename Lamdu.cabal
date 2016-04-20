@@ -38,7 +38,6 @@ Library
                   , Control.Monad.Trans.State.Utils
                   , Control.Monad.Unit
                   , Data.Binary.Utils
-                  , Data.ByteString.NFData
                   , Data.ByteString.Utils
                   , Data.CurAndPrev
                   , Data.Function.Decycle
@@ -50,7 +49,6 @@ Library
                   , Data.Monoid.Applicative
                   , Data.Monoid.Generic
                   , Data.Monoid.Instances
-                  , Data.Random.Instances
                   , Data.Set.Ordered
                   , Data.Store.Db
                   , Data.Store.IRef

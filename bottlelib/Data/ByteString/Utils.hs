@@ -7,7 +7,6 @@ import           Data.Bits (xor)
 import qualified Data.ByteString as SBS
 import qualified Data.ByteString.Lazy as LBS
 import           Data.Function (on)
-import           Data.Random.Instances ()
 import           Data.Word (Word8)
 import           System.Random (randomIO)
 
