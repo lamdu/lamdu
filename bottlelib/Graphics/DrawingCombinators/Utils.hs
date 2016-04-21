@@ -37,8 +37,13 @@ instance Aeson.FromJSON Draw.Color
 scale :: Vector2 Draw.R -> Draw.Affine
 scale (Vector2 x y) = Draw.scale x y
 
+roundR :: Draw.R -> Draw.R
+roundR x = fromIntegral (round x :: Int)
+
 translate :: Vector2 Draw.R -> Draw.Affine
-translate (Vector2 x y) = Draw.translate (x, y)
+-- Translating to fractional positions causes drawing artefacts for
+-- text, so we round all positions to nearest pixel boundary
+translate (Vector2 x y) = Draw.translate (roundR x, roundR y)
 
 square :: Image
 square = void $ Draw.convexPoly [ (0, 0), (1, 0), (1, 1), (0, 1) ]
