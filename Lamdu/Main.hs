@@ -242,8 +242,8 @@ runEditor title copyJSOutputPath windowMode db =
 newtype RefreshScheduler = RefreshScheduler (IORef Bool)
 newRefreshScheduler :: IO RefreshScheduler
 newRefreshScheduler = newIORef False <&> RefreshScheduler
-shouldRefresh :: RefreshScheduler -> IO Bool
-shouldRefresh (RefreshScheduler ref) = atomicModifyIORef ref $ \r -> (False, r)
+isRefreshScheduled :: RefreshScheduler -> IO Bool
+isRefreshScheduled (RefreshScheduler ref) = atomicModifyIORef ref $ \r -> (False, r)
 scheduleRefresh :: RefreshScheduler -> IO ()
 scheduleRefresh (RefreshScheduler ref) = writeIORef ref True
 
@@ -335,7 +335,7 @@ mainLoop win refreshScheduler configSampler iteration =
                         (curVersionNum, lastVersionNum /= curVersionNum)
                     if configChanged
                         then return True
-                        else shouldRefresh refreshScheduler
+                        else isRefreshScheduled refreshScheduler
         mainLoopWidget win tickHandler makeWidget getAnimHalfLife
 
 memoizeMakeWidget ::
