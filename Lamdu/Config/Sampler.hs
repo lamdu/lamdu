@@ -1,7 +1,7 @@
 {-# LANGUAGE NoImplicitPrelude, DeriveFunctor, DeriveFoldable, DeriveTraversable #-}
 module Lamdu.Config.Sampler
     ( Sampler, new
-    , Sample(..), getSample
+    , Sample(..), getSample, onEachSample
     ) where
 
 import           Control.Concurrent (threadDelay, ThreadId)
@@ -34,6 +34,9 @@ data Sampler a = Sampler
     { _sThreadId :: ThreadId
     , sGetSample :: IO (Sample a)
     } deriving Functor
+
+onEachSample :: (a -> IO b) -> Sampler a -> Sampler b
+onEachSample act (Sampler t get) = Sampler t (get >>= traverse act)
 
 getSample :: Sampler a -> IO (Sample a)
 getSample = sGetSample
