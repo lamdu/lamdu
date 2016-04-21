@@ -67,11 +67,11 @@ import           Prelude.Compat
 
 type T = Transaction
 
-defaultFonts :: Fonts (FontSize, FilePath)
+defaultFonts :: Fonts FilePath
 defaultFonts =
-    Fonts defaultFont defaultFont defaultFont defaultFont
+    Fonts defaultFont defaultFont defaultFont defaultFont defaultFont
     where
-        defaultFont = (16, "fonts/Purisa.ttf")
+        defaultFont = "fonts/Purisa.ttf"
 
 main :: IO ()
 main =
@@ -234,7 +234,7 @@ runEditor title copyJSOutputPath windowMode db =
                     mainLoop win refreshScheduler configSampler $ \fontsVer fonts config size ->
                         makeRootWidgetCached (CachedWidgetInput fontsVer config size fonts)
                         >>= wrapFlyNav
-                        >>= addHelp (Style.help (Font.fontDefault fonts) (Config.help config)) size
+                        >>= addHelp (Style.help (Font.fontHelp fonts) (Config.help config)) size
 
 newtype RefreshScheduler = RefreshScheduler (IORef Bool)
 newRefreshScheduler :: IO RefreshScheduler
@@ -259,25 +259,37 @@ loopWhileException _ act = loop 0
             Nothing -> loop (n+1)
             Just res -> return res
 
-prependConfigPath ::
-    ConfigSampler.Sample Config ->
-    Fonts (FontSize, FilePath) ->
-    Fonts (FontSize, FilePath)
+prependConfigPath :: ConfigSampler.Sample Config -> Fonts FilePath -> Fonts FilePath
 prependConfigPath sample =
-    Lens.mapped . _2 %~ (dir </>)
+    Lens.mapped %~ (dir </>)
     where
         dir = FilePath.takeDirectory (ConfigSampler.sFilePath sample)
 
+assignFontSizes ::
+    ConfigSampler.Sample Config -> Fonts FilePath -> Fonts (FontSize, FilePath)
+assignFontSizes sample fonts =
+    fonts
+    <&> (,) baseTextSize
+    & Font.lfontHelp . _1 .~ helpTextSize
+    where
+        baseTextSize = Config.baseTextSize config
+        helpTextSize = Config.helpTextSize (Config.help config)
+        config = ConfigSampler.sValue sample
+
 absFontsOfSample :: ConfigSampler.Sample Config -> Fonts (FontSize, FilePath)
 absFontsOfSample sample =
-    prependConfigPath sample $ Config.fonts $ ConfigSampler.sValue sample
+    ConfigSampler.sValue sample
+    & Config.fonts
+    & prependConfigPath sample
+    & assignFontSizes sample
 
 withFontLoop :: Sampler Config -> (Int -> IO () -> Fonts Draw.Font -> IO a) -> IO a
 withFontLoop configSampler act =
     loopWhileException (Proxy :: Proxy FontChanged) $ \fontsVer -> do
         sample <- ConfigSampler.getSample configSampler
         let absFonts = absFontsOfSample sample
-        let defaultFontsAbs = prependConfigPath sample defaultFonts
+        let defaultFontsAbs =
+                prependConfigPath sample defaultFonts & assignFontSizes sample
         let throwIfFontChanged =
                 do
                     newAbsFonts <- ConfigSampler.getSample configSampler <&> absFontsOfSample

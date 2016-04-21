@@ -41,7 +41,8 @@ layerInterval :: Layers -> Int
 layerInterval Layers{..} = layerMax - layerMin
 
 data Help = Help
-    { helpTextColor :: Draw.Color
+    { helpTextSize :: FontSize
+    , helpTextColor :: Draw.Color
     , helpInputDocColor :: Draw.Color
     , helpBGColor :: Draw.Color
     , helpKeys :: [ModKey]
@@ -157,7 +158,8 @@ instance Aeson.ToJSON LiteralText where
 instance Aeson.FromJSON LiteralText
 
 data Config = Config
-    { fonts :: Fonts (FontSize, FilePath)
+    { fonts :: Fonts FilePath
+    , baseTextSize :: FontSize
     , layers :: Layers
     , help :: Help
     , zoom :: Zoom
