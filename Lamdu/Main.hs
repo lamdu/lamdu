@@ -127,8 +127,11 @@ settingsChangeHandler evaluator settings =
     Settings.Evaluation -> EvalManager.start evaluator
     _ -> EvalManager.stop evaluator
 
+-- Number of times fonts changed / needed reload
+type FontsVersion = Version
+
 data CachedWidgetInput = CachedWidgetInput
-    { _cwiFontsVer :: Int
+    { _cwiFontsVer :: FontsVersion
     , _cwiConfig :: Config
     , _cwiSize :: Widget.Size
     , _cwiFonts :: Fonts Draw.Font
@@ -244,12 +247,9 @@ shouldRefresh (RefreshScheduler ref) = atomicModifyIORef ref $ \r -> (False, r)
 scheduleRefresh :: RefreshScheduler -> IO ()
 scheduleRefresh (RefreshScheduler ref) = writeIORef ref True
 
+type Version = Int
 
-data FontChanged = FontChanged
-    deriving (Show, Typeable)
-instance E.Exception FontChanged
-
-loopWhileException :: forall a e. E.Exception e => Proxy e -> (Int -> IO a) -> IO a
+loopWhileException :: forall a e. E.Exception e => Proxy e -> (Version -> IO a) -> IO a
 loopWhileException _ act = loop 0
     where
         loop !n =
@@ -283,7 +283,11 @@ absFontsOfSample sample =
     & prependConfigPath sample
     & assignFontSizes sample
 
-withFontLoop :: Sampler Config -> (Int -> IO () -> Fonts Draw.Font -> IO a) -> IO a
+data FontChanged = FontChanged
+    deriving (Show, Typeable)
+instance E.Exception FontChanged
+
+withFontLoop :: Sampler Config -> (FontsVersion -> IO () -> Fonts Draw.Font -> IO a) -> IO a
 withFontLoop configSampler act =
     loopWhileException (Proxy :: Proxy FontChanged) $ \fontsVer -> do
         sample <- ConfigSampler.getSample configSampler
@@ -306,7 +310,8 @@ withFontLoop configSampler act =
 
 mainLoop ::
     GLFW.Window -> RefreshScheduler -> Sampler Config ->
-    (Int -> Fonts Draw.Font -> Config -> Widget.Size -> IO (Widget MainLoop.M)) -> IO ()
+    (FontsVersion -> Fonts Draw.Font -> Config -> Widget.Size ->
+     IO (Widget MainLoop.M)) -> IO ()
 mainLoop win refreshScheduler configSampler iteration =
     withFontLoop configSampler $ \fontsVer checkFonts fonts ->
     do
