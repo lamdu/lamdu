@@ -96,7 +96,8 @@ textEdit prop pl =
             & ExprGuiM.localEnv (WE.envTextStyle .~ style)
             >>= ExpressionGui.egWidget %%~
             ExprGuiM.makeFocusDelegator (fdConfig config)
-                FocusDelegator.FocusEntryParent myId
+                FocusDelegator.FocusEntryParent (WidgetIds.notDelegatingId myId)
+    & ExprGuiM.assignCursor myId (WidgetIds.notDelegatingId myId)
     where
         innerId = WidgetIds.delegatingId myId
         myId = WidgetIds.fromExprPayload pl
