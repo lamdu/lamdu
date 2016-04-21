@@ -7,13 +7,12 @@ import           Prelude.Compat
 
 import           Control.Lens.Operators
 import           Data.IORef
-import           Data.Vector.Vector2 (Vector2(..))
 import qualified Graphics.UI.Bottle.EventMap as EventMap
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Lamdu.Config as Config
 
 newtype Zoom = Zoom
-    { _scaleFactorRef :: IORef (Vector2 Widget.R)
+    { _scaleFactorRef :: IORef Widget.R
     }
 
 eventMap :: Zoom -> Config.Zoom -> Widget.EventHandlers IO
@@ -27,8 +26,8 @@ eventMap (Zoom ref) Config.Zoom{..} =
         modifyIORef ref (/ realToFrac shrinkFactor)
     ]
 
-getSizeFactor :: Zoom -> IO (Vector2 Widget.R)
+getSizeFactor :: Zoom -> IO Widget.R
 getSizeFactor (Zoom ref) = readIORef ref
 
-make :: Vector2 Widget.R -> IO Zoom
+make :: Widget.R -> IO Zoom
 make initialZoom = newIORef initialZoom <&> Zoom

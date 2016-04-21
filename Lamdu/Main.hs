@@ -166,7 +166,6 @@ makeRootWidget db zoom settingsRef evaluator input =
             DbLayout.cursor DbLayout.revisionProps
             & Transaction.getP
             & DbLayout.runDbTransaction db
-        sizeFactor <- Zoom.getSizeFactor zoom
         globalEventMap <- Settings.mkEventMap (settingsChangeHandler evaluator) config settingsRef
         let eventMap = globalEventMap `mappend` Zoom.eventMap zoom (Config.zoom config)
         evalResults <- EvalManager.getResults evaluator
@@ -178,7 +177,7 @@ makeRootWidget db zoom settingsRef evaluator input =
                 , _envConfig = config
                 , _envSettings = settings
                 , _envStyle = Style.style config fonts
-                , _envFullSize = size / sizeFactor
+                , _envFullSize = size
                 , _envCursor = cursor
                 }
         let dbToIO action =
@@ -188,7 +187,6 @@ makeRootWidget db zoom settingsRef evaluator input =
                 _ -> DbLayout.runDbTransaction db action
         mkWidgetWithFallback dbToIO env
             <&> Widget.weakerEvents (eventMap <&> liftIO)
-            <&> Widget.scale sizeFactor
     where
         CachedWidgetInput _fontsVer config size fonts = input
 
@@ -202,11 +200,20 @@ printGLVersion =
         ver <- GL.get GL.glVersion
         putStrLn $ "Using GL version: " ++ show ver
 
+zoomConfig :: Zoom -> Config -> IO Config
+zoomConfig zoom config =
+    do
+        factor <- Zoom.getSizeFactor zoom
+        return config
+            { Config.baseTextSize =
+              Config.baseTextSize config * realToFrac factor
+            }
+
 runEditor :: String -> Maybe FilePath -> Opts.WindowMode -> Db -> IO ()
 runEditor title copyJSOutputPath windowMode db =
     do
         -- Load config as early as possible, before we open any windows/etc
-        configSampler <- ConfigSampler.new
+        rawConfigSampler <- ConfigSampler.new
 
         GLFWUtils.withGLFW $ do
             win <- createWindow title windowMode
@@ -223,7 +230,10 @@ runEditor title copyJSOutputPath windowMode db =
                         , EvalManager.dbMVar = dbMVar
                         , EvalManager.copyJSOutputPath = copyJSOutputPath
                         }
-                    zoom <- Zoom.make =<< GLFWUtils.getDisplayScale win
+                    zoom <- Zoom.make 1
+                    let configSampler =
+                            ConfigSampler.onEachSample (zoomConfig zoom)
+                            rawConfigSampler
                     let initialSettings = Settings Settings.defaultInfoMode
                     settingsRef <- newIORef initialSettings
                     settingsChangeHandler evaluator initialSettings
@@ -278,8 +288,8 @@ assignFontSizes sample fonts =
         helpTextSize = Config.helpTextSize (Config.help config)
         config = ConfigSampler.sValue sample
 
-absFontsOfSample :: ConfigSampler.Sample Config -> Fonts (FontSize, FilePath)
-absFontsOfSample sample =
+curSampleFonts :: ConfigSampler.Sample Config -> Fonts (FontSize, FilePath)
+curSampleFonts sample =
     ConfigSampler.sValue sample
     & Config.fonts
     & prependConfigPath sample
@@ -293,12 +303,12 @@ withFontLoop :: Sampler Config -> (FontsVersion -> IO () -> Fonts Draw.Font -> I
 withFontLoop configSampler act =
     loopWhileException (Proxy :: Proxy FontChanged) $ \fontsVer -> do
         sample <- ConfigSampler.getSample configSampler
-        let absFonts = absFontsOfSample sample
+        let absFonts = curSampleFonts sample
         let defaultFontsAbs =
                 prependConfigPath sample defaultFonts & assignFontSizes sample
         let throwIfFontChanged =
                 do
-                    newAbsFonts <- ConfigSampler.getSample configSampler <&> absFontsOfSample
+                    newAbsFonts <- ConfigSampler.getSample configSampler <&> curSampleFonts
                     when (newAbsFonts /= absFonts) $ E.throwIO FontChanged
         let runAct = act fontsVer throwIfFontChanged
         res <-
