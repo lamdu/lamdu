@@ -160,7 +160,7 @@ exportActions config evalResults =
 makeRootWidget ::
     Db -> Zoom -> IORef Settings -> EvalManager.Evaluator ->
     CachedWidgetInput -> IO (Widget MainLoop.M)
-makeRootWidget db zoom settingsRef evaluator (CachedWidgetInput _fontsVer config size fonts) =
+makeRootWidget db zoom settingsRef evaluator input =
     do
         cursor <-
             DbLayout.cursor DbLayout.revisionProps
@@ -189,6 +189,8 @@ makeRootWidget db zoom settingsRef evaluator (CachedWidgetInput _fontsVer config
         mkWidgetWithFallback dbToIO env
             <&> Widget.weakerEvents (eventMap <&> liftIO)
             <&> Widget.scale sizeFactor
+    where
+        CachedWidgetInput _fontsVer config size fonts = input
 
 withMVarProtection :: a -> (MVar (Maybe a) -> IO b) -> IO b
 withMVarProtection val =
