@@ -27,7 +27,7 @@ forwardExceptions action =
         return $ action `E.catch` \exc@E.SomeException{} ->
             do
                 asyncThrowTo selfId exc
-                E.throwIO exc
+                E.throwIO E.ThreadKilled
 
 withForkedIO :: IO () -> IO a -> IO a
 withForkedIO action =
