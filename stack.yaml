@@ -8,16 +8,16 @@ packages:
     commit: 21c8a22a10a820660850fb7d68b928c29af80cb5
 - location:
     git: https://github.com/lamdu/graphics-drawingcombinators
-    commit: eb09149fbd633f050d86a323f844fc756a0c8be0
+    commit: ec4fa91e432b245326bf7bd20ef80b72f545952b
 - location:
-    git: https://github.com/Peaker/freetype2
+    git: https://github.com/lamdu/freetype2
     commit: b6b3f82b9f8acb925d8f36ecc1520832ad256444
 - location:
-    git: https://github.com/Peaker/bindings-freetype-gl
-    commit: 098317dd81452dab1a280bc6f84d5124138f9b19
+    git: https://github.com/lamdu/bindings-freetype-gl
+    commit: 3407e0ecafabb3ad854a44be815d830c7ded36a9
 - location:
-    git: https://github.com/Peaker/FreetypeGL
-    commit: c22b9e62bcdd568768a68ded09d9618cff8647ad
+    git: https://github.com/lamdu/FreetypeGL
+    commit: 6d917395c468886a979d0bbb11a54bcf031429ea
 - location:
     git: https://github.com/lamdu/language-ecmascript
     commit: 2c71e37ad055163a9926ee53e5297146de9b435c
