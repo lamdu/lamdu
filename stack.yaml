@@ -1,11 +1,11 @@
 packages:
-- .
+- '.'
 - location:
     git: https://github.com/lamdu/lamdu-calculus
     commit: f54abe6f1f9b1eb7923e442fa11f3cf16ad5cfcb
 - location:
     git: https://github.com/lamdu/Algorithm-W-Step-By-Step
-    commit: e05886d2392005936f46c3fa75aa624317659bc4
+    commit: 21c8a22a10a820660850fb7d68b928c29af80cb5
 - location:
     git: https://github.com/lamdu/graphics-drawingcombinators
     commit: 2d8f9efb610dcf69c28ae9fbb8799565cef10612
@@ -15,8 +15,6 @@ packages:
 - location:
     git: https://github.com/lamdu/nodejs-exec
     commit: 52fce18ec3cffac1104b04677cf038eff9629a7c
-
-resolver: lts-5.12
 extra-deps:
 - FTGL-2.1
 - bitmap-0.0.2
@@ -28,3 +26,4 @@ extra-include-dirs:
 - /usr/local/include
 extra-lib-dirs:
 - /usr/local/lib
+resolver: lts-5.12
