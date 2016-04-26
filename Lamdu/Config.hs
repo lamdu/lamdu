@@ -179,7 +179,6 @@ data Config = Config
 
     , backgroundColor :: Draw.Color
     , baseColor :: Draw.Color
-    , spaceWidth :: Double
 
     , quitKeys :: [ModKey]
     , nextInfoModeKeys :: [ModKey]

@@ -40,7 +40,6 @@ data Env = Env
     , layerCursor :: Anim.Layer
     , layerInterval :: Anim.Layer
     , verticalSpacing :: Double
-    , stdSpaceWidth :: Double
     }
 Lens.makeLenses ''Env
 

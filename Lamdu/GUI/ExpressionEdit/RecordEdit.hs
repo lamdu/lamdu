@@ -92,8 +92,7 @@ makeFieldRow (Sugar.RecordField delete tag fieldExpr) =
             TagEdit.makeRecordTag (ExprGuiT.nextHolesBefore fieldExpr) tag
         fieldExprGui <- ExprGuiM.makeSubexpression (const 0) fieldExpr
         let itemEventMap = recordDelEventMap config delete
-        space <-
-            BWidgets.stdSpaceWidget & ExprGuiM.widgetEnv <&> ExpressionGui.fromValueWidget
+        space <- ExpressionGui.stdSpace
         [ fieldRefGui & ExpressionGui.egAlignment . _1 .~ 1
             , space
             , fieldExprGui & ExpressionGui.egAlignment . _1 .~ 0

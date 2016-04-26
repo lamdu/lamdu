@@ -128,7 +128,10 @@ hbox :: [ExpressionGui m] -> ExpressionGui m
 hbox = Layout.hbox 0.5
 
 stdSpace :: Monad m => ExprGuiM m (Layout.Layout f)
-stdSpace = ExprGuiM.widgetEnv BWidgets.stdSpaceWidget <&> Layout.fromCenteredWidget
+stdSpace =
+    ExprGuiM.widgetEnv BWidgets.stdSpaceView
+    <&> Widget.fromView
+    <&> Layout.fromCenteredWidget
 
 verticalSpace :: Monad m => ExprGuiM m (ExpressionGui f)
 verticalSpace = ExprGuiM.widgetEnv BWidgets.verticalSpace <&> Layout.fromCenteredWidget

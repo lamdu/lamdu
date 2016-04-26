@@ -97,5 +97,4 @@ make env rootId =
             , WE.layerCursor = Config.layerCursor $ Config.layers config
             , WE.layerInterval = Config.layerInterval $ Config.layers config
             , WE.verticalSpacing = Config.verticalSpacing config
-            , WE.stdSpaceWidth = Config.spaceWidth config
             }

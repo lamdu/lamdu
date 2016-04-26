@@ -7,7 +7,6 @@ module Lamdu.GUI.EvalView
 import           Control.Lens.Operators
 import           Control.Lens.Tuple
 import           Control.Monad (void)
-
 import qualified Data.Binary.Utils as BinUtils
 import qualified Data.ByteString.UTF8 as UTF8
 import qualified Data.Store.Transaction as Transaction
@@ -18,13 +17,11 @@ import           Graphics.UI.Bottle.View (View(..))
 import qualified Graphics.UI.Bottle.View as View
 import qualified Graphics.UI.Bottle.Widgets as BWidgets
 import qualified Graphics.UI.Bottle.Widgets.GridView as GridView
-import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
 import qualified Lamdu.Builtins.Anchors as Builtins
 import qualified Lamdu.Builtins.PrimVal as PrimVal
 import           Lamdu.Calc.Type (Type)
 import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Calc.Val as V
-import qualified Lamdu.Config as Config
 import qualified Lamdu.Data.Anchors as Anchors
 import           Lamdu.Eval.Results (EvalError(..), Val(..), Body(..))
 import           Lamdu.Formatting (Format(..))
@@ -63,9 +60,7 @@ makeField ::
 makeField parentAnimId tag val =
     do
         tagView <- makeTag (baseId ++ ["tag"]) tag
-        space <-
-            ExprGuiM.readConfig
-            <&> Spacer.makeHorizontal . realToFrac . Config.spaceWidth
+        space <- ExprGuiM.widgetEnv BWidgets.stdSpaceView
         valView <- make (baseId ++ ["val"]) val
         return
             [ (Vector2 1 0.5, tagView)
@@ -116,9 +111,7 @@ make animId (Val typ val) =
     RInject inj ->
         do
             tagView <- inj ^. V.injectTag & makeTag (animId ++ ["tag"])
-            space <-
-                ExprGuiM.readConfig
-                <&> Spacer.makeHorizontal . realToFrac . Config.spaceWidth
+            space <- ExprGuiM.widgetEnv BWidgets.stdSpaceView
             valView <- inj ^. V.injectVal & make (animId ++ ["val"])
             hbox [tagView, space, valView] & return
     RRecExtend recExtend ->

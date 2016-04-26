@@ -3,8 +3,6 @@ module Lamdu.GUI.TypeView
     ( make
     ) where
 
-import           Prelude.Compat
-
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Lens.Tuple
@@ -24,7 +22,6 @@ import qualified Graphics.UI.Bottle.View as View
 import qualified Graphics.UI.Bottle.WidgetId as WidgetId
 import qualified Graphics.UI.Bottle.Widgets as BWidgets
 import qualified Graphics.UI.Bottle.Widgets.GridView as GridView
-import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
 import           Graphics.UI.Bottle.WidgetsEnvT (WidgetEnvT)
 import           Lamdu.Calc.Identifier (Identifier(..))
 import           Lamdu.Calc.Type (Type)
@@ -38,6 +35,8 @@ import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Sugar.OrderTags (orderedFlatComposite)
 import           System.Random (Random, random)
 import qualified System.Random as Random
+
+import           Prelude.Compat
 
 type T = Transaction
 newtype M m a = M
@@ -72,9 +71,7 @@ hbox :: [View] -> View
 hbox = GridView.horizontalAlign 0.5
 
 mkSpace :: Monad m => M m View
-mkSpace =
-    egui ExprGuiM.readConfig
-    <&> Spacer.makeHorizontal . realToFrac . Config.spaceWidth
+mkSpace = ExprGuiM.widgetEnv BWidgets.stdSpaceView & egui
 
 parensAround :: Monad m => View -> M m View
 parensAround view =
