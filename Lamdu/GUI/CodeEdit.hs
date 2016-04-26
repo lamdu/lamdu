@@ -25,7 +25,6 @@ import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets as BWidgets
 import qualified Graphics.UI.Bottle.Widgets.Box as Box
-import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
 import           Graphics.UI.Bottle.WidgetsEnvT (WidgetEnvT)
 import qualified Graphics.UI.Bottle.WidgetsEnvT as WE
 import           Lamdu.Config (Config)
@@ -203,8 +202,9 @@ gui env rootId replExpr panes =
             >>= traverse (makePaneEdit env)
         newDefinitionButton <- makeNewDefinitionButton rootId <&> mLiftWidget
         eventMap <- panesEventMap env & ExprGuiM.widgetEnv
+        vspace <- ExprGuiM.vspacer (Config.paneSpacing . Config.pane)
         [replEdit] ++ panesEdits ++ [newDefinitionButton]
-            & intersperse space
+            & intersperse vspace
             & Box.vboxAlign 0
             & Widget.weakerEvents eventMap
             & return
@@ -212,7 +212,6 @@ gui env rootId replExpr panes =
     & ExprGuiM.run ExpressionEdit.make
       (codeProps env) (config env) (settings env) (style env)
     where
-        space = (Spacer.makeWidget . realToFrac . Config.paneSpacing . Config.pane . config) env
         replId = replExpr ^. Sugar.rPayload . Sugar.plEntityId & WidgetIds.fromEntityId
 
 make :: Monad m => Env m -> Widget.Id -> WidgetEnvT (T m) (Widget (M m))

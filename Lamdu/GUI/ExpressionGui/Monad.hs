@@ -13,6 +13,7 @@ module Lamdu.GUI.ExpressionGui.Monad
     --
     , readConfig, readSettings, readStyle, readCodeAnchors
     , getCodeAnchor, mkPrejumpPosSaver
+    , vspacer
     --
     , readMScopeId, withLocalMScopeId
     , isExprSelected
@@ -136,6 +137,16 @@ readCodeAnchors = ExprGuiM $ Lens.view aCodeAnchors
 mkPrejumpPosSaver :: Monad m => ExprGuiM m (T m ())
 mkPrejumpPosSaver =
     DataOps.savePreJumpPosition <$> readCodeAnchors <*> widgetEnv WE.readCursor
+
+-- | Vertical spacer as ratio of line height
+vspacer :: (Real a, Monad m) => (Config -> a) -> ExprGuiM m (Widget f)
+vspacer configGetter =
+    (*)
+    <$> widgetEnv BWidgets.stdFontHeight
+    <*> ( readConfig
+          <&> configGetter
+          <&> realToFrac )
+    <&> BWidgets.vspaceWidget
 
 makeSubexpression ::
     Monad m =>

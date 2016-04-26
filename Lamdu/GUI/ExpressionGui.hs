@@ -306,14 +306,7 @@ makeEvalView (NeighborVals mPrev mNext) evalRes animId =
             & return
 
 annotationSpacer :: Monad m => ExprGuiM m (ExpressionGui f)
-annotationSpacer =
-    (*)
-    <$> ExprGuiM.widgetEnv BWidgets.stdFontHeight
-    <*> ( ExprGuiM.readConfig
-          <&> Config.valAnnotationSpacing
-          <&> realToFrac )
-    <&> BWidgets.vspaceWidget
-    <&> fromValueWidget
+annotationSpacer = ExprGuiM.vspacer Config.valAnnotationSpacing <&> fromValueWidget
 
 addAnnotationH ::
     Monad m =>

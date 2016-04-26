@@ -221,7 +221,7 @@
                 "Key'Down"
             ]
         ],
-        "paneSpacing": 50,
+        "paneSpacing": 1.5,
         "paneHoverPadding": 40
     },
     "versionControl": {
