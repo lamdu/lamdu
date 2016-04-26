@@ -61,7 +61,6 @@ import qualified Graphics.UI.Bottle.Widgets as BWidgets
 import qualified Graphics.UI.Bottle.Widgets.Box as Box
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 import qualified Graphics.UI.Bottle.Widgets.Layout as Layout
-import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
 import qualified Graphics.UI.Bottle.Widgets.TextEdit as TextEdit
 import qualified Graphics.UI.Bottle.WidgetsEnvT as WE
 import qualified Graphics.UI.GLFW as GLFW
@@ -308,14 +307,13 @@ makeEvalView (NeighborVals mPrev mNext) evalRes animId =
 
 annotationSpacer :: Monad m => ExprGuiM m (ExpressionGui f)
 annotationSpacer =
-    do
-        config <- ExprGuiM.readConfig
-        Config.valAnnotationSpacing config
-            & realToFrac
-            & Spacer.makeVertical
-            & Widget.fromView
-            & fromValueWidget
-            & return
+    (*)
+    <$> ExprGuiM.widgetEnv BWidgets.stdFontHeight
+    <*> ( ExprGuiM.readConfig
+          <&> Config.valAnnotationSpacing
+          <&> realToFrac )
+    <&> BWidgets.vspaceWidget
+    <&> fromValueWidget
 
 addAnnotationH ::
     Monad m =>

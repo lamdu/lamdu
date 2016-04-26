@@ -7,6 +7,7 @@ module Graphics.UI.Bottle.Widgets
     , makeTextEditor, makeLineEdit, makeWordEdit
     , makeFocusDelegator
     , makeChoiceWidget
+    , stdFontHeight
     , stdSpaceWidth, stdSpaceView
     , stdSpaceHeight, stdVSpaceView
     , hspaceWidget, vspaceWidget
@@ -181,9 +182,12 @@ vspaceWidget = Widget.fromView . Spacer.makeVertical
 stdFont :: Monad m => WidgetEnvT m Draw.Font
 stdFont = WE.readEnv <&> (^. WE.envTextStyle . TextEdit.sTextViewStyle . TextView.styleFont)
 
+stdFontHeight :: Monad m => WidgetEnvT m Double
+stdFontHeight = stdFont <&> Draw.fontHeight
+
 stdSpaceHeight :: Monad m => WidgetEnvT m Double
 stdSpaceHeight =
-    (*) <$> (stdFont <&> Draw.fontHeight) <*> (WE.readEnv <&> WE.verticalSpacing)
+    (*) <$> stdFontHeight <*> (WE.readEnv <&> WE.verticalSpacing)
 
 stdSpaceWidth :: Monad m => WidgetEnvT m Double
 stdSpaceWidth = stdFont <&> (`Draw.textAdvance` " ")

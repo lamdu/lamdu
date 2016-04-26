@@ -964,7 +964,7 @@
             "Key'Comma"
         ]
     ],
-    "valAnnotationSpacing": 3,
+    "valAnnotationSpacing": 0.1,
     "valAnnotationWidthExpansionLimit": 34,
     "valAnnotationShrinkAtLeast": 80,
     "valFramePadding": {

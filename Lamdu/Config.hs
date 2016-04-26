@@ -218,7 +218,7 @@ data Config = Config
     , valNomBGColor :: Draw.Color
     , valAnnotationBGColor :: Draw.Color
     , valAnnotationHoverBGColor :: Draw.Color
-    , valAnnotationSpacing :: Double
+    , valAnnotationSpacing :: Double -- as ratio of line height
     , valAnnotationWidthExpansionLimit :: Double
     , valAnnotationShrinkAtLeast :: Double
     , typeFrameBGColor :: Draw.Color
