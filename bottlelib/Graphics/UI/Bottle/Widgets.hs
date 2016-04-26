@@ -10,7 +10,7 @@ module Graphics.UI.Bottle.Widgets
     , stdFontHeight
     , stdSpaceWidth, stdSpaceView
     , stdSpaceHeight, stdVSpaceView
-    , hspaceWidget, vspaceWidget
+    , hspaceWidget, vspaceWidget, vspacer
     , hboxSpaced, hboxCenteredSpaced
     , gridHSpaced, gridHSpacedCentered
     , liftLayerInterval
@@ -197,6 +197,10 @@ stdSpaceView = stdSpaceWidth <&> realToFrac <&> Spacer.make
 
 stdVSpaceView :: Monad m => WidgetEnvT m View
 stdVSpaceView = stdSpaceHeight <&> realToFrac <&> Spacer.make
+
+-- | Vertical spacer as ratio of line height
+vspacer :: Monad m => Double -> WidgetEnvT m (Widget f)
+vspacer ratio = stdFontHeight <&> (ratio *) <&> vspaceWidget
 
 hboxSpaced :: Monad m => [(Box.Alignment, Widget f)] -> WidgetEnvT m (Widget f)
 hboxSpaced widgets =

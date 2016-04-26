@@ -222,7 +222,7 @@
             ]
         ],
         "paneSpacing": 1.5,
-        "paneHoverPadding": 40
+        "paneHoverPadding": 4
     },
     "versionControl": {
         "undoKeys": [

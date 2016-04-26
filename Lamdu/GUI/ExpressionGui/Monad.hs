@@ -139,14 +139,11 @@ mkPrejumpPosSaver =
     DataOps.savePreJumpPosition <$> readCodeAnchors <*> widgetEnv WE.readCursor
 
 -- | Vertical spacer as ratio of line height
-vspacer :: (Real a, Monad m) => (Config -> a) -> ExprGuiM m (Widget f)
+vspacer :: Monad m => (Config -> Double) -> ExprGuiM m (Widget f)
 vspacer configGetter =
-    (*)
-    <$> widgetEnv BWidgets.stdFontHeight
-    <*> ( readConfig
-          <&> configGetter
-          <&> realToFrac )
-    <&> BWidgets.vspaceWidget
+    readConfig
+    <&> configGetter
+    >>= widgetEnv . BWidgets.vspacer
 
 makeSubexpression ::
     Monad m =>

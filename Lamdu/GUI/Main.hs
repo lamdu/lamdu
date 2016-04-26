@@ -15,8 +15,8 @@ import           Data.Vector.Vector2 (Vector2(..))
 import qualified Graphics.UI.Bottle.EventMap as EventMap
 import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
+import qualified Graphics.UI.Bottle.Widgets as BWidgets
 import qualified Graphics.UI.Bottle.Widgets.Box as Box
-import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
 import           Graphics.UI.Bottle.WidgetsEnvT (runWidgetEnvT)
 import qualified Graphics.UI.Bottle.WidgetsEnvT as WE
 import           Lamdu.Config (Config)
@@ -66,6 +66,9 @@ make env rootId =
                             CodeEdit.make codeEditEnv rootId
                             & WE.mapWidgetEnvT VersionControl.runAction
                             <&> Widget.events . CodeEdit.m %~ fmap (VersionControl.runEvent cursor)
+                        hoverPadding <-
+                            Config.pane config & Config.paneHoverPadding
+                            & BWidgets.vspacer
                         let scrollBox =
                                 Box.vbox [(0.5, hoverPadding), (0.5, codeEdit)]
                                 & Widget.padToSizeAlign codeSize 0
@@ -79,7 +82,6 @@ make env rootId =
                     & Widget.strongerEvents quitEventMap
                     & return
     where
-        hoverPadding = Spacer.makeWidget $ Vector2 0 $ Config.paneHoverPadding $ Config.pane config
         Env evalResults exportActions config settings style fullSize cursor = env
         codeEditEnv = CodeEdit.Env
             { codeProps = DbLayout.codeProps

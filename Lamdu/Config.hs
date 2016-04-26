@@ -79,7 +79,7 @@ data Pane = Pane
     , paneMoveDownKeys :: [ModKey]
     , paneMoveUpKeys :: [ModKey]
     , -- Need some padding on top because of on-top hovers, this decides
-      -- how much:
+      -- how much (as ratio of line height):
       paneHoverPadding :: Draw.R
     , -- Space between panes
       paneSpacing :: Draw.R
