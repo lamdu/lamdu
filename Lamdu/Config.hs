@@ -222,7 +222,7 @@ data Config = Config
     , valAnnotationWidthExpansionLimit :: Double
     , valAnnotationShrinkAtLeast :: Double
     , typeFrameBGColor :: Draw.Color
-    , verticalSpacing :: Double
+    , verticalSpacing :: Double -- as ratio of line height
     , cursorBGColor :: Draw.Color
     , grammarColor :: Draw.Color
     , disabledColor :: Draw.Color

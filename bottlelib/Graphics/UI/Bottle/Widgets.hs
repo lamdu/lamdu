@@ -8,10 +8,10 @@ module Graphics.UI.Bottle.Widgets
     , makeFocusDelegator
     , makeChoiceWidget
     , stdSpaceWidth, stdSpaceView
+    , stdSpaceHeight, stdVSpaceView
     , hspaceWidget, vspaceWidget
     , hboxSpaced, hboxCenteredSpaced
     , gridHSpaced, gridHSpacedCentered
-    , verticalSpace
     , liftLayerInterval
     , respondToCursorPrefix
     ) where
@@ -58,11 +58,6 @@ makeTextViewWidget text myId =
 makeLabel :: Monad m => String -> AnimId -> WidgetEnvT m (Widget f)
 makeLabel text prefix =
     makeTextViewWidget text $ mappend prefix [pack text]
-
-verticalSpace :: Monad m => WidgetEnvT m (Widget f)
-verticalSpace = do
-    env <- WE.readEnv
-    return $ vspaceWidget $ realToFrac $ WE.verticalSpacing env
 
 liftLayerInterval :: Monad m => Widget f -> WidgetEnvT m (Widget f)
 liftLayerInterval widget =
@@ -186,11 +181,18 @@ vspaceWidget = Widget.fromView . Spacer.makeVertical
 stdFont :: Monad m => WidgetEnvT m Draw.Font
 stdFont = WE.readEnv <&> (^. WE.envTextStyle . TextEdit.sTextViewStyle . TextView.styleFont)
 
+stdSpaceHeight :: Monad m => WidgetEnvT m Double
+stdSpaceHeight =
+    (*) <$> (stdFont <&> Draw.fontHeight) <*> (WE.readEnv <&> WE.verticalSpacing)
+
 stdSpaceWidth :: Monad m => WidgetEnvT m Double
 stdSpaceWidth = stdFont <&> (`Draw.textAdvance` " ")
 
 stdSpaceView :: Monad m => WidgetEnvT m View
 stdSpaceView = stdSpaceWidth <&> realToFrac <&> Spacer.make
+
+stdVSpaceView :: Monad m => WidgetEnvT m View
+stdVSpaceView = stdSpaceHeight <&> realToFrac <&> Spacer.make
 
 hboxSpaced :: Monad m => [(Box.Alignment, Widget f)] -> WidgetEnvT m (Widget f)
 hboxSpaced widgets =
