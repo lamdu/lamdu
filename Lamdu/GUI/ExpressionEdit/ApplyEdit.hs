@@ -156,7 +156,7 @@ makeArgRows arg =
         argTagEdit <- TagEdit.makeParamTag (arg ^. Sugar.aaTag)
         argValEdit <- ExprGuiM.makeSubexpression (const 0) $ arg ^. Sugar.aaExpr
         vspace <- ExprGuiM.widgetEnv BWidgets.stdVSpaceView <&> Widget.fromView
-        space <- ExprGuiM.widgetEnv BWidgets.stdSpaceView <&> Widget.fromView
+        space <- ExprGuiM.widgetEnv BWidgets.stdHSpaceView <&> Widget.fromView
         pure
             [ replicate 3 (0.5, vspace)
             , [ argTagEdit ^. Layout.alignedWidget & _1 . _1 .~ 0

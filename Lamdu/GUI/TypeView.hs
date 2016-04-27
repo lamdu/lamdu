@@ -70,8 +70,8 @@ showIdentifier (Identifier bs) = text (BS8.unpack bs)
 hbox :: [View] -> View
 hbox = GridView.horizontalAlign 0.5
 
-mkSpace :: Monad m => M m View
-mkSpace = ExprGuiM.widgetEnv BWidgets.stdSpaceView & egui
+mkHSpace :: Monad m => M m View
+mkHSpace = ExprGuiM.widgetEnv BWidgets.stdHSpaceView & egui
 
 parensAround :: Monad m => View -> M m View
 parensAround view =
@@ -107,15 +107,15 @@ makeTInst _parentPrecedence tid typeParams =
     do
         nameView <-
             Anchors.assocNameRef tid & Transaction.getP & transaction >>= text
-        space <- mkSpace
-        let afterName paramsView = addValPadding $ hbox [nameView, space, paramsView]
+        hspace <- mkHSpace
+        let afterName paramsView = addValPadding $ hbox [nameView, hspace, paramsView]
             makeTypeParam (T.ParamId tParamId, arg) =
                 do
                     paramIdView <- showIdentifier tParamId
                     typeView <- splitMake (ParentPrecedence 0) arg
                     return
                         [ (Vector2 1 0.5, paramIdView)
-                        , (0.5, space)
+                        , (0.5, hspace)
                         , (Vector2 0 0.5, typeView)
                         ]
         case Map.toList typeParams of
@@ -162,7 +162,7 @@ makeField :: Monad m => (T.Tag, Type) -> M m [(Vector2 Anim.R, View)]
 makeField (tag, fieldType) =
     Lens.sequenceOf (Lens.traversed . _2)
     [ (Vector2 1 0.5, makeTag tag)
-    , (0.5, mkSpace)
+    , (0.5, mkHSpace)
     , (Vector2 0 0.5, splitMake (ParentPrecedence 0) fieldType)
     ]
 
@@ -172,7 +172,7 @@ makeSumField (tag, T.TRecord T.CEmpty) =
 makeSumField (tag, fieldType) =
     Lens.sequenceOf (Lens.traversed . _2)
     [ (Vector2 1 0.5, makeTag tag)
-    , (0.5, mkSpace)
+    , (0.5, mkHSpace)
     , (Vector2 0 0.5, splitMake (ParentPrecedence 0) fieldType)
     ]
 

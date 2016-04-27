@@ -92,7 +92,7 @@ makeFieldRow (Sugar.RecordField delete tag fieldExpr) =
             TagEdit.makeRecordTag (ExprGuiT.nextHolesBefore fieldExpr) tag
         fieldExprGui <- ExprGuiM.makeSubexpression (const 0) fieldExpr
         let itemEventMap = recordDelEventMap config delete
-        space <- ExpressionGui.stdSpace
+        space <- ExpressionGui.stdHSpace
         [ fieldRefGui & ExpressionGui.egAlignment . _1 .~ 1
             , space
             , fieldExprGui & ExpressionGui.egAlignment . _1 .~ 0
@@ -110,7 +110,7 @@ makeFieldsWidget [] myId =
         ExprGuiM.widgetEnv . BWidgets.makeFocusableView myId
 makeFieldsWidget fields _ =
     do
-        vspace <- ExpressionGui.verticalSpace
+        vspace <- ExpressionGui.stdVSpace
         mapM makeFieldRow fields
             <&> List.intersperse (replicate 3 vspace)
             <&> ExpressionGui.gridTopLeftFocal
@@ -131,7 +131,7 @@ makeOpenRecord ::
 makeOpenRecord fieldsGui rest animId =
     do
         config <- ExprGuiM.readConfig
-        vspace <- ExpressionGui.verticalSpace
+        vspace <- ExpressionGui.stdVSpace
         restExpr <-
             ExprGuiM.makeSubexpression (const 0) rest
             >>= ExpressionGui.addValPadding

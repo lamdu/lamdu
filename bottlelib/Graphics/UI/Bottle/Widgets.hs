@@ -8,8 +8,9 @@ module Graphics.UI.Bottle.Widgets
     , makeFocusDelegator
     , makeChoiceWidget
     , stdFontHeight
-    , stdSpaceWidth, stdSpaceView
-    , stdSpaceHeight, stdVSpaceView
+    , stdSpacing
+    , stdHSpaceWidth, stdHSpaceView
+    , stdVSpaceHeight, stdVSpaceView
     , hspaceWidget, vspaceWidget, vspacer
     , hboxSpaced, hboxCenteredSpaced
     , gridHSpaced, gridHSpacedCentered
@@ -18,11 +19,13 @@ module Graphics.UI.Bottle.Widgets
     ) where
 
 import           Control.Lens.Operators
+import           Control.Lens.Tuple
 import           Control.Monad (when)
 import           Data.ByteString.Char8 (pack)
 import           Data.List (intersperse)
 import           Data.Store.Property (Property)
 import qualified Data.Store.Property as Property
+import           Data.Vector.Vector2 (Vector2(..))
 import qualified Graphics.DrawingCombinators as Draw
 import           Graphics.UI.Bottle.Animation (AnimId)
 import qualified Graphics.UI.Bottle.EventMap as EventMap
@@ -185,18 +188,26 @@ stdFont = WE.readEnv <&> (^. WE.envTextStyle . TextEdit.sTextViewStyle . TextVie
 stdFontHeight :: Monad m => WidgetEnvT m Double
 stdFontHeight = stdFont <&> Draw.fontHeight
 
-stdSpaceHeight :: Monad m => WidgetEnvT m Double
-stdSpaceHeight =
-    (*) <$> stdFontHeight <*> (WE.readEnv <&> WE.verticalSpacing)
+stdVSpaceHeight :: Monad m => WidgetEnvT m Double
+stdVSpaceHeight =
+    (*)
+    <$> stdFontHeight
+    <*> (WE.readEnv <&> WE.stdSpacing <&> (^. _2))
 
-stdSpaceWidth :: Monad m => WidgetEnvT m Double
-stdSpaceWidth = stdFont <&> (`Draw.textAdvance` " ")
+stdHSpaceWidth :: Monad m => WidgetEnvT m Double
+stdHSpaceWidth =
+    (*)
+    <$> (stdFont <&> (`Draw.textAdvance` " "))
+    <*> (WE.readEnv <&> WE.stdSpacing <&> (^. _1))
 
-stdSpaceView :: Monad m => WidgetEnvT m View
-stdSpaceView = stdSpaceWidth <&> realToFrac <&> Spacer.make
+stdSpacing :: Monad m => WidgetEnvT m (Vector2 Double)
+stdSpacing = Vector2 <$> stdHSpaceWidth <*> stdVSpaceHeight
+
+stdHSpaceView :: Monad m => WidgetEnvT m View
+stdHSpaceView = stdHSpaceWidth <&> realToFrac <&> Spacer.make
 
 stdVSpaceView :: Monad m => WidgetEnvT m View
-stdVSpaceView = stdSpaceHeight <&> realToFrac <&> Spacer.make
+stdVSpaceView = stdVSpaceHeight <&> realToFrac <&> Spacer.make
 
 -- | Vertical spacer as ratio of line height
 vspacer :: Monad m => Double -> WidgetEnvT m (Widget f)
@@ -204,21 +215,23 @@ vspacer ratio = stdFontHeight <&> (ratio *) <&> vspaceWidget
 
 hboxSpaced :: Monad m => [(Box.Alignment, Widget f)] -> WidgetEnvT m (Widget f)
 hboxSpaced widgets =
-    stdSpaceView
+    stdHSpaceView
     <&> Widget.fromView
     <&> Box.hbox . (`intersperse` widgets) . (,) 0.5
 
 hboxCenteredSpaced :: Monad m => [Widget f] -> WidgetEnvT m (Widget f)
 hboxCenteredSpaced widgets =
-    stdSpaceView
+    stdHSpaceView
     <&> Widget.fromView
     <&> Box.hboxAlign 0.5 . (`intersperse` widgets)
 
 gridHSpaced :: Monad m => [[(Grid.Alignment, Widget f)]] -> WidgetEnvT m (Widget f)
 gridHSpaced xs =
-    stdSpaceView
-    <&> Widget.fromView
-    <&> Grid.toWidget . Grid.make . (`map` xs) . intersperse . (,) 0
+    stdHSpaceView
+    <&> Widget.fromView <&> (,) 0
+    <&> intersperse <&> (`map` xs)
+    <&> Grid.make
+    <&> Grid.toWidget
 
 gridHSpacedCentered :: Monad m => [[Widget f]] -> WidgetEnvT m (Widget f)
 gridHSpacedCentered = gridHSpaced . (map . map) ((,) 0.5)

@@ -131,7 +131,7 @@ makeExprDefinition def bodyExpr =
             BinderEdit.make (def ^. Sugar.drName)
             (bodyExpr ^. Sugar.deContent) myId
         let width = bodyGui ^. ExpressionGui.egWidget . Widget.width
-        vspace <- ExpressionGui.verticalSpace
+        vspace <- ExpressionGui.stdVSpace
         typeGui <-
             case bodyExpr ^. Sugar.deTypeInfo of
             Sugar.DefinitionExportedTypeInfo scheme ->

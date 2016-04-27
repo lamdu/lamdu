@@ -60,7 +60,7 @@ makeField ::
 makeField parentAnimId tag val =
     do
         tagView <- makeTag (baseId ++ ["tag"]) tag
-        space <- ExprGuiM.widgetEnv BWidgets.stdSpaceView
+        space <- ExprGuiM.widgetEnv BWidgets.stdHSpaceView
         valView <- make (baseId ++ ["val"]) val
         return
             [ (Vector2 1 0.5, tagView)
@@ -111,7 +111,7 @@ make animId (Val typ val) =
     RInject inj ->
         do
             tagView <- inj ^. V.injectTag & makeTag (animId ++ ["tag"])
-            space <- ExprGuiM.widgetEnv BWidgets.stdSpaceView
+            space <- ExprGuiM.widgetEnv BWidgets.stdHSpaceView
             valView <- inj ^. V.injectVal & make (animId ++ ["val"])
             hbox [tagView, space, valView] & return
     RRecExtend recExtend ->

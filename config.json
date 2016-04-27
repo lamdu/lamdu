@@ -890,7 +890,7 @@
             "Key'Enter"
         ]
     ],
-    "verticalSpacing": 0.3,
+    "stdSpacing": [1.0, 0.3],
     "grammarColor": [
         0.8,
         0.8,

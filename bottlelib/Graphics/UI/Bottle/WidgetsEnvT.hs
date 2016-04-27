@@ -23,6 +23,7 @@ import           Control.Monad.Trans.Class (MonadTrans(..))
 import           Control.Monad.Trans.Reader (ReaderT, runReaderT)
 import qualified Control.Monad.Trans.Reader as Reader
 import           Data.Maybe (isJust)
+import           Data.Vector.Vector2 (Vector2)
 import qualified Graphics.DrawingCombinators as Draw
 import           Graphics.UI.Bottle.Animation (AnimId)
 import qualified Graphics.UI.Bottle.Animation as Anim
@@ -39,7 +40,7 @@ data Env = Env
     , cursorBGColor :: Draw.Color
     , layerCursor :: Anim.Layer
     , layerInterval :: Anim.Layer
-    , verticalSpacing :: Double
+    , stdSpacing :: Vector2 Double
     }
 Lens.makeLenses ''Env
 

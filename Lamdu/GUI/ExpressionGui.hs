@@ -5,7 +5,7 @@ module Lamdu.GUI.ExpressionGui
     , fromValueWidget, addBelow, addAbove
     , scale
     , pad
-    , stdSpace, verticalSpace
+    , stdHSpace, stdVSpace
     , hbox, hboxSpaced
     , vboxTopFocal, vboxTopFocalSpaced, vboxTopFocalAlignedTo
     , gridTopLeftFocal
@@ -126,21 +126,21 @@ pad = Layout.pad
 hbox :: [ExpressionGui m] -> ExpressionGui m
 hbox = Layout.hbox 0.5
 
-stdSpace :: Monad m => ExprGuiM m (Layout.Layout f)
-stdSpace =
-    ExprGuiM.widgetEnv BWidgets.stdSpaceView
+stdHSpace :: Monad m => ExprGuiM m (Layout.Layout f)
+stdHSpace =
+    ExprGuiM.widgetEnv BWidgets.stdHSpaceView
     <&> Widget.fromView
     <&> Layout.fromCenteredWidget
 
-verticalSpace :: Monad m => ExprGuiM m (ExpressionGui f)
-verticalSpace =
+stdVSpace :: Monad m => ExprGuiM m (ExpressionGui f)
+stdVSpace =
     ExprGuiM.widgetEnv BWidgets.stdVSpaceView
     <&> Widget.fromView
     <&> Layout.fromCenteredWidget
 
 hboxSpaced :: Monad m => [ExpressionGui f] -> ExprGuiM m (ExpressionGui f)
 hboxSpaced guis =
-    stdSpace
+    stdHSpace
     <&> (`List.intersperse` guis)
     <&> hbox
 
@@ -156,7 +156,7 @@ vboxTopFocalSpaced ::
     Monad m => [ExpressionGui m] -> ExprGuiM m (ExpressionGui m)
 vboxTopFocalSpaced guis =
     do
-        space <- verticalSpace
+        space <- stdVSpace
         guis & List.intersperse space & vboxTopFocal & return
 
 gridTopLeftFocal :: [[ExpressionGui m]] -> ExpressionGui m

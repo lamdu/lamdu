@@ -104,7 +104,7 @@ make (Sugar.Case mArg alts caseTail addAlt cEntityId) pl =
                 <&> TagEdit.diveToCaseTag
                 & Widget.keysEventMapMovesCursor (Config.caseAddAltKeys config)
                   (E.Doc ["Edit", "Case", "Add Alt"])
-        vspace <- ExpressionGui.verticalSpace
+        vspace <- ExpressionGui.stdVSpace
         [header, vspace, altsGui]
             & ExpressionGui.vboxTopFocalAlignedTo 0
             & ExpressionGui.addValFrame myId
@@ -128,7 +128,7 @@ makeAltRow mActiveTag (Sugar.CaseAlt delete tag altExpr) =
                 else return
         altExprGui <- ExprGuiM.makeSubexpression (const 0) altExpr
         let itemEventMap = caseDelEventMap config delete
-        space <- ExpressionGui.stdSpace
+        space <- ExpressionGui.stdVSpace
         [ altRefGui & ExpressionGui.egAlignment . _1 .~ 1
             , space
             , altExprGui & ExpressionGui.egAlignment . _1 .~ 0
@@ -146,7 +146,7 @@ makeAltsWidget _ [] myId =
     >>= ExpressionGui.makeFocusableView (Widget.joinId myId ["Ø"])
 makeAltsWidget mActiveTag alts _ =
     do
-        vspace <- ExpressionGui.verticalSpace
+        vspace <- ExpressionGui.stdVSpace
         mapM (makeAltRow mActiveTag) alts
             <&> List.intersperse (replicate 3 vspace)
             <&> ExpressionGui.gridTopLeftFocal
@@ -167,7 +167,7 @@ makeOpenCase ::
 makeOpenCase rest animId altsGui =
     do
         config <- ExprGuiM.readConfig
-        vspace <- ExpressionGui.verticalSpace
+        vspace <- ExpressionGui.stdVSpace
         restExpr <-
             ExprGuiM.makeSubexpression (const 0) rest
             >>= ExpressionGui.addValPadding

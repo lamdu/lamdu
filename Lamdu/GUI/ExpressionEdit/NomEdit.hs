@@ -47,7 +47,7 @@ expandingName ::
     LayoutFunc m
 expandingName namePos nomId label nameGui subexprGui showName =
     do
-        space <- ExpressionGui.stdSpace
+        space <- ExpressionGui.stdHSpace
         namePos [nameGui | showName] label
             & ExpressionGui.egWidget %%~
                 ExpressionGui.addValBGWithColor Config.valNomBGColor nomId
