@@ -1,17 +1,7 @@
 -- | JSON encoder/decoder for Lamdu types
 {-# LANGUAGE NoImplicitPrelude, LambdaCase, OverloadedStrings, PatternGuards, FlexibleContexts #-}
 module Lamdu.Data.Export.JSON.Codec
-    ( Encoder
-      , encodeRepl, encodeDef, encodeArray
-      , encodeNamedTag
-      , encodeNamedNominal
-      , encodeNamedLamVar
-    , Decoder
-      , decodeRepl, decodeDef, decodeArray
-      , decodeNamedTag
-      , decodeNamedNominal
-      , decodeNamedLamVar
-    , Encoded, runDecoder
+    ( TagOrder, Entity(..)
     ) where
 
 import           Control.Applicative (optional)
@@ -26,8 +16,8 @@ import           Data.Aeson ((.=))
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.Encode.Pretty as AesonPretty
 import qualified Data.Aeson.Types as AesonTypes
-import qualified Data.ByteString.Char8 as BS
 import qualified Data.ByteString.Base16 as Hex
+import qualified Data.ByteString.Char8 as BS
 import qualified Data.ByteString.Lazy.Char8 as LBS8
 import           Data.Either.Combinators (swapEither)
 import qualified Data.HashMap.Strict as HashMap
@@ -48,8 +38,8 @@ import qualified Lamdu.Calc.Type.FlatComposite as FlatComposite
 import           Lamdu.Calc.Type.Nominal (Nominal(..), NominalType(..))
 import           Lamdu.Calc.Type.Scheme (Scheme(..))
 import           Lamdu.Calc.Type.Vars (TypeVars(..))
-import           Lamdu.Calc.Val.Annotated (Val(..))
 import qualified Lamdu.Calc.Val as V
+import           Lamdu.Calc.Val.Annotated (Val(..))
 import qualified Lamdu.Data.Anchors as Anchors
 import           Lamdu.Data.Definition (Definition(..))
 import qualified Lamdu.Data.Definition as Definition
@@ -61,14 +51,38 @@ type Encoded = Aeson.Value
 type Encoder a = a -> Encoded
 type Decoder a = Encoded -> AesonTypes.Parser a
 
-runDecoder :: Decoder a -> Encoded -> Either String a
-runDecoder = AesonTypes.parseEither
+type TagOrder = Int
 
-encodeArray :: Encoder [Aeson.Value]
-encodeArray = Aeson.Array . Vector.fromList
+data Entity
+    = EntityRepl (Val UUID)
+    | EntityDef (Definition (Val UUID) (Anchors.PresentationMode, Maybe String, V.Var))
+    | EntityTag TagOrder (Maybe String) T.Tag
+    | EntityNominal (Maybe String) T.NominalId Nominal
+    | EntityLamVar (Maybe Anchors.ParamList) (Maybe String) UUID V.Var
 
-decodeArray :: Decoder [Aeson.Value]
-decodeArray = fmap Vector.toList . Aeson.parseJSON
+instance AesonTypes.ToJSON Entity where
+    toJSON (EntityRepl val) = encodeRepl val
+    toJSON (EntityDef def) = encodeDef def
+    toJSON (EntityTag tagOrder mName tag) = encodeNamedTag (tagOrder, mName, tag)
+    toJSON (EntityNominal mName nomId nom) = encodeNamedNominal ((mName, nomId), nom)
+    toJSON (EntityLamVar mParamList mName lamI var) =
+        encodeNamedLamVar (mParamList, mName, lamI, var)
+
+instance AesonTypes.FromJSON Entity where
+    parseJSON json =
+        jsum
+        [ decodeRepl json <&> EntityRepl
+        , decodeDef json <&> EntityDef
+        , decodeNamedTag json <&> uncurry3 EntityTag
+        , decodeNamedNominal json <&> \((mName, nomId), nom) -> EntityNominal mName nomId nom
+        , decodeNamedLamVar json <&> uncurry4 EntityLamVar
+        ]
+
+uncurry3 :: (a -> b -> c -> d) -> (a, b, c) -> d
+uncurry3 f (x0, x1, x2) = f x0 x1 x2
+
+uncurry4 :: (a -> b -> c -> d -> e) -> (a, b, c, d) -> e
+uncurry4 f (x0, x1, x2, x3) = f x0 x1 x2 x3
 
 encodePresentationMode :: Encoder Anchors.PresentationMode
 encodePresentationMode Anchors.OO = Aeson.String "OO"
@@ -192,7 +206,7 @@ encodeFlatComposite :: Encoder (FlatComposite p)
 encodeFlatComposite = \case
     FlatComposite fields Nothing -> encodedFields fields
     FlatComposite fields (Just (T.Var name)) ->
-        encodeArray [encodedFields fields, encodeIdent name]
+        AesonTypes.toJSON [encodedFields fields, encodeIdent name]
     where
         encodedFields = encodeIdentMap T.tagName encodeType
 
@@ -512,17 +526,17 @@ decodeDef =
         presentationMode <- obj .: "defPresentationMode" >>= lift . decodePresentationMode
         Definition body (presentationMode, mName, V.Var globalId) & return
 
-encodeTagOrder :: Int -> Aeson.Object
+encodeTagOrder :: TagOrder -> Aeson.Object
 encodeTagOrder tagOrder = HashMap.fromList ["tagOrder" .= tagOrder]
 
-decodeTagOrder :: ExhaustiveDecoder Int
+decodeTagOrder :: ExhaustiveDecoder TagOrder
 decodeTagOrder obj = obj .: "tagOrder"
 
-encodeNamedTag :: Encoder (Int, Maybe String, T.Tag)
+encodeNamedTag :: Encoder (TagOrder, Maybe String, T.Tag)
 encodeNamedTag (tagOrder, mName, T.Tag ident) =
     encodeNamed "tag" encodeTagOrder ((mName, ident), tagOrder) & Aeson.Object
 
-decodeNamedTag :: Decoder (Int, Maybe String, T.Tag)
+decodeNamedTag :: Decoder (TagOrder, Maybe String, T.Tag)
 decodeNamedTag json =
     do
         ((mName, tag), tagOrder) <-
@@ -541,14 +555,14 @@ encodeMaybe encoder mVal = mVal <&> encoder & Aeson.toJSON
 decodeMaybe :: Decoder a -> Decoder (Maybe a)
 decodeMaybe decoder json = Aeson.parseJSON json >>= traverse decoder
 
-encodeLam :: Aeson.ToJSON a => (a, Maybe Anchors.ParamList) -> Aeson.Object
+encodeLam :: (UUID, Maybe Anchors.ParamList) -> Aeson.Object
 encodeLam (lamI, mParamList) =
     HashMap.fromList
     [ "lamId" .= lamI
     , "lamFieldParams" .= encodeMaybe encodeParamList mParamList
     ]
 
-decodeLam :: Aeson.FromJSON a => ExhaustiveDecoder (a, Maybe Anchors.ParamList)
+decodeLam :: ExhaustiveDecoder (UUID, Maybe Anchors.ParamList)
 decodeLam obj =
     do
         lamI <- obj .: "lamId"
@@ -556,12 +570,12 @@ decodeLam obj =
         return (lamI, mParamList)
 
 encodeNamedLamVar ::
-    Aeson.ToJSON a => Encoder (Maybe Anchors.ParamList, Maybe String, a, V.Var)
+    Encoder (Maybe Anchors.ParamList, Maybe String, UUID, V.Var)
 encodeNamedLamVar (mParamList, mName, lamI, V.Var ident) =
     encodeNamed "lamVar" encodeLam ((mName, ident), (lamI, mParamList)) & Aeson.Object
 
 decodeNamedLamVar ::
-    Aeson.FromJSON a => Decoder (Maybe Anchors.ParamList, Maybe String, a, V.Var)
+    Decoder (Maybe Anchors.ParamList, Maybe String, UUID, V.Var)
 decodeNamedLamVar json =
     do
         ((mName, ident), (lamI, mParamList)) <-
