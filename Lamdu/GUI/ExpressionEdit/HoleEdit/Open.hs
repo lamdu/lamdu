@@ -164,7 +164,8 @@ makeShownResult holeInfo result =
         res <- ExprGuiM.transaction $ rHoleResult result
         config <- Config.hole <$> ExprGuiM.readConfig
         (widget, mkEventMap) <- makeHoleResultWidget (rId result) res
-        let padding = Config.holeResultPadding config <&> realToFrac
+        stdSpacing <- ExprGuiM.widgetEnv BWidgets.stdSpacing
+        let padding = Config.holeResultPadding config <&> realToFrac & (* stdSpacing)
         let mFirstHoleInside =
                 res ^? Sugar.holeResultConverted
                 . SugarLens.holePayloads . Sugar.plEntityId

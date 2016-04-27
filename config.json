@@ -313,7 +313,7 @@
         ],
         "holeResultCount": 5,
         "holeResultInjectedScaleExponent": 0.65,
-        "holeResultPadding": [3.0, 3.0],
+        "holeResultPadding": [1.0, 0.5],
         "holePickAndMoveToNextHoleKeys": [
             [
                 {
