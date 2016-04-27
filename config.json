@@ -313,10 +313,7 @@
         ],
         "holeResultCount": 5,
         "holeResultInjectedScaleExponent": 0.65,
-        "holeResultPadding": {
-            "_first": 3.0,
-            "_second": 3.0
-        },
+        "holeResultPadding": [3.0, 3.0],
         "holePickAndMoveToNextHoleKeys": [
             [
                 {
@@ -368,10 +365,7 @@
             0.05,
             0.85
         ],
-        "holeDarkPadding": {
-            "_first": 1,
-            "_second": 1
-        },
+        "holeDarkPadding": [1, 1],
         "holeOpenKeys": [
             [
                 {
@@ -423,10 +417,7 @@
                 "Key'Enter"
             ]
         ],
-        "holeHoveringWrapperScaleFactor": {
-            "_first": 0.5,
-            "_second": 0.5
-        }
+        "holeHoveringWrapperScaleFactor": [0.5, 0.5]
     },
     "literalText": {
         "literalTextStartEditingKeys": [
@@ -501,10 +492,7 @@
             0.5,
             1.0
         ],
-        "collisionSuffixScaleFactor": {
-            "_first": 0.5,
-            "_second": 0.5
-        },
+        "collisionSuffixScaleFactor": [0.5, 0.5],
         "collisionSuffixBGColor": [
             0.7,
             0.0,
@@ -568,14 +556,8 @@
             0.5,
             0.5
         ],
-        "neighborsScaleFactor": {
-            "_first": 0.65,
-            "_second": 0.65
-        },
-        "neighborsPadding": {
-            "_first": 3,
-            "_second": 3
-        }
+        "neighborsScaleFactor": [0.65, 0.65],
+        "neighborsPadding": [3, 3]
     },
     "previousCursorKeys": [
         [
@@ -770,10 +752,7 @@
         0.0,
         0.9
     ],
-    "typeIndicatorFrameWidth": {
-        "_first": 2.0,
-        "_second": 2.0
-    },
+    "typeIndicatorFrameWidth": [2.0, 2.0],
     "typeIndicatorErrorColor": [
         1.0,
         0.2,
@@ -967,10 +946,7 @@
     "valAnnotationSpacing": 0.1,
     "valAnnotationWidthExpansionLimit": 34,
     "valAnnotationShrinkAtLeast": 80,
-    "valFramePadding": {
-        "_first": 7.0,
-        "_second": 7.0
-    },
+    "valFramePadding": [7.0, 7.0],
     "delForwardKeys": [
         [
             {
@@ -997,10 +973,7 @@
         1.0,
         0.25
     ],
-    "letItemPadding": {
-        "_first": 5,
-        "_second": 5
-    },
+    "letItemPadding": [5, 5],
     "letAddItemKeys": [
         [
             {
@@ -1045,10 +1018,7 @@
         1.0,
         1.0
     ],
-    "presentationChoiceScaleFactor": {
-        "_first": 0.5,
-        "_second": 0.5
-    },
+    "presentationChoiceScaleFactor": [0.5, 0.5],
     "jumpToDefinitionKeys": [
         [
             {
