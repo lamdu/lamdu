@@ -101,7 +101,7 @@ convertParamsRecord param exprPl =
         GetParamsRecord ParamsRecordVar
             { _prvFieldNames =
                 exprPl
-                ^.. Input.inferredType . T._TRecord . ExprLens.compositeTags
+                ^.. Input.inferredType . T._TRecord . ExprLens.compositeFieldTags
                 <&> UniqueId.toUUID
             } & return
 

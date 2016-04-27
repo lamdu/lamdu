@@ -599,7 +599,7 @@ convertNonEmptyParams binderKind lambda lambdaPl =
                         . Lens.filtered (Lens.has ExprLens.valAbs)
                         . Val.payload
                         . Input.inferredType . T._TFun . _1
-                        . T._TRecord . ExprLens.compositeTags
+                        . T._TRecord . ExprLens.compositeFieldTags
                         & Set.fromList
             _ -> convertNonRecordParam binderKind lambda lambdaPl
     where

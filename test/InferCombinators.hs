@@ -271,10 +271,10 @@ infixl 4 $.
     where
         tags =
             case f ^. iType of
-            T.TFun (T.TRecord p) _ -> compositeTags p
+            T.TFun (T.TRecord p) _ -> compositeFieldTags p
             _ -> error "not a record func in ($$:)"
 
-compositeTags :: T.Composite p -> [T.Tag]
-compositeTags T.CEmpty = []
-compositeTags T.CVar {} = error "unknown tags in compositeTags"
-compositeTags (T.CExtend t _ r) = t : compositeTags r
+compositeFieldTags :: T.Composite p -> [T.Tag]
+compositeFieldTags T.CEmpty = []
+compositeFieldTags T.CVar {} = error "unknown tags in compositeFieldTags"
+compositeFieldTags (T.CExtend t _ r) = t : compositeFieldTags r

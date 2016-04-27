@@ -404,7 +404,7 @@ idTranslations consistentExpr dest
                           )
                       | tag <-
                               srcType ^..
-                              T._TFun . _1 . T._TRecord . ExprLens.compositeTags
+                              T._TFun . _1 . T._TRecord . ExprLens.compositeFieldTags
                       ] ++ recurse
             _ -> recurse
             where
