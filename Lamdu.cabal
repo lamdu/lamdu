@@ -192,6 +192,7 @@ Executable lamdu
                   , Lamdu.Data.Export.Codejam
                   , Lamdu.Data.Export.JSON
                   , Lamdu.Data.Export.JSON.Codec
+                  , Lamdu.Data.Export.JSON.Process
                   , Lamdu.Data.Ops
                   , Lamdu.Data.Ops.Subexprs
                   , Lamdu.DataFile
