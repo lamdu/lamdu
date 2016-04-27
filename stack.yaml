@@ -5,7 +5,7 @@ packages:
     commit: f54abe6f1f9b1eb7923e442fa11f3cf16ad5cfcb
 - location:
     git: https://github.com/lamdu/Algorithm-W-Step-By-Step
-    commit: 21c8a22a10a820660850fb7d68b928c29af80cb5
+    commit: 9f07f5f00ac4aaebbc150f14ad8baa423442f1d5
 - location:
     git: https://github.com/lamdu/graphics-drawingcombinators
     commit: 99a7656c0fe5590a8331782cbc7cdf5183fe9ca4
