@@ -28,7 +28,7 @@ stack install
 requires [stack](https://github.com/commercialhaskell/stack/releases)
 ```shell
 sudo apt-get update -qq
-sudo apt-get install git zlib1g-dev libleveldb-dev libglfw-dev libxrandr-dev libxi-dev libxcursor-dev libxinerama-dev -yq
+sudo apt-get install git zlib1g-dev libglew-dev libleveldb-dev libglfw-dev libxrandr-dev libxi-dev libxcursor-dev libxinerama-dev -yq
 git clone --recursive https://github.com/lamdu/lamdu
 cd lamdu
 stack setup
