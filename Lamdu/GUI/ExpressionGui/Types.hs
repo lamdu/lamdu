@@ -23,6 +23,7 @@ import           Graphics.UI.Bottle.Widgets.Layout (Layout)
 import           Lamdu.Sugar.Names.Types (ExpressionN)
 import           Lamdu.Sugar.NearestHoles (NearestHoles)
 import qualified Lamdu.Sugar.NearestHoles as NearestHoles
+import qualified Lamdu.Sugar.Lens as SugarLens
 import qualified Lamdu.Sugar.Types as Sugar
 
 type ExpressionGui m = Layout (Transaction m Widget.EventResult)
@@ -91,10 +92,4 @@ nextHolesBefore val =
         then NearestHoles.next .~ Just (node ^. Sugar.rPayload . Sugar.plEntityId)
         else id
     where
-        node = leftMostLeaf val
-
-leftMostLeaf :: Sugar.Expression name m a -> Sugar.Expression name m a
-leftMostLeaf val =
-    case val ^.. Sugar.rBody . Lens.traversed of
-    [] -> val
-    (x:_) -> leftMostLeaf x
+        node = SugarLens.leftMostLeaf val

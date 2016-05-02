@@ -12,6 +12,7 @@ module Lamdu.Sugar.Lens
     , binderContentExpr
     , binderContentEntityId
     , exprBinders
+    , leftMostLeaf
     ) where
 
 import           Control.Lens (Lens')
@@ -184,3 +185,9 @@ binderContentEntityId f (BinderExpr e) =
     e & rPayload . plEntityId %%~ f <&> BinderExpr
 binderContentEntityId f (BinderLet l) =
     l & lEntityId %%~ f <&> BinderLet
+
+leftMostLeaf :: Expression name m a -> Expression name m a
+leftMostLeaf val =
+    case val ^.. rBody . Lens.traversed of
+    [] -> val
+    (x:_) -> leftMostLeaf x
