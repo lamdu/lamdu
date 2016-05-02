@@ -75,7 +75,8 @@ makeNameRef myId nameRef makeView =
 
 makeInlineEventMap ::
     Monad m =>
-    Config -> Sugar.BinderVarInline m -> Widget.EventHandlers (Transaction m)
+    Config -> Sugar.BinderVarInline m ->
+    Widget.EventMap (Transaction m Widget.EventResult)
 makeInlineEventMap config (Sugar.InlineVar inline) =
     inline <&> WidgetIds.fromEntityId
     & Widget.keysEventMapMovesCursor (Config.inlineKeys config)

@@ -38,17 +38,26 @@ branchNameFDConfig = FocusDelegator.Config
     , FocusDelegator.focusParentDoc = E.Doc ["Branches", "Done renaming"]
     }
 
-undoEventMap :: Functor m => VersionControl.Config -> Maybe (m Widget.Id) -> Widget.EventHandlers m
+undoEventMap ::
+    Functor m =>
+    VersionControl.Config -> Maybe (m Widget.Id) ->
+    Widget.EventMap (m Widget.EventResult)
 undoEventMap VersionControl.Config{..} =
     maybe mempty .
     Widget.keysEventMapMovesCursor undoKeys $ E.Doc ["Edit", "Undo"]
 
-redoEventMap :: Functor m => VersionControl.Config -> Maybe (m Widget.Id) -> Widget.EventHandlers m
+redoEventMap ::
+    Functor m =>
+    VersionControl.Config -> Maybe (m Widget.Id) ->
+    Widget.EventMap (m Widget.EventResult)
 redoEventMap VersionControl.Config{..} =
     maybe mempty .
     Widget.keysEventMapMovesCursor redoKeys $ E.Doc ["Edit", "Redo"]
 
-globalEventMap :: Applicative f => VersionControl.Config -> Actions t f -> Widget.EventHandlers f
+globalEventMap ::
+    Applicative f =>
+    VersionControl.Config -> Actions t f ->
+    Widget.EventMap (f Widget.EventResult)
 globalEventMap VersionControl.Config{..} actions = mconcat
     [ Widget.keysEventMapMovesCursor makeBranchKeys
       (E.Doc ["Branches", "New"]) $ branchTextEditId <$> makeBranch actions
@@ -85,8 +94,8 @@ make ::
     (forall a. Transaction n a -> mw a) ->
     (forall a. Transaction n a -> mr a) ->
     Actions n mw ->
-    (Widget mw -> WidgetEnvT mr (Widget mw)) ->
-    WidgetEnvT mr (Widget mw)
+    (Widget (mw Widget.EventResult) -> WidgetEnvT mr (Widget (mw Widget.EventResult))) ->
+    WidgetEnvT mr (Widget (mw Widget.EventResult))
 make VersionControl.Config{..} choiceBGLayer rwtransaction rtransaction actions mkWidget =
     do
         branchNameEdits <- traverse makeBranchNameEdit $ branches actions

@@ -14,7 +14,7 @@ module Graphics.UI.Bottle.Widget
     , animIdMappingFromPrefixMap
 
     -- Events:
-    , EventHandlers
+    , EventMap
     , keysEventMap
     , keysEventMapMovesCursor
 
@@ -80,18 +80,16 @@ instance Monoid EventResult where
     mempty = def_mempty
     mappend = def_mappend
 
-data EnterResult f = EnterResult
+data EnterResult a = EnterResult
     { _enterResultRect :: Rect
-    , _enterResultEvent :: f EventResult
+    , _enterResultEvent :: a
     }
 
-type EventHandlers f = EventMap (f EventResult)
-
-data Widget f = Widget
+data Widget a = Widget
     { _isFocused :: Bool
     , _view :: View
-    , _mEnter :: Maybe (Direction -> EnterResult f) -- Nothing if we're not enterable
-    , _eventMap :: EventHandlers f
+    , _mEnter :: Maybe (Direction -> EnterResult a) -- Nothing if we're not enterable
+    , _eventMap :: EventMap a
     , _focalArea :: Rect
     }
 
@@ -134,7 +132,7 @@ eventResultFromCursor cursor = EventResult
     , _eAnimIdMapping = mempty
     }
 
-events :: Lens.Setter (Widget f) (Widget g) (f EventResult) (g EventResult)
+events :: Lens.Setter (Widget a) (Widget b) a b
 events =
     Lens.sets atEvents
     where
@@ -155,7 +153,9 @@ fromView v =
         , _mEnter = Nothing
         }
 
-takesFocus :: Functor f => (Direction -> f Id) -> Widget f -> Widget f
+takesFocus ::
+    Functor f =>
+    (Direction -> f Id) -> Widget (f EventResult) -> Widget (f EventResult)
 takesFocus enterFunc widget =
     widget & mEnter .~ Just enter
     where
@@ -164,22 +164,22 @@ takesFocus enterFunc widget =
             <&> Lens.mapped %~ eventResultFromCursor
             <&> EnterResult (widget ^. focalArea)
 
-doesntTakeFocus :: Widget f -> Widget f
+doesntTakeFocus :: Widget a -> Widget a
 doesntTakeFocus = mEnter .~ Nothing
 
 -- ^ If doesn't take focus, event map is ignored
-strongerEvents :: EventHandlers f -> Widget f -> Widget f
+strongerEvents :: EventMap a -> Widget a -> Widget a
 strongerEvents eMap = eventMap %~ (eMap `mappend`)
 
 -- ^ If doesn't take focus, event map is ignored
-weakerEvents :: EventHandlers f -> Widget f -> Widget f
+weakerEvents :: EventMap a -> Widget a -> Widget a
 weakerEvents eMap = eventMap %~ (`mappend` eMap)
 
-backgroundColor :: Int -> AnimId -> Draw.Color -> Widget f -> Widget f
+backgroundColor :: Int -> AnimId -> Draw.Color -> Widget a -> Widget a
 backgroundColor layer animId color =
     view %~ View.backgroundColor animId layer color
 
-addInnerFrame :: Int -> AnimId -> Draw.Color -> Vector2 R -> Widget f -> Widget f
+addInnerFrame :: Int -> AnimId -> Draw.Color -> Vector2 R -> Widget a -> Widget a
 addInnerFrame layer animId color frameWidth widget =
     widget & animFrame %~ mappend emptyRectangle
     where
@@ -208,14 +208,14 @@ tint color = view %~ View.tint color
 
 keysEventMap ::
     Functor f => [ModKey] -> EventMap.Doc ->
-    f () -> EventHandlers f
+    f () -> EventMap (f EventResult)
 keysEventMap keys doc act =
     (fmap . const) mempty <$>
     EventMap.keyPresses keys doc act
 
 keysEventMapMovesCursor ::
     Functor f => [ModKey] -> EventMap.Doc ->
-    f Id -> EventHandlers f
+    f Id -> EventMap (f EventResult)
 keysEventMapMovesCursor keys doc act =
     fmap eventResultFromCursor <$>
     EventMap.keyPresses keys doc act

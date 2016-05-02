@@ -150,7 +150,7 @@ make apply@(Sugar.Apply func specialArgs annotatedArgs) pl =
 makeArgRows ::
     Monad m =>
     Sugar.AnnotatedArg (Name m) (ExprGuiT.SugarExpr m) ->
-    ExprGuiM m [[(Grid.Alignment, Widget (T m))]]
+    ExprGuiM m [[(Grid.Alignment, Widget (T m Widget.EventResult))]]
 makeArgRows arg =
     do
         argTagEdit <- TagEdit.makeParamTag (arg ^. Sugar.aaTag)

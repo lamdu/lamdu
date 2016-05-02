@@ -39,15 +39,17 @@ import           Prelude.Compat
 
 type T = Transaction.Transaction
 
-blockDownEvents :: Monad f => Widget f -> Widget f
+blockDownEvents :: (Monoid a, Applicative f) => Widget (f a) -> Widget (f a)
 blockDownEvents =
     Widget.weakerEvents $
     E.keyPresses
     [ModKey mempty GLFW.Key'Down]
     (E.Doc ["Navigation", "Move", "down (blocked)"]) $
-    return mempty
+    pure mempty
 
-adHocTextEditEventMap :: Monad m => Config.Hole -> Property m String -> Widget.EventHandlers m
+adHocTextEditEventMap ::
+    Monad m =>
+    Config.Hole -> Property m String -> Widget.EventMap (m Widget.EventResult)
 adHocTextEditEventMap holeConfig searchTermProp =
     appendCharEventMap <> deleteCharEventMap
     where
@@ -110,8 +112,9 @@ deleteKeys :: [ModKey] -> E.EventMap a -> E.EventMap a
 deleteKeys = E.deleteKeys . map (E.KeyEvent GLFW.KeyState'Pressed)
 
 pickEventMap ::
-    Monad m => Config.Hole -> HoleInfo m -> ShownResult m ->
-    Widget.EventHandlers (T m)
+    Monad m =>
+    Config.Hole -> HoleInfo m -> ShownResult m ->
+    Widget.EventMap (T m Widget.EventResult)
 pickEventMap Config.Hole{..} holeInfo shownResult =
     -- TODO: Does this entityId business make sense?
     case hiNearestHoles holeInfo ^. NearestHoles.next of
@@ -143,7 +146,7 @@ pickBefore shownResult action =
         return $ _pickedEventResult <> actionResult
 
 -- | Remove unwanted event handlers from a hole result
-removeUnwanted :: Config -> Widget.EventHandlers f -> Widget.EventHandlers f
+removeUnwanted :: Config -> Widget.EventMap a -> Widget.EventMap a
 removeUnwanted config =
     deleteKeys
     (delKeys ++ gridKeyEvents ++ holeNavigationKeys ++ subexprNavigationKeys ++
@@ -157,7 +160,9 @@ removeUnwanted config =
         gridKeyEvents = Foldable.toList Grid.stdKeys
         delKeys = Config.delKeys config
 
-mkEventsOnPickedResult :: Monad m => ShownResult m -> ExprGuiM m (Widget.EventHandlers (T m))
+mkEventsOnPickedResult ::
+    Monad m =>
+    ShownResult m -> ExprGuiM m (Widget.EventMap (T m Widget.EventResult))
 mkEventsOnPickedResult shownResult =
     do
         config <- ExprGuiM.readConfig
@@ -167,7 +172,8 @@ mkEventsOnPickedResult shownResult =
             <&> removeUnwanted config
 
 -- To make HoleEdit
-emptyPickEventMap :: Monad f => Config.Hole -> Widget.EventHandlers f
+emptyPickEventMap ::
+    Monad f => Config.Hole -> Widget.EventMap (f Widget.EventResult)
 emptyPickEventMap Config.Hole{..} =
     return ()
     & Widget.keysEventMap keys (E.Doc ["Edit", "Result", "Pick (N/A)"])
@@ -184,7 +190,8 @@ listTHead nil l =
 
 -- TODO: This is ugly, maybe Sugar.HoleOption should
 -- have a canonical result?
-toLiteralTextEventMap :: Monad m => HoleInfo m -> Widget.EventHandlers (T m)
+toLiteralTextEventMap ::
+    Monad m => HoleInfo m -> Widget.EventMap (T m Widget.EventResult)
 toLiteralTextEventMap holeInfo =
     Widget.keysEventMapMovesCursor toLiteralTextKeys
     (E.Doc ["Edit", "Create Text Literal"]) $
@@ -211,8 +218,8 @@ makeOpenEventMaps ::
     Monad m =>
     HoleInfo m -> Maybe (ShownResult m) ->
     ExprGuiM m
-    ( Widget.EventHandlers (T m)
-    , Widget.EventHandlers (T m)
+    ( Widget.EventMap (T m Widget.EventResult)
+    , Widget.EventMap (T m Widget.EventResult)
     )
 makeOpenEventMaps holeInfo mShownResult =
     do

@@ -127,7 +127,8 @@ afterPick holeInfo resultId mFirstHoleInside pr =
 
 fixNumWithDotEventMap ::
     Monad m =>
-    HoleInfo m -> Sugar.HoleResult name m -> Widget.EventHandlers (T m)
+    HoleInfo m -> Sugar.HoleResult name m ->
+    Widget.EventMap (T m Widget.EventResult)
 fixNumWithDotEventMap holeInfo res
     | endsWithDot
     , Lens.has literalNum conv
@@ -156,7 +157,9 @@ fixNumWithDotEventMap holeInfo res
         hrWrapAction = Sugar.rPayload . Sugar.plActions . Sugar.wrap
 
 makeShownResult ::
-    Monad m => HoleInfo m -> Result m -> ExprGuiM m (Widget (T m), ShownResult m)
+    Monad m =>
+    HoleInfo m -> Result m ->
+    ExprGuiM m (Widget (T m Widget.EventResult), ShownResult m)
 makeShownResult holeInfo result =
     do
         -- Warning: rHoleResult should be ran at most once!
@@ -200,7 +203,7 @@ makeExtraSymbolWidget animId isSelected results
 data ResultGroupWidgets m = ResultGroupWidgets
     { _rgwMainResult :: ShownResult m
     , _rgwMSelectedResult :: Maybe (ShownResult m) -- Can be an extra result
-    , _rgwRow :: [Widget (T m)]
+    , _rgwRow :: [Widget (T m Widget.EventResult)]
     , _rgwPadding :: Widget.R
     }
 rgwMainResult :: Lens' (ResultGroupWidgets m) (ShownResult m)
@@ -209,7 +212,7 @@ rgwMainResult f ResultGroupWidgets{..} =
 rgwMSelectedResult :: Lens' (ResultGroupWidgets m) (Maybe (ShownResult m))
 rgwMSelectedResult f ResultGroupWidgets{..} =
     f _rgwMSelectedResult <&> \_rgwMSelectedResult -> ResultGroupWidgets{..}
-rgwRow :: Lens' (ResultGroupWidgets m) [Widget (T m)]
+rgwRow :: Lens' (ResultGroupWidgets m) [Widget (T m Widget.EventResult)]
 rgwRow f ResultGroupWidgets{..} =
     f _rgwRow <&> \_rgwRow -> ResultGroupWidgets{..}
 rgwPadding :: Lens' (ResultGroupWidgets m) Widget.R
@@ -261,8 +264,9 @@ makeResultGroup holeInfo results =
         focusFirstExtraResult (result:_) = makeFocusable (rId result)
 
 makeExtraResultsWidget ::
-    Monad m => HoleInfo m -> Anim.R -> [Result m] ->
-    ExprGuiM m (Maybe (ShownResult m), Widget (T m), Widget.R)
+    Monad m =>
+    HoleInfo m -> Anim.R -> [Result m] ->
+    ExprGuiM m (Maybe (ShownResult m), Widget (T m Widget.EventResult), Widget.R)
 makeExtraResultsWidget _ _ [] = return (Nothing, Widget.empty, 0)
 makeExtraResultsWidget holeInfo mainResultHeight extraResults@(firstResult:_) =
     do
@@ -296,13 +300,15 @@ makeExtraResultsWidget holeInfo mainResultHeight extraResults@(firstResult:_) =
             )
 
 makeFocusable ::
-    (Monad m, Applicative f) => Widget.Id -> Widget f -> ExprGuiM m (Widget f)
+    (Monad m, Applicative f) =>
+    Widget.Id -> Widget (f Widget.EventResult) ->
+    ExprGuiM m (Widget (f Widget.EventResult))
 makeFocusable wId = ExprGuiM.widgetEnv . BWidgets.makeFocusableView wId
 
 makeHoleResultWidget ::
-    Monad m => Widget.Id ->
-    Sugar.HoleResult (Name m) m ->
-    ExprGuiM m (Widget (T m), ExprGuiM m (Widget.EventHandlers (T m)))
+    Monad m =>
+    Widget.Id -> Sugar.HoleResult (Name m) m ->
+    ExprGuiM m (Widget (T m Widget.EventResult), ExprGuiM m (Widget.EventMap (T m Widget.EventResult)))
 makeHoleResultWidget resultId holeResult =
     do
         Config.Hole{..} <- ExprGuiM.readConfig <&> Config.hole
@@ -356,7 +362,8 @@ toPayload isInjected =
       Sugar.NotInjected -> []
       Sugar.Injected -> [True]
 
-makeNoResults :: Monad m => AnimId -> ExprGuiM m (Widget (T m))
+makeNoResults ::
+    Monad m => AnimId -> ExprGuiM m (Widget (T m Widget.EventResult))
 makeNoResults animId =
     ExpressionGui.makeLabel "(No results)" animId
     <&> (^. ExpressionGui.egWidget)
@@ -383,7 +390,7 @@ calcPadding =
 layoutResults ::
     Monad m =>
     [ResultGroupWidgets m] -> HaveHiddenResults -> Widget.Id ->
-    ExprGuiM m (Widget (T m))
+    ExprGuiM m (Widget (T m Widget.EventResult))
 layoutResults groups hiddenResults myId
     | null groups = makeNoResults (Widget.toAnimId myId)
     | otherwise =
@@ -408,7 +415,7 @@ layoutResults groups hiddenResults myId
 makeResultsWidget ::
     Monad m => HoleInfo m ->
     [ResultsList m] -> HaveHiddenResults ->
-    ExprGuiM m (Maybe (ShownResult m), Widget (T m))
+    ExprGuiM m (Maybe (ShownResult m), Widget (T m Widget.EventResult))
 makeResultsWidget holeInfo shownResultsLists hiddenResults =
     do
         groupsWidgets <- traverse (makeResultGroup holeInfo) shownResultsLists

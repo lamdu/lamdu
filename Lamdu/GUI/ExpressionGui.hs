@@ -91,14 +91,14 @@ type T = Transaction
 
 {-# INLINE egWidget #-}
 egWidget ::
-    Lens (ExpressionGui m) (ExpressionGui n) (Widget (T m)) (Widget (T n))
+    Lens (ExpressionGui m) (ExpressionGui n) (Widget (T m Widget.EventResult)) (Widget (T n Widget.EventResult))
 egWidget = Layout.alignedWidget . _2
 
 {-# INLINE egAlignment #-}
 egAlignment :: Lens' (ExpressionGui m) Layout.Alignment
 egAlignment = Layout.alignedWidget . _1
 
-fromValueWidget :: Widget (T m) -> ExpressionGui m
+fromValueWidget :: Widget (T m Widget.EventResult) -> ExpressionGui m
 fromValueWidget = Layout.fromCenteredWidget
 
 alignAdd ::
@@ -364,7 +364,8 @@ nameEditFDConfig = FocusDelegator.Config
     , FocusDelegator.focusParentDoc = E.Doc ["Edit", "Done renaming"]
     }
 
-makeNameOriginEdit :: Monad m => Name m -> Widget.Id -> ExprGuiM m (Widget (T m))
+makeNameOriginEdit ::
+    Monad m => Name m -> Widget.Id -> ExprGuiM m (Widget (T m Widget.EventResult))
 makeNameOriginEdit name myId =
     do
         style <- ExprGuiM.readStyle
@@ -375,11 +376,14 @@ makeNameOriginEdit name myId =
         makeNameEdit name myId -- myId goes directly to name edit
             & ExprGuiM.localEnv (WE.envTextStyle .~ textEditStyle)
 
-makeNameEdit :: Monad m => Name m -> Widget.Id -> ExprGuiM m (Widget (T m))
+makeNameEdit ::
+    Monad m => Name m -> Widget.Id -> ExprGuiM m (Widget (T m Widget.EventResult))
 makeNameEdit = makeNameEditWith id
 
 makeNameEditWith ::
-    Monad m => (Widget (T m) -> Widget (T m)) -> Name m -> Widget.Id -> ExprGuiM m (Widget (T m))
+    Monad m =>
+    (Widget (T m Widget.EventResult) -> Widget (T m Widget.EventResult)) ->
+    Name m -> Widget.Id -> ExprGuiM m (Widget (T m Widget.EventResult))
 makeNameEditWith onActiveEditor (Name nameSrc nameCollision setName name) myId =
     do
         collisionSuffixes <-

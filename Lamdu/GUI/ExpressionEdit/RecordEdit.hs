@@ -9,7 +9,6 @@ import           Control.Lens.Operators
 import           Control.Lens.Tuple
 import qualified Data.List as List
 import           Data.Monoid ((<>))
-import           Data.Store.Transaction (Transaction)
 import           Data.Vector.Vector2 (Vector2(..))
 import           Graphics.UI.Bottle.Animation (AnimId)
 import qualified Graphics.UI.Bottle.Animation as Anim
@@ -28,8 +27,6 @@ import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Sugar.Names.Types (Name(..))
 import qualified Lamdu.Sugar.Types as Sugar
-
-type T = Transaction
 
 defaultPos ::
     [Sugar.RecordField name m (Sugar.Expression name m a)] ->
@@ -146,14 +143,14 @@ makeOpenRecord fieldsGui rest animId =
 
 recordOpenEventMap ::
     Monad m =>
-    Config -> T m Sugar.EntityId -> Widget.EventHandlers (T m)
+    Config -> m Sugar.EntityId -> Widget.EventMap (m Widget.EventResult)
 recordOpenEventMap config open =
     Widget.keysEventMapMovesCursor (Config.recordOpenKeys config)
     (E.Doc ["Edit", "Record", "Open"]) $ WidgetIds.fromEntityId <$> open
 
 recordDelEventMap ::
     Monad m =>
-    Config -> T m Sugar.EntityId -> Widget.EventHandlers (T m)
+    Config -> m Sugar.EntityId -> Widget.EventMap (m Widget.EventResult)
 recordDelEventMap config delete =
     Widget.keysEventMapMovesCursor (Config.delKeys config)
     (E.Doc ["Edit", "Record", "Delete Field"]) $ WidgetIds.fromEntityId <$> delete

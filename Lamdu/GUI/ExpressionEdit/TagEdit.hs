@@ -28,8 +28,9 @@ import qualified Lamdu.Sugar.Types as Sugar
 type T = Transaction
 
 makeTagNameEdit ::
-    Monad m => Widget.EventHandlers (T m) -> Draw.Color ->
-    Sugar.TagG (Name m) -> ExprGuiM m (Widget (T m))
+    Monad m =>
+    Widget.EventMap (T m Widget.EventResult) -> Draw.Color ->
+    Sugar.TagG (Name m) -> ExprGuiM m (Widget (T m Widget.EventResult))
 makeTagNameEdit jumpNextEventMap tagColor tagG =
     ExpressionGui.makeNameEditWith (Widget.weakerEvents jumpNextEventMap)
     (tagG ^. Sugar.tagGName) myId

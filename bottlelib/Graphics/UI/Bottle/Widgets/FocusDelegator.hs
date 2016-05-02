@@ -55,8 +55,8 @@ setFocusChildEventMap Config{..} widgetRecord =
 modifyEntry ::
     Applicative f =>
     Widget.Id -> Rect -> FocusEntryTarget ->
-    Maybe (Direction -> Widget.EnterResult f) ->
-    Maybe (Direction -> Widget.EnterResult f)
+    Maybe (Direction -> Widget.EnterResult (f Widget.EventResult)) ->
+    Maybe (Direction -> Widget.EnterResult (f Widget.EventResult))
 modifyEntry myId fullChildRect = f
     where
         f FocusEntryParent _ = Just $ const focusParent
@@ -74,7 +74,7 @@ modifyEntry myId fullChildRect = f
 make ::
     Applicative f =>
     Env -> FocusEntryTarget -> Widget.Id ->
-    Widget.Env -> Widget f -> Widget f
+    Widget.Env -> Widget (f Widget.EventResult) -> Widget (f Widget.EventResult)
 make Env{..} focusEntryTarget myId env childWidget
     | selfIsFocused =
         childWidget

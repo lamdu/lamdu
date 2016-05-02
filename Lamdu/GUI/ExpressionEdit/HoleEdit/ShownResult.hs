@@ -18,7 +18,7 @@ data PickedResult = PickedResult
 Lens.makeLenses ''PickedResult
 
 data ShownResult m = ShownResult
-    { srMkEventMap :: ExprGuiM m (Widget.EventHandlers (T m))
+    { srMkEventMap :: ExprGuiM m (Widget.EventMap (T m Widget.EventResult))
     , srHasHoles :: Bool
     , srPick :: T m PickedResult
     }

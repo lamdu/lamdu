@@ -40,8 +40,8 @@ data IsSelected = Selected | NotSelected
 
 toBox ::
     Applicative f => Config -> Bool ->
-    Widget.Id -> [(IsSelected, f (), Widget f)] ->
-    Widget f
+    Widget.Id -> [(IsSelected, f (), Widget (f Widget.EventResult))] ->
+    Widget (f Widget.EventResult)
 toBox Config{..} selfFocused myId childrenRecords =
     childrenRecords
     <&> applyAction
@@ -77,8 +77,8 @@ toBox Config{..} selfFocused myId childrenRecords =
 make ::
     Applicative f =>
     FocusDelegator.Style -> Config ->
-    [(IsSelected, f (), Widget f)] ->
-    Widget.Id -> Widget.Env -> Widget f
+    [(IsSelected, f (), Widget (f Widget.EventResult))] ->
+    Widget.Id -> Widget.Env -> Widget (f Widget.EventResult)
 make fdStyle Config{..} children myId widgetEnv =
     FocusDelegator.make FocusDelegator.Env
     { FocusDelegator.config = cwcFDConfig

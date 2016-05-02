@@ -47,7 +47,9 @@ data Env = Env
     }
 Lens.makeLenses ''Env
 
-make :: Env -> Widget.Id -> T DbLayout.DbM (Widget (CodeEdit.M DbLayout.DbM))
+make ::
+    Env -> Widget.Id ->
+    T DbLayout.DbM (Widget (CodeEdit.M DbLayout.DbM Widget.EventResult))
 make env rootId =
     do
         actions <-

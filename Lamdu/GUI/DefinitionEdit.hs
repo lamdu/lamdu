@@ -33,7 +33,10 @@ import           Prelude.Compat
 
 type T = Transaction
 
-make :: Monad m => DefinitionN m ExprGuiT.Payload -> ExprGuiM m (Widget (T m))
+make ::
+    Monad m =>
+    DefinitionN m ExprGuiT.Payload ->
+    ExprGuiM m (Widget (T m Widget.EventResult))
 make exprGuiDefS =
     case exprGuiDefS ^. Sugar.drBody of
     Sugar.DefinitionBodyExpression bodyExpr ->

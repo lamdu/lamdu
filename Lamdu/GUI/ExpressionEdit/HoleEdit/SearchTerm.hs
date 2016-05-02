@@ -33,7 +33,9 @@ textEditNoEmpty textEditStyle =
     & TextEdit.sEmptyUnfocusedString .~ "  "
 
 makeSearchTermPropEdit ::
-    Monad m => WidgetIds -> Property m String -> WE.WidgetEnvT m (Widget m)
+    Monad m =>
+    WidgetIds -> Property m String ->
+    WE.WidgetEnvT m (Widget (m Widget.EventResult))
 makeSearchTermPropEdit WidgetIds{..} searchTermProp =
     BWidgets.makeTextEdit searchTerm hidOpenSearchTerm
     <&> Widget.events %~ \(newSearchTerm, eventRes) ->

@@ -99,7 +99,8 @@ cursorRects style str =
         addFirstCursor y = (Rect (Vector2 0 y) (Vector2 0 lineHeight) :)
         lineHeight = TextView.lineHeight style
 
-makeUnfocused :: Style -> String -> Widget.Id -> Widget ((,) String)
+makeUnfocused ::
+    Style -> String -> Widget.Id -> Widget (String, Widget.EventResult)
 makeUnfocused Style{..} str myId =
     TextView.makeWidget _sTextViewStyle displayStr animId
     & Widget.animFrame %~ cursorTranslate Style{..}
@@ -121,7 +122,7 @@ cursorNearRect style str fromRect =
 
 enterFromDirection ::
     Style -> String -> Widget.Id ->
-    Direction.Direction -> Widget.EnterResult ((,) String)
+    Direction.Direction -> Widget.EnterResult (String, Widget.EventResult)
 enterFromDirection Style{..} str myId dir =
     Widget.EnterResult cursorRect .
     (,) str . Widget.eventResultFromCursor $
@@ -136,7 +137,7 @@ enterFromDirection Style{..} str myId dir =
 
 makeFocusable ::
     Style -> String -> Widget.Id ->
-    Widget ((,) String) -> Widget ((,) String)
+    Widget (String, Widget.EventResult) -> Widget (String, Widget.EventResult)
 makeFocusable style str myId =
     Widget.mEnter .~ Just (enterFromDirection style str myId)
 
@@ -175,7 +176,9 @@ eventResult myId strWithIds newText newCursor =
 
 -- | Note: maxLines prevents the *user* from exceeding it, not the
 -- | given text...
-makeFocused :: AnimId -> Cursor -> Style -> String -> Widget.Id -> Widget ((,) String)
+makeFocused ::
+    AnimId -> Cursor -> Style -> String -> Widget.Id ->
+    Widget (String, Widget.EventResult)
 makeFocused cursorBGAnimId cursor Style{..} str myId =
     widget
     & Widget.backgroundColor 10 cursorBGAnimId _sBGColor
@@ -217,7 +220,7 @@ mkCursorRect Style{..} cursor str = Rect cursorPos cursorSize
 
 eventMap ::
     Int -> String -> String -> Widget.Id ->
-    Widget.EventHandlers ((,) String)
+    Widget.EventMap (String, Widget.EventResult)
 eventMap cursor str displayStr myId =
     mconcat . concat $ [
         [ keys (moveDoc ["left"]) [noMods GLFW.Key'Left] $
@@ -354,7 +357,9 @@ eventMap cursor str displayStr myId =
         strWithIds = str ^@.. Lens.traversed <&> _1 %~ Just
         (before, after) = splitAt cursor strWithIds
 
-make :: Style -> String -> Widget.Id -> Widget.Env -> Widget ((,) String)
+make ::
+    Style -> String -> Widget.Id -> Widget.Env ->
+    Widget (String, Widget.EventResult)
 make style str myId env =
     makeFunc style str myId
     where

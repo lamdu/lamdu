@@ -69,7 +69,7 @@ instance Monad m => Applicative (M m) where
 mLiftTrans :: Functor m => T m a -> M m a
 mLiftTrans = M . pure . fmap pure
 
-mLiftWidget :: Functor m => Widget (T m) -> Widget (M m)
+mLiftWidget :: Functor m => Widget (T m a) -> Widget (M m a)
 mLiftWidget = Widget.events %~ mLiftTrans
 
 data Pane m = Pane
@@ -192,7 +192,7 @@ processExpr env expr =
 gui ::
     Monad m =>
     Env m -> Widget.Id -> ExprGuiT.SugarExpr m -> [Pane m] ->
-    WidgetEnvT (T m) (Widget (M m))
+    WidgetEnvT (T m) (Widget (M m Widget.EventResult))
 gui env rootId replExpr panes =
     do
         replEdit <- makeReplEdit env rootId replExpr
@@ -214,7 +214,9 @@ gui env rootId replExpr panes =
     where
         replId = replExpr ^. Sugar.rPayload . Sugar.plEntityId & WidgetIds.fromEntityId
 
-make :: Monad m => Env m -> Widget.Id -> WidgetEnvT (T m) (Widget (M m))
+make ::
+    Monad m =>
+    Env m -> Widget.Id -> WidgetEnvT (T m) (Widget (M m Widget.EventResult))
 make env rootId =
     do
         replExpr <-
@@ -226,7 +228,8 @@ make env rootId =
 
 makePaneEdit ::
     Monad m =>
-    Env m -> (Pane m, DefinitionN m ExprGuiT.Payload) -> ExprGuiM m (Widget (M m))
+    Env m -> (Pane m, DefinitionN m ExprGuiT.Payload) ->
+    ExprGuiM m (Widget (M m Widget.EventResult))
 makePaneEdit env (pane, defS) =
     makePaneWidget defS
     <&> mLiftWidget
@@ -254,8 +257,9 @@ makePaneEdit env (pane, defS) =
             ] & mconcat
 
 makeNewDefinitionEventMap ::
-    Monad m => Anchors.CodeProps m ->
-    WidgetEnvT (T m) ([ModKey] -> Widget.EventHandlers (T m))
+    Monad m =>
+    Anchors.CodeProps m ->
+    WidgetEnvT (T m) ([ModKey] -> Widget.EventMap (T m Widget.EventResult))
 makeNewDefinitionEventMap cp =
     do
         curCursor <- WE.readCursor
@@ -270,7 +274,8 @@ makeNewDefinitionEventMap cp =
             Widget.keysEventMapMovesCursor newDefinitionKeys
             (E.Doc ["Edit", "New definition"]) newDefinition
 
-makeNewDefinitionButton :: Monad m => Widget.Id -> ExprGuiM m (Widget (T m))
+makeNewDefinitionButton ::
+    Monad m => Widget.Id -> ExprGuiM m (Widget (T m Widget.EventResult))
 makeNewDefinitionButton myId =
     do
         codeAnchors <- ExprGuiM.readCodeAnchors
@@ -288,7 +293,9 @@ makeNewDefinitionButton myId =
     where
         newDefinitionButtonId = Widget.joinId myId ["NewDefinition"]
 
-replEventMap :: Monad m => Env m -> Sugar.Expression name m a -> Widget.EventHandlers (M m)
+replEventMap ::
+    Monad m =>
+    Env m -> Sugar.Expression name m a -> Widget.EventMap (M m Widget.EventResult)
 replEventMap env replExpr =
     mconcat
     [ replExpr ^. Sugar.rPayload . Sugar.plActions . Sugar.extract
@@ -306,7 +313,9 @@ replEventMap env replExpr =
         Config.Pane{newDefinitionButtonPressKeys} = Config.pane (config env)
 
 makeReplEdit ::
-    Monad m => Env m -> Widget.Id -> ExprGuiT.SugarExpr m -> ExprGuiM m (Widget (M m))
+    Monad m =>
+    Env m -> Widget.Id -> ExprGuiT.SugarExpr m ->
+    ExprGuiM m (Widget (M m Widget.EventResult))
 makeReplEdit env myId replExpr =
     do
         replLabel <-
@@ -321,7 +330,8 @@ makeReplEdit env myId replExpr =
         replId = Widget.joinId myId ["repl"]
 
 panesEventMap ::
-    Monad m => Env m -> WidgetEnvT (T m) (Widget.EventHandlers (M m))
+    Monad m =>
+    Env m -> WidgetEnvT (T m) (Widget.EventMap (M m Widget.EventResult))
 panesEventMap Env{config,codeProps,exportActions} =
     do
         mJumpBack <- DataOps.jumpBack codeProps & lift <&> fmap mLiftTrans
@@ -346,7 +356,8 @@ panesEventMap Env{config,codeProps,exportActions} =
         Config.Export{exportPath,importKeys,exportAllKeys} = Config.export config
 
 makePaneWidget ::
-    Monad m => DefinitionN m ExprGuiT.Payload -> ExprGuiM m (Widget (T m))
+    Monad m =>
+    DefinitionN m ExprGuiT.Payload -> ExprGuiM m (Widget (T m Widget.EventResult))
 makePaneWidget defS =
     do
         config <- ExprGuiM.readConfig

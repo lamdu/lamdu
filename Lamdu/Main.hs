@@ -159,7 +159,7 @@ exportActions config evalResults =
 
 makeRootWidget ::
     Db -> Zoom -> IORef Settings -> EvalManager.Evaluator ->
-    CachedWidgetInput -> IO (Widget MainLoop.M)
+    CachedWidgetInput -> IO (Widget (MainLoop.M Widget.EventResult))
 makeRootWidget db zoom settingsRef evaluator input =
     do
         cursor <-
@@ -323,7 +323,7 @@ withFontLoop configSampler act =
 mainLoop ::
     GLFW.Window -> RefreshScheduler -> Sampler Config ->
     (FontsVersion -> Fonts Draw.Font -> Config -> Widget.Size ->
-     IO (Widget MainLoop.M)) -> IO ()
+     IO (Widget (MainLoop.M Widget.EventResult))) -> IO ()
 mainLoop win refreshScheduler configSampler iteration =
     withFontLoop configSampler $ \fontsVer checkFonts fonts ->
     do
@@ -352,7 +352,7 @@ mainLoop win refreshScheduler configSampler iteration =
 
 memoizeMakeWidget ::
     (MonadIO m, Eq a) =>
-    (a -> IO (Widget m)) -> IO (IO (), a -> IO (Widget m))
+    (a -> IO (Widget (m b))) -> IO (IO (), a -> IO (Widget (m b)))
 memoizeMakeWidget mkWidget =
     do
         widgetCacheRef <- newIORef =<< memoIO mkWidget
@@ -370,7 +370,7 @@ rootCursor = WidgetIds.fromUUID $ IRef.uuid $ DbLayout.panes DbLayout.codeIRefs
 
 mkWidgetWithFallback ::
     (forall a. T DbLayout.DbM a -> IO a) ->
-    GUIMain.Env -> IO (Widget MainLoop.M)
+    GUIMain.Env -> IO (Widget (MainLoop.M Widget.EventResult))
 mkWidgetWithFallback dbToIO env =
     do
         (isValid, widget) <-
@@ -401,7 +401,7 @@ mkWidgetWithFallback dbToIO env =
 
 makeMainGui ::
     (forall a. T DbLayout.DbM a -> IO a) ->
-    GUIMain.Env -> T DbLayout.DbM (Widget MainLoop.M)
+    GUIMain.Env -> T DbLayout.DbM (Widget (MainLoop.M Widget.EventResult))
 makeMainGui dbToIO env =
     GUIMain.make env rootCursor
     <&> Widget.events %~ \act ->

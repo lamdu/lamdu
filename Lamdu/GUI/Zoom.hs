@@ -15,7 +15,7 @@ newtype Zoom = Zoom
     { _scaleFactorRef :: IORef Widget.R
     }
 
-eventMap :: Zoom -> Config.Zoom -> Widget.EventHandlers IO
+eventMap :: Zoom -> Config.Zoom -> Widget.EventMap (IO Widget.EventResult)
 eventMap (Zoom ref) Config.Zoom{..} =
     mconcat
     [ Widget.keysEventMap enlargeKeys

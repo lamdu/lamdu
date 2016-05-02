@@ -57,7 +57,7 @@ nonOperatorName _ = False
 makeBinderNameEdit ::
     Monad m =>
     Sugar.BinderActions m ->
-    Widget.EventHandlers (Transaction m) ->
+    Widget.EventMap (T m Widget.EventResult) ->
     (String, Sugar.EntityId) ->
     Name m -> Widget.Id ->
     ExprGuiM m (ExpressionGui m)
@@ -97,7 +97,7 @@ presentationModeChoiceConfig config = Choice.Config
 mkPresentationModeEdit ::
         Monad m => Widget.Id ->
         Transaction.MkProperty m Sugar.PresentationMode ->
-        ExprGuiM m (Widget (T m))
+        ExprGuiM m (Widget (T m Widget.EventResult))
 mkPresentationModeEdit myId prop = do
     cur <- ExprGuiM.transaction $ Transaction.getP prop
     config <- ExprGuiM.readConfig
@@ -117,7 +117,7 @@ data Parts m = Parts
     { pMParamsEdit :: Maybe (ExpressionGui m)
     , pMScopesEdit :: Maybe (ExpressionGui m)
     , pBodyEdit :: ExpressionGui m
-    , pEventMap :: Widget.EventHandlers (T m)
+    , pEventMap :: Widget.EventMap (T m Widget.EventResult)
     }
 
 data ScopeCursor = ScopeCursor
@@ -175,8 +175,8 @@ mkChosenScopeCursor binder =
 
 makeScopeEventMap ::
     Monad m =>
-    [ModKey] -> [ModKey] -> ScopeCursor -> (Sugar.BinderParamScopeId -> T m ()) ->
-    Widget.EventHandlers (T m)
+    [ModKey] -> [ModKey] -> ScopeCursor -> (Sugar.BinderParamScopeId -> m ()) ->
+    Widget.EventMap (m Widget.EventResult)
 makeScopeEventMap prevKey nextKey cursor setter =
     do
         (key, doc, scope) <-
@@ -188,7 +188,7 @@ makeScopeEventMap prevKey nextKey cursor setter =
         prevDoc = E.Doc ["Evaluation", "Scope", "Previous"]
         nextDoc = E.Doc ["Evaluation", "Scope", "Next"]
 
-blockEventMap :: Monad m => Widget.EventHandlers (T m)
+blockEventMap :: Monad m => Widget.EventMap (m Widget.EventResult)
 blockEventMap =
     return mempty
     & E.keyPresses dirKeys
@@ -199,7 +199,7 @@ blockEventMap =
 makeScopeNavEdit ::
     Monad m =>
     Sugar.Binder name m expr -> Widget.Id -> ScopeCursor ->
-    ExprGuiM m (Widget.EventHandlers (T m), Maybe (ExpressionGui m))
+    ExprGuiM m (Widget.EventMap (T m Widget.EventResult), Maybe (ExpressionGui m))
 makeScopeNavEdit binder myId curCursor =
     do
         config <- ExprGuiM.readConfig
@@ -395,8 +395,9 @@ makeLetEdit item =
         binder = item ^. Sugar.lValue
 
 jumpToRHS ::
-    Monad f => [ModKey] -> (String, Sugar.EntityId) ->
-    ExprGuiM f (Widget.EventHandlers (T f))
+    Monad f =>
+    [ModKey] -> (String, Sugar.EntityId) ->
+    ExprGuiM f (Widget.EventMap (T f Widget.EventResult))
 jumpToRHS keys (rhsDoc, rhsId) = do
     savePos <- ExprGuiM.mkPrejumpPosSaver
     return $

@@ -9,7 +9,6 @@ import           Control.Lens.Tuple
 import qualified Data.List as List
 import           Data.Maybe (fromMaybe)
 import           Data.Monoid ((<>))
-import           Data.Store.Transaction (Transaction)
 import           Data.Vector.Vector2 (Vector2(..))
 import           Graphics.UI.Bottle.Animation (AnimId)
 import qualified Graphics.UI.Bottle.Animation as Anim
@@ -33,8 +32,6 @@ import           Lamdu.Sugar.Names.Types (Name(..))
 import qualified Lamdu.Sugar.Types as Sugar
 
 import           Prelude.Compat
-
-type T = Transaction
 
 destCursorId ::
     [Sugar.CaseAlt name n (Sugar.Expression name n p)] ->
@@ -182,21 +179,21 @@ makeOpenCase rest animId altsGui =
 
 caseOpenEventMap ::
     Monad m =>
-    Config -> T m Sugar.EntityId -> Widget.EventHandlers (T m)
+    Config -> m Sugar.EntityId -> Widget.EventMap (m Widget.EventResult)
 caseOpenEventMap config open =
     Widget.keysEventMapMovesCursor (Config.caseOpenKeys config)
     (E.Doc ["Edit", "Case", "Open"]) $ WidgetIds.fromEntityId <$> open
 
 caseDelEventMap ::
     Monad m =>
-    Config -> T m Sugar.EntityId -> Widget.EventHandlers (T m)
+    Config -> m Sugar.EntityId -> Widget.EventMap (m Widget.EventResult)
 caseDelEventMap config delete =
     Widget.keysEventMapMovesCursor (Config.delKeys config)
     (E.Doc ["Edit", "Case", "Delete Alt"]) $ WidgetIds.fromEntityId <$> delete
 
 toLambdaCaseEventMap ::
     Monad m =>
-    Config -> T m Sugar.EntityId -> Widget.EventHandlers (T m)
+    Config -> m Sugar.EntityId -> Widget.EventMap (m Widget.EventResult)
 toLambdaCaseEventMap config toLamCase =
     Widget.keysEventMapMovesCursor (Config.delKeys config)
     (E.Doc ["Edit", "Case", "Turn to Lambda-Case"]) $

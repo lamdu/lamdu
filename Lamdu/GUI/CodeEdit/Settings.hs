@@ -33,7 +33,8 @@ nextInfoMode :: InfoMode -> InfoMode
 nextInfoMode = cyclicSucc
 
 mkEventMap ::
-    (Settings -> IO ()) -> Config -> IORef Settings -> IO (Widget.EventHandlers IO)
+    (Settings -> IO ()) -> Config -> IORef Settings ->
+    IO (Widget.EventMap (IO Widget.EventResult))
 mkEventMap onSettingsChange config settingsRef =
     do
         settings <- readIORef settingsRef

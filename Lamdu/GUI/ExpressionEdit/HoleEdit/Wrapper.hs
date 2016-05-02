@@ -30,8 +30,8 @@ type T = Transaction.Transaction
 modifyWrappedEventMap ::
     (Monad m, Applicative f) =>
     Config -> Bool -> Sugar.HoleArg m (ExpressionN m a) -> WidgetIds ->
-    Widget.EventHandlers f ->
-    Widget.EventHandlers f
+    Widget.EventMap (f Widget.EventResult) ->
+    Widget.EventMap (f Widget.EventResult)
 modifyWrappedEventMap config argIsFocused arg WidgetIds{..} eventMap
     | argIsFocused =
         eventMap <>
@@ -47,7 +47,7 @@ modifyWrappedEventMap config argIsFocused arg WidgetIds{..} eventMap
 makeUnwrapEventMap ::
     (Monad m, Monad f) =>
     Sugar.HoleArg f (ExpressionN f a) -> WidgetIds ->
-    ExprGuiM m (Widget.EventHandlers (T f))
+    ExprGuiM m (Widget.EventMap (T f Widget.EventResult))
 makeUnwrapEventMap arg WidgetIds{..} =
     do
         config <- ExprGuiM.readConfig

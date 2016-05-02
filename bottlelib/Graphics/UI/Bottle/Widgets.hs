@@ -89,8 +89,9 @@ respondToCursorPrefix myIdPrefix widget = do
         & return
 
 makeFocusableView ::
-    (Applicative f, Monad m) => Widget.Id ->
-    Widget f -> WidgetEnvT m (Widget f)
+    (Monad m, Applicative f) =>
+    Widget.Id -> Widget (f Widget.EventResult) ->
+    WidgetEnvT m (Widget (f Widget.EventResult))
 makeFocusableView myIdPrefix widget =
     widget
     & Widget.focalArea .~ Rect 0 (widget ^. Widget.view . View.size)
@@ -98,18 +99,16 @@ makeFocusableView myIdPrefix widget =
     & Widget.takesFocus (const (pure myIdPrefix))
     & respondToCursorPrefix myIdPrefix
 
-makeFocusableTextView
-    :: (Applicative f, Monad m)
-    => String -> Widget.Id
-    -> WidgetEnvT m (Widget f)
+makeFocusableTextView ::
+    (Monad m, Applicative f) =>
+    String -> Widget.Id -> WidgetEnvT m (Widget (f Widget.EventResult))
 makeFocusableTextView text myId = do
     textView <- makeTextViewWidget text $ Widget.toAnimId myId
     makeFocusableView myId textView
 
-makeFocusableLabel
-    :: (Applicative f, Monad m)
-    => String -> Widget.Id
-    -> WidgetEnvT m (Widget f)
+makeFocusableLabel ::
+    (Monad m, Applicative f) =>
+    String -> Widget.Id -> WidgetEnvT m (Widget (f Widget.EventResult))
 makeFocusableLabel text myIdPrefix =
     makeFocusableTextView text (Widget.joinId myIdPrefix [pack text])
 
@@ -120,11 +119,11 @@ fdStyle env = FocusDelegator.Style
     }
 
 makeFocusDelegator ::
-    (Applicative f, Monad m) =>
+    (Monad m, Applicative f) =>
     FocusDelegator.Config ->
     FocusDelegator.FocusEntryTarget ->
     Widget.Id ->
-    Widget f -> WidgetEnvT m (Widget f)
+    Widget (f Widget.EventResult) -> WidgetEnvT m (Widget (f Widget.EventResult))
 makeFocusDelegator fdConfig focusEntryTarget myId childWidget =
     do
         env <- readEnv
@@ -134,18 +133,17 @@ makeFocusDelegator fdConfig focusEntryTarget myId childWidget =
 makeTextEdit ::
     Monad m =>
     String -> Widget.Id ->
-    WidgetEnvT m (Widget ((,) String))
+    WidgetEnvT m (Widget (String, Widget.EventResult))
 makeTextEdit text myId =
     do
         style <- WE.readTextStyle
         env <- readEnv
         TextEdit.make style text myId env & return
 
-makeTextEditor
-    :: (Monad m, Applicative f)
-    => Property f String
-    -> Widget.Id
-    -> WidgetEnvT m (Widget f)
+makeTextEditor ::
+    (Monad m, Applicative f) =>
+    Property f String -> Widget.Id ->
+    WidgetEnvT m (Widget (f Widget.EventResult))
 makeTextEditor textRef myId =
     makeTextEdit (Property.value textRef) myId
     <&> Widget.events %~ setter
@@ -154,7 +152,7 @@ makeTextEditor textRef myId =
             eventRes <$
             when (newText /= Property.value textRef) (Property.set textRef newText)
 
-deleteKeyEventHandler :: ModKey -> Widget f -> Widget f
+deleteKeyEventHandler :: ModKey -> Widget a -> Widget a
 deleteKeyEventHandler key =
     Widget.eventMap %~
     EventMap.deleteKey (EventMap.KeyEvent GLFW.KeyState'Pressed key)
@@ -164,7 +162,7 @@ makeLineEdit ::
     (Monad m, Applicative f) =>
     Property f String ->
     Widget.Id ->
-    WidgetEnvT m (Widget f)
+    WidgetEnvT m (Widget (f Widget.EventResult))
 makeLineEdit textRef myId =
     makeTextEditor textRef myId <&> deleteKeyEventHandler (ModKey mempty GLFW.Key'Enter)
 
@@ -172,7 +170,7 @@ makeWordEdit ::
     (Monad m, Applicative f) =>
     Property f String ->
     Widget.Id ->
-    WidgetEnvT m (Widget f)
+    WidgetEnvT m (Widget (f Widget.EventResult))
 makeWordEdit textRef myId =
     makeLineEdit textRef myId <&> deleteKeyEventHandler (ModKey mempty GLFW.Key'Space)
 
@@ -238,8 +236,8 @@ gridHSpacedCentered = gridHSpaced . (map . map) ((,) 0.5)
 
 makeChoiceWidget ::
     (Eq a, Monad m, Applicative f) =>
-    (a -> f ()) -> [(a, Widget f)] -> a ->
-    Choice.Config -> Widget.Id -> WidgetEnvT m (Widget f)
+    (a -> f ()) -> [(a, Widget (f Widget.EventResult))] -> a ->
+    Choice.Config -> Widget.Id -> WidgetEnvT m (Widget (f Widget.EventResult))
 makeChoiceWidget choose children curChild choiceConfig myId = do
     env <- WE.readEnv
     widgetEnv <- readEnv

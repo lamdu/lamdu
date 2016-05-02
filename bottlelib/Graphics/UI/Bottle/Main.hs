@@ -46,11 +46,12 @@ instance Monad M where
 instance MonadIO M where
     liftIO = M . fmap pure
 
-mLiftWidget :: Widget IO -> Widget M
+mLiftWidget :: Widget (IO a) -> Widget (M a)
 mLiftWidget = Widget.events %~ liftIO
 
 mainLoopWidget ::
-    GLFW.Window -> IO Bool -> (Widget.Size -> IO (Widget M)) ->
+    GLFW.Window -> IO Bool ->
+    (Widget.Size -> IO (Widget (M Widget.EventResult))) ->
     IO MainAnim.AnimConfig -> IO ()
 mainLoopWidget win widgetTickHandler mkWidgetUnmemod getAnimationConfig =
     do

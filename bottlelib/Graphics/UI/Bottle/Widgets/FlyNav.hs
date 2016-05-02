@@ -74,12 +74,12 @@ initState = Nothing
 withEmptyResult :: Functor f => f () -> f Widget.EventResult
 withEmptyResult = (fmap . const) mempty
 
-mkTickHandler :: Functor f => f () -> Widget.EventHandlers f
+mkTickHandler :: Functor f => f () -> Widget.EventMap (f Widget.EventResult)
 mkTickHandler = EventMap.tickHandler . withEmptyResult
 
 mkKeyMap
     :: Functor f => GLFW.KeyState -> ModKey -> EventMap.Doc
-    -> f () -> Widget.EventHandlers f
+    -> f () -> Widget.EventMap (f Widget.EventResult)
 mkKeyMap isPress key doc =
     EventMap.keyEventMap
     (EventMap.KeyEvent isPress key) doc .
@@ -125,7 +125,7 @@ addMovements
     => Vector2 Widget.R
     -> [Movement]
     -> (Maybe ActiveState -> f ())
-    -> Widget.EventHandlers f
+    -> Widget.EventMap (f Widget.EventResult)
 addMovements = mconcat
     [ addMovement "Down"  (keysDown  stdDirKeys) (Vector2   0    1)
     , addMovement "Up"    (keysUp    stdDirKeys) (Vector2   0  (-1))
@@ -141,7 +141,7 @@ addMovement
     -> Vector2 Widget.R
     -> [Movement]
     -> (Maybe ActiveState -> f ())
-    -> Widget.EventHandlers f
+    -> Widget.EventMap (f Widget.EventResult)
 addMovement name keys dir pos movements setState
     | name `elem` map (^. mName) movements = mempty
     | otherwise =
@@ -162,9 +162,10 @@ zipped (x:xs) =
 focalCenter :: Lens' (Widget f) (Vector2 Widget.R)
 focalCenter = Widget.focalArea . Rect.center
 
-make
-    :: Applicative f => Config -> AnimId -> State -> (State -> f ())
-    -> Widget f -> Widget f
+make ::
+    Applicative f =>
+    Config -> AnimId -> State -> (State -> f ()) ->
+    Widget (f Widget.EventResult) -> Widget (f Widget.EventResult)
 make _ _ Nothing setState w =
     w & Widget.eventMap <>~ addMovements (w ^. focalCenter) [] setState
 make config animId (Just (ActiveState pos movements)) setState w =
@@ -204,7 +205,10 @@ make config animId (Just (ActiveState pos movements)) setState w =
                 maybe (pure mempty) (^. Widget.enterResultEvent)
                     mEnteredChild
 
-makeIO :: MonadIO m => Config -> AnimId -> IO (Widget m -> IO (Widget m))
+makeIO ::
+    MonadIO m =>
+    Config -> AnimId -> IO (Widget (m Widget.EventResult) ->
+    IO (Widget (m Widget.EventResult)))
 makeIO config animId =
     do
         flyNavState <- newIORef initState

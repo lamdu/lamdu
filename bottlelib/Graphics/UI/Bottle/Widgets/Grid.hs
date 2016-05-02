@@ -51,7 +51,7 @@ length2d xs = Vector2 (foldl' max 0 . map length $ xs) (length xs)
 capCursor :: Vector2 Int -> Vector2 Int -> Vector2 Int
 capCursor size = fmap (max 0) . liftA2 min (subtract 1 <$> size)
 
-data NavDests f = NavDests
+data NavDests a = NavDests
     { leftOfCursor
     , aboveCursor
     , rightOfCursor
@@ -59,13 +59,12 @@ data NavDests f = NavDests
     , topCursor
     , leftMostCursor
     , bottomCursor
-    , rightMostCursor :: Maybe (Widget.EnterResult f)
+    , rightMostCursor :: Maybe (Widget.EnterResult a)
     }
 
 mkNavDests ::
-    Widget.Size -> Rect ->
-    [[Maybe (Direction -> Widget.EnterResult f)]] ->
-    Cursor -> NavDests f
+    Widget.Size -> Rect -> [[Maybe (Direction -> Widget.EnterResult a)]] ->
+    Cursor -> NavDests a
 mkNavDests widgetSize prevFocalArea mEnterss cursor@(Vector2 cursorX cursorY) = NavDests
     { leftOfCursor    = givePrevFocalArea . reverse $ take cursorX curRow
     , aboveCursor     = givePrevFocalArea . reverse $ take cursorY curColumn
@@ -119,9 +118,7 @@ stdKeys = Keys
         ctrlK = ModKey.ctrl
 
 addNavEventmap ::
-    Keys ModKey -> NavDests f ->
-    Widget.EventHandlers f ->
-    Widget.EventHandlers f
+    Keys ModKey -> NavDests a -> Widget.EventMap a -> Widget.EventMap a
 addNavEventmap Keys{..} navDests eMap =
     strongMap <> eMap <> weakMap
     where
@@ -161,16 +158,16 @@ getCursor widgets =
     & find (^. _2 . Widget.isFocused)
     <&> fst
 
-data Element f = Element
+data Element a = Element
     { __elementAlign :: Alignment
     , __elementRect :: Rect
-    , __elementOriginalWidget :: Widget f
+    , __elementOriginalWidget :: Widget a
     }
 
-data KGrid key f = KGrid
+data KGrid key a = KGrid
     { __gridMCursor :: Maybe Cursor
     , __gridSize :: Widget.Size
-    , __gridContent :: [[(key, Element f)]]
+    , __gridContent :: [[(key, Element a)]]
     }
 
 Lens.makeLenses ''Element
@@ -231,11 +228,11 @@ makeAlign alignment = make . (map . map) ((,) alignment)
 makeCentered :: [[Widget f]] -> Grid f
 makeCentered = makeAlign 0.5
 
-type CombineEnters f =
-    Widget.Size -> [[Maybe (Direction -> Widget.EnterResult f)]] ->
-    Maybe (Direction -> Widget.EnterResult f)
+type CombineEnters a =
+    Widget.Size -> [[Maybe (Direction -> Widget.EnterResult a)]] ->
+    Maybe (Direction -> Widget.EnterResult a)
 
-toWidgetCommon :: Keys ModKey -> CombineEnters f -> KGrid key f -> Widget f
+toWidgetCommon :: Keys ModKey -> CombineEnters a -> KGrid key a -> Widget a
 toWidgetCommon keys combineEnters (KGrid mCursor size sChildren) =
     Widget
     { _isFocused = Lens.has Lens._Just mCursor
@@ -283,14 +280,14 @@ combineEntersBiased (Vector2 x y) size children =
                 Direction.Point _ -> unbiased
 
 -- ^ If unfocused, will enters the given child when entered
-toWidgetBiasedWithKeys :: Keys ModKey -> Cursor -> KGrid key f -> Widget f
+toWidgetBiasedWithKeys :: Keys ModKey -> Cursor -> KGrid key a -> Widget a
 toWidgetBiasedWithKeys keys cursor =
     toWidgetCommon keys (combineEntersBiased cursor)
 
-toWidgetBiased :: Cursor -> KGrid key f -> Widget f
+toWidgetBiased :: Cursor -> KGrid key a -> Widget a
 toWidgetBiased = toWidgetBiasedWithKeys stdKeys
 
-toWidgetWithKeys :: Keys ModKey -> KGrid key f -> Widget f
+toWidgetWithKeys :: Keys ModKey -> KGrid key a -> Widget a
 toWidgetWithKeys keys = toWidgetCommon keys combineMEnters
 
 toWidget :: KGrid key f -> Widget f

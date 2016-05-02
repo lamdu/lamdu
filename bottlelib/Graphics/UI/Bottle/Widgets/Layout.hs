@@ -113,7 +113,7 @@ internalToAlignedWidget (LayoutBox orientation boxComponents) =
 mkLayout :: LayoutInternal f -> Layout f
 mkLayout li = Layout li (internalToAlignedWidget li)
 
-fromCenteredWidget :: Widget f -> Layout f
+fromCenteredWidget :: Widget a -> Layout a
 fromCenteredWidget widget = mkLayout $ LayoutSingleton (0.5, widget)
 
 empty :: Layout f

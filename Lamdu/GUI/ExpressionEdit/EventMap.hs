@@ -13,7 +13,6 @@ import           Control.Lens.Operators
 import qualified Data.Store.Transaction as Transaction
 import qualified Graphics.UI.Bottle.EventMap as E
 import           Graphics.UI.Bottle.ModKey (ModKey(..))
-import           Graphics.UI.Bottle.Widget (EventHandlers)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import           Lamdu.CharClassification (operatorChars)
 import           Lamdu.Config (Config)
@@ -34,8 +33,9 @@ type T = Transaction.Transaction
 data IsHoleResult = HoleResult | NotHoleResult
 
 make ::
-    Monad m => HolePickers m -> Sugar.Payload m ExprGuiT.Payload ->
-    ExprGuiM m (EventHandlers (T m))
+    Monad m =>
+    HolePickers m -> Sugar.Payload m ExprGuiT.Payload ->
+    ExprGuiM m (Widget.EventMap (T m Widget.EventResult))
 make holePickers pl =
     mconcat <$> sequenceA
     [ actionsEventMap holePickers isHoleResult (pl ^. Sugar.plActions)
@@ -52,13 +52,15 @@ mkEventMapWithPickers ::
     HolePickers m ->
     [ModKey] -> E.Doc ->
     (f Sugar.EntityId -> T m Widget.Id) ->
-    f Sugar.EntityId -> EventHandlers (T m)
+    f Sugar.EntityId -> Widget.EventMap (T m Widget.EventResult)
 mkEventMapWithPickers holePickers keys doc f =
     E.keyPresses keys doc .
     liftA2 mappend (ExprGuiM.holePickersAction holePickers) .
     fmap Widget.eventResultFromCursor . f
 
-jumpHolesEventMap :: Monad m => NearestHoles -> ExprGuiM m (EventHandlers (T m))
+jumpHolesEventMap ::
+    Monad m =>
+    NearestHoles -> ExprGuiM m (Widget.EventMap (T m Widget.EventResult))
 jumpHolesEventMap hg =
     do
         config <- ExprGuiM.readConfig <&> Config.hole
@@ -77,7 +79,8 @@ jumpHolesEventMap hg =
 
 jumpHolesEventMapIfSelected ::
     Monad m =>
-    Sugar.Payload m ExprGuiT.Payload -> ExprGuiM m (EventHandlers (T m))
+    Sugar.Payload m ExprGuiT.Payload ->
+    ExprGuiM m (Widget.EventMap (T m Widget.EventResult))
 jumpHolesEventMapIfSelected pl =
     do
         isSelected <- ExprGuiM.isExprSelected pl
@@ -90,7 +93,9 @@ extractCursor (Sugar.ExtractToLet letId) = WidgetIds.fromEntityId letId
 extractCursor (Sugar.ExtractToDef defId) =
     WidgetIds.nameEditOf (WidgetIds.fromEntityId defId)
 
-extractEventMap :: Functor m => Config -> Sugar.Actions m -> EventHandlers (T m)
+extractEventMap ::
+    Functor m =>
+    Config -> Sugar.Actions m -> Widget.EventMap (T m Widget.EventResult)
 extractEventMap config actions =
     actions ^. Sugar.extract <&> extractCursor
     & Widget.keysEventMapMovesCursor keys doc
@@ -101,7 +106,7 @@ extractEventMap config actions =
 replaceOrComeToParentEventMap ::
     Monad m =>
     Sugar.Payload m ExprGuiT.Payload ->
-    ExprGuiM m (EventHandlers (T m))
+    ExprGuiM m (Widget.EventMap (T m Widget.EventResult))
 replaceOrComeToParentEventMap pl =
     do
         config <- ExprGuiM.readConfig
@@ -120,9 +125,8 @@ replaceOrComeToParentEventMap pl =
 
 actionsEventMap ::
     Monad m =>
-    HolePickers m -> IsHoleResult ->
-    Sugar.Actions m ->
-    ExprGuiM m (EventHandlers (T m))
+    HolePickers m -> IsHoleResult -> Sugar.Actions m ->
+    ExprGuiM m (Widget.EventMap (T m Widget.EventResult))
 actionsEventMap holePickers isHoleResult actions =
     do
         config <- ExprGuiM.readConfig
@@ -135,7 +139,8 @@ actionsEventMap holePickers isHoleResult actions =
             ] actions
 
 applyOperatorEventMap ::
-    Monad m => HolePickers m -> Sugar.Actions m -> EventHandlers (T m)
+    Monad m =>
+    HolePickers m -> Sugar.Actions m -> Widget.EventMap (T m Widget.EventResult)
 applyOperatorEventMap holePickers actions =
     case actions ^. Sugar.wrap of
     Sugar.WrapAction wrap -> action wrap
@@ -156,7 +161,7 @@ applyOperatorEventMap holePickers actions =
 wrapEventMap ::
     Monad m =>
     HolePickers m -> Config ->
-    Sugar.Actions m -> EventHandlers (T m)
+    Sugar.Actions m -> Widget.EventMap (T m Widget.EventResult)
 wrapEventMap holePickers config actions =
     case actions ^. Sugar.wrap of
     Sugar.WrapAction wrap ->
@@ -168,7 +173,9 @@ wrapEventMap holePickers config actions =
     Sugar.WrappedAlready _ -> mempty
     Sugar.WrapNotAllowed -> mempty
 
-replaceEventMap :: Monad m => Config -> Sugar.Actions m -> EventHandlers (T m)
+replaceEventMap ::
+    Monad m =>
+    Config -> Sugar.Actions m -> Widget.EventMap (T m Widget.EventResult)
 replaceEventMap config actions =
     mconcat
     [ case actions ^. Sugar.setToInnerExpr of
@@ -191,8 +198,9 @@ replaceEventMap config actions =
             fmap WidgetIds.fromEntityId
 
 modifyEventMap ::
-    Monad m => HolePickers m -> Config ->
-    Sugar.Actions m -> EventHandlers (T m)
+    Monad m =>
+    HolePickers m -> Config ->
+    Sugar.Actions m -> Widget.EventMap (T m Widget.EventResult)
 modifyEventMap holePickers config =
     mconcat
     [ wrapEventMap holePickers config

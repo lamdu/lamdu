@@ -171,7 +171,8 @@ toggle HelpNotShown = HelpShown
 
 makeToggledHelpAdder ::
     MonadIO m =>
-    IsHelpShown -> IO (Config -> Widget.Size -> Widget m -> IO (Widget m))
+    IsHelpShown ->
+    IO (Config -> Widget.Size -> Widget (m Widget.EventResult) -> IO (Widget (m Widget.EventResult)))
 makeToggledHelpAdder startValue =
     do
         showingHelpVar <- newIORef startValue

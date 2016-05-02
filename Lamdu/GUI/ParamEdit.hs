@@ -52,7 +52,7 @@ cursorFromEntityId = WidgetIds.nameEditOf . WidgetIds.fromEntityId
 
 eventMapAddFirstParam ::
     Functor m => Config -> T m Sugar.ParamAddResult ->
-    Widget.EventHandlers (T m)
+    Widget.EventMap (T m Widget.EventResult)
 eventMapAddFirstParam config addFirstParam =
     addFirstParam
     <&> chooseAddResultEntityId
@@ -60,7 +60,9 @@ eventMapAddFirstParam config addFirstParam =
         (E.Doc ["Edit", "Add parameter"])
 
 eventMapAddNextParam ::
-    Functor m => Config -> T m Sugar.ParamAddResult -> Widget.EventHandlers (T m)
+    Functor m =>
+    Config -> T m Sugar.ParamAddResult ->
+    Widget.EventMap (T m Widget.EventResult)
 eventMapAddNextParam config fpAdd =
     fpAdd
     <&> chooseAddResultEntityId
@@ -68,15 +70,16 @@ eventMapAddNextParam config fpAdd =
         (E.Doc ["Edit", "Add next parameter"])
 
 eventMapOrderParam ::
-    Monad m => [ModKey] -> String -> T m () -> Widget.EventHandlers (T m)
+    Monad m =>
+    [ModKey] -> String -> m () -> Widget.EventMap (m Widget.EventResult)
 eventMapOrderParam keys docSuffix action =
     Widget.keysEventMap keys (E.Doc ["Edit", "Parameter", "Move " ++ docSuffix])
     action
 
 eventParamDelEventMap ::
     Monad m =>
-    T m Sugar.ParamDelResult -> [ModKey] -> String -> Widget.Id ->
-    Widget.EventHandlers (T m)
+    m Sugar.ParamDelResult -> [ModKey] -> String -> Widget.Id ->
+    Widget.EventMap (m Widget.EventResult)
 eventParamDelEventMap fpDel keys docSuffix dstPosId =
     do
         res <- fpDel

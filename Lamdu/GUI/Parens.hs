@@ -23,7 +23,8 @@ import qualified Lamdu.GUI.WidgetIds as WidgetIds
 
 addTextParensI ::
     (Monad m, Applicative f) =>
-    AnimId -> Widget.Id -> Layout f -> WidgetEnvT m (Layout f)
+    AnimId -> Widget.Id -> Layout (f Widget.EventResult) ->
+    WidgetEnvT m (Layout (f Widget.EventResult))
 addTextParensI parenId rParenId widget =
     do
         beforeParen <- label "("
@@ -36,14 +37,16 @@ addTextParensI parenId rParenId widget =
     where
         label str = BWidgets.makeLabel str $ parensPrefix parenId
 
-highlightExpression :: Config -> Widget.Widget f -> Widget.Widget f
+highlightExpression :: Config -> Widget.Widget a -> Widget.Widget a
 highlightExpression config =
     Widget.backgroundColor (Config.layerParensHighlightBG (Config.layers config))
     WidgetIds.parenHighlightId $
     Config.parenHighlightColor config
 
 addHighlightedTextParens ::
-    (Monad m, Applicative f) => Widget.Id -> Layout f -> ExprGuiM m (Layout f)
+    (Monad m, Applicative f) =>
+    Widget.Id -> Layout (f Widget.EventResult) ->
+    ExprGuiM m (Layout (f Widget.EventResult))
 addHighlightedTextParens myId widget =
     do
         mInsideParenId <- WE.subCursor rParenId & ExprGuiM.widgetEnv

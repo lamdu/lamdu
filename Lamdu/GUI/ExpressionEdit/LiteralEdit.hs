@@ -36,7 +36,9 @@ import           Prelude.Compat
 type T = Transaction.Transaction
 
 mkEditEventMap ::
-    Monad m => String -> T m (UUID, Sugar.EntityId) -> Widget.EventHandlers (T m)
+    Monad m =>
+    String -> T m (UUID, Sugar.EntityId) ->
+    Widget.EventMap (T m Widget.EventResult)
 mkEditEventMap valText setToHole =
     Widget.keysEventMapMovesCursor [ModKey mempty GLFW.Key'Enter]
     (E.Doc ["Edit", "Value"]) $
