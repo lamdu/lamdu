@@ -45,7 +45,7 @@ height = size . _2
 backgroundColor :: AnimId -> Layer -> Draw.Color -> View -> View
 backgroundColor animId layer color view =
     view
-    & animFrame %~ Anim.backgroundColor bgAnimId layer color (view ^. size)
+    & animFrame <>~ Anim.backgroundColor bgAnimId layer color (view ^. size)
     where
         bgAnimId = animId ++ ["bg"]
 
