@@ -180,11 +180,15 @@ makeFocused ::
 makeFocused cursor Style{..} str myId =
     makeFocusable Style{..} str myId widget
     where
-        widget = Widget
+        widget =
+            Widget
             { _view = View reqSize $ img <> cursorFrame
-            , _eventMap = eventMap cursor str displayStr myId
             , _mEnter = Nothing
-            , _mFocalArea = Just cursorRect
+            , _mFocus =
+                Just Widget.Focus
+                { _focalArea = cursorRect
+                , _eventMap = eventMap cursor str displayStr myId
+                }
             }
         reqSize = Vector2 (_sCursorWidth + tlWidth) tlHeight
         myAnimId = Widget.toAnimId myId

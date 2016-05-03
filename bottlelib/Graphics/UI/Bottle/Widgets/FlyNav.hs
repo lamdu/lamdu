@@ -13,7 +13,6 @@ import           Control.Lens.Tuple
 import           Control.Monad (void)
 import           Control.Monad.IO.Class (MonadIO(..))
 import           Data.IORef
-import           Data.Maybe (fromMaybe)
 import           Data.Monoid ((<>))
 import           Data.Vector.Vector2 (Vector2(..))
 import qualified Graphics.DrawingCombinators as Draw
@@ -164,15 +163,16 @@ make ::
     Config -> AnimId -> State -> (State -> f ()) ->
     Widget (f Widget.EventResult) -> Widget (f Widget.EventResult)
 make _ _ Nothing setState w =
-    w & Widget.eventMap <>~ addMovements center [] setState
+    w & Widget.mFocus . Lens._Just %~ f
     where
-        center =
-            (w ^. Widget.mFocalArea) <&> (^. Rect.center)
-            & fromMaybe (error "focused widget with no focal area?")
+        f focus =
+            focus & Widget.eventMap <>~ addMovements center [] setState
+            where
+                center = focus ^. Widget.focalArea . Rect.center
 make config animId (Just (ActiveState pos movements)) setState w =
     w
     & Widget.animFrame %~ mappend frame
-    & Widget.eventMap .~ eventMap
+    & Widget.mFocus . Lens._Just . Widget.eventMap .~ eventMap
     where
         delta = sum $ map (^. mDir) movements
         highlight =

@@ -5,6 +5,7 @@ module Lamdu.GUI.ExpressionEdit.HoleEdit.SearchTerm
     ( make
     ) where
 
+import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Monad (when)
 import qualified Data.Monoid as Monoid
@@ -59,7 +60,8 @@ make holeInfo =
         config <- ExprGuiM.readConfig
         let holeConfig@Config.Hole{..} = Config.hole config
         makeSearchTermPropEdit WidgetIds{..} (HoleInfo.hiSearchTermProperty holeInfo)
-            <&> Widget.eventMap %~ EventMap.disallowCharsFromSearchTerm holeConfig searchTerm
+            <&> Widget.mFocus . Lens._Just . Widget.eventMap
+                %~ EventMap.disallowCharsFromSearchTerm holeConfig searchTerm
             <&> addBackground (Widget.toAnimId hidOpenSearchTerm)
                 (Config.layers config) holeSearchTermBGColor
             <&> ExpressionGui.fromValueWidget

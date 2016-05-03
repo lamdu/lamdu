@@ -70,7 +70,8 @@ mainLoopWidget win widgetTickHandler mkWidgetUnmemod getConfig =
                     when anyUpdate newWidget
                     widget <- getWidget size
                     EventResult runInMainThread tickResults <-
-                        sequenceA (widget ^. Widget.eventMap . E.emTickHandlers)
+                        sequenceA
+                        (widget ^. Widget.mFocus . Lens._Just . Widget.eventMap . E.emTickHandlers)
                         ^. m
                     unless (null tickResults) newWidget
                     return MainAnim.EventResult
@@ -83,7 +84,7 @@ mainLoopWidget win widgetTickHandler mkWidgetUnmemod getConfig =
             , MainAnim.eventHandler = \event ->
                 do
                     widget <- getWidget size
-                    let eventMap = widget ^. Widget.eventMap
+                    let eventMap = widget ^. Widget.mFocus . Lens._Just . Widget.eventMap
                     mWidgetRes <- E.lookup (GLFW.getClipboardString win) event eventMap
                     EventResult runInMainThread mAnimIdMapping <-
                         (sequenceA mWidgetRes <&> fmap (^. Widget.eAnimIdMapping)) ^. m

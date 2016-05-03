@@ -4,6 +4,7 @@ module Lamdu.GUI.ExpressionEdit.HoleEdit.Wrapper
     ( make
     ) where
 
+import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Lens.Tuple
 import           Data.Monoid ((<>))
@@ -83,7 +84,7 @@ make WidgetIds{..} arg =
         let argIsFocused = argGui ^. ExpressionGui.egWidget & Widget.isFocused
         unwrapEventMap <- makeUnwrapEventMap arg WidgetIds{..}
         argGui
-            & ExpressionGui.egWidget . Widget.eventMap %~
+            & ExpressionGui.egWidget . Widget.mFocus . Lens._Just . Widget.eventMap %~
                 modifyWrappedEventMap config argIsFocused arg WidgetIds{..}
             & ExpressionGui.pad (frameWidth & _2 .~ 0)
             & ExpressionGui.egWidget %~

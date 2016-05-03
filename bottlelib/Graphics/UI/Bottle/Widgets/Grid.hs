@@ -237,8 +237,7 @@ toWidgetCommon keys combineEnters (KGrid mCursor size sChildren) =
     Widget
     { _view = View size frame
     , _mEnter = combineEnters size mEnterss
-    , _eventMap = eMap
-    , _mFocalArea = mFocalArea
+    , _mFocus = mFocus
     }
     where
         frame = widgets ^. Lens.traverse . Lens.traverse . Widget.animFrame
@@ -247,19 +246,21 @@ toWidgetCommon keys combineEnters (KGrid mCursor size sChildren) =
         widgets =
             sChildren & Lens.mapped . Lens.mapped %~ translateChildWidget
         mEnterss = widgets & Lens.mapped . Lens.mapped %~ (^. Widget.mEnter)
-        (eMap, mFocalArea) =
+        mFocus =
             case mCursor of
-            Nothing -> (mempty, Nothing)
+            Nothing -> Nothing
             Just cursor ->
-                ( selectedWidget ^. Widget.eventMap & addNavEventmap keys navDests
-                , Just focalArea
-                )
+                selectedWidgetFocus
+                & Widget.eventMap %~ addNavEventmap keys navDests
+                & Just
                 where
-                    focalArea =
-                        selectedWidget ^. Widget.mFocalArea
+                    selectedWidgetFocus =
+                        selectedWidget ^. Widget.mFocus
                         & fromMaybe (error "selected unfocused widget?")
                     selectedWidget = index2d widgets cursor
-                    navDests = mkNavDests size focalArea mEnterss cursor
+                    navDests =
+                        mkNavDests size (selectedWidgetFocus ^. Widget.focalArea)
+                        mEnterss cursor
 
 groupSortOn :: Ord b => (a -> b) -> [a] -> [[a]]
 groupSortOn f = groupOn f . sortOn f

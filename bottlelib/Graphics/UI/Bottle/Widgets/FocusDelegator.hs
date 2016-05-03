@@ -5,8 +5,7 @@ module Graphics.UI.Bottle.Widgets.FocusDelegator
     , make
     ) where
 
-import           Prelude.Compat
-
+import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Graphics.UI.Bottle.Direction (Direction)
 import qualified Graphics.UI.Bottle.Direction as Direction
@@ -15,6 +14,8 @@ import           Graphics.UI.Bottle.ModKey (ModKey(..))
 import           Graphics.UI.Bottle.Rect (Rect(..))
 import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
+
+import           Prelude.Compat
 
 data FocusEntryTarget = FocusEntryChild | FocusEntryParent
 
@@ -25,13 +26,13 @@ data Config = Config
     , focusParentDoc :: E.Doc
     }
 
-setFocusChildEventMap :: Config -> Widget f -> Widget f
+setFocusChildEventMap :: Config -> Widget a -> Widget a
 setFocusChildEventMap Config{..} widgetRecord =
     widgetRecord
     -- We're not delegating, so replace the child eventmap with an
     -- event map to either delegate to it (if it is enterable) or to
     -- nothing (if it is not):
-    & Widget.eventMap .~ neeventMap
+    & Widget.mFocus . Lens._Just . Widget.eventMap .~ neeventMap
     where
         neeventMap =
             case widgetRecord ^. Widget.mEnter of

@@ -19,7 +19,8 @@ module Graphics.UI.Bottle.Widget
     , keysEventMapMovesCursor
 
     -- Widget type and lenses:
-    , Widget(..), view, mEnter, eventMap, mFocalArea
+    , Widget(..), view, mEnter, mFocus
+    , Focus(..), eventMap, focalArea
     , animLayers, animFrame, size, width, height, events
 
     , isFocused
@@ -92,33 +93,34 @@ data EnterResult a = EnterResult
     , _enterResultEvent :: a
     }
 
+data Focus a = Focus
+    { _focalArea :: Rect
+    , _eventMap :: EventMap a
+    }
+
 data Widget a = Widget
     { _view :: View
     , _mEnter :: Maybe (Direction -> EnterResult a) -- Nothing if we're not enterable
-    , _eventMap :: EventMap a
-    , _mFocalArea :: Maybe Rect
+    , _mFocus :: Maybe (Focus a)
     }
 
 -- When focused, mEnter may still be relevant, e.g: FlyNav in an
 -- active textedit, to move to a different text-edit position.
 
--- When unfocused, event map is usually irrelevant, but can too be
--- used
-
 Lens.makeLenses ''EnterResult
 Lens.makeLenses ''EventResult
+Lens.makeLenses ''Focus
 Lens.makeLenses ''Widget
 
 isFocused :: Widget a -> Bool
-isFocused = Lens.has (mFocalArea . Lens._Just)
+isFocused = Lens.has (mFocus . Lens._Just)
 
 empty :: Widget f
 empty =
     Widget
     { _view = View.empty
     , _mEnter = Nothing
-    , _eventMap = mempty
-    , _mFocalArea = Nothing
+    , _mFocus = Nothing
     }
 
 {-# INLINE animFrame #-}
@@ -151,21 +153,23 @@ events :: Lens.Setter (Widget a) (Widget b) a b
 events =
     Lens.sets atEvents
     where
-        atEvents f widget = widget
+        atEvents :: (a -> b) -> Widget a -> Widget b
+        atEvents f widget =
+            widget
             { _mEnter =
-                      (Lens.mapped . Lens.mapped . enterResultEvent %~ f) $
-                      _mEnter widget
-            , _eventMap = f <$> _eventMap widget
+                  (Lens.mapped . Lens.mapped . enterResultEvent %~ f) $
+                  _mEnter widget
+            , _mFocus =
+                widget ^. mFocus & Lens._Just . eventMap . Lens.mapped %~ f
             }
 
 fromView :: View -> Widget f
 fromView v =
     Widget
-        { _mFocalArea = Nothing
-        , _view = v
-        , _eventMap = mempty
-        , _mEnter = Nothing
-        }
+    { _mFocus = Nothing
+    , _view = v
+    , _mEnter = Nothing
+    }
 
 takesFocus ::
     Functor f =>
@@ -181,13 +185,13 @@ takesFocus enterFunc widget =
 doesntTakeFocus :: Widget a -> Widget a
 doesntTakeFocus = mEnter .~ Nothing
 
--- ^ If doesn't take focus, event map is ignored
+-- ^ If doesn't take focus, does nothing
 strongerEvents :: EventMap a -> Widget a -> Widget a
-strongerEvents eMap = eventMap %~ (eMap `mappend`)
+strongerEvents eMap = mFocus . Lens._Just . eventMap %~ (eMap `mappend`)
 
--- ^ If doesn't take focus, event map is ignored
+-- ^ If doesn't take focus, does nothing
 weakerEvents :: EventMap a -> Widget a -> Widget a
-weakerEvents eMap = eventMap %~ (`mappend` eMap)
+weakerEvents eMap = mFocus . Lens._Just . eventMap %~ (`mappend` eMap)
 
 backgroundColor :: Int -> AnimId -> Draw.Color -> Widget a -> Widget a
 backgroundColor layer animId color =
@@ -244,14 +248,14 @@ translate pos widget =
         Direction.coordinates . Rect.topLeft -~ pos
     & mEnter . Lens._Just . Lens.mapped .
         enterResultRect . Rect.topLeft +~ pos
-    & mFocalArea . Lens._Just . Rect.topLeft +~ pos
+    & mFocus . Lens._Just . focalArea . Rect.topLeft +~ pos
     & view %~ View.translate pos
 
 scale :: Vector2 R -> Widget f -> Widget f
 scale mult widget =
     widget
     & view %~ View.scale mult
-    & mFocalArea . Lens._Just . Rect.topLeftAndSize *~ mult
+    & mFocus . Lens._Just . focalArea . Rect.topLeftAndSize *~ mult
     & mEnter . Lens._Just . Lens.mapped . enterResultRect . Rect.topLeftAndSize *~ mult
     & mEnter . Lens._Just . Lens.argument . Direction.coordinates . Rect.topLeftAndSize //~ mult
 
@@ -292,7 +296,12 @@ respondToCursorBy f env
     | otherwise = id
 
 respondToCursor :: Widget f -> Widget f
-respondToCursor widget = widget & mFocalArea .~ Just (Rect 0 (widget ^. size))
+respondToCursor widget =
+    widget & mFocus .~ Just
+        Focus
+        { _focalArea = Rect 0 (widget ^. size)
+        , _eventMap = mempty
+        }
 
 cursorAnimId :: AnimId
 cursorAnimId = ["background"]
@@ -304,10 +313,10 @@ data CursorConfig = CursorConfig
 
 renderWithCursor :: CursorConfig -> Widget a -> Anim.Frame
 renderWithCursor CursorConfig{..} widget =
-    maybe mempty renderCursor (widget ^. mFocalArea)
+    maybe mempty renderCursor (widget ^? mFocus . Lens._Just . focalArea)
     & mappend (widget ^. animFrame)
     where
-        renderCursor focalArea =
+        renderCursor area =
             Anim.backgroundColor cursorAnimId cursorLayer cursorColor
-            (focalArea ^. Rect.size)
-            & Anim.translate (focalArea ^. Rect.topLeft)
+            (area ^. Rect.size)
+            & Anim.translate (area ^. Rect.topLeft)

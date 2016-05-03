@@ -182,7 +182,11 @@ makeToggledHelpAdder startValue =
                 let (f, docStr) =
                         case showingHelp of
                         HelpShown ->
-                            (makeView size (widget ^. Widget.eventMap) config, "Hide" :: String)
+                            ( makeView size
+                                (widget ^. Widget.mFocus . Lens._Just . Widget.eventMap)
+                                config
+                            , "Hide" :: String
+                            )
                         HelpNotShown ->
                             (makeTooltip config (configOverlayDocKeys config), "Show")
                     toggleEventMap =
