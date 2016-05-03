@@ -28,7 +28,6 @@ import qualified Lamdu.GUI.CodeEdit as CodeEdit
 import           Lamdu.GUI.CodeEdit.Settings (Settings(..))
 import qualified Lamdu.GUI.Scroll as Scroll
 import qualified Lamdu.GUI.VersionControl as VersionControlGUI
-import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Style (Style)
 import qualified Lamdu.Style as Style
 import qualified Lamdu.VersionControl as VersionControl
@@ -96,9 +95,6 @@ make env rootId =
         widgetEnv = WE.Env
             { WE._envCursor = cursor
             , WE._envTextStyle = Style.styleBase style
-            , WE.backgroundCursorId = WidgetIds.backgroundCursorId
-            , WE.cursorBGColor = Config.cursorBGColor config
-            , WE.layerCursor = Config.layerCursor $ Config.layers config
             , WE.layerInterval = Config.layerInterval $ Config.layers config
             , WE.stdSpacing = Config.stdSpacing config
             }

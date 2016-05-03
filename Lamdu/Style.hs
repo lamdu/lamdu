@@ -3,11 +3,13 @@ module Lamdu.Style
     ( flyNav
     , help
     , Style(..), style
-    , anim
+    , mainLoopConfig
     ) where
 
 import qualified Graphics.DrawingCombinators as Draw
+import qualified Graphics.UI.Bottle.Main as MainLoop
 import           Graphics.UI.Bottle.Main.Animation (AnimConfig(..))
+import           Graphics.UI.Bottle.Widget (CursorConfig(..))
 import qualified Graphics.UI.Bottle.Widgets.EventMapDoc as EventMapDoc
 import qualified Graphics.UI.Bottle.Widgets.FlyNav as FlyNav
 import qualified Graphics.UI.Bottle.Widgets.TextEdit as TextEdit
@@ -16,7 +18,6 @@ import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
 import           Lamdu.Font (Fonts(..))
 import qualified Lamdu.Font as Fonts
-import qualified Lamdu.GUI.WidgetIds as WidgetIds
 
 data Style = Style
     { styleBase :: TextEdit.Style
@@ -57,7 +58,6 @@ textEdit config color font =
       }
     , TextEdit._sCursorColor = TextEdit.defaultCursorColor
     , TextEdit._sCursorWidth = TextEdit.defaultCursorWidth
-    , TextEdit._sTextCursorId = WidgetIds.textCursorId
     , TextEdit._sBGColor = Config.cursorBGColor config
     , TextEdit._sEmptyUnfocusedString = ""
     , TextEdit._sEmptyFocusedString = ""
@@ -82,9 +82,17 @@ style config fonts =
     where
         Config.Name{..} = Config.name config
 
-anim :: Config -> AnimConfig
-anim config =
-    AnimConfig
-    { acTimePeriod = realToFrac (Config.animationTimePeriodSec config)
-    , acRemainingRatioInPeriod = realToFrac (Config.animationRemainInPeriod config)
+mainLoopConfig :: Config -> MainLoop.Config
+mainLoopConfig config =
+    MainLoop.Config
+    { cAnim =
+        AnimConfig
+        { acTimePeriod = realToFrac (Config.animationTimePeriodSec config)
+        , acRemainingRatioInPeriod = realToFrac (Config.animationRemainInPeriod config)
+        }
+    , cCursor =
+        CursorConfig
+        { cursorLayer = Config.layerCursor (Config.layers config)
+        , cursorColor = Config.cursorBGColor config
+        }
     }

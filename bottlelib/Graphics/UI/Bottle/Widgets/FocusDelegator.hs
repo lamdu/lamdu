@@ -1,15 +1,13 @@
 {-# LANGUAGE NoImplicitPrelude, OverloadedStrings, RecordWildCards #-}
 module Graphics.UI.Bottle.Widgets.FocusDelegator
     ( FocusEntryTarget(..)
-    , Config(..), Style(..), Env(..)
+    , Config(..)
     , make
     ) where
 
 import           Prelude.Compat
 
 import           Control.Lens.Operators
-import qualified Graphics.DrawingCombinators as Draw
-import qualified Graphics.UI.Bottle.Animation as Anim
 import           Graphics.UI.Bottle.Direction (Direction)
 import qualified Graphics.UI.Bottle.Direction as Direction
 import qualified Graphics.UI.Bottle.EventMap as E
@@ -20,21 +18,11 @@ import qualified Graphics.UI.Bottle.Widget as Widget
 
 data FocusEntryTarget = FocusEntryChild | FocusEntryParent
 
-data Style = Style
-    { color :: Draw.Color
-    , layer :: Anim.Layer
-    }
-
 data Config = Config
     { focusChildKeys :: [ModKey]
     , focusChildDoc :: E.Doc
     , focusParentKeys :: [ModKey]
     , focusParentDoc :: E.Doc
-    }
-
-data Env = Env
-    { config :: Config
-    , style :: Style
     }
 
 setFocusChildEventMap :: Config -> Widget f -> Widget f
@@ -73,12 +61,11 @@ modifyEntry myId fullChildRect = f
 
 make ::
     Applicative f =>
-    Env -> FocusEntryTarget -> Widget.Id ->
+    Config -> FocusEntryTarget -> Widget.Id ->
     Widget.Env -> Widget (f Widget.EventResult) -> Widget (f Widget.EventResult)
-make Env{..} focusEntryTarget myId env childWidget
+make config@Config{..} focusEntryTarget myId env childWidget
     | selfIsFocused =
-        childWidget
-        & Widget.respondToCursor color layer (env ^. Widget.envCursorAnimId)
+        Widget.respondToCursor childWidget
         & setFocusChildEventMap config
         -- NOTE: Intentionally not checking whether child is also
         -- focused. That's a bug, which will usefully show up as two
@@ -95,8 +82,6 @@ make Env{..} focusEntryTarget myId env childWidget
         fullChildRect = Rect 0 (childWidget ^. Widget.size)
         childIsFocused = Widget.isFocused childWidget
         selfIsFocused = myId == env ^. Widget.envCursor
-        Config{..} = config
-        Style{..} = style
         focusParentEventMap =
             Widget.keysEventMapMovesCursor focusParentKeys focusParentDoc
             (pure myId)

@@ -69,22 +69,15 @@ liftLayerInterval widget =
         widget & Widget.animLayers -~ layerDiff & return
 
 readEnv :: Monad m => WidgetEnvT m Widget.Env
-readEnv =
-    do
-        env <- WE.readEnv
-        Widget.Env (env ^. WE.envCursor) (WE.backgroundCursorId env) & return
+readEnv = WE.readEnv <&> (^. WE.envCursor) <&> Widget.Env
 
 respondToCursorPrefix ::
     Monad m => Widget.Id -> Widget f -> WidgetEnvT m (Widget f)
-respondToCursorPrefix myIdPrefix widget = do
-    env <- WE.readEnv
-    widgetEnv <- readEnv
-    widget
-        & Widget.respondToCursorPrefix myIdPrefix
-            (WE.cursorBGColor env)
-            (WE.layerCursor env)
-            widgetEnv
-        & return
+respondToCursorPrefix myIdPrefix widget =
+    do
+        widgetEnv <- readEnv
+        Widget.respondToCursorPrefix myIdPrefix widgetEnv widget
+            & return
 
 makeFocusableView ::
     (Monad m, Applicative f) =>
@@ -109,12 +102,6 @@ makeFocusableLabel ::
 makeFocusableLabel text myIdPrefix =
     makeFocusableTextView text (Widget.joinId myIdPrefix [pack text])
 
-fdStyle :: WE.Env -> FocusDelegator.Style
-fdStyle env = FocusDelegator.Style
-    { FocusDelegator.color = WE.cursorBGColor env
-    , FocusDelegator.layer = WE.layerCursor env
-    }
-
 makeFocusDelegator ::
     (Monad m, Applicative f) =>
     FocusDelegator.Config ->
@@ -124,8 +111,7 @@ makeFocusDelegator ::
 makeFocusDelegator fdConfig focusEntryTarget myId childWidget =
     do
         env <- readEnv
-        fdEnv <- WE.readEnv <&> fdStyle <&> FocusDelegator.Env fdConfig
-        FocusDelegator.make fdEnv focusEntryTarget myId env childWidget & return
+        FocusDelegator.make fdConfig focusEntryTarget myId env childWidget & return
 
 makeTextEdit ::
     Monad m =>
@@ -235,11 +221,11 @@ makeChoiceWidget ::
     (Eq a, Monad m, Applicative f) =>
     (a -> f ()) -> [(a, Widget (f Widget.EventResult))] -> a ->
     Choice.Config -> Widget.Id -> WidgetEnvT m (Widget (f Widget.EventResult))
-makeChoiceWidget choose children curChild choiceConfig myId = do
-    env <- WE.readEnv
-    widgetEnv <- readEnv
-    Choice.make (fdStyle env) choiceConfig (children <&> annotate) myId widgetEnv
-        & return
+makeChoiceWidget choose children curChild choiceConfig myId =
+    do
+        widgetEnv <- readEnv
+        Choice.make choiceConfig (children <&> annotate) myId widgetEnv
+            & return
     where
         annotate (item, widget) =
             ( if item == curChild then Choice.Selected else Choice.NotSelected

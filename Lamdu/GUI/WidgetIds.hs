@@ -36,12 +36,6 @@ fromUUID = fromBS . UUIDUtils.toSBS16
 hash :: Show a => a -> Id
 hash = fromUUID . randFunc . show
 
-backgroundCursorId :: AnimId
-backgroundCursorId = ["background cursor"]
-
-textCursorId :: AnimId
-textCursorId = ["text cursor"]
-
 branchSelection :: Id
 branchSelection = Id ["selected branch"]
 

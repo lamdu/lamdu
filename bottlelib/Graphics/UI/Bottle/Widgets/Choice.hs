@@ -76,14 +76,11 @@ toBox Config{..} selfFocused myId childrenRecords =
 
 make ::
     Applicative f =>
-    FocusDelegator.Style -> Config ->
-    [(IsSelected, f (), Widget (f Widget.EventResult))] ->
+    Config -> [(IsSelected, f (), Widget (f Widget.EventResult))] ->
     Widget.Id -> Widget.Env -> Widget (f Widget.EventResult)
-make fdStyle Config{..} children myId widgetEnv =
-    FocusDelegator.make FocusDelegator.Env
-    { FocusDelegator.config = cwcFDConfig
-    , FocusDelegator.style = fdStyle
-    } FocusDelegator.FocusEntryParent myId widgetEnv childrenBox
+make Config{..} children myId widgetEnv =
+    FocusDelegator.make cwcFDConfig
+    FocusDelegator.FocusEntryParent myId widgetEnv childrenBox
     where
         childrenBox = toBox Config{..} selfFocused myId children
         selfFocused =

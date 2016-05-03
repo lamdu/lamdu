@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, DeriveFunctor, FlexibleInstances, MultiParamTypeClasses, TemplateHaskell, GeneralizedNewtypeDeriving, DeriveGeneric #-}
+{-# LANGUAGE NoImplicitPrelude, DeriveFunctor, TemplateHaskell, GeneralizedNewtypeDeriving, DeriveGeneric, OverloadedStrings, RecordWildCards #-}
 module Graphics.UI.Bottle.Widget
     ( module Graphics.UI.Bottle.WidgetId
 
@@ -24,6 +24,9 @@ module Graphics.UI.Bottle.Widget
 
     , isFocused
 
+    , CursorConfig(..)
+    , renderWithCursor, cursorAnimId
+
     -- Construct widgets:
     , empty
     , fromView
@@ -40,7 +43,7 @@ module Graphics.UI.Bottle.Widget
     , tint
 
     -- Env:
-    , Env(..), envCursor, envCursorAnimId
+    , Env(..), envCursor
 
     , respondToCursorAt
     , respondToCursorPrefix
@@ -273,33 +276,38 @@ padToSizeAlign newSize alignment widget =
 data Env = Env
     { -- | Where the cursor is pointing:
         _envCursor :: Id
-    , -- | What animId to use when drawing a cursor anim frame:
-        _envCursorAnimId :: AnimId
     } deriving (Show, Eq, Ord)
 Lens.makeLenses ''Env
 
-respondToCursorPrefix ::
-    Id -> Draw.Color -> Anim.Layer -> Env ->
-    Widget f -> Widget f
+respondToCursorPrefix :: Id -> Env -> Widget a -> Widget a
 respondToCursorPrefix myIdPrefix =
     respondToCursorBy (Lens.has Lens._Just . subId myIdPrefix)
 
-respondToCursorAt ::
-    Id -> Draw.Color -> Anim.Layer -> Env ->
-    Widget f -> Widget f
+respondToCursorAt :: Id -> Env -> Widget a -> Widget a
 respondToCursorAt wId = respondToCursorBy (== wId)
 
-respondToCursorBy ::
-    (Id -> Bool) -> Draw.Color -> Anim.Layer -> Env ->
-    Widget f -> Widget f
-respondToCursorBy f color layer env widget
-    | f (env ^. envCursor) =
-        widget & respondToCursor color layer (env ^. envCursorAnimId)
-    | otherwise = widget
+respondToCursorBy :: (Id -> Bool) -> Env -> Widget a -> Widget a
+respondToCursorBy f env
+    | f (env ^. envCursor) = respondToCursor
+    | otherwise = id
 
-respondToCursor ::
-    Draw.Color -> Anim.Layer -> AnimId -> Widget f -> Widget f
-respondToCursor color layer animId widget =
-    widget
-    & backgroundColor layer animId color
-    & mFocalArea .~ Just (Rect 0 (widget ^. size))
+respondToCursor :: Widget f -> Widget f
+respondToCursor widget = widget & mFocalArea .~ Just (Rect 0 (widget ^. size))
+
+cursorAnimId :: AnimId
+cursorAnimId = ["background"]
+
+data CursorConfig = CursorConfig
+    { cursorLayer :: Anim.Layer
+    , cursorColor :: Draw.Color
+    }
+
+renderWithCursor :: CursorConfig -> Widget a -> Anim.Frame
+renderWithCursor CursorConfig{..} widget =
+    maybe mempty renderCursor (widget ^. mFocalArea)
+    & mappend (widget ^. animFrame)
+    where
+        renderCursor focalArea =
+            Anim.backgroundColor cursorAnimId cursorLayer cursorColor
+            (focalArea ^. Rect.size)
+            & Anim.translate (focalArea ^. Rect.topLeft)

@@ -328,16 +328,16 @@ mainLoop win refreshScheduler configSampler iteration =
     withFontLoop configSampler $ \fontsVer checkFonts fonts ->
     do
         lastVersionNumRef <- newIORef =<< getCurrentTime
-        let getAnimHalfLife =
+        let getConfig =
                 ConfigSampler.getSample configSampler
-                <&> Style.anim . ConfigSampler.sValue
-            makeWidget size =
+                <&> Style.mainLoopConfig . ConfigSampler.sValue
+        let makeWidget size =
                 do
                     config <-
                         ConfigSampler.getSample configSampler
                         <&> ConfigSampler.sValue
                     iteration fontsVer fonts config size
-            tickHandler =
+        let tickHandler =
                 do
                     checkFonts
                     curVersionNum <-
@@ -348,7 +348,7 @@ mainLoop win refreshScheduler configSampler iteration =
                     if configChanged
                         then return True
                         else isRefreshScheduled refreshScheduler
-        mainLoopWidget win tickHandler makeWidget getAnimHalfLife
+        mainLoopWidget win tickHandler makeWidget getConfig
 
 memoizeMakeWidget ::
     (MonadIO m, Eq a) =>

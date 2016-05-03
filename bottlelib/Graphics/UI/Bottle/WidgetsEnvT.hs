@@ -36,9 +36,6 @@ import           Prelude.Compat
 data Env = Env
     { _envCursor :: Widget.Id
     , _envTextStyle :: TextEdit.Style
-    , backgroundCursorId :: AnimId
-    , cursorBGColor :: Draw.Color
-    , layerCursor :: Anim.Layer
     , layerInterval :: Anim.Layer
     , stdSpacing :: Vector2 Double
     }

@@ -2,7 +2,7 @@
 module Graphics.UI.Bottle.Widgets.TextEdit
     ( Cursor
     , Style(..)
-        , sCursorColor, sCursorWidth, sTextCursorId, sBGColor, sEmptyUnfocusedString
+        , sCursorColor, sCursorWidth, sBGColor, sEmptyUnfocusedString
         , sEmptyFocusedString, sTextViewStyle
     , make
     , defaultCursorColor
@@ -26,7 +26,6 @@ import qualified Data.Set as Set
 import           Data.Vector.Vector2 (Vector2(..))
 import qualified Graphics.DrawingCombinators as Draw
 import           Graphics.DrawingCombinators.Utils (TextSize(..))
-import           Graphics.UI.Bottle.Animation (AnimId)
 import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.Direction as Direction
 import qualified Graphics.UI.Bottle.EventMap as E
@@ -47,7 +46,6 @@ type Cursor = Int
 data Style = Style
     { _sCursorColor :: Draw.Color
     , _sCursorWidth :: Widget.R
-    , _sTextCursorId :: Anim.AnimId
     , _sBGColor :: Draw.Color
     , _sEmptyUnfocusedString :: String
     , _sEmptyFocusedString :: String
@@ -177,12 +175,10 @@ eventResult myId strWithIds newText newCursor =
 -- | Note: maxLines prevents the *user* from exceeding it, not the
 -- | given text...
 makeFocused ::
-    AnimId -> Cursor -> Style -> String -> Widget.Id ->
+    Cursor -> Style -> String -> Widget.Id ->
     Widget (String, Widget.EventResult)
-makeFocused cursorBGAnimId cursor Style{..} str myId =
-    widget
-    & Widget.backgroundColor 10 cursorBGAnimId _sBGColor
-    & makeFocusable Style{..} str myId
+makeFocused cursor Style{..} str myId =
+    makeFocusable Style{..} str myId widget
     where
         widget = Widget
             { _view = View reqSize $ img <> cursorFrame
@@ -200,7 +196,7 @@ makeFocused cursorBGAnimId cursor Style{..} str myId =
 
         cursorRect = mkCursorRect Style{..} cursor str
         cursorFrame =
-            Anim.unitSquare _sTextCursorId
+            Anim.unitSquare (Widget.cursorAnimId ++ ["text"])
             & Anim.unitImages %~ Draw.tint _sCursorColor
             & Anim.unitIntoRect cursorRect
             & Anim.layers +~ 2 -- TODO: 2?!
@@ -365,7 +361,6 @@ make style str myId env =
         makeFunc =
             case Widget.subId myId (env ^. Widget.envCursor) of
             Nothing -> makeUnfocused
-            Just suffix ->
-                makeFocused (env ^. Widget.envCursorAnimId) (decodeCursor suffix)
+            Just suffix -> makeFocused (decodeCursor suffix)
         decodeCursor [x] = min (length str) $ BinUtils.decodeS x
         decodeCursor _ = length str

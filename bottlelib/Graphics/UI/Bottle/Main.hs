@@ -1,6 +1,6 @@
 {-# LANGUAGE DeriveFunctor, NoImplicitPrelude, TemplateHaskell #-}
 module Graphics.UI.Bottle.Main
-    ( mainLoopWidget, EventResult(..), M(..), m, mLiftWidget
+    ( mainLoopWidget, Config(..), EventResult(..), M(..), m, mLiftWidget
     ) where
 
 import           Control.Applicative (liftA2)
@@ -17,6 +17,11 @@ import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.GLFW as GLFW
 
 import           Prelude.Compat
+
+data Config = Config
+    { cAnim :: MainAnim.AnimConfig
+    , cCursor :: Widget.CursorConfig
+    }
 
 data EventResult a = EventResult
     { erExecuteInMainThread :: IO ()
@@ -51,14 +56,14 @@ mLiftWidget = Widget.events %~ liftIO
 
 mainLoopWidget ::
     GLFW.Window -> IO Bool ->
-    (Widget.Size -> IO (Widget (M Widget.EventResult))) ->
-    IO MainAnim.AnimConfig -> IO ()
-mainLoopWidget win widgetTickHandler mkWidgetUnmemod getAnimationConfig =
+    (Widget.Size -> IO (Widget (M Widget.EventResult))) -> IO Config ->
+    IO ()
+mainLoopWidget win widgetTickHandler mkWidgetUnmemod getConfig =
     do
         mkWidgetRef <- newIORef =<< memoIO mkWidgetUnmemod
         let newWidget = writeIORef mkWidgetRef =<< memoIO mkWidgetUnmemod
         let getWidget size = ($ size) =<< readIORef mkWidgetRef
-        MainAnim.mainLoop win getAnimationConfig $ \size -> MainAnim.Handlers
+        MainAnim.mainLoop win (getConfig <&> cAnim) $ \size -> MainAnim.Handlers
             { MainAnim.tickHandler =
                 do
                     anyUpdate <- widgetTickHandler
@@ -89,5 +94,8 @@ mainLoopWidget win widgetTickHandler mkWidgetUnmemod getAnimationConfig =
                         { MainAnim.erAnimIdMapping = mAnimIdMapping
                         , MainAnim.erExecuteInMainThread = runInMainThread
                         }
-            , MainAnim.makeFrame = getWidget size <&> (^. Widget.animFrame)
+            , MainAnim.makeFrame =
+                Widget.renderWithCursor
+                <$> (getConfig <&> cCursor)
+                <*> getWidget size
             }
