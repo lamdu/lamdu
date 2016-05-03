@@ -13,7 +13,7 @@
     "layers": {
         "layerMin": -100,
         "layerMax": 100,
-        "layerCursor": -1,
+        "layerCursor": -200,
         "layerTypeIndicatorFrame": 1,
         "layerParensHighlightBG": 34,
         "layerActivePane": 40,
