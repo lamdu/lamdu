@@ -91,8 +91,8 @@ make WidgetIds{..} arg =
                 Widget.addInnerFrame
                 (Config.layerTypeIndicatorFrame (Config.layers config))
                 frameId frameColor frameWidth
-            & ExpressionGui.egWidget %~ Widget.weakerEvents unwrapEventMap
             & ExpressionGui.egWidget %%~
                 ExprGuiM.widgetEnv . BWidgets.makeFocusableView hidWrapper
+            <&> ExpressionGui.egWidget %~ Widget.weakerEvents unwrapEventMap
     where
         frameId = Widget.toAnimId hidWrapper <> ["hole frame"]

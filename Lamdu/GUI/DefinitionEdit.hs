@@ -118,9 +118,9 @@ acceptableTypeIndicator width accept color myId =
                 (E.Doc ["Edit", "Accept inferred type"]) (accept >> return myId)
         typeIndicator width color myId
             >>= ExpressionGui.egWidget %%~
+                fmap (Widget.weakerEvents acceptKeyMap) .
                 ExprGuiM.widgetEnv .
-                BWidgets.makeFocusableView (typeIndicatorId myId) .
-                Widget.weakerEvents acceptKeyMap
+                BWidgets.makeFocusableView (typeIndicatorId myId)
 
 makeExprDefinition ::
     Monad m =>
