@@ -81,7 +81,9 @@ instance Monoid EventResult where
     mappend = def_mappend
 
 data EnterResult a = EnterResult
-    { _enterResultRect :: Rect
+    { -- The new focal area upon this entrace.
+      -- Used in Grid to decide which cell's EnterResult to use and in FlyNav.
+      _enterResultRect :: Rect
     , _enterResultEvent :: a
     }
 
