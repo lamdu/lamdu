@@ -90,11 +90,10 @@ make Env{..} focusEntryTarget myId env childWidget
 
     | otherwise =
         childWidget
-        & Widget.focalArea .~ fullChildRect
         & Widget.mEnter %~ modifyEntry myId fullChildRect focusEntryTarget
     where
         fullChildRect = Rect 0 (childWidget ^. Widget.size)
-        childIsFocused = childWidget ^. Widget.isFocused
+        childIsFocused = Widget.isFocused childWidget
         selfIsFocused = myId == env ^. Widget.envCursor
         Config{..} = config
         Style{..} = style

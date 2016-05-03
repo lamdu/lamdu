@@ -80,7 +80,7 @@ make WidgetIds{..} arg =
         argGui <-
             arg ^. Sugar.haExpr
             & ExprGuiM.makeSubexpression (const 0)
-        let argIsFocused = argGui ^. ExpressionGui.egWidget . Widget.isFocused
+        let argIsFocused = argGui ^. ExpressionGui.egWidget & Widget.isFocused
         unwrapEventMap <- makeUnwrapEventMap arg WidgetIds{..}
         argGui
             & ExpressionGui.egWidget . Widget.eventMap %~

@@ -263,8 +263,8 @@ makeMParamsEdit mScopeCursor mScopeNavEdit delVarBackwardsId myId nearestHoles b
         annotationMode =
             do
                 mScopeNavEdit ^?
-                    Lens._Just . ExpressionGui.egWidget . Widget.isFocused
-                    >>= guard
+                    Lens._Just . ExpressionGui.egWidget
+                    >>= guard . Widget.isFocused
                 ExpressionGui.NeighborVals
                     <$> (mCurCursor <&> sMPrevParamScope)
                     <*> (mCurCursor <&> sMNextParamScope)

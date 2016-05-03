@@ -111,7 +111,7 @@ make hole pl =
                                     SearchArea.makeStdWrapped pl holeInfo
                                 f WidgetIds{..} wrapperGui searchAreaGui
                                     <&> (`Layout.hoverInPlaceOf` unfocusedWrapperGui)
-                        if wrapperGui ^. ExpressionGui.egWidget . Widget.isFocused
+                        if Widget.isFocused (wrapperGui ^. ExpressionGui.egWidget)
                             then layout addSearchAreaBelow
                             else if isSelected then
                                      layout addWrapperAbove

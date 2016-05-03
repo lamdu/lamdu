@@ -19,8 +19,10 @@ module Graphics.UI.Bottle.Widget
     , keysEventMapMovesCursor
 
     -- Widget type and lenses:
-    , Widget(..), isFocused, view, mEnter, eventMap, focalArea
+    , Widget(..), view, mEnter, eventMap, mFocalArea
     , animLayers, animFrame, size, width, height, events
+
+    , isFocused
 
     -- Construct widgets:
     , empty
@@ -88,11 +90,10 @@ data EnterResult a = EnterResult
     }
 
 data Widget a = Widget
-    { _isFocused :: Bool
-    , _view :: View
+    { _view :: View
     , _mEnter :: Maybe (Direction -> EnterResult a) -- Nothing if we're not enterable
     , _eventMap :: EventMap a
-    , _focalArea :: Rect
+    , _mFocalArea :: Maybe Rect
     }
 
 -- When focused, mEnter may still be relevant, e.g: FlyNav in an
@@ -105,8 +106,17 @@ Lens.makeLenses ''EnterResult
 Lens.makeLenses ''EventResult
 Lens.makeLenses ''Widget
 
+isFocused :: Widget a -> Bool
+isFocused = Lens.has (mFocalArea . Lens._Just)
+
 empty :: Widget f
-empty = Widget False View.empty Nothing mempty (Rect 0 0)
+empty =
+    Widget
+    { _view = View.empty
+    , _mEnter = Nothing
+    , _eventMap = mempty
+    , _mFocalArea = Nothing
+    }
 
 {-# INLINE animFrame #-}
 animFrame :: Lens' (Widget f) Anim.Frame
@@ -148,8 +158,7 @@ events =
 fromView :: View -> Widget f
 fromView v =
     Widget
-        { _isFocused = False
-        , _focalArea = Rect 0 (v ^. View.size)
+        { _mFocalArea = Nothing
         , _view = v
         , _eventMap = mempty
         , _mEnter = Nothing
@@ -164,7 +173,7 @@ takesFocus enterFunc widget =
         enter =
             enterFunc
             <&> Lens.mapped %~ eventResultFromCursor
-            <&> EnterResult (widget ^. focalArea)
+            <&> EnterResult (Rect 0 (widget ^. size))
 
 doesntTakeFocus :: Widget a -> Widget a
 doesntTakeFocus = mEnter .~ Nothing
@@ -232,14 +241,14 @@ translate pos widget =
         Direction.coordinates . Rect.topLeft -~ pos
     & mEnter . Lens._Just . Lens.mapped .
         enterResultRect . Rect.topLeft +~ pos
-    & focalArea . Rect.topLeft +~ pos
+    & mFocalArea . Lens._Just . Rect.topLeft +~ pos
     & view %~ View.translate pos
 
 scale :: Vector2 R -> Widget f -> Widget f
 scale mult widget =
     widget
     & view %~ View.scale mult
-    & focalArea . Rect.topLeftAndSize *~ mult
+    & mFocalArea . Lens._Just . Rect.topLeftAndSize *~ mult
     & mEnter . Lens._Just . Lens.mapped . enterResultRect . Rect.topLeftAndSize *~ mult
     & mEnter . Lens._Just . Lens.argument . Direction.coordinates . Rect.topLeftAndSize //~ mult
 
@@ -293,4 +302,4 @@ respondToCursor ::
 respondToCursor color layer animId widget =
     widget
     & backgroundColor layer animId color
-    & isFocused .~ True
+    & mFocalArea .~ Just (Rect 0 (widget ^. size))

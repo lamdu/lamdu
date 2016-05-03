@@ -72,7 +72,7 @@ toBox Config{..} selfFocused myId childrenRecords =
             )
         anyChildFocused =
             childrenRecords
-            & Lens.orOf (Lens.traversed . _3 . Widget.isFocused)
+            & Lens.orOf (Lens.traversed . _3 . Lens.to Widget.isFocused)
 
 make ::
     Applicative f =>

@@ -378,14 +378,14 @@ mkWidgetWithFallback dbToIO env =
             do
                 candidateWidget <- makeMainGui dbToIO env
                 (isValid, widget) <-
-                    if candidateWidget ^. Widget.isFocused
+                    if Widget.isFocused candidateWidget
                     then return (True, candidateWidget)
                     else do
                         finalWidget <-
                             env & GUIMain.envCursor .~ rootCursor & makeMainGui dbToIO
                         Transaction.setP (DbLayout.cursor DbLayout.revisionProps) rootCursor
                         return (False, finalWidget)
-                unless (widget ^. Widget.isFocused) $
+                unless (Widget.isFocused widget) $
                     fail "Root cursor did not match"
                 return (isValid, widget)
         unless isValid $ putStrLn $ "Invalid cursor: " ++ show (env ^. GUIMain.envCursor)

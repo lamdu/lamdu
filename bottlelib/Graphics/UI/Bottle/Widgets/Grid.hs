@@ -155,7 +155,7 @@ getCursor :: [[Widget k]] -> Maybe Cursor
 getCursor widgets =
     widgets
     & enumerate2d
-    & find (^. _2 . Widget.isFocused)
+    & find (Widget.isFocused . snd)
     <&> fst
 
 data Element a = Element
@@ -235,11 +235,10 @@ type CombineEnters a =
 toWidgetCommon :: Keys ModKey -> CombineEnters a -> KGrid key a -> Widget a
 toWidgetCommon keys combineEnters (KGrid mCursor size sChildren) =
     Widget
-    { _isFocused = Lens.has Lens._Just mCursor
-    , _view = View size frame
+    { _view = View size frame
     , _mEnter = combineEnters size mEnterss
     , _eventMap = eMap
-    , _focalArea = focalArea
+    , _mFocalArea = mFocalArea
     }
     where
         frame = widgets ^. Lens.traverse . Lens.traverse . Widget.animFrame
@@ -248,17 +247,19 @@ toWidgetCommon keys combineEnters (KGrid mCursor size sChildren) =
         widgets =
             sChildren & Lens.mapped . Lens.mapped %~ translateChildWidget
         mEnterss = widgets & Lens.mapped . Lens.mapped %~ (^. Widget.mEnter)
-        (eMap, focalArea) =
+        (eMap, mFocalArea) =
             case mCursor of
-            Nothing -> (mempty, Rect 0 0)
+            Nothing -> (mempty, Nothing)
             Just cursor ->
                 ( selectedWidget ^. Widget.eventMap & addNavEventmap keys navDests
-                , selectedWidget ^. Widget.focalArea
+                , Just focalArea
                 )
                 where
+                    focalArea =
+                        selectedWidget ^. Widget.mFocalArea
+                        & fromMaybe (error "selected unfocused widget?")
                     selectedWidget = index2d widgets cursor
-                    navDests =
-                        mkNavDests size (selectedWidget ^. Widget.focalArea) mEnterss cursor
+                    navDests = mkNavDests size focalArea mEnterss cursor
 
 groupSortOn :: Ord b => (a -> b) -> [a] -> [[a]]
 groupSortOn f = groupOn f . sortOn f

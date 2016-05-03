@@ -368,6 +368,6 @@ makePaneWidget defS =
                 (Config.layerActivePane (Config.layers config))
                 WidgetIds.activePaneBackground paneActiveBGColor
         let colorize widget
-                | widget ^. Widget.isFocused = colorizeActivePane widget
+                | Widget.isFocused widget = colorizeActivePane widget
                 | otherwise = colorizeInactivePane widget
         DefinitionEdit.make defS <&> colorize

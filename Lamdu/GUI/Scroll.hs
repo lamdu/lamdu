@@ -6,6 +6,7 @@ import           Control.Lens (Lens')
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Lens.Tuple
+import           Data.Maybe (fromMaybe)
 import           Data.Vector.Vector2 (Vector2(..))
 import qualified Graphics.UI.Bottle.Rect as Rect
 import           Graphics.UI.Bottle.Widget (Widget)
@@ -28,4 +29,6 @@ focusAreaIntoWindow winSize widget =
                 movement = center ^. l - focalPoint ^. l
                 l :: Lens' (Vector2 Widget.R) Widget.R
                 l = Lens.cloneLens rawLens
-        focalPoint = widget ^. Widget.focalArea . Rect.center
+        focalPoint =
+            widget ^. Widget.mFocalArea <&> (^. Rect.center)
+            & fromMaybe 0

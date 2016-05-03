@@ -7,13 +7,13 @@ module Graphics.UI.Bottle.Widgets.FlyNav
     ) where
 
 import           Control.Applicative (liftA2)
-import           Control.Lens (Lens')
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Lens.Tuple
 import           Control.Monad (void)
 import           Control.Monad.IO.Class (MonadIO(..))
 import           Data.IORef
+import           Data.Maybe (fromMaybe)
 import           Data.Monoid ((<>))
 import           Data.Vector.Vector2 (Vector2(..))
 import qualified Graphics.DrawingCombinators as Draw
@@ -159,15 +159,16 @@ zipped (x:xs) =
     (x, xs) :
     (Lens.mapped . _2 %~ (x:)) (zipped xs)
 
-focalCenter :: Lens' (Widget f) (Vector2 Widget.R)
-focalCenter = Widget.focalArea . Rect.center
-
 make ::
     Applicative f =>
     Config -> AnimId -> State -> (State -> f ()) ->
     Widget (f Widget.EventResult) -> Widget (f Widget.EventResult)
 make _ _ Nothing setState w =
-    w & Widget.eventMap <>~ addMovements (w ^. focalCenter) [] setState
+    w & Widget.eventMap <>~ addMovements center [] setState
+    where
+        center =
+            (w ^. Widget.mFocalArea) <&> (^. Rect.center)
+            & fromMaybe (error "focused widget with no focal area?")
 make config animId (Just (ActiveState pos movements)) setState w =
     w
     & Widget.animFrame %~ mappend frame

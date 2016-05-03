@@ -234,7 +234,7 @@ makeResultGroup holeInfo results =
                 results ^. HoleResults.rlExtra
                 & makeExtraResultsWidget holeInfo mainResultHeight
         (mSelectedResult, extraResWidget, extraPadding) <-
-            if mainResultWidget ^. Widget.isFocused
+            if Widget.isFocused mainResultWidget
             then do
                 (_, extraResWidget, extraPadding) <- makeExtra
                 return (Just shownMainResult, extraResWidget, extraPadding)
