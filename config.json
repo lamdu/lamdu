@@ -6,7 +6,7 @@
         "fontAutoName": "fonts/DejaVuSerif-Italic.ttf",
         "fontMono"    : "fonts/DejaVuSansMono.ttf"
     },
-    "baseTextSize": 18,
+    "baseTextSize": 12,
     "animationTimePeriodSec": 0.11,
     "animationRemainInPeriod": 0.2,
     "maxExprDepth": 40,
@@ -31,7 +31,7 @@
             0.7,
             1.0
         ],
-        "helpTextSize": 14,
+        "helpTextSize": 9,
         "helpKeys": [
             [
                 {

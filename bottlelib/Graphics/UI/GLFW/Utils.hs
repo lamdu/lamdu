@@ -1,3 +1,4 @@
+{-# LANGUAGE LambdaCase #-}
 module Graphics.UI.GLFW.Utils
     ( withGLFW
     , createWindow
@@ -39,9 +40,35 @@ getVideoModeSize monitor = do
         GLFW.getVideoMode monitor
     return $ Vector2 (GLFW.videoModeWidth videoMode) (GLFW.videoModeHeight videoMode)
 
+guessMonitor :: GLFW.Window -> IO GLFW.Monitor
+guessMonitor window =
+    GLFW.getWindowMonitor window
+    >>= \case
+    Just monitor -> return monitor
+    Nothing ->
+        GLFW.getPrimaryMonitor
+        >>= maybe (fail "Cannot get primary monitor") return
+
+stdPixelsPerInch :: Num a => Vector2 a
+stdPixelsPerInch = Vector2 96 96
+
+stdPixelsPerMM :: Fractional a => Vector2 a
+stdPixelsPerMM = stdPixelsPerInch / 25.4
+
 getDisplayScale :: Fractional a => GLFW.Window -> IO (Vector2 a)
 getDisplayScale window =
     do
-        fbSize <- GLFW.getFramebufferSize window <&> uncurry Vector2 <&> fmap fromIntegral
+        monitor <- guessMonitor window
+        (widthMM, heightMM) <- GLFW.getMonitorPhysicalSize monitor
+        let physSizeMM = Vector2 widthMM heightMM <&> fromIntegral
+        videoModeSize <- getVideoModeSize monitor <&> fmap fromIntegral
         winSize <- GLFW.getWindowSize window <&> uncurry Vector2 <&> fmap fromIntegral
-        fbSize / winSize & return
+        let actualPixelsPerMM = videoModeSize / physSizeMM
+        let physScale = actualPixelsPerMM / stdPixelsPerMM
+
+        -- TODO: Is videoModeSize in "logical" or "framebuffer" pixels?
+        -- If the latter, need to delete "winScale"
+        fbSize <- GLFW.getFramebufferSize window <&> uncurry Vector2 <&> fmap fromIntegral
+        let winScale = fbSize / winSize
+
+        physScale * winScale & return
