@@ -152,7 +152,7 @@ vboxTopFocal [] = Layout.empty
 vboxTopFocal (gui:guis) = gui & Layout.addAfter Layout.Vertical guis
 
 vboxTopFocalSpaced ::
-    Monad m => [ExpressionGui m] -> ExprGuiM m (ExpressionGui m)
+    Monad m => [ExpressionGui f] -> ExprGuiM m (ExpressionGui f)
 vboxTopFocalSpaced guis =
     do
         space <- stdVSpace
@@ -187,8 +187,9 @@ wideAnnotationBehaviorFromSelected True = HoverWideAnnotation
 -- NOTE: Also adds the background color, because it differs based on
 -- whether we're hovering
 applyWideAnnotationBehavior ::
-    Monad m => Config -> AnimId -> WideAnnotationBehavior -> Vector2 Widget.R -> ExpressionGui m ->
-    ExprGuiM m (ExpressionGui m)
+    Monad m =>
+    Config -> AnimId -> WideAnnotationBehavior -> Vector2 Widget.R -> ExpressionGui f ->
+    ExprGuiM m (ExpressionGui f)
 applyWideAnnotationBehavior config animId wideAnnotationBehavior shrinkRatio eg =
     case wideAnnotationBehavior of
     ShrinkWideAnnotation ->
@@ -208,8 +209,8 @@ applyWideAnnotationBehavior config animId wideAnnotationBehavior shrinkRatio eg 
 
 processAnnotationGui ::
     Monad m =>
-    AnimId -> WideAnnotationBehavior -> Widget.R -> ExpressionGui m ->
-    ExprGuiM m (ExpressionGui m)
+    AnimId -> WideAnnotationBehavior -> Widget.R -> ExpressionGui f ->
+    ExprGuiM m (ExpressionGui f)
 processAnnotationGui animId wideAnnotationBehavior minWidth annotationEg =
     do
         config <- ExprGuiM.readConfig
@@ -294,9 +295,9 @@ annotationSpacer = ExprGuiM.vspacer Config.valAnnotationSpacing <&> fromValueWid
 
 addAnnotationH ::
     Monad m =>
-    (AnimId -> ExprGuiM m (ExpressionGui m)) ->
+    (AnimId -> ExprGuiM m (ExpressionGui f)) ->
     WideAnnotationBehavior -> Sugar.EntityId ->
-    ExpressionGui m -> ExprGuiM m (ExpressionGui m)
+    ExpressionGui f -> ExprGuiM m (ExpressionGui f)
 addAnnotationH f wideBehavior entityId eg =
     do
         vspace <- annotationSpacer
@@ -397,7 +398,8 @@ makeNameEditWith onActiveEditor (Name nameSrc nameCollision setName name) myId =
                 %~ E.filterChars (`notElem` disallowedNameChars)
 
 stdWrap ::
-    Monad m => Sugar.Payload m ExprGuiT.Payload ->
+    Monad m =>
+    Sugar.Payload m ExprGuiT.Payload ->
     ExprGuiM m (ExpressionGui m) ->
     ExprGuiM m (ExpressionGui m)
 stdWrap pl mkGui =
@@ -406,7 +408,8 @@ stdWrap pl mkGui =
     & wrapExprEventMap pl
 
 parentDelegator ::
-    Monad m => Widget.Id -> ExpressionGui m -> ExprGuiM m (ExpressionGui m)
+    (Monad f, Monad m) =>
+    Widget.Id -> ExpressionGui f -> ExprGuiM m (ExpressionGui f)
 parentDelegator myId gui =
     do
         config <- ExprGuiM.readConfig
@@ -448,10 +451,10 @@ parenify prec myId mkGui =
                    & ExprGuiM.withLocalPrecedence (const 0)
               else mkGui
 
-makeLabel :: Monad m => String -> AnimId -> ExprGuiM m (ExpressionGui m)
+makeLabel :: Monad m => String -> AnimId -> ExprGuiM m (ExpressionGui f)
 makeLabel text animId = ExprGuiM.makeLabel text animId <&> fromValueWidget
 
-grammarLabel :: Monad m => String -> AnimId -> ExprGuiM m (ExpressionGui m)
+grammarLabel :: Monad m => String -> AnimId -> ExprGuiM m (ExpressionGui f)
 grammarLabel text animId =
     do
         config <- ExprGuiM.readConfig
@@ -483,7 +486,7 @@ liftLayers =
     egWidget %%~ ExprGuiM.widgetEnv . BWidgets.liftLayerInterval
 
 addValFrame ::
-    Monad m => Widget.Id -> ExpressionGui m -> ExprGuiM m (ExpressionGui m)
+    Monad m => Widget.Id -> ExpressionGui f -> ExprGuiM m (ExpressionGui f)
 addValFrame myId gui = addValPadding gui >>= egWidget %%~ addValBG myId
 
 stdWrapParenify ::
