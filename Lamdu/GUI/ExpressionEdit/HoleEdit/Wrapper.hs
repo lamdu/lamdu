@@ -84,8 +84,6 @@ make WidgetIds{..} arg =
         let argIsFocused = argGui ^. ExpressionGui.egWidget & Widget.isFocused
         unwrapEventMap <- makeUnwrapEventMap arg WidgetIds{..}
         argGui
-            & ExpressionGui.egWidget . Widget.mFocus . Lens._Just . Widget.eventMap %~
-                modifyWrappedEventMap config argIsFocused arg WidgetIds{..}
             & ExpressionGui.pad (frameWidth & _2 .~ 0)
             & ExpressionGui.egWidget %~
                 Widget.addInnerFrame
@@ -93,6 +91,8 @@ make WidgetIds{..} arg =
                 frameId frameColor frameWidth
             & ExpressionGui.egWidget %%~
                 ExprGuiM.widgetEnv . BWidgets.makeFocusableView hidWrapper
+            <&> ExpressionGui.egWidget . Widget.mFocus . Lens._Just . Widget.eventMap %~
+                modifyWrappedEventMap config argIsFocused arg WidgetIds{..}
             <&> ExpressionGui.egWidget %~ Widget.weakerEvents unwrapEventMap
     where
         frameId = Widget.toAnimId hidWrapper <> ["hole frame"]
