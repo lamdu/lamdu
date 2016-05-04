@@ -111,15 +111,17 @@ undoN n db =
                 fromMaybe (fail "Cannot undo any further") $ mUndo actions
 
 createWindow :: String -> Opts.WindowMode -> IO GLFW.Window
-createWindow title Opts.VideoModeSize =
-    GLFWUtils.getVideoModeSize >>=
-    GLFWUtils.createWindow title Nothing
-createWindow title (Opts.WindowSize winSize) =
-    GLFWUtils.createWindow title Nothing winSize
-createWindow title Opts.FullScreen =
+createWindow title mode =
     do
-        mMonitor <- GLFW.getPrimaryMonitor
-        GLFWUtils.getVideoModeSize >>= GLFWUtils.createWindow title mMonitor
+        monitor <-
+            GLFW.getPrimaryMonitor
+            >>= maybe (fail "GLFW: Can't get primary monitor") return
+        videoModeSize <- GLFWUtils.getVideoModeSize monitor
+        let createWin = GLFWUtils.createWindow title
+        case mode of
+            Opts.FullScreen         -> createWin (Just monitor) videoModeSize
+            Opts.VideoModeSize      -> createWin Nothing videoModeSize
+            Opts.WindowSize winSize -> createWin Nothing winSize
 
 settingsChangeHandler :: EvalManager.Evaluator -> Settings -> IO ()
 settingsChangeHandler evaluator settings =

@@ -32,11 +32,8 @@ createWindow title mMonitor (Vector2 w h) = do
             GLFW.makeContextCurrent $ Just win
             return win
 
-getVideoModeSize :: IO (Vector2 Int)
-getVideoModeSize = do
-    monitor <-
-        maybe (fail "GLFW: Can't get primary monitor") return =<<
-        GLFW.getPrimaryMonitor
+getVideoModeSize :: GLFW.Monitor -> IO (Vector2 Int)
+getVideoModeSize monitor = do
     videoMode <-
         maybe (fail "GLFW: Can't get video mode of monitor") return =<<
         GLFW.getVideoMode monitor
