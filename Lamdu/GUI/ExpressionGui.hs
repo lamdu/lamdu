@@ -25,7 +25,6 @@ module Lamdu.GUI.ExpressionGui
     , NeighborVals(..)
     , EvalAnnotationOptions(..), maybeAddAnnotationWith
     , WideAnnotationBehavior(..), wideAnnotationBehaviorFromSelected
-    , AnnotationParams(..), annotationParamsFor
     , makeTypeView
     , evaluationResult
     -- Expression wrapping
@@ -185,21 +184,6 @@ wideAnnotationBehaviorFromSelected :: Bool -> WideAnnotationBehavior
 wideAnnotationBehaviorFromSelected False = ShrinkWideAnnotation
 wideAnnotationBehaviorFromSelected True = HoverWideAnnotation
 
-data AnnotationParams = AnnotationParams
-    { apMinWidth :: Widget.R
-    , apAnimId :: AnimId
-    , apWideAnnotationBehavior :: WideAnnotationBehavior
-    }
-
-annotationParamsFor ::
-    WideAnnotationBehavior -> Sugar.EntityId -> ExpressionGui m -> AnnotationParams
-annotationParamsFor wideBehavior entityId eg =
-    AnnotationParams
-    { apMinWidth = eg ^. egWidget . Widget.width
-    , apAnimId = Widget.toAnimId $ WidgetIds.fromEntityId entityId
-    , apWideAnnotationBehavior = wideBehavior
-    }
-
 -- NOTE: Also adds the background color, because it differs based on
 -- whether we're hovering
 applyWideAnnotationBehavior ::
@@ -222,13 +206,13 @@ applyWideAnnotationBehavior config animId wideAnnotationBehavior shrinkRatio eg 
             eg
             & Layout.scaleAround (Vector2 0.5 0) shrinkRatio
 
-makeWithAnnotationBG ::
-    Monad m => (AnimId -> ExprGuiM m (ExpressionGui m)) ->
-    AnnotationParams -> ExprGuiM m (ExpressionGui m)
-makeWithAnnotationBG f (AnnotationParams minWidth animId wideAnnotationBehavior) =
+processAnnotationGui ::
+    Monad m =>
+    AnimId -> WideAnnotationBehavior -> Widget.R -> ExpressionGui m ->
+    ExprGuiM m (ExpressionGui m)
+processAnnotationGui animId wideAnnotationBehavior minWidth annotationEg =
     do
         config <- ExprGuiM.readConfig
-        annotationEg <- f animId
         let annotationWidth = annotationEg ^. egWidget . Widget.width
         let width = max annotationWidth minWidth
         let expansionLimit =
@@ -317,12 +301,15 @@ addAnnotationH f wideBehavior entityId eg =
     do
         vspace <- annotationSpacer
         annotationEg <-
-            makeWithAnnotationBG f (annotationParamsFor wideBehavior entityId eg)
+            f animId
+            >>= processAnnotationGui animId wideBehavior (eg ^. egWidget . Widget.width)
         vboxTopFocal
             [ eg & egAlignment . _1 .~ 0.5
             , vspace
             , annotationEg
             ] & return
+    where
+        animId = WidgetIds.fromEntityId entityId & Widget.toAnimId
 
 addInferredType ::
     Monad m => Type -> WideAnnotationBehavior -> Sugar.EntityId ->
