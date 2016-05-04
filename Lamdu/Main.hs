@@ -230,7 +230,7 @@ runEditor title copyJSOutputPath windowMode db =
                         , EvalManager.dbMVar = dbMVar
                         , EvalManager.copyJSOutputPath = copyJSOutputPath
                         }
-                    zoom <- Zoom.make 1
+                    zoom <- Zoom.make . (^. _2) =<< GLFWUtils.getDisplayScale win
                     let configSampler =
                             ConfigSampler.onEachSample (zoomConfig zoom)
                             rawConfigSampler
