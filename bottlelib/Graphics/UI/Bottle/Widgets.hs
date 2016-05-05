@@ -62,12 +62,12 @@ makeLabel :: Monad m => String -> AnimId -> WidgetEnvT m (Widget f)
 makeLabel text prefix =
     makeTextViewWidget text $ mappend prefix [pack text]
 
-liftLayerInterval :: Monad m => Widget f -> WidgetEnvT m (Widget f)
-liftLayerInterval widget =
+liftLayerInterval :: Monad m => WidgetEnvT m (Widget f -> Widget f)
+liftLayerInterval =
     do
         env <- WE.readEnv
         let layerDiff = WE.layerInterval env
-        widget & Widget.animLayers -~ layerDiff & return
+        Widget.animLayers -~ layerDiff & return
 
 readEnv :: Monad m => WidgetEnvT m Widget.Env
 readEnv = WE.readEnv <&> (^. WE.envCursor) <&> Widget.Env

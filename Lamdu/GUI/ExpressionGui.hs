@@ -197,10 +197,12 @@ applyWideAnnotationBehavior config animId wideAnnotationBehavior shrinkRatio eg 
         & addAnnotationBackground config animId
         & return
     HoverWideAnnotation ->
-        eg
-        & addAnnotationHoverBackground config animId
-        & (`Layout.hoverInPlaceOf` scaledDown)
-        & liftLayers
+        liftLayers
+        <&>
+        ($ (eg
+            & addAnnotationHoverBackground config animId
+            & (`Layout.hoverInPlaceOf` scaledDown)
+        ))
     KeepWideAnnotation -> return eg
     where
         scaledDown =
@@ -481,9 +483,10 @@ addValPadding gui =
         padding <- ExprGuiM.readConfig <&> Config.valFramePadding
         pad (padding <&> realToFrac) gui & return
 
-liftLayers :: Monad m => ExpressionGui n -> ExprGuiM m (ExpressionGui n)
+liftLayers :: Monad m => ExprGuiM m (ExpressionGui n -> ExpressionGui n)
 liftLayers =
-    egWidget %%~ ExprGuiM.widgetEnv . BWidgets.liftLayerInterval
+    ExprGuiM.widgetEnv BWidgets.liftLayerInterval
+    <&> (egWidget %~)
 
 addValFrame ::
     Monad m => Widget.Id -> ExpressionGui f -> ExprGuiM m (ExpressionGui f)

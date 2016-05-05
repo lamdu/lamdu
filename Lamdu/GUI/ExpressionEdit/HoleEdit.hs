@@ -52,10 +52,9 @@ addSearchAreaBelow ::
 addSearchAreaBelow WidgetIds{..} wrapperGui searchAreaGui =
     do
         hoveringSearchArea <-
-            searchAreaGui
-            & addDarkBackground
-                (Widget.toAnimId hidOpen ++ ["searchAreaDarkBg"])
-            >>= ExpressionGui.liftLayers
+            ExpressionGui.liftLayers <*>
+            addDarkBackground
+                (Widget.toAnimId hidOpen ++ ["searchAreaDarkBg"]) searchAreaGui
         wrapperGui
             & Layout.addAfter Layout.Vertical [hoveringSearchArea]
             & return
@@ -68,10 +67,11 @@ addWrapperAbove WidgetIds{..} wrapperGui searchAreaGui =
     do
         Config.Hole{..} <- ExprGuiM.readConfig <&> Config.hole
         hoveringWrapper <-
-            addDarkBackground (Widget.toAnimId hidWrapper ++ ["wrapperDarkBg"])
-            wrapperGui
+            ExpressionGui.liftLayers
+            <*>
+                addDarkBackground (Widget.toAnimId hidWrapper ++ ["wrapperDarkBg"])
+                wrapperGui
             <&> Layout.scale (holeHoveringWrapperScaleFactor <&> realToFrac)
-            >>= ExpressionGui.liftLayers
         searchAreaGui
             & Layout.addBefore Layout.Vertical [hoveringWrapper]
             & return

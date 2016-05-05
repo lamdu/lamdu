@@ -27,11 +27,10 @@ addRight :: Layout.AddLayout w => [w] -> Layout.LayoutType w -> Layout.LayoutTyp
 addRight = Layout.addAfter Layout.Horizontal
 
 hover ::
-    Monad m => ExpressionGui n -> ExpressionGui n ->
-    ExprGuiM m (ExpressionGui n)
+    Monad m => ExpressionGui n -> ExpressionGui n -> ExprGuiM m (ExpressionGui n)
 hover gui place =
-    gui `Layout.hoverInPlaceOf` place
-    & ExpressionGui.liftLayers
+    ExpressionGui.liftLayers
+    <&> ($ gui `Layout.hoverInPlaceOf` place)
 
 type LayoutFunc m =
     Widget.Id -> -- nomId

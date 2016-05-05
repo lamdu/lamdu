@@ -321,10 +321,9 @@ makeHoleResultWidget resultId holeResult =
                 ExprGuiM.localEnv (WE.envCursor .~ idWithinResultWidget) mkWidget
                 <&> (^. Widget.mFocus . Lens._Just . Widget.eventMap)
         widget <-
-            mkWidget
+            ExprGuiM.widgetEnv BWidgets.liftLayerInterval
+            <*> (mkWidget >>= makeFocusable resultId)
             <&> Widget.animFrame %~ Anim.mapIdentities (<> (resultSuffix # Widget.toAnimId resultId))
-            >>= makeFocusable resultId
-            >>= ExprGuiM.widgetEnv . BWidgets.liftLayerInterval
         return (widget, mkEventMap)
     where
         mkWidget =
@@ -472,16 +471,18 @@ makeUnderCursorAssignment shownResultsLists hasHiddenResults holeInfo =
 
         vspace <- ExpressionGui.annotationSpacer
         hoverResultsWidget <-
-            resultsWidget
-            & Widget.width %~ max (typeView ^. ExpressionGui.egWidget . Widget.width)
-            & Widget.strongerEvents resultsEventMap .
-              addBackground (Widget.toAnimId hidResultsPrefix) (Config.layers config)
-              holeOpenBGColor
-            & ExpressionGui.fromValueWidget
-            & Layout.addAfter Layout.Vertical [vspace, typeView]
-            & addDarkBackground (Widget.toAnimId hidResultsPrefix)
-            <&> (^. ExpressionGui.egWidget)
-            >>= ExprGuiM.widgetEnv . BWidgets.liftLayerInterval
+            ExprGuiM.widgetEnv BWidgets.liftLayerInterval
+            <*>
+            ( resultsWidget
+                & Widget.width %~ max (typeView ^. ExpressionGui.egWidget . Widget.width)
+                & Widget.strongerEvents resultsEventMap .
+                  addBackground (Widget.toAnimId hidResultsPrefix) (Config.layers config)
+                  holeOpenBGColor
+                & ExpressionGui.fromValueWidget
+                & Layout.addAfter Layout.Vertical [vspace, typeView]
+                & addDarkBackground (Widget.toAnimId hidResultsPrefix)
+                <&> (^. ExpressionGui.egWidget)
+            )
         searchTermGui <- SearchTerm.make holeInfo
         searchTermGui
             & ExpressionGui.egWidget %~ Widget.weakerEvents searchTermEventMap
