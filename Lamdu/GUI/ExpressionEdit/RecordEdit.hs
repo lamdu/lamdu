@@ -17,7 +17,6 @@ import           Graphics.UI.Bottle.View (View(..))
 import qualified Graphics.UI.Bottle.Widget as Widget
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
-import qualified Graphics.UI.Bottle.Widgets as BWidgets
 import qualified Lamdu.GUI.ExpressionEdit.TagEdit as TagEdit
 import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
@@ -103,8 +102,7 @@ makeFieldsWidget ::
     Widget.Id -> ExprGuiM m (ExpressionGui m)
 makeFieldsWidget [] myId =
     ExpressionGui.grammarLabel "()" (Widget.toAnimId myId)
-    >>= ExpressionGui.egWidget %%~
-        ExprGuiM.widgetEnv . BWidgets.makeFocusableView myId
+    >>= ExpressionGui.makeFocusableView myId
 makeFieldsWidget fields _ =
     do
         vspace <- ExpressionGui.stdVSpace
