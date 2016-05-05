@@ -11,7 +11,6 @@ import           Data.Monoid ((<>))
 import qualified Data.Store.Transaction as Transaction
 import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
-import qualified Graphics.UI.Bottle.Widgets as BWidgets
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds (WidgetIds(..))
@@ -89,8 +88,7 @@ make WidgetIds{..} arg =
                 Widget.addInnerFrame
                 (Config.layerTypeIndicatorFrame (Config.layers config))
                 frameId frameColor frameWidth
-            & ExpressionGui.egWidget %%~
-                ExprGuiM.widgetEnv . BWidgets.makeFocusableView hidWrapper
+            & ExpressionGui.makeFocusableView hidWrapper
             <&> ExpressionGui.egWidget . Widget.mFocus . Lens._Just . Widget.eventMap %~
                 modifyWrappedEventMap config argIsFocused arg WidgetIds{..}
             <&> ExpressionGui.egWidget %~ Widget.weakerEvents unwrapEventMap
