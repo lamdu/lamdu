@@ -89,8 +89,8 @@ mkNomGui nameSidePrecLens str layout nom@(Sugar.Nominal _ val) pl =
             <&> if isSelected then id
                 else ExpressionGui.egWidget %~ Widget.takesFocus (const (pure nameId))
         nameEdit <-
-            mkNameGui nom nameId
-            >>= ExpressionGui.makeFocusableView nameId
+            ExpressionGui.makeFocusableView nameId
+            <*> mkNameGui nom nameId
         subexprEdit <-
             ExprGuiM.makeSubexpression
             (nameSidePrecLens .~ nomPrecedence+1) val

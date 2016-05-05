@@ -58,9 +58,9 @@ mkShrunk paramIds mScopeEdit myId =
                   (Widget.keysEventMapMovesCursor (Config.jumpToDefinitionKeys config)
                    (E.Doc ["View", "Expand Lambda Params"]) . return .
                    WidgetIds.fromEntityId)
-        ExpressionGui.grammarLabel "λ" animId
+        ExpressionGui.makeFocusableView (lamId myId)
+            <*> ExpressionGui.grammarLabel "λ" animId
             & LightLambda.withUnderline (Config.lightLambda config)
-            >>= ExpressionGui.makeFocusableView (lamId myId)
             -- TODO: add event to jump to first param
             <&> addScopeEdit mScopeEdit
             <&> ExpressionGui.egWidget %~ Widget.weakerEvents expandEventMap

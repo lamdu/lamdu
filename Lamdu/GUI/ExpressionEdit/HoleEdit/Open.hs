@@ -245,8 +245,8 @@ makeResultGroup holeInfo results =
                 if cursorOnExtra
                     then makeExtra
                     else
-                    Widget.empty
-                    & focusFirstExtraResult (results ^. HoleResults.rlExtra)
+                    focusFirstExtraResult (results ^. HoleResults.rlExtra)
+                    <&> ($ Widget.empty)
                     <&> \x -> (Nothing, x, 0)
         let isSelected = Lens.has Lens._Just mSelectedResult
         extraSymbolWidget <-
@@ -260,7 +260,7 @@ makeResultGroup holeInfo results =
             }
     where
         mainResult = results ^. HoleResults.rlMain
-        focusFirstExtraResult [] = return
+        focusFirstExtraResult [] = return id
         focusFirstExtraResult (result:_) = makeFocusable (rId result)
 
 makeExtraResultsWidget ::
@@ -301,9 +301,9 @@ makeExtraResultsWidget holeInfo mainResultHeight extraResults@(firstResult:_) =
 
 makeFocusable ::
     (Monad m, Applicative f) =>
-    Widget.Id -> Widget (f Widget.EventResult) ->
-    ExprGuiM m (Widget (f Widget.EventResult))
-makeFocusable wId = ExprGuiM.widgetEnv . BWidgets.makeFocusableView wId
+    Widget.Id ->
+    ExprGuiM m (Widget (f Widget.EventResult) -> Widget (f Widget.EventResult))
+makeFocusable = ExprGuiM.widgetEnv . BWidgets.makeFocusableView
 
 makeHoleResultWidget ::
     Monad m =>
@@ -322,7 +322,7 @@ makeHoleResultWidget resultId holeResult =
                 <&> (^. Widget.mFocus . Lens._Just . Widget.eventMap)
         widget <-
             ExprGuiM.widgetEnv BWidgets.liftLayerInterval
-            <*> (mkWidget >>= makeFocusable resultId)
+            <*> (makeFocusable resultId <*> mkWidget)
             <&> Widget.animFrame %~ Anim.mapIdentities (<> (resultSuffix # Widget.toAnimId resultId))
         return (widget, mkEventMap)
     where

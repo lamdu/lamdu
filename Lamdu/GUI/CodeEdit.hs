@@ -319,8 +319,8 @@ makeReplEdit ::
 makeReplEdit env myId replExpr =
     do
         replLabel <-
-            ExpressionGui.makeLabel "⋙" (Widget.toAnimId replId)
-            >>= ExpressionGui.makeFocusableView replId
+            ExpressionGui.makeFocusableView replId
+            <*> ExpressionGui.makeLabel "⋙" (Widget.toAnimId replId)
         expr <- ExprGuiM.makeSubexpression id replExpr
         ExpressionGui.hboxSpaced [replLabel, expr]
             <&> (^. ExpressionGui.egWidget)

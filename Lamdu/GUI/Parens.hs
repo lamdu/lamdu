@@ -28,7 +28,7 @@ addTextParensI ::
 addTextParensI parenId rParenId widget =
     do
         beforeParen <- label "("
-        afterParen <- label ")" >>= BWidgets.makeFocusableView rParenId
+        afterParen <- BWidgets.makeFocusableView rParenId <*> label ")"
         Layout.hbox 0.5
             [ beforeParen & Layout.fromCenteredWidget
             , widget

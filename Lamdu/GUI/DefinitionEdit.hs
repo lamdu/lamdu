@@ -116,8 +116,8 @@ acceptableTypeIndicator width accept color myId =
         let acceptKeyMap =
                 Widget.keysEventMapMovesCursor (Config.acceptDefinitionTypeKeys config)
                 (E.Doc ["Edit", "Accept inferred type"]) (accept >> return myId)
-        typeIndicator width color myId
-            >>= ExpressionGui.makeFocusableView (typeIndicatorId myId)
+        ExpressionGui.makeFocusableView (typeIndicatorId myId)
+            <*> typeIndicator width color myId
             <&> ExpressionGui.egWidget %~ Widget.weakerEvents acceptKeyMap
 
 makeExprDefinition ::

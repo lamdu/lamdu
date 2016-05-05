@@ -215,9 +215,8 @@ makeScopeNavEdit binder myId curCursor =
         settings <- ExprGuiM.readSettings
         case settings ^. CESettings.sInfoMode of
             CESettings.Evaluation ->
-                mapM mkArrow scopes
-                >>= ExpressionGui.hboxSpaced
-                >>= ExpressionGui.makeFocusableView myId
+                ExpressionGui.makeFocusableView myId
+                <*> (mapM mkArrow scopes >>= ExpressionGui.hboxSpaced)
                 <&> ExpressionGui.egWidget %~ Widget.weakerEvents
                     (mkScopeEventMap leftKeys rightKeys `mappend` blockEventMap)
                 <&> Just
@@ -491,8 +490,8 @@ nullParamEditInfo (Sugar.NullParamInfo mActions) =
     ParamEdit.Info
     { ParamEdit.iMakeNameEdit =
       \myId ->
-      ExpressionGui.grammarLabel "◗" (Widget.toAnimId myId)
-      >>= ExpressionGui.makeFocusableView myId
+      ExpressionGui.makeFocusableView myId
+      <*> ExpressionGui.grammarLabel "◗" (Widget.toAnimId myId)
     , ParamEdit.iMAddNext = Nothing
     , ParamEdit.iMOrderBefore = Nothing
     , ParamEdit.iMOrderAfter = Nothing

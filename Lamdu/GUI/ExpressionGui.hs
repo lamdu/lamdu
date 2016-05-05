@@ -435,11 +435,11 @@ stdWrapParentExpr pl mkGui =
         innerId = WidgetIds.delegatingId myId
 
 makeFocusableView ::
-    (Monad m, Monad n) =>
-    Widget.Id -> ExpressionGui n -> ExprGuiM m (ExpressionGui n)
-makeFocusableView myId gui =
-    ExprGuiM.widgetEnv $
-    egWidget (BWidgets.makeFocusableView myId) gui
+    (Monad m, Monad f) =>
+    Widget.Id -> ExprGuiM m (ExpressionGui f -> ExpressionGui f)
+makeFocusableView myId =
+    ExprGuiM.widgetEnv (BWidgets.makeFocusableView myId)
+    <&> (egWidget %~)
 
 parenify ::
     (Monad f, Monad m) =>

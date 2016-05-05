@@ -82,13 +82,13 @@ make WidgetIds{..} arg =
             & ExprGuiM.makeSubexpression (const 0)
         let argIsFocused = argGui ^. ExpressionGui.egWidget & Widget.isFocused
         unwrapEventMap <- makeUnwrapEventMap arg WidgetIds{..}
-        argGui
-            & ExpressionGui.pad (frameWidth & _2 .~ 0)
-            & ExpressionGui.egWidget %~
+        ExpressionGui.makeFocusableView hidWrapper
+            <&> ($ argGui)
+            <&> ExpressionGui.pad (frameWidth & _2 .~ 0)
+            <&> ExpressionGui.egWidget %~
                 Widget.addInnerFrame
                 (Config.layerTypeIndicatorFrame (Config.layers config))
                 frameId frameColor frameWidth
-            & ExpressionGui.makeFocusableView hidWrapper
             <&> ExpressionGui.egWidget . Widget.mFocus . Lens._Just . Widget.eventMap %~
                 modifyWrappedEventMap config argIsFocused arg WidgetIds{..}
             <&> ExpressionGui.egWidget %~ Widget.weakerEvents unwrapEventMap

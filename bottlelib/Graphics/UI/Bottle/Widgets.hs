@@ -73,29 +73,26 @@ readEnv :: Monad m => WidgetEnvT m Widget.Env
 readEnv = WE.readEnv <&> (^. WE.envCursor) <&> Widget.Env
 
 respondToCursorPrefix ::
-    Monad m => Widget.Id -> Widget f -> WidgetEnvT m (Widget f)
-respondToCursorPrefix myIdPrefix widget =
-    do
-        widgetEnv <- readEnv
-        Widget.respondToCursorPrefix myIdPrefix widgetEnv widget
-            & return
+    Monad m => Widget.Id -> WidgetEnvT m (Widget f -> Widget f)
+respondToCursorPrefix myIdPrefix =
+    readEnv <&> Widget.respondToCursorPrefix myIdPrefix
 
 makeFocusableView ::
     (Monad m, Applicative f) =>
-    Widget.Id -> Widget (f Widget.EventResult) ->
-    WidgetEnvT m (Widget (f Widget.EventResult))
-makeFocusableView myIdPrefix widget =
-    widget
+    Widget.Id ->
+    WidgetEnvT m (Widget (f Widget.EventResult) -> Widget (f Widget.EventResult))
+makeFocusableView myIdPrefix =
+    respondToCursorPrefix myIdPrefix
+    <&>
     -- TODO: make it non-prefix-related?
-    & Widget.takesFocus (const (pure myIdPrefix))
-    & respondToCursorPrefix myIdPrefix
+    fmap (Widget.takesFocus (const (pure myIdPrefix)))
 
 makeFocusableTextView ::
     (Monad m, Applicative f) =>
     String -> Widget.Id -> WidgetEnvT m (Widget (f Widget.EventResult))
-makeFocusableTextView text myId = do
-    textView <- makeTextViewWidget text $ Widget.toAnimId myId
-    makeFocusableView myId textView
+makeFocusableTextView text myId =
+    makeFocusableView myId
+    <*> makeTextViewWidget text (Widget.toAnimId myId)
 
 makeFocusableLabel ::
     (Monad m, Applicative f) =>
