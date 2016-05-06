@@ -317,15 +317,15 @@ makeReplEdit ::
     Env m -> Widget.Id -> ExprGuiT.SugarExpr m ->
     ExprGuiM m (Widget (M m Widget.EventResult))
 makeReplEdit env myId replExpr =
-    do
-        replLabel <-
-            ExpressionGui.makeFocusableView replId
-            <*> ExpressionGui.makeLabel "⋙" (Widget.toAnimId replId)
-        expr <- ExprGuiM.makeSubexpression id replExpr
-        ExpressionGui.hboxSpaced [replLabel, expr]
-            <&> (^. ExpressionGui.egWidget)
-            <&> mLiftWidget
-            <&> Widget.weakerEvents (replEventMap env replExpr)
+    ExpressionGui.hboxSpaced
+    <*> sequence
+    [ ExpressionGui.makeFocusableView replId
+        <*> ExpressionGui.makeLabel "⋙" (Widget.toAnimId replId)
+    , ExprGuiM.makeSubexpression id replExpr
+    ]
+    <&> (^. ExpressionGui.egWidget)
+    <&> mLiftWidget
+    <&> Widget.weakerEvents (replEventMap env replExpr)
     where
         replId = Widget.joinId myId ["repl"]
 

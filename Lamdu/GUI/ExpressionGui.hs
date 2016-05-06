@@ -137,11 +137,11 @@ stdVSpace =
     <&> Widget.fromView
     <&> Layout.fromCenteredWidget
 
-hboxSpaced :: Monad m => [ExpressionGui f] -> ExprGuiM m (ExpressionGui f)
-hboxSpaced guis =
+hboxSpaced :: Monad m => ExprGuiM m ([ExpressionGui f] -> ExpressionGui f)
+hboxSpaced =
     stdHSpace
-    <&> (`List.intersperse` guis)
-    <&> hbox
+    <&> List.intersperse
+    <&> fmap hbox
 
 vboxTopFocalAlignedTo :: Widget.R -> [ExpressionGui m] -> ExpressionGui m
 vboxTopFocalAlignedTo hAlign guis =
@@ -152,11 +152,11 @@ vboxTopFocal [] = Layout.empty
 vboxTopFocal (gui:guis) = gui & Layout.addAfter Layout.Vertical guis
 
 vboxTopFocalSpaced ::
-    Monad m => [ExpressionGui f] -> ExprGuiM m (ExpressionGui f)
-vboxTopFocalSpaced guis =
-    do
-        space <- stdVSpace
-        guis & List.intersperse space & vboxTopFocal & return
+    Monad m => ExprGuiM m ([ExpressionGui f] -> ExpressionGui f)
+vboxTopFocalSpaced =
+    stdVSpace
+    <&> List.intersperse
+    <&> fmap vboxTopFocal
 
 gridTopLeftFocal :: [[ExpressionGui m]] -> ExpressionGui m
 gridTopLeftFocal = Layout.gridTopLeftFocal

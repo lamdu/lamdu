@@ -44,12 +44,14 @@ makeParamsRecord myId paramsRecordVar =
         let Config.Name{..} = Config.name config
         sequence
             [ ExpressionGui.makeLabel "Params {" (Widget.toAnimId myId <> ["prefix"])
-            , zip [0..] fieldNames
-                & mapM
+            , ExpressionGui.hboxSpaced
+                <*>
+                ( zip [0..] fieldNames
+                    & mapM
                     (\(i, fieldName) ->
                       makeSimpleView parameterColor fieldName $
                       Widget.joinId myId ["params", SBS8.pack (show (i::Int))])
-                >>= ExpressionGui.hboxSpaced
+                )
             , ExpressionGui.makeLabel "}" (Widget.toAnimId myId <> ["suffix"])
             ] <&> ExpressionGui.hbox
     where
