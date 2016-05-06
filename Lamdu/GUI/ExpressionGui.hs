@@ -188,22 +188,24 @@ wideAnnotationBehaviorFromSelected True = HoverWideAnnotation
 -- whether we're hovering
 applyWideAnnotationBehavior ::
     Monad m =>
-    Config -> AnimId -> WideAnnotationBehavior -> Vector2 Widget.R -> ExpressionGui f ->
+    AnimId -> WideAnnotationBehavior -> Vector2 Widget.R -> ExpressionGui f ->
     ExprGuiM m (ExpressionGui f)
-applyWideAnnotationBehavior config animId wideAnnotationBehavior shrinkRatio eg =
-    case wideAnnotationBehavior of
-    ShrinkWideAnnotation ->
-        scaledDown
-        & addAnnotationBackground config animId
-        & return
-    HoverWideAnnotation ->
-        liftLayers
-        <&>
-        ($ (eg
-            & addAnnotationHoverBackground config animId
-            & (`Layout.hoverInPlaceOf` scaledDown)
-        ))
-    KeepWideAnnotation -> return eg
+applyWideAnnotationBehavior animId wideAnnotationBehavior shrinkRatio eg =
+    do
+        config <- ExprGuiM.readConfig
+        case wideAnnotationBehavior of
+            ShrinkWideAnnotation ->
+                scaledDown
+                & addAnnotationBackground config animId
+                & return
+            HoverWideAnnotation ->
+                liftLayers
+                <&>
+                ($ (eg
+                    & addAnnotationHoverBackground config animId
+                    & (`Layout.hoverInPlaceOf` scaledDown)
+                ))
+            KeepWideAnnotation -> return eg
     where
         scaledDown =
             eg
@@ -230,7 +232,7 @@ processAnnotationGui animId wideAnnotationBehavior minWidth annotationEg =
                 | otherwise = id
         let maybeTooWide
                 | annotationWidth > minWidth + max shrinkAtLeast expansionLimit =
-                    applyWideAnnotationBehavior config animId
+                    applyWideAnnotationBehavior animId
                     wideAnnotationBehavior shrinkRatio
                 | otherwise = return . addAnnotationBackground config animId
         annotationEg
