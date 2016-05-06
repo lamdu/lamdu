@@ -188,56 +188,54 @@ wideAnnotationBehaviorFromSelected True = HoverWideAnnotation
 -- whether we're hovering
 applyWideAnnotationBehavior ::
     Monad m =>
-    AnimId -> WideAnnotationBehavior -> Vector2 Widget.R -> ExpressionGui f ->
-    ExprGuiM m (ExpressionGui f)
-applyWideAnnotationBehavior animId wideAnnotationBehavior shrinkRatio eg =
+    AnimId -> WideAnnotationBehavior ->
+    ExprGuiM m (Vector2 Widget.R -> ExpressionGui f -> ExpressionGui f)
+applyWideAnnotationBehavior _ KeepWideAnnotation = return (const id)
+applyWideAnnotationBehavior animId ShrinkWideAnnotation =
     do
         config <- ExprGuiM.readConfig
-        case wideAnnotationBehavior of
-            ShrinkWideAnnotation ->
-                scaledDown
-                & addAnnotationBackground config animId
-                & return
-            HoverWideAnnotation ->
-                liftLayers
-                <&>
-                ($ (eg
-                    & addAnnotationHoverBackground config animId
-                    & (`Layout.hoverInPlaceOf` scaledDown)
-                ))
-            KeepWideAnnotation -> return eg
-    where
-        scaledDown =
-            eg
-            & Layout.scaleAround (Vector2 0.5 0) shrinkRatio
+        return $ \shrinkRatio eg ->
+            Layout.scaleAround (Vector2 0.5 0) shrinkRatio eg
+            & addAnnotationBackground config animId
+applyWideAnnotationBehavior animId HoverWideAnnotation =
+    do
+        config <- ExprGuiM.readConfig
+        lifter <- liftLayers
+        shrinker <- applyWideAnnotationBehavior animId ShrinkWideAnnotation
+        return $
+            \shrinkRatio eg ->
+                lifter eg
+                & addAnnotationHoverBackground config animId
+                & (`Layout.hoverInPlaceOf` shrinker shrinkRatio eg)
 
 processAnnotationGui ::
     Monad m =>
-    AnimId -> WideAnnotationBehavior -> Widget.R -> ExpressionGui f ->
-    ExprGuiM m (ExpressionGui f)
-processAnnotationGui animId wideAnnotationBehavior minWidth annotationEg =
-    do
-        config <- ExprGuiM.readConfig
-        let annotationWidth = annotationEg ^. egWidget . Widget.width
-        let width = max annotationWidth minWidth
-        let expansionLimit =
-                Config.valAnnotationWidthExpansionLimit config & realToFrac
-        let maxWidth = minWidth + expansionLimit
-        let shrinkAtLeast = Config.valAnnotationShrinkAtLeast config & realToFrac
-        let shrinkRatio =
-                annotationWidth - shrinkAtLeast & min maxWidth & max minWidth
-                & (/ annotationWidth) & pure
-        let maybeTooNarrow
-                | minWidth > annotationWidth = pad (Vector2 ((width - annotationWidth) / 2) 0)
-                | otherwise = id
-        let maybeTooWide
-                | annotationWidth > minWidth + max shrinkAtLeast expansionLimit =
-                    applyWideAnnotationBehavior animId
-                    wideAnnotationBehavior shrinkRatio
-                | otherwise = return . addAnnotationBackground config animId
-        annotationEg
-            & maybeTooNarrow
-            & maybeTooWide
+    AnimId -> WideAnnotationBehavior -> Widget.R ->
+    ExprGuiM m (ExpressionGui f -> ExpressionGui f)
+processAnnotationGui animId wideAnnotationBehavior minWidth =
+    f
+    <$> ExprGuiM.readConfig
+    <*> applyWideAnnotationBehavior animId wideAnnotationBehavior
+    where
+        f config applyWide annotationEg =
+            maybeTooNarrow annotationEg & maybeTooWide
+            where
+                annotationWidth = annotationEg ^. egWidget . Widget.width
+                width = max annotationWidth minWidth
+                expansionLimit =
+                    Config.valAnnotationWidthExpansionLimit config & realToFrac
+                maxWidth = minWidth + expansionLimit
+                shrinkAtLeast = Config.valAnnotationShrinkAtLeast config & realToFrac
+                shrinkRatio =
+                    annotationWidth - shrinkAtLeast & min maxWidth & max minWidth
+                    & (/ annotationWidth) & pure
+                maybeTooNarrow
+                    | minWidth > annotationWidth = pad (Vector2 ((width - annotationWidth) / 2) 0)
+                    | otherwise = id
+                maybeTooWide
+                    | annotationWidth > minWidth + max shrinkAtLeast expansionLimit =
+                        applyWide shrinkRatio
+                    | otherwise = addAnnotationBackground config animId
 
 data EvalResDisplay = EvalResDisplay
     { erdScope :: ER.ScopeId
@@ -306,8 +304,8 @@ addAnnotationH f wideBehavior entityId eg =
     do
         vspace <- annotationSpacer
         annotationEg <-
-            f animId
-            >>= processAnnotationGui animId wideBehavior (eg ^. egWidget . Widget.width)
+            processAnnotationGui animId wideBehavior (eg ^. egWidget . Widget.width)
+            <*> f animId
         vboxTopFocal
             [ eg & egAlignment . _1 .~ 0.5
             , vspace
