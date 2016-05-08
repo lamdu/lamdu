@@ -115,14 +115,14 @@ makeAltRow ::
 makeAltRow mActiveTag (Sugar.CaseAlt delete tag altExpr) =
     do
         config <- ExprGuiM.readConfig
+        addBg <-
+            ExpressionGui.addValBGWithColor Config.evaluatedPathBGColor
+            (WidgetIds.fromEntityId (tag ^. Sugar.tagInstance))
         altRefGui <-
             TagEdit.makeCaseTag (ExprGuiT.nextHolesBefore altExpr) tag
-            >>= if mActiveTag == Just (tag ^. Sugar.tagVal)
-                then
-                    ExpressionGui.egWidget %%~
-                    ExpressionGui.addValBGWithColor Config.evaluatedPathBGColor
-                    (WidgetIds.fromEntityId (tag ^. Sugar.tagInstance))
-                else return
+            <&> if mActiveTag == Just (tag ^. Sugar.tagVal)
+                then ExpressionGui.egWidget %~ addBg
+                else id
         altExprGui <- ExprGuiM.makeSubexpression (const 0) altExpr
         let itemEventMap = caseDelEventMap config delete
         space <- ExpressionGui.stdVSpace
@@ -166,8 +166,8 @@ makeOpenCase rest animId altsGui =
         config <- ExprGuiM.readConfig
         vspace <- ExpressionGui.stdVSpace
         restExpr <-
-            ExprGuiM.makeSubexpression (const 0) rest
-            >>= ExpressionGui.addValPadding
+            ExpressionGui.addValPadding
+            <*> ExprGuiM.makeSubexpression (const 0) rest
         let minWidth = restExpr ^. ExpressionGui.egWidget . Widget.width
         [ altsGui
             , separationBar config (max minWidth targetWidth) animId

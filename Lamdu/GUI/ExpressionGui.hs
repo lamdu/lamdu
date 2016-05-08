@@ -210,14 +210,14 @@ applyWideAnnotationBehavior animId HoverWideAnnotation =
 
 processAnnotationGui ::
     Monad m =>
-    AnimId -> WideAnnotationBehavior -> Widget.R ->
-    ExprGuiM m (ExpressionGui f -> ExpressionGui f)
-processAnnotationGui animId wideAnnotationBehavior minWidth =
+    AnimId -> WideAnnotationBehavior ->
+    ExprGuiM m (Widget.R -> ExpressionGui f -> ExpressionGui f)
+processAnnotationGui animId wideAnnotationBehavior =
     f
     <$> ExprGuiM.readConfig
     <*> applyWideAnnotationBehavior animId wideAnnotationBehavior
     where
-        f config applyWide annotationEg =
+        f config applyWide minWidth annotationEg =
             maybeTooNarrow annotationEg & maybeTooWide
             where
                 annotationWidth = annotationEg ^. egWidget . Widget.width
@@ -299,38 +299,39 @@ addAnnotationH ::
     Monad m =>
     (AnimId -> ExprGuiM m (ExpressionGui f)) ->
     WideAnnotationBehavior -> Sugar.EntityId ->
-    ExpressionGui f -> ExprGuiM m (ExpressionGui f)
-addAnnotationH f wideBehavior entityId eg =
+    ExprGuiM m (ExpressionGui f -> ExpressionGui f)
+addAnnotationH f wideBehavior entityId =
     do
         vspace <- annotationSpacer
-        annotationEg <-
-            processAnnotationGui animId wideBehavior (eg ^. egWidget . Widget.width)
-            <*> f animId
-        vboxTopFocal
+        annotationEg <- f animId
+        processAnn <- processAnnotationGui animId wideBehavior
+        return $
+            \eg ->
+            vboxTopFocal
             [ eg & egAlignment . _1 .~ 0.5
             , vspace
-            , annotationEg
-            ] & return
+            , processAnn (eg ^. egWidget . Widget.width) annotationEg
+            ]
     where
         animId = WidgetIds.fromEntityId entityId & Widget.toAnimId
 
 addInferredType ::
-    Monad m => Type -> WideAnnotationBehavior -> Sugar.EntityId ->
-    ExpressionGui m -> ExprGuiM m (ExpressionGui m)
+    Monad m =>
+    Type -> WideAnnotationBehavior -> Sugar.EntityId ->
+    ExprGuiM m (ExpressionGui m -> ExpressionGui m)
 addInferredType typ = addAnnotationH (makeTypeView typ)
 
 addEvaluationResult ::
     Monad m =>
     Type -> NeighborVals (Maybe EvalResDisplay) -> EvalResDisplay ->
     WideAnnotationBehavior -> Sugar.EntityId ->
-    ExpressionGui m -> ExprGuiM m (ExpressionGui m)
+    ExprGuiM m (ExpressionGui m -> ExpressionGui m)
 -- REVIEW(Eyal): This is misleading when it refers to Previous results
-addEvaluationResult typ neigh resDisp wideBehavior entityId gui =
-    gui
-    & case (erdVal resDisp ^. ER.payload, erdVal resDisp ^. ER.body) of
+addEvaluationResult typ neigh resDisp wideBehavior entityId =
+    case (erdVal resDisp ^. ER.payload, erdVal resDisp ^. ER.body) of
     (T.TRecord T.CEmpty, _) ->
-        egWidget %%~
         addValBGWithColor Config.evaluatedPathBGColor (WidgetIds.fromEntityId entityId)
+        <&> (egWidget %~)
     (_, ER.RFunc{}) ->
         addAnnotationH (makeTypeView typ) wideBehavior entityId
     _ -> addAnnotationH (makeEvalView neigh resDisp) wideBehavior entityId
@@ -463,25 +464,23 @@ grammarLabel text animId =
         makeLabel text animId
             & ExprGuiM.localEnv (WE.setTextColor (Config.grammarColor config))
 
-addValBG :: Monad m => Widget.Id -> Widget f -> ExprGuiM m (Widget f)
-addValBG = addValBGWithColor Config.valFrameBGColor
+addValBG :: Monad m => Widget.Id -> ExprGuiM m (Widget f -> Widget f)
+addValBG myId = addValBGWithColor Config.valFrameBGColor myId
 
 addValBGWithColor ::
     Monad m =>
-    (Config -> Draw.Color) -> Widget.Id -> Widget f -> ExprGuiM m (Widget f)
-addValBGWithColor color myId gui =
+    (Config -> Draw.Color) -> Widget.Id -> ExprGuiM m (Widget f -> Widget f)
+addValBGWithColor color myId =
     do
         config <- ExprGuiM.readConfig
         let layer = Config.layerValFrameBG $ Config.layers config
-        Widget.backgroundColor layer animId (color config) gui & return
+        Widget.backgroundColor layer animId (color config) & return
     where
         animId = Widget.toAnimId myId ++ ["val"]
 
-addValPadding :: Monad m => ExpressionGui n -> ExprGuiM m (ExpressionGui n)
-addValPadding gui =
-    do
-        padding <- ExprGuiM.readConfig <&> Config.valFramePadding
-        pad (padding <&> realToFrac) gui & return
+addValPadding :: Monad m => ExprGuiM m (ExpressionGui n -> ExpressionGui n)
+addValPadding =
+    ExprGuiM.readConfig <&> Config.valFramePadding <&> fmap realToFrac <&> pad
 
 liftLayers :: Monad m => ExprGuiM m (ExpressionGui n -> ExpressionGui n)
 liftLayers =
@@ -490,7 +489,9 @@ liftLayers =
 
 addValFrame ::
     Monad m => Widget.Id -> ExpressionGui f -> ExprGuiM m (ExpressionGui f)
-addValFrame myId gui = addValPadding gui >>= egWidget %%~ addValBG myId
+addValFrame myId gui =
+    (addValBG myId <&> (egWidget %~))
+    <*> (addValPadding <*> return gui) -- TODO
 
 stdWrapParenify ::
     Monad m =>
@@ -623,10 +624,12 @@ maybeAddAnnotationWith opt wideAnnotationBehavior ShowAnnotation{..} annotation 
         noAnnotation = return eg
         -- concise mode and eval mode with no result
         inferredType = annotation ^. Sugar.aInferredType
-        withType = addInferredType inferredType wideAnnotationBehavior entityId eg
+        withType =
+            addInferredType inferredType wideAnnotationBehavior entityId
+            <&> (eg &)
         withVal neighborVals scopeAndVal =
             addEvaluationResult inferredType neighborVals scopeAndVal
-            wideAnnotationBehavior entityId eg
+            wideAnnotationBehavior entityId <&> (eg &)
 
 valOfScope :: Sugar.Annotation -> CurAndPrev (Maybe ER.ScopeId) -> Maybe EvalResDisplay
 valOfScope annotation mScopeIds =

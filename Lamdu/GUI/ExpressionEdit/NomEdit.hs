@@ -27,31 +27,34 @@ addRight :: Layout.AddLayout w => [w] -> Layout.LayoutType w -> Layout.LayoutTyp
 addRight = Layout.addAfter Layout.Horizontal
 
 hover ::
-    Monad m => ExpressionGui n -> ExpressionGui n -> ExprGuiM m (ExpressionGui n)
-hover gui place =
+    Monad m =>
+    ExprGuiM m (ExpressionGui n -> ExpressionGui n -> ExpressionGui n)
+hover =
     ExpressionGui.liftLayers
-    <&> ($ gui `Layout.hoverInPlaceOf` place)
+    <&> (\lift gui place -> lift gui `Layout.hoverInPlaceOf` place)
 
 type LayoutFunc m =
     Widget.Id -> -- nomId
-    ExpressionGui m -> -- label
-    ExpressionGui m -> -- name gui
-    ExpressionGui m -> -- subexpr gui
     Bool -> -- show name
-    ExprGuiM m (ExpressionGui m)
+    ExprGuiM m (
+        ExpressionGui m -> -- label
+        ExpressionGui m -> -- name gui
+        ExpressionGui m -> -- subexpr gui
+        ExpressionGui m)
 
 expandingName ::
     Monad m =>
-    ([ExpressionGui m] -> ExpressionGui m -> ExpressionGui m) ->
-    LayoutFunc m
-expandingName namePos nomId label nameGui subexprGui showName =
+    ([ExpressionGui m] -> ExpressionGui m -> ExpressionGui m) -> LayoutFunc m
+expandingName namePos nomId showName =
     do
         space <- ExpressionGui.stdHSpace
-        namePos [nameGui | showName] label
-            & ExpressionGui.egWidget %%~
-                ExpressionGui.addValBGWithColor Config.valNomBGColor nomId
-            <&> (:[]) <&> (`namePos` space)
-            <&> (:[]) <&> (`namePos` subexprGui)
+        addBg <- ExpressionGui.addValBGWithColor Config.valNomBGColor nomId
+        return $
+            \label nameGui subexprGui ->
+            namePos [nameGui | showName] label
+            & ExpressionGui.egWidget %~ addBg
+            & (:[]) & (`namePos` space)
+            & (:[]) & (`namePos` subexprGui)
 
 makeToNom ::
     Monad m =>
@@ -94,13 +97,14 @@ mkNomGui nameSidePrecLens str layout nom@(Sugar.Nominal _ val) pl =
         subexprEdit <-
             ExprGuiM.makeSubexpression
             (nameSidePrecLens .~ nomPrecedence+1) val
-        let mk = layout nomId label nameEdit subexprEdit
+        let mk x = layout nomId x <&> (\f -> f label nameEdit subexprEdit)
+        h <- hover
         if ExprGuiT.plOfHoleResult pl
             then mk True
             else do
                 compact <- mk False
                 if isSelected
-                    then mk True >>= (`hover` compact)
+                    then mk True <&> (`h` compact)
                     else return compact
     & ExprGuiM.assignCursor myId valId
     where

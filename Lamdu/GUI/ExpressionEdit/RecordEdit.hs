@@ -52,8 +52,8 @@ make record@(Sugar.Record fields recordTail addField) pl =
             ExprGuiM.listenResultPickers $
             do
                 fieldsGui <-
-                    makeFieldsWidget fields myId
-                    >>= if addBg then ExpressionGui.addValPadding else return
+                    (if addBg then ExpressionGui.addValPadding else return id)
+                    <*>  makeFieldsWidget fields myId
                 case recordTail of
                     Sugar.ClosedRecord deleteTail ->
                         fieldsGui
@@ -72,7 +72,10 @@ make record@(Sugar.Record fields recordTail addField) pl =
         gui
             & ExpressionGui.egWidget %~ Widget.weakerEvents addFieldEventMap
             & if addBg
-                then ExpressionGui.egWidget %%~ ExpressionGui.addValBG myId
+                then
+                    (<*>)
+                    (ExpressionGui.addValBG myId <&> (ExpressionGui.egWidget %~))
+                    . return
                 else return
     where
         addBg = shouldAddBg record
@@ -128,8 +131,8 @@ makeOpenRecord fieldsGui rest animId =
         config <- ExprGuiM.readConfig
         vspace <- ExpressionGui.stdVSpace
         restExpr <-
-            ExprGuiM.makeSubexpression (const 0) rest
-            >>= ExpressionGui.addValPadding
+            ExpressionGui.addValPadding
+            <*> ExprGuiM.makeSubexpression (const 0) rest
         let minWidth = restExpr ^. ExpressionGui.egWidget . Widget.width
         [ fieldsGui
             , separationBar config (max minWidth targetWidth) animId
