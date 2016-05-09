@@ -54,27 +54,25 @@ hover WidgetIds{..} name =
 
 addSearchAreaBelow ::
     Monad m => WidgetIds ->
-    ExpressionGui f -> ExpressionGui f ->
-    ExprGuiM m (ExpressionGui f)
-addSearchAreaBelow ids wrapperGui searchAreaGui =
-    do
-        hoveringSearchArea <- hover ids ["searchArea"] ?? searchAreaGui
-        wrapperGui
-            & Layout.addAfter Layout.Vertical [hoveringSearchArea]
-            & return
+    ExprGuiM m (ExpressionGui f -> ExpressionGui f -> ExpressionGui f)
+addSearchAreaBelow ids =
+    hover ids ["searchArea"] <&>
+    \f  wrapperGui searchAreaGui ->
+    Layout.addAfter Layout.Vertical [f searchAreaGui] wrapperGui
 
 addWrapperAbove ::
     Monad m =>
-    WidgetIds -> ExpressionGui f -> ExpressionGui f ->
-    ExprGuiM m (ExpressionGui f)
-addWrapperAbove ids wrapperGui searchAreaGui =
+    WidgetIds -> ExprGuiM m (ExpressionGui f -> ExpressionGui f -> ExpressionGui f)
+addWrapperAbove ids =
     do
         Config.Hole{..} <- ExprGuiM.readConfig <&> Config.hole
-        hoveringWrapper <- hover ids ["wrapper"] ?? wrapperGui
-            <&> Layout.scale (holeHoveringWrapperScaleFactor <&> realToFrac)
-        searchAreaGui
-            & Layout.addBefore Layout.Vertical [hoveringWrapper]
-            & return
+        -- \
+        hover ids ["wrapper"]
+            <&> \f wrapperGui searchAreaGui ->
+            Layout.addBefore Layout.Vertical
+            [ f wrapperGui
+              & Layout.scale (holeHoveringWrapperScaleFactor <&> realToFrac)
+            ] searchAreaGui
 
 make ::
     Monad m =>
@@ -109,7 +107,7 @@ make hole pl =
                         let layout f = do
                                 searchAreaGui <-
                                     SearchArea.makeStdWrapped pl holeInfo
-                                f WidgetIds{..} wrapperGui searchAreaGui
+                                f WidgetIds{..} ?? wrapperGui ?? searchAreaGui
                                     <&> (`Layout.hoverInPlaceOf` unfocusedWrapperGui)
                         if Widget.isFocused (wrapperGui ^. ExpressionGui.egWidget)
                             then layout addSearchAreaBelow
