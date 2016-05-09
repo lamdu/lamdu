@@ -443,16 +443,17 @@ makeBinderContentEdit params (Sugar.BinderLet l) =
                 (E.Doc ["Edit", "Let clause", "Move inwards"]) . void)
         mOuterScopeId <- ExprGuiM.readMScopeId
         let letBodyScope = liftA2 lookupMKey mOuterScopeId (l ^. Sugar.lBodyScope)
-        ExpressionGui.vboxTopFocalSpaced
-            <*>
-            (   [ makeLetEdit l
-                <&> ExpressionGui.egWidget %~ Widget.weakerEvents moveToInnerEventMap
-                , makeBinderBodyEdit params body
-                  & ExprGuiM.withLocalMScopeId letBodyScope
-                ] & sequence
-                <&> map (ExpressionGui.egAlignment . _1 .~ 0)
-            )
-            >>= ExpressionGui.parentDelegator letEntityId
+        ExpressionGui.parentDelegator letEntityId
+            <*> ( ExpressionGui.vboxTopFocalSpaced
+                  <*>
+                  (   [ makeLetEdit l
+                        <&> ExpressionGui.egWidget %~ Widget.weakerEvents moveToInnerEventMap
+                      , makeBinderBodyEdit params body
+                        & ExprGuiM.withLocalMScopeId letBodyScope
+                      ] & sequence
+                      <&> map (ExpressionGui.egAlignment . _1 .~ 0)
+                  )
+                )
             <&> ExpressionGui.egWidget %~ Widget.weakerEvents delEventMap
     where
         letEntityId = l ^. Sugar.lEntityId & WidgetIds.fromEntityId

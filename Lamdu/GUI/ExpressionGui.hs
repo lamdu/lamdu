@@ -427,14 +427,13 @@ makeFocusDelegator =
     <&> Lens.mapped . Lens.mapped . Lens.mapped %~ (egWidget %~)
 
 parentDelegator ::
-    (Monad f, Monad m) =>
-    Widget.Id -> ExpressionGui f -> ExprGuiM m (ExpressionGui f)
-parentDelegator myId gui =
+    (Monad f, Monad m) => Widget.Id ->
+    ExprGuiM m (ExpressionGui f -> ExpressionGui f)
+parentDelegator myId =
     do
         config <- ExprGuiM.readConfig
         makeFocusDelegator (parentExprFDConfig config)
             FocusDelegator.FocusEntryChild (WidgetIds.notDelegatingId myId)
-            ?? gui
 
 stdWrapParentExpr ::
     Monad m =>
@@ -442,8 +441,7 @@ stdWrapParentExpr ::
     (Widget.Id -> ExprGuiM m (ExpressionGui m)) ->
     ExprGuiM m (ExpressionGui m)
 stdWrapParentExpr pl mkGui =
-    mkGui innerId
-    >>= parentDelegator myId
+    parentDelegator myId <*> mkGui innerId
     & stdWrap pl
     & ExprGuiM.assignCursor myId innerId
     where
