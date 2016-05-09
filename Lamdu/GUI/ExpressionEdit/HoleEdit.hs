@@ -6,6 +6,7 @@ module Lamdu.GUI.ExpressionEdit.HoleEdit
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import qualified Data.Store.Transaction as Transaction
+import           Graphics.UI.Bottle.Animation (AnimId)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.Layout as Layout
 import qualified Graphics.UI.Bottle.WidgetsEnvT as WE
@@ -45,16 +46,19 @@ assignHoleCursor WidgetIds{..} (Just _) =
     ExprGuiM.assignCursor hidHole hidWrapper .
     ExprGuiM.assignCursor (WidgetIds.notDelegatingId hidHole) hidWrapper
 
+hover :: Monad m => WidgetIds -> AnimId -> ExprGuiM m (ExpressionGui n -> ExpressionGui n)
+hover WidgetIds{..} name =
+    (.)
+    <$> ExpressionGui.liftLayers
+    <*> addDarkBackground (Widget.toAnimId hidOpen ++ name ++ ["DarkBg"])
+
 addSearchAreaBelow ::
     Monad m => WidgetIds ->
     ExpressionGui f -> ExpressionGui f ->
     ExprGuiM m (ExpressionGui f)
-addSearchAreaBelow WidgetIds{..} wrapperGui searchAreaGui =
+addSearchAreaBelow ids wrapperGui searchAreaGui =
     do
-        hoveringSearchArea <-
-            ExpressionGui.liftLayers <*>
-            (addDarkBackground (Widget.toAnimId hidOpen ++ ["searchAreaDarkBg"])
-             ?? searchAreaGui)
+        hoveringSearchArea <- hover ids ["searchArea"] ?? searchAreaGui
         wrapperGui
             & Layout.addAfter Layout.Vertical [hoveringSearchArea]
             & return
@@ -63,13 +67,10 @@ addWrapperAbove ::
     Monad m =>
     WidgetIds -> ExpressionGui f -> ExpressionGui f ->
     ExprGuiM m (ExpressionGui f)
-addWrapperAbove WidgetIds{..} wrapperGui searchAreaGui =
+addWrapperAbove ids wrapperGui searchAreaGui =
     do
         Config.Hole{..} <- ExprGuiM.readConfig <&> Config.hole
-        hoveringWrapper <-
-            ExpressionGui.liftLayers
-            <*> (addDarkBackground (Widget.toAnimId hidWrapper ++ ["wrapperDarkBg"])
-                 ?? wrapperGui)
+        hoveringWrapper <- hover ids ["wrapper"] ?? wrapperGui
             <&> Layout.scale (holeHoveringWrapperScaleFactor <&> realToFrac)
         searchAreaGui
             & Layout.addBefore Layout.Vertical [hoveringWrapper]
