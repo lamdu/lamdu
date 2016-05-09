@@ -5,7 +5,6 @@ module Lamdu.GUI.ExpressionEdit.HoleEdit.SearchArea
 
 import           Control.Lens.Operators
 import qualified Graphics.UI.Bottle.EventMap as E
-import qualified Graphics.UI.Bottle.Widgets as BWidgets
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 import qualified Graphics.UI.Bottle.Widgets.Layout as Layout
 import qualified Graphics.UI.Bottle.WidgetsEnvT as WE
@@ -41,20 +40,17 @@ makeStdWrapped pl holeInfo =
         let Config.Hole{..} = Config.hole config
             WidgetIds{..} = hiIds holeInfo
             fdWrap =
-                ExpressionGui.egWidget %%~
-                ExprGuiM.widgetEnv .
-                BWidgets.makeFocusDelegator (fdConfig (Config.hole config))
+                ExpressionGui.makeFocusDelegator (fdConfig (Config.hole config))
                 FocusDelegator.FocusEntryChild hidClosedSearchArea
         closedSearchTermGui <-
-            SearchTerm.make holeInfo >>= fdWrap & ExpressionGui.stdWrap pl
+            fdWrap <*> SearchTerm.make holeInfo & ExpressionGui.stdWrap pl
         isSelected <- ExprGuiM.widgetEnv $ WE.isSubCursor hidOpen
         if isSelected
-            then makeOpenSearchTermGui pl holeInfo
-                 -- ideally the fdWrap would be "inside" the
+            then -- ideally the fdWrap would be "inside" the
                  -- type-view addition and stdWrap, but it's not
                  -- important in the case the FD is selected, and
                  -- it is harder to implement, so just wrap it
                  -- here
-                 >>= fdWrap
+                 fdWrap <*> makeOpenSearchTermGui pl holeInfo
                  <&> (`Layout.hoverInPlaceOf` closedSearchTermGui)
             else return closedSearchTermGui

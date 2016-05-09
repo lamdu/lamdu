@@ -83,7 +83,7 @@ textEdit prop pl =
     do
         config <- ExprGuiM.readConfig <&> Config.literalText
         style <- ExprGuiM.readStyle <&> Style.styleText
-        do
+        edit <- do
             text <- BWidgets.makeTextEditor prop innerId
             let quoteSize = text ^. Widget.size & _1 .~ 0
             left <-
@@ -96,9 +96,9 @@ textEdit prop pl =
             <&> ExpressionGui.fromValueWidget
             & ExprGuiM.widgetEnv
             & ExprGuiM.localEnv (WE.envTextStyle .~ style)
-            >>= ExpressionGui.egWidget %%~
-            ExprGuiM.makeFocusDelegator (fdConfig config)
-                FocusDelegator.FocusEntryParent (WidgetIds.notDelegatingId myId)
+        ExpressionGui.makeFocusDelegator (fdConfig config)
+            FocusDelegator.FocusEntryParent (WidgetIds.notDelegatingId myId)
+            ?? edit
     & ExprGuiM.assignCursor myId (WidgetIds.notDelegatingId myId)
     where
         innerId = WidgetIds.delegatingId myId

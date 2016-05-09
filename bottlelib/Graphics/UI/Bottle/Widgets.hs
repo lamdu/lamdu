@@ -105,11 +105,11 @@ makeFocusDelegator ::
     FocusDelegator.Config ->
     FocusDelegator.FocusEntryTarget ->
     Widget.Id ->
-    Widget (f Widget.EventResult) -> WidgetEnvT m (Widget (f Widget.EventResult))
-makeFocusDelegator fdConfig focusEntryTarget myId childWidget =
+    WidgetEnvT m (Widget (f Widget.EventResult) -> Widget (f Widget.EventResult))
+makeFocusDelegator fdConfig focusEntryTarget myId =
     do
         env <- readEnv
-        FocusDelegator.make fdConfig focusEntryTarget myId env childWidget & return
+        FocusDelegator.make fdConfig focusEntryTarget myId env & return
 
 makeTextEdit ::
     Monad m =>

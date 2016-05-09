@@ -115,9 +115,9 @@ make VersionControl.Config{..} choiceBGLayer rwtransaction rtransaction actions 
                     & Lens.mapped . Property.pSet . Lens.mapped %~ rwtransaction
                     & rtransaction & lift
                 branchNameEdit <-
-                    BWidgets.makeLineEdit nameProp (branchTextEditId branch)
-                    >>= BWidgets.makeFocusDelegator branchNameFDConfig
-                        FocusDelegator.FocusEntryParent (branchDelegatorId branch)
+                    BWidgets.makeFocusDelegator branchNameFDConfig
+                    FocusDelegator.FocusEntryParent (branchDelegatorId branch)
+                    <*> BWidgets.makeLineEdit nameProp (branchTextEditId branch)
                 let delEventMap
                         | ListUtils.isLengthAtLeast 2 (branches actions) =
                             Widget.keysEventMapMovesCursor

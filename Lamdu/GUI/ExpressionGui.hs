@@ -16,6 +16,7 @@ module Lamdu.GUI.ExpressionGui
     , addValBGWithColor
     , liftLayers
     -- Lifted widgets:
+    , makeFocusDelegator
     , makeFocusableView
     , makeNameView
     , makeNameEdit, makeNameEditWith
@@ -380,6 +381,9 @@ makeNameEditWith ::
     (Widget (T m Widget.EventResult) -> Widget (T m Widget.EventResult)) ->
     Name m -> Widget.Id -> ExprGuiM m (Widget (T m Widget.EventResult))
 makeNameEditWith onActiveEditor (Name nameSrc nameCollision setName name) myId =
+    ExprGuiM.makeFocusDelegator nameEditFDConfig
+    FocusDelegator.FocusEntryParent myId
+    <*>
     do
         collisionSuffixes <-
             makeCollisionSuffixLabels nameCollision (Widget.toAnimId myId)
@@ -389,8 +393,6 @@ makeNameEditWith onActiveEditor (Name nameSrc nameCollision setName name) myId =
             & ExprGuiM.widgetEnv
         return . Box.hboxCentered $ nameEdit : collisionSuffixes
     <&> onActiveEditor
-    >>= ExprGuiM.makeFocusDelegator nameEditFDConfig
-        FocusDelegator.FocusEntryParent myId
     where
         emptyStringEnv env = env
             & WE.envTextStyle . TextEdit.sEmptyFocusedString .~ ""
@@ -414,16 +416,25 @@ stdWrap pl mkGui =
     >>= maybeAddAnnotationPl pl
     & wrapExprEventMap pl
 
+makeFocusDelegator ::
+    (Monad m, Monad f) =>
+    FocusDelegator.Config ->
+    FocusDelegator.FocusEntryTarget ->
+    Widget.Id ->
+    ExprGuiM m (ExpressionGui f -> ExpressionGui f)
+makeFocusDelegator =
+    ExprGuiM.makeFocusDelegator
+    <&> Lens.mapped . Lens.mapped . Lens.mapped %~ (egWidget %~)
+
 parentDelegator ::
     (Monad f, Monad m) =>
     Widget.Id -> ExpressionGui f -> ExprGuiM m (ExpressionGui f)
 parentDelegator myId gui =
     do
         config <- ExprGuiM.readConfig
-        gui
-            & egWidget %%~
-            ExprGuiM.makeFocusDelegator (parentExprFDConfig config)
+        makeFocusDelegator (parentExprFDConfig config)
             FocusDelegator.FocusEntryChild (WidgetIds.notDelegatingId myId)
+            ?? gui
 
 stdWrapParentExpr ::
     Monad m =>
