@@ -473,15 +473,16 @@ makeUnderCursorAssignment shownResultsLists hasHiddenResults holeInfo =
         hoverResultsWidget <-
             ExprGuiM.widgetEnv BWidgets.liftLayerInterval
             <*>
-            ( resultsWidget
+            ( addDarkBackground (Widget.toAnimId hidResultsPrefix)
+              ??
+              ( resultsWidget
                 & Widget.width %~ max (typeView ^. ExpressionGui.egWidget . Widget.width)
                 & Widget.strongerEvents resultsEventMap .
                   addBackground (Widget.toAnimId hidResultsPrefix) (Config.layers config)
                   holeOpenBGColor
                 & ExpressionGui.fromValueWidget
                 & Layout.addAfter Layout.Vertical [vspace, typeView]
-                & addDarkBackground (Widget.toAnimId hidResultsPrefix)
-                <&> (^. ExpressionGui.egWidget)
+              ) <&> (^. ExpressionGui.egWidget)
             )
         searchTermGui <- SearchTerm.make holeInfo
         searchTermGui

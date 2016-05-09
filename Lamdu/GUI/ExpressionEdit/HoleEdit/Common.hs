@@ -20,16 +20,16 @@ addBackground myId layers =
     Widget.backgroundColor (Config.layerHoleBG layers)
     (myId <> ["hole background"])
 
-addDarkBackground :: Monad m => AnimId -> ExpressionGui f -> ExprGuiM m (ExpressionGui f)
-addDarkBackground animId widget =
+addDarkBackground :: Monad m => AnimId -> ExprGuiM m (ExpressionGui f -> ExpressionGui f)
+addDarkBackground animId =
     do
         config <- ExprGuiM.readConfig
         let Config.Hole{..} = Config.hole config
-        widget
+        return $ \widget ->
+            widget
             & ExpressionGui.pad (holeDarkPadding <&> realToFrac)
             & ExpressionGui.egWidget %~
               Widget.backgroundColor
               (Config.layerDarkHoleBG (Config.layers config))
               (animId <> ["hole dark background"])
               holeDarkBGColor
-            & return
