@@ -6,8 +6,6 @@ module Lamdu.GUI.ExpressionEdit.EventMap
     , extractCursor
     ) where
 
-import           Prelude.Compat
-
 import           Control.Applicative (liftA2)
 import           Control.Lens.Operators
 import qualified Data.Store.Transaction as Transaction
@@ -28,14 +26,16 @@ import           Lamdu.Sugar.NearestHoles (NearestHoles)
 import qualified Lamdu.Sugar.NearestHoles as NearestHoles
 import qualified Lamdu.Sugar.Types as Sugar
 
+import           Prelude.Compat
+
 type T = Transaction.Transaction
 
 data IsHoleResult = HoleResult | NotHoleResult
 
 make ::
-    Monad m =>
-    HolePickers m -> Sugar.Payload m ExprGuiT.Payload ->
-    ExprGuiM m (Widget.EventMap (T m Widget.EventResult))
+    (Monad m, Monad f) =>
+    HolePickers f -> Sugar.Payload f ExprGuiT.Payload ->
+    ExprGuiM m (Widget.EventMap (T f Widget.EventResult))
 make holePickers pl =
     mconcat <$> sequenceA
     [ actionsEventMap holePickers isHoleResult (pl ^. Sugar.plActions)
@@ -59,8 +59,8 @@ mkEventMapWithPickers holePickers keys doc f =
     fmap Widget.eventResultFromCursor . f
 
 jumpHolesEventMap ::
-    Monad m =>
-    NearestHoles -> ExprGuiM m (Widget.EventMap (T m Widget.EventResult))
+    (Monad m, Monad f) =>
+    NearestHoles -> ExprGuiM m (Widget.EventMap (T f Widget.EventResult))
 jumpHolesEventMap hg =
     do
         config <- ExprGuiM.readConfig <&> Config.hole
@@ -78,9 +78,9 @@ jumpHolesEventMap hg =
         jumpDoc dirStr = "Jump to " ++ dirStr ++ " hole"
 
 jumpHolesEventMapIfSelected ::
-    Monad m =>
-    Sugar.Payload m ExprGuiT.Payload ->
-    ExprGuiM m (Widget.EventMap (T m Widget.EventResult))
+    (Monad m, Monad f) =>
+    Sugar.Payload dummy ExprGuiT.Payload ->
+    ExprGuiM m (Widget.EventMap (T f Widget.EventResult))
 jumpHolesEventMapIfSelected pl =
     do
         isSelected <- ExprGuiM.isExprSelected pl
@@ -104,9 +104,9 @@ extractEventMap config actions =
         keys = Config.extractKeys config
 
 replaceOrComeToParentEventMap ::
-    Monad m =>
-    Sugar.Payload m ExprGuiT.Payload ->
-    ExprGuiM m (Widget.EventMap (T m Widget.EventResult))
+    (Monad m, Monad f) =>
+    Sugar.Payload f ExprGuiT.Payload ->
+    ExprGuiM m (Widget.EventMap (T f Widget.EventResult))
 replaceOrComeToParentEventMap pl =
     do
         config <- ExprGuiM.readConfig
@@ -124,9 +124,9 @@ replaceOrComeToParentEventMap pl =
             & return
 
 actionsEventMap ::
-    Monad m =>
-    HolePickers m -> IsHoleResult -> Sugar.Actions m ->
-    ExprGuiM m (Widget.EventMap (T m Widget.EventResult))
+    (Monad m, Monad f) =>
+    HolePickers f -> IsHoleResult -> Sugar.Actions f ->
+    ExprGuiM m (Widget.EventMap (T f Widget.EventResult))
 actionsEventMap holePickers isHoleResult actions =
     do
         config <- ExprGuiM.readConfig
@@ -174,7 +174,7 @@ wrapEventMap holePickers config actions =
     Sugar.WrapNotAllowed -> mempty
 
 replaceEventMap ::
-    Monad m =>
+    Functor m =>
     Config -> Sugar.Actions m -> Widget.EventMap (T m Widget.EventResult)
 replaceEventMap config actions =
     mconcat

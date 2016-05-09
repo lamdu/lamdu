@@ -90,7 +90,11 @@ type T = Transaction
 
 {-# INLINE egWidget #-}
 egWidget ::
-    Lens (ExpressionGui m) (ExpressionGui n) (Widget (T m Widget.EventResult)) (Widget (T n Widget.EventResult))
+    Lens
+    (ExpressionGui m)
+    (ExpressionGui n)
+    (Widget (T m Widget.EventResult))
+    (Widget (T n Widget.EventResult))
 egWidget = Layout.alignedWidget . _2
 
 {-# INLINE egAlignment #-}
@@ -244,7 +248,7 @@ data EvalResDisplay = EvalResDisplay
     }
 
 makeEvaluationResultView ::
-    Monad m => AnimId -> EvalResDisplay -> ExprGuiM m (ExpressionGui m)
+    Monad m => AnimId -> EvalResDisplay -> ExprGuiM m (ExpressionGui f)
 makeEvaluationResultView animId res =
     do
         config <- ExprGuiM.readConfig
@@ -257,7 +261,7 @@ makeEvaluationResultView animId res =
     <&> Widget.fromView
     <&> fromValueWidget
 
-makeTypeView :: Monad m => Type -> AnimId -> ExprGuiM m (ExpressionGui m)
+makeTypeView :: Monad m => Type -> AnimId -> ExprGuiM m (ExpressionGui f)
 makeTypeView typ animId =
     TypeView.make animId typ <&> fromValueWidget . Widget.fromView
 
@@ -269,7 +273,7 @@ data NeighborVals a = NeighborVals
 makeEvalView ::
     Monad m =>
     NeighborVals (Maybe EvalResDisplay) -> EvalResDisplay ->
-    AnimId -> ExprGuiM m (ExpressionGui m)
+    AnimId -> ExprGuiM m (ExpressionGui f)
 makeEvalView (NeighborVals mPrev mNext) evalRes animId =
     do
         config <- ExprGuiM.readConfig
@@ -318,14 +322,14 @@ addAnnotationH f wideBehavior entityId =
 addInferredType ::
     Monad m =>
     Type -> WideAnnotationBehavior -> Sugar.EntityId ->
-    ExprGuiM m (ExpressionGui m -> ExpressionGui m)
+    ExprGuiM m (ExpressionGui f -> ExpressionGui f)
 addInferredType typ = addAnnotationH (makeTypeView typ)
 
 addEvaluationResult ::
     Monad m =>
     Type -> NeighborVals (Maybe EvalResDisplay) -> EvalResDisplay ->
     WideAnnotationBehavior -> Sugar.EntityId ->
-    ExprGuiM m (ExpressionGui m -> ExpressionGui m)
+    ExprGuiM m (ExpressionGui f -> ExpressionGui f)
 -- REVIEW(Eyal): This is misleading when it refers to Previous results
 addEvaluationResult typ neigh resDisp wideBehavior entityId =
     case (erdVal resDisp ^. ER.payload, erdVal resDisp ^. ER.body) of
@@ -545,8 +549,8 @@ wrapExprEventMap pl action =
 
 maybeAddAnnotationPl ::
     Monad m =>
-    Sugar.Payload m0 ExprGuiT.Payload ->
-    ExpressionGui m -> ExprGuiM m (ExpressionGui m)
+    Sugar.Payload x ExprGuiT.Payload ->
+    ExpressionGui f -> ExprGuiM m (ExpressionGui f)
 maybeAddAnnotationPl pl eg =
     do
         wideAnnotationBehavior <-
@@ -576,7 +580,7 @@ data EvalAnnotationOptions
 maybeAddAnnotation ::
     Monad m =>
     WideAnnotationBehavior -> ShowAnnotation -> Sugar.Annotation -> Sugar.EntityId ->
-    ExpressionGui m -> ExprGuiM m (ExpressionGui m)
+    ExpressionGui f -> ExprGuiM m (ExpressionGui f)
 maybeAddAnnotation = maybeAddAnnotationWith NormalEvalAnnotation
 
 data AnnotationMode
@@ -604,8 +608,8 @@ getAnnotationMode opt annotation =
 maybeAddAnnotationWith ::
     Monad m =>
     EvalAnnotationOptions -> WideAnnotationBehavior -> ShowAnnotation ->
-    Sugar.Annotation -> Sugar.EntityId -> ExpressionGui m ->
-    ExprGuiM m (ExpressionGui m)
+    Sugar.Annotation -> Sugar.EntityId -> ExpressionGui f ->
+    ExprGuiM m (ExpressionGui f)
 maybeAddAnnotationWith opt wideAnnotationBehavior ShowAnnotation{..} annotation entityId eg =
     getAnnotationMode opt annotation
     >>= \case
