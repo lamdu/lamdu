@@ -35,13 +35,12 @@ mkLhsEdits :: Monad m => Maybe (ExpressionGui m) -> Maybe (ExpressionGui m) -> [
 mkLhsEdits mParamsEdit mScopeEdit =
     mParamsEdit <&> addScopeEdit mScopeEdit & (^.. Lens._Just)
 
-mkExpanded :: Monad m => Maybe (ExpressionGui m) -> Maybe (ExpressionGui m) -> AnimId -> ExprGuiM m [ExpressionGui m]
-mkExpanded mParamsEdit mScopeEdit animId =
+mkExpanded :: Monad m => AnimId -> ExprGuiM m (Maybe (ExpressionGui m) -> Maybe (ExpressionGui m) -> [ExpressionGui m])
+mkExpanded animId =
     do
         labelEdit <- ExpressionGui.grammarLabel "→" animId
-        lhsEdits ++ [labelEdit] & return
-    where
-        lhsEdits = mkLhsEdits mParamsEdit mScopeEdit
+        return $ \mParamsEdit mScopeEdit ->
+            mkLhsEdits mParamsEdit mScopeEdit ++ [labelEdit]
 
 lamId :: Widget.Id -> Widget.Id
 lamId = (`Widget.joinId` ["lam"])
@@ -85,7 +84,7 @@ mkLightLambda mParamsEdit mScopeEdit params myId =
                 Widget.keysEventMapMovesCursor shrinkKeys
                 (E.Doc ["View", "Shrink Lambda Params"]) (return (lamId myId))
         if isSelected
-            then mkExpanded mParamsEdit mScopeEdit animId
+            then mkExpanded animId ?? mParamsEdit ?? mScopeEdit
                  <&> Lens.mapped . ExpressionGui.egWidget %~
                      Widget.weakerEvents shrinkEventMap
             else mkShrunk paramIds mScopeEdit myId
@@ -110,7 +109,7 @@ make lam pl =
             case (lam ^. Sugar.lamMode, params) of
             (_, Sugar.NullParam{}) -> mkLhsEdits mParamsEdit mScopeEdit & return
             (Sugar.LightLambda, _) -> mkLightLambda mParamsEdit mScopeEdit params myId
-            _ -> mkExpanded mParamsEdit mScopeEdit animId
+            _ -> mkExpanded animId ?? mParamsEdit ?? mScopeEdit
         ExpressionGui.hboxSpaced
             <&> ($ paramsAndLabelEdits ++ [bodyEdit])
             <&> ExpressionGui.egWidget %~ Widget.weakerEvents eventMap
