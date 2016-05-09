@@ -46,9 +46,9 @@ lamId :: Widget.Id -> Widget.Id
 lamId = (`Widget.joinId` ["lam"])
 
 mkShrunk ::
-    Monad m => [Sugar.EntityId] -> Maybe (ExpressionGui m) -> Widget.Id ->
-    ExprGuiM m [ExpressionGui m]
-mkShrunk paramIds mScopeEdit myId =
+    Monad m => [Sugar.EntityId] -> Widget.Id ->
+    ExprGuiM m (Maybe (ExpressionGui m) -> [ExpressionGui m])
+mkShrunk paramIds myId =
     do
         config <- ExprGuiM.readConfig
         let expandEventMap =
@@ -57,13 +57,14 @@ mkShrunk paramIds mScopeEdit myId =
                   (Widget.keysEventMapMovesCursor (Config.jumpToDefinitionKeys config)
                    (E.Doc ["View", "Expand Lambda Params"]) . return .
                    WidgetIds.fromEntityId)
-        ExpressionGui.makeFocusableView (lamId myId)
+        lamLabel <-
+            ExpressionGui.makeFocusableView (lamId myId)
             <*> ExpressionGui.grammarLabel "λ" animId
             & LightLambda.withUnderline (Config.lightLambda config)
-            -- TODO: add event to jump to first param
-            <&> addScopeEdit mScopeEdit
-            <&> ExpressionGui.egWidget %~ Widget.weakerEvents expandEventMap
-            <&> (:[])
+        return $ \mScopeEdit ->
+            [ addScopeEdit mScopeEdit lamLabel
+              & ExpressionGui.egWidget %~ Widget.weakerEvents expandEventMap
+            ]
     where
         animId = Widget.toAnimId myId
 
@@ -87,7 +88,7 @@ mkLightLambda params myId mParamsEdit mScopeEdit =
             then mkExpanded animId ?? mParamsEdit ?? mScopeEdit
                  <&> Lens.mapped . ExpressionGui.egWidget %~
                      Widget.weakerEvents shrinkEventMap
-            else mkShrunk paramIds mScopeEdit myId
+            else mkShrunk paramIds myId ?? mScopeEdit
     where
         paramIds = params ^.. SugarLens.binderNamedParams . Sugar.fpId
         animId = Widget.toAnimId myId
