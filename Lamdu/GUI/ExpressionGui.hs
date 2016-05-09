@@ -501,10 +501,11 @@ liftLayers =
     <&> (egWidget %~)
 
 addValFrame ::
-    Monad m => Widget.Id -> ExpressionGui f -> ExprGuiM m (ExpressionGui f)
-addValFrame myId gui =
-    (addValBG myId <&> (egWidget %~))
-    <*> (addValPadding <*> return gui) -- TODO
+    Monad m => Widget.Id -> ExprGuiM m (ExpressionGui f -> ExpressionGui f)
+addValFrame myId =
+    (.)
+    <$> (addValBG myId <&> (egWidget %~))
+    <*> addValPadding
 
 stdWrapParenify ::
     Monad m =>

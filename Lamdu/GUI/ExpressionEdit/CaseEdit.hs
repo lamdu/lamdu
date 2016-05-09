@@ -102,9 +102,8 @@ make (Sugar.Case mArg alts caseTail addAlt cEntityId) pl =
                 & Widget.keysEventMapMovesCursor (Config.caseAddAltKeys config)
                   (E.Doc ["Edit", "Case", "Add Alt"])
         vspace <- ExpressionGui.stdVSpace
-        [header, vspace, altsGui]
-            & ExpressionGui.vboxTopFocalAlignedTo 0
-            & ExpressionGui.addValFrame myId
+        ExpressionGui.addValFrame myId
+            ?? ExpressionGui.vboxTopFocalAlignedTo 0 [header, vspace, altsGui]
             <&> ExpressionGui.egWidget %~ Widget.weakerEvents addAltEventMap
 
 makeAltRow ::

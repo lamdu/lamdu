@@ -180,4 +180,4 @@ mkBoxed annotatedArgs myId mkFuncRow =
         mkFuncRow
             & ExprGuiM.withLocalPrecedence (const 0)
             <&> ExpressionGui.addBelow 0 [(0, grid)]
-            >>= ExpressionGui.addValFrame myId
+            & (ExpressionGui.addValFrame myId <*>)
