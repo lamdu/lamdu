@@ -69,11 +69,11 @@ mkShrunk paramIds mScopeEdit myId =
 
 mkLightLambda ::
     Monad n =>
-    Maybe (ExpressionGui n) ->
-    Maybe (ExpressionGui n) ->
     Sugar.BinderParams a m -> Widget.Id ->
+    Maybe (ExpressionGui n) ->
+    Maybe (ExpressionGui n) ->
     ExprGuiM n [ExpressionGui n]
-mkLightLambda mParamsEdit mScopeEdit params myId =
+mkLightLambda params myId mParamsEdit mScopeEdit =
     do
         isSelected <-
             mapM (WE.isSubCursor . WidgetIds.fromEntityId) paramIds
@@ -108,7 +108,7 @@ make lam pl =
         paramsAndLabelEdits <-
             case (lam ^. Sugar.lamMode, params) of
             (_, Sugar.NullParam{}) -> mkLhsEdits mParamsEdit mScopeEdit & return
-            (Sugar.LightLambda, _) -> mkLightLambda mParamsEdit mScopeEdit params myId
+            (Sugar.LightLambda, _) -> mkLightLambda params myId mParamsEdit mScopeEdit
             _ -> mkExpanded animId ?? mParamsEdit ?? mScopeEdit
         ExpressionGui.hboxSpaced
             <&> ($ paramsAndLabelEdits ++ [bodyEdit])
