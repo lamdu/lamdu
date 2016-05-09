@@ -92,7 +92,6 @@ mainLoopConfig config =
         }
     , cCursor =
         CursorConfig
-        { cursorLayer = Config.layerCursor (Config.layers config)
-        , cursorColor = Config.cursorBGColor config
+        { cursorColor = Config.cursorBGColor config
         }
     }

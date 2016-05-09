@@ -21,7 +21,6 @@ import qualified Lamdu.GUI.VersionControl.Config as VersionControl
 
 data Layers = Layers
     { layerMin
-    , layerCursor
     , layerAnnotations
     , layerTypeIndicatorFrame
     , layerChoiceBG

@@ -60,6 +60,7 @@ import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Data.Map (Map)
 import qualified Data.Map as Map
+import           Data.Maybe (fromMaybe)
 import qualified Data.Monoid as Monoid
 import           Data.Monoid.Generic (def_mempty, def_mappend)
 import           Data.Vector.Vector2 (Vector2(..))
@@ -306,9 +307,8 @@ respondToCursor widget =
 cursorAnimId :: AnimId
 cursorAnimId = ["background"]
 
-data CursorConfig = CursorConfig
-    { cursorLayer :: Anim.Layer
-    , cursorColor :: Draw.Color
+newtype CursorConfig = CursorConfig
+    { cursorColor :: Draw.Color
     }
 
 renderWithCursor :: CursorConfig -> Widget a -> Anim.Frame
@@ -316,6 +316,8 @@ renderWithCursor CursorConfig{..} widget =
     maybe mempty renderCursor (widget ^? mFocus . Lens._Just . focalArea)
     & mappend (widget ^. animFrame)
     where
+        minLayer = fromMaybe 0 (Lens.minimumOf animLayers widget)
+        cursorLayer = minLayer - 1
         renderCursor area =
             Anim.backgroundColor cursorAnimId cursorLayer cursorColor
             (area ^. Rect.size)
