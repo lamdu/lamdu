@@ -103,7 +103,7 @@ make hole pl =
                 Just wrapperGui ->
                     do
                         unfocusedWrapperGui <-
-                            wrapperGui & ExpressionGui.maybeAddAnnotationPl pl
+                            ExpressionGui.maybeAddAnnotationPl pl ?? wrapperGui
                         isSelected <- ExprGuiM.widgetEnv $ WE.isSubCursor hidHole
                         let layout f = do
                                 searchAreaGui <-

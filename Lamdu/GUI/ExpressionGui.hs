@@ -411,10 +411,7 @@ stdWrap ::
     Sugar.Payload m ExprGuiT.Payload ->
     ExprGuiM m (ExpressionGui m) ->
     ExprGuiM m (ExpressionGui m)
-stdWrap pl mkGui =
-    mkGui
-    >>= maybeAddAnnotationPl pl
-    & wrapExprEventMap pl
+stdWrap pl mkGui = maybeAddAnnotationPl pl <*> mkGui & wrapExprEventMap pl
 
 makeFocusDelegator ::
     (Monad m, Monad f) =>
@@ -560,8 +557,8 @@ wrapExprEventMap pl action =
 maybeAddAnnotationPl ::
     Monad m =>
     Sugar.Payload x ExprGuiT.Payload ->
-    ExpressionGui f -> ExprGuiM m (ExpressionGui f)
-maybeAddAnnotationPl pl eg =
+    ExprGuiM m (ExpressionGui f -> ExpressionGui f)
+maybeAddAnnotationPl pl =
     do
         wideAnnotationBehavior <-
             if showAnnotation ^. ExprGuiT.showExpanded
@@ -571,7 +568,6 @@ maybeAddAnnotationPl pl eg =
             showAnnotation
             (pl ^. Sugar.plAnnotation)
             (pl ^. Sugar.plEntityId)
-            ?? eg
     where
         showAnnotation = pl ^. Sugar.plData . ExprGuiT.plShowAnnotation
 
