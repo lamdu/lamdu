@@ -31,27 +31,29 @@ import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Sugar.Names.Types (Name(..))
 import qualified Lamdu.Sugar.Types as Sugar
 
-shrinkIfHigherThanLine :: Monad m => ExpressionGui f -> ExprGuiM m (ExpressionGui f)
-shrinkIfHigherThanLine w =
+shrinkIfHigherThanLine :: Monad m => ExprGuiM m (ExpressionGui f -> ExpressionGui f)
+shrinkIfHigherThanLine =
     do
         sizedFont <-
             ExprGuiM.widgetEnv WE.readTextStyle
             <&> (^. TextEdit.sTextViewStyle . TextView.styleFont)
         config <- ExprGuiM.readConfig <&> Config.hole
-        let ratio =
-                (Font.height sizedFont /
-                  w ^. ExpressionGui.egWidget . Widget.height)
-                ** realToFrac (Config.holeResultInjectedScaleExponent config)
-        return $
-            if ratio < 1
-            then
-                ExpressionGui.scale (realToFrac ratio) w
-                & ExpressionGui.egAlignment . _2 .~ 0.5
-            else w
+        return $ \w ->
+            let ratio =
+                    (Font.height sizedFont /
+                      w ^. ExpressionGui.egWidget . Widget.height)
+                    ** realToFrac (Config.holeResultInjectedScaleExponent config)
+                result
+                    | ratio >= 1 = w
+                    | otherwise =
+                          w
+                          & ExpressionGui.scale (realToFrac ratio)
+                          & ExpressionGui.egAlignment . _2 .~ 0.5
+            in result
 
 make :: Monad m => ExprGuiT.SugarExpr m -> ExprGuiM m (ExpressionGui m)
 make sExpr =
-    makeEditor body pl >>= maybeShrink
+    maybeShrink <*> makeEditor body pl
     & assignCursor
     where
         Sugar.Expression body pl = sExpr
@@ -61,7 +63,7 @@ make sExpr =
         myId = WidgetIds.fromExprPayload pl
         maybeShrink
             | or (pl ^. Sugar.plData ^. ExprGuiT.plInjected) = shrinkIfHigherThanLine
-            | otherwise = return
+            | otherwise = pure id
         assignCursor x =
             foldr (`ExprGuiM.assignCursorPrefix` const myId) x $
             exprHiddenEntityIds <&> WidgetIds.fromEntityId
