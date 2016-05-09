@@ -123,10 +123,10 @@ make annotationOpts showAnnotation prevId nextId param =
         iMakeNameEdit info myId
             <&> ExpressionGui.egWidget %~ Widget.weakerEvents paramEventMap
             <&> ExpressionGui.egAlignment . _1 .~ 0.5
-            >>= ExpressionGui.maybeAddAnnotationWith annotationOpts
+            & ( ExpressionGui.maybeAddAnnotationWith annotationOpts
                 ExpressionGui.KeepWideAnnotation showAnnotation
                 (param ^. Sugar.fpAnnotation)
-                entityId
+                entityId <*> )
     where
         entityId = param ^. Sugar.fpId
         myId = WidgetIds.fromEntityId entityId

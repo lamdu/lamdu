@@ -567,11 +567,11 @@ maybeAddAnnotationPl pl eg =
             if showAnnotation ^. ExprGuiT.showExpanded
             then return KeepWideAnnotation
             else ExprGuiM.isExprSelected pl <&> wideAnnotationBehaviorFromSelected
-        eg
-            & maybeAddAnnotation wideAnnotationBehavior
-              showAnnotation
-              (pl ^. Sugar.plAnnotation)
-              (pl ^. Sugar.plEntityId)
+        maybeAddAnnotation wideAnnotationBehavior
+            showAnnotation
+            (pl ^. Sugar.plAnnotation)
+            (pl ^. Sugar.plEntityId)
+            ?? eg
     where
         showAnnotation = pl ^. Sugar.plData . ExprGuiT.plShowAnnotation
 
@@ -590,7 +590,7 @@ data EvalAnnotationOptions
 maybeAddAnnotation ::
     Monad m =>
     WideAnnotationBehavior -> ShowAnnotation -> Sugar.Annotation -> Sugar.EntityId ->
-    ExpressionGui f -> ExprGuiM m (ExpressionGui f)
+    ExprGuiM m (ExpressionGui f -> ExpressionGui f)
 maybeAddAnnotation = maybeAddAnnotationWith NormalEvalAnnotation
 
 data AnnotationMode
@@ -618,32 +618,31 @@ getAnnotationMode opt annotation =
 maybeAddAnnotationWith ::
     Monad m =>
     EvalAnnotationOptions -> WideAnnotationBehavior -> ShowAnnotation ->
-    Sugar.Annotation -> Sugar.EntityId -> ExpressionGui f ->
-    ExprGuiM m (ExpressionGui f)
-maybeAddAnnotationWith opt wideAnnotationBehavior ShowAnnotation{..} annotation entityId eg =
+    Sugar.Annotation -> Sugar.EntityId ->
+    ExprGuiM m (ExpressionGui f -> ExpressionGui f)
+maybeAddAnnotationWith opt wideAnnotationBehavior ShowAnnotation{..} annotation entityId =
     getAnnotationMode opt annotation
     >>= \case
-        AnnotationModeNone
-            | _showExpanded -> withType
-            | otherwise -> noAnnotation
-        AnnotationModeEvaluation n v ->
-            case _showInEvalMode of
-            EvalModeShowNothing -> noAnnotation
-            EvalModeShowType -> withType
-            EvalModeShowEval -> withVal n v
-        AnnotationModeTypes
-            | _showInTypeMode -> withType
-            | otherwise -> noAnnotation
+    AnnotationModeNone
+        | _showExpanded -> withType
+        | otherwise -> noAnnotation
+    AnnotationModeEvaluation n v ->
+        case _showInEvalMode of
+        EvalModeShowNothing -> noAnnotation
+        EvalModeShowType -> withType
+        EvalModeShowEval -> withVal n v
+    AnnotationModeTypes
+        | _showInTypeMode -> withType
+        | otherwise -> noAnnotation
     where
-        noAnnotation = return eg
+        noAnnotation = pure id
         -- concise mode and eval mode with no result
         inferredType = annotation ^. Sugar.aInferredType
         withType =
             addInferredType inferredType wideAnnotationBehavior entityId
-            <&> (eg &)
         withVal neighborVals scopeAndVal =
             addEvaluationResult inferredType neighborVals scopeAndVal
-            wideAnnotationBehavior entityId <&> (eg &)
+            wideAnnotationBehavior entityId
 
 valOfScope :: Sugar.Annotation -> CurAndPrev (Maybe ER.ScopeId) -> Maybe EvalResDisplay
 valOfScope annotation mScopeIds =
