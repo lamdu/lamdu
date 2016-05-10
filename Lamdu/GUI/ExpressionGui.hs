@@ -204,11 +204,11 @@ applyWideAnnotationBehavior ::
     ExprGuiM m (Vector2 Widget.R -> ExpressionGui f -> ExpressionGui f)
 applyWideAnnotationBehavior _ KeepWideAnnotation = return (const id)
 applyWideAnnotationBehavior animId ShrinkWideAnnotation =
-    do
-        config <- ExprGuiM.readConfig
-        return $ \shrinkRatio eg ->
-            Layout.scaleAround (Vector2 0.5 0) shrinkRatio eg
-            & addAnnotationBackground config animId
+    ExprGuiM.readConfig
+    <&>
+    \config shrinkRatio eg ->
+    Layout.scaleAround (Vector2 0.5 0) shrinkRatio eg
+    & addAnnotationBackground config animId
 applyWideAnnotationBehavior animId HoverWideAnnotation =
     do
         config <- ExprGuiM.readConfig
