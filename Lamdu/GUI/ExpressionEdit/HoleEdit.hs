@@ -56,8 +56,9 @@ addSearchAreaBelow ::
     Monad m => WidgetIds ->
     ExprGuiM m (ExpressionGui f -> ExpressionGui f -> ExpressionGui f)
 addSearchAreaBelow ids =
-    hover ids ["searchArea"] <&>
-    \f  wrapperGui searchAreaGui ->
+    hover ids ["searchArea"]
+    <&>
+    \f wrapperGui searchAreaGui ->
     Layout.addAfter Layout.Vertical [f searchAreaGui] wrapperGui
 
 addWrapperAbove ::
@@ -66,7 +67,6 @@ addWrapperAbove ::
 addWrapperAbove ids =
     do
         Config.Hole{..} <- ExprGuiM.readConfig <&> Config.hole
-        -- \
         hover ids ["wrapper"]
             <&> \f wrapperGui searchAreaGui ->
             Layout.addBefore Layout.Vertical
