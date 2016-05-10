@@ -23,17 +23,19 @@ import qualified Lamdu.GUI.WidgetIds as WidgetIds
 
 addTextParensI ::
     (Monad m, Applicative f) =>
-    AnimId -> Widget.Id -> Layout (f Widget.EventResult) ->
-    WidgetEnvT m (Layout (f Widget.EventResult))
-addTextParensI parenId rParenId widget =
+    AnimId -> Widget.Id ->
+    WidgetEnvT m
+    (Layout (f Widget.EventResult) -> Layout (f Widget.EventResult))
+addTextParensI parenId rParenId =
     do
         beforeParen <- label "("
         afterParen <- BWidgets.makeFocusableView rParenId <*> label ")"
-        Layout.hbox 0.5
+        return $ \widget ->
+            Layout.hbox 0.5
             [ beforeParen & Layout.fromCenteredWidget
             , widget
             , afterParen & Layout.fromCenteredWidget
-            ] & return
+            ]
     where
         label str = BWidgets.makeLabel str $ parensPrefix parenId
 
@@ -45,18 +47,19 @@ highlightExpression config =
 
 addHighlightedTextParens ::
     (Monad m, Applicative f) =>
-    Widget.Id -> Layout (f Widget.EventResult) ->
-    ExprGuiM m (Layout (f Widget.EventResult))
-addHighlightedTextParens myId widget =
+    Widget.Id ->
+    ExprGuiM m
+    (Layout (f Widget.EventResult) -> Layout (f Widget.EventResult))
+addHighlightedTextParens myId =
     do
         mInsideParenId <- WE.subCursor rParenId & ExprGuiM.widgetEnv
-        widgetWithParens <- addTextParensI animId rParenId widget & ExprGuiM.widgetEnv
         config <- ExprGuiM.readConfig
-        return $
-            widgetWithParens
-            & case mInsideParenId of
+        (.)
+            <$> addTextParensI animId rParenId
+            ?? case mInsideParenId of
                 Nothing -> id
                 Just _ -> Layout.alignedWidget . _2 %~ highlightExpression config
+            & ExprGuiM.widgetEnv
     where
         rParenId = Widget.joinId myId [")"]
         animId = Widget.toAnimId myId

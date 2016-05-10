@@ -467,7 +467,7 @@ parenify prec myId mkGui =
     do
         parent <- ExprGuiM.outerPrecedence
         if needParens (ParentPrecedence parent) prec
-              then mkGui >>= Parens.addHighlightedTextParens myId
+              then Parens.addHighlightedTextParens myId <*> mkGui
                    & ExprGuiM.withLocalPrecedence (const 0)
               else mkGui
 
