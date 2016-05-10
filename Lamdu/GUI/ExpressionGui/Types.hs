@@ -18,7 +18,6 @@ module Lamdu.GUI.ExpressionGui.Types
 import           Control.Lens (Lens, Lens')
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
-import           Control.Lens.Tuple
 import           Data.Store.Transaction (Transaction)
 import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
@@ -44,7 +43,7 @@ egWidget = Layout.widget
 
 {-# INLINE egAlignment #-}
 egAlignment :: Lens' (ExpressionGui m) Layout.Alignment
-egAlignment = Layout.alignedWidget . _1
+egAlignment = Layout.alignment
 
 data EvalModeShow = EvalModeShowNothing | EvalModeShowType | EvalModeShowEval
     deriving (Eq, Ord, Show)

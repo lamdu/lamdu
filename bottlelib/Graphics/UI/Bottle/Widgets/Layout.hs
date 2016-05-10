@@ -5,7 +5,7 @@ module Graphics.UI.Bottle.Widgets.Layout
     , empty
     , AlignedWidget, AbsAlignedWidget
     , alignedWidget, absAlignedWidget
-    , widget, width
+    , alignment, widget, width
     , fromCenteredWidget
 
     , AddLayout(..)
@@ -58,8 +58,8 @@ boxComponentsAlignedWidgets ::
     Lens.Getting Widget.R Box.Alignment Widget.R ->
     Lens.Fold (BoxComponents a) (Widget.R, Widget a)
 boxComponentsAlignedWidgets getAlign = Lens.folding $
-    \(BoxComponents before (alignment, focal) after) ->
-    before ++ [(alignment ^. getAlign, focal)] ++ after
+    \(BoxComponents before (align, focal) after) ->
+    before ++ [(align ^. getAlign, focal)] ++ after
 
 data LayoutInternal a
     = LayoutSingleton (AlignedWidget a)
@@ -74,6 +74,10 @@ data Layout a = Layout
 alignedWidget ::
     Lens.Iso (Layout a) (Layout b) (AlignedWidget a) (AlignedWidget b)
 alignedWidget = Lens.iso toAlignedWidget (mkLayout . LayoutSingleton)
+
+{-# INLINE alignment #-}
+alignment :: Lens' (Layout a) Box.Alignment
+alignment = alignedWidget . _1
 
 {-# INLINE widget #-}
 widget :: Lens (Layout a) (Layout b) (Widget a) (Widget b)
@@ -196,8 +200,8 @@ scaleAround :: Vector2 Widget.R -> Vector2 Widget.R -> Layout a -> Layout a
 scaleAround point ratio =
     alignedWidget %~ f
     where
-        f (alignment, w) =
-            ( point + (alignment - point) / ratio
+        f (align, w) =
+            ( point + (align - point) / ratio
             , Widget.scale ratio w
             )
 
@@ -208,8 +212,8 @@ pad :: Vector2 Widget.R -> Layout a -> Layout a
 pad padding =
     alignedWidget %~ f
     where
-        f (alignment, w) =
-            ( alignment & fromRelative & (+ padding) & toRelative
+        f (align, w) =
+            ( align & fromRelative & (+ padding) & toRelative
             , paddedWidget
             )
             where
