@@ -149,11 +149,12 @@ makeSubexpression ::
     Monad m =>
     (Precedence -> Precedence) -> ExprGuiT.SugarExpr m -> ExprGuiM m (ExpressionGui m)
 makeSubexpression onPrecedence expr =
-    advanceDepth (return . Layout.fromCenteredWidget . Widget.fromView) animId $
     do
-        maker <- ExprGuiM $ Lens.view aMakeSubexpression
+        maker <- Lens.view aMakeSubexpression & ExprGuiM
         maker expr & withLocalPrecedence onPrecedence
+    & advanceDepth fromView animId
     where
+        fromView = return . const . Layout.fromCenteredWidget . Widget.fromView
         animId = toAnimId $ WidgetIds.fromExprPayload $ expr ^. Sugar.rPayload
 
 advanceDepth ::

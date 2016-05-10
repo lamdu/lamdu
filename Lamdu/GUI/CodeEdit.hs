@@ -25,6 +25,8 @@ import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets as BWidgets
 import qualified Graphics.UI.Bottle.Widgets.Box as Box
+import           Graphics.UI.Bottle.Widgets.Layout (Layout)
+import qualified Graphics.UI.Bottle.Widgets.Layout as Layout
 import           Graphics.UI.Bottle.WidgetsEnvT (WidgetEnvT)
 import qualified Graphics.UI.Bottle.WidgetsEnvT as WE
 import           Lamdu.Config (Config)
@@ -38,6 +40,7 @@ import           Lamdu.GUI.CodeEdit.Settings (Settings)
 import qualified Lamdu.GUI.DefinitionEdit as DefinitionEdit
 import qualified Lamdu.GUI.ExpressionEdit as ExpressionEdit
 import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
+import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
@@ -192,7 +195,7 @@ processExpr env expr =
 gui ::
     Monad m =>
     Env m -> Widget.Id -> ExprGuiT.SugarExpr m -> [Pane m] ->
-    WidgetEnvT (T m) (Widget (M m Widget.EventResult))
+    WidgetEnvT (T m) (Widget.R -> Widget (M m Widget.EventResult))
 gui env rootId replExpr panes =
     do
         replEdit <- makeReplEdit env rootId replExpr
@@ -203,11 +206,14 @@ gui env rootId replExpr panes =
         newDefinitionButton <- makeNewDefinitionButton rootId <&> mLiftWidget
         eventMap <- panesEventMap env & ExprGuiM.widgetEnv
         vspace <- ExprGuiM.vspacer (Config.paneSpacing . Config.pane)
-        [replEdit] ++ panesEdits ++ [newDefinitionButton]
-            & intersperse vspace
-            & Box.vboxAlign 0
-            & Widget.weakerEvents eventMap
-            & return
+        return $
+            \width ->
+            let render x = x (ExpressionGui.LayoutNarrow width) ^. Layout.widget
+            in
+                [render replEdit] ++ (panesEdits <&> render) ++ [newDefinitionButton]
+                & intersperse vspace
+                & Box.vboxAlign 0
+                & Widget.weakerEvents eventMap
     & ExprGuiM.assignCursor rootId replId
     & ExprGuiM.run ExpressionEdit.make
       (codeProps env) (config env) (settings env) (style env)
@@ -216,7 +222,8 @@ gui env rootId replExpr panes =
 
 make ::
     Monad m =>
-    Env m -> Widget.Id -> WidgetEnvT (T m) (Widget (M m Widget.EventResult))
+    Env m -> Widget.Id ->
+    WidgetEnvT (T m) (Widget.R -> Widget (M m Widget.EventResult))
 make env rootId =
     do
         replExpr <-
@@ -229,11 +236,10 @@ make env rootId =
 makePaneEdit ::
     Monad m =>
     Env m -> (Pane m, DefinitionN m ExprGuiT.Payload) ->
-    ExprGuiM m (Widget (M m Widget.EventResult))
+    ExprGuiM m (ExpressionGui.LayoutMode -> Layout (M m Widget.EventResult))
 makePaneEdit env (pane, defS) =
     makePaneWidget defS
-    <&> mLiftWidget
-    <&> Widget.weakerEvents paneEventMap
+    <&> Lens.mapped . Layout.widget %~ Widget.weakerEvents paneEventMap . mLiftWidget
     where
         Config.Pane{paneCloseKeys, paneMoveDownKeys, paneMoveUpKeys} =
             Config.pane (config env)
@@ -315,17 +321,16 @@ replEventMap env replExpr =
 makeReplEdit ::
     Monad m =>
     Env m -> Widget.Id -> ExprGuiT.SugarExpr m ->
-    ExprGuiM m (Widget (M m Widget.EventResult))
+    ExprGuiM m (ExpressionGui.LayoutMode -> Layout (M m Widget.EventResult))
 makeReplEdit env myId replExpr =
     ExpressionGui.hboxSpaced
     <*> sequence
     [ ExpressionGui.makeFocusableView replId
-        <*> ExpressionGui.makeLabel "⋙" (Widget.toAnimId replId)
+        <*> (ExpressionGui.makeLabel "⋙" (Widget.toAnimId replId) <&> const)
     , ExprGuiM.makeSubexpression id replExpr
     ]
-    <&> (^. ExpressionGui.egWidget)
-    <&> mLiftWidget
-    <&> Widget.weakerEvents (replEventMap env replExpr)
+    <&> Lens.mapped . Layout.widget %~
+        Widget.weakerEvents (replEventMap env replExpr) . mLiftWidget
     where
         replId = Widget.joinId myId ["repl"]
 
@@ -356,8 +361,7 @@ panesEventMap Env{config,codeProps,exportActions} =
         Config.Export{exportPath,importKeys,exportAllKeys} = Config.export config
 
 makePaneWidget ::
-    Monad m =>
-    DefinitionN m ExprGuiT.Payload -> ExprGuiM m (Widget (T m Widget.EventResult))
+    Monad m => DefinitionN m ExprGuiT.Payload -> ExprGuiM m (ExpressionGui m)
 makePaneWidget defS =
     do
         config <- ExprGuiM.readConfig
@@ -370,4 +374,5 @@ makePaneWidget defS =
         let colorize widget
                 | Widget.isFocused widget = colorizeActivePane widget
                 | otherwise = colorizeInactivePane widget
-        DefinitionEdit.make defS <&> colorize
+        DefinitionEdit.make defS
+            <&> ExpressionGui.egWidget %~ colorize

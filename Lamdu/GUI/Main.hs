@@ -9,6 +9,7 @@ module Lamdu.GUI.Main
 
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
+import           Control.Lens.Tuple
 import           Data.CurAndPrev (CurAndPrev(..))
 import           Data.Store.Transaction (Transaction)
 import           Data.Vector.Vector2 (Vector2(..))
@@ -64,7 +65,7 @@ make env rootId =
                     do
                         let codeSize = fullSize - Vector2 0 (branchSelector ^. Widget.height)
                         codeEdit <-
-                            CodeEdit.make codeEditEnv rootId
+                            CodeEdit.make codeEditEnv rootId ?? (codeSize ^. _1)
                             & WE.mapWidgetEnvT VersionControl.runAction
                             <&> Widget.events . CodeEdit.m %~ fmap (VersionControl.runEvent cursor)
                         hoverPadding <-

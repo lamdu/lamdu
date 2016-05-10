@@ -26,6 +26,8 @@ import qualified Graphics.UI.Bottle.Widgets as BWidgets
 import qualified Graphics.UI.Bottle.Widgets.Box as Box
 import qualified Graphics.UI.Bottle.Widgets.Choice as Choice
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
+import           Graphics.UI.Bottle.Widgets.Layout (Layout)
+import qualified Graphics.UI.Bottle.Widgets.Layout as Layout
 import qualified Graphics.UI.Bottle.WidgetsEnvT as WE
 import qualified Graphics.UI.GLFW as GLFW
 import           Lamdu.CharClassification (operatorChars)
@@ -95,9 +97,9 @@ presentationModeChoiceConfig config = Choice.Config
     }
 
 mkPresentationModeEdit ::
-        Monad m => Widget.Id ->
-        Transaction.MkProperty m Sugar.PresentationMode ->
-        ExprGuiM m (Widget (T m Widget.EventResult))
+    Monad m => Widget.Id ->
+    Transaction.MkProperty m Sugar.PresentationMode ->
+    ExprGuiM m (Widget (T m Widget.EventResult))
 mkPresentationModeEdit myId prop = do
     cur <- ExprGuiM.transaction $ Transaction.getP prop
     config <- ExprGuiM.readConfig
@@ -115,7 +117,7 @@ mkPresentationModeEdit myId prop = do
 
 data Parts m = Parts
     { pMParamsEdit :: Maybe (ExpressionGui m)
-    , pMScopesEdit :: Maybe (ExpressionGui m)
+    , pMScopesEdit :: Maybe (Layout (T m Widget.EventResult))
     , pBodyEdit :: ExpressionGui m
     , pEventMap :: Widget.EventMap (T m Widget.EventResult)
     }
@@ -199,7 +201,10 @@ blockEventMap =
 makeScopeNavEdit ::
     Monad m =>
     Sugar.Binder name m expr -> Widget.Id -> ScopeCursor ->
-    ExprGuiM m (Widget.EventMap (T m Widget.EventResult), Maybe (ExpressionGui m))
+    ExprGuiM m
+    ( Widget.EventMap (T m Widget.EventResult)
+    , Maybe (Layout (T m Widget.EventResult))
+    )
 makeScopeNavEdit binder myId curCursor =
     do
         config <- ExprGuiM.readConfig
@@ -215,9 +220,9 @@ makeScopeNavEdit binder myId curCursor =
         settings <- ExprGuiM.readSettings
         case settings ^. CESettings.sInfoMode of
             CESettings.Evaluation ->
-                ExpressionGui.makeFocusableView myId
-                <*> (ExpressionGui.hboxSpaced <*> mapM mkArrow scopes)
-                <&> ExpressionGui.egWidget %~ Widget.weakerEvents
+                ExprGuiM.widgetEnv (BWidgets.makeFocusableView myId <&> (Layout.widget %~))
+                <*> (mapM mkArrow scopes <&> Layout.hbox 0.5)
+                <&> Layout.widget %~ Widget.weakerEvents
                     (mkScopeEventMap leftKeys rightKeys `mappend` blockEventMap)
                 <&> Just
                 <&> (,) (mkScopeEventMap prevScopeKeys nextScopeKeys)
@@ -229,6 +234,7 @@ makeScopeNavEdit binder myId curCursor =
         scopes :: [(String, Maybe Sugar.BinderParamScopeId)]
         scopes =
             [ ("◀", sMPrevParamScope curCursor)
+            , (" ", Nothing)
             , ("▶", sMNextParamScope curCursor)
             ]
         setScope = Transaction.setP (binder ^. Sugar.bChosenScopeProp) . Just
@@ -254,7 +260,7 @@ makeMParamsEdit mScopeCursor isScopeNavFocused delVarBackwardsId myId nearestHol
     [] -> return Nothing
     paramEdits ->
         ExpressionGui.vboxTopFocalSpaced
-        <&> ($ paramEdits <&> ExpressionGui.egAlignment . _1 .~ 0.5)
+        ?? (paramEdits <&> ExpressionGui.egAlignment . _1 .~ 0.5)
         & case params of
           Sugar.FieldParams{} -> (ExpressionGui.addValFrame myId <*>)
           _ -> id
@@ -297,8 +303,8 @@ makeParts funcApplyLimit binder delVarBackwardsId myId =
             & maybe (return (mempty, Nothing)) (makeScopeNavEdit binder scopesNavId)
         let isScopeNavFocused =
                 case mScopeNavEdit of
-                Just gui
-                    | Widget.isFocused (gui ^. ExpressionGui.egWidget) -> ScopeNavIsFocused
+                Just layout
+                    | Widget.isFocused (layout ^. Layout.widget) -> ScopeNavIsFocused
                 _ -> ScopeNavNotFocused
         do
             mParamsEdit <-
@@ -338,21 +344,22 @@ make name binder myId =
         jumpHolesEventMap <-
             ExprEventMap.jumpHolesEventMap (binderContentNearestHoles body)
         defNameEdit <-
-            makeBinderNameEdit (binder ^. Sugar.bActions)
-            rhsJumperEquals rhs name myId
-            <&> ExpressionGui.addBelow 0 (map ((,) 0) presentationEdits)
+            makeBinderNameEdit (binder ^. Sugar.bActions) rhsJumperEquals rhs
+            name myId
+            <&> ExpressionGui.addBelow 0 (presentationEdits <&> ExpressionGui.fromValueWidget)
             <&> ExpressionGui.egWidget %~ Widget.weakerEvents jumpHolesEventMap
         mLhsEdit <-
             case mParamsEdit of
             Nothing -> return Nothing
             Just paramsEdit ->
                 ExpressionGui.vboxTopFocalSpaced
-                ?? (paramsEdit : mScopeEdit ^.. Lens._Just <&> ExpressionGui.egAlignment . _1 .~ 0.5)
+                ?? (paramsEdit : fmap const mScopeEdit ^.. Lens._Just
+                    <&> ExpressionGui.egAlignment . _1 .~ 0.5)
                 <&> ExpressionGui.egWidget %~ Widget.weakerEvents rhsJumperEquals
                 <&> Just
         equals <- ExpressionGui.makeLabel "=" (Widget.toAnimId myId)
         ExpressionGui.hboxSpaced
-            <&> ($ defNameEdit : (mLhsEdit ^.. Lens._Just) ++ [equals, bodyEdit])
+            ?? (defNameEdit : (mLhsEdit ^.. Lens._Just) ++ [const equals, bodyEdit])
             <&> ExpressionGui.egWidget %~ Widget.weakerEvents eventMap
     where
         presentationChoiceId = Widget.joinId myId ["presentation"]
@@ -386,12 +393,11 @@ makeLetEdit item =
         let eventMap = mappend actionsEventMap usageEventMap
         ExpressionGui.hboxSpaced
             <*> sequence
-            [ ExpressionGui.grammarLabel "let" (Widget.toAnimId myId)
+            [ ExpressionGui.grammarLabel "let" (Widget.toAnimId myId) <&> const
             , make (item ^. Sugar.lName) binder myId
                 <&> ExpressionGui.egWidget %~ Widget.weakerEvents eventMap
                 <&> ExpressionGui.pad
                     (Config.letItemPadding config <&> realToFrac)
-                <&> ExpressionGui.egAlignment . _1 .~ 0
             ]
     where
         bodyId =
@@ -452,13 +458,12 @@ makeBinderContentEdit params (Sugar.BinderLet l) =
         ExpressionGui.parentDelegator letEntityId
             <*> ( ExpressionGui.vboxTopFocalSpaced
                   <*>
-                  (   [ makeLetEdit l
-                        <&> ExpressionGui.egWidget %~ Widget.weakerEvents moveToInnerEventMap
-                      , makeBinderBodyEdit params body
-                        & ExprGuiM.withLocalMScopeId letBodyScope
-                      ] & sequence
-                      <&> map (ExpressionGui.egAlignment . _1 .~ 0)
-                  )
+                  ( sequence
+                  [ makeLetEdit l
+                    <&> ExpressionGui.egWidget %~ Widget.weakerEvents moveToInnerEventMap
+                  , makeBinderBodyEdit params body
+                    & ExprGuiM.withLocalMScopeId letBodyScope
+                  ] <&> map (ExpressionGui.egAlignment . _1 .~ 0))
                 )
             <&> ExpressionGui.egWidget %~ Widget.weakerEvents delEventMap
     where
@@ -501,7 +506,7 @@ nullParamEditInfo (Sugar.NullParamInfo mActions) =
     { ParamEdit.iMakeNameEdit =
       \myId ->
       ExpressionGui.makeFocusableView myId
-      <*> ExpressionGui.grammarLabel "◗" (Widget.toAnimId myId)
+      <*> (ExpressionGui.grammarLabel "◗" (Widget.toAnimId myId) <&> const)
     , ParamEdit.iMAddNext = Nothing
     , ParamEdit.iMOrderBefore = Nothing
     , ParamEdit.iMOrderAfter = Nothing

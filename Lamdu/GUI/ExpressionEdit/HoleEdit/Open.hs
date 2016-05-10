@@ -330,7 +330,8 @@ makeHoleResultWidget resultId holeResult =
             holeResultConverted
             & postProcessSugar
             & ExprGuiM.makeSubexpression (const 0)
-            <&> (^. ExpressionGui.egWidget)
+            ?? ExprGuiT.LayoutWide
+            <&> (^. Layout.widget)
         holeResultEntityId =
             holeResultConverted ^. Sugar.rPayload . Sugar.plEntityId
         idWithinResultWidget =
@@ -364,7 +365,7 @@ makeNoResults ::
     Monad m => AnimId -> ExprGuiM m (Widget (T m Widget.EventResult))
 makeNoResults animId =
     ExpressionGui.makeLabel "(No results)" animId
-    <&> (^. ExpressionGui.egWidget)
+    <&> (^. Layout.widget)
 
 makeHiddenResultsMWidget :: Monad m => HaveHiddenResults -> Widget.Id -> ExprGuiM m (Maybe (Widget f))
 makeHiddenResultsMWidget HaveHiddenResults myId =
@@ -476,22 +477,26 @@ makeUnderCursorAssignment shownResultsLists hasHiddenResults holeInfo =
             ( addDarkBackground (Widget.toAnimId hidResultsPrefix)
               ??
               ( resultsWidget
-                & Widget.width %~ max (typeView ^. ExpressionGui.egWidget . Widget.width)
+                & Widget.width %~ max (typeView ^. Layout.widget . Widget.width)
                 & Widget.strongerEvents resultsEventMap .
                   addBackground (Widget.toAnimId hidResultsPrefix) (Config.layers config)
                   holeOpenBGColor
                 & ExpressionGui.fromValueWidget
-                & Layout.addAfter Layout.Vertical [vspace, typeView]
-              ) <&> (^. ExpressionGui.egWidget)
+                <&> Layout.addAfter Layout.Vertical [vspace, typeView]
+              ) ?? ExprGuiT.LayoutWide <&> (^. Layout.widget)
             )
         searchTermGui <- SearchTerm.make holeInfo
         searchTermGui
             & ExpressionGui.egWidget %~ Widget.weakerEvents searchTermEventMap
-            & alignment .~ 0
-            & Layout.addAfter Layout.Vertical
-              [(0, hoverResultsWidget)]
-            & alignment .~ searchTermGui ^. alignment
             & return
+            <&>
+            \mk layout ->
+            let w = mk layout
+            in
+                w
+                & alignment .~ 0
+                & Layout.addAfter Layout.Vertical [(0, hoverResultsWidget)]
+                & alignment .~ w ^. alignment
     where
         alignment :: Lens' (Layout f) Box.Alignment
         alignment = Layout.absAlignedWidget . _1

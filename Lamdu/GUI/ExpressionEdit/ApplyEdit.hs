@@ -5,15 +5,11 @@ module Lamdu.GUI.ExpressionEdit.ApplyEdit
 
 import           Control.Lens.Operators
 import           Control.Lens.Tuple
-import           Data.Store.Transaction (Transaction)
 import           Data.Vector.Vector2 (Vector2(..))
 import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.Bottle.Animation as Anim
 import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
-import qualified Graphics.UI.Bottle.Widgets as BWidgets
-import qualified Graphics.UI.Bottle.Widgets.Grid as Grid
-import qualified Graphics.UI.Bottle.Widgets.Layout as Layout
 import qualified Lamdu.GUI.ExpressionEdit.BinderEdit as BinderEdit
 import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
 import qualified Lamdu.GUI.ExpressionEdit.TagEdit as TagEdit
@@ -30,8 +26,6 @@ import           Lamdu.Sugar.Names.Types (Name(..))
 import qualified Lamdu.Sugar.Types as Sugar
 
 import           Prelude.Compat
-
-type T = Transaction
 
 prefixPrecedence :: Int
 prefixPrecedence = 10
@@ -151,20 +145,11 @@ make apply@(Sugar.Apply func specialArgs annotatedArgs) pl =
 makeArgRows ::
     Monad m =>
     Sugar.AnnotatedArg (Name m) (ExprGuiT.SugarExpr m) ->
-    ExprGuiM m [[(Grid.Alignment, Widget (T m Widget.EventResult))]]
+    ExprGuiM m (ExpressionGui m)
 makeArgRows arg =
-    do
-        argTagEdit <- TagEdit.makeParamTag (arg ^. Sugar.aaTag)
-        argValEdit <- ExprGuiM.makeSubexpression (const 0) $ arg ^. Sugar.aaExpr
-        vspace <- ExprGuiM.widgetEnv BWidgets.stdVSpaceView <&> Widget.fromView
-        space <- ExprGuiM.widgetEnv BWidgets.stdHSpaceView <&> Widget.fromView
-        pure
-            [ replicate 3 (0.5, vspace)
-            , [ argTagEdit ^. Layout.alignedWidget & _1 . _1 .~ 0
-                , (0.5, space)
-                , argValEdit ^. Layout.alignedWidget & _1 . _1 .~ 0
-                ]
-            ]
+    ExpressionGui.tagItem
+    <*> TagEdit.makeParamTag (arg ^. Sugar.aaTag)
+    <*> ExprGuiM.makeSubexpression (const 0) (arg ^. Sugar.aaExpr)
 
 mkBoxed ::
     Monad m =>
@@ -174,11 +159,9 @@ mkBoxed ::
     ExprGuiM m (ExpressionGui m)
 mkBoxed annotatedArgs myId mkFuncRow =
     do
-        grid <-
-            annotatedArgs
-            & traverse makeArgRows
-            <&> Grid.toWidget . Grid.make . concat
-        mkFuncRow
-            & ExprGuiM.withLocalPrecedence (const 0)
-            <&> ExpressionGui.addBelow 0 [(0, grid)]
-            & (ExpressionGui.addValFrame myId <*>)
+        argRows <- traverse makeArgRows annotatedArgs
+        funcRow <- ExprGuiM.withLocalPrecedence (const 0) mkFuncRow
+        vbox <- ExpressionGui.vboxTopFocalSpaced
+        ExpressionGui.addValFrame myId
+            ?? vbox
+                ([funcRow, vbox argRows] <&> ExpressionGui.egAlignment . _1 .~ 0)

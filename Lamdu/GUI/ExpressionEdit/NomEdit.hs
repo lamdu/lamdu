@@ -5,11 +5,14 @@ module Lamdu.GUI.ExpressionEdit.NomEdit
 
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
+import           Data.Store.Transaction (Transaction)
 import qualified Graphics.UI.Bottle.Widget as Widget
+import           Graphics.UI.Bottle.Widgets.Layout (Layout)
 import qualified Graphics.UI.Bottle.Widgets.Layout as Layout
 import qualified Graphics.UI.Bottle.WidgetsEnvT as WE
 import qualified Lamdu.Config as Config
-import           Lamdu.GUI.ExpressionGui (ExpressionGui, Precedence, precLeft, precRight)
+import           Lamdu.GUI.ExpressionGui
+    ( ExpressionGui, Precedence, precLeft, precRight, (<||), (||>) )
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
@@ -21,68 +24,63 @@ import qualified Lamdu.Sugar.Types as Sugar
 
 import           Prelude.Compat
 
-addLeft :: Layout.AddLayout w => w -> Layout.LayoutType w -> Layout.LayoutType w
-addLeft = Layout.addBefore Layout.Horizontal . (: [])
-
-addRight :: Layout.AddLayout w => w -> Layout.LayoutType w -> Layout.LayoutType w
-addRight = Layout.addAfter Layout.Horizontal . (: [])
-
-hover ::
-    Monad m =>
-    ExprGuiM m (ExpressionGui n -> ExpressionGui n -> ExpressionGui n)
+hover :: Monad m => ExprGuiM m (Layout n -> Layout n -> Layout n)
 hover =
     ExpressionGui.liftLayers
     <&> (\lift gui place -> lift gui `Layout.hoverInPlaceOf` place)
 
-type LayoutFunc m =
+type T = Transaction
+
+type LayoutFunc m f =
     Widget.Id -> -- nomId
     Bool -> -- show name
     ExprGuiM m (
-        ExpressionGui m -> -- label
-        ExpressionGui m -> -- name gui
-        ExpressionGui m -> -- subexpr gui
-        ExpressionGui m)
+        Layout (T f Widget.EventResult) -> -- label
+        ExpressionGui f -> -- name gui
+        ExpressionGui f -> -- subexpr gui
+        ExpressionGui f)
 
 expandingName ::
     Monad m =>
-    (ExpressionGui m -> ExpressionGui m -> ExpressionGui m) ->
-    LayoutFunc m
-expandingName namePos nomId showName =
+    (Layout (T f Widget.EventResult) -> ExpressionGui f -> ExpressionGui f) ->
+    (ExpressionGui f -> Layout (T f Widget.EventResult) -> ExpressionGui f) ->
+    LayoutFunc m f
+expandingName (#>) (<#) nomId showName =
     do
         space <- ExpressionGui.stdHSpace
         addBg <- ExpressionGui.addValBGWithColor Config.valNomBGColor nomId
         return $
             \label nameGui subexprGui ->
-            label
-            & ( if showName
-                then namePos nameGui
-                else id )
-            & ExpressionGui.egWidget %~ addBg
-            & (`namePos` space)
-            & (`namePos` subexprGui)
+            ( if showName
+              then (nameGui <# label) ExprGuiT.LayoutWide
+              else label
+            & Layout.widget %~ addBg
+            )
+            #> (space #> subexprGui)
 
 makeToNom ::
     Monad m =>
     Sugar.Nominal (Name m) (ExprGuiT.SugarExpr m) ->
     Sugar.Payload m ExprGuiT.Payload ->
     ExprGuiM m (ExpressionGui m)
-makeToNom = mkNomGui precLeft "«" $ expandingName addLeft
+makeToNom = mkNomGui precLeft "«" $ expandingName (||>) (<||)
 
 makeFromNom ::
     Monad m =>
     Sugar.Nominal (Name m) (ExprGuiT.SugarExpr m) ->
     Sugar.Payload m ExprGuiT.Payload ->
     ExprGuiM m (ExpressionGui m)
-makeFromNom = mkNomGui precRight "»" $ expandingName addRight
+makeFromNom = mkNomGui precRight "»" $ expandingName (flip (<||)) (flip (||>))
 
 nomPrecedence :: Int
 nomPrecedence = 9
 
 mkNomGui ::
-    Monad m => Lens.ASetter' Precedence Int ->
-    String -> LayoutFunc m ->
+    Monad m =>
+    Lens.ASetter' Precedence Int -> String -> LayoutFunc m m ->
     Sugar.Nominal (Name m) (ExprGuiT.SugarExpr m) ->
-    Sugar.Payload m ExprGuiT.Payload -> ExprGuiM m (ExpressionGui m)
+    Sugar.Payload m ExprGuiT.Payload ->
+    ExprGuiM m (ExpressionGui m)
 mkNomGui nameSidePrecLens str layout nom@(Sugar.Nominal _ val) pl =
     ExprGuiM.withLocalPrecedence (nameSidePrecLens .~ 0) $
     stdWrapParenify pl
@@ -95,7 +93,7 @@ mkNomGui nameSidePrecLens str layout nom@(Sugar.Nominal _ val) pl =
         label <-
             ExpressionGui.grammarLabel str (Widget.toAnimId myId)
             <&> if isSelected then id
-                else ExpressionGui.egWidget %~ Widget.takesFocus (const (pure nameId))
+                else Layout.widget %~ Widget.takesFocus (const (pure nameId))
         nameEdit <-
             ExpressionGui.makeFocusableView nameId
             <*> mkNameGui nom nameId
@@ -109,7 +107,7 @@ mkNomGui nameSidePrecLens str layout nom@(Sugar.Nominal _ val) pl =
             else do
                 compact <- mk False
                 if isSelected
-                    then mk True <&> (`h` compact)
+                    then mk True <&> \expanded mode -> (expanded mode `h` compact mode)
                     else return compact
     & ExprGuiM.assignCursor myId valId
     where

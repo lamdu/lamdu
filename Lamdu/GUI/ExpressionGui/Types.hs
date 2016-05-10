@@ -1,6 +1,8 @@
 {-# LANGUAGE TemplateHaskell #-}
 module Lamdu.GUI.ExpressionGui.Types
     ( ExpressionGui, egWidget, egAlignment
+    , LayoutMode(..), _LayoutNarrow, _LayoutWide
+      , modeWidths
     , SugarExpr
     , Payload(..)
         , plStoredEntityIds, plInjected, plNearestHoles, plShowAnnotation
@@ -15,7 +17,6 @@ module Lamdu.GUI.ExpressionGui.Types
     , plOfHoleResult
     ) where
 
-import           Control.Lens (Lens, Lens')
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Data.Store.Transaction (Transaction)
@@ -30,20 +31,29 @@ import qualified Lamdu.Sugar.NearestHoles as NearestHoles
 import qualified Lamdu.Sugar.Types as Sugar
 
 type T = Transaction
-type ExpressionGui m = Layout (Transaction m Widget.EventResult)
+data LayoutMode
+    = LayoutNarrow Widget.R -- ^ limited by the given
+    | LayoutWide -- ^ no limit on width
+Lens.makePrisms ''LayoutMode
+
+modeWidths :: Lens.Traversal' LayoutMode Widget.R
+modeWidths _ LayoutWide = pure LayoutWide
+modeWidths f (LayoutNarrow limit) = f limit <&> LayoutNarrow
+
+type ExpressionGui m = LayoutMode -> Layout (T m Widget.EventResult)
 
 {-# INLINE egWidget #-}
 egWidget ::
-    Lens
+    Lens.Setter
     (ExpressionGui m)
     (ExpressionGui n)
     (Widget (T m Widget.EventResult))
     (Widget (T n Widget.EventResult))
-egWidget = Layout.widget
+egWidget = Lens.mapped . Layout.widget
 
 {-# INLINE egAlignment #-}
-egAlignment :: Lens' (ExpressionGui m) Layout.Alignment
-egAlignment = Layout.alignment
+egAlignment :: Lens.Setter' (ExpressionGui m) Layout.Alignment
+egAlignment = Lens.mapped . Layout.alignment
 
 data EvalModeShow = EvalModeShowNothing | EvalModeShowType | EvalModeShowEval
     deriving (Eq, Ord, Show)

@@ -52,5 +52,7 @@ makeStdWrapped pl holeInfo =
                  -- it is harder to implement, so just wrap it
                  -- here
                  fdWrap <*> makeOpenSearchTermGui pl holeInfo
-                 <&> (`Layout.hoverInPlaceOf` closedSearchTermGui)
+                 <&>
+                 \gui layout ->
+                 gui layout `Layout.hoverInPlaceOf` closedSearchTermGui layout
             else return closedSearchTermGui

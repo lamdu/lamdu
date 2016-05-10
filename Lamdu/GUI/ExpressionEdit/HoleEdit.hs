@@ -49,7 +49,7 @@ assignHoleCursor WidgetIds{..} (Just _) =
 hover :: Monad m => WidgetIds -> AnimId -> ExprGuiM m (ExpressionGui n -> ExpressionGui n)
 hover WidgetIds{..} name =
     (.)
-    <$> ExpressionGui.liftLayers
+    <$> (ExpressionGui.liftLayers <&> fmap)
     <*> addDarkBackground (Widget.toAnimId hidOpen ++ name ++ ["DarkBg"])
 
 addSearchAreaBelow ::
@@ -59,7 +59,7 @@ addSearchAreaBelow ids =
     hover ids ["searchArea"]
     <&>
     \f wrapperGui searchAreaGui ->
-    Layout.addAfter Layout.Vertical [f searchAreaGui] wrapperGui
+    ExpressionGui.vboxTopFocal [wrapperGui, f searchAreaGui]
 
 addWrapperAbove ::
     Monad m =>
@@ -69,10 +69,11 @@ addWrapperAbove ids =
         Config.Hole{..} <- ExprGuiM.readConfig <&> Config.hole
         hover ids ["wrapper"]
             <&> \f wrapperGui searchAreaGui ->
-            Layout.addBefore Layout.Vertical
-            [ f wrapperGui
-              & Layout.scale (holeHoveringWrapperScaleFactor <&> realToFrac)
-            ] searchAreaGui
+            ExpressionGui.vboxTopFocal
+            [ searchAreaGui
+            , f wrapperGui
+              & ExpressionGui.scale (holeHoveringWrapperScaleFactor <&> realToFrac)
+            ]
 
 make ::
     Monad m =>
@@ -104,12 +105,15 @@ make hole pl =
                         unfocusedWrapperGui <-
                             ExpressionGui.maybeAddAnnotationPl pl ?? wrapperGui
                         isSelected <- ExprGuiM.widgetEnv $ WE.isSubCursor hidHole
-                        let layout f = do
-                                searchAreaGui <-
-                                    SearchArea.makeStdWrapped pl holeInfo
-                                f WidgetIds{..} ?? wrapperGui ?? searchAreaGui
-                                    <&> (`Layout.hoverInPlaceOf` unfocusedWrapperGui)
-                        if Widget.isFocused (wrapperGui ^. ExpressionGui.egWidget)
+                        let layout f =
+                                do
+                                    searchAreaGui <- SearchArea.makeStdWrapped pl holeInfo
+                                    lay <- f WidgetIds{..}
+                                    return $
+                                        \layoutParam ->
+                                        lay wrapperGui searchAreaGui layoutParam
+                                        `Layout.hoverInPlaceOf` unfocusedWrapperGui layoutParam
+                        if Widget.isFocused (wrapperGui ExpressionGui.LayoutWide ^. Layout.widget)
                             then layout addSearchAreaBelow
                             else if isSelected then
                                      layout addWrapperAbove

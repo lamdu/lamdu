@@ -6,10 +6,12 @@ module Lamdu.GUI.ExpressionEdit.LambdaEdit
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Lens.Tuple
+import           Data.Store.Transaction (Transaction)
 import           Graphics.UI.Bottle.Animation (AnimId)
 import qualified Graphics.UI.Bottle.EventMap as E
 import           Graphics.UI.Bottle.ModKey (ModKey(..))
 import qualified Graphics.UI.Bottle.Widget as Widget
+import           Graphics.UI.Bottle.Widgets.Layout (Layout)
 import qualified Graphics.UI.Bottle.WidgetsEnvT as WE
 import qualified Graphics.UI.GLFW as GLFW
 import qualified Lamdu.Config as Config
@@ -26,29 +28,36 @@ import qualified Lamdu.Sugar.Lens as SugarLens
 import           Lamdu.Sugar.Names.Types (Name(..))
 import qualified Lamdu.Sugar.Types as Sugar
 
-addScopeEdit :: Monad m => Maybe (ExpressionGui m) -> ExpressionGui m -> ExpressionGui m
+type T = Transaction
+
+addScopeEdit :: Monad m => Maybe (Layout (T m Widget.EventResult)) -> ExpressionGui m -> ExpressionGui m
 addScopeEdit mScopeEdit e =
-    e : (mScopeEdit ^.. Lens._Just)
+    e : (mScopeEdit ^.. Lens._Just <&> const)
     <&> ExpressionGui.egAlignment . _1 .~ 0.5
     & ExpressionGui.vboxTopFocal
 
-mkLhsEdits :: Monad m => Maybe (ExpressionGui m) -> Maybe (ExpressionGui m) -> [ExpressionGui m]
+mkLhsEdits :: Monad m => Maybe (ExpressionGui m) -> Maybe (Layout (T m Widget.EventResult)) -> [ExpressionGui m]
 mkLhsEdits mParamsEdit mScopeEdit =
     mParamsEdit <&> addScopeEdit mScopeEdit & (^.. Lens._Just)
 
-mkExpanded :: Monad m => AnimId -> ExprGuiM m (Maybe (ExpressionGui m) -> Maybe (ExpressionGui m) -> [ExpressionGui m])
+mkExpanded ::
+    Monad m => AnimId ->
+    ExprGuiM m
+    (Maybe (ExpressionGui m) ->
+     Maybe (Layout (T m Widget.EventResult)) ->
+     [ExpressionGui m])
 mkExpanded animId =
     do
         labelEdit <- ExpressionGui.grammarLabel "→" animId
         return $ \mParamsEdit mScopeEdit ->
-            mkLhsEdits mParamsEdit mScopeEdit ++ [labelEdit]
+            mkLhsEdits mParamsEdit mScopeEdit ++ [const labelEdit]
 
 lamId :: Widget.Id -> Widget.Id
 lamId = (`Widget.joinId` ["lam"])
 
 mkShrunk ::
     Monad m => [Sugar.EntityId] -> Widget.Id ->
-    ExprGuiM m (Maybe (ExpressionGui m) -> [ExpressionGui m])
+    ExprGuiM m (Maybe (Layout (T m Widget.EventResult)) -> [ExpressionGui m])
 mkShrunk paramIds myId =
     do
         config <- ExprGuiM.readConfig
@@ -60,7 +69,7 @@ mkShrunk paramIds myId =
                    WidgetIds.fromEntityId)
         lamLabel <-
             ExpressionGui.makeFocusableView (lamId myId)
-            <*> ExpressionGui.grammarLabel "λ" animId
+            <*> (ExpressionGui.grammarLabel "λ" animId <&> const)
             & LightLambda.withUnderline (Config.lightLambda config)
         return $ \mScopeEdit ->
             [ addScopeEdit mScopeEdit lamLabel
@@ -74,7 +83,7 @@ mkLightLambda ::
     Sugar.BinderParams a m -> Widget.Id ->
     ExprGuiM n
     (Maybe (ExpressionGui n) ->
-     Maybe (ExpressionGui n) ->
+     Maybe (Layout (T n Widget.EventResult)) ->
      [ExpressionGui n])
 mkLightLambda params myId =
     do
@@ -89,7 +98,8 @@ mkLightLambda params myId =
         if isSelected
             then
                  mkExpanded animId
-                 <&> Lens.mapped . Lens.mapped . Lens.mapped . ExpressionGui.egWidget %~ Widget.weakerEvents shrinkEventMap
+                 <&> Lens.mapped . Lens.mapped . Lens.mapped . ExpressionGui.egWidget %~
+                     Widget.weakerEvents shrinkEventMap
             else mkShrunk paramIds myId
                  <&> \mk _mParamsEdit mScopeEdit -> mk mScopeEdit
     where
@@ -115,7 +125,7 @@ make lam pl =
             (Sugar.LightLambda, _) -> mkLightLambda params myId ?? mParamsEdit ?? mScopeEdit
             _ -> mkExpanded animId ?? mParamsEdit ?? mScopeEdit
         ExpressionGui.hboxSpaced
-            <&> ($ paramsAndLabelEdits ++ [bodyEdit])
+            ?? (paramsAndLabelEdits ++ [bodyEdit])
             <&> ExpressionGui.egWidget %~ Widget.weakerEvents eventMap
     where
         funcApplyLimit = pl ^. Sugar.plData . ExprGuiT.plShowAnnotation . ExprGuiT.funcApplyLimit

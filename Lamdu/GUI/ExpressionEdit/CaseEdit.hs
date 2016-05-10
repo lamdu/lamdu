@@ -5,6 +5,7 @@ module Lamdu.GUI.ExpressionEdit.CaseEdit
 
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
+import           Control.Lens.Tuple
 import qualified Data.List as List
 import           Data.Maybe (fromMaybe)
 import           Data.Monoid ((<>))
@@ -14,6 +15,8 @@ import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.EventMap as E
 import           Graphics.UI.Bottle.View (View(..))
 import qualified Graphics.UI.Bottle.Widget as Widget
+import qualified Graphics.UI.Bottle.Widgets.Layout as Layout
+import           Graphics.UI.Bottle.Widgets.Layout (Layout)
 import           Lamdu.Calc.Type (Tag)
 import qualified Lamdu.Calc.Val as V
 import           Lamdu.Config (Config)
@@ -62,9 +65,11 @@ make (Sugar.Case mArg alts caseTail addAlt cEntityId) pl =
                 ExpressionGui.makeFocusableView headerId
                 <*>
                 (ExpressionGui.grammarLabel text
-                    (Widget.toAnimId (WidgetIds.fromEntityId cEntityId)))
-                <&> ExpressionGui.egWidget
-                    %~ Widget.weakerEvents labelJumpHoleEventMap
+                    (Widget.toAnimId (WidgetIds.fromEntityId cEntityId))
+                    <&> Layout.widget
+                        %~ Widget.weakerEvents labelJumpHoleEventMap
+                    <&> const
+                )
         (mActiveTag, header) <-
             case mArg of
             Sugar.LambdaCase -> headerLabel "λ:" <&> (,) Nothing
@@ -102,7 +107,7 @@ make (Sugar.Case mArg alts caseTail addAlt cEntityId) pl =
                   (E.Doc ["Edit", "Case", "Add Alt"])
         vspace <- ExpressionGui.stdVSpace
         ExpressionGui.addValFrame myId
-            ?? ExpressionGui.vboxTopFocalAlignedTo 0 [header, vspace, altsGui]
+            ?? ExpressionGui.vboxTopFocalAlignedTo 0 [header, const vspace, altsGui]
             <&> ExpressionGui.egWidget %~ Widget.weakerEvents addAltEventMap
 
 makeAltRow ::
@@ -123,7 +128,7 @@ makeAltRow mActiveTag (Sugar.CaseAlt delete tag altExpr) =
                 else id
         altExprGui <- ExprGuiM.makeSubexpression (const 0) altExpr
         let itemEventMap = caseDelEventMap config delete
-        ExpressionGui.spacedHPair ?? altRefGui ?? altExprGui
+        ExpressionGui.tagItem ?? altRefGui ?? altExprGui
             <&> ExpressionGui.egWidget %~ Widget.weakerEvents itemEventMap
 
 makeAltsWidget ::
@@ -133,22 +138,22 @@ makeAltsWidget ::
     Widget.Id -> ExprGuiM m (ExpressionGui m)
 makeAltsWidget _ [] myId =
     ExpressionGui.makeFocusableView (Widget.joinId myId ["Ø"])
-    <*> ExpressionGui.grammarLabel "Ø" (Widget.toAnimId myId)
+    <*> (ExpressionGui.grammarLabel "Ø" (Widget.toAnimId myId) <&> const)
 makeAltsWidget mActiveTag alts _ =
     do
         vspace <- ExpressionGui.stdVSpace
         mapM (makeAltRow mActiveTag) alts
-            <&> List.intersperse vspace
+            <&> List.intersperse (const vspace)
             <&> ExpressionGui.vboxTopFocal
 
-separationBar :: Config -> Widget.R -> Anim.AnimId -> ExpressionGui m
+separationBar :: Config -> Widget.R -> Anim.AnimId -> Layout a
 separationBar config width animId =
     Anim.unitSquare (animId <> ["tailsep"])
     & View 1
     & Widget.fromView
     & Widget.tint (Config.caseTailColor config)
     & Widget.scale (Vector2 width 10)
-    & ExpressionGui.fromValueWidget
+    & Layout.fromCenteredWidget
 
 makeOpenCase ::
     Monad m =>
@@ -161,14 +166,21 @@ makeOpenCase rest animId altsGui =
         restExpr <-
             ExpressionGui.addValPadding
             <*> ExprGuiM.makeSubexpression (const 0) rest
-        let minWidth = restExpr ^. ExpressionGui.egWidget . Widget.width
-        [ altsGui
-            , separationBar config (max minWidth targetWidth) animId
-            , vspace
-            , restExpr
-            ] & ExpressionGui.vboxTopFocalAlignedTo 0 & return
-    where
-        targetWidth = altsGui ^. ExpressionGui.egWidget . Widget.width
+        return $
+            \layout ->
+            let restLayout = restExpr layout
+                minWidth = restLayout ^. Layout.widget . Widget.width
+                alts = altsGui layout
+                targetWidth = alts ^. Layout.widget . Widget.width
+            in
+            alts
+            & Layout.alignment . _1 .~ 0
+            & Layout.addAfter Layout.Vertical
+            ( [ separationBar config (max minWidth targetWidth) animId
+              , vspace
+              , restLayout
+              ] <&> (Layout.alignment . _1 .~ 0)
+            )
 
 caseOpenEventMap ::
     Monad m =>

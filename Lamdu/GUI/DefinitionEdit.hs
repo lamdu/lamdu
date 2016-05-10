@@ -12,9 +12,10 @@ import           Graphics.UI.Bottle.Animation (AnimId)
 import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.EventMap as E
 import           Graphics.UI.Bottle.View (View(..))
-import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets as BWidgets
+import qualified Graphics.UI.Bottle.Widgets.Layout as Layout
+import           Graphics.UI.Bottle.Widgets.Layout (Layout)
 import           Lamdu.Calc.Type.Scheme (Scheme(..), schemeType)
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Data.Definition as Definition
@@ -34,28 +35,25 @@ import           Prelude.Compat
 type T = Transaction
 
 make ::
-    Monad m =>
-    DefinitionN m ExprGuiT.Payload ->
-    ExprGuiM m (Widget (T m Widget.EventResult))
+    Monad m => DefinitionN m ExprGuiT.Payload -> ExprGuiM m (ExpressionGui m)
 make exprGuiDefS =
     case exprGuiDefS ^. Sugar.drBody of
     Sugar.DefinitionBodyExpression bodyExpr ->
         makeExprDefinition exprGuiDefS bodyExpr
     Sugar.DefinitionBodyBuiltin builtin ->
-        makeBuiltinDefinition exprGuiDefS builtin
-    <&> (^. ExpressionGui.egWidget)
+        makeBuiltinDefinition exprGuiDefS builtin <&> const
 
-expandTo :: Widget.R -> ExpressionGui m -> ExpressionGui m
+expandTo :: Widget.R -> Layout a -> Layout a
 expandTo width eg
     | padding <= 0 = eg
-    | otherwise = eg & ExpressionGui.pad (Vector2 (padding / 2) 0)
+    | otherwise = eg & Layout.pad (Vector2 (padding / 2) 0)
     where
-        padding = width - eg ^. ExpressionGui.egWidget . Widget.width
+        padding = width - eg ^. Layout.widget . Widget.width
 
 topLevelSchemeTypeView ::
     Monad m =>
     Scheme -> Sugar.EntityId -> AnimId ->
-    ExprGuiM m (Widget.R -> ExpressionGui m)
+    ExprGuiM m (Widget.R -> Layout a)
 topLevelSchemeTypeView scheme entityId suffix =
     -- At the definition-level, Schemes can be shown as ordinary
     -- types to avoid confusing forall's:
@@ -68,7 +66,7 @@ topLevelSchemeTypeView scheme entityId suffix =
 makeBuiltinDefinition ::
     Monad m =>
     Sugar.Definition (Name m) m (ExprGuiT.SugarExpr m) ->
-    Sugar.DefinitionBuiltin m -> ExprGuiM m (ExpressionGui m)
+    Sugar.DefinitionBuiltin m -> ExprGuiM m (Layout (T m Widget.EventResult))
 makeBuiltinDefinition def builtin =
     do
         assignment <-
@@ -78,13 +76,12 @@ makeBuiltinDefinition def builtin =
             ]
             & sequenceA
             >>= ExprGuiM.widgetEnv . BWidgets.hboxCenteredSpaced
-            <&> ExpressionGui.fromValueWidget
-        let width = assignment ^. ExpressionGui.egWidget . Widget.width
+        let width = assignment ^. Widget.width
         typeView <-
             topLevelSchemeTypeView (builtin ^. Sugar.biType) entityId ["builtinType"]
             ?? width
-        [assignment, typeView]
-            & ExpressionGui.vboxTopFocalAlignedTo 0
+        Layout.fromCenteredWidget assignment
+            & Layout.addAfter Layout.Vertical [typeView]
             & return
     where
         name = def ^. Sugar.drName
@@ -96,7 +93,7 @@ typeIndicatorId myId = Widget.joinId myId ["type indicator"]
 
 typeIndicator ::
     Monad m =>
-    Draw.Color -> Widget.Id -> ExprGuiM m (Widget.R -> ExpressionGui m)
+    Draw.Color -> Widget.Id -> ExprGuiM m (Widget.R -> Layout a)
 typeIndicator color myId =
     ExprGuiM.readConfig
     <&>
@@ -106,24 +103,27 @@ typeIndicator color myId =
     & Widget.fromView
     & Widget.scale (Vector2 width (realToFrac (Config.typeIndicatorFrameWidth config ^. _2)))
     & Widget.tint color
-    & ExpressionGui.fromValueWidget
+    & Layout.fromCenteredWidget
 
 acceptableTypeIndicator ::
     Monad m =>
-    T m a -> Draw.Color -> Widget.Id -> ExprGuiM m (Widget.R -> ExpressionGui m)
+    T m a -> Draw.Color -> Widget.Id ->
+    ExprGuiM m (Widget.R -> Layout (T m Widget.EventResult))
 acceptableTypeIndicator accept color myId =
     do
         config <- ExprGuiM.readConfig
         let acceptKeyMap =
                 Widget.keysEventMapMovesCursor (Config.acceptDefinitionTypeKeys config)
                 (E.Doc ["Edit", "Accept inferred type"]) (accept >> return myId)
-        makeFocusable <- ExpressionGui.makeFocusableView (typeIndicatorId myId)
+        makeFocusable <-
+            BWidgets.makeFocusableView (typeIndicatorId myId)
+            <&> (Layout.widget %~) & ExprGuiM.widgetEnv
         makeIndicator <- typeIndicator color myId
         return $
             \width ->
             makeIndicator width
             & makeFocusable
-            & ExpressionGui.egWidget %~ Widget.weakerEvents acceptKeyMap
+            & Layout.widget %~ Widget.weakerEvents acceptKeyMap
 
 makeExprDefinition ::
     Monad m =>
@@ -136,9 +136,8 @@ makeExprDefinition def bodyExpr =
         bodyGui <-
             BinderEdit.make (def ^. Sugar.drName)
             (bodyExpr ^. Sugar.deContent) myId
-        let width = bodyGui ^. ExpressionGui.egWidget . Widget.width
         vspace <- ExpressionGui.stdVSpace
-        typeGui <-
+        typeGuis <-
             case bodyExpr ^. Sugar.deTypeInfo of
             Sugar.DefinitionExportedTypeInfo scheme ->
                 [ typeIndicator (Config.typeIndicatorMatchColor config) myId
@@ -155,11 +154,13 @@ makeExprDefinition def bodyExpr =
                     , acceptableTypeIndicator accept (Config.typeIndicatorErrorColor config) myId
                     , topLevelSchemeTypeView oldExported entityId ["exportedType"]
                     ]
-            <&> (?? width)
-            & sequence
-            <&> ExpressionGui.vboxTopFocalAlignedTo 0 . concatMap (\w -> [vspace, w])
-        ExpressionGui.vboxTopFocalAlignedTo 0 [bodyGui, typeGui]
-            & return
+            & sequence <&> sequence
+        return $
+            \layoutParam ->
+            let bodyLayout = bodyGui layoutParam & Layout.alignment . _1 .~ 0
+                width = bodyLayout ^. Layout.widget . Widget.width
+                f row = [vspace, row & Layout.alignment . _1 .~ 0]
+            in Layout.addAfter Layout.Vertical (typeGuis width >>= f) bodyLayout
     where
         entityId = def ^. Sugar.drEntityId
         myId = WidgetIds.fromEntityId entityId

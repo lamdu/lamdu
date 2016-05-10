@@ -8,6 +8,7 @@ import           Control.Lens.Tuple
 import qualified Data.List as List
 import qualified Graphics.UI.Bottle.Font as Font
 import qualified Graphics.UI.Bottle.Widget as Widget
+import qualified Graphics.UI.Bottle.Widgets.Layout as Layout
 import qualified Graphics.UI.Bottle.Widgets.TextEdit as TextEdit
 import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
 import qualified Graphics.UI.Bottle.WidgetsEnvT as WE
@@ -23,7 +24,6 @@ import qualified Lamdu.GUI.ExpressionEdit.LiteralEdit as LiteralEdit
 import qualified Lamdu.GUI.ExpressionEdit.NomEdit as NomEdit
 import qualified Lamdu.GUI.ExpressionEdit.RecordEdit as RecordEdit
 import           Lamdu.GUI.ExpressionGui (ExpressionGui)
-import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
@@ -38,17 +38,19 @@ shrinkIfHigherThanLine =
             ExprGuiM.widgetEnv WE.readTextStyle
             <&> (^. TextEdit.sTextViewStyle . TextView.styleFont)
         config <- ExprGuiM.readConfig <&> Config.hole
-        return $ \w ->
-            let ratio =
+        return
+            $ \gui layoutParam ->
+            let layout = gui layoutParam
+                ratio =
                     (Font.height sizedFont /
-                      w ^. ExpressionGui.egWidget . Widget.height)
+                     layout ^. Layout.widget . Widget.height)
                     ** realToFrac (Config.holeResultInjectedScaleExponent config)
                 result
-                    | ratio >= 1 = w
+                    | ratio >= 1 = layout
                     | otherwise =
-                          w
-                          & ExpressionGui.scale (realToFrac ratio)
-                          & ExpressionGui.egAlignment . _2 .~ 0.5
+                          layout
+                          & Layout.scale (realToFrac ratio)
+                          & Layout.alignment . _2 .~ 0.5
             in result
 
 make :: Monad m => ExprGuiT.SugarExpr m -> ExprGuiM m (ExpressionGui m)
