@@ -5,6 +5,7 @@ module Graphics.UI.Bottle.Widgets.Layout
     , empty
     , AlignedWidget, AbsAlignedWidget
     , alignedWidget, absAlignedWidget
+    , widget, width
     , fromCenteredWidget
 
     , AddLayout(..)
@@ -18,7 +19,7 @@ module Graphics.UI.Bottle.Widgets.Layout
     , hoverInPlaceOf
     ) where
 
-import           Control.Lens (Lens')
+import           Control.Lens (Lens, Lens')
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Lens.Tuple
@@ -29,8 +30,8 @@ import qualified Graphics.UI.Bottle.Widgets.Box as Box
 
 import           Prelude.Compat
 
-type AlignedWidget f = (Box.Alignment, Widget f)
-type AbsAlignedWidget f = (Box.Alignment, Widget f)
+type AlignedWidget a = (Box.Alignment, Widget a)
+type AbsAlignedWidget a = (Box.Alignment, Widget a)
 
 data Orientation = Horizontal | Vertical deriving Eq
 
@@ -46,45 +47,53 @@ boxOrientation :: Orientation -> Box.Orientation
 boxOrientation Horizontal = Box.horizontal
 boxOrientation Vertical = Box.vertical
 
-data BoxComponents f = BoxComponents
-    { _widgetsBefore :: [(Widget.R, Widget f)]
-    , __focalWidget :: AlignedWidget f
-    , _widgetsAfter :: [(Widget.R, Widget f)]
+data BoxComponents a = BoxComponents
+    { _widgetsBefore :: [(Widget.R, Widget a)]
+    , __focalWidget :: AlignedWidget a
+    , _widgetsAfter :: [(Widget.R, Widget a)]
     }
 Lens.makeLenses ''BoxComponents
 
 boxComponentsAlignedWidgets ::
     Lens.Getting Widget.R Box.Alignment Widget.R ->
-    Lens.Fold (BoxComponents f) (Widget.R, Widget f)
+    Lens.Fold (BoxComponents a) (Widget.R, Widget a)
 boxComponentsAlignedWidgets getAlign = Lens.folding $
     \(BoxComponents before (alignment, focal) after) ->
     before ++ [(alignment ^. getAlign, focal)] ++ after
 
-data LayoutInternal f
-    = LayoutSingleton (AlignedWidget f)
-    | LayoutBox Orientation (BoxComponents f)
+data LayoutInternal a
+    = LayoutSingleton (AlignedWidget a)
+    | LayoutBox Orientation (BoxComponents a)
 
-data Layout f = Layout
-    { layoutInternal :: LayoutInternal f
-    , toAlignedWidget :: AlignedWidget f
+data Layout a = Layout
+    { layoutInternal :: LayoutInternal a
+    , toAlignedWidget :: AlignedWidget a
     }
 
 {-# INLINE alignedWidget #-}
 alignedWidget ::
-    Lens.Iso (Layout f) (Layout g) (AlignedWidget f) (AlignedWidget g)
+    Lens.Iso (Layout a) (Layout b) (AlignedWidget a) (AlignedWidget b)
 alignedWidget = Lens.iso toAlignedWidget (mkLayout . LayoutSingleton)
+
+{-# INLINE widget #-}
+widget :: Lens (Layout a) (Layout b) (Widget a) (Widget b)
+widget = alignedWidget . _2
+
+{-# INLINE width #-}
+width :: Lens' (Layout a) Widget.R
+width = widget . Widget.width
 
 {-# INLINE absAlignedWidget #-}
 absAlignedWidget ::
-    Lens.Iso (Layout f) (Layout g) (AbsAlignedWidget f) (AbsAlignedWidget g)
+    Lens.Iso (Layout a) (Layout b) (AbsAlignedWidget a) (AbsAlignedWidget b)
 absAlignedWidget =
     alignedWidget . Lens.iso toAbs fromAbs
     where
-        toAbs (relAlign, widget) = (relAlign * widget ^. Widget.size, widget)
-        fromAbs (absAlign, widget) = (absAlign / widget ^. Widget.size, widget)
+        toAbs (relAlign, w) = (relAlign * w ^. Widget.size, w)
+        fromAbs (absAlign, w) = (absAlign / w ^. Widget.size, w)
 
 boxComponentsToWidget ::
-    Orientation -> BoxComponents f -> AlignedWidget f
+    Orientation -> BoxComponents a -> AlignedWidget a
 boxComponentsToWidget orientation (BoxComponents before awidget after) =
     ( kbox ^?!
       Box.boxContent . Lens.traverse . Lens.filtered fst . _2 . Box.elementAlign
@@ -103,21 +112,21 @@ boxComponentsToWidget orientation (BoxComponents before awidget after) =
             , nonFocal after
             ]
 
-internalToAlignedWidget :: LayoutInternal f -> AlignedWidget f
-internalToAlignedWidget (LayoutSingleton widget) = widget
+internalToAlignedWidget :: LayoutInternal a -> AlignedWidget a
+internalToAlignedWidget (LayoutSingleton w) = w
 internalToAlignedWidget (LayoutBox orientation boxComponents) =
     boxComponentsToWidget orientation boxComponents
 
-mkLayout :: LayoutInternal f -> Layout f
+mkLayout :: LayoutInternal a -> Layout a
 mkLayout li = Layout li (internalToAlignedWidget li)
 
 fromCenteredWidget :: Widget a -> Layout a
-fromCenteredWidget widget = mkLayout $ LayoutSingleton (0.5, widget)
+fromCenteredWidget w = mkLayout $ LayoutSingleton (0.5, w)
 
-empty :: Layout f
+empty :: Layout a
 empty = fromCenteredWidget Widget.empty
 
-toBoxComponents :: Orientation -> Layout f -> BoxComponents f
+toBoxComponents :: Orientation -> Layout a -> BoxComponents a
 toBoxComponents orientation layout =
     case layoutInternal layout of
     LayoutBox o boxComponents | o == orientation -> boxComponents
@@ -125,8 +134,8 @@ toBoxComponents orientation layout =
 
 composeLayout ::
     Orientation ->
-    (BoxComponents f -> BoxComponents f) ->
-    Layout f -> Layout f
+    (BoxComponents a -> BoxComponents a) ->
+    Layout a -> Layout a
 composeLayout orientation onBoxComponents layout =
     layout
     & toBoxComponents orientation
@@ -139,18 +148,18 @@ class AddLayout w where
     addBefore :: Orientation -> [w] -> LayoutType w -> LayoutType w
     addAfter :: Orientation -> [w] -> LayoutType w -> LayoutType w
 
-aligned1d :: Lens.Getting b Box.Alignment b -> Layout f -> (b, Widget f)
+aligned1d :: Lens.Getting b Box.Alignment b -> Layout a -> (b, Widget a)
 aligned1d getter layout = layout ^. alignedWidget & _1 %~ (^. getter)
 
-instance align ~ Widget.R => AddLayout (align, Widget f) where
-    type LayoutType (align, Widget f) = Layout f
+instance align ~ Widget.R => AddLayout (align, Widget a) where
+    type LayoutType (align, Widget a) = Layout a
     addBefore orientation befores =
         composeLayout orientation (widgetsBefore %~ (befores++))
     addAfter orientation afters =
         composeLayout orientation (widgetsAfter <>~ afters)
 
-instance AddLayout (Layout f) where
-    type LayoutType (Layout f) = Layout f
+instance AddLayout (Layout a) where
+    type LayoutType (Layout a) = Layout a
     addBefore orientation =
         addBefore orientation . map (aligned1d (perpAxis orientation))
     addAfter orientation =
@@ -158,7 +167,7 @@ instance AddLayout (Layout f) where
 
 -- The axisAlignment is the alignment point to choose within the resulting box
 -- i.e: Horizontal box -> choose eventual horizontal alignment point
-box :: Orientation -> Widget.R -> [Layout f] -> Layout f
+box :: Orientation -> Widget.R -> [Layout a] -> Layout a
 box orientation axisAlignment layouts =
     layouts
     <&> toBoxComponents Horizontal
@@ -172,10 +181,10 @@ box orientation axisAlignment layouts =
         componentsFromList [] = BoxComponents [] (0, Widget.empty) []
         componentsFromList ((align, w):ws) = BoxComponents [] (pure align, w) ws
 
-hbox :: Widget.R -> [Layout f] -> Layout f
+hbox :: Widget.R -> [Layout a] -> Layout a
 hbox = box Horizontal
 
-vbox :: Widget.R -> [Layout f] -> Layout f
+vbox :: Widget.R -> [Layout a] -> Layout a
 vbox = box Vertical
 
 -- TODO: These functions and the AlignedWidget type could possibly be
@@ -183,33 +192,33 @@ vbox = box Vertical
 
 -- | scale = scaleAround 0.5
 --   scaleFromTopMiddle = scaleAround (Vector2 0.5 0)
-scaleAround :: Vector2 Widget.R -> Vector2 Widget.R -> Layout f -> Layout f
+scaleAround :: Vector2 Widget.R -> Vector2 Widget.R -> Layout a -> Layout a
 scaleAround point ratio =
     alignedWidget %~ f
     where
-        f (alignment, widget) =
+        f (alignment, w) =
             ( point + (alignment - point) / ratio
-            , Widget.scale ratio widget
+            , Widget.scale ratio w
             )
 
-scale :: Vector2 Widget.R -> Layout g -> Layout g
+scale :: Vector2 Widget.R -> Layout a -> Layout a
 scale ratio = alignedWidget . _2 %~ Widget.scale ratio
 
-pad :: Vector2 Widget.R -> Layout f -> Layout f
+pad :: Vector2 Widget.R -> Layout a -> Layout a
 pad padding =
     alignedWidget %~ f
     where
-        f (alignment, widget) =
+        f (alignment, w) =
             ( alignment & fromRelative & (+ padding) & toRelative
             , paddedWidget
             )
             where
-                paddedWidget = Widget.pad padding widget
-                fromRelative = (* widget ^. Widget.size)
+                paddedWidget = Widget.pad padding w
+                fromRelative = (* w ^. Widget.size)
                 toRelative = (/ paddedWidget ^. Widget.size)
 
 -- Resize a layout to be the same alignment/size as another layout
-hoverInPlaceOf :: Layout f -> Layout f -> Layout f
+hoverInPlaceOf :: Layout a -> Layout a -> Layout a
 layout `hoverInPlaceOf` src =
     ( srcAbsAlignment
     , layoutWidget

@@ -96,7 +96,7 @@ egWidget ::
     (ExpressionGui n)
     (Widget (T m Widget.EventResult))
     (Widget (T n Widget.EventResult))
-egWidget = Layout.alignedWidget . _2
+egWidget = Layout.widget
 
 {-# INLINE egAlignment #-}
 egAlignment :: Lens' (ExpressionGui m) Layout.Alignment
@@ -232,7 +232,7 @@ processAnnotationGui animId wideAnnotationBehavior =
         f config applyWide minWidth annotationEg =
             maybeTooNarrow annotationEg & maybeTooWide
             where
-                annotationWidth = annotationEg ^. egWidget . Widget.width
+                annotationWidth = annotationEg ^. Layout.width
                 width = max annotationWidth minWidth
                 expansionLimit =
                     Config.valAnnotationWidthExpansionLimit config & realToFrac
@@ -322,7 +322,7 @@ addAnnotationH f wideBehavior entityId =
             vboxTopFocal
             [ eg & egAlignment . _1 .~ 0.5
             , vspace
-            , processAnn (eg ^. egWidget . Widget.width) annotationEg
+            , processAnn (eg ^. Layout.width) annotationEg
             ]
     where
         animId = WidgetIds.fromEntityId entityId & Widget.toAnimId
