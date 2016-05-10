@@ -3,8 +3,6 @@ module Lamdu.GUI.ExpressionEdit.ApplyEdit
     ( make
     ) where
 
-import           Prelude.Compat
-
 import           Control.Lens.Operators
 import           Control.Lens.Tuple
 import           Data.Store.Transaction (Transaction)
@@ -13,9 +11,9 @@ import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.Bottle.Animation as Anim
 import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
+import qualified Graphics.UI.Bottle.Widgets as BWidgets
 import qualified Graphics.UI.Bottle.Widgets.Grid as Grid
 import qualified Graphics.UI.Bottle.Widgets.Layout as Layout
-import qualified Graphics.UI.Bottle.Widgets as BWidgets
 import qualified Lamdu.GUI.ExpressionEdit.BinderEdit as BinderEdit
 import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
 import qualified Lamdu.GUI.ExpressionEdit.TagEdit as TagEdit
@@ -23,12 +21,15 @@ import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
+import           Lamdu.GUI.ExpressionGui.Parens (parenify)
 import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
 import           Lamdu.GUI.Precedence (MyPrecedence(..))
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.Sugar.Names.Get as NamesGet
 import           Lamdu.Sugar.Names.Types (Name(..))
 import qualified Lamdu.Sugar.Types as Sugar
+
+import           Prelude.Compat
 
 type T = Transaction
 
@@ -139,7 +140,7 @@ make apply@(Sugar.Apply func specialArgs annotatedArgs) pl =
     makeFuncRow apply pl
     & ( if isBoxed
         then mkBoxed annotatedArgs myId
-        else ExpressionGui.parenify myPrecedence myId
+        else parenify myPrecedence myId
       )
     & ExprGuiM.assignCursor myId funcId
     where

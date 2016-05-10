@@ -13,6 +13,7 @@ import           Lamdu.GUI.ExpressionGui (ExpressionGui, Precedence, precLeft, p
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
+import           Lamdu.GUI.ExpressionGui.Parens (stdWrapParenify)
 import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Sugar.Names.Types (Name(..))
@@ -80,7 +81,7 @@ mkNomGui ::
     Sugar.Payload m ExprGuiT.Payload -> ExprGuiM m (ExpressionGui m)
 mkNomGui nameSidePrecLens str layout nom@(Sugar.Nominal _ val) pl =
     ExprGuiM.withLocalPrecedence (nameSidePrecLens .~ 0) $
-    ExpressionGui.stdWrapParenify pl
+    stdWrapParenify pl
     (ExpressionGui.MyPrecedence (fromIntegral nomPrecedence)) $
     \myId ->
     do

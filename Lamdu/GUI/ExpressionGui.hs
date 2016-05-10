@@ -30,13 +30,11 @@ module Lamdu.GUI.ExpressionGui
     , evaluationResult
     -- Expression wrapping
     , MyPrecedence(..), ParentPrecedence(..), Precedence(..), Precedence.precLeft, Precedence.precRight
-    , parenify
     , wrapExprEventMap
     , maybeAddAnnotationPl
     , stdWrap
     , parentDelegator
     , stdWrapParentExpr
-    , stdWrapParenify
     ) where
 
 import qualified Control.Lens as Lens
@@ -73,10 +71,9 @@ import qualified Lamdu.GUI.EvalView as EvalView
 import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
-import qualified Lamdu.GUI.ExpressionGui.Parens as Parens
 import           Lamdu.GUI.ExpressionGui.Types (ExpressionGui, ShowAnnotation(..), EvalModeShow(..), egWidget, egAlignment)
 import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
-import           Lamdu.GUI.Precedence (MyPrecedence(..), ParentPrecedence(..), Precedence(..), needParens)
+import           Lamdu.GUI.Precedence (MyPrecedence(..), ParentPrecedence(..), Precedence(..))
 import qualified Lamdu.GUI.Precedence as Precedence
 import qualified Lamdu.GUI.TypeView as TypeView
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
@@ -445,18 +442,6 @@ makeFocusableView myId =
     ExprGuiM.widgetEnv (BWidgets.makeFocusableView myId)
     <&> (egWidget %~)
 
-parenify ::
-    (Monad f, Monad m) =>
-    MyPrecedence -> Widget.Id ->
-    ExprGuiM m (ExpressionGui f) -> ExprGuiM m (ExpressionGui f)
-parenify prec myId mkGui =
-    do
-        parent <- ExprGuiM.outerPrecedence
-        if needParens (ParentPrecedence parent) prec
-              then Parens.addHighlightedTextParens myId <*> mkGui
-                   & ExprGuiM.withLocalPrecedence (const 0)
-              else mkGui
-
 makeLabel :: Monad m => String -> AnimId -> ExprGuiM m (ExpressionGui f)
 makeLabel text animId = ExprGuiM.makeLabel text animId <&> fromValueWidget
 
@@ -496,16 +481,6 @@ addValFrame myId =
     (.)
     <$> (addValBG myId <&> (egWidget %~))
     <*> addValPadding
-
-stdWrapParenify ::
-    Monad m =>
-    Sugar.Payload m ExprGuiT.Payload -> MyPrecedence ->
-    (Widget.Id -> ExprGuiM m (ExpressionGui m)) ->
-    ExprGuiM m (ExpressionGui m)
-stdWrapParenify pl prec mkGui =
-    stdWrapParentExpr pl $ \myId ->
-    mkGui myId
-    & parenify prec myId
 
 -- TODO: This doesn't belong here
 makeNameView ::

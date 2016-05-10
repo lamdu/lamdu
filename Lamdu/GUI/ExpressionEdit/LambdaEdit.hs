@@ -18,6 +18,7 @@ import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
+import           Lamdu.GUI.ExpressionGui.Parens (stdWrapParenify)
 import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
 import qualified Lamdu.GUI.LightLambda as LightLambda
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
@@ -102,7 +103,7 @@ make ::
     ExprGuiM m (ExpressionGui m)
 make lam pl =
     ExprGuiM.withLocalPrecedence (ExpressionGui.precLeft .~ 0) $
-    ExpressionGui.stdWrapParenify pl (ExpressionGui.MyPrecedence 0) $ \myId ->
+    stdWrapParenify pl (ExpressionGui.MyPrecedence 0) $ \myId ->
     ExprGuiM.assignCursor myId bodyId $
     do
         BinderEdit.Parts mParamsEdit mScopeEdit bodyEdit eventMap <-
