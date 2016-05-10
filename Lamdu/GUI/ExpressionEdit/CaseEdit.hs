@@ -5,7 +5,6 @@ module Lamdu.GUI.ExpressionEdit.CaseEdit
 
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
-import           Control.Lens.Tuple
 import qualified Data.List as List
 import           Data.Maybe (fromMaybe)
 import           Data.Monoid ((<>))
@@ -110,7 +109,7 @@ makeAltRow ::
     Monad m =>
     Maybe Tag ->
     Sugar.CaseAlt (Name m) m (Sugar.Expression (Name m) m ExprGuiT.Payload) ->
-    ExprGuiM m [ExpressionGui m]
+    ExprGuiM m (ExpressionGui m)
 makeAltRow mActiveTag (Sugar.CaseAlt delete tag altExpr) =
     do
         config <- ExprGuiM.readConfig
@@ -124,13 +123,8 @@ makeAltRow mActiveTag (Sugar.CaseAlt delete tag altExpr) =
                 else id
         altExprGui <- ExprGuiM.makeSubexpression (const 0) altExpr
         let itemEventMap = caseDelEventMap config delete
-        space <- ExpressionGui.stdVSpace
-        [ altRefGui & ExpressionGui.egAlignment . _1 .~ 1
-            , space
-            , altExprGui & ExpressionGui.egAlignment . _1 .~ 0
-            ]
+        ExpressionGui.spacedHPair ?? altRefGui ?? altExprGui
             <&> ExpressionGui.egWidget %~ Widget.weakerEvents itemEventMap
-            & return
 
 makeAltsWidget ::
     Monad m =>
@@ -144,8 +138,8 @@ makeAltsWidget mActiveTag alts _ =
     do
         vspace <- ExpressionGui.stdVSpace
         mapM (makeAltRow mActiveTag) alts
-            <&> List.intersperse (replicate 3 vspace)
-            <&> ExpressionGui.gridTopLeftFocal
+            <&> List.intersperse vspace
+            <&> ExpressionGui.vboxTopFocal
 
 separationBar :: Config -> Widget.R -> Anim.AnimId -> ExpressionGui m
 separationBar config width animId =

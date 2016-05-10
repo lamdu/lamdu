@@ -11,15 +11,12 @@ module Graphics.UI.Bottle.Widgets.Layout
 
     , Orientation(..)
     , box, hbox, vbox
-    , gridTopLeftFocal
 
     , scaleAround
     , scale
     , pad
     , hoverInPlaceOf
     ) where
-
-import           Prelude.Compat
 
 import           Control.Lens (Lens')
 import qualified Control.Lens as Lens
@@ -29,7 +26,8 @@ import           Data.Vector.Vector2 (Vector2(..))
 import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.Box as Box
-import qualified Graphics.UI.Bottle.Widgets.Grid as Grid
+
+import           Prelude.Compat
 
 type AlignedWidget f = (Box.Alignment, Widget f)
 type AbsAlignedWidget f = (Box.Alignment, Widget f)
@@ -179,24 +177,6 @@ hbox = box Horizontal
 
 vbox :: Widget.R -> [Layout f] -> Layout f
 vbox = box Vertical
-
-gridTopLeftFocal :: [[Layout f]] -> Layout f
-gridTopLeftFocal [] = empty
-gridTopLeftFocal ([]:rs) =
-    gridTopLeftFocal rs
-    -- First row has 0 height, and alignment comes from top-left
-    -- element:
-    & alignedWidget . _1 . _2 .~ 0
-gridTopLeftFocal rows@((_:_):_) =
-    (topLeftAlignment, Grid.toWidget grid) ^. Lens.from alignedWidget
-    where
-        topLeftAlignment =
-            grid ^?!
-            Grid.gridContent . Lens.ix 0 . Lens.ix 0 . _2 . Grid.elementAlign
-        grid =
-            rows
-            & Lens.mapped . Lens.mapped %~ (^. alignedWidget)
-            & Grid.make
 
 -- TODO: These functions and the AlignedWidget type could possibly be
 -- extracted to their own module?

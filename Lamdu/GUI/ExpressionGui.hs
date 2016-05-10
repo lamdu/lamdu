@@ -8,7 +8,7 @@ module Lamdu.GUI.ExpressionGui
     , stdHSpace, stdVSpace
     , hbox, hboxSpaced
     , vboxTopFocal, vboxTopFocalSpaced, vboxTopFocalAlignedTo
-    , gridTopLeftFocal
+    , spacedHPair
     , listWithDelDests
     , makeLabel
     , grammarLabel
@@ -163,8 +163,15 @@ vboxTopFocalSpaced =
     <&> List.intersperse
     <&> fmap vboxTopFocal
 
-gridTopLeftFocal :: [[ExpressionGui m]] -> ExpressionGui m
-gridTopLeftFocal = Layout.gridTopLeftFocal
+-- | Pair an item with a mid-space that becomes the combined alignment
+-- point
+spacedHPair :: Monad m => ExprGuiM m (ExpressionGui f -> ExpressionGui f -> ExpressionGui f)
+spacedHPair =
+    stdHSpace
+    <&> \space x y ->
+    space
+    & Layout.addBefore Layout.Horizontal [x]
+    & Layout.addAfter Layout.Horizontal [y]
 
 addAnnotationBackgroundH :: (Config -> Draw.Color) -> Config -> AnimId -> ExpressionGui m -> ExpressionGui m
 addAnnotationBackgroundH getColor config animId =

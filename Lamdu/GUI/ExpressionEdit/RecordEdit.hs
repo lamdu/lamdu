@@ -3,10 +3,7 @@ module Lamdu.GUI.ExpressionEdit.RecordEdit
     ( make
     ) where
 
-import           Prelude.Compat
-
 import           Control.Lens.Operators
-import           Control.Lens.Tuple
 import qualified Data.List as List
 import           Data.Monoid ((<>))
 import           Data.Vector.Vector2 (Vector2(..))
@@ -26,6 +23,8 @@ import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Sugar.Names.Types (Name(..))
 import qualified Lamdu.Sugar.Types as Sugar
+
+import           Prelude.Compat
 
 defaultPos ::
     [Sugar.RecordField name m (Sugar.Expression name m a)] ->
@@ -83,7 +82,7 @@ make record@(Sugar.Record fields recordTail addField) pl =
 makeFieldRow ::
     Monad m =>
     Sugar.RecordField (Name m) m (Sugar.Expression (Name m) m ExprGuiT.Payload) ->
-    ExprGuiM m [ExpressionGui m]
+    ExprGuiM m (ExpressionGui m)
 makeFieldRow (Sugar.RecordField delete tag fieldExpr) =
     do
         config <- ExprGuiM.readConfig
@@ -91,13 +90,8 @@ makeFieldRow (Sugar.RecordField delete tag fieldExpr) =
             TagEdit.makeRecordTag (ExprGuiT.nextHolesBefore fieldExpr) tag
         fieldExprGui <- ExprGuiM.makeSubexpression (const 0) fieldExpr
         let itemEventMap = recordDelEventMap config delete
-        space <- ExpressionGui.stdHSpace
-        [ fieldRefGui & ExpressionGui.egAlignment . _1 .~ 1
-            , space
-            , fieldExprGui & ExpressionGui.egAlignment . _1 .~ 0
-            ]
+        ExpressionGui.spacedHPair ?? fieldRefGui ?? fieldExprGui
             <&> ExpressionGui.egWidget %~ Widget.weakerEvents itemEventMap
-            & return
 
 makeFieldsWidget ::
     Monad m =>
@@ -110,8 +104,8 @@ makeFieldsWidget fields _ =
     do
         vspace <- ExpressionGui.stdVSpace
         mapM makeFieldRow fields
-            <&> List.intersperse (replicate 3 vspace)
-            <&> ExpressionGui.gridTopLeftFocal
+            <&> List.intersperse vspace
+            <&> ExpressionGui.vboxTopFocal
 
 separationBar :: Config -> Widget.R -> Anim.AnimId -> ExpressionGui m
 separationBar config width animId =
