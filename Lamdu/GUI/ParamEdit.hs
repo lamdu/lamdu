@@ -120,13 +120,15 @@ make annotationOpts showAnnotation prevId nextId param =
                 , maybe mempty (eventMapOrderParam (Config.paramOrderBeforeKeys config) "before") (iMOrderBefore info)
                 , maybe mempty (eventMapOrderParam (Config.paramOrderAfterKeys config) "after") (iMOrderAfter info)
                 ]
-        iMakeNameEdit info myId
-            <&> ExpressionGui.egWidget %~ Widget.weakerEvents paramEventMap
-            <&> ExpressionGui.egAlignment . _1 .~ 0.5
-            & ( ExpressionGui.maybeAddAnnotationWith annotationOpts
-                ExpressionGui.KeepWideAnnotation showAnnotation
-                (param ^. Sugar.fpAnnotation)
-                entityId <*> )
+        ExpressionGui.maybeAddAnnotationWith annotationOpts
+            ExpressionGui.KeepWideAnnotation showAnnotation
+            (param ^. Sugar.fpAnnotation)
+            entityId
+            <*>
+            ( iMakeNameEdit info myId
+              <&> ExpressionGui.egWidget %~ Widget.weakerEvents paramEventMap
+              <&> ExpressionGui.egAlignment . _1 .~ 0.5
+            )
     where
         entityId = param ^. Sugar.fpId
         myId = WidgetIds.fromEntityId entityId
