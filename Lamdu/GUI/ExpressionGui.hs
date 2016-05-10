@@ -39,7 +39,6 @@ module Lamdu.GUI.ExpressionGui
     , stdWrapParenify
     ) where
 
-import           Control.Lens (Lens, Lens')
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Lens.Tuple
@@ -75,7 +74,7 @@ import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.ExpressionGui.Parens as Parens
-import           Lamdu.GUI.ExpressionGui.Types (ExpressionGui, ShowAnnotation(..), EvalModeShow(..))
+import           Lamdu.GUI.ExpressionGui.Types (ExpressionGui, ShowAnnotation(..), EvalModeShow(..), egWidget, egAlignment)
 import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
 import           Lamdu.GUI.Precedence (MyPrecedence(..), ParentPrecedence(..), Precedence(..), needParens)
 import qualified Lamdu.GUI.Precedence as Precedence
@@ -88,19 +87,6 @@ import qualified Lamdu.Sugar.Types as Sugar
 import           Prelude.Compat
 
 type T = Transaction
-
-{-# INLINE egWidget #-}
-egWidget ::
-    Lens
-    (ExpressionGui m)
-    (ExpressionGui n)
-    (Widget (T m Widget.EventResult))
-    (Widget (T n Widget.EventResult))
-egWidget = Layout.widget
-
-{-# INLINE egAlignment #-}
-egAlignment :: Lens' (ExpressionGui m) Layout.Alignment
-egAlignment = Layout.alignedWidget . _1
 
 fromValueWidget :: Widget (T m Widget.EventResult) -> ExpressionGui m
 fromValueWidget = Layout.fromCenteredWidget

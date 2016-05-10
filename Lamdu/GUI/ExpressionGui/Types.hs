@@ -1,6 +1,6 @@
 {-# LANGUAGE TemplateHaskell #-}
 module Lamdu.GUI.ExpressionGui.Types
-    ( ExpressionGui
+    ( ExpressionGui, egWidget, egAlignment
     , SugarExpr
     , Payload(..)
         , plStoredEntityIds, plInjected, plNearestHoles, plShowAnnotation
@@ -15,18 +15,36 @@ module Lamdu.GUI.ExpressionGui.Types
     , plOfHoleResult
     ) where
 
+import           Control.Lens (Lens, Lens')
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
+import           Control.Lens.Tuple
 import           Data.Store.Transaction (Transaction)
+import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import           Graphics.UI.Bottle.Widgets.Layout (Layout)
+import qualified Graphics.UI.Bottle.Widgets.Layout as Layout
+import qualified Lamdu.Sugar.Lens as SugarLens
 import           Lamdu.Sugar.Names.Types (ExpressionN)
 import           Lamdu.Sugar.NearestHoles (NearestHoles)
 import qualified Lamdu.Sugar.NearestHoles as NearestHoles
-import qualified Lamdu.Sugar.Lens as SugarLens
 import qualified Lamdu.Sugar.Types as Sugar
 
+type T = Transaction
 type ExpressionGui m = Layout (Transaction m Widget.EventResult)
+
+{-# INLINE egWidget #-}
+egWidget ::
+    Lens
+    (ExpressionGui m)
+    (ExpressionGui n)
+    (Widget (T m Widget.EventResult))
+    (Widget (T n Widget.EventResult))
+egWidget = Layout.widget
+
+{-# INLINE egAlignment #-}
+egAlignment :: Lens' (ExpressionGui m) Layout.Alignment
+egAlignment = Layout.alignedWidget . _1
 
 data EvalModeShow = EvalModeShowNothing | EvalModeShowType | EvalModeShowEval
     deriving (Eq, Ord, Show)

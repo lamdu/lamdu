@@ -3,10 +3,7 @@ module Lamdu.GUI.ExpressionGui.Parens
     ( addHighlightedTextParens
     ) where
 
-import           Prelude.Compat
-
 import           Control.Lens.Operators
-import           Control.Lens.Tuple
 import           Graphics.UI.Bottle.Animation (AnimId)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import           Graphics.UI.Bottle.Widgets.Layout (Layout)
@@ -20,6 +17,8 @@ import           Graphics.UI.Bottle.WidgetsEnvT (WidgetEnvT)
 import qualified Graphics.UI.Bottle.WidgetsEnvT as WE
 import           Lamdu.GUI.WidgetIds (parensPrefix)
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
+
+import           Prelude.Compat
 
 addTextParensI ::
     (Monad m, Applicative f) =>
@@ -58,7 +57,7 @@ addHighlightedTextParens myId =
             <$> addTextParensI animId rParenId
             ?? case mInsideParenId of
                 Nothing -> id
-                Just _ -> Layout.alignedWidget . _2 %~ highlightExpression config
+                Just _ -> Layout.widget %~ highlightExpression config
             & ExprGuiM.widgetEnv
     where
         rParenId = Widget.joinId myId [")"]
