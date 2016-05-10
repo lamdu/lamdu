@@ -242,11 +242,11 @@ Executable lamdu
                   , Lamdu.GUI.ExpressionEdit.TagEdit
                   , Lamdu.GUI.ExpressionGui
                   , Lamdu.GUI.ExpressionGui.Monad
+                  , Lamdu.GUI.ExpressionGui.Parens
                   , Lamdu.GUI.ExpressionGui.Types
                   , Lamdu.GUI.LightLambda
                   , Lamdu.GUI.Main
                   , Lamdu.GUI.ParamEdit
-                  , Lamdu.GUI.Parens
                   , Lamdu.GUI.Precedence
                   , Lamdu.GUI.RedundantAnnotations
                   , Lamdu.GUI.Scroll

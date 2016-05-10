@@ -1,5 +1,5 @@
 {-# LANGUAGE NoImplicitPrelude, OverloadedStrings #-}
-module Lamdu.GUI.Parens
+module Lamdu.GUI.ExpressionGui.Parens
     ( addHighlightedTextParens
     ) where
 
