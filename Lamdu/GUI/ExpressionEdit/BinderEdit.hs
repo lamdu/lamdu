@@ -347,7 +347,7 @@ make name binder myId =
             Nothing -> return Nothing
             Just paramsEdit ->
                 ExpressionGui.vboxTopFocalSpaced
-                <&> ($ (paramsEdit : mScopeEdit ^.. Lens._Just) <&> ExpressionGui.egAlignment . _1 .~ 0.5)
+                ?? (paramsEdit : mScopeEdit ^.. Lens._Just <&> ExpressionGui.egAlignment . _1 .~ 0.5)
                 <&> ExpressionGui.egWidget %~ Widget.weakerEvents rhsJumperEquals
                 <&> Just
         equals <- ExpressionGui.makeLabel "=" (Widget.toAnimId myId)
