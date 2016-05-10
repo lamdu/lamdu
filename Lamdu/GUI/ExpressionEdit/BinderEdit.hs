@@ -233,13 +233,16 @@ makeScopeNavEdit binder myId curCursor =
             ]
         setScope = Transaction.setP (binder ^. Sugar.bChosenScopeProp) . Just
 
+data IsScopeNavFocused = ScopeNavIsFocused | ScopeNavNotFocused
+    deriving (Eq, Ord)
+
 makeMParamsEdit ::
     Monad m =>
-    CurAndPrev (Maybe ScopeCursor) -> Maybe (ExpressionGui n) ->
+    CurAndPrev (Maybe ScopeCursor) -> IsScopeNavFocused ->
     Widget.Id -> Widget.Id ->
     NearestHoles -> Widget.Id -> Sugar.BinderParams (Name m) m ->
     ExprGuiM m (Maybe (ExpressionGui m))
-makeMParamsEdit mScopeCursor mScopeNavEdit delVarBackwardsId myId nearestHoles bodyId params =
+makeMParamsEdit mScopeCursor isScopeNavFocused delVarBackwardsId myId nearestHoles bodyId params =
     params
     & makeParamsEdit annotationMode nearestHoles
       delVarBackwardsId myId bodyId
@@ -260,9 +263,7 @@ makeMParamsEdit mScopeCursor mScopeNavEdit delVarBackwardsId myId nearestHoles b
         mCurCursor = mScopeCursor ^. current
         annotationMode =
             do
-                mScopeNavEdit ^?
-                    Lens._Just . ExpressionGui.egWidget
-                    >>= guard . Widget.isFocused
+                ScopeNavIsFocused == isScopeNavFocused & guard
                 ExpressionGui.NeighborVals
                     <$> (mCurCursor <&> sMPrevParamScope)
                     <*> (mCurCursor <&> sMNextParamScope)
@@ -294,9 +295,14 @@ makeParts funcApplyLimit binder delVarBackwardsId myId =
                     Lens.has (Lens.traversed . Lens._Just) [sMPrevParamScope currentScope, sMNextParamScope currentScope]
                 Just currentScope
             & maybe (return (mempty, Nothing)) (makeScopeNavEdit binder scopesNavId)
+        let isScopeNavFocused =
+                case mScopeNavEdit of
+                Just gui
+                    | Widget.isFocused (gui ^. ExpressionGui.egWidget) -> ScopeNavIsFocused
+                _ -> ScopeNavNotFocused
         do
             mParamsEdit <-
-                makeMParamsEdit mScopeCursor mScopeNavEdit delVarBackwardsId myId
+                makeMParamsEdit mScopeCursor isScopeNavFocused delVarBackwardsId myId
                 (binderContentNearestHoles bodyContent) bodyId params
             rhs <- makeBinderBodyEdit params body
             Parts mParamsEdit mScopeNavEdit rhs scopeEventMap & return
