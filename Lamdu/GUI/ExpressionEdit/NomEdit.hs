@@ -21,11 +21,11 @@ import qualified Lamdu.Sugar.Types as Sugar
 
 import           Prelude.Compat
 
-addLeft :: Layout.AddLayout w => [w] -> Layout.LayoutType w -> Layout.LayoutType w
-addLeft = Layout.addBefore Layout.Horizontal
+addLeft :: Layout.AddLayout w => w -> Layout.LayoutType w -> Layout.LayoutType w
+addLeft = Layout.addBefore Layout.Horizontal . (: [])
 
-addRight :: Layout.AddLayout w => [w] -> Layout.LayoutType w -> Layout.LayoutType w
-addRight = Layout.addAfter Layout.Horizontal
+addRight :: Layout.AddLayout w => w -> Layout.LayoutType w -> Layout.LayoutType w
+addRight = Layout.addAfter Layout.Horizontal . (: [])
 
 hover ::
     Monad m =>
@@ -45,17 +45,21 @@ type LayoutFunc m =
 
 expandingName ::
     Monad m =>
-    ([ExpressionGui m] -> ExpressionGui m -> ExpressionGui m) -> LayoutFunc m
+    (ExpressionGui m -> ExpressionGui m -> ExpressionGui m) ->
+    LayoutFunc m
 expandingName namePos nomId showName =
     do
         space <- ExpressionGui.stdHSpace
         addBg <- ExpressionGui.addValBGWithColor Config.valNomBGColor nomId
         return $
             \label nameGui subexprGui ->
-            namePos [nameGui | showName] label
+            label
+            & ( if showName
+                then namePos nameGui
+                else id )
             & ExpressionGui.egWidget %~ addBg
-            & (:[]) & (`namePos` space)
-            & (:[]) & (`namePos` subexprGui)
+            & (`namePos` space)
+            & (`namePos` subexprGui)
 
 makeToNom ::
     Monad m =>
