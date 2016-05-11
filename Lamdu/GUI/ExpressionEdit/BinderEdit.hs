@@ -359,7 +359,12 @@ make name binder myId =
                 <&> Just
         equals <- ExpressionGui.makeLabel "=" (Widget.toAnimId myId)
         ExpressionGui.hboxSpaced
-            ?? (defNameEdit : (mLhsEdit ^.. Lens._Just) ++ [const equals, bodyEdit])
+            <&>
+            (\hbox ->
+            hbox
+            [ hbox (defNameEdit : (mLhsEdit ^.. Lens._Just) ++ [const equals])
+            , bodyEdit
+            ] )
             <&> ExpressionGui.egWidget %~ Widget.weakerEvents eventMap
     where
         presentationChoiceId = Widget.joinId myId ["presentation"]
