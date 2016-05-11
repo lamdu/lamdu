@@ -31,9 +31,11 @@ hover =
 
 type T = Transaction
 
+data ShowName = NameHovering | NameShowing | NameCollapsed
+
 type LayoutFunc m f =
     Widget.Id -> -- nomId
-    Bool -> -- show name
+    ShowName ->
     ExprGuiM m (
         Layout (T f Widget.EventResult) -> -- label
         ExpressionGui f -> -- name gui
@@ -43,34 +45,37 @@ type LayoutFunc m f =
 expandingName ::
     Monad m =>
     (Layout (T f Widget.EventResult) -> ExpressionGui f -> ExpressionGui f) ->
-    (ExpressionGui f -> Layout (T f Widget.EventResult) -> ExpressionGui f) ->
     LayoutFunc m f
-expandingName (#>) (<#) nomId showName =
+expandingName (#>) nomId showName =
     do
         space <- ExpressionGui.stdHSpace
         addBg <- ExpressionGui.addValBGWithColor Config.valNomBGColor nomId
+        h <- hover
         return $
             \label nameGui subexprGui ->
-            ( if showName
-              then (nameGui <# label) ExprGuiT.LayoutWide
-              else label
-            & Layout.widget %~ addBg
-            )
-            #> (space #> subexprGui)
+            let nameShowing =
+                    (nameGui ExprGuiT.LayoutWide #> const label)
+                    ExprGuiT.LayoutWide
+                    & Layout.widget %~ addBg
+            in  case showName of
+                NameCollapsed -> label & Layout.widget %~ addBg
+                NameShowing -> nameShowing
+                NameHovering -> nameShowing `h` label
+                #> (space #> subexprGui)
 
 makeToNom ::
     Monad m =>
     Sugar.Nominal (Name m) (ExprGuiT.SugarExpr m) ->
     Sugar.Payload m ExprGuiT.Payload ->
     ExprGuiM m (ExpressionGui m)
-makeToNom = mkNomGui precLeft "«" $ expandingName (||>) (<||)
+makeToNom = mkNomGui precLeft "«" $ expandingName (||>)
 
 makeFromNom ::
     Monad m =>
     Sugar.Nominal (Name m) (ExprGuiT.SugarExpr m) ->
     Sugar.Payload m ExprGuiT.Payload ->
     ExprGuiM m (ExpressionGui m)
-makeFromNom = mkNomGui precRight "»" $ expandingName (flip (<||)) (flip (||>))
+makeFromNom = mkNomGui precRight "»" $ expandingName (flip (<||))
 
 nomPrecedence :: Int
 nomPrecedence = 9
@@ -88,27 +93,19 @@ mkNomGui nameSidePrecLens str layout nom@(Sugar.Nominal _ val) pl =
     \myId ->
     do
         let nomId = Widget.joinId myId ["nom"]
-        isSelected <- WE.isSubCursor nomId & ExprGuiM.widgetEnv
         let nameId = Widget.joinId nomId ["name"]
-        label <-
-            ExpressionGui.grammarLabel str (Widget.toAnimId myId)
-            <&> if isSelected then id
-                else Layout.widget %~ Widget.takesFocus (const (pure nameId))
-        nameEdit <-
-            ExpressionGui.makeFocusableView nameId
-            <*> mkNameGui nom nameId
-        subexprEdit <-
-            ExprGuiM.makeSubexpression
-            (nameSidePrecLens .~ nomPrecedence+1) val
-        let mk x = layout nomId x <&> (\f -> f label nameEdit subexprEdit)
-        h <- hover
-        if ExprGuiT.plOfHoleResult pl
-            then mk True
-            else do
-                compact <- mk False
-                if isSelected
-                    then mk True <&> \expanded mode -> (expanded mode `h` compact mode)
-                    else return compact
+        isSelected <- WE.isSubCursor nomId & ExprGuiM.widgetEnv
+        let nameShowing
+                | ExprGuiT.plOfHoleResult pl = NameShowing
+                | isSelected = NameHovering
+                | otherwise = NameCollapsed
+        layout nomId nameShowing
+            <*> (ExpressionGui.grammarLabel str (Widget.toAnimId myId)
+                <&> if isSelected then id
+                    else Layout.widget %~ Widget.takesFocus (const (pure nameId))
+                )
+            <*> (ExpressionGui.makeFocusableView nameId <*> mkNameGui nom nameId)
+            <*> ExprGuiM.makeSubexpression (nameSidePrecLens .~ nomPrecedence+1) val
     & ExprGuiM.assignCursor myId valId
     where
         valId = val ^. Sugar.rPayload . Sugar.plEntityId & WidgetIds.fromEntityId
