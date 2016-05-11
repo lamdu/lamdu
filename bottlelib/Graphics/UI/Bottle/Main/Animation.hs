@@ -205,8 +205,7 @@ mainLoop win getAnimationConfig animHandlers =
         tvars <-
             ThreadVars
             <$>
-                ( makeFrame (animHandlers initialWinSize)
-                  >>= initialAnimState >>= newTVarIO
+                ( initialAnimState mempty >>= newTVarIO
                 )
             <*> newTVarIO EventsData
                 { _edHaveTicks = False
