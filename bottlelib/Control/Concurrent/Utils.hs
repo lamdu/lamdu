@@ -31,4 +31,4 @@ forwardExceptions action =
 
 withForkedIO :: IO () -> IO a -> IO a
 withForkedIO action =
-    E.bracket (forkIOUnmasked action) (`asyncThrowTo` E.ThreadKilled) . const
+    E.bracket (forkIOUnmasked action) (`E.throwTo` E.ThreadKilled) . const
