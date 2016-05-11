@@ -396,14 +396,13 @@ makeLetEdit item =
                 | usage <- take 1 (item ^. Sugar.lUsages)
                 ]
         let eventMap = mappend actionsEventMap usageEventMap
-        ExpressionGui.hboxSpaced
-            <*> sequence
-            [ ExpressionGui.grammarLabel "let" (Widget.toAnimId myId) <&> const
-            , make (item ^. Sugar.lName) binder myId
+        ExpressionGui.tagItem
+            <*> (ExpressionGui.grammarLabel "let" (Widget.toAnimId myId) <&> const)
+            <*> (make (item ^. Sugar.lName) binder myId
                 <&> ExpressionGui.egWidget %~ Widget.weakerEvents eventMap
                 <&> ExpressionGui.pad
                     (Config.letItemPadding config <&> realToFrac)
-            ]
+                )
     where
         bodyId =
             item ^. Sugar.lBody . Sugar.bbContent . SugarLens.binderContentEntityId
