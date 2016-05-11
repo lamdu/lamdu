@@ -1,12 +1,12 @@
 {-# LANGUAGE NoImplicitPrelude, TemplateHaskell, DeriveGeneric, DeriveFunctor, DeriveFoldable, DeriveTraversable #-}
 module Lamdu.Font
-    ( FontSize, Fonts(..), with
+    ( FontSize, Fonts(..), new
     , lfontDefault, lfontHelp, lfontFancy, lfontAutoName, lfontMono
     ) where
 
 import qualified Control.Exception as E
 import qualified Control.Lens as Lens
-import           Control.Monad.Trans.Cont (ContT(..))
+import           Control.Monad (unless)
 import qualified Data.Aeson.Types as Aeson
 import           Data.Typeable (Typeable)
 import           GHC.Generics (Generic)
@@ -40,15 +40,12 @@ Lens.makeLensesFor
 
 type FontSize = Float
 
-withPath :: E.Exception e => (e -> IO a) -> FontSize -> FilePath -> (Draw.Font -> IO a) -> IO a
-withPath catchError size path action =
+openFont :: FontSize -> FilePath -> IO Draw.Font
+openFont size path =
     do
         exists <- Directory.doesFileExist path
-        if exists
-            then Draw.withFontCatch catchError size path action
-            else
-                let err = MissingFont $ path ++ " does not exist!"
-                in E.throwIO err `E.catch` catchError
+        unless exists $ E.throwIO $ MissingFont $ path ++ " does not exist!"
+        Draw.openFont size path
 
-with :: E.Exception e => (e -> IO a) -> Fonts (FontSize, FilePath) -> (Fonts Draw.Font -> IO a) -> IO a
-with catchError = runContT . traverse (ContT . uncurry (withPath catchError))
+new :: Fonts (FontSize, FilePath) -> IO (Fonts Draw.Font)
+new = traverse (uncurry openFont)

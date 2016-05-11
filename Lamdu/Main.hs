@@ -313,14 +313,11 @@ withFontLoop configSampler act =
                     newAbsFonts <- ConfigSampler.getSample configSampler <&> curSampleFonts
                     when (newAbsFonts /= absFonts) $ E.throwIO FontChanged
         let runAct = act fontsVer throwIfFontChanged
-        res <-
-            withFont (const (return Nothing)) absFonts $ \fonts ->
-            Just <$> runAct fonts
-        case res of
-            Nothing -> withFont E.throwIO defaultFontsAbs runAct
-            Just success -> return success
-    where
-        withFont err = Font.with (\x@E.SomeException{} -> err x)
+        fonts <-
+            Font.new absFonts
+            `E.catch` \E.SomeException {} ->
+            Font.new defaultFontsAbs
+        runAct fonts
 
 mainLoop ::
     GLFW.Window -> RefreshScheduler -> Sampler Config ->
