@@ -115,13 +115,12 @@ makeFuncRow (Sugar.Apply func specialArgs annotatedArgs) pl =
             Sugar.InfixArgs prec l r ->
                 ExpressionGui.hboxSpaced
                 <*> sequenceA
-                [ ExprGuiM.makeSubexpression
-                    (ExpressionGui.precRight .~ prec+1)
-                    l
-                , makeInfixFuncName func <&> overrideModifyEventMap
-                , ExprGuiM.makeSubexpression
-                    (ExpressionGui.precLeft .~ prec+1)
-                    r
+                [ ExpressionGui.hboxSpaced
+                    <*> sequenceA
+                    [ ExprGuiM.makeSubexpression (ExpressionGui.precRight .~ prec+1) l
+                    , makeInfixFuncName func <&> overrideModifyEventMap
+                    ]
+                , ExprGuiM.makeSubexpression (ExpressionGui.precLeft .~ prec+1) r
                 ]
 
 make ::
