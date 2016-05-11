@@ -259,7 +259,7 @@ makeMParamsEdit mScopeCursor isScopeNavFocused delVarBackwardsId myId nearestHol
     >>= \case
     [] -> return Nothing
     paramEdits ->
-        ExpressionGui.vboxTopFocalSpaced
+        ExpressionGui.hboxSpaced
         ?? (paramEdits <&> ExpressionGui.egAlignment . _1 .~ 0.5)
         & case params of
           Sugar.FieldParams{} -> (ExpressionGui.addValFrame myId <*>)
