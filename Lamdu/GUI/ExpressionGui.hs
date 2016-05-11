@@ -163,10 +163,20 @@ stdVSpace =
 
 hboxSpaced :: Monad m => ExprGuiM m ([ExpressionGui f] -> ExpressionGui f)
 hboxSpaced =
-    stdHSpace
-    <&> const
-    <&> List.intersperse
-    <&> fmap hbox
+    do
+        hSpace <- stdHSpace
+        vSpace <- stdVSpace
+        return $
+            \guis layoutMode ->
+            let wide = guis ?? LayoutWide & List.intersperse hSpace & Layout.hbox 0.5
+            in  case layoutMode of
+                LayoutWide -> wide
+                LayoutNarrow limit
+                    | wide ^. Layout.width > limit ->
+                      vboxTopFocal
+                      (List.intersperse (const vSpace) guis <&> egAlignment . _1 .~ 0)
+                      layoutMode
+                    | otherwise -> wide
 
 vboxTopFocalAlignedTo :: Widget.R -> [ExpressionGui m] -> ExpressionGui m
 vboxTopFocalAlignedTo hAlign guis =
