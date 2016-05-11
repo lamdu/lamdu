@@ -1,7 +1,8 @@
 {-# LANGUAGE NoImplicitPrelude, TemplateHaskell #-}
 
 module Graphics.UI.Bottle.Main.Animation
-    ( mainLoop, AnimConfig(..), Handlers(..), EventResult(..)
+    ( AnimConfig(..), Handlers(..), EventResult(..)
+    , Looper(..), newLooper
     ) where
 
 import           Control.Concurrent.STM.TVar (TVar, newTVarIO, readTVar, writeTVar, modifyTVar, swapTVar)
@@ -198,21 +199,30 @@ animThread tvars win =
             FinalFrame -> Just $ Anim.draw frame
             NotAnimating -> Nothing
 
-mainLoop :: GLFW.Window -> IO AnimConfig -> (Anim.Size -> Handlers) -> IO ()
-mainLoop win getAnimationConfig animHandlers =
+newtype Looper = Looper
+    { runLooper :: GLFW.Window -> IO AnimConfig -> (Anim.Size -> Handlers) -> IO ()
+    }
+
+newLooper :: IO Looper
+newLooper =
     do
-        initialWinSize <- MainImage.windowSize win
-        tvars <-
-            ThreadVars
-            <$>
-                ( initialAnimState mempty >>= newTVarIO
-                )
-            <*> newTVarIO EventsData
-                { _edHaveTicks = False
-                , _edRefreshRequested = False
-                , _edWinSize = initialWinSize
-                , _edReversedEvents = []
-                }
-            <*> newTVarIO (return ())
-        eventsThread <- forwardExceptions (eventHandlerThread tvars getAnimationConfig animHandlers)
-        withForkedIO eventsThread (animThread tvars win)
+        animState <- initialAnimState mempty >>= newTVarIO
+        return $ Looper $ \win getAnimationConfig animHandlers ->
+            do
+                winSize <- MainImage.windowSize win
+                frame <- makeFrame (animHandlers winSize)
+                STM.atomically $ modifyTVar animState $ \s -> s
+                    & asCurFrame . Anim.unitImages .~ mempty
+                    & asDestFrame .~ frame
+                tvars <-
+                    ThreadVars animState
+                    <$> newTVarIO EventsData
+                        { _edHaveTicks = False
+                        , _edRefreshRequested = False
+                        , _edWinSize = winSize
+                        , _edReversedEvents = []
+                        }
+                    <*> newTVarIO (return ())
+                eventsThread <-
+                    forwardExceptions (eventHandlerThread tvars getAnimationConfig animHandlers)
+                withForkedIO eventsThread (animThread tvars win)

@@ -26,7 +26,6 @@ import           GHC.Conc (setNumCapabilities, getNumProcessors)
 import           GHC.Stack (whoCreated)
 import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.Rendering.OpenGL.GL as GL
-import           Graphics.UI.Bottle.Main (mainLoopWidget)
 import qualified Graphics.UI.Bottle.Main as MainLoop
 import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
@@ -248,7 +247,8 @@ runEditor title copyJSOutputPath windowMode db =
                             invalidateCacheAction
                             scheduleRefresh refreshScheduler
                     addHelp <- EventMapDoc.makeToggledHelpAdder EventMapDoc.HelpNotShown
-                    mainLoop win refreshScheduler configSampler $ \fontsVer fonts config size ->
+                    mainLoop win refreshScheduler configSampler $
+                        \fontsVer fonts config size ->
                         makeRootWidgetCached (CachedWidgetInput fontsVer config size fonts)
                         >>= wrapFlyNav
                         >>= addHelp (Style.help (Font.fontHelp fonts) (Config.help config)) size
@@ -324,30 +324,32 @@ mainLoop ::
     (FontsVersion -> Fonts Draw.Font -> Config -> Widget.Size ->
      IO (Widget (MainLoop.M Widget.EventResult))) -> IO ()
 mainLoop win refreshScheduler configSampler iteration =
-    withFontLoop configSampler $ \fontsVer checkFonts fonts ->
     do
-        lastVersionNumRef <- newIORef =<< getCurrentTime
-        let getConfig =
-                ConfigSampler.getSample configSampler
-                <&> Style.mainLoopConfig . ConfigSampler.sValue
-        let makeWidget size =
-                do
-                    config <-
+        looper <- MainLoop.newLooper
+        withFontLoop configSampler $ \fontsVer checkFonts fonts ->
+            do
+                lastVersionNumRef <- newIORef =<< getCurrentTime
+                let getConfig =
                         ConfigSampler.getSample configSampler
-                        <&> ConfigSampler.sValue
-                    iteration fontsVer fonts config size
-        let tickHandler =
-                do
-                    checkFonts
-                    curVersionNum <-
-                        ConfigSampler.getSample configSampler
-                        <&> ConfigSampler.sVersion
-                    configChanged <- atomicModifyIORef lastVersionNumRef $ \lastVersionNum ->
-                        (curVersionNum, lastVersionNum /= curVersionNum)
-                    if configChanged
-                        then return True
-                        else isRefreshScheduled refreshScheduler
-        mainLoopWidget win tickHandler makeWidget getConfig
+                        <&> Style.mainLoopConfig . ConfigSampler.sValue
+                let makeWidget size =
+                        do
+                            config <-
+                                ConfigSampler.getSample configSampler
+                                <&> ConfigSampler.sValue
+                            iteration fontsVer fonts config size
+                let tickHandler =
+                        do
+                            checkFonts
+                            curVersionNum <-
+                                ConfigSampler.getSample configSampler
+                                <&> ConfigSampler.sVersion
+                            configChanged <- atomicModifyIORef lastVersionNumRef $ \lastVersionNum ->
+                                (curVersionNum, lastVersionNum /= curVersionNum)
+                            if configChanged
+                                then return True
+                                else isRefreshScheduled refreshScheduler
+                MainLoop.runLooper looper win tickHandler makeWidget getConfig
 
 memoizeMakeWidget ::
     (MonadIO m, Eq a) =>
