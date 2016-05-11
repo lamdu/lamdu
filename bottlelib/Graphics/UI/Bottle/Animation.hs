@@ -157,7 +157,7 @@ isVirtuallySame (Frame a) (Frame b) =
     where
         equalityThreshold = 0.2
         diffRects =
-            maximum . Map.elems $
+            maximum . (0:) . Map.elems $
             Map.intersectionWith subtractRect
                 (rectMap a) (rectMap b)
         subtractRect ra rb =
