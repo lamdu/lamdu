@@ -53,15 +53,17 @@ expandTo width eg
         padding = width - eg ^. ExpressionGui.egWidget . Widget.width
 
 topLevelSchemeTypeView ::
-    Monad m => Widget.R -> Scheme -> Sugar.EntityId -> AnimId -> ExprGuiM m (ExpressionGui m)
-topLevelSchemeTypeView width scheme entityId suffix =
+    Monad m =>
+    Scheme -> Sugar.EntityId -> AnimId ->
+    ExprGuiM m (Widget.R -> ExpressionGui m)
+topLevelSchemeTypeView scheme entityId suffix =
     -- At the definition-level, Schemes can be shown as ordinary
     -- types to avoid confusing forall's:
     WidgetIds.fromEntityId entityId
     & (`Widget.joinId` suffix)
     & Widget.toAnimId
     & ExpressionGui.makeTypeView (scheme ^. schemeType)
-    <&> expandTo width
+    <&> flip expandTo
 
 makeBuiltinDefinition ::
     Monad m =>
@@ -79,7 +81,8 @@ makeBuiltinDefinition def builtin =
             <&> ExpressionGui.fromValueWidget
         let width = assignment ^. ExpressionGui.egWidget . Widget.width
         typeView <-
-            topLevelSchemeTypeView width (builtin ^. Sugar.biType) entityId ["builtinType"]
+            topLevelSchemeTypeView (builtin ^. Sugar.biType) entityId ["builtinType"]
+            ?? width
         [assignment, typeView]
             & ExpressionGui.vboxTopFocalAlignedTo 0
             & return
@@ -92,33 +95,35 @@ typeIndicatorId :: Widget.Id -> Widget.Id
 typeIndicatorId myId = Widget.joinId myId ["type indicator"]
 
 typeIndicator ::
-    Monad m => Widget.R -> Draw.Color -> Widget.Id -> ExprGuiM m (ExpressionGui m)
-typeIndicator width color myId =
-    do
-        config <- ExprGuiM.readConfig
-        let typeIndicatorHeight =
-                realToFrac $ Config.typeIndicatorFrameWidth config ^. _2
-        Anim.unitSquare (Widget.toAnimId (typeIndicatorId myId))
-            & View 1
-            & Widget.fromView
-            & Widget.scale (Vector2 width typeIndicatorHeight)
-            & Widget.tint color
-            & ExpressionGui.fromValueWidget
-            & return
+    Monad m =>
+    Draw.Color -> Widget.Id -> ExprGuiM m (Widget.R -> ExpressionGui m)
+typeIndicator color myId =
+    ExprGuiM.readConfig
+    <&>
+    \config width ->
+    Anim.unitSquare (Widget.toAnimId (typeIndicatorId myId))
+    & View 1
+    & Widget.fromView
+    & Widget.scale (Vector2 width (realToFrac (Config.typeIndicatorFrameWidth config ^. _2)))
+    & Widget.tint color
+    & ExpressionGui.fromValueWidget
 
 acceptableTypeIndicator ::
     Monad m =>
-    Widget.R -> T m a -> Draw.Color -> Widget.Id ->
-    ExprGuiM m (ExpressionGui m)
-acceptableTypeIndicator width accept color myId =
+    T m a -> Draw.Color -> Widget.Id -> ExprGuiM m (Widget.R -> ExpressionGui m)
+acceptableTypeIndicator accept color myId =
     do
         config <- ExprGuiM.readConfig
         let acceptKeyMap =
                 Widget.keysEventMapMovesCursor (Config.acceptDefinitionTypeKeys config)
                 (E.Doc ["Edit", "Accept inferred type"]) (accept >> return myId)
-        ExpressionGui.makeFocusableView (typeIndicatorId myId)
-            <*> typeIndicator width color myId
-            <&> ExpressionGui.egWidget %~ Widget.weakerEvents acceptKeyMap
+        makeFocusable <- ExpressionGui.makeFocusableView (typeIndicatorId myId)
+        makeIndicator <- typeIndicator color myId
+        return $
+            \width ->
+            makeIndicator width
+            & makeFocusable
+            & ExpressionGui.egWidget %~ Widget.weakerEvents acceptKeyMap
 
 makeExprDefinition ::
     Monad m =>
@@ -136,21 +141,22 @@ makeExprDefinition def bodyExpr =
         typeGui <-
             case bodyExpr ^. Sugar.deTypeInfo of
             Sugar.DefinitionExportedTypeInfo scheme ->
-                typeIndicator width (Config.typeIndicatorMatchColor config) myId :
-                [ topLevelSchemeTypeView width scheme entityId ["exportedType"]
-                ] & sequence
+                [ typeIndicator (Config.typeIndicatorMatchColor config) myId
+                , topLevelSchemeTypeView scheme entityId ["exportedType"]
+                ]
             Sugar.DefinitionNewType (Sugar.AcceptNewType oldMExported newInferred accept) ->
                 case oldMExported of
                 Definition.NoExportedType ->
-                    [ topLevelSchemeTypeView width newInferred entityId ["inferredType"]
-                    , acceptableTypeIndicator width accept (Config.typeIndicatorFirstTimeColor config) myId
+                    [ topLevelSchemeTypeView newInferred entityId ["inferredType"]
+                    , acceptableTypeIndicator accept (Config.typeIndicatorFirstTimeColor config) myId
                     ]
                 Definition.ExportedType oldExported ->
-                    [ topLevelSchemeTypeView width newInferred entityId ["inferredType"]
-                    , acceptableTypeIndicator width accept (Config.typeIndicatorErrorColor config) myId
-                    , topLevelSchemeTypeView width oldExported entityId ["exportedType"]
+                    [ topLevelSchemeTypeView newInferred entityId ["inferredType"]
+                    , acceptableTypeIndicator accept (Config.typeIndicatorErrorColor config) myId
+                    , topLevelSchemeTypeView oldExported entityId ["exportedType"]
                     ]
-                & sequence
+            <&> (?? width)
+            & sequence
             <&> ExpressionGui.vboxTopFocalAlignedTo 0 . concatMap (\w -> [vspace, w])
         ExpressionGui.vboxTopFocalAlignedTo 0 [bodyGui, typeGui]
             & return
