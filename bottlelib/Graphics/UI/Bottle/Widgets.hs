@@ -181,10 +181,10 @@ stdSpacing :: Monad m => WidgetEnvT m (Vector2 Double)
 stdSpacing = Vector2 <$> stdHSpaceWidth <*> stdVSpaceHeight
 
 stdHSpaceView :: Monad m => WidgetEnvT m View
-stdHSpaceView = stdHSpaceWidth <&> realToFrac <&> Spacer.make
+stdHSpaceView = stdHSpaceWidth <&> (`Vector2` 0) <&> Spacer.make
 
 stdVSpaceView :: Monad m => WidgetEnvT m View
-stdVSpaceView = stdVSpaceHeight <&> realToFrac <&> Spacer.make
+stdVSpaceView = stdVSpaceHeight <&> Vector2 0 <&> Spacer.make
 
 -- | Vertical spacer as ratio of line height
 vspacer :: Monad m => Double -> WidgetEnvT m (Widget f)
