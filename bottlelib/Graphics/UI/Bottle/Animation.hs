@@ -40,11 +40,11 @@ type Layer = Int
 type Size = Vector2 R
 
 data Image = Image
-    { _iLayer :: Layer
-    , _iUnitImage :: Draw.Image ()
+    { _iLayer :: !Layer
+    , _iUnitImage :: !(Draw.Image ())
         -- iUnitImage always occupies (0,0)..(1,1),
         -- the translation/scaling occurs when drawing
-    , _iRect :: Rect
+    , _iRect :: !Rect
     } deriving (Generic)
 Lens.makeLenses ''Image
 

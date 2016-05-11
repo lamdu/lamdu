@@ -25,8 +25,8 @@ import           GHC.Generics (Generic)
 import           Graphics.DrawingCombinators (R)
 
 data Rect = Rect
-    { _topLeft :: Vector2 R
-    , _size :: Vector2 R
+    { _topLeft :: !(Vector2 R)
+    , _size :: !(Vector2 R)
     } deriving (Show, Generic)
 Lens.makeLenses ''Rect
 
