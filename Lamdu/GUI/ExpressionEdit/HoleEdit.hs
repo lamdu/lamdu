@@ -70,9 +70,9 @@ addWrapperAbove ids =
         hover ids ["wrapper"]
             <&> \f wrapperGui searchAreaGui ->
             ExpressionGui.vboxTopFocal
-            [ searchAreaGui
-            , f wrapperGui
+            [ f wrapperGui
               & ExpressionGui.scale (holeHoveringWrapperScaleFactor <&> realToFrac)
+            , searchAreaGui
             ]
 
 make ::
