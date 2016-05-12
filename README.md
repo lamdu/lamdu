@@ -41,11 +41,12 @@ stack install
 
 requires [stack](https://github.com/commercialhaskell/stack/releases)
 ```shell
-sudo dnf install -y gcc gcc-c++ gmp-devel libXrandr-devel libXi-devel libXcursor-devel mesa-libGL-devel libGLU-devel libXinerama-devel leveldb-devel
+sudo dnf install -y gcc gcc-c++ gmp-devel libXrandr-devel libXi-devel libXcursor-devel mesa-libGL-devel libGLU-devel libXinerama-devel leveldb-devel glew-devel
 git clone --recursive https://github.com/lamdu/lamdu
 cd lamdu
 stack setup
 stack install
+~/.local/bin/lamdu
 ```
 
 #### arch linux
