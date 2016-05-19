@@ -233,10 +233,10 @@ newPublicDefinitionWithPane name codeProps bodyI =
         newPane codeProps defI
         return defI
 
-newIdentityLambda :: Monad m => T m (ValI m, ValI m)
+newIdentityLambda :: Monad m => T m (V.Var, ValI m)
 newIdentityLambda =
     do
         paramId <- ExprIRef.newVar
         getVar <- V.LVar paramId & V.BLeaf & ExprIRef.newValBody
         lamI <- V.Lam paramId getVar & V.BLam & ExprIRef.newValBody
-        return (lamI, getVar)
+        return (paramId, lamI)

@@ -54,7 +54,7 @@ mkExtractToLet ::
     Monad m => ExprIRef.ValIProperty m -> ExprIRef.ValIProperty m -> T m EntityId
 mkExtractToLet outerScope stored =
     do
-        (lamI, getVarI) <-
+        (newParam, lamI) <-
             if Property.value stored == extractPosI
             then
                 -- Give entire binder body a name (replace binder body
@@ -71,10 +71,10 @@ mkExtractToLet outerScope stored =
                         & ExprIRef.newValBody
                     getVarI <- V.LVar newParam & V.BLeaf & ExprIRef.newValBody
                     Property.set stored getVarI
-                    return (lamI, getVarI)
+                    return (newParam, lamI)
         V.Apply lamI oldStored & V.BApp & ExprIRef.newValBody
             >>= Property.set outerScope
-        EntityId.ofValI getVarI & return
+        EntityId.ofLambdaParam newParam & return
     where
         extractPosI = Property.value outerScope
         oldStored = Property.value stored
