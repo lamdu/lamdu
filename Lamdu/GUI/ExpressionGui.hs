@@ -300,7 +300,7 @@ makeEvaluationResultView animId res =
 
 makeTypeView :: Monad m => Type -> AnimId -> ExprGuiM m (Layout f)
 makeTypeView typ animId =
-    TypeView.make animId typ <&> Layout.fromCenteredWidget . Widget.fromView
+    TypeView.make typ animId <&> Layout.fromCenteredWidget . Widget.fromView
 
 data NeighborVals a = NeighborVals
     { prevNeighbor :: a

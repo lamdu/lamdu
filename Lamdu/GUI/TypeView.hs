@@ -217,8 +217,8 @@ makeInternal parentPrecedence typ =
         ] & sequenceA
         <&> hbox
 
-make :: Monad m => AnimId -> Type -> ExprGuiM m View
-make prefix t =
+make :: Monad m => Type -> AnimId -> ExprGuiM m View
+make t prefix =
     do
         config <- ExprGuiM.readConfig
         makeInternal (ParentPrecedence 0) t
