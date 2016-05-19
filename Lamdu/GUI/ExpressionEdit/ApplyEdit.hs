@@ -103,10 +103,10 @@ makeFuncRow (Sugar.Apply func specialArgs annotatedArgs) pl =
                 ExpressionGui.combineSpaced
                 <*> sequenceA
                 [ ExprGuiM.makeSubexpression
-                  (ExpressionGui.precRight .~ prefixPrecedence+1) func
+                  (ExpressionGui.precAfter .~ prefixPrecedence+1) func
                   <&> maybeOverrideModifyEventMap
                 , ExprGuiM.makeSubexpression
-                  (ExpressionGui.precLeft .~ prefixPrecedence) arg
+                  (ExpressionGui.precBefore .~ prefixPrecedence) arg
                 ]
                 where
                     maybeOverrideModifyEventMap
@@ -117,10 +117,10 @@ makeFuncRow (Sugar.Apply func specialArgs annotatedArgs) pl =
                 <*> sequenceA
                 [ ExpressionGui.combineSpaced
                     <*> sequenceA
-                    [ ExprGuiM.makeSubexpression (ExpressionGui.precRight .~ prec+1) l
+                    [ ExprGuiM.makeSubexpression (ExpressionGui.precAfter .~ prec+1) l
                     , makeInfixFuncName func <&> overrideModifyEventMap
                     ]
-                , ExprGuiM.makeSubexpression (ExpressionGui.precLeft .~ prec+1) r
+                , ExprGuiM.makeSubexpression (ExpressionGui.precBefore .~ prec+1) r
                 ]
 
 make ::

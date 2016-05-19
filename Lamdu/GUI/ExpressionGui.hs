@@ -31,7 +31,7 @@ module Lamdu.GUI.ExpressionGui
     , makeTypeView
     , evaluationResult
     -- Expression wrapping
-    , MyPrecedence(..), ParentPrecedence(..), Precedence(..), Precedence.precLeft, Precedence.precRight
+    , MyPrecedence(..), ParentPrecedence(..), Precedence(..), Precedence.precBefore, Precedence.precAfter
     , wrapExprEventMap
     , maybeAddAnnotationPl
     , stdWrap

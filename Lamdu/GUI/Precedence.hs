@@ -1,21 +1,21 @@
 {-# LANGUAGE TemplateHaskell #-}
 module Lamdu.GUI.Precedence
     ( Precedence(..), MyPrecedence(..), ParentPrecedence(..), needParens
-    , precLeft, precRight
+    , precBefore, precAfter
     ) where
 
 import qualified Control.Lens as Lens
 
 data Precedence = Precedence
-    { _precLeft :: {-# UNPACK #-} !Int
-    , _precRight :: {-# UNPACK #-} !Int
+    { _precBefore :: {-# UNPACK #-} !Int
+    , _precAfter :: {-# UNPACK #-} !Int
     }
 
 Lens.makeLenses ''Precedence
 
 instance Num Precedence where
     fromInteger x = Precedence (fromInteger x) (fromInteger x)
-    x + y = Precedence (_precLeft x + _precLeft y) (_precRight x + _precRight y)
+    x + y = Precedence (_precBefore x + _precBefore y) (_precAfter x + _precAfter y)
     (*) = error "instance Num Precedence.*"
     (-) = error "instance Num Precedence.-"
     abs = error "instance Num Precedence.abs"
@@ -26,4 +26,4 @@ newtype ParentPrecedence = ParentPrecedence { unParentPrecedence :: Precedence }
 
 needParens :: ParentPrecedence -> MyPrecedence -> Bool
 needParens (ParentPrecedence parent) (MyPrecedence my) =
-    _precLeft parent > _precLeft my || _precRight parent > _precRight my
+    _precBefore parent > _precBefore my || _precAfter parent > _precAfter my

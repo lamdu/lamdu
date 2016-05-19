@@ -112,7 +112,7 @@ make ::
     Sugar.Payload m ExprGuiT.Payload ->
     ExprGuiM m (ExpressionGui m)
 make lam pl =
-    ExprGuiM.withLocalPrecedence (ExpressionGui.precLeft .~ 0) $
+    ExprGuiM.withLocalPrecedence (ExpressionGui.precBefore .~ 0) $
     stdWrapParenify pl (ExpressionGui.MyPrecedence 0) $ \myId ->
     ExprGuiM.assignCursor myId bodyId $
     do

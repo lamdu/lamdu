@@ -26,7 +26,7 @@ make (Sugar.GetField recExpr tagG) pl =
     ExpressionGui.stdWrapParentExpr pl $ \myId ->
     do
         recExprEdit <-
-            ExprGuiM.makeSubexpression (ExpressionGui.precRight .~ 11) recExpr
+            ExprGuiM.makeSubexpression (ExpressionGui.precAfter .~ 11) recExpr
         dotLabel <- ExpressionGui.makeLabel "." (Widget.toAnimId myId)
         tagEdit <-
             TagEdit.makeRecordTag

@@ -12,7 +12,7 @@ import qualified Graphics.UI.Bottle.Widgets.Layout as Layout
 import qualified Graphics.UI.Bottle.WidgetsEnvT as WE
 import qualified Lamdu.Config as Config
 import           Lamdu.GUI.ExpressionGui
-    ( ExpressionGui, Precedence, precLeft, precRight, (<||), (||>) )
+    ( ExpressionGui, Precedence, precBefore, precAfter, (<||), (||>) )
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
@@ -68,14 +68,14 @@ makeToNom ::
     Sugar.Nominal (Name m) (ExprGuiT.SugarExpr m) ->
     Sugar.Payload m ExprGuiT.Payload ->
     ExprGuiM m (ExpressionGui m)
-makeToNom = mkNomGui precLeft "«" $ expandingName (||>)
+makeToNom = mkNomGui precBefore "«" $ expandingName (||>)
 
 makeFromNom ::
     Monad m =>
     Sugar.Nominal (Name m) (ExprGuiT.SugarExpr m) ->
     Sugar.Payload m ExprGuiT.Payload ->
     ExprGuiM m (ExpressionGui m)
-makeFromNom = mkNomGui precRight "»" $ expandingName (flip (<||))
+makeFromNom = mkNomGui precAfter "»" $ expandingName (flip (<||))
 
 nomPrecedence :: Int
 nomPrecedence = 9
