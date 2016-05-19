@@ -26,7 +26,7 @@ import qualified Lamdu.Expr.UniqueId as UniqueId
 import           Lamdu.Sugar.Convert.Binder.Float (makeFloatLetToOuterScope)
 import           Lamdu.Sugar.Convert.Binder.Inline (inlineLet)
 import           Lamdu.Sugar.Convert.Binder.Params (ConventionalParams(..), cpParams, convertParams, convertLamParams, mkStoredLam, makeDeleteLambda)
-import           Lamdu.Sugar.Convert.Binder.Redex (Redex(..), checkForRedex)
+import           Lamdu.Sugar.Convert.Binder.Redex (Redex(..))
 import qualified Lamdu.Sugar.Convert.Binder.Redex as Redex
 import           Lamdu.Sugar.Convert.Binder.Types (BinderKind(..))
 import           Lamdu.Sugar.Convert.Expression.Actions (addActions, makeAnnotation)
@@ -57,7 +57,7 @@ mkLetIActions topLevelProp redex =
             , _laFloat = float
             }
     where
-        V.Lam param body = redex ^. Redex.redexLam
+        V.Lam param body = redex ^. Redex.lam
 
 localNewExtractDestPos ::
     Monad m => Val (Input.Payload m x) -> ConvertM m a -> ConvertM m a
@@ -77,7 +77,7 @@ localVarsUnderExtractDestPos vars =
 
 makeInline :: Monad m => ValIProperty m -> Redex (Input.Payload m a) -> BinderVarInline m
 makeInline stored redex =
-    case redex ^. Redex.redexParamRefs of
+    case redex ^. Redex.paramRefs of
     [_singleUsage] ->
         inlineLet stored (redex <&> (^. Input.stored) <&> Property.value)
         & InlineVar
@@ -92,7 +92,7 @@ convertRedex ::
 convertRedex expr redex =
     do
         value <-
-            convertBinder binderKind defUUID (redex ^. Redex.redexArg)
+            convertBinder binderKind defUUID (redex ^. Redex.arg)
             & localNewExtractDestPos expr
         actions <-
             mkLetIActions (expr ^. Val.payload . Input.stored)
@@ -104,26 +104,26 @@ convertRedex expr redex =
             & ConvertM.local (scScopeInfo . siLetItems <>~
                 Map.singleton param
                 (makeInline (expr ^. Val.payload . Input.stored) redex))
-        ann <- redex ^. Redex.redexArg . Val.payload & makeAnnotation
+        ann <- redex ^. Redex.arg . Val.payload & makeAnnotation
         return Let
             { _lEntityId = defEntityId
             , _lValue =
                 value
                 & bBody . bbContent . SugarLens.binderContentExpr . rPayload . plData <>~
-                redex ^. Redex.redexHiddenPayloads . Lens.traversed . Input.userData
+                redex ^. Redex.hiddenPayloads . Lens.traversed . Input.userData
             , _lActions = actions
             , _lName = UniqueId.toUUID param
             , _lAnnotation = ann
-            , _lBodyScope = redex ^. Redex.redexBodyScope
+            , _lBodyScope = redex ^. Redex.bodyScope
             , _lBody = letBody
-            , _lUsages = redex ^. Redex.redexParamRefs
+            , _lUsages = redex ^. Redex.paramRefs
             }
   where
       binderKind =
-          redex ^. Redex.redexLam
+          redex ^. Redex.lam
           <&> Lens.mapped %~ (^. Input.stored)
           & BinderKindLet
-      V.Lam param body = redex ^. Redex.redexLam
+      V.Lam param body = redex ^. Redex.lam
       defUUID = UniqueId.toUUID param
       defEntityId = EntityId.ofLambdaParam param
 
@@ -132,7 +132,7 @@ makeBinderContent ::
     Val (Input.Payload m a) ->
     ConvertM m (BinderContent UUID m (ExpressionU m a))
 makeBinderContent expr =
-    case checkForRedex expr of
+    case Redex.check expr of
     Nothing ->
         ConvertM.convertSubexpression expr & localNewExtractDestPos expr
         <&> BinderExpr

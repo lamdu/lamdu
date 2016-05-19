@@ -2,13 +2,13 @@
 
 module Lamdu.Sugar.Convert.Binder.Redex
     ( Redex(..)
-      , redexBodyScope
-      , redexLam
-      , redexParamRefs
-      , redexArg
-      , redexArgType
-      , redexHiddenPayloads
-    , checkForRedex
+      , bodyScope
+      , lam
+      , paramRefs
+      , arg
+      , argType
+      , hiddenPayloads
+    , check
     ) where
 
 import qualified Control.Lens as Lens
@@ -28,30 +28,29 @@ import           Lamdu.Sugar.Types
 import           Prelude.Compat
 
 data Redex a = Redex
-    { _redexBodyScope :: CurAndPrev (Map ScopeId ScopeId)
-    , _redexLam :: V.Lam (Val a)
-    , _redexParamRefs :: [EntityId]
-    , _redexArg :: Val a
-    , _redexArgType :: Type
-    , _redexHiddenPayloads :: [a]
+    { _bodyScope :: CurAndPrev (Map ScopeId ScopeId)
+    , _lam :: V.Lam (Val a)
+    , _paramRefs :: [EntityId]
+    , _arg :: Val a
+    , _argType :: Type
+    , _hiddenPayloads :: [a]
     } deriving (Functor, Foldable, Traversable)
 Lens.makeLenses ''Redex
 
-checkForRedex :: Val (Input.Payload m a) -> Maybe (Redex (Input.Payload m a))
-checkForRedex expr = do
-    V.Apply func arg <- expr ^? ExprLens.valApply
-    lam <- func ^? Val.body . V._BLam
+check :: Val (Input.Payload m a) -> Maybe (Redex (Input.Payload m a))
+check expr = do
+    V.Apply func a <- expr ^? ExprLens.valApply
+    l <- func ^? Val.body . V._BLam
     Just Redex
-        { _redexLam = lam
-        , _redexBodyScope =
+        { _lam = l
+        , _bodyScope =
             func ^. Val.payload . Input.evalResults
             <&> (^. Input.eAppliesOfLam)
             <&> Lens.traversed %~ getRedexApplies
-        , _redexArg = arg
-        , _redexArgType =
-            arg ^. Val.payload . Input.inferred . Infer.plType
-        , _redexHiddenPayloads = (^. Val.payload) <$> [expr, func]
-        , _redexParamRefs = func ^. Val.payload . Input.varRefsOfLambda
+        , _arg = a
+        , _argType = a ^. Val.payload . Input.inferred . Infer.plType
+        , _hiddenPayloads = (^. Val.payload) <$> [expr, func]
+        , _paramRefs = func ^. Val.payload . Input.varRefsOfLambda
         }
     where
         getRedexApplies [(scopeId, _)] = scopeId
