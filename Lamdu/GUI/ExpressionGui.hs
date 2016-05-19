@@ -325,14 +325,15 @@ makeEvalView (NeighborVals mPrev mNext) evalRes animId =
         let makeEvaluationResultViewBG res =
                 makeEvaluationResultView animId res
                 <&> addAnnotationBackground config (animId ++ [encodeS (erdScope res)])
-        let neighbourViews n =
+        let neighbourViews n yPos =
                 n ^.. Lens._Just
                 <&> makeEvaluationResultViewBG
                 <&> Lens.mapped %~
                     Layout.pad (neighborsPadding <&> realToFrac) .
                     Layout.scale (neighborsScaleFactor <&> realToFrac)
-        prevs <- sequence (neighbourViews mPrev)
-        nexts <- sequence (neighbourViews mNext)
+                <&> Lens.mapped . Layout.alignment . _2 .~ yPos
+        prevs <- neighbourViews mPrev 1 & sequence
+        nexts <- neighbourViews mNext 0 & sequence
         evalView <- makeEvaluationResultView animId evalRes
         evalView
             & Layout.addBefore Layout.Horizontal prevs
