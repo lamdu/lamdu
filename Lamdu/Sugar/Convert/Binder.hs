@@ -45,7 +45,7 @@ mkLetIActions ::
     ConvertM m (LetActions m)
 mkLetIActions topLevelProp redex =
     do
-        float <- makeFloatLetToOuterScope topLevelProp redex
+        float <- makeFloatLetToOuterScope (Property.set topLevelProp) redex
         return
             LetActions
             { _laSetToInner =

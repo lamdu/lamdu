@@ -141,17 +141,17 @@ sameLet redex =
 
 floatLetToOuterScope ::
     Monad m =>
-    ValIProperty m -> Redex (ValIProperty m) -> ConvertM.Context m ->
+    (ValI m -> T m ()) ->
+    Redex (ValIProperty m) -> ConvertM.Context m ->
     T m LetFloatResult
-floatLetToOuterScope topLevelProp redex ctx =
+floatLetToOuterScope setTopLevel redex ctx =
     do
         newLet <-
             case varsToRemove of
             [] -> sameLet redex & return
             [x] -> addLetParam x redex
             _ -> error "multiple osiVarsUnderPos not expected!?"
-        redexLam redex ^. V.lamResult . Val.payload . Property.pVal
-            & Property.set topLevelProp
+        redexLam redex ^. V.lamResult . Val.payload . Property.pVal & setTopLevel
         resultEntity <-
             case outerScopeInfo ^. ConvertM.osiPos of
             Nothing ->
@@ -176,7 +176,7 @@ floatLetToOuterScope topLevelProp redex ctx =
 
 makeFloatLetToOuterScope ::
     Monad m =>
-    ValIProperty m -> Redex (ValIProperty m) ->
+    (ValI m -> T m ()) -> Redex (ValIProperty m) ->
     ConvertM m (T m LetFloatResult)
-makeFloatLetToOuterScope topLevelProp redex =
-    ConvertM.readContext <&> floatLetToOuterScope topLevelProp redex
+makeFloatLetToOuterScope setTopLevel redex =
+    ConvertM.readContext <&> floatLetToOuterScope setTopLevel redex
