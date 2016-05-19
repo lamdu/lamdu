@@ -1,6 +1,7 @@
 {-# LANGUAGE TemplateHaskell #-}
 module Lamdu.GUI.ExpressionGui.Types
-    ( ExpressionGui, egWidget, egAlignment, egLayout
+    ( ExpressionGuiM
+    , ExpressionGui, egWidget, egAlignment, egLayout
       , fromValueWidget, fromLayout
     , LayoutMode(..), _LayoutNarrow, _LayoutWide
       , modeWidths
@@ -41,7 +42,8 @@ modeWidths :: Lens.Traversal' LayoutMode Widget.R
 modeWidths _ LayoutWide = pure LayoutWide
 modeWidths f (LayoutNarrow limit) = f limit <&> LayoutNarrow
 
-type ExpressionGui m = LayoutMode -> Layout (T m Widget.EventResult)
+type ExpressionGuiM m = LayoutMode -> Layout (m Widget.EventResult)
+type ExpressionGui m = ExpressionGuiM (T m)
 
 fromValueWidget :: Widget (T m Widget.EventResult) -> ExpressionGui m
 fromValueWidget = const . Layout.fromCenteredWidget

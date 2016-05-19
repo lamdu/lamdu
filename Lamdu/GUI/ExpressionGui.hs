@@ -1,6 +1,7 @@
 {-# LANGUAGE NoImplicitPrelude, RecordWildCards, OverloadedStrings, RankNTypes, TypeFamilies, LambdaCase, DeriveFunctor, DeriveFoldable, DeriveTraversable #-}
 module Lamdu.GUI.ExpressionGui
-    ( ExpressionGui, egWidget, egAlignment
+    ( ExprGuiT.ExpressionGuiM
+    , ExpressionGui, egWidget, egAlignment
       , ExprGuiT.egLayout, ExprGuiT.fromLayout
     , LayoutMode(..)
     -- General:

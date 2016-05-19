@@ -25,7 +25,6 @@ import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets as BWidgets
 import qualified Graphics.UI.Bottle.Widgets.Box as Box
-import           Graphics.UI.Bottle.Widgets.Layout (Layout)
 import qualified Graphics.UI.Bottle.Widgets.Layout as Layout
 import           Graphics.UI.Bottle.WidgetsEnvT (WidgetEnvT)
 import qualified Graphics.UI.Bottle.WidgetsEnvT as WE
@@ -40,7 +39,7 @@ import           Lamdu.GUI.CodeEdit.Settings (Settings)
 import qualified Lamdu.GUI.DefinitionEdit as DefinitionEdit
 import qualified Lamdu.GUI.ExpressionEdit as ExpressionEdit
 import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
-import           Lamdu.GUI.ExpressionGui (ExpressionGui)
+import           Lamdu.GUI.ExpressionGui (ExpressionGui, ExpressionGuiM)
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
@@ -236,7 +235,7 @@ make env rootId =
 makePaneEdit ::
     Monad m =>
     Env m -> (Pane m, DefinitionN m ExprGuiT.Payload) ->
-    ExprGuiM m (ExpressionGui.LayoutMode -> Layout (M m Widget.EventResult))
+    ExprGuiM m (ExpressionGuiM (M m))
 makePaneEdit env (pane, defS) =
     makePaneWidget defS
     <&> Lens.mapped . Layout.widget %~ Widget.weakerEvents paneEventMap . mLiftWidget
@@ -321,7 +320,7 @@ replEventMap env replExpr =
 makeReplEdit ::
     Monad m =>
     Env m -> Widget.Id -> ExprGuiT.SugarExpr m ->
-    ExprGuiM m (ExpressionGui.LayoutMode -> Layout (M m Widget.EventResult))
+    ExprGuiM m (ExpressionGuiM (M m))
 makeReplEdit env myId replExpr =
     ExpressionGui.combineSpaced
     <*> sequence
