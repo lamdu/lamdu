@@ -140,6 +140,21 @@ sameLet redex =
     , nlMVarToTags = Nothing
     }
 
+processLet ::
+    Monad m => ConvertM.OuterScopeInfo f -> Redex (ValIProperty m) -> T m (NewLet m)
+processLet outerScopeInfo redex =
+    case varsToRemove of
+    [] -> sameLet redex & return
+    [x] -> addLetParam x redex
+    _ -> error "multiple osiVarsUnderPos not expected!?"
+    where
+        usedVars =
+            redex ^.. Redex.arg . ExprLens.valLeafs . V._LVar
+            & Set.fromList
+        varsToRemove =
+            filter (`Set.member` usedVars)
+            (outerScopeInfo ^. ConvertM.osiVarsUnderPos)
+
 floatLetToOuterScope ::
     Monad m =>
     (ValI m -> T m ()) ->
@@ -147,12 +162,11 @@ floatLetToOuterScope ::
     T m LetFloatResult
 floatLetToOuterScope setTopLevel redex ctx =
     do
-        newLet <-
-            case varsToRemove of
-            [] -> sameLet redex & return
-            [x] -> addLetParam x redex
-            _ -> error "multiple osiVarsUnderPos not expected!?"
         redex ^. Redex.lam . V.lamResult . Val.payload . Property.pVal & setTopLevel
+        newLet <-
+            redex
+            & Redex.lam . V.lamResult . Val.payload . Property.pSet .~ setTopLevel
+            & processLet outerScopeInfo
         resultEntity <-
             case outerScopeInfo ^. ConvertM.osiPos of
             Nothing ->
@@ -167,13 +181,7 @@ floatLetToOuterScope setTopLevel redex ctx =
             }
     where
         param = redex ^. Redex.lam . V.lamParamId
-        varsToRemove =
-            filter (`Set.member` usedVars)
-            (outerScopeInfo ^. ConvertM.osiVarsUnderPos)
         outerScopeInfo = ctx ^. ConvertM.scScopeInfo . ConvertM.siOuter
-        usedVars =
-            redex ^.. Redex.arg . ExprLens.valLeafs . V._LVar
-            & Set.fromList
 
 makeFloatLetToOuterScope ::
     Monad m =>
