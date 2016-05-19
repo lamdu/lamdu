@@ -5,7 +5,6 @@ module Lamdu.GUI.ExpressionEdit.RecordEdit
 
 import           Control.Lens.Operators
 import           Control.Lens.Tuple
-import qualified Data.List as List
 import           Data.Monoid ((<>))
 import           Data.Vector.Vector2 (Vector2(..))
 import           Graphics.UI.Bottle.Animation (AnimId)
@@ -13,8 +12,8 @@ import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.EventMap as E
 import           Graphics.UI.Bottle.View (View(..))
 import qualified Graphics.UI.Bottle.Widget as Widget
+import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widgets.Layout as Layout
-import           Graphics.UI.Bottle.Widgets.Layout (Layout)
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
 import qualified Lamdu.GUI.ExpressionEdit.TagEdit as TagEdit
@@ -104,20 +103,15 @@ makeFieldsWidget [] myId =
     ExpressionGui.makeFocusableView myId
     <*> (ExpressionGui.grammarLabel "()" (Widget.toAnimId myId) <&> const)
 makeFieldsWidget fields _ =
-    do
-        vspace <- ExpressionGui.stdVSpace
-        mapM makeFieldRow fields
-            <&> List.intersperse (const vspace)
-            <&> ExpressionGui.vboxTopFocal
+    ExpressionGui.vboxTopFocalSpaced <*> mapM makeFieldRow fields
 
-separationBar :: Config -> Widget.R -> Anim.AnimId -> Layout a
+separationBar :: Config -> Widget.R -> Anim.AnimId -> Widget a
 separationBar config width animId =
     Anim.unitSquare (animId <> ["tailsep"])
     & View 1
     & Widget.fromView
     & Widget.tint (Config.recordTailColor config)
     & Widget.scale (Vector2 width 10)
-    & Layout.fromCenteredWidget
 
 makeOpenRecord ::
     Monad m =>
@@ -131,19 +125,20 @@ makeOpenRecord fieldsGui rest animId =
             ExpressionGui.addValPadding
             <*> ExprGuiM.makeSubexpression (const 0) rest
         return $
-            \layout ->
-            let restLayout = restExpr layout
+            \layoutMode ->
+            let restLayout = restExpr layoutMode
                 minWidth = restLayout ^. Layout.widget . Widget.width
-                fields = fieldsGui layout
+                fields = fieldsGui layoutMode
                 targetWidth = fields ^. Layout.widget . Widget.width
             in
             fields
             & Layout.alignment . _1 .~ 0
             & Layout.addAfter Layout.Vertical
             ( [ separationBar config (max minWidth targetWidth) animId
-              , vspace
+                & Layout.fromCenteredWidget
+              , Layout.fromCenteredWidget vspace
               , restLayout
-              ] <&> (Layout.alignment . _1 .~ 0)
+              ] <&> Layout.alignment . _1 .~ 0
             )
 
 recordOpenEventMap ::

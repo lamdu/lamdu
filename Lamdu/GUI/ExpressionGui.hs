@@ -9,7 +9,7 @@ module Lamdu.GUI.ExpressionGui
     , stdHSpace, stdVSpace
     , combine, combineSpaced
     , (||>), (<||)
-    , vboxTopFocal, vboxTopFocalSpaced, vboxTopFocalAlignedTo
+    , vboxTopFocal, vboxTopFocalSpaced
     , tagItem
     , listWithDelDests
     , makeLabel
@@ -148,17 +148,15 @@ hCombine f layout gui layoutMode =
 (<||) :: ExpressionGui f -> Layout (T f Widget.EventResult) -> ExpressionGui f
 (<||) = flip (hCombine Layout.addAfter)
 
-stdHSpace :: Monad m => ExprGuiM m (Layout (T f Widget.EventResult))
+stdHSpace :: Monad m => ExprGuiM m (Widget a)
 stdHSpace =
     ExprGuiM.widgetEnv BWidgets.stdHSpaceView
     <&> Widget.fromView
-    <&> Layout.fromCenteredWidget
 
-stdVSpace :: Monad m => ExprGuiM m (Layout a)
+stdVSpace :: Monad m => ExprGuiM m (Widget a)
 stdVSpace =
     ExprGuiM.widgetEnv BWidgets.stdVSpaceView
     <&> Widget.fromView
-    <&> Layout.fromCenteredWidget
 
 combineSpaced :: Monad m => ExprGuiM m ([ExpressionGui f] -> ExpressionGui f)
 combineSpaced =
@@ -167,19 +165,15 @@ combineSpaced =
         vSpace <- stdVSpace
         return $
             \guis layoutMode ->
-            let wide = guis ?? LayoutWide & List.intersperse hSpace & Layout.hbox 0.5
+            let wide = guis ?? LayoutWide & List.intersperse (Layout.fromCenteredWidget hSpace) & Layout.hbox 0.5
             in  case layoutMode of
                 LayoutWide -> wide
                 LayoutNarrow limit
                     | wide ^. Layout.width > limit ->
                       vboxTopFocal
-                      (List.intersperse (const vSpace) guis <&> egAlignment . _1 .~ 0)
+                      (List.intersperse (fromValueWidget vSpace) guis <&> egAlignment . _1 .~ 0)
                       layoutMode
                     | otherwise -> wide
-
-vboxTopFocalAlignedTo :: Widget.R -> [ExpressionGui m] -> ExpressionGui m
-vboxTopFocalAlignedTo hAlign guis =
-    guis <&> egAlignment . _1 .~ hAlign & vboxTopFocal
 
 vboxTopFocal :: [ExpressionGui m] -> ExpressionGui m
 vboxTopFocal [] _ = Layout.empty
@@ -191,13 +185,13 @@ vboxTopFocalSpaced ::
     Monad m => ExprGuiM m ([ExpressionGui f] -> ExpressionGui f)
 vboxTopFocalSpaced =
     stdVSpace
-    <&> const
+    <&> fromValueWidget
     <&> List.intersperse
     <&> fmap vboxTopFocal
 
 tagItem :: Monad m => ExprGuiM m (ExpressionGui f -> ExpressionGui f -> ExpressionGui f)
 tagItem =
-    stdHSpace <&> f
+    stdHSpace <&> Layout.fromCenteredWidget <&> f
     where
         f space tag item layoutMode =
             tagAndSpace

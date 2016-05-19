@@ -48,7 +48,7 @@ expandingName ::
     LayoutFunc m f
 expandingName (#>) nomId showName =
     do
-        space <- ExpressionGui.stdHSpace
+        space <- ExpressionGui.stdHSpace <&> Layout.fromCenteredWidget
         addBg <- ExpressionGui.addValBGWithColor Config.valNomBGColor nomId
         h <- hover
         return $
