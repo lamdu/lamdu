@@ -1,7 +1,7 @@
 {-# LANGUAGE TemplateHaskell #-}
 module Lamdu.GUI.ExpressionGui.Types
-    ( ExpressionGui, egWidget, egAlignment
-      , fromValueWidget
+    ( ExpressionGui, egWidget, egAlignment, egLayout
+      , fromValueWidget, fromLayout
     , LayoutMode(..), _LayoutNarrow, _LayoutWide
       , modeWidths
     , SugarExpr
@@ -58,6 +58,13 @@ egWidget = Lens.mapped . Layout.widget
 {-# INLINE egAlignment #-}
 egAlignment :: Lens.Setter' (ExpressionGui m) Layout.Alignment
 egAlignment = Lens.mapped . Layout.alignment
+
+{-# INLINE egLayout #-}
+egLayout :: Lens.Setter' (ExpressionGui m) (Layout (T m Widget.EventResult))
+egLayout = Lens.mapped
+
+fromLayout :: Layout (T m Widget.EventResult) -> ExpressionGui m
+fromLayout = const
 
 data EvalModeShow = EvalModeShowNothing | EvalModeShowType | EvalModeShowEval
     deriving (Eq, Ord, Show)

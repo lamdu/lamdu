@@ -101,7 +101,8 @@ makeFieldsWidget ::
     Widget.Id -> ExprGuiM m (ExpressionGui m)
 makeFieldsWidget [] myId =
     ExpressionGui.makeFocusableView myId
-    <*> (ExpressionGui.grammarLabel "()" (Widget.toAnimId myId) <&> const)
+    <*> (ExpressionGui.grammarLabel "()" (Widget.toAnimId myId))
+    <&> ExpressionGui.fromLayout
 makeFieldsWidget fields _ =
     ExpressionGui.vboxTopFocalSpaced <*> mapM makeFieldRow fields
 

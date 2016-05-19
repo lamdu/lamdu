@@ -67,8 +67,8 @@ make (Sugar.Case mArg alts caseTail addAlt cEntityId) pl =
                     (Widget.toAnimId (WidgetIds.fromEntityId cEntityId))
                     <&> Layout.widget
                         %~ Widget.weakerEvents labelJumpHoleEventMap
-                    <&> const
                 )
+                <&> ExpressionGui.fromLayout
         (mActiveTag, header) <-
             case mArg of
             Sugar.LambdaCase -> headerLabel "λ:" <&> (,) Nothing
@@ -137,7 +137,8 @@ makeAltsWidget ::
     Widget.Id -> ExprGuiM m (ExpressionGui m)
 makeAltsWidget _ [] myId =
     ExpressionGui.makeFocusableView (Widget.joinId myId ["Ø"])
-    <*> (ExpressionGui.grammarLabel "Ø" (Widget.toAnimId myId) <&> const)
+    <*> (ExpressionGui.grammarLabel "Ø" (Widget.toAnimId myId))
+    <&> ExpressionGui.fromLayout
 makeAltsWidget mActiveTag alts _ =
     ExpressionGui.vboxTopFocalSpaced <*> mapM (makeAltRow mActiveTag) alts
 

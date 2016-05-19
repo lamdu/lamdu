@@ -326,7 +326,8 @@ makeReplEdit env myId replExpr =
     ExpressionGui.combineSpaced
     <*> sequence
     [ ExpressionGui.makeFocusableView replId
-        <*> (ExpressionGui.makeLabel "⋙" (Widget.toAnimId replId) <&> const)
+      <*> (ExpressionGui.makeLabel "⋙" (Widget.toAnimId replId))
+      <&> ExpressionGui.fromLayout
     , ExprGuiM.makeSubexpression id replExpr
     ]
     <&> Lens.mapped . Layout.widget %~

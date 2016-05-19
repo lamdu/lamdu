@@ -88,6 +88,7 @@ make WidgetIds{..} arg =
 
         unwrapEventMap <- makeUnwrapEventMap arg WidgetIds{..}
         ExpressionGui.makeFocusableView hidWrapper
+            <&> (ExpressionGui.egLayout %~)
             ?? argGui
             <&> ExpressionGui.pad (frameWidth & _2 .~ 0)
             <&> ExpressionGui.egWidget %~

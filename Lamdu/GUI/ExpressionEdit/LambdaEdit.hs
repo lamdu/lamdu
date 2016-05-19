@@ -69,7 +69,8 @@ mkShrunk paramIds myId =
                    WidgetIds.fromEntityId)
         lamLabel <-
             ExpressionGui.makeFocusableView (lamId myId)
-            <*> (ExpressionGui.grammarLabel "λ" animId <&> const)
+            <*> (ExpressionGui.grammarLabel "λ" animId)
+            <&> ExpressionGui.fromLayout
             & LightLambda.withUnderline (Config.lightLambda config)
         return $ \mScopeEdit ->
             [ addScopeEdit mScopeEdit lamLabel

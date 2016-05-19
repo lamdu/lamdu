@@ -1,6 +1,7 @@
 {-# LANGUAGE NoImplicitPrelude, RecordWildCards, OverloadedStrings, RankNTypes, TypeFamilies, LambdaCase, DeriveFunctor, DeriveFoldable, DeriveTraversable #-}
 module Lamdu.GUI.ExpressionGui
     ( ExpressionGui, egWidget, egAlignment
+      , ExprGuiT.egLayout, ExprGuiT.fromLayout
     , LayoutMode(..)
     -- General:
     , fromValueWidget
@@ -465,11 +466,15 @@ stdWrapParentExpr pl mkGui =
         innerId = WidgetIds.delegatingId myId
 
 makeFocusableView ::
-    (Monad m, Monad f) =>
-    Widget.Id -> ExprGuiM m (ExpressionGui f -> ExpressionGui f)
+    (Applicative f, Monad m) =>
+    Widget.Id ->
+    ExprGuiM m
+    ( Layout (f Widget.EventResult) ->
+      Layout (f Widget.EventResult)
+    )
 makeFocusableView myId =
     ExprGuiM.widgetEnv (BWidgets.makeFocusableView myId)
-    <&> (egWidget %~)
+    <&> (Layout.widget %~)
 
 makeLabel :: Monad m => String -> AnimId -> ExprGuiM m (Layout a)
 makeLabel text animId =

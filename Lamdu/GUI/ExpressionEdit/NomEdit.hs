@@ -38,7 +38,7 @@ type LayoutFunc m f =
     ShowName ->
     ExprGuiM m (
         Layout (T f Widget.EventResult) -> -- label
-        ExpressionGui f -> -- name gui
+        Layout (T f Widget.EventResult) -> -- name gui
         ExpressionGui f -> -- subexpr gui
         ExpressionGui f)
 
@@ -54,7 +54,7 @@ expandingName (#>) nomId showName =
         return $
             \label nameGui subexprGui ->
             let nameShowing =
-                    (nameGui ExprGuiT.LayoutWide #> const label)
+                    (nameGui #> ExpressionGui.fromLayout label)
                     ExprGuiT.LayoutWide
                     & Layout.widget %~ addBg
             in  case showName of
@@ -104,7 +104,8 @@ mkNomGui nameSidePrecLens str layout nom@(Sugar.Nominal _ val) pl =
                 <&> if isSelected then id
                     else Layout.widget %~ Widget.takesFocus (const (pure nameId))
                 )
-            <*> (ExpressionGui.makeFocusableView nameId <*> mkNameGui nom nameId)
+            <*> (ExpressionGui.makeFocusableView nameId
+                 <*> mkNameGui nom nameId)
             <*> ExprGuiM.makeSubexpression (nameSidePrecLens .~ nomPrecedence+1) val
     & ExprGuiM.assignCursor myId valId
     where
@@ -112,7 +113,7 @@ mkNomGui nameSidePrecLens str layout nom@(Sugar.Nominal _ val) pl =
 
 mkNameGui ::
     Monad m => Sugar.Nominal (Name m) a -> Widget.Id ->
-    ExprGuiM m (ExpressionGui m)
+    ExprGuiM m (Layout b)
 mkNameGui (Sugar.Nominal tidg _val) nameId =
     ExpressionGui.makeNameView (tidg ^. Sugar.tidgName) (Widget.toAnimId nameId)
-    <&> ExpressionGui.fromValueWidget
+    <&> Layout.fromCenteredWidget
