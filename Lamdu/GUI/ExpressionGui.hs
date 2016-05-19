@@ -74,7 +74,7 @@ import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import           Lamdu.GUI.ExpressionGui.Types (ExpressionGui, ShowAnnotation(..), EvalModeShow(..), egWidget, egAlignment, modeWidths)
-import           Lamdu.GUI.ExpressionGui.Types (LayoutMode(..))
+import           Lamdu.GUI.ExpressionGui.Types (LayoutMode(..), fromValueWidget)
 import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
 import           Lamdu.GUI.Precedence (MyPrecedence(..), ParentPrecedence(..), Precedence(..))
 import qualified Lamdu.GUI.Precedence as Precedence
@@ -87,9 +87,6 @@ import qualified Lamdu.Sugar.Types as Sugar
 import           Prelude.Compat
 
 type T = Transaction
-
-fromValueWidget :: Widget (T m Widget.EventResult) -> ExpressionGui m
-fromValueWidget = const . Layout.fromCenteredWidget
 
 alignAdd ::
     ([Layout (T m Widget.EventResult)] ->

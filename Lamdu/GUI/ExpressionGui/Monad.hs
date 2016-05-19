@@ -26,8 +26,6 @@ module Lamdu.GUI.ExpressionGui.Monad
     , run
     ) where
 
-import           Prelude.Compat
-
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Lens.Tuple
@@ -48,7 +46,6 @@ import qualified Graphics.UI.Bottle.Widget as Widget
 import           Graphics.UI.Bottle.WidgetId (toAnimId)
 import qualified Graphics.UI.Bottle.Widgets as BWidgets
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
-import qualified Graphics.UI.Bottle.Widgets.Layout as Layout
 import qualified Graphics.UI.Bottle.Widgets.TextEdit as TextEdit
 import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
 import           Graphics.UI.Bottle.WidgetsEnvT (WidgetEnvT)
@@ -65,6 +62,8 @@ import           Lamdu.GUI.Precedence (Precedence)
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Style (Style)
 import qualified Lamdu.Sugar.Types as Sugar
+
+import           Prelude.Compat
 
 type T = Transaction
 
@@ -154,7 +153,7 @@ makeSubexpression onPrecedence expr =
         maker expr & withLocalPrecedence onPrecedence
     & advanceDepth fromView animId
     where
-        fromView = return . const . Layout.fromCenteredWidget . Widget.fromView
+        fromView = return . ExprGuiT.fromValueWidget . Widget.fromView
         animId = toAnimId $ WidgetIds.fromExprPayload $ expr ^. Sugar.rPayload
 
 advanceDepth ::

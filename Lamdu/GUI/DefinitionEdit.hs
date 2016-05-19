@@ -3,8 +3,10 @@ module Lamdu.GUI.DefinitionEdit
     ( make
     ) where
 
+import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Lens.Tuple
+import qualified Data.List as List
 import           Data.Store.Transaction (Transaction)
 import           Data.Vector.Vector2 (Vector2(..))
 import qualified Graphics.DrawingCombinators as Draw
@@ -136,7 +138,7 @@ makeExprDefinition def bodyExpr =
         bodyGui <-
             BinderEdit.make (def ^. Sugar.drName)
             (bodyExpr ^. Sugar.deContent) myId
-        vspace <- ExpressionGui.stdVSpace <&> Layout.fromCenteredWidget
+        vspace <- ExpressionGui.stdVSpace
         mkTypeWidgets <-
             case bodyExpr ^. Sugar.deTypeInfo of
             Sugar.DefinitionExportedTypeInfo scheme ->
@@ -155,12 +157,12 @@ makeExprDefinition def bodyExpr =
                     , topLevelSchemeTypeView oldExported entityId ["exportedType"]
                     ]
             & sequence <&> sequence
-        return $
-            \layoutParam ->
-            let bodyLayout = bodyGui layoutParam & Layout.alignment . _1 .~ 0
-                width = bodyLayout ^. Layout.widget . Widget.width
-                f row = [vspace, row & Layout.fromCenteredWidget & Layout.alignment . _1 .~ 0]
-            in Layout.addAfter Layout.Vertical (mkTypeWidgets width >>= f) bodyLayout
+        let f widget =
+                widget : mkTypeWidgets (widget ^. Widget.width)
+                & List.intersperse vspace
+                & Box.vboxCentered
+        bodyGui & Lens.mapped . Layout.absAlignedWidget . _2 %~ f
+            & return
     where
         entityId = def ^. Sugar.drEntityId
         myId = WidgetIds.fromEntityId entityId
