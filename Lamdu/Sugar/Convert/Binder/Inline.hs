@@ -15,6 +15,7 @@ import qualified Lamdu.Calc.Val.Annotated as Val
 import           Lamdu.Expr.IRef (ValIProperty, ValI)
 import qualified Lamdu.Expr.IRef as ExprIRef
 import           Lamdu.Sugar.Convert.Binder.Redex (Redex(..))
+import qualified Lamdu.Sugar.Convert.Binder.Redex as Redex
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import           Lamdu.Sugar.Types
 
@@ -70,11 +71,13 @@ cursorDest val =
 inlineLet ::
     Monad m => ValIProperty m -> Redex (ValI m) -> Transaction m EntityId
 inlineLet topLevelProp redex =
-    redexLam redex ^. V.lamResult
+    redex ^. Redex.redexLam . V.lamResult
     <&> Just
-    & inlineLetH (redexLam redex ^. V.lamParamId) (redexArg redex <&> Just)
+    & inlineLetH
+      (redex ^. Redex.redexLam . V.lamParamId)
+      (redex ^. Redex.redexArg <&> Just)
     <&> flip (,) ()
     & ExprIRef.writeValWithStoredSubexpressions
     <&> (^. Val.payload . _1)
     >>= Property.set topLevelProp
-    <&> const (cursorDest (redexArg redex <&> EntityId.ofValI))
+    <&> const (cursorDest (redex ^. Redex.redexArg <&> EntityId.ofValI))

@@ -1,7 +1,13 @@
-{-# LANGUAGE NoImplicitPrelude, DeriveFunctor, DeriveFoldable, DeriveTraversable #-}
+{-# LANGUAGE NoImplicitPrelude, TemplateHaskell, DeriveFunctor, DeriveFoldable, DeriveTraversable #-}
 
 module Lamdu.Sugar.Convert.Binder.Redex
     ( Redex(..)
+      , redexBodyScope
+      , redexLam
+      , redexParamRefs
+      , redexArg
+      , redexArgType
+      , redexHiddenPayloads
     , checkForRedex
     ) where
 
@@ -22,29 +28,30 @@ import           Lamdu.Sugar.Types
 import           Prelude.Compat
 
 data Redex a = Redex
-    { redexBodyScope :: CurAndPrev (Map ScopeId ScopeId)
-    , redexLam :: V.Lam (Val a)
-    , redexParamRefs :: [EntityId]
-    , redexArg :: Val a
-    , redexArgType :: Type
-    , redexHiddenPayloads :: [a]
+    { _redexBodyScope :: CurAndPrev (Map ScopeId ScopeId)
+    , _redexLam :: V.Lam (Val a)
+    , _redexParamRefs :: [EntityId]
+    , _redexArg :: Val a
+    , _redexArgType :: Type
+    , _redexHiddenPayloads :: [a]
     } deriving (Functor, Foldable, Traversable)
+Lens.makeLenses ''Redex
 
 checkForRedex :: Val (Input.Payload m a) -> Maybe (Redex (Input.Payload m a))
 checkForRedex expr = do
     V.Apply func arg <- expr ^? ExprLens.valApply
     lam <- func ^? Val.body . V._BLam
     Just Redex
-        { redexLam = lam
-        , redexBodyScope =
+        { _redexLam = lam
+        , _redexBodyScope =
             func ^. Val.payload . Input.evalResults
             <&> (^. Input.eAppliesOfLam)
             <&> Lens.traversed %~ getRedexApplies
-        , redexArg = arg
-        , redexArgType =
+        , _redexArg = arg
+        , _redexArgType =
             arg ^. Val.payload . Input.inferred . Infer.plType
-        , redexHiddenPayloads = (^. Val.payload) <$> [expr, func]
-        , redexParamRefs = func ^. Val.payload . Input.varRefsOfLambda
+        , _redexHiddenPayloads = (^. Val.payload) <$> [expr, func]
+        , _redexParamRefs = func ^. Val.payload . Input.varRefsOfLambda
         }
     where
         getRedexApplies [(scopeId, _)] = scopeId
