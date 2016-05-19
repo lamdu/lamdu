@@ -3,7 +3,7 @@ module Lamdu.GUI.ExpressionGui
     ( ExpressionGui, egWidget, egAlignment
     , LayoutMode(..)
     -- General:
-    , fromValueWidget, addBelow
+    , fromValueWidget
     , scale
     , pad
     , stdHSpace, stdVSpace
@@ -87,11 +87,6 @@ import qualified Lamdu.Sugar.Types as Sugar
 import           Prelude.Compat
 
 type T = Transaction
-
-addBelow ::
-    Widget.R -> [ExpressionGui m] -> ExpressionGui m -> ExpressionGui m
-addBelow hAlign egs eg layoutMode =
-    eg layoutMode & Layout.alignment . _1 .~ hAlign & Layout.addAfter Layout.Vertical (egs ?? layoutMode)
 
 scale :: Vector2 Widget.R -> ExpressionGui m -> ExpressionGui m
 scale s gui layoutMode =
