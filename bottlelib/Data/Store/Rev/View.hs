@@ -75,7 +75,7 @@ transaction view updates = do
     changes <- catMaybes <$> traverse makeChange updates
     unless (null changes) $ do
         b <- branch view
-        Branch.newVersion b changes 
+        Branch.newVersion b changes
     where
         makeChange (key, value) = do
             prev <- lookupBS view key
