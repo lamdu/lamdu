@@ -20,6 +20,7 @@ import           Data.Vector.Vector2 (Vector2(..))
 import           Graphics.UI.Bottle.Animation (AnimId)
 import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.EventMap as E
+import qualified Graphics.UI.Bottle.View as View
 import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.WidgetId as WidgetId
@@ -47,9 +48,10 @@ import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
+import qualified Lamdu.GUI.TypeView as TypeView
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
-import           Lamdu.Sugar.Names.Types (Name(..), ExpressionN)
 import qualified Lamdu.Sugar.Lens as SugarLens
+import           Lamdu.Sugar.Names.Types (Name(..), ExpressionN)
 import qualified Lamdu.Sugar.NearestHoles as NearestHoles
 import qualified Lamdu.Sugar.Types as Sugar
 
@@ -466,9 +468,7 @@ makeUnderCursorAssignment shownResultsLists hasHiddenResults holeInfo =
         -- We make our own type view here instead of
         -- ExpressionGui.stdWrap, because we want to synchronize the
         -- active BG width with the inferred type width
-        typeView <-
-            ExpressionGui.makeTypeView (hiInferredType holeInfo)
-            (Widget.toAnimId hidHole)
+        typeView <- TypeView.make (hiInferredType holeInfo) (Widget.toAnimId hidHole)
 
         vspace <- ExpressionGui.annotationSpacer
         hoverResultsWidget <-
@@ -477,12 +477,12 @@ makeUnderCursorAssignment shownResultsLists hasHiddenResults holeInfo =
             ( addDarkBackground (Widget.toAnimId hidResultsPrefix)
               ??
               ( resultsWidget
-                & Widget.width %~ max (typeView ^. Layout.widget . Widget.width)
+                & Widget.width %~ max (typeView ^. View.width)
                 & Widget.strongerEvents resultsEventMap .
                   addBackground (Widget.toAnimId hidResultsPrefix) (Config.layers config)
                   holeOpenBGColor
                 & ExpressionGui.fromValueWidget
-                <&> Layout.addAfter Layout.Vertical [vspace, typeView]
+                <&> Layout.addAfter Layout.Vertical [vspace, Widget.fromView typeView & Layout.fromCenteredWidget]
               ) ?? ExprGuiT.LayoutWide <&> (^. Layout.widget)
             )
         searchTermGui <- SearchTerm.make holeInfo

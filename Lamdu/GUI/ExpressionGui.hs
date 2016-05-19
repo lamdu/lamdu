@@ -28,7 +28,6 @@ module Lamdu.GUI.ExpressionGui
     , NeighborVals(..)
     , EvalAnnotationOptions(..), maybeAddAnnotationWith
     , WideAnnotationBehavior(..), wideAnnotationBehaviorFromSelected
-    , makeTypeView
     , evaluationResult
     -- Expression wrapping
     , MyPrecedence(..), ParentPrecedence(..), Precedence(..), Precedence.precBefore, Precedence.precAfter
