@@ -349,14 +349,14 @@ make name binder myId =
         defNameEdit <-
             makeBinderNameEdit (binder ^. Sugar.bActions) rhsJumperEquals rhs
             name myId
-            <&> Lens.mapped . Layout.absAlignedWidget . _2 %~ addBelow presentationEdits
+            <&> ExpressionGui.egLayout . Layout.absAlignedWidget . _2 %~ addBelow presentationEdits
             <&> ExpressionGui.egWidget %~ Widget.weakerEvents jumpHolesEventMap
         mLhsEdit <-
             case mParamsEdit of
             Nothing -> return Nothing
             Just paramsEdit ->
                 ExpressionGui.vboxTopFocalSpaced
-                ?? (paramsEdit : fmap const mScopeEdit ^.. Lens._Just
+                ?? (paramsEdit : fmap ExpressionGui.fromLayout mScopeEdit ^.. Lens._Just
                     <&> ExpressionGui.egAlignment . _1 .~ 0.5)
                 <&> ExpressionGui.egWidget %~ Widget.weakerEvents rhsJumperEquals
                 <&> Just
@@ -365,7 +365,7 @@ make name binder myId =
             <&>
             (\hbox ->
             hbox
-            [ hbox (defNameEdit : (mLhsEdit ^.. Lens._Just) ++ [const equals])
+            [ hbox (defNameEdit : (mLhsEdit ^.. Lens._Just) ++ [ExpressionGui.fromLayout equals])
             , bodyEdit
             ] )
             <&> ExpressionGui.egWidget %~ Widget.weakerEvents eventMap

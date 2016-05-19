@@ -23,7 +23,7 @@ import qualified Lamdu.GUI.ExpressionEdit.LambdaEdit as LambdaEdit
 import qualified Lamdu.GUI.ExpressionEdit.LiteralEdit as LiteralEdit
 import qualified Lamdu.GUI.ExpressionEdit.NomEdit as NomEdit
 import qualified Lamdu.GUI.ExpressionEdit.RecordEdit as RecordEdit
-import           Lamdu.GUI.ExpressionGui (ExpressionGui)
+import           Lamdu.GUI.ExpressionGui (ExpressionGuiM(..), ExpressionGui)
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
@@ -39,8 +39,10 @@ shrinkIfHigherThanLine =
             <&> (^. TextEdit.sTextViewStyle . TextView.styleFont)
         config <- ExprGuiM.readConfig <&> Config.hole
         return
-            $ \gui layoutParam ->
-            let layout = gui layoutParam
+            $ \(ExpressionGui mkLayout) ->
+            ExpressionGui $
+            \layoutMode ->
+            let layout = mkLayout layoutMode
                 ratio =
                     (Font.height sizedFont /
                      layout ^. Layout.widget . Widget.height)

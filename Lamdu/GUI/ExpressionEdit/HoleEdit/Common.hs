@@ -25,8 +25,8 @@ addDarkBackground animId =
     do
         config <- ExprGuiM.readConfig
         let Config.Hole{..} = Config.hole config
-        return $ \widget ->
-            widget
+        return $ \gui ->
+            gui
             & ExpressionGui.pad (holeDarkPadding <&> realToFrac)
             & ExpressionGui.egWidget %~
               Widget.backgroundColor

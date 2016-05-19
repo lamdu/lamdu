@@ -13,7 +13,7 @@ import           Lamdu.GUI.ExpressionEdit.HoleEdit.Info (HoleInfo(..))
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.Open (makeOpenSearchTermGui)
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.SearchTerm as SearchTerm
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds (WidgetIds(..))
-import           Lamdu.GUI.ExpressionGui (ExpressionGui)
+import           Lamdu.GUI.ExpressionGui (ExpressionGuiM(..), ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
@@ -53,6 +53,10 @@ makeStdWrapped pl holeInfo =
                  -- here
                  fdWrap <*> makeOpenSearchTermGui pl holeInfo
                  <&>
-                 \gui layout ->
-                 gui layout `Layout.hoverInPlaceOf` closedSearchTermGui layout
+                 \gui ->
+                 ExpressionGui $
+                 \layout ->
+                 (gui ^. ExpressionGui.toLayout) layout
+                 `Layout.hoverInPlaceOf`
+                 (closedSearchTermGui ^. ExpressionGui.toLayout) layout
             else return closedSearchTermGui

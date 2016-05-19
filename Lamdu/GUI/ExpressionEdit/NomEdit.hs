@@ -54,8 +54,8 @@ expandingName (#>) nomId showName =
         return $
             \label nameGui subexprGui ->
             let nameShowing =
-                    (nameGui #> ExpressionGui.fromLayout label)
                     ExprGuiT.LayoutWide
+                    & (nameGui #> ExpressionGui.fromLayout label) ^. ExpressionGui.toLayout
                     & Layout.widget %~ addBg
             in  case showName of
                 NameCollapsed -> label & Layout.widget %~ addBg

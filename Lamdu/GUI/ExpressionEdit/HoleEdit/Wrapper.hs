@@ -84,7 +84,10 @@ make WidgetIds{..} arg =
 
         -- TODO: We need to make isFocused independent from the layout
         -- mode and then fix this code not to doubly apply argGui
-        let argIsFocused = argGui ExpressionGui.LayoutWide ^. Layout.widget & Widget.isFocused
+        let argIsFocused =
+                ( ExpressionGui.LayoutWide
+                  & argGui ^. ExpressionGui.toLayout
+                ) ^. Layout.widget & Widget.isFocused
 
         unwrapEventMap <- makeUnwrapEventMap arg WidgetIds{..}
         ExpressionGui.makeFocusableView hidWrapper

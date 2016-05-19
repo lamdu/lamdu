@@ -23,7 +23,7 @@ import qualified Lamdu.Config as Config
 import qualified Lamdu.Eval.Results as ER
 import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
 import qualified Lamdu.GUI.ExpressionEdit.TagEdit as TagEdit
-import           Lamdu.GUI.ExpressionGui (ExpressionGui)
+import           Lamdu.GUI.ExpressionGui (ExpressionGuiM(..), ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
@@ -137,7 +137,7 @@ makeAltsWidget ::
     Widget.Id -> ExprGuiM m (ExpressionGui m)
 makeAltsWidget _ [] myId =
     ExpressionGui.makeFocusableView (Widget.joinId myId ["Ø"])
-    <*> (ExpressionGui.grammarLabel "Ø" (Widget.toAnimId myId))
+    <*> ExpressionGui.grammarLabel "Ø" (Widget.toAnimId myId)
     <&> ExpressionGui.fromLayout
 makeAltsWidget mActiveTag alts _ =
     ExpressionGui.vboxTopFocalSpaced <*> mapM (makeAltRow mActiveTag) alts
@@ -161,11 +161,11 @@ makeOpenCase rest animId altsGui =
         restExpr <-
             ExpressionGui.addValPadding
             <*> ExprGuiM.makeSubexpression (const 0) rest
-        return $
+        return $ ExpressionGui $
             \layoutMode ->
-            let restLayout = restExpr layoutMode
+            let restLayout = layoutMode & restExpr ^. ExpressionGui.toLayout
                 minWidth = restLayout ^. Layout.widget . Widget.width
-                alts = altsGui layoutMode
+                alts = layoutMode & altsGui ^. ExpressionGui.toLayout
                 targetWidth = alts ^. Layout.widget . Widget.width
             in
             alts

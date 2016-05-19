@@ -32,7 +32,7 @@ type T = Transaction
 
 addScopeEdit :: Monad m => Maybe (Layout (T m Widget.EventResult)) -> ExpressionGui m -> ExpressionGui m
 addScopeEdit mScopeEdit e =
-    e : (mScopeEdit ^.. Lens._Just <&> const)
+    e : (mScopeEdit ^.. Lens._Just <&> ExpressionGui.fromLayout)
     <&> ExpressionGui.egAlignment . _1 .~ 0.5
     & ExpressionGui.vboxTopFocal
 
@@ -50,7 +50,8 @@ mkExpanded animId =
     do
         labelEdit <- ExpressionGui.grammarLabel "→" animId
         return $ \mParamsEdit mScopeEdit ->
-            mkLhsEdits mParamsEdit mScopeEdit ++ [const labelEdit]
+            mkLhsEdits mParamsEdit mScopeEdit ++
+            [ExpressionGui.fromLayout labelEdit]
 
 lamId :: Widget.Id -> Widget.Id
 lamId = (`Widget.joinId` ["lam"])

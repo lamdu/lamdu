@@ -39,7 +39,7 @@ import           Lamdu.GUI.CodeEdit.Settings (Settings)
 import qualified Lamdu.GUI.DefinitionEdit as DefinitionEdit
 import qualified Lamdu.GUI.ExpressionEdit as ExpressionEdit
 import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
-import           Lamdu.GUI.ExpressionGui (ExpressionGui, ExpressionGuiM)
+import           Lamdu.GUI.ExpressionGui (ExpressionGuiM(..), ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
@@ -207,7 +207,8 @@ gui env rootId replExpr panes =
         vspace <- ExprGuiM.vspacer (Config.paneSpacing . Config.pane)
         return $
             \width ->
-            let render x = x (ExpressionGui.LayoutNarrow width) ^. Layout.widget
+            let render (ExpressionGui mkLayout) =
+                    mkLayout (ExpressionGui.LayoutNarrow width) ^. Layout.widget
             in
                 [render replEdit] ++ (panesEdits <&> render) ++ [newDefinitionButton]
                 & intersperse vspace
@@ -238,7 +239,7 @@ makePaneEdit ::
     ExprGuiM m (ExpressionGuiM (M m))
 makePaneEdit env (pane, defS) =
     makePaneWidget defS
-    <&> Lens.mapped . Layout.widget %~ Widget.weakerEvents paneEventMap . mLiftWidget
+    <&> ExpressionGui.egWidget %~ Widget.weakerEvents paneEventMap . mLiftWidget
     where
         Config.Pane{paneCloseKeys, paneMoveDownKeys, paneMoveUpKeys} =
             Config.pane (config env)
@@ -329,7 +330,7 @@ makeReplEdit env myId replExpr =
       <&> ExpressionGui.fromLayout
     , ExprGuiM.makeSubexpression id replExpr
     ]
-    <&> Lens.mapped . Layout.widget %~
+    <&> ExpressionGui.egWidget %~
         Widget.weakerEvents (replEventMap env replExpr) . mLiftWidget
     where
         replId = Widget.joinId myId ["repl"]

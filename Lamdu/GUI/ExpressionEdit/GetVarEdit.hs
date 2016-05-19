@@ -28,33 +28,37 @@ import qualified Lamdu.Sugar.Types as Sugar
 import           Prelude.Compat
 
 makeSimpleView ::
-    Monad m => Draw.Color -> Name m -> Widget.Id ->
-    ExprGuiM m (ExpressionGui m)
+    (Monad f, Monad m) =>
+    Draw.Color -> Name m -> Widget.Id ->
+    ExprGuiM m (ExpressionGui f)
 makeSimpleView color name myId =
     ExprGuiM.widgetEnv (BWidgets.makeFocusableView myId)
     <*> ExpressionGui.makeNameView name (Widget.toAnimId myId)
-    <&> ExpressionGui.fromValueWidget
     & ExprGuiM.withFgColor color
+    <&> ExpressionGui.fromValueWidget
 
 makeParamsRecord ::
-    Monad m => Widget.Id -> Sugar.ParamsRecordVar (Name m) -> ExprGuiM m (ExpressionGui m)
+    Monad m => Widget.Id -> Sugar.ParamsRecordVar (Name m) ->
+    ExprGuiM m (ExpressionGui m)
 makeParamsRecord myId paramsRecordVar =
     do
         config <- ExprGuiM.readConfig
         let Config.Name{..} = Config.name config
         sequence
-            [ ExpressionGui.makeLabel "Params {" (Widget.toAnimId myId <> ["prefix"])
-              <&> const
+            [ ExpressionGui.makeLabel "Params {"
+              (Widget.toAnimId myId <> ["prefix"])
+              <&> ExpressionGui.fromLayout
             , ExpressionGui.combineSpaced
-                <*>
-                ( zip [0..] fieldNames
-                    & mapM
-                    (\(i, fieldName) ->
-                      Widget.joinId myId ["params", SBS8.pack (show (i::Int))]
-                      & makeSimpleView parameterColor fieldName)
+              <*>
+              ( fieldNames
+                & Lens.itraverse
+                (\i fieldName ->
+                    Widget.joinId myId ["params", SBS8.pack (show (i::Int))]
+                    & makeSimpleView parameterColor fieldName
                 )
+              )
             , ExpressionGui.makeLabel "}" (Widget.toAnimId myId <> ["suffix"])
-              <&> const
+              <&> ExpressionGui.fromLayout
             ] <&> ExpressionGui.combine
     where
         Sugar.ParamsRecordVar fieldNames = paramsRecordVar

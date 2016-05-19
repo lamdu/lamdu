@@ -43,7 +43,7 @@ import           Lamdu.GUI.ExpressionEdit.HoleEdit.ShownResult (PickedResult(..)
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.State (HoleState(..))
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.State as HoleState
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds (WidgetIds(..))
-import           Lamdu.GUI.ExpressionGui (ExpressionGui)
+import           Lamdu.GUI.ExpressionGui (ExpressionGuiM(..), ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
@@ -307,6 +307,12 @@ makeFocusable ::
     ExprGuiM m (Widget (f Widget.EventResult) -> Widget (f Widget.EventResult))
 makeFocusable = ExprGuiM.widgetEnv . BWidgets.makeFocusableView
 
+applyLayout ::
+    Functor f => ExpressionGui.LayoutMode -> f (ExpressionGui m) ->
+    f (Layout (T m Widget.EventResult))
+applyLayout layoutMode fGui =
+    fGui <&> (^. ExpressionGui.toLayout) ?? layoutMode
+
 makeHoleResultWidget ::
     Monad m =>
     Widget.Id -> Sugar.HoleResult (Name m) m ->
@@ -332,7 +338,7 @@ makeHoleResultWidget resultId holeResult =
             holeResultConverted
             & postProcessSugar
             & ExprGuiM.makeSubexpression (const 0)
-            ?? ExprGuiT.LayoutWide
+            & applyLayout ExprGuiT.LayoutWide
             <&> (^. Layout.widget)
         holeResultEntityId =
             holeResultConverted ^. Sugar.rPayload . Sugar.plEntityId
@@ -481,17 +487,22 @@ makeUnderCursorAssignment shownResultsLists hasHiddenResults holeInfo =
                 & Widget.strongerEvents resultsEventMap .
                   addBackground (Widget.toAnimId hidResultsPrefix) (Config.layers config)
                   holeOpenBGColor
-                & ExpressionGui.fromValueWidget
-                <&> Layout.addAfter Layout.Vertical [vspace, Widget.fromView typeView & Layout.fromCenteredWidget]
-              ) ?? ExprGuiT.LayoutWide <&> (^. Layout.widget)
+                & Layout.fromCenteredWidget
+                & Layout.addAfter Layout.Vertical
+                  [ vspace
+                  , Widget.fromView typeView & Layout.fromCenteredWidget
+                  ]
+                & ExpressionGui.fromLayout
+              ) & applyLayout ExprGuiT.LayoutWide
+              <&> (^. Layout.widget)
             )
         searchTermGui <- SearchTerm.make holeInfo
-        searchTermGui
-            & ExpressionGui.egWidget %~ Widget.weakerEvents searchTermEventMap
-            & return
-            <&>
-            \mk layout ->
-            let w = mk layout
+        return $ ExpressionGui $ \layoutMode ->
+            let w = layoutMode
+                    & ( searchTermGui
+                        & ExpressionGui.egWidget %~
+                          Widget.weakerEvents searchTermEventMap
+                      ) ^. ExpressionGui.toLayout
             in
                 w
                 & alignment .~ 0

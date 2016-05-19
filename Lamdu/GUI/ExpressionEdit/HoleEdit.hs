@@ -18,7 +18,7 @@ import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.State as HoleState
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds (WidgetIds(..))
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds as HoleWidgetIds
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.Wrapper as Wrapper
-import           Lamdu.GUI.ExpressionGui (ExpressionGui)
+import           Lamdu.GUI.ExpressionGui (ExpressionGuiM(..), ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
@@ -49,7 +49,7 @@ assignHoleCursor WidgetIds{..} (Just _) =
 hover :: Monad m => WidgetIds -> AnimId -> ExprGuiM m (ExpressionGui n -> ExpressionGui n)
 hover WidgetIds{..} name =
     (.)
-    <$> (ExpressionGui.liftLayers <&> fmap)
+    <$> (ExpressionGui.liftLayers <&> (ExpressionGui.egLayout %~))
     <*> addDarkBackground (Widget.toAnimId hidOpen ++ name ++ ["DarkBg"])
 
 addSearchAreaBelow ::
@@ -109,11 +109,11 @@ make hole pl =
                                 do
                                     searchAreaGui <- SearchArea.makeStdWrapped pl holeInfo
                                     lay <- f WidgetIds{..}
-                                    return $
-                                        \layoutParam ->
-                                        lay wrapperGui searchAreaGui layoutParam
-                                        `Layout.hoverInPlaceOf` unfocusedWrapperGui layoutParam
-                        if Widget.isFocused (wrapperGui ExpressionGui.LayoutWide ^. Layout.widget)
+                                    return $ ExpressionGui $
+                                        \layoutMode ->
+                                        (layoutMode & lay wrapperGui searchAreaGui ^. ExpressionGui.toLayout)
+                                        `Layout.hoverInPlaceOf` (layoutMode & unfocusedWrapperGui ^. ExpressionGui.toLayout)
+                        if ExpressionGui.egIsFocused wrapperGui
                             then layout addSearchAreaBelow
                             else if isSelected then
                                      layout addWrapperAbove

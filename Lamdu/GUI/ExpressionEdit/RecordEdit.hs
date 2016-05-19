@@ -17,7 +17,7 @@ import qualified Graphics.UI.Bottle.Widgets.Layout as Layout
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
 import qualified Lamdu.GUI.ExpressionEdit.TagEdit as TagEdit
-import           Lamdu.GUI.ExpressionGui (ExpressionGui)
+import           Lamdu.GUI.ExpressionGui (ExpressionGuiM(..), ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
@@ -101,7 +101,7 @@ makeFieldsWidget ::
     Widget.Id -> ExprGuiM m (ExpressionGui m)
 makeFieldsWidget [] myId =
     ExpressionGui.makeFocusableView myId
-    <*> (ExpressionGui.grammarLabel "()" (Widget.toAnimId myId))
+    <*> ExpressionGui.grammarLabel "()" (Widget.toAnimId myId)
     <&> ExpressionGui.fromLayout
 makeFieldsWidget fields _ =
     ExpressionGui.vboxTopFocalSpaced <*> mapM makeFieldRow fields
@@ -125,11 +125,11 @@ makeOpenRecord fieldsGui rest animId =
         restExpr <-
             ExpressionGui.addValPadding
             <*> ExprGuiM.makeSubexpression (const 0) rest
-        return $
+        return $ ExpressionGui $
             \layoutMode ->
-            let restLayout = restExpr layoutMode
+            let restLayout = layoutMode & restExpr ^. ExpressionGui.toLayout
                 minWidth = restLayout ^. Layout.widget . Widget.width
-                fields = fieldsGui layoutMode
+                fields = layoutMode & fieldsGui ^. ExpressionGui.toLayout
                 targetWidth = fields ^. Layout.widget . Widget.width
             in
             fields

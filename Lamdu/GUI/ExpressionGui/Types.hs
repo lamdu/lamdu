@@ -1,7 +1,8 @@
 {-# LANGUAGE TemplateHaskell #-}
 module Lamdu.GUI.ExpressionGui.Types
-    ( ExpressionGuiM
-    , ExpressionGui, egWidget, egAlignment, egLayout
+    ( ExpressionGuiM(..)
+    , ExpressionGui, toLayout
+      , egWidget, egAlignment, egLayout
       , fromValueWidget, fromLayout
     , LayoutMode(..), _LayoutNarrow, _LayoutWide
       , modeWidths
@@ -42,31 +43,40 @@ modeWidths :: Lens.Traversal' LayoutMode Widget.R
 modeWidths _ LayoutWide = pure LayoutWide
 modeWidths f (LayoutNarrow limit) = f limit <&> LayoutNarrow
 
-type ExpressionGuiM m = LayoutMode -> Layout (m Widget.EventResult)
+newtype ExpressionGuiM m = ExpressionGui
+    { _toLayout :: LayoutMode -> Layout (m Widget.EventResult)
+    }
+Lens.makeLenses ''ExpressionGuiM
+
 type ExpressionGui m = ExpressionGuiM (T m)
 
-fromValueWidget :: Widget (T m Widget.EventResult) -> ExpressionGui m
-fromValueWidget = const . Layout.fromCenteredWidget
+fromLayout :: Layout (m Widget.EventResult) -> ExpressionGuiM m
+fromLayout = ExpressionGui . const
+
+fromValueWidget :: Widget (m Widget.EventResult) -> ExpressionGuiM m
+fromValueWidget = fromLayout . Layout.fromCenteredWidget
+
+{-# INLINE egLayout #-}
+egLayout ::
+    Lens.Setter
+    (ExpressionGuiM m)
+    (ExpressionGuiM n)
+    (Layout (m Widget.EventResult))
+    (Layout (n Widget.EventResult))
+egLayout = toLayout . Lens.mapped
 
 {-# INLINE egWidget #-}
 egWidget ::
     Lens.Setter
-    (ExpressionGui m)
-    (ExpressionGui n)
-    (Widget (T m Widget.EventResult))
-    (Widget (T n Widget.EventResult))
-egWidget = Lens.mapped . Layout.widget
+    (ExpressionGuiM m)
+    (ExpressionGuiM n)
+    (Widget (m Widget.EventResult))
+    (Widget (n Widget.EventResult))
+egWidget = egLayout . Layout.widget
 
 {-# INLINE egAlignment #-}
 egAlignment :: Lens.Setter' (ExpressionGui m) Layout.Alignment
-egAlignment = Lens.mapped . Layout.alignment
-
-{-# INLINE egLayout #-}
-egLayout :: Lens.Setter' (ExpressionGui m) (Layout (T m Widget.EventResult))
-egLayout = Lens.mapped
-
-fromLayout :: Layout (T m Widget.EventResult) -> ExpressionGui m
-fromLayout = const
+egAlignment = egLayout . Layout.alignment
 
 data EvalModeShow = EvalModeShowNothing | EvalModeShowType | EvalModeShowEval
     deriving (Eq, Ord, Show)

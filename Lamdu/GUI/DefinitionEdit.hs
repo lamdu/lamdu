@@ -3,7 +3,6 @@ module Lamdu.GUI.DefinitionEdit
     ( make
     ) where
 
-import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Lens.Tuple
 import qualified Data.List as List
@@ -161,7 +160,7 @@ makeExprDefinition def bodyExpr =
                 widget : mkTypeWidgets (widget ^. Widget.width)
                 & List.intersperse vspace
                 & Box.vboxCentered
-        bodyGui & Lens.mapped . Layout.absAlignedWidget . _2 %~ f
+        bodyGui & ExpressionGui.egLayout . Layout.absAlignedWidget . _2 %~ f
             & return
     where
         entityId = def ^. Sugar.drEntityId
