@@ -24,7 +24,7 @@ makeCommon ::
     ExprGuiM m (ExpressionGui m)
 makeCommon tagG nearestHoles valEdits =
     ExpressionGui.combineSpaced
-    <*> (TagEdit.makeRecordTag nearestHoles tagG <&> (: valEdits))
+    <*> (TagEdit.makeRecordTag nearestHoles tagG <&> const <&> (: valEdits))
 
 make ::
     Monad m =>

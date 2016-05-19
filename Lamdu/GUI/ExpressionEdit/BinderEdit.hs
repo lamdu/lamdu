@@ -400,7 +400,7 @@ makeLetEdit item =
                 ]
         let eventMap = mappend actionsEventMap usageEventMap
         ExpressionGui.tagItem
-            <*> (ExpressionGui.grammarLabel "let" (Widget.toAnimId myId) <&> const)
+            <*> ExpressionGui.grammarLabel "let" (Widget.toAnimId myId)
             <*> (make (item ^. Sugar.lName) binder myId
                 <&> ExpressionGui.egWidget %~ Widget.weakerEvents eventMap
                 <&> ExpressionGui.pad

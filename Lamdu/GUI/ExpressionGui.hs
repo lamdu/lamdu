@@ -170,7 +170,7 @@ vboxTopFocalSpaced =
     <&> List.intersperse
     <&> fmap vboxTopFocal
 
-tagItem :: Monad m => ExprGuiM m (ExpressionGui f -> ExpressionGui f -> ExpressionGui f)
+tagItem :: Monad m => ExprGuiM m (Layout (T f Widget.EventResult) -> ExpressionGui f -> ExpressionGui f)
 tagItem =
     stdHSpace <&> Layout.fromCenteredWidget <&> f
     where
@@ -181,7 +181,7 @@ tagItem =
                 remainingLayout = layoutMode & modeWidths -~ tagAndSpace ^. Layout.width
                 tagAndSpace =
                     space
-                    & Layout.addBefore Layout.Horizontal [tag LayoutWide]
+                    & Layout.addBefore Layout.Horizontal [tag]
 
 addAnnotationBackgroundH :: (Config -> Draw.Color) -> Config -> AnimId -> Layout a -> Layout a
 addAnnotationBackgroundH getColor config animId =

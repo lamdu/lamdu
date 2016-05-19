@@ -123,7 +123,7 @@ makeAltRow mActiveTag (Sugar.CaseAlt delete tag altExpr) =
         altRefGui <-
             TagEdit.makeCaseTag (ExprGuiT.nextHolesBefore altExpr) tag
             <&> if mActiveTag == Just (tag ^. Sugar.tagVal)
-                then ExpressionGui.egWidget %~ addBg
+                then Layout.widget %~ addBg
                 else id
         altExprGui <- ExprGuiM.makeSubexpression (const 0) altExpr
         let itemEventMap = caseDelEventMap config delete
