@@ -323,7 +323,7 @@ makeReplEdit ::
     Env m -> Widget.Id -> ExprGuiT.SugarExpr m ->
     ExprGuiM m (ExpressionGui.LayoutMode -> Layout (M m Widget.EventResult))
 makeReplEdit env myId replExpr =
-    ExpressionGui.hboxSpaced
+    ExpressionGui.combineSpaced
     <*> sequence
     [ ExpressionGui.makeFocusableView replId
         <*> (ExpressionGui.makeLabel "⋙" (Widget.toAnimId replId) <&> const)

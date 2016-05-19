@@ -124,8 +124,8 @@ make lam pl =
             (_, Sugar.NullParam{}) -> mkLhsEdits mParamsEdit mScopeEdit & return
             (Sugar.LightLambda, _) -> mkLightLambda params myId ?? mParamsEdit ?? mScopeEdit
             _ -> mkExpanded animId ?? mParamsEdit ?? mScopeEdit
-        ExpressionGui.hboxSpaced
-            <*> (ExpressionGui.hboxSpaced ?? paramsAndLabelEdits <&> (: [bodyEdit]))
+        ExpressionGui.combineSpaced
+            <*> (ExpressionGui.combineSpaced ?? paramsAndLabelEdits <&> (: [bodyEdit]))
             <&> ExpressionGui.egWidget %~ Widget.weakerEvents eventMap
     where
         funcApplyLimit = pl ^. Sugar.plData . ExprGuiT.plShowAnnotation . ExprGuiT.funcApplyLimit

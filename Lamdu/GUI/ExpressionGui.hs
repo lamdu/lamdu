@@ -7,7 +7,7 @@ module Lamdu.GUI.ExpressionGui
     , scale
     , pad
     , stdHSpace, stdVSpace
-    , hbox, hboxSpaced
+    , combine, combineSpaced
     , (||>), (<||)
     , vboxTopFocal, vboxTopFocalSpaced, vboxTopFocalAlignedTo
     , tagItem
@@ -121,9 +121,8 @@ pad p gui layoutMode =
     & gui
     & Layout.pad p
 
--- TODO: Rename to hboxOrVBox
-hbox :: [ExpressionGui m] -> ExpressionGui m
-hbox guis layoutMode =
+combine :: [ExpressionGui m] -> ExpressionGui m
+combine guis layoutMode =
     case layoutMode of
     LayoutWide -> wide
     LayoutNarrow limit
@@ -161,8 +160,8 @@ stdVSpace =
     <&> Widget.fromView
     <&> Layout.fromCenteredWidget
 
-hboxSpaced :: Monad m => ExprGuiM m ([ExpressionGui f] -> ExpressionGui f)
-hboxSpaced =
+combineSpaced :: Monad m => ExprGuiM m ([ExpressionGui f] -> ExpressionGui f)
+combineSpaced =
     do
         hSpace <- stdHSpace
         vSpace <- stdVSpace

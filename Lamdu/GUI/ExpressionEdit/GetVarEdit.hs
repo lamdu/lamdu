@@ -45,7 +45,7 @@ makeParamsRecord myId paramsRecordVar =
         sequence
             [ ExpressionGui.makeLabel "Params {" (Widget.toAnimId myId <> ["prefix"])
               <&> const
-            , ExpressionGui.hboxSpaced
+            , ExpressionGui.combineSpaced
                 <*>
                 ( zip [0..] fieldNames
                     & mapM
@@ -55,7 +55,7 @@ makeParamsRecord myId paramsRecordVar =
                 )
             , ExpressionGui.makeLabel "}" (Widget.toAnimId myId <> ["suffix"])
               <&> const
-            ] <&> ExpressionGui.hbox
+            ] <&> ExpressionGui.combine
     where
         Sugar.ParamsRecordVar fieldNames = paramsRecordVar
 

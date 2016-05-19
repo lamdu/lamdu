@@ -31,7 +31,7 @@ make (Sugar.GetField recExpr tagG) pl =
         tagEdit <-
             TagEdit.makeRecordTag
             (pl ^. Sugar.plData . ExprGuiT.plNearestHoles) tagG
-        return $ ExpressionGui.hbox [recExprEdit, const dotLabel, tagEdit]
+        return $ ExpressionGui.combine [recExprEdit, const dotLabel, tagEdit]
     & ExprGuiM.assignCursor myId tagId
     where
         tagId = WidgetIds.fromEntityId (tagG ^. Sugar.tagInstance)
