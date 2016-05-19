@@ -3,7 +3,7 @@ module Lamdu.GUI.ExpressionGui
     ( ExpressionGui, egWidget, egAlignment
     , LayoutMode(..)
     -- General:
-    , fromValueWidget, addBelow, addAbove
+    , fromValueWidget, addBelow
     , scale
     , pad
     , stdHSpace, stdVSpace
@@ -88,20 +88,10 @@ import           Prelude.Compat
 
 type T = Transaction
 
-alignAdd ::
-    ([Layout (T m Widget.EventResult)] ->
-     Layout (T m Widget.EventResult) ->
-     Layout (T m Widget.EventResult)) ->
-    Widget.R ->
-    [ExpressionGui m] -> ExpressionGui m -> ExpressionGui m
-alignAdd addFunc hAlign egs eg layoutMode =
-    eg layoutMode & Layout.alignment . _1 .~ hAlign & addFunc (egs ?? layoutMode)
-
-addAbove :: Widget.R -> [ExpressionGui m] -> ExpressionGui m -> ExpressionGui m
-addAbove = alignAdd (Layout.addBefore Layout.Vertical)
-
-addBelow :: Widget.R -> [ExpressionGui m] -> ExpressionGui m -> ExpressionGui m
-addBelow = alignAdd (Layout.addAfter Layout.Vertical)
+addBelow ::
+    Widget.R -> [ExpressionGui m] -> ExpressionGui m -> ExpressionGui m
+addBelow hAlign egs eg layoutMode =
+    eg layoutMode & Layout.alignment . _1 .~ hAlign & Layout.addAfter Layout.Vertical (egs ?? layoutMode)
 
 scale :: Vector2 Widget.R -> ExpressionGui m -> ExpressionGui m
 scale s gui layoutMode =
