@@ -135,23 +135,6 @@ vboxTopFocalSpaced =
     <&> List.intersperse
     <&> fmap vboxTopFocal
 
-combine :: [ExpressionGui m] -> ExpressionGui m
-combine guis =
-    ExpressionGui $
-    \layoutMode ->
-    case layoutMode of
-    LayoutWide -> wide
-    LayoutNarrow limit
-        | wide ^. Layout.width > limit ->
-          layoutMode
-          & vboxTopFocal (guis <&> egAlignment . _1 .~ 0) ^. toLayout
-        | otherwise -> wide
-    where
-        wide =
-            guis ^.. Lens.traverse . toLayout
-            ?? LayoutWide
-            & Layout.hbox 0.5
-
 hCombine ::
     (Layout.Orientation ->
      [Layout (T f Widget.EventResult)] ->
@@ -182,29 +165,34 @@ stdVSpace =
     ExprGuiM.widgetEnv BWidgets.stdVSpaceView
     <&> Widget.fromView
 
+combineWith ::
+    ([Layout (T m Widget.EventResult)] -> [Layout (T m Widget.EventResult)]) ->
+    ([ExpressionGui m] -> [ExpressionGui m]) ->
+    [ExpressionGui m] -> ExpressionGui m
+combineWith onHGuis onVGuis guis =
+    ExpressionGui $
+    \layoutMode ->
+    case layoutMode of
+    LayoutWide -> wide
+    LayoutNarrow limit
+        | wide ^. Layout.width > limit ->
+          layoutMode
+          & vboxTopFocal (onVGuis guis <&> egAlignment . _1 .~ 0) ^. toLayout
+        | otherwise -> wide
+    where
+        wide =
+            guis ^.. Lens.traverse . toLayout ?? LayoutWide & onHGuis
+            & Layout.hbox 0.5
+
+combine :: [ExpressionGui m] -> ExpressionGui m
+combine = combineWith id id
+
 combineSpaced :: Monad m => ExprGuiM m ([ExpressionGui f] -> ExpressionGui f)
 combineSpaced =
     do
-        hSpace <- stdHSpace
-        vSpace <- stdVSpace
-        return $
-            \guis ->
-            let wide =
-                    guis ^.. Lens.traverse . toLayout
-                    ?? LayoutWide
-                    & List.intersperse (Layout.fromCenteredWidget hSpace)
-                    & Layout.hbox 0.5
-            in  ExpressionGui $
-                \layoutMode ->
-                case layoutMode of
-                LayoutWide -> wide
-                LayoutNarrow limit
-                    | wide ^. Layout.width > limit ->
-                      layoutMode
-                      & vboxTopFocal
-                        (List.intersperse (ExprGuiT.fromValueWidget vSpace) guis
-                         <&> egAlignment . _1 .~ 0) ^. toLayout
-                    | otherwise -> wide
+        hSpace <- stdHSpace <&> Layout.fromCenteredWidget
+        vSpace <- stdVSpace <&> ExprGuiT.fromValueWidget
+        return $ combineWith (List.intersperse hSpace) (List.intersperse vSpace)
 
 tagItem :: Monad m => ExprGuiM m (Layout (T f Widget.EventResult) -> ExpressionGui f -> ExpressionGui f)
 tagItem =
