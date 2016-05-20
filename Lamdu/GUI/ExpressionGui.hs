@@ -5,7 +5,7 @@ module Lamdu.GUI.ExpressionGui
       , ExprGuiT.egLayout, ExprGuiT.fromLayout, egIsFocused
     , LayoutMode(..)
     -- General:
-    , fromValueWidget
+    , ExprGuiT.fromValueWidget
     , scale
     , pad
     , stdHSpace, stdVSpace
@@ -77,8 +77,9 @@ import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import           Lamdu.GUI.ExpressionGui.Types ( ExpressionGuiM(..), ExpressionGui
                                                , ShowAnnotation(..), EvalModeShow(..)
-                                               , egWidget, egAlignment, modeWidths )
-import           Lamdu.GUI.ExpressionGui.Types (LayoutMode(..), fromValueWidget, fromLayout, toLayout)
+                                               , egWidget, egAlignment, modeWidths
+                                               , LayoutMode(..), toLayout
+                                               )
 import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
 import           Lamdu.GUI.Precedence (MyPrecedence(..), ParentPrecedence(..), Precedence(..))
 import qualified Lamdu.GUI.Precedence as Precedence
@@ -119,7 +120,7 @@ pad p =
             & Layout.pad p
 
 vboxTopFocal :: [ExpressionGui m] -> ExpressionGui m
-vboxTopFocal [] = fromLayout Layout.empty
+vboxTopFocal [] = ExprGuiT.fromLayout Layout.empty
 vboxTopFocal (ExpressionGui mkLayout:guis) =
     ExpressionGui $
     \layoutMode ->
@@ -130,7 +131,7 @@ vboxTopFocalSpaced ::
     Monad m => ExprGuiM m ([ExpressionGui f] -> ExpressionGui f)
 vboxTopFocalSpaced =
     stdVSpace
-    <&> fromValueWidget
+    <&> ExprGuiT.fromValueWidget
     <&> List.intersperse
     <&> fmap vboxTopFocal
 
@@ -201,7 +202,7 @@ combineSpaced =
                     | wide ^. Layout.width > limit ->
                       layoutMode
                       & vboxTopFocal
-                        (List.intersperse (fromValueWidget vSpace) guis
+                        (List.intersperse (ExprGuiT.fromValueWidget vSpace) guis
                          <&> egAlignment . _1 .~ 0) ^. toLayout
                     | otherwise -> wide
 
