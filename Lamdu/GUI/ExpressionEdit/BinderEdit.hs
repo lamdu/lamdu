@@ -466,11 +466,12 @@ makeBinderContentEdit params (Sugar.BinderLet l) =
             <*> ( ExpressionGui.vboxTopFocalSpaced
                   <*>
                   ( sequence
-                  [ makeLetEdit l
-                    <&> ExpressionGui.egWidget %~ Widget.weakerEvents moveToInnerEventMap
-                  , makeBinderBodyEdit params body
-                    & ExprGuiM.withLocalMScopeId letBodyScope
-                  ] <&> map (ExpressionGui.egAlignment . _1 .~ 0))
+                    [ makeLetEdit l
+                      <&> ExpressionGui.egWidget %~ Widget.weakerEvents moveToInnerEventMap
+                    , makeBinderBodyEdit params body
+                      & ExprGuiM.withLocalMScopeId letBodyScope
+                    ] <&> map (ExpressionGui.egAlignment . _1 .~ 0)
+                  )
                 )
             <&> ExpressionGui.egWidget %~ Widget.weakerEvents delEventMap
     where
