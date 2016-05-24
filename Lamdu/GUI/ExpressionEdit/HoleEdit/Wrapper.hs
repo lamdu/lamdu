@@ -11,7 +11,6 @@ import           Data.Monoid ((<>))
 import qualified Data.Store.Transaction as Transaction
 import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
-import qualified Graphics.UI.Bottle.Widgets.Layout as Layout
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds (WidgetIds(..))
@@ -81,16 +80,7 @@ make WidgetIds{..} arg =
         argGui <-
             arg ^. Sugar.haExpr
             & ExprGuiM.makeSubexpression (const 0)
-
-        -- TODO: We need to make isFocused independent from the layout
-        -- mode and then fix this code not to doubly apply argGui
-        let argIsFocused =
-                ( ExpressionGui.LayoutParams
-                    { _layoutMode = ExpressionGui.LayoutWide
-                    }
-                  & argGui ^. ExpressionGui.toLayout
-                ) ^. Layout.widget & Widget.isFocused
-
+        let argIsFocused = ExpressionGui.egIsFocused argGui
         unwrapEventMap <- makeUnwrapEventMap arg WidgetIds{..}
         ExpressionGui.makeFocusableView hidWrapper
             <&> (ExpressionGui.egLayout %~)
