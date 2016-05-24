@@ -211,6 +211,7 @@ gui env rootId replExpr panes =
                     mkLayout
                     ExpressionGui.LayoutParams
                     { _layoutMode = ExpressionGui.LayoutNarrow width
+                    , _layoutContext = ExpressionGui.LayoutClear
                     } ^. Layout.widget
             in
                 [render replEdit] ++ (panesEdits <&> render) ++ [newDefinitionButton]
@@ -326,7 +327,7 @@ makeReplEdit ::
     Env m -> Widget.Id -> ExprGuiT.SugarExpr m ->
     ExprGuiM m (ExpressionGuiM (M m))
 makeReplEdit env myId replExpr =
-    ExpressionGui.combineSpaced
+    ExpressionGui.combineSpaced Nothing
     <*> sequence
     [ ExpressionGui.makeFocusableView replId
       <*> (ExpressionGui.makeLabel "⋙" (Widget.toAnimId replId))

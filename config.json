@@ -14,7 +14,6 @@
         "layerMin": -100,
         "layerMax": 100,
         "layerTypeIndicatorFrame": 1,
-        "layerParensHighlightBG": 34,
         "layerActivePane": 40,
         "layerHoleBG": 38,
         "layerDarkHoleBG": 39,
@@ -966,12 +965,7 @@
             "Key'Delete"
         ]
     ],
-    "parenHighlightColor": [
-        0.3,
-        0.0,
-        1.0,
-        0.25
-    ],
+    "indentWidth": 100,
     "letItemPadding": [5, 5],
     "letAddItemKeys": [
         [

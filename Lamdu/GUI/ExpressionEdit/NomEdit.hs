@@ -16,8 +16,8 @@ import           Lamdu.GUI.ExpressionGui
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
-import           Lamdu.GUI.ExpressionGui.Parens (stdWrapParenify)
 import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
+import qualified Lamdu.GUI.Precedence as Prec
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Sugar.Names.Types (Name(..))
 import qualified Lamdu.Sugar.Types as Sugar
@@ -56,6 +56,7 @@ expandingName (#>) nomId showName =
             let nameShowing =
                     ExprGuiT.LayoutParams
                     { ExprGuiT._layoutMode = ExprGuiT.LayoutWide
+                    , ExprGuiT._layoutContext = ExprGuiT.LayoutClear
                     }
                     & (nameGui #> ExpressionGui.fromLayout label) ^. ExpressionGui.toLayout
                     & Layout.widget %~ addBg
@@ -90,10 +91,10 @@ mkNomGui ::
     ExprGuiM m (ExpressionGui m)
 mkNomGui nameSidePrecLens str layout nom@(Sugar.Nominal _ val) pl =
     ExprGuiM.withLocalPrecedence (nameSidePrecLens .~ 0) $
-    stdWrapParenify pl
-    (ExpressionGui.MyPrecedence (fromIntegral nomPrecedence)) $
+    ExpressionGui.stdWrapParentExpr pl $
     \myId ->
     do
+        parentPrec <- ExprGuiM.outerPrecedence <&> Prec.ParentPrecedence
         let nomId = Widget.joinId myId ["nom"]
         let nameId = Widget.joinId nomId ["name"]
         isSelected <- WE.isSubCursor nomId & ExprGuiM.widgetEnv
@@ -101,14 +102,20 @@ mkNomGui nameSidePrecLens str layout nom@(Sugar.Nominal _ val) pl =
                 | ExprGuiT.plOfHoleResult pl = NameShowing
                 | isSelected = NameHovering
                 | otherwise = NameCollapsed
-        layout nomId nameShowing
-            <*> (ExpressionGui.grammarLabel str (Widget.toAnimId myId)
-                <&> if isSelected then id
-                    else Layout.widget %~ Widget.takesFocus (const (pure nameId))
-                )
-            <*> (ExpressionGui.makeFocusableView nameId
-                 <*> mkNameGui nom nameId)
-            <*> ExprGuiM.makeSubexpression (nameSidePrecLens .~ nomPrecedence+1) val
+        (if Prec.needParens parentPrec
+            (ExpressionGui.MyPrecedence (fromIntegral nomPrecedence))
+            then ExpressionGui.addParens (Widget.toAnimId myId)
+            else return id
+            ) <*>
+            ( layout nomId nameShowing
+                <*> (ExpressionGui.grammarLabel str (Widget.toAnimId myId)
+                    <&> if isSelected then id
+                        else Layout.widget %~ Widget.takesFocus (const (pure nameId))
+                    )
+                <*> (ExpressionGui.makeFocusableView nameId
+                     <*> mkNameGui nom nameId)
+                <*> ExprGuiM.makeSubexpression (nameSidePrecLens .~ nomPrecedence+1) val
+            )
     & ExprGuiM.assignCursor myId valId
     where
         valId = val ^. Sugar.rPayload . Sugar.plEntityId & WidgetIds.fromEntityId

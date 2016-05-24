@@ -7,6 +7,7 @@ import           Control.Lens.Operators
 import           Control.Lens.Tuple
 import           Data.Vector.Vector2 (Vector2(..))
 import qualified Graphics.DrawingCombinators as Draw
+import           Graphics.UI.Bottle.Animation (AnimId)
 import qualified Graphics.UI.Bottle.Animation as Anim
 import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
@@ -17,9 +18,8 @@ import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
-import           Lamdu.GUI.ExpressionGui.Parens (parenify)
 import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
-import           Lamdu.GUI.Precedence (MyPrecedence(..))
+import qualified Lamdu.GUI.Precedence as Prec
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.Sugar.Names.Get as NamesGet
 import           Lamdu.Sugar.Names.Types (Name(..))
@@ -40,13 +40,13 @@ mkOverrideModifyEventMap actions =
             Widget.strongerEvents (ExprEventMap.modifyEventMap [] config actions)
             & return
 
-mkPrecedence :: Sugar.SpecialArgs a -> MyPrecedence
+mkPrecedence :: Sugar.SpecialArgs a -> Prec.MyPrecedence
 mkPrecedence specialArgs =
     case specialArgs of
     Sugar.NoSpecialArgs -> 0
     Sugar.ObjectArg{} -> prefixPrecedence
     Sugar.InfixArgs prec _ _ -> prec
-    & fromIntegral & MyPrecedence
+    & fromIntegral & Prec.MyPrecedence
 
 infixMarker :: Vector2 Anim.R -> Draw.Image ()
 infixMarker (Vector2 w h) =
@@ -90,9 +90,10 @@ makeInfixFuncName func =
 
 makeFuncRow ::
     Monad m =>
+    Maybe AnimId ->
     Sugar.Apply name (ExprGuiT.SugarExpr m) ->
     Sugar.Payload m a -> ExprGuiM m (ExpressionGui m)
-makeFuncRow (Sugar.Apply func specialArgs annotatedArgs) pl =
+makeFuncRow mParensId (Sugar.Apply func specialArgs annotatedArgs) pl =
     do
         overrideModifyEventMap <- mkOverrideModifyEventMap (pl ^. Sugar.plActions)
         case specialArgs of
@@ -100,7 +101,7 @@ makeFuncRow (Sugar.Apply func specialArgs annotatedArgs) pl =
                 ExprGuiM.makeSubexpression (const 0) func
                 <&> overrideModifyEventMap
             Sugar.ObjectArg arg ->
-                ExpressionGui.combineSpaced
+                ExpressionGui.combineSpaced mParensId
                 <*> sequenceA
                 [ ExprGuiM.makeSubexpression
                   (ExpressionGui.precAfter .~ prefixPrecedence+1) func
@@ -113,9 +114,9 @@ makeFuncRow (Sugar.Apply func specialArgs annotatedArgs) pl =
                         | null annotatedArgs = id
                         | otherwise = overrideModifyEventMap
             Sugar.InfixArgs prec l r ->
-                ExpressionGui.combineSpaced
+                ExpressionGui.combineSpaced mParensId
                 <*> sequenceA
-                [ ExpressionGui.combineSpaced
+                [ ExpressionGui.combineSpaced Nothing
                     <*> sequenceA
                     [ ExprGuiM.makeSubexpression (ExpressionGui.precAfter .~ prec+1) l
                     , makeInfixFuncName func <&> overrideModifyEventMap
@@ -130,15 +131,22 @@ make ::
     ExprGuiM m (ExpressionGui m)
 make apply@(Sugar.Apply func specialArgs annotatedArgs) pl =
     ExpressionGui.stdWrapParentExpr pl $ \myId ->
-    makeFuncRow apply pl
-    & ( if isBoxed
-        then mkBoxed annotatedArgs myId
-        else parenify myPrecedence myId
-      )
-    & ExprGuiM.assignCursor myId funcId
+    do
+        parentPrec <- ExprGuiM.outerPrecedence <&> Prec.ParentPrecedence
+        let needParens =
+                not isBoxed
+                && Prec.needParens parentPrec (mkPrecedence specialArgs)
+        let mParensId
+                | needParens = Just (Widget.toAnimId myId)
+                | otherwise = Nothing
+        makeFuncRow mParensId apply pl
+            & ( if isBoxed
+                then mkBoxed annotatedArgs myId
+                else id
+              )
+            & ExprGuiM.assignCursor myId funcId
     where
         funcId = func ^. Sugar.rPayload & WidgetIds.fromExprPayload
-        myPrecedence = mkPrecedence specialArgs
         isBoxed = not $ null annotatedArgs
 
 makeArgRows ::

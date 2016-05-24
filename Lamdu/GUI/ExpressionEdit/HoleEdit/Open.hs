@@ -313,6 +313,7 @@ applyResultLayout fGui =
     fGui <&> (^. ExpressionGui.toLayout)
     ?? ExprGuiT.LayoutParams
         { _layoutMode = ExprGuiT.LayoutWide
+        , _layoutContext = ExprGuiT.LayoutClear
         }
 
 makeHoleResultWidget ::

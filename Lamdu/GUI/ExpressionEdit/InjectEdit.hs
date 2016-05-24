@@ -23,7 +23,7 @@ makeCommon ::
     NearestHoles -> [ExpressionGui m] ->
     ExprGuiM m (ExpressionGui m)
 makeCommon tagG nearestHoles valEdits =
-    ExpressionGui.combineSpaced
+    ExpressionGui.combineSpaced Nothing
     <*> ( TagEdit.makeRecordTag nearestHoles tagG
           <&> ExpressionGui.fromLayout <&> (: valEdits)
         )

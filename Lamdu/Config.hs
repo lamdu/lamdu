@@ -28,7 +28,6 @@ data Layers = Layers
     , layerDarkHoleBG
     , layerNameCollisionBG
     , layerValFrameBG
-    , layerParensHighlightBG
     , layerActivePane
     , layerMax :: Anim.Layer
     } deriving (Eq, Generic, Show)
@@ -193,7 +192,7 @@ data Config = Config
     , delBackwardKeys :: [ModKey]
     , wrapKeys :: [ModKey]
 
-    , parenHighlightColor :: Draw.Color
+    , indentWidth :: Double
     , literalColor :: Draw.Color
     , typeIndicatorErrorColor :: Draw.Color
     , typeIndicatorMatchColor :: Draw.Color

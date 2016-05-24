@@ -48,7 +48,7 @@ makeParamsRecord myId paramsRecordVar =
             [ ExpressionGui.makeLabel "Params {"
               (Widget.toAnimId myId <> ["prefix"])
               <&> ExpressionGui.fromLayout
-            , ExpressionGui.combineSpaced
+            , ExpressionGui.combineSpaced Nothing
               <*>
               ( fieldNames
                 & Lens.itraverse

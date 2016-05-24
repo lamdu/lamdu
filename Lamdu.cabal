@@ -242,7 +242,6 @@ Executable lamdu
                   , Lamdu.GUI.ExpressionEdit.TagEdit
                   , Lamdu.GUI.ExpressionGui
                   , Lamdu.GUI.ExpressionGui.Monad
-                  , Lamdu.GUI.ExpressionGui.Parens
                   , Lamdu.GUI.ExpressionGui.Types
                   , Lamdu.GUI.LightLambda
                   , Lamdu.GUI.Main

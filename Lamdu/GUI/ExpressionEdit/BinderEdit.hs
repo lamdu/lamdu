@@ -259,7 +259,7 @@ makeMParamsEdit mScopeCursor isScopeNavFocused delVarBackwardsId myId nearestHol
     >>= \case
     [] -> return Nothing
     paramEdits ->
-        ExpressionGui.combineSpaced
+        ExpressionGui.combineSpaced Nothing
         ?? (paramEdits <&> ExpressionGui.egAlignment . _1 .~ 0.5)
         & case params of
           Sugar.FieldParams{} -> (ExpressionGui.addValFrame myId <*>)
@@ -361,7 +361,7 @@ make name binder myId =
                 <&> ExpressionGui.egWidget %~ Widget.weakerEvents rhsJumperEquals
                 <&> Just
         equals <- ExpressionGui.makeLabel "=" (Widget.toAnimId myId)
-        ExpressionGui.combineSpaced
+        ExpressionGui.combineSpaced Nothing
             <&>
             (\hbox ->
             hbox

@@ -4,9 +4,10 @@ module Lamdu.GUI.ExpressionGui.Types
     , ExpressionGui, toLayout
       , egWidget, egAlignment, egLayout
       , fromValueWidget, fromLayout
-    , LayoutParams(..), layoutMode
+    , LayoutParams(..), layoutMode, layoutContext
     , LayoutMode(..), _LayoutNarrow, _LayoutWide
       , modeWidths
+    , LayoutDisambiguationContext(..)
     , SugarExpr
     , Payload(..)
         , plStoredEntityIds, plInjected, plNearestHoles, plShowAnnotation
@@ -40,8 +41,15 @@ data LayoutMode
     | LayoutWide -- ^ no limit on width
 Lens.makePrisms ''LayoutMode
 
-newtype LayoutParams = LayoutParams
+-- The relevant context for knowing whether parenthesis/indentation is needed
+data LayoutDisambiguationContext
+    = LayoutClear
+    | LayoutHorizontal
+    | LayoutVertical
+
+data LayoutParams = LayoutParams
     { _layoutMode :: LayoutMode
+    , _layoutContext :: LayoutDisambiguationContext
     }
 Lens.makeLenses ''LayoutParams
 

@@ -20,9 +20,9 @@ import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
-import           Lamdu.GUI.ExpressionGui.Parens (stdWrapParenify)
 import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
 import qualified Lamdu.GUI.LightLambda as LightLambda
+import qualified Lamdu.GUI.Precedence as Prec
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.Sugar.Lens as SugarLens
 import           Lamdu.Sugar.Names.Types (Name(..))
@@ -115,9 +115,14 @@ make ::
     ExprGuiM m (ExpressionGui m)
 make lam pl =
     ExprGuiM.withLocalPrecedence (ExpressionGui.precBefore .~ 0) $
-    stdWrapParenify pl (ExpressionGui.MyPrecedence 0) $ \myId ->
+    ExpressionGui.stdWrapParentExpr pl $ \myId ->
     ExprGuiM.assignCursor myId bodyId $
     do
+        parentPrec <- ExprGuiM.outerPrecedence <&> Prec.ParentPrecedence
+        let mParensId
+                | Prec.needParens parentPrec (Prec.MyPrecedence 0) =
+                    Just (Widget.toAnimId myId)
+                | otherwise = Nothing
         BinderEdit.Parts mParamsEdit mScopeEdit bodyEdit eventMap <-
             BinderEdit.makeParts funcApplyLimit binder bodyId myId
         let animId = Widget.toAnimId myId
@@ -126,8 +131,9 @@ make lam pl =
             (_, Sugar.NullParam{}) -> mkLhsEdits mParamsEdit mScopeEdit & return
             (Sugar.LightLambda, _) -> mkLightLambda params myId ?? mParamsEdit ?? mScopeEdit
             _ -> mkExpanded animId ?? mParamsEdit ?? mScopeEdit
-        ExpressionGui.combineSpaced
-            <*> (ExpressionGui.combineSpaced ?? paramsAndLabelEdits <&> (: [bodyEdit]))
+        ExpressionGui.combineSpaced mParensId
+            <*> (ExpressionGui.combineSpaced Nothing ?? paramsAndLabelEdits
+                <&> (: [bodyEdit]))
             <&> ExpressionGui.egWidget %~ Widget.weakerEvents eventMap
     where
         funcApplyLimit = pl ^. Sugar.plData . ExprGuiT.plShowAnnotation . ExprGuiT.funcApplyLimit
