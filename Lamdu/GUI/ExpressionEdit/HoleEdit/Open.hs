@@ -310,7 +310,10 @@ makeFocusable = ExprGuiM.widgetEnv . BWidgets.makeFocusableView
 applyResultLayout ::
     Functor f => f (ExpressionGui m) -> f (Layout (T m Widget.EventResult))
 applyResultLayout fGui =
-    fGui <&> (^. ExpressionGui.toLayout) ?? ExprGuiT.LayoutWide
+    fGui <&> (^. ExpressionGui.toLayout)
+    ?? ExprGuiT.LayoutParams
+        { _layoutMode = ExprGuiT.LayoutWide
+        }
 
 makeHoleResultWidget ::
     Monad m =>

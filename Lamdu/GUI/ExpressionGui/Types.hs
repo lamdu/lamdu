@@ -4,6 +4,7 @@ module Lamdu.GUI.ExpressionGui.Types
     , ExpressionGui, toLayout
       , egWidget, egAlignment, egLayout
       , fromValueWidget, fromLayout
+    , LayoutParams(..), layoutMode
     , LayoutMode(..), _LayoutNarrow, _LayoutWide
       , modeWidths
     , SugarExpr
@@ -39,12 +40,17 @@ data LayoutMode
     | LayoutWide -- ^ no limit on width
 Lens.makePrisms ''LayoutMode
 
+newtype LayoutParams = LayoutParams
+    { _layoutMode :: LayoutMode
+    }
+Lens.makeLenses ''LayoutParams
+
 modeWidths :: Lens.Traversal' LayoutMode Widget.R
 modeWidths _ LayoutWide = pure LayoutWide
 modeWidths f (LayoutNarrow limit) = f limit <&> LayoutNarrow
 
 newtype ExpressionGuiM m = ExpressionGui
-    { _toLayout :: LayoutMode -> Layout (m Widget.EventResult)
+    { _toLayout :: LayoutParams -> Layout (m Widget.EventResult)
     }
 Lens.makeLenses ''ExpressionGuiM
 

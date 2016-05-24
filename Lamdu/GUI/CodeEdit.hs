@@ -208,7 +208,10 @@ gui env rootId replExpr panes =
         return $
             \width ->
             let render (ExpressionGui mkLayout) =
-                    mkLayout (ExpressionGui.LayoutNarrow width) ^. Layout.widget
+                    mkLayout
+                    ExpressionGui.LayoutParams
+                    { _layoutMode = ExpressionGui.LayoutNarrow width
+                    } ^. Layout.widget
             in
                 [render replEdit] ++ (panesEdits <&> render) ++ [newDefinitionButton]
                 & intersperse vspace

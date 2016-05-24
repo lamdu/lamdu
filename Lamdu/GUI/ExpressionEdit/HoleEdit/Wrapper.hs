@@ -85,7 +85,9 @@ make WidgetIds{..} arg =
         -- TODO: We need to make isFocused independent from the layout
         -- mode and then fix this code not to doubly apply argGui
         let argIsFocused =
-                ( ExpressionGui.LayoutWide
+                ( ExpressionGui.LayoutParams
+                    { _layoutMode = ExpressionGui.LayoutWide
+                    }
                   & argGui ^. ExpressionGui.toLayout
                 ) ^. Layout.widget & Widget.isFocused
 

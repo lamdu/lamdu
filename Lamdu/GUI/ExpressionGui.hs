@@ -3,7 +3,7 @@ module Lamdu.GUI.ExpressionGui
     ( ExpressionGuiM(..)
     , ExpressionGui, toLayout, egWidget, egAlignment
       , ExprGuiT.egLayout, ExprGuiT.fromLayout, egIsFocused
-    , LayoutMode(..)
+    , LayoutMode(..), LayoutParams(..)
     -- General:
     , ExprGuiT.fromValueWidget
     , scale
@@ -78,7 +78,9 @@ import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import           Lamdu.GUI.ExpressionGui.Types ( ExpressionGuiM(..), ExpressionGui
                                                , ShowAnnotation(..), EvalModeShow(..)
                                                , egWidget, egAlignment, modeWidths
-                                               , LayoutMode(..), toLayout
+                                               , LayoutMode(..)
+                                               , LayoutParams(..), layoutMode
+                                               , toLayout
                                                )
 import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
 import           Lamdu.GUI.Precedence (MyPrecedence(..), ParentPrecedence(..), Precedence(..))
@@ -97,15 +99,20 @@ type T = Transaction
 egIsFocused :: ExpressionGui m -> Bool
 -- TODO: Fix this:
 egIsFocused (ExpressionGui mkLayout) =
-    mkLayout LayoutWide ^. Layout.widget & Widget.isFocused
+    mkLayout params ^. Layout.widget & Widget.isFocused
+    where
+        params =
+            LayoutParams
+            { _layoutMode = LayoutWide
+            }
 
 scale :: Vector2 Widget.R -> ExpressionGui m -> ExpressionGui m
 scale s =
     toLayout %~ f
     where
-        f mkLayout layoutMode =
-            layoutMode
-            & modeWidths //~ s ^. _1
+        f mkLayout layoutParams =
+            layoutParams
+            & layoutMode . modeWidths //~ s ^. _1
             & mkLayout
             & Layout.scale s
 
@@ -113,9 +120,9 @@ pad :: Vector2 Widget.R -> ExpressionGui m -> ExpressionGui m
 pad p =
     toLayout %~ f
     where
-        f mkLayout layoutMode =
-            layoutMode
-            & modeWidths -~ 2 * (p ^. _1)
+        f mkLayout layoutParams =
+            layoutParams
+            & layoutMode . modeWidths -~ 2 * (p ^. _1)
             & mkLayout
             & Layout.pad p
 
@@ -123,9 +130,9 @@ vboxTopFocal :: [ExpressionGui m] -> ExpressionGui m
 vboxTopFocal [] = ExprGuiT.fromLayout Layout.empty
 vboxTopFocal (ExpressionGui mkLayout:guis) =
     ExpressionGui $
-    \layoutMode ->
-    mkLayout layoutMode
-    & Layout.addAfter Layout.Vertical (guis ^.. Lens.traverse . toLayout ?? layoutMode)
+    \lp ->
+    mkLayout lp
+    & Layout.addAfter Layout.Vertical (guis ^.. Lens.traverse . toLayout ?? lp)
 
 vboxTopFocalSpaced ::
     Monad m => ExprGuiM m ([ExpressionGui f] -> ExpressionGui f)
@@ -143,9 +150,9 @@ hCombine ::
     Layout (T f Widget.EventResult) -> ExpressionGui f -> ExpressionGui f
 hCombine f layout gui =
     ExpressionGui $
-    \layoutMode ->
-    layoutMode
-    & modeWidths -~ layout ^. Layout.width
+    \layoutParams ->
+    layoutParams
+    & layoutMode . modeWidths -~ layout ^. Layout.width
     & gui ^. toLayout
     & f Layout.Horizontal [layout]
 
@@ -171,17 +178,21 @@ combineWith ::
     [ExpressionGui m] -> ExpressionGui m
 combineWith onHGuis onVGuis guis =
     ExpressionGui $
-    \layoutMode ->
-    case layoutMode of
+    \layoutParams ->
+    case layoutParams ^. layoutMode of
     LayoutWide -> wide
     LayoutNarrow limit
         | wide ^. Layout.width > limit ->
-          layoutMode
+          layoutParams
           & vboxTopFocal (onVGuis guis <&> egAlignment . _1 .~ 0) ^. toLayout
         | otherwise -> wide
     where
         wide =
-            guis ^.. Lens.traverse . toLayout ?? LayoutWide & onHGuis
+            guis ^.. Lens.traverse . toLayout
+            ?? LayoutParams
+                { _layoutMode = LayoutWide
+                }
+            & onHGuis
             & Layout.hbox 0.5
 
 combine :: [ExpressionGui m] -> ExpressionGui m
@@ -200,8 +211,10 @@ tagItem =
     where
         f space tag item =
             ExpressionGui $
-            \layoutMode ->
-            let remainingLayoutMode = layoutMode & modeWidths -~ tagAndSpace ^. Layout.width
+            \layoutParams ->
+            let remainingLayoutMode =
+                    layoutParams & layoutMode . modeWidths
+                        -~ tagAndSpace ^. Layout.width
             in  tagAndSpace
                 & Layout.addAfter Layout.Horizontal [remainingLayoutMode & item ^. toLayout]
             where
@@ -356,8 +369,8 @@ addAnnotationH f wideBehavior entityId =
         processAnn <- processAnnotationGui animId wideBehavior
         return $
             \(ExpressionGui mkLayout) ->
-            ExpressionGui $ \layoutMode ->
-            let layout = mkLayout layoutMode
+            ExpressionGui $ \lp ->
+            let layout = mkLayout lp
             in  layout & Layout.alignment . _1 .~ 0.5
                 & Layout.addAfter Layout.Vertical
                 [ vspace
