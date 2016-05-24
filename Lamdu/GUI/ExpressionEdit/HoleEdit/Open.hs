@@ -307,11 +307,10 @@ makeFocusable ::
     ExprGuiM m (Widget (f Widget.EventResult) -> Widget (f Widget.EventResult))
 makeFocusable = ExprGuiM.widgetEnv . BWidgets.makeFocusableView
 
-applyLayout ::
-    Functor f => ExpressionGui.LayoutMode -> f (ExpressionGui m) ->
-    f (Layout (T m Widget.EventResult))
-applyLayout layoutMode fGui =
-    fGui <&> (^. ExpressionGui.toLayout) ?? layoutMode
+applyResultLayout ::
+    Functor f => f (ExpressionGui m) -> f (Layout (T m Widget.EventResult))
+applyResultLayout fGui =
+    fGui <&> (^. ExpressionGui.toLayout) ?? ExprGuiT.LayoutWide
 
 makeHoleResultWidget ::
     Monad m =>
@@ -338,7 +337,7 @@ makeHoleResultWidget resultId holeResult =
             holeResultConverted
             & postProcessSugar
             & ExprGuiM.makeSubexpression (const 0)
-            & applyLayout ExprGuiT.LayoutWide
+            & applyResultLayout
             <&> (^. Layout.widget)
         holeResultEntityId =
             holeResultConverted ^. Sugar.rPayload . Sugar.plEntityId
@@ -493,7 +492,7 @@ makeUnderCursorAssignment shownResultsLists hasHiddenResults holeInfo =
                   , Widget.fromView typeView & Layout.fromCenteredWidget
                   ]
                 & ExpressionGui.fromLayout
-              ) & applyLayout ExprGuiT.LayoutWide
+              ) & applyResultLayout
               <&> (^. Layout.widget)
             )
         searchTermGui <- SearchTerm.make holeInfo
