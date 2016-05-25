@@ -34,7 +34,6 @@ module Lamdu.GUI.ExpressionGui
     , evaluationResult
     -- Expression wrapping
     , MyPrecedence(..), ParentPrecedence(..), Precedence(..), Precedence.precBefore, Precedence.precAfter
-    , wrapExprEventMap
     , maybeAddAnnotationPl
     , stdWrap
     , parentDelegator
@@ -565,7 +564,12 @@ stdWrap ::
     Sugar.Payload m ExprGuiT.Payload ->
     ExprGuiM m (ExpressionGui m) ->
     ExprGuiM m (ExpressionGui m)
-stdWrap pl mkGui = maybeAddAnnotationPl pl <*> mkGui & wrapExprEventMap pl
+stdWrap pl mkGui =
+    do
+        exprEventMap <- ExprEventMap.make pl
+        maybeAddAnnotationPl pl
+            <*> mkGui
+            <&> egWidget %~ Widget.weakerEvents exprEventMap
 
 makeFocusDelegator ::
     (Monad m, Monad f) =>
@@ -677,19 +681,6 @@ makeCollisionSuffixLabels (Collision suffix) animId =
             & WE.localEnv (WE.setTextColor collisionSuffixTextColor)
             <&> (:[]) . onSuffixWidget
             & ExprGuiM.widgetEnv
-
-wrapExprEventMap ::
-    Monad m =>
-    Sugar.Payload m ExprGuiT.Payload ->
-    ExprGuiM m (ExpressionGui m) ->
-    ExprGuiM m (ExpressionGui m)
-wrapExprEventMap pl action =
-    do
-        (res, resultPickers) <- ExprGuiM.listenResultPickers action
-        exprEventMap <- ExprEventMap.make resultPickers pl
-        res
-            & egWidget %~ Widget.weakerEvents exprEventMap
-            & return
 
 maybeAddAnnotationPl ::
     Monad m =>

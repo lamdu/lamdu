@@ -11,6 +11,7 @@ import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.Layout as Layout
 import qualified Graphics.UI.Bottle.WidgetsEnvT as WE
 import qualified Lamdu.Config as Config
+import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.Common (addDarkBackground)
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.Info (HoleInfo(..))
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.SearchArea as SearchArea
@@ -28,12 +29,17 @@ import           Lamdu.Sugar.Names.Types (Name(..))
 import qualified Lamdu.Sugar.Types as Sugar
 
 makeWrapper ::
-    Monad m => Sugar.Payload m ExprGuiT.Payload ->
-    HoleInfo m -> ExprGuiM m (Maybe (ExpressionGui m))
+    Monad m =>
+    Sugar.Payload m ExprGuiT.Payload -> HoleInfo m ->
+    ExprGuiM m (Maybe (ExpressionGui m))
 makeWrapper pl holeInfo =
     hiHole holeInfo ^. Sugar.holeMArg
     & Lens._Just %%~
-        ExpressionGui.wrapExprEventMap pl . Wrapper.make (hiIds holeInfo)
+        \holeArg ->
+        do
+            exprEventMap <- ExprEventMap.make pl
+            Wrapper.make (hiIds holeInfo) holeArg
+                <&> ExpressionGui.egWidget %~ Widget.weakerEvents exprEventMap
 
 assignHoleCursor ::
     Monad m =>

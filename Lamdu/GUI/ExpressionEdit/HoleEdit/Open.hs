@@ -32,6 +32,7 @@ import qualified Graphics.UI.Bottle.Widgets.Layout as Layout
 import qualified Graphics.UI.Bottle.WidgetsEnvT as WE
 import           Lamdu.CharClassification (operatorChars)
 import qualified Lamdu.Config as Config
+import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.Common (addBackground, addDarkBackground)
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.EventMap as EventMap
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.Info (HoleInfo(..))
@@ -532,8 +533,9 @@ makeOpenSearchAreaGui pl holeInfo =
                 [ rId . (^. HoleResults.rlMain)
                 , (^. HoleResults.rlExtraResultsPrefixId)
                 ] <*> shownResultsLists
+        exprEventMap <- ExprEventMap.make pl
         makeUnderCursorAssignment shownResultsLists
             hasHiddenResults holeInfo
             & assignHoleEditCursor holeInfo shownMainResultsIds
               allShownResultIds (holeInfo & hiIds & hidOpenSearchTerm)
-            & ExpressionGui.wrapExprEventMap pl
+            <&> ExpressionGui.egWidget %~ Widget.weakerEvents exprEventMap

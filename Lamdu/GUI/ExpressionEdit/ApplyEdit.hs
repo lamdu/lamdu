@@ -37,7 +37,7 @@ mkOverrideModifyEventMap actions =
     do
         config <- ExprGuiM.readConfig
         ExpressionGui.egWidget %~
-            Widget.strongerEvents (ExprEventMap.modifyEventMap [] config actions)
+            Widget.strongerEvents (ExprEventMap.modifyEventMap config actions)
             & return
 
 mkPrecedence :: Sugar.SpecialArgs a -> Prec.MyPrecedence
