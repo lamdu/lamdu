@@ -12,6 +12,7 @@ module Lamdu.GUI.ExpressionGui
     , combine, combineSpaced
     , (||>), (<||)
     , vboxTopFocal, vboxTopFocalSpaced
+    , fallsbackToVertical
     , addParens
     , tagItem
     , listWithDelDests
@@ -132,33 +133,34 @@ pad p =
             & mkLayout
             & Layout.pad p
 
-vboxTopFocalH :: Maybe ParenIndentInfo -> [ExpressionGui m] -> ExpressionGui m
-vboxTopFocalH _ [] = ExprGuiT.fromLayout Layout.empty
-vboxTopFocalH mPiInfo (ExpressionGui mkLayout:guis) =
+maybeIndent :: Maybe ParenIndentInfo -> ExpressionGui m -> ExpressionGui m
+maybeIndent mPiInfo gui =
     ExpressionGui $
     \lp ->
     case (lp ^. layoutContext, mPiInfo) of
     (LayoutVertical, Just piInfo) ->
         let indentWidth = piIndentWidth piInfo
         in
-        go (lp ^. layoutMode & modeWidths -~ indentWidth)
+        lp & layoutMode . modeWidths -~ indentWidth
+        & gui ^. toLayout
         & Layout.addBefore Layout.Horizontal
             [Layout.fromCenteredWidget (BWidgets.hspaceWidget indentWidth)]
-    _ -> go (lp ^. layoutMode)
-    where
-        go lm =
-            mkLayout cp
-            & Layout.addAfter Layout.Vertical
-                (guis ^.. Lens.traverse . toLayout ?? cp)
-            where
-                cp =
-                    LayoutParams
-                    { _layoutMode = lm
-                    , _layoutContext = LayoutVertical
-                    }
+    _ -> lp & gui ^. toLayout
 
 vboxTopFocal :: [ExpressionGui m] -> ExpressionGui m
-vboxTopFocal = vboxTopFocalH Nothing
+vboxTopFocal [] = ExprGuiT.fromLayout Layout.empty
+vboxTopFocal (ExpressionGui mkLayout:guis) =
+    ExpressionGui $
+    \layoutParams ->
+    let cp =
+            LayoutParams
+            { _layoutMode = layoutParams ^. layoutMode
+            , _layoutContext = LayoutVertical
+            }
+    in
+    mkLayout cp
+    & Layout.addAfter Layout.Vertical
+        (guis ^.. Lens.traverse . toLayout ?? cp)
 
 vboxTopFocalSpaced ::
     Monad m => ExprGuiM m ([ExpressionGui f] -> ExpressionGui f)
@@ -227,14 +229,14 @@ addParens parenId =
     _ -> gui
     ^. toLayout
 
-combineWith ::
-    Maybe ParenIndentInfo ->
-    ([Layout (T m Widget.EventResult)] -> [Layout (T m Widget.EventResult)]) ->
-    ([ExpressionGui m] -> [ExpressionGui m]) ->
-    [ExpressionGui m] -> ExpressionGui m
-combineWith mParenInfo onHGuis onVGuis guis =
+fallsbackToVertical ::
+    ExpressionGui m -> ExpressionGui m -> Maybe ParenIndentInfo ->
+    ExpressionGui m
+fallsbackToVertical horiz vert mParenInfo =
     ExpressionGui $
     \layoutParams ->
+    let wide = layoutParams & layoutMode .~ LayoutWide & horiz ^. toLayout
+    in
     case layoutParams ^. layoutMode of
     LayoutWide ->
         case (mParenInfo, layoutParams ^. layoutContext) of
@@ -245,11 +247,18 @@ combineWith mParenInfo onHGuis onVGuis guis =
         _ -> wide
     LayoutNarrow limit
         | wide ^. Layout.width > limit ->
-          layoutParams
-          & vboxTopFocalH mParenInfo
-            (onVGuis guis <&> egAlignment . _1 .~ 0) ^. toLayout
+            layoutParams & maybeIndent mParenInfo vert ^. toLayout
         | otherwise -> wide
+
+combineWith ::
+    Maybe ParenIndentInfo ->
+    ([Layout (T m Widget.EventResult)] -> [Layout (T m Widget.EventResult)]) ->
+    ([ExpressionGui m] -> [ExpressionGui m]) ->
+    [ExpressionGui m] -> ExpressionGui m
+combineWith mParenInfo onHGuis onVGuis guis =
+    (wide `fallsbackToVertical` vert) mParenInfo
     where
+        vert = vboxTopFocal (onVGuis guis <&> egAlignment . _1 .~ 0)
         wide =
             guis ^.. Lens.traverse . toLayout
             ?? LayoutParams
@@ -258,6 +267,7 @@ combineWith mParenInfo onHGuis onVGuis guis =
                 }
             & onHGuis
             & Layout.hbox 0.5
+            & const & ExpressionGui
 
 combine :: [ExpressionGui m] -> ExpressionGui m
 combine = combineWith Nothing id id
