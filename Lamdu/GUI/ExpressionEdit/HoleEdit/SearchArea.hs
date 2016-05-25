@@ -1,4 +1,9 @@
 {-# LANGUAGE NoImplicitPrelude, FlexibleContexts, RecordWildCards, OverloadedStrings, TypeFamilies #-}
+-- | The search area (search term + results) of a hole.
+-- When it is open it hovers over the space it takes when closed.
+--
+-- For non-wrapper holes this is the whole hole.
+
 module Lamdu.GUI.ExpressionEdit.HoleEdit.SearchArea
     ( makeStdWrapped
     ) where

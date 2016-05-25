@@ -1,4 +1,6 @@
 {-# LANGUAGE PatternGuards, NoImplicitPrelude, FlexibleContexts, RecordWildCards, OverloadedStrings, TypeFamilies #-}
+-- | The search area (search term + results) of an open/active hole.
+
 module Lamdu.GUI.ExpressionEdit.HoleEdit.Open
     ( makeOpenSearchAreaGui
     ) where
