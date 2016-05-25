@@ -139,8 +139,9 @@ maybeIndent mPiInfo gui =
     case (lp ^. layoutContext, mPiInfo) of
     (LayoutVertical, Just piInfo) ->
         let indentConf = piIndentConfig piInfo
-            barWidth = Config.indentBarWidth indentConf
-            gapWidth = Config.indentBarGap indentConf
+            stdSpace = piStdHorizSpacing piInfo
+            barWidth = stdSpace * Config.indentBarWidth indentConf
+            gapWidth = stdSpace * Config.indentBarGap indentConf
             indentWidth = barWidth + gapWidth
             content =
                 lp & layoutMode . modeWidths -~ indentWidth
@@ -222,6 +223,7 @@ data ParenIndentInfo = ParenIndentInfo
     { piAnimId :: AnimId
     , piTextStyle :: TextView.Style
     , piIndentConfig :: Config.Indent
+    , piStdHorizSpacing :: Widget.R
     }
 
 parenLabel :: ParenIndentInfo -> String -> Layout a
@@ -288,7 +290,8 @@ makeParenIndentInfo parensId =
             ExprGuiM.widgetEnv WE.readTextStyle
             <&> (^. TextEdit.sTextViewStyle)
         conf <- ExprGuiM.readConfig <&> Config.indent
-        ParenIndentInfo parensId textStyle conf & return
+        stdSpacing <- ExprGuiM.widgetEnv BWidgets.stdSpacing <&> (^. _1)
+        ParenIndentInfo parensId textStyle conf stdSpacing & return
 
 combineSpaced ::
     Monad m => Maybe AnimId -> ExprGuiM m ([ExpressionGui f] -> ExpressionGui f)

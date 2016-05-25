@@ -558,8 +558,8 @@
         "neighborsPadding": [3, 3]
     },
     "indent": {
-        "indentBarWidth": 25,
-        "indentBarGap": 10,
+        "indentBarWidth": 1.5,
+        "indentBarGap": 0.75,
         "indentBarColor": [
             0.8,
             0.8,
@@ -667,7 +667,6 @@
             "Key'Down"
         ]
     ],
-    "navArrowsSize": 10,
     "wrapKeys": [
         [
             {
