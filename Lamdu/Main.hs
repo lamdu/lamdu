@@ -33,7 +33,7 @@ import qualified Graphics.UI.Bottle.Widgets.EventMapDoc as EventMapDoc
 import qualified Graphics.UI.Bottle.Widgets.FlyNav as FlyNav
 import qualified Graphics.UI.GLFW as GLFW
 import qualified Graphics.UI.GLFW.Utils as GLFWUtils
-import           Lamdu.Config (Config)
+import           Lamdu.Config (Config(Config))
 import qualified Lamdu.Config as Config
 import           Lamdu.Config.Sampler (Sampler)
 import qualified Lamdu.Config.Sampler as ConfigSampler
@@ -201,14 +201,19 @@ printGLVersion =
         ver <- GL.get GL.glVersion
         putStrLn $ "Using GL version: " ++ show ver
 
-zoomConfig :: Zoom -> Config -> IO Config
-zoomConfig zoom config =
+zoomConfig :: Widget.R -> Zoom -> Config -> IO Config
+zoomConfig displayScale zoom config =
     do
         factor <- Zoom.getSizeFactor zoom
         return config
-            { Config.baseTextSize =
-              Config.baseTextSize config * realToFrac factor
+            { Config.baseTextSize = baseTextSize * realToFrac factor * scale
+            , Config.help =
+              help { Config.helpTextSize = helpTextSize * scale }
             }
+    where
+        scale = realToFrac displayScale
+        Config{help, baseTextSize} = config
+        Config.Help{helpTextSize} = help
 
 runEditor :: String -> Maybe FilePath -> Opts.WindowMode -> Db -> IO ()
 runEditor title copyJSOutputPath windowMode db =
@@ -231,9 +236,10 @@ runEditor title copyJSOutputPath windowMode db =
                         , EvalManager.dbMVar = dbMVar
                         , EvalManager.copyJSOutputPath = copyJSOutputPath
                         }
-                    zoom <- Zoom.make . (^. _2) =<< GLFWUtils.getDisplayScale win
+                    displayScale <- GLFWUtils.getDisplayScale win <&> (^. _2)
+                    zoom <- Zoom.make
                     let configSampler =
-                            ConfigSampler.onEachSample (zoomConfig zoom)
+                            ConfigSampler.onEachSample (zoomConfig displayScale zoom)
                             rawConfigSampler
                     let initialSettings = Settings Settings.defaultInfoMode
                     settingsRef <- newIORef initialSettings

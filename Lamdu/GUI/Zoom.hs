@@ -29,5 +29,5 @@ eventMap (Zoom ref) Config.Zoom{..} =
 getSizeFactor :: Zoom -> IO Widget.R
 getSizeFactor (Zoom ref) = readIORef ref
 
-make :: Widget.R -> IO Zoom
-make initialZoom = newIORef initialZoom <&> Zoom
+make :: IO Zoom
+make = newIORef 1 <&> Zoom
