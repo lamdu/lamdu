@@ -84,7 +84,7 @@ data Pane m = Pane
 data ExportActions m = ExportActions
     { exportRepl :: M m ()
     , exportAll :: M m ()
-    , -- Fancy export is intended for sending code  to someone who doesn't have
+    , -- Fancy export is intended for sending code to someone who doesn't have
       -- Lamdu installed. It bundles together in a zipfile a screenshot,
       -- a README, the repl export, and compiled JS  (that requires a new
       -- version of nodejs supporting TCO).  It is intended to enable Lamdu
