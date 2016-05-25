@@ -13545,7 +13545,7 @@
         "lamFieldParams": null
     },
     {
-        "defPresentationMode": "Verbose",
+        "defPresentationMode": "OO",
         "name": "take",
         "def": "ef15e9ece99a44fc9a41740a570f3fc9",
         "typ": {
