@@ -9,7 +9,7 @@ import           Control.Applicative ((<|>))
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Lens.Tuple
-import           Control.Monad (join, void, liftM)
+import           Control.Monad (join, void, liftM, filterM)
 import           Control.Monad.ListT (ListT)
 import           Control.Monad.Trans.Class (lift)
 import           Control.Monad.Trans.Either (EitherT(..))
@@ -36,6 +36,7 @@ import qualified Lamdu.Calc.Val.Annotated as Val
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Expr.GenIds as GenIds
 import qualified Lamdu.Expr.IRef as ExprIRef
+import           Lamdu.Expr.IRef (ValIProperty, ValI, DefI)
 import qualified Lamdu.Expr.IRef.Infer as IRefInfer
 import qualified Lamdu.Expr.Lens as ExprLens
 import qualified Lamdu.Expr.Load as Load
@@ -64,7 +65,7 @@ import           Prelude.Compat
 
 type T = Transaction
 
-type ExprStorePoint m a = Val (Maybe (ExprIRef.ValI m), a)
+type ExprStorePoint m a = Val (Maybe (ValI m), a)
 
 convert ::
     (Monad m, Monoid a) =>
@@ -85,7 +86,7 @@ convertCommon mInjectedArg exprPl =
 mkHoleOptionFromInjected ::
     Monad m =>
     ConvertM.Context m ->
-    Input.Payload m a -> ExprIRef.ValIProperty m ->
+    Input.Payload m a -> ValIProperty m ->
     Val (Type, Maybe (Input.Payload m a)) -> HoleOption UUID m
 mkHoleOptionFromInjected sugarContext exprPl stored val =
     HoleOption
@@ -117,7 +118,7 @@ getBaseExprVal (SeedExpr v) = v
 mkHoleOption ::
     Monad m => ConvertM.Context m ->
     Maybe (Val (Input.Payload m a)) ->
-    Input.Payload m a -> ExprIRef.ValIProperty m ->
+    Input.Payload m a -> ValIProperty m ->
     BaseExpr -> HoleOption UUID m
 mkHoleOption sugarContext mInjectedArg exprPl stored val =
     HoleOption
@@ -131,7 +132,7 @@ mkHoleOption sugarContext mInjectedArg exprPl stored val =
 mkHoleSuggesteds ::
     Monad m =>
     ConvertM.Context m -> Maybe (Val (Input.Payload m a)) ->
-    Input.Payload m a -> ExprIRef.ValIProperty m -> [HoleOption UUID m]
+    Input.Payload m a -> ValIProperty m -> [HoleOption UUID m]
 mkHoleSuggesteds sugarContext mInjectedArg exprPl stored =
     exprPl ^. Input.inferred
     & Suggest.value
@@ -149,10 +150,16 @@ addSuggestedOptions suggesteds options
             any (Val.alphaEq (x ^. hoVal)) (nonTrivial ^.. Lens.traverse . hoVal)
         nonTrivial = filter (Lens.nullOf (hoVal . ExprLens.valHole)) suggesteds
 
+isLiveGlobal :: Monad m => DefI m -> T m Bool
+isLiveGlobal defI =
+    Anchors.assocDefinitionState defI
+    & Transaction.getP
+    <&> (== LiveDefinition)
+
 mkOptions ::
     Monad m => ConvertM.Context m ->
     Maybe (Val (Input.Payload m a)) ->
-    Input.Payload m a -> ExprIRef.ValIProperty m ->
+    Input.Payload m a -> ValIProperty m ->
     T m [HoleOption UUID m]
 mkOptions sugarContext mInjectedArg exprPl stored =
     do
@@ -162,6 +169,7 @@ mkOptions sugarContext mInjectedArg exprPl stored =
         globals <-
             sugarContext ^. ConvertM.scCodeAnchors
             & Anchors.globals & Transaction.getP <&> Set.toList
+            >>= filterM isLiveGlobal
         concat
             [ exprPl ^. Input.inferredScope
                 & Infer.scopeToTypeMap
@@ -191,7 +199,7 @@ mkOptions sugarContext mInjectedArg exprPl stored =
 mkWritableHoleActions ::
     (Monad m) =>
     Maybe (Val (Input.Payload m a)) ->
-    Input.Payload m a -> ExprIRef.ValIProperty m ->
+    Input.Payload m a -> ValIProperty m ->
     ConvertM m (HoleActions UUID m)
 mkWritableHoleActions mInjectedArg exprPl stored = do
     sugarContext <- ConvertM.readContext
@@ -298,19 +306,19 @@ getLocalScopeGetVars sugarContext par
             ) <&> fst
         mkFieldParam tag = V.GetField var tag & V.BGetField & Val ()
 
-type HoleResultVal m a = Val (Infer.Payload, (Maybe (ExprIRef.ValI m), a))
+type HoleResultVal m a = Val (Infer.Payload, (Maybe (ValI m), a))
 
 markNotInjected :: HoleResultVal n () -> HoleResultVal n IsInjected
 markNotInjected val = val <&> _2 . _2 .~ NotInjected
 
 writeConvertTypeChecked ::
     (Monad m, Monoid a) =>
-    EntityId -> ConvertM.Context m -> ExprIRef.ValIProperty m ->
+    EntityId -> ConvertM.Context m -> ValIProperty m ->
     HoleResultVal m a ->
     T m
     ( ExpressionU m a
     , Val (Input.Payload m a)
-    , Val (ExprIRef.ValIProperty m, Input.Payload m a)
+    , Val (ValIProperty m, Input.Payload m a)
     )
 writeConvertTypeChecked holeEntityId sugarContext holeStored inferredVal = do
     -- With the real stored uuids:
@@ -607,7 +615,7 @@ mkHoleResultVals mInjectedArg exprPl base =
 mkHoleResult ::
     Monad m =>
     ConvertM.Context m -> EntityId ->
-    ExprIRef.ValIProperty m -> HoleResultVal m IsInjected ->
+    ValIProperty m -> HoleResultVal m IsInjected ->
     T m (HoleResult UUID m)
 mkHoleResult sugarContext entityId stored val =
     do
@@ -638,7 +646,7 @@ mkHoleResults ::
     Monad m =>
     Maybe (Val (Input.Payload m a)) ->
     ConvertM.Context m ->
-    Input.Payload m dummy -> ExprIRef.ValIProperty m ->
+    Input.Payload m dummy -> ValIProperty m ->
     BaseExpr ->
     ListT (T m) (HoleResultScore, T m (HoleResult UUID m))
 mkHoleResults mInjectedArg sugarContext exprPl stored base =
@@ -663,9 +671,9 @@ randomizeNonStoredParamIds gen =
 
 writeExprMStored ::
     Monad m =>
-    ExprIRef.ValI m ->
+    ValI m ->
     ExprStorePoint m a ->
-    T m (Val (ExprIRef.ValI m, a))
+    T m (Val (ValI m, a))
 writeExprMStored exprIRef exprMStorePoint =
     do
         key <- Transaction.newKey
