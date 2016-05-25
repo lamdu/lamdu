@@ -172,7 +172,10 @@ toggle HelpNotShown = HelpShown
 makeToggledHelpAdder ::
     MonadIO m =>
     IsHelpShown ->
-    IO (Config -> Widget.Size -> Widget (m Widget.EventResult) -> IO (Widget (m Widget.EventResult)))
+    IO
+    (Config -> Widget.Size ->
+     Widget (m Widget.EventResult) ->
+     IO (Widget (m Widget.EventResult)))
 makeToggledHelpAdder startValue =
     do
         showingHelpVar <- newIORef startValue
@@ -190,7 +193,8 @@ makeToggledHelpAdder startValue =
                         HelpNotShown ->
                             (makeTooltip config (configOverlayDocKeys config), "Show")
                     toggleEventMap =
-                        Widget.keysEventMap (configOverlayDocKeys config) (E.Doc ["Help", "Key Bindings", docStr]) $
+                        Widget.keysEventMap (configOverlayDocKeys config)
+                        (E.Doc ["Help", "Key Bindings", docStr]) $
                         liftIO $ modifyIORef showingHelpVar toggle
                 return . addHelp f size $
                     Widget.strongerEvents toggleEventMap widget
