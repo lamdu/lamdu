@@ -64,16 +64,13 @@ addSearchAreaBelow ids =
 addWrapperAbove ::
     Monad m =>
     WidgetIds -> ExprGuiM m (ExpressionGui f -> ExpressionGui f -> ExpressionGui f)
-addWrapperAbove ids =
-    do
-        Config.Hole{..} <- ExprGuiM.readConfig <&> Config.hole
-        hover ids ["wrapper"]
-            <&> \f wrapperGui searchAreaGui ->
-            ExpressionGui.vboxTopFocal
-            [ f wrapperGui
-              & ExpressionGui.scale (holeHoveringWrapperScaleFactor <&> realToFrac)
-            , searchAreaGui
-            ]
+addWrapperAbove _ids =
+    return $
+    \wrapperGui searchAreaGui ->
+    ExpressionGui.vboxTopFocal
+    [ wrapperGui
+    , searchAreaGui
+    ]
 
 make ::
     Monad m =>
