@@ -76,7 +76,7 @@ mLiftWidget = Widget.events %~ mLiftTrans
 
 data Pane m = Pane
     { paneDefI :: DefI m
-    , paneDel :: Maybe (T m Widget.Id)
+    , paneDel :: T m Widget.Id
     , paneMoveDown :: Maybe (T m ())
     , paneMoveUp :: Maybe (T m ())
     }
@@ -108,15 +108,14 @@ makePanes :: Monad m => Widget.Id -> Transaction.Property m [DefI m] -> [Pane m]
 makePanes defaultDelDest (Property paneDefs setPaneDefs) =
     paneDefs & Lens.imapped %@~ convertPane
     where
-        mkMDelPane i
-            | not (null paneDefs) =
-                Just $ do
-                    let newPaneDefs = removeAt i paneDefs
-                    setPaneDefs newPaneDefs
-                    newPaneDefs ^? Lens.ix i
-                        & maybe defaultDelDest (WidgetIds.fromUUID . IRef.uuid)
-                        & return
-            | otherwise = Nothing
+        mkDelPane i =
+            do
+                setPaneDefs newPaneDefs
+                newPaneDefs ^? Lens.ix i
+                    & maybe defaultDelDest (WidgetIds.fromUUID . IRef.uuid)
+                    & return
+            where
+                newPaneDefs = removeAt i paneDefs
         movePane oldIndex newIndex =
             insertAt newIndex item (before ++ after)
             & setPaneDefs
@@ -130,7 +129,7 @@ makePanes defaultDelDest (Property paneDefs setPaneDefs) =
             | otherwise = Nothing
         convertPane i defI = Pane
             { paneDefI = defI
-            , paneDel = mkMDelPane i
+            , paneDel = mkDelPane i
             , paneMoveDown = mkMMovePaneDown i
             , paneMoveUp = mkMMovePaneUp i
             }
@@ -249,10 +248,9 @@ makePaneEdit env (pane, defS) =
             Config.pane (config env)
         Config.Export{exportKeys} = Config.export (config env)
         paneEventMap =
-            [ paneDel pane <&> mLiftTrans
-              & maybe mempty
-                (Widget.keysEventMapMovesCursor paneCloseKeys
-                 (E.Doc ["View", "Pane", "Close"]))
+            [ paneDel pane & mLiftTrans
+              & Widget.keysEventMapMovesCursor paneCloseKeys
+                (E.Doc ["View", "Pane", "Close"])
             , paneMoveDown pane <&> mLiftTrans
               & maybe mempty
                 (Widget.keysEventMap paneMoveDownKeys
