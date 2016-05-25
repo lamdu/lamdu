@@ -104,7 +104,9 @@ make getVar pl =
     do
         config <- ExprGuiM.readConfig
         let Config.Name{..} = Config.name config
-        case getVar of
+        ExpressionGui.stdWrap pl
+            <*>
+            case getVar of
             Sugar.GetBinder binderVar ->
                 case binderVar ^. Sugar.bvForm of
                 Sugar.GetLet -> letColor
@@ -123,6 +125,5 @@ make getVar pl =
                 _ -> makeSimpleView parameterColor
                 & makeNameRef myId (param ^. Sugar.pNameRef)
             Sugar.GetParamsRecord paramsRecordVar -> makeParamsRecord myId paramsRecordVar
-    & ExpressionGui.stdWrap pl
     where
         myId = WidgetIds.fromExprPayload pl

@@ -43,7 +43,7 @@ makeStdWrapped pl holeInfo =
                 ExpressionGui.makeFocusDelegator (fdConfig (Config.hole config))
                 FocusDelegator.FocusEntryChild hidClosedSearchArea
         closedSearchTermGui <-
-            fdWrap <*> SearchTerm.make holeInfo & ExpressionGui.stdWrap pl
+            ExpressionGui.stdWrap pl <*> (fdWrap <*> SearchTerm.make holeInfo)
         isSelected <- ExprGuiM.widgetEnv $ WE.isSubCursor hidOpen
         if isSelected
             then -- ideally the fdWrap would be "inside" the

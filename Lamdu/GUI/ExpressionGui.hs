@@ -562,14 +562,15 @@ makeNameEditWith onActiveEditor (Name nameSrc nameCollision setName name) myId =
 stdWrap ::
     Monad m =>
     Sugar.Payload m ExprGuiT.Payload ->
-    ExprGuiM m (ExpressionGui m) ->
-    ExprGuiM m (ExpressionGui m)
-stdWrap pl mkGui =
+    ExprGuiM m (ExpressionGui m -> ExpressionGui m)
+stdWrap pl =
     do
         exprEventMap <- ExprEventMap.make pl
         maybeAddAnnotationPl pl
-            <*> mkGui
-            <&> egWidget %~ Widget.weakerEvents exprEventMap
+            <&>
+            \maybeAdd gui ->
+            maybeAdd gui
+            & egWidget %~ Widget.weakerEvents exprEventMap
 
 makeFocusDelegator ::
     (Monad m, Monad f) =>
@@ -596,8 +597,7 @@ stdWrapParentExpr ::
     (Widget.Id -> ExprGuiM m (ExpressionGui m)) ->
     ExprGuiM m (ExpressionGui m)
 stdWrapParentExpr pl mkGui =
-    parentDelegator myId <*> mkGui innerId
-    & stdWrap pl
+    stdWrap pl <*> (parentDelegator myId <*> mkGui innerId)
     & ExprGuiM.assignCursor myId innerId
     where
         myId = WidgetIds.fromExprPayload pl

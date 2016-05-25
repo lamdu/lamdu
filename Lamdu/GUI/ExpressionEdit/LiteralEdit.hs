@@ -109,9 +109,10 @@ make ::
     Sugar.Literal (Transaction.Property m) -> Sugar.Payload m ExprGuiT.Payload ->
     ExprGuiM m (ExpressionGui m)
 make lit pl =
-    pl
-    & case lit of
-    Sugar.LiteralNum x -> genericEdit Style.styleNum x
-    Sugar.LiteralBytes x -> genericEdit Style.styleBytes x
-    Sugar.LiteralText x -> textEdit x
-    & ExpressionGui.stdWrap pl
+    ExpressionGui.stdWrap pl
+    <*>
+    ( case lit of
+        Sugar.LiteralNum x -> genericEdit Style.styleNum x
+        Sugar.LiteralBytes x -> genericEdit Style.styleBytes x
+        Sugar.LiteralText x -> textEdit x
+    ) pl
