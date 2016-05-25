@@ -140,7 +140,10 @@ make apply@(Sugar.Apply func specialArgs annotatedArgs) pl =
                 | needParens = Just (Widget.toAnimId myId)
                 | otherwise = Nothing
         makeFuncRow mParensId apply pl
-            & ( if isBoxed
+            & ( if needParens
+                then ExprGuiM.withLocalPrecedence (const 0)
+                else
+                if isBoxed
                 then mkBoxed annotatedArgs myId
                 else id
               )
