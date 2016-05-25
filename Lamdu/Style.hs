@@ -47,8 +47,8 @@ help font Config.Help{..} =
     , EventMapDoc.configOverlayDocKeys = helpKeys
     }
 
-textEdit :: Config -> Draw.Color -> Draw.Font -> TextEdit.Style
-textEdit config color font =
+textEdit :: Draw.Color -> Draw.Font -> TextEdit.Style
+textEdit color font =
     TextEdit.Style
     { TextEdit._sTextViewStyle =
       TextView.Style
@@ -58,7 +58,6 @@ textEdit config color font =
       }
     , TextEdit._sCursorColor = TextEdit.defaultCursorColor
     , TextEdit._sCursorWidth = TextEdit.defaultCursorWidth
-    , TextEdit._sBGColor = Config.cursorBGColor config
     , TextEdit._sEmptyUnfocusedString = ""
     , TextEdit._sEmptyFocusedString = ""
     }
@@ -67,17 +66,17 @@ style :: Config -> Fonts Draw.Font -> Style
 style config fonts =
     Style
     { styleBase =
-      textEdit config (Config.baseColor config) (Fonts.fontDefault fonts)
+      textEdit (Config.baseColor config) (Fonts.fontDefault fonts)
     , styleAutoNameOrigin =
-      textEdit config nameOriginFGColor (Fonts.fontAutoName fonts)
+      textEdit nameOriginFGColor (Fonts.fontAutoName fonts)
     , styleNameOrigin =
-      textEdit config nameOriginFGColor (Fonts.fontDefault fonts)
+      textEdit nameOriginFGColor (Fonts.fontDefault fonts)
     , styleBytes =
-      textEdit config (Config.literalColor config) (Fonts.fontMono fonts)
+      textEdit (Config.literalColor config) (Fonts.fontMono fonts)
     , styleText =
-      textEdit config (Config.literalColor config) (Fonts.fontFancy fonts)
+      textEdit (Config.literalColor config) (Fonts.fontFancy fonts)
     , styleNum =
-      textEdit config (Config.literalColor config) (Fonts.fontDefault fonts)
+      textEdit (Config.literalColor config) (Fonts.fontDefault fonts)
     }
     where
         Config.Name{..} = Config.name config

@@ -2,7 +2,7 @@
 module Graphics.UI.Bottle.Widgets.TextEdit
     ( Cursor
     , Style(..)
-        , sCursorColor, sCursorWidth, sBGColor, sEmptyUnfocusedString
+        , sCursorColor, sCursorWidth, sEmptyUnfocusedString
         , sEmptyFocusedString, sTextViewStyle
     , make
     , defaultCursorColor
@@ -46,7 +46,6 @@ type Cursor = Int
 data Style = Style
     { _sCursorColor :: Draw.Color
     , _sCursorWidth :: Widget.R
-    , _sBGColor :: Draw.Color
     , _sEmptyUnfocusedString :: String
     , _sEmptyFocusedString :: String
     , _sTextViewStyle :: TextView.Style
