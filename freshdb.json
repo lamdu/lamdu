@@ -7324,25 +7324,6 @@
         }
     },
     {
-        "lamId": "a1d2c53a-f73d-4c4e-88e6-7691e4167a5e",
-        "lamVar": "7b842832ba914cc9998602d846f76786",
-        "lamFieldParams": [
-            "1b6990743fcc77560fdb139d1ac01a2c",
-            "69b9a1d0263f75cb50e2a06aceaa0a20"
-        ]
-    },
-    {
-        "lamId": "b4125e94-3215-4d36-b151-1751600ec63f",
-        "name": "pair",
-        "lamVar": "780ade788d1f4c00b9074d132b180b38",
-        "lamFieldParams": null
-    },
-    {
-        "lamId": "777fe59a-e793-419b-a12c-d93767a288c9",
-        "lamVar": "0bfd29a9c52d8dd1359687f5524f1b3d",
-        "lamFieldParams": null
-    },
-    {
         "tagOrder": 1,
         "tag": "91779287964ae7c888a0bcc7d444b7b2",
         "name": "next"
@@ -8734,17 +8715,6 @@
                 }
             }
         }
-    },
-    {
-        "lamId": "5a9acf90-4ffc-4efd-8264-a98f62ad166b",
-        "name": "infStream",
-        "lamVar": "0e1b90cc3675403da35a9633417e7f17",
-        "lamFieldParams": null
-    },
-    {
-        "lamId": "9148cc3c-b1d6-4b1a-86a0-1fab04962ce9",
-        "lamVar": "79f1bac9bbe4ec67572edcb2dd6b1852",
-        "lamFieldParams": null
     },
     {
         "defPresentationMode": "OO",
