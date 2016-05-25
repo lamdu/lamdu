@@ -6,19 +6,21 @@ module Graphics.UI.Bottle.View
     , width, height
     , pad, assymetricPad
     , Size, R
+    , addDiagonal
     , backgroundColor
     , translate, scale, tint
     ) where
 
-import           Prelude.Compat
-
 import           Control.Lens (Lens')
 import           Control.Lens.Operators
 import           Control.Lens.Tuple
+import           Control.Monad (void)
 import           Data.Vector.Vector2 (Vector2(..))
 import qualified Graphics.DrawingCombinators as Draw
 import           Graphics.UI.Bottle.Animation (AnimId, Layer, R)
 import qualified Graphics.UI.Bottle.Animation as Anim
+
+import           Prelude.Compat
 
 type Size = Anim.Size
 
@@ -41,6 +43,27 @@ width = size . _1
 
 height :: Lens' View R
 height = size . _2
+
+-- | Add a diagonal line (top-left to right-bottom). Useful as a
+-- "deletion" GUI annotation
+addDiagonal :: R -> AnimId -> Layer -> Draw.Color -> View -> View
+addDiagonal thickness animId layer color view=
+    view & animFrame <>~ line
+    where
+        line =
+            Draw.convexPoly
+            [ (0, thickness)
+            , (0, 0)
+            , (thickness, 0)
+            , (1, 1-thickness)
+            , (1, 1)
+            , (1-thickness, 1)
+            ]
+            & Draw.tint color
+            & void
+            & Anim.simpleFrame animId
+            & Anim.layers +~ layer
+            & Anim.scale (view ^. size)
 
 backgroundColor :: AnimId -> Layer -> Draw.Color -> View -> View
 backgroundColor animId layer color view =
