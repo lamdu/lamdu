@@ -12,8 +12,7 @@ module Lamdu.GUI.ExpressionGui
     , combine, combineSpaced
     , (||>), (<||)
     , vboxTopFocal, vboxTopFocalSpaced
-    , fallsbackToVertical
-    , addParens
+    , horizVertFallback
     , tagItem
     , listWithDelDests
     , makeLabel
@@ -215,24 +214,18 @@ parenLabel parenInfo t =
     (piAnimId parenInfo ++ [fromString t])
     & Widget.fromView & Layout.fromCenteredWidget
 
-addParens :: Monad m => AnimId -> ExprGuiM m (ExpressionGui m -> ExpressionGui m)
-addParens parenId =
-    makeParenIndentInfo parenId
-    <&>
-    \parenInfo gui ->
-    ExpressionGui $
-    \layoutParams ->
-    layoutParams &
-    case layoutParams ^. layoutContext of
-    LayoutHorizontal ->
-        parenLabel parenInfo "(" ||> gui <|| parenLabel parenInfo ")"
-    _ -> gui
-    ^. toLayout
+horizVertFallback ::
+    Monad m =>
+    Maybe AnimId ->
+    ExprGuiM m (ExpressionGui f -> ExpressionGui f -> ExpressionGui f)
+horizVertFallback mParenId =
+    mParenId & Lens._Just %%~ makeParenIndentInfo
+    <&> horizVertFallbackH
 
-fallsbackToVertical ::
-    ExpressionGui m -> ExpressionGui m -> Maybe ParenIndentInfo ->
-    ExpressionGui m
-fallsbackToVertical horiz vert mParenInfo =
+horizVertFallbackH ::
+    Maybe ParenIndentInfo ->
+    ExpressionGui m -> ExpressionGui m -> ExpressionGui m
+horizVertFallbackH mParenInfo horiz vert =
     ExpressionGui $
     \layoutParams ->
     let wide = layoutParams & layoutMode .~ LayoutWide & horiz ^. toLayout
@@ -256,7 +249,7 @@ combineWith ::
     ([ExpressionGui m] -> [ExpressionGui m]) ->
     [ExpressionGui m] -> ExpressionGui m
 combineWith mParenInfo onHGuis onVGuis guis =
-    (wide `fallsbackToVertical` vert) mParenInfo
+    horizVertFallbackH mParenInfo wide vert
     where
         vert = vboxTopFocal (onVGuis guis <&> egAlignment . _1 .~ 0)
         wide =
