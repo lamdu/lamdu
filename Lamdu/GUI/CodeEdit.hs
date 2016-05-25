@@ -105,30 +105,30 @@ data Env m = Env
     }
 
 makePanes :: Monad m => Widget.Id -> Transaction.Property m [DefI m] -> [Pane m]
-makePanes defaultDelDest (Property panes setPanes) =
-    panes ^@.. Lens.traversed <&> convertPane
+makePanes defaultDelDest (Property paneDefs setPaneDefs) =
+    paneDefs & Lens.imapped %@~ convertPane
     where
         mkMDelPane i
-            | not (null panes) =
+            | not (null paneDefs) =
                 Just $ do
-                    let newPanes = removeAt i panes
-                    setPanes newPanes
-                    newPanes ^? Lens.ix i
+                    let newPaneDefs = removeAt i paneDefs
+                    setPaneDefs newPaneDefs
+                    newPaneDefs ^? Lens.ix i
                         & maybe defaultDelDest (WidgetIds.fromUUID . IRef.uuid)
                         & return
             | otherwise = Nothing
         movePane oldIndex newIndex =
             insertAt newIndex item (before ++ after)
-            & setPanes
+            & setPaneDefs
             where
-                (before, item:after) = splitAt oldIndex panes
+                (before, item:after) = splitAt oldIndex paneDefs
         mkMMovePaneDown i
-            | i+1 < length panes = Just $ movePane i (i+1)
+            | i+1 < length paneDefs = Just $ movePane i (i+1)
             | otherwise = Nothing
         mkMMovePaneUp i
             | i-1 >= 0 = Just $ movePane i (i-1)
             | otherwise = Nothing
-        convertPane (i, defI) = Pane
+        convertPane i defI = Pane
             { paneDefI = defI
             , paneDel = mkMDelPane i
             , paneMoveDown = mkMMovePaneDown i
