@@ -8,7 +8,7 @@ packages:
     commit: 9f07f5f00ac4aaebbc150f14ad8baa423442f1d5
 - location:
     git: https://github.com/lamdu/graphics-drawingcombinators
-    commit: 9dabb04a8357b42e1a5d6f8f05d3c4bdb625f523
+    commit: c88a8c2b6d952315dc371f63b37622e7ecb56014
 - location:
     git: https://github.com/lamdu/freetype2
     commit: b6b3f82b9f8acb925d8f36ecc1520832ad256444
