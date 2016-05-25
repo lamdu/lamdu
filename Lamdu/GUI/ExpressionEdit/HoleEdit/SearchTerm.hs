@@ -7,6 +7,7 @@ module Lamdu.GUI.ExpressionEdit.HoleEdit.SearchTerm
 
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
+import           Control.Lens.Tuple
 import           Control.Monad (when)
 import qualified Data.Monoid as Monoid
 import           Data.Store.Property (Property)
@@ -65,6 +66,7 @@ make holeInfo =
             <&> addBackground (Widget.toAnimId hidOpenSearchTerm)
                 (Config.layers config) holeSearchTermBGColor
             <&> ExpressionGui.fromValueWidget
+            <&> ExpressionGui.egAlignment . _1 .~ 0
             & WE.localEnv (WE.envTextStyle %~ textEditNoEmpty)
             & ExprGuiM.widgetEnv
     where

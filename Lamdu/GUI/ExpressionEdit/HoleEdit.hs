@@ -5,6 +5,7 @@ module Lamdu.GUI.ExpressionEdit.HoleEdit
 
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
+import           Control.Lens.Tuple
 import qualified Data.Store.Transaction as Transaction
 import           Graphics.UI.Bottle.Animation (AnimId)
 import qualified Graphics.UI.Bottle.Widget as Widget
@@ -114,8 +115,13 @@ make hole pl =
                                     lay <- f WidgetIds{..}
                                     return $ ExpressionGui $
                                         \layoutMode ->
-                                        (layoutMode & lay wrapperGui searchAreaGui ^. ExpressionGui.toLayout)
-                                        `Layout.hoverInPlaceOf` (layoutMode & unfocusedWrapperGui ^. ExpressionGui.toLayout)
+                                        (layoutMode & lay
+                                        (wrapperGui & ExpressionGui.egAlignment . _1 .~ 0)
+                                        searchAreaGui ^. ExpressionGui.toLayout)
+                                        `Layout.hoverInPlaceOf`
+                                        (layoutMode
+                                        & unfocusedWrapperGui ^. ExpressionGui.toLayout
+                                        & Layout.alignment . _1 .~ 0)
                         if ExpressionGui.egIsFocused wrapperGui
                             then layout addSearchAreaBelow
                             else if isSelected then

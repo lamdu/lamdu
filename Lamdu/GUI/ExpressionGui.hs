@@ -465,10 +465,11 @@ addAnnotationH f wideBehavior entityId =
             \(ExpressionGui mkLayout) ->
             ExpressionGui $ \lp ->
             let layout = mkLayout lp
-            in  layout & Layout.alignment . _1 .~ 0.5
+            in  layout
                 & Layout.addAfter Layout.Vertical
                 [ vspace
                 , processAnn (layout ^. Layout.width) annotationLayout
+                     & Layout.alignment . _1 .~ layout ^. Layout.alignment . _1
                 ]
     where
         animId = WidgetIds.fromEntityId entityId & Widget.toAnimId
