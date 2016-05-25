@@ -6,6 +6,7 @@ module Lamdu.GUI.DefinitionEdit
 import           Control.Lens.Operators
 import           Control.Lens.Tuple
 import qualified Data.List as List
+import qualified Data.Store.Property as Property
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
 import           Data.Vector.Vector2 (Vector2(..))
@@ -13,12 +14,13 @@ import qualified Graphics.DrawingCombinators as Draw
 import           Graphics.UI.Bottle.Animation (AnimId)
 import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.EventMap as E
+import           Graphics.UI.Bottle.ModKey (ModKey(..))
 import           Graphics.UI.Bottle.View (View(..))
 import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets as BWidgets
 import qualified Graphics.UI.Bottle.Widgets.Box as Box
-import qualified Graphics.UI.Bottle.Widgets.Layout as Layout
+import qualified Graphics.UI.GLFW as GLFW
 import           Lamdu.Calc.Type.Scheme (Scheme(..), schemeType)
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Data.Definition as Definition
@@ -38,21 +40,45 @@ import           Prelude.Compat
 
 type T = Transaction
 
+addUndeleteButton :: Monad m => Widget.Id -> T m Widget.Id -> ExpressionGui m -> ExprGuiM m (ExpressionGui m)
+addUndeleteButton myId undelete gui =
+    do
+        undelButton <-
+            BWidgets.makeFocusableTextView "Undelete..." undelButtonId
+            & ExprGuiM.widgetEnv
+            <&> Widget.weakerEvents eventMap
+            <&> ExpressionGui.fromValueWidget
+        ExpressionGui.vboxTopFocalSpaced
+            ??
+            ([gui, undelButton] <&> ExpressionGui.egAlignment . _1 .~ 0)
+    where
+        eventMap =
+            Widget.keysEventMapMovesCursor [ModKey mempty GLFW.Key'Enter]
+            (E.Doc ["Edit", "Undelete definition"]) undelete
+        undelButtonId = Widget.joinId myId ["Undelete"]
+
 make ::
     Monad m => DefinitionN m ExprGuiT.Payload -> ExprGuiM m (ExpressionGui m)
 make def =
     do
-        defState <-
-            Transaction.getP (def ^. Sugar.drDefinitionState) & ExprGuiM.transaction
+        defStateProp <-
+            def ^. Sugar.drDefinitionState . Transaction.mkProperty
+            & ExprGuiM.transaction
+        let defState = Property.value defStateProp
+        let mUndelete =
+                case defState of
+                Sugar.LiveDefinition -> Nothing
+                Sugar.DeletedDefinition ->
+                    myId <$ Property.set defStateProp Sugar.LiveDefinition & Just
         case def ^. Sugar.drBody of
             Sugar.DefinitionBodyExpression bodyExpr ->
                 makeExprDefinition def bodyExpr
             Sugar.DefinitionBodyBuiltin builtin ->
                 makeBuiltinDefinition def builtin <&> ExpressionGui.fromValueWidget
-            <&> ExpressionGui.deletionDiagonal 0.02 animId defState
+            <&> ExpressionGui.deletionDiagonal 0.02 (Widget.toAnimId myId) defState
+            >>= maybe return (addUndeleteButton myId) mUndelete
     where
-        animId =
-            def ^. Sugar.drEntityId & WidgetIds.fromEntityId & Widget.toAnimId
+        myId = def ^. Sugar.drEntityId & WidgetIds.fromEntityId
 
 expandTo :: Widget.R -> Widget a -> Widget a
 expandTo width eg
