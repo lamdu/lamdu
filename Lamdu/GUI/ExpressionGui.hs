@@ -1,7 +1,7 @@
 {-# LANGUAGE NoImplicitPrelude, RecordWildCards, OverloadedStrings, RankNTypes, TypeFamilies, LambdaCase, DeriveFunctor, DeriveFoldable, DeriveTraversable #-}
 module Lamdu.GUI.ExpressionGui
     ( ExpressionGuiM(..)
-    , ExpressionGui, toLayout, egWidget, egAlignment
+    , ExpressionGui, toLayout, egWidget, egAlignment, egAbsWidget
       , ExprGuiT.egLayout, ExprGuiT.fromLayout, egIsFocused
     , LayoutMode(..), LayoutParams(..), LayoutDisambiguationContext(..)
     -- General:
@@ -84,7 +84,8 @@ import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import           Lamdu.GUI.ExpressionGui.Types ( ExpressionGuiM(..), ExpressionGui
                                                , ShowAnnotation(..), EvalModeShow(..)
-                                               , egWidget, egAlignment, modeWidths
+                                               , egWidget, egAlignment, egAbsWidget
+                                               , modeWidths
                                                , LayoutMode(..)
                                                , LayoutParams(..)
                                                , layoutMode, layoutContext

@@ -168,7 +168,7 @@ makeExprDefinition def bodyExpr =
                 widget : mkTypeWidgets (widget ^. Widget.width)
                 & List.intersperse vspace
                 & Box.vboxCentered
-        bodyGui & ExpressionGui.egLayout . Layout.absAlignedWidget . _2 %~ f
+        bodyGui & ExpressionGui.egAbsWidget %~ f
             & return
     where
         entityId = def ^. Sugar.drEntityId
