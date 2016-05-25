@@ -100,8 +100,8 @@ toBinderVar binderVar =
     (bvNameRef . nrName) f binderVar
     where
         f = case binderVar ^. bvForm of
-            GetLet        -> ParamName -- TODO: Separate op for lets?
-            GetDefinition -> DefName
+            GetLet          -> ParamName -- TODO: Separate op for lets?
+            GetDefinition _ -> DefName
             & opGetName
 
 toGetVar ::

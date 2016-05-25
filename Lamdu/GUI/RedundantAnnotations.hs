@@ -52,7 +52,7 @@ markAnnotationsToDisplay (Expression oldBody pl) =
         Expression newBody pl
     BodyGetVar (GetParam Param { _pBinderMode = NormalBinder }) ->
         Expression newBody pl & dontShowAnnotation
-    BodyGetVar (GetBinder BinderVar { _bvForm = GetDefinition }) ->
+    BodyGetVar (GetBinder BinderVar { _bvForm = GetDefinition _ }) ->
         Expression newBody pl
     BodyGetVar (GetBinder BinderVar { _bvForm = GetLet }) ->
         Expression newBody pl & dontShowAnnotation

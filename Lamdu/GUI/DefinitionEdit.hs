@@ -7,6 +7,7 @@ import           Control.Lens.Operators
 import           Control.Lens.Tuple
 import qualified Data.List as List
 import           Data.Store.Transaction (Transaction)
+import qualified Data.Store.Transaction as Transaction
 import           Data.Vector.Vector2 (Vector2(..))
 import qualified Graphics.DrawingCombinators as Draw
 import           Graphics.UI.Bottle.Animation (AnimId)
@@ -39,12 +40,19 @@ type T = Transaction
 
 make ::
     Monad m => DefinitionN m ExprGuiT.Payload -> ExprGuiM m (ExpressionGui m)
-make exprGuiDefS =
-    case exprGuiDefS ^. Sugar.drBody of
-    Sugar.DefinitionBodyExpression bodyExpr ->
-        makeExprDefinition exprGuiDefS bodyExpr
-    Sugar.DefinitionBodyBuiltin builtin ->
-        makeBuiltinDefinition exprGuiDefS builtin <&> ExpressionGui.fromValueWidget
+make def =
+    do
+        defState <-
+            Transaction.getP (def ^. Sugar.drDefinitionState) & ExprGuiM.transaction
+        case def ^. Sugar.drBody of
+            Sugar.DefinitionBodyExpression bodyExpr ->
+                makeExprDefinition def bodyExpr
+            Sugar.DefinitionBodyBuiltin builtin ->
+                makeBuiltinDefinition def builtin <&> ExpressionGui.fromValueWidget
+            <&> ExpressionGui.deletionDiagonal 0.02 animId defState
+    where
+        animId =
+            def ^. Sugar.drEntityId & WidgetIds.fromEntityId & Widget.toAnimId
 
 expandTo :: Widget.R -> Widget a -> Widget a
 expandTo width eg

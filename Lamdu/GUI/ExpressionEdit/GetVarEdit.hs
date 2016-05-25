@@ -109,13 +109,19 @@ make getVar pl =
             case getVar of
             Sugar.GetBinder binderVar ->
                 case binderVar ^. Sugar.bvForm of
-                Sugar.GetLet -> letColor
-                Sugar.GetDefinition -> definitionColor
-                & makeSimpleView
-                & makeNameRef myId (binderVar ^. Sugar.bvNameRef)
-                <&> ExpressionGui.egWidget %~
+                Sugar.GetLet -> (letColor, id)
+                Sugar.GetDefinition defState ->
+                    ( definitionColor
+                    , ExpressionGui.deletionDiagonal
+                      0.1 (Widget.toAnimId myId) defState
+                    )
+                & \(color, maybeAddDiagonal) ->
+                    makeSimpleView color
+                    & makeNameRef myId (binderVar ^. Sugar.bvNameRef)
+                    <&> ExpressionGui.egWidget %~
                     Widget.weakerEvents
                     (makeInlineEventMap config (binderVar ^. Sugar.bvInline))
+                    <&> maybeAddDiagonal
             Sugar.GetParam param ->
                 case param ^. Sugar.pBinderMode of
                 Sugar.LightLambda ->

@@ -210,6 +210,7 @@ convertDefI evalRes cp (Definition.Definition body defI) =
             { _drEntityId = EntityId.ofIRef defI
             , _drName = UniqueId.toUUID defI
             , _drBody = bodyS
+            , _drDefinitionState = Anchors.assocDefinitionState defI
             }
     where
         convertDefBody (Definition.BodyBuiltin builtin) =

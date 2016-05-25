@@ -244,6 +244,7 @@ makePaneEdit env (pane, defS) =
     makePaneWidget defS
     <&> ExpressionGui.egWidget %~ Widget.weakerEvents paneEventMap . mLiftWidget
     where
+        delKeys = Config.delKeys (config env)
         Config.Pane{paneCloseKeys, paneMoveDownKeys, paneMoveUpKeys} =
             Config.pane (config env)
         Config.Export{exportKeys} = Config.export (config env)
@@ -251,6 +252,13 @@ makePaneEdit env (pane, defS) =
             [ paneDel pane & mLiftTrans
               & Widget.keysEventMapMovesCursor paneCloseKeys
                 (E.Doc ["View", "Pane", "Close"])
+            , do
+                  Transaction.setP (defS ^. Sugar.drDefinitionState)
+                      Sugar.DeletedDefinition
+                  paneDel pane
+              & mLiftTrans
+              & Widget.keysEventMapMovesCursor delKeys
+                (E.Doc ["Edit", "Definition", "Delete"])
             , paneMoveDown pane <&> mLiftTrans
               & maybe mempty
                 (Widget.keysEventMap paneMoveDownKeys

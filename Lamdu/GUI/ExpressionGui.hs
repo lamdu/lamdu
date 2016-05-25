@@ -26,6 +26,7 @@ module Lamdu.GUI.ExpressionGui
     , makeNameView
     , makeNameEdit, makeNameEditWith
     , makeNameOriginEdit
+    , deletionDiagonal
     -- Info adding
     , annotationSpacer
     , NeighborVals(..)
@@ -47,12 +48,14 @@ import           Data.Binary.Utils (encodeS)
 import           Data.CurAndPrev (CurAndPrev(..), CurPrevTag(..), curPrevTag, fallbackToPrev)
 import qualified Data.List as List
 import qualified Data.List.Utils as ListUtils
+import           Data.Maybe (fromMaybe)
 import           Data.Store.Property (Property(..))
 import           Data.Store.Transaction (Transaction)
 import           Data.String (IsString(..))
 import           Data.Vector.Vector2 (Vector2(..))
 import qualified Graphics.DrawingCombinators as Draw
 import           Graphics.UI.Bottle.Animation (AnimId)
+import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.EventMap as E
 import           Graphics.UI.Bottle.ModKey (ModKey(..))
 import qualified Graphics.UI.Bottle.View as View
@@ -72,6 +75,7 @@ import           Lamdu.Calc.Type (Type)
 import qualified Lamdu.Calc.Type as T
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
+import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Eval.Results as ER
 import qualified Lamdu.GUI.CodeEdit.Settings as CESettings
 import qualified Lamdu.GUI.EvalView as EvalView
@@ -516,6 +520,21 @@ nameEditFDConfig = FocusDelegator.Config
     , FocusDelegator.focusParentKeys = [ModKey mempty GLFW.Key'Escape]
     , FocusDelegator.focusParentDoc = E.Doc ["Edit", "Done renaming"]
     }
+
+deletionDiagonal ::
+    Widget.R -> AnimId -> Anchors.DefinitionState -> ExpressionGui m -> ExpressionGui m
+deletionDiagonal _ _ Anchors.LiveDefinition eg = eg
+deletionDiagonal thickness animId Anchors.DeletedDefinition eg =
+    eg
+    & egWidget . Widget.view %~ f
+    where
+        f view =
+            View.addDiagonal thickness (animId ++ ["diagonal"])
+            (minLayer - 1) (Draw.Color 1 0 0 1) view
+            where
+                minLayer =
+                    Lens.minimumOf (View.animFrame . Anim.layers) view
+                    & fromMaybe 0
 
 makeNameOriginEdit ::
     Monad m => Name m -> Widget.Id -> ExprGuiM m (Widget (T m Widget.EventResult))

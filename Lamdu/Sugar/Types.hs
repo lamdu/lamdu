@@ -1,7 +1,7 @@
 {-# LANGUAGE NoImplicitPrelude, KindSignatures, TemplateHaskell, DeriveFunctor, DeriveFoldable, DeriveTraversable, GeneralizedNewtypeDeriving, RankNTypes, RecordWildCards #-}
 module Lamdu.Sugar.Types
     ( EntityId
-    , Definition(..), drEntityId, drName, drBody
+    , Definition(..), drDefinitionState, drEntityId, drName, drBody
     , DefinitionBody(..), _DefinitionBodyExpression, _DefinitionBodyBuiltin
     , VarToTags(..), TagsToVar(..)
     , ParamDelResult(..), ParamAddResult(..)
@@ -12,6 +12,7 @@ module Lamdu.Sugar.Types
         , _DefinitionExportedTypeInfo
         , _DefinitionNewType
     , Anchors.PresentationMode(..)
+    , Anchors.DefinitionState(..)
     , BinderActions(..), baAddFirstParam
     , NullParamActions(..), npDeleteLambda
     , BinderParams(..)
@@ -374,7 +375,7 @@ data Param name m = Param
     , _pBinderMode :: BinderMode
     }
 
-data BinderVarForm = GetDefinition | GetLet
+data BinderVarForm = GetDefinition Anchors.DefinitionState | GetLet
     deriving (Eq, Ord)
 
 data BinderVarInline m
@@ -555,6 +556,7 @@ data DefinitionBody name m expr
 
 data Definition name m expr = Definition
     { _drName :: name
+    , _drDefinitionState :: MkProperty m Anchors.DefinitionState
     , _drEntityId :: EntityId
     , _drBody :: DefinitionBody name m expr
     } deriving (Functor, Foldable, Traversable)

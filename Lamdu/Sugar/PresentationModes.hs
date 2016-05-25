@@ -19,7 +19,7 @@ indirectDefinitionUUID funcS =
     case funcS ^. Sugar.rBody of
     Sugar.BodyGetVar
         (Sugar.GetBinder
-         binderVar@Sugar.BinderVar { Sugar._bvForm = Sugar.GetDefinition }) ->
+         binderVar@Sugar.BinderVar { Sugar._bvForm = Sugar.GetDefinition _ }) ->
             Just $ binderVar ^. Sugar.bvNameRef . Sugar.nrName
     _ -> Nothing
 

@@ -12,6 +12,7 @@ import           Control.Monad.Trans.Maybe (MaybeT)
 import           Data.Maybe.Utils (maybeToMPlus)
 import           Data.UUID.Types (UUID)
 import           Data.Store.Transaction (Transaction)
+import qualified Data.Store.Transaction as Transaction
 import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Calc.Val as V
 import qualified Lamdu.Data.Anchors as Anchors
@@ -43,13 +44,16 @@ convertGlobal param exprPl =
         let isGlobalInScope =
                 ctx ^. ConvertM.scGlobalsInScope . Lens.contains defI
         notInScope || isGlobalInScope & guard
+        defState <-
+            Anchors.assocDefinitionState defI
+            & Transaction.getP & ConvertM.liftTransaction & lift
         GetBinder BinderVar
             { _bvNameRef = NameRef
               { _nrName = UniqueId.toUUID defI
               , _nrGotoDefinition =
                   jumpToDefI (ctx ^. ConvertM.scCodeAnchors) defI
               }
-            , _bvForm = GetDefinition
+            , _bvForm = GetDefinition defState
             , _bvInline = CannotInline
             } & return
     where

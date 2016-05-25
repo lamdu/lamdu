@@ -6,8 +6,8 @@ module Lamdu.Data.Anchors
     , CodeProps, RevisionProps
     , assocNameRef
     , assocScopeRef
-    , PresentationMode(..)
-    , assocPresentationMode
+    , PresentationMode(..), assocPresentationMode
+    , DefinitionState(..), assocDefinitionState
     , assocTagOrder
     , ParamList
     , assocFieldParamList
@@ -93,5 +93,13 @@ assocPresentationMode ::
     a -> Transaction.MkProperty m PresentationMode
 assocPresentationMode =
     Transaction.assocDataRefDef Verbose "PresentationMode" . UniqueId.toUUID
+
+data DefinitionState = DeletedDefinition | LiveDefinition
+    deriving (Eq, Ord, Show, Generic)
+instance Binary DefinitionState
+
+assocDefinitionState :: Monad m => DefI m -> Transaction.MkProperty m DefinitionState
+assocDefinitionState =
+    Transaction.assocDataRefDef LiveDefinition "DefinitionState" . UniqueId.toUUID
 
 Lens.makeLenses ''BinderParamScopeId
