@@ -1,6 +1,6 @@
 {-# LANGUAGE PatternGuards, NoImplicitPrelude, FlexibleContexts, RecordWildCards, OverloadedStrings, TypeFamilies #-}
 module Lamdu.GUI.ExpressionEdit.HoleEdit.Open
-    ( makeOpenSearchTermGui
+    ( makeOpenSearchAreaGui
     ) where
 
 import           Control.Applicative ((<|>))
@@ -516,10 +516,10 @@ makeUnderCursorAssignment shownResultsLists hasHiddenResults holeInfo =
         alignment = Layout.absAlignedWidget . _1
         WidgetIds{..} = hiIds holeInfo
 
-makeOpenSearchTermGui ::
+makeOpenSearchAreaGui ::
     Monad m =>
     Sugar.Payload m ExprGuiT.Payload -> HoleInfo m -> ExprGuiM m (ExpressionGui m)
-makeOpenSearchTermGui pl holeInfo =
+makeOpenSearchAreaGui pl holeInfo =
     do
         (shownResultsLists, hasHiddenResults) <-
             -- Don't generate results of open holes inside hole results

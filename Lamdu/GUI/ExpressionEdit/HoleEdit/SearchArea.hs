@@ -10,7 +10,7 @@ import qualified Graphics.UI.Bottle.Widgets.Layout as Layout
 import qualified Graphics.UI.Bottle.WidgetsEnvT as WE
 import qualified Lamdu.Config as Config
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.Info (HoleInfo(..))
-import           Lamdu.GUI.ExpressionEdit.HoleEdit.Open (makeOpenSearchTermGui)
+import           Lamdu.GUI.ExpressionEdit.HoleEdit.Open (makeOpenSearchAreaGui)
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.SearchTerm as SearchTerm
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds (WidgetIds(..))
 import           Lamdu.GUI.ExpressionGui (ExpressionGuiM(..), ExpressionGui)
@@ -51,7 +51,7 @@ makeStdWrapped pl holeInfo =
                  -- important in the case the FD is selected, and
                  -- it is harder to implement, so just wrap it
                  -- here
-                 fdWrap <*> makeOpenSearchTermGui pl holeInfo
+                 fdWrap <*> makeOpenSearchAreaGui pl holeInfo
                  <&>
                  \gui ->
                  ExpressionGui $
