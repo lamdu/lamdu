@@ -557,6 +557,16 @@
         "neighborsScaleFactor": [0.65, 0.65],
         "neighborsPadding": [3, 3]
     },
+    "indent": {
+        "indentBarWidth": 25,
+        "indentBarGap": 10,
+        "indentBarColor": [
+            0.8,
+            0.8,
+            1.0,
+            0.1
+        ]
+    },
     "previousCursorKeys": [
         [
             {
@@ -965,7 +975,6 @@
             "Key'Delete"
         ]
     ],
-    "indentWidth": 100,
     "letItemPadding": [5, 5],
     "letAddItemKeys": [
         [

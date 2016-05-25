@@ -2,7 +2,8 @@
 {-# LANGUAGE DeriveGeneric, RecordWildCards #-}
 module Lamdu.Config
     ( Layers(..)
-    , Help(..), Zoom(..), Export(..), Pane(..), Hole(..), Name(..), Eval(..)
+    , Help(..), Zoom(..), Export(..), Pane(..), Hole(..)
+    , Name(..), Eval(..), Indent(..)
     , LiteralText(..)
     , LightLambda(..)
     , Config(..)
@@ -155,6 +156,15 @@ instance Aeson.ToJSON LiteralText where
     toJSON = Aeson.genericToJSON Aeson.defaultOptions
 instance Aeson.FromJSON LiteralText
 
+data Indent = Indent
+    { indentBarWidth :: Double
+    , indentBarGap :: Double
+    , indentBarColor :: Draw.Color
+    } deriving (Eq, Generic, Show)
+instance Aeson.ToJSON Indent where
+    toJSON = Aeson.genericToJSON Aeson.defaultOptions
+instance Aeson.FromJSON Indent
+
 data Config = Config
     { fonts :: Fonts FilePath
     , baseTextSize :: FontSize
@@ -169,6 +179,7 @@ data Config = Config
     , name :: Name
     , lightLambda :: LightLambda
     , eval :: Eval
+    , indent :: Indent
 
     , animationTimePeriodSec :: Double
     , animationRemainInPeriod :: Double
@@ -192,7 +203,6 @@ data Config = Config
     , delBackwardKeys :: [ModKey]
     , wrapKeys :: [ModKey]
 
-    , indentWidth :: Double
     , literalColor :: Draw.Color
     , typeIndicatorErrorColor :: Draw.Color
     , typeIndicatorMatchColor :: Draw.Color

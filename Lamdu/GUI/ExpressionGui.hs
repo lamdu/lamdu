@@ -64,6 +64,7 @@ import qualified Graphics.UI.Bottle.Widgets.Box as Box
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 import           Graphics.UI.Bottle.Widgets.Layout (Layout)
 import qualified Graphics.UI.Bottle.Widgets.Layout as Layout
+import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
 import qualified Graphics.UI.Bottle.Widgets.TextEdit as TextEdit
 import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
 import qualified Graphics.UI.Bottle.WidgetsEnvT as WE
@@ -138,12 +139,28 @@ maybeIndent mPiInfo gui =
     \lp ->
     case (lp ^. layoutContext, mPiInfo) of
     (LayoutVertical, Just piInfo) ->
-        let indentWidth = piIndentWidth piInfo
+        let indentConf = piIndentConfig piInfo
+            barWidth = Config.indentBarWidth indentConf
+            gapWidth = Config.indentBarGap indentConf
+            indentWidth = barWidth + gapWidth
+            content =
+                lp & layoutMode . modeWidths -~ indentWidth
+                & gui ^. toLayout
+                & Layout.alignment . _2 .~ 0
+            bgAnimId = piAnimId piInfo ++ ["("]
         in
-        lp & layoutMode . modeWidths -~ indentWidth
-        & gui ^. toLayout
+        content
         & Layout.addBefore Layout.Horizontal
-            [Layout.fromCenteredWidget (BWidgets.hspaceWidget indentWidth)]
+            [ Spacer.make
+                (Vector2 barWidth (content ^. Layout.widget . Widget.height))
+                & Widget.fromView
+                & Widget.backgroundColor 0 bgAnimId
+                    (Config.indentBarColor indentConf)
+                & Layout.fromCenteredWidget
+                & Layout.alignment . _2 .~ 0
+            , Spacer.make (Vector2 gapWidth 0)
+                & Widget.fromView & Layout.fromCenteredWidget
+            ]
     _ -> lp & gui ^. toLayout
 
 vboxTopFocal :: [ExpressionGui m] -> ExpressionGui m
@@ -205,7 +222,7 @@ stdVSpace =
 data ParenIndentInfo = ParenIndentInfo
     { piAnimId :: AnimId
     , piTextStyle :: TextView.Style
-    , piIndentWidth :: Widget.R
+    , piIndentConfig :: Config.Indent
     }
 
 parenLabel :: ParenIndentInfo -> String -> Layout a
@@ -271,8 +288,8 @@ makeParenIndentInfo parensId =
         textStyle <-
             ExprGuiM.widgetEnv WE.readTextStyle
             <&> (^. TextEdit.sTextViewStyle)
-        indentWidth <- ExprGuiM.readConfig <&> Config.indentWidth
-        ParenIndentInfo parensId textStyle indentWidth & return
+        conf <- ExprGuiM.readConfig <&> Config.indent
+        ParenIndentInfo parensId textStyle conf & return
 
 combineSpaced ::
     Monad m => Maybe AnimId -> ExprGuiM m ([ExpressionGui f] -> ExpressionGui f)
