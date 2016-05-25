@@ -47,9 +47,9 @@ import           Data.Binary.Utils (encodeS)
 import           Data.CurAndPrev (CurAndPrev(..), CurPrevTag(..), curPrevTag, fallbackToPrev)
 import qualified Data.List as List
 import qualified Data.List.Utils as ListUtils
-import           Data.String (IsString(..))
 import           Data.Store.Property (Property(..))
 import           Data.Store.Transaction (Transaction)
+import           Data.String (IsString(..))
 import           Data.Vector.Vector2 (Vector2(..))
 import qualified Graphics.DrawingCombinators as Draw
 import           Graphics.UI.Bottle.Animation (AnimId)
