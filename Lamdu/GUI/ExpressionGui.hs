@@ -490,17 +490,16 @@ addInferredType typ = addAnnotationH (makeTypeView typ)
 
 addEvaluationResult ::
     Monad m =>
-    Type -> NeighborVals (Maybe EvalResDisplay) -> EvalResDisplay ->
+    NeighborVals (Maybe EvalResDisplay) -> EvalResDisplay ->
     WideAnnotationBehavior -> Sugar.EntityId ->
     ExprGuiM m (ExpressionGui f -> ExpressionGui f)
 -- REVIEW(Eyal): This is misleading when it refers to Previous results
-addEvaluationResult typ neigh resDisp wideBehavior entityId =
+addEvaluationResult neigh resDisp wideBehavior entityId =
     case (erdVal resDisp ^. ER.payload, erdVal resDisp ^. ER.body) of
     (T.TRecord T.CEmpty, _) ->
         addValBGWithColor Config.evaluatedPathBGColor (WidgetIds.fromEntityId entityId)
         <&> (egWidget %~)
-    (_, ER.RFunc{}) ->
-        addAnnotationH (makeTypeView typ) wideBehavior entityId
+    (_, ER.RFunc{}) -> return id
     _ -> addAnnotationH (makeEvalView neigh resDisp) wideBehavior entityId
 
 parentExprFDConfig :: Config -> FocusDelegator.Config
@@ -789,7 +788,7 @@ maybeAddAnnotationWith opt wideAnnotationBehavior ShowAnnotation{..} annotation 
         withType =
             addInferredType inferredType wideAnnotationBehavior entityId
         withVal neighborVals scopeAndVal =
-            addEvaluationResult inferredType neighborVals scopeAndVal
+            addEvaluationResult neighborVals scopeAndVal
             wideAnnotationBehavior entityId
 
 valOfScope :: Sugar.Annotation -> CurAndPrev (Maybe ER.ScopeId) -> Maybe EvalResDisplay
