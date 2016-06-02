@@ -1,7 +1,6 @@
-{-# LANGUAGE FlexibleContexts #-}
 -- | Deduplicate exported entities of the same name
 
-{-# LANGUAGE TemplateHaskell, LambdaCase #-}
+{-# LANGUAGE TemplateHaskell, LambdaCase, OverloadedStrings, FlexibleContexts #-}
 module Main (main) where
 
 import qualified Control.Lens as Lens
@@ -9,12 +8,16 @@ import           Control.Lens.Operators
 import           Control.Monad (when)
 import           Control.Monad.Trans.Class (lift)
 import           Control.Monad.Trans.State (StateT, evalStateT)
+import qualified Data.List as List
 import           Data.Map (Map)
 import qualified Data.Map as Map
 import           Data.Maybe (fromMaybe)
+import           Lamdu.Calc.Identifier (Identifier(..))
 import qualified Lamdu.Calc.Type as T
 import           Lamdu.Calc.Type.Nominal (_NominalType)
 import qualified Lamdu.Calc.Type.Nominal as Nominal
+import qualified Lamdu.Calc.Val as V
+import           Lamdu.Data.Definition (Definition(..))
 import qualified Lamdu.Data.Definition as Definition
 import           Lamdu.Data.Export.JSON.Codec (TagOrder)
 import qualified Lamdu.Data.Export.JSON.Codec as Codec
@@ -31,11 +34,21 @@ Lens.makeLenses ''DedupState
 emptyState :: DedupState
 emptyState = DedupState Map.empty Map.empty
 
+type EntityOrdering = (Int, Identifier)
+
+entityOrdering :: Codec.Entity -> EntityOrdering
+entityOrdering (Codec.EntityTag _ _ (T.Tag ident))                  = (0, ident)
+entityOrdering (Codec.EntityNominal _ (T.NominalId nomId) _)        = (1, nomId)
+entityOrdering (Codec.EntityLamVar _ _ _ (V.Var ident))             = (2, ident)
+entityOrdering (Codec.EntityDef (Definition _ (_, _, V.Var ident))) = (3, ident)
+entityOrdering (Codec.EntityRepl _)                                 = (4, "")
+
 dedup :: [Codec.Entity] -> IO [Codec.Entity]
 dedup entities =
     traverse f entities
     & (`evalStateT` emptyState)
     <&> concat
+    <&> List.sortOn entityOrdering
     where
         f :: Codec.Entity -> StateT DedupState IO [Codec.Entity]
         f entity =
