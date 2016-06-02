@@ -15,6 +15,16 @@ var indexTag = conf.builtinTagName('index');
 var startTag = conf.builtinTagName('start');
 var stopTag = conf.builtinTagName('stop');
 var valTag = conf.builtinTagName('val');
+var oldPathTag = conf.builtinTagName('oldPath');
+var newPathTag = conf.builtinTagName('newPath');
+var filePathTag = conf.builtinTagName('filePath');
+var fileDescTag = conf.builtinTagName('fileDesc');
+var dataTag = conf.builtinTagName('data');
+var modeTag = conf.builtinTagName('mode');
+var sizeTag = conf.builtinTagName('size');
+var srcPathTag = conf.builtinTagName('srcPath');
+var dstPathTag = conf.builtinTagName('dstPath');
+var flagsTag = conf.builtinTagName('flags');
 
 var bool = function (x) {
     return {tag: x ? trueTag : falseTag, data: {}};
@@ -140,6 +150,73 @@ module.exports = {
                 fromStream: function (x) { return function () { return arrayFromStream(x); } },
                 run: function(st) { return st(); },
             },
+        },
+        IO: {
+            file: {
+                unlink: function(path) {
+                    return function() { require('fs').unlinkSync(path); };
+                },
+                rename: function(x) {
+                    return function() { require('fs').renameSync(x[oldPathTag], x[newPathTag]); };
+                },
+                chmod: function(x) {
+                    return function() { require('fs').chmodSync(x[filePathTag], x[modeTag]); };
+                },
+                close: function(fd) {
+                    return function() { require('fs').closeSync(fd); };
+                },
+                fchmod: function(x) {
+                    return function() { require('fs').fchmodSync(x[fileDescTag], x[modeTag]); };
+                },
+                fstat: function(fd) {
+                    return function() { return require('fs').fstatSync(fd); };
+                    // { dev: 66306,
+                    //   mode: 33188,
+                    //   nlink: 1,
+                    //   uid: 0,
+                    //   gid: 0,
+                    //   rdev: 0,
+                    //   blksize: 4096,
+                    //   ino: 7733458,
+                    //   size: 2243,
+                    //   blocks: 8,
+                    //   atime: 2016-06-02T11:35:58.456Z,
+                    //   mtime: 2016-05-02T22:06:47.124Z,
+                    //   ctime: 2016-05-02T22:06:47.132Z,
+                    // }
+                },
+                fsync: function(fd) {
+                    return function() { require('fs').fsyncSync(fd); };
+                },
+                ftruncate: function(x) {
+                    return function() { require('fs').ftruncateSync(x[fileDescTag], x[sizeTag]); };
+                },
+                link: function(x) {
+                    return function() { require('fs').linkSync(x[srcPathTag], x[dstPathTag]); };
+                },
+                lstat: function(path) {
+                    // see fstat for result example
+                    return function() { return require('fs').lstatSync(path); };
+                },
+                mkdir: function(path) {
+                    return function() { require('fs').mkdirSync(path); };
+                },
+                open: function(x) {
+                    return function() { return require('fs').openSync(x[filePathTag], x[flagsTag], x[modeTag]); };
+                },
+                readFile: function(path) {
+                    return function() { return require('fs').readFileSync(path); };
+                },
+                readLink: function(path) {
+                    return function() { return require('fs').readlinkSync(path, 'buffer'); };
+                },
+                appendFile: function(x) {
+                    return function() { require('fs').appendFileSync(x[filePathTag], x[dataTag]); };
+                },
+                writeFile: function(x) {
+                    return function() { require('fs').writeFileSync(x[filePathTag], x[dataTag]); };
+                },
+            }
         }
     },
 };
