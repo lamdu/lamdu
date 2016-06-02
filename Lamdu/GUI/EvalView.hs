@@ -9,6 +9,7 @@ import           Control.Lens.Tuple
 import           Control.Monad (void)
 import qualified Data.Binary.Utils as BinUtils
 import qualified Data.ByteString.UTF8 as UTF8
+import qualified Data.List as List
 import qualified Data.Store.Transaction as Transaction
 import           Data.Vector.Vector2 (Vector2(..))
 import           Graphics.UI.Bottle.Animation (AnimId)
@@ -154,8 +155,18 @@ make animId (Val typ val) =
             BWidgets.makeTextView cut animId & ExprGuiM.widgetEnv
             where
                 cut =
+                    map limLine start ++
+                    ( case rest of
+                        [] -> []
+                        _ -> ["..."]
+                    ) & List.intercalate "\n"
+                    where
+                        (start, rest) = splitAt 10 (lines text)
+                limLine :: String -> String
+                limLine ln =
                     start ++
                     case rest of
-                    "" -> ""
+                    [] -> ""
                     _ -> "..."
-                (start, rest) = splitAt 300 text
+                    where
+                        (start, rest) = splitAt 100 ln
