@@ -10584,6 +10584,62 @@
         }
     },
     {
+        "lamId": "59bc4aaa-5151-4c12-9bcf-51ec55342c54",
+        "lamVar": "b071cd05a330f14141ef9d9f753a9af6",
+        "lamFieldParams": null
+    },
+    {
+        "defPresentationMode": "Verbose",
+        "name": "get",
+        "def": "a4f60383fdc646f19909ad070da91b07",
+        "typ": {
+            "schemeType": {
+                "nomParams": {
+                    "42493a76616c00000000000000000000": {
+                        "typeVar": "6e32"
+                    },
+                    "42493a73746174650000000000000000": {
+                        "typeVar": "6e32"
+                    }
+                },
+                "nomId": "b4af64aea4b94e2983a283a7b3bb1a26"
+            },
+            "schemeBinders": {
+                "typeVars": [
+                    "6e32"
+                ]
+            }
+        },
+        "val": {
+            "toNomVal": {
+                "lamVar": "b071cd05a330f14141ef9d9f753a9af6",
+                "id": "59bc4aaa-5151-4c12-9bcf-51ec55342c54",
+                "lamBody": {
+                    "extendVal": {
+                        "var": "b071cd05a330f14141ef9d9f753a9af6",
+                        "id": "3ac0fea6-3d29-4ee2-95b5-2b90517de8a4"
+                    },
+                    "extendTag": "42493a73746174650000000000000000",
+                    "id": "da5a8d6e-eb42-439b-991a-309e86d9f8fd",
+                    "extendRest": {
+                        "extendVal": {
+                            "var": "b071cd05a330f14141ef9d9f753a9af6",
+                            "id": "26cc17e8-6bf5-4b2b-b52c-e3e475b4cde1"
+                        },
+                        "extendTag": "42493a76616c00000000000000000000",
+                        "id": "ca26448d-18be-4f7a-b819-39837e6f4ab1",
+                        "extendRest": {
+                            "recEmpty": {},
+                            "id": "e89a5fc3-3775-4ffd-886e-a577a2b6d8bf"
+                        }
+                    }
+                }
+            },
+            "toNomId": "b4af64aea4b94e2983a283a7b3bb1a26",
+            "id": "1f227f26-b079-425e-9337-734608b8a7c5"
+        }
+    },
+    {
         "defPresentationMode": [
             "Infix",
             7
