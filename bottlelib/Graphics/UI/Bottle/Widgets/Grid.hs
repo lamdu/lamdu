@@ -21,8 +21,8 @@ import           Control.Lens.Operators
 import           Control.Lens.Tuple
 import           Control.Monad (msum)
 import           Data.Function (on)
-import           Data.List (foldl', transpose, find)
-import           Data.List.Utils (groupOn, sortOn, minimumOn)
+import           Data.List (foldl', transpose, find, sortOn)
+import           Data.List.Utils (groupOn, minimumOn)
 import           Data.MRUMemo (memo)
 import           Data.Maybe (fromMaybe)
 import           Data.Monoid ((<>))

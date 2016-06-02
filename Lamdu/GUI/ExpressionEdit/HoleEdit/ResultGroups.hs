@@ -14,9 +14,8 @@ import qualified Data.ByteString.Char8 as BS8
 import qualified Data.Char as Char
 import           Data.Function (on)
 import           Data.Functor.Identity (Identity(..))
-import           Data.List (isInfixOf, isPrefixOf)
+import           Data.List (isInfixOf, isPrefixOf, sortOn)
 import qualified Data.List.Class as ListClass
-import           Data.List.Utils (sortOn)
 import           Data.Monoid ((<>))
 import           Data.Store.Transaction (Transaction)
 import qualified Graphics.UI.Bottle.WidgetId as WidgetId

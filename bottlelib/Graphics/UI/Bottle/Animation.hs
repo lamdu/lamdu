@@ -22,7 +22,7 @@ import           Control.Lens.Tuple
 import           Control.Monad (void)
 import qualified Data.ByteString.Char8 as SBS
 import qualified Data.List as List
-import           Data.List.Utils (groupOn, sortOn)
+import           Data.List.Utils (groupOn)
 import           Data.Map (Map, (!))
 import qualified Data.Map.Strict as Map
 import           Data.Maybe (isJust)
@@ -96,7 +96,7 @@ draw frame =
     <&> markConflicts
     & concat
     <&> posImage
-    & sortOn (^. _1) <&> snd
+    & List.sortOn (^. _1) <&> snd
     & mconcat
     where
         redX = Draw.tint red unitX
@@ -112,7 +112,8 @@ draw frame =
 
 prefixRects :: Map AnimId Image -> Map AnimId Rect
 prefixRects src =
-    Map.fromList . filter (not . null . fst) . map perGroup $ groupOn fst $ sortOn fst prefixItems
+    Map.fromList . filter (not . null . fst) . map perGroup $ groupOn fst $
+    List.sortOn fst prefixItems
     where
         perGroup xs =
             (fst (head xs), List.foldl1' joinRects (map snd xs))

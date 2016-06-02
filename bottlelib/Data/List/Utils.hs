@@ -1,6 +1,5 @@
 module Data.List.Utils
     ( groupOn
-    , sortOn
     , minimumOn
     , insertAt
     , removeAt
@@ -14,7 +13,7 @@ module Data.List.Utils
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Data.Function (on)
-import           Data.List (groupBy, sortBy, minimumBy)
+import           Data.List (groupBy, minimumBy)
 import           Data.Ord (comparing)
 
 rightPad :: Int -> a -> [a] -> [a]
@@ -26,9 +25,6 @@ rightPad l x xs
 
 groupOn :: Eq b => (a -> b) -> [a] -> [[a]]
 groupOn = groupBy . on (==)
-
-sortOn :: Ord b => (a -> b) -> [a] -> [a]
-sortOn = sortBy . comparing
 
 minimumOn :: Ord b => (a -> b) -> [a] -> a
 minimumOn = minimumBy . comparing

@@ -9,7 +9,7 @@ import           Control.Lens.Operators
 import           Control.Lens.Tuple
 import           Control.Lens.Utils (tagged)
 import           Control.Monad ((>=>))
-import           Data.List.Utils (sortOn)
+import           Data.List (sortOn)
 import qualified Data.Map as Map
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
