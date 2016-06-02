@@ -53,7 +53,7 @@ addTypesRecExtend (V.RecExtend tag val rest) go typ =
             (go typ val)
             (go typ rest)
             & RRecExtend
-        _ -> ER.EvalTypeError "addTypes bad type for RRecExtend" & RError
+        _ -> "addTypes got " ++ show typ ++ " for RRecExtend" & ER.EvalTypeError & RError
     Just (valType, restType) ->
         V.RecExtend tag
         (go valType val)
@@ -68,7 +68,7 @@ addTypesInject (V.Inject tag val) go typ =
         -- we currently don't know types for eval results of polymorphic values
         case typ of
         T.TVar{} -> go typ val & V.Inject tag & RInject
-        _ -> ER.EvalTypeError "addTypes bad type for RInject" & RError
+        _ -> "addTypes got " ++ show typ ++ " for RInject" & ER.EvalTypeError & RError
     Just valType -> go valType val & V.Inject tag & RInject
 
 addTypesArray :: [val] -> AddTypes val res
@@ -77,7 +77,7 @@ addTypesArray items go typ =
         (_nomId, params) <- typ ^? T._TInst
         paramType <- params ^. Lens.at Builtins.valTypeParamId
         items <&> go paramType & RArray & Just
-    & fromMaybe (ER.EvalTypeError "addTypes bad type for RArray" & RError)
+    & fromMaybe ("addTypes got " ++ show typ ++ " for RArray" & ER.EvalTypeError & RError)
 
 addTypes :: Map T.NominalId N.Nominal -> T.Type -> Val () -> Val T.Type
 addTypes nomsMap typ (Val () b) =
