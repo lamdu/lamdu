@@ -134,7 +134,7 @@ parseWord8 (Json.Number x)
     | x == fromIntegral i = i
     where
         i = truncate x
-parseWord8 x = error $ "Expected word8, given: " ++ show x
+parseWord8 x = "Expected word8, given: " ++ show x & error
 
 parseBytes :: Json.Value -> ER.Val ()
 parseBytes (Json.Array vals) =
@@ -168,7 +168,7 @@ parseResult (Json.Object obj) =
             dataField = Json.parseMaybe (.: "data") obj
 parseResult (Json.Array arr) =
     Vec.toList arr <&> parseResult & ER.RArray & ER.Val ()
-parseResult x = error $ "Unsupported encoded JS output: " ++ show x
+parseResult x = "Unsupported encoded JS output: " ++ show x & error
 
 addVal ::
     Ord srcId =>
