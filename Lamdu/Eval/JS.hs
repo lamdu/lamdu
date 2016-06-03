@@ -153,11 +153,14 @@ parseInject tag mData =
         Just v -> parseResult v
     } & ER.Val ()
 
+(.?) :: Json.FromJSON a => Json.Object -> Text -> Maybe a
+obj .? tag = Json.parseMaybe (.: tag) obj
+
 parseResult :: Json.Value -> ER.Val ()
 parseResult (Json.Number x) =
     realToFrac x & PrimVal.Float & PrimVal.fromKnown & ER.RPrimVal & ER.Val ()
 parseResult (Json.Object obj) =
-    case Json.parseMaybe (.: "tag") obj of
+    case obj .? "tag" of
     Nothing -> parseRecord obj
     Just tag
         | tag == "bytes" ->
@@ -165,7 +168,7 @@ parseResult (Json.Object obj) =
         | tag == "function" -> ER.Val () ER.RFunc
         | otherwise -> parseInject tag dataField
         where
-            dataField = Json.parseMaybe (.: "data") obj
+            dataField = obj .? "data"
 parseResult (Json.Array arr) =
     Vec.toList arr <&> parseResult & ER.RArray & ER.Val ()
 parseResult x = "Unsupported encoded JS output: " ++ show x & error
@@ -176,15 +179,15 @@ addVal ::
     Map srcId (Map ScopeId (ER.Val ())) ->
     Map srcId (Map ScopeId (ER.Val ()))
 addVal fromUUID obj =
-    case Json.parseMaybe (.: "result") obj of
+    case obj .? "result" of
     Nothing -> id
     Just result ->
         Map.alter
         (<> Just (Map.singleton (ScopeId scope) (parseResult result)))
         (fromUUID (parseUUID exprId))
     where
-        Just scope = Json.parseMaybe (.: "scope") obj
-        Just exprId = Json.parseMaybe (.: "exprId") obj
+        Just scope = obj .? "scope"
+        Just exprId = obj .? "exprId"
 
 newScope ::
     Ord srcId =>
@@ -197,11 +200,11 @@ newScope fromUUID obj =
         addApply Nothing = Just apply
         addApply (Just x) = Just (Map.unionWith (++) x apply)
         apply = Map.singleton (ScopeId parentScope) [(ScopeId scope, arg)]
-        Just parentScope = Json.parseMaybe (.: "parentScope") obj
-        Just scope = Json.parseMaybe (.: "scope") obj
-        Just lamId = Json.parseMaybe (.: "lamId") obj
+        Just parentScope = obj .? "parentScope"
+        Just scope = obj .? "scope"
+        Just lamId = obj .? "lamId"
         arg =
-            case Json.parseMaybe (.: "arg") obj of
+            case obj .? "arg" of
             Nothing -> error "Scope report missing arg"
             Just x -> parseResult x
 
@@ -217,7 +220,7 @@ processEvent fromUUID resultsRef obj =
         (flip (,) () . (ER.erAppliesOfLam %~ newScope fromUUID obj))
     _ -> "Unknown event " ++ event & putStrLn
     where
-        Just event = Json.parseMaybe (.: "event") obj
+        Just event = obj .? "event"
 
 withCopyJSOutputTo :: Maybe FilePath -> ((String -> IO ()) -> IO a) -> IO a
 withCopyJSOutputTo Nothing f = f $ \_js -> return ()
