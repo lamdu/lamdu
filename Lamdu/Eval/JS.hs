@@ -18,9 +18,9 @@ import qualified Data.Aeson as JsonStr
 import           Data.Aeson.Types ((.:))
 import qualified Data.Aeson.Types as Json
 import qualified Data.ByteString as SBS
-import qualified Data.ByteString.Char8 as Char8
 import qualified Data.ByteString.Base16 as Hex
-import qualified Data.ByteString.Lazy as LBS
+import qualified Data.ByteString.Char8 as Char8
+import           Data.ByteString.Utils (lazifyBS)
 import           Data.HashMap.Strict (HashMap)
 import qualified Data.HashMap.Strict as HashMap
 import           Data.IORef
@@ -271,7 +271,7 @@ asyncStart toUUID fromUUID depsMVar resultsRef val actions =
                             unless isEof $
                                 do
                                     line <- SBS.hGetLine stdout
-                                    let Just obj = JsonStr.decode (LBS.fromChunks [line])
+                                    let Just obj = JsonStr.decode (lazifyBS line)
                                     processEvent fromUUID resultsRef obj
                                     actions ^. aReportUpdatesAvailable
                                     processLines
