@@ -35,12 +35,6 @@ var isEqual = function (a, b) {
     return true;
 }
 
-var bytes = function (list) {
-    var arr = new Uint8Array(list.length);
-    arr.set(list);
-    return arr;
-}
-
 var arrayFromStream = function (stream) {
     var items = [];
     while (stream['tag'] == consTag)
@@ -56,15 +50,13 @@ var encode = function (x) {
         if (value == null) { // or undefined due to auto-coercion
             return {};
         }
-        if (Uint8Array.prototype.isPrototypeOf(value)) {
-            return { tag: "bytes", data: Array.from(value) };
-        }
         if (Function.prototype.isPrototypeOf(value)) {
-            return { tag: "function" };
+            return { type: "function" };
         }
         return value;
     };
-    return JSON.stringify(x, replacer);
+    var res = JSON.stringify(x, replacer);
+    return res;
 };
 
 var STArray = function(arr) {
@@ -106,14 +98,7 @@ module.exports = {
             return callee.apply(this, arguments);
         }
     },
-    bytes: bytes,
-    bytesFromString: function (str) {
-        var arr = new Uint8Array(str.length);
-        for (var i = 0; i < str.length; ++i) {
-            arr[i] = str.charCodeAt(i);
-        }
-        return arr;
-    },
+    bytes: Buffer.from,
     builtins: {
         Prelude: {
             sqrt: Math.sqrt,
@@ -135,9 +120,9 @@ module.exports = {
         Bytes: {
             length: function (x) { return x.length; },
             byteAt: function (x) { return x[objTag][x[indexTag]]; },
-            slice: function (x) { return x[objTag].subarray(x[startTag], x[stopTag]); },
+            slice: function (x) { return x[objTag].slice(x[startTag], x[stopTag]); },
             unshare: function (x) { return x.slice(); },
-            fromStream: function (x) { return bytes(arrayFromStream(x)); },
+            fromStream: function (x) { return Buffer.from(arrayFromStream(x)); },
         },
         Array: {
             length: function (x) { return x.length; },

@@ -160,15 +160,16 @@ parseResult :: Json.Value -> ER.Val ()
 parseResult (Json.Number x) =
     realToFrac x & PrimVal.Float & PrimVal.fromKnown & ER.RPrimVal & ER.Val ()
 parseResult (Json.Object obj) =
-    case obj .? "tag" of
-    Nothing -> parseRecord obj
-    Just tag
-        | tag == "bytes" ->
-          fromMaybe (error "bytes with no data?!") dataField & parseBytes
-        | tag == "function" -> ER.Val () ER.RFunc
-        | otherwise -> parseInject tag dataField
-        where
-            dataField = obj .? "data"
+    case (obj .? "type" :: Maybe String, obj .? "tag") of
+    (Nothing, Nothing) ->
+        parseRecord obj
+    (Just typ, Nothing)
+        | typ == "Buffer" ->
+          obj .? "data" & fromMaybe (error "bytes with no data?!") & parseBytes
+        | typ == "function" -> ER.Val () ER.RFunc
+        | otherwise -> "Invalid type tag: " ++ show typ & error
+    (Nothing, Just tag) -> obj .? "data" & parseInject tag
+    (Just _, Just _) -> error "Both type and tag are not allowed"
 parseResult (Json.Array arr) =
     Vec.toList arr <&> parseResult & ER.RArray & ER.Val ()
 parseResult x = "Unsupported encoded JS output: " ++ show x & error
