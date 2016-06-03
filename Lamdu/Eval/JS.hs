@@ -271,10 +271,13 @@ asyncStart toUUID fromUUID depsMVar resultsRef val actions =
                             unless isEof $
                                 do
                                     line <- SBS.hGetLine stdout
-                                    let Just obj = JsonStr.decode (lazifyBS line)
-                                    processEvent fromUUID resultsRef obj
-                                    actions ^. aReportUpdatesAvailable
-                                    processLines
+                                    case JsonStr.decode (lazifyBS line) of
+                                        Nothing -> "Failed to decode: " ++ show line & error
+                                        Just obj ->
+                                            do
+                                                processEvent fromUUID resultsRef obj
+                                                actions ^. aReportUpdatesAvailable
+                                                processLines
                 processLines
                 _ <- Proc.waitForProcess handle
                 return ()
