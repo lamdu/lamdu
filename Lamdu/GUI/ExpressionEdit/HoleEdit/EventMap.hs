@@ -72,7 +72,7 @@ adHocTextEditEventMap holeConfig searchTermProp =
         changeText f = mempty <$ Property.pureModify searchTermProp f
 
 disallowedHoleChars :: String
-disallowedHoleChars = "`\n "
+disallowedHoleChars = "`\"\n "
 
 toLiteralTextKeys :: [ModKey]
 toLiteralTextKeys =
