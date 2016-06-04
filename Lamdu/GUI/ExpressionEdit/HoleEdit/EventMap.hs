@@ -237,7 +237,9 @@ makeOpenEventMaps holeInfo mShownResult =
             & Lens.both %~ mappend maybeLiteralTextEventMap
             & pure
     where
+        isWrapperHole = hiHole holeInfo & Lens.has (Sugar.holeMArg . Lens._Just)
         maybeLiteralTextEventMap
-            | null (searchTermProp ^. Property.pVal) = toLiteralTextEventMap holeInfo
+            | null (searchTermProp ^. Property.pVal) && not isWrapperHole =
+              toLiteralTextEventMap holeInfo
             | otherwise = mempty
         searchTermProp = HoleInfo.hiSearchTermProperty holeInfo
