@@ -39,6 +39,8 @@ var isEqual = function (a, b) {
         return a == b;
     if (a.length != b.length)
         return false;
+    if (a instanceof Buffer)
+        return Buffer.compare(a, b) == 0;
     for (var p in a)
         if (!isEqual(a[p], b[p]))
             return false;
