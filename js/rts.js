@@ -39,12 +39,14 @@ var isEqual = function (a, b) {
         return a == b;
     if (a.length != b.length)
         return false;
-    if (a instanceof Buffer)
-        return Buffer.compare(a, b) == 0;
     for (var p in a)
         if (!isEqual(a[p], b[p]))
             return false;
     return true;
+}
+
+var bytes = function (list) {
+    return new Uint8Array(list);;
 }
 
 var arrayFromStream = function (stream) {
@@ -62,13 +64,15 @@ var encode = function (x) {
         if (value == null) { // or undefined due to auto-coercion
             return {};
         }
+        if (Uint8Array.prototype.isPrototypeOf(value)) {
+            return { tag: "bytes", data: Array.from(value) };
+        }
         if (Function.prototype.isPrototypeOf(value)) {
-            return { type: "function" };
+            return { tag: "function" };
         }
         return value;
     };
-    var res = JSON.stringify(x, replacer);
-    return res;
+    return JSON.stringify(x, replacer);
 };
 
 var STArray = function(arr) {
@@ -110,7 +114,14 @@ module.exports = {
             return callee.apply(this, arguments);
         }
     },
-    bytes: Buffer.from,
+    bytes: bytes,
+    bytesFromString: function (str) {
+        var arr = new Uint8Array(str.length);
+        for (var i = 0; i < str.length; ++i) {
+            arr[i] = str.charCodeAt(i);
+        }
+        return arr;
+    },
     builtins: {
         Prelude: {
             sqrt: Math.sqrt,
@@ -132,9 +143,9 @@ module.exports = {
         Bytes: {
             length: function (x) { return x.length; },
             byteAt: function (x) { return x[objTag][x[indexTag]]; },
-            slice: function (x) { return x[objTag].slice(x[startTag], x[stopTag]); },
+            slice: function (x) { return x[objTag].subarray(x[startTag], x[stopTag]); },
             unshare: function (x) { return x.slice(); },
-            fromStream: function (x) { return Buffer.from(arrayFromStream(x)); },
+            fromStream: function (x) { return bytes(arrayFromStream(x)); },
         },
         Array: {
             length: function (x) { return x.length; },
@@ -207,10 +218,10 @@ module.exports = {
                     return function() { return require('fs').openSync(x[filePathTag], x[flagsTag], x[modeTag]); };
                 },
                 readFile: function(path) {
-                    return function() { return require('fs').readFileSync(path); };
+                    return function() { return bytes(require('fs').readFileSync(path)); };
                 },
                 readLink: function(path) {
-                    return function() { return require('fs').readlinkSync(path, 'buffer'); };
+                    return function() { return bytes(require('fs').readlinkSync(path, 'buffer')); };
                 },
                 appendFile: function(x) {
                     return function() { require('fs').appendFileSync(x[filePathTag], x[dataTag]); };

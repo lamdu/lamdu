@@ -368,16 +368,13 @@ ffiCompile (Definition.FFIName modul funcName) =
     foldl ($.) (JS.var "rts" $. "builtins") (modul <&> JS.ident)
     `JS.brack` JS.string funcName
 
-bufferFromBytes :: BS.ByteString -> CodeGen
-bufferFromBytes bytes =
-    JS.var "Buffer" $. "from" $$ JS.array ints & codeGenFromExpr
-    where
-        ints = [JS.int (fromIntegral byte) | byte <- BS.unpack bytes]
-
 compileLiteral :: V.PrimVal -> CodeGen
 compileLiteral literal =
     case PrimVal.toKnown literal of
-    PrimVal.Bytes bytes -> bufferFromBytes bytes
+    PrimVal.Bytes bytes ->
+        JS.var "rts" $. "bytes" $$ JS.array ints & codeGenFromExpr
+        where
+            ints = [JS.int (fromIntegral byte) | byte <- BS.unpack bytes]
     PrimVal.Float num -> JS.number num & codeGenFromExpr
 
 compileRecExtend :: Monad m => V.RecExtend (Val ValId) -> M m CodeGen
@@ -561,8 +558,9 @@ compileLeaf leaf valId =
 compileToNom :: Monad m => V.Nom (Val ValId) -> ValId -> M m CodeGen
 compileToNom (V.Nom tId val) valId =
     case val ^? ExprLens.valLiteral <&> PrimVal.toKnown of
-    Just (PrimVal.Bytes bytes)
-        | tId == Builtins.textTid -> bufferFromBytes bytes & return
+    Just (PrimVal.Bytes bytes) | tId == Builtins.textTid ->
+        JS.var "rts" $. "bytesFromString" $$ JS.string (UTF8.toString bytes)
+        & codeGenFromExpr & return
     _ -> compileVal val >>= maybeLogSubexprResult valId
 
 compileVal :: Monad m => Val ValId -> M m CodeGen
