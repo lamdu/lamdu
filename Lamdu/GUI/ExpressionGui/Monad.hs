@@ -161,11 +161,10 @@ advanceDepth ::
     AnimId -> ExprGuiM m r -> ExprGuiM m r
 advanceDepth f animId action =
     do
-        maxDepth <- readConfig <&> Config.maxExprDepth
         depth <- ExprGuiM $ Lens.view aSubexpressionLayer
-        if depth >= maxDepth
+        if depth <= 0
             then mkErrorWidget >>= f
-            else action & exprGuiM %~ RWS.local (aSubexpressionLayer +~ 1)
+            else action & exprGuiM %~ RWS.local (aSubexpressionLayer -~ 1)
     where
         mkErrorWidget =
             BWidgets.makeTextView "ERROR: Subexpr too deep" animId
@@ -177,20 +176,19 @@ run ::
     Anchors.CodeProps m -> Config -> Settings -> Style -> ExprGuiM m a ->
     WidgetEnvT (T m) a
 run makeSubexpr codeAnchors config settings style (ExprGuiM action) =
-    f <$> runRWST action
+    runRWST action
     Askable
     { _aConfig = config
     , _aSettings = settings
     , _aMakeSubexpression = makeSubexpr
     , _aCodeAnchors = codeAnchors
-    , _aSubexpressionLayer = 0
+    , _aSubexpressionLayer = Config.maxExprDepth config
     , _aMScopeId = Just topLevelScopeId & pure
     , _aOuterPrecedence = 0
     , _aStyle = style
     }
     ()
-    where
-        f (x, (), _output) = x
+    <&> \(x, (), _output) -> x
 
 widgetEnv :: Monad m => WidgetEnvT (T m) a -> ExprGuiM m a
 widgetEnv = ExprGuiM . lift
