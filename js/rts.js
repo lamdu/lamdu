@@ -1,5 +1,7 @@
 "use strict";
 
+process.stdout._handle.setBlocking(true);
+
 var conf = require('rtsConfig.js')
 
 // Tag names must match those in Lamdu.Builtins.Anchors
