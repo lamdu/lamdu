@@ -83,22 +83,24 @@ var STArray = function(arr) {
 module.exports = {
     logRepl: conf.logRepl,
     logResult: function (scope, exprId, result) {
-        console.log(encode(
+        process.stdout.write(encode(
             { event:"Result"
               , scope:scope
               , exprId:exprId
               , result:result
             }));
+        process.stdout.write("\n");
         return result;
     },
     logNewScope: function (parentScope, scope, lamId, arg) {
-        console.log(encode(
+        process.stdout.write(encode(
             { event:"NewScope"
               , parentScope:parentScope
               , scope:scope
               , lamId:lamId
               , arg:arg
             }));
+        process.stdout.write("\n");
     },
     wrap: function (fast, slow) {
         var count = 0;
