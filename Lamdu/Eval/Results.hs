@@ -4,7 +4,7 @@ module Lamdu.Eval.Results
     , Val(..), payload, body
     , ScopeId(..), scopeIdInt, topLevelScopeId
     , EvalError(..)
-    , EvalResults(..), erExprValues, erAppliesOfLam, empty
+    , EvalResults(..), erExprValues, erAppliesOfLam, erCache, empty
 
     , extractField
     ) where
@@ -12,11 +12,13 @@ module Lamdu.Eval.Results
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Data.Binary (Binary)
+import           Data.IntMap (IntMap)
+import qualified Data.IntMap as IntMap
 import           Data.Map (Map)
 import qualified Data.Map as Map
-import           Lamdu.Data.Definition (FFIName)
 import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Calc.Val as V
+import           Lamdu.Data.Definition (FFIName)
 
 import           Prelude.Compat
 
@@ -66,6 +68,7 @@ data EvalResults srcId =
     EvalResults
     { _erExprValues :: Map srcId (Map ScopeId (Val ()))
     , _erAppliesOfLam :: Map srcId (Map ScopeId [(ScopeId, Val ())])
+    , _erCache :: IntMap (Val ())
     } deriving Show
 
 empty :: EvalResults srcId
@@ -73,6 +76,7 @@ empty =
     EvalResults
     { _erExprValues = Map.empty
     , _erAppliesOfLam = Map.empty
+    , _erCache = IntMap.empty
     }
 
 Lens.makeLenses ''EvalResults

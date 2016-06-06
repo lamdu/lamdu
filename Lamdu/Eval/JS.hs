@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, OverloadedStrings, TemplateHaskell #-}
+{-# LANGUAGE NoImplicitPrelude, OverloadedStrings, TemplateHaskell, GeneralizedNewtypeDeriving #-}
 -- | Run a process that evaluates given compiled
 module Lamdu.Eval.JS
     ( Evaluator
@@ -13,7 +13,8 @@ import           Control.Concurrent.MVar
 import qualified Control.Exception as E
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
-import           Control.Monad (unless, msum)
+import           Control.Monad (unless, foldM, msum)
+import           Control.Monad.Trans.State (State, runState)
 import qualified Data.Aeson as JsonStr
 import           Data.Aeson.Types ((.:))
 import qualified Data.Aeson.Types as Json
@@ -24,6 +25,7 @@ import           Data.ByteString.Utils (lazifyBS)
 import           Data.HashMap.Strict (HashMap)
 import qualified Data.HashMap.Strict as HashMap
 import           Data.IORef
+import           Data.IntMap (IntMap)
 import           Data.List.Split (chunksOf)
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
@@ -81,6 +83,8 @@ data Evaluator srcId = Evaluator
     , eResultsRef :: IORef (EvalResults srcId)
     }
 
+type Parse = State (IntMap (ER.Val ()))
+
 nodeRepl :: FilePath -> FilePath -> Proc.CreateProcess
 nodeRepl nodeExePath rtsPath =
     (Proc.proc nodeExePath ["--harmony-tailcalls"])
@@ -118,14 +122,17 @@ parseHexNameBs n = parseHexBs n
 parseUUID :: String -> UUID
 parseUUID = UUIDUtils.fromSBS16 . parseHexNameBs
 
-parseRecord :: HashMap Text Json.Value -> ER.Val ()
+parseRecord :: HashMap Text Json.Value -> Parse (ER.Val ())
 parseRecord obj =
-    HashMap.toList obj & foldl step (ER.Val () ER.RRecEmpty)
+    HashMap.toList obj & foldM step (ER.Val () ER.RRecEmpty)
     where
+        step r ("cacheId", _) = return r
         step r (k, v) =
+            parseResult v
+            <&> \pv ->
             ER.RRecExtend V.RecExtend
             { V._recTag = Text.unpack k & parseHexNameBs & Identifier & Tag
-            , V._recFieldVal = parseResult v
+            , V._recFieldVal = pv
             , V._recRest = r
             } & ER.Val ()
 
@@ -143,44 +150,61 @@ parseBytes (Json.Array vals) =
     & SBS.pack & PrimVal.Bytes & PrimVal.fromKnown & ER.RPrimVal & ER.Val ()
 parseBytes _ = error "Bytes with non-array data"
 
-parseInject :: String -> Maybe Json.Value -> ER.Val ()
+parseInject :: String -> Maybe Json.Value -> Parse (ER.Val ())
 parseInject tag mData =
+    case mData of
+    Nothing -> ER.Val () ER.RRecEmpty & return
+    Just v -> parseResult v
+    <&> \iv ->
     ER.RInject V.Inject
     { V._injectTag = parseHexNameBs tag & Identifier & Tag
-    , V._injectVal =
-        case mData of
-        Nothing -> ER.Val () ER.RRecEmpty
-        Just v -> parseResult v
+    , V._injectVal = iv
     } & ER.Val ()
 
 (.?) :: Json.FromJSON a => Json.Object -> Text -> Maybe a
 obj .? tag = Json.parseMaybe (.: tag) obj
 
-parseResult :: Json.Value -> ER.Val ()
-parseResult (Json.Number x) =
-    realToFrac x & PrimVal.Float & PrimVal.fromKnown & ER.RPrimVal & ER.Val ()
-parseResult (Json.Object obj) =
+parseObj :: Json.Object -> Parse (ER.Val ())
+parseObj obj =
     msum
     [ obj .? "array"
       <&> \(Json.Array arr) ->
-            Vec.toList arr <&> parseResult & ER.RArray & ER.Val ()
-    , obj .? "bytes" <&> parseBytes
+            Vec.toList arr & Lens.traversed %%~ parseResult <&> ER.RArray <&> ER.Val ()
+    , obj .? "bytes" <&> parseBytes <&> return
     , obj .? "tag" <&> (`parseInject` (obj .? "data"))
-    , obj .? "func" <&> \(Json.Object _) -> ER.Val () ER.RFunc
+    , obj .? "func" <&> (\(Json.Object _) -> ER.Val () ER.RFunc) <&> return
     ] & fromMaybe (parseRecord obj)
-parseResult x = "Unsupported encoded JS output: " ++ show x & error
+
+parseResult :: Json.Value -> Parse (ER.Val ())
+parseResult (Json.Number x) =
+    realToFrac x & PrimVal.Float & PrimVal.fromKnown & ER.RPrimVal & ER.Val () & return
+parseResult (Json.Object obj) =
+    case obj .? "cachedVal" of
+    Just cacheId -> Lens.use (Lens.singular (Lens.ix cacheId))
+    Nothing ->
+        do
+            val <- parseObj obj
+            case obj .? "cacheId" of
+                Nothing -> return ()
+                Just cacheId -> Lens.at cacheId ?= val
+            return val
+parseResult x = "Unsupported encoded JS output: " ++ show x & fail
 
 addVal ::
     Ord srcId =>
     (UUID -> srcId) -> Json.Object ->
-    Map srcId (Map ScopeId (ER.Val ())) ->
-    Map srcId (Map ScopeId (ER.Val ()))
+    Parse
+    ( Map srcId (Map ScopeId (ER.Val ())) ->
+      Map srcId (Map ScopeId (ER.Val ()))
+    )
 addVal fromUUID obj =
     case obj .? "result" of
-    Nothing -> id
+    Nothing -> return id
     Just result ->
+        parseResult result
+        <&> \pr ->
         Map.alter
-        (<> Just (Map.singleton (ScopeId scope) (parseResult result)))
+        (<> Just (Map.singleton (ScopeId scope) pr))
         (fromUUID (parseUUID exprId))
     where
         Just scope = obj .? "scope"
@@ -189,34 +213,45 @@ addVal fromUUID obj =
 newScope ::
     Ord srcId =>
     (UUID -> srcId) -> Json.Object ->
-    Map srcId (Map ScopeId [(ScopeId, ER.Val ())]) ->
-    Map srcId (Map ScopeId [(ScopeId, ER.Val ())])
+    Parse
+    ( Map srcId (Map ScopeId [(ScopeId, ER.Val ())]) ->
+      Map srcId (Map ScopeId [(ScopeId, ER.Val ())])
+    )
 newScope fromUUID obj =
-    Map.alter addApply (fromUUID (parseUUID lamId))
+    do
+        arg <-
+            case obj .? "arg" of
+            Nothing -> fail "Scope report missing arg"
+            Just x -> parseResult x
+        let apply = Map.singleton (ScopeId parentScope) [(ScopeId scope, arg)]
+        let addApply Nothing = Just apply
+            addApply (Just x) = Just (Map.unionWith (++) x apply)
+        Map.alter addApply (fromUUID (parseUUID lamId)) & return
     where
-        addApply Nothing = Just apply
-        addApply (Just x) = Just (Map.unionWith (++) x apply)
-        apply = Map.singleton (ScopeId parentScope) [(ScopeId scope, arg)]
         Just parentScope = obj .? "parentScope"
         Just scope = obj .? "scope"
         Just lamId = obj .? "lamId"
-        arg =
-            case obj .? "arg" of
-            Nothing -> error "Scope report missing arg"
-            Just x -> parseResult x
+
+atomicModifyIORef'_ :: IORef a -> (a -> a) -> IO ()
+atomicModifyIORef'_ ref f = atomicModifyIORef' ref (flip (,) () . f)
 
 processEvent ::
     Ord srcId => (UUID -> srcId) -> IORef (EvalResults srcId) -> Json.Object -> IO ()
 processEvent fromUUID resultsRef obj =
     case event of
     "Result" ->
-        atomicModifyIORef' resultsRef
-        (flip (,) () . (ER.erExprValues %~ addVal fromUUID obj))
+        runParse (addVal fromUUID obj) (ER.erExprValues %~)
     "NewScope" ->
-        atomicModifyIORef' resultsRef
-        (flip (,) () . (ER.erAppliesOfLam %~ newScope fromUUID obj))
+        runParse (newScope fromUUID obj) (ER.erAppliesOfLam %~)
     _ -> "Unknown event " ++ event & putStrLn
     where
+        runParse act postProcess =
+            atomicModifyIORef'_ resultsRef $
+            \oldEvalResults ->
+            let (res, newCache) = runState act (oldEvalResults ^. ER.erCache)
+            in  oldEvalResults
+                & ER.erCache .~ newCache
+                & postProcess res
         Just event = obj .? "event"
 
 withCopyJSOutputTo :: Maybe FilePath -> ((String -> IO ()) -> IO a) -> IO a

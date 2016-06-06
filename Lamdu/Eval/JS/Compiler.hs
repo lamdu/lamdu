@@ -151,7 +151,7 @@ jsReservedNamespace =
     [ "x", "repl"
     , "Object", "console", "repl"
     , "log", "scopeCounter", "rts"
-    , "tag", "data", "array", "bytes", "func"
+    , "tag", "data", "array", "bytes", "func", "cacheId"
     ]
 
 jsAllReserved :: Set String

@@ -61,27 +61,40 @@ var arrayFromStream = function (stream) {
     return items;
 }
 
-var encode = function (x) {
-    var replacer = function(key, value) {
-        if (value == null) { // or undefined due to auto-coercion
-            return {};
-        }
-        if (Array.prototype.isPrototypeOf(value)) {
-            if (key === "array" || key === "bytes") {
+var encode = function() {
+    var cacheId = 0;
+    return function (x) {
+        var replacer = function(key, value) {
+            if (value == null) { // or undefined due to auto-coercion
+                return {};
+            }
+            if (Function.prototype.isPrototypeOf(value)) {
+                return { func: {} };
+            }
+            if (typeof value != "object" || key === "array" || key === "bytes") {
                 return value;
             }
-            return { array: value };
-        }
-        if (Uint8Array.prototype.isPrototypeOf(value)) {
-            return { bytes: Array.from(value) };
-        }
-        if (Function.prototype.isPrototypeOf(value)) {
-            return { func: {} };
-        }
-        return value;
+            if (value.hasOwnProperty("cacheId")) {
+                return { cachedVal: value.cacheId };
+            }
+            value.cacheId = cacheId++;
+            if (Array.prototype.isPrototypeOf(value)) {
+                return {
+                    array: value,
+                    cacheId: value.cacheId,
+                };
+            }
+            if (Uint8Array.prototype.isPrototypeOf(value)) {
+                return {
+                    bytes: Array.from(value),
+                    cacheId: value.cacheId,
+                };
+            }
+            return value;
+        };
+        return JSON.stringify(x, replacer);
     };
-    return JSON.stringify(x, replacer);
-};
+}();
 
 var STArray = function(arr) {
     this.arr = arr;
