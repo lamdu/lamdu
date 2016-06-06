@@ -66,11 +66,17 @@ var encode = function (x) {
         if (value == null) { // or undefined due to auto-coercion
             return {};
         }
+        if (Array.prototype.isPrototypeOf(value)) {
+            if (key === "array" || key === "bytes") {
+                return value;
+            }
+            return { array: value };
+        }
         if (Uint8Array.prototype.isPrototypeOf(value)) {
-            return { tag: "bytes", data: Array.from(value) };
+            return { bytes: Array.from(value) };
         }
         if (Function.prototype.isPrototypeOf(value)) {
-            return { tag: "function" };
+            return { func: {} };
         }
         return value;
     };

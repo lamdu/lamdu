@@ -13,7 +13,7 @@ import           Control.Concurrent.MVar
 import qualified Control.Exception as E
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
-import           Control.Monad (unless)
+import           Control.Monad (unless, msum)
 import qualified Data.Aeson as JsonStr
 import           Data.Aeson.Types ((.:))
 import qualified Data.Aeson.Types as Json
@@ -160,17 +160,14 @@ parseResult :: Json.Value -> ER.Val ()
 parseResult (Json.Number x) =
     realToFrac x & PrimVal.Float & PrimVal.fromKnown & ER.RPrimVal & ER.Val ()
 parseResult (Json.Object obj) =
-    case obj .? "tag" of
-    Nothing -> parseRecord obj
-    Just tag
-        | tag == "bytes" ->
-          fromMaybe (error "bytes with no data?!") dataField & parseBytes
-        | tag == "function" -> ER.Val () ER.RFunc
-        | otherwise -> parseInject tag dataField
-        where
-            dataField = obj .? "data"
-parseResult (Json.Array arr) =
-    Vec.toList arr <&> parseResult & ER.RArray & ER.Val ()
+    msum
+    [ obj .? "array"
+      <&> \(Json.Array arr) ->
+            Vec.toList arr <&> parseResult & ER.RArray & ER.Val ()
+    , obj .? "bytes" <&> parseBytes
+    , obj .? "tag" <&> (`parseInject` (obj .? "data"))
+    , obj .? "func" <&> \(Json.Object _) -> ER.Val () ER.RFunc
+    ] & fromMaybe (parseRecord obj)
 parseResult x = "Unsupported encoded JS output: " ++ show x & error
 
 addVal ::
