@@ -42,7 +42,7 @@ var isEqual = function (a, b) {
     if (a.length != b.length)
         return false;
     for (var p in a)
-        if (!isEqual(a[p], b[p]))
+        if (p != 'cacheId' && !isEqual(a[p], b[p]))
             return false;
     return true;
 }
