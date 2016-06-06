@@ -4,6 +4,7 @@ module Lamdu.GUI.EvalView
     ( make
     ) where
 
+import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Lens.Tuple
 import           Control.Monad (void)
@@ -25,6 +26,7 @@ import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Calc.Val as V
 import qualified Lamdu.Data.Anchors as Anchors
 import           Lamdu.Eval.Results (EvalError(..), Val(..), Body(..))
+import qualified Lamdu.Eval.Results as ER
 import           Lamdu.Formatting (Format(..))
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
@@ -62,7 +64,7 @@ makeField parentAnimId tag val =
     do
         tagView <- makeTag (baseId ++ ["tag"]) tag
         space <- ExprGuiM.widgetEnv BWidgets.stdHSpaceView
-        valView <- make (baseId ++ ["val"]) val
+        valView <- makeInner (baseId ++ ["val"]) val
         return
             [ (Vector2 1 0.5, tagView)
             , (0.5, space)
@@ -93,7 +95,7 @@ makeArray animId items =
         cutoff = 10
         makeItem idx val =
             [ [ label ", " itemId | idx > 0 ]
-            , [ make (Anim.augmentId itemId ("val" :: String)) val | idx < cutoff ]
+            , [ makeInner (Anim.augmentId itemId ("val" :: String)) val | idx < cutoff ]
             , [ label "..." itemId | idx == cutoff ]
             ] & concat
             & sequence
@@ -101,8 +103,20 @@ makeArray animId items =
             where
                 itemId = Anim.augmentId animId (idx :: Int)
 
+depthCounts :: Val a -> [Int]
+depthCounts v =
+    1 : map sum (List.transpose (map depthCounts (v ^.. ER.body . Lens.folded)))
+
 make :: Monad m => AnimId -> Val Type -> ExprGuiM m View
-make animId (Val typ val) =
+make animId v =
+    makeInner animId v
+    & ExprGuiM.resetDepth depthLimit
+    where
+        depthLimit =
+            depthCounts v & scanl (+) 0 & tail & takeWhile (< 200) & length
+
+makeInner :: Monad m => AnimId -> Val Type -> ExprGuiM m View
+makeInner animId (Val typ val) =
     case val of
     RError err -> makeError err animId
     RFunc{} -> textView "Fn" animId
@@ -113,7 +127,7 @@ make animId (Val typ val) =
         do
             tagView <- inj ^. V.injectTag & makeTag (animId ++ ["tag"])
             space <- ExprGuiM.widgetEnv BWidgets.stdHSpaceView
-            valView <- inj ^. V.injectVal & make (animId ++ ["val"])
+            valView <- inj ^. V.injectVal & makeInner (animId ++ ["val"])
             hbox [tagView, space, valView] & return
     RRecExtend recExtend ->
         do

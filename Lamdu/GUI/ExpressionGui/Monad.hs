@@ -9,7 +9,7 @@ module Lamdu.GUI.ExpressionGui.Monad
     , makeFocusDelegator
     --
     , makeSubexpression
-    , advanceDepth
+    , advanceDepth, resetDepth
     --
     , readConfig, readSettings, readStyle, readCodeAnchors
     , getCodeAnchor, mkPrejumpPosSaver
@@ -155,6 +155,9 @@ makeSubexpression onPrecedence expr =
     where
         fromView = return . ExprGuiT.fromValueWidget . Widget.fromView
         animId = toAnimId $ WidgetIds.fromExprPayload $ expr ^. Sugar.rPayload
+
+resetDepth :: Monad m => Int -> ExprGuiM m r -> ExprGuiM m r
+resetDepth depth = exprGuiM %~ RWS.local (aSubexpressionLayer .~ depth)
 
 advanceDepth ::
     Monad m => (View -> ExprGuiM m r) ->
