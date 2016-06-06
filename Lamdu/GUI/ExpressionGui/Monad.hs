@@ -170,7 +170,7 @@ advanceDepth f animId action =
             else action & exprGuiM %~ RWS.local (aSubexpressionLayer -~ 1)
     where
         mkErrorWidget =
-            BWidgets.makeTextView "ERROR: Subexpr too deep" animId
+            BWidgets.makeTextView "..." animId
             & widgetEnv
 
 run ::
