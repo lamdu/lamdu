@@ -24,6 +24,7 @@ import qualified Lamdu.Builtins.PrimVal as PrimVal
 import           Lamdu.Calc.Type (Type)
 import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Calc.Val as V
+import qualified Lamdu.Config as Config
 import qualified Lamdu.Data.Anchors as Anchors
 import           Lamdu.Eval.Results (EvalError(..), Val(..), Body(..))
 import qualified Lamdu.Eval.Results as ER
@@ -109,11 +110,13 @@ depthCounts v =
 
 make :: Monad m => AnimId -> Val Type -> ExprGuiM m View
 make animId v =
-    makeInner animId v
-    & ExprGuiM.resetDepth depthLimit
-    where
-        depthLimit =
-            depthCounts v & scanl (+) 0 & tail & takeWhile (< 200) & length
+    do
+        maxEvalViewSize <- ExprGuiM.readConfig <&> Config.maxEvalViewSize
+        let depthLimit =
+                depthCounts v & scanl (+) 0 & tail
+                & takeWhile (< maxEvalViewSize) & length
+        makeInner animId v
+            & ExprGuiM.resetDepth depthLimit
 
 makeInner :: Monad m => AnimId -> Val Type -> ExprGuiM m View
 makeInner animId (Val typ val) =

@@ -185,6 +185,7 @@ data Config = Config
     , animationRemainInPeriod :: Double
 
     , maxExprDepth :: Int
+    , maxEvalViewSize :: Int
 
     , backgroundColor :: Draw.Color
     , baseColor :: Draw.Color
