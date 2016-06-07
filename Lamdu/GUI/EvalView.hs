@@ -107,6 +107,28 @@ makeArray animId items =
             where
                 itemId = Anim.augmentId animId (idx :: Int)
 
+makeRecExtend :: Monad m => AnimId -> V.RecExtend (Val Type) -> ExprGuiM m View
+makeRecExtend animId recExtend =
+    do
+        fieldsView <- mapM (uncurry (makeField animId)) fields <&> GridView.make
+        let barWidth
+                | null fields = 150
+                | otherwise = fieldsView ^. View.width
+        restView <-
+            case recStatus of
+            RecordComputed -> return View.empty
+            RecordExtendsError err ->
+                do
+                    v <- makeError err animId
+                    GridView.verticalAlign 0.5 [sqr, v] & return
+                where
+                    sqr =
+                        View 1 (Anim.unitSquare (animId ++ ["line"]))
+                        & View.scale (Vector2 barWidth 1)
+        GridView.verticalAlign 0.5 [fieldsView, restView] & return
+    where
+        (fields, recStatus) = extractFields recExtend
+
 depthCounts :: Val a -> [Int]
 depthCounts v =
     v ^.. ER.body . Lens.folded
@@ -140,26 +162,7 @@ makeInner animId (Val typ val) =
             space <- ExprGuiM.widgetEnv BWidgets.stdHSpaceView
             valView <- inj ^. V.injectVal & makeInner (animId ++ ["val"])
             hbox [tagView, space, valView] & return
-    RRecExtend recExtend ->
-        do
-            fieldsView <- mapM (uncurry (makeField animId)) fields <&> GridView.make
-            let barWidth
-                    | null fields = 150
-                    | otherwise = fieldsView ^. View.width
-            restView <-
-                case recStatus of
-                RecordComputed -> return View.empty
-                RecordExtendsError err ->
-                    do
-                        v <- makeError err animId
-                        GridView.verticalAlign 0.5 [sqr, v] & return
-                    where
-                        sqr =
-                            View 1 (Anim.unitSquare (animId ++ ["line"]))
-                            & View.scale (Vector2 barWidth 1)
-            GridView.verticalAlign 0.5 [fieldsView, restView] & return
-        where
-            (fields, recStatus) = extractFields recExtend
+    RRecExtend recExtend -> makeRecExtend animId recExtend
     RPrimVal primVal
         | typ == T.TInst Builtins.textTid mempty ->
           case pv of
