@@ -85,19 +85,22 @@ makeError err animId = textView msg $ animId ++ ["error"]
 hbox :: [View] -> View
 hbox = GridView.horizontalAlign 0.5
 
+arrayCutoff :: Int
+arrayCutoff = 10
+
 makeArray :: Monad m => AnimId -> [Val Type] -> ExprGuiM m View
 makeArray animId items =
     do
-        itemViews <- zipWith makeItem [0..cutoff] items & sequence
+        itemViews <- zipWith makeItem [0..arrayCutoff] items & sequence
         opener <- label "[" animId
         closer <- label "]" animId
         opener : itemViews ++ [closer] & hbox & return
     where
-        cutoff = 10
         makeItem idx val =
             [ [ label ", " itemId | idx > 0 ]
-            , [ makeInner (Anim.augmentId itemId ("val" :: String)) val | idx < cutoff ]
-            , [ label "..." itemId | idx == cutoff ]
+            , [ makeInner (Anim.augmentId itemId ("val" :: String)) val
+                | idx < arrayCutoff ]
+            , [ label "..." itemId | idx == arrayCutoff ]
             ] & concat
             & sequence
             <&> hbox
@@ -106,7 +109,12 @@ makeArray animId items =
 
 depthCounts :: Val a -> [Int]
 depthCounts v =
-    1 : map sum (List.transpose (map depthCounts (v ^.. ER.body . Lens.folded)))
+    v ^.. ER.body . Lens.folded
+    & take arrayCutoff
+    <&> depthCounts
+    & List.transpose
+    <&> sum
+    & (1 :)
 
 make :: Monad m => AnimId -> Val Type -> ExprGuiM m View
 make animId v =
