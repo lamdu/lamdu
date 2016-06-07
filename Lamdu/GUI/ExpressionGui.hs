@@ -380,11 +380,14 @@ processAnnotationGui animId wideAnnotationBehavior =
     <$> ExprGuiM.readConfig
     <*> applyWideAnnotationBehavior animId wideAnnotationBehavior
     where
-        f config applyWide minWidth annotationLayout =
-            maybeTooNarrow annotationLayout & maybeTooWide
+        f config applyWide minWidth annotationLayout
+            | annotationWidth > minWidth + max shrinkAtLeast expansionLimit =
+                applyWide shrinkRatio annotationLayout
+            | otherwise =
+                maybeTooNarrow annotationLayout
+                & addAnnotationBackground config animId
             where
                 annotationWidth = annotationLayout ^. Layout.width
-                width = max annotationWidth minWidth
                 expansionLimit =
                     Config.valAnnotationWidthExpansionLimit config & realToFrac
                 maxWidth = minWidth + expansionLimit
@@ -393,12 +396,8 @@ processAnnotationGui animId wideAnnotationBehavior =
                     annotationWidth - shrinkAtLeast & min maxWidth & max minWidth
                     & (/ annotationWidth) & pure
                 maybeTooNarrow
-                    | minWidth > annotationWidth = Layout.pad (Vector2 ((width - annotationWidth) / 2) 0)
+                    | minWidth > annotationWidth = Layout.pad (Vector2 ((minWidth - annotationWidth) / 2) 0)
                     | otherwise = id
-                maybeTooWide
-                    | annotationWidth > minWidth + max shrinkAtLeast expansionLimit =
-                        applyWide shrinkRatio
-                    | otherwise = addAnnotationBackground config animId
 
 data EvalResDisplay = EvalResDisplay
     { erdScope :: ER.ScopeId
