@@ -107,25 +107,51 @@ makeArray animId items =
             where
                 itemId = Anim.augmentId animId (idx :: Int)
 
-makeRecExtend :: Monad m => AnimId -> V.RecExtend (Val Type) -> ExprGuiM m View
-makeRecExtend animId recExtend =
-    do
-        fieldsView <- mapM (uncurry (makeField animId)) fields <&> GridView.make
-        let barWidth
-                | null fields = 150
-                | otherwise = fieldsView ^. View.width
-        restView <-
-            case recStatus of
-            RecordComputed -> return View.empty
-            RecordExtendsError err ->
-                do
-                    v <- makeError err animId
-                    GridView.verticalAlign 0.5 [sqr, v] & return
+makeRecExtend ::
+    Monad m => AnimId -> Type -> V.RecExtend (Val Type) -> ExprGuiM m View
+makeRecExtend animId typ recExtend =
+    case
+        ( typ, recStatus
+        , lookup Builtins.rootTag fields, lookup Builtins.subtreesTag fields
+        ) of
+    (T.TInst tid _, RecordComputed, Just root, Just subtrees)
+        | tid == Builtins.treeTid ->
+        do
+            rootView <- makeInner (animId ++ ["root"]) root
+            subtreeViews <-
+                subtrees ^.. ER.body . ER._RArray . Lens.traverse
+                & zipWith makeItem [0..cutoff] & sequence
+            rootView : subtreeViews & GridView.verticalAlign 0 & return
+        where
+            makeItem idx val =
+                [ [ label "* " itemId ]
+                , [ makeInner (Anim.augmentId itemId ("val" :: String)) val
+                    | idx < cutoff ]
+                , [ label "..." itemId | idx == cutoff ]
+                ] & concat
+                & sequence
+                <&> GridView.horizontalAlign 0
                 where
-                    sqr =
-                        View 1 (Anim.unitSquare (animId ++ ["line"]))
-                        & View.scale (Vector2 barWidth 1)
-        GridView.verticalAlign 0.5 [fieldsView, restView] & return
+                    itemId = Anim.augmentId animId (idx :: Int)
+            cutoff = 4
+    _ ->
+        do
+            fieldsView <- mapM (uncurry (makeField animId)) fields <&> GridView.make
+            let barWidth
+                    | null fields = 150
+                    | otherwise = fieldsView ^. View.width
+            restView <-
+                case recStatus of
+                RecordComputed -> return View.empty
+                RecordExtendsError err ->
+                    do
+                        v <- makeError err animId
+                        GridView.verticalAlign 0.5 [sqr, v] & return
+                    where
+                        sqr =
+                            View 1 (Anim.unitSquare (animId ++ ["line"]))
+                            & View.scale (Vector2 barWidth 1)
+            GridView.verticalAlign 0.5 [fieldsView, restView] & return
     where
         (fields, recStatus) = extractFields recExtend
 
@@ -162,7 +188,7 @@ makeInner animId (Val typ val) =
             space <- ExprGuiM.widgetEnv BWidgets.stdHSpaceView
             valView <- inj ^. V.injectVal & makeInner (animId ++ ["val"])
             hbox [tagView, space, valView] & return
-    RRecExtend recExtend -> makeRecExtend animId recExtend
+    RRecExtend recExtend -> makeRecExtend animId typ recExtend
     RPrimVal primVal
         | typ == T.TInst Builtins.textTid mempty ->
           case pv of

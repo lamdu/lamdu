@@ -10,7 +10,7 @@
     "animationTimePeriodSec": 0.11,
     "animationRemainInPeriod": 0.2,
     "maxExprDepth": 40,
-    "maxEvalViewSize": 64,
+    "maxEvalViewSize": 32,
     "layers": {
         "layerMin": -100,
         "layerMax": 100,
@@ -954,6 +954,7 @@
     "valAnnotationSpacing": 0.1,
     "valAnnotationWidthExpansionLimit": 34,
     "valAnnotationShrinkAtLeast": 80,
+    "valAnnotationMaxHeight": 20,
     "valFramePadding": [7.0, 7.0],
     "delForwardKeys": [
         [

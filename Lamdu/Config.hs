@@ -230,6 +230,7 @@ data Config = Config
     , valAnnotationSpacing :: Double -- as ratio of line height
     , valAnnotationWidthExpansionLimit :: Double
     , valAnnotationShrinkAtLeast :: Double
+    , valAnnotationMaxHeight :: Double
     , typeFrameBGColor :: Draw.Color
     , stdSpacing :: Vector2 Double -- as ratio of space character size
     , cursorBGColor :: Draw.Color

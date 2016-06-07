@@ -2,8 +2,8 @@
 -- Those which are supported in the runtime are repeated in JS in rts.js.
 
 module Lamdu.Builtins.Anchors
-    ( bytesTid, floatTid, streamTid, textTid
-    , headTag, tailTag, consTag, nilTag
+    ( bytesTid, floatTid, streamTid, textTid, treeTid
+    , headTag, tailTag, consTag, nilTag, rootTag, subtreesTag
     , valTypeParamId
     ) where
 
@@ -31,6 +31,9 @@ streamTid = bi "stream"
 textTid :: T.NominalId
 textTid = bi "text"
 
+treeTid :: T.NominalId
+treeTid = bi "tree"
+
 headTag :: Tag
 headTag = bi "head"
 
@@ -42,6 +45,12 @@ consTag = bi "cons"
 
 nilTag :: Tag
 nilTag = bi "nil"
+
+rootTag :: Tag
+rootTag = bi "root"
+
+subtreesTag :: Tag
+subtreesTag = bi "subtrees"
 
 valTypeParamId :: T.ParamId
 valTypeParamId = bi "val"

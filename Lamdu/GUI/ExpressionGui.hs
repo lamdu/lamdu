@@ -378,10 +378,12 @@ processAnnotationGui ::
 processAnnotationGui animId wideAnnotationBehavior =
     f
     <$> ExprGuiM.readConfig
+    <*> ExprGuiM.widgetEnv BWidgets.stdSpacing
     <*> applyWideAnnotationBehavior animId wideAnnotationBehavior
     where
-        f config applyWide minWidth annotationLayout
-            | annotationWidth > minWidth + max shrinkAtLeast expansionLimit =
+        f config stdSpacing applyWide minWidth annotationLayout
+            | annotationWidth > minWidth + max shrinkAtLeast expansionLimit
+            || heightShrinkRatio < 1 =
                 applyWide shrinkRatio annotationLayout
             | otherwise =
                 maybeTooNarrow annotationLayout
@@ -392,9 +394,14 @@ processAnnotationGui animId wideAnnotationBehavior =
                     Config.valAnnotationWidthExpansionLimit config & realToFrac
                 maxWidth = minWidth + expansionLimit
                 shrinkAtLeast = Config.valAnnotationShrinkAtLeast config & realToFrac
+                heightShrinkRatio =
+                    Config.valAnnotationMaxHeight config * stdSpacing ^. _2
+                    / annotationLayout ^. Layout.widget . Widget.height
+                    & min 1
                 shrinkRatio =
                     annotationWidth - shrinkAtLeast & min maxWidth & max minWidth
                     & (/ annotationWidth) & pure
+                    & _2 %~ min heightShrinkRatio
                 maybeTooNarrow
                     | minWidth > annotationWidth = Layout.pad (Vector2 ((minWidth - annotationWidth) / 2) 0)
                     | otherwise = id
