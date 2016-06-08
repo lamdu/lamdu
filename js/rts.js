@@ -138,7 +138,7 @@ module.exports = {
         }
     },
     bytes: bytes,
-    bytesFromString: function (str) {
+    bytesFromAscii: function (str) {
         var arr = new Uint8Array(str.length);
         for (var i = 0; i < str.length; ++i) {
             arr[i] = str.charCodeAt(i);

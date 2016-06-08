@@ -559,9 +559,12 @@ compileLeaf leaf valId =
 compileToNom :: Monad m => V.Nom (Val ValId) -> ValId -> M m CodeGen
 compileToNom (V.Nom tId val) valId =
     case val ^? ExprLens.valLiteral <&> PrimVal.toKnown of
-    Just (PrimVal.Bytes bytes) | tId == Builtins.textTid ->
-        JS.var "rts" $. "bytesFromString" $$ JS.string (UTF8.toString bytes)
-        & codeGenFromExpr & return
+    Just (PrimVal.Bytes bytes)
+        | tId == Builtins.textTid
+        && all (< 128) (BS.unpack bytes) ->
+            -- The JS is more readable with string constants
+            JS.var "rts" $. "bytesFromAscii" $$ JS.string (UTF8.toString bytes)
+            & codeGenFromExpr & return
     _ -> compileVal val >>= maybeLogSubexprResult valId
 
 compileVal :: Monad m => Val ValId -> M m CodeGen
