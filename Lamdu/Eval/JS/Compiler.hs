@@ -186,12 +186,14 @@ compile actions val = compileVal val & run actions
 run :: Monad m => Actions m -> M m CodeGen -> m ()
 run actions act =
     runRWST
-    (traverse ppOut topLevelDecls
-     >> act
-     <&> codeGenExpression
-     <&> JS.call (JS.var "rts" $. "logRepl") . (:[])
-     <&> JS.expr
-     >>= ppOut & unM)
+    (do
+        _ <- traverse ppOut topLevelDecls
+        act <&> codeGenExpression <&> varinit "repl" >>= ppOut
+        JS.call (JS.var "rts" $. "logRepl") [JS.var "repl"] & JS.expr & ppOut
+        JS.assign (JS.var "module" `JS.ldot` "exports") (JS.var "repl")
+            & JS.expr & ppOut
+    & unM
+    )
     Env
     { _envActions = actions
     , _envLocals = mempty
