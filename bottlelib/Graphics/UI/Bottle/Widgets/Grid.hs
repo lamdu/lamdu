@@ -1,7 +1,7 @@
 {-# LANGUAGE NoImplicitPrelude, TemplateHaskell, OverloadedStrings, RecordWildCards, DeriveFunctor, DeriveFoldable, DeriveTraversable #-}
 module Graphics.UI.Bottle.Widgets.Grid
     ( Grid, KGrid(..)
-    , make, makeKeyed, makeAlign, makeCentered
+    , make, makeKeyed
     , unkey
     , Alignment
     , gridMCursor, gridSize, gridContent
@@ -221,12 +221,6 @@ unkey = (map . map) ((,) ())
 
 make :: [[(Alignment, Widget f)]] -> Grid f
 make = makeKeyed . unkey
-
-makeAlign :: Alignment -> [[Widget f]] -> Grid f
-makeAlign alignment = make . (map . map) ((,) alignment)
-
-makeCentered :: [[Widget f]] -> Grid f
-makeCentered = makeAlign 0.5
 
 type CombineEnters a =
     Widget.Size -> [[Maybe (Direction -> Widget.EnterResult a)]] ->

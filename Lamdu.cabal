@@ -33,26 +33,21 @@ Library
   Exposed-modules:  Control.Applicative.Utils
                   , Control.Concurrent.Utils
                   , Control.Lens.Utils
-                  , Control.Monad.Trans.Decycle
                   , Control.Monad.Trans.Either.Utils
-                  , Control.Monad.Trans.State.Utils
                   , Control.Monad.Unit
                   , Data.Binary.Utils
                   , Data.ByteString.Utils
                   , Data.CurAndPrev
                   , Data.Function.Decycle
                   , Data.IORef.Utils
-                  , Data.List.Assoc
                   , Data.List.Utils
                   , Data.MRUMemo
                   , Data.Maybe.Utils
-                  , Data.Monoid.Applicative
                   , Data.Monoid.Generic
                   , Data.Monoid.Instances
                   , Data.Set.Ordered
                   , Data.Store.Db
                   , Data.Store.IRef
-                  , Data.Store.Map
                   , Data.Store.Property
                   , Data.Store.Rev.Branch
                   , Data.Store.Rev.Change

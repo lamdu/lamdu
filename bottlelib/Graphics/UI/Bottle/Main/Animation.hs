@@ -200,7 +200,7 @@ animThread tvars win =
             NotAnimating -> Nothing
 
 newtype Looper = Looper
-    { runLooper :: GLFW.Window -> IO AnimConfig -> (Anim.Size -> Handlers) -> IO ()
+    { _runLooper :: GLFW.Window -> IO AnimConfig -> (Anim.Size -> Handlers) -> IO ()
     }
 
 newLooper :: IO Looper

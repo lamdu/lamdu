@@ -11,9 +11,8 @@ module Graphics.UI.Bottle.Widgets
     , stdSpacing
     , stdHSpaceWidth, stdHSpaceView
     , stdVSpaceHeight, stdVSpaceView
-    , hspaceWidget, vspaceWidget, vspacer
-    , hboxSpaced, hboxCenteredSpaced
-    , gridHSpaced, gridHSpacedCentered
+    , vspacer
+    , hboxCenteredSpaced
     , liftLayerInterval
     , respondToCursorPrefix
     ) where
@@ -37,7 +36,6 @@ import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.Box as Box
 import qualified Graphics.UI.Bottle.Widgets.Choice as Choice
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
-import qualified Graphics.UI.Bottle.Widgets.Grid as Grid
 import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
 import qualified Graphics.UI.Bottle.Widgets.TextEdit as TextEdit
 import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
@@ -153,12 +151,6 @@ makeWordEdit ::
 makeWordEdit textRef myId =
     makeLineEdit textRef myId <&> deleteKeyEventHandler (ModKey mempty GLFW.Key'Space)
 
-hspaceWidget :: Widget.R -> Widget f
-hspaceWidget = Widget.fromView . Spacer.makeHorizontal
-
-vspaceWidget :: Widget.R -> Widget f
-vspaceWidget = Widget.fromView . Spacer.makeVertical
-
 stdFont :: Monad m => WidgetEnvT m Draw.Font
 stdFont = WE.readEnv <&> (^. WE.envTextStyle . TextEdit.sTextViewStyle . TextView.styleFont)
 
@@ -188,30 +180,13 @@ stdVSpaceView = stdVSpaceHeight <&> Vector2 0 <&> Spacer.make
 
 -- | Vertical spacer as ratio of line height
 vspacer :: Monad m => Double -> WidgetEnvT m (Widget f)
-vspacer ratio = stdFontHeight <&> (ratio *) <&> vspaceWidget
-
-hboxSpaced :: Monad m => [(Box.Alignment, Widget f)] -> WidgetEnvT m (Widget f)
-hboxSpaced widgets =
-    stdHSpaceView
-    <&> Widget.fromView
-    <&> Box.hbox . (`intersperse` widgets) . (,) 0.5
+vspacer ratio = stdFontHeight <&> (ratio *) <&> Spacer.makeVertical <&> Widget.fromView
 
 hboxCenteredSpaced :: Monad m => [Widget f] -> WidgetEnvT m (Widget f)
 hboxCenteredSpaced widgets =
     stdHSpaceView
     <&> Widget.fromView
     <&> Box.hboxAlign 0.5 . (`intersperse` widgets)
-
-gridHSpaced :: Monad m => [[(Grid.Alignment, Widget f)]] -> WidgetEnvT m (Widget f)
-gridHSpaced xs =
-    stdHSpaceView
-    <&> Widget.fromView <&> (,) 0
-    <&> intersperse <&> (`map` xs)
-    <&> Grid.make
-    <&> Grid.toWidget
-
-gridHSpacedCentered :: Monad m => [[Widget f]] -> WidgetEnvT m (Widget f)
-gridHSpacedCentered = gridHSpaced . (map . map) ((,) 0.5)
 
 makeChoiceWidget ::
     (Eq a, Monad m, Applicative f) =>

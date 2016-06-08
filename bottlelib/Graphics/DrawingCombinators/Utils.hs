@@ -5,9 +5,7 @@ module Graphics.DrawingCombinators.Utils
     , square
     , TextSize(..)
     , Draw.fontHeight, textSize
-    , textLinesSize
-    , drawText, drawTextLines
-    , backgroundColor
+    , drawText
     , scale, translate
     , Draw.clearRender
     ) where
@@ -16,7 +14,6 @@ import           Control.Applicative (liftA2)
 import           Control.Lens.Operators
 import           Control.Monad (void)
 import qualified Data.Aeson.Types as Aeson
-import           Data.List (genericLength)
 import           Data.Vector.Vector2 (Vector2(..))
 import           Foreign.C.Types.Instances ()
 import           GHC.Generics (Generic)
@@ -89,22 +86,3 @@ drawText font textAttrs str =
     -- We want to reverse it so that higher y is down, and it is also
     -- moved to 0..2
     & (scale (Vector2 1 (-1)) %%)
-
-textLinesHeight :: Draw.Font -> [String] -> Draw.R
-textLinesHeight font = (Draw.fontHeight font *) . genericLength
-
-textLinesWidth :: Draw.Font -> [String] -> TextSize Draw.R
-textLinesWidth font = fmap maximum . traverse (textWidth font)
-
-textLinesSize :: Draw.Font -> [String] -> TextSize (Vector2 Draw.R)
-textLinesSize font textLines =
-    (`Vector2` textLinesHeight font textLines) <$>
-    textLinesWidth font textLines
-
-drawTextLines :: Draw.Font -> Draw.TextAttrs -> [String] -> Image
-drawTextLines font attrs = drawText font attrs . unlines
-
-backgroundColor :: Draw.Color -> Vector2 Draw.R -> Image -> Image
-backgroundColor color size image =
-    mappend image $
-    Draw.tint color $ scale size %% square

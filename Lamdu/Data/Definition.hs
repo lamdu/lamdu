@@ -2,25 +2,18 @@
 module Lamdu.Data.Definition
     ( FFIName(..)
     , Builtin(..)
-      , builtinTags
     , ExportedType(..), _NoExportedType, _ExportedType
-      , exportedTypeTags
     , Expr(..), expr, exprType, exprUsedDefinitions
-      , exprTags
     , Body(..), _BodyExpr, _BodyBuiltin
-      , bodyTags
     , Definition(..), defBody, defPayload
-      , defTags
     ) where
 
 import qualified Control.Lens as Lens
 import           Data.Binary (Binary(..))
 import           Data.Map (Map)
 import           GHC.Generics (Generic)
-import qualified Lamdu.Calc.Type as T
 import           Lamdu.Calc.Type.Scheme (Scheme)
 import           Lamdu.Calc.Val (Var)
-import           Lamdu.Expr.Lens (schemeTags)
 
 import           Prelude.Compat
 
@@ -67,22 +60,3 @@ Lens.makePrisms ''ExportedType
 Lens.makePrisms ''Body
 Lens.makeLenses ''Definition
 Lens.makeLenses ''Expr
-
-builtinTags :: Lens.Setter' Builtin T.Tag
-builtinTags f (Builtin ffiName typ) = Builtin ffiName <$> schemeTags f typ
-
-exportedTypeTags :: Lens.Setter' ExportedType T.Tag
-exportedTypeTags = _ExportedType . schemeTags
-
-exprTags :: Lens.Setter' (Expr valExpr) T.Tag
-exprTags f (Expr val typ usedDefs) =
-    Expr val
-    <$> exportedTypeTags f typ
-    <*> (traverse . schemeTags) f usedDefs
-
-bodyTags :: Lens.Setter' (Body valExpr) T.Tag
-bodyTags f (BodyExpr x) = BodyExpr <$> exprTags f x
-bodyTags f (BodyBuiltin x) = BodyBuiltin <$> builtinTags f x
-
-defTags :: Lens.Setter' (Definition valExpr a) T.Tag
-defTags = defBody . bodyTags

@@ -1,5 +1,5 @@
 module Lamdu.CharClassification
-    ( operatorChars, alphaNumericChars, bracketChars, digitChars
+    ( operatorChars, bracketChars, digitChars
     ) where
 
 operatorChars :: String
@@ -10,6 +10,3 @@ bracketChars = "()[]{}"
 
 digitChars :: String
 digitChars = ['0'..'9']
-
-alphaNumericChars :: String
-alphaNumericChars = ['a'..'z'] ++ digitChars

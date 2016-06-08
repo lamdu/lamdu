@@ -8,12 +8,11 @@ module Graphics.UI.Bottle.EventMap
     , charEventMap, allChars
     , charGroup
     , keyEventMap, keyPress, keyPresses
-    , pasteOnKey, pasteOnKeys
+    , pasteOnKey
     , dropEventMap
     , deleteKey, deleteKeys
     , filterChars
     , tickHandler
-    , specialCharKey
     ) where
 
 import qualified Control.Lens as Lens
@@ -35,28 +34,6 @@ import           Prelude.Compat hiding (lookup)
 
 data KeyEvent = KeyEvent GLFW.KeyState ModKey
     deriving (Generic, Show, Eq, Ord)
-
-specialCharKey :: Char -> Maybe GLFW.Key
-specialCharKey c =
-    case c of
-    ' ' -> Just GLFW.Key'Space
-    '0' -> Just GLFW.Key'Pad0
-    '1' -> Just GLFW.Key'Pad1
-    '2' -> Just GLFW.Key'Pad2
-    '3' -> Just GLFW.Key'Pad3
-    '4' -> Just GLFW.Key'Pad4
-    '5' -> Just GLFW.Key'Pad5
-    '6' -> Just GLFW.Key'Pad6
-    '7' -> Just GLFW.Key'Pad7
-    '8' -> Just GLFW.Key'Pad8
-    '9' -> Just GLFW.Key'Pad9
-    '/' -> Just GLFW.Key'PadDivide
-    '*' -> Just GLFW.Key'PadMultiply
-    '-' -> Just GLFW.Key'PadSubtract
-    '+' -> Just GLFW.Key'PadAdd
-    '.' -> Just GLFW.Key'PadDecimal
-    '=' -> Just GLFW.Key'PadEqual
-    _ -> Nothing
 
 charOfKey :: GLFW.Key -> Maybe Char
 charOfKey key =
@@ -355,9 +332,6 @@ dropEventMap iDoc oDoc handler =
 pasteOnKey :: ModKey -> Doc -> (Clipboard -> a) -> EventMap a
 pasteOnKey key doc handler =
     keyEventMapH (KeyEvent GLFW.KeyState'Pressed key) doc (WantsClipboard handler)
-
-pasteOnKeys :: [ModKey] -> Doc -> (Clipboard -> a) -> EventMap a
-pasteOnKeys = mconcat . map pasteOnKey
 
 tickHandler :: a -> EventMap a
 tickHandler x = mempty { _emTickHandlers = [x] }

@@ -11,10 +11,8 @@ module Lamdu.Sugar.Convert.Monad
 
     , ConvertM(..), run
     , readContext, liftTransaction, local
-    , codeAnchor
-    , getP
     , convertSubexpression
-    , typeProtectTransaction, typeProtectedSetToVal, wrapOnTypeError
+    , typeProtectTransaction, typeProtectedSetToVal
     ) where
 
 import qualified Control.Lens as Lens
@@ -24,7 +22,6 @@ import           Control.Monad.Trans.Reader (ReaderT, runReaderT)
 import qualified Control.Monad.Trans.Reader as Reader
 import           Data.Map (Map)
 import           Data.Set (Set)
-import qualified Data.Store.Property as Property
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
 import           Lamdu.Calc.Type.Nominal (Nominal(..))
@@ -126,15 +123,6 @@ typeProtectedSetToVal =
                         Nothing -> DataOps.setToWrapper valI dest
         return setToVal
 
-wrapOnTypeError ::
-    Monad m =>
-    ConvertM m (ExprIRef.ValIProperty m -> T m (ExprIRef.ValI m))
-wrapOnTypeError =
-    do
-        protectedSetToVal <- typeProtectedSetToVal
-        let wrap prop = protectedSetToVal prop (Property.value prop)
-        return wrap
-
 run :: Monad m => Context m -> ConvertM m a -> T m a
 run ctx (ConvertM action) = runReaderT action ctx
 
@@ -146,12 +134,6 @@ local f (ConvertM act) = ConvertM $ Reader.local f act
 
 liftTransaction :: Monad m => T m a -> ConvertM m a
 liftTransaction = ConvertM . lift
-
-codeAnchor :: Monad m => (Anchors.CodeProps m -> a) -> ConvertM m a
-codeAnchor f = f . (^. scCodeAnchors) <$> readContext
-
-getP :: Monad m => Transaction.MkProperty m a -> ConvertM m a
-getP = liftTransaction . Transaction.getP
 
 convertSubexpression :: (Monad m, Monoid a) => Val (Input.Payload m a) -> ConvertM m (ExpressionU m a)
 convertSubexpression exprI =

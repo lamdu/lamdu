@@ -2,8 +2,7 @@
 module Data.Store.Property
     ( Property(..), pVal, pSet, value, set
     , compose, pureCompose, composeLens
-    , modify, modify_, pureModify
-    , list
+    , modify_, pureModify
     ) where
 
 import           Control.Lens (Lens')
@@ -22,12 +21,6 @@ value = (^. pVal)
 
 set :: Property m a -> a -> m ()
 set = (^. pSet)
-
-modify :: Monad m => Property m a -> (a -> m (a, b)) -> m b
-modify (Property val setter) f = do
-    (newValue, res) <- f val
-    setter newValue
-    return res
 
 modify_ :: Monad m => Property m a -> (a -> m a) -> m ()
 modify_ (Property val setter) f = setter =<< f val
@@ -48,12 +41,3 @@ pureCompose ab ba = compose ab (return . ba)
 composeLens :: Lens' a b -> Property m a -> Property m b
 composeLens lens (Property val setter) =
     Property (val ^. lens) (setter . flip (lens .~) val)
-
-list :: Property m [a] -> [Property m a]
-list (Property vals setter) =
-    zipWith mkProp vals [0..]
-    where
-        mkProp val i =
-            Property val (setter . (pre ++) . (: post))
-            where
-                (pre, _: post) = splitAt i vals

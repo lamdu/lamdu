@@ -1,3 +1,6 @@
+-- This is currently unused code, but will be useful for a purely
+-- functional data-store (for testing/etc)
+
 {-# LANGUAGE NoImplicitPrelude #-}
 module Data.Store.Map
     ( mapStore, runEmpty

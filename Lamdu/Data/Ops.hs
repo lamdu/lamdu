@@ -5,7 +5,6 @@ module Lamdu.Data.Ops
     , redexWrapWithGivenParam
     , recExtend, RecExtendResult(..)
     , case_, CaseResult(..)
-    , addListItem
     , newPublicDefinitionWithPane
     , newPublicDefinitionToIRef
     , newDefinition
@@ -23,7 +22,6 @@ import qualified Data.Store.Property as Property
 import           Data.Store.Transaction (Transaction, getP, setP, modP)
 import qualified Data.Store.Transaction as Transaction
 import qualified Graphics.UI.Bottle.WidgetId as WidgetId
-import qualified Lamdu.Builtins.Anchors as Builtins
 import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Calc.Val as V
 import           Lamdu.CharClassification (operatorChars)
@@ -31,7 +29,7 @@ import           Lamdu.Data.Anchors (PresentationMode(..))
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Expr.GenIds as GenIds
-import           Lamdu.Expr.IRef (DefI, ValIProperty, ValI, ValTree(..))
+import           Lamdu.Expr.IRef (DefI, ValIProperty, ValI)
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified System.Random.Utils as RandomUtils
 
@@ -137,26 +135,6 @@ case_ valP =
             V.Case tag newValueI $ Property.value valP
         Property.set valP resultI
         return $ CaseResult tag newValueI resultI
-
-addListItem :: Monad m => ValIProperty m -> T m (ValI m, ValI m)
-addListItem exprP =
-    do
-        newItemI <- newHole
-        newParam <- ExprIRef.newVar
-        newListI <-
-            ExprIRef.writeValTree $
-            v $ V.BToNom $ V.Nom Builtins.streamTid $
-            v $ V.BLam $ V.Lam newParam $
-            v $ V.BInject $ V.Inject Builtins.consTag $
-            recEx Builtins.headTag (ValTreeLeaf newItemI) $
-            recEx Builtins.tailTag (ValTreeLeaf (Property.value exprP))
-            recEmpty
-        Property.set exprP newListI
-        return (newListI, newItemI)
-    where
-        v = ValTreeNode
-        recEx tag val rest = v $ V.BRecExtend $ V.RecExtend tag val rest
-        recEmpty           = v $ V.BLeaf V.LRecEmpty
 
 newPane :: Monad m => Anchors.CodeProps m -> DefI m -> T m ()
 newPane codeProps defI =

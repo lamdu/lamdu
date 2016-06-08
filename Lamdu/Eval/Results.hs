@@ -2,7 +2,7 @@
 module Lamdu.Eval.Results
     ( Body(..), _RRecExtend, _RInject, _RFunc, _RRecEmpty, _RPrimVal, _RError, _RArray
     , Val(..), payload, body
-    , ScopeId(..), scopeIdInt, topLevelScopeId
+    , ScopeId(..), topLevelScopeId
     , EvalError(..)
     , EvalResults(..), erExprValues, erAppliesOfLam, erCache, empty
 
@@ -22,11 +22,8 @@ import           Lamdu.Data.Definition (FFIName)
 
 import           Prelude.Compat
 
-newtype ScopeId = ScopeId { getScopeId :: Int }
+newtype ScopeId = ScopeId Int
     deriving (Show, Eq, Ord, Binary)
-
-scopeIdInt :: Lens.Iso' ScopeId Int
-scopeIdInt = Lens.iso getScopeId ScopeId
 
 data EvalError
     = EvalHole

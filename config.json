@@ -596,17 +596,6 @@
             "Key'Right"
         ]
     ],
-    "listAddItemKeys": [
-        [
-            {
-                "modifierKeysSuper": false,
-                "modifierKeysAlt": false,
-                "modifierKeysShift": false,
-                "modifierKeysControl": false
-            },
-            "Key'Comma"
-        ]
-    ],
     "delBackwardKeys": [
         [
             {

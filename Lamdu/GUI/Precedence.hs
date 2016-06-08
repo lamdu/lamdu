@@ -21,8 +21,8 @@ instance Num Precedence where
     abs = error "instance Num Precedence.abs"
     signum = error "instance Num Precedence.signum"
 
-newtype MyPrecedence = MyPrecedence { unMyPrecedence :: Precedence }
-newtype ParentPrecedence = ParentPrecedence { unParentPrecedence :: Precedence }
+newtype MyPrecedence = MyPrecedence Precedence
+newtype ParentPrecedence = ParentPrecedence Precedence
 
 needParens :: ParentPrecedence -> MyPrecedence -> Bool
 needParens (ParentPrecedence parent) (MyPrecedence my) =

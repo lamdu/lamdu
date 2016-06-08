@@ -7,16 +7,13 @@ module Data.Store.Transaction
     , lookupBS, lookup
     , insertBS, insert
     , delete, deleteIRef
-    , readIRef, readIRefDef, writeIRef
-    , readUUID, readUUIDDef, writeUUID
+    , readIRef, writeIRef
     , isEmpty
-    , uuidExists, irefExists
+    , irefExists
     , newIRef, newKey
-    , followBy
-    , anchorRef, anchorRefDef
     , assocDataRef, assocDataRefDef
     , Property
-    , fromIRef, fromIRefDef
+    , fromIRef
     , MkProperty(..), mkProperty, mkPropertyFromIRef
     , getP, setP, modP
     )
@@ -150,9 +147,6 @@ readUUIDMb :: (Monad m, Binary a) => Transaction m a -> UUID -> Transaction m a
 readUUIDMb nothingCase uuid =
     maybe nothingCase return =<< lookup uuid
 
-readUUIDDef :: (Monad m, Binary a) => a -> UUID -> Transaction m a
-readUUIDDef = readUUIDMb . return
-
 readUUID :: (Monad m, Binary a) => UUID -> Transaction m a
 readUUID uuid = readUUIDMb failure uuid
     where
@@ -160,9 +154,6 @@ readUUID uuid = readUUIDMb failure uuid
 
 deleteIRef :: Monad m => IRef m a -> Transaction m ()
 deleteIRef = delete . IRef.uuid
-
-readIRefDef :: (Monad m, Binary a) => a -> IRef m a -> Transaction m a
-readIRefDef def = readUUIDDef def . IRef.uuid
 
 readIRef :: (Monad m, Binary a) => IRef m a -> Transaction m a
 readIRef = readUUID . IRef.uuid
@@ -188,23 +179,6 @@ type Property m = Property.Property (Transaction m)
 
 fromIRef :: (Monad m, Binary a) => IRef m a -> Transaction m (Property m a)
 fromIRef iref = flip Property.Property (writeIRef iref) <$> readIRef iref
-
-fromIRefDef :: (Monad m, Binary a) => IRef m a -> a -> Transaction m (Property m a)
-fromIRefDef iref def = flip Property.Property (writeIRef iref) <$> readIRefDef def iref
-
--- Dereference the *current* value of the IRef (Will not track new
--- values of IRef, by-value and not by-name)
-followBy :: (Monad m, Binary a) =>
-                        (b -> IRef m a) ->
-                        Property m b ->
-                        Transaction m (Property m a)
-followBy conv = fromIRef . conv . Property.value
-
-anchorRef :: (Monad m, Binary a) => String -> Transaction m (Property m a)
-anchorRef = fromIRef . IRef.anchor
-
-anchorRefDef :: (Monad m, Binary a) => String -> a -> Transaction m (Property m a)
-anchorRefDef name def = flip fromIRefDef def $ IRef.anchor name
 
 newtype MkProperty m a = MkProperty { _mkProperty :: Transaction m (Property m a) }
 Lens.makeLenses ''MkProperty

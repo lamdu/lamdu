@@ -1,6 +1,6 @@
 {-# LANGUAGE NoImplicitPrelude, FlexibleContexts, RecordWildCards, RankNTypes #-}
 module Lamdu.Sugar.Lens
-    ( bitraverseExpression, subExprPayloads, payloadsIndexedByPath
+    ( subExprPayloads, payloadsIndexedByPath
     , payloadsOf
     , holePayloads, holeArgs
     , defSchemes
@@ -11,7 +11,6 @@ module Lamdu.Sugar.Lens
     , binderLetActions
     , binderContentExpr
     , binderContentEntityId
-    , exprBinders
     , leftMostLeaf
     ) where
 
@@ -26,15 +25,6 @@ import qualified Lamdu.Data.Definition as Def
 import           Lamdu.Sugar.Types
 
 import           Prelude.Compat
-
-bitraverseExpression ::
-    Applicative f =>
-    (Body name m (Expression name m a) ->
-     f (Body name m (Expression name m b))) ->
-    (Payload m a -> f (Payload m b)) ->
-    Expression name m a -> f (Expression name m b)
-bitraverseExpression onBody onPl (Expression body pl) =
-    Expression <$> onBody body <*> onPl pl
 
 subExprPayloads ::
     Lens.IndexedTraversal
@@ -136,16 +126,6 @@ binderNamedParams f (FieldParams ps) = FieldParams <$> (Lens.traverse . _2) f ps
 binderNamedParamsActions ::
     Lens.Traversal' (BinderParams name m) (FuncParamActions m)
 binderNamedParamsActions = binderNamedParams . fpInfo . npiActions
-
-exprBinders ::
-    Lens.Traversal'
-    (Expression name m a)
-    (Binder name m (Expression name m a))
-exprBinders f =
-    rBody %%~ onBody
-    where
-        onBody (BodyLam lam) = lam & lamBinder %%~ f <&> BodyLam
-        onBody body = body & Lens.traversed . exprBinders %%~ f
 
 binderContentLetActions ::
     Lens.Traversal'

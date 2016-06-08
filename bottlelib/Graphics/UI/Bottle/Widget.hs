@@ -46,7 +46,6 @@ module Graphics.UI.Bottle.Widget
     -- Env:
     , Env(..), envCursor
 
-    , respondToCursorAt
     , respondToCursorPrefix
     , respondToCursorBy
     , respondToCursor
@@ -287,9 +286,6 @@ Lens.makeLenses ''Env
 respondToCursorPrefix :: Id -> Env -> Widget a -> Widget a
 respondToCursorPrefix myIdPrefix =
     respondToCursorBy (Lens.has Lens._Just . subId myIdPrefix)
-
-respondToCursorAt :: Id -> Env -> Widget a -> Widget a
-respondToCursorAt wId = respondToCursorBy (== wId)
 
 respondToCursorBy :: (Id -> Bool) -> Env -> Widget a -> Widget a
 respondToCursorBy f env

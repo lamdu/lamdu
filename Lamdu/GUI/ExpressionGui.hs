@@ -6,7 +6,6 @@ module Lamdu.GUI.ExpressionGui
     , LayoutMode(..), LayoutParams(..), LayoutDisambiguationContext(..)
     -- General:
     , ExprGuiT.fromValueWidget
-    , scale
     , pad
     , stdHSpace, stdVSpace
     , combine, combineSpaced
@@ -116,16 +115,6 @@ egIsFocused (ExpressionGui mkLayout) =
             { _layoutMode = LayoutWide
             , _layoutContext = LayoutClear
             }
-
-scale :: Vector2 Widget.R -> ExpressionGui m -> ExpressionGui m
-scale s =
-    toLayout %~ f
-    where
-        f mkLayout layoutParams =
-            layoutParams
-            & layoutMode . modeWidths //~ s ^. _1
-            & mkLayout
-            & Layout.scale s
 
 pad :: Vector2 Widget.R -> ExpressionGui m -> ExpressionGui m
 pad p =

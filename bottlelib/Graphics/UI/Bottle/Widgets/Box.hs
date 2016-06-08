@@ -1,7 +1,7 @@
 {-# LANGUAGE Rank2Types, TemplateHaskell #-}
 module Graphics.UI.Bottle.Widgets.Box
     ( Box, KBox(..), Alignment
-    , make, makeKeyed, makeAlign, makeCentered
+    , make, makeKeyed, makeAlign
     , unkey
     , boxMCursor, boxSize, boxContent, boxOrientation
     , Element, elementRect, elementAlign, elementOriginalWidget
@@ -114,9 +114,6 @@ make orientation = makeKeyed orientation . unkey
 
 makeAlign :: Alignment -> Orientation -> [Widget f] -> Box f
 makeAlign alignment orientation = make orientation . map ((,) alignment)
-
-makeCentered :: Orientation -> [Widget f] -> Box f
-makeCentered = makeAlign 0.5
 
 toWidget :: KBox key f -> Widget f
 toWidget = Grid.toWidget . __boxGrid

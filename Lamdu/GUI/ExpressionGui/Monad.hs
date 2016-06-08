@@ -5,14 +5,14 @@ module Lamdu.GUI.ExpressionGui.Monad
     , makeLabel
     , StoredEntityIds(..), Injected(..)
     , transaction, localEnv, withFgColor, withLocalUnderline
-    , getP, assignCursor, assignCursorPrefix
+    , assignCursor, assignCursorPrefix
     , makeFocusDelegator
     --
     , makeSubexpression
     , advanceDepth, resetDepth
     --
     , readConfig, readSettings, readStyle, readCodeAnchors
-    , getCodeAnchor, mkPrejumpPosSaver
+    , mkPrejumpPosSaver
     , vspacer
     --
     , readMScopeId, withLocalMScopeId
@@ -36,7 +36,6 @@ import           Data.Binary (Binary)
 import qualified Data.Char as Char
 import           Data.CurAndPrev (CurAndPrev)
 import           Data.Store.Transaction (Transaction)
-import qualified Data.Store.Transaction as Transaction
 import qualified Graphics.DrawingCombinators as Draw
 import           Graphics.UI.Bottle.Animation.Id (AnimId)
 import qualified Graphics.UI.Bottle.EventMap as E
@@ -205,13 +204,6 @@ makeLabel text animId = widgetEnv $ BWidgets.makeLabel text animId
 
 transaction :: Monad m => T m a -> ExprGuiM m a
 transaction = widgetEnv . lift
-
-getP :: Monad m => Transaction.MkProperty m a -> ExprGuiM m a
-getP = transaction . Transaction.getP
-
-getCodeAnchor ::
-    Monad m => (Anchors.CodeProps m -> Transaction.MkProperty m b) -> ExprGuiM m b
-getCodeAnchor anchor = getP . anchor =<< readCodeAnchors
 
 assignCursor ::
     Monad m => Widget.Id -> Widget.Id ->

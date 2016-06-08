@@ -5,7 +5,7 @@ module Graphics.UI.Bottle.Animation
     , Image(..), iUnitImage, iRect
     , Frame(..), frameImagesMap, unitImages
     , draw, nextFrame, mapIdentities
-    , unitSquare, unitHStripedSquare, emptyRectangle
+    , unitSquare, emptyRectangle
     , backgroundColor
     , translate, scale, layers
     , unitIntoRect
@@ -20,7 +20,6 @@ import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Lens.Tuple
 import           Control.Monad (void)
-import qualified Data.ByteString.Char8 as SBS
 import qualified Data.List as List
 import           Data.List.Utils (groupOn)
 import           Data.Map (Map, (!))
@@ -233,19 +232,6 @@ emptyRectangle (Vector2 fX fY) totalSize@(Vector2 sX sY) animId =
             DrawUtils.square
             & (DrawUtils.scale size %%)
             & (DrawUtils.translate origin %%)
-
--- Size is 1. Built from multiple vertical rectangles
-unitHStripedSquare :: Int -> AnimId -> Frame
-unitHStripedSquare n animId =
-    mconcat
-    [ scale (Vector2 (1/hunits) 1) $
-        translate (Vector2 pos 0) $
-        square i
-    | (i, pos) <- zip [0..] [0,2..hunits-1]
-    ]
-    where
-        hunits = fromIntegral n * 2 - 1 -- light/dark unit count
-        square i = unitSquare $ animId ++ [SBS.pack (show (i :: Int))]
 
 backgroundColor :: AnimId -> Layer -> Draw.Color -> Vector2 R -> Frame
 backgroundColor animId layer color size =

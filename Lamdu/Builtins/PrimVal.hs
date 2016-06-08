@@ -2,33 +2,17 @@
 module Lamdu.Builtins.PrimVal
     ( KnownPrim(..)
     , fromKnown, toKnown
-    , floatType, bytesType
-    , nameOf
     ) where
 
 import           Data.Binary.Utils (encodeS, decodeS)
 import           Data.ByteString (ByteString)
 import           Lamdu.Builtins.Anchors (bytesTid, floatTid)
-import           Lamdu.Calc.Type (Type)
-import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Calc.Val as V
 
 data KnownPrim
     = Float Double
     | Bytes ByteString
     deriving (Eq, Ord, Show)
-
-nameOf :: T.NominalId -> String
-nameOf p
-    | p == bytesTid = "Bytes"
-    | p == floatTid = "Num"
-    | otherwise = error $ "Invalid prim id: " ++ show p
-
-floatType :: Type
-floatType = T.TInst floatTid mempty
-
-bytesType :: Type
-bytesType = T.TInst bytesTid mempty
 
 toKnown :: V.PrimVal -> KnownPrim
 toKnown (V.PrimVal litId bytes)

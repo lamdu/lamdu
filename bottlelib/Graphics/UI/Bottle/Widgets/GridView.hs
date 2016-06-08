@@ -1,6 +1,6 @@
 {-# LANGUAGE NoImplicitPrelude #-}
 module Graphics.UI.Bottle.Widgets.GridView
-    ( make, makePlacements, makeAlign, makeCentered
+    ( make, makePlacements
     , Alignment
     , verticalAlign, vertical
     , horizontalAlign, horizontal
@@ -71,15 +71,6 @@ make views =
             & concat
             <&> translate
             & mconcat
-
-makeAlign :: Alignment -> [[View]] -> View
-makeAlign alignment views =
-    views
-    & Lens.mapped . Lens.mapped %~ (,) alignment
-    & make
-
-makeCentered :: [[View]] -> View
-makeCentered = makeAlign 0.5
 
 vertical :: [(Alignment, View)] -> View
 vertical = make . map (:[])

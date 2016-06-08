@@ -1,7 +1,7 @@
 {-# LANGUAGE DeriveFunctor, NoImplicitPrelude, TemplateHaskell #-}
 module Graphics.UI.Bottle.Main
     ( Looper(..), newLooper
-    , Config(..), EventResult(..), M(..), m, mLiftWidget
+    , Config(..), EventResult(..), M(..), m
     ) where
 
 import           Control.Applicative (liftA2)
@@ -51,9 +51,6 @@ instance Monad M where
 
 instance MonadIO M where
     liftIO = M . fmap pure
-
-mLiftWidget :: Widget (IO a) -> Widget (M a)
-mLiftWidget = Widget.events %~ liftIO
 
 newtype Looper = Looper
     { runLooper ::

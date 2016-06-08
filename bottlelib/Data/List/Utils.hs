@@ -4,14 +4,12 @@ module Data.List.Utils
     , insertAt
     , removeAt
     , nonEmptyAll
-    , match
     , isLengthAtLeast
     , withPrevNext
     , rightPad
     ) where
 
 import qualified Control.Lens as Lens
-import           Control.Lens.Operators
 import           Data.Function (on)
 import           Data.List (groupBy, minimumBy)
 import           Data.Ord (comparing)
@@ -43,12 +41,6 @@ isLengthAtLeast n
 nonEmptyAll :: (a -> Bool) -> [a] -> Bool
 nonEmptyAll _ [] = False
 nonEmptyAll f xs = all f xs
-
-match :: (a -> b -> c) -> [a] -> [b] -> Maybe [c]
-match f (x:xs) (y:ys) =
-    match f xs ys <&> (f x y :)
-match _ [] [] = Just []
-match _ _ _ = Nothing
 
 withPrevNext :: k -> k -> (a -> k) -> [a] -> [(k, k, a)]
 withPrevNext before after f list =

@@ -237,8 +237,6 @@ data Config = Config
     , grammarColor :: Draw.Color
     , disabledColor :: Draw.Color
 
-    , listAddItemKeys :: [ModKey]
-
     , jumpLHStoRHSKeys :: [ModKey]
     , jumpRHStoLHSKeys :: [ModKey]
 

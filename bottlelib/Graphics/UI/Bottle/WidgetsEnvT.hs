@@ -11,9 +11,8 @@ module Graphics.UI.Bottle.WidgetsEnvT
 
     , localEnv
     , envAssignCursor, envAssignCursorPrefix
-    , assignCursor, assignCursorPrefix
 
-    , readTextStyle, setTextStyle
+    , readTextStyle
     , setTextColor
     ) where
 
@@ -72,9 +71,6 @@ isSubCursor = fmap isJust . subCursor
 readTextStyle :: Monad m => WidgetEnvT m TextEdit.Style
 readTextStyle = readEnv <&> (^. envTextStyle)
 
-setTextStyle :: Monad m => TextEdit.Style -> WidgetEnvT m a -> WidgetEnvT m a
-setTextStyle style = localEnv (envTextStyle .~ style)
-
 envAssignCursor
     :: Widget.Id -> Widget.Id -> Env -> Env
 envAssignCursor src dest =
@@ -93,16 +89,6 @@ envAssignCursorPrefix srcFolder dest =
             case Widget.subId srcFolder cursor of
             Nothing -> cursor
             Just suffix -> dest suffix
-
-assignCursor ::
-    Monad m => Widget.Id -> Widget.Id ->
-    WidgetEnvT m a -> WidgetEnvT m a
-assignCursor x y = localEnv $ envAssignCursor x y
-
-assignCursorPrefix ::
-    Monad m => Widget.Id -> (AnimId -> Widget.Id) ->
-    WidgetEnvT m a -> WidgetEnvT m a
-assignCursorPrefix x y = localEnv $ envAssignCursorPrefix x y
 
 localEnv :: Monad m => (Env -> Env) -> WidgetEnvT m a -> WidgetEnvT m a
 localEnv = (widgetEnvT %~) . Reader.local

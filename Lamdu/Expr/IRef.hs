@@ -5,15 +5,13 @@ module Lamdu.Expr.IRef
     , ValIProperty
     , Lam, Apply
     , newValBody, readValBody, writeValBody
-    , newVar
-    , newVal, writeVal, readVal
+    , newVar, newVal, readVal
     , writeValWithStoredSubexpressions
     , DefI
     , addProperties
 
     , globalId, defI, nominalI
 
-    , ValTree(..), ValTreeM, writeValTree
     ) where
 
 import           Control.DeepSeq (NFData)
@@ -77,16 +75,6 @@ writeValBody = Transaction.writeIRef . unValI
 newVal :: Monad m => Val () -> T m (ValI m)
 newVal = fmap (^. Val.payload . _1) . writeValWithStoredSubexpressions . ((,) Nothing <$>)
 
--- Returns expression with new UUIDs
-writeVal ::
-    Monad m =>
-    ValI m -> Val a ->
-    T m (Val (ValI m, a))
-writeVal iref =
-    writeValWithStoredSubexpressions .
-    (Val.payload . _1 .~ Just iref) .
-    fmap ((,) Nothing)
-
 readVal :: Monad m => ValI m -> T m (Val (ValI m))
 readVal =
     decycle loop
@@ -132,13 +120,3 @@ addProperties setIRef (Val (iref, a) body) =
             <&> (^. Val.payload . _1) -- convert to body of IRefs
             & Lens.element index .~ newIRef
             & writeValBody iref
-
-data ValTree m
-    = ValTreeLeaf (ValI m)
-    | ValTreeNode (V.Body (ValTree m))
-    deriving (Show)
-type ValTreeM m = ValTree m
-
-writeValTree :: Monad m => ValTreeM m -> T m (ValI m)
-writeValTree (ValTreeLeaf valI) = return valI
-writeValTree (ValTreeNode body) = newValBody =<< traverse writeValTree body

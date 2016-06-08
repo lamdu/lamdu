@@ -39,18 +39,6 @@ hash = fromUUID . randFunc . show
 branchSelection :: Id
 branchSelection = Id ["selected branch"]
 
-goUpId :: Id
-goUpId = Id ["go up"]
-
-parenHighlightId :: AnimId
-parenHighlightId = ["paren highlight"]
-
-parensPrefix :: AnimId -> AnimId
-parensPrefix = flip mappend ["parens"]
-
-underlineId :: AnimId -> AnimId
-underlineId = flip mappend ["underline"]
-
 activePaneBackground :: AnimId
 activePaneBackground = ["active def bg"]
 
