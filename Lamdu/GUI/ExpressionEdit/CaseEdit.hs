@@ -98,12 +98,13 @@ make (Sugar.Case mArg alts caseTail addAlt cEntityId) pl =
                         altsGui
                         & makeOpenCase rest (Widget.toAnimId myId)
         let addAltEventMap =
-                ExprGuiM.holePickersAction resultPickers >> addAlt
+                addAlt
                 <&> (^. Sugar.caarNewTag . Sugar.tagInstance)
                 <&> WidgetIds.fromEntityId
                 <&> TagEdit.diveToCaseTag
                 & Widget.keysEventMapMovesCursor (Config.caseAddAltKeys config)
                   (E.Doc ["Edit", "Case", "Add Alt"])
+                & ExprGuiM.withHolePickers resultPickers
         ExpressionGui.addValFrame myId
             <*> (ExpressionGui.vboxTopFocalSpaced ??
                  ([header, altsGui] <&> ExpressionGui.egAlignment . _1 .~ 0))

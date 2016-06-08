@@ -64,12 +64,13 @@ make record@(Sugar.Record fields recordTail addField) pl =
                     Sugar.RecordExtending rest ->
                         makeOpenRecord fieldsGui rest (Widget.toAnimId myId)
         let addFieldEventMap =
-                ExprGuiM.holePickersAction resultPickers >> addField
+                addField
                 <&> (^. Sugar.rafrNewTag . Sugar.tagInstance)
                 <&> WidgetIds.fromEntityId
                 <&> TagEdit.diveToRecordTag
                 & Widget.keysEventMapMovesCursor (Config.recordAddFieldKeys config)
                   (E.Doc ["Edit", "Record", "Add Field"])
+                & ExprGuiM.withHolePickers resultPickers
         gui
             & ExpressionGui.egWidget %~ Widget.weakerEvents addFieldEventMap
             & if addBg

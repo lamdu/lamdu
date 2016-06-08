@@ -21,7 +21,7 @@ module Lamdu.GUI.ExpressionGui.Monad
     , outerPrecedence
     , withLocalPrecedence
     --
-    , HolePickers, holePickersAddDocPrefix, holePickersAction
+    , HolePickers, withHolePickers
     , addResultPicker, listenResultPickers
     , run
     ) where
@@ -69,15 +69,18 @@ type T = Transaction
 
 type HolePickers m = [T m Widget.EventResult]
 
-holePickersAddDocPrefix :: HolePickers m -> E.Subtitle -> E.Subtitle
-holePickersAddDocPrefix [] doc = doc
-holePickersAddDocPrefix (_:_) doc =
-    doc
-    & Lens.element 0 %~ Char.toLower
-    & ("Pick result and " ++)
-
-holePickersAction :: Monad m => HolePickers m -> T m Widget.EventResult
-holePickersAction = fmap mconcat . sequence
+withHolePickers :: Monad m => HolePickers m -> E.EventMap (T m a) -> E.EventMap (T m a)
+withHolePickers [] e = e
+withHolePickers p@(_:_) e =
+    e
+    & E.emDocs . E.docStrs . Lens.reversed . Lens.element 0 %~ f
+    <&> (action >>)
+    where
+        action = p & sequence <&> mconcat
+        f x =
+            x
+            & Lens.element 0 %~ Char.toLower
+            & ("Pick result and " ++)
 
 newtype Output m = Output
     { oHolePickers :: HolePickers m
