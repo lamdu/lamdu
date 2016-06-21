@@ -23,7 +23,7 @@ packages:
     commit: 2c71e37ad055163a9926ee53e5297146de9b435c
 - location:
     git: https://github.com/lamdu/nodejs-exec
-    commit: 52fce18ec3cffac1104b04677cf038eff9629a7c
+    commit: 67272aca34a3ffc8dd35631215efc41a2061afeb
 extra-deps:
 - bitmap-0.0.2
 - bitmap-opengl-0.0.1.5
