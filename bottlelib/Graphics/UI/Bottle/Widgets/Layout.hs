@@ -49,31 +49,14 @@ boxOrientation Vertical = Box.vertical
 
 data BoxComponents a = BoxComponents
     { _widgetsBefore :: [(Widget.R, Widget a)]
-    , __focalWidget :: AlignedWidget a
+    , _focalWidget :: AlignedWidget a
     , _widgetsAfter :: [(Widget.R, Widget a)]
     }
-Lens.makeLenses ''BoxComponents
 
-boxComponentsAlignedWidgets ::
-    Lens.Getting Widget.R Box.Alignment Widget.R ->
-    Lens.Fold (BoxComponents a) (Widget.R, Widget a)
-boxComponentsAlignedWidgets getAlign = Lens.folding $
-    \(BoxComponents before (align, focal) after) ->
-    before ++ [(align ^. getAlign, focal)] ++ after
-
-data LayoutInternal a
-    = LayoutSingleton (AlignedWidget a)
-    | LayoutBox Orientation (BoxComponents a)
-
-data Layout a = Layout
-    { layoutInternal :: LayoutInternal a
-    , toAlignedWidget :: AlignedWidget a
+newtype Layout a = Layout
+    { _alignedWidget :: AlignedWidget a
     }
-
-{-# INLINE alignedWidget #-}
-alignedWidget ::
-    Lens.Iso (Layout a) (Layout b) (AlignedWidget a) (AlignedWidget b)
-alignedWidget = Lens.iso toAlignedWidget (mkLayout . LayoutSingleton)
+Lens.makeLenses ''Layout
 
 {-# INLINE alignment #-}
 alignment :: Lens' (Layout a) Box.Alignment
@@ -116,36 +99,16 @@ boxComponentsToWidget orientation (BoxComponents before awidget after) =
             , nonFocal after
             ]
 
-internalToAlignedWidget :: LayoutInternal a -> AlignedWidget a
-internalToAlignedWidget (LayoutSingleton w) = w
-internalToAlignedWidget (LayoutBox orientation boxComponents) =
-    boxComponentsToWidget orientation boxComponents
-
-mkLayout :: LayoutInternal a -> Layout a
-mkLayout li = Layout li (internalToAlignedWidget li)
-
 fromCenteredWidget :: Widget a -> Layout a
-fromCenteredWidget w = mkLayout $ LayoutSingleton (0.5, w)
+fromCenteredWidget w = Layout (0.5, w)
 
 empty :: Layout a
 empty = fromCenteredWidget Widget.empty
 
-toBoxComponents :: Orientation -> Layout a -> BoxComponents a
-toBoxComponents orientation layout =
-    case layoutInternal layout of
-    LayoutBox o boxComponents | o == orientation -> boxComponents
-    _ -> BoxComponents [] (layout ^. alignedWidget) []
-
 composeLayout ::
-    Orientation ->
-    (BoxComponents a -> BoxComponents a) ->
-    Layout a -> Layout a
-composeLayout orientation onBoxComponents layout =
-    layout
-    & toBoxComponents orientation
-    & onBoxComponents
-    & LayoutBox orientation
-    & mkLayout
+    Orientation -> BoxComponents a -> Layout a
+composeLayout orientation components =
+    boxComponentsToWidget orientation components & Layout
 
 class AddLayout w where
     type LayoutType w
@@ -157,10 +120,12 @@ aligned1d getter layout = layout ^. alignedWidget & _1 %~ (^. getter)
 
 instance align ~ Widget.R => AddLayout (align, Widget a) where
     type LayoutType (align, Widget a) = Layout a
-    addBefore orientation befores =
-        composeLayout orientation (widgetsBefore %~ (befores++))
-    addAfter orientation afters =
-        composeLayout orientation (widgetsAfter <>~ afters)
+    addBefore orientation befores layout =
+        BoxComponents befores (layout ^. alignedWidget) []
+        & composeLayout orientation
+    addAfter orientation afters layout=
+        BoxComponents [] (layout ^. alignedWidget) afters
+        & composeLayout orientation
 
 instance AddLayout (Layout a) where
     type LayoutType (Layout a) = Layout a
@@ -174,13 +139,12 @@ instance AddLayout (Layout a) where
 box :: Orientation -> Widget.R -> [Layout a] -> Layout a
 box orientation axisAlignment layouts =
     layouts
-    <&> toBoxComponents orientation
-    & (^.. Lens.traverse . boxComponentsAlignedWidgets (perpAxis orientation))
+    ^.. Lens.traversed . alignedWidget
+    <&> Lens._1 %~ (^. perpAxis orientation)
     & componentsFromList
     & boxComponentsToWidget orientation
     & _1 . axis orientation .~ axisAlignment
-    & LayoutSingleton
-    & mkLayout
+    & Layout
     where
         componentsFromList [] = BoxComponents [] (0, Widget.empty) []
         componentsFromList ((align, w):ws) = BoxComponents [] (pure align, w) ws
@@ -190,9 +154,6 @@ hbox = box Horizontal
 
 vbox :: Widget.R -> [Layout a] -> Layout a
 vbox = box Vertical
-
--- TODO: These functions and the AlignedWidget type could possibly be
--- extracted to their own module?
 
 -- | scale = scaleAround 0.5
 --   scaleFromTopMiddle = scaleAround (Vector2 0.5 0)
