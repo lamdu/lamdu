@@ -181,12 +181,15 @@ makeFocused cursor Style{..} str myId =
     where
         widget =
             Widget
-            { _view = View reqSize $ img <> cursorFrame
-            , _mEnter = Nothing
-            , _mFocus =
+            { _mFocus =
                 Just Widget.Focus
                 { _focalArea = cursorRect
                 , _fEventMap = eventMap cursor str displayStr myId
+                }
+            , _common =
+                Widget.WidgetCommon
+                { _cView = View reqSize $ img <> cursorFrame
+                , _cMEnter = Nothing
                 }
             }
         reqSize = Vector2 (_sCursorWidth + tlWidth) tlHeight

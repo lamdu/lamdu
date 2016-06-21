@@ -19,7 +19,8 @@ module Graphics.UI.Bottle.Widget
     , keysEventMapMovesCursor
 
     -- Widget type and lenses:
-    , Widget(..), view, mEnter, mFocus, eventMap
+    , Widget(..), mFocus, common, view, mEnter, eventMap
+    , WidgetCommon(..), cView, cMEnter
     , Focus(..), fEventMap, focalArea
     , animLayers, animFrame, size, width, height, events
 
@@ -98,9 +99,14 @@ data Focus a = Focus
     , _fEventMap :: EventMap a
     }
 
+-- TODO: Better name for this?
+data WidgetCommon a = WidgetCommon
+    { _cView :: View
+    , _cMEnter :: Maybe (Direction -> EnterResult a) -- Nothing if we're not enterable
+    }
+
 data Widget a = Widget
-    { _view :: View
-    , _mEnter :: Maybe (Direction -> EnterResult a) -- Nothing if we're not enterable
+    { _common :: WidgetCommon a
     , _mFocus :: Maybe (Focus a)
     }
 
@@ -111,6 +117,15 @@ Lens.makeLenses ''EnterResult
 Lens.makeLenses ''EventResult
 Lens.makeLenses ''Focus
 Lens.makeLenses ''Widget
+Lens.makeLenses ''WidgetCommon
+
+{-# INLINE mEnter #-}
+mEnter :: Lens' (Widget a) (Maybe (Direction -> EnterResult a))
+mEnter = common . cMEnter
+
+{-# INLINE view #-}
+view :: Lens' (Widget a) View
+view = common . cView
 
 isFocused :: Widget a -> Bool
 isFocused = Lens.has (mFocus . Lens._Just)
@@ -118,9 +133,12 @@ isFocused = Lens.has (mFocus . Lens._Just)
 empty :: Widget f
 empty =
     Widget
-    { _view = View.empty
-    , _mEnter = Nothing
-    , _mFocus = Nothing
+    { _mFocus = Nothing
+    , _common =
+        WidgetCommon
+        { _cView = View.empty
+        , _cMEnter = Nothing
+        }
     }
 
 {-# INLINE animFrame #-}
@@ -159,20 +177,23 @@ events =
     where
         atEvents :: (a -> b) -> Widget a -> Widget b
         atEvents f widget =
-            widget
-            { _mEnter =
-                  (Lens.mapped . Lens.mapped . enterResultEvent %~ f) $
-                  _mEnter widget
-            , _mFocus =
+            Widget
+            { _mFocus =
                 widget ^. mFocus & Lens._Just . fEventMap . Lens.mapped %~ f
+            , _common =
+                widget ^. common
+                & cMEnter . Lens.mapped . Lens.mapped . enterResultEvent %~ f
             }
 
 fromView :: View -> Widget f
 fromView v =
     Widget
     { _mFocus = Nothing
-    , _view = v
-    , _mEnter = Nothing
+    , _common =
+        WidgetCommon
+        { _cView = v
+        , _cMEnter = Nothing
+        }
     }
 
 takesFocus ::
@@ -248,20 +269,26 @@ keysEventMapMovesCursor keys doc act =
 translate :: Vector2 R -> Widget f -> Widget f
 translate pos widget =
     widget
-    & mEnter . Lens._Just . Lens.argument .
-        Direction.coordinates . Rect.topLeft -~ pos
-    & mEnter . Lens._Just . Lens.mapped .
-        enterResultRect . Rect.topLeft +~ pos
+    & mEnter . Lens._Just %~ onEnter
     & mFocus . Lens._Just . focalArea . Rect.topLeft +~ pos
     & view %~ View.translate pos
+    where
+        onEnter x =
+            x
+            & Lens.argument . Direction.coordinates . Rect.topLeft -~ pos
+            <&> enterResultRect . Rect.topLeft +~ pos
 
 scale :: Vector2 R -> Widget f -> Widget f
 scale mult widget =
     widget
     & view %~ View.scale mult
     & mFocus . Lens._Just . focalArea . Rect.topLeftAndSize *~ mult
-    & mEnter . Lens._Just . Lens.mapped . enterResultRect . Rect.topLeftAndSize *~ mult
-    & mEnter . Lens._Just . Lens.argument . Direction.coordinates . Rect.topLeftAndSize //~ mult
+    & mEnter . Lens._Just %~ onEnter
+    where
+        onEnter x =
+            x
+            <&> enterResultRect . Rect.topLeftAndSize *~ mult
+            & Lens.argument . Direction.coordinates . Rect.topLeftAndSize //~ mult
 
 -- Surround a widget with padding
 pad :: Vector2 R -> Widget f -> Widget f

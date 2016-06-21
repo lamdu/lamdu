@@ -229,9 +229,12 @@ type CombineEnters a =
 toWidgetCommon :: Keys ModKey -> CombineEnters a -> KGrid key a -> Widget a
 toWidgetCommon keys combineEnters (KGrid mCursor size sChildren) =
     Widget
-    { _view = View size frame
-    , _mEnter = combineEnters size mEnterss
-    , _mFocus = mFocus
+    { _mFocus = mFocus
+    , _common =
+        Widget.WidgetCommon
+        { _cView = View size frame
+        , _cMEnter = combineEnters size mEnterss
+        }
     }
     where
         frame = widgets ^. Lens.traverse . Lens.traverse . Widget.animFrame
