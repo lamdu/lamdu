@@ -174,10 +174,10 @@ instance AddLayout (Layout a) where
 box :: Orientation -> Widget.R -> [Layout a] -> Layout a
 box orientation axisAlignment layouts =
     layouts
-    <&> toBoxComponents Horizontal
+    <&> toBoxComponents orientation
     & (^.. Lens.traverse . boxComponentsAlignedWidgets (perpAxis orientation))
     & componentsFromList
-    & boxComponentsToWidget Horizontal
+    & boxComponentsToWidget orientation
     & _1 . axis orientation .~ axisAlignment
     & LayoutSingleton
     & mkLayout
