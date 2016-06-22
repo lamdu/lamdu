@@ -36,7 +36,7 @@ import qualified Graphics.UI.Bottle.ModKey as ModKey
 import           Graphics.UI.Bottle.Rect (Rect(..))
 import qualified Graphics.UI.Bottle.Rect as Rect
 import           Graphics.UI.Bottle.View (View(..))
-import           Graphics.UI.Bottle.Widget (R, Widget(Widget))
+import           Graphics.UI.Bottle.Widget (R, Widget(..))
 import qualified Graphics.UI.Bottle.Widget as Widget
 import           Graphics.UI.Bottle.Widgets.GridView (Alignment)
 import qualified Graphics.UI.Bottle.Widgets.GridView as GridView
@@ -228,36 +228,36 @@ type CombineEnters a =
 
 toWidgetCommon :: Keys ModKey -> CombineEnters a -> KGrid key a -> Widget a
 toWidgetCommon keys combineEnters (KGrid mCursor size sChildren) =
-    Widget
-    { _mFocus = mFocus
-    , _common =
-        Widget.WidgetCommon
-        { _cView = View size frame
-        , _cMEnter = combineEnters size mEnterss
+    case mCursor of
+    Nothing -> Widget.WidgetNotFocused common
+    Just cursor ->
+        Widget.WidgetFocused Widget.FocusedWidget
+        { _fEventMap =
+            selectedWidgetFocus ^. Widget.fEventMap
+            & addNavEventmap keys navDests
+        , _focalArea = selectedWidgetFocus ^. Widget.focalArea
+        , _fCommon = common
         }
-    }
+        where
+            selectedWidgetFocus =
+                selectedWidget ^? Widget._WidgetFocused
+                & fromMaybe (error "selected unfocused widget?")
+            selectedWidget = index2d widgets cursor
+            navDests =
+                mkNavDests size (selectedWidgetFocus ^. Widget.focalArea)
+                mEnterss cursor
     where
+        common =
+            Widget.WidgetCommon
+            { _cView = View size frame
+            , _cMEnter = combineEnters size mEnterss
+            }
         frame = widgets ^. Lens.traverse . Lens.traverse . Widget.animFrame
         translateChildWidget (_key, Element _align rect widget) =
             Widget.translate (rect ^. Rect.topLeft) widget
         widgets =
             sChildren & Lens.mapped . Lens.mapped %~ translateChildWidget
         mEnterss = widgets & Lens.mapped . Lens.mapped %~ (^. Widget.mEnter)
-        mFocus =
-            case mCursor of
-            Nothing -> Nothing
-            Just cursor ->
-                selectedWidgetFocus
-                & Widget.fEventMap %~ addNavEventmap keys navDests
-                & Just
-                where
-                    selectedWidgetFocus =
-                        selectedWidget ^. Widget.mFocus
-                        & fromMaybe (error "selected unfocused widget?")
-                    selectedWidget = index2d widgets cursor
-                    navDests =
-                        mkNavDests size (selectedWidgetFocus ^. Widget.focalArea)
-                        mEnterss cursor
 
 groupSortOn :: Ord b => (a -> b) -> [a] -> [[a]]
 groupSortOn f = groupOn f . sortOn f

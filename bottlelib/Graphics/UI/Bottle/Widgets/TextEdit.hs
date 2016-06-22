@@ -180,13 +180,10 @@ makeFocused cursor Style{..} str myId =
     makeFocusable Style{..} str myId widget
     where
         widget =
-            Widget
-            { _mFocus =
-                Just Widget.Focus
-                { _focalArea = cursorRect
-                , _fEventMap = eventMap cursor str displayStr myId
-                }
-            , _common =
+            Widget.WidgetFocused Widget.FocusedWidget
+            { _focalArea = cursorRect
+            , _fEventMap = eventMap cursor str displayStr myId
+            , _fCommon =
                 Widget.WidgetCommon
                 { _cView = View reqSize $ img <> cursorFrame
                 , _cMEnter = Nothing

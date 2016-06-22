@@ -19,9 +19,10 @@ module Graphics.UI.Bottle.Widget
     , keysEventMapMovesCursor
 
     -- Widget type and lenses:
-    , Widget(..), mFocus, common, view, mEnter, eventMap
+    , Widget(..), _WidgetFocused, _WidgetNotFocused
+    , common, view, mEnter, eventMap
     , WidgetCommon(..), cView, cMEnter
-    , Focus(..), fEventMap, focalArea
+    , FocusedWidget(..), fEventMap, focalArea
     , animLayers, animFrame, size, width, height, events
 
     , isFocused
@@ -94,30 +95,35 @@ data EnterResult a = EnterResult
     , _enterResultEvent :: a
     }
 
-data Focus a = Focus
-    { _focalArea :: Rect
-    , _fEventMap :: EventMap a
-    }
-
 -- TODO: Better name for this?
 data WidgetCommon a = WidgetCommon
     { _cView :: View
     , _cMEnter :: Maybe (Direction -> EnterResult a) -- Nothing if we're not enterable
     }
 
-data Widget a = Widget
-    { _common :: WidgetCommon a
-    , _mFocus :: Maybe (Focus a)
+data FocusedWidget a = FocusedWidget
+    { _focalArea :: Rect
+    , _fEventMap :: EventMap a
+    , _fCommon :: WidgetCommon a
     }
+
+data Widget a
+    = WidgetNotFocused (WidgetCommon a)
+    | WidgetFocused (FocusedWidget a)
 
 -- When focused, mEnter may still be relevant, e.g: FlyNav in an
 -- active textedit, to move to a different text-edit position.
 
 Lens.makeLenses ''EnterResult
 Lens.makeLenses ''EventResult
-Lens.makeLenses ''Focus
-Lens.makeLenses ''Widget
+Lens.makeLenses ''FocusedWidget
 Lens.makeLenses ''WidgetCommon
+Lens.makePrisms ''Widget
+
+{-# INLINE common #-}
+common :: Lens' (Widget a) (WidgetCommon a)
+common f (WidgetNotFocused x) = f x <&> WidgetNotFocused
+common f (WidgetFocused x) = fCommon f x <&> WidgetFocused
 
 {-# INLINE mEnter #-}
 mEnter :: Lens' (Widget a) (Maybe (Direction -> EnterResult a))
@@ -128,17 +134,13 @@ view :: Lens' (Widget a) View
 view = common . cView
 
 isFocused :: Widget a -> Bool
-isFocused = Lens.has (mFocus . Lens._Just)
+isFocused = Lens.has _WidgetFocused
 
-empty :: Widget f
+empty :: Widget a
 empty =
-    Widget
-    { _mFocus = Nothing
-    , _common =
-        WidgetCommon
-        { _cView = View.empty
-        , _cMEnter = Nothing
-        }
+    WidgetNotFocused WidgetCommon
+    { _cView = View.empty
+    , _cMEnter = Nothing
     }
 
 {-# INLINE animFrame #-}
@@ -163,7 +165,7 @@ height = view . View.height
 
 {-# INLINE eventMap #-}
 eventMap :: Lens.Traversal' (Widget a) (EventMap a)
-eventMap = mFocus . Lens._Just . fEventMap
+eventMap = _WidgetFocused . fEventMap
 
 eventResultFromCursor :: Id -> EventResult
 eventResultFromCursor cursor = EventResult
@@ -175,25 +177,23 @@ events :: Lens.Setter (Widget a) (Widget b) a b
 events =
     Lens.sets atEvents
     where
+        commonEvents = cMEnter . Lens.mapped . Lens.mapped . enterResultEvent
         atEvents :: (a -> b) -> Widget a -> Widget b
-        atEvents f widget =
-            Widget
-            { _mFocus =
-                widget ^. mFocus & Lens._Just . fEventMap . Lens.mapped %~ f
-            , _common =
-                widget ^. common
-                & cMEnter . Lens.mapped . Lens.mapped . enterResultEvent %~ f
+        atEvents f (WidgetNotFocused x) =
+            x
+            & commonEvents %~ f
+            & WidgetNotFocused
+        atEvents f (WidgetFocused x) =
+            WidgetFocused x
+            { _fEventMap = x ^. fEventMap <&> f
+            , _fCommon = x ^. fCommon & commonEvents %~ f
             }
 
 fromView :: View -> Widget f
 fromView v =
-    Widget
-    { _mFocus = Nothing
-    , _common =
-        WidgetCommon
-        { _cView = v
-        , _cMEnter = Nothing
-        }
+    WidgetNotFocused WidgetCommon
+    { _cView = v
+    , _cMEnter = Nothing
     }
 
 takesFocus ::
@@ -266,11 +266,11 @@ keysEventMapMovesCursor keys doc act =
 -- TODO: This actually makes an incorrect widget because its size
 -- remains same, but it is now translated away from 0..size
 -- Should expose higher-level combinators instead?
-translate :: Vector2 R -> Widget f -> Widget f
+translate :: Vector2 R -> Widget a -> Widget a
 translate pos widget =
     widget
     & mEnter . Lens._Just %~ onEnter
-    & mFocus . Lens._Just . focalArea . Rect.topLeft +~ pos
+    & _WidgetFocused . focalArea . Rect.topLeft +~ pos
     & view %~ View.translate pos
     where
         onEnter x =
@@ -282,7 +282,7 @@ scale :: Vector2 R -> Widget f -> Widget f
 scale mult widget =
     widget
     & view %~ View.scale mult
-    & mFocus . Lens._Just . focalArea . Rect.topLeftAndSize *~ mult
+    & _WidgetFocused . focalArea . Rect.topLeftAndSize *~ mult
     & mEnter . Lens._Just %~ onEnter
     where
         onEnter x =
@@ -324,12 +324,16 @@ respondToCursorBy f env
     | otherwise = id
 
 respondToCursor :: Widget f -> Widget f
-respondToCursor widget =
-    widget & mFocus .~ Just
-        Focus
-        { _focalArea = Rect 0 (widget ^. size)
-        , _fEventMap = mempty
-        }
+respondToCursor (WidgetNotFocused x) =
+    WidgetFocused FocusedWidget
+    { _focalArea = Rect 0 (x ^. cView . View.size)
+    , _fEventMap = mempty
+    , _fCommon = x
+    }
+respondToCursor (WidgetFocused x) =
+    x
+    & focalArea .~ Rect 0 (x ^. fCommon . cView . View.size)
+    & WidgetFocused
 
 cursorAnimId :: AnimId
 cursorAnimId = ["background"]
@@ -340,7 +344,7 @@ newtype CursorConfig = CursorConfig
 
 renderWithCursor :: CursorConfig -> Widget a -> Anim.Frame
 renderWithCursor CursorConfig{..} widget =
-    maybe mempty renderCursor (widget ^? mFocus . Lens._Just . focalArea)
+    maybe mempty renderCursor (widget ^? _WidgetFocused . focalArea)
     & mappend (widget ^. animFrame)
     where
         minLayer = fromMaybe 0 (Lens.minimumOf animLayers widget)
