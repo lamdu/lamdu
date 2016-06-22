@@ -75,8 +75,7 @@ newLooper =
                     when anyUpdate newWidget
                     widget <- getWidget size
                     EventResult runInMainThread tickResults <-
-                        sequenceA
-                        (widget ^. Widget.mFocus . Lens._Just . Widget.eventMap . E.emTickHandlers)
+                        sequenceA (widget ^. Widget.eventMap . E.emTickHandlers)
                         ^. m
                     unless (null tickResults) newWidget
                     return MainAnim.EventResult
@@ -89,8 +88,9 @@ newLooper =
             , MainAnim.eventHandler = \event ->
                 do
                     widget <- getWidget size
-                    let eventMap = widget ^. Widget.mFocus . Lens._Just . Widget.eventMap
-                    mWidgetRes <- E.lookup (GLFW.getClipboardString win) event eventMap
+                    mWidgetRes <-
+                        E.lookup (GLFW.getClipboardString win) event
+                        (widget ^. Widget.eventMap)
                     EventResult runInMainThread mAnimIdMapping <-
                         (sequenceA mWidgetRes <&> fmap (^. Widget.eAnimIdMapping)) ^. m
                     case mAnimIdMapping of

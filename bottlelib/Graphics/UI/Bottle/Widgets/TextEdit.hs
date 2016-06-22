@@ -186,7 +186,7 @@ makeFocused cursor Style{..} str myId =
             , _mFocus =
                 Just Widget.Focus
                 { _focalArea = cursorRect
-                , _eventMap = eventMap cursor str displayStr myId
+                , _fEventMap = eventMap cursor str displayStr myId
                 }
             }
         reqSize = Vector2 (_sCursorWidth + tlWidth) tlHeight

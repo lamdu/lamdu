@@ -17,7 +17,6 @@ module Graphics.UI.Bottle.Widgets
     , respondToCursorPrefix
     ) where
 
-import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Lens.Tuple
 import           Control.Monad (when)
@@ -131,7 +130,7 @@ makeTextEditor textRef myId =
 
 deleteKeyEventHandler :: ModKey -> Widget a -> Widget a
 deleteKeyEventHandler key =
-    Widget.mFocus . Lens._Just . Widget.eventMap %~
+    Widget.eventMap %~
     EventMap.deleteKey (EventMap.KeyEvent GLFW.KeyState'Pressed key)
 
 -- TODO: Editor, not Edit (consistent with makeTextEditor vs. makeTextEdit)

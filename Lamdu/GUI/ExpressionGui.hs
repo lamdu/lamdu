@@ -574,7 +574,7 @@ makeNameEditWith onActiveEditor (Name nameSrc nameCollision setName name) myId =
             NameSourceStored -> name
         makeWordEdit =
             BWidgets.makeWordEdit
-            <&> Lens.mapped . Lens.mapped . Widget.mFocus . Lens._Just . Widget.eventMap
+            <&> Lens.mapped . Lens.mapped . Widget.eventMap
                 %~ E.filterChars (`notElem` disallowedNameChars)
 
 stdWrap ::

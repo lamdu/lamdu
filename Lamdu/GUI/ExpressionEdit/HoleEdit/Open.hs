@@ -333,7 +333,7 @@ makeHoleResultWidget resultId holeResult =
                 -- event maps of any result (we actually use the first one's
                 -- event map)
                 ExprGuiM.localEnv (WE.envCursor .~ idWithinResultWidget) mkWidget
-                <&> (^. Widget.mFocus . Lens._Just . Widget.eventMap)
+                <&> (^. Widget.eventMap)
         widget <-
             ExprGuiM.widgetEnv BWidgets.liftLayerInterval
             <*> (makeFocusable resultId <*> mkWidget)

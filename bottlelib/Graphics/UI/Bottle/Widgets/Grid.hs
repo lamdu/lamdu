@@ -245,7 +245,7 @@ toWidgetCommon keys combineEnters (KGrid mCursor size sChildren) =
             Nothing -> Nothing
             Just cursor ->
                 selectedWidgetFocus
-                & Widget.eventMap %~ addNavEventmap keys navDests
+                & Widget.fEventMap %~ addNavEventmap keys navDests
                 & Just
                 where
                     selectedWidgetFocus =

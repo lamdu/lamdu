@@ -19,8 +19,8 @@ module Graphics.UI.Bottle.Widget
     , keysEventMapMovesCursor
 
     -- Widget type and lenses:
-    , Widget(..), view, mEnter, mFocus
-    , Focus(..), eventMap, focalArea
+    , Widget(..), view, mEnter, mFocus, eventMap
+    , Focus(..), fEventMap, focalArea
     , animLayers, animFrame, size, width, height, events
 
     , isFocused
@@ -95,7 +95,7 @@ data EnterResult a = EnterResult
 
 data Focus a = Focus
     { _focalArea :: Rect
-    , _eventMap :: EventMap a
+    , _fEventMap :: EventMap a
     }
 
 data Widget a = Widget
@@ -143,6 +143,10 @@ width = view . View.width
 height :: Lens' (Widget f) R
 height = view . View.height
 
+{-# INLINE eventMap #-}
+eventMap :: Lens.Traversal' (Widget a) (EventMap a)
+eventMap = mFocus . Lens._Just . fEventMap
+
 eventResultFromCursor :: Id -> EventResult
 eventResultFromCursor cursor = EventResult
     { _eCursor = Monoid.Last $ Just cursor
@@ -160,7 +164,7 @@ events =
                   (Lens.mapped . Lens.mapped . enterResultEvent %~ f) $
                   _mEnter widget
             , _mFocus =
-                widget ^. mFocus & Lens._Just . eventMap . Lens.mapped %~ f
+                widget ^. mFocus & Lens._Just . fEventMap . Lens.mapped %~ f
             }
 
 fromView :: View -> Widget f
@@ -187,11 +191,11 @@ doesntTakeFocus = mEnter .~ Nothing
 
 -- ^ If doesn't take focus, does nothing
 strongerEvents :: EventMap a -> Widget a -> Widget a
-strongerEvents eMap = mFocus . Lens._Just . eventMap %~ (eMap `mappend`)
+strongerEvents eMap = eventMap %~ (eMap `mappend`)
 
 -- ^ If doesn't take focus, does nothing
 weakerEvents :: EventMap a -> Widget a -> Widget a
-weakerEvents eMap = mFocus . Lens._Just . eventMap %~ (`mappend` eMap)
+weakerEvents eMap = eventMap %~ (`mappend` eMap)
 
 backgroundColor :: Int -> AnimId -> Draw.Color -> Widget a -> Widget a
 backgroundColor layer animId color =
@@ -297,7 +301,7 @@ respondToCursor widget =
     widget & mFocus .~ Just
         Focus
         { _focalArea = Rect 0 (widget ^. size)
-        , _eventMap = mempty
+        , _fEventMap = mempty
         }
 
 cursorAnimId :: AnimId

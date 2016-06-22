@@ -166,13 +166,13 @@ make _ _ Nothing setState w =
     w & Widget.mFocus . Lens._Just %~ f
     where
         f focus =
-            focus & Widget.eventMap <>~ addMovements center [] setState
+            focus & Widget.fEventMap <>~ addMovements center [] setState
             where
                 center = focus ^. Widget.focalArea . Rect.center
 make config animId (Just (ActiveState pos movements)) setState w =
     w
     & Widget.animFrame %~ mappend frame
-    & Widget.mFocus . Lens._Just . Widget.eventMap .~ eventMap
+    & Widget.eventMap .~ eventMap
     where
         delta = sum $ map (^. mDir) movements
         highlight =

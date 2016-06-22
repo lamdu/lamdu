@@ -5,7 +5,6 @@ module Graphics.UI.Bottle.Widgets.FocusDelegator
     , make
     ) where
 
-import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Graphics.UI.Bottle.Direction (Direction)
 import qualified Graphics.UI.Bottle.Direction as Direction
@@ -32,7 +31,7 @@ setFocusChildEventMap Config{..} widgetRecord =
     -- We're not delegating, so replace the child eventmap with an
     -- event map to either delegate to it (if it is enterable) or to
     -- nothing (if it is not):
-    & Widget.mFocus . Lens._Just . Widget.eventMap .~ neeventMap
+    & Widget.eventMap .~ neeventMap
     where
         neeventMap =
             case widgetRecord ^. Widget.mEnter of

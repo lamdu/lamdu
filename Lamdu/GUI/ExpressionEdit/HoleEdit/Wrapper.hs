@@ -4,7 +4,6 @@ module Lamdu.GUI.ExpressionEdit.HoleEdit.Wrapper
     ( make
     ) where
 
-import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Lens.Tuple
 import           Data.Monoid ((<>))
@@ -90,7 +89,7 @@ make WidgetIds{..} arg =
                 Widget.addInnerFrame
                 (Config.layerTypeIndicatorFrame (Config.layers config))
                 frameId frameColor frameWidth
-            <&> ExpressionGui.egWidget . Widget.mFocus . Lens._Just . Widget.eventMap %~
+            <&> ExpressionGui.egWidget . Widget.eventMap %~
                 modifyWrappedEventMap config argIsFocused arg WidgetIds{..}
             <&> ExpressionGui.egWidget %~ Widget.weakerEvents unwrapEventMap
     where
