@@ -8,7 +8,7 @@ module Graphics.UI.Bottle.Widgets.Layout
     , alignment, widget, width
     , fromCenteredWidget
 
-    , AddLayout(..)
+    , addBefore, addAfter
 
     , Orientation(..)
     , box, hbox, vbox
@@ -39,18 +39,14 @@ axis :: Orientation -> Lens' (Vector2 a) a
 axis Horizontal = _1
 axis Vertical = _2
 
-perpAxis :: Orientation -> Lens' (Vector2 a) a
-perpAxis Vertical = _1
-perpAxis Horizontal = _2
-
 boxOrientation :: Orientation -> Box.Orientation
 boxOrientation Horizontal = Box.horizontal
 boxOrientation Vertical = Box.vertical
 
 data BoxComponents a = BoxComponents
-    { _widgetsBefore :: [(Widget.R, Widget a)]
-    , _focalWidget :: AlignedWidget a
-    , _widgetsAfter :: [(Widget.R, Widget a)]
+    { _widgetsBefore :: [Layout a]
+    , _focalWidget :: Layout a
+    , _widgetsAfter :: [Layout a]
     }
 
 newtype Layout a = Layout
@@ -80,23 +76,22 @@ absAlignedWidget =
         fromAbs (absAlign, w) = (absAlign / w ^. Widget.size, w)
 
 boxComponentsToWidget ::
-    Orientation -> BoxComponents a -> AlignedWidget a
+    Orientation -> BoxComponents a -> Layout a
 boxComponentsToWidget orientation (BoxComponents before awidget after) =
+    Layout
     ( kbox ^?!
       Box.boxContent . Lens.traverse . Lens.filtered fst . _2 . Box.elementAlign
     , kbox & Box.toWidget
     )
     where
-        kbox = Box.makeKeyed (boxOrientation orientation) children
-        nonFocal widgets =
-            widgets
-            <&> _1 %~ pure
-            <&> (,) False
+        kbox =
+            children <&> Lens._2 %~ (^. alignedWidget)
+            & Box.makeKeyed (boxOrientation orientation)
         children =
             concat
-            [ nonFocal before
+            [ before <&> (,) False
             , [ awidget & (,) True ]
-            , nonFocal after
+            , after <&> (,) False
             ]
 
 fromCenteredWidget :: Widget a -> Layout a
@@ -105,49 +100,25 @@ fromCenteredWidget w = Layout (0.5, w)
 empty :: Layout a
 empty = fromCenteredWidget Widget.empty
 
-composeLayout ::
-    Orientation -> BoxComponents a -> Layout a
-composeLayout orientation components =
-    boxComponentsToWidget orientation components & Layout
-
-class AddLayout w where
-    type LayoutType w
-    addBefore :: Orientation -> [w] -> LayoutType w -> LayoutType w
-    addAfter :: Orientation -> [w] -> LayoutType w -> LayoutType w
-
-aligned1d :: Lens.Getting b Box.Alignment b -> Layout a -> (b, Widget a)
-aligned1d getter layout = layout ^. alignedWidget & _1 %~ (^. getter)
-
-instance align ~ Widget.R => AddLayout (align, Widget a) where
-    type LayoutType (align, Widget a) = Layout a
-    addBefore orientation befores layout =
-        BoxComponents befores (layout ^. alignedWidget) []
-        & composeLayout orientation
-    addAfter orientation afters layout=
-        BoxComponents [] (layout ^. alignedWidget) afters
-        & composeLayout orientation
-
-instance AddLayout (Layout a) where
-    type LayoutType (Layout a) = Layout a
-    addBefore orientation =
-        addBefore orientation . map (aligned1d (perpAxis orientation))
-    addAfter orientation =
-        addAfter orientation . map (aligned1d (perpAxis orientation))
+addBefore :: Orientation -> [Layout a] -> Layout a -> Layout a
+addBefore orientation befores layout =
+    BoxComponents befores layout []
+    & boxComponentsToWidget orientation
+addAfter :: Orientation -> [Layout a] -> Layout a -> Layout a
+addAfter orientation afters layout =
+    BoxComponents [] layout afters
+    & boxComponentsToWidget orientation
 
 -- The axisAlignment is the alignment point to choose within the resulting box
 -- i.e: Horizontal box -> choose eventual horizontal alignment point
 box :: Orientation -> Widget.R -> [Layout a] -> Layout a
 box orientation axisAlignment layouts =
-    layouts
-    ^.. Lens.traversed . alignedWidget
-    <&> Lens._1 %~ (^. perpAxis orientation)
-    & componentsFromList
+    componentsFromList layouts
     & boxComponentsToWidget orientation
-    & _1 . axis orientation .~ axisAlignment
-    & Layout
+    & alignedWidget . _1 . axis orientation .~ axisAlignment
     where
-        componentsFromList [] = BoxComponents [] (0, Widget.empty) []
-        componentsFromList ((align, w):ws) = BoxComponents [] (pure align, w) ws
+        componentsFromList [] = BoxComponents [] (Layout (0, Widget.empty)) []
+        componentsFromList (w:ws) = BoxComponents [] w ws
 
 hbox :: Widget.R -> [Layout a] -> Layout a
 hbox = box Horizontal

@@ -511,7 +511,10 @@ makeUnderCursorAssignment shownResultsLists hasHiddenResults holeInfo =
                       ) ^. ExpressionGui.toLayout
             in
                 w
-                & Layout.addAfter Layout.Vertical [(0, hoverResultsWidget)]
+                & Layout.addAfter Layout.Vertical
+                    [ Layout.fromCenteredWidget hoverResultsWidget
+                        & Layout.alignment . _1 .~ 0
+                    ]
                 & alignment .~ w ^. alignment
     where
         alignment :: Lens' (Layout f) Box.Alignment
