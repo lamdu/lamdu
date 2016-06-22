@@ -1,10 +1,10 @@
-{-# LANGUAGE TypeFamilies, UndecidableInstances, ConstraintKinds #-}
+{-# LANGUAGE TypeFamilies, ConstraintKinds, UndecidableInstances #-}
 
 module Data.Traversable.Generalized
     ( GTraversable(..), Constraints
     ) where
 
-import Control.Lens (Settable, mapped, _1, _2, _Just, _Wrapped)
+import Control.Lens (_1, _2, _Just, _Wrapped)
 import Control.Monad.Trans.Maybe (MaybeT)
 import Control.Monad.Trans.Reader (ReaderT)
 import Control.Monad.Trans.State (StateT)
@@ -15,7 +15,7 @@ import GHC.Exts (Constraint)
 
 type Constraints t f = (GTraversable t, Functor f, GTConstraints t f)
 
-class Functor t => GTraversable t where
+class (Functor t, GTConstraints t Identity) => GTraversable t where
     type GTConstraints t (f :: * -> *) :: Constraint
     type GTConstraints t f = ()
     gTraverse :: Constraints t f => (a -> f b) -> t a -> f (t b)
@@ -51,9 +51,9 @@ instance GTraversable m => GTraversable (WriterT w m) where
     gTraverse = _Wrapped . gTraverse . _1
 
 instance GTraversable m => GTraversable (ReaderT r m) where
-    type GTConstraints (ReaderT r m) f = (GTConstraints m f, Settable f)
-    gTraverse = _Wrapped . mapped . gTraverse
+    type GTConstraints (ReaderT r m) f = (GTConstraints m f, Distributive f)
+    gTraverse = _Wrapped . collect . gTraverse
 
 instance GTraversable m => GTraversable (StateT s m) where
-    type GTConstraints (StateT s m) f = (GTConstraints m f, Settable f)
-    gTraverse = _Wrapped . mapped . gTraverse . _1
+    type GTConstraints (StateT s m) f = (GTConstraints m f, Distributive f)
+    gTraverse = _Wrapped . collect . gTraverse . _1

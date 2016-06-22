@@ -36,7 +36,7 @@ import qualified Graphics.UI.Bottle.ModKey as ModKey
 import           Graphics.UI.Bottle.Rect (Rect(..))
 import qualified Graphics.UI.Bottle.Rect as Rect
 import           Graphics.UI.Bottle.View (View(..))
-import           Graphics.UI.Bottle.Widget (R, Widget(..))
+import           Graphics.UI.Bottle.Widget (R, Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import           Graphics.UI.Bottle.Widgets.GridView (Alignment)
 import qualified Graphics.UI.Bottle.Widgets.GridView as GridView
@@ -229,18 +229,18 @@ type CombineEnters a =
 toWidgetCommon :: Keys ModKey -> CombineEnters a -> KGrid key a -> Widget a
 toWidgetCommon keys combineEnters (KGrid mCursor size sChildren) =
     case mCursor of
-    Nothing -> Widget.WidgetNotFocused common
+    Nothing -> pure common & Widget.WidgetNotFocused
     Just cursor ->
-        Widget.WidgetFocused Widget.FocusedWidget
+        pure Widget.FocusedWidget
         { _fEventMap =
             selectedWidgetFocus ^. Widget.fEventMap
             & addNavEventmap keys navDests
         , _focalArea = selectedWidgetFocus ^. Widget.focalArea
         , _fCommon = common
-        }
+        } & Widget.WidgetFocused
         where
             selectedWidgetFocus =
-                selectedWidget ^? Widget._WidgetFocused
+                selectedWidget ^? Widget._WidgetFocused . Lens._Wrapped
                 & fromMaybe (error "selected unfocused widget?")
             selectedWidget = index2d widgets cursor
             navDests =

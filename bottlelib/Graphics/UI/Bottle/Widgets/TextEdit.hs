@@ -23,6 +23,7 @@ import           Data.Maybe (mapMaybe)
 import           Data.Monoid ((<>))
 import qualified Data.Monoid as Monoid
 import qualified Data.Set as Set
+import           Data.Traversable.Generalized (GTraversable(..))
 import           Data.Vector.Vector2 (Vector2(..))
 import qualified Graphics.DrawingCombinators as Draw
 import           Graphics.DrawingCombinators.Utils (TextSize(..))
@@ -34,7 +35,7 @@ import qualified Graphics.UI.Bottle.ModKey as ModKey
 import           Graphics.UI.Bottle.Rect (Rect(..))
 import qualified Graphics.UI.Bottle.Rect as Rect
 import           Graphics.UI.Bottle.View (View(..))
-import           Graphics.UI.Bottle.Widget (Widget(..))
+import           Graphics.UI.Bottle.Widget (Widget, WidgetF(..))
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
 import qualified Graphics.UI.GLFW as GLFW
@@ -133,8 +134,10 @@ enterFromDirection Style{..} str myId dir =
         cursorRect = mkCursorRect Style{..} cursor str
 
 makeFocusable ::
+    GTraversable t =>
     Style -> String -> Widget.Id ->
-    Widget (String, Widget.EventResult) -> Widget (String, Widget.EventResult)
+    WidgetF t (String, Widget.EventResult) ->
+    WidgetF t (String, Widget.EventResult)
 makeFocusable style str myId =
     Widget.mEnter .~ Just (enterFromDirection style str myId)
 
@@ -180,7 +183,7 @@ makeFocused cursor Style{..} str myId =
     makeFocusable Style{..} str myId widget
     where
         widget =
-            Widget.WidgetFocused Widget.FocusedWidget
+            pure Widget.FocusedWidget
             { _focalArea = cursorRect
             , _fEventMap = eventMap cursor str displayStr myId
             , _fCommon =
@@ -188,7 +191,7 @@ makeFocused cursor Style{..} str myId =
                 { _cView = View reqSize $ img <> cursorFrame
                 , _cMEnter = Nothing
                 }
-            }
+            } & Widget.WidgetFocused
         reqSize = Vector2 (_sCursorWidth + tlWidth) tlHeight
         myAnimId = Widget.toAnimId myId
         img = cursorTranslate Style{..} $ frameGen myAnimId
