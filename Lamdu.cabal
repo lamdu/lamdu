@@ -54,6 +54,7 @@ Library
                   , Data.Store.Rev.Version
                   , Data.Store.Rev.View
                   , Data.Store.Transaction
+                  , Data.Traversable.Generalized
                   , Data.UUID.Utils
                   , Data.Vector.Vector2
                   , Foreign.C.Types.Instances
@@ -107,6 +108,7 @@ Library
                   , deepseq
                   , deepseq-generics >= 0.1
                   , directory >= 1.0.1.1
+                  , distributive
                   , either
                   , filepath >= 1.1
                   , graphics-drawingcombinators >= 1.6
