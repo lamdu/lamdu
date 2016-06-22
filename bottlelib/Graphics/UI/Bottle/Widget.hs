@@ -144,23 +144,23 @@ empty =
     }
 
 {-# INLINE animFrame #-}
-animFrame :: Lens' (Widget f) Anim.Frame
+animFrame :: Lens' (Widget a) Anim.Frame
 animFrame = view . View.animFrame
 
 {-# INLINE animLayers #-}
-animLayers :: Lens.Traversal' (Widget f) Anim.Layer
+animLayers :: Lens.Traversal' (Widget a) Anim.Layer
 animLayers = animFrame . Anim.layers
 
 {-# INLINE size #-}
-size :: Lens' (Widget f) Size
+size :: Lens' (Widget a) Size
 size = view . View.size
 
 {-# INLINE width #-}
-width :: Lens' (Widget f) R
+width :: Lens' (Widget a) R
 width = view . View.width
 
 {-# INLINE height #-}
-height :: Lens' (Widget f) R
+height :: Lens' (Widget a) R
 height = view . View.height
 
 {-# INLINE eventMap #-}
@@ -189,7 +189,7 @@ events =
             , _fCommon = x ^. fCommon & commonEvents %~ f
             }
 
-fromView :: View -> Widget f
+fromView :: View -> Widget a
 fromView v =
     WidgetNotFocused WidgetCommon
     { _cView = v
@@ -246,7 +246,7 @@ applyIdMapping widgetIdMap eventResult =
         mapCursor (Id oldCursor) =
             Id $ Anim.mappingFromPrefixMap animIdMap oldCursor
 
-tint :: Draw.Color -> Widget f -> Widget f
+tint :: Draw.Color -> Widget a -> Widget a
 tint color = view %~ View.tint color
 
 keysEventMap ::
@@ -278,7 +278,7 @@ translate pos widget =
             & Lens.argument . Direction.coordinates . Rect.topLeft -~ pos
             <&> enterResultRect . Rect.topLeft +~ pos
 
-scale :: Vector2 R -> Widget f -> Widget f
+scale :: Vector2 R -> Widget a -> Widget a
 scale mult widget =
     widget
     & view %~ View.scale mult
@@ -291,16 +291,16 @@ scale mult widget =
             & Lens.argument . Direction.coordinates . Rect.topLeftAndSize //~ mult
 
 -- Surround a widget with padding
-pad :: Vector2 R -> Widget f -> Widget f
+pad :: Vector2 R -> Widget a -> Widget a
 pad p = assymetricPad p p
 
-assymetricPad :: Vector2 R -> Vector2 R -> Widget f -> Widget f
+assymetricPad :: Vector2 R -> Vector2 R -> Widget a -> Widget a
 assymetricPad leftAndTop rightAndBottom widget =
     widget
     & size +~ leftAndTop + rightAndBottom
     & translate leftAndTop
 
-padToSizeAlign :: Size -> Vector2 R -> Widget f -> Widget f
+padToSizeAlign :: Size -> Vector2 R -> Widget a -> Widget a
 padToSizeAlign newSize alignment widget =
     widget
     & translate (sizeDiff * alignment)
@@ -323,7 +323,7 @@ respondToCursorBy f env
     | f (env ^. envCursor) = respondToCursor
     | otherwise = id
 
-respondToCursor :: Widget f -> Widget f
+respondToCursor :: Widget a -> Widget a
 respondToCursor (WidgetNotFocused x) =
     WidgetFocused FocusedWidget
     { _focalArea = Rect 0 (x ^. cView . View.size)
