@@ -25,6 +25,13 @@ stack install
 
 #### ubuntu
 
+Optionally: install nodejs from node's apt repository:
+
+```shell
+curl -sL https://deb.nodesource.com/setup_6.x | sudo -E bash -
+sudo apt-get install -y nodejs
+```
+
 requires [stack](https://github.com/commercialhaskell/stack/releases)
 ```shell
 sudo apt-get update -qq
@@ -61,6 +68,15 @@ stack install
 ~/.local/bin/lamdu
 
 ```
+
+### Optionally installing [nodejs](https://nodejs.org/en/)
+
+To speed up Lamdu's installation under any OS, you can install `nodejs
+>= 6.2.1`, such that `node` is in your `$PATH`.
+
+If you do not install nodejs, Lamdu's installation will build it from
+source.
+
 ## Tutorial
 
 ### Simple expressions
