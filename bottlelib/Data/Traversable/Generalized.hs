@@ -1,7 +1,7 @@
-{-# LANGUAGE TypeFamilies, UndecidableInstances #-}
+{-# LANGUAGE TypeFamilies, UndecidableInstances, ConstraintKinds #-}
 
 module Data.Traversable.Generalized
-    ( GTraversable(..)
+    ( GTraversable(..), Constraints
     ) where
 
 import Control.Lens (Settable, mapped, _1, _2, _Just, _Wrapped)
@@ -11,62 +11,49 @@ import Control.Monad.Trans.State (StateT)
 import Control.Monad.Trans.Writer (WriterT)
 import Data.Distributive (Distributive(..))
 import Data.Functor.Identity (Identity(..))
-import Data.Set (Set)
-import Data.Set.Lens (setmapped)
 import GHC.Exts (Constraint)
 
-class GTraversable t where
-    type Constraints t (f :: * -> *) :: Constraint
-    type Constraints t f = ()
-    type ValConstraints t a :: Constraint
-    type ValConstraints t a = ()
-    gTraverse ::
-        (Functor f, Constraints t f, ValConstraints t a, ValConstraints t b) =>
-        (a -> f b) -> t a -> f (t b)
+type Constraints t f = (GTraversable t, Functor f, GTConstraints t f)
+
+class Functor t => GTraversable t where
+    type GTConstraints t (f :: * -> *) :: Constraint
+    type GTConstraints t f = ()
+    gTraverse :: Constraints t f => (a -> f b) -> t a -> f (t b)
 
 instance GTraversable Identity where
     gTraverse = _Wrapped
 
 instance GTraversable [] where
-    type Constraints [] f = Applicative f
+    type GTConstraints [] f = Applicative f
     gTraverse = traverse
 
-instance GTraversable Set where
-    type Constraints Set f = Settable f
-    type ValConstraints Set a = Ord a
-    gTraverse = setmapped
-
 instance GTraversable Maybe where
-    type Constraints Maybe f = Applicative f
+    type GTConstraints Maybe f = Applicative f
     gTraverse = traverse
 
 instance GTraversable (Either e) where
-    type Constraints (Either e) f = Applicative f
+    type GTConstraints (Either e) f = Applicative f
     gTraverse = traverse
 
 instance GTraversable ((,) w) where
     gTraverse = _2
 
 instance GTraversable ((->) r) where
-    type Constraints ((->) r) f = Distributive f
+    type GTConstraints ((->) r) f = Distributive f
     gTraverse = collect
 
 instance GTraversable m => GTraversable (MaybeT m) where
-    type Constraints (MaybeT m) f = (Constraints m f, Applicative f)
-    type ValConstraints (MaybeT m) a = (ValConstraints m (Maybe a))
+    type GTConstraints (MaybeT m) f = (GTConstraints m f, Applicative f)
     gTraverse = _Wrapped . gTraverse . _Just
 
 instance GTraversable m => GTraversable (WriterT w m) where
-    type Constraints (WriterT w m) f = Constraints m f
-    type ValConstraints (WriterT w m) a = ValConstraints m (a, w)
+    type GTConstraints (WriterT w m) f = GTConstraints m f
     gTraverse = _Wrapped . gTraverse . _1
 
 instance GTraversable m => GTraversable (ReaderT r m) where
-    type Constraints (ReaderT r m) f = (Constraints m f, Settable f)
-    type ValConstraints (ReaderT r m) a = ValConstraints m a
+    type GTConstraints (ReaderT r m) f = (GTConstraints m f, Settable f)
     gTraverse = _Wrapped . mapped . gTraverse
 
 instance GTraversable m => GTraversable (StateT s m) where
-    type Constraints (StateT s m) f = (Constraints m f, Settable f)
-    type ValConstraints (StateT s m) a = ValConstraints m (a, s)
+    type GTConstraints (StateT s m) f = (GTConstraints m f, Settable f)
     gTraverse = _Wrapped . mapped . gTraverse . _1
