@@ -154,6 +154,8 @@ hoverInPlaceOf :: Layout a -> Layout a -> Layout a
 layout `hoverInPlaceOf` src =
     layout
     & Widget.sequenced . wValue %~
-        Widget.translate
-        (src ^. absAlignedWidget . alignment - layout ^. absAlignedWidget . alignment)
+        Widget.translate (srcAlign - layout ^. absAlignedWidget . alignment)
     & Widget.size .~ (src ^. Widget.size)
+    & absAlignedWidget . alignment .~ srcAlign
+    where
+        srcAlign = src ^. absAlignedWidget . alignment
