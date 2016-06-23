@@ -25,7 +25,7 @@ module Graphics.UI.Bottle.Widget
     , FocusedWidget(..), fEventMap, focalArea
     , animLayers, animFrame, size, width, height, events
 
-    , sequenced, hoist, toFWidget, toWidgetF
+    , sequenced, toFWidget, toWidgetF
     , isFocused
 
     , CursorConfig(..)
@@ -132,12 +132,6 @@ common ::
 common f (WidgetNotFocused x) = gTraverse f x <&> WidgetNotFocused
 common f (WidgetFocused x) = (gTraverse . fCommon) f x <&> WidgetFocused
 
-{-# INLINE hoist #-}
-hoist ::
-    (GTraversable.Constraints t (Lens.Const (Widget b)), Functor f) =>
-    (f (Widget a) -> t (Widget b)) -> WidgetF f a -> WidgetF t b
-hoist f widget = toWidgetF (f (toFWidget widget))
-
 {-# INLINE toWidgetF #-}
 toWidgetF ::
     GTraversable.Constraints t (Lens.Const (Widget a)) =>
@@ -155,8 +149,8 @@ toFWidget (WidgetFocused x) = x <&> WidgetFocused . Identity
 -- TODO: better name for this?
 {-# INLINE sequenced #-}
 sequenced ::
-    (Functor f, GTraversable.Constraints t (Lens.Const (Widget b))) =>
-    LensLike f (WidgetF t a) (WidgetF t b) (t (Widget a)) (t (Widget b))
+    (Functor f, Functor t, GTraversable.Constraints s (Lens.Const (Widget b))) =>
+    LensLike f (WidgetF t a) (WidgetF s b) (t (Widget a)) (s (Widget b))
 sequenced f x = f (toFWidget x) <&> toWidgetF
 
 {-# INLINE mEnter #-}

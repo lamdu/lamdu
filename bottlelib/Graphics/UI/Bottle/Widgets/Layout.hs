@@ -1,6 +1,7 @@
 {-# LANGUAGE NoImplicitPrelude, TypeFamilies, TemplateHaskell, RankNTypes, FlexibleInstances, DeriveFunctor, DeriveFoldable, DeriveTraversable #-}
 module Graphics.UI.Bottle.Widgets.Layout
     ( Layout
+    , WithAlignment
     , Box.Alignment
     , empty
     , AbsAlignedWidget
@@ -77,15 +78,15 @@ width = widget . Widget.width
 absAlignedWidget ::
     Lens.Iso (Layout a) (Layout b) (AbsAlignedWidget a) (AbsAlignedWidget b)
 absAlignedWidget =
-    Lens.iso (Widget.hoist (f (*))) (Widget.hoist (f (flip (/))))
+    Lens.iso (f (*)) (f (flip (/)))
     where
-        f op w = w & wAlignment %~ op (w ^. wValue . Widget.size)
+        f op w = w & alignment %~ op (w ^. Widget.size)
 
 boxComponentsToWidget ::
     Orientation -> BoxComponents a -> Layout a
 boxComponentsToWidget orientation (BoxComponents before awidget after) =
     Box.toWidget kbox
-    & Widget.hoist (WithAlignment align . (^. Lens._Wrapped))
+    & Widget.sequenced %~ WithAlignment align . (^. Lens._Wrapped)
     where
         align =
             kbox ^?!
@@ -102,7 +103,7 @@ boxComponentsToWidget orientation (BoxComponents before awidget after) =
             ]
 
 fromCenteredWidget :: Widget a -> Layout a
-fromCenteredWidget = Widget.hoist (WithAlignment 0.5 . (^. Lens._Wrapped))
+fromCenteredWidget = Widget.sequenced %~ WithAlignment 0.5 . (^. Lens._Wrapped)
 
 empty :: Layout a
 empty = fromCenteredWidget Widget.empty
