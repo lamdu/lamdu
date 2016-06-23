@@ -25,6 +25,7 @@ module Graphics.UI.Bottle.Widget
     , FocusedWidget(..), fEventMap, focalArea
     , animLayers, animFrame, size, width, height, events
 
+    , sequenced, hoist, toFWidget, toWidgetF
     , isFocused
 
     , CursorConfig(..)
@@ -54,7 +55,7 @@ module Graphics.UI.Bottle.Widget
     ) where
 
 import           Control.Applicative (liftA2)
-import           Control.Lens (LensLike')
+import           Control.Lens (LensLike, LensLike')
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Data.Functor.Identity (Identity(..))
@@ -130,6 +131,33 @@ common ::
     LensLike' f (WidgetF t a) (WidgetCommon a)
 common f (WidgetNotFocused x) = gTraverse f x <&> WidgetNotFocused
 common f (WidgetFocused x) = (gTraverse . fCommon) f x <&> WidgetFocused
+
+{-# INLINE hoist #-}
+hoist ::
+    (GTraversable.Constraints t (Lens.Const (Widget b)), Functor f) =>
+    (f (Widget a) -> t (Widget b)) -> WidgetF f a -> WidgetF t b
+hoist f widget = toWidgetF (f (toFWidget widget))
+
+{-# INLINE toWidgetF #-}
+toWidgetF ::
+    GTraversable.Constraints t (Lens.Const (Widget a)) =>
+    t (Widget a) -> WidgetF t a
+toWidgetF x =
+    case x ^. gTraverse of
+    WidgetFocused (Identity y) -> WidgetFocused (x & gTraverse .~ y)
+    WidgetNotFocused (Identity y) -> WidgetNotFocused (x & gTraverse .~ y)
+
+{-# INLINE toFWidget #-}
+toFWidget :: Functor f => WidgetF f a -> f (Widget a)
+toFWidget (WidgetNotFocused x) = x <&> WidgetNotFocused . Identity
+toFWidget (WidgetFocused x) = x <&> WidgetFocused . Identity
+
+-- TODO: better name for this?
+{-# INLINE sequenced #-}
+sequenced ::
+    (Functor f, GTraversable.Constraints t (Lens.Const (Widget b))) =>
+    LensLike f (WidgetF t a) (WidgetF t b) (t (Widget a)) (t (Widget b))
+sequenced f x = f (toFWidget x) <&> toWidgetF
 
 {-# INLINE mEnter #-}
 mEnter ::
@@ -298,11 +326,11 @@ translate pos widget =
             & Lens.argument . Direction.coordinates . Rect.topLeft -~ pos
             <&> enterResultRect . Rect.topLeft +~ pos
 
-scale :: Vector2 R -> Widget a -> Widget a
+scale :: GTraversable t => Vector2 R -> WidgetF t a -> WidgetF t a
 scale mult widget =
     widget
     & view %~ View.scale mult
-    & _WidgetFocused . Lens._Wrapped . focalArea . Rect.topLeftAndSize *~ mult
+    & _WidgetFocused . gTraverse . focalArea . Rect.topLeftAndSize *~ mult
     & mEnter . Lens._Just %~ onEnter
     where
         onEnter x =

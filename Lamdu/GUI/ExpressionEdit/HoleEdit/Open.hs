@@ -518,7 +518,7 @@ makeUnderCursorAssignment shownResultsLists hasHiddenResults holeInfo =
                 & alignment .~ w ^. alignment
     where
         alignment :: Lens' (Layout f) Box.Alignment
-        alignment = Layout.absAlignedWidget . _1
+        alignment = Layout.absAlignedWidget . Layout.alignment
         WidgetIds{..} = hiIds holeInfo
 
 makeOpenSearchAreaGui ::

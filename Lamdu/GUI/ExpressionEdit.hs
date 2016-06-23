@@ -50,8 +50,7 @@ shrinkIfHigherThanLine =
                 result
                     | ratio >= 1 = layout
                     | otherwise =
-                          layout
-                          & Layout.scale (realToFrac ratio)
+                          Widget.scale (realToFrac ratio) layout
                           & Layout.alignment . _2 .~ 0.5
             in result
 
