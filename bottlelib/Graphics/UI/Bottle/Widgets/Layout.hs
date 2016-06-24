@@ -62,9 +62,7 @@ data BoxComponents a = BoxComponents
 
 {-# INLINE alignment #-}
 alignment :: Lens' (Layout a) Box.Alignment
-alignment = Widget.sequenced . wAlignment
--- alignment f (Widget.WidgetFocused x) = wAlignment f x <&> Widget.WidgetFocused
--- alignment f (Widget.WidgetNotFocused x) = wAlignment f x <&> Widget.WidgetNotFocused
+alignment f = Widget.hoistL (wAlignment f)
 
 {-# INLINE widget #-}
 widget :: Lens (Layout a) (Layout b) (Widget a) (Widget b)
@@ -82,7 +80,7 @@ boxComponentsToWidget ::
     Orientation -> BoxComponents a -> Layout a
 boxComponentsToWidget orientation (BoxComponents before awidget after) =
     Box.toWidget kbox
-    & Widget.sequenced %~ WithAlignment align . (^. Lens._Wrapped)
+    & Widget.hoist (WithAlignment align . (^. Lens._Wrapped))
     where
         align =
             kbox ^?!
@@ -99,7 +97,7 @@ boxComponentsToWidget orientation (BoxComponents before awidget after) =
             ]
 
 fromCenteredWidget :: Widget a -> Layout a
-fromCenteredWidget = Widget.sequenced %~ WithAlignment 0.5 . (^. Lens._Wrapped)
+fromCenteredWidget = Widget.hoist (WithAlignment 0.5 . (^. Lens._Wrapped))
 
 empty :: Layout a
 empty = fromCenteredWidget Widget.empty

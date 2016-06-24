@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, DeriveFunctor, TemplateHaskell, FlexibleContexts, GeneralizedNewtypeDeriving, DeriveGeneric, OverloadedStrings, RecordWildCards #-}
+{-# LANGUAGE NoImplicitPrelude, DeriveFunctor, TemplateHaskell, FlexibleContexts, GeneralizedNewtypeDeriving, DeriveGeneric, OverloadedStrings, RecordWildCards, RankNTypes #-}
 module Graphics.UI.Bottle.Widget
     ( module Graphics.UI.Bottle.WidgetId
 
@@ -25,7 +25,7 @@ module Graphics.UI.Bottle.Widget
     , FocusedWidget(..), fEventMap, focalArea
     , animLayers, animFrame, size, width, height, events
 
-    , sequenced, toFWidget, toWidgetF
+    , hoist, hoistL, sequenced
     , isFocused
 
     , CursorConfig(..)
@@ -132,26 +132,30 @@ common ::
 common f (WidgetNotFocused x) = gTraverse f x <&> WidgetNotFocused
 common f (WidgetFocused x) = (gTraverse . fCommon) f x <&> WidgetFocused
 
-{-# INLINE toWidgetF #-}
-toWidgetF ::
-    GTraversable.Constraints t (Lens.Const (Widget a)) =>
-    t (Widget a) -> WidgetF t a
-toWidgetF x =
-    case x ^. gTraverse of
-    WidgetFocused (Identity y) -> WidgetFocused (x & gTraverse .~ y)
-    WidgetNotFocused (Identity y) -> WidgetNotFocused (x & gTraverse .~ y)
-
-{-# INLINE toFWidget #-}
-toFWidget :: Functor f => WidgetF f a -> f (Widget a)
-toFWidget (WidgetNotFocused x) = x <&> WidgetNotFocused . Identity
-toFWidget (WidgetFocused x) = x <&> WidgetFocused . Identity
-
 -- TODO: better name for this?
 {-# INLINE sequenced #-}
 sequenced ::
     (Functor f, Functor t, GTraversable.Constraints s (Lens.Const (Widget b))) =>
     LensLike f (WidgetF t a) (WidgetF s b) (t (Widget a)) (s (Widget b))
-sequenced f x = f (toFWidget x) <&> toWidgetF
+sequenced f w =
+    f (toFWidget w) <&> toWidgetF
+    where
+        toFWidget (WidgetNotFocused x) = x <&> WidgetNotFocused . Identity
+        toFWidget (WidgetFocused x) = x <&> WidgetFocused . Identity
+        toWidgetF x =
+            case x ^. gTraverse of
+            WidgetFocused (Identity y) -> WidgetFocused (x & gTraverse .~ y)
+            WidgetNotFocused (Identity y) -> WidgetNotFocused (x & gTraverse .~ y)
+
+{-# INLINE hoist #-}
+hoist :: (forall x. t x -> s x) -> WidgetF t a -> WidgetF s a
+hoist f (WidgetFocused v) = f v & WidgetFocused
+hoist f (WidgetNotFocused v) = f v & WidgetNotFocused
+
+{-# INLINE hoistL #-}
+hoistL :: Functor f => (forall x. t x -> f (s x)) -> WidgetF t a -> f (WidgetF s a)
+hoistL f (WidgetFocused v) = f v <&> WidgetFocused
+hoistL f (WidgetNotFocused v) = f v <&> WidgetNotFocused
 
 {-# INLINE mEnter #-}
 mEnter ::
