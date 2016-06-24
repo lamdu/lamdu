@@ -191,7 +191,7 @@ hCombine f layout gui =
     \layoutParams ->
     LayoutParams
     { _layoutMode =
-        layoutParams ^. layoutMode & modeWidths -~ layout ^. Layout.width
+        layoutParams ^. layoutMode & modeWidths -~ layout ^. Widget.width
     , _layoutContext = LayoutHorizontal
     }
     & gui ^. toLayout
@@ -251,7 +251,7 @@ horizVertFallbackH mParenInfo horiz vert =
             & Layout.addAfter Layout.Horizontal [parenLabel parenInfo ")"]
         _ -> wide
     LayoutNarrow limit
-        | wide ^. Layout.width > limit ->
+        | wide ^. Widget.width > limit ->
             layoutParams & maybeIndent mParenInfo vert ^. toLayout
         | otherwise -> wide
 
@@ -305,7 +305,7 @@ tagItem =
             \layoutParams ->
             let remainingLayoutMode =
                     layoutParams & layoutMode . modeWidths
-                        -~ tagAndSpace ^. Layout.width
+                        -~ tagAndSpace ^. Widget.width
             in  tagAndSpace
                 & Layout.addAfter Layout.Horizontal [remainingLayoutMode & item ^. toLayout]
             where
@@ -378,7 +378,7 @@ processAnnotationGui animId wideAnnotationBehavior =
                 maybeTooNarrow annotationLayout
                 & addAnnotationBackground config animId
             where
-                annotationWidth = annotationLayout ^. Layout.width
+                annotationWidth = annotationLayout ^. Widget.width
                 expansionLimit =
                     Config.valAnnotationWidthExpansionLimit config & realToFrac
                 maxWidth = minWidth + expansionLimit
@@ -471,7 +471,7 @@ addAnnotationH f wideBehavior entityId =
             in  layout
                 & Layout.addAfter Layout.Vertical
                 [ vspace
-                , processAnn (layout ^. Layout.width) annotationLayout
+                , processAnn (layout ^. Widget.width) annotationLayout
                      & Layout.alignment . _1 .~ layout ^. Layout.alignment . _1
                 ]
     where

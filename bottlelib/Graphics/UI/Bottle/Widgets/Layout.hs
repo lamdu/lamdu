@@ -6,7 +6,7 @@ module Graphics.UI.Bottle.Widgets.Layout
     , empty
     , AbsAlignedWidget
     , absAlignedWidget
-    , alignment, widget, width
+    , alignment, widget
     , fromCenteredWidget
 
     , addBefore, addAfter
@@ -69,10 +69,6 @@ alignment = Widget.sequenced . wAlignment
 {-# INLINE widget #-}
 widget :: Lens (Layout a) (Layout b) (Widget a) (Widget b)
 widget = Widget.sequenced . wValue
-
-{-# INLINE width #-}
-width :: Lens' (Layout a) Widget.R
-width = widget . Widget.width
 
 {-# INLINE absAlignedWidget #-}
 absAlignedWidget ::
