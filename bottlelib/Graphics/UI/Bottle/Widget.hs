@@ -111,7 +111,7 @@ data WidgetData focusData a = WidgetData
 data FocusData a = FocusData
     { _focalArea :: Rect
     , _fEventMap :: EventMap a
-    }
+    } deriving Functor
 
 data WidgetF t a
     = WidgetNotFocused (t (WidgetData () a))
@@ -219,7 +219,7 @@ events =
         atFocused f x =
             x
             { _wMEnter = x ^. wMEnter & commonEvents %~ f
-            , _wFocus = x ^. wFocus & fEventMap . Lens.mapped %~ f
+            , _wFocus = x ^. wFocus <&> f
             }
 
 fromView :: Applicative t => View -> WidgetF t a
