@@ -163,7 +163,7 @@ make ::
     Config -> AnimId -> State -> (State -> f ()) ->
     Widget (f Widget.EventResult) -> Widget (f Widget.EventResult)
 make _ _ Nothing setState w =
-    w & Widget._WidgetFocused . Lens._Wrapped %~ f
+    w & Widget._WidgetFocused . Lens._Wrapped . Widget.wFocus %~ f
     where
         f focus =
             focus & Widget.fEventMap <>~ addMovements center [] setState

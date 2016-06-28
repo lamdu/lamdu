@@ -183,13 +183,13 @@ makeFocused cursor Style{..} str myId =
     makeFocusable Style{..} str myId widget
     where
         widget =
-            pure Widget.FocusedWidget
-            { _focalArea = cursorRect
-            , _fEventMap = eventMap cursor str displayStr myId
-            , _fCommon =
-                Widget.WidgetCommon
-                { _cView = View reqSize $ img <> cursorFrame
-                , _cMEnter = Nothing
+            pure Widget.WidgetData
+            { _wView = View reqSize $ img <> cursorFrame
+            , _wMEnter = Nothing
+            , _wFocus =
+                Widget.FocusData
+                { _focalArea = cursorRect
+                , _fEventMap = eventMap cursor str displayStr myId
                 }
             } & Widget.WidgetFocused
         reqSize = Vector2 (_sCursorWidth + tlWidth) tlHeight

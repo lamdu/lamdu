@@ -226,31 +226,32 @@ type CombineEnters a =
     Widget.Size -> [[Maybe (Direction -> Widget.EnterResult a)]] ->
     Maybe (Direction -> Widget.EnterResult a)
 
-toWidgetCommon :: Keys ModKey -> CombineEnters a -> KGrid key a -> Widget a
-toWidgetCommon keys combineEnters (KGrid mCursor size sChildren) =
+toWidgetData :: Keys ModKey -> CombineEnters a -> KGrid key a -> Widget a
+toWidgetData keys combineEnters (KGrid mCursor size sChildren) =
     case mCursor of
-    Nothing -> pure common & Widget.WidgetNotFocused
+    Nothing -> res () & Widget.WidgetNotFocused
     Just cursor ->
-        pure Widget.FocusedWidget
+        res Widget.FocusData
         { _fEventMap =
             selectedWidgetFocus ^. Widget.fEventMap
             & addNavEventmap keys navDests
         , _focalArea = selectedWidgetFocus ^. Widget.focalArea
-        , _fCommon = common
         } & Widget.WidgetFocused
         where
             selectedWidgetFocus =
-                selectedWidget ^? Widget._WidgetFocused . Lens._Wrapped
+                selectedWidget
+                ^? Widget._WidgetFocused . Lens._Wrapped . Widget.wFocus
                 & fromMaybe (error "selected unfocused widget?")
             selectedWidget = index2d widgets cursor
             navDests =
                 mkNavDests size (selectedWidgetFocus ^. Widget.focalArea)
                 mEnterss cursor
     where
-        common =
-            Widget.WidgetCommon
-            { _cView = View size frame
-            , _cMEnter = combineEnters size mEnterss
+        res f =
+            pure Widget.WidgetData
+            { _wView = View size frame
+            , _wMEnter = combineEnters size mEnterss
+            , _wFocus = f
             }
         frame = widgets ^. Lens.traverse . Lens.traverse . Widget.animFrame
         translateChildWidget (_key, Element _align rect widget) =
@@ -281,13 +282,13 @@ combineEntersBiased (Vector2 x y) size children =
 -- ^ If unfocused, will enters the given child when entered
 toWidgetBiasedWithKeys :: Keys ModKey -> Cursor -> KGrid key a -> Widget a
 toWidgetBiasedWithKeys keys cursor =
-    toWidgetCommon keys (combineEntersBiased cursor)
+    toWidgetData keys (combineEntersBiased cursor)
 
 toWidgetBiased :: Cursor -> KGrid key a -> Widget a
 toWidgetBiased = toWidgetBiasedWithKeys stdKeys
 
 toWidgetWithKeys :: Keys ModKey -> KGrid key a -> Widget a
-toWidgetWithKeys keys = toWidgetCommon keys combineMEnters
+toWidgetWithKeys keys = toWidgetData keys combineMEnters
 
 toWidget :: KGrid key f -> Widget f
 toWidget = toWidgetWithKeys stdKeys
