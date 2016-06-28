@@ -171,11 +171,7 @@ isFocused :: WidgetF t a -> Bool
 isFocused = Lens.has _WidgetFocused
 
 empty :: Applicative t => WidgetF t a
-empty =
-    pure WidgetCommon
-    { _cView = View.empty
-    , _cMEnter = Nothing
-    } & WidgetNotFocused
+empty = fromView View.empty
 
 {-# INLINE animFrame #-}
 animFrame :: GTraversable.Constraints t f => LensLike' f (WidgetF t a) Anim.Frame
