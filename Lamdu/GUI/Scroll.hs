@@ -32,5 +32,5 @@ focusAreaIntoWindow winSize widget =
         focalPoint =
             widget
             ^? Widget._WidgetFocused . Lens._Wrapped
-            . Widget.wFocus . Widget.focalArea . Rect.center
+            . Widget.wFocus . Widget.focusData . Widget.focalArea . Rect.center
             & fromMaybe 0

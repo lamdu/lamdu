@@ -187,7 +187,7 @@ makeFocused cursor Style{..} str myId =
             { _wView = View reqSize $ img <> cursorFrame
             , _wMEnter = Nothing
             , _wFocus =
-                Widget.FocusData
+                Widget.HasFocusData Widget.FocusData
                 { _focalArea = cursorRect
                 , _fEventMap = eventMap cursor str displayStr myId
                 }

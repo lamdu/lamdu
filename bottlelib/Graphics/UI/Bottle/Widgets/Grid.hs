@@ -229,18 +229,18 @@ type CombineEnters a =
 toWidgetData :: Keys ModKey -> CombineEnters a -> KGrid key a -> Widget a
 toWidgetData keys combineEnters (KGrid mCursor size sChildren) =
     case mCursor of
-    Nothing -> res () & Widget.WidgetNotFocused
+    Nothing -> res Widget.NoFocusData & Widget.WidgetNotFocused
     Just cursor ->
-        res Widget.FocusData
+        Widget.HasFocusData Widget.FocusData
         { _fEventMap =
             selectedWidgetFocus ^. Widget.fEventMap
             & addNavEventmap keys navDests
         , _focalArea = selectedWidgetFocus ^. Widget.focalArea
-        } & Widget.WidgetFocused
+        } & res & Widget.WidgetFocused
         where
             selectedWidgetFocus =
                 selectedWidget
-                ^? Widget._WidgetFocused . Lens._Wrapped . Widget.wFocus
+                ^? Widget._WidgetFocused . Lens._Wrapped . Widget.wFocus . Widget.focusData
                 & fromMaybe (error "selected unfocused widget?")
             selectedWidget = index2d widgets cursor
             navDests =
