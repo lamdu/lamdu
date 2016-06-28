@@ -72,7 +72,7 @@ mLiftTrans :: Functor m => T m a -> M m a
 mLiftTrans = M . pure . fmap pure
 
 mLiftWidget :: Functor m => Widget (T m a) -> Widget (M m a)
-mLiftWidget = Widget.events %~ mLiftTrans
+mLiftWidget = fmap mLiftTrans
 
 data Pane m = Pane
     { paneDefI :: DefI m

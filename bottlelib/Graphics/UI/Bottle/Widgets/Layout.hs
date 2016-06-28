@@ -62,7 +62,7 @@ data BoxComponents a = BoxComponents
 
 {-# INLINE alignment #-}
 alignment :: Lens' (Layout a) Box.Alignment
-alignment f = Widget.hoistL (wAlignment f)
+alignment f = Widget.widgetF (wAlignment f)
 
 {-# INLINE widget #-}
 widget :: Lens (Layout a) (Layout b) (Widget a) (Widget b)

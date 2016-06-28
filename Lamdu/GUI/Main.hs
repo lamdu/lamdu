@@ -67,7 +67,7 @@ make env rootId =
                         codeEdit <-
                             CodeEdit.make codeEditEnv rootId ?? (codeSize ^. _1)
                             & WE.mapWidgetEnvT VersionControl.runAction
-                            <&> Widget.events . CodeEdit.m %~ fmap (VersionControl.runEvent cursor)
+                            <&> Lens.mapped . CodeEdit.m %~ fmap (VersionControl.runEvent cursor)
                         hoverPadding <-
                             Config.pane config & Config.paneHoverPadding
                             & BWidgets.vspacer

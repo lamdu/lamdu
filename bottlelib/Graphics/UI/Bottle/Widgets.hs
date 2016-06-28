@@ -17,6 +17,7 @@ module Graphics.UI.Bottle.Widgets
     , respondToCursorPrefix
     ) where
 
+import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Lens.Tuple
 import           Control.Monad (when)
@@ -122,7 +123,7 @@ makeTextEditor ::
     WidgetEnvT m (Widget (f Widget.EventResult))
 makeTextEditor textRef myId =
     makeTextEdit (Property.value textRef) myId
-    <&> Widget.events %~ setter
+    <&> Lens.mapped %~ setter
     where
         setter (newText, eventRes) =
             eventRes <$

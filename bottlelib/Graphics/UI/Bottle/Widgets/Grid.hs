@@ -239,8 +239,7 @@ toWidgetData keys combineEnters (KGrid mCursor size sChildren) =
         } & res & Widget.WidgetFocused
         where
             selectedWidgetFocus =
-                selectedWidget
-                ^? Widget._WidgetFocused . Lens._Wrapped . Widget.wFocus . Widget.focusData
+                selectedWidget ^? Widget.widgetFocus
                 & fromMaybe (error "selected unfocused widget?")
             selectedWidget = index2d widgets cursor
             navDests =

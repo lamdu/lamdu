@@ -30,7 +30,5 @@ focusAreaIntoWindow winSize widget =
                 l :: Lens' (Vector2 Widget.R) Widget.R
                 l = Lens.cloneLens rawLens
         focalPoint =
-            widget
-            ^? Widget._WidgetFocused . Lens._Wrapped
-            . Widget.wFocus . Widget.focusData . Widget.focalArea . Rect.center
+            widget ^? Widget.widgetFocus . Widget.focalArea . Rect.center
             & fromMaybe 0
