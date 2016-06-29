@@ -1,22 +1,12 @@
 {-# LANGUAGE NoImplicitPrelude, RankNTypes #-}
 module Control.Lens.Utils
-    ( _fromJust
-    , getPrism
-    , tagged
+    ( tagged
     ) where
 
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
-import           Data.Maybe.Utils (unsafeUnjust)
 
 import           Prelude.Compat
-
-_fromJust :: String -> Lens.Iso (Maybe a) (Maybe b) a b
-_fromJust msg = Lens.iso (unsafeUnjust msg) Just
-{-# INLINE _fromJust #-}
-
-getPrism :: Lens.Prism s t a b -> s -> Either a t
-getPrism p = p Left
 
 {-# INLINE tagged #-}
 tagged :: Lens.Prism' tag () -> Lens.Prism' (a, tag) a
