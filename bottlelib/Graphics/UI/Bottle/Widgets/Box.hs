@@ -55,45 +55,45 @@ vertical = Orientation
 type Element = Grid.Element
 
 {-# INLINE elementRect #-}
-elementRect :: Lens.Getter (Element f) Rect
+elementRect :: Lens.Getter (Element a) Rect
 elementRect = Grid.elementRect
 
 {-# INLINE elementAlign #-}
-elementAlign :: Lens.Getter (Element f) Alignment
+elementAlign :: Lens.Getter (Element a) Alignment
 elementAlign = Grid.elementAlign
 
 {-# INLINE elementOriginalWidget #-}
-elementOriginalWidget :: Lens.Getter (Element f) (Widget f)
+elementOriginalWidget :: Lens.Getter (Element a) (Widget a)
 elementOriginalWidget = Grid.elementOriginalWidget
 
-data KBox key f = KBox
+data KBox key a = KBox
     { __boxOrientation :: Orientation
     , __boxMCursor :: Maybe Cursor
     , __boxSize :: Size
-    , __boxContent :: [(key, Element f)]
-    , __boxGrid :: KGrid key f
+    , __boxContent :: [(key, Element a)]
+    , __boxGrid :: KGrid key a
     }
 Lens.makeLenses ''KBox
 
 {-# INLINE boxOrientation #-}
-boxOrientation :: Lens.Getter (KBox key f) Orientation
+boxOrientation :: Lens.Getter (KBox key a) Orientation
 boxOrientation = _boxOrientation
 
 {-# INLINE boxMCursor #-}
-boxMCursor :: Lens.Getter (KBox key f) (Maybe Cursor)
+boxMCursor :: Lens.Getter (KBox key a) (Maybe Cursor)
 boxMCursor = _boxMCursor
 
 {-# INLINE boxSize #-}
-boxSize :: Lens.Getter (KBox key f) Size
+boxSize :: Lens.Getter (KBox key a) Size
 boxSize = _boxSize
 
 {-# INLINE boxContent #-}
-boxContent :: Lens.Getter (KBox key f) [(key, Element f)]
+boxContent :: Lens.Getter (KBox key a) [(key, Element a)]
 boxContent = _boxContent
 
 type Box = KBox ()
 
-makeKeyed :: Orientation -> [(key, (Alignment, Widget f))] -> KBox key f
+makeKeyed :: Orientation -> [(key, (Alignment, Widget a))] -> KBox key a
 makeKeyed orientation children = KBox
     { __boxOrientation = orientation
     , __boxMCursor = fmap (oFromGridCursor orientation) $ grid ^. Grid.gridMCursor
@@ -104,37 +104,37 @@ makeKeyed orientation children = KBox
     where
         grid = Grid.makeKeyed $ oToGridChildren orientation children
 
-unkey :: [(Alignment, Widget f)] -> [((), (Alignment, Widget f))]
+unkey :: [(Alignment, Widget a)] -> [((), (Alignment, Widget a))]
 unkey = map ((,) ())
 
-make :: Orientation -> [(Alignment, Widget f)] -> Box f
+make :: Orientation -> [(Alignment, Widget a)] -> Box a
 make orientation = makeKeyed orientation . unkey
 
-makeAlign :: Alignment -> Orientation -> [Widget f] -> Box f
+makeAlign :: Alignment -> Orientation -> [Widget a] -> Box a
 makeAlign alignment orientation = make orientation . map ((,) alignment)
 
-toWidget :: KBox key f -> Widget f
+toWidget :: KBox key a -> Widget a
 toWidget = Grid.toWidget . __boxGrid
 
-boxAlign :: Orientation -> Alignment -> [Widget f] -> Widget f
+boxAlign :: Orientation -> Alignment -> [Widget a] -> Widget a
 boxAlign orientation align =
     toWidget .
     makeAlign align orientation
 
-hboxAlign :: Alignment -> [Widget f] -> Widget f
+hboxAlign :: Alignment -> [Widget a] -> Widget a
 hboxAlign = boxAlign horizontal
 
-vboxAlign :: Alignment -> [Widget f] -> Widget f
+vboxAlign :: Alignment -> [Widget a] -> Widget a
 vboxAlign = boxAlign vertical
 
-vboxCentered :: [Widget f] -> Widget f
+vboxCentered :: [Widget a] -> Widget a
 vboxCentered = vboxAlign 0.5
 
-hboxCentered :: [Widget f] -> Widget f
+hboxCentered :: [Widget a] -> Widget a
 hboxCentered = hboxAlign 0.5
 
-hbox :: [(Alignment, Widget f)] -> Widget f
+hbox :: [(Alignment, Widget a)] -> Widget a
 hbox = toWidget . make horizontal
 
-vbox :: [(Alignment, Widget f)] -> Widget f
+vbox :: [(Alignment, Widget a)] -> Widget a
 vbox = toWidget . make vertical

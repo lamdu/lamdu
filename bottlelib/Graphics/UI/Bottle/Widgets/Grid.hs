@@ -173,32 +173,32 @@ Lens.makeLenses ''Element
 Lens.makeLenses ''KGrid
 
 {-# INLINE elementAlign #-}
-elementAlign :: Lens.Getter (Element f) Alignment
+elementAlign :: Lens.Getter (Element a) Alignment
 elementAlign = _elementAlign
 
 {-# INLINE elementRect #-}
-elementRect :: Lens.Getter (Element f) Rect
+elementRect :: Lens.Getter (Element a) Rect
 elementRect = _elementRect
 
 {-# INLINE elementOriginalWidget #-}
-elementOriginalWidget :: Lens.Getter (Element f) (Widget f)
+elementOriginalWidget :: Lens.Getter (Element a) (Widget a)
 elementOriginalWidget = _elementOriginalWidget
 
 {-# INLINE gridMCursor #-}
-gridMCursor :: Lens.Getter (KGrid key f) (Maybe Cursor)
+gridMCursor :: Lens.Getter (KGrid key a) (Maybe Cursor)
 gridMCursor = _gridMCursor
 
 {-# INLINE gridSize #-}
-gridSize :: Lens.Getter (KGrid key f) Widget.Size
+gridSize :: Lens.Getter (KGrid key a) Widget.Size
 gridSize = _gridSize
 
 {-# INLINE gridContent #-}
-gridContent :: Lens.Getter (KGrid key f) [[(key, Element f)]]
+gridContent :: Lens.Getter (KGrid key a) [[(key, Element a)]]
 gridContent = _gridContent
 
 type Grid = KGrid ()
 
-makeKeyed :: [[(key, (Alignment, Widget f))]] -> KGrid key f
+makeKeyed :: [[(key, (Alignment, Widget a))]] -> KGrid key a
 makeKeyed children = KGrid
     { __gridMCursor = getCursor $ (map . map) (snd . snd) children
     , __gridSize = size
@@ -215,10 +215,10 @@ makeKeyed children = KGrid
         toElement (alignment, rect, (key, widget)) =
             (key, Element alignment rect widget)
 
-unkey :: [[(Alignment, Widget f)]] -> [[((), (Alignment, Widget f))]]
+unkey :: [[(Alignment, Widget a)]] -> [[((), (Alignment, Widget a))]]
 unkey = (map . map) ((,) ())
 
-make :: [[(Alignment, Widget f)]] -> Grid f
+make :: [[(Alignment, Widget a)]] -> Grid a
 make = makeKeyed . unkey
 
 toWidgetWithKeys :: Keys ModKey -> KGrid key a -> Widget a
@@ -257,7 +257,7 @@ toWidgetWithKeys keys (KGrid mCursor size sChildren) =
 groupSortOn :: Ord b => (a -> b) -> [a] -> [[a]]
 groupSortOn f = groupOn f . sortOn f
 
-toWidget :: KGrid key f -> Widget f
+toWidget :: KGrid key a -> Widget a
 toWidget = toWidgetWithKeys stdKeys
 
 combineMEnters ::
