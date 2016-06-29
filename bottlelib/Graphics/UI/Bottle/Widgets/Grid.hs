@@ -5,7 +5,7 @@ module Graphics.UI.Bottle.Widgets.Grid
     , Alignment(..), GridView.alignmentRatio
     , gridMCursor, gridSize, gridContent
     , Element
-    , elementAlign, elementRect, elementOriginalWidget
+    , elementAlign, elementRect
     , Cursor
     , Keys(..), stdKeys
     ) where
@@ -162,7 +162,6 @@ getCursor widgets =
 data Element a = Element
     { __elementAlign :: Alignment
     , __elementRect :: Rect
-    , __elementOriginalWidget :: Widget a
     }
 
 data Grid vert horiz a = Grid
@@ -181,10 +180,6 @@ elementAlign = _elementAlign
 {-# INLINE elementRect #-}
 elementRect :: Lens.Getter (Element a) Rect
 elementRect = _elementRect
-
-{-# INLINE elementOriginalWidget #-}
-elementOriginalWidget :: Lens.Getter (Element a) (Widget a)
-elementOriginalWidget = _elementOriginalWidget
 
 {-# INLINE gridMCursor #-}
 gridMCursor :: Lens.Getter (Grid vert horiz a) (Maybe Cursor)
@@ -207,30 +202,31 @@ makeWithKeys ::
     (Traversable vert, Traversable horiz) =>
     Keys ModKey -> vert (horiz (Alignment, Widget a)) -> (Grid vert horiz a, Widget a)
 makeWithKeys keys children =
-    ( grid
-    , toWidgetWithKeys keys grid
+    ( Grid
+      { __gridMCursor = mCursor
+      , __gridSize = size
+      , __gridContent = content <&> Lens.mapped %~ toElement
+      }
+    , content
+      <&> Lens.mapped %~ (\(_align, rect, widget) -> (rect, widget))
+      & toWidgetWithKeys keys mCursor size
     )
     where
-        grid =
-            Grid
-            { __gridMCursor = toList children <&> toList <&> map snd & getCursor
-            , __gridSize = size
-            , __gridContent = content
-            }
+        mCursor = toList children <&> toList <&> map snd & getCursor
         (size, content) =
             children
             & Lens.mapped . Lens.mapped %~ toTriplet
             & GridView.makePlacements
-            & _2 . Lens.mapped . Lens.mapped %~ toElement
         toTriplet (alignment, widget) =
             (alignment, widget ^. Widget.size, widget)
-        toElement (alignment, rect, widget) =
-            Element alignment rect widget
+        toElement (alignment, rect, _widget) =
+            Element alignment rect
 
 toWidgetWithKeys ::
     (Foldable vert, Foldable horiz) =>
-    Keys ModKey -> Grid vert horiz a -> Widget a
-toWidgetWithKeys keys (Grid mCursor size sChildren) =
+    Keys ModKey -> Maybe Cursor -> Widget.Size ->
+    vert (horiz (Rect, Widget a)) -> Widget a
+toWidgetWithKeys keys mCursor size sChildren =
     case mCursor of
     Nothing -> res Widget.NoFocusData & Widget.WidgetNotFocused
     Just cursor ->
@@ -257,7 +253,7 @@ toWidgetWithKeys keys (Grid mCursor size sChildren) =
             , _wFocus = f
             }
         frame = widgets ^. Lens.folded . Lens.folded . Widget.animFrame
-        translateChildWidget (Element _align rect widget) =
+        translateChildWidget (rect, widget) =
             Widget.translate (rect ^. Rect.topLeft) widget
         widgets = toList sChildren <&> toList <&> Lens.mapped %~ translateChildWidget
         mEnterss = widgets <&> Lens.mapped %~ (^. Widget.mEnter)
