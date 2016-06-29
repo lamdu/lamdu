@@ -3,7 +3,7 @@ module Graphics.UI.Bottle.Widgets.Box
     ( Box, KBox(..), Alignment(..), Grid.alignmentRatio
     , make, makeKeyed, makeAlign
     , unkey
-    , boxMCursor, boxSize, boxContent, boxOrientation
+    , boxMCursor, boxContent
     , Element, elementRect, elementAlign, elementOriginalWidget
     , Cursor
     , Orientation, horizontal, vertical
@@ -17,7 +17,7 @@ import qualified Control.Lens as Lens
 import           Control.Lens.Tuple
 import           Data.Vector.Vector2 (Vector2(..))
 import           Graphics.UI.Bottle.Rect (Rect(..))
-import           Graphics.UI.Bottle.Widget (Widget, Size)
+import           Graphics.UI.Bottle.Widget (Widget)
 import           Graphics.UI.Bottle.Widgets.Grid (Alignment(..))
 import qualified Graphics.UI.Bottle.Widgets.Grid as Grid
 
@@ -67,24 +67,14 @@ elementOriginalWidget :: Lens.Getter (Element a) (Widget a)
 elementOriginalWidget = Grid.elementOriginalWidget
 
 data KBox key a = KBox
-    { __boxOrientation :: Orientation
-    , __boxMCursor :: Maybe Cursor
-    , __boxSize :: Size
+    { __boxMCursor :: Maybe Cursor
     , __boxContent :: [(key, Element a)]
     }
 Lens.makeLenses ''KBox
 
-{-# INLINE boxOrientation #-}
-boxOrientation :: Lens.Getter (KBox key a) Orientation
-boxOrientation = _boxOrientation
-
 {-# INLINE boxMCursor #-}
 boxMCursor :: Lens.Getter (KBox key a) (Maybe Cursor)
 boxMCursor = _boxMCursor
-
-{-# INLINE boxSize #-}
-boxSize :: Lens.Getter (KBox key a) Size
-boxSize = _boxSize
 
 {-# INLINE boxContent #-}
 boxContent :: Lens.Getter (KBox key a) [(key, Element a)]
@@ -95,9 +85,7 @@ type Box = KBox ()
 makeKeyed :: Orientation -> [(key, (Alignment, Widget a))] -> (KBox key a, Widget a)
 makeKeyed orientation children =
     ( KBox
-      { __boxOrientation = orientation
-      , __boxMCursor = fmap (oFromGridCursor orientation) $ grid ^. Grid.gridMCursor
-      , __boxSize = grid ^. Grid.gridSize
+      { __boxMCursor = fmap (oFromGridCursor orientation) $ grid ^. Grid.gridMCursor
       , __boxContent = oFromGridChildren orientation $ grid ^. Grid.gridContent
       }
     , Grid.toWidget grid
