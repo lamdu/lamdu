@@ -65,8 +65,7 @@ make (Sugar.Case mArg alts caseTail addAlt cEntityId) pl =
                 <*>
                 (ExpressionGui.grammarLabel text
                     (Widget.toAnimId (WidgetIds.fromEntityId cEntityId))
-                    <&> Layout.widget
-                        %~ Widget.weakerEvents labelJumpHoleEventMap
+                    <&> Widget.weakerEvents labelJumpHoleEventMap
                 )
                 <&> ExpressionGui.fromLayout
         (mActiveTag, header) <-
@@ -121,11 +120,12 @@ makeAltRow mActiveTag (Sugar.CaseAlt delete tag altExpr) =
         addBg <-
             ExpressionGui.addValBGWithColor Config.evaluatedPathBGColor
             (WidgetIds.fromEntityId (tag ^. Sugar.tagInstance))
+        let mAddBg
+                | mActiveTag == Just (tag ^. Sugar.tagVal) = addBg
+                | otherwise = id
         altRefGui <-
             TagEdit.makeCaseTag (ExprGuiT.nextHolesBefore altExpr) tag
-            <&> if mActiveTag == Just (tag ^. Sugar.tagVal)
-                then Layout.widget %~ addBg
-                else id
+            <&> mAddBg
         altExprGui <- ExprGuiM.makeSubexpression (const 0) altExpr
         let itemEventMap = caseDelEventMap config delete
         ExpressionGui.tagItem ?? altRefGui ?? altExprGui
@@ -165,14 +165,13 @@ makeOpenCase rest animId altsGui =
         return $ ExpressionGui $
             \layoutMode ->
             let restLayout = layoutMode & restExpr ^. ExpressionGui.toLayout
-                minWidth = restLayout ^. Layout.widget . Widget.width
                 alts = layoutMode & altsGui ^. ExpressionGui.toLayout
-                targetWidth = alts ^. Layout.widget . Widget.width
+                sepBarWidth = min (restLayout ^. Widget.width) (alts ^. Widget.width)
             in
             alts
             & Layout.alignment . _1 .~ 0
             & Layout.addAfter Layout.Vertical
-            ( [ separationBar config (max minWidth targetWidth) animId & Layout.fromCenteredWidget
+            ( [ separationBar config sepBarWidth animId & Layout.fromCenteredWidget
               , Layout.fromCenteredWidget vspace
               , restLayout
               ] <&> (Layout.alignment . _1 .~ 0)

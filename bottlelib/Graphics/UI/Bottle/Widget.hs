@@ -242,8 +242,8 @@ fromView v =
     } & WidgetNotFocused
 
 takesFocus ::
-    Functor f =>
-    (Direction -> f Id) -> Widget (f EventResult) -> Widget (f EventResult)
+    (GTraversable.Constraints t (Lens.Const (Vector2 R)), Functor f) =>
+    (Direction -> f Id) -> WidgetF t (f EventResult) -> WidgetF t (f EventResult)
 takesFocus enterFunc widget =
     widget & mEnter .~ Just enter
     where

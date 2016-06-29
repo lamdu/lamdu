@@ -63,10 +63,10 @@ expandingName vertOrder (#>) needParen nomId showName =
                     , ExprGuiT._layoutContext = ExprGuiT.LayoutClear
                     }
                     & (nameGui #> ExpressionGui.fromLayout label) ^. ExpressionGui.toLayout
-                    & Layout.widget %~ addBg
+                    & addBg
                 horiz =
                     case showName of
-                    NameCollapsed -> label & Layout.widget %~ addBg
+                    NameCollapsed -> addBg label
                     NameShowing -> nameShowing
                     NameHovering -> nameShowing `h` label
                     #> (space #> subexprGui)
@@ -122,11 +122,12 @@ mkNomGui nameSidePrecLens str layout nom@(Sugar.Nominal _ val) pl =
                 | ExprGuiT.plOfHoleResult pl = NameShowing
                 | isSelected = NameHovering
                 | otherwise = NameCollapsed
+        let mTakesFocus
+                | isSelected = id
+                | otherwise = Widget.takesFocus (const (pure nameId))
         layout needParen nomId nameShowing
             <*> (ExpressionGui.grammarLabel str (Widget.toAnimId myId)
-                <&> if isSelected then id
-                    else Layout.widget %~ Widget.takesFocus (const (pure nameId))
-                )
+                <&> mTakesFocus)
             <*> (ExpressionGui.makeFocusableView nameId
                  <*> mkNameGui nom nameId)
             <*> ExprGuiM.makeSubexpression (nameSidePrecLens .~ nomPrecedence+1) val

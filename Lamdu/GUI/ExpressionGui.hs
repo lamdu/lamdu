@@ -51,6 +51,7 @@ import           Data.Maybe (fromMaybe)
 import           Data.Store.Property (Property(..))
 import           Data.Store.Transaction (Transaction)
 import           Data.String (IsString(..))
+import           Data.Traversable.Generalized (GTraversable)
 import           Data.Vector.Vector2 (Vector2(..))
 import qualified Graphics.DrawingCombinators as Draw
 import           Graphics.UI.Bottle.Animation (AnimId)
@@ -58,7 +59,7 @@ import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.EventMap as E
 import           Graphics.UI.Bottle.ModKey (ModKey(..))
 import qualified Graphics.UI.Bottle.View as View
-import           Graphics.UI.Bottle.Widget (Widget)
+import           Graphics.UI.Bottle.Widget (Widget, WidgetF)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets as BWidgets
 import qualified Graphics.UI.Bottle.Widgets.Box as Box
@@ -108,7 +109,7 @@ type T = Transaction
 egIsFocused :: ExpressionGui m -> Bool
 -- TODO: Fix this:
 egIsFocused (ExpressionGui mkLayout) =
-    mkLayout params ^. Layout.widget & Widget.isFocused
+    mkLayout params & Widget.isFocused
     where
         params =
             LayoutParams
@@ -146,7 +147,7 @@ maybeIndent mPiInfo gui =
         content
         & Layout.addBefore Layout.Horizontal
             [ Spacer.make
-                (Vector2 barWidth (content ^. Layout.widget . Widget.height))
+                (Vector2 barWidth (content ^. Widget.height))
                 & Widget.fromView
                 & Widget.backgroundColor 0 bgAnimId
                     (Config.indentBarColor indentConf)
@@ -315,7 +316,7 @@ tagItem =
 
 addAnnotationBackgroundH :: (Config -> Draw.Color) -> Config -> AnimId -> Layout a -> Layout a
 addAnnotationBackgroundH getColor config animId =
-    Layout.widget %~ Widget.backgroundColor bgLayer bgAnimId bgColor
+    Widget.backgroundColor bgLayer bgAnimId bgColor
     where
         bgAnimId = animId ++ ["annotation background"]
         bgLayer = Config.layerAnnotations $ Config.layers config
@@ -385,7 +386,7 @@ processAnnotationGui animId wideAnnotationBehavior =
                 shrinkAtLeast = Config.valAnnotationShrinkAtLeast config & realToFrac
                 heightShrinkRatio =
                     Config.valAnnotationMaxHeight config * stdSpacing ^. _2
-                    / annotationLayout ^. Layout.widget . Widget.height
+                    / annotationLayout ^. Widget.height
                     & min 1
                 shrinkRatio =
                     annotationWidth - shrinkAtLeast & min maxWidth & max minWidth
@@ -628,9 +629,7 @@ makeFocusableView ::
     ( Layout (f Widget.EventResult) ->
       Layout (f Widget.EventResult)
     )
-makeFocusableView myId =
-    ExprGuiM.widgetEnv (BWidgets.makeFocusableView myId)
-    <&> (Layout.widget %~)
+makeFocusableView myId = ExprGuiM.widgetEnv (BWidgets.makeFocusableView myId)
 
 makeLabel :: Monad m => String -> AnimId -> ExprGuiM m (Layout a)
 makeLabel text animId =
@@ -647,8 +646,8 @@ addValBG :: Monad m => Widget.Id -> ExprGuiM m (Widget f -> Widget f)
 addValBG myId = addValBGWithColor Config.valFrameBGColor myId
 
 addValBGWithColor ::
-    Monad m =>
-    (Config -> Draw.Color) -> Widget.Id -> ExprGuiM m (Widget f -> Widget f)
+    (GTraversable t, Monad m) =>
+    (Config -> Draw.Color) -> Widget.Id -> ExprGuiM m (WidgetF t a -> WidgetF t a)
 addValBGWithColor color myId =
     do
         config <- ExprGuiM.readConfig
@@ -662,9 +661,7 @@ addValPadding =
     ExprGuiM.readConfig <&> Config.valFramePadding <&> fmap realToFrac <&> pad
 
 liftLayers :: Monad m => ExprGuiM m (Layout a -> Layout a)
-liftLayers =
-    ExprGuiM.widgetEnv BWidgets.liftLayerInterval
-    <&> (Layout.widget %~)
+liftLayers = ExprGuiM.widgetEnv BWidgets.liftLayerInterval
 
 addValFrame ::
     Monad m => Widget.Id -> ExprGuiM m (ExpressionGui f -> ExpressionGui f)

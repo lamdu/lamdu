@@ -44,8 +44,7 @@ shrinkIfHigherThanLine =
             \layoutMode ->
             let layout = mkLayout layoutMode
                 ratio =
-                    (Font.height sizedFont /
-                     layout ^. Layout.widget . Widget.height)
+                    (Font.height sizedFont / layout ^. Widget.height)
                     ** realToFrac (Config.holeResultInjectedScaleExponent config)
                 result
                     | ratio >= 1 = layout

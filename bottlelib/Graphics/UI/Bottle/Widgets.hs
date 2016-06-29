@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, OverloadedStrings #-}
+{-# LANGUAGE NoImplicitPrelude, OverloadedStrings, FlexibleContexts #-}
 module Graphics.UI.Bottle.Widgets
     ( makeTextView, makeTextViewWidget, makeLabel
     , makeFocusableView
@@ -25,13 +25,15 @@ import           Data.ByteString.Char8 (pack)
 import           Data.List (intersperse)
 import           Data.Store.Property (Property)
 import qualified Data.Store.Property as Property
+import qualified Data.Traversable.Generalized as GTraversable
+import           Data.Traversable.Generalized (GTraversable)
 import           Data.Vector.Vector2 (Vector2(..))
 import qualified Graphics.DrawingCombinators as Draw
 import           Graphics.UI.Bottle.Animation (AnimId)
 import qualified Graphics.UI.Bottle.EventMap as EventMap
 import           Graphics.UI.Bottle.ModKey (ModKey(..))
 import           Graphics.UI.Bottle.View (View)
-import           Graphics.UI.Bottle.Widget (Widget)
+import           Graphics.UI.Bottle.Widget (Widget, WidgetF)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.Box as Box
 import qualified Graphics.UI.Bottle.Widgets.Choice as Choice
@@ -60,7 +62,8 @@ makeLabel :: Monad m => String -> AnimId -> WidgetEnvT m (Widget f)
 makeLabel text prefix =
     makeTextViewWidget text $ mappend prefix [pack text]
 
-liftLayerInterval :: Monad m => WidgetEnvT m (Widget f -> Widget f)
+liftLayerInterval ::
+    (Monad m, GTraversable t) => WidgetEnvT m (WidgetF t a -> WidgetF t a)
 liftLayerInterval =
     do
         env <- WE.readEnv
@@ -71,14 +74,16 @@ readEnv :: Monad m => WidgetEnvT m Widget.Env
 readEnv = WE.readEnv <&> (^. WE.envCursor) <&> Widget.Env
 
 respondToCursorPrefix ::
-    Monad m => Widget.Id -> WidgetEnvT m (Widget f -> Widget f)
+    (Monad m, GTraversable t) =>
+    Widget.Id -> WidgetEnvT m (WidgetF t a -> WidgetF t a)
 respondToCursorPrefix myIdPrefix =
     readEnv <&> Widget.respondToCursorPrefix myIdPrefix
 
 makeFocusableView ::
-    (Monad m, Applicative f) =>
+    (Monad m, Applicative f, GTraversable.Constraints t (Lens.Const (Vector2 Widget.R))) =>
     Widget.Id ->
-    WidgetEnvT m (Widget (f Widget.EventResult) -> Widget (f Widget.EventResult))
+    WidgetEnvT m
+    (WidgetF t (f Widget.EventResult) -> WidgetF t (f Widget.EventResult))
 makeFocusableView myIdPrefix =
     respondToCursorPrefix myIdPrefix
     <&>

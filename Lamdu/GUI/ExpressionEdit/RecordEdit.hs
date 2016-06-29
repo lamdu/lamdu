@@ -129,9 +129,9 @@ makeOpenRecord fieldsGui rest animId =
         return $ ExpressionGui $
             \layoutMode ->
             let restLayout = layoutMode & restExpr ^. ExpressionGui.toLayout
-                minWidth = restLayout ^. Layout.widget . Widget.width
+                minWidth = restLayout ^. Widget.width
                 fields = layoutMode & fieldsGui ^. ExpressionGui.toLayout
-                targetWidth = fields ^. Layout.widget . Widget.width
+                targetWidth = fields ^. Widget.width
             in
             fields
             & Layout.alignment . _1 .~ 0

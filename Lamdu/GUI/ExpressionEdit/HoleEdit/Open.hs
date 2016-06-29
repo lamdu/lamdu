@@ -18,12 +18,13 @@ import           Data.Monoid ((<>))
 import qualified Data.Monoid as Monoid
 import qualified Data.Store.Property as Property
 import           Data.Store.Transaction (Transaction)
+import qualified Data.Traversable.Generalized as GTraversable
 import           Data.Vector.Vector2 (Vector2(..))
 import           Graphics.UI.Bottle.Animation (AnimId)
 import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.View as View
-import           Graphics.UI.Bottle.Widget (Widget)
+import           Graphics.UI.Bottle.Widget (Widget, WidgetF)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.WidgetId as WidgetId
 import qualified Graphics.UI.Bottle.Widgets as BWidgets
@@ -305,9 +306,9 @@ makeExtraResultsWidget holeInfo mainResultHeight extraResults@(firstResult:_) =
             )
 
 makeFocusable ::
-    (Monad m, Applicative f) =>
+    (Monad m, Applicative f, GTraversable.Constraints t (Lens.Const (Vector2 Widget.R))) =>
     Widget.Id ->
-    ExprGuiM m (Widget (f Widget.EventResult) -> Widget (f Widget.EventResult))
+    ExprGuiM m (WidgetF t (f Widget.EventResult) -> WidgetF t (f Widget.EventResult))
 makeFocusable = ExprGuiM.widgetEnv . BWidgets.makeFocusableView
 
 applyResultLayout ::
@@ -338,6 +339,7 @@ makeHoleResultWidget resultId holeResult =
             ExprGuiM.widgetEnv BWidgets.liftLayerInterval
             <*> (makeFocusable resultId <*> mkWidget)
             <&> Widget.animFrame %~ Anim.mapIdentities (<> (resultSuffix # Widget.toAnimId resultId))
+            <&> (^. Layout.widget)
         return (widget, mkEventMap)
     where
         mkWidget =
@@ -345,7 +347,6 @@ makeHoleResultWidget resultId holeResult =
             & postProcessSugar
             & ExprGuiM.makeSubexpression (const 0)
             & applyResultLayout
-            <&> (^. Layout.widget)
         holeResultEntityId =
             holeResultConverted ^. Sugar.rPayload . Sugar.plEntityId
         idWithinResultWidget =
@@ -500,7 +501,6 @@ makeUnderCursorAssignment shownResultsLists hasHiddenResults holeInfo =
                   ]
                 & ExpressionGui.fromLayout
               ) & applyResultLayout
-              <&> (^. Layout.widget)
             )
         searchTermGui <- SearchTerm.make holeInfo
         return $ ExpressionGui $ \layoutMode ->
@@ -512,9 +512,7 @@ makeUnderCursorAssignment shownResultsLists hasHiddenResults holeInfo =
             in
                 w
                 & Layout.addAfter Layout.Vertical
-                    [ Layout.fromCenteredWidget hoverResultsWidget
-                        & Layout.alignment . _1 .~ 0
-                    ]
+                    [ hoverResultsWidget & Layout.alignment . _1 .~ 0 ]
                 & alignment .~ w ^. alignment
     where
         alignment :: Lens' (Layout f) Box.Alignment

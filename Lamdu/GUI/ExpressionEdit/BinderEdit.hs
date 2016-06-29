@@ -220,9 +220,9 @@ makeScopeNavEdit binder myId curCursor =
         settings <- ExprGuiM.readSettings
         case settings ^. CESettings.sInfoMode of
             CESettings.Evaluation ->
-                ExprGuiM.widgetEnv (BWidgets.makeFocusableView myId <&> (Layout.widget %~))
+                ExprGuiM.widgetEnv (BWidgets.makeFocusableView myId)
                 <*> (mapM mkArrow scopes <&> Layout.hbox 0.5)
-                <&> Layout.widget %~ Widget.weakerEvents
+                <&> Widget.weakerEvents
                     (mkScopeEventMap leftKeys rightKeys `mappend` blockEventMap)
                 <&> Just
                 <&> (,) (mkScopeEventMap prevScopeKeys nextScopeKeys)
@@ -304,7 +304,7 @@ makeParts funcApplyLimit binder delVarBackwardsId myId =
         let isScopeNavFocused =
                 case mScopeNavEdit of
                 Just layout
-                    | Widget.isFocused (layout ^. Layout.widget) -> ScopeNavIsFocused
+                    | Widget.isFocused layout -> ScopeNavIsFocused
                 _ -> ScopeNavNotFocused
         do
             mParamsEdit <-
