@@ -17,6 +17,7 @@ import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Lens.Tuple
 import           Control.Monad (msum)
+import           Data.Foldable (toList)
 import           Data.Function (on)
 import           Data.List (foldl', transpose, find, sortOn)
 import           Data.List.Utils (groupOn, minimumOn)
@@ -44,8 +45,8 @@ import           Prelude.Compat
 
 type Cursor = Vector2 Int
 
-length2d :: [[a]] -> Vector2 Int
-length2d xs = Vector2 (foldl' max 0 . map length $ xs) (length xs)
+length2d :: (Foldable vert, Foldable horiz) => vert (horiz a) -> Vector2 Int
+length2d xs = Vector2 (foldl' max 0 (toList xs <&> length)) (length xs)
 
 capCursor :: Vector2 Int -> Vector2 Int -> Vector2 Int
 capCursor size = fmap (max 0) . liftA2 min (subtract 1 <$> size)
@@ -62,9 +63,10 @@ data NavDests a = NavDests
     }
 
 mkNavDests ::
-    Widget.Size -> Rect -> [[Maybe (Direction -> Widget.EnterResult a)]] ->
-    Cursor -> NavDests a
-mkNavDests widgetSize prevFocalArea mEnterss cursor@(Vector2 cursorX cursorY) = NavDests
+    Widget.Size -> Rect -> Cursor ->
+    [[Maybe (Direction -> Widget.EnterResult a)]] -> NavDests a
+mkNavDests widgetSize prevFocalArea cursor@(Vector2 cursorX cursorY) mEnterss =
+    NavDests
     { leftOfCursor    = givePrevFocalArea . reverse $ take cursorX curRow
     , aboveCursor     = givePrevFocalArea . reverse $ take cursorY curColumn
     , rightOfCursor   = givePrevFocalArea $ drop (cursorX+1) curRow
@@ -142,13 +144,15 @@ addNavEventmap Keys{..} navDests eMap =
               (^. Widget.enterResultEvent)) <$>
             f navDests
 
-enumerate2d :: [[a]] -> [(Vector2 Int, a)]
+enumerate2d ::
+    (Foldable vert, Foldable horiz) =>
+    vert (horiz a) -> [(Vector2 Int, a)]
 enumerate2d xss =
-    xss ^@.. Lens.traversed <.> Lens.traversed
+    xss ^@.. Lens.folded <.> Lens.folded
     <&> _1 %~ uncurry (flip Vector2)
 
-index2d :: [[a]] -> Vector2 Int -> a
-index2d xss (Vector2 x y) = xss !! y !! x
+index2d :: (Foldable vert, Foldable horiz) => vert (horiz a) -> Vector2 Int -> a
+index2d xss (Vector2 x y) = toList (toList xss !! y) !! x
 
 getCursor :: [[Widget k]] -> Maybe Cursor
 getCursor widgets =
@@ -163,10 +167,10 @@ data Element a = Element
     , __elementOriginalWidget :: Widget a
     }
 
-data KGrid key a = KGrid
+data KGrid vert horiz key a = KGrid
     { __gridMCursor :: Maybe Cursor
     , __gridSize :: Widget.Size
-    , __gridContent :: [[(key, Element a)]]
+    , __gridContent :: vert (horiz (key, Element a))
     }
 
 Lens.makeLenses ''Element
@@ -185,22 +189,24 @@ elementOriginalWidget :: Lens.Getter (Element a) (Widget a)
 elementOriginalWidget = _elementOriginalWidget
 
 {-# INLINE gridMCursor #-}
-gridMCursor :: Lens.Getter (KGrid key a) (Maybe Cursor)
+gridMCursor :: Lens.Getter (KGrid vert horiz key a) (Maybe Cursor)
 gridMCursor = _gridMCursor
 
 {-# INLINE gridSize #-}
-gridSize :: Lens.Getter (KGrid key a) Widget.Size
+gridSize :: Lens.Getter (KGrid vert horiz key a) Widget.Size
 gridSize = _gridSize
 
 {-# INLINE gridContent #-}
-gridContent :: Lens.Getter (KGrid key a) [[(key, Element a)]]
+gridContent :: Lens.Getter (KGrid vert horiz key a) (vert (horiz (key, Element a)))
 gridContent = _gridContent
 
-type Grid = KGrid ()
+type Grid = KGrid [] [] ()
 
-makeKeyed :: [[(key, (Alignment, Widget a))]] -> KGrid key a
+makeKeyed ::
+    (Traversable vert, Traversable horiz) =>
+    vert (horiz (key, (Alignment, Widget a))) -> KGrid vert horiz key a
 makeKeyed children = KGrid
-    { __gridMCursor = getCursor $ (map . map) (snd . snd) children
+    { __gridMCursor = toList children <&> toList <&> map (snd . snd) & getCursor
     , __gridSize = size
     , __gridContent = content
     }
@@ -215,13 +221,20 @@ makeKeyed children = KGrid
         toElement (alignment, rect, (key, widget)) =
             (key, Element alignment rect widget)
 
-unkey :: [[(Alignment, Widget a)]] -> [[((), (Alignment, Widget a))]]
-unkey = (map . map) ((,) ())
+unkey ::
+    (Functor vert, Functor horiz) =>
+    vert (horiz (Alignment, Widget a)) ->
+    vert (horiz ((), (Alignment, Widget a)))
+unkey = (fmap . fmap) ((,) ())
 
-make :: [[(Alignment, Widget a)]] -> Grid a
+make ::
+    (Traversable vert, Traversable horiz) =>
+    vert (horiz (Alignment, Widget a)) -> KGrid vert horiz () a
 make = makeKeyed . unkey
 
-toWidgetWithKeys :: Keys ModKey -> KGrid key a -> Widget a
+toWidgetWithKeys ::
+    (Foldable vert, Foldable horiz) =>
+    Keys ModKey -> KGrid vert horiz key a -> Widget a
 toWidgetWithKeys keys (KGrid mCursor size sChildren) =
     case mCursor of
     Nothing -> res Widget.NoFocusData & Widget.WidgetNotFocused
@@ -238,26 +251,26 @@ toWidgetWithKeys keys (KGrid mCursor size sChildren) =
                 & fromMaybe (error "selected unfocused widget?")
             selectedWidget = index2d widgets cursor
             navDests =
-                mkNavDests size (selectedWidgetFocus ^. Widget.focalArea)
-                mEnterss cursor
+                mEnterss & toList <&> toList
+                & mkNavDests size (selectedWidgetFocus ^. Widget.focalArea)
+                  cursor
     where
         res f =
             pure Widget.WidgetData
             { _wView = View size frame
-            , _wMEnter = combineMEnters size mEnterss
+            , _wMEnter = toList mEnterss <&> toList & combineMEnters size
             , _wFocus = f
             }
-        frame = widgets ^. Lens.traverse . Lens.traverse . Widget.animFrame
+        frame = widgets ^. Lens.folded . Lens.folded . Widget.animFrame
         translateChildWidget (_key, Element _align rect widget) =
             Widget.translate (rect ^. Rect.topLeft) widget
-        widgets =
-            sChildren & Lens.mapped . Lens.mapped %~ translateChildWidget
-        mEnterss = widgets & Lens.mapped . Lens.mapped %~ (^. Widget.mEnter)
+        widgets = toList sChildren <&> toList <&> Lens.mapped %~ translateChildWidget
+        mEnterss = widgets <&> Lens.mapped %~ (^. Widget.mEnter)
 
 groupSortOn :: Ord b => (a -> b) -> [a] -> [[a]]
 groupSortOn f = groupOn f . sortOn f
 
-toWidget :: KGrid key a -> Widget a
+toWidget :: (Foldable vert, Foldable horiz) => KGrid vert horiz key a -> Widget a
 toWidget = toWidgetWithKeys stdKeys
 
 combineMEnters ::
