@@ -10,10 +10,7 @@ module Graphics.UI.Bottle.Widgets.Grid
     , Cursor
     , Keys(..), stdKeys
     , toWidget, toWidgetWithKeys
-    , toWidgetBiased, toWidgetBiasedWithKeys
     ) where
-
-import           Prelude.Compat
 
 import           Control.Applicative (liftA2)
 import qualified Control.Lens as Lens
@@ -42,6 +39,8 @@ import           Graphics.UI.Bottle.Widgets.GridView (Alignment(..))
 import qualified Graphics.UI.Bottle.Widgets.GridView as GridView
 import           Graphics.UI.Bottle.Widgets.StdKeys (DirKeys(..), stdDirKeys)
 import qualified Graphics.UI.GLFW as GLFW
+
+import           Prelude.Compat
 
 type Cursor = Vector2 Int
 
@@ -222,12 +221,8 @@ unkey = (map . map) ((,) ())
 make :: [[(Alignment, Widget f)]] -> Grid f
 make = makeKeyed . unkey
 
-type CombineEnters a =
-    Widget.Size -> [[Maybe (Direction -> Widget.EnterResult a)]] ->
-    Maybe (Direction -> Widget.EnterResult a)
-
-toWidgetData :: Keys ModKey -> CombineEnters a -> KGrid key a -> Widget a
-toWidgetData keys combineEnters (KGrid mCursor size sChildren) =
+toWidgetWithKeys :: Keys ModKey -> KGrid key a -> Widget a
+toWidgetWithKeys keys (KGrid mCursor size sChildren) =
     case mCursor of
     Nothing -> res Widget.NoFocusData & Widget.WidgetNotFocused
     Just cursor ->
@@ -249,7 +244,7 @@ toWidgetData keys combineEnters (KGrid mCursor size sChildren) =
         res f =
             pure Widget.WidgetData
             { _wView = View size frame
-            , _wMEnter = combineEnters size mEnterss
+            , _wMEnter = combineMEnters size mEnterss
             , _wFocus = f
             }
         frame = widgets ^. Lens.traverse . Lens.traverse . Widget.animFrame
@@ -262,37 +257,12 @@ toWidgetData keys combineEnters (KGrid mCursor size sChildren) =
 groupSortOn :: Ord b => (a -> b) -> [a] -> [[a]]
 groupSortOn f = groupOn f . sortOn f
 
-combineEntersBiased :: Cursor -> CombineEnters f
-combineEntersBiased (Vector2 x y) size children =
-    combineMEnters size children <&> maybeOverride
-    where
-        biased dir =
-            case children ^? Lens.ix y . Lens.ix x . Lens._Just of
-            Nothing -> id
-            Just childEnter -> const (childEnter dir)
-        unbiased = id
-        maybeOverride enter dir =
-            enter dir
-            & case dir of
-                Direction.Outside -> biased dir
-                Direction.PrevFocalArea _ -> biased dir
-                Direction.Point _ -> unbiased
-
--- ^ If unfocused, will enters the given child when entered
-toWidgetBiasedWithKeys :: Keys ModKey -> Cursor -> KGrid key a -> Widget a
-toWidgetBiasedWithKeys keys cursor =
-    toWidgetData keys (combineEntersBiased cursor)
-
-toWidgetBiased :: Cursor -> KGrid key a -> Widget a
-toWidgetBiased = toWidgetBiasedWithKeys stdKeys
-
-toWidgetWithKeys :: Keys ModKey -> KGrid key a -> Widget a
-toWidgetWithKeys keys = toWidgetData keys combineMEnters
-
 toWidget :: KGrid key f -> Widget f
 toWidget = toWidgetWithKeys stdKeys
 
-combineMEnters :: CombineEnters f
+combineMEnters ::
+    Widget.Size -> [[Maybe (Direction -> Widget.EnterResult a)]] ->
+    Maybe (Direction -> Widget.EnterResult a)
 combineMEnters size children = chooseClosest childEnters
     where
         childEnters =

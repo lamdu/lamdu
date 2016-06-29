@@ -8,18 +8,16 @@ module Graphics.UI.Bottle.Widgets.Choice
     , ExpandMode(..)
     ) where
 
-
-import           Prelude.Compat
-
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Lens.Tuple
-import           Data.List (findIndex)
 import qualified Graphics.DrawingCombinators as Draw
 import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.Box as Box
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
+
+import           Prelude.Compat
 
 data ExpandMode
     -- Cursor is on expanded widget, need to show selected choice with a
@@ -48,9 +46,8 @@ toBox Config{..} selfFocused myId childrenRecords =
     & filterVisible
     <&> colorize
     & Box.makeAlign 0 cwcOrientation
-    & maybe Box.toWidget Box.toWidgetBiased mCurChildIndex
+    & Box.toWidget
     where
-        mCurChildIndex = childrenRecords & findIndex ((== Selected) . (^. _1))
         filterVisible
             | anyChildFocused || (autoExpand && selfFocused) = id
             | otherwise = filter ((== Selected) . fst)

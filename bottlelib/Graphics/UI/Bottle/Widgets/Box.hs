@@ -5,7 +5,7 @@ module Graphics.UI.Bottle.Widgets.Box
     , unkey
     , boxMCursor, boxSize, boxContent, boxOrientation
     , Element, elementRect, elementAlign, elementOriginalWidget
-    , Cursor, toWidget, toWidgetBiased
+    , Cursor, toWidget
     , Orientation, horizontal, vertical
     , hboxAlign, vboxAlign
     , hboxCentered, vboxCentered
@@ -115,12 +115,6 @@ makeAlign alignment orientation = make orientation . map ((,) alignment)
 
 toWidget :: KBox key f -> Widget f
 toWidget = Grid.toWidget . __boxGrid
-
-toWidgetBiased :: Cursor -> KBox key f -> Widget f
-toWidgetBiased cursor box =
-    Grid.toWidgetBiased gridCursor $ __boxGrid box
-    where
-        gridCursor = oToGridCursor (box ^. boxOrientation) cursor
 
 boxAlign :: Orientation -> Alignment -> [Widget f] -> Widget f
 boxAlign orientation align =
