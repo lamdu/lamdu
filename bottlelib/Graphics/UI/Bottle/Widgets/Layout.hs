@@ -1,7 +1,6 @@
 {-# LANGUAGE NoImplicitPrelude, TypeFamilies, TemplateHaskell, RankNTypes, FlexibleInstances, DeriveFunctor, DeriveFoldable, DeriveTraversable #-}
 module Graphics.UI.Bottle.Widgets.Layout
     ( Layout
-    , WithAlignment
     , Box.Alignment
     , empty
     , AbsAlignedWidget
@@ -23,7 +22,6 @@ import qualified Control.Lens as Lens
 import           Control.Lens (Lens, Lens')
 import           Control.Lens.Operators
 import           Control.Lens.Tuple
-import           Data.Traversable.Generalized (GTraversable(..))
 import           Data.Vector.Vector2 (Vector2(..))
 import           Graphics.UI.Bottle.Widget (Widget, WidgetF(..))
 import qualified Graphics.UI.Bottle.Widget as Widget
@@ -31,18 +29,8 @@ import qualified Graphics.UI.Bottle.Widgets.Box as Box
 
 import           Prelude.Compat
 
-data WithAlignment alignment a = WithAlignment
-    { _wAlignment :: alignment
-    , _wValue :: a
-    } deriving (Functor, Foldable, Traversable)
-
-Lens.makeLenses ''WithAlignment
-
-instance GTraversable (WithAlignment alignment) where
-    gTraverse = wValue
-
-type Layout = WidgetF (WithAlignment Box.Alignment)
-type AbsAlignedWidget = WidgetF (WithAlignment (Vector2 Widget.R))
+type Layout = WidgetF ((,) Box.Alignment)
+type AbsAlignedWidget = WidgetF ((,) (Vector2 Widget.R))
 
 data Orientation = Horizontal | Vertical deriving Eq
 
@@ -63,18 +51,18 @@ data BoxComponents a = BoxComponents
 {-# INLINE alignment #-}
 alignment ::
     Lens
-    (WidgetF (WithAlignment a) x)
-    (WidgetF (WithAlignment b) x)
+    (WidgetF ((,) a) x)
+    (WidgetF ((,) b) x)
     a b
-alignment f = Widget.widgetF (wAlignment f)
+alignment f = Widget.widgetF (_1 f)
 
 {-# INLINE widget #-}
 widget ::
     Lens
-    (WidgetF (WithAlignment alignment) a)
-    (WidgetF (WithAlignment alignment) b)
+    (WidgetF ((,) alignment) a)
+    (WidgetF ((,) alignment) b)
     (Widget a) (Widget b)
-widget = Widget.sequenced . wValue
+widget = Widget.sequenced . _2
 
 {-# INLINE absAlignedWidget #-}
 absAlignedWidget ::
@@ -88,15 +76,14 @@ boxComponentsToWidget ::
     Orientation -> BoxComponents a -> Layout a
 boxComponentsToWidget orientation (BoxComponents before awidget after) =
     Box.toWidget kbox
-    & Widget.hoist (WithAlignment align . (^. Lens._Wrapped))
+    & Widget.hoist ((,) align . (^. Lens._Wrapped))
     where
         align =
             kbox ^?!
             Box.boxContent . Lens.traverse . Lens.filtered fst . _2 . Box.elementAlign
         kbox =
-            children <&> Lens._2 %~ toTuple . (^. Widget.sequenced)
+            children <&> Lens._2 %~ (^. Widget.sequenced)
             & Box.makeKeyed (boxOrientation orientation)
-        toTuple w = (w ^. wAlignment, w ^. wValue)
         children =
             concat
             [ before <&> (,) False
@@ -105,7 +92,7 @@ boxComponentsToWidget orientation (BoxComponents before awidget after) =
             ]
 
 fromCenteredWidget :: Widget a -> Layout a
-fromCenteredWidget = Widget.hoist (WithAlignment 0.5 . (^. Lens._Wrapped))
+fromCenteredWidget = Widget.hoist ((,) 0.5 . (^. Lens._Wrapped))
 
 empty :: Layout a
 empty = fromCenteredWidget Widget.empty
