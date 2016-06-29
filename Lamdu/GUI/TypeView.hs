@@ -114,9 +114,9 @@ makeTInst _parentPrecedence tid typeParams =
                     paramIdView <- showIdentifier tParamId
                     typeView <- splitMake (ParentPrecedence 0) arg
                     return
-                        [ (Vector2 1 0.5, paramIdView)
+                        [ (GridView.Alignment (Vector2 1 0.5), paramIdView)
                         , (0.5, hspace)
-                        , (Vector2 0 0.5, typeView)
+                        , (GridView.Alignment (Vector2 0 0.5), typeView)
                         ]
         case Map.toList typeParams of
             [] -> pure nameView
@@ -158,27 +158,27 @@ makeTag tag =
     Anchors.assocNameRef tag & Transaction.getP & transaction
     >>= text
 
-makeField :: Monad m => (T.Tag, Type) -> M m [(Vector2 Anim.R, View)]
+makeField :: Monad m => (T.Tag, Type) -> M m [(GridView.Alignment, View)]
 makeField (tag, fieldType) =
     Lens.sequenceOf (Lens.traversed . _2)
-    [ (Vector2 1 0.5, makeTag tag)
+    [ (GridView.Alignment (Vector2 1 0.5), makeTag tag)
     , (0.5, mkHSpace)
-    , (Vector2 0 0.5, splitMake (ParentPrecedence 0) fieldType)
+    , (GridView.Alignment (Vector2 0 0.5), splitMake (ParentPrecedence 0) fieldType)
     ]
 
-makeSumField :: Monad m => (T.Tag, Type) -> M m [(Vector2 Anim.R, View)]
+makeSumField :: Monad m => (T.Tag, Type) -> M m [(GridView.Alignment, View)]
 makeSumField (tag, T.TRecord T.CEmpty) =
-    makeTag tag <&> (,) (Vector2 1 0.5) <&> (:[])
+    makeTag tag <&> (,) (GridView.Alignment (Vector2 1 0.5)) <&> (:[])
 makeSumField (tag, fieldType) =
     Lens.sequenceOf (Lens.traversed . _2)
-    [ (Vector2 1 0.5, makeTag tag)
+    [ (GridView.Alignment (Vector2 1 0.5), makeTag tag)
     , (0.5, mkHSpace)
-    , (Vector2 0 0.5, splitMake (ParentPrecedence 0) fieldType)
+    , (GridView.Alignment (Vector2 0 0.5), splitMake (ParentPrecedence 0) fieldType)
     ]
 
 makeComposite ::
     Monad m =>
-    ((T.Tag, Type) -> M m [(Vector2 Anim.R, View)]) -> T.Composite t -> M m View
+    ((T.Tag, Type) -> M m [(GridView.Alignment, View)]) -> T.Composite t -> M m View
 makeComposite _ T.CEmpty = makeEmptyRecord
 makeComposite mkField composite =
     do

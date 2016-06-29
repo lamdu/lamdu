@@ -137,7 +137,8 @@ makeTreeView config animId size =
         toGrid i =
             addHelpBG config (Anim.augmentId animId i) .
             GridView.make . map toRow
-        toRow (titleView, docView) = [(0, titleView), (Vector2 1 0, docView)]
+        toRow (titleView, docView) =
+            [(0, titleView), (GridView.Alignment (Vector2 1 0), docView)]
         pairHeight (titleView, docView) = (max `on` (^. View.height)) titleView docView
         handleResult (pairs, []) = pairs
         handleResult _ = error "Leafs at root of tree!"

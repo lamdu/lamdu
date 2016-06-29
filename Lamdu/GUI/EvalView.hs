@@ -67,9 +67,9 @@ makeField parentAnimId tag val =
         space <- ExprGuiM.widgetEnv BWidgets.stdHSpaceView
         valView <- makeInner (baseId ++ ["val"]) val
         return
-            [ (Vector2 1 0.5, tagView)
+            [ (GridView.Alignment (Vector2 1 0.5), tagView)
             , (0.5, space)
-            , (Vector2 0 0.5, valView)
+            , (GridView.Alignment (Vector2 0 0.5), valView)
             ]
     where
         baseId = parentAnimId ++ [BinUtils.encodeS tag]

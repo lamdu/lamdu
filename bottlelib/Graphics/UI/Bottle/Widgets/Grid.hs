@@ -3,7 +3,7 @@ module Graphics.UI.Bottle.Widgets.Grid
     ( Grid, KGrid(..)
     , make, makeKeyed
     , unkey
-    , Alignment
+    , Alignment(..), GridView.alignmentRatio
     , gridMCursor, gridSize, gridContent
     , Element
     , elementAlign, elementRect, elementOriginalWidget
@@ -38,7 +38,7 @@ import qualified Graphics.UI.Bottle.Rect as Rect
 import           Graphics.UI.Bottle.View (View(..))
 import           Graphics.UI.Bottle.Widget (R, Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
-import           Graphics.UI.Bottle.Widgets.GridView (Alignment)
+import           Graphics.UI.Bottle.Widgets.GridView (Alignment(..))
 import qualified Graphics.UI.Bottle.Widgets.GridView as GridView
 import           Graphics.UI.Bottle.Widgets.StdKeys (DirKeys(..), stdDirKeys)
 import qualified Graphics.UI.GLFW as GLFW

@@ -1,6 +1,6 @@
 {-# LANGUAGE Rank2Types, TemplateHaskell #-}
 module Graphics.UI.Bottle.Widgets.Box
-    ( Box, KBox(..), Alignment
+    ( Box, KBox(..), Alignment(..), Grid.alignmentRatio
     , make, makeKeyed, makeAlign
     , unkey
     , boxMCursor, boxSize, boxContent, boxOrientation
@@ -18,7 +18,7 @@ import           Control.Lens.Tuple
 import           Data.Vector.Vector2 (Vector2(..))
 import           Graphics.UI.Bottle.Rect (Rect(..))
 import           Graphics.UI.Bottle.Widget (Widget, Size)
-import           Graphics.UI.Bottle.Widgets.Grid (KGrid(..))
+import           Graphics.UI.Bottle.Widgets.Grid (KGrid(..), Alignment(..))
 import qualified Graphics.UI.Bottle.Widgets.Grid as Grid
 
 type Cursor = Int
@@ -29,8 +29,6 @@ eHead [] = error "Grid returned invalid list without any elements, instead of li
 
 -- Want a 2d vector like in Grid, because we may want to preserve the
 -- alignment in the resulting KBox.
-type Alignment = Grid.Alignment
-
 data Orientation = Orientation
     { oToGridCursor :: Cursor -> Grid.Cursor
     , oToGridChildren :: forall a. [a] -> [[a]]

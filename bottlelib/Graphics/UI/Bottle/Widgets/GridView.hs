@@ -1,12 +1,10 @@
-{-# LANGUAGE NoImplicitPrelude #-}
+{-# LANGUAGE TemplateHaskell, NoImplicitPrelude, GeneralizedNewtypeDeriving, TypeSynonymInstances, MultiParamTypeClasses #-}
 module Graphics.UI.Bottle.Widgets.GridView
     ( make, makePlacements
-    , Alignment
+    , Alignment(..), alignmentRatio
     , verticalAlign, vertical
     , horizontalAlign, horizontal
     ) where
-
-import           Prelude.Compat
 
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
@@ -19,9 +17,19 @@ import qualified Graphics.UI.Bottle.Rect as Rect
 import           Graphics.UI.Bottle.View (View(..))
 import qualified Graphics.UI.Bottle.View as View
 
-type Alignment = Vector2 Anim.R -- ^ 0..1
+import           Prelude.Compat
 
-groupSize :: (Num a, Ord a) => Lens.Getting a b a -> [(b, b)] -> (a, a)
+newtype Alignment = Alignment { _alignmentRatio :: Vector2 Anim.R } -- ^ 0..1
+    deriving (Num, Fractional)
+Lens.makeLenses ''Alignment
+
+instance Field1 Alignment Alignment Anim.R Anim.R where
+    _1 = alignmentRatio . _1
+
+instance Field2 Alignment Alignment Anim.R Anim.R where
+    _2 = alignmentRatio . _2
+
+groupSize :: Lens.Getting Anim.R b Anim.R -> [(b, b)] -> (Anim.R, Anim.R)
 groupSize dim group =
     (alignmentPos + maxSize snd, alignmentPos)
     where
@@ -32,26 +40,29 @@ makePlacements ::
     [[(Alignment, View.Size, a)]] ->
     (View.Size, [[(Alignment, Rect, a)]])
 makePlacements rows =
-    ( Vector2 width height
+    ( totalSize
     , zipWith rowResult (zipWith alignPos rowPos rowSizes) posRows
     )
     where
+        totalSize = Vector2 width height
         width = last colPos
         height = last rowPos
         rowPos = groupPos rowSizes
         colPos = groupPos colSizes
         alignPos pos (_, align) = pos + align
         groupPos = scanl (+) 0 . map fst
-        rowResult rowSize = zipWith (itemResult rowSize) (zipWith alignPos colPos colSizes)
+        rowResult rowSize =
+            zipWith (itemResult rowSize) (zipWith alignPos colPos colSizes)
         itemResult alignY alignX (itemSize, (Vector2 preX preY, _), a) =
-            ( Vector2 (alignX / width) (alignY / height)
+            ( Alignment (Vector2 alignX alignY / totalSize)
             , Rect (Vector2 (alignX - preX) (alignY - preY)) itemSize
             , a
             )
         colSizes = posRows & transpose <&> groupSize _1 . map (^. _2)
-        rowSizes = posRows <&> groupSize _2 . map (^. _2)
+        rowSizes = posRows             <&> groupSize _2 . map (^. _2)
         posRows = (map . map) calcPos rows
-        calcPos (alignment, size, x) = (size, (alignment * size, (1 - alignment) * size), x)
+        calcPos (Alignment alignment, size, x) =
+            (size, (alignment * size, (1 - alignment) * size), x)
 
 --- Displays:
 

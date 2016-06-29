@@ -31,22 +31,22 @@ import qualified Graphics.UI.Bottle.Widgets.Box as Box
 
 import           Prelude.Compat
 
-data WithAlignment a = WithAlignment
-    { _wAlignment :: Box.Alignment
+data WithAlignment alignment a = WithAlignment
+    { _wAlignment :: alignment
     , _wValue :: a
     } deriving (Functor, Foldable, Traversable)
 
 Lens.makeLenses ''WithAlignment
 
-instance GTraversable WithAlignment where
+instance GTraversable (WithAlignment alignment) where
     gTraverse = wValue
 
-type Layout a = WidgetF WithAlignment a
-type AbsAlignedWidget a = Layout a
+type Layout = WidgetF (WithAlignment Box.Alignment)
+type AbsAlignedWidget = WidgetF (WithAlignment (Vector2 Widget.R))
 
 data Orientation = Horizontal | Vertical deriving Eq
 
-axis :: Orientation -> Lens' (Vector2 a) a
+axis :: Orientation -> Lens' Box.Alignment Widget.R
 axis Horizontal = _1
 axis Vertical = _2
 
@@ -61,20 +61,28 @@ data BoxComponents a = BoxComponents
     }
 
 {-# INLINE alignment #-}
-alignment :: Lens' (Layout a) Box.Alignment
+alignment ::
+    Lens
+    (WidgetF (WithAlignment a) x)
+    (WidgetF (WithAlignment b) x)
+    a b
 alignment f = Widget.widgetF (wAlignment f)
 
 {-# INLINE widget #-}
-widget :: Lens (Layout a) (Layout b) (Widget a) (Widget b)
+widget ::
+    Lens
+    (WidgetF (WithAlignment alignment) a)
+    (WidgetF (WithAlignment alignment) b)
+    (Widget a) (Widget b)
 widget = Widget.sequenced . wValue
 
 {-# INLINE absAlignedWidget #-}
 absAlignedWidget ::
     Lens.Iso (Layout a) (Layout b) (AbsAlignedWidget a) (AbsAlignedWidget b)
 absAlignedWidget =
-    Lens.iso (f (*)) (f (flip (/)))
+    Lens.iso (f ((*) . (^. Box.alignmentRatio))) (f (fmap Box.Alignment . (/)))
     where
-        f op w = w & alignment %~ op (w ^. Widget.size)
+        f op w = w & alignment %~ (`op` (w ^. Widget.size))
 
 boxComponentsToWidget ::
     Orientation -> BoxComponents a -> Layout a
@@ -130,10 +138,10 @@ vbox = box Vertical
 
 -- | scale = scaleAround 0.5
 --   scaleFromTopMiddle = scaleAround (Vector2 0.5 0)
-scaleAround :: Vector2 Widget.R -> Vector2 Widget.R -> Layout a -> Layout a
+scaleAround :: Box.Alignment -> Vector2 Widget.R -> Layout a -> Layout a
 scaleAround point ratio w =
     Widget.scale ratio w
-    & alignment .~ point + (w ^. alignment - point) / ratio
+    & alignment .~ point + ((w ^. alignment - point) & Box.alignmentRatio //~ ratio)
 
 pad :: Vector2 Widget.R -> Layout a -> Layout a
 pad padding =

@@ -413,7 +413,7 @@ layoutResults groups hiddenResults myId
                 makeHiddenResultsMWidget hiddenResults myId <&> (^.. Lens._Just)
             let grid =
                   rows
-                  & Lens.mapped . Lens.mapped %~ (,) (Vector2 0 0.5)
+                  & Lens.mapped . Lens.mapped %~ (,) (Grid.Alignment (Vector2 0 0.5))
                   & Grid.make & Grid.toWidget
                   & EventMap.blockDownEvents
             let padHeight =
@@ -515,7 +515,7 @@ makeUnderCursorAssignment shownResultsLists hasHiddenResults holeInfo =
                     [ hoverResultsWidget & Layout.alignment . _1 .~ 0 ]
                 & alignment .~ w ^. alignment
     where
-        alignment :: Lens' (Layout f) Box.Alignment
+        alignment :: Lens' (Layout f) (Vector2 Widget.R)
         alignment = Layout.absAlignedWidget . Layout.alignment
         WidgetIds{..} = hiIds holeInfo
 
