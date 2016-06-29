@@ -1,8 +1,7 @@
 {-# LANGUAGE Rank2Types, TemplateHaskell #-}
 module Graphics.UI.Bottle.Widgets.Box
-    ( Box(..), Alignment(..), Grid.alignmentRatio
+    ( Alignment(..), Grid.alignmentRatio
     , make, makeAlign
-    , boxMCursor, boxContent
     , Cursor
     , Orientation(..)
     , hboxAlign, vboxAlign
@@ -28,35 +27,15 @@ eHead [] = error "Grid returned invalid list without any elements, instead of li
 data Orientation = Horizontal | Vertical
     deriving (Eq)
 
-data Box t = Box
-    { _boxMCursor :: Maybe Cursor
-    , _boxContent :: t Alignment
-    }
-Lens.makeLenses ''Box
-
 make ::
     Traversable t =>
-    Orientation -> t (Alignment, Widget a) -> (Box t, Widget a)
-make Horizontal children =
-    Grid.make [children] & _1 %~ boxify
-    where
-        boxify grid =
-            Box
-            { _boxMCursor = grid ^. Grid.gridMCursor <&> (^. _1)
-            , _boxContent = grid ^. Grid.gridContent & eHead
-            }
-make Vertical children =
-    children <&> (:[]) & Grid.make & _1 %~ boxify
-    where
-        boxify grid =
-            Box
-            { _boxMCursor = grid ^. Grid.gridMCursor <&> (^. _2)
-            , _boxContent = grid ^. Grid.gridContent <&> eHead
-            }
+    Orientation -> t (Alignment, Widget a) -> (t Alignment, Widget a)
+make Horizontal x = Grid.make [x] & _1 %~ eHead
+make Vertical x = x <&> (:[]) & Grid.make & _1 . Lens.mapped %~ eHead
 
 makeAlign ::
     Traversable t =>
-    Alignment -> Orientation -> t (Widget a) -> (Box t, Widget a)
+    Alignment -> Orientation -> t (Widget a) -> (t Alignment, Widget a)
 makeAlign alignment orientation = make orientation . fmap ((,) alignment)
 
 boxAlign ::

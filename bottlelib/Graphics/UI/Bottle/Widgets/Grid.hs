@@ -1,9 +1,7 @@
 {-# LANGUAGE NoImplicitPrelude, TemplateHaskell, OverloadedStrings, RecordWildCards, DeriveFunctor, DeriveFoldable, DeriveTraversable #-}
 module Graphics.UI.Bottle.Widgets.Grid
-    ( Grid(..)
-    , make, makeWithKeys
+    ( make, makeWithKeys
     , Alignment(..), GridView.alignmentRatio
-    , gridMCursor, gridSize, gridContent
     , Cursor
     , Keys(..), stdKeys
     ) where
@@ -157,27 +155,16 @@ getCursor widgets =
     & find (Widget.isFocused . snd)
     <&> fst
 
-data Grid vert horiz = Grid
-    { _gridMCursor :: Maybe Cursor
-    , _gridSize :: Widget.Size
-    , _gridContent :: vert (horiz Alignment)
-    }
-Lens.makeLenses ''Grid
-
 make ::
     (Traversable vert, Traversable horiz) =>
-    vert (horiz (Alignment, Widget a)) -> (Grid vert horiz, Widget a)
+    vert (horiz (Alignment, Widget a)) -> (vert (horiz Alignment), Widget a)
 make = makeWithKeys stdKeys
 
 makeWithKeys ::
     (Traversable vert, Traversable horiz) =>
-    Keys ModKey -> vert (horiz (Alignment, Widget a)) -> (Grid vert horiz, Widget a)
+    Keys ModKey -> vert (horiz (Alignment, Widget a)) -> (vert (horiz Alignment), Widget a)
 makeWithKeys keys children =
-    ( Grid
-      { _gridMCursor = mCursor
-      , _gridSize = size
-      , _gridContent = content <&> Lens.mapped %~ (^. _1)
-      }
+    ( content <&> Lens.mapped %~ (^. _1)
     , content
       <&> Lens.mapped %~ (\(_align, rect, widget) -> (rect, widget))
       & toWidgetWithKeys keys mCursor size
