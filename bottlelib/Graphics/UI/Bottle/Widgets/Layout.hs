@@ -149,14 +149,14 @@ pad padding =
     where
         f w =
             w
-            & Widget.sequenced . wValue %~ Widget.pad padding
+            & widget %~ Widget.pad padding
             & alignment +~ padding
 
 -- Resize a layout to be the same alignment/size as another layout
 hoverInPlaceOf :: Layout a -> Layout a -> Layout a
 layout `hoverInPlaceOf` src =
     layout
-    & Widget.sequenced . wValue %~
+    & widget %~
         Widget.translate (srcAlign - layout ^. absAlignedWidget . alignment)
     & Widget.size .~ (src ^. Widget.size)
     & absAlignedWidget . alignment .~ srcAlign
