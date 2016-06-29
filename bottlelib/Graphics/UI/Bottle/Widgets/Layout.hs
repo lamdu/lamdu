@@ -75,13 +75,12 @@ absAlignedWidget =
 boxComponentsToWidget ::
     Orientation -> BoxComponents a -> Layout a
 boxComponentsToWidget orientation (BoxComponents before awidget after) =
-    Box.toWidget kbox
-    & Widget.hoist ((,) align . (^. Lens._Wrapped))
+    Widget.hoist ((,) align . (^. Lens._Wrapped)) boxWidget
     where
         align =
             kbox ^?!
             Box.boxContent . Lens.traverse . Lens.filtered fst . _2 . Box.elementAlign
-        kbox =
+        (kbox, boxWidget) =
             children <&> Lens._2 %~ (^. Widget.sequenced)
             & Box.makeKeyed (boxOrientation orientation)
         children =

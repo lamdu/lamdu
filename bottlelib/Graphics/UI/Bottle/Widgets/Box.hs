@@ -5,7 +5,7 @@ module Graphics.UI.Bottle.Widgets.Box
     , unkey
     , boxMCursor, boxSize, boxContent, boxOrientation
     , Element, elementRect, elementAlign, elementOriginalWidget
-    , Cursor, toWidget
+    , Cursor
     , Orientation, horizontal, vertical
     , hboxAlign, vboxAlign
     , hboxCentered, vboxCentered
@@ -18,7 +18,7 @@ import           Control.Lens.Tuple
 import           Data.Vector.Vector2 (Vector2(..))
 import           Graphics.UI.Bottle.Rect (Rect(..))
 import           Graphics.UI.Bottle.Widget (Widget, Size)
-import           Graphics.UI.Bottle.Widgets.Grid (KGrid(..), Alignment(..))
+import           Graphics.UI.Bottle.Widgets.Grid (Alignment(..))
 import qualified Graphics.UI.Bottle.Widgets.Grid as Grid
 
 type Cursor = Int
@@ -71,7 +71,6 @@ data KBox key a = KBox
     , __boxMCursor :: Maybe Cursor
     , __boxSize :: Size
     , __boxContent :: [(key, Element a)]
-    , __boxGrid :: KGrid key a
     }
 Lens.makeLenses ''KBox
 
@@ -93,33 +92,30 @@ boxContent = _boxContent
 
 type Box = KBox ()
 
-makeKeyed :: Orientation -> [(key, (Alignment, Widget a))] -> KBox key a
-makeKeyed orientation children = KBox
-    { __boxOrientation = orientation
-    , __boxMCursor = fmap (oFromGridCursor orientation) $ grid ^. Grid.gridMCursor
-    , __boxSize = grid ^. Grid.gridSize
-    , __boxContent = oFromGridChildren orientation $ grid ^. Grid.gridContent
-    , __boxGrid = grid
-    }
+makeKeyed :: Orientation -> [(key, (Alignment, Widget a))] -> (KBox key a, Widget a)
+makeKeyed orientation children =
+    ( KBox
+      { __boxOrientation = orientation
+      , __boxMCursor = fmap (oFromGridCursor orientation) $ grid ^. Grid.gridMCursor
+      , __boxSize = grid ^. Grid.gridSize
+      , __boxContent = oFromGridChildren orientation $ grid ^. Grid.gridContent
+      }
+    , Grid.toWidget grid
+    )
     where
         grid = Grid.makeKeyed $ oToGridChildren orientation children
 
 unkey :: [(Alignment, Widget a)] -> [((), (Alignment, Widget a))]
 unkey = map ((,) ())
 
-make :: Orientation -> [(Alignment, Widget a)] -> Box a
+make :: Orientation -> [(Alignment, Widget a)] -> (Box a, Widget a)
 make orientation = makeKeyed orientation . unkey
 
-makeAlign :: Alignment -> Orientation -> [Widget a] -> Box a
+makeAlign :: Alignment -> Orientation -> [Widget a] -> (Box a, Widget a)
 makeAlign alignment orientation = make orientation . map ((,) alignment)
 
-toWidget :: KBox key a -> Widget a
-toWidget = Grid.toWidget . __boxGrid
-
 boxAlign :: Orientation -> Alignment -> [Widget a] -> Widget a
-boxAlign orientation align =
-    toWidget .
-    makeAlign align orientation
+boxAlign orientation align = snd . makeAlign align orientation
 
 hboxAlign :: Alignment -> [Widget a] -> Widget a
 hboxAlign = boxAlign horizontal
@@ -134,7 +130,7 @@ hboxCentered :: [Widget a] -> Widget a
 hboxCentered = hboxAlign 0.5
 
 hbox :: [(Alignment, Widget a)] -> Widget a
-hbox = toWidget . make horizontal
+hbox = snd . make horizontal
 
 vbox :: [(Alignment, Widget a)] -> Widget a
-vbox = toWidget . make vertical
+vbox = snd . make vertical

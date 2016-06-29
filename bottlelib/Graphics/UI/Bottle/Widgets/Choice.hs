@@ -46,7 +46,7 @@ toBox Config{..} selfFocused myId childrenRecords =
     & filterVisible
     <&> colorize
     & Box.makeAlign 0 cwcOrientation
-    & Box.toWidget
+    & snd
     where
         filterVisible
             | anyChildFocused || (autoExpand && selfFocused) = id
