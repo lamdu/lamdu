@@ -158,24 +158,11 @@ getCursor widgets =
     <&> fst
 
 data Grid vert horiz = Grid
-    { __gridMCursor :: Maybe Cursor
-    , __gridSize :: Widget.Size
-    , __gridContent :: vert (horiz Alignment)
+    { _gridMCursor :: Maybe Cursor
+    , _gridSize :: Widget.Size
+    , _gridContent :: vert (horiz Alignment)
     }
-
 Lens.makeLenses ''Grid
-
-{-# INLINE gridMCursor #-}
-gridMCursor :: Lens.Getter (Grid vert horiz) (Maybe Cursor)
-gridMCursor = _gridMCursor
-
-{-# INLINE gridSize #-}
-gridSize :: Lens.Getter (Grid vert horiz) Widget.Size
-gridSize = _gridSize
-
-{-# INLINE gridContent #-}
-gridContent :: Lens.Getter (Grid vert horiz) (vert (horiz Alignment))
-gridContent = _gridContent
 
 make ::
     (Traversable vert, Traversable horiz) =>
@@ -187,9 +174,9 @@ makeWithKeys ::
     Keys ModKey -> vert (horiz (Alignment, Widget a)) -> (Grid vert horiz, Widget a)
 makeWithKeys keys children =
     ( Grid
-      { __gridMCursor = mCursor
-      , __gridSize = size
-      , __gridContent = content <&> Lens.mapped %~ (^. _1)
+      { _gridMCursor = mCursor
+      , _gridSize = size
+      , _gridContent = content <&> Lens.mapped %~ (^. _1)
       }
     , content
       <&> Lens.mapped %~ (\(_align, rect, widget) -> (rect, widget))

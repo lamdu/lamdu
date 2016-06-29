@@ -29,18 +29,10 @@ data Orientation = Horizontal | Vertical
     deriving (Eq)
 
 data Box t = Box
-    { __boxMCursor :: Maybe Cursor
-    , __boxContent :: t Alignment
+    { _boxMCursor :: Maybe Cursor
+    , _boxContent :: t Alignment
     }
 Lens.makeLenses ''Box
-
-{-# INLINE boxMCursor #-}
-boxMCursor :: Lens.Getter (Box t) (Maybe Cursor)
-boxMCursor = _boxMCursor
-
-{-# INLINE boxContent #-}
-boxContent :: Lens.Getter (Box t) (t Alignment)
-boxContent = _boxContent
 
 make ::
     Traversable t =>
@@ -50,16 +42,16 @@ make Horizontal children =
     where
         boxify grid =
             Box
-            { __boxMCursor = grid ^. Grid.gridMCursor <&> (^. _1)
-            , __boxContent = grid ^. Grid.gridContent & eHead
+            { _boxMCursor = grid ^. Grid.gridMCursor <&> (^. _1)
+            , _boxContent = grid ^. Grid.gridContent & eHead
             }
 make Vertical children =
     children <&> (:[]) & Grid.make & _1 %~ boxify
     where
         boxify grid =
             Box
-            { __boxMCursor = grid ^. Grid.gridMCursor <&> (^. _2)
-            , __boxContent = grid ^. Grid.gridContent <&> eHead
+            { _boxMCursor = grid ^. Grid.gridMCursor <&> (^. _2)
+            , _boxContent = grid ^. Grid.gridContent <&> eHead
             }
 
 makeAlign ::
