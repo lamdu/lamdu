@@ -34,4 +34,4 @@ extra-include-dirs:
 - /usr/local/include
 extra-lib-dirs:
 - /usr/local/lib
-resolver: lts-5.12
+resolver: lts-6.5
