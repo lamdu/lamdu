@@ -98,7 +98,7 @@ egAbsWidget ::
 egAbsWidget = egLayout . Layout.absAlignedWidget . Layout.widget
 
 {-# INLINE egAlignment #-}
-egAlignment :: Lens.Setter' (ExpressionGui m) Layout.Alignment
+egAlignment :: Lens.Setter' (ExpressionGuiM m) Layout.Alignment
 egAlignment = egLayout . Layout.alignment
 
 data EvalModeShow = EvalModeShowNothing | EvalModeShowType | EvalModeShowEval

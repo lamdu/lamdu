@@ -158,7 +158,7 @@ maybeIndent mPiInfo gui =
             ]
     _ -> lp & gui ^. toLayout
 
-vboxTopFocal :: [ExpressionGui m] -> ExpressionGui m
+vboxTopFocal :: [ExpressionGuiM m] -> ExpressionGuiM m
 vboxTopFocal [] = ExprGuiT.fromLayout Layout.empty
 vboxTopFocal (ExpressionGui mkLayout:guis) =
     ExpressionGui $
@@ -174,7 +174,7 @@ vboxTopFocal (ExpressionGui mkLayout:guis) =
         (guis ^.. Lens.traverse . toLayout ?? cp)
 
 vboxTopFocalSpaced ::
-    Monad m => ExprGuiM m ([ExpressionGui f] -> ExpressionGui f)
+    Monad m => ExprGuiM m ([ExpressionGuiM f] -> ExpressionGuiM f)
 vboxTopFocalSpaced =
     stdVSpace
     <&> ExprGuiT.fromValueWidget
