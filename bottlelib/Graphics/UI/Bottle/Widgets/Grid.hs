@@ -1,8 +1,7 @@
 {-# LANGUAGE NoImplicitPrelude, TemplateHaskell, OverloadedStrings, RecordWildCards, DeriveFunctor, DeriveFoldable, DeriveTraversable #-}
 module Graphics.UI.Bottle.Widgets.Grid
-    ( Grid, KGrid(..)
-    , make, makeKeyed
-    , unkey
+    ( Grid(..)
+    , make
     , Alignment(..), GridView.alignmentRatio
     , gridMCursor, gridSize, gridContent
     , Element
@@ -167,14 +166,14 @@ data Element a = Element
     , __elementOriginalWidget :: Widget a
     }
 
-data KGrid vert horiz key a = KGrid
+data Grid vert horiz a = Grid
     { __gridMCursor :: Maybe Cursor
     , __gridSize :: Widget.Size
-    , __gridContent :: vert (horiz (key, Element a))
+    , __gridContent :: vert (horiz (Element a))
     }
 
 Lens.makeLenses ''Element
-Lens.makeLenses ''KGrid
+Lens.makeLenses ''Grid
 
 {-# INLINE elementAlign #-}
 elementAlign :: Lens.Getter (Element a) Alignment
@@ -189,24 +188,22 @@ elementOriginalWidget :: Lens.Getter (Element a) (Widget a)
 elementOriginalWidget = _elementOriginalWidget
 
 {-# INLINE gridMCursor #-}
-gridMCursor :: Lens.Getter (KGrid vert horiz key a) (Maybe Cursor)
+gridMCursor :: Lens.Getter (Grid vert horiz a) (Maybe Cursor)
 gridMCursor = _gridMCursor
 
 {-# INLINE gridSize #-}
-gridSize :: Lens.Getter (KGrid vert horiz key a) Widget.Size
+gridSize :: Lens.Getter (Grid vert horiz a) Widget.Size
 gridSize = _gridSize
 
 {-# INLINE gridContent #-}
-gridContent :: Lens.Getter (KGrid vert horiz key a) (vert (horiz (key, Element a)))
+gridContent :: Lens.Getter (Grid vert horiz a) (vert (horiz (Element a)))
 gridContent = _gridContent
 
-type Grid = KGrid [] [] ()
-
-makeKeyed ::
+make ::
     (Traversable vert, Traversable horiz) =>
-    vert (horiz (key, (Alignment, Widget a))) -> KGrid vert horiz key a
-makeKeyed children = KGrid
-    { __gridMCursor = toList children <&> toList <&> map (snd . snd) & getCursor
+    vert (horiz (Alignment, Widget a)) -> Grid vert horiz a
+make children = Grid
+    { __gridMCursor = toList children <&> toList <&> map snd & getCursor
     , __gridSize = size
     , __gridContent = content
     }
@@ -216,26 +213,15 @@ makeKeyed children = KGrid
             & Lens.mapped . Lens.mapped %~ toTriplet
             & GridView.makePlacements
             & _2 . Lens.mapped . Lens.mapped %~ toElement
-        toTriplet (key, (alignment, widget)) =
-            (alignment, widget ^. Widget.size, (key, widget))
-        toElement (alignment, rect, (key, widget)) =
-            (key, Element alignment rect widget)
-
-unkey ::
-    (Functor vert, Functor horiz) =>
-    vert (horiz (Alignment, Widget a)) ->
-    vert (horiz ((), (Alignment, Widget a)))
-unkey = (fmap . fmap) ((,) ())
-
-make ::
-    (Traversable vert, Traversable horiz) =>
-    vert (horiz (Alignment, Widget a)) -> KGrid vert horiz () a
-make = makeKeyed . unkey
+        toTriplet (alignment, widget) =
+            (alignment, widget ^. Widget.size, widget)
+        toElement (alignment, rect, widget) =
+            Element alignment rect widget
 
 toWidgetWithKeys ::
     (Foldable vert, Foldable horiz) =>
-    Keys ModKey -> KGrid vert horiz key a -> Widget a
-toWidgetWithKeys keys (KGrid mCursor size sChildren) =
+    Keys ModKey -> Grid vert horiz a -> Widget a
+toWidgetWithKeys keys (Grid mCursor size sChildren) =
     case mCursor of
     Nothing -> res Widget.NoFocusData & Widget.WidgetNotFocused
     Just cursor ->
@@ -262,7 +248,7 @@ toWidgetWithKeys keys (KGrid mCursor size sChildren) =
             , _wFocus = f
             }
         frame = widgets ^. Lens.folded . Lens.folded . Widget.animFrame
-        translateChildWidget (_key, Element _align rect widget) =
+        translateChildWidget (Element _align rect widget) =
             Widget.translate (rect ^. Rect.topLeft) widget
         widgets = toList sChildren <&> toList <&> Lens.mapped %~ translateChildWidget
         mEnterss = widgets <&> Lens.mapped %~ (^. Widget.mEnter)
@@ -270,7 +256,7 @@ toWidgetWithKeys keys (KGrid mCursor size sChildren) =
 groupSortOn :: Ord b => (a -> b) -> [a] -> [[a]]
 groupSortOn f = groupOn f . sortOn f
 
-toWidget :: (Foldable vert, Foldable horiz) => KGrid vert horiz key a -> Widget a
+toWidget :: (Foldable vert, Foldable horiz) => Grid vert horiz a -> Widget a
 toWidget = toWidgetWithKeys stdKeys
 
 combineMEnters ::

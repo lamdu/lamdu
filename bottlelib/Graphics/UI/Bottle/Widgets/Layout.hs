@@ -38,10 +38,11 @@ axis Horizontal = _1
 axis Vertical = _2
 
 data BoxComponents a = BoxComponents
-    { _widgetsBefore :: [Layout a]
-    , _focalWidget :: Layout a
-    , _widgetsAfter :: [Layout a]
-    }
+    { __widgetsBefore :: [a]
+    , _focalWidget :: a
+    , __widgetsAfter :: [a]
+    } deriving (Functor, Foldable, Traversable)
+Lens.makeLenses ''BoxComponents
 
 {-# INLINE alignment #-}
 alignment ::
@@ -68,22 +69,14 @@ absAlignedWidget =
         f op w = w & alignment %~ (`op` (w ^. Widget.size))
 
 boxComponentsToWidget ::
-    Orientation -> BoxComponents a -> Layout a
-boxComponentsToWidget orientation (BoxComponents before awidget after) =
+    Orientation -> BoxComponents (Layout a) -> Layout a
+boxComponentsToWidget orientation boxComponents =
     Widget.hoist ((,) align . (^. Lens._Wrapped)) boxWidget
     where
-        align =
-            kbox ^?!
-            Box.boxContent . Lens.traverse . Lens.filtered fst . _2 . Box.elementAlign
+        align = kbox ^. Box.boxContent . focalWidget . Box.elementAlign
         (kbox, boxWidget) =
-            children <&> Lens._2 %~ (^. Widget.sequenced)
-            & Box.makeKeyed orientation
-        children =
-            concat
-            [ before <&> (,) False
-            , [ awidget & (,) True ]
-            , after <&> (,) False
-            ]
+            boxComponents <&> (^. Widget.sequenced)
+            & Box.make orientation
 
 fromCenteredWidget :: Widget a -> Layout a
 fromCenteredWidget = Widget.hoist ((,) 0.5 . (^. Lens._Wrapped))

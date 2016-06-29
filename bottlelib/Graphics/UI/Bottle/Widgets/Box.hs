@@ -1,8 +1,7 @@
 {-# LANGUAGE Rank2Types, TemplateHaskell #-}
 module Graphics.UI.Bottle.Widgets.Box
-    ( Box, KBox(..), Alignment(..), Grid.alignmentRatio
-    , make, makeKeyed, makeAlign
-    , unkey
+    ( Box(..), Alignment(..), Grid.alignmentRatio
+    , make, makeAlign
     , boxMCursor, boxContent
     , Element, elementRect, elementAlign, elementOriginalWidget
     , Cursor
@@ -27,7 +26,7 @@ eHead (x:_) = x
 eHead [] = error "Grid returned invalid list without any elements, instead of list Box handed it"
 
 -- Want a 2d vector like in Grid, because we may want to preserve the
--- alignment in the resulting KBox.
+-- alignment in the resulting Box.
 data Orientation = Horizontal | Vertical
     deriving (Eq)
 
@@ -45,53 +44,45 @@ elementAlign = Grid.elementAlign
 elementOriginalWidget :: Lens.Getter (Element a) (Widget a)
 elementOriginalWidget = Grid.elementOriginalWidget
 
-data KBox t key a = KBox
+data Box t a = Box
     { __boxMCursor :: Maybe Cursor
-    , __boxContent :: t (key, Element a)
+    , __boxContent :: t (Element a)
     }
-Lens.makeLenses ''KBox
+Lens.makeLenses ''Box
 
 {-# INLINE boxMCursor #-}
-boxMCursor :: Lens.Getter (KBox t key a) (Maybe Cursor)
+boxMCursor :: Lens.Getter (Box t a) (Maybe Cursor)
 boxMCursor = _boxMCursor
 
 {-# INLINE boxContent #-}
-boxContent :: Lens.Getter (KBox t key a) (t (key, Element a))
+boxContent :: Lens.Getter (Box t a) (t (Element a))
 boxContent = _boxContent
 
-type Box = KBox [] ()
-
-makeKeyed ::
+make ::
     Traversable t =>
-    Orientation -> t (key, (Alignment, Widget a)) -> (KBox t key a, Widget a)
-makeKeyed Horizontal children =
-    ( KBox
+    Orientation -> t (Alignment, Widget a) -> (Box t a, Widget a)
+make Horizontal children =
+    ( Box
       { __boxMCursor = grid ^. Grid.gridMCursor <&> (^. _1)
       , __boxContent = grid ^. Grid.gridContent & eHead
       }
     , Grid.toWidget grid
     )
     where
-        grid = Grid.makeKeyed [children]
-makeKeyed Vertical children =
-    ( KBox
+        grid = Grid.make [children]
+make Vertical children =
+    ( Box
       { __boxMCursor = grid ^. Grid.gridMCursor <&> (^. _2)
       , __boxContent = grid ^. Grid.gridContent <&> eHead
       }
     , Grid.toWidget grid
     )
     where
-        grid = children <&> (:[]) & Grid.makeKeyed
-
-unkey :: Functor f => f (Alignment, Widget a) -> f ((), (Alignment, Widget a))
-unkey = fmap ((,) ())
-
-make :: Traversable t => Orientation -> t (Alignment, Widget a) -> (KBox t () a, Widget a)
-make orientation = makeKeyed orientation . unkey
+        grid = children <&> (:[]) & Grid.make
 
 makeAlign ::
     Traversable t =>
-    Alignment -> Orientation -> t (Widget a) -> (KBox t () a, Widget a)
+    Alignment -> Orientation -> t (Widget a) -> (Box t a, Widget a)
 makeAlign alignment orientation = make orientation . fmap ((,) alignment)
 
 boxAlign ::
