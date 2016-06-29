@@ -5,7 +5,7 @@ module Lamdu.GUI.CodeEdit
     , M(..), m, mLiftTrans
     ) where
 
-import           Control.Applicative (liftA2)
+import           Control.Applicative (liftA2, (<|>))
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Monad.Trans.Class (lift)
@@ -13,6 +13,7 @@ import           Data.CurAndPrev (CurAndPrev(..))
 import           Data.Foldable (traverse_)
 import           Data.Functor.Identity (Identity(..))
 import           Data.List.Utils (insertAt, removeAt)
+import           Data.Maybe (fromMaybe)
 import           Data.Orphans () -- Imported for Monoid (IO ()) instance
 import qualified Data.Store.IRef as IRef
 import           Data.Store.Property (Property(..))
@@ -103,16 +104,21 @@ data Env m = Env
     }
 
 makePanes :: Monad m => Widget.Id -> Transaction.Property m [DefI m] -> [Pane m]
-makePanes defaultDelDest (Property paneDefs setPaneDefs) =
+makePanes emptyDelDest (Property paneDefs setPaneDefs) =
     paneDefs & Lens.imapped %@~ convertPane
     where
         mkDelPane i =
             do
                 setPaneDefs newPaneDefs
-                newPaneDefs ^? Lens.ix i
-                    & maybe defaultDelDest (WidgetIds.fromUUID . IRef.uuid)
+                newPaneIds ^? Lens.ix i
+                    <|> newPaneIds ^? Lens.ix (i-1)
+                    & fromMaybe emptyDelDest
                     & return
             where
+                newPaneIds =
+                    newPaneDefs
+                    <&> IRef.uuid
+                    <&> WidgetIds.fromUUID
                 newPaneDefs = removeAt i paneDefs
         movePane oldIndex newIndex =
             insertAt newIndex item (before ++ after)
