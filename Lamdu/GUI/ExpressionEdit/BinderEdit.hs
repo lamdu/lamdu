@@ -91,7 +91,7 @@ presentationModeChoiceConfig config = Choice.Config
         , FocusDelegator.focusParentKeys = [ModKey mempty GLFW.Key'Enter]
         , FocusDelegator.focusParentDoc = E.Doc ["Presentation Mode", "Choose selected"]
         }
-    , Choice.cwcOrientation = Box.vertical
+    , Choice.cwcOrientation = Box.Vertical
     , Choice.cwcExpandMode = Choice.ExplicitEntry
     , Choice.cwcBgLayer = Config.layerChoiceBG $ Config.layers config
     }

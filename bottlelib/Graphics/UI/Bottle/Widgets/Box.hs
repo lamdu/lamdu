@@ -6,16 +6,15 @@ module Graphics.UI.Bottle.Widgets.Box
     , boxMCursor, boxContent
     , Element, elementRect, elementAlign, elementOriginalWidget
     , Cursor
-    , Orientation, horizontal, vertical
+    , Orientation(..)
     , hboxAlign, vboxAlign
     , hboxCentered, vboxCentered
     , hbox, vbox
     ) where
 
-import           Control.Lens ((^.))
 import qualified Control.Lens as Lens
+import           Control.Lens.Operators
 import           Control.Lens.Tuple
-import           Data.Vector.Vector2 (Vector2(..))
 import           Graphics.UI.Bottle.Rect (Rect(..))
 import           Graphics.UI.Bottle.Widget (Widget)
 import           Graphics.UI.Bottle.Widgets.Grid (Alignment(..))
@@ -29,28 +28,8 @@ eHead [] = error "Grid returned invalid list without any elements, instead of li
 
 -- Want a 2d vector like in Grid, because we may want to preserve the
 -- alignment in the resulting KBox.
-data Orientation = Orientation
-    { oToGridCursor :: Cursor -> Grid.Cursor
-    , oToGridChildren :: forall a. [a] -> [[a]]
-    , oFromGridCursor :: Grid.Cursor -> Cursor
-    , oFromGridChildren :: forall a. [[a]] -> [a]
-    }
-
-horizontal :: Orientation
-horizontal = Orientation
-    { oToGridCursor = (`Vector2` 0)
-    , oToGridChildren = (: [])
-    , oFromGridCursor = (^. _1)
-    , oFromGridChildren = eHead
-    }
-
-vertical :: Orientation
-vertical = Orientation
-    { oToGridCursor = (0 `Vector2`)
-    , oToGridChildren = map (: [])
-    , oFromGridCursor = (^. _2)
-    , oFromGridChildren = map eHead
-    }
+data Orientation = Horizontal | Vertical
+    deriving (Eq)
 
 type Element = Grid.Element
 
@@ -66,59 +45,73 @@ elementAlign = Grid.elementAlign
 elementOriginalWidget :: Lens.Getter (Element a) (Widget a)
 elementOriginalWidget = Grid.elementOriginalWidget
 
-data KBox key a = KBox
+data KBox t key a = KBox
     { __boxMCursor :: Maybe Cursor
-    , __boxContent :: [(key, Element a)]
+    , __boxContent :: t (key, Element a)
     }
 Lens.makeLenses ''KBox
 
 {-# INLINE boxMCursor #-}
-boxMCursor :: Lens.Getter (KBox key a) (Maybe Cursor)
+boxMCursor :: Lens.Getter (KBox t key a) (Maybe Cursor)
 boxMCursor = _boxMCursor
 
 {-# INLINE boxContent #-}
-boxContent :: Lens.Getter (KBox key a) [(key, Element a)]
+boxContent :: Lens.Getter (KBox t key a) (t (key, Element a))
 boxContent = _boxContent
 
-type Box = KBox ()
+type Box = KBox [] ()
 
-makeKeyed :: Orientation -> [(key, (Alignment, Widget a))] -> (KBox key a, Widget a)
-makeKeyed orientation children =
+makeKeyed ::
+    Traversable t =>
+    Orientation -> t (key, (Alignment, Widget a)) -> (KBox t key a, Widget a)
+makeKeyed Horizontal children =
     ( KBox
-      { __boxMCursor = fmap (oFromGridCursor orientation) $ grid ^. Grid.gridMCursor
-      , __boxContent = oFromGridChildren orientation $ grid ^. Grid.gridContent
+      { __boxMCursor = grid ^. Grid.gridMCursor <&> (^. _1)
+      , __boxContent = grid ^. Grid.gridContent & eHead
       }
     , Grid.toWidget grid
     )
     where
-        grid = Grid.makeKeyed $ oToGridChildren orientation children
+        grid = Grid.makeKeyed [children]
+makeKeyed Vertical children =
+    ( KBox
+      { __boxMCursor = grid ^. Grid.gridMCursor <&> (^. _2)
+      , __boxContent = grid ^. Grid.gridContent <&> eHead
+      }
+    , Grid.toWidget grid
+    )
+    where
+        grid = children <&> (:[]) & Grid.makeKeyed
 
-unkey :: [(Alignment, Widget a)] -> [((), (Alignment, Widget a))]
-unkey = map ((,) ())
+unkey :: Functor f => f (Alignment, Widget a) -> f ((), (Alignment, Widget a))
+unkey = fmap ((,) ())
 
-make :: Orientation -> [(Alignment, Widget a)] -> (Box a, Widget a)
+make :: Traversable t => Orientation -> t (Alignment, Widget a) -> (KBox t () a, Widget a)
 make orientation = makeKeyed orientation . unkey
 
-makeAlign :: Alignment -> Orientation -> [Widget a] -> (Box a, Widget a)
-makeAlign alignment orientation = make orientation . map ((,) alignment)
+makeAlign ::
+    Traversable t =>
+    Alignment -> Orientation -> t (Widget a) -> (KBox t () a, Widget a)
+makeAlign alignment orientation = make orientation . fmap ((,) alignment)
 
-boxAlign :: Orientation -> Alignment -> [Widget a] -> Widget a
+boxAlign ::
+    Traversable t => Orientation -> Alignment -> t (Widget a) -> Widget a
 boxAlign orientation align = snd . makeAlign align orientation
 
-hboxAlign :: Alignment -> [Widget a] -> Widget a
-hboxAlign = boxAlign horizontal
+hboxAlign :: Traversable t => Alignment -> t (Widget a) -> Widget a
+hboxAlign = boxAlign Horizontal
 
-vboxAlign :: Alignment -> [Widget a] -> Widget a
-vboxAlign = boxAlign vertical
+vboxAlign :: Traversable t => Alignment -> t (Widget a) -> Widget a
+vboxAlign = boxAlign Vertical
 
-vboxCentered :: [Widget a] -> Widget a
+vboxCentered :: Traversable t => t (Widget a) -> Widget a
 vboxCentered = vboxAlign 0.5
 
-hboxCentered :: [Widget a] -> Widget a
+hboxCentered :: Traversable t => t (Widget a) -> Widget a
 hboxCentered = hboxAlign 0.5
 
-hbox :: [(Alignment, Widget a)] -> Widget a
-hbox = snd . make horizontal
+hbox :: Traversable t => t (Alignment, Widget a) -> Widget a
+hbox = snd . make Horizontal
 
-vbox :: [(Alignment, Widget a)] -> Widget a
-vbox = snd . make vertical
+vbox :: Traversable t => t (Alignment, Widget a) -> Widget a
+vbox = snd . make Vertical

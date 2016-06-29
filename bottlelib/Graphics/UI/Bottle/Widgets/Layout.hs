@@ -26,21 +26,16 @@ import           Data.Vector.Vector2 (Vector2(..))
 import           Graphics.UI.Bottle.Widget (Widget, WidgetF(..))
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.Box as Box
+import           Graphics.UI.Bottle.Widgets.Box (Orientation(..))
 
 import           Prelude.Compat
 
 type Layout = WidgetF ((,) Box.Alignment)
 type AbsAlignedWidget = WidgetF ((,) (Vector2 Widget.R))
 
-data Orientation = Horizontal | Vertical deriving Eq
-
 axis :: Orientation -> Lens' Box.Alignment Widget.R
 axis Horizontal = _1
 axis Vertical = _2
-
-boxOrientation :: Orientation -> Box.Orientation
-boxOrientation Horizontal = Box.horizontal
-boxOrientation Vertical = Box.vertical
 
 data BoxComponents a = BoxComponents
     { _widgetsBefore :: [Layout a]
@@ -82,7 +77,7 @@ boxComponentsToWidget orientation (BoxComponents before awidget after) =
             Box.boxContent . Lens.traverse . Lens.filtered fst . _2 . Box.elementAlign
         (kbox, boxWidget) =
             children <&> Lens._2 %~ (^. Widget.sequenced)
-            & Box.makeKeyed (boxOrientation orientation)
+            & Box.makeKeyed orientation
         children =
             concat
             [ before <&> (,) False

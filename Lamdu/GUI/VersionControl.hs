@@ -78,7 +78,7 @@ choiceWidgetConfig VersionControl.Config{..} choiceBGLayer = Choice.Config
         , FocusDelegator.focusParentDoc = E.Doc ["Branches", "Choose selected"]
         }
     , Choice.cwcExpandMode = Choice.AutoExpand selectedBranchColor
-    , Choice.cwcOrientation = Box.vertical
+    , Choice.cwcOrientation = Box.Vertical
     , Choice.cwcBgLayer = choiceBGLayer
     }
 
