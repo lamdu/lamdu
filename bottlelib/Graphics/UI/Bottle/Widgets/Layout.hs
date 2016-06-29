@@ -73,7 +73,7 @@ boxComponentsToWidget ::
 boxComponentsToWidget orientation boxComponents =
     Widget.hoist ((,) align . (^. Lens._Wrapped)) boxWidget
     where
-        align = kbox ^. Box.boxContent . focalWidget . Box.elementAlign
+        align = kbox ^. Box.boxContent . focalWidget
         (kbox, boxWidget) =
             boxComponents <&> (^. Widget.sequenced)
             & Box.make orientation

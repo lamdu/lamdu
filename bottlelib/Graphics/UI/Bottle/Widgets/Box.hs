@@ -3,7 +3,6 @@ module Graphics.UI.Bottle.Widgets.Box
     ( Box(..), Alignment(..), Grid.alignmentRatio
     , make, makeAlign
     , boxMCursor, boxContent
-    , Element, elementRect, elementAlign
     , Cursor
     , Orientation(..)
     , hboxAlign, vboxAlign
@@ -14,7 +13,6 @@ module Graphics.UI.Bottle.Widgets.Box
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Lens.Tuple
-import           Graphics.UI.Bottle.Rect (Rect(..))
 import           Graphics.UI.Bottle.Widget (Widget)
 import           Graphics.UI.Bottle.Widgets.Grid (Alignment(..))
 import qualified Graphics.UI.Bottle.Widgets.Grid as Grid
@@ -30,33 +28,23 @@ eHead [] = error "Grid returned invalid list without any elements, instead of li
 data Orientation = Horizontal | Vertical
     deriving (Eq)
 
-type Element = Grid.Element
-
-{-# INLINE elementRect #-}
-elementRect :: Lens.Getter (Element a) Rect
-elementRect = Grid.elementRect
-
-{-# INLINE elementAlign #-}
-elementAlign :: Lens.Getter (Element a) Alignment
-elementAlign = Grid.elementAlign
-
-data Box t a = Box
+data Box t = Box
     { __boxMCursor :: Maybe Cursor
-    , __boxContent :: t (Element a)
+    , __boxContent :: t Alignment
     }
 Lens.makeLenses ''Box
 
 {-# INLINE boxMCursor #-}
-boxMCursor :: Lens.Getter (Box t a) (Maybe Cursor)
+boxMCursor :: Lens.Getter (Box t) (Maybe Cursor)
 boxMCursor = _boxMCursor
 
 {-# INLINE boxContent #-}
-boxContent :: Lens.Getter (Box t a) (t (Element a))
+boxContent :: Lens.Getter (Box t) (t Alignment)
 boxContent = _boxContent
 
 make ::
     Traversable t =>
-    Orientation -> t (Alignment, Widget a) -> (Box t a, Widget a)
+    Orientation -> t (Alignment, Widget a) -> (Box t, Widget a)
 make Horizontal children =
     Grid.make [children] & _1 %~ boxify
     where
@@ -76,7 +64,7 @@ make Vertical children =
 
 makeAlign ::
     Traversable t =>
-    Alignment -> Orientation -> t (Widget a) -> (Box t a, Widget a)
+    Alignment -> Orientation -> t (Widget a) -> (Box t, Widget a)
 makeAlign alignment orientation = make orientation . fmap ((,) alignment)
 
 boxAlign ::

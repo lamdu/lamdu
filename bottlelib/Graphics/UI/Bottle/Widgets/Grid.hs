@@ -4,8 +4,6 @@ module Graphics.UI.Bottle.Widgets.Grid
     , make, makeWithKeys
     , Alignment(..), GridView.alignmentRatio
     , gridMCursor, gridSize, gridContent
-    , Element
-    , elementAlign, elementRect
     , Cursor
     , Keys(..), stdKeys
     ) where
@@ -159,53 +157,39 @@ getCursor widgets =
     & find (Widget.isFocused . snd)
     <&> fst
 
-data Element a = Element
-    { __elementAlign :: Alignment
-    , __elementRect :: Rect
-    }
-
-data Grid vert horiz a = Grid
+data Grid vert horiz = Grid
     { __gridMCursor :: Maybe Cursor
     , __gridSize :: Widget.Size
-    , __gridContent :: vert (horiz (Element a))
+    , __gridContent :: vert (horiz Alignment)
     }
 
-Lens.makeLenses ''Element
 Lens.makeLenses ''Grid
 
-{-# INLINE elementAlign #-}
-elementAlign :: Lens.Getter (Element a) Alignment
-elementAlign = _elementAlign
-
-{-# INLINE elementRect #-}
-elementRect :: Lens.Getter (Element a) Rect
-elementRect = _elementRect
-
 {-# INLINE gridMCursor #-}
-gridMCursor :: Lens.Getter (Grid vert horiz a) (Maybe Cursor)
+gridMCursor :: Lens.Getter (Grid vert horiz) (Maybe Cursor)
 gridMCursor = _gridMCursor
 
 {-# INLINE gridSize #-}
-gridSize :: Lens.Getter (Grid vert horiz a) Widget.Size
+gridSize :: Lens.Getter (Grid vert horiz) Widget.Size
 gridSize = _gridSize
 
 {-# INLINE gridContent #-}
-gridContent :: Lens.Getter (Grid vert horiz a) (vert (horiz (Element a)))
+gridContent :: Lens.Getter (Grid vert horiz) (vert (horiz Alignment))
 gridContent = _gridContent
 
 make ::
     (Traversable vert, Traversable horiz) =>
-    vert (horiz (Alignment, Widget a)) -> (Grid vert horiz a, Widget a)
+    vert (horiz (Alignment, Widget a)) -> (Grid vert horiz, Widget a)
 make = makeWithKeys stdKeys
 
 makeWithKeys ::
     (Traversable vert, Traversable horiz) =>
-    Keys ModKey -> vert (horiz (Alignment, Widget a)) -> (Grid vert horiz a, Widget a)
+    Keys ModKey -> vert (horiz (Alignment, Widget a)) -> (Grid vert horiz, Widget a)
 makeWithKeys keys children =
     ( Grid
       { __gridMCursor = mCursor
       , __gridSize = size
-      , __gridContent = content <&> Lens.mapped %~ toElement
+      , __gridContent = content <&> Lens.mapped %~ (^. _1)
       }
     , content
       <&> Lens.mapped %~ (\(_align, rect, widget) -> (rect, widget))
@@ -219,8 +203,6 @@ makeWithKeys keys children =
             & GridView.makePlacements
         toTriplet (alignment, widget) =
             (alignment, widget ^. Widget.size, widget)
-        toElement (alignment, rect, _widget) =
-            Element alignment rect
 
 toWidgetWithKeys ::
     (Foldable vert, Foldable horiz) =>
