@@ -3,7 +3,7 @@ module Graphics.UI.Bottle.Widgets.Box
     ( Box(..), Alignment(..), Grid.alignmentRatio
     , make, makeAlign
     , boxMCursor, boxContent
-    , Element, elementRect, elementAlign, elementOriginalWidget
+    , Element, elementRect, elementAlign
     , Cursor
     , Orientation(..)
     , hboxAlign, vboxAlign
@@ -39,10 +39,6 @@ elementRect = Grid.elementRect
 {-# INLINE elementAlign #-}
 elementAlign :: Lens.Getter (Element a) Alignment
 elementAlign = Grid.elementAlign
-
-{-# INLINE elementOriginalWidget #-}
-elementOriginalWidget :: Lens.Getter (Element a) (Widget a)
-elementOriginalWidget = Grid.elementOriginalWidget
 
 data Box t a = Box
     { __boxMCursor :: Maybe Cursor
