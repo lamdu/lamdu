@@ -413,7 +413,8 @@ layoutResults groups hiddenResults myId
                 makeHiddenResultsMWidget hiddenResults myId <&> (^.. Lens._Just)
             let grid =
                   rows
-                  & Lens.mapped . Lens.mapped %~ (,) (Grid.Alignment (Vector2 0 0.5))
+                  <&> Lens.mapped %~ Layout.fromCenteredWidget
+                  <&> Lens.mapped . Layout.alignment . _1 .~ 0
                   & Grid.make & snd
                   & EventMap.blockDownEvents
             let padHeight =

@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, DeriveFunctor, TemplateHaskell, FlexibleContexts, GeneralizedNewtypeDeriving, DeriveGeneric, OverloadedStrings, RecordWildCards, RankNTypes, EmptyDataDecls, GADTs #-}
+{-# LANGUAGE NoImplicitPrelude, DeriveFunctor, TemplateHaskell, FlexibleContexts, GeneralizedNewtypeDeriving, DeriveGeneric, OverloadedStrings, RecordWildCards, RankNTypes, EmptyDataDecls, GADTs, ConstraintKinds #-}
 module Graphics.UI.Bottle.Widget
     ( module Graphics.UI.Bottle.WidgetId
 
@@ -20,6 +20,7 @@ module Graphics.UI.Bottle.Widget
 
     -- Widget type and lenses:
     , Widget, WidgetF(..), _WidgetFocused, _WidgetNotFocused
+    , WidgetFConstraints
     , view, mEnter, eventMap, widgetFocus
     , WidgetData(..), wView, wMEnter, wFocus
     , Focus(..), TagFocused, TagNotFocused, focusData
@@ -136,6 +137,12 @@ data WidgetF t a
     deriving Functor
 
 type Widget = WidgetF Identity
+
+type WidgetFConstraints t a =
+    ( GTraversable.Constraints t (Lens.Const Anim.Frame)
+    , GTraversable.Constraints t (Lens.Const (Maybe (Direction -> EnterResult a)))
+    , GTraversable.Constraints t (Lens.Const (Monoid.First (FocusData a)))
+    )
 
 Lens.makeLenses ''EnterResult
 Lens.makeLenses ''EventResult

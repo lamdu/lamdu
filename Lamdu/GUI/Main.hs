@@ -18,6 +18,7 @@ import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets as BWidgets
 import qualified Graphics.UI.Bottle.Widgets.Box as Box
+import qualified Graphics.UI.Bottle.Widgets.Layout as Layout
 import           Graphics.UI.Bottle.WidgetsEnvT (runWidgetEnvT)
 import qualified Graphics.UI.Bottle.WidgetsEnvT as WE
 import           Lamdu.Config (Config)
@@ -72,12 +73,14 @@ make env rootId =
                             Config.pane config & Config.paneHoverPadding
                             & BWidgets.vspacer
                         let scrollBox =
-                                Box.vbox [(0.5, hoverPadding), (0.5, codeEdit)]
+                                [hoverPadding, codeEdit]
+                                <&> Layout.fromCenteredWidget
+                                & Box.vbox
                                 & Widget.padToSizeAlign codeSize 0
                                 & Scroll.focusAreaIntoWindow fullSize
                                 & Widget.size .~ codeSize
-                        Box.vbox [(0.5, scrollBox), (0.5, branchSelector)]
-                            & return
+                        [scrollBox, branchSelector] <&> Layout.fromCenteredWidget
+                            & Box.vbox & return
                 let quitEventMap =
                         Widget.keysEventMap (Config.quitKeys config) (EventMap.Doc ["Quit"]) (error "Quit")
                 branchGui

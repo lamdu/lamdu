@@ -12,7 +12,8 @@ module Graphics.UI.Bottle.Widgets.Box
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Lens.Tuple
-import           Graphics.UI.Bottle.Widget (Widget)
+import qualified Graphics.UI.Bottle.Widget as Widget
+import           Graphics.UI.Bottle.Widget (Widget, WidgetF)
 import           Graphics.UI.Bottle.Widgets.Grid (Alignment(..))
 import qualified Graphics.UI.Bottle.Widgets.Grid as Grid
 
@@ -29,14 +30,15 @@ data Orientation = Horizontal | Vertical
 
 make ::
     Traversable t =>
-    Orientation -> t (Alignment, Widget a) -> (t Alignment, Widget a)
+    Orientation -> t (WidgetF ((,) Alignment) a) -> (t Alignment, Widget a)
 make Horizontal x = Grid.make [x] & _1 %~ eHead
 make Vertical x = x <&> (:[]) & Grid.make & _1 . Lens.mapped %~ eHead
 
 makeAlign ::
     Traversable t =>
     Alignment -> Orientation -> t (Widget a) -> (t Alignment, Widget a)
-makeAlign alignment orientation = make orientation . fmap ((,) alignment)
+makeAlign alignment orientation =
+    make orientation . fmap (Widget.hoist ((,) alignment . (^. Lens._Wrapped)))
 
 boxAlign ::
     Traversable t => Orientation -> Alignment -> t (Widget a) -> Widget a
@@ -54,8 +56,8 @@ vboxCentered = vboxAlign 0.5
 hboxCentered :: Traversable t => t (Widget a) -> Widget a
 hboxCentered = hboxAlign 0.5
 
-hbox :: Traversable t => t (Alignment, Widget a) -> Widget a
+hbox :: Traversable t => t (WidgetF ((,) Alignment) a) -> Widget a
 hbox = snd . make Horizontal
 
-vbox :: Traversable t => t (Alignment, Widget a) -> Widget a
+vbox :: Traversable t => t (WidgetF ((,) Alignment) a) -> Widget a
 vbox = snd . make Vertical

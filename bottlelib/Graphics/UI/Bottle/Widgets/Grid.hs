@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, TemplateHaskell, OverloadedStrings, RecordWildCards, DeriveFunctor, DeriveFoldable, DeriveTraversable #-}
+{-# LANGUAGE NoImplicitPrelude, TemplateHaskell, OverloadedStrings, RecordWildCards, DeriveFunctor, DeriveFoldable, DeriveTraversable, FlexibleContexts #-}
 module Graphics.UI.Bottle.Widgets.Grid
     ( make, makeWithKeys
     , Alignment(..), GridView.alignmentRatio
@@ -8,6 +8,7 @@ module Graphics.UI.Bottle.Widgets.Grid
 
 import           Control.Applicative (liftA2)
 import qualified Control.Lens as Lens
+import           Control.Lens (Lens)
 import           Control.Lens.Operators
 import           Control.Lens.Tuple
 import           Control.Monad (msum)
@@ -28,7 +29,7 @@ import qualified Graphics.UI.Bottle.ModKey as ModKey
 import           Graphics.UI.Bottle.Rect (Rect(..))
 import qualified Graphics.UI.Bottle.Rect as Rect
 import           Graphics.UI.Bottle.View (View(..))
-import           Graphics.UI.Bottle.Widget (R, Widget)
+import           Graphics.UI.Bottle.Widget (R, Widget, WidgetF)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import           Graphics.UI.Bottle.Widgets.GridView (Alignment(..))
 import qualified Graphics.UI.Bottle.Widgets.GridView as GridView
@@ -148,7 +149,7 @@ enumerate2d xss =
 index2d :: (Foldable vert, Foldable horiz) => vert (horiz a) -> Vector2 Int -> a
 index2d xss (Vector2 x y) = toList (toList xss !! y) !! x
 
-getCursor :: [[Widget k]] -> Maybe Cursor
+getCursor :: [[WidgetF t a]] -> Maybe Cursor
 getCursor widgets =
     widgets
     & enumerate2d
@@ -157,31 +158,33 @@ getCursor widgets =
 
 make ::
     (Traversable vert, Traversable horiz) =>
-    vert (horiz (Alignment, Widget a)) -> (vert (horiz Alignment), Widget a)
+    vert (horiz (WidgetF ((,) Alignment) a)) -> (vert (horiz Alignment), Widget a)
 make = makeWithKeys stdKeys
+
+widgetInfo :: Lens (WidgetF ((,) a) x) (WidgetF ((,) b) x) a b
+widgetInfo f = Widget.widgetF (_1 f)
 
 makeWithKeys ::
     (Traversable vert, Traversable horiz) =>
-    Keys ModKey -> vert (horiz (Alignment, Widget a)) -> (vert (horiz Alignment), Widget a)
+    Keys ModKey -> vert (horiz (WidgetF ((,) Alignment) a)) -> (vert (horiz Alignment), Widget a)
 makeWithKeys keys children =
     ( content <&> Lens.mapped %~ (^. _1)
-    , content
-      <&> Lens.mapped %~ (\(_align, rect, widget) -> (rect, widget))
+    , content <&> Lens.mapped %~ (\(_align, rect, widget) -> (rect, widget))
       & toWidgetWithKeys keys mCursor size
     )
     where
-        mCursor = toList children <&> toList <&> map snd & getCursor
+        mCursor = toList children <&> toList & getCursor
         (size, content) =
             children
             & Lens.mapped . Lens.mapped %~ toTriplet
             & GridView.makePlacements
-        toTriplet (alignment, widget) =
-            (alignment, widget ^. Widget.size, widget)
+        toTriplet widget =
+            (widget ^. widgetInfo, widget ^. Widget.size, widget)
 
 toWidgetWithKeys ::
-    (Foldable vert, Foldable horiz) =>
+    (Widget.WidgetFConstraints t a, Foldable vert, Foldable horiz) =>
     Keys ModKey -> Maybe Cursor -> Widget.Size ->
-    vert (horiz (Rect, Widget a)) -> Widget a
+    vert (horiz (Rect, WidgetF t a)) -> Widget a
 toWidgetWithKeys keys mCursor size sChildren =
     case mCursor of
     Nothing -> res Widget.NoFocusData & Widget.WidgetNotFocused
