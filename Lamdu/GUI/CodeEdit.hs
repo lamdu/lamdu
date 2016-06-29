@@ -12,7 +12,6 @@ import           Control.Monad.Trans.Class (lift)
 import           Data.CurAndPrev (CurAndPrev(..))
 import           Data.Foldable (traverse_)
 import           Data.Functor.Identity (Identity(..))
-import           Data.List (intersperse)
 import           Data.List.Utils (insertAt, removeAt)
 import           Data.Orphans () -- Imported for Monoid (IO ()) instance
 import qualified Data.Store.IRef as IRef
@@ -24,7 +23,6 @@ import           Graphics.UI.Bottle.ModKey (ModKey(..))
 import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets as BWidgets
-import qualified Graphics.UI.Bottle.Widgets.Box as Box
 import qualified Graphics.UI.Bottle.Widgets.Layout as Layout
 import           Graphics.UI.Bottle.WidgetsEnvT (WidgetEnvT)
 import qualified Graphics.UI.Bottle.WidgetsEnvT as WE
@@ -201,9 +199,11 @@ gui env rootId replExpr panes =
             panes
             & ExprGuiM.transaction . traverse (processPane env)
             >>= traverse (makePaneEdit env)
-        newDefinitionButton <- makeNewDefinitionButton rootId <&> mLiftWidget
+        newDefinitionButton <-
+            makeNewDefinitionButton rootId <&> mLiftWidget
+            <&> ExpressionGui.fromValueWidget
         eventMap <- panesEventMap env & ExprGuiM.widgetEnv
-        vspace <- ExprGuiM.vspacer (Config.paneSpacing . Config.pane)
+        vbox <- ExpressionGui.vboxTopFocalSpaced
         return $
             \width ->
             let render (ExpressionGui mkLayout) =
@@ -213,10 +213,9 @@ gui env rootId replExpr panes =
                     , _layoutContext = ExpressionGui.LayoutClear
                     } ^. Layout.widget
             in
-                [render replEdit] ++ (panesEdits <&> render) ++ [newDefinitionButton]
-                & intersperse vspace
-                & Box.vboxAlign 0
-                & Widget.weakerEvents eventMap
+                replEdit : panesEdits ++ [newDefinitionButton]
+                <&> ExpressionGui.egAlignment .~ 0
+                & vbox & render & Widget.weakerEvents eventMap
     & ExprGuiM.assignCursor rootId replId
     & ExprGuiM.run ExpressionEdit.make
       (codeProps env) (config env) (settings env) (style env)
