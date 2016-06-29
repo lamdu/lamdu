@@ -26,7 +26,7 @@ module Graphics.UI.Bottle.Widget
     , FocusData(..), fEventMap, focalArea
     , animLayers, animFrame, size, width, height
 
-    , widgetF, widgetData
+    , widgetF, widgetData, onWidgetData
     , hoist, sequenced
     , isFocused
 
@@ -157,6 +157,12 @@ widgetData ::
     (forall tag. WidgetData tag a -> f (WidgetData tag b)) ->
     WidgetF t a -> f (WidgetF t b)
 widgetData f = widgetF (gTraverse f)
+
+onWidgetData ::
+    GTraversable t =>
+    (forall tag. WidgetData tag a -> WidgetData tag b) ->
+    WidgetF t a -> WidgetF t b
+onWidgetData f = runIdentity . widgetData (Identity . f)
 
 -- TODO: better name for this?
 {-# INLINE sequenced #-}
@@ -311,15 +317,14 @@ keysEventMapMovesCursor keys doc act =
     fmap eventResultFromCursor <$>
     EventMap.keyPresses keys doc act
 
--- TODO: This actually makes an incorrect widget because its size
+-- TODO: On its own this makes an incorrect widget because its size
 -- remains same, but it is now translated away from 0..size
--- Should expose higher-level combinators instead?
-translate :: Vector2 R -> Widget a -> Widget a
-translate pos widget =
-    widget
-    & mEnter . Lens._Just %~ onEnter
-    & widgetFocus . focalArea . Rect.topLeft +~ pos
-    & view %~ View.translate pos
+translate :: Vector2 R -> WidgetData tag a -> WidgetData tag a
+translate pos w =
+    w
+    & wMEnter . Lens._Just %~ onEnter
+    & wFocus . focusData . focalArea . Rect.topLeft +~ pos
+    & wView %~ View.translate pos
     where
         onEnter x =
             x
@@ -346,12 +351,12 @@ assymetricPad :: Vector2 R -> Vector2 R -> Widget a -> Widget a
 assymetricPad leftAndTop rightAndBottom widget =
     widget
     & size +~ leftAndTop + rightAndBottom
-    & translate leftAndTop
+    & onWidgetData (translate leftAndTop)
 
 padToSizeAlign :: Size -> Vector2 R -> Widget a -> Widget a
 padToSizeAlign newSize alignment widget =
     widget
-    & translate (sizeDiff * alignment)
+    & onWidgetData (translate (sizeDiff * alignment))
     & size %~ liftA2 max newSize
     where
         sizeDiff = max <$> 0 <*> newSize - widget ^. size

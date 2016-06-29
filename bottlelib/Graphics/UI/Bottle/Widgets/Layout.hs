@@ -130,8 +130,8 @@ pad padding =
 hoverInPlaceOf :: Layout a -> Layout a -> Layout a
 layout `hoverInPlaceOf` src =
     layout
-    & widget %~
-        Widget.translate (srcAlign - layout ^. absAlignedWidget . alignment)
+    & Widget.onWidgetData
+        (Widget.translate (srcAlign - layout ^. absAlignedWidget . alignment))
     & Widget.size .~ (src ^. Widget.size)
     & absAlignedWidget . alignment .~ srcAlign
     where

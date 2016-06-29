@@ -210,7 +210,7 @@ toWidgetWithKeys keys mCursor size sChildren =
             }
         frame = widgets ^. Lens.folded . Lens.folded . Widget.animFrame
         translateChildWidget (rect, widget) =
-            Widget.translate (rect ^. Rect.topLeft) widget
+            Widget.onWidgetData (Widget.translate (rect ^. Rect.topLeft)) widget
         widgets = toList sChildren <&> toList <&> Lens.mapped %~ translateChildWidget
         mEnterss = widgets <&> Lens.mapped %~ (^. Widget.mEnter)
 

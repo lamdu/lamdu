@@ -300,7 +300,7 @@ makeExtraResultsWidget holeInfo mainResultHeight extraResults@(firstResult:_) =
             ( msum mResults
             , widget
                 & Widget.size .~ Vector2 0 height
-                & Widget.translate (Vector2 0 (0.5 * (height - headHeight)))
+                & Widget.onWidgetData (Widget.translate (Vector2 0 (0.5 * (height - headHeight))))
             , (widget ^. Widget.size . _2) - 0.5 * (headHeight + mainResultHeight)
                 & max 0
             )

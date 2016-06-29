@@ -23,7 +23,8 @@ focusAreaIntoWindow winSize widget =
         allowedScroll = winSize - widgetSize
         intoWindow rawLens
             | widgetSize ^. l > winSize ^. l && movement < 0 =
-              Widget.translate (0 & l .~ max (allowedScroll ^. l) movement)
+              Widget.onWidgetData
+              (Widget.translate (0 & l .~ max (allowedScroll ^. l) movement))
             | otherwise = id
             where
                 movement = center ^. l - focalPoint ^. l
