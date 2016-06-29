@@ -1,14 +1,13 @@
 {-# LANGUAGE NoImplicitPrelude, TemplateHaskell, OverloadedStrings, RecordWildCards, DeriveFunctor, DeriveFoldable, DeriveTraversable #-}
 module Graphics.UI.Bottle.Widgets.Grid
     ( Grid(..)
-    , make
+    , make, makeWithKeys
     , Alignment(..), GridView.alignmentRatio
     , gridMCursor, gridSize, gridContent
     , Element
     , elementAlign, elementRect, elementOriginalWidget
     , Cursor
     , Keys(..), stdKeys
-    , toWidget, toWidgetWithKeys
     ) where
 
 import           Control.Applicative (liftA2)
@@ -201,13 +200,23 @@ gridContent = _gridContent
 
 make ::
     (Traversable vert, Traversable horiz) =>
-    vert (horiz (Alignment, Widget a)) -> Grid vert horiz a
-make children = Grid
-    { __gridMCursor = toList children <&> toList <&> map snd & getCursor
-    , __gridSize = size
-    , __gridContent = content
-    }
+    vert (horiz (Alignment, Widget a)) -> (Grid vert horiz a, Widget a)
+make = makeWithKeys stdKeys
+
+makeWithKeys ::
+    (Traversable vert, Traversable horiz) =>
+    Keys ModKey -> vert (horiz (Alignment, Widget a)) -> (Grid vert horiz a, Widget a)
+makeWithKeys keys children =
+    ( grid
+    , toWidgetWithKeys keys grid
+    )
     where
+        grid =
+            Grid
+            { __gridMCursor = toList children <&> toList <&> map snd & getCursor
+            , __gridSize = size
+            , __gridContent = content
+            }
         (size, content) =
             children
             & Lens.mapped . Lens.mapped %~ toTriplet
@@ -255,9 +264,6 @@ toWidgetWithKeys keys (Grid mCursor size sChildren) =
 
 groupSortOn :: Ord b => (a -> b) -> [a] -> [[a]]
 groupSortOn f = groupOn f . sortOn f
-
-toWidget :: (Foldable vert, Foldable horiz) => Grid vert horiz a -> Widget a
-toWidget = toWidgetWithKeys stdKeys
 
 combineMEnters ::
     Widget.Size -> [[Maybe (Direction -> Widget.EnterResult a)]] ->

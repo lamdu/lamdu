@@ -414,7 +414,7 @@ layoutResults groups hiddenResults myId
             let grid =
                   rows
                   & Lens.mapped . Lens.mapped %~ (,) (Grid.Alignment (Vector2 0 0.5))
-                  & Grid.make & Grid.toWidget
+                  & Grid.make & snd
                   & EventMap.blockDownEvents
             let padHeight =
                     calcPadding groups

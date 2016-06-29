@@ -62,23 +62,21 @@ make ::
     Traversable t =>
     Orientation -> t (Alignment, Widget a) -> (Box t a, Widget a)
 make Horizontal children =
-    ( Box
-      { __boxMCursor = grid ^. Grid.gridMCursor <&> (^. _1)
-      , __boxContent = grid ^. Grid.gridContent & eHead
-      }
-    , Grid.toWidget grid
-    )
+    Grid.make [children] & _1 %~ boxify
     where
-        grid = Grid.make [children]
+        boxify grid =
+            Box
+            { __boxMCursor = grid ^. Grid.gridMCursor <&> (^. _1)
+            , __boxContent = grid ^. Grid.gridContent & eHead
+            }
 make Vertical children =
-    ( Box
-      { __boxMCursor = grid ^. Grid.gridMCursor <&> (^. _2)
-      , __boxContent = grid ^. Grid.gridContent <&> eHead
-      }
-    , Grid.toWidget grid
-    )
+    children <&> (:[]) & Grid.make & _1 %~ boxify
     where
-        grid = children <&> (:[]) & Grid.make
+        boxify grid =
+            Box
+            { __boxMCursor = grid ^. Grid.gridMCursor <&> (^. _2)
+            , __boxContent = grid ^. Grid.gridContent <&> eHead
+            }
 
 makeAlign ::
     Traversable t =>
