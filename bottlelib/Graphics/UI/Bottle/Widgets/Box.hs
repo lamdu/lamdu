@@ -12,16 +12,13 @@ module Graphics.UI.Bottle.Widgets.Box
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Lens.Tuple
-import qualified Graphics.UI.Bottle.Widget as Widget
+import           Data.Functor.Identity (Identity(..))
 import           Graphics.UI.Bottle.Widget (Widget, WidgetF)
+import qualified Graphics.UI.Bottle.Widget as Widget
 import           Graphics.UI.Bottle.Widgets.Grid (Alignment(..))
 import qualified Graphics.UI.Bottle.Widgets.Grid as Grid
 
 type Cursor = Int
-
-eHead :: [a] -> a
-eHead (x:_) = x
-eHead [] = error "Grid returned invalid list without any elements, instead of list Box handed it"
 
 -- Want a 2d vector like in Grid, because we may want to preserve the
 -- alignment in the resulting Box.
@@ -31,8 +28,8 @@ data Orientation = Horizontal | Vertical
 make ::
     Traversable t =>
     Orientation -> t (WidgetF ((,) Alignment) a) -> (t Alignment, Widget a)
-make Horizontal x = Grid.make [x] & _1 %~ eHead
-make Vertical x = x <&> (:[]) & Grid.make & _1 . Lens.mapped %~ eHead
+make Horizontal x = Grid.make (Identity x) & _1 %~ runIdentity
+make Vertical x = x <&> Identity & Grid.make & _1 . Lens.mapped %~ runIdentity
 
 makeAlign ::
     Traversable t =>
