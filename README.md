@@ -71,8 +71,8 @@ stack install
 
 ### Optionally installing [nodejs](https://nodejs.org/en/)
 
-To speed up Lamdu's installation under any OS, you can install `nodejs
->= 6.2.1`, such that `node` is in your `$PATH`.
+To speed up Lamdu's installation under any OS, you can install
+`nodejs >= 6.2.1`, such that `node` is in your `$PATH`.
 
 If you do not install nodejs, Lamdu's installation will build it from
 source.
