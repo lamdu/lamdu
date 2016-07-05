@@ -38,6 +38,8 @@ markAnnotationsToDisplay ::
     Expression name m T.Payload
 markAnnotationsToDisplay (Expression oldBody pl) =
     case newBody of
+    BodyInjectedExpression ->
+        Expression newBody pl & dontShowAnnotation
     BodyLiteral LiteralNum {} ->
         Expression newBody pl & dontShowAnnotation
     BodyLiteral LiteralText {}->

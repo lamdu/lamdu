@@ -2,6 +2,7 @@
 module Lamdu.Sugar.Convert.Hole
     ( convert, convertCommon
     , mkHoleOption, mkHoleOptionFromInjected, addSuggestedOptions
+    , injectVar
     , BaseExpr(..)
     ) where
 
@@ -306,19 +307,30 @@ getLocalScopeGetVars sugarContext par
             ) <&> fst
         mkFieldParam tag = V.GetField var tag & V.BGetField & Val ()
 
+data IsInjected = Injected | NotInjected
 type HoleResultVal m a = Val (Infer.Payload, (Maybe (ValI m), a))
 
 markNotInjected :: HoleResultVal n () -> HoleResultVal n IsInjected
 markNotInjected val = val <&> _2 . _2 .~ NotInjected
 
+injectVar :: V.Var
+injectVar = "HOLE INJECT EXPR"
+
+replaceInjected :: Val (Input.Payload m IsInjected) -> Val (Input.Payload m ())
+replaceInjected (Val pl body) =
+    case pl ^. Input.userData of
+    Injected -> V.LVar injectVar & V.BLeaf
+    NotInjected -> body & traverse %~ replaceInjected
+    & Val (void pl)
+
 writeConvertTypeChecked ::
-    (Monad m, Monoid a) =>
+    Monad m =>
     EntityId -> ConvertM.Context m -> ValIProperty m ->
-    HoleResultVal m a ->
+    HoleResultVal m IsInjected ->
     T m
-    ( ExpressionU m a
-    , Val (Input.Payload m a)
-    , Val (ValIProperty m, Input.Payload m a)
+    ( ExpressionU m ()
+    , Val (Input.Payload m ())
+    , Val (ValIProperty m, Input.Payload m ())
     )
 writeConvertTypeChecked holeEntityId sugarContext holeStored inferredVal = do
     -- With the real stored uuids:
@@ -350,13 +362,13 @@ writeConvertTypeChecked holeEntityId sugarContext holeStored inferredVal = do
             <&> makeConsistentPayload
             & consistentExprIds holeEntityId
     converted <-
-        consistentExpr
+        replaceInjected consistentExpr
         & ConvertM.convertSubexpression
         & ConvertM.run sugarContext
     return
         ( converted
-        , consistentExpr
-        , writtenExpr <&> snd
+        , consistentExpr <&> void
+        , writtenExpr <&> snd <&> _2 %~ void
         )
     where
         intoStorePoint (inferred, (mStorePoint, a)) =

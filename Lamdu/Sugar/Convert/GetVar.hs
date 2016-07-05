@@ -24,6 +24,7 @@ import qualified Lamdu.Expr.UniqueId as UniqueId
 import qualified Lamdu.Infer as Infer
 import           Lamdu.Sugar.Convert.Expression.Actions (addActions)
 import qualified Lamdu.Sugar.Convert.Input as Input
+import qualified Lamdu.Sugar.Convert.Hole as ConvertHole
 import           Lamdu.Sugar.Convert.Monad (ConvertM, siTagParamInfos, tpiFromParameters)
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
 import           Lamdu.Sugar.Internal
@@ -112,12 +113,15 @@ convertParamsRecord param exprPl =
 convert ::
     Monad m =>
     V.Var -> Input.Payload m a -> ConvertM m (ExpressionU m a)
-convert param exprPl =
-    do
-        convertGlobal param exprPl & justToLeft
-        convertGetBinder param exprPl & justToLeft
-        convertParamsRecord param exprPl & justToLeft
-        GetParam (Param (paramNameRef param) GetParameter NormalBinder) & return
-    & runMatcherT
-    <&> BodyGetVar
-    >>= addActions exprPl
+convert param exprPl
+    | param == ConvertHole.injectVar =
+        addActions exprPl BodyInjectedExpression
+    | otherwise =
+        do
+            convertGlobal param exprPl & justToLeft
+            convertGetBinder param exprPl & justToLeft
+            convertParamsRecord param exprPl & justToLeft
+            GetParam (Param (paramNameRef param) GetParameter NormalBinder) & return
+        & runMatcherT
+        <&> BodyGetVar
+        >>= addActions exprPl

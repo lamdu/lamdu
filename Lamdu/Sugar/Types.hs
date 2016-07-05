@@ -88,7 +88,6 @@ module Lamdu.Sugar.Types
     , HoleResult(..)
         , holeResultConverted
         , holeResultPick
-    , IsInjected(..)
     , PickedResult(..), prIdTranslation
     , TagG(..), tagGName, tagVal, tagInstance
     , Lambda(..), lamBinder, lamMode
@@ -230,17 +229,10 @@ newtype PickedResult = PickedResult
     { _prIdTranslation :: [(EntityId, EntityId)]
     }
 
-data IsInjected = Injected | NotInjected
-
-instance Monoid IsInjected where
-    mempty = NotInjected
-    mappend NotInjected NotInjected = NotInjected
-    mappend _ _ = Injected
-
 type HoleResultScore = [Int]
 
 data HoleResult name m = HoleResult
-    { _holeResultConverted :: Expression name m IsInjected
+    { _holeResultConverted :: Expression name m ()
     , _holeResultPick :: T m PickedResult
     }
 
@@ -438,6 +430,7 @@ data Body name m expr
     | BodyGetVar (GetVar name m)
     | BodyToNom (Nominal name expr)
     | BodyFromNom (Nominal name expr)
+    | BodyInjectedExpression -- Used for hole results
     deriving (Functor, Foldable, Traversable)
 
 instance Show name => Show (NamedParamInfo name m) where
@@ -461,6 +454,7 @@ instance Show expr => Show (Body name m expr) where
     show BodyGetVar {} = "GetVar:TODO"
     show BodyFromNom {} = "FromNom:TODO"
     show BodyToNom {} = "ToNom:TODO"
+    show BodyInjectedExpression {} = "InjectedExpression"
 
 data LetFloatResult = LetFloatResult
     { lfrNewEntity :: EntityId

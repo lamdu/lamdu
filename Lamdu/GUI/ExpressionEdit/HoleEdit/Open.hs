@@ -347,23 +347,16 @@ makeHoleResultWidget resultId holeResult =
         holeResultConverted = holeResult ^. Sugar.holeResultConverted
 
 postProcessSugar ::
-    Monad m =>
-    ExpressionN m Sugar.IsInjected ->
-    ExpressionN m ExprGuiT.Payload
+    Monad m => ExpressionN m () -> ExpressionN m ExprGuiT.Payload
 postProcessSugar expr =
     expr
-    <&> toPayload
+    & Lens.mapped .~ pl
     & SugarLens.holeArgs . Sugar.plData . ExprGuiT.plShowAnnotation
     .~ ExprGuiT.alwaysShowAnnotations
-
-toPayload :: Sugar.IsInjected -> ExprGuiT.Payload
-toPayload isInjected =
-    ExprGuiT.emptyPayload NearestHoles.none
-    & ExprGuiT.plShowAnnotation .~ ExprGuiT.neverShowAnnotations
-    & ExprGuiT.plInjected .~
-      case isInjected of
-      Sugar.NotInjected -> []
-      Sugar.Injected -> [True]
+    where
+        pl =
+            ExprGuiT.emptyPayload NearestHoles.none
+            & ExprGuiT.plShowAnnotation .~ ExprGuiT.neverShowAnnotations
 
 makeNoResults ::
     Monad m => AnimId -> ExprGuiM m (Widget (T m Widget.EventResult))

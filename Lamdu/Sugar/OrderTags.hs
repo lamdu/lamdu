@@ -84,6 +84,7 @@ orderBody x@Sugar.BodyGetVar{} = return x
 orderBody x@Sugar.BodyInject{} = return x
 orderBody x@Sugar.BodyToNom{} = return x
 orderBody x@Sugar.BodyFromNom{} = return x
+orderBody x@Sugar.BodyInjectedExpression{} = return x
 
 orderExpr :: Monad m => Order m (Sugar.Expression name m a)
 orderExpr e =

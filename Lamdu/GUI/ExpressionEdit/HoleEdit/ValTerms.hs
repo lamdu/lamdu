@@ -49,6 +49,7 @@ bodyShape = \case
     Sugar.BodyToNom {} -> []
     Sugar.BodyFromNom {} -> []
     Sugar.BodyHole {} -> []
+    Sugar.BodyInjectedExpression {} -> []
 
 bodyNames :: Monad m => Sugar.Body (Name m) m expr -> [String]
 bodyNames = \case

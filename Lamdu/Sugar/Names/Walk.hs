@@ -172,6 +172,7 @@ toBody expr = \case
     BodyGetVar       x -> toGetVar x <&> BodyGetVar
     BodyLiteral      x -> pure $ BodyLiteral x
     BodyLam          x -> toLam expr x <&> BodyLam
+    BodyInjectedExpression -> return BodyInjectedExpression
     where
         toTagG = tagGName %%~ opGetName TagName
         toTIdG = tidgName %%~ opGetName NominalName

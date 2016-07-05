@@ -10,7 +10,7 @@ module Lamdu.GUI.ExpressionGui.Types
     , LayoutDisambiguationContext(..)
     , SugarExpr
     , Payload(..)
-        , plStoredEntityIds, plInjected, plNearestHoles, plShowAnnotation
+        , plStoredEntityIds, plNearestHoles, plShowAnnotation
     , emptyPayload
     , EvalModeShow(..)
     , FuncApplyLimit(..)
@@ -138,7 +138,6 @@ alwaysShowAnnotations = ShowAnnotation True True EvalModeShowEval UnlimitedFuncA
 -- GUI input payload on sugar exprs
 data Payload = Payload
     { _plStoredEntityIds :: [Sugar.EntityId]
-    , _plInjected :: [Bool]
     , _plNearestHoles :: NearestHoles
     , _plShowAnnotation :: ShowAnnotation
     }
@@ -153,7 +152,6 @@ type SugarExpr m = ExpressionN m Payload
 emptyPayload :: NearestHoles -> Payload
 emptyPayload nearestHoles = Payload
     { _plStoredEntityIds = []
-    , _plInjected = []
     , _plNearestHoles = nearestHoles
     , _plShowAnnotation = showAnnotationWhenVerbose
     }
