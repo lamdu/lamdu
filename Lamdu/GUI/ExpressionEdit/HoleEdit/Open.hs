@@ -1,4 +1,4 @@
-{-# LANGUAGE PatternGuards, NoImplicitPrelude, FlexibleContexts, RecordWildCards, OverloadedStrings, TypeFamilies #-}
+{-# LANGUAGE TemplateHaskell, PatternGuards, NoImplicitPrelude, FlexibleContexts, RecordWildCards, OverloadedStrings, TypeFamilies #-}
 -- | The search area (search term + results) of an open/active hole.
 
 module Lamdu.GUI.ExpressionEdit.HoleEdit.Open
@@ -62,6 +62,14 @@ import qualified Lamdu.Sugar.Types as Sugar
 import           Prelude.Compat
 
 type T = Transaction
+
+data ResultGroupWidgets m = ResultGroupWidgets
+    { _rgwMainResult :: ShownResult m
+    , _rgwMSelectedResult :: Maybe (ShownResult m) -- Can be an extra result
+    , _rgwRow :: [Widget (T m Widget.EventResult)]
+    , _rgwPadding :: Widget.R
+    }
+Lens.makeLenses ''ResultGroupWidgets
 
 extraSymbol :: String
 extraSymbol = "▷"
@@ -205,25 +213,6 @@ makeExtraSymbolWidget animId isSelected results
                 <&> Widget.scale extraSymbolScaleFactor
                 <&> Widget.tint extraSymbolColor
                 >>= ExprGuiM.widgetEnv . BWidgets.hboxCenteredSpaced . (Widget.empty :) . (: [])
-
-data ResultGroupWidgets m = ResultGroupWidgets
-    { _rgwMainResult :: ShownResult m
-    , _rgwMSelectedResult :: Maybe (ShownResult m) -- Can be an extra result
-    , _rgwRow :: [Widget (T m Widget.EventResult)]
-    , _rgwPadding :: Widget.R
-    }
-rgwMainResult :: Lens' (ResultGroupWidgets m) (ShownResult m)
-rgwMainResult f ResultGroupWidgets{..} =
-    f _rgwMainResult <&> \_rgwMainResult -> ResultGroupWidgets{..}
-rgwMSelectedResult :: Lens' (ResultGroupWidgets m) (Maybe (ShownResult m))
-rgwMSelectedResult f ResultGroupWidgets{..} =
-    f _rgwMSelectedResult <&> \_rgwMSelectedResult -> ResultGroupWidgets{..}
-rgwRow :: Lens' (ResultGroupWidgets m) [Widget (T m Widget.EventResult)]
-rgwRow f ResultGroupWidgets{..} =
-    f _rgwRow <&> \_rgwRow -> ResultGroupWidgets{..}
-rgwPadding :: Lens' (ResultGroupWidgets m) Widget.R
-rgwPadding f ResultGroupWidgets{..} =
-    f _rgwPadding <&> \_rgwPadding -> ResultGroupWidgets{..}
 
 makeResultGroup ::
     Monad m =>
