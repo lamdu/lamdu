@@ -7,6 +7,7 @@ import           Prelude.Compat
 
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
+import           Control.Lens.Tuple
 import           Control.Monad (guard, unless)
 import           Control.Monad.Trans.Class (lift)
 import           Control.Monad.Trans.Either.Utils (runMatcherT, justToLeft)
@@ -198,7 +199,7 @@ mkAppliedHoleSuggesteds sugarContext argI exprPl stored =
             ConvertHole.mkHoleOptionFromInjected
             (sugarContext & ConvertM.scInferContext .~ newInferCtx)
             exprPl stored
-            (sugg <&> Lens._1 %~ (^. Infer.plType))
+            (sugg <&> _1 %~ (^. Infer.plType))
 
 convertAppliedHole ::
     (Monad m, Monoid a) =>
