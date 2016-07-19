@@ -187,7 +187,7 @@ makeShownResult holeInfo result =
                 res ^? Sugar.holeResultConverted
                 . SugarLens.holePayloads . Sugar.plEntityId
         return
-            ( widget & Widget.pad padding
+            ( Widget.onWidgetData (Widget.pad padding) widget
             , ShownResult
               { srMkEventMap =
                   mkEventMap <&> mappend (fixNumWithDotEventMap holeInfo res)
@@ -404,7 +404,8 @@ layoutResults groups hiddenResults myId
                     - sum (hiddenResultsWidgets ^.. Lens.traversed . Widget.size . _2)
                     & max 0
             grid : hiddenResultsWidgets & Box.vboxCentered
-                & Widget.assymetricPad 0 (Vector2 0 padHeight)
+                & Widget.onWidgetData
+                    (Widget.assymetricPad 0 (Vector2 0 padHeight))
                 & return
     where
         rows = groups ^.. Lens.traversed . rgwRow

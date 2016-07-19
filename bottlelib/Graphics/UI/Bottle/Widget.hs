@@ -351,14 +351,14 @@ scale mult widget =
             & Lens.argument . Direction.coordinates . Rect.topLeftAndSize //~ mult
 
 -- Surround a widget with padding
-pad :: Vector2 R -> Widget a -> Widget a
+pad :: Vector2 R -> WidgetData fo a -> WidgetData fo a
 pad p = assymetricPad p p
 
-assymetricPad :: Vector2 R -> Vector2 R -> Widget a -> Widget a
-assymetricPad leftAndTop rightAndBottom widget =
-    widget
-    & size +~ leftAndTop + rightAndBottom
-    & onWidgetData (translate leftAndTop)
+assymetricPad :: Vector2 R -> Vector2 R -> WidgetData fo a -> WidgetData fo a
+assymetricPad leftAndTop rightAndBottom wd =
+    wd
+    & wView . View.size +~ leftAndTop + rightAndBottom
+    & translate leftAndTop
 
 padToSizeAlign :: Size -> Vector2 R -> Widget a -> Widget a
 padToSizeAlign newSize alignment widget =

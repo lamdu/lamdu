@@ -81,11 +81,11 @@ make def =
         myId = def ^. Sugar.drEntityId & WidgetIds.fromEntityId
 
 expandTo :: Widget.R -> Widget a -> Widget a
-expandTo width eg
-    | padding <= 0 = eg
-    | otherwise = eg & Widget.pad (Vector2 (padding / 2) 0)
+expandTo width w
+    | padding <= 0 = w
+    | otherwise = Widget.onWidgetData (Widget.pad (Vector2 (padding / 2) 0)) w
     where
-        padding = width - eg ^. Widget.width
+        padding = width - w ^. Widget.width
 
 topLevelSchemeTypeView ::
     Monad m =>

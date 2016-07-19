@@ -121,7 +121,7 @@ pad padding =
     where
         f w =
             w
-            & widget %~ Widget.pad padding
+            & Widget.onWidgetData (Widget.pad padding)
             & alignment +~ padding
 
 -- Resize a layout to be the same alignment/size as another layout
