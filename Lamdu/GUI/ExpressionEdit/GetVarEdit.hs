@@ -112,7 +112,8 @@ make getVar pl =
                 Sugar.GetLet -> (letColor, id)
                 Sugar.GetDefinition defState ->
                     ( definitionColor
-                    , ExpressionGui.deletionDiagonal
+                    , ExpressionGui.egWidget . Widget.view %~
+                      ExpressionGui.deletionDiagonal
                       0.1 (Widget.toAnimId myId) defState
                     )
                 & \(color, maybeAddDiagonal) ->

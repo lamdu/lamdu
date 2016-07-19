@@ -59,6 +59,7 @@ import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.EventMap as E
 import           Graphics.UI.Bottle.ModKey (ModKey(..))
 import qualified Graphics.UI.Bottle.View as View
+import           Graphics.UI.Bottle.View (View)
 import           Graphics.UI.Bottle.Widget (Widget, WidgetF)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets as BWidgets
@@ -518,19 +519,15 @@ nameEditFDConfig = FocusDelegator.Config
     }
 
 deletionDiagonal ::
-    Widget.R -> AnimId -> Anchors.DefinitionState -> ExpressionGui m -> ExpressionGui m
-deletionDiagonal _ _ Anchors.LiveDefinition eg = eg
-deletionDiagonal thickness animId Anchors.DeletedDefinition eg =
-    eg
-    & egWidget . Widget.view %~ f
+    Widget.R -> AnimId -> Anchors.DefinitionState -> View -> View
+deletionDiagonal _ _ Anchors.LiveDefinition view = view
+deletionDiagonal thickness animId Anchors.DeletedDefinition view =
+    View.addDiagonal thickness (animId ++ ["diagonal"])
+    (minLayer - 1) (Draw.Color 1 0 0 1) view
     where
-        f view =
-            View.addDiagonal thickness (animId ++ ["diagonal"])
-            (minLayer - 1) (Draw.Color 1 0 0 1) view
-            where
-                minLayer =
-                    Lens.minimumOf (View.animFrame . Anim.layers) view
-                    & fromMaybe 0
+        minLayer =
+            Lens.minimumOf (View.animFrame . Anim.layers) view
+            & fromMaybe 0
 
 makeNameOriginEdit ::
     Monad m => Name m -> Widget.Id -> ExprGuiM m (Widget (T m Widget.EventResult))

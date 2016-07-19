@@ -75,7 +75,8 @@ make def =
                 makeExprDefinition def bodyExpr
             Sugar.DefinitionBodyBuiltin builtin ->
                 makeBuiltinDefinition def builtin <&> ExpressionGui.fromValueWidget
-            <&> ExpressionGui.deletionDiagonal 0.02 (Widget.toAnimId myId) defState
+            <&> ExpressionGui.egWidget . Widget.view %~
+                ExpressionGui.deletionDiagonal 0.02 (Widget.toAnimId myId) defState
             >>= maybe return (addUndeleteButton myId) mUndelete
     where
         myId = def ^. Sugar.drEntityId & WidgetIds.fromEntityId
