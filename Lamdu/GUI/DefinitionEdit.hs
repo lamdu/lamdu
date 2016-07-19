@@ -3,6 +3,7 @@ module Lamdu.GUI.DefinitionEdit
     ( make
     ) where
 
+import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Lens.Tuple
 import qualified Data.List as List
@@ -20,13 +21,13 @@ import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets as BWidgets
 import qualified Graphics.UI.Bottle.Widgets.Box as Box
+import qualified Graphics.UI.Bottle.Widgets.Layout as Layout
 import qualified Graphics.UI.GLFW as GLFW
 import           Lamdu.Calc.Type.Scheme (Scheme(..), schemeType)
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.GUI.ExpressionEdit.BinderEdit as BinderEdit
 import qualified Lamdu.GUI.ExpressionEdit.BuiltinEdit as BuiltinEdit
-import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
@@ -40,17 +41,17 @@ import           Prelude.Compat
 
 type T = Transaction
 
-addUndeleteButton :: Monad m => Widget.Id -> T m Widget.Id -> ExpressionGui m -> ExprGuiM m (ExpressionGui m)
-addUndeleteButton myId undelete gui =
+addUndeleteButton ::
+    Monad m => Widget.Id -> T m Widget.Id ->
+    (Widget.R -> Widget (T m Widget.EventResult)) ->
+    ExprGuiM m (Widget.R -> Widget (T m Widget.EventResult))
+addUndeleteButton myId undelete mkWidget =
     do
         undelButton <-
             BWidgets.makeFocusableTextView "Undelete..." undelButtonId
             & ExprGuiM.widgetEnv
             <&> Widget.weakerEvents eventMap
-            <&> ExpressionGui.fromValueWidget
-        ExpressionGui.vboxTopFocalSpaced
-            ??
-            ([gui, undelButton] <&> ExpressionGui.egAlignment . _1 .~ 0)
+        return $ \width -> Box.vboxAlign 0 [mkWidget width, undelButton]
     where
         eventMap =
             Widget.keysEventMapMovesCursor [ModKey mempty GLFW.Key'Enter]
@@ -58,7 +59,9 @@ addUndeleteButton myId undelete gui =
         undelButtonId = Widget.joinId myId ["Undelete"]
 
 make ::
-    Monad m => DefinitionN m ExprGuiT.Payload -> ExprGuiM m (ExpressionGui m)
+    Monad m =>
+    DefinitionN m ExprGuiT.Payload ->
+    ExprGuiM m (Widget.R -> Widget (T m Widget.EventResult))
 make def =
     do
         defStateProp <-
@@ -74,8 +77,8 @@ make def =
             Sugar.DefinitionBodyExpression bodyExpr ->
                 makeExprDefinition def bodyExpr
             Sugar.DefinitionBodyBuiltin builtin ->
-                makeBuiltinDefinition def builtin <&> ExpressionGui.fromValueWidget
-            <&> ExpressionGui.egWidget . Widget.view %~
+                makeBuiltinDefinition def builtin <&> const
+            <&> Lens.mapped . Widget.view %~
                 ExpressionGui.deletionDiagonal 0.02 (Widget.toAnimId myId) defState
             >>= maybe return (addUndeleteButton myId) mUndelete
     where
@@ -165,7 +168,7 @@ makeExprDefinition ::
     Monad m =>
     Sugar.Definition (Name m) m (ExprGuiT.SugarExpr m) ->
     Sugar.DefinitionExpression (Name m) m (ExprGuiT.SugarExpr m) ->
-    ExprGuiM m (ExpressionGui m)
+    ExprGuiM m (Widget.R -> Widget (T m Widget.EventResult))
 makeExprDefinition def bodyExpr =
     do
         config <- ExprGuiM.readConfig
@@ -191,12 +194,12 @@ makeExprDefinition def bodyExpr =
                     , topLevelSchemeTypeView oldExported entityId ["exportedType"]
                     ]
             & sequence <&> sequence
-        let f widget =
-                widget : mkTypeWidgets (widget ^. Widget.width)
-                & List.intersperse vspace
-                & Box.vboxCentered
-        bodyGui & ExpressionGui.egAbsWidget %~ f
-            & return
+        return $ \width ->
+            let bodyWidget = ExpressionGui.render width bodyGui ^. Layout.widget
+            in
+            bodyWidget : mkTypeWidgets (bodyWidget ^. Widget.width)
+            & List.intersperse vspace
+            & Box.vboxCentered
     where
         entityId = def ^. Sugar.drEntityId
         myId = WidgetIds.fromEntityId entityId

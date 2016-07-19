@@ -4,6 +4,7 @@ module Lamdu.GUI.ExpressionGui
     , ExpressionGui, toLayout, egWidget, egAlignment, egAbsWidget
       , ExprGuiT.egLayout, ExprGuiT.fromLayout, egIsFocused
     , LayoutMode(..), LayoutParams(..), LayoutDisambiguationContext(..)
+    , render
     -- General:
     , ExprGuiT.fromValueWidget
     , pad
@@ -798,3 +799,11 @@ valOfScopePreferCur annotation = valOfScope annotation . pure . Just
 
 listWithDelDests :: k -> k -> (a -> k) -> [a] -> [(k, k, a)]
 listWithDelDests = ListUtils.withPrevNext
+
+render :: Widget.R -> ExpressionGuiM m -> Layout (m Widget.EventResult)
+render width gui =
+    (gui ^. toLayout)
+    LayoutParams
+    { _layoutMode = LayoutNarrow width
+    , _layoutContext = LayoutClear
+    }

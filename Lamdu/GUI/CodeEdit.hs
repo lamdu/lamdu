@@ -12,6 +12,7 @@ import           Control.Monad.Trans.Class (lift)
 import           Data.CurAndPrev (CurAndPrev(..))
 import           Data.Foldable (traverse_)
 import           Data.Functor.Identity (Identity(..))
+import qualified Data.List as List
 import           Data.List.Utils (insertAt, removeAt)
 import           Data.Maybe (fromMaybe)
 import           Data.Orphans () -- Imported for Monoid (IO ()) instance
@@ -24,6 +25,7 @@ import           Graphics.UI.Bottle.ModKey (ModKey(..))
 import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets as BWidgets
+import qualified Graphics.UI.Bottle.Widgets.Box as Box
 import qualified Graphics.UI.Bottle.Widgets.Layout as Layout
 import           Graphics.UI.Bottle.WidgetsEnvT (WidgetEnvT)
 import qualified Graphics.UI.Bottle.WidgetsEnvT as WE
@@ -200,28 +202,21 @@ gui ::
     WidgetEnvT (T m) (Widget.R -> Widget (M m Widget.EventResult))
 gui env rootId replExpr panes =
     do
-        replEdit <- makeReplEdit env rootId replExpr
+        replGui <- makeReplEdit env rootId replExpr
         panesEdits <-
             panes
             & ExprGuiM.transaction . traverse (processPane env)
             >>= traverse (makePaneEdit env)
         newDefinitionButton <-
             makeNewDefinitionButton rootId <&> mLiftWidget
-            <&> ExpressionGui.fromValueWidget
         eventMap <- panesEventMap env & ExprGuiM.widgetEnv
-        vbox <- ExpressionGui.vboxTopFocalSpaced
-        return $
-            \width ->
-            let render (ExpressionGui mkLayout) =
-                    mkLayout
-                    ExpressionGui.LayoutParams
-                    { _layoutMode = ExpressionGui.LayoutNarrow width
-                    , _layoutContext = ExpressionGui.LayoutClear
-                    } ^. Layout.widget
-            in
-                replEdit : panesEdits ++ [newDefinitionButton]
-                <&> ExpressionGui.egAlignment .~ 0
-                & vbox & render & Widget.weakerEvents eventMap
+        vspace <- ExpressionGui.stdVSpace
+        return $ \width ->
+            ExpressionGui.render width replGui ^. Layout.widget
+            : (panesEdits ?? width) ++ [newDefinitionButton]
+            & List.intersperse vspace
+            & Box.vboxAlign 0
+            & Widget.weakerEvents eventMap
     & ExprGuiM.assignCursor rootId replId
     & ExprGuiM.run ExpressionEdit.make
       (codeProps env) (config env) (settings env) (style env)
@@ -244,10 +239,10 @@ make env rootId =
 makePaneEdit ::
     Monad m =>
     Env m -> (Pane m, DefinitionN m ExprGuiT.Payload) ->
-    ExprGuiM m (ExpressionGuiM (M m))
+    ExprGuiM m (Widget.R -> Widget (M m Widget.EventResult))
 makePaneEdit env (pane, defS) =
     makePaneWidget defS
-    <&> ExpressionGui.egWidget %~ Widget.weakerEvents paneEventMap . mLiftWidget
+    <&> Lens.mapped %~ Widget.weakerEvents paneEventMap . mLiftWidget
     where
         delKeys = Config.delKeys (config env)
         Config.Pane{paneCloseKeys, paneMoveDownKeys, paneMoveUpKeys} =
@@ -377,7 +372,9 @@ panesEventMap Env{config,codeProps,exportActions} =
         Config.Export{exportPath,importKeys,exportAllKeys} = Config.export config
 
 makePaneWidget ::
-    Monad m => DefinitionN m ExprGuiT.Payload -> ExprGuiM m (ExpressionGui m)
+    Monad m =>
+    DefinitionN m ExprGuiT.Payload ->
+    ExprGuiM m (Widget.R -> Widget (T m Widget.EventResult))
 makePaneWidget defS =
     do
         config <- ExprGuiM.readConfig
@@ -390,5 +387,4 @@ makePaneWidget defS =
         let colorize widget
                 | Widget.isFocused widget = colorizeActivePane widget
                 | otherwise = colorizeInactivePane widget
-        DefinitionEdit.make defS
-            <&> ExpressionGui.egWidget %~ colorize
+        DefinitionEdit.make defS <&> Lens.mapped %~ colorize
