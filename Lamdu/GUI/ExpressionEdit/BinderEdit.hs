@@ -349,7 +349,12 @@ make name binder myId =
         defNameEdit <-
             makeBinderNameEdit (binder ^. Sugar.bActions) rhsJumperEquals rhs
             name myId
-            <&> ExpressionGui.egAbsWidget %~ addBelow presentationEdits
+            <&> ExpressionGui.egAlignment . _1 .~ 0
+            <&> ExpressionGui.egLayout %~
+                Layout.addAfter Layout.Vertical
+                (presentationEdits
+                <&> Layout.fromCenteredWidget
+                <&> Layout.alignment . _1 .~ 0)
             <&> ExpressionGui.egWidget %~ Widget.weakerEvents jumpHolesEventMap
         mLhsEdit <-
             case mParamsEdit of
