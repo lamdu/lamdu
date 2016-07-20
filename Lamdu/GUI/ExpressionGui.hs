@@ -130,35 +130,36 @@ pad p =
             & Widget.hoist (Layout.pad p)
 
 maybeIndent :: Maybe ParenIndentInfo -> ExpressionGui m -> ExpressionGui m
-maybeIndent mPiInfo gui =
-    ExpressionGui $
-    \lp ->
-    case (lp ^. layoutContext, mPiInfo) of
-    (LayoutVertical, Just piInfo) ->
-        let indentConf = piIndentConfig piInfo
-            stdSpace = piStdHorizSpacing piInfo
-            barWidth = stdSpace * Config.indentBarWidth indentConf
-            gapWidth = stdSpace * Config.indentBarGap indentConf
-            indentWidth = barWidth + gapWidth
-            content =
-                lp & layoutMode . modeWidths -~ indentWidth
-                & gui ^. toLayout
-                & Layout.alignment . _2 .~ 0
-            bgAnimId = piAnimId piInfo ++ ["("]
-        in
-        content
-        & Layout.addBefore Layout.Horizontal
-            [ Spacer.make
-                (Vector2 barWidth (content ^. Widget.height))
-                & Widget.fromView
-                & Widget.backgroundColor 0 bgAnimId
-                    (Config.indentBarColor indentConf)
-                & Layout.fromCenteredWidget
-                & Layout.alignment . _2 .~ 0
-            , Spacer.make (Vector2 gapWidth 0)
-                & Widget.fromView & Layout.fromCenteredWidget
-            ]
-    _ -> lp & gui ^. toLayout
+maybeIndent mPiInfo =
+    toLayout %~ f
+    where
+        f mkLayout lp =
+            case (lp ^. layoutContext, mPiInfo) of
+            (LayoutVertical, Just piInfo) ->
+                content
+                & Layout.addBefore Layout.Horizontal
+                    [ Spacer.make
+                        (Vector2 barWidth (content ^. Widget.height))
+                        & Widget.fromView
+                        & Widget.backgroundColor 0 bgAnimId
+                            (Config.indentBarColor indentConf)
+                        & Layout.fromCenteredWidget
+                        & Layout.alignment . _2 .~ 0
+                    , Spacer.make (Vector2 gapWidth 0)
+                        & Widget.fromView & Layout.fromCenteredWidget
+                    ]
+                where
+                    indentConf = piIndentConfig piInfo
+                    stdSpace = piStdHorizSpacing piInfo
+                    barWidth = stdSpace * Config.indentBarWidth indentConf
+                    gapWidth = stdSpace * Config.indentBarGap indentConf
+                    indentWidth = barWidth + gapWidth
+                    content =
+                        lp & layoutMode . modeWidths -~ indentWidth
+                        & mkLayout
+                        & Layout.alignment . _2 .~ 0
+                    bgAnimId = piAnimId piInfo ++ ["("]
+            _ -> mkLayout lp
 
 vboxTopFocal :: [ExpressionGuiM m] -> ExpressionGuiM m
 vboxTopFocal [] = ExprGuiT.fromLayout Layout.empty
