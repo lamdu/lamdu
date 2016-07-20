@@ -118,10 +118,11 @@ make hole pl =
                                         (layoutMode & lay
                                         (wrapperGui & ExpressionGui.egAlignment . _1 .~ 0)
                                         searchAreaGui ^. ExpressionGui.toLayout)
-                                        `Layout.hoverInPlaceOf`
+                                        & Widget.hoist
+                                        (`Layout.hoverInPlaceOf`
                                         (layoutMode
                                         & unfocusedWrapperGui ^. ExpressionGui.toLayout
-                                        & Layout.alignment . _1 .~ 0)
+                                        & Layout.alignment . _1 .~ 0))
                         if ExpressionGui.egIsFocused wrapperGui
                             then layout addSearchAreaBelow
                             else if isSelected then

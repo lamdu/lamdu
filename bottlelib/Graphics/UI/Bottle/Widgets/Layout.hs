@@ -23,7 +23,8 @@ import           Control.Lens (Lens, Lens')
 import           Control.Lens.Operators
 import           Control.Lens.Tuple
 import           Data.Vector.Vector2 (Vector2(..))
-import           Graphics.UI.Bottle.Widget (Widget, WidgetF(..))
+import qualified Graphics.UI.Bottle.View as View
+import           Graphics.UI.Bottle.Widget (Widget, WidgetF(..), WidgetData)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.Box as Box
 import           Graphics.UI.Bottle.Widgets.Box (Orientation(..))
@@ -62,11 +63,15 @@ widget = Widget.sequenced . _2
 
 {-# INLINE absAlignedWidget #-}
 absAlignedWidget ::
-    Lens.Iso (Layout a) (Layout b) (AbsAlignedWidget a) (AbsAlignedWidget b)
+    Lens.Iso
+    (Box.Alignment, WidgetData fo a)
+    (Box.Alignment, WidgetData fo b)
+    (Vector2 Widget.R, WidgetData fo a)
+    (Vector2 Widget.R, WidgetData fo b)
 absAlignedWidget =
     Lens.iso (f ((*) . (^. Box.alignmentRatio))) (f (fmap Box.Alignment . (/)))
     where
-        f op w = w & alignment %~ (`op` (w ^. Widget.size))
+        f op (align, wd) = (op align (wd ^. Widget.wView . View.size), wd)
 
 boxComponentsToWidget ::
     Orientation -> BoxComponents (Layout a) -> Layout a
@@ -115,22 +120,23 @@ scaleAround point ratio w =
     Widget.scale ratio w
     & alignment .~ point + ((w ^. alignment - point) & Box.alignmentRatio //~ ratio)
 
-pad :: Vector2 Widget.R -> Layout a -> Layout a
+pad ::
+    Vector2 Widget.R ->
+    (Box.Alignment, WidgetData fo a) -> (Box.Alignment, WidgetData fo a)
 pad padding =
     absAlignedWidget %~ f
     where
-        f w =
-            w
-            & Widget.onWidgetData (Widget.pad padding)
-            & alignment +~ padding
+        f (p, wd) = (p + padding, Widget.pad padding wd)
 
 -- Resize a layout to be the same alignment/size as another layout
-hoverInPlaceOf :: Layout a -> Layout a -> Layout a
+hoverInPlaceOf ::
+    (Box.Alignment, WidgetData fo b) -> Layout a ->
+    (Box.Alignment, WidgetData fo b)
 layout `hoverInPlaceOf` src =
     layout
-    & Widget.onWidgetData
-        (Widget.translate (srcAlign - layout ^. absAlignedWidget . alignment))
-    & Widget.size .~ (src ^. Widget.size)
-    & absAlignedWidget . alignment .~ srcAlign
+    & _2 %~ Widget.translate (srcAlign - layout ^. absAlignedWidget . _1)
+    & _2 %~ Widget.wView . View.size .~ (src ^. Widget.size)
+    & absAlignedWidget . _1 .~ srcAlign
     where
-        srcAlign = src ^. absAlignedWidget . alignment
+        absSrc = Widget.hoist (^. absAlignedWidget) src
+        srcAlign = absSrc ^. alignment

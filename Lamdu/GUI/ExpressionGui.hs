@@ -127,7 +127,7 @@ pad p =
             layoutParams
             & layoutMode . modeWidths -~ 2 * (p ^. _1)
             & mkLayout
-            & Layout.pad p
+            & Widget.hoist (Layout.pad p)
 
 maybeIndent :: Maybe ParenIndentInfo -> ExpressionGui m -> ExpressionGui m
 maybeIndent mPiInfo gui =
@@ -361,7 +361,8 @@ applyWideAnnotationBehavior animId HoverWideAnnotation =
             \shrinkRatio layout ->
                 lifter layout
                 & addAnnotationHoverBackground config animId
-                & (`Layout.hoverInPlaceOf` shrinker shrinkRatio layout)
+                & Widget.hoist
+                    (`Layout.hoverInPlaceOf` shrinker shrinkRatio layout)
 
 processAnnotationGui ::
     Monad m =>
@@ -395,7 +396,9 @@ processAnnotationGui animId wideAnnotationBehavior =
                     & (/ annotationWidth) & pure
                     & _2 %~ min heightShrinkRatio
                 maybeTooNarrow
-                    | minWidth > annotationWidth = Layout.pad (Vector2 ((minWidth - annotationWidth) / 2) 0)
+                    | minWidth > annotationWidth =
+                        Widget.hoist
+                        (Layout.pad (Vector2 ((minWidth - annotationWidth) / 2) 0))
                     | otherwise = id
 
 data EvalResDisplay = EvalResDisplay
@@ -442,7 +445,7 @@ makeEvalView (NeighborVals mPrev mNext) evalRes animId =
                 n ^.. Lens._Just
                 <&> makeEvaluationResultViewBG
                 <&> Lens.mapped %~
-                    Layout.pad (neighborsPadding <&> realToFrac) .
+                    Widget.hoist (Layout.pad (neighborsPadding <&> realToFrac)) .
                     Widget.scale (neighborsScaleFactor <&> realToFrac)
                 <&> Lens.mapped . Layout.alignment . _2 .~ yPos
         prevs <- neighbourViews mPrev 1 & sequence
@@ -451,7 +454,7 @@ makeEvalView (NeighborVals mPrev mNext) evalRes animId =
         evalView
             & Layout.addBefore Layout.Horizontal prevs
             & Layout.addAfter Layout.Horizontal nexts
-            & (`Layout.hoverInPlaceOf` evalView)
+            & Widget.hoist (`Layout.hoverInPlaceOf` evalView)
             & return
 
 annotationSpacer :: Monad m => ExprGuiM m (Layout a)

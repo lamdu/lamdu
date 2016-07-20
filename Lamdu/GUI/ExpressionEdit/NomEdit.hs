@@ -28,7 +28,8 @@ import           Prelude.Compat
 hover :: Monad m => ExprGuiM m (Layout n -> Layout n -> Layout n)
 hover =
     ExpressionGui.liftLayers
-    <&> (\lift gui place -> lift gui `Layout.hoverInPlaceOf` place)
+    <&>
+    (\lift gui place -> lift gui & Widget.hoist (`Layout.hoverInPlaceOf` place))
 
 type T = Transaction
 

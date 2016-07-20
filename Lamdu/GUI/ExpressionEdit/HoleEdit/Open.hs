@@ -500,7 +500,7 @@ makeUnderCursorAssignment shownResultsLists hasHiddenResults holeInfo =
                 & alignment .~ w ^. alignment
     where
         alignment :: Lens' (Layout f) (Vector2 Widget.R)
-        alignment = Layout.absAlignedWidget . Layout.alignment
+        alignment f = Widget.widgetF (Layout.absAlignedWidget (_1 f))
         WidgetIds{..} = hiIds holeInfo
 
 makeOpenSearchAreaGui ::
