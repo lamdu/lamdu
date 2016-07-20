@@ -72,9 +72,8 @@ eventMapAddNextParam config fpAdd =
 eventMapOrderParam ::
     Monad m =>
     [ModKey] -> String -> m () -> Widget.EventMap (m Widget.EventResult)
-eventMapOrderParam keys docSuffix action =
+eventMapOrderParam keys docSuffix =
     Widget.keysEventMap keys (E.Doc ["Edit", "Parameter", "Move " ++ docSuffix])
-    action
 
 eventParamDelEventMap ::
     Monad m =>

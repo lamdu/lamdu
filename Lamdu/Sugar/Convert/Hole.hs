@@ -10,7 +10,7 @@ import           Control.Applicative ((<|>))
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Lens.Tuple
-import           Control.Monad (join, void, liftM, filterM)
+import           Control.Monad (join, void, filterM)
 import           Control.Monad.ListT (ListT)
 import           Control.Monad.Trans.Class (lift)
 import           Control.Monad.Trans.Either (EitherT(..))
@@ -443,7 +443,7 @@ idTranslations consistentExpr dest
             Lens.to EntityId.ofLambdaParam
 
 eitherTtoListT :: Monad m => EitherT err m a -> ListT m a
-eitherTtoListT = ListClass.joinL . liftM (ListClass.fromList . (^.. Lens._Right)) . runEitherT
+eitherTtoListT = ListClass.joinL . fmap (ListClass.fromList . (^.. Lens._Right)) . runEitherT
 
 eitherToListT :: Monad m => Either t a -> ListT m a
 eitherToListT (Left _) = mempty

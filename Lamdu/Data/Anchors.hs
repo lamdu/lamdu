@@ -39,8 +39,8 @@ data Code f m = Code
     , preJumps :: f [WidgetId.Id]
     , preCursor :: f WidgetId.Id
     , postCursor :: f WidgetId.Id
-    , tags :: f (Set (T.Tag))
-    , tids :: f (Set (T.NominalId))
+    , tags :: f (Set T.Tag)
+    , tids :: f (Set T.NominalId)
     }
 onCode :: (forall a. Binary a => f a -> g a) -> Code f m -> Code g m
 onCode f (Code x0 x1 x2 x3 x4 x5 x6 x7) =

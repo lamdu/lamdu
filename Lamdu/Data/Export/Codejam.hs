@@ -49,7 +49,7 @@ _takeScreenshot =
         let pixelSize = 3
         -- glY converts top-origin coordinates to OpenGL's bottom-origin system
         let glY y = height - 1 - y
-        let pixelOffset x y = ((glY y) * width + x) * pixelSize
+        let pixelOffset x y = (glY y * width + x) * pixelSize
         F.allocaBytes (pixelSize * width * height) $
             \ptr ->
             do

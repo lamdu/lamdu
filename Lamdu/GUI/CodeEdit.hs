@@ -336,7 +336,7 @@ makeReplEdit env myId replExpr =
     ExpressionGui.combineSpaced Nothing
     <*> sequence
     [ ExpressionGui.makeFocusableView replId
-      <*> (ExpressionGui.makeLabel "⋙" (Widget.toAnimId replId))
+      <*> ExpressionGui.makeLabel "⋙" (Widget.toAnimId replId)
       <&> ExpressionGui.fromLayout
     , ExprGuiM.makeSubexpression id replExpr
     ]

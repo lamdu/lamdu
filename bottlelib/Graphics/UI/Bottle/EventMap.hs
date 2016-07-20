@@ -320,7 +320,7 @@ keyEventMap :: KeyEvent -> Doc -> a -> EventMap a
 keyEventMap eventType doc handler = keyEventMapH eventType doc (Doesn'tWantClipboard handler)
 
 keyPress :: ModKey -> Doc -> a -> EventMap a
-keyPress key doc handler = keyEventMap (KeyEvent GLFW.KeyState'Pressed key) doc handler
+keyPress key = keyEventMap (KeyEvent GLFW.KeyState'Pressed key)
 
 keyPresses :: [ModKey] -> Doc -> a -> EventMap a
 keyPresses = mconcat . map keyPress

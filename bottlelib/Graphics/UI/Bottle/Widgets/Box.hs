@@ -1,4 +1,4 @@
-{-# LANGUAGE Rank2Types, TemplateHaskell #-}
+{-# LANGUAGE Rank2Types #-}
 module Graphics.UI.Bottle.Widgets.Box
     ( Alignment(..), Grid.alignmentRatio
     , make, makeAlign

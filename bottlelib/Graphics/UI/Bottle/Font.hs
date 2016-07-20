@@ -33,8 +33,8 @@ render ::
     (TextSize (Vector2 Draw.R), Draw.Image ())
 render font color mUnderline str =
     ( size
-    , ( DrawUtils.drawText font attrs str
-      ) <> maybe mempty (drawUnderline font (DrawUtils.bounding size)) mUnderline
+    , DrawUtils.drawText font attrs str
+      <> maybe mempty (drawUnderline font (DrawUtils.bounding size)) mUnderline
     )
     where
         attrs =

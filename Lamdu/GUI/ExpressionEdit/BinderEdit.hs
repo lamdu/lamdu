@@ -516,7 +516,7 @@ nullParamEditInfo (Sugar.NullParamInfo mActions) =
     { ParamEdit.iMakeNameEdit =
       \myId ->
       ExpressionGui.makeFocusableView myId
-      <*> (ExpressionGui.grammarLabel "◗" (Widget.toAnimId myId))
+      <*> ExpressionGui.grammarLabel "◗" (Widget.toAnimId myId)
       <&> ExpressionGui.fromLayout
     , ParamEdit.iMAddNext = Nothing
     , ParamEdit.iMOrderBefore = Nothing

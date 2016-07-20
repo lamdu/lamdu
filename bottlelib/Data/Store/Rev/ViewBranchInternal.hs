@@ -55,7 +55,7 @@ moveView vm =
     where
         applyForward = apply Change.newValue
         applyBackward = apply Change.oldValue
-        apply changeDir version = applyChangesToView vm changeDir . Version.changes $ version
+        apply changeDir = applyChangesToView vm changeDir . Version.changes
 
 makeViewKey :: View m -> Change.Key -> UUID
 makeViewKey (View iref) = UUIDUtils.combine . IRef.uuid $ iref

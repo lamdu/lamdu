@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, PatternGuards #-}
+{-# LANGUAGE NoImplicitPrelude #-}
 module Lamdu.Sugar.Convert.GetVar
     ( convert
     ) where

@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, OverloadedStrings, Rank2Types, RecordWildCards, NamedFieldPuns, DeriveDataTypeable, ScopedTypeVariables, LambdaCase, BangPatterns #-}
+{-# LANGUAGE NoImplicitPrelude, OverloadedStrings, Rank2Types, DisambiguateRecordFields, NamedFieldPuns, DeriveDataTypeable, ScopedTypeVariables, LambdaCase, BangPatterns #-}
 module Main
     ( main
     ) where
@@ -419,9 +419,8 @@ makeMainGui dbToIO env =
     <&> uncurry MainLoop.EventResult & MainLoop.M
     where
         attachCursor eventResult =
-            do
-                eventResult ^. Widget.eCursor
-                    & Monoid.getLast
-                    & maybe (return ())
-                      (Transaction.setP (DbLayout.cursor DbLayout.revisionProps))
-                    & (eventResult <$)
+            eventResult ^. Widget.eCursor
+            & Monoid.getLast
+            & maybe (return ())
+              (Transaction.setP (DbLayout.cursor DbLayout.revisionProps))
+            & (eventResult <$)
