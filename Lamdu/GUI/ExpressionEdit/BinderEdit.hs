@@ -327,9 +327,6 @@ makeParts funcApplyLimit binder delVarBackwardsId myId =
         bodyId = bodyContent ^. SugarLens.binderContentEntityId & WidgetIds.fromEntityId
         scopesNavId = Widget.joinId myId ["scopesNav"]
 
-addBelow :: [Widget a] -> Widget a -> Widget a
-addBelow belows above = above : belows & Box.vboxAlign 0
-
 make ::
     Monad m =>
     Name m ->
