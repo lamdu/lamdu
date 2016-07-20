@@ -140,9 +140,9 @@ maybeIndent mPiInfo =
                 & Layout.addBefore Layout.Horizontal
                     [ Spacer.make
                         (Vector2 barWidth (content ^. Widget.height))
-                        & Widget.fromView
-                        & Widget.backgroundColor 0 bgAnimId
+                        & View.backgroundColor bgAnimId 0
                             (Config.indentBarColor indentConf)
+                        & Widget.fromView
                         & Layout.fromCenteredWidget
                         & Layout.alignment . _2 .~ 0
                     , Spacer.make (Vector2 gapWidth 0)
