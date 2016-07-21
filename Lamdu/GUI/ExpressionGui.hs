@@ -11,7 +11,7 @@ module Lamdu.GUI.ExpressionGui
     , stdHSpace, stdVSpace
     , combine, combineSpaced
     , (||>), (<||)
-    , vboxTopFocal, vboxTopFocalSpaced
+    , addBelow, addBelowWithSpace, vboxTopFocal, vboxTopFocalSpaced
     , horizVertFallback
     , tagItem
     , listWithDelDests
@@ -46,7 +46,6 @@ import           Control.Lens.Operators
 import           Control.Lens.Tuple
 import           Data.Binary.Utils (encodeS)
 import           Data.CurAndPrev (CurAndPrev(..), CurPrevTag(..), curPrevTag, fallbackToPrev)
-import qualified Data.List as List
 import qualified Data.List.Utils as ListUtils
 import           Data.Maybe (fromMaybe)
 import           Data.Store.Property (Property(..))
@@ -156,28 +155,39 @@ maybeIndent mPiInfo =
                     bgAnimId = piAnimId piInfo ++ ["("]
             _ -> mkLayout lp
 
+addBelow :: ExpressionGuiM m -> ExpressionGuiM m -> ExpressionGuiM m
+addBelow (ExpressionGui x) (ExpressionGui y) =
+    ExpressionGui $ \layoutParams ->
+    let cp = layoutParams & layoutContext .~ LayoutVertical
+    in Layout.addAfter Layout.Vertical [y cp] (x cp)
+
+addBelowWithSpaceH ::
+    Widget.R -> ExpressionGuiM f -> ExpressionGuiM f -> ExpressionGuiM f
+addBelowWithSpaceH height x y =
+    y
+    & toLayout . Lens.mapped %~
+        Widget.hoist (Layout.assymetricPad (Vector2 0 height) 0)
+    & addBelow x
+
+addBelowWithSpace ::
+    Monad m =>
+    ExprGuiM m (ExpressionGuiM f -> ExpressionGuiM f -> ExpressionGuiM f)
+addBelowWithSpace =
+    ExprGuiM.widgetEnv BWidgets.stdVSpaceHeight <&> addBelowWithSpaceH
+
 vboxTopFocal :: [ExpressionGuiM m] -> ExpressionGuiM m
 vboxTopFocal [] = ExprGuiT.fromLayout Layout.empty
-vboxTopFocal (ExpressionGui mkLayout:guis) =
-    ExpressionGui $
-    \layoutParams ->
-    let cp =
-            LayoutParams
-            { _layoutMode = layoutParams ^. layoutMode
-            , _layoutContext = LayoutVertical
-            }
-    in
-    mkLayout cp
-    & Layout.addAfter Layout.Vertical
-        (guis ^.. Lens.traverse . toLayout ?? cp)
+vboxTopFocal xs = foldl1 addBelow xs
 
 vboxTopFocalSpaced ::
     Monad m => ExprGuiM m ([ExpressionGuiM f] -> ExpressionGuiM f)
 vboxTopFocalSpaced =
-    stdVSpace
-    <&> ExprGuiT.fromValueWidget
-    <&> List.intersperse
-    <&> fmap vboxTopFocal
+    addBelowWithSpace
+    <&>
+    \add xs ->
+    case xs of
+    [] -> ExprGuiT.fromLayout Layout.empty
+    _ -> foldl1 add xs
 
 hCombine ::
     (Layout.Orientation ->
@@ -254,27 +264,47 @@ horizVertFallbackH mParenInfo horiz vert =
             layoutParams & maybeIndent mParenInfo vert ^. toLayout
         | otherwise -> wide
 
-combineWith ::
-    Maybe ParenIndentInfo ->
-    ([Layout (T m Widget.EventResult)] -> [Layout (T m Widget.EventResult)]) ->
-    ([ExpressionGui m] -> [ExpressionGui m]) ->
-    [ExpressionGui m] -> ExpressionGui m
-combineWith mParenInfo onHGuis onVGuis guis =
+addAfterH ::
+    Maybe ParenIndentInfo -> Vector2 Widget.R ->
+    ExpressionGui m -> ExpressionGui m -> ExpressionGui m
+addAfterH mParenInfo spaces focal after =
     horizVertFallbackH mParenInfo wide vert
     where
-        vert = vboxTopFocal (onVGuis guis <&> egAlignment . _1 .~ 0)
+        vert =
+            addBelowWithSpaceH (spaces ^. _2)
+            (focal & egAlignment . _1 .~ 0)
+            (after & egAlignment . _1 .~ 0)
+        wideCp =
+            LayoutParams
+            { _layoutMode = LayoutWide
+            , _layoutContext = LayoutHorizontal
+            }
         wide =
-            guis ^.. Lens.traverse . toLayout
-            ?? LayoutParams
-                { _layoutMode = LayoutWide
-                , _layoutContext = LayoutHorizontal
-                }
-            & onHGuis
-            & Layout.hbox 0.5
-            & const & ExpressionGui
+            Layout.addAfter Layout.Horizontal
+            [ (after ^. toLayout) wideCp
+                & Widget.hoist (Layout.assymetricPad (spaces & _2 .~ 0) 0)
+            ] ((focal ^. toLayout) wideCp)
+            & ExprGuiT.fromLayout
+
+addAfter :: ExpressionGui m -> ExpressionGui m -> ExpressionGui m
+addAfter = addAfterH Nothing 0
+
+addAfterWithSpace ::
+    Monad m =>
+    Maybe AnimId ->
+    ExprGuiM m (ExpressionGui f -> ExpressionGui f -> ExpressionGui f)
+addAfterWithSpace mParensId =
+    do
+        spaces <-
+            Vector2
+            <$> ExprGuiM.widgetEnv BWidgets.stdHSpaceWidth
+            <*> ExprGuiM.widgetEnv BWidgets.stdVSpaceHeight
+        mParenInfo <- mParensId & Lens._Just %%~ makeParenIndentInfo
+        addAfterH mParenInfo spaces & return
 
 combine :: [ExpressionGui m] -> ExpressionGui m
-combine = combineWith Nothing id id
+combine [] = error "combine got empty list"
+combine xs = foldl1 addAfter xs
 
 makeParenIndentInfo :: Monad m => AnimId -> ExprGuiM m ParenIndentInfo
 makeParenIndentInfo parensId =
@@ -290,10 +320,13 @@ combineSpaced ::
     Monad m => Maybe AnimId -> ExprGuiM m ([ExpressionGui f] -> ExpressionGui f)
 combineSpaced mParensId =
     do
-        hSpace <- stdHSpace <&> Layout.fromCenteredWidget
-        vSpace <- stdVSpace <&> ExprGuiT.fromValueWidget
-        mParenInfo <- mParensId & Lens._Just %%~ makeParenIndentInfo
-        return $ combineWith mParenInfo (List.intersperse hSpace) (List.intersperse vSpace)
+        outer <- addAfterWithSpace mParensId
+        inner <- addAfterWithSpace Nothing
+        return $
+            \case
+            [] -> error "combineSpaced with empty list"
+            [x] -> x
+            x:xs -> outer x (foldr1 inner xs)
 
 tagItem :: Monad m => ExprGuiM m (Layout (T f Widget.EventResult) -> ExpressionGui f -> ExpressionGui f)
 tagItem =

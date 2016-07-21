@@ -66,7 +66,7 @@ addSearchAreaBelow ids =
     hover ids ["searchArea"]
     <&>
     \f wrapperGui searchAreaGui ->
-    ExpressionGui.vboxTopFocal [wrapperGui, f searchAreaGui]
+    ExpressionGui.addBelow wrapperGui (f searchAreaGui)
 
 addWrapperAbove ::
     Monad m =>
