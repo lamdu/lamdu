@@ -68,7 +68,6 @@ import qualified Graphics.UI.Bottle.Widgets.Box as Box
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 import           Graphics.UI.Bottle.Widgets.Layout (Layout)
 import qualified Graphics.UI.Bottle.Widgets.Layout as Layout
-import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
 import qualified Graphics.UI.Bottle.Widgets.TextEdit as TextEdit
 import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
 import qualified Graphics.UI.Bottle.WidgetsEnvT as WE
@@ -137,17 +136,13 @@ maybeIndent mPiInfo =
             case (lp ^. layoutContext, mPiInfo) of
             (LayoutVertical, Just piInfo) ->
                 content
-                & Layout.addBefore Layout.Horizontal
-                    [ Spacer.make
+                & Widget.hoist
+                    ( ( _2 . Widget.wView . View.animFrame <>~
+                        Anim.backgroundColor bgAnimId 0
+                        (Config.indentBarColor indentConf)
                         (Vector2 barWidth (content ^. Widget.height))
-                        & View.backgroundColor bgAnimId 0
-                            (Config.indentBarColor indentConf)
-                        & Widget.fromView
-                        & Layout.fromCenteredWidget
-                        & Layout.alignment . _2 .~ 0
-                    , Spacer.make (Vector2 gapWidth 0)
-                        & Widget.fromView & Layout.fromCenteredWidget
-                    ]
+                    ) . Layout.assymetricPad (Vector2 (barWidth + gapWidth) 0) 0
+                    )
                 where
                     indentConf = piIndentConfig piInfo
                     stdSpace = piStdHorizSpacing piInfo

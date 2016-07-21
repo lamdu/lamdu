@@ -14,7 +14,7 @@ module Graphics.UI.Bottle.Widgets.Layout
     , box, hbox, vbox
 
     , scaleAround
-    , pad
+    , pad, assymetricPad
     , hoverInPlaceOf
     ) where
 
@@ -123,10 +123,18 @@ scaleAround point ratio w =
 pad ::
     Vector2 Widget.R ->
     (Box.Alignment, WidgetData fo a) -> (Box.Alignment, WidgetData fo a)
-pad padding =
+pad padding = assymetricPad padding padding
+
+assymetricPad ::
+    Vector2 Widget.R -> Vector2 Widget.R ->
+    (Box.Alignment, WidgetData fo a) -> (Box.Alignment, WidgetData fo a)
+assymetricPad leftAndTop rightAndBottom =
     absAlignedWidget %~ f
     where
-        f (p, wd) = (p + padding, Widget.pad padding wd)
+        f (p, wd) =
+            ( p + leftAndTop
+            , Widget.assymetricPad leftAndTop rightAndBottom wd
+            )
 
 -- Resize a layout to be the same alignment/size as another layout
 hoverInPlaceOf ::
