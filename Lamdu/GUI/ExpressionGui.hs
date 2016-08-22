@@ -690,8 +690,11 @@ addValPadding :: Monad m => ExprGuiM m (ExpressionGui n -> ExpressionGui n)
 addValPadding =
     ExprGuiM.readConfig <&> Config.valFramePadding <&> fmap realToFrac <&> pad
 
-liftLayers :: Monad m => ExprGuiM m (WidgetF ((,) Alignment) a -> WidgetF ((,) Alignment) a)
-liftLayers = ExprGuiM.widgetEnv BWidgets.liftLayerInterval
+liftLayers :: (GTraversable t, Monad m) => ExprGuiM m (WidgetF t a -> WidgetF t a)
+liftLayers =
+    ExprGuiM.widgetEnv BWidgets.liftLayerInterval <&> f
+    where
+        f g = Widget.onWidgetData (Widget.wView %~ g)
 
 addValFrame ::
     Monad m => Widget.Id -> ExprGuiM m (ExpressionGui f -> ExpressionGui f)

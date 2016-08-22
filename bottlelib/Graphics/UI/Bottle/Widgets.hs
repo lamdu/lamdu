@@ -25,14 +25,16 @@ import           Data.ByteString.Char8 (pack)
 import           Data.List (intersperse)
 import           Data.Store.Property (Property)
 import qualified Data.Store.Property as Property
-import qualified Data.Traversable.Generalized as GTraversable
 import           Data.Traversable.Generalized (GTraversable)
+import qualified Data.Traversable.Generalized as GTraversable
 import           Data.Vector.Vector2 (Vector2(..))
 import qualified Graphics.DrawingCombinators as Draw
 import           Graphics.UI.Bottle.Animation (AnimId)
+import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.EventMap as EventMap
 import           Graphics.UI.Bottle.ModKey (ModKey(..))
 import           Graphics.UI.Bottle.View (View)
+import qualified Graphics.UI.Bottle.View as View
 import           Graphics.UI.Bottle.Widget (Widget, WidgetF)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.Box as Box
@@ -62,13 +64,12 @@ makeLabel :: Monad m => String -> AnimId -> WidgetEnvT m (Widget f)
 makeLabel text prefix =
     makeTextViewWidget text $ mappend prefix [pack text]
 
-liftLayerInterval ::
-    (Monad m, GTraversable t) => WidgetEnvT m (WidgetF t a -> WidgetF t a)
+liftLayerInterval :: Monad m => WidgetEnvT m (View -> View)
 liftLayerInterval =
     do
         env <- WE.readEnv
         let layerDiff = WE.layerInterval env
-        Widget.animLayers -~ layerDiff & return
+        View.animFrame . Anim.layers -~ layerDiff & return
 
 readEnv :: Monad m => WidgetEnvT m Widget.Env
 readEnv = WE.readEnv <&> (^. WE.envCursor) <&> Widget.Env
