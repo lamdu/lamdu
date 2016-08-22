@@ -6,12 +6,14 @@ module Graphics.UI.Bottle.Widgets.FocusDelegator
     ) where
 
 import           Control.Lens.Operators
+import           Data.Traversable.Generalized
 import           Graphics.UI.Bottle.Direction (Direction)
 import qualified Graphics.UI.Bottle.Direction as Direction
 import qualified Graphics.UI.Bottle.EventMap as E
 import           Graphics.UI.Bottle.ModKey (ModKey(..))
 import           Graphics.UI.Bottle.Rect (Rect(..))
-import           Graphics.UI.Bottle.Widget (Widget)
+import qualified Graphics.UI.Bottle.View as View
+import           Graphics.UI.Bottle.Widget (WidgetF)
 import qualified Graphics.UI.Bottle.Widget as Widget
 
 import           Prelude.Compat
@@ -25,20 +27,23 @@ data Config = Config
     , focusParentDoc :: E.Doc
     }
 
-setFocusChildEventMap :: Config -> Widget a -> Widget a
-setFocusChildEventMap Config{..} widgetRecord =
-    widgetRecord
+setFocusChildEventMap :: GTraversable t => Config -> WidgetF t a -> WidgetF t a
+setFocusChildEventMap Config{..} =
     -- We're not delegating, so replace the child eventmap with an
     -- event map to either delegate to it (if it is enterable) or to
     -- nothing (if it is not):
-    & Widget.eventMap .~ neeventMap
+    Widget.onWidgetData f
     where
-        neeventMap =
-            case widgetRecord ^. Widget.mEnter of
-            Nothing -> mempty
-            Just childEnter ->
-                E.keyPresses focusChildKeys focusChildDoc $
-                childEnter Direction.Outside ^. Widget.enterResultEvent
+        f widgetData =
+            widgetData
+            & Widget.wFocus . Widget.focusData . Widget.fEventMap .~ neeventMap
+            where
+                neeventMap =
+                    case widgetData ^. Widget.wMEnter of
+                    Nothing -> mempty
+                    Just childEnter ->
+                        E.keyPresses focusChildKeys focusChildDoc $
+                        childEnter Direction.Outside ^. Widget.enterResultEvent
 
 modifyEntry ::
     Applicative f =>
@@ -60,9 +65,9 @@ modifyEntry myId fullChildRect = f
             }
 
 make ::
-    Applicative f =>
-    Config -> FocusEntryTarget -> Widget.Id ->
-    Widget.Env -> Widget (f Widget.EventResult) -> Widget (f Widget.EventResult)
+    (GTraversable t, Applicative f) =>
+    Config -> FocusEntryTarget -> Widget.Id -> Widget.Env ->
+    WidgetF t (f Widget.EventResult) -> WidgetF t (f Widget.EventResult)
 make config@Config{..} focusEntryTarget myId env childWidget
     | selfIsFocused =
         Widget.respondToCursor childWidget
@@ -77,9 +82,13 @@ make config@Config{..} focusEntryTarget myId env childWidget
 
     | otherwise =
         childWidget
-        & Widget.mEnter %~ modifyEntry myId fullChildRect focusEntryTarget
+        & Widget.onWidgetData modifyChildEntry
     where
-        fullChildRect = Rect 0 (childWidget ^. Widget.size)
+        modifyChildEntry childData =
+            childData
+            & Widget.wMEnter %~ modifyEntry myId fullChildRect focusEntryTarget
+            where
+                fullChildRect = Rect 0 (childData ^. Widget.wView . View.size)
         childIsFocused = Widget.isFocused childWidget
         selfIsFocused = myId == env ^. Widget.envCursor
         focusParentEventMap =
