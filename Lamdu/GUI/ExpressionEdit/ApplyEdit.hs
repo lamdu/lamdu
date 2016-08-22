@@ -5,11 +5,13 @@ module Lamdu.GUI.ExpressionEdit.ApplyEdit
 
 import           Control.Lens.Operators
 import           Control.Lens.Tuple
+import           Data.Traversable.Generalized (GTraversable)
 import           Data.Vector.Vector2 (Vector2(..))
 import qualified Graphics.DrawingCombinators as Draw
 import           Graphics.UI.Bottle.Animation (AnimId)
 import qualified Graphics.UI.Bottle.Animation as Anim
-import           Graphics.UI.Bottle.Widget (Widget)
+import qualified Graphics.UI.Bottle.View as View
+import           Graphics.UI.Bottle.Widget (WidgetF)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Lamdu.GUI.ExpressionEdit.BinderEdit as BinderEdit
 import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
@@ -64,13 +66,15 @@ infixMarker (Vector2 w h) =
     where
         x = min w h / 4
 
-addInfixMarker :: Widget.Id -> Widget a -> Widget a
-addInfixMarker widgetId widget =
-    widget
-    & Widget.animFrame
-    <>~ Anim.simpleFrame frameId (infixMarker (widget ^. Widget.size))
+addInfixMarker :: GTraversable t => Widget.Id -> WidgetF t a -> WidgetF t a
+addInfixMarker widgetId =
+    Widget.onWidgetData (Widget.wView %~ f)
     where
         frameId = Widget.toAnimId widgetId ++ ["infix"]
+        f view =
+            view
+            & View.animFrame <>~
+              Anim.simpleFrame frameId (infixMarker (view ^. View.size))
 
 makeInfixFuncName ::
     Monad m => ExprGuiT.SugarExpr m -> ExprGuiM m (ExpressionGui m)
