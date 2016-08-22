@@ -22,7 +22,7 @@ import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
 import qualified Graphics.UI.Bottle.EventMap as E
 import           Graphics.UI.Bottle.ModKey (ModKey(..))
-import           Graphics.UI.Bottle.Widget (Widget)
+import           Graphics.UI.Bottle.Widget (Widget, WidgetF)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets as BWidgets
 import qualified Graphics.UI.Bottle.Widgets.Box as Box
@@ -72,7 +72,7 @@ instance Monad m => Applicative (M m) where
 mLiftTrans :: Functor m => T m a -> M m a
 mLiftTrans = M . pure . fmap pure
 
-mLiftWidget :: Functor m => Widget (T m a) -> Widget (M m a)
+mLiftWidget :: (Functor m, Functor t) => WidgetF t (T m a) -> WidgetF t (M m a)
 mLiftWidget = fmap mLiftTrans
 
 data Pane m = Pane
