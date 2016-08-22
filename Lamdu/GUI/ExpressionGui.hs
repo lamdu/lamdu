@@ -672,7 +672,7 @@ grammarLabel text animId =
         makeLabel text animId
             & ExprGuiM.localEnv (WE.setTextColor (Config.grammarColor config))
 
-addValBG :: Monad m => Widget.Id -> ExprGuiM m (Widget f -> Widget f)
+addValBG :: (GTraversable t, Monad m) => Widget.Id -> ExprGuiM m (WidgetF t f -> WidgetF t f)
 addValBG = addValBGWithColor Config.valFrameBGColor
 
 addValBGWithColor ::
