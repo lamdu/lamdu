@@ -333,17 +333,7 @@ tagItem =
     stdHSpace <&> Layout.fromCenteredWidget <&> f
     where
         f space tag item =
-            ExpressionGui $
-            \layoutParams ->
-            let remainingLayoutMode =
-                    layoutParams & layoutMode . modeWidths
-                        -~ tagAndSpace ^. Widget.width
-            in  tagAndSpace
-                & Layout.addAfter Layout.Horizontal [remainingLayoutMode & item ^. toLayout]
-            where
-                tagAndSpace =
-                    space
-                    & Layout.addBefore Layout.Horizontal [tag]
+            tag ||> (space ||> (item & egAlignment . _1 .~ 0))
 
 addAnnotationBackgroundH :: (Config -> Draw.Color) -> Config -> AnimId -> WidgetF ((,) Alignment) a -> WidgetF ((,) Alignment) a
 addAnnotationBackgroundH getColor config animId =
