@@ -21,7 +21,6 @@ import           Data.Maybe (fromMaybe)
 import           Data.Monoid ((<>))
 import           Data.Vector.Vector2 (Vector2(..))
 import qualified Data.Vector.Vector2 as Vector2
-import           Graphics.UI.Bottle.Direction (Direction)
 import qualified Graphics.UI.Bottle.Direction as Direction
 import qualified Graphics.UI.Bottle.EventMap as EventMap
 import           Graphics.UI.Bottle.ModKey (ModKey(..))
@@ -57,9 +56,7 @@ data NavDests a = NavDests
     , rightMostCursor :: Maybe (Widget.EnterResult a)
     }
 
-mkNavDests ::
-    Widget.Size -> Rect -> Cursor ->
-    [[Maybe (Direction -> Widget.EnterResult a)]] -> NavDests a
+mkNavDests :: Widget.Size -> Rect -> Cursor -> [[Widget.MEnter a]] -> NavDests a
 mkNavDests widgetSize prevFocalArea cursor@(Vector2 cursorX cursorY) mEnterss =
     NavDests
     { leftOfCursor    = givePrevFocalArea . reverse $ take cursorX curRow
@@ -220,10 +217,9 @@ toWidgetWithKeys keys mCursor size sChildren =
 groupSortOn :: Ord b => (a -> b) -> [a] -> [[a]]
 groupSortOn f = groupOn f . sortOn f
 
-combineMEnters ::
-    Widget.Size -> [[Maybe (Direction -> Widget.EnterResult a)]] ->
-    Maybe (Direction -> Widget.EnterResult a)
-combineMEnters size children = chooseClosest childEnters
+combineMEnters :: Widget.Size -> [[Widget.MEnter a]] -> Widget.MEnter a
+combineMEnters size children =
+    chooseClosest childEnters
     where
         childEnters =
                 (enumerate2d children <&> Lens.sequenceAOf _2)

@@ -22,6 +22,7 @@ module Graphics.UI.Bottle.Widget
     , Widget, WidgetF(..), _WidgetFocused, _WidgetNotFocused
     , WidgetFConstraints
     , view, mEnter, eventMap, widgetFocus
+    , MEnter
     , WidgetData(..), wView, wMEnter, wFocus
     , Focus(..), TagFocused, TagNotFocused, focusData
     , FocusData(..), fEventMap, focalArea
@@ -122,12 +123,14 @@ focusData :: Lens.Traversal (Focus tag a) (Focus tag b) (FocusData a) (FocusData
 focusData _ NoFocusData = pure NoFocusData
 focusData f (HasFocusData d) = f d <&> HasFocusData
 
+type MEnter a = Maybe (Direction -> EnterResult a)
+
 -- TODO: Better name for this?
 data WidgetData focusTag a = WidgetData
     { _wView :: View
     -- When focused, mEnter may still be relevant, e.g: FlyNav in an
     -- active textedit, to move to a different text-edit position:
-    , _wMEnter :: Maybe (Direction -> EnterResult a) -- Nothing if we're not enterable
+    , _wMEnter :: MEnter a -- Nothing if we're not enterable
     , _wFocus :: Focus focusTag a
     } deriving Functor
 
@@ -140,7 +143,7 @@ type Widget = WidgetF Identity
 
 type WidgetFConstraints t a =
     ( GTraversable.Constraints t (Lens.Const Anim.Frame)
-    , GTraversable.Constraints t (Lens.Const (Maybe (Direction -> EnterResult a)))
+    , GTraversable.Constraints t (Lens.Const (MEnter a))
     , GTraversable.Constraints t (Lens.Const (Monoid.First (FocusData a)))
     )
 
@@ -193,7 +196,7 @@ hoist f = runIdentity . widgetF (Identity . f)
 {-# INLINE mEnter #-}
 mEnter ::
     GTraversable.Constraints t f =>
-    LensLike' f (WidgetF t a) (Maybe (Direction -> EnterResult a))
+    LensLike' f (WidgetF t a) (MEnter a)
 mEnter f = widgetData (wMEnter f)
 
 {-# INLINE view #-}
