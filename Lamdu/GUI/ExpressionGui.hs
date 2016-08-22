@@ -9,10 +9,10 @@ module Lamdu.GUI.ExpressionGui
     , ExprGuiT.fromValueWidget
     , pad
     , stdHSpace, stdVSpace
+    , addAfter, addAfterWithSpace, addAfterWithMParens
     , combine, combineSpaced
     , (||>), (<||)
     , addBelow, addBelowWithSpace, vboxTopFocal, vboxTopFocalSpaced
-    , horizVertFallback
     , tagItem
     , listWithDelDests
     , makeLabel
@@ -235,14 +235,6 @@ parenLabel parenInfo t =
     (piAnimId parenInfo ++ [fromString t])
     & Widget.fromView & Layout.fromCenteredWidget
 
-horizVertFallback ::
-    Monad m =>
-    Maybe AnimId ->
-    ExprGuiM m (ExpressionGui f -> ExpressionGui f -> ExpressionGui f)
-horizVertFallback mParenId =
-    mParenId & Lens._Just %%~ makeParenIndentInfo
-    <&> horizVertFallbackH
-
 horizVertFallbackH ::
     Maybe ParenIndentInfo ->
     ExpressionGui m -> ExpressionGui m -> ExpressionGui m
@@ -288,6 +280,15 @@ addAfterH mParenInfo spaces focal after =
 
 addAfter :: ExpressionGui m -> ExpressionGui m -> ExpressionGui m
 addAfter = addAfterH Nothing 0
+
+addAfterWithMParens ::
+    Monad m =>
+    Maybe AnimId ->
+    ExprGuiM m (ExpressionGui f -> ExpressionGui f -> ExpressionGui f)
+addAfterWithMParens mParensId =
+    do
+        mParenInfo <- mParensId & Lens._Just %%~ makeParenIndentInfo
+        addAfterH mParenInfo 0 & return
 
 addAfterWithSpace ::
     Monad m =>
