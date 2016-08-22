@@ -20,6 +20,7 @@ import qualified Data.Store.Property as Property
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Traversable.Generalized as GTraversable
 import           Data.Vector.Vector2 (Vector2(..))
+import           Graphics.UI.Bottle.Alignment (Alignment)
 import           Graphics.UI.Bottle.Animation (AnimId)
 import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.EventMap as E
@@ -30,7 +31,6 @@ import qualified Graphics.UI.Bottle.WidgetId as WidgetId
 import qualified Graphics.UI.Bottle.Widgets as BWidgets
 import qualified Graphics.UI.Bottle.Widgets.Box as Box
 import qualified Graphics.UI.Bottle.Widgets.Grid as Grid
-import           Graphics.UI.Bottle.Widgets.Layout (Layout)
 import qualified Graphics.UI.Bottle.Widgets.Layout as Layout
 import qualified Graphics.UI.Bottle.WidgetsEnvT as WE
 import           Lamdu.CharClassification (operatorChars)
@@ -301,7 +301,7 @@ makeFocusable ::
 makeFocusable = ExprGuiM.widgetEnv . BWidgets.makeFocusableView
 
 applyResultLayout ::
-    Functor f => f (ExpressionGui m) -> f (Layout (T m Widget.EventResult))
+    Functor f => f (ExpressionGui m) -> f (WidgetF ((,) Alignment) (T m Widget.EventResult))
 applyResultLayout fGui =
     fGui <&> (^. ExpressionGui.toLayout)
     ?? ExprGuiT.LayoutParams
@@ -499,7 +499,7 @@ makeUnderCursorAssignment shownResultsLists hasHiddenResults holeInfo =
                     [ hoverResultsWidget & Layout.alignment . _1 .~ 0 ]
                 & alignment .~ w ^. alignment
     where
-        alignment :: Lens' (Layout f) (Vector2 Widget.R)
+        alignment :: Lens' (WidgetF ((,) Alignment) f) (Vector2 Widget.R)
         alignment f = Widget.widgetF (Layout.absAlignedWidget (_1 f))
         WidgetIds{..} = hiIds holeInfo
 

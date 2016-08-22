@@ -1,7 +1,7 @@
 {-# LANGUAGE NoImplicitPrelude, OverloadedStrings, RecordWildCards, DeriveFunctor, DeriveFoldable, DeriveTraversable, FlexibleContexts #-}
 module Graphics.UI.Bottle.Widgets.Grid
     ( make, makeWithKeys
-    , Alignment(..), GridView.alignmentRatio
+    , Alignment(..)
     , Cursor
     , Keys(..), stdKeys
     ) where

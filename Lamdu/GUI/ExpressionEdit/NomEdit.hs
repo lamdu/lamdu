@@ -7,8 +7,9 @@ import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Lens.Tuple
 import           Data.Store.Transaction (Transaction)
+import           Graphics.UI.Bottle.Alignment (Alignment)
+import           Graphics.UI.Bottle.Widget (WidgetF)
 import qualified Graphics.UI.Bottle.Widget as Widget
-import           Graphics.UI.Bottle.Widgets.Layout (Layout)
 import qualified Graphics.UI.Bottle.Widgets.Layout as Layout
 import qualified Graphics.UI.Bottle.WidgetsEnvT as WE
 import qualified Lamdu.Config as Config
@@ -25,7 +26,7 @@ import qualified Lamdu.Sugar.Types as Sugar
 
 import           Prelude.Compat
 
-hover :: Monad m => ExprGuiM m (Layout n -> Layout n -> Layout n)
+hover :: Monad m => ExprGuiM m (WidgetF ((,) Alignment) n -> WidgetF ((,) Alignment) n -> WidgetF ((,) Alignment) n)
 hover =
     ExpressionGui.liftLayers
     <&>
@@ -40,15 +41,15 @@ type LayoutFunc m f =
     Widget.Id -> -- nomId
     ShowName ->
     ExprGuiM m (
-        Layout (T f Widget.EventResult) -> -- label
-        Layout (T f Widget.EventResult) -> -- name gui
+        WidgetF ((,) Alignment) (T f Widget.EventResult) -> -- label
+        WidgetF ((,) Alignment) (T f Widget.EventResult) -> -- name gui
         ExpressionGui f -> -- subexpr gui
         ExpressionGui f)
 
 expandingName ::
     Monad m =>
     (ExpressionGui f -> ExpressionGui f -> [ExpressionGui f]) ->
-    (Layout (T f Widget.EventResult) -> ExpressionGui f -> ExpressionGui f) ->
+    (WidgetF ((,) Alignment) (T f Widget.EventResult) -> ExpressionGui f -> ExpressionGui f) ->
     LayoutFunc m f
 expandingName vertOrder (#>) needParen nomId showName =
     do
@@ -138,7 +139,7 @@ mkNomGui nameSidePrecLens str layout nom@(Sugar.Nominal _ val) pl =
 
 mkNameGui ::
     Monad m => Sugar.Nominal (Name m) a -> Widget.Id ->
-    ExprGuiM m (Layout b)
+    ExprGuiM m (WidgetF ((,) Alignment) b)
 mkNameGui (Sugar.Nominal tidg _val) nameId =
     ExpressionGui.makeNameView (tidg ^. Sugar.tidgName) (Widget.toAnimId nameId)
     <&> Layout.fromCenteredWidget

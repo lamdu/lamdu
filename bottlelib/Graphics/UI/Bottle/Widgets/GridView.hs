@@ -1,7 +1,7 @@
-{-# LANGUAGE TemplateHaskell, NoImplicitPrelude, GeneralizedNewtypeDeriving, TypeSynonymInstances, MultiParamTypeClasses #-}
+{-# LANGUAGE NoImplicitPrelude #-}
 module Graphics.UI.Bottle.Widgets.GridView
     ( make, makePlacements
-    , Alignment(..), alignmentRatio
+    , Alignment(..)
     , verticalAlign, vertical
     , horizontalAlign, horizontal
     ) where
@@ -13,6 +13,7 @@ import           Control.Lens.Tuple
 import           Data.Foldable (toList)
 import           Data.List (transpose)
 import           Data.Vector.Vector2 (Vector2(..))
+import           Graphics.UI.Bottle.Alignment (Alignment(..))
 import qualified Graphics.UI.Bottle.Animation as Anim
 import           Graphics.UI.Bottle.Rect (Rect(..))
 import qualified Graphics.UI.Bottle.Rect as Rect
@@ -20,16 +21,6 @@ import           Graphics.UI.Bottle.View (View(..))
 import qualified Graphics.UI.Bottle.View as View
 
 import           Prelude.Compat
-
-newtype Alignment = Alignment { _alignmentRatio :: Vector2 Anim.R } -- ^ 0..1
-    deriving (Num, Fractional)
-Lens.makeLenses ''Alignment
-
-instance Field1 Alignment Alignment Anim.R Anim.R where
-    _1 = alignmentRatio . _1
-
-instance Field2 Alignment Alignment Anim.R Anim.R where
-    _2 = alignmentRatio . _2
 
 groupSize ::
     (Functor f, Foldable f) =>

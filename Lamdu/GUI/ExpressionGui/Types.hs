@@ -25,9 +25,9 @@ module Lamdu.GUI.ExpressionGui.Types
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Data.Store.Transaction (Transaction)
-import           Graphics.UI.Bottle.Widget (Widget)
+import           Graphics.UI.Bottle.Alignment (Alignment)
+import           Graphics.UI.Bottle.Widget (Widget, WidgetF)
 import qualified Graphics.UI.Bottle.Widget as Widget
-import           Graphics.UI.Bottle.Widgets.Layout (Layout)
 import qualified Graphics.UI.Bottle.Widgets.Layout as Layout
 import qualified Lamdu.Sugar.Lens as SugarLens
 import           Lamdu.Sugar.Names.Types (ExpressionN)
@@ -58,13 +58,13 @@ modeWidths _ LayoutWide = pure LayoutWide
 modeWidths f (LayoutNarrow limit) = f limit <&> LayoutNarrow
 
 newtype ExpressionGuiM m = ExpressionGui
-    { _toLayout :: LayoutParams -> Layout (m Widget.EventResult)
+    { _toLayout :: LayoutParams -> WidgetF ((,) Alignment) (m Widget.EventResult)
     }
 Lens.makeLenses ''ExpressionGuiM
 
 type ExpressionGui m = ExpressionGuiM (T m)
 
-fromLayout :: Layout (m Widget.EventResult) -> ExpressionGuiM m
+fromLayout :: WidgetF ((,) Alignment) (m Widget.EventResult) -> ExpressionGuiM m
 fromLayout = ExpressionGui . const
 
 fromValueWidget :: Widget (m Widget.EventResult) -> ExpressionGuiM m
@@ -75,8 +75,8 @@ egLayout ::
     Lens.Setter
     (ExpressionGuiM m)
     (ExpressionGuiM n)
-    (Layout (m Widget.EventResult))
-    (Layout (n Widget.EventResult))
+    (WidgetF ((,) Alignment) (m Widget.EventResult))
+    (WidgetF ((,) Alignment) (n Widget.EventResult))
 egLayout = toLayout . Lens.mapped
 
 {-# INLINE egWidget #-}

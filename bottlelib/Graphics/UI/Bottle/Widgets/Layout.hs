@@ -1,7 +1,6 @@
 {-# LANGUAGE NoImplicitPrelude, TypeFamilies, TemplateHaskell, RankNTypes, FlexibleInstances, DeriveFunctor, DeriveFoldable, DeriveTraversable #-}
 module Graphics.UI.Bottle.Widgets.Layout
-    ( Layout
-    , Box.Alignment
+    ( Alignment
     , empty
     , AbsAlignedWidget
     , absAlignedWidget
@@ -23,6 +22,8 @@ import           Control.Lens (Lens, Lens')
 import           Control.Lens.Operators
 import           Control.Lens.Tuple
 import           Data.Vector.Vector2 (Vector2(..))
+import qualified Graphics.UI.Bottle.Alignment as Alignment
+import           Graphics.UI.Bottle.Alignment (Alignment(..))
 import qualified Graphics.UI.Bottle.View as View
 import           Graphics.UI.Bottle.Widget (Widget, WidgetF(..), WidgetData)
 import qualified Graphics.UI.Bottle.Widget as Widget
@@ -31,10 +32,9 @@ import           Graphics.UI.Bottle.Widgets.Box (Orientation(..))
 
 import           Prelude.Compat
 
-type Layout = WidgetF ((,) Box.Alignment)
 type AbsAlignedWidget = WidgetF ((,) (Vector2 Widget.R))
 
-axis :: Orientation -> Lens' Box.Alignment Widget.R
+axis :: Orientation -> Lens' Alignment Widget.R
 axis Horizontal = _1
 axis Vertical = _2
 
@@ -64,41 +64,40 @@ widget = Widget.sequenced . _2
 {-# INLINE absAlignedWidget #-}
 absAlignedWidget ::
     Lens.Iso
-    (Box.Alignment, WidgetData fo a)
-    (Box.Alignment, WidgetData fo b)
+    (Alignment, WidgetData fo a)
+    (Alignment, WidgetData fo b)
     (Vector2 Widget.R, WidgetData fo a)
     (Vector2 Widget.R, WidgetData fo b)
 absAlignedWidget =
-    Lens.iso (f ((*) . (^. Box.alignmentRatio))) (f (fmap Box.Alignment . (/)))
+    Lens.iso (f ((*) . (^. Alignment.ratio))) (f (fmap Alignment . (/)))
     where
         f op (align, wd) = (op align (wd ^. Widget.wView . View.size), wd)
 
-boxComponentsToWidget ::
-    Orientation -> BoxComponents (Layout a) -> Layout a
+boxComponentsToWidget :: Orientation -> BoxComponents (WidgetF ((,) Alignment) a) -> WidgetF ((,) Alignment) a
 boxComponentsToWidget orientation boxComponents =
     Widget.hoist ((,) align . (^. Lens._Wrapped)) boxWidget
     where
         align = boxAlign ^. focalWidget
         (boxAlign, boxWidget) = Box.make orientation boxComponents
 
-fromCenteredWidget :: Widget a -> Layout a
+fromCenteredWidget :: Widget a -> WidgetF ((,) Alignment) a
 fromCenteredWidget = Widget.hoist ((,) 0.5 . (^. Lens._Wrapped))
 
-empty :: Layout a
+empty :: WidgetF ((,) Alignment) a
 empty = fromCenteredWidget Widget.empty
 
-addBefore :: Orientation -> [Layout a] -> Layout a -> Layout a
+addBefore :: Orientation -> [WidgetF ((,) Alignment) a] -> WidgetF ((,) Alignment) a -> WidgetF ((,) Alignment) a
 addBefore orientation befores layout =
     BoxComponents befores layout []
     & boxComponentsToWidget orientation
-addAfter :: Orientation -> [Layout a] -> Layout a -> Layout a
+addAfter :: Orientation -> [WidgetF ((,) Alignment) a] -> WidgetF ((,) Alignment) a -> WidgetF ((,) Alignment) a
 addAfter orientation afters layout =
     BoxComponents [] layout afters
     & boxComponentsToWidget orientation
 
 -- The axisAlignment is the alignment point to choose within the resulting box
 -- i.e: Horizontal box -> choose eventual horizontal alignment point
-box :: Orientation -> Widget.R -> [Layout a] -> Layout a
+box :: Orientation -> Widget.R -> [WidgetF ((,) Alignment) a] -> WidgetF ((,) Alignment) a
 box orientation axisAlignment layouts =
     componentsFromList layouts
     & boxComponentsToWidget orientation
@@ -107,27 +106,27 @@ box orientation axisAlignment layouts =
         componentsFromList [] = BoxComponents [] empty []
         componentsFromList (w:ws) = BoxComponents [] w ws
 
-hbox :: Widget.R -> [Layout a] -> Layout a
+hbox :: Widget.R -> [WidgetF ((,) Alignment) a] -> WidgetF ((,) Alignment) a
 hbox = box Horizontal
 
-vbox :: Widget.R -> [Layout a] -> Layout a
+vbox :: Widget.R -> [WidgetF ((,) Alignment) a] -> WidgetF ((,) Alignment) a
 vbox = box Vertical
 
 -- | scale = scaleAround 0.5
 --   scaleFromTopMiddle = scaleAround (Vector2 0.5 0)
-scaleAround :: Box.Alignment -> Vector2 Widget.R -> Layout a -> Layout a
+scaleAround :: Alignment -> Vector2 Widget.R -> WidgetF ((,) Alignment) a -> WidgetF ((,) Alignment) a
 scaleAround point ratio w =
     Widget.scale ratio w
-    & alignment .~ point + ((w ^. alignment - point) & Box.alignmentRatio //~ ratio)
+    & alignment .~ point + ((w ^. alignment - point) & Alignment.ratio //~ ratio)
 
 pad ::
     Vector2 Widget.R ->
-    (Box.Alignment, WidgetData fo a) -> (Box.Alignment, WidgetData fo a)
+    (Alignment, WidgetData fo a) -> (Alignment, WidgetData fo a)
 pad padding = assymetricPad padding padding
 
 assymetricPad ::
     Vector2 Widget.R -> Vector2 Widget.R ->
-    (Box.Alignment, WidgetData fo a) -> (Box.Alignment, WidgetData fo a)
+    (Alignment, WidgetData fo a) -> (Alignment, WidgetData fo a)
 assymetricPad leftAndTop rightAndBottom =
     absAlignedWidget %~ f
     where
@@ -138,8 +137,8 @@ assymetricPad leftAndTop rightAndBottom =
 
 -- Resize a layout to be the same alignment/size as another layout
 hoverInPlaceOf ::
-    (Box.Alignment, WidgetData fo b) -> Layout a ->
-    (Box.Alignment, WidgetData fo b)
+    (Alignment, WidgetData fo b) -> WidgetF ((,) Alignment) a ->
+    (Alignment, WidgetData fo b)
 layout `hoverInPlaceOf` src =
     layout
     & _2 %~ Widget.translate (srcAlign - layout ^. absAlignedWidget . _1)

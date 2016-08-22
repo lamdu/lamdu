@@ -1,6 +1,6 @@
 {-# LANGUAGE Rank2Types #-}
 module Graphics.UI.Bottle.Widgets.Box
-    ( Alignment(..), Grid.alignmentRatio
+    ( Alignment(..)
     , make, makeAlign
     , Cursor
     , Orientation(..)
