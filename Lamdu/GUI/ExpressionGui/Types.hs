@@ -70,6 +70,15 @@ fromLayout = ExpressionGui . const
 fromValueWidget :: Widget (m Widget.EventResult) -> ExpressionGuiM m
 fromValueWidget = fromLayout . Layout.fromCenteredWidget
 
+{-# INLINE egWidget #-}
+egWidget ::
+    Lens.Setter
+    (ExpressionGuiM m)
+    (ExpressionGuiM n)
+    (WidgetF ((,) Alignment) (m Widget.EventResult))
+    (WidgetF ((,) Alignment) (n Widget.EventResult))
+egWidget = toLayout . Lens.mapped
+
 {-# INLINE egLayout #-}
 egLayout ::
     Lens.Setter
@@ -77,16 +86,7 @@ egLayout ::
     (ExpressionGuiM n)
     (WidgetF ((,) Alignment) (m Widget.EventResult))
     (WidgetF ((,) Alignment) (n Widget.EventResult))
-egLayout = toLayout . Lens.mapped
-
-{-# INLINE egWidget #-}
-egWidget ::
-    Lens.Setter
-    (ExpressionGuiM m)
-    (ExpressionGuiM n)
-    (Widget (m Widget.EventResult))
-    (Widget (n Widget.EventResult))
-egWidget = egLayout . Layout.widget
+egLayout = egWidget
 
 {-# INLINE egAlignment #-}
 egAlignment :: Lens.Setter' (ExpressionGuiM m) Layout.Alignment
