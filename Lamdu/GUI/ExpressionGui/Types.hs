@@ -2,7 +2,7 @@
 module Lamdu.GUI.ExpressionGui.Types
     ( ExpressionGuiM(..)
     , ExpressionGui, toLayout
-      , egWidget, egAlignment, egLayout
+      , egWidget, egAlignment
       , fromValueWidget, fromLayout
     , LayoutParams(..), layoutMode, layoutContext
     , LayoutMode(..), _LayoutNarrow, _LayoutWide
@@ -79,18 +79,9 @@ egWidget ::
     (WidgetF ((,) Alignment) (n Widget.EventResult))
 egWidget = toLayout . Lens.mapped
 
-{-# INLINE egLayout #-}
-egLayout ::
-    Lens.Setter
-    (ExpressionGuiM m)
-    (ExpressionGuiM n)
-    (WidgetF ((,) Alignment) (m Widget.EventResult))
-    (WidgetF ((,) Alignment) (n Widget.EventResult))
-egLayout = egWidget
-
 {-# INLINE egAlignment #-}
 egAlignment :: Lens.Setter' (ExpressionGuiM m) Layout.Alignment
-egAlignment = egLayout . Layout.alignment
+egAlignment = egWidget . Layout.alignment
 
 data EvalModeShow = EvalModeShowNothing | EvalModeShowType | EvalModeShowEval
     deriving (Eq, Ord, Show)

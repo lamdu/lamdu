@@ -56,7 +56,7 @@ assignHoleCursor WidgetIds{..} (Just _) =
 hover :: Monad m => WidgetIds -> AnimId -> ExprGuiM m (ExpressionGui n -> ExpressionGui n)
 hover WidgetIds{..} name =
     (.)
-    <$> (ExpressionGui.liftLayers <&> (ExpressionGui.egLayout %~))
+    <$> (ExpressionGui.liftLayers <&> (ExpressionGui.egWidget %~))
     <*> addDarkBackground (Widget.toAnimId hidOpen ++ name ++ ["DarkBg"])
 
 addSearchAreaBelow ::

@@ -82,7 +82,7 @@ make WidgetIds{..} arg =
         let argIsFocused = ExpressionGui.egIsFocused argGui
         unwrapEventMap <- makeUnwrapEventMap arg WidgetIds{..}
         ExpressionGui.makeFocusableView hidWrapper
-            <&> (ExpressionGui.egLayout %~)
+            <&> (ExpressionGui.egWidget %~)
             ?? argGui
             <&> ExpressionGui.pad (frameWidth & _2 .~ 0)
             <&> ExpressionGui.egWidget %~

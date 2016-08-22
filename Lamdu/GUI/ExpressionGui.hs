@@ -2,7 +2,7 @@
 module Lamdu.GUI.ExpressionGui
     ( ExpressionGuiM(..)
     , ExpressionGui, toLayout, egWidget, egAlignment
-      , ExprGuiT.egLayout, ExprGuiT.fromLayout, egIsFocused
+      , ExprGuiT.fromLayout, egIsFocused
     , LayoutMode(..), LayoutParams(..), LayoutDisambiguationContext(..)
     , render
     -- General:
@@ -653,11 +653,11 @@ stdWrapParentExpr pl mkGui =
         innerId = WidgetIds.delegatingId myId
 
 makeFocusableView ::
-    (Applicative f, Monad m) =>
+    (GTraversable t, Applicative f, Monad m) =>
     Widget.Id ->
     ExprGuiM m
-    ( WidgetF ((,) Alignment) (f Widget.EventResult) ->
-      WidgetF ((,) Alignment) (f Widget.EventResult)
+    ( WidgetF t (f Widget.EventResult) ->
+      WidgetF t (f Widget.EventResult)
     )
 makeFocusableView myId = ExprGuiM.widgetEnv (BWidgets.makeFocusableView myId)
 
