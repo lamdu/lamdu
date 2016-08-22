@@ -341,17 +341,20 @@ make name binder myId =
         presentationEdits <-
             binder ^.. Sugar.bMPresentationModeProp . Lens._Just
             & traverse (mkPresentationModeEdit presentationChoiceId)
+        let addPresentationEdits top =
+                top
+                : ( presentationEdits
+                  <&> ExpressionGui.fromValueWidget
+                  <&> ExpressionGui.egAlignment . _1 .~ 0
+                  ) & ExpressionGui.vboxTopFocal
+
         jumpHolesEventMap <-
             ExprEventMap.jumpHolesEventMap (binderContentNearestHoles body)
         defNameEdit <-
             makeBinderNameEdit (binder ^. Sugar.bActions) rhsJumperEquals rhs
             name myId
             <&> ExpressionGui.egAlignment . _1 .~ 0
-            <&> ExpressionGui.egLayout %~
-                Layout.addAfter Layout.Vertical
-                (presentationEdits
-                <&> Layout.fromCenteredWidget
-                <&> Layout.alignment . _1 .~ 0)
+            <&> addPresentationEdits
             <&> ExpressionGui.egWidget %~ Widget.weakerEvents jumpHolesEventMap
         mLhsEdit <-
             case mParamsEdit of
