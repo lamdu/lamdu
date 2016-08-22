@@ -26,7 +26,6 @@ import           Data.List (intersperse)
 import           Data.Store.Property (Property)
 import qualified Data.Store.Property as Property
 import           Data.Traversable.Generalized (GTraversable)
-import qualified Data.Traversable.Generalized as GTraversable
 import           Data.Vector.Vector2 (Vector2(..))
 import qualified Graphics.DrawingCombinators as Draw
 import           Graphics.UI.Bottle.Animation (AnimId)
@@ -81,7 +80,7 @@ respondToCursorPrefix myIdPrefix =
     readEnv <&> Widget.respondToCursorPrefix myIdPrefix
 
 makeFocusableView ::
-    (Monad m, Applicative f, GTraversable.Constraints t (Lens.Const (Vector2 Widget.R))) =>
+    (Monad m, Applicative f, GTraversable t) =>
     Widget.Id ->
     WidgetEnvT m
     (WidgetF t (f Widget.EventResult) -> WidgetF t (f Widget.EventResult))

@@ -254,16 +254,23 @@ fromView v =
     , _wFocus = NoFocusData
     } & WidgetNotFocused
 
-takesFocus ::
-    (GTraversable.Constraints t (Lens.Const (Vector2 R)), Functor f) =>
-    (Direction -> f Id) -> WidgetF t (f EventResult) -> WidgetF t (f EventResult)
-takesFocus enterFunc widget =
-    widget & mEnter .~ Just enter
+wTakesFocus ::
+    Functor f =>
+    (Direction -> f Id) ->
+    WidgetData tag (f EventResult) ->
+    WidgetData tag (f EventResult)
+wTakesFocus enterFunc wd =
+    wd & wMEnter .~ Just enter
     where
         enter =
             enterFunc
             <&> Lens.mapped %~ eventResultFromCursor
-            <&> EnterResult (Rect 0 (widget ^. size))
+            <&> EnterResult (Rect 0 (wd ^. wView . View.size))
+
+takesFocus ::
+    (Functor f, GTraversable t) =>
+    (Direction -> f Id) -> WidgetF t (f EventResult) -> WidgetF t (f EventResult)
+takesFocus enterFunc = onWidgetData (wTakesFocus enterFunc)
 
 doesntTakeFocus :: GTraversable t => WidgetF t a -> WidgetF t a
 doesntTakeFocus = mEnter .~ Nothing
