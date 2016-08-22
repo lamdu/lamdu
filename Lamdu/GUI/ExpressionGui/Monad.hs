@@ -36,11 +36,12 @@ import           Data.Binary (Binary)
 import qualified Data.Char as Char
 import           Data.CurAndPrev (CurAndPrev)
 import           Data.Store.Transaction (Transaction)
+import           Data.Traversable.Generalized (GTraversable)
 import qualified Graphics.DrawingCombinators as Draw
 import           Graphics.UI.Bottle.Animation.Id (AnimId)
 import qualified Graphics.UI.Bottle.EventMap as E
 import           Graphics.UI.Bottle.View (View)
-import           Graphics.UI.Bottle.Widget (Widget)
+import           Graphics.UI.Bottle.Widget (Widget, WidgetF)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import           Graphics.UI.Bottle.WidgetId (toAnimId)
 import qualified Graphics.UI.Bottle.Widgets as BWidgets
@@ -216,11 +217,11 @@ assignCursorPrefix ::
 assignCursorPrefix x y = localEnv $ WE.envAssignCursorPrefix x y
 
 makeFocusDelegator ::
-    (Applicative f, Monad m) =>
+    (Applicative f, Monad m, GTraversable t) =>
     FocusDelegator.Config ->
     FocusDelegator.FocusEntryTarget ->
     Widget.Id ->
-    ExprGuiM m (Widget (f Widget.EventResult) -> Widget (f Widget.EventResult))
+    ExprGuiM m (WidgetF t (f Widget.EventResult) -> WidgetF t (f Widget.EventResult))
 makeFocusDelegator =
     BWidgets.makeFocusDelegator <&> Lens.mapped . Lens.mapped %~ widgetEnv
 

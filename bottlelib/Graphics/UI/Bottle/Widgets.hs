@@ -104,11 +104,12 @@ makeFocusableLabel text myIdPrefix =
     makeFocusableTextView text (Widget.joinId myIdPrefix [pack text])
 
 makeFocusDelegator ::
-    (Monad m, Applicative f) =>
+    (Monad m, Applicative f, GTraversable t) =>
     FocusDelegator.Config ->
     FocusDelegator.FocusEntryTarget ->
     Widget.Id ->
-    WidgetEnvT m (Widget (f Widget.EventResult) -> Widget (f Widget.EventResult))
+    WidgetEnvT m
+    (WidgetF t (f Widget.EventResult) -> WidgetF t (f Widget.EventResult))
 makeFocusDelegator fdConfig focusEntryTarget myId =
     readEnv <&> FocusDelegator.make fdConfig focusEntryTarget myId
 
