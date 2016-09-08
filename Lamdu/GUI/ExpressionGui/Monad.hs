@@ -199,8 +199,7 @@ run makeSubexpr codeAnchors config settings style (ExprGuiM action) =
 widgetEnv :: Monad m => WidgetEnvT (T m) a -> ExprGuiM m a
 widgetEnv = ExprGuiM . lift
 
-makeLabel ::
-    Monad m => String -> AnimId -> ExprGuiM m (Widget f)
+makeLabel :: Monad m => String -> AnimId -> ExprGuiM m View
 makeLabel text animId = widgetEnv $ BWidgets.makeLabel text animId
 
 transaction :: Monad m => T m a -> ExprGuiM m a

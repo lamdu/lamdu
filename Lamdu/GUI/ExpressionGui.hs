@@ -66,6 +66,7 @@ import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets as BWidgets
 import qualified Graphics.UI.Bottle.Widgets.Box as Box
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
+import qualified Graphics.UI.Bottle.Widgets.GridView as GridView
 import qualified Graphics.UI.Bottle.Widgets.Layout as Layout
 import qualified Graphics.UI.Bottle.Widgets.TextEdit as TextEdit
 import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
@@ -580,6 +581,7 @@ makeNameEditWith onActiveEditor (Name nameSrc nameCollision setName name) myId =
     do
         mCollisionSuffix <-
             makeCollisionSuffixLabel nameCollision (Widget.toAnimId myId)
+            <&> Lens._Just %~ Widget.fromView
         nameEdit <-
             makeWordEdit (Property storedName setName) (WidgetIds.nameEditOf myId)
             & WE.localEnv emptyStringEnv
@@ -653,8 +655,7 @@ makeFocusableView ::
 makeFocusableView myId = ExprGuiM.widgetEnv (BWidgets.makeFocusableView myId)
 
 makeLabel :: Monad m => String -> AnimId -> ExprGuiM m (WidgetF ((,) Alignment) a)
-makeLabel text animId =
-    ExprGuiM.makeLabel text animId <&> Layout.fromCenteredWidget
+makeLabel text animId = ExprGuiM.makeLabel text animId <&> Widget.fromView <&> Layout.fromCenteredWidget
 
 grammarLabel :: Monad m => String -> AnimId -> ExprGuiM m (WidgetF ((,) Alignment) f)
 grammarLabel text animId =
@@ -695,18 +696,15 @@ addValFrame myId =
     <*> addValPadding
 
 -- TODO: This doesn't belong here
-makeNameView ::
-    (Monad m, Monad n) =>
-    Name n -> AnimId -> ExprGuiM m (Widget f)
+makeNameView :: (Monad m, Monad n) => Name n -> AnimId -> ExprGuiM m View
 makeNameView (Name _ collision _ name) animId =
     do
         label <- BWidgets.makeLabel name animId & ExprGuiM.widgetEnv
         mSuffixLabel <- makeCollisionSuffixLabel collision $ animId ++ ["suffix"]
-        Box.hboxCentered (label : mSuffixLabel ^.. Lens._Just) & return
+        GridView.horizontalAlign 0.5 (label : mSuffixLabel ^.. Lens._Just) & return
 
 -- TODO: This doesn't belong here
-makeCollisionSuffixLabel ::
-    Monad m => NameCollision -> AnimId -> ExprGuiM m (Maybe (Widget f))
+makeCollisionSuffixLabel :: Monad m => NameCollision -> AnimId -> ExprGuiM m (Maybe View)
 makeCollisionSuffixLabel NoCollision _ = return Nothing
 makeCollisionSuffixLabel (Collision suffix) animId =
     do
@@ -714,8 +712,8 @@ makeCollisionSuffixLabel (Collision suffix) animId =
         let Config.Name{..} = Config.name config
         BWidgets.makeLabel (show suffix) animId
             & WE.localEnv (WE.setTextColor collisionSuffixTextColor)
-            <&> Widget.scale (realToFrac <$> collisionSuffixScaleFactor)
-            <&> Widget.backgroundColor
+            <&> View.scale (realToFrac <$> collisionSuffixScaleFactor)
+            <&> View.backgroundColor
                 (Config.layerNameCollisionBG (Config.layers config)) animId
                 collisionSuffixBGColor
             <&> Just

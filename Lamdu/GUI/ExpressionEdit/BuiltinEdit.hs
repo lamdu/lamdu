@@ -66,7 +66,7 @@ make def myId =
         varName <-
             makeNamePartEditor (Config.foreignVarColor config) name nameSetter
             (builtinFFIName myId)
-        dot <- ExprGuiM.makeLabel "." $ Widget.toAnimId myId
+        dot <- ExprGuiM.makeLabel "." (Widget.toAnimId myId) <&> Widget.fromView
         [moduleName, dot, varName]
             & Box.hboxCentered
             & return

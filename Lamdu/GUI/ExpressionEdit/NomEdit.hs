@@ -129,4 +129,5 @@ mkNameWidget ::
     ExprGuiM m (WidgetF ((,) Alignment) b)
 mkNameWidget (Sugar.Nominal tidg _val) nameId =
     ExpressionGui.makeNameView (tidg ^. Sugar.tidgName) (Widget.toAnimId nameId)
+    <&> Widget.fromView
     <&> Layout.fromCenteredWidget

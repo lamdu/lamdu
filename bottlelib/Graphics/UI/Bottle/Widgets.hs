@@ -1,6 +1,6 @@
 {-# LANGUAGE NoImplicitPrelude, OverloadedStrings, FlexibleContexts #-}
 module Graphics.UI.Bottle.Widgets
-    ( makeTextView, makeTextViewWidget, makeLabel
+    ( makeTextView, makeLabel
     , makeFocusableView
     , makeFocusableTextView, makeFocusableLabel
     , makeTextEdit
@@ -55,13 +55,8 @@ makeTextView text myId = do
     return $
         TextView.make (style ^. TextEdit.sTextViewStyle) text myId
 
-makeTextViewWidget :: Monad m => String -> AnimId -> WidgetEnvT m (Widget f)
-makeTextViewWidget text myId =
-    Widget.fromView <$> makeTextView text myId
-
-makeLabel :: Monad m => String -> AnimId -> WidgetEnvT m (Widget f)
-makeLabel text prefix =
-    makeTextViewWidget text $ mappend prefix [pack text]
+makeLabel :: Monad m => String -> AnimId -> WidgetEnvT m View
+makeLabel text prefix = makeTextView text $ mappend prefix [pack text]
 
 liftLayerInterval :: Monad m => WidgetEnvT m (View -> View)
 liftLayerInterval =
@@ -95,7 +90,7 @@ makeFocusableTextView ::
     String -> Widget.Id -> WidgetEnvT m (Widget (f Widget.EventResult))
 makeFocusableTextView text myId =
     makeFocusableView myId
-    <*> makeTextViewWidget text (Widget.toAnimId myId)
+    <*> (makeTextView text (Widget.toAnimId myId) <&> Widget.fromView)
 
 makeFocusableLabel ::
     (Monad m, Applicative f) =>

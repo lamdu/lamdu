@@ -113,7 +113,7 @@ makeBuiltinDefinition def builtin =
     do
         assignment <-
             [ ExpressionGui.makeNameOriginEdit name (Widget.joinId myId ["name"])
-            , ExprGuiM.makeLabel "=" $ Widget.toAnimId myId
+            , ExprGuiM.makeLabel "=" (Widget.toAnimId myId) <&> Widget.fromView
             , BuiltinEdit.make builtin myId
             ]
             & sequenceA

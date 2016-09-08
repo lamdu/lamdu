@@ -24,6 +24,7 @@ import           Graphics.UI.Bottle.Alignment (Alignment)
 import           Graphics.UI.Bottle.Animation (AnimId)
 import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.EventMap as E
+import           Graphics.UI.Bottle.View (View)
 import qualified Graphics.UI.Bottle.View as View
 import           Graphics.UI.Bottle.Widget (Widget, WidgetF)
 import qualified Graphics.UI.Bottle.Widget as Widget
@@ -200,9 +201,9 @@ makeShownResult holeInfo result =
               }
             )
 
-makeExtraSymbolWidget :: Monad m => AnimId -> Bool -> ResultsList n -> ExprGuiM m (Widget f)
-makeExtraSymbolWidget animId isSelected results
-    | Lens.nullOf (HoleResults.rlExtra . traverse) results = pure Widget.empty
+makeExtraSymbol :: Monad m => AnimId -> Bool -> ResultsList n -> ExprGuiM m View
+makeExtraSymbol animId isSelected results
+    | Lens.nullOf (HoleResults.rlExtra . traverse) results = pure View.empty
     | otherwise =
         do
             Config.Hole{..} <- Config.hole <$> ExprGuiM.readConfig
@@ -211,9 +212,9 @@ makeExtraSymbolWidget animId isSelected results
                     | otherwise = holeExtraSymbolColorUnselected
             hSpace <- ExprGuiM.widgetEnv BWidgets.stdHSpaceWidth
             ExprGuiM.makeLabel extraSymbol animId
-                <&> Widget.scale extraSymbolScaleFactor
-                <&> Widget.tint extraSymbolColor
-                <&> Widget.onWidgetData (Widget.assymetricPad (Vector2 hSpace 0) 0)
+                <&> View.scale extraSymbolScaleFactor
+                <&> View.tint extraSymbolColor
+                <&> View.assymetricPad (Vector2 hSpace 0) 0
 
 makeResultGroup ::
     Monad m =>
@@ -246,8 +247,8 @@ makeResultGroup holeInfo results =
                     <&> \x -> (Nothing, x, 0)
         let isSelected = Lens.has Lens._Just mSelectedResult
         extraSymbolWidget <-
-            makeExtraSymbolWidget (Widget.toAnimId (rId mainResult)) isSelected
-            results
+            makeExtraSymbol (Widget.toAnimId (rId mainResult)) isSelected results
+            <&> Widget.fromView
         return ResultGroupWidgets
             { _rgwMainResult = shownMainResult
             , _rgwMSelectedResult = mSelectedResult
@@ -365,10 +366,11 @@ makeNoResults animId =
     ExpressionGui.makeLabel "(No results)" animId
     <&> (^. Layout.widget)
 
-makeHiddenResultsMWidget :: Monad m => HaveHiddenResults -> Widget.Id -> ExprGuiM m (Maybe (Widget f))
-makeHiddenResultsMWidget HaveHiddenResults myId =
+makeHiddenResultsMView ::
+    Monad m => HaveHiddenResults -> Widget.Id -> ExprGuiM m (Maybe View)
+makeHiddenResultsMView HaveHiddenResults myId =
     Just <$> ExprGuiM.makeLabel "..." (Widget.toAnimId myId)
-makeHiddenResultsMWidget NoHiddenResults _ = return Nothing
+makeHiddenResultsMView NoHiddenResults _ = return Nothing
 
 addMResultPicker :: Monad m => Maybe (ShownResult m) -> ExprGuiM m ()
 addMResultPicker mSelectedResult =
@@ -393,7 +395,8 @@ layoutResults groups hiddenResults myId
     | otherwise =
         do
             hiddenResultsWidgets <-
-                makeHiddenResultsMWidget hiddenResults myId <&> (^.. Lens._Just)
+                makeHiddenResultsMView hiddenResults myId <&> (^.. Lens._Just)
+                <&> map Widget.fromView
             let grid =
                   rows
                   <&> Lens.mapped %~ Layout.fromCenteredWidget

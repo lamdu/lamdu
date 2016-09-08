@@ -88,9 +88,11 @@ textEdit prop pl =
             let quoteSize = text ^. Widget.size & _1 .~ 0
             left <-
                 BWidgets.makeLabel "“" (Widget.toAnimId myId)
+                <&> Widget.fromView
                 <&> Widget.padToSizeAlign quoteSize 0
             right <-
                 BWidgets.makeLabel "„" (Widget.toAnimId myId)
+                <&> Widget.fromView
                 <&> Widget.padToSizeAlign quoteSize 1
             Box.hboxCentered [left, text, right] & return
             <&> ExpressionGui.fromValueWidget

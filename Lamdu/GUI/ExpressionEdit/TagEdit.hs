@@ -83,6 +83,7 @@ makeParamTag t =
         Config.Name{..} <- Config.name <$> ExprGuiM.readConfig
         ExpressionGui.makeNameView (t ^. Sugar.tagGName) animId
             & ExprGuiM.withFgColor paramTagColor
+            <&> Widget.fromView
             <&> Layout.fromCenteredWidget
     where
         animId = t ^. Sugar.tagInstance & WidgetIds.fromEntityId & Widget.toAnimId
