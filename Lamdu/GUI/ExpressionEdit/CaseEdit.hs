@@ -13,8 +13,8 @@ import           Graphics.UI.Bottle.Animation (AnimId)
 import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.EventMap as E
 import           Graphics.UI.Bottle.View (View(..))
+import qualified Graphics.UI.Bottle.View as View
 import qualified Graphics.UI.Bottle.Widget as Widget
-import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widgets.Layout as Layout
 import           Lamdu.Calc.Type (Tag)
 import qualified Lamdu.Calc.Val as V
@@ -143,13 +143,12 @@ makeAltsWidget _ [] myId =
 makeAltsWidget mActiveTag alts _ =
     ExpressionGui.vboxTopFocalSpaced <*> mapM (makeAltRow mActiveTag) alts
 
-separationBar :: Config -> Widget.R -> Anim.AnimId -> Widget a
+separationBar :: Config -> Widget.R -> Anim.AnimId -> View
 separationBar config width animId =
     Anim.unitSquare (animId <> ["tailsep"])
     & View 1
-    & Widget.fromView
-    & Widget.tint (Config.caseTailColor config)
-    & Widget.scale (Vector2 width 10)
+    & View.tint (Config.caseTailColor config)
+    & View.scale (Vector2 width 10)
 
 makeOpenCase ::
     Monad m =>
@@ -171,7 +170,9 @@ makeOpenCase rest animId altsGui =
             alts
             & Layout.alignment . _1 .~ 0
             & Layout.addAfter Layout.Vertical
-            ( [ separationBar config sepBarWidth animId & Layout.fromCenteredWidget
+            ( [ separationBar config sepBarWidth animId
+                & Widget.fromView
+                & Layout.fromCenteredWidget
               , Layout.fromCenteredWidget vspace
               , restLayout
               ] <&> (Layout.alignment . _1 .~ 0)

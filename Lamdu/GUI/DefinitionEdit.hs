@@ -17,6 +17,7 @@ import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.EventMap as E
 import           Graphics.UI.Bottle.ModKey (ModKey(..))
 import           Graphics.UI.Bottle.View (View(..))
+import qualified Graphics.UI.Bottle.View as View
 import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets as BWidgets
@@ -132,17 +133,15 @@ typeIndicatorId :: Widget.Id -> Widget.Id
 typeIndicatorId myId = Widget.joinId myId ["type indicator"]
 
 typeIndicator ::
-    Monad m =>
-    Draw.Color -> Widget.Id -> ExprGuiM m (Widget.R -> Widget a)
+    Monad m => Draw.Color -> Widget.Id -> ExprGuiM m (Widget.R -> View)
 typeIndicator color myId =
     ExprGuiM.readConfig
     <&>
     \config width ->
     Anim.unitSquare (Widget.toAnimId (typeIndicatorId myId))
     & View 1
-    & Widget.fromView
-    & Widget.scale (Vector2 width (realToFrac (Config.typeIndicatorFrameWidth config ^. _2)))
-    & Widget.tint color
+    & View.scale (Vector2 width (realToFrac (Config.typeIndicatorFrameWidth config ^. _2)))
+    & View.tint color
 
 acceptableTypeIndicator ::
     Monad m =>
@@ -161,6 +160,7 @@ acceptableTypeIndicator accept color myId =
         return $
             \width ->
             makeIndicator width
+            & Widget.fromView
             & makeFocusable
             & Widget.weakerEvents acceptKeyMap
 
@@ -180,6 +180,7 @@ makeExprDefinition def bodyExpr =
             case bodyExpr ^. Sugar.deTypeInfo of
             Sugar.DefinitionExportedTypeInfo scheme ->
                 [ typeIndicator (Config.typeIndicatorMatchColor config) myId
+                  <&> fmap Widget.fromView
                 , topLevelSchemeTypeView scheme entityId ["exportedType"]
                 ]
             Sugar.DefinitionNewType (Sugar.AcceptNewType oldMExported newInferred accept) ->

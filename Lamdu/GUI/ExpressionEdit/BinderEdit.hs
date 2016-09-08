@@ -113,7 +113,7 @@ mkPresentationModeEdit myId prop = do
     BWidgets.makeChoiceWidget (Transaction.setP prop) pairs cur
         (presentationModeChoiceConfig config) myId
         & ExprGuiM.widgetEnv
-        <&> Widget.scale (realToFrac <$> Config.presentationChoiceScaleFactor config)
+        <&> Widget.onWidgetData (Widget.scale (realToFrac <$> Config.presentationChoiceScaleFactor config))
 
 data Parts m = Parts
     { pMParamsEdit :: Maybe (ExpressionGui m)

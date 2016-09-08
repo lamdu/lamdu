@@ -347,12 +347,12 @@ translate pos w =
             & Lens.argument . Direction.coordinates . Rect.topLeft -~ pos
             <&> enterResultRect . Rect.topLeft +~ pos
 
-scale :: GTraversable t => Vector2 R -> WidgetF t a -> WidgetF t a
+scale :: Vector2 R -> WidgetData tag a -> WidgetData tag a
 scale mult widget =
     widget
-    & view %~ View.scale mult
-    & widgetFocus . focalArea . Rect.topLeftAndSize *~ mult
-    & mEnter . Lens._Just %~ onEnter
+    & wView %~ View.scale mult
+    & wFocus . focusData . focalArea . Rect.topLeftAndSize *~ mult
+    & wMEnter . Lens._Just %~ onEnter
     where
         onEnter x =
             x

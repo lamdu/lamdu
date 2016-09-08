@@ -12,7 +12,7 @@ module Graphics.UI.Bottle.Widgets.Layout
     , Orientation(..)
     , box, hbox, vbox
 
-    , scaleAround
+    , scaleAround, scale
     , pad, assymetricPad
     , hoverInPlaceOf
     ) where
@@ -112,12 +112,17 @@ hbox = box Horizontal
 vbox :: Widget.R -> [WidgetF ((,) Alignment) a] -> WidgetF ((,) Alignment) a
 vbox = box Vertical
 
--- | scale = scaleAround 0.5
+-- | scale = scaleAround 0.5 (modulu efficiency)
 --   scaleFromTopMiddle = scaleAround (Vector2 0.5 0)
 scaleAround :: Alignment -> Vector2 Widget.R -> WidgetF ((,) Alignment) a -> WidgetF ((,) Alignment) a
 scaleAround point ratio w =
-    Widget.scale ratio w
+    w
+    & Widget.onWidgetData (Widget.scale ratio)
     & alignment .~ point + ((w ^. alignment - point) & Alignment.ratio //~ ratio)
+
+-- | More efficient special-case of scale around center
+scale :: Vector2 Widget.R -> WidgetF ((,) Alignment) a -> WidgetF ((,) Alignment) a
+scale ratio = Widget.onWidgetData (Widget.scale ratio)
 
 pad ::
     Vector2 Widget.R ->

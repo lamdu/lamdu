@@ -467,7 +467,7 @@ makeEvalView (NeighborVals mPrev mNext) evalRes animId =
                 <&> makeEvaluationResultViewBG
                 <&> Lens.mapped %~
                     Widget.hoist (Layout.pad (neighborsPadding <&> realToFrac)) .
-                    Widget.scale (neighborsScaleFactor <&> realToFrac)
+                    Layout.scale (neighborsScaleFactor <&> realToFrac)
                 <&> Lens.mapped . Layout.alignment . _2 .~ yPos
         prevs <- neighbourViews mPrev 1 & sequence
         nexts <- neighbourViews mNext 0 & sequence

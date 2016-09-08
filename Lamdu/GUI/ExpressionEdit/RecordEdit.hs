@@ -11,8 +11,8 @@ import           Graphics.UI.Bottle.Animation (AnimId)
 import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.EventMap as E
 import           Graphics.UI.Bottle.View (View(..))
+import qualified Graphics.UI.Bottle.View as View
 import qualified Graphics.UI.Bottle.Widget as Widget
-import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widgets.Layout as Layout
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
@@ -107,13 +107,12 @@ makeFieldsWidget [] myId =
 makeFieldsWidget fields _ =
     ExpressionGui.vboxTopFocalSpaced <*> mapM makeFieldRow fields
 
-separationBar :: Config -> Widget.R -> Anim.AnimId -> Widget a
+separationBar :: Config -> Widget.R -> Anim.AnimId -> View
 separationBar config width animId =
     Anim.unitSquare (animId <> ["tailsep"])
     & View 1
-    & Widget.fromView
-    & Widget.tint (Config.recordTailColor config)
-    & Widget.scale (Vector2 width 10)
+    & View.tint (Config.recordTailColor config)
+    & View.scale (Vector2 width 10)
 
 makeOpenRecord ::
     Monad m =>
@@ -137,6 +136,7 @@ makeOpenRecord fieldsGui rest animId =
             & Layout.alignment . _1 .~ 0
             & Layout.addAfter Layout.Vertical
             ( [ separationBar config (max minWidth targetWidth) animId
+                & Widget.fromView
                 & Layout.fromCenteredWidget
               , Layout.fromCenteredWidget vspace
               , restLayout
