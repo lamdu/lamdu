@@ -114,11 +114,14 @@ vbox = box Vertical
 
 -- | scale = scaleAround 0.5 (modulu efficiency)
 --   scaleFromTopMiddle = scaleAround (Vector2 0.5 0)
-scaleAround :: Alignment -> Vector2 Widget.R -> WidgetF ((,) Alignment) a -> WidgetF ((,) Alignment) a
-scaleAround point ratio w =
-    w
-    & Widget.onWidgetData (Widget.scale ratio)
-    & alignment .~ point + ((w ^. alignment - point) & Alignment.ratio //~ ratio)
+scaleAround ::
+    Alignment -> Vector2 Widget.R ->
+    (Alignment, WidgetData t a) ->
+    (Alignment, WidgetData t a)
+scaleAround point ratio (align, w) =
+    ( point + ((align - point) & Alignment.ratio //~ ratio)
+    , Widget.scale ratio w
+    )
 
 -- | More efficient special-case of scale around center
 scale :: Vector2 Widget.R -> WidgetF ((,) Alignment) a -> WidgetF ((,) Alignment) a

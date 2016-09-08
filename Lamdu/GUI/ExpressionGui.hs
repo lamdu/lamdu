@@ -371,7 +371,8 @@ applyWideAnnotationBehavior animId ShrinkWideAnnotation =
     ExprGuiM.readConfig
     <&>
     \config shrinkRatio layout ->
-    Layout.scaleAround (Box.Alignment (Vector2 0.5 0)) shrinkRatio layout
+    layout
+    & Widget.hoist (Layout.scaleAround (Box.Alignment (Vector2 0.5 0)) shrinkRatio)
     & addAnnotationBackground config animId
 applyWideAnnotationBehavior animId HoverWideAnnotation =
     do
