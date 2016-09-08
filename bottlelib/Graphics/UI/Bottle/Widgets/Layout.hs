@@ -14,7 +14,7 @@ module Graphics.UI.Bottle.Widgets.Layout
 
     , scaleAround, scale
     , pad, assymetricPad
-    , hoverInPlaceOf
+    , hoverInPlaceOf, hoverAt
     ) where
 
 import qualified Control.Lens as Lens
@@ -143,15 +143,20 @@ assymetricPad leftAndTop rightAndBottom =
             , Widget.assymetricPad leftAndTop rightAndBottom wd
             )
 
+hoverAt ::
+    (Alignment, WidgetData fo b) -> (Alignment, Widget.Size) ->
+    (Alignment, WidgetData fo b)
+layout `hoverAt` (srcAlign, srcSize) =
+    layout
+    & _2 %~ Widget.translate (srcAbsAlign - layout ^. absAlignedWidget . _1)
+    & _2 %~ Widget.wView . View.size .~ srcSize
+    & absAlignedWidget . _1 .~ srcAbsAlign
+    where
+        srcAbsAlign = srcAlign ^. Alignment.ratio * srcSize
+
 -- Resize a layout to be the same alignment/size as another layout
 hoverInPlaceOf ::
     (Alignment, WidgetData fo b) -> WidgetF ((,) Alignment) a ->
     (Alignment, WidgetData fo b)
-layout `hoverInPlaceOf` src =
-    layout
-    & _2 %~ Widget.translate (srcAlign - layout ^. absAlignedWidget . _1)
-    & _2 %~ Widget.wView . View.size .~ (src ^. Widget.size)
-    & absAlignedWidget . _1 .~ srcAlign
-    where
-        absSrc = Widget.hoist (^. absAlignedWidget) src
-        srcAlign = absSrc ^. alignment
+layout `hoverInPlaceOf` w =
+    layout `hoverAt` (w ^. alignment, w ^. Widget.size)
