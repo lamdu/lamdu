@@ -91,7 +91,7 @@ makeTextViews config =
 
 addHelpBG :: Config -> AnimId -> View -> View
 addHelpBG config animId =
-    View.backgroundColor animId 1 $ configBGColor config
+    View.backgroundColor 1 animId $ configBGColor config
 
 columns :: R -> (a -> R) -> [a] -> [[a]]
 columns maxHeight itemHeight =

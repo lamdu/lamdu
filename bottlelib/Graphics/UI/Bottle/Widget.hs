@@ -73,7 +73,7 @@ import qualified Data.Traversable.Generalized as GTraversable
 import           Data.Vector.Vector2 (Vector2(..))
 import           GHC.Generics (Generic)
 import qualified Graphics.DrawingCombinators as Draw
-import           Graphics.UI.Bottle.Animation (AnimId, R, Size)
+import           Graphics.UI.Bottle.Animation (AnimId, R, Size, Layer)
 import qualified Graphics.UI.Bottle.Animation as Anim
 import           Graphics.UI.Bottle.Direction (Direction)
 import qualified Graphics.UI.Bottle.Direction as Direction
@@ -286,10 +286,9 @@ strongerEvents eMap = eventMap %~ (eMap `mappend`)
 weakerEvents :: GTraversable t => EventMap a -> WidgetF t a -> WidgetF t a
 weakerEvents eMap = eventMap %~ (`mappend` eMap)
 
-backgroundColor ::
-    GTraversable t => Int -> AnimId -> Draw.Color -> WidgetF t a -> WidgetF t a
+backgroundColor :: GTraversable t => Layer -> AnimId -> Draw.Color -> WidgetF t a -> WidgetF t a
 backgroundColor layer animId color =
-    view %~ View.backgroundColor animId layer color
+    view %~ View.backgroundColor layer animId color
 
 addInnerFrame ::
     (GTraversable.Constraints t (Lens.Const (Vector2 R))) =>

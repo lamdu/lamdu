@@ -144,7 +144,7 @@ addBGColor view =
         let color = Config.typeFrameBGColor config
         bgId <- randAnimId
         view
-            & View.backgroundColor bgId layer color
+            & View.backgroundColor layer bgId color
             & return
 
 addBackgroundFrame :: Monad m => View -> M m View

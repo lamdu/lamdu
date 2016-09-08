@@ -65,8 +65,8 @@ addDiagonal thickness animId layer color view=
             & Anim.layers +~ layer
             & Anim.scale (view ^. size)
 
-backgroundColor :: AnimId -> Layer -> Draw.Color -> View -> View
-backgroundColor animId layer color view =
+backgroundColor :: Layer -> AnimId -> Draw.Color -> View -> View
+backgroundColor layer animId color view =
     view
     & animFrame <>~ Anim.backgroundColor bgAnimId layer color (view ^. size)
     where
