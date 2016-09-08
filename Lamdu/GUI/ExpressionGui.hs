@@ -578,13 +578,13 @@ makeNameEditWith onActiveEditor (Name nameSrc nameCollision setName name) myId =
     FocusDelegator.FocusEntryParent myId
     <*>
     do
-        collisionSuffixes <-
-            makeCollisionSuffixLabels nameCollision (Widget.toAnimId myId)
+        mCollisionSuffix <-
+            makeCollisionSuffixLabel nameCollision (Widget.toAnimId myId)
         nameEdit <-
             makeWordEdit (Property storedName setName) (WidgetIds.nameEditOf myId)
             & WE.localEnv emptyStringEnv
             & ExprGuiM.widgetEnv
-        return . Box.hboxCentered $ nameEdit : collisionSuffixes
+        return . Box.hboxCentered $ nameEdit : mCollisionSuffix ^.. Lens._Just
     <&> onActiveEditor
     where
         emptyStringEnv env = env
@@ -701,24 +701,24 @@ makeNameView ::
 makeNameView (Name _ collision _ name) animId =
     do
         label <- BWidgets.makeLabel name animId & ExprGuiM.widgetEnv
-        suffixLabels <- makeCollisionSuffixLabels collision $ animId ++ ["suffix"]
-        Box.hboxCentered (label : suffixLabels) & return
+        mSuffixLabel <- makeCollisionSuffixLabel collision $ animId ++ ["suffix"]
+        Box.hboxCentered (label : mSuffixLabel ^.. Lens._Just) & return
 
 -- TODO: This doesn't belong here
-makeCollisionSuffixLabels ::
-    Monad m => NameCollision -> AnimId -> ExprGuiM m [Widget f]
-makeCollisionSuffixLabels NoCollision _ = return []
-makeCollisionSuffixLabels (Collision suffix) animId =
+makeCollisionSuffixLabel ::
+    Monad m => NameCollision -> AnimId -> ExprGuiM m (Maybe (Widget f))
+makeCollisionSuffixLabel NoCollision _ = return Nothing
+makeCollisionSuffixLabel (Collision suffix) animId =
     do
         config <- ExprGuiM.readConfig
         let Config.Name{..} = Config.name config
-            onSuffixWidget =
-                Widget.backgroundColor (Config.layerNameCollisionBG (Config.layers config))
-                    animId collisionSuffixBGColor .
-                Widget.scale (realToFrac <$> collisionSuffixScaleFactor)
         BWidgets.makeLabel (show suffix) animId
             & WE.localEnv (WE.setTextColor collisionSuffixTextColor)
-            <&> (:[]) . onSuffixWidget
+            <&> Widget.scale (realToFrac <$> collisionSuffixScaleFactor)
+            <&> Widget.backgroundColor
+                (Config.layerNameCollisionBG (Config.layers config)) animId
+                collisionSuffixBGColor
+            <&> Just
             & ExprGuiM.widgetEnv
 
 maybeAddAnnotationPl ::
