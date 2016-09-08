@@ -381,7 +381,8 @@ applyWideAnnotationBehavior animId HoverWideAnnotation =
         shrinker <- applyWideAnnotationBehavior animId ShrinkWideAnnotation
         return $
             \shrinkRatio layout ->
-                lifter layout
+                layout
+                & Widget.view %~ lifter
                 & addAnnotationHoverBackground config animId
                 & Widget.hoist
                     (`Layout.hoverInPlaceOf` shrinker shrinkRatio layout)
@@ -683,11 +684,8 @@ addValPadding :: Monad m => ExprGuiM m (ExpressionGui n -> ExpressionGui n)
 addValPadding =
     ExprGuiM.readConfig <&> Config.valFramePadding <&> fmap realToFrac <&> pad
 
-liftLayers :: (GTraversable t, Monad m) => ExprGuiM m (WidgetF t a -> WidgetF t a)
-liftLayers =
-    ExprGuiM.widgetEnv BWidgets.liftLayerInterval <&> f
-    where
-        f g = Widget.onWidgetData (Widget.wView %~ g)
+liftLayers :: Monad m => ExprGuiM m (View -> View)
+liftLayers = ExprGuiM.widgetEnv BWidgets.liftLayerInterval
 
 addValFrame ::
     Monad m => Widget.Id -> ExprGuiM m (ExpressionGui f -> ExpressionGui f)

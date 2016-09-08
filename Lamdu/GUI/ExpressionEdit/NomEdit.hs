@@ -28,7 +28,8 @@ hover :: Monad m => ExprGuiM m (WidgetF ((,) Alignment) n -> WidgetF ((,) Alignm
 hover =
     ExpressionGui.liftLayers
     <&>
-    (\lift gui place -> lift gui & Widget.hoist (`Layout.hoverInPlaceOf` place))
+    (\lift gui place ->
+     gui & Widget.view %~ lift & Widget.hoist (`Layout.hoverInPlaceOf` place))
 
 type T = Transaction
 

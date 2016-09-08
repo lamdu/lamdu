@@ -327,7 +327,7 @@ makeHoleResultWidget resultId holeResult =
                 ExprGuiM.localEnv (WE.envCursor .~ idWithinResultWidget) mkWidget
                 <&> (^. Widget.eventMap)
         widget <-
-            ExpressionGui.liftLayers
+            (ExpressionGui.liftLayers <&> (Widget.view %~))
             <*> (makeFocusable resultId <*> mkWidget)
             <&> Widget.animFrame %~ Anim.mapIdentities (<> (resultSuffix # Widget.toAnimId resultId))
             <&> (^. Layout.widget)
@@ -473,7 +473,7 @@ makeUnderCursorAssignment shownResultsLists hasHiddenResults holeInfo =
 
         vspace <- ExpressionGui.annotationSpacer
         hoverResultsWidget <-
-            ExpressionGui.liftLayers
+            (ExpressionGui.liftLayers <&> (Widget.view %~))
             <*>
             ( addDarkBackground (Widget.toAnimId hidResultsPrefix)
               ??
