@@ -209,10 +209,11 @@ makeExtraSymbolWidget animId isSelected results
             let extraSymbolColor
                     | isSelected = holeExtraSymbolColorSelected
                     | otherwise = holeExtraSymbolColorUnselected
+            hSpace <- ExprGuiM.widgetEnv BWidgets.stdHSpaceWidth
             ExprGuiM.makeLabel extraSymbol animId
                 <&> Widget.scale extraSymbolScaleFactor
                 <&> Widget.tint extraSymbolColor
-                >>= ExprGuiM.widgetEnv . BWidgets.hboxCenteredSpaced . (Widget.empty :) . (: [])
+                <&> Widget.onWidgetData (Widget.assymetricPad (Vector2 hSpace 0) 0)
 
 makeResultGroup ::
     Monad m =>
