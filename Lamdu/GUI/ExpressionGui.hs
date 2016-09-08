@@ -337,18 +337,19 @@ tagItem =
         f space tag item =
             tag ||> (space ||> (item & egAlignment . _1 .~ 0))
 
-addAnnotationBackgroundH :: (Config -> Draw.Color) -> Config -> AnimId -> WidgetF ((,) Alignment) a -> WidgetF ((,) Alignment) a
+addAnnotationBackgroundH ::
+    (Config -> Draw.Color) -> Config -> AnimId -> View -> View
 addAnnotationBackgroundH getColor config animId =
-    Widget.backgroundColor bgLayer bgAnimId bgColor
+    View.backgroundColor bgLayer bgAnimId bgColor
     where
         bgAnimId = animId ++ ["annotation background"]
         bgLayer = Config.layerAnnotations $ Config.layers config
         bgColor = getColor config
 
-addAnnotationBackground :: Config -> AnimId -> WidgetF ((,) Alignment) a -> WidgetF ((,) Alignment) a
+addAnnotationBackground :: Config -> AnimId -> View -> View
 addAnnotationBackground = addAnnotationBackgroundH Config.valAnnotationBGColor
 
-addAnnotationHoverBackground :: Config -> AnimId -> WidgetF ((,) Alignment) a -> WidgetF ((,) Alignment) a
+addAnnotationHoverBackground :: Config -> AnimId -> View -> View
 addAnnotationHoverBackground = addAnnotationBackgroundH Config.valAnnotationHoverBGColor
 
 data WideAnnotationBehavior
@@ -373,7 +374,7 @@ applyWideAnnotationBehavior animId ShrinkWideAnnotation =
     \config shrinkRatio layout ->
     layout
     & Widget.hoist (Layout.scaleAround (Box.Alignment (Vector2 0.5 0)) shrinkRatio)
-    & addAnnotationBackground config animId
+    & Widget.view %~ addAnnotationBackground config animId
 applyWideAnnotationBehavior animId HoverWideAnnotation =
     do
         config <- ExprGuiM.readConfig
@@ -383,7 +384,7 @@ applyWideAnnotationBehavior animId HoverWideAnnotation =
             \shrinkRatio layout ->
                 layout
                 & Widget.view %~ lifter
-                & addAnnotationHoverBackground config animId
+                & Widget.view %~ addAnnotationHoverBackground config animId
                 & Widget.hoist
                     (`Layout.hoverInPlaceOf` shrinker shrinkRatio layout)
 
@@ -403,7 +404,7 @@ processAnnotationGui animId wideAnnotationBehavior =
                 applyWide shrinkRatio annotationLayout
             | otherwise =
                 maybeTooNarrow annotationLayout
-                & addAnnotationBackground config animId
+                & Widget.view %~ addAnnotationBackground config animId
             where
                 annotationWidth = annotationLayout ^. Widget.width
                 expansionLimit =
@@ -463,7 +464,7 @@ makeEvalView (NeighborVals mPrev mNext) evalRes animId =
         let Config.Eval{..} = Config.eval config
         let makeEvaluationResultViewBG res =
                 makeEvaluationResultView animId res
-                <&> addAnnotationBackground config (animId ++ [encodeS (erdScope res)])
+                <&> Widget.view %~ addAnnotationBackground config (animId ++ [encodeS (erdScope res)])
         let neighbourViews n yPos =
                 n ^.. Lens._Just
                 <&> makeEvaluationResultViewBG
