@@ -110,10 +110,10 @@ mkPresentationModeEdit myId prop = do
                 BWidgets.makeFocusableLabel (show presentationMode) myId
             return (presentationMode, widget)
     pairs <- traverse mkPair [Sugar.OO, Sugar.Verbose, Sugar.Infix 5]
-    fmap (Widget.scale (realToFrac <$> Config.presentationChoiceScaleFactor config)) .
-        ExprGuiM.widgetEnv $
-        BWidgets.makeChoiceWidget (Transaction.setP prop) pairs cur
+    BWidgets.makeChoiceWidget (Transaction.setP prop) pairs cur
         (presentationModeChoiceConfig config) myId
+        & ExprGuiM.widgetEnv
+        <&> Widget.scale (realToFrac <$> Config.presentationChoiceScaleFactor config)
 
 data Parts m = Parts
     { pMParamsEdit :: Maybe (ExpressionGui m)
