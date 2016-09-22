@@ -8,10 +8,10 @@ module Lamdu.GUI.ExpressionEdit.TagEdit
 import           Control.Lens.Operators
 import           Data.Store.Transaction (Transaction)
 import qualified Graphics.DrawingCombinators as Draw
-import           Graphics.UI.Bottle.Alignment (Alignment)
 import qualified Graphics.UI.Bottle.EventMap as E
-import           Graphics.UI.Bottle.Widget (Widget, WidgetF)
+import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
+import           Graphics.UI.Bottle.Widgets.Layout (Layout)
 import qualified Graphics.UI.Bottle.Widgets.Layout as Layout
 import qualified Lamdu.Config as Config
 import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
@@ -42,7 +42,7 @@ makeTagNameEdit jumpNextEventMap tagColor tagG =
 makeTagH ::
     Monad m =>
     Draw.Color -> NearestHoles -> Sugar.TagG (Name m) ->
-    ExprGuiM m (WidgetF ((,) Alignment) (T m Widget.EventResult))
+    ExprGuiM m (Layout (T m Widget.EventResult))
 makeTagH tagColor nearestHoles tagG =
     do
         config <- ExprGuiM.readConfig
@@ -61,7 +61,7 @@ makeTagH tagColor nearestHoles tagG =
 
 makeRecordTag ::
     Monad m => NearestHoles -> Sugar.TagG (Name m) ->
-    ExprGuiM m (WidgetF ((,) Alignment) (T m Widget.EventResult))
+    ExprGuiM m (Layout (T m Widget.EventResult))
 makeRecordTag nearestHoles tagG =
     do
         Config.Name{..} <- Config.name <$> ExprGuiM.readConfig
@@ -69,7 +69,7 @@ makeRecordTag nearestHoles tagG =
 
 makeCaseTag ::
     Monad m => NearestHoles -> Sugar.TagG (Name m) ->
-    ExprGuiM m (WidgetF ((,) Alignment) (T m Widget.EventResult))
+    ExprGuiM m (Layout (T m Widget.EventResult))
 makeCaseTag nearestHoles tagG =
     do
         Config.Name{..} <- Config.name <$> ExprGuiM.readConfig
@@ -77,7 +77,7 @@ makeCaseTag nearestHoles tagG =
 
 -- | Unfocusable tag view (e.g: in apply params)
 makeParamTag ::
-    Monad m => Sugar.TagG (Name m) -> ExprGuiM m (WidgetF ((,) Alignment) a)
+    Monad m => Sugar.TagG (Name m) -> ExprGuiM m (Layout a)
 makeParamTag t =
     do
         Config.Name{..} <- Config.name <$> ExprGuiM.readConfig

@@ -150,6 +150,7 @@ Executable lamdu
                   , deepseq
                   , deepseq-generics >= 0.1
                   , directory
+                  , distributive
                   , either
                   , filepath
                   , graphics-drawingcombinators

@@ -2,7 +2,7 @@
 module Lamdu.GUI.ExpressionGui.Types
     ( ExpressionGuiM(..)
     , ExpressionGui, toLayout
-      , egWidget, egAlignment
+      , egWidget, egAlignment, egLayout
       , fromValueWidget, fromLayout
     , LayoutParams(..), layoutMode, layoutContext
     , LayoutMode(..), _LayoutNarrow, _LayoutWide
@@ -25,9 +25,9 @@ module Lamdu.GUI.ExpressionGui.Types
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Data.Store.Transaction (Transaction)
-import           Graphics.UI.Bottle.Alignment (Alignment)
-import           Graphics.UI.Bottle.Widget (Widget, WidgetF)
+import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
+import           Graphics.UI.Bottle.Widgets.Layout (Layout)
 import qualified Graphics.UI.Bottle.Widgets.Layout as Layout
 import qualified Lamdu.Sugar.Lens as SugarLens
 import           Lamdu.Sugar.Names.Types (ExpressionN)
@@ -58,30 +58,39 @@ modeWidths _ LayoutWide = pure LayoutWide
 modeWidths f (LayoutNarrow limit) = f limit <&> LayoutNarrow
 
 newtype ExpressionGuiM m = ExpressionGui
-    { _toLayout :: LayoutParams -> WidgetF ((,) Alignment) (m Widget.EventResult)
+    { _toLayout :: LayoutParams -> Layout (m Widget.EventResult)
     }
 Lens.makeLenses ''ExpressionGuiM
 
 type ExpressionGui m = ExpressionGuiM (T m)
 
-fromLayout :: WidgetF ((,) Alignment) (m Widget.EventResult) -> ExpressionGuiM m
+fromLayout :: Layout (m Widget.EventResult) -> ExpressionGuiM m
 fromLayout = ExpressionGui . const
 
 fromValueWidget :: Widget (m Widget.EventResult) -> ExpressionGuiM m
 fromValueWidget = fromLayout . Layout.fromCenteredWidget
+
+{-# INLINE egLayout #-}
+egLayout ::
+    Lens.Setter
+    (ExpressionGuiM m)
+    (ExpressionGuiM n)
+    (Layout (m Widget.EventResult))
+    (Layout (n Widget.EventResult))
+egLayout = toLayout . Lens.mapped
 
 {-# INLINE egWidget #-}
 egWidget ::
     Lens.Setter
     (ExpressionGuiM m)
     (ExpressionGuiM n)
-    (WidgetF ((,) Alignment) (m Widget.EventResult))
-    (WidgetF ((,) Alignment) (n Widget.EventResult))
-egWidget = toLayout . Lens.mapped
+    (Widget (m Widget.EventResult))
+    (Widget (n Widget.EventResult))
+egWidget = egLayout . Layout.widget
 
 {-# INLINE egAlignment #-}
 egAlignment :: Lens.Setter' (ExpressionGuiM m) Layout.Alignment
-egAlignment = egWidget . Layout.alignment
+egAlignment = egLayout . Layout.alignment
 
 data EvalModeShow = EvalModeShowNothing | EvalModeShowType | EvalModeShowEval
     deriving (Eq, Ord, Show)

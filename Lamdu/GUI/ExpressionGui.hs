@@ -2,17 +2,17 @@
 module Lamdu.GUI.ExpressionGui
     ( ExpressionGuiM(..)
     , ExpressionGui, toLayout, egWidget, egAlignment
-      , ExprGuiT.fromLayout, egIsFocused
+      , ExprGuiT.egLayout, ExprGuiT.fromLayout, egIsFocused
     , LayoutMode(..), LayoutParams(..), LayoutDisambiguationContext(..)
     , render
     -- General:
     , ExprGuiT.fromValueWidget
     , pad
     , stdHSpace, stdVSpace
-    , addAfter, addAfterWithSpace, addAfterWithMParens
     , combine, combineSpaced
     , (||>), (<||)
-    , addBelow, addBelowWithSpace, vboxTopFocal, vboxTopFocalSpaced
+    , vboxTopFocal, vboxTopFocalSpaced
+    , horizVertFallback
     , tagItem
     , listWithDelDests
     , makeLabel
@@ -46,28 +46,30 @@ import           Control.Lens.Operators
 import           Control.Lens.Tuple
 import           Data.Binary.Utils (encodeS)
 import           Data.CurAndPrev (CurAndPrev(..), CurPrevTag(..), curPrevTag, fallbackToPrev)
+import qualified Data.List as List
 import qualified Data.List.Utils as ListUtils
 import           Data.Maybe (fromMaybe)
 import           Data.Store.Property (Property(..))
 import           Data.Store.Transaction (Transaction)
 import           Data.String (IsString(..))
-import           Data.Traversable.Generalized (GTraversable)
 import           Data.Vector.Vector2 (Vector2(..))
 import qualified Graphics.DrawingCombinators as Draw
-import           Graphics.UI.Bottle.Alignment (Alignment)
+import           Graphics.UI.Bottle.Alignment (Alignment(..))
 import           Graphics.UI.Bottle.Animation (AnimId)
 import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.EventMap as E
 import           Graphics.UI.Bottle.ModKey (ModKey(..))
-import           Graphics.UI.Bottle.View (View)
 import qualified Graphics.UI.Bottle.View as View
-import           Graphics.UI.Bottle.Widget (Widget, WidgetF)
+import           Graphics.UI.Bottle.View (View)
+import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets as BWidgets
 import qualified Graphics.UI.Bottle.Widgets.Box as Box
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 import qualified Graphics.UI.Bottle.Widgets.GridView as GridView
+import           Graphics.UI.Bottle.Widgets.Layout (Layout)
 import qualified Graphics.UI.Bottle.Widgets.Layout as Layout
+import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
 import qualified Graphics.UI.Bottle.Widgets.TextEdit as TextEdit
 import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
 import qualified Graphics.UI.Bottle.WidgetsEnvT as WE
@@ -110,7 +112,7 @@ type T = Transaction
 egIsFocused :: ExpressionGui m -> Bool
 -- TODO: Fix this:
 egIsFocused (ExpressionGui mkLayout) =
-    mkLayout params & Widget.isFocused
+    mkLayout params ^. Layout.widget & Widget.isFocused
     where
         params =
             LayoutParams
@@ -126,7 +128,7 @@ pad p =
             layoutParams
             & layoutMode . modeWidths -~ 2 * (p ^. _1)
             & mkLayout
-            & Widget.hoist (Layout.pad p)
+            & Layout.pad p
 
 maybeIndent :: Maybe ParenIndentInfo -> ExpressionGui m -> ExpressionGui m
 maybeIndent mPiInfo =
@@ -136,13 +138,17 @@ maybeIndent mPiInfo =
             case (lp ^. layoutContext, mPiInfo) of
             (LayoutVertical, Just piInfo) ->
                 content
-                & Widget.hoist
-                    ( ( _2 . Widget.wView . View.animFrame <>~
-                        Anim.backgroundColor bgAnimId 0
-                        (Config.indentBarColor indentConf)
-                        (Vector2 barWidth (content ^. Widget.height))
-                    ) . Layout.assymetricPad (Vector2 (barWidth + gapWidth) 0) 0
-                    )
+                & Layout.addBefore Layout.Horizontal
+                    [ Spacer.make
+                        (Vector2 barWidth (content ^. Layout.widget . Widget.height))
+                        & Widget.fromView
+                        & Widget.backgroundColor 0 bgAnimId
+                            (Config.indentBarColor indentConf)
+                        & Layout.fromCenteredWidget
+                        & Layout.alignment . _2 .~ 0
+                    , Spacer.make (Vector2 gapWidth 0)
+                        & Widget.fromView & Layout.fromCenteredWidget
+                    ]
                 where
                     indentConf = piIndentConfig piInfo
                     stdSpace = piStdHorizSpacing piInfo
@@ -156,61 +162,50 @@ maybeIndent mPiInfo =
                     bgAnimId = piAnimId piInfo ++ ["("]
             _ -> mkLayout lp
 
-addBelow :: ExpressionGuiM m -> ExpressionGuiM m -> ExpressionGuiM m
-addBelow (ExpressionGui x) (ExpressionGui y) =
-    ExpressionGui $ \layoutParams ->
-    let cp = layoutParams & layoutContext .~ LayoutVertical
-    in Layout.addAfter Layout.Vertical [y cp] (x cp)
-
-addBelowWithSpaceH ::
-    Widget.R -> ExpressionGuiM f -> ExpressionGuiM f -> ExpressionGuiM f
-addBelowWithSpaceH height x y =
-    y
-    & toLayout . Lens.mapped %~
-        Widget.hoist (Layout.assymetricPad (Vector2 0 height) 0)
-    & addBelow x
-
-addBelowWithSpace ::
-    Monad m =>
-    ExprGuiM m (ExpressionGuiM f -> ExpressionGuiM f -> ExpressionGuiM f)
-addBelowWithSpace =
-    ExprGuiM.widgetEnv BWidgets.stdVSpaceHeight <&> addBelowWithSpaceH
-
 vboxTopFocal :: [ExpressionGuiM m] -> ExpressionGuiM m
 vboxTopFocal [] = ExprGuiT.fromLayout Layout.empty
-vboxTopFocal xs = foldl1 addBelow xs
+vboxTopFocal (ExpressionGui mkLayout:guis) =
+    ExpressionGui $
+    \layoutParams ->
+    let cp =
+            LayoutParams
+            { _layoutMode = layoutParams ^. layoutMode
+            , _layoutContext = LayoutVertical
+            }
+    in
+    mkLayout cp
+    & Layout.addAfter Layout.Vertical
+        (guis ^.. Lens.traverse . toLayout ?? cp)
 
 vboxTopFocalSpaced ::
     Monad m => ExprGuiM m ([ExpressionGuiM f] -> ExpressionGuiM f)
 vboxTopFocalSpaced =
-    addBelowWithSpace
-    <&>
-    \add xs ->
-    case xs of
-    [] -> ExprGuiT.fromLayout Layout.empty
-    _ -> foldl1 add xs
+    stdVSpace
+    <&> ExprGuiT.fromValueWidget
+    <&> List.intersperse
+    <&> fmap vboxTopFocal
 
 hCombine ::
     (Layout.Orientation ->
-     [WidgetF ((,) Alignment) (T f Widget.EventResult)] ->
-     WidgetF ((,) Alignment) (T f Widget.EventResult) ->
-     WidgetF ((,) Alignment) (T f Widget.EventResult)) ->
-    WidgetF ((,) Alignment) (T f Widget.EventResult) -> ExpressionGui f -> ExpressionGui f
+     [Layout (T f Widget.EventResult)] ->
+     Layout (T f Widget.EventResult) ->
+     Layout (T f Widget.EventResult)) ->
+    Layout (T f Widget.EventResult) -> ExpressionGui f -> ExpressionGui f
 hCombine f layout gui =
     ExpressionGui $
     \layoutParams ->
     LayoutParams
     { _layoutMode =
-        layoutParams ^. layoutMode & modeWidths -~ layout ^. Widget.width
+        layoutParams ^. layoutMode & modeWidths -~ layout ^. Layout.width
     , _layoutContext = LayoutHorizontal
     }
     & gui ^. toLayout
     & f Layout.Horizontal [layout]
 
-(||>) :: WidgetF ((,) Alignment) (T f Widget.EventResult) -> ExpressionGui f -> ExpressionGui f
+(||>) :: Layout (T f Widget.EventResult) -> ExpressionGui f -> ExpressionGui f
 (||>) = hCombine Layout.addBefore
 
-(<||) :: ExpressionGui f -> WidgetF ((,) Alignment) (T f Widget.EventResult) -> ExpressionGui f
+(<||) :: ExpressionGui f -> Layout (T f Widget.EventResult) -> ExpressionGui f
 (<||) = flip (hCombine Layout.addAfter)
 
 stdHSpace :: Monad m => ExprGuiM m (Widget a)
@@ -230,11 +225,19 @@ data ParenIndentInfo = ParenIndentInfo
     , piStdHorizSpacing :: Widget.R
     }
 
-parenLabel :: ParenIndentInfo -> String -> WidgetF ((,) Alignment) a
+parenLabel :: ParenIndentInfo -> String -> Layout a
 parenLabel parenInfo t =
     TextView.make (piTextStyle parenInfo) t
     (piAnimId parenInfo ++ [fromString t])
     & Widget.fromView & Layout.fromCenteredWidget
+
+horizVertFallback ::
+    Monad m =>
+    Maybe AnimId ->
+    ExprGuiM m (ExpressionGui f -> ExpressionGui f -> ExpressionGui f)
+horizVertFallback mParenId =
+    mParenId & Lens._Just %%~ makeParenIndentInfo
+    <&> horizVertFallbackH
 
 horizVertFallbackH ::
     Maybe ParenIndentInfo ->
@@ -253,60 +256,31 @@ horizVertFallbackH mParenInfo horiz vert =
             & Layout.addAfter Layout.Horizontal [parenLabel parenInfo ")"]
         _ -> wide
     LayoutNarrow limit
-        | wide ^. Widget.width > limit ->
+        | wide ^. Layout.width > limit ->
             layoutParams & maybeIndent mParenInfo vert ^. toLayout
         | otherwise -> wide
 
-addAfterH ::
-    Maybe ParenIndentInfo -> Vector2 Widget.R ->
-    ExpressionGui m -> ExpressionGui m -> ExpressionGui m
-addAfterH mParenInfo spaces focal after =
+combineWith ::
+    Maybe ParenIndentInfo ->
+    ([Layout (T m Widget.EventResult)] -> [Layout (T m Widget.EventResult)]) ->
+    ([ExpressionGui m] -> [ExpressionGui m]) ->
+    [ExpressionGui m] -> ExpressionGui m
+combineWith mParenInfo onHGuis onVGuis guis =
     horizVertFallbackH mParenInfo wide vert
     where
-        vert =
-            addBelowWithSpaceH (spaces ^. _2)
-            (focal & egAlignment . _1 .~ 0)
-            (after & egAlignment . _1 .~ 0)
-        wideCp =
-            LayoutParams
-            { _layoutMode = LayoutWide
-            , _layoutContext = LayoutHorizontal
-            }
+        vert = vboxTopFocal (onVGuis guis <&> egAlignment . _1 .~ 0)
         wide =
-            Layout.addAfter Layout.Horizontal
-            [ (after ^. toLayout) wideCp
-                & Widget.hoist (Layout.assymetricPad (spaces & _2 .~ 0) 0)
-            ] ((focal ^. toLayout) wideCp)
-            & ExprGuiT.fromLayout
-
-addAfter :: ExpressionGui m -> ExpressionGui m -> ExpressionGui m
-addAfter = addAfterH Nothing 0
-
-addAfterWithMParens ::
-    Monad m =>
-    Maybe AnimId ->
-    ExprGuiM m (ExpressionGui f -> ExpressionGui f -> ExpressionGui f)
-addAfterWithMParens mParensId =
-    do
-        mParenInfo <- mParensId & Lens._Just %%~ makeParenIndentInfo
-        addAfterH mParenInfo 0 & return
-
-addAfterWithSpace ::
-    Monad m =>
-    Maybe AnimId ->
-    ExprGuiM m (ExpressionGui f -> ExpressionGui f -> ExpressionGui f)
-addAfterWithSpace mParensId =
-    do
-        spaces <-
-            Vector2
-            <$> ExprGuiM.widgetEnv BWidgets.stdHSpaceWidth
-            <*> ExprGuiM.widgetEnv BWidgets.stdVSpaceHeight
-        mParenInfo <- mParensId & Lens._Just %%~ makeParenIndentInfo
-        addAfterH mParenInfo spaces & return
+            guis ^.. Lens.traverse . toLayout
+            ?? LayoutParams
+                { _layoutMode = LayoutWide
+                , _layoutContext = LayoutHorizontal
+                }
+            & onHGuis
+            & Layout.hbox 0.5
+            & const & ExpressionGui
 
 combine :: [ExpressionGui m] -> ExpressionGui m
-combine [] = error "combine got empty list"
-combine xs = foldl1 addAfter xs
+combine = combineWith Nothing id id
 
 makeParenIndentInfo :: Monad m => AnimId -> ExprGuiM m ParenIndentInfo
 makeParenIndentInfo parensId =
@@ -322,15 +296,12 @@ combineSpaced ::
     Monad m => Maybe AnimId -> ExprGuiM m ([ExpressionGui f] -> ExpressionGui f)
 combineSpaced mParensId =
     do
-        outer <- addAfterWithSpace mParensId
-        inner <- addAfterWithSpace Nothing
-        return $
-            \case
-            [] -> error "combineSpaced with empty list"
-            [x] -> x
-            x:xs -> outer x (foldr1 inner xs)
+        hSpace <- stdHSpace <&> Layout.fromCenteredWidget
+        vSpace <- stdVSpace <&> ExprGuiT.fromValueWidget
+        mParenInfo <- mParensId & Lens._Just %%~ makeParenIndentInfo
+        return $ combineWith mParenInfo (List.intersperse hSpace) (List.intersperse vSpace)
 
-tagItem :: Monad m => ExprGuiM m (WidgetF ((,) Alignment) (T f Widget.EventResult) -> ExpressionGui f -> ExpressionGui f)
+tagItem :: Monad m => ExprGuiM m (Layout (T f Widget.EventResult) -> ExpressionGui f -> ExpressionGui f)
 tagItem =
     stdHSpace <&> Layout.fromCenteredWidget <&> f
     where
@@ -366,15 +337,14 @@ wideAnnotationBehaviorFromSelected True = HoverWideAnnotation
 applyWideAnnotationBehavior ::
     Monad m =>
     AnimId -> WideAnnotationBehavior ->
-    ExprGuiM m (Vector2 Widget.R -> WidgetF ((,) Alignment) a -> WidgetF ((,) Alignment) a)
+    ExprGuiM m (Vector2 Widget.R -> Layout a -> Layout a)
 applyWideAnnotationBehavior _ KeepWideAnnotation = return (const id)
 applyWideAnnotationBehavior animId ShrinkWideAnnotation =
     ExprGuiM.readConfig
     <&>
     \config shrinkRatio layout ->
-    layout
-    & Widget.hoist (Layout.scaleAround (Box.Alignment (Vector2 0.5 0)) shrinkRatio)
-    & Widget.view %~ addAnnotationBackground config animId
+    Layout.scaleAround (Alignment (Vector2 0.5 0)) shrinkRatio layout
+    & Layout.widget . Widget.view %~ addAnnotationBackground config animId
 applyWideAnnotationBehavior animId HoverWideAnnotation =
     do
         config <- ExprGuiM.readConfig
@@ -382,16 +352,14 @@ applyWideAnnotationBehavior animId HoverWideAnnotation =
         shrinker <- applyWideAnnotationBehavior animId ShrinkWideAnnotation
         return $
             \shrinkRatio layout ->
-                layout
-                & Widget.view %~ lifter
-                & Widget.view %~ addAnnotationHoverBackground config animId
-                & Widget.hoist
-                    (`Layout.hoverInPlaceOf` shrinker shrinkRatio layout)
+                lifter layout
+                & Layout.widget . Widget.view %~ addAnnotationHoverBackground config animId
+                & (`Layout.hoverInPlaceOf` shrinker shrinkRatio layout)
 
 processAnnotationGui ::
     Monad m =>
     AnimId -> WideAnnotationBehavior ->
-    ExprGuiM m (Widget.R -> WidgetF ((,) Alignment) a -> WidgetF ((,) Alignment) a)
+    ExprGuiM m (Widget.R -> Layout a -> Layout a)
 processAnnotationGui animId wideAnnotationBehavior =
     f
     <$> ExprGuiM.readConfig
@@ -404,25 +372,23 @@ processAnnotationGui animId wideAnnotationBehavior =
                 applyWide shrinkRatio annotationLayout
             | otherwise =
                 maybeTooNarrow annotationLayout
-                & Widget.view %~ addAnnotationBackground config animId
+                & Layout.widget . Widget.view %~ addAnnotationBackground config animId
             where
-                annotationWidth = annotationLayout ^. Widget.width
+                annotationWidth = annotationLayout ^. Layout.width
                 expansionLimit =
                     Config.valAnnotationWidthExpansionLimit config & realToFrac
                 maxWidth = minWidth + expansionLimit
                 shrinkAtLeast = Config.valAnnotationShrinkAtLeast config & realToFrac
                 heightShrinkRatio =
                     Config.valAnnotationMaxHeight config * stdSpacing ^. _2
-                    / annotationLayout ^. Widget.height
+                    / annotationLayout ^. Layout.widget . Widget.height
                     & min 1
                 shrinkRatio =
                     annotationWidth - shrinkAtLeast & min maxWidth & max minWidth
                     & (/ annotationWidth) & pure
                     & _2 %~ min heightShrinkRatio
                 maybeTooNarrow
-                    | minWidth > annotationWidth =
-                        Widget.hoist
-                        (Layout.pad (Vector2 ((minWidth - annotationWidth) / 2) 0))
+                    | minWidth > annotationWidth = Layout.pad (Vector2 ((minWidth - annotationWidth) / 2) 0)
                     | otherwise = id
 
 data EvalResDisplay = EvalResDisplay
@@ -432,7 +398,7 @@ data EvalResDisplay = EvalResDisplay
     }
 
 makeEvaluationResultView ::
-    Monad m => AnimId -> EvalResDisplay -> ExprGuiM m (WidgetF ((,) Alignment) a)
+    Monad m => AnimId -> EvalResDisplay -> ExprGuiM m (Layout a)
 makeEvaluationResultView animId res =
     do
         config <- ExprGuiM.readConfig
@@ -445,7 +411,7 @@ makeEvaluationResultView animId res =
     <&> Widget.fromView
     <&> Layout.fromCenteredWidget
 
-makeTypeView :: Monad m => Type -> AnimId -> ExprGuiM m (WidgetF ((,) Alignment) f)
+makeTypeView :: Monad m => Type -> AnimId -> ExprGuiM m (Layout f)
 makeTypeView typ animId =
     TypeView.make typ animId <&> Layout.fromCenteredWidget . Widget.fromView
 
@@ -457,19 +423,20 @@ data NeighborVals a = NeighborVals
 makeEvalView ::
     Monad m =>
     NeighborVals (Maybe EvalResDisplay) -> EvalResDisplay ->
-    AnimId -> ExprGuiM m (WidgetF ((,) Alignment) a)
+    AnimId -> ExprGuiM m (Layout a)
 makeEvalView (NeighborVals mPrev mNext) evalRes animId =
     do
         config <- ExprGuiM.readConfig
         let Config.Eval{..} = Config.eval config
         let makeEvaluationResultViewBG res =
                 makeEvaluationResultView animId res
-                <&> Widget.view %~ addAnnotationBackground config (animId ++ [encodeS (erdScope res)])
+                <&> Layout.widget . Widget.view %~
+                    addAnnotationBackground config (animId ++ [encodeS (erdScope res)])
         let neighbourViews n yPos =
                 n ^.. Lens._Just
                 <&> makeEvaluationResultViewBG
                 <&> Lens.mapped %~
-                    Widget.hoist (Layout.pad (neighborsPadding <&> realToFrac)) .
+                    Layout.pad (neighborsPadding <&> realToFrac) .
                     Layout.scale (neighborsScaleFactor <&> realToFrac)
                 <&> Lens.mapped . Layout.alignment . _2 .~ yPos
         prevs <- neighbourViews mPrev 1 & sequence
@@ -478,15 +445,15 @@ makeEvalView (NeighborVals mPrev mNext) evalRes animId =
         evalView
             & Layout.addBefore Layout.Horizontal prevs
             & Layout.addAfter Layout.Horizontal nexts
-            & Widget.hoist (`Layout.hoverInPlaceOf` evalView)
+            & (`Layout.hoverInPlaceOf` evalView)
             & return
 
-annotationSpacer :: Monad m => ExprGuiM m (WidgetF ((,) Alignment) a)
+annotationSpacer :: Monad m => ExprGuiM m (Layout a)
 annotationSpacer = ExprGuiM.vspacer Config.valAnnotationSpacing <&> Layout.fromCenteredWidget
 
 addAnnotationH ::
     Monad m =>
-    (AnimId -> ExprGuiM m (WidgetF ((,) Alignment) (T f Widget.EventResult))) ->
+    (AnimId -> ExprGuiM m (Layout (T f Widget.EventResult))) ->
     WideAnnotationBehavior -> Sugar.EntityId ->
     ExprGuiM m (ExpressionGui f -> ExpressionGui f)
 addAnnotationH f wideBehavior entityId =
@@ -501,7 +468,7 @@ addAnnotationH f wideBehavior entityId =
             in  layout
                 & Layout.addAfter Layout.Vertical
                 [ vspace
-                , processAnn (layout ^. Widget.width) annotationLayout
+                , processAnn (layout ^. Layout.width) annotationLayout
                      & Layout.alignment . _1 .~ layout ^. Layout.alignment . _1
                 ]
     where
@@ -649,30 +616,32 @@ stdWrapParentExpr pl mkGui =
         innerId = WidgetIds.delegatingId myId
 
 makeFocusableView ::
-    (GTraversable t, Applicative f, Monad m) =>
+    (Applicative f, Monad m) =>
     Widget.Id ->
     ExprGuiM m
-    ( WidgetF t (f Widget.EventResult) ->
-      WidgetF t (f Widget.EventResult)
+    ( Layout (f Widget.EventResult) ->
+      Layout (f Widget.EventResult)
     )
-makeFocusableView myId = ExprGuiM.widgetEnv (BWidgets.makeFocusableView myId)
+makeFocusableView myId =
+    ExprGuiM.widgetEnv (BWidgets.makeFocusableView myId)
+    <&> (Layout.widget %~)
 
-makeLabel :: Monad m => String -> AnimId -> ExprGuiM m (WidgetF ((,) Alignment) a)
+makeLabel :: Monad m => String -> AnimId -> ExprGuiM m (Layout a)
 makeLabel text animId = ExprGuiM.makeLabel text animId <&> Widget.fromView <&> Layout.fromCenteredWidget
 
-grammarLabel :: Monad m => String -> AnimId -> ExprGuiM m (WidgetF ((,) Alignment) f)
+grammarLabel :: Monad m => String -> AnimId -> ExprGuiM m (Layout f)
 grammarLabel text animId =
     do
         config <- ExprGuiM.readConfig
         makeLabel text animId
             & ExprGuiM.localEnv (WE.setTextColor (Config.grammarColor config))
 
-addValBG :: (GTraversable t, Monad m) => Widget.Id -> ExprGuiM m (WidgetF t f -> WidgetF t f)
+addValBG :: Monad m => Widget.Id -> ExprGuiM m (Widget f -> Widget f)
 addValBG = addValBGWithColor Config.valFrameBGColor
 
 addValBGWithColor ::
-    (GTraversable t, Monad m) =>
-    (Config -> Draw.Color) -> Widget.Id -> ExprGuiM m (WidgetF t a -> WidgetF t a)
+    Monad m =>
+    (Config -> Draw.Color) -> Widget.Id -> ExprGuiM m (Widget f -> Widget f)
 addValBGWithColor color myId =
     do
         config <- ExprGuiM.readConfig
@@ -685,8 +654,10 @@ addValPadding :: Monad m => ExprGuiM m (ExpressionGui n -> ExpressionGui n)
 addValPadding =
     ExprGuiM.readConfig <&> Config.valFramePadding <&> fmap realToFrac <&> pad
 
-liftLayers :: Monad m => ExprGuiM m (View -> View)
-liftLayers = ExprGuiM.widgetEnv BWidgets.liftLayerInterval
+liftLayers :: Monad m => ExprGuiM m (Layout a -> Layout a)
+liftLayers =
+    ExprGuiM.widgetEnv BWidgets.liftLayerInterval
+    <&> (Layout.widget . Widget.view %~)
 
 addValFrame ::
     Monad m => Widget.Id -> ExprGuiM m (ExpressionGui f -> ExpressionGui f)
@@ -824,7 +795,7 @@ valOfScopePreferCur annotation = valOfScope annotation . pure . Just
 listWithDelDests :: k -> k -> (a -> k) -> [a] -> [(k, k, a)]
 listWithDelDests = ListUtils.withPrevNext
 
-render :: Widget.R -> ExpressionGuiM m -> WidgetF ((,) Alignment) (m Widget.EventResult)
+render :: Widget.R -> ExpressionGuiM m -> Layout (m Widget.EventResult)
 render width gui =
     (gui ^. toLayout)
     LayoutParams

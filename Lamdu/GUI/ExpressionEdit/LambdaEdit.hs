@@ -7,12 +7,11 @@ import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Lens.Tuple
 import           Data.Store.Transaction (Transaction)
-import           Graphics.UI.Bottle.Alignment (Alignment)
 import           Graphics.UI.Bottle.Animation (AnimId)
 import qualified Graphics.UI.Bottle.EventMap as E
 import           Graphics.UI.Bottle.ModKey (ModKey(..))
-import           Graphics.UI.Bottle.Widget (WidgetF)
 import qualified Graphics.UI.Bottle.Widget as Widget
+import           Graphics.UI.Bottle.Widgets.Layout (Layout)
 import qualified Graphics.UI.Bottle.WidgetsEnvT as WE
 import qualified Graphics.UI.GLFW as GLFW
 import qualified Lamdu.Config as Config
@@ -31,13 +30,13 @@ import qualified Lamdu.Sugar.Types as Sugar
 
 type T = Transaction
 
-addScopeEdit :: Monad m => Maybe (WidgetF ((,) Alignment) (T m Widget.EventResult)) -> ExpressionGui m -> ExpressionGui m
+addScopeEdit :: Monad m => Maybe (Layout (T m Widget.EventResult)) -> ExpressionGui m -> ExpressionGui m
 addScopeEdit mScopeEdit e =
     e : (mScopeEdit ^.. Lens._Just <&> ExpressionGui.fromLayout)
     <&> ExpressionGui.egAlignment . _1 .~ 0.5
     & ExpressionGui.vboxTopFocal
 
-mkLhsEdits :: Monad m => Maybe (ExpressionGui m) -> Maybe (WidgetF ((,) Alignment) (T m Widget.EventResult)) -> [ExpressionGui m]
+mkLhsEdits :: Monad m => Maybe (ExpressionGui m) -> Maybe (Layout (T m Widget.EventResult)) -> [ExpressionGui m]
 mkLhsEdits mParamsEdit mScopeEdit =
     mParamsEdit <&> addScopeEdit mScopeEdit & (^.. Lens._Just)
 
@@ -45,7 +44,7 @@ mkExpanded ::
     Monad m => AnimId ->
     ExprGuiM m
     (Maybe (ExpressionGui m) ->
-     Maybe (WidgetF ((,) Alignment) (T m Widget.EventResult)) ->
+     Maybe (Layout (T m Widget.EventResult)) ->
      [ExpressionGui m])
 mkExpanded animId =
     do
@@ -59,7 +58,7 @@ lamId = (`Widget.joinId` ["lam"])
 
 mkShrunk ::
     Monad m => [Sugar.EntityId] -> Widget.Id ->
-    ExprGuiM m (Maybe (WidgetF ((,) Alignment) (T m Widget.EventResult)) -> [ExpressionGui m])
+    ExprGuiM m (Maybe (Layout (T m Widget.EventResult)) -> [ExpressionGui m])
 mkShrunk paramIds myId =
     do
         config <- ExprGuiM.readConfig
@@ -86,7 +85,7 @@ mkLightLambda ::
     Sugar.BinderParams a m -> Widget.Id ->
     ExprGuiM n
     (Maybe (ExpressionGui n) ->
-     Maybe (WidgetF ((,) Alignment) (T n Widget.EventResult)) ->
+     Maybe (Layout (T n Widget.EventResult)) ->
      [ExpressionGui n])
 mkLightLambda params myId =
     do

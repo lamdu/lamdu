@@ -18,7 +18,6 @@ import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets as BWidgets
 import qualified Graphics.UI.Bottle.Widgets.Box as Box
-import qualified Graphics.UI.Bottle.Widgets.Layout as Layout
 import           Graphics.UI.Bottle.WidgetsEnvT (runWidgetEnvT)
 import qualified Graphics.UI.Bottle.WidgetsEnvT as WE
 import           Lamdu.Config (Config)
@@ -68,19 +67,17 @@ make env rootId =
                         codeEdit <-
                             CodeEdit.make codeEditEnv rootId ?? (codeSize ^. _1)
                             & WE.mapWidgetEnvT VersionControl.runAction
-                            <&> Lens.mapped . CodeEdit.m %~ fmap (VersionControl.runEvent cursor)
+                            <&> Widget.events . CodeEdit.m %~ fmap (VersionControl.runEvent cursor)
                         hoverPadding <-
                             Config.pane config & Config.paneHoverPadding
                             & BWidgets.vspacer
                         let scrollBox =
-                                [hoverPadding, codeEdit]
-                                <&> Layout.fromCenteredWidget
-                                & Box.vbox
+                                Box.vbox [(0.5, hoverPadding), (0.5, codeEdit)]
                                 & Widget.padToSizeAlign codeSize 0
                                 & Scroll.focusAreaIntoWindow fullSize
                                 & Widget.size .~ codeSize
-                        [scrollBox, branchSelector] <&> Layout.fromCenteredWidget
-                            & Box.vbox & return
+                        Box.vbox [(0.5, scrollBox), (0.5, branchSelector)]
+                            & return
                 let quitEventMap =
                         Widget.keysEventMap (Config.quitKeys config) (EventMap.Doc ["Quit"]) (error "Quit")
                 branchGui

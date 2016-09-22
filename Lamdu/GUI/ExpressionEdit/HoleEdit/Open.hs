@@ -18,7 +18,6 @@ import           Data.Monoid ((<>))
 import qualified Data.Monoid as Monoid
 import qualified Data.Store.Property as Property
 import           Data.Store.Transaction (Transaction)
-import qualified Data.Traversable.Generalized as GTraversable
 import           Data.Vector.Vector2 (Vector2(..))
 import           Graphics.UI.Bottle.Alignment (Alignment)
 import           Graphics.UI.Bottle.Animation (AnimId)
@@ -26,12 +25,13 @@ import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.EventMap as E
 import           Graphics.UI.Bottle.View (View)
 import qualified Graphics.UI.Bottle.View as View
-import           Graphics.UI.Bottle.Widget (Widget, WidgetF)
+import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.WidgetId as WidgetId
 import qualified Graphics.UI.Bottle.Widgets as BWidgets
 import qualified Graphics.UI.Bottle.Widgets.Box as Box
 import qualified Graphics.UI.Bottle.Widgets.Grid as Grid
+import           Graphics.UI.Bottle.Widgets.Layout (Layout)
 import qualified Graphics.UI.Bottle.Widgets.Layout as Layout
 import qualified Graphics.UI.Bottle.WidgetsEnvT as WE
 import           Lamdu.CharClassification (operatorChars)
@@ -188,7 +188,7 @@ makeShownResult holeInfo result =
                 res ^? Sugar.holeResultConverted
                 . SugarLens.holePayloads . Sugar.plEntityId
         return
-            ( Widget.onWidgetData (Widget.pad padding) widget
+            ( widget & Widget.pad padding
             , ShownResult
               { srMkEventMap =
                   mkEventMap <&> mappend (fixNumWithDotEventMap holeInfo res)
@@ -291,19 +291,19 @@ makeExtraResultsWidget holeInfo mainResultHeight extraResults@(firstResult:_) =
             ( msum mResults
             , widget
                 & Widget.size .~ Vector2 0 height
-                & Widget.onWidgetData (Widget.translate (Vector2 0 (0.5 * (height - headHeight))))
+                & Widget.translate (Vector2 0 (0.5 * (height - headHeight)))
             , (widget ^. Widget.size . _2) - 0.5 * (headHeight + mainResultHeight)
                 & max 0
             )
 
 makeFocusable ::
-    (Monad m, Applicative f, GTraversable.Constraints t (Lens.Const (Vector2 Widget.R))) =>
+    (Monad m, Applicative f) =>
     Widget.Id ->
-    ExprGuiM m (WidgetF t (f Widget.EventResult) -> WidgetF t (f Widget.EventResult))
+    ExprGuiM m (Widget (f Widget.EventResult) -> Widget (f Widget.EventResult))
 makeFocusable = ExprGuiM.widgetEnv . BWidgets.makeFocusableView
 
 applyResultLayout ::
-    Functor f => f (ExpressionGui m) -> f (WidgetF ((,) Alignment) (T m Widget.EventResult))
+    Functor f => f (ExpressionGui m) -> f (Layout (T m Widget.EventResult))
 applyResultLayout fGui =
     fGui <&> (^. ExpressionGui.toLayout)
     ?? ExprGuiT.LayoutParams
@@ -327,10 +327,9 @@ makeHoleResultWidget resultId holeResult =
                 ExprGuiM.localEnv (WE.envCursor .~ idWithinResultWidget) mkWidget
                 <&> (^. Widget.eventMap)
         widget <-
-            (ExpressionGui.liftLayers <&> (Widget.view %~))
+            (ExprGuiM.widgetEnv BWidgets.liftLayerInterval <&> (Widget.view %~))
             <*> (makeFocusable resultId <*> mkWidget)
             <&> Widget.animFrame %~ Anim.mapIdentities (<> (resultSuffix # Widget.toAnimId resultId))
-            <&> (^. Layout.widget)
         return (widget, mkEventMap)
     where
         mkWidget =
@@ -338,6 +337,7 @@ makeHoleResultWidget resultId holeResult =
             & postProcessSugar
             & ExprGuiM.makeSubexpression (const 0)
             & applyResultLayout
+            <&> (^. Layout.widget)
         holeResultEntityId =
             holeResultConverted ^. Sugar.rPayload . Sugar.plEntityId
         idWithinResultWidget =
@@ -399,8 +399,7 @@ layoutResults groups hiddenResults myId
                 <&> map Widget.fromView
             let grid =
                   rows
-                  <&> Lens.mapped %~ Layout.fromCenteredWidget
-                  <&> Lens.mapped . Layout.alignment . _1 .~ 0
+                  & Lens.mapped . Lens.mapped %~ (,) (Grid.Alignment (Vector2 0 0.5))
                   & Grid.make & snd
                   & EventMap.blockDownEvents
             let padHeight =
@@ -408,8 +407,7 @@ layoutResults groups hiddenResults myId
                     - sum (hiddenResultsWidgets ^.. Lens.traversed . Widget.size . _2)
                     & max 0
             grid : hiddenResultsWidgets & Box.vboxCentered
-                & Widget.onWidgetData
-                    (Widget.assymetricPad 0 (Vector2 0 padHeight))
+                & Widget.assymetricPad 0 (Vector2 0 padHeight)
                 & return
     where
         rows = groups ^.. Lens.traversed . rgwRow
@@ -473,7 +471,7 @@ makeUnderCursorAssignment shownResultsLists hasHiddenResults holeInfo =
 
         vspace <- ExpressionGui.annotationSpacer
         hoverResultsWidget <-
-            (ExpressionGui.liftLayers <&> (Widget.view %~))
+            (ExprGuiM.widgetEnv BWidgets.liftLayerInterval <&> (Widget.view %~))
             <*>
             ( addDarkBackground (Widget.toAnimId hidResultsPrefix)
               ??
@@ -489,6 +487,7 @@ makeUnderCursorAssignment shownResultsLists hasHiddenResults holeInfo =
                   ]
                 & ExpressionGui.fromLayout
               ) & applyResultLayout
+              <&> (^. Layout.widget)
             )
         searchTermGui <- SearchTerm.make holeInfo
         return $ ExpressionGui $ \layoutMode ->
@@ -500,11 +499,13 @@ makeUnderCursorAssignment shownResultsLists hasHiddenResults holeInfo =
             in
                 w
                 & Layout.addAfter Layout.Vertical
-                    [ hoverResultsWidget & Layout.alignment . _1 .~ 0 ]
+                    [ Layout.fromCenteredWidget hoverResultsWidget
+                        & Layout.alignment . _1 .~ 0
+                    ]
                 & alignment .~ w ^. alignment
     where
-        alignment :: Lens' (WidgetF ((,) Alignment) f) (Vector2 Widget.R)
-        alignment f = Widget.widgetF (Layout.absAlignedWidget (_1 f))
+        alignment :: Lens' (Layout f) (Vector2 Widget.R)
+        alignment = Layout.absAlignedWidget . _1
         WidgetIds{..} = hiIds holeInfo
 
 makeOpenSearchAreaGui ::

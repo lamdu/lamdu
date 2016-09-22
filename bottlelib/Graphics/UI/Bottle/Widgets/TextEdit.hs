@@ -23,7 +23,6 @@ import           Data.Maybe (mapMaybe)
 import           Data.Monoid ((<>))
 import qualified Data.Monoid as Monoid
 import qualified Data.Set as Set
-import           Data.Traversable.Generalized (GTraversable(..))
 import           Data.Vector.Vector2 (Vector2(..))
 import qualified Graphics.DrawingCombinators as Draw
 import           Graphics.DrawingCombinators.Utils (TextSize(..))
@@ -35,7 +34,7 @@ import qualified Graphics.UI.Bottle.ModKey as ModKey
 import           Graphics.UI.Bottle.Rect (Rect(..))
 import qualified Graphics.UI.Bottle.Rect as Rect
 import           Graphics.UI.Bottle.View (View(..))
-import           Graphics.UI.Bottle.Widget (Widget, WidgetF(..))
+import           Graphics.UI.Bottle.Widget (Widget(..))
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
 import qualified Graphics.UI.GLFW as GLFW
@@ -134,10 +133,8 @@ enterFromDirection Style{..} str myId dir =
         cursorRect = mkCursorRect Style{..} cursor str
 
 makeFocusable ::
-    GTraversable t =>
     Style -> String -> Widget.Id ->
-    WidgetF t (String, Widget.EventResult) ->
-    WidgetF t (String, Widget.EventResult)
+    Widget (String, Widget.EventResult) -> Widget (String, Widget.EventResult)
 makeFocusable style str myId =
     Widget.mEnter .~ Just (enterFromDirection style str myId)
 
@@ -183,15 +180,15 @@ makeFocused cursor Style{..} str myId =
     makeFocusable Style{..} str myId widget
     where
         widget =
-            pure Widget.WidgetData
-            { _wView = View reqSize $ img <> cursorFrame
-            , _wMEnter = Nothing
-            , _wFocus =
-                Widget.HasFocusData Widget.FocusData
+            Widget
+            { _view = View reqSize $ img <> cursorFrame
+            , _mEnter = Nothing
+            , _mFocus =
+                Just Widget.Focus
                 { _focalArea = cursorRect
                 , _fEventMap = eventMap cursor str displayStr myId
                 }
-            } & Widget.WidgetFocused
+            }
         reqSize = Vector2 (_sCursorWidth + tlWidth) tlHeight
         myAnimId = Widget.toAnimId myId
         img = cursorTranslate Style{..} $ frameGen myAnimId

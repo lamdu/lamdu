@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, OverloadedStrings, RecordWildCards, DeriveFunctor, DeriveFoldable, DeriveTraversable, FlexibleContexts #-}
+{-# LANGUAGE NoImplicitPrelude, OverloadedStrings, RecordWildCards, DeriveFunctor, DeriveFoldable, DeriveTraversable #-}
 module Graphics.UI.Bottle.Widgets.Grid
     ( make, makeWithKeys
     , Alignment(..)
@@ -8,7 +8,6 @@ module Graphics.UI.Bottle.Widgets.Grid
 
 import           Control.Applicative (liftA2)
 import qualified Control.Lens as Lens
-import           Control.Lens (Lens)
 import           Control.Lens.Operators
 import           Control.Lens.Tuple
 import           Control.Monad (msum)
@@ -28,7 +27,7 @@ import qualified Graphics.UI.Bottle.ModKey as ModKey
 import           Graphics.UI.Bottle.Rect (Rect(..))
 import qualified Graphics.UI.Bottle.Rect as Rect
 import           Graphics.UI.Bottle.View (View(..))
-import           Graphics.UI.Bottle.Widget (R, Widget, WidgetF)
+import           Graphics.UI.Bottle.Widget (R, Widget(Widget))
 import qualified Graphics.UI.Bottle.Widget as Widget
 import           Graphics.UI.Bottle.Widgets.GridView (Alignment(..))
 import qualified Graphics.UI.Bottle.Widgets.GridView as GridView
@@ -146,7 +145,7 @@ enumerate2d xss =
 index2d :: (Foldable vert, Foldable horiz) => vert (horiz a) -> Vector2 Int -> a
 index2d xss (Vector2 x y) = toList (toList xss !! y) !! x
 
-getCursor :: [[WidgetF t a]] -> Maybe Cursor
+getCursor :: [[Widget k]] -> Maybe Cursor
 getCursor widgets =
     widgets
     & enumerate2d
@@ -155,64 +154,59 @@ getCursor widgets =
 
 make ::
     (Traversable vert, Traversable horiz) =>
-    vert (horiz (WidgetF ((,) Alignment) a)) -> (vert (horiz Alignment), Widget a)
+    vert (horiz (Alignment, Widget a)) -> (vert (horiz Alignment), Widget a)
 make = makeWithKeys stdKeys
-
-widgetInfo :: Lens (WidgetF ((,) a) x) (WidgetF ((,) b) x) a b
-widgetInfo f = Widget.widgetF (_1 f)
 
 makeWithKeys ::
     (Traversable vert, Traversable horiz) =>
-    Keys ModKey -> vert (horiz (WidgetF ((,) Alignment) a)) -> (vert (horiz Alignment), Widget a)
+    Keys ModKey -> vert (horiz (Alignment, Widget a)) -> (vert (horiz Alignment), Widget a)
 makeWithKeys keys children =
     ( content <&> Lens.mapped %~ (^. _1)
-    , content <&> Lens.mapped %~ (\(_align, rect, widget) -> (rect, widget))
+    , content
+      <&> Lens.mapped %~ (\(_align, rect, widget) -> (rect, widget))
       & toWidgetWithKeys keys mCursor size
     )
     where
-        mCursor = toList children <&> toList & getCursor
+        mCursor = toList children <&> toList <&> map snd & getCursor
         (size, content) =
             children
             & Lens.mapped . Lens.mapped %~ toTriplet
             & GridView.makePlacements
-        toTriplet widget =
-            (widget ^. widgetInfo, widget ^. Widget.size, widget)
+        toTriplet (alignment, widget) =
+            (alignment, widget ^. Widget.size, widget)
 
 toWidgetWithKeys ::
-    (Widget.WidgetFConstraints t a, Foldable vert, Foldable horiz) =>
+    (Foldable vert, Foldable horiz) =>
     Keys ModKey -> Maybe Cursor -> Widget.Size ->
-    vert (horiz (Rect, WidgetF t a)) -> Widget a
+    vert (horiz (Rect, Widget a)) -> Widget a
 toWidgetWithKeys keys mCursor size sChildren =
-    case mCursor of
-    Nothing -> res Widget.NoFocusData & Widget.WidgetNotFocused
-    Just cursor ->
-        Widget.HasFocusData Widget.FocusData
-        { _fEventMap =
-            selectedWidgetFocus ^. Widget.fEventMap
-            & addNavEventmap keys navDests
-        , _focalArea = selectedWidgetFocus ^. Widget.focalArea
-        } & res & Widget.WidgetFocused
-        where
-            selectedWidgetFocus =
-                selectedWidget ^? Widget.widgetFocus
-                & fromMaybe (error "selected unfocused widget?")
-            selectedWidget = index2d widgets cursor
-            navDests =
-                mEnterss & toList <&> toList
-                & mkNavDests size (selectedWidgetFocus ^. Widget.focalArea)
-                  cursor
+    Widget
+    { _view = View size frame
+    , _mEnter = toList mEnterss <&> toList & combineMEnters size
+    , _mFocus = mFocus
+    }
     where
-        res f =
-            pure Widget.WidgetData
-            { _wView = View size frame
-            , _wMEnter = toList mEnterss <&> toList & combineMEnters size
-            , _wFocus = f
-            }
         frame = widgets ^. Lens.folded . Lens.folded . Widget.animFrame
         translateChildWidget (rect, widget) =
-            Widget.onWidgetData (Widget.translate (rect ^. Rect.topLeft)) widget
+            Widget.translate (rect ^. Rect.topLeft) widget
         widgets = toList sChildren <&> toList <&> Lens.mapped %~ translateChildWidget
-        mEnterss = widgets <&> Lens.mapped %~ (^. Widget.mEnter)
+        mEnterss = widgets & Lens.mapped . Lens.mapped %~ (^. Widget.mEnter)
+        mFocus =
+            case mCursor of
+            Nothing -> Nothing
+            Just cursor ->
+                selectedWidgetFocus
+                & Widget.fEventMap %~ addNavEventmap keys navDests
+                & Just
+                where
+                    selectedWidgetFocus =
+                        selectedWidget ^. Widget.mFocus
+                        & fromMaybe (error "selected unfocused widget?")
+                    selectedWidget = index2d widgets cursor
+                    navDests =
+                        mEnterss & toList <&> toList
+                        & mkNavDests size (selectedWidgetFocus ^. Widget.focalArea)
+                          cursor
 
 groupSortOn :: Ord b => (a -> b) -> [a] -> [[a]]
 groupSortOn f = groupOn f . sortOn f

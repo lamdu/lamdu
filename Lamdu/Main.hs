@@ -369,7 +369,7 @@ memoizeMakeWidget mkWidget =
             , \x ->
                 readIORef widgetCacheRef
                 >>= ($ x)
-                <&> Lens.mapped %~ (<* liftIO invalidateCache)
+                <&> Widget.events %~ (<* liftIO invalidateCache)
             )
 
 rootCursor :: Widget.Id
@@ -411,7 +411,7 @@ makeMainGui ::
     GUIMain.Env -> T DbLayout.DbM (Widget (MainLoop.M Widget.EventResult))
 makeMainGui dbToIO env =
     GUIMain.make env rootCursor
-    <&> Lens.mapped %~ \act ->
+    <&> Widget.events %~ \act ->
     act ^. GUIMain.m
     & Lens.mapped %~ (>>= _2 attachCursor)
     <&> dbToIO

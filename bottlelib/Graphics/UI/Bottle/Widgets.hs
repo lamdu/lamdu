@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, OverloadedStrings, FlexibleContexts #-}
+{-# LANGUAGE NoImplicitPrelude, OverloadedStrings #-}
 module Graphics.UI.Bottle.Widgets
     ( makeTextView, makeLabel
     , makeFocusableView
@@ -17,7 +17,6 @@ module Graphics.UI.Bottle.Widgets
     , respondToCursorPrefix
     ) where
 
-import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Lens.Tuple
 import           Control.Monad (when)
@@ -25,7 +24,6 @@ import           Data.ByteString.Char8 (pack)
 import           Data.List (intersperse)
 import           Data.Store.Property (Property)
 import qualified Data.Store.Property as Property
-import           Data.Traversable.Generalized (GTraversable)
 import           Data.Vector.Vector2 (Vector2(..))
 import qualified Graphics.DrawingCombinators as Draw
 import           Graphics.UI.Bottle.Animation (AnimId)
@@ -34,7 +32,7 @@ import qualified Graphics.UI.Bottle.EventMap as EventMap
 import           Graphics.UI.Bottle.ModKey (ModKey(..))
 import           Graphics.UI.Bottle.View (View)
 import qualified Graphics.UI.Bottle.View as View
-import           Graphics.UI.Bottle.Widget (Widget, WidgetF)
+import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.Box as Box
 import qualified Graphics.UI.Bottle.Widgets.Choice as Choice
@@ -69,16 +67,14 @@ readEnv :: Monad m => WidgetEnvT m Widget.Env
 readEnv = WE.readEnv <&> (^. WE.envCursor) <&> Widget.Env
 
 respondToCursorPrefix ::
-    (Monad m, GTraversable t) =>
-    Widget.Id -> WidgetEnvT m (WidgetF t a -> WidgetF t a)
+    Monad m => Widget.Id -> WidgetEnvT m (Widget f -> Widget f)
 respondToCursorPrefix myIdPrefix =
     readEnv <&> Widget.respondToCursorPrefix myIdPrefix
 
 makeFocusableView ::
-    (Monad m, Applicative f, GTraversable t) =>
+    (Monad m, Applicative f) =>
     Widget.Id ->
-    WidgetEnvT m
-    (WidgetF t (f Widget.EventResult) -> WidgetF t (f Widget.EventResult))
+    WidgetEnvT m (Widget (f Widget.EventResult) -> Widget (f Widget.EventResult))
 makeFocusableView myIdPrefix =
     respondToCursorPrefix myIdPrefix
     <&>
@@ -99,12 +95,11 @@ makeFocusableLabel text myIdPrefix =
     makeFocusableTextView text (Widget.joinId myIdPrefix [pack text])
 
 makeFocusDelegator ::
-    (Monad m, Applicative f, GTraversable t) =>
+    (Monad m, Applicative f) =>
     FocusDelegator.Config ->
     FocusDelegator.FocusEntryTarget ->
     Widget.Id ->
-    WidgetEnvT m
-    (WidgetF t (f Widget.EventResult) -> WidgetF t (f Widget.EventResult))
+    WidgetEnvT m (Widget (f Widget.EventResult) -> Widget (f Widget.EventResult))
 makeFocusDelegator fdConfig focusEntryTarget myId =
     readEnv <&> FocusDelegator.make fdConfig focusEntryTarget myId
 
@@ -124,7 +119,7 @@ makeTextEditor ::
     WidgetEnvT m (Widget (f Widget.EventResult))
 makeTextEditor textRef myId =
     makeTextEdit (Property.value textRef) myId
-    <&> Lens.mapped %~ setter
+    <&> Widget.events %~ setter
     where
         setter (newText, eventRes) =
             eventRes <$

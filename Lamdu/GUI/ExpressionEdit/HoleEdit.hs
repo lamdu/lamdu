@@ -56,7 +56,7 @@ assignHoleCursor WidgetIds{..} (Just _) =
 hover :: Monad m => WidgetIds -> AnimId -> ExprGuiM m (ExpressionGui n -> ExpressionGui n)
 hover WidgetIds{..} name =
     (.)
-    <$> (ExpressionGui.liftLayers <&> (ExpressionGui.egWidget . Widget.view %~))
+    <$> (ExpressionGui.liftLayers <&> (ExpressionGui.egLayout %~))
     <*> addDarkBackground (Widget.toAnimId hidOpen ++ name ++ ["DarkBg"])
 
 addSearchAreaBelow ::
@@ -66,7 +66,7 @@ addSearchAreaBelow ids =
     hover ids ["searchArea"]
     <&>
     \f wrapperGui searchAreaGui ->
-    ExpressionGui.addBelow wrapperGui (f searchAreaGui)
+    ExpressionGui.vboxTopFocal [wrapperGui, f searchAreaGui]
 
 addWrapperAbove ::
     Monad m =>
@@ -118,11 +118,10 @@ make hole pl =
                                         (layoutMode & lay
                                         (wrapperGui & ExpressionGui.egAlignment . _1 .~ 0)
                                         searchAreaGui ^. ExpressionGui.toLayout)
-                                        & Widget.hoist
-                                        (`Layout.hoverInPlaceOf`
+                                        `Layout.hoverInPlaceOf`
                                         (layoutMode
                                         & unfocusedWrapperGui ^. ExpressionGui.toLayout
-                                        & Layout.alignment . _1 .~ 0))
+                                        & Layout.alignment . _1 .~ 0)
                         if ExpressionGui.egIsFocused wrapperGui
                             then layout addSearchAreaBelow
                             else if isSelected then

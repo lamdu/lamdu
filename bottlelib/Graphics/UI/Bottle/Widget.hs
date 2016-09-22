@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, DeriveFunctor, TemplateHaskell, FlexibleContexts, GeneralizedNewtypeDeriving, DeriveGeneric, OverloadedStrings, RecordWildCards, RankNTypes, EmptyDataDecls, GADTs, ConstraintKinds #-}
+{-# LANGUAGE NoImplicitPrelude, DeriveFunctor, TemplateHaskell, GeneralizedNewtypeDeriving, DeriveGeneric, OverloadedStrings, RecordWildCards #-}
 module Graphics.UI.Bottle.Widget
     ( module Graphics.UI.Bottle.WidgetId
 
@@ -19,17 +19,11 @@ module Graphics.UI.Bottle.Widget
     , keysEventMapMovesCursor
 
     -- Widget type and lenses:
-    , Widget, WidgetF(..), _WidgetFocused, _WidgetNotFocused
-    , WidgetFConstraints
-    , view, mEnter, eventMap, widgetFocus
+    , Widget(..), view, mEnter, mFocus, eventMap
     , MEnter
-    , WidgetData(..), wView, wMEnter, wFocus
-    , Focus(..), TagFocused, TagNotFocused, focusData
-    , FocusData(..), fEventMap, focalArea
-    , animLayers, animFrame, size, width, height
+    , Focus(..), fEventMap, focalArea
+    , animLayers, animFrame, size, width, height, events
 
-    , widgetF, widgetData, onWidgetData
-    , hoist, sequenced
     , isFocused
 
     , CursorConfig(..)
@@ -58,18 +52,17 @@ module Graphics.UI.Bottle.Widget
     , respondToCursor
     ) where
 
+import           Prelude.Compat
+
 import           Control.Applicative (liftA2)
-import           Control.Lens (LensLike, LensLike')
+import           Control.Lens (Lens')
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
-import           Data.Functor.Identity (Identity(..))
 import           Data.Map (Map)
 import qualified Data.Map as Map
 import           Data.Maybe (fromMaybe)
 import qualified Data.Monoid as Monoid
 import           Data.Monoid.Generic (def_mempty, def_mappend)
-import           Data.Traversable.Generalized (GTraversable(..))
-import qualified Data.Traversable.Generalized as GTraversable
 import           Data.Vector.Vector2 (Vector2(..))
 import           GHC.Generics (Generic)
 import qualified Graphics.DrawingCombinators as Draw
@@ -86,8 +79,6 @@ import           Graphics.UI.Bottle.View (View(..))
 import qualified Graphics.UI.Bottle.View as View
 import           Graphics.UI.Bottle.WidgetId
 
-import           Prelude.Compat
-
 data EventResult = EventResult
     { _eCursor :: Monoid.Last Id
     , _eAnimIdMapping :: Monoid.Endo AnimId
@@ -101,147 +92,57 @@ data EnterResult a = EnterResult
       -- Used in Grid to decide which cell's EnterResult to use and in FlyNav.
       _enterResultRect :: Rect
     , _enterResultEvent :: a
-    } deriving Functor
+    }
 
-data FocusData a = FocusData
+data Focus a = Focus
     { _focalArea :: Rect
     , _fEventMap :: EventMap a
-    } deriving Functor
+    }
 
-data TagFocused
-data TagNotFocused
-
-data Focus tag a where
-    NoFocusData :: Focus TagNotFocused a
-    HasFocusData :: FocusData a -> Focus TagFocused a
-
-instance Functor (Focus tag) where
-    fmap _ NoFocusData = NoFocusData
-    fmap f (HasFocusData x) = x <&> f & HasFocusData
-
-focusData :: Lens.Traversal (Focus tag a) (Focus tag b) (FocusData a) (FocusData b)
-focusData _ NoFocusData = pure NoFocusData
-focusData f (HasFocusData d) = f d <&> HasFocusData
-
+-- When focused, mEnter may still be relevant, e.g: FlyNav in an
+-- active textedit, to move to a different text-edit position.
 type MEnter a = Maybe (Direction -> EnterResult a)
 
--- TODO: Better name for this?
-data WidgetData focusTag a = WidgetData
-    { _wView :: View
-    -- When focused, mEnter may still be relevant, e.g: FlyNav in an
-    -- active textedit, to move to a different text-edit position:
-    , _wMEnter :: MEnter a -- Nothing if we're not enterable
-    , _wFocus :: Focus focusTag a
-    } deriving Functor
-
-data WidgetF t a
-    = WidgetNotFocused (t (WidgetData TagNotFocused a))
-    | WidgetFocused (t (WidgetData TagFocused a))
-    deriving Functor
-
-type Widget = WidgetF Identity
-
-type WidgetFConstraints t a =
-    ( GTraversable.Constraints t (Lens.Const Anim.Frame)
-    , GTraversable.Constraints t (Lens.Const (MEnter a))
-    , GTraversable.Constraints t (Lens.Const (Monoid.First (FocusData a)))
-    )
+data Widget a = Widget
+    { _view :: View
+    , _mEnter :: MEnter a -- Nothing if we're not enterable
+    , _mFocus :: Maybe (Focus a)
+    }
 
 Lens.makeLenses ''EnterResult
 Lens.makeLenses ''EventResult
-Lens.makePrisms ''Focus
-Lens.makeLenses ''FocusData
-Lens.makeLenses ''WidgetData
-Lens.makePrisms ''WidgetF
+Lens.makeLenses ''Focus
+Lens.makeLenses ''Widget
 
-{-# INLINE widgetF #-}
-widgetF ::
-    Functor f =>
-    (forall tag. t (WidgetData tag a) -> f (s (WidgetData tag b))) ->
-    WidgetF t a -> f (WidgetF s b)
-widgetF f (WidgetFocused v) = f v <&> WidgetFocused
-widgetF f (WidgetNotFocused v) = f v <&> WidgetNotFocused
+isFocused :: Widget a -> Bool
+isFocused = Lens.has (mFocus . Lens._Just)
 
-widgetData ::
-    GTraversable.Constraints t f =>
-    (forall tag. WidgetData tag a -> f (WidgetData tag b)) ->
-    WidgetF t a -> f (WidgetF t b)
-widgetData f = widgetF (gTraverse f)
-
-onWidgetData ::
-    GTraversable t =>
-    (forall tag. WidgetData tag a -> WidgetData tag b) ->
-    WidgetF t a -> WidgetF t b
-onWidgetData f = runIdentity . widgetData (Identity . f)
-
--- TODO: better name for this?
-{-# INLINE sequenced #-}
-sequenced ::
-    (Functor f, Functor t, GTraversable.Constraints s (Lens.Const (Widget b))) =>
-    LensLike f (WidgetF t a) (WidgetF s b) (t (Widget a)) (s (Widget b))
-sequenced f w =
-    f (toFWidget w) <&> toWidgetF
-    where
-        toFWidget (WidgetNotFocused x) = x <&> WidgetNotFocused . Identity
-        toFWidget (WidgetFocused x) = x <&> WidgetFocused . Identity
-        toWidgetF x =
-            case x ^. gTraverse of
-            WidgetFocused (Identity y) -> WidgetFocused (x & gTraverse .~ y)
-            WidgetNotFocused (Identity y) -> WidgetNotFocused (x & gTraverse .~ y)
-
-{-# INLINE hoist #-}
-hoist :: (forall tag. t (WidgetData tag a) -> s (WidgetData tag b)) -> WidgetF t a -> WidgetF s b
-hoist f = runIdentity . widgetF (Identity . f)
-
-{-# INLINE mEnter #-}
-mEnter ::
-    GTraversable.Constraints t f =>
-    LensLike' f (WidgetF t a) (MEnter a)
-mEnter f = widgetData (wMEnter f)
-
-{-# INLINE view #-}
-view :: GTraversable.Constraints t f => LensLike' f (WidgetF t a) View
-view f = widgetData (wView f)
-
-isFocused :: WidgetF t a -> Bool
-isFocused = Lens.has _WidgetFocused
-
-empty :: Applicative t => WidgetF t a
+empty :: Widget f
 empty = fromView View.empty
 
 {-# INLINE animFrame #-}
-animFrame :: GTraversable.Constraints t f => LensLike' f (WidgetF t a) Anim.Frame
+animFrame :: Lens' (Widget a) Anim.Frame
 animFrame = view . View.animFrame
 
 {-# INLINE animLayers #-}
-animLayers ::
-    (GTraversable.Constraints t f, Applicative f) =>
-    Lens.LensLike' f (WidgetF t a) Anim.Layer
+animLayers :: Lens.Traversal' (Widget a) Anim.Layer
 animLayers = animFrame . Anim.layers
 
 {-# INLINE size #-}
-size :: GTraversable.Constraints t f => LensLike' f (WidgetF t a) Size
+size :: Lens' (Widget a) Size
 size = view . View.size
 
 {-# INLINE width #-}
-width :: GTraversable.Constraints t f => LensLike' f (WidgetF t a) R
+width :: Lens' (Widget a) R
 width = view . View.width
 
 {-# INLINE height #-}
-height :: GTraversable.Constraints t f => LensLike' f (WidgetF t a) R
+height :: Lens' (Widget a) R
 height = view . View.height
 
-{-# INLINE widgetFocus #-}
-widgetFocus ::
-    (GTraversable.Constraints t f, Applicative f) =>
-    LensLike' f (WidgetF t a) (FocusData a)
-widgetFocus = _WidgetFocused . gTraverse . wFocus . focusData
-
 {-# INLINE eventMap #-}
-eventMap ::
-    (GTraversable.Constraints t f, Applicative f) =>
-    Lens.LensLike' f (WidgetF t a) (EventMap a)
-eventMap = widgetFocus . fEventMap
+eventMap :: Lens.Traversal' (Widget a) (EventMap a)
+eventMap = mFocus . Lens._Just . fEventMap
 
 eventResultFromCursor :: Id -> EventResult
 eventResultFromCursor cursor = EventResult
@@ -249,50 +150,55 @@ eventResultFromCursor cursor = EventResult
     , _eAnimIdMapping = mempty
     }
 
-fromView :: Applicative t => View -> WidgetF t a
-fromView v =
-    pure WidgetData
-    { _wView = v
-    , _wMEnter = Nothing
-    , _wFocus = NoFocusData
-    } & WidgetNotFocused
+events :: Lens.Setter (Widget a) (Widget b) a b
+events =
+    Lens.sets atEvents
+    where
+        atEvents :: (a -> b) -> Widget a -> Widget b
+        atEvents f widget =
+            widget
+            { _mEnter =
+                  (Lens.mapped . Lens.mapped . enterResultEvent %~ f) $
+                  _mEnter widget
+            , _mFocus =
+                widget ^. mFocus & Lens._Just . fEventMap . Lens.mapped %~ f
+            }
 
-wTakesFocus ::
+fromView :: View -> Widget a
+fromView v =
+    Widget
+    { _mFocus = Nothing
+    , _view = v
+    , _mEnter = Nothing
+    }
+
+takesFocus ::
     Functor f =>
-    (Direction -> f Id) ->
-    WidgetData tag (f EventResult) ->
-    WidgetData tag (f EventResult)
-wTakesFocus enterFunc wd =
-    wd & wMEnter .~ Just enter
+    (Direction -> f Id) -> Widget (f EventResult) -> Widget (f EventResult)
+takesFocus enterFunc widget =
+    widget & mEnter .~ Just enter
     where
         enter =
             enterFunc
             <&> Lens.mapped %~ eventResultFromCursor
-            <&> EnterResult (Rect 0 (wd ^. wView . View.size))
+            <&> EnterResult (Rect 0 (widget ^. size))
 
-takesFocus ::
-    (Functor f, GTraversable t) =>
-    (Direction -> f Id) -> WidgetF t (f EventResult) -> WidgetF t (f EventResult)
-takesFocus enterFunc = onWidgetData (wTakesFocus enterFunc)
-
-doesntTakeFocus :: GTraversable t => WidgetF t a -> WidgetF t a
+doesntTakeFocus :: Widget a -> Widget a
 doesntTakeFocus = mEnter .~ Nothing
 
 -- ^ If doesn't take focus, does nothing
-strongerEvents :: GTraversable t => EventMap a -> WidgetF t a -> WidgetF t a
+strongerEvents :: EventMap a -> Widget a -> Widget a
 strongerEvents eMap = eventMap %~ (eMap `mappend`)
 
 -- ^ If doesn't take focus, does nothing
-weakerEvents :: GTraversable t => EventMap a -> WidgetF t a -> WidgetF t a
+weakerEvents :: EventMap a -> Widget a -> Widget a
 weakerEvents eMap = eventMap %~ (`mappend` eMap)
 
-backgroundColor :: GTraversable t => Layer -> AnimId -> Draw.Color -> WidgetF t a -> WidgetF t a
+backgroundColor :: Layer -> AnimId -> Draw.Color -> Widget a -> Widget a
 backgroundColor layer animId color =
     view %~ View.backgroundColor layer animId color
 
-addInnerFrame ::
-    (GTraversable.Constraints t (Lens.Const (Vector2 R))) =>
-    Int -> AnimId -> Draw.Color -> Vector2 R -> WidgetF t a -> WidgetF t a
+addInnerFrame :: Int -> AnimId -> Draw.Color -> Vector2 R -> Widget a -> Widget a
 addInnerFrame layer animId color frameWidth widget =
     widget & animFrame %~ mappend emptyRectangle
     where
@@ -316,7 +222,7 @@ applyIdMapping widgetIdMap eventResult =
         mapCursor (Id oldCursor) =
             Id $ Anim.mappingFromPrefixMap animIdMap oldCursor
 
-tint :: GTraversable t => Draw.Color -> WidgetF t a -> WidgetF t a
+tint :: Draw.Color -> Widget a -> Widget a
 tint color = view %~ View.tint color
 
 keysEventMap ::
@@ -333,46 +239,41 @@ keysEventMapMovesCursor keys doc act =
     fmap eventResultFromCursor <$>
     EventMap.keyPresses keys doc act
 
--- TODO: On its own this makes an incorrect widget because its size
+-- TODO: This actually makes an incorrect widget because its size
 -- remains same, but it is now translated away from 0..size
-translate :: Vector2 R -> WidgetData tag a -> WidgetData tag a
-translate pos w =
-    w
-    & wMEnter . Lens._Just %~ onEnter
-    & wFocus . focusData . focalArea . Rect.topLeft +~ pos
-    & wView %~ View.translate pos
-    where
-        onEnter x =
-            x
-            & Lens.argument . Direction.coordinates . Rect.topLeft -~ pos
-            <&> enterResultRect . Rect.topLeft +~ pos
+-- Should expose higher-level combinators instead?
+translate :: Vector2 R -> Widget f -> Widget f
+translate pos widget =
+    widget
+    & mEnter . Lens._Just . Lens.argument .
+        Direction.coordinates . Rect.topLeft -~ pos
+    & mEnter . Lens._Just . Lens.mapped .
+        enterResultRect . Rect.topLeft +~ pos
+    & mFocus . Lens._Just . focalArea . Rect.topLeft +~ pos
+    & view %~ View.translate pos
 
-scale :: Vector2 R -> WidgetData tag a -> WidgetData tag a
+scale :: Vector2 R -> Widget a -> Widget a
 scale mult widget =
     widget
-    & wView %~ View.scale mult
-    & wFocus . focusData . focalArea . Rect.topLeftAndSize *~ mult
-    & wMEnter . Lens._Just %~ onEnter
-    where
-        onEnter x =
-            x
-            <&> enterResultRect . Rect.topLeftAndSize *~ mult
-            & Lens.argument . Direction.coordinates . Rect.topLeftAndSize //~ mult
+    & view %~ View.scale mult
+    & mFocus . Lens._Just . focalArea . Rect.topLeftAndSize *~ mult
+    & mEnter . Lens._Just . Lens.mapped . enterResultRect . Rect.topLeftAndSize *~ mult
+    & mEnter . Lens._Just . Lens.argument . Direction.coordinates . Rect.topLeftAndSize //~ mult
 
 -- Surround a widget with padding
-pad :: Vector2 R -> WidgetData fo a -> WidgetData fo a
+pad :: Vector2 R -> Widget a -> Widget a
 pad p = assymetricPad p p
 
-assymetricPad :: Vector2 R -> Vector2 R -> WidgetData fo a -> WidgetData fo a
-assymetricPad leftAndTop rightAndBottom wd =
-    wd
-    & wView . View.size +~ leftAndTop + rightAndBottom
+assymetricPad :: Vector2 R -> Vector2 R -> Widget a -> Widget a
+assymetricPad leftAndTop rightAndBottom widget =
+    widget
+    & size +~ leftAndTop + rightAndBottom
     & translate leftAndTop
 
 padToSizeAlign :: Size -> Vector2 R -> Widget a -> Widget a
 padToSizeAlign newSize alignment widget =
     widget
-    & onWidgetData (translate (sizeDiff * alignment))
+    & translate (sizeDiff * alignment)
     & size %~ liftA2 max newSize
     where
         sizeDiff = max <$> 0 <*> newSize - widget ^. size
@@ -383,32 +284,22 @@ data Env = Env
     } deriving (Show, Eq, Ord)
 Lens.makeLenses ''Env
 
-respondToCursorPrefix ::
-    GTraversable t => Id -> Env -> WidgetF t a -> WidgetF t a
+respondToCursorPrefix :: Id -> Env -> Widget a -> Widget a
 respondToCursorPrefix myIdPrefix =
     respondToCursorBy (Lens.has Lens._Just . subId myIdPrefix)
 
-respondToCursorBy ::
-    GTraversable t => (Id -> Bool) -> Env -> WidgetF t a -> WidgetF t a
+respondToCursorBy :: (Id -> Bool) -> Env -> Widget a -> Widget a
 respondToCursorBy f env
     | f (env ^. envCursor) = respondToCursor
     | otherwise = id
 
-respondToCursor :: GTraversable t => WidgetF t a -> WidgetF t a
-respondToCursor (WidgetNotFocused x) =
-    x <&> mkFocused & WidgetFocused
-    where
-        mkFocused w =
-            w & wFocus .~
-            HasFocusData FocusData
-            { _focalArea = Rect 0 (w ^. wView . View.size)
-            , _fEventMap = mempty
-            }
-respondToCursor (WidgetFocused x) =
-    x <&> onFocused & WidgetFocused
-    where
-        onFocused w =
-            w & wFocus . focusData . focalArea .~ Rect 0 (w ^. wView . View.size)
+respondToCursor :: Widget a -> Widget a
+respondToCursor widget =
+    widget & mFocus .~ Just
+        Focus
+        { _focalArea = Rect 0 (widget ^. size)
+        , _fEventMap = mempty
+        }
 
 cursorAnimId :: AnimId
 cursorAnimId = ["background"]
@@ -419,7 +310,7 @@ newtype CursorConfig = CursorConfig
 
 renderWithCursor :: CursorConfig -> Widget a -> Anim.Frame
 renderWithCursor CursorConfig{..} widget =
-    maybe mempty renderCursor (widget ^? widgetFocus . focalArea)
+    maybe mempty renderCursor (widget ^? mFocus . Lens._Just . focalArea)
     & mappend (widget ^. animFrame)
     where
         minLayer = fromMaybe 0 (Lens.minimumOf animLayers widget)

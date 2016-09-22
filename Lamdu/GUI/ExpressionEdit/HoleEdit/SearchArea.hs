@@ -10,7 +10,6 @@ module Lamdu.GUI.ExpressionEdit.HoleEdit.SearchArea
 
 import           Control.Lens.Operators
 import qualified Graphics.UI.Bottle.EventMap as E
-import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 import qualified Graphics.UI.Bottle.Widgets.Layout as Layout
 import qualified Graphics.UI.Bottle.WidgetsEnvT as WE
@@ -63,7 +62,6 @@ makeStdWrapped pl holeInfo =
                  ExpressionGui $
                  \layout ->
                  (gui ^. ExpressionGui.toLayout) layout
-                 & Widget.hoist
-                 (`Layout.hoverInPlaceOf`
-                 (closedSearchTermGui ^. ExpressionGui.toLayout) layout)
+                 `Layout.hoverInPlaceOf`
+                 (closedSearchTermGui ^. ExpressionGui.toLayout) layout
             else return closedSearchTermGui

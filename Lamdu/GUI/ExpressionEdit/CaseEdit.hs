@@ -65,7 +65,8 @@ make (Sugar.Case mArg alts caseTail addAlt cEntityId) pl =
                 <*>
                 (ExpressionGui.grammarLabel text
                     (Widget.toAnimId (WidgetIds.fromEntityId cEntityId))
-                    <&> Widget.weakerEvents labelJumpHoleEventMap
+                    <&> Layout.widget
+                        %~ Widget.weakerEvents labelJumpHoleEventMap
                 )
                 <&> ExpressionGui.fromLayout
         (mActiveTag, header) <-
@@ -120,12 +121,11 @@ makeAltRow mActiveTag (Sugar.CaseAlt delete tag altExpr) =
         addBg <-
             ExpressionGui.addValBGWithColor Config.evaluatedPathBGColor
             (WidgetIds.fromEntityId (tag ^. Sugar.tagInstance))
-        let mAddBg
-                | mActiveTag == Just (tag ^. Sugar.tagVal) = addBg
-                | otherwise = id
         altRefGui <-
             TagEdit.makeCaseTag (ExprGuiT.nextHolesBefore altExpr) tag
-            <&> mAddBg
+            <&> if mActiveTag == Just (tag ^. Sugar.tagVal)
+                then Layout.widget %~ addBg
+                else id
         altExprGui <- ExprGuiM.makeSubexpression (const 0) altExpr
         let itemEventMap = caseDelEventMap config delete
         ExpressionGui.tagItem ?? altRefGui ?? altExprGui
@@ -164,15 +164,15 @@ makeOpenCase rest animId altsGui =
         return $ ExpressionGui $
             \layoutMode ->
             let restLayout = layoutMode & restExpr ^. ExpressionGui.toLayout
+                minWidth = restLayout ^. Layout.widget . Widget.width
                 alts = layoutMode & altsGui ^. ExpressionGui.toLayout
-                sepBarWidth = min (restLayout ^. Widget.width) (alts ^. Widget.width)
+                targetWidth = alts ^. Layout.widget . Widget.width
             in
             alts
             & Layout.alignment . _1 .~ 0
             & Layout.addAfter Layout.Vertical
-            ( [ separationBar config sepBarWidth animId
-                & Widget.fromView
-                & Layout.fromCenteredWidget
+            ( [ separationBar config (max minWidth targetWidth) animId
+                & Widget.fromView & Layout.fromCenteredWidget
               , Layout.fromCenteredWidget vspace
               , restLayout
               ] <&> (Layout.alignment . _1 .~ 0)

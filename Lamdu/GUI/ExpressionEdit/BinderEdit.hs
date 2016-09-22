@@ -18,15 +18,15 @@ import           Data.Maybe (fromMaybe)
 import           Data.Monoid ((<>))
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
-import           Graphics.UI.Bottle.Alignment (Alignment)
 import qualified Graphics.UI.Bottle.EventMap as E
 import           Graphics.UI.Bottle.ModKey (ModKey(..))
-import           Graphics.UI.Bottle.Widget (Widget, WidgetF)
+import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets as BWidgets
 import qualified Graphics.UI.Bottle.Widgets.Box as Box
 import qualified Graphics.UI.Bottle.Widgets.Choice as Choice
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
+import           Graphics.UI.Bottle.Widgets.Layout (Layout)
 import qualified Graphics.UI.Bottle.Widgets.Layout as Layout
 import qualified Graphics.UI.Bottle.WidgetsEnvT as WE
 import qualified Graphics.UI.GLFW as GLFW
@@ -113,11 +113,11 @@ mkPresentationModeEdit myId prop = do
     BWidgets.makeChoiceWidget (Transaction.setP prop) pairs cur
         (presentationModeChoiceConfig config) myId
         & ExprGuiM.widgetEnv
-        <&> Widget.onWidgetData (Widget.scale (realToFrac <$> Config.presentationChoiceScaleFactor config))
+        <&> Widget.scale (realToFrac <$> Config.presentationChoiceScaleFactor config)
 
 data Parts m = Parts
     { pMParamsEdit :: Maybe (ExpressionGui m)
-    , pMScopesEdit :: Maybe (WidgetF ((,) Alignment) (T m Widget.EventResult))
+    , pMScopesEdit :: Maybe (Layout (T m Widget.EventResult))
     , pBodyEdit :: ExpressionGui m
     , pEventMap :: Widget.EventMap (T m Widget.EventResult)
     }
@@ -203,7 +203,7 @@ makeScopeNavEdit ::
     Sugar.Binder name m expr -> Widget.Id -> ScopeCursor ->
     ExprGuiM m
     ( Widget.EventMap (T m Widget.EventResult)
-    , Maybe (WidgetF ((,) Alignment) (T m Widget.EventResult))
+    , Maybe (Layout (T m Widget.EventResult))
     )
 makeScopeNavEdit binder myId curCursor =
     do
@@ -220,9 +220,9 @@ makeScopeNavEdit binder myId curCursor =
         settings <- ExprGuiM.readSettings
         case settings ^. CESettings.sInfoMode of
             CESettings.Evaluation ->
-                ExprGuiM.widgetEnv (BWidgets.makeFocusableView myId)
+                ExprGuiM.widgetEnv (BWidgets.makeFocusableView myId <&> (Layout.widget %~))
                 <*> (mapM mkArrow scopes <&> Layout.hbox 0.5)
-                <&> Widget.weakerEvents
+                <&> Layout.widget %~ Widget.weakerEvents
                     (mkScopeEventMap leftKeys rightKeys `mappend` blockEventMap)
                 <&> Just
                 <&> (,) (mkScopeEventMap prevScopeKeys nextScopeKeys)
@@ -304,7 +304,7 @@ makeParts funcApplyLimit binder delVarBackwardsId myId =
         let isScopeNavFocused =
                 case mScopeNavEdit of
                 Just layout
-                    | Widget.isFocused layout -> ScopeNavIsFocused
+                    | Widget.isFocused (layout ^. Layout.widget) -> ScopeNavIsFocused
                 _ -> ScopeNavNotFocused
         do
             mParamsEdit <-
@@ -341,20 +341,17 @@ make name binder myId =
         presentationEdits <-
             binder ^.. Sugar.bMPresentationModeProp . Lens._Just
             & traverse (mkPresentationModeEdit presentationChoiceId)
-        let addPresentationEdits top =
-                top
-                : ( presentationEdits
-                  <&> ExpressionGui.fromValueWidget
-                  <&> ExpressionGui.egAlignment . _1 .~ 0
-                  ) & ExpressionGui.vboxTopFocal
-
         jumpHolesEventMap <-
             ExprEventMap.jumpHolesEventMap (binderContentNearestHoles body)
         defNameEdit <-
             makeBinderNameEdit (binder ^. Sugar.bActions) rhsJumperEquals rhs
             name myId
             <&> ExpressionGui.egAlignment . _1 .~ 0
-            <&> addPresentationEdits
+            <&> ExpressionGui.egLayout %~
+                Layout.addAfter Layout.Vertical
+                (presentationEdits
+                <&> Layout.fromCenteredWidget
+                <&> Layout.alignment . _1 .~ 0)
             <&> ExpressionGui.egWidget %~ Widget.weakerEvents jumpHolesEventMap
         mLhsEdit <-
             case mParamsEdit of

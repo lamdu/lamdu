@@ -5,7 +5,6 @@ module Lamdu.GUI.ExpressionEdit.HoleEdit.SearchTerm
     ( make
     ) where
 
-import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Lens.Tuple
 import           Control.Monad (when)
@@ -40,7 +39,7 @@ makeSearchTermPropEdit ::
     WE.WidgetEnvT m (Widget (m Widget.EventResult))
 makeSearchTermPropEdit WidgetIds{..} searchTermProp =
     BWidgets.makeTextEdit searchTerm hidOpenSearchTerm
-    <&> Lens.mapped %~ \(newSearchTerm, eventRes) ->
+    <&> Widget.events %~ \(newSearchTerm, eventRes) ->
         do
             when (newSearchTerm /= searchTerm) $
                 Property.set searchTermProp newSearchTerm

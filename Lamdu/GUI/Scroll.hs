@@ -23,13 +23,13 @@ focusAreaIntoWindow winSize widget =
         allowedScroll = winSize - widgetSize
         intoWindow rawLens
             | widgetSize ^. l > winSize ^. l && movement < 0 =
-              Widget.onWidgetData
-              (Widget.translate (0 & l .~ max (allowedScroll ^. l) movement))
+              Widget.translate (0 & l .~ max (allowedScroll ^. l) movement)
             | otherwise = id
             where
                 movement = center ^. l - focalPoint ^. l
                 l :: Lens' (Vector2 Widget.R) Widget.R
                 l = Lens.cloneLens rawLens
         focalPoint =
-            widget ^? Widget.widgetFocus . Widget.focalArea . Rect.center
+            widget ^? Widget.mFocus . Lens._Just . Widget.focalArea
+            <&> (^. Rect.center)
             & fromMaybe 0
