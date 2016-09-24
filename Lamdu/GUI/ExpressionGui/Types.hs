@@ -25,6 +25,7 @@ module Lamdu.GUI.ExpressionGui.Types
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Data.Store.Transaction (Transaction)
+import           Graphics.UI.Bottle.Alignment (Alignment)
 import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import           Graphics.UI.Bottle.Widget.Aligned (AlignedWidget)
@@ -89,7 +90,7 @@ egWidget ::
 egWidget = egLayout . AlignedWidget.widget
 
 {-# INLINE egAlignment #-}
-egAlignment :: Lens.Setter' (ExpressionGuiM m) AlignedWidget.Alignment
+egAlignment :: Lens.Setter' (ExpressionGuiM m) Alignment
 egAlignment = egLayout . AlignedWidget.alignment
 
 data EvalModeShow = EvalModeShowNothing | EvalModeShowType | EvalModeShowEval

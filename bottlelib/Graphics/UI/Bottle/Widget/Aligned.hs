@@ -1,21 +1,14 @@
 {-# LANGUAGE NoImplicitPrelude, TypeFamilies, TemplateHaskell, RankNTypes, FlexibleInstances, FlexibleContexts, DeriveFunctor, DeriveFoldable, DeriveTraversable #-}
 module Graphics.UI.Bottle.Widget.Aligned
-    ( AlignedWidget
-    , Alignment
-    , empty
-    , AbsAlignedWidget, absAlignedWidget
-    , alignment, widget, asTuple, width
-    , fromCenteredWidget
-
-    , addBefore, addAfter
-
-    , Orientation(..)
-    , box, hbox, vbox
-
-    , scaleAround
-    , scale
-    , pad
+    ( AlignedWidget, alignment, widget
+    , asTuple, width
+    , empty, fromCenteredWidget
+    , scaleAround, scale, pad
     , hoverInPlaceOf
+    , AbsAlignedWidget, absAlignedWidget
+    , Orientation(..)
+    , addBefore, addAfter
+    , box, hbox, vbox
     ) where
 
 import           Control.Lens (Lens')
@@ -32,19 +25,6 @@ import           Graphics.UI.Bottle.Widgets.Box (Orientation(..))
 
 import           Prelude.Compat
 
-type AbsAlignedWidget a = (Vector2 Widget.R, Widget a)
-
-axis :: Orientation -> Lens' Alignment Widget.R
-axis Horizontal = _1
-axis Vertical = _2
-
-data BoxComponents a = BoxComponents
-    { __widgetsBefore :: [a]
-    , _focalWidget :: a
-    , __widgetsAfter :: [a]
-    } deriving (Functor, Foldable, Traversable)
-Lens.makeLenses ''BoxComponents
-
 data AlignedWidget a = AlignedWidget
     { _alignment :: Alignment
     , _widget :: Widget a
@@ -55,66 +35,11 @@ Lens.makeLenses ''AlignedWidget
 width :: Lens' (AlignedWidget a) Widget.R
 width = widget . Widget.width
 
-{-# INLINE asTuple #-}
-asTuple ::
-    Lens.Iso (AlignedWidget a) (AlignedWidget b) (Alignment, Widget a) (Alignment, Widget b)
-asTuple =
-    Lens.iso toTup fromTup
-    where
-        toTup w = (w ^. alignment, w ^. widget)
-        fromTup (a, w) = AlignedWidget a w
-
-{-# INLINE absAlignedWidget #-}
-absAlignedWidget ::
-    Lens.Iso (AlignedWidget a) (AlignedWidget b) (AbsAlignedWidget a) (AbsAlignedWidget b)
-absAlignedWidget =
-    asTuple . Lens.iso (f ((*) . (^. Alignment.ratio))) (f (fmap Alignment . (/)))
-    where
-        f op w = w & _1 %~ (`op` (w ^. _2 . Widget.size))
-
-boxComponentsToWidget ::
-    Orientation -> BoxComponents (AlignedWidget a) -> AlignedWidget a
-boxComponentsToWidget orientation boxComponents =
-    AlignedWidget
-    { _alignment = boxAlign ^. focalWidget
-    , _widget = boxWidget
-    }
-    where
-        (boxAlign, boxWidget) =
-            boxComponents <&> (^. asTuple)
-            & Box.make orientation
-
 fromCenteredWidget :: Widget a -> AlignedWidget a
-fromCenteredWidget w = AlignedWidget 0.5 w
+fromCenteredWidget = AlignedWidget 0.5
 
 empty :: AlignedWidget a
 empty = fromCenteredWidget Widget.empty
-
-addBefore :: Orientation -> [AlignedWidget a] -> AlignedWidget a -> AlignedWidget a
-addBefore orientation befores layout =
-    BoxComponents befores layout []
-    & boxComponentsToWidget orientation
-addAfter :: Orientation -> [AlignedWidget a] -> AlignedWidget a -> AlignedWidget a
-addAfter orientation afters layout =
-    BoxComponents [] layout afters
-    & boxComponentsToWidget orientation
-
--- The axisAlignment is the alignment point to choose within the resulting box
--- i.e: Horizontal box -> choose eventual horizontal alignment point
-box :: Orientation -> Widget.R -> [AlignedWidget a] -> AlignedWidget a
-box orientation axisAlignment layouts =
-    componentsFromList layouts
-    & boxComponentsToWidget orientation
-    & alignment . axis orientation .~ axisAlignment
-    where
-        componentsFromList [] = BoxComponents [] (AlignedWidget 0 Widget.empty) []
-        componentsFromList (w:ws) = BoxComponents [] w ws
-
-hbox :: Widget.R -> [AlignedWidget a] -> AlignedWidget a
-hbox = box Horizontal
-
-vbox :: Widget.R -> [AlignedWidget a] -> AlignedWidget a
-vbox = box Vertical
 
 -- | scale = scaleAround 0.5
 --   scaleFromTopMiddle = scaleAround (Vector2 0.5 0)
@@ -151,3 +76,71 @@ layout `hoverInPlaceOf` src =
         (layoutAbsAlignment, layoutWidget) = layout ^. absAlignedWidget
         (srcAbsAlignment, srcWidget) = src ^. absAlignedWidget
         srcSize = srcWidget ^. Widget.size
+
+{-# INLINE asTuple #-}
+asTuple ::
+    Lens.Iso (AlignedWidget a) (AlignedWidget b) (Alignment, Widget a) (Alignment, Widget b)
+asTuple =
+    Lens.iso toTup fromTup
+    where
+        toTup w = (w ^. alignment, w ^. widget)
+        fromTup (a, w) = AlignedWidget a w
+
+type AbsAlignedWidget a = (Vector2 Widget.R, Widget a)
+
+{-# INLINE absAlignedWidget #-}
+absAlignedWidget ::
+    Lens.Iso (AlignedWidget a) (AlignedWidget b) (AbsAlignedWidget a) (AbsAlignedWidget b)
+absAlignedWidget =
+    asTuple . Lens.iso (f ((*) . (^. Alignment.ratio))) (f (fmap Alignment . (/)))
+    where
+        f op w = w & _1 %~ (`op` (w ^. _2 . Widget.size))
+
+axis :: Orientation -> Lens' Alignment Widget.R
+axis Horizontal = _1
+axis Vertical = _2
+
+data BoxComponents a = BoxComponents
+    { __widgetsBefore :: [a]
+    , _focalWidget :: a
+    , __widgetsAfter :: [a]
+    } deriving (Functor, Foldable, Traversable)
+Lens.makeLenses ''BoxComponents
+
+boxComponentsToWidget ::
+    Orientation -> BoxComponents (AlignedWidget a) -> AlignedWidget a
+boxComponentsToWidget orientation boxComponents =
+    AlignedWidget
+    { _alignment = boxAlign ^. focalWidget
+    , _widget = boxWidget
+    }
+    where
+        (boxAlign, boxWidget) =
+            boxComponents <&> (^. asTuple)
+            & Box.make orientation
+
+addBefore :: Orientation -> [AlignedWidget a] -> AlignedWidget a -> AlignedWidget a
+addBefore orientation befores layout =
+    BoxComponents befores layout []
+    & boxComponentsToWidget orientation
+addAfter :: Orientation -> [AlignedWidget a] -> AlignedWidget a -> AlignedWidget a
+addAfter orientation afters layout =
+    BoxComponents [] layout afters
+    & boxComponentsToWidget orientation
+
+-- The axisAlignment is the alignment point to choose within the resulting box
+-- i.e: Horizontal box -> choose eventual horizontal alignment point
+box :: Orientation -> Widget.R -> [AlignedWidget a] -> AlignedWidget a
+box orientation axisAlignment layouts =
+    componentsFromList layouts
+    & boxComponentsToWidget orientation
+    & alignment . axis orientation .~ axisAlignment
+    where
+        componentsFromList [] = BoxComponents [] (AlignedWidget 0 Widget.empty) []
+        componentsFromList (w:ws) = BoxComponents [] w ws
+
+hbox :: Widget.R -> [AlignedWidget a] -> AlignedWidget a
+hbox = box Horizontal
+
+vbox :: Widget.R -> [AlignedWidget a] -> AlignedWidget a
+vbox = box Vertical
