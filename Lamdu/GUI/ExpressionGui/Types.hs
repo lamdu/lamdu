@@ -1,13 +1,6 @@
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE NoImplicitPrelude, TemplateHaskell #-}
 module Lamdu.GUI.ExpressionGui.Types
-    ( ExpressionGuiM(..)
-    , ExpressionGui, toLayout
-      , egWidget, egAlignment, egLayout
-      , fromValueWidget, fromLayout
-    , LayoutParams(..), layoutMode, layoutContext
-    , LayoutMode(..), _LayoutNarrow, _LayoutWide
-      , modeWidths
-    , LayoutDisambiguationContext(..)
+    ( ExpressionGui
     , SugarExpr
     , Payload(..)
         , plStoredEntityIds, plNearestHoles, plShowAnnotation
@@ -25,73 +18,17 @@ module Lamdu.GUI.ExpressionGui.Types
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Data.Store.Transaction (Transaction)
-import           Graphics.UI.Bottle.Alignment (Alignment)
-import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
-import           Graphics.UI.Bottle.Widget.Aligned (AlignedWidget)
-import qualified Graphics.UI.Bottle.Widget.Aligned as AlignedWidget
+import           Graphics.UI.Bottle.Widget.TreeLayout (TreeLayout(..))
 import qualified Lamdu.Sugar.Lens as SugarLens
 import           Lamdu.Sugar.Names.Types (ExpressionN)
 import           Lamdu.Sugar.NearestHoles (NearestHoles)
 import qualified Lamdu.Sugar.NearestHoles as NearestHoles
 import qualified Lamdu.Sugar.Types as Sugar
 
-type T = Transaction
-data LayoutMode
-    = LayoutNarrow Widget.R -- ^ limited by the given
-    | LayoutWide -- ^ no limit on width
-Lens.makePrisms ''LayoutMode
+import           Prelude.Compat
 
--- The relevant context for knowing whether parenthesis/indentation is needed
-data LayoutDisambiguationContext
-    = LayoutClear
-    | LayoutHorizontal
-    | LayoutVertical
-
-data LayoutParams = LayoutParams
-    { _layoutMode :: LayoutMode
-    , _layoutContext :: LayoutDisambiguationContext
-    }
-Lens.makeLenses ''LayoutParams
-
-modeWidths :: Lens.Traversal' LayoutMode Widget.R
-modeWidths _ LayoutWide = pure LayoutWide
-modeWidths f (LayoutNarrow limit) = f limit <&> LayoutNarrow
-
-newtype ExpressionGuiM m = ExpressionGui
-    { _toLayout :: LayoutParams -> AlignedWidget (m Widget.EventResult)
-    }
-Lens.makeLenses ''ExpressionGuiM
-
-type ExpressionGui m = ExpressionGuiM (T m)
-
-fromLayout :: AlignedWidget (m Widget.EventResult) -> ExpressionGuiM m
-fromLayout = ExpressionGui . const
-
-fromValueWidget :: Widget (m Widget.EventResult) -> ExpressionGuiM m
-fromValueWidget = fromLayout . AlignedWidget.fromCenteredWidget
-
-{-# INLINE egLayout #-}
-egLayout ::
-    Lens.Setter
-    (ExpressionGuiM m)
-    (ExpressionGuiM n)
-    (AlignedWidget (m Widget.EventResult))
-    (AlignedWidget (n Widget.EventResult))
-egLayout = toLayout . Lens.mapped
-
-{-# INLINE egWidget #-}
-egWidget ::
-    Lens.Setter
-    (ExpressionGuiM m)
-    (ExpressionGuiM n)
-    (Widget (m Widget.EventResult))
-    (Widget (n Widget.EventResult))
-egWidget = egLayout . AlignedWidget.widget
-
-{-# INLINE egAlignment #-}
-egAlignment :: Lens.Setter' (ExpressionGuiM m) Alignment
-egAlignment = egLayout . AlignedWidget.alignment
+type ExpressionGui m = TreeLayout (Transaction m Widget.EventResult)
 
 data EvalModeShow = EvalModeShowNothing | EvalModeShowType | EvalModeShowEval
     deriving (Eq, Ord, Show)

@@ -11,6 +11,7 @@ import           Graphics.UI.Bottle.Animation (AnimId)
 import qualified Graphics.UI.Bottle.Animation as Anim
 import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
+import qualified Graphics.UI.Bottle.Widget.TreeLayout as TreeLayout
 import qualified Lamdu.GUI.ExpressionEdit.BinderEdit as BinderEdit
 import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
 import qualified Lamdu.GUI.ExpressionEdit.TagEdit as TagEdit
@@ -36,7 +37,7 @@ mkOverrideModifyEventMap ::
 mkOverrideModifyEventMap actions =
     do
         config <- ExprGuiM.readConfig
-        ExpressionGui.egWidget %~
+        TreeLayout.widget %~
             Widget.strongerEvents (ExprEventMap.modifyEventMap config actions)
             & return
 
@@ -80,7 +81,7 @@ makeInfixFuncName func =
         if any BinderEdit.nonOperatorName (NamesGet.fromExpression func)
             then
                 res
-                & ExpressionGui.egWidget %~
+                & TreeLayout.widget %~
                     addInfixMarker (WidgetIds.fromExprPayload (func ^. Sugar.rPayload))
                 & return
             else return res
@@ -174,4 +175,4 @@ mkBoxed annotatedArgs myId mkFuncRow =
         vbox <- ExpressionGui.vboxTopFocalSpaced
         ExpressionGui.addValFrame myId
             ?? vbox
-                ([funcRow, vbox argRows] <&> ExpressionGui.egAlignment . _1 .~ 0)
+                ([funcRow, vbox argRows] <&> TreeLayout.alignment . _1 .~ 0)

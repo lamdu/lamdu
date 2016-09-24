@@ -73,6 +73,7 @@ Library
                   , Graphics.UI.Bottle.View
                   , Graphics.UI.Bottle.Widget
                   , Graphics.UI.Bottle.Widget.Aligned
+                  , Graphics.UI.Bottle.Widget.TreeLayout
                   , Graphics.UI.Bottle.WidgetId
                   , Graphics.UI.Bottle.Widgets
                   , Graphics.UI.Bottle.Widgets.Box

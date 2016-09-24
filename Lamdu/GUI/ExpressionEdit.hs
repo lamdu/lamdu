@@ -6,6 +6,7 @@ module Lamdu.GUI.ExpressionEdit
 import           Control.Lens.Operators
 import qualified Data.List as List
 import qualified Graphics.UI.Bottle.Widget as Widget
+import qualified Graphics.UI.Bottle.Widget.TreeLayout as TreeLayout
 import qualified Lamdu.GUI.ExpressionEdit.ApplyEdit as ApplyEdit
 import qualified Lamdu.GUI.ExpressionEdit.CaseEdit as CaseEdit
 import qualified Lamdu.GUI.ExpressionEdit.GetFieldEdit as GetFieldEdit
@@ -41,7 +42,7 @@ injectedExpr ::
     Monad m => Sugar.Payload m ExprGuiT.Payload -> ExprGuiM m (ExpressionGui m)
 injectedExpr pl =
     WidgetIds.fromExprPayload pl & Widget.toAnimId
-    & ExpressionGui.makeLabel "★" <&> ExpressionGui.fromLayout
+    & ExpressionGui.makeLabel "★" <&> TreeLayout.fixedLayout
 
 makeEditor ::
     Monad m =>

@@ -12,6 +12,7 @@ import qualified Data.Store.Transaction as Transaction
 import qualified Graphics.UI.Bottle.EventMap as E
 import           Graphics.UI.Bottle.ModKey (ModKey(..))
 import qualified Graphics.UI.Bottle.Widget as Widget
+import qualified Graphics.UI.Bottle.Widget.TreeLayout as TreeLayout
 import qualified Graphics.UI.Bottle.Widgets as BWidgets
 import qualified Graphics.UI.Bottle.Widgets.Box as Box
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
@@ -57,7 +58,7 @@ genericEdit getStyle prop pl =
             & ExprGuiM.widgetEnv
             & ExprGuiM.localEnv (WE.envTextStyle .~ style)
             <&> Widget.weakerEvents editEventMap
-            <&> ExpressionGui.fromValueWidget
+            <&> TreeLayout.fromCenteredWidget
     where
         myId = WidgetIds.fromExprPayload pl
         editEventMap =
@@ -95,7 +96,7 @@ textEdit prop pl =
                 <&> Widget.fromView
                 <&> Widget.padToSizeAlign quoteSize 1
             Box.hboxCentered [left, text, right] & return
-            <&> ExpressionGui.fromValueWidget
+            <&> TreeLayout.fromCenteredWidget
             & ExprGuiM.widgetEnv
             & ExprGuiM.localEnv (WE.envTextStyle .~ style)
         ExpressionGui.makeFocusDelegator (fdConfig config)

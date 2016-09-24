@@ -14,10 +14,12 @@ import           Graphics.UI.Bottle.View (View(..))
 import qualified Graphics.UI.Bottle.View as View
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widget.Aligned as AlignedWidget
+import           Graphics.UI.Bottle.Widget.TreeLayout (TreeLayout(..))
+import qualified Graphics.UI.Bottle.Widget.TreeLayout as TreeLayout
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
 import qualified Lamdu.GUI.ExpressionEdit.TagEdit as TagEdit
-import           Lamdu.GUI.ExpressionGui (ExpressionGuiM(..), ExpressionGui)
+import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
@@ -58,7 +60,7 @@ make record@(Sugar.Record fields recordTail addField) pl =
                 case recordTail of
                     Sugar.ClosedRecord deleteTail ->
                         fieldsGui
-                        & ExpressionGui.egWidget %~
+                        & TreeLayout.widget %~
                           Widget.weakerEvents (recordOpenEventMap config deleteTail)
                         & return
                     Sugar.RecordExtending rest ->
@@ -72,11 +74,11 @@ make record@(Sugar.Record fields recordTail addField) pl =
                   (E.Doc ["Edit", "Record", "Add Field"])
                 & ExprGuiM.withHolePickers resultPickers
         gui
-            & ExpressionGui.egWidget %~ Widget.weakerEvents addFieldEventMap
+            & TreeLayout.widget %~ Widget.weakerEvents addFieldEventMap
             & if addBg
                 then
                     (<*>)
-                    (ExpressionGui.addValBG myId <&> (ExpressionGui.egWidget %~))
+                    (ExpressionGui.addValBG myId <&> (TreeLayout.widget %~))
                     . return
                 else return
     where
@@ -94,7 +96,7 @@ makeFieldRow (Sugar.RecordField delete tag fieldExpr) =
         fieldExprGui <- ExprGuiM.makeSubexpression (const 0) fieldExpr
         let itemEventMap = recordDelEventMap config delete
         ExpressionGui.tagItem ?? fieldRefGui ?? fieldExprGui
-            <&> ExpressionGui.egWidget %~ Widget.weakerEvents itemEventMap
+            <&> TreeLayout.widget %~ Widget.weakerEvents itemEventMap
 
 makeFieldsWidget ::
     Monad m =>
@@ -103,7 +105,7 @@ makeFieldsWidget ::
 makeFieldsWidget [] myId =
     ExpressionGui.makeFocusableView myId
     <*> ExpressionGui.grammarLabel "()" (Widget.toAnimId myId)
-    <&> ExpressionGui.fromLayout
+    <&> TreeLayout.fixedLayout
 makeFieldsWidget fields _ =
     ExpressionGui.vboxTopFocalSpaced <*> mapM makeFieldRow fields
 
@@ -125,11 +127,11 @@ makeOpenRecord fieldsGui rest animId =
         restExpr <-
             ExpressionGui.addValPadding
             <*> ExprGuiM.makeSubexpression (const 0) rest
-        return $ ExpressionGui $
+        return $ TreeLayout $
             \layoutMode ->
-            let restLayout = layoutMode & restExpr ^. ExpressionGui.toLayout
+            let restLayout = layoutMode & restExpr ^. TreeLayout.render
                 minWidth = restLayout ^. AlignedWidget.widget . Widget.width
-                fields = layoutMode & fieldsGui ^. ExpressionGui.toLayout
+                fields = layoutMode & fieldsGui ^. TreeLayout.render
                 targetWidth = fields ^. AlignedWidget.widget . Widget.width
             in
             fields

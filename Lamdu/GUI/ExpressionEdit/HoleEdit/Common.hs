@@ -9,9 +9,9 @@ import qualified Graphics.DrawingCombinators as Draw
 import           Graphics.UI.Bottle.Animation (AnimId)
 import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
+import qualified Graphics.UI.Bottle.Widget.TreeLayout as TreeLayout
 import qualified Lamdu.Config as Config
 import           Lamdu.GUI.ExpressionGui (ExpressionGui)
-import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 
@@ -27,8 +27,8 @@ addDarkBackground animId =
         let Config.Hole{..} = Config.hole config
         return $ \gui ->
             gui
-            & ExpressionGui.pad (holeDarkPadding <&> realToFrac)
-            & ExpressionGui.egWidget %~
+            & TreeLayout.pad (holeDarkPadding <&> realToFrac)
+            & TreeLayout.widget %~
               Widget.backgroundColor
               (Config.layerDarkHoleBG (Config.layers config))
               (animId <> ["hole dark background"])

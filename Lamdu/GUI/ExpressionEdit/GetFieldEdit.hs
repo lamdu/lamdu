@@ -5,6 +5,7 @@ module Lamdu.GUI.ExpressionEdit.GetFieldEdit
 
 import           Control.Lens.Operators
 import qualified Graphics.UI.Bottle.Widget as Widget
+import qualified Graphics.UI.Bottle.Widget.TreeLayout as TreeLayout
 import qualified Lamdu.GUI.ExpressionEdit.TagEdit as TagEdit
 import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
@@ -33,8 +34,8 @@ make (Sugar.GetField recExpr tagG) pl =
             (pl ^. Sugar.plData . ExprGuiT.plNearestHoles) tagG
         ExpressionGui.combine
             [ recExprEdit
-            , ExpressionGui.fromLayout dotLabel
-            , ExpressionGui.fromLayout tagEdit
+            , TreeLayout.fixedLayout dotLabel
+            , TreeLayout.fixedLayout tagEdit
             ]
             & return
     & ExprGuiM.assignCursor myId tagId

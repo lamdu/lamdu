@@ -13,6 +13,7 @@ import           Data.Store.Property (Property)
 import qualified Data.Store.Property as Property
 import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
+import qualified Graphics.UI.Bottle.Widget.TreeLayout as TreeLayout
 import qualified Graphics.UI.Bottle.Widgets as BWidgets
 import qualified Graphics.UI.Bottle.Widgets.TextEdit as TextEdit
 import qualified Graphics.UI.Bottle.WidgetsEnvT as WE
@@ -23,7 +24,6 @@ import           Lamdu.GUI.ExpressionEdit.HoleEdit.Info (HoleInfo(..))
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.Info as HoleInfo
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds (WidgetIds(..))
 import           Lamdu.GUI.ExpressionGui (ExpressionGui)
-import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 
@@ -64,8 +64,8 @@ make holeInfo =
                 %~ EventMap.disallowCharsFromSearchTerm holeConfig searchTerm
             <&> addBackground (Widget.toAnimId hidOpenSearchTerm)
                 (Config.layers config) holeSearchTermBGColor
-            <&> ExpressionGui.fromValueWidget
-            <&> ExpressionGui.egAlignment . _1 .~ 0
+            <&> TreeLayout.fromCenteredWidget
+            <&> TreeLayout.alignment . _1 .~ 0
             & WE.localEnv (WE.envTextStyle %~ textEditNoEmpty)
             & ExprGuiM.widgetEnv
     where

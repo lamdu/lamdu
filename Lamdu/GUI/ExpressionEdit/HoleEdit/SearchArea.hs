@@ -11,6 +11,8 @@ module Lamdu.GUI.ExpressionEdit.HoleEdit.SearchArea
 import           Control.Lens.Operators
 import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget.Aligned as AlignedWidget
+import           Graphics.UI.Bottle.Widget.TreeLayout (TreeLayout(..))
+import qualified Graphics.UI.Bottle.Widget.TreeLayout as TreeLayout
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 import qualified Graphics.UI.Bottle.WidgetsEnvT as WE
 import qualified Lamdu.Config as Config
@@ -18,7 +20,7 @@ import           Lamdu.GUI.ExpressionEdit.HoleEdit.Info (HoleInfo(..))
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.Open (makeOpenSearchAreaGui)
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.SearchTerm as SearchTerm
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds (WidgetIds(..))
-import           Lamdu.GUI.ExpressionGui (ExpressionGuiM(..), ExpressionGui)
+import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
@@ -59,9 +61,9 @@ makeStdWrapped pl holeInfo =
                  fdWrap <*> makeOpenSearchAreaGui pl holeInfo
                  <&>
                  \gui ->
-                 ExpressionGui $
+                 TreeLayout $
                  \layout ->
-                 (gui ^. ExpressionGui.toLayout) layout
+                 (gui ^. TreeLayout.render) layout
                  `AlignedWidget.hoverInPlaceOf`
-                 (closedSearchTermGui ^. ExpressionGui.toLayout) layout
+                 (closedSearchTermGui ^. TreeLayout.render) layout
             else return closedSearchTermGui

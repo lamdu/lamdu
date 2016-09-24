@@ -25,6 +25,8 @@ import           Graphics.UI.Bottle.ModKey (ModKey(..))
 import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widget.Aligned as AlignedWidget
+import           Graphics.UI.Bottle.Widget.TreeLayout (TreeLayout)
+import qualified Graphics.UI.Bottle.Widget.TreeLayout as TreeLayout
 import qualified Graphics.UI.Bottle.Widgets as BWidgets
 import qualified Graphics.UI.Bottle.Widgets.Box as Box
 import           Graphics.UI.Bottle.WidgetsEnvT (WidgetEnvT)
@@ -40,7 +42,6 @@ import           Lamdu.GUI.CodeEdit.Settings (Settings)
 import qualified Lamdu.GUI.DefinitionEdit as DefinitionEdit
 import qualified Lamdu.GUI.ExpressionEdit as ExpressionEdit
 import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
-import           Lamdu.GUI.ExpressionGui (ExpressionGuiM(..))
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
@@ -331,16 +332,16 @@ replEventMap env replExpr =
 makeReplEdit ::
     Monad m =>
     Env m -> Widget.Id -> ExprGuiT.SugarExpr m ->
-    ExprGuiM m (ExpressionGuiM (M m))
+    ExprGuiM m (TreeLayout (M m Widget.EventResult))
 makeReplEdit env myId replExpr =
     ExpressionGui.combineSpaced Nothing
     <*> sequence
     [ ExpressionGui.makeFocusableView replId
       <*> ExpressionGui.makeLabel "⋙" (Widget.toAnimId replId)
-      <&> ExpressionGui.fromLayout
+      <&> TreeLayout.fixedLayout
     , ExprGuiM.makeSubexpression id replExpr
     ]
-    <&> ExpressionGui.egWidget %~
+    <&> TreeLayout.widget %~
         Widget.weakerEvents (replEventMap env replExpr) . mLiftWidget
     where
         replId = Widget.joinId myId ["repl"]

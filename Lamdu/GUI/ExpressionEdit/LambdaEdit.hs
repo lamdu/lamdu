@@ -12,6 +12,7 @@ import qualified Graphics.UI.Bottle.EventMap as E
 import           Graphics.UI.Bottle.ModKey (ModKey(..))
 import qualified Graphics.UI.Bottle.Widget as Widget
 import           Graphics.UI.Bottle.Widget.Aligned (AlignedWidget)
+import qualified Graphics.UI.Bottle.Widget.TreeLayout as TreeLayout
 import qualified Graphics.UI.Bottle.WidgetsEnvT as WE
 import qualified Graphics.UI.GLFW as GLFW
 import qualified Lamdu.Config as Config
@@ -32,8 +33,8 @@ type T = Transaction
 
 addScopeEdit :: Monad m => Maybe (AlignedWidget (T m Widget.EventResult)) -> ExpressionGui m -> ExpressionGui m
 addScopeEdit mScopeEdit e =
-    e : (mScopeEdit ^.. Lens._Just <&> ExpressionGui.fromLayout)
-    <&> ExpressionGui.egAlignment . _1 .~ 0.5
+    e : (mScopeEdit ^.. Lens._Just <&> TreeLayout.fixedLayout)
+    <&> TreeLayout.alignment . _1 .~ 0.5
     & ExpressionGui.vboxTopFocal
 
 mkLhsEdits :: Monad m => Maybe (ExpressionGui m) -> Maybe (AlignedWidget (T m Widget.EventResult)) -> [ExpressionGui m]
@@ -51,7 +52,7 @@ mkExpanded animId =
         labelEdit <- ExpressionGui.grammarLabel "→" animId
         return $ \mParamsEdit mScopeEdit ->
             mkLhsEdits mParamsEdit mScopeEdit ++
-            [ExpressionGui.fromLayout labelEdit]
+            [TreeLayout.fixedLayout labelEdit]
 
 lamId :: Widget.Id -> Widget.Id
 lamId = (`Widget.joinId` ["lam"])
@@ -71,11 +72,11 @@ mkShrunk paramIds myId =
         lamLabel <-
             ExpressionGui.makeFocusableView (lamId myId)
             <*> ExpressionGui.grammarLabel "λ" animId
-            <&> ExpressionGui.fromLayout
+            <&> TreeLayout.fixedLayout
             & LightLambda.withUnderline (Config.lightLambda config)
         return $ \mScopeEdit ->
             [ addScopeEdit mScopeEdit lamLabel
-              & ExpressionGui.egWidget %~ Widget.weakerEvents expandEventMap
+              & TreeLayout.widget %~ Widget.weakerEvents expandEventMap
             ]
     where
         animId = Widget.toAnimId myId
@@ -100,7 +101,7 @@ mkLightLambda params myId =
         if isSelected
             then
                  mkExpanded animId
-                 <&> Lens.mapped . Lens.mapped . Lens.mapped . ExpressionGui.egWidget %~
+                 <&> Lens.mapped . Lens.mapped . Lens.mapped . TreeLayout.widget %~
                      Widget.weakerEvents shrinkEventMap
             else mkShrunk paramIds myId
                  <&> \mk _mParamsEdit mScopeEdit -> mk mScopeEdit
@@ -134,7 +135,7 @@ make lam pl =
         ExpressionGui.combineSpaced mParensId
             <*> (ExpressionGui.combineSpaced Nothing ?? paramsAndLabelEdits
                 <&> (: [bodyEdit]))
-            <&> ExpressionGui.egWidget %~ Widget.weakerEvents eventMap
+            <&> TreeLayout.widget %~ Widget.weakerEvents eventMap
     where
         funcApplyLimit = pl ^. Sugar.plData . ExprGuiT.plShowAnnotation . ExprGuiT.funcApplyLimit
         params = binder ^. Sugar.bParams

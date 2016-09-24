@@ -10,6 +10,7 @@ import           Data.Monoid ((<>))
 import qualified Data.Store.Transaction as Transaction
 import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
+import qualified Graphics.UI.Bottle.Widget.TreeLayout as TreeLayout
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds (WidgetIds(..))
@@ -82,15 +83,15 @@ make WidgetIds{..} arg =
         let argIsFocused = ExpressionGui.egIsFocused argGui
         unwrapEventMap <- makeUnwrapEventMap arg WidgetIds{..}
         ExpressionGui.makeFocusableView hidWrapper
-            <&> (ExpressionGui.egLayout %~)
+            <&> (TreeLayout.alignedWidget %~)
             ?? argGui
-            <&> ExpressionGui.pad (frameWidth & _2 .~ 0)
-            <&> ExpressionGui.egWidget %~
+            <&> TreeLayout.pad (frameWidth & _2 .~ 0)
+            <&> TreeLayout.widget %~
                 Widget.addInnerFrame
                 (Config.layerTypeIndicatorFrame (Config.layers config))
                 frameId frameColor frameWidth
-            <&> ExpressionGui.egWidget . Widget.eventMap %~
+            <&> TreeLayout.widget . Widget.eventMap %~
                 modifyWrappedEventMap config argIsFocused arg WidgetIds{..}
-            <&> ExpressionGui.egWidget %~ Widget.weakerEvents unwrapEventMap
+            <&> TreeLayout.widget %~ Widget.weakerEvents unwrapEventMap
     where
         frameId = Widget.toAnimId hidWrapper <> ["hole frame"]

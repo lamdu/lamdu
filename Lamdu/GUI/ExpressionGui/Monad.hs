@@ -42,6 +42,7 @@ import qualified Graphics.UI.Bottle.EventMap as E
 import           Graphics.UI.Bottle.View (View)
 import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
+import qualified Graphics.UI.Bottle.Widget.TreeLayout as TreeLayout
 import           Graphics.UI.Bottle.WidgetId (toAnimId)
 import qualified Graphics.UI.Bottle.Widgets as BWidgets
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
@@ -153,9 +154,8 @@ makeSubexpression onPrecedence expr =
     do
         maker <- Lens.view aMakeSubexpression & ExprGuiM
         maker expr & withLocalPrecedence onPrecedence
-    & advanceDepth fromView animId
+    & advanceDepth (return . TreeLayout.fromCenteredView) animId
     where
-        fromView = return . ExprGuiT.fromValueWidget . Widget.fromView
         animId = toAnimId $ WidgetIds.fromExprPayload $ expr ^. Sugar.rPayload
 
 resetDepth :: Monad m => Int -> ExprGuiM m r -> ExprGuiM m r

@@ -24,6 +24,7 @@ import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import           Graphics.UI.Bottle.Widget.Aligned (AlignedWidget)
 import qualified Graphics.UI.Bottle.Widget.Aligned as AlignedWidget
+import qualified Graphics.UI.Bottle.Widget.TreeLayout as TreeLayout
 import qualified Graphics.UI.Bottle.Widgets as BWidgets
 import qualified Graphics.UI.Bottle.Widgets.Box as Box
 import qualified Graphics.UI.Bottle.Widgets.Choice as Choice
@@ -73,7 +74,7 @@ makeBinderNameEdit binderActions rhsJumperEquals rhs name myId =
                 (ParamEdit.eventMapAddFirstParam config
                  (binderActions ^. Sugar.baAddFirstParam) <>
                  rhsJumper)
-            <&> ExpressionGui.fromValueWidget
+            <&> TreeLayout.fromCenteredWidget
     where
         jumpToRHSViaEquals n widget
             | nonOperatorName n =
@@ -260,7 +261,7 @@ makeMParamsEdit mScopeCursor isScopeNavFocused delVarBackwardsId myId nearestHol
     [] -> return Nothing
     paramEdits ->
         ExpressionGui.combineSpaced Nothing
-        ?? (paramEdits <&> ExpressionGui.egAlignment . _1 .~ 0.5)
+        ?? (paramEdits <&> TreeLayout.alignment . _1 .~ 0.5)
         & case params of
           Sugar.FieldParams{} -> (ExpressionGui.addValFrame myId <*>)
           _ -> id
@@ -346,31 +347,31 @@ make name binder myId =
         defNameEdit <-
             makeBinderNameEdit (binder ^. Sugar.bActions) rhsJumperEquals rhs
             name myId
-            <&> ExpressionGui.egAlignment . _1 .~ 0
-            <&> ExpressionGui.egLayout %~
+            <&> TreeLayout.alignment . _1 .~ 0
+            <&> TreeLayout.alignedWidget %~
                 AlignedWidget.addAfter AlignedWidget.Vertical
                 (presentationEdits
                 <&> AlignedWidget.fromCenteredWidget
                 <&> AlignedWidget.alignment . _1 .~ 0)
-            <&> ExpressionGui.egWidget %~ Widget.weakerEvents jumpHolesEventMap
+            <&> TreeLayout.widget %~ Widget.weakerEvents jumpHolesEventMap
         mLhsEdit <-
             case mParamsEdit of
             Nothing -> return Nothing
             Just paramsEdit ->
                 ExpressionGui.vboxTopFocalSpaced
-                ?? (paramsEdit : fmap ExpressionGui.fromLayout mScopeEdit ^.. Lens._Just
-                    <&> ExpressionGui.egAlignment . _1 .~ 0.5)
-                <&> ExpressionGui.egWidget %~ Widget.weakerEvents rhsJumperEquals
+                ?? (paramsEdit : fmap TreeLayout.fixedLayout mScopeEdit ^.. Lens._Just
+                    <&> TreeLayout.alignment . _1 .~ 0.5)
+                <&> TreeLayout.widget %~ Widget.weakerEvents rhsJumperEquals
                 <&> Just
         equals <- ExpressionGui.makeLabel "=" (Widget.toAnimId myId)
         ExpressionGui.combineSpaced Nothing
             <&>
             (\hbox ->
             hbox
-            [ hbox (defNameEdit : (mLhsEdit ^.. Lens._Just) ++ [ExpressionGui.fromLayout equals])
+            [ hbox (defNameEdit : (mLhsEdit ^.. Lens._Just) ++ [TreeLayout.fixedLayout equals])
             , bodyEdit
             ] )
-            <&> ExpressionGui.egWidget %~ Widget.weakerEvents eventMap
+            <&> TreeLayout.widget %~ Widget.weakerEvents eventMap
     where
         presentationChoiceId = Widget.joinId myId ["presentation"]
         rhs = ("Def Body", body ^. SugarLens.binderContentEntityId)
@@ -404,8 +405,8 @@ makeLetEdit item =
         ExpressionGui.tagItem
             <*> ExpressionGui.grammarLabel "let" (Widget.toAnimId myId)
             <*> (make (item ^. Sugar.lName) binder myId
-                <&> ExpressionGui.egWidget %~ Widget.weakerEvents eventMap
-                <&> ExpressionGui.pad
+                <&> TreeLayout.widget %~ Widget.weakerEvents eventMap
+                <&> TreeLayout.pad
                     (Config.letItemPadding config <&> realToFrac)
                 )
     where
@@ -440,7 +441,7 @@ makeBinderBodyEdit params (Sugar.BinderBody addOuterLet content) =
                 & Widget.keysEventMapMovesCursor (Config.letAddItemKeys config)
                   (E.Doc ["Edit", "Let clause", "Add"])
         makeBinderContentEdit params content
-            <&> ExpressionGui.egWidget %~ Widget.weakerEvents newLetEventMap
+            <&> TreeLayout.widget %~ Widget.weakerEvents newLetEventMap
 
 makeBinderContentEdit ::
     Monad m =>
@@ -469,13 +470,13 @@ makeBinderContentEdit params (Sugar.BinderLet l) =
                   <*>
                   ( sequence
                     [ makeLetEdit l
-                      <&> ExpressionGui.egWidget %~ Widget.weakerEvents moveToInnerEventMap
+                      <&> TreeLayout.widget %~ Widget.weakerEvents moveToInnerEventMap
                     , makeBinderBodyEdit params body
                       & ExprGuiM.withLocalMScopeId letBodyScope
-                    ] <&> map (ExpressionGui.egAlignment . _1 .~ 0)
+                    ] <&> map (TreeLayout.alignment . _1 .~ 0)
                   )
                 )
-            <&> ExpressionGui.egWidget %~ Widget.weakerEvents delEventMap
+            <&> TreeLayout.widget %~ Widget.weakerEvents delEventMap
     where
         letEntityId = l ^. Sugar.lEntityId & WidgetIds.fromEntityId
         body = l ^. Sugar.lBody
@@ -496,14 +497,14 @@ makeBinderContentEdit params (Sugar.BinderExpr binderBody) =
                     (Config.jumpRHStoLHSKeys config) (E.Doc ["Navigation", "Jump to last param"]) $
                     WidgetIds.fromEntityId (last ps ^. _2 . Sugar.fpId) <$ savePos
         ExprGuiM.makeSubexpression (const 0) binderBody
-            <&> ExpressionGui.egWidget %~ Widget.weakerEvents jumpToLhsEventMap
+            <&> TreeLayout.widget %~ Widget.weakerEvents jumpToLhsEventMap
 
 namedParamEditInfo :: Monad m => Sugar.NamedParamInfo (Name m) m -> ParamEdit.Info m
 namedParamEditInfo paramInfo =
     ParamEdit.Info
     { ParamEdit.iMakeNameEdit =
       ExpressionGui.makeNameOriginEdit (paramInfo ^. Sugar.npiName)
-      <&> Lens.mapped %~ ExpressionGui.fromValueWidget
+      <&> Lens.mapped %~ TreeLayout.fromCenteredWidget
     , ParamEdit.iMAddNext = paramInfo ^. Sugar.npiActions . Sugar.fpAddNext & Just
     , ParamEdit.iMOrderBefore = paramInfo ^. Sugar.npiActions . Sugar.fpMOrderBefore
     , ParamEdit.iMOrderAfter = paramInfo ^. Sugar.npiActions . Sugar.fpMOrderAfter
@@ -517,7 +518,7 @@ nullParamEditInfo (Sugar.NullParamInfo mActions) =
       \myId ->
       ExpressionGui.makeFocusableView myId
       <*> ExpressionGui.grammarLabel "◗" (Widget.toAnimId myId)
-      <&> ExpressionGui.fromLayout
+      <&> TreeLayout.fixedLayout
     , ParamEdit.iMAddNext = Nothing
     , ParamEdit.iMOrderBefore = Nothing
     , ParamEdit.iMOrderAfter = Nothing
@@ -548,7 +549,7 @@ makeParamsEdit annotationOpts nearestHoles delVarBackwardsId lhsId rhsId params 
                 jumpHolesEventMap <- ExprEventMap.jumpHolesEventMap nearestHoles
                 let mkParam (prevId, nextId, param) =
                         ParamEdit.make annotationOpts showParamAnnotation prevId nextId param
-                        <&> ExpressionGui.egWidget
+                        <&> TreeLayout.widget
                         %~ Widget.weakerEvents jumpHolesEventMap
                 ExpressionGui.listWithDelDests delDestFirst delDestLast
                     (WidgetIds.fromEntityId . (^. Sugar.fpId)) paramList

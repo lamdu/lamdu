@@ -16,6 +16,8 @@ import           Graphics.UI.Bottle.View (View(..))
 import qualified Graphics.UI.Bottle.View as View
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widget.Aligned as AlignedWidget
+import           Graphics.UI.Bottle.Widget.TreeLayout (TreeLayout(..))
+import qualified Graphics.UI.Bottle.Widget.TreeLayout as TreeLayout
 import           Lamdu.Calc.Type (Tag)
 import qualified Lamdu.Calc.Val as V
 import           Lamdu.Config (Config)
@@ -23,7 +25,7 @@ import qualified Lamdu.Config as Config
 import qualified Lamdu.Eval.Results as ER
 import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
 import qualified Lamdu.GUI.ExpressionEdit.TagEdit as TagEdit
-import           Lamdu.GUI.ExpressionGui (ExpressionGuiM(..), ExpressionGui)
+import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
@@ -68,7 +70,7 @@ make (Sugar.Case mArg alts caseTail addAlt cEntityId) pl =
                     <&> AlignedWidget.widget
                         %~ Widget.weakerEvents labelJumpHoleEventMap
                 )
-                <&> ExpressionGui.fromLayout
+                <&> TreeLayout.fixedLayout
         (mActiveTag, header) <-
             case mArg of
             Sugar.LambdaCase -> headerLabel "λ:" <&> (,) Nothing
@@ -76,7 +78,7 @@ make (Sugar.Case mArg alts caseTail addAlt cEntityId) pl =
                 do
                     argEdit <-
                         ExprGuiM.makeSubexpression (const 0) arg
-                        <&> ExpressionGui.egWidget %~ Widget.weakerEvents
+                        <&> TreeLayout.widget %~ Widget.weakerEvents
                             (toLambdaCaseEventMap config toLambdaCase)
                     caseLabel <- headerLabel ":"
                     mTag <-
@@ -90,7 +92,7 @@ make (Sugar.Case mArg alts caseTail addAlt cEntityId) pl =
                 case caseTail of
                     Sugar.ClosedCase deleteTail ->
                         altsGui
-                        & ExpressionGui.egWidget %~
+                        & TreeLayout.widget %~
                           Widget.weakerEvents
                           (caseOpenEventMap config deleteTail)
                         & return
@@ -107,8 +109,8 @@ make (Sugar.Case mArg alts caseTail addAlt cEntityId) pl =
                 & ExprGuiM.withHolePickers resultPickers
         ExpressionGui.addValFrame myId
             <*> (ExpressionGui.vboxTopFocalSpaced ??
-                 ([header, altsGui] <&> ExpressionGui.egAlignment . _1 .~ 0))
-            <&> ExpressionGui.egWidget %~ Widget.weakerEvents addAltEventMap
+                 ([header, altsGui] <&> TreeLayout.alignment . _1 .~ 0))
+            <&> TreeLayout.widget %~ Widget.weakerEvents addAltEventMap
 
 makeAltRow ::
     Monad m =>
@@ -129,7 +131,7 @@ makeAltRow mActiveTag (Sugar.CaseAlt delete tag altExpr) =
         altExprGui <- ExprGuiM.makeSubexpression (const 0) altExpr
         let itemEventMap = caseDelEventMap config delete
         ExpressionGui.tagItem ?? altRefGui ?? altExprGui
-            <&> ExpressionGui.egWidget %~ Widget.weakerEvents itemEventMap
+            <&> TreeLayout.widget %~ Widget.weakerEvents itemEventMap
 
 makeAltsWidget ::
     Monad m =>
@@ -139,7 +141,7 @@ makeAltsWidget ::
 makeAltsWidget _ [] myId =
     ExpressionGui.makeFocusableView (Widget.joinId myId ["Ø"])
     <*> ExpressionGui.grammarLabel "Ø" (Widget.toAnimId myId)
-    <&> ExpressionGui.fromLayout
+    <&> TreeLayout.fixedLayout
 makeAltsWidget mActiveTag alts _ =
     ExpressionGui.vboxTopFocalSpaced <*> mapM (makeAltRow mActiveTag) alts
 
@@ -161,11 +163,11 @@ makeOpenCase rest animId altsGui =
         restExpr <-
             ExpressionGui.addValPadding
             <*> ExprGuiM.makeSubexpression (const 0) rest
-        return $ ExpressionGui $
+        return $ TreeLayout $
             \layoutMode ->
-            let restLayout = layoutMode & restExpr ^. ExpressionGui.toLayout
+            let restLayout = layoutMode & restExpr ^. TreeLayout.render
                 minWidth = restLayout ^. AlignedWidget.widget . Widget.width
-                alts = layoutMode & altsGui ^. ExpressionGui.toLayout
+                alts = layoutMode & altsGui ^. TreeLayout.render
                 targetWidth = alts ^. AlignedWidget.widget . Widget.width
             in
             alts

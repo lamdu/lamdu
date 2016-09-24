@@ -10,6 +10,8 @@ import qualified Data.Store.Transaction as Transaction
 import           Graphics.UI.Bottle.Animation (AnimId)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widget.Aligned as AlignedWidget
+import           Graphics.UI.Bottle.Widget.TreeLayout (TreeLayout(..))
+import qualified Graphics.UI.Bottle.Widget.TreeLayout as TreeLayout
 import qualified Graphics.UI.Bottle.WidgetsEnvT as WE
 import qualified Lamdu.Config as Config
 import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
@@ -20,7 +22,7 @@ import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.State as HoleState
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds (WidgetIds(..))
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds as HoleWidgetIds
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.Wrapper as Wrapper
-import           Lamdu.GUI.ExpressionGui (ExpressionGuiM(..), ExpressionGui)
+import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
@@ -40,7 +42,7 @@ makeWrapper pl holeInfo =
         do
             exprEventMap <- ExprEventMap.make pl
             Wrapper.make (hiIds holeInfo) holeArg
-                <&> ExpressionGui.egWidget %~ Widget.weakerEvents exprEventMap
+                <&> TreeLayout.widget %~ Widget.weakerEvents exprEventMap
 
 assignHoleCursor ::
     Monad m =>
@@ -56,7 +58,7 @@ assignHoleCursor WidgetIds{..} (Just _) =
 hover :: Monad m => WidgetIds -> AnimId -> ExprGuiM m (ExpressionGui n -> ExpressionGui n)
 hover WidgetIds{..} name =
     (.)
-    <$> (ExpressionGui.liftLayers <&> (ExpressionGui.egLayout %~))
+    <$> (ExpressionGui.liftLayers <&> (TreeLayout.alignedWidget %~))
     <*> addDarkBackground (Widget.toAnimId hidOpen ++ name ++ ["DarkBg"])
 
 addSearchAreaBelow ::
@@ -113,14 +115,14 @@ make hole pl =
                                 do
                                     searchAreaGui <- SearchArea.makeStdWrapped pl holeInfo
                                     lay <- f WidgetIds{..}
-                                    return $ ExpressionGui $
+                                    return $ TreeLayout $
                                         \layoutMode ->
                                         (layoutMode & lay
-                                        (wrapperGui & ExpressionGui.egAlignment . _1 .~ 0)
-                                        searchAreaGui ^. ExpressionGui.toLayout)
+                                        (wrapperGui & TreeLayout.alignment . _1 .~ 0)
+                                        searchAreaGui ^. TreeLayout.render)
                                         `AlignedWidget.hoverInPlaceOf`
                                         (layoutMode
-                                        & unfocusedWrapperGui ^. ExpressionGui.toLayout
+                                        & unfocusedWrapperGui ^. TreeLayout.render
                                         & AlignedWidget.alignment . _1 .~ 0)
                         if ExpressionGui.egIsFocused wrapperGui
                             then layout addSearchAreaBelow

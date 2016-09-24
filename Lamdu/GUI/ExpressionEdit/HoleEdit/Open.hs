@@ -28,6 +28,8 @@ import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import           Graphics.UI.Bottle.Widget.Aligned (AlignedWidget)
 import qualified Graphics.UI.Bottle.Widget.Aligned as AlignedWidget
+import           Graphics.UI.Bottle.Widget.TreeLayout (TreeLayout(..))
+import qualified Graphics.UI.Bottle.Widget.TreeLayout as TreeLayout
 import qualified Graphics.UI.Bottle.WidgetId as WidgetId
 import qualified Graphics.UI.Bottle.Widgets as BWidgets
 import qualified Graphics.UI.Bottle.Widgets.Box as Box
@@ -47,7 +49,7 @@ import           Lamdu.GUI.ExpressionEdit.HoleEdit.ShownResult (PickedResult(..)
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.State (HoleState(..))
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.State as HoleState
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds (WidgetIds(..))
-import           Lamdu.GUI.ExpressionGui (ExpressionGuiM(..), ExpressionGui)
+import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
@@ -304,10 +306,10 @@ makeFocusable = ExprGuiM.widgetEnv . BWidgets.makeFocusableView
 applyResultLayout ::
     Functor f => f (ExpressionGui m) -> f (AlignedWidget (T m Widget.EventResult))
 applyResultLayout fGui =
-    fGui <&> (^. ExpressionGui.toLayout)
-    ?? ExprGuiT.LayoutParams
-        { _layoutMode = ExprGuiT.LayoutWide
-        , _layoutContext = ExprGuiT.LayoutClear
+    fGui <&> (^. TreeLayout.render)
+    ?? TreeLayout.LayoutParams
+        { _layoutMode = TreeLayout.LayoutWide
+        , _layoutContext = TreeLayout.LayoutClear
         }
 
 makeHoleResultWidget ::
@@ -484,17 +486,17 @@ makeUnderCursorAssignment shownResultsLists hasHiddenResults holeInfo =
                   [ vspace
                   , Widget.fromView typeView & AlignedWidget.fromCenteredWidget
                   ]
-                & ExpressionGui.fromLayout
+                & TreeLayout.fixedLayout
               ) & applyResultLayout
               <&> (^. AlignedWidget.widget)
             )
         searchTermGui <- SearchTerm.make holeInfo
-        return $ ExpressionGui $ \layoutMode ->
+        return $ TreeLayout $ \layoutMode ->
             let w = layoutMode
                     & ( searchTermGui
-                        & ExpressionGui.egWidget %~
+                        & TreeLayout.widget %~
                           Widget.weakerEvents searchTermEventMap
-                      ) ^. ExpressionGui.toLayout
+                      ) ^. TreeLayout.render
             in
                 w
                 & AlignedWidget.addAfter AlignedWidget.Vertical
@@ -528,4 +530,4 @@ makeOpenSearchAreaGui pl holeInfo =
             hasHiddenResults holeInfo
             & assignHoleEditCursor holeInfo shownMainResultsIds
               allShownResultIds (holeInfo & hiIds & hidOpenSearchTerm)
-            <&> ExpressionGui.egWidget %~ Widget.weakerEvents exprEventMap
+            <&> TreeLayout.widget %~ Widget.weakerEvents exprEventMap

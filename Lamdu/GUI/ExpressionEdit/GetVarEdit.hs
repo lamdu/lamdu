@@ -11,6 +11,7 @@ import           Data.Store.Transaction (Transaction)
 import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
+import qualified Graphics.UI.Bottle.Widget.TreeLayout as TreeLayout
 import qualified Graphics.UI.Bottle.Widgets as BWidgets
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
@@ -35,7 +36,7 @@ makeSimpleView color name myId =
     ExprGuiM.widgetEnv (BWidgets.makeFocusableView myId)
     <*> (ExpressionGui.makeNameView name (Widget.toAnimId myId) <&> Widget.fromView)
     & ExprGuiM.withFgColor color
-    <&> ExpressionGui.fromValueWidget
+    <&> TreeLayout.fromCenteredWidget
 
 makeParamsRecord ::
     Monad m => Widget.Id -> Sugar.ParamsRecordVar (Name m) ->
@@ -47,7 +48,7 @@ makeParamsRecord myId paramsRecordVar =
         sequence
             [ ExpressionGui.makeLabel "Params {"
               (Widget.toAnimId myId <> ["prefix"])
-              <&> ExpressionGui.fromLayout
+              <&> TreeLayout.fixedLayout
             , ExpressionGui.combineSpaced Nothing
               <*>
               ( fieldNames
@@ -58,7 +59,7 @@ makeParamsRecord myId paramsRecordVar =
                 )
               )
             , ExpressionGui.makeLabel "}" (Widget.toAnimId myId <> ["suffix"])
-              <&> ExpressionGui.fromLayout
+              <&> TreeLayout.fixedLayout
             ] <&> ExpressionGui.combine
     where
         Sugar.ParamsRecordVar fieldNames = paramsRecordVar
@@ -79,7 +80,7 @@ makeNameRef myId nameRef makeView =
                     DataOps.savePreJumpPosition cp myId
                     WidgetIds.fromEntityId <$> nameRef ^. Sugar.nrGotoDefinition
         makeView (nameRef ^. Sugar.nrName) myId
-            <&> ExpressionGui.egWidget %~ Widget.weakerEvents jumpToDefinitionEventMap
+            <&> TreeLayout.widget %~ Widget.weakerEvents jumpToDefinitionEventMap
 
 makeInlineEventMap ::
     Monad m =>
@@ -112,14 +113,14 @@ make getVar pl =
                 Sugar.GetLet -> (letColor, id)
                 Sugar.GetDefinition defState ->
                     ( definitionColor
-                    , ExpressionGui.egWidget . Widget.view %~
+                    , TreeLayout.widget . Widget.view %~
                       ExpressionGui.deletionDiagonal
                       0.1 (Widget.toAnimId myId) defState
                     )
                 & \(color, maybeAddDiagonal) ->
                     makeSimpleView color
                     & makeNameRef myId (binderVar ^. Sugar.bvNameRef)
-                    <&> ExpressionGui.egWidget %~
+                    <&> TreeLayout.widget %~
                     Widget.weakerEvents
                     (makeInlineEventMap config (binderVar ^. Sugar.bvInline))
                     <&> maybeAddDiagonal

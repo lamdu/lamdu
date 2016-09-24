@@ -1,13 +1,9 @@
 {-# LANGUAGE NoImplicitPrelude, RecordWildCards, OverloadedStrings, RankNTypes, TypeFamilies, LambdaCase, DeriveFunctor, DeriveFoldable, DeriveTraversable #-}
 module Lamdu.GUI.ExpressionGui
-    ( ExpressionGuiM(..)
-    , ExpressionGui, toLayout, egWidget, egAlignment
-      , ExprGuiT.egLayout, ExprGuiT.fromLayout, egIsFocused
-    , LayoutMode(..), LayoutParams(..), LayoutDisambiguationContext(..)
+    ( ExpressionGui
+    , egIsFocused
     , render
     -- General:
-    , ExprGuiT.fromValueWidget
-    , pad
     , stdHSpace, stdVSpace
     , combine, combineSpaced
     , (||>), (<||)
@@ -65,6 +61,8 @@ import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import           Graphics.UI.Bottle.Widget.Aligned (AlignedWidget)
 import qualified Graphics.UI.Bottle.Widget.Aligned as AlignedWidget
+import           Graphics.UI.Bottle.Widget.TreeLayout (TreeLayout(..))
+import qualified Graphics.UI.Bottle.Widget.TreeLayout as TreeLayout
 import qualified Graphics.UI.Bottle.Widgets as BWidgets
 import qualified Graphics.UI.Bottle.Widgets.Box as Box
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
@@ -85,16 +83,7 @@ import qualified Lamdu.GUI.EvalView as EvalView
 import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
-import           Lamdu.GUI.ExpressionGui.Types ( ExpressionGuiM(..), ExpressionGui
-                                               , ShowAnnotation(..), EvalModeShow(..)
-                                               , egWidget, egAlignment
-                                               , modeWidths
-                                               , LayoutMode(..)
-                                               , LayoutParams(..)
-                                               , layoutMode, layoutContext
-                                               , LayoutDisambiguationContext(..)
-                                               , toLayout
-                                               )
+import           Lamdu.GUI.ExpressionGui.Types (ExpressionGui, ShowAnnotation(..), EvalModeShow(..))
 import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
 import           Lamdu.GUI.Precedence (MyPrecedence(..), ParentPrecedence(..), Precedence(..))
 import qualified Lamdu.GUI.Precedence as Precedence
@@ -109,34 +98,24 @@ import           Prelude.Compat
 type T = Transaction
 
 {-# INLINE egIsFocused #-}
-egIsFocused :: ExpressionGui m -> Bool
+egIsFocused :: TreeLayout a -> Bool
 -- TODO: Fix this:
-egIsFocused (ExpressionGui mkLayout) =
+egIsFocused (TreeLayout mkLayout) =
     mkLayout params ^. AlignedWidget.widget & Widget.isFocused
     where
         params =
-            LayoutParams
-            { _layoutMode = LayoutWide
-            , _layoutContext = LayoutClear
+            TreeLayout.LayoutParams
+            { _layoutMode = TreeLayout.LayoutWide
+            , _layoutContext = TreeLayout.LayoutClear
             }
 
-pad :: Vector2 Widget.R -> ExpressionGui m -> ExpressionGui m
-pad p =
-    toLayout %~ f
-    where
-        f mkLayout layoutParams =
-            layoutParams
-            & layoutMode . modeWidths -~ 2 * (p ^. _1)
-            & mkLayout
-            & AlignedWidget.pad p
-
-maybeIndent :: Maybe ParenIndentInfo -> ExpressionGui m -> ExpressionGui m
+maybeIndent :: Maybe ParenIndentInfo -> TreeLayout a -> TreeLayout a
 maybeIndent mPiInfo =
-    toLayout %~ f
+    TreeLayout.render %~ f
     where
         f mkLayout lp =
-            case (lp ^. layoutContext, mPiInfo) of
-            (LayoutVertical, Just piInfo) ->
+            case (lp ^. TreeLayout.layoutContext, mPiInfo) of
+            (TreeLayout.LayoutVertical, Just piInfo) ->
                 content
                 & AlignedWidget.addBefore AlignedWidget.Horizontal
                     [ Spacer.make
@@ -156,56 +135,55 @@ maybeIndent mPiInfo =
                     gapWidth = stdSpace * Config.indentBarGap indentConf
                     indentWidth = barWidth + gapWidth
                     content =
-                        lp & layoutMode . modeWidths -~ indentWidth
+                        lp & TreeLayout.layoutMode . TreeLayout.modeWidths -~ indentWidth
                         & mkLayout
                         & AlignedWidget.alignment . _2 .~ 0
                     bgAnimId = piAnimId piInfo ++ ["("]
             _ -> mkLayout lp
 
-vboxTopFocal :: [ExpressionGuiM m] -> ExpressionGuiM m
-vboxTopFocal [] = ExprGuiT.fromLayout AlignedWidget.empty
-vboxTopFocal (ExpressionGui mkLayout:guis) =
-    ExpressionGui $
+vboxTopFocal :: [TreeLayout a] -> TreeLayout a
+vboxTopFocal [] = TreeLayout.empty
+vboxTopFocal (TreeLayout mkLayout:guis) =
+    TreeLayout $
     \layoutParams ->
     let cp =
-            LayoutParams
-            { _layoutMode = layoutParams ^. layoutMode
-            , _layoutContext = LayoutVertical
+            TreeLayout.LayoutParams
+            { _layoutMode = layoutParams ^. TreeLayout.layoutMode
+            , _layoutContext = TreeLayout.LayoutVertical
             }
     in
     mkLayout cp
     & AlignedWidget.addAfter AlignedWidget.Vertical
-        (guis ^.. Lens.traverse . toLayout ?? cp)
+        (guis ^.. Lens.traverse . TreeLayout.render ?? cp)
 
 vboxTopFocalSpaced ::
-    Monad m => ExprGuiM m ([ExpressionGuiM f] -> ExpressionGuiM f)
+    Monad m => ExprGuiM m ([TreeLayout a] -> TreeLayout a)
 vboxTopFocalSpaced =
     stdVSpace
-    <&> ExprGuiT.fromValueWidget
+    <&> TreeLayout.fromCenteredWidget
     <&> List.intersperse
     <&> fmap vboxTopFocal
 
 hCombine ::
-    (AlignedWidget.Orientation ->
-     [AlignedWidget (T f Widget.EventResult)] ->
-     AlignedWidget (T f Widget.EventResult) ->
-     AlignedWidget (T f Widget.EventResult)) ->
-    AlignedWidget (T f Widget.EventResult) -> ExpressionGui f -> ExpressionGui f
+    (AlignedWidget.Orientation -> [AlignedWidget a] -> AlignedWidget a ->
+     AlignedWidget a) ->
+    AlignedWidget a -> TreeLayout a -> TreeLayout a
 hCombine f layout gui =
-    ExpressionGui $
+    TreeLayout $
     \layoutParams ->
-    LayoutParams
+    TreeLayout.LayoutParams
     { _layoutMode =
-        layoutParams ^. layoutMode & modeWidths -~ layout ^. AlignedWidget.width
-    , _layoutContext = LayoutHorizontal
+        layoutParams ^. TreeLayout.layoutMode
+        & TreeLayout.modeWidths -~ layout ^. AlignedWidget.width
+    , _layoutContext = TreeLayout.LayoutHorizontal
     }
-    & gui ^. toLayout
+    & gui ^. TreeLayout.render
     & f AlignedWidget.Horizontal [layout]
 
-(||>) :: AlignedWidget (T f Widget.EventResult) -> ExpressionGui f -> ExpressionGui f
+(||>) :: AlignedWidget a -> TreeLayout a -> TreeLayout a
 (||>) = hCombine AlignedWidget.addBefore
 
-(<||) :: ExpressionGui f -> AlignedWidget (T f Widget.EventResult) -> ExpressionGui f
+(<||) :: TreeLayout a -> AlignedWidget a -> TreeLayout a
 (<||) = flip (hCombine AlignedWidget.addAfter)
 
 stdHSpace :: Monad m => ExprGuiM m (Widget a)
@@ -233,53 +211,53 @@ parenLabel parenInfo t =
 
 horizVertFallback ::
     Monad m =>
-    Maybe AnimId ->
-    ExprGuiM m (ExpressionGui f -> ExpressionGui f -> ExpressionGui f)
+    Maybe AnimId -> ExprGuiM m (TreeLayout a -> TreeLayout a -> TreeLayout a)
 horizVertFallback mParenId =
     mParenId & Lens._Just %%~ makeParenIndentInfo
     <&> horizVertFallbackH
 
 horizVertFallbackH ::
-    Maybe ParenIndentInfo ->
-    ExpressionGui m -> ExpressionGui m -> ExpressionGui m
+    Maybe ParenIndentInfo -> TreeLayout a -> TreeLayout a -> TreeLayout a
 horizVertFallbackH mParenInfo horiz vert =
-    ExpressionGui $
+    TreeLayout $
     \layoutParams ->
-    let wide = layoutParams & layoutMode .~ LayoutWide & horiz ^. toLayout
+    let wide =
+            layoutParams & TreeLayout.layoutMode .~ TreeLayout.LayoutWide
+            & horiz ^. TreeLayout.render
     in
-    case layoutParams ^. layoutMode of
-    LayoutWide ->
-        case (mParenInfo, layoutParams ^. layoutContext) of
-        (Just parenInfo, LayoutHorizontal) ->
+    case layoutParams ^. TreeLayout.layoutMode of
+    TreeLayout.LayoutWide ->
+        case (mParenInfo, layoutParams ^. TreeLayout.layoutContext) of
+        (Just parenInfo, TreeLayout.LayoutHorizontal) ->
             wide
             & AlignedWidget.addBefore AlignedWidget.Horizontal [parenLabel parenInfo "("]
             & AlignedWidget.addAfter AlignedWidget.Horizontal [parenLabel parenInfo ")"]
         _ -> wide
-    LayoutNarrow limit
+    TreeLayout.LayoutNarrow limit
         | wide ^. AlignedWidget.width > limit ->
-            layoutParams & maybeIndent mParenInfo vert ^. toLayout
+            layoutParams & maybeIndent mParenInfo vert ^. TreeLayout.render
         | otherwise -> wide
 
 combineWith ::
     Maybe ParenIndentInfo ->
-    ([AlignedWidget (T m Widget.EventResult)] -> [AlignedWidget (T m Widget.EventResult)]) ->
-    ([ExpressionGui m] -> [ExpressionGui m]) ->
-    [ExpressionGui m] -> ExpressionGui m
+    ([AlignedWidget a] -> [AlignedWidget a]) ->
+    ([TreeLayout a] -> [TreeLayout a]) ->
+    [TreeLayout a] -> TreeLayout a
 combineWith mParenInfo onHGuis onVGuis guis =
     horizVertFallbackH mParenInfo wide vert
     where
-        vert = vboxTopFocal (onVGuis guis <&> egAlignment . _1 .~ 0)
+        vert = vboxTopFocal (onVGuis guis <&> TreeLayout.alignment . _1 .~ 0)
         wide =
-            guis ^.. Lens.traverse . toLayout
-            ?? LayoutParams
-                { _layoutMode = LayoutWide
-                , _layoutContext = LayoutHorizontal
+            guis ^.. Lens.traverse . TreeLayout.render
+            ?? TreeLayout.LayoutParams
+                { _layoutMode = TreeLayout.LayoutWide
+                , _layoutContext = TreeLayout.LayoutHorizontal
                 }
             & onHGuis
             & AlignedWidget.hbox 0.5
-            & const & ExpressionGui
+            & TreeLayout.fixedLayout
 
-combine :: [ExpressionGui m] -> ExpressionGui m
+combine :: [TreeLayout a] -> TreeLayout a
 combine = combineWith Nothing id id
 
 makeParenIndentInfo :: Monad m => AnimId -> ExprGuiM m ParenIndentInfo
@@ -293,20 +271,21 @@ makeParenIndentInfo parensId =
         ParenIndentInfo parensId textStyle conf stdSpacing & return
 
 combineSpaced ::
-    Monad m => Maybe AnimId -> ExprGuiM m ([ExpressionGui f] -> ExpressionGui f)
+    Monad m => Maybe AnimId -> ExprGuiM m ([TreeLayout a] -> TreeLayout a)
 combineSpaced mParensId =
     do
         hSpace <- stdHSpace <&> AlignedWidget.fromCenteredWidget
-        vSpace <- stdVSpace <&> ExprGuiT.fromValueWidget
+        vSpace <- stdVSpace <&> TreeLayout.fromCenteredWidget
         mParenInfo <- mParensId & Lens._Just %%~ makeParenIndentInfo
         return $ combineWith mParenInfo (List.intersperse hSpace) (List.intersperse vSpace)
 
-tagItem :: Monad m => ExprGuiM m (AlignedWidget (T f Widget.EventResult) -> ExpressionGui f -> ExpressionGui f)
+tagItem ::
+    Monad m => ExprGuiM m (AlignedWidget a -> TreeLayout a -> TreeLayout a)
 tagItem =
     stdHSpace <&> AlignedWidget.fromCenteredWidget <&> f
     where
         f space tag item =
-            tag ||> (space ||> (item & egAlignment . _1 .~ 0))
+            tag ||> (space ||> (item & TreeLayout.alignment . _1 .~ 0))
 
 addAnnotationBackgroundH ::
     (Config -> Draw.Color) -> Config -> AnimId -> View -> View
@@ -453,17 +432,17 @@ annotationSpacer = ExprGuiM.vspacer Config.valAnnotationSpacing <&> AlignedWidge
 
 addAnnotationH ::
     Monad m =>
-    (AnimId -> ExprGuiM m (AlignedWidget (T f Widget.EventResult))) ->
+    (AnimId -> ExprGuiM m (AlignedWidget a)) ->
     WideAnnotationBehavior -> Sugar.EntityId ->
-    ExprGuiM m (ExpressionGui f -> ExpressionGui f)
+    ExprGuiM m (TreeLayout a -> TreeLayout a)
 addAnnotationH f wideBehavior entityId =
     do
         vspace <- annotationSpacer
         annotationLayout <- f animId
         processAnn <- processAnnotationGui animId wideBehavior
         return $
-            \(ExpressionGui mkLayout) ->
-            ExpressionGui $ \lp ->
+            \(TreeLayout mkLayout) ->
+            TreeLayout $ \lp ->
             let layout = mkLayout lp
             in  layout
                 & AlignedWidget.addAfter AlignedWidget.Vertical
@@ -477,20 +456,20 @@ addAnnotationH f wideBehavior entityId =
 addInferredType ::
     Monad m =>
     Type -> WideAnnotationBehavior -> Sugar.EntityId ->
-    ExprGuiM m (ExpressionGui f -> ExpressionGui f)
+    ExprGuiM m (TreeLayout a -> TreeLayout a)
 addInferredType typ = addAnnotationH (makeTypeView typ)
 
 addEvaluationResult ::
     Monad m =>
     NeighborVals (Maybe EvalResDisplay) -> EvalResDisplay ->
     WideAnnotationBehavior -> Sugar.EntityId ->
-    ExprGuiM m (ExpressionGui f -> ExpressionGui f)
+    ExprGuiM m (TreeLayout a -> TreeLayout a)
 -- REVIEW(Eyal): This is misleading when it refers to Previous results
 addEvaluationResult neigh resDisp wideBehavior entityId =
     case (erdVal resDisp ^. ER.payload, erdVal resDisp ^. ER.body) of
     (T.TRecord T.CEmpty, _) ->
         addValBGWithColor Config.evaluatedPathBGColor (WidgetIds.fromEntityId entityId)
-        <&> (egWidget %~)
+        <&> (TreeLayout.widget %~)
     (_, ER.RFunc{}) -> return id
     _ -> addAnnotationH (makeEvalView neigh resDisp) wideBehavior entityId
 
@@ -582,7 +561,7 @@ stdWrap pl =
             <&>
             \maybeAdd gui ->
             maybeAdd gui
-            & egWidget %~ Widget.weakerEvents exprEventMap
+            & TreeLayout.widget %~ Widget.weakerEvents exprEventMap
 
 makeFocusDelegator ::
     (Monad m, Monad f) =>
@@ -592,7 +571,7 @@ makeFocusDelegator ::
     ExprGuiM m (ExpressionGui f -> ExpressionGui f)
 makeFocusDelegator =
     ExprGuiM.makeFocusDelegator
-    <&> Lens.mapped . Lens.mapped . Lens.mapped %~ (egWidget %~)
+    <&> Lens.mapped . Lens.mapped . Lens.mapped %~ (TreeLayout.widget %~)
 
 parentDelegator ::
     (Monad f, Monad m) => Widget.Id ->
@@ -650,9 +629,10 @@ addValBGWithColor color myId =
     where
         animId = Widget.toAnimId myId ++ ["val"]
 
-addValPadding :: Monad m => ExprGuiM m (ExpressionGui n -> ExpressionGui n)
+addValPadding :: Monad m => ExprGuiM m (TreeLayout a -> TreeLayout a)
 addValPadding =
-    ExprGuiM.readConfig <&> Config.valFramePadding <&> fmap realToFrac <&> pad
+    ExprGuiM.readConfig <&> Config.valFramePadding <&> fmap realToFrac
+    <&> TreeLayout.pad
 
 liftLayers :: Monad m => ExprGuiM m (AlignedWidget a -> AlignedWidget a)
 liftLayers =
@@ -660,10 +640,10 @@ liftLayers =
     <&> (AlignedWidget.widget . Widget.view %~)
 
 addValFrame ::
-    Monad m => Widget.Id -> ExprGuiM m (ExpressionGui f -> ExpressionGui f)
+    Monad m => Widget.Id -> ExprGuiM m (TreeLayout a -> TreeLayout a)
 addValFrame myId =
     (.)
-    <$> (addValBG myId <&> (egWidget %~))
+    <$> (addValBG myId <&> (TreeLayout.widget %~))
     <*> addValPadding
 
 -- TODO: This doesn't belong here
@@ -795,10 +775,10 @@ valOfScopePreferCur annotation = valOfScope annotation . pure . Just
 listWithDelDests :: k -> k -> (a -> k) -> [a] -> [(k, k, a)]
 listWithDelDests = ListUtils.withPrevNext
 
-render :: Widget.R -> ExpressionGuiM m -> AlignedWidget (m Widget.EventResult)
+render :: Widget.R -> TreeLayout a -> AlignedWidget a
 render width gui =
-    (gui ^. toLayout)
-    LayoutParams
-    { _layoutMode = LayoutNarrow width
-    , _layoutContext = LayoutClear
+    (gui ^. TreeLayout.render)
+    TreeLayout.LayoutParams
+    { _layoutMode = TreeLayout.LayoutNarrow width
+    , _layoutContext = TreeLayout.LayoutClear
     }

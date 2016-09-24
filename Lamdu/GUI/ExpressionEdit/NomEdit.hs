@@ -10,6 +10,7 @@ import           Data.Store.Transaction (Transaction)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import           Graphics.UI.Bottle.Widget.Aligned (AlignedWidget)
 import qualified Graphics.UI.Bottle.Widget.Aligned as AlignedWidget
+import qualified Graphics.UI.Bottle.Widget.TreeLayout as TreeLayout
 import qualified Graphics.UI.Bottle.WidgetsEnvT as WE
 import qualified Lamdu.Config as Config
 import           Lamdu.GUI.ExpressionGui
@@ -110,11 +111,11 @@ expandingName vertOrder (#>) needParen nomId showName =
         return $
             \label nameGui subexprGui ->
             let nameShowing =
-                    ExprGuiT.LayoutParams
-                    { ExprGuiT._layoutMode = ExprGuiT.LayoutWide
-                    , ExprGuiT._layoutContext = ExprGuiT.LayoutClear
+                    TreeLayout.LayoutParams
+                    { TreeLayout._layoutMode = TreeLayout.LayoutWide
+                    , TreeLayout._layoutContext = TreeLayout.LayoutClear
                     }
-                    & (nameGui #> ExpressionGui.fromLayout label) ^. ExpressionGui.toLayout
+                    & (nameGui #> TreeLayout.fixedLayout label) ^. TreeLayout.render
                     & AlignedWidget.widget %~ addBg
                 horiz =
                     case showName of
@@ -123,9 +124,9 @@ expandingName vertOrder (#>) needParen nomId showName =
                     NameHovering -> nameShowing `h` label
                     #> (space #> subexprGui)
                 vert =
-                    ExprGuiT.ExpressionGui (const nameShowing)
+                    TreeLayout.fixedLayout nameShowing
                     `vertOrder` subexprGui
-                    <&> ExpressionGui.egAlignment . _1 .~ 0
+                    <&> TreeLayout.alignment . _1 .~ 0
                     & ExpressionGui.vboxTopFocal
             in horiz `horizWithFallback` vert
     where

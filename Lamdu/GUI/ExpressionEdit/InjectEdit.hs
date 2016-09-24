@@ -4,6 +4,7 @@ module Lamdu.GUI.ExpressionEdit.InjectEdit
     ) where
 
 import           Control.Lens.Operators
+import qualified Graphics.UI.Bottle.Widget.TreeLayout as TreeLayout
 import qualified Lamdu.GUI.ExpressionEdit.TagEdit as TagEdit
 import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
@@ -25,7 +26,7 @@ makeCommon ::
 makeCommon tagG nearestHoles valEdits =
     ExpressionGui.combineSpaced Nothing
     <*> ( TagEdit.makeRecordTag nearestHoles tagG
-          <&> ExpressionGui.fromLayout <&> (: valEdits)
+          <&> TreeLayout.fixedLayout <&> (: valEdits)
         )
 
 make ::
