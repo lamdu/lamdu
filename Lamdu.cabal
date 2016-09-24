@@ -74,6 +74,7 @@ Library
                   , Graphics.UI.Bottle.Widget
                   , Graphics.UI.Bottle.WidgetId
                   , Graphics.UI.Bottle.Widgets
+                  , Graphics.UI.Bottle.Widgets.AlignedWidget
                   , Graphics.UI.Bottle.Widgets.Box
                   , Graphics.UI.Bottle.Widgets.Choice
                   , Graphics.UI.Bottle.Widgets.EventMapDoc
@@ -81,7 +82,6 @@ Library
                   , Graphics.UI.Bottle.Widgets.FocusDelegator
                   , Graphics.UI.Bottle.Widgets.Grid
                   , Graphics.UI.Bottle.Widgets.GridView
-                  , Graphics.UI.Bottle.Widgets.Layout
                   , Graphics.UI.Bottle.Widgets.Spacer
                   , Graphics.UI.Bottle.Widgets.StdKeys
                   , Graphics.UI.Bottle.Widgets.TextEdit

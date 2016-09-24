@@ -9,7 +9,7 @@ import           Control.Lens.Tuple
 import qualified Data.Store.Transaction as Transaction
 import           Graphics.UI.Bottle.Animation (AnimId)
 import qualified Graphics.UI.Bottle.Widget as Widget
-import qualified Graphics.UI.Bottle.Widgets.Layout as Layout
+import qualified Graphics.UI.Bottle.Widgets.AlignedWidget as AlignedWidget
 import qualified Graphics.UI.Bottle.WidgetsEnvT as WE
 import qualified Lamdu.Config as Config
 import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
@@ -118,10 +118,10 @@ make hole pl =
                                         (layoutMode & lay
                                         (wrapperGui & ExpressionGui.egAlignment . _1 .~ 0)
                                         searchAreaGui ^. ExpressionGui.toLayout)
-                                        `Layout.hoverInPlaceOf`
+                                        `AlignedWidget.hoverInPlaceOf`
                                         (layoutMode
                                         & unfocusedWrapperGui ^. ExpressionGui.toLayout
-                                        & Layout.alignment . _1 .~ 0)
+                                        & AlignedWidget.alignment . _1 .~ 0)
                         if ExpressionGui.egIsFocused wrapperGui
                             then layout addSearchAreaBelow
                             else if isSelected then

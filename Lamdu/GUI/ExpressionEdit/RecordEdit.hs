@@ -13,7 +13,7 @@ import qualified Graphics.UI.Bottle.EventMap as E
 import           Graphics.UI.Bottle.View (View(..))
 import qualified Graphics.UI.Bottle.View as View
 import qualified Graphics.UI.Bottle.Widget as Widget
-import qualified Graphics.UI.Bottle.Widgets.Layout as Layout
+import qualified Graphics.UI.Bottle.Widgets.AlignedWidget as AlignedWidget
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
 import qualified Lamdu.GUI.ExpressionEdit.TagEdit as TagEdit
@@ -128,19 +128,19 @@ makeOpenRecord fieldsGui rest animId =
         return $ ExpressionGui $
             \layoutMode ->
             let restLayout = layoutMode & restExpr ^. ExpressionGui.toLayout
-                minWidth = restLayout ^. Layout.widget . Widget.width
+                minWidth = restLayout ^. AlignedWidget.widget . Widget.width
                 fields = layoutMode & fieldsGui ^. ExpressionGui.toLayout
-                targetWidth = fields ^. Layout.widget . Widget.width
+                targetWidth = fields ^. AlignedWidget.widget . Widget.width
             in
             fields
-            & Layout.alignment . _1 .~ 0
-            & Layout.addAfter Layout.Vertical
+            & AlignedWidget.alignment . _1 .~ 0
+            & AlignedWidget.addAfter AlignedWidget.Vertical
             ( [ separationBar config (max minWidth targetWidth) animId
                 & Widget.fromView
-                & Layout.fromCenteredWidget
-              , Layout.fromCenteredWidget vspace
+                & AlignedWidget.fromCenteredWidget
+              , AlignedWidget.fromCenteredWidget vspace
               , restLayout
-              ] <&> Layout.alignment . _1 .~ 0
+              ] <&> AlignedWidget.alignment . _1 .~ 0
             )
 
 recordOpenEventMap ::

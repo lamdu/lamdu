@@ -11,8 +11,8 @@ import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.Bottle.EventMap as E
 import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
-import           Graphics.UI.Bottle.Widgets.Layout (Layout)
-import qualified Graphics.UI.Bottle.Widgets.Layout as Layout
+import           Graphics.UI.Bottle.Widgets.AlignedWidget (AlignedWidget)
+import qualified Graphics.UI.Bottle.Widgets.AlignedWidget as AlignedWidget
 import qualified Lamdu.Config as Config
 import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
@@ -42,7 +42,7 @@ makeTagNameEdit jumpNextEventMap tagColor tagG =
 makeTagH ::
     Monad m =>
     Draw.Color -> NearestHoles -> Sugar.TagG (Name m) ->
-    ExprGuiM m (Layout (T m Widget.EventResult))
+    ExprGuiM m (AlignedWidget (T m Widget.EventResult))
 makeTagH tagColor nearestHoles tagG =
     do
         config <- ExprGuiM.readConfig
@@ -57,11 +57,11 @@ makeTagH tagColor nearestHoles tagG =
         let Config.Name{..} = Config.name config
         makeTagNameEdit jumpNextEventMap tagColor tagG
             <&> Widget.weakerEvents jumpHolesEventMap
-            <&> Layout.fromCenteredWidget
+            <&> AlignedWidget.fromCenteredWidget
 
 makeRecordTag ::
     Monad m => NearestHoles -> Sugar.TagG (Name m) ->
-    ExprGuiM m (Layout (T m Widget.EventResult))
+    ExprGuiM m (AlignedWidget (T m Widget.EventResult))
 makeRecordTag nearestHoles tagG =
     do
         Config.Name{..} <- Config.name <$> ExprGuiM.readConfig
@@ -69,7 +69,7 @@ makeRecordTag nearestHoles tagG =
 
 makeCaseTag ::
     Monad m => NearestHoles -> Sugar.TagG (Name m) ->
-    ExprGuiM m (Layout (T m Widget.EventResult))
+    ExprGuiM m (AlignedWidget (T m Widget.EventResult))
 makeCaseTag nearestHoles tagG =
     do
         Config.Name{..} <- Config.name <$> ExprGuiM.readConfig
@@ -77,14 +77,14 @@ makeCaseTag nearestHoles tagG =
 
 -- | Unfocusable tag view (e.g: in apply params)
 makeParamTag ::
-    Monad m => Sugar.TagG (Name m) -> ExprGuiM m (Layout a)
+    Monad m => Sugar.TagG (Name m) -> ExprGuiM m (AlignedWidget a)
 makeParamTag t =
     do
         Config.Name{..} <- Config.name <$> ExprGuiM.readConfig
         ExpressionGui.makeNameView (t ^. Sugar.tagGName) animId
             & ExprGuiM.withFgColor paramTagColor
             <&> Widget.fromView
-            <&> Layout.fromCenteredWidget
+            <&> AlignedWidget.fromCenteredWidget
     where
         animId = t ^. Sugar.tagInstance & WidgetIds.fromEntityId & Widget.toAnimId
 

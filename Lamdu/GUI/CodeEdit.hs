@@ -25,8 +25,8 @@ import           Graphics.UI.Bottle.ModKey (ModKey(..))
 import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets as BWidgets
+import qualified Graphics.UI.Bottle.Widgets.AlignedWidget as AlignedWidget
 import qualified Graphics.UI.Bottle.Widgets.Box as Box
-import qualified Graphics.UI.Bottle.Widgets.Layout as Layout
 import           Graphics.UI.Bottle.WidgetsEnvT (WidgetEnvT)
 import qualified Graphics.UI.Bottle.WidgetsEnvT as WE
 import           Lamdu.Config (Config)
@@ -212,7 +212,7 @@ gui env rootId replExpr panes =
         eventMap <- panesEventMap env & ExprGuiM.widgetEnv
         vspace <- ExpressionGui.stdVSpace
         return $ \width ->
-            ExpressionGui.render width replGui ^. Layout.widget
+            ExpressionGui.render width replGui ^. AlignedWidget.widget
             : (panesEdits ?? width) ++ [newDefinitionButton]
             & List.intersperse vspace
             & Box.vboxAlign 0

@@ -28,10 +28,10 @@ import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.WidgetId as WidgetId
 import qualified Graphics.UI.Bottle.Widgets as BWidgets
+import           Graphics.UI.Bottle.Widgets.AlignedWidget (AlignedWidget)
+import qualified Graphics.UI.Bottle.Widgets.AlignedWidget as AlignedWidget
 import qualified Graphics.UI.Bottle.Widgets.Box as Box
 import qualified Graphics.UI.Bottle.Widgets.Grid as Grid
-import           Graphics.UI.Bottle.Widgets.Layout (Layout)
-import qualified Graphics.UI.Bottle.Widgets.Layout as Layout
 import qualified Graphics.UI.Bottle.WidgetsEnvT as WE
 import           Lamdu.CharClassification (operatorChars)
 import qualified Lamdu.Config as Config
@@ -302,7 +302,7 @@ makeFocusable ::
 makeFocusable = ExprGuiM.widgetEnv . BWidgets.makeFocusableView
 
 applyResultLayout ::
-    Functor f => f (ExpressionGui m) -> f (Layout (T m Widget.EventResult))
+    Functor f => f (ExpressionGui m) -> f (AlignedWidget (T m Widget.EventResult))
 applyResultLayout fGui =
     fGui <&> (^. ExpressionGui.toLayout)
     ?? ExprGuiT.LayoutParams
@@ -336,7 +336,7 @@ makeHoleResultWidget resultId holeResult =
             & postProcessSugar
             & ExprGuiM.makeSubexpression (const 0)
             & applyResultLayout
-            <&> (^. Layout.widget)
+            <&> (^. AlignedWidget.widget)
         holeResultEntityId =
             holeResultConverted ^. Sugar.rPayload . Sugar.plEntityId
         idWithinResultWidget =
@@ -363,7 +363,7 @@ makeNoResults ::
     Monad m => AnimId -> ExprGuiM m (Widget (T m Widget.EventResult))
 makeNoResults animId =
     ExpressionGui.makeLabel "(No results)" animId
-    <&> (^. Layout.widget)
+    <&> (^. AlignedWidget.widget)
 
 makeHiddenResultsMView ::
     Monad m => HaveHiddenResults -> Widget.Id -> ExprGuiM m (Maybe View)
@@ -479,14 +479,14 @@ makeUnderCursorAssignment shownResultsLists hasHiddenResults holeInfo =
                 & Widget.strongerEvents resultsEventMap .
                   addBackground (Widget.toAnimId hidResultsPrefix) (Config.layers config)
                   holeOpenBGColor
-                & Layout.fromCenteredWidget
-                & Layout.addAfter Layout.Vertical
+                & AlignedWidget.fromCenteredWidget
+                & AlignedWidget.addAfter AlignedWidget.Vertical
                   [ vspace
-                  , Widget.fromView typeView & Layout.fromCenteredWidget
+                  , Widget.fromView typeView & AlignedWidget.fromCenteredWidget
                   ]
                 & ExpressionGui.fromLayout
               ) & applyResultLayout
-              <&> (^. Layout.widget)
+              <&> (^. AlignedWidget.widget)
             )
         searchTermGui <- SearchTerm.make holeInfo
         return $ ExpressionGui $ \layoutMode ->
@@ -497,14 +497,14 @@ makeUnderCursorAssignment shownResultsLists hasHiddenResults holeInfo =
                       ) ^. ExpressionGui.toLayout
             in
                 w
-                & Layout.addAfter Layout.Vertical
-                    [ Layout.fromCenteredWidget hoverResultsWidget
-                        & Layout.alignment . _1 .~ 0
+                & AlignedWidget.addAfter AlignedWidget.Vertical
+                    [ AlignedWidget.fromCenteredWidget hoverResultsWidget
+                        & AlignedWidget.alignment . _1 .~ 0
                     ]
                 & alignment .~ w ^. alignment
     where
-        alignment :: Lens' (Layout f) (Vector2 Widget.R)
-        alignment = Layout.absAlignedWidget . _1
+        alignment :: Lens' (AlignedWidget f) (Vector2 Widget.R)
+        alignment = AlignedWidget.absAlignedWidget . _1
         WidgetIds{..} = hiIds holeInfo
 
 makeOpenSearchAreaGui ::

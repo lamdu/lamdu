@@ -21,8 +21,8 @@ import qualified Graphics.UI.Bottle.View as View
 import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets as BWidgets
+import qualified Graphics.UI.Bottle.Widgets.AlignedWidget as AlignedWidget
 import qualified Graphics.UI.Bottle.Widgets.Box as Box
-import qualified Graphics.UI.Bottle.Widgets.Layout as Layout
 import qualified Graphics.UI.GLFW as GLFW
 import           Lamdu.Calc.Type.Scheme (Scheme(..), schemeType)
 import qualified Lamdu.Config as Config
@@ -196,7 +196,7 @@ makeExprDefinition def bodyExpr =
                     ]
             & sequence <&> sequence
         return $ \width ->
-            let bodyWidget = ExpressionGui.render width bodyGui ^. Layout.widget
+            let bodyWidget = ExpressionGui.render width bodyGui ^. AlignedWidget.widget
             in
             bodyWidget : mkTypeWidgets (bodyWidget ^. Widget.width)
             & List.intersperse vspace

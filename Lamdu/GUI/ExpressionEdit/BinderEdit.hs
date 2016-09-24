@@ -23,11 +23,11 @@ import           Graphics.UI.Bottle.ModKey (ModKey(..))
 import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets as BWidgets
+import           Graphics.UI.Bottle.Widgets.AlignedWidget (AlignedWidget)
+import qualified Graphics.UI.Bottle.Widgets.AlignedWidget as AlignedWidget
 import qualified Graphics.UI.Bottle.Widgets.Box as Box
 import qualified Graphics.UI.Bottle.Widgets.Choice as Choice
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
-import           Graphics.UI.Bottle.Widgets.Layout (Layout)
-import qualified Graphics.UI.Bottle.Widgets.Layout as Layout
 import qualified Graphics.UI.Bottle.WidgetsEnvT as WE
 import qualified Graphics.UI.GLFW as GLFW
 import           Lamdu.CharClassification (operatorChars)
@@ -117,7 +117,7 @@ mkPresentationModeEdit myId prop = do
 
 data Parts m = Parts
     { pMParamsEdit :: Maybe (ExpressionGui m)
-    , pMScopesEdit :: Maybe (Layout (T m Widget.EventResult))
+    , pMScopesEdit :: Maybe (AlignedWidget (T m Widget.EventResult))
     , pBodyEdit :: ExpressionGui m
     , pEventMap :: Widget.EventMap (T m Widget.EventResult)
     }
@@ -203,7 +203,7 @@ makeScopeNavEdit ::
     Sugar.Binder name m expr -> Widget.Id -> ScopeCursor ->
     ExprGuiM m
     ( Widget.EventMap (T m Widget.EventResult)
-    , Maybe (Layout (T m Widget.EventResult))
+    , Maybe (AlignedWidget (T m Widget.EventResult))
     )
 makeScopeNavEdit binder myId curCursor =
     do
@@ -220,9 +220,9 @@ makeScopeNavEdit binder myId curCursor =
         settings <- ExprGuiM.readSettings
         case settings ^. CESettings.sInfoMode of
             CESettings.Evaluation ->
-                ExprGuiM.widgetEnv (BWidgets.makeFocusableView myId <&> (Layout.widget %~))
-                <*> (mapM mkArrow scopes <&> Layout.hbox 0.5)
-                <&> Layout.widget %~ Widget.weakerEvents
+                ExprGuiM.widgetEnv (BWidgets.makeFocusableView myId <&> (AlignedWidget.widget %~))
+                <*> (mapM mkArrow scopes <&> AlignedWidget.hbox 0.5)
+                <&> AlignedWidget.widget %~ Widget.weakerEvents
                     (mkScopeEventMap leftKeys rightKeys `mappend` blockEventMap)
                 <&> Just
                 <&> (,) (mkScopeEventMap prevScopeKeys nextScopeKeys)
@@ -304,7 +304,7 @@ makeParts funcApplyLimit binder delVarBackwardsId myId =
         let isScopeNavFocused =
                 case mScopeNavEdit of
                 Just layout
-                    | Widget.isFocused (layout ^. Layout.widget) -> ScopeNavIsFocused
+                    | Widget.isFocused (layout ^. AlignedWidget.widget) -> ScopeNavIsFocused
                 _ -> ScopeNavNotFocused
         do
             mParamsEdit <-
@@ -348,10 +348,10 @@ make name binder myId =
             name myId
             <&> ExpressionGui.egAlignment . _1 .~ 0
             <&> ExpressionGui.egLayout %~
-                Layout.addAfter Layout.Vertical
+                AlignedWidget.addAfter AlignedWidget.Vertical
                 (presentationEdits
-                <&> Layout.fromCenteredWidget
-                <&> Layout.alignment . _1 .~ 0)
+                <&> AlignedWidget.fromCenteredWidget
+                <&> AlignedWidget.alignment . _1 .~ 0)
             <&> ExpressionGui.egWidget %~ Widget.weakerEvents jumpHolesEventMap
         mLhsEdit <-
             case mParamsEdit of

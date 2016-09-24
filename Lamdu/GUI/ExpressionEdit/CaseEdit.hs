@@ -15,7 +15,7 @@ import qualified Graphics.UI.Bottle.EventMap as E
 import           Graphics.UI.Bottle.View (View(..))
 import qualified Graphics.UI.Bottle.View as View
 import qualified Graphics.UI.Bottle.Widget as Widget
-import qualified Graphics.UI.Bottle.Widgets.Layout as Layout
+import qualified Graphics.UI.Bottle.Widgets.AlignedWidget as AlignedWidget
 import           Lamdu.Calc.Type (Tag)
 import qualified Lamdu.Calc.Val as V
 import           Lamdu.Config (Config)
@@ -65,7 +65,7 @@ make (Sugar.Case mArg alts caseTail addAlt cEntityId) pl =
                 <*>
                 (ExpressionGui.grammarLabel text
                     (Widget.toAnimId (WidgetIds.fromEntityId cEntityId))
-                    <&> Layout.widget
+                    <&> AlignedWidget.widget
                         %~ Widget.weakerEvents labelJumpHoleEventMap
                 )
                 <&> ExpressionGui.fromLayout
@@ -124,7 +124,7 @@ makeAltRow mActiveTag (Sugar.CaseAlt delete tag altExpr) =
         altRefGui <-
             TagEdit.makeCaseTag (ExprGuiT.nextHolesBefore altExpr) tag
             <&> if mActiveTag == Just (tag ^. Sugar.tagVal)
-                then Layout.widget %~ addBg
+                then AlignedWidget.widget %~ addBg
                 else id
         altExprGui <- ExprGuiM.makeSubexpression (const 0) altExpr
         let itemEventMap = caseDelEventMap config delete
@@ -164,18 +164,18 @@ makeOpenCase rest animId altsGui =
         return $ ExpressionGui $
             \layoutMode ->
             let restLayout = layoutMode & restExpr ^. ExpressionGui.toLayout
-                minWidth = restLayout ^. Layout.widget . Widget.width
+                minWidth = restLayout ^. AlignedWidget.widget . Widget.width
                 alts = layoutMode & altsGui ^. ExpressionGui.toLayout
-                targetWidth = alts ^. Layout.widget . Widget.width
+                targetWidth = alts ^. AlignedWidget.widget . Widget.width
             in
             alts
-            & Layout.alignment . _1 .~ 0
-            & Layout.addAfter Layout.Vertical
+            & AlignedWidget.alignment . _1 .~ 0
+            & AlignedWidget.addAfter AlignedWidget.Vertical
             ( [ separationBar config (max minWidth targetWidth) animId
-                & Widget.fromView & Layout.fromCenteredWidget
-              , Layout.fromCenteredWidget vspace
+                & Widget.fromView & AlignedWidget.fromCenteredWidget
+              , AlignedWidget.fromCenteredWidget vspace
               , restLayout
-              ] <&> (Layout.alignment . _1 .~ 0)
+              ] <&> (AlignedWidget.alignment . _1 .~ 0)
             )
 
 caseOpenEventMap ::
