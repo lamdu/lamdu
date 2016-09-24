@@ -3,9 +3,8 @@ module Graphics.UI.Bottle.Widgets.Layout
     ( Layout
     , Alignment
     , empty
-    , AbsAlignedWidget
-    , alignedWidget, absAlignedWidget
-    , alignment, widget, width
+    , AbsAlignedWidget, absAlignedWidget
+    , alignment, widget, asTuple, width
     , fromCenteredWidget
 
     , addBefore, addAfter
@@ -19,7 +18,7 @@ module Graphics.UI.Bottle.Widgets.Layout
     , hoverInPlaceOf
     ) where
 
-import           Control.Lens (Lens, Lens')
+import           Control.Lens (Lens')
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Lens.Tuple
@@ -46,28 +45,30 @@ data BoxComponents a = BoxComponents
     } deriving (Functor, Foldable, Traversable)
 Lens.makeLenses ''BoxComponents
 
-newtype Layout a = Layout
-    { _alignedWidget :: (Alignment, Widget a)
+data Layout a = Layout
+    { _alignment :: Alignment
+    , _widget :: Widget a
     }
 Lens.makeLenses ''Layout
-
-{-# INLINE alignment #-}
-alignment :: Lens' (Layout a) Alignment
-alignment = alignedWidget . _1
-
-{-# INLINE widget #-}
-widget :: Lens (Layout a) (Layout b) (Widget a) (Widget b)
-widget = alignedWidget . _2
 
 {-# INLINE width #-}
 width :: Lens' (Layout a) Widget.R
 width = widget . Widget.width
 
+{-# INLINE asTuple #-}
+asTuple ::
+    Lens.Iso (Layout a) (Layout b) (Alignment, Widget a) (Alignment, Widget b)
+asTuple =
+    Lens.iso toTup fromTup
+    where
+        toTup w = (w ^. alignment, w ^. widget)
+        fromTup (a, w) = Layout a w
+
 {-# INLINE absAlignedWidget #-}
 absAlignedWidget ::
     Lens.Iso (Layout a) (Layout b) (AbsAlignedWidget a) (AbsAlignedWidget b)
 absAlignedWidget =
-    alignedWidget . Lens.iso (f ((*) . (^. Alignment.ratio))) (f (fmap Alignment . (/)))
+    asTuple . Lens.iso (f ((*) . (^. Alignment.ratio))) (f (fmap Alignment . (/)))
     where
         f op w = w & _1 %~ (`op` (w ^. _2 . Widget.size))
 
@@ -75,16 +76,16 @@ boxComponentsToWidget ::
     Orientation -> BoxComponents (Layout a) -> Layout a
 boxComponentsToWidget orientation boxComponents =
     Layout
-    ( boxAlign ^. focalWidget
-    , boxWidget
-    )
+    { _alignment = boxAlign ^. focalWidget
+    , _widget = boxWidget
+    }
     where
         (boxAlign, boxWidget) =
-            boxComponents <&> (^. alignedWidget)
+            boxComponents <&> (^. asTuple)
             & Box.make orientation
 
 fromCenteredWidget :: Widget a -> Layout a
-fromCenteredWidget w = Layout (0.5, w)
+fromCenteredWidget w = Layout 0.5 w
 
 empty :: Layout a
 empty = fromCenteredWidget Widget.empty
@@ -104,9 +105,9 @@ box :: Orientation -> Widget.R -> [Layout a] -> Layout a
 box orientation axisAlignment layouts =
     componentsFromList layouts
     & boxComponentsToWidget orientation
-    & alignedWidget . _1 . axis orientation .~ axisAlignment
+    & alignment . axis orientation .~ axisAlignment
     where
-        componentsFromList [] = BoxComponents [] (Layout (0, Widget.empty)) []
+        componentsFromList [] = BoxComponents [] (Layout 0 Widget.empty) []
         componentsFromList (w:ws) = BoxComponents [] w ws
 
 hbox :: Widget.R -> [Layout a] -> Layout a
@@ -118,30 +119,25 @@ vbox = box Vertical
 -- | scale = scaleAround 0.5
 --   scaleFromTopMiddle = scaleAround (Vector2 0.5 0)
 scaleAround :: Alignment -> Vector2 Widget.R -> Layout a -> Layout a
-scaleAround (Alignment point) ratio =
-    alignedWidget %~ f
-    where
-        f (align, w) =
-            ( align & Alignment.ratio %~ \r -> point + (r - point) / ratio
-            , Widget.scale ratio w
-            )
+scaleAround (Alignment point) ratio (Layout (Alignment align) w) =
+    Layout
+    { _alignment = point + (align - point) / ratio & Alignment
+    , _widget = Widget.scale ratio w
+    }
 
 scale :: Vector2 Widget.R -> Layout a -> Layout a
-scale ratio = alignedWidget . _2 %~ Widget.scale ratio
+scale ratio = widget %~ Widget.scale ratio
 
 pad :: Vector2 Widget.R -> Layout a -> Layout a
-pad padding =
-    alignedWidget %~ f
+pad padding (Layout (Alignment align) w) =
+    Layout
+    { _alignment =
+        (align * (w ^. Widget.size) + padding) / (paddedWidget ^. Widget.size)
+        & Alignment
+    , _widget = paddedWidget
+    }
     where
-        f (align, w) =
-            ( align ^. Alignment.ratio & fromRelative
-                & (+ padding) & toRelative & Alignment
-            , paddedWidget
-            )
-            where
-                paddedWidget = Widget.pad padding w
-                fromRelative = (* w ^. Widget.size)
-                toRelative = (/ paddedWidget ^. Widget.size)
+        paddedWidget = Widget.pad padding w
 
 -- Resize a layout to be the same alignment/size as another layout
 hoverInPlaceOf :: Layout a -> Layout a -> Layout a
