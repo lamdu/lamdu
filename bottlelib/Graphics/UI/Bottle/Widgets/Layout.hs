@@ -3,7 +3,7 @@ module Graphics.UI.Bottle.Widgets.Layout
     ( Layout
     , Alignment
     , empty
-    , AlignedWidget, AbsAlignedWidget
+    , AbsAlignedWidget
     , alignedWidget, absAlignedWidget
     , alignment, widget, width
     , fromCenteredWidget
@@ -33,7 +33,6 @@ import           Graphics.UI.Bottle.Widgets.Box (Orientation(..))
 
 import           Prelude.Compat
 
-type AlignedWidget a = (Alignment, Widget a)
 type AbsAlignedWidget a = (Vector2 Widget.R, Widget a)
 
 axis :: Orientation -> Lens' Alignment Widget.R
@@ -48,7 +47,7 @@ data BoxComponents a = BoxComponents
 Lens.makeLenses ''BoxComponents
 
 newtype Layout a = Layout
-    { _alignedWidget :: AlignedWidget a
+    { _alignedWidget :: (Alignment, Widget a)
     }
 Lens.makeLenses ''Layout
 
