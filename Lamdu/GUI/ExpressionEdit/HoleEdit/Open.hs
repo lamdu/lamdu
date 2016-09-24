@@ -19,7 +19,6 @@ import qualified Data.Monoid as Monoid
 import qualified Data.Store.Property as Property
 import           Data.Store.Transaction (Transaction)
 import           Data.Vector.Vector2 (Vector2(..))
-import           Graphics.UI.Bottle.Alignment (Alignment)
 import           Graphics.UI.Bottle.Animation (AnimId)
 import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.EventMap as E
