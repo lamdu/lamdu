@@ -27,8 +27,8 @@ import           Control.Lens.Operators
 import           Data.Store.Transaction (Transaction)
 import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
-import           Graphics.UI.Bottle.Widgets.AlignedWidget (AlignedWidget)
-import qualified Graphics.UI.Bottle.Widgets.AlignedWidget as AlignedWidget
+import           Graphics.UI.Bottle.Widget.Aligned (AlignedWidget)
+import qualified Graphics.UI.Bottle.Widget.Aligned as AlignedWidget
 import qualified Lamdu.Sugar.Lens as SugarLens
 import           Lamdu.Sugar.Names.Types (ExpressionN)
 import           Lamdu.Sugar.NearestHoles (NearestHoles)

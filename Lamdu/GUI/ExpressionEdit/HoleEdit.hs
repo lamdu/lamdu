@@ -9,7 +9,7 @@ import           Control.Lens.Tuple
 import qualified Data.Store.Transaction as Transaction
 import           Graphics.UI.Bottle.Animation (AnimId)
 import qualified Graphics.UI.Bottle.Widget as Widget
-import qualified Graphics.UI.Bottle.Widgets.AlignedWidget as AlignedWidget
+import qualified Graphics.UI.Bottle.Widget.Aligned as AlignedWidget
 import qualified Graphics.UI.Bottle.WidgetsEnvT as WE
 import qualified Lamdu.Config as Config
 import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap

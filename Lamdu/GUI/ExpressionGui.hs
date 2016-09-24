@@ -63,9 +63,9 @@ import qualified Graphics.UI.Bottle.View as View
 import           Graphics.UI.Bottle.View (View)
 import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
+import           Graphics.UI.Bottle.Widget.Aligned (AlignedWidget)
+import qualified Graphics.UI.Bottle.Widget.Aligned as AlignedWidget
 import qualified Graphics.UI.Bottle.Widgets as BWidgets
-import           Graphics.UI.Bottle.Widgets.AlignedWidget (AlignedWidget)
-import qualified Graphics.UI.Bottle.Widgets.AlignedWidget as AlignedWidget
 import qualified Graphics.UI.Bottle.Widgets.Box as Box
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 import qualified Graphics.UI.Bottle.Widgets.GridView as GridView

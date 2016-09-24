@@ -1,5 +1,5 @@
 {-# LANGUAGE NoImplicitPrelude, TypeFamilies, TemplateHaskell, RankNTypes, FlexibleInstances, FlexibleContexts, DeriveFunctor, DeriveFoldable, DeriveTraversable #-}
-module Graphics.UI.Bottle.Widgets.AlignedWidget
+module Graphics.UI.Bottle.Widget.Aligned
     ( AlignedWidget
     , Alignment
     , empty

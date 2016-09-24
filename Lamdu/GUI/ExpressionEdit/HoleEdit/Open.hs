@@ -26,10 +26,10 @@ import           Graphics.UI.Bottle.View (View)
 import qualified Graphics.UI.Bottle.View as View
 import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
+import           Graphics.UI.Bottle.Widget.Aligned (AlignedWidget)
+import qualified Graphics.UI.Bottle.Widget.Aligned as AlignedWidget
 import qualified Graphics.UI.Bottle.WidgetId as WidgetId
 import qualified Graphics.UI.Bottle.Widgets as BWidgets
-import           Graphics.UI.Bottle.Widgets.AlignedWidget (AlignedWidget)
-import qualified Graphics.UI.Bottle.Widgets.AlignedWidget as AlignedWidget
 import qualified Graphics.UI.Bottle.Widgets.Box as Box
 import qualified Graphics.UI.Bottle.Widgets.Grid as Grid
 import qualified Graphics.UI.Bottle.WidgetsEnvT as WE

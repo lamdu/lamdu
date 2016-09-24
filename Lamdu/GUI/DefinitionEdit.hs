@@ -20,8 +20,8 @@ import           Graphics.UI.Bottle.View (View(..))
 import qualified Graphics.UI.Bottle.View as View
 import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
+import qualified Graphics.UI.Bottle.Widget.Aligned as AlignedWidget
 import qualified Graphics.UI.Bottle.Widgets as BWidgets
-import qualified Graphics.UI.Bottle.Widgets.AlignedWidget as AlignedWidget
 import qualified Graphics.UI.Bottle.Widgets.Box as Box
 import qualified Graphics.UI.GLFW as GLFW
 import           Lamdu.Calc.Type.Scheme (Scheme(..), schemeType)

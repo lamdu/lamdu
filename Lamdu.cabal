@@ -72,9 +72,9 @@ Library
                   , Graphics.UI.Bottle.Font
                   , Graphics.UI.Bottle.View
                   , Graphics.UI.Bottle.Widget
+                  , Graphics.UI.Bottle.Widget.Aligned
                   , Graphics.UI.Bottle.WidgetId
                   , Graphics.UI.Bottle.Widgets
-                  , Graphics.UI.Bottle.Widgets.AlignedWidget
                   , Graphics.UI.Bottle.Widgets.Box
                   , Graphics.UI.Bottle.Widgets.Choice
                   , Graphics.UI.Bottle.Widgets.EventMapDoc

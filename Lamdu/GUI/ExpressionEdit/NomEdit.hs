@@ -8,8 +8,8 @@ import           Control.Lens.Operators
 import           Control.Lens.Tuple
 import           Data.Store.Transaction (Transaction)
 import qualified Graphics.UI.Bottle.Widget as Widget
-import           Graphics.UI.Bottle.Widgets.AlignedWidget (AlignedWidget)
-import qualified Graphics.UI.Bottle.Widgets.AlignedWidget as AlignedWidget
+import           Graphics.UI.Bottle.Widget.Aligned (AlignedWidget)
+import qualified Graphics.UI.Bottle.Widget.Aligned as AlignedWidget
 import qualified Graphics.UI.Bottle.WidgetsEnvT as WE
 import qualified Lamdu.Config as Config
 import           Lamdu.GUI.ExpressionGui
