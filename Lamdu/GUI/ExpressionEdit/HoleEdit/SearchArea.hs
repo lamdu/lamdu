@@ -11,7 +11,6 @@ module Lamdu.GUI.ExpressionEdit.HoleEdit.SearchArea
 import           Control.Lens.Operators
 import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget.Aligned as AlignedWidget
-import           Graphics.UI.Bottle.Widget.TreeLayout (TreeLayout(..))
 import qualified Graphics.UI.Bottle.Widget.TreeLayout as TreeLayout
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 import qualified Graphics.UI.Bottle.WidgetsEnvT as WE
@@ -61,7 +60,7 @@ makeStdWrapped pl holeInfo =
                  fdWrap <*> makeOpenSearchAreaGui pl holeInfo
                  <&>
                  \gui ->
-                 TreeLayout $
+                 TreeLayout.render #
                  \layout ->
                  (gui ^. TreeLayout.render) layout
                  `AlignedWidget.hoverInPlaceOf`

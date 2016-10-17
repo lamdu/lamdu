@@ -10,7 +10,6 @@ import qualified Data.Store.Transaction as Transaction
 import           Graphics.UI.Bottle.Animation (AnimId)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widget.Aligned as AlignedWidget
-import           Graphics.UI.Bottle.Widget.TreeLayout (TreeLayout(..))
 import qualified Graphics.UI.Bottle.Widget.TreeLayout as TreeLayout
 import qualified Graphics.UI.Bottle.WidgetsEnvT as WE
 import qualified Lamdu.Config as Config
@@ -115,7 +114,7 @@ make hole pl =
                                 do
                                     searchAreaGui <- SearchArea.makeStdWrapped pl holeInfo
                                     lay <- f WidgetIds{..}
-                                    return $ TreeLayout $
+                                    return $ TreeLayout.render #
                                         \layoutMode ->
                                         (layoutMode & lay
                                         (wrapperGui & TreeLayout.alignment . _1 .~ 0)

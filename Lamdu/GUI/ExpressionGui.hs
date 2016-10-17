@@ -100,8 +100,8 @@ type T = Transaction
 {-# INLINE egIsFocused #-}
 egIsFocused :: TreeLayout a -> Bool
 -- TODO: Fix this:
-egIsFocused (TreeLayout mkLayout) =
-    mkLayout params ^. AlignedWidget.widget & Widget.isFocused
+egIsFocused tl =
+    (tl ^. TreeLayout.render) params ^. AlignedWidget.widget & Widget.isFocused
     where
         params =
             TreeLayout.LayoutParams
@@ -110,12 +110,13 @@ egIsFocused (TreeLayout mkLayout) =
             }
 
 maybeIndent :: Maybe ParenIndentInfo -> TreeLayout a -> TreeLayout a
-maybeIndent mPiInfo =
+maybeIndent Nothing = id
+maybeIndent (Just piInfo) =
     TreeLayout.render %~ f
     where
         f mkLayout lp =
-            case (lp ^. TreeLayout.layoutContext, mPiInfo) of
-            (TreeLayout.LayoutVertical, Just piInfo) ->
+            case lp ^. TreeLayout.layoutContext of
+            TreeLayout.LayoutVertical ->
                 content
                 & AlignedWidget.addBefore AlignedWidget.Horizontal
                     [ Spacer.make
@@ -143,8 +144,8 @@ maybeIndent mPiInfo =
 
 vboxTopFocal :: [TreeLayout a] -> TreeLayout a
 vboxTopFocal [] = TreeLayout.empty
-vboxTopFocal (TreeLayout mkLayout:guis) =
-    TreeLayout $
+vboxTopFocal (gui:guis) =
+    TreeLayout.render #
     \layoutParams ->
     let cp =
             TreeLayout.LayoutParams
@@ -152,7 +153,8 @@ vboxTopFocal (TreeLayout mkLayout:guis) =
             , _layoutContext = TreeLayout.LayoutVertical
             }
     in
-    mkLayout cp
+    cp
+    & gui ^. TreeLayout.render
     & AlignedWidget.addAfter AlignedWidget.Vertical
         (guis ^.. Lens.traverse . TreeLayout.render ?? cp)
 
@@ -169,7 +171,7 @@ hCombine ::
      AlignedWidget a) ->
     AlignedWidget a -> TreeLayout a -> TreeLayout a
 hCombine f layout gui =
-    TreeLayout $
+    TreeLayout.render #
     \layoutParams ->
     TreeLayout.LayoutParams
     { _layoutMode =
@@ -219,7 +221,7 @@ horizVertFallback mParenId =
 horizVertFallbackH ::
     Maybe ParenIndentInfo -> TreeLayout a -> TreeLayout a -> TreeLayout a
 horizVertFallbackH mParenInfo horiz vert =
-    TreeLayout $
+    TreeLayout.render #
     \layoutParams ->
     let wide =
             layoutParams & TreeLayout.layoutMode .~ TreeLayout.LayoutWide
@@ -441,9 +443,9 @@ addAnnotationH f wideBehavior entityId =
         annotationLayout <- f animId
         processAnn <- processAnnotationGui animId wideBehavior
         return $
-            \(TreeLayout mkLayout) ->
-            TreeLayout $ \lp ->
-            let layout = mkLayout lp
+            \tl ->
+            TreeLayout.render # \lp ->
+            let layout = lp & tl ^. TreeLayout.render
             in  layout
                 & AlignedWidget.addAfter AlignedWidget.Vertical
                 [ vspace

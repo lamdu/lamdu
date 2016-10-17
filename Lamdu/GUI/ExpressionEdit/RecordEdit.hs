@@ -14,7 +14,6 @@ import           Graphics.UI.Bottle.View (View(..))
 import qualified Graphics.UI.Bottle.View as View
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widget.Aligned as AlignedWidget
-import           Graphics.UI.Bottle.Widget.TreeLayout (TreeLayout(..))
 import qualified Graphics.UI.Bottle.Widget.TreeLayout as TreeLayout
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
@@ -127,7 +126,7 @@ makeOpenRecord fieldsGui rest animId =
         restExpr <-
             ExpressionGui.addValPadding
             <*> ExprGuiM.makeSubexpression (const 0) rest
-        return $ TreeLayout $
+        return $ TreeLayout.render #
             \layoutMode ->
             let restLayout = layoutMode & restExpr ^. TreeLayout.render
                 minWidth = restLayout ^. AlignedWidget.widget . Widget.width

@@ -104,4 +104,4 @@ pad :: Vector2 Widget.R -> TreeLayout a -> TreeLayout a
 pad p w =
     w
     & render . Lens.argument . layoutMode . modeWidths -~ 2 * (p ^. _1)
-    & render . Lens.mapped %~ AlignedWidget.pad p
+    & alignedWidget %~ AlignedWidget.pad p

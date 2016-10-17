@@ -28,7 +28,6 @@ import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import           Graphics.UI.Bottle.Widget.Aligned (AlignedWidget)
 import qualified Graphics.UI.Bottle.Widget.Aligned as AlignedWidget
-import           Graphics.UI.Bottle.Widget.TreeLayout (TreeLayout(..))
 import qualified Graphics.UI.Bottle.Widget.TreeLayout as TreeLayout
 import qualified Graphics.UI.Bottle.WidgetId as WidgetId
 import qualified Graphics.UI.Bottle.Widgets as BWidgets
@@ -491,7 +490,7 @@ makeUnderCursorAssignment shownResultsLists hasHiddenResults holeInfo =
               <&> (^. AlignedWidget.widget)
             )
         searchTermGui <- SearchTerm.make holeInfo
-        return $ TreeLayout $ \layoutMode ->
+        return $ TreeLayout.render # \layoutMode ->
             let w = layoutMode
                     & ( searchTermGui
                         & TreeLayout.widget %~
