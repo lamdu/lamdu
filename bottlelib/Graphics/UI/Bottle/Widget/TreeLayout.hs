@@ -1,7 +1,13 @@
 -- TreeLayout is a layout form intended for tree-data, such as program code.
--- Its layout design goal is to avoid the need for horizontal scroll,
--- yet still make good use of the available space.
 --
+-- Its design goals are:
+-- * Make good use of the available screen real-estate.
+-- * Avoid horizontal scroll
+-- * Display the hierarchy/tree structure clearly
+-- * Make changes in layout (due to edits or zooming) easy to follow
+--
+-- The upper nodes in the tree are layed out vertically, while the subtrees that
+-- have space available for it are layed out horizontically.
 -- Tree elements which have a horizontal layout must also have a fallback mode
 -- to be rendered vertically when there isn't enough horizontal space for their
 -- horizontal layout.
