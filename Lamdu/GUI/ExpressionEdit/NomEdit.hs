@@ -115,7 +115,7 @@ expandingName vertOrder (#>) needParen nomId showName =
                     { TreeLayout._layoutMode = TreeLayout.LayoutWide
                     , TreeLayout._layoutContext = TreeLayout.LayoutClear
                     }
-                    & (nameGui #> TreeLayout.fixedLayout label) ^. TreeLayout.render
+                    & (nameGui #> TreeLayout.fromAlignedWidget label) ^. TreeLayout.render
                     & AlignedWidget.widget %~ addBg
                 horiz =
                     case showName of
@@ -124,7 +124,7 @@ expandingName vertOrder (#>) needParen nomId showName =
                     NameHovering -> nameShowing `h` label
                     #> (space #> subexprGui)
                 vert =
-                    TreeLayout.fixedLayout nameShowing
+                    TreeLayout.fromAlignedWidget nameShowing
                     `vertOrder` subexprGui
                     <&> TreeLayout.alignment . _1 .~ 0
                     & ExpressionGui.vboxTopFocal

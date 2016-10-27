@@ -42,7 +42,7 @@ injectedExpr ::
     Monad m => Sugar.Payload m ExprGuiT.Payload -> ExprGuiM m (ExpressionGui m)
 injectedExpr pl =
     WidgetIds.fromExprPayload pl & Widget.toAnimId
-    & ExpressionGui.makeLabel "★" <&> TreeLayout.fixedLayout
+    & ExpressionGui.makeLabel "★" <&> TreeLayout.fromAlignedWidget
 
 makeEditor ::
     Monad m =>

@@ -257,7 +257,7 @@ combineWith mParenInfo onHGuis onVGuis guis =
                 }
             & onHGuis
             & AlignedWidget.hbox 0.5
-            & TreeLayout.fixedLayout
+            & TreeLayout.fromAlignedWidget
 
 combine :: [TreeLayout a] -> TreeLayout a
 combine = combineWith Nothing id id

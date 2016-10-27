@@ -1,38 +1,41 @@
--- | TreeLayout is a layout form intended for tree-data, such as program code.
+-- | TreeLayout is a layout form intended for visualizing tree-data,
+-- such as program code.
 --
 -- Its design goals are:
+--
 -- * Make good use of the available screen real-estate.
 -- * Avoid horizontal scroll
 -- * Display the hierarchy/tree structure clearly
--- * Make changes in layout (due to edits or zooming) easy to follow
+-- * Make the layout changes due to edits predictable and easy to follow
 --
--- The upper nodes in the tree are layed out vertically, while the subtrees that
--- have space available for it are layed out horizontically.
--- Tree elements which have a horizontal layout must also have a fallback mode
--- to be rendered vertically when there isn't enough horizontal space for their
--- horizontal layout.
+-- Subtrees are laid out horizontally as long as they fit within the
+-- available horizontal space, to avoid horizontal scrolling.
+--
+-- When there is not enough horizontal space to lay the entire tree
+-- horizontally, vertical layouts are used for the upper parts of the tree.
 --
 -- Hierarchy disambiguation happens using parentheses and indentation,
--- but only when necessary, so a horizontal child of a vertical element
--- will not need parentheses as the hierarchy is already clear by the layout.
+-- but only when necessary. For example: a horizontally laid out child
+-- of a vertically laid out parent will not use parentheses as the
+-- hierarchy is already clear in the layout itself.
 
 {-# LANGUAGE NoImplicitPrelude, TemplateHaskell #-}
 
 module Graphics.UI.Bottle.Widget.TreeLayout
     ( TreeLayout(..), render
 
-    -- Lenses:
-    , alignedWidget, widget, alignment
-
-    -- Layout params:
+    -- * Layout params
     , LayoutParams(..), layoutMode, layoutContext
-    , LayoutMode(..), _LayoutNarrow, _LayoutWide, modeWidths
+    , LayoutMode(..), _LayoutNarrow, _LayoutWide
     , LayoutDisambiguationContext(..)
 
-    -- Various lifters:
-    , fixedLayout, fromCenteredWidget, fromCenteredView, empty
+    -- * Lenses
+    , alignedWidget, widget, alignment, modeWidths
 
-    -- Operations:
+    -- * Leaf generation
+    , fromAlignedWidget, fromCenteredWidget, fromCenteredView, empty
+
+    -- * Operations
     , pad
     ) where
 
@@ -51,7 +54,7 @@ import qualified Graphics.UI.Bottle.Widget.Aligned as AlignedWidget
 import           Prelude.Compat
 
 data LayoutMode
-    = LayoutNarrow Widget.R -- ^ limited by the given
+    = LayoutNarrow Widget.R -- ^ limited by the contained width field
     | LayoutWide -- ^ no limit on width
 Lens.makePrisms ''LayoutMode
 
@@ -88,18 +91,28 @@ widget = alignedWidget . AlignedWidget.widget
 alignment :: Lens.Setter' (TreeLayout a) Alignment
 alignment = alignedWidget . AlignedWidget.alignment
 
-fixedLayout :: AlignedWidget a -> TreeLayout a
-fixedLayout = TreeLayout . const
+-- | Lifts a Widget into a 'TreeLayout'
+fromAlignedWidget :: AlignedWidget a -> TreeLayout a
+fromAlignedWidget = TreeLayout . const
 
+-- | Lifts a Widget into a 'TreeLayout' with an alignment point at the
+-- widget's center
 fromCenteredWidget :: Widget a -> TreeLayout a
-fromCenteredWidget = fixedLayout . AlignedWidget.fromCenteredWidget
+fromCenteredWidget = fromAlignedWidget . AlignedWidget.fromCenteredWidget
 
+-- | Lifts a View into a 'TreeLayout' with an alignment point at the
+-- view's center
 fromCenteredView :: View -> TreeLayout a
 fromCenteredView = fromCenteredWidget . Widget.fromView
 
+-- | The empty 'TreeLayout'
 empty :: TreeLayout a
 empty = fromCenteredView View.empty
 
+-- | Adds space around a given 'TreeLayout'. Each of the 'Vector2'
+-- components is added to the size twice (once on each side). Only the
+-- width component of the 'Vector2' affects layout decisions by
+-- shrinking the width available to the given 'TreeLayout'.
 pad :: Vector2 Widget.R -> TreeLayout a -> TreeLayout a
 pad p w =
     w

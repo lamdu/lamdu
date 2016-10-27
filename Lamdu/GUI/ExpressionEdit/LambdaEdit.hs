@@ -33,7 +33,7 @@ type T = Transaction
 
 addScopeEdit :: Monad m => Maybe (AlignedWidget (T m Widget.EventResult)) -> ExpressionGui m -> ExpressionGui m
 addScopeEdit mScopeEdit e =
-    e : (mScopeEdit ^.. Lens._Just <&> TreeLayout.fixedLayout)
+    e : (mScopeEdit ^.. Lens._Just <&> TreeLayout.fromAlignedWidget)
     <&> TreeLayout.alignment . _1 .~ 0.5
     & ExpressionGui.vboxTopFocal
 
@@ -52,7 +52,7 @@ mkExpanded animId =
         labelEdit <- ExpressionGui.grammarLabel "→" animId
         return $ \mParamsEdit mScopeEdit ->
             mkLhsEdits mParamsEdit mScopeEdit ++
-            [TreeLayout.fixedLayout labelEdit]
+            [TreeLayout.fromAlignedWidget labelEdit]
 
 lamId :: Widget.Id -> Widget.Id
 lamId = (`Widget.joinId` ["lam"])
@@ -72,7 +72,7 @@ mkShrunk paramIds myId =
         lamLabel <-
             ExpressionGui.makeFocusableView (lamId myId)
             <*> ExpressionGui.grammarLabel "λ" animId
-            <&> TreeLayout.fixedLayout
+            <&> TreeLayout.fromAlignedWidget
             & LightLambda.withUnderline (Config.lightLambda config)
         return $ \mScopeEdit ->
             [ addScopeEdit mScopeEdit lamLabel

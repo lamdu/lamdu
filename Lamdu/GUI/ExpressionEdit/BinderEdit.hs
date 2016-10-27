@@ -359,7 +359,7 @@ make name binder myId =
             Nothing -> return Nothing
             Just paramsEdit ->
                 ExpressionGui.vboxTopFocalSpaced
-                ?? (paramsEdit : fmap TreeLayout.fixedLayout mScopeEdit ^.. Lens._Just
+                ?? (paramsEdit : fmap TreeLayout.fromAlignedWidget mScopeEdit ^.. Lens._Just
                     <&> TreeLayout.alignment . _1 .~ 0.5)
                 <&> TreeLayout.widget %~ Widget.weakerEvents rhsJumperEquals
                 <&> Just
@@ -368,7 +368,7 @@ make name binder myId =
             <&>
             (\hbox ->
             hbox
-            [ hbox (defNameEdit : (mLhsEdit ^.. Lens._Just) ++ [TreeLayout.fixedLayout equals])
+            [ hbox (defNameEdit : (mLhsEdit ^.. Lens._Just) ++ [TreeLayout.fromAlignedWidget equals])
             , bodyEdit
             ] )
             <&> TreeLayout.widget %~ Widget.weakerEvents eventMap
@@ -518,7 +518,7 @@ nullParamEditInfo (Sugar.NullParamInfo mActions) =
       \myId ->
       ExpressionGui.makeFocusableView myId
       <*> ExpressionGui.grammarLabel "◗" (Widget.toAnimId myId)
-      <&> TreeLayout.fixedLayout
+      <&> TreeLayout.fromAlignedWidget
     , ParamEdit.iMAddNext = Nothing
     , ParamEdit.iMOrderBefore = Nothing
     , ParamEdit.iMOrderAfter = Nothing

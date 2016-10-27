@@ -485,7 +485,7 @@ makeUnderCursorAssignment shownResultsLists hasHiddenResults holeInfo =
                   [ vspace
                   , Widget.fromView typeView & AlignedWidget.fromCenteredWidget
                   ]
-                & TreeLayout.fixedLayout
+                & TreeLayout.fromAlignedWidget
               ) & applyResultLayout
               <&> (^. AlignedWidget.widget)
             )

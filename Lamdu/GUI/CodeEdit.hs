@@ -338,7 +338,7 @@ makeReplEdit env myId replExpr =
     <*> sequence
     [ ExpressionGui.makeFocusableView replId
       <*> ExpressionGui.makeLabel "⋙" (Widget.toAnimId replId)
-      <&> TreeLayout.fixedLayout
+      <&> TreeLayout.fromAlignedWidget
     , ExprGuiM.makeSubexpression id replExpr
     ]
     <&> TreeLayout.widget %~

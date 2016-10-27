@@ -26,7 +26,7 @@ makeCommon ::
 makeCommon tagG nearestHoles valEdits =
     ExpressionGui.combineSpaced Nothing
     <*> ( TagEdit.makeRecordTag nearestHoles tagG
-          <&> TreeLayout.fixedLayout <&> (: valEdits)
+          <&> TreeLayout.fromAlignedWidget <&> (: valEdits)
         )
 
 make ::

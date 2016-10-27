@@ -69,7 +69,7 @@ make (Sugar.Case mArg alts caseTail addAlt cEntityId) pl =
                     <&> AlignedWidget.widget
                         %~ Widget.weakerEvents labelJumpHoleEventMap
                 )
-                <&> TreeLayout.fixedLayout
+                <&> TreeLayout.fromAlignedWidget
         (mActiveTag, header) <-
             case mArg of
             Sugar.LambdaCase -> headerLabel "λ:" <&> (,) Nothing
@@ -140,7 +140,7 @@ makeAltsWidget ::
 makeAltsWidget _ [] myId =
     ExpressionGui.makeFocusableView (Widget.joinId myId ["Ø"])
     <*> ExpressionGui.grammarLabel "Ø" (Widget.toAnimId myId)
-    <&> TreeLayout.fixedLayout
+    <&> TreeLayout.fromAlignedWidget
 makeAltsWidget mActiveTag alts _ =
     ExpressionGui.vboxTopFocalSpaced <*> mapM (makeAltRow mActiveTag) alts
 
