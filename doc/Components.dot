@@ -1,16 +1,18 @@
 digraph G {
     calc [label="LamduCalc"];
+    execution [label="Execution\nEngine"];
     compiler [label="Compiler"];
     infer [label="Type inference"];
-    store [label="Data.Store"];
+    store [label="Revisioned\nDatabase"];
     animation [label="Animation engine"];
     widgets [label="GUI framework"];
     sugar [label="LamduSugar"];
-    sugarconvert [label="LamduCalc<->LamduSugar"];
-    ui [label="Lamdu UI"];
+    sugarconvert [label="De/Sugaring"];
+    ui [label="UI"];
 
     infer        -> calc;
-    compiler     -> calc;
+    execution    -> compiler;
+    compiler     -> infer;
     widgets      -> animation;
     sugar        -> calc;
     sugarconvert -> sugar;
@@ -18,7 +20,7 @@ digraph G {
     sugarconvert -> store;
     ui           -> sugar;
     ui           -> widgets;
-    main         -> ui;
-    main         -> sugarconvert;
-    main         -> compiler;
+    ui           -> execution;
+
+    {rank = same; ui; sugarconvert;};
 }
