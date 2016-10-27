@@ -1,4 +1,4 @@
--- TreeLayout is a layout form intended for tree-data, such as program code.
+-- | TreeLayout is a layout form intended for tree-data, such as program code.
 --
 -- Its design goals are:
 -- * Make good use of the available screen real-estate.
