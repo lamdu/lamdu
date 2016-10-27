@@ -5,7 +5,7 @@ packages:
     commit: f54abe6f1f9b1eb7923e442fa11f3cf16ad5cfcb
 - location:
     git: https://github.com/lamdu/Algorithm-W-Step-By-Step
-    commit: 9f07f5f00ac4aaebbc150f14ad8baa423442f1d5
+    commit: 6c14686a41b7ea3ad492b2f6573893450dca8e60
 - location:
     git: https://github.com/lamdu/graphics-drawingcombinators
     commit: c88a8c2b6d952315dc371f63b37622e7ecb56014
@@ -20,18 +20,19 @@ packages:
     commit: 585671664f9afb1dd306b0439007a0d5e9fe995a
 - location:
     git: https://github.com/lamdu/language-ecmascript
-    commit: 2c71e37ad055163a9926ee53e5297146de9b435c
+    commit: 1c75cfd064faec8c564c205702227bb44822e296
 - location:
     git: https://github.com/lamdu/nodejs-exec
-    commit: b9c2e6a9aaec543c77e7f3510dfff1c6a6386512
+    commit: 9b33e991d682fac2b1f6f9c7a4fd8df5a684940d
 extra-deps:
 - bitmap-0.0.2
 - bitmap-opengl-0.0.1.5
 - stb-image-0.2.1
 - uuid-aeson-0.1.0.0
+- List-0.5.2
 
 extra-include-dirs:
 - /usr/local/include
 extra-lib-dirs:
 - /usr/local/lib
-resolver: lts-6.5
+resolver: lts-7.5
