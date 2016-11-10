@@ -31,7 +31,7 @@ import qualified Lamdu.Sugar.Types as Sugar
 
 type T = Transaction
 
-addScopeEdit :: Monad m => Maybe (AlignedWidget (T m Widget.EventResult)) -> ExpressionGui m -> ExpressionGui m
+addScopeEdit :: Maybe (AlignedWidget (T m Widget.EventResult)) -> ExpressionGui m -> ExpressionGui m
 addScopeEdit mScopeEdit e =
     e : (mScopeEdit ^.. Lens._Just <&> TreeLayout.fromAlignedWidget)
     <&> TreeLayout.alignment . _1 .~ 0.5

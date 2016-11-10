@@ -163,7 +163,6 @@ exprAddNearestHoles expr =
     & runIdentity
 
 postProcessExpr ::
-    Monad m =>
     Sugar.Expression name m ([Sugar.EntityId], NearestHoles) ->
     Sugar.Expression name m ExprGuiT.Payload
 postProcessExpr expr =

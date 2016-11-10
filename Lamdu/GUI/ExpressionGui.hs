@@ -649,7 +649,7 @@ addValFrame myId =
     <*> addValPadding
 
 -- TODO: This doesn't belong here
-makeNameView :: (Monad m, Monad n) => Name n -> AnimId -> ExprGuiM m View
+makeNameView :: Monad m => Name n -> AnimId -> ExprGuiM m View
 makeNameView (Name _ collision _ name) animId =
     do
         label <- BWidgets.makeLabel name animId & ExprGuiM.widgetEnv

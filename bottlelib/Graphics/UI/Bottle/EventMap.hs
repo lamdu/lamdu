@@ -232,7 +232,7 @@ isCharMods modKeys =
 mkModKey :: GLFW.ModifierKeys -> GLFW.Key -> ModKey
 mkModKey = ModKey
 
-filterByKey :: Ord k => (k -> Bool) -> Map k v -> Map k v
+filterByKey :: (k -> Bool) -> Map k v -> Map k v
 filterByKey p = Map.filterWithKey (const . p)
 
 deleteKey :: KeyEvent -> EventMap a -> EventMap a

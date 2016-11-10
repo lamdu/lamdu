@@ -28,7 +28,7 @@ import           Prelude.Compat
 type T = Transaction.Transaction
 
 modifyWrappedEventMap ::
-    (Monad m, Applicative f) =>
+    Applicative f =>
     Config -> Bool -> Sugar.HoleArg m (ExpressionN m a) -> WidgetIds ->
     Widget.EventMap (f Widget.EventResult) ->
     Widget.EventMap (f Widget.EventResult)

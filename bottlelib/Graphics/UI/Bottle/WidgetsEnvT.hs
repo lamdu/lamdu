@@ -45,15 +45,10 @@ newtype WidgetEnvT m a = WidgetEnvT
     } deriving (Functor, Applicative, Monad, MonadTrans)
 Lens.makeLenses ''WidgetEnvT
 
-runWidgetEnvT ::
-    Monad m => Env -> WidgetEnvT m a -> m a
+runWidgetEnvT :: Env -> WidgetEnvT m a -> m a
 runWidgetEnvT env (WidgetEnvT action) = runReaderT action env
 
-mapWidgetEnvT
-    :: Monad m
-    => (m a -> n a)
-    -> WidgetEnvT m a
-    -> WidgetEnvT n a
+mapWidgetEnvT :: (m a -> n a) -> WidgetEnvT m a -> WidgetEnvT n a
 mapWidgetEnvT = (widgetEnvT %~) . Reader.mapReaderT
 
 readEnv :: Monad m => WidgetEnvT m Env
@@ -90,7 +85,7 @@ envAssignCursorPrefix srcFolder dest =
             Nothing -> cursor
             Just suffix -> dest suffix
 
-localEnv :: Monad m => (Env -> Env) -> WidgetEnvT m a -> WidgetEnvT m a
+localEnv :: (Env -> Env) -> WidgetEnvT m a -> WidgetEnvT m a
 localEnv = (widgetEnvT %~) . Reader.local
 
 setTextColor :: Draw.Color -> Env -> Env

@@ -158,7 +158,7 @@ makeSubexpression onPrecedence expr =
     where
         animId = toAnimId $ WidgetIds.fromExprPayload $ expr ^. Sugar.rPayload
 
-resetDepth :: Monad m => Int -> ExprGuiM m r -> ExprGuiM m r
+resetDepth :: Int -> ExprGuiM m r -> ExprGuiM m r
 resetDepth depth = exprGuiM %~ RWS.local (aSubexpressionLayer .~ depth)
 
 advanceDepth ::
@@ -239,8 +239,7 @@ addResultPicker picker = ExprGuiM $ RWS.tell mempty { oHolePickers = [picker] }
 readMScopeId :: Monad m => ExprGuiM m (CurAndPrev (Maybe ScopeId))
 readMScopeId = ExprGuiM $ Lens.view aMScopeId
 
-withLocalMScopeId ::
-    Monad m => CurAndPrev (Maybe ScopeId) -> ExprGuiM m a -> ExprGuiM m a
+withLocalMScopeId :: CurAndPrev (Maybe ScopeId) -> ExprGuiM m a -> ExprGuiM m a
 withLocalMScopeId mScopeId = exprGuiM %~ RWS.local (aMScopeId .~ mScopeId)
 
 isExprSelected :: Monad m => Sugar.Payload f a -> ExprGuiM m Bool
@@ -249,5 +248,5 @@ isExprSelected = widgetEnv . WE.isSubCursor . WidgetIds.fromExprPayload
 outerPrecedence :: Monad m => ExprGuiM m Precedence
 outerPrecedence = ExprGuiM $ Lens.view aOuterPrecedence
 
-withLocalPrecedence :: Monad m => (Precedence -> Precedence) -> ExprGuiM m a -> ExprGuiM m a
+withLocalPrecedence :: (Precedence -> Precedence) -> ExprGuiM m a -> ExprGuiM m a
 withLocalPrecedence f = exprGuiM %~ RWS.local (aOuterPrecedence %~ f)

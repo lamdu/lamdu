@@ -36,7 +36,7 @@ defaultPos [] myId = myId
 defaultPos (f : _) _ =
     f ^. Sugar.rfExpr . Sugar.rPayload & WidgetIds.fromExprPayload
 
-shouldAddBg :: Monad m => Sugar.Record name m a -> Bool
+shouldAddBg :: Sugar.Record name m a -> Bool
 shouldAddBg (Sugar.Record [] Sugar.ClosedRecord{} _) = False
 shouldAddBg _ = True
 
