@@ -112,13 +112,13 @@ Lens.makeLenses ''Askable
 Lens.makeLenses ''ExprGuiM
 
 -- TODO: To lens
-localEnv :: Monad m => (WE.Env -> WE.Env) -> ExprGuiM m a -> ExprGuiM m a
+localEnv :: (WE.Env -> WE.Env) -> ExprGuiM m a -> ExprGuiM m a
 localEnv = (exprGuiM %~) . RWS.mapRWST . WE.localEnv
 
-withFgColor :: Monad m => Draw.Color -> ExprGuiM m a -> ExprGuiM m a
+withFgColor :: Draw.Color -> ExprGuiM m a -> ExprGuiM m a
 withFgColor = localEnv . WE.setTextColor
 
-withLocalUnderline :: Monad m => TextView.Underline -> ExprGuiM m a -> ExprGuiM m a
+withLocalUnderline :: TextView.Underline -> ExprGuiM m a -> ExprGuiM m a
 withLocalUnderline underline =
     WE.envTextStyle . TextEdit.sTextViewStyle .
     TextView.styleUnderline ?~ underline
@@ -204,14 +204,11 @@ makeLabel text animId = widgetEnv $ BWidgets.makeLabel text animId
 transaction :: Monad m => T m a -> ExprGuiM m a
 transaction = widgetEnv . lift
 
-assignCursor ::
-    Monad m => Widget.Id -> Widget.Id ->
-    ExprGuiM m a -> ExprGuiM m a
+assignCursor :: Widget.Id -> Widget.Id -> ExprGuiM m a -> ExprGuiM m a
 assignCursor x y = localEnv $ WE.envAssignCursor x y
 
 assignCursorPrefix ::
-    Monad m => Widget.Id -> (AnimId -> Widget.Id) ->
-    ExprGuiM m a -> ExprGuiM m a
+    Widget.Id -> (AnimId -> Widget.Id) -> ExprGuiM m a -> ExprGuiM m a
 assignCursorPrefix x y = localEnv $ WE.envAssignCursorPrefix x y
 
 makeFocusDelegator ::

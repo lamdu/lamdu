@@ -348,8 +348,7 @@ makeHoleResultWidget resultId holeResult =
             & WidgetIds.fromEntityId
         holeResultConverted = holeResult ^. Sugar.holeResultConverted
 
-postProcessSugar ::
-    Monad m => ExpressionN m () -> ExpressionN m ExprGuiT.Payload
+postProcessSugar :: ExpressionN m () -> ExpressionN m ExprGuiT.Payload
 postProcessSugar expr =
     expr
     & Lens.mapped .~ pl

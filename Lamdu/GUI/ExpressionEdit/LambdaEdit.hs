@@ -37,7 +37,7 @@ addScopeEdit mScopeEdit e =
     <&> TreeLayout.alignment . _1 .~ 0.5
     & ExpressionGui.vboxTopFocal
 
-mkLhsEdits :: Monad m => Maybe (ExpressionGui m) -> Maybe (AlignedWidget (T m Widget.EventResult)) -> [ExpressionGui m]
+mkLhsEdits :: Maybe (ExpressionGui m) -> Maybe (AlignedWidget (T m Widget.EventResult)) -> [ExpressionGui m]
 mkLhsEdits mParamsEdit mScopeEdit =
     mParamsEdit <&> addScopeEdit mScopeEdit & (^.. Lens._Just)
 
