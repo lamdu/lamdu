@@ -67,23 +67,28 @@ fromChar char
 
 translate :: [GLFWRawEvent] -> [Event]
 translate [] = []
-translate (RawWindowClose : xs) = EventWindowClose : translate xs
-translate (RawWindowRefresh : xs) = EventWindowRefresh : translate xs
-translate (RawDropPaths paths : xs) = EventDropPaths paths : translate xs
-translate (RawFrameBufferSize size : xs) = EventFrameBufferSize size : translate xs
-translate (RawKeyEvent key scanCode keyState modKeys : RawCharEvent char : xs) =
-    EventKey (KeyEvent key scanCode keyState modKeys (fromChar char)) :
-    translate xs
-translate (RawKeyEvent key scanCode keyState modKeys : xs) =
-    EventKey (KeyEvent key scanCode keyState modKeys Nothing) : translate xs
-translate (RawCharEvent _ : xs) = translate xs
+translate (x : xs) =
+    case x of
+    RawWindowClose -> EventWindowClose : ys
+    RawWindowRefresh -> EventWindowRefresh : ys
+    RawDropPaths paths -> EventDropPaths paths : ys
+    RawFrameBufferSize size -> EventFrameBufferSize size : ys
+    RawCharEvent _ -> ys
+    RawKeyEvent key scanCode keyState modKeys ->
+        case xs of
+        RawCharEvent char : xss -> eventKey (fromChar char) : translate xss
+        _ -> eventKey Nothing : ys
+        where
+            eventKey ch = EventKey (KeyEvent key scanCode keyState modKeys ch)
+    where
+        ys = translate xs
 
 data EventLoopDisallowedWhenMasked = EventLoopDisallowedWhenMasked
     deriving (Show, Typeable)
 instance E.Exception EventLoopDisallowedWhenMasked
 
-rawEventLoop :: GLFW.Window -> ([GLFWRawEvent] -> IO Result) -> IO ()
-rawEventLoop win eventsHandler =
+eventLoop :: GLFW.Window -> ([Event] -> IO Result) -> IO ()
+eventLoop win eventsHandler =
     do
         maskingState <- E.getMaskingState
         when (maskingState /= E.Unmasked) $ E.throwIO EventLoopDisallowedWhenMasked
@@ -97,7 +102,7 @@ rawEventLoop win eventsHandler =
                 do
                     let handleReversedEvents rEvents = ([], reverse rEvents)
                     events <- atomicModifyIORef eventsVar handleReversedEvents
-                    res <- eventsHandler events
+                    res <- eventsHandler (translate events)
                     case res of
                         ResultNone ->
                             do
@@ -119,6 +124,3 @@ rawEventLoop win eventsHandler =
 
         GLFW.swapInterval 1
         loop
-
-eventLoop :: GLFW.Window -> ([Event] -> IO Result) -> IO ()
-eventLoop win handler = rawEventLoop win (handler . translate)
