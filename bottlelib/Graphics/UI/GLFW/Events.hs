@@ -1,7 +1,10 @@
+-- | Event-loop for GLFW (instead of its native callbacks model).
+
 {-# LANGUAGE NoImplicitPrelude #-}
 module Graphics.UI.GLFW.Events
-    ( KeyEvent(..), Event(..), Result(..)
-    , eventLoop
+    ( eventLoop
+    , Event(..), KeyEvent(..)
+    , Result(..)
     ) where
 
 import qualified Control.Exception as E
@@ -14,7 +17,9 @@ import qualified Graphics.UI.GLFW as GLFW
 
 import           Prelude.Compat
 
--- this is the reification of the callback information:
+-- GLFWRawEvent is the reification of the callback information.
+-- It differs from Event in that in some cases events are grouped together
+-- (i.e a RawKeyEvent and a RawCharEvent become a combined KeyEvent).
 data GLFWRawEvent
     = RawCharEvent Char
     | RawKeyEvent GLFW.Key Int GLFW.KeyState GLFW.ModifierKeys
@@ -32,7 +37,6 @@ data KeyEvent = KeyEvent
     , keChar :: Maybe Char
     } deriving (Show, Eq)
 
--- This is the final representation we expose of events:
 data Event
     = EventKey KeyEvent
     | EventWindowClose
@@ -41,10 +45,14 @@ data Event
     | EventFrameBufferSize (Vector2 Int)
     deriving (Show, Eq)
 
+-- | The output of the event handler back to the event-loop.
 data Result
     = ResultNone
     | ResultDidDraw
+    -- ^ The event handler performed drawing
+    --   (so a `GLFW.swapBuffers` call is necessary)
     | ResultQuit
+    -- ^ The event-loop should quit.
     deriving (Show, Eq, Ord)
 
 instance Monoid Result where
@@ -84,7 +92,6 @@ rawEventLoop win eventsHandler =
         let addEvent event = atomicModifyIORef_ eventsVar (event:)
             addKeyEvent key scanCode keyState modKeys =
                 addEvent $ RawKeyEvent key scanCode keyState modKeys
-            charEventHandler = addEvent . RawCharEvent
             setCallback f cb = f win $ Just $ const cb
             loop =
                 do
@@ -103,7 +110,7 @@ rawEventLoop win eventsHandler =
                                 loop
                         ResultQuit -> return ()
 
-        setCallback GLFW.setCharCallback charEventHandler
+        setCallback GLFW.setCharCallback (addEvent . RawCharEvent)
         setCallback GLFW.setKeyCallback addKeyEvent
         setCallback GLFW.setDropCallback (addEvent . RawDropPaths)
         setCallback GLFW.setWindowRefreshCallback $ addEvent RawWindowRefresh
