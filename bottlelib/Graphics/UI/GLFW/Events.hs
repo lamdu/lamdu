@@ -3,7 +3,7 @@
 {-# LANGUAGE NoImplicitPrelude #-}
 module Graphics.UI.GLFW.Events
     ( eventLoop
-    , Event(..), KeyEvent(..)
+    , Event(..), KeyEvent(..), MouseButtonEvent(..)
     , Result(..)
     ) where
 
@@ -23,9 +23,12 @@ import           Prelude.Compat
 data GLFWRawEvent
     = RawCharEvent Char
     | RawKeyEvent GLFW.Key Int GLFW.KeyState GLFW.ModifierKeys
+    | RawMouseButton GLFW.MouseButton GLFW.MouseButtonState GLFW.ModifierKeys
+    | RawMousePosition (Vector2 Double)
     | RawWindowRefresh
     | RawDropPaths [FilePath]
     | RawFrameBufferSize (Vector2 Int)
+    | RawWindowSize (Vector2 Int)
     | RawWindowClose
     deriving (Show, Eq)
 
@@ -37,8 +40,22 @@ data KeyEvent = KeyEvent
     , keChar :: Maybe Char
     } deriving (Show, Eq)
 
+data MouseButtonEvent = MouseButtonEvent
+    { mbButton :: GLFW.MouseButton
+    , mbButtonState :: GLFW.MouseButtonState
+    , mbModKeys :: GLFW.ModifierKeys
+    , mbPosition :: Vector2 Double
+    -- ^ Position in frame buffer coordinates, which may not be the same as
+    -- "window coordinates"
+    , mbPositionInWindowCoords :: Vector2 Double
+    -- ^ Position in "window coordinates".
+    -- Since "retina" displays were introduced, window coordindates no longer
+    -- relate to graphical pixels.
+    } deriving (Show, Eq)
+
 data Event
     = EventKey KeyEvent
+    | EventMouseButton MouseButtonEvent
     | EventWindowClose
     | EventWindowRefresh
     | EventDropPaths [FilePath]
@@ -65,23 +82,52 @@ fromChar char
     | '\57344' <= char && char <= '\63743' = Nothing
     | otherwise = Just char
 
-translate :: [GLFWRawEvent] -> [Event]
-translate [] = []
-translate (x : xs) =
+data EventProcessingState = EventProcessingState
+    { epMousePos :: Vector2 Double
+    , epFrameBufferSize :: Vector2 Int
+    , epWindowSize :: Vector2 Int
+    }
+
+translate ::
+    [GLFWRawEvent] -> EventProcessingState -> ([Event], EventProcessingState)
+translate [] state = ([], state)
+translate (x : xs) state =
     case x of
-    RawWindowClose -> EventWindowClose : ys
-    RawWindowRefresh -> EventWindowRefresh : ys
-    RawDropPaths paths -> EventDropPaths paths : ys
-    RawFrameBufferSize size -> EventFrameBufferSize size : ys
-    RawCharEvent _ -> ys
+    RawWindowClose -> simple EventWindowClose
+    RawWindowRefresh -> simple EventWindowRefresh
+    RawDropPaths paths -> simple (EventDropPaths paths)
+    RawCharEvent _ ->
+        -- Skip char events here as they are processed together with the
+        -- key events that immediately precede them.
+        translate xs state
     RawKeyEvent key scanCode keyState modKeys ->
         case xs of
-        RawCharEvent char : xss -> eventKey (fromChar char) : translate xss
-        _ -> eventKey Nothing : ys
+        RawCharEvent char : _ -> eventKey (fromChar char)
+        _ -> eventKey Nothing
         where
-            eventKey ch = EventKey (KeyEvent key scanCode keyState modKeys ch)
+            eventKey ch =
+                simple $ EventKey $ KeyEvent key scanCode keyState modKeys ch
+    RawFrameBufferSize size ->
+        (EventFrameBufferSize size : ne, ns)
+        where
+            (ne, ns) = translate xs state { epFrameBufferSize = size }
+    RawWindowSize size ->
+        -- Only change the window position
+        translate xs state { epWindowSize = size }
+    RawMousePosition newPos ->
+        -- Only change the mouse position
+        translate xs state { epMousePos = newPos }
+    RawMouseButton button buttonState modKeys ->
+        simple $ EventMouseButton $
+            MouseButtonEvent button buttonState modKeys
+            (p * (fromIntegral <$> epFrameBufferSize state)
+                / (fromIntegral <$> epWindowSize state))
+            p
+        where
+            p = epMousePos state
     where
-        ys = translate xs
+        (nextEvents, nextState) = translate xs state
+        simple out = (out : nextEvents, nextState)
 
 data EventLoopDisallowedWhenMasked = EventLoopDisallowedWhenMasked
     deriving (Show, Typeable)
@@ -93,16 +139,29 @@ eventLoop win eventsHandler =
         maskingState <- E.getMaskingState
         when (maskingState /= E.Unmasked) $ E.throwIO EventLoopDisallowedWhenMasked
         eventsVar <- newIORef [RawWindowRefresh]
+        eventProcessingStateRef <-
+            EventProcessingState
+            <$> (uncurry Vector2 <$> GLFW.getCursorPos win)
+            <*> (uncurry Vector2 <$> GLFW.getFramebufferSize win)
+            <*> (uncurry Vector2 <$> GLFW.getWindowSize win)
+            >>= newIORef
 
         let addEvent event = atomicModifyIORef_ eventsVar (event:)
             addKeyEvent key scanCode keyState modKeys =
                 addEvent $ RawKeyEvent key scanCode keyState modKeys
+            addMouseButtonEvent button buttonState modKeys =
+                addEvent $ RawMouseButton button buttonState modKeys
             setCallback f cb = f win $ Just $ const cb
+            addVec2Event c x y = addEvent $ c $ Vector2 x y
             loop =
                 do
                     let handleReversedEvents rEvents = ([], reverse rEvents)
-                    events <- atomicModifyIORef eventsVar handleReversedEvents
-                    res <- eventsHandler (translate events)
+                    rawEvents <-
+                        atomicModifyIORef eventsVar handleReversedEvents
+                    oldState <- readIORef eventProcessingStateRef
+                    let (events, newState) = translate rawEvents oldState
+                    writeIORef eventProcessingStateRef newState
+                    res <- eventsHandler events
                     case res of
                         ResultNone ->
                             do
@@ -117,9 +176,12 @@ eventLoop win eventsHandler =
 
         setCallback GLFW.setCharCallback (addEvent . RawCharEvent)
         setCallback GLFW.setKeyCallback addKeyEvent
+        setCallback GLFW.setMouseButtonCallback addMouseButtonEvent
+        setCallback GLFW.setCursorPosCallback $ addVec2Event RawMousePosition
         setCallback GLFW.setDropCallback (addEvent . RawDropPaths)
         setCallback GLFW.setWindowRefreshCallback $ addEvent RawWindowRefresh
-        setCallback GLFW.setFramebufferSizeCallback $ \w h -> addEvent (RawFrameBufferSize (Vector2 w h))
+        setCallback GLFW.setFramebufferSizeCallback $ addVec2Event RawFrameBufferSize
+        setCallback GLFW.setWindowSizeCallback $ addVec2Event RawWindowSize
         setCallback GLFW.setWindowCloseCallback $ addEvent RawWindowClose
 
         GLFW.swapInterval 1

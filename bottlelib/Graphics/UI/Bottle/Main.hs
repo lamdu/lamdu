@@ -11,11 +11,13 @@ import           Control.Monad (when, unless)
 import           Control.Monad.IO.Class (MonadIO(..))
 import           Data.IORef
 import           Data.MRUMemo (memoIO)
+import qualified Graphics.UI.Bottle.Direction as Direction
 import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Main.Animation as MainAnim
 import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.GLFW as GLFW
+import           Graphics.UI.GLFW.Events as GLFWE
 
 import           Prelude.Compat
 
@@ -68,6 +70,15 @@ newLooper =
         mkWidgetRef <- newIORef =<< memoIO mkWidgetUnmemod
         let newWidget = writeIORef mkWidgetRef =<< memoIO mkWidgetUnmemod
         let getWidget size = ($ size) =<< readIORef mkWidgetRef
+        let lookupEvent widget (GLFWE.EventMouseButton
+                (GLFWE.MouseButtonEvent GLFW.MouseButton'1
+                    GLFW.MouseButtonState'Released _ mousePosF _)) =
+                case widget ^. Widget.mEnter of
+                Nothing -> return Nothing
+                Just enter -> enter (Direction.Point mousePosF) ^. Widget.enterResultEvent & Just & return
+            lookupEvent widget event =
+                E.lookup (GLFW.getClipboardString win) event
+                (widget ^. Widget.eventMap)
         loop win (getConfig <&> cAnim) $ \size -> MainAnim.Handlers
             { MainAnim.tickHandler =
                 do
@@ -88,9 +99,7 @@ newLooper =
             , MainAnim.eventHandler = \event ->
                 do
                     widget <- getWidget size
-                    mWidgetRes <-
-                        E.lookup (GLFW.getClipboardString win) event
-                        (widget ^. Widget.eventMap)
+                    mWidgetRes <- lookupEvent widget event
                     EventResult runInMainThread mAnimIdMapping <-
                         (sequenceA mWidgetRes <&> fmap (^. Widget.eAnimIdMapping)) ^. m
                     case mAnimIdMapping of
