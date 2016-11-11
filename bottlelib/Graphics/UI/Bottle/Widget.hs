@@ -89,7 +89,7 @@ instance Monoid EventResult where
 
 data EnterResult a = EnterResult
     { -- The new focal area upon this entrace.
-      -- Used in Grid to decide which cell's EnterResult to use and in FlyNav.
+      -- Used in Grid to decide which cell's EnterResult to use.
       _enterResultRect :: Rect
     , _enterResultEvent :: a
     }
@@ -99,7 +99,7 @@ data Focus a = Focus
     , _fEventMap :: EventMap a
     }
 
--- When focused, mEnter may still be relevant, e.g: FlyNav in an
+-- When focused, mEnter may still be relevant, e.g: Mouse click in an
 -- active textedit, to move to a different text-edit position.
 type MEnter a = Maybe (Direction -> EnterResult a)
 

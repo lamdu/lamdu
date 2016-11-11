@@ -30,7 +30,6 @@ import qualified Graphics.UI.Bottle.Main as MainLoop
 import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.EventMapDoc as EventMapDoc
-import qualified Graphics.UI.Bottle.Widgets.FlyNav as FlyNav
 import qualified Graphics.UI.GLFW as GLFW
 import qualified Graphics.UI.GLFW.Utils as GLFWUtils
 import           Lamdu.Config (Config(Config))
@@ -225,7 +224,6 @@ runEditor title copyJSOutputPath windowMode db =
             win <- createWindow title windowMode
             printGLVersion
             -- Fonts must be loaded after the GL context is created..
-            wrapFlyNav <- FlyNav.makeIO Style.flyNav WidgetIds.flyNav
             invalidateCacheRef <- newIORef (return ())
             let invalidateCache = join (readIORef invalidateCacheRef)
             withMVarProtection db $ \dbMVar ->
@@ -256,7 +254,6 @@ runEditor title copyJSOutputPath windowMode db =
                     mainLoop win refreshScheduler configSampler $
                         \fontsVer fonts config size ->
                         makeRootWidgetCached (CachedWidgetInput fontsVer config size fonts)
-                        >>= wrapFlyNav
                         >>= addHelp (Style.help (Font.fontHelp fonts) (Config.help config)) size
 
 newtype RefreshScheduler = RefreshScheduler (IORef Bool)

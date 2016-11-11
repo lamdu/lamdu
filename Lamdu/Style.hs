@@ -1,7 +1,6 @@
 {-# LANGUAGE RecordWildCards #-}
 module Lamdu.Style
-    ( flyNav
-    , help
+    ( help
     , Style(..), style
     , mainLoopConfig
     ) where
@@ -11,7 +10,6 @@ import qualified Graphics.UI.Bottle.Main as MainLoop
 import           Graphics.UI.Bottle.Main.Animation (AnimConfig(..))
 import           Graphics.UI.Bottle.Widget (CursorConfig(..))
 import qualified Graphics.UI.Bottle.Widgets.EventMapDoc as EventMapDoc
-import qualified Graphics.UI.Bottle.Widgets.FlyNav as FlyNav
 import qualified Graphics.UI.Bottle.Widgets.TextEdit as TextEdit
 import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
 import           Lamdu.Config (Config)
@@ -26,11 +24,6 @@ data Style = Style
     , styleBytes :: TextEdit.Style
     , styleText :: TextEdit.Style
     , styleNum :: TextEdit.Style
-    }
-
-flyNav :: FlyNav.Config
-flyNav = FlyNav.Config
-    { FlyNav.configLayer = -10000 -- that should cover it :-)
     }
 
 help :: Draw.Font -> Config.Help -> EventMapDoc.Config

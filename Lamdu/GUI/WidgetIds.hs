@@ -42,9 +42,6 @@ branchSelection = Id ["selected branch"]
 activePaneBackground :: AnimId
 activePaneBackground = ["active def bg"]
 
-flyNav :: AnimId
-flyNav = ["flyNav"]
-
 delegatingId :: Id -> Id
 delegatingId = flip Widget.joinId ["delegating"]
 
