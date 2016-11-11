@@ -3,7 +3,7 @@ module Graphics.UI.Bottle.EventMap
     ( KeyEvent(..)
     , InputDoc, Subtitle, Doc(..), docStrs
     , MaybeWantsClipboard(..)
-    , EventMap, lookup, emTickHandlers
+    , EventMap, lookup
     , emDocs
     , charEventMap, allChars
     , charGroup
@@ -12,7 +12,6 @@ module Graphics.UI.Bottle.EventMap
     , dropEventMap
     , deleteKey, deleteKeys
     , filterChars
-    , tickHandler
     ) where
 
 import qualified Control.Lens as Lens
@@ -150,7 +149,6 @@ data EventMap a = EventMap
     , _emCharGroupHandlers :: [CharGroupHandler a]
     , _emCharGroupChars :: Set Char
     , _emAllCharsHandler :: [AllCharsHandler a]
-    , _emTickHandlers :: [a]
     } deriving (Generic, Functor)
 
 prettyKeyEvent :: KeyEvent -> InputDoc
@@ -166,25 +164,23 @@ emDocs f EventMap{..} =
     <*> (Lens.traverse .> cgDocs) f _emCharGroupHandlers
     <*> pure _emCharGroupChars
     <*> (Lens.traverse .> chDocs) f _emAllCharsHandler
-    <*> pure _emTickHandlers
 
 Lens.makeLenses ''EventMap
 
 instance Monoid (EventMap a) where
-    mempty = EventMap mempty mempty mempty mempty mempty mempty
+    mempty = EventMap mempty mempty mempty mempty mempty
     mappend = overrides
 
 overrides :: EventMap a -> EventMap a -> EventMap a
 overrides
-    x@(EventMap xMap xDropHandlers xCharGroups xChars xMAllChars xTicks)
-    (EventMap yMap yDropHandlers yCharGroups yChars yMAllChars yTicks) =
+    x@(EventMap xMap xDropHandlers xCharGroups xChars xMAllChars)
+    (EventMap yMap yDropHandlers yCharGroups yChars yMAllChars) =
     EventMap
     (xMap `mappend` filteredYMap)
     (xDropHandlers ++ yDropHandlers)
     (xCharGroups ++ filteredYCharGroups)
     (xChars `mappend` yChars)
     (xMAllChars ++ yMAllChars)
-    (xTicks ++ yTicks)
     where
         filteredYMap = filterByKey (not . isKeyConflict) yMap
         isKeyConflict (KeyEvent _ (ModKey mods key))
@@ -252,7 +248,7 @@ lookup getClipboard (Events.EventKey event) eventMap
     | Just res <- lookupAllCharHandler allCharHandlers event = pure (Just res)
     | otherwise = pure Nothing
     where
-        EventMap dict _dropHandlers charGroups _ allCharHandlers _tick = eventMap
+        EventMap dict _dropHandlers charGroups _ allCharHandlers = eventMap
 lookup _ _ _ = pure Nothing
 
 lookupKeyMap ::
@@ -332,6 +328,3 @@ dropEventMap iDoc oDoc handler =
 pasteOnKey :: ModKey -> Doc -> (Clipboard -> a) -> EventMap a
 pasteOnKey key doc handler =
     keyEventMapH (KeyEvent GLFW.KeyState'Pressed key) doc (WantsClipboard handler)
-
-tickHandler :: a -> EventMap a
-tickHandler x = mempty { _emTickHandlers = [x] }

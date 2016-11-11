@@ -7,7 +7,7 @@ module Graphics.UI.Bottle.Main
 import           Control.Applicative (liftA2)
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
-import           Control.Monad (when, unless)
+import           Control.Monad (when)
 import           Control.Monad.IO.Class (MonadIO(..))
 import           Data.IORef
 import           Data.MRUMemo (memoIO)
@@ -84,17 +84,12 @@ newLooper =
                 do
                     anyUpdate <- widgetTickHandler
                     when anyUpdate newWidget
-                    widget <- getWidget size
-                    EventResult runInMainThread tickResults <-
-                        sequenceA (widget ^. Widget.eventMap . E.emTickHandlers)
-                        ^. m
-                    unless (null tickResults) newWidget
                     return MainAnim.EventResult
                         { MainAnim.erAnimIdMapping =
-                            case (tickResults, anyUpdate) of
-                            ([], False) -> Nothing
-                            _ -> Just . mconcat $ map (^. Widget.eAnimIdMapping) tickResults
-                        , MainAnim.erExecuteInMainThread = runInMainThread
+                            -- TODO: nicer way to communicate whether widget
+                            -- requires updating?
+                            if anyUpdate then Just mempty else Nothing
+                        , MainAnim.erExecuteInMainThread = return ()
                         }
             , MainAnim.eventHandler = \event ->
                 do
