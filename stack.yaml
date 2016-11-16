@@ -3,27 +3,35 @@ packages:
 - location:
     git: https://github.com/lamdu/lamdu-calculus
     commit: f54abe6f1f9b1eb7923e442fa11f3cf16ad5cfcb
+  extra-dep: True
 - location:
     git: https://github.com/lamdu/Algorithm-W-Step-By-Step
     commit: 6c14686a41b7ea3ad492b2f6573893450dca8e60
+  extra-dep: True
 - location:
     git: https://github.com/lamdu/graphics-drawingcombinators
     commit: c88a8c2b6d952315dc371f63b37622e7ecb56014
+  extra-dep: True
 - location:
     git: https://github.com/lamdu/freetype2
     commit: b6b3f82b9f8acb925d8f36ecc1520832ad256444
+  extra-dep: True
 - location:
     git: https://github.com/lamdu/bindings-freetype-gl
     commit: 839c7e00a7f48b33f13b7ce7914e713e4e2261ad
+  extra-dep: True
 - location:
     git: https://github.com/lamdu/FreetypeGL
     commit: 585671664f9afb1dd306b0439007a0d5e9fe995a
+  extra-dep: True
 - location:
     git: https://github.com/lamdu/language-ecmascript
     commit: 1c75cfd064faec8c564c205702227bb44822e296
+  extra-dep: True
 - location:
     git: https://github.com/lamdu/nodejs-exec
     commit: cb9831476fa66b65c0d40537d55af85fd03b00c7
+  extra-dep: True
 extra-deps:
 - bitmap-0.0.2
 - bitmap-opengl-0.0.1.5
