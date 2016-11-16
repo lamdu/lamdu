@@ -28,7 +28,7 @@ memoIO act =
 
 -- | Memoize the given function with a single most-recently-used value
 memoIOPure
-    :: (Show a, Eq a)
+    :: Eq a
     => (a -> b)           -- ^Function to memoize
     -> IO (a -> IO b)
 memoIOPure f =
@@ -44,8 +44,9 @@ memoIOPure f =
                     | otherwise -> callOrig
 
 -- | The pure version of 'memoIO'.
-memo :: (Show a, Eq a)
-          => (a -> b)           -- ^Function to memoize
-          -> a -> b
+memo
+    :: Eq a
+    => (a -> b)           -- ^Function to memoize
+    -> a -> b
 memo f = let f' = unsafePerformIO (memoIOPure f)
          in unsafePerformIO . f'

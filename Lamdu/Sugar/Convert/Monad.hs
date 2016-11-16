@@ -123,13 +123,13 @@ typeProtectedSetToVal =
                         Nothing -> DataOps.setToWrapper valI dest
         return setToVal
 
-run :: Monad m => Context m -> ConvertM m a -> T m a
+run :: Context m -> ConvertM m a -> T m a
 run ctx (ConvertM action) = runReaderT action ctx
 
 readContext :: Monad m => ConvertM m (Context m)
 readContext = ConvertM Reader.ask
 
-local :: Monad m => (Context m -> Context m) -> ConvertM m a -> ConvertM m a
+local :: (Context m -> Context m) -> ConvertM m a -> ConvertM m a
 local f (ConvertM act) = ConvertM $ Reader.local f act
 
 liftTransaction :: Monad m => T m a -> ConvertM m a

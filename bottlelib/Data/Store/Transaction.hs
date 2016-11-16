@@ -158,7 +158,7 @@ deleteIRef = delete . IRef.uuid
 readIRef :: (Monad m, Binary a) => IRef m a -> Transaction m a
 readIRef = readUUID . IRef.uuid
 
-irefExists :: (Monad m, Binary a) => IRef m a -> Transaction m Bool
+irefExists :: Monad m => IRef m a -> Transaction m Bool
 irefExists = uuidExists . IRef.uuid
 
 writeIRef :: (Monad m, Binary a) => IRef m a -> a -> Transaction m ()

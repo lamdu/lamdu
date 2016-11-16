@@ -60,7 +60,7 @@ mkLetIActions topLevelProp redex =
         V.Lam param body = redex ^. Redex.lam
 
 localNewExtractDestPos ::
-    Monad m => Val (Input.Payload m x) -> ConvertM m a -> ConvertM m a
+    Val (Input.Payload m x) -> ConvertM m a -> ConvertM m a
 localNewExtractDestPos val =
     ConvertM.scScopeInfo . ConvertM.siOuter .~
     ConvertM.OuterScopeInfo
@@ -69,8 +69,7 @@ localNewExtractDestPos val =
     }
     & ConvertM.local
 
-localVarsUnderExtractDestPos ::
-    Monad m => [V.Var] -> ConvertM m a -> ConvertM m a
+localVarsUnderExtractDestPos :: [V.Var] -> ConvertM m a -> ConvertM m a
 localVarsUnderExtractDestPos vars =
     ConvertM.scScopeInfo . ConvertM.siOuter . ConvertM.osiVarsUnderPos <>~ vars
     & ConvertM.local
@@ -228,7 +227,7 @@ useNormalLambda paramUUIDs binder =
             Lens.failing (_BodyHole . check)
             (_BodyLam . lamBinder . bParams . SugarLens.binderNamedParams .
                 check)
-        check :: Lens.Fold a ()
+        check :: Lens.Contravariant f => (() -> f ()) -> x -> f x
         check = const () & Lens.to
 
 allParamsUsed :: Set UUID -> Binder UUID m (Expression UUID m a) -> Bool

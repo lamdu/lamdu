@@ -274,7 +274,7 @@ tagString tag@(T.Tag ident) = readName tag ("tag" ++ identHex ident & return)
 tagIdent :: Monad m => T.Tag -> M m (JSS.Id ())
 tagIdent = fmap JS.ident . tagString
 
-local :: Monad m => (Env m -> Env m) -> M m a -> M m a
+local :: (Env m -> Env m) -> M m a -> M m a
 local f (M act) = M (RWS.local f act)
 
 withLocalVar :: Monad m => V.Var -> M m a -> M m (LocalVarName, a)

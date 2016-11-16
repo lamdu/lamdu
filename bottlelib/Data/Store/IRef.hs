@@ -21,5 +21,5 @@ newtype IRef (m :: * -> *) a = IRef
 unsafeFromUUID :: UUID -> IRef m a
 unsafeFromUUID = IRef
 
-anchor :: Binary a => String -> IRef m a
+anchor :: String -> IRef m a
 anchor = unsafeFromUUID . fromSBS16 . SBS8.pack . rightPad 16 '\x00'

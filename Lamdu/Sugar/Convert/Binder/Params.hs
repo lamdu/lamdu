@@ -308,7 +308,7 @@ mkParamInfo param fp =
     & Map.singleton (fpTag fp)
 
 convertRecordParams ::
-    (Monad m, Monoid a) =>
+    Monad m =>
     BinderKind m -> [FieldParam] ->
     V.Lam (Val (Input.Payload m a)) -> Input.Payload m a ->
     ConventionalParams m

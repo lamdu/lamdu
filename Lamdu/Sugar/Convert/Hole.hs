@@ -141,7 +141,6 @@ mkHoleSuggesteds sugarContext mInjectedArg exprPl stored =
     <&> mkHoleOption sugarContext mInjectedArg exprPl stored
 
 addSuggestedOptions ::
-    Monad m =>
     [HoleOption UUID m] -> [HoleOption UUID m] -> [HoleOption UUID m]
 addSuggestedOptions suggesteds options
     | null nonTrivial = options
@@ -282,7 +281,7 @@ sugar sugarContext exprPl val =
             }
 
 mkHole ::
-    (Monad m, Monoid a) =>
+    Monad m =>
     Maybe (Val (Input.Payload m a)) ->
     Input.Payload m a -> ConvertM m (Hole UUID m (ExpressionU m a))
 mkHole mInjectedArg exprPl = do
@@ -292,7 +291,7 @@ mkHole mInjectedArg exprPl = do
         , _holeMArg = Nothing
         }
 
-getLocalScopeGetVars :: Monad m => ConvertM.Context m -> V.Var -> [Val ()]
+getLocalScopeGetVars :: ConvertM.Context m -> V.Var -> [Val ()]
 getLocalScopeGetVars sugarContext par
     | sugarContext ^. ConvertM.scScopeInfo . ConvertM.siNullParams . Lens.contains par = []
     | otherwise = map mkFieldParam fieldTags ++ [var]

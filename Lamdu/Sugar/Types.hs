@@ -442,7 +442,7 @@ instance Show info => Show (FuncParam info) where
                                               " " ++ show _fpAnnotation ++ " )"
 
 
-instance Show expr => Show (Body name m expr) where
+instance Show (Body name m expr) where
     show (BodyLam _) = "TODO show lam"
     show BodyHole {} = "Hole"
     show BodyLiteral {} = "Literal"

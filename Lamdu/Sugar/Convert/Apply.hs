@@ -119,7 +119,7 @@ convertLabeled funcS argS argI exprPl =
         (fieldsI, recordTail) = RecordVal.unpack argI
 
 convertPrefix ::
-    (Monad m, Monoid a) =>
+    Monad m =>
     ExpressionU m a -> ExpressionU m a ->
     Input.Payload m a -> ConvertM m (ExpressionU m a)
 convertPrefix funcS argS applyPl =
