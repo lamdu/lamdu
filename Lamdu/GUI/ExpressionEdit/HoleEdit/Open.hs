@@ -114,15 +114,12 @@ resultSuffix = suffixed ["result suffix"]
 
 afterPick ::
     Monad m =>
-    HoleInfo m -> Widget.Id -> Maybe Sugar.EntityId ->
-    Sugar.PickedResult -> T m PickedResult
-afterPick holeInfo resultId mFirstHoleInside pr =
+    HoleInfo m -> Maybe Sugar.EntityId -> Sugar.PickedResult -> T m PickedResult
+afterPick holeInfo mFirstHoleInside pr =
     do
         Property.set (hiState holeInfo) HoleState.emptyState
         result
             & pickedEventResult . Widget.eCursor .~ Monoid.Last (Just cursorId)
-            & pickedEventResult . Widget.eAnimIdMapping %~
-              mappend (Monoid.Endo obliterateOtherResults)
             & return
     where
         result = eventResultOfPickedResult pr
@@ -132,13 +129,6 @@ afterPick holeInfo resultId mFirstHoleInside pr =
             & result ^. pickedIdTranslations
         myHoleId =
             WidgetIds.fromEntityId $ hiEntityId holeInfo
-        obliterateOtherResults animId =
-            case animId ^? resultSuffix of
-            Nothing -> animId
-            Just unsuffixed
-                | Lens.has (suffixed (Widget.toAnimId resultId)) unsuffixed ->
-                      animId
-                | otherwise -> "obliterated" : animId
 
 fixNumWithDotEventMap ::
     Monad m =>
@@ -197,7 +187,7 @@ makeShownResult holeInfo result =
                   res
               , srPick =
                   res ^. Sugar.holeResultPick
-                  >>= afterPick holeInfo (rId result) mFirstHoleInside
+                  >>= afterPick holeInfo mFirstHoleInside
               }
             )
 
