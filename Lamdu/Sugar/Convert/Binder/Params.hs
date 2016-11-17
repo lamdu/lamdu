@@ -555,7 +555,7 @@ convertLamParams lambda lambdaPl =
         lambdaProp = lambdaPl ^. Input.stored
 
 convertNonEmptyParams ::
-    (Monad m, Monoid a) =>
+    Monad m =>
     BinderKind m -> V.Lam (Val (Input.Payload m a)) -> Input.Payload m a ->
     ConvertM m (ConventionalParams m)
 convertNonEmptyParams binderKind lambda lambdaPl =

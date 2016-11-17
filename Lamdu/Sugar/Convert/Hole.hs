@@ -76,7 +76,7 @@ convert exprPl =
     <&> rPayload . plActions . setToHole .~ AlreadyAHole
 
 convertCommon ::
-    (Monad m, Monoid a) =>
+    Monad m =>
     Maybe (Val (Input.Payload m a)) -> Input.Payload m a -> ConvertM m (ExpressionU m a)
 convertCommon mInjectedArg exprPl =
     mkHole mInjectedArg exprPl
