@@ -116,6 +116,7 @@ Library
                   , lens >= 4.1
                   , leveldb-haskell >= 0.6
                   , random >= 1.0.0
+                  , safe-exceptions >= 0.1.4
                   , split >= 0.1
                   , stm
                   , template-haskell

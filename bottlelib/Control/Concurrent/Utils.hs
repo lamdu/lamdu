@@ -1,8 +1,9 @@
 module Control.Concurrent.Utils
-    ( forkIOUnmasked, runAfter, asyncThrowTo, forwardExceptions, withForkedIO
+    ( forkIOUnmasked, runAfter, asyncThrowTo, forwardSynchronuousExceptions, withForkedIO
     ) where
 
 import           Control.Concurrent (ThreadId, forkIOWithUnmask, threadDelay, myThreadId)
+import qualified Control.Exception.Safe as ES
 import qualified Control.Exception as E
 import           Control.Lens.Operators
 import           Control.Monad (void)
@@ -20,11 +21,11 @@ runAfter delay action =
 asyncThrowTo :: E.Exception e => ThreadId -> e -> IO ()
 asyncThrowTo threadId exc = E.throwTo threadId exc & forkIOUnmasked & void
 
-forwardExceptions :: IO a -> IO (IO a)
-forwardExceptions action =
+forwardSynchronuousExceptions :: IO a -> IO (IO a)
+forwardSynchronuousExceptions action =
     do
         selfId <- myThreadId
-        return $ action `E.catch` \exc@E.SomeException{} ->
+        return $ action `ES.catch` \exc@E.SomeException{} ->
             do
                 throwerThread <- myThreadId
                 show throwerThread ++ " forwarding exception to "

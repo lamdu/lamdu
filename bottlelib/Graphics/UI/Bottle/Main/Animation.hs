@@ -6,7 +6,7 @@ module Graphics.UI.Bottle.Main.Animation
     ) where
 
 import           Control.Concurrent.STM.TVar (TVar, newTVarIO, readTVar, writeTVar, modifyTVar, swapTVar)
-import           Control.Concurrent.Utils (forwardExceptions, withForkedIO)
+import           Control.Concurrent.Utils (forwardSynchronuousExceptions, withForkedIO)
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Monad (when, forever)
@@ -224,5 +224,5 @@ newLooper =
                         }
                     <*> newTVarIO (return ())
                 eventsThread <-
-                    forwardExceptions (eventHandlerThread tvars getAnimationConfig animHandlers)
+                    forwardSynchronuousExceptions (eventHandlerThread tvars getAnimationConfig animHandlers)
                 withForkedIO eventsThread (animThread tvars win)
