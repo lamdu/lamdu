@@ -181,7 +181,7 @@ mkCursorRect Style{..} cursor str = Rect cursorPos cursorSize
         cursorPos = Vector2 cursorPosX cursorPosY
         cursorSize = Vector2 _sCursorWidth lineHeight
         cursorPosX =
-            TextView.drawTextAsSingleLetters _sTextViewStyle (last beforeCursorLines) ^.
+            TextView.drawText _sTextViewStyle (last beforeCursorLines) ^.
             TextView.renderedTextSize . Lens.to advance . _1
         cursorPosY = lineHeight * (genericLength beforeCursorLines - 1)
 
