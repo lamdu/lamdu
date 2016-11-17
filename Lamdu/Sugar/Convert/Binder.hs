@@ -222,7 +222,7 @@ useNormalLambda paramUUIDs binder =
     , not . allParamsUsed paramUUIDs
     ]
     where
-        forbiddenLightLamSubExprs :: Lens.Fold (Body name m a) ()
+        forbiddenLightLamSubExprs :: Lens.Traversal' (Body name m a) ()
         forbiddenLightLamSubExprs =
             Lens.failing (_BodyHole . Lens.united)
             (_BodyLam . lamBinder . bParams . SugarLens.binderNamedParams .
