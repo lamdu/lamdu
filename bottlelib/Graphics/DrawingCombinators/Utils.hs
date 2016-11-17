@@ -74,7 +74,11 @@ textWidth font str =
         adv = Draw.textAdvance font str
 
 textSize :: Draw.Font -> String -> TextSize (Vector2 Draw.R)
-textSize font str = (`Vector2` Draw.fontHeight font) <$> textWidth font str
+textSize font str =
+    (`Vector2` height) <$> textWidth font str
+    where
+        height = Draw.fontHeight font * fromIntegral numLines
+        numLines = length (filter (== '\n') str) + 1
 
 {-# NOINLINE drawText #-}
 drawText :: Draw.Font -> Draw.TextAttrs -> String -> Image

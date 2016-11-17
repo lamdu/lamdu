@@ -128,12 +128,7 @@ letterRects Style{..} text =
                     Rect (Vector2 (advance xpos) 0) (bounding size)
 
 drawTextAsLines :: Style -> String -> RenderedText (AnimId -> Anim.Frame)
-drawTextAsLines style text =
-    splitWhen (== '\n') text ^@.. Lens.traversed
-    <&> _1 %~ (,) ("Line"::String)
-    <&> _2 %~ fontRender style
-    <&> nestedFrame
-    & joinLines
+drawTextAsLines style text = nestedFrame ("text", fontRender style text)
 
 make :: Style -> String -> AnimId -> View
 make style text animId = View (bounding textSize) (frame animId)
