@@ -13,16 +13,11 @@ import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Lens.Tuple
 import qualified Data.Binary.Utils as BinUtils
-import qualified Data.ByteString.Char8 as SBS8
 import           Data.Char (isSpace)
 import           Data.List (genericLength)
 import           Data.List.Split (splitWhen)
 import           Data.List.Utils (minimumOn)
-import qualified Data.Map as Map
-import           Data.Maybe (mapMaybe)
 import           Data.Monoid ((<>))
-import qualified Data.Monoid as Monoid
-import qualified Data.Set as Set
 import           Data.Vector.Vector2 (Vector2(..))
 import qualified Graphics.DrawingCombinators as Draw
 import           Graphics.DrawingCombinators.Utils (TextSize(..))
@@ -138,38 +133,12 @@ makeFocusable ::
 makeFocusable style str myId =
     Widget.mEnter .~ Just (enterFromDirection style str myId)
 
-readM :: Read a => String -> Maybe a
-readM str =
-    case reads str of
-    [(x, "")] -> Just x
-    _ -> Nothing
-
 eventResult ::
-    Widget.Id -> [(Maybe Int, Char)] -> [(Maybe Int, Char)] ->
-    Int -> (String, Widget.EventResult)
-eventResult myId strWithIds newText newCursor =
-    (map snd newText,
-        Widget.EventResult {
-            Widget._eCursor = Monoid.Last . Just $ encodeCursor myId newCursor,
-            Widget._eAnimIdMapping = Monoid.Endo mapping
-        })
-    where
-        myAnimId = Widget.toAnimId myId
-        mapping animId = maybe animId (Anim.joinId myAnimId . translateId) $ Anim.subId myAnimId animId
-        translateId [subId] = (:[]) . maybe subId (SBS8.pack . show) $ (`Map.lookup` dict) =<< readM (SBS8.unpack subId)
-        translateId x = x
-        dict = mappend movedDict deletedDict
-        movedDict =
-            map fst newText ^@.. Lens.traversed
-            <&> posMapping
-            & (^.. Lens.traversed . Lens._Just)
-            & Map.fromList
-        deletedDict = Map.fromList . map (flip (,) (-1)) $ Set.toList deletedKeys
-        posMapping (_, Nothing) = Nothing
-        posMapping (newPos, Just oldPos) = Just (oldPos, newPos)
-        deletedKeys =
-            Set.fromList (mapMaybe fst strWithIds) `Set.difference`
-            Set.fromList (mapMaybe fst newText)
+    Widget.Id -> String -> Int -> (String, Widget.EventResult)
+eventResult myId newText newCursor =
+    ( newText
+    , encodeCursor myId newCursor & Widget.eventResultFromCursor
+    )
 
 -- | Note: maxLines prevents the *user* from exceeding it, not the
 -- | given text...
@@ -191,11 +160,11 @@ makeFocused cursor Style{..} str myId =
             }
         reqSize = Vector2 (_sCursorWidth + tlWidth) tlHeight
         myAnimId = Widget.toAnimId myId
-        img = cursorTranslate Style{..} $ frameGen myAnimId
+        img = frameGen myAnimId & cursorTranslate Style{..}
         displayStr = makeDisplayStr _sEmptyFocusedString str
         Vector2 tlWidth tlHeight = bounding renderedSize
         (TextView.RenderedText renderedSize frameGen) =
-            TextView.drawTextAsSingleLetters _sTextViewStyle displayStr
+            TextView.drawText _sTextViewStyle displayStr
 
         cursorRect = mkCursorRect Style{..} cursor str
         cursorFrame =
@@ -269,7 +238,7 @@ eventMap cursor str displayStr myId =
         | cursor > 0 ],
 
         let swapPoint = min (textLength - 2) (cursor - 1)
-            (beforeSwap, x:y:afterSwap) = splitAt swapPoint strWithIds
+            (beforeSwap, x:y:afterSwap) = splitAt swapPoint str
             swapLetters = eventRes (beforeSwap ++ y:x:afterSwap) $ min textLength (cursor + 1)
 
         in
@@ -317,7 +286,7 @@ eventMap cursor str displayStr myId =
         deleteDoc = editDoc . ("Delete" :)
         insertDoc = editDoc . ("Insert" :)
         moveDoc = E.Doc . ("Navigation" :) . ("Move" :)
-        splitLines = splitWhen ((== '\n') . snd)
+        splitLines = splitWhen (== '\n')
         linesBefore = reverse (splitLines before)
         linesAfter = splitLines after
         prevLine = linesBefore !! 1
@@ -327,21 +296,22 @@ eventMap cursor str displayStr myId =
         cursorX = length curLineBefore
         cursorY = length linesBefore - 1
 
-        eventRes = eventResult myId strWithIds
-        moveAbsolute a = eventRes strWithIds . max 0 $ min (length str) a
+        eventRes = eventResult myId
+        moveAbsolute a = eventRes str . max 0 $ min (length str) a
         moveRelative d = moveAbsolute (cursor + d)
-        backDelete n = eventRes (take (cursor-n) strWithIds ++ drop cursor strWithIds) (cursor-n)
+        backDelete n = eventRes (take (cursor-n) str ++ drop cursor str) (cursor-n)
         delete n = eventRes (before ++ drop n after) cursor
-        insert l = eventRes str' cursor'
+        insert l =
+            eventRes str' cursor'
             where
                 cursor' = cursor + length l
-                str' = concat [before, map ((,) Nothing) l, after]
+                str' = concat [before, l, after]
 
-        backDeleteWord = backDelete . length . tillEndOfWord . reverse $ map snd before
-        deleteWord = delete . length . tillEndOfWord $ map snd after
+        backDeleteWord = backDelete . length . tillEndOfWord $ reverse before
+        deleteWord = delete . length $ tillEndOfWord after
 
-        backMoveWord = moveRelative . negate . length . tillEndOfWord . reverse $ map snd before
-        moveWord = moveRelative . length . tillEndOfWord $ map snd after
+        backMoveWord = moveRelative . negate . length . tillEndOfWord $ reverse before
+        moveWord = moveRelative . length $ tillEndOfWord after
 
         keys = flip E.keyPresses
 
@@ -352,8 +322,7 @@ eventMap cursor str displayStr myId =
         endKeys = [noMods GLFW.Key'End, ctrl GLFW.Key'E]
         textLength = length str
         lineCount = length $ splitWhen (== '\n') displayStr
-        strWithIds = str ^@.. Lens.traversed <&> _1 %~ Just
-        (before, after) = splitAt cursor strWithIds
+        (before, after) = splitAt cursor str
 
 make ::
     Style -> String -> Widget.Id -> Widget.Env ->

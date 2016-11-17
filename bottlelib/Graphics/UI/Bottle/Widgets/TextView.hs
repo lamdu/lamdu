@@ -7,7 +7,7 @@ module Graphics.UI.Bottle.Widgets.TextView
     , make, makeWidget
     , label
     , RenderedText(..), renderedTextSize
-    , drawTextAsSingleLetters, drawTextAsLines
+    , drawTextAsSingleLetters, drawText
     , letterRects
     ) where
 
@@ -86,19 +86,22 @@ joinLines =
         vertical = _1 .~ 0
 
 nestedFrame ::
-    Show a => (a, RenderedText (Draw.Image ())) -> RenderedText (AnimId -> Anim.Frame)
-nestedFrame (i, RenderedText size img) =
+    Show a =>
+    Style ->
+    (a, RenderedText (Draw.Image ())) -> RenderedText (AnimId -> Anim.Frame)
+nestedFrame style (i, RenderedText size img) =
     RenderedText size draw
     where
         draw animId =
-            Anim.sizedFrame (Anim.augmentId animId i) (bounding size) img
+            Anim.sizedFrame (Anim.augmentId animId i) anchorSize img
+        anchorSize = pure (lineHeight style)
 
 drawTextAsSingleLetters :: Style -> String -> RenderedText (AnimId -> Anim.Frame)
 drawTextAsSingleLetters style text =
     text ^@.. Lens.traversed
     & splitWhen ((== '\n') . snd)
     <&> Lens.mapped . _2 %~ renderLetter
-    <&> Lens.mapped %~ nestedFrame
+    <&> Lens.mapped %~ nestedFrame style
     <&> drawMany horizontal
     <&> renderedTextSize . Lens.mapped . _2 %~ max minLineSize
     & joinLines
@@ -127,13 +130,14 @@ letterRects Style{..} text =
                 makeLetterRect size xpos =
                     Rect (Vector2 (advance xpos) 0) (bounding size)
 
-drawTextAsLines :: Style -> String -> RenderedText (AnimId -> Anim.Frame)
-drawTextAsLines style text = nestedFrame ("text", fontRender style text)
+drawText :: Style -> String -> RenderedText (AnimId -> Anim.Frame)
+drawText style text = nestedFrame style ("text", fontRender style text)
 
 make :: Style -> String -> AnimId -> View
-make style text animId = View (bounding textSize) (frame animId)
+make style text animId =
+    View (bounding textSize) (frame animId)
     where
-        RenderedText textSize frame = drawTextAsLines style text
+        RenderedText textSize frame = drawText style text
 
 makeWidget :: Style -> String -> AnimId -> Widget a
 makeWidget style text = Widget.fromView . make style text
