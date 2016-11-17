@@ -224,11 +224,9 @@ useNormalLambda paramUUIDs binder =
     where
         forbiddenLightLamSubExprs :: Lens.Fold (Body name m a) ()
         forbiddenLightLamSubExprs =
-            Lens.failing (_BodyHole . check)
+            Lens.failing (_BodyHole . Lens.united)
             (_BodyLam . lamBinder . bParams . SugarLens.binderNamedParams .
-                check)
-        check :: Lens.Contravariant f => (() -> f ()) -> x -> f x
-        check = const () & Lens.to
+             Lens.united)
 
 allParamsUsed :: Set UUID -> Binder UUID m (Expression UUID m a) -> Bool
 allParamsUsed paramUUIDs binder =
