@@ -26,6 +26,11 @@ forwardExceptions action =
         selfId <- myThreadId
         return $ action `E.catch` \exc@E.SomeException{} ->
             do
+                throwerThread <- myThreadId
+                show throwerThread ++ " forwarding exception to "
+                    ++ show selfId ++ ":"
+                    & putStrLn
+                print exc
                 asyncThrowTo selfId exc
                 E.throwIO E.ThreadKilled
 
