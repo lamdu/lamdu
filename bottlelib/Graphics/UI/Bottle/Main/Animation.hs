@@ -129,6 +129,10 @@ eventHandlerThread tvars getAnimationConfig animHandlers =
             (_, mMapping) ->
                 do
                     destFrame <- makeFrame handlers
+                    -- Force destFrame so that we don't get unknown computations
+                    -- happening inside STM.atomically modifying the state var.
+                    -- Without this we may get nested STM.atomically errors.
+                    destFrame `seq` return ()
                     AnimConfig timePeriod ratio <- getAnimationConfig
                     curTime <- getCurrentTime
                     let timeRemaining =
