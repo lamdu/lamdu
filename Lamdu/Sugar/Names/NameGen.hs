@@ -23,7 +23,7 @@ data NameGen g = NameGen
     }
 Lens.makeLenses ''NameGen
 
-initial :: Ord g => NameGen g
+initial :: NameGen g
 initial =
     NameGen indepNames indepFuncNames Map.empty
     where
