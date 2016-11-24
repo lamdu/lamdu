@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, RecordWildCards, OverloadedStrings, TemplateHaskell #-}
+{-# LANGUAGE NoImplicitPrelude, RecordWildCards, OverloadedStrings, TemplateHaskell, ViewPatterns #-}
 module Graphics.UI.Bottle.Widgets.TextEdit
     ( Cursor
     , Style(..)
@@ -15,9 +15,10 @@ import           Control.Lens.Tuple
 import qualified Data.Binary.Utils as BinUtils
 import           Data.Char (isSpace)
 import           Data.List (genericLength)
-import           Data.List.Split (splitWhen)
 import           Data.List.Utils (minimumOn)
 import           Data.Monoid ((<>))
+import           Data.Text (Text)
+import qualified Data.Text as Text
 import           Data.Vector.Vector2 (Vector2(..))
 import qualified Graphics.DrawingCombinators as Draw
 import           Graphics.DrawingCombinators.Utils (TextSize(..))
@@ -41,8 +42,8 @@ type Cursor = Int
 data Style = Style
     { _sCursorColor :: Draw.Color
     , _sCursorWidth :: Widget.R
-    , _sEmptyUnfocusedString :: String
-    , _sEmptyFocusedString :: String
+    , _sEmptyUnfocusedString :: Text
+    , _sEmptyFocusedString :: Text
     , _sTextViewStyle :: TextView.Style
     }
 Lens.makeLenses ''Style
@@ -54,13 +55,13 @@ defaultCursorColor = Draw.Color 0 1 0 1
 defaultCursorWidth :: Widget.R
 defaultCursorWidth = 4
 
-tillEndOfWord :: String -> String
-tillEndOfWord xs = spaces ++ nonSpaces
+tillEndOfWord :: Text -> Text
+tillEndOfWord xs = spaces <> nonSpaces
     where
-        spaces = takeWhile isSpace xs
-        nonSpaces = takeWhile (not . isSpace) . dropWhile isSpace $ xs
+        spaces = Text.takeWhile isSpace xs
+        nonSpaces = Text.dropWhile isSpace xs & Text.takeWhile (not . isSpace)
 
-makeDisplayStr :: String -> String -> String
+makeDisplayStr :: Text -> Text -> Text
 makeDisplayStr empty ""  = empty
 makeDisplayStr _     str = str
 
@@ -76,7 +77,7 @@ rightSideOfRect rect =
     & Rect.left .~ rect ^. Rect.right
     & Rect.width .~ 0
 
-cursorRects :: TextView.Style -> String -> [Rect]
+cursorRects :: TextView.Style -> Text -> [Rect]
 cursorRects style str =
     concat .
     -- A bit ugly: letterRects returns rects for all but newlines, and
@@ -91,8 +92,7 @@ cursorRects style str =
         addFirstCursor y = (Rect (Vector2 0 y) (Vector2 0 lineHeight) :)
         lineHeight = TextView.lineHeight style
 
-makeUnfocused ::
-    Style -> String -> Widget.Id -> Widget (String, Widget.EventResult)
+makeUnfocused :: Style -> Text -> Widget.Id -> Widget (Text, Widget.EventResult)
 makeUnfocused Style{..} str myId =
     TextView.makeWidget _sTextViewStyle displayStr animId
     & Widget.animFrame %~ cursorTranslate Style{..}
@@ -107,14 +107,14 @@ minimumIndex :: Ord a => [a] -> Int
 minimumIndex xs =
     xs ^@.. Lens.traversed & minimumOn snd & fst
 
-cursorNearRect :: TextView.Style -> String -> Rect -> Int
+cursorNearRect :: TextView.Style -> Text -> Rect -> Int
 cursorNearRect style str fromRect =
     cursorRects style str <&> Rect.distance fromRect
     & minimumIndex -- cursorRects(TextView.letterRects) should never return an empty list
 
 enterFromDirection ::
-    Style -> String -> Widget.Id ->
-    Direction.Direction -> Widget.EnterResult (String, Widget.EventResult)
+    Style -> Text -> Widget.Id ->
+    Direction.Direction -> Widget.EnterResult (Text, Widget.EventResult)
 enterFromDirection Style{..} str myId dir =
     Widget.EnterResult cursorRect .
     (,) str . Widget.eventResultFromCursor $
@@ -122,19 +122,18 @@ enterFromDirection Style{..} str myId dir =
     where
         cursor =
             case dir of
-            Direction.Outside -> length str
+            Direction.Outside -> Text.length str
             Direction.PrevFocalArea rect -> cursorNearRect _sTextViewStyle str rect
             Direction.Point x -> cursorNearRect _sTextViewStyle str $ Rect x 0
         cursorRect = mkCursorRect Style{..} cursor str
 
 makeFocusable ::
-    Style -> String -> Widget.Id ->
-    Widget (String, Widget.EventResult) -> Widget (String, Widget.EventResult)
+    Style -> Text -> Widget.Id ->
+    Widget (Text, Widget.EventResult) -> Widget (Text, Widget.EventResult)
 makeFocusable style str myId =
     Widget.mEnter .~ Just (enterFromDirection style str myId)
 
-eventResult ::
-    Widget.Id -> String -> Int -> (String, Widget.EventResult)
+eventResult :: Widget.Id -> Text -> Int -> (Text, Widget.EventResult)
 eventResult myId newText newCursor =
     ( newText
     , encodeCursor myId newCursor & Widget.eventResultFromCursor
@@ -143,8 +142,8 @@ eventResult myId newText newCursor =
 -- | Note: maxLines prevents the *user* from exceeding it, not the
 -- | given text...
 makeFocused ::
-    Cursor -> Style -> String -> Widget.Id ->
-    Widget (String, Widget.EventResult)
+    Cursor -> Style -> Text -> Widget.Id ->
+    Widget (Text, Widget.EventResult)
 makeFocused cursor Style{..} str myId =
     makeFocusable Style{..} str myId widget
     where
@@ -173,10 +172,10 @@ makeFocused cursor Style{..} str myId =
             & Anim.unitIntoRect cursorRect
             & Anim.layers +~ 2 -- TODO: 2?!
 
-mkCursorRect :: Style -> Int -> String -> Rect
+mkCursorRect :: Style -> Int -> Text -> Rect
 mkCursorRect Style{..} cursor str = Rect cursorPos cursorSize
     where
-        beforeCursorLines = splitWhen (== '\n') $ take cursor str
+        beforeCursorLines = Text.splitOn "\n" $ Text.take cursor str
         lineHeight = TextView.lineHeight _sTextViewStyle
         cursorPos = Vector2 cursorPosX cursorPosY
         cursorSize = Vector2 _sCursorWidth lineHeight
@@ -186,8 +185,8 @@ mkCursorRect Style{..} cursor str = Rect cursorPos cursorSize
         cursorPosY = lineHeight * (genericLength beforeCursorLines - 1)
 
 eventMap ::
-    Int -> String -> String -> Widget.Id ->
-    Widget.EventMap (String, Widget.EventResult)
+    Int -> Text -> Text -> Widget.Id ->
+    Widget.EventMap (Text, Widget.EventResult)
 eventMap cursor str displayStr myId =
     mconcat . concat $ [
         [ keys (moveDoc ["left"]) [noMods GLFW.Key'Left] $
@@ -206,11 +205,13 @@ eventMap cursor str displayStr myId =
         | cursor < textLength ],
 
         [ keys (moveDoc ["up"]) [noMods GLFW.Key'Up] $
-            moveRelative (- cursorX - 1 - length (drop cursorX prevLine))
+            moveRelative (- cursorX - 1 - Text.length (Text.drop cursorX prevLine))
         | cursorY > 0 ],
 
         [ keys (moveDoc ["down"]) [noMods GLFW.Key'Down] $
-            moveRelative (length curLineAfter + 1 + min cursorX (length nextLine))
+            moveRelative
+            (Text.length curLineAfter + 1 +
+             min cursorX (Text.length nextLine))
         | cursorY < lineCount - 1 ],
 
         [ keys (moveDoc ["beginning of line"]) homeKeys $
@@ -218,8 +219,8 @@ eventMap cursor str displayStr myId =
         | cursorX > 0 ],
 
         [ keys (moveDoc ["end of line"]) endKeys $
-            moveRelative (length curLineAfter)
-        | not . null $ curLineAfter ],
+          moveRelative (Text.length curLineAfter)
+        | not . Text.null $ curLineAfter ],
 
         [ keys (moveDoc ["beginning of text"]) homeKeys $
             moveAbsolute 0
@@ -227,7 +228,7 @@ eventMap cursor str displayStr myId =
 
         [ keys (moveDoc ["end of text"]) endKeys $
             moveAbsolute textLength
-        | null curLineAfter && cursor < textLength ],
+        | Text.null curLineAfter && cursor < textLength ],
 
         [ keys (deleteDoc ["backwards"]) [noMods GLFW.Key'Backspace] $
             backDelete 1
@@ -238,8 +239,10 @@ eventMap cursor str displayStr myId =
         | cursor > 0 ],
 
         let swapPoint = min (textLength - 2) (cursor - 1)
-            (beforeSwap, x:y:afterSwap) = splitAt swapPoint str
-            swapLetters = eventRes (beforeSwap ++ y:x:afterSwap) $ min textLength (cursor + 1)
+            (beforeSwap, Text.unpack -> x:y:afterSwap) = Text.splitAt swapPoint str
+            swapLetters =
+                min textLength (cursor + 1)
+                & eventRes (beforeSwap <> Text.pack (y:x:afterSwap))
 
         in
 
@@ -256,20 +259,20 @@ eventMap cursor str displayStr myId =
         | cursor < textLength ],
 
         [ keys (deleteDoc ["till", "end of line"]) [ctrl GLFW.Key'K] $
-            delete (length curLineAfter)
-        | not . null $ curLineAfter ],
+            delete (Text.length curLineAfter)
+        | not . Text.null $ curLineAfter ],
 
         [ keys (deleteDoc ["newline"]) [ctrl GLFW.Key'K] $
             delete 1
-        | null curLineAfter && cursor < textLength ],
+        | Text.null curLineAfter && cursor < textLength ],
 
         [ keys (deleteDoc ["till", "beginning of line"]) [ctrl GLFW.Key'U] $
-            backDelete (length curLineBefore)
-        | not . null $ curLineBefore ],
+            backDelete (Text.length curLineBefore)
+        | not . Text.null $ curLineBefore ],
 
         [ E.filterChars (`notElem` (" \n" :: String)) .
             E.allChars "Character" (insertDoc ["character"]) $
-            insert . (: [])
+            insert . Text.singleton
         ],
 
         [ keys (insertDoc ["Newline"])
@@ -286,32 +289,35 @@ eventMap cursor str displayStr myId =
         deleteDoc = editDoc . ("Delete" :)
         insertDoc = editDoc . ("Insert" :)
         moveDoc = E.Doc . ("Navigation" :) . ("Move" :)
-        splitLines = splitWhen (== '\n')
+        splitLines = Text.splitOn "\n"
         linesBefore = reverse (splitLines before)
         linesAfter = splitLines after
         prevLine = linesBefore !! 1
         nextLine = linesAfter !! 1
         curLineBefore = head linesBefore
         curLineAfter = head linesAfter
-        cursorX = length curLineBefore
+        cursorX = Text.length curLineBefore
         cursorY = length linesBefore - 1
 
         eventRes = eventResult myId
-        moveAbsolute a = eventRes str . max 0 $ min (length str) a
+        moveAbsolute a = eventRes str . max 0 $ min (Text.length str) a
         moveRelative d = moveAbsolute (cursor + d)
-        backDelete n = eventRes (take (cursor-n) str ++ drop cursor str) (cursor-n)
-        delete n = eventRes (before ++ drop n after) cursor
+        backDelete n = eventRes (Text.take (cursor-n) str <> Text.drop cursor str) (cursor-n)
+        delete n = eventRes (before <> Text.drop n after) cursor
         insert l =
             eventRes str' cursor'
             where
-                cursor' = cursor + length l
-                str' = concat [before, l, after]
+                cursor' = cursor + Text.length l
+                str' = mconcat [before, l, after]
 
-        backDeleteWord = backDelete . length . tillEndOfWord $ reverse before
-        deleteWord = delete . length $ tillEndOfWord after
+        backDeleteWord =
+            backDelete . Text.length . tillEndOfWord $ Text.reverse before
+        deleteWord = delete . Text.length $ tillEndOfWord after
 
-        backMoveWord = moveRelative . negate . length . tillEndOfWord $ reverse before
-        moveWord = moveRelative . length $ tillEndOfWord after
+        backMoveWord =
+            moveRelative . negate . Text.length . tillEndOfWord $
+            Text.reverse before
+        moveWord = moveRelative . Text.length $ tillEndOfWord after
 
         keys = flip E.keyPresses
 
@@ -320,13 +326,12 @@ eventMap cursor str displayStr myId =
         alt = ModKey.alt
         homeKeys = [noMods GLFW.Key'Home, ctrl GLFW.Key'A]
         endKeys = [noMods GLFW.Key'End, ctrl GLFW.Key'E]
-        textLength = length str
-        lineCount = length $ splitWhen (== '\n') displayStr
-        (before, after) = splitAt cursor str
+        textLength = Text.length str
+        lineCount = length $ Text.splitOn "\n" displayStr
+        (before, after) = Text.splitAt cursor str
 
 make ::
-    Style -> String -> Widget.Id -> Widget.Env ->
-    Widget (String, Widget.EventResult)
+    Style -> Text -> Widget.Id -> Widget.Env -> Widget (Text, Widget.EventResult)
 make style str myId env =
     makeFunc style str myId
     where
@@ -334,5 +339,5 @@ make style str myId env =
             case Widget.subId myId (env ^. Widget.envCursor) of
             Nothing -> makeUnfocused
             Just suffix -> makeFocused (decodeCursor suffix)
-        decodeCursor [x] = min (length str) $ BinUtils.decodeS x
-        decodeCursor _ = length str
+        decodeCursor [x] = min (Text.length str) $ BinUtils.decodeS x
+        decodeCursor _ = Text.length str

@@ -24,7 +24,6 @@ import qualified Data.HashMap.Strict as HashMap
 import           Data.Map (Map)
 import qualified Data.Map as Map
 import qualified Data.Set as Set
-import           Data.String (IsString(..))
 import           Data.Text (Text)
 import           Data.UUID.Aeson ()
 import           Data.UUID.Types (UUID)
@@ -55,10 +54,10 @@ type TagOrder = Int
 
 data Entity
     = EntityRepl (Val UUID)
-    | EntityDef (Definition (Val UUID) (Anchors.PresentationMode, Maybe String, V.Var))
-    | EntityTag TagOrder (Maybe String) T.Tag
-    | EntityNominal (Maybe String) T.NominalId Nominal
-    | EntityLamVar (Maybe Anchors.ParamList) (Maybe String) UUID V.Var
+    | EntityDef (Definition (Val UUID) (Anchors.PresentationMode, Maybe Text, V.Var))
+    | EntityTag TagOrder (Maybe Text) T.Tag
+    | EntityNominal (Maybe Text) T.NominalId Nominal
+    | EntityLamVar (Maybe Anchors.ParamList) (Maybe Text) UUID V.Var
 
 instance AesonTypes.ToJSON Entity where
     toJSON (EntityRepl val) = encodeRepl val
@@ -148,10 +147,10 @@ decodeIdentMap fromIdent decode json =
             <*> decode v
 
 encodeSquash ::
-    Aeson.ToJSON j => (a -> Bool) -> String -> (a -> j) -> a -> [AesonTypes.Pair]
+    Aeson.ToJSON j => (a -> Bool) -> Text -> (a -> j) -> a -> [AesonTypes.Pair]
 encodeSquash isEmpty name encode val
     | isEmpty val = []
-    | otherwise = [fromString name .= encode val]
+    | otherwise = [name .= encode val]
 
 jsum :: [AesonTypes.Parser a] -> AesonTypes.Parser a
 jsum parsers =
@@ -165,13 +164,11 @@ jsum' = WriterT . jsum . map runWriterT
 type Exhaustive a = WriterT [Text] AesonTypes.Parser a
 type ExhaustiveDecoder a = Aeson.Object -> Exhaustive a
 
-(.:) :: Aeson.FromJSON a => Aeson.Object -> String -> Exhaustive a
+(.:) :: Aeson.FromJSON a => Aeson.Object -> Text -> Exhaustive a
 obj .: name =
     do
-        Writer.tell [tName]
-        lift (obj Aeson..: tName)
-    where
-        tName = fromString name
+        Writer.tell [name]
+        lift (obj Aeson..: name)
 
 withObject :: String -> ExhaustiveDecoder a -> Decoder a
 withObject msg act =
@@ -189,7 +186,7 @@ withObject msg act =
 
 decodeSquashed ::
     (Aeson.FromJSON j, Monoid a) =>
-    String -> (j -> AesonTypes.Parser a) -> ExhaustiveDecoder a
+    Text -> (j -> AesonTypes.Parser a) -> ExhaustiveDecoder a
 decodeSquashed name decode o =
     jsum'
     [ o .: name >>= lift . decode
@@ -469,8 +466,8 @@ encodeRepl val = Aeson.object [ "repl" .= encodeVal val ]
 decodeRepl :: Decoder (Val UUID)
 decodeRepl = withObject "repl" $ \obj -> obj .: "repl" >>= lift . decodeVal
 
-insertField :: Aeson.ToJSON a => String -> a -> Aeson.Object -> Aeson.Object
-insertField k v = HashMap.insert (fromString k) (Aeson.toJSON v)
+insertField :: Aeson.ToJSON a => Text -> a -> Aeson.Object -> Aeson.Object
+insertField k v = HashMap.insert k (Aeson.toJSON v)
 
 encodeNominalType :: Encoder NominalType
 encodeNominalType (NominalType scheme) = encodeScheme scheme
@@ -493,23 +490,23 @@ decodeNominal obj =
     <$> decodeSquashed "typeParams" (decodeIdentMap T.ParamId (fmap T.Var . decodeIdent)) obj
     <*> (obj .: "nomType" >>= lift . decodeNominalType)
 
-encodeNamed :: String -> (a -> Aeson.Object) -> ((Maybe String, Identifier), a) -> Aeson.Object
+encodeNamed :: Text -> (a -> Aeson.Object) -> ((Maybe Text, Identifier), a) -> Aeson.Object
 encodeNamed idAttrName encoder ((mName, ident), x) =
     encoder x
     & insertField idAttrName (encodeIdent ident)
     & maybe id (insertField "name") mName
 
-decodeNamed :: String -> ExhaustiveDecoder a -> ExhaustiveDecoder ((Maybe String, Identifier), a)
+decodeNamed :: Text -> ExhaustiveDecoder a -> ExhaustiveDecoder ((Maybe Text, Identifier), a)
 decodeNamed idAttrName decoder obj =
     (,)
     <$> ( (,)
           <$> optional (obj .: "name")
-          <*> (obj .: fromString idAttrName >>= lift . decodeIdent)
+          <*> (obj .: idAttrName >>= lift . decodeIdent)
         )
     <*> decoder obj
 
 encodeDef ::
-    Encoder (Definition (Val UUID) (Anchors.PresentationMode, Maybe String, V.Var))
+    Encoder (Definition (Val UUID) (Anchors.PresentationMode, Maybe Text, V.Var))
 encodeDef (Definition body (presentationMode, mName, V.Var globalId)) =
     encodeNamed "def" encodeDefBody ((mName, globalId), body)
     & insertField "defPresentationMode" (encodePresentationMode presentationMode)
@@ -518,7 +515,7 @@ encodeDef (Definition body (presentationMode, mName, V.Var globalId)) =
 decodeDef ::
     Decoder
     (Definition (Val UUID)
-     (Anchors.PresentationMode, Maybe String, V.Var))
+     (Anchors.PresentationMode, Maybe Text, V.Var))
 decodeDef =
     withObject "def" $ \obj ->
     do
@@ -532,11 +529,11 @@ encodeTagOrder tagOrder = HashMap.fromList ["tagOrder" .= tagOrder]
 decodeTagOrder :: ExhaustiveDecoder TagOrder
 decodeTagOrder obj = obj .: "tagOrder"
 
-encodeNamedTag :: Encoder (TagOrder, Maybe String, T.Tag)
+encodeNamedTag :: Encoder (TagOrder, Maybe Text, T.Tag)
 encodeNamedTag (tagOrder, mName, T.Tag ident) =
     encodeNamed "tag" encodeTagOrder ((mName, ident), tagOrder) & Aeson.Object
 
-decodeNamedTag :: Decoder (TagOrder, Maybe String, T.Tag)
+decodeNamedTag :: Decoder (TagOrder, Maybe Text, T.Tag)
 decodeNamedTag json =
     do
         ((mName, tag), tagOrder) <-
@@ -570,23 +567,23 @@ decodeLam obj =
         return (lamI, mParamList)
 
 encodeNamedLamVar ::
-    Encoder (Maybe Anchors.ParamList, Maybe String, UUID, V.Var)
+    Encoder (Maybe Anchors.ParamList, Maybe Text, UUID, V.Var)
 encodeNamedLamVar (mParamList, mName, lamI, V.Var ident) =
     encodeNamed "lamVar" encodeLam ((mName, ident), (lamI, mParamList)) & Aeson.Object
 
 decodeNamedLamVar ::
-    Decoder (Maybe Anchors.ParamList, Maybe String, UUID, V.Var)
+    Decoder (Maybe Anchors.ParamList, Maybe Text, UUID, V.Var)
 decodeNamedLamVar json =
     do
         ((mName, ident), (lamI, mParamList)) <-
             withObject "lam" ?? json $ decodeNamed "lamVar" decodeLam
         return (mParamList, mName, lamI, V.Var ident)
 
-encodeNamedNominal :: Encoder ((Maybe String, T.NominalId), Nominal)
+encodeNamedNominal :: Encoder ((Maybe Text, T.NominalId), Nominal)
 encodeNamedNominal ((mName, T.NominalId nomId), nom) =
     encodeNamed "nom" encodeNominal ((mName, nomId), nom) & Aeson.Object
 
-decodeNamedNominal :: Decoder ((Maybe String, T.NominalId), Nominal)
+decodeNamedNominal :: Decoder ((Maybe Text, T.NominalId), Nominal)
 decodeNamedNominal json =
     withObject "nom" (decodeNamed "nom" decodeNominal) json
     <&> _1 . _2 %~ T.NominalId

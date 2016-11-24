@@ -3,8 +3,6 @@ module Lamdu.GUI.VersionControl
     ( make
     ) where
 
-import           Prelude.Compat
-
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Monad.Trans.Class (lift)
@@ -29,6 +27,8 @@ import qualified Lamdu.GUI.VersionControl.Config as VersionControl
 import           Graphics.UI.Bottle.WidgetsEnvT (WidgetEnvT)
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.VersionControl.Actions (Actions(..))
+
+import           Prelude.Compat
 
 branchNameFDConfig :: FocusDelegator.Config
 branchNameFDConfig = FocusDelegator.Config

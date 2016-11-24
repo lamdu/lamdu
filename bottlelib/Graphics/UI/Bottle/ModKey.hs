@@ -1,6 +1,6 @@
 -- | ModKey type: Grouping the modifier keys with the key
 {-# OPTIONS -fno-warn-orphans #-}
-{-# LANGUAGE NoImplicitPrelude, DeriveGeneric #-}
+{-# LANGUAGE NoImplicitPrelude, DeriveGeneric, OverloadedStrings #-}
 module Graphics.UI.Bottle.ModKey
     ( ModKey(..), ctrlMods, altMods, shiftMods, superMods
     , ctrl, alt, shift, super
@@ -12,6 +12,9 @@ import           Prelude.Compat
 
 import           Data.Aeson (ToJSON(..), FromJSON(..))
 import           Data.List (isPrefixOf)
+import           Data.Monoid ((<>))
+import           Data.Text (Text)
+import qualified Data.Text as Text
 import           GHC.Generics (Generic)
 import qualified Graphics.UI.GLFW as GLFW
 import           Graphics.UI.GLFW.Instances ()
@@ -53,16 +56,17 @@ data ModKey = ModKey GLFW.ModifierKeys GLFW.Key
 instance ToJSON ModKey
 instance FromJSON ModKey
 
-prettyKey :: GLFW.Key -> String
+prettyKey :: GLFW.Key -> Text
 prettyKey k
-    | "Key'" `isPrefixOf` show k = drop 4 $ show k
-    | otherwise = show k
+    | "Key'" `isPrefixOf` show k = Text.pack $ drop 4 $ show k
+    | otherwise = Text.pack $ show k
 
-prettyModKeys :: GLFW.ModifierKeys -> String
-prettyModKeys ms = concat $
+prettyModKeys :: GLFW.ModifierKeys -> Text
+prettyModKeys ms =
+    mconcat $
     ["Ctrl+" | GLFW.modifierKeysControl ms] ++
     ["Alt+" | GLFW.modifierKeysAlt ms] ++
     ["Shift+" | GLFW.modifierKeysShift ms]
 
-pretty :: ModKey -> String
-pretty (ModKey ms key) = prettyModKeys ms ++ prettyKey key
+pretty :: ModKey -> Text
+pretty (ModKey ms key) = prettyModKeys ms <> prettyKey key

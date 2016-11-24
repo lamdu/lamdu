@@ -1,5 +1,5 @@
 -- | Initialize a database, populating it with "freshdb.json" if needed
-{-# LANGUAGE NoImplicitPrelude #-}
+{-# LANGUAGE NoImplicitPrelude, OverloadedStrings #-}
 module Lamdu.Data.DbInit
     ( withDB
     ) where
@@ -14,9 +14,10 @@ import qualified Data.Store.Rev.Version as Version
 import qualified Data.Store.Rev.View as View
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
+import           Data.Text (Text)
 import qualified Lamdu.Data.DbLayout as DbLayout
-import qualified Lamdu.DataFile as DataFile
 import           Lamdu.Data.Export.JSON (fileImportAll)
+import qualified Lamdu.DataFile as DataFile
 import qualified Lamdu.Expr.UniqueId as UniqueId
 import qualified Lamdu.GUI.WidgetIdIRef as WidgetIdIRef
 import qualified System.Directory as Directory
@@ -26,10 +27,10 @@ import           Prelude.Compat
 
 type T = Transaction
 
-setName :: (Monad m, UniqueId.ToUUID a) => a -> String -> T m ()
+setName :: (Monad m, UniqueId.ToUUID a) => a -> Text -> T m ()
 setName = Transaction.setP . DbLayout.assocNameRef
 
-newBranch :: Monad m => String -> Version m -> T m (Branch m)
+newBranch :: Monad m => Text -> Version m -> T m (Branch m)
 newBranch name ver =
     do
         branch <- Branch.new ver

@@ -7,7 +7,9 @@ module Lamdu.GUI.ParamEdit
 import           Control.Lens.Operators
 import           Control.Lens.Tuple
 import qualified Data.Map as Map
+import           Data.Monoid ((<>))
 import           Data.Store.Transaction (Transaction)
+import           Data.Text (Text)
 import qualified Graphics.UI.Bottle.EventMap as E
 import           Graphics.UI.Bottle.ModKey (ModKey)
 import qualified Graphics.UI.Bottle.Widget as Widget
@@ -72,13 +74,13 @@ eventMapAddNextParam config fpAdd =
 
 eventMapOrderParam ::
     Monad m =>
-    [ModKey] -> String -> m () -> Widget.EventMap (m Widget.EventResult)
+    [ModKey] -> Text -> m () -> Widget.EventMap (m Widget.EventResult)
 eventMapOrderParam keys docSuffix =
-    Widget.keysEventMap keys (E.Doc ["Edit", "Parameter", "Move " ++ docSuffix])
+    Widget.keysEventMap keys (E.Doc ["Edit", "Parameter", "Move " <> docSuffix])
 
 eventParamDelEventMap ::
     Monad m =>
-    m Sugar.ParamDelResult -> [ModKey] -> String -> Widget.Id ->
+    m Sugar.ParamDelResult -> [ModKey] -> Text -> Widget.Id ->
     Widget.EventMap (m Widget.EventResult)
 eventParamDelEventMap fpDel keys docSuffix dstPosId =
     do
@@ -93,7 +95,7 @@ eventParamDelEventMap fpDel keys docSuffix dstPosId =
             & Widget.applyIdMapping widgetIdMap
             & return
     & E.keyPresses keys
-        (E.Doc ["Edit", "Delete parameter" ++ docSuffix])
+        (E.Doc ["Edit", "Delete parameter" <> docSuffix])
 
 data Info m = Info
     { iMakeNameEdit :: Widget.Id -> ExprGuiM m (ExpressionGui m)

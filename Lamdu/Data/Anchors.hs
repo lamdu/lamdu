@@ -23,6 +23,7 @@ import           Data.Store.Rev.Version (Version)
 import           Data.Store.Rev.View (View)
 import           Data.Store.Transaction (MkProperty(..))
 import qualified Data.Store.Transaction as Transaction
+import           Data.Text (Text)
 import           GHC.Generics (Generic)
 import qualified Graphics.UI.Bottle.WidgetId as WidgetId
 import qualified Lamdu.Calc.Type as T
@@ -67,7 +68,7 @@ type RevisionProps m = Revision (MkProperty m) m
 makePane :: DefI m -> Pane m
 makePane = id
 
-assocNameRef :: (UniqueId.ToUUID a, Monad m) => a -> MkProperty m String
+assocNameRef :: (UniqueId.ToUUID a, Monad m) => a -> MkProperty m Text
 assocNameRef = Transaction.assocDataRefDef "" "Name" . UniqueId.toUUID
 
 assocScopeRef ::

@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, TemplateHaskell, DeriveFunctor, DeriveGeneric, FlexibleContexts, RecordWildCards, LambdaCase, PatternGuards #-}
+{-# LANGUAGE NoImplicitPrelude, TemplateHaskell, DeriveFunctor, DeriveGeneric, FlexibleContexts, RecordWildCards, LambdaCase, PatternGuards, OverloadedStrings #-}
 module Graphics.UI.Bottle.EventMap
     ( KeyEvent(..)
     , InputDoc, Subtitle, Doc(..), docStrs
@@ -21,8 +21,10 @@ import           Data.Foldable (asum)
 import           Data.Map (Map)
 import qualified Data.Map as Map
 import           Data.Maybe (catMaybes, listToMaybe)
+import           Data.Monoid ((<>))
 import           Data.Set (Set)
 import qualified Data.Set as Set
+import           Data.Text (Text)
 import           GHC.Generics (Generic)
 import           Graphics.UI.Bottle.ModKey (ModKey(..))
 import qualified Graphics.UI.Bottle.ModKey as ModKey
@@ -82,10 +84,9 @@ charOfKey key =
     GLFW.Key'PadEqual    -> Just '='
     _              -> Nothing
 
--- TODO: ByteString?
-type Clipboard = String
+type Clipboard = Text
 
-type Subtitle = String
+type Subtitle = Text
 
 newtype Doc = Doc
     { _docStrs :: [Subtitle]
@@ -98,7 +99,7 @@ data DocHandler a = DocHandler
     } deriving (Generic, Functor)
 Lens.makeLenses ''DocHandler
 
-type InputDoc = String
+type InputDoc = Text
 
 -- AllCharsHandler always conflict with each other
 data AllCharsHandler a = AllCharsHandler
@@ -153,8 +154,8 @@ data EventMap a = EventMap
 
 prettyKeyEvent :: KeyEvent -> InputDoc
 prettyKeyEvent (KeyEvent GLFW.KeyState'Pressed modKey) = ModKey.pretty modKey
-prettyKeyEvent (KeyEvent GLFW.KeyState'Repeating modKey) = "Repeat " ++ ModKey.pretty modKey
-prettyKeyEvent (KeyEvent GLFW.KeyState'Released modKey) = "Depress " ++ ModKey.pretty modKey
+prettyKeyEvent (KeyEvent GLFW.KeyState'Repeating modKey) = "Repeat " <> ModKey.pretty modKey
+prettyKeyEvent (KeyEvent GLFW.KeyState'Released modKey) = "Depress " <> ModKey.pretty modKey
 
 emDocs :: Lens.IndexedTraversal' InputDoc (EventMap a) Doc
 emDocs f EventMap{..} =

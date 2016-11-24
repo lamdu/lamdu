@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE NoImplicitPrelude, GeneralizedNewtypeDeriving, OverloadedStrings #-}
 module Lamdu.GUI.TypeView
     ( make
     ) where
@@ -8,11 +8,12 @@ import           Control.Lens.Operators
 import           Control.Lens.Tuple
 import           Control.Monad.Trans.Class (MonadTrans(..))
 import           Control.Monad.Trans.State (StateT, state, evalStateT)
-import qualified Data.ByteString.Char8 as BS8
 import           Data.Map (Map)
 import qualified Data.Map as Map
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
+import           Data.Text (Text)
+import           Data.Text.Encoding (decodeUtf8)
 import           Data.Vector.Vector2 (Vector2(..))
 import qualified Graphics.DrawingCombinators as Draw
 import           Graphics.UI.Bottle.Animation (AnimId)
@@ -61,11 +62,11 @@ split (M act) =
 randAnimId :: Monad m => M m AnimId
 randAnimId = WidgetId.toAnimId . WidgetIds.fromUUID <$> rand
 
-text :: Monad m => String -> M m View
+text :: Monad m => Text -> M m View
 text str = wenv . BWidgets.makeTextView str =<< randAnimId
 
 showIdentifier :: Monad m => Identifier -> M m View
-showIdentifier (Identifier bs) = text (BS8.unpack bs)
+showIdentifier (Identifier bs) = text (decodeUtf8 bs)
 
 hbox :: [View] -> View
 hbox = GridView.horizontalAlign 0.5

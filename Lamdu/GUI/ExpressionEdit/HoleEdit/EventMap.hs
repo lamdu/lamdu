@@ -16,6 +16,8 @@ import           Data.Monoid ((<>))
 import           Data.Store.Property (Property(..))
 import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
+import           Data.Text (Text)
+import qualified Data.Text as Text
 import qualified Graphics.UI.Bottle.EventMap as E
 import           Graphics.UI.Bottle.ModKey (ModKey(..))
 import qualified Graphics.UI.Bottle.ModKey as ModKey
@@ -49,7 +51,7 @@ blockDownEvents =
 
 adHocTextEditEventMap ::
     Monad m =>
-    Config.Hole -> Property m String -> Widget.EventMap (m Widget.EventResult)
+    Config.Hole -> Property m Text -> Widget.EventMap (m Widget.EventResult)
 adHocTextEditEventMap holeConfig searchTermProp =
     appendCharEventMap <> deleteCharEventMap
     where
@@ -58,16 +60,16 @@ adHocTextEditEventMap holeConfig searchTermProp =
             (E.Doc ["Edit", "Search Term", "Append character"])
             (changeText . snoc)
             & disallowCharsFromSearchTerm holeConfig searchTerm
-            & if null searchTerm
+            & if Text.null searchTerm
               then E.filterChars (`notElem` operatorChars)
               else id
         deleteCharEventMap
-            | null searchTerm = mempty
+            | Text.null searchTerm = mempty
             | otherwise =
                   E.keyPress (ModKey mempty GLFW.Key'Backspace)
                   (E.Doc ["Edit", "Search Term", "Delete backwards"]) $
-                  changeText init
-        snoc x = (++ [x])
+                  changeText Text.init
+        snoc x = (<> Text.singleton x)
         searchTerm = Property.value searchTermProp
         changeText f = mempty <$ Property.pureModify searchTermProp f
 
@@ -80,7 +82,7 @@ toLiteralTextKeys =
     , ModKey mempty GLFW.Key'Apostrophe
     ]
 
-disallowCharsFromSearchTerm :: Config.Hole -> String -> E.EventMap a -> E.EventMap a
+disallowCharsFromSearchTerm :: Config.Hole -> Text -> E.EventMap a -> E.EventMap a
 disallowCharsFromSearchTerm Config.Hole{..} searchTerm =
     E.filterChars (`notElem` disallowedHoleChars) .
     deleteKeys
@@ -90,7 +92,7 @@ disallowCharsFromSearchTerm Config.Hole{..} searchTerm =
         allowOnly group = E.filterChars (`elem` group)
         disallow group = E.filterChars (`notElem` group)
         disallowMix =
-            case searchTerm of
+            case Text.unpack searchTerm of
             "" -> id
             '"':_ -> id
             "." -> disallow bracketChars
@@ -101,8 +103,8 @@ disallowCharsFromSearchTerm Config.Hole{..} searchTerm =
                 | x `elem` operatorChars -> allowOnly operatorChars
                 | x `elem` bracketChars -> allowOnly bracketChars
                 | "." `isInfixOf` xs -> allowOnly digitChars
-                | all (`elem` digitChars) searchTerm -> allowOnly ('.':digitChars)
-                | all (`notElem` operatorChars) searchTerm -> disallow operatorChars
+                | Text.all (`elem` digitChars) searchTerm -> allowOnly ('.':digitChars)
+                | Text.all (`notElem` operatorChars) searchTerm -> disallow operatorChars
                 | otherwise ->
                   -- Mix of operator/non-operator chars happened in search term
                   -- This can happen when editing a literal text, allow everything
@@ -167,7 +169,7 @@ mkEventsOnPickedResult shownResult =
     do
         config <- ExprGuiM.readConfig
         srMkEventMap shownResult
-            <&> E.emDocs . E.docStrs . Lens._last %~ (++ " (On picked result)")
+            <&> E.emDocs . E.docStrs . Lens._last %~ (<> " (On picked result)")
             <&> Lens.mapped %~ pickBefore shownResult
             <&> removeUnwanted config
 
@@ -239,7 +241,7 @@ makeOpenEventMaps holeInfo mShownResult =
     where
         isWrapperHole = hiHole holeInfo & Lens.has (Sugar.holeMArg . Lens._Just)
         maybeLiteralTextEventMap
-            | null (searchTermProp ^. Property.pVal) && not isWrapperHole =
+            | Text.null (searchTermProp ^. Property.pVal) && not isWrapperHole =
               toLiteralTextEventMap holeInfo
             | otherwise = mempty
         searchTermProp = HoleInfo.hiSearchTermProperty holeInfo

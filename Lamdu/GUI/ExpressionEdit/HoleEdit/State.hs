@@ -8,6 +8,7 @@ import qualified Control.Lens as Lens
 import           Data.Binary (Binary)
 import           Data.UUID.Types (UUID)
 import qualified Data.Store.Transaction as Transaction
+import           Data.Text (Text)
 import           GHC.Generics (Generic)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds (WidgetIds(..))
@@ -17,7 +18,7 @@ import qualified Lamdu.Sugar.Types as Sugar
 type T = Transaction.Transaction
 
 newtype HoleState = HoleState
-    { _hsSearchTerm :: String
+    { _hsSearchTerm :: Text
     } deriving (Eq, Generic)
 Lens.makeLenses ''HoleState
 instance Binary HoleState

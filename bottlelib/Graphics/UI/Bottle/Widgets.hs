@@ -20,10 +20,11 @@ module Graphics.UI.Bottle.Widgets
 import           Control.Lens.Operators
 import           Control.Lens.Tuple
 import           Control.Monad (when)
-import           Data.ByteString.Char8 (pack)
 import           Data.List (intersperse)
 import           Data.Store.Property (Property)
 import qualified Data.Store.Property as Property
+import           Data.Text (Text)
+import           Data.Text.Encoding (encodeUtf8)
 import           Data.Vector.Vector2 (Vector2(..))
 import qualified Graphics.DrawingCombinators as Draw
 import           Graphics.UI.Bottle.Animation (AnimId)
@@ -46,15 +47,14 @@ import qualified Graphics.UI.GLFW as GLFW
 
 import           Prelude.Compat
 
-makeTextView ::
-    Monad m => String -> AnimId -> WidgetEnvT m View
+makeTextView :: Monad m => Text -> AnimId -> WidgetEnvT m View
 makeTextView text myId = do
     style <- WE.readTextStyle
     return $
         TextView.make (style ^. TextEdit.sTextViewStyle) text myId
 
-makeLabel :: Monad m => String -> AnimId -> WidgetEnvT m View
-makeLabel text prefix = makeTextView text $ mappend prefix [pack text]
+makeLabel :: Monad m => Text -> AnimId -> WidgetEnvT m View
+makeLabel text prefix = makeTextView text $ mappend prefix [encodeUtf8 text]
 
 liftLayerInterval :: Monad m => WidgetEnvT m (View -> View)
 liftLayerInterval =
@@ -83,16 +83,16 @@ makeFocusableView myIdPrefix =
 
 makeFocusableTextView ::
     (Monad m, Applicative f) =>
-    String -> Widget.Id -> WidgetEnvT m (Widget (f Widget.EventResult))
+    Text -> Widget.Id -> WidgetEnvT m (Widget (f Widget.EventResult))
 makeFocusableTextView text myId =
     makeFocusableView myId
     <*> (makeTextView text (Widget.toAnimId myId) <&> Widget.fromView)
 
 makeFocusableLabel ::
     (Monad m, Applicative f) =>
-    String -> Widget.Id -> WidgetEnvT m (Widget (f Widget.EventResult))
+    Text -> Widget.Id -> WidgetEnvT m (Widget (f Widget.EventResult))
 makeFocusableLabel text myIdPrefix =
-    makeFocusableTextView text (Widget.joinId myIdPrefix [pack text])
+    makeFocusableTextView text (Widget.joinId myIdPrefix [encodeUtf8 text])
 
 makeFocusDelegator ::
     (Monad m, Applicative f) =>
@@ -105,8 +105,8 @@ makeFocusDelegator fdConfig focusEntryTarget myId =
 
 makeTextEdit ::
     Monad m =>
-    String -> Widget.Id ->
-    WidgetEnvT m (Widget (String, Widget.EventResult))
+    Text -> Widget.Id ->
+    WidgetEnvT m (Widget (Text, Widget.EventResult))
 makeTextEdit text myId =
     do
         style <- WE.readTextStyle
@@ -115,7 +115,7 @@ makeTextEdit text myId =
 
 makeTextEditor ::
     (Monad m, Applicative f) =>
-    Property f String -> Widget.Id ->
+    Property f Text -> Widget.Id ->
     WidgetEnvT m (Widget (f Widget.EventResult))
 makeTextEditor textRef myId =
     makeTextEdit (Property.value textRef) myId
@@ -133,7 +133,7 @@ deleteKeyEventHandler key =
 -- TODO: Editor, not Edit (consistent with makeTextEditor vs. makeTextEdit)
 makeLineEdit ::
     (Monad m, Applicative f) =>
-    Property f String ->
+    Property f Text ->
     Widget.Id ->
     WidgetEnvT m (Widget (f Widget.EventResult))
 makeLineEdit textRef myId =
@@ -141,7 +141,7 @@ makeLineEdit textRef myId =
 
 makeWordEdit ::
     (Monad m, Applicative f) =>
-    Property f String ->
+    Property f Text ->
     Widget.Id ->
     WidgetEnvT m (Widget (f Widget.EventResult))
 makeWordEdit textRef myId =

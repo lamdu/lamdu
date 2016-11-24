@@ -8,6 +8,7 @@ import           Control.Lens.Operators
 import           Data.Store.Property (Property(..))
 import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
+import           Data.Text (Text)
 import           Lamdu.Calc.Type (Type)
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.State (HoleState, hsSearchTerm)
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds (WidgetIds)
@@ -27,8 +28,8 @@ data HoleInfo m = HoleInfo
     , hiState :: Property (T m) HoleState
     }
 
-hiSearchTermProperty :: HoleInfo m -> Property (T m) String
+hiSearchTermProperty :: HoleInfo m -> Property (T m) Text
 hiSearchTermProperty holeInfo = hiState holeInfo & Property.composeLens hsSearchTerm
 
-hiSearchTerm :: HoleInfo m -> String
+hiSearchTerm :: HoleInfo m -> Text
 hiSearchTerm holeInfo = Property.value (hiState holeInfo) ^. hsSearchTerm

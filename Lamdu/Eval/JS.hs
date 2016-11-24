@@ -20,13 +20,11 @@ import           Data.Aeson.Types ((.:))
 import qualified Data.Aeson.Types as Json
 import qualified Data.ByteString as SBS
 import qualified Data.ByteString.Base16 as Hex
-import qualified Data.ByteString.Char8 as Char8
 import           Data.ByteString.Utils (lazifyBS)
 import           Data.HashMap.Strict (HashMap)
 import qualified Data.HashMap.Strict as HashMap
 import           Data.IORef
 import           Data.IntMap (IntMap)
-import           Data.List.Split (chunksOf)
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import           Data.Maybe (fromMaybe)
@@ -35,6 +33,7 @@ import           Data.Set (Set)
 import qualified Data.Set as Set
 import           Data.Text (Text)
 import qualified Data.Text as Text
+import           Data.Text.Encoding (decodeUtf8)
 import           Data.UUID.Types (UUID)
 import qualified Data.UUID.Utils as UUIDUtils
 import qualified Data.Vector as Vec
@@ -61,7 +60,7 @@ data Actions srcId = Actions
     { _aLoadGlobal :: V.Var -> IO (Def.Body (Val srcId))
     , -- TODO: This is currently not in use but remains here because
       -- it *should* be used for readable JS output
-      _aReadAssocName :: UUID -> IO String
+      _aReadAssocName :: UUID -> IO Text
     , _aReportUpdatesAvailable :: IO ()
     , _aCompleted :: Either E.SomeException (ER.Val srcId) -> IO ()
     , _aCopyJSOutputPath :: Maybe FilePath
@@ -108,18 +107,20 @@ withProcess createProc =
               _ <- [mStdout, mStderr] & Lens.traverse . Lens.traverse %%~ hClose
               Proc.terminateProcess handle
 
-parseHexBs :: String -> SBS.ByteString
+parseHexBs :: Text -> SBS.ByteString
 parseHexBs =
-    SBS.pack . map (fst . sHead . readHex) . chunksOf 2
+    SBS.pack . map (fst . sHead . readHex . Text.unpack) . Text.chunksOf 2
     where
         sHead [] = error "parseHexBs got bad input"
         sHead (x:_) = x
 
-parseHexNameBs :: String -> SBS.ByteString
-parseHexNameBs ('_':n) = parseHexBs n
-parseHexNameBs n = parseHexBs n
+parseHexNameBs :: Text -> SBS.ByteString
+parseHexNameBs t =
+    case Text.uncons t of
+    Just ('_', n) -> parseHexBs n
+    _ -> parseHexBs t
 
-parseUUID :: String -> UUID
+parseUUID :: Text -> UUID
 parseUUID = UUIDUtils.fromSBS16 . parseHexNameBs
 
 parseRecord :: HashMap Text Json.Value -> Parse (ER.Val ())
@@ -131,7 +132,7 @@ parseRecord obj =
             parseResult v
             <&> \pv ->
             ER.RRecExtend V.RecExtend
-            { V._recTag = Text.unpack k & parseHexNameBs & Identifier & Tag
+            { V._recTag = parseHexNameBs k & Identifier & Tag
             , V._recFieldVal = pv
             , V._recRest = r
             } & ER.Val ()
@@ -150,7 +151,7 @@ parseBytes (Json.Array vals) =
     & SBS.pack & PrimVal.Bytes & PrimVal.fromKnown & ER.RPrimVal & ER.Val ()
 parseBytes _ = error "Bytes with non-array data"
 
-parseInject :: String -> Maybe Json.Value -> Parse (ER.Val ())
+parseInject :: Text -> Maybe Json.Value -> Parse (ER.Val ())
 parseInject tag mData =
     case mData of
     Nothing -> ER.Val () ER.RRecEmpty & return
@@ -276,7 +277,7 @@ asyncStart toUUID fromUUID depsMVar resultsRef val actions =
                 val
                     <&> valId
                     & Compiler.compile Compiler.Actions
-                    { Compiler.readAssocName = return . Char8.unpack . Hex.encode . UUIDUtils.toSBS16
+                    { Compiler.readAssocName = return . decodeUtf8 . Hex.encode . UUIDUtils.toSBS16
                     , Compiler.readGlobal =
                       \globalId ->
                       modifyMVar depsMVar $ \oldDeps ->

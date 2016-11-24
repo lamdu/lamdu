@@ -6,9 +6,10 @@ module Lamdu.GUI.ExpressionEdit.LiteralEdit
 
 import           Control.Lens.Operators
 import           Control.Lens.Tuple
-import           Data.UUID.Types (UUID)
 import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
+import           Data.Text (Text)
+import           Data.UUID.Types (UUID)
 import qualified Graphics.UI.Bottle.EventMap as E
 import           Graphics.UI.Bottle.ModKey (ModKey(..))
 import qualified Graphics.UI.Bottle.Widget as Widget
@@ -38,7 +39,7 @@ type T = Transaction.Transaction
 
 mkEditEventMap ::
     Monad m =>
-    String -> T m (UUID, Sugar.EntityId) ->
+    Text -> T m (UUID, Sugar.EntityId) ->
     Widget.EventMap (T m Widget.EventResult)
 mkEditEventMap valText setToHole =
     Widget.keysEventMapMovesCursor [ModKey mempty GLFW.Key'Enter]
@@ -78,7 +79,7 @@ fdConfig Config.LiteralText{..} = FocusDelegator.Config
     }
 
 textEdit ::
-    Monad m => Transaction.Property m String ->
+    Monad m => Transaction.Property m Text ->
     Sugar.Payload m ExprGuiT.Payload -> ExprGuiM m (ExpressionGui m)
 textEdit prop pl =
     do

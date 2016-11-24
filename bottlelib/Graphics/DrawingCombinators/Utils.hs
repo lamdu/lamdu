@@ -1,5 +1,5 @@
 {-# OPTIONS -fno-warn-orphans #-}
-{-# LANGUAGE NoImplicitPrelude, StandaloneDeriving, DeriveFunctor, DeriveFoldable, DeriveTraversable, DeriveGeneric #-}
+{-# LANGUAGE NoImplicitPrelude, StandaloneDeriving, DeriveFunctor, DeriveFoldable, DeriveTraversable, DeriveGeneric, OverloadedStrings #-}
 module Graphics.DrawingCombinators.Utils
     ( Image
     , square
@@ -14,6 +14,8 @@ import           Control.Applicative (liftA2)
 import           Control.Lens.Operators
 import           Control.Monad (void)
 import qualified Data.Aeson.Types as Aeson
+import           Data.Text (Text)
+import qualified Data.Text as Text
 import           Data.Vector.Vector2 (Vector2(..))
 import           Foreign.C.Types.Instances ()
 import           GHC.Generics (Generic)
@@ -60,7 +62,7 @@ instance Num a => Num (TextSize a) where
     signum = fmap signum
     negate = fmap negate
 
-textWidth :: Draw.Font -> String -> TextSize Draw.R
+textWidth :: Draw.Font -> Text -> TextSize Draw.R
 textWidth font str =
     TextSize
     { bounding =
@@ -73,15 +75,15 @@ textWidth font str =
     where
         adv = Draw.textAdvance font str
 
-textSize :: Draw.Font -> String -> TextSize (Vector2 Draw.R)
+textSize :: Draw.Font -> Text -> TextSize (Vector2 Draw.R)
 textSize font str =
     (`Vector2` height) <$> textWidth font str
     where
         height = Draw.fontHeight font * fromIntegral numLines
-        numLines = length (filter (== '\n') str) + 1
+        numLines = 1 + Text.count "\n" str
 
 {-# NOINLINE drawText #-}
-drawText :: Draw.Font -> Draw.TextAttrs -> String -> Image
+drawText :: Draw.Font -> Draw.TextAttrs -> Text -> Image
 drawText font textAttrs str =
     Draw.text font str textAttrs
     & void

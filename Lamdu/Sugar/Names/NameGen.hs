@@ -1,10 +1,8 @@
-{-# LANGUAGE NoImplicitPrelude, TemplateHaskell #-}
+{-# LANGUAGE NoImplicitPrelude, TemplateHaskell, OverloadedStrings #-}
 module Lamdu.Sugar.Names.NameGen
     ( NameGen, initial
     , VarInfo(..), existingName, newName
     ) where
-
-import           Prelude.Compat
 
 import           Control.Arrow ((&&&))
 import qualified Control.Lens as Lens
@@ -13,13 +11,18 @@ import           Control.Monad.Trans.State (State, state)
 import           Data.Map (Map)
 import qualified Data.Map as Map
 import           Data.Maybe (fromMaybe)
+import           Data.Monoid ((<>))
+import           Data.Text (Text)
+import qualified Data.Text as Text
+
+import           Prelude.Compat
 
 data VarInfo = Function | NormalVar
 
 data NameGen g = NameGen
-    { _ngUnusedNames :: [String]
-    , _ngUnusedFuncNames :: [String]
-    , _ngUsedNames :: Map g String
+    { _ngUnusedNames :: [Text]
+    , _ngUnusedFuncNames :: [Text]
+    , _ngUsedNames :: Map g Text
     }
 Lens.makeLenses ''NameGen
 
@@ -29,15 +32,15 @@ initial =
     where
         indepFuncNames = numberCycle ["f", "g", "h"]
         indepNames = numberCycle ["x", "y", "z", "w", "u", "v"]
-        numberCycle s = (s ++) . concat . zipWith appendAll [0::Int ..] $ repeat s
-        appendAll num = map (++ show num)
+        numberCycle s = (s <>) . mconcat . zipWith appendAll [0::Int ..] $ repeat s
+        appendAll num = map (<> Text.pack (show num))
 
-existingName :: (Ord g, Show g) => g -> State (NameGen g) String
+existingName :: (Ord g, Show g) => g -> State (NameGen g) Text
 existingName g =
-    fromMaybe ("TodoError:" ++ show g) <$>
+    fromMaybe ("TodoError:" <> Text.pack (show g)) <$>
     Lens.uses ngUsedNames (Map.lookup g)
 
-newName :: Ord g => (String -> Bool) -> VarInfo -> g -> State (NameGen g) String
+newName :: Ord g => (Text -> Bool) -> VarInfo -> g -> State (NameGen g) Text
 newName acceptName isFunc g =
     do
         name <- Lens.zoom names loop

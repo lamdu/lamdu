@@ -111,18 +111,17 @@ Library
                   , distributive
                   , either
                   , filepath >= 1.1
-                  , graphics-drawingcombinators >= 1.6
+                  , graphics-drawingcombinators >= 1.7
                   , hashable
                   , lens >= 4.1
                   , leveldb-haskell >= 0.6
                   , random >= 1.0.0
                   , safe-exceptions >= 0.1.4
-                  , split >= 0.1
                   , stm
                   , template-haskell
+                  , text
                   , time >= 1.2
                   , transformers >= 0.4.3
-                  , utf8-string >= 0.3
                   , uuid >= 1.3
                   , uuid-types >= 1.0
   ghc-options:         -O2 -Wall -threaded
@@ -160,13 +159,11 @@ Executable lamdu
                   , lens
                   , nodejs-exec
                   , random
-                  , split
                   , text
                   , time
                   , process
                   , transformers
                   , unordered-containers
-                  , utf8-string
                   , vector
                   , void >= 0.6.1
                   , wl-pprint >= 1.2

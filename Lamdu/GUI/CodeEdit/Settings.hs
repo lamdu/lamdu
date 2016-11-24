@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TemplateHaskell, OverloadedStrings #-}
 module Lamdu.GUI.CodeEdit.Settings
     ( Settings(..), sInfoMode, InfoMode(..), defaultInfoMode
     , nextInfoMode
@@ -8,6 +8,8 @@ module Lamdu.GUI.CodeEdit.Settings
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Data.IORef
+import           Data.Monoid ((<>))
+import qualified Data.Text as Text
 import qualified Graphics.UI.Bottle.EventMap as EventMap
 import qualified Graphics.UI.Bottle.Widget as Widget
 import           Lamdu.Config (Config)
@@ -39,7 +41,8 @@ mkEventMap onSettingsChange config settingsRef =
     do
         settings <- readIORef settingsRef
         let next = settings ^. sInfoMode & nextInfoMode
-        let nextDoc = EventMap.Doc ["View", "Subtext", "Show " ++ show next]
+        let nextDoc =
+                EventMap.Doc ["View", "Subtext", "Show " <> Text.pack (show next)]
         let nextSettings = settings & sInfoMode .~ next
         do
             writeIORef settingsRef nextSettings

@@ -13,6 +13,7 @@ import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Lens.Tuple
 import           Data.Monoid ((<>))
+import           Data.Text (Text)
 import           Data.Vector.Vector2 (Vector2(..))
 import           Graphics.DrawingCombinators ((%%))
 import qualified Graphics.DrawingCombinators as Draw
@@ -29,7 +30,7 @@ height :: Draw.Font -> Draw.R
 height = DrawUtils.fontHeight
 
 render ::
-    Draw.Font -> Draw.Color -> Maybe Underline -> String ->
+    Draw.Font -> Draw.Color -> Maybe Underline -> Text ->
     (TextSize (Vector2 Draw.R), Draw.Image ())
 render font color mUnderline str =
     ( size

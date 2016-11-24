@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell, RankNTypes, DisambiguateRecordFields, NamedFieldPuns #-}
+{-# LANGUAGE TemplateHaskell, RankNTypes, DisambiguateRecordFields, NamedFieldPuns, OverloadedStrings #-}
 module Lamdu.GUI.Main
     ( make
     , Env(..), CodeEdit.ExportActions(..)

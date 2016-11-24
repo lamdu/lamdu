@@ -28,6 +28,7 @@ import qualified Data.Store.Rev.Change as Change
 import qualified Data.Store.Rev.Version as Version
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
+import           Data.Text (Text)
 import           Data.UUID.Types (UUID)
 import           Lamdu.Calc.Val.Annotated (Val)
 import qualified Lamdu.Data.Anchors as Anchors
@@ -110,7 +111,7 @@ loadDef ::
     IO (Def.Definition (Val (ExprIRef.ValIProperty ViewM)) (DefI ViewM))
 loadDef evaluator = runViewTransactionInIO (eDb evaluator) . Load.def
 
-readAssocName :: Evaluator -> UUID -> IO String
+readAssocName :: Evaluator -> UUID -> IO Text
 readAssocName evaluator uuid =
     Transaction.getP (Anchors.assocNameRef uuid)
     & runViewTransactionInIO (eDb evaluator)

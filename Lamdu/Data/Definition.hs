@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, DeriveGeneric, DeriveFunctor, DeriveFoldable, DeriveTraversable, TemplateHaskell #-}
+{-# LANGUAGE NoImplicitPrelude, DeriveGeneric, DeriveFunctor, DeriveFoldable, DeriveTraversable, TemplateHaskell, OverloadedStrings #-}
 module Lamdu.Data.Definition
     ( FFIName(..)
     , Builtin(..)
@@ -9,8 +9,12 @@ module Lamdu.Data.Definition
     ) where
 
 import qualified Control.Lens as Lens
+import           Control.Lens.Operators
 import           Data.Binary (Binary(..))
 import           Data.Map (Map)
+import           Data.Monoid ((<>))
+import           Data.Text (Text)
+import qualified Data.Text as Text
 import           GHC.Generics (Generic)
 import           Lamdu.Calc.Type.Scheme (Scheme)
 import           Lamdu.Calc.Val (Var)
@@ -18,12 +22,13 @@ import           Lamdu.Calc.Val (Var)
 import           Prelude.Compat
 
 data FFIName = FFIName
-    { fModule :: [String]
-    , fName :: String
+    { fModule :: [Text]
+    , fName :: Text
     } deriving (Generic, Eq, Ord)
 
 instance Show FFIName where
-    show (FFIName path name) = concatMap (++".") path ++ name
+    show (FFIName path name) =
+        mconcat (path <&> (<> ".")) <> name & Text.unpack
 
 data Builtin = Builtin
     { bName :: FFIName

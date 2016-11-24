@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, RecordWildCards #-}
+{-# LANGUAGE NoImplicitPrelude, RecordWildCards, OverloadedStrings #-}
 module Lamdu.GUI.Zoom
     ( Zoom, make, eventMap, getSizeFactor
     ) where

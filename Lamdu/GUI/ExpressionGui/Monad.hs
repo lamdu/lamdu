@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, GeneralizedNewtypeDeriving, TemplateHaskell #-}
+{-# LANGUAGE NoImplicitPrelude, GeneralizedNewtypeDeriving, TemplateHaskell, OverloadedStrings #-}
 module Lamdu.GUI.ExpressionGui.Monad
     ( ExprGuiM
     , widgetEnv
@@ -35,7 +35,10 @@ import qualified Control.Monad.Trans.RWS as RWS
 import           Data.Binary (Binary)
 import qualified Data.Char as Char
 import           Data.CurAndPrev (CurAndPrev)
+import           Data.Monoid ((<>))
 import           Data.Store.Transaction (Transaction)
+import           Data.Text (Text)
+import qualified Data.Text.Lens as TextLens
 import qualified Graphics.DrawingCombinators as Draw
 import           Graphics.UI.Bottle.Animation.Id (AnimId)
 import qualified Graphics.UI.Bottle.EventMap as E
@@ -79,8 +82,8 @@ withHolePickers p@(_:_) e =
         action = p & sequence <&> mconcat
         f x =
             x
-            & Lens.element 0 %~ Char.toLower
-            & ("Pick result and " ++)
+            & TextLens._Text . Lens.element 0 %~ Char.toLower
+            & ("Pick result and " <>)
 
 newtype Output m = Output
     { oHolePickers :: HolePickers m
@@ -198,7 +201,7 @@ run makeSubexpr codeAnchors config settings style (ExprGuiM action) =
 widgetEnv :: Monad m => WidgetEnvT (T m) a -> ExprGuiM m a
 widgetEnv = ExprGuiM . lift
 
-makeLabel :: Monad m => String -> AnimId -> ExprGuiM m View
+makeLabel :: Monad m => Text -> AnimId -> ExprGuiM m View
 makeLabel text animId = widgetEnv $ BWidgets.makeLabel text animId
 
 transaction :: Monad m => T m a -> ExprGuiM m a

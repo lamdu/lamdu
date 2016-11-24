@@ -3,27 +3,27 @@ module Lamdu.GUI.ExpressionEdit.BuiltinEdit
     ( make
     ) where
 
-import           Prelude.Compat
-
 import           Control.Lens.Operators
-import qualified Data.List as List
-import           Data.List.Split (splitOn)
 import           Data.Store.Property (Property(..))
 import           Data.Store.Transaction (Transaction)
+import           Data.Text (Text)
+import qualified Data.Text as Text
 import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.Bottle.EventMap as E
 import           Graphics.UI.Bottle.ModKey (ModKey(..))
 import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
+import qualified Graphics.UI.Bottle.Widgets as BWidgets
 import qualified Graphics.UI.Bottle.Widgets.Box as Box
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 import qualified Graphics.UI.GLFW as GLFW
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Data.Definition as Definition
-import qualified Graphics.UI.Bottle.Widgets as BWidgets
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.Sugar.Types as Sugar
+
+import           Prelude.Compat
 
 type T = Transaction
 
@@ -43,7 +43,7 @@ builtinFFIName = flip Widget.joinId ["FFIName"]
 
 makeNamePartEditor ::
     (Monad f, Monad m) =>
-    Draw.Color -> String -> (String -> f ()) -> Widget.Id ->
+    Draw.Color -> Text -> (Text -> f ()) -> Widget.Id ->
     ExprGuiM m (Widget (f Widget.EventResult))
 makeNamePartEditor color namePartStr setter myId =
     ExprGuiM.makeFocusDelegator builtinFDConfig FocusDelegator.FocusEntryParent myId
@@ -74,6 +74,6 @@ make def myId =
     where
         Sugar.DefinitionBuiltin
             (Definition.FFIName modulePath name) setFFIName _ = def
-        modulePathStr = List.intercalate "." modulePath
-        modulePathSetter = setFFIName . (`Definition.FFIName` name) . splitOn "."
+        modulePathStr = Text.intercalate "." modulePath
+        modulePathSetter = setFFIName . (`Definition.FFIName` name) . Text.splitOn "."
         nameSetter = setFFIName . Definition.FFIName modulePath

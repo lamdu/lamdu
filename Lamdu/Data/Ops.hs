@@ -21,6 +21,8 @@ import           Data.Store.Property (Property(..))
 import qualified Data.Store.Property as Property
 import           Data.Store.Transaction (Transaction, getP, setP, modP)
 import qualified Data.Store.Transaction as Transaction
+import           Data.Text (Text)
+import qualified Data.Text as Text
 import qualified Graphics.UI.Bottle.WidgetId as WidgetId
 import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Calc.Val as V
@@ -159,16 +161,16 @@ jumpBack codeProps =
                     setP (Anchors.preJumps codeProps) js
                     return j
 
-isInfix :: String -> Bool
-isInfix x = not (null x) && all (`elem` operatorChars) x
+isInfix :: Text -> Bool
+isInfix x = not (Text.null x) && Text.all (`elem` operatorChars) x
 
-presentationModeOfName :: String -> PresentationMode
+presentationModeOfName :: Text -> PresentationMode
 presentationModeOfName x
     | isInfix x = Infix 5
     | otherwise = Verbose
 
 newDefinition ::
-    Monad m => String -> PresentationMode ->
+    Monad m => Text -> PresentationMode ->
     Definition.Body (ValI m) -> T m (DefI m)
 newDefinition name presentationMode defBody =
     do
@@ -178,7 +180,7 @@ newDefinition name presentationMode defBody =
         return newDef
 
 newPublicDefinition ::
-    Monad m => Anchors.CodeProps m -> ValI m -> String -> T m (DefI m)
+    Monad m => Anchors.CodeProps m -> ValI m -> Text -> T m (DefI m)
 newPublicDefinition codeProps bodyI name =
     do
         defI <-
@@ -204,7 +206,7 @@ newPublicDefinitionToIRef codeProps bodyI defI =
         newPane codeProps defI
 
 newPublicDefinitionWithPane ::
-    Monad m => String -> Anchors.CodeProps m -> ValI m -> T m (DefI m)
+    Monad m => Text -> Anchors.CodeProps m -> ValI m -> T m (DefI m)
 newPublicDefinitionWithPane name codeProps bodyI =
     do
         defI <- newPublicDefinition codeProps bodyI name

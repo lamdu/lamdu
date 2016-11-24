@@ -16,14 +16,16 @@ import           Control.Monad.Trans.RWS.Strict (RWST(..))
 import qualified Control.Monad.Trans.RWS.Strict as RWS
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Base16 as Hex
-import qualified Data.ByteString.UTF8 as UTF8
 import qualified Data.Char as Char
 import           Data.Default () -- instances
-import           Data.List (isPrefixOf)
 import           Data.Map (Map)
 import qualified Data.Map as Map
+import           Data.Monoid ((<>))
 import           Data.Set (Set)
 import qualified Data.Set as Set
+import           Data.Text (Text)
+import qualified Data.Text as Text
+import           Data.Text.Encoding (decodeUtf8)
 import           Data.UUID.Types (UUID)
 import qualified Data.UUID.Utils as UUIDUtils
 import qualified Lamdu.Builtins.Anchors as Builtins
@@ -51,7 +53,7 @@ data Mode = FastSilent | SlowLogging LoggingInfo
     deriving Show
 
 data Actions m = Actions
-    { readAssocName :: UUID -> m String
+    { readAssocName :: UUID -> m Text
     , readGlobal :: V.Var -> m (Definition.Body (Val ValId))
     , output :: String -> m ()
     , loggingMode :: Mode
@@ -74,7 +76,7 @@ Lens.makeLenses ''Env
 
 data State = State
     { _freshId :: Int
-    , _names :: Map String (Map UUID String)
+    , _names :: Map Text (Map UUID Text)
     , _compiled :: Map V.Var GlobalVarName
     }
 Lens.makeLenses ''State
@@ -129,7 +131,7 @@ declLog depth =
     ]
 
 -- | Taken from http://www.ecma-international.org/ecma-262/6.0/#sec-keywords
-jsReservedKeywords :: Set String
+jsReservedKeywords :: Set Text
 jsReservedKeywords =
     Set.fromList
     [ "break"    , "do"        , "in"        , "typeof"
@@ -145,7 +147,7 @@ jsReservedKeywords =
     , "interface", "private"   , "public"
     ]
 
-jsReservedNamespace :: Set String
+jsReservedNamespace :: Set Text
 jsReservedNamespace =
     Set.fromList
     [ "x", "repl"
@@ -154,13 +156,13 @@ jsReservedNamespace =
     , "tag", "data", "array", "bytes", "func", "cacheId"
     ]
 
-jsAllReserved :: Set String
+jsAllReserved :: Set Text
 jsAllReserved = jsReservedNamespace `mappend` jsReservedKeywords
 
-isReservedName :: String -> Bool
+isReservedName :: Text -> Bool
 isReservedName name =
     name `Set.member` jsAllReserved
-    || any (`isPrefixOf` name)
+    || any (`Text.isPrefixOf` name)
     [ "global_"
     , "local_"
     , "scopeId_"
@@ -215,22 +217,24 @@ resetRW (M act) =
     & RWS.local (\x -> x & envMode .~ loggingMode (x ^. envActions))
     & M
 
-freshName :: Monad m => String -> M m String
+freshName :: Monad m => Text -> M m Text
 freshName prefix =
     do
         newId <- freshId <+= 1
-        prefix ++ show newId & return
+        prefix <> Text.pack (show newId) & return
     & M
 
-avoidReservedNames :: String -> String
+avoidReservedNames :: Text -> Text
 avoidReservedNames name
-    | isReservedName name = "_" ++ name
+    | isReservedName name = "_" <> name
     | otherwise = name
 
-escapeName :: String -> String
-escapeName (d:xs)
-    | Char.isDigit d = '_' : d : replaceSpecialChars xs
-escapeName xs = replaceSpecialChars xs
+escapeName :: Text -> Text
+escapeName name =
+    case Text.unpack name of
+    (d:xs) | Char.isDigit d -> '_' : d : replaceSpecialChars xs
+    xs -> replaceSpecialChars xs
+    & Text.pack
 
 replaceSpecialChars :: String -> String
 replaceSpecialChars = concatMap replaceSpecial
@@ -240,7 +244,7 @@ replaceSpecialChars = concatMap replaceSpecial
             | x == '_' = "__"
             | otherwise = '_' : ((hex #) . Char.ord) x ++ "_"
 
-readName :: (UniqueId.ToUUID a, Monad m) => a -> M m String -> M m String
+readName :: (UniqueId.ToUUID a, Monad m) => a -> M m Text -> M m Text
 readName g act =
     do
         name <-
@@ -258,21 +262,23 @@ readName g act =
                 \case
                 Nothing -> (newName, Just newName)
                     where
-                        newName = name ++ show (Map.size uuidMap)
+                        newName = name <> Text.pack (show (Map.size uuidMap))
                 Just oldName -> (oldName, Just oldName)
                 <&> Just
             & M
     where
         uuid = UniqueId.toUUID g
 
-freshStoredName :: (Monad m, UniqueId.ToUUID a) => a -> String -> M m String
+freshStoredName :: (Monad m, UniqueId.ToUUID a) => a -> Text -> M m Text
 freshStoredName g prefix = readName g (freshName prefix)
 
-tagString :: Monad m => T.Tag -> M m String
-tagString tag@(T.Tag ident) = readName tag ("tag" ++ identHex ident & return)
+tagString :: Monad m => T.Tag -> M m Text
+tagString tag@(T.Tag ident) =
+    "tag" ++ identHex ident & Text.pack & return
+    & readName tag
 
 tagIdent :: Monad m => T.Tag -> M m (JSS.Id ())
-tagIdent = fmap JS.ident . tagString
+tagIdent = fmap (JS.ident . Text.unpack) . tagString
 
 local :: (Env m -> Env m) -> M m a -> M m a
 local f (M act) = M (RWS.local f act)
@@ -280,7 +286,7 @@ local f (M act) = M (RWS.local f act)
 withLocalVar :: Monad m => V.Var -> M m a -> M m (LocalVarName, a)
 withLocalVar v act =
     do
-        varName <- freshStoredName v "local_" <&> JS.ident
+        varName <- freshStoredName v "local_" <&> Text.unpack <&> JS.ident
         res <- local (envLocals . Lens.at v ?~ varName) act
         return (varName, res)
 
@@ -303,7 +309,7 @@ compileGlobalVar var =
     where
         newGlobal =
             do
-                varName <- freshStoredName var "global_" <&> JS.ident
+                varName <- freshStoredName var "global_" <&> Text.unpack <&> JS.ident
                 compiled . Lens.at var ?= varName & M
                 compileGlobal var
                     <&> varinit varName
@@ -351,12 +357,12 @@ codeGenFromExpr expr =
     }
 
 lam ::
-    Monad m => String ->
+    Monad m => Text ->
     (JSS.Expression () -> M m [JSS.Statement ()]) ->
     M m (JSS.Expression ())
 lam prefix code =
     do
-        var <- freshName prefix <&> JS.ident
+        var <- freshName prefix <&> Text.unpack <&> JS.ident
         code (JS.var var) <&> JS.lambda [var]
 
 inject :: JSS.Expression () -> JSS.Expression () -> JSS.Expression ()
@@ -368,8 +374,8 @@ inject tagStr dat' =
 
 ffiCompile :: Definition.FFIName -> JSS.Expression ()
 ffiCompile (Definition.FFIName modul funcName) =
-    foldl ($.) (JS.var "rts" $. "builtins") (modul <&> JS.ident)
-    `JS.brack` JS.string funcName
+    foldl ($.) (JS.var "rts" $. "builtins") (modul <&> Text.unpack <&> JS.ident)
+    `JS.brack` JS.string (Text.unpack funcName)
 
 compileLiteral :: V.PrimVal -> CodeGen
 compileLiteral literal =
@@ -390,7 +396,7 @@ compileRecExtend x =
             & Lens.traversed . _1 %%~ tagString
         case mRest of
             Nothing ->
-                strTags <&> _1 %~ JS.propId . JS.ident
+                strTags <&> _1 %~ JS.propId . JS.ident . Text.unpack
                 & JS.object & codeGenFromExpr
             Just rest ->
                 CodeGen
@@ -402,7 +408,7 @@ compileRecExtend x =
                         varinit "rest"
                         (JS.var "Object" $. "create" $$ codeGenExpression rest)
                         : ( strTags
-                            <&> _1 %~ JS.ldot (JS.var "rest")
+                            <&> _1 %~ JS.ldot (JS.var "rest") . Text.unpack
                             <&> uncurry JS.assign
                             <&> JS.expr )
                         ++ [JS.var "rest" & JS.returns]
@@ -411,7 +417,7 @@ compileRecExtend x =
 compileInject :: Monad m => V.Inject (Val ValId) -> M m CodeGen
 compileInject (V.Inject tag dat) =
     do
-        tagStr <- tagString tag <&> JS.string
+        tagStr <- tagString tag <&> Text.unpack <&> JS.string
         dat' <- compileVal dat
         inject tagStr (codeGenExpression dat') & codeGenFromExpr & return
 
@@ -438,7 +444,7 @@ compileCaseOnVar x scrutineeVar =
         makeCase (tagStr, handler) =
             compileAppliedFunc handler (scrutineeVar $. "data")
             <&> codeGenLamStmts
-            <&> JS.casee (JS.string tagStr)
+            <&> JS.casee (JS.string (Text.unpack tagStr))
 
 compileGetField :: Monad m => V.GetField (Val ValId) -> M m CodeGen
 compileGetField (V.GetField record tag) =
@@ -454,7 +460,7 @@ declMyScopeDepth depth =
     JS.uassign JSS.PostfixInc "scopeCounter"
 
 jsValId :: ValId -> JSS.Expression ()
-jsValId (ValId uuid) = (JS.string . UTF8.toString . Hex.encode . UUIDUtils.toSBS16) uuid
+jsValId (ValId uuid) = (JS.string . Text.unpack . decodeUtf8 . Hex.encode . UUIDUtils.toSBS16) uuid
 
 callLogNewScope :: Int -> Int -> ValId -> JSS.Expression () -> JSS.Statement ()
 callLogNewScope parentDepth myDepth lamValId argVal =
@@ -565,7 +571,7 @@ compileToNom (V.Nom tId val) valId =
         | tId == Builtins.textTid
         && all (< 128) (BS.unpack bytes) ->
             -- The JS is more readable with string constants
-            JS.var "rts" $. "bytesFromAscii" $$ JS.string (UTF8.toString bytes)
+            JS.var "rts" $. "bytesFromAscii" $$ JS.string (Text.unpack (decodeUtf8 bytes))
             & codeGenFromExpr & return
     _ -> compileVal val >>= maybeLogSubexprResult valId
 

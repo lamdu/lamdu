@@ -7,6 +7,7 @@ import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Lens.Tuple
 import           Data.Store.Transaction (Transaction)
+import           Data.Text (Text)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import           Graphics.UI.Bottle.Widget.Aligned (AlignedWidget)
 import qualified Graphics.UI.Bottle.Widget.Aligned as AlignedWidget
@@ -55,7 +56,7 @@ nomPrecedence = 9
 mkNomGui ::
     Monad m =>
     Lens.ASetter' Precedence Int ->
-    String ->
+    Text ->
     (ExpressionGui m -> ExpressionGui m -> [ExpressionGui m]) ->
     (AlignedWidget (T m Widget.EventResult) -> ExpressionGui m -> ExpressionGui m) ->
     Sugar.Nominal (Name m) (ExprGuiT.SugarExpr m) ->

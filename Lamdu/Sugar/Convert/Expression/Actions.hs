@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude #-}
+{-# LANGUAGE NoImplicitPrelude, OverloadedStrings #-}
 module Lamdu.Sugar.Convert.Expression.Actions
     ( addActions, makeAnnotation
     , makeSetToInner

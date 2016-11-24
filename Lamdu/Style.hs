@@ -1,4 +1,4 @@
-{-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE OverloadedStrings, RecordWildCards #-}
 module Lamdu.Style
     ( help
     , Style(..), style

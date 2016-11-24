@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, OverloadedStrings, DeriveFunctor #-}
+{-# LANGUAGE NoImplicitPrelude, OverloadedStrings, DeriveFunctor, OverloadedStrings #-}
 module Graphics.UI.Bottle.Widgets.EventMapDoc
     ( makeView
     , IsHelpShown(..)
@@ -6,8 +6,6 @@ module Graphics.UI.Bottle.Widgets.EventMapDoc
     , makeToggledHelpAdder
     , Config(..)
     ) where
-
-import           Prelude.Compat
 
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
@@ -32,6 +30,8 @@ import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.GridView as GridView
 import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
 import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
+
+import           Prelude.Compat
 
 data Config = Config
     { configStyle :: TextView.Style
@@ -187,7 +187,7 @@ makeToggledHelpAdder startValue =
                         case showingHelp of
                         HelpShown ->
                             ( makeView size (widget ^. Widget.eventMap) config
-                            , "Hide" :: String
+                            , "Hide"
                             )
                         HelpNotShown ->
                             (makeTooltip config (configOverlayDocKeys config), "Show")

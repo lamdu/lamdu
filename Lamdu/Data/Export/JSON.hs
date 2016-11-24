@@ -1,5 +1,5 @@
 -- | Import/Export JSON support
-{-# LANGUAGE NoImplicitPrelude, TemplateHaskell, OverloadedStrings, FlexibleContexts, LambdaCase #-}
+{-# LANGUAGE NoImplicitPrelude, TemplateHaskell, OverloadedStrings, FlexibleContexts, LambdaCase, OverloadedStrings #-}
 module Lamdu.Data.Export.JSON
     ( fileExportRepl, jsonExportRepl
     , fileExportAll
@@ -28,6 +28,8 @@ import qualified Data.Store.IRef as IRef
 import qualified Data.Store.Property as Property
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
+import           Data.Text (Text)
+import qualified Data.Text as Text
 import           Data.UUID.Types (UUID)
 import qualified Lamdu.Calc.Type as T
 import           Lamdu.Calc.Type.Nominal (Nominal)
@@ -77,12 +79,12 @@ withVisited l x act =
                 Lens.assign (Lens.cloneLens l . Lens.contains x) True
                 act
 
-readAssocName :: Monad m => ToUUID a => a -> T m (Maybe String)
+readAssocName :: Monad m => ToUUID a => a -> T m (Maybe Text)
 readAssocName x =
     do
         name <- Anchors.assocNameRef x & Transaction.getP
         return $
-            if null name
+            if Text.null name
             then Nothing
             else Just name
 
@@ -180,7 +182,7 @@ export msg act exportPath =
             putStrLn $ "Exporting " ++ msg ++ " to " ++ show exportPath
             LBS.writeFile exportPath (AesonPretty.encodePretty json)
 
-setName :: ToUUID a => a -> String -> T ViewM ()
+setName :: ToUUID a => a -> Text -> T ViewM ()
 setName x = Transaction.setP (Anchors.assocNameRef x)
 
 writeValAt :: Monad m => Val (ValI m) -> T m (ValI m)
@@ -202,7 +204,7 @@ insertTo item setIRef =
     where
         iref = setIRef DbLayout.codeIRefs
 
-importDef :: Definition (Val UUID) (Anchors.PresentationMode, Maybe String, V.Var) -> T ViewM ()
+importDef :: Definition (Val UUID) (Anchors.PresentationMode, Maybe Text, V.Var) -> T ViewM ()
 importDef (Definition defBody (presentationMode, mName, globalId)) =
     do
         Transaction.setP (Anchors.assocPresentationMode globalId) presentationMode
@@ -217,14 +219,14 @@ importRepl :: Val UUID -> T ViewM ()
 importRepl val =
     writeValAtUUID val >>= Transaction.writeIRef (DbLayout.repl DbLayout.codeIRefs)
 
-importTag :: Codec.TagOrder -> Maybe String -> T.Tag -> T ViewM ()
+importTag :: Codec.TagOrder -> Maybe Text -> T.Tag -> T ViewM ()
 importTag tagOrder mName tag =
     do
         Transaction.setP (Anchors.assocTagOrder tag) tagOrder
         traverse_ (setName tag) mName
         tag `insertTo` DbLayout.tags
 
-importLamVar :: Maybe Anchors.ParamList -> Maybe String -> UUID -> V.Var -> T ViewM ()
+importLamVar :: Maybe Anchors.ParamList -> Maybe Text -> UUID -> V.Var -> T ViewM ()
 importLamVar paramList mName lamUUID var =
     do
         Transaction.setP (Anchors.assocFieldParamList lamI) paramList
@@ -232,7 +234,7 @@ importLamVar paramList mName lamUUID var =
     where
         lamI = IRef.unsafeFromUUID lamUUID & ExprIRef.ValI
 
-importNominal :: Maybe String -> T.NominalId -> Nominal -> T ViewM ()
+importNominal :: Maybe Text -> T.NominalId -> Nominal -> T ViewM ()
 importNominal mName nomId nominal =
     do
         traverse_ (setName nomId) mName

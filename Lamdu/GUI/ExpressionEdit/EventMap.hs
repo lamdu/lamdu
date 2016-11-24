@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude #-}
+{-# LANGUAGE NoImplicitPrelude, OverloadedStrings #-}
 module Lamdu.GUI.ExpressionEdit.EventMap
     ( make
     , modifyEventMap
@@ -7,7 +7,10 @@ module Lamdu.GUI.ExpressionEdit.EventMap
     ) where
 
 import           Control.Lens.Operators
+import           Data.Monoid ((<>))
 import qualified Data.Store.Transaction as Transaction
+import           Data.Text (Text)
+import qualified Data.Text as Text
 import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
 import           Lamdu.CharClassification (operatorChars)
@@ -61,8 +64,8 @@ jumpHolesEventMap hg =
             , jumpEventMap Config.holeJumpToPrevKeys "previous" NearestHoles.prev
             ] & return
     where
-        jumpDoc :: String -> String
-        jumpDoc dirStr = "Jump to " ++ dirStr ++ " hole"
+        jumpDoc :: Text -> Text
+        jumpDoc dirStr = "Jump to " <> dirStr <> " hole"
 
 jumpHolesEventMapIfSelected ::
     (Monad m, Monad f) =>
@@ -139,7 +142,7 @@ applyOperatorEventMap actions =
             E.charGroup "Operator" doc operatorChars $ \c ->
                 do
                     (uuid, entityId) <- wrap
-                    cursor <- HoleEditState.setHoleStateAndJump uuid (HoleState [c]) entityId
+                    cursor <- HoleEditState.setHoleStateAndJump uuid (HoleState (Text.singleton c)) entityId
                     return $ Widget.eventResultFromCursor cursor
 
 wrapEventMap ::

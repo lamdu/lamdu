@@ -47,7 +47,9 @@ import qualified Data.List.Utils as ListUtils
 import           Data.Maybe (fromMaybe)
 import           Data.Store.Property (Property(..))
 import           Data.Store.Transaction (Transaction)
-import           Data.String (IsString(..))
+import           Data.Text (Text)
+import qualified Data.Text as Text
+import           Data.Text.Encoding (encodeUtf8)
 import           Data.Vector.Vector2 (Vector2(..))
 import qualified Graphics.DrawingCombinators as Draw
 import           Graphics.UI.Bottle.Alignment (Alignment(..))
@@ -205,10 +207,10 @@ data ParenIndentInfo = ParenIndentInfo
     , piStdHorizSpacing :: Widget.R
     }
 
-parenLabel :: ParenIndentInfo -> String -> AlignedWidget a
+parenLabel :: ParenIndentInfo -> Text -> AlignedWidget a
 parenLabel parenInfo t =
     TextView.make (piTextStyle parenInfo) t
-    (piAnimId parenInfo ++ [fromString t])
+    (piAnimId parenInfo ++ [encodeUtf8 t])
     & Widget.fromView & AlignedWidget.fromCenteredWidget
 
 horizVertFallback ::
@@ -607,10 +609,10 @@ makeFocusableView myId =
     ExprGuiM.widgetEnv (BWidgets.makeFocusableView myId)
     <&> (AlignedWidget.widget %~)
 
-makeLabel :: Monad m => String -> AnimId -> ExprGuiM m (AlignedWidget a)
+makeLabel :: Monad m => Text -> AnimId -> ExprGuiM m (AlignedWidget a)
 makeLabel text animId = ExprGuiM.makeLabel text animId <&> Widget.fromView <&> AlignedWidget.fromCenteredWidget
 
-grammarLabel :: Monad m => String -> AnimId -> ExprGuiM m (AlignedWidget f)
+grammarLabel :: Monad m => Text -> AnimId -> ExprGuiM m (AlignedWidget f)
 grammarLabel text animId =
     do
         config <- ExprGuiM.readConfig
@@ -663,7 +665,7 @@ makeCollisionSuffixLabel (Collision suffix) animId =
     do
         config <- ExprGuiM.readConfig
         let Config.Name{..} = Config.name config
-        BWidgets.makeLabel (show suffix) animId
+        BWidgets.makeLabel (Text.pack (show suffix)) animId
             & WE.localEnv (WE.setTextColor collisionSuffixTextColor)
             <&> View.scale (realToFrac <$> collisionSuffixScaleFactor)
             <&> View.backgroundColor

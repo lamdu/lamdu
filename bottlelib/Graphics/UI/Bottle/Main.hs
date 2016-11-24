@@ -11,6 +11,7 @@ import           Control.Monad (when)
 import           Control.Monad.IO.Class (MonadIO(..))
 import           Data.IORef
 import           Data.MRUMemo (memoIO)
+import qualified Data.Text as Text
 import qualified Graphics.UI.Bottle.Direction as Direction
 import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Main.Animation as MainAnim
@@ -77,7 +78,7 @@ newLooper =
                 Nothing -> return Nothing
                 Just enter -> enter (Direction.Point mousePosF) ^. Widget.enterResultEvent & Just & return
             lookupEvent widget event =
-                E.lookup (GLFW.getClipboardString win) event
+                E.lookup (GLFW.getClipboardString win <&> fmap Text.pack) event
                 (widget ^. Widget.eventMap)
         loop win (getConfig <&> cAnim) $ \size -> MainAnim.Handlers
             { MainAnim.tickHandler =

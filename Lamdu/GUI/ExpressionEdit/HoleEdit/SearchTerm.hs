@@ -11,6 +11,8 @@ import           Control.Monad (when)
 import qualified Data.Monoid as Monoid
 import           Data.Store.Property (Property)
 import qualified Data.Store.Property as Property
+import           Data.Text (Text)
+import qualified Data.Text as Text
 import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widget.TreeLayout as TreeLayout
@@ -35,7 +37,7 @@ textEditNoEmpty textEditStyle =
 
 makeSearchTermPropEdit ::
     Monad m =>
-    WidgetIds -> Property m String ->
+    WidgetIds -> Property m Text ->
     WE.WidgetEnvT m (Widget (m Widget.EventResult))
 makeSearchTermPropEdit WidgetIds{..} searchTermProp =
     BWidgets.makeTextEdit searchTerm hidOpenSearchTerm
@@ -46,7 +48,7 @@ makeSearchTermPropEdit WidgetIds{..} searchTermProp =
             eventRes
                 -- When first letter is typed in search term, jump to the
                 -- results, which will go to first result:
-                & ( if null searchTerm && (not . null) newSearchTerm
+                & ( if Text.null searchTerm && (not . Text.null) newSearchTerm
                     then Widget.eCursor .~ Monoid.Last (Just hidResultsPrefix)
                     else id
                   )

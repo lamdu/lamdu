@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, BangPatterns, RecordWildCards, TemplateHaskell #-}
+{-# LANGUAGE NoImplicitPrelude, BangPatterns, RecordWildCards, TemplateHaskell, OverloadedStrings #-}
 module Graphics.UI.Bottle.Widgets.TextView
     ( Font.Underline(..), Font.underlineColor, Font.underlineWidth
     , Style(..), styleColor, styleFont, styleUnderline
@@ -16,7 +16,8 @@ import           Prelude.Compat
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Lens.Tuple
-import           Data.List.Split (splitWhen)
+import           Data.Text (Text)
+import qualified Data.Text as Text
 import           Data.Vector.Vector2 (Vector2(..))
 import qualified Graphics.DrawingCombinators as Draw
 import           Graphics.UI.Bottle.Animation (AnimId, Size)
@@ -45,7 +46,7 @@ data RenderedText a = RenderedText
     }
 Lens.makeLenses ''RenderedText
 
-fontRender :: Style -> String -> RenderedText (Draw.Image ())
+fontRender :: Style -> Text -> RenderedText (Draw.Image ())
 fontRender Style{..} str =
     Font.render _styleFont _styleColor _styleUnderline str
     & uncurry RenderedText
@@ -62,12 +63,12 @@ nestedFrame style (i, RenderedText size img) =
         anchorSize = pure (lineHeight style)
 
 -- | Returns at least one rect
-letterRects :: Style -> String -> [[Rect]]
+letterRects :: Style -> Text -> [[Rect]]
 letterRects Style{..} text =
     zipWith locateLineHeight (iterate (+ height) 0) textLines
     where
-        -- splitWhen returns at least one string:
-        textLines = map makeLine $ splitWhen (== '\n') text
+        -- splitOn returns at least one string:
+        textLines = map makeLine $ Text.splitOn "\n" text
         locateLineHeight y = Lens.mapped . Rect.top +~ y
         height = Font.height _styleFont
         makeLine textLine =
@@ -77,21 +78,23 @@ letterRects Style{..} text =
             & scanl (+) 0
             & zipWith makeLetterRect sizes
             where
-                sizes = textLine <&> Font.textSize _styleFont . (:[])
+                sizes =
+                    Text.unpack textLine
+                    <&> Font.textSize _styleFont . Text.singleton
                 makeLetterRect size xpos =
                     Rect (Vector2 (advance xpos) 0) (bounding size)
 
-drawText :: Style -> String -> RenderedText (AnimId -> Anim.Frame)
-drawText style text = nestedFrame style ("text", fontRender style text)
+drawText :: Style -> Text -> RenderedText (AnimId -> Anim.Frame)
+drawText style text = nestedFrame style ("text" :: Text, fontRender style text)
 
-make :: Style -> String -> AnimId -> View
+make :: Style -> Text -> AnimId -> View
 make style text animId =
     View (bounding textSize) (frame animId)
     where
         RenderedText textSize frame = drawText style text
 
-makeWidget :: Style -> String -> AnimId -> Widget a
+makeWidget :: Style -> Text -> AnimId -> Widget a
 makeWidget style text = Widget.fromView . make style text
 
-label :: Style -> AnimId -> String -> View
+label :: Style -> AnimId -> Text -> View
 label style animId text = make style text $ Anim.augmentId animId text

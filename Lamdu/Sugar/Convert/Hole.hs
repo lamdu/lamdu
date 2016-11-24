@@ -16,7 +16,6 @@ import           Control.Monad.Trans.Class (lift)
 import           Control.Monad.Trans.Either (EitherT(..))
 import           Control.Monad.Trans.State (StateT(..), mapStateT)
 import qualified Control.Monad.Trans.State as State
-import qualified Data.ByteString.UTF8 as UTF8
 import           Data.CurAndPrev (CurAndPrev(..))
 import           Data.Functor.Identity (Identity(..))
 import qualified Data.List.Class as ListClass
@@ -26,6 +25,7 @@ import qualified Data.Set as Set
 import qualified Data.Store.Property as Property
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
+import           Data.Text.Encoding (encodeUtf8)
 import           Data.UUID.Types (UUID)
 import qualified Lamdu.Builtins.Anchors as Builtins
 import qualified Lamdu.Builtins.PrimVal as PrimVal
@@ -217,7 +217,7 @@ mkWritableHoleActions mInjectedArg exprPl stored = do
           LiteralNum (Identity x) -> PrimVal.Float x & mkLiteralOption
           LiteralBytes (Identity x) -> PrimVal.Bytes x & mkLiteralOption
           LiteralText (Identity x) ->
-              UTF8.fromString x
+              encodeUtf8 x
               & PrimVal.Bytes
               & PrimVal.fromKnown
               & V.LLiteral & Pure.leaf

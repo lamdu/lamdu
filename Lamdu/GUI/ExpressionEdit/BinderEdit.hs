@@ -18,6 +18,8 @@ import           Data.Maybe (fromMaybe)
 import           Data.Monoid ((<>))
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
+import           Data.Text (Text)
+import qualified Data.Text as Text
 import qualified Graphics.UI.Bottle.EventMap as E
 import           Graphics.UI.Bottle.ModKey (ModKey(..))
 import           Graphics.UI.Bottle.Widget (Widget)
@@ -54,14 +56,14 @@ type T = Transaction
 
 nonOperatorName :: Name m -> Bool
 nonOperatorName (Name NameSourceStored _ _ x) =
-    nonEmptyAll (`notElem` operatorChars) x
+    nonEmptyAll (`notElem` operatorChars) (Text.unpack x)
 nonOperatorName _ = False
 
 makeBinderNameEdit ::
     Monad m =>
     Sugar.BinderActions m ->
     Widget.EventMap (T m Widget.EventResult) ->
-    (String, Sugar.EntityId) ->
+    (Text, Sugar.EntityId) ->
     Name m -> Widget.Id ->
     ExprGuiM m (ExpressionGui m)
 makeBinderNameEdit binderActions rhsJumperEquals rhs name myId =
@@ -108,7 +110,7 @@ mkPresentationModeEdit myId prop = do
             widget <-
                 ExprGuiM.withFgColor (Config.presentationChoiceColor config) .
                 ExprGuiM.widgetEnv $
-                BWidgets.makeFocusableLabel (show presentationMode) myId
+                BWidgets.makeFocusableLabel (Text.pack (show presentationMode)) myId
             return (presentationMode, widget)
     pairs <- traverse mkPair [Sugar.OO, Sugar.Verbose, Sugar.Infix 5]
     BWidgets.makeChoiceWidget (Transaction.setP prop) pairs cur
@@ -232,7 +234,7 @@ makeScopeNavEdit binder myId curCursor =
         mkScopeEventMap l r = makeScopeEventMap l r curCursor setScope
         leftKeys = [ModKey mempty GLFW.Key'Left]
         rightKeys = [ModKey mempty GLFW.Key'Right]
-        scopes :: [(String, Maybe Sugar.BinderParamScopeId)]
+        scopes :: [(Text, Maybe Sugar.BinderParamScopeId)]
         scopes =
             [ ("◀", sMPrevParamScope curCursor)
             , (" ", Nothing)
@@ -418,12 +420,12 @@ makeLetEdit item =
 
 jumpToRHS ::
     Monad f =>
-    [ModKey] -> (String, Sugar.EntityId) ->
+    [ModKey] -> (Text, Sugar.EntityId) ->
     ExprGuiM f (Widget.EventMap (T f Widget.EventResult))
 jumpToRHS keys (rhsDoc, rhsId) = do
     savePos <- ExprGuiM.mkPrejumpPosSaver
     return $
-        Widget.keysEventMapMovesCursor keys (E.Doc ["Navigation", "Jump to " ++ rhsDoc]) $
+        Widget.keysEventMapMovesCursor keys (E.Doc ["Navigation", "Jump to " <> rhsDoc]) $
             WidgetIds.fromEntityId rhsId <$ savePos
 
 makeBinderBodyEdit ::

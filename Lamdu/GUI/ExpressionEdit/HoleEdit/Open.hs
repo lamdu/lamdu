@@ -18,6 +18,8 @@ import           Data.Monoid ((<>))
 import qualified Data.Monoid as Monoid
 import qualified Data.Store.Property as Property
 import           Data.Store.Transaction (Transaction)
+import           Data.Text (Text)
+import qualified Data.Text as Text
 import           Data.Vector.Vector2 (Vector2(..))
 import           Graphics.UI.Bottle.Animation (AnimId)
 import qualified Graphics.UI.Bottle.Animation as Anim
@@ -72,7 +74,7 @@ data ResultGroupWidgets m = ResultGroupWidgets
     }
 Lens.makeLenses ''ResultGroupWidgets
 
-extraSymbol :: String
+extraSymbol :: Text
 extraSymbol = "▷"
 
 extraSymbolScaleFactor :: Fractional a => a
@@ -150,9 +152,9 @@ fixNumWithDotEventMap holeInfo res
                 (uuid, entityId) <- toHole
                 cursor <-
                     HoleState.setHoleStateAndJump uuid
-                    (HoleState ('.':[c])) entityId
+                    (HoleState ("." <> Text.singleton c)) entityId
                 return $ Widget.eventResultFromCursor cursor
-        endsWithDot = Lens.has (suffixed ".") (HoleInfo.hiSearchTerm holeInfo)
+        endsWithDot = "." `Text.isSuffixOf` (HoleInfo.hiSearchTerm holeInfo)
         doc = E.Doc ["Edit", "Apply Operator"]
         conv = res ^. Sugar.holeResultConverted
         literalNum = Sugar.rBody . Sugar._BodyLiteral . Sugar._LiteralNum
@@ -435,7 +437,7 @@ assignHoleEditCursor holeInfo shownMainResultsIds allShownResultIds searchTermId
     where
         WidgetIds{..} = hiIds holeInfo
         destId
-            | null (HoleInfo.hiSearchTerm holeInfo) = searchTermId
+            | Text.null (HoleInfo.hiSearchTerm holeInfo) = searchTermId
             | otherwise = head (shownMainResultsIds ++ [searchTermId])
 
 makeUnderCursorAssignment ::

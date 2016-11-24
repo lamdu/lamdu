@@ -101,6 +101,7 @@ import           Data.CurAndPrev (CurAndPrev)
 import           Data.Functor.Identity (Identity(..))
 import           Data.Map (Map)
 import           Data.Store.Transaction (Transaction, MkProperty, Property)
+import           Data.Text (Text)
 import           Data.UUID.Types (UUID)
 import           Lamdu.Calc.Type (Type)
 import qualified Lamdu.Calc.Type as T
@@ -256,7 +257,7 @@ data HoleOption name m = HoleOption
 data Literal f
     = LiteralNum (f Double)
     | LiteralBytes (f SBS.ByteString)
-    | LiteralText (f String)
+    | LiteralText (f Text)
 
 data HoleActions name m = HoleActions
     { _holeUUID :: UUID -- TODO: Replace this with a way to associate data?

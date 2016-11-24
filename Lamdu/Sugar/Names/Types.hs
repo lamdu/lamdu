@@ -5,6 +5,7 @@ module Lamdu.Sugar.Names.Types
     ) where
 
 import Data.Store.Transaction (Transaction)
+import Data.Text (Text)
 import Lamdu.Sugar.Types (Expression, Body, Definition)
 
 type T = Transaction
@@ -16,8 +17,8 @@ data NameCollision = NoCollision | Collision {-Disambiguator:-} Int
 data Name m = Name
     { nNameSource :: NameSource
     , nNameCollisionSuffix :: NameCollision
-    , nSetName :: String -> T m ()
-    , nName :: String
+    , nSetName :: Text -> T m ()
+    , nName :: Text
     }
 instance Show (Name m) where
     show Name{..} =

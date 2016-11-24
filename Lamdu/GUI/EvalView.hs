@@ -9,9 +9,12 @@ import           Control.Lens.Operators
 import           Control.Lens.Tuple
 import           Control.Monad (void)
 import qualified Data.Binary.Utils as BinUtils
-import qualified Data.ByteString.UTF8 as UTF8
 import qualified Data.List as List
+import           Data.Monoid ((<>))
 import qualified Data.Store.Transaction as Transaction
+import           Data.Text (Text)
+import           Data.Text.Encoding (decodeUtf8)
+import qualified Data.Text as Text
 import           Data.Vector.Vector2 (Vector2(..))
 import           Graphics.UI.Bottle.Animation (AnimId)
 import qualified Graphics.UI.Bottle.Animation as Anim
@@ -47,10 +50,10 @@ extractFields (V.RecExtend tag val (Val _ rest)) =
           & EvalTypeError & RecordExtendsError
         )
 
-textView :: Monad m => String -> AnimId -> ExprGuiM m View
+textView :: Monad m => Text -> AnimId -> ExprGuiM m View
 textView x animId = BWidgets.makeTextView x animId & ExprGuiM.widgetEnv
 
-label :: Monad m => String -> AnimId -> ExprGuiM m View
+label :: Monad m => Text -> AnimId -> ExprGuiM m View
 label x animId = BWidgets.makeTextView x (Anim.augmentId animId x) & ExprGuiM.widgetEnv
 
 makeTag :: Monad m => AnimId -> T.Tag -> ExprGuiM m View
@@ -75,12 +78,13 @@ makeField parentAnimId tag val =
         baseId = parentAnimId ++ [BinUtils.encodeS tag]
 
 makeError :: Monad m => EvalError -> AnimId -> ExprGuiM m View
-makeError err animId = textView msg $ animId ++ ["error"]
+makeError err animId =
+    textView msg $ animId ++ ["error"]
     where
         msg =
             case err of
             EvalHole -> "?"
-            _ -> show err
+            _ -> Text.pack (show err)
 
 hbox :: [View] -> View
 hbox = GridView.horizontalAlign 0.5
@@ -98,7 +102,7 @@ makeArray animId items =
     where
         makeItem idx val =
             [ [ label ", " itemId | idx > 0 ]
-            , [ makeInner (Anim.augmentId itemId ("val" :: String)) val
+            , [ makeInner (Anim.augmentId itemId ("val" :: Text)) val
                 | idx < arrayCutoff ]
             , [ label "..." itemId | idx == arrayCutoff ]
             ] & concat
@@ -125,7 +129,7 @@ makeRecExtend animId typ recExtend =
         where
             makeItem idx val =
                 [ [ label "* " itemId ]
-                , [ makeInner (Anim.augmentId itemId ("val" :: String)) val
+                , [ makeInner (Anim.augmentId itemId ("val" :: Text)) val
                     | idx < cutoff ]
                 , [ label "..." itemId | idx == cutoff ]
                 ] & concat
@@ -192,7 +196,7 @@ makeInner animId (Val typ val) =
     RPrimVal primVal
         | typ == T.TInst Builtins.textTid mempty ->
           case pv of
-          PrimVal.Bytes x -> UTF8.toString x & toText
+          PrimVal.Bytes x -> decodeUtf8 x & toText
           _ -> error "text not made of bytes"
         | otherwise ->
           case pv of
@@ -211,16 +215,16 @@ makeInner animId (Val typ val) =
                 cut =
                     map limLine start ++
                     ( case rest of
-                        [] -> []
-                        _ -> ["..."]
-                    ) & List.intercalate "\n"
+                      [] -> []
+                      _ -> ["..."]
+                    ) & Text.intercalate "\n"
                     where
-                        (start, rest) = splitAt 10 (lines text)
-                limLine :: String -> String
+                        (start, rest) = splitAt 10 (Text.lines text)
+                limLine :: Text -> Text
                 limLine ln =
-                    start ++
-                    case rest of
-                    [] -> ""
-                    _ -> "..."
+                    start <>
+                    if Text.null rest
+                    then ""
+                    else "..."
                     where
-                        (start, rest) = splitAt 100 ln
+                        (start, rest) = Text.splitAt 100 ln

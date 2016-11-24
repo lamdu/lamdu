@@ -11,13 +11,14 @@ import           Control.Lens.Operators
 import           Control.Lens.Tuple
 import           Control.Monad.ListT (ListT)
 import qualified Data.ByteString.Char8 as BS8
-import qualified Data.Char as Char
 import           Data.Function (on)
 import           Data.Functor.Identity (Identity(..))
-import           Data.List (isInfixOf, isPrefixOf, sortOn)
+import           Data.List (sortOn)
 import qualified Data.List.Class as ListClass
 import           Data.Monoid ((<>))
 import           Data.Store.Transaction (Transaction)
+import           Data.Text (Text)
+import qualified Data.Text as Text
 import qualified Graphics.UI.Bottle.WidgetId as WidgetId
 import qualified Lamdu.Config as Config
 import           Lamdu.Formatting (Format(..))
@@ -35,7 +36,7 @@ import           Prelude.Compat
 type T = Transaction
 
 data Group m = Group
-    { _groupSearchTerms :: [String]
+    { _groupSearchTerms :: [Text]
     , _groupId :: WidgetId.Id
     , _groupResults ::
         ListT (T m) (Sugar.HoleResultScore, T m (Sugar.HoleResult (Name m) m))
@@ -173,11 +174,11 @@ literalGroups holeInfo =
     , tryBuildLiteral Sugar.LiteralText holeInfo
     ] & sequenceA <&> (^.. Lens.traverse . Lens._Just)
 
-insensitivePrefixOf :: String -> String -> Bool
-insensitivePrefixOf = isPrefixOf `on` map Char.toLower
+insensitivePrefixOf :: Text -> Text -> Bool
+insensitivePrefixOf = Text.isPrefixOf `on` Text.toLower
 
-insensitiveInfixOf :: String -> String -> Bool
-insensitiveInfixOf = isInfixOf `on` map Char.toLower
+insensitiveInfixOf :: Text -> Text -> Bool
+insensitiveInfixOf = Text.isInfixOf `on` Text.toLower
 
 makeAllGroups :: Monad m => HoleInfo m -> T m [Group m]
 makeAllGroups holeInfo =
@@ -187,25 +188,25 @@ makeAllGroups holeInfo =
          >>= mapM mkGroup
          <&> holeMatches (hiSearchTerm holeInfo))
 
-groupOrdering :: String -> Group m -> [Bool]
+groupOrdering :: Text -> Group m -> [Bool]
 groupOrdering searchTerm group =
     map not
     [ null (group ^. groupSearchTerms)
     , match (==)
-    , match isPrefixOf
+    , match Text.isPrefixOf
     , match insensitivePrefixOf
-    , match isInfixOf
+    , match Text.isInfixOf
     ]
     where
         match f = any (f searchTerm) (group ^. groupSearchTerms)
 
-holeMatches :: String -> [Group m] -> [Group m]
+holeMatches :: Text -> [Group m] -> [Group m]
 holeMatches searchTerm groups =
     groups
     & filterBySearchTerm
     & sortOn (groupOrdering searchTerm)
     where
         filterBySearchTerm
-            | null searchTerm = id
+            | Text.null searchTerm = id
             | otherwise = filter nameMatch
         nameMatch group = any (insensitiveInfixOf searchTerm) (group ^. groupSearchTerms)
