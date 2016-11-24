@@ -12,7 +12,6 @@ import           Control.Lens.Operators
 import           Control.Lens.Tuple
 import           Control.Monad (msum)
 import           Data.Foldable (toList)
-import           Data.Function (on)
 import           Data.List (foldl', transpose, find, sortOn)
 import           Data.List.Utils (groupOn, minimumOn)
 import           Data.MRUMemo (memo)
@@ -225,7 +224,7 @@ combineMEnters size children =
         byDirection dir =
             minimumOn
             (Vector2.uncurry (+) . abs . modifyDistance .
-              distance dirRect . (^. Widget.enterResultRect)) .
+              Rect.distance dirRect . (^. Widget.enterResultRect)) .
             map ($ dir) $ filteredByEdge edge
             where
                 removeUninterestingAxis :: Vector2 R -> Vector2 R
@@ -235,8 +234,6 @@ combineMEnters size children =
                     Direction.PrevFocalArea x -> (removeUninterestingAxis, x)
                     Direction.Point x -> (id, Rect x 0)
                 edge = asEdge size dirRect
-
-        distance = (-) `on` (^. Rect.center)
 
         filteredByEdge = memo $ \(Vector2 hEdge vEdge) ->
             map snd .
