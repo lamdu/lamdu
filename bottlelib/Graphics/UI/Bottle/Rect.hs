@@ -9,8 +9,6 @@ module Graphics.UI.Bottle.Rect
     , distance
     ) where
 
-import           Prelude.Compat
-
 import           Control.Applicative (liftA2)
 import           Control.DeepSeq (NFData(..))
 import           Control.DeepSeq.Generics (genericRnf)
@@ -19,10 +17,11 @@ import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Lens.Tuple
 import           Data.Vector.Vector2 (Vector2(..))
-import qualified Data.Vector.Vector2 as Vector2
 import           Foreign.C.Types.Instances ()
 import           GHC.Generics (Generic)
 import           Graphics.DrawingCombinators (R)
+
+import           Prelude.Compat
 
 data Rect = Rect
     { _topLeft :: !(Vector2 R)
@@ -83,11 +82,15 @@ width = size . _1
 height :: Lens' Rect R
 height = size . _2
 
-distance :: Rect -> Rect -> R
-distance r1 r2 = Vector2.sqrNorm dist2
+-- | Returns the linear distance between the 2 closest points in 2
+-- rects
+distance :: Rect -> Rect -> Vector2 R
+distance r1 r2 =
+    max
+    <$> tl2 - br1
+    <*> tl1 - br2
+    <&> max 0
     where
-        max2 = liftA2 max
-        dist2 = max2 (max2 0 (tl2 - br1)) (max2 0 (tl1 - br2))
         tl1 = r1 ^. topLeft
         tl2 = r2 ^. topLeft
         br1 = r1 ^. bottomRight
