@@ -148,11 +148,8 @@ eventHandlerThread tvars getAnimationConfig animHandlers =
                         oldFrameState
                         & asIsAnimating .~ Animating animationHalfLife
                         & asDestFrame .~ destFrame
-                        -- retroactively pretend animation started at
-                        -- user event time to make the
-                        -- animation-until-dest-frame last the same
-                        -- amount of time no matter how long it took
-                        -- to handle the event:
+                        -- retroactively pretend animation started a little bit
+                        -- sooner so there's already a change in the first frame
                         & asCurTime .~ addUTCTime (-1.0 / desiredFrameRate) curTime
                         & asCurFrame %~ Anim.mapIdentities (Monoid.appEndo (fromMaybe mempty mMapping))
                     -- In case main thread went to sleep (not knowing
