@@ -72,10 +72,6 @@ data Result
     -- ^ The event-loop should quit.
     deriving (Show, Eq, Ord)
 
-instance Monoid Result where
-    mempty = ResultNone
-    mappend = max
-
 fromChar :: Char -> Maybe Char
 fromChar char
     -- Range for "key" characters (keys for left key, right key, etc.)
