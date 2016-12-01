@@ -9,6 +9,7 @@ import           Control.Concurrent.STM.TVar (TVar, newTVarIO, readTVar, writeTV
 import           Control.Concurrent.Utils (forwardSynchronuousExceptions, withForkedIO)
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
+import           Control.Exception (evaluate)
 import           Control.Monad (when, forever)
 import qualified Control.Monad.STM as STM
 import           Data.Maybe (fromMaybe)
@@ -128,11 +129,12 @@ eventHandlerThread tvars getAnimationConfig animHandlers =
             (False, Nothing) -> return ()
             (_, mMapping) ->
                 do
-                    destFrame <- makeFrame handlers
-                    -- Force destFrame so that we don't get unknown computations
-                    -- happening inside STM.atomically modifying the state var.
-                    -- Without this we may get nested STM.atomically errors.
-                    destFrame `seq` return ()
+                    destFrame <-
+                        makeFrame handlers
+                        -- Force destFrame so that we don't get unknown computations
+                        -- happening inside STM.atomically modifying the state var.
+                        -- Without this we may get nested STM.atomically errors.
+                        >>= evaluate
                     AnimConfig timePeriod ratio <- getAnimationConfig
                     curTime <- getCurrentTime
                     let timeRemaining =
