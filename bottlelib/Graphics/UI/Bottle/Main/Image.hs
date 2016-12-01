@@ -19,7 +19,7 @@ import           Graphics.Rendering.OpenGL.GL (($=))
 import qualified Graphics.Rendering.OpenGL.GL as GL
 import           Graphics.UI.Bottle.Animation (Size)
 import qualified Graphics.UI.GLFW as GLFW
-import           Graphics.UI.GLFW.Events (Event, Result(..), eventLoop)
+import           Graphics.UI.GLFW.Events (Event, Next(..), eventLoop)
 import qualified Graphics.UI.GLFW.Events as GLFWEvents
 
 import           Prelude.Compat
@@ -67,11 +67,11 @@ mainLoop win imageHandlers =
                     let handlers = imageHandlers winSize
                     writeIORef drawnImageHandlers handlers
                     case eventResult of
-                        ERQuit -> return ResultQuit
+                        ERQuit -> return NextQuit
                         ERRefresh -> refresh handlers >>= draw winSize
                         ERNone ->
                             update handlers >>=
-                            maybe (return ResultNone) (draw winSize)
+                            maybe (return NextWait) (draw winSize)
         eventLoop win handleEvents
     where
         draw (Vector2 winSizeX winSizeY) image =
@@ -84,4 +84,4 @@ mainLoop win imageHandlers =
                 GL.ortho 0 winSizeX winSizeY 0 (-1) 1
                 DrawUtils.clearRender image
                 GLFW.swapBuffers win
-                return ResultDidDraw
+                return NextPoll

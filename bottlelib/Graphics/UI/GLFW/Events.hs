@@ -4,7 +4,7 @@
 module Graphics.UI.GLFW.Events
     ( eventLoop
     , Event(..), KeyEvent(..), MouseButtonEvent(..)
-    , Result(..)
+    , Next(..)
     ) where
 
 import qualified Control.Exception as E
@@ -63,10 +63,12 @@ data Event
     deriving (Show, Eq)
 
 -- | The output of the event handler back to the event-loop.
-data Result
-    = ResultNone
-    | ResultDidDraw
-    | ResultQuit
+data Next
+    = NextWait
+    -- ^ idle wait for the next event
+    | NextPoll
+    -- ^ poll for the next event and immediately (up to sync-to-vblank) continue
+    | NextQuit
     -- ^ The event-loop should quit.
     deriving (Show, Eq, Ord)
 
@@ -127,7 +129,7 @@ data EventLoopDisallowedWhenMasked = EventLoopDisallowedWhenMasked
     deriving (Show, Typeable)
 instance E.Exception EventLoopDisallowedWhenMasked
 
-eventLoop :: GLFW.Window -> ([Event] -> IO Result) -> IO ()
+eventLoop :: GLFW.Window -> ([Event] -> IO Next) -> IO ()
 eventLoop win eventsHandler =
     do
         maskingState <- E.getMaskingState
@@ -155,17 +157,17 @@ eventLoop win eventsHandler =
                     oldState <- readIORef eventProcessingStateRef
                     let (events, newState) = translate rawEvents oldState
                     writeIORef eventProcessingStateRef newState
-                    res <- eventsHandler events
-                    case res of
-                        ResultNone ->
+                    next <- eventsHandler events
+                    case next of
+                        NextWait ->
                             do
                                 GLFW.waitEvents
                                 loop
-                        ResultDidDraw ->
+                        NextPoll ->
                             do
                                 GLFW.pollEvents
                                 loop
-                        ResultQuit -> return ()
+                        NextQuit -> return ()
 
         setCallback GLFW.setCharCallback (addEvent . RawCharEvent)
         setCallback GLFW.setKeyCallback addKeyEvent
