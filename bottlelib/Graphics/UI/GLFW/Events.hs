@@ -66,8 +66,6 @@ data Event
 data Result
     = ResultNone
     | ResultDidDraw
-    -- ^ The event handler performed drawing
-    --   (so a `GLFW.swapBuffers` call is necessary)
     | ResultQuit
     -- ^ The event-loop should quit.
     deriving (Show, Eq, Ord)
@@ -165,7 +163,6 @@ eventLoop win eventsHandler =
                                 loop
                         ResultDidDraw ->
                             do
-                                GLFW.swapBuffers win
                                 GLFW.pollEvents
                                 loop
                         ResultQuit -> return ()

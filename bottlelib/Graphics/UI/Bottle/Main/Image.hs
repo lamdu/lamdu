@@ -83,4 +83,5 @@ mainLoop win imageHandlers =
                 GL.loadIdentity
                 GL.ortho 0 winSizeX winSizeY 0 (-1) 1
                 DrawUtils.clearRender image
+                GLFW.swapBuffers win
                 return ResultDidDraw
