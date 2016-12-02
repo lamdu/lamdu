@@ -9,11 +9,11 @@ import           Control.Concurrent.STM.TVar (TVar, newTVarIO, readTVar, writeTV
 import           Control.Concurrent.Utils (forwardSynchronuousExceptions, withForkedIO)
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
-import           Control.Lens.Tuple
 import           Control.Exception (evaluate)
 import           Control.Monad (mplus, when, forever)
 import qualified Control.Monad.STM as STM
-import           Data.IORef (IORef, newIORef, readIORef, modifyIORef, atomicModifyIORef)
+import           Data.IORef (IORef, newIORef, readIORef, writeIORef, modifyIORef)
+import           Data.Maybe.Utils (unsafeUnjust)
 import qualified Data.Monoid as Monoid
 import           Data.Monoid ((<>))
 import           Data.Time.Clock (NominalDiffTime, UTCTime, getCurrentTime, addUTCTime, diffUTCTime)
@@ -25,11 +25,6 @@ import           Graphics.UI.GLFW.Events (Event)
 
 import           Prelude.Compat
 
-data IsAnimating
-    = Animating NominalDiffTime -- Current animation speed half-life
-    | NotAnimating
-    deriving Eq
-
 -- Animation thread will have not only the cur frame, but the dest
 -- frame in its mutable current state (to update it asynchronously)
 
@@ -37,10 +32,9 @@ data IsAnimating
 -- Animation thread sends events, ticks to worker thread. Samples results from worker thread, applies them to the cur state
 
 data AnimState = AnimState
-    { _asIsAnimating :: !IsAnimating
+    { _asCurSpeedHalfLife :: !NominalDiffTime
     , _asCurTime :: !UTCTime
-    , _asCurFrame :: !Anim.Frame
-    , _asDestFrame :: !Anim.Frame
+    , _asState :: !Anim.State
     }
 Lens.makeLenses ''AnimState
 
@@ -94,15 +88,14 @@ data Handlers = Handlers
 desiredFrameRate :: Double
 desiredFrameRate = 60
 
-initialAnimState :: Anim.Frame -> IO AnimState
-initialAnimState initialFrame =
+initialAnimState :: IO AnimState
+initialAnimState =
     do
         curTime <- getCurrentTime
         return AnimState
-            { _asIsAnimating = NotAnimating
+            { _asCurSpeedHalfLife = 0
             , _asCurTime = curTime
-            , _asCurFrame = initialFrame
-            , _asDestFrame = initialFrame
+            , _asState = Anim.initialState
             }
 
 waitForEvent :: TVar EventsData -> IO EventsData
@@ -164,27 +157,18 @@ animThread tvars animStateRef getAnimationConfig win =
         do
             updateTVar (edRefreshRequested .~ True)
             _ <- updateFrameState size
-            readIORef animStateRef <&> _asCurFrame <&> Anim.draw
-    , MainImage.update = updateFrameState size <&> fmap Anim.draw
+            readIORef animStateRef <&> draw
+    , MainImage.update = updateFrameState size <&> fmap draw
     }
     where
+        draw = Anim.draw . Anim.currentFrame . _asState
         updateTVar = STM.atomically . modifyTVar (eventsVar tvars)
         tick size = updateTVar $ (edHaveTicks .~ True) . (edWinSize .~ size)
-        advanceAnimation elapsed animState =
-            case animState ^. asIsAnimating of
-            Animating animationHalfLife ->
-                case Anim.nextFrame progress destFrame (animState ^. asCurFrame) of
-                Nothing ->
-                    ( animState
-                        & asCurFrame .~ destFrame
-                        & asIsAnimating .~ NotAnimating
-                    , Just destFrame
-                    )
-                Just newFrame -> (animState & asCurFrame .~ newFrame, Just newFrame)
-                where
-                    destFrame = animState ^. asDestFrame
-                    progress = 1 - 0.5 ** (realToFrac elapsed / realToFrac animationHalfLife)
-            NotAnimating -> (animState, Nothing)
+        advanceAnimation elapsed mNewDestFrame animState =
+            Anim.nextState progress mNewDestFrame (animState ^. asState)
+            <&> \newState -> animState & asState .~ newState
+            where
+                progress = 1 - 0.5 ** (realToFrac elapsed / realToFrac (animState ^. asCurSpeedHalfLife))
         updateFrameState size =
             do
                 tick size
@@ -192,32 +176,32 @@ animThread tvars animStateRef getAnimationConfig win =
                 taEventResult fromEvents & erExecuteInMainThread
                 AnimConfig timePeriod ratio <- getAnimationConfig
                 curTime <- getCurrentTime
-                atomicModifyIORef animStateRef $
+                mNewState <-
+                    readIORef animStateRef <&>
                     \animState ->
                     case taMNewFrame fromEvents of
                     Just (userEventTime, newDestFrame) ->
                         animState
-                        & asDestFrame .~ newDestFrame
-                        & asIsAnimating .~ Animating animationHalfLife
-                        & asCurFrame %~
+                        & asCurSpeedHalfLife .~ timeRemaining / realToFrac (logBase 0.5 ratio)
+                        & asState . Anim.stateFrames %~
                             case erAnimIdMapping (taEventResult fromEvents) of
                             Nothing -> id
                             Just mapping -> Anim.mapIdentities (Monoid.appEndo mapping)
-                        & advanceAnimation elapsed
+                        & advanceAnimation elapsed (Just newDestFrame)
                         where
                             -- Retroactively pretend animation started a little bit
                             -- sooner so there's already a change in the first frame
                             elapsed = 1.0 / desiredFrameRate
-                            animationHalfLife = timeRemaining / realToFrac (logBase 0.5 ratio)
                             timeRemaining =
                                 max 0 $
                                 diffUTCTime
                                 (addUTCTime timePeriod userEventTime)
                                 curTime
                     Nothing ->
-                        animState
-                        & advanceAnimation (curTime `diffUTCTime` (animState ^. asCurTime))
-                    & _1 . asCurTime .~ curTime
+                        advanceAnimation (curTime `diffUTCTime` (animState ^. asCurTime)) Nothing animState
+                    <&> asCurTime .~ curTime
+                _ <- Lens._Just (writeIORef animStateRef) mNewState
+                return mNewState
 
 newtype Looper = Looper
     { _runLooper :: GLFW.Window -> IO AnimConfig -> (Anim.Size -> Handlers) -> IO ()
@@ -226,17 +210,22 @@ newtype Looper = Looper
 newLooper :: IO Looper
 newLooper =
     do
-        animStateRef <- initialAnimState mempty >>= newIORef
+        animStateRef <- initialAnimState >>= newIORef
         return $ Looper $ \win getAnimationConfig animHandlers ->
             do
                 winSize <- MainImage.windowSize win
                 frame <- makeFrame (animHandlers winSize)
                 AnimConfig timePeriod ratio <- getAnimationConfig
-                modifyIORef animStateRef $ \s -> s
-                    & asCurFrame . Anim.unitImages .~ mempty
-                    & asDestFrame .~ frame
-                    & asIsAnimating .~
-                        Animating (timePeriod / realToFrac (logBase 0.5 ratio))
+                curTime <- getCurrentTime
+                modifyIORef animStateRef $
+                    \s ->
+                    s
+                    & asCurTime .~ curTime
+                    & asCurSpeedHalfLife .~ timePeriod / realToFrac (logBase 0.5 ratio)
+                    & asState . Anim.stateFrames . Anim.unitImages .~ mempty
+                    & asState %~
+                        unsafeUnjust "nextState with frame always updates state" .
+                        Anim.nextState 0 (Just frame)
                 tvars <-
                     ThreadVars
                     <$> newTVarIO EventsData

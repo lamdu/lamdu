@@ -4,16 +4,17 @@ module Graphics.UI.Bottle.Animation
     ( R, Size, Layer
     , Image(..), iUnitImage, iRect
     , Frame(..), frameImagesMap, unitImages
-    , draw, nextFrame, mapIdentities
+    , draw
+    , initialState, nextState, currentFrame
+    , mapIdentities
     , unitSquare, emptyRectangle
     , backgroundColor
     , translate, scale, layers
     , unitIntoRect
     , simpleFrame, sizedFrame
+    , State, stateFrames
     , module Graphics.UI.Bottle.Animation.Id
     ) where
-
-import           Prelude.Compat
 
 import           Control.Applicative (liftA2)
 import qualified Control.Lens as Lens
@@ -24,7 +25,7 @@ import qualified Data.List as List
 import           Data.List.Utils (groupOn)
 import           Data.Map (Map, (!))
 import qualified Data.Map.Strict as Map
-import           Data.Maybe (isJust)
+import           Data.Maybe (fromMaybe, isJust)
 import           Data.Vector.Vector2 (Vector2(..))
 import qualified Data.Vector.Vector2 as Vector2
 import           GHC.Generics (Generic)
@@ -34,6 +35,8 @@ import qualified Graphics.DrawingCombinators.Utils as DrawUtils
 import           Graphics.UI.Bottle.Animation.Id
 import           Graphics.UI.Bottle.Rect (Rect(Rect))
 import qualified Graphics.UI.Bottle.Rect as Rect
+
+import           Prelude.Compat
 
 type Layer = Int
 type Size = Vector2 R
@@ -51,6 +54,38 @@ newtype Frame = Frame
     { _frameImagesMap :: Map AnimId [Image]
     } deriving (Generic)
 Lens.makeLenses ''Frame
+
+data CurFrame = DestFrame | Animating Frame
+Lens.makePrisms ''CurFrame
+
+data State = State
+    { destFrame :: Frame
+    , curFrame :: CurFrame
+    }
+
+stateFrames :: Lens.Traversal' State Frame
+stateFrames f (State d c) = State <$> f d <*> _Animating f c
+
+currentFrame :: State -> Frame
+currentFrame (State _dest (Animating cur)) = cur
+currentFrame (State dest DestFrame) = dest
+
+initialState :: State
+initialState = State mempty DestFrame
+
+nextState :: R -> Maybe Frame -> State -> Maybe State
+nextState _movement Nothing (State _dest DestFrame) = Nothing
+nextState movement mNewDest oldState =
+    Just State
+    { destFrame = newDest
+    , curFrame =
+        if isVirtuallySame oldFrame newDest
+        then DestFrame
+        else makeNextFrame movement newDest oldFrame & Animating
+    }
+    where
+        oldFrame = currentFrame oldState
+        newDest = fromMaybe (destFrame oldState) mNewDest
 
 {-# INLINE images #-}
 images :: Lens.Traversal' Frame Image
@@ -169,11 +204,6 @@ isVirtuallySame (Frame a) (Frame b) =
 
 mapIdentities :: (AnimId -> AnimId) -> Frame -> Frame
 mapIdentities f = frameImagesMap %~ Map.mapKeys f
-
-nextFrame :: R -> Frame -> Frame -> Maybe Frame
-nextFrame movement dest cur
-    | isVirtuallySame dest cur = Nothing
-    | otherwise = Just $ makeNextFrame movement dest cur
 
 makeNextFrame :: R -> Frame -> Frame -> Frame
 makeNextFrame movement (Frame dests) (Frame curs) =
