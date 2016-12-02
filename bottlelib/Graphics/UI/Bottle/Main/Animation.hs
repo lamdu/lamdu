@@ -231,9 +231,12 @@ newLooper =
             do
                 winSize <- MainImage.windowSize win
                 frame <- makeFrame (animHandlers winSize)
+                AnimConfig timePeriod ratio <- getAnimationConfig
                 modifyIORef animStateRef $ \s -> s
                     & asCurFrame . Anim.unitImages .~ mempty
                     & asDestFrame .~ frame
+                    & asIsAnimating .~
+                        Animating (timePeriod / realToFrac (logBase 0.5 ratio))
                 tvars <-
                     ThreadVars
                     <$> newTVarIO EventsData
