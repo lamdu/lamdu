@@ -25,7 +25,6 @@ import           Prelude.Compat
 
 data IsAnimating
     = Animating NominalDiffTime -- Current animation speed half-life
-    | FinalFrame
     | NotAnimating
     deriving Eq
 
@@ -165,8 +164,8 @@ animThread tvars win =
     , MainImage.refresh =
         do
             updateTVar (edRefreshRequested .~ True)
-            updateFrameState size <&> _asCurFrame <&> Anim.draw
-    , MainImage.update = updateFrameState size <&> frameStateResult
+            updateFrameState size <&> fst <&> _asCurFrame <&> Anim.draw
+    , MainImage.update = updateFrameState size <&> snd <&> fmap Anim.draw
     }
     where
         updateTVar = STM.atomically . modifyTVar (eventsVar tvars)
@@ -175,32 +174,34 @@ animThread tvars win =
             do
                 tick size
                 curTime <- getCurrentTime
-                (newAnimState, runInAnim) <- STM.atomically $
+                (result, runInAnim) <- STM.atomically $
                     do
                         AnimState prevAnimating prevTime prevFrame destFrame <-
                             readTVar (animStateVar tvars)
-                        let notAnimating = AnimState NotAnimating curTime destFrame destFrame
-                            newAnimState =
+                        let (newAnimState, mFrameToDraw) =
                                 case prevAnimating of
                                 Animating animationHalfLife ->
                                     case Anim.nextFrame progress destFrame prevFrame of
-                                    Nothing -> AnimState FinalFrame curTime destFrame destFrame
-                                    Just newFrame -> AnimState (Animating animationHalfLife) curTime newFrame destFrame
+                                    Nothing ->
+                                        ( AnimState NotAnimating curTime destFrame destFrame
+                                        , Just destFrame
+                                        )
+                                    Just newFrame ->
+                                        ( AnimState (Animating animationHalfLife) curTime newFrame destFrame
+                                        , Just newFrame
+                                        )
                                     where
                                         elapsed = curTime `diffUTCTime` prevTime
                                         progress = 1 - 0.5 ** (realToFrac elapsed / realToFrac animationHalfLife)
-                                FinalFrame -> notAnimating
-                                NotAnimating -> notAnimating
+                                NotAnimating ->
+                                    ( AnimState NotAnimating curTime destFrame destFrame
+                                    , Nothing
+                                    )
                         writeTVar (animStateVar tvars) newAnimState
                         runInAnim <- swapTVar (runInAnimVar tvars) (return ())
-                        return (newAnimState, runInAnim)
+                        return ((newAnimState, mFrameToDraw), runInAnim)
                 runInAnim
-                return newAnimState
-        frameStateResult (AnimState isAnimating _ frame _) =
-            case isAnimating of
-            Animating _ -> Just $ Anim.draw frame
-            FinalFrame -> Just $ Anim.draw frame
-            NotAnimating -> Nothing
+                return result
 
 newtype Looper = Looper
     { _runLooper :: GLFW.Window -> IO AnimConfig -> (Anim.Size -> Handlers) -> IO ()
