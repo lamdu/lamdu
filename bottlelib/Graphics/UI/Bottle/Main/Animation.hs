@@ -9,6 +9,7 @@ import           Control.Concurrent.STM.TVar (TVar, newTVarIO, readTVar, writeTV
 import           Control.Concurrent.Utils (forwardSynchronuousExceptions, withForkedIO)
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
+import           Control.Lens.Tuple
 import           Control.Exception (evaluate)
 import           Control.Monad (when, forever)
 import qualified Control.Monad.STM as STM
@@ -176,27 +177,27 @@ animThread tvars win =
                 curTime <- getCurrentTime
                 (result, runInAnim) <- STM.atomically $
                     do
-                        AnimState prevAnimating prevTime prevFrame destFrame <-
-                            readTVar (animStateVar tvars)
+                        animState <- readTVar (animStateVar tvars)
                         let (newAnimState, mFrameToDraw) =
-                                case prevAnimating of
+                                case animState ^. asIsAnimating of
                                 Animating animationHalfLife ->
-                                    case Anim.nextFrame progress destFrame prevFrame of
+                                    case Anim.nextFrame progress destFrame (animState ^. asCurFrame) of
                                     Nothing ->
-                                        ( AnimState NotAnimating curTime destFrame destFrame
+                                        ( animState
+                                            & asCurFrame .~ destFrame
+                                            & asIsAnimating .~ NotAnimating
                                         , Just destFrame
                                         )
                                     Just newFrame ->
-                                        ( AnimState (Animating animationHalfLife) curTime newFrame destFrame
+                                        ( animState & asCurFrame .~ newFrame
                                         , Just newFrame
                                         )
                                     where
-                                        elapsed = curTime `diffUTCTime` prevTime
+                                        destFrame = animState ^. asDestFrame
+                                        elapsed = curTime `diffUTCTime` (animState ^. asCurTime)
                                         progress = 1 - 0.5 ** (realToFrac elapsed / realToFrac animationHalfLife)
-                                NotAnimating ->
-                                    ( AnimState NotAnimating curTime destFrame destFrame
-                                    , Nothing
-                                    )
+                                NotAnimating -> (animState, Nothing)
+                                & _1 . asCurTime .~ curTime
                         writeTVar (animStateVar tvars) newAnimState
                         runInAnim <- swapTVar (runInAnimVar tvars) (return ())
                         return ((newAnimState, mFrameToDraw), runInAnim)
