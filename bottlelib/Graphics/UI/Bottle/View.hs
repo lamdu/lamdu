@@ -69,8 +69,10 @@ backgroundColor layer animId color view =
         bgAnimId = animId ++ ["bg"]
 
 scale :: Vector2 Draw.R -> View -> View
-scale ratio (View sz frm) =
-    View (sz*ratio) (Anim.scale ratio frm)
+scale ratio view =
+    view
+    & size *~ ratio
+    & animFrame %~ Anim.scale ratio
 
 pad :: Vector2 R -> View -> View
 pad p = assymetricPad p p
