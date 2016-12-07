@@ -1,17 +1,13 @@
-{-# LANGUAGE OverloadedStrings, RecordWildCards #-}
+{-# LANGUAGE NoImplicitPrelude, OverloadedStrings, RecordWildCards #-}
 -- | A hole's search term component
 
 module Lamdu.GUI.ExpressionEdit.HoleEdit.SearchTerm
     ( make
     ) where
 
-import           Control.Lens.Operators
-import           Control.Lens.Tuple
-import           Control.Monad (when)
 import qualified Data.Monoid as Monoid
 import           Data.Store.Property (Property)
 import qualified Data.Store.Property as Property
-import           Data.Text (Text)
 import qualified Data.Text as Text
 import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
@@ -28,6 +24,8 @@ import           Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds (WidgetIds(..))
 import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
+
+import           Lamdu.Prelude
 
 textEditNoEmpty :: TextEdit.Style -> TextEdit.Style
 textEditNoEmpty textEditStyle =

@@ -16,7 +16,6 @@ module Lamdu.GUI.ExpressionGui.Types
     ) where
 
 import qualified Control.Lens as Lens
-import           Control.Lens.Operators
 import           Data.Store.Transaction (Transaction)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import           Graphics.UI.Bottle.Widget.TreeLayout (TreeLayout(..))
@@ -26,7 +25,7 @@ import           Lamdu.Sugar.NearestHoles (NearestHoles)
 import qualified Lamdu.Sugar.NearestHoles as NearestHoles
 import qualified Lamdu.Sugar.Types as Sugar
 
-import           Prelude.Compat
+import           Lamdu.Prelude
 
 type ExpressionGui m = TreeLayout (Transaction m Widget.EventResult)
 

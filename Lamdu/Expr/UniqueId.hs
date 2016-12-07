@@ -15,7 +15,7 @@ import qualified Lamdu.Calc.Val as V
 import           Lamdu.Expr.IRef (ValI(..))
 import qualified Lamdu.Expr.IRef as ExprIRef
 
-import           Prelude.Compat
+import           Lamdu.Prelude
 
 uuidOfIdentifier :: Identifier -> UUID
 uuidOfIdentifier (Identifier bs) = UUIDUtils.fromSBS16 bs

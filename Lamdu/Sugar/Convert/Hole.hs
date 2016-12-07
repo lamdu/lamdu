@@ -8,11 +8,8 @@ module Lamdu.Sugar.Convert.Hole
 
 import           Control.Applicative ((<|>))
 import qualified Control.Lens as Lens
-import           Control.Lens.Operators
-import           Control.Lens.Tuple
-import           Control.Monad (join, void, filterM)
+import           Control.Monad (filterM, join)
 import           Control.Monad.ListT (ListT)
-import           Control.Monad.Trans.Class (lift)
 import           Control.Monad.Trans.Either (EitherT(..))
 import           Control.Monad.Trans.State (StateT(..), mapStateT)
 import qualified Control.Monad.Trans.State as State
@@ -62,7 +59,7 @@ import qualified System.Random as Random
 import           System.Random.Utils (genFromHashable)
 import           Text.PrettyPrint.HughesPJClass (prettyShow)
 
-import           Prelude.Compat
+import           Lamdu.Prelude
 
 type T = Transaction
 

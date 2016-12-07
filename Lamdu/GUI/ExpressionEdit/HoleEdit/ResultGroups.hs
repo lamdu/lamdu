@@ -7,17 +7,13 @@ module Lamdu.GUI.ExpressionEdit.HoleEdit.ResultGroups
     ) where
 
 import qualified Control.Lens as Lens
-import           Control.Lens.Operators
-import           Control.Lens.Tuple
 import           Control.Monad.ListT (ListT)
 import qualified Data.ByteString.Char8 as BS8
 import           Data.Function (on)
 import           Data.Functor.Identity (Identity(..))
 import           Data.List (sortOn)
 import qualified Data.List.Class as ListClass
-import           Data.Monoid ((<>))
 import           Data.Store.Transaction (Transaction)
-import           Data.Text (Text)
 import qualified Data.Text as Text
 import qualified Graphics.UI.Bottle.WidgetId as WidgetId
 import qualified Lamdu.Config as Config
@@ -31,7 +27,7 @@ import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Sugar.Names.Types (Name(..))
 import qualified Lamdu.Sugar.Types as Sugar
 
-import           Prelude.Compat
+import           Lamdu.Prelude
 
 type T = Transaction
 

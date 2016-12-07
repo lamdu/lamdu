@@ -4,11 +4,8 @@ module Lamdu.VersionControl
     ) where
 
 import qualified Control.Lens as Lens
-import           Control.Lens.Operators
-import           Control.Monad (unless)
 import           Data.List (elemIndex)
 import           Data.List.Utils (removeAt)
-import           Data.Maybe (fromMaybe)
 import           Data.Maybe.Utils (unsafeUnjust)
 import qualified Data.Monoid as Monoid
 import           Data.Store.Rev.Branch (Branch)
@@ -25,7 +22,7 @@ import qualified Lamdu.Data.DbLayout as DbLayout
 import           Lamdu.VersionControl.Actions (Actions(Actions))
 import qualified Lamdu.VersionControl.Actions as Actions
 
-import           Prelude.Compat
+import           Lamdu.Prelude
 
 -- TODO: Use the monad newtypes:
 type TDB = Transaction DbM

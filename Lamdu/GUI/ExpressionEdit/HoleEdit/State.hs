@@ -1,4 +1,4 @@
-{-# LANGUAGE RecordWildCards, OverloadedStrings, TemplateHaskell, DeriveGeneric #-}
+{-# LANGUAGE NoImplicitPrelude, RecordWildCards, OverloadedStrings, TemplateHaskell, DeriveGeneric #-}
 module Lamdu.GUI.ExpressionEdit.HoleEdit.State
     ( HoleState(..), hsSearchTerm
     , emptyState, setHoleStateAndJump, assocStateRef
@@ -8,12 +8,13 @@ import qualified Control.Lens as Lens
 import           Data.Binary (Binary)
 import           Data.UUID.Types (UUID)
 import qualified Data.Store.Transaction as Transaction
-import           Data.Text (Text)
 import           GHC.Generics (Generic)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds (WidgetIds(..))
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds as WidgetIds
 import qualified Lamdu.Sugar.Types as Sugar
+
+import           Lamdu.Prelude
 
 type T = Transaction.Transaction
 

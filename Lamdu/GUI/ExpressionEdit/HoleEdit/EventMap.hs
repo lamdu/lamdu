@@ -5,18 +5,14 @@ module Lamdu.GUI.ExpressionEdit.HoleEdit.EventMap
     ) where
 
 import qualified Control.Lens as Lens
-import           Control.Lens.Operators
 import qualified Data.Foldable as Foldable
 import           Data.Functor.Identity (Identity(..))
 import           Data.List (isInfixOf)
 import           Data.List.Class (List)
 import qualified Data.List.Class as List
-import           Data.Maybe (fromMaybe)
-import           Data.Monoid ((<>))
 import           Data.Store.Property (Property(..))
 import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
-import           Data.Text (Text)
 import qualified Data.Text as Text
 import qualified Graphics.UI.Bottle.EventMap as E
 import           Graphics.UI.Bottle.ModKey (ModKey(..))
@@ -37,7 +33,7 @@ import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.Sugar.NearestHoles as NearestHoles
 import qualified Lamdu.Sugar.Types as Sugar
 
-import           Prelude.Compat
+import           Lamdu.Prelude
 
 type T = Transaction.Transaction
 

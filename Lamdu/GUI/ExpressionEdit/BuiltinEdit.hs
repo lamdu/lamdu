@@ -3,10 +3,8 @@ module Lamdu.GUI.ExpressionEdit.BuiltinEdit
     ( make
     ) where
 
-import           Control.Lens.Operators
 import           Data.Store.Property (Property(..))
 import           Data.Store.Transaction (Transaction)
-import           Data.Text (Text)
 import qualified Data.Text as Text
 import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.Bottle.EventMap as E
@@ -23,7 +21,7 @@ import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.Sugar.Types as Sugar
 
-import           Prelude.Compat
+import           Lamdu.Prelude
 
 type T = Transaction
 

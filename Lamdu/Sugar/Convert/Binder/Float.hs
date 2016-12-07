@@ -5,7 +5,6 @@ module Lamdu.Sugar.Convert.Binder.Float
     ) where
 
 import qualified Control.Lens as Lens
-import           Control.Lens.Operators
 import qualified Data.Set as Set
 import qualified Data.Store.Property as Property
 import           Data.Store.Transaction (Transaction)
@@ -28,7 +27,7 @@ import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import           Lamdu.Sugar.OrderTags (orderedClosedFlatComposite)
 import           Lamdu.Sugar.Types
 
-import           Prelude.Compat
+import           Lamdu.Prelude
 
 type T = Transaction
 

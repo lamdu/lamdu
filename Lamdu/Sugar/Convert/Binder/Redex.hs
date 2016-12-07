@@ -12,9 +12,7 @@ module Lamdu.Sugar.Convert.Binder.Redex
     ) where
 
 import qualified Control.Lens as Lens
-import           Control.Lens.Operators
 import           Data.CurAndPrev (CurAndPrev)
-import           Data.Map (Map)
 import           Lamdu.Calc.Type (Type)
 import qualified Lamdu.Calc.Val as V
 import           Lamdu.Calc.Val.Annotated (Val(..))
@@ -25,7 +23,7 @@ import qualified Lamdu.Infer as Infer
 import qualified Lamdu.Sugar.Convert.Input as Input
 import           Lamdu.Sugar.Types
 
-import           Prelude.Compat
+import           Lamdu.Prelude
 
 data Redex a = Redex
     { _bodyScope :: CurAndPrev (Map ScopeId ScopeId)

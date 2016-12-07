@@ -3,13 +3,7 @@ module Lamdu.Sugar.Convert.Apply
     ( convert
     ) where
 
-import           Prelude.Compat
-
 import qualified Control.Lens as Lens
-import           Control.Lens.Operators
-import           Control.Lens.Tuple
-import           Control.Monad (guard, unless)
-import           Control.Monad.Trans.Class (lift)
 import           Control.Monad.Trans.Either.Utils (runMatcherT, justToLeft)
 import           Control.Monad.Trans.Maybe (MaybeT(..))
 import           Control.Monad.Trans.State (evalStateT, runStateT)
@@ -43,6 +37,8 @@ import qualified Lamdu.Sugar.Convert.Monad as ConvertM
 import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import           Lamdu.Sugar.Types
+
+import           Lamdu.Prelude
 
 type T = Transaction
 

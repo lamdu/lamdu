@@ -1,15 +1,17 @@
+{-# LANGUAGE NoImplicitPrelude #-}
 module Lamdu.Sugar.Convert.Hole.ResultScore
     ( resultScore
     ) where
 
 import qualified Control.Lens as Lens
-import           Control.Lens.Operators
 import qualified Data.Map as Map
 import           Lamdu.Calc.Type (Type(..), Composite(..))
 import           Lamdu.Calc.Val.Annotated (Val(..))
 import qualified Lamdu.Calc.Val as V
 import qualified Lamdu.Expr.Lens as ExprLens
 import qualified Lamdu.Infer as Infer
+
+import           Lamdu.Prelude
 
 resultTypeScore :: Type -> [Int]
 resultTypeScore (TVar _) = [0]

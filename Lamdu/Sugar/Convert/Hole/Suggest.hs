@@ -7,12 +7,9 @@ module Lamdu.Sugar.Convert.Hole.Suggest
     ) where
 
 import qualified Control.Lens as Lens
-import           Control.Lens.Operators
-import           Control.Lens.Tuple
 import           Control.Monad (mzero)
 import           Control.Monad.Trans.Class (MonadTrans(..))
 import           Control.Monad.Trans.State (StateT(..), mapStateT)
-import           Data.Map (Map)
 import qualified Data.Map as Map
 import qualified Data.Set as Set
 import           Lamdu.Calc.Type (Type)
@@ -29,7 +26,7 @@ import qualified Lamdu.Infer as Infer
 import           Lamdu.Infer.Update (update)
 import qualified Lamdu.Infer.Update as Update
 
-import           Prelude.Compat
+import           Lamdu.Prelude
 
 type Nominals = Map T.NominalId Nominal
 

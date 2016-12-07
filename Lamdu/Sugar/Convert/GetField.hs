@@ -4,8 +4,6 @@ module Lamdu.Sugar.Convert.GetField
     ) where
 
 import qualified Control.Lens as Lens
-import           Control.Lens.Operators
-import           Control.Monad (guard)
 import qualified Lamdu.Calc.Val as V
 import           Lamdu.Calc.Val.Annotated (Val(..))
 import qualified Lamdu.Expr.Lens as ExprLens
@@ -18,7 +16,7 @@ import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import           Lamdu.Sugar.Types
 
-import           Prelude.Compat
+import           Lamdu.Prelude
 
 convertGetFieldParam ::
     Monad m =>

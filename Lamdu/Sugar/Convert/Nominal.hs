@@ -3,8 +3,6 @@ module Lamdu.Sugar.Convert.Nominal
     ( convertFromNom, convertToNom
     ) where
 
-import           Control.Lens.Operators
-import           Control.Monad.Trans.Class (lift)
 import           Control.Monad.Trans.Either.Utils (runMatcherT, justToLeft)
 import           Data.UUID.Types (UUID)
 import qualified Lamdu.Calc.Val as V
@@ -18,7 +16,7 @@ import qualified Lamdu.Sugar.Convert.Text as ConvertText
 import           Lamdu.Sugar.Internal
 import           Lamdu.Sugar.Types
 
-import           Prelude.Compat
+import           Lamdu.Prelude
 
 convertFromNom ::
     (Monad m, Monoid a) => V.Nom (Val (Input.Payload m a)) ->

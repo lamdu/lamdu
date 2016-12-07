@@ -1,11 +1,13 @@
+{-# LANGUAGE NoImplicitPrelude #-}
 module Lamdu.DataFile
     ( getPath, getLamduDir
     ) where
 
-import           Control.Lens.Operators
 import           Paths_Lamdu (getDataFileName)
 import qualified System.Directory as Directory
 import           System.FilePath ((</>))
+
+import           Lamdu.Prelude
 
 getLamduDir :: IO FilePath
 getLamduDir = Directory.getHomeDirectory <&> (</> ".lamdu")

@@ -4,10 +4,7 @@ module Lamdu.GUI.ExpressionEdit.NomEdit
     ) where
 
 import qualified Control.Lens as Lens
-import           Control.Lens.Operators
-import           Control.Lens.Tuple
 import           Data.Store.Transaction (Transaction)
-import           Data.Text (Text)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import           Graphics.UI.Bottle.Widget.Aligned (AlignedWidget)
 import qualified Graphics.UI.Bottle.Widget.Aligned as AlignedWidget
@@ -25,12 +22,12 @@ import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Sugar.Names.Types (Name(..))
 import qualified Lamdu.Sugar.Types as Sugar
 
-import           Prelude.Compat
+import           Lamdu.Prelude
 
 hover :: Monad m => ExprGuiM m (AlignedWidget n -> AlignedWidget n -> AlignedWidget n)
 hover =
     ExpressionGui.liftLayers
-    <&> (\lift gui place -> lift gui `AlignedWidget.hoverInPlaceOf` place)
+    <&> (\lifter gui place -> lifter gui `AlignedWidget.hoverInPlaceOf` place)
 
 type T = Transaction
 

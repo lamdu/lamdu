@@ -6,14 +6,13 @@ module Lamdu.Font
 
 import qualified Control.Exception as E
 import qualified Control.Lens as Lens
-import           Control.Monad (unless)
 import qualified Data.Aeson.Types as Aeson
 import           Data.Typeable (Typeable)
 import           GHC.Generics (Generic)
 import qualified Graphics.DrawingCombinators as Draw
 import qualified System.Directory as Directory
 
-import           Prelude.Compat
+import           Lamdu.Prelude
 
 data MissingFont = MissingFont FilePath deriving (Show, Typeable)
 instance E.Exception MissingFont

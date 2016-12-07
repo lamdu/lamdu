@@ -12,8 +12,7 @@ import           Control.Concurrent (forkIO, killThread)
 import           Control.Concurrent.MVar
 import qualified Control.Exception as E
 import qualified Control.Lens as Lens
-import           Control.Lens.Operators
-import           Control.Monad (unless, foldM, msum)
+import           Control.Monad (foldM, msum)
 import           Control.Monad.Trans.State (State, runState)
 import qualified Data.Aeson as JsonStr
 import           Data.Aeson.Types ((.:))
@@ -25,13 +24,8 @@ import           Data.HashMap.Strict (HashMap)
 import qualified Data.HashMap.Strict as HashMap
 import           Data.IORef
 import           Data.IntMap (IntMap)
-import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import           Data.Maybe (fromMaybe)
-import           Data.Monoid ((<>))
-import           Data.Set (Set)
 import qualified Data.Set as Set
-import           Data.Text (Text)
 import qualified Data.Text as Text
 import           Data.Text.Encoding (decodeUtf8)
 import           Data.UUID.Types (UUID)
@@ -54,7 +48,7 @@ import           System.IO (IOMode(..), Handle, hClose, hIsEOF, hPutStrLn, withF
 import qualified System.NodeJS.Path as NodeJS
 import qualified System.Process as Proc
 
-import           Prelude.Compat
+import           Lamdu.Prelude
 
 data Actions srcId = Actions
     { _aLoadGlobal :: V.Var -> IO (Def.Body (Val srcId))

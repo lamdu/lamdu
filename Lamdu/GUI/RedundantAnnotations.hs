@@ -5,12 +5,11 @@ module Lamdu.GUI.RedundantAnnotations
 
 import           Control.Lens (Lens')
 import qualified Control.Lens as Lens
-import           Control.Lens.Operators
 import qualified Lamdu.GUI.ExpressionGui.Types as T
 import qualified Lamdu.Sugar.Lens as SugarLens
 import           Lamdu.Sugar.Types
 
-import           Prelude.Compat
+import           Lamdu.Prelude
 
 showAnn :: Lens' (Payload m0 T.Payload) T.ShowAnnotation
 showAnn = plData . T.plShowAnnotation

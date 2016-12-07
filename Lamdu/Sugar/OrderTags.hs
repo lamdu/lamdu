@@ -1,12 +1,10 @@
-{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE NoImplicitPrelude, RankNTypes #-}
 module Lamdu.Sugar.OrderTags
     ( orderDef, orderType, orderExpr
     , orderedFlatComposite, orderedClosedFlatComposite
     ) where
 
 import qualified Control.Lens as Lens
-import           Control.Lens.Operators
-import           Control.Lens.Tuple
 import           Control.Lens.Utils (tagged)
 import           Control.Monad ((>=>))
 import           Data.List (sortOn)
@@ -22,6 +20,8 @@ import qualified Lamdu.Calc.Type.Scheme as S
 import qualified Lamdu.Expr.Lens as ExprLens
 import qualified Lamdu.Sugar.Lens as SugarLens
 import qualified Lamdu.Sugar.Types as Sugar
+
+import           Lamdu.Prelude
 
 type Order m x = x -> Transaction m x
 

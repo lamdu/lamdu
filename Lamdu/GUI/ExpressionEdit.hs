@@ -1,9 +1,8 @@
-{-# LANGUAGE OverloadedStrings, TypeFamilies #-}
+{-# LANGUAGE NoImplicitPrelude, OverloadedStrings, TypeFamilies #-}
 module Lamdu.GUI.ExpressionEdit
     ( make
     ) where
 
-import           Control.Lens.Operators
 import qualified Data.List as List
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widget.TreeLayout as TreeLayout
@@ -25,6 +24,8 @@ import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Sugar.Names.Types (Name(..))
 import qualified Lamdu.Sugar.Types as Sugar
+
+import           Lamdu.Prelude
 
 make :: Monad m => ExprGuiT.SugarExpr m -> ExprGuiM m (ExpressionGui m)
 make (Sugar.Expression body pl) =

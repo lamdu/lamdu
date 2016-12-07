@@ -3,7 +3,6 @@ module Lamdu.GUI.ExpressionEdit.InjectEdit
     ( make
     ) where
 
-import           Control.Lens.Operators
 import qualified Graphics.UI.Bottle.Widget.TreeLayout as TreeLayout
 import qualified Lamdu.GUI.ExpressionEdit.TagEdit as TagEdit
 import           Lamdu.GUI.ExpressionGui (ExpressionGui)
@@ -16,7 +15,7 @@ import           Lamdu.Sugar.NearestHoles (NearestHoles)
 import qualified Lamdu.Sugar.Types as Sugar
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 
-import           Prelude.Compat
+import           Lamdu.Prelude
 
 makeCommon ::
     Monad m =>

@@ -4,11 +4,7 @@ module Lamdu.Sugar.Convert.Case
     , convertAbsurd
     ) where
 
-import           Prelude.Compat
-
 import qualified Control.Lens as Lens
-import           Control.Lens.Operators
-import           Control.Monad (void)
 import           Data.Maybe.Utils (unsafeUnjust)
 import qualified Data.Store.Property as Property
 import           Data.Store.Transaction (Transaction)
@@ -29,6 +25,8 @@ import qualified Lamdu.Sugar.Convert.Monad as ConvertM
 import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import           Lamdu.Sugar.Types
+
+import           Lamdu.Prelude
 
 -- This is mostly a copy&paste of the Convert.Record module, yuck! DRY
 -- with some abstraction?

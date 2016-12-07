@@ -1,4 +1,4 @@
-{-# LANGUAGE GeneralizedNewtypeDeriving, OverloadedStrings #-}
+{-# LANGUAGE NoImplicitPrelude, GeneralizedNewtypeDeriving, OverloadedStrings #-}
 module Lamdu.Sugar.Internal.EntityId
     ( EntityId
     , bs
@@ -13,7 +13,6 @@ module Lamdu.Sugar.Internal.EntityId
     , randomizeExprAndParams
     ) where
 
-import           Data.ByteString (ByteString)
 import           Data.Hashable (Hashable)
 import           Data.UUID.Types (UUID)
 import qualified Data.UUID.Utils as UUIDUtils
@@ -25,6 +24,8 @@ import qualified Lamdu.Expr.GenIds as GenIds
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.UniqueId as UniqueId
 import           System.Random (RandomGen)
+
+import           Lamdu.Prelude
 
 newtype EntityId = EntityId UUID
     deriving (Eq, Hashable, Show)

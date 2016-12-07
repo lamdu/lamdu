@@ -4,11 +4,7 @@ module Lamdu.Sugar.Convert.Binder
     ) where
 
 import qualified Control.Lens as Lens
-import           Control.Lens.Operators
-import           Control.Lens.Tuple
-import           Control.Monad (void)
 import qualified Data.Map as Map
-import           Data.Set (Set)
 import qualified Data.Set as Set
 import qualified Data.Store.IRef as IRef
 import qualified Data.Store.Property as Property
@@ -38,7 +34,7 @@ import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import qualified Lamdu.Sugar.Lens as SugarLens
 import           Lamdu.Sugar.Types
 
-import           Prelude.Compat
+import           Lamdu.Prelude
 
 mkLetIActions ::
     Monad m =>

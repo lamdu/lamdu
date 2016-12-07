@@ -4,7 +4,6 @@ module Lamdu.Sugar.Names.Add
     ) where
 
 import qualified Control.Lens as Lens
-import           Control.Lens.Operators
 import           Control.Monad.Trans.Reader (Reader, runReader)
 import qualified Control.Monad.Trans.Reader as Reader
 import           Control.Monad.Trans.State (runState, evalState)
@@ -12,17 +11,13 @@ import           Control.Monad.Trans.Writer (Writer, runWriter)
 import qualified Control.Monad.Trans.Writer as Writer
 import           Data.Foldable (toList)
 import qualified Data.List.Utils as ListUtils
-import           Data.Map (Map)
 import qualified Data.Map as Map
-import           Data.Monoid ((<>))
 import           Data.Monoid.Generic (def_mempty, def_mappend)
-import           Data.Set (Set)
 import qualified Data.Set as Set
 import           Data.Set.Ordered (OrderedSet)
 import qualified Data.Set.Ordered as OrderedSet
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
-import           Data.Text (Text)
 import qualified Data.Text as Text
 import           Data.UUID.Types (UUID)
 import           GHC.Generics (Generic)
@@ -36,7 +31,7 @@ import           Lamdu.Sugar.Names.Walk (MonadNaming)
 import qualified Lamdu.Sugar.Names.Walk as Walk
 import           Lamdu.Sugar.Types
 
-import           Prelude.Compat
+import           Lamdu.Prelude
 
 type T = Transaction
 

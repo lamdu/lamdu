@@ -3,18 +3,15 @@ module Lamdu.GUI.ExpressionEdit.HoleEdit.ValTerms
     ( body
     ) where
 
-import           Control.Lens.Operators
-import           Data.Monoid ((<>))
 import           Data.Store.Property (Property)
 import qualified Data.Store.Property as Property
-import           Data.Text (Text)
 import qualified Data.Text as Text
 import           Lamdu.Formatting (Format(..))
 import qualified Lamdu.Sugar.Names.Get as NamesGet
 import           Lamdu.Sugar.Names.Types (Name(..), NameCollision(..))
 import qualified Lamdu.Sugar.Types as Sugar
 
-import           Prelude.Compat
+import           Lamdu.Prelude
 
 ofName :: Name m -> Text
 ofName (Name _ NoCollision _ varName) = varName

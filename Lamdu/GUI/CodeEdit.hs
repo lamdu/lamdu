@@ -7,14 +7,10 @@ module Lamdu.GUI.CodeEdit
 
 import           Control.Applicative (liftA2, (<|>))
 import qualified Control.Lens as Lens
-import           Control.Lens.Operators
-import           Control.Monad.Trans.Class (lift)
 import           Data.CurAndPrev (CurAndPrev(..))
-import           Data.Foldable (traverse_)
 import           Data.Functor.Identity (Identity(..))
 import qualified Data.List as List
 import           Data.List.Utils (insertAt, removeAt)
-import           Data.Maybe (fromMaybe)
 import           Data.Orphans () -- Imported for Monoid (IO ()) instance
 import qualified Data.Store.IRef as IRef
 import           Data.Store.Property (Property(..))
@@ -58,7 +54,7 @@ import qualified Lamdu.Sugar.OrderTags as OrderTags
 import qualified Lamdu.Sugar.PresentationModes as PresentationModes
 import qualified Lamdu.Sugar.Types as Sugar
 
-import           Prelude.Compat
+import           Lamdu.Prelude
 
 type T = Transaction
 

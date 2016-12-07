@@ -4,8 +4,6 @@ module Lamdu.GUI.DefinitionEdit
     ) where
 
 import qualified Control.Lens as Lens
-import           Control.Lens.Operators
-import           Control.Lens.Tuple
 import qualified Data.List as List
 import qualified Data.Store.Property as Property
 import           Data.Store.Transaction (Transaction)
@@ -38,7 +36,7 @@ import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Sugar.Names.Types (Name(..), DefinitionN)
 import qualified Lamdu.Sugar.Types as Sugar
 
-import           Prelude.Compat
+import           Lamdu.Prelude
 
 type T = Transaction
 

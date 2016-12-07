@@ -3,7 +3,7 @@ module Lamdu.Sugar.Names.CPS
     ( CPS(..)
     ) where
 
-import Prelude.Compat
+import Lamdu.Prelude
 
 data CPS m a = CPS { runCPS :: forall r. m r -> m (a, r) }
     deriving (Functor)

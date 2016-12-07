@@ -1,4 +1,4 @@
-{-# LANGUAGE Rank2Types, OverloadedStrings, DeriveGeneric, TemplateHaskell, GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE NoImplicitPrelude, Rank2Types, OverloadedStrings, DeriveGeneric, TemplateHaskell, GeneralizedNewtypeDeriving #-}
 module Lamdu.Data.Anchors
     ( Code(..), onCode
     , Revision(..), onRevision
@@ -17,19 +17,19 @@ module Lamdu.Data.Anchors
 import qualified Control.Lens as Lens
 import           Data.Binary (Binary)
 import           Data.ByteString.Char8 ()
-import           Data.Set (Set)
 import           Data.Store.Rev.Branch (Branch)
 import           Data.Store.Rev.Version (Version)
 import           Data.Store.Rev.View (View)
 import           Data.Store.Transaction (MkProperty(..))
 import qualified Data.Store.Transaction as Transaction
-import           Data.Text (Text)
 import           GHC.Generics (Generic)
 import qualified Graphics.UI.Bottle.WidgetId as WidgetId
 import qualified Lamdu.Calc.Type as T
 import           Lamdu.Eval.Results (ScopeId)
 import           Lamdu.Expr.IRef (DefI, ValI)
 import qualified Lamdu.Expr.UniqueId as UniqueId
+
+import           Lamdu.Prelude
 
 type Pane m = DefI m
 

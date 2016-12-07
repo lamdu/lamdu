@@ -3,7 +3,6 @@ module Lamdu.Sugar.Convert.Expression
     ( convert
     ) where
 
-import           Control.Lens.Operators
 import qualified Data.ByteString as SBS
 import           Data.Store.Property (Property(..))
 import qualified Data.Store.Property as Property
@@ -28,7 +27,7 @@ import qualified Lamdu.Sugar.Convert.Record as ConvertRecord
 import           Lamdu.Sugar.Internal
 import           Lamdu.Sugar.Types
 
-import           Prelude.Compat
+import           Lamdu.Prelude
 
 convertLiteralCommon ::
     Monad m =>

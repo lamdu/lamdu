@@ -7,18 +7,11 @@ module Lamdu.GUI.ExpressionEdit.BinderEdit
 
 import           Control.Applicative ((<|>), liftA2)
 import qualified Control.Lens as Lens
-import           Control.Lens.Operators
-import           Control.Lens.Tuple
-import           Control.Monad (guard, void)
 import           Data.CurAndPrev (CurAndPrev, current)
 import           Data.List.Utils (nonEmptyAll)
-import           Data.Map (Map)
 import qualified Data.Map as Map
-import           Data.Maybe (fromMaybe)
-import           Data.Monoid ((<>))
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
-import           Data.Text (Text)
 import qualified Data.Text as Text
 import qualified Graphics.UI.Bottle.EventMap as E
 import           Graphics.UI.Bottle.ModKey (ModKey(..))
@@ -50,7 +43,7 @@ import           Lamdu.Sugar.Names.Types (Name(..), NameSource(..))
 import           Lamdu.Sugar.NearestHoles (NearestHoles)
 import qualified Lamdu.Sugar.Types as Sugar
 
-import           Prelude.Compat
+import           Lamdu.Prelude
 
 type T = Transaction
 

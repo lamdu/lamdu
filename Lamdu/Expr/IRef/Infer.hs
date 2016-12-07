@@ -1,4 +1,4 @@
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE NoImplicitPrelude, OverloadedStrings #-}
 -- | Infer expressions where GlobalId's are known to be DefI's
 module Lamdu.Expr.IRef.Infer
     ( ExpressionSetter
@@ -10,9 +10,6 @@ module Lamdu.Expr.IRef.Infer
     ) where
 
 import           Control.Lens (_Left)
-import           Control.Lens.Operators
-import           Control.Lens.Tuple
-import           Control.Monad.Trans.Class (lift)
 import           Control.Monad.Trans.Either (EitherT(..), hoistEither)
 import           Control.Monad.Trans.State (StateT(..), mapStateT)
 import           Data.Store.Transaction (Transaction)
@@ -33,6 +30,8 @@ import           Lamdu.Infer.Unify (unify)
 import qualified Lamdu.Infer.Update as Update
 import qualified Text.PrettyPrint as PP
 import           Text.PrettyPrint.HughesPJClass (Pretty(..))
+
+import           Lamdu.Prelude
 
 type T = Transaction
 

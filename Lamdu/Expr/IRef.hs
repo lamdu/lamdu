@@ -16,8 +16,6 @@ module Lamdu.Expr.IRef
 
 import           Control.DeepSeq (NFData)
 import qualified Control.Lens as Lens
-import           Control.Lens.Operators
-import           Control.Lens.Tuple
 import           Data.Binary (Binary(..))
 import           Data.Function.Decycle (decycle)
 import           Data.Store.IRef (IRef)
@@ -34,7 +32,7 @@ import qualified Lamdu.Calc.Val as V
 import           Lamdu.Calc.Val.Annotated (Val(..))
 import qualified Lamdu.Calc.Val.Annotated as Val
 
-import           Prelude.Compat
+import           Lamdu.Prelude
 
 type T = Transaction
 

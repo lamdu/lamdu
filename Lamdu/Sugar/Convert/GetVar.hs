@@ -4,8 +4,6 @@ module Lamdu.Sugar.Convert.GetVar
     ) where
 
 import qualified Control.Lens as Lens
-import           Control.Lens.Operators
-import           Control.Monad (guard)
 import           Control.Monad.Trans.Class (MonadTrans(..))
 import           Control.Monad.Trans.Either.Utils (runMatcherT, justToLeft)
 import           Control.Monad.Trans.Maybe (MaybeT)
@@ -31,7 +29,7 @@ import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import           Lamdu.Sugar.Types
 
-import           Prelude.Compat
+import           Lamdu.Prelude
 
 jumpToDefI ::
     Monad m => Anchors.CodeProps m -> DefI m -> Transaction m EntityId

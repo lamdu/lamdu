@@ -5,7 +5,6 @@ module Lamdu.Sugar.Convert.ParamList
     ) where
 
 import qualified Control.Lens as Lens
-import           Control.Lens.Operators
 import           Control.Monad.Trans.Class (MonadTrans(..))
 import           Control.Monad.Trans.State (mapStateT)
 import qualified Control.Monad.Trans.State as State
@@ -27,7 +26,7 @@ import           Lamdu.Infer.Update (update)
 import qualified Lamdu.Infer.Update as Update
 import qualified Lamdu.Sugar.Convert.Input as Input
 
-import           Prelude.Compat
+import           Lamdu.Prelude
 
 type T = Transaction
 

@@ -3,11 +3,9 @@ module Lamdu.Sugar.Convert.Record
     ( convertEmpty, convertExtend
     ) where
 
-import           Prelude.Compat
+import           Lamdu.Prelude
 
 import qualified Control.Lens as Lens
-import           Control.Lens.Operators
-import           Control.Monad (void)
 import           Data.Maybe.Utils (unsafeUnjust)
 import qualified Data.Store.Property as Property
 import           Data.Store.Transaction (Transaction)

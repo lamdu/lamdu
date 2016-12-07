@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell, OverloadedStrings #-}
+{-# LANGUAGE NoImplicitPrelude, TemplateHaskell, OverloadedStrings #-}
 module Lamdu.GUI.CodeEdit.Settings
     ( Settings(..), sInfoMode, InfoMode(..), defaultInfoMode
     , nextInfoMode
@@ -6,14 +6,14 @@ module Lamdu.GUI.CodeEdit.Settings
     ) where
 
 import qualified Control.Lens as Lens
-import           Control.Lens.Operators
 import           Data.IORef
-import           Data.Monoid ((<>))
 import qualified Data.Text as Text
 import qualified Graphics.UI.Bottle.EventMap as EventMap
 import qualified Graphics.UI.Bottle.Widget as Widget
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
+
+import           Lamdu.Prelude
 
 data InfoMode = Evaluation | Types | None
     deriving (Eq, Ord, Show, Enum, Bounded)

@@ -1,14 +1,13 @@
+{-# LANGUAGE NoImplicitPrelude #-}
 module Lamdu.GUI.ExpressionEdit.HoleEdit.Info
     ( HoleInfo(..)
     , hiSearchTermProperty
     , hiSearchTerm
     ) where
 
-import           Control.Lens.Operators
 import           Data.Store.Property (Property(..))
 import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
-import           Data.Text (Text)
 import           Lamdu.Calc.Type (Type)
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.State (HoleState, hsSearchTerm)
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds (WidgetIds)
@@ -16,6 +15,8 @@ import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
 import           Lamdu.Sugar.Names.Types (Name)
 import           Lamdu.Sugar.NearestHoles (NearestHoles)
 import qualified Lamdu.Sugar.Types as Sugar
+
+import           Lamdu.Prelude
 
 type T = Transaction.Transaction
 

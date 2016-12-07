@@ -12,17 +12,11 @@ module Lamdu.Sugar.Convert.Binder.Params
 
 import           Control.Lens (Lens')
 import qualified Control.Lens as Lens
-import           Control.Lens.Operators
-import           Control.Lens.Tuple
-import           Control.Monad (guard, void, when)
 import           Data.CurAndPrev (CurAndPrev)
-import           Data.Foldable (traverse_)
 import qualified Data.List as List
 import qualified Data.List.Utils as ListUtils
-import           Data.Map (Map)
 import qualified Data.Map as Map
 import           Data.Maybe.Utils (unsafeUnjust)
-import           Data.Set (Set)
 import qualified Data.Set as Set
 import           Data.Store.Property (Property)
 import qualified Data.Store.Property as Property
@@ -54,7 +48,7 @@ import           Lamdu.Sugar.Lens as SugarLens
 import           Lamdu.Sugar.OrderTags (orderType, orderedClosedFlatComposite)
 import           Lamdu.Sugar.Types
 
-import           Prelude.Compat
+import           Lamdu.Prelude
 
 type T = Transaction
 

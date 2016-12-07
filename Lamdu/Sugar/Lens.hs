@@ -16,15 +16,12 @@ module Lamdu.Sugar.Lens
 
 import           Control.Lens (Lens')
 import qualified Control.Lens as Lens
-import           Control.Lens.Operators
-import           Control.Lens.Tuple
-import           Control.Monad (void)
 import           Data.Store.Transaction (Transaction)
 import           Lamdu.Calc.Type.Scheme (Scheme)
 import qualified Lamdu.Data.Definition as Def
 import           Lamdu.Sugar.Types
 
-import           Prelude.Compat
+import           Lamdu.Prelude
 
 subExprPayloads ::
     Lens.IndexedTraversal

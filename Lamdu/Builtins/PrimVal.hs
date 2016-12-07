@@ -1,13 +1,14 @@
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE NoImplicitPrelude, OverloadedStrings #-}
 module Lamdu.Builtins.PrimVal
     ( KnownPrim(..)
     , fromKnown, toKnown
     ) where
 
 import           Data.Binary.Utils (encodeS, decodeS)
-import           Data.ByteString (ByteString)
 import           Lamdu.Builtins.Anchors (bytesTid, floatTid)
 import qualified Lamdu.Calc.Val as V
+
+import           Lamdu.Prelude
 
 data KnownPrim
     = Float Double

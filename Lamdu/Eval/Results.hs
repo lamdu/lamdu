@@ -10,17 +10,15 @@ module Lamdu.Eval.Results
     ) where
 
 import qualified Control.Lens as Lens
-import           Control.Lens.Operators
 import           Data.Binary (Binary)
 import           Data.IntMap (IntMap)
 import qualified Data.IntMap as IntMap
-import           Data.Map (Map)
 import qualified Data.Map as Map
 import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Calc.Val as V
 import           Lamdu.Data.Definition (FFIName)
 
-import           Prelude.Compat
+import           Lamdu.Prelude
 
 newtype ScopeId = ScopeId Int
     deriving (Show, Eq, Ord, Binary)

@@ -8,7 +8,6 @@ module Lamdu.GUI.ExpressionEdit.HoleEdit.SearchArea
     ( makeStdWrapped
     ) where
 
-import           Control.Lens.Operators
 import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget.Aligned as AlignedWidget
 import qualified Graphics.UI.Bottle.Widget.TreeLayout as TreeLayout
@@ -26,7 +25,7 @@ import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
 import qualified Lamdu.Sugar.Types as Sugar
 
-import           Prelude.Compat
+import           Lamdu.Prelude
 
 fdConfig :: Config.Hole -> FocusDelegator.Config
 fdConfig Config.Hole{..} = FocusDelegator.Config

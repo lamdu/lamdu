@@ -10,9 +10,7 @@ module Lamdu.Sugar.Convert.Input
 
 import           Control.Lens (Lens')
 import qualified Control.Lens as Lens
-import           Control.Lens.Operators
 import           Data.CurAndPrev (CurAndPrev(..))
-import           Data.Map (Map)
 import qualified Data.Map as Map
 import           Lamdu.Calc.Type (Type)
 import qualified Lamdu.Calc.Val as V
@@ -22,7 +20,7 @@ import           Lamdu.Expr.IRef (ValIProperty)
 import qualified Lamdu.Infer as Infer
 import           Lamdu.Sugar.EntityId (EntityId)
 
-import           Prelude.Compat
+import           Lamdu.Prelude
 
 data EvalResultsForExpr = EvalResultsForExpr
     { _eResults :: Map ER.ScopeId (ER.Val ())

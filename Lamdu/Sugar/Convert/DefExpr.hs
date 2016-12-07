@@ -4,7 +4,6 @@ module Lamdu.Sugar.Convert.DefExpr
     ) where
 
 import qualified Control.Lens as Lens
-import           Control.Lens.Operators
 import qualified Data.Map as Map
 import qualified Data.Set as Set
 import qualified Data.Store.Property as Property
@@ -28,7 +27,7 @@ import qualified Lamdu.Sugar.Convert.Monad as ConvertM
 import           Lamdu.Sugar.Internal
 import           Lamdu.Sugar.Types
 
-import           Prelude.Compat
+import           Lamdu.Prelude
 
 loadGlobalType :: Monad m => V.Var -> Transaction m (Maybe Scheme)
 loadGlobalType globId =

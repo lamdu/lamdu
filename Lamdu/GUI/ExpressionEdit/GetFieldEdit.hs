@@ -3,7 +3,6 @@ module Lamdu.GUI.ExpressionEdit.GetFieldEdit
     ( make
     ) where
 
-import           Control.Lens.Operators
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widget.TreeLayout as TreeLayout
 import qualified Lamdu.GUI.ExpressionEdit.TagEdit as TagEdit
@@ -16,7 +15,7 @@ import           Lamdu.Sugar.Names.Types (Name(..))
 import qualified Lamdu.Sugar.Types as Sugar
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 
-import           Prelude.Compat
+import           Lamdu.Prelude
 
 make ::
     Monad m =>

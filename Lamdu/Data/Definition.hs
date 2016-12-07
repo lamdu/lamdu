@@ -9,17 +9,13 @@ module Lamdu.Data.Definition
     ) where
 
 import qualified Control.Lens as Lens
-import           Control.Lens.Operators
 import           Data.Binary (Binary(..))
-import           Data.Map (Map)
-import           Data.Monoid ((<>))
-import           Data.Text (Text)
 import qualified Data.Text as Text
 import           GHC.Generics (Generic)
 import           Lamdu.Calc.Type.Scheme (Scheme)
 import           Lamdu.Calc.Val (Var)
 
-import           Prelude.Compat
+import           Lamdu.Prelude
 
 data FFIName = FFIName
     { fModule :: [Text]

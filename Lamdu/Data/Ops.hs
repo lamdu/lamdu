@@ -14,14 +14,11 @@ module Lamdu.Data.Ops
     , newIdentityLambda
     ) where
 
-import           Control.Lens.Operators
-import           Control.Monad (when)
 import qualified Data.Set as Set
 import           Data.Store.Property (Property(..))
 import qualified Data.Store.Property as Property
 import           Data.Store.Transaction (Transaction, getP, setP, modP)
 import qualified Data.Store.Transaction as Transaction
-import           Data.Text (Text)
 import qualified Data.Text as Text
 import qualified Graphics.UI.Bottle.WidgetId as WidgetId
 import qualified Lamdu.Calc.Type as T
@@ -35,7 +32,7 @@ import           Lamdu.Expr.IRef (DefI, ValIProperty, ValI)
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified System.Random.Utils as RandomUtils
 
-import           Prelude.Compat
+import           Lamdu.Prelude
 
 type T = Transaction
 

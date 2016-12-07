@@ -4,8 +4,6 @@ module Lamdu.GUI.WidgetIds
     , module Lamdu.GUI.WidgetIdIRef
     ) where
 
-import           Control.Lens.Operators
-import           Data.ByteString.Char8 (ByteString)
 import           Data.UUID.Types (UUID)
 import qualified Data.UUID.Utils as UUIDUtils
 import           Graphics.UI.Bottle.Animation (AnimId)
@@ -16,7 +14,7 @@ import qualified Lamdu.Sugar.EntityId as EntityId
 import qualified Lamdu.Sugar.Types as Sugar
 import           System.Random.Utils (randFunc)
 
-import           Prelude.Compat
+import           Lamdu.Prelude
 
 fromBS :: ByteString -> Id
 fromBS = Id . (: [])

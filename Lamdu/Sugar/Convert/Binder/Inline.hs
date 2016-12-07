@@ -5,8 +5,6 @@ module Lamdu.Sugar.Convert.Binder.Inline
     ) where
 
 import qualified Control.Lens as Lens
-import           Control.Lens.Operators
-import           Control.Lens.Tuple
 import qualified Data.Store.Property as Property
 import           Data.Store.Transaction (Transaction)
 import qualified Lamdu.Calc.Val as V
@@ -19,7 +17,7 @@ import qualified Lamdu.Sugar.Convert.Binder.Redex as Redex
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import           Lamdu.Sugar.Types
 
-import           Prelude.Compat
+import           Lamdu.Prelude
 
 redexes :: Val a -> ([(V.Var, Val a)], Val a)
 redexes (Val _ (V.BApp (V.Apply (Val _ (V.BLam lam)) arg))) =

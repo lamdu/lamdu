@@ -1,16 +1,17 @@
+{-# LANGUAGE NoImplicitPrelude #-}
 module Lamdu.Sugar.PresentationModes
     ( addToDef, addToExpr
     ) where
 
 import qualified Control.Lens as Lens
-import           Control.Lens.Operators
-import           Control.Lens.Tuple
 import           Data.UUID.Types (UUID)
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
 import qualified Lamdu.Data.Anchors as Anchors
 import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Types as Sugar
+
+import           Lamdu.Prelude
 
 type T = Transaction
 

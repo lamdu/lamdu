@@ -4,11 +4,8 @@ module Lamdu.GUI.ExpressionEdit.LiteralEdit
     ) where
 
 
-import           Control.Lens.Operators
-import           Control.Lens.Tuple
 import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
-import           Data.Text (Text)
 import           Data.UUID.Types (UUID)
 import qualified Graphics.UI.Bottle.EventMap as E
 import           Graphics.UI.Bottle.ModKey (ModKey(..))
@@ -33,7 +30,7 @@ import           Lamdu.Style (Style)
 import qualified Lamdu.Style as Style
 import qualified Lamdu.Sugar.Types as Sugar
 
-import           Prelude.Compat
+import           Lamdu.Prelude
 
 type T = Transaction.Transaction
 

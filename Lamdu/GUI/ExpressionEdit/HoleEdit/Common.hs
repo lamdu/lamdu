@@ -1,10 +1,8 @@
-{-# LANGUAGE RecordWildCards, OverloadedStrings #-}
+{-# LANGUAGE NoImplicitPrelude, RecordWildCards, OverloadedStrings #-}
 module Lamdu.GUI.ExpressionEdit.HoleEdit.Common
     ( addBackground, addDarkBackground
     ) where
 
-import           Control.Lens.Operators
-import           Data.Monoid ((<>))
 import qualified Graphics.DrawingCombinators as Draw
 import           Graphics.UI.Bottle.Animation (AnimId)
 import           Graphics.UI.Bottle.Widget (Widget)
@@ -14,6 +12,8 @@ import qualified Lamdu.Config as Config
 import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
+
+import           Lamdu.Prelude
 
 addBackground :: AnimId -> Config.Layers -> Draw.Color -> Widget f -> Widget f
 addBackground myId layers =

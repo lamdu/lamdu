@@ -1,11 +1,9 @@
-{-# LANGUAGE NoMonomorphismRestriction, RecordWildCards, OverloadedStrings #-}
+{-# LANGUAGE NoImplicitPrelude, NoMonomorphismRestriction, RecordWildCards, OverloadedStrings #-}
 module Lamdu.GUI.ExpressionEdit.HoleEdit
     ( make
     ) where
 
 import qualified Control.Lens as Lens
-import           Control.Lens.Operators
-import           Control.Lens.Tuple
 import qualified Data.Store.Transaction as Transaction
 import           Graphics.UI.Bottle.Animation (AnimId)
 import qualified Graphics.UI.Bottle.Widget as Widget
@@ -29,6 +27,8 @@ import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Sugar.Names.Types (Name(..))
 import qualified Lamdu.Sugar.Types as Sugar
+
+import           Lamdu.Prelude
 
 makeWrapper ::
     Monad m =>

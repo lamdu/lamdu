@@ -4,7 +4,6 @@ module Lamdu.Data.DbInit
     ( withDB
     ) where
 
-import           Control.Monad (unless)
 import           Data.Store.Db (Db)
 import qualified Data.Store.Db as Db
 import           Data.Store.Rev.Branch (Branch)
@@ -14,7 +13,6 @@ import qualified Data.Store.Rev.Version as Version
 import qualified Data.Store.Rev.View as View
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
-import           Data.Text (Text)
 import qualified Lamdu.Data.DbLayout as DbLayout
 import           Lamdu.Data.Export.JSON (fileImportAll)
 import qualified Lamdu.DataFile as DataFile
@@ -23,7 +21,7 @@ import qualified Lamdu.GUI.WidgetIdIRef as WidgetIdIRef
 import qualified System.Directory as Directory
 import           System.FilePath ((</>))
 
-import           Prelude.Compat
+import           Lamdu.Prelude
 
 type T = Transaction
 

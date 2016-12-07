@@ -7,7 +7,7 @@ module Lamdu.Data.DbLayout
     , module Lamdu.Data.Anchors
     ) where
 
-import           Prelude.Compat
+import           Lamdu.Prelude
 
 import           Control.Monad.IO.Class (MonadIO)
 import           Data.ByteString.Char8 ()

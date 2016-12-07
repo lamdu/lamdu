@@ -6,14 +6,11 @@ module Main
 import           Control.Concurrent.MVar
 import qualified Control.Exception as E
 import qualified Control.Lens as Lens
-import           Control.Lens.Operators
-import           Control.Lens.Tuple
-import           Control.Monad (when, join, unless, replicateM_)
+import           Control.Monad (join, replicateM_)
 import           Control.Monad.IO.Class (MonadIO(..))
 import           Data.CurAndPrev (current)
 import           Data.IORef
 import           Data.MRUMemo (memoIO)
-import           Data.Maybe
 import qualified Data.Monoid as Monoid
 import           Data.Proxy (Proxy(..))
 import           Data.Store.Db (Db)
@@ -61,7 +58,7 @@ import           System.FilePath ((</>))
 import qualified System.FilePath as FilePath
 import           System.IO (hPutStrLn, stderr)
 
-import           Prelude.Compat
+import           Lamdu.Prelude
 
 type T = Transaction
 

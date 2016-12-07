@@ -99,9 +99,7 @@ import           Control.Monad.ListT (ListT)
 import qualified Data.ByteString as SBS
 import           Data.CurAndPrev (CurAndPrev)
 import           Data.Functor.Identity (Identity(..))
-import           Data.Map (Map)
 import           Data.Store.Transaction (Transaction, MkProperty, Property)
-import           Data.Text (Text)
 import           Data.UUID.Types (UUID)
 import           Lamdu.Calc.Type (Type)
 import qualified Lamdu.Calc.Type as T
@@ -114,7 +112,7 @@ import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Eval.Results as ER
 import           Lamdu.Sugar.Internal.EntityId (EntityId)
 
-import           Prelude.Compat
+import           Lamdu.Prelude
 
 type T = Transaction
 

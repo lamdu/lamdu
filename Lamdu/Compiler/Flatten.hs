@@ -7,13 +7,11 @@ module Lamdu.Compiler.Flatten
     ) where
 
 import qualified Control.Lens as Lens
-import           Control.Lens.Operators
-import           Data.Map (Map)
 import qualified Lamdu.Calc.Type as T
 import           Lamdu.Calc.Val.Annotated (Val(..))
 import qualified Lamdu.Calc.Val as V
 
-import           Prelude.Compat
+import           Lamdu.Prelude
 
 data Composite p a = Composite
     { _tags :: Map T.Tag a

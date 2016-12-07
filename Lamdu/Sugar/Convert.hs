@@ -4,13 +4,9 @@ module Lamdu.Sugar.Convert
     ) where
 
 import qualified Control.Lens as Lens
-import           Control.Lens.Operators
-import           Control.Monad (unless)
 import           Control.Monad.Trans.Class (MonadTrans(..))
 import qualified Control.Monad.Trans.State as State
 import           Data.CurAndPrev (CurAndPrev)
-import           Data.Foldable (traverse_)
-import           Data.Map (Map)
 import qualified Data.Map as Map
 import qualified Data.Set as Set
 import           Data.Store.Property (Property)
@@ -45,7 +41,7 @@ import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import           Lamdu.Sugar.Types
 import           Text.PrettyPrint.HughesPJClass (pPrint)
 
-import           Prelude.Compat
+import           Lamdu.Prelude
 
 type T = Transaction
 

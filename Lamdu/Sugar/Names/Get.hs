@@ -3,7 +3,7 @@ module Lamdu.Sugar.Names.Get
     ( fromExpression, fromBody
     ) where
 
-import           Prelude.Compat
+import           Lamdu.Prelude
 
 import           Control.Monad.Trans.State (State, runState)
 import qualified Control.Monad.Trans.State as State

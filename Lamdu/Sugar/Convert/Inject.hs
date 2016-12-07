@@ -4,7 +4,6 @@ module Lamdu.Sugar.Convert.Inject
     ) where
 
 import qualified Control.Lens as Lens
-import           Control.Lens.Operators
 import qualified Lamdu.Calc.Val as V
 import           Lamdu.Calc.Val.Annotated (Val)
 import qualified Lamdu.Calc.Val.Annotated as Val
@@ -18,7 +17,7 @@ import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import           Lamdu.Sugar.Types
 
-import           Prelude.Compat
+import           Lamdu.Prelude
 
 convert :: (Monad m, Monoid a) => V.Inject (Val (Input.Payload m a)) -> Input.Payload m a -> ConvertM m (ExpressionU m a)
 convert (V.Inject tag val) exprPl =

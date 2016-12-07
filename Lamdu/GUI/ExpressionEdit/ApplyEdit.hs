@@ -3,8 +3,6 @@ module Lamdu.GUI.ExpressionEdit.ApplyEdit
     ( make
     ) where
 
-import           Control.Lens.Operators
-import           Control.Lens.Tuple
 import           Data.Vector.Vector2 (Vector2(..))
 import qualified Graphics.DrawingCombinators as Draw
 import           Graphics.UI.Bottle.Animation (AnimId)
@@ -26,7 +24,7 @@ import qualified Lamdu.Sugar.Names.Get as NamesGet
 import           Lamdu.Sugar.Names.Types (Name(..))
 import qualified Lamdu.Sugar.Types as Sugar
 
-import           Prelude.Compat
+import           Lamdu.Prelude
 
 prefixPrecedence :: Int
 prefixPrecedence = 10

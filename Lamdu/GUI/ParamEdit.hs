@@ -4,12 +4,8 @@ module Lamdu.GUI.ParamEdit
     , eventMapAddFirstParam
     ) where
 
-import           Control.Lens.Operators
-import           Control.Lens.Tuple
 import qualified Data.Map as Map
-import           Data.Monoid ((<>))
 import           Data.Store.Transaction (Transaction)
-import           Data.Text (Text)
 import qualified Graphics.UI.Bottle.EventMap as E
 import           Graphics.UI.Bottle.ModKey (ModKey)
 import qualified Graphics.UI.Bottle.Widget as Widget
@@ -24,7 +20,7 @@ import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.Sugar.Types as Sugar
 
-import           Prelude.Compat
+import           Lamdu.Prelude
 
 type T = Transaction
 

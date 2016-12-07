@@ -6,10 +6,7 @@ module Lamdu.GUI.ExpressionEdit.EventMap
     , extractCursor
     ) where
 
-import           Control.Lens.Operators
-import           Data.Monoid ((<>))
 import qualified Data.Store.Transaction as Transaction
-import           Data.Text (Text)
 import qualified Data.Text as Text
 import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
@@ -27,7 +24,7 @@ import           Lamdu.Sugar.NearestHoles (NearestHoles)
 import qualified Lamdu.Sugar.NearestHoles as NearestHoles
 import qualified Lamdu.Sugar.Types as Sugar
 
-import           Prelude.Compat
+import           Lamdu.Prelude
 
 type T = Transaction.Transaction
 

@@ -4,9 +4,7 @@ module Lamdu.GUI.ExpressionEdit.GetVarEdit
     ) where
 
 import qualified Control.Lens as Lens
-import           Control.Lens.Operators
 import qualified Data.ByteString.Char8 as SBS8
-import           Data.Monoid ((<>))
 import           Data.Store.Transaction (Transaction)
 import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.Bottle.EventMap as E
@@ -26,7 +24,7 @@ import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Sugar.Names.Types (Name(..))
 import qualified Lamdu.Sugar.Types as Sugar
 
-import           Prelude.Compat
+import           Lamdu.Prelude
 
 makeSimpleView ::
     (Monad f, Monad m) =>

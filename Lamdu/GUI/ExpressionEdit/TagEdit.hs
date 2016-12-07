@@ -5,7 +5,6 @@ module Lamdu.GUI.ExpressionEdit.TagEdit
     , diveToRecordTag, diveToCaseTag
     ) where
 
-import           Control.Lens.Operators
 import           Data.Store.Transaction (Transaction)
 import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.Bottle.EventMap as E
@@ -24,7 +23,7 @@ import           Lamdu.Sugar.NearestHoles (NearestHoles)
 import qualified Lamdu.Sugar.NearestHoles as NearestHoles
 import qualified Lamdu.Sugar.Types as Sugar
 
-import           Prelude.Compat
+import           Lamdu.Prelude
 
 type T = Transaction
 

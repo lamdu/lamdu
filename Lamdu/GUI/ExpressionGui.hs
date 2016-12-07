@@ -38,16 +38,12 @@ module Lamdu.GUI.ExpressionGui
     ) where
 
 import qualified Control.Lens as Lens
-import           Control.Lens.Operators
-import           Control.Lens.Tuple
 import           Data.Binary.Utils (encodeS)
 import           Data.CurAndPrev (CurAndPrev(..), CurPrevTag(..), curPrevTag, fallbackToPrev)
 import qualified Data.List as List
 import qualified Data.List.Utils as ListUtils
-import           Data.Maybe (fromMaybe)
 import           Data.Store.Property (Property(..))
 import           Data.Store.Transaction (Transaction)
-import           Data.Text (Text)
 import qualified Data.Text as Text
 import           Data.Text.Encoding (encodeUtf8)
 import           Data.Vector.Vector2 (Vector2(..))
@@ -95,7 +91,7 @@ import qualified Lamdu.Style as Style
 import           Lamdu.Sugar.Names.Types (Name(..), NameSource(..), NameCollision(..))
 import qualified Lamdu.Sugar.Types as Sugar
 
-import           Prelude.Compat
+import           Lamdu.Prelude
 
 type T = Transaction
 

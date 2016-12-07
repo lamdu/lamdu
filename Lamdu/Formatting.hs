@@ -4,19 +4,16 @@ module Lamdu.Formatting
     , formatTextContents
     ) where
 
-import           Control.Lens.Operators
-import           Control.Monad (guard, mplus)
-import           Data.ByteString (ByteString)
+import           Control.Monad (mplus)
 import qualified Data.ByteString.Base16 as Hex
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.Char as Char
-import           Data.Text (Text)
 import qualified Data.Text as Text
 import           Data.Text.Encoding (encodeUtf8, decodeUtf8)
 import           Text.Printf (printf)
 import           Text.Read (readMaybe)
 
-import           Prelude.Compat
+import           Lamdu.Prelude
 
 formatTextContents :: Text -> Text
 formatTextContents =

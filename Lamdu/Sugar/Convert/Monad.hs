@@ -16,12 +16,9 @@ module Lamdu.Sugar.Convert.Monad
     ) where
 
 import qualified Control.Lens as Lens
-import           Control.Lens.Operators
 import           Control.Monad.Trans.Class (MonadTrans(..))
 import           Control.Monad.Trans.Reader (ReaderT, runReaderT)
 import qualified Control.Monad.Trans.Reader as Reader
-import           Data.Map (Map)
-import           Data.Set (Set)
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
 import           Lamdu.Calc.Type.Nominal (Nominal(..))
@@ -36,7 +33,7 @@ import qualified Lamdu.Sugar.Convert.Input as Input
 import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Types as Sugar
 
-import           Prelude.Compat
+import           Lamdu.Prelude
 
 data TagParamInfo = TagParamInfo
     { tpiFromParameters :: V.Var -- TODO: Rename "From" to something else

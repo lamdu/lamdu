@@ -7,13 +7,11 @@ module Lamdu.Data.Export.Codejam
 import qualified Codec.Archive.Zip as Zip
 import           Codec.Picture (Image, PixelRGB8(..), withImage)
 import qualified Control.Lens as Lens
-import           Control.Lens.Operators
 import           Control.Monad.Trans.Class (MonadTrans(..))
 import           Control.Monad.Trans.Writer (execWriterT, tell)
 import qualified Data.Aeson.Encode.Pretty as AesonPretty
 import qualified Data.ByteString as SBS
 import qualified Data.ByteString.Lazy as LBS
-import           Data.Maybe (fromMaybe)
 import qualified Data.Store.IRef as IRef
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
@@ -36,7 +34,7 @@ import qualified Lamdu.Eval.Results as EV
 import           Lamdu.Expr.IRef (ValI)
 import qualified Lamdu.Expr.IRef as ExprIRef
 
-import           Prelude.Compat
+import           Lamdu.Prelude
 
 type T = Transaction
 

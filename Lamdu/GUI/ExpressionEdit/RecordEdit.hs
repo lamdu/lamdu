@@ -3,9 +3,6 @@ module Lamdu.GUI.ExpressionEdit.RecordEdit
     ( make
     ) where
 
-import           Control.Lens.Operators
-import           Control.Lens.Tuple
-import           Data.Monoid ((<>))
 import           Data.Vector.Vector2 (Vector2(..))
 import           Graphics.UI.Bottle.Animation (AnimId)
 import qualified Graphics.UI.Bottle.Animation as Anim
@@ -27,7 +24,7 @@ import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Sugar.Names.Types (Name(..))
 import qualified Lamdu.Sugar.Types as Sugar
 
-import           Prelude.Compat
+import           Lamdu.Prelude
 
 defaultPos ::
     [Sugar.RecordField name m (Sugar.Expression name m a)] ->

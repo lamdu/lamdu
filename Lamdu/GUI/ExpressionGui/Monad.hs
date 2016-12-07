@@ -27,17 +27,12 @@ module Lamdu.GUI.ExpressionGui.Monad
     ) where
 
 import qualified Control.Lens as Lens
-import           Control.Lens.Operators
-import           Control.Lens.Tuple
-import           Control.Monad.Trans.Class (lift)
 import           Control.Monad.Trans.RWS (RWST, runRWST)
 import qualified Control.Monad.Trans.RWS as RWS
 import           Data.Binary (Binary)
 import qualified Data.Char as Char
 import           Data.CurAndPrev (CurAndPrev)
-import           Data.Monoid ((<>))
 import           Data.Store.Transaction (Transaction)
-import           Data.Text (Text)
 import qualified Data.Text.Lens as TextLens
 import qualified Graphics.DrawingCombinators as Draw
 import           Graphics.UI.Bottle.Animation.Id (AnimId)
@@ -66,7 +61,7 @@ import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Style (Style)
 import qualified Lamdu.Sugar.Types as Sugar
 
-import           Prelude.Compat
+import           Lamdu.Prelude
 
 type T = Transaction
 

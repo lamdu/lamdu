@@ -6,16 +6,11 @@ module Lamdu.Sugar.Names.NameGen
 
 import           Control.Arrow ((&&&))
 import qualified Control.Lens as Lens
-import           Control.Lens.Operators
 import           Control.Monad.Trans.State (State, state)
-import           Data.Map (Map)
 import qualified Data.Map as Map
-import           Data.Maybe (fromMaybe)
-import           Data.Monoid ((<>))
-import           Data.Text (Text)
 import qualified Data.Text as Text
 
-import           Prelude.Compat
+import           Lamdu.Prelude
 
 data VarInfo = Function | NormalVar
 

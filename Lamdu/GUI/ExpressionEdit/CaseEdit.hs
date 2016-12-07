@@ -4,10 +4,6 @@ module Lamdu.GUI.ExpressionEdit.CaseEdit
     ) where
 
 import qualified Control.Lens as Lens
-import           Control.Lens.Operators
-import           Control.Lens.Tuple
-import           Data.Maybe (fromMaybe)
-import           Data.Monoid ((<>))
 import           Data.Vector.Vector2 (Vector2(..))
 import           Graphics.UI.Bottle.Animation (AnimId)
 import qualified Graphics.UI.Bottle.Animation as Anim
@@ -33,7 +29,7 @@ import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Sugar.Names.Types (Name(..))
 import qualified Lamdu.Sugar.Types as Sugar
 
-import           Prelude.Compat
+import           Lamdu.Prelude
 
 destCursorId ::
     [Sugar.CaseAlt name n (Sugar.Expression name n p)] ->

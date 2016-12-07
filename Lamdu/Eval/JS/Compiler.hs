@@ -8,22 +8,14 @@ module Lamdu.Eval.JS.Compiler
     ) where
 
 import qualified Control.Lens as Lens
-import           Control.Lens.Operators
-import           Control.Lens.Tuple
-import           Control.Monad (void)
-import           Control.Monad.Trans.Class (lift)
 import           Control.Monad.Trans.RWS.Strict (RWST(..))
 import qualified Control.Monad.Trans.RWS.Strict as RWS
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Base16 as Hex
 import qualified Data.Char as Char
 import           Data.Default () -- instances
-import           Data.Map (Map)
 import qualified Data.Map as Map
-import           Data.Monoid ((<>))
-import           Data.Set (Set)
 import qualified Data.Set as Set
-import           Data.Text (Text)
 import qualified Data.Text as Text
 import           Data.Text.Encoding (decodeUtf8)
 import           Data.UUID.Types (UUID)
@@ -44,8 +36,9 @@ import qualified Language.ECMAScript3.Syntax as JSS
 import qualified Language.ECMAScript3.Syntax.CodeGen as JS
 import           Language.ECMAScript3.Syntax.QuasiQuote (jsstmt)
 import           Numeric.Lens (hex)
-import           Prelude.Compat
 import qualified Text.PrettyPrint.Leijen as Pretty
+
+import           Lamdu.Prelude
 
 newtype ValId = ValId UUID
 

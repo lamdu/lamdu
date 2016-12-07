@@ -1,12 +1,13 @@
-{-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE NoImplicitPrelude, RecordWildCards #-}
 module Lamdu.Sugar.Names.Types
     ( NameSource(..), NameCollision(..), Name(..)
     , ExpressionN, BodyN, DefinitionN
     ) where
 
 import Data.Store.Transaction (Transaction)
-import Data.Text (Text)
 import Lamdu.Sugar.Types (Expression, Body, Definition)
+
+import Lamdu.Prelude
 
 type T = Transaction
 

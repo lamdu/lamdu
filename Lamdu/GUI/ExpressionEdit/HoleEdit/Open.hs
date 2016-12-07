@@ -8,17 +8,13 @@ module Lamdu.GUI.ExpressionEdit.HoleEdit.Open
 import           Control.Applicative ((<|>))
 import           Control.Lens (Lens')
 import qualified Control.Lens as Lens
-import           Control.Lens.Operators
-import           Control.Lens.Tuple
-import           Control.Monad (guard, msum)
+import           Control.Monad (msum)
 import           Data.List.Lens (suffixed)
 import qualified Data.Map as Map
-import           Data.Maybe (isJust, fromMaybe)
-import           Data.Monoid ((<>))
+import           Data.Maybe (isJust)
 import qualified Data.Monoid as Monoid
 import qualified Data.Store.Property as Property
 import           Data.Store.Transaction (Transaction)
-import           Data.Text (Text)
 import qualified Data.Text as Text
 import           Data.Vector.Vector2 (Vector2(..))
 import           Graphics.UI.Bottle.Animation (AnimId)
@@ -62,7 +58,7 @@ import           Lamdu.Sugar.Names.Types (Name(..), ExpressionN)
 import qualified Lamdu.Sugar.NearestHoles as NearestHoles
 import qualified Lamdu.Sugar.Types as Sugar
 
-import           Prelude.Compat
+import           Lamdu.Prelude
 
 type T = Transaction
 

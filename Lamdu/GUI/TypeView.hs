@@ -4,15 +4,11 @@ module Lamdu.GUI.TypeView
     ) where
 
 import qualified Control.Lens as Lens
-import           Control.Lens.Operators
-import           Control.Lens.Tuple
 import           Control.Monad.Trans.Class (MonadTrans(..))
 import           Control.Monad.Trans.State (StateT, state, evalStateT)
-import           Data.Map (Map)
 import qualified Data.Map as Map
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
-import           Data.Text (Text)
 import           Data.Text.Encoding (decodeUtf8)
 import           Data.Vector.Vector2 (Vector2(..))
 import qualified Graphics.DrawingCombinators as Draw
@@ -37,7 +33,7 @@ import           Lamdu.Sugar.OrderTags (orderedFlatComposite)
 import           System.Random (Random, random)
 import qualified System.Random as Random
 
-import           Prelude.Compat
+import           Lamdu.Prelude
 
 type T = Transaction
 newtype M m a = M

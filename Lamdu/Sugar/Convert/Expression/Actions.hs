@@ -5,11 +5,7 @@ module Lamdu.Sugar.Convert.Expression.Actions
     , addActionsWithSetToInner
     ) where
 
-import           Prelude.Compat
-
 import qualified Control.Lens as Lens
-import           Control.Lens.Operators
-import           Control.Monad (guard)
 import qualified Data.Map as Map
 import qualified Data.Store.Property as Property
 import           Data.Store.Transaction (Transaction)
@@ -28,6 +24,8 @@ import qualified Lamdu.Sugar.Convert.Monad as ConvertM
 import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import           Lamdu.Sugar.Types
+
+import           Lamdu.Prelude
 
 type T = Transaction
 

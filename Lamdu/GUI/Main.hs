@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell, RankNTypes, DisambiguateRecordFields, NamedFieldPuns, OverloadedStrings #-}
+{-# LANGUAGE NoImplicitPrelude, TemplateHaskell, RankNTypes, DisambiguateRecordFields, NamedFieldPuns, OverloadedStrings #-}
 module Lamdu.GUI.Main
     ( make
     , Env(..), CodeEdit.ExportActions(..)
@@ -8,8 +8,6 @@ module Lamdu.GUI.Main
     ) where
 
 import qualified Control.Lens as Lens
-import           Control.Lens.Operators
-import           Control.Lens.Tuple
 import           Data.CurAndPrev (CurAndPrev(..))
 import           Data.Store.Transaction (Transaction)
 import           Data.Vector.Vector2 (Vector2(..))
@@ -33,6 +31,8 @@ import           Lamdu.Style (Style)
 import qualified Lamdu.Style as Style
 import qualified Lamdu.VersionControl as VersionControl
 import qualified Lamdu.VersionControl.Actions as VersionControl.Actions
+
+import           Lamdu.Prelude
 
 type T = Transaction
 

@@ -4,10 +4,7 @@ module Lamdu.Eval.Results.Process
     ) where
 
 import qualified Control.Lens as Lens
-import           Control.Lens.Operators
-import           Data.Map (Map)
 import qualified Data.Map as Map
-import           Data.Maybe (fromMaybe)
 import qualified Lamdu.Builtins.Anchors as Builtins
 import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Calc.Type.FlatComposite as FlatComposite
@@ -18,7 +15,7 @@ import           Lamdu.Eval.Results (Val(..), Body(..))
 import qualified Lamdu.Eval.Results as ER
 import           Lamdu.Infer (applyNominal)
 
-import           Prelude.Compat
+import           Lamdu.Prelude
 
 extractRecordTypeField :: T.Tag -> T.Type -> Maybe (T.Type, T.Type)
 extractRecordTypeField tag typ =

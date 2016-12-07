@@ -11,14 +11,10 @@ import           Control.Concurrent (ThreadId, killThread)
 import           Control.Concurrent.MVar
 import           Control.Concurrent.Utils (runAfter)
 import qualified Control.Lens as Lens
-import           Control.Lens.Operators
-import           Control.Monad (when)
 import           Data.CurAndPrev (CurAndPrev(..))
-import           Data.Foldable (traverse_)
 import           Data.IORef
 import           Data.IORef.Utils (atomicModifyIORef_)
 import qualified Data.Monoid as Monoid
-import           Data.Set (Set)
 import qualified Data.Set as Set
 import           Data.Store.Db (Db)
 import           Data.Store.IRef (IRef)
@@ -28,7 +24,6 @@ import qualified Data.Store.Rev.Change as Change
 import qualified Data.Store.Rev.Version as Version
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
-import           Data.Text (Text)
 import           Data.UUID.Types (UUID)
 import           Lamdu.Calc.Val.Annotated (Val)
 import qualified Lamdu.Data.Anchors as Anchors
@@ -44,7 +39,7 @@ import qualified Lamdu.Expr.Load as Load
 import           Lamdu.VersionControl (getVersion)
 import qualified Lamdu.VersionControl as VersionControl
 
-import           Prelude.Compat
+import           Lamdu.Prelude
 
 type T = Transaction
 

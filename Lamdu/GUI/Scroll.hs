@@ -1,16 +1,16 @@
+{-# LANGUAGE NoImplicitPrelude #-}
 module Lamdu.GUI.Scroll
     ( focusAreaIntoWindow
     ) where
 
 import           Control.Lens (Lens')
 import qualified Control.Lens as Lens
-import           Control.Lens.Operators
-import           Control.Lens.Tuple
-import           Data.Maybe (fromMaybe)
 import           Data.Vector.Vector2 (Vector2(..))
 import qualified Graphics.UI.Bottle.Rect as Rect
 import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
+
+import           Lamdu.Prelude
 
 focusAreaIntoWindow :: Widget.Size -> Widget f -> Widget f
 focusAreaIntoWindow winSize widget =

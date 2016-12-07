@@ -4,9 +4,6 @@ module Lamdu.GUI.ExpressionEdit.HoleEdit.Wrapper
     ( make
     ) where
 
-import           Control.Lens.Operators
-import           Control.Lens.Tuple
-import           Data.Monoid ((<>))
 import qualified Data.Store.Transaction as Transaction
 import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
@@ -23,7 +20,7 @@ import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Sugar.Names.Types (ExpressionN)
 import qualified Lamdu.Sugar.Types as Sugar
 
-import           Prelude.Compat
+import           Lamdu.Prelude
 
 type T = Transaction.Transaction
 

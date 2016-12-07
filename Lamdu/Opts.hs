@@ -7,12 +7,11 @@ module Lamdu.Opts
     ) where
 
 import qualified Control.Lens as Lens
-import           Control.Lens.Operators
 import           Control.Monad.Trans.State (execStateT)
 import           Data.Vector.Vector2 (Vector2(..))
 import           System.Environment (getArgs)
 
-import           Prelude.Compat
+import           Lamdu.Prelude
 
 data WindowMode = VideoModeSize | WindowSize (Vector2 Int) | FullScreen
 

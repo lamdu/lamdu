@@ -8,8 +8,6 @@ import           Control.Concurrent (threadDelay, ThreadId)
 import           Control.Concurrent.MVar
 import           Control.Concurrent.Utils (forkIOUnmasked)
 import qualified Control.Exception as E
-import           Control.Lens.Operators
-import           Control.Monad (forever)
 import qualified Data.Aeson as Aeson
 import qualified Data.ByteString.Lazy as LBS
 import           Data.Time.Clock (UTCTime)
@@ -17,7 +15,7 @@ import           Lamdu.Config (Config)
 import qualified Lamdu.DataFile as DataFile
 import           System.Directory (getModificationTime)
 
-import           Prelude.Compat
+import           Lamdu.Prelude
 
 type ModificationTime = UTCTime
 

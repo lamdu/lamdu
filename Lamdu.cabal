@@ -30,8 +30,7 @@ Library
   -- Modules exported by the library.
   hs-Source-Dirs:      bottlelib
 
-  Exposed-modules:  Control.Applicative.Utils
-                  , Control.Concurrent.Utils
+  Exposed-modules:  Control.Concurrent.Utils
                   , Control.Lens.Utils
                   , Control.Monad.Trans.Either.Utils
                   , Control.Monad.Unit
@@ -253,6 +252,7 @@ Executable lamdu
                   , Lamdu.GUI.Zoom
                   , Lamdu.Main
                   , Lamdu.Opts
+                  , Lamdu.Prelude
                   , Lamdu.Style
                   , Lamdu.Sugar.Convert
                   , Lamdu.Sugar.Convert.Apply

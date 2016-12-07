@@ -4,9 +4,7 @@ module Lamdu.Sugar.Convert.Text
      ( text
      ) where
 
-import           Control.Lens.Operators
-import           Control.Monad (guard, mzero)
-import           Control.Monad.Trans.Class (lift)
+import           Control.Monad (mzero)
 import           Control.Monad.Trans.Maybe (MaybeT(..))
 import           Data.Maybe.Utils (maybeToMPlus)
 import           Data.Text.Encoding (decodeUtf8, encodeUtf8)
@@ -24,7 +22,7 @@ import           Lamdu.Sugar.Convert.Monad (ConvertM)
 import           Lamdu.Sugar.Internal
 import           Lamdu.Sugar.Types
 
-import           Prelude.Compat
+import           Lamdu.Prelude
 
 text ::
     (Monad m, Monoid a) =>

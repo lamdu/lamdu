@@ -6,10 +6,6 @@ module Lamdu.Data.Export.JSON.Codec
 
 import           Control.Applicative (optional)
 import qualified Control.Lens as Lens
-import           Control.Lens.Operators hiding ((.=))
-import           Control.Lens.Tuple
-import           Control.Monad (guard, unless)
-import           Control.Monad.Trans.Class (lift)
 import           Control.Monad.Trans.Writer (WriterT(..))
 import qualified Control.Monad.Trans.Writer as Writer
 import           Data.Aeson ((.=))
@@ -21,10 +17,8 @@ import qualified Data.ByteString.Char8 as BS
 import qualified Data.ByteString.Lazy.Char8 as LBS8
 import           Data.Either.Combinators (swapEither)
 import qualified Data.HashMap.Strict as HashMap
-import           Data.Map (Map)
 import qualified Data.Map as Map
 import qualified Data.Set as Set
-import           Data.Text (Text)
 import           Data.UUID.Aeson ()
 import           Data.UUID.Types (UUID)
 import qualified Data.Vector as Vector
@@ -43,7 +37,7 @@ import qualified Lamdu.Data.Anchors as Anchors
 import           Lamdu.Data.Definition (Definition(..))
 import qualified Lamdu.Data.Definition as Definition
 
-import           Prelude.Compat
+import           Lamdu.Prelude hiding ((.=))
 
 type Encoded = Aeson.Value
 

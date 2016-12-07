@@ -1,18 +1,13 @@
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE NoImplicitPrelude, OverloadedStrings #-}
 
 module Lamdu.GUI.EvalView
     ( make
     ) where
 
 import qualified Control.Lens as Lens
-import           Control.Lens.Operators
-import           Control.Lens.Tuple
-import           Control.Monad (void)
 import qualified Data.Binary.Utils as BinUtils
 import qualified Data.List as List
-import           Data.Monoid ((<>))
 import qualified Data.Store.Transaction as Transaction
-import           Data.Text (Text)
 import           Data.Text.Encoding (decodeUtf8)
 import qualified Data.Text as Text
 import           Data.Vector.Vector2 (Vector2(..))
@@ -34,6 +29,8 @@ import qualified Lamdu.Eval.Results as ER
 import           Lamdu.Formatting (Format(..))
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
+
+import           Lamdu.Prelude
 
 data RecordStatus = RecordComputed | RecordExtendsError EvalError
 

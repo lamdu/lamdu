@@ -3,13 +3,12 @@ module Lamdu.GUI.Zoom
     ( Zoom, make, eventMap, getSizeFactor
     ) where
 
-import           Prelude.Compat
-
-import           Control.Lens.Operators
 import           Data.IORef
 import qualified Graphics.UI.Bottle.EventMap as EventMap
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Lamdu.Config as Config
+
+import           Lamdu.Prelude
 
 newtype Zoom = Zoom
     { _scaleFactorRef :: IORef Widget.R

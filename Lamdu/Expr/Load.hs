@@ -3,9 +3,8 @@ module Lamdu.Expr.Load
     ( def, expr, exprProperty, nominal
     ) where
 
-import           Prelude.Compat
+import           Lamdu.Prelude
 
-import           Control.Lens.Operators
 import           Data.Store.Property (Property(..))
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
