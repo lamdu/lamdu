@@ -191,7 +191,7 @@ parseResult (Json.Object obj) =
             return val
 parseResult x = "Unsupported encoded JS output: " ++ show x & fail
 
-fromDouble :: Double -> ER.Val
+fromDouble :: Double -> ER.Val ()
 fromDouble = ER.Val () . ER.RPrimVal . PrimVal.fromKnown . PrimVal.Float
 
 addVal ::
