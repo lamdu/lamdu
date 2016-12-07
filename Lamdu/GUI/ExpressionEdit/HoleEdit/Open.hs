@@ -154,7 +154,7 @@ fixNumWithDotEventMap holeInfo res
                     HoleState.setHoleStateAndJump uuid
                     (HoleState ("." <> Text.singleton c)) entityId
                 return $ Widget.eventResultFromCursor cursor
-        endsWithDot = "." `Text.isSuffixOf` (HoleInfo.hiSearchTerm holeInfo)
+        endsWithDot = "." `Text.isSuffixOf` HoleInfo.hiSearchTerm holeInfo
         doc = E.Doc ["Edit", "Apply Operator"]
         conv = res ^. Sugar.holeResultConverted
         literalNum = Sugar.rBody . Sugar._BodyLiteral . Sugar._LiteralNum

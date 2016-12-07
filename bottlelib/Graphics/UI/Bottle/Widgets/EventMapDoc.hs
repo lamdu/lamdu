@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, OverloadedStrings, DeriveFunctor, OverloadedStrings #-}
+{-# LANGUAGE NoImplicitPrelude, OverloadedStrings, DeriveFunctor #-}
 module Graphics.UI.Bottle.Widgets.EventMapDoc
     ( makeView
     , IsHelpShown(..)
