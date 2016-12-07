@@ -540,7 +540,7 @@ isParamAlwaysUsedWithGetField (V.Lam param body) =
             x -> all (go False) (x ^.. Lens.traverse)
 
 convertLamParams ::
-    (Monad m, Monoid a) =>
+    Monad m =>
     V.Lam (Val (Input.Payload m a)) -> Input.Payload m a ->
     ConvertM m (ConventionalParams m)
 convertLamParams lambda lambdaPl =
@@ -651,7 +651,7 @@ convertEmptyParams binderKind val =
     }
 
 convertParams ::
-    (Monad m, Monoid a) =>
+    Monad m =>
     BinderKind m -> Val (Input.Payload m a) ->
     ConvertM m
     ( ConventionalParams m
