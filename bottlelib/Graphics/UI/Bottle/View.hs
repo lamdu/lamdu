@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, RecordWildCards, RankNTypes, OverloadedStrings #-}
+{-# LANGUAGE NoImplicitPrelude, RecordWildCards, RankNTypes, OverloadedStrings, TemplateHaskell #-}
 module Graphics.UI.Bottle.View
     ( View(..)
     , empty
@@ -12,6 +12,7 @@ module Graphics.UI.Bottle.View
     ) where
 
 import           Control.Lens (Lens')
+import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Lens.Tuple
 import           Control.Monad (void)
@@ -28,15 +29,10 @@ data View = View
     { _size :: Size
     , _animFrame :: Anim.Frame
     }
+Lens.makeLenses ''View
 
 empty :: View
 empty = View 0 mempty
-
-size :: Lens' View Size
-size f View{..} = f _size <&> \_size -> View{..}
-
-animFrame :: Lens' View Anim.Frame
-animFrame f View{..} = f _animFrame <&> \_animFrame -> View{..}
 
 width :: Lens' View R
 width = size . _1
