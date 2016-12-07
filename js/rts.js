@@ -71,6 +71,9 @@ var encode = function() {
             if (Function.prototype.isPrototypeOf(value)) {
                 return { func: {} };
             }
+            if (typeof value == "number" && !isFinite(value)) {
+                return { "number": String(value) }
+            }
             if (typeof value != "object" || key === "array" || key === "bytes") {
                 return value;
             }

@@ -172,13 +172,13 @@ parseObj obj =
       <&> \(Json.Array arr) ->
             Vec.toList arr & Lens.traversed %%~ parseResult <&> ER.RArray <&> ER.Val ()
     , obj .? "bytes" <&> parseBytes <&> return
+    , obj .? "number" <&> read <&> fromDouble <&> return
     , obj .? "tag" <&> (`parseInject` (obj .? "data"))
     , obj .? "func" <&> (\(Json.Object _) -> ER.Val () ER.RFunc) <&> return
     ] & fromMaybe (parseRecord obj)
 
 parseResult :: Json.Value -> Parse (ER.Val ())
-parseResult (Json.Number x) =
-    realToFrac x & PrimVal.Float & PrimVal.fromKnown & ER.RPrimVal & ER.Val () & return
+parseResult (Json.Number x) = realToFrac x & fromDouble & return
 parseResult (Json.Object obj) =
     case obj .? "cachedVal" of
     Just cacheId -> Lens.use (Lens.singular (Lens.ix cacheId))
@@ -190,6 +190,9 @@ parseResult (Json.Object obj) =
                 Just cacheId -> Lens.at cacheId ?= val
             return val
 parseResult x = "Unsupported encoded JS output: " ++ show x & fail
+
+fromDouble :: Double -> ER.Val
+fromDouble = ER.Val () . ER.RPrimVal . PrimVal.fromKnown . PrimVal.Float
 
 addVal ::
     Ord srcId =>
