@@ -13,7 +13,6 @@ module Graphics.UI.Bottle.Widgets
     , stdVSpaceHeight, stdVSpaceView
     , vspacer
     , hboxCenteredSpaced
-    , liftLayerInterval
     , respondToCursorPrefix
     ) where
 
@@ -28,11 +27,9 @@ import           Data.Text.Encoding (encodeUtf8)
 import           Data.Vector.Vector2 (Vector2(..))
 import qualified Graphics.DrawingCombinators as Draw
 import           Graphics.UI.Bottle.Animation (AnimId)
-import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.EventMap as EventMap
 import           Graphics.UI.Bottle.ModKey (ModKey(..))
 import           Graphics.UI.Bottle.View (View)
-import qualified Graphics.UI.Bottle.View as View
 import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.Box as Box
@@ -55,13 +52,6 @@ makeTextView text myId = do
 
 makeLabel :: Monad m => Text -> AnimId -> WidgetEnvT m View
 makeLabel text prefix = makeTextView text $ mappend prefix [encodeUtf8 text]
-
-liftLayerInterval :: Monad m => WidgetEnvT m (View -> View)
-liftLayerInterval =
-    do
-        env <- WE.readEnv
-        let layerDiff = WE.layerInterval env
-        View.animFrame . Anim.layers -~ layerDiff & return
 
 readEnv :: Monad m => WidgetEnvT m Widget.Env
 readEnv = WE.readEnv <&> (^. WE.envCursor) <&> Widget.Env

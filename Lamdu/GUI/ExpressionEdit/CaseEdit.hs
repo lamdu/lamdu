@@ -143,7 +143,7 @@ makeAltsWidget mActiveTag alts _ =
 separationBar :: Config -> Widget.R -> Anim.AnimId -> View
 separationBar config width animId =
     Anim.unitSquare (animId <> ["tailsep"])
-    & View 1
+    & View.make 1
     & View.tint (Config.caseTailColor config)
     & View.scale (Vector2 width 10)
 

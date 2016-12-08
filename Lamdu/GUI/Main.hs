@@ -59,7 +59,6 @@ make env rootId =
             do
                 branchGui <-
                     VersionControlGUI.make (Config.versionControl config)
-                    (Config.layerChoiceBG (Config.layers config))
                     CodeEdit.mLiftTrans id actions $
                     \branchSelector ->
                     do
@@ -96,6 +95,5 @@ make env rootId =
         widgetEnv = WE.Env
             { WE._envCursor = cursor
             , WE._envTextStyle = Style.styleBase style
-            , WE.layerInterval = Config.layerInterval $ Config.layers config
             , WE.stdSpacing = Config.stdSpacing config
             }

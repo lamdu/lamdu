@@ -22,7 +22,10 @@ module Graphics.UI.Bottle.Widget
     , Widget(..), view, mEnter, mFocus, eventMap
     , MEnter
     , Focus(..), fEventMap, focalArea
-    , animLayers, animFrame, size, width, height, events
+    , size, width, height, events
+    -- , animFrames
+    , bottomFrame
+    -- , animFrame
 
     , isFocused
 
@@ -52,21 +55,18 @@ module Graphics.UI.Bottle.Widget
     , respondToCursor
     ) where
 
-import           Prelude.Compat
-
 import           Control.Applicative (liftA2)
 import           Control.Lens (Lens')
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Data.Map (Map)
 import qualified Data.Map as Map
-import           Data.Maybe (fromMaybe)
 import qualified Data.Monoid as Monoid
 import           Data.Monoid.Generic (def_mempty, def_mappend)
 import           Data.Vector.Vector2 (Vector2(..))
 import           GHC.Generics (Generic)
 import qualified Graphics.DrawingCombinators as Draw
-import           Graphics.UI.Bottle.Animation (AnimId, R, Size, Layer)
+import           Graphics.UI.Bottle.Animation (AnimId, R, Size)
 import qualified Graphics.UI.Bottle.Animation as Anim
 import           Graphics.UI.Bottle.Direction (Direction)
 import qualified Graphics.UI.Bottle.Direction as Direction
@@ -78,6 +78,8 @@ import qualified Graphics.UI.Bottle.Rect as Rect
 import           Graphics.UI.Bottle.View (View(..))
 import qualified Graphics.UI.Bottle.View as View
 import           Graphics.UI.Bottle.WidgetId
+
+import           Prelude.Compat
 
 data EventResult = EventResult
     { _eCursor :: Monoid.Last Id
@@ -120,13 +122,15 @@ isFocused = Lens.has (mFocus . Lens._Just)
 empty :: Widget f
 empty = fromView View.empty
 
-{-# INLINE animFrame #-}
-animFrame :: Lens' (Widget a) Anim.Frame
-animFrame = view . View.animFrame
+-- {-# INLINE animFrame #-}
+-- animFrame :: Lens' (Widget a) Anim.Frame
+-- animFrame = view . View.animFrame
 
-{-# INLINE animLayers #-}
-animLayers :: Lens.Traversal' (Widget a) Anim.Layer
-animLayers = animFrame . Anim.layers
+-- animFrames :: Lens.Traversal' (Widget a) Anim.Frame
+-- animFrames = view . View.animFrames
+
+bottomFrame :: Lens.Traversal' (Widget a) Anim.Frame
+bottomFrame = view . View.animLayers . View.layers . Lens.ix 0
 
 {-# INLINE size #-}
 size :: Lens' (Widget a) Size
@@ -194,18 +198,17 @@ strongerEvents eMap = eventMap %~ (eMap `mappend`)
 weakerEvents :: EventMap a -> Widget a -> Widget a
 weakerEvents eMap = eventMap %~ (`mappend` eMap)
 
-backgroundColor :: Layer -> AnimId -> Draw.Color -> Widget a -> Widget a
-backgroundColor layer animId color =
-    view %~ View.backgroundColor layer animId color
+backgroundColor :: AnimId -> Draw.Color -> Widget a -> Widget a
+backgroundColor animId color =
+    view %~ View.backgroundColor animId color
 
-addInnerFrame :: Int -> AnimId -> Draw.Color -> Vector2 R -> Widget a -> Widget a
-addInnerFrame layer animId color frameWidth widget =
-    widget & animFrame %~ mappend emptyRectangle
+addInnerFrame :: AnimId -> Draw.Color -> Vector2 R -> Widget a -> Widget a
+addInnerFrame animId color frameWidth widget =
+    widget & bottomFrame %~ mappend emptyRectangle
     where
         emptyRectangle =
             Anim.emptyRectangle frameWidth (widget ^. size) animId
             & Anim.unitImages %~ Draw.tint color
-            & Anim.layers +~ layer
 
 animIdMappingFromPrefixMap :: Map AnimId AnimId -> Monoid.Endo AnimId
 animIdMappingFromPrefixMap = Monoid.Endo . Anim.mappingFromPrefixMap
@@ -311,11 +314,9 @@ newtype CursorConfig = CursorConfig
 renderWithCursor :: CursorConfig -> Widget a -> Anim.Frame
 renderWithCursor CursorConfig{..} widget =
     maybe mempty renderCursor (widget ^? mFocus . Lens._Just . focalArea)
-    & mappend (widget ^. animFrame)
+    & (`mappend` View.render (widget ^. view))
     where
-        minLayer = fromMaybe 0 (Lens.minimumOf animLayers widget)
-        cursorLayer = minLayer - 1
         renderCursor area =
-            Anim.backgroundColor cursorAnimId cursorLayer cursorColor
+            Anim.backgroundColor cursorAnimId cursorColor
             (area ^. Rect.size)
             & Anim.translate (area ^. Rect.topLeft)

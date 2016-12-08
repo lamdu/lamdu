@@ -24,11 +24,6 @@ import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
 
-hover :: Monad m => ExprGuiM m (AlignedWidget n -> AlignedWidget n -> AlignedWidget n)
-hover =
-    ExpressionGui.liftLayers
-    <&> (\lifter gui place -> lifter gui `AlignedWidget.hoverInPlaceOf` place)
-
 type T = Transaction
 
 data ShowName = NameHovering | NameShowing | NameCollapsed
@@ -104,7 +99,6 @@ expandingName vertOrder (#>) needParen nomId showName =
     do
         space <- ExpressionGui.stdHSpace <&> AlignedWidget.fromCenteredWidget
         addBg <- ExpressionGui.addValBGWithColor Config.valNomBGColor nomId
-        h <- hover
         horizWithFallback <- ExpressionGui.horizVertFallback mParenInfo
         return $
             \label nameGui subexprGui ->
@@ -119,7 +113,7 @@ expandingName vertOrder (#>) needParen nomId showName =
                     case showName of
                     NameCollapsed -> label & AlignedWidget.widget %~ addBg
                     NameShowing -> nameShowing
-                    NameHovering -> nameShowing `h` label
+                    NameHovering -> nameShowing `AlignedWidget.hoverInPlaceOf` label
                     #> (space #> subexprGui)
                 vert =
                     TreeLayout.fromAlignedWidget nameShowing

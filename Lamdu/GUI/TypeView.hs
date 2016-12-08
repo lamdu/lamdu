@@ -135,11 +135,10 @@ addBGColor :: Monad m => View -> M m View
 addBGColor view =
     do
         config <- egui ExprGuiM.readConfig
-        let layer = Config.layerAnnotations (Config.layers config) - 1
         let color = Config.typeFrameBGColor config
         bgId <- randAnimId
         view
-            & View.backgroundColor layer bgId color
+            & View.backgroundColor bgId color
             & return
 
 addBackgroundFrame :: Monad m => View -> M m View
@@ -188,7 +187,7 @@ makeComposite mkField composite =
                 do
                     sqrId <- randAnimId
                     let sqr =
-                            View 1 (Anim.unitSquare sqrId)
+                            View.make 1 (Anim.unitSquare sqrId)
                             & View.scale (Vector2 barWidth 10)
                     v <- makeTVar var
                     return $ GridView.verticalAlign 0.5 [sqr, v]
@@ -219,5 +218,5 @@ make t prefix =
         makeInternal (ParentPrecedence 0) t
             & runM
             & (`evalStateT` Random.mkStdGen 0)
-            <&> View.animFrame %~ Anim.mapIdentities (mappend prefix)
+            <&> View.animFrames %~ Anim.mapIdentities (mappend prefix)
             <&> View.tint (Config.typeTint config)

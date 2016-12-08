@@ -10,7 +10,6 @@ import           Data.Store.Rev.Branch (Branch)
 import qualified Data.Store.Rev.Branch as Branch
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
-import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.EventMap as E
 import           Graphics.UI.Bottle.ModKey (ModKey(..))
 import           Graphics.UI.Bottle.Widget (Widget)
@@ -66,8 +65,8 @@ globalEventMap VersionControl.Config{..} actions = mconcat
     , redoEventMap VersionControl.Config{..} $ mRedo actions
     ]
 
-choiceWidgetConfig :: VersionControl.Config -> Anim.Layer -> Choice.Config
-choiceWidgetConfig VersionControl.Config{..} choiceBGLayer = Choice.Config
+choiceWidgetConfig :: VersionControl.Config -> Choice.Config
+choiceWidgetConfig VersionControl.Config{..} = Choice.Config
     { Choice.cwcFDConfig =
         FocusDelegator.Config
         { FocusDelegator.focusChildKeys = [ModKey mempty GLFW.Key'Enter]
@@ -77,7 +76,6 @@ choiceWidgetConfig VersionControl.Config{..} choiceBGLayer = Choice.Config
         }
     , Choice.cwcExpandMode = Choice.AutoExpand selectedBranchColor
     , Choice.cwcOrientation = Box.Vertical
-    , Choice.cwcBgLayer = choiceBGLayer
     }
 
 branchDelegatorId :: Branch t -> Widget.Id
@@ -88,19 +86,19 @@ branchTextEditId = (`Widget.joinId` ["textedit"]) . branchDelegatorId
 
 make ::
     (Monad mr, Applicative mw, Monad n) =>
-    VersionControl.Config -> Anim.Layer ->
+    VersionControl.Config ->
     (forall a. Transaction n a -> mw a) ->
     (forall a. Transaction n a -> mr a) ->
     Actions n mw ->
     (Widget (mw Widget.EventResult) -> WidgetEnvT mr (Widget (mw Widget.EventResult))) ->
     WidgetEnvT mr (Widget (mw Widget.EventResult))
-make VersionControl.Config{..} choiceBGLayer rwtransaction rtransaction actions mkWidget =
+make VersionControl.Config{..} rwtransaction rtransaction actions mkWidget =
     do
         branchNameEdits <- traverse makeBranchNameEdit $ branches actions
         branchSelector <-
             BWidgets.makeChoiceWidget (setCurrentBranch actions)
             branchNameEdits (currentBranch actions)
-            (choiceWidgetConfig VersionControl.Config{..} choiceBGLayer)
+            (choiceWidgetConfig VersionControl.Config{..})
             WidgetIds.branchSelection
         mkWidget branchSelector
             <&> Widget.strongerEvents

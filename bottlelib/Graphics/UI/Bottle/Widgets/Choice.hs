@@ -30,7 +30,6 @@ data Config = Config
     { cwcFDConfig :: FocusDelegator.Config
     , cwcOrientation :: Box.Orientation
     , cwcExpandMode :: ExpandMode
-    , cwcBgLayer :: Int
     }
 
 data IsSelected = Selected | NotSelected
@@ -59,7 +58,7 @@ toBox Config{..} selfFocused myId childrenRecords =
                 & case cwcExpandMode of
                     AutoExpand color
                         | isSelected == Selected ->
-                            Widget.backgroundColor cwcBgLayer (Widget.toAnimId myId) color
+                            Widget.backgroundColor (Widget.toAnimId myId) color
                     _ -> id
         applyAction (isSelected, action, widget) =
             ( isSelected

@@ -1,31 +1,32 @@
 {-# LANGUAGE NoImplicitPrelude, DeriveGeneric, TemplateHaskell, FlexibleInstances, MultiParamTypeClasses, OverloadedStrings #-}
 
 module Graphics.UI.Bottle.Animation
-    ( R, Size, Layer
-    , Image(..), iUnitImage, iRect
-    , Frame(..), frameImagesMap, unitImages
+    ( R, Size
+    , Image(..), iAnimId, iUnitImage, iRect
+    , Frame(..), frameImages, unitImages
     , draw
     , initialState, nextState, currentFrame
     , mapIdentities
     , unitSquare, emptyRectangle
     , backgroundColor
-    , translate, scale, layers
+    , translate, scale
     , unitIntoRect
     , simpleFrame, sizedFrame
-    , State, stateFrames
+    , State, stateMapIdentities, stateClearImages
     , module Graphics.UI.Bottle.Animation.Id
     ) where
 
 import           Control.Applicative (liftA2)
+import           Control.Lens (Lens')
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
-import           Control.Lens.Tuple
 import           Control.Monad (void)
 import qualified Data.List as List
 import           Data.List.Utils (groupOn)
 import           Data.Map (Map, (!))
 import qualified Data.Map.Strict as Map
-import           Data.Maybe (fromMaybe)
+import           Data.Maybe (mapMaybe)
+import qualified Data.Set as Set
 import           Data.Vector.Vector2 (Vector2(..))
 import qualified Data.Vector.Vector2 as Vector2
 import           GHC.Generics (Generic)
@@ -38,11 +39,10 @@ import qualified Graphics.UI.Bottle.Rect as Rect
 
 import           Prelude.Compat
 
-type Layer = Int
 type Size = Vector2 R
 
 data Image = Image
-    { _iLayer :: !Layer
+    { _iAnimId :: AnimId
     , _iUnitImage :: !(Draw.Image ())
         -- iUnitImage always occupies (0,0)..(1,1),
         -- the translation/scaling occurs when drawing
@@ -51,57 +51,131 @@ data Image = Image
 Lens.makeLenses ''Image
 
 newtype Frame = Frame
-    { _frameImagesMap :: Map AnimId [Image]
+    { _frameImages :: [Image]
     } deriving (Generic)
 Lens.makeLenses ''Frame
 
-data CurFrame = DestFrame | Animating Frame
-Lens.makePrisms ''CurFrame
+data Interpolation
+    = Deleting Image
+      -- ^ An image that is interpolating from its current state to nothingness
+    | Modifying {-cur-}Image {-dest-}Rect
+      -- ^ An image that is interpolating from the cur Rect towards the dest Image
+    | Final Image
+      -- ^ An image that finished interpolating
+Lens.makePrisms ''Interpolation
 
-data State = State
-    { destFrame :: Frame
-    , curFrame :: CurFrame
+interpolationImage :: Lens' Interpolation Image
+interpolationImage f (Deleting img) = f img <&> Deleting
+interpolationImage f (Modifying curImg destRect) = f curImg <&> (`Modifying` destRect)
+interpolationImage f (Final img) = f img <&> Final
+
+newtype State = State
+    { _stateInterpolations :: [Interpolation]
     }
-
-stateFrames :: Lens.Traversal' State Frame
-stateFrames f (State d c) = State <$> f d <*> _Animating f c
+Lens.makeLenses ''State
 
 currentFrame :: State -> Frame
-currentFrame (State _dest (Animating cur)) = cur
-currentFrame (State dest DestFrame) = dest
+currentFrame (State interpolations) =
+    interpolations ^.. traverse . interpolationImage & Frame
 
 initialState :: State
-initialState = State mempty DestFrame
+initialState = State []
+
+rectDistance :: Rect -> Rect -> R
+rectDistance ra rb =
+    liftA2 max
+    (abs (ra ^. Rect.topLeft - rb ^. Rect.topLeft))
+    (abs (ra ^. Rect.bottomRight - rb ^. Rect.bottomRight))
+    & Vector2.uncurry max
+
+advanceInterpolation :: R -> Interpolation -> Maybe Interpolation
+advanceInterpolation _ x@Final{} = Just x
+advanceInterpolation movement (Modifying curImage destRect)
+    | rectDistance (curImage ^. iRect) destRect < equalityThreshold =
+        curImage & iRect .~ destRect & Final & Just
+    | otherwise =
+        curImage
+        & iRect .~
+            Rect
+            (animSpeed * destTopLeft + (1 - animSpeed) * curTopLeft)
+            (animSpeed * destSize    + (1 - animSpeed) * curSize   )
+        & (`Modifying` destRect) & Just
+    where
+        equalityThreshold = 0.2
+        animSpeed = pure movement
+        Rect destTopLeft destSize = destRect
+        Rect curTopLeft curSize = curImage ^. iRect
+advanceInterpolation movement (Deleting img)
+    | Vector2.sqrNorm (img ^. iRect . Rect.size) < 1 = Nothing
+    | otherwise =
+        img
+        & iRect . Rect.centeredSize *~ pure (1 - movement)
+        & Deleting & Just
+
+advanceState :: R -> State -> State
+advanceState speed = stateInterpolations %~ mapMaybe (advanceInterpolation speed)
+
+setNewDest :: Frame -> State -> State
+setNewDest destFrame state =
+    go (curFrame ^. frameImages) (destFrame ^. frameImages) & State
+    where
+        go (c:cs) (d:ds)
+            | c ^. iAnimId == d ^. iAnimId =
+                modifying d (c ^. iRect) : go cs ds
+        go (c:cs) ds
+            | (c ^. iAnimId) `Set.member` destIds =
+                go cs ds -- c will be treated in its new position
+            | otherwise =
+                Deleting c : go cs ds
+        go [] ds = map goDest ds
+        goDest d =
+            case findPrefix (d ^. iAnimId) curPrefixMap of
+            Nothing -> Rect (d ^. iRect . Rect.center) 0
+            Just (prefix, curRect) ->
+                relocateSubRect (d ^. iRect) (destPrefixMap ! prefix) curRect
+            & modifying d
+        modifying destImage prevRect =
+            Modifying (rImg & iRect .~ prevRect) (destImage ^. iRect)
+            where
+                rImg
+                    | (destImage ^. iAnimId) `Set.member` duplicateDestIds
+                        = destImage & iUnitImage %~ mappend redX
+                    | otherwise = destImage
+                redX = Draw.tint red unitX
+        curFrame = currentFrame state
+        sortedDestIds = destFrame ^.. frameImages . traverse . iAnimId & List.sort
+        duplicateDestIds =
+            List.group sortedDestIds <&> tail & concat & Set.fromAscList
+        destIds = Set.fromAscList sortedDestIds
+        curPrefixMap = prefixRects curFrame
+        destPrefixMap = prefixRects destFrame
+
+stateMapIdentities :: (AnimId -> AnimId) -> State -> State
+stateMapIdentities mapping =
+    stateInterpolations . traverse . interpolationImage . iAnimId %~ mapping
+
+-- When images are based on stale data (unloaded Font) we must clear them.
+stateClearImages :: State -> State
+stateClearImages =
+    stateInterpolations . traverse . interpolationImage . iUnitImage .~ mempty
 
 nextState :: R -> Maybe Frame -> State -> Maybe State
-nextState _movement Nothing (State _dest DestFrame) = Nothing
-nextState movement mNewDest oldState =
-    Just State
-    { destFrame = newDest
-    , curFrame =
-        if isVirtuallySame oldFrame newDest
-        then DestFrame
-        else makeNextFrame movement newDest oldFrame & Animating
-    }
-    where
-        oldFrame = currentFrame oldState
-        newDest = fromMaybe (destFrame oldState) mNewDest
+nextState movement Nothing state
+    | all (Lens.has _Final) (state ^. stateInterpolations) = Nothing
+    | otherwise = advanceState movement state & Just
+nextState movement (Just dest) state =
+    setNewDest dest state & advanceState movement & Just
 
 {-# INLINE images #-}
 images :: Lens.Traversal' Frame Image
-images = frameImagesMap . Lens.traversed . Lens.traversed
-
-{-# INLINE layers #-}
-layers :: Lens.Traversal' Frame Layer
-layers = images . iLayer
+images = frameImages . Lens.traversed
 
 {-# INLINE unitImages #-}
 unitImages :: Lens.Traversal' Frame (Draw.Image ())
 unitImages = images . iUnitImage
 
 simpleFrame :: AnimId -> Draw.Image () -> Frame
-simpleFrame animId image =
-    Frame $ Map.singleton animId [Image 0 image (Rect 0 1)]
+simpleFrame animId image = Frame [Image animId image (Rect 0 1)]
 
 sizedFrame :: AnimId -> Size -> Draw.Image () -> Frame
 sizedFrame animId size =
@@ -111,7 +185,7 @@ sizedFrame animId size =
 
 instance Monoid Frame where
     mempty = Frame mempty
-    mappend (Frame m0) (Frame m1) = Frame $ Map.unionWith (++) m0 m1
+    mappend (Frame m0) (Frame m1) = Frame (m0 ++ m1)
 
 unitX :: Draw.Image ()
 unitX = void $ mconcat
@@ -125,50 +199,43 @@ red = Draw.Color 1 0 0 1
 draw :: Frame -> Draw.Image ()
 draw frame =
     frame
-    ^. frameImagesMap
-    & Map.elems
-    <&> markConflicts
-    & concat
+    ^. frameImages
     <&> posImage
-    & List.sortOn (^. _1) <&> snd
     & mconcat
     where
-        redX = Draw.tint red unitX
-        markConflicts imgs@(_:_:_) =
-            imgs <&> iUnitImage %~ mappend redX
-        markConflicts imgs = imgs
-        posImage (Image layer img rect) =
-            ( layer
-            , DrawUtils.translate (rect ^. Rect.topLeft) %%
-                DrawUtils.scale (rect ^. Rect.size) %%
-                img
-            )
+        posImage (Image _ img rect) =
+            DrawUtils.translate (rect ^. Rect.topLeft) %%
+            DrawUtils.scale (rect ^. Rect.size) %%
+            img
 
-prefixRects :: Map AnimId Image -> Map AnimId Rect
-prefixRects src =
-    Map.fromList . filter (not . null . fst) . map perGroup $ groupOn fst $
-    List.sortOn fst prefixItems
+prefixRects :: Frame -> Map AnimId Rect
+prefixRects srcFrame =
+    do
+        img <- srcFrame ^. frameImages
+        prefix <- List.inits (img ^. iAnimId)
+        return (prefix, img ^. iRect)
+    & List.sortOn fst
+    & groupOn fst
+    <&> perGroup
+    & filter (not . null . fst)
+    & Map.fromList
     where
         perGroup xs =
-            (fst (head xs), List.foldl1' joinRects (map snd xs))
-        prefixItems = do
-            (key, img) <- Map.toList src
-            prefix <- List.inits key
-            return (prefix, img ^. iRect)
-        joinRects a b =
-            Rect {
-                Rect._topLeft = tl,
-                Rect._size = br - tl
+            (fst (head xs), List.foldl1' unionRects (map snd xs))
+        unionRects a b =
+            Rect
+            { Rect._topLeft = tl
+            , Rect._size = br - tl
             }
             where
-                tl =
-                    liftA2 min (a ^. Rect.topLeft) (b ^. Rect.topLeft)
-                br =
-                    liftA2 max (a ^. Rect.bottomRight) (b ^. Rect.bottomRight)
+                tl = liftA2 min (a ^. Rect.topLeft) (b ^. Rect.topLeft)
+                br = liftA2 max (a ^. Rect.bottomRight) (b ^. Rect.bottomRight)
 
-findPrefix :: Ord a => [a] -> Map [a] b -> Maybe [a]
+findPrefix :: Ord a => [a] -> Map [a] b -> Maybe ([a], b)
 findPrefix key dict =
-    List.find (`Map.member` dict) . reverse $ List.inits key
+    (List.inits key & reverse <&> f) ^? traverse . Lens._Just
+    where
+        f prefix = Map.lookup prefix dict <&> (,) prefix
 
 relocateSubRect :: Rect -> Rect -> Rect -> Rect
 relocateSubRect srcSubRect srcSuperRect dstSuperRect =
@@ -185,64 +252,8 @@ relocateSubRect srcSubRect srcSuperRect dstSuperRect =
             dstSuperRect ^. Rect.size /
             fmap (max 1) (srcSuperRect ^. Rect.size)
 
-isVirtuallySame :: Frame -> Frame -> Bool
-isVirtuallySame (Frame a) (Frame b) =
-    Map.keysSet a == Map.keysSet b &&
-    diffRects < equalityThreshold
-    where
-        equalityThreshold = 0.2
-        diffRects =
-            maximum . (0:) . Map.elems $
-            Map.intersectionWith subtractRect
-                (rectMap a) (rectMap b)
-        subtractRect ra rb =
-            Vector2.uncurry max $
-            liftA2 max
-                (abs (ra ^. Rect.topLeft - rb ^. Rect.topLeft))
-                (abs (ra ^. Rect.bottomRight - rb ^. Rect.bottomRight))
-        rectMap = Map.mapMaybe (^? Lens.traversed . iRect)
-
 mapIdentities :: (AnimId -> AnimId) -> Frame -> Frame
-mapIdentities f = frameImagesMap %~ Map.mapKeys f
-
-makeNextFrame :: R -> Frame -> Frame -> Frame
-makeNextFrame movement (Frame dests) (Frame curs) =
-    Frame . Map.map (:[]) . Map.mapMaybe id $
-    mconcat
-    [ Map.mapWithKey add $ Map.difference dest cur
-    , Map.difference cur dest <&> del
-    , Map.intersectionWith modify dest cur
-    ]
-    where
-        dest = Map.map head dests
-        cur = Map.map head curs
-        animSpeed = pure movement
-        curPrefixMap = prefixRects cur
-        destPrefixMap = prefixRects dest
-        add key destImg =
-            destImg & iRect .~ curRect & Just
-            where
-                destRect = destImg ^. iRect
-                curRect =
-                    findPrefix key curPrefixMap
-                    & maybe (Rect (destRect ^. Rect.center) 0) genRect
-                genRect prefix = relocateSubRect destRect (destPrefixMap ! prefix) (curPrefixMap ! prefix)
-        del curImg
-            | Vector2.sqrNorm (curImg ^. iRect . Rect.size) < 1 = Nothing
-            | otherwise =
-                curImg
-                & iRect . Rect.centeredSize *~ (1 - animSpeed)
-                & Just
-        modify destImg curImg =
-            destImg
-            & iRect .~
-                Rect
-                (animSpeed * destTopLeft + (1 - animSpeed) * curTopLeft)
-                (animSpeed * destSize    + (1 - animSpeed) * curSize   )
-            & Just
-            where
-                Rect destTopLeft destSize = destImg ^. iRect
-                Rect curTopLeft curSize = curImg ^. iRect
+mapIdentities f = frameImages . traverse . iAnimId %~ f
 
 unitSquare :: AnimId -> Frame
 unitSquare animId = simpleFrame animId DrawUtils.square
@@ -262,12 +273,11 @@ emptyRectangle (Vector2 fX fY) totalSize@(Vector2 sX sY) animId =
             & (DrawUtils.scale size %%)
             & (DrawUtils.translate origin %%)
 
-backgroundColor :: AnimId -> Layer -> Draw.Color -> Vector2 R -> Frame
-backgroundColor animId layer color size =
+backgroundColor :: AnimId -> Draw.Color -> Vector2 R -> Frame
+backgroundColor animId color size =
     unitSquare animId
     & images . iUnitImage %~ Draw.tint color
     & scale size
-    & layers +~ layer
 
 translate :: Vector2 R -> Frame -> Frame
 translate pos = images . iRect . Rect.topLeft +~ pos

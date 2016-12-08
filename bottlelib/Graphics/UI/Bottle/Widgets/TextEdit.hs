@@ -134,7 +134,7 @@ makeFocused ::
     Widget (Text, Widget.EventResult)
 makeFocused cursor Style{..} str myId =
     makeUnfocused Style{..} str myId
-    & Widget.animFrame <>~ cursorFrame
+    & Widget.bottomFrame <>~ cursorFrame
     & Widget.mFocus .~
         Just Widget.Focus
         { _focalArea = cursorRect
@@ -147,7 +147,6 @@ makeFocused cursor Style{..} str myId =
             Anim.unitSquare (Widget.cursorAnimId ++ ["text"])
             & Anim.unitImages %~ Draw.tint _sCursorColor
             & Anim.unitIntoRect cursorRect
-            & Anim.layers +~ 2 -- TODO: 2?!
 
 mkCursorRect :: Style -> Int -> Text -> Rect
 mkCursorRect Style{..} cursor str = Rect cursorPos cursorSize

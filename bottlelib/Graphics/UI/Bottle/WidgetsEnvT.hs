@@ -25,7 +25,6 @@ import           Data.Maybe (isJust)
 import           Data.Vector.Vector2 (Vector2)
 import qualified Graphics.DrawingCombinators as Draw
 import           Graphics.UI.Bottle.Animation (AnimId)
-import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.TextEdit as TextEdit
 import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
@@ -35,7 +34,6 @@ import           Prelude.Compat
 data Env = Env
     { _envCursor :: Widget.Id
     , _envTextStyle :: TextEdit.Style
-    , layerInterval :: Anim.Layer
     , stdSpacing :: Vector2 Double
     }
 Lens.makeLenses ''Env

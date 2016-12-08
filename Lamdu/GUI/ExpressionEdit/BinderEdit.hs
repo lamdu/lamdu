@@ -27,7 +27,6 @@ import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 import qualified Graphics.UI.Bottle.WidgetsEnvT as WE
 import qualified Graphics.UI.GLFW as GLFW
 import           Lamdu.CharClassification (operatorChars)
-import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
 import qualified Lamdu.GUI.CodeEdit.Settings as CESettings
 import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
@@ -78,8 +77,8 @@ makeBinderNameEdit binderActions rhsJumperEquals rhs name myId =
                 & Widget.weakerEvents rhsJumperEquals
             | otherwise = widget
 
-presentationModeChoiceConfig :: Config -> Choice.Config
-presentationModeChoiceConfig config = Choice.Config
+presentationModeChoiceConfig :: Choice.Config
+presentationModeChoiceConfig = Choice.Config
     { Choice.cwcFDConfig =
         FocusDelegator.Config
         { FocusDelegator.focusChildKeys = [ModKey mempty GLFW.Key'Enter]
@@ -89,7 +88,6 @@ presentationModeChoiceConfig config = Choice.Config
         }
     , Choice.cwcOrientation = Box.Vertical
     , Choice.cwcExpandMode = Choice.ExplicitEntry
-    , Choice.cwcBgLayer = Config.layerChoiceBG $ Config.layers config
     }
 
 mkPresentationModeEdit ::
@@ -107,7 +105,7 @@ mkPresentationModeEdit myId prop = do
             return (presentationMode, widget)
     pairs <- traverse mkPair [Sugar.OO, Sugar.Verbose, Sugar.Infix 5]
     BWidgets.makeChoiceWidget (Transaction.setP prop) pairs cur
-        (presentationModeChoiceConfig config) myId
+        presentationModeChoiceConfig myId
         & ExprGuiM.widgetEnv
         <&> Widget.scale (realToFrac <$> Config.presentationChoiceScaleFactor config)
 

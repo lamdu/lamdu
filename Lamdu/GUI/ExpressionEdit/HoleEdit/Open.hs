@@ -273,8 +273,7 @@ makeExtraResultsWidget holeInfo mainResultHeight extraResults@(firstResult:_) =
         let height = min mainResultHeight headHeight
         let widget =
                 Box.vboxAlign 0 widgets
-                & addBackground (Widget.toAnimId (rId firstResult))
-                    (Config.layers config) holeOpenBGColor
+                & addBackground (Widget.toAnimId (rId firstResult)) holeOpenBGColor
         return
             ( msum mResults
             , widget
@@ -315,9 +314,9 @@ makeHoleResultWidget resultId holeResult =
                 ExprGuiM.localEnv (WE.envCursor .~ idWithinResultWidget) mkWidget
                 <&> (^. Widget.eventMap)
         widget <-
-            (ExprGuiM.widgetEnv BWidgets.liftLayerInterval <&> (Widget.view %~))
-            <*> (makeFocusable resultId <*> mkWidget)
-            <&> Widget.animFrame %~ Anim.mapIdentities (<> (resultSuffix # Widget.toAnimId resultId))
+            makeFocusable resultId <*> mkWidget
+            <&> Widget.view . View.animFrames %~
+                Anim.mapIdentities (<> (resultSuffix # Widget.toAnimId resultId))
         return (widget, mkEventMap)
     where
         mkWidget =
@@ -458,24 +457,20 @@ makeUnderCursorAssignment shownResultsLists hasHiddenResults holeInfo =
 
         vspace <- ExpressionGui.annotationSpacer
         hoverResultsWidget <-
-            (ExprGuiM.widgetEnv BWidgets.liftLayerInterval <&> (Widget.view %~))
-            <*>
-            ( addDarkBackground (Widget.toAnimId hidResultsPrefix)
-              ??
-              ( resultsWidget
-                & Widget.width %~ max (typeView ^. View.width)
-                & Widget.strongerEvents resultsEventMap .
-                  addBackground (Widget.toAnimId hidResultsPrefix) (Config.layers config)
-                  holeOpenBGColor
-                & AlignedWidget.fromCenteredWidget
-                & AlignedWidget.addAfter AlignedWidget.Vertical
-                  [ vspace
-                  , Widget.fromView typeView & AlignedWidget.fromCenteredWidget
-                  ]
-                & TreeLayout.fromAlignedWidget
-              ) & applyResultLayout
-              <&> (^. AlignedWidget.widget)
-            )
+            addDarkBackground (Widget.toAnimId hidResultsPrefix)
+            ??
+            ( resultsWidget
+              & Widget.width %~ max (typeView ^. View.width)
+              & Widget.strongerEvents resultsEventMap .
+                addBackground (Widget.toAnimId hidResultsPrefix) holeOpenBGColor
+              & AlignedWidget.fromCenteredWidget
+              & AlignedWidget.addAfter AlignedWidget.Vertical
+                [ vspace
+                , Widget.fromView typeView & AlignedWidget.fromCenteredWidget
+                ]
+              & TreeLayout.fromAlignedWidget
+            ) & applyResultLayout
+            <&> (^. AlignedWidget.widget)
         searchTermGui <- SearchTerm.make holeInfo
         return $ TreeLayout.render # \layoutMode ->
             let w = layoutMode

@@ -150,7 +150,7 @@ makeRecExtend animId typ recExtend =
                         GridView.verticalAlign 0.5 [sqr, v] & return
                     where
                         sqr =
-                            View 1 (Anim.unitSquare (animId ++ ["line"]))
+                            View.make 1 (Anim.unitSquare (animId ++ ["line"]))
                             & View.scale (Vector2 barWidth 1)
             GridView.verticalAlign 0.5 [fieldsView, restView] & return
     where

@@ -183,10 +183,10 @@ animThread tvars animStateRef getAnimationConfig win =
                     Just (userEventTime, newDestFrame) ->
                         animState
                         & asCurSpeedHalfLife .~ timeRemaining / realToFrac (logBase 0.5 ratio)
-                        & asState . Anim.stateFrames %~
+                        & asState %~
                             case erAnimIdMapping (taEventResult fromEvents) of
                             Nothing -> id
-                            Just mapping -> Anim.mapIdentities (Monoid.appEndo mapping)
+                            Just mapping -> Anim.stateMapIdentities (Monoid.appEndo mapping)
                         & advanceAnimation elapsed (Just newDestFrame)
                         where
                             -- Retroactively pretend animation started a little bit
@@ -222,7 +222,7 @@ newLooper =
                     s
                     & asCurTime .~ curTime
                     & asCurSpeedHalfLife .~ timePeriod / realToFrac (logBase 0.5 ratio)
-                    & asState . Anim.stateFrames . Anim.unitImages .~ mempty
+                    & asState %~ Anim.stateClearImages
                     & asState %~
                         unsafeUnjust "nextState with frame always updates state" .
                         Anim.nextState 0 (Just frame)

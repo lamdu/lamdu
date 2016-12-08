@@ -391,9 +391,7 @@ mkWidgetWithFallback dbToIO env =
                 return (isValid, widget)
         unless isValid $ putStrLn $ "Invalid cursor: " ++ show (env ^. GUIMain.envCursor)
         widget
-            & Widget.backgroundColor
-              (Config.layerMax (Config.layers config))
-              ["background"] (bgColor isValid config)
+            & Widget.backgroundColor ["background"] (bgColor isValid config)
             & return
     where
         config = env ^. GUIMain.envConfig

@@ -1,43 +1,21 @@
 {-# OPTIONS -O0 #-}
 {-# LANGUAGE DeriveGeneric, RecordWildCards #-}
 module Lamdu.Config
-    ( Layers(..)
-    , Help(..), Zoom(..), Export(..), Pane(..), Hole(..)
+    ( Help(..), Zoom(..), Export(..), Pane(..), Hole(..)
     , Name(..), Eval(..), Indent(..)
     , LiteralText(..)
     , LightLambda(..)
     , Config(..)
     , delKeys
-    , layerInterval
     ) where
 
 import qualified Data.Aeson.Types as Aeson
 import           Data.Vector.Vector2 (Vector2(..))
 import           GHC.Generics (Generic)
 import qualified Graphics.DrawingCombinators as Draw
-import qualified Graphics.UI.Bottle.Animation as Anim
 import           Graphics.UI.Bottle.ModKey (ModKey(..))
 import           Lamdu.Font (FontSize, Fonts(..))
 import qualified Lamdu.GUI.VersionControl.Config as VersionControl
-
-data Layers = Layers
-    { layerMin
-    , layerAnnotations
-    , layerTypeIndicatorFrame
-    , layerChoiceBG
-    , layerHoleBG
-    , layerDarkHoleBG
-    , layerNameCollisionBG
-    , layerValFrameBG
-    , layerActivePane
-    , layerMax :: Anim.Layer
-    } deriving (Eq, Generic, Show)
-instance Aeson.ToJSON Layers where
-    toJSON = Aeson.genericToJSON Aeson.defaultOptions
-instance Aeson.FromJSON Layers
-
-layerInterval :: Layers -> Int
-layerInterval Layers{..} = layerMax - layerMin
 
 data Help = Help
     { helpTextSize :: FontSize
@@ -166,7 +144,6 @@ instance Aeson.FromJSON Indent
 data Config = Config
     { fonts :: Fonts FilePath
     , baseTextSize :: FontSize
-    , layers :: Layers
     , help :: Help
     , zoom :: Zoom
     , export :: Export

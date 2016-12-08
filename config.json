@@ -11,18 +11,6 @@
     "animationRemainInPeriod": 0.2,
     "maxExprDepth": 40,
     "maxEvalViewSize": 32,
-    "layers": {
-        "layerMin": -100,
-        "layerMax": 100,
-        "layerTypeIndicatorFrame": 1,
-        "layerActivePane": 40,
-        "layerHoleBG": 38,
-        "layerDarkHoleBG": 39,
-        "layerAnnotations": -50,
-        "layerNameCollisionBG": 32,
-        "layerChoiceBG": 30,
-        "layerValFrameBG": 33
-    },
     "help": {
         "helpInputDocColor": [
             0.1,

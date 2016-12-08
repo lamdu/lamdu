@@ -15,10 +15,8 @@ import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 
 import           Lamdu.Prelude
 
-addBackground :: AnimId -> Config.Layers -> Draw.Color -> Widget f -> Widget f
-addBackground myId layers =
-    Widget.backgroundColor (Config.layerHoleBG layers)
-    (myId <> ["hole background"])
+addBackground :: AnimId -> Draw.Color -> Widget f -> Widget f
+addBackground myId = Widget.backgroundColor (myId <> ["hole background"])
 
 addDarkBackground :: Monad m => AnimId -> ExprGuiM m (ExpressionGui f -> ExpressionGui f)
 addDarkBackground animId =
@@ -30,6 +28,5 @@ addDarkBackground animId =
             & TreeLayout.pad (holeDarkPadding <&> realToFrac)
             & TreeLayout.widget %~
               Widget.backgroundColor
-              (Config.layerDarkHoleBG (Config.layers config))
               (animId <> ["hole dark background"])
               holeDarkBGColor

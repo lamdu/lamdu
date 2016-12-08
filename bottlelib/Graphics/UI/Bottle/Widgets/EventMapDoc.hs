@@ -143,13 +143,12 @@ makeTreeView size =
                 (titles, inputDocs) = go trees
 
 addToBottomRight :: View -> Widget.Size -> Widget f -> Widget f
-addToBottomRight (View eventMapSize eventMapFrame) size =
-    Widget.animFrame <>~ docFrame
+addToBottomRight (View eventMapSize eventMapLayers) size =
+    Widget.view . View.animLayers . View.layers <>~ docLayers ^. View.layers
     where
-        docFrame =
-            eventMapFrame
-            & Anim.translate (size - eventMapSize)
-            & Anim.layers -~ 10 -- TODO: 10?!
+        docLayers =
+            eventMapLayers
+            & View.layers . traverse %~ Anim.translate (size - eventMapSize)
 
 data IsHelpShown = HelpShown | HelpNotShown
     deriving (Eq, Ord, Read, Show)
@@ -186,7 +185,7 @@ makeToggledHelpAdder startValue =
                         liftIO $ modifyIORef showingHelpVar toggle
                 let bgHelpView =
                         helpView
-                        & View.backgroundColor 1 animId (configBGColor config)
+                        & View.backgroundColor animId (configBGColor config)
                         & View.tint (transparency 0.8) -- TODO: 0.8?!
                 return . addToBottomRight bgHelpView size $
                     Widget.strongerEvents toggleEventMap widget

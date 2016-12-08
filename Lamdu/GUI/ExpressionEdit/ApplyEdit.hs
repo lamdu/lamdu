@@ -66,7 +66,7 @@ infixMarker (Vector2 w h) =
 addInfixMarker :: Widget.Id -> Widget a -> Widget a
 addInfixMarker widgetId widget =
     widget
-    & Widget.animFrame
+    & Widget.bottomFrame
     <>~ Anim.simpleFrame frameId (infixMarker (widget ^. Widget.size))
     where
         frameId = Widget.toAnimId widgetId ++ ["infix"]

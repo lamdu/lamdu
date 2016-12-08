@@ -62,8 +62,7 @@ make holeInfo =
         makeSearchTermPropEdit WidgetIds{..} (HoleInfo.hiSearchTermProperty holeInfo)
             <&> Widget.eventMap
                 %~ EventMap.disallowCharsFromSearchTerm holeConfig searchTerm
-            <&> addBackground (Widget.toAnimId hidOpenSearchTerm)
-                (Config.layers config) holeSearchTermBGColor
+            <&> addBackground (Widget.toAnimId hidOpenSearchTerm) holeSearchTermBGColor
             <&> TreeLayout.fromCenteredWidget
             <&> TreeLayout.alignment . _1 .~ 0
             & WE.localEnv (WE.envTextStyle %~ textEditNoEmpty)

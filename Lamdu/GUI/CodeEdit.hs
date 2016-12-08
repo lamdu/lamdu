@@ -377,9 +377,8 @@ makePaneWidget defS =
         let Config.Pane{paneActiveBGColor,paneInactiveTintColor} = Config.pane config
         let colorizeInactivePane = Widget.tint paneInactiveTintColor
         let colorizeActivePane =
-                Widget.backgroundColor
-                (Config.layerActivePane (Config.layers config))
-                WidgetIds.activePaneBackground paneActiveBGColor
+                Widget.backgroundColor WidgetIds.activePaneBackground
+                paneActiveBGColor
         let colorize widget
                 | Widget.isFocused widget = colorizeActivePane widget
                 | otherwise = colorizeInactivePane widget

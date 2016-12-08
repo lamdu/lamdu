@@ -5,7 +5,6 @@ module Lamdu.GUI.ExpressionEdit.HoleEdit
 
 import qualified Control.Lens as Lens
 import qualified Data.Store.Transaction as Transaction
-import           Graphics.UI.Bottle.Animation (AnimId)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widget.Aligned as AlignedWidget
 import qualified Graphics.UI.Bottle.Widget.TreeLayout as TreeLayout
@@ -52,17 +51,11 @@ assignHoleCursor WidgetIds{..} (Just _) =
     ExprGuiM.assignCursor hidHole hidWrapper .
     ExprGuiM.assignCursor (WidgetIds.notDelegatingId hidHole) hidWrapper
 
-hover :: Monad m => WidgetIds -> AnimId -> ExprGuiM m (ExpressionGui n -> ExpressionGui n)
-hover WidgetIds{..} name =
-    (.)
-    <$> (ExpressionGui.liftLayers <&> (TreeLayout.alignedWidget %~))
-    <*> addDarkBackground (Widget.toAnimId hidOpen ++ name ++ ["DarkBg"])
-
 addSearchAreaBelow ::
     Monad m => WidgetIds ->
     ExprGuiM m (ExpressionGui f -> ExpressionGui f -> ExpressionGui f)
-addSearchAreaBelow ids =
-    hover ids ["searchArea"]
+addSearchAreaBelow WidgetIds{..} =
+    addDarkBackground (Widget.toAnimId hidOpen ++ ["searchArea", "DarkBg"])
     <&>
     \f wrapperGui searchAreaGui ->
     ExpressionGui.vboxTopFocal [wrapperGui, f searchAreaGui]

@@ -137,7 +137,7 @@ typeIndicator color myId =
     <&>
     \config width ->
     Anim.unitSquare (Widget.toAnimId (typeIndicatorId myId))
-    & View 1
+    & View.make 1
     & View.scale (Vector2 width (realToFrac (Config.typeIndicatorFrameWidth config ^. _2)))
     & View.tint color
 

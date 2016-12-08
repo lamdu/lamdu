@@ -11,8 +11,6 @@ module Graphics.UI.Bottle.Widgets.TextView
     , letterRects
     ) where
 
-import           Prelude.Compat
-
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Lens.Tuple
@@ -27,8 +25,11 @@ import qualified Graphics.UI.Bottle.Rect as Rect
 import           Graphics.UI.Bottle.Font (TextSize(..))
 import qualified Graphics.UI.Bottle.Font as Font
 import           Graphics.UI.Bottle.View (View(..))
+import qualified Graphics.UI.Bottle.View as View
 import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
+
+import           Prelude.Compat
 
 data Style = Style
     { _styleColor :: Draw.Color
@@ -89,7 +90,7 @@ drawText style text = nestedFrame style ("text" :: Text, fontRender style text)
 
 make :: Style -> Text -> AnimId -> View
 make style text animId =
-    View (bounding textSize) (frame animId)
+    View.make (bounding textSize) (frame animId)
     where
         RenderedText textSize frame = drawText style text
 

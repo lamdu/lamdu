@@ -15,7 +15,6 @@ module Lamdu.GUI.ExpressionGui
     , grammarLabel
     , addValBG, addValFrame, addValPadding
     , addValBGWithColor
-    , liftLayers
     -- Lifted widgets:
     , makeFocusDelegator
     , makeFocusableView
@@ -50,7 +49,6 @@ import           Data.Vector.Vector2 (Vector2(..))
 import qualified Graphics.DrawingCombinators as Draw
 import           Graphics.UI.Bottle.Alignment (Alignment(..))
 import           Graphics.UI.Bottle.Animation (AnimId)
-import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.EventMap as E
 import           Graphics.UI.Bottle.ModKey (ModKey(..))
 import qualified Graphics.UI.Bottle.View as View
@@ -120,8 +118,8 @@ maybeIndent (Just piInfo) =
                     [ Spacer.make
                         (Vector2 barWidth (content ^. AlignedWidget.widget . Widget.height))
                         & Widget.fromView
-                        & Widget.backgroundColor 0 bgAnimId
-                            (Config.indentBarColor indentConf)
+                        & Widget.backgroundColor bgAnimId
+                          (Config.indentBarColor indentConf)
                         & AlignedWidget.fromCenteredWidget
                         & AlignedWidget.alignment . _2 .~ 0
                     , Spacer.make (Vector2 gapWidth 0)
@@ -290,10 +288,9 @@ tagItem =
 addAnnotationBackgroundH ::
     (Config -> Draw.Color) -> Config -> AnimId -> View -> View
 addAnnotationBackgroundH getColor config animId =
-    View.backgroundColor bgLayer bgAnimId bgColor
+    View.backgroundColor bgAnimId bgColor
     where
         bgAnimId = animId ++ ["annotation background"]
-        bgLayer = Config.layerAnnotations $ Config.layers config
         bgColor = getColor config
 
 addAnnotationBackground :: Config -> AnimId -> View -> View
@@ -327,11 +324,10 @@ applyWideAnnotationBehavior animId ShrinkWideAnnotation =
 applyWideAnnotationBehavior animId HoverWideAnnotation =
     do
         config <- ExprGuiM.readConfig
-        lifter <- liftLayers
         shrinker <- applyWideAnnotationBehavior animId ShrinkWideAnnotation
         return $
             \shrinkRatio layout ->
-                lifter layout
+                layout
                 & AlignedWidget.widget . Widget.view %~ addAnnotationHoverBackground config animId
                 & (`AlignedWidget.hoverInPlaceOf` shrinker shrinkRatio layout)
 
@@ -494,14 +490,9 @@ nameEditFDConfig = FocusDelegator.Config
 
 deletionDiagonal ::
     Widget.R -> AnimId -> Anchors.DefinitionState -> View -> View
-deletionDiagonal _ _ Anchors.LiveDefinition view = view
-deletionDiagonal thickness animId Anchors.DeletedDefinition view =
-    View.addDiagonal thickness (animId ++ ["diagonal"])
-    (minLayer - 1) (Draw.Color 1 0 0 1) view
-    where
-        minLayer =
-            Lens.minimumOf (View.animFrame . Anim.layers) view
-            & fromMaybe 0
+deletionDiagonal _ _ Anchors.LiveDefinition = id
+deletionDiagonal thickness animId Anchors.DeletedDefinition =
+    View.addDiagonal thickness (animId ++ ["diagonal"]) (Draw.Color 1 0 0 1)
 
 makeNameOriginEdit ::
     Monad m => Name m -> Widget.Id -> ExprGuiM m (Widget (T m Widget.EventResult))
@@ -624,8 +615,7 @@ addValBGWithColor ::
 addValBGWithColor color myId =
     do
         config <- ExprGuiM.readConfig
-        let layer = Config.layerValFrameBG $ Config.layers config
-        Widget.backgroundColor layer animId (color config) & return
+        Widget.backgroundColor animId (color config) & return
     where
         animId = Widget.toAnimId myId ++ ["val"]
 
@@ -633,11 +623,6 @@ addValPadding :: Monad m => ExprGuiM m (TreeLayout a -> TreeLayout a)
 addValPadding =
     ExprGuiM.readConfig <&> Config.valFramePadding <&> fmap realToFrac
     <&> TreeLayout.pad
-
-liftLayers :: Monad m => ExprGuiM m (AlignedWidget a -> AlignedWidget a)
-liftLayers =
-    ExprGuiM.widgetEnv BWidgets.liftLayerInterval
-    <&> (AlignedWidget.widget . Widget.view %~)
 
 addValFrame ::
     Monad m => Widget.Id -> ExprGuiM m (TreeLayout a -> TreeLayout a)
@@ -664,9 +649,7 @@ makeCollisionSuffixLabel (Collision suffix) animId =
         BWidgets.makeLabel (Text.pack (show suffix)) animId
             & WE.localEnv (WE.setTextColor collisionSuffixTextColor)
             <&> View.scale (realToFrac <$> collisionSuffixScaleFactor)
-            <&> View.backgroundColor
-                (Config.layerNameCollisionBG (Config.layers config)) animId
-                collisionSuffixBGColor
+            <&> View.backgroundColor animId collisionSuffixBGColor
             <&> Just
             & ExprGuiM.widgetEnv
 

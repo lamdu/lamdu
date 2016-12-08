@@ -26,6 +26,7 @@ import qualified Graphics.UI.Bottle.ModKey as ModKey
 import           Graphics.UI.Bottle.Rect (Rect(..))
 import qualified Graphics.UI.Bottle.Rect as Rect
 import           Graphics.UI.Bottle.View (View(..))
+import qualified Graphics.UI.Bottle.View as View
 import           Graphics.UI.Bottle.Widget (R, Widget(Widget))
 import qualified Graphics.UI.Bottle.Widget as Widget
 import           Graphics.UI.Bottle.Widgets.GridView (Alignment(..))
@@ -180,12 +181,12 @@ toWidgetWithKeys ::
     vert (horiz (Rect, Widget a)) -> Widget a
 toWidgetWithKeys keys mCursor size sChildren =
     Widget
-    { _view = View size frame
+    { _view = View size layers
     , _mEnter = toList mEnterss <&> toList & combineMEnters size
     , _mFocus = mFocus
     }
     where
-        frame = widgets ^. Lens.folded . Lens.folded . Widget.animFrame
+        layers = widgets ^. Lens.folded . Lens.folded . Widget.view . View.animLayers
         translateChildWidget (rect, widget) =
             Widget.translate (rect ^. Rect.topLeft) widget
         widgets = toList sChildren <&> toList <&> Lens.mapped %~ translateChildWidget
