@@ -29,7 +29,6 @@ import           Graphics.UI.Bottle.ModKey (ModKey(..))
 import qualified Graphics.UI.Bottle.ModKey as ModKey
 import           Graphics.UI.Bottle.Rect (Rect(..))
 import qualified Graphics.UI.Bottle.Rect as Rect
-import           Graphics.UI.Bottle.View (View(..))
 import           Graphics.UI.Bottle.Widget (Widget(..))
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
@@ -65,9 +64,6 @@ makeDisplayStr :: Text -> Text -> Text
 makeDisplayStr empty ""  = empty
 makeDisplayStr _     str = str
 
-cursorTranslate :: Style -> Anim.Frame -> Anim.Frame
-cursorTranslate Style{..} = Anim.translate $ Vector2 (_sCursorWidth / 2) 0
-
 encodeCursor :: Widget.Id -> Int -> Widget.Id
 encodeCursor myId = Widget.joinId myId . (:[]) . BinUtils.encodeS
 
@@ -95,12 +91,10 @@ cursorRects style str =
 makeUnfocused :: Style -> Text -> Widget.Id -> Widget (Text, Widget.EventResult)
 makeUnfocused Style{..} str myId =
     TextView.makeWidget _sTextViewStyle displayStr animId
-    & Widget.animFrame %~ cursorTranslate Style{..}
-    & Widget.width +~ cursorWidth
-    & makeFocusable Style{..} str myId
+    & Widget.pad (Vector2 (_sCursorWidth / 2) 0)
+    & Widget.mEnter .~ Just (enterFromDirection Style{..} str myId)
     where
         animId = Widget.toAnimId myId
-        cursorWidth = _sCursorWidth
         displayStr = makeDisplayStr _sEmptyUnfocusedString str
 
 minimumIndex :: Ord a => [a] -> Int
@@ -127,12 +121,6 @@ enterFromDirection Style{..} str myId dir =
             Direction.Point x -> cursorNearRect _sTextViewStyle str $ Rect x 0
         cursorRect = mkCursorRect Style{..} cursor str
 
-makeFocusable ::
-    Style -> Text -> Widget.Id ->
-    Widget (Text, Widget.EventResult) -> Widget (Text, Widget.EventResult)
-makeFocusable style str myId =
-    Widget.mEnter .~ Just (enterFromDirection style str myId)
-
 eventResult :: Widget.Id -> Text -> Int -> (Text, Widget.EventResult)
 eventResult myId newText newCursor =
     ( newText
@@ -145,26 +133,15 @@ makeFocused ::
     Cursor -> Style -> Text -> Widget.Id ->
     Widget (Text, Widget.EventResult)
 makeFocused cursor Style{..} str myId =
-    makeFocusable Style{..} str myId widget
+    makeUnfocused Style{..} str myId
+    & Widget.animFrame <>~ cursorFrame
+    & Widget.mFocus .~
+        Just Widget.Focus
+        { _focalArea = cursorRect
+        , _fEventMap = eventMap cursor str displayStr myId
+        }
     where
-        widget =
-            Widget
-            { _view = View reqSize $ img <> cursorFrame
-            , _mEnter = Nothing
-            , _mFocus =
-                Just Widget.Focus
-                { _focalArea = cursorRect
-                , _fEventMap = eventMap cursor str displayStr myId
-                }
-            }
-        reqSize = Vector2 (_sCursorWidth + tlWidth) tlHeight
-        myAnimId = Widget.toAnimId myId
-        img = frameGen myAnimId & cursorTranslate Style{..}
         displayStr = makeDisplayStr _sEmptyFocusedString str
-        Vector2 tlWidth tlHeight = bounding renderedSize
-        (TextView.RenderedText renderedSize frameGen) =
-            TextView.drawText _sTextViewStyle displayStr
-
         cursorRect = mkCursorRect Style{..} cursor str
         cursorFrame =
             Anim.unitSquare (Widget.cursorAnimId ++ ["text"])
