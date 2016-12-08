@@ -10,7 +10,6 @@ import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
 import           Data.Text.Encoding (decodeUtf8)
 import           Data.Vector.Vector2 (Vector2(..))
-import qualified Graphics.DrawingCombinators as Draw
 import           Graphics.UI.Bottle.Animation (AnimId)
 import qualified Graphics.UI.Bottle.Animation as Anim
 import           Graphics.UI.Bottle.View (View(..))
@@ -221,4 +220,4 @@ make t prefix =
             & runM
             & (`evalStateT` Random.mkStdGen 0)
             <&> View.animFrame %~ Anim.mapIdentities (mappend prefix)
-            <&> View.animFrame . Anim.unitImages %~ Draw.tint (Config.typeTint config)
+            <&> View.tint (Config.typeTint config)
