@@ -4,7 +4,6 @@ module Lamdu.GUI.TypeView
     ) where
 
 import qualified Control.Lens as Lens
-import           Control.Monad.Trans.Class (MonadTrans(..))
 import           Control.Monad.Trans.State (StateT, state, evalStateT)
 import qualified Data.Map as Map
 import           Data.Store.Transaction (Transaction)

@@ -16,7 +16,6 @@ module Lamdu.Sugar.Convert.Monad
     ) where
 
 import qualified Control.Lens as Lens
-import           Control.Monad.Trans.Class (MonadTrans(..))
 import           Control.Monad.Trans.Reader (ReaderT, runReaderT)
 import qualified Control.Monad.Trans.Reader as Reader
 import           Data.Store.Transaction (Transaction)

@@ -14,7 +14,6 @@ module Lamdu.Expr.GenIds
 
 import qualified Control.Lens as Lens
 import           Control.Monad (replicateM)
-import           Control.Monad.Trans.Class (MonadTrans(..))
 import           Control.Monad.Trans.Reader (ReaderT(..))
 import qualified Control.Monad.Trans.Reader as Reader
 import           Control.Monad.Trans.State (evalState, state, runState)

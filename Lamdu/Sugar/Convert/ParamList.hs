@@ -5,7 +5,6 @@ module Lamdu.Sugar.Convert.ParamList
     ) where
 
 import qualified Control.Lens as Lens
-import           Control.Monad.Trans.Class (MonadTrans(..))
 import           Control.Monad.Trans.State (mapStateT)
 import qualified Control.Monad.Trans.State as State
 import qualified Data.Store.Property as Property

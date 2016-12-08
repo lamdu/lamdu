@@ -4,7 +4,6 @@ module Lamdu.Sugar.Convert
     ) where
 
 import qualified Control.Lens as Lens
-import           Control.Monad.Trans.Class (MonadTrans(..))
 import qualified Control.Monad.Trans.State as State
 import           Data.CurAndPrev (CurAndPrev)
 import qualified Data.Map as Map

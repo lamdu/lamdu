@@ -7,7 +7,6 @@ module Lamdu.Data.Export.Codejam
 import qualified Codec.Archive.Zip as Zip
 import           Codec.Picture (Image, PixelRGB8(..), withImage)
 import qualified Control.Lens as Lens
-import           Control.Monad.Trans.Class (MonadTrans(..))
 import           Control.Monad.Trans.Writer (execWriterT, tell)
 import qualified Data.Aeson.Encode.Pretty as AesonPretty
 import qualified Data.ByteString as SBS

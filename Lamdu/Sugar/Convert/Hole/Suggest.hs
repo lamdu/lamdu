@@ -8,7 +8,6 @@ module Lamdu.Sugar.Convert.Hole.Suggest
 
 import qualified Control.Lens as Lens
 import           Control.Monad (mzero)
-import           Control.Monad.Trans.Class (MonadTrans(..))
 import           Control.Monad.Trans.State (StateT(..), mapStateT)
 import qualified Data.Map as Map
 import qualified Data.Set as Set
