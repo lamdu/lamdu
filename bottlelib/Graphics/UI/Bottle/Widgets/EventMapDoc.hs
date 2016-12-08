@@ -2,7 +2,6 @@
 module Graphics.UI.Bottle.Widgets.EventMapDoc
     ( makeView
     , IsHelpShown(..)
-    , addHelp
     , makeToggledHelpAdder
     , Config(..)
     ) where
@@ -76,7 +75,7 @@ makeShortcutKeyView ::
 makeShortcutKeyView config (animId, inputDocs) =
     inputDocs
     <&> TextView.label (configStyle config) animId
-    <&> View.animFrame . Anim.unitImages %~ Draw.tint (configInputDocColor config)
+    <&> View.tint (configInputDocColor config)
     & GridView.verticalAlign 0
 
 makeTextViews ::
@@ -88,10 +87,6 @@ makeTextViews config =
     ( (treeNodes %~ uncurry (TextView.label (configStyle config)))
     . fmap (makeShortcutKeyView config)
     ) . addAnimIds
-
-addHelpBG :: Config -> AnimId -> View -> View
-addHelpBG config animId =
-    View.backgroundColor 1 animId $ configBGColor config
 
 columns :: R -> (a -> R) -> [a] -> [[a]]
 columns maxHeight itemHeight =
@@ -112,11 +107,10 @@ makeView size eventMap config animId =
     <&> (_1 %~ (^. E.docStrs)) . Tuple.swap
     & groupInputDocs & groupTree
     <&> makeTextViews config animId
-    & makeTreeView config animId size
+    & makeTreeView size
 
 makeTooltip :: Config -> [ModKey] -> AnimId -> View
 makeTooltip config helpKeys animId =
-    addHelpBG config animId $
     GridView.horizontalAlign 0
     [ TextView.label (configStyle config) animId "Show help"
     , Spacer.makeHorizontal 10
@@ -128,15 +122,12 @@ indent :: R -> View -> View
 indent width x =
     GridView.horizontalAlign 0 [Spacer.makeHorizontal width, x]
 
-makeTreeView :: Config -> AnimId -> Vector2 R -> [Tree View View] -> View
-makeTreeView config animId size =
-    GridView.horizontalAlign 1 . (Lens.traversed %@~ toGrid) .
+makeTreeView :: Vector2 R -> [Tree View View] -> View
+makeTreeView size =
+    GridView.horizontalAlign 1 . fmap (GridView.make . map toRow) .
     columns (size ^. _2) pairHeight .
     handleResult . go
     where
-        toGrid i =
-            addHelpBG config (Anim.augmentId animId i) .
-            GridView.make . map toRow
         toRow (titleView, docView) =
             [(0, titleView), (GridView.Alignment (Vector2 1 0), docView)]
         pairHeight (titleView, docView) = (max `on` (^. View.height)) titleView docView
@@ -151,17 +142,14 @@ makeTreeView config animId size =
             where
                 (titles, inputDocs) = go trees
 
-addHelp :: (AnimId -> View) -> Widget.Size -> Widget f -> Widget f
-addHelp f size =
+addToBottomRight :: View -> Widget.Size -> Widget f -> Widget f
+addToBottomRight (View eventMapSize eventMapFrame) size =
     Widget.animFrame <>~ docFrame
     where
-        View eventMapSize eventMapFrame = f ["help box"]
-        transparency = Draw.Color 1 1 1
         docFrame =
             eventMapFrame
             & Anim.translate (size - eventMapSize)
             & Anim.layers -~ 10 -- TODO: 10?!
-            & Anim.unitImages %~ Draw.tint (transparency 0.8) -- TODO: 0.8?!
 
 data IsHelpShown = HelpShown | HelpNotShown
     deriving (Eq, Ord, Read, Show)
@@ -183,17 +171,25 @@ makeToggledHelpAdder startValue =
         return $ \config size widget ->
             do
                 showingHelp <- readIORef showingHelpVar & liftIO
-                let (f, docStr) =
+                let (helpView, docStr) =
                         case showingHelp of
                         HelpShown ->
                             ( makeView size (widget ^. Widget.eventMap) config
+                              animId
                             , "Hide"
                             )
                         HelpNotShown ->
-                            (makeTooltip config (configOverlayDocKeys config), "Show")
-                    toggleEventMap =
+                            (makeTooltip config (configOverlayDocKeys config) animId, "Show")
+                let toggleEventMap =
                         Widget.keysEventMap (configOverlayDocKeys config)
                         (E.Doc ["Help", "Key Bindings", docStr]) $
                         liftIO $ modifyIORef showingHelpVar toggle
-                return . addHelp f size $
+                let bgHelpView =
+                        helpView
+                        & View.backgroundColor 1 animId (configBGColor config)
+                        & View.tint (transparency 0.8) -- TODO: 0.8?!
+                return . addToBottomRight bgHelpView size $
                     Widget.strongerEvents toggleEventMap widget
+    where
+        transparency = Draw.Color 1 1 1
+        animId = ["help box"]
