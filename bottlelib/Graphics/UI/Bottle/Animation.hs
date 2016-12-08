@@ -25,7 +25,7 @@ import qualified Data.List as List
 import           Data.List.Utils (groupOn)
 import           Data.Map (Map, (!))
 import qualified Data.Map.Strict as Map
-import           Data.Maybe (fromMaybe, isJust)
+import           Data.Maybe (fromMaybe)
 import           Data.Vector.Vector2 (Vector2(..))
 import qualified Data.Vector.Vector2 as Vector2
 import           GHC.Generics (Generic)
@@ -210,7 +210,7 @@ makeNextFrame movement (Frame dests) (Frame curs) =
     Frame . Map.map (:[]) . Map.mapMaybe id $
     mconcat
     [ Map.mapWithKey add $ Map.difference dest cur
-    , Map.mapWithKey del $ Map.difference cur dest
+    , Map.difference cur dest <&> del
     , Map.intersectionWith modify dest cur
     ]
     where
@@ -227,9 +227,8 @@ makeNextFrame movement (Frame dests) (Frame curs) =
                     findPrefix key curPrefixMap
                     & maybe (Rect (destRect ^. Rect.center) 0) genRect
                 genRect prefix = relocateSubRect destRect (destPrefixMap ! prefix) (curPrefixMap ! prefix)
-        del key curImg
-            | isJust (findPrefix key destPrefixMap)
-            || Vector2.sqrNorm (curImg ^. iRect . Rect.size) < 1 = Nothing
+        del curImg
+            | Vector2.sqrNorm (curImg ^. iRect . Rect.size) < 1 = Nothing
             | otherwise =
                 curImg
                 & iRect . Rect.centeredSize *~ (1 - animSpeed)
