@@ -18,6 +18,7 @@ import           Control.Lens.Tuple
 import           Data.Vector.Vector2 (Vector2(..))
 import           Graphics.UI.Bottle.Alignment (Alignment(..))
 import qualified Graphics.UI.Bottle.Alignment as Alignment
+import qualified Graphics.UI.Bottle.View as View
 import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.Box as Box
@@ -69,6 +70,7 @@ hoverInPlaceOf :: AlignedWidget a -> AlignedWidget a -> AlignedWidget a
 layout `hoverInPlaceOf` src =
     ( srcAbsAlignment
     , layoutWidget
+        & Widget.view . View.animLayers . View.layers %~ (mempty :)
         & Widget.translate (srcAbsAlignment - layoutAbsAlignment)
         & Widget.size .~ srcSize
     ) ^. Lens.from absAlignedWidget

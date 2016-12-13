@@ -55,7 +55,7 @@ make :: Size -> Anim.Frame -> View
 make sz frame = View sz (Layers [frame])
 
 render :: View -> Anim.Frame
-render view = view ^. animFrames
+render view = view ^. animLayers . layers . Lens.reversed . traverse
 
 animFrames :: Lens.Traversal' View Anim.Frame
 animFrames = animLayers . layers . traverse
