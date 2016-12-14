@@ -31,6 +31,7 @@ Library
   hs-Source-Dirs:      bottlelib
 
   Exposed-modules:  Control.Concurrent.Utils
+                  , Control.Exception.Utils
                   , Control.Lens.Utils
                   , Control.Monad.Trans.Either.Utils
                   , Control.Monad.Unit

@@ -51,6 +51,7 @@ startedEvaluator (Started eval) = Just eval
 
 data NewParams = NewParams
     { invalidateCache :: IO ()
+    -- ^ Callback for notifying that new evaluation results are available.
     , dbMVar :: MVar (Maybe Db)
     , copyJSOutputPath :: Maybe FilePath
     }

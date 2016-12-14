@@ -5,6 +5,7 @@ module Main
 
 import           Control.Concurrent.MVar
 import qualified Control.Exception as E
+import           Control.Exception.Utils (loopWhileException)
 import qualified Control.Lens as Lens
 import           Control.Monad (join, replicateM_)
 import           Control.Monad.IO.Class (MonadIO(..))
@@ -235,16 +236,6 @@ isRefreshScheduled :: RefreshScheduler -> IO Bool
 isRefreshScheduled (RefreshScheduler ref) = atomicModifyIORef ref $ \r -> (False, r)
 scheduleRefresh :: RefreshScheduler -> IO ()
 scheduleRefresh (RefreshScheduler ref) = writeIORef ref True
-
-loopWhileException :: forall a e. E.Exception e => Proxy e -> IO a -> IO a
-loopWhileException _ act = loop
-    where
-        loop =
-            (act <&> Just)
-            `E.catch` (\(_ :: e) -> return Nothing)
-            >>= \case
-            Nothing -> loop
-            Just res -> return res
 
 prependConfigPath :: ConfigSampler.Sample Config -> Fonts FilePath -> Fonts FilePath
 prependConfigPath sample =
