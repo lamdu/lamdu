@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, OverloadedStrings, Rank2Types, DisambiguateRecordFields, NamedFieldPuns, DeriveDataTypeable, ScopedTypeVariables, LambdaCase #-}
+{-# LANGUAGE NoImplicitPrelude, OverloadedStrings, Rank2Types, DisambiguateRecordFields, NamedFieldPuns, DeriveDataTypeable #-}
 module Main
     ( main
     ) where
