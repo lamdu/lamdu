@@ -222,7 +222,6 @@ newLooper =
                     s
                     & asCurTime .~ curTime
                     & asCurSpeedHalfLife .~ timePeriod / realToFrac (logBase 0.5 ratio)
-                    & asState %~ Anim.stateClearImages
                     & asState %~
                         unsafeUnjust "nextState with frame always updates state" .
                         Anim.nextState 0 (Just frame)

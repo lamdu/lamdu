@@ -12,7 +12,7 @@ module Graphics.UI.Bottle.Animation
     , translate, scale
     , unitIntoRect
     , simpleFrame, sizedFrame
-    , State, stateMapIdentities, stateClearImages
+    , State, stateMapIdentities
     , module Graphics.UI.Bottle.Animation.Id
     ) where
 
@@ -153,11 +153,6 @@ setNewDest destFrame state =
 stateMapIdentities :: (AnimId -> AnimId) -> State -> State
 stateMapIdentities mapping =
     stateInterpolations . traverse . interpolationImage . iAnimId %~ mapping
-
--- When images are based on stale data (unloaded Font) we must clear them.
-stateClearImages :: State -> State
-stateClearImages =
-    stateInterpolations . traverse . interpolationImage . iUnitImage .~ mempty
 
 nextState :: R -> Maybe Frame -> State -> Maybe State
 nextState movement Nothing state
