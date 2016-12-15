@@ -265,22 +265,23 @@ data FontChanged = FontChanged
     deriving (Show, Typeable)
 instance E.Exception FontChanged
 
-withFontLoop :: Sampler Config -> (IO () -> Fonts Draw.Font -> IO a) -> IO a
+withFontLoop :: Sampler Config -> (IO (Fonts Draw.Font) -> IO a) -> IO a
 withFontLoop configSampler act =
     loopWhileException (Proxy :: Proxy FontChanged) $ do
         sample <- ConfigSampler.getSample configSampler
         let absFonts = curSampleFonts sample
         let defaultFontsAbs =
                 prependConfigPath sample defaultFonts & assignFontSizes sample
-        let throwIfFontChanged =
-                do
-                    newAbsFonts <- ConfigSampler.getSample configSampler <&> curSampleFonts
-                    when (newAbsFonts /= absFonts) $ E.throwIO FontChanged
         fonts <-
             Font.new absFonts
             `E.catch` \E.SomeException {} ->
             Font.new defaultFontsAbs
-        act throwIfFontChanged fonts
+        let fontGetter =
+                do
+                    newAbsFonts <- ConfigSampler.getSample configSampler <&> curSampleFonts
+                    when (newAbsFonts /= absFonts) $ E.throwIO FontChanged
+                    return fonts
+        act fontGetter
 
 mainLoop ::
     GLFW.Window -> RefreshScheduler -> Sampler Config ->
@@ -289,7 +290,7 @@ mainLoop ::
 mainLoop win refreshScheduler configSampler iteration =
     do
         looper <- MainLoop.newLooper
-        withFontLoop configSampler $ \checkFonts fonts ->
+        withFontLoop configSampler $ \getFonts ->
             do
                 lastVersionNumRef <- newIORef =<< getCurrentTime
                 let getConfig =
@@ -300,10 +301,10 @@ mainLoop win refreshScheduler configSampler iteration =
                             config <-
                                 ConfigSampler.getSample configSampler
                                 <&> ConfigSampler.sValue
+                            fonts <- getFonts
                             iteration fonts config size
                 let tickHandler =
                         do
-                            checkFonts
                             curVersionNum <-
                                 ConfigSampler.getSample configSampler
                                 <&> ConfigSampler.sVersion
