@@ -10,19 +10,19 @@ packages:
   extra-dep: True
 - location:
     git: https://github.com/lamdu/graphics-drawingcombinators
-    commit: c1fcfb0ac36f3e215496a632f0201410c953c93c
+    commit: 1765d31878528aab549590bc5f6ed1376d793e9e
   extra-dep: True
 - location:
     git: https://github.com/lamdu/freetype2
-    commit: b6b3f82b9f8acb925d8f36ecc1520832ad256444
+    commit: 71941659a29fe353bf975aefeb1805417c8ab364
   extra-dep: True
 - location:
     git: https://github.com/lamdu/bindings-freetype-gl
-    commit: 839c7e00a7f48b33f13b7ce7914e713e4e2261ad
+    commit: a6d46d2ce7534c85949d23be7a2766fa103e00aa
   extra-dep: True
 - location:
     git: https://github.com/lamdu/FreetypeGL
-    commit: 3257d9c5b41887773fdc6d05be250497e5ee6243
+    commit: 24c37a9fa9c798d2d0549877998ecb8811bcc968
   extra-dep: True
 - location:
     git: https://github.com/lamdu/language-ecmascript
