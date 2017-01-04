@@ -5,20 +5,17 @@ module Main
 
 import           Control.Concurrent.MVar
 import qualified Control.Exception as E
-import           Control.Exception.Utils (loopWhileException)
 import qualified Control.Lens as Lens
 import           Control.Monad (join, replicateM_)
 import           Control.Monad.IO.Class (MonadIO(..))
 import           Data.CurAndPrev (current)
 import           Data.IORef
 import qualified Data.Monoid as Monoid
-import           Data.Proxy (Proxy(..))
 import           Data.Store.Db (Db)
 import qualified Data.Store.IRef as IRef
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
 import           Data.Time.Clock (getCurrentTime)
-import           Data.Typeable (Typeable)
 import           GHC.Conc (setNumCapabilities, getNumProcessors)
 import           GHC.Stack (whoCreated)
 import qualified Graphics.DrawingCombinators as Draw
@@ -261,26 +258,33 @@ curSampleFonts sample =
     & prependConfigPath sample
     & assignFontSizes sample
 
-data FontChanged = FontChanged
-    deriving (Show, Typeable)
-instance E.Exception FontChanged
-
 withFontLoop :: Sampler Config -> (IO (Fonts Draw.Font) -> IO a) -> IO a
 withFontLoop configSampler act =
-    loopWhileException (Proxy :: Proxy FontChanged) $ do
-        sample <- ConfigSampler.getSample configSampler
-        let absFonts = curSampleFonts sample
-        let defaultFontsAbs =
-                prependConfigPath sample defaultFonts & assignFontSizes sample
-        fonts <-
-            Font.new absFonts
-            `E.catch` \E.SomeException {} ->
-            Font.new defaultFontsAbs
+    do
+        let loadFonts (absFonts, defaultFontsAbs) =
+                Font.new absFonts
+                `E.catch` \E.SomeException {} ->
+                Font.new defaultFontsAbs
+        let getFontsDef =
+                do
+                    sample <- ConfigSampler.getSample configSampler
+                    return
+                        ( curSampleFonts sample
+                        , prependConfigPath sample defaultFonts & assignFontSizes sample
+                        )
+        startFontsDef <- getFontsDef
+        fontsDefRef <- newIORef startFontsDef
+        fontsRef <- loadFonts startFontsDef >>= newIORef
         let fontGetter =
                 do
-                    newAbsFonts <- ConfigSampler.getSample configSampler <&> curSampleFonts
-                    when (newAbsFonts /= absFonts) $ E.throwIO FontChanged
-                    return fonts
+                    newFontsDef <- getFontsDef
+                    curFontsDef <- readIORef fontsDefRef
+                    when (newFontsDef /= curFontsDef) $
+                        do
+                            print newFontsDef
+                            writeIORef fontsDefRef newFontsDef
+                            loadFonts newFontsDef >>= writeIORef fontsRef
+                    readIORef fontsRef
         act fontGetter
 
 mainLoop ::
