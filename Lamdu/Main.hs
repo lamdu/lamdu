@@ -202,7 +202,6 @@ runEditor title copyJSOutputPath windowMode db =
         GLFWUtils.withGLFW $ do
             win <- createWindow title windowMode
             printGLVersion
-            -- Fonts must be loaded after the GL context is created..
             refreshScheduler <- newRefreshScheduler
             withMVarProtection db $ \dbMVar ->
                 do
