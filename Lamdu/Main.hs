@@ -281,7 +281,6 @@ withFontLoop configSampler act =
                     curFontsDef <- readIORef fontsDefRef
                     when (newFontsDef /= curFontsDef) $
                         do
-                            print newFontsDef
                             writeIORef fontsDefRef newFontsDef
                             loadFonts newFontsDef >>= writeIORef fontsRef
                     readIORef fontsRef
