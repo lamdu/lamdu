@@ -1,5 +1,5 @@
 {-# OPTIONS -O0 #-}
-{-# LANGUAGE DeriveGeneric, RecordWildCards #-}
+{-# LANGUAGE DeriveGeneric #-}
 module Lamdu.Config
     ( Help(..), Zoom(..), Export(..), Pane(..), Hole(..)
     , Name(..), Eval(..), Indent(..)
