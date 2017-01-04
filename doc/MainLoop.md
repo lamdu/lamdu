@@ -34,4 +34,4 @@ It performs animation and event-handling on separate threads. This way time-cons
 
 Bottle.Main's main-loop builds on top the lower layers to work in terms of the high-level `Widget` type.
 
-This is main-loop gets used in Lamdu's `main` function.
+This main-loop gets used in Lamdu's `main` function.
