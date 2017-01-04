@@ -1,8 +1,7 @@
 {-# LANGUAGE NoImplicitPrelude, TemplateHaskell #-}
 
 module Graphics.UI.Bottle.Main.Animation
-    ( AnimConfig(..), Handlers(..), EventResult(..)
-    , Looper(..), newLooper
+    ( mainLoop, AnimConfig(..), Handlers(..), EventResult(..)
     ) where
 
 import           Control.Concurrent.STM.TVar (TVar, newTVarIO, readTVar, writeTVar, modifyTVar, swapTVar)
@@ -203,37 +202,27 @@ animThread tvars animStateRef getAnimationConfig win =
                 _ <- Lens._Just (writeIORef animStateRef) mNewState
                 return mNewState
 
-newtype Looper = Looper
-    { _runLooper :: GLFW.Window -> IO AnimConfig -> (Anim.Size -> Handlers) -> IO ()
-    }
-
-newLooper :: IO Looper
-newLooper =
+mainLoop :: GLFW.Window -> IO AnimConfig -> (Anim.Size -> Handlers) -> IO ()
+mainLoop win getAnimationConfig animHandlers =
     do
         animStateRef <- initialAnimState >>= newIORef
-        return $ Looper $ \win getAnimationConfig animHandlers ->
-            do
-                winSize <- MainImage.windowSize win
-                frame <- makeFrame (animHandlers winSize)
-                AnimConfig timePeriod ratio <- getAnimationConfig
-                curTime <- getCurrentTime
-                modifyIORef animStateRef $
-                    \s ->
-                    s
-                    & asCurTime .~ curTime
-                    & asCurSpeedHalfLife .~ timePeriod / realToFrac (logBase 0.5 ratio)
-                    & asState %~
-                        unsafeUnjust "nextState with frame always updates state" .
-                        Anim.nextState 0 (Just frame)
-                tvars <-
-                    ThreadVars
-                    <$> newTVarIO EventsData
-                        { _edHaveTicks = False
-                        , _edRefreshRequested = False
-                        , _edWinSize = winSize
-                        , _edReversedEvents = []
-                        }
-                    <*> newTVarIO mempty
-                eventsThread <-
-                    forwardSynchronuousExceptions (eventHandlerThread tvars animHandlers)
-                withForkedIO eventsThread (animThread tvars animStateRef getAnimationConfig win)
+        initialWinSize <- MainImage.windowSize win
+        AnimConfig timePeriod ratio <- getAnimationConfig
+        curTime <- getCurrentTime
+        modifyIORef animStateRef $
+            \s ->
+            s
+            & asCurTime .~ curTime
+            & asCurSpeedHalfLife .~ timePeriod / realToFrac (logBase 0.5 ratio)
+        tvars <-
+            ThreadVars
+            <$> newTVarIO EventsData
+                { _edHaveTicks = False
+                , _edRefreshRequested = False
+                , _edWinSize = initialWinSize
+                , _edReversedEvents = []
+                }
+            <*> newTVarIO mempty
+        eventsThread <-
+            forwardSynchronuousExceptions (eventHandlerThread tvars animHandlers)
+        withForkedIO eventsThread (animThread tvars animStateRef getAnimationConfig win)

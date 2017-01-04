@@ -1,7 +1,6 @@
 {-# LANGUAGE DeriveFunctor, NoImplicitPrelude, TemplateHaskell #-}
 module Graphics.UI.Bottle.Main
-    ( Looper(..), newLooper
-    , Config(..), EventResult(..), M(..), m
+    ( mainLoopWidget, Config(..), EventResult(..), M(..), m
     ) where
 
 import           Control.Applicative (liftA2)
@@ -55,18 +54,11 @@ instance Monad M where
 instance MonadIO M where
     liftIO = M . fmap pure
 
-newtype Looper = Looper
-    { runLooper ::
-          GLFW.Window -> IO Bool ->
-          (Widget.Size -> IO (Widget (M Widget.EventResult))) ->
-          IO Config -> IO ()
-    }
-
-newLooper :: IO Looper
-newLooper =
-    MainAnim.newLooper
-    <&> \(MainAnim.Looper loop) ->
-    Looper $ \win widgetTickHandler mkWidgetUnmemod getConfig ->
+mainLoopWidget ::
+    GLFW.Window -> IO Bool ->
+    (Widget.Size -> IO (Widget (M Widget.EventResult))) -> IO Config ->
+    IO ()
+mainLoopWidget win widgetTickHandler mkWidgetUnmemod getConfig =
     do
         mkWidgetRef <- newIORef =<< memoIO mkWidgetUnmemod
         let newWidget = writeIORef mkWidgetRef =<< memoIO mkWidgetUnmemod
@@ -80,7 +72,7 @@ newLooper =
             lookupEvent widget event =
                 E.lookup (GLFW.getClipboardString win <&> fmap Text.pack) event
                 (widget ^. Widget.eventMap)
-        loop win (getConfig <&> cAnim) $ \size -> MainAnim.Handlers
+        MainAnim.mainLoop win (getConfig <&> cAnim) $ \size -> MainAnim.Handlers
             { MainAnim.tickHandler =
                 do
                     anyUpdate <- widgetTickHandler
