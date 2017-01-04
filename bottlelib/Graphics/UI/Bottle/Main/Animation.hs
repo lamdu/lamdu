@@ -11,8 +11,7 @@ import           Control.Lens.Operators
 import           Control.Exception (evaluate)
 import           Control.Monad (mplus, when, forever)
 import qualified Control.Monad.STM as STM
-import           Data.IORef (IORef, newIORef, readIORef, writeIORef, modifyIORef)
-import           Data.Maybe.Utils (unsafeUnjust)
+import           Data.IORef (IORef, newIORef, readIORef, writeIORef)
 import qualified Data.Monoid as Monoid
 import           Data.Monoid ((<>))
 import           Data.Time.Clock (NominalDiffTime, UTCTime, getCurrentTime, addUTCTime, diffUTCTime)
@@ -207,13 +206,6 @@ mainLoop win getAnimationConfig animHandlers =
     do
         animStateRef <- initialAnimState >>= newIORef
         initialWinSize <- MainImage.windowSize win
-        AnimConfig timePeriod ratio <- getAnimationConfig
-        curTime <- getCurrentTime
-        modifyIORef animStateRef $
-            \s ->
-            s
-            & asCurTime .~ curTime
-            & asCurSpeedHalfLife .~ timePeriod / realToFrac (logBase 0.5 ratio)
         tvars <-
             ThreadVars
             <$> newTVarIO EventsData
