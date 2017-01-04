@@ -257,41 +257,41 @@ curSampleFonts sample =
     & prependConfigPath sample
     & assignFontSizes sample
 
-withFontLoop :: Sampler Config -> (IO (Fonts Draw.Font) -> IO a) -> IO a
-withFontLoop configSampler act =
+makeGetFonts :: Sampler Config -> IO (IO (Fonts Draw.Font))
+makeGetFonts configSampler =
     do
-        let loadFonts (absFonts, defaultFontsAbs) =
-                Font.new absFonts
-                `E.catch` \E.SomeException {} ->
-                Font.new defaultFontsAbs
-        let getFontsDef =
-                do
-                    sample <- ConfigSampler.getSample configSampler
-                    return
-                        ( curSampleFonts sample
-                        , prependConfigPath sample defaultFonts & assignFontSizes sample
-                        )
         startFontsDef <- getFontsDef
         fontsDefRef <- newIORef startFontsDef
         fontsRef <- loadFonts startFontsDef >>= newIORef
-        let fontGetter =
-                do
-                    newFontsDef <- getFontsDef
-                    curFontsDef <- readIORef fontsDefRef
-                    when (newFontsDef /= curFontsDef) $
-                        do
-                            writeIORef fontsDefRef newFontsDef
-                            loadFonts newFontsDef >>= writeIORef fontsRef
-                    readIORef fontsRef
-        act fontGetter
+        return $
+            do
+                newFontsDef <- getFontsDef
+                curFontsDef <- readIORef fontsDefRef
+                when (newFontsDef /= curFontsDef) $
+                    do
+                        writeIORef fontsDefRef newFontsDef
+                        loadFonts newFontsDef >>= writeIORef fontsRef
+                readIORef fontsRef
+    where
+        loadFonts (absFonts, defaultFontsAbs) =
+            Font.new absFonts
+            `E.catch` \E.SomeException {} ->
+            Font.new defaultFontsAbs
+        getFontsDef =
+            do
+                sample <- ConfigSampler.getSample configSampler
+                return
+                    ( curSampleFonts sample
+                    , prependConfigPath sample defaultFonts & assignFontSizes sample
+                    )
 
 mainLoop ::
     GLFW.Window -> RefreshScheduler -> Sampler Config ->
     (Fonts Draw.Font -> Config -> Widget.Size ->
     IO (Widget (MainLoop.M Widget.EventResult))) -> IO ()
 mainLoop win refreshScheduler configSampler iteration =
-    withFontLoop configSampler $ \getFonts ->
     do
+        getFonts <- makeGetFonts configSampler
         lastVersionNumRef <- newIORef =<< getCurrentTime
         let getConfig =
                 ConfigSampler.getSample configSampler
