@@ -186,28 +186,6 @@
                 "Key'W"
             ]
         ],
-        "paneMoveUpKeys": [
-            [
-                {
-                    "modifierKeysSuper": false,
-                    "modifierKeysAlt": true,
-                    "modifierKeysShift": false,
-                    "modifierKeysControl": false
-                },
-                "Key'Up"
-            ]
-        ],
-        "paneMoveDownKeys": [
-            [
-                {
-                    "modifierKeysSuper": false,
-                    "modifierKeysAlt": true,
-                    "modifierKeysShift": false,
-                    "modifierKeysControl": false
-                },
-                "Key'Down"
-            ]
-        ],
         "paneHoverPadding": 4
     },
     "versionControl": {

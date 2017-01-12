@@ -35,7 +35,7 @@ type Pane m = DefI m
 
 data Code f m = Code
     { repl :: f (ValI m)
-    , panes :: f [Pane m]
+    , panes :: f (Set (Pane m))
     , globals :: f (Set (DefI m))
     , preJumps :: f [WidgetId.Id]
     , preCursor :: f WidgetId.Id

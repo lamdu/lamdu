@@ -5,13 +5,13 @@ module Lamdu.GUI.CodeEdit
     , M(..), m, mLiftTrans
     ) where
 
-import           Control.Applicative (liftA2, (<|>))
+import           Control.Applicative (liftA2)
 import qualified Control.Lens as Lens
 import           Data.CurAndPrev (CurAndPrev(..))
 import           Data.Functor.Identity (Identity(..))
 import qualified Data.List as List
-import           Data.List.Utils (insertAt, removeAt)
 import           Data.Orphans () -- Imported for Monoid (IO ()) instance
+import qualified Data.Set as Set
 import qualified Data.Store.IRef as IRef
 import           Data.Store.Property (Property(..))
 import           Data.Store.Transaction (Transaction)
@@ -75,8 +75,6 @@ mLiftWidget = Widget.events %~ mLiftTrans
 data Pane m = Pane
     { paneDefI :: DefI m
     , paneDel :: T m Widget.Id
-    , paneMoveDown :: Maybe (T m ())
-    , paneMoveUp :: Maybe (T m ())
     }
 
 data ExportActions m = ExportActions
@@ -102,39 +100,19 @@ data Env m = Env
     , style :: Style
     }
 
-makePanes :: Monad m => Widget.Id -> Transaction.Property m [DefI m] -> [Pane m]
+makePanes :: Monad m => Widget.Id -> Transaction.Property m (Set (DefI m)) -> [Pane m]
 makePanes emptyDelDest (Property paneDefs setPaneDefs) =
-    paneDefs & Lens.imapped %@~ convertPane
+    ordered & Lens.imapped %@~ convertPane
     where
-        mkDelPane i =
-            do
-                setPaneDefs newPaneDefs
-                newPaneIds ^? Lens.ix i
-                    <|> newPaneIds ^? Lens.ix (i-1)
-                    & fromMaybe emptyDelDest
-                    & return
-            where
-                newPaneIds =
-                    newPaneDefs
-                    <&> IRef.uuid
-                    <&> WidgetIds.fromUUID
-                newPaneDefs = removeAt i paneDefs
-        movePane oldIndex newIndex =
-            insertAt newIndex item (before ++ after)
-            & setPaneDefs
-            where
-                (before, item:after) = splitAt oldIndex paneDefs
-        mkMMovePaneDown i
-            | i+1 < length paneDefs = Just $ movePane i (i+1)
-            | otherwise = Nothing
-        mkMMovePaneUp i
-            | i-1 >= 0 = Just $ movePane i (i-1)
-            | otherwise = Nothing
+        ordered = Set.toList paneDefs
         convertPane i defI = Pane
             { paneDefI = defI
-            , paneDel = mkDelPane i
-            , paneMoveDown = mkMMovePaneDown i
-            , paneMoveUp = mkMMovePaneUp i
+            , paneDel =
+                do
+                    Set.delete defI paneDefs & setPaneDefs
+                    ordered ^? Lens.ix (i-1)
+                        & maybe emptyDelDest (WidgetIds.fromUUID . IRef.uuid)
+                        & return
             }
 
 toExprGuiMPayload :: ([Sugar.EntityId], NearestHoles) -> ExprGuiT.Payload
@@ -241,7 +219,7 @@ makePaneEdit env (pane, defS) =
     <&> Lens.mapped %~ Widget.weakerEvents paneEventMap . mLiftWidget
     where
         delKeys = Config.delKeys (config env)
-        Config.Pane{paneCloseKeys, paneMoveDownKeys, paneMoveUpKeys} =
+        Config.Pane{paneCloseKeys} =
             Config.pane (config env)
         Config.Export{exportKeys} = Config.export (config env)
         paneEventMap =
@@ -255,14 +233,6 @@ makePaneEdit env (pane, defS) =
               & mLiftTrans
               & Widget.keysEventMapMovesCursor delKeys
                 (E.Doc ["Edit", "Definition", "Delete"])
-            , paneMoveDown pane <&> mLiftTrans
-              & maybe mempty
-                (Widget.keysEventMap paneMoveDownKeys
-                 (E.Doc ["View", "Pane", "Move down"]))
-            , paneMoveUp pane <&> mLiftTrans
-              & maybe mempty
-                (Widget.keysEventMap paneMoveUpKeys
-                 (E.Doc ["View", "Pane", "Move up"]))
             , exportDef (exportActions env) (paneDefI pane)
               & Widget.keysEventMap exportKeys
                 (E.Doc ["Collaboration", "Export definition to JSON file"])

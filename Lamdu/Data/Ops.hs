@@ -141,7 +141,7 @@ newPane codeProps defI =
         let panesProp = Anchors.panes codeProps
         panes <- getP panesProp
         when (defI `notElem` panes) $
-            setP panesProp $ panes ++ [Anchors.makePane defI]
+            setP panesProp $ Set.insert (Anchors.makePane defI) panes
 
 savePreJumpPosition :: Monad m => Anchors.CodeProps m -> WidgetId.Id -> T m ()
 savePreJumpPosition codeProps pos = modP (Anchors.preJumps codeProps) $ (pos :) . take 19

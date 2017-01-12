@@ -53,8 +53,6 @@ data Pane = Pane
     { paneInactiveTintColor :: Draw.Color
     , paneActiveBGColor :: Draw.Color
     , paneCloseKeys :: [ModKey]
-    , paneMoveDownKeys :: [ModKey]
-    , paneMoveUpKeys :: [ModKey]
     , -- Need some padding on top because of on-top hovers, this decides
       -- how much (as ratio of line height):
       paneHoverPadding :: Draw.R
