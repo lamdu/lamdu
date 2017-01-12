@@ -10,7 +10,7 @@ packages:
   extra-dep: True
 - location:
     git: https://github.com/lamdu/graphics-drawingcombinators
-    commit: 9a963814152c34f8dfbd89f4a234963c85eb2959
+    commit: 2edee3b36f8d030c4feed51f8430d6e15d16123f
   extra-dep: True
 - location:
     git: https://github.com/lamdu/freetype2
@@ -22,7 +22,7 @@ packages:
   extra-dep: True
 - location:
     git: https://github.com/lamdu/FreetypeGL
-    commit: 5b6a25170db18867aea12b9eb624e1e1a9b1d0cb
+    commit: 1e7ff5df8fd7dff345e2d68813212546540bba25
   extra-dep: True
 - location:
     git: https://github.com/lamdu/language-ecmascript
