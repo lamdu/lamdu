@@ -32,6 +32,8 @@ forwardSynchronuousExceptions action =
                     ++ show selfId ++ ":"
                     & putStrLn
                 print exc
+                    `E.catch` \E.SomeException{} ->
+                     "Failed to resolve exception string" & putStrLn
                 asyncThrowTo selfId exc
                 E.throwIO E.ThreadKilled
 
