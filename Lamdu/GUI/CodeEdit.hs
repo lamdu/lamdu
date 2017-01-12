@@ -76,7 +76,7 @@ mLiftWidget = Widget.events %~ mLiftTrans
 
 data Pane m = Pane
     { paneDefI :: DefI m
-    , paneDel :: T m Sugar.EntityId
+    , paneClose :: T m Sugar.EntityId
     }
 
 data ExportActions m = ExportActions
@@ -118,7 +118,7 @@ makePanes (Property paneDefs setPaneDefs) =
         ordered = Set.toList paneDefs
         convertPane i defI = Pane
             { paneDefI = defI
-            , paneDel =
+            , paneClose =
                 do
                     Set.delete defI paneDefs & setPaneDefs
                     ordered ^? Lens.ix (i-1)
@@ -229,14 +229,14 @@ makePaneEdit env (pane, defS) =
             Config.pane (config env)
         Config.Export{exportKeys} = Config.export (config env)
         paneEventMap =
-            [ paneDel pane & mLiftTrans
+            [ paneClose pane & mLiftTrans
               <&> WidgetIds.fromEntityId
               & Widget.keysEventMapMovesCursor paneCloseKeys
                 (E.Doc ["View", "Pane", "Close"])
             , do
                   Transaction.setP (defS ^. Sugar.drDefinitionState)
                       Sugar.DeletedDefinition
-                  paneDel pane
+                  paneClose pane
               & mLiftTrans
               <&> WidgetIds.fromEntityId
               & Widget.keysEventMapMovesCursor delKeys
