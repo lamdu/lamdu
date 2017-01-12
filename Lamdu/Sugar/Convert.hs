@@ -1,6 +1,6 @@
 {-# LANGUAGE NoImplicitPrelude, FlexibleContexts, OverloadedStrings, TypeFamilies, Rank2Types #-}
 module Lamdu.Sugar.Convert
-    ( convertDefI, convertExpr
+    ( loadWorkArea
     ) where
 
 import qualified Control.Lens as Lens
@@ -8,7 +8,7 @@ import qualified Control.Monad.Trans.State as State
 import           Data.CurAndPrev (CurAndPrev)
 import qualified Data.Map as Map
 import qualified Data.Set as Set
-import           Data.Store.Property (Property)
+import           Data.Store.Property (Property(..))
 import qualified Data.Store.Property as Property
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
@@ -37,6 +37,8 @@ import qualified Lamdu.Sugar.Convert.Monad as ConvertM
 import qualified Lamdu.Sugar.Convert.ParamList as ParamList
 import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
+import qualified Lamdu.Sugar.OrderTags as OrderTags
+import qualified Lamdu.Sugar.PresentationModes as PresentationModes
 import           Lamdu.Sugar.Types
 import           Text.PrettyPrint.HughesPJClass (pPrint)
 
@@ -206,6 +208,7 @@ convertDefI evalRes cp (Definition.Definition body defI) =
             , _drName = UniqueId.toUUID defI
             , _drBody = bodyS
             , _drDefinitionState = Anchors.assocDefinitionState defI
+            , _drDefI = defI
             }
     where
         convertDefBody (Definition.BodyBuiltin builtin) =
@@ -235,3 +238,50 @@ convertExpr evalRes cp val =
                 , scConvertSubexpression = ConvertExpr.convert
                 }
         ConvertM.convertSubexpression valInferred & ConvertM.run context
+
+loadRepl ::
+    Monad m =>
+    CurAndPrev (EvalResults (ValI m)) -> Anchors.CodeProps m ->
+    T m (Expression UUID m [EntityId])
+loadRepl evalRes cp =
+    Anchors.repl cp ^. Transaction.mkProperty
+    >>= Load.exprProperty
+    >>= convertExpr evalRes cp
+    >>= OrderTags.orderExpr
+    >>= PresentationModes.addToExpr
+
+loadPanes ::
+    Monad m =>
+    CurAndPrev (EvalResults (ValI m)) -> Anchors.CodeProps m -> EntityId ->
+    T m [Pane UUID m [EntityId]]
+loadPanes evalRes cp replEntityId =
+    do
+        Property paneDefs setPaneDefs <-
+            Anchors.panes cp ^. Transaction.mkProperty
+        let ordered = Set.toList paneDefs
+        let convertPane i defI =
+                do
+                    def <-
+                        Load.def defI
+                        >>= convertDefI evalRes cp
+                        >>= OrderTags.orderDef
+                        >>= PresentationModes.addToDef
+                    return Pane
+                        { _paneDefinition = def
+                        , _paneClose =
+                          do
+                              Set.delete defI paneDefs & setPaneDefs
+                              ordered ^? Lens.ix (i-1)
+                                  & maybe replEntityId EntityId.ofIRef
+                                  & return
+                        }
+        ordered & Lens.itraversed %%@~ convertPane
+
+loadWorkArea ::
+    Monad m => CurAndPrev (EvalResults (ValI m)) -> Anchors.CodeProps m ->
+    T m (WorkArea UUID m [EntityId])
+loadWorkArea evalRes cp =
+    do
+        repl <- loadRepl evalRes cp
+        panes <- loadPanes evalRes cp (repl ^. rPayload . plEntityId)
+        WorkArea panes repl & return

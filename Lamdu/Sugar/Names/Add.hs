@@ -1,6 +1,6 @@
 {-# LANGUAGE LambdaCase, NoImplicitPrelude, GeneralizedNewtypeDeriving, RecordWildCards, TypeFamilies, TemplateHaskell, DeriveGeneric, FlexibleInstances, KindSignatures, NoMonomorphismRestriction, OverloadedStrings #-}
 module Lamdu.Sugar.Names.Add
-    ( addToDef, addToExpr
+    ( addToWorkArea
     ) where
 
 import qualified Control.Lens as Lens
@@ -368,7 +368,7 @@ fixExpr expr =
 runPasses ::
     Functor tm =>
     (a -> Pass0M tm b) -> (b -> Pass1M tm c) -> (c -> Pass2M tm d) ->
-    a -> Transaction tm d
+    a -> T tm d
 runPasses f0 f1 f2 =
     fmap (pass2 . pass1) . pass0
     where
@@ -377,18 +377,17 @@ runPasses f0 f1 f2 =
         pass2 (x, storedNamesBelow) =
             f2 x & runPass2MInitial storedNamesBelow
 
-addToDef :: Monad tm => DefinitionU tm a -> T tm (DefinitionN tm a)
-addToDef def =
-    def
-    & drBody . _DefinitionBodyExpression . deContent %~ fixBinder
-    & runPasses f f f
-    where
-        f = Walk.toDef Walk.toExpression
+fixDef ::
+    Monad tm =>
+    Definition name tm (Expression name tm a) ->
+    Definition name tm (Expression name tm a)
+fixDef = drBody . _DefinitionBodyExpression . deContent %~ fixBinder
 
-addToExpr :: Monad tm => Expression UUID tm a -> T tm (Expression (Name tm) tm a)
-addToExpr expr =
-    expr
-    & fixExpr
+addToWorkArea :: Monad tm => WorkArea UUID tm a -> T tm (WorkArea (Name tm) tm a)
+addToWorkArea workArea =
+    workArea
+    & waPanes . traverse . paneDefinition %~ fixDef
+    & waRepl %~ fixExpr
     & runPasses f f f
     where
-        f = Walk.toExpression
+        f = Walk.toWorkArea

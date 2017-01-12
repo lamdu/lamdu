@@ -1,11 +1,11 @@
-{-# LANGUAGE LambdaCase, NoImplicitPrelude, FlexibleContexts, TypeFamilies, RankNTypes, RecordWildCards #-}
+{-# LANGUAGE LambdaCase, NoImplicitPrelude, FlexibleContexts, TypeFamilies, RankNTypes, RecordWildCards, NamedFieldPuns #-}
 module Lamdu.Sugar.Names.Walk
     ( MonadNaming(..)
     , InTransaction(..)
     , NameType(..)
     , NameConvertor, CPSNameConvertor
     , OldExpression, NewExpression
-    , toDef, toExpression, toBody
+    , toWorkArea, toDef, toExpression, toBody
     ) where
 
 import           Data.Store.Transaction (Transaction)
@@ -217,3 +217,18 @@ toDef f def@Definition {..} =
     do
         (name, body) <- runCPS (opWithDefName _drName) $ toDefinitionBody f _drBody
         pure def { _drName = name, _drBody = body }
+
+toPane ::
+    MonadNaming m =>
+    Pane (OldName m) (TM m) a ->
+    m (Pane (NewName m) (TM m) a)
+toPane = paneDefinition (toDef toExpression)
+
+toWorkArea ::
+    MonadNaming m =>
+    WorkArea (OldName m) (TM m) a ->
+    m (WorkArea (NewName m) (TM m) a)
+toWorkArea WorkArea { _waPanes, _waRepl } =
+    WorkArea
+    <$> traverse toPane _waPanes
+    <*> toExpression _waRepl

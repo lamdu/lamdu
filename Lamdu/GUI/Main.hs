@@ -27,6 +27,7 @@ import qualified Lamdu.GUI.CodeEdit as CodeEdit
 import           Lamdu.GUI.CodeEdit.Settings (Settings(..))
 import qualified Lamdu.GUI.Scroll as Scroll
 import qualified Lamdu.GUI.VersionControl as VersionControlGUI
+import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Style (Style)
 import qualified Lamdu.Style as Style
 import qualified Lamdu.VersionControl as VersionControl
@@ -48,7 +49,7 @@ data Env = Env
 Lens.makeLenses ''Env
 
 defaultCursor :: Widget.Id
-defaultCursor = CodeEdit.replId
+defaultCursor = WidgetIds.replId
 
 make :: Env -> T DbLayout.DbM (Widget (CodeEdit.M DbLayout.DbM Widget.EventResult))
 make env =

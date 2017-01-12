@@ -1,7 +1,9 @@
 {-# LANGUAGE NoImplicitPrelude, KindSignatures, TemplateHaskell, DeriveFunctor, DeriveFoldable, DeriveTraversable, GeneralizedNewtypeDeriving, RankNTypes, RecordWildCards #-}
 module Lamdu.Sugar.Types
     ( EntityId
-    , Definition(..), drDefinitionState, drEntityId, drName, drBody
+    , Pane(..), paneDefinition, paneClose
+    , WorkArea(..), waPanes, waRepl
+    , Definition(..), drDefinitionState, drEntityId, drName, drBody, drDefI
     , DefinitionBody(..), _DefinitionBodyExpression, _DefinitionBodyBuiltin
     , VarToTags(..), TagsToVar(..)
     , ParamDelResult(..), ParamAddResult(..)
@@ -111,6 +113,7 @@ import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Eval.Results as ER
 import           Lamdu.Sugar.Internal.EntityId (EntityId)
+import           Lamdu.Expr.IRef (DefI)
 
 import           Lamdu.Prelude
 
@@ -549,12 +552,23 @@ data DefinitionBody name m expr
 
 data Definition name m expr = Definition
     { _drName :: name
+    , _drDefI :: DefI m
     , _drDefinitionState :: MkProperty m Anchors.DefinitionState
     , _drEntityId :: EntityId
     , _drBody :: DefinitionBody name m expr
     } deriving (Functor, Foldable, Traversable)
 
 type DefinitionU m a = Definition UUID m (Expression UUID m a)
+
+data Pane name m a = Pane
+    { _paneDefinition :: Definition name m (Expression name m a)
+    , _paneClose :: T m EntityId
+    } deriving (Functor, Foldable, Traversable)
+
+data WorkArea name m a = WorkArea
+    { _waPanes :: [Pane name m a]
+    , _waRepl :: Expression name m a
+    } deriving (Functor, Foldable, Traversable)
 
 Lens.makeLenses ''Actions
 Lens.makeLenses ''AnnotatedArg
@@ -590,6 +604,7 @@ Lens.makeLenses ''NamedParamInfo
 Lens.makeLenses ''Nominal
 Lens.makeLenses ''NullParamActions
 Lens.makeLenses ''NullParamInfo
+Lens.makeLenses ''Pane
 Lens.makeLenses ''Param
 Lens.makeLenses ''ParamsRecordVar
 Lens.makeLenses ''Payload
@@ -600,6 +615,7 @@ Lens.makeLenses ''RecordField
 Lens.makeLenses ''ScopeGetVar
 Lens.makeLenses ''TIdG
 Lens.makeLenses ''TagG
+Lens.makeLenses ''WorkArea
 Lens.makePrisms ''BinderContent
 Lens.makePrisms ''BinderParams
 Lens.makePrisms ''BinderVarForm

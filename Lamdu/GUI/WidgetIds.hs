@@ -45,3 +45,6 @@ delegatingId = flip Widget.joinId ["delegating"]
 
 notDelegatingId :: Id -> Id
 notDelegatingId = flip Widget.joinId ["non-delegating"]
+
+replId :: Id
+replId = Id ["repl"]

@@ -3,7 +3,6 @@ module Lamdu.GUI.CodeEdit
     ( make
     , Env(..), ExportActions(..)
     , M(..), m, mLiftTrans
-    , replId
     ) where
 
 import           Control.Applicative (liftA2)
@@ -12,8 +11,6 @@ import           Data.CurAndPrev (CurAndPrev(..))
 import           Data.Functor.Identity (Identity(..))
 import qualified Data.List as List
 import           Data.Orphans () -- Imported for Monoid (IO ()) instance
-import qualified Data.Set as Set
-import           Data.Store.Property (Property(..))
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
 import qualified Graphics.UI.Bottle.EventMap as E
@@ -30,11 +27,9 @@ import qualified Graphics.UI.Bottle.WidgetsEnvT as WE
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Data.Anchors as Anchors
-import qualified Lamdu.Data.DbLayout as DbLayout
 import qualified Lamdu.Data.Ops as DataOps
 import           Lamdu.Eval.Results (EvalResults)
 import           Lamdu.Expr.IRef (DefI, ValI)
-import qualified Lamdu.Expr.Load as Load
 import           Lamdu.GUI.CodeEdit.Settings (Settings)
 import qualified Lamdu.GUI.DefinitionEdit as DefinitionEdit
 import qualified Lamdu.GUI.ExpressionEdit as ExpressionEdit
@@ -47,13 +42,10 @@ import qualified Lamdu.GUI.RedundantAnnotations as RedundantAnnotations
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Style (Style)
 import qualified Lamdu.Sugar.Convert as SugarConvert
-import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import qualified Lamdu.Sugar.Names.Add as AddNames
-import           Lamdu.Sugar.Names.Types (DefinitionN)
+import           Lamdu.Sugar.Names.Types (DefinitionN, Name)
 import           Lamdu.Sugar.NearestHoles (NearestHoles)
 import qualified Lamdu.Sugar.NearestHoles as NearestHoles
-import qualified Lamdu.Sugar.OrderTags as OrderTags
-import qualified Lamdu.Sugar.PresentationModes as PresentationModes
 import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
@@ -73,11 +65,6 @@ mLiftTrans = M . pure . fmap pure
 
 mLiftWidget :: Functor m => Widget (T m a) -> Widget (M m a)
 mLiftWidget = Widget.events %~ mLiftTrans
-
-data Pane m = Pane
-    { paneDefI :: DefI m
-    , paneClose :: T m Sugar.EntityId
-    }
 
 data ExportActions m = ExportActions
     { exportRepl :: M m ()
@@ -101,30 +88,6 @@ data Env m = Env
     , settings :: Settings
     , style :: Style
     }
-
-replEntityId :: Sugar.EntityId
-replEntityId =
-    EntityId.ofIRef replIRef
-    where
-        replIRef = Anchors.repl DbLayout.codeIRefs
-
-replId :: Widget.Id
-replId = Widget.Id ["repl"]
-
-makePanes :: Monad m => Transaction.Property m (Set (DefI m)) -> [Pane m]
-makePanes (Property paneDefs setPaneDefs) =
-    ordered & Lens.imapped %@~ convertPane
-    where
-        ordered = Set.toList paneDefs
-        convertPane i defI = Pane
-            { paneDefI = defI
-            , paneClose =
-                do
-                    Set.delete defI paneDefs & setPaneDefs
-                    ordered ^? Lens.ix (i-1)
-                        & maybe replEntityId EntityId.ofIRef
-                        & return
-            }
 
 toExprGuiMPayload :: ([Sugar.EntityId], NearestHoles) -> ExprGuiT.Payload
 toExprGuiMPayload (entityIds, nearestHoles) =
@@ -155,43 +118,43 @@ postProcessExpr expr =
     <&> toExprGuiMPayload
     & RedundantAnnotations.markAnnotationsToDisplay
 
-processPane ::
-    Monad m => Env m -> Pane m ->
-    T m (Pane m, DefinitionN m ExprGuiT.Payload)
-processPane env pane =
-    paneDefI pane
-    & Load.def
-    >>= SugarConvert.convertDefI (evalResults env) (codeProps env)
-    >>= OrderTags.orderDef
-    >>= PresentationModes.addToDef
-    >>= AddNames.addToDef
-    <&> traverseAddNearestHoles
-    <&> fmap postProcessExpr
-    <&> (,) pane
-
-processExpr ::
-    Monad m => Env m -> Transaction.Property m (ValI m) ->
-    T m (ExprGuiT.SugarExpr m)
-processExpr env expr =
-    Load.exprProperty expr
-    >>= SugarConvert.convertExpr (evalResults env) (codeProps env)
-    >>= OrderTags.orderExpr
-    >>= PresentationModes.addToExpr
-    >>= AddNames.addToExpr
-    <&> exprAddNearestHoles
-    <&> postProcessExpr
-
-gui ::
-    Monad m =>
-    Env m -> ExprGuiT.SugarExpr m -> [Pane m] ->
-    WidgetEnvT (T m) (Widget.R -> Widget (M m Widget.EventResult))
-gui env replExpr panes =
+loadWorkArea :: Monad m => Env m -> T m (Sugar.WorkArea (Name m) m ExprGuiT.Payload)
+loadWorkArea env =
     do
-        replGui <- makeReplEdit env replExpr
-        panesEdits <-
-            panes
-            & ExprGuiM.transaction . traverse (processPane env)
-            >>= traverse (makePaneEdit env)
+        Sugar.WorkArea { _waPanes, _waRepl } <-
+            SugarConvert.loadWorkArea (evalResults env) (codeProps env)
+            >>= AddNames.addToWorkArea
+        Sugar.WorkArea
+            (_waPanes <&> Sugar.paneDefinition %~ fmap postProcessExpr . traverseAddNearestHoles)
+            (_waRepl & exprAddNearestHoles & postProcessExpr)
+            & pure
+
+makeReplEdit ::
+    Monad m =>
+    Env m -> ExprGuiT.SugarExpr m ->
+    ExprGuiM m (TreeLayout (M m Widget.EventResult))
+makeReplEdit env replExpr =
+    ExpressionGui.combineSpaced Nothing
+    <*> sequence
+    [ ExpressionGui.makeFocusableView WidgetIds.replId
+      <*> ExpressionGui.makeLabel "⋙" (Widget.toAnimId WidgetIds.replId)
+      <&> TreeLayout.fromAlignedWidget
+    , ExprGuiM.makeSubexpression id replExpr
+    ]
+    <&> TreeLayout.widget %~
+        Widget.weakerEvents (replEventMap env replExpr) . mLiftWidget
+    & ExprGuiM.assignCursor WidgetIds.replId exprId
+    where
+        exprId = replExpr ^. Sugar.rPayload . Sugar.plEntityId & WidgetIds.fromEntityId
+
+make ::
+    Monad m =>
+    Env m -> WidgetEnvT (T m) (Widget.R -> Widget (M m Widget.EventResult))
+make env =
+    do
+        workArea <- loadWorkArea env & ExprGuiM.transaction
+        replGui <- makeReplEdit env (workArea ^. Sugar.waRepl)
+        panesEdits <- workArea ^. Sugar.waPanes & traverse (makePaneEdit env)
         newDefinitionButton <- makeNewDefinitionButton <&> mLiftWidget
         eventMap <- panesEventMap env & ExprGuiM.widgetEnv
         vspace <- ExpressionGui.stdVSpace
@@ -204,24 +167,12 @@ gui env replExpr panes =
     & ExprGuiM.run ExpressionEdit.make
       (codeProps env) (config env) (settings env) (style env)
 
-make ::
-    Monad m =>
-    Env m -> WidgetEnvT (T m) (Widget.R -> Widget (M m Widget.EventResult))
-make env =
-    do
-        replExpr <-
-            getProp Anchors.repl >>= lift . processExpr env
-        panes <- getProp Anchors.panes <&> makePanes
-        gui env replExpr panes
-    where
-        getProp f = f (codeProps env) ^. Transaction.mkProperty & lift
-
 makePaneEdit ::
     Monad m =>
-    Env m -> (Pane m, DefinitionN m ExprGuiT.Payload) ->
+    Env m -> Sugar.Pane (Name m) m ExprGuiT.Payload ->
     ExprGuiM m (Widget.R -> Widget (M m Widget.EventResult))
-makePaneEdit env (pane, defS) =
-    makePaneWidget defS
+makePaneEdit env pane =
+    makePaneWidget (pane ^. Sugar.paneDefinition)
     <&> Lens.mapped %~ Widget.weakerEvents paneEventMap . mLiftWidget
     where
         delKeys = Config.delKeys (config env)
@@ -229,19 +180,19 @@ makePaneEdit env (pane, defS) =
             Config.pane (config env)
         Config.Export{exportKeys} = Config.export (config env)
         paneEventMap =
-            [ paneClose pane & mLiftTrans
+            [ pane ^. Sugar.paneClose & mLiftTrans
               <&> WidgetIds.fromEntityId
               & Widget.keysEventMapMovesCursor paneCloseKeys
                 (E.Doc ["View", "Pane", "Close"])
             , do
-                  Transaction.setP (defS ^. Sugar.drDefinitionState)
+                  Transaction.setP (pane ^. Sugar.paneDefinition . Sugar.drDefinitionState)
                       Sugar.DeletedDefinition
-                  paneClose pane
+                  pane ^. Sugar.paneClose
               & mLiftTrans
               <&> WidgetIds.fromEntityId
               & Widget.keysEventMapMovesCursor delKeys
                 (E.Doc ["Edit", "Definition", "Delete"])
-            , exportDef (exportActions env) (paneDefI pane)
+            , exportDef (exportActions env) (pane ^. Sugar.paneDefinition . Sugar.drDefI)
               & Widget.keysEventMap exportKeys
                 (E.Doc ["Collaboration", "Export definition to JSON file"])
             ] & mconcat
@@ -300,24 +251,6 @@ replEventMap env replExpr =
         ExportActions{exportRepl, exportFancy} = exportActions env
         Config.Export{exportKeys, exportFancyKeys} = Config.export (config env)
         Config.Pane{newDefinitionButtonPressKeys} = Config.pane (config env)
-
-makeReplEdit ::
-    Monad m =>
-    Env m -> ExprGuiT.SugarExpr m ->
-    ExprGuiM m (TreeLayout (M m Widget.EventResult))
-makeReplEdit env replExpr =
-    ExpressionGui.combineSpaced Nothing
-    <*> sequence
-    [ ExpressionGui.makeFocusableView replId
-      <*> ExpressionGui.makeLabel "⋙" (Widget.toAnimId replId)
-      <&> TreeLayout.fromAlignedWidget
-    , ExprGuiM.makeSubexpression id replExpr
-    ]
-    <&> TreeLayout.widget %~
-        Widget.weakerEvents (replEventMap env replExpr) . mLiftWidget
-    & ExprGuiM.assignCursor replId exprId
-    where
-        exprId = replExpr ^. Sugar.rPayload . Sugar.plEntityId & WidgetIds.fromEntityId
 
 panesEventMap ::
     Monad m =>
