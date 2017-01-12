@@ -18,7 +18,7 @@ packages:
   extra-dep: True
 - location:
     git: https://github.com/lamdu/bindings-freetype-gl
-    commit: a6d46d2ce7534c85949d23be7a2766fa103e00aa
+    commit: 14d06448def366d9df83aabe5a2da091fa43c000
   extra-dep: True
 - location:
     git: https://github.com/lamdu/FreetypeGL
