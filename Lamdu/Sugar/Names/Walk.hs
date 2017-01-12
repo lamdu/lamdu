@@ -35,7 +35,6 @@ class (Monad m, Monad (TM m)) => MonadNaming m where
 
     opWithParamName :: NameGen.VarInfo -> CPSNameConvertor m
     opWithLetName :: NameGen.VarInfo -> CPSNameConvertor m
-    opWithDefName :: CPSNameConvertor m
     opWithTagName :: CPSNameConvertor m
     opGetName :: NameType -> NameConvertor m
 
@@ -215,7 +214,8 @@ toDef ::
     m (Definition (NewName m) (TM m) b)
 toDef f def@Definition {..} =
     do
-        (name, body) <- runCPS (opWithDefName _drName) $ toDefinitionBody f _drBody
+        name <- opGetName DefName _drName
+        body <- toDefinitionBody f _drBody
         pure def { _drName = name, _drBody = body }
 
 toPane ::

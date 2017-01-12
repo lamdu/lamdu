@@ -25,7 +25,6 @@ instance Monad m => MonadNaming (Collect name m) where
     opRun = pure $ Walk.InTransaction (return . fst . runCollect)
     opWithParamName _ = cpsTellName
     opWithLetName _ = cpsTellName
-    opWithDefName = cpsTellName
     opWithTagName = cpsTellName
     opGetName _ = tellName
 

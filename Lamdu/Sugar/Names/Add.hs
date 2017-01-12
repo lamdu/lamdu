@@ -53,7 +53,6 @@ instance Monad tm => MonadNaming (Pass0M tm) where
     opRun = pure $ Walk.InTransaction runPass0M
     opWithParamName _ = p0cpsNameConvertor
     opWithLetName _ = p0cpsNameConvertor
-    opWithDefName = p0cpsNameConvertor
     opWithTagName = p0cpsNameConvertor
     opGetName _ = p0nameConvertor
 
@@ -131,7 +130,6 @@ instance Monad tm => MonadNaming (Pass1M tm) where
     opRun = pure $ Walk.InTransaction $ return . fst . runPass1M
     opWithParamName _ = p1cpsNameConvertor Local
     opWithLetName _ = p1cpsNameConvertor Local
-    opWithDefName = p1cpsNameConvertor Local
     opWithTagName = p1cpsNameConvertor Local
     opGetName nameType =
         case nameType of
@@ -212,7 +210,6 @@ instance Monad tm => MonadNaming (Pass2M tm) where
     type NewName (Pass2M tm) = Name tm
     type TM (Pass2M tm) = tm
     opRun = (\env -> Walk.InTransaction (return . runPass2M env)) <$> p2GetEnv
-    opWithDefName = p2cpsNameConvertorGlobal "def_"
     opWithTagName = p2cpsNameConvertorGlobal "tag_"
     opWithParamName = p2cpsNameConvertorLocal
     opWithLetName = p2cpsNameConvertorLocal
