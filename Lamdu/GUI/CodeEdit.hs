@@ -13,7 +13,6 @@ import           Data.Functor.Identity (Identity(..))
 import qualified Data.List as List
 import           Data.Orphans () -- Imported for Monoid (IO ()) instance
 import qualified Data.Set as Set
-import qualified Data.Store.IRef as IRef
 import           Data.Store.Property (Property(..))
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
@@ -31,6 +30,7 @@ import qualified Graphics.UI.Bottle.WidgetsEnvT as WE
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Data.Anchors as Anchors
+import qualified Lamdu.Data.DbLayout as DbLayout
 import qualified Lamdu.Data.Ops as DataOps
 import           Lamdu.Eval.Results (EvalResults)
 import           Lamdu.Expr.IRef (DefI, ValI)
@@ -47,6 +47,7 @@ import qualified Lamdu.GUI.RedundantAnnotations as RedundantAnnotations
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Style (Style)
 import qualified Lamdu.Sugar.Convert as SugarConvert
+import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import qualified Lamdu.Sugar.Names.Add as AddNames
 import           Lamdu.Sugar.Names.Types (DefinitionN)
 import           Lamdu.Sugar.NearestHoles (NearestHoles)
@@ -75,7 +76,7 @@ mLiftWidget = Widget.events %~ mLiftTrans
 
 data Pane m = Pane
     { paneDefI :: DefI m
-    , paneDel :: T m Widget.Id
+    , paneDel :: T m Sugar.EntityId
     }
 
 data ExportActions m = ExportActions
@@ -101,6 +102,12 @@ data Env m = Env
     , style :: Style
     }
 
+replEntityId :: Sugar.EntityId
+replEntityId =
+    EntityId.ofIRef replIRef
+    where
+        replIRef = Anchors.repl DbLayout.codeIRefs
+
 replId :: Widget.Id
 replId = Widget.Id ["repl"]
 
@@ -115,7 +122,7 @@ makePanes (Property paneDefs setPaneDefs) =
                 do
                     Set.delete defI paneDefs & setPaneDefs
                     ordered ^? Lens.ix (i-1)
-                        & maybe replId (WidgetIds.fromUUID . IRef.uuid)
+                        & maybe replEntityId EntityId.ofIRef
                         & return
             }
 
@@ -223,6 +230,7 @@ makePaneEdit env (pane, defS) =
         Config.Export{exportKeys} = Config.export (config env)
         paneEventMap =
             [ paneDel pane & mLiftTrans
+              <&> WidgetIds.fromEntityId
               & Widget.keysEventMapMovesCursor paneCloseKeys
                 (E.Doc ["View", "Pane", "Close"])
             , do
@@ -230,6 +238,7 @@ makePaneEdit env (pane, defS) =
                       Sugar.DeletedDefinition
                   paneDel pane
               & mLiftTrans
+              <&> WidgetIds.fromEntityId
               & Widget.keysEventMapMovesCursor delKeys
                 (E.Doc ["Edit", "Definition", "Delete"])
             , exportDef (exportActions env) (paneDefI pane)
