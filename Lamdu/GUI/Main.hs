@@ -4,7 +4,7 @@ module Lamdu.GUI.Main
     , Env(..), CodeEdit.ExportActions(..)
       , envEvalRes, envExportActions
       , envConfig, envSettings, envStyle, envFullSize, envCursor
-    , CodeEdit.M(..), CodeEdit.m
+    , CodeEdit.M(..), CodeEdit.m, defaultCursor
     ) where
 
 import qualified Control.Lens as Lens
@@ -47,10 +47,11 @@ data Env = Env
     }
 Lens.makeLenses ''Env
 
-make ::
-    Env -> Widget.Id ->
-    T DbLayout.DbM (Widget (CodeEdit.M DbLayout.DbM Widget.EventResult))
-make env rootId =
+defaultCursor :: Widget.Id
+defaultCursor = CodeEdit.replId
+
+make :: Env -> T DbLayout.DbM (Widget (CodeEdit.M DbLayout.DbM Widget.EventResult))
+make env =
     do
         actions <-
             VersionControl.makeActions
@@ -64,7 +65,7 @@ make env rootId =
                     do
                         let codeSize = fullSize - Vector2 0 (branchSelector ^. Widget.height)
                         codeEdit <-
-                            CodeEdit.make codeEditEnv rootId ?? (codeSize ^. _1)
+                            CodeEdit.make codeEditEnv ?? (codeSize ^. _1)
                             & WE.mapWidgetEnvT VersionControl.runAction
                             <&> Widget.events . CodeEdit.m %~ fmap (VersionControl.runEvent cursor)
                         hoverPadding <-

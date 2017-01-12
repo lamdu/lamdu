@@ -12,7 +12,6 @@ import           Data.CurAndPrev (current)
 import           Data.IORef
 import qualified Data.Monoid as Monoid
 import           Data.Store.Db (Db)
-import qualified Data.Store.IRef as IRef
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
 import           Data.Time.Clock (getCurrentTime)
@@ -44,7 +43,6 @@ import qualified Lamdu.Font as Font
 import           Lamdu.GUI.CodeEdit.Settings (Settings(..))
 import qualified Lamdu.GUI.CodeEdit.Settings as Settings
 import qualified Lamdu.GUI.Main as GUIMain
-import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.GUI.Zoom (Zoom)
 import qualified Lamdu.GUI.Zoom as Zoom
 import qualified Lamdu.Opts as Opts
@@ -314,9 +312,6 @@ mainLoop win refreshScheduler configSampler iteration =
                         else isRefreshScheduled refreshScheduler
         mainLoopWidget win tickHandler makeWidget getConfig
 
-rootCursor :: Widget.Id
-rootCursor = WidgetIds.fromUUID $ IRef.uuid $ DbLayout.panes DbLayout.codeIRefs
-
 mkWidgetWithFallback ::
     (forall a. T DbLayout.DbM a -> IO a) ->
     GUIMain.Env -> IO (Widget (MainLoop.M Widget.EventResult))
@@ -331,8 +326,10 @@ mkWidgetWithFallback dbToIO env =
                     then return (True, candidateWidget)
                     else do
                         finalWidget <-
-                            env & GUIMain.envCursor .~ rootCursor & makeMainGui dbToIO
-                        Transaction.setP (DbLayout.cursor DbLayout.revisionProps) rootCursor
+                            env & GUIMain.envCursor .~ GUIMain.defaultCursor
+                            & makeMainGui dbToIO
+                        Transaction.setP (DbLayout.cursor DbLayout.revisionProps)
+                            GUIMain.defaultCursor
                         return (False, finalWidget)
                 unless (Widget.isFocused widget) $
                     fail "Root cursor did not match"
@@ -350,7 +347,7 @@ makeMainGui ::
     (forall a. T DbLayout.DbM a -> IO a) ->
     GUIMain.Env -> T DbLayout.DbM (Widget (MainLoop.M Widget.EventResult))
 makeMainGui dbToIO env =
-    GUIMain.make env rootCursor
+    GUIMain.make env
     <&> Widget.events %~ \act ->
     act ^. GUIMain.m
     & Lens.mapped %~ (>>= _2 attachCursor)

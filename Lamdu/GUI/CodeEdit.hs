@@ -3,6 +3,7 @@ module Lamdu.GUI.CodeEdit
     ( make
     , Env(..), ExportActions(..)
     , M(..), m, mLiftTrans
+    , replId
     ) where
 
 import           Control.Applicative (liftA2)
@@ -100,8 +101,11 @@ data Env m = Env
     , style :: Style
     }
 
-makePanes :: Monad m => Widget.Id -> Transaction.Property m (Set (DefI m)) -> [Pane m]
-makePanes emptyDelDest (Property paneDefs setPaneDefs) =
+replId :: Widget.Id
+replId = Widget.Id ["repl"]
+
+makePanes :: Monad m => Transaction.Property m (Set (DefI m)) -> [Pane m]
+makePanes (Property paneDefs setPaneDefs) =
     ordered & Lens.imapped %@~ convertPane
     where
         ordered = Set.toList paneDefs
@@ -111,7 +115,7 @@ makePanes emptyDelDest (Property paneDefs setPaneDefs) =
                 do
                     Set.delete defI paneDefs & setPaneDefs
                     ordered ^? Lens.ix (i-1)
-                        & maybe emptyDelDest (WidgetIds.fromUUID . IRef.uuid)
+                        & maybe replId (WidgetIds.fromUUID . IRef.uuid)
                         & return
             }
 
@@ -172,17 +176,16 @@ processExpr env expr =
 
 gui ::
     Monad m =>
-    Env m -> Widget.Id -> ExprGuiT.SugarExpr m -> [Pane m] ->
+    Env m -> ExprGuiT.SugarExpr m -> [Pane m] ->
     WidgetEnvT (T m) (Widget.R -> Widget (M m Widget.EventResult))
-gui env rootId replExpr panes =
+gui env replExpr panes =
     do
-        replGui <- makeReplEdit env rootId replExpr
+        replGui <- makeReplEdit env replExpr
         panesEdits <-
             panes
             & ExprGuiM.transaction . traverse (processPane env)
             >>= traverse (makePaneEdit env)
-        newDefinitionButton <-
-            makeNewDefinitionButton rootId <&> mLiftWidget
+        newDefinitionButton <- makeNewDefinitionButton <&> mLiftWidget
         eventMap <- panesEventMap env & ExprGuiM.widgetEnv
         vspace <- ExpressionGui.stdVSpace
         return $ \width ->
@@ -191,22 +194,18 @@ gui env rootId replExpr panes =
             & List.intersperse vspace
             & Box.vboxAlign 0
             & Widget.weakerEvents eventMap
-    & ExprGuiM.assignCursor rootId replId
     & ExprGuiM.run ExpressionEdit.make
       (codeProps env) (config env) (settings env) (style env)
-    where
-        replId = replExpr ^. Sugar.rPayload . Sugar.plEntityId & WidgetIds.fromEntityId
 
 make ::
     Monad m =>
-    Env m -> Widget.Id ->
-    WidgetEnvT (T m) (Widget.R -> Widget (M m Widget.EventResult))
-make env rootId =
+    Env m -> WidgetEnvT (T m) (Widget.R -> Widget (M m Widget.EventResult))
+make env =
     do
         replExpr <-
             getProp Anchors.repl >>= lift . processExpr env
-        panes <- getProp Anchors.panes <&> makePanes rootId
-        gui env rootId replExpr panes
+        panes <- getProp Anchors.panes <&> makePanes
+        gui env replExpr panes
     where
         getProp f = f (codeProps env) ^. Transaction.mkProperty & lift
 
@@ -256,9 +255,8 @@ makeNewDefinitionEventMap cp =
             Widget.keysEventMapMovesCursor newDefinitionKeys
             (E.Doc ["Edit", "New definition"]) newDefinition
 
-makeNewDefinitionButton ::
-    Monad m => Widget.Id -> ExprGuiM m (Widget (T m Widget.EventResult))
-makeNewDefinitionButton myId =
+makeNewDefinitionButton :: Monad m => ExprGuiM m (Widget (T m Widget.EventResult))
+makeNewDefinitionButton =
     do
         codeAnchors <- ExprGuiM.readCodeAnchors
         newDefinitionEventMap <-
@@ -273,7 +271,7 @@ makeNewDefinitionButton myId =
             <&> Widget.weakerEvents
                 (newDefinitionEventMap newDefinitionButtonPressKeys)
     where
-        newDefinitionButtonId = Widget.joinId myId ["NewDefinition"]
+        newDefinitionButtonId = Widget.Id ["NewDefinition"]
 
 replEventMap ::
     Monad m =>
@@ -296,9 +294,9 @@ replEventMap env replExpr =
 
 makeReplEdit ::
     Monad m =>
-    Env m -> Widget.Id -> ExprGuiT.SugarExpr m ->
+    Env m -> ExprGuiT.SugarExpr m ->
     ExprGuiM m (TreeLayout (M m Widget.EventResult))
-makeReplEdit env myId replExpr =
+makeReplEdit env replExpr =
     ExpressionGui.combineSpaced Nothing
     <*> sequence
     [ ExpressionGui.makeFocusableView replId
@@ -308,8 +306,9 @@ makeReplEdit env myId replExpr =
     ]
     <&> TreeLayout.widget %~
         Widget.weakerEvents (replEventMap env replExpr) . mLiftWidget
+    & ExprGuiM.assignCursor replId exprId
     where
-        replId = Widget.joinId myId ["repl"]
+        exprId = replExpr ^. Sugar.rPayload . Sugar.plEntityId & WidgetIds.fromEntityId
 
 panesEventMap ::
     Monad m =>
