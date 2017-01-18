@@ -252,14 +252,14 @@ loadRepl evalRes cp =
     >>= PresentationModes.addToExpr
 
 panesStronglyConnComps ::
-    [(DefI m, Definition.Definition (Val a) b)] ->
-    [[(DefI m, Definition.Definition (Val a) b)]]
+    [Definition.Definition (Val a) (DefI m)] ->
+    [[Definition.Definition (Val a) (DefI m)]]
 panesStronglyConnComps panes =
     panes <&> node & Graph.stronglyConnComp <&> Graph.flattenSCC
     where
-        node l@(defI, def) =
-            ( l
-            , ExprIRef.globalId defI
+        node def =
+            ( def
+            , def ^. Definition.defPayload & ExprIRef.globalId
             , def ^.. Definition.defBody . Lens.traverse . ExprLens.valGlobals mempty
             )
 
@@ -272,9 +272,9 @@ loadPanes evalRes cp replEntityId =
         Property paneDefs setPaneDefs <-
             Anchors.panes cp ^. Transaction.mkProperty
         ordered <-
-            Set.toList paneDefs & mapM loadPane
+            Set.toList paneDefs & mapM Load.def
             <&> panesStronglyConnComps <&> concat <&> reverse
-        let convertPane i (defI, def) =
+        let convertPane i def =
                 do
                     defS <-
                         convertDefI evalRes cp def
@@ -284,14 +284,12 @@ loadPanes evalRes cp replEntityId =
                         { _paneDefinition = defS
                         , _paneClose =
                           do
-                              Set.delete defI paneDefs & setPaneDefs
-                              ordered ^? Lens.ix (i-1) . Lens._1
+                              Set.delete (def ^. Definition.defPayload) paneDefs & setPaneDefs
+                              ordered ^? Lens.ix (i-1) . Definition.defPayload
                                   & maybe replEntityId EntityId.ofIRef
                                   & return
                         }
         ordered & Lens.itraversed %%@~ convertPane
-    where
-        loadPane defI = Load.def defI <&> (,) defI
 
 loadWorkArea ::
     Monad m => CurAndPrev (EvalResults (ValI m)) -> Anchors.CodeProps m ->
