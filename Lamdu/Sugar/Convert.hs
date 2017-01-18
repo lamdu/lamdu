@@ -195,27 +195,15 @@ convertInferDefExpr evalRes cp defExpr defI =
     where
         val = defExpr ^. Definition.expr
 
-convertDefI ::
+convertDefBody ::
     Monad m =>
-    CurAndPrev (EvalResults (ValI m)) ->
-    Anchors.CodeProps m ->
+    CurAndPrev (EvalResults (ValI m)) -> Anchors.CodeProps m ->
     Definition.Definition (Val (ValIProperty m)) (DefI m) ->
-    T m (DefinitionU m [EntityId])
-convertDefI evalRes cp (Definition.Definition body defI) =
-    do
-        bodyS <- convertDefBody body
-        return Definition
-            { _drEntityId = EntityId.ofIRef defI
-            , _drName = UniqueId.toUUID defI
-            , _drBody = bodyS
-            , _drDefinitionState = Anchors.assocDefinitionState defI
-            , _drDefI = defI
-            }
-    where
-        convertDefBody (Definition.BodyBuiltin builtin) =
-            return $ convertDefIBuiltin builtin defI
-        convertDefBody (Definition.BodyExpr defExpr) =
-            convertInferDefExpr evalRes cp defExpr defI
+    T m (DefinitionBody UUID m (ExpressionU m [EntityId]))
+convertDefBody evalRes cp (Definition.Definition body defI) =
+    case body of
+    Definition.BodyExpr defExpr -> convertInferDefExpr evalRes cp defExpr defI
+    Definition.BodyBuiltin builtin -> convertDefIBuiltin builtin defI & return
 
 convertExpr ::
     Monad m => CurAndPrev (EvalResults (ValI m)) -> Anchors.CodeProps m ->
@@ -276,15 +264,22 @@ loadPanes evalRes cp replEntityId =
             <&> panesStronglyConnComps <&> concat <&> reverse
         let convertPane i def =
                 do
+                    bodyS <- convertDefBody evalRes cp def
+                    let defI = def ^. Definition.defPayload
                     defS <-
-                        convertDefI evalRes cp def
-                        >>= OrderTags.orderDef
+                        OrderTags.orderDef Definition
+                        { _drEntityId = EntityId.ofIRef defI
+                        , _drName = UniqueId.toUUID defI
+                        , _drBody = bodyS
+                        , _drDefinitionState = Anchors.assocDefinitionState defI
+                        , _drDefI = defI
+                        }
                         >>= PresentationModes.addToDef
                     return Pane
                         { _paneDefinition = defS
                         , _paneClose =
                           do
-                              Set.delete (def ^. Definition.defPayload) paneDefs & setPaneDefs
+                              Set.delete defI paneDefs & setPaneDefs
                               ordered ^? Lens.ix (i-1) . Definition.defPayload
                                   & maybe replEntityId EntityId.ofIRef
                                   & return
