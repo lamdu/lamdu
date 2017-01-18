@@ -6,6 +6,7 @@ module Lamdu.Sugar.Convert
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Trans.State as State
 import           Data.CurAndPrev (CurAndPrev)
+import qualified Data.Graph as Graph
 import qualified Data.Map as Map
 import qualified Data.Set as Set
 import           Data.Store.Property (Property(..))
@@ -250,6 +251,18 @@ loadRepl evalRes cp =
     >>= OrderTags.orderExpr
     >>= PresentationModes.addToExpr
 
+panesStronglyConnComps ::
+    [(DefI m, Definition.Definition (Val a) b)] ->
+    [[(DefI m, Definition.Definition (Val a) b)]]
+panesStronglyConnComps panes =
+    panes <&> node & Graph.stronglyConnComp <&> Graph.flattenSCC
+    where
+        node l@(defI, def) =
+            ( l
+            , ExprIRef.globalId defI
+            , def ^.. Definition.defBody . Lens.traverse . ExprLens.valGlobals mempty
+            )
+
 loadPanes ::
     Monad m =>
     CurAndPrev (EvalResults (ValI m)) -> Anchors.CodeProps m -> EntityId ->
@@ -258,24 +271,27 @@ loadPanes evalRes cp replEntityId =
     do
         Property paneDefs setPaneDefs <-
             Anchors.panes cp ^. Transaction.mkProperty
-        let ordered = Set.toList paneDefs
-        let convertPane i defI =
+        ordered <-
+            Set.toList paneDefs & mapM loadPane
+            <&> panesStronglyConnComps <&> concat <&> reverse
+        let convertPane i (defI, def) =
                 do
-                    def <-
-                        Load.def defI
-                        >>= convertDefI evalRes cp
+                    defS <-
+                        convertDefI evalRes cp def
                         >>= OrderTags.orderDef
                         >>= PresentationModes.addToDef
                     return Pane
-                        { _paneDefinition = def
+                        { _paneDefinition = defS
                         , _paneClose =
                           do
                               Set.delete defI paneDefs & setPaneDefs
-                              ordered ^? Lens.ix (i-1)
+                              ordered ^? Lens.ix (i-1) . Lens._1
                                   & maybe replEntityId EntityId.ofIRef
                                   & return
                         }
         ordered & Lens.itraversed %%@~ convertPane
+    where
+        loadPane defI = Load.def defI <&> (,) defI
 
 loadWorkArea ::
     Monad m => CurAndPrev (EvalResults (ValI m)) -> Anchors.CodeProps m ->
