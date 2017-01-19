@@ -25,6 +25,7 @@ import qualified Lamdu.Builtins.PrimVal as PrimVal
 import           Lamdu.Calc.Identifier (identHex)
 import qualified Lamdu.Calc.Type as T
 import           Lamdu.Calc.Type.Scheme (Scheme)
+import qualified Lamdu.Calc.Type.Scheme as Scheme
 import qualified Lamdu.Calc.Val as V
 import           Lamdu.Calc.Val.Annotated (Val(..))
 import qualified Lamdu.Calc.Val.Annotated as Val
@@ -65,6 +66,7 @@ data Env m = Env
     { _envActions :: Actions m
     , _envLocals :: Map V.Var LocalVarName
     , _envMode :: Mode
+    , _envExpectedTypes :: Map V.Var Scheme
     }
 Lens.makeLenses ''Env
 
@@ -195,6 +197,7 @@ run actions act =
     { _envActions = actions
     , _envLocals = mempty
     , _envMode = loggingMode actions
+    , _envExpectedTypes = mempty
     }
     State
     { _freshId = 0
@@ -294,13 +297,14 @@ compileGlobal globalId =
         do
             globalTypes . Lens.at globalId ?= scheme & M
             ffiCompile ffiName & return
-    Definition.BodyExpr (Definition.Expr val typ _usedDefs) ->
+    Definition.BodyExpr (Definition.Expr val typ usedDefs) ->
         do
             case typ of
                 Definition.NoExportedType -> error "unexported definition used"
                 Definition.ExportedType scheme ->
                     globalTypes . Lens.at globalId ?= scheme & M
-            compileVal val <&> codeGenExpression
+            compileVal val & local (envExpectedTypes .~ usedDefs)
+        <&> codeGenExpression
     & resetRW
 
 compileGlobalVar :: Monad m => V.Var -> M m CodeGen
@@ -309,6 +313,7 @@ compileGlobalVar var =
     >>= maybe newGlobal return
     <&> JS.var
     <&> codeGenFromExpr
+    >>= verifyType
     where
         newGlobal =
             do
@@ -318,6 +323,19 @@ compileGlobalVar var =
                     <&> varinit varName
                     >>= ppOut
                 return varName
+        verifyType onGood =
+            Lens.view (envExpectedTypes . Lens.at var) & M
+            >>=
+            \case
+            Nothing -> return onGood
+            Just expected ->
+                do
+                    scheme <-
+                        Lens.use (globalTypes . Lens.at var) & M
+                        <&> fromMaybe (error "used global has no type")
+                    if Scheme.alphaEq scheme expected
+                        then return onGood
+                        else throwStr "Reached broken def!" & return
 
 compileLocalVar :: JSS.Id () -> CodeGen
 compileLocalVar = codeGenFromExpr . JS.var
