@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, RecordWildCards, PatternGuards #-}
+{-# LANGUAGE TemplateHaskell, NoImplicitPrelude, RecordWildCards, PatternGuards #-}
 module Lamdu.Sugar.Convert.Binder.Params
     ( ConventionalParams(..), cpParams, cpAddFirstParam
     , convertParams, convertLamParams
@@ -10,7 +10,6 @@ module Lamdu.Sugar.Convert.Binder.Params
     , isParamAlwaysUsedWithGetField
     ) where
 
-import           Control.Lens (Lens')
 import qualified Control.Lens as Lens
 import           Data.CurAndPrev (CurAndPrev)
 import qualified Data.List as List
@@ -60,15 +59,7 @@ data ConventionalParams m = ConventionalParams
     , cpScopes :: BinderBodyScope
     , cpMLamParam :: Maybe V.Var
     }
-
-cpParams :: Lens' (ConventionalParams m) (BinderParams UUID m)
-cpParams f ConventionalParams {..} = f _cpParams <&> \_cpParams -> ConventionalParams{..}
-
-cpParamInfos :: Lens' (ConventionalParams m) (Map T.Tag ConvertM.TagFieldParam)
-cpParamInfos f ConventionalParams {..} = f _cpParamInfos <&> \_cpParamInfos -> ConventionalParams{..}
-
-cpAddFirstParam :: Lens' (ConventionalParams m) (T m ParamAddResult)
-cpAddFirstParam f ConventionalParams {..} = f _cpAddFirstParam <&> \_cpAddFirstParam -> ConventionalParams{..}
+Lens.makeLenses ''ConventionalParams
 
 data FieldParam = FieldParam
     { fpTag :: T.Tag
@@ -80,9 +71,7 @@ data StoredLam m = StoredLam
     { _slLam :: V.Lam (Val (ValIProperty m))
     , slLambdaProp :: ValIProperty m
     }
-
-slLam :: Lens' (StoredLam m) (V.Lam (Val (ValIProperty m)))
-slLam f StoredLam{..} = f _slLam <&> \_slLam -> StoredLam{..}
+Lens.makeLenses ''StoredLam
 
 slParamList :: Monad m => StoredLam m -> Transaction.MkProperty m (Maybe ParamList)
 slParamList = Anchors.assocFieldParamList . Property.value . slLambdaProp
