@@ -2,7 +2,7 @@
 module Lamdu.Data.Anchors
     ( Code(..), onCode
     , Revision(..), onRevision
-    , Pane(..), makePane
+    , Pane(..)
     , CodeProps, RevisionProps
     , assocNameRef
     , assocScopeRef
@@ -67,9 +67,6 @@ newtype BinderParamScopeId = BinderParamScopeId
 
 type CodeProps m = Code (MkProperty m) m
 type RevisionProps m = Revision (MkProperty m) m
-
-makePane :: DefI m -> Pane m
-makePane = Pane
 
 assocNameRef :: (UniqueId.ToUUID a, Monad m) => a -> MkProperty m Text
 assocNameRef = Transaction.assocDataRefDef "" "Name" . UniqueId.toUUID
