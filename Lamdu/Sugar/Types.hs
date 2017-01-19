@@ -84,7 +84,6 @@ module Lamdu.Sugar.Types
     , HoleOption(..), hoVal, hoSugaredBaseExpr, hoResults
     , HoleActions(..), holeUUID, holeOptions, holeOptionLiteral
     , Hole(..), holeActions, holeMArg
-    , ScopeGetVar(..), sgvGetVar, sgvVal
     , TIdG(..), tidgName, tidgTId
     , HoleResultScore
     , HoleResult(..)
@@ -236,11 +235,6 @@ type HoleResultScore = [Int]
 data HoleResult name m = HoleResult
     { _holeResultConverted :: Expression name m ()
     , _holeResultPick :: T m PickedResult
-    }
-
-data ScopeGetVar name m = ScopeGetVar
-    { _sgvGetVar :: GetVar name m
-    , _sgvVal :: Val ()
     }
 
 data TIdG name = TIdG
@@ -612,7 +606,6 @@ Lens.makeLenses ''PickedResult
 Lens.makeLenses ''Record
 Lens.makeLenses ''RecordAddFieldResult
 Lens.makeLenses ''RecordField
-Lens.makeLenses ''ScopeGetVar
 Lens.makeLenses ''TIdG
 Lens.makeLenses ''TagG
 Lens.makeLenses ''WorkArea
