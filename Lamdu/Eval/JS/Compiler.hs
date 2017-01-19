@@ -70,7 +70,7 @@ Lens.makeLenses ''Env
 data State = State
     { _freshId :: Int
     , _names :: Map Text (Map UUID Text)
-    , _compiled :: Map V.Var GlobalVarName
+    , _globalVarNames :: Map V.Var GlobalVarName
     }
 Lens.makeLenses ''State
 
@@ -197,7 +197,7 @@ run actions act =
     State
     { _freshId = 0
     , _names = mempty
-    , _compiled = mempty
+    , _globalVarNames = mempty
     }
     <&> (^. _1)
 
@@ -295,7 +295,7 @@ compileGlobal globalId =
 
 compileGlobalVar :: Monad m => V.Var -> M m CodeGen
 compileGlobalVar var =
-    Lens.use (compiled . Lens.at var) & M
+    Lens.use (globalVarNames . Lens.at var) & M
     >>= maybe newGlobal return
     <&> JS.var
     <&> codeGenFromExpr
@@ -303,7 +303,7 @@ compileGlobalVar var =
         newGlobal =
             do
                 varName <- freshStoredName var "global_" <&> Text.unpack <&> JS.ident
-                compiled . Lens.at var ?= varName & M
+                globalVarNames . Lens.at var ?= varName & M
                 compileGlobal var
                     <&> varinit varName
                     >>= ppOut
