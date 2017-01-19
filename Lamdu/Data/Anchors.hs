@@ -2,7 +2,7 @@
 module Lamdu.Data.Anchors
     ( Code(..), onCode
     , Revision(..), onRevision
-    , Pane, makePane
+    , Pane(..), makePane
     , CodeProps, RevisionProps
     , assocNameRef
     , assocScopeRef
@@ -31,7 +31,10 @@ import qualified Lamdu.Expr.UniqueId as UniqueId
 
 import           Lamdu.Prelude
 
-type Pane m = DefI m
+newtype Pane m = Pane
+    { paneDef :: DefI m
+    } deriving (Eq, Ord, Show, Generic)
+instance Binary (Pane m)
 
 data Code f m = Code
     { repl :: f (ValI m)
@@ -66,7 +69,7 @@ type CodeProps m = Code (MkProperty m) m
 type RevisionProps m = Revision (MkProperty m) m
 
 makePane :: DefI m -> Pane m
-makePane = id
+makePane = Pane
 
 assocNameRef :: (UniqueId.ToUUID a, Monad m) => a -> MkProperty m Text
 assocNameRef = Transaction.assocDataRefDef "" "Name" . UniqueId.toUUID

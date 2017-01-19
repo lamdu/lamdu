@@ -239,17 +239,27 @@ loadRepl evalRes cp =
     >>= OrderTags.orderExpr
     >>= PresentationModes.addToExpr
 
-panesStronglyConnComps ::
-    [Definition.Definition (Val a) (DefI m)] ->
-    [[Definition.Definition (Val a) (DefI m)]]
-panesStronglyConnComps panes =
-    panes <&> node & Graph.stronglyConnComp <&> Graph.flattenSCC
+-- | Returns the list of definition-sets (topographically-sorted by usages)
+-- This allows us to choose type inference order with maximal generality
+stronglyConnectedDefs ::
+    (pl -> DefI m) ->
+    [Definition.Definition (Val a) pl] ->
+    [[Definition.Definition (Val a) pl]]
+stronglyConnectedDefs getDefI defs =
+    defs <&> node & Graph.stronglyConnComp <&> Graph.flattenSCC
     where
         node def =
             ( def
-            , def ^. Definition.defPayload & ExprIRef.globalId
+            , def ^. Definition.defPayload & getDefI & ExprIRef.globalId
             , def ^.. Definition.defBody . Lens.traverse . ExprLens.valGlobals mempty
             )
+
+loadAnnotatedDef ::
+    Monad m =>
+    (pl -> DefI m) ->
+    pl -> T m (Definition.Definition (Val (ValIProperty m)) pl)
+loadAnnotatedDef getDefI annotation =
+    getDefI annotation & Load.def <&> Definition.defPayload .~ annotation
 
 loadPanes ::
     Monad m =>
@@ -257,15 +267,14 @@ loadPanes ::
     T m [Pane UUID m [EntityId]]
 loadPanes evalRes cp replEntityId =
     do
-        Property paneDefs setPaneDefs <-
-            Anchors.panes cp ^. Transaction.mkProperty
+        Property panes setPanes <- Anchors.panes cp ^. Transaction.mkProperty
         ordered <-
-            Set.toList paneDefs & mapM Load.def
-            <&> panesStronglyConnComps <&> concat <&> reverse
+            Set.toList panes & mapM (loadAnnotatedDef Anchors.paneDef)
+            <&> stronglyConnectedDefs Anchors.paneDef <&> concat <&> reverse
         let convertPane i def =
                 do
-                    bodyS <- convertDefBody evalRes cp def
-                    let defI = def ^. Definition.defPayload
+                    bodyS <- def <&> Anchors.paneDef & convertDefBody evalRes cp
+                    let defI = def ^. Definition.defPayload & Anchors.paneDef
                     defS <-
                         OrderTags.orderDef Definition
                         { _drEntityId = EntityId.ofIRef defI
@@ -279,9 +288,10 @@ loadPanes evalRes cp replEntityId =
                         { _paneDefinition = defS
                         , _paneClose =
                           do
-                              Set.delete defI paneDefs & setPaneDefs
+                              Set.delete (def ^. Definition.defPayload) panes
+                                  & setPanes
                               ordered ^? Lens.ix (i-1) . Definition.defPayload
-                                  & maybe replEntityId EntityId.ofIRef
+                                  & maybe replEntityId (EntityId.ofIRef . Anchors.paneDef)
                                   & return
                         }
         ordered & Lens.itraversed %%@~ convertPane
