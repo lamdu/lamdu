@@ -24,6 +24,7 @@ import qualified Lamdu.Builtins.Anchors as Builtins
 import qualified Lamdu.Builtins.PrimVal as PrimVal
 import           Lamdu.Calc.Identifier (identHex)
 import qualified Lamdu.Calc.Type as T
+import           Lamdu.Calc.Type.Scheme (Scheme)
 import qualified Lamdu.Calc.Val as V
 import           Lamdu.Calc.Val.Annotated (Val(..))
 import qualified Lamdu.Calc.Val.Annotated as Val
@@ -71,6 +72,7 @@ data State = State
     { _freshId :: Int
     , _names :: Map Text (Map UUID Text)
     , _globalVarNames :: Map V.Var GlobalVarName
+    , _globalTypes :: Map V.Var Scheme
     }
 Lens.makeLenses ''State
 
@@ -198,6 +200,7 @@ run actions act =
     { _freshId = 0
     , _names = mempty
     , _globalVarNames = mempty
+    , _globalTypes = mempty
     }
     <&> (^. _1)
 
@@ -287,10 +290,17 @@ compileGlobal :: Monad m => V.Var -> M m (JSS.Expression ())
 compileGlobal globalId =
     performAction (`readGlobal` globalId) >>=
     \case
-    Definition.BodyBuiltin (Definition.Builtin ffiName _scheme) ->
-        ffiCompile ffiName & return
-    Definition.BodyExpr (Definition.Expr val _type _usedDefs) ->
-        compileVal val <&> codeGenExpression
+    Definition.BodyBuiltin (Definition.Builtin ffiName scheme) ->
+        do
+            globalTypes . Lens.at globalId ?= scheme & M
+            ffiCompile ffiName & return
+    Definition.BodyExpr (Definition.Expr val typ _usedDefs) ->
+        do
+            case typ of
+                Definition.NoExportedType -> error "unexported definition used"
+                Definition.ExportedType scheme ->
+                    globalTypes . Lens.at globalId ?= scheme & M
+            compileVal val <&> codeGenExpression
     & resetRW
 
 compileGlobalVar :: Monad m => V.Var -> M m CodeGen
