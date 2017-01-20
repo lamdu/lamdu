@@ -50,6 +50,7 @@ data Mode = FastSilent | SlowLogging LoggingInfo
 data Actions m = Actions
     { readAssocName :: UUID -> m Text
     , readGlobal :: V.Var -> m (Definition.Body (Val ValId))
+    , readGlobalType :: V.Var -> m Scheme
     , output :: String -> m ()
     , loggingMode :: Mode
     }
@@ -309,12 +310,14 @@ compileGlobal globalId =
 
 compileGlobalVar :: Monad m => V.Var -> M m CodeGen
 compileGlobalVar var =
-    Lens.use (globalVarNames . Lens.at var) & M
-    >>= maybe newGlobal return
-    <&> JS.var
-    <&> codeGenFromExpr
-    >>= verifyType
+    Lens.view (envExpectedTypes . Lens.at var) & M
+    >>= maybe loadGlobal verifyType
     where
+        loadGlobal =
+            Lens.use (globalVarNames . Lens.at var) & M
+            >>= maybe newGlobal return
+            <&> JS.var
+            <&> codeGenFromExpr
         newGlobal =
             do
                 varName <- freshStoredName var "global_" <&> Text.unpack <&> JS.ident
@@ -323,19 +326,19 @@ compileGlobalVar var =
                     <&> varinit varName
                     >>= ppOut
                 return varName
-        verifyType onGood =
-            Lens.view (envExpectedTypes . Lens.at var) & M
-            >>=
-            \case
-            Nothing -> return onGood
-            Just expected ->
-                do
-                    scheme <-
-                        Lens.use (globalTypes . Lens.at var) & M
-                        <&> fromMaybe (error "used global has no type")
-                    if Scheme.alphaEq scheme expected
-                        then return onGood
-                        else throwStr "Reached broken def!" & return
+        verifyType expectedType =
+            do
+                scheme <-
+                    Lens.use (globalTypes . Lens.at var) & M
+                    >>= maybe newGlobalType return
+                if Scheme.alphaEq scheme expectedType
+                    then loadGlobal
+                    else throwStr "Reached broken def!" & return
+        newGlobalType =
+            do
+                scheme <- performAction (`readGlobalType` var)
+                globalTypes . Lens.at var ?= scheme & M
+                return scheme
 
 compileLocalVar :: JSS.Id () -> CodeGen
 compileLocalVar = codeGenFromExpr . JS.var

@@ -266,22 +266,43 @@ compilerActions toUUID depsMVar actions output =
     { Compiler.readAssocName =
         return . decodeUtf8 . Hex.encode . UUIDUtils.toSBS16
     , Compiler.readGlobal =
-      \globalId ->
-      modifyMVar depsMVar $ \oldDeps ->
-      do
-          -- This happens inside the modifyMVar so
-          -- loads are under "lock" and not racy
-          defBody <- globalId & actions ^. aLoadGlobal
-          return
-              ( oldDeps <> Dependencies
-                { subExprDeps = defBody ^.. Lens.folded . Lens.folded & Set.fromList
-                , globalDeps = Set.singleton globalId
-                }
-              , defBody <&> Lens.mapped %~ Compiler.ValId . toUUID
-              )
+        readGlobal $
+        \defBody ->
+        ( Dependencies
+          { subExprDeps = defBody ^.. Lens.folded . Lens.folded & Set.fromList
+          , globalDeps = mempty
+          }
+        , defBody <&> Lens.mapped %~ Compiler.ValId . toUUID
+        )
+    , Compiler.readGlobalType =
+        readGlobal $
+        \defBody ->
+        case defBody of
+        Def.BodyBuiltin builtin -> Def.bType builtin
+        Def.BodyExpr defExpr ->
+            case defExpr ^. Def.exprType of
+            Def.NoExportedType -> error "unexported definition used"
+            Def.ExportedType scheme -> scheme
+        & (,) mempty
     , Compiler.output = output
     , Compiler.loggingMode = Compiler.loggingEnabled
     }
+    where
+        readGlobal f globalId =
+            modifyMVar depsMVar $ \oldDeps ->
+            do
+                -- This happens inside the modifyMVar so
+                -- loads are under "lock" and not racy
+                defBody <- globalId & actions ^. aLoadGlobal
+                let (bodyDeps, result) = f defBody
+                return
+                    ( oldDeps <> bodyDeps <>
+                        Dependencies
+                        { subExprDeps = mempty
+                        , globalDeps = Set.singleton globalId
+                        }
+                    , result
+                    )
 
 asyncStart ::
     Ord srcId =>
