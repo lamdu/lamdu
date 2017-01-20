@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, OverloadedStrings #-}
+{-# LANGUAGE NoImplicitPrelude, LambdaCase, OverloadedStrings #-}
 
 module Lamdu.Data.Export.Codejam
     ( exportFancy
@@ -25,6 +25,7 @@ import qualified Lamdu.Calc.Val.Annotated as Val
 import qualified Lamdu.Data.Anchors as Anchors
 import           Lamdu.Data.DbLayout (ViewM)
 import qualified Lamdu.Data.DbLayout as DbLayout
+import qualified Lamdu.Data.Definition as Def
 import           Lamdu.Data.Export.JSON (jsonExportRepl)
 import qualified Lamdu.DataFile as DataFile
 import qualified Lamdu.Eval.JS.Compiler as Compiler
@@ -81,11 +82,22 @@ compile val =
             , Compiler.readAssocName =
                 lift . Transaction.getP . Anchors.assocNameRef
             , Compiler.readGlobal =
-                  \globalId ->
-                  ExprIRef.defI globalId & Transaction.readIRef
-                  >>= traverse ExprIRef.readVal
-                  & lift
-                  <&> Lens.mapped . Lens.mapped %~ valId
+                \globalId ->
+                ExprIRef.defI globalId & Transaction.readIRef
+                >>= traverse ExprIRef.readVal
+                & lift
+                <&> Lens.mapped . Lens.mapped %~ valId
+            , Compiler.readGlobalType =
+                \globalId ->
+                ExprIRef.defI globalId & Transaction.readIRef
+                & lift
+                <&>
+                \case
+                Def.BodyBuiltin builtin -> Def.bType builtin
+                Def.BodyExpr defExpr ->
+                    case defExpr ^. Def.exprType of
+                    Def.NoExportedType -> error "unexported definition used"
+                    Def.ExportedType scheme -> scheme
             }
 
 formatResult :: EV.Val a -> SBS.ByteString
