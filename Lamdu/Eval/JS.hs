@@ -257,6 +257,32 @@ withCopyJSOutputTo Nothing f = f $ \_js -> return ()
 withCopyJSOutputTo (Just path) f =
     withFile path WriteMode $ \outputFile -> f (hPutStrLn outputFile)
 
+compilerActions ::
+    Ord a =>
+    (a -> UUID) -> MVar (Dependencies a) -> Actions a -> (String -> IO ()) ->
+    Compiler.Actions IO
+compilerActions toUUID depsMVar actions output =
+    Compiler.Actions
+    { Compiler.readAssocName =
+        return . decodeUtf8 . Hex.encode . UUIDUtils.toSBS16
+    , Compiler.readGlobal =
+      \globalId ->
+      modifyMVar depsMVar $ \oldDeps ->
+      do
+          -- This happens inside the modifyMVar so
+          -- loads are under "lock" and not racy
+          defBody <- globalId & actions ^. aLoadGlobal
+          return
+              ( oldDeps <> Dependencies
+                { subExprDeps = defBody ^.. Lens.folded . Lens.folded & Set.fromList
+                , globalDeps = Set.singleton globalId
+                }
+              , defBody <&> Lens.mapped %~ Compiler.ValId . toUUID
+              )
+    , Compiler.output = output
+    , Compiler.loggingMode = Compiler.loggingEnabled
+    }
+
 asyncStart ::
     Ord srcId =>
     (srcId -> UUID) -> (UUID -> srcId) ->
@@ -271,31 +297,13 @@ asyncStart toUUID fromUUID depsMVar resultsRef val actions =
             \(Just stdin, Just stdout, Nothing, handle) ->
             withCopyJSOutputTo (actions ^. aCopyJSOutputPath) $ \copyJSOutput ->
             do
-                val
-                    <&> valId
-                    & Compiler.compile Compiler.Actions
-                    { Compiler.readAssocName = return . decodeUtf8 . Hex.encode . UUIDUtils.toSBS16
-                    , Compiler.readGlobal =
-                      \globalId ->
-                      modifyMVar depsMVar $ \oldDeps ->
-                      do
-                          -- This happens inside the modifyMVar so
-                          -- loads are under "lock" and not racy
-                          defBody <- globalId & actions ^. aLoadGlobal
-                          return
-                              ( oldDeps <> Dependencies
-                                { subExprDeps = defBody ^.. Lens.folded . Lens.folded & Set.fromList
-                                , globalDeps = Set.singleton globalId
-                                }
-                              , defBody <&> fmap valId
-                              )
-                    , Compiler.output =
-                      \line ->
+                let output line =
                       do
                           copyJSOutput line
                           hPutStrLn stdin line
-                    , Compiler.loggingMode = Compiler.loggingEnabled
-                    }
+                val <&> Compiler.ValId . toUUID
+                    & Compiler.compile
+                        (compilerActions toUUID depsMVar actions output)
                 hClose stdin
                 let
                     processLines =
@@ -314,8 +322,6 @@ asyncStart toUUID fromUUID depsMVar resultsRef val actions =
                 processLines
                 _ <- Proc.waitForProcess handle
                 return ()
-    where
-        valId = Compiler.ValId . toUUID
 
 -- | Pause the evaluator, yielding all dependencies of evaluation so
 -- far. If any dependency changed, this evaluation is stale.
