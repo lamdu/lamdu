@@ -89,15 +89,8 @@ compile val =
                 <&> Lens.mapped . Lens.mapped %~ valId
             , Compiler.readGlobalType =
                 \globalId ->
-                ExprIRef.defI globalId & Transaction.readIRef
-                & lift
-                <&>
-                \case
-                Def.BodyBuiltin builtin -> Def.bType builtin
-                Def.BodyExpr defExpr ->
-                    case defExpr ^. Def.exprType of
-                    Def.NoExportedType -> error "unexported definition used"
-                    Def.ExportedType scheme -> scheme
+                ExprIRef.defI globalId & Transaction.readIRef & lift
+                <&> Def.typeOfDefBody
             }
 
 formatResult :: EV.Val a -> SBS.ByteString

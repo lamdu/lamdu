@@ -274,16 +274,7 @@ compilerActions toUUID depsMVar actions output =
           }
         , defBody <&> Lens.mapped %~ Compiler.ValId . toUUID
         )
-    , Compiler.readGlobalType =
-        readGlobal $
-        \defBody ->
-        case defBody of
-        Def.BodyBuiltin builtin -> Def.bType builtin
-        Def.BodyExpr defExpr ->
-            case defExpr ^. Def.exprType of
-            Def.NoExportedType -> error "unexported definition used"
-            Def.ExportedType scheme -> scheme
-        & (,) mempty
+    , Compiler.readGlobalType = readGlobal (Def.typeOfDefBody <&> (,) mempty)
     , Compiler.output = output
     , Compiler.loggingMode = Compiler.loggingEnabled
     }

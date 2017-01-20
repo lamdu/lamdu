@@ -6,6 +6,7 @@ module Lamdu.Data.Definition
     , Expr(..), expr, exprType, exprUsedDefinitions
     , Body(..), _BodyExpr, _BodyBuiltin
     , Definition(..), defBody, defPayload
+    , typeOfDefBody
     ) where
 
 import qualified Control.Lens as Lens
@@ -13,6 +14,7 @@ import           Data.Binary (Binary(..))
 import qualified Data.Text as Text
 import           GHC.Generics (Generic)
 import           Lamdu.Calc.Type.Scheme (Scheme)
+import qualified Lamdu.Calc.Type.Scheme as Scheme
 import           Lamdu.Calc.Val (Var)
 
 import           Lamdu.Prelude
@@ -61,3 +63,14 @@ Lens.makePrisms ''ExportedType
 Lens.makePrisms ''Body
 Lens.makeLenses ''Definition
 Lens.makeLenses ''Expr
+
+-- TODO: When moving away from "accept type", all definitions will have types
+-- and this should then be simpler/removed.
+typeOfDefBody :: Body a -> Scheme
+typeOfDefBody (BodyExpr defExpr) =
+    case defExpr ^. exprType of
+    ExportedType scheme -> scheme
+    NoExportedType -> unknownGlobalType
+    where
+        unknownGlobalType = Scheme.any
+typeOfDefBody (BodyBuiltin (Builtin _ scheme)) = scheme

@@ -14,8 +14,6 @@ import           Control.Monad.Trans.Either (EitherT(..), hoistEither)
 import           Control.Monad.Trans.State (StateT(..), mapStateT)
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
-import           Lamdu.Calc.Type.Scheme (Scheme(..))
-import qualified Lamdu.Calc.Type.Scheme as Scheme
 import           Lamdu.Calc.Val.Annotated (Val(..))
 import qualified Lamdu.Calc.Val.Annotated as Val
 import qualified Lamdu.Data.Definition as Definition
@@ -43,22 +41,13 @@ instance Pretty Error where
     pPrint UnexportedGlobalReferred = PP.text "Unexported global referred"
     pPrint (InferError e) = pPrint e
 
-unknownGlobalType :: Scheme
-unknownGlobalType = Scheme.any
-
-typeOfDefBody :: Definition.Body a -> Scheme
-typeOfDefBody (Definition.BodyExpr defExpr) =
-    case defExpr ^. Definition.exprType of
-    Definition.ExportedType scheme -> scheme
-    Definition.NoExportedType -> unknownGlobalType
-typeOfDefBody (Definition.BodyBuiltin (Definition.Builtin _ scheme)) = scheme
-
 loader :: Monad m => Loader (EitherT Error (T m))
 loader =
     Loader
     { InferLoad.loadTypeOf =
         \globalId ->
-        ExprIRef.defI globalId & Transaction.readIRef & lift <&> typeOfDefBody
+        ExprIRef.defI globalId & Transaction.readIRef & lift
+        <&> Definition.typeOfDefBody
     , InferLoad.loadNominal = lift . Load.nominal
     }
 
