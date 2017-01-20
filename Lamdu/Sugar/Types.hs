@@ -69,7 +69,9 @@ module Lamdu.Sugar.Types
     , NameRef(..), nrName, nrGotoDefinition
     , Param(..), pNameRef, pForm, pBinderMode
     , BinderVarForm(..), _GetDefinition, _GetLet
-    , DefinitionForm(..), defLifeState
+    , DefinitionForm(..), defLifeState, defTypeState
+    , DefinitionTypeState(..), _DefTypeUpToDate, _DefTypeChanged
+    , DefinitionOutdatedType(..), defTypeWhenUsed, defTypeCurrent, defTypeUseCurrent
     , BinderVarInline(..), _InlineVar, _CannotInlineDueToUses, _CannotInline
     , BinderVar(..), bvNameRef, bvForm, bvInline
     , GetVar(..), _GetParam, _GetParamsRecord, _GetBinder
@@ -364,12 +366,24 @@ data Param name m = Param
     , _pBinderMode :: BinderMode
     }
 
-newtype DefinitionForm = DefinitionForm
-    { _defLifeState :: Anchors.DefinitionState
-    } deriving (Eq, Ord)
+data DefinitionOutdatedType m = DefinitionOutdatedType
+    { _defTypeWhenUsed :: Scheme
+    , _defTypeCurrent :: Scheme
+    , _defTypeUseCurrent :: T m ()
+    }
 
-data BinderVarForm = GetDefinition DefinitionForm | GetLet
-    deriving (Eq, Ord)
+-- TODO: DefinitionTypeState and DefinitionTypeInfo are similar and confusing.
+-- This will be fixed when DefinitionTypeInfo will disappear
+-- (when removing accept type mechanism)
+data DefinitionTypeState m =
+    DefTypeUpToDate | DefTypeChanged (DefinitionOutdatedType m)
+
+data DefinitionForm m = DefinitionForm
+    { _defLifeState :: Anchors.DefinitionState
+    , _defTypeState :: DefinitionTypeState m
+    }
+
+data BinderVarForm m = GetDefinition (DefinitionForm m) | GetLet
 
 data BinderVarInline m
     = InlineVar (T m EntityId)
@@ -378,7 +392,7 @@ data BinderVarInline m
 
 data BinderVar name m = BinderVar
     { _bvNameRef :: NameRef name m
-    , _bvForm :: BinderVarForm
+    , _bvForm :: BinderVarForm m
     , -- Just means it is stored and inlinable:
       _bvInline :: BinderVarInline m
     }
@@ -586,6 +600,7 @@ Lens.makeLenses ''Definition
 Lens.makeLenses ''DefinitionForm
 Lens.makeLenses ''DefinitionBuiltin
 Lens.makeLenses ''DefinitionExpression
+Lens.makeLenses ''DefinitionOutdatedType
 Lens.makeLenses ''Expression
 Lens.makeLenses ''FuncParam
 Lens.makeLenses ''FuncParamActions
@@ -624,6 +639,7 @@ Lens.makePrisms ''CaseKind
 Lens.makePrisms ''CaseTail
 Lens.makePrisms ''DefinitionBody
 Lens.makePrisms ''DefinitionTypeInfo
+Lens.makePrisms ''DefinitionTypeState
 Lens.makePrisms ''GetVar
 Lens.makePrisms ''Literal
 Lens.makePrisms ''ParameterForm
