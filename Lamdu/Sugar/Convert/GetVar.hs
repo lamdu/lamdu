@@ -51,7 +51,7 @@ convertGlobal param exprPl =
               , _nrGotoDefinition =
                   jumpToDefI (ctx ^. ConvertM.scCodeAnchors) defI
               }
-            , _bvForm = GetDefinition defState
+            , _bvForm = DefinitionForm defState & GetDefinition
             , _bvInline = CannotInline
             } & return
     where

@@ -109,11 +109,11 @@ make getVar pl =
             Sugar.GetBinder binderVar ->
                 case binderVar ^. Sugar.bvForm of
                 Sugar.GetLet -> (letColor, id)
-                Sugar.GetDefinition defState ->
+                Sugar.GetDefinition defForm ->
                     ( definitionColor
                     , TreeLayout.widget . Widget.view %~
                       ExpressionGui.deletionDiagonal
-                      0.1 (Widget.toAnimId myId) defState
+                      0.1 (Widget.toAnimId myId) (defForm ^. Sugar.defLifeState)
                     )
                 & \(color, maybeAddDiagonal) ->
                     makeSimpleView color

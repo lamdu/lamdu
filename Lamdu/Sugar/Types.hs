@@ -69,6 +69,7 @@ module Lamdu.Sugar.Types
     , NameRef(..), nrName, nrGotoDefinition
     , Param(..), pNameRef, pForm, pBinderMode
     , BinderVarForm(..), _GetDefinition, _GetLet
+    , DefinitionForm(..), defLifeState
     , BinderVarInline(..), _InlineVar, _CannotInlineDueToUses, _CannotInline
     , BinderVar(..), bvNameRef, bvForm, bvInline
     , GetVar(..), _GetParam, _GetParamsRecord, _GetBinder
@@ -363,7 +364,11 @@ data Param name m = Param
     , _pBinderMode :: BinderMode
     }
 
-data BinderVarForm = GetDefinition Anchors.DefinitionState | GetLet
+newtype DefinitionForm = DefinitionForm
+    { _defLifeState :: Anchors.DefinitionState
+    } deriving (Eq, Ord)
+
+data BinderVarForm = GetDefinition DefinitionForm | GetLet
     deriving (Eq, Ord)
 
 data BinderVarInline m
@@ -578,6 +583,7 @@ Lens.makeLenses ''CaseAddAltResult
 Lens.makeLenses ''CaseAlt
 Lens.makeLenses ''CaseArg
 Lens.makeLenses ''Definition
+Lens.makeLenses ''DefinitionForm
 Lens.makeLenses ''DefinitionBuiltin
 Lens.makeLenses ''DefinitionExpression
 Lens.makeLenses ''Expression
