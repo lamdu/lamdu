@@ -8,7 +8,9 @@ import qualified Data.ByteString.Char8 as SBS8
 import           Data.Store.Transaction (Transaction)
 import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.Bottle.EventMap as E
+import           Graphics.UI.Bottle.Font (Underline(..))
 import qualified Graphics.UI.Bottle.Widget as Widget
+import           Graphics.UI.Bottle.Widget.TreeLayout (TreeLayout)
 import qualified Graphics.UI.Bottle.Widget.TreeLayout as TreeLayout
 import qualified Graphics.UI.Bottle.Widgets as BWidgets
 import           Lamdu.Config (Config)
@@ -94,6 +96,26 @@ makeInlineEventMap config (Sugar.CannotInlineDueToUses (x:_)) =
       (E.Doc ["Navigation", "Jump to next use"])
 makeInlineEventMap _ _ = mempty
 
+processDefinitionWidget ::
+    Functor m =>
+    Sugar.DefinitionForm m -> Widget.Id ->
+    ExprGuiM m (TreeLayout a) -> ExprGuiM m (TreeLayout a)
+processDefinitionWidget defForm myId =
+    deleted . outdated
+    where
+        deleted =
+            Lens.mapped . TreeLayout.widget . Widget.view %~
+            ExpressionGui.deletionDiagonal 0.1
+            (Widget.toAnimId myId) (defForm ^. Sugar.defLifeState)
+        outdated =
+            case defForm ^. Sugar.defTypeState of
+            Sugar.DefTypeUpToDate -> id
+            Sugar.DefTypeChanged _info ->
+                ExprGuiM.withLocalUnderline Underline
+                { _underlineColor = Draw.Color 1 0 0 1
+                , _underlineWidth = 2
+                }
+
 make ::
     Monad m =>
     Sugar.GetVar (Name m) m ->
@@ -111,17 +133,15 @@ make getVar pl =
                 Sugar.GetLet -> (letColor, id)
                 Sugar.GetDefinition defForm ->
                     ( definitionColor
-                    , TreeLayout.widget . Widget.view %~
-                      ExpressionGui.deletionDiagonal
-                      0.1 (Widget.toAnimId myId) (defForm ^. Sugar.defLifeState)
+                    , processDefinitionWidget defForm myId
                     )
-                & \(color, maybeAddDiagonal) ->
+                & \(color, processDef) ->
                     makeSimpleView color
+                    <&> Lens.mapped %~ processDef
                     & makeNameRef myId (binderVar ^. Sugar.bvNameRef)
                     <&> TreeLayout.widget %~
                     Widget.weakerEvents
                     (makeInlineEventMap config (binderVar ^. Sugar.bvInline))
-                    <&> maybeAddDiagonal
             Sugar.GetParam param ->
                 case param ^. Sugar.pBinderMode of
                 Sugar.LightLambda ->
