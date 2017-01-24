@@ -16,7 +16,8 @@ import qualified Data.Store.Transaction as Transaction
 import           Data.UUID.Types (UUID)
 import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Calc.Type.Nominal as N
-import           Lamdu.Calc.Type.Scheme (schemeType)
+import           Lamdu.Calc.Type.Scheme (Scheme, schemeType, alphaEq)
+import qualified Lamdu.Calc.Val as V
 import           Lamdu.Calc.Val.Annotated (Val(..))
 import qualified Lamdu.Calc.Val.Annotated as Val
 import qualified Lamdu.Data.Anchors as Anchors
@@ -167,6 +168,26 @@ makeNominalsMap val =
                         Map.insert tid nom loaded & State.put
                         nom ^.. N.nomType . N._NominalType . schemeType & traverse_ loadForType
 
+scanUsedDefinitions ::
+    Monad m => Map V.Var Scheme -> T m (Map V.Var (DefinitionOutdatedType m))
+scanUsedDefinitions usedDefinitions =
+    Map.toList usedDefinitions & mapM (uncurry scanDef)
+    <&> mconcat
+    where
+        scanDef globalVar usedType =
+            ExprIRef.defI globalVar & Transaction.readIRef
+            <&> Definition.typeOfDefBody
+            <&> processDef globalVar usedType
+        processDef globalVar usedType defType
+            | alphaEq usedType defType = Map.empty
+            | otherwise =
+                DefinitionOutdatedType
+                { _defTypeWhenUsed = usedType
+                , _defTypeCurrent = defType
+                , _defTypeUseCurrent = error "TODO"
+                }
+                & Map.singleton globalVar
+
 convertInferDefExpr ::
     Monad m =>
     CurAndPrev (EvalResults (ValI m)) -> Anchors.CodeProps m ->
@@ -179,6 +200,8 @@ convertInferDefExpr evalRes cp defExpr defI =
             >>= loadInferPrepareInput evalRes
             & assertRunInfer
         nomsMap <- makeNominalsMap valInferred
+        outdatedDefinitions <-
+            defExpr ^. Definition.exprUsedDefinitions & scanUsedDefinitions
         let context =
                 Context
                 { _scInferContext = newInferContext
@@ -187,6 +210,7 @@ convertInferDefExpr evalRes cp defExpr defI =
                 , _scCodeAnchors = cp
                 , _scScopeInfo = emptyScopeInfo
                 , _scReinferCheckRoot = reinferCheckDefinition defI
+                , _scOutdatedDefinitions = outdatedDefinitions
                 , scConvertSubexpression = ConvertExpr.convert
                 }
         ConvertDefExpr.convert
@@ -224,6 +248,7 @@ convertExpr evalRes cp val =
                 , _scScopeInfo = emptyScopeInfo
                 , _scReinferCheckRoot =
                     reinferCheckExpression (val ^. Val.payload . Property.pVal)
+                , _scOutdatedDefinitions = Map.empty
                 , scConvertSubexpression = ConvertExpr.convert
                 }
         ConvertM.convertSubexpression valInferred & ConvertM.run context

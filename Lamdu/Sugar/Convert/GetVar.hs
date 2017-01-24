@@ -42,7 +42,7 @@ convertGlobal param exprPl =
         let isGlobalInScope =
                 ctx ^. ConvertM.scGlobalsInScope . Lens.contains defI
         notInScope || isGlobalInScope & guard
-        defState <-
+        lifeState <-
             Anchors.assocDefinitionState defI
             & Transaction.getP & ConvertM.liftTransaction & lift
         GetBinder BinderVar
@@ -53,8 +53,10 @@ convertGlobal param exprPl =
               }
             , _bvForm =
                 GetDefinition DefinitionForm
-                { _defLifeState = defState
-                , _defTypeState = DefTypeUpToDate
+                { _defLifeState = lifeState
+                , _defTypeState =
+                    ctx ^. ConvertM.scOutdatedDefinitions . Lens.at param
+                    & maybe DefTypeUpToDate DefTypeChanged
                 }
             , _bvInline = CannotInline
             } & return
