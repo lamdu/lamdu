@@ -635,9 +635,9 @@ addValFrame myId =
 makeNameView :: Monad m => Name n -> AnimId -> ExprGuiM m View
 makeNameView (Name _ collision _ name) animId =
     do
-        label <- BWidgets.makeLabel name animId & ExprGuiM.widgetEnv
+        nameView <- BWidgets.makeTextView name animId & ExprGuiM.widgetEnv
         mSuffixLabel <- makeCollisionSuffixLabel collision $ animId ++ ["suffix"]
-        GridView.horizontalAlign 0.5 (label : mSuffixLabel ^.. Lens._Just) & return
+        GridView.horizontalAlign 0.5 (nameView : mSuffixLabel ^.. Lens._Just) & return
 
 -- TODO: This doesn't belong here
 makeCollisionSuffixLabel :: Monad m => NameCollision -> AnimId -> ExprGuiM m (Maybe View)
