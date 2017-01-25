@@ -20,7 +20,6 @@ module Lamdu.Sugar.Types.Binder
     , ParamDelResult(..), ParamAddResult(..)
     , FuncParamActions(..), fpAddNext, fpDelete, fpMOrderBefore, fpMOrderAfter
     , NamedParamInfo(..), npiName, npiActions
-    , NullParamInfo(..), nullParamInfoActions
     , FuncParam(..), fpId, fpInfo, fpAnnotation, fpHiddenIds
     , Anchors.PresentationMode(..)
     , Anchors.DefinitionState(..)
@@ -102,11 +101,6 @@ newtype NullParamActions m = NullParamActions
     { _npDeleteLambda :: T m ()
     }
 
--- TODO: Remove this?
-newtype NullParamInfo m = NullParamInfo
-    { _nullParamInfoActions :: NullParamActions m
-    }
-
 data FuncParam info = FuncParam
     { _fpId :: EntityId
     , _fpAnnotation :: Annotation
@@ -172,7 +166,7 @@ data BinderParams name m
     | -- null param represents a lambda whose parameter's type is inferred
       -- to be the empty record.
       -- This is often used to represent "deferred execution"
-      NullParam (FuncParam (NullParamInfo m))
+      NullParam (FuncParam (NullParamActions m))
     | VarParam (FuncParam (NamedParamInfo name m))
     | FieldParams [(T.Tag, FuncParam (NamedParamInfo name m))]
 
@@ -214,7 +208,6 @@ Lens.makeLenses ''LetActions
 Lens.makeLenses ''NameRef
 Lens.makeLenses ''NamedParamInfo
 Lens.makeLenses ''NullParamActions
-Lens.makeLenses ''NullParamInfo
 Lens.makeLenses ''TagG
 Lens.makePrisms ''BinderContent
 Lens.makePrisms ''BinderParams

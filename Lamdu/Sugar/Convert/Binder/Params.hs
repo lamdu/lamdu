@@ -488,7 +488,6 @@ convertNonRecordParam binderKind lam@(V.Lam param _) lamExprPl =
                   funcParamActions ^. fpDelete
                   & void
                   & NullParamActions
-                  & NullParamInfo
                   & mkFuncParam paramEntityId lamExprPl
                   <&> NullParam
             _ ->

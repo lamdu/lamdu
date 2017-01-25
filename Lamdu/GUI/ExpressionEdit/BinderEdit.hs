@@ -504,8 +504,8 @@ namedParamEditInfo paramInfo =
     , ParamEdit.iDel = paramInfo ^. Sugar.npiActions . Sugar.fpDelete
     }
 
-nullParamEditInfo :: Monad m => Sugar.NullParamInfo m -> ParamEdit.Info m
-nullParamEditInfo (Sugar.NullParamInfo mActions) =
+nullParamEditInfo :: Monad m => Sugar.NullParamActions m -> ParamEdit.Info m
+nullParamEditInfo mActions =
     ParamEdit.Info
     { ParamEdit.iMakeNameEdit =
       \myId ->
