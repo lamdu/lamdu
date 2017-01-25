@@ -1,6 +1,7 @@
 {-# LANGUAGE NoImplicitPrelude, TemplateHaskell, DeriveFunctor, DeriveFoldable, DeriveTraversable #-}
 module Lamdu.Sugar.Types
-    ( module Lamdu.Sugar.Types.Expression
+    ( module Lamdu.Sugar.Types.Binder
+    , module Lamdu.Sugar.Types.Expression
     , EntityId
     , Pane(..), paneDefinition, paneClose
     , WorkArea(..), waPanes, waRepl
@@ -25,6 +26,7 @@ import           Lamdu.Data.Anchors (BinderParamScopeId(..), bParamScopeId)
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Definition as Definition
 import           Lamdu.Sugar.Internal.EntityId (EntityId)
+import           Lamdu.Sugar.Types.Binder
 import           Lamdu.Sugar.Types.Expression
 import           Lamdu.Expr.IRef (DefI)
 
