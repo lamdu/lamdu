@@ -72,7 +72,6 @@ import           Lamdu.Calc.Type (Type)
 import qualified Lamdu.Calc.Type as T
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
-import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Eval.Results as ER
 import qualified Lamdu.GUI.CodeEdit.Settings as CESettings
 import qualified Lamdu.GUI.EvalView as EvalView
@@ -488,10 +487,8 @@ nameEditFDConfig = FocusDelegator.Config
     , FocusDelegator.focusParentDoc = E.Doc ["Edit", "Done renaming"]
     }
 
-deletionDiagonal ::
-    Widget.R -> AnimId -> Anchors.DefinitionState -> View -> View
-deletionDiagonal _ _ Anchors.LiveDefinition = id
-deletionDiagonal thickness animId Anchors.DeletedDefinition =
+deletionDiagonal :: Widget.R -> AnimId -> View -> View
+deletionDiagonal thickness animId =
     View.addDiagonal thickness (animId ++ ["diagonal"]) (Draw.Color 1 0 0 1)
 
 makeNameOriginEdit ::

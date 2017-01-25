@@ -100,21 +100,15 @@ processDefinitionWidget ::
     Functor m =>
     Sugar.DefinitionForm m -> Widget.Id ->
     ExprGuiM m (TreeLayout a) -> ExprGuiM m (TreeLayout a)
-processDefinitionWidget defForm myId =
-    deleted . outdated
-    where
-        deleted =
-            Lens.mapped . TreeLayout.widget . Widget.view %~
-            ExpressionGui.deletionDiagonal 0.1
-            (Widget.toAnimId myId) (defForm ^. Sugar.defLifeState)
-        outdated =
-            case defForm ^. Sugar.defTypeState of
-            Sugar.DefTypeUpToDate -> id
-            Sugar.DefTypeChanged _info ->
-                ExprGuiM.withLocalUnderline Underline
-                { _underlineColor = Draw.Color 1 0 0 1
-                , _underlineWidth = 2
-                }
+processDefinitionWidget Sugar.DefUpToDate _myId = id
+processDefinitionWidget Sugar.DefDeleted myId =
+    Lens.mapped . TreeLayout.widget . Widget.view %~
+    ExpressionGui.deletionDiagonal 0.1 (Widget.toAnimId myId)
+processDefinitionWidget (Sugar.DefTypeChanged _info) _myId =
+    ExprGuiM.withLocalUnderline Underline
+    { _underlineColor = Draw.Color 1 0 0 1
+    , _underlineWidth = 2
+    }
 
 make ::
     Monad m =>

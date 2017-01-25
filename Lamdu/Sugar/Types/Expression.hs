@@ -32,8 +32,7 @@ module Lamdu.Sugar.Types.Expression
     , ParameterForm(..), _GetFieldParameter, _GetParameter
     , Param(..), pNameRef, pForm, pBinderMode
     , BinderVarForm(..), _GetDefinition, _GetLet
-    , DefinitionForm(..), defLifeState, defTypeState
-    , DefinitionTypeState(..), _DefTypeUpToDate, _DefTypeChanged
+    , DefinitionForm(..), _DefUpToDate, _DefDeleted, _DefTypeChanged
     , DefinitionOutdatedType(..), defTypeWhenUsed, defTypeCurrent, defTypeUseCurrent
     , BinderVarInline(..), _InlineVar, _CannotInlineDueToUses, _CannotInline
     , BinderVar(..), bvNameRef, bvForm, bvInline
@@ -65,7 +64,6 @@ import           Data.UUID.Types (UUID)
 import qualified Lamdu.Calc.Type as T
 import           Lamdu.Calc.Type.Scheme (Scheme)
 import           Lamdu.Calc.Val.Annotated (Val)
-import qualified Lamdu.Data.Anchors as Anchors
 import           Lamdu.Sugar.Internal.EntityId (EntityId)
 import           Lamdu.Sugar.Types.Binder
 
@@ -248,16 +246,8 @@ data DefinitionOutdatedType m = DefinitionOutdatedType
     , _defTypeUseCurrent :: T m ()
     }
 
--- TODO: DefinitionTypeState and DefinitionTypeInfo are similar and confusing.
--- This will be fixed when DefinitionTypeInfo will disappear
--- (when removing accept type mechanism)
-data DefinitionTypeState m =
-    DefTypeUpToDate | DefTypeChanged (DefinitionOutdatedType m)
-
-data DefinitionForm m = DefinitionForm
-    { _defLifeState :: Anchors.DefinitionState
-    , _defTypeState :: DefinitionTypeState m
-    }
+data DefinitionForm m =
+    DefUpToDate | DefDeleted | DefTypeChanged (DefinitionOutdatedType m)
 
 data BinderVarForm m = GetDefinition (DefinitionForm m) | GetLet
 
@@ -347,7 +337,6 @@ Lens.makeLenses ''Case
 Lens.makeLenses ''CaseAddAltResult
 Lens.makeLenses ''CaseAlt
 Lens.makeLenses ''CaseArg
-Lens.makeLenses ''DefinitionForm
 Lens.makeLenses ''DefinitionOutdatedType
 Lens.makeLenses ''Expression
 Lens.makeLenses ''GetField
@@ -372,7 +361,7 @@ Lens.makePrisms ''BinderVarInline
 Lens.makePrisms ''Body
 Lens.makePrisms ''CaseKind
 Lens.makePrisms ''CaseTail
-Lens.makePrisms ''DefinitionTypeState
+Lens.makePrisms ''DefinitionForm
 Lens.makePrisms ''GetVar
 Lens.makePrisms ''Literal
 Lens.makePrisms ''ParameterForm

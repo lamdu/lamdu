@@ -52,12 +52,12 @@ convertGlobal param exprPl =
                   jumpToDefI (ctx ^. ConvertM.scCodeAnchors) defI
               }
             , _bvForm =
-                GetDefinition DefinitionForm
-                { _defLifeState = lifeState
-                , _defTypeState =
+                case lifeState of
+                DeletedDefinition -> DefDeleted
+                LiveDefinition ->
                     ctx ^. ConvertM.scOutdatedDefinitions . Lens.at param
-                    & maybe DefTypeUpToDate DefTypeChanged
-                }
+                    & maybe DefUpToDate DefTypeChanged
+                & GetDefinition
             , _bvInline = CannotInline
             } & return
     where
