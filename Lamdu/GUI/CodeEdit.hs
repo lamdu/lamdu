@@ -136,7 +136,7 @@ makeReplEdit ::
 makeReplEdit env replExpr =
     ExpressionGui.combineSpaced Nothing
     <*> sequence
-    [ ExpressionGui.makeFocusableView WidgetIds.replId
+    [ ExpressionGui.makeFocusableView (Widget.joinId WidgetIds.replId ["symbol"])
       <*> ExpressionGui.makeLabel "⋙" (Widget.toAnimId WidgetIds.replId)
       <&> TreeLayout.fromAlignedWidget
     , ExprGuiM.makeSubexpression id replExpr
