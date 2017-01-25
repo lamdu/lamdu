@@ -84,8 +84,11 @@ makeNameRef myId nameRef makeView =
                 do
                     DataOps.savePreJumpPosition cp myId
                     WidgetIds.fromEntityId <$> nameRef ^. Sugar.nrGotoDefinition
-        makeView (nameRef ^. Sugar.nrName) myId
+        makeView (nameRef ^. Sugar.nrName) nameId
             <&> TreeLayout.widget %~ Widget.weakerEvents jumpToDefinitionEventMap
+    & ExprGuiM.assignCursor myId nameId
+    where
+        nameId = Widget.joinId myId ["name"]
 
 makeInlineEventMap ::
     Monad m =>
@@ -102,8 +105,9 @@ makeInlineEventMap config (Sugar.CannotInlineDueToUses (x:_)) =
 makeInlineEventMap _ _ = mempty
 
 definitionTypeChangeBox ::
-    Monad m =>
-    Sugar.DefinitionOutdatedType m -> Widget.Id -> ExprGuiM m (AlignedWidget a)
+    (Applicative f, Monad m) =>
+    Sugar.DefinitionOutdatedType m -> Widget.Id ->
+    ExprGuiM m (AlignedWidget (f Widget.EventResult))
 definitionTypeChangeBox info myId =
     do
         headerLabel <-
@@ -113,16 +117,17 @@ definitionTypeChangeBox info myId =
         sepLabel <- ExpressionGui.makeLabel "to" animId
         typeCurrent <- mkTypeWidget "typeCurrent" (info ^. Sugar.defTypeCurrent)
         config <- ExprGuiM.readConfig
-        AlignedWidget.vbox 0
-            [headerLabel, typeWhenUsed, sepLabel, typeCurrent]
-            & AlignedWidget.alignment .~ 0
-            & AlignedWidget.widget %~
-                Widget.backgroundColor (animId ++ ["getdef background"])
-                -- TODO: which background color to use?
-                -- This and hole should probably use the same background,
-                -- but it should have a different name to represent that.
-                (Config.holeOpenBGColor (Config.hole config))
-            & return
+        let box =
+                AlignedWidget.vbox 0
+                [headerLabel, typeWhenUsed, sepLabel, typeCurrent]
+                & AlignedWidget.alignment .~ 0
+                & AlignedWidget.widget %~
+                    Widget.backgroundColor (animId ++ ["getdef background"])
+                    -- TODO: which background color to use?
+                    -- This and hole should probably use the same background,
+                    -- but it should have a different name to represent that.
+                    (Config.holeOpenBGColor (Config.hole config))
+        ExpressionGui.makeFocusableView myId ?? box
     where
         mkTypeWidget idSuffix scheme =
             TypeView.make (scheme ^. schemeType) (animId ++ [idSuffix])
@@ -130,9 +135,10 @@ definitionTypeChangeBox info myId =
         animId = Widget.toAnimId myId
 
 processDefinitionWidget ::
-    Monad m =>
+    (Applicative f, Monad m) =>
     Sugar.DefinitionForm m -> Widget.Id ->
-    ExprGuiM m (TreeLayout a) -> ExprGuiM m (TreeLayout a)
+    ExprGuiM m (TreeLayout (f Widget.EventResult)) ->
+    ExprGuiM m (TreeLayout (f Widget.EventResult))
 processDefinitionWidget Sugar.DefUpToDate _myId mkLayout = mkLayout
 processDefinitionWidget Sugar.DefDeleted myId mkLayout =
     mkLayout
@@ -150,7 +156,9 @@ processDefinitionWidget (Sugar.DefTypeChanged info) myId mkLayout =
         if isSelected
             then
             do
-                box <- definitionTypeChangeBox info myId
+                box <-
+                    definitionTypeChangeBox info
+                    (Widget.joinId myId ["type change"])
                 layout
                     & TreeLayout.alignment . _1 .~ 0
                     & TreeLayout.alignedWidget %~
