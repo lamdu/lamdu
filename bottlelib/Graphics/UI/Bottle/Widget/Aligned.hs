@@ -94,9 +94,12 @@ type AbsAlignedWidget a = (Vector2 Widget.R, Widget a)
 absAlignedWidget ::
     Lens.Iso (AlignedWidget a) (AlignedWidget b) (AbsAlignedWidget a) (AbsAlignedWidget b)
 absAlignedWidget =
-    asTuple . Lens.iso (f ((*) . (^. Alignment.ratio))) (f (fmap Alignment . (/)))
+    asTuple . Lens.iso (f ((*) . (^. Alignment.ratio))) (f (fmap Alignment . fromAbs))
     where
         f op w = w & _1 %~ (`op` (w ^. _2 . Widget.size))
+        fromAbs align size
+            | size == 0 = 0
+            | otherwise = align / size
 
 axis :: Orientation -> Lens' Alignment Widget.R
 axis Horizontal = _1
