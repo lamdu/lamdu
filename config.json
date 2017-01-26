@@ -488,15 +488,13 @@
             1.0
         ]
     },
-    "lightLambda": {
-        "lightLambdaUnderlineColor": [
-            1.0,
-            1.0,
-            1.0,
-            0.3
-        ],
-        "lightLambdaUnderlineWidth": 2
-    },
+    "lightLambdaUnderlineColor": [
+        1.0,
+        1.0,
+        1.0,
+        0.3
+    ],
+    "underlineWidth": 2,
     "eval": {
         "prevScopeKeys": [
             [

@@ -211,8 +211,7 @@ make getVar pl =
                 case param ^. Sugar.pBinderMode of
                 Sugar.LightLambda ->
                     makeSimpleView nameOriginFGColor
-                    <&> Lens.mapped %~
-                        LightLambda.withUnderline (Config.lightLambda config)
+                    <&> Lens.mapped %~ LightLambda.withUnderline config
                 _ -> makeSimpleView parameterColor
                 & makeNameRef myId (param ^. Sugar.pNameRef)
             Sugar.GetParamsRecord paramsRecordVar -> makeParamsRecord myId paramsRecordVar

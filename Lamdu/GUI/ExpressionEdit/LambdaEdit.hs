@@ -73,7 +73,7 @@ mkShrunk paramIds myId =
             ExpressionGui.makeFocusableView (lamId myId)
             <*> ExpressionGui.grammarLabel "λ" animId
             <&> TreeLayout.fromAlignedWidget
-            & LightLambda.withUnderline (Config.lightLambda config)
+            & LightLambda.withUnderline config
         return $ \mScopeEdit ->
             [ addScopeEdit mScopeEdit lamLabel
               & TreeLayout.widget %~ Widget.weakerEvents expandEventMap

@@ -4,7 +4,6 @@ module Lamdu.Config
     ( Help(..), Zoom(..), Export(..), Pane(..), Hole(..)
     , Name(..), Eval(..), Indent(..)
     , LiteralText(..)
-    , LightLambda(..)
     , Config(..)
     , delKeys
     ) where
@@ -104,14 +103,6 @@ instance Aeson.ToJSON Name where
     toJSON = Aeson.genericToJSON Aeson.defaultOptions
 instance Aeson.FromJSON Name
 
-data LightLambda = LightLambda
-    { lightLambdaUnderlineColor :: Draw.Color
-    , lightLambdaUnderlineWidth :: Double
-    } deriving (Eq, Generic, Show)
-instance Aeson.ToJSON LightLambda where
-    toJSON = Aeson.genericToJSON Aeson.defaultOptions
-instance Aeson.FromJSON LightLambda
-
 data Eval = Eval
     { prevScopeKeys :: [ModKey]
     , nextScopeKeys :: [ModKey]
@@ -151,7 +142,8 @@ data Config = Config
     , hole :: Hole
     , literalText :: LiteralText
     , name :: Name
-    , lightLambda :: LightLambda
+    , lightLambdaUnderlineColor :: Draw.Color
+    , underlineWidth :: Double
     , eval :: Eval
     , indent :: Indent
 
