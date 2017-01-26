@@ -37,6 +37,7 @@ data Config = Config
     , configInputDocColor :: Draw.Color
     , configBGColor :: Draw.Color
     , configOverlayDocKeys :: [ModKey]
+    , configTint :: Draw.Color
     }
 
 data Tree n l = Leaf l | Branch n [Tree n l]
@@ -186,9 +187,8 @@ makeToggledHelpAdder startValue =
                 let bgHelpView =
                         helpView
                         & View.backgroundColor animId (configBGColor config)
-                        & View.tint (transparency 0.8) -- TODO: 0.8?!
+                        & View.tint (configTint config)
                 return . addToBottomRight bgHelpView size $
                     Widget.strongerEvents toggleEventMap widget
     where
-        transparency = Draw.Color 1 1 1
         animId = ["help box"]

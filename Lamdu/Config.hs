@@ -22,6 +22,7 @@ data Help = Help
     , helpTextColor :: Draw.Color
     , helpInputDocColor :: Draw.Color
     , helpBGColor :: Draw.Color
+    , helpTint :: Draw.Color
     , helpKeys :: [ModKey]
     } deriving (Eq, Generic, Show)
 instance Aeson.ToJSON Help where

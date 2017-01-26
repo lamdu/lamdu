@@ -38,6 +38,7 @@ help font Config.Help{..} =
     , EventMapDoc.configInputDocColor = helpInputDocColor
     , EventMapDoc.configBGColor = helpBGColor
     , EventMapDoc.configOverlayDocKeys = helpKeys
+    , EventMapDoc.configTint = helpTint
     }
 
 textEdit :: Draw.Color -> Draw.Font -> TextEdit.Style
