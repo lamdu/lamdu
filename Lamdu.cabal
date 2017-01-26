@@ -264,6 +264,7 @@ Executable lamdu
                   , Lamdu.Sugar.Convert.Binder.Types
                   , Lamdu.Sugar.Convert.Case
                   , Lamdu.Sugar.Convert.DefExpr
+                  , Lamdu.Sugar.Convert.DefExpr.OutdatedDefs
                   , Lamdu.Sugar.Convert.Expression
                   , Lamdu.Sugar.Convert.Expression.Actions
                   , Lamdu.Sugar.Convert.GetField

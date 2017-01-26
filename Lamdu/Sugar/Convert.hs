@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, FlexibleContexts, OverloadedStrings, TypeFamilies, Rank2Types #-}
+{-# LANGUAGE NoImplicitPrelude #-}
 module Lamdu.Sugar.Convert
     ( loadWorkArea
     ) where
@@ -16,8 +16,7 @@ import qualified Data.Store.Transaction as Transaction
 import           Data.UUID.Types (UUID)
 import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Calc.Type.Nominal as N
-import           Lamdu.Calc.Type.Scheme (Scheme, schemeType, alphaEq)
-import qualified Lamdu.Calc.Val as V
+import           Lamdu.Calc.Type.Scheme (schemeType)
 import           Lamdu.Calc.Val.Annotated (Val(..))
 import qualified Lamdu.Calc.Val.Annotated as Val
 import qualified Lamdu.Data.Anchors as Anchors
@@ -32,6 +31,7 @@ import qualified Lamdu.Expr.Load as Load
 import qualified Lamdu.Expr.UniqueId as UniqueId
 import qualified Lamdu.Infer as Infer
 import qualified Lamdu.Sugar.Convert.DefExpr as ConvertDefExpr
+import qualified Lamdu.Sugar.Convert.DefExpr.OutdatedDefs as OutdatedDefs
 import qualified Lamdu.Sugar.Convert.Expression as ConvertExpr
 import qualified Lamdu.Sugar.Convert.Input as Input
 import           Lamdu.Sugar.Convert.Monad (Context(..), ScopeInfo(..), OuterScopeInfo(..))
@@ -168,26 +168,6 @@ makeNominalsMap val =
                         Map.insert tid nom loaded & State.put
                         nom ^.. N.nomType . N._NominalType . schemeType & traverse_ loadForType
 
-scanUsedDefinitions ::
-    Monad m => Map V.Var Scheme -> T m (Map V.Var (DefinitionOutdatedType m))
-scanUsedDefinitions usedDefinitions =
-    Map.toList usedDefinitions & mapM (uncurry scanDef)
-    <&> mconcat
-    where
-        scanDef globalVar usedType =
-            ExprIRef.defI globalVar & Transaction.readIRef
-            <&> Definition.typeOfDefBody
-            <&> processDef globalVar usedType
-        processDef globalVar usedType defType
-            | alphaEq usedType defType = Map.empty
-            | otherwise =
-                DefinitionOutdatedType
-                { _defTypeWhenUsed = usedType
-                , _defTypeCurrent = defType
-                , _defTypeUseCurrent = error "TODO"
-                }
-                & Map.singleton globalVar
-
 convertInferDefExpr ::
     Monad m =>
     CurAndPrev (EvalResults (ValI m)) -> Anchors.CodeProps m ->
@@ -201,7 +181,7 @@ convertInferDefExpr evalRes cp defExpr defI =
             & assertRunInfer
         nomsMap <- makeNominalsMap valInferred
         outdatedDefinitions <-
-            defExpr ^. Definition.exprUsedDefinitions & scanUsedDefinitions
+            defExpr ^. Definition.exprUsedDefinitions & OutdatedDefs.scan
         let context =
                 Context
                 { _scInferContext = newInferContext
