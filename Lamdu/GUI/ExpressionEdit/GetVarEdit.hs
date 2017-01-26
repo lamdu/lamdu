@@ -143,9 +143,11 @@ processDefinitionWidget ::
     ExprGuiM m (TreeLayout (f Widget.EventResult))
 processDefinitionWidget Sugar.DefUpToDate _myId mkLayout = mkLayout
 processDefinitionWidget Sugar.DefDeleted myId mkLayout =
-    mkLayout
-    & Lens.mapped . TreeLayout.widget . Widget.view %~
-        ExpressionGui.deletionDiagonal 0.1 (Widget.toAnimId myId)
+    do
+        addDiagonal <- ExpressionGui.addDeletionDiagonal
+        mkLayout <&> TreeLayout.widget . Widget.view %~ addDiagonal 0.1 animId
+    where
+        animId = Widget.toAnimId myId
 processDefinitionWidget (Sugar.DefTypeChanged info) myId mkLayout =
     do
         config <- ExprGuiM.readConfig

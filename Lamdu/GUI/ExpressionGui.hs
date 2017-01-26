@@ -21,7 +21,7 @@ module Lamdu.GUI.ExpressionGui
     , makeNameView
     , makeNameEdit, makeNameEditWith
     , makeNameOriginEdit
-    , deletionDiagonal
+    , addDeletionDiagonal
     -- Info adding
     , annotationSpacer
     , NeighborVals(..)
@@ -487,9 +487,13 @@ nameEditFDConfig = FocusDelegator.Config
     , FocusDelegator.focusParentDoc = E.Doc ["Edit", "Done renaming"]
     }
 
-deletionDiagonal :: Widget.R -> AnimId -> View -> View
-deletionDiagonal thickness animId =
-    View.addDiagonal thickness (animId ++ ["diagonal"]) (Draw.Color 1 0 0 1)
+addDeletionDiagonal :: Monad m => ExprGuiM m (Widget.R -> AnimId -> View -> View)
+addDeletionDiagonal =
+    do
+        config <- ExprGuiM.readConfig
+        return $ \thickness animId ->
+            View.addDiagonal thickness (animId ++ ["diagonal"])
+            (Config.typeIndicatorErrorColor config)
 
 makeNameOriginEdit ::
     Monad m => Name m -> Widget.Id -> ExprGuiM m (Widget (T m Widget.EventResult))

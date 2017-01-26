@@ -67,11 +67,11 @@ make def =
             def ^. Sugar.drDefinitionState . Transaction.mkProperty
             & ExprGuiM.transaction
         let defState = Property.value defStateProp
-        let deletionDiagonal =
-                case defState of
-                Sugar.DeletedDefinition ->
-                    ExpressionGui.deletionDiagonal 0.02 (Widget.toAnimId myId)
-                Sugar.LiveDefinition -> id
+        addDeletionDiagonal <-
+            case defState of
+            Sugar.DeletedDefinition ->
+                ExpressionGui.addDeletionDiagonal ?? 0.02 ?? Widget.toAnimId myId
+            Sugar.LiveDefinition -> return id
         let mUndelete =
                 case defState of
                 Sugar.LiveDefinition -> Nothing
@@ -82,7 +82,7 @@ make def =
                 makeExprDefinition def bodyExpr
             Sugar.DefinitionBodyBuiltin builtin ->
                 makeBuiltinDefinition def builtin <&> const
-            <&> Lens.mapped . Widget.view %~ deletionDiagonal
+            <&> Lens.mapped . Widget.view %~ addDeletionDiagonal
             >>= maybe return (addUndeleteButton myId) mUndelete
     where
         myId = def ^. Sugar.drEntityId & WidgetIds.fromEntityId
