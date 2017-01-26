@@ -2,6 +2,7 @@
 -- | Infer expressions where GlobalId's are known to be DefI's
 module Lamdu.Expr.IRef.Infer
     ( M
+    , liftInfer
     , loadInferScope
     , loadInferRecursive
     , run
