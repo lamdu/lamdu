@@ -116,13 +116,7 @@ isUnappliedVar _ _ = False
 
 wrapUnappliedUsesOfVar :: Monad m => V.Var -> Val (ValIProperty m) -> T m ()
 wrapUnappliedUsesOfVar var =
-    SubExprs.onMatchingSubexprsWithPath holeWrap (isUnappliedVar var)
-    where
-        holeWrap prop =
-            V.BLeaf V.LHole & ExprIRef.newValBody
-            <&> (`V.Apply` Property.value prop) <&> V.BApp
-            >>= ExprIRef.newValBody
-            >>= Property.set prop
+    SubExprs.onMatchingSubexprsWithPath (DataOps.wrap <&> void) (isUnappliedVar var)
 
 changeCallArgs ::
     Monad m =>
