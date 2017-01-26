@@ -117,9 +117,11 @@ definitionTypeChangeBox info myId =
         sepLabel <- ExpressionGui.makeLabel "to" animId
         typeCurrent <- mkTypeWidget "typeCurrent" (info ^. Sugar.defTypeCurrent)
         config <- ExprGuiM.readConfig
+        let padding = realToFrac <$> Config.valFramePadding config
         let box =
                 AlignedWidget.vbox 0
                 [headerLabel, typeWhenUsed, sepLabel, typeCurrent]
+                & AlignedWidget.pad padding
                 & AlignedWidget.alignment .~ 0
                 & AlignedWidget.widget %~
                     Widget.backgroundColor (animId ++ ["getdef background"])
@@ -181,11 +183,11 @@ make getVar pl =
             case getVar of
             Sugar.GetBinder binderVar ->
                 makeSimpleView color
-                <&> Lens.mapped %~ processDef
                 & makeNameRef myId (binderVar ^. Sugar.bvNameRef)
                 <&> TreeLayout.widget %~
                 Widget.weakerEvents
                 (makeInlineEventMap config (binderVar ^. Sugar.bvInline))
+                & processDef
                 where
                     (color, processDef) =
                         case binderVar ^. Sugar.bvForm of
