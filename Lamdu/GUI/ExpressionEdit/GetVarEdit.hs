@@ -180,19 +180,20 @@ make getVar pl =
             <*>
             case getVar of
             Sugar.GetBinder binderVar ->
-                case binderVar ^. Sugar.bvForm of
-                Sugar.GetLet -> (letColor, id)
-                Sugar.GetDefinition defForm ->
-                    ( definitionColor
-                    , processDefinitionWidget defForm myId
-                    )
-                & \(color, processDef) ->
-                    makeSimpleView color
-                    <&> Lens.mapped %~ processDef
-                    & makeNameRef myId (binderVar ^. Sugar.bvNameRef)
-                    <&> TreeLayout.widget %~
-                    Widget.weakerEvents
-                    (makeInlineEventMap config (binderVar ^. Sugar.bvInline))
+                makeSimpleView color
+                <&> Lens.mapped %~ processDef
+                & makeNameRef myId (binderVar ^. Sugar.bvNameRef)
+                <&> TreeLayout.widget %~
+                Widget.weakerEvents
+                (makeInlineEventMap config (binderVar ^. Sugar.bvInline))
+                where
+                    (color, processDef) =
+                        case binderVar ^. Sugar.bvForm of
+                        Sugar.GetLet -> (letColor, id)
+                        Sugar.GetDefinition defForm ->
+                            ( definitionColor
+                            , processDefinitionWidget defForm myId
+                            )
             Sugar.GetParam param ->
                 case param ^. Sugar.pBinderMode of
                 Sugar.LightLambda ->
