@@ -95,9 +95,9 @@ Library
 
   Build-depends:    GLFW-b >= 1.4.8.0
                   , OpenGL
-                  , QuickCheck >= 2.8 && < 2.9
+                  , QuickCheck >= 2.8 && < 2.10
                   , StateVar
-                  , aeson >= 0.6.2.1 && < 0.12
+                  , aeson >= 0.6.2.1 && < 1.1
                   , base >= 4
                   , base-compat >= 0.8.2 && < 0.10
                   , binary >= 0.7
