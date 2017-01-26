@@ -205,7 +205,7 @@ runEditor title copyJSOutputPath windowMode db =
                 do
                     evaluator <-
                         EvalManager.new EvalManager.NewParams
-                        { EvalManager.invalidateCache = scheduleRefresh refreshScheduler
+                        { EvalManager.resultsUpdated = scheduleRefresh refreshScheduler
                         , EvalManager.dbMVar = dbMVar
                         , EvalManager.copyJSOutputPath = copyJSOutputPath
                         }

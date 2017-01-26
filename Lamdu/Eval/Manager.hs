@@ -50,7 +50,7 @@ startedEvaluator NotStarted = Nothing
 startedEvaluator (Started eval) = Just eval
 
 data NewParams = NewParams
-    { invalidateCache :: IO ()
+    { resultsUpdated :: IO ()
     -- ^ Callback for notifying that new evaluation results are available.
     , dbMVar :: MVar (Maybe Db)
     , copyJSOutputPath :: Maybe FilePath
@@ -117,11 +117,11 @@ evalActions evaluator =
     Eval.Actions
     { Eval._aLoadGlobal = loadGlobal
     , Eval._aReadAssocName = readAssocName evaluator
-    , Eval._aReportUpdatesAvailable = invalidateCache (eParams evaluator)
+    , Eval._aReportUpdatesAvailable = resultsUpdated (eParams evaluator)
     , Eval._aCompleted = \_ ->
           do
               atomicModifyIORef_ (eResultsRef evaluator) (const EvalResults.empty)
-              invalidateCache (eParams evaluator)
+              resultsUpdated (eParams evaluator)
     , Eval._aCopyJSOutputPath = copyJSOutputPath (eParams evaluator)
     }
     where
@@ -209,7 +209,7 @@ setCancelTimer evaluator =
             do
                 atomicModifyIORef (eResultsRef evaluator)
                     (flip (,) () . const EvalResults.empty)
-                invalidateCache (eParams evaluator)
+                resultsUpdated (eParams evaluator)
         atomicModifyIORef (eCancelTimerRef evaluator)
             (\x -> (Just newCancelTimer, x))
             >>= Lens.traverseOf_ Lens._Just killThread
