@@ -204,10 +204,12 @@ runTransactionAndMaybeRestartEvaluator evaluator transaction =
 setCancelTimer :: Evaluator -> IO ()
 setCancelTimer evaluator =
     do
-        newCancelTimer <- runAfter 5000000 -- 5 seconds
-            (atomicModifyIORef (eResultsRef evaluator)
-                (flip (,) () . const EvalResults.empty)
-            )
+        newCancelTimer <-
+            runAfter 5000000 $ -- 5 seconds
+            do
+                atomicModifyIORef (eResultsRef evaluator)
+                    (flip (,) () . const EvalResults.empty)
+                invalidateCache (eParams evaluator)
         atomicModifyIORef (eCancelTimerRef evaluator)
             (\x -> (Just newCancelTimer, x))
             >>= Lens.traverseOf_ Lens._Just killThread
