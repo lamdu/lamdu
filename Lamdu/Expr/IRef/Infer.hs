@@ -1,8 +1,7 @@
 {-# LANGUAGE NoImplicitPrelude, OverloadedStrings #-}
 -- | Infer expressions where GlobalId's are known to be DefI's
 module Lamdu.Expr.IRef.Infer
-    ( ExpressionSetter
-    , M
+    ( M
     , loadInferScope
     , loadInferRecursive
     , run
@@ -28,8 +27,6 @@ import qualified Lamdu.Infer.Update as Update
 import           Lamdu.Prelude
 
 type T = Transaction
-
-type ExpressionSetter def = Val () -> Val ()
 
 loader :: Monad m => Loader (EitherT InferErr.Error (T m))
 loader =
