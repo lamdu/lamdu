@@ -6,10 +6,8 @@ module Lamdu.Expr.IRef.Infer
     , loadInferScope
     , loadInferRecursive
     , run
-    , Error(..), toEitherT
     ) where
 
-import           Control.Lens (_Left)
 import           Control.Monad.Trans.Either (EitherT(..), hoistEither)
 import           Control.Monad.Trans.State (StateT(..), mapStateT)
 import           Data.Store.Transaction (Transaction)
@@ -26,8 +24,6 @@ import           Lamdu.Infer.Load (Loader(Loader))
 import qualified Lamdu.Infer.Load as InferLoad
 import           Lamdu.Infer.Unify (unify)
 import qualified Lamdu.Infer.Update as Update
-import qualified Text.PrettyPrint as PP
-import           Text.PrettyPrint.HughesPJClass (Pretty(..))
 
 import           Lamdu.Prelude
 
@@ -35,13 +31,7 @@ type T = Transaction
 
 type ExpressionSetter def = Val () -> Val ()
 
-data Error = UnexportedGlobalReferred | InferError InferErr.Error
-
-instance Pretty Error where
-    pPrint UnexportedGlobalReferred = PP.text "Unexported global referred"
-    pPrint (InferError e) = pPrint e
-
-loader :: Monad m => Loader (EitherT Error (T m))
+loader :: Monad m => Loader (EitherT InferErr.Error (T m))
 loader =
     Loader
     { InferLoad.loadTypeOf =
@@ -51,13 +41,10 @@ loader =
     , InferLoad.loadNominal = lift . Load.nominal
     }
 
-type M m = StateT Infer.Context (EitherT Error (T m))
-
-toEitherT :: Monad m => Either InferErr.Error a -> EitherT Error m a
-toEitherT = hoistEither . (_Left %~ InferError)
+type M m = StateT Infer.Context (EitherT InferErr.Error (T m))
 
 liftInfer :: Monad m => Infer a -> M m a
-liftInfer = mapStateT toEitherT . Infer.run
+liftInfer = mapStateT hoistEither . Infer.run
 
 loadInferScope ::
     Monad m => Infer.Scope -> Val a -> M m (Val (Infer.Payload, a))
@@ -84,5 +71,5 @@ loadInferRecursive defI val =
                 Infer.insertTypeOf (ExprIRef.globalId defI) defType Infer.emptyScope
         loadInferInto (Infer.Payload defType scope) val
 
-run :: M m a -> T m (Either Error (a, Infer.Context))
+run :: M m a -> T m (Either InferErr.Error (a, Infer.Context))
 run = runEitherT . (`runStateT` Infer.initialContext)

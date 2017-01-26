@@ -5,6 +5,7 @@ module Lamdu.Sugar.Convert.ParamList
     ) where
 
 import qualified Control.Lens as Lens
+import           Control.Monad.Trans.Either (hoistEither)
 import           Control.Monad.Trans.State (mapStateT)
 import qualified Control.Monad.Trans.State as State
 import qualified Data.Store.Property as Property
@@ -64,4 +65,4 @@ loadForLambdas val =
                                 mkFuncType (pl ^. Input.inferredScope) paramList
                             unify (pl ^. Input.inferredType) funcType
                         & Infer.run
-                        & mapStateT IRefInfer.toEitherT
+                        & mapStateT hoistEither
