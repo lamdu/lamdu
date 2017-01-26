@@ -289,7 +289,7 @@
                 "Key'Space"
             ]
         ],
-        "holeOpenBGColor": [
+        "hoverBGColor": [
             0.05,
             0.25,
             0.3,

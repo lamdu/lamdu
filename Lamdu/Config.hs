@@ -73,7 +73,7 @@ data Hole = Hole
     , holeResultInjectedScaleExponent :: Double
     , holeExtraSymbolColorUnselected :: Draw.Color
     , holeExtraSymbolColorSelected :: Draw.Color
-    , holeOpenBGColor :: Draw.Color
+    , hoverBGColor :: Draw.Color
     , holeSearchTermBGColor :: Draw.Color
     , holePickResultKeys :: [ModKey]
     , holeDarkPadding :: Vector2 Double

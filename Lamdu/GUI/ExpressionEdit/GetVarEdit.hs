@@ -126,7 +126,7 @@ definitionTypeChangeBox info myId =
                     -- TODO: which background color to use?
                     -- This and hole should probably use the same background,
                     -- but it should have a different name to represent that.
-                    (Config.holeOpenBGColor (Config.hole config))
+                    (Config.hoverBGColor (Config.hole config))
         ExpressionGui.makeFocusableView myId ?? box
     where
         mkTypeWidget idSuffix scheme =

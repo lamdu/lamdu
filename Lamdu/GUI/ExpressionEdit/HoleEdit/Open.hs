@@ -273,7 +273,7 @@ makeExtraResultsWidget holeInfo mainResultHeight extraResults@(firstResult:_) =
         let height = min mainResultHeight headHeight
         let widget =
                 Box.vboxAlign 0 widgets
-                & addBackground (Widget.toAnimId (rId firstResult)) holeOpenBGColor
+                & addBackground (Widget.toAnimId (rId firstResult)) hoverBGColor
         return
             ( msum mResults
             , widget
@@ -462,7 +462,7 @@ makeUnderCursorAssignment shownResultsLists hasHiddenResults holeInfo =
             ( resultsWidget
               & Widget.width %~ max (typeView ^. View.width)
               & Widget.strongerEvents resultsEventMap .
-                addBackground (Widget.toAnimId hidResultsPrefix) holeOpenBGColor
+                addBackground (Widget.toAnimId hidResultsPrefix) hoverBGColor
               & AlignedWidget.fromCenteredWidget
               & AlignedWidget.addAfter AlignedWidget.Vertical
                 [ vspace
