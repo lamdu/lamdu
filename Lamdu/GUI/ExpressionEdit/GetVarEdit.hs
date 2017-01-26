@@ -33,6 +33,8 @@ import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
 
+type T = Transaction
+
 makeSimpleView ::
     (Monad f, Monad m) =>
     Draw.Color -> Name m -> Widget.Id ->
@@ -93,7 +95,7 @@ makeNameRef myId nameRef makeView =
 makeInlineEventMap ::
     Monad m =>
     Config -> Sugar.BinderVarInline m ->
-    Widget.EventMap (Transaction m Widget.EventResult)
+    Widget.EventMap (T m Widget.EventResult)
 makeInlineEventMap config (Sugar.InlineVar inline) =
     inline <&> WidgetIds.fromEntityId
     & Widget.keysEventMapMovesCursor (Config.inlineKeys config)
@@ -105,10 +107,10 @@ makeInlineEventMap config (Sugar.CannotInlineDueToUses (x:_)) =
 makeInlineEventMap _ _ = mempty
 
 definitionTypeChangeBox ::
-    (Applicative f, Monad m) =>
+    Monad m =>
     Sugar.DefinitionOutdatedType m -> Widget.Id ->
-    ExprGuiM m (AlignedWidget (f Widget.EventResult))
-definitionTypeChangeBox info myId =
+    ExprGuiM m (AlignedWidget (T m Widget.EventResult))
+definitionTypeChangeBox info getVarId =
     do
         headerLabel <-
             ExpressionGui.makeLabel "Type changed from" animId
@@ -129,18 +131,26 @@ definitionTypeChangeBox info myId =
                     -- This and hole should probably use the same background,
                     -- but it should have a different name to represent that.
                     (Config.hoverBGColor (Config.hole config))
+        -- TODO: unify config's button press keys
+        let keys = Config.newDefinitionButtonPressKeys (Config.pane config)
+        let update = (info ^. Sugar.defTypeUseCurrent) >> return getVarId
         ExpressionGui.makeFocusableView myId ?? box
+            <&> AlignedWidget.widget %~
+                Widget.weakerEvents
+                (Widget.keysEventMapMovesCursor keys
+                 (E.Doc ["Edit", "Update definition type"]) update)
     where
         mkTypeWidget idSuffix scheme =
             TypeView.make (scheme ^. schemeType) (animId ++ [idSuffix])
             <&> Widget.fromView <&> AlignedWidget.fromCenteredWidget
+        myId = Widget.joinId getVarId ["type change"]
         animId = Widget.toAnimId myId
 
 processDefinitionWidget ::
-    (Applicative f, Monad m) =>
+    Monad m =>
     Sugar.DefinitionForm m -> Widget.Id ->
-    ExprGuiM m (TreeLayout (f Widget.EventResult)) ->
-    ExprGuiM m (TreeLayout (f Widget.EventResult))
+    ExprGuiM m (TreeLayout (T m Widget.EventResult)) ->
+    ExprGuiM m (TreeLayout (T m Widget.EventResult))
 processDefinitionWidget Sugar.DefUpToDate _myId mkLayout = mkLayout
 processDefinitionWidget Sugar.DefDeleted myId mkLayout =
     do
@@ -161,9 +171,7 @@ processDefinitionWidget (Sugar.DefTypeChanged info) myId mkLayout =
         if isSelected
             then
             do
-                box <-
-                    definitionTypeChangeBox info
-                    (Widget.joinId myId ["type change"])
+                box <- definitionTypeChangeBox info myId
                 layout
                     & TreeLayout.alignment . _1 .~ 0
                     & TreeLayout.alignedWidget %~

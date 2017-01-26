@@ -180,8 +180,7 @@ convertInferDefExpr evalRes cp defExpr defI =
             >>= loadInferPrepareInput evalRes
             & assertRunInfer
         nomsMap <- makeNominalsMap valInferred
-        outdatedDefinitions <-
-            defExpr ^. Definition.exprUsedDefinitions & OutdatedDefs.scan
+        outdatedDefinitions <- OutdatedDefs.scan defExpr defI
         let context =
                 Context
                 { _scInferContext = newInferContext
