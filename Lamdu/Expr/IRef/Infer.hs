@@ -29,14 +29,14 @@ import           Lamdu.Prelude
 
 type T = Transaction
 
-loader :: Monad m => Loader (EitherT InferErr.Error (T m))
+loader :: Monad m => Loader (T m)
 loader =
     Loader
     { InferLoad.loadTypeOf =
         \globalId ->
-        ExprIRef.defI globalId & Transaction.readIRef & lift
+        ExprIRef.defI globalId & Transaction.readIRef
         <&> Definition.typeOfDefBody
-    , InferLoad.loadNominal = lift . Load.nominal
+    , InferLoad.loadNominal = Load.nominal
     }
 
 type M m = StateT Infer.Context (EitherT InferErr.Error (T m))
@@ -47,7 +47,7 @@ liftInfer = mapStateT hoistEither . Infer.run
 loadInferScope ::
     Monad m => Infer.Scope -> Val a -> M m (Val (Infer.Payload, a))
 loadInferScope scope val =
-    InferLoad.loadInfer loader scope val & lift >>= liftInfer
+    InferLoad.loadInfer loader scope val & lift & lift >>= liftInfer
 
 loadInferInto ::
     Monad m => Infer.Payload -> Val a -> M m (Val (Infer.Payload, a))
