@@ -13,6 +13,8 @@ import qualified Lamdu.Calc.Val as V
 import           Lamdu.Calc.Val.Annotated (Val(..))
 import qualified Lamdu.Calc.Val.Annotated as Val
 import qualified Lamdu.Data.Definition as Def
+import qualified Lamdu.Data.Ops as DataOps
+import qualified Lamdu.Data.Ops.Subexprs as SubExprs
 import           Lamdu.Expr.IRef (DefI, ValIProperty)
 import qualified Lamdu.Expr.IRef as ExprIRef
 import           Lamdu.Sugar.Types (DefinitionOutdatedType(..))
@@ -26,10 +28,14 @@ updateDefType ::
     Scheme -> Scheme -> V.Var ->
     Def.Expr (Val (ValIProperty m)) -> DefI m -> T m ()
 updateDefType _prevType newType usedDefVar defExpr usingDefI =
-    defExpr <&> (^. Val.payload) <&> Property.value
-    & Def.exprUsedDefinitions . Lens.at usedDefVar .~ Just newType
-    & Def.BodyExpr
-    & Transaction.writeIRef usingDefI
+    do
+        defExpr ^. Def.expr
+            & SubExprs.onMatchingSubexprs (DataOps.wrap <&> void)
+                (Val.body . V._BLeaf . V._LVar . Lens.only usedDefVar)
+        defExpr <&> (^. Val.payload) <&> Property.value
+            & Def.exprUsedDefinitions . Lens.at usedDefVar .~ Just newType
+            & Def.BodyExpr
+            & Transaction.writeIRef usingDefI
 
 scan ::
     Monad m =>
