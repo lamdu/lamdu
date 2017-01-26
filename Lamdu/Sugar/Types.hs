@@ -22,7 +22,6 @@ import qualified Control.Lens as Lens
 import           Data.Store.Transaction (Transaction, MkProperty)
 import           Data.UUID.Types (UUID)
 import           Lamdu.Calc.Type.Scheme (Scheme)
-import           Lamdu.Data.Anchors (BinderParamScopeId(..), bParamScopeId)
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Definition as Definition
 import           Lamdu.Sugar.Internal.EntityId (EntityId)
