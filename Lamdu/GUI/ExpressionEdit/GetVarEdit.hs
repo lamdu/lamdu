@@ -148,9 +148,10 @@ processDefinitionWidget Sugar.DefDeleted myId mkLayout =
         ExpressionGui.deletionDiagonal 0.1 (Widget.toAnimId myId)
 processDefinitionWidget (Sugar.DefTypeChanged info) myId mkLayout =
     do
+        config <- ExprGuiM.readConfig
         layout <-
             ExprGuiM.withLocalUnderline Underline
-                { _underlineColor = Draw.Color 1 0 0 1
+                { _underlineColor = Config.typeIndicatorErrorColor config
                 , _underlineWidth = 2
                 }
             mkLayout
