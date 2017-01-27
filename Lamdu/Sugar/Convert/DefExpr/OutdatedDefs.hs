@@ -4,10 +4,7 @@ module Lamdu.Sugar.Convert.DefExpr.OutdatedDefs
     ) where
 
 import qualified Control.Lens as Lens
-import           Control.Monad (join)
-import           Control.Monad.Trans.Either.Utils (runMatcherT, justToLeft)
 import qualified Data.Map as Map
-import           Data.Maybe.Utils (maybeToMPlus)
 import qualified Data.Store.Property as Property
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
@@ -27,8 +24,7 @@ import           Lamdu.Prelude
 
 type T = Transaction
 
-changeFuncResult ::
-    Monad m => V.Var -> Val (ValIProperty m) -> T m ()
+changeFuncResult :: Monad m => V.Var -> Val (ValIProperty m) -> T m ()
 changeFuncResult usedDefVar (Val pl (V.BLeaf (V.LVar v))) =
     when (v == usedDefVar) (void (DataOps.wrap pl))
 changeFuncResult usedDefVar
@@ -40,15 +36,19 @@ changeFuncResult usedDefVar
 changeFuncResult usedDefVar val =
     val ^. Val.body & traverse_ (changeFuncResult usedDefVar)
 
-mFuncResultChange ::
-    Monad m =>
-    Scheme -> Scheme -> V.Var -> Val (ValIProperty m) -> Maybe (T m ())
-mFuncResultChange prevType newType usedDefVar defExpr =
+isFuncResultChange :: Scheme -> Scheme -> Bool
+isFuncResultChange prevType newType =
     do
         prevArg <- prevType & schemeType %%~ (^? T._TFun . _1)
         newArg <- newType & schemeType %%~ (^? T._TFun . _1)
         alphaEq prevArg newArg & guard
-        changeFuncResult usedDefVar defExpr & return
+    & Lens.has Lens._Just
+
+fixDefExpr ::
+    Monad m => Scheme -> Scheme -> V.Var -> Val (ValIProperty m) -> T m ()
+fixDefExpr prevType newType usedDefVar defExpr
+    | isFuncResultChange prevType newType = changeFuncResult usedDefVar defExpr
+    | otherwise = SubExprs.onGetVars (DataOps.wrap <&> void) usedDefVar defExpr
 
 updateDefType ::
     Monad m =>
@@ -56,20 +56,11 @@ updateDefType ::
     Def.Expr (Val (ValIProperty m)) -> DefI m -> T m ()
 updateDefType prevType newType usedDefVar defExpr usingDefI =
     do
-        do
-            mFuncResultChange prevType newType usedDefVar (defExpr ^. Def.expr)
-                & maybeToMPlus & justToLeft
-            return wrapAll
-            & runMatcherT & join
+        fixDefExpr prevType newType usedDefVar (defExpr ^. Def.expr)
         defExpr <&> (^. Val.payload) <&> Property.value
             & Def.exprUsedDefinitions . Lens.at usedDefVar .~ Just newType
             & Def.BodyExpr
             & Transaction.writeIRef usingDefI
-    where
-        wrapAll =
-            defExpr ^. Def.expr
-            & SubExprs.onMatchingSubexprs (DataOps.wrap <&> void)
-                (Val.body . V._BLeaf . V._LVar . Lens.only usedDefVar)
 
 scan ::
     Monad m =>
