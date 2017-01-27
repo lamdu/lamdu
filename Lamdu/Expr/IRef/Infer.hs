@@ -3,6 +3,7 @@
 module Lamdu.Expr.IRef.Infer
     ( M
     , liftInfer
+    , liftTransaction
     , loadInferScope
     , loadInferRecursive
     , run
@@ -44,10 +45,13 @@ type M m = StateT Infer.Context (EitherT InferErr.Error (T m))
 liftInfer :: Monad m => Infer a -> M m a
 liftInfer = mapStateT hoistEither . Infer.run
 
+liftTransaction :: Monad m => T m a -> M m a
+liftTransaction = lift . lift
+
 loadInferScope ::
     Monad m => Infer.Scope -> Val a -> M m (Val (Infer.Payload, a))
 loadInferScope scope val =
-    InferLoad.loadInfer loader scope val & lift & lift >>= liftInfer
+    InferLoad.loadInfer loader scope val & liftTransaction >>= liftInfer
 
 loadInferInto ::
     Monad m => Infer.Payload -> Val a -> M m (Val (Infer.Payload, a))

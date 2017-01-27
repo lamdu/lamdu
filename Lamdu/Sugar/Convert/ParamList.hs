@@ -54,7 +54,7 @@ loadForLambdas val =
 
         loadUnifyParamList pl =
             do
-                mParamList <- loadStored (pl ^. Input.stored) & lift & lift
+                mParamList <- loadStored (pl ^. Input.stored) & IRefInfer.liftTransaction
                 case mParamList of
                     Nothing -> return ()
                     Just paramList ->
