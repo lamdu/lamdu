@@ -10,6 +10,7 @@ import           Data.UUID.Types (UUID)
 import qualified Graphics.UI.Bottle.EventMap as E
 import           Graphics.UI.Bottle.ModKey (ModKey(..))
 import qualified Graphics.UI.Bottle.Widget as Widget
+import qualified Graphics.UI.Bottle.Widget.Aligned as AlignedWidget
 import qualified Graphics.UI.Bottle.Widget.TreeLayout as TreeLayout
 import qualified Graphics.UI.Bottle.Widgets as BWidgets
 import qualified Graphics.UI.Bottle.Widgets.Box as Box
@@ -83,18 +84,18 @@ textEdit prop pl =
         config <- ExprGuiM.readConfig <&> Config.literalText
         style <- ExprGuiM.readStyle <&> Style.styleText
         edit <- do
+            left <- BWidgets.makeLabel "“" (Widget.toAnimId myId) <&> Widget.fromView
             text <- BWidgets.makeTextEditor prop innerId
+            right <- BWidgets.makeLabel "„" (Widget.toAnimId myId) <&> Widget.fromView
             let quoteSize = text ^. Widget.size & _1 .~ 0
-            left <-
-                BWidgets.makeLabel "“" (Widget.toAnimId myId)
-                <&> Widget.fromView
-                <&> Widget.padToSizeAlign quoteSize 0
-            right <-
-                BWidgets.makeLabel "„" (Widget.toAnimId myId)
-                <&> Widget.fromView
-                <&> Widget.padToSizeAlign quoteSize 1
-            Box.hboxCentered [left, text, right] & return
-            <&> TreeLayout.fromCenteredWidget
+            Box.hboxCentered
+                [ Widget.padToSizeAlign quoteSize 0 left
+                , text
+                , Widget.padToSizeAlign quoteSize 1 right
+                ] & return
+                <&> TreeLayout.fromCenteredWidget
+                <&> TreeLayout.alignedWidget . AlignedWidget.absAlignedWidget . _1 . _2 .~
+                    0.5 * (left ^. Widget.height)
             & ExprGuiM.widgetEnv
             & ExprGuiM.localEnv (WE.envTextStyle .~ style)
         ExpressionGui.makeFocusDelegator (fdConfig config)
