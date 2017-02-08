@@ -313,7 +313,11 @@ applyWideAnnotationBehavior ::
     Monad m =>
     AnimId -> WideAnnotationBehavior ->
     ExprGuiM m (Vector2 Widget.R -> AlignedWidget a -> AlignedWidget a)
-applyWideAnnotationBehavior _ KeepWideAnnotation = return (const id)
+applyWideAnnotationBehavior animId KeepWideAnnotation =
+    do
+        config <- ExprGuiM.readConfig
+        AlignedWidget.widget . Widget.view %~ addAnnotationBackground config animId
+            & const & return
 applyWideAnnotationBehavior animId ShrinkWideAnnotation =
     ExprGuiM.readConfig
     <&>
