@@ -550,10 +550,7 @@ stdWrap pl =
     do
         exprEventMap <- ExprEventMap.make pl
         maybeAddAnnotationPl pl
-            <&>
-            \maybeAdd gui ->
-            maybeAdd gui
-            & TreeLayout.widget %~ Widget.weakerEvents exprEventMap
+            <&> Lens.mapped . TreeLayout.widget %~ Widget.weakerEvents exprEventMap
 
 makeFocusDelegator ::
     (Monad m, Monad f) =>
