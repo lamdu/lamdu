@@ -3,7 +3,7 @@ module Lamdu.GUI.ExpressionGui.Monad
     ( ExprGuiM
     , widgetEnv
     , makeLabel
-    , StoredEntityIds(..), Injected(..)
+    , StoredEntityIds(..)
     , transaction, localEnv, withFgColor, withLocalUnderline
     , assignCursor, assignCursorPrefix
     , makeFocusDelegator
@@ -29,7 +29,6 @@ module Lamdu.GUI.ExpressionGui.Monad
 import qualified Control.Lens as Lens
 import           Control.Monad.Trans.RWS (RWST, runRWST)
 import qualified Control.Monad.Trans.RWS as RWS
-import           Data.Binary (Binary)
 import qualified Data.Char as Char
 import           Data.CurAndPrev (CurAndPrev)
 import           Data.Store.Transaction (Transaction)
@@ -86,9 +85,6 @@ newtype Output m = Output
 
 newtype StoredEntityIds = StoredEntityIds [Sugar.EntityId]
     deriving (Monoid)
-
-newtype Injected = Injected [Bool]
-    deriving (Monoid, Binary, Eq, Ord)
 
 data Askable m = Askable
     { _aSettings :: Settings
