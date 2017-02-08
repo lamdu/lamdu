@@ -77,6 +77,7 @@ make WidgetIds{..} arg =
         argGui <-
             arg ^. Sugar.haExpr
             & ExprGuiM.makeSubexpression (const 0)
+            & ExprGuiM.withVerbose
         let argIsFocused = ExpressionGui.egIsFocused argGui
         unwrapEventMap <- makeUnwrapEventMap arg WidgetIds{..}
         ExpressionGui.makeFocusableView hidWrapper

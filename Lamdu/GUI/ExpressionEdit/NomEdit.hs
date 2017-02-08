@@ -66,8 +66,9 @@ mkNomGui nameSidePrecLens str asList hCombine nom@(Sugar.Nominal _ val) pl =
         let nomId = Widget.joinId myId ["nom"]
         let nameId = Widget.joinId nomId ["name"]
         isSelected <- WE.isSubCursor nomId & ExprGuiM.widgetEnv
+        isVerbose <- ExprGuiM.readVerbose
         let nameShowing
-                | ExprGuiT.plOfHoleResult pl = NameShowing
+                | isVerbose || ExprGuiT.plOfHoleResult pl = NameShowing
                 | isSelected = NameHovering
                 | otherwise = NameCollapsed
         expandingName asList hCombine needParen nomId nameShowing

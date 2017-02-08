@@ -21,6 +21,8 @@ module Lamdu.GUI.ExpressionGui.Monad
     , outerPrecedence
     , withLocalPrecedence
     --
+    , readVerbose, withVerbose
+    --
     , HolePickers, withHolePickers
     , addResultPicker, listenResultPickers
     , run
@@ -95,6 +97,7 @@ data Askable m = Askable
     , _aMScopeId :: CurAndPrev (Maybe ScopeId)
     , _aOuterPrecedence :: Precedence
     , _aStyle :: Style
+    , _aVerbose :: Bool
     }
 
 newtype ExprGuiM m a = ExprGuiM
@@ -129,6 +132,12 @@ readConfig = ExprGuiM $ Lens.view aConfig
 
 readCodeAnchors :: Monad m => ExprGuiM m (Anchors.CodeProps m)
 readCodeAnchors = ExprGuiM $ Lens.view aCodeAnchors
+
+readVerbose :: Monad m => ExprGuiM m Bool
+readVerbose = ExprGuiM $ Lens.view aVerbose
+
+withVerbose :: ExprGuiM m a -> ExprGuiM m a
+withVerbose = exprGuiM %~ RWS.local (aVerbose .~ True)
 
 mkPrejumpPosSaver :: Monad m => ExprGuiM m (T m ())
 mkPrejumpPosSaver =
@@ -185,6 +194,7 @@ run makeSubexpr codeAnchors config settings style (ExprGuiM action) =
     , _aMScopeId = Just topLevelScopeId & pure
     , _aOuterPrecedence = 0
     , _aStyle = style
+    , _aVerbose = False
     }
     ()
     <&> \(x, (), _output) -> x
