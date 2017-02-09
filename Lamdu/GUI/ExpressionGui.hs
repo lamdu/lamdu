@@ -406,7 +406,15 @@ makeEvalView mNeighbours evalRes animId =
     do
         config <- ExprGuiM.readConfig
         let Config.Eval{..} = Config.eval config
-        let mkAnimId res = animId ++ [encodeS (erdScope res)]
+        let mkAnimId res =
+                -- When we can scroll between eval view results we
+                -- must encode the scope into the anim ID for smooth
+                -- scroll to work.
+                -- When we cannot, we'd rather not animate changes
+                -- within a scrolled scope (use same animId).
+                case mNeighbours of
+                Nothing -> animId ++ ["eval-view"]
+                Just _ -> animId ++ [encodeS (erdScope res)]
         let makeEvaluationResultViewBG res =
                 makeEvaluationResultView (mkAnimId res) res
                 <&> AlignedWidget.widget . Widget.view %~
