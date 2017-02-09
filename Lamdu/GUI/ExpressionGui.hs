@@ -400,9 +400,9 @@ data NeighborVals a = NeighborVals
 
 makeEvalView ::
     Monad m =>
-    NeighborVals (Maybe EvalResDisplay) -> EvalResDisplay ->
+    Maybe (NeighborVals (Maybe EvalResDisplay)) -> EvalResDisplay ->
     AnimId -> ExprGuiM m (AlignedWidget a)
-makeEvalView (NeighborVals mPrev mNext) evalRes animId =
+makeEvalView mNeighbours evalRes animId =
     do
         config <- ExprGuiM.readConfig
         let Config.Eval{..} = Config.eval config
@@ -418,8 +418,13 @@ makeEvalView (NeighborVals mPrev mNext) evalRes animId =
                     AlignedWidget.pad (neighborsPadding <&> realToFrac) .
                     AlignedWidget.scale (neighborsScaleFactor <&> realToFrac)
                 <&> Lens.mapped . AlignedWidget.alignment . _2 .~ yPos
-        prevs <- neighbourViews mPrev 1 & sequence
-        nexts <- neighbourViews mNext 0 & sequence
+        (prevs, nexts) <-
+            case mNeighbours of
+            Nothing -> ([], []) & pure
+            Just (NeighborVals mPrev mNext) ->
+                (,)
+                <$> sequence (neighbourViews mPrev 1)
+                <*> sequence (neighbourViews mNext 0)
         evalView <- makeEvaluationResultView (mkAnimId evalRes) evalRes
         evalView
             & AlignedWidget.addBefore AlignedWidget.Horizontal prevs
@@ -461,17 +466,17 @@ addInferredType typ = addAnnotationH (makeTypeView typ)
 
 addEvaluationResult ::
     Monad m =>
-    NeighborVals (Maybe EvalResDisplay) -> EvalResDisplay ->
+    Maybe (NeighborVals (Maybe EvalResDisplay)) -> EvalResDisplay ->
     WideAnnotationBehavior -> Sugar.EntityId ->
     ExprGuiM m (TreeLayout a -> TreeLayout a)
 -- REVIEW(Eyal): This is misleading when it refers to Previous results
-addEvaluationResult neigh resDisp wideBehavior entityId =
+addEvaluationResult mNeigh resDisp wideBehavior entityId =
     case (erdVal resDisp ^. ER.payload, erdVal resDisp ^. ER.body) of
     (T.TRecord T.CEmpty, _) ->
         addValBGWithColor Config.evaluatedPathBGColor (WidgetIds.fromEntityId entityId)
         <&> (TreeLayout.widget %~)
     (_, ER.RFunc{}) -> return id
-    _ -> addAnnotationH (makeEvalView neigh resDisp) wideBehavior entityId
+    _ -> addAnnotationH (makeEvalView mNeigh resDisp) wideBehavior entityId
 
 parentExprFDConfig :: Config -> FocusDelegator.Config
 parentExprFDConfig config = FocusDelegator.Config
@@ -694,7 +699,7 @@ maybeAddAnnotation = maybeAddAnnotationWith NormalEvalAnnotation
 data AnnotationMode
     = AnnotationModeNone
     | AnnotationModeTypes
-    | AnnotationModeEvaluation (NeighborVals (Maybe EvalResDisplay)) EvalResDisplay
+    | AnnotationModeEvaluation (Maybe (NeighborVals (Maybe EvalResDisplay))) EvalResDisplay
 
 getAnnotationMode :: Monad m => EvalAnnotationOptions -> Sugar.Annotation -> ExprGuiM m AnnotationMode
 getAnnotationMode opt annotation =
@@ -709,9 +714,10 @@ getAnnotationMode opt annotation =
     where
         neighbourVals =
             case opt of
-            NormalEvalAnnotation -> NeighborVals Nothing Nothing
+            NormalEvalAnnotation -> Nothing
             WithNeighbouringEvalAnnotations neighbors ->
                 neighbors <&> (>>= valOfScopePreferCur annotation . (^. Sugar.bParamScopeId))
+                & Just
 
 maybeAddAnnotationWith ::
     Monad m =>
@@ -738,8 +744,8 @@ maybeAddAnnotationWith opt wideAnnotationBehavior ShowAnnotation{..} annotation 
         inferredType = annotation ^. Sugar.aInferredType
         withType =
             addInferredType inferredType wideAnnotationBehavior entityId
-        withVal neighborVals scopeAndVal =
-            addEvaluationResult neighborVals scopeAndVal
+        withVal mNeighborVals scopeAndVal =
+            addEvaluationResult mNeighborVals scopeAndVal
             wideAnnotationBehavior entityId
 
 valOfScope :: Sugar.Annotation -> CurAndPrev (Maybe ER.ScopeId) -> Maybe EvalResDisplay
