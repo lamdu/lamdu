@@ -380,7 +380,7 @@ makeEvaluationResultView ::
 makeEvaluationResultView animId res =
     do
         config <- ExprGuiM.readConfig
-        view <- EvalView.make (animId ++ [encodeS (erdScope res)]) (erdVal res)
+        view <- EvalView.make animId (erdVal res)
         view
             & case erdSource res of
             Current -> id
@@ -406,10 +406,11 @@ makeEvalView (NeighborVals mPrev mNext) evalRes animId =
     do
         config <- ExprGuiM.readConfig
         let Config.Eval{..} = Config.eval config
+        let mkAnimId res = animId ++ [encodeS (erdScope res)]
         let makeEvaluationResultViewBG res =
-                makeEvaluationResultView animId res
+                makeEvaluationResultView (mkAnimId res) res
                 <&> AlignedWidget.widget . Widget.view %~
-                    addAnnotationBackground config (animId ++ [encodeS (erdScope res)])
+                    addAnnotationBackground config (mkAnimId res)
         let neighbourViews n yPos =
                 n ^.. Lens._Just
                 <&> makeEvaluationResultViewBG
@@ -419,7 +420,7 @@ makeEvalView (NeighborVals mPrev mNext) evalRes animId =
                 <&> Lens.mapped . AlignedWidget.alignment . _2 .~ yPos
         prevs <- neighbourViews mPrev 1 & sequence
         nexts <- neighbourViews mNext 0 & sequence
-        evalView <- makeEvaluationResultView animId evalRes
+        evalView <- makeEvaluationResultView (mkAnimId evalRes) evalRes
         evalView
             & AlignedWidget.addBefore AlignedWidget.Horizontal prevs
             & AlignedWidget.addAfter AlignedWidget.Horizontal nexts
