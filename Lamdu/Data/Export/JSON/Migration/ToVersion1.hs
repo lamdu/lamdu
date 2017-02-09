@@ -78,18 +78,45 @@ addFrozenDeps nominalMap frozenDefTypes defObj =
             & Lens.at "frozenDeps" ?~ frozenDeps
             & pure
 
+convertBuiltin :: Aeson.Value -> Aeson.Object -> Either Text Aeson.Object
+convertBuiltin builtin obj =
+    do
+        bobj <-
+            case builtin of
+            Aeson.Object x -> return x
+            _ -> Left "builtin not an object"
+        name <-
+            case bobj ^. Lens.at "name" of
+            Nothing -> Left "builtin with no name"
+            Just x -> return x
+        scheme <-
+            case bobj ^. Lens.at "scheme" of
+            Nothing -> Left "builin with no scheme"
+            Just x -> return x
+        obj
+            & Lens.at "builtin" ?~ name
+            & Lens.at "typ" ?~ scheme
+            & pure
+
 migrateEntity ::
     Map NominalId FrozenNominal -> Aeson.Value -> Either Text Aeson.Value
 migrateEntity nominalMap (Aeson.Object obj) =
-    case obj ^. Lens.at "schemaVersion" of
-    Just _ -> "found unexpected version" & Left
-    Nothing ->
+    do
+        case obj ^. Lens.at "schemaVersion" of
+            Nothing -> return ()
+            Just _ -> "found unexpected version" & Left & Left
         case obj ^. Lens.at "frozenDefTypes" of
-        Nothing -> Right obj
-        Just frozenDefTypes ->
-            obj
-            & Lens.at "frozenDefTypes" .~ Nothing
-            & addFrozenDeps nominalMap frozenDefTypes
+            Nothing -> return ()
+            Just frozenDefTypes ->
+                obj
+                & Lens.at "frozenDefTypes" .~ Nothing
+                & addFrozenDeps nominalMap frozenDefTypes
+                & Left
+        case obj ^. Lens.at "builtin" of
+            Nothing -> return ()
+            Just builtin -> convertBuiltin builtin obj & Left
+        return obj
+    & either id return
     <&> Aeson.Object
 migrateEntity _ _ = Left "Expecting object"
 

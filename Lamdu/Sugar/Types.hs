@@ -34,7 +34,7 @@ import           Lamdu.Prelude
 type T = Transaction
 
 data AcceptNewType m = AcceptNewType
-    { antOldExportedType :: Definition.ExportedType
+    { antOldExportedType :: Scheme
     , antNewInferredType :: Scheme
     , antAccept :: T m ()
     }

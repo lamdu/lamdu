@@ -3,7 +3,6 @@ module Lamdu.Sugar.Convert.DefExpr
     ( convert
     ) where
 
-import qualified Control.Lens as Lens
 import qualified Data.Map as Map
 import qualified Data.Set as Set
 import qualified Data.Store.Property as Property
@@ -29,16 +28,9 @@ import           Lamdu.Sugar.Types
 
 import           Lamdu.Prelude
 
-loadGlobalType :: Monad m => V.Var -> Transaction m (Maybe Scheme)
+loadGlobalType :: Monad m => V.Var -> Transaction m Scheme
 loadGlobalType globId =
-    Transaction.readIRef (ExprIRef.defI globId)
-    <&>
-    \case
-    Definition.BodyExpr defExpr ->
-        case defExpr ^. Definition.exprType of
-        Definition.ExportedType t -> Just t
-        Definition.NoExportedType -> Nothing
-    Definition.BodyBuiltin b -> Just (Definition.bType b)
+    Transaction.readIRef (ExprIRef.defI globId) <&> (^. Definition.defType)
 
 acceptNewType ::
     Monad m =>
@@ -46,57 +38,57 @@ acceptNewType ::
     Transaction m ()
 acceptNewType defExpr defI inferredType =
     do
-        usedDefs <- mapM loadGlobType usedGlobals <&> concat <&> Map.fromList
-        Definition.BodyExpr
-            Definition.Expr
-            { Definition._expr =
-                defExpr ^. Definition.expr . Val.payload . Input.stored . Property.pVal
-            , Definition._exprType = Definition.ExportedType inferredType
-            , Definition._exprFrozenDeps =
-                Infer.Deps
-                { Infer._depsGlobalTypes = usedDefs
-                , Infer._depsNominals = mempty -- TODO
+        usedDefs <- mapM loadGlobType usedGlobals <&> Map.fromList
+        Transaction.writeIRef defI
+            Definition.Definition
+            { Definition._defBody =
+                Definition.BodyExpr
+                Definition.Expr
+                { Definition._expr =
+                    defExpr ^. Definition.expr . Val.payload . Input.stored . Property.pVal
+                , Definition._exprFrozenDeps =
+                    Infer.Deps
+                    { Infer._depsGlobalTypes = usedDefs
+                    , Infer._depsNominals = mempty -- TODO
+                    }
                 }
+            , Definition._defType = inferredType
+            , Definition._defPayload = ()
             }
-            & Transaction.writeIRef defI
     where
         usedGlobals = defExpr ^.. Definition.expr . ExprLens.valGlobals (Set.singleton (ExprIRef.globalId defI))
-        loadGlobType globId =
-            loadGlobalType globId
-            <&> Lens._Just %~ (,) globId <&> (^.. Lens._Just)
+        loadGlobType globId = loadGlobalType globId <&> (,) globId
 
 makeExprDefTypeInfo ::
     Monad m =>
-    Definition.Expr (Val (Input.Payload m a)) -> DefI m ->
+    Scheme -> Definition.Expr (Val (Input.Payload m a)) -> DefI m ->
     ConvertM m (DefinitionTypeInfo m)
-makeExprDefTypeInfo defExpr defI =
+makeExprDefTypeInfo defType defExpr defI =
     do
         sugarContext <- ConvertM.readContext
         let inferContext = sugarContext ^. ConvertM.scInferContext
         let inferredType =
                 defExpr ^. Definition.expr . Val.payload . Input.inferredType
                 & Infer.makeScheme inferContext
-        case defExpr ^. Definition.exprType of
-            Definition.ExportedType defType
-                | defType `Scheme.alphaEq` inferredType ->
-                    DefinitionExportedTypeInfo defType
-            defType ->
+        if Scheme.alphaEq defType inferredType
+            then DefinitionExportedTypeInfo defType & return
+            else
                 DefinitionNewType AcceptNewType
                 { antOldExportedType = defType
                 , antNewInferredType = inferredType
                 , antAccept = acceptNewType defExpr defI inferredType
                 }
-            & return
+                & return
 
 convert ::
     (Monoid a, Monad m) =>
-    Definition.Expr (Val (Input.Payload m a)) -> DefI m ->
+    Scheme -> Definition.Expr (Val (Input.Payload m a)) -> DefI m ->
     ConvertM m (DefinitionBody UUID m (ExpressionU m a))
-convert defExpr defI =
+convert defType defExpr defI =
     do
         content <-
             ConvertBinder.convertDefinitionBinder defI (defExpr ^. Definition.expr)
-        typeInfo <- makeExprDefTypeInfo defExpr defI
+        typeInfo <- makeExprDefTypeInfo defType defExpr defI
         return $ DefinitionBodyExpression DefinitionExpression
             { _deContent = content
             , _deTypeInfo = typeInfo

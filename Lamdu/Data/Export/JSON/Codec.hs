@@ -415,26 +415,13 @@ decodeValBody obj =
     , decodeLeaf obj <&> V.BLeaf
     ] >>= traverse (lift . decodeVal)
 
-encodeExportedType :: Encoder Definition.ExportedType
-encodeExportedType Definition.NoExportedType = Aeson.String "NoExportedType"
-encodeExportedType (Definition.ExportedType scheme) = encodeScheme scheme
-
-decodeExportedType :: Decoder Definition.ExportedType
-decodeExportedType (Aeson.String "NoExportedType") = pure Definition.NoExportedType
-decodeExportedType json = decodeScheme json <&> Definition.ExportedType
-
 encodeDefBody :: Definition.Body (Val UUID) -> Aeson.Object
-encodeDefBody (Definition.BodyBuiltin (Definition.Builtin name scheme)) =
+encodeDefBody (Definition.BodyBuiltin name) =
     HashMap.fromList
-    [ "builtin" .=
-      Aeson.object
-      [ "name" .= encodeFFIName name
-      , "scheme" .= encodeScheme scheme
-      ]
+    [ "builtin" .= encodeFFIName name
     ]
-encodeDefBody (Definition.BodyExpr (Definition.Expr val typ frozenDeps)) =
+encodeDefBody (Definition.BodyExpr (Definition.Expr val frozenDeps)) =
     [ "val" .= encodeVal val
-    , "typ" .= encodeExportedType typ
     ] ++
     encodeSquash null "frozenDeps" HashMap.fromList encodedDeps
     & HashMap.fromList
@@ -450,10 +437,9 @@ encodeDefBody (Definition.BodyExpr (Definition.Expr val typ frozenDeps)) =
 decodeDefBody :: ExhaustiveDecoder (Definition.Body (Val UUID))
 decodeDefBody obj =
     jsum'
-    [ obj .: "builtin" >>= lift . decodeBuiltin <&> Definition.BodyBuiltin
+    [ obj .: "builtin" >>= lift . decodeFFIName <&> Definition.BodyBuiltin
     , Definition.Expr
       <$> (obj .: "val" >>= lift . decodeVal)
-      <*> (obj .: "typ" >>= lift . decodeExportedType)
       <*> decodeSquashed "frozenDeps" (withObject "deps" decodeDeps) obj
       <&> Definition.BodyExpr
     ]
@@ -463,12 +449,6 @@ decodeDefBody obj =
             <$> decodeSquashed "defTypes" (decodeIdentMap V.Var decodeScheme) o
             <*> decodeSquashed "nominals"
                 (decodeIdentMap T.NominalId (withObject "nominal" decodeNominal)) o
-        decodeBuiltin =
-            withObject "builtin" $
-            \builtin ->
-            Definition.Builtin
-            <$> (builtin .: "name" >>= lift . decodeFFIName)
-            <*> (builtin .: "scheme" >>= lift . decodeScheme)
 
 encodeRepl :: Encoder (Val UUID)
 encodeRepl val = Aeson.object [ "repl" .= encodeVal val ]
@@ -517,8 +497,9 @@ decodeNamed idAttrName decoder obj =
 
 encodeDef ::
     Encoder (Definition (Val UUID) (Anchors.PresentationMode, Maybe Text, V.Var))
-encodeDef (Definition body (presentationMode, mName, V.Var globalId)) =
+encodeDef (Definition body scheme (presentationMode, mName, V.Var globalId)) =
     encodeNamed "def" encodeDefBody ((mName, globalId), body)
+    & insertField "typ" (encodeScheme scheme)
     & insertField "defPresentationMode" (encodePresentationMode presentationMode)
     & Aeson.Object
 
@@ -530,8 +511,10 @@ decodeDef =
     withObject "def" $ \obj ->
     do
         ((mName, globalId), body) <- decodeNamed "def" decodeDefBody obj
-        presentationMode <- obj .: "defPresentationMode" >>= lift . decodePresentationMode
-        Definition body (presentationMode, mName, V.Var globalId) & return
+        presentationMode <-
+            obj .: "defPresentationMode" >>= lift . decodePresentationMode
+        scheme <- obj .: "typ" >>= lift . decodeScheme
+        Definition body scheme (presentationMode, mName, V.Var globalId) & return
 
 encodeTagOrder :: TagOrder -> Aeson.Object
 encodeTagOrder tagOrder = HashMap.fromList ["tagOrder" .= tagOrder]

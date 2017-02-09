@@ -128,10 +128,8 @@ evalActions evaluator =
         loadGlobal globalId =
             ExprIRef.defI globalId
             & loadDef evaluator
-            <&> asDef
-        asDef x =
-            x ^. Def.defBody
-            <&> Lens.mapped %~ Property.value
+            <&> Def.defBody . Lens.mapped . Lens.mapped %~ Property.value
+            <&> Lens.mapped .~ ()
 
 replIRef :: IRef ViewM (ValI ViewM)
 replIRef = DbLayout.repl DbLayout.codeIRefs

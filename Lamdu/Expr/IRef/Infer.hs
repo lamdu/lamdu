@@ -36,7 +36,7 @@ loader =
     { InferLoad.loadTypeOf =
         \globalId ->
         ExprIRef.defI globalId & Transaction.readIRef
-        <&> Definition.typeOfDefBody
+        <&> (^. Definition.defType)
     , InferLoad.loadNominal = Load.nominal
     }
 

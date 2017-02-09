@@ -37,6 +37,7 @@ import           Lamdu.Calc.Identifier (Identifier(..))
 import           Lamdu.Calc.Type (Tag(..))
 import qualified Lamdu.Calc.Val as V
 import           Lamdu.Calc.Val.Annotated (Val)
+import           Lamdu.Data.Definition (Definition)
 import qualified Lamdu.Data.Definition as Def
 import qualified Lamdu.DataFile as DataFile
 import qualified Lamdu.Eval.JS.Compiler as Compiler
@@ -51,7 +52,7 @@ import qualified System.Process as Proc
 import           Lamdu.Prelude
 
 data Actions srcId = Actions
-    { _aLoadGlobal :: V.Var -> IO (Def.Body (Val srcId))
+    { _aLoadGlobal :: V.Var -> IO (Definition (Val srcId) ())
     , -- TODO: This is currently not in use but remains here because
       -- it *should* be used for readable JS output
       _aReadAssocName :: UUID -> IO Text
@@ -267,14 +268,14 @@ compilerActions toUUID depsMVar actions output =
         return . decodeUtf8 . Hex.encode . UUIDUtils.toSBS16
     , Compiler.readGlobal =
         readGlobal $
-        \defBody ->
+        \def ->
         ( Dependencies
-          { subExprDeps = defBody ^.. Lens.folded . Lens.folded & Set.fromList
+          { subExprDeps = def ^.. Def.defBody . Lens.folded . Lens.folded & Set.fromList
           , globalDeps = mempty
           }
-        , defBody <&> Lens.mapped %~ Compiler.ValId . toUUID
+        , def & Def.defBody . Lens.mapped . Lens.mapped %~ Compiler.ValId . toUUID
         )
-    , Compiler.readGlobalType = readGlobal (Def.typeOfDefBody <&> (,) mempty)
+    , Compiler.readGlobalType = readGlobal ((^. Def.defType) <&> (,) mempty)
     , Compiler.output = output
     , Compiler.loggingMode = Compiler.loggingEnabled
     }
@@ -284,10 +285,10 @@ compilerActions toUUID depsMVar actions output =
             do
                 -- This happens inside the modifyMVar so
                 -- loads are under "lock" and not racy
-                defBody <- globalId & actions ^. aLoadGlobal
-                let (bodyDeps, result) = f defBody
+                def <- globalId & actions ^. aLoadGlobal
+                let (deps, result) = f def
                 return
-                    ( oldDeps <> bodyDeps <>
+                    ( oldDeps <> deps <>
                         Dependencies
                         { subExprDeps = mempty
                         , globalDeps = Set.singleton globalId

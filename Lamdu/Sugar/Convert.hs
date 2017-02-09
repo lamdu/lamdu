@@ -16,7 +16,7 @@ import qualified Data.Store.Transaction as Transaction
 import           Data.UUID.Types (UUID)
 import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Calc.Type.Nominal as N
-import           Lamdu.Calc.Type.Scheme (schemeType)
+import           Lamdu.Calc.Type.Scheme (Scheme, schemeType)
 import           Lamdu.Calc.Val.Annotated (Val(..))
 import qualified Lamdu.Calc.Val.Annotated as Val
 import qualified Lamdu.Data.Anchors as Anchors
@@ -49,18 +49,22 @@ import           Lamdu.Prelude
 type T = Transaction
 
 convertDefIBuiltin ::
-    Monad m => Definition.Builtin -> DefI m ->
+    Monad m => Scheme -> Definition.FFIName -> DefI m ->
     DefinitionBody UUID m (ExpressionU m [EntityId])
-convertDefIBuiltin (Definition.Builtin name scheme) defI =
+convertDefIBuiltin scheme name defI =
     DefinitionBodyBuiltin DefinitionBuiltin
     { _biName = name
     , _biSetName = setName
     , _biType = scheme
     }
     where
-        setName =
-            Transaction.writeIRef defI .
-            Definition.BodyBuiltin . (`Definition.Builtin` scheme)
+        setName newName =
+            Transaction.writeIRef defI
+            Definition.Definition
+            { Definition._defBody = Definition.BodyBuiltin newName
+            , Definition._defType = scheme
+            , Definition._defPayload = ()
+            }
 
 assertRunInfer :: Monad m => IRefInfer.M m a -> T m (a, Infer.Context)
 assertRunInfer action =
@@ -77,10 +81,10 @@ readValAndAddProperties valI =
 reinferCheckDefinition :: Monad m => DefI m -> T m Bool
 reinferCheckDefinition defI =
     do
-        defBody <- Transaction.readIRef defI
-        case defBody of
+        def <- Transaction.readIRef defI
+        case def ^. Definition.defBody of
             Definition.BodyBuiltin {} -> return True
-            Definition.BodyExpr (Definition.Expr valI _ _usedDefsTodo) ->
+            Definition.BodyExpr (Definition.Expr valI _usedDefsTodo) ->
                 do
                     val <- readValAndAddProperties valI
                     IRefInfer.loadInferRecursive defI val
@@ -171,9 +175,9 @@ makeNominalsMap val =
 convertInferDefExpr ::
     Monad m =>
     CurAndPrev (EvalResults (ValI m)) -> Anchors.CodeProps m ->
-    Definition.Expr (Val (ValIProperty m)) -> DefI m ->
+    Scheme -> Definition.Expr (Val (ValIProperty m)) -> DefI m ->
     T m (DefinitionBody UUID m (ExpressionU m [EntityId]))
-convertInferDefExpr evalRes cp defExpr defI =
+convertInferDefExpr evalRes cp defType defExpr defI =
     do
         (valInferred, newInferContext) <-
             IRefInfer.loadInferRecursive defI val
@@ -193,21 +197,23 @@ convertInferDefExpr evalRes cp defExpr defI =
                 , scConvertSubexpression = ConvertExpr.convert
                 }
         ConvertDefExpr.convert
-            (defExpr & Definition.expr .~ valInferred) defI
+            defType (defExpr & Definition.expr .~ valInferred) defI
             & ConvertM.run context
     where
         val = defExpr ^. Definition.expr
-        setDefExpr = Transaction.writeIRef defI . Definition.BodyExpr
+        setDefExpr x =
+            Definition.Definition (Definition.BodyExpr x) defType ()
+            & Transaction.writeIRef defI
 
 convertDefBody ::
     Monad m =>
     CurAndPrev (EvalResults (ValI m)) -> Anchors.CodeProps m ->
     Definition.Definition (Val (ValIProperty m)) (DefI m) ->
     T m (DefinitionBody UUID m (ExpressionU m [EntityId]))
-convertDefBody evalRes cp (Definition.Definition body defI) =
+convertDefBody evalRes cp (Definition.Definition body defType defI) =
     case body of
-    Definition.BodyExpr defExpr -> convertInferDefExpr evalRes cp defExpr defI
-    Definition.BodyBuiltin builtin -> convertDefIBuiltin builtin defI & return
+    Definition.BodyExpr defExpr -> convertInferDefExpr evalRes cp defType defExpr defI
+    Definition.BodyBuiltin builtin -> convertDefIBuiltin defType builtin defI & return
 
 convertExpr ::
     Monad m => CurAndPrev (EvalResults (ValI m)) -> Anchors.CodeProps m ->

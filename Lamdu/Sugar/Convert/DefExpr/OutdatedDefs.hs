@@ -129,15 +129,15 @@ scan defExpr setDefExpr =
     where
         scanDef globalVar usedType =
             ExprIRef.defI globalVar & Transaction.readIRef
-            <&> Def.typeOfDefBody
+            <&> (^. Def.defType)
             <&> processDef globalVar usedType
-        processDef globalVar usedType defType
-            | alphaEq usedType defType = Map.empty
+        processDef globalVar usedType newUsedDefType
+            | alphaEq usedType newUsedDefType = Map.empty
             | otherwise =
                 DefinitionOutdatedType
                 { _defTypeWhenUsed = usedType
-                , _defTypeCurrent = defType
+                , _defTypeCurrent = newUsedDefType
                 , _defTypeUseCurrent =
-                    updateDefType usedType defType globalVar defExpr setDefExpr
+                    updateDefType usedType newUsedDefType globalVar defExpr setDefExpr
                 }
                 & Map.singleton globalVar

@@ -22,10 +22,12 @@ import qualified Data.Store.Transaction as Transaction
 import qualified Data.Text as Text
 import qualified Graphics.UI.Bottle.WidgetId as WidgetId
 import qualified Lamdu.Calc.Type as T
+import qualified Lamdu.Calc.Type.Scheme as Scheme
 import qualified Lamdu.Calc.Val as V
 import           Lamdu.CharClassification (operatorChars)
 import           Lamdu.Data.Anchors (PresentationMode(..))
 import qualified Lamdu.Data.Anchors as Anchors
+import           Lamdu.Data.Definition (Definition(..))
 import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Expr.GenIds as GenIds
 import           Lamdu.Expr.IRef (DefI, ValIProperty, ValI)
@@ -171,7 +173,7 @@ newDefinition ::
     Definition.Body (ValI m) -> T m (DefI m)
 newDefinition name presentationMode defBody =
     do
-        newDef <- Transaction.newIRef defBody
+        newDef <- Transaction.newIRef (Definition defBody Scheme.any ())
         setP (Anchors.assocNameRef newDef) name
         setP (Anchors.assocPresentationMode newDef) presentationMode
         return newDef
@@ -181,7 +183,7 @@ newPublicDefinition ::
 newPublicDefinition codeProps bodyI name =
     do
         defI <-
-            Definition.Expr bodyI Definition.NoExportedType mempty
+            Definition.Expr bodyI mempty
             & Definition.BodyExpr
             & newDefinition name (presentationModeOfName name)
         modP (Anchors.globals codeProps) (Set.insert defI)
@@ -193,8 +195,9 @@ newPublicDefinitionToIRef ::
     Monad m => Anchors.CodeProps m -> ValI m -> DefI m -> T m ()
 newPublicDefinitionToIRef codeProps bodyI defI =
     do
-        Definition.Expr bodyI Definition.NoExportedType mempty
-            & Definition.BodyExpr
+        Definition
+            (Definition.BodyExpr (Definition.Expr bodyI mempty))
+            Scheme.any ()
             & Transaction.writeIRef defI
         getP (Anchors.assocNameRef defI)
             <&> presentationModeOfName

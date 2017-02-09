@@ -50,7 +50,7 @@ data Mode = FastSilent | SlowLogging LoggingInfo
 
 data Actions m = Actions
     { readAssocName :: UUID -> m Text
-    , readGlobal :: V.Var -> m (Definition.Body (Val ValId))
+    , readGlobal :: V.Var -> m (Definition.Definition (Val ValId) ())
     , readGlobalType :: V.Var -> m Scheme
     , output :: String -> m ()
     , loggingMode :: Mode
@@ -293,20 +293,14 @@ withLocalVar v act =
 
 compileGlobal :: Monad m => V.Var -> M m (JSS.Expression ())
 compileGlobal globalId =
-    performAction (`readGlobal` globalId) >>=
-    \case
-    Definition.BodyBuiltin (Definition.Builtin ffiName scheme) ->
-        do
-            globalTypes . Lens.at globalId ?= scheme & M
-            ffiCompile ffiName & return
-    Definition.BodyExpr (Definition.Expr val typ frozenDeps) ->
-        do
-            case typ of
-                Definition.NoExportedType -> error "unexported definition used"
-                Definition.ExportedType scheme ->
-                    globalTypes . Lens.at globalId ?= scheme & M
-            compileVal val & local (envExpectedTypes .~ frozenDeps ^. Infer.depsGlobalTypes)
-        <&> codeGenExpression
+    do
+        def <- performAction (`readGlobal` globalId)
+        globalTypes . Lens.at globalId ?= def ^. Definition.defType & M
+        case def ^. Definition.defBody of
+            Definition.BodyBuiltin ffiName -> ffiCompile ffiName & return
+            Definition.BodyExpr (Definition.Expr val frozenDeps) ->
+                compileVal val & local (envExpectedTypes .~ frozenDeps ^. Infer.depsGlobalTypes)
+                <&> codeGenExpression
     & resetRW
 
 compileGlobalVar :: Monad m => V.Var -> M m CodeGen

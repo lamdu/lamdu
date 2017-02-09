@@ -59,12 +59,12 @@ type Export = WriterT [Codec.Entity] (StateT Visited (T ViewM))
 type EntityOrdering = (Int, Identifier)
 
 entityOrdering :: Codec.Entity -> EntityOrdering
-entityOrdering (Codec.EntitySchemaVersion _)                        = (0, "")
-entityOrdering (Codec.EntityTag _ _ (T.Tag ident))                  = (1, ident)
-entityOrdering (Codec.EntityNominal _ (T.NominalId nomId) _)        = (2, nomId)
-entityOrdering (Codec.EntityLamVar _ _ _ (V.Var ident))             = (3, ident)
-entityOrdering (Codec.EntityDef (Definition _ (_, _, V.Var ident))) = (4, ident)
-entityOrdering (Codec.EntityRepl _)                                 = (5, "")
+entityOrdering (Codec.EntitySchemaVersion _)                          = (0, "")
+entityOrdering (Codec.EntityTag _ _ (T.Tag ident))                    = (1, ident)
+entityOrdering (Codec.EntityNominal _ (T.NominalId nomId) _)          = (2, nomId)
+entityOrdering (Codec.EntityLamVar _ _ _ (V.Var ident))               = (3, ident)
+entityOrdering (Codec.EntityDef (Definition _ _ (_, _, V.Var ident))) = (4, ident)
+entityOrdering (Codec.EntityRepl _)                                   = (5, "")
 
 entityVersion :: Codec.Entity
 entityVersion = Codec.EntitySchemaVersion 1
@@ -214,12 +214,12 @@ insertTo item setIRef =
         iref = setIRef DbLayout.codeIRefs
 
 importDef :: Definition (Val UUID) (Anchors.PresentationMode, Maybe Text, V.Var) -> T ViewM ()
-importDef (Definition defBody (presentationMode, mName, globalId)) =
+importDef (Definition defBody defScheme (presentationMode, mName, globalId)) =
     do
         Transaction.setP (Anchors.assocPresentationMode globalId) presentationMode
         traverse_ (setName globalId) mName
-        Lens.traverse writeValAtUUID defBody
-            >>= Transaction.writeIRef defI
+        bodyValI <- Lens.traverse writeValAtUUID defBody
+        Definition bodyValI defScheme () & Transaction.writeIRef defI
         defI `insertTo` DbLayout.globals
     where
         defI = ExprIRef.defI globalId

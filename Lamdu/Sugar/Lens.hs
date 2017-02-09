@@ -18,7 +18,6 @@ import           Control.Lens (Lens')
 import qualified Control.Lens as Lens
 import           Data.Store.Transaction (Transaction)
 import           Lamdu.Calc.Type.Scheme (Scheme)
-import qualified Lamdu.Data.Definition as Def
 import           Lamdu.Sugar.Types
 
 import           Lamdu.Prelude
@@ -93,7 +92,7 @@ defTypeInfoSchemes f (DefinitionExportedTypeInfo s) =
 defTypeInfoSchemes f (DefinitionNewType (AcceptNewType ot nt a)) =
     DefinitionNewType <$>
     ( AcceptNewType
-      <$> (ot & Def._ExportedType %%~ f)
+      <$> f ot
       <*> f nt
       <*> pure a
     )

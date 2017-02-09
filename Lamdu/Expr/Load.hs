@@ -42,13 +42,14 @@ defExpr writeDefExpr d =
 def :: Monad m => DefI m -> T m (Definition (Val (ValIProperty m)) (DefI m))
 def defI =
     do
-        defBody <- Transaction.readIRef defI
-        (`Definition` defI) <$>
-            case defBody of
-            Definition.BodyExpr e ->
-                Definition.BodyExpr <$>
-                defExpr (Transaction.writeIRef defI . Definition.BodyExpr) e
-            Definition.BodyBuiltin bi -> return $ Definition.BodyBuiltin bi
+        d <- Transaction.readIRef defI
+        let writeExpr e =
+                d
+                & Definition.defBody .~ Definition.BodyExpr e
+                & Transaction.writeIRef defI
+        d
+            & Definition.defPayload .~ defI
+            & Definition.defBody . Definition._BodyExpr %%~ defExpr writeExpr
 
 nominal :: Monad m => T.NominalId -> T m Nominal
 nominal tid = Transaction.readIRef iref

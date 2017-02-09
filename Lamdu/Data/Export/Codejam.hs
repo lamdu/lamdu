@@ -84,13 +84,13 @@ compile val =
             , Compiler.readGlobal =
                 \globalId ->
                 ExprIRef.defI globalId & Transaction.readIRef
-                >>= traverse ExprIRef.readVal
+                >>= Def.defBody . traverse %%~ ExprIRef.readVal
+                <&> Def.defBody . Lens.mapped . Lens.mapped %~ valId
                 & lift
-                <&> Lens.mapped . Lens.mapped %~ valId
             , Compiler.readGlobalType =
                 \globalId ->
                 ExprIRef.defI globalId & Transaction.readIRef & lift
-                <&> Def.typeOfDefBody
+                <&> (^. Def.defType)
             }
 
 formatResult :: EV.Val a -> SBS.ByteString

@@ -24,7 +24,6 @@ import qualified Graphics.UI.Bottle.Widgets.Box as Box
 import qualified Graphics.UI.GLFW as GLFW
 import           Lamdu.Calc.Type.Scheme (Scheme(..), schemeType)
 import qualified Lamdu.Config as Config
-import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.GUI.ExpressionEdit.BinderEdit as BinderEdit
 import qualified Lamdu.GUI.ExpressionEdit.BuiltinEdit as BuiltinEdit
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
@@ -185,17 +184,11 @@ makeExprDefinition def bodyExpr =
                   <&> fmap Widget.fromView
                 , topLevelSchemeTypeView scheme entityId ["exportedType"]
                 ]
-            Sugar.DefinitionNewType (Sugar.AcceptNewType oldMExported newInferred accept) ->
-                case oldMExported of
-                Definition.NoExportedType ->
-                    [ topLevelSchemeTypeView newInferred entityId ["inferredType"]
-                    , acceptableTypeIndicator accept (Config.typeIndicatorFirstTimeColor config) myId
-                    ]
-                Definition.ExportedType oldExported ->
-                    [ topLevelSchemeTypeView newInferred entityId ["inferredType"]
-                    , acceptableTypeIndicator accept (Config.typeIndicatorErrorColor config) myId
-                    , topLevelSchemeTypeView oldExported entityId ["exportedType"]
-                    ]
+            Sugar.DefinitionNewType (Sugar.AcceptNewType oldExported newInferred accept) ->
+                [ topLevelSchemeTypeView newInferred entityId ["inferredType"]
+                , acceptableTypeIndicator accept (Config.typeIndicatorErrorColor config) myId
+                , topLevelSchemeTypeView oldExported entityId ["exportedType"]
+                ]
             & sequence <&> sequence
         return $ \width ->
             let bodyWidget = ExpressionGui.render width bodyGui ^. AlignedWidget.widget

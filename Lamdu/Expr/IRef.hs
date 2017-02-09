@@ -24,7 +24,7 @@ import           Data.Store.Property (Property(..))
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
 import qualified Data.UUID.Utils as UUIDUtils
-import qualified Lamdu.Data.Definition as Definition
+import           Lamdu.Data.Definition (Definition)
 import           Lamdu.Calc.Identifier (Identifier(..))
 import qualified Lamdu.Calc.Type as T
 import           Lamdu.Calc.Type.Nominal (Nominal)
@@ -36,7 +36,7 @@ import           Lamdu.Prelude
 
 type T = Transaction
 
-type DefI m = IRef m (Definition.Body (ValI m))
+type DefI m = IRef m (Definition (ValI m) ())
 
 -- NOTE: Nobody else should generate Lamdu-visible Global Id's
 globalId :: DefI m -> V.Var
