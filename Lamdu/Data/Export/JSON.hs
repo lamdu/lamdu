@@ -16,6 +16,7 @@ import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.Encode.Pretty as AesonPretty
 import           Data.Binary (Binary)
 import qualified Data.ByteString.Lazy as LBS
+import qualified Data.List as List
 import qualified Data.Set as Set
 import           Data.Store.IRef (IRef)
 import qualified Data.Store.IRef as IRef
@@ -24,6 +25,7 @@ import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
 import qualified Data.Text as Text
 import           Data.UUID.Types (UUID)
+import           Lamdu.Calc.Identifier (Identifier)
 import qualified Lamdu.Calc.Type as T
 import           Lamdu.Calc.Type.Nominal (Nominal)
 import qualified Lamdu.Calc.Val as V
@@ -53,11 +55,20 @@ Lens.makeLenses ''Visited
 
 type Export = WriterT [Codec.Entity] (StateT Visited (T ViewM))
 
+type EntityOrdering = (Int, Identifier)
+
+entityOrdering :: Codec.Entity -> EntityOrdering
+entityOrdering (Codec.EntityTag _ _ (T.Tag ident))                  = (0, ident)
+entityOrdering (Codec.EntityNominal _ (T.NominalId nomId) _)        = (1, nomId)
+entityOrdering (Codec.EntityLamVar _ _ _ (V.Var ident))             = (2, ident)
+entityOrdering (Codec.EntityDef (Definition _ (_, _, V.Var ident))) = (3, ident)
+entityOrdering (Codec.EntityRepl _)                                 = (4, "")
+
 runExport :: Export a -> T ViewM (a, Aeson.Value)
 runExport act =
     act
     & runWriterT
-    <&> _2 %~ Aeson.toJSON
+    <&> _2 %~ Aeson.toJSON . List.sortOn entityOrdering
     & (`State.evalStateT` Visited mempty mempty mempty)
 
 trans :: T ViewM a -> Export a
