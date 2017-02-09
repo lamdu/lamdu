@@ -36,6 +36,7 @@ import qualified Lamdu.Data.DbLayout as DbLayout
 import           Lamdu.Data.Definition (Definition(..))
 import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Data.Export.JSON.Codec as Codec
+import qualified Lamdu.Data.Export.JSON.Migration as Migration
 import           Lamdu.Expr.IRef (ValI)
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Lens as ExprLens
@@ -58,17 +59,21 @@ type Export = WriterT [Codec.Entity] (StateT Visited (T ViewM))
 type EntityOrdering = (Int, Identifier)
 
 entityOrdering :: Codec.Entity -> EntityOrdering
-entityOrdering (Codec.EntityTag _ _ (T.Tag ident))                  = (0, ident)
-entityOrdering (Codec.EntityNominal _ (T.NominalId nomId) _)        = (1, nomId)
-entityOrdering (Codec.EntityLamVar _ _ _ (V.Var ident))             = (2, ident)
-entityOrdering (Codec.EntityDef (Definition _ (_, _, V.Var ident))) = (3, ident)
-entityOrdering (Codec.EntityRepl _)                                 = (4, "")
+entityOrdering (Codec.EntitySchemaVersion _)                        = (0, "")
+entityOrdering (Codec.EntityTag _ _ (T.Tag ident))                  = (1, ident)
+entityOrdering (Codec.EntityNominal _ (T.NominalId nomId) _)        = (2, nomId)
+entityOrdering (Codec.EntityLamVar _ _ _ (V.Var ident))             = (3, ident)
+entityOrdering (Codec.EntityDef (Definition _ (_, _, V.Var ident))) = (4, ident)
+entityOrdering (Codec.EntityRepl _)                                 = (5, "")
+
+entityVersion :: Codec.Entity
+entityVersion = Codec.EntitySchemaVersion 1
 
 runExport :: Export a -> T ViewM (a, Aeson.Value)
 runExport act =
     act
     & runWriterT
-    <&> _2 %~ Aeson.toJSON . List.sortOn entityOrdering
+    <&> _2 %~ Aeson.toJSON . List.sortOn entityOrdering . (entityVersion :)
     & (`State.evalStateT` Visited mempty mempty mempty)
 
 trans :: T ViewM a -> Export a
@@ -252,6 +257,15 @@ importOne (Codec.EntityTag tagOrder mName tag) = importTag tagOrder mName tag
 importOne (Codec.EntityNominal mName nomId nom) = importNominal mName nomId nom
 importOne (Codec.EntityLamVar paramList mName lamUUID var) =
     importLamVar paramList mName lamUUID var
+importOne (Codec.EntitySchemaVersion _) =
+    fail "Only one schemaVersion allowed in beginning of document"
+
+importEntities :: [Codec.Entity] -> T ViewM ()
+importEntities (Codec.EntitySchemaVersion ver : entities) =
+    if ver == 1
+    then mapM_ importOne entities
+    else "Unsupported schema version: " ++ show ver & fail
+importEntities _ = "Missing schema version"  & fail
 
 fileImportAll :: FilePath -> IO (T ViewM ())
 fileImportAll importPath =
@@ -259,7 +273,8 @@ fileImportAll importPath =
         putStrLn $ "importing from: " ++ show importPath
         LBS.readFile importPath <&> Aeson.eitherDecode
             >>= either fail return
-            <&> \json ->
-                case Aeson.fromJSON json of
+            >>= Migration.migrateAsNeeded
+            <&> Aeson.fromJSON
+            <&> \case
                 Aeson.Error str -> fail str
-                Aeson.Success entities -> mapM_ importOne (entities :: [Codec.Entity])
+                Aeson.Success entities -> importEntities entities

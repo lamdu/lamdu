@@ -21,6 +21,7 @@ import qualified Lamdu.Data.Ops.Subexprs as SubExprs
 import           Lamdu.Expr.IRef (ValI, ValIProperty)
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Lens as ExprLens
+import qualified Lamdu.Infer as Infer
 import           Lamdu.Sugar.Types (DefinitionOutdatedType(..))
 
 import           Lamdu.Prelude
@@ -115,7 +116,7 @@ updateDefType prevType newType usedDefVar defExpr setDefExpr =
         fixDefExpr prevType newType usedDefVar (defExpr ^. Def.expr)
         defExpr
             <&> (^. Val.payload . Property.pVal)
-            & Def.exprUsedDefinitions . Lens.at usedDefVar ?~ newType
+            & Def.exprFrozenDeps . Infer.depsGlobalTypes . Lens.at usedDefVar ?~ newType
             & setDefExpr
 
 scan ::
@@ -123,7 +124,7 @@ scan ::
     Def.Expr (Val (ValIProperty m)) -> (Def.Expr (ValI m) -> T m ()) ->
     T m (Map V.Var (DefinitionOutdatedType m))
 scan defExpr setDefExpr =
-    defExpr ^. Def.exprUsedDefinitions
+    defExpr ^. Def.exprFrozenDeps . Infer.depsGlobalTypes
     & Map.toList & mapM (uncurry scanDef) <&> mconcat
     where
         scanDef globalVar usedType =

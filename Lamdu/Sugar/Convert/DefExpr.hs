@@ -52,7 +52,11 @@ acceptNewType defExpr defI inferredType =
             { Definition._expr =
                 defExpr ^. Definition.expr . Val.payload . Input.stored . Property.pVal
             , Definition._exprType = Definition.ExportedType inferredType
-            , Definition._exprUsedDefinitions = usedDefs
+            , Definition._exprFrozenDeps =
+                Infer.Deps
+                { Infer._depsGlobalTypes = usedDefs
+                , Infer._depsNominals = mempty -- TODO
+                }
             }
             & Transaction.writeIRef defI
     where

@@ -36,6 +36,7 @@ import           Lamdu.Calc.Val.Annotated (Val(..))
 import qualified Lamdu.Data.Anchors as Anchors
 import           Lamdu.Data.Definition (Definition(..))
 import qualified Lamdu.Data.Definition as Definition
+import qualified Lamdu.Infer as Infer
 
 import           Lamdu.Prelude hiding ((.=))
 
@@ -47,13 +48,15 @@ type Decoder a = Encoded -> AesonTypes.Parser a
 type TagOrder = Int
 
 data Entity
-    = EntityRepl (Val UUID)
+    = EntitySchemaVersion Int
+    | EntityRepl (Val UUID)
     | EntityDef (Definition (Val UUID) (Anchors.PresentationMode, Maybe Text, V.Var))
     | EntityTag TagOrder (Maybe Text) T.Tag
     | EntityNominal (Maybe Text) T.NominalId Nominal
     | EntityLamVar (Maybe Anchors.ParamList) (Maybe Text) UUID V.Var
 
 instance AesonTypes.ToJSON Entity where
+    toJSON (EntitySchemaVersion ver) = encodeSchemaVersion ver
     toJSON (EntityRepl val) = encodeRepl val
     toJSON (EntityDef def) = encodeDef def
     toJSON (EntityTag tagOrder mName tag) = encodeNamedTag (tagOrder, mName, tag)
@@ -69,6 +72,7 @@ instance AesonTypes.FromJSON Entity where
         , decodeNamedTag json <&> uncurry3 EntityTag
         , decodeNamedNominal json <&> \((mName, nomId), nom) -> EntityNominal mName nomId nom
         , decodeNamedLamVar json <&> uncurry4 EntityLamVar
+        , decodeSchemaVersion json <&> EntitySchemaVersion
         ]
 
 uncurry3 :: (a -> b -> c -> d) -> (a, b, c) -> d
@@ -428,13 +432,20 @@ encodeDefBody (Definition.BodyBuiltin (Definition.Builtin name scheme)) =
       , "scheme" .= encodeScheme scheme
       ]
     ]
-encodeDefBody (Definition.BodyExpr (Definition.Expr val typ frozenDefTypes)) =
+encodeDefBody (Definition.BodyExpr (Definition.Expr val typ frozenDeps)) =
     [ "val" .= encodeVal val
     , "typ" .= encodeExportedType typ
     ] ++
-    encodeSquash Map.null "frozenDefTypes" (encodeIdentMap V.vvName encodeScheme)
-    frozenDefTypes
+    encodeSquash null "frozenDeps" HashMap.fromList encodedDeps
     & HashMap.fromList
+    where
+        encodedDeps =
+            encodeSquash Map.null "defTypes"
+                (encodeIdentMap V.vvName encodeScheme)
+                (frozenDeps ^. Infer.depsGlobalTypes) ++
+            encodeSquash Map.null "nominals"
+                (encodeIdentMap T.nomId encodeNominal)
+                (frozenDeps ^. Infer.depsNominals)
 
 decodeDefBody :: ExhaustiveDecoder (Definition.Body (Val UUID))
 decodeDefBody obj =
@@ -443,10 +454,15 @@ decodeDefBody obj =
     , Definition.Expr
       <$> (obj .: "val" >>= lift . decodeVal)
       <*> (obj .: "typ" >>= lift . decodeExportedType)
-      <*> decodeSquashed "frozenDefTypes" (decodeIdentMap V.Var decodeScheme) obj
+      <*> decodeSquashed "frozenDeps" (withObject "deps" decodeDeps) obj
       <&> Definition.BodyExpr
     ]
     where
+        decodeDeps o =
+            Infer.Deps
+            <$> decodeSquashed "defTypes" (decodeIdentMap V.Var decodeScheme) o
+            <*> decodeSquashed "nominals"
+                (decodeIdentMap T.NominalId (withObject "nominal" decodeNominal)) o
         decodeBuiltin =
             withObject "builtin" $
             \builtin ->
@@ -581,3 +597,15 @@ decodeNamedNominal :: Decoder ((Maybe Text, T.NominalId), Nominal)
 decodeNamedNominal json =
     withObject "nom" (decodeNamed "nom" decodeNominal) json
     <&> _1 . _2 %~ T.NominalId
+
+encodeSchemaVersion :: Encoder Int
+encodeSchemaVersion ver =
+    HashMap.fromList
+    [ "schemaVersion" .= ver
+    ] & Aeson.Object
+
+decodeSchemaVersion :: Decoder Int
+decodeSchemaVersion =
+    withObject "schemaVersion" $ \obj ->
+    obj .: "schemaVersion"
+

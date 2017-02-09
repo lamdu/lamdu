@@ -3,7 +3,7 @@ module Lamdu.Data.Definition
     ( FFIName(..)
     , Builtin(..)
     , ExportedType(..), _NoExportedType, _ExportedType
-    , Expr(..), expr, exprType, exprUsedDefinitions
+    , Expr(..), expr, exprType, exprFrozenDeps
     , Body(..), _BodyExpr, _BodyBuiltin
     , Definition(..), defBody, defPayload
     , typeOfDefBody
@@ -15,7 +15,7 @@ import qualified Data.Text as Text
 import           GHC.Generics (Generic)
 import           Lamdu.Calc.Type.Scheme (Scheme)
 import qualified Lamdu.Calc.Type.Scheme as Scheme
-import           Lamdu.Calc.Val (Var)
+import           Lamdu.Infer (Dependencies)
 
 import           Lamdu.Prelude
 
@@ -39,7 +39,7 @@ data ExportedType = NoExportedType | ExportedType Scheme
 data Expr valExpr = Expr
     { _expr :: valExpr
     , _exprType :: ExportedType
-    , _exprUsedDefinitions :: Map Var Scheme
+    , _exprFrozenDeps :: Dependencies
     } deriving (Generic, Show, Functor, Foldable, Traversable)
 
 data Body valExpr

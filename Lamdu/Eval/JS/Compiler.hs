@@ -33,6 +33,7 @@ import qualified Lamdu.Compiler.Flatten as Flatten
 import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Expr.Lens as ExprLens
 import qualified Lamdu.Expr.UniqueId as UniqueId
+import qualified Lamdu.Infer as Infer
 import qualified Language.ECMAScript3.PrettyPrint as JSPP
 import qualified Language.ECMAScript3.Syntax as JSS
 import qualified Language.ECMAScript3.Syntax.CodeGen as JS
@@ -298,13 +299,13 @@ compileGlobal globalId =
         do
             globalTypes . Lens.at globalId ?= scheme & M
             ffiCompile ffiName & return
-    Definition.BodyExpr (Definition.Expr val typ usedDefs) ->
+    Definition.BodyExpr (Definition.Expr val typ frozenDeps) ->
         do
             case typ of
                 Definition.NoExportedType -> error "unexported definition used"
                 Definition.ExportedType scheme ->
                     globalTypes . Lens.at globalId ?= scheme & M
-            compileVal val & local (envExpectedTypes .~ usedDefs)
+            compileVal val & local (envExpectedTypes .~ frozenDeps ^. Infer.depsGlobalTypes)
         <&> codeGenExpression
     & resetRW
 
