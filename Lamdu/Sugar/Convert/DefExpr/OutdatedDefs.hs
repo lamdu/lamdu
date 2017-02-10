@@ -18,7 +18,7 @@ import qualified Lamdu.Calc.Val.Annotated as Val
 import qualified Lamdu.Data.Definition as Def
 import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Data.Ops.Subexprs as SubExprs
-import           Lamdu.Expr.IRef (DefI, ValIProperty)
+import           Lamdu.Expr.IRef (ValI, ValIProperty)
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Lens as ExprLens
 import           Lamdu.Sugar.Types (DefinitionOutdatedType(..))
@@ -108,20 +108,21 @@ fixDefExpr prevType newType usedDefVar defExpr
 updateDefType ::
     Monad m =>
     Scheme -> Scheme -> V.Var ->
-    Def.Expr (Val (ValIProperty m)) -> DefI m -> T m ()
-updateDefType prevType newType usedDefVar defExpr usingDefI =
+    Def.Expr (Val (ValIProperty m)) -> (Def.Expr (ValI m) -> T m ()) ->
+    T m ()
+updateDefType prevType newType usedDefVar defExpr setDefExpr =
     do
         fixDefExpr prevType newType usedDefVar (defExpr ^. Def.expr)
-        defExpr <&> (^. Val.payload) <&> Property.value
-            & Def.exprUsedDefinitions . Lens.at usedDefVar .~ Just newType
-            & Def.BodyExpr
-            & Transaction.writeIRef usingDefI
+        defExpr
+            <&> (^. Val.payload . Property.pVal)
+            & Def.exprUsedDefinitions . Lens.at usedDefVar ?~ newType
+            & setDefExpr
 
 scan ::
     Monad m =>
-    Def.Expr (Val (ValIProperty m)) -> DefI m ->
+    Def.Expr (Val (ValIProperty m)) -> (Def.Expr (ValI m) -> T m ()) ->
     T m (Map V.Var (DefinitionOutdatedType m))
-scan defExpr defI =
+scan defExpr setDefExpr =
     defExpr ^. Def.exprUsedDefinitions
     & Map.toList & mapM (uncurry scanDef) <&> mconcat
     where
@@ -136,6 +137,6 @@ scan defExpr defI =
                 { _defTypeWhenUsed = usedType
                 , _defTypeCurrent = defType
                 , _defTypeUseCurrent =
-                    updateDefType usedType defType globalVar defExpr defI
+                    updateDefType usedType defType globalVar defExpr setDefExpr
                 }
                 & Map.singleton globalVar

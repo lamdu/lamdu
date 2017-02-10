@@ -180,7 +180,7 @@ convertInferDefExpr evalRes cp defExpr defI =
             >>= loadInferPrepareInput evalRes
             & assertRunInfer
         nomsMap <- makeNominalsMap valInferred
-        outdatedDefinitions <- OutdatedDefs.scan defExpr defI
+        outdatedDefinitions <- OutdatedDefs.scan defExpr setDefExpr
         let context =
                 Context
                 { _scInferContext = newInferContext
@@ -197,6 +197,7 @@ convertInferDefExpr evalRes cp defExpr defI =
             & ConvertM.run context
     where
         val = defExpr ^. Definition.expr
+        setDefExpr = Transaction.writeIRef defI . Definition.BodyExpr
 
 convertDefBody ::
     Monad m =>
