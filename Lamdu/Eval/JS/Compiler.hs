@@ -291,6 +291,10 @@ withLocalVar v act =
         res <- local (envLocals . Lens.at v ?~ varName) act
         return (varName, res)
 
+compileDefExpr :: Monad m => Definition.Expr (Val ValId) -> M m CodeGen
+compileDefExpr (Definition.Expr val frozenDeps) =
+    compileVal val & local (envExpectedTypes .~ frozenDeps ^. Infer.depsGlobalTypes)
+
 compileGlobal :: Monad m => V.Var -> M m (JSS.Expression ())
 compileGlobal globalId =
     do
@@ -298,9 +302,7 @@ compileGlobal globalId =
         globalTypes . Lens.at globalId ?= def ^. Definition.defType & M
         case def ^. Definition.defBody of
             Definition.BodyBuiltin ffiName -> ffiCompile ffiName & return
-            Definition.BodyExpr (Definition.Expr val frozenDeps) ->
-                compileVal val & local (envExpectedTypes .~ frozenDeps ^. Infer.depsGlobalTypes)
-                <&> codeGenExpression
+            Definition.BodyExpr defExpr -> compileDefExpr defExpr <&> codeGenExpression
     & resetRW
 
 compileGlobalVar :: Monad m => V.Var -> M m CodeGen
