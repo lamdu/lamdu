@@ -49,7 +49,7 @@ type TagOrder = Int
 
 data Entity
     = EntitySchemaVersion Int
-    | EntityRepl (Val UUID)
+    | EntityRepl (Definition.Expr (Val UUID))
     | EntityDef (Definition (Val UUID) (Anchors.PresentationMode, Maybe Text, V.Var))
     | EntityTag TagOrder (Maybe Text) T.Tag
     | EntityNominal (Maybe Text) T.NominalId Nominal
@@ -453,11 +453,13 @@ decodeDefBody obj =
     , decodeDefExpr obj <&> Definition.BodyExpr
     ]
 
-encodeRepl :: Encoder (Val UUID)
-encodeRepl val = Aeson.object [ "repl" .= encodeVal val ]
+encodeRepl :: Encoder (Definition.Expr (Val UUID))
+encodeRepl defExpr = Aeson.object [ "repl" .= encodeDefExpr defExpr ]
 
-decodeRepl :: Decoder (Val UUID)
-decodeRepl = withObject "repl" $ \obj -> obj .: "repl" >>= lift . decodeVal
+decodeRepl :: Decoder (Definition.Expr (Val UUID))
+decodeRepl =
+    withObject "repl" $
+    \obj -> obj .: "repl" >>= lift . withObject "defExpr" decodeDefExpr
 
 insertField :: Aeson.ToJSON a => Text -> a -> Aeson.Object -> Aeson.Object
 insertField k v = HashMap.insert k (Aeson.toJSON v)

@@ -25,6 +25,7 @@ import qualified Data.Store.Transaction as Transaction
 import           GHC.Generics (Generic)
 import qualified Graphics.UI.Bottle.WidgetId as WidgetId
 import qualified Lamdu.Calc.Type as T
+import qualified Lamdu.Data.Definition as Definition
 import           Lamdu.Eval.Results (ScopeId)
 import           Lamdu.Expr.IRef (DefI, ValI)
 import qualified Lamdu.Expr.UniqueId as UniqueId
@@ -37,7 +38,7 @@ newtype Pane m = Pane
 instance Binary (Pane m)
 
 data Code f m = Code
-    { repl :: f (ValI m)
+    { repl :: f (Definition.Expr (ValI m))
     , panes :: f (Set (Pane m))
     , globals :: f (Set (DefI m))
     , preJumps :: f [WidgetId.Id]

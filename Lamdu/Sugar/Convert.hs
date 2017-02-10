@@ -216,15 +216,18 @@ convertDefBody evalRes cp (Definition.Definition body defType defI) =
     Definition.BodyBuiltin builtin -> convertDefIBuiltin defType builtin defI & return
 
 convertExpr ::
-    Monad m => CurAndPrev (EvalResults (ValI m)) -> Anchors.CodeProps m ->
-    Val (ValIProperty m) -> T m (ExpressionU m [EntityId])
-convertExpr evalRes cp val =
+    Monad m =>
+    CurAndPrev (EvalResults (ValI m)) -> Anchors.CodeProps m ->
+    Definition.Expr (Val (ValIProperty m)) -> (Definition.Expr (ValI m) -> T m ()) ->
+    T m (ExpressionU m [EntityId])
+convertExpr evalRes cp defExpr setDefExpr =
     do
         (valInferred, newInferContext) <-
             IRefInfer.loadInferScope Infer.emptyScope val
             >>= loadInferPrepareInput evalRes
             & assertRunInfer
         nomsMap <- makeNominalsMap valInferred
+        outdatedDefinitions <- OutdatedDefs.scan defExpr setDefExpr
         let context =
                 Context
                 { _scInferContext = newInferContext
@@ -234,21 +237,24 @@ convertExpr evalRes cp val =
                 , _scScopeInfo = emptyScopeInfo
                 , _scReinferCheckRoot =
                     reinferCheckExpression (val ^. Val.payload . Property.pVal)
-                , _scOutdatedDefinitions = Map.empty
+                , _scOutdatedDefinitions = outdatedDefinitions
                 , scConvertSubexpression = ConvertExpr.convert
                 }
         ConvertM.convertSubexpression valInferred & ConvertM.run context
+    where
+        val = defExpr ^. Definition.expr
 
 loadRepl ::
     Monad m =>
     CurAndPrev (EvalResults (ValI m)) -> Anchors.CodeProps m ->
     T m (Expression UUID m [EntityId])
 loadRepl evalRes cp =
-    Anchors.repl cp ^. Transaction.mkProperty
-    >>= Load.exprProperty
-    >>= convertExpr evalRes cp
-    >>= OrderTags.orderExpr
-    >>= PresentationModes.addToExpr
+    do
+        prop <- Anchors.repl cp ^. Transaction.mkProperty
+        loaded <- Load.defExprProperty prop
+        convertExpr evalRes cp loaded (Property.set prop)
+            >>= OrderTags.orderExpr
+            >>= PresentationModes.addToExpr
 
 -- | Returns the list of definition-sets (topographically-sorted by usages)
 -- This allows us to choose type inference order with maximal generality

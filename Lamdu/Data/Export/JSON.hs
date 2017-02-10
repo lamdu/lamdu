@@ -155,9 +155,10 @@ exportRepl =
     do
         repl <-
             DbLayout.repl DbLayout.codeIRefs & Transaction.readIRef
-            >>= ExprIRef.readVal & trans
-        exportVal repl
-        repl <&> valIToUUID & Codec.EntityRepl & tell
+            >>= traverse ExprIRef.readVal
+            & trans
+        traverse_ exportVal repl
+        repl <&> Lens.mapped %~ valIToUUID & Codec.EntityRepl & tell
 
 jsonExportRepl :: T ViewM Aeson.Value
 jsonExportRepl = runExport exportRepl <&> snd
@@ -224,9 +225,10 @@ importDef (Definition defBody defScheme (presentationMode, mName, globalId)) =
     where
         defI = ExprIRef.defI globalId
 
-importRepl :: Val UUID -> T ViewM ()
-importRepl val =
-    writeValAtUUID val >>= Transaction.writeIRef (DbLayout.repl DbLayout.codeIRefs)
+importRepl :: Definition.Expr (Val UUID) -> T ViewM ()
+importRepl defExpr =
+    traverse writeValAtUUID defExpr >>=
+    Transaction.writeIRef (DbLayout.repl DbLayout.codeIRefs)
 
 importTag :: Codec.TagOrder -> Maybe Text -> T.Tag -> T ViewM ()
 importTag tagOrder mName tag =

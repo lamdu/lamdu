@@ -11,6 +11,7 @@
 module Lamdu.Data.Export.JSON.Migration.ToVersion1 (migrate) where
 
 import qualified Control.Lens as Lens
+import           Control.Monad (mplus)
 import qualified Data.Aeson as Aeson
 import qualified Data.Map as Map
 import           Data.Set (Set)
@@ -26,6 +27,8 @@ version1 =
 
 type NominalId = Text
 type FrozenNominal = Aeson.Value
+type DefId = Text
+type FrozenDef = Aeson.Value
 
 children :: Aeson.Value -> [Aeson.Value]
 children (Aeson.Object x) = x ^.. Lens.folded
@@ -35,6 +38,19 @@ children Aeson.Bool {} = []
 children Aeson.Number {} = []
 children Aeson.String {} = []
 
+asIdentifierSet :: Maybe (Aeson.Value) -> Either Text (Set Text)
+asIdentifierSet Nothing = Right mempty
+asIdentifierSet (Just (Aeson.String x)) = Set.singleton x & Right
+asIdentifierSet (Just _) = Left "identifier must be a string"
+
+scanVars :: Aeson.Value -> Either Text (Set DefId)
+scanVars val =
+    (<>)
+    <$> (traverse scanVars (children val) <&> mconcat)
+    <*> case val of
+        Aeson.Object obj -> obj ^. Lens.at "var" & asIdentifierSet
+        _ -> pure mempty
+
 scanNomIds :: Aeson.Value -> Either Text (Set NominalId)
 scanNomIds val =
     (<>)
@@ -42,15 +58,12 @@ scanNomIds val =
     <*> case val of
         Aeson.Object obj ->
             (<>)
-            <$> asSet (obj ^. Lens.at "fromNomId")
-            <*> asSet (obj ^. Lens.at "toNomId")
+            <$> asIdentifierSet (obj ^. Lens.at "fromNomId")
+            <*> asIdentifierSet (obj ^. Lens.at "toNomId")
         _ -> pure mempty
     where
         recurse :: Either Text (Set NominalId)
         recurse = children val & traverse scanNomIds <&> mconcat
-        asSet Nothing = Right mempty
-        asSet (Just (Aeson.String nomId)) = Set.singleton nomId & Right
-        asSet (Just _) = Left "fromNomId/toNomId must be a string"
 
 setMapIntersection :: Ord k => Set k -> Map k a -> Map k a
 setMapIntersection s m = m `Map.intersection` Map.fromSet (const ()) s
@@ -78,8 +91,8 @@ addFrozenDeps nominalMap frozenDefTypes defObj =
             & Lens.at "frozenDeps" ?~ frozenDeps
             & pure
 
-convertBuiltin :: Aeson.Value -> Aeson.Object -> Either Text Aeson.Object
-convertBuiltin builtin obj =
+convertBuiltin :: Aeson.Object -> Aeson.Value -> Either Text Aeson.Object
+convertBuiltin obj builtin =
     do
         bobj <-
             case builtin of
@@ -98,27 +111,76 @@ convertBuiltin builtin obj =
             & Lens.at "typ" ?~ scheme
             & pure
 
-migrateEntity ::
-    Map NominalId FrozenNominal -> Aeson.Value -> Either Text Aeson.Value
-migrateEntity nominalMap (Aeson.Object obj) =
+replDefExpr ::
+    Map NominalId FrozenNominal -> Map DefId FrozenDef ->
+    Aeson.Value -> Either Text Aeson.Value
+replDefExpr nominalMap defMap val =
     do
-        case obj ^. Lens.at "schemaVersion" of
-            Nothing -> return ()
-            Just _ -> "found unexpected version" & Left & Left
-        case obj ^. Lens.at "frozenDefTypes" of
-            Nothing -> return ()
-            Just frozenDefTypes ->
+        usedVars <- scanVars val
+        let frozenDefs = setMapIntersection usedVars defMap & Aeson.toJSON
+        mempty
+            & Lens.at "val" ?~ val
+            & addFrozenDeps nominalMap frozenDefs
+            <&> Aeson.Object
+
+emptyScheme :: Aeson.Value
+emptyScheme =
+    mempty
+    & Lens.at "schemeBinders" ?~
+      ( mempty
+        & Lens.at "typeVars" ?~ Aeson.toJSON [var]
+        & Aeson.Object
+      )
+    & Lens.at "schemeType" ?~
+      ( mempty
+        & Lens.at "typeVar" ?~ var
+        & Aeson.Object
+      )
+    & Aeson.Object
+    where
+        var = Aeson.String "61"
+
+fixScheme :: Aeson.Value -> Either Text Aeson.Value
+fixScheme (Aeson.String s)
+    | s == "NoExportedType" = return emptyScheme
+fixScheme o@Aeson.Object{} = return o
+fixScheme _ = Left "Malformed scheme"
+
+match :: Maybe a -> (a -> b) -> Either b ()
+match Nothing _ = Right ()
+match (Just x) f = Left (f x)
+
+migrateEntity ::
+    Map NominalId FrozenNominal -> Map DefId FrozenDef ->
+    Aeson.Value -> Either Text Aeson.Value
+migrateEntity nominalMap defMap (Aeson.Object obj) =
+    do
+        match (obj ^. Lens.at "schemaVersion") $
+            \_ -> Left "found unexpected version"
+        match (obj ^. Lens.at "typ") $
+            \typ ->
+            do
+                fixedTyp <- fixScheme typ
+                let fixedObj =
+                        obj
+                            & Lens.at "frozenDefTypes" .~ Nothing
+                            & Lens.at "typ" ?~ fixedTyp
+                case obj ^. Lens.at "frozenDefTypes" of
+                    Nothing -> return fixedObj
+                    Just frozenDefTypes ->
+                        addFrozenDeps nominalMap frozenDefTypes fixedObj
+        match (obj ^. Lens.at "builtin") (convertBuiltin obj)
+        match (obj ^. Lens.at "repl") $
+            \replVal ->
+            do
+                defExpr <- replDefExpr nominalMap defMap replVal
                 obj
-                & Lens.at "frozenDefTypes" .~ Nothing
-                & addFrozenDeps nominalMap frozenDefTypes
-                & Left
-        case obj ^. Lens.at "builtin" of
-            Nothing -> return ()
-            Just builtin -> convertBuiltin builtin obj & Left
+                    & Lens.at "repl" ?~ defExpr
+                    & return
         return obj
     & either id return
     <&> Aeson.Object
-migrateEntity _ _ = Left "Expecting object"
+migrateEntity _ _ _ = Left "Expecting object"
 
 collectNominals :: Aeson.Value -> Either Text (Map NominalId FrozenNominal)
 collectNominals (Aeson.Object obj) =
@@ -138,11 +200,32 @@ collectNominals (Aeson.Object obj) =
     Nothing -> Right mempty
 collectNominals _ = Right mempty
 
+collectDefs :: Aeson.Value -> Either Text (Map DefId FrozenDef)
+collectDefs (Aeson.Object obj) =
+    case obj ^. Lens.at "def" of
+    Just (Aeson.String defId) ->
+        do
+            builtinType <-
+                case obj ^. Lens.at "builtin" of
+                Just (Aeson.Object b) -> b ^. Lens.at "scheme" & Right
+                Just _ -> Left "Malformed 'buitlin' node"
+                _ -> Right Nothing
+            case mplus (obj ^. Lens.at "typ") builtinType of
+                Just defType ->
+                    do
+                        fixed <- fixScheme defType
+                        mempty & Lens.at defId ?~ fixed & Right
+                Nothing -> Left "Malformed 'def' node"
+    Just _ -> Left "Malformed 'def' id"
+    Nothing -> Right mempty
+collectDefs _ = Right mempty
+
 migrate :: Aeson.Value -> Either Text Aeson.Value
 migrate (Aeson.Array vals) =
     do
         nominalMap <- traverse collectNominals vals <&> (^. traverse)
-        newVals <- traverse (migrateEntity nominalMap) vals
+        defMap <- traverse collectDefs vals <&> (^. traverse)
+        newVals <- traverse (migrateEntity nominalMap defMap) vals
         Lens._Cons # (version1, newVals)
             & Aeson.Array & pure
 migrate _ = Left "top-level should be array"

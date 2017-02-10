@@ -131,10 +131,10 @@ evalActions evaluator =
             <&> Def.defBody . Lens.mapped . Lens.mapped %~ Property.value
             <&> Lens.mapped .~ ()
 
-replIRef :: IRef ViewM (ValI ViewM)
+replIRef :: IRef ViewM (Def.Expr (ValI ViewM))
 replIRef = DbLayout.repl DbLayout.codeIRefs
 
-startBG :: Eval.Actions (ValI m) -> Val (ValI m) -> IO (Eval.Evaluator (ValI m))
+startBG :: Eval.Actions (ValI m) -> Def.Expr (Val (ValI m)) -> IO (Eval.Evaluator (ValI m))
 startBG =
     Eval.start
     (IRef.uuid . ExprIRef.unValI)
@@ -142,7 +142,8 @@ startBG =
 
 start :: Evaluator -> IO ()
 start evaluator =
-    Transaction.readIRef replIRef >>= ExprIRef.readVal
+    Transaction.readIRef replIRef
+    >>= traverse ExprIRef.readVal
     & runViewTransactionInIO (eDb evaluator)
     >>= startBG
         (evalActions evaluator) <&> Started

@@ -300,7 +300,7 @@ asyncStart ::
     Ord srcId =>
     (srcId -> UUID) -> (UUID -> srcId) ->
     MVar (Dependencies srcId) -> IORef (EvalResults srcId) ->
-    Val srcId -> Actions srcId ->
+    Def.Expr (Val srcId) -> Actions srcId ->
     IO ()
 asyncStart toUUID fromUUID depsMVar resultsRef val actions =
     do
@@ -314,7 +314,7 @@ asyncStart toUUID fromUUID depsMVar resultsRef val actions =
                       do
                           copyJSOutput line
                           hPutStrLn stdin line
-                val <&> Compiler.ValId . toUUID
+                val <&> Lens.mapped %~ Compiler.ValId . toUUID
                     & Compiler.compile
                         (compilerActions toUUID depsMVar actions output)
                 hClose stdin
@@ -346,16 +346,16 @@ whilePaused = withMVar . eDeps
 
 start ::
     Ord srcId => (srcId -> UUID) -> (UUID -> srcId) ->
-    Actions srcId -> Val srcId -> IO (Evaluator srcId)
-start toUUID fromUUID actions val =
+    Actions srcId -> Def.Expr (Val srcId) -> IO (Evaluator srcId)
+start toUUID fromUUID actions defExpr =
     do
         depsMVar <-
             newMVar Dependencies
             { globalDeps = Set.empty
-            , subExprDeps = val ^.. Lens.folded & Set.fromList
+            , subExprDeps = defExpr ^.. Lens.folded . Lens.folded & Set.fromList
             }
         resultsRef <- newIORef ER.empty
-        tid <- asyncStart toUUID fromUUID depsMVar resultsRef val actions & forkIO
+        tid <- asyncStart toUUID fromUUID depsMVar resultsRef defExpr actions & forkIO
         return Evaluator
             { stop = killThread tid
             , eDeps = depsMVar

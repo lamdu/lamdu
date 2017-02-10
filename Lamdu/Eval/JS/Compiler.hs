@@ -181,8 +181,8 @@ topLevelDecls =
 loggingEnabled :: Mode
 loggingEnabled = SlowLogging LoggingInfo { _liScopeDepth = 0 }
 
-compile :: Monad m => Actions m -> Val ValId -> m ()
-compile actions val = compileVal val & run actions
+compile :: Monad m => Actions m -> Definition.Expr (Val ValId) -> m ()
+compile actions defExpr = compileDefExpr defExpr & run actions
 
 run :: Monad m => Actions m -> M m CodeGen -> m ()
 run actions act =

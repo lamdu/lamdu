@@ -1,11 +1,12 @@
 {-# LANGUAGE NoImplicitPrelude, TypeFamilies, FlexibleContexts #-}
 module Lamdu.Expr.Load
-    ( def, expr, exprProperty, nominal
+    ( def, defExprProperty, expr, exprProperty, nominal
     ) where
 
 import           Lamdu.Prelude
 
 import           Data.Store.Property (Property(..))
+import qualified Data.Store.Property as Property
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
 import qualified Lamdu.Calc.Type as T
@@ -38,6 +39,12 @@ defExpr writeDefExpr d =
     where
         wrap :: val -> Definition.Expr val
         wrap v = d & Definition.expr .~ v
+
+defExprProperty ::
+    Monad m =>
+    Transaction.Property m (Definition.Expr (ValI m)) ->
+    T m (Definition.Expr (Val (ValIProperty m)))
+defExprProperty prop = defExpr (Property.set prop) (Property.value prop)
 
 def :: Monad m => DefI m -> T m (Definition (Val (ValIProperty m)) (DefI m))
 def defI =

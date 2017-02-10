@@ -62,14 +62,14 @@ removeReadmeMeta :: String -> String
 removeReadmeMeta =
     unlines . tail . dropWhile (/= "== ExportFromHere ==") . lines
 
-readRepl :: T ViewM (Val (ValI ViewM))
+readRepl :: T ViewM (Def.Expr (Val (ValI ViewM)))
 readRepl =
     DbLayout.repl DbLayout.codeIRefs & Transaction.readIRef
-    >>= ExprIRef.readVal
+    >>= traverse ExprIRef.readVal
 
-compile :: Val (ValI ViewM) -> T ViewM String
+compile :: Def.Expr (Val (ValI ViewM)) -> T ViewM String
 compile val =
-    val <&> valId
+    val <&> Lens.mapped %~ valId
     & Compiler.compile actions
     & execWriterT
     <&> unlines
@@ -114,7 +114,7 @@ exportFancy evalResults =
         let replResult =
                 evalResults
                 ^? EV.erExprValues
-                . Lens.ix (repl ^. Val.payload)
+                . Lens.ix (repl ^. Def.expr . Val.payload)
                 . Lens.ix EV.topLevelScopeId
                 <&> formatResult
                 & fromMaybe "<NO RESULT>"
