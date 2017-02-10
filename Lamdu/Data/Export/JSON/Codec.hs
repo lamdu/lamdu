@@ -415,12 +415,8 @@ decodeValBody obj =
     , decodeLeaf obj <&> V.BLeaf
     ] >>= traverse (lift . decodeVal)
 
-encodeDefBody :: Definition.Body (Val UUID) -> Aeson.Object
-encodeDefBody (Definition.BodyBuiltin name) =
-    HashMap.fromList
-    [ "builtin" .= encodeFFIName name
-    ]
-encodeDefBody (Definition.BodyExpr (Definition.Expr val frozenDeps)) =
+encodeDefExpr :: Definition.Expr (Val UUID) -> Aeson.Object
+encodeDefExpr (Definition.Expr val frozenDeps) =
     [ "val" .= encodeVal val
     ] ++
     encodeSquash null "frozenDeps" HashMap.fromList encodedDeps
@@ -434,21 +430,28 @@ encodeDefBody (Definition.BodyExpr (Definition.Expr val frozenDeps)) =
                 (encodeIdentMap T.nomId encodeNominal)
                 (frozenDeps ^. Infer.depsNominals)
 
-decodeDefBody :: ExhaustiveDecoder (Definition.Body (Val UUID))
-decodeDefBody obj =
-    jsum'
-    [ obj .: "builtin" >>= lift . decodeFFIName <&> Definition.BodyBuiltin
-    , Definition.Expr
-      <$> (obj .: "val" >>= lift . decodeVal)
-      <*> decodeSquashed "frozenDeps" (withObject "deps" decodeDeps) obj
-      <&> Definition.BodyExpr
-    ]
+encodeDefBody :: Definition.Body (Val UUID) -> Aeson.Object
+encodeDefBody (Definition.BodyBuiltin name) = HashMap.fromList ["builtin" .= encodeFFIName name]
+encodeDefBody (Definition.BodyExpr defExpr) = encodeDefExpr defExpr
+
+decodeDefExpr :: ExhaustiveDecoder (Definition.Expr (Val UUID))
+decodeDefExpr obj =
+    Definition.Expr
+    <$> (obj .: "val" >>= lift . decodeVal)
+    <*> decodeSquashed "frozenDeps" (withObject "deps" decodeDeps) obj
     where
         decodeDeps o =
             Infer.Deps
             <$> decodeSquashed "defTypes" (decodeIdentMap V.Var decodeScheme) o
             <*> decodeSquashed "nominals"
                 (decodeIdentMap T.NominalId (withObject "nominal" decodeNominal)) o
+
+decodeDefBody :: ExhaustiveDecoder (Definition.Body (Val UUID))
+decodeDefBody obj =
+    jsum'
+    [ obj .: "builtin" >>= lift . decodeFFIName <&> Definition.BodyBuiltin
+    , decodeDefExpr obj <&> Definition.BodyExpr
+    ]
 
 encodeRepl :: Encoder (Val UUID)
 encodeRepl val = Aeson.object [ "repl" .= encodeVal val ]
