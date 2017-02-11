@@ -17,6 +17,7 @@ import           Data.UUID.Types (UUID)
 import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Calc.Type.Nominal as N
 import           Lamdu.Calc.Type.Scheme (Scheme, schemeType)
+import qualified Lamdu.Calc.Val as V
 import           Lamdu.Calc.Val.Annotated (Val(..))
 import qualified Lamdu.Calc.Val.Annotated as Val
 import qualified Lamdu.Data.Anchors as Anchors
@@ -29,7 +30,10 @@ import qualified Lamdu.Expr.IRef.Infer as IRefInfer
 import qualified Lamdu.Expr.Lens as ExprLens
 import qualified Lamdu.Expr.Load as Load
 import qualified Lamdu.Expr.UniqueId as UniqueId
+import           Lamdu.Infer (Infer)
 import qualified Lamdu.Infer as Infer
+import           Lamdu.Infer.Unify (unify)
+import qualified Lamdu.Infer.Update as Update
 import qualified Lamdu.Sugar.Convert.DefExpr as ConvertDefExpr
 import qualified Lamdu.Sugar.Convert.DefExpr.OutdatedDefs as OutdatedDefs
 import qualified Lamdu.Sugar.Convert.Expression as ConvertExpr
@@ -78,25 +82,44 @@ readValAndAddProperties valI =
     <&> ExprIRef.addProperties (error "TODO: DefExpr root setIRef")
     <&> fmap fst
 
+inferDefExpr :: Infer.Scope -> Definition.Expr (Val a) -> Infer (Val (Infer.Payload, a))
+inferDefExpr scope defExpr =
+    Infer.infer (defExpr ^. Definition.exprFrozenDeps)
+    scope (defExpr ^. Definition.expr)
+
+inferRecursive ::
+    Definition.Expr (Val a) -> V.Var -> Infer (Val (Infer.Payload, a))
+inferRecursive defExpr defId =
+    do
+        defTv <- Infer.freshInferredVar Infer.emptyScope "r"
+        let scope = Infer.insertTypeOf defId defTv Infer.emptyScope
+        inferredVal <- inferDefExpr scope defExpr
+        let inferredType = inferredVal ^. Val.payload . _1 . Infer.plType
+        unify inferredType defTv
+        Update.inferredVal inferredVal & Update.liftInfer
+
 reinferCheckDefinition :: Monad m => DefI m -> T m Bool
 reinferCheckDefinition defI =
     do
-        def <- Transaction.readIRef defI
+        def <-
+            Transaction.readIRef defI
+            >>= Definition.defBody . traverse %%~ readValAndAddProperties
         case def ^. Definition.defBody of
             Definition.BodyBuiltin {} -> return True
-            Definition.BodyExpr (Definition.Expr valI _usedDefsTodo) ->
-                do
-                    val <- readValAndAddProperties valI
-                    IRefInfer.loadInferRecursive defI val
-                        >>= loadInferPrepareInput (pure Results.empty)
-                        & IRefInfer.run
+            Definition.BodyExpr defExpr ->
+                inferRecursive defExpr (ExprIRef.globalId defI)
+                & IRefInfer.liftInfer
+                >>= loadInferPrepareInput (pure Results.empty)
+                & IRefInfer.run
                 <&> Lens.has Lens._Right
 
-reinferCheckExpression :: Monad m => ValI m -> T m Bool
-reinferCheckExpression valI =
+reinferCheckExpression ::
+    Monad m => T m (Definition.Expr (Val (ValIProperty m))) -> T m Bool
+reinferCheckExpression load =
     do
-        val <- readValAndAddProperties valI
-        IRefInfer.loadInferScope Infer.emptyScope val
+        defExpr <- load
+        inferDefExpr Infer.emptyScope defExpr
+            & IRefInfer.liftInfer
             >>= loadInferPrepareInput (pure Results.empty)
             & IRefInfer.run
             <&> Lens.has Lens._Right
@@ -180,7 +203,8 @@ convertInferDefExpr ::
 convertInferDefExpr evalRes cp defType defExpr defI =
     do
         (valInferred, newInferContext) <-
-            IRefInfer.loadInferRecursive defI val
+            inferRecursive defExpr (ExprIRef.globalId defI)
+            & IRefInfer.liftInfer
             >>= loadInferPrepareInput evalRes
             & assertRunInfer
         nomsMap <- makeNominalsMap valInferred
@@ -194,16 +218,21 @@ convertInferDefExpr evalRes cp defType defExpr defI =
                 , _scScopeInfo = emptyScopeInfo
                 , _scReinferCheckRoot = reinferCheckDefinition defI
                 , _scOutdatedDefinitions = outdatedDefinitions
+                , _scFrozenDeps =
+                    Property (defExpr ^. Definition.exprFrozenDeps) setFrozenDeps
                 , scConvertSubexpression = ConvertExpr.convert
                 }
         ConvertDefExpr.convert
             defType (defExpr & Definition.expr .~ valInferred) defI
             & ConvertM.run context
     where
-        val = defExpr ^. Definition.expr
         setDefExpr x =
             Definition.Definition (Definition.BodyExpr x) defType ()
             & Transaction.writeIRef defI
+        setFrozenDeps deps =
+            Transaction.readIRef defI
+            <&> Definition.defBody . Definition._BodyExpr . Definition.exprFrozenDeps .~ deps
+            >>= Transaction.writeIRef defI
 
 convertDefBody ::
     Monad m =>
@@ -218,16 +247,19 @@ convertDefBody evalRes cp (Definition.Definition body defType defI) =
 convertExpr ::
     Monad m =>
     CurAndPrev (EvalResults (ValI m)) -> Anchors.CodeProps m ->
-    Definition.Expr (Val (ValIProperty m)) -> (Definition.Expr (ValI m) -> T m ()) ->
+
+    Transaction.MkProperty m (Definition.Expr (ValI m)) ->
     T m (ExpressionU m [EntityId])
-convertExpr evalRes cp defExpr setDefExpr =
+convertExpr evalRes cp prop =
     do
+        defExpr <- Load.defExprProperty prop
         (valInferred, newInferContext) <-
-            IRefInfer.loadInferScope Infer.emptyScope val
+            inferDefExpr Infer.emptyScope defExpr
+            & IRefInfer.liftInfer
             >>= loadInferPrepareInput evalRes
             & assertRunInfer
         nomsMap <- makeNominalsMap valInferred
-        outdatedDefinitions <- OutdatedDefs.scan defExpr setDefExpr
+        outdatedDefinitions <- OutdatedDefs.scan defExpr (Transaction.setP prop)
         let context =
                 Context
                 { _scInferContext = newInferContext
@@ -235,26 +267,26 @@ convertExpr evalRes cp defExpr setDefExpr =
                 , _scGlobalsInScope = Set.empty
                 , _scCodeAnchors = cp
                 , _scScopeInfo = emptyScopeInfo
-                , _scReinferCheckRoot =
-                    reinferCheckExpression (val ^. Val.payload . Property.pVal)
+                , _scReinferCheckRoot = Load.defExprProperty prop & reinferCheckExpression
                 , _scOutdatedDefinitions = outdatedDefinitions
+                , _scFrozenDeps =
+                    Property (defExpr ^. Definition.exprFrozenDeps) setFrozenDeps
                 , scConvertSubexpression = ConvertExpr.convert
                 }
         ConvertM.convertSubexpression valInferred & ConvertM.run context
     where
-        val = defExpr ^. Definition.expr
+        setFrozenDeps deps =
+            prop ^. Transaction.mkProperty
+            >>= (`Property.pureModify` (Definition.exprFrozenDeps .~ deps))
 
 loadRepl ::
     Monad m =>
     CurAndPrev (EvalResults (ValI m)) -> Anchors.CodeProps m ->
     T m (Expression UUID m [EntityId])
 loadRepl evalRes cp =
-    do
-        prop <- Anchors.repl cp ^. Transaction.mkProperty
-        loaded <- Load.defExprProperty prop
-        convertExpr evalRes cp loaded (Property.set prop)
-            >>= OrderTags.orderExpr
-            >>= PresentationModes.addToExpr
+    convertExpr evalRes cp (Anchors.repl cp)
+    >>= OrderTags.orderExpr
+    >>= PresentationModes.addToExpr
 
 -- | Returns the list of definition-sets (topographically-sorted by usages)
 -- This allows us to choose type inference order with maximal generality

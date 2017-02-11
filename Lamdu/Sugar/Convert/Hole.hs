@@ -32,6 +32,7 @@ import qualified Lamdu.Calc.Val as V
 import           Lamdu.Calc.Val.Annotated (Val(..))
 import qualified Lamdu.Calc.Val.Annotated as Val
 import qualified Lamdu.Data.Anchors as Anchors
+import qualified Lamdu.Data.Definition as Def
 import qualified Lamdu.Expr.GenIds as GenIds
 import qualified Lamdu.Expr.IRef as ExprIRef
 import           Lamdu.Expr.IRef (ValIProperty, ValI, DefI)
@@ -93,10 +94,15 @@ mkHoleOptionFromInjected sugarContext exprPl stored val =
             (result, inferContext) <-
                 mkHoleResultValInjected exprPl val
                 & (`runStateT` (sugarContext ^. ConvertM.scInferContext))
+            let depsProp = sugarContext ^. ConvertM.scFrozenDeps
+            updateDeps <-
+                loadNewDeps (depsProp ^. Property.pVal)
+                (exprPl ^. Input.inferred . Infer.plScope) val
+                <&> Property.set depsProp
             let newSugarContext = sugarContext & ConvertM.scInferContext .~ inferContext
             return
                 ( resultScore (fst <$> result)
-                , mkHoleResult newSugarContext (exprPl ^. Input.entityId) stored result
+                , mkHoleResult newSugarContext updateDeps (exprPl ^. Input.entityId) stored result
                 )
         <&> return & ListClass.joinL
     }
@@ -225,12 +231,32 @@ mkWritableHoleActions mInjectedArg exprPl stored = do
 consistentExprIds :: EntityId -> Val (EntityId -> a) -> Val a
 consistentExprIds = EntityId.randomizeExprAndParams . genFromHashable
 
-infer ::
-    Monad m => Infer.Payload -> Val a -> IRefInfer.M m (Val (Infer.Payload, a))
-infer holeInferred =
-    IRefInfer.loadInferScope scopeAtHole
+loadDeps :: Monad m => [V.Var] -> [T.NominalId] -> T m Infer.Dependencies
+loadDeps vars noms =
+    Infer.Deps
+    <$> (mapM loadVar vars <&> Map.fromList)
+    <*> (mapM loadNom noms <&> Map.fromList)
     where
-        scopeAtHole = holeInferred ^. Infer.plScope
+        loadVar globalId =
+            ExprIRef.defI globalId & Transaction.readIRef
+            <&> (^. Def.defType) <&> (,) globalId
+        loadNom nomId = Load.nominal nomId <&> (,) nomId
+
+loadNewDeps ::
+    Monad m => Infer.Dependencies -> Infer.Scope -> Val a -> T m Infer.Dependencies
+loadNewDeps currentDeps scope val =
+    loadDeps newDepVars newNoms
+    <&> mappend currentDeps
+    where
+        scopeVars = Infer.scopeToTypeMap scope & Map.keysSet
+        valVars = val ^.. ExprLens.valGlobals scopeVars & Set.fromList
+        valNoms = val ^.. ExprLens.valNominals & Set.fromList
+        newDepVars =
+            currentDeps ^. Infer.depsGlobalTypes & Map.keysSet
+            & Set.difference valVars & Set.toList
+        newNoms =
+            currentDeps ^. Infer.depsNominals & Map.keysSet
+            & Set.difference valNoms & Set.toList
 
 -- Unstored and without eval results (e.g: hole result)
 prepareUnstoredPayloads ::
@@ -600,35 +626,55 @@ mkHoleResultValInjected exprPl val =
 
 mkHoleResultVals ::
     Monad m =>
+    Transaction.Property m Infer.Dependencies ->
     Maybe (Val (Input.Payload m a)) ->
     Input.Payload m dummy ->
     BaseExpr ->
-    StateT Infer.Context (ListT (T m)) (HoleResultVal m IsInjected)
-mkHoleResultVals mInjectedArg exprPl base =
+    StateT Infer.Context (ListT (T m)) (T m (), HoleResultVal m IsInjected)
+mkHoleResultVals frozenDeps mInjectedArg exprPl base =
     case base of
     SeedExpr seed ->
-        infer inferred seed
-        & mapStateT eitherTtoListT
-        <&> Lens.traversed . _2 %~ (,) Nothing
-        >>= applyForms (Nothing, ())
+        do
+            (seedDeps, inferResult) <-
+                do
+                    seedDeps <- loadTheNewDeps seed
+                    inferResult <-
+                        Infer.infer seedDeps scope seed & IRefInfer.liftInfer
+                        <&> Lens.traversed . _2 %~ (,) Nothing
+                    return (seedDeps, inferResult)
+                & mapStateT eitherTtoListT
+            form <- applyForms (Nothing, ()) inferResult
+            newDeps <- loadNewDeps seedDeps scope form & lift & lift
+            return (newDeps, form)
     SuggestedExpr sugg ->
-        sugg & Lens.traversed %~ flip (,) (Nothing, ()) & return
-    >>= maybe (return . markNotInjected) holeResultsInject mInjectedArg
-    >>= holeWrapIfNeeded (inferred ^. Infer.plType)
+        (,)
+        <$> mapStateT eitherTtoListT (loadTheNewDeps sugg)
+        ?? (sugg & Lens.traversed %~ flip (,) (Nothing, ()))
+    <&> _1 %~ Property.set frozenDeps
+    >>= _2 %%~ post
     where
+        loadTheNewDeps expr =
+            loadNewDeps (frozenDeps ^. Property.pVal) scope expr
+            & IRefInfer.liftTransaction
+        scope = inferred ^. Infer.plScope
         inferred = exprPl ^. Input.inferred
+        post x =
+            x
+            & maybe (return . markNotInjected) holeResultsInject mInjectedArg
+            >>= holeWrapIfNeeded (inferred ^. Infer.plType)
 
 mkHoleResult ::
     Monad m =>
-    ConvertM.Context m -> EntityId ->
+    ConvertM.Context m -> Transaction m () -> EntityId ->
     ValIProperty m -> HoleResultVal m IsInjected ->
     T m (HoleResult UUID m)
-mkHoleResult sugarContext entityId stored val =
+mkHoleResult sugarContext updateDeps entityId stored val =
     do
         ((fConverted, fConsistentExpr, fWrittenExpr), forkedChanges) <-
             Transaction.fork $
-            writeConvertTypeChecked entityId
-            sugarContext stored val
+            do
+                updateDeps
+                writeConvertTypeChecked entityId sugarContext stored val
         return
             HoleResult
             { _holeResultConverted = fConverted
@@ -657,13 +703,14 @@ mkHoleResults ::
     ListT (T m) (HoleResultScore, T m (HoleResult UUID m))
 mkHoleResults mInjectedArg sugarContext exprPl stored base =
     do
-        (val, inferContext) <-
-            mkHoleResultVals mInjectedArg exprPl base
+        ((updateDeps, val), inferContext) <-
+            mkHoleResultVals (sugarContext ^. ConvertM.scFrozenDeps)
+            mInjectedArg exprPl base
             & (`runStateT` (sugarContext ^. ConvertM.scInferContext))
         let newSugarContext = sugarContext & ConvertM.scInferContext .~ inferContext
         return
             ( resultScore (fst <$> val)
-            , mkHoleResult newSugarContext (exprPl ^. Input.entityId) stored val
+            , mkHoleResult newSugarContext updateDeps (exprPl ^. Input.entityId) stored val
             )
 
 randomizeNonStoredParamIds ::

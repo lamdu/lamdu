@@ -1,11 +1,10 @@
 {-# LANGUAGE NoImplicitPrelude, TypeFamilies, FlexibleContexts #-}
 module Lamdu.Expr.Load
-    ( def, defExprProperty, expr, exprProperty, nominal
+    ( def, defExprProperty, expr, nominal
     ) where
 
 import           Lamdu.Prelude
 
-import           Data.Store.Property (Property(..))
 import qualified Data.Store.Property as Property
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
@@ -26,37 +25,38 @@ expr writeRoot valI =
     <&> ExprIRef.addProperties writeRoot
     <&> fmap fst
 
-exprProperty :: Monad m => ValIProperty m -> T m (Val (ValIProperty m))
-exprProperty (Property val set) = expr set val
-
 defExpr ::
     Monad m =>
-    (Definition.Expr (ValI m) -> T m ()) ->
-    Definition.Expr (ValI m) -> T m (Definition.Expr (Val (ValIProperty m)))
-defExpr writeDefExpr d =
-    expr (writeDefExpr . wrap) (d ^. Definition.expr)
-    <&> wrap
-    where
-        wrap :: val -> Definition.Expr val
-        wrap v = d & Definition.expr .~ v
+    (ValI m -> T m ()) -> Definition.Expr (ValI m) ->
+    T m (Definition.Expr (Val (ValIProperty m)))
+defExpr setExpr loaded = loaded & Definition.expr %%~ expr setExpr
 
 defExprProperty ::
     Monad m =>
-    Transaction.Property m (Definition.Expr (ValI m)) ->
+    Transaction.MkProperty m (Definition.Expr (ValI m)) ->
     T m (Definition.Expr (Val (ValIProperty m)))
-defExprProperty prop = defExpr (Property.set prop) (Property.value prop)
+defExprProperty mkProp =
+    do
+        loaded <- mkProp ^. Transaction.mkProperty <&> Property.value
+        defExpr setExpr loaded
+    where
+        setExpr e =
+            do
+                prop <- mkProp ^. Transaction.mkProperty
+                prop ^. Property.pVal
+                    & Definition.expr .~ e
+                    & Property.set prop
 
 def :: Monad m => DefI m -> T m (Definition (Val (ValIProperty m)) (DefI m))
 def defI =
-    do
-        d <- Transaction.readIRef defI
-        let writeExpr e =
-                d
-                & Definition.defBody .~ Definition.BodyExpr e
-                & Transaction.writeIRef defI
-        d
-            & Definition.defPayload .~ defI
-            & Definition.defBody . Definition._BodyExpr %%~ defExpr writeExpr
+    Transaction.readIRef defI
+    <&> Definition.defPayload .~ defI
+    >>= Definition.defBody . Definition._BodyExpr %%~ defExpr setExpr
+    where
+        setExpr e =
+            Transaction.readIRef defI
+            <&> Definition.defBody . Definition._BodyExpr . Definition.expr .~ e
+            >>= Transaction.writeIRef defI
 
 nominal :: Monad m => T.NominalId -> T m Nominal
 nominal tid = Transaction.readIRef iref
