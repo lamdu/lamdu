@@ -89,12 +89,12 @@ deleteAlt stored restI restS expr exprS =
                 case restS ^. cTail of
                 ClosedCase{}
                     | Lens.has (rBody . _BodyHole) exprS ->
-                            ExprIRef.newVal $ Val () $ V.BLeaf V.LRecEmpty
+                        return restI
                     | otherwise ->
-                            -- When deleting closed one alt case
-                            -- we replace the case with the alt value
-                            -- (unless it is a hole)
-                            return (expr ^. Val.payload . plValI)
+                        -- When deleting closed one alt case
+                        -- we replace the case with the alt value
+                        -- (unless it is a hole)
+                        return (expr ^. Val.payload . plValI)
                 CaseExtending{} -> return restI
                 >>= protectedSetToVal stored
                 <&> EntityId.ofValI
