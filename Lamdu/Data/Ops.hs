@@ -126,15 +126,12 @@ data CaseResult m = CaseResult
     , crResult :: ValI m
     }
 
-case_ :: Monad m => ValIProperty m -> T m (CaseResult m)
-case_ valP =
+case_ :: Monad m => ValI m -> T m (CaseResult m)
+case_ tailI =
     do
         tag <- fst . GenIds.randomTag . RandomUtils.genFromHashable <$> Transaction.newKey
         newValueI <- newHole
-        resultI <-
-            ExprIRef.newValBody . V.BCase $
-            V.Case tag newValueI $ Property.value valP
-        Property.set valP resultI
+        resultI <- V.Case tag newValueI tailI & V.BCase & ExprIRef.newValBody
         return $ CaseResult tag newValueI resultI
 
 newPane :: Monad m => Anchors.CodeProps m -> DefI m -> T m ()

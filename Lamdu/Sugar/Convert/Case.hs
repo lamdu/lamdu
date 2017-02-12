@@ -42,27 +42,19 @@ makeAddAlt :: Monad m =>
     ConvertM m (Transaction m CaseAddAltResult)
 makeAddAlt stored =
     do
-        typeProtect <- ConvertM.typeProtectTransaction
+        protectedSetToVal <- ConvertM.typeProtectedSetToVal
         do
-            mResultI <- DataOps.case_ stored & typeProtect
-            case mResultI of
-                Just caseRes -> return caseRes
-                Nothing ->
-                    do
-                        caseRes <- DataOps.case_ stored
-                        DataOps.setToWrapper (DataOps.crResult caseRes) stored & void
-                        return caseRes
-                <&> result
+            DataOps.CaseResult tag newValI resultI <-
+                DataOps.case_ (stored ^. Property.pVal)
+            _ <- protectedSetToVal stored resultI
+            let resultEntity = EntityId.ofValI resultI
+            return
+                CaseAddAltResult
+                { _caarNewTag = TagG (EntityId.ofRecExtendTag resultEntity) tag ()
+                , _caarNewVal = EntityId.ofValI newValI
+                , _caarCase = resultEntity
+                }
             & return
-    where
-        result (DataOps.CaseResult tag newValI resultI) =
-            CaseAddAltResult
-            { _caarNewTag = TagG (EntityId.ofRecExtendTag resultEntity) tag ()
-            , _caarNewVal = EntityId.ofValI newValI
-            , _caarCase = resultEntity
-            }
-            where
-                resultEntity = EntityId.ofValI resultI
 
 convertAbsurd :: Monad m => Input.Payload m a -> ConvertM m (ExpressionU m a)
 convertAbsurd exprPl =
