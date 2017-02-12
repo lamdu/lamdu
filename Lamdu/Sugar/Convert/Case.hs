@@ -5,7 +5,6 @@ module Lamdu.Sugar.Convert.Case
     ) where
 
 import qualified Control.Lens as Lens
-import           Data.Maybe.Utils (unsafeUnjust)
 import qualified Data.Store.Property as Property
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
@@ -76,51 +75,21 @@ convertAbsurd exprPl =
 deleteAlt ::
     Monad m =>
     ExprIRef.ValIProperty m -> ExprIRef.ValI m ->
-    Case name0 m (Expression name2 m a1) -> Val (Input.Payload m a) ->
-    Expression name1 m0 a0 ->
     ConvertM m (Transaction m EntityId)
-deleteAlt stored restI restS expr exprS =
+deleteAlt stored restI =
     do
-        typeProtect <- ConvertM.typeProtectTransaction
         protectedSetToVal <- ConvertM.typeProtectedSetToVal
-        return $
-            if null (restS ^. cAlts)
-            then
-                case restS ^. cTail of
-                ClosedCase{}
-                    | Lens.has (rBody . _BodyHole) exprS ->
-                        return restI
-                    | otherwise ->
-                        -- When deleting closed one alt case
-                        -- we replace the case with the alt value
-                        -- (unless it is a hole)
-                        return (expr ^. Val.payload . plValI)
-                CaseExtending{} -> return restI
-                >>= protectedSetToVal stored
-                <&> EntityId.ofValI
-            else do
-                let delete = DataOps.replace stored restI
-                mResult <- typeProtect delete <&> fmap EntityId.ofValI
-                case mResult of
-                    Just result -> return result
-                    Nothing ->
-                        unsafeUnjust "should have a way to fix type error" $
-                        case restS ^. cTail of
-                        CaseExtending ext ->
-                            ext ^? rPayload . plActions . wrap . _WrapAction
-                            <&> fmap snd
-                        ClosedCase open -> delete >> open & Just
+        protectedSetToVal stored restI <&> EntityId.ofValI & return
 
 convertAlt ::
     (Monad m, Monoid a) =>
     ExprIRef.ValIProperty m -> ExprIRef.ValI m ->
-    Case name m (ExpressionU m a) ->
     EntityId -> T.Tag -> Val (Input.Payload m a) ->
     ConvertM m (CaseAlt UUID m (ExpressionU m a))
-convertAlt stored restI restS inst tag expr =
+convertAlt stored restI inst tag expr =
     do
         exprS <- ConvertM.convertSubexpression expr
-        delAlt <- deleteAlt stored restI restS expr exprS
+        delAlt <- deleteAlt stored restI
         return CaseAlt
             { _caTag = convertTag inst tag
             , _caHandler = exprS
@@ -158,7 +127,7 @@ convert (V.Case tag val rest) exprPl = do
                     )
     altS <-
         convertAlt
-        (exprPl ^. Input.stored) (rest ^. Val.payload . plValI) restCase
+        (exprPl ^. Input.stored) (rest ^. Val.payload . plValI)
         (EntityId.ofCaseTag (exprPl ^. Input.entityId)) tag val
     restCase
         & cAlts %~ (altS:)

@@ -13,7 +13,7 @@ module Lamdu.Sugar.Convert.Monad
     , ConvertM(..), run
     , readContext, liftTransaction, local
     , convertSubexpression
-    , typeProtectTransaction, typeProtectedSetToVal
+    , typeProtectedSetToVal
     ) where
 
 import qualified Control.Lens as Lens

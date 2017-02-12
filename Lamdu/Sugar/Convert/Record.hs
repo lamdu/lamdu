@@ -6,7 +6,6 @@ module Lamdu.Sugar.Convert.Record
 import           Lamdu.Prelude
 
 import qualified Control.Lens as Lens
-import           Data.Maybe.Utils (unsafeUnjust)
 import qualified Data.Store.Property as Property
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
@@ -35,53 +34,23 @@ convertTag inst tag = TagG inst tag $ UniqueId.toUUID tag
 
 deleteField ::
     Monad m =>
-    ExprIRef.ValIProperty m ->
-    ExprIRef.ValI m ->
-    Record name0 m (Expression name2 m a1) -> Val (Input.Payload m a) ->
-    Expression name1 m0 a0 ->
+    ExprIRef.ValIProperty m -> ExprIRef.ValI m ->
     ConvertM m (Transaction m EntityId)
-deleteField stored restI restS expr exprS =
+deleteField stored restI =
     do
-        typeProtect <- ConvertM.typeProtectTransaction
         protectedSetToVal <- ConvertM.typeProtectedSetToVal
-        return $
-            if null (restS ^. rItems)
-            then
-                case restS ^. rTail of
-                ClosedRecord{}
-                    | Lens.has (rBody . _BodyHole) exprS ->
-                        return restI
-                    | otherwise ->
-                        -- When deleting closed one field record
-                        -- we replace the record with the field value
-                        -- (unless it is a hole)
-                        expr ^. Val.payload . plValI & return
-                RecordExtending{} -> return restI
-                >>= protectedSetToVal stored
-                <&> EntityId.ofValI
-            else do
-                let delete = DataOps.replace stored restI
-                mResult <- typeProtect delete <&> fmap EntityId.ofValI
-                case mResult of
-                    Just result -> return result
-                    Nothing ->
-                        unsafeUnjust "should have a way to fix type error" $
-                        case restS ^. rTail of
-                        RecordExtending ext ->
-                            ext ^? rPayload . plActions . wrap . _WrapAction
-                            <&> fmap snd
-                        ClosedRecord open -> delete >> open & Just
+        protectedSetToVal stored restI <&> EntityId.ofValI & return
 
 convertField ::
     (Monad m, Monoid a) =>
     ExprIRef.ValIProperty m ->
-    ExprIRef.ValI m -> Record name m (ExpressionU m a) ->
+    ExprIRef.ValI m ->
     EntityId -> T.Tag -> Val (Input.Payload m a) ->
     ConvertM m (RecordField UUID m (ExpressionU m a))
-convertField stored restI restS inst tag expr =
+convertField stored restI inst tag expr =
     do
         exprS <- ConvertM.convertSubexpression expr
-        delField <- deleteField stored restI restS expr exprS
+        delField <- deleteField stored restI
         return RecordField
             { _rfTag = convertTag inst tag
             , _rfExpr = exprS
@@ -145,7 +114,7 @@ convertExtend (V.RecExtend tag val rest) exprPl = do
                     )
     fieldS <-
         convertField
-        (exprPl ^. Input.stored) (rest ^. Val.payload . plValI) restRecord
+        (exprPl ^. Input.stored) (rest ^. Val.payload . plValI)
         (EntityId.ofRecExtendTag (exprPl ^. Input.entityId)) tag val
     restRecord
         & rItems %~ (fieldS:)
