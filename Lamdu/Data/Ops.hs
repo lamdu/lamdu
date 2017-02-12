@@ -109,16 +109,13 @@ data RecExtendResult m = RecExtendResult
     , rerResult :: ValI m
     }
 
-recExtend :: Monad m => ValIProperty m -> T m (RecExtendResult m)
-recExtend valP =
+recExtend :: Monad m => ValI m -> T m (RecExtendResult m)
+recExtend valI =
     do
         tag <- fst . GenIds.randomTag . RandomUtils.genFromHashable <$> Transaction.newKey
         newValueI <- newHole
-        resultI <-
-            ExprIRef.newValBody . V.BRecExtend $
-            V.RecExtend tag newValueI $ Property.value valP
-        Property.set valP resultI
-        return $ RecExtendResult tag newValueI resultI
+        V.RecExtend tag newValueI valI & V.BRecExtend & ExprIRef.newValBody
+            <&> RecExtendResult tag newValueI
 
 data CaseResult m = CaseResult
     { crNewTag :: T.Tag
@@ -131,8 +128,8 @@ case_ tailI =
     do
         tag <- fst . GenIds.randomTag . RandomUtils.genFromHashable <$> Transaction.newKey
         newValueI <- newHole
-        resultI <- V.Case tag newValueI tailI & V.BCase & ExprIRef.newValBody
-        return $ CaseResult tag newValueI resultI
+        V.Case tag newValueI tailI & V.BCase & ExprIRef.newValBody
+            <&> CaseResult tag newValueI
 
 newPane :: Monad m => Anchors.CodeProps m -> DefI m -> T m ()
 newPane codeProps defI =

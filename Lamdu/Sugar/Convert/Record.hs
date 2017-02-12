@@ -50,7 +50,7 @@ deleteField stored restI restS expr exprS =
                 case restS ^. rTail of
                 ClosedRecord{}
                     | Lens.has (rBody . _BodyHole) exprS ->
-                        V.BLeaf V.LRecEmpty & Val () & ExprIRef.newVal
+                        return restI
                     | otherwise ->
                         -- When deleting closed one field record
                         -- we replace the record with the field value
@@ -93,27 +93,19 @@ makeAddField :: Monad m =>
     ConvertM m (Transaction m RecordAddFieldResult)
 makeAddField stored =
     do
-        typeProtect <- ConvertM.typeProtectTransaction
+        protectedSetToVal <- ConvertM.typeProtectedSetToVal
         do
-            mResultI <- DataOps.recExtend stored & typeProtect
-            case mResultI of
-                Just extendRes -> return extendRes
-                Nothing ->
-                    do
-                        extendRes <- DataOps.recExtend stored
-                        DataOps.setToWrapper (DataOps.rerResult extendRes) stored & void
-                        return extendRes
-                <&> result
+            DataOps.RecExtendResult tag newValI resultI <-
+                DataOps.recExtend (stored ^. Property.pVal)
+            _ <- protectedSetToVal stored resultI
+            let resultEntity = EntityId.ofValI resultI
+            return
+                RecordAddFieldResult
+                { _rafrNewTag = TagG (EntityId.ofRecExtendTag resultEntity) tag ()
+                , _rafrNewVal = EntityId.ofValI newValI
+                , _rafrRecExtend = resultEntity
+                }
             & return
-    where
-        result (DataOps.RecExtendResult tag newValI resultI) =
-            RecordAddFieldResult
-            { _rafrNewTag = TagG (EntityId.ofRecExtendTag resultEntity) tag ()
-            , _rafrNewVal = EntityId.ofValI newValI
-            , _rafrRecExtend = resultEntity
-            }
-            where
-                resultEntity = EntityId.ofValI resultI
 
 convertEmpty :: Monad m => Input.Payload m a -> ConvertM m (ExpressionU m a)
 convertEmpty exprPl = do
