@@ -7,7 +7,6 @@ module Lamdu.Data.Ops
     , case_, CaseResult(..)
     , newPublicDefinitionWithPane
     , newPublicDefinitionToIRef
-    , newDefinition
     , savePreJumpPosition, jumpBack
     , newPane
     , isInfix
@@ -22,13 +21,11 @@ import qualified Data.Store.Transaction as Transaction
 import qualified Data.Text as Text
 import qualified Graphics.UI.Bottle.WidgetId as WidgetId
 import qualified Lamdu.Calc.Type as T
-import qualified Lamdu.Calc.Type.Scheme as Scheme
 import qualified Lamdu.Calc.Val as V
 import           Lamdu.CharClassification (operatorChars)
 import           Lamdu.Data.Anchors (PresentationMode(..))
 import qualified Lamdu.Data.Anchors as Anchors
 import           Lamdu.Data.Definition (Definition(..))
-import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Expr.GenIds as GenIds
 import           Lamdu.Expr.IRef (DefI, ValIProperty, ValI)
 import qualified Lamdu.Expr.IRef as ExprIRef
@@ -163,36 +160,21 @@ presentationModeOfName x
     | otherwise = Verbose
 
 newDefinition ::
-    Monad m => Text -> PresentationMode ->
-    Definition.Body (ValI m) -> T m (DefI m)
-newDefinition name presentationMode defBody =
+    Monad m => Text -> PresentationMode -> Definition (ValI m) () -> T m (DefI m)
+newDefinition name presentationMode def =
     do
-        newDef <- Transaction.newIRef (Definition defBody Scheme.any ())
+        newDef <- Transaction.newIRef def
         setP (Anchors.assocNameRef newDef) name
         setP (Anchors.assocPresentationMode newDef) presentationMode
         return newDef
 
-newPublicDefinition ::
-    Monad m => Anchors.CodeProps m -> ValI m -> Text -> T m (DefI m)
-newPublicDefinition codeProps bodyI name =
-    do
-        defI <-
-            Definition.Expr bodyI mempty
-            & Definition.BodyExpr
-            & newDefinition name (presentationModeOfName name)
-        modP (Anchors.globals codeProps) (Set.insert defI)
-        return defI
-
 -- Used when writing a definition into an identifier which was a variable.
 -- Used in float.
 newPublicDefinitionToIRef ::
-    Monad m => Anchors.CodeProps m -> ValI m -> DefI m -> T m ()
-newPublicDefinitionToIRef codeProps bodyI defI =
+    Monad m => Anchors.CodeProps m -> Definition (ValI m) () -> DefI m -> T m ()
+newPublicDefinitionToIRef codeProps def defI =
     do
-        Definition
-            (Definition.BodyExpr (Definition.Expr bodyI mempty))
-            Scheme.any ()
-            & Transaction.writeIRef defI
+        Transaction.writeIRef defI def
         getP (Anchors.assocNameRef defI)
             <&> presentationModeOfName
             >>= setP (Anchors.assocPresentationMode defI)
@@ -200,10 +182,12 @@ newPublicDefinitionToIRef codeProps bodyI defI =
         newPane codeProps defI
 
 newPublicDefinitionWithPane ::
-    Monad m => Text -> Anchors.CodeProps m -> ValI m -> T m (DefI m)
-newPublicDefinitionWithPane name codeProps bodyI =
+    Monad m =>
+    Text -> Anchors.CodeProps m -> Definition (ValI m) () -> T m (DefI m)
+newPublicDefinitionWithPane name codeProps def =
     do
-        defI <- newPublicDefinition codeProps bodyI name
+        defI <- newDefinition name (presentationModeOfName name) def
+        modP (Anchors.globals codeProps) (Set.insert defI)
         newPane codeProps defI
         return defI
 

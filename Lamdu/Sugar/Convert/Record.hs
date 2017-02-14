@@ -79,11 +79,12 @@ makeAddField stored =
 convertEmpty :: Monad m => Input.Payload m a -> ConvertM m (ExpressionU m a)
 convertEmpty exprPl = do
     addField <- exprPl ^. Input.stored & makeAddField
+    postProcess <- ConvertM.postProcess
     BodyRecord Record
         { _rItems = []
         , _rTail =
-                exprPl ^. Input.stored
-                & DataOps.replaceWithHole
+                DataOps.replaceWithHole (exprPl ^. Input.stored)
+                <* postProcess
                 <&> EntityId.ofValI
                 & ClosedRecord
         , _rAddField = addField

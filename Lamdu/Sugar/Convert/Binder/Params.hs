@@ -515,6 +515,15 @@ isParamAlwaysUsedWithGetField (V.Lam param body) =
             V.BGetField (V.GetField r _) -> go True r
             x -> all (go False) (x ^.. Lens.traverse)
 
+postProcessActions ::
+    Monad m => T m () -> ConventionalParams m -> ConventionalParams m
+postProcessActions post x =
+    x
+    & cpAddFirstParam %~ (<* post)
+    & cpParams . SugarLens.binderNamedParamsActions . fpAddNext %~ (<* post)
+    & cpParams . SugarLens.binderNamedParamsActions . fpDelete %~ (<* post)
+    & cpParams . _NullParam . fpInfo . npDeleteLambda %~ (<* post)
+
 convertLamParams ::
     Monad m =>
     V.Lam (Val (Input.Payload m a)) -> Input.Payload m a ->
@@ -524,9 +533,7 @@ convertLamParams lambda lambdaPl =
         protectedSetToVal <- ConvertM.typeProtectedSetToVal
         let maybeWrap = protectedSetToVal lambdaProp (Property.value lambdaProp)
         convertNonEmptyParams BinderKindLambda lambda lambdaPl
-            <&> cpAddFirstParam %~ (<* maybeWrap)
-            <&> cpParams . SugarLens.binderNamedParamsActions . fpAddNext %~
-                (<* maybeWrap)
+            <&> postProcessActions (void maybeWrap)
     where
         lambdaProp = lambdaPl ^. Input.stored
 
@@ -634,17 +641,19 @@ convertParams ::
     , Val (Input.Payload m a)
     )
 convertParams binderKind expr =
-    case expr ^. Val.body of
-    V.BLam lambda ->
-        do
-            params <-
-                convertNonEmptyParams binderKind lambda (expr ^. Val.payload)
-                -- The lambda disappears here, so add its id to the first
-                -- param's hidden ids:
-                <&> cpParams . _VarParam . fpHiddenIds <>~ hiddenIds
-                <&> cpParams . _FieldParams . Lens.ix 0 . _2 . fpHiddenIds <>~ hiddenIds
-            return (params, lambda ^. V.lamResult)
-        where
-              hiddenIds = [expr ^. Val.payload . Input.entityId]
-    _ ->
-        return (convertEmptyParams binderKind expr, expr)
+    do
+        postProcess <- ConvertM.postProcess
+        case expr ^. Val.body of
+            V.BLam lambda ->
+                do
+                    params <-
+                        convertNonEmptyParams binderKind lambda (expr ^. Val.payload)
+                        -- The lambda disappears here, so add its id to the first
+                        -- param's hidden ids:
+                        <&> cpParams . _VarParam . fpHiddenIds <>~ hiddenIds
+                        <&> cpParams . _FieldParams . Lens.ix 0 . _2 . fpHiddenIds <>~ hiddenIds
+                    return (params, lambda ^. V.lamResult)
+                where
+                      hiddenIds = [expr ^. Val.payload . Input.entityId]
+            _ -> return (convertEmptyParams binderKind expr, expr)
+            <&> _1 %~ postProcessActions postProcess

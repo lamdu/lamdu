@@ -24,9 +24,12 @@ import qualified Graphics.UI.Bottle.Widgets as BWidgets
 import qualified Graphics.UI.Bottle.Widgets.Box as Box
 import           Graphics.UI.Bottle.WidgetsEnvT (WidgetEnvT)
 import qualified Graphics.UI.Bottle.WidgetsEnvT as WE
+import qualified Lamdu.Calc.Type.Scheme as Scheme
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Data.Anchors as Anchors
+import           Lamdu.Data.Definition (Definition(..))
+import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Data.Ops as DataOps
 import           Lamdu.Eval.Results (EvalResults)
 import           Lamdu.Expr.IRef (DefI, ValI)
@@ -206,8 +209,12 @@ makeNewDefinitionEventMap cp =
         curCursor <- WE.readCursor
         let newDefinition =
                 do
+                    holeI <- DataOps.newHole
                     newDefI <-
-                        DataOps.newHole >>= DataOps.newPublicDefinitionWithPane "" cp
+                        Definition
+                        (Definition.BodyExpr (Definition.Expr holeI mempty))
+                        Scheme.any ()
+                        & DataOps.newPublicDefinitionWithPane "" cp
                     DataOps.savePreJumpPosition cp curCursor
                     return newDefI
                 <&> WidgetIds.nameEditOf . WidgetIds.fromIRef

@@ -8,15 +8,18 @@ import qualified Control.Lens as Lens
 import qualified Data.Set as Set
 import qualified Data.Store.Property as Property
 import           Data.Store.Transaction (Transaction)
+import           Lamdu.Calc.Type (Type)
 import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Calc.Val as V
 import           Lamdu.Calc.Val.Annotated (Val(..))
 import qualified Lamdu.Calc.Val.Annotated as Val
+import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Data.Ops.Subexprs as SubExprs
 import           Lamdu.Expr.IRef (ValI, ValIProperty)
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Lens as ExprLens
+import qualified Lamdu.Infer as Infer
 import qualified Lamdu.Sugar.Convert.Binder.Params as Params
 import           Lamdu.Sugar.Convert.Binder.Redex (Redex(..))
 import qualified Lamdu.Sugar.Convert.Binder.Redex as Redex
@@ -31,10 +34,22 @@ import           Lamdu.Prelude
 
 type T = Transaction
 
-moveToGlobalScope :: Monad m => ConvertM.Context m -> V.Var -> ValI m -> T m ()
-moveToGlobalScope ctx param letI =
-    DataOps.newPublicDefinitionToIRef
-    (ctx ^. ConvertM.scCodeAnchors) letI (ExprIRef.defI param)
+moveToGlobalScope ::
+    Monad m => ConvertM.Context m -> V.Var -> Definition.Expr (ValI m) -> Type -> T m ()
+moveToGlobalScope ctx param defExpr letType =
+    do
+        DataOps.newPublicDefinitionToIRef
+            (ctx ^. ConvertM.scCodeAnchors)
+            (Definition.Definition (Definition.BodyExpr defExpr) scheme ())
+            (ExprIRef.defI param)
+        Infer.depsGlobalTypes . Lens.at param ?~ scheme
+            & Property.pureModify (ctx ^. ConvertM.scFrozenDeps)
+        -- Prune outer def's deps (some used only in inner) and update
+        -- our type which may become generalized due to
+        -- extraction/generalization of the inner type
+        ctx ^. ConvertM.scPostProcessRoot & void
+    where
+        scheme = Infer.makeScheme (ctx ^. ConvertM.scInferContext) letType
 
 data NewLet m = NewLet
     { nlIRef :: ValI m
@@ -170,7 +185,14 @@ floatLetToOuterScope setTopLevel redex ctx =
             case outerScopeInfo ^. ConvertM.osiPos of
             Nothing ->
                 EntityId.ofIRef (ExprIRef.defI param) <$
-                moveToGlobalScope ctx param (nlIRef newLet)
+                moveToGlobalScope ctx param innerDefExpr (redex ^. Redex.argType)
+                where
+                    innerDefExpr = Definition.Expr (nlIRef newLet) innerDeps
+                    innerDeps =
+                        -- Outer deps, pruned:
+                        ctx ^. ConvertM.scFrozenDeps . Property.pVal
+                        & Definition.Expr (redex ^. Redex.arg)
+                        & Definition.pruneDefExprDeps
             Just outerScope ->
                 EntityId.ofLambdaParam param <$
                 DataOps.redexWrapWithGivenParam param (nlIRef newLet) outerScope

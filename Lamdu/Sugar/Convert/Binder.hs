@@ -43,13 +43,18 @@ mkLetItemActions ::
 mkLetItemActions topLevelProp redex =
     do
         float <- makeFloatLetToOuterScope (Property.set topLevelProp) redex
+        postProcess <- ConvertM.postProcess
         return
             LetActions
             { _laSetToInner =
                 do
                     SubExprs.getVarsToHole param body
                     body ^. Val.payload & replaceWith topLevelProp & void
-            , _laSetToHole = DataOps.setToHole topLevelProp <&> EntityId.ofValI
+                <* postProcess
+            , _laSetToHole =
+                DataOps.setToHole topLevelProp
+                <* postProcess
+                <&> EntityId.ofValI
             , _laFloat = float
             }
     where

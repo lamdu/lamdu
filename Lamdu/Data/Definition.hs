@@ -4,14 +4,20 @@ module Lamdu.Data.Definition
     , Expr(..), expr, exprFrozenDeps
     , Body(..), _BodyExpr, _BodyBuiltin
     , Definition(..), defBody, defType, defPayload
+    , pruneDefExprDeps
     ) where
 
 import qualified Control.Lens as Lens
 import           Data.Binary (Binary(..))
+import           Data.Map.Utils (setMapIntersection)
+import qualified Data.Set as Set
 import qualified Data.Text as Text
 import           GHC.Generics (Generic)
 import           Lamdu.Calc.Type.Scheme (Scheme)
+import           Lamdu.Calc.Val.Annotated (Val)
+import qualified Lamdu.Expr.Lens as ExprLens
 import           Lamdu.Infer (Dependencies)
+import qualified Lamdu.Infer as Infer
 
 import           Lamdu.Prelude
 
@@ -48,3 +54,14 @@ instance (Binary valExpr, Binary a) => Binary (Definition valExpr a)
 Lens.makePrisms ''Body
 Lens.makeLenses ''Definition
 Lens.makeLenses ''Expr
+
+-- Prune dependencies of an Expr after edits.
+pruneDefExprDeps :: Expr (Val a) -> Infer.Dependencies
+pruneDefExprDeps defExpr =
+    defExpr ^. exprFrozenDeps
+    & Infer.depsGlobalTypes %~ setMapIntersection valVars
+    & Infer.depsNominals %~ setMapIntersection valNoms
+    where
+        val = defExpr ^. expr
+        valVars = val ^..  ExprLens.valGlobals mempty & Set.fromList
+        valNoms = val ^.. ExprLens.valNominals & Set.fromList

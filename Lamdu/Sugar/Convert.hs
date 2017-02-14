@@ -98,31 +98,54 @@ inferRecursive defExpr defId =
         unify inferredType defTv
         Update.inferredVal inferredVal & Update.liftInfer
 
-reinferCheckDefinition :: Monad m => DefI m -> T m Bool
-reinferCheckDefinition defI =
+postProcessDef :: Monad m => DefI m -> T m Bool
+postProcessDef defI =
     do
-        def <-
-            Transaction.readIRef defI
-            >>= Definition.defBody . traverse %%~ readValAndAddProperties
+        def <- Transaction.readIRef defI
         case def ^. Definition.defBody of
             Definition.BodyBuiltin {} -> return True
             Definition.BodyExpr defExpr ->
-                inferRecursive defExpr (ExprIRef.globalId defI)
-                & IRefInfer.liftInfer
-                >>= loadInferPrepareInput (pure Results.empty)
-                & IRefInfer.run
-                <&> Lens.has Lens._Right
+                do
+                    loaded <- traverse readValAndAddProperties defExpr
+                    inferRes <-
+                        inferRecursive loaded (ExprIRef.globalId defI)
+                        & IRefInfer.liftInfer
+                        >>= loadInferPrepareInput (pure Results.empty)
+                        & IRefInfer.run
+                    case inferRes of
+                        Left _ -> return False
+                        Right (inferredVal, inferContext) ->
+                            do
+                                def
+                                    & Definition.defType .~
+                                        Infer.makeScheme inferContext inferredType
+                                    & Definition.defBody . Definition._BodyExpr .
+                                        Definition.exprFrozenDeps .~
+                                        Definition.pruneDefExprDeps loaded
+                                    & Transaction.writeIRef defI
+                                return True
+                            where
+                                inferredType = inferredVal ^. Val.payload . Input.inferredType
 
-reinferCheckExpression ::
-    Monad m => T m (Definition.Expr (Val (ValIProperty m))) -> T m Bool
-reinferCheckExpression load =
+postProcessExpr ::
+    Monad m => Transaction.MkProperty m (Definition.Expr (ValI m)) -> T m Bool
+postProcessExpr mkProp =
     do
-        defExpr <- load
-        inferDefExpr Infer.emptyScope defExpr
+        prop <- mkProp ^. Transaction.mkProperty
+        defExpr <- traverse readValAndAddProperties (prop ^. Property.pVal)
+        inferred <-
+            inferDefExpr Infer.emptyScope defExpr
             & IRefInfer.liftInfer
             >>= loadInferPrepareInput (pure Results.empty)
             & IRefInfer.run
-            <&> Lens.has Lens._Right
+        case inferred of
+            Left _ -> return False
+            Right _ ->
+                do
+                    Definition.exprFrozenDeps .~
+                        Definition.pruneDefExprDeps defExpr
+                        & Property.pureModify prop
+                    return True
 
 emptyScopeInfo :: ScopeInfo m
 emptyScopeInfo =
@@ -216,7 +239,7 @@ convertInferDefExpr evalRes cp defType defExpr defI =
                 , _scGlobalsInScope = Set.singleton defI
                 , _scCodeAnchors = cp
                 , _scScopeInfo = emptyScopeInfo
-                , _scReinferCheckRoot = reinferCheckDefinition defI
+                , _scPostProcessRoot = postProcessDef defI
                 , _scOutdatedDefinitions = outdatedDefinitions
                 , _scFrozenDeps =
                     Property (defExpr ^. Definition.exprFrozenDeps) setFrozenDeps
@@ -267,7 +290,7 @@ convertExpr evalRes cp prop =
                 , _scGlobalsInScope = Set.empty
                 , _scCodeAnchors = cp
                 , _scScopeInfo = emptyScopeInfo
-                , _scReinferCheckRoot = Load.defExprProperty prop & reinferCheckExpression
+                , _scPostProcessRoot = postProcessExpr prop
                 , _scOutdatedDefinitions = outdatedDefinitions
                 , _scFrozenDeps =
                     Property (defExpr ^. Definition.exprFrozenDeps) setFrozenDeps

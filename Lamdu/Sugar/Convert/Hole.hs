@@ -249,14 +249,12 @@ loadNewDeps currentDeps scope val =
     <&> mappend currentDeps
     where
         scopeVars = Infer.scopeToTypeMap scope & Map.keysSet
-        valVars = val ^.. ExprLens.valGlobals scopeVars & Set.fromList
-        valNoms = val ^.. ExprLens.valNominals & Set.fromList
-        newDepVars =
-            currentDeps ^. Infer.depsGlobalTypes & Map.keysSet
-            & Set.difference valVars & Set.toList
-        newNoms =
-            currentDeps ^. Infer.depsNominals & Map.keysSet
-            & Set.difference valNoms & Set.toList
+        newDeps depsLens valLens =
+            Set.fromList (val ^.. valLens)
+            `Set.difference` Map.keysSet (currentDeps ^. depsLens)
+            & Set.toList
+        newDepVars = newDeps Infer.depsGlobalTypes (ExprLens.valGlobals scopeVars)
+        newNoms = newDeps Infer.depsNominals ExprLens.valNominals
 
 -- Unstored and without eval results (e.g: hole result)
 prepareUnstoredPayloads ::
@@ -679,7 +677,10 @@ mkHoleResult sugarContext updateDeps entityId stored val =
             HoleResult
             { _holeResultConverted = fConverted
             , _holeResultPick =
-                mkPickedResult fConsistentExpr fWrittenExpr <$ Transaction.merge forkedChanges
+                mkPickedResult fConsistentExpr fWrittenExpr <$
+                do
+                    Transaction.merge forkedChanges
+                    sugarContext ^. ConvertM.scPostProcessRoot
             }
     where
         mkPickedResult consistentExpr writtenExpr =

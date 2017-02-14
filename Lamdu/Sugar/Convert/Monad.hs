@@ -6,14 +6,14 @@ module Lamdu.Sugar.Convert.Monad
     , ScopeInfo(..), siTagParamInfos, siNullParams, siLetItems, siOuter
 
     , Context(..)
-    , scInferContext, scReinferCheckRoot, scGlobalsInScope
+    , scInferContext, scPostProcessRoot, scGlobalsInScope
     , scCodeAnchors, scScopeInfo, scNominalsMap
     , scOutdatedDefinitions, scFrozenDeps
 
     , ConvertM(..), run
     , readContext, liftTransaction, local
     , convertSubexpression
-    , typeProtectedSetToVal
+    , typeProtectedSetToVal, postProcess
     ) where
 
 import qualified Control.Lens as Lens
@@ -78,7 +78,7 @@ data Context m = Context
     , _scScopeInfo :: ScopeInfo m
     , -- Check whether the definition is valid after an edit,
       -- so that can hole-wrap bad edits.
-      _scReinferCheckRoot :: T m Bool
+      _scPostProcessRoot :: T m Bool
     , -- The nominal types appearing in the converted expr and its subexpression
       _scNominalsMap :: Map T.NominalId Nominal
     , _scOutdatedDefinitions :: Map V.Var (Sugar.DefinitionOutdatedType m)
@@ -89,23 +89,19 @@ data Context m = Context
 Lens.makeLenses ''Context
 Lens.makePrisms ''TagFieldParam
 
-typeProtectTransaction :: Monad m => ConvertM m (T m a -> T m (Maybe a))
-typeProtectTransaction =
+typeProtect :: Monad m => T m Bool -> T m a -> T m (Maybe a)
+typeProtect checkOk act =
     do
-        checkOk <- (^. scReinferCheckRoot) <$> readContext
-        let protect act =
-                do
-                    (resume, changes) <-
-                        Transaction.fork $
-                        do
-                            result <- act
-                            isOk <- checkOk
-                            return $
-                                if isOk
-                                then (>> return (Just result)) . Transaction.merge
-                                else const $ return Nothing
-                    resume changes
-        return protect
+        (resume, changes) <-
+            Transaction.fork $
+            do
+                result <- act
+                isOk <- checkOk
+                return $
+                    if isOk
+                    then (>> return (Just result)) . Transaction.merge
+                    else const $ return Nothing
+        resume changes
 
 typeProtectedSetToVal ::
     Monad m =>
@@ -113,14 +109,21 @@ typeProtectedSetToVal ::
     (ExprIRef.ValIProperty m -> ExprIRef.ValI m -> T m (ExprIRef.ValI m))
 typeProtectedSetToVal =
     do
-        typeProtect <- typeProtectTransaction
+        checkOk <- readContext <&> (^. scPostProcessRoot)
         let setToVal dest valI =
                 do
-                    mResult <- typeProtect $ DataOps.replace dest valI
+                    mResult <- DataOps.replace dest valI & typeProtect checkOk
                     case mResult of
                         Just result -> return result
-                        Nothing -> DataOps.setToWrapper valI dest
+                        Nothing ->
+                            do
+                                res <- DataOps.setToWrapper valI dest
+                                _ <- checkOk
+                                return res
         return setToVal
+
+postProcess :: Monad m => ConvertM m (T m ())
+postProcess = readContext <&> (^. scPostProcessRoot) <&> void
 
 run :: Context m -> ConvertM m a -> T m a
 run ctx (ConvertM action) = runReaderT action ctx

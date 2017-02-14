@@ -59,12 +59,13 @@ convertAbsurd :: Monad m => Input.Payload m a -> ConvertM m (ExpressionU m a)
 convertAbsurd exprPl =
     do
         addAlt <- exprPl ^. Input.stored & makeAddAlt
+        postProcess <- ConvertM.postProcess
         BodyCase Case
             { _cKind = LambdaCase
             , _cAlts = []
             , _cTail =
-                    exprPl ^. Input.stored
-                    & DataOps.replaceWithHole
+                    DataOps.replaceWithHole (exprPl ^. Input.stored)
+                    <* postProcess
                     <&> EntityId.ofValI
                     & ClosedCase
             , _cAddAlt = addAlt

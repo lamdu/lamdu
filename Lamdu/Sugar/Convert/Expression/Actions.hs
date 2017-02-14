@@ -12,12 +12,13 @@ import           Data.Store.Transaction (Transaction)
 import qualified Lamdu.Calc.Val as V
 import qualified Lamdu.Calc.Val.Annotated as Val
 import           Lamdu.Calc.Val.Annotated (Val)
-import qualified Lamdu.Data.Anchors as Anchors
+import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Eval.Results.Process as ResultsProcess
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Lens as ExprLens
 import qualified Lamdu.Expr.UniqueId as UniqueId
+import qualified Lamdu.Infer as Infer
 import qualified Lamdu.Sugar.Convert.Input as Input
 import           Lamdu.Sugar.Convert.Monad (ConvertM)
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
@@ -30,23 +31,44 @@ import           Lamdu.Prelude
 type T = Transaction
 
 mkExtract ::
-    Monad m => ExprIRef.ValIProperty m -> ConvertM m (T m ExtractToDestination)
-mkExtract stored =
+    Monad m => Input.Payload m a -> ConvertM m (T m ExtractToDestination)
+mkExtract exprPl =
     do
         ctx <- ConvertM.readContext
         case ctx ^. ConvertM.scScopeInfo . ConvertM.siOuter . ConvertM.osiPos of
-            Nothing -> mkExtractToDef (ctx ^. ConvertM.scCodeAnchors) stored <&> ExtractToDef
-            Just extractDestPos -> mkExtractToLet extractDestPos stored <&> ExtractToLet
+            Nothing -> mkExtractToDef ctx exprPl <&> ExtractToDef
+            Just extractDestPos ->
+                mkExtractToLet extractDestPos (exprPl ^. Input.stored)
+                <&> ExtractToLet
             & return
 
 mkExtractToDef ::
-    Monad m => Anchors.CodeProps m -> ExprIRef.ValIProperty m -> T m EntityId
-mkExtractToDef cp stored =
+    Monad m => ConvertM.Context m -> Input.Payload m a -> T m EntityId
+mkExtractToDef ctx exprPl =
     do
-        newDefI <- DataOps.newPublicDefinitionWithPane "" cp (Property.value stored)
-        getVarI <- ExprIRef.globalId newDefI & V.LVar & V.BLeaf & ExprIRef.newValBody
-        Property.set stored getVarI
+        val <- ExprIRef.readVal valI
+        let deps =
+                ctx ^. ConvertM.scFrozenDeps . Property.pVal
+                & Definition.Expr val
+                & Definition.pruneDefExprDeps
+        newDefI <-
+            Definition.Definition
+            (Definition.BodyExpr (Definition.Expr valI deps)) scheme ()
+            & DataOps.newPublicDefinitionWithPane "" cp
+        let param = ExprIRef.globalId newDefI
+        getVarI <- V.LVar param & V.BLeaf & ExprIRef.newValBody
+        Property.set (exprPl ^. Input.stored) getVarI
+        Infer.depsGlobalTypes . Lens.at param ?~ scheme
+            & Property.pureModify (ctx ^. ConvertM.scFrozenDeps)
+        -- Remove the extracted deps
+        ctx ^. ConvertM.scPostProcessRoot & void
         EntityId.ofIRef newDefI & return
+    where
+        valI = exprPl ^. Input.stored . Property.pVal
+        cp = ctx ^. ConvertM.scCodeAnchors
+        scheme =
+            Infer.makeScheme (ctx ^. ConvertM.scInferContext)
+            (exprPl ^. Input.inferredType)
 
 mkExtractToLet ::
     Monad m => ExprIRef.ValIProperty m -> ExprIRef.ValIProperty m -> T m EntityId
@@ -77,18 +99,20 @@ mkExtractToLet outerScope stored =
         extractPosI = Property.value outerScope
         oldStored = Property.value stored
 
-mkActions :: Monad m => ExprIRef.ValIProperty m -> ConvertM m (Actions m)
-mkActions stored =
+mkActions :: Monad m => Input.Payload m a -> ConvertM m (Actions m)
+mkActions exprPl =
     do
-        ext <- mkExtract stored
+        ext <- mkExtract exprPl
+        postProcess <- ConvertM.postProcess
         Actions
-            { _wrap = DataOps.wrap stored <&> addEntityId & WrapAction
-            , _setToHole = DataOps.setToHole stored <&> addEntityId & SetToHole
+            { _wrap = DataOps.wrap stored <* postProcess <&> addEntityId & WrapAction
+            , _setToHole = DataOps.setToHole stored <* postProcess <&> addEntityId & SetToHole
             , _setToInnerExpr = NoInnerExpr
             , _extract = ext
             } & return
     where
         addEntityId valI = (UniqueId.toUUID valI, EntityId.ofValI valI)
+        stored = exprPl ^. Input.stored
 
 makeSetToInner ::
     Monad m => Input.Payload m a -> Val (Input.Payload m b) ->
@@ -109,7 +133,7 @@ addActions ::
     Monad m => Input.Payload m a -> BodyU m a -> ConvertM m (ExpressionU m a)
 addActions exprPl body =
     do
-        actions <- exprPl ^. Input.stored & mkActions
+        actions <- mkActions exprPl
         ann <- makeAnnotation exprPl
         return $ Expression body Payload
             { _plEntityId = exprPl ^. Input.entityId
