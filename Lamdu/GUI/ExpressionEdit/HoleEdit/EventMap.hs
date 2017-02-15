@@ -95,6 +95,10 @@ disallowCharsFromSearchTerm Config.Hole{..} searchTerm =
             '.':x:_
                 | x `elem` operatorChars -> allowOnly operatorChars
                 | otherwise -> disallow operatorChars . disallow bracketChars
+            "-" -> allowOnly (operatorChars ++ digitChars)
+            '-':x:xs
+                | x `elem` digitChars ->
+                    digitChars ++ ['.' | not ("." `isInfixOf` xs)] & allowOnly
             x:xs
                 | x `elem` operatorChars -> allowOnly operatorChars
                 | x `elem` bracketChars -> allowOnly bracketChars
