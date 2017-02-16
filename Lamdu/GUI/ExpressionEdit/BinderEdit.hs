@@ -260,15 +260,15 @@ makeMParamsEdit mScopeCursor isScopeNavFocused delVarBackwardsId myId nearestHol
           _ -> id
         <&> Just
     where
-        mCurCursor = mScopeCursor ^. current
-        annotationMode =
+        mCurCursor =
             do
                 ScopeNavIsFocused == isScopeNavFocused & guard
-                ExpressionGui.NeighborVals
-                    <$> (mCurCursor <&> sMPrevParamScope)
-                    <*> (mCurCursor <&> sMNextParamScope)
-                    <&> ExpressionGui.WithNeighbouringEvalAnnotations
-            & fromMaybe ExpressionGui.NormalEvalAnnotation
+                mScopeCursor ^. current
+        annotationMode =
+            ExpressionGui.NeighborVals
+            (mCurCursor >>= sMPrevParamScope)
+            (mCurCursor >>= sMNextParamScope)
+            & ExpressionGui.WithNeighbouringEvalAnnotations
 
 binderContentNearestHoles :: Sugar.BinderContent name m (ExprGuiT.SugarExpr m) -> NearestHoles
 binderContentNearestHoles body =
