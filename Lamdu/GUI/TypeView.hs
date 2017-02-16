@@ -98,13 +98,13 @@ makeTFun parentPrecedence a b =
     >>= parens parentPrecedence (MyPrecedence 0)
 
 makeTInst :: Monad m => ParentPrecedence -> T.NominalId -> Map T.ParamId Type -> M m View
-makeTInst _parentPrecedence tid typeParams =
+makeTInst parentPrecedence tid typeParams =
     do
         nameView <-
             Anchors.assocNameRef tid & Transaction.getP & transaction >>= text
         hspace <- mkHSpace
-        let afterName paramsView = addValPadding $ hbox [nameView, hspace, paramsView]
-            makeTypeParam (T.ParamId tParamId, arg) =
+        let afterName paramsView = hbox [nameView, hspace, paramsView]
+        let makeTypeParam (T.ParamId tParamId, arg) =
                 do
                     paramIdView <- showIdentifier tParamId
                     typeView <- splitMake (ParentPrecedence 0) arg
@@ -117,12 +117,13 @@ makeTInst _parentPrecedence tid typeParams =
             [] -> pure nameView
             [(_, arg)] ->
                 splitMake (ParentPrecedence 0) arg
-                >>= afterName
+                <&> afterName
+                >>= parens parentPrecedence (MyPrecedence 0)
             params ->
                 mapM makeTypeParam params
                 <&> GridView.make
                 >>= addBackgroundFrame
-                >>= afterName
+                <&> afterName
 
 addValPadding :: Monad m => View -> M m View
 addValPadding view =
