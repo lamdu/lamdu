@@ -38,7 +38,7 @@ children Aeson.Bool {} = []
 children Aeson.Number {} = []
 children Aeson.String {} = []
 
-asIdentifierSet :: Maybe (Aeson.Value) -> Either Text (Set Text)
+asIdentifierSet :: Maybe Aeson.Value -> Either Text (Set Text)
 asIdentifierSet Nothing = Right mempty
 asIdentifierSet (Just (Aeson.String x)) = Set.singleton x & Right
 asIdentifierSet (Just _) = Left "identifier must be a string"
@@ -123,8 +123,9 @@ replDefExpr nominalMap defMap val =
             & addFrozenDeps nominalMap frozenDefs
             <&> Aeson.Object
 
-emptyScheme :: Aeson.Value
-emptyScheme =
+-- | Represents "forall a. a"
+schemeAny :: Aeson.Value
+schemeAny =
     mempty
     & Lens.at "schemeBinders" ?~
       ( mempty
@@ -142,7 +143,7 @@ emptyScheme =
 
 fixScheme :: Aeson.Value -> Either Text Aeson.Value
 fixScheme (Aeson.String s)
-    | s == "NoExportedType" = return emptyScheme
+    | s == "NoExportedType" = return schemeAny
 fixScheme o@Aeson.Object{} = return o
 fixScheme _ = Left "Malformed scheme"
 
