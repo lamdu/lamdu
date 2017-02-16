@@ -61,7 +61,7 @@ make holeInfo =
         let holeConfig@Config.Hole{..} = Config.hole config
         makeSearchTermPropEdit WidgetIds{..} (HoleInfo.hiSearchTermProperty holeInfo)
             <&> Widget.eventMap
-                %~ EventMap.disallowCharsFromSearchTerm holeConfig searchTerm
+                %~ EventMap.disallowCharsFromSearchTerm holeConfig holeInfo searchTerm
             <&> addBackground (Widget.toAnimId hidOpenSearchTerm) holeSearchTermBGColor
             <&> TreeLayout.fromCenteredWidget
             <&> TreeLayout.alignment . _1 .~ 0

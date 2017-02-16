@@ -47,15 +47,15 @@ blockDownEvents =
 
 adHocTextEditEventMap ::
     Monad m =>
-    Config.Hole -> Property m Text -> Widget.EventMap (m Widget.EventResult)
-adHocTextEditEventMap holeConfig searchTermProp =
+    Config.Hole -> HoleInfo m -> Property (T m) Text -> Widget.EventMap (T m Widget.EventResult)
+adHocTextEditEventMap holeConfig holeInfo searchTermProp =
     appendCharEventMap <> deleteCharEventMap
     where
         appendCharEventMap =
             E.allChars "Character"
             (E.Doc ["Edit", "Search Term", "Append character"])
             (changeText . snoc)
-            & disallowCharsFromSearchTerm holeConfig searchTerm
+            & disallowCharsFromSearchTerm holeConfig holeInfo searchTerm
             & if Text.null searchTerm
               then E.filterChars (`notElem` operatorChars)
               else id
@@ -78,8 +78,8 @@ toLiteralTextKeys =
     , ModKey mempty GLFW.Key'Apostrophe
     ]
 
-disallowCharsFromSearchTerm :: Config.Hole -> Text -> E.EventMap a -> E.EventMap a
-disallowCharsFromSearchTerm Config.Hole{..} searchTerm =
+disallowCharsFromSearchTerm :: Config.Hole -> HoleInfo m -> Text -> E.EventMap a -> E.EventMap a
+disallowCharsFromSearchTerm Config.Hole{..} holeInfo searchTerm =
     E.filterChars (`notElem` disallowedHoleChars) .
     deleteKeys
     (holePickAndMoveToNextHoleKeys ++ holePickResultKeys) .
@@ -87,6 +87,7 @@ disallowCharsFromSearchTerm Config.Hole{..} searchTerm =
     where
         allowOnly group = E.filterChars (`elem` group)
         disallow group = E.filterChars (`notElem` group)
+        isLeafHole = hiHole holeInfo & Lens.has (Sugar.holeMArg . Lens._Nothing)
         disallowMix =
             case Text.unpack searchTerm of
             "" -> id
@@ -95,7 +96,7 @@ disallowCharsFromSearchTerm Config.Hole{..} searchTerm =
             '.':x:_
                 | x `elem` operatorChars -> allowOnly operatorChars
                 | otherwise -> disallow operatorChars . disallow bracketChars
-            "-" -> allowOnly (operatorChars ++ digitChars)
+            "-" | isLeafHole -> allowOnly (operatorChars ++ digitChars)
             '-':x:xs
                 | x `elem` digitChars ->
                     digitChars ++ ['.' | not ("." `isInfixOf` xs)] & allowOnly
@@ -234,7 +235,7 @@ makeOpenEventMaps holeInfo mShownResult =
                 mkEventsOnPickedResult shownResult
                 <&> mappend (pickEventMap holeConfig holeInfo shownResult)
                 <&> deleteKeys toLiteralTextKeys
-        let adHocEdit = adHocTextEditEventMap holeConfig searchTermProp
+        let adHocEdit = adHocTextEditEventMap holeConfig holeInfo searchTermProp
         (eventMap, adHocEdit <> eventMap)
             & Lens.both %~ mappend maybeLiteralTextEventMap
             & pure
