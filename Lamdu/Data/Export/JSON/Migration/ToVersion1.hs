@@ -10,9 +10,10 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Lamdu.Data.Export.JSON.Migration.ToVersion1 (migrate) where
 
+import           Control.Applicative ((<|>))
 import qualified Control.Lens as Lens
-import           Control.Monad (mplus)
 import qualified Data.Aeson as Aeson
+import           Data.Foldable (asum)
 import qualified Data.Map as Map
 import           Data.Set (Set)
 import qualified Data.Set as Set
@@ -147,39 +148,34 @@ fixScheme (Aeson.String s)
 fixScheme o@Aeson.Object{} = return o
 fixScheme _ = Left "Malformed scheme"
 
-match :: Maybe a -> (a -> b) -> Either b ()
-match Nothing _ = Right ()
-match (Just x) f = Left (f x)
-
 migrateEntity ::
     Map NominalId FrozenNominal -> Map DefId FrozenDef ->
     Aeson.Value -> Either Text Aeson.Value
 migrateEntity nominalMap defMap (Aeson.Object obj) =
-    do
-        match (obj ^. Lens.at "schemaVersion") $
-            \_ -> Left "found unexpected version"
-        match (obj ^. Lens.at "typ") $
-            \typ ->
-            do
-                fixedTyp <- fixScheme typ
-                let fixedObj =
-                        obj
-                            & Lens.at "frozenDefTypes" .~ Nothing
-                            & Lens.at "typ" ?~ fixedTyp
-                case obj ^. Lens.at "frozenDefTypes" of
-                    Nothing -> return fixedObj
-                    Just frozenDefTypes ->
-                        addFrozenDeps nominalMap frozenDefTypes fixedObj
-        match (obj ^. Lens.at "builtin") (convertBuiltin obj)
-        match (obj ^. Lens.at "repl") $
-            \replVal ->
-            do
-                defExpr <- replDefExpr nominalMap defMap replVal
-                obj
-                    & Lens.at "repl" ?~ defExpr
-                    & return
-        return obj
-    & either id return
+    asum
+    [ Left "found unexpected version" <$ obj ^. Lens.at "schemaVersion"
+    , obj ^. Lens.at "typ" <&>
+        \typ ->
+        do
+            fixedTyp <- fixScheme typ
+            let fixedObj =
+                    obj
+                    & Lens.at "frozenDefTypes" .~ Nothing
+                    & Lens.at "typ" ?~ fixedTyp
+            case obj ^. Lens.at "frozenDefTypes" of
+                Nothing -> return fixedObj
+                Just frozenDefTypes ->
+                    addFrozenDeps nominalMap frozenDefTypes fixedObj
+    , obj ^. Lens.at "builtin" <&> convertBuiltin obj
+    , obj ^. Lens.at "repl" <&>
+        \replVal ->
+        do
+            defExpr <- replDefExpr nominalMap defMap replVal
+            obj
+                & Lens.at "repl" ?~ defExpr
+                & return
+    ]
+    & fromMaybe (Right obj)
     <&> Aeson.Object
 migrateEntity _ _ _ = Left "Expecting object"
 
@@ -211,7 +207,7 @@ collectDefs (Aeson.Object obj) =
                 Just (Aeson.Object b) -> b ^. Lens.at "scheme" & Right
                 Just _ -> Left "Malformed 'buitlin' node"
                 _ -> Right Nothing
-            case mplus (obj ^. Lens.at "typ") builtinType of
+            case obj ^. Lens.at "typ" <|> builtinType of
                 Just defType ->
                     do
                         fixed <- fixScheme defType
