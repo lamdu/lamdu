@@ -250,7 +250,6 @@ Executable lamdu
                   , Lamdu.GUI.WidgetIdIRef
                   , Lamdu.GUI.WidgetIds
                   , Lamdu.GUI.Zoom
-                  , Lamdu.Main
                   , Lamdu.Opts
                   , Lamdu.Prelude
                   , Lamdu.Style
