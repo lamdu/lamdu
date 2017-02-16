@@ -36,11 +36,11 @@ import           Lamdu.Sugar.Types
 
 import           Lamdu.Prelude
 
-mkLetIActions ::
+mkLetItemActions ::
     Monad m =>
     ValIProperty m -> Redex (ValIProperty m) ->
     ConvertM m (LetActions m)
-mkLetIActions topLevelProp redex =
+mkLetItemActions topLevelProp redex =
     do
         float <- makeFloatLetToOuterScope (Property.set topLevelProp) redex
         return
@@ -90,7 +90,7 @@ convertRedex expr redex =
             convertBinder binderKind defUUID (redex ^. Redex.arg)
             & localNewExtractDestPos expr
         actions <-
-            mkLetIActions (expr ^. Val.payload . Input.stored)
+            mkLetItemActions (expr ^. Val.payload . Input.stored)
             (redex <&> (^. Input.stored))
         letBody <-
             makeBinderBody body
