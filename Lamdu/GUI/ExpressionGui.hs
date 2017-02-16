@@ -322,7 +322,7 @@ applyWideAnnotationBehavior animId ShrinkWideAnnotation =
     ExprGuiM.readConfig
     <&>
     \config shrinkRatio layout ->
-    AlignedWidget.scaleAround (Alignment (Vector2 0.5 0)) shrinkRatio layout
+    AlignedWidget.scaleAround (Alignment 0) shrinkRatio layout
     & AlignedWidget.widget . Widget.view %~ addAnnotationBackground config animId
 applyWideAnnotationBehavior animId HoverWideAnnotation =
     do
@@ -360,11 +360,9 @@ processAnnotationGui animId wideAnnotationBehavior =
                 heightShrinkRatio =
                     Config.valAnnotationMaxHeight config * stdSpacing ^. _2
                     / annotationLayout ^. AlignedWidget.widget . Widget.height
-                    & min 1
                 shrinkRatio =
                     annotationWidth - shrinkAtLeast & min maxWidth & max minWidth
-                    & (/ annotationWidth) & pure
-                    & _2 %~ min heightShrinkRatio
+                    & (/ annotationWidth) & min heightShrinkRatio & pure
                 maybeTooNarrow
                     | minWidth > annotationWidth = AlignedWidget.pad (Vector2 ((minWidth - annotationWidth) / 2) 0)
                     | otherwise = id
