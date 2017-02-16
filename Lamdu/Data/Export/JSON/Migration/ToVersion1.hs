@@ -15,6 +15,7 @@ import qualified Control.Lens as Lens
 import qualified Data.Aeson as Aeson
 import           Data.Foldable (asum)
 import qualified Data.Map as Map
+import           Data.Map.Utils (setMapIntersection)
 import           Data.Set (Set)
 import qualified Data.Set as Set
 
@@ -65,9 +66,6 @@ scanNomIds val =
     where
         recurse :: Either Text (Set NominalId)
         recurse = children val & traverse scanNomIds <&> mconcat
-
-setMapIntersection :: Ord k => Set k -> Map k a -> Map k a
-setMapIntersection s m = m `Map.intersection` Map.fromSet (const ()) s
 
 addFrozenDeps ::
     Map NominalId FrozenNominal -> Aeson.Value -> Aeson.Object ->
