@@ -204,8 +204,12 @@ makeInner animId (Val typ val) =
             toText :: (Format r, Monad m) => r -> ExprGuiM m View
             toText = asText . format
     RArray items -> makeArray animId items
-    & ExprGuiM.advanceDepth return animId
+    & advanceDepth
     where
+        -- Only cut non-leaf expressions due to depth limits
+        advanceDepth
+            | Lens.has traverse val = ExprGuiM.advanceDepth return animId
+            | otherwise = id
         asText text =
             BWidgets.makeTextView cut animId & ExprGuiM.widgetEnv
             where
