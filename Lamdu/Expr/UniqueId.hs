@@ -1,6 +1,6 @@
 {-# LANGUAGE NoImplicitPrelude #-}
 module Lamdu.Expr.UniqueId
-    ( ToUUID(..), UniqueId(..)
+    ( ToUUID(..), UniqueId(..), identifierOfUUID
     ) where
 
 import           Data.Store.IRef (IRef)

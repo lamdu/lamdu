@@ -16,6 +16,9 @@ import           Data.Store.Transaction (Transaction)
 import           Data.UUID.Types (UUID)
 import qualified Lamdu.Builtins.Anchors as Builtins
 import           Lamdu.Calc.Type (Type)
+import qualified Lamdu.Calc.Type as T
+import qualified Lamdu.Calc.Type.FlatComposite as FlatComposite
+import           Lamdu.Calc.Type.Scheme (schemeType)
 import qualified Lamdu.Calc.Val as V
 import           Lamdu.Calc.Val.Annotated (Val(..))
 import qualified Lamdu.Calc.Val.Annotated as Val
@@ -81,9 +84,25 @@ convertLabeled ::
 convertLabeled funcS argS argI exprPl =
     do
         guard $ Lens.has (Val.body . V._BLeaf . V._LRecEmpty) recordTail
-        guard $ Lens.has (rBody . _BodyGetVar . _GetBinder . bvForm . _GetDefinition) funcS
-        record <- maybeToMPlus $ argS ^? rBody . _BodyRecord
+        sBinderVar <-
+            funcS ^? rBody . _BodyGetVar . _GetBinder & maybeToMPlus
+        guard $ Lens.has (bvForm . _GetDefinition) sBinderVar
+        record <- argS ^? rBody . _BodyRecord & maybeToMPlus
         guard $ length (record ^. rItems) >= 2
+        ctx <- lift ConvertM.readContext
+        let var = sBinderVar ^. bvNameRef . nrName & UniqueId.identifierOfUUID & V.Var
+        unless (Set.member (ExprIRef.defI var) (ctx ^. ConvertM.scGlobalsInScope)) $
+            do
+                defArgs <-
+                    ctx ^? ConvertM.scFrozenDeps . Property.pVal
+                        . Infer.depsGlobalTypes . Lens.at var . Lens._Just
+                        . schemeType . T._TFun . _1 . T._TRecord
+                    & maybeToMPlus
+                let flatArgs = FlatComposite.fromComposite defArgs
+                guard $ Lens.has Lens._Nothing (FlatComposite._extension flatArgs)
+                let sFields =
+                        record ^.. rItems . traverse . rfTag . tagVal & Set.fromList
+                guard $ Map.keysSet (flatArgs ^. FlatComposite.fields) == sFields
         let getArg field =
                 AnnotatedArg
                     { _aaTag = field ^. rfTag
