@@ -187,7 +187,13 @@ module.exports = {
                 read: function (x) { return function() { return x[objTag][x[indexTag]]; } },
                 write: function (x) { return function() { x[objTag][x[indexTag]] = x[valTag]; return {}; } },
                 fromStream: function (x) { return function () { return arrayFromStream(x); } },
-                run: function(st) { return st(); },
+                run: function(st) {
+                    var result = st();
+                    if (result.hasOwnProperty("cacheId")) {
+                        delete result.cacheId;
+                    }
+                    return result;
+                },
             },
         },
         IO: {
