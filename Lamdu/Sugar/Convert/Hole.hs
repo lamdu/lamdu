@@ -95,11 +95,14 @@ mkHoleOptionFromInjected sugarContext exprPl stored val =
                 mkHoleResultValInjected exprPl val
                 & (`runStateT` (sugarContext ^. ConvertM.scInferContext))
             let depsProp = sugarContext ^. ConvertM.scFrozenDeps
-            updateDeps <-
+            newDeps <-
                 loadNewDeps (depsProp ^. Property.pVal)
                 (exprPl ^. Input.inferred . Infer.plScope) val
-                <&> Property.set depsProp
-            let newSugarContext = sugarContext & ConvertM.scInferContext .~ inferContext
+            let newSugarContext =
+                    sugarContext
+                    & ConvertM.scInferContext .~ inferContext
+                    & ConvertM.scFrozenDeps . Property.pVal .~ newDeps
+            let updateDeps = Property.set depsProp newDeps
             return
                 ( resultScore (fst <$> result)
                 , mkHoleResult newSugarContext updateDeps (exprPl ^. Input.entityId) stored result
@@ -628,7 +631,7 @@ mkHoleResultVals ::
     Maybe (Val (Input.Payload m a)) ->
     Input.Payload m dummy ->
     BaseExpr ->
-    StateT Infer.Context (ListT (T m)) (T m (), HoleResultVal m IsInjected)
+    StateT Infer.Context (ListT (T m)) (Infer.Dependencies, HoleResultVal m IsInjected)
 mkHoleResultVals frozenDeps mInjectedArg exprPl base =
     case base of
     SeedExpr seed ->
@@ -648,7 +651,6 @@ mkHoleResultVals frozenDeps mInjectedArg exprPl base =
         (,)
         <$> mapStateT eitherTtoListT (loadTheNewDeps sugg)
         ?? (sugg & Lens.traversed %~ flip (,) (Nothing, ()))
-    <&> _1 %~ Property.set frozenDeps
     >>= _2 %%~ post
     where
         loadTheNewDeps expr =
@@ -704,11 +706,15 @@ mkHoleResults ::
     ListT (T m) (HoleResultScore, T m (HoleResult UUID m))
 mkHoleResults mInjectedArg sugarContext exprPl stored base =
     do
-        ((updateDeps, val), inferContext) <-
+        ((newDeps, val), inferContext) <-
             mkHoleResultVals (sugarContext ^. ConvertM.scFrozenDeps)
             mInjectedArg exprPl base
             & (`runStateT` (sugarContext ^. ConvertM.scInferContext))
-        let newSugarContext = sugarContext & ConvertM.scInferContext .~ inferContext
+        let newSugarContext =
+                sugarContext
+                & ConvertM.scInferContext .~ inferContext
+                & ConvertM.scFrozenDeps . Property.pVal .~ newDeps
+        let updateDeps = newDeps & sugarContext ^. ConvertM.scFrozenDeps . Property.pSet
         return
             ( resultScore (fst <$> val)
             , mkHoleResult newSugarContext updateDeps (exprPl ^. Input.entityId) stored val
