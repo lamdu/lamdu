@@ -3,14 +3,18 @@ module Lamdu.Sugar.Convert.DefExpr.OutdatedDefs
     ( scan
     ) where
 
+import           Control.Applicative ((<|>))
 import qualified Control.Lens as Lens
+import           Control.Monad (foldM)
 import qualified Data.Map as Map
 import qualified Data.Monoid as Monoid
+import qualified Data.Set as Set
 import qualified Data.Store.Property as Property
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
 import           Lamdu.Calc.Type (Type)
 import qualified Lamdu.Calc.Type as T
+import qualified Lamdu.Calc.Type.FlatComposite as FlatComposite
 import           Lamdu.Calc.Type.Scheme (Scheme, schemeType, alphaEq)
 import qualified Lamdu.Calc.Val as V
 import           Lamdu.Calc.Val.Annotated (Val(..))
@@ -74,15 +78,63 @@ wrap val
     || Lens.has ExprLens.valHole val = return ()
     | otherwise = val ^. Val.payload & DataOps.wrap & void
 
-changeFuncArg :: Monad m => V.Var -> Val (ValIProperty m) -> T m ()
-changeFuncArg usedDefVar =
+data RecordChange = RecordChange
+    { fieldsAdded :: Set T.Tag
+    , fieldsRemoved :: Set T.Tag
+    , fieldsChanged :: Map T.Tag ArgChange
+    }
+
+data ArgChange = ArgChange | ArgRecordChange RecordChange
+
+changeFuncArg :: Monad m => ArgChange -> V.Var -> Val (ValIProperty m) -> T m ()
+changeFuncArg change usedDefVar =
     recursivelyFixExpr mFix
     where
         mFix NotHoleArg (Val pl (V.BLeaf (V.LVar v)))
             | v == usedDefVar = DataOps.wrap pl & void & const & Just
         mFix _ (Val _ (V.BApp (V.Apply (Val _ (V.BLeaf (V.LVar v))) arg)))
-            | v == usedDefVar = Just $ \go -> wrap arg >> go IsHoleArg arg
+            | v == usedDefVar = fixArg change arg & Just
         mFix _ _ = Nothing
+        fixArg ArgChange arg go =
+            do
+                wrap arg
+                go IsHoleArg arg
+        fixArg (ArgRecordChange recChange) arg go =
+            ( if Set.null (fieldsRemoved recChange)
+                then
+                    arg ^. Val.payload . Property.pVal
+                    <$ changeFields (fieldsChanged recChange) arg go
+                else
+                    do
+                        go IsHoleArg arg
+                        V.Apply
+                            <$> DataOps.newHole
+                            ?? arg ^. Val.payload . Property.pVal
+                            <&> V.BApp
+                            >>= ExprIRef.newValBody
+            )
+            >>= addFields (fieldsAdded recChange)
+            >>= arg ^. Val.payload . Property.pSet
+        addFields fields src = foldM addField src fields
+        addField src tag =
+            V.RecExtend tag <$> DataOps.newHole ?? src
+            <&> V.BRecExtend
+            >>= ExprIRef.newValBody
+        changeFields changes arg go
+            | Map.null changes = go NotHoleArg arg
+            | otherwise =
+                case arg ^. Val.body of
+                V.BRecExtend (V.RecExtend tag fieldVal rest) ->
+                    case Map.lookup tag changes of
+                    Nothing ->
+                        do
+                            go NotHoleArg fieldVal
+                            changeFields changes rest go
+                    Just fieldChange ->
+                        do
+                            fixArg fieldChange fieldVal go
+                            changeFields (Map.delete tag changes) rest go
+                _ -> fixArg ArgChange arg go
 
 isPartSame ::
     (Lens.Getting (Monoid.First Type) Type Type) -> Scheme -> Scheme -> Bool
@@ -93,18 +145,50 @@ isPartSame part preType newType =
         alphaEq prePart newPart & guard
     & Lens.has Lens._Just
 
-isFuncResChange :: Scheme -> Scheme -> Bool
-isFuncResChange = isPartSame (T._TFun . _1)
-
-isFuncArgChange :: Scheme -> Scheme -> Bool
-isFuncArgChange = isPartSame (T._TFun . _2)
+argChangeType :: Scheme -> Scheme -> ArgChange
+argChangeType prevArg newArg =
+    do
+        prevProd <- prevArg ^? schemeType . T._TRecord <&> FlatComposite.fromComposite
+        FlatComposite._extension prevProd ^? Lens._Nothing
+        newProd <- newArg ^? schemeType . T._TRecord <&> FlatComposite.fromComposite
+        FlatComposite._extension newProd ^? Lens._Nothing
+        let prevTags = prevProd ^. FlatComposite.fields & Map.keysSet
+        let newTags = newProd ^. FlatComposite.fields & Map.keysSet
+        let changedTags =
+                Map.intersectionWith fieldChange
+                (prevProd ^. FlatComposite.fields)
+                (newProd ^. FlatComposite.fields)
+                & Map.mapMaybe id
+        ArgRecordChange RecordChange
+            { fieldsAdded = Set.difference newTags prevTags
+            , fieldsRemoved = Set.difference prevTags newTags
+            , fieldsChanged = changedTags
+            }
+            & return
+    & fromMaybe ArgChange
+    where
+        fieldChange prevField newField
+            | alphaEq prevFieldScheme newFieldScheme = Nothing
+            | otherwise = argChangeType prevFieldScheme newFieldScheme & Just
+            where
+                prevFieldScheme = prevArg & schemeType .~ prevField
+                newFieldScheme = newArg & schemeType .~ newField
 
 fixDefExpr ::
     Monad m => Scheme -> Scheme -> V.Var -> Val (ValIProperty m) -> T m ()
-fixDefExpr prevType newType usedDefVar defExpr
-    | isFuncResChange prevType newType = changeFuncRes usedDefVar defExpr
-    | isFuncArgChange prevType newType = changeFuncArg usedDefVar defExpr
-    | otherwise = SubExprs.onGetVars (DataOps.wrap <&> void) usedDefVar defExpr
+fixDefExpr prevType newType usedDefVar defExpr =
+    do
+        isPartSame (T._TFun . _1) prevType newType & guard
+        -- Function result changed (arg is the same).
+        changeFuncRes usedDefVar defExpr & return
+    <|>
+    do
+        isPartSame (T._TFun . _2) prevType newType & guard
+        -- Function arg changed (result is the same).
+        prevArg <- prevType & schemeType %%~ (^? T._TFun . _1)
+        newArg <- newType & schemeType %%~ (^? T._TFun . _1)
+        changeFuncArg (argChangeType prevArg newArg) usedDefVar defExpr & return
+    & fromMaybe (SubExprs.onGetVars (DataOps.wrap <&> void) usedDefVar defExpr)
 
 updateDefType ::
     Monad m =>
