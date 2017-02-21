@@ -19,7 +19,7 @@ Disambiguation tags are small red numbers at the end of a variable name that Lam
 
 In Lamdu, program ASTs are edited, and one may create code without actually giving names to all of their variables. But variables would still need to be displayed, and when not named by the user they will get auto-generated names.
 
-Auto-generated names are often fine for small lambdas like `λx → x+1`, and not having to name those variables is convenient.
+Auto-generated names are often fine for small lambdas like `x → x+1`, and not having to name those variables is convenient.
 
 Lamdu also makes sure that the auto-generated names will never clash with names given by the user. So if the user renames a variable so that it has the same name as an auto-generated name had, the auto-generated name changes, so that there will not be a clash! To clarify that the auto-generated names are ephemeral and could change when the user renames other variables, they are drawn with an *italic* font where they are introduced.
 
