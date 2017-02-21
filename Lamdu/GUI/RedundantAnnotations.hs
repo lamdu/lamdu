@@ -59,8 +59,10 @@ markAnnotationsToDisplay (Expression oldBody pl) =
         Expression newBody pl & dontShowAnnotation
     BodyFromNom _ ->
         Expression (newBody <&> dontShowEval) pl
-    BodyToNom _ ->
-        Expression (newBody <&> dontShowEval) pl
+    BodyToNom (Nominal _ val) ->
+        pl
+        & showAnn . T.showInEvalMode .~ val ^. rPayload . showAnn . T.showInEvalMode
+        & Expression (newBody <&> dontShowEval)
     BodyInject _ ->
         Expression newBody pl & dontShowEval
     BodyGetVar (GetParamsRecord _) ->
