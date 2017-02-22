@@ -86,12 +86,12 @@ convertLabeled funcS argS argI exprPl =
         guard $ Lens.has (Val.body . V._BLeaf . V._LRecEmpty) recordTail
         sBinderVar <-
             funcS ^? rBody . _BodyGetVar . _GetBinder & maybeToMPlus
-        guard $ Lens.has (bvForm . _GetDefinition) sBinderVar
         record <- argS ^? rBody . _BodyRecord & maybeToMPlus
         guard $ length (record ^. rItems) >= 2
         ctx <- lift ConvertM.readContext
         let var = sBinderVar ^. bvNameRef . nrName & UniqueId.identifierOfUUID & V.Var
-        unless (Set.member (ExprIRef.defI var) (ctx ^. ConvertM.scGlobalsInScope)) $
+        unless (Lens.has (Lens.at var . Lens._Just)
+            (Infer.scopeToTypeMap (exprPl ^. Input.inferred . Infer.plScope))) $
             do
                 defArgs <-
                     ctx ^? ConvertM.scFrozenDeps . Property.pVal
