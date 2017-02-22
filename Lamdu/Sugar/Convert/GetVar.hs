@@ -80,9 +80,9 @@ paramNameRef param =
     , _nrGotoDefinition = pure $ EntityId.ofLambdaParam param
     }
 
-convertGetBinder ::
+convertGetLet ::
     Monad m => V.Var -> Input.Payload m a -> MaybeT (ConvertM m) (GetVar UUID m)
-convertGetBinder param exprPl =
+convertGetLet param exprPl =
     do
         inline <-
             lift ConvertM.readContext
@@ -122,7 +122,7 @@ convert param exprPl
     | otherwise =
         do
             convertGlobal param exprPl & justToLeft
-            convertGetBinder param exprPl & justToLeft
+            convertGetLet param exprPl & justToLeft
             convertParamsRecord param exprPl & justToLeft
             GetParam (Param (paramNameRef param) GetParameter NormalBinder) & return
         & runMatcherT
