@@ -80,8 +80,8 @@ toHoleActions ha@HoleActions {..} =
 
 toParam ::
     MonadNaming m =>
-    Param (OldName m) (TM m) ->
-    m (Param (NewName m) (TM m))
+    Param (OldName m) p ->
+    m (Param (NewName m) p)
 toParam param =
     (pNameRef . nrName) f param
     where
@@ -92,8 +92,8 @@ toParam param =
 
 toBinderVar ::
     MonadNaming m =>
-    BinderVar (OldName m) (TM m) ->
-    m (BinderVar (NewName m) (TM m))
+    BinderVar (OldName m) p ->
+    m (BinderVar (NewName m) p)
 toBinderVar binderVar =
     (bvNameRef . nrName) f binderVar
     where
@@ -104,16 +104,16 @@ toBinderVar binderVar =
 
 toGetVar ::
     MonadNaming m =>
-    GetVar (OldName m) (TM m) ->
-    m (GetVar (NewName m) (TM m))
+    GetVar (OldName m) p ->
+    m (GetVar (NewName m) p)
 toGetVar (GetParam x) = toParam x <&> GetParam
 toGetVar (GetBinder x) = toBinderVar x <&> GetBinder
 toGetVar (GetParamsRecord x) = traverse (opGetName TagName) x <&> GetParamsRecord
 
 toLet ::
     MonadNaming m => (a -> m b) ->
-    Let (OldName m) (TM m) a ->
-    m (Let (NewName m) (TM m) b)
+    Let (OldName m) p a ->
+    m (Let (NewName m) p b)
 toLet expr item@Let{..} =
     do
         (name, body) <-
@@ -124,21 +124,21 @@ toLet expr item@Let{..} =
 
 toBinderContent ::
     MonadNaming m => (a -> m b) ->
-    BinderContent (OldName m) (TM m) a ->
-    m (BinderContent (NewName m) (TM m) b)
+    BinderContent (OldName m) p a ->
+    m (BinderContent (NewName m) p b)
 toBinderContent expr (BinderLet l) = toLet expr l <&> BinderLet
 toBinderContent expr (BinderExpr e) = expr e <&> BinderExpr
 
 toBinderBody ::
     MonadNaming m => (a -> m b) ->
-    BinderBody (OldName m) (TM m) a ->
-    m (BinderBody (NewName m) (TM m) b)
+    BinderBody (OldName m) p a ->
+    m (BinderBody (NewName m) p b)
 toBinderBody expr = bbContent %%~ toBinderContent expr
 
 toBinder ::
     MonadNaming m => (a -> m b) ->
-    Binder (OldName m) (TM m) a ->
-    m (Binder (NewName m) (TM m) b)
+    Binder (OldName m) p a ->
+    m (Binder (NewName m) p b)
 toBinder expr binder@Binder{..} =
     do
         (params, body) <-
@@ -150,8 +150,8 @@ toBinder expr binder@Binder{..} =
 
 toLam ::
     MonadNaming m => (a -> m b) ->
-    Lambda (OldName m) (TM m) a ->
-    m (Lambda (NewName m) (TM m) b)
+    Lambda (OldName m) p a ->
+    m (Lambda (NewName m) p b)
 toLam = lamBinder . toBinder
 
 toBody ::
@@ -180,7 +180,8 @@ toExpression = rBody (toBody toExpression)
 
 withBinderParams ::
     MonadNaming m =>
-    BinderParams (OldName m) (TM m) -> CPS m (BinderParams (NewName m) (TM m))
+    BinderParams (OldName m) p ->
+    CPS m (BinderParams (NewName m) p)
 withBinderParams BinderWithoutParams = pure BinderWithoutParams
 withBinderParams (NullParam a) = pure (NullParam a)
 withBinderParams (VarParam fp) =
@@ -191,8 +192,8 @@ withBinderParams (FieldParams xs) = onTagParams xs <&> FieldParams
 
 onTagParams ::
     MonadNaming m =>
-    [(T.Tag, FuncParam (NamedParamInfo (OldName m) (TM m)))] ->
-    CPS m [(T.Tag, FuncParam (NamedParamInfo (NewName m) (TM m)))]
+    [(T.Tag, FuncParam (NamedParamInfo (OldName m) p))] ->
+    CPS m [(T.Tag, FuncParam (NamedParamInfo (NewName m) p))]
 onTagParams =
     (traverse . second . fpInfo . npiName) opWithTagName
     where
@@ -200,8 +201,8 @@ onTagParams =
 
 toDefinitionBody ::
     MonadNaming m => (a -> m b) ->
-    DefinitionBody (OldName m) (TM m) a ->
-    m (DefinitionBody (NewName m) (TM m) b)
+    DefinitionBody (OldName m) p a ->
+    m (DefinitionBody (NewName m) p b)
 toDefinitionBody _ (DefinitionBodyBuiltin bi) = pure (DefinitionBodyBuiltin bi)
 toDefinitionBody f (DefinitionBodyExpression (DefinitionExpression typeInfo content)) =
      toBinder f content
@@ -210,8 +211,8 @@ toDefinitionBody f (DefinitionBodyExpression (DefinitionExpression typeInfo cont
 
 toDef ::
     MonadNaming m => (a -> m b) ->
-    Definition (OldName m) (TM m) a ->
-    m (Definition (NewName m) (TM m) b)
+    Definition (OldName m) p a ->
+    m (Definition (NewName m) p b)
 toDef f def@Definition {..} =
     do
         name <- opGetName DefName _drName
