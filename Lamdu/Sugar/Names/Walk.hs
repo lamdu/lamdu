@@ -35,6 +35,9 @@ class (Monad m, Monad (TM m)) => MonadNaming m where
     opWithTagName :: CPSNameConvertor m
     opGetName :: NameType -> NameConvertor m
 
+    opGetAppliedFuncName :: Apply () () -> NameType -> NameConvertor m
+    opGetAppliedFuncName _ = opGetName
+
 type OldExpression m a = Expression (OldName m) (TM m) a
 type NewExpression m a = Expression (NewName m) (TM m) a
 
@@ -89,17 +92,16 @@ toParam param =
             GetFieldParameter -> TagName
             & opGetName
 
+binderVarType :: BinderVarForm t -> NameType
+binderVarType GetLet = ParamName
+binderVarType (GetDefinition _) = DefName
+
 toBinderVar ::
     MonadNaming m =>
     BinderVar (OldName m) p ->
     m (BinderVar (NewName m) p)
 toBinderVar binderVar =
-    (bvNameRef . nrName) f binderVar
-    where
-        f = case binderVar ^. bvForm of
-            GetLet          -> ParamName -- TODO: Separate op for lets?
-            GetDefinition _ -> DefName
-            & opGetName
+    (bvNameRef . nrName) (opGetName (binderVarType (binderVar ^. bvForm))) binderVar
 
 toGetVar ::
     MonadNaming m =>
@@ -153,6 +155,12 @@ toLam ::
     m (Lambda (NewName m) p b)
 toLam = lamBinder . toBinder
 
+toTagG ::
+    MonadNaming m =>
+    TagG (OldName m) ->
+    m (TagG (NewName m))
+toTagG = tagGName %%~ opGetName TagName
+
 toBody ::
     MonadNaming m => (a -> m b) ->
     Body (OldName m) (TM m) a ->
@@ -171,11 +179,35 @@ toBody expr = \case
     BodyLam          x -> toLam expr x <&> BodyLam
     BodyInjectedExpression -> return BodyInjectedExpression
     where
-        toTagG = tagGName %%~ opGetName TagName
         toTIdG = tidgName %%~ opGetName NominalName
 
 toExpression :: MonadNaming m => OldExpression m a -> m (NewExpression m a)
-toExpression = rBody (toBody toExpression)
+toExpression expr =
+    do
+        app@(Apply func spec anot) <- expr ^? rBody . _BodyApply
+        funcVar <- func ^? rBody . _BodyGetVar . _GetBinder
+        let voidedApp =
+                void app
+                & aAnnotatedArgs . traverse . aaTag . tagGName .~ ()
+        let newFunc =
+                funcVar
+                & bvNameRef . nrName %%~
+                    opGetAppliedFuncName voidedApp (binderVarType (funcVar ^. bvForm))
+                <&> GetBinder
+                <&> BodyGetVar
+                <&> (`Expression` (func ^. rPayload))
+        Apply
+            <$> newFunc
+            <*> traverse toExpression spec
+            <*> traverse onAnnotatedArg anot
+            <&> BodyApply <&> (`Expression` (expr ^. rPayload))
+            & Just
+    & fromMaybe (rBody (toBody toExpression) expr)
+    where
+        onAnnotatedArg (AnnotatedArg tag e) =
+            AnnotatedArg
+            <$> toTagG tag
+            <*> toExpression e
 
 withBinderParams ::
     MonadNaming m =>

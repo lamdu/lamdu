@@ -3,7 +3,11 @@
 In textual programming languages, functions and variables are referred to by their names.
 One cannot give two variables the same name, as there would be no way for the compiler to know which of variables a user is referring to.
 
-Some langauges, like C++, do have some mechanisms for "overloading", where the compiler infers which of several functions with the same name to call based on the number of arguments is was given and their types. In that case there may still be a clash (a compilation error) when the types of the functions also match.
+## Name overloading
+
+Some langauges, like C++, do have some mechanisms for "overloading".
+The compiler infers which of several functions with the same name to call
+based on the "function signature" inferred at the call site.
 
 ## When names clash in Lamdu
 
@@ -14,6 +18,10 @@ the programmer looking at the code also needs to distinguish between them!
 For this reason when the user gives two variables the same name, they get displayed with "disambiguation tags" added to their names.
 
 Disambiguation tags are small red numbers at the end of a variable name that Lamdu generates so that the user can understand which variable is used where.
+
+In a similar manner to "overloading", when it's clear from the use that the variables are different,
+then no disambiguation tags are added.
+This man only happen with called functions, when their "type signatures" are different.
 
 # Auto-generated names in Lamdu
 

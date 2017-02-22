@@ -9,7 +9,6 @@ import qualified Control.Monad.Trans.Reader as Reader
 import           Control.Monad.Trans.State (runState, evalState)
 import           Control.Monad.Trans.Writer (Writer, runWriter)
 import qualified Control.Monad.Trans.Writer as Writer
-import           Data.Foldable (toList)
 import qualified Data.List.Utils as ListUtils
 import qualified Data.Map as Map
 import           Data.Monoid.Generic (def_mempty, def_mappend)
@@ -72,12 +71,19 @@ p0cpsNameConvertor :: Monad tm => Walk.CPSNameConvertor (Pass0M tm)
 p0cpsNameConvertor uuid =
     CPS $ \k -> (,) <$> getMStoredName uuid <*> k
 
+data NameUse
+    = NameReference
+    | NameApplied (Apply () ())
+    deriving (Eq, Ord, Show)
+
+Lens.makePrisms ''NameUse
+
 -- Wrap the Map for a more sensible (recursive) Monoid instance
-newtype NameUUIDMap = NameUUIDMap (Map StoredName (OrderedSet UUID))
+newtype NameUUIDMap = NameUUIDMap (Map StoredName (OrderedSet (UUID, NameUse)))
     deriving Show
 
 type instance Lens.Index NameUUIDMap = StoredName
-type instance Lens.IxValue NameUUIDMap = OrderedSet UUID
+type instance Lens.IxValue NameUUIDMap = OrderedSet (UUID, NameUse)
 
 -- ghc-7.7.20131205 fails deriving these instances on its own.
 instance Lens.Ixed NameUUIDMap where
@@ -92,8 +98,10 @@ instance Monoid NameUUIDMap where
     NameUUIDMap x `mappend` NameUUIDMap y =
         NameUUIDMap $ Map.unionWith mappend x y
 
-nameUUIDMapSingleton :: StoredName -> UUID -> NameUUIDMap
-nameUUIDMapSingleton name uuid = NameUUIDMap . Map.singleton name $ OrderedSet.singleton uuid
+nameUUIDMapSingleton :: UUID -> NameUse -> StoredName -> NameUUIDMap
+nameUUIDMapSingleton uuid nameUse name =
+    OrderedSet.singleton (uuid, nameUse)
+    & Map.singleton name & NameUUIDMap
 
 data StoredNamesWithin = StoredNamesWithin
     { _snwUUIDMap :: NameUUIDMap
@@ -123,6 +131,12 @@ runPass1M (Pass1M act) = runWriter act
 
 data NameScope = Local | Global
 
+nameTypeScope :: Walk.NameType -> NameScope
+nameTypeScope Walk.ParamName = Local
+nameTypeScope Walk.TagName = Global
+nameTypeScope Walk.NominalName = Global
+nameTypeScope Walk.DefName = Global
+
 instance Monad tm => MonadNaming (Pass1M tm) where
     type OldName (Pass1M tm) = MStoredName
     type NewName (Pass1M tm) = StoredNames
@@ -131,18 +145,17 @@ instance Monad tm => MonadNaming (Pass1M tm) where
     opWithParamName _ = p1cpsNameConvertor Local
     opWithLetName _ = p1cpsNameConvertor Local
     opWithTagName = p1cpsNameConvertor Local
-    opGetName nameType =
-        case nameType of
-        Walk.ParamName -> Local
-        Walk.TagName -> Global
-        Walk.NominalName -> Global
-        Walk.DefName -> Global
-        & p1nameConvertor
+    opGetName = p1nameConvertor NameReference . nameTypeScope
+    opGetAppliedFuncName apply =
+        p1nameConvertor (NameApplied ctx) . nameTypeScope
+        where
+            -- Ignore operator precedence
+            ctx = apply & aSpecialArgs . _InfixArgs . _1 .~ 0
 
 pass1Result ::
-    NameScope -> MStoredName ->
+    NameUse -> NameScope -> MStoredName ->
     Pass1M tm (StoredNamesWithin -> StoredNames)
-pass1Result scope sn@(MStoredName mName uuid) =
+pass1Result nameUse scope sn@(MStoredName mName uuid) =
     do
         p1TellStoredNames myStoredNamesWithin
         pure $ \storedNamesUnder -> StoredNames
@@ -153,7 +166,7 @@ pass1Result scope sn@(MStoredName mName uuid) =
         myStoredNamesWithin =
             maybe mempty
             (buildStoredNamesWithin .
-              (`nameUUIDMapSingleton` uuid)) mName
+              (nameUUIDMapSingleton uuid nameUse)) mName
         buildStoredNamesWithin myNameUUIDMap =
             StoredNamesWithin myNameUUIDMap $
             globalNames myNameUUIDMap
@@ -162,13 +175,15 @@ pass1Result scope sn@(MStoredName mName uuid) =
             Local -> mempty
             Global -> myNameUUIDMap
 
-p1nameConvertor :: NameScope -> Walk.NameConvertor (Pass1M tm)
-p1nameConvertor scope mStoredName = ($ mempty) <$> pass1Result scope mStoredName
+p1nameConvertor :: NameUse -> NameScope -> Walk.NameConvertor (Pass1M tm)
+p1nameConvertor nameUse scope mStoredName =
+    pass1Result nameUse scope mStoredName
+    <&> ($ mempty)
 
 p1cpsNameConvertor :: NameScope -> Walk.CPSNameConvertor (Pass1M tm)
 p1cpsNameConvertor scope mNameSrc =
     CPS $ \k -> do
-        result <- pass1Result scope mNameSrc
+        result <- pass1Result NameReference scope mNameSrc
         (res, storedNamesBelow) <- p1ListenStoredNames k
         pure (result storedNamesBelow, res)
 
@@ -180,14 +195,27 @@ data P2Env = P2Env
     }
 Lens.makeLenses ''P2Env
 
+uuidSuffixes :: OrderedSet (UUID, NameUse) -> Map UUID Int
+uuidSuffixes nameUses
+    | not (ListUtils.isLengthAtLeast 2 uuids) = Map.empty
+    | ListUtils.isLengthAtLeast 2 nameRefs = suffixes
+    | hasBothTypes = suffixes
+    | hasSameCallType = suffixes
+    | otherwise = Map.empty
+    where
+        uuids = (nameUses ^. Lens.folded . _1 . Lens.to OrderedSet.singleton) ^.. Lens.folded
+        suffixes = zip uuids [0..] & Map.fromList
+        nameRefs = nameUses ^.. Lens.folded . _2 . _NameReference
+        nameApps = nameUses ^.. Lens.folded . _2 . _NameApplied
+        hasBothTypes = not (null nameRefs) && not (null nameApps)
+        hasSameCallType = Set.size (Set.fromList nameApps) < length nameApps
+
 emptyP2Env :: NameUUIDMap -> P2Env
-emptyP2Env (NameUUIDMap globalNamesMap) = P2Env
+emptyP2Env (NameUUIDMap globalNamesMap) =
+    P2Env
     { _p2NameGen = NameGen.initial
     , _p2StoredNames = mempty
-    , _p2StoredNameSuffixes =
-        mconcat .
-        map Map.fromList . filter (ListUtils.isLengthAtLeast 2) .
-        map ((`zip` [0..]) . toList) $ Map.elems globalNamesMap
+    , _p2StoredNameSuffixes = globalNamesMap ^.. traverse <&> uuidSuffixes & mconcat
     }
 
 newtype Pass2M (tm :: * -> *) a = Pass2M (Reader P2Env a)
@@ -254,8 +282,10 @@ makeFinalNameEnv name storedNamesBelow uuid env =
         mSuffixFromAbove =
             Map.lookup uuid $ env ^. p2StoredNameSuffixes
         collidingUUIDs =
-            maybe [] (filter (/= uuid) . toList) $
-            storedNamesBelow ^. snwUUIDMap . Lens.at name
+            storedNamesBelow
+            ^. snwUUIDMap . Lens.at name . Lens._Just .
+                Lens.folded . Lens._1 . Lens.filtered (/= uuid) . Lens.to OrderedSet.singleton
+            ^.. Lens.folded
 
 p2cpsNameConvertor ::
     Monad tm =>
