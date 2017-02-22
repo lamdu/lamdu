@@ -180,6 +180,29 @@ processDefinitionWidget (Sugar.DefTypeChanged info) myId mkLayout =
                     & return
             else return layout
 
+makeGetBinder ::
+    Monad m =>
+    Sugar.BinderVar (Name m) m -> Widget.Id ->
+    ExprGuiM m (TreeLayout (T m Widget.EventResult))
+makeGetBinder binderVar myId =
+    do
+        config <- ExprGuiM.readConfig
+        let Config.Name{..} = Config.name config
+        let (color, processDef) =
+                case binderVar ^. Sugar.bvForm of
+                Sugar.GetLet -> (letColor, id)
+                Sugar.GetDefinition defForm ->
+                    ( definitionColor
+                    , processDefinitionWidget defForm myId
+                    )
+        makeSimpleView color
+            & makeNameRef myId (binderVar ^. Sugar.bvNameRef)
+            <&> TreeLayout.widget %~
+            Widget.weakerEvents
+            (makeInlineEventMap config (binderVar ^. Sugar.bvInline))
+            & processDef
+
+
 make ::
     Monad m =>
     Sugar.GetVar (Name m) m ->
@@ -192,21 +215,7 @@ make getVar pl =
         ExpressionGui.stdWrap pl
             <*>
             case getVar of
-            Sugar.GetBinder binderVar ->
-                makeSimpleView color
-                & makeNameRef myId (binderVar ^. Sugar.bvNameRef)
-                <&> TreeLayout.widget %~
-                Widget.weakerEvents
-                (makeInlineEventMap config (binderVar ^. Sugar.bvInline))
-                & processDef
-                where
-                    (color, processDef) =
-                        case binderVar ^. Sugar.bvForm of
-                        Sugar.GetLet -> (letColor, id)
-                        Sugar.GetDefinition defForm ->
-                            ( definitionColor
-                            , processDefinitionWidget defForm myId
-                            )
+            Sugar.GetBinder binderVar -> makeGetBinder binderVar myId
             Sugar.GetParam param ->
                 case param ^. Sugar.pBinderMode of
                 Sugar.LightLambda ->
