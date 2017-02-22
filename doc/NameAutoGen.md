@@ -36,11 +36,19 @@ Hence, variable names clash when two variables which are accessible in a common 
 
 A variable from an outer scope may clash with several inner scope variables that do not clash with each other. In this case too all of them get different disambiguation tags.
 
+**Idea/suggestion**: For local variables, perhaps we could had only the inner scope variables have disambiguation tags, where the number is a counter for how many variables with the same name this variable "shadows". Note that this way variables from different scopes aren't grouped together even though they shadow the same variable. I think this will make the numbering less arbitrary and perhaps more straight-forward?
+
+### Clashes in hole results
+
+For any names introduced inside hole results (in lambdas), they are auto-generated so as not to clash with anything.
+
+When browsing global variables or Nominal types in hole results - that doesn't change the expression outside the hole, so currently there are no disambiguation tags for these. **TODO**: Think of a better solution for this?
+
 ## Type names and tags
 
 Type (and tags) are not limited to a specific scope so when two types have the same name they always clash.
 
-*(Note that this would be less of an issue for tags once we implement proper tag holes in Lamdu)*
+*(Note that there would be less name collisions for tags soon when we implement proper tag holes in Lamdu - i.e same tag will be used)*
 
 # Implementation of Lamdu's naming process
 
