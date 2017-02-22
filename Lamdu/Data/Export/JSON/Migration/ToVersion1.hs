@@ -156,14 +156,13 @@ migrateEntity nominalMap defMap (Aeson.Object obj) =
         \typ ->
         do
             fixedTyp <- fixScheme typ
-            let fixedObj =
-                    obj
-                    & Lens.at "frozenDefTypes" .~ Nothing
-                    & Lens.at "typ" ?~ fixedTyp
-            case obj ^. Lens.at "frozenDefTypes" of
-                Nothing -> return fixedObj
-                Just frozenDefTypes ->
-                    addFrozenDeps nominalMap frozenDefTypes fixedObj
+            let prevFrozenTypes =
+                    obj ^. Lens.at "frozenDefTypes"
+                    & fromMaybe (Aeson.Object mempty)
+            obj
+                & Lens.at "frozenDefTypes" .~ Nothing
+                & Lens.at "typ" ?~ fixedTyp
+                & addFrozenDeps nominalMap prevFrozenTypes
     , obj ^. Lens.at "builtin" <&> convertBuiltin obj
     , obj ^. Lens.at "repl" <&>
         \replVal ->
