@@ -1,7 +1,6 @@
-{-# LANGUAGE LambdaCase, NoImplicitPrelude, FlexibleContexts, TypeFamilies, RankNTypes, RecordWildCards, NamedFieldPuns #-}
+{-# LANGUAGE LambdaCase, NoImplicitPrelude, FlexibleContexts, TypeFamilies, RecordWildCards, NamedFieldPuns #-}
 module Lamdu.Sugar.Names.Walk
     ( MonadNaming(..)
-    , InTransaction(..)
     , NameType(..)
     , NameConvertor, CPSNameConvertor
     , OldExpression, NewExpression
@@ -22,8 +21,6 @@ type T = Transaction
 type CPSNameConvertor m = OldName m -> CPS m (NewName m)
 type NameConvertor m = OldName m -> m (NewName m)
 
-newtype InTransaction m = InTransaction (forall a. m a -> T (TM m) a)
-
 data NameType = DefName | TagName | NominalName | ParamName
 
 -- TODO: Rename MonadNameWalk
@@ -31,7 +28,7 @@ class (Monad m, Monad (TM m)) => MonadNaming m where
     type OldName m
     type NewName m
     type TM m :: * -> *
-    opRun :: m (InTransaction m)
+    opRun :: m (m a -> T (TM m) a)
 
     opWithParamName :: NameGen.VarInfo -> CPSNameConvertor m
     opWithLetName :: NameGen.VarInfo -> CPSNameConvertor m
@@ -57,10 +54,11 @@ toHoleOption ::
     m (HoleOption (NewName m) (TM m))
 toHoleOption option@HoleOption{..} =
     do
-        InTransaction run <- opRun
+        run0 <- opRun
+        run1 <- opRun
         pure option
-            { _hoSugaredBaseExpr = _hoSugaredBaseExpr >>= run . toExpression
-            , _hoResults = _hoResults <&> second (>>= run . toHoleResult)
+            { _hoSugaredBaseExpr = _hoSugaredBaseExpr >>= run0 . toExpression
+            , _hoResults = _hoResults <&> second (>>= run1 . toHoleResult)
             }
     where
         {-# INLINE second #-}
@@ -72,10 +70,11 @@ toHoleActions ::
     m (HoleActions (NewName m) (TM m))
 toHoleActions ha@HoleActions {..} =
     do
-        InTransaction run <- opRun
+        run0 <- opRun
+        run1 <- opRun
         pure ha
-            { _holeOptions = _holeOptions >>= run . traverse toHoleOption
-            , _holeOptionLiteral = _holeOptionLiteral <&> (>>= run . toHoleOption)
+            { _holeOptions = _holeOptions >>= run0 . traverse toHoleOption
+            , _holeOptionLiteral = _holeOptionLiteral <&> (>>= run1 . toHoleOption)
             }
 
 toParam ::
