@@ -137,7 +137,7 @@ changeFuncArg change usedDefVar =
                 _ -> fixArg ArgChange arg go
 
 isPartSame ::
-    (Lens.Getting (Monoid.First Type) Type Type) -> Scheme -> Scheme -> Bool
+    Lens.Getting (Monoid.First Type) Type Type -> Scheme -> Scheme -> Bool
 isPartSame part preType newType =
     do
         prePart <- preType & schemeType %%~ (^? part)

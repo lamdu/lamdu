@@ -417,8 +417,8 @@ decodeValBody obj =
 
 encodeDefExpr :: Definition.Expr (Val UUID) -> Aeson.Object
 encodeDefExpr (Definition.Expr val frozenDeps) =
-    [ "val" .= encodeVal val
-    ] ++
+    ( "val" .= encodeVal val
+    ) :
     encodeSquash null "frozenDeps" HashMap.fromList encodedDeps
     & HashMap.fromList
     where
