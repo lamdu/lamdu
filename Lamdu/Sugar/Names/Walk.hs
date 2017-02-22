@@ -22,7 +22,7 @@ type T = Transaction
 type CPSNameConvertor m = OldName m -> CPS m (NewName m)
 type NameConvertor m = OldName m -> m (NewName m)
 
-newtype InTransaction m tm = InTransaction (forall a. m a -> T tm a)
+newtype InTransaction m = InTransaction (forall a. m a -> T (TM m) a)
 
 data NameType = DefName | TagName | NominalName | ParamName
 
@@ -31,7 +31,7 @@ class (Monad m, Monad (TM m)) => MonadNaming m where
     type OldName m
     type NewName m
     type TM m :: * -> *
-    opRun :: m (InTransaction m (TM m))
+    opRun :: m (InTransaction m)
 
     opWithParamName :: NameGen.VarInfo -> CPSNameConvertor m
     opWithLetName :: NameGen.VarInfo -> CPSNameConvertor m
