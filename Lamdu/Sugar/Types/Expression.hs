@@ -276,18 +276,18 @@ data SpecialArgs expr
     = NoSpecialArgs
     | ObjectArg expr
     | InfixArgs Int expr expr
-    deriving (Functor, Foldable, Traversable)
+    deriving (Functor, Foldable, Traversable, Eq, Ord, Show)
 
 data AnnotatedArg name expr = AnnotatedArg
     { _aaTag :: TagG name
     , _aaExpr :: expr
-    } deriving (Functor, Foldable, Traversable)
+    } deriving (Functor, Foldable, Traversable, Eq, Ord, Show)
 
 data Apply name expr = Apply
     { _aFunc :: expr
     , _aSpecialArgs :: SpecialArgs expr
     , _aAnnotatedArgs :: [AnnotatedArg name expr]
-    } deriving (Functor, Foldable, Traversable)
+    } deriving (Functor, Foldable, Traversable, Eq, Ord, Show)
 
 data Nominal name expr = Nominal
     { _nTId :: TIdG name

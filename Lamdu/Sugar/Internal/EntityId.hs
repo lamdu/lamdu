@@ -28,7 +28,7 @@ import           System.Random (RandomGen)
 import           Lamdu.Prelude
 
 newtype EntityId = EntityId UUID
-    deriving (Eq, Hashable, Show)
+    deriving (Eq, Ord, Hashable, Show)
 
 bs :: EntityId -> ByteString
 bs (EntityId uuid) = UUIDUtils.toSBS16 uuid

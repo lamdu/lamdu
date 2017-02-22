@@ -113,7 +113,7 @@ data TagG name = TagG
     { _tagInstance :: EntityId -- Unique across different uses of a tag
     , _tagVal :: T.Tag
     , _tagGName :: name
-    }
+    } deriving (Eq, Ord, Show)
 
 data NameRef name m = NameRef
     { _nrName :: name
