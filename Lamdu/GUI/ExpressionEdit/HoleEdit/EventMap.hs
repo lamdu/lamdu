@@ -21,7 +21,7 @@ import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.Grid as Grid
 import qualified Graphics.UI.GLFW as GLFW
-import           Lamdu.CharClassification (operatorChars, bracketChars, digitChars)
+import           Lamdu.CharClassification (operatorChars, bracketChars, digitChars, hexDigitChars)
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.Info (HoleInfo(..))
@@ -100,6 +100,9 @@ disallowCharsFromSearchTerm Config.Hole{..} holeInfo searchTerm =
             '-':x:xs
                 | x `elem` digitChars ->
                     digitChars ++ ['.' | not ("." `isInfixOf` xs)] & allowOnly
+            "#" | isLeafHole -> allowOnly (operatorChars ++ hexDigitChars)
+            '#':x:_
+                | x `elem` hexDigitChars -> allowOnly hexDigitChars
             x:xs
                 | x `elem` operatorChars -> allowOnly operatorChars
                 | x `elem` bracketChars -> allowOnly bracketChars
