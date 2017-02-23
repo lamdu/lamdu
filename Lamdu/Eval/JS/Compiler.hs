@@ -8,8 +8,8 @@ module Lamdu.Eval.JS.Compiler
     ) where
 
 import qualified Control.Lens as Lens
-import           Control.Monad.Trans.RWS.Strict (RWST(..))
-import qualified Control.Monad.Trans.RWS.Strict as RWS
+import           Control.Monad.Trans.FastRWS (RWST, runRWST)
+import qualified Control.Monad.Trans.FastRWS as RWS
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Base16 as Hex
 import qualified Data.Char as Char

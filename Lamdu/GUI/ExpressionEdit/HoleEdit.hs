@@ -43,6 +43,7 @@ makeWrapper pl holeInfo =
                 <&> TreeLayout.widget %~ Widget.weakerEvents exprEventMap
 
 assignHoleCursor ::
+    Functor m =>
     WidgetIds -> Maybe (Sugar.HoleArg m expr) -> ExprGuiM m a -> ExprGuiM m a
 assignHoleCursor WidgetIds{..} Nothing =
     ExprGuiM.assignCursor hidHole hidOpen .

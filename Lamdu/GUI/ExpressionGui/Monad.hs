@@ -29,8 +29,8 @@ module Lamdu.GUI.ExpressionGui.Monad
     ) where
 
 import qualified Control.Lens as Lens
-import           Control.Monad.Trans.RWS (RWST, runRWST)
-import qualified Control.Monad.Trans.RWS as RWS
+import           Control.Monad.Trans.FastRWS (RWST, runRWST)
+import qualified Control.Monad.Trans.FastRWS as RWS
 import qualified Data.Char as Char
 import           Data.CurAndPrev (CurAndPrev)
 import           Data.Store.Transaction (Transaction)
@@ -109,13 +109,13 @@ Lens.makeLenses ''Askable
 Lens.makeLenses ''ExprGuiM
 
 -- TODO: To lens
-localEnv :: (WE.Env -> WE.Env) -> ExprGuiM m a -> ExprGuiM m a
+localEnv :: Functor m => (WE.Env -> WE.Env) -> ExprGuiM m a -> ExprGuiM m a
 localEnv = (exprGuiM %~) . RWS.mapRWST . WE.localEnv
 
-withFgColor :: Draw.Color -> ExprGuiM m a -> ExprGuiM m a
+withFgColor :: Functor m => Draw.Color -> ExprGuiM m a -> ExprGuiM m a
 withFgColor = localEnv . WE.setTextColor
 
-withLocalUnderline :: TextView.Underline -> ExprGuiM m a -> ExprGuiM m a
+withLocalUnderline :: Functor m => TextView.Underline -> ExprGuiM m a -> ExprGuiM m a
 withLocalUnderline underline =
     WE.envTextStyle . TextEdit.sTextViewStyle .
     TextView.styleUnderline ?~ underline
@@ -208,11 +208,11 @@ makeLabel text animId = widgetEnv $ BWidgets.makeLabel text animId
 transaction :: Monad m => T m a -> ExprGuiM m a
 transaction = widgetEnv . lift
 
-assignCursor :: Widget.Id -> Widget.Id -> ExprGuiM m a -> ExprGuiM m a
+assignCursor :: Functor m => Widget.Id -> Widget.Id -> ExprGuiM m a -> ExprGuiM m a
 assignCursor x y = localEnv $ WE.envAssignCursor x y
 
 assignCursorPrefix ::
-    Widget.Id -> (AnimId -> Widget.Id) -> ExprGuiM m a -> ExprGuiM m a
+    Functor m => Widget.Id -> (AnimId -> Widget.Id) -> ExprGuiM m a -> ExprGuiM m a
 assignCursorPrefix x y = localEnv $ WE.envAssignCursorPrefix x y
 
 makeFocusDelegator ::

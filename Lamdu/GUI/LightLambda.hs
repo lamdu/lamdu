@@ -11,7 +11,7 @@ import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 
 import           Lamdu.Prelude
 
-withUnderline :: Config -> ExprGuiM m a -> ExprGuiM m a
+withUnderline :: Functor m => Config -> ExprGuiM m a -> ExprGuiM m a
 withUnderline config =
     Underline
     { _underlineColor = Config.lightLambdaUnderlineColor config

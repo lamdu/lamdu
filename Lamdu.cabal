@@ -34,6 +34,7 @@ Library
                   , Control.Lens.Utils
                   , Control.Monad.Trans.Either.Utils
                   , Control.Monad.Trans.FastWriter
+                  , Control.Monad.Trans.FastRWS
                   , Control.Monad.Unit
                   , Data.Binary.Utils
                   , Data.ByteString.Utils
