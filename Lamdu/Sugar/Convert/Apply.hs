@@ -227,6 +227,7 @@ convertAppliedHole (V.Apply funcI argI) argS exprPl =
         isTypeMatch <-
             checkTypeMatch (argI ^. Val.payload . Input.inferredType)
             (exprPl ^. Input.inferredType) & lift
+        postProcess <- lift ConvertM.postProcess
         let holeArg = HoleArg
                 { _haExpr =
                       argS
@@ -237,7 +238,9 @@ convertAppliedHole (V.Apply funcI argI) argS exprPl =
                 , _haUnwrap =
                       if isTypeMatch
                       then unwrap (exprPl ^. Input.stored)
-                           (argI ^. Val.payload . Input.stored) argI & UnwrapAction
+                           (argI ^. Val.payload . Input.stored) argI
+                           <* postProcess
+                           & UnwrapAction
                       else UnwrapTypeMismatch
                 }
         do
