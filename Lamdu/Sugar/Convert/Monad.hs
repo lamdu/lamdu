@@ -8,7 +8,7 @@ module Lamdu.Sugar.Convert.Monad
     , Context(..)
     , scInferContext, scPostProcessRoot, scGlobalsInScope
     , scCodeAnchors, scScopeInfo, scNominalsMap
-    , scOutdatedDefinitions, scFrozenDeps
+    , scOutdatedDefinitions, scFrozenDeps, scInlineableDefinitions
 
     , ConvertM(..), run
     , readContext, liftTransaction, local
@@ -82,6 +82,7 @@ data Context m = Context
     , -- The nominal types appearing in the converted expr and its subexpression
       _scNominalsMap :: Map T.NominalId Nominal
     , _scOutdatedDefinitions :: Map V.Var (Sugar.DefinitionOutdatedType m)
+    , _scInlineableDefinitions :: Set V.Var
     , _scFrozenDeps :: Transaction.Property m Infer.Dependencies
     , scConvertSubexpression ::
         forall a. Monoid a => Val (Input.Payload m a) -> ConvertM m (ExpressionU m a)

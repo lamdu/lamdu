@@ -8,13 +8,15 @@ import           Control.Monad.Trans.Either.Utils (runMatcherT, justToLeft)
 import           Control.Monad.Trans.Maybe (MaybeT)
 import           Data.Maybe.Utils (maybeToMPlus)
 import           Data.UUID.Types (UUID)
+import qualified Data.Store.Property as Property
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
 import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Calc.Val as V
 import qualified Lamdu.Data.Anchors as Anchors
+import qualified Lamdu.Data.Definition as Def
 import qualified Lamdu.Data.Ops as DataOps
-import           Lamdu.Expr.IRef (DefI)
+import           Lamdu.Expr.IRef (DefI, ValIProperty)
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Lens as ExprLens
 import qualified Lamdu.Expr.UniqueId as UniqueId
@@ -34,6 +36,39 @@ jumpToDefI ::
     Monad m => Anchors.CodeProps m -> DefI m -> Transaction m EntityId
 jumpToDefI cp defI = EntityId.ofIRef defI <$ DataOps.newPane cp defI
 
+inlineDef ::
+    Monad m => ConvertM.Context m -> V.Var -> ValIProperty m -> Transaction m EntityId
+inlineDef ctx globalId dest =
+    do
+        def <- Transaction.readIRef defI
+        case def ^. Def.defBody of
+            Def.BodyBuiltin _ ->
+                -- Cannot inline builtins.
+                -- Jump to it instead so that user understands that it's a builtin.
+                gotoDef
+            Def.BodyExpr defExpr ->
+                do
+                    isRecursive <-
+                        ExprIRef.readVal (defExpr ^. Def.expr)
+                        <&> Lens.has (ExprLens.valGlobals mempty . Lens.only globalId)
+                    if isRecursive
+                        then gotoDef
+                        else doInline def defExpr
+    where
+        defI = ExprIRef.defI globalId
+        gotoDef = jumpToDefI (ctx ^. ConvertM.scCodeAnchors) defI
+        doInline def defExpr =
+            do
+                Property.set dest (defExpr ^. Def.expr)
+                Property.pureModify (ctx ^. ConvertM.scFrozenDeps) (<> defExpr ^. Def.exprFrozenDeps)
+                newDefExpr <- DataOps.newHole
+                def & Def.defBody .~ Def.BodyExpr (Def.Expr newDefExpr mempty)
+                    & Transaction.writeIRef defI
+                Transaction.setP (Anchors.assocDefinitionState defI) DeletedDefinition
+                _ <- ctx ^. ConvertM.scPostProcessRoot
+                defExpr ^. Def.expr & EntityId.ofValI & return
+
+
 convertGlobal ::
     Monad m => V.Var -> Input.Payload m a -> MaybeT (ConvertM m) (GetVar UUID m)
 convertGlobal param exprPl =
@@ -45,20 +80,25 @@ convertGlobal param exprPl =
         lifeState <-
             Anchors.assocDefinitionState defI
             & Transaction.getP & ConvertM.liftTransaction & lift
-        GetBinder BinderVar
-            { _bvNameRef = NameRef
-              { _nrName = UniqueId.toUUID defI
-              , _nrGotoDefinition =
-                  jumpToDefI (ctx ^. ConvertM.scCodeAnchors) defI
-              }
-            , _bvForm =
+        let defForm =
                 case lifeState of
                 DeletedDefinition -> DefDeleted
                 LiveDefinition ->
                     ctx ^. ConvertM.scOutdatedDefinitions . Lens.at param
                     & maybe DefUpToDate DefTypeChanged
-                & GetDefinition
-            , _bvInline = CannotInline
+        GetBinder BinderVar
+            { _bvNameRef = NameRef
+              { _nrName = UniqueId.toUUID defI
+              , _nrGotoDefinition = jumpToDefI (ctx ^. ConvertM.scCodeAnchors) defI
+              }
+            , _bvForm = GetDefinition defForm
+            , _bvInline =
+                case defForm of
+                DefUpToDate
+                    | Lens.has (ConvertM.scInlineableDefinitions . Lens.ix param) ctx ->
+                        inlineDef ctx param (exprPl ^. Input.stored)
+                        & InlineVar
+                _ -> CannotInline
             } & return
     where
         defI = ExprIRef.defI param

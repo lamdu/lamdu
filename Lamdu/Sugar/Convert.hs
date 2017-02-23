@@ -7,6 +7,7 @@ import qualified Control.Lens as Lens
 import qualified Control.Monad.Trans.State as State
 import           Data.CurAndPrev (CurAndPrev)
 import qualified Data.Graph as Graph
+import qualified Data.List as List
 import qualified Data.Map as Map
 import qualified Data.Set as Set
 import           Data.Store.Property (Property(..))
@@ -218,6 +219,9 @@ makeNominalsMap val =
                         Map.insert tid nom loaded & State.put
                         nom ^.. N.nomType . N._NominalType . schemeType & traverse_ loadForType
 
+nonRepeating :: Ord a => [a] -> [a]
+nonRepeating = concat . filter (null . tail) . List.group . List.sort
+
 convertInferDefExpr ::
     Monad m =>
     CurAndPrev (EvalResults (ValI m)) -> Anchors.CodeProps m ->
@@ -226,7 +230,7 @@ convertInferDefExpr ::
 convertInferDefExpr evalRes cp defType defExpr defI =
     do
         (valInferred, newInferContext) <-
-            inferRecursive defExpr (ExprIRef.globalId defI)
+            inferRecursive defExpr defVar
             & IRefInfer.liftInfer
             >>= loadInferPrepareInput evalRes
             & assertRunInfer
@@ -241,6 +245,9 @@ convertInferDefExpr evalRes cp defType defExpr defI =
                 , _scScopeInfo = emptyScopeInfo
                 , _scPostProcessRoot = postProcessDef defI
                 , _scOutdatedDefinitions = outdatedDefinitions
+                , _scInlineableDefinitions =
+                    valInferred ^.. ExprLens.valGlobals (Set.singleton defVar)
+                    & nonRepeating & Set.fromList
                 , _scFrozenDeps =
                     Property (defExpr ^. Definition.exprFrozenDeps) setFrozenDeps
                 , scConvertSubexpression = ConvertExpr.convert
@@ -249,6 +256,7 @@ convertInferDefExpr evalRes cp defType defExpr defI =
             defType (defExpr & Definition.expr .~ valInferred) defI
             & ConvertM.run context
     where
+        defVar = ExprIRef.globalId defI
         setDefExpr x =
             Definition.Definition (Definition.BodyExpr x) defType ()
             & Transaction.writeIRef defI
@@ -270,7 +278,6 @@ convertDefBody evalRes cp (Definition.Definition body defType defI) =
 convertExpr ::
     Monad m =>
     CurAndPrev (EvalResults (ValI m)) -> Anchors.CodeProps m ->
-
     Transaction.MkProperty m (Definition.Expr (ValI m)) ->
     T m (ExpressionU m [EntityId])
 convertExpr evalRes cp prop =
@@ -292,6 +299,8 @@ convertExpr evalRes cp prop =
                 , _scScopeInfo = emptyScopeInfo
                 , _scPostProcessRoot = postProcessExpr prop
                 , _scOutdatedDefinitions = outdatedDefinitions
+                , _scInlineableDefinitions =
+                    valInferred ^.. ExprLens.valGlobals mempty & nonRepeating & Set.fromList
                 , _scFrozenDeps =
                     Property (defExpr ^. Definition.exprFrozenDeps) setFrozenDeps
                 , scConvertSubexpression = ConvertExpr.convert
