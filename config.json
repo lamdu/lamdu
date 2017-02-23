@@ -192,7 +192,7 @@
                 "Key'W"
             ]
         ],
-        "paneHoverPadding": 4
+        "paneHoverPadding": 1.5
     },
     "versionControl": {
         "undoKeys": [
