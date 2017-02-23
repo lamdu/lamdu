@@ -1,7 +1,7 @@
 # When names clash
 
 In textual programming languages, functions and variables are referred to by their names.
-One cannot give two variables the same name, as there would be no way for the compiler to know which of variables a user is referring to.
+One cannot give two variables the same name in the same scope, as there would be no way for the compiler to know which variable is being referring to.
 
 ## Name overloading
 
@@ -11,7 +11,7 @@ based on the "function signature" inferred at the call site.
 
 ## When names clash in Lamdu
 
-In Lamdu the situation is different: The compiler always knows which variable is used where, because in the stored AST, variables are referred to by unique identifiers, which aren't their user-readable displayed names.
+In Lamdu the situation is different: The compiler always knows which variable is used, because in the stored AST, variables are referred to by unique identifiers, which aren't their user-readable displayed names.
 
 But the compiler isn't the only one who needs to distinguish between variables,
 the programmer looking at the code also needs to distinguish between them!
@@ -21,17 +21,18 @@ Disambiguation tags are small red numbers at the end of a variable name that Lam
 
 In a similar manner to "overloading", when it's clear from the use that the variables are different,
 then no disambiguation tags are added.
-This man only happen with called functions, when their "type signatures" are different.
+This only happens with applied functions, when their parameter names are different.
 
 # Auto-generated names in Lamdu
 
-In Lamdu, program ASTs are edited, and one may create code without actually giving names to all of their variables. But variables would still need to be displayed, and when not named by the user they will get auto-generated names.
+In Lamdu, program ASTs are edited, and one may create code without actually giving names to all variables. But variables would still need to be displayed, and when not named by the user they will get auto-generated names.
 
 Auto-generated names are often fine for small lambdas like `x → x+1`, and not having to name those variables is convenient.
 
-Lamdu also makes sure that the auto-generated names will never clash with names given by the user. So if the user renames a variable so that it has the same name as an auto-generated name had, the auto-generated name changes, so that there will not be a clash! To clarify that the auto-generated names are ephemeral and could change when the user renames other variables, they are drawn with an *italic* font where they are introduced.
+Lamdu also makes sure that the auto-generated names will never clash with other names. So if the user renames a variable so that it has the same name as an auto-generated name had, the auto-generated name changes, so that there will not be a 
+clash! To clarify that the auto-generated names are ephemeral and could change when the user renames other variables, they are drawn with an *italic* font where they are introduced.
 
-For local variables, Lamdu gives names such as `x`, `y`, etc. And in case is infers that the variable stands for a function it will name it `f`, `g`, etc.
+For local variables, Lamdu gives names such as `x`, `y`, etc. And in case it infers that the variable is a function it will name it `f`, `g`, etc.
 
 The auto-generated names for global variables and type/tag names are ugly verbose identifiers. This is because we really want to encourage giving names to those.
 
@@ -44,7 +45,8 @@ Hence, variable names clash when two variables which are accessible in a common 
 
 A variable from an outer scope may clash with several inner scope variables that do not clash with each other. In this case too all of them get different disambiguation tags.
 
-**Idea/suggestion**: For local variables, perhaps we could had only the inner scope variables have disambiguation tags, where the number is a counter for how many variables with the same name this variable "shadows". Note that this way variables from different scopes aren't grouped together even though they shadow the same variable. I think this will make the numbering less arbitrary and perhaps more straight-forward?
+**Idea/suggestion**: Only when an inner scope variable shadows an outer one, add a disambiguation tag to it. The outer variable need not have a tag. The number in the tag counts the number of outer variables shadowed.
+In a sense, this reverts to de-bruijn indexing for variables that don't have unique names.
 
 ### Clashes in hole results
 
@@ -69,7 +71,7 @@ To find which names clash with which, and auto-generating non-clashing names, `A
 
 These passes "walk" on the tree and change its "name" type-parameter. Because the traversal of the tree is the same for all three passes, we created a type-class, `MonadNaming`, for the passes, so that common AST-traversal code could be used for all of them.
 
-* `Lamdu.Sugar.Names.Walk` defines the `MonadNaming` class and the expressions traversals it.
+* `Lamdu.Sugar.Names.Walk` defines the `MonadNaming` class and the expressions traversals for it.
 
 The `MonadNaming` class also defines three type families, `OldName`, `NewName`, and `TM` (**TODO**: better name?), so that the walking functions have types such as:
 
