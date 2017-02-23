@@ -91,7 +91,6 @@ newtype NameUUIDMap = NameUUIDMap (Map StoredName (OrderedSet NameInstance))
 type instance Lens.Index NameUUIDMap = StoredName
 type instance Lens.IxValue NameUUIDMap = OrderedSet NameInstance
 
--- ghc-7.7.20131205 fails deriving these instances on its own.
 instance Lens.Ixed NameUUIDMap where
     ix k f (NameUUIDMap m) = NameUUIDMap <$> Lens.ix k f m
     {-# INLINE ix #-}
