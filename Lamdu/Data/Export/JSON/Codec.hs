@@ -6,8 +6,8 @@ module Lamdu.Data.Export.JSON.Codec
 
 import           Control.Applicative (optional)
 import qualified Control.Lens as Lens
-import           Control.Monad.Trans.Writer (WriterT(..))
-import qualified Control.Monad.Trans.Writer as Writer
+import           Control.Monad.Trans.FastWriter (WriterT, writerT, runWriterT)
+import qualified Control.Monad.Trans.FastWriter as Writer
 import           Data.Aeson ((.=))
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.Encode.Pretty as AesonPretty
@@ -157,7 +157,7 @@ jsum parsers =
     & fromEither
 
 jsum' :: [Exhaustive a] -> Exhaustive a
-jsum' = WriterT . jsum . map runWriterT
+jsum' = writerT . jsum . map runWriterT
 
 type Exhaustive a = WriterT [Text] AesonTypes.Parser a
 type ExhaustiveDecoder a = Aeson.Object -> Exhaustive a

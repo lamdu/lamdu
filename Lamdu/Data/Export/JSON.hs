@@ -10,8 +10,8 @@ module Lamdu.Data.Export.JSON
 import qualified Control.Lens as Lens
 import           Control.Monad.Trans.State (StateT)
 import qualified Control.Monad.Trans.State as State
-import           Control.Monad.Trans.Writer (WriterT(..))
-import qualified Control.Monad.Trans.Writer as Writer
+import           Control.Monad.Trans.FastWriter (WriterT, runWriterT)
+import qualified Control.Monad.Trans.FastWriter as Writer
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.Encode.Pretty as AesonPretty
 import           Data.Binary (Binary)

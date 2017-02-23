@@ -7,8 +7,8 @@ import qualified Control.Lens as Lens
 import           Control.Monad.Trans.Reader (Reader, runReader)
 import qualified Control.Monad.Trans.Reader as Reader
 import           Control.Monad.Trans.State (runState, evalState)
-import           Control.Monad.Trans.Writer (Writer, runWriter)
-import qualified Control.Monad.Trans.Writer as Writer
+import           Control.Monad.Trans.FastWriter (Writer, runWriter)
+import qualified Control.Monad.Trans.FastWriter as Writer
 import qualified Data.List.Utils as ListUtils
 import qualified Data.Map as Map
 import qualified Data.Map.Utils as MapUtils

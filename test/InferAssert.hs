@@ -13,8 +13,8 @@ import           Control.Monad ((<=<))
 import           Control.Monad.Trans.Class (MonadTrans(..))
 import           Control.Monad.Trans.State (State, evalState, mapStateT)
 import qualified Control.Monad.Trans.State as State
-import           Control.Monad.Trans.Writer (WriterT(..))
-import qualified Control.Monad.Trans.Writer as Writer
+import           Control.Monad.Trans.FastWriter (WriterT(..))
+import qualified Control.Monad.Trans.FastWriter as Writer
 import           Data.Map (Map)
 import qualified Data.Map as Map
 import qualified Data.Monoid as Monoid
