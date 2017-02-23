@@ -16,7 +16,10 @@ import qualified Data.List.Class as ListClass
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Text as Text
 import qualified Graphics.UI.Bottle.WidgetId as WidgetId
+import qualified Lamdu.Calc.Val as V
+import           Lamdu.Calc.Val.Annotated (Val)
 import qualified Lamdu.Config as Config
+import qualified Lamdu.Expr.Lens as ExprLens
 import           Lamdu.Formatting (Format(..))
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.Info (HoleInfo(..), hiSearchTerm)
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.ValTerms as ValTerms
@@ -143,6 +146,12 @@ makeAll holeInfo =
             >>= collectResults config
             & ExprGuiM.transaction
 
+mkGroupId :: Show a => Val a -> WidgetId.Id
+mkGroupId option =
+    option
+    & ExprLens.valLeafs . V._LLiteral . V.primData .~ mempty
+    & WidgetIds.hash
+
 mkGroup :: Monad m => Sugar.HoleOption (Name m) m -> T m (Group m)
 mkGroup option =
     do
@@ -150,7 +159,7 @@ mkGroup option =
         pure Group
             { _groupSearchTerms = sugaredBaseExpr ^. Sugar.rBody & ValTerms.body
             , _groupResults = option ^. Sugar.hoResults
-            , _groupId = WidgetIds.hash (option ^. Sugar.hoVal)
+            , _groupId = mkGroupId (option ^. Sugar.hoVal)
             }
 
 tryBuildLiteral ::
