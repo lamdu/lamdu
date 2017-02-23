@@ -13,13 +13,14 @@ import           Control.Applicative (Alternative(..))
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Lens.Tuple
+import           Control.Monad (MonadPlus(..))
+import           Control.Monad.IO.Class (MonadIO(..))
 import qualified Control.Monad.Reader as MonadReader
 import qualified Control.Monad.State as MonadState
-import           Control.Monad (MonadPlus(..))
 import           Control.Monad.Trans.Class (MonadTrans(..))
+import qualified Control.Monad.Writer as MonadWriter
 import           Data.Functor.Identity (Identity(..))
 import           Data.Monoid ((<>))
-import           Control.Monad.IO.Class (MonadIO(..))
 
 newtype RWST r w s m a = RWST { unRWST :: r -> w -> s -> m (a, s, w) }
     deriving Functor
@@ -50,8 +51,16 @@ instance Monad m => MonadState.MonadState s (RWST r w s m) where
     state f = RWST $ \_ w s0 -> let (res, s1) = f s0 in pure (res, s1, w)
 
 instance Monad m => MonadReader.MonadReader r (RWST r w s m) where
-    ask = RWST $ \r w s -> pure (r, s, w)
+    ask = asks id
     local f (RWST act) = RWST $ \r w s -> act (f r) w s
+
+instance (Monoid w, Monad m) => MonadWriter.MonadWriter w (RWST r w s m) where
+    tell = tell
+    listen = listen
+    pass (RWST act) = RWST $ \r w0 s0 ->
+        do
+            ((res, f), s1, w1) <- act r mempty s0
+            return (res, s1, w0 <> f w1)
 
 instance MonadTrans (RWST r w s) where
     lift act = RWST $ \_ w s -> act <&> (\res -> (res, s, w))
