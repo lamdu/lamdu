@@ -71,19 +71,23 @@ p0cpsNameConvertor :: Monad tm => Walk.CPSNameConvertor (Pass0LoadNames tm)
 p0cpsNameConvertor uuid =
     CPS $ \k -> (,) <$> getMStoredName uuid <*> k
 
-data NameUse
-    = NameReference
-    | NameApplied (Apply () ())
-    deriving (Eq, Ord, Show)
+type FunctionSignature = Apply () ()
 
-Lens.makePrisms ''NameUse
+-- | Info about a single instance of use of a name:
+data NameInstance = NameInstance
+    { _niUUID :: UUID
+    , -- | Is the name used in a function application context? We consider
+      -- the application as a disambiguator
+      _niMApplied :: Maybe FunctionSignature
+    } deriving (Eq, Ord, Show)
+Lens.makeLenses ''NameInstance
 
 -- Wrap the Map for a more sensible (recursive) Monoid instance
-newtype NameUUIDMap = NameUUIDMap (Map StoredName (OrderedSet (UUID, NameUse)))
+newtype NameUUIDMap = NameUUIDMap (Map StoredName (OrderedSet NameInstance))
     deriving Show
 
 type instance Lens.Index NameUUIDMap = StoredName
-type instance Lens.IxValue NameUUIDMap = OrderedSet (UUID, NameUse)
+type instance Lens.IxValue NameUUIDMap = OrderedSet NameInstance
 
 -- ghc-7.7.20131205 fails deriving these instances on its own.
 instance Lens.Ixed NameUUIDMap where
@@ -98,10 +102,9 @@ instance Monoid NameUUIDMap where
     NameUUIDMap x `mappend` NameUUIDMap y =
         NameUUIDMap $ Map.unionWith mappend x y
 
-nameUUIDMapSingleton :: UUID -> NameUse -> StoredName -> NameUUIDMap
-nameUUIDMapSingleton uuid nameUse name =
-    OrderedSet.singleton (uuid, nameUse)
-    & Map.singleton name & NameUUIDMap
+nameUUIDMapSingleton :: NameInstance -> StoredName -> NameUUIDMap
+nameUUIDMapSingleton nameInstance name =
+    OrderedSet.singleton nameInstance & Map.singleton name & NameUUIDMap
 
 data StoredNamesWithin = StoredNamesWithin
     { _snwUUIDMap :: NameUUIDMap
@@ -145,15 +148,15 @@ instance Monad tm => MonadNaming (Pass1PropagateUp tm) where
     opWithParamName _ = p1cpsNameConvertor Local
     opWithLetName _ = p1cpsNameConvertor Local
     opWithTagName = p1cpsNameConvertor Local
-    opGetName = p1nameConvertor NameReference . nameTypeScope
+    opGetName = p1nameConvertor Nothing . nameTypeScope
     opGetAppliedFuncName apply =
-        p1nameConvertor (NameApplied ctx) . nameTypeScope
+        p1nameConvertor (Just ctx) . nameTypeScope
         where
             -- Ignore operator precedence
             ctx = apply & aSpecialArgs . _InfixArgs . _1 .~ 0
 
 pass1Result ::
-    NameUse -> NameScope -> MStoredName ->
+    Maybe FunctionSignature -> NameScope -> MStoredName ->
     Pass1PropagateUp tm (StoredNamesWithin -> StoredNames)
 pass1Result nameUse scope sn@(MStoredName mName uuid) =
     do
@@ -164,18 +167,20 @@ pass1Result nameUse scope sn@(MStoredName mName uuid) =
             }
     where
         myStoredNamesWithin =
-            maybe mempty
-            (buildStoredNamesWithin .
-              (nameUUIDMapSingleton uuid nameUse)) mName
+            case mName of
+            Nothing -> mempty
+            Just name ->
+                nameUUIDMapSingleton (NameInstance uuid nameUse) name
+                & buildStoredNamesWithin
         buildStoredNamesWithin myNameUUIDMap =
-            StoredNamesWithin myNameUUIDMap $
             globalNames myNameUUIDMap
+            & StoredNamesWithin myNameUUIDMap
         globalNames myNameUUIDMap =
             case scope of
             Local -> mempty
             Global -> myNameUUIDMap
 
-p1nameConvertor :: NameUse -> NameScope -> Walk.NameConvertor (Pass1PropagateUp tm)
+p1nameConvertor :: Maybe FunctionSignature -> NameScope -> Walk.NameConvertor (Pass1PropagateUp tm)
 p1nameConvertor nameUse scope mStoredName =
     pass1Result nameUse scope mStoredName
     <&> ($ mempty)
@@ -183,7 +188,7 @@ p1nameConvertor nameUse scope mStoredName =
 p1cpsNameConvertor :: NameScope -> Walk.CPSNameConvertor (Pass1PropagateUp tm)
 p1cpsNameConvertor scope mNameSrc =
     CPS $ \k -> do
-        result <- pass1Result NameReference scope mNameSrc
+        result <- pass1Result Nothing scope mNameSrc
         (res, storedNamesBelow) <- p1ListenStoredNames k
         pure (result storedNamesBelow, res)
 
@@ -197,7 +202,7 @@ Lens.makeLenses ''P2Env
 
 -- | Given a list of UUIDs that are being referred to via the same
 -- textual name, generate a suffix map
-uuidSuffixes :: OrderedSet (UUID, NameUse) -> Map UUID Int
+uuidSuffixes :: OrderedSet NameInstance -> Map UUID Int
 uuidSuffixes nameUses
     | not (ListUtils.isLengthAtLeast 2 uuids) = Map.empty
     | ListUtils.isLengthAtLeast 2 nameRefs = suffixes
@@ -205,10 +210,10 @@ uuidSuffixes nameUses
     | hasSameCallType = suffixes
     | otherwise = Map.empty
     where
-        uuids = (nameUses ^. Lens.folded . _1 . Lens.to OrderedSet.singleton) ^.. Lens.folded
+        uuids = (nameUses ^. Lens.folded . niUUID . Lens.to OrderedSet.singleton) ^.. Lens.folded
         suffixes = zip uuids [0..] & Map.fromList
-        nameRefs = nameUses ^.. Lens.folded . _2 . _NameReference
-        nameApps = nameUses ^.. Lens.folded . _2 . _NameApplied
+        nameRefs = nameUses ^.. Lens.folded . niMApplied . Lens._Nothing
+        nameApps = nameUses ^.. Lens.folded . niMApplied . Lens._Just
         -- | Same textual name used both as an application and as a
         -- normal name:
         hasBothTypes = not (null nameRefs) && not (null nameApps)
@@ -291,7 +296,7 @@ makeFinalNameEnv name storedNamesBelow uuid env =
         collidingUUIDs =
             storedNamesBelow
             ^. snwUUIDMap . Lens.at name . Lens._Just .
-                Lens.folded . Lens._1 . Lens.filtered (/= uuid) . Lens.to OrderedSet.singleton
+                Lens.folded . niUUID . Lens.filtered (/= uuid) . Lens.to OrderedSet.singleton
             ^.. Lens.folded
 
 p2cpsNameConvertor ::
