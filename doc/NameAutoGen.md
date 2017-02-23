@@ -80,10 +80,19 @@ The `MonadNaming` class also defines three type families, `OldName`, `NewName`, 
         WorkArea (OldName m) (TM m) a ->
         m (WorkArea (NewName m) (TM m) a)
 
-The three passes are:
+The three passes each convert an `OldName m` to a `NewName m` and are:
 
-* `Pass0M`: Converts `UUID`s to `MStoredName` (where the "M" stands for maybe, as not all identifiers are given names by the user). It just loads the user-given names.
-* `Pass1M`: Converts the `MStoredName`s to the `StoredNames` structure which adds to it a `storedNamesWithin` field which describes the names in the inner scopes (which could be clashed with).
-* `Pass2M`: Converts `StoredNames` to the final `Name`.
+## Pass 0: Load names
 
-**TODO**: Add some descriptions for what exactly `Pass1M` and `Pass2M` do and how they work!
+`Pass0LoadNames` converts `UUID`s to `MStoredName` (where the "M" stands for maybe, as not all identifiers are given names by the user). It just loads the user-given names.
+The monad used is a simple Transaction monad, used to read the names from the database.
+
+## Pass 1: Propagate inner scopes upwards
+
+`Pass1PropagateUp` converts the `MStoredName`s to the `StoredNames` structure which adds to it a `storedNamesWithin` field which describes the names in the inner scopes (which could be clashed with).
+The monad used is a `Writer` because it flows upwards (from inner to outer scopes) all the stored names used within.
+
+## Pass 2: Give final names
+
+`Pass2MakeNames` converts `StoredNames` to the final `Name`.
+The monad used is a `Reader` because it flows the naming decisions already made downwards.

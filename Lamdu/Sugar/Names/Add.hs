@@ -42,32 +42,32 @@ data MStoredName = MStoredName
     , _mStoredUUID :: UUID
     }
 
-newtype Pass0M tm a = Pass0M { runPass0M :: T tm a }
+newtype Pass0LoadNames tm a = Pass0LoadNames { runPass0LoadNames :: T tm a }
     deriving (Functor, Applicative, Monad)
 
-instance Monad tm => MonadNaming (Pass0M tm) where
-    type OldName (Pass0M tm) = UUID
-    type NewName (Pass0M tm) = MStoredName
-    type TM (Pass0M tm) = tm
-    opRun = pure runPass0M
+instance Monad tm => MonadNaming (Pass0LoadNames tm) where
+    type OldName (Pass0LoadNames tm) = UUID
+    type NewName (Pass0LoadNames tm) = MStoredName
+    type TM (Pass0LoadNames tm) = tm
+    opRun = pure runPass0LoadNames
     opWithParamName _ = p0cpsNameConvertor
     opWithLetName _ = p0cpsNameConvertor
     opWithTagName = p0cpsNameConvertor
     opGetName _ = p0nameConvertor
 
-getMStoredName :: Monad tm => UUID -> Pass0M tm MStoredName
+getMStoredName :: Monad tm => UUID -> Pass0LoadNames tm MStoredName
 getMStoredName uuid =
-    Pass0M $ do
+    Pass0LoadNames $ do
         nameStr <- Transaction.getP $ assocNameRef uuid
         pure MStoredName
             { _mStoredName = if Text.null nameStr then Nothing else Just nameStr
             , _mStoredUUID = uuid
             }
 
-p0nameConvertor :: Monad tm => Walk.NameConvertor (Pass0M tm)
+p0nameConvertor :: Monad tm => Walk.NameConvertor (Pass0LoadNames tm)
 p0nameConvertor = getMStoredName
 
-p0cpsNameConvertor :: Monad tm => Walk.CPSNameConvertor (Pass0M tm)
+p0cpsNameConvertor :: Monad tm => Walk.CPSNameConvertor (Pass0LoadNames tm)
 p0cpsNameConvertor uuid =
     CPS $ \k -> (,) <$> getMStoredName uuid <*> k
 
@@ -120,14 +120,14 @@ data StoredNames = StoredNames
     , storedNamesWithin :: StoredNamesWithin
     }
 Lens.makeLenses ''StoredNames
-newtype Pass1M (tm :: * -> *) a = Pass1M (Writer StoredNamesWithin a)
+newtype Pass1PropagateUp (tm :: * -> *) a = Pass1PropagateUp (Writer StoredNamesWithin a)
     deriving (Functor, Applicative, Monad)
-p1TellStoredNames :: StoredNamesWithin -> Pass1M tm ()
-p1TellStoredNames = Pass1M . Writer.tell
-p1ListenStoredNames :: Pass1M tm a -> Pass1M tm (a, StoredNamesWithin)
-p1ListenStoredNames (Pass1M act) = Pass1M $ Writer.listen act
-runPass1M :: Pass1M tm a -> (a, StoredNamesWithin)
-runPass1M (Pass1M act) = runWriter act
+p1TellStoredNames :: StoredNamesWithin -> Pass1PropagateUp tm ()
+p1TellStoredNames = Pass1PropagateUp . Writer.tell
+p1ListenStoredNames :: Pass1PropagateUp tm a -> Pass1PropagateUp tm (a, StoredNamesWithin)
+p1ListenStoredNames (Pass1PropagateUp act) = Pass1PropagateUp $ Writer.listen act
+runPass1PropagateUp :: Pass1PropagateUp tm a -> (a, StoredNamesWithin)
+runPass1PropagateUp (Pass1PropagateUp act) = runWriter act
 
 data NameScope = Local | Global
 
@@ -137,11 +137,11 @@ nameTypeScope Walk.TagName = Global
 nameTypeScope Walk.NominalName = Global
 nameTypeScope Walk.DefName = Global
 
-instance Monad tm => MonadNaming (Pass1M tm) where
-    type OldName (Pass1M tm) = MStoredName
-    type NewName (Pass1M tm) = StoredNames
-    type TM (Pass1M tm) = tm
-    opRun = pure (return . fst . runPass1M)
+instance Monad tm => MonadNaming (Pass1PropagateUp tm) where
+    type OldName (Pass1PropagateUp tm) = MStoredName
+    type NewName (Pass1PropagateUp tm) = StoredNames
+    type TM (Pass1PropagateUp tm) = tm
+    opRun = pure (return . fst . runPass1PropagateUp)
     opWithParamName _ = p1cpsNameConvertor Local
     opWithLetName _ = p1cpsNameConvertor Local
     opWithTagName = p1cpsNameConvertor Local
@@ -154,7 +154,7 @@ instance Monad tm => MonadNaming (Pass1M tm) where
 
 pass1Result ::
     NameUse -> NameScope -> MStoredName ->
-    Pass1M tm (StoredNamesWithin -> StoredNames)
+    Pass1PropagateUp tm (StoredNamesWithin -> StoredNames)
 pass1Result nameUse scope sn@(MStoredName mName uuid) =
     do
         p1TellStoredNames myStoredNamesWithin
@@ -175,12 +175,12 @@ pass1Result nameUse scope sn@(MStoredName mName uuid) =
             Local -> mempty
             Global -> myNameUUIDMap
 
-p1nameConvertor :: NameUse -> NameScope -> Walk.NameConvertor (Pass1M tm)
+p1nameConvertor :: NameUse -> NameScope -> Walk.NameConvertor (Pass1PropagateUp tm)
 p1nameConvertor nameUse scope mStoredName =
     pass1Result nameUse scope mStoredName
     <&> ($ mempty)
 
-p1cpsNameConvertor :: NameScope -> Walk.CPSNameConvertor (Pass1M tm)
+p1cpsNameConvertor :: NameScope -> Walk.CPSNameConvertor (Pass1PropagateUp tm)
 p1cpsNameConvertor scope mNameSrc =
     CPS $ \k -> do
         result <- pass1Result NameReference scope mNameSrc
@@ -218,26 +218,26 @@ emptyP2Env (NameUUIDMap globalNamesMap) =
     , _p2StoredNameSuffixes = globalNamesMap ^.. traverse <&> uuidSuffixes & mconcat
     }
 
-newtype Pass2M (tm :: * -> *) a = Pass2M (Reader P2Env a)
+newtype Pass2MakeNames (tm :: * -> *) a = Pass2MakeNames (Reader P2Env a)
     deriving (Functor, Applicative, Monad)
-runPass2M :: P2Env -> Pass2M tm a -> a
-runPass2M initial (Pass2M act) = runReader act initial
-p2GetEnv :: Pass2M tm P2Env
-p2GetEnv = Pass2M Reader.ask
-p2WithEnv :: (P2Env -> P2Env) -> Pass2M tm a -> Pass2M tm a
-p2WithEnv f (Pass2M act) = Pass2M $ Reader.local f act
+runPass2MakeNames :: P2Env -> Pass2MakeNames tm a -> a
+runPass2MakeNames initial (Pass2MakeNames act) = runReader act initial
+p2GetEnv :: Pass2MakeNames tm P2Env
+p2GetEnv = Pass2MakeNames Reader.ask
+p2WithEnv :: (P2Env -> P2Env) -> Pass2MakeNames tm a -> Pass2MakeNames tm a
+p2WithEnv f (Pass2MakeNames act) = Pass2MakeNames $ Reader.local f act
 
-runPass2MInitial :: StoredNamesWithin -> Pass2M tm a -> a
-runPass2MInitial storedNamesBelow = runPass2M (emptyP2Env (storedNamesBelow ^. snwGlobalNames))
+runPass2MakeNamesInitial :: StoredNamesWithin -> Pass2MakeNames tm a -> a
+runPass2MakeNamesInitial storedNamesBelow = runPass2MakeNames (emptyP2Env (storedNamesBelow ^. snwGlobalNames))
 
 setName :: Monad tm => UUID -> StoredName -> T tm ()
 setName = Transaction.setP . assocNameRef
 
-instance Monad tm => MonadNaming (Pass2M tm) where
-    type OldName (Pass2M tm) = StoredNames
-    type NewName (Pass2M tm) = Name tm
-    type TM (Pass2M tm) = tm
-    opRun = p2GetEnv <&> runPass2M <&> (return .)
+instance Monad tm => MonadNaming (Pass2MakeNames tm) where
+    type OldName (Pass2MakeNames tm) = StoredNames
+    type NewName (Pass2MakeNames tm) = Name tm
+    type TM (Pass2MakeNames tm) = tm
+    opRun = p2GetEnv <&> runPass2MakeNames <&> (return .)
     opWithTagName = p2cpsNameConvertorGlobal "tag_"
     opWithParamName = p2cpsNameConvertorLocal
     opWithLetName = p2cpsNameConvertorLocal
@@ -291,7 +291,7 @@ p2cpsNameConvertor ::
     Monad tm =>
     StoredNames ->
     (P2Env -> (Name tm, P2Env)) ->
-    CPS (Pass2M tm) (Name tm)
+    CPS (Pass2MakeNames tm) (Name tm)
 p2cpsNameConvertor (StoredNames mStoredName storedNamesBelow) nameMaker =
     CPS $ \k ->
     do
@@ -310,12 +310,12 @@ makeUUIDName prefix (MStoredName _ uuid) =
     Name NameSourceAutoGenerated NoCollision (setName uuid)
     (prefix <> Text.pack (take 8 (show uuid)))
 
-p2cpsNameConvertorGlobal :: Monad tm => Text -> Walk.CPSNameConvertor (Pass2M tm)
+p2cpsNameConvertorGlobal :: Monad tm => Text -> Walk.CPSNameConvertor (Pass2MakeNames tm)
 p2cpsNameConvertorGlobal prefix storedNames =
     p2cpsNameConvertor storedNames $
     \p2env -> (makeUUIDName prefix (storedNames ^. storedName), p2env)
 
-p2cpsNameConvertorLocal :: Monad tm => NameGen.VarInfo -> Walk.CPSNameConvertor (Pass2M tm)
+p2cpsNameConvertorLocal :: Monad tm => NameGen.VarInfo -> Walk.CPSNameConvertor (Pass2MakeNames tm)
 p2cpsNameConvertorLocal isFunction storedNames =
     p2cpsNameConvertor storedNames $ \p2env ->
     (`runState` p2env) . Lens.zoom p2NameGen $
@@ -328,7 +328,7 @@ p2cpsNameConvertorLocal isFunction storedNames =
     where
         StoredNames (MStoredName _ uuid) storedNamesBelow = storedNames
 
-p2nameConvertor :: Monad tm => Text -> Walk.NameConvertor (Pass2M tm)
+p2nameConvertor :: Monad tm => Text -> Walk.NameConvertor (Pass2MakeNames tm)
 p2nameConvertor prefix (StoredNames mStoredName storedNamesBelow) =
     case mName of
     Just str -> makeFinalName str storedNamesBelow uuid <$> p2GetEnv
@@ -394,15 +394,15 @@ fixExpr expr =
 
 runPasses ::
     Functor tm =>
-    (a -> Pass0M tm b) -> (b -> Pass1M tm c) -> (c -> Pass2M tm d) ->
+    (a -> Pass0LoadNames tm b) -> (b -> Pass1PropagateUp tm c) -> (c -> Pass2MakeNames tm d) ->
     a -> T tm d
 runPasses f0 f1 f2 =
     fmap (pass2 . pass1) . pass0
     where
-        pass0 = runPass0M . f0
-        pass1 = runPass1M . f1
+        pass0 = runPass0LoadNames . f0
+        pass1 = runPass1PropagateUp . f1
         pass2 (x, storedNamesBelow) =
-            f2 x & runPass2MInitial storedNamesBelow
+            f2 x & runPass2MakeNamesInitial storedNamesBelow
 
 fixDef ::
     Monad tm =>
