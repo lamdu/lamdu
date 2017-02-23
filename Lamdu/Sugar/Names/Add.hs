@@ -195,6 +195,8 @@ data P2Env = P2Env
     }
 Lens.makeLenses ''P2Env
 
+-- | Given a list of UUIDs that are being referred to via the same
+-- textual name, generate a suffix map
 uuidSuffixes :: OrderedSet (UUID, NameUse) -> Map UUID Int
 uuidSuffixes nameUses
     | not (ListUtils.isLengthAtLeast 2 uuids) = Map.empty
@@ -207,8 +209,13 @@ uuidSuffixes nameUses
         suffixes = zip uuids [0..] & Map.fromList
         nameRefs = nameUses ^.. Lens.folded . _2 . _NameReference
         nameApps = nameUses ^.. Lens.folded . _2 . _NameApplied
+        -- | Same textual name used both as an application and as a
+        -- normal name:
         hasBothTypes = not (null nameRefs) && not (null nameApps)
-        hasSameCallType = Set.size (Set.fromList nameApps) < length nameApps
+        -- | Multiple applications have same signature for differing
+        -- UUIDs, still ambiguous:
+        hasSameCallType = uniqueCount nameApps < length nameApps
+        uniqueCount = Set.size . Set.fromList
 
 emptyP2Env :: NameUUIDMap -> P2Env
 emptyP2Env (NameUUIDMap globalNamesMap) =
