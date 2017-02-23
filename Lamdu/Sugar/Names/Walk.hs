@@ -22,6 +22,7 @@ type CPSNameConvertor m = OldName m -> CPS m (NewName m)
 type NameConvertor m = OldName m -> m (NewName m)
 
 data NameType = DefName | TagName | NominalName | ParamName
+    deriving (Eq, Ord, Show)
 
 -- TODO: Rename MonadNameWalk
 class (Monad m, Monad (TM m)) => MonadNaming m where

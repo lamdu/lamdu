@@ -11,6 +11,7 @@ import           Control.Monad.Trans.Writer (Writer, runWriter)
 import qualified Control.Monad.Trans.Writer as Writer
 import qualified Data.List.Utils as ListUtils
 import qualified Data.Map as Map
+import qualified Data.Map.Utils as MapUtils
 import           Data.Monoid.Generic (def_mempty, def_mappend)
 import qualified Data.Set as Set
 import           Data.Set.Ordered (OrderedSet)
@@ -75,10 +76,11 @@ type FunctionSignature = Apply () ()
 
 -- | Info about a single instance of use of a name:
 data NameInstance = NameInstance
-    { _niUUID :: UUID
+    { _niUUID :: !UUID
     , -- | Is the name used in a function application context? We consider
       -- the application as a disambiguator
-      _niMApplied :: Maybe FunctionSignature
+      _niMApplied :: !(Maybe FunctionSignature)
+    , _niNameType :: !Walk.NameType
     } deriving (Eq, Ord, Show)
 Lens.makeLenses ''NameInstance
 
@@ -145,20 +147,20 @@ instance Monad tm => MonadNaming (Pass1PropagateUp tm) where
     type NewName (Pass1PropagateUp tm) = StoredNames
     type TM (Pass1PropagateUp tm) = tm
     opRun = pure (return . fst . runPass1PropagateUp)
-    opWithParamName _ = p1cpsNameConvertor Local
-    opWithLetName _ = p1cpsNameConvertor Local
-    opWithTagName = p1cpsNameConvertor Local
-    opGetName = p1nameConvertor Nothing . nameTypeScope
+    opWithParamName _ = p1cpsNameConvertor Walk.ParamName
+    opWithLetName _ = p1cpsNameConvertor Walk.ParamName
+    opWithTagName = p1cpsNameConvertor Walk.TagName
+    opGetName = p1nameConvertor Nothing
     opGetAppliedFuncName apply =
-        p1nameConvertor (Just ctx) . nameTypeScope
+        p1nameConvertor (Just ctx)
         where
             -- Ignore operator precedence
             ctx = apply & aSpecialArgs . _InfixArgs . _1 .~ 0
 
 pass1Result ::
-    Maybe FunctionSignature -> NameScope -> MStoredName ->
+    Maybe FunctionSignature -> Walk.NameType -> MStoredName ->
     Pass1PropagateUp tm (StoredNamesWithin -> StoredNames)
-pass1Result nameUse scope sn@(MStoredName mName uuid) =
+pass1Result mApplied nameType sn@(MStoredName mName uuid) =
     do
         p1TellStoredNames myStoredNamesWithin
         pure $ \storedNamesUnder -> StoredNames
@@ -170,25 +172,30 @@ pass1Result nameUse scope sn@(MStoredName mName uuid) =
             case mName of
             Nothing -> mempty
             Just name ->
-                nameUUIDMapSingleton (NameInstance uuid nameUse) name
+                nameUUIDMapSingleton
+                NameInstance
+                { _niUUID = uuid
+                , _niMApplied = mApplied
+                , _niNameType = nameType
+                } name
                 & buildStoredNamesWithin
         buildStoredNamesWithin myNameUUIDMap =
             globalNames myNameUUIDMap
             & StoredNamesWithin myNameUUIDMap
         globalNames myNameUUIDMap =
-            case scope of
+            case nameTypeScope nameType of
             Local -> mempty
             Global -> myNameUUIDMap
 
-p1nameConvertor :: Maybe FunctionSignature -> NameScope -> Walk.NameConvertor (Pass1PropagateUp tm)
-p1nameConvertor nameUse scope mStoredName =
-    pass1Result nameUse scope mStoredName
+p1nameConvertor :: Maybe FunctionSignature -> Walk.NameType -> Walk.NameConvertor (Pass1PropagateUp tm)
+p1nameConvertor mApplied nameType mStoredName =
+    pass1Result mApplied nameType mStoredName
     <&> ($ mempty)
 
-p1cpsNameConvertor :: NameScope -> Walk.CPSNameConvertor (Pass1PropagateUp tm)
-p1cpsNameConvertor scope mNameSrc =
+p1cpsNameConvertor :: Walk.NameType -> Walk.CPSNameConvertor (Pass1PropagateUp tm)
+p1cpsNameConvertor nameType mNameSrc =
     CPS $ \k -> do
-        result <- pass1Result Nothing scope mNameSrc
+        result <- pass1Result Nothing nameType mNameSrc
         (res, storedNamesBelow) <- p1ListenStoredNames k
         pure (result storedNamesBelow, res)
 
@@ -200,20 +207,53 @@ data P2Env = P2Env
     }
 Lens.makeLenses ''P2Env
 
+-- | Textual Name ambiguity
+--
+-- In the visible grammar, there are different types of names (see
+-- Walk.NameType):
+-- DefName, TagName, NominalName, ParamName
+--
+-- Each type can collide with itself. Nominals can only collide with
+-- themselves (due to their grammatic context being unique).
+--
+-- Definitions and tags cannot collide with each other but both
+-- can collide with param names.
+--
+-- Hence, we check collisions in three groups:
+-- * Nominals
+-- * Tags+Params
+-- * Defs+Params
+--
+-- Defs+Params can also be disambiguated if used exclusively in
+-- labeled apply contexts, and with differing signatures.
+
+uuidSuffixes :: OrderedSet NameInstance -> Map UUID Int
+uuidSuffixes nameInstances
+    | namesClash (getNames Walk.NominalName)
+    || namesClash (getNames Walk.TagName ++ getNames Walk.ParamName)
+    || namesClash (getNames Walk.DefName ++ getNames Walk.ParamName)
+    = zip uuids [0..] & Map.fromList
+    | otherwise = mempty
+    where
+        getNames nameType = byType ^. Lens.ix nameType
+        byType =
+            nameInstances ^.. Lens.folded & MapUtils.partition (^. niNameType)
+        uuids = (nameInstances ^. Lens.folded . niUUID . Lens.to OrderedSet.singleton) ^.. Lens.folded
+
 -- | Given a list of UUIDs that are being referred to via the same
 -- textual name, generate a suffix map
-uuidSuffixes :: OrderedSet NameInstance -> Map UUID Int
-uuidSuffixes nameUses
-    | not (ListUtils.isLengthAtLeast 2 uuids) = Map.empty
-    | ListUtils.isLengthAtLeast 2 nameRefs = suffixes
-    | hasBothTypes = suffixes
-    | hasSameCallType = suffixes
-    | otherwise = Map.empty
+namesClash :: [NameInstance] -> Bool
+namesClash nameInstances =
+    Set.size uuids >= 2
+    &&
+    ( ListUtils.isLengthAtLeast 2 nameRefs
+      || hasBothTypes
+      || hasSameCallType
+    )
     where
-        uuids = (nameUses ^. Lens.folded . niUUID . Lens.to OrderedSet.singleton) ^.. Lens.folded
-        suffixes = zip uuids [0..] & Map.fromList
-        nameRefs = nameUses ^.. Lens.folded . niMApplied . Lens._Nothing
-        nameApps = nameUses ^.. Lens.folded . niMApplied . Lens._Just
+        uuids = nameInstances ^.. Lens.folded . niUUID & Set.fromList
+        nameRefs = nameInstances ^.. Lens.folded . niMApplied . Lens._Nothing
+        nameApps = nameInstances ^.. Lens.folded . niMApplied . Lens._Just
         -- | Same textual name used both as an application and as a
         -- normal name:
         hasBothTypes = not (null nameRefs) && not (null nameApps)
