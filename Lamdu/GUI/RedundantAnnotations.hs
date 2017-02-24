@@ -59,9 +59,10 @@ markAnnotationsToDisplay (Expression oldBody pl) =
         Expression newBody pl & dontShowAnnotation
     BodyFromNom _ ->
         Expression (newBody <&> dontShowEval) pl
-    BodyToNom (Nominal _ val) ->
+    BodyToNom (Nominal _ binder) ->
         pl
-        & showAnn . T.showInEvalMode .~ val ^. rPayload . showAnn . T.showInEvalMode
+        & showAnn . T.showInEvalMode .~
+            binder ^. bbContent . SugarLens.binderContentExpr . rPayload . showAnn . T.showInEvalMode
         & Expression (newBody <&> dontShowEval)
     BodyInject _ ->
         Expression newBody pl & dontShowEval

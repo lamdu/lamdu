@@ -1,6 +1,6 @@
 {-# LANGUAGE NoImplicitPrelude, FlexibleContexts, OverloadedStrings, TypeFamilies, RankNTypes, RecordWildCards #-}
 module Lamdu.Sugar.Convert.Binder
-    ( convertDefinitionBinder, convertLam
+    ( convertDefinitionBinder, convertLam, convertBinderBody
     ) where
 
 import qualified Control.Lens as Lens
@@ -98,7 +98,7 @@ convertRedex expr redex =
             mkLetItemActions (expr ^. Val.payload . Input.stored)
             (redex <&> (^. Input.stored))
         letBody <-
-            makeBinderBody body
+            convertBinderBody body
             & localVarsUnderExtractDestPos [param]
             & localNewExtractDestPos expr
             & ConvertM.local (scScopeInfo . siLetItems <>~
@@ -138,11 +138,11 @@ makeBinderContent expr =
         <&> BinderExpr
     Just redex -> convertRedex expr redex <&> BinderLet
 
-makeBinderBody ::
+convertBinderBody ::
     (Monad m, Monoid a) =>
     Val (Input.Payload m a) ->
     ConvertM m (BinderBody UUID m (ExpressionU m a))
-makeBinderBody expr =
+convertBinderBody expr =
     do
         content <- makeBinderContent expr
         BinderBody
@@ -160,7 +160,7 @@ makeBinder :: (Monad m, Monoid a) =>
 makeBinder chosenScopeProp mPresentationModeProp ConventionalParams{..} funcBody =
     do
         binderBody <-
-            makeBinderBody funcBody
+            convertBinderBody funcBody
             & localVarsUnderExtractDestPos (cpMLamParam ^.. Lens._Just)
         return Binder
             { _bParams = _cpParams

@@ -173,8 +173,8 @@ toBody expr = \case
     BodyCase         x -> traverse expr x >>= (cAlts . traverse . caTag) toTagG <&> BodyCase
     BodyApply        x -> traverse expr x >>= (aAnnotatedArgs . traverse . aaTag) toTagG <&> BodyApply
     BodyHole         x -> traverse expr x >>= holeActions toHoleActions <&> BodyHole
-    BodyToNom        x -> traverse expr x >>= nTId toTIdG <&> BodyToNom
     BodyFromNom      x -> traverse expr x >>= nTId toTIdG <&> BodyFromNom
+    BodyToNom        x -> traverse (toBinderBody expr) x >>= nTId toTIdG <&> BodyToNom
     BodyGetVar       x -> toGetVar x <&> BodyGetVar
     BodyLiteral      x -> pure $ BodyLiteral x
     BodyLam          x -> toLam expr x <&> BodyLam

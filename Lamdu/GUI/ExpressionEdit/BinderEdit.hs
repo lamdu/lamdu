@@ -1,6 +1,7 @@
 {-# LANGUAGE NamedFieldPuns, RecordWildCards, NoImplicitPrelude, OverloadedStrings, LambdaCase #-}
 module Lamdu.GUI.ExpressionEdit.BinderEdit
     ( make
+    , makeBinderBodyEdit
     , Parts(..), makeParts
     , nonOperatorName
     ) where

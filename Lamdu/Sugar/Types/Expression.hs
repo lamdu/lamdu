@@ -309,7 +309,7 @@ data Body name m expr
     | BodyCase (Case name m expr)
     | BodyInject (Inject name expr)
     | BodyGetVar (GetVar name m)
-    | BodyToNom (Nominal name expr)
+    | BodyToNom (Nominal name (BinderBody name m expr))
     | BodyFromNom (Nominal name expr)
     | BodyInjectedExpression -- Used for hole results
     deriving (Functor, Foldable, Traversable)
