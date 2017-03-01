@@ -11,8 +11,11 @@ import qualified Data.Store.Transaction as Transaction
 import           Data.Text.Encoding (decodeUtf8)
 import qualified Data.Text as Text
 import           Data.Vector.Vector2 (Vector2(..))
+import           Graphics.DrawingCombinators ((%%))
+import qualified Graphics.DrawingCombinators.Utils as DrawUtils
 import           Graphics.UI.Bottle.Animation (AnimId)
 import qualified Graphics.UI.Bottle.Animation as Anim
+import qualified Graphics.UI.Bottle.Rect as Rect
 import           Graphics.UI.Bottle.View (View(..))
 import qualified Graphics.UI.Bottle.View as View
 import qualified Graphics.UI.Bottle.Widgets as BWidgets
@@ -174,6 +177,19 @@ make animId v =
                 & takeWhile (< maxEvalViewSize) & length
         makeInner animId v
             & ExprGuiM.resetDepth depthLimit
+    <&> fixSize
+
+-- Make animation frames of eval views animate from the whole rect
+fixSize :: View -> View
+fixSize view =
+    view & View.animFrames . Anim.frameImages . traverse %~ onImage
+    where
+        size = view ^. View.size
+        onImage image =
+            image
+            & Anim.iRect . Rect.size .~ size
+            & Anim.iUnitImage %~
+            (DrawUtils.scale (image ^. Anim.iRect . Rect.size / view ^. View.size) %%)
 
 makeInner :: Monad m => AnimId -> Val Type -> ExprGuiM m View
 makeInner animId (Val typ val) =
