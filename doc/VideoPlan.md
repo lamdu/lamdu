@@ -56,9 +56,35 @@ These are the major visible stuff that changed:
 * Internet points / motivation / etc
 * Who knows - someone seeing this or using Lamdu after this might even get us grants (money) to develop Lamdu? Then maybe we could work on it a lot more rather than just on our own free time.
 
-## Video ##
+## Video Script ##
 
-Things to show: **TODO**
+### Introduce Lamdu ###
 
-## Script ##
+* A fancy calculator / REPL
+  * Evaluates expressions as you type them.
+    * Word about purity and how it enables this.
+      * Creating interactive processes is also possible and those parts are not constantly evaluated.
+* Switch to a slightly bigger example - an approximation of Pi.
+  * Explain our annotations.
+    * Show how they can be turned off (Kinda looks like Python)
+    * Show how they can be switched to type mode (Kinda looks like Java)
+      * Explain about type inference and how it allows one to write in a type-safe language but with a feel similar to dynamic languages like Python.
+  * Demonstrate navigating on scopes in the lambda of Pi's series.
+  * Extract the computation from the repl.
+* Demonstrate defining functions with factorial.
+* Demonstrate differences from textual editing
+  * Simply cannot create syntax errors nor name errors.
+    * All editing is done via filling holes and doing structural edits.
+    * Renaming variables renames them in all places of use.
+  * No need to manage parentheses nor indentation.
+    * Demonstrate automatic layouting.
+  * Localized type errors
+    * Blame assignment when the type of a definition that we used changed. Can demonstrate this with function converting a number to its digits, with a "base" parameter added.
+
+### Discuss Lamdu's vision ###
+
+* We want to support richer annotations: Images, waveforms, graphs, etc.
+  * Displays for different types will be user-defined.
+* Make version-control and team-work better.
+
 **TODO**
