@@ -77,9 +77,9 @@ These are the major visible stuff that changed:
     * All editing is done via filling holes and doing structural edits.
     * Renaming variables renames them in all places of use.
   * No need to manage parentheses nor indentation.
-    * Demonstrate automatic layouting.
-  * Localized type errors
-    * Blame assignment when the type of a definition that we used changed. Can demonstrate this with function converting a number to its digits, with a "base" parameter added.
+    * Demonstrate automatic layouting on a bigger code example (without typing it)
+  * Localized type errors - can demonstrate with euler1
+  * Blame assignment when the type of a definition that we used changed. Can demonstrate this with function converting a number to its digits, with a "base" parameter added.
 
 ### Discuss Lamdu's vision ###
 
