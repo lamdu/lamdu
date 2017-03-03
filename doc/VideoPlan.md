@@ -4,6 +4,8 @@
 
 ## Previous video summary
 
+*This part isn't in the video. I'm just describing the previous video as a reference when planning the new one.*
+
 In October 2014, before Lamdu executed the code written in it, and when it looked a lot different, we made a video presenting it (vimeo.com/97648370, vimeo.com/97713439) which got more than 3000 views.
 
 It presented, in order of appearance:
@@ -60,31 +62,57 @@ These are the major visible stuff that changed:
 
 ### Introduce Lamdu ###
 
-* A fancy calculator / REPL
-  * Evaluates expressions as you type them.
-    * Word about purity and how it enables this.
-      * Creating interactive processes is also possible and those parts are not constantly evaluated.
+* A fancy calculator / REPL. Show with a simple calculation like (1+sqrt 5)/2
+  * Explain a bit about our annotations
+    * Unlike common repl here we see the results for all the subexpressions.
 * Switch to a slightly bigger example - an approximation of Pi.
-  * Explain our annotations.
+  * Lamdu evaluates expressions as you type them.
+  * That's a lot to look at - introduce annotation modes.
     * Show how they can be turned off (Kinda looks like Python)
     * Show how they can be switched to type mode (Kinda looks like Java)
       * Explain about type inference and how it allows one to write in a type-safe language but with a feel similar to dynamic languages like Python.
   * Demonstrate navigating on scopes in the lambda of Pi's series.
+  * Talk about how evaluation is enabled by purity.
+    * Sidenote: Creating interactive processes is also possible and those parts are not constantly evaluated.
   * Extract the computation from the repl.
 * Demonstrate defining functions with factorial.
-* Demonstrate differences from textual editing
+* Talk about differences from textual editing
   * Simply cannot create syntax errors nor name errors.
     * All editing is done via filling holes and doing structural edits.
     * Renaming variables renames them in all places of use.
   * No need to manage parentheses nor indentation.
-    * Demonstrate automatic layouting on a bigger code example (without typing it)
-  * Localized type errors - can demonstrate with euler1
-  * Blame assignment when the type of a definition that we used changed. Can demonstrate this with function converting a number to its digits, with a "base" parameter added.
+* Switch to digits function "map (% 10) . takeWhile (> 0) . iterate (/ 10)""
+  * Pause on type error in take/while's predicate.
+    * Introduce localized type errors
+* Test the digits function.
+  * Demonstrate blame assignment when the type of a definition that we used changed. Can demonstrate this with function converting a number to its digits, with a "base" parameter added.
+* Demonstrate presentation modes by turning "digits" to OO mode
+* Demonstrate automatic layouting on a bigger code example (without typing it in)
+  * Code is systematically layed out, making sure that no horizontal scroll is needed.
+  * In textual programming language, this take concious effort, and causes spurious flame wars and merge conflicts. These conflicts and wars are avoided in Lamdu.
 
-### Discuss Lamdu's vision ###
+**TODO**: Demonstrate structural types. We did this in the previous demo with a fibonacci example, but it is a bit embarassing that if we call the field "next" then we get disambiguation tags. We should probably solve this in some way - tag holes or less spurious disambiguations..
 
-* We want to support richer annotations: Images, waveforms, graphs, etc.
-  * Displays for different types will be user-defined.
-* Make version-control and team-work better.
+### A bit about Lamdu's vision ###
 
-**TODO**
+Things we plan on:
+
+* We want to support custom rich annotations: Images, waveforms, graphs, etc.
+* Additional things we plan on integrating into the environment:
+  * Version control. As it happens, existing tools like git were designed for text files and we may need to create new source control tools for non-textual code.
+  * Testing being integrated. It just makes sense when the IDE already runs your code.
+
+### And a little bit about us ###
+
+* Eyal and Yair. Been working on Lamdu on our free time since 2011.
+  * Some bits about us?
+    * Been programming for a really long while in BASIC, C, C++, Python, D, Haskell.
+    * We think that many frustrustions faced by programmers and by us can be solved and this is what we are trying to do with Lamdu.
+    * Yair left Google so that he could have enough time to work on this.
+* Lamdu is free and open-source.
+  * There's no institution or company behind us.
+    * But if anyone wants to give us with grants, by all means do :) We would love to be able to spend more of our time developing Lamdu.
+* We would really like other people to join our effort to bring forth a brighter future for programming.
+  * Lamdu is implemented in Haskell and being proficient in it is a pre-requisite for programmers wanting to get involved.
+* For more info about our technical road-map see our article about that. **TODO** create this status/roadmap article.
+  * There are a few key features still missing, like a UI to define more Nominal types, and type-classes.
