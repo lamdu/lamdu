@@ -149,9 +149,9 @@ argChangeType :: Scheme -> Scheme -> ArgChange
 argChangeType prevArg newArg =
     do
         prevProd <- prevArg ^? schemeType . T._TRecord <&> FlatComposite.fromComposite
-        FlatComposite._extension prevProd ^? Lens._Nothing
+        prevProd ^? FlatComposite.extension . Lens._Nothing
         newProd <- newArg ^? schemeType . T._TRecord <&> FlatComposite.fromComposite
-        FlatComposite._extension newProd ^? Lens._Nothing
+        newProd ^? FlatComposite.extension . Lens._Nothing
         let prevTags = prevProd ^. FlatComposite.fields & Map.keysSet
         let newTags = newProd ^. FlatComposite.fields & Map.keysSet
         let changedTags =

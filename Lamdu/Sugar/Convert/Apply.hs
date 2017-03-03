@@ -99,7 +99,7 @@ convertLabeled funcS argS argI exprPl =
                         . schemeType . T._TFun . _1 . T._TRecord
                     & maybeToMPlus
                 let flatArgs = FlatComposite.fromComposite defArgs
-                guard $ Lens.has Lens._Nothing (FlatComposite._extension flatArgs)
+                flatArgs ^? FlatComposite.extension . Lens._Nothing & maybeToMPlus
                 let sFields =
                         record ^.. rItems . traverse . rfTag . tagVal & Set.fromList
                 guard $ Map.keysSet (flatArgs ^. FlatComposite.fields) == sFields
