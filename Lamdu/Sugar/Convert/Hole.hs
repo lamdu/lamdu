@@ -28,6 +28,9 @@ import qualified Lamdu.Builtins.Anchors as Builtins
 import qualified Lamdu.Builtins.PrimVal as PrimVal
 import           Lamdu.Calc.Type (Type(..))
 import qualified Lamdu.Calc.Type as T
+import           Lamdu.Calc.Type.Constraints (getProductVarConstraints)
+import qualified Lamdu.Calc.Type.FlatComposite as FlatComposite
+import           Lamdu.Calc.Type.Scheme (schemeConstraints)
 import qualified Lamdu.Calc.Val as V
 import           Lamdu.Calc.Val.Annotated (Val(..))
 import qualified Lamdu.Calc.Val.Annotated as Val
@@ -174,6 +177,13 @@ mkOptions sugarContext mInjectedArg exprPl stored =
             sugarContext ^. ConvertM.scCodeAnchors
             & Anchors.globals & Transaction.getP <&> Set.toList
             >>= filterM isLiveGlobal
+        recordTags <-
+            case mForbiddenRecordTags of
+            Nothing -> return mempty
+            Just tags ->
+                sugarContext ^. ConvertM.scCodeAnchors
+                & Anchors.tags & Transaction.getP
+                <&> (`Set.difference` tags) <&> Set.toList
         concat
             [ exprPl ^. Input.inferredScope
                 & Infer.scopeToTypeMap
@@ -185,6 +195,9 @@ mkOptions sugarContext mInjectedArg exprPl stored =
                 nominalTid <- nominalTids
                 f <- [V.BFromNom, V.BToNom]
                 [ V.Nom nominalTid P.hole & f & Val () ]
+            , do
+                tag <- recordTags
+                [ P.recExtend tag P.hole P.hole ]
             , [ P.abs "NewLambda" P.hole
               , P.recEmpty
               , P.absurd
@@ -199,6 +212,16 @@ mkOptions sugarContext mInjectedArg exprPl stored =
         isGlobalInScope varId =
             sugarContext ^. ConvertM.scGlobalsInScope .
             Lens.contains (ExprIRef.defI varId)
+        mForbiddenRecordTags =
+            exprPl ^? Input.inferred . Infer.plType . T._TRecord
+            <&> FlatComposite.fromComposite
+            >>= (^. FlatComposite.extension)
+            <&> recordTypeVarConstraints
+        recordTypeVarConstraints tv =
+            Infer.makeScheme (sugarContext ^. ConvertM.scInferContext)
+            (T.TRecord (T.CVar tv))
+            ^. schemeConstraints
+            & getProductVarConstraints tv
 
 mkWritableHoleActions ::
     (Monad m) =>
@@ -209,7 +232,7 @@ mkWritableHoleActions mInjectedArg exprPl stored = do
     sugarContext <- ConvertM.readContext
     let mkOption =
             return . mkHoleOption sugarContext mInjectedArg exprPl stored . SeedExpr
-        mkLiteralOption =
+    let mkLiteralOption =
             mkOption . Val () . V.BLeaf . V.LLiteral . PrimVal.fromKnown
     pure HoleActions
         { _holeOptions =
