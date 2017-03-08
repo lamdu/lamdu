@@ -170,6 +170,7 @@ parseObj obj =
     , obj .? "number" <&> read <&> fromDouble <&> return
     , obj .? "tag" <&> (`parseInject` (obj .? "data"))
     , obj .? "func" <&> (\(Json.Object _) -> ER.Val () ER.RFunc) <&> return
+    , obj .? "error" <&> ER.EvalError <&> ER.RError <&> ER.Val () <&> return
     ] & fromMaybe (parseRecord obj)
 
 parseResult :: Json.Value -> Parse (ER.Val ())

@@ -23,7 +23,7 @@ newtype ScopeId = ScopeId Int
     deriving (Show, Eq, Ord, Binary)
 
 data EvalError
-    = EvalHole
+    = EvalError String
     | EvalTypeError String
     deriving Show
 

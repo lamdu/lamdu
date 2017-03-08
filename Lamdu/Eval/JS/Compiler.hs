@@ -355,7 +355,7 @@ unitRedex stmts = JS.lambda [] stmts `JS.call` []
 
 throwStr :: String -> CodeGen
 throwStr str =
-    go [JS.throw (JS.string str)]
+    go [JS.throw (JS.object [(JS.propId "error", JS.string str)])]
     where
         go stmts =
             CodeGen
@@ -442,12 +442,12 @@ compileInject (V.Inject tag dat) =
         dat' <- compileVal dat
         inject tagStr (codeGenExpression dat') & codeGenFromExpr & return
 
-compileCase :: Monad m => V.Case (Val ValId) -> M m CodeGen
-compileCase = fmap codeGenFromExpr . lam "x" . compileCaseOnVar
+compileCase :: Monad m => ValId -> V.Case (Val ValId) -> M m CodeGen
+compileCase valId = fmap codeGenFromExpr . lam "x" . compileCaseOnVar valId
 
 compileCaseOnVar ::
-    Monad m => V.Case (Val ValId) -> JSS.Expression () -> M m [JSS.Statement ()]
-compileCaseOnVar x scrutineeVar =
+    Monad m => ValId -> V.Case (Val ValId) -> JSS.Expression () -> M m [JSS.Statement ()]
+compileCaseOnVar valId x scrutineeVar =
     do
         tagsStr <- Map.toList tags & Lens.traverse . _1 %%~ tagString
         cases <- traverse makeCase tagsStr
@@ -456,14 +456,14 @@ compileCaseOnVar x scrutineeVar =
             Nothing ->
                 return [JS.throw (JS.string "Unhandled case? This is a type error!")]
             Just restHandler ->
-                compileAppliedFunc restHandler scrutineeVar
+                compileAppliedFunc valId restHandler scrutineeVar
                 <&> codeGenLamStmts
             <&> JS.defaultc
         return [JS.switch (scrutineeVar $. "tag") (cases ++ [defaultCase])]
     where
         Flatten.Composite tags mRestHandler = Flatten.case_ x
         makeCase (tagStr, handler) =
-            compileAppliedFunc handler (scrutineeVar $. "data")
+            compileAppliedFunc valId handler (scrutineeVar $. "data")
             <&> codeGenLamStmts
             <&> JS.casee (JS.string (Text.unpack tagStr))
 
@@ -531,11 +531,11 @@ compileLambda (V.Lam v res) valId =
         mkLambda (varId, lamStmts) = JS.lambda [varId] lamStmts
         compileRes = compileVal res <&> codeGenLamStmts & withLocalVar v
 
-compileApply :: Monad m => V.Apply (Val ValId) -> M m CodeGen
-compileApply (V.Apply func arg) =
+compileApply :: Monad m => ValId -> V.Apply (Val ValId) -> M m CodeGen
+compileApply valId (V.Apply func arg) =
     do
         arg' <- compileVal arg <&> codeGenExpression
-        compileAppliedFunc func arg'
+        compileAppliedFunc valId func arg'
 
 maybeLogSubexprResult :: Monad m => ValId -> CodeGen -> M m CodeGen
 maybeLogSubexprResult valId codeGen =
@@ -552,13 +552,23 @@ logSubexprResult valId codeGen =
             & codeGenFromExpr
             & return
 
-compileAppliedFunc :: Monad m => Val ValId -> JSS.Expression () -> M m CodeGen
-compileAppliedFunc func arg' =
+compileAppliedFunc :: Monad m => ValId -> Val ValId -> JSS.Expression () -> M m CodeGen
+compileAppliedFunc valId func arg' =
     do
         mode <- Lens.view envMode & M
+        let mTryCatch app =
+                case mode of
+                FastSilent -> codeGenFromExpr app & return
+                SlowLogging{} ->
+                    do
+                        logException <- JS.var "ex" & codeGenFromExpr & logSubexprResult valId
+                        [ JS.trycatch (JS.returns app)
+                            (JS.catch "ex" (JS.throw (codeGenExpression logException)))
+                            Nothing
+                            ] & codeGenFromLamStmts & return
         case (func ^. Val.body, mode) of
             (V.BCase case_, FastSilent) ->
-                compileCaseOnVar case_ (JS.var "x")
+                compileCaseOnVar valId case_ (JS.var "x")
                 <&> (varinit "x" arg' :)
                 <&> codeGenFromLamStmts
             (V.BLam (V.Lam v res), FastSilent) ->
@@ -572,9 +582,10 @@ compileAppliedFunc func arg' =
                             JS.lambda [vId] lamStmts $$ arg'
                         }
             _ ->
-                do
-                    func' <- compileVal func <&> codeGenExpression
-                    func' $$ arg' & codeGenFromExpr & return
+                compileVal func
+                <&> codeGenExpression
+                <&> ($$ arg')
+                >>= mTryCatch
 
 compileLeaf :: Monad m => V.Leaf -> ValId -> M m CodeGen
 compileLeaf leaf valId =
@@ -600,12 +611,12 @@ compileVal :: Monad m => Val ValId -> M m CodeGen
 compileVal (Val valId body) =
     case body of
     V.BLeaf leaf                -> compileLeaf leaf valId
-    V.BApp x                    -> compileApply x    >>= maybeLog
+    V.BApp x                    -> compileApply valId x >>= maybeLog
     V.BGetField x               -> compileGetField x >>= maybeLog
     V.BLam x                    -> compileLambda x valId
     V.BInject x                 -> compileInject x   >>= maybeLog
     V.BRecExtend x              -> compileRecExtend x
-    V.BCase x                   -> compileCase x
+    V.BCase x                   -> compileCase valId x
     V.BFromNom (V.Nom _tId val) -> compileVal val    >>= maybeLog
     V.BToNom x                  -> compileToNom x valId
     where
