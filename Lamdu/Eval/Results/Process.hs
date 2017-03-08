@@ -70,10 +70,14 @@ addTypesInject (V.Inject tag val) go typ =
 
 addTypesArray :: [val] -> AddTypes val res
 addTypesArray items go typ =
-    do
-        paramType <- typ ^? T._TInst . _2 . Lens.ix Builtins.valTypeParamId
-        items <&> go paramType & RArray & Just
-    & fromMaybe ("addTypes got " ++ show typ ++ " for RArray" & ER.EvalTypeError & RError)
+    case typ ^? T._TInst . _2 . Lens.ix Builtins.valTypeParamId of
+    Nothing ->
+        -- TODO: this is a work-around for a bug. HACK
+        -- we currently don't know types for eval results of polymorphic values
+        case typ of
+        T.TVar{} -> items <&> go typ & RArray
+        _ -> "addTypesArray got " ++ show typ & ER.EvalTypeError & RError
+    Just paramType -> items <&> go paramType & RArray
 
 addTypes :: Map T.NominalId N.Nominal -> T.Type -> Val () -> Val T.Type
 addTypes nomsMap typ (Val () b) =
