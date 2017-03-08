@@ -16,7 +16,6 @@ import qualified Data.IntMap as IntMap
 import qualified Data.Map as Map
 import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Calc.Val as V
-import           Lamdu.Data.Definition (FFIName)
 
 import           Lamdu.Prelude
 
@@ -26,10 +25,6 @@ newtype ScopeId = ScopeId Int
 data EvalError
     = EvalHole
     | EvalTypeError String
-    | EvalLoadGlobalFailed V.Var
-    | EvalMissingBuiltin FFIName
-    | EvalTodoError String
-    | EvalIndexError String
     deriving Show
 
 topLevelScopeId :: ScopeId
