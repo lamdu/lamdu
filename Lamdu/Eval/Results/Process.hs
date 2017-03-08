@@ -49,13 +49,12 @@ addTypesRecExtend (V.RecExtend tag val rest) go typ =
             V.RecExtend tag
             (go typ val)
             (go typ rest)
-            & RRecExtend
-        _ -> "addTypes got " ++ show typ ++ " for RRecExtend" & ER.EvalTypeError & RError
+        _ -> "addTypes got " ++ show typ ++ " for RRecExtend" & error
     Just (valType, restType) ->
         V.RecExtend tag
         (go valType val)
         (go restType rest)
-        & RRecExtend
+    & RRecExtend
 
 addTypesInject :: V.Inject val -> AddTypes val res
 addTypesInject (V.Inject tag val) go typ =
@@ -64,9 +63,10 @@ addTypesInject (V.Inject tag val) go typ =
         -- TODO: this is a work-around for a bug. HACK
         -- we currently don't know types for eval results of polymorphic values
         case typ of
-        T.TVar{} -> go typ val & V.Inject tag & RInject
-        _ -> "addTypes got " ++ show typ ++ " for RInject" & ER.EvalTypeError & RError
-    Just valType -> go valType val & V.Inject tag & RInject
+        T.TVar{} -> go typ val & V.Inject tag
+        _ -> "addTypes got " ++ show typ ++ " for RInject" & error
+    Just valType -> go valType val & V.Inject tag
+    & RInject
 
 addTypesArray :: [val] -> AddTypes val res
 addTypesArray items go typ =
@@ -75,9 +75,10 @@ addTypesArray items go typ =
         -- TODO: this is a work-around for a bug. HACK
         -- we currently don't know types for eval results of polymorphic values
         case typ of
-        T.TVar{} -> items <&> go typ & RArray
-        _ -> "addTypesArray got " ++ show typ & ER.EvalTypeError & RError
-    Just paramType -> items <&> go paramType & RArray
+        T.TVar{} -> items <&> go typ
+        _ -> "addTypesArray got " ++ show typ & error
+    Just paramType -> items <&> go paramType
+    & RArray
 
 addTypes :: Map T.NominalId N.Nominal -> T.Type -> Val () -> Val T.Type
 addTypes nomsMap typ (Val () b) =

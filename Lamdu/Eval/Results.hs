@@ -24,7 +24,6 @@ newtype ScopeId = ScopeId Int
 
 data EvalError
     = EvalHole
-    | EvalTypeError String
     deriving Show
 
 topLevelScopeId :: ScopeId
@@ -52,7 +51,7 @@ extractField tag (Val () (RRecExtend (V.RecExtend vt vv vr)))
 extractField _ v@(Val () RError {}) = v
 extractField tag x =
     "Expected record with tag: " ++ show tag ++ " got: " ++ show x
-    & EvalTypeError & RError & Val ()
+    & error
 
 data EvalResults srcId =
     EvalResults
