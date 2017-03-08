@@ -44,7 +44,11 @@ extractFields (V.RecExtend tag val (Val _ rest)) =
     RRecExtend recExtend ->
         extractFields recExtend & _1 %~ ((tag, val):)
     RError err -> ([], RecordExtendsError err)
-    x -> "extractFields expects record, got: " ++ show (void x) & error
+    x ->
+        ( []
+        , "extractFields expects record, got: " ++ show (void x)
+          & EvalTypeError & RecordExtendsError
+        )
 
 textView :: Monad m => Text -> AnimId -> ExprGuiM m View
 textView x animId = BWidgets.makeTextView x animId & ExprGuiM.widgetEnv
