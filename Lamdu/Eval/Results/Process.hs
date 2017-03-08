@@ -71,8 +71,7 @@ addTypesInject (V.Inject tag val) go typ =
 addTypesArray :: [val] -> AddTypes val res
 addTypesArray items go typ =
     do
-        (_nomId, params) <- typ ^? T._TInst
-        paramType <- params ^. Lens.at Builtins.valTypeParamId
+        paramType <- typ ^? T._TInst . _2 . Lens.ix Builtins.valTypeParamId
         items <&> go paramType & RArray & Just
     & fromMaybe ("addTypes got " ++ show typ ++ " for RArray" & ER.EvalTypeError & RError)
 
