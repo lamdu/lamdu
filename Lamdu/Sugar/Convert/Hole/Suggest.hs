@@ -63,7 +63,8 @@ valueConversionH ::
     StateT Context [] (Val (Payload, a))
 valueConversionH nominals empty src =
     case srcInferPl ^. Infer.plType of
-    T.TRecord composite ->
+    T.TRecord composite
+        | Lens.nullOf (Val.body . V._BRecExtend) src ->
         composite ^.. ExprLens.compositeFields
         <&> getField & lift
         & prependOpt src
