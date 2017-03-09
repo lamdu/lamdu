@@ -119,7 +119,6 @@ Things we plan on:
 
 ## TODOs that can improve video
 
-* Bold binders - no "yellows"
 * Option to disable LCD subpixel rendering
 * Clearer UI for update-type
 * Hole result ordering

@@ -62,9 +62,9 @@ style config fonts =
     { styleBase =
       textEdit (Config.baseColor config) (Fonts.fontDefault fonts)
     , styleAutoNameOrigin =
-      textEdit nameOriginFGColor (Fonts.fontAutoName fonts)
+      textEdit (Config.baseColor config) (Fonts.fontAutoName fonts)
     , styleNameOrigin =
-      textEdit nameOriginFGColor (Fonts.fontDefault fonts)
+      textEdit (Config.baseColor config) (Fonts.fontBinders fonts)
     , styleBytes =
       textEdit (Config.literalColor config) (Fonts.fontLiteralBytes fonts)
     , styleText =

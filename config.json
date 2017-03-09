@@ -1,10 +1,11 @@
 {
     "fonts": {
-        "fontDefault" : "fonts/DejaVuSans.ttf",
-        "fontHelp"    : "fonts/DejaVuSans.ttf",
-        "fontLiteralText"   : "fonts/DejaVuSerif.ttf",
-        "fontAutoName": "fonts/DejaVuSerif-Italic.ttf",
-        "fontLiteralBytes"    : "fonts/DejaVuSansMono.ttf"
+        "fontDefault"     : "fonts/DejaVuSans.ttf",
+        "fontHelp"        : "fonts/DejaVuSans.ttf",
+        "fontAutoName"    : "fonts/DejaVuSerif-BoldItalic.ttf",
+        "fontBinders"     : "fonts/DejaVuSans-Bold.ttf",
+        "fontLiteralText" : "fonts/DejaVuSerif.ttf",
+        "fontLiteralBytes": "fonts/DejaVuSansMono.ttf"
     },
     "baseTextSize": 12,
     "animationTimePeriodSec": 0.11,
@@ -432,12 +433,6 @@
         ]
     },
     "name": {
-        "nameOriginFGColor": [
-            1.0,
-            0.8,
-            0.5,
-            1.0
-        ],
         "parameterColor": [
             0.5,
             0.9,

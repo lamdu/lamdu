@@ -113,8 +113,9 @@ makeBuiltinDefinition ::
     Sugar.DefinitionBuiltin m -> ExprGuiM m (Widget (T m Widget.EventResult))
 makeBuiltinDefinition def builtin =
     do
+        defColor <- ExprGuiM.readConfig <&> Config.name <&> Config.definitionColor
         assignment <-
-            [ ExpressionGui.makeNameOriginEdit name (Widget.joinId myId ["name"])
+            [ ExpressionGui.makeNameOriginEdit name defColor (Widget.joinId myId ["name"])
             , ExprGuiM.makeLabel "=" (Widget.toAnimId myId) <&> Widget.fromView
             , BuiltinEdit.make builtin myId
             ]
@@ -173,8 +174,9 @@ makeExprDefinition ::
 makeExprDefinition def bodyExpr =
     do
         config <- ExprGuiM.readConfig
+        let defColor = Config.definitionColor (Config.name config)
         bodyGui <-
-            BinderEdit.make (def ^. Sugar.drName)
+            BinderEdit.make (def ^. Sugar.drName) defColor
             (bodyExpr ^. Sugar.deContent) myId
         vspace <- ExpressionGui.stdVSpace
         mkTypeWidgets <-

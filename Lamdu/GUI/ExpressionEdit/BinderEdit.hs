@@ -14,6 +14,7 @@ import qualified Data.Map as Map
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
 import qualified Data.Text as Text
+import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.Bottle.EventMap as E
 import           Graphics.UI.Bottle.ModKey (ModKey(..))
 import           Graphics.UI.Bottle.Widget (Widget)
@@ -57,13 +58,13 @@ makeBinderNameEdit ::
     Sugar.BinderActions m ->
     Widget.EventMap (T m Widget.EventResult) ->
     (Text, Sugar.EntityId) ->
-    Name m -> Widget.Id ->
+    Name m -> Draw.Color -> Widget.Id ->
     ExprGuiM m (ExpressionGui m)
-makeBinderNameEdit binderActions rhsJumperEquals rhs name myId =
+makeBinderNameEdit binderActions rhsJumperEquals rhs name color myId =
     do
         config <- ExprGuiM.readConfig
         rhsJumper <- jumpToRHS (Config.jumpLHStoRHSKeys config) rhs
-        ExpressionGui.makeNameOriginEdit name myId
+        ExpressionGui.makeNameOriginEdit name color myId
             <&> jumpToRHSViaEquals name
             <&> Widget.weakerEvents
                 (ParamEdit.eventMapAddFirstParam config
@@ -324,11 +325,11 @@ makeParts funcApplyLimit binder delVarBackwardsId myId =
 
 make ::
     Monad m =>
-    Name m ->
+    Name m -> Draw.Color ->
     Sugar.Binder (Name m) m (ExprGuiT.SugarExpr m) ->
     Widget.Id ->
     ExprGuiM m (ExpressionGui m)
-make name binder myId =
+make name color binder myId =
     do
         Parts mParamsEdit mScopeEdit bodyEdit eventMap <-
             makeParts ExprGuiT.UnlimitedFuncApply binder myId myId
@@ -340,7 +341,7 @@ make name binder myId =
             ExprEventMap.jumpHolesEventMap (binderContentNearestHoles body)
         defNameEdit <-
             makeBinderNameEdit (binder ^. Sugar.bActions) rhsJumperEquals rhs
-            name myId
+            name color myId
             <&> TreeLayout.alignment . _1 .~ 0
             <&> TreeLayout.alignedWidget %~
                 AlignedWidget.addAfter AlignedWidget.Vertical
@@ -378,6 +379,7 @@ makeLetEdit ::
 makeLetEdit item =
     do
         config <- ExprGuiM.readConfig
+        let letColor = Config.letColor (Config.name config)
         let actionsEventMap =
                 mconcat
                 [ Widget.keysEventMapMovesCursor (Config.delKeys config)
@@ -398,7 +400,7 @@ makeLetEdit item =
         let eventMap = mappend actionsEventMap usageEventMap
         ExpressionGui.tagItem
             <*> ExpressionGui.grammarLabel "let" (Widget.toAnimId myId)
-            <*> (make (item ^. Sugar.lName) binder myId
+            <*> (make (item ^. Sugar.lName) letColor binder myId
                 <&> TreeLayout.widget %~ Widget.weakerEvents eventMap
                 <&> TreeLayout.pad
                     (Config.letItemPadding config <&> realToFrac)
@@ -493,11 +495,11 @@ makeBinderContentEdit params (Sugar.BinderExpr binderBody) =
         ExprGuiM.makeSubexpression (const 0) binderBody
             <&> TreeLayout.widget %~ Widget.weakerEvents jumpToLhsEventMap
 
-namedParamEditInfo :: Monad m => Sugar.NamedParamInfo (Name m) m -> ParamEdit.Info m
-namedParamEditInfo paramInfo =
+namedParamEditInfo :: Monad m => Draw.Color -> Sugar.NamedParamInfo (Name m) m -> ParamEdit.Info m
+namedParamEditInfo color paramInfo =
     ParamEdit.Info
     { ParamEdit.iMakeNameEdit =
-      ExpressionGui.makeNameOriginEdit (paramInfo ^. Sugar.npiName)
+      ExpressionGui.makeNameOriginEdit (paramInfo ^. Sugar.npiName) color
       <&> Lens.mapped %~ TreeLayout.fromCenteredWidget
     , ParamEdit.iMAddNext = paramInfo ^. Sugar.npiActions . Sugar.fpAddNext & Just
     , ParamEdit.iMOrderBefore = paramInfo ^. Sugar.npiActions . Sugar.fpMOrderBefore
@@ -526,17 +528,20 @@ makeParamsEdit ::
     Sugar.BinderParams (Name m) m ->
     ExprGuiM m [ExpressionGui m]
 makeParamsEdit annotationOpts nearestHoles delVarBackwardsId lhsId rhsId params =
-    case params of
-    Sugar.BinderWithoutParams -> return []
-    Sugar.NullParam p ->
-        fromParamList ExprGuiT.showAnnotationWhenVerbose delVarBackwardsId rhsId
-        [p & Sugar.fpInfo %~ nullParamEditInfo]
-    Sugar.VarParam p ->
-        fromParamList ExprGuiT.alwaysShowAnnotations delVarBackwardsId rhsId [p & Sugar.fpInfo %~ namedParamEditInfo]
-    Sugar.FieldParams ps ->
-        ps ^.. Lens.traversed . _2
-        & traverse . Sugar.fpInfo %~ namedParamEditInfo
-        & fromParamList ExprGuiT.alwaysShowAnnotations lhsId rhsId
+    do
+        paramColor <- ExprGuiM.readConfig <&> Config.name <&> Config.parameterColor
+        case params of
+            Sugar.BinderWithoutParams -> return []
+            Sugar.NullParam p ->
+                fromParamList ExprGuiT.showAnnotationWhenVerbose delVarBackwardsId rhsId
+                [p & Sugar.fpInfo %~ nullParamEditInfo]
+            Sugar.VarParam p ->
+                fromParamList ExprGuiT.alwaysShowAnnotations delVarBackwardsId rhsId
+                [p & Sugar.fpInfo %~ namedParamEditInfo paramColor]
+            Sugar.FieldParams ps ->
+                ps ^.. Lens.traversed . _2
+                & traverse . Sugar.fpInfo %~ namedParamEditInfo paramColor
+                & fromParamList ExprGuiT.alwaysShowAnnotations lhsId rhsId
     where
         fromParamList showParamAnnotation delDestFirst delDestLast paramList =
             do

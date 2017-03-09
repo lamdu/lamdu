@@ -6,7 +6,6 @@ module Lamdu.GUI.ExpressionEdit.GetVarEdit
 import qualified Control.Lens as Lens
 import qualified Data.ByteString.Char8 as SBS8
 import           Data.Store.Transaction (Transaction)
-import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.Bottle.EventMap as E
 import           Graphics.UI.Bottle.Font (Underline(..))
 import qualified Graphics.UI.Bottle.Widget as Widget
@@ -37,12 +36,11 @@ type T = Transaction
 
 makeSimpleView ::
     (Monad f, Monad m) =>
-    Draw.Color -> Name m -> Widget.Id ->
+    Name m -> Widget.Id ->
     ExprGuiM m (ExpressionGui f)
-makeSimpleView color name myId =
+makeSimpleView name myId =
     ExprGuiM.widgetEnv (BWidgets.makeFocusableView myId)
     <*> (ExpressionGui.makeNameView name (Widget.toAnimId myId) <&> Widget.fromView)
-    & ExprGuiM.withFgColor color
     <&> TreeLayout.fromCenteredWidget
 
 makeParamsRecord ::
@@ -62,7 +60,8 @@ makeParamsRecord myId paramsRecordVar =
                 & Lens.itraverse
                 (\i fieldName ->
                     Widget.joinId myId ["params", SBS8.pack (show (i::Int))]
-                    & makeSimpleView parameterColor fieldName
+                    & makeSimpleView fieldName
+                    & ExprGuiM.withFgColor parameterColor
                 )
               )
             , ExpressionGui.makeLabel "}" (Widget.toAnimId myId <> ["suffix"])
@@ -195,7 +194,8 @@ makeGetBinder binderVar myId =
                     ( definitionColor
                     , processDefinitionWidget defForm myId
                     )
-        makeSimpleView color
+        makeSimpleView
+            <&> Lens.mapped %~ ExprGuiM.withFgColor color
             & makeNameRef myId (binderVar ^. Sugar.bvNameRef)
             <&> TreeLayout.widget %~
             Widget.weakerEvents
@@ -219,10 +219,15 @@ make getVar pl =
             Sugar.GetParam param ->
                 case param ^. Sugar.pBinderMode of
                 Sugar.LightLambda ->
-                    makeSimpleView nameOriginFGColor
+                    makeSimpleView
                     <&> Lens.mapped %~ LightLambda.withUnderline config
-                _ -> makeSimpleView parameterColor
+                    <&> Lens.mapped %~ ExpressionGui.styleNameOrigin name parameterColor
+                _ ->
+                    makeSimpleView
+                    <&> Lens.mapped %~ ExprGuiM.withFgColor parameterColor
                 & makeNameRef myId (param ^. Sugar.pNameRef)
+                where
+                    name = param ^. Sugar.pNameRef . Sugar.nrName
             Sugar.GetParamsRecord paramsRecordVar -> makeParamsRecord myId paramsRecordVar
     where
         myId = WidgetIds.fromExprPayload pl
