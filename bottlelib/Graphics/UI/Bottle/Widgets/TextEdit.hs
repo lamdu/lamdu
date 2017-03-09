@@ -88,13 +88,18 @@ cursorRects style str =
         addFirstCursor y = (Rect (Vector2 0 y) (Vector2 0 lineHeight) :)
         lineHeight = TextView.lineHeight style
 
-makeUnfocused :: Style -> Text -> Widget.Id -> Widget (Text, Widget.EventResult)
-makeUnfocused Style{..} str myId =
+makeInternal :: Style -> Text -> Text -> Widget.Id -> Widget (Text, Widget.EventResult)
+makeInternal Style{..} str displayStr myId =
     TextView.makeWidget _sTextViewStyle displayStr animId
     & Widget.pad (Vector2 (_sCursorWidth / 2) 0)
     & Widget.mEnter .~ Just (enterFromDirection Style{..} str myId)
     where
         animId = Widget.toAnimId myId
+
+makeUnfocused :: Style -> Text -> Widget.Id -> Widget (Text, Widget.EventResult)
+makeUnfocused Style{..} str myId =
+    makeInternal Style{..} str displayStr myId
+    where
         displayStr = makeDisplayStr _sEmptyUnfocusedString str
 
 minimumIndex :: Ord a => [a] -> Int
@@ -133,12 +138,12 @@ makeFocused ::
     Cursor -> Style -> Text -> Widget.Id ->
     Widget (Text, Widget.EventResult)
 makeFocused cursor Style{..} str myId =
-    makeUnfocused Style{..} str myId
+    makeInternal Style{..} str displayStr myId
     & Widget.bottomFrame <>~ cursorFrame
     & Widget.mFocus .~
         Just Widget.Focus
         { _focalArea = cursorRect
-        , _fEventMap = eventMap cursor str displayStr myId
+        , _fEventMap = eventMap cursor str myId
         }
     where
         displayStr = makeDisplayStr _sEmptyFocusedString str
@@ -160,10 +165,8 @@ mkCursorRect Style{..} cursor str = Rect cursorPos cursorSize
             TextView.renderedTextSize . Lens.to advance . _1
         cursorPosY = lineHeight * (genericLength beforeCursorLines - 1)
 
-eventMap ::
-    Int -> Text -> Text -> Widget.Id ->
-    Widget.EventMap (Text, Widget.EventResult)
-eventMap cursor str displayStr myId =
+eventMap :: Int -> Text -> Widget.Id -> Widget.EventMap (Text, Widget.EventResult)
+eventMap cursor str myId =
     mconcat . concat $ [
         [ keys (moveDoc ["left"]) [noMods GLFW.Key'Left] $
             moveRelative (-1)
@@ -303,7 +306,7 @@ eventMap cursor str displayStr myId =
         homeKeys = [noMods GLFW.Key'Home, ctrl GLFW.Key'A]
         endKeys = [noMods GLFW.Key'End, ctrl GLFW.Key'E]
         textLength = Text.length str
-        lineCount = length $ Text.splitOn "\n" displayStr
+        lineCount = length $ Text.splitOn "\n" str
         (before, after) = Text.splitAt cursor str
 
 make ::
