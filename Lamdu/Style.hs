@@ -66,9 +66,9 @@ style config fonts =
     , styleNameOrigin =
       textEdit nameOriginFGColor (Fonts.fontDefault fonts)
     , styleBytes =
-      textEdit (Config.literalColor config) (Fonts.fontMono fonts)
+      textEdit (Config.literalColor config) (Fonts.fontLiteralBytes fonts)
     , styleText =
-      textEdit (Config.literalColor config) (Fonts.fontFancy fonts)
+      textEdit (Config.literalColor config) (Fonts.fontLiteralText fonts)
     , styleNum =
       textEdit (Config.literalColor config) (Fonts.fontDefault fonts)
     }

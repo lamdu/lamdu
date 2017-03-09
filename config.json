@@ -2,9 +2,9 @@
     "fonts": {
         "fontDefault" : "fonts/DejaVuSans.ttf",
         "fontHelp"    : "fonts/DejaVuSans.ttf",
-        "fontFancy"   : "fonts/DejaVuSerif.ttf",
+        "fontLiteralText"   : "fonts/DejaVuSerif.ttf",
         "fontAutoName": "fonts/DejaVuSerif-Italic.ttf",
-        "fontMono"    : "fonts/DejaVuSansMono.ttf"
+        "fontLiteralBytes"    : "fonts/DejaVuSansMono.ttf"
     },
     "baseTextSize": 12,
     "animationTimePeriodSec": 0.11,

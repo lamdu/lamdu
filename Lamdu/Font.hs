@@ -1,7 +1,7 @@
 {-# LANGUAGE NoImplicitPrelude, TemplateHaskell, DeriveGeneric, DeriveFunctor, DeriveFoldable, DeriveTraversable #-}
 module Lamdu.Font
     ( FontSize, Fonts(..), new
-    , lfontDefault, lfontHelp, lfontFancy, lfontAutoName, lfontMono
+    , lfontDefault, lfontHelp, lfontLiteralText, lfontAutoName, lfontLiteralBytes
     ) where
 
 import qualified Control.Exception as E
@@ -20,20 +20,20 @@ instance E.Exception MissingFont
 data Fonts a = Fonts
     { fontDefault :: a
     , fontHelp :: a
-    , fontFancy :: a
+    , fontLiteralText :: a
+    , fontLiteralBytes :: a
     , fontAutoName :: a
-    , fontMono :: a
     } deriving (Eq, Generic, Show, Functor, Foldable, Traversable)
 instance Aeson.ToJSON a => Aeson.ToJSON (Fonts a) where
     toJSON = Aeson.genericToJSON Aeson.defaultOptions
 instance Aeson.FromJSON a => Aeson.FromJSON (Fonts a)
 
 Lens.makeLensesFor
-    [ ("fontDefault" , "lfontDefault"  )
-    , ("fontHelp"    , "lfontHelp"     )
-    , ("fontFancy"   , "lfontFancy"    )
-    , ("fontAutoName", "lfontAutoName" )
-    , ("fontMono"    , "lfontMono"     )
+    [ ("fontDefault"     , "lfontDefault"     )
+    , ("fontHelp"        , "lfontHelp"        )
+    , ("fontAutoName"    , "lfontAutoName"    )
+    , ("fontLiteralText" , "lfontLiteralText" )
+    , ("fontLiteralBytes", "lfontLiteralBytes")
     ]
     ''Fonts
 
