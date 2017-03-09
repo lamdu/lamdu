@@ -116,3 +116,11 @@ Things we plan on:
   * Lamdu is implemented in Haskell and being proficient in it is a pre-requisite for programmers wanting to get involved.
 * For more info about our technical road-map see our article about that. **TODO** create this status/roadmap article.
   * There are a few key features still missing, like a UI to define more Nominal types, and type-classes.
+
+## TODOs that can improve video
+
+* Empty tag name edit
+* Bold binders - no "yellows"
+* Option to disable LCD subpixel rendering
+* Clearer UI for update-type
+* Hole result ordering
