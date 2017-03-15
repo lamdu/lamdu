@@ -93,27 +93,30 @@ These are the major visible stuff that changed:
 
 **TODO**: Demonstrate structural types. We did this in the previous demo with a fibonacci example, but it is a bit embarassing that if we call the field "next" then we get disambiguation tags. We should probably solve this in some way - tag holes or less spurious disambiguations..
 
+### Present cool mockups ###
+
+Things that aren't yet implemented in Lamdu but that will be in the future:
+
+* Switching languages. Can mock it up by switching branches to a branch where things are in Spanish.
+* Rich customizable value annotations. Show a function that calculates the possible moves for a chess horse with chess boards as annotations. ("Photoshop"ed)
+
 ### A bit about Lamdu's vision ###
 
-Things we plan on:
+Additional things we plan on integrating into the environment:
 
-* We want to support custom rich annotations: Images, waveforms, graphs, etc.
-* Additional things we plan on integrating into the environment:
-  * Version control. As it happens, existing tools like git were designed for text files and we may need to create new source control tools for non-textual code.
-  * Testing being integrated. It just makes sense when the IDE already runs your code.
+* Version control. As it happens, existing tools like git were designed for text files and we may need to create new source control tools for non-textual code.
+* Testing being integrated. It just makes sense when the IDE already runs your code.
 
 ### And a little bit about us ###
 
 * Eyal and Yair. Been working on Lamdu on our free time since 2011.
-  * Some bits about us?
-    * Been programming for a really long while in BASIC, C, C++, Python, D, Haskell.
-    * We think that many frustrustions faced by programmers and by us can be solved and this is what we are trying to do with Lamdu.
-    * Yair left Google so that he could have enough time to work on this.
+  * Been programming for a really long while in BASIC, C, C++, Python, Haskell, D, and more.
+  * We think that many accumulating small frustrustions faced by programmers, like us, can be solved and this is what we are trying to do with Lamdu.
+  * Yair left Google so that he could have enough time to work on this.
 * Lamdu is free and open-source.
-  * There's no institution or company behind us.
-    * But if anyone wants to give us with grants, by all means do :) We would love to be able to spend more of our time developing Lamdu.
+  * There's no institution or company behind us - But if anyone wants to give us grants, by all means do :) We would love to be able to spend more of our time developing Lamdu.
 * We would really like other people to join our effort to bring forth a brighter future for programming.
-  * Lamdu is implemented in Haskell and being proficient in it is a pre-requisite for programmers wanting to get involved.
+  * Lamdu is implemented in Haskell and being proficient in it is a pre-requisite for programmers wanting to get involved in coding.
 * For more info about our technical road-map see our article about that. **TODO** create this status/roadmap article.
   * There are a few key features still missing, like a UI to define more Nominal types, and type-classes.
 
