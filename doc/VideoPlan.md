@@ -122,6 +122,4 @@ Additional things we plan on integrating into the environment:
 
 ## TODOs that can improve video
 
-* Option to disable LCD subpixel rendering
-* Clearer UI for update-type
 * Hole result ordering
