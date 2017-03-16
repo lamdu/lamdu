@@ -135,12 +135,7 @@ definitionTypeChangeBox info getVarId =
         let keys = Config.newDefinitionButtonPressKeys (Config.pane config)
         let update = (info ^. Sugar.defTypeUseCurrent) >> return getVarId
         Hover.addDarkBackground animId
-            ?? TreeLayout.fromAlignedWidget box
-            <&> (^. TreeLayout.render)
-            ?? TreeLayout.LayoutParams
-                { _layoutMode = TreeLayout.LayoutWide
-                , _layoutContext = TreeLayout.LayoutClear
-                }
+            ?? box
             <&> AlignedWidget.widget %~
                 Widget.weakerEvents
                 (Widget.keysEventMapMovesCursor keys
