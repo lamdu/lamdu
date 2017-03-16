@@ -116,12 +116,15 @@ definitionTypeChangeBox info getVarId =
             ExpressionGui.makeLabel "Type was:" animId
         typeWhenUsed <-
             mkTypeWidget "typeWhenUsed" (info ^. Sugar.defTypeWhenUsed)
-        sepLabel <- ExpressionGui.makeLabel "Update to:" animId
+        spacing <- ExpressionGui.stdVSpace <&> AlignedWidget.fromCenteredWidget
+        sepLabel <-
+            ExpressionGui.makeFocusableView myId
+            <*> ExpressionGui.makeLabel "Update to:" animId
         typeCurrent <- mkTypeWidget "typeCurrent" (info ^. Sugar.defTypeCurrent)
         config <- ExprGuiM.readConfig
         let padding = realToFrac <$> Config.valFramePadding config
         let box =
-                [headerLabel, typeWhenUsed, sepLabel, typeCurrent]
+                [headerLabel, typeWhenUsed, spacing, sepLabel, typeCurrent]
                 <&> AlignedWidget.alignment .~ 0
                 & AlignedWidget.vbox 0
                 & AlignedWidget.pad padding
@@ -132,7 +135,7 @@ definitionTypeChangeBox info getVarId =
         let keys = Config.newDefinitionButtonPressKeys (Config.pane config)
         let update = (info ^. Sugar.defTypeUseCurrent) >> return getVarId
         Hover.addDarkBackground animId
-            <*> (ExpressionGui.makeFocusableView myId ?? box <&> TreeLayout.fromAlignedWidget)
+            ?? TreeLayout.fromAlignedWidget box
             <&> (^. TreeLayout.render)
             ?? TreeLayout.LayoutParams
                 { _layoutMode = TreeLayout.LayoutWide
