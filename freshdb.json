@@ -3546,7 +3546,7 @@
             "Prelude",
             ">="
         ],
-        "name": ">=",
+        "name": "≥",
         "def": "19803e17faab427a9474e0230d52c366",
         "typ": {
             "schemeType": {
@@ -9910,7 +9910,7 @@
             "Prelude",
             "<="
         ],
-        "name": "<=",
+        "name": "≤",
         "def": "a3b4da9b99894201bafa045744d43156",
         "typ": {
             "schemeType": {
@@ -14295,7 +14295,7 @@
             "Prelude",
             "/="
         ],
-        "name": "/=",
+        "name": "≠",
         "def": "e76ab39e7b024b6681896b7454932918",
         "typ": {
             "schemeType": {

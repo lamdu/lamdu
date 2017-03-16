@@ -182,8 +182,23 @@ literalGroups holeInfo =
 insensitivePrefixOf :: Text -> Text -> Bool
 insensitivePrefixOf = Text.isPrefixOf `on` Text.toLower
 
-insensitiveInfixOf :: Text -> Text -> Bool
-insensitiveInfixOf = Text.isInfixOf `on` Text.toLower
+infixAltOf :: Text -> Text -> Bool
+infixAltOf needle haystack =
+    mapM alts (Text.unpack haystack)
+    <&> concat
+    <&> Text.pack
+    & any (Text.isInfixOf needle)
+    where
+        alts x = [x] : extras x
+        extras '≥' = [">="]
+        extras '≤' = ["<="]
+        extras '≠' = ["/=", "!=", "<>"]
+        extras 'α' = ["alpha"]
+        extras 'β' = ["beta"]
+        extras _ = []
+
+insensitiveInfixAltOf :: Text -> Text -> Bool
+insensitiveInfixAltOf = infixAltOf `on` Text.toLower
 
 makeAllGroups :: Monad m => HoleInfo m -> T m [Group m]
 makeAllGroups holeInfo =
@@ -214,4 +229,4 @@ holeMatches searchTerm groups =
         filterBySearchTerm
             | Text.null searchTerm = id
             | otherwise = filter nameMatch
-        nameMatch group = any (insensitiveInfixOf searchTerm) (group ^. groupSearchTerms)
+        nameMatch group = any (insensitiveInfixAltOf searchTerm) (group ^. groupSearchTerms)
