@@ -1,6 +1,7 @@
 {-# LANGUAGE NoImplicitPrelude, TemplateHaskell, DeriveGeneric, DeriveFunctor, DeriveFoldable, DeriveTraversable #-}
 module Lamdu.Font
-    ( FontSize, Fonts(..), new
+    ( FontSize, Fonts(..)
+    , LCDSubPixelEnabled(..), new
     , lfontDefault, lfontHelp, lfontLiteralText, lfontAutoName, lfontLiteralBytes, lfontBinders
     ) where
 
@@ -41,12 +42,18 @@ Lens.makeLensesFor
 
 type FontSize = Float
 
-openFont :: FontSize -> FilePath -> IO Draw.Font
-openFont size path =
+data LCDSubPixelEnabled = LCDSubPixelEnabled | LCDSubPixelDisabled
+
+load :: LCDSubPixelEnabled -> Float -> FilePath -> IO Draw.Font
+load LCDSubPixelEnabled = Draw.openFont
+load LCDSubPixelDisabled = Draw.openFontNoLCD
+
+openFont :: LCDSubPixelEnabled -> FontSize -> FilePath -> IO Draw.Font
+openFont subpixel size path =
     do
         exists <- Directory.doesFileExist path
         unless exists $ E.throwIO $ MissingFont $ path ++ " does not exist!"
-        Draw.openFont size path
+        load subpixel size path
 
-new :: Fonts (FontSize, FilePath) -> IO (Fonts Draw.Font)
-new = traverse (uncurry openFont)
+new :: LCDSubPixelEnabled -> Fonts (FontSize, FilePath) -> IO (Fonts Draw.Font)
+new subpixel = traverse (uncurry (openFont subpixel))

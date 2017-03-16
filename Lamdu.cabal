@@ -113,7 +113,7 @@ Library
                   , distributive
                   , either
                   , filepath >= 1.1
-                  , graphics-drawingcombinators >= 1.7
+                  , graphics-drawingcombinators >= 1.7.1
                   , hashable
                   , lens >= 4.1
                   , leveldb-haskell >= 0.6

@@ -216,9 +216,14 @@ runEditor opts db =
                     settingsRef <- newIORef initialSettings
                     settingsChangeHandler evaluator initialSettings
                     addHelp <- EventMapDoc.makeToggledHelpAdder EventMapDoc.HelpNotShown
-                    mainLoop win refreshScheduler configSampler $ \fonts config size ->
+                    mainLoop subpixel win refreshScheduler configSampler $
+                        \fonts config size ->
                         makeRootWidget fonts db zoom settingsRef evaluator config size
                         >>= addHelp (Style.help (Font.fontHelp fonts) (Config.help config)) size
+    where
+        subpixel
+            | opts ^. Opts.eoSubpixelEnabled = Font.LCDSubPixelEnabled
+            | otherwise = Font.LCDSubPixelDisabled
 
 newtype RefreshScheduler = RefreshScheduler (IORef Bool)
 newRefreshScheduler :: IO RefreshScheduler
@@ -252,8 +257,8 @@ curSampleFonts sample =
     & prependConfigPath sample
     & assignFontSizes sample
 
-makeGetFonts :: Sampler Config -> IO (IO (Fonts Draw.Font))
-makeGetFonts configSampler =
+makeGetFonts :: Font.LCDSubPixelEnabled -> Sampler Config -> IO (IO (Fonts Draw.Font))
+makeGetFonts subpixel configSampler =
     do
         startFontsDef <- getFontsDef
         fontsDefRef <- newIORef startFontsDef
@@ -269,9 +274,9 @@ makeGetFonts configSampler =
                 readIORef fontsRef
     where
         loadFonts (absFonts, defaultFontsAbs) =
-            Font.new absFonts
+            Font.new subpixel absFonts
             `E.catch` \E.SomeException {} ->
-            Font.new defaultFontsAbs
+            Font.new subpixel defaultFontsAbs
         getFontsDef =
             do
                 sample <- ConfigSampler.getSample configSampler
@@ -281,12 +286,13 @@ makeGetFonts configSampler =
                     )
 
 mainLoop ::
+    Font.LCDSubPixelEnabled ->
     GLFW.Window -> RefreshScheduler -> Sampler Config ->
     (Fonts Draw.Font -> Config -> Widget.Size ->
     IO (Widget (MainLoop.M Widget.EventResult))) -> IO ()
-mainLoop win refreshScheduler configSampler iteration =
+mainLoop subpixel win refreshScheduler configSampler iteration =
     do
-        getFonts <- makeGetFonts configSampler
+        getFonts <- makeGetFonts subpixel configSampler
         lastVersionNumRef <- newIORef =<< getCurrentTime
         let getConfig =
                 ConfigSampler.getSample configSampler

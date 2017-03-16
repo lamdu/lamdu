@@ -1,6 +1,6 @@
 {-# LANGUAGE NoImplicitPrelude, TemplateHaskell, FlexibleContexts, RecordWildCards #-}
 module Lamdu.Opts
-    ( EditorOpts(..), eoWindowMode, eoCopyJSOutputPath, eoWindowTitle
+    ( EditorOpts(..), eoWindowMode, eoCopyJSOutputPath, eoWindowTitle, eoSubpixelEnabled
     , Command(..), _DeleteDb, _Undo, _Editor
     , Parsed(..), pCommand, pLamduDB
     , WindowMode(..), _VideoModeSize, _FullScreen
@@ -20,6 +20,7 @@ data EditorOpts = EditorOpts
     { _eoWindowMode :: WindowMode
     , _eoCopyJSOutputPath :: Maybe FilePath
     , _eoWindowTitle :: String
+    , _eoSubpixelEnabled :: Bool
     }
 
 data Command
@@ -65,6 +66,9 @@ editorOpts =
           <> P.showDefault
           <> P.help "Override window title"
         )
+    <*> P.flag True False
+        (P.long "disable-lcd-rendering"
+         <> P.help "Disables LCD subpixel font rendering")
 
 command :: P.Parser Command
 command = (Editor <$> editorOpts) <|> subcommands
