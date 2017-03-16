@@ -3,19 +3,18 @@ module Lamdu.Opts
     ( IDEOpts(..), ioWindowMode, ioCopyJSOutputPath, ioWindowTitle
     , Command(..), _DeleteDb, _Undo, _IDE
     , Parsed(..), pCommand, pLamduDB
-    , WindowMode(..), _VideoModeSize, _WindowSize, _FullScreen
+    , WindowMode(..), _VideoModeSize, _FullScreen
     , get
     ) where
 
 import           Control.Applicative (optional)
 import qualified Control.Lens as Lens
-import           Data.Vector.Vector2 (Vector2(..))
 import           Options.Applicative ((<|>))
 import qualified Options.Applicative as P
 
 import           Lamdu.Prelude
 
-data WindowMode = VideoModeSize | WindowSize (Vector2 Int) | FullScreen
+data WindowMode = VideoModeSize | FullScreen
 
 data IDEOpts = IDEOpts
     { _ioWindowMode :: WindowMode
@@ -76,11 +75,6 @@ windowMode =
       <> P.short 'f'
       <> P.help "Run Lamdu in a fullscreen window"
     )
-    <|> P.option
-    (P.auto <&> uncurry Vector2 <&> WindowSize)
-    (P.long "windowsize"
-     <> P.metavar "W,H"
-     <> P.help "Control the window size lamdu starts with")
     <|> pure VideoModeSize
 
 parser :: P.Parser Parsed

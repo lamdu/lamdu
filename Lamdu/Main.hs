@@ -111,7 +111,6 @@ createWindow title mode =
         case mode of
             Opts.FullScreen         -> createWin (Just monitor) videoModeSize
             Opts.VideoModeSize      -> createWin Nothing videoModeSize
-            Opts.WindowSize winSize -> createWin Nothing winSize
 
 settingsChangeHandler :: EvalManager.Evaluator -> Settings -> IO ()
 settingsChangeHandler evaluator settings =
