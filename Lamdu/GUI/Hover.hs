@@ -1,5 +1,7 @@
+-- | The dark background is meant to be added around the set of
+-- rectangular shaped hovering UI elements (e.g: annotations)
 {-# LANGUAGE NoImplicitPrelude, OverloadedStrings #-}
-module Lamdu.GUI.ExpressionEdit.HoleEdit.Common
+module Lamdu.GUI.Hover
     ( addBackground, addDarkBackground
     ) where
 
@@ -16,7 +18,7 @@ import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import           Lamdu.Prelude
 
 addBackground :: AnimId -> Draw.Color -> Widget f -> Widget f
-addBackground myId = Widget.backgroundColor (myId <> ["hole background"])
+addBackground myId = Widget.backgroundColor (myId <> ["hover background"])
 
 addDarkBackground :: Monad m => AnimId -> ExprGuiM m (ExpressionGui f -> ExpressionGui f)
 addDarkBackground animId =
@@ -27,5 +29,5 @@ addDarkBackground animId =
             & TreeLayout.pad (Config.hoverDarkPadding config <&> realToFrac)
             & TreeLayout.widget %~
               Widget.backgroundColor
-              (animId <> ["hole dark background"])
+              (animId <> ["hover dark background"])
               (Config.hoverDarkBGColor config)

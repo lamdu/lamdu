@@ -224,7 +224,6 @@ Executable lamdu
                   , Lamdu.GUI.ExpressionEdit.GetFieldEdit
                   , Lamdu.GUI.ExpressionEdit.GetVarEdit
                   , Lamdu.GUI.ExpressionEdit.HoleEdit
-                  , Lamdu.GUI.ExpressionEdit.HoleEdit.Common
                   , Lamdu.GUI.ExpressionEdit.HoleEdit.EventMap
                   , Lamdu.GUI.ExpressionEdit.HoleEdit.Info
                   , Lamdu.GUI.ExpressionEdit.HoleEdit.Open
@@ -245,6 +244,7 @@ Executable lamdu
                   , Lamdu.GUI.ExpressionGui
                   , Lamdu.GUI.ExpressionGui.Monad
                   , Lamdu.GUI.ExpressionGui.Types
+                  , Lamdu.GUI.Hover
                   , Lamdu.GUI.LightLambda
                   , Lamdu.GUI.Main
                   , Lamdu.GUI.ParamEdit
