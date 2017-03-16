@@ -74,8 +74,8 @@ main =
         case _pCommand of
             Opts.DeleteDb -> deleteDB lamduDir
             Opts.Undo n -> withDB (undoN n)
-            Opts.IDE Opts.IDEOpts{_ioWindowMode,_ioCopyJSOutputPath,_ioWindowTitle} ->
-                withDB $ runEditor _ioWindowTitle _ioCopyJSOutputPath _ioWindowMode
+            Opts.Editor Opts.EditorOpts{_eoWindowMode,_eoCopyJSOutputPath,_eoWindowTitle} ->
+                withDB $ runEditor _eoWindowTitle _eoCopyJSOutputPath _eoWindowMode
     `E.catch` \e@E.SomeException{} -> do
     hPutStrLn stderr $ "Main exiting due to exception: " ++ show e
     mapM_ (hPutStrLn stderr) =<< whoCreated e

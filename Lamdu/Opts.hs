@@ -1,7 +1,7 @@
 {-# LANGUAGE NoImplicitPrelude, TemplateHaskell, FlexibleContexts, RecordWildCards #-}
 module Lamdu.Opts
-    ( IDEOpts(..), ioWindowMode, ioCopyJSOutputPath, ioWindowTitle
-    , Command(..), _DeleteDb, _Undo, _IDE
+    ( EditorOpts(..), eoWindowMode, eoCopyJSOutputPath, eoWindowTitle
+    , Command(..), _DeleteDb, _Undo, _Editor
     , Parsed(..), pCommand, pLamduDB
     , WindowMode(..), _VideoModeSize, _FullScreen
     , get
@@ -16,23 +16,23 @@ import           Lamdu.Prelude
 
 data WindowMode = VideoModeSize | FullScreen
 
-data IDEOpts = IDEOpts
-    { _ioWindowMode :: WindowMode
-    , _ioCopyJSOutputPath :: Maybe FilePath
-    , _ioWindowTitle :: String
+data EditorOpts = EditorOpts
+    { _eoWindowMode :: WindowMode
+    , _eoCopyJSOutputPath :: Maybe FilePath
+    , _eoWindowTitle :: String
     }
 
 data Command
     = DeleteDb
     | Undo Int
-    | IDE IDEOpts
+    | Editor EditorOpts
 
 data Parsed = Parsed
     { _pCommand :: Command
     , _pLamduDB :: Maybe FilePath
     }
 
-Lens.makeLenses ''IDEOpts
+Lens.makeLenses ''EditorOpts
 Lens.makePrisms ''Command
 Lens.makePrisms ''WindowMode
 Lens.makeLenses ''Parsed
@@ -51,9 +51,9 @@ subcommands =
 maybePath :: P.Mod P.OptionFields String -> P.Parser (Maybe FilePath)
 maybePath m = optional (P.option P.str (P.metavar "PATH" <> m))
 
-ideOpts :: P.Parser IDEOpts
+ideOpts :: P.Parser EditorOpts
 ideOpts =
-    IDEOpts
+    EditorOpts
     <$> windowMode
     <*> maybePath
         (P.long "copyjsoutput" <>
@@ -67,7 +67,7 @@ ideOpts =
         )
 
 command :: P.Parser Command
-command = (IDE <$> ideOpts) <|> subcommands
+command = (Editor <$> ideOpts) <|> subcommands
 
 windowMode :: P.Parser WindowMode
 windowMode =
