@@ -74,8 +74,7 @@ main =
         case _pCommand of
             Opts.DeleteDb -> deleteDB lamduDir
             Opts.Undo n -> withDB (undoN n)
-            Opts.Editor Opts.EditorOpts{_eoWindowMode,_eoCopyJSOutputPath,_eoWindowTitle} ->
-                withDB $ runEditor _eoWindowTitle _eoCopyJSOutputPath _eoWindowMode
+            Opts.Editor opts -> withDB $ runEditor opts
     `E.catch` \e@E.SomeException{} -> do
     hPutStrLn stderr $ "Main exiting due to exception: " ++ show e
     mapM_ (hPutStrLn stderr) =<< whoCreated e
@@ -187,14 +186,17 @@ zoomConfig displayScale zoom config =
         Config{help, baseTextSize} = config
         Config.Help{helpTextSize} = help
 
-runEditor :: String -> Maybe FilePath -> Opts.WindowMode -> Db -> IO ()
-runEditor title copyJSOutputPath windowMode db =
+runEditor :: Opts.EditorOpts -> Db -> IO ()
+runEditor opts db =
     do
         -- Load config as early as possible, before we open any windows/etc
         rawConfigSampler <- ConfigSampler.new
 
         GLFWUtils.withGLFW $ do
-            win <- createWindow title windowMode
+            win <-
+                createWindow
+                (opts ^. Opts.eoWindowTitle)
+                (opts ^. Opts.eoWindowMode)
             printGLVersion
             refreshScheduler <- newRefreshScheduler
             withMVarProtection db $ \dbMVar ->
@@ -203,7 +205,7 @@ runEditor title copyJSOutputPath windowMode db =
                         EvalManager.new EvalManager.NewParams
                         { EvalManager.resultsUpdated = scheduleRefresh refreshScheduler
                         , EvalManager.dbMVar = dbMVar
-                        , EvalManager.copyJSOutputPath = copyJSOutputPath
+                        , EvalManager.copyJSOutputPath = opts ^. Opts.eoCopyJSOutputPath
                         }
                     displayScale <- GLFWUtils.getDisplayScale win <&> (^. _2)
                     zoom <- Zoom.make

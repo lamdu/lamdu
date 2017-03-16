@@ -51,8 +51,8 @@ subcommands =
 maybePath :: P.Mod P.OptionFields String -> P.Parser (Maybe FilePath)
 maybePath m = optional (P.option P.str (P.metavar "PATH" <> m))
 
-ideOpts :: P.Parser EditorOpts
-ideOpts =
+editorOpts :: P.Parser EditorOpts
+editorOpts =
     EditorOpts
     <$> windowMode
     <*> maybePath
@@ -67,7 +67,7 @@ ideOpts =
         )
 
 command :: P.Parser Command
-command = (Editor <$> ideOpts) <|> subcommands
+command = (Editor <$> editorOpts) <|> subcommands
 
 windowMode :: P.Parser WindowMode
 windowMode =
