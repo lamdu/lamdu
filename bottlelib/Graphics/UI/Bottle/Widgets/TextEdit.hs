@@ -1,7 +1,6 @@
 {-# LANGUAGE NoImplicitPrelude, RecordWildCards, OverloadedStrings, TemplateHaskell, ViewPatterns #-}
 module Graphics.UI.Bottle.Widgets.TextEdit
-    ( Cursor
-    , Style(..)
+    ( Style(..)
         , sCursorColor, sCursorWidth, sEmptyUnfocusedString
         , sEmptyFocusedString, sTextViewStyle
     , make
@@ -64,7 +63,7 @@ makeDisplayStr :: Text -> Text -> Text
 makeDisplayStr empty ""  = empty
 makeDisplayStr _     str = str
 
-encodeCursor :: Widget.Id -> Int -> Widget.Id
+encodeCursor :: Widget.Id -> Cursor -> Widget.Id
 encodeCursor myId = Widget.joinId myId . (:[]) . BinUtils.encodeS
 
 rightSideOfRect :: Rect -> Rect
@@ -106,7 +105,7 @@ minimumIndex :: Ord a => [a] -> Int
 minimumIndex xs =
     xs ^@.. Lens.traversed & minimumOn snd & fst
 
-cursorNearRect :: TextView.Style -> Text -> Rect -> Int
+cursorNearRect :: TextView.Style -> Text -> Rect -> Cursor
 cursorNearRect style str fromRect =
     cursorRects style str <&> Rect.distance fromRect
     & minimumIndex -- cursorRects(TextView.letterRects) should never return an empty list
@@ -126,7 +125,7 @@ enterFromDirection Style{..} str myId dir =
             Direction.Point x -> cursorNearRect _sTextViewStyle str $ Rect x 0
         cursorRect = mkCursorRect Style{..} cursor str
 
-eventResult :: Widget.Id -> Text -> Int -> (Text, Widget.EventResult)
+eventResult :: Widget.Id -> Text -> Cursor -> (Text, Widget.EventResult)
 eventResult myId newText newCursor =
     ( newText
     , encodeCursor myId newCursor & Widget.eventResultFromCursor
@@ -153,7 +152,7 @@ makeFocused cursor Style{..} str myId =
             & Anim.unitImages %~ Draw.tint _sCursorColor
             & Anim.unitIntoRect cursorRect
 
-mkCursorRect :: Style -> Int -> Text -> Rect
+mkCursorRect :: Style -> Cursor -> Text -> Rect
 mkCursorRect Style{..} cursor str = Rect cursorPos cursorSize
     where
         beforeCursorLines = Text.splitOn "\n" $ Text.take cursor str
@@ -165,7 +164,7 @@ mkCursorRect Style{..} cursor str = Rect cursorPos cursorSize
             TextView.renderedTextSize . Lens.to advance . _1
         cursorPosY = lineHeight * (genericLength beforeCursorLines - 1)
 
-eventMap :: Int -> Text -> Widget.Id -> Widget.EventMap (Text, Widget.EventResult)
+eventMap :: Cursor -> Text -> Widget.Id -> Widget.EventMap (Text, Widget.EventResult)
 eventMap cursor str myId =
     mconcat . concat $ [
         [ keys (moveDoc ["left"]) [noMods GLFW.Key'Left] $
