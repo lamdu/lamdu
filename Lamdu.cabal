@@ -161,6 +161,7 @@ Executable lamdu
                   , language-ecmascript >= 0.17
                   , lens
                   , nodejs-exec
+                  , optparse-applicative >= 0.13
                   , random
                   , text
                   , time
