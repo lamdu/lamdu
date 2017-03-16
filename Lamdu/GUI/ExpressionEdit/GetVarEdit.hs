@@ -126,10 +126,7 @@ definitionTypeChangeBox info getVarId =
                 & AlignedWidget.alignment .~ 0
                 & AlignedWidget.widget %~
                     Widget.backgroundColor (animId ++ ["getdef background"])
-                    -- TODO: which background color to use?
-                    -- This and hole should probably use the same background,
-                    -- but it should have a different name to represent that.
-                    (Config.hoverBGColor (Config.hole config))
+                    (Config.hoverBGColor config)
         -- TODO: unify config's button press keys
         let keys = Config.newDefinitionButtonPressKeys (Config.pane config)
         let update = (info ^. Sugar.defTypeUseCurrent) >> return getVarId

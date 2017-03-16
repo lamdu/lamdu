@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, RecordWildCards, OverloadedStrings #-}
+{-# LANGUAGE NoImplicitPrelude, OverloadedStrings #-}
 module Lamdu.GUI.ExpressionEdit.HoleEdit.Common
     ( addBackground, addDarkBackground
     ) where
@@ -22,11 +22,10 @@ addDarkBackground :: Monad m => AnimId -> ExprGuiM m (ExpressionGui f -> Express
 addDarkBackground animId =
     do
         config <- ExprGuiM.readConfig
-        let Config.Hole{..} = Config.hole config
         return $ \gui ->
             gui
-            & TreeLayout.pad (hoverDarkPadding <&> realToFrac)
+            & TreeLayout.pad (Config.hoverDarkPadding config <&> realToFrac)
             & TreeLayout.widget %~
               Widget.backgroundColor
               (animId <> ["hole dark background"])
-              hoverDarkBGColor
+              (Config.hoverDarkBGColor config)

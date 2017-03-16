@@ -10,6 +10,19 @@
     "baseTextSize": 16,
     "animationTimePeriodSec": 0.11,
     "animationRemainInPeriod": 0.2,
+    "hoverBGColor": [
+        0.05,
+        0.25,
+        0.3,
+        0.9
+    ],
+    "hoverDarkBGColor": [
+        0.05,
+        0.05,
+        0.05,
+        0.85
+    ],
+    "hoverDarkPadding": [1, 1],
     "maxExprDepth": 40,
     "maxEvalViewSize": 32,
     "help": {
@@ -296,12 +309,6 @@
                 "Key'Space"
             ]
         ],
-        "hoverBGColor": [
-            0.05,
-            0.25,
-            0.3,
-            0.9
-        ],
         "holeSearchTermBGColor": [
             0.2,
             0.3,
@@ -330,13 +337,6 @@
                 "Key'Enter"
             ]
         ],
-        "hoverDarkBGColor": [
-            0.05,
-            0.05,
-            0.05,
-            0.85
-        ],
-        "hoverDarkPadding": [1, 1],
         "holeOpenKeys": [
             [
                 {

@@ -266,7 +266,6 @@ makeExtraResultsWidget _ _ [] = return (Nothing, Widget.empty, 0)
 makeExtraResultsWidget holeInfo mainResultHeight extraResults@(firstResult:_) =
     do
         config <- ExprGuiM.readConfig
-        let Config.Hole{..} = Config.hole config
         let mkResWidget result =
                 do
                     isOnResult <-
@@ -283,7 +282,8 @@ makeExtraResultsWidget holeInfo mainResultHeight extraResults@(firstResult:_) =
         let height = min mainResultHeight headHeight
         let widget =
                 Box.vboxAlign 0 widgets
-                & addBackground (Widget.toAnimId (rId firstResult)) hoverBGColor
+                & addBackground (Widget.toAnimId (rId firstResult))
+                  (Config.hoverBGColor config)
         return
             ( msum mResults
             , widget
@@ -452,7 +452,6 @@ makeUnderCursorAssignment ::
 makeUnderCursorAssignment shownResultsLists hasHiddenResults holeInfo =
     do
         config <- ExprGuiM.readConfig
-        let Config.Hole{..} = Config.hole config
 
         (mShownResult, resultsWidget) <-
             makeResultsWidget holeInfo shownResultsLists hasHiddenResults
@@ -472,7 +471,8 @@ makeUnderCursorAssignment shownResultsLists hasHiddenResults holeInfo =
             ( resultsWidget
               & Widget.width %~ max (typeView ^. View.width)
               & Widget.strongerEvents resultsEventMap .
-                addBackground (Widget.toAnimId hidResultsPrefix) hoverBGColor
+                addBackground (Widget.toAnimId hidResultsPrefix)
+                (Config.hoverBGColor config)
               & AlignedWidget.fromCenteredWidget
               & AlignedWidget.addAfter AlignedWidget.Vertical
                 [ vspace

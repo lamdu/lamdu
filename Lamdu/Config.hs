@@ -71,11 +71,8 @@ data Hole = Hole
     , holeResultInjectedScaleExponent :: Double
     , holeExtraSymbolColorUnselected :: Draw.Color
     , holeExtraSymbolColorSelected :: Draw.Color
-    , hoverBGColor :: Draw.Color
     , holeSearchTermBGColor :: Draw.Color
     , holePickResultKeys :: [ModKey]
-    , hoverDarkPadding :: Vector2 Double
-    , hoverDarkBGColor :: Draw.Color
     , holeUnwrapKeys :: [ModKey]
     , holeOpenKeys :: [ModKey]
     , holeCloseKeys :: [ModKey]
@@ -143,6 +140,10 @@ data Config = Config
     , underlineWidth :: Double
     , eval :: Eval
     , indent :: Indent
+
+    , hoverBGColor :: Draw.Color
+    , hoverDarkPadding :: Vector2 Double
+    , hoverDarkBGColor :: Draw.Color
 
     , animationTimePeriodSec :: Double
     , animationRemainInPeriod :: Double
