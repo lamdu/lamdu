@@ -470,8 +470,8 @@ makeUnderCursorAssignment shownResultsLists hasHiddenResults holeInfo =
             ??
             ( resultsWidget
               & Widget.width %~ max (typeView ^. View.width)
-              & Widget.strongerEvents resultsEventMap .
-                addBackground (Widget.toAnimId hidResultsPrefix)
+              & Widget.strongerEvents resultsEventMap
+              & addBackground (Widget.toAnimId hidResultsPrefix)
                 (Config.hoverBGColor config)
               & AlignedWidget.fromCenteredWidget
               & AlignedWidget.addAfter AlignedWidget.Vertical
