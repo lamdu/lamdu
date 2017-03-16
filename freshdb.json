@@ -13678,7 +13678,7 @@
     {
         "defPresentationMode": [
             "Infix",
-            5
+            2
         ],
         "name": "||",
         "def": "dff4e86e63c54fab8b58ab3fe7e440ad",
@@ -14186,7 +14186,7 @@
     {
         "defPresentationMode": [
             "Infix",
-            5
+            3
         ],
         "name": "&&",
         "def": "e75aed3cb68c4fd395ce0c5c287eadba",
