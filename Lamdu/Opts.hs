@@ -19,7 +19,7 @@ data WindowMode = VideoModeSize | FullScreen
 data IDEOpts = IDEOpts
     { _ioWindowMode :: WindowMode
     , _ioCopyJSOutputPath :: Maybe FilePath
-    , _ioWindowTitle :: Maybe String
+    , _ioWindowTitle :: String
     }
 
 data Command
@@ -58,12 +58,13 @@ ideOpts =
     <*> maybePath
         (P.long "copyjsoutput" <>
          P.help "Output the internal executed JS to a file")
-    <*> optional
-        (P.option P.str
-         ( P.long "windowtitle"
-           <> P.metavar "TITLE"
-           <> P.help "Override window title"
-         ))
+    <*> P.option P.str
+        ( P.long "windowtitle"
+          <> P.value "Lamdu"
+          <> P.metavar "TITLE"
+          <> P.showDefault
+          <> P.help "Override window title"
+        )
 
 command :: P.Parser Command
 command = (IDE <$> ideOpts) <|> subcommands
