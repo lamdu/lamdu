@@ -25,8 +25,8 @@ addDarkBackground animId =
         let Config.Hole{..} = Config.hole config
         return $ \gui ->
             gui
-            & TreeLayout.pad (holeDarkPadding <&> realToFrac)
+            & TreeLayout.pad (hoverDarkPadding <&> realToFrac)
             & TreeLayout.widget %~
               Widget.backgroundColor
               (animId <> ["hole dark background"])
-              holeDarkBGColor
+              hoverDarkBGColor

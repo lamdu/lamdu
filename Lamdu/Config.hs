@@ -74,8 +74,8 @@ data Hole = Hole
     , hoverBGColor :: Draw.Color
     , holeSearchTermBGColor :: Draw.Color
     , holePickResultKeys :: [ModKey]
-    , holeDarkPadding :: Vector2 Double
-    , holeDarkBGColor :: Draw.Color
+    , hoverDarkPadding :: Vector2 Double
+    , hoverDarkBGColor :: Draw.Color
     , holeUnwrapKeys :: [ModKey]
     , holeOpenKeys :: [ModKey]
     , holeCloseKeys :: [ModKey]
