@@ -117,7 +117,7 @@ makeFuncRow mParensId (Sugar.Apply func specialArgs annotatedArgs) pl =
                 <*> sequenceA
                 [ ExpressionGui.combineSpaced Nothing
                     <*> sequenceA
-                    [ ExprGuiM.makeSubexpression (ExpressionGui.precAfter .~ prec+1) l
+                    [ ExprGuiM.makeSubexpression (ExpressionGui.precAfter .~ prec) l
                     , makeInfixFuncName func <&> overrideModifyEventMap
                     ]
                 , ExprGuiM.makeSubexpression (ExpressionGui.precBefore .~ prec+1) r
