@@ -14,6 +14,7 @@ module Graphics.UI.Bottle.Widgets
     , vspacer
     , hboxCenteredSpaced
     , respondToCursorPrefix
+    , readEnv
     ) where
 
 import           Control.Lens.Operators

@@ -6,6 +6,7 @@ module Graphics.UI.Bottle.Widgets.TextEdit
     , make
     , defaultCursorColor
     , defaultCursorWidth
+    , getCursor
     ) where
 
 import qualified Control.Lens as Lens
@@ -308,14 +309,19 @@ eventMap cursor str myId =
         lineCount = length $ Text.splitOn "\n" str
         (before, after) = Text.splitAt cursor str
 
+getCursor :: Text -> Widget.Id -> Widget.Env -> Maybe Int
+getCursor str myId env =
+    Widget.subId myId (env ^. Widget.envCursor) <&> decodeCursor
+    where
+        decodeCursor [x] = min (Text.length str) $ BinUtils.decodeS x
+        decodeCursor _ = Text.length str
+
 make ::
     Style -> Text -> Widget.Id -> Widget.Env -> Widget (Text, Widget.EventResult)
 make style str myId env =
     makeFunc style str myId
     where
         makeFunc =
-            case Widget.subId myId (env ^. Widget.envCursor) of
+            case getCursor str myId env of
             Nothing -> makeUnfocused
-            Just suffix -> makeFocused (decodeCursor suffix)
-        decodeCursor [x] = min (Text.length str) $ BinUtils.decodeS x
-        decodeCursor _ = Text.length str
+            Just pos -> makeFocused pos

@@ -55,7 +55,7 @@ adHocTextEditEventMap holeConfig holeInfo searchTermProp =
             E.allChars "Character"
             (E.Doc ["Edit", "Search Term", "Append character"])
             (changeText . snoc)
-            & disallowCharsFromSearchTerm holeConfig holeInfo searchTerm
+            & disallowCharsFromSearchTerm holeConfig holeInfo searchTerm Nothing
             & if Text.null searchTerm
               then E.filterChars (`notElem` operatorChars)
               else id
@@ -78,8 +78,9 @@ toLiteralTextKeys =
     , ModKey mempty GLFW.Key'Apostrophe
     ]
 
-disallowCharsFromSearchTerm :: Config.Hole -> HoleInfo m -> Text -> E.EventMap a -> E.EventMap a
-disallowCharsFromSearchTerm Config.Hole{..} holeInfo searchTerm =
+disallowCharsFromSearchTerm ::
+    Config.Hole -> HoleInfo m -> Text -> Maybe Int -> E.EventMap a -> E.EventMap a
+disallowCharsFromSearchTerm Config.Hole{..} holeInfo searchTerm mPos =
     E.filterChars (`notElem` disallowedHoleChars) .
     deleteKeys
     (holePickAndMoveToNextHoleKeys ++ holePickResultKeys) .
@@ -100,6 +101,9 @@ disallowCharsFromSearchTerm Config.Hole{..} holeInfo searchTerm =
             '-':x:xs
                 | x `elem` digitChars ->
                     digitChars ++ ['.' | not ("." `isInfixOf` xs)] & allowOnly
+            x:_
+                | (x `elem` digitChars) && Just 0 == mPos ->
+                    '-':digitChars & allowOnly
             "#" | isLeafHole -> allowOnly (operatorChars ++ hexDigitChars)
             '#':x:_
                 | x `elem` hexDigitChars -> allowOnly hexDigitChars
