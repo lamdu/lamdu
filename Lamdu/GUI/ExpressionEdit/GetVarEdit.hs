@@ -24,6 +24,7 @@ import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
+import qualified Lamdu.GUI.Hover as Hover
 import qualified Lamdu.GUI.LightLambda as LightLambda
 import qualified Lamdu.GUI.TypeView as TypeView
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
@@ -112,25 +113,31 @@ definitionTypeChangeBox ::
 definitionTypeChangeBox info getVarId =
     do
         headerLabel <-
-            ExpressionGui.makeLabel "Type changed from" animId
+            ExpressionGui.makeLabel "Type was:" animId
         typeWhenUsed <-
             mkTypeWidget "typeWhenUsed" (info ^. Sugar.defTypeWhenUsed)
-        sepLabel <- ExpressionGui.makeLabel "to" animId
+        sepLabel <- ExpressionGui.makeLabel "Update to:" animId
         typeCurrent <- mkTypeWidget "typeCurrent" (info ^. Sugar.defTypeCurrent)
         config <- ExprGuiM.readConfig
         let padding = realToFrac <$> Config.valFramePadding config
         let box =
-                AlignedWidget.vbox 0
                 [headerLabel, typeWhenUsed, sepLabel, typeCurrent]
+                <&> AlignedWidget.alignment .~ 0
+                & AlignedWidget.vbox 0
                 & AlignedWidget.pad padding
                 & AlignedWidget.alignment .~ 0
                 & AlignedWidget.widget %~
-                    Widget.backgroundColor (animId ++ ["getdef background"])
-                    (Config.hoverBGColor config)
+                    Hover.addBackground animId (Config.hoverBGColor config)
         -- TODO: unify config's button press keys
         let keys = Config.newDefinitionButtonPressKeys (Config.pane config)
         let update = (info ^. Sugar.defTypeUseCurrent) >> return getVarId
-        ExpressionGui.makeFocusableView myId ?? box
+        Hover.addDarkBackground animId
+            <*> (ExpressionGui.makeFocusableView myId ?? box <&> TreeLayout.fromAlignedWidget)
+            <&> (^. TreeLayout.render)
+            ?? TreeLayout.LayoutParams
+                { _layoutMode = TreeLayout.LayoutWide
+                , _layoutContext = TreeLayout.LayoutClear
+                }
             <&> AlignedWidget.widget %~
                 Widget.weakerEvents
                 (Widget.keysEventMapMovesCursor keys
