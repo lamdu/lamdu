@@ -8,7 +8,6 @@ import qualified Control.Lens as Lens
 import qualified Data.Set as Set
 import qualified Data.Store.Property as Property
 import           Data.Store.Transaction (Transaction)
-import           Lamdu.Calc.Type (Type)
 import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Calc.Val as V
 import           Lamdu.Calc.Val.Annotated (Val(..))
@@ -16,6 +15,7 @@ import qualified Lamdu.Calc.Val.Annotated as Val
 import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Data.Ops.Subexprs as SubExprs
+import qualified Lamdu.Eval.Results as Results
 import           Lamdu.Expr.IRef (ValI, ValIProperty)
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Lens as ExprLens
@@ -24,6 +24,8 @@ import qualified Lamdu.Sugar.Convert.Binder.Params as Params
 import           Lamdu.Sugar.Convert.Binder.Redex (Redex(..))
 import qualified Lamdu.Sugar.Convert.Binder.Redex as Redex
 import           Lamdu.Sugar.Convert.Binder.Types (BinderKind(..))
+import qualified Lamdu.Sugar.Convert.Input as Input
+import qualified Lamdu.Sugar.Convert.Load as Load
 import           Lamdu.Sugar.Convert.Monad (ConvertM)
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
@@ -35,9 +37,19 @@ import           Lamdu.Prelude
 type T = Transaction
 
 moveToGlobalScope ::
-    Monad m => ConvertM.Context m -> V.Var -> Definition.Expr (ValI m) -> Type -> T m ()
-moveToGlobalScope ctx param defExpr letType =
+    Monad m => ConvertM.Context m -> V.Var -> Definition.Expr (ValI m) -> T m ()
+moveToGlobalScope ctx param defExpr =
     do
+        scheme <-
+            do
+                loaded <- traverse Load.readValAndAddProperties defExpr
+                inferRes <- Load.inferDef (pure Results.empty) loaded param
+                case inferRes of
+                    Left _err -> error "extract to global scope failed inference"
+                    Right (inferredVal, inferContext) ->
+                        inferredVal ^. Val.payload . Input.inferredType
+                        & Infer.makeScheme inferContext
+                    & return
         DataOps.newPublicDefinitionToIRef
             (ctx ^. ConvertM.scCodeAnchors)
             (Definition.Definition (Definition.BodyExpr defExpr) scheme ())
@@ -49,8 +61,6 @@ moveToGlobalScope ctx param defExpr letType =
         -- extraction/generalization of the inner type
         ConvertM.GoodExpr <- ctx ^. ConvertM.scPostProcessRoot
         return ()
-    where
-        scheme = Infer.makeScheme (ctx ^. ConvertM.scInferContext) letType
 
 data NewLet m = NewLet
     { nlIRef :: ValI m
@@ -186,7 +196,7 @@ floatLetToOuterScope setTopLevel redex ctx =
             case outerScopeInfo ^. ConvertM.osiPos of
             Nothing ->
                 EntityId.ofIRef (ExprIRef.defI param) <$
-                moveToGlobalScope ctx param innerDefExpr (redex ^. Redex.argType)
+                moveToGlobalScope ctx param innerDefExpr
                 where
                     innerDefExpr = Definition.Expr (nlIRef newLet) innerDeps
                     innerDeps =
