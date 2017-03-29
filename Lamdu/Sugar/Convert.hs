@@ -33,6 +33,7 @@ import qualified Lamdu.Expr.Load as Load
 import qualified Lamdu.Expr.UniqueId as UniqueId
 import           Lamdu.Infer (Infer)
 import qualified Lamdu.Infer as Infer
+import qualified Lamdu.Infer.Error as Infer
 import           Lamdu.Infer.Unify (unify)
 import qualified Lamdu.Infer.Update as Update
 import qualified Lamdu.Sugar.Convert.DefExpr as ConvertDefExpr
@@ -71,10 +72,8 @@ convertDefIBuiltin scheme name defI =
             , Definition._defPayload = ()
             }
 
-assertRunInfer :: Monad m => IRefInfer.M m a -> T m (a, Infer.Context)
-assertRunInfer action =
-    IRefInfer.run action
-    <&> either (error . ("Type inference failed: " ++) . show . pPrint) id
+assertInferSuccess :: Either Infer.Error a -> a
+assertInferSuccess = either (error . ("Type inference failed: " ++) . show . pPrint) id
 
 readValAndAddProperties :: Monad m => ValI m -> T m (Val (ValIProperty m))
 readValAndAddProperties valI =
@@ -235,7 +234,8 @@ convertInferDefExpr evalRes cp defType defExpr defI =
             inferRecursive defExpr defVar
             & IRefInfer.liftInfer
             >>= loadInferPrepareInput evalRes
-            & assertRunInfer
+            & IRefInfer.run
+            <&> assertInferSuccess
         nomsMap <- makeNominalsMap valInferred
         outdatedDefinitions <- OutdatedDefs.scan defExpr setDefExpr
         let context =
@@ -289,7 +289,8 @@ convertExpr evalRes cp prop =
             inferDefExpr Infer.emptyScope defExpr
             & IRefInfer.liftInfer
             >>= loadInferPrepareInput evalRes
-            & assertRunInfer
+            & IRefInfer.run
+            <&> assertInferSuccess
         nomsMap <- makeNominalsMap valInferred
         outdatedDefinitions <- OutdatedDefs.scan defExpr (Transaction.setP prop)
         let context =
