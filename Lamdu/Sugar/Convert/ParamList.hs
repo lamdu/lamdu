@@ -40,7 +40,7 @@ mkFuncType scope paramList =
         step tag rest = T.CExtend tag <$> Infer.freshInferredVar scope "t" <*> rest
 
 loadForLambdas ::
-    Monad m => Val (Input.Payload m a) -> IRefInfer.M m (Val (Input.Payload m a))
+    Monad m => Val (Input.Payload m a) -> IRefInfer.M (T m) (Val (Input.Payload m a))
 loadForLambdas val =
     do
         Lens.itraverseOf_ ExprLens.subExprPayloads loadLambdaParamList val
@@ -54,7 +54,7 @@ loadForLambdas val =
 
         loadUnifyParamList pl =
             do
-                mParamList <- loadStored (pl ^. Input.stored) & IRefInfer.liftTransaction
+                mParamList <- loadStored (pl ^. Input.stored) & IRefInfer.liftInner
                 case mParamList of
                     Nothing -> return ()
                     Just paramList ->

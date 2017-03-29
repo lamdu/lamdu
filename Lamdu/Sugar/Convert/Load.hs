@@ -91,7 +91,7 @@ loadInferPrepareInput ::
     Monad m =>
     CurAndPrev (EvalResults (ValI m)) ->
     Val (Infer.Payload, ValIProperty m) ->
-    IRefInfer.M m (Val (Input.Payload m [EntityId]))
+    IRefInfer.M (T m) (Val (Input.Payload m [EntityId]))
 loadInferPrepareInput evalRes val =
     preparePayloads evalRes val
     <&> setUserData

@@ -678,7 +678,7 @@ mkHoleResultVals frozenDeps mInjectedArg exprPl base =
     where
         loadTheNewDeps expr =
             loadNewDeps (frozenDeps ^. Property.pVal) scope expr
-            & IRefInfer.liftTransaction
+            & IRefInfer.liftInner
         scope = inferred ^. Infer.plScope
         inferred = exprPl ^. Input.inferred
         post x =
