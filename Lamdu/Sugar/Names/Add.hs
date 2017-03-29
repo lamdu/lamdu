@@ -389,9 +389,7 @@ p2nameConvertor prefix (StoredNames mStoredName storedNamesBelow) =
 
 fixVarToTags :: Monad m => VarToTags -> T m ()
 fixVarToTags VarToTags {..} =
-    do
-        Transaction.setP tagName =<< Transaction.getP varName
-        Transaction.setP varName ""
+    Transaction.setP tagName =<< Transaction.getP varName
     where
         varName = assocNameRef vttReplacedVar
         tagName = assocNameRef (vttReplacedByTag ^. tagVal)
@@ -402,9 +400,7 @@ fixParamAddResult _ = return ()
 
 fixParamDelResult :: Monad m => ParamDelResult -> T m ()
 fixParamDelResult (ParamDelResultTagsToVar TagsToVar {..}) =
-    do
-        Transaction.setP varName =<< Transaction.getP tagName
-        Transaction.setP tagName ""
+    Transaction.setP varName =<< Transaction.getP tagName
     where
         varName = assocNameRef ttvReplacedByVar
         tagName = assocNameRef (ttvReplacedTag ^. tagVal)
