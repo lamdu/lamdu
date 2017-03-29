@@ -407,7 +407,7 @@ fixParamDelResult (ParamDelResultTagsToVar TagsToVar {..}) =
 fixParamDelResult _ = return ()
 
 fixLetFloatResult :: Monad m => LetFloatResult -> T m ()
-fixLetFloatResult = maybe (return ()) fixVarToTags . lfrMVarToTags
+fixLetFloatResult = traverse_ fixVarToTags . lfrMVarToTags
 
 -- mutual recursion fixBinder<->fixExpr
 

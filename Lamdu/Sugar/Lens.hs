@@ -123,18 +123,11 @@ binderNamedParamsActions ::
     Lens.Traversal' (BinderParams name m) (FuncParamActions m)
 binderNamedParamsActions = binderNamedParams . fpInfo . npiActions
 
-binderContentLetActions ::
-    Lens.Traversal'
-    (BinderContent name m (Expression name m a))
-    (LetActions m)
-binderContentLetActions f (BinderLet l) = l & lActions %%~ f <&> BinderLet
-binderContentLetActions _ (BinderExpr expr) = pure (BinderExpr expr)
-
 binderLetActions ::
     Lens.Traversal'
     (Binder name m (Expression name m a))
     (LetActions m)
-binderLetActions = bBody . bbContent . binderContentLetActions
+binderLetActions = bBody . bbContent . _BinderLet . lActions
 
 binderFuncParamAdds ::
     Lens.Traversal'
