@@ -26,7 +26,7 @@ import           Lamdu.Eval.Results (EvalResults)
 import qualified Lamdu.Eval.Results as Results
 import           Lamdu.Expr.IRef (DefI, ValI, ValIProperty)
 import qualified Lamdu.Expr.IRef as ExprIRef
-import qualified Lamdu.Expr.IRef.Infer as IRefInfer
+import qualified Lamdu.Infer.Trans as InferT
 import qualified Lamdu.Expr.Lens as ExprLens
 import qualified Lamdu.Expr.Load as ExprLoad
 import qualified Lamdu.Expr.UniqueId as UniqueId
@@ -101,9 +101,9 @@ postProcessExpr mkProp =
         defExpr <- traverse Load.readValAndAddProperties (prop ^. Property.pVal)
         inferred <-
             Load.inferDefExpr Infer.emptyScope defExpr
-            & IRefInfer.liftInfer
+            & InferT.liftInfer
             >>= Load.loadInferPrepareInput (pure Results.empty)
-            & IRefInfer.run
+            & InferT.run
         case inferred of
             Left err -> ConvertM.BadExpr err & return
             Right _ ->
@@ -204,9 +204,9 @@ convertExpr evalRes cp prop =
         defExpr <- ExprLoad.defExprProperty prop
         (valInferred, newInferContext) <-
             Load.inferDefExpr Infer.emptyScope defExpr
-            & IRefInfer.liftInfer
+            & InferT.liftInfer
             >>= Load.loadInferPrepareInput evalRes
-            & IRefInfer.run
+            & InferT.run
             <&> Load.assertInferSuccess
         nomsMap <- makeNominalsMap valInferred
         outdatedDefinitions <- OutdatedDefs.scan defExpr (Transaction.setP prop)

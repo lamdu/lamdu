@@ -15,7 +15,7 @@ import qualified Lamdu.Calc.Val as V
 import           Lamdu.Calc.Val.Annotated (Val(..))
 import           Lamdu.Data.Anchors (ParamList, assocFieldParamList)
 import qualified Lamdu.Expr.IRef as ExprIRef
-import qualified Lamdu.Expr.IRef.Infer as IRefInfer
+import qualified Lamdu.Infer.Trans as InferT
 import qualified Lamdu.Expr.Lens as ExprLens
 import           Lamdu.Infer (Infer)
 import qualified Lamdu.Infer as Infer
@@ -40,7 +40,7 @@ mkFuncType scope paramList =
         step tag rest = T.CExtend tag <$> Infer.freshInferredVar scope "t" <*> rest
 
 loadForLambdas ::
-    Monad m => Val (Input.Payload m a) -> IRefInfer.M (T m) (Val (Input.Payload m a))
+    Monad m => Val (Input.Payload m a) -> InferT.M (T m) (Val (Input.Payload m a))
 loadForLambdas val =
     do
         Lens.itraverseOf_ ExprLens.subExprPayloads loadLambdaParamList val
@@ -54,7 +54,7 @@ loadForLambdas val =
 
         loadUnifyParamList pl =
             do
-                mParamList <- loadStored (pl ^. Input.stored) & IRefInfer.liftInner
+                mParamList <- loadStored (pl ^. Input.stored) & InferT.liftInner
                 case mParamList of
                     Nothing -> return ()
                     Just paramList ->
@@ -62,4 +62,4 @@ loadForLambdas val =
                             funcType <-
                                 mkFuncType (pl ^. Input.inferredScope) paramList
                             unify (pl ^. Input.inferredType) funcType
-                        & IRefInfer.liftInfer
+                        & InferT.liftInfer

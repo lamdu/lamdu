@@ -207,7 +207,6 @@ Executable lamdu
                   , Lamdu.Eval.Results.Process
                   , Lamdu.Expr.GenIds
                   , Lamdu.Expr.IRef
-                  , Lamdu.Expr.IRef.Infer
                   , Lamdu.Expr.Load
                   , Lamdu.Expr.RecordVal
                   , Lamdu.Expr.UniqueId
@@ -259,6 +258,7 @@ Executable lamdu
                   , Lamdu.GUI.WidgetIdIRef
                   , Lamdu.GUI.WidgetIds
                   , Lamdu.GUI.Zoom
+                  , Lamdu.Infer.Trans
                   , Lamdu.Opts
                   , Lamdu.Prelude
                   , Lamdu.Style

@@ -22,7 +22,7 @@ import qualified Lamdu.Data.Definition as Definition
 import           Lamdu.Eval.Results (EvalResults, erExprValues, erAppliesOfLam)
 import           Lamdu.Expr.IRef (ValI, ValIProperty)
 import qualified Lamdu.Expr.IRef as ExprIRef
-import qualified Lamdu.Expr.IRef.Infer as IRefInfer
+import qualified Lamdu.Infer.Trans as InferT
 import           Lamdu.Infer (Infer)
 import qualified Lamdu.Infer as Infer
 import qualified Lamdu.Infer.Error as Infer
@@ -91,7 +91,7 @@ loadInferPrepareInput ::
     Monad m =>
     CurAndPrev (EvalResults (ValI m)) ->
     Val (Infer.Payload, ValIProperty m) ->
-    IRefInfer.M (T m) (Val (Input.Payload m [EntityId]))
+    InferT.M (T m) (Val (Input.Payload m [EntityId]))
 loadInferPrepareInput evalRes val =
     preparePayloads evalRes val
     <&> setUserData
@@ -115,6 +115,6 @@ inferDef ::
     T m (Either Infer.Error (Val (Input.Payload m [EntityId]), Infer.Context))
 inferDef results defExpr defVar =
     inferRecursive defExpr defVar
-    & IRefInfer.liftInfer
+    & InferT.liftInfer
     >>= loadInferPrepareInput results
-    & IRefInfer.run
+    & InferT.run

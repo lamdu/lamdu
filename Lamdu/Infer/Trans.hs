@@ -1,5 +1,7 @@
+-- | A convenience monad transformer that can load, infer, unify and update.
+-- Allows binding together actions of all these kinds.
 {-# LANGUAGE NoImplicitPrelude #-}
-module Lamdu.Expr.IRef.Infer
+module Lamdu.Infer.Trans
     ( M
     , liftInfer
     , liftInner

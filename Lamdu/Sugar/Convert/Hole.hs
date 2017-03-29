@@ -39,7 +39,7 @@ import qualified Lamdu.Data.Definition as Def
 import qualified Lamdu.Expr.GenIds as GenIds
 import qualified Lamdu.Expr.IRef as ExprIRef
 import           Lamdu.Expr.IRef (ValIProperty, ValI, DefI)
-import qualified Lamdu.Expr.IRef.Infer as IRefInfer
+import qualified Lamdu.Infer.Trans as InferT
 import qualified Lamdu.Expr.Lens as ExprLens
 import qualified Lamdu.Expr.Load as Load
 import qualified Lamdu.Expr.Pure as P
@@ -663,7 +663,7 @@ mkHoleResultVals frozenDeps mInjectedArg exprPl base =
                 do
                     seedDeps <- loadTheNewDeps seed
                     inferResult <-
-                        Infer.infer seedDeps scope seed & IRefInfer.liftInfer
+                        Infer.infer seedDeps scope seed & InferT.liftInfer
                         <&> Lens.traversed . _2 %~ (,) Nothing
                     return (seedDeps, inferResult)
                 & mapStateT eitherTtoListT
@@ -678,7 +678,7 @@ mkHoleResultVals frozenDeps mInjectedArg exprPl base =
     where
         loadTheNewDeps expr =
             loadNewDeps (frozenDeps ^. Property.pVal) scope expr
-            & IRefInfer.liftInner
+            & InferT.liftInner
         scope = inferred ^. Infer.plScope
         inferred = exprPl ^. Input.inferred
         post x =
