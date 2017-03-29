@@ -419,14 +419,14 @@ fixBinder binder =
     binder
     & SugarLens.binderFuncParamAdds %~ postProcess fixParamAddResult
     & SugarLens.binderFuncParamDeletes %~ postProcess fixParamDelResult
-    & bBody %~ fixBinderBody
-    & SugarLens.binderLetActions . laFloat %~ postProcess fixLetFloatResult
+    & bBody . bbContent %~ fixBinderContent
     where
-        fixBinderBody bb =
-            bb
-            & bbContent . _BinderExpr %~ fixExpr
-            & bbContent . _BinderLet . lValue %~ fixBinder
-            & bbContent . _BinderLet . lBody %~ fixBinderBody
+        fixBinderContent x =
+            x
+            & _BinderExpr %~ fixExpr
+            & _BinderLet . lValue %~ fixBinder
+            & _BinderLet . lBody . bbContent %~ fixBinderContent
+            & _BinderLet . lActions . laFloat %~ postProcess fixLetFloatResult
         postProcess f action =
             do
                 res <- action
