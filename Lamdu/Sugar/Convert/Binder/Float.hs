@@ -47,7 +47,8 @@ moveToGlobalScope ctx param defExpr letType =
         -- Prune outer def's deps (some used only in inner) and update
         -- our type which may become generalized due to
         -- extraction/generalization of the inner type
-        ctx ^. ConvertM.scPostProcessRoot & void
+        ConvertM.GoodExpr <- ctx ^. ConvertM.scPostProcessRoot
+        return ()
     where
         scheme = Infer.makeScheme (ctx ^. ConvertM.scInferContext) letType
 

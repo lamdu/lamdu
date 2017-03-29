@@ -99,12 +99,12 @@ inferRecursive defExpr defId =
         unify inferredType defTv
         Update.inferredVal inferredVal & Update.liftInfer
 
-postProcessDef :: Monad m => DefI m -> T m Bool
+postProcessDef :: Monad m => DefI m -> T m ConvertM.PostProcessResult
 postProcessDef defI =
     do
         def <- Transaction.readIRef defI
         case def ^. Definition.defBody of
-            Definition.BodyBuiltin {} -> return True
+            Definition.BodyBuiltin {} -> return ConvertM.GoodExpr
             Definition.BodyExpr defExpr ->
                 do
                     loaded <- traverse readValAndAddProperties defExpr
@@ -114,7 +114,7 @@ postProcessDef defI =
                         >>= loadInferPrepareInput (pure Results.empty)
                         & IRefInfer.run
                     case inferRes of
-                        Left _ -> return False
+                        Left err -> ConvertM.BadExpr err & return
                         Right (inferredVal, inferContext) ->
                             do
                                 def
@@ -124,12 +124,14 @@ postProcessDef defI =
                                         Definition.exprFrozenDeps .~
                                         Definition.pruneDefExprDeps loaded
                                     & Transaction.writeIRef defI
-                                return True
+                                return ConvertM.GoodExpr
                             where
                                 inferredType = inferredVal ^. Val.payload . Input.inferredType
 
 postProcessExpr ::
-    Monad m => Transaction.MkProperty m (Definition.Expr (ValI m)) -> T m Bool
+    Monad m =>
+    Transaction.MkProperty m (Definition.Expr (ValI m)) ->
+    T m ConvertM.PostProcessResult
 postProcessExpr mkProp =
     do
         prop <- mkProp ^. Transaction.mkProperty
@@ -140,13 +142,13 @@ postProcessExpr mkProp =
             >>= loadInferPrepareInput (pure Results.empty)
             & IRefInfer.run
         case inferred of
-            Left _ -> return False
+            Left err -> ConvertM.BadExpr err & return
             Right _ ->
                 do
                     Definition.exprFrozenDeps .~
                         Definition.pruneDefExprDeps defExpr
                         & Property.pureModify prop
-                    return True
+                    return ConvertM.GoodExpr
 
 emptyScopeInfo :: ScopeInfo m
 emptyScopeInfo =

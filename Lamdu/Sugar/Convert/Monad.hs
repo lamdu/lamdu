@@ -5,6 +5,7 @@ module Lamdu.Sugar.Convert.Monad
     , OuterScopeInfo(..), osiPos, osiVarsUnderPos
     , ScopeInfo(..), siTagParamInfos, siNullParams, siLetItems, siOuter
 
+    , PostProcessResult(..)
     , Context(..)
     , scInferContext, scPostProcessRoot, scGlobalsInScope
     , scCodeAnchors, scScopeInfo, scNominalsMap
@@ -21,14 +22,15 @@ import           Control.Monad.Trans.Reader (ReaderT, runReaderT)
 import qualified Control.Monad.Trans.Reader as Reader
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
-import           Lamdu.Calc.Type.Nominal (Nominal(..))
 import qualified Lamdu.Calc.Type as T
+import           Lamdu.Calc.Type.Nominal (Nominal(..))
 import qualified Lamdu.Calc.Val as V
 import           Lamdu.Calc.Val.Annotated (Val)
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Infer as Infer
+import qualified Lamdu.Infer.Error as Infer
 import qualified Lamdu.Sugar.Convert.Input as Input
 import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Types as Sugar
@@ -69,6 +71,8 @@ type T = Transaction
 newtype ConvertM m a = ConvertM (ReaderT (Context m) (T m) a)
     deriving (Functor, Applicative, Monad)
 
+data PostProcessResult = GoodExpr | BadExpr Infer.Error
+
 data Context m = Context
     { _scInferContext :: Infer.Context
     , -- The globals we artificially inject into the scope in order to
@@ -78,7 +82,7 @@ data Context m = Context
     , _scScopeInfo :: ScopeInfo m
     , -- Check whether the definition is valid after an edit,
       -- so that can hole-wrap bad edits.
-      _scPostProcessRoot :: T m Bool
+      _scPostProcessRoot :: T m PostProcessResult
     , -- The nominal types appearing in the converted expr and its subexpression
       _scNominalsMap :: Map T.NominalId Nominal
     , _scOutdatedDefinitions :: Map V.Var (Sugar.DefinitionOutdatedType m)
@@ -90,19 +94,13 @@ data Context m = Context
 Lens.makeLenses ''Context
 Lens.makePrisms ''TagFieldParam
 
-typeProtect :: Monad m => T m Bool -> T m a -> T m (Maybe a)
+typeProtect :: Monad m => T m PostProcessResult -> T m a -> T m (Maybe a)
 typeProtect checkOk act =
     do
-        (resume, changes) <-
-            Transaction.fork $
-            do
-                result <- act
-                isOk <- checkOk
-                return $
-                    if isOk
-                    then (>> return (Just result)) . Transaction.merge
-                    else const $ return Nothing
-        resume changes
+        ((result, isOk), changes) <- (,) <$> act <*> checkOk & Transaction.fork
+        case isOk of
+            GoodExpr -> Just result <$ Transaction.merge changes
+            BadExpr _ -> return Nothing
 
 typeProtectedSetToVal ::
     Monad m =>
