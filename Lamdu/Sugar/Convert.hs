@@ -74,7 +74,7 @@ postProcessDef defI =
             Definition.BodyBuiltin {} -> return ConvertM.GoodExpr
             Definition.BodyExpr defExpr ->
                 do
-                    loaded <- traverse Load.readValAndAddProperties defExpr
+                    loaded <- Definition.expr Load.readValAndAddProperties defExpr
                     inferRes <- Load.inferDef (pure Results.empty) loaded (ExprIRef.globalId defI)
                     case inferRes of
                         Left err -> ConvertM.BadExpr err & return
@@ -98,7 +98,9 @@ postProcessExpr ::
 postProcessExpr mkProp =
     do
         prop <- mkProp ^. Transaction.mkProperty
-        defExpr <- traverse Load.readValAndAddProperties (prop ^. Property.pVal)
+        -- TODO: This is code duplication with the above Load.inferDef
+        -- & functions inside Load itself
+        defExpr <- Definition.expr Load.readValAndAddProperties (prop ^. Property.pVal)
         inferred <-
             Load.inferDefExpr Infer.emptyScope defExpr
             & InferT.liftInfer
