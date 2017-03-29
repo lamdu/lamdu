@@ -281,6 +281,7 @@ Executable lamdu
                   , Lamdu.Sugar.Convert.Hole.Suggest
                   , Lamdu.Sugar.Convert.Inject
                   , Lamdu.Sugar.Convert.Input
+                  , Lamdu.Sugar.Convert.Load
                   , Lamdu.Sugar.Convert.Monad
                   , Lamdu.Sugar.Convert.Nominal
                   , Lamdu.Sugar.Convert.ParamList

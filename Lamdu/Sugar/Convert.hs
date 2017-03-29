@@ -18,37 +18,31 @@ import           Data.UUID.Types (UUID)
 import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Calc.Type.Nominal as N
 import           Lamdu.Calc.Type.Scheme (Scheme, schemeType)
-import qualified Lamdu.Calc.Val as V
 import           Lamdu.Calc.Val.Annotated (Val(..))
 import qualified Lamdu.Calc.Val.Annotated as Val
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Definition as Definition
-import           Lamdu.Eval.Results (EvalResults, erExprValues, erAppliesOfLam)
+import           Lamdu.Eval.Results (EvalResults)
 import qualified Lamdu.Eval.Results as Results
 import           Lamdu.Expr.IRef (DefI, ValI, ValIProperty)
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.IRef.Infer as IRefInfer
 import qualified Lamdu.Expr.Lens as ExprLens
-import qualified Lamdu.Expr.Load as Load
+import qualified Lamdu.Expr.Load as ExprLoad
 import qualified Lamdu.Expr.UniqueId as UniqueId
-import           Lamdu.Infer (Infer)
 import qualified Lamdu.Infer as Infer
-import qualified Lamdu.Infer.Error as Infer
-import           Lamdu.Infer.Unify (unify)
-import qualified Lamdu.Infer.Update as Update
 import qualified Lamdu.Sugar.Convert.DefExpr as ConvertDefExpr
 import qualified Lamdu.Sugar.Convert.DefExpr.OutdatedDefs as OutdatedDefs
 import qualified Lamdu.Sugar.Convert.Expression as ConvertExpr
 import qualified Lamdu.Sugar.Convert.Input as Input
+import qualified Lamdu.Sugar.Convert.Load as Load
 import           Lamdu.Sugar.Convert.Monad (Context(..), ScopeInfo(..), OuterScopeInfo(..))
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
-import qualified Lamdu.Sugar.Convert.ParamList as ParamList
 import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import qualified Lamdu.Sugar.OrderTags as OrderTags
 import qualified Lamdu.Sugar.PresentationModes as PresentationModes
 import           Lamdu.Sugar.Types
-import           Text.PrettyPrint.HughesPJClass (pPrint)
 
 import           Lamdu.Prelude
 
@@ -72,32 +66,6 @@ convertDefIBuiltin scheme name defI =
             , Definition._defPayload = ()
             }
 
-assertInferSuccess :: Either Infer.Error a -> a
-assertInferSuccess = either (error . ("Type inference failed: " ++) . show . pPrint) id
-
-readValAndAddProperties :: Monad m => ValI m -> T m (Val (ValIProperty m))
-readValAndAddProperties valI =
-    ExprIRef.readVal valI
-    <&> fmap (flip (,) ())
-    <&> ExprIRef.addProperties (error "TODO: DefExpr root setIRef")
-    <&> fmap fst
-
-inferDefExpr :: Infer.Scope -> Definition.Expr (Val a) -> Infer (Val (Infer.Payload, a))
-inferDefExpr scope defExpr =
-    Infer.infer (defExpr ^. Definition.exprFrozenDeps)
-    scope (defExpr ^. Definition.expr)
-
-inferRecursive ::
-    Definition.Expr (Val a) -> V.Var -> Infer (Val (Infer.Payload, a))
-inferRecursive defExpr defId =
-    do
-        defTv <- Infer.freshInferredVar Infer.emptyScope "r"
-        let scope = Infer.insertTypeOf defId defTv Infer.emptyScope
-        inferredVal <- inferDefExpr scope defExpr
-        let inferredType = inferredVal ^. Val.payload . _1 . Infer.plType
-        unify inferredType defTv
-        Update.inferredVal inferredVal & Update.liftInfer
-
 postProcessDef :: Monad m => DefI m -> T m ConvertM.PostProcessResult
 postProcessDef defI =
     do
@@ -106,12 +74,8 @@ postProcessDef defI =
             Definition.BodyBuiltin {} -> return ConvertM.GoodExpr
             Definition.BodyExpr defExpr ->
                 do
-                    loaded <- traverse readValAndAddProperties defExpr
-                    inferRes <-
-                        inferRecursive loaded (ExprIRef.globalId defI)
-                        & IRefInfer.liftInfer
-                        >>= loadInferPrepareInput (pure Results.empty)
-                        & IRefInfer.run
+                    loaded <- traverse Load.readValAndAddProperties defExpr
+                    inferRes <- Load.inferDef (pure Results.empty) loaded (ExprIRef.globalId defI)
                     case inferRes of
                         Left err -> ConvertM.BadExpr err & return
                         Right (inferredVal, inferContext) ->
@@ -134,11 +98,11 @@ postProcessExpr ::
 postProcessExpr mkProp =
     do
         prop <- mkProp ^. Transaction.mkProperty
-        defExpr <- traverse readValAndAddProperties (prop ^. Property.pVal)
+        defExpr <- traverse Load.readValAndAddProperties (prop ^. Property.pVal)
         inferred <-
-            inferDefExpr Infer.emptyScope defExpr
+            Load.inferDefExpr Infer.emptyScope defExpr
             & IRefInfer.liftInfer
-            >>= loadInferPrepareInput (pure Results.empty)
+            >>= Load.loadInferPrepareInput (pure Results.empty)
             & IRefInfer.run
         case inferred of
             Left err -> ConvertM.BadExpr err & return
@@ -161,49 +125,6 @@ emptyScopeInfo =
         }
       }
 
-propEntityId :: Property f (ValI m) -> EntityId
-propEntityId = EntityId.ofValI . Property.value
-
-preparePayloads ::
-    CurAndPrev (EvalResults (ValI m)) ->
-    Val (Infer.Payload, ValIProperty m) ->
-    Val (Input.Payload m ())
-preparePayloads evalRes inferredVal =
-    inferredVal <&> f & Input.preparePayloads
-    where
-        f (inferPl, valIProp) =
-            ( eId
-            , \varRefs ->
-              Input.Payload
-              { Input._varRefsOfLambda = varRefs
-              , Input._entityId = eId
-              , Input._stored = valIProp
-              , Input._inferred = inferPl
-              , Input._evalResults = evalRes <&> exprEvalRes execId
-              , Input._userData = ()
-              }
-            )
-            where
-                eId = propEntityId valIProp
-                execId = Property.value valIProp
-        exprEvalRes pl r =
-            Input.EvalResultsForExpr
-            (r ^. erExprValues . Lens.at pl . Lens._Just)
-            (r ^. erAppliesOfLam . Lens.at pl . Lens._Just)
-
-loadInferPrepareInput ::
-    Monad m =>
-    CurAndPrev (EvalResults (ValI m)) ->
-    Val (Infer.Payload, ValIProperty m) ->
-    IRefInfer.M m (Val (Input.Payload m [EntityId]))
-loadInferPrepareInput evalRes val =
-    preparePayloads evalRes val
-    <&> setUserData
-    & ParamList.loadForLambdas
-    where
-        setUserData pl =
-            pl & Input.userData %~ \() -> [pl ^. Input.entityId]
-
 makeNominalsMap ::
     Monad m => Val (Input.Payload m a) -> T m (Map T.NominalId N.Nominal)
 makeNominalsMap val =
@@ -216,7 +137,7 @@ makeNominalsMap val =
                 loaded <- State.get
                 unless (Map.member tid loaded) $
                     do
-                        nom <- Load.nominal tid & lift
+                        nom <- ExprLoad.nominal tid & lift
                         Map.insert tid nom loaded & State.put
                         nom ^.. N.nomType . N._NominalType . schemeType & traverse_ loadForType
 
@@ -231,11 +152,7 @@ convertInferDefExpr ::
 convertInferDefExpr evalRes cp defType defExpr defI =
     do
         (valInferred, newInferContext) <-
-            inferRecursive defExpr defVar
-            & IRefInfer.liftInfer
-            >>= loadInferPrepareInput evalRes
-            & IRefInfer.run
-            <&> assertInferSuccess
+            Load.inferDef evalRes defExpr defVar <&> Load.assertInferSuccess
         nomsMap <- makeNominalsMap valInferred
         outdatedDefinitions <- OutdatedDefs.scan defExpr setDefExpr
         let context =
@@ -284,13 +201,13 @@ convertExpr ::
     T m (ExpressionU m [EntityId])
 convertExpr evalRes cp prop =
     do
-        defExpr <- Load.defExprProperty prop
+        defExpr <- ExprLoad.defExprProperty prop
         (valInferred, newInferContext) <-
-            inferDefExpr Infer.emptyScope defExpr
+            Load.inferDefExpr Infer.emptyScope defExpr
             & IRefInfer.liftInfer
-            >>= loadInferPrepareInput evalRes
+            >>= Load.loadInferPrepareInput evalRes
             & IRefInfer.run
-            <&> assertInferSuccess
+            <&> Load.assertInferSuccess
         nomsMap <- makeNominalsMap valInferred
         outdatedDefinitions <- OutdatedDefs.scan defExpr (Transaction.setP prop)
         let context =
@@ -343,7 +260,7 @@ loadAnnotatedDef ::
     (pl -> DefI m) ->
     pl -> T m (Definition.Definition (Val (ValIProperty m)) pl)
 loadAnnotatedDef getDefI annotation =
-    getDefI annotation & Load.def <&> Definition.defPayload .~ annotation
+    getDefI annotation & ExprLoad.def <&> Definition.defPayload .~ annotation
 
 loadPanes ::
     Monad m =>
