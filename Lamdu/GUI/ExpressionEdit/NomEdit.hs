@@ -36,13 +36,12 @@ makeToNom ::
     Sugar.Payload m ExprGuiT.Payload ->
     ExprGuiM m (ExpressionGui m)
 makeToNom nom pl =
-    traverse (BinderEdit.makeBinderBodyEdit Sugar.BinderWithoutParams) nom
-    >>= mkNomGui precBefore "«" (\a b -> [a, b]) (||>) valId pl
+    nom <&> BinderEdit.makeBinderBodyEdit Sugar.BinderWithoutParams
+    & mkNomGui precBefore "«" (\a b -> [a, b]) (||>) valId pl
     where
         valId =
             nom ^. Sugar.nVal . Sugar.bbContent . SugarLens.binderContentExpr
                 . Sugar.rPayload . Sugar.plEntityId & WidgetIds.fromEntityId
-
 
 makeFromNom ::
     Monad m =>
@@ -50,9 +49,8 @@ makeFromNom ::
     Sugar.Payload m ExprGuiT.Payload ->
     ExprGuiM m (ExpressionGui m)
 makeFromNom nom pl =
-    nom
-    & traverse (ExprGuiM.makeSubexpression (precAfter .~ nomPrecedence+1))
-    >>= mkNomGui precAfter "»" (\a b -> [b, a]) (flip (<||)) valId pl
+    nom <&> ExprGuiM.makeSubexpression (precAfter .~ nomPrecedence+1)
+    & mkNomGui precAfter "»" (\a b -> [b, a]) (flip (<||)) valId pl
     where
         valId = nom ^. Sugar.nVal . Sugar.rPayload . Sugar.plEntityId & WidgetIds.fromEntityId
 
@@ -67,7 +65,7 @@ mkNomGui ::
     (AlignedWidget (T m Widget.EventResult) -> ExpressionGui m -> ExpressionGui m) ->
     Widget.Id ->
     Sugar.Payload m ExprGuiT.Payload ->
-    Sugar.Nominal (Name m) (ExpressionGui m) ->
+    Sugar.Nominal (Name m) (ExprGuiM m (ExpressionGui m)) ->
     ExprGuiM m (ExpressionGui m)
 mkNomGui nameSidePrecLens str asList hCombine valId pl (Sugar.Nominal tid val) =
     ExprGuiM.withLocalPrecedence (nameSidePrecLens .~ 0) $
@@ -93,7 +91,7 @@ mkNomGui nameSidePrecLens str asList hCombine valId pl (Sugar.Nominal tid val) =
                 )
             <*> (ExpressionGui.makeFocusableView nameId
                  <*> mkNameGui tid nameId)
-            ?? val
+            <*> val
     & ExprGuiM.assignCursor myId valId
 
 expandingName ::
