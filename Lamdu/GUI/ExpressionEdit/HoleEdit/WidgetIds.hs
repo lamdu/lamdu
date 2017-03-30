@@ -15,7 +15,7 @@ data WidgetIds = WidgetIds
     , hidOpen :: Widget.Id
     , hidOpenSearchTerm :: Widget.Id
     , hidResultsPrefix :: Widget.Id
-    }
+    } deriving Show
 
 make :: EntityId -> WidgetIds
 make entityId = WidgetIds
