@@ -29,15 +29,19 @@ versionMigrations =
 currentVersion :: Int
 currentVersion = length versionMigrations
 
+toIO :: Either Text a -> IO a
+toIO = either (fail . unpack) return
+
+applyMigrations :: Aeson.Value -> Int -> IO Aeson.Value
+applyMigrations doc ver
+    | ver == currentVersion = return doc
+    | ver > currentVersion = "Cannot read docs of version: " ++ show ver & fail
+    | otherwise =
+        do
+            putStrLn $ "Migrating version " ++ show ver ++ " -> " ++ show (ver + 1)
+            newDoc <- (versionMigrations !! ver) doc & toIO
+            applyMigrations newDoc (ver + 1)
+
 migrateAsNeeded :: Aeson.Value -> IO Aeson.Value
 migrateAsNeeded doc =
-    do
-        ver <- getVersion doc & toIO
-        if ver == currentVersion
-            then return doc
-            else
-                if ver > currentVersion
-                then "Cannot read docs of version: " ++ show ver & fail
-                else (versionMigrations !! ver) doc & toIO
-    where
-        toIO = either (fail . unpack) return
+    getVersion doc & toIO >>= applyMigrations doc
