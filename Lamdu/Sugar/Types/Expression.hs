@@ -275,7 +275,7 @@ data GetVar name m
 data SpecialArgs expr
     = NoSpecialArgs
     | ObjectArg expr
-    | InfixArgs Int expr expr
+    | InfixArgs expr expr
     deriving (Functor, Foldable, Traversable, Eq, Ord, Show)
 
 data AnnotatedArg name expr = AnnotatedArg

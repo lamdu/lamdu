@@ -84,14 +84,12 @@ uncurry4 f (x0, x1, x2, x3) = f x0 x1 x2 x3
 encodePresentationMode :: Encoder Anchors.PresentationMode
 encodePresentationMode Anchors.OO = Aeson.String "OO"
 encodePresentationMode Anchors.Verbose = Aeson.String "Verbose"
-encodePresentationMode (Anchors.Infix prec) = Aeson.toJSON (Aeson.String "Infix", prec)
+encodePresentationMode Anchors.Infix = Aeson.String "Infix"
 
 decodePresentationMode :: Decoder Anchors.PresentationMode
 decodePresentationMode (Aeson.String "OO") = pure Anchors.OO
 decodePresentationMode (Aeson.String "Verbose") = pure Anchors.Verbose
-decodePresentationMode (Aeson.Array arr)
-    | [Aeson.String "Infix", Aeson.Number prec] <- Vector.toList arr =
-          pure (Anchors.Infix (truncate prec))
+decodePresentationMode (Aeson.String "Infix") = pure Anchors.Infix
 decodePresentationMode other = fail $ "Unexpected presentation mode: " ++ show other
 
 encodeFFIName :: Encoder Definition.FFIName

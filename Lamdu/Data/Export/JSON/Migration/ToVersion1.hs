@@ -7,7 +7,7 @@
 -- 3. Copy all nominal types into "frozenDeps"."nominals" inside all
 -- definitions that use them
 
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE NoImplicitPrelude, OverloadedStrings #-}
 module Lamdu.Data.Export.JSON.Migration.ToVersion1 (migrate) where
 
 import           Control.Applicative ((<|>))

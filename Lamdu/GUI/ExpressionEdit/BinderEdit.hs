@@ -105,7 +105,7 @@ mkPresentationModeEdit myId prop = do
                 ExprGuiM.widgetEnv $
                 BWidgets.makeFocusableLabel (Text.pack (show presentationMode)) myId
             return (presentationMode, widget)
-    pairs <- traverse mkPair [Sugar.OO, Sugar.Verbose, Sugar.Infix 5]
+    pairs <- traverse mkPair [Sugar.OO, Sugar.Verbose, Sugar.Infix]
     BWidgets.makeChoiceWidget (Transaction.setP prop) pairs cur
         presentationModeChoiceConfig myId
         & ExprGuiM.widgetEnv

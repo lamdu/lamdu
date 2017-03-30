@@ -6,6 +6,7 @@ import qualified Control.Lens as Lens
 import qualified Data.Aeson as Aeson
 import           Data.Text (unpack)
 import qualified Lamdu.Data.Export.JSON.Migration.ToVersion1 as ToVersion1
+import qualified Lamdu.Data.Export.JSON.Migration.ToVersion2 as ToVersion2
 
 import           Lamdu.Prelude
 
@@ -21,15 +22,22 @@ getVersion (Aeson.Array values) =
         Nothing -> Left "Empty document"
 getVersion _ = Left "Expecting top-level array"
 
+versionMigrations :: [Aeson.Value -> Either Text Aeson.Value]
+versionMigrations =
+    [ToVersion1.migrate, ToVersion2.migrate]
+
+currentVersion :: Int
+currentVersion = length versionMigrations
+
 migrateAsNeeded :: Aeson.Value -> IO Aeson.Value
 migrateAsNeeded doc =
     do
         ver <- getVersion doc & toIO
-        case ver of
-            0 -> do
-                putStrLn "Migrating version 0 -> 1"
-                ToVersion1.migrate doc & toIO
-            1 -> return doc
-            _ -> "Cannot read docs of version: " ++ show ver & fail
+        if ver == currentVersion
+            then return doc
+            else
+                if ver > currentVersion
+                then "Cannot read docs of version: " ++ show ver & fail
+                else (versionMigrations !! ver) doc & toIO
     where
         toIO = either (fail . unpack) return

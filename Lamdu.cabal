@@ -196,6 +196,7 @@ Executable lamdu
                   , Lamdu.Data.Export.JSON.Process
                   , Lamdu.Data.Export.JSON.Migration
                   , Lamdu.Data.Export.JSON.Migration.ToVersion1
+                  , Lamdu.Data.Export.JSON.Migration.ToVersion2
                   , Lamdu.Data.Ops
                   , Lamdu.Data.Ops.Subexprs
                   , Lamdu.DataFile

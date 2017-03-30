@@ -150,11 +150,7 @@ instance Monad tm => MonadNaming (Pass1PropagateUp tm) where
     opWithLetName _ = p1cpsNameConvertor Walk.ParamName
     opWithTagName = p1cpsNameConvertor Walk.TagName
     opGetName = p1nameConvertor Nothing
-    opGetAppliedFuncName apply =
-        p1nameConvertor (Just ctx)
-        where
-            -- Ignore operator precedence
-            ctx = apply & aSpecialArgs . _InfixArgs . _1 .~ 0
+    opGetAppliedFuncName = p1nameConvertor . Just
 
 pass1Result ::
     Maybe FunctionSignature -> Walk.NameType -> MStoredName ->

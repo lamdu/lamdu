@@ -156,7 +156,7 @@ isInfix x = not (Text.null x) && Text.all (`elem` operatorChars) x
 
 presentationModeOfName :: Text -> PresentationMode
 presentationModeOfName x
-    | isInfix x = Infix 5
+    | isInfix x = Infix
     | otherwise = Verbose
 
 newDefinition ::
