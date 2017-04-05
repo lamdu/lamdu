@@ -1,6 +1,6 @@
 {-# LANGUAGE NoImplicitPrelude, OverloadedStrings #-}
 module Lamdu.GUI.ExpressionEdit.ApplyEdit
-    ( make
+    ( make, prefixPrecedence
     ) where
 
 import qualified Data.Text as Text

@@ -5,6 +5,7 @@ module Lamdu.GUI.ExpressionEdit.InjectEdit
 
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widget.TreeLayout as TreeLayout
+import qualified Lamdu.GUI.ExpressionEdit.ApplyEdit as ApplyEdit
 import qualified Lamdu.GUI.ExpressionEdit.TagEdit as TagEdit
 import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
@@ -52,7 +53,8 @@ make (Sugar.Inject tagG mVal) pl =
         (pl ^. Sugar.plData . ExprGuiT.plNearestHoles) []
     Just val ->
         ExpressionGui.stdWrapParentExpr pl $ \myId ->
-        ExprGuiM.makeSubexpressionWith (ExpressionGui.before .~ 11) val <&> (:[])
+        ExprGuiM.makeSubexpressionWith
+        (ExpressionGui.before .~ ApplyEdit.prefixPrecedence) val <&> (:[])
         >>= makeCommon "•" tagG (ExprGuiT.nextHolesBefore val)
         & ExprGuiM.assignCursor myId tagId
     where
