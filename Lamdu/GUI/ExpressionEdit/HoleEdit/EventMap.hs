@@ -156,19 +156,21 @@ pickBefore shownResult action =
         return $ _pickedEventResult <> actionResult
 
 -- | Remove unwanted event handlers from a hole result
-removeUnwanted :: Config -> Widget.EventMap a -> Widget.EventMap a
-removeUnwanted config =
-    deleteKeys
-    (delKeys ++ gridKeyEvents ++ holeNavigationKeys ++ subexprNavigationKeys ++
-     letAddItemKeys)
-    where
-        letAddItemKeys = Config.letAddItemKeys config
-        subexprNavigationKeys =
-            config & Config.leaveSubexpressionKeys <> Config.enterSubexpressionKeys
-        Config.Hole{..} = Config.hole config
-        holeNavigationKeys = holeOpenKeys ++ holeCloseKeys
-        gridKeyEvents = Foldable.toList Grid.stdKeys
-        delKeys = Config.delKeys config
+removeUnwanted ::
+    Monad m => ExprGuiM m (Widget.EventMap a -> Widget.EventMap a)
+removeUnwanted =
+    do
+        config <- ExprGuiM.readConfig
+        let Config.Hole{..} = Config.hole config
+        concat
+            [ Config.delKeys config
+            , holeOpenKeys, holeCloseKeys
+            , Foldable.toList Grid.stdKeys
+            , Config.leaveSubexpressionKeys config
+            , Config.enterSubexpressionKeys config
+            , Config.letAddItemKeys config
+            ] & deleteKeys
+            & return
 
 mkEventsOnPickedResult ::
     Monad m =>
@@ -176,10 +178,10 @@ mkEventsOnPickedResult ::
 mkEventsOnPickedResult shownResult =
     do
         config <- ExprGuiM.readConfig
-        srMkEventMap shownResult
+        removeUnwanted
+            <*> srMkEventMap shownResult
             <&> E.emDocs . E.docStrs . Lens._last %~ (<> " (On picked result)")
             <&> Lens.mapped %~ pickBefore shownResult
-            <&> removeUnwanted config
 
 -- To make HoleEdit
 emptyPickEventMap ::
