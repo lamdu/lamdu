@@ -1,6 +1,9 @@
 {-# LANGUAGE LambdaCase, NoImplicitPrelude, ConstraintKinds, OverloadedStrings, RankNTypes #-}
 module Lamdu.Sugar.Convert.Hole
-    ( convert, convertCommon
+    ( convert
+
+      -- Used by Hole.Apply:
+    , convertCommon
     , mkHoleOption, mkHoleOptionFromInjected, addSuggestedOptions
     , injectVar
     , BaseExpr(..)
@@ -163,6 +166,49 @@ isLiveGlobal defI =
     & Transaction.getP
     <&> (== LiveDefinition)
 
+getRecordTags ::
+    Monad m => ConvertM.Context m -> Input.Payload f a -> T m [T.Tag]
+getRecordTags sugarContext exprPl =
+    case mForbiddenRecordTags of
+    Nothing -> return mempty
+    Just tags ->
+        sugarContext ^. ConvertM.scCodeAnchors
+        & Anchors.tags & Transaction.getP
+        <&> (`Set.difference` tags) <&> Set.toList
+    where
+        mForbiddenRecordTags =
+            exprPl ^? Input.inferred . Infer.plType . T._TRecord
+            <&> FlatComposite.fromComposite
+            >>= (^. FlatComposite.extension)
+            <&> recordTypeVarConstraints
+        recordTypeVarConstraints tv =
+            Infer.makeScheme (sugarContext ^. ConvertM.scInferContext)
+            (T.TRecord (T.CVar tv))
+            ^. schemeConstraints
+            & getProductVarConstraints tv
+
+getNominals :: Monad m => ConvertM.Context m -> T m [T.NominalId]
+getNominals sugarContext =
+    sugarContext ^. ConvertM.scCodeAnchors
+    & Anchors.tids & Transaction.getP <&> Set.toList
+
+getGlobals :: Monad m => ConvertM.Context m -> T m [DefI m]
+getGlobals sugarContext =
+    sugarContext ^. ConvertM.scCodeAnchors
+    & Anchors.globals & Transaction.getP <&> Set.toList
+    >>= filterM isLiveGlobal
+
+locals :: ConvertM.Context m -> Input.Payload f a -> [V.Var]
+locals sugarContext exprPl =
+    exprPl ^. Input.inferredScope
+    & Infer.scopeToTypeMap
+    & Map.keys
+    & filter (not . isGlobalInScope)
+    where
+        isGlobalInScope varId =
+            sugarContext ^. ConvertM.scGlobalsInScope .
+            Lens.contains (ExprIRef.defI varId)
+
 mkOptions ::
     Monad m => ConvertM.Context m ->
     Maybe (Val (Input.Payload m a)) ->
@@ -170,25 +216,11 @@ mkOptions ::
     T m [HoleOption UUID m]
 mkOptions sugarContext mInjectedArg exprPl stored =
     do
-        nominalTids <-
-            sugarContext ^. ConvertM.scCodeAnchors
-            & Anchors.tids & Transaction.getP <&> Set.toList
-        globals <-
-            sugarContext ^. ConvertM.scCodeAnchors
-            & Anchors.globals & Transaction.getP <&> Set.toList
-            >>= filterM isLiveGlobal
-        recordTags <-
-            case mForbiddenRecordTags of
-            Nothing -> return mempty
-            Just tags ->
-                sugarContext ^. ConvertM.scCodeAnchors
-                & Anchors.tags & Transaction.getP
-                <&> (`Set.difference` tags) <&> Set.toList
+        nominalTids <- getNominals sugarContext
+        globals <- getGlobals sugarContext
+        recordTags <- getRecordTags sugarContext exprPl
         concat
-            [ exprPl ^. Input.inferredScope
-                & Infer.scopeToTypeMap
-                & Map.keys
-                & filter (not . isGlobalInScope)
+            [ locals sugarContext exprPl
                 & concatMap (getLocalScopeGetVars sugarContext)
             , globals <&> P.var . ExprIRef.globalId
             , do
@@ -208,20 +240,6 @@ mkOptions sugarContext mInjectedArg exprPl stored =
             <&> SeedExpr
             <&> mkHoleOption sugarContext mInjectedArg exprPl stored
             & return
-    where
-        isGlobalInScope varId =
-            sugarContext ^. ConvertM.scGlobalsInScope .
-            Lens.contains (ExprIRef.defI varId)
-        mForbiddenRecordTags =
-            exprPl ^? Input.inferred . Infer.plType . T._TRecord
-            <&> FlatComposite.fromComposite
-            >>= (^. FlatComposite.extension)
-            <&> recordTypeVarConstraints
-        recordTypeVarConstraints tv =
-            Infer.makeScheme (sugarContext ^. ConvertM.scInferContext)
-            (T.TRecord (T.CVar tv))
-            ^. schemeConstraints
-            & getProductVarConstraints tv
 
 mkWritableHoleActions ::
     (Monad m) =>
