@@ -22,7 +22,6 @@ import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.Grid as Grid
 import qualified Graphics.UI.GLFW as GLFW
 import           Lamdu.CharClassification (operatorChars, bracketChars, digitChars, hexDigitChars)
-import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.Info (HoleInfo(..))
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.Info as HoleInfo
@@ -176,12 +175,10 @@ mkEventsOnPickedResult ::
     Monad m =>
     ShownResult m -> ExprGuiM m (Widget.EventMap (T m Widget.EventResult))
 mkEventsOnPickedResult shownResult =
-    do
-        config <- ExprGuiM.readConfig
-        removeUnwanted
-            <*> srMkEventMap shownResult
-            <&> E.emDocs . E.docStrs . Lens._last %~ (<> " (On picked result)")
-            <&> Lens.mapped %~ pickBefore shownResult
+    removeUnwanted
+    <*> srMkEventMap shownResult
+    <&> E.emDocs . E.docStrs . Lens._last %~ (<> " (On picked result)")
+    <&> Lens.mapped %~ pickBefore shownResult
 
 -- To make HoleEdit
 emptyPickEventMap ::
