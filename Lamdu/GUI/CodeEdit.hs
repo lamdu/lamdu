@@ -142,7 +142,7 @@ makeReplEdit env replExpr =
     [ ExpressionGui.makeFocusableView (Widget.joinId WidgetIds.replId ["symbol"])
       <*> ExpressionGui.makeLabel "⋙" (Widget.toAnimId WidgetIds.replId)
       <&> TreeLayout.fromAlignedWidget
-    , ExprGuiM.makeSubexpression id replExpr
+    , ExprGuiM.makeSubexpressionWith id replExpr
     ]
     <&> TreeLayout.widget %~
         Widget.weakerEvents (replEventMap env replExpr) . mLiftWidget

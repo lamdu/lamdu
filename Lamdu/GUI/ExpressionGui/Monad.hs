@@ -9,6 +9,7 @@ module Lamdu.GUI.ExpressionGui.Monad
     , makeFocusDelegator
     --
     , makeSubexpression
+    , makeSubexpressionWith
     , advanceDepth, resetDepth
     --
     , readConfig, readSettings, readStyle, readCodeAnchors
@@ -152,8 +153,13 @@ vspacer configGetter =
 
 makeSubexpression ::
     Monad m =>
+    ExprGuiT.SugarExpr m -> ExprGuiM m (ExpressionGui m)
+makeSubexpression = makeSubexpressionWith (const 0)
+
+makeSubexpressionWith ::
+    Monad m =>
     (Precedence -> Precedence) -> ExprGuiT.SugarExpr m -> ExprGuiM m (ExpressionGui m)
-makeSubexpression onPrecedence expr =
+makeSubexpressionWith onPrecedence expr =
     do
         maker <- Lens.view aMakeSubexpression & ExprGuiM
         maker expr & withLocalPrecedence onPrecedence

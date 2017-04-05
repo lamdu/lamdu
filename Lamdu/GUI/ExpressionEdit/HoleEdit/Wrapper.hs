@@ -76,7 +76,7 @@ make WidgetIds{..} arg =
         let frameWidth = Config.typeIndicatorFrameWidth config <&> realToFrac
         argGui <-
             arg ^. Sugar.haExpr
-            & ExprGuiM.makeSubexpression (const 0)
+            & ExprGuiM.makeSubexpression
             & ExprGuiM.withVerbose
         let argIsFocused = ExpressionGui.egIsFocused argGui
         unwrapEventMap <- makeUnwrapEventMap arg WidgetIds{..}

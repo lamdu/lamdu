@@ -89,7 +89,7 @@ makeFieldRow (Sugar.RecordField delete tag fieldExpr) =
         config <- ExprGuiM.readConfig
         fieldRefGui <-
             TagEdit.makeRecordTag (ExprGuiT.nextHolesBefore fieldExpr) tag
-        fieldExprGui <- ExprGuiM.makeSubexpression (const 0) fieldExpr
+        fieldExprGui <- ExprGuiM.makeSubexpression fieldExpr
         let itemEventMap = recordDelEventMap config delete
         ExpressionGui.tagItem ?? fieldRefGui ?? fieldExprGui
             <&> TreeLayout.widget %~ Widget.weakerEvents itemEventMap
@@ -122,7 +122,7 @@ makeOpenRecord fieldsGui rest animId =
         vspace <- ExpressionGui.stdVSpace
         restExpr <-
             ExpressionGui.addValPadding
-            <*> ExprGuiM.makeSubexpression (const 0) rest
+            <*> ExprGuiM.makeSubexpression rest
         return $ TreeLayout.render #
             \layoutMode ->
             let restLayout = layoutMode & restExpr ^. TreeLayout.render

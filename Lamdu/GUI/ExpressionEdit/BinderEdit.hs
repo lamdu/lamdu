@@ -492,7 +492,7 @@ makeBinderContentEdit params (Sugar.BinderExpr binderBody) =
                     Widget.keysEventMapMovesCursor
                     (Config.jumpRHStoLHSKeys config) (E.Doc ["Navigation", "Jump to last param"]) $
                     WidgetIds.fromEntityId (last ps ^. _2 . Sugar.fpId) <$ savePos
-        ExprGuiM.makeSubexpression (const 0) binderBody
+        ExprGuiM.makeSubexpression binderBody
             <&> TreeLayout.widget %~ Widget.weakerEvents jumpToLhsEventMap
 
 namedParamEditInfo :: Monad m => Draw.Color -> Sugar.NamedParamInfo (Name m) m -> ParamEdit.Info m

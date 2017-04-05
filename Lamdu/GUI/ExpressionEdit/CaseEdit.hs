@@ -72,7 +72,7 @@ make (Sugar.Case mArg alts caseTail addAlt cEntityId) pl =
             Sugar.CaseWithArg (Sugar.CaseArg arg toLambdaCase) ->
                 do
                     argEdit <-
-                        ExprGuiM.makeSubexpression (const 0) arg
+                        ExprGuiM.makeSubexpression arg
                         <&> TreeLayout.widget %~ Widget.weakerEvents
                             (toLambdaCaseEventMap config toLambdaCase)
                     caseLabel <- headerLabel ":"
@@ -123,7 +123,7 @@ makeAltRow myId mActiveTag (Sugar.CaseAlt delete tag altExpr) =
             <&> if mActiveTag == Just (tag ^. Sugar.tagVal)
                 then AlignedWidget.widget %~ addBg
                 else id
-        altExprGui <- ExprGuiM.makeSubexpression (const 0) altExpr
+        altExprGui <- ExprGuiM.makeSubexpression altExpr
         let itemEventMap = caseDelEventMap config delete
         ExpressionGui.tagItem ?? altRefGui ?? altExprGui
             <&> TreeLayout.widget %~ Widget.weakerEvents itemEventMap
@@ -157,7 +157,7 @@ makeOpenCase rest animId altsGui =
         vspace <- ExpressionGui.stdVSpace
         restExpr <-
             ExpressionGui.addValPadding
-            <*> ExprGuiM.makeSubexpression (const 0) rest
+            <*> ExprGuiM.makeSubexpression rest
         return $ TreeLayout.render #
             \layoutMode ->
             let restLayout = layoutMode & restExpr ^. TreeLayout.render

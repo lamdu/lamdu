@@ -332,7 +332,7 @@ makeHoleResultWidget resultId holeResult =
         mkWidget =
             holeResultConverted
             & postProcessSugar
-            & ExprGuiM.makeSubexpression (const 0)
+            & ExprGuiM.makeSubexpression
             & applyResultLayout
             <&> (^. AlignedWidget.widget)
         holeResultEntityId =

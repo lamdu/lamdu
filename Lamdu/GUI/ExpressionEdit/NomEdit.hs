@@ -49,7 +49,7 @@ makeFromNom ::
     Sugar.Payload m ExprGuiT.Payload ->
     ExprGuiM m (ExpressionGui m)
 makeFromNom nom pl =
-    nom <&> ExprGuiM.makeSubexpression (precAfter .~ nomPrecedence+1)
+    nom <&> ExprGuiM.makeSubexpressionWith (precAfter .~ nomPrecedence+1)
     & mkNomGui precAfter "»" (\a b -> [b, a]) (flip (<||)) valId pl
     where
         valId = nom ^. Sugar.nVal . Sugar.rPayload . Sugar.plEntityId & WidgetIds.fromEntityId

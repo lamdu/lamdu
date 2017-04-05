@@ -79,7 +79,7 @@ makeInfixFuncName ::
     Monad m => ExprGuiT.SugarExpr m -> ExprGuiM m (ExpressionGui m)
 makeInfixFuncName func =
     do
-        res <- ExprGuiM.makeSubexpression (const prec) func
+        res <- ExprGuiM.makeSubexpressionWith (const prec) func
         if any BinderEdit.nonOperatorName (NamesGet.fromExpression func)
             then
                 res
@@ -102,15 +102,15 @@ makeFuncRow mParensId prec (Sugar.Apply func specialArgs annotatedArgs) pl =
         overrideModifyEventMap <- mkOverrideModifyEventMap (pl ^. Sugar.plActions)
         case specialArgs of
             Sugar.NoSpecialArgs ->
-                ExprGuiM.makeSubexpression (const (fromIntegral prec)) func
+                ExprGuiM.makeSubexpressionWith (const (fromIntegral prec)) func
                 <&> overrideModifyEventMap
             Sugar.ObjectArg arg ->
                 ExpressionGui.combineSpaced mParensId
                 <*> sequenceA
-                [ ExprGuiM.makeSubexpression
+                [ ExprGuiM.makeSubexpressionWith
                   (ExpressionGui.precAfter .~ prec+1) func
                   <&> maybeOverrideModifyEventMap
-                , ExprGuiM.makeSubexpression
+                , ExprGuiM.makeSubexpressionWith
                   (ExpressionGui.precBefore .~ prec) arg
                 ]
                 where
@@ -122,10 +122,10 @@ makeFuncRow mParensId prec (Sugar.Apply func specialArgs annotatedArgs) pl =
                 <*> sequenceA
                 [ ExpressionGui.combineSpaced Nothing
                     <*> sequenceA
-                    [ ExprGuiM.makeSubexpression (ExpressionGui.precAfter .~ prec) l
+                    [ ExprGuiM.makeSubexpressionWith (ExpressionGui.precAfter .~ prec) l
                     , makeInfixFuncName func <&> overrideModifyEventMap
                     ]
-                , ExprGuiM.makeSubexpression (ExpressionGui.precBefore .~ prec+1) r
+                , ExprGuiM.makeSubexpressionWith (ExpressionGui.precBefore .~ prec+1) r
                 ]
 
 make ::
@@ -164,7 +164,7 @@ makeArgRows ::
 makeArgRows arg =
     ExpressionGui.tagItem
     <*> TagEdit.makeParamTag (arg ^. Sugar.aaTag)
-    <*> ExprGuiM.makeSubexpression (const 0) (arg ^. Sugar.aaExpr)
+    <*> ExprGuiM.makeSubexpression (arg ^. Sugar.aaExpr)
 
 mkBoxed ::
     Monad m =>
