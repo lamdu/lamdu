@@ -47,8 +47,8 @@ make record@(Sugar.Record fields recordTail addField) pl =
     ExprGuiM.assignCursor myId (defaultPos fields myId) $
     do
         config <- ExprGuiM.readConfig
-        (gui, resultPickers) <-
-            ExprGuiM.listenResultPickers $
+        (gui, resultPicker) <-
+            ExprGuiM.listenResultPicker $
             do
                 fieldsGui <-
                     (if addBg then ExpressionGui.addValPadding else return id)
@@ -68,7 +68,7 @@ make record@(Sugar.Record fields recordTail addField) pl =
                 <&> TagEdit.diveToRecordTag
                 & Widget.keysEventMapMovesCursor (Config.recordAddFieldKeys config)
                   (E.Doc ["Edit", "Record", "Add Field"])
-                & ExprGuiM.withHolePickers resultPickers
+                & ExprGuiM.withHolePicker resultPicker
         gui
             & TreeLayout.widget %~ Widget.weakerEvents addFieldEventMap
             & if addBg

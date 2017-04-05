@@ -80,8 +80,8 @@ make (Sugar.Case mArg alts caseTail addAlt cEntityId) pl =
                         ExpressionGui.evaluationResult (arg ^. Sugar.rPayload)
                         <&> (>>= (^? ER.body . ER._RInject . V.injectTag))
                     return (mTag, ExpressionGui.combine [argEdit, caseLabel])
-        (altsGui, resultPickers) <-
-            ExprGuiM.listenResultPickers $
+        (altsGui, resultPicker) <-
+            ExprGuiM.listenResultPicker $
             do
                 altsGui <- makeAltsWidget mActiveTag alts myId
                 case caseTail of
@@ -101,7 +101,7 @@ make (Sugar.Case mArg alts caseTail addAlt cEntityId) pl =
                 <&> TagEdit.diveToCaseTag
                 & Widget.keysEventMapMovesCursor (Config.caseAddAltKeys config)
                   (E.Doc ["Edit", "Case", "Add Alt"])
-                & ExprGuiM.withHolePickers resultPickers
+                & ExprGuiM.withHolePicker resultPicker
         ExpressionGui.addValFrame myId
             <*> (ExpressionGui.vboxTopFocalSpaced ??
                  ([header, altsGui] <&> TreeLayout.alignment . _1 .~ 0))

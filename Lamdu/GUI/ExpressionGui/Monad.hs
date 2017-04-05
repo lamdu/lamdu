@@ -24,8 +24,8 @@ module Lamdu.GUI.ExpressionGui.Monad
     --
     , readVerbose, withVerbose
     --
-    , HolePickers, withHolePickers
-    , addResultPicker, listenResultPickers
+    , HolePicker, withHolePicker
+    , setResultPicker, listenResultPicker
     , run
     ) where
 
@@ -68,23 +68,30 @@ import           Lamdu.Prelude
 
 type T = Transaction
 
-type HolePickers m = [T m Widget.EventResult]
+data HolePicker m
+    = NoHolePick
+    | HolePick (T m Widget.EventResult)
 
-withHolePickers :: Monad m => HolePickers m -> E.EventMap (T m a) -> E.EventMap (T m a)
-withHolePickers [] e = e
-withHolePickers p@(_:_) e =
+instance Monoid (HolePicker m) where
+    mempty = NoHolePick
+    mappend NoHolePick x = x
+    mappend x NoHolePick = x
+    mappend _ _ = error "Two HolePick's told, are we inside 2 holes simultaneously?"
+
+withHolePicker :: Monad m => HolePicker m -> E.EventMap (T m a) -> E.EventMap (T m a)
+withHolePicker NoHolePick e = e
+withHolePicker (HolePick action) e =
     e
     & E.emDocs . E.docStrs . Lens.reversed . Lens.element 0 %~ f
     <&> (action >>)
     where
-        action = p & sequence <&> mconcat
         f x =
             x
             & TextLens._Text . Lens.element 0 %~ Char.toLower
             & ("Pick result and " <>)
 
 newtype Output m = Output
-    { oHolePickers :: HolePickers m
+    { oHolePicker :: HolePicker m
     } deriving (Monoid)
 
 newtype StoredEntityIds = StoredEntityIds [Sugar.EntityId]
@@ -246,11 +253,12 @@ listener f =
     exprGuiM %~ RWS.listen
     & Lens.mapped . Lens.mapped . _2 %~ f
 
-listenResultPickers :: Monad m => ExprGuiM m a -> ExprGuiM m (a, HolePickers m)
-listenResultPickers = listener oHolePickers
+listenResultPicker :: Monad m => ExprGuiM m a -> ExprGuiM m (a, HolePicker m)
+listenResultPicker = listener oHolePicker
 
-addResultPicker :: Monad m => T m Widget.EventResult -> ExprGuiM m ()
-addResultPicker picker = ExprGuiM $ RWS.tell mempty { oHolePickers = [picker] }
+setResultPicker :: Monad m => T m Widget.EventResult -> ExprGuiM m ()
+setResultPicker picker =
+    ExprGuiM $ RWS.tell mempty { oHolePicker = HolePick picker }
 
 readMScopeId :: Monad m => ExprGuiM m (CurAndPrev (Maybe ScopeId))
 readMScopeId = ExprGuiM $ Lens.view aMScopeId

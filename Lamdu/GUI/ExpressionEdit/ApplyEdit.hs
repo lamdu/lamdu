@@ -31,10 +31,10 @@ import           Lamdu.Prelude
 prefixPrecedence :: Int
 prefixPrecedence = 10
 
-mkOverrideModifyEventMap ::
+mkOverrideFuncEventMap ::
     Monad m => Sugar.Actions m ->
     ExprGuiM m (ExpressionGui m -> ExpressionGui m)
-mkOverrideModifyEventMap actions =
+mkOverrideFuncEventMap actions =
     do
         config <- ExprGuiM.readConfig
         TreeLayout.widget %~
@@ -99,31 +99,31 @@ makeFuncRow ::
     Sugar.Payload m a -> ExprGuiM m (ExpressionGui m)
 makeFuncRow mParensId prec (Sugar.Apply func specialArgs annotatedArgs) pl =
     do
-        overrideModifyEventMap <- mkOverrideModifyEventMap (pl ^. Sugar.plActions)
+        overrideFuncEventMap <- mkOverrideFuncEventMap (pl ^. Sugar.plActions)
         case specialArgs of
             Sugar.NoSpecialArgs ->
                 ExprGuiM.makeSubexpressionWith 0 (const (Prec.make prec)) func
-                <&> overrideModifyEventMap
+                <&> overrideFuncEventMap
             Sugar.ObjectArg arg ->
                 ExpressionGui.combineSpaced mParensId
                 <*> sequenceA
                 [ ExprGuiM.makeSubexpressionWith 0
                   (ExpressionGui.after .~ prec+1) func
-                  <&> maybeOverrideModifyEventMap
+                  <&> maybeOverrideFuncEventMap
                 , ExprGuiM.makeSubexpressionWith prec
                   (ExpressionGui.before .~ prec) arg
                 ]
                 where
-                    maybeOverrideModifyEventMap
+                    maybeOverrideFuncEventMap
                         | null annotatedArgs = id
-                        | otherwise = overrideModifyEventMap
+                        | otherwise = overrideFuncEventMap
             Sugar.InfixArgs l r ->
                 ExpressionGui.combineSpaced mParensId
                 <*> sequenceA
                 [ ExpressionGui.combineSpaced Nothing
                     <*> sequenceA
                     [ ExprGuiM.makeSubexpressionWith 0 (ExpressionGui.after .~ prec) l
-                    , makeInfixFuncName func <&> overrideModifyEventMap
+                    , makeInfixFuncName func <&> overrideFuncEventMap
                     ]
                 , ExprGuiM.makeSubexpressionWith (prec+1) (ExpressionGui.before .~ prec+1) r
                 ]

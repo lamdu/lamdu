@@ -372,7 +372,7 @@ addMResultPicker :: Monad m => Maybe (ShownResult m) -> ExprGuiM m ()
 addMResultPicker mSelectedResult =
     case mSelectedResult of
     Nothing -> return ()
-    Just res -> ExprGuiM.addResultPicker $ (^. pickedEventResult) <$> srPick res
+    Just res -> ExprGuiM.setResultPicker $ (^. pickedEventResult) <$> srPick res
 
 calcPadding :: [ResultGroupWidgets m] -> Widget.R
 calcPadding =
