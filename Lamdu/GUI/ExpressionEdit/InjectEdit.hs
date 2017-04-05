@@ -24,7 +24,7 @@ makeCommon ::
     ExprGuiM m (ExpressionGui m)
 makeCommon tagG nearestHoles valEdits =
     ExpressionGui.combineSpaced Nothing
-    <*> ( TagEdit.makeRecordTag nearestHoles tagG
+    <*> ( TagEdit.makeCaseTag nearestHoles tagG
           <&> TreeLayout.fromAlignedWidget <&> (: valEdits)
         )
 
