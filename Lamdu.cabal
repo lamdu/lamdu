@@ -278,6 +278,7 @@ Executable lamdu
                   , Lamdu.Sugar.Convert.GetField
                   , Lamdu.Sugar.Convert.GetVar
                   , Lamdu.Sugar.Convert.Hole
+                  , Lamdu.Sugar.Convert.Hole.Wrapper
                   , Lamdu.Sugar.Convert.Hole.ResultScore
                   , Lamdu.Sugar.Convert.Hole.Suggest
                   , Lamdu.Sugar.Convert.Inject

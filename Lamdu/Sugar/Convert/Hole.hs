@@ -2,10 +2,11 @@
 module Lamdu.Sugar.Convert.Hole
     ( convert
 
-      -- Used by Hole.Apply:
+      -- Used by Convert.GetVar:
+    , injectVar
+      -- Used by Convert.Apply(wrapper hole):
     , convertCommon
     , mkHoleOption, mkHoleOptionFromInjected, addSuggestedOptions
-    , injectVar
     , BaseExpr(..)
     ) where
 
@@ -375,6 +376,7 @@ type HoleResultVal m a = Val (Infer.Payload, (Maybe (ValI m), a))
 markNotInjected :: HoleResultVal n () -> HoleResultVal n IsInjected
 markNotInjected val = val <&> _2 . _2 .~ NotInjected
 
+-- TODO: Unify type according to IsInjected, avoid magic var
 injectVar :: V.Var
 injectVar = "HOLE INJECT EXPR"
 
