@@ -10,8 +10,8 @@ module Lamdu.GUI.Precedence
 import qualified Control.Lens as Lens
 
 data Precedence = Precedence
-    { _before :: {-# UNPACK #-} !Int
-    , _after :: {-# UNPACK #-} !Int
+    { _before :: {-# UNPACK #-}!Int
+    , _after  :: {-# UNPACK #-}!Int
     }
 
 Lens.makeLenses ''Precedence

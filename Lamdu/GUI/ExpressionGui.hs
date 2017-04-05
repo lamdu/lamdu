@@ -29,7 +29,12 @@ module Lamdu.GUI.ExpressionGui
     , WideAnnotationBehavior(..), wideAnnotationBehaviorFromSelected
     , evaluationResult
     -- Expression wrapping
-    , MyPrecedence(..), ParentPrecedence(..), Precedence(..), Precedence.before, Precedence.after
+
+    , Precedence.MyPrecedence(..)
+    , Precedence.ParentPrecedence(..)
+    , Precedence.Precedence(..)
+    , Precedence.before, Precedence.after
+
     , maybeAddAnnotationPl
     , stdWrap
     , parentDelegator
@@ -80,7 +85,6 @@ import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import           Lamdu.GUI.ExpressionGui.Types (ExpressionGui, ShowAnnotation(..), EvalModeShow(..))
 import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
-import           Lamdu.GUI.Precedence (MyPrecedence(..), ParentPrecedence(..), Precedence(..))
 import qualified Lamdu.GUI.Precedence as Precedence
 import qualified Lamdu.GUI.TypeView as TypeView
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
