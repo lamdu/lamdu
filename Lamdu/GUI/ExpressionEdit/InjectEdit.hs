@@ -53,7 +53,7 @@ make (Sugar.Inject tagG mVal) pl =
         (pl ^. Sugar.plData . ExprGuiT.plNearestHoles) []
     Just val ->
         ExpressionGui.stdWrapParentExpr pl $ \myId ->
-        ExprGuiM.makeSubexpressionWith
+        ExprGuiM.makeSubexpressionWith ApplyEdit.prefixPrecedence
         (ExpressionGui.before .~ ApplyEdit.prefixPrecedence) val <&> (:[])
         >>= makeCommon "•" tagG (ExprGuiT.nextHolesBefore val)
         & ExprGuiM.assignCursor myId tagId

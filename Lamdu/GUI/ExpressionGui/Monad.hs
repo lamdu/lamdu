@@ -98,6 +98,13 @@ data Askable m = Askable
     , _aSubexpressionLayer :: Int
     , _aMScopeId :: CurAndPrev (Maybe ScopeId)
     , _aOuterPrecedence :: Precedence
+    , _aMinOpPrecedence :: Int
+      -- ^ The minimum precedence that operators must have to be
+      -- applicable inside leaf holes. This allows "text-like"
+      -- appending of operators at the right parent level according to
+      --
+      -- precedence (e.g: in "x % 3 == 0 || ..." the hole for "3" does
+      -- not allow operators, making the == apply at the parent expr)
     , _aStyle :: Style
     , _aVerbose :: Bool
     }
@@ -155,15 +162,15 @@ vspacer configGetter =
 makeSubexpression ::
     Monad m =>
     ExprGuiT.SugarExpr m -> ExprGuiM m (ExpressionGui m)
-makeSubexpression = makeSubexpressionWith (const (Precedence.make 0))
+makeSubexpression = makeSubexpressionWith 0 (const (Precedence.make 0))
 
 makeSubexpressionWith ::
     Monad m =>
-    (Precedence -> Precedence) -> ExprGuiT.SugarExpr m -> ExprGuiM m (ExpressionGui m)
-makeSubexpressionWith onPrecedence expr =
+    Int -> (Precedence -> Precedence) -> ExprGuiT.SugarExpr m -> ExprGuiM m (ExpressionGui m)
+makeSubexpressionWith minOpPrec onPrecedence expr =
     do
         maker <- Lens.view aMakeSubexpression & ExprGuiM
-        maker expr & withLocalPrecedence onPrecedence
+        maker expr & withLocalPrecedence minOpPrec onPrecedence
     & advanceDepth (return . TreeLayout.fromCenteredView) animId
     where
         animId = toAnimId $ WidgetIds.fromExprPayload $ expr ^. Sugar.rPayload
@@ -200,6 +207,7 @@ run makeSubexpr codeAnchors config settings style (ExprGuiM action) =
     , _aSubexpressionLayer = Config.maxExprDepth config
     , _aMScopeId = Just topLevelScopeId & pure
     , _aOuterPrecedence = Precedence.make 0
+    , _aMinOpPrecedence = 0
     , _aStyle = style
     , _aVerbose = False
     }
@@ -256,5 +264,10 @@ isExprSelected = widgetEnv . WE.isSubCursor . WidgetIds.fromExprPayload
 outerPrecedence :: Monad m => ExprGuiM m Precedence
 outerPrecedence = ExprGuiM $ Lens.view aOuterPrecedence
 
-withLocalPrecedence :: (Precedence -> Precedence) -> ExprGuiM m a -> ExprGuiM m a
-withLocalPrecedence f = exprGuiM %~ RWS.local (aOuterPrecedence %~ f)
+withLocalPrecedence :: Int -> (Precedence -> Precedence) -> ExprGuiM m a -> ExprGuiM m a
+withLocalPrecedence minOpPrec f =
+    exprGuiM %~
+    RWS.local
+    ( (aOuterPrecedence %~ f)
+    . (aMinOpPrecedence .~ minOpPrec)
+    )

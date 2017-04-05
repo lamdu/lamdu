@@ -79,7 +79,7 @@ makeInfixFuncName ::
     Monad m => ExprGuiT.SugarExpr m -> ExprGuiM m (ExpressionGui m)
 makeInfixFuncName func =
     do
-        res <- ExprGuiM.makeSubexpressionWith (const prec) func
+        res <- ExprGuiM.makeSubexpressionWith 0 (const prec) func
         if any BinderEdit.nonOperatorName (NamesGet.fromExpression func)
             then
                 res
@@ -102,15 +102,15 @@ makeFuncRow mParensId prec (Sugar.Apply func specialArgs annotatedArgs) pl =
         overrideModifyEventMap <- mkOverrideModifyEventMap (pl ^. Sugar.plActions)
         case specialArgs of
             Sugar.NoSpecialArgs ->
-                ExprGuiM.makeSubexpressionWith (const (Prec.make prec)) func
+                ExprGuiM.makeSubexpressionWith 0 (const (Prec.make prec)) func
                 <&> overrideModifyEventMap
             Sugar.ObjectArg arg ->
                 ExpressionGui.combineSpaced mParensId
                 <*> sequenceA
-                [ ExprGuiM.makeSubexpressionWith
+                [ ExprGuiM.makeSubexpressionWith 0
                   (ExpressionGui.after .~ prec+1) func
                   <&> maybeOverrideModifyEventMap
-                , ExprGuiM.makeSubexpressionWith
+                , ExprGuiM.makeSubexpressionWith prec
                   (ExpressionGui.before .~ prec) arg
                 ]
                 where
@@ -122,10 +122,10 @@ makeFuncRow mParensId prec (Sugar.Apply func specialArgs annotatedArgs) pl =
                 <*> sequenceA
                 [ ExpressionGui.combineSpaced Nothing
                     <*> sequenceA
-                    [ ExprGuiM.makeSubexpressionWith (ExpressionGui.after .~ prec) l
+                    [ ExprGuiM.makeSubexpressionWith 0 (ExpressionGui.after .~ prec) l
                     , makeInfixFuncName func <&> overrideModifyEventMap
                     ]
-                , ExprGuiM.makeSubexpressionWith (ExpressionGui.before .~ prec+1) r
+                , ExprGuiM.makeSubexpressionWith (prec+1) (ExpressionGui.before .~ prec+1) r
                 ]
 
 make ::
@@ -145,7 +145,7 @@ make apply@(Sugar.Apply func _specialArgs annotatedArgs) pl =
                 | otherwise = Nothing
         makeFuncRow mParensId prec apply pl
             & ( if needParens
-                then ExprGuiM.withLocalPrecedence (const (Prec.make 0))
+                then ExprGuiM.withLocalPrecedence 0 (const (Prec.make 0))
                 else
                 if isBoxed
                 then mkBoxed annotatedArgs myId
@@ -175,7 +175,7 @@ mkBoxed ::
 mkBoxed annotatedArgs myId mkFuncRow =
     do
         argRows <- traverse makeArgRows annotatedArgs
-        funcRow <- ExprGuiM.withLocalPrecedence (const (Prec.make 0)) mkFuncRow
+        funcRow <- ExprGuiM.withLocalPrecedence 0 (const (Prec.make 0)) mkFuncRow
         vbox <- ExpressionGui.vboxTopFocalSpaced
         ExpressionGui.addValFrame myId
             ?? vbox
