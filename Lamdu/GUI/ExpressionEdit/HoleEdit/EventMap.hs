@@ -21,7 +21,7 @@ import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.Grid as Grid
 import qualified Graphics.UI.GLFW as GLFW
-import           Lamdu.CharClassification (operatorChars, bracketChars, digitChars, hexDigitChars)
+import           Lamdu.CharClassification (operatorChars, bracketChars, digitChars, hexDigitChars, charPrecedence)
 import qualified Lamdu.Config as Config
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.Info (HoleInfo(..))
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.Info as HoleInfo
@@ -160,16 +160,19 @@ removeUnwanted ::
 removeUnwanted =
     do
         config <- ExprGuiM.readConfig
+        minOpPrec <- ExprGuiM.readMinOpPrec
         let Config.Hole{..} = Config.hole config
-        concat
-            [ Config.delKeys config
-            , holeOpenKeys, holeCloseKeys
-            , Foldable.toList Grid.stdKeys
-            , Config.leaveSubexpressionKeys config
-            , Config.enterSubexpressionKeys config
-            , Config.letAddItemKeys config
-            ] & deleteKeys
-            & return
+        let unwantedKeys =
+                concat
+                [ Config.delKeys config
+                , holeOpenKeys, holeCloseKeys
+                , Foldable.toList Grid.stdKeys
+                , Config.leaveSubexpressionKeys config
+                , Config.enterSubexpressionKeys config
+                , Config.letAddItemKeys config
+                ]
+        let allowedOperator char = charPrecedence char >= minOpPrec
+        return (E.filterChars allowedOperator . deleteKeys unwantedKeys)
 
 mkEventsOnPickedResult ::
     Monad m =>

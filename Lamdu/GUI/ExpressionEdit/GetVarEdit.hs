@@ -214,9 +214,7 @@ make getVar pl =
     do
         config <- ExprGuiM.readConfig
         let Config.Name{..} = Config.name config
-        ExpressionGui.stdWrap pl
-            <*>
-            case getVar of
+        case getVar of
             Sugar.GetBinder binderVar -> makeGetBinder binderVar myId
             Sugar.GetParam param ->
                 case param ^. Sugar.pBinderMode of
@@ -231,5 +229,6 @@ make getVar pl =
                 where
                     name = param ^. Sugar.pNameRef . Sugar.nrName
             Sugar.GetParamsRecord paramsRecordVar -> makeParamsRecord myId paramsRecordVar
+            & ExpressionGui.stdWrap pl
     where
         myId = WidgetIds.fromExprPayload pl

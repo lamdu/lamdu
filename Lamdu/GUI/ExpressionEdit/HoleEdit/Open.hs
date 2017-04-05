@@ -516,7 +516,7 @@ makeOpenSearchAreaGui pl holeInfo =
                 [ rId . (^. HoleResults.rlMain)
                 , (^. HoleResults.rlExtraResultsPrefixId)
                 ] <*> shownResultsLists
-        exprEventMap <- ExprEventMap.make pl
+        exprEventMap <- ExprEventMap.make pl ExprGuiM.NoHolePick
         makeUnderCursorAssignment shownResultsLists
             hasHiddenResults holeInfo
             & assignHoleEditCursor holeInfo shownMainResultsIds

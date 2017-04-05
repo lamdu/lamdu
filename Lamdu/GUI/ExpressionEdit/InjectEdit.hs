@@ -45,12 +45,11 @@ make ::
 make (Sugar.Inject tagG mVal) pl =
     case mVal of
     Nothing ->
-        ExpressionGui.stdWrap pl
-        <*>
         makeCommon "◦"
         -- Give the tag widget the identity of the whole inject
         (tagG & Sugar.tagInstance .~ (pl ^. Sugar.plEntityId))
         (pl ^. Sugar.plData . ExprGuiT.plNearestHoles) []
+        & ExpressionGui.stdWrap pl
     Just val ->
         ExpressionGui.stdWrapParentExpr pl $ \myId ->
         ExprGuiM.makeSubexpressionWith ApplyEdit.prefixPrecedence

@@ -38,9 +38,13 @@ makeWrapper pl holeInfo =
     & Lens._Just %%~
         \holeArg ->
         do
-            exprEventMap <- ExprEventMap.make pl
-            Wrapper.make (hiIds holeInfo) holeArg
-                <&> TreeLayout.widget %~ Widget.weakerEvents exprEventMap
+            (wrapper, holePicker) <-
+                Wrapper.make (hiIds holeInfo) holeArg
+                & ExprGuiM.listenResultPicker
+            exprEventMap <- ExprEventMap.make pl holePicker
+            wrapper
+                & TreeLayout.widget %~ Widget.weakerEvents exprEventMap
+                & return
 
 assignHoleCursor ::
     Functor m =>

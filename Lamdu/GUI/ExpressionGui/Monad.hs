@@ -12,7 +12,7 @@ module Lamdu.GUI.ExpressionGui.Monad
     , makeSubexpressionWith
     , advanceDepth, resetDepth
     --
-    , readConfig, readSettings, readStyle, readCodeAnchors
+    , readConfig, readMinOpPrec, readSettings, readStyle, readCodeAnchors
     , mkPrejumpPosSaver
     , vspacer
     --
@@ -24,7 +24,7 @@ module Lamdu.GUI.ExpressionGui.Monad
     --
     , readVerbose, withVerbose
     --
-    , HolePicker, withHolePicker
+    , HolePicker(..), withHolePicker
     , setResultPicker, listenResultPicker
     , run
     ) where
@@ -145,6 +145,9 @@ readSettings = ExprGuiM $ Lens.view aSettings
 
 readConfig :: Monad m => ExprGuiM m Config
 readConfig = ExprGuiM $ Lens.view aConfig
+
+readMinOpPrec :: Monad m => ExprGuiM m Int
+readMinOpPrec = ExprGuiM $ Lens.view aMinOpPrecedence
 
 readCodeAnchors :: Monad m => ExprGuiM m (Anchors.CodeProps m)
 readCodeAnchors = ExprGuiM $ Lens.view aCodeAnchors

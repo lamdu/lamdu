@@ -3,6 +3,7 @@ module Lamdu.GUI.ExpressionEdit.ApplyEdit
     ( make, prefixPrecedence
     ) where
 
+import qualified Control.Lens as Lens
 import qualified Data.Text as Text
 import           Data.Vector.Vector2 (Vector2(..))
 import qualified Graphics.DrawingCombinators as Draw
@@ -30,16 +31,6 @@ import           Lamdu.Prelude
 
 prefixPrecedence :: Int
 prefixPrecedence = 10
-
-mkOverrideFuncEventMap ::
-    Monad m => Sugar.Actions m ->
-    ExprGuiM m (ExpressionGui m -> ExpressionGui m)
-mkOverrideFuncEventMap actions =
-    do
-        config <- ExprGuiM.readConfig
-        TreeLayout.widget %~
-            Widget.strongerEvents (ExprEventMap.modifyEventMap config actions)
-            & return
 
 mkPrecedence :: Monad m => Sugar.Apply name (ExprGuiT.SugarExpr m) -> Int
 mkPrecedence (Sugar.Apply func specialArgs _annotatedArgs) =
@@ -91,42 +82,52 @@ makeInfixFuncName func =
         -- TODO: What precedence to give when it must be atomic?:
         prec = Prec.make 20
 
+isBoxed :: Sugar.Apply name a -> Bool
+isBoxed apply = Lens.has (Sugar.aAnnotatedArgs . Lens.traversed) apply
+
 makeFuncRow ::
     Monad m =>
     Maybe AnimId ->
     Int ->
     Sugar.Apply name (ExprGuiT.SugarExpr m) ->
-    Sugar.Payload m a -> ExprGuiM m (ExpressionGui m)
-makeFuncRow mParensId prec (Sugar.Apply func specialArgs annotatedArgs) pl =
-    do
-        overrideFuncEventMap <- mkOverrideFuncEventMap (pl ^. Sugar.plActions)
-        case specialArgs of
-            Sugar.NoSpecialArgs ->
-                ExprGuiM.makeSubexpressionWith 0 (const (Prec.make prec)) func
-                <&> overrideFuncEventMap
-            Sugar.ObjectArg arg ->
-                ExpressionGui.combineSpaced mParensId
-                <*> sequenceA
-                [ ExprGuiM.makeSubexpressionWith 0
-                  (ExpressionGui.after .~ prec+1) func
-                  <&> maybeOverrideFuncEventMap
-                , ExprGuiM.makeSubexpressionWith prec
-                  (ExpressionGui.before .~ prec) arg
-                ]
-                where
-                    maybeOverrideFuncEventMap
-                        | null annotatedArgs = id
-                        | otherwise = overrideFuncEventMap
-            Sugar.InfixArgs l r ->
-                ExpressionGui.combineSpaced mParensId
-                <*> sequenceA
-                [ ExpressionGui.combineSpaced Nothing
-                    <*> sequenceA
-                    [ ExprGuiM.makeSubexpressionWith 0 (ExpressionGui.after .~ prec) l
-                    , makeInfixFuncName func <&> overrideFuncEventMap
-                    ]
-                , ExprGuiM.makeSubexpressionWith (prec+1) (ExpressionGui.before .~ prec+1) r
-                ]
+    Sugar.Payload m ExprGuiT.Payload ->
+    ExprGuiM m (ExpressionGui m)
+makeFuncRow mParensId prec apply pl =
+    case specialArgs of
+    Sugar.NoSpecialArgs ->
+        ExprGuiM.makeSubexpressionWith 0 (const (Prec.make prec)) func
+        & overrideFuncEventMap
+    Sugar.ObjectArg arg ->
+        ExpressionGui.combineSpaced mParensId
+        <*> sequenceA
+        [ ExprGuiM.makeSubexpressionWith 0
+          (ExpressionGui.after .~ prec+1) func
+          & overrideFuncEventMap
+        , ExprGuiM.makeSubexpressionWith
+          (if isBoxed apply then 0 else prec)
+          (ExpressionGui.before .~ prec) arg
+        ]
+    Sugar.InfixArgs l r ->
+        ExpressionGui.combineSpaced mParensId
+        <*> sequenceA
+        [ ExpressionGui.combineSpaced Nothing
+            <*> sequenceA
+            [ ExprGuiM.makeSubexpressionWith 0 (ExpressionGui.after .~ prec) l
+            , makeInfixFuncName func & overrideFuncEventMap
+            ]
+        , ExprGuiM.makeSubexpressionWith (prec+1) (ExpressionGui.before .~ prec+1) r
+        ]
+    where
+        overrideFuncEventMap mkFunc
+            | isBoxed apply =
+                  do
+                      (funcGui, holePicker) <- ExprGuiM.listenResultPicker mkFunc
+                      funcEventMap <- ExprEventMap.modifyEventMap pl holePicker
+                      funcGui & TreeLayout.widget %~ Widget.strongerEvents funcEventMap
+                          & return
+            | otherwise = mkFunc
+
+        Sugar.Apply func specialArgs _ = apply
 
 make ::
     Monad m =>
@@ -138,7 +139,7 @@ make apply@(Sugar.Apply func _specialArgs annotatedArgs) pl =
     do
         parentPrec <- ExprGuiM.outerPrecedence <&> Prec.ParentPrecedence
         let needParens =
-                not isBoxed
+                not (isBoxed apply)
                 && Prec.needParens parentPrec (Prec.my prec)
         let mParensId
                 | needParens = Just (Widget.toAnimId myId)
@@ -147,14 +148,13 @@ make apply@(Sugar.Apply func _specialArgs annotatedArgs) pl =
             & ( if needParens
                 then ExprGuiM.withLocalPrecedence 0 (const (Prec.make 0))
                 else
-                if isBoxed
+                if (isBoxed apply)
                 then mkBoxed annotatedArgs myId
                 else id
               )
             & ExprGuiM.assignCursor myId funcId
     where
         funcId = func ^. Sugar.rPayload & WidgetIds.fromExprPayload
-        isBoxed = not $ null annotatedArgs
         prec = mkPrecedence apply
 
 makeArgRows ::
