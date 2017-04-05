@@ -89,7 +89,7 @@ makeInfixFuncName func =
             else return res
     where
         -- TODO: What precedence to give when it must be atomic?:
-        prec = 20
+        prec = Prec.make 20
 
 makeFuncRow ::
     Monad m =>
@@ -102,7 +102,7 @@ makeFuncRow mParensId prec (Sugar.Apply func specialArgs annotatedArgs) pl =
         overrideModifyEventMap <- mkOverrideModifyEventMap (pl ^. Sugar.plActions)
         case specialArgs of
             Sugar.NoSpecialArgs ->
-                ExprGuiM.makeSubexpressionWith (const (fromIntegral prec)) func
+                ExprGuiM.makeSubexpressionWith (const (Prec.make prec)) func
                 <&> overrideModifyEventMap
             Sugar.ObjectArg arg ->
                 ExpressionGui.combineSpaced mParensId
@@ -139,13 +139,13 @@ make apply@(Sugar.Apply func _specialArgs annotatedArgs) pl =
         parentPrec <- ExprGuiM.outerPrecedence <&> Prec.ParentPrecedence
         let needParens =
                 not isBoxed
-                && Prec.needParens parentPrec (Prec.MyPrecedence (fromIntegral prec))
+                && Prec.needParens parentPrec (Prec.my prec)
         let mParensId
                 | needParens = Just (Widget.toAnimId myId)
                 | otherwise = Nothing
         makeFuncRow mParensId prec apply pl
             & ( if needParens
-                then ExprGuiM.withLocalPrecedence (const 0)
+                then ExprGuiM.withLocalPrecedence (const (Prec.make 0))
                 else
                 if isBoxed
                 then mkBoxed annotatedArgs myId
@@ -175,7 +175,7 @@ mkBoxed ::
 mkBoxed annotatedArgs myId mkFuncRow =
     do
         argRows <- traverse makeArgRows annotatedArgs
-        funcRow <- ExprGuiM.withLocalPrecedence (const 0) mkFuncRow
+        funcRow <- ExprGuiM.withLocalPrecedence (const (Prec.make 0)) mkFuncRow
         vbox <- ExpressionGui.vboxTopFocalSpaced
         ExpressionGui.addValFrame myId
             ?? vbox

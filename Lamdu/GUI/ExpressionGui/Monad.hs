@@ -59,6 +59,7 @@ import           Lamdu.GUI.CodeEdit.Settings (Settings)
 import           Lamdu.GUI.ExpressionGui.Types (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
 import           Lamdu.GUI.Precedence (Precedence)
+import qualified Lamdu.GUI.Precedence as Precedence
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Style (Style)
 import qualified Lamdu.Sugar.Types as Sugar
@@ -154,7 +155,7 @@ vspacer configGetter =
 makeSubexpression ::
     Monad m =>
     ExprGuiT.SugarExpr m -> ExprGuiM m (ExpressionGui m)
-makeSubexpression = makeSubexpressionWith (const 0)
+makeSubexpression = makeSubexpressionWith (const (Precedence.make 0))
 
 makeSubexpressionWith ::
     Monad m =>
@@ -198,7 +199,7 @@ run makeSubexpr codeAnchors config settings style (ExprGuiM action) =
     , _aCodeAnchors = codeAnchors
     , _aSubexpressionLayer = Config.maxExprDepth config
     , _aMScopeId = Just topLevelScopeId & pure
-    , _aOuterPrecedence = 0
+    , _aOuterPrecedence = Precedence.make 0
     , _aStyle = style
     , _aVerbose = False
     }

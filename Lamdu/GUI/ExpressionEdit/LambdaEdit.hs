@@ -121,7 +121,7 @@ make lam pl =
     do
         parentPrec <- ExprGuiM.outerPrecedence <&> Prec.ParentPrecedence
         let mParensId
-                | Prec.needParens parentPrec (Prec.MyPrecedence 0) =
+                | Prec.needParens parentPrec (Prec.my 0) =
                     Just (Widget.toAnimId myId)
                 | otherwise = Nothing
         BinderEdit.Parts mParamsEdit mScopeEdit bodyEdit eventMap <-

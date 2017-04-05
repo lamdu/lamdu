@@ -73,9 +73,7 @@ mkNomGui nameSidePrecLens str asList hCombine valId pl (Sugar.Nominal tid val) =
     \myId ->
     do
         parentPrec <- ExprGuiM.outerPrecedence <&> Prec.ParentPrecedence
-        let needParen =
-                Prec.needParens parentPrec
-                (ExpressionGui.MyPrecedence (fromIntegral nomPrecedence))
+        let needParen = Prec.needParens parentPrec (Prec.my nomPrecedence)
         let nomId = Widget.joinId myId ["nom"]
         let nameId = Widget.joinId nomId ["name"]
         isSelected <- WE.isSubCursor nomId & ExprGuiM.widgetEnv

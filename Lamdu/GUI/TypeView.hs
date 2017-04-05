@@ -26,6 +26,7 @@ import qualified Lamdu.Data.Anchors as Anchors
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import           Lamdu.GUI.Precedence (ParentPrecedence(..), MyPrecedence(..), needParens)
+import qualified Lamdu.GUI.Precedence as Precedence
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Sugar.OrderTags (orderedFlatComposite)
 import           System.Random (Random, random)
@@ -89,13 +90,13 @@ makeTFun parentPrecedence a b =
     case a of
     T.TRecord T.CEmpty -> [text "◗ "]
     _ ->
-        [ splitMake (ParentPrecedence 1) a
+        [ splitMake (Precedence.parent 1) a
         , text " → "
         ]
-    ++ [splitMake (ParentPrecedence 0) b]
+    ++ [splitMake (Precedence.parent 0) b]
     & sequence
     <&> hbox
-    >>= parens parentPrecedence (MyPrecedence 0)
+    >>= parens parentPrecedence (Precedence.my 0)
 
 makeTInst :: Monad m => ParentPrecedence -> T.NominalId -> Map T.ParamId Type -> M m View
 makeTInst parentPrecedence tid typeParams =
@@ -107,7 +108,7 @@ makeTInst parentPrecedence tid typeParams =
         let makeTypeParam (T.ParamId tParamId, arg) =
                 do
                     paramIdView <- showIdentifier tParamId
-                    typeView <- splitMake (ParentPrecedence 0) arg
+                    typeView <- splitMake (Precedence.parent 0) arg
                     return
                         [ (GridView.Alignment (Vector2 1 0.5), paramIdView)
                         , (0.5, hspace)
@@ -116,9 +117,9 @@ makeTInst parentPrecedence tid typeParams =
         case Map.toList typeParams of
             [] -> pure nameView
             [(_, arg)] ->
-                splitMake (ParentPrecedence 0) arg
+                splitMake (Precedence.parent 0) arg
                 <&> afterName
-                >>= parens parentPrecedence (MyPrecedence 0)
+                >>= parens parentPrecedence (Precedence.my 0)
             params ->
                 mapM makeTypeParam params
                 <&> GridView.make
@@ -158,7 +159,7 @@ makeField (tag, fieldType) =
     Lens.sequenceOf (Lens.traversed . _2)
     [ (GridView.Alignment (Vector2 1 0.5), makeTag tag)
     , (0.5, mkHSpace)
-    , (GridView.Alignment (Vector2 0 0.5), splitMake (ParentPrecedence 0) fieldType)
+    , (GridView.Alignment (Vector2 0 0.5), splitMake (Precedence.parent 0) fieldType)
     ]
 
 makeSumField :: Monad m => (T.Tag, Type) -> M m [(GridView.Alignment, View)]
@@ -168,7 +169,7 @@ makeSumField (tag, fieldType) =
     Lens.sequenceOf (Lens.traversed . _2)
     [ (GridView.Alignment (Vector2 1 0.5), makeTag tag)
     , (0.5, mkHSpace)
-    , (GridView.Alignment (Vector2 0 0.5), splitMake (ParentPrecedence 0) fieldType)
+    , (GridView.Alignment (Vector2 0 0.5), splitMake (Precedence.parent 0) fieldType)
     ]
 
 makeComposite ::
@@ -216,7 +217,7 @@ make :: Monad m => Type -> AnimId -> ExprGuiM m View
 make t prefix =
     do
         config <- ExprGuiM.readConfig
-        makeInternal (ParentPrecedence 0) t
+        makeInternal (Precedence.parent 0) t
             & runM
             & (`evalStateT` Random.mkStdGen 0)
             <&> View.animFrames %~ Anim.mapIdentities (mappend prefix)
