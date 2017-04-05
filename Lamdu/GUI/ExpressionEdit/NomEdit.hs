@@ -13,7 +13,7 @@ import qualified Graphics.UI.Bottle.WidgetsEnvT as WE
 import qualified Lamdu.Config as Config
 import qualified Lamdu.GUI.ExpressionEdit.BinderEdit as BinderEdit
 import           Lamdu.GUI.ExpressionGui
-    ( ExpressionGui, Precedence, precBefore, precAfter, (<||), (||>) )
+    ( ExpressionGui, Precedence, before, after, (<||), (||>) )
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
@@ -37,7 +37,7 @@ makeToNom ::
     ExprGuiM m (ExpressionGui m)
 makeToNom nom pl =
     nom <&> BinderEdit.makeBinderBodyEdit Sugar.BinderWithoutParams
-    & mkNomGui precBefore "«" (\a b -> [a, b]) (||>) valId pl
+    & mkNomGui before "«" (\a b -> [a, b]) (||>) valId pl
     where
         valId =
             nom ^. Sugar.nVal . Sugar.bbContent . SugarLens.binderContentExpr
@@ -49,8 +49,8 @@ makeFromNom ::
     Sugar.Payload m ExprGuiT.Payload ->
     ExprGuiM m (ExpressionGui m)
 makeFromNom nom pl =
-    nom <&> ExprGuiM.makeSubexpressionWith (precAfter .~ nomPrecedence+1)
-    & mkNomGui precAfter "»" (\a b -> [b, a]) (flip (<||)) valId pl
+    nom <&> ExprGuiM.makeSubexpressionWith (after .~ nomPrecedence+1)
+    & mkNomGui after "»" (\a b -> [b, a]) (flip (<||)) valId pl
     where
         valId = nom ^. Sugar.nVal . Sugar.rPayload . Sugar.plEntityId & WidgetIds.fromEntityId
 

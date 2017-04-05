@@ -29,7 +29,7 @@ module Lamdu.GUI.ExpressionGui
     , WideAnnotationBehavior(..), wideAnnotationBehaviorFromSelected
     , evaluationResult
     -- Expression wrapping
-    , MyPrecedence(..), ParentPrecedence(..), Precedence(..), Precedence.precBefore, Precedence.precAfter
+    , MyPrecedence(..), ParentPrecedence(..), Precedence(..), Precedence.before, Precedence.after
     , maybeAddAnnotationPl
     , stdWrap
     , parentDelegator

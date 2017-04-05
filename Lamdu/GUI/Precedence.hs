@@ -4,14 +4,14 @@ module Lamdu.GUI.Precedence
     , MyPrecedence(..), my
     , ParentPrecedence(..), parent
     , needParens
-    , precBefore, precAfter
+    , before, after
     ) where
 
 import qualified Control.Lens as Lens
 
 data Precedence = Precedence
-    { _precBefore :: {-# UNPACK #-} !Int
-    , _precAfter :: {-# UNPACK #-} !Int
+    { _before :: {-# UNPACK #-} !Int
+    , _after :: {-# UNPACK #-} !Int
     }
 
 Lens.makeLenses ''Precedence
@@ -21,7 +21,7 @@ make p = Precedence p p
 
 -- instance Num Precedence where
 --     fromInteger x = Precedence (fromInteger x) (fromInteger x)
---     x + y = Precedence (_precBefore x + _precBefore y) (_precAfter x + _precAfter y)
+--     x + y = Precedence (_before x + _before y) (_after x + _after y)
 --     (*) = error "instance Num Precedence.*"
 --     (-) = error "instance Num Precedence.-"
 --     abs = error "instance Num Precedence.abs"
@@ -38,4 +38,4 @@ my = MyPrecedence . make
 
 needParens :: ParentPrecedence -> MyPrecedence -> Bool
 needParens (ParentPrecedence x) (MyPrecedence y) =
-    _precBefore x > _precBefore y || _precAfter x > _precAfter y
+    _before x > _before y || _after x > _after y
