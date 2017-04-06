@@ -67,7 +67,7 @@ entityOrdering (Codec.EntityDef (Definition _ _ (_, _, V.Var ident))) = (4, iden
 entityOrdering (Codec.EntityRepl _)                                   = (5, "")
 
 entityVersion :: Codec.Entity
-entityVersion = Codec.EntitySchemaVersion 1
+entityVersion = Codec.EntitySchemaVersion Migration.currentVersion
 
 runExport :: Export a -> T ViewM (a, Aeson.Value)
 runExport act =

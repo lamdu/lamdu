@@ -1,6 +1,9 @@
 -- | Migrate any older version to current
 {-# LANGUAGE OverloadedStrings #-}
-module Lamdu.Data.Export.JSON.Migration (migrateAsNeeded) where
+module Lamdu.Data.Export.JSON.Migration
+    ( migrateAsNeeded
+    , currentVersion
+    ) where
 
 import qualified Control.Lens as Lens
 import qualified Data.Aeson as Aeson
