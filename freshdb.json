@@ -1,6 +1,6 @@
 [
     {
-        "schemaVersion": 1
+        "schemaVersion": 2
     },
     {
         "tagOrder": 1,
@@ -2813,10 +2813,7 @@
         }
     },
     {
-        "defPresentationMode": [
-            "Infix",
-            5
-        ],
+        "defPresentationMode": "Infix",
         "name": "contains",
         "def": "075c51ffab154a67a12beddd9138be18",
         "typ": {
@@ -3334,10 +3331,7 @@
         }
     },
     {
-        "defPresentationMode": [
-            "Infix",
-            4
-        ],
+        "defPresentationMode": "Infix",
         "builtin": [
             "Prelude",
             "=="
@@ -3402,10 +3396,7 @@
         }
     },
     {
-        "defPresentationMode": [
-            "Infix",
-            6
-        ],
+        "defPresentationMode": "Infix",
         "builtin": [
             "Prelude",
             "-"
@@ -3431,10 +3422,7 @@
         }
     },
     {
-        "defPresentationMode": [
-            "Infix",
-            5
-        ],
+        "defPresentationMode": "Infix",
         "name": "..",
         "def": "193690a42fe14ab78610b96346c4b244",
         "typ": {
@@ -3538,10 +3526,7 @@
         }
     },
     {
-        "defPresentationMode": [
-            "Infix",
-            4
-        ],
+        "defPresentationMode": "Infix",
         "builtin": [
             "Prelude",
             ">="
@@ -3572,10 +3557,7 @@
         }
     },
     {
-        "defPresentationMode": [
-            "Infix",
-            5
-        ],
+        "defPresentationMode": "Infix",
         "name": "max",
         "def": "19e923b820b04266a9811a6b34fe7b37",
         "typ": {
@@ -4066,10 +4048,7 @@
         }
     },
     {
-        "defPresentationMode": [
-            "Infix",
-            5
-        ],
+        "defPresentationMode": "Infix",
         "name": "++",
         "def": "38928f0eef7e4a84bbc6cc4c5019c0ed",
         "typ": {
@@ -4351,10 +4330,7 @@
         }
     },
     {
-        "defPresentationMode": [
-            "Infix",
-            5
-        ],
+        "defPresentationMode": "Infix",
         "name": ";",
         "def": "3ae235b4fade4f6e8fd7b9d4987f5229",
         "typ": {
@@ -4875,10 +4851,7 @@
         }
     },
     {
-        "defPresentationMode": [
-            "Infix",
-            4
-        ],
+        "defPresentationMode": "Infix",
         "builtin": [
             "Prelude",
             ">"
@@ -5033,10 +5006,7 @@
         }
     },
     {
-        "defPresentationMode": [
-            "Infix",
-            4
-        ],
+        "defPresentationMode": "Infix",
         "builtin": [
             "Prelude",
             "<"
@@ -5688,10 +5658,7 @@
         }
     },
     {
-        "defPresentationMode": [
-            "Infix",
-            7
-        ],
+        "defPresentationMode": "Infix",
         "builtin": [
             "Prelude",
             "*"
@@ -5764,10 +5731,7 @@
         }
     },
     {
-        "defPresentationMode": [
-            "Infix",
-            7
-        ],
+        "defPresentationMode": "Infix",
         "builtin": [
             "Prelude",
             "div"
@@ -6157,10 +6121,7 @@
         }
     },
     {
-        "defPresentationMode": [
-            "Infix",
-            5
-        ],
+        "defPresentationMode": "Infix",
         "name": "++",
         "def": "70037a0a32e84ee4a5e1b76133f970b5",
         "typ": {
@@ -7239,10 +7200,7 @@
         }
     },
     {
-        "defPresentationMode": [
-            "Infix",
-            5
-        ],
+        "defPresentationMode": "Infix",
         "name": "min",
         "def": "7ec7afa641254cf886a0bb8653d79bd6",
         "typ": {
@@ -8851,10 +8809,7 @@
         }
     },
     {
-        "defPresentationMode": [
-            "Infix",
-            5
-        ],
+        "defPresentationMode": "Infix",
         "name": "..",
         "def": "976e4af994d74546b61bfcdc6bf2c950",
         "typ": {
@@ -9902,10 +9857,7 @@
         }
     },
     {
-        "defPresentationMode": [
-            "Infix",
-            4
-        ],
+        "defPresentationMode": "Infix",
         "builtin": [
             "Prelude",
             "<="
@@ -10014,10 +9966,7 @@
         }
     },
     {
-        "defPresentationMode": [
-            "Infix",
-            7
-        ],
+        "defPresentationMode": "Infix",
         "builtin": [
             "Prelude",
             "/"
@@ -10667,10 +10616,7 @@
         }
     },
     {
-        "defPresentationMode": [
-            "Infix",
-            6
-        ],
+        "defPresentationMode": "Infix",
         "builtin": [
             "Prelude",
             "+"
@@ -11200,10 +11146,7 @@
         }
     },
     {
-        "defPresentationMode": [
-            "Infix",
-            5
-        ],
+        "defPresentationMode": "Infix",
         "name": "++",
         "def": "b56469ead34c4de993403a6babb63af9",
         "typ": {
@@ -11306,10 +11249,7 @@
         }
     },
     {
-        "defPresentationMode": [
-            "Infix",
-            8
-        ],
+        "defPresentationMode": "Infix",
         "builtin": [
             "Prelude",
             "^"
@@ -11937,10 +11877,7 @@
         }
     },
     {
-        "defPresentationMode": [
-            "Infix",
-            7
-        ],
+        "defPresentationMode": "Infix",
         "builtin": [
             "Prelude",
             "mod"
@@ -13400,10 +13337,7 @@
         }
     },
     {
-        "defPresentationMode": [
-            "Infix",
-            1
-        ],
+        "defPresentationMode": "Infix",
         "builtin": [
             "Mut",
             "bind"
@@ -13676,10 +13610,7 @@
         }
     },
     {
-        "defPresentationMode": [
-            "Infix",
-            2
-        ],
+        "defPresentationMode": "Infix",
         "name": "||",
         "def": "dff4e86e63c54fab8b58ab3fe7e440ad",
         "typ": {
@@ -14184,10 +14115,7 @@
         }
     },
     {
-        "defPresentationMode": [
-            "Infix",
-            3
-        ],
+        "defPresentationMode": "Infix",
         "name": "&&",
         "def": "e75aed3cb68c4fd395ce0c5c287eadba",
         "typ": {
@@ -14287,10 +14215,7 @@
         }
     },
     {
-        "defPresentationMode": [
-            "Infix",
-            4
-        ],
+        "defPresentationMode": "Infix",
         "builtin": [
             "Prelude",
             "/="
@@ -14924,10 +14849,7 @@
         }
     },
     {
-        "defPresentationMode": [
-            "Infix",
-            5
-        ],
+        "defPresentationMode": "Infix",
         "name": "gcd",
         "def": "ec584ce102fd47d0bce748a40cb56bab",
         "typ": {
@@ -16011,10 +15933,7 @@
         }
     },
     {
-        "defPresentationMode": [
-            "Infix",
-            5
-        ],
+        "defPresentationMode": "Infix",
         "name": "<&>",
         "def": "f84d288519584812b5561ceccec2baf0",
         "typ": {
