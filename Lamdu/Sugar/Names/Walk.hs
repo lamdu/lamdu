@@ -182,18 +182,20 @@ toBody expr = \case
     where
         toTIdG = tidgName %%~ opGetName NominalName
 
+voidApply :: Apply name a -> Apply () ()
+voidApply app =
+    void app
+    & aAnnotatedArgs . traverse . aaTag . tagGName .~ ()
+
 toExpression :: MonadNaming m => OldExpression m a -> m (NewExpression m a)
 toExpression expr =
     do
         app@(Apply func spec anot) <- expr ^? rBody . _BodyApply
         funcVar <- func ^? rBody . _BodyGetVar . _GetBinder
-        let voidedApp =
-                void app
-                & aAnnotatedArgs . traverse . aaTag . tagGName .~ ()
         let newFunc =
                 funcVar
                 & bvNameRef . nrName %%~
-                    opGetAppliedFuncName voidedApp (binderVarType (funcVar ^. bvForm))
+                    opGetAppliedFuncName (voidApply app) (binderVarType (funcVar ^. bvForm))
                 <&> GetBinder
                 <&> BodyGetVar
                 <&> (`Expression` (func ^. rPayload))
