@@ -94,7 +94,7 @@ defTypeInfoSchemes f (DefinitionNewType (AcceptNewType ot nt a)) =
     ( AcceptNewType
       <$> f ot
       <*> f nt
-      <*> pure a
+      ?? a
     )
 
 defBodySchemes :: Lens.Traversal' (DefinitionBody name m expr) Scheme

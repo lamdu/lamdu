@@ -97,8 +97,8 @@ makeInternal Style{..} str displayStr myId =
         animId = Widget.toAnimId myId
 
 makeUnfocused :: Style -> Text -> Widget.Id -> Widget (Text, Widget.EventResult)
-makeUnfocused Style{..} str myId =
-    makeInternal Style{..} str displayStr myId
+makeUnfocused Style{..} str =
+    makeInternal Style{..} str displayStr
     where
         displayStr = makeDisplayStr _sEmptyUnfocusedString str
 

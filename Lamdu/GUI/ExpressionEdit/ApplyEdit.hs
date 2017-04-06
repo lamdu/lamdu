@@ -81,7 +81,7 @@ makeInfixFuncName funcVar myId =
             | otherwise = id
 
 isBoxed :: Sugar.LabeledApply name binderVar a -> Bool
-isBoxed apply = Lens.has (Sugar.aAnnotatedArgs . Lens.traversed) apply
+isBoxed = Lens.has (Sugar.aAnnotatedArgs . Lens.traversed)
 
 makeFuncRow ::
     Monad m =>

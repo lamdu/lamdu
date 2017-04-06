@@ -1,5 +1,5 @@
 -- | JSON encoder/decoder for Lamdu types
-{-# LANGUAGE NoImplicitPrelude, LambdaCase, OverloadedStrings, PatternGuards, FlexibleContexts #-}
+{-# LANGUAGE NoImplicitPrelude, LambdaCase, OverloadedStrings, FlexibleContexts #-}
 module Lamdu.Data.Export.JSON.Codec
     ( TagOrder, Entity(..)
     ) where
