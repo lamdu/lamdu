@@ -53,7 +53,8 @@ makeEditor ::
 makeEditor body =
     case body of
     Sugar.BodyHole         x -> x & HoleEdit.make
-    Sugar.BodyApply        x -> x & ApplyEdit.make
+    Sugar.BodyLabeledApply x -> x & ApplyEdit.makeLabeled
+    Sugar.BodySimpleApply  x -> x & ApplyEdit.makeSimple
     Sugar.BodyLam          x -> x & LambdaEdit.make
     Sugar.BodyLiteral      x -> x & LiteralEdit.make
     Sugar.BodyRecord       x -> x & RecordEdit.make

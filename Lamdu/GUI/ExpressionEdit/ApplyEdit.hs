@@ -1,6 +1,6 @@
 {-# LANGUAGE NoImplicitPrelude, OverloadedStrings #-}
 module Lamdu.GUI.ExpressionEdit.ApplyEdit
-    ( make, prefixPrecedence
+    ( makeSimple, makeLabeled, prefixPrecedence
     ) where
 
 import qualified Control.Lens as Lens
@@ -14,7 +14,7 @@ import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widget.TreeLayout as TreeLayout
 import qualified Lamdu.CharClassification as CharClassification
 import qualified Lamdu.GUI.ExpressionEdit.BinderEdit as BinderEdit
-import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
+import qualified Lamdu.GUI.ExpressionEdit.GetVarEdit as GetVarEdit
 import qualified Lamdu.GUI.ExpressionEdit.TagEdit as TagEdit
 import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
@@ -23,7 +23,6 @@ import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
 import qualified Lamdu.GUI.Precedence as Prec
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
-import qualified Lamdu.Sugar.Names.Get as NamesGet
 import           Lamdu.Sugar.Names.Types (Name(..))
 import qualified Lamdu.Sugar.Types as Sugar
 
@@ -32,15 +31,19 @@ import           Lamdu.Prelude
 prefixPrecedence :: Int
 prefixPrecedence = 10
 
-mkPrecedence :: Monad m => Sugar.Apply name (ExprGuiT.SugarExpr m) -> Int
-mkPrecedence (Sugar.Apply func specialArgs _annotatedArgs) =
-    case specialArgs of
+mkPrecedence :: Sugar.LabeledApply n0 (Sugar.BinderVar (Name m) m0) expr -> Int
+mkPrecedence apply =
+    case apply ^. Sugar.aSpecialArgs of
     Sugar.NoSpecialArgs -> 0
     Sugar.ObjectArg{} -> prefixPrecedence
     Sugar.InfixArgs _ _ ->
-        case NamesGet.fromExpression func <&> Text.unpack . nName of
-        [x:_] -> CharClassification.charPrecedence x
+        case funcName of
+        x:_ -> CharClassification.charPrecedence x
         _ -> 20
+    where
+        funcName =
+            apply ^. Sugar.aFunc . Sugar.bvNameRef . Sugar.nrName
+            & nName & Text.unpack
 
 infixMarker :: Vector2 Anim.R -> Draw.Image ()
 infixMarker (Vector2 w h) =
@@ -67,42 +70,33 @@ addInfixMarker widgetId widget =
         frameId = Widget.toAnimId widgetId ++ ["infix"]
 
 makeInfixFuncName ::
-    Monad m => ExprGuiT.SugarExpr m -> ExprGuiM m (ExpressionGui m)
-makeInfixFuncName func =
-    do
-        res <- ExprGuiM.makeSubexpressionWith 0 (const prec) func
-        if any BinderEdit.nonOperatorName (NamesGet.fromExpression func)
-            then
-                res
-                & TreeLayout.widget %~
-                    addInfixMarker (WidgetIds.fromExprPayload (func ^. Sugar.rPayload))
-                & return
-            else return res
+    Monad m => Sugar.BinderVar (Name m) m -> Widget.Id -> ExprGuiM m (ExpressionGui m)
+makeInfixFuncName funcVar myId =
+    GetVarEdit.makeGetBinder funcVar myId
+    <&> mAddMarker
     where
-        -- TODO: What precedence to give when it must be atomic?:
-        prec = Prec.make 20
+        mAddMarker
+            | funcVar ^. Sugar.bvNameRef . Sugar.nrName & BinderEdit.nonOperatorName =
+                TreeLayout.widget %~ addInfixMarker myId
+            | otherwise = id
 
-isBoxed :: Sugar.Apply name a -> Bool
+isBoxed :: Sugar.LabeledApply name binderVar a -> Bool
 isBoxed apply = Lens.has (Sugar.aAnnotatedArgs . Lens.traversed) apply
 
 makeFuncRow ::
     Monad m =>
     Maybe AnimId ->
     Int ->
-    Sugar.Apply name (ExprGuiT.SugarExpr m) ->
-    Sugar.Payload m ExprGuiT.Payload ->
+    Sugar.LabeledApply name (Sugar.BinderVar (Name m) m) (ExprGuiT.SugarExpr m) ->
+    Widget.Id ->
     ExprGuiM m (ExpressionGui m)
-makeFuncRow mParensId prec apply pl =
+makeFuncRow mParensId prec apply myId =
     case specialArgs of
-    Sugar.NoSpecialArgs ->
-        ExprGuiM.makeSubexpressionWith 0 (const (Prec.make prec)) func
-        & overrideFuncEventMap
+    Sugar.NoSpecialArgs -> GetVarEdit.makeGetBinder funcVar myId
     Sugar.ObjectArg arg ->
         ExpressionGui.combineSpaced mParensId
         <*> sequenceA
-        [ ExprGuiM.makeSubexpressionWith 0
-          (ExpressionGui.after .~ prec+1) func
-          & overrideFuncEventMap
+        [ GetVarEdit.makeGetBinder funcVar myId
         , ExprGuiM.makeSubexpressionWith
           (if isBoxed apply then 0 else prec)
           (ExpressionGui.before .~ prec) arg
@@ -113,28 +107,19 @@ makeFuncRow mParensId prec apply pl =
         [ ExpressionGui.combineSpaced Nothing
             <*> sequenceA
             [ ExprGuiM.makeSubexpressionWith 0 (ExpressionGui.after .~ prec) l
-            , makeInfixFuncName func & overrideFuncEventMap
+            , makeInfixFuncName funcVar myId
             ]
         , ExprGuiM.makeSubexpressionWith (prec+1) (ExpressionGui.before .~ prec+1) r
         ]
     where
-        overrideFuncEventMap mkFunc
-            | isBoxed apply =
-                  do
-                      (funcGui, holePicker) <- ExprGuiM.listenResultPicker mkFunc
-                      funcEventMap <- ExprEventMap.modifyEventMap pl holePicker
-                      funcGui & TreeLayout.widget %~ Widget.strongerEvents funcEventMap
-                          & return
-            | otherwise = mkFunc
+        Sugar.LabeledApply funcVar specialArgs _ = apply
 
-        Sugar.Apply func specialArgs _ = apply
-
-make ::
+makeLabeled ::
     Monad m =>
-    Sugar.Apply (Name m) (ExprGuiT.SugarExpr m) ->
+    Sugar.LabeledApply (Name m) (Sugar.BinderVar (Name m) m) (ExprGuiT.SugarExpr m) ->
     Sugar.Payload m ExprGuiT.Payload ->
     ExprGuiM m (ExpressionGui m)
-make apply@(Sugar.Apply func _specialArgs annotatedArgs) pl =
+makeLabeled apply pl =
     ExpressionGui.stdWrapParentExpr pl $ \myId ->
     do
         parentPrec <- ExprGuiM.outerPrecedence <&> Prec.ParentPrecedence
@@ -144,17 +129,15 @@ make apply@(Sugar.Apply func _specialArgs annotatedArgs) pl =
         let mParensId
                 | needParens = Just (Widget.toAnimId myId)
                 | otherwise = Nothing
-        makeFuncRow mParensId prec apply pl
+        makeFuncRow mParensId prec apply myId
             & ( if needParens
                 then ExprGuiM.withLocalPrecedence 0 (const (Prec.make 0))
                 else
-                if (isBoxed apply)
-                then mkBoxed annotatedArgs myId
+                if isBoxed apply
+                then mkBoxed (apply ^. Sugar.aAnnotatedArgs) myId
                 else id
               )
-            & ExprGuiM.assignCursor myId funcId
     where
-        funcId = func ^. Sugar.rPayload & WidgetIds.fromExprPayload
         prec = mkPrecedence apply
 
 makeArgRows ::
@@ -180,3 +163,25 @@ mkBoxed annotatedArgs myId mkFuncRow =
         ExpressionGui.addValFrame myId
             ?? vbox
                 ([funcRow, vbox argRows] <&> TreeLayout.alignment . _1 .~ 0)
+
+makeSimple ::
+    Monad m =>
+    Sugar.Apply (ExprGuiT.SugarExpr m) ->
+    Sugar.Payload m ExprGuiT.Payload ->
+    ExprGuiM m (ExpressionGui m)
+makeSimple (Sugar.Apply func arg) pl =
+    ExpressionGui.stdWrapParentExpr pl $ \myId ->
+    do
+        parentPrec <- ExprGuiM.outerPrecedence <&> Prec.ParentPrecedence
+        let mParensId
+                | Prec.needParens parentPrec (Prec.my prefixPrecedence) =
+                    Just (Widget.toAnimId myId)
+                | otherwise = Nothing
+        ExpressionGui.combineSpaced mParensId
+            <*> sequenceA
+            [ ExprGuiM.makeSubexpressionWith
+              0 (ExpressionGui.after .~ prefixPrecedence+1) func
+            , ExprGuiM.makeSubexpressionWith
+              prefixPrecedence (ExpressionGui.before .~ prefixPrecedence) arg
+            ]
+    & ExprGuiM.assignCursor myId (func ^. Sugar.rPayload & WidgetIds.fromExprPayload)

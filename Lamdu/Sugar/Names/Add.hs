@@ -72,7 +72,7 @@ p0cpsNameConvertor :: Monad tm => Walk.CPSNameConvertor (Pass0LoadNames tm)
 p0cpsNameConvertor uuid =
     CPS $ \k -> (,) <$> getMStoredName uuid <*> k
 
-type FunctionSignature = Apply () ()
+type FunctionSignature = LabeledApply () () ()
 
 -- | Info about a single instance of use of a name:
 data NameInstance = NameInstance

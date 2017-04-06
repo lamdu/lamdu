@@ -36,7 +36,7 @@ class (Monad m, Monad (TM m)) => MonadNaming m where
     opWithTagName :: CPSNameConvertor m
     opGetName :: NameType -> NameConvertor m
 
-    opGetAppliedFuncName :: Apply () () -> NameType -> NameConvertor m
+    opGetAppliedFuncName :: LabeledApply () () () -> NameType -> NameConvertor m
     opGetAppliedFuncName _ = opGetName
 
 type OldExpression m a = Expression (OldName m) (TM m) a
@@ -162,6 +162,16 @@ toTagG ::
     m (TagG (NewName m))
 toTagG = tagGName %%~ opGetName TagName
 
+toLabeledApply ::
+    MonadNaming m =>
+    LabeledApply (OldName m) (BinderVar (OldName m) p) a ->
+    m (LabeledApply (NewName m) (BinderVar (NewName m) p) a)
+toLabeledApply LabeledApply{..} =
+    LabeledApply
+    <$> toBinderVar _aFunc
+    <*> pure _aSpecialArgs
+    <*> (traverse . aaTag) toTagG _aAnnotatedArgs
+
 toBody ::
     MonadNaming m => (a -> m b) ->
     Body (OldName m) (TM m) a ->
@@ -171,7 +181,8 @@ toBody expr = \case
     BodyInject       x -> traverse expr x >>= iTag toTagG <&> BodyInject
     BodyRecord       x -> traverse expr x >>= (rItems . traverse . rfTag) toTagG <&> BodyRecord
     BodyCase         x -> traverse expr x >>= (cAlts . traverse . caTag) toTagG <&> BodyCase
-    BodyApply        x -> traverse expr x >>= (aAnnotatedArgs . traverse . aaTag) toTagG <&> BodyApply
+    BodySimpleApply  x -> traverse expr x <&> BodySimpleApply
+    BodyLabeledApply x -> traverse expr x >>= toLabeledApply <&> BodyLabeledApply
     BodyHole         x -> traverse expr x >>= holeActions toHoleActions <&> BodyHole
     BodyFromNom      x -> traverse expr x >>= nTId toTIdG <&> BodyFromNom
     BodyToNom        x -> traverse (toBinderBody expr) x >>= nTId toTIdG <&> BodyToNom
@@ -182,28 +193,27 @@ toBody expr = \case
     where
         toTIdG = tidgName %%~ opGetName NominalName
 
-voidApply :: Apply name a -> Apply () ()
-voidApply app =
-    void app
-    & aAnnotatedArgs . traverse . aaTag . tagGName .~ ()
+voidLabeledApply :: LabeledApply name binderVar a -> LabeledApply () () ()
+voidLabeledApply LabeledApply{..} =
+    LabeledApply
+    { _aFunc = ()
+    , _aSpecialArgs = void _aSpecialArgs
+    , _aAnnotatedArgs = _aAnnotatedArgs <&> void <&> aaTag . tagGName .~ ()
+    }
 
 toExpression :: MonadNaming m => OldExpression m a -> m (NewExpression m a)
 toExpression expr =
     do
-        app@(Apply func spec anot) <- expr ^? rBody . _BodyApply
-        funcVar <- func ^? rBody . _BodyGetVar . _GetBinder
-        let newFunc =
+        app@(LabeledApply funcVar spec anot) <- expr ^? rBody . _BodyLabeledApply
+        let newFuncVar =
                 funcVar
                 & bvNameRef . nrName %%~
-                    opGetAppliedFuncName (voidApply app) (binderVarType (funcVar ^. bvForm))
-                <&> GetBinder
-                <&> BodyGetVar
-                <&> (`Expression` (func ^. rPayload))
-        Apply
-            <$> newFunc
+                    opGetAppliedFuncName (voidLabeledApply app) (binderVarType (funcVar ^. bvForm))
+        LabeledApply
+            <$> newFuncVar
             <*> traverse toExpression spec
             <*> traverse onAnnotatedArg anot
-            <&> BodyApply <&> (`Expression` (expr ^. rPayload))
+            <&> BodyLabeledApply <&> (`Expression` (expr ^. rPayload))
             & Just
     & fromMaybe (rBody (toBody toExpression) expr)
     where

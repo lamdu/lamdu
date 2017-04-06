@@ -15,37 +15,25 @@ import           Lamdu.Prelude
 
 type T = Transaction
 
-indirectDefinitionUUID :: ExpressionU m pl -> Maybe UUID
-indirectDefinitionUUID funcS =
-    case funcS ^. Sugar.rBody of
-    Sugar.BodyGetVar (Sugar.GetBinder binderVar) ->
-        Just $ binderVar ^. Sugar.bvNameRef . Sugar.nrName
-    _ -> Nothing
-
-indirectDefinitionPresentationMode ::
-    Monad m => ExpressionU m pl -> T m (Maybe Sugar.PresentationMode)
-indirectDefinitionPresentationMode =
-    Lens.traverse (Transaction.getP . Anchors.assocPresentationMode) .
-    indirectDefinitionUUID
-
-addToApply ::
+addToLabeledApply ::
     Monad m =>
-    Sugar.Apply name (ExpressionU m pl) ->
-    T m (Sugar.Apply name (ExpressionU m pl))
-addToApply a =
+    Sugar.LabeledApply UUID (Sugar.BinderVar UUID f) expr ->
+    T m (Sugar.LabeledApply UUID (Sugar.BinderVar UUID f) expr)
+addToLabeledApply a =
     case a ^. Sugar.aSpecialArgs of
     Sugar.NoSpecialArgs ->
         do
             presentationMode <-
-                a ^. Sugar.aFunc & indirectDefinitionPresentationMode
+                a ^. Sugar.aFunc . Sugar.bvNameRef . Sugar.nrName
+                & Anchors.assocPresentationMode & Transaction.getP
             let (specialArgs, annotatedArgs) =
                     case (presentationMode, a ^. Sugar.aAnnotatedArgs) of
-                    (Just Sugar.Infix, a0:a1:as) ->
+                    (Sugar.Infix, a0:a1:as) ->
                         ( Sugar.InfixArgs
                           (a0 ^. Sugar.aaExpr) (a1 ^. Sugar.aaExpr)
                         , as
                         )
-                    (Just Sugar.OO, a0:as) ->
+                    (Sugar.OO, a0:as) ->
                         (Sugar.ObjectArg (a0 ^. Sugar.aaExpr), as)
                     (_, args) -> (Sugar.NoSpecialArgs, args)
             a
@@ -65,7 +53,7 @@ addToHole =
     _2 %~ (>>= addToHoleResult)
 
 addToBody :: Monad m => BodyU m pl -> T m (BodyU m pl)
-addToBody (Sugar.BodyApply a) = addToApply a <&> Sugar.BodyApply
+addToBody (Sugar.BodyLabeledApply a) = addToLabeledApply a <&> Sugar.BodyLabeledApply
 addToBody (Sugar.BodyHole a) = addToHole a & Sugar.BodyHole & return
 addToBody b = return b
 

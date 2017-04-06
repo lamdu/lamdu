@@ -55,8 +55,8 @@ orderType t =
 orderRecord :: Monad m => Order m (Sugar.Record name f a)
 orderRecord = Sugar.rItems %%~ orderByTag (^. Sugar.rfTag . Sugar.tagVal)
 
-orderApply :: Monad m => Order m (Sugar.Apply name a)
-orderApply = Sugar.aAnnotatedArgs %%~ orderByTag (^. Sugar.aaTag . Sugar.tagVal)
+orderLabeledApply :: Monad m => Order m (Sugar.LabeledApply name binderVar a)
+orderLabeledApply = Sugar.aAnnotatedArgs %%~ orderByTag (^. Sugar.aaTag . Sugar.tagVal)
 
 orderHoleResult :: Monad m => Order m (Sugar.HoleResult name m)
 orderHoleResult = Sugar.holeResultConverted %%~ orderExpr
@@ -75,9 +75,10 @@ orderLam = Sugar.lamBinder orderBinder
 orderBody :: Monad m => Order m (Sugar.Body name m a)
 orderBody (Sugar.BodyLam l) = orderLam l <&> Sugar.BodyLam
 orderBody (Sugar.BodyRecord r) = orderRecord r <&> Sugar.BodyRecord
-orderBody (Sugar.BodyApply a) = orderApply a <&> Sugar.BodyApply
+orderBody (Sugar.BodyLabeledApply a) = orderLabeledApply a <&> Sugar.BodyLabeledApply
 orderBody (Sugar.BodyCase c) = orderCase c <&> Sugar.BodyCase
 orderBody (Sugar.BodyHole a) = orderHole a & Sugar.BodyHole & return
+orderBody x@Sugar.BodySimpleApply{} = return x
 orderBody x@Sugar.BodyLiteral{} = return x
 orderBody x@Sugar.BodyGetField{} = return x
 orderBody x@Sugar.BodyGetVar{} = return x

@@ -8,7 +8,8 @@ module Lamdu.Sugar.Types.Expression
         , wrap, setToHole, setToInnerExpr, extract
     , Literal(..), _LiteralNum, _LiteralBytes, _LiteralText
     , Body(..)
-        , _BodyLam, _BodyApply, _BodyGetVar, _BodyGetField, _BodyInject, _BodyHole
+        , _BodyLam, _BodyLabeledApply, _BodySimpleApply
+        , _BodyGetVar, _BodyGetField, _BodyInject, _BodyHole
         , _BodyLiteral, _BodyCase, _BodyRecord
         , _BodyFromNom, _BodyToNom
     , Payload(..), plEntityId, plAnnotation, plActions, plData
@@ -40,7 +41,7 @@ module Lamdu.Sugar.Types.Expression
     , ParamsRecordVar(..), prvFieldNames
     , SpecialArgs(..), _NoSpecialArgs, _ObjectArg, _InfixArgs
     , AnnotatedArg(..), aaTag, aaExpr
-    , Apply(..), aFunc, aSpecialArgs, aAnnotatedArgs
+    , LabeledApply(..), aFunc, aSpecialArgs, aAnnotatedArgs
     , Unwrap(..), _UnwrapAction, _UnwrapTypeMismatch
     , HoleArg(..), haExpr, haUnwrap
     , HoleOption(..), hoVal, hoSugaredBaseExpr, hoResults
@@ -53,6 +54,7 @@ module Lamdu.Sugar.Types.Expression
         , holeResultPick
     , PickedResult(..), prIdTranslation
     , Lambda(..), lamBinder, lamMode
+    , V.Apply(..), V.applyFunc, V.applyArg
     ) where
 
 import qualified Control.Lens as Lens
@@ -63,6 +65,7 @@ import           Data.Store.Transaction (Transaction, Property)
 import           Data.UUID.Types (UUID)
 import qualified Lamdu.Calc.Type as T
 import           Lamdu.Calc.Type.Scheme (Scheme)
+import qualified Lamdu.Calc.Val as V
 import           Lamdu.Calc.Val.Annotated (Val)
 import           Lamdu.Sugar.Internal.EntityId (EntityId)
 import           Lamdu.Sugar.Types.Binder
@@ -283,8 +286,8 @@ data AnnotatedArg name expr = AnnotatedArg
     , _aaExpr :: expr
     } deriving (Functor, Foldable, Traversable, Eq, Ord, Show)
 
-data Apply name expr = Apply
-    { _aFunc :: expr
+data LabeledApply name funcVar expr = LabeledApply
+    { _aFunc :: funcVar
     , _aSpecialArgs :: SpecialArgs expr
     , _aAnnotatedArgs :: [AnnotatedArg name expr]
     } deriving (Functor, Foldable, Traversable, Eq, Ord, Show)
@@ -301,7 +304,8 @@ data Lambda name m expr = Lambda
 
 data Body name m expr
     = BodyLam (Lambda name m expr)
-    | BodyApply (Apply name expr)
+    | BodySimpleApply (V.Apply expr)
+    | BodyLabeledApply (LabeledApply name (BinderVar name m) expr)
     | BodyHole (Hole name m expr)
     | BodyLiteral (Literal (Property m))
     | BodyRecord (Record name m expr)
@@ -318,7 +322,8 @@ instance Show (Body name m expr) where
     show (BodyLam _) = "TODO show lam"
     show BodyHole {} = "Hole"
     show BodyLiteral {} = "Literal"
-    show BodyApply {} = "LabelledApply:TODO"
+    show BodySimpleApply {} = "SimpleApply:TODO"
+    show BodyLabeledApply {} = "LabelledApply:TODO"
     show BodyRecord {} = "Record:TODO"
     show BodyGetField {} = "GetField:TODO"
     show BodyCase {} = "Case:TODO"
@@ -330,7 +335,6 @@ instance Show (Body name m expr) where
 
 Lens.makeLenses ''Actions
 Lens.makeLenses ''AnnotatedArg
-Lens.makeLenses ''Apply
 Lens.makeLenses ''BinderVar
 Lens.makeLenses ''Body
 Lens.makeLenses ''Case
@@ -346,6 +350,7 @@ Lens.makeLenses ''HoleArg
 Lens.makeLenses ''HoleOption
 Lens.makeLenses ''HoleResult
 Lens.makeLenses ''Inject
+Lens.makeLenses ''LabeledApply
 Lens.makeLenses ''Lambda
 Lens.makeLenses ''Nominal
 Lens.makeLenses ''Param

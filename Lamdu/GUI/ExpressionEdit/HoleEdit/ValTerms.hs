@@ -28,7 +28,8 @@ formatLiteral (Sugar.LiteralBytes i) = formatProp i
 bodyShape :: Sugar.Body (Name m) m expr -> [Text]
 bodyShape = \case
     Sugar.BodyLam {} -> ["lambda", "\\", "Λ", "λ"]
-    Sugar.BodyApply {} -> ["Apply"]
+    Sugar.BodySimpleApply {} -> ["Apply"]
+    Sugar.BodyLabeledApply {} -> ["Apply"]
     Sugar.BodyRecord r ->
         ["record", "{}", "()"] ++
         case r of

@@ -106,8 +106,8 @@ convertLabeled funcS argS argI exprPl =
                     <&> EntityId.ofValI
                     & SetToInnerExpr
                 _ -> NoInnerExpr
-        BodyApply Apply
-            { _aFunc = funcS
+        BodyLabeledApply LabeledApply
+            { _aFunc = sBinderVar
             , _aSpecialArgs = NoSpecialArgs
             , _aAnnotatedArgs = args
             }
@@ -124,11 +124,11 @@ convertPrefix ::
     ExpressionU m a -> ExpressionU m a ->
     Input.Payload m a -> ConvertM m (ExpressionU m a)
 convertPrefix funcS argS applyPl =
-    addActions applyPl $ BodyApply Apply
-    { _aFunc = funcS
-    , _aSpecialArgs = ObjectArg argS
-    , _aAnnotatedArgs = []
+    BodySimpleApply Apply
+    { _applyFunc = funcS
+    , _applyArg = argS
     }
+    & addActions applyPl
 
 convertAppliedCase ::
     (Monad m, Monoid a) =>

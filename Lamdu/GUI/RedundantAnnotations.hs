@@ -70,8 +70,10 @@ markAnnotationsToDisplay (Expression oldBody pl) =
         Expression newBody pl
     BodyGetField _ ->
         Expression newBody pl
-    BodyApply app ->
-        Expression (BodyApply (app & aFunc %~ dontShowAnnotation)) pl
+    BodySimpleApply app ->
+        Expression (BodySimpleApply (app & applyFunc %~ dontShowAnnotation)) pl
+    BodyLabeledApply _ ->
+        Expression newBody pl
     BodyHole hole ->
         Expression (BodyHole hole') pl & forceShowType
         where
