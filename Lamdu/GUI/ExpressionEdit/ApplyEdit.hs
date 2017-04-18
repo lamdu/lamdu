@@ -104,7 +104,7 @@ makeFuncRow mParensId prec apply myId =
     Sugar.InfixArgs l r ->
         ExpressionGui.combineSpacedMParens mParensId
         <*> sequenceA
-        [ ExpressionGui.combineSpacedMParens Nothing
+        [ ExpressionGui.combineSpaced
             <*> sequenceA
             [ ExprGuiM.makeSubexpressionWith 0 (ExpressionGui.after .~ prec) l
             , makeInfixFuncName funcVar myId

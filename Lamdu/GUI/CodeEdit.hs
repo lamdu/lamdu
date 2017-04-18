@@ -137,7 +137,7 @@ makeReplEdit ::
     Env m -> ExprGuiT.SugarExpr m ->
     ExprGuiM m (TreeLayout (M m Widget.EventResult))
 makeReplEdit env replExpr =
-    ExpressionGui.combineSpacedMParens Nothing
+    ExpressionGui.combineSpaced
     <*> sequence
     [ ExpressionGui.makeFocusableView (Widget.joinId WidgetIds.replId ["symbol"])
       <*> ExpressionGui.makeLabel "⋙" (Widget.toAnimId WidgetIds.replId)
