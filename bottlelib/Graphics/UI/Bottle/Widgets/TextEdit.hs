@@ -62,7 +62,7 @@ tillEndOfWord xs = spaces <> nonSpaces
 
 makeDisplayStr :: Text -> Text -> Text
 makeDisplayStr empty ""  = empty
-makeDisplayStr _     str = str
+makeDisplayStr _     str = Text.take 5000 str
 
 encodeCursor :: Widget.Id -> Cursor -> Widget.Id
 encodeCursor myId = Widget.joinId myId . (:[]) . BinUtils.encodeS
