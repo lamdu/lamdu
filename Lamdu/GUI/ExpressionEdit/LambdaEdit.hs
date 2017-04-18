@@ -119,11 +119,6 @@ make lam pl =
     ExpressionGui.stdWrapParentExpr pl $ \myId ->
     ExprGuiM.assignCursor myId bodyId $
     do
-        parentPrec <- ExprGuiM.outerPrecedence <&> Prec.ParentPrecedence
-        let mParensId
-                | Prec.needParens parentPrec (Prec.my 0) =
-                    Just (Widget.toAnimId myId)
-                | otherwise = Nothing
         BinderEdit.Parts mParamsEdit mScopeEdit bodyEdit eventMap <-
             BinderEdit.makeParts funcApplyLimit binder bodyId myId
         let animId = Widget.toAnimId myId
@@ -132,6 +127,10 @@ make lam pl =
             (_, Sugar.NullParam{}) -> mkLhsEdits mParamsEdit mScopeEdit & return
             (Sugar.LightLambda, _) -> mkLightLambda params myId ?? mParamsEdit ?? mScopeEdit
             _ -> mkExpanded animId ?? mParamsEdit ?? mScopeEdit
+        parentPrec <- ExprGuiM.outerPrecedence <&> Prec.ParentPrecedence
+        let mParensId
+                | Prec.needParens parentPrec (Prec.my 0) = Just animId
+                | otherwise = Nothing
         ExpressionGui.combineSpaced mParensId
             <*> (ExpressionGui.combineSpaced Nothing ?? paramsAndLabelEdits
                 <&> (: [bodyEdit]))
