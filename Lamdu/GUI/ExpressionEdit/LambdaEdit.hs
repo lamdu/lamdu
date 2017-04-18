@@ -131,8 +131,8 @@ make lam pl =
         let mParensId
                 | Prec.needParens parentPrec (Prec.my 0) = Just animId
                 | otherwise = Nothing
-        ExpressionGui.combineSpaced mParensId
-            <*> (ExpressionGui.combineSpaced Nothing ?? paramsAndLabelEdits
+        ExpressionGui.combineSpacedMParens mParensId
+            <*> (ExpressionGui.combineSpacedMParens Nothing ?? paramsAndLabelEdits
                 <&> (: [bodyEdit]))
             <&> TreeLayout.widget %~ Widget.weakerEvents eventMap
     where

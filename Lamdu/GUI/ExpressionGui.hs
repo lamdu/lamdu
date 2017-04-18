@@ -5,7 +5,7 @@ module Lamdu.GUI.ExpressionGui
     , render
     -- General:
     , stdHSpace, stdVSpace
-    , combine, combineSpaced
+    , combine, combineSpacedMParens
     , (||>), (<||)
     , vboxTopFocal, vboxTopFocalSpaced
     , horizVertFallback
@@ -271,9 +271,9 @@ makeParenIndentInfo parensId =
         stdSpacing <- ExprGuiM.widgetEnv BWidgets.stdSpacing <&> (^. _1)
         ParenIndentInfo parensId textStyle conf stdSpacing & return
 
-combineSpaced ::
+combineSpacedMParens ::
     Monad m => Maybe AnimId -> ExprGuiM m ([TreeLayout a] -> TreeLayout a)
-combineSpaced mParensId =
+combineSpacedMParens mParensId =
     do
         hSpace <- stdHSpace <&> AlignedWidget.fromCenteredWidget
         vSpace <- stdVSpace <&> TreeLayout.fromCenteredWidget

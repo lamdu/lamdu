@@ -94,7 +94,7 @@ makeFuncRow mParensId prec apply myId =
     case specialArgs of
     Sugar.NoSpecialArgs -> GetVarEdit.makeGetBinder funcVar myId
     Sugar.ObjectArg arg ->
-        ExpressionGui.combineSpaced mParensId
+        ExpressionGui.combineSpacedMParens mParensId
         <*> sequenceA
         [ GetVarEdit.makeGetBinder funcVar myId
         , ExprGuiM.makeSubexpressionWith
@@ -102,9 +102,9 @@ makeFuncRow mParensId prec apply myId =
           (ExpressionGui.before .~ prec) arg
         ]
     Sugar.InfixArgs l r ->
-        ExpressionGui.combineSpaced mParensId
+        ExpressionGui.combineSpacedMParens mParensId
         <*> sequenceA
-        [ ExpressionGui.combineSpaced Nothing
+        [ ExpressionGui.combineSpacedMParens Nothing
             <*> sequenceA
             [ ExprGuiM.makeSubexpressionWith 0 (ExpressionGui.after .~ prec) l
             , makeInfixFuncName funcVar myId
@@ -177,7 +177,7 @@ makeSimple (Sugar.Apply func arg) pl =
                 | Prec.needParens parentPrec (Prec.my prefixPrecedence) =
                     Just (Widget.toAnimId myId)
                 | otherwise = Nothing
-        ExpressionGui.combineSpaced mParensId
+        ExpressionGui.combineSpacedMParens mParensId
             <*> sequenceA
             [ ExprGuiM.makeSubexpressionWith
               0 (ExpressionGui.after .~ prefixPrecedence+1) func
