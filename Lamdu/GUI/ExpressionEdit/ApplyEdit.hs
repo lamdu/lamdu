@@ -120,23 +120,25 @@ makeLabeled ::
     Sugar.Payload m ExprGuiT.Payload ->
     ExprGuiM m (ExpressionGui m)
 makeLabeled apply pl =
-    ExpressionGui.stdWrapParentExpr pl $ \myId ->
     do
         parentPrec <- ExprGuiM.outerPrecedence <&> Prec.ParentPrecedence
         let needParens =
                 not (isBoxed apply)
                 && Prec.needParens parentPrec (Prec.my prec)
-        let mParensId
-                | needParens = Just (Widget.toAnimId myId)
-                | otherwise = Nothing
-        makeFuncRow mParensId prec apply myId
-            & ( if needParens
-                then ExprGuiM.withLocalPrecedence 0 (const (Prec.make 0))
-                else
-                if isBoxed apply
-                then mkBoxed (apply ^. Sugar.aAnnotatedArgs) myId
-                else id
-              )
+        let fixPrec
+                | needParens = ExprGuiM.withLocalPrecedence 0 (const (Prec.make 0))
+                | otherwise = id
+        fixPrec . ExpressionGui.stdWrapParentExpr pl $
+            \myId ->
+            do
+                let mParensId
+                        | needParens = Just (Widget.toAnimId myId)
+                        | otherwise = Nothing
+                makeFuncRow mParensId prec apply myId
+                    &
+                    if isBoxed apply
+                    then mkBoxed (apply ^. Sugar.aAnnotatedArgs) myId
+                    else id
     where
         prec = mkPrecedence apply
 
