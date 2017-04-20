@@ -4,6 +4,7 @@ var nameMap = {
     true: 'True',
     false: 'False',
     cons: 'NonEmpty',
+    data: '__data1'
 }
 
 module.exports = {
