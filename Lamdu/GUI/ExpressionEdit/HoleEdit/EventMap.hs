@@ -171,7 +171,8 @@ removeUnwanted =
                 , Config.enterSubexpressionKeys config
                 , Config.letAddItemKeys config
                 ]
-        let allowedOperator char = charPrecedence char >= minOpPrec
+        let allowedOperator '.' = True
+            allowedOperator char = charPrecedence char >= minOpPrec
         return (E.filterChars allowedOperator . deleteKeys unwantedKeys)
 
 mkEventsOnPickedResult ::
