@@ -99,11 +99,6 @@ var encode = function() {
     };
 }();
 
-var STArray = function(arr) {
-    this.arr = arr;
-    return this;
-};
-
 module.exports = {
     logRepl: conf.logRepl,
     logResult: function (scope, exprId, result) {
