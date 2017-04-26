@@ -77,45 +77,49 @@ toLiteralTextKeys =
     , ModKey mempty GLFW.Key'Apostrophe
     ]
 
+allowedCharsFromSearchTerm ::
+    HoleInfo m -> Text -> Maybe Int -> Char -> Bool
+allowedCharsFromSearchTerm holeInfo searchTerm mPos =
+    case Text.unpack searchTerm of
+    "" -> allowAll
+    '"':_ -> allowAll
+    "." -> disallow bracketChars
+    '.':x:_
+        | x `elem` operatorChars -> allowOnly operatorChars
+        | otherwise -> disallow (operatorChars ++ bracketChars)
+    "-" | isLeafHole -> allowOnly (operatorChars ++ digitChars)
+    '-':x:xs
+        | x `elem` digitChars ->
+            digitChars ++ ['.' | not ("." `isInfixOf` xs)] & allowOnly
+    x:_
+        | (x `elem` digitChars) && Just 0 == mPos ->
+            '-':digitChars & allowOnly
+    "#" | isLeafHole -> allowOnly (operatorChars ++ hexDigitChars)
+    '#':x:_
+        | x `elem` hexDigitChars -> allowOnly hexDigitChars
+    x:xs
+        | x `elem` operatorChars -> allowOnly operatorChars
+        | x `elem` bracketChars -> allowOnly bracketChars
+        | "." `isInfixOf` xs -> allowOnly digitChars
+        | Text.all (`elem` digitChars) searchTerm -> allowOnly ('.':digitChars)
+        | Text.all (`notElem` operatorChars) searchTerm -> disallow operatorChars
+        | otherwise ->
+          -- Mix of operator/non-operator chars happened in search term
+          -- This can happen when editing a literal text, allow everything
+          allowAll
+    where
+        allowAll = const True
+        allowOnly = flip elem
+        disallow = flip notElem
+        isLeafHole = hiHole holeInfo & Lens.has (Sugar.holeMArg . Lens._Nothing)
+
 disallowCharsFromSearchTerm ::
     Config.Hole -> HoleInfo m -> Text -> Maybe Int -> E.EventMap a -> E.EventMap a
 disallowCharsFromSearchTerm Config.Hole{..} holeInfo searchTerm mPos =
     E.filterChars (`notElem` disallowedHoleChars) .
     deleteKeys
     (holePickAndMoveToNextHoleKeys ++ holePickResultKeys) .
-    disallowMix
-    where
-        allowOnly group = E.filterChars (`elem` group)
-        disallow group = E.filterChars (`notElem` group)
-        isLeafHole = hiHole holeInfo & Lens.has (Sugar.holeMArg . Lens._Nothing)
-        disallowMix =
-            case Text.unpack searchTerm of
-            "" -> id
-            '"':_ -> id
-            "." -> disallow bracketChars
-            '.':x:_
-                | x `elem` operatorChars -> allowOnly operatorChars
-                | otherwise -> disallow (operatorChars ++ bracketChars)
-            "-" | isLeafHole -> allowOnly (operatorChars ++ digitChars)
-            '-':x:xs
-                | x `elem` digitChars ->
-                    digitChars ++ ['.' | not ("." `isInfixOf` xs)] & allowOnly
-            x:_
-                | (x `elem` digitChars) && Just 0 == mPos ->
-                    '-':digitChars & allowOnly
-            "#" | isLeafHole -> allowOnly (operatorChars ++ hexDigitChars)
-            '#':x:_
-                | x `elem` hexDigitChars -> allowOnly hexDigitChars
-            x:xs
-                | x `elem` operatorChars -> allowOnly operatorChars
-                | x `elem` bracketChars -> allowOnly bracketChars
-                | "." `isInfixOf` xs -> allowOnly digitChars
-                | Text.all (`elem` digitChars) searchTerm -> allowOnly ('.':digitChars)
-                | Text.all (`notElem` operatorChars) searchTerm -> disallow operatorChars
-                | otherwise ->
-                  -- Mix of operator/non-operator chars happened in search term
-                  -- This can happen when editing a literal text, allow everything
-                  id
+    E.filterChars (allowedCharsFromSearchTerm holeInfo searchTerm mPos)
 
 deleteKeys :: [ModKey] -> E.EventMap a -> E.EventMap a
 deleteKeys = E.deleteKeys . map (E.KeyEvent GLFW.KeyState'Pressed)
