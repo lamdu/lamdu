@@ -13910,6 +13910,48 @@
     },
     {
         "defPresentationMode": "Verbose",
+        "builtin": [
+            "Mut",
+            "Array",
+            "pop"
+        ],
+        "name": "popLastMutArray",
+        "def": "e01662e48ef6e33c8390bb9b9237323b",
+        "typ": {
+            "schemeType": {
+                "funcParam": {
+                    "nomParams": {
+                        "73000000000000000000000000000000": {
+                            "typeVar": "1073"
+                        },
+                        "42493a76616c00000000000000000000": {
+                            "typeVar": "1061"
+                        }
+                    },
+                    "nomId": "42493a73744172726179000000000000"
+                },
+                "funcResult": {
+                    "nomParams": {
+                        "73000000000000000000000000000000": {
+                            "typeVar": "1073"
+                        },
+                        "42493a76616c00000000000000000000": {
+                            "typeVar": "1061"
+                        }
+                    },
+                    "nomId": "42493a53540000000000000000000000"
+                }
+            },
+            "schemeBinders": {
+                "typeVars": [
+                    "1061",
+                    "1073"
+                ]
+            }
+        }
+    },
+    {
+        "defPresentationMode": "Verbose",
         "name": "find",
         "def": "e466086c41dd4bde92c54ef439849ee3",
         "typ": {
