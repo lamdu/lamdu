@@ -82,7 +82,7 @@ type Parse = State (IntMap (ER.Val ()))
 nodeRepl :: FilePath -> FilePath -> Proc.CreateProcess
 nodeRepl nodeExePath rtsPath =
     (Proc.proc nodeExePath ["--harmony-tailcalls"])
-    { Proc.env = Just [("NODE_PATH", rtsPath)]
+    { Proc.cwd = Just rtsPath
     }
 
 withProcess ::

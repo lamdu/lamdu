@@ -18,7 +18,7 @@ As such, it has no textual format, but Lamdu code can be exported and shared in 
 
 * `source.lamdu`: Lamdu source of the exported program in a JSON-based format. It can be drag-and-dropped into Lamdu to load the code.
 * `screenshot.png`: A screenshot of the program as seen in Lamdu. Note that this is just an overview of the program as not all subroutines used in it may be included in the screenshot. **Note**: The screenshot may be tiny (so its of a small piece of the code) or even missing due to Google Code Jam upload size restriction.
-* `js/main.js`: The program compiled to JavaScript. One may run it to obtain the program output value. Run it with `$ NODE_PATH=. node --harmony-tailcalls main.js`. It requires a recent version of [nodejs](https://nodejs.org/en/) which supports the `--harmony-tailcalls` flag (>= v6.2.0).
+* `js/main.js`: The program compiled to JavaScript. One may run it to obtain the program output value. Run it with `$ node --harmony-tailcalls main.js`. It requires a recent version of [nodejs](https://nodejs.org/en/) which supports the `--harmony-tailcalls` flag (>= v6.2.0).
 * `js/rts.js`, `js/rtsConfig.js`: Support files for `js/main.js`. These modules implement the basic primitives of Lamdu in JavaScript (arithmetic, arrays, etc).
 * `README.md`: The README which file you are reading right now.
 

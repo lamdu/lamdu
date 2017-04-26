@@ -172,7 +172,7 @@ topLevelDecls =
     ( [ [jsstmt|"use strict";|]
       , [jsstmt|var scopeId_0 = 0;|]
       , [jsstmt|var scopeCounter = 1;|]
-      , [jsstmt|var rts = require('rts.js');|]
+      , [jsstmt|var rts = require('./rts.js');|]
       ] <&> void
     ) ++
     [ declLog 0

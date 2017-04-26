@@ -2,7 +2,7 @@
 
 process.stdout._handle.setBlocking(true);
 
-var conf = require('rtsConfig.js')
+var conf = require('./rtsConfig.js')
 
 // Tag names must match those in Lamdu.Builtins.Anchors
 var trueTag = conf.builtinTagName('true');
