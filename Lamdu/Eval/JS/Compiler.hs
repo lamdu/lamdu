@@ -353,9 +353,9 @@ data CodeGen = CodeGen
 unitRedex :: [JSS.Statement ()] -> JSS.Expression ()
 unitRedex stmts = JS.lambda [] stmts `JS.call` []
 
-throwStr :: String -> CodeGen
+throwStr :: Text -> CodeGen
 throwStr str =
-    go [JS.throw (JS.string str)]
+    go [JS.throw (JS.string (Text.unpack str))]
     where
         go stmts =
             CodeGen
