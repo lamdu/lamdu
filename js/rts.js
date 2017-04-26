@@ -184,7 +184,7 @@ module.exports = {
             bind: function(x) { return function () { return x[infixrTag](x[infixlTag]())(); } },
             run: function(st) { return st(); },
             Array: {
-                length: function (x) { return x.length; },
+                length: function (x) { return function() { return x.length; } },
                 read: function (x) { return function() { return x[objTag][x[indexTag]]; } },
                 write: function (x) { return function() { x[objTag][x[indexTag]] = x[valTag]; return {}; } },
                 append: function (x) { return function() { x[objTag].push(x[valTag]); return {}; } },
