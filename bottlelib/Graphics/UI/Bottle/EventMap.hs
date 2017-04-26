@@ -7,7 +7,7 @@ module Graphics.UI.Bottle.EventMap
     , emDocs
     , charEventMap, allChars
     , charGroup
-    , keyEventMap, keyPress, keyPresses
+    , keyEventMap, keyPress, keyPresses, keyPressOrRepeat
     , pasteOnKey
     , dropEventMap
     , deleteKey, deleteKeys
@@ -326,6 +326,11 @@ keyPress key = keyEventMap (KeyEvent GLFW.KeyState'Pressed key)
 
 keyPresses :: [ModKey] -> Doc -> a -> EventMap a
 keyPresses = mconcat . map keyPress
+
+keyPressOrRepeat :: ModKey -> Doc -> a -> EventMap a
+keyPressOrRepeat key doc res =
+    keyEventMap (KeyEvent GLFW.KeyState'Pressed key) doc res <>
+    keyEventMap (KeyEvent GLFW.KeyState'Repeating key) doc res
 
 dropEventMap :: InputDoc -> Doc -> ([FilePath] -> Maybe a) -> EventMap a
 dropEventMap iDoc oDoc handler =

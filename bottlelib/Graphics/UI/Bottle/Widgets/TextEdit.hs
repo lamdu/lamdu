@@ -168,11 +168,11 @@ mkCursorRect Style{..} cursor str = Rect cursorPos cursorSize
 eventMap :: Cursor -> Text -> Widget.Id -> Widget.EventMap (Text, Widget.EventResult)
 eventMap cursor str myId =
     mconcat . concat $ [
-        [ keys (moveDoc ["left"]) [noMods GLFW.Key'Left] $
+        [ E.keyPressOrRepeat (noMods GLFW.Key'Left) (moveDoc ["left"]) $
             moveRelative (-1)
         | cursor > 0 ],
 
-        [ keys (moveDoc ["right"]) [noMods GLFW.Key'Right] $
+        [ E.keyPressOrRepeat (noMods GLFW.Key'Right) (moveDoc ["right"]) $
             moveRelative 1
         | cursor < textLength ],
 
@@ -183,11 +183,11 @@ eventMap cursor str myId =
         [ keys (moveDoc ["word", "right"]) [ctrl GLFW.Key'Right] moveWord
         | cursor < textLength ],
 
-        [ keys (moveDoc ["up"]) [noMods GLFW.Key'Up] $
+        [ E.keyPressOrRepeat (noMods GLFW.Key'Up) (moveDoc ["up"]) $
             moveRelative (- cursorX - 1 - Text.length (Text.drop cursorX prevLine))
         | cursorY > 0 ],
 
-        [ keys (moveDoc ["down"]) [noMods GLFW.Key'Down] $
+        [ E.keyPressOrRepeat (noMods GLFW.Key'Down) (moveDoc ["down"]) $
             moveRelative
             (Text.length curLineAfter + 1 +
              min cursorX (Text.length nextLine))
