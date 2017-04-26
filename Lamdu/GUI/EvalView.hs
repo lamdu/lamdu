@@ -83,7 +83,7 @@ makeError err animId =
     where
         msg =
             case err of
-            EvalError _ -> "?"
+            EvalHole -> "?"
             _ -> Text.pack (show err)
 
 hbox :: [View] -> View
