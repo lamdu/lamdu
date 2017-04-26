@@ -95,7 +95,7 @@ disallowCharsFromSearchTerm Config.Hole{..} holeInfo searchTerm mPos =
             "." -> disallow bracketChars
             '.':x:_
                 | x `elem` operatorChars -> allowOnly operatorChars
-                | otherwise -> disallow operatorChars . disallow bracketChars
+                | otherwise -> disallow (operatorChars ++ bracketChars)
             "-" | isLeafHole -> allowOnly (operatorChars ++ digitChars)
             '-':x:xs
                 | x `elem` digitChars ->
