@@ -197,6 +197,11 @@ module.exports = {
                     return result;
                 },
             },
+            Ref: {
+                new: function (x) { return function() {return {val: x}; } },
+                read: function (x) { return function() {return x.val;} },
+                write: function (x) { return function() {x[objTag].val = x[valTag]; return {};} },
+            },
         },
         IO: {
             file: {

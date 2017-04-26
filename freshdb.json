@@ -425,6 +425,15 @@
         "name": "MutArray"
     },
     {
+        "nomType": "OpaqueNominal",
+        "typeParams": {
+            "73000000000000000000000000000000": "73",
+            "42493a76616c00000000000000000000": "61"
+        },
+        "nom": "42493a73745265660000000000000000",
+        "name": "MutRef"
+    },
+    {
         "nomType": {
             "schemeType": {
                 "sum": {
@@ -5945,6 +5954,48 @@
     {
         "defPresentationMode": "OO",
         "builtin": [
+            "Mut",
+            "Ref",
+            "read"
+        ],
+        "name": "readMutRef",
+        "def": "675c3ce1aeee99ec8cff9a60954d55a2",
+        "typ": {
+            "schemeType": {
+                "funcParam": {
+                    "nomParams": {
+                        "73000000000000000000000000000000": {
+                            "typeVar": "1073"
+                        },
+                        "42493a76616c00000000000000000000": {
+                            "typeVar": "1061"
+                        }
+                    },
+                    "nomId": "42493a73745265660000000000000000"
+                },
+                "funcResult": {
+                    "nomParams": {
+                        "73000000000000000000000000000000": {
+                            "typeVar": "1073"
+                        },
+                        "42493a76616c00000000000000000000": {
+                            "typeVar": "1061"
+                        }
+                    },
+                    "nomId": "42493a53540000000000000000000000"
+                }
+            },
+            "schemeBinders": {
+                "typeVars": [
+                    "1061",
+                    "1073"
+                ]
+            }
+        }
+    },
+    {
+        "defPresentationMode": "OO",
+        "builtin": [
             "Array",
             "fromStream"
         ],
@@ -7393,6 +7444,48 @@
                 "typeVars": [
                     "0261",
                     "0273"
+                ]
+            }
+        }
+    },
+    {
+        "defPresentationMode": "OO",
+        "builtin": [
+            "Mut",
+            "Ref",
+            "new"
+        ],
+        "name": "newMutRef",
+        "def": "801dfeb7bbadfa9ee94acd7ddba7eeee",
+        "typ": {
+            "schemeType": {
+                "funcParam": {
+                    "typeVar": "1061"
+                },
+                "funcResult": {
+                    "nomParams": {
+                        "73000000000000000000000000000000": {
+                            "typeVar": "1073"
+                        },
+                        "42493a76616c00000000000000000000": {
+                            "nomParams": {
+                                "73000000000000000000000000000000": {
+                                    "typeVar": "1073"
+                                },
+                                "42493a76616c00000000000000000000": {
+                                    "typeVar": "1061"
+                                }
+                            },
+                            "nomId": "42493a73745265660000000000000000"
+                        }
+                    },
+                    "nomId": "42493a53540000000000000000000000"
+                }
+            },
+            "schemeBinders": {
+                "typeVars": [
+                    "1061",
+                    "1073"
                 ]
             }
         }
@@ -11575,6 +11668,55 @@
             "schemeBinders": {
                 "typeVars": [
                     "61"
+                ]
+            }
+        }
+    },
+    {
+        "defPresentationMode": "OO",
+        "builtin": [
+            "Mut",
+            "Ref",
+            "write"
+        ],
+        "name": "writeMutRef",
+        "def": "cc5bbe713b8efcc2cab19c03a893e630",
+        "typ": {
+            "schemeType": {
+                "funcParam": {
+                    "record": {
+                        "42493a76616c00000000000000000000": {
+                            "typeVar": "1061"
+                        },
+                        "42493a6f626a65637400000000000000": {
+                            "nomParams": {
+                                "73000000000000000000000000000000": {
+                                    "typeVar": "1073"
+                                },
+                                "42493a76616c00000000000000000000": {
+                                    "typeVar": "1061"
+                                }
+                            },
+                            "nomId": "42493a73745265660000000000000000"
+                        }
+                    }
+                },
+                "funcResult": {
+                    "nomParams": {
+                        "73000000000000000000000000000000": {
+                            "typeVar": "1073"
+                        },
+                        "42493a76616c00000000000000000000": {
+                            "record": {}
+                        }
+                    },
+                    "nomId": "42493a53540000000000000000000000"
+                }
+            },
+            "schemeBinders": {
+                "typeVars": [
+                    "1061",
+                    "1073"
                 ]
             }
         }

@@ -50,6 +50,9 @@ addTypesRecExtend (V.RecExtend tag val rest) go typ =
             (go typ val)
             (go typ rest)
             & RRecExtend
+        T.TInst{} ->
+            -- Work around for MutRefs: todo better presentation which shows their current value?
+            RRecEmpty
         _ -> "addTypes got " ++ show typ ++ " for RRecExtend" & ER.EvalTypeError & RError
     Just (valType, restType) ->
         V.RecExtend tag
