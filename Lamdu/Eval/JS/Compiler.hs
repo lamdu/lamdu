@@ -330,7 +330,9 @@ compileGlobalVar var =
                     >>= maybe newGlobalType return
                 if Scheme.alphaEq scheme expectedType
                     then loadGlobal
-                    else throwStr "Reached broken def!" & return
+                    else
+                        readName var (return "unnamed")
+                        <&> ("Reached broken def: " <>) <&> throwStr
         newGlobalType =
             do
                 scheme <- performAction (`readGlobalType` var)
