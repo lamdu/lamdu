@@ -62,7 +62,7 @@ make holeInfo =
         we <- ExprGuiM.widgetEnv BWidgets.readEnv
         makeSearchTermPropEdit WidgetIds{..} (HoleInfo.hiSearchTermProperty holeInfo)
             <&> Widget.eventMap
-                %~ EventMap.disallowCharsFromSearchTerm holeConfig holeInfo searchTerm
+                %~ EventMap.disallowCharsFromSearchTerm holeConfig holeInfo
                     (TextEdit.getCursor searchTerm hidOpenSearchTerm we)
             <&> addBackground (Widget.toAnimId hidOpenSearchTerm) holeSearchTermBGColor
             <&> TreeLayout.fromCenteredWidget

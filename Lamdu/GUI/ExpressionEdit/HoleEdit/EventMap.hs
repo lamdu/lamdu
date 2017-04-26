@@ -54,7 +54,7 @@ adHocTextEditEventMap holeConfig holeInfo searchTermProp =
             E.allChars "Character"
             (E.Doc ["Edit", "Search Term", "Append character"])
             (changeText . snoc)
-            & disallowCharsFromSearchTerm holeConfig holeInfo searchTerm Nothing
+            & disallowCharsFromSearchTerm holeConfig holeInfo Nothing
             & if Text.null searchTerm
               then E.filterChars (`notElem` operatorChars)
               else id
@@ -78,8 +78,8 @@ toLiteralTextKeys =
     ]
 
 allowedCharsFromSearchTerm ::
-    HoleInfo m -> Text -> Maybe Int -> Char -> Bool
-allowedCharsFromSearchTerm holeInfo searchTerm mPos =
+    HoleInfo m -> Maybe Int -> Char -> Bool
+allowedCharsFromSearchTerm holeInfo mPos =
     case Text.unpack searchTerm of
     "" -> allowAll
     '"':_ -> allowAll
@@ -108,18 +108,19 @@ allowedCharsFromSearchTerm holeInfo searchTerm mPos =
           -- This can happen when editing a literal text, allow everything
           allowAll
     where
+        searchTerm = HoleInfo.hiSearchTerm holeInfo
         allowAll = const True
         allowOnly = flip elem
         disallow = flip notElem
         isLeafHole = hiHole holeInfo & Lens.has (Sugar.holeMArg . Lens._Nothing)
 
 disallowCharsFromSearchTerm ::
-    Config.Hole -> HoleInfo m -> Text -> Maybe Int -> E.EventMap a -> E.EventMap a
-disallowCharsFromSearchTerm Config.Hole{..} holeInfo searchTerm mPos =
+    Config.Hole -> HoleInfo m -> Maybe Int -> E.EventMap a -> E.EventMap a
+disallowCharsFromSearchTerm Config.Hole{..} holeInfo mPos =
     E.filterChars (`notElem` disallowedHoleChars) .
     deleteKeys
     (holePickAndMoveToNextHoleKeys ++ holePickResultKeys) .
-    E.filterChars (allowedCharsFromSearchTerm holeInfo searchTerm mPos)
+    E.filterChars (allowedCharsFromSearchTerm holeInfo mPos)
 
 deleteKeys :: [ModKey] -> E.EventMap a -> E.EventMap a
 deleteKeys = E.deleteKeys . map (E.KeyEvent GLFW.KeyState'Pressed)
