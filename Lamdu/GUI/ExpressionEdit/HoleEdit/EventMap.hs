@@ -177,7 +177,9 @@ removeUnwanted =
                 , Config.letAddItemKeys config
                 ]
         let allowedOperator '.' = True
-            allowedOperator char = charPrecedence char >= minOpPrec
+            allowedOperator char
+                | not (elem char operatorChars) = True
+                | otherwise = charPrecedence char >= minOpPrec
         return (E.filterChars allowedOperator . deleteKeys unwantedKeys)
 
 mkEventsOnPickedResult ::
