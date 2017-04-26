@@ -8045,6 +8045,55 @@
         }
     },
     {
+        "defPresentationMode": "OO",
+        "builtin": [
+            "Mut",
+            "Array",
+            "append"
+        ],
+        "name": "appendMutArray",
+        "def": "8bda8cdc1fcb7aef5dba1bea7d40813f",
+        "typ": {
+            "schemeType": {
+                "funcParam": {
+                    "record": {
+                        "42493a76616c00000000000000000000": {
+                            "typeVar": "1061"
+                        },
+                        "42493a6f626a65637400000000000000": {
+                            "nomParams": {
+                                "73000000000000000000000000000000": {
+                                    "typeVar": "1073"
+                                },
+                                "42493a76616c00000000000000000000": {
+                                    "typeVar": "1061"
+                                }
+                            },
+                            "nomId": "42493a73744172726179000000000000"
+                        }
+                    }
+                },
+                "funcResult": {
+                    "nomParams": {
+                        "73000000000000000000000000000000": {
+                            "typeVar": "1073"
+                        },
+                        "42493a76616c00000000000000000000": {
+                            "record": {}
+                        }
+                    },
+                    "nomId": "42493a53540000000000000000000000"
+                }
+            },
+            "schemeBinders": {
+                "typeVars": [
+                    "1061",
+                    "1073"
+                ]
+            }
+        }
+    },
+    {
         "defPresentationMode": "Verbose",
         "name": "last",
         "def": "8fdcb3e762e94337b532cd54f3501007",

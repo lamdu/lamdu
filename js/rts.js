@@ -187,6 +187,7 @@ module.exports = {
                 length: function (x) { return x.length; },
                 read: function (x) { return function() { return x[objTag][x[indexTag]]; } },
                 write: function (x) { return function() { x[objTag][x[indexTag]] = x[valTag]; return {}; } },
+                append: function (x) { return function() { x[objTag].push(x[valTag]); return {}; } },
                 fromStream: function (x) { return function () { return arrayFromStream(x); } },
                 run: function(st) {
                     var result = st();
