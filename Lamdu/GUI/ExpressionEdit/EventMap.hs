@@ -1,7 +1,6 @@
 {-# LANGUAGE NoImplicitPrelude, OverloadedStrings #-}
 module Lamdu.GUI.ExpressionEdit.EventMap
     ( make
-    , modifyEventMap
     , jumpHolesEventMap
     , extractCursor
     ) where
@@ -193,20 +192,3 @@ replaceEventMap config actions =
         mkEventMap keys doc =
             Widget.keysEventMapMovesCursor keys doc .
             fmap WidgetIds.fromEntityId
-
-modifyEventMap ::
-    (Monad m, Monad f) =>
-    Sugar.Payload f ExprGuiT.Payload -> ExprGuiM.HolePicker f ->
-    ExprGuiM m (Widget.EventMap (T f Widget.EventResult))
-modifyEventMap pl holePicker =
-    do
-        config <- ExprGuiM.readConfig
-        applyOp <- applyOperatorEventMap pl holePicker
-        mconcat
-            [ wrapEventMap config actions
-            , applyOp
-            , replaceEventMap config actions
-            ]
-            & return
-    where
-        actions = pl ^. Sugar.plActions
