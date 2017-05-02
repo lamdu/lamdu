@@ -72,12 +72,9 @@ makeBinderNameEdit binderActions rhsJumperEquals rhs name color myId =
                  rhsJumper)
             <&> TreeLayout.fromCenteredWidget
     where
-        jumpToRHSViaEquals n widget
-            | nonOperatorName n =
-                widget
-                & Widget.eventMap %~ E.filterChars (/= '=')
-                & Widget.weakerEvents rhsJumperEquals
-            | otherwise = widget
+        jumpToRHSViaEquals n
+            | nonOperatorName n = Widget.strongerEvents rhsJumperEquals
+            | otherwise = id
 
 presentationModeChoiceConfig :: Choice.Config
 presentationModeChoiceConfig = Choice.Config
@@ -356,7 +353,7 @@ make name color binder myId =
                 ExpressionGui.vboxTopFocalSpaced
                 ?? (paramsEdit : fmap TreeLayout.fromAlignedWidget mScopeEdit ^.. Lens._Just
                     <&> TreeLayout.alignment . _1 .~ 0.5)
-                <&> TreeLayout.widget %~ Widget.weakerEvents rhsJumperEquals
+                <&> TreeLayout.widget %~ Widget.strongerEvents rhsJumperEquals
                 <&> Just
         equals <- ExpressionGui.makeLabel "=" (Widget.toAnimId myId)
         ExpressionGui.combineSpaced
