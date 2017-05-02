@@ -582,7 +582,11 @@ stdWrap pl act =
         (res, holePicker) <- ExprGuiM.listenResultPicker act
         exprEventMap <- ExprEventMap.make pl holePicker
         maybeAddAnnotationPl pl ?? res
-            <&> TreeLayout.widget %~ Widget.weakerEvents exprEventMap
+            <&> TreeLayout.widget %~ addEvents exprEventMap
+    where
+        addEvents
+            | ExprGuiT.plOfHoleResult pl = Widget.strongerEvents
+            | otherwise = Widget.weakerEvents
 
 makeFocusDelegator ::
     (Monad m, Monad f) =>
