@@ -98,14 +98,15 @@ convertLabeled funcS argS argI exprPl =
         let tags = args ^.. Lens.traversed . aaTag . tagVal
         unless (noRepetitions tags) $ error "Repetitions should not type-check"
         protectedSetToVal <- lift ConvertM.typeProtectedSetToVal
-        let setToInnerExprAction =
+        let innerExpr =
                 case (filter (Lens.nullOf ExprLens.valHole) . map snd . Map.elems) fieldsI of
-                [x] ->
-                    x ^. Val.payload . Input.stored & Property.value
-                    & protectedSetToVal (exprPl ^. Input.stored)
-                    <&> EntityId.ofValI
-                    & SetToInnerExpr
-                _ -> NoInnerExpr
+                [x] -> x
+                _ -> argI
+        let setToInnerExprAction =
+                innerExpr ^. Val.payload . Input.stored & Property.value
+                & protectedSetToVal (exprPl ^. Input.stored)
+                <&> EntityId.ofValI
+                & SetToInnerExpr
         BodyLabeledApply LabeledApply
             { _aFunc = sBinderVar
             , _aSpecialArgs = NoSpecialArgs
