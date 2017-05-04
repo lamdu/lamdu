@@ -515,14 +515,19 @@ isParamAlwaysUsedWithGetField (V.Lam param body) =
             V.BGetField (V.GetField r _) -> go True r
             x -> all (go False) (x ^.. Lens.traverse)
 
+-- Post process param add and delete actions to wrap lambda in hole.
+-- This isn't done for all actions as some already perform this function.
+-- TODO: clean up responsibilities - make it clear why some actions already
+-- take care of wrapping and some don't.
 postProcessActions ::
     Monad m => T m () -> ConventionalParams m -> ConventionalParams m
 postProcessActions post x =
     x
     & cpAddFirstParam %~ (<* post)
     & cpParams . SugarLens.binderNamedParamsActions . fpAddNext %~ (<* post)
-    & cpParams . SugarLens.binderNamedParamsActions . fpDelete %~ (<* post)
-    & cpParams . _NullParam . fpInfo . npDeleteLambda %~ (<* post)
+    & if Lens.has (cpParams . _FieldParams) x
+        then cpParams . SugarLens.binderNamedParamsActions . fpDelete %~ (<* post)
+        else id
 
 convertLamParams ::
     Monad m =>
