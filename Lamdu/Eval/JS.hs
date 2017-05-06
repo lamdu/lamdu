@@ -51,6 +51,8 @@ import qualified System.Process as Proc
 
 import           Lamdu.Prelude
 
+{-# ANN module ("HLint: ignore Use camelCase"::String) #-}
+
 data Actions srcId = Actions
     { _aLoadGlobal :: V.Var -> IO (Definition (Val srcId) ())
     , -- TODO: This is currently not in use but remains here because

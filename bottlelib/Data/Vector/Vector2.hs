@@ -36,7 +36,7 @@ instance Aeson.ToJSON a => Aeson.ToJSON (Vector2 a) where
 instance Aeson.FromJSON a => Aeson.FromJSON (Vector2 a) where
     parseJSON json =
         Aeson.parseJSON json
-        <&> \(x, y) -> Vector2 x y
+        <&> uncurry Vector2
 
 instance a ~ b => Lens.Field1 (Vector2 a) (Vector2 b) a b where
     _1 f (Vector2 x y) = (`Vector2` y) <$> Lens.indexed f (0 :: Int) x

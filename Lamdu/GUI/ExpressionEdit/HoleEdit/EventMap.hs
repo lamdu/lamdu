@@ -178,7 +178,7 @@ removeUnwanted =
                 ]
         let allowedOperator '.' = True
             allowedOperator char
-                | not (elem char operatorChars) = True
+                | char `notElem` operatorChars = True
                 | otherwise = charPrecedence char >= minOpPrec
         return (E.filterChars allowedOperator . deleteKeys unwantedKeys)
 

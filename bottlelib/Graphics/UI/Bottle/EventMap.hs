@@ -33,6 +33,8 @@ import qualified Graphics.UI.GLFW.Events as Events
 
 import           Prelude.Compat hiding (lookup)
 
+{-# ANN module ("HLint: ignore Use camelCase"::String) #-}
+
 data KeyEvent = KeyEvent GLFW.KeyState ModKey
     deriving (Generic, Show, Eq, Ord)
 
