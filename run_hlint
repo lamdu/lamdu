@@ -1,1 +1,1 @@
-hlint test/ Lamdu/ bottlelib/ --hint=hlint/lensfixities.hs --cpp-file=dist/build/autogen/cabal_macros.h
+hlint Lamdu/ bottlelib/ --hint=hlint/lensfixities.hs --cpp-file=dist/build/autogen/cabal_macros.h
