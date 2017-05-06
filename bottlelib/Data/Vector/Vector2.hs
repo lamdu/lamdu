@@ -16,6 +16,7 @@ import           Control.Monad (join)
 import qualified Data.Aeson.Types as Aeson
 import           Data.Binary (Binary(..))
 import           Data.Monoid.Generic (def_mempty, def_mappend)
+import qualified Data.Tuple as Tuple
 import           GHC.Generics (Generic)
 
 import           Prelude.Compat hiding (curry, uncurry, zip)
@@ -36,7 +37,7 @@ instance Aeson.ToJSON a => Aeson.ToJSON (Vector2 a) where
 instance Aeson.FromJSON a => Aeson.FromJSON (Vector2 a) where
     parseJSON json =
         Aeson.parseJSON json
-        <&> uncurry Vector2
+        <&> Tuple.uncurry Vector2
 
 instance a ~ b => Lens.Field1 (Vector2 a) (Vector2 b) a b where
     _1 f (Vector2 x y) = (`Vector2` y) <$> Lens.indexed f (0 :: Int) x
