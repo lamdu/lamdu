@@ -176,11 +176,11 @@ removeUnwanted =
                 , Config.enterSubexpressionKeys config
                 , Config.letAddItemKeys config
                 ]
-        let allowedOperator '.' = True
-            allowedOperator char
-                | char `notElem` operatorChars = True
-                | otherwise = charPrecedence char >= minOpPrec
-        return (E.filterChars allowedOperator . deleteKeys unwantedKeys)
+        let disallowedOperator '.' = False
+            disallowedOperator char
+                | char `notElem` operatorChars = False
+                | otherwise = charPrecedence char < minOpPrec
+        return (E.filterChars (not . disallowedOperator) . deleteKeys unwantedKeys)
 
 mkEventsOnPickedResult ::
     Monad m =>
