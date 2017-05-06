@@ -34,22 +34,23 @@ import           Lamdu.Calc.Type (Type(..))
 import qualified Lamdu.Calc.Type as T
 import           Lamdu.Calc.Type.Constraints (getProductVarConstraints)
 import qualified Lamdu.Calc.Type.FlatComposite as FlatComposite
-import           Lamdu.Calc.Type.Scheme (schemeConstraints)
+import qualified Lamdu.Calc.Type.Nominal as N
+import           Lamdu.Calc.Type.Scheme (schemeConstraints, schemeType)
 import qualified Lamdu.Calc.Val as V
 import           Lamdu.Calc.Val.Annotated (Val(..))
 import qualified Lamdu.Calc.Val.Annotated as Val
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Definition as Def
 import qualified Lamdu.Expr.GenIds as GenIds
-import qualified Lamdu.Expr.IRef as ExprIRef
 import           Lamdu.Expr.IRef (ValIProperty, ValI, DefI)
-import qualified Lamdu.Infer.Trans as InferT
+import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Lens as ExprLens
 import qualified Lamdu.Expr.Load as Load
 import qualified Lamdu.Expr.Pure as P
 import qualified Lamdu.Expr.Pure as Pure
 import qualified Lamdu.Expr.UniqueId as UniqueId
 import qualified Lamdu.Infer as Infer
+import qualified Lamdu.Infer.Trans as InferT
 import           Lamdu.Infer.Unify (unify)
 import           Lamdu.Infer.Update (Update, update)
 import qualified Lamdu.Infer.Update as Update
@@ -188,10 +189,11 @@ getRecordTags sugarContext exprPl =
             ^. schemeConstraints
             & getProductVarConstraints tv
 
-getNominals :: Monad m => ConvertM.Context m -> T m [T.NominalId]
+getNominals :: Monad m => ConvertM.Context m -> T m [(T.NominalId, N.Nominal)]
 getNominals sugarContext =
     sugarContext ^. ConvertM.scCodeAnchors
     & Anchors.tids & Transaction.getP <&> Set.toList
+    >>= traverse (\nomId -> (,) nomId <$> Load.nominal nomId)
 
 getGlobals :: Monad m => ConvertM.Context m -> T m [DefI m]
 getGlobals sugarContext =
@@ -210,6 +212,25 @@ locals sugarContext exprPl =
             sugarContext ^. ConvertM.scGlobalsInScope .
             Lens.contains (ExprIRef.defI varId)
 
+mkNominalOptions :: [(T.NominalId, N.Nominal)] -> [Val ()]
+mkNominalOptions nominals =
+    do
+        (tid, nominal) <- nominals
+        mkDirectWrappers tid ++ mkToNomInjections tid nominal
+    where
+        mkDirectWrappers tid =
+            do
+                f <- [V.BFromNom, V.BToNom]
+                [ V.Nom tid P.hole & f & Val () ]
+        mkToNomInjections tid nominal =
+            do
+                (tag, _typ) <-
+                    nominal ^..
+                    N.nomType . N._NominalType . schemeType . T._TSum .
+                    ExprLens.compositeFields
+                let inject = V.Inject tag P.hole & V.BInject & Val ()
+                [ inject & V.Nom tid & V.BToNom & Val () ]
+
 mkOptions ::
     Monad m => ConvertM.Context m ->
     Maybe (Val (Input.Payload m a)) ->
@@ -217,17 +238,14 @@ mkOptions ::
     T m [HoleOption UUID m]
 mkOptions sugarContext mInjectedArg exprPl stored =
     do
-        nominalTids <- getNominals sugarContext
+        nominalOptions <- getNominals sugarContext <&> mkNominalOptions
         globals <- getGlobals sugarContext
         recordTags <- getRecordTags sugarContext exprPl
         concat
             [ locals sugarContext exprPl
                 & concatMap (getLocalScopeGetVars sugarContext)
             , globals <&> P.var . ExprIRef.globalId
-            , do
-                nominalTid <- nominalTids
-                f <- [V.BFromNom, V.BToNom]
-                [ V.Nom nominalTid P.hole & f & Val () ]
+            , nominalOptions
             , do
                 tag <- recordTags
                 [ P.recExtend tag P.hole P.hole ]

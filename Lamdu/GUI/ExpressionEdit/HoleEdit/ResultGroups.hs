@@ -157,7 +157,7 @@ mkGroup option =
     do
         sugaredBaseExpr <- option ^. Sugar.hoSugaredBaseExpr
         pure Group
-            { _groupSearchTerms = sugaredBaseExpr ^. Sugar.rBody & ValTerms.body
+            { _groupSearchTerms = sugaredBaseExpr & ValTerms.expr
             , _groupResults = option ^. Sugar.hoResults
             , _groupId = mkGroupId (option ^. Sugar.hoVal)
             }

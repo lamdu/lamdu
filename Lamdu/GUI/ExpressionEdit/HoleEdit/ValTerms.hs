@@ -1,6 +1,6 @@
 {-# LANGUAGE LambdaCase, NoImplicitPrelude, OverloadedStrings #-}
 module Lamdu.GUI.ExpressionEdit.HoleEdit.ValTerms
-    ( body
+    ( expr
     ) where
 
 import           Data.Store.Property (Property)
@@ -8,7 +8,7 @@ import qualified Data.Store.Property as Property
 import qualified Data.Text as Text
 import           Lamdu.Formatting (Format(..))
 import qualified Lamdu.Sugar.Names.Get as NamesGet
-import           Lamdu.Sugar.Names.Types (Name(..), NameCollision(..))
+import           Lamdu.Sugar.Names.Types (Name(..), NameCollision(..), ExpressionN)
 import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
@@ -57,5 +57,6 @@ bodyNames = \case
     Sugar.BodyLam {} -> []
     b -> NamesGet.fromBody b <&> ofName
 
-body :: Monad m => Sugar.Body (Name m) m expr -> [Text]
-body = bodyShape <> bodyNames
+expr :: Monad m => ExpressionN m a -> [Text]
+expr (Sugar.Expression body _) =
+    bodyShape body <> bodyNames body <> (body ^.. traverse >>= expr)
