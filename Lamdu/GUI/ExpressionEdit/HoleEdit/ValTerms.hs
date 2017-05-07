@@ -7,6 +7,7 @@ import           Data.Store.Property (Property)
 import qualified Data.Store.Property as Property
 import qualified Data.Text as Text
 import           Lamdu.Formatting (Format(..))
+import qualified Lamdu.Sugar.Lens as SugarLens
 import qualified Lamdu.Sugar.Names.Get as NamesGet
 import           Lamdu.Sugar.Names.Types (Name(..), NameCollision(..), ExpressionN)
 import qualified Lamdu.Sugar.Types as Sugar
@@ -59,4 +60,9 @@ bodyNames = \case
 
 expr :: Monad m => ExpressionN m a -> [Text]
 expr (Sugar.Expression body _) =
-    bodyShape body <> bodyNames body <> (body ^.. traverse >>= expr)
+    bodyShape body <> bodyNames body <>
+    case body of
+    Sugar.BodyToNom (Sugar.Nominal _ binder) ->
+        expr (binder ^. Sugar.bbContent . SugarLens.binderContentExpr)
+    Sugar.BodyFromNom (Sugar.Nominal _ val) -> expr val
+    _ -> []
