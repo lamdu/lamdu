@@ -92,9 +92,12 @@ addDiagonal thickness animId color view=
 backgroundColor :: AnimId -> Draw.Color -> View -> View
 backgroundColor animId color view =
     view
-    & animLayers . layers . Lens.ix 0 <>~ Anim.backgroundColor bgAnimId color (view ^. size)
+    & animLayers . layers %~ addBg
     where
         bgAnimId = animId ++ ["bg"]
+        bg = Anim.backgroundColor bgAnimId color (view ^. size)
+        addBg [] = [bg]
+        addBg (x:xs) = x <> bg : xs
 
 scale :: Vector2 Draw.R -> View -> View
 scale ratio view =
