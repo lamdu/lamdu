@@ -171,7 +171,6 @@ data Config = Config
     , literalColor :: Draw.Color
     , typeIndicatorErrorColor :: Draw.Color
     , typeIndicatorMatchColor :: Draw.Color
-    , typeIndicatorFirstTimeColor :: Draw.Color
     , typeIndicatorFrameWidth :: Vector2 Double
     , foreignModuleColor :: Draw.Color
     , foreignVarColor :: Draw.Color
