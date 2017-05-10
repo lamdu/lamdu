@@ -75,9 +75,12 @@ makeShortcutKeyView ::
     Config -> (AnimId, [E.InputDoc]) -> View
 makeShortcutKeyView config (animId, inputDocs) =
     inputDocs
-    <&> TextView.label (configStyle config) animId
-    <&> View.tint (configInputDocColor config)
+    <&> TextView.label conf animId
     & GridView.verticalAlign 0
+    where
+        conf =
+            configStyle config
+            & TextView.styleColor .~ configInputDocColor config
 
 makeTextViews ::
     Config -> AnimId ->
