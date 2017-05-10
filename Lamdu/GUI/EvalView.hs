@@ -164,11 +164,11 @@ makeInject animId inject =
     case inject ^. V.injectVal . ER.body of
     RRecEmpty -> makeTagView
     _ ->
-        do
-            tagView <- makeTagView
-            space <- ExprGuiM.widgetEnv BWidgets.stdHSpaceView
-            valView <- inject ^. V.injectVal & makeInner (animId ++ ["val"])
-            hbox [tagView, space, valView] & return
+        [ makeTagView
+        , ExprGuiM.widgetEnv BWidgets.stdHSpaceView
+        , inject ^. V.injectVal & makeInner (animId ++ ["val"])
+        ]
+        & sequence <&> hbox
     where
         makeTagView = inject ^. V.injectTag & makeTag (animId ++ ["tag"])
 
