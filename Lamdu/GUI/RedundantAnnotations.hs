@@ -18,7 +18,10 @@ dontShowEval :: Expression name m T.Payload -> Expression name m T.Payload
 dontShowEval = rPayload . showAnn . T.showInEvalMode .~ T.EvalModeShowNothing
 
 dontShowAnnotation :: Expression name m T.Payload -> Expression name m T.Payload
-dontShowAnnotation = rPayload . showAnn .~ T.neverShowAnnotations
+dontShowAnnotation expr =
+    case expr ^. rBody of
+    BodyHole{} -> expr
+    _ -> expr & rPayload . showAnn .~ T.neverShowAnnotations
 
 forceShowType :: Expression name m T.Payload -> Expression name m T.Payload
 forceShowType =
