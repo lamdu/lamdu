@@ -159,10 +159,23 @@ makeRecExtend animId typ recExtend =
     where
         (fields, recStatus) = extractFields recExtend
 
-makeInject :: Monad m => AnimId -> V.Inject (Val Type) -> ExprGuiM m View
-makeInject animId inject =
-    case inject ^. V.injectVal . ER.body of
-    RRecEmpty -> makeTagView
+makeInject ::
+    Monad m => AnimId -> Type -> V.Inject (Val Type) -> ExprGuiM m View
+makeInject animId typ inject =
+    case
+        ( typ
+        , inject ^. V.injectVal . ER.body
+        , mRecStatus
+        , lookup Builtins.headTag fields
+        , lookup Builtins.tailTag fields <&> (^. ER.body)
+        ) of
+    (_, RRecEmpty, _, _, _) -> makeTagView
+    (T.TInst tid _, _, Just RecordComputed, Just head_, Just RFunc)
+        | tid == Builtins.streamTid ->
+        [ makeInner (animId ++ ["head"]) head_
+        , label ", …" animId
+        ]
+        & sequence <&> hbox
     _ ->
         [ makeTagView
         , ExprGuiM.widgetEnv BWidgets.stdHSpaceView
@@ -171,6 +184,10 @@ makeInject animId inject =
         & sequence <&> hbox
     where
         makeTagView = inject ^. V.injectTag & makeTag (animId ++ ["tag"])
+        (fields, mRecStatus) =
+            case inject ^. V.injectVal . ER.body of
+            RRecExtend recExtend -> extractFields recExtend & _2 %~ Just
+            _ -> ([], Nothing)
 
 depthCounts :: Val a -> [Int]
 depthCounts v =
@@ -210,7 +227,7 @@ makeInner animId (Val typ val) =
     RError err -> makeError err animId
     RFunc{} -> textView "Fn" animId
     RRecEmpty -> textView "()" animId
-    RInject inject -> makeInject animId inject
+    RInject inject -> makeInject animId typ inject
     RRecExtend recExtend -> makeRecExtend animId typ recExtend
     RPrimVal primVal
         | typ == T.TInst Builtins.textTid mempty ->
