@@ -172,8 +172,9 @@ makeInject animId typ inject =
     (_, RRecEmpty, _, _, _) -> makeTagView
     (T.TInst tid _, _, Just RecordComputed, Just head_, Just RFunc)
         | tid == Builtins.streamTid ->
-        [ makeInner (animId ++ ["head"]) head_
-        , label ", …" animId
+        [ label "[" animId
+        , makeInner (animId ++ ["head"]) head_
+        , label ", …]" animId
         ]
         & sequence <&> hbox
     _ ->
