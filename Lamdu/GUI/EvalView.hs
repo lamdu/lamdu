@@ -159,6 +159,19 @@ makeRecExtend animId typ recExtend =
     where
         (fields, recStatus) = extractFields recExtend
 
+makeInject :: Monad m => AnimId -> V.Inject (Val Type) -> ExprGuiM m View
+makeInject animId inject =
+    case inject ^. V.injectVal . ER.body of
+    RRecEmpty -> makeTagView
+    _ ->
+        do
+            tagView <- makeTagView
+            space <- ExprGuiM.widgetEnv BWidgets.stdHSpaceView
+            valView <- inject ^. V.injectVal & makeInner (animId ++ ["val"])
+            hbox [tagView, space, valView] & return
+    where
+        makeTagView = inject ^. V.injectTag & makeTag (animId ++ ["tag"])
+
 depthCounts :: Val a -> [Int]
 depthCounts v =
     v ^.. ER.body . Lens.folded
@@ -197,14 +210,7 @@ makeInner animId (Val typ val) =
     RError err -> makeError err animId
     RFunc{} -> textView "Fn" animId
     RRecEmpty -> textView "()" animId
-    RInject (V.Inject injTag (Val _ RRecEmpty)) ->
-        makeTag (animId ++ ["tag"]) injTag
-    RInject inj ->
-        do
-            tagView <- inj ^. V.injectTag & makeTag (animId ++ ["tag"])
-            space <- ExprGuiM.widgetEnv BWidgets.stdHSpaceView
-            valView <- inj ^. V.injectVal & makeInner (animId ++ ["val"])
-            hbox [tagView, space, valView] & return
+    RInject inject -> makeInject animId inject
     RRecExtend recExtend -> makeRecExtend animId typ recExtend
     RPrimVal primVal
         | typ == T.TInst Builtins.textTid mempty ->
