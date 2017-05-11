@@ -128,7 +128,7 @@
             0.5,
             1.0
         ],
-        "collisionSuffixScaleFactor": [0.5, 0.5],
+        "collisionSuffixScaleFactor": [1.0, 1.0],
         "collisionSuffixBGColor": [
             0.7,
             0.0,
