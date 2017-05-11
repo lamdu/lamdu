@@ -1,13 +1,15 @@
+{-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE NoImplicitPrelude, DeriveFunctor, DeriveFoldable, DeriveTraversable #-}
 module Lamdu.Config.Sampler
     ( Sampler, new
-    , Sample(..), getSample, onEachSample
+    , Sample(..), sConfig, getSample, onEachSample
     ) where
 
 import           Control.Concurrent (threadDelay, ThreadId)
 import           Control.Concurrent.MVar
 import           Control.Concurrent.Utils (forkIOUnmasked)
 import qualified Control.Exception as E
+import qualified Control.Lens as Lens
 import qualified Data.Aeson as Aeson
 import qualified Data.ByteString.Lazy as LBS
 import           Data.Time.Clock (UTCTime)
@@ -22,24 +24,26 @@ type ModificationTime = UTCTime
 -- TODO: FRP-style sampling of (mtime, file content) of the config
 -- file, then map over that to Config
 
-data Sample a = Sample
+data Sample = Sample
     { sVersion :: ModificationTime
     , sFilePath :: FilePath
-    , sValue :: a
-    } deriving (Eq, Ord, Functor, Foldable, Traversable)
+    , _sConfig :: Config
+    } deriving (Eq)
 
-data Sampler a = Sampler
+Lens.makeLenses ''Sample
+
+data Sampler = Sampler
     { _sThreadId :: ThreadId
-    , sGetSample :: IO (Sample a)
-    } deriving Functor
+    , sGetSample :: IO Sample
+    }
 
-onEachSample :: (a -> IO b) -> Sampler a -> Sampler b
-onEachSample act (Sampler t get) = Sampler t (get >>= traverse act)
+onEachSample :: (Sample -> IO Sample) -> Sampler -> Sampler
+onEachSample act (Sampler t get) = Sampler t (get >>= act)
 
-getSample :: Sampler a -> IO (Sample a)
+getSample :: Sampler -> IO Sample
 getSample = sGetSample
 
-withMTime :: FilePath -> IO a -> IO (Sample a)
+withMTime :: FilePath -> IO Config -> IO Sample
 withMTime path act =
     do
         mtimeBefore <- getModificationTime path
@@ -49,7 +53,7 @@ withMTime path act =
             then Sample mtimeAfter path res & return
             else withMTime path act
 
-load :: FilePath -> IO (Sample Config)
+load :: FilePath -> IO Sample
 load configPath =
     do
         eConfig <- Aeson.eitherDecode' <$> LBS.readFile configPath
@@ -58,7 +62,7 @@ load configPath =
     where
         msg = "Failed to parse config file contents at " ++ show configPath ++ ": "
 
-maybeLoad :: Sample Config -> FilePath -> IO (Sample Config)
+maybeLoad :: Sample -> FilePath -> IO Sample
 maybeLoad old configPath =
     do
         mtime <- getModificationTime configPath
@@ -66,7 +70,7 @@ maybeLoad old configPath =
             then return old
             else load configPath
 
-new :: IO (Sampler Config)
+new :: IO Sampler
 new =
     do
         ref <-

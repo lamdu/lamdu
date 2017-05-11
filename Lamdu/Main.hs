@@ -210,7 +210,7 @@ runEditor opts db =
                     displayScale <- GLFWUtils.getDisplayScale win <&> (^. _2)
                     zoom <- Zoom.make
                     let configSampler =
-                            ConfigSampler.onEachSample (zoomConfig displayScale zoom)
+                            (ConfigSampler.onEachSample . ConfigSampler.sConfig . zoomConfig displayScale) zoom
                             rawConfigSampler
                     let initialSettings = Settings Settings.defaultInfoMode
                     settingsRef <- newIORef initialSettings
@@ -233,14 +233,14 @@ isRefreshScheduled (RefreshScheduler ref) = atomicModifyIORef ref $ \r -> (False
 scheduleRefresh :: RefreshScheduler -> IO ()
 scheduleRefresh (RefreshScheduler ref) = writeIORef ref True
 
-prependConfigPath :: ConfigSampler.Sample Config -> Fonts FilePath -> Fonts FilePath
+prependConfigPath :: ConfigSampler.Sample -> Fonts FilePath -> Fonts FilePath
 prependConfigPath sample =
     Lens.mapped %~ (dir </>)
     where
         dir = FilePath.takeDirectory (ConfigSampler.sFilePath sample)
 
 assignFontSizes ::
-    ConfigSampler.Sample Config -> Fonts FilePath -> Fonts (FontSize, FilePath)
+    ConfigSampler.Sample -> Fonts FilePath -> Fonts (FontSize, FilePath)
 assignFontSizes sample fonts =
     fonts
     <&> (,) baseTextSize
@@ -248,16 +248,16 @@ assignFontSizes sample fonts =
     where
         baseTextSize = Config.baseTextSize config
         helpTextSize = Config.helpTextSize (Config.help config)
-        config = ConfigSampler.sValue sample
+        config = sample ^. ConfigSampler.sConfig
 
-curSampleFonts :: ConfigSampler.Sample Config -> Fonts (FontSize, FilePath)
+curSampleFonts :: ConfigSampler.Sample -> Fonts (FontSize, FilePath)
 curSampleFonts sample =
-    ConfigSampler.sValue sample
+    sample ^. ConfigSampler.sConfig
     & Config.fonts
     & prependConfigPath sample
     & assignFontSizes sample
 
-makeGetFonts :: Font.LCDSubPixelEnabled -> Sampler Config -> IO (IO (Fonts Draw.Font))
+makeGetFonts :: Font.LCDSubPixelEnabled -> Sampler -> IO (IO (Fonts Draw.Font))
 makeGetFonts subpixel configSampler =
     do
         startFontsDef <- getFontsDef
@@ -287,7 +287,7 @@ makeGetFonts subpixel configSampler =
 
 mainLoop ::
     Font.LCDSubPixelEnabled ->
-    GLFW.Window -> RefreshScheduler -> Sampler Config ->
+    GLFW.Window -> RefreshScheduler -> Sampler ->
     (Fonts Draw.Font -> Config -> Widget.Size ->
     IO (Widget (MainLoop.M Widget.EventResult))) -> IO ()
 mainLoop subpixel win refreshScheduler configSampler iteration =
@@ -296,12 +296,12 @@ mainLoop subpixel win refreshScheduler configSampler iteration =
         lastVersionNumRef <- newIORef =<< getCurrentTime
         let getConfig =
                 ConfigSampler.getSample configSampler
-                <&> Style.mainLoopConfig . ConfigSampler.sValue
+                <&> Style.mainLoopConfig . (^. ConfigSampler.sConfig)
         let makeWidget size =
                 do
                     config <-
                         ConfigSampler.getSample configSampler
-                        <&> ConfigSampler.sValue
+                        <&> (^. ConfigSampler.sConfig)
                     fonts <- getFonts
                     iteration fonts config size
         let tickHandler =
