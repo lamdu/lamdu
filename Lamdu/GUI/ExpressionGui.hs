@@ -55,7 +55,7 @@ import qualified Graphics.DrawingCombinators as Draw
 import           Graphics.UI.Bottle.Alignment (Alignment(..))
 import           Graphics.UI.Bottle.Animation (AnimId)
 import qualified Graphics.UI.Bottle.EventMap as E
-import           Graphics.UI.Bottle.ModKey (ModKey(..))
+import           Graphics.UI.Bottle.MetaKey (MetaKey(..), noMods)
 import           Graphics.UI.Bottle.View (View)
 import qualified Graphics.UI.Bottle.View as View
 import           Graphics.UI.Bottle.Widget (Widget)
@@ -509,9 +509,9 @@ disallowedNameChars = "[]\\`()"
 
 nameEditFDConfig :: FocusDelegator.Config
 nameEditFDConfig = FocusDelegator.Config
-    { FocusDelegator.focusChildKeys = [ModKey mempty GLFW.Key'Enter]
+    { FocusDelegator.focusChildKeys = [MetaKey noMods GLFW.Key'Enter]
     , FocusDelegator.focusChildDoc = E.Doc ["Edit", "Rename"]
-    , FocusDelegator.focusParentKeys = [ModKey mempty GLFW.Key'Escape]
+    , FocusDelegator.focusParentKeys = [MetaKey noMods GLFW.Key'Escape]
     , FocusDelegator.focusParentDoc = E.Doc ["Edit", "Done renaming"]
     }
 

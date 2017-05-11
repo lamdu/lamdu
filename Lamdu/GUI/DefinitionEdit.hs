@@ -13,7 +13,7 @@ import qualified Graphics.DrawingCombinators as Draw
 import           Graphics.UI.Bottle.Animation (AnimId)
 import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.EventMap as E
-import           Graphics.UI.Bottle.ModKey (ModKey(..))
+import           Graphics.UI.Bottle.MetaKey (MetaKey(..), noMods)
 import           Graphics.UI.Bottle.View (View(..))
 import qualified Graphics.UI.Bottle.View as View
 import           Graphics.UI.Bottle.Widget (Widget)
@@ -53,7 +53,7 @@ addUndeleteButton myId undelete mkWidget =
         return $ \width -> Box.vboxAlign 0 [mkWidget width, undelButton]
     where
         eventMap =
-            Widget.keysEventMapMovesCursor [ModKey mempty GLFW.Key'Enter]
+            Widget.keysEventMapMovesCursor [MetaKey noMods GLFW.Key'Enter]
             (E.Doc ["Edit", "Undelete definition"]) undelete
         undelButtonId = Widget.joinId myId ["Undelete"]
 

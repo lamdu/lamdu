@@ -16,7 +16,7 @@ import qualified Data.Store.Transaction as Transaction
 import qualified Data.Text as Text
 import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.Bottle.EventMap as E
-import           Graphics.UI.Bottle.ModKey (ModKey(..))
+import           Graphics.UI.Bottle.MetaKey (MetaKey(..), noMods, toModKey)
 import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import           Graphics.UI.Bottle.Widget.Aligned (AlignedWidget)
@@ -81,9 +81,9 @@ presentationModeChoiceConfig :: Choice.Config
 presentationModeChoiceConfig = Choice.Config
     { Choice.cwcFDConfig =
         FocusDelegator.Config
-        { FocusDelegator.focusChildKeys = [ModKey mempty GLFW.Key'Enter]
+        { FocusDelegator.focusChildKeys = [MetaKey noMods GLFW.Key'Enter]
         , FocusDelegator.focusChildDoc = E.Doc ["Presentation Mode", "Select"]
-        , FocusDelegator.focusParentKeys = [ModKey mempty GLFW.Key'Enter]
+        , FocusDelegator.focusParentKeys = [MetaKey noMods GLFW.Key'Enter]
         , FocusDelegator.focusParentDoc = E.Doc ["Presentation Mode", "Choose selected"]
         }
     , Choice.cwcOrientation = Box.Vertical
@@ -171,7 +171,7 @@ mkChosenScopeCursor binder =
 
 makeScopeEventMap ::
     Monad m =>
-    [ModKey] -> [ModKey] -> ScopeCursor -> (Sugar.BinderParamScopeId -> m ()) ->
+    [MetaKey] -> [MetaKey] -> ScopeCursor -> (Sugar.BinderParamScopeId -> m ()) ->
     Widget.EventMap (m Widget.EventResult)
 makeScopeEventMap prevKey nextKey cursor setter =
     do
@@ -187,10 +187,10 @@ makeScopeEventMap prevKey nextKey cursor setter =
 blockEventMap :: Monad m => Widget.EventMap (m Widget.EventResult)
 blockEventMap =
     return mempty
-    & E.keyPresses dirKeys
+    & E.keyPresses (dirKeys <&> toModKey)
     (E.Doc ["Navigation", "Move", "(blocked)"])
     where
-        dirKeys = [GLFW.Key'Left, GLFW.Key'Right] <&> ModKey mempty
+        dirKeys = [GLFW.Key'Left, GLFW.Key'Right] <&> MetaKey noMods
 
 makeScopeNavEdit ::
     Monad m =>
@@ -223,8 +223,8 @@ makeScopeNavEdit binder myId curCursor =
             _ -> return (mempty, Nothing)
     where
         mkScopeEventMap l r = makeScopeEventMap l r curCursor setScope
-        leftKeys = [ModKey mempty GLFW.Key'Left]
-        rightKeys = [ModKey mempty GLFW.Key'Right]
+        leftKeys = [MetaKey noMods GLFW.Key'Left]
+        rightKeys = [MetaKey noMods GLFW.Key'Right]
         scopes :: [(Text, Maybe Sugar.BinderParamScopeId)]
         scopes =
             [ ("◀", sMPrevParamScope curCursor)
@@ -331,7 +331,7 @@ make name color binder myId =
     do
         Parts mParamsEdit mScopeEdit bodyEdit eventMap <-
             makeParts ExprGuiT.UnlimitedFuncApply binder myId myId
-        rhsJumperEquals <- jumpToRHS [ModKey mempty GLFW.Key'Equal] rhs
+        rhsJumperEquals <- jumpToRHS [MetaKey noMods GLFW.Key'Equal] rhs
         presentationEdits <-
             binder ^.. Sugar.bMPresentationModeProp . Lens._Just
             & traverse (mkPresentationModeEdit presentationChoiceId)
@@ -413,7 +413,7 @@ makeLetEdit item =
 
 jumpToRHS ::
     Monad f =>
-    [ModKey] -> (Text, Sugar.EntityId) ->
+    [MetaKey] -> (Text, Sugar.EntityId) ->
     ExprGuiM f (Widget.EventMap (T f Widget.EventResult))
 jumpToRHS keys (rhsDoc, rhsId) = do
     savePos <- ExprGuiM.mkPrejumpPosSaver

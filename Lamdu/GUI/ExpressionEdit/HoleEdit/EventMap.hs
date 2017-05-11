@@ -15,8 +15,9 @@ import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
 import qualified Data.Text as Text
 import qualified Graphics.UI.Bottle.EventMap as E
+import           Graphics.UI.Bottle.MetaKey (MetaKey(..))
+import qualified Graphics.UI.Bottle.MetaKey as MetaKey
 import           Graphics.UI.Bottle.ModKey (ModKey(..))
-import qualified Graphics.UI.Bottle.ModKey as ModKey
 import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.Grid as Grid
@@ -71,10 +72,10 @@ adHocTextEditEventMap holeConfig holeInfo searchTermProp =
 disallowedHoleChars :: String
 disallowedHoleChars = "`\"\n "
 
-toLiteralTextKeys :: [ModKey]
+toLiteralTextKeys :: [MetaKey]
 toLiteralTextKeys =
-    [ ModKey.shift GLFW.Key'Apostrophe
-    , ModKey mempty GLFW.Key'Apostrophe
+    [ MetaKey.shift GLFW.Key'Apostrophe
+    , MetaKey MetaKey.noMods GLFW.Key'Apostrophe
     ]
 
 allowedCharsFromSearchTerm ::
@@ -119,7 +120,7 @@ disallowCharsFromSearchTerm ::
 disallowCharsFromSearchTerm Config.Hole{..} holeInfo mPos =
     E.filterChars (`notElem` disallowedHoleChars) .
     deleteKeys
-    (holePickAndMoveToNextHoleKeys ++ holePickResultKeys) .
+    (holePickAndMoveToNextHoleKeys ++ holePickResultKeys <&> MetaKey.toModKey) .
     E.filterChars (allowedCharsFromSearchTerm holeInfo mPos)
 
 deleteKeys :: [ModKey] -> E.EventMap a -> E.EventMap a
@@ -176,6 +177,7 @@ removeUnwanted =
                 , Config.enterSubexpressionKeys config
                 , Config.letAddItemKeys config
                 ]
+                <&> MetaKey.toModKey
         let disallowedOperator '.' = False
             disallowedOperator char
                 | char `notElem` operatorChars = False
@@ -251,7 +253,7 @@ makeOpenEventMaps holeInfo mShownResult =
             Just shownResult ->
                 mkEventsOnPickedResult shownResult
                 <&> mappend (pickEventMap holeConfig holeInfo shownResult)
-                <&> deleteKeys toLiteralTextKeys
+                <&> deleteKeys (toLiteralTextKeys <&> MetaKey.toModKey)
         let adHocEdit = adHocTextEditEventMap holeConfig holeInfo searchTermProp
         (eventMap, adHocEdit <> eventMap)
             & Lens.both %~ mappend maybeLiteralTextEventMap

@@ -7,7 +7,7 @@ import qualified Control.Lens as Lens
 import           Data.Store.Transaction (Transaction)
 import           Graphics.UI.Bottle.Animation (AnimId)
 import qualified Graphics.UI.Bottle.EventMap as E
-import           Graphics.UI.Bottle.ModKey (ModKey(..))
+import           Graphics.UI.Bottle.MetaKey (MetaKey(..), noMods)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import           Graphics.UI.Bottle.Widget.Aligned (AlignedWidget)
 import qualified Graphics.UI.Bottle.Widget.TreeLayout as TreeLayout
@@ -95,7 +95,7 @@ mkLightLambda params myId =
             mapM (WE.isSubCursor . WidgetIds.fromEntityId) paramIds
             <&> or
             & ExprGuiM.widgetEnv
-        let shrinkKeys = [ModKey mempty GLFW.Key'Escape]
+        let shrinkKeys = [MetaKey noMods GLFW.Key'Escape]
         let shrinkEventMap =
                 Widget.keysEventMapMovesCursor shrinkKeys
                 (E.Doc ["View", "Shrink Lambda Params"]) (return (lamId myId))

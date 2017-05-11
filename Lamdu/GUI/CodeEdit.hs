@@ -14,7 +14,7 @@ import           Data.Orphans () -- Imported for Monoid (IO ()) instance
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
 import qualified Graphics.UI.Bottle.EventMap as E
-import           Graphics.UI.Bottle.ModKey (ModKey(..))
+import           Graphics.UI.Bottle.MetaKey (MetaKey)
 import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widget.Aligned as AlignedWidget
@@ -206,7 +206,7 @@ makePaneEdit env pane =
 makeNewDefinitionEventMap ::
     Monad m =>
     Anchors.CodeProps m ->
-    WidgetEnvT (T m) ([ModKey] -> Widget.EventMap (T m Widget.EventResult))
+    WidgetEnvT (T m) ([MetaKey] -> Widget.EventMap (T m Widget.EventResult))
 makeNewDefinitionEventMap cp =
     do
         curCursor <- WE.readCursor

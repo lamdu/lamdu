@@ -20,6 +20,7 @@ import           Graphics.UI.Bottle.Animation (AnimId, R)
 import qualified Graphics.UI.Bottle.Animation as Anim
 import           Graphics.UI.Bottle.EventMap (EventMap)
 import qualified Graphics.UI.Bottle.EventMap as E
+import           Graphics.UI.Bottle.MetaKey (MetaKey, toModKey)
 import           Graphics.UI.Bottle.ModKey (ModKey(..))
 import qualified Graphics.UI.Bottle.ModKey as ModKey
 import           Graphics.UI.Bottle.View (View(..))
@@ -36,7 +37,7 @@ data Config = Config
     { configStyle :: TextView.Style
     , configInputDocColor :: Draw.Color
     , configBGColor :: Draw.Color
-    , configOverlayDocKeys :: [ModKey]
+    , configOverlayDocKeys :: [MetaKey]
     , configTint :: Draw.Color
     }
 
@@ -182,7 +183,9 @@ makeToggledHelpAdder startValue =
                             , "Hide"
                             )
                         HelpNotShown ->
-                            (makeTooltip config (configOverlayDocKeys config) animId, "Show")
+                            ( makeTooltip config (configOverlayDocKeys config <&> toModKey) animId
+                            , "Show"
+                            )
                 let toggleEventMap =
                         Widget.keysEventMap (configOverlayDocKeys config)
                         (E.Doc ["Help", "Key Bindings", docStr]) $

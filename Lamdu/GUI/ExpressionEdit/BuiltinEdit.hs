@@ -8,7 +8,7 @@ import           Data.Store.Transaction (Transaction)
 import qualified Data.Text as Text
 import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.Bottle.EventMap as E
-import           Graphics.UI.Bottle.ModKey (ModKey(..))
+import           Graphics.UI.Bottle.MetaKey (MetaKey(..), noMods)
 import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets as BWidgets
@@ -27,9 +27,9 @@ type T = Transaction
 
 builtinFDConfig :: FocusDelegator.Config
 builtinFDConfig = FocusDelegator.Config
-    { FocusDelegator.focusChildKeys = [ModKey mempty GLFW.Key'Enter]
+    { FocusDelegator.focusChildKeys = [MetaKey noMods GLFW.Key'Enter]
     , FocusDelegator.focusChildDoc = E.Doc ["Edit", "Change imported name"]
-    , FocusDelegator.focusParentKeys = [ModKey mempty GLFW.Key'Escape]
+    , FocusDelegator.focusParentKeys = [MetaKey noMods GLFW.Key'Escape]
     , FocusDelegator.focusParentDoc = E.Doc ["Edit", "Stop changing name"]
     }
 

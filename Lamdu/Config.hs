@@ -10,20 +10,20 @@ module Lamdu.Config
 
 import qualified Data.Aeson.Types as Aeson
 import           GHC.Generics (Generic)
-import           Graphics.UI.Bottle.ModKey (ModKey)
+import           Graphics.UI.Bottle.MetaKey (MetaKey)
 import qualified Lamdu.GUI.VersionControl.Config as VersionControl
 import           Lamdu.Prelude
 
 data Help = Help
-    { helpKeys :: [ModKey]
+    { helpKeys :: [MetaKey]
     } deriving (Eq, Generic, Show)
 instance Aeson.ToJSON Help where
     toJSON = Aeson.genericToJSON Aeson.defaultOptions
 instance Aeson.FromJSON Help
 
 data Zoom = Zoom
-    { shrinkKeys :: [ModKey]
-    , enlargeKeys :: [ModKey]
+    { shrinkKeys :: [MetaKey]
+    , enlargeKeys :: [MetaKey]
     , enlargeFactor :: Double
     , shrinkFactor :: Double
     } deriving (Eq, Generic, Show)
@@ -33,49 +33,49 @@ instance Aeson.FromJSON Zoom
 
 data Export = Export
     { exportPath :: FilePath
-    , exportKeys :: [ModKey]
-    , exportFancyKeys :: [ModKey]
-    , exportAllKeys :: [ModKey]
-    , importKeys :: [ModKey]
+    , exportKeys :: [MetaKey]
+    , exportFancyKeys :: [MetaKey]
+    , exportAllKeys :: [MetaKey]
+    , importKeys :: [MetaKey]
     } deriving (Eq, Generic, Show)
 instance Aeson.ToJSON Export where
     toJSON = Aeson.genericToJSON Aeson.defaultOptions
 instance Aeson.FromJSON Export
 
 data Pane = Pane
-    { paneCloseKeys :: [ModKey]
-    , newDefinitionKeys :: [ModKey]
-    , newDefinitionButtonPressKeys :: [ModKey]
+    { paneCloseKeys :: [MetaKey]
+    , newDefinitionKeys :: [MetaKey]
+    , newDefinitionButtonPressKeys :: [MetaKey]
     } deriving (Eq, Generic, Show)
 instance Aeson.ToJSON Pane where
     toJSON = Aeson.genericToJSON Aeson.defaultOptions
 instance Aeson.FromJSON Pane
 
 data Hole = Hole
-    { holePickAndMoveToNextHoleKeys :: [ModKey]
-    , holeJumpToNextKeys :: [ModKey]
-    , holeJumpToPrevKeys :: [ModKey]
+    { holePickAndMoveToNextHoleKeys :: [MetaKey]
+    , holeJumpToNextKeys :: [MetaKey]
+    , holeJumpToPrevKeys :: [MetaKey]
     , holeResultCount :: Int
-    , holePickResultKeys :: [ModKey]
-    , holeUnwrapKeys :: [ModKey]
-    , holeOpenKeys :: [ModKey]
-    , holeCloseKeys :: [ModKey]
+    , holePickResultKeys :: [MetaKey]
+    , holeUnwrapKeys :: [MetaKey]
+    , holeOpenKeys :: [MetaKey]
+    , holeCloseKeys :: [MetaKey]
     } deriving (Eq, Generic, Show)
 instance Aeson.ToJSON Hole where
     toJSON = Aeson.genericToJSON Aeson.defaultOptions
 instance Aeson.FromJSON Hole
 
 data Eval = Eval
-    { prevScopeKeys :: [ModKey]
-    , nextScopeKeys :: [ModKey]
+    { prevScopeKeys :: [MetaKey]
+    , nextScopeKeys :: [MetaKey]
     } deriving (Eq, Generic, Show)
 instance Aeson.ToJSON Eval where
     toJSON = Aeson.genericToJSON Aeson.defaultOptions
 instance Aeson.FromJSON Eval
 
 data LiteralText = LiteralText
-    { literalTextStartEditingKeys :: [ModKey]
-    , literalTextStopEditingKeys :: [ModKey]
+    { literalTextStartEditingKeys :: [MetaKey]
+    , literalTextStopEditingKeys :: [MetaKey]
     } deriving (Eq, Generic, Show)
 instance Aeson.ToJSON LiteralText where
     toJSON = Aeson.genericToJSON Aeson.defaultOptions
@@ -94,41 +94,41 @@ data Config = Config
 
     , maxExprDepth :: Int
 
-    , quitKeys :: [ModKey]
-    , nextInfoModeKeys :: [ModKey]
-    , previousCursorKeys :: [ModKey]
+    , quitKeys :: [MetaKey]
+    , nextInfoModeKeys :: [MetaKey]
+    , previousCursorKeys :: [MetaKey]
 
-    , addNextParamKeys :: [ModKey]
-    , paramOrderBeforeKeys :: [ModKey]
-    , paramOrderAfterKeys :: [ModKey]
-    , jumpToDefinitionKeys :: [ModKey]
-    , delForwardKeys :: [ModKey]
-    , delBackwardKeys :: [ModKey]
-    , wrapKeys :: [ModKey]
+    , addNextParamKeys :: [MetaKey]
+    , paramOrderBeforeKeys :: [MetaKey]
+    , paramOrderAfterKeys :: [MetaKey]
+    , jumpToDefinitionKeys :: [MetaKey]
+    , delForwardKeys :: [MetaKey]
+    , delBackwardKeys :: [MetaKey]
+    , wrapKeys :: [MetaKey]
 
-    , acceptDefinitionTypeKeys :: [ModKey]
+    , acceptDefinitionTypeKeys :: [MetaKey]
 
-    , letAddItemKeys :: [ModKey]
+    , letAddItemKeys :: [MetaKey]
 
-    , extractKeys :: [ModKey]
-    , inlineKeys :: [ModKey]
-    , moveLetInwardKeys:: [ModKey]
+    , extractKeys :: [MetaKey]
+    , inlineKeys :: [MetaKey]
+    , moveLetInwardKeys:: [MetaKey]
 
-    , jumpLHStoRHSKeys :: [ModKey]
-    , jumpRHStoLHSKeys :: [ModKey]
+    , jumpLHStoRHSKeys :: [MetaKey]
+    , jumpRHStoLHSKeys :: [MetaKey]
 
-    , enterSubexpressionKeys :: [ModKey]
-    , leaveSubexpressionKeys :: [ModKey]
+    , enterSubexpressionKeys :: [MetaKey]
+    , leaveSubexpressionKeys :: [MetaKey]
 
-    , recordOpenKeys :: [ModKey]
-    , recordAddFieldKeys :: [ModKey]
+    , recordOpenKeys :: [MetaKey]
+    , recordAddFieldKeys :: [MetaKey]
 
-    , caseOpenKeys :: [ModKey]
-    , caseAddAltKeys :: [ModKey]
+    , caseOpenKeys :: [MetaKey]
+    , caseAddAltKeys :: [MetaKey]
     } deriving (Eq, Generic, Show)
 instance Aeson.ToJSON Config where
     toJSON = Aeson.genericToJSON Aeson.defaultOptions
 instance Aeson.FromJSON Config
 
-delKeys :: Config -> [ModKey]
+delKeys :: Config -> [MetaKey]
 delKeys config = delForwardKeys config ++ delBackwardKeys config

@@ -8,7 +8,7 @@ import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
 import           Data.UUID.Types (UUID)
 import qualified Graphics.UI.Bottle.EventMap as E
-import           Graphics.UI.Bottle.ModKey (ModKey(..))
+import           Graphics.UI.Bottle.MetaKey (MetaKey(..), noMods)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widget.Aligned as AlignedWidget
 import qualified Graphics.UI.Bottle.Widget.TreeLayout as TreeLayout
@@ -40,7 +40,7 @@ mkEditEventMap ::
     Text -> T m (UUID, Sugar.EntityId) ->
     Widget.EventMap (T m Widget.EventResult)
 mkEditEventMap valText setToHole =
-    Widget.keysEventMapMovesCursor [ModKey mempty GLFW.Key'Enter]
+    Widget.keysEventMapMovesCursor [MetaKey noMods GLFW.Key'Enter]
     (E.Doc ["Edit", "Value"]) $
     do
         (uuid, entityId) <- setToHole

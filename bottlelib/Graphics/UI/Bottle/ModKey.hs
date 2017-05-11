@@ -65,14 +65,15 @@ prettyKey k
 prettyModKeys :: GLFW.ModifierKeys -> Text
 prettyModKeys ms =
     mconcat $
-    [superName <> "+" | GLFW.modifierKeysSuper ms] ++
+    [superName | GLFW.modifierKeysSuper ms] ++
     ["Ctrl+" | GLFW.modifierKeysControl ms] ++
     ["Alt+" | GLFW.modifierKeysAlt ms] ++
     ["Shift+" | GLFW.modifierKeysShift ms]
     where
         superName
-            | SysInfo.os == "darwin" = "Cmd"
-            | otherwise = "Win"
+            | SysInfo.os /= "darwin" = "Win+"
+            | ms == superMods = "⌘"
+            | otherwise = "⌘+"
 
 pretty :: ModKey -> Text
 pretty (ModKey ms key) = prettyModKeys ms <> prettyKey key

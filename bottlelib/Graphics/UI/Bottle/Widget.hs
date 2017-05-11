@@ -72,7 +72,7 @@ import           Graphics.UI.Bottle.Direction (Direction)
 import qualified Graphics.UI.Bottle.Direction as Direction
 import           Graphics.UI.Bottle.EventMap (EventMap)
 import qualified Graphics.UI.Bottle.EventMap as EventMap
-import           Graphics.UI.Bottle.ModKey (ModKey)
+import           Graphics.UI.Bottle.MetaKey (MetaKey, toModKey)
 import           Graphics.UI.Bottle.Rect (Rect(..))
 import qualified Graphics.UI.Bottle.Rect as Rect
 import           Graphics.UI.Bottle.View (View(..))
@@ -229,18 +229,18 @@ tint :: Draw.Color -> Widget a -> Widget a
 tint color = view %~ View.tint color
 
 keysEventMap ::
-    Functor f => [ModKey] -> EventMap.Doc ->
+    Functor f => [MetaKey] -> EventMap.Doc ->
     f () -> EventMap (f EventResult)
 keysEventMap keys doc act =
     (fmap . const) mempty <$>
-    EventMap.keyPresses keys doc act
+    EventMap.keyPresses (keys <&> toModKey) doc act
 
 keysEventMapMovesCursor ::
-    Functor f => [ModKey] -> EventMap.Doc ->
+    Functor f => [MetaKey] -> EventMap.Doc ->
     f Id -> EventMap (f EventResult)
 keysEventMapMovesCursor keys doc act =
     fmap eventResultFromCursor <$>
-    EventMap.keyPresses keys doc act
+    EventMap.keyPresses (keys <&> toModKey) doc act
 
 -- TODO: This actually makes an incorrect widget because its size
 -- remains same, but it is now translated away from 0..size

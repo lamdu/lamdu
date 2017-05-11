@@ -11,7 +11,7 @@ import qualified Data.Store.Rev.Branch as Branch
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
 import qualified Graphics.UI.Bottle.EventMap as E
-import           Graphics.UI.Bottle.ModKey (ModKey(..))
+import           Graphics.UI.Bottle.MetaKey (MetaKey(..), noMods)
 import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.Box as Box
@@ -29,9 +29,9 @@ import           Lamdu.Prelude
 
 branchNameFDConfig :: FocusDelegator.Config
 branchNameFDConfig = FocusDelegator.Config
-    { FocusDelegator.focusChildKeys = [ModKey mempty GLFW.Key'F2]
+    { FocusDelegator.focusChildKeys = [MetaKey noMods GLFW.Key'F2]
     , FocusDelegator.focusChildDoc = E.Doc ["Branches", "Rename"]
-    , FocusDelegator.focusParentKeys = [ModKey mempty GLFW.Key'Enter]
+    , FocusDelegator.focusParentKeys = [MetaKey noMods GLFW.Key'Enter]
     , FocusDelegator.focusParentDoc = E.Doc ["Branches", "Done renaming"]
     }
 
@@ -70,9 +70,9 @@ choiceWidgetConfig VersionControl.Config{..} VersionControl.Theme{..} =
     Choice.Config
     { Choice.cwcFDConfig =
         FocusDelegator.Config
-        { FocusDelegator.focusChildKeys = [ModKey mempty GLFW.Key'Enter]
+        { FocusDelegator.focusChildKeys = [MetaKey noMods GLFW.Key'Enter]
         , FocusDelegator.focusChildDoc = E.Doc ["Branches", "Select"]
-        , FocusDelegator.focusParentKeys = [ModKey mempty GLFW.Key'Enter]
+        , FocusDelegator.focusParentKeys = [MetaKey noMods GLFW.Key'Enter]
         , FocusDelegator.focusParentDoc = E.Doc ["Branches", "Choose selected"]
         }
     , Choice.cwcExpandMode = Choice.AutoExpand selectedBranchColor

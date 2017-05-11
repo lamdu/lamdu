@@ -7,7 +7,7 @@ module Lamdu.GUI.ParamEdit
 import qualified Data.Map as Map
 import           Data.Store.Transaction (Transaction)
 import qualified Graphics.UI.Bottle.EventMap as E
-import           Graphics.UI.Bottle.ModKey (ModKey)
+import           Graphics.UI.Bottle.MetaKey (MetaKey, toModKey)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widget.TreeLayout as TreeLayout
 import           Lamdu.Config (Config)
@@ -55,7 +55,7 @@ eventMapAddFirstParam ::
 eventMapAddFirstParam config addFirstParam =
     addFirstParam
     <&> chooseAddResultEntityId
-    & E.keyPresses (Config.addNextParamKeys config)
+    & E.keyPresses (Config.addNextParamKeys config <&> toModKey)
         (E.Doc ["Edit", "Add parameter"])
 
 eventMapAddNextParam ::
@@ -65,18 +65,18 @@ eventMapAddNextParam ::
 eventMapAddNextParam config fpAdd =
     fpAdd
     <&> chooseAddResultEntityId
-    & E.keyPresses (Config.addNextParamKeys config)
+    & E.keyPresses (Config.addNextParamKeys config <&> toModKey)
         (E.Doc ["Edit", "Add next parameter"])
 
 eventMapOrderParam ::
     Monad m =>
-    [ModKey] -> Text -> m () -> Widget.EventMap (m Widget.EventResult)
+    [MetaKey] -> Text -> m () -> Widget.EventMap (m Widget.EventResult)
 eventMapOrderParam keys docSuffix =
     Widget.keysEventMap keys (E.Doc ["Edit", "Parameter", "Move " <> docSuffix])
 
 eventParamDelEventMap ::
     Monad m =>
-    m Sugar.ParamDelResult -> [ModKey] -> Text -> Widget.Id ->
+    m Sugar.ParamDelResult -> [MetaKey] -> Text -> Widget.Id ->
     Widget.EventMap (m Widget.EventResult)
 eventParamDelEventMap fpDel keys docSuffix dstPosId =
     do
@@ -90,7 +90,7 @@ eventParamDelEventMap fpDel keys docSuffix dstPosId =
         Widget.eventResultFromCursor dstPosId
             & Widget.applyIdMapping widgetIdMap
             & return
-    & E.keyPresses keys
+    & E.keyPresses (keys <&> toModKey)
         (E.Doc ["Edit", "Delete parameter" <> docSuffix])
 
 data Info m = Info

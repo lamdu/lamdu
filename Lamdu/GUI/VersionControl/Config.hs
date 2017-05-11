@@ -7,14 +7,14 @@ import qualified Data.Aeson.Types as Aeson
 import           GHC.Generics (Generic)
 import qualified Graphics.DrawingCombinators as Draw
 import           Graphics.DrawingCombinators.Utils ()
-import           Graphics.UI.Bottle.ModKey (ModKey(..))
+import           Graphics.UI.Bottle.MetaKey (MetaKey)
 
 data Config = Config
-    { undoKeys :: [ModKey]
-    , redoKeys :: [ModKey]
-    , makeBranchKeys :: [ModKey]
-    , jumpToBranchesKeys :: [ModKey]
-    , delBranchKeys :: [ModKey]
+    { undoKeys :: [MetaKey]
+    , redoKeys :: [MetaKey]
+    , makeBranchKeys :: [MetaKey]
+    , jumpToBranchesKeys :: [MetaKey]
+    , delBranchKeys :: [MetaKey]
     } deriving (Eq, Generic, Show)
 
 instance Aeson.ToJSON Config where

@@ -21,8 +21,9 @@ import           Data.Vector.Vector2 (Vector2(..))
 import qualified Data.Vector.Vector2 as Vector2
 import qualified Graphics.UI.Bottle.Direction as Direction
 import qualified Graphics.UI.Bottle.EventMap as EventMap
-import           Graphics.UI.Bottle.ModKey (ModKey(..))
-import qualified Graphics.UI.Bottle.ModKey as ModKey
+import           Graphics.UI.Bottle.MetaKey (MetaKey(..), noMods)
+import qualified Graphics.UI.Bottle.MetaKey as MetaKey
+import           Graphics.UI.Bottle.ModKey (ModKey)
 import           Graphics.UI.Bottle.Rect (Rect(..))
 import qualified Graphics.UI.Bottle.Rect as Rect
 import           Graphics.UI.Bottle.View (View(..))
@@ -95,19 +96,18 @@ data Keys key = Keys
     , keysBottom :: [key]
     } deriving (Functor, Foldable, Traversable)
 
-stdKeys :: Keys ModKey
+stdKeys :: Keys MetaKey
 stdKeys = Keys
     { keysDir = k <$> stdDirKeys
     , keysMoreLeft = [k GLFW.Key'Home]
     , keysMoreRight = [k GLFW.Key'End]
-    , keysLeftMost = [ctrlK GLFW.Key'Home]
-    , keysRightMost = [ctrlK GLFW.Key'End]
+    , keysLeftMost = [MetaKey.cmd GLFW.Key'Home]
+    , keysRightMost = [MetaKey.cmd GLFW.Key'End]
     , keysTop = [k GLFW.Key'PageUp]
     , keysBottom = [k GLFW.Key'PageDown]
     }
     where
-        k = ModKey mempty
-        ctrlK = ModKey.ctrl
+        k = MetaKey noMods
 
 addNavEventmap ::
     Keys ModKey -> NavDests a -> Widget.EventMap a -> Widget.EventMap a
@@ -155,7 +155,7 @@ getCursor widgets =
 make ::
     (Traversable vert, Traversable horiz) =>
     vert (horiz (Alignment, Widget a)) -> (vert (horiz Alignment), Widget a)
-make = makeWithKeys stdKeys
+make = makeWithKeys (stdKeys <&> MetaKey.toModKey)
 
 makeWithKeys ::
     (Traversable vert, Traversable horiz) =>

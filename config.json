@@ -2,48 +2,16 @@
     "maxExprDepth": 40,
     "help": {
         "helpKeys": [
-            [
-                {
-                    "modifierKeysSuper": false,
-                    "modifierKeysAlt": false,
-                    "modifierKeysShift": false,
-                    "modifierKeysControl": false
-                },
-                "Key'F1"
-            ],
-            [
-                {
-                    "modifierKeysSuper": false,
-                    "modifierKeysAlt": true,
-                    "modifierKeysShift": false,
-                    "modifierKeysControl": false
-                },
-                "Key'H"
-            ]
+            "F1",
+            "Alt+H"
         ]
     },
     "zoom": {
         "shrinkKeys": [
-            [
-                {
-                    "modifierKeysSuper": false,
-                    "modifierKeysAlt": false,
-                    "modifierKeysShift": false,
-                    "modifierKeysControl": true
-                },
-                "Key'Minus"
-            ]
+            "Cmd+Minus"
         ],
         "enlargeKeys": [
-            [
-                {
-                    "modifierKeysSuper": false,
-                    "modifierKeysAlt": false,
-                    "modifierKeysShift": false,
-                    "modifierKeysControl": true
-                },
-                "Key'Equal"
-            ]
+            "Cmd+Equal"
         ],
         "shrinkFactor": 1.1,
         "enlargeFactor": 1.1
@@ -51,639 +19,167 @@
     "export": {
         "exportPath": "export.json",
         "exportKeys": [
-            [
-                {
-                    "modifierKeysSuper": false,
-                    "modifierKeysAlt": true,
-                    "modifierKeysShift": false,
-                    "modifierKeysControl": false
-                },
-                "Key'E"
-            ]
+            "Alt+E"
         ],
         "exportFancyKeys": [
-            [
-                {
-                    "modifierKeysSuper": false,
-                    "modifierKeysAlt": true,
-                    "modifierKeysShift": true,
-                    "modifierKeysControl": false
-                },
-                "Key'J"
-            ]
+            "Alt+Shift+J"
         ],
         "exportAllKeys": [
-            [
-                {
-                    "modifierKeysSuper": false,
-                    "modifierKeysAlt": true,
-                    "modifierKeysShift": true,
-                    "modifierKeysControl": false
-                },
-                "Key'E"
-            ]
+            "Alt+Shift+E"
         ],
         "importKeys": [
-            [
-                {
-                    "modifierKeysSuper": false,
-                    "modifierKeysAlt": true,
-                    "modifierKeysShift": false,
-                    "modifierKeysControl": false
-                },
-                "Key'I"
-            ]
+            "Alt+I"
         ]
     },
     "pane": {
         "newDefinitionKeys": [
-            [
-                {
-                    "modifierKeysSuper": false,
-                    "modifierKeysAlt": true,
-                    "modifierKeysShift": false,
-                    "modifierKeysControl": false
-                },
-                "Key'N"
-            ]
+            "Alt+N"
         ],
         "newDefinitionButtonPressKeys": [
-            [
-                {
-                    "modifierKeysSuper": false,
-                    "modifierKeysAlt": false,
-                    "modifierKeysShift": false,
-                    "modifierKeysControl": false
-                },
-                "Key'Space"
-            ],
-            [
-                {
-                    "modifierKeysSuper": false,
-                    "modifierKeysAlt": false,
-                    "modifierKeysShift": false,
-                    "modifierKeysControl": false
-                },
-                "Key'Enter"
-            ]
+            "Space",
+            "Enter"
         ],
         "paneCloseKeys": [
-            [
-                {
-                    "modifierKeysSuper": false,
-                    "modifierKeysAlt": true,
-                    "modifierKeysShift": false,
-                    "modifierKeysControl": false
-                },
-                "Key'W"
-            ]
+            "Alt+W"
         ]
     },
     "versionControl": {
         "undoKeys": [
-            [
-                {
-                    "modifierKeysSuper": false,
-                    "modifierKeysAlt": false,
-                    "modifierKeysShift": false,
-                    "modifierKeysControl": true
-                },
-                "Key'Z"
-            ]
+            "Cmd+Z"
         ],
         "redoKeys": [
-            [
-                {
-                    "modifierKeysSuper": false,
-                    "modifierKeysAlt": false,
-                    "modifierKeysShift": false,
-                    "modifierKeysControl": true
-                },
-                "Key'Y"
-            ]
+            "Cmd+Y"
         ],
         "makeBranchKeys": [
-            [
-                {
-                    "modifierKeysSuper": false,
-                    "modifierKeysAlt": false,
-                    "modifierKeysShift": false,
-                    "modifierKeysControl": true
-                },
-                "Key'S"
-            ]
+            "Cmd+S"
         ],
         "delBranchKeys": [
-            [
-                {
-                    "modifierKeysSuper": false,
-                    "modifierKeysAlt": true,
-                    "modifierKeysShift": false,
-                    "modifierKeysControl": false
-                },
-                "Key'O"
-            ]
+            "Alt+O"
         ],
         "jumpToBranchesKeys": [
-            [
-                {
-                    "modifierKeysSuper": false,
-                    "modifierKeysAlt": false,
-                    "modifierKeysShift": false,
-                    "modifierKeysControl": true
-                },
-                "Key'F10"
-            ]
+            "Cmd+F10"
         ]
     },
     "hole": {
         "holeJumpToNextKeys": [
-            [
-                {
-                    "modifierKeysSuper": false,
-                    "modifierKeysAlt": false,
-                    "modifierKeysShift": false,
-                    "modifierKeysControl": false
-                },
-                "Key'Tab"
-            ]
+            "Tab"
         ],
         "holeResultCount": 5,
         "holePickAndMoveToNextHoleKeys": [
-            [
-                {
-                    "modifierKeysSuper": false,
-                    "modifierKeysAlt": false,
-                    "modifierKeysShift": false,
-                    "modifierKeysControl": false
-                },
-                "Key'Space"
-            ]
+            "Space"
         ],
         "holeJumpToPrevKeys": [
-            [
-                {
-                    "modifierKeysSuper": false,
-                    "modifierKeysAlt": false,
-                    "modifierKeysShift": true,
-                    "modifierKeysControl": false
-                },
-                "Key'Tab"
-            ]
+            "Shift+Tab"
         ],
         "holePickResultKeys": [
-            [
-                {
-                    "modifierKeysSuper": false,
-                    "modifierKeysAlt": false,
-                    "modifierKeysShift": false,
-                    "modifierKeysControl": false
-                },
-                "Key'Enter"
-            ]
+            "Enter"
         ],
         "holeOpenKeys": [
-            [
-                {
-                    "modifierKeysSuper": false,
-                    "modifierKeysAlt": false,
-                    "modifierKeysShift": false,
-                    "modifierKeysControl": false
-                },
-                "Key'Enter"
-            ]
+            "Enter"
         ],
         "holeCloseKeys": [
-            [
-                {
-                    "modifierKeysSuper": false,
-                    "modifierKeysAlt": false,
-                    "modifierKeysShift": false,
-                    "modifierKeysControl": false
-                },
-                "Key'Escape"
-            ],
-            [
-                {
-                    "modifierKeysSuper": false,
-                    "modifierKeysAlt": false,
-                    "modifierKeysShift": false,
-                    "modifierKeysControl": true
-                },
-                "Key'LeftBracket"
-            ]
+            "Escape",
+            "Cmd+LeftBracket"
         ],
         "holeUnwrapKeys": [
-            [
-                {
-                    "modifierKeysSuper": false,
-                    "modifierKeysAlt": false,
-                    "modifierKeysShift": false,
-                    "modifierKeysControl": false
-                },
-                "Key'Space"
-            ],
-            [
-                {
-                    "modifierKeysSuper": false,
-                    "modifierKeysAlt": false,
-                    "modifierKeysShift": false,
-                    "modifierKeysControl": false
-                },
-                "Key'Enter"
-            ]
+            "Space",
+            "Enter"
         ]
     },
     "literalText": {
         "literalTextStartEditingKeys": [
-            [
-                {
-                    "modifierKeysSuper": false,
-                    "modifierKeysAlt": false,
-                    "modifierKeysShift": false,
-                    "modifierKeysControl": false
-                },
-                "Key'Enter"
-            ],
-            [
-                {
-                    "modifierKeysSuper": false,
-                    "modifierKeysAlt": false,
-                    "modifierKeysShift": true,
-                    "modifierKeysControl": false
-                },
-                "Key'Right"
-            ]
+            "Enter",
+            "Shift+Right"
         ],
         "literalTextStopEditingKeys": [
-            [
-                {
-                    "modifierKeysSuper": false,
-                    "modifierKeysAlt": false,
-                    "modifierKeysShift": false,
-                    "modifierKeysControl": false
-                },
-                "Key'Escape"
-            ],
-            [
-                {
-                    "modifierKeysSuper": false,
-                    "modifierKeysAlt": false,
-                    "modifierKeysShift": true,
-                    "modifierKeysControl": false
-                },
-                "Key'Left"
-            ]
+            "Escape",
+            "Shift+Left"
         ]
     },
     "eval": {
         "prevScopeKeys": [
-            [
-                {
-                    "modifierKeysSuper": false,
-                    "modifierKeysAlt": false,
-                    "modifierKeysShift": false,
-                    "modifierKeysControl": true
-                },
-                "Key'Up"
-            ]
+            "Cmd+Up"
         ],
         "nextScopeKeys": [
-            [
-                {
-                    "modifierKeysSuper": false,
-                    "modifierKeysAlt": false,
-                    "modifierKeysShift": false,
-                    "modifierKeysControl": true
-                },
-                "Key'Down"
-            ]
+            "Cmd+Down"
         ]
     },
     "theme": "default",
     "previousCursorKeys": [
-        [
-            {
-                "modifierKeysSuper": false,
-                "modifierKeysAlt": true,
-                "modifierKeysShift": false,
-                "modifierKeysControl": false
-            },
-            "Key'Left"
-        ]
+        "Alt+Left"
     ],
     "enterSubexpressionKeys": [
-        [
-            {
-                "modifierKeysSuper": false,
-                "modifierKeysAlt": false,
-                "modifierKeysShift": true,
-                "modifierKeysControl": false
-            },
-            "Key'Right"
-        ]
+        "Shift+Right"
     ],
     "delBackwardKeys": [
-        [
-            {
-                "modifierKeysSuper": false,
-                "modifierKeysAlt": false,
-                "modifierKeysShift": false,
-                "modifierKeysControl": false
-            },
-            "Key'Backspace"
-        ]
+        "Backspace"
     ],
     "quitKeys": [
-        [
-            {
-                "modifierKeysSuper": false,
-                "modifierKeysAlt": false,
-                "modifierKeysShift": false,
-                "modifierKeysControl": true
-            },
-            "Key'Q"
-        ]
+        "Cmd+Q"
     ],
     "addNextParamKeys": [
-        [
-            {
-                "modifierKeysSuper": false,
-                "modifierKeysAlt": false,
-                "modifierKeysShift": false,
-                "modifierKeysControl": false
-            },
-            "Key'Space"
-        ]
+        "Space"
     ],
     "paramOrderBeforeKeys": [
-        [
-            {
-                "modifierKeysSuper": false,
-                "modifierKeysAlt": true,
-                "modifierKeysShift": false,
-                "modifierKeysControl": false
-            },
-            "Key'Up"
-        ]
+        "Alt+Up"
     ],
     "paramOrderAfterKeys": [
-        [
-            {
-                "modifierKeysSuper": false,
-                "modifierKeysAlt": true,
-                "modifierKeysShift": false,
-                "modifierKeysControl": false
-            },
-            "Key'Down"
-        ]
+        "Alt+Down"
     ],
     "wrapKeys": [
-        [
-            {
-                "modifierKeysSuper": false,
-                "modifierKeysAlt": false,
-                "modifierKeysShift": false,
-                "modifierKeysControl": false
-            },
-            "Key'Space"
-        ]
+        "Space"
     ],
     "recordOpenKeys": [
-        [
-            {
-                "modifierKeysSuper": false,
-                "modifierKeysAlt": true,
-                "modifierKeysShift": false,
-                "modifierKeysControl": false
-            },
-            "Key'O"
-        ]
+        "Alt+O"
     ],
     "caseOpenKeys": [
-        [
-            {
-                "modifierKeysSuper": false,
-                "modifierKeysAlt": true,
-                "modifierKeysShift": false,
-                "modifierKeysControl": false
-            },
-            "Key'O"
-        ]
+        "Alt+O"
     ],
     "jumpLHStoRHSKeys": [
-        [
-            {
-                "modifierKeysSuper": false,
-                "modifierKeysAlt": false,
-                "modifierKeysShift": false,
-                "modifierKeysControl": false
-            },
-            "Key'GraveAccent"
-        ]
+        "GraveAccent"
     ],
     "jumpRHStoLHSKeys": [
-        [
-            {
-                "modifierKeysSuper": false,
-                "modifierKeysAlt": false,
-                "modifierKeysShift": false,
-                "modifierKeysControl": false
-            },
-            "Key'GraveAccent"
-        ]
+        "GraveAccent"
     ],
     "extractKeys": [
-        [
-            {
-                "modifierKeysSuper": false,
-                "modifierKeysAlt": false,
-                "modifierKeysShift": false,
-                "modifierKeysControl": true
-            },
-            "Key'X"
-        ],
-        [
-            {
-                "modifierKeysSuper": false,
-                "modifierKeysAlt": false,
-                "modifierKeysShift": false,
-                "modifierKeysControl": false
-            },
-            "Key'X"
-        ],
-        [
-            {
-                "modifierKeysSuper": false,
-                "modifierKeysAlt": true,
-                "modifierKeysShift": false,
-                "modifierKeysControl": false
-            },
-            "Key'Up"
-        ]
+        "Cmd+X",
+        "X",
+        "Alt+Up"
     ],
     "moveLetInwardKeys": [
-        [
-            {
-                "modifierKeysSuper": false,
-                "modifierKeysAlt": true,
-                "modifierKeysShift": false,
-                "modifierKeysControl": false
-            },
-            "Key'Down"
-        ]
+        "Alt+Down"
     ],
     "inlineKeys": [
-        [
-            {
-                "modifierKeysSuper": false,
-                "modifierKeysAlt": false,
-                "modifierKeysShift": false,
-                "modifierKeysControl": true
-            },
-            "Key'V"
-        ],
-        [
-            {
-                "modifierKeysSuper": false,
-                "modifierKeysAlt": false,
-                "modifierKeysShift": false,
-                "modifierKeysControl": false
-            },
-            "Key'V"
-        ]
+        "Cmd+V",
+        "V"
     ],
     "nextInfoModeKeys": [
-        [
-            {
-                "modifierKeysSuper": false,
-                "modifierKeysAlt": false,
-                "modifierKeysShift": false,
-                "modifierKeysControl": false
-            },
-            "Key'F7"
-        ]
+        "F7"
     ],
     "leaveSubexpressionKeys": [
-        [
-            {
-                "modifierKeysSuper": false,
-                "modifierKeysAlt": false,
-                "modifierKeysShift": true,
-                "modifierKeysControl": false
-            },
-            "Key'Left"
-        ]
+        "Shift+Left"
     ],
     "acceptDefinitionTypeKeys": [
-        [
-            {
-                "modifierKeysSuper": false,
-                "modifierKeysAlt": false,
-                "modifierKeysShift": false,
-                "modifierKeysControl": false
-            },
-            "Key'Space"
-        ],
-        [
-            {
-                "modifierKeysSuper": false,
-                "modifierKeysAlt": false,
-                "modifierKeysShift": false,
-                "modifierKeysControl": false
-            },
-            "Key'Enter"
-        ]
+        "Space",
+        "Enter"
     ],
     "recordAddFieldKeys": [
-        [
-            {
-                "modifierKeysSuper": false,
-                "modifierKeysAlt": false,
-                "modifierKeysShift": false,
-                "modifierKeysControl": false
-            },
-            "Key'A"
-        ],
-        [
-            {
-                "modifierKeysSuper": false,
-                "modifierKeysAlt": false,
-                "modifierKeysShift": false,
-                "modifierKeysControl": false
-            },
-            "Key'Comma"
-        ]
+        "A",
+        "Comma"
     ],
     "caseAddAltKeys": [
-        [
-            {
-                "modifierKeysSuper": false,
-                "modifierKeysAlt": false,
-                "modifierKeysShift": false,
-                "modifierKeysControl": false
-            },
-            "Key'A"
-        ],
-        [
-            {
-                "modifierKeysSuper": false,
-                "modifierKeysAlt": false,
-                "modifierKeysShift": false,
-                "modifierKeysControl": false
-            },
-            "Key'Comma"
-        ]
+        "A",
+        "Comma"
     ],
     "delForwardKeys": [
-        [
-            {
-                "modifierKeysSuper": false,
-                "modifierKeysAlt": false,
-                "modifierKeysShift": false,
-                "modifierKeysControl": false
-            },
-            "Key'Delete"
-        ],
-        [
-            {
-                "modifierKeysSuper": false,
-                "modifierKeysAlt": true,
-                "modifierKeysShift": false,
-                "modifierKeysControl": false
-            },
-            "Key'Delete"
-        ]
+        "Delete",
+        "Alt+Delete"
     ],
     "letAddItemKeys": [
-        [
-            {
-                "modifierKeysSuper": false,
-                "modifierKeysAlt": false,
-                "modifierKeysShift": false,
-                "modifierKeysControl": false
-            },
-            "Key'L"
-        ],
-        [
-            {
-                "modifierKeysSuper": false,
-                "modifierKeysAlt": true,
-                "modifierKeysShift": false,
-                "modifierKeysControl": false
-            },
-            "Key'L"
-        ]
+        "L",
+        "Alt+L"
     ],
     "jumpToDefinitionKeys": [
-        [
-            {
-                "modifierKeysSuper": false,
-                "modifierKeysAlt": false,
-                "modifierKeysShift": false,
-                "modifierKeysControl": false
-            },
-            "Key'Enter"
-        ]
+        "Enter"
     ]
 }

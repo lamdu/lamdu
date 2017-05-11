@@ -8,7 +8,7 @@ module Graphics.UI.Bottle.Widgets.FocusDelegator
 import           Control.Lens.Operators
 import qualified Graphics.UI.Bottle.Direction as Direction
 import qualified Graphics.UI.Bottle.EventMap as E
-import           Graphics.UI.Bottle.ModKey (ModKey(..))
+import           Graphics.UI.Bottle.MetaKey (MetaKey, toModKey)
 import           Graphics.UI.Bottle.Rect (Rect(..))
 import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
@@ -18,9 +18,9 @@ import           Prelude.Compat
 data FocusEntryTarget = FocusEntryChild | FocusEntryParent
 
 data Config = Config
-    { focusChildKeys :: [ModKey]
+    { focusChildKeys :: [MetaKey]
     , focusChildDoc :: E.Doc
-    , focusParentKeys :: [ModKey]
+    , focusParentKeys :: [MetaKey]
     , focusParentDoc :: E.Doc
     }
 
@@ -36,7 +36,7 @@ setFocusChildEventMap Config{..} widgetRecord =
             case widgetRecord ^. Widget.mEnter of
             Nothing -> mempty
             Just childEnter ->
-                E.keyPresses focusChildKeys focusChildDoc $
+                E.keyPresses (focusChildKeys <&> toModKey) focusChildDoc $
                 childEnter Direction.Outside ^. Widget.enterResultEvent
 
 modifyEntry ::
