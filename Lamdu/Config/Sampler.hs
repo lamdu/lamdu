@@ -40,14 +40,11 @@ Lens.makeLenses ''Sample
 
 data Sampler = Sampler
     { _sThreadId :: ThreadId
-    , sGetSample :: IO Sample
+    , getSample :: IO Sample
     }
 
 onEachSample :: (Sample -> IO Sample) -> Sampler -> Sampler
 onEachSample act (Sampler t get) = Sampler t (get >>= act)
-
-getSample :: Sampler -> IO Sample
-getSample = sGetSample
 
 withMTime :: FilePath -> IO (Config, FilePath, Theme) -> IO Sample
 withMTime configPath act =
