@@ -18,6 +18,7 @@ import qualified Data.Text as Text
 import           GHC.Generics (Generic)
 import qualified Graphics.UI.GLFW as GLFW
 import           Graphics.UI.GLFW.Instances ()
+import qualified System.Info as SysInfo
 
 instance Monoid GLFW.ModifierKeys where
     mempty = GLFW.ModifierKeys False False False False
@@ -64,9 +65,14 @@ prettyKey k
 prettyModKeys :: GLFW.ModifierKeys -> Text
 prettyModKeys ms =
     mconcat $
+    [superName <> "+" | GLFW.modifierKeysSuper ms] ++
     ["Ctrl+" | GLFW.modifierKeysControl ms] ++
     ["Alt+" | GLFW.modifierKeysAlt ms] ++
     ["Shift+" | GLFW.modifierKeysShift ms]
+    where
+        superName
+            | SysInfo.os == "darwin" = "Cmd"
+            | otherwise = "Win"
 
 pretty :: ModKey -> Text
 pretty (ModKey ms key) = prettyModKeys ms <> prettyKey key
