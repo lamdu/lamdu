@@ -29,7 +29,7 @@ themeEventMap keys configSampler themeRef =
             >>= Directory.getDirectoryContents
             <&> filter ((== ".json") . FilePath.takeExtension)
             <&> map (Text.pack . FilePath.dropExtension)
-        let newTheme = takeWhile (/= curTheme) themeFiles ++ themeFiles & tail & head
+        let newTheme = dropWhile (/= curTheme) themeFiles ++ themeFiles & tail & head
         writeIORef themeRef newTheme
         ConfigSampler.setTheme configSampler newTheme
     & Widget.keysEventMap keys (E.Doc ["Theme", "Switch"])
