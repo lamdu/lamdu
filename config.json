@@ -1,187 +1,71 @@
 {
     "maxExprDepth": 40,
-    "help": {
-        "helpKeys": [
-            "F1",
-            "Alt+H"
-        ]
-    },
+    "help": { "helpKeys": [ "F1", "Alt+H" ] },
     "zoom": {
-        "shrinkKeys": [
-            "Cmd+Minus"
-        ],
-        "enlargeKeys": [
-            "Cmd+Equal"
-        ],
-        "shrinkFactor": 1.1,
-        "enlargeFactor": 1.1
+        "shrinkKeys"    : [ "Cmd+Minus" ],
+        "enlargeKeys"   : [ "Cmd+Equal" ],
+        "shrinkFactor"  : 1.1,
+        "enlargeFactor" : 1.1
     },
     "export": {
-        "exportPath": "export.json",
-        "exportKeys": [
-            "Alt+E"
-        ],
-        "exportFancyKeys": [
-            "Alt+Shift+J"
-        ],
-        "exportAllKeys": [
-            "Alt+Shift+E"
-        ],
-        "importKeys": [
-            "Alt+I"
-        ]
+        "exportPath"      : "export.json",
+        "exportKeys"      : [ "Alt+E" ],
+        "exportFancyKeys" : [ "Alt+Shift+J" ],
+        "exportAllKeys"   : [ "Alt+Shift+E" ],
+        "importKeys"      : [ "Alt+I" ]
     },
     "pane": {
-        "newDefinitionKeys": [
-            "Alt+N"
-        ],
-        "newDefinitionButtonPressKeys": [
-            "Space",
-            "Enter"
-        ],
-        "paneCloseKeys": [
-            "Alt+W"
-        ]
+        "newDefinitionKeys"            : [ "Alt+N" ],
+        "newDefinitionButtonPressKeys" : [ "Space", "Enter" ],
+        "paneCloseKeys"                : [ "Alt+W" ]
     },
     "versionControl": {
-        "undoKeys": [
-            "Cmd+Z"
-        ],
-        "redoKeys": [
-            "Cmd+Y"
-        ],
-        "makeBranchKeys": [
-            "Cmd+S"
-        ],
-        "delBranchKeys": [
-            "Alt+O"
-        ],
-        "jumpToBranchesKeys": [
-            "Cmd+F10"
-        ]
+        "undoKeys"           : [ "Cmd+Z" ],
+        "redoKeys"           : [ "Cmd+Y" ],
+        "makeBranchKeys"     : [ "Cmd+S" ],
+        "delBranchKeys"      : [ "Alt+O" ],
+        "jumpToBranchesKeys" : [ "Cmd+F10" ]
     },
     "hole": {
-        "holeJumpToNextKeys": [
-            "Tab"
-        ],
-        "holeResultCount": 5,
-        "holePickAndMoveToNextHoleKeys": [
-            "Space"
-        ],
-        "holeJumpToPrevKeys": [
-            "Shift+Tab"
-        ],
-        "holePickResultKeys": [
-            "Enter"
-        ],
-        "holeOpenKeys": [
-            "Enter"
-        ],
-        "holeCloseKeys": [
-            "Escape",
-            "Cmd+LeftBracket"
-        ],
-        "holeUnwrapKeys": [
-            "Space",
-            "Enter"
-        ]
+        "holeJumpToNextKeys"            : [ "Tab" ],
+        "holeResultCount"               : 5,
+        "holePickAndMoveToNextHoleKeys" : [ "Space" ],
+        "holeJumpToPrevKeys"            : [ "Shift+Tab" ],
+        "holePickResultKeys"            : [ "Enter" ],
+        "holeOpenKeys"                  : [ "Enter" ],
+        "holeCloseKeys"                 : [ "Escape", "Cmd+LeftBracket" ],
+        "holeUnwrapKeys"                : [ "Space", "Enter" ]
     },
     "literalText": {
-        "literalTextStartEditingKeys": [
-            "Enter",
-            "Shift+Right"
-        ],
-        "literalTextStopEditingKeys": [
-            "Escape",
-            "Shift+Left"
-        ]
+        "literalTextStartEditingKeys" : [ "Enter", "Shift+Right" ],
+        "literalTextStopEditingKeys"  : [ "Escape", "Shift+Left" ]
     },
     "eval": {
-        "prevScopeKeys": [
-            "Cmd+Up"
-        ],
-        "nextScopeKeys": [
-            "Cmd+Down"
-        ]
+        "prevScopeKeys": [ "Cmd+Up" ],
+        "nextScopeKeys": [ "Cmd+Down" ]
     },
-    "previousCursorKeys": [
-        "Alt+Left"
-    ],
-    "enterSubexpressionKeys": [
-        "Shift+Right"
-    ],
-    "delBackwardKeys": [
-        "Backspace"
-    ],
-    "quitKeys": [
-        "Cmd+Q"
-    ],
-    "changeThemeKeys": [
-        "Alt+T"
-    ],
-    "addNextParamKeys": [
-        "Space"
-    ],
-    "paramOrderBeforeKeys": [
-        "Alt+Up"
-    ],
-    "paramOrderAfterKeys": [
-        "Alt+Down"
-    ],
-    "wrapKeys": [
-        "Space"
-    ],
-    "recordOpenKeys": [
-        "Alt+O"
-    ],
-    "caseOpenKeys": [
-        "Alt+O"
-    ],
-    "jumpLHStoRHSKeys": [
-        "GraveAccent"
-    ],
-    "jumpRHStoLHSKeys": [
-        "GraveAccent"
-    ],
-    "extractKeys": [
-        "Cmd+X",
-        "X",
-        "Alt+Up"
-    ],
-    "moveLetInwardKeys": [
-        "Alt+Down"
-    ],
-    "inlineKeys": [
-        "Cmd+V",
-        "V"
-    ],
-    "nextInfoModeKeys": [
-        "F7"
-    ],
-    "leaveSubexpressionKeys": [
-        "Shift+Left"
-    ],
-    "acceptDefinitionTypeKeys": [
-        "Space",
-        "Enter"
-    ],
-    "recordAddFieldKeys": [
-        "A",
-        "Comma"
-    ],
-    "caseAddAltKeys": [
-        "A",
-        "Comma"
-    ],
-    "delForwardKeys": [
-        "Delete",
-        "Alt+Delete"
-    ],
-    "letAddItemKeys": [
-        "L",
-        "Alt+L"
-    ],
-    "jumpToDefinitionKeys": [
-        "Enter"
-    ]
+    "previousCursorKeys"       : [ "Alt+Left" ],
+    "enterSubexpressionKeys"   : [ "Shift+Right" ],
+    "delBackwardKeys"          : [ "Backspace" ],
+    "quitKeys"                 : [ "Cmd+Q" ],
+    "changeThemeKeys"          : [ "Alt+T" ],
+    "addNextParamKeys"         : [ "Space" ],
+    "paramOrderBeforeKeys"     : [ "Alt+Up" ],
+    "paramOrderAfterKeys"      : [ "Alt+Down" ],
+    "wrapKeys"                 : [ "Space" ],
+    "recordOpenKeys"           : [ "Alt+O" ],
+    "caseOpenKeys"             : [ "Alt+O" ],
+    "jumpLHStoRHSKeys"         : [ "GraveAccent" ],
+    "jumpRHStoLHSKeys"         : [ "GraveAccent" ],
+    "extractKeys"              : [ "Cmd+X", "X", "Alt+Up" ],
+    "moveLetInwardKeys"        : [ "Alt+Down" ],
+    "inlineKeys"               : [ "Cmd+V", "V" ],
+    "nextInfoModeKeys"         : [ "F7" ],
+    "leaveSubexpressionKeys"   : [ "Shift+Left" ],
+    "acceptDefinitionTypeKeys" : [ "Space", "Enter" ],
+    "recordAddFieldKeys"       : [ "A", "Comma" ],
+    "caseAddAltKeys"           : [ "A", "Comma" ],
+    "delForwardKeys"           : [ "Delete", "Alt+Delete" ],
+    "letAddItemKeys"           : [ "L", "Alt+L" ],
+    "jumpToDefinitionKeys"     : [ "Enter" ]
 }

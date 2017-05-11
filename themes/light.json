@@ -1,320 +1,95 @@
 {
-    "animationTimePeriodSec": 0.11,
-    "animationRemainInPeriod": 0.2,
+    "animationTimePeriodSec"        : 0.11,
+    "animationRemainInPeriod"       : 0.2,
+    "stdSpacing"                    : [1.0, 0.3],
+    "baseTextSize"                  : 16,
+    "hoverBGColor"                  : [0.8, 0.9, 0.95, 1.0],
+    "hoverDarkBGColor"              : [0.5, 0.5, 0.5, 0.85],
+    "hoverDarkPadding"              : [1.0, 1.0],
+    "maxEvalViewSize"               : 32,
+    "lightLambdaUnderlineColor"     : [0.0, 0.0, 0.0, 0.6],
+    "underlineWidth"                : 2,
+    "typeTint"                      : [1.0, 1.0, 1.0, 0.6],
+    "cursorBGColor"                 : [0.25, 0.25, 0.75, 0.25],
+    "recordTailColor"               : [0.6, 0.6, 0.6, 1.0],
+    "caseTailColor"                 : [0.2, 0.6, 0.2, 1.0],
+    "evaluatedPathBGColor"          : [0.0, 0.8, 0.0, 0.2],
+    "valFrameBGColor"               : [0.0, 0.0, 0.0, 0.05],
+    "typeFrameBGColor"              : [0.2, 0.6, 0.8, 0.16],
+    "valNomBGColor"                 : [0.9, 0.75, 1.0, 0.8],
+    "typeIndicatorFrameWidth"       : [2.0, 2.0],
+    "typeIndicatorErrorColor"       : [0.8, 0.0, 0.0, 1.0],
+    "typeIndicatorMatchColor"       : [0.5, 0.75, 0.5, 1.0],
+    "foreignVarColor"               : [1.0, 0.65, 0.25, 1.0],
+    "grammarColor"                  : [0.1, 0.1, 0.2, 1.0],
+    "disabledColor"                 : [0.4, 0.4, 0.45, 0.5],
+    "valFramePadding"               : [7.0, 7.0],
+    "letItemPadding"                : [5.0, 5.0],
+    "literalColor"                  : [0.0, 0.5, 0.0, 1.0],
+    "presentationChoiceColor"       : [0.4, 0.4, 0.4, 1.0],
+    "backgroundColor"               : [1.0, 1.0, 1.0, 1.0],
+    "baseColor"                     : [0.0, 0.0, 0.0, 1.0],
+    "presentationChoiceScaleFactor" : [0.5, 0.5],
+    "invalidCursorBGColor"          : [0.4, 0.0, 0.0, 1.0],
+    "foreignModuleColor"            : [1.0, 0.3, 0.35, 1.0],
     "fonts": {
-        "fontDefault"     : "fonts/DejaVuSans.ttf",
-        "fontHelp"        : "fonts/DejaVuSans.ttf",
-        "fontAutoName"    : "fonts/DejaVuSerif-BoldItalic.ttf",
-        "fontBinders"     : "fonts/DejaVuSans-Bold.ttf",
-        "fontLiteralText" : "fonts/DejaVuSerif.ttf",
-        "fontLiteralBytes": "fonts/DejaVuSansMono.ttf"
+        "fontDefault"      : "fonts/DejaVuSans.ttf",
+        "fontHelp"         : "fonts/DejaVuSans.ttf",
+        "fontAutoName"     : "fonts/DejaVuSerif-BoldItalic.ttf",
+        "fontBinders"      : "fonts/DejaVuSans-Bold.ttf",
+        "fontLiteralText"  : "fonts/DejaVuSerif.ttf",
+        "fontLiteralBytes" : "fonts/DejaVuSansMono.ttf"
     },
-    "stdSpacing": [1.0, 0.3],
-    "baseTextSize": 16,
-    "hoverBGColor": [
-        0.8,
-        0.9,
-        0.95,
-        1.0
-    ],
-    "hoverDarkBGColor": [
-        0.5,
-        0.5,
-        0.5,
-        0.85
-    ],
-    "hoverDarkPadding": [1, 1],
-    "maxEvalViewSize": 32,
     "help": {
-        "helpInputDocColor": [
-            0,
-            0.5,
-            0.5,
-            1.0
-        ],
-        "helpTextSize": 9,
-        "helpTextColor": [
-            0,
-            0,
-            0,
-            1.0
-        ],
-        "helpBGColor": [
-            1,
-            0.95,
-            0.8,
-            0.5
-        ],
-        "helpTint": [
-            1.0,
-            1.0,
-            1.0,
-            0.8
-        ]
+        "helpInputDocColor" : [0, 0.5, 0.5, 1.0],
+        "helpTextSize"      : 9,
+        "helpTextColor"     : [0, 0, 0, 1.0],
+        "helpBGColor"       : [1, 0.95, 0.8, 0.5],
+        "helpTint"          : [1.0, 1.0, 1.0, 0.8]
     },
     "pane": {
-        "newDefinitionActionColor": [
-            0,
-            0.7,
-            0,
-            1.0
-        ],
-        "paneActiveBGColor": [
-            1.0,
-            1.0,
-            1.0,
-            0.0
-        ],
-        "paneInactiveTintColor": [
-            1.0,
-            1.0,
-            1.0,
-            1.0
-        ],
-        "paneHoverPadding": 1.5
+        "newDefinitionActionColor" : [0, 0.7, 0, 1.0],
+        "paneActiveBGColor"        : [1.0, 1.0, 1.0, 0.0],
+        "paneInactiveTintColor"    : [1.0, 1.0, 1.0, 1.0],
+        "paneHoverPadding"         : 1.5
     },
     "versionControl": {
-        "selectedBranchColor": [
-            0.25,
-            0.5,
-            0.25,
-            1.0
-        ]
+        "selectedBranchColor" : [0.25, 0.5, 0.25, 1.0]
     },
     "hole": {
-        "holeExtraSymbolColorUnselected": [
-            0,
-            0,
-            0,
-            0.3
-        ],
-        "holeExtraSymbolColorSelected": [
-            0,
-            0,
-            0,
-            1.0
-        ],
-        "holeResultInjectedScaleExponent": 0.65,
-        "holeResultPadding": [1.0, 0.5],
-        "holeSearchTermBGColor": [
-            0.7,
-            0.8,
-            1.0,
-            1.0
-        ]
+        "holeExtraSymbolColorUnselected"  : [0, 0, 0, 0.3],
+        "holeExtraSymbolColorSelected"    : [0, 0, 0, 1.0],
+        "holeResultInjectedScaleExponent" : 0.65,
+        "holeResultPadding"               : [1.0, 0.5],
+        "holeSearchTermBGColor"           : [0.7, 0.8, 1.0, 1.0]
     },
     "name": {
-        "parameterColor": [
-            0,
-            0.4,
-            0.5,
-            1.0
-        ],
-        "letColor": [
-            0.25,
-            0,
-            0.5,
-            1.0
-        ],
-        "definitionColor": [
-            0.5,
-            0.0,
-            0.5,
-            1.0
-        ],
-        "collisionSuffixTextColor": [
-            0.5,
-            0.3,
-            0.0,
-            1.0
-        ],
-        "collisionSuffixScaleFactor": [0.5, 0.5],
-        "collisionSuffixBGColor": [
-            1.0,
-            0.7,
-            0.7,
-            1.0
-        ],
-        "recordTagColor": [
-            0.25,
-            0.25,
-            0.25,
-            1.0
-        ],
-        "caseTagColor": [
-            0.25,
-            0.5,
-            0.25,
-            1.0
-        ],
-        "paramTagColor": [
-            0.35,
-            0.35,
-            0.35,
-            1.0
-        ]
+        "parameterColor"             : [0.0, 0.4, 0.5, 1.0],
+        "letColor"                   : [0.25, 0.0, 0.5, 1.0],
+        "definitionColor"            : [0.5, 0.0, 0.5, 1.0],
+        "collisionSuffixTextColor"   : [0.5, 0.3, 0.0, 1.0],
+        "collisionSuffixScaleFactor" : [0.5, 0.5],
+        "collisionSuffixBGColor"     : [1.0, 0.7, 0.7, 1.0],
+        "recordTagColor"             : [0.25, 0.25, 0.25, 1.0],
+        "caseTagColor"               : [0.25, 0.5, 0.25, 1.0],
+        "paramTagColor"              : [0.35, 0.35, 0.35, 1.0]
     },
-    "lightLambdaUnderlineColor": [
-        0.0,
-        0.0,
-        0.0,
-        0.6
-    ],
-    "underlineWidth": 2,
     "eval": {
-        "staleResultTint": [
-            0.5,
-            0.5,
-            0.5,
-            0.5
-        ],
-        "neighborsScaleFactor": [0.65, 0.65],
-        "neighborsPadding": [3, 3]
+        "staleResultTint"      : [0.5, 0.5, 0.5, 0.5],
+        "neighborsScaleFactor" : [0.65, 0.65],
+        "neighborsPadding"     : [3, 3]
     },
     "indent": {
-        "indentBarWidth": 1.5,
-        "indentBarGap": 0.75,
-        "indentBarColor": [
-            0.0,
-            0.0,
-            1.0,
-            0.1
-        ]
+        "indentBarWidth" : 1.5,
+        "indentBarGap"   : 0.75,
+        "indentBarColor" : [0.0, 0.0, 1.0, 0.1]
     },
-    "typeTint": [
-        1.0,
-        1.0,
-        1.0,
-        0.6
-    ],
-    "cursorBGColor": [
-        0.25,
-        0.25,
-        0.75,
-        0.25
-    ],
-    "recordTailColor": [
-        0.6,
-        0.6,
-        0.6,
-        1.0
-    ],
-    "caseTailColor": [
-        0.2,
-        0.6,
-        0.2,
-        1.0
-    ],
-    "evaluatedPathBGColor" : [
-        0.0,
-        0.8,
-        0.0,
-        0.2
-    ],
-    "valFrameBGColor": [
-        0.0,
-        0.0,
-        0.0,
-        0.05
-    ],
-    "typeFrameBGColor": [
-        0.2,
-        0.6,
-        0.8,
-        0.16
-    ],
-    "valNomBGColor": [
-        0.9,
-        0.75,
-        1.0,
-        0.8
-    ],
-    "typeIndicatorFrameWidth": [2.0, 2.0],
-    "typeIndicatorErrorColor": [
-        0.8,
-        0.0,
-        0.0,
-        1.0
-    ],
-    "typeIndicatorMatchColor": [
-        0.5,
-        0.75,
-        0.5,
-        1.0
-    ],
-    "foreignVarColor": [
-        1.0,
-        0.65,
-        0.25,
-        1.0
-    ],
-    "grammarColor": [
-        0.1,
-        0.1,
-        0.2,
-        1.0
-    ],
-    "disabledColor": [
-        0.4,
-        0.4,
-        0.45,
-        0.5
-    ],
     "valAnnotation": {
-        "valAnnotationSpacing": 0.1,
-        "valAnnotationWidthExpansionLimit": 34,
-        "valAnnotationShrinkAtLeast": 80,
-        "valAnnotationMaxHeight": 20,
-        "valAnnotationBGColor": [
-            0.0,
-            0.0,
-            0.0,
-            0.15
-        ],
-        "valAnnotationHoverBGColor": [
-            0.7,
-            0.7,
-            0.7,
-            0.9
-        ]
-    },
-    "valFramePadding": [7.0, 7.0],
-    "letItemPadding": [5, 5],
-    "literalColor": [
-        0.0,
-        0.5,
-        0.0,
-        1.0
-    ],
-    "presentationChoiceColor": [
-        0.4,
-        0.4,
-        0.4,
-        1.0
-    ],
-    "backgroundColor": [
-        1.0,
-        1.0,
-        1.0,
-        1.0
-    ],
-    "baseColor": [
-        0.0,
-        0.0,
-        0.0,
-        1.0
-    ],
-    "presentationChoiceScaleFactor": [0.5, 0.5],
-    "invalidCursorBGColor": [
-        0.4,
-        0.0,
-        0.0,
-        1.0
-    ],
-    "foreignModuleColor": [
-        1.0,
-        0.3,
-        0.35,
-        1.0
-    ]
+        "valAnnotationSpacing"             : 0.1,
+        "valAnnotationWidthExpansionLimit" : 34,
+        "valAnnotationShrinkAtLeast"       : 80,
+        "valAnnotationMaxHeight"           : 20,
+        "valAnnotationBGColor"             : [0.0, 0.0, 0.0, 0.15],
+        "valAnnotationHoverBGColor"        : [0.7, 0.7, 0.7, 0.9]
+    }
 }
