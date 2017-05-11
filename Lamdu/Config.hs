@@ -90,11 +90,11 @@ data Config = Config
     , hole :: Hole
     , literalText :: LiteralText
     , eval :: Eval
-    , theme :: Text
 
     , maxExprDepth :: Int
 
     , quitKeys :: [MetaKey]
+    , changeThemeKeys :: [MetaKey]
     , nextInfoModeKeys :: [MetaKey]
     , previousCursorKeys :: [MetaKey]
 

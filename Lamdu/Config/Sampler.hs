@@ -3,7 +3,7 @@
 module Lamdu.Config.Sampler
     ( Sampler, new
     , Sample(..), sConfigPath, sConfig, sThemePath, sTheme
-    , getSample, onEachSample
+    , getSample, onEachSample, setTheme
     ) where
 
 import           Control.Concurrent (threadDelay, ThreadId)
@@ -16,11 +16,10 @@ import qualified Data.ByteString.Lazy as LBS
 import qualified Data.Text as Text
 import           Data.Time.Clock (UTCTime)
 import           Lamdu.Config (Config)
-import qualified Lamdu.Config as Config
 import           Lamdu.Config.Theme (Theme)
 import qualified Lamdu.DataFile as DataFile
 import           System.Directory (getModificationTime)
-import           System.FilePath (takeDirectory, (</>))
+import           System.FilePath (takeDirectory, takeFileName, dropExtension, (</>))
 
 import           Lamdu.Prelude
 
@@ -41,10 +40,11 @@ Lens.makeLenses ''Sample
 data Sampler = Sampler
     { _sThreadId :: ThreadId
     , getSample :: IO Sample
+    , setTheme :: Text -> IO ()
     }
 
 onEachSample :: (Sample -> IO Sample) -> Sampler -> Sampler
-onEachSample act (Sampler t get) = Sampler t (get >>= act)
+onEachSample act (Sampler t get setT) = Sampler t (get >>= act) setT
 
 withMTime :: FilePath -> IO (Config, FilePath, Theme) -> IO Sample
 withMTime configPath act =
@@ -53,13 +53,15 @@ withMTime configPath act =
         mtimesAfter <- traverse getModificationTime [configPath, themePath]
         Sample mtimesAfter configPath config themePath theme & return
 
-load :: FilePath -> IO Sample
-load configPath =
+calcThemePath :: FilePath -> Text -> FilePath
+calcThemePath configPath theme =
+    takeDirectory configPath </> "themes" </>
+    Text.unpack theme ++ ".json"
+
+load :: Text -> FilePath -> IO Sample
+load themeName configPath =
     do
         config <- readJson configPath
-        let themePath =
-                takeDirectory configPath </> "themes" </>
-                Text.unpack (Config.theme config) ++ ".json"
         theme <- readJson themePath
         return (config, themePath, theme)
     & withMTime configPath
@@ -68,6 +70,7 @@ load configPath =
             Aeson.eitherDecode' <$> LBS.readFile path
             >>= either (fail . (msg ++)) return
         msg = "Failed to parse config file contents at " ++ show configPath ++ ": "
+        themePath = calcThemePath configPath themeName
 
 maybeReload :: Sample -> FilePath -> IO Sample
 maybeReload old newConfigPath =
@@ -76,14 +79,16 @@ maybeReload old newConfigPath =
             traverse getModificationTime [old ^. sConfigPath, old ^. sThemePath]
         if mtime == sVersion old
             then return old
-            else load newConfigPath
+            else load theme newConfigPath
+    where
+        theme = old ^. sThemePath & takeFileName & dropExtension & Text.pack
 
-new :: IO Sampler
-new =
+new :: Text -> IO Sampler
+new initialTheme =
     do
         ref <-
             getConfigPath
-            >>= load
+            >>= load initialTheme
             >>= E.evaluate
             >>= newMVar
         tid <-
@@ -93,6 +98,16 @@ new =
                 modifyMVar_ ref $ \old ->
                     (getConfigPath >>= maybeReload old)
                     `E.catch` \E.SomeException {} -> return old
-        return $ Sampler tid $ readMVar ref
+        return Sampler
+            { _sThreadId = tid
+            , getSample = readMVar ref
+            , setTheme =
+                \theme ->
+                takeMVar ref
+                >> getConfigPath
+                >>= load theme
+                >>= E.evaluate
+                >>= putMVar ref
+            }
     where
         getConfigPath = DataFile.getPath "config.json"

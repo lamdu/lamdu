@@ -48,6 +48,7 @@ import           Lamdu.GUI.Zoom (Zoom)
 import qualified Lamdu.GUI.Zoom as Zoom
 import qualified Lamdu.Opts as Opts
 import qualified Lamdu.Style as Style
+import           Lamdu.Themes (defaultTheme, themeEventMap)
 import qualified Lamdu.VersionControl as VersionControl
 import           Lamdu.VersionControl.Actions (mUndo)
 import qualified System.Directory as Directory
@@ -192,7 +193,8 @@ runEditor :: Opts.EditorOpts -> Db -> IO ()
 runEditor opts db =
     do
         -- Load config as early as possible, before we open any windows/etc
-        rawConfigSampler <- ConfigSampler.new
+        themeRef <- newIORef defaultTheme
+        rawConfigSampler <- ConfigSampler.new defaultTheme
 
         GLFWUtils.withGLFW $ do
             win <-
@@ -226,6 +228,10 @@ runEditor opts db =
                                     (Config.help config) (Theme.help theme)
                             in  makeRootWidget fonts db zoom settingsRef evaluator
                                 config theme size
+                                <&> Widget.weakerEvents
+                                    (themeEventMap (Config.changeThemeKeys config) configSampler themeRef
+                                    <&> liftIO
+                                    )
                                 >>= addHelp helpStyle size
     where
         subpixel

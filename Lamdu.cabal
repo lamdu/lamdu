@@ -16,6 +16,8 @@ Data-files:          fonts/DejaVuSans.ttf
                    , fonts/DejaVuSerif-Italic.ttf
                    , fonts/Purisa.ttf
                    , config.json
+                   , themes/default.json
+                   , themes/light.json
                    , freshdb.json
                    , js/rts.js
                    , js/rtsConfig.js
@@ -308,6 +310,7 @@ Executable lamdu
                   , Lamdu.Sugar.Types
                   , Lamdu.Sugar.Types.Binder
                   , Lamdu.Sugar.Types.Expression
+                  , Lamdu.Themes
                   , Lamdu.VersionControl
                   , Lamdu.VersionControl.Actions
                   , Paths_Lamdu

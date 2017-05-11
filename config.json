@@ -104,7 +104,6 @@
             "Cmd+Down"
         ]
     },
-    "theme": "default",
     "previousCursorKeys": [
         "Alt+Left"
     ],
@@ -116,6 +115,9 @@
     ],
     "quitKeys": [
         "Cmd+Q"
+    ],
+    "changeThemeKeys": [
+        "Alt+T"
     ],
     "addNextParamKeys": [
         "Space"
