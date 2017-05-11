@@ -76,7 +76,6 @@ data Hole = Hole
     , holeUnwrapKeys :: [ModKey]
     , holeOpenKeys :: [ModKey]
     , holeCloseKeys :: [ModKey]
-    , holeHoveringWrapperScaleFactor :: Vector2 Double
     } deriving (Eq, Generic, Show)
 instance Aeson.ToJSON Hole where
     toJSON = Aeson.genericToJSON Aeson.defaultOptions
