@@ -34,6 +34,7 @@ import qualified Graphics.UI.Bottle.Widgets.Grid as Grid
 import qualified Graphics.UI.Bottle.WidgetsEnvT as WE
 import           Lamdu.CharClassification (operatorChars)
 import qualified Lamdu.Config as Config
+import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.EventMap as EventMap
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.Info (HoleInfo(..))
@@ -178,10 +179,10 @@ makeShownResult holeInfo result =
         -- Warning: rHoleResult should be ran at most once!
         -- Running it more than once caused a horrible bug (bugfix: 848b6c4407)
         res <- ExprGuiM.transaction $ rHoleResult result
-        config <- Config.hole <$> ExprGuiM.readConfig
+        theme <- Theme.hole <$> ExprGuiM.readTheme
         (widget, mkEventMap) <- makeHoleResultWidget (rId result) res
         stdSpacing <- ExprGuiM.widgetEnv BWidgets.stdSpacing
-        let padding = Config.holeResultPadding config <&> realToFrac & (* stdSpacing)
+        let padding = Theme.holeResultPadding theme <&> realToFrac & (* stdSpacing)
         let mFirstHoleInside =
                 res ^? Sugar.holeResultConverted
                 . SugarLens.holePayloads . Sugar.plEntityId
@@ -204,7 +205,7 @@ makeExtraSymbol animId isSelected results
     | Lens.nullOf (HoleResults.rlExtra . traverse) results = pure View.empty
     | otherwise =
         do
-            Config.Hole{..} <- Config.hole <$> ExprGuiM.readConfig
+            Theme.Hole{..} <- Theme.hole <$> ExprGuiM.readTheme
             let extraSymbolColor
                     | isSelected = holeExtraSymbolColorSelected
                     | otherwise = holeExtraSymbolColorUnselected
@@ -265,7 +266,7 @@ makeExtraResultsWidget ::
 makeExtraResultsWidget _ _ [] = return (Nothing, Widget.empty, 0)
 makeExtraResultsWidget holeInfo mainResultHeight extraResults@(firstResult:_) =
     do
-        config <- ExprGuiM.readConfig
+        theme <- ExprGuiM.readTheme
         let mkResWidget result =
                 do
                     isOnResult <-
@@ -283,7 +284,7 @@ makeExtraResultsWidget holeInfo mainResultHeight extraResults@(firstResult:_) =
         let widget =
                 Box.vboxAlign 0 widgets
                 & addBackground (Widget.toAnimId (rId firstResult))
-                  (Config.hoverBGColor config)
+                  (Theme.hoverBGColor theme)
         return
             ( msum mResults
             , widget
@@ -314,7 +315,7 @@ makeHoleResultWidget ::
     ExprGuiM m (Widget (T m Widget.EventResult), ExprGuiM m (Widget.EventMap (T m Widget.EventResult)))
 makeHoleResultWidget resultId holeResult =
     do
-        Config.Hole{..} <- ExprGuiM.readConfig <&> Config.hole
+        Theme.Hole{..} <- ExprGuiM.readTheme <&> Theme.hole
         let mkEventMap =
                 -- Create a hidden result widget that we never display, but only
                 -- keep the event map from. We always tell it that it has focus,
@@ -451,7 +452,7 @@ makeUnderCursorAssignment ::
     HoleInfo m -> ExprGuiM m (ExpressionGui m)
 makeUnderCursorAssignment shownResultsLists hasHiddenResults holeInfo =
     do
-        config <- ExprGuiM.readConfig
+        theme <- ExprGuiM.readTheme
 
         (mShownResult, resultsWidget) <-
             makeResultsWidget holeInfo shownResultsLists hasHiddenResults
@@ -472,7 +473,7 @@ makeUnderCursorAssignment shownResultsLists hasHiddenResults holeInfo =
               & Widget.width %~ max (typeView ^. View.width)
               & Widget.strongerEvents resultsEventMap
               & addBackground (Widget.toAnimId hidResultsPrefix)
-                (Config.hoverBGColor config)
+                (Theme.hoverBGColor theme)
               & AlignedWidget.fromCenteredWidget
               & AlignedWidget.addAfter AlignedWidget.Vertical
                 [ vspace

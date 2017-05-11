@@ -56,8 +56,8 @@ import           Graphics.UI.Bottle.Alignment (Alignment(..))
 import           Graphics.UI.Bottle.Animation (AnimId)
 import qualified Graphics.UI.Bottle.EventMap as E
 import           Graphics.UI.Bottle.ModKey (ModKey(..))
-import qualified Graphics.UI.Bottle.View as View
 import           Graphics.UI.Bottle.View (View)
+import qualified Graphics.UI.Bottle.View as View
 import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import           Graphics.UI.Bottle.Widget.Aligned (AlignedWidget)
@@ -77,6 +77,8 @@ import           Lamdu.Calc.Type (Type)
 import qualified Lamdu.Calc.Type as T
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
+import           Lamdu.Config.Theme (Theme)
+import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.Eval.Results as ER
 import qualified Lamdu.GUI.CodeEdit.Settings as CESettings
 import qualified Lamdu.GUI.EvalView as EvalView
@@ -122,17 +124,17 @@ maybeIndent (Just piInfo) =
                         (Vector2 barWidth (content ^. AlignedWidget.widget . Widget.height))
                         & Widget.fromView
                         & Widget.backgroundColor bgAnimId
-                          (Config.indentBarColor indentConf)
+                          (Theme.indentBarColor indentConf)
                         & AlignedWidget.fromCenteredWidget
                         & AlignedWidget.alignment . _2 .~ 0
                     , Spacer.make (Vector2 gapWidth 0)
                         & Widget.fromView & AlignedWidget.fromCenteredWidget
                     ]
                 where
-                    indentConf = piIndentConfig piInfo
+                    indentConf = piIndentTheme piInfo
                     stdSpace = piStdHorizSpacing piInfo
-                    barWidth = stdSpace * Config.indentBarWidth indentConf
-                    gapWidth = stdSpace * Config.indentBarGap indentConf
+                    barWidth = stdSpace * Theme.indentBarWidth indentConf
+                    gapWidth = stdSpace * Theme.indentBarGap indentConf
                     indentWidth = barWidth + gapWidth
                     content =
                         lp & TreeLayout.layoutMode . TreeLayout.modeWidths -~ indentWidth
@@ -200,7 +202,7 @@ stdVSpace =
 data ParenIndentInfo = ParenIndentInfo
     { piAnimId :: AnimId
     , piTextStyle :: TextView.Style
-    , piIndentConfig :: Config.Indent
+    , piIndentTheme :: Theme.Indent
     , piStdHorizSpacing :: Widget.R
     }
 
@@ -267,9 +269,9 @@ makeParenIndentInfo parensId =
         textStyle <-
             ExprGuiM.widgetEnv WE.readTextStyle
             <&> (^. TextEdit.sTextViewStyle)
-        conf <- ExprGuiM.readConfig <&> Config.indent
+        theme <- ExprGuiM.readTheme <&> Theme.indent
         stdSpacing <- ExprGuiM.widgetEnv BWidgets.stdSpacing <&> (^. _1)
-        ParenIndentInfo parensId textStyle conf stdSpacing & return
+        ParenIndentInfo parensId textStyle theme stdSpacing & return
 
 combineSpaced :: Monad m => ExprGuiM m ([TreeLayout a] -> TreeLayout a)
 combineSpaced = combineSpacedMParens Nothing
@@ -292,18 +294,19 @@ tagItem =
             tag ||> (space ||> (item & TreeLayout.alignment . _1 .~ 0))
 
 addAnnotationBackgroundH ::
-    (Config -> Draw.Color) -> Config -> AnimId -> View -> View
-addAnnotationBackgroundH getColor config animId =
+    (Theme.ValAnnotation -> Draw.Color) -> Theme.ValAnnotation -> AnimId ->
+    View -> View
+addAnnotationBackgroundH getColor theme animId =
     View.backgroundColor bgAnimId bgColor
     where
         bgAnimId = animId ++ ["annotation background"]
-        bgColor = getColor config
+        bgColor = getColor theme
 
-addAnnotationBackground :: Config -> AnimId -> View -> View
-addAnnotationBackground = addAnnotationBackgroundH Config.valAnnotationBGColor
+addAnnotationBackground :: Theme.ValAnnotation -> AnimId -> View -> View
+addAnnotationBackground = addAnnotationBackgroundH Theme.valAnnotationBGColor
 
-addAnnotationHoverBackground :: Config -> AnimId -> View -> View
-addAnnotationHoverBackground = addAnnotationBackgroundH Config.valAnnotationHoverBGColor
+addAnnotationHoverBackground :: Theme.ValAnnotation -> AnimId -> View -> View
+addAnnotationHoverBackground = addAnnotationBackgroundH Theme.valAnnotationHoverBGColor
 
 data WideAnnotationBehavior
     = ShrinkWideAnnotation
@@ -322,23 +325,23 @@ applyWideAnnotationBehavior ::
     ExprGuiM m (Vector2 Widget.R -> AlignedWidget a -> AlignedWidget a)
 applyWideAnnotationBehavior animId KeepWideAnnotation =
     do
-        config <- ExprGuiM.readConfig
-        AlignedWidget.widget . Widget.view %~ addAnnotationBackground config animId
+        theme <- ExprGuiM.readTheme <&> Theme.valAnnotation
+        AlignedWidget.widget . Widget.view %~ addAnnotationBackground theme animId
             & const & return
 applyWideAnnotationBehavior animId ShrinkWideAnnotation =
-    ExprGuiM.readConfig
+    ExprGuiM.readTheme <&> Theme.valAnnotation
     <&>
-    \config shrinkRatio layout ->
+    \theme shrinkRatio layout ->
     AlignedWidget.scaleAround (Alignment 0) shrinkRatio layout
-    & AlignedWidget.widget . Widget.view %~ addAnnotationBackground config animId
+    & AlignedWidget.widget . Widget.view %~ addAnnotationBackground theme animId
 applyWideAnnotationBehavior animId HoverWideAnnotation =
     do
-        config <- ExprGuiM.readConfig
+        theme <- ExprGuiM.readTheme <&> Theme.valAnnotation
         shrinker <- applyWideAnnotationBehavior animId ShrinkWideAnnotation
         return $
             \shrinkRatio layout ->
                 layout
-                & AlignedWidget.widget . Widget.view %~ addAnnotationHoverBackground config animId
+                & AlignedWidget.widget . Widget.view %~ addAnnotationHoverBackground theme animId
                 & (`AlignedWidget.hoverInPlaceOf` shrinker shrinkRatio layout)
 
 processAnnotationGui ::
@@ -347,25 +350,25 @@ processAnnotationGui ::
     ExprGuiM m (Widget.R -> AlignedWidget a -> AlignedWidget a)
 processAnnotationGui animId wideAnnotationBehavior =
     f
-    <$> ExprGuiM.readConfig
+    <$> (ExprGuiM.readTheme <&> Theme.valAnnotation)
     <*> ExprGuiM.widgetEnv BWidgets.stdSpacing
     <*> applyWideAnnotationBehavior animId wideAnnotationBehavior
     where
-        f config stdSpacing applyWide minWidth annotationLayout
+        f theme stdSpacing applyWide minWidth annotationLayout
             | annotationWidth > minWidth + max shrinkAtLeast expansionLimit
             || heightShrinkRatio < 1 =
                 applyWide shrinkRatio annotationLayout
             | otherwise =
                 maybeTooNarrow annotationLayout
-                & AlignedWidget.widget . Widget.view %~ addAnnotationBackground config animId
+                & AlignedWidget.widget . Widget.view %~ addAnnotationBackground theme animId
             where
                 annotationWidth = annotationLayout ^. AlignedWidget.width
                 expansionLimit =
-                    Config.valAnnotationWidthExpansionLimit config & realToFrac
+                    Theme.valAnnotationWidthExpansionLimit theme & realToFrac
                 maxWidth = minWidth + expansionLimit
-                shrinkAtLeast = Config.valAnnotationShrinkAtLeast config & realToFrac
+                shrinkAtLeast = Theme.valAnnotationShrinkAtLeast theme & realToFrac
                 heightShrinkRatio =
-                    Config.valAnnotationMaxHeight config * stdSpacing ^. _2
+                    Theme.valAnnotationMaxHeight theme * stdSpacing ^. _2
                     / annotationLayout ^. AlignedWidget.widget . Widget.height
                 shrinkRatio =
                     annotationWidth - shrinkAtLeast & min maxWidth & max minWidth
@@ -384,12 +387,12 @@ makeEvaluationResultView ::
     Monad m => AnimId -> EvalResDisplay -> ExprGuiM m (AlignedWidget a)
 makeEvaluationResultView animId res =
     do
-        config <- ExprGuiM.readConfig
+        theme <- ExprGuiM.readTheme
         view <- EvalView.make animId (erdVal res)
         view
             & case erdSource res of
             Current -> id
-            Prev -> View.tint (Config.staleResultTint (Config.eval config))
+            Prev -> View.tint (Theme.staleResultTint (Theme.eval theme))
             & return
     <&> Widget.fromView
     <&> AlignedWidget.fromCenteredWidget
@@ -409,8 +412,8 @@ makeEvalView ::
     AnimId -> ExprGuiM m (AlignedWidget a)
 makeEvalView mNeighbours evalRes animId =
     do
-        config <- ExprGuiM.readConfig
-        let Config.Eval{..} = Config.eval config
+        theme <- ExprGuiM.readTheme
+        let Theme.Eval{..} = Theme.eval theme
         let mkAnimId res =
                 -- When we can scroll between eval view results we
                 -- must encode the scope into the anim ID for smooth
@@ -423,7 +426,7 @@ makeEvalView mNeighbours evalRes animId =
         let makeEvaluationResultViewBG res =
                 makeEvaluationResultView (mkAnimId res) res
                 <&> AlignedWidget.widget . Widget.view %~
-                    addAnnotationBackground config (mkAnimId res)
+                    addAnnotationBackground (Theme.valAnnotation theme) (mkAnimId res)
         let neighbourViews n yPos =
                 n ^.. Lens._Just
                 <&> makeEvaluationResultViewBG
@@ -446,7 +449,9 @@ makeEvalView mNeighbours evalRes animId =
             & return
 
 annotationSpacer :: Monad m => ExprGuiM m (AlignedWidget a)
-annotationSpacer = ExprGuiM.vspacer Config.valAnnotationSpacing <&> AlignedWidget.fromCenteredWidget
+annotationSpacer =
+    ExprGuiM.vspacer (Theme.valAnnotationSpacing . Theme.valAnnotation)
+    <&> AlignedWidget.fromCenteredWidget
 
 addAnnotationH ::
     Monad m =>
@@ -486,7 +491,7 @@ addEvaluationResult ::
 addEvaluationResult mNeigh resDisp wideBehavior entityId =
     case (erdVal resDisp ^. ER.payload, erdVal resDisp ^. ER.body) of
     (T.TRecord T.CEmpty, _) ->
-        addValBGWithColor Config.evaluatedPathBGColor (WidgetIds.fromEntityId entityId)
+        addValBGWithColor Theme.evaluatedPathBGColor (WidgetIds.fromEntityId entityId)
         <&> (TreeLayout.widget %~)
     (_, ER.RFunc{}) -> return id
     _ -> addAnnotationH (makeEvalView mNeigh resDisp) wideBehavior entityId
@@ -513,10 +518,10 @@ nameEditFDConfig = FocusDelegator.Config
 addDeletionDiagonal :: Monad m => ExprGuiM m (Widget.R -> AnimId -> View -> View)
 addDeletionDiagonal =
     do
-        config <- ExprGuiM.readConfig
+        theme <- ExprGuiM.readTheme
         return $ \thickness animId ->
             View.addDiagonal thickness (animId ++ ["diagonal"])
-            (Config.typeIndicatorErrorColor config)
+            (Theme.typeIndicatorErrorColor theme)
 
 makeNameOriginEdit ::
     Monad m =>
@@ -637,26 +642,26 @@ makeLabel text animId = ExprGuiM.makeLabel text animId <&> Widget.fromView <&> A
 grammarLabel :: Monad m => Text -> AnimId -> ExprGuiM m (AlignedWidget f)
 grammarLabel text animId =
     do
-        config <- ExprGuiM.readConfig
+        theme <- ExprGuiM.readTheme
         makeLabel text animId
-            & ExprGuiM.localEnv (WE.setTextColor (Config.grammarColor config))
+            & ExprGuiM.localEnv (WE.setTextColor (Theme.grammarColor theme))
 
 addValBG :: Monad m => Widget.Id -> ExprGuiM m (Widget f -> Widget f)
-addValBG = addValBGWithColor Config.valFrameBGColor
+addValBG = addValBGWithColor Theme.valFrameBGColor
 
 addValBGWithColor ::
     Monad m =>
-    (Config -> Draw.Color) -> Widget.Id -> ExprGuiM m (Widget f -> Widget f)
+    (Theme -> Draw.Color) -> Widget.Id -> ExprGuiM m (Widget f -> Widget f)
 addValBGWithColor color myId =
     do
-        config <- ExprGuiM.readConfig
-        Widget.backgroundColor animId (color config) & return
+        theme <- ExprGuiM.readTheme
+        Widget.backgroundColor animId (color theme) & return
     where
         animId = Widget.toAnimId myId ++ ["val"]
 
 addValPadding :: Monad m => ExprGuiM m (TreeLayout a -> TreeLayout a)
 addValPadding =
-    ExprGuiM.readConfig <&> Config.valFramePadding <&> fmap realToFrac
+    ExprGuiM.readTheme <&> Theme.valFramePadding <&> fmap realToFrac
     <&> TreeLayout.pad
 
 addValFrame ::
@@ -679,8 +684,8 @@ makeCollisionSuffixLabel :: Monad m => NameCollision -> AnimId -> ExprGuiM m (Ma
 makeCollisionSuffixLabel NoCollision _ = return Nothing
 makeCollisionSuffixLabel (Collision suffix) animId =
     do
-        config <- ExprGuiM.readConfig
-        let Config.Name{..} = Config.name config
+        theme <- ExprGuiM.readTheme
+        let Theme.Name{..} = Theme.name theme
         BWidgets.makeLabel (Text.pack (show suffix)) animId
             & WE.localEnv (WE.setTextColor collisionSuffixTextColor)
             <&> View.scale (realToFrac <$> collisionSuffixScaleFactor)

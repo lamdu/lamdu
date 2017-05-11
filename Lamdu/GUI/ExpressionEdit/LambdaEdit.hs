@@ -62,18 +62,19 @@ mkShrunk ::
     ExprGuiM m (Maybe (AlignedWidget (T m Widget.EventResult)) -> [ExpressionGui m])
 mkShrunk paramIds myId =
     do
-        config <- ExprGuiM.readConfig
+        jumpKeys <- ExprGuiM.readConfig <&> Config.jumpToDefinitionKeys
         let expandEventMap =
                 paramIds ^? Lens.traverse
                 & maybe mempty
-                  (Widget.keysEventMapMovesCursor (Config.jumpToDefinitionKeys config)
+                  (Widget.keysEventMapMovesCursor jumpKeys
                    (E.Doc ["View", "Expand Lambda Params"]) . return .
                    WidgetIds.fromEntityId)
+        theme <- ExprGuiM.readTheme
         lamLabel <-
             ExpressionGui.makeFocusableView (lamId myId)
             <*> ExpressionGui.grammarLabel "λ" animId
             <&> TreeLayout.fromAlignedWidget
-            & LightLambda.withUnderline config
+            & LightLambda.withUnderline theme
         return $ \mScopeEdit ->
             [ addScopeEdit mScopeEdit lamLabel
               & TreeLayout.widget %~ Widget.weakerEvents expandEventMap

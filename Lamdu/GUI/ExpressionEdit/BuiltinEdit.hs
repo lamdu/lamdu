@@ -15,7 +15,7 @@ import qualified Graphics.UI.Bottle.Widgets as BWidgets
 import qualified Graphics.UI.Bottle.Widgets.Box as Box
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 import qualified Graphics.UI.GLFW as GLFW
-import qualified Lamdu.Config as Config
+import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.Data.Definition as Definition
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
@@ -57,12 +57,12 @@ make ::
     ExprGuiM m (Widget (T m Widget.EventResult))
 make def myId =
     do
-        config <- ExprGuiM.readConfig
+        theme <- ExprGuiM.readTheme
         moduleName <-
-            makeNamePartEditor (Config.foreignModuleColor config)
+            makeNamePartEditor (Theme.foreignModuleColor theme)
             modulePathStr modulePathSetter (builtinFFIPath myId)
         varName <-
-            makeNamePartEditor (Config.foreignVarColor config) name nameSetter
+            makeNamePartEditor (Theme.foreignVarColor theme) name nameSetter
             (builtinFFIName myId)
         dot <- ExprGuiM.makeLabel "." (Widget.toAnimId myId) <&> Widget.fromView
         [moduleName, dot, varName]

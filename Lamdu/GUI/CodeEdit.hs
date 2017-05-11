@@ -27,6 +27,8 @@ import qualified Graphics.UI.Bottle.WidgetsEnvT as WE
 import qualified Lamdu.Calc.Type.Scheme as Scheme
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
+import           Lamdu.Config.Theme (Theme)
+import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.Data.Anchors as Anchors
 import           Lamdu.Data.Definition (Definition(..))
 import qualified Lamdu.Data.Definition as Definition
@@ -88,6 +90,7 @@ data Env m = Env
     , exportActions :: ExportActions m
     , evalResults :: CurAndPrev (EvalResults (ValI m))
     , config :: Config
+    , theme :: Theme
     , settings :: Settings
     , style :: Style
     }
@@ -168,7 +171,7 @@ make env =
             & Box.vboxAlign 0
             & Widget.weakerEvents eventMap
     & ExprGuiM.run ExpressionEdit.make
-      (codeProps env) (config env) (settings env) (style env)
+      (codeProps env) (config env) (theme env) (settings env) (style env)
 
 makePaneEdit ::
     Monad m =>
@@ -229,8 +232,8 @@ makeNewDefinitionButton =
         newDefinitionEventMap <-
             makeNewDefinitionEventMap codeAnchors & ExprGuiM.widgetEnv
 
-        Config.Pane{newDefinitionActionColor, newDefinitionButtonPressKeys} <-
-            ExprGuiM.readConfig <&> Config.pane
+        Config.Pane{newDefinitionButtonPressKeys} <- ExprGuiM.readConfig <&> Config.pane
+        Theme.Pane{newDefinitionActionColor}      <- ExprGuiM.readTheme  <&> Theme.pane
 
         BWidgets.makeFocusableTextView "New..." newDefinitionButtonId
             & WE.localEnv (WE.setTextColor newDefinitionActionColor)
@@ -291,8 +294,8 @@ makePaneWidget ::
     ExprGuiM m (Widget.R -> Widget (T m Widget.EventResult))
 makePaneWidget defS =
     do
-        config <- ExprGuiM.readConfig
-        let Config.Pane{paneActiveBGColor,paneInactiveTintColor} = Config.pane config
+        Theme.Pane{paneActiveBGColor,paneInactiveTintColor} <-
+            ExprGuiM.readTheme <&> Theme.pane
         let colorizeInactivePane = Widget.tint paneInactiveTintColor
         let colorizeActivePane =
                 Widget.backgroundColor WidgetIds.activePaneBackground

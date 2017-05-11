@@ -12,8 +12,8 @@ module Lamdu.GUI.ExpressionGui.Monad
     , makeSubexpressionWith
     , advanceDepth, resetDepth
     --
-    , readConfig, readMinOpPrec, readSettings, readStyle, readCodeAnchors
-    , mkPrejumpPosSaver
+    , readConfig, readTheme, readMinOpPrec, readSettings, readStyle
+    , readCodeAnchors, mkPrejumpPosSaver
     , vspacer
     --
     , readMScopeId, withLocalMScopeId
@@ -51,6 +51,7 @@ import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
 import           Graphics.UI.Bottle.WidgetsEnvT (WidgetEnvT)
 import qualified Graphics.UI.Bottle.WidgetsEnvT as WE
 import           Lamdu.Config (Config)
+import           Lamdu.Config.Theme (Theme)
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Ops as DataOps
@@ -100,6 +101,7 @@ newtype StoredEntityIds = StoredEntityIds [Sugar.EntityId]
 data Askable m = Askable
     { _aSettings :: Settings
     , _aConfig :: Config
+    , _aTheme :: Theme
     , _aMakeSubexpression :: ExprGuiT.SugarExpr m -> ExprGuiM m (ExpressionGui m)
     , _aCodeAnchors :: Anchors.CodeProps m
     , _aSubexpressionLayer :: Int
@@ -146,6 +148,9 @@ readSettings = ExprGuiM $ Lens.view aSettings
 readConfig :: Monad m => ExprGuiM m Config
 readConfig = ExprGuiM $ Lens.view aConfig
 
+readTheme :: Monad m => ExprGuiM m Theme
+readTheme = ExprGuiM $ Lens.view aTheme
+
 readMinOpPrec :: Monad m => ExprGuiM m Int
 readMinOpPrec = ExprGuiM $ Lens.view aMinOpPrecedence
 
@@ -163,10 +168,9 @@ mkPrejumpPosSaver =
     DataOps.savePreJumpPosition <$> readCodeAnchors <*> widgetEnv WE.readCursor
 
 -- | Vertical spacer as ratio of line height
-vspacer :: Monad m => (Config -> Double) -> ExprGuiM m (Widget f)
-vspacer configGetter =
-    readConfig
-    <&> configGetter
+vspacer :: Monad m => (Theme -> Double) -> ExprGuiM m (Widget f)
+vspacer themeGetter =
+    readTheme <&> themeGetter
     >>= widgetEnv . BWidgets.vspacer
 
 makeSubexpression ::
@@ -205,12 +209,14 @@ advanceDepth f animId action =
 run ::
     Monad m =>
     (ExprGuiT.SugarExpr m -> ExprGuiM m (ExpressionGui m)) ->
-    Anchors.CodeProps m -> Config -> Settings -> Style -> ExprGuiM m a ->
+    Anchors.CodeProps m -> Config -> Theme -> Settings -> Style ->
+    ExprGuiM m a ->
     WidgetEnvT (T m) a
-run makeSubexpr codeAnchors config settings style (ExprGuiM action) =
+run makeSubexpr codeAnchors config theme settings style (ExprGuiM action) =
     runRWST action
     Askable
     { _aConfig = config
+    , _aTheme = theme
     , _aSettings = settings
     , _aMakeSubexpression = makeSubexpr
     , _aCodeAnchors = codeAnchors

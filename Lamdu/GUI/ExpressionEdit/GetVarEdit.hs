@@ -18,6 +18,7 @@ import qualified Graphics.UI.Bottle.WidgetsEnvT as WE
 import           Lamdu.Calc.Type.Scheme (schemeType)
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
+import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.Data.Ops as DataOps
 import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
@@ -49,8 +50,8 @@ makeParamsRecord ::
     ExprGuiM m (ExpressionGui m)
 makeParamsRecord myId paramsRecordVar =
     do
-        config <- ExprGuiM.readConfig
-        let Config.Name{..} = Config.name config
+        theme <- ExprGuiM.readTheme
+        let Theme.Name{..} = Theme.name theme
         sequence
             [ ExpressionGui.makeLabel "Params {"
               (Widget.toAnimId myId <> ["prefix"])
@@ -122,7 +123,8 @@ definitionTypeChangeBox info getVarId =
             <*> ExpressionGui.makeLabel "Update to:" animId
         typeCurrent <- mkTypeWidget "typeCurrent" (info ^. Sugar.defTypeCurrent)
         config <- ExprGuiM.readConfig
-        let padding = realToFrac <$> Config.valFramePadding config
+        theme <- ExprGuiM.readTheme
+        let padding = realToFrac <$> Theme.valFramePadding theme
         let box =
                 [headerLabel, typeWhenUsed, spacing, sepLabel, typeCurrent]
                 <&> AlignedWidget.alignment .~ 0
@@ -130,7 +132,7 @@ definitionTypeChangeBox info getVarId =
                 & AlignedWidget.pad padding
                 & AlignedWidget.alignment .~ 0
                 & AlignedWidget.widget %~
-                    Hover.addBackground animId (Config.hoverBGColor config)
+                    Hover.addBackground animId (Theme.hoverBGColor theme)
         -- TODO: unify config's button press keys
         let keys = Config.newDefinitionButtonPressKeys (Config.pane config)
         let update = (info ^. Sugar.defTypeUseCurrent) >> return getVarId
@@ -161,11 +163,11 @@ processDefinitionWidget Sugar.DefDeleted myId mkLayout =
         animId = Widget.toAnimId myId
 processDefinitionWidget (Sugar.DefTypeChanged info) myId mkLayout =
     do
-        config <- ExprGuiM.readConfig
+        theme <- ExprGuiM.readTheme
         layout <-
             ExprGuiM.withLocalUnderline Underline
-                { _underlineColor = Config.typeIndicatorErrorColor config
-                , _underlineWidth = Config.underlineWidth config
+                { _underlineColor = Theme.typeIndicatorErrorColor theme
+                , _underlineWidth = Theme.underlineWidth theme
                 }
             mkLayout
         isSelected <- ExprGuiM.widgetEnv $ WE.isSubCursor myId
@@ -188,7 +190,8 @@ makeGetBinder ::
 makeGetBinder binderVar myId =
     do
         config <- ExprGuiM.readConfig
-        let Config.Name{..} = Config.name config
+        theme <- ExprGuiM.readTheme
+        let Theme.Name{..} = Theme.name theme
         let (color, processDef) =
                 case binderVar ^. Sugar.bvForm of
                 Sugar.GetLet -> (letColor, id)
@@ -212,15 +215,15 @@ make ::
     ExprGuiM m (ExpressionGui m)
 make getVar pl =
     do
-        config <- ExprGuiM.readConfig
-        let Config.Name{..} = Config.name config
+        theme <- ExprGuiM.readTheme
+        let Theme.Name{..} = Theme.name theme
         case getVar of
             Sugar.GetBinder binderVar -> makeGetBinder binderVar myId
             Sugar.GetParam param ->
                 case param ^. Sugar.pBinderMode of
                 Sugar.LightLambda ->
                     makeSimpleView
-                    <&> Lens.mapped %~ LightLambda.withUnderline config
+                    <&> Lens.mapped %~ LightLambda.withUnderline theme
                     <&> Lens.mapped %~ ExpressionGui.styleNameOrigin name parameterColor
                 _ ->
                     makeSimpleView

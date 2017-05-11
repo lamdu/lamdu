@@ -17,6 +17,8 @@ import           Lamdu.Calc.Type (Tag)
 import qualified Lamdu.Calc.Val as V
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
+import           Lamdu.Config.Theme (Theme)
+import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.Eval.Results as ER
 import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
 import qualified Lamdu.GUI.ExpressionEdit.TagEdit as TagEdit
@@ -116,7 +118,7 @@ makeAltRow myId mActiveTag (Sugar.CaseAlt delete tag altExpr) =
     do
         config <- ExprGuiM.readConfig
         addBg <-
-            ExpressionGui.addValBGWithColor Config.evaluatedPathBGColor
+            ExpressionGui.addValBGWithColor Theme.evaluatedPathBGColor
             (Widget.joinId myId ["ActiveAlt"])
         altRefGui <-
             TagEdit.makeCaseTag (ExprGuiT.nextHolesBefore altExpr) tag
@@ -140,11 +142,11 @@ makeAltsWidget _ [] myId =
 makeAltsWidget mActiveTag alts myId =
     ExpressionGui.vboxTopFocalSpaced <*> mapM (makeAltRow myId mActiveTag) alts
 
-separationBar :: Config -> Widget.R -> Anim.AnimId -> View
-separationBar config width animId =
+separationBar :: Theme -> Widget.R -> Anim.AnimId -> View
+separationBar theme width animId =
     Anim.unitSquare (animId <> ["tailsep"])
     & View.make 1
-    & View.tint (Config.caseTailColor config)
+    & View.tint (Theme.caseTailColor theme)
     & View.scale (Vector2 width 10)
 
 makeOpenCase ::
@@ -153,7 +155,7 @@ makeOpenCase ::
     ExprGuiM m (ExpressionGui m)
 makeOpenCase rest animId altsGui =
     do
-        config <- ExprGuiM.readConfig
+        theme <- ExprGuiM.readTheme
         vspace <- ExpressionGui.stdVSpace
         restExpr <-
             ExpressionGui.addValPadding
@@ -168,7 +170,7 @@ makeOpenCase rest animId altsGui =
             alts
             & AlignedWidget.alignment . _1 .~ 0
             & AlignedWidget.addAfter AlignedWidget.Vertical
-            ( [ separationBar config (max minWidth targetWidth) animId
+            ( [ separationBar theme (max minWidth targetWidth) animId
                 & Widget.fromView & AlignedWidget.fromCenteredWidget
               , AlignedWidget.fromCenteredWidget vspace
               , restLayout

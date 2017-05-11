@@ -10,6 +10,7 @@ import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widget.TreeLayout as TreeLayout
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
+import qualified Lamdu.Config.Theme as Theme
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds (WidgetIds(..))
 import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
@@ -66,13 +67,14 @@ make ::
 make WidgetIds{..} arg =
     do
         config <- ExprGuiM.readConfig
-        let Config.Hole{..} = Config.hole config
+        theme <- ExprGuiM.readTheme
+        let Theme.Hole{..} = Theme.hole theme
         let frameColor =
-                config &
+                theme &
                 case arg ^. Sugar.haUnwrap of
-                Sugar.UnwrapAction {} -> Config.typeIndicatorMatchColor
-                Sugar.UnwrapTypeMismatch {} -> Config.typeIndicatorErrorColor
-        let frameWidth = Config.typeIndicatorFrameWidth config <&> realToFrac
+                Sugar.UnwrapAction {} -> Theme.typeIndicatorMatchColor
+                Sugar.UnwrapTypeMismatch {} -> Theme.typeIndicatorErrorColor
+        let frameWidth = Theme.typeIndicatorFrameWidth theme <&> realToFrac
         argGui <-
             arg ^. Sugar.haExpr
             & ExprGuiM.makeSubexpression

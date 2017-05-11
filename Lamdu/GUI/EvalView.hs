@@ -8,8 +8,8 @@ import qualified Control.Lens as Lens
 import qualified Data.Binary.Utils as BinUtils
 import qualified Data.List as List
 import qualified Data.Store.Transaction as Transaction
-import           Data.Text.Encoding (decodeUtf8)
 import qualified Data.Text as Text
+import           Data.Text.Encoding (decodeUtf8)
 import           Data.Vector.Vector2 (Vector2(..))
 import           Graphics.DrawingCombinators ((%%))
 import qualified Graphics.DrawingCombinators.Utils as DrawUtils
@@ -25,7 +25,7 @@ import qualified Lamdu.Builtins.PrimVal as PrimVal
 import           Lamdu.Calc.Type (Type)
 import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Calc.Val as V
-import qualified Lamdu.Config as Config
+import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.Data.Anchors as Anchors
 import           Lamdu.Eval.Results (EvalError(..), Val(..), Body(..))
 import qualified Lamdu.Eval.Results as ER
@@ -202,7 +202,7 @@ depthCounts v =
 make :: Monad m => AnimId -> Val Type -> ExprGuiM m View
 make animId v =
     do
-        maxEvalViewSize <- ExprGuiM.readConfig <&> Config.maxEvalViewSize
+        maxEvalViewSize <- ExprGuiM.readTheme <&> Theme.maxEvalViewSize
         let depthLimit =
                 depthCounts v & scanl (+) 0 & tail
                 & takeWhile (< maxEvalViewSize) & length

@@ -1,4 +1,5 @@
-{-# LANGUAGE OverloadedStrings, RecordWildCards #-}
+{-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE NamedFieldPuns, OverloadedStrings #-}
 module Lamdu.Style
     ( help
     , Style(..), style
@@ -12,8 +13,9 @@ import           Graphics.UI.Bottle.Widget (CursorConfig(..))
 import qualified Graphics.UI.Bottle.Widgets.EventMapDoc as EventMapDoc
 import qualified Graphics.UI.Bottle.Widgets.TextEdit as TextEdit
 import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
-import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
+import           Lamdu.Config.Theme (Theme)
+import qualified Lamdu.Config.Theme as Theme
 import           Lamdu.Font (Fonts(..))
 import qualified Lamdu.Font as Fonts
 
@@ -26,8 +28,8 @@ data Style = Style
     , styleNum :: TextEdit.Style
     }
 
-help :: Draw.Font -> Config.Help -> EventMapDoc.Config
-help font Config.Help{..} =
+help :: Draw.Font -> Config.Help -> Theme.Help -> EventMapDoc.Config
+help font config theme =
     EventMapDoc.Config
     { EventMapDoc.configStyle =
         TextView.Style
@@ -40,6 +42,9 @@ help font Config.Help{..} =
     , EventMapDoc.configOverlayDocKeys = helpKeys
     , EventMapDoc.configTint = helpTint
     }
+    where
+        Config.Help{helpKeys} = config
+        Theme.Help{helpTextColor, helpInputDocColor, helpBGColor, helpTint} = theme
 
 textEdit :: Draw.Color -> Draw.Font -> TextEdit.Style
 textEdit color font =
@@ -56,35 +61,35 @@ textEdit color font =
     , TextEdit._sEmptyFocusedString = ""
     }
 
-style :: Config -> Fonts Draw.Font -> Style
+style :: Theme -> Fonts Draw.Font -> Style
 style config fonts =
     Style
     { styleBase =
-      textEdit (Config.baseColor config) (Fonts.fontDefault fonts)
+      textEdit (Theme.baseColor config) (Fonts.fontDefault fonts)
     , styleAutoNameOrigin =
-      textEdit (Config.baseColor config) (Fonts.fontAutoName fonts)
+      textEdit (Theme.baseColor config) (Fonts.fontAutoName fonts)
     , styleNameOrigin =
-      textEdit (Config.baseColor config) (Fonts.fontBinders fonts)
+      textEdit (Theme.baseColor config) (Fonts.fontBinders fonts)
     , styleBytes =
-      textEdit (Config.literalColor config) (Fonts.fontLiteralBytes fonts)
+      textEdit (Theme.literalColor config) (Fonts.fontLiteralBytes fonts)
     , styleText =
-      textEdit (Config.literalColor config) (Fonts.fontLiteralText fonts)
+      textEdit (Theme.literalColor config) (Fonts.fontLiteralText fonts)
     , styleNum =
-      textEdit (Config.literalColor config) (Fonts.fontDefault fonts)
+      textEdit (Theme.literalColor config) (Fonts.fontDefault fonts)
     }
     where
-        Config.Name{..} = Config.name config
+        Theme.Name{..} = Theme.name config
 
-mainLoopConfig :: Config -> MainLoop.Config
-mainLoopConfig config =
+mainLoopConfig :: Theme -> MainLoop.Config
+mainLoopConfig theme =
     MainLoop.Config
     { cAnim =
         AnimConfig
-        { acTimePeriod = realToFrac (Config.animationTimePeriodSec config)
-        , acRemainingRatioInPeriod = realToFrac (Config.animationRemainInPeriod config)
+        { acTimePeriod = realToFrac (Theme.animationTimePeriodSec theme)
+        , acRemainingRatioInPeriod = realToFrac (Theme.animationRemainInPeriod theme)
         }
     , cCursor =
         CursorConfig
-        { cursorColor = Config.cursorBGColor config
+        { cursorColor = Theme.cursorBGColor theme
         }
     }

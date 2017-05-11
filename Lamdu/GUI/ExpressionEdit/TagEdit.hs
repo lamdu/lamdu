@@ -13,6 +13,7 @@ import qualified Graphics.UI.Bottle.Widget as Widget
 import           Graphics.UI.Bottle.Widget.Aligned (AlignedWidget)
 import qualified Graphics.UI.Bottle.Widget.Aligned as AlignedWidget
 import qualified Lamdu.Config as Config
+import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
@@ -46,6 +47,7 @@ makeTagH ::
 makeTagH tagColor nearestHoles tagG =
     do
         config <- ExprGuiM.readConfig
+        theme <- ExprGuiM.readTheme
         jumpHolesEventMap <- ExprEventMap.jumpHolesEventMap nearestHoles
         let keys = Config.holePickAndMoveToNextHoleKeys (Config.hole config)
         let jumpNextEventMap =
@@ -54,7 +56,7 @@ makeTagH tagColor nearestHoles tagG =
                   (Widget.keysEventMapMovesCursor keys
                    (E.Doc ["Navigation", "Jump to next hole"]) .
                    return . WidgetIds.fromEntityId)
-        let Config.Name{..} = Config.name config
+        let Theme.Name{..} = Theme.name theme
         makeTagNameEdit jumpNextEventMap tagColor tagG
             <&> Widget.weakerEvents jumpHolesEventMap
             <&> AlignedWidget.fromCenteredWidget
@@ -64,7 +66,7 @@ makeRecordTag ::
     ExprGuiM m (AlignedWidget (T m Widget.EventResult))
 makeRecordTag nearestHoles tagG =
     do
-        Config.Name{..} <- Config.name <$> ExprGuiM.readConfig
+        Theme.Name{..} <- Theme.name <$> ExprGuiM.readTheme
         makeTagH recordTagColor nearestHoles tagG
 
 makeCaseTag ::
@@ -72,7 +74,7 @@ makeCaseTag ::
     ExprGuiM m (AlignedWidget (T m Widget.EventResult))
 makeCaseTag nearestHoles tagG =
     do
-        Config.Name{..} <- Config.name <$> ExprGuiM.readConfig
+        Theme.Name{..} <- Theme.name <$> ExprGuiM.readTheme
         makeTagH caseTagColor nearestHoles tagG
 
 -- | Unfocusable tag view (e.g: in apply params)
@@ -80,7 +82,7 @@ makeParamTag ::
     Monad m => Sugar.TagG (Name m) -> ExprGuiM m (AlignedWidget a)
 makeParamTag t =
     do
-        Config.Name{..} <- Config.name <$> ExprGuiM.readConfig
+        Theme.Name{..} <- Theme.name <$> ExprGuiM.readTheme
         ExpressionGui.makeNameView (t ^. Sugar.tagGName) animId
             & ExprGuiM.withFgColor paramTagColor
             <&> Widget.fromView

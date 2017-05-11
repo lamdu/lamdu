@@ -65,8 +65,9 @@ globalEventMap VersionControl.Config{..} actions = mconcat
     , redoEventMap VersionControl.Config{..} $ mRedo actions
     ]
 
-choiceWidgetConfig :: VersionControl.Config -> Choice.Config
-choiceWidgetConfig VersionControl.Config{..} = Choice.Config
+choiceWidgetConfig :: VersionControl.Config -> VersionControl.Theme -> Choice.Config
+choiceWidgetConfig VersionControl.Config{..} VersionControl.Theme{..} =
+    Choice.Config
     { Choice.cwcFDConfig =
         FocusDelegator.Config
         { FocusDelegator.focusChildKeys = [ModKey mempty GLFW.Key'Enter]
@@ -86,19 +87,19 @@ branchTextEditId = (`Widget.joinId` ["textedit"]) . branchDelegatorId
 
 make ::
     (Monad mr, Applicative mw, Monad n) =>
-    VersionControl.Config ->
+    VersionControl.Config -> VersionControl.Theme ->
     (forall a. Transaction n a -> mw a) ->
     (forall a. Transaction n a -> mr a) ->
     Actions n mw ->
     (Widget (mw Widget.EventResult) -> WidgetEnvT mr (Widget (mw Widget.EventResult))) ->
     WidgetEnvT mr (Widget (mw Widget.EventResult))
-make VersionControl.Config{..} rwtransaction rtransaction actions mkWidget =
+make VersionControl.Config{..} VersionControl.Theme{..} rwtransaction rtransaction actions mkWidget =
     do
         branchNameEdits <- traverse makeBranchNameEdit $ branches actions
         branchSelector <-
             BWidgets.makeChoiceWidget (setCurrentBranch actions)
             branchNameEdits (currentBranch actions)
-            (choiceWidgetConfig VersionControl.Config{..})
+            (choiceWidgetConfig VersionControl.Config{..} VersionControl.Theme{..})
             WidgetIds.branchSelection
         mkWidget branchSelector
             <&> Widget.strongerEvents

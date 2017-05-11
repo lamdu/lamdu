@@ -3,7 +3,7 @@ module Lamdu.GUI.Main
     ( make
     , Env(..), CodeEdit.ExportActions(..)
       , envEvalRes, envExportActions
-      , envConfig, envSettings, envStyle, envFullSize, envCursor
+      , envConfig, envTheme, envSettings, envStyle, envFullSize, envCursor
     , CodeEdit.M(..), CodeEdit.m, defaultCursor
     ) where
 
@@ -20,6 +20,8 @@ import           Graphics.UI.Bottle.WidgetsEnvT (runWidgetEnvT)
 import qualified Graphics.UI.Bottle.WidgetsEnvT as WE
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
+import qualified Lamdu.Config.Theme as Theme
+import           Lamdu.Config.Theme (Theme)
 import qualified Lamdu.Data.DbLayout as DbLayout
 import           Lamdu.Eval.Results (EvalResults)
 import qualified Lamdu.Expr.IRef as ExprIRef
@@ -41,6 +43,7 @@ data Env = Env
     { _envEvalRes :: CurAndPrev (EvalResults (ExprIRef.ValI DbLayout.ViewM))
     , _envExportActions :: CodeEdit.ExportActions DbLayout.ViewM
     , _envConfig :: Config
+    , _envTheme :: Theme
     , _envSettings :: Settings
     , _envStyle :: Style
     , _envFullSize :: Widget.Size
@@ -60,7 +63,7 @@ make env =
         runWidgetEnvT widgetEnv $
             do
                 branchGui <-
-                    VersionControlGUI.make (Config.versionControl config)
+                    VersionControlGUI.make (Config.versionControl config) (Theme.versionControl theme)
                     CodeEdit.mLiftTrans id actions $
                     \branchSelector ->
                     do
@@ -70,7 +73,7 @@ make env =
                             & WE.mapWidgetEnvT VersionControl.runAction
                             <&> Widget.events . CodeEdit.m %~ fmap (VersionControl.runEvent cursor)
                         hoverPadding <-
-                            Config.pane config & Config.paneHoverPadding
+                            Theme.pane theme & Theme.paneHoverPadding
                             & BWidgets.vspacer
                         let scrollBox =
                                 Box.vbox [(0.5, hoverPadding), (0.5, codeEdit)]
@@ -85,11 +88,12 @@ make env =
                     & Widget.strongerEvents quitEventMap
                     & return
     where
-        Env evalResults exportActions config settings style fullSize cursor = env
+        Env evalResults exportActions config theme settings style fullSize cursor = env
         codeEditEnv = CodeEdit.Env
             { codeProps = DbLayout.codeProps
             , evalResults
             , config
+            , theme
             , settings
             , style
             , exportActions
@@ -97,5 +101,5 @@ make env =
         widgetEnv = WE.Env
             { WE._envCursor = cursor
             , WE._envTextStyle = Style.styleBase style
-            , WE.stdSpacing = Config.stdSpacing config
+            , WE.stdSpacing = Theme.stdSpacing theme
             }

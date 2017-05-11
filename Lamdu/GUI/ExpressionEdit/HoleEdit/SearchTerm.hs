@@ -16,6 +16,7 @@ import qualified Graphics.UI.Bottle.Widgets as BWidgets
 import qualified Graphics.UI.Bottle.Widgets.TextEdit as TextEdit
 import qualified Graphics.UI.Bottle.WidgetsEnvT as WE
 import qualified Lamdu.Config as Config
+import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.EventMap as EventMap
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.Info (HoleInfo(..))
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.Info as HoleInfo
@@ -58,7 +59,9 @@ make :: Monad m => HoleInfo m -> ExprGuiM m (ExpressionGui m)
 make holeInfo =
     do
         config <- ExprGuiM.readConfig
+        theme <- ExprGuiM.readTheme
         let holeConfig@Config.Hole{..} = Config.hole config
+        let Theme.Hole{..} = Theme.hole theme
         we <- ExprGuiM.widgetEnv BWidgets.readEnv
         makeSearchTermPropEdit WidgetIds{..} (HoleInfo.hiSearchTermProperty holeInfo)
             <&> Widget.eventMap

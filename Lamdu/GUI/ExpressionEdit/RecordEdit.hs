@@ -14,6 +14,8 @@ import qualified Graphics.UI.Bottle.Widget.Aligned as AlignedWidget
 import qualified Graphics.UI.Bottle.Widget.TreeLayout as TreeLayout
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
+import           Lamdu.Config.Theme (Theme)
+import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.GUI.ExpressionEdit.TagEdit as TagEdit
 import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
@@ -105,11 +107,11 @@ makeFieldsWidget [] myId =
 makeFieldsWidget fields _ =
     ExpressionGui.vboxTopFocalSpaced <*> mapM makeFieldRow fields
 
-separationBar :: Config -> Widget.R -> Anim.AnimId -> View
-separationBar config width animId =
+separationBar :: Theme -> Widget.R -> Anim.AnimId -> View
+separationBar theme width animId =
     Anim.unitSquare (animId <> ["tailsep"])
     & View.make 1
-    & View.tint (Config.recordTailColor config)
+    & View.tint (Theme.recordTailColor theme)
     & View.scale (Vector2 width 10)
 
 makeOpenRecord ::
@@ -118,7 +120,7 @@ makeOpenRecord ::
     ExprGuiM m (ExpressionGui m)
 makeOpenRecord fieldsGui rest animId =
     do
-        config <- ExprGuiM.readConfig
+        theme <- ExprGuiM.readTheme
         vspace <- ExpressionGui.stdVSpace
         restExpr <-
             ExpressionGui.addValPadding
@@ -133,7 +135,7 @@ makeOpenRecord fieldsGui rest animId =
             fields
             & AlignedWidget.alignment . _1 .~ 0
             & AlignedWidget.addAfter AlignedWidget.Vertical
-            ( [ separationBar config (max minWidth targetWidth) animId
+            ( [ separationBar theme (max minWidth targetWidth) animId
                 & Widget.fromView
                 & AlignedWidget.fromCenteredWidget
               , AlignedWidget.fromCenteredWidget vspace

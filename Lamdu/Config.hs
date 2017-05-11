@@ -1,28 +1,21 @@
 {-# OPTIONS -O0 #-}
-{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DeriveGeneric, NoImplicitPrelude #-}
 module Lamdu.Config
     ( Help(..), Zoom(..), Export(..), Pane(..), Hole(..)
-    , Name(..), Eval(..), Indent(..)
+    , Eval(..)
     , LiteralText(..)
     , Config(..)
     , delKeys
     ) where
 
 import qualified Data.Aeson.Types as Aeson
-import           Data.Vector.Vector2 (Vector2)
 import           GHC.Generics (Generic)
-import qualified Graphics.DrawingCombinators as Draw
 import           Graphics.UI.Bottle.ModKey (ModKey)
-import           Lamdu.Font (FontSize, Fonts)
 import qualified Lamdu.GUI.VersionControl.Config as VersionControl
+import           Lamdu.Prelude
 
 data Help = Help
-    { helpTextSize :: FontSize
-    , helpTextColor :: Draw.Color
-    , helpInputDocColor :: Draw.Color
-    , helpBGColor :: Draw.Color
-    , helpTint :: Draw.Color
-    , helpKeys :: [ModKey]
+    { helpKeys :: [ModKey]
     } deriving (Eq, Generic, Show)
 instance Aeson.ToJSON Help where
     toJSON = Aeson.genericToJSON Aeson.defaultOptions
@@ -50,13 +43,9 @@ instance Aeson.ToJSON Export where
 instance Aeson.FromJSON Export
 
 data Pane = Pane
-    { paneInactiveTintColor :: Draw.Color
-    , paneActiveBGColor :: Draw.Color
-    , paneCloseKeys :: [ModKey]
-    , paneHoverPadding :: Draw.R
+    { paneCloseKeys :: [ModKey]
     , newDefinitionKeys :: [ModKey]
     , newDefinitionButtonPressKeys :: [ModKey]
-    , newDefinitionActionColor :: Draw.Color
     } deriving (Eq, Generic, Show)
 instance Aeson.ToJSON Pane where
     toJSON = Aeson.genericToJSON Aeson.defaultOptions
@@ -67,11 +56,6 @@ data Hole = Hole
     , holeJumpToNextKeys :: [ModKey]
     , holeJumpToPrevKeys :: [ModKey]
     , holeResultCount :: Int
-    , holeResultPadding :: Vector2 Double
-    , holeResultInjectedScaleExponent :: Double
-    , holeExtraSymbolColorUnselected :: Draw.Color
-    , holeExtraSymbolColorSelected :: Draw.Color
-    , holeSearchTermBGColor :: Draw.Color
     , holePickResultKeys :: [ModKey]
     , holeUnwrapKeys :: [ModKey]
     , holeOpenKeys :: [ModKey]
@@ -81,27 +65,9 @@ instance Aeson.ToJSON Hole where
     toJSON = Aeson.genericToJSON Aeson.defaultOptions
 instance Aeson.FromJSON Hole
 
-data Name = Name
-    { collisionSuffixTextColor :: Draw.Color
-    , collisionSuffixBGColor :: Draw.Color
-    , collisionSuffixScaleFactor :: Vector2 Double
-    , definitionColor :: Draw.Color
-    , parameterColor :: Draw.Color
-    , letColor :: Draw.Color
-    , recordTagColor :: Draw.Color
-    , caseTagColor :: Draw.Color
-    , paramTagColor :: Draw.Color
-    } deriving (Eq, Generic, Show)
-instance Aeson.ToJSON Name where
-    toJSON = Aeson.genericToJSON Aeson.defaultOptions
-instance Aeson.FromJSON Name
-
 data Eval = Eval
     { prevScopeKeys :: [ModKey]
     , nextScopeKeys :: [ModKey]
-    , neighborsScaleFactor :: Vector2 Double
-    , neighborsPadding :: Vector2 Double
-    , staleResultTint :: Draw.Color
     } deriving (Eq, Generic, Show)
 instance Aeson.ToJSON Eval where
     toJSON = Aeson.genericToJSON Aeson.defaultOptions
@@ -115,49 +81,22 @@ instance Aeson.ToJSON LiteralText where
     toJSON = Aeson.genericToJSON Aeson.defaultOptions
 instance Aeson.FromJSON LiteralText
 
-data Indent = Indent
-    { indentBarWidth :: Double
-    , indentBarGap :: Double
-    , indentBarColor :: Draw.Color
-    } deriving (Eq, Generic, Show)
-instance Aeson.ToJSON Indent where
-    toJSON = Aeson.genericToJSON Aeson.defaultOptions
-instance Aeson.FromJSON Indent
-
 data Config = Config
-    { fonts :: Fonts FilePath
-    , baseTextSize :: FontSize
-    , help :: Help
+    { help :: Help
     , zoom :: Zoom
     , export :: Export
     , pane :: Pane
     , versionControl :: VersionControl.Config
     , hole :: Hole
     , literalText :: LiteralText
-    , name :: Name
-    , lightLambdaUnderlineColor :: Draw.Color
-    , underlineWidth :: Double
     , eval :: Eval
-    , indent :: Indent
-
-    , hoverBGColor :: Draw.Color
-    , hoverDarkPadding :: Vector2 Double
-    , hoverDarkBGColor :: Draw.Color
-
-    , animationTimePeriodSec :: Double
-    , animationRemainInPeriod :: Double
+    , theme :: Text
 
     , maxExprDepth :: Int
-    , maxEvalViewSize :: Int
-
-    , backgroundColor :: Draw.Color
-    , baseColor :: Draw.Color
 
     , quitKeys :: [ModKey]
     , nextInfoModeKeys :: [ModKey]
     , previousCursorKeys :: [ModKey]
-
-    , invalidCursorBGColor :: Draw.Color
 
     , addNextParamKeys :: [ModKey]
     , paramOrderBeforeKeys :: [ModKey]
@@ -167,37 +106,13 @@ data Config = Config
     , delBackwardKeys :: [ModKey]
     , wrapKeys :: [ModKey]
 
-    , literalColor :: Draw.Color
-    , typeIndicatorErrorColor :: Draw.Color
-    , typeIndicatorMatchColor :: Draw.Color
-    , typeIndicatorFrameWidth :: Vector2 Double
-    , foreignModuleColor :: Draw.Color
-    , foreignVarColor :: Draw.Color
-
     , acceptDefinitionTypeKeys :: [ModKey]
 
     , letAddItemKeys :: [ModKey]
-    , letItemPadding :: Vector2 Double
 
     , extractKeys :: [ModKey]
     , inlineKeys :: [ModKey]
     , moveLetInwardKeys:: [ModKey]
-
-    , typeTint :: Draw.Color
-    , valFrameBGColor :: Draw.Color
-    , valFramePadding :: Vector2 Double
-    , valNomBGColor :: Draw.Color
-    , valAnnotationBGColor :: Draw.Color
-    , valAnnotationHoverBGColor :: Draw.Color
-    , valAnnotationSpacing :: Double -- as ratio of line height
-    , valAnnotationWidthExpansionLimit :: Double
-    , valAnnotationShrinkAtLeast :: Double
-    , valAnnotationMaxHeight :: Double
-    , typeFrameBGColor :: Draw.Color
-    , stdSpacing :: Vector2 Double -- as ratio of space character size
-    , cursorBGColor :: Draw.Color
-    , grammarColor :: Draw.Color
-    , disabledColor :: Draw.Color
 
     , jumpLHStoRHSKeys :: [ModKey]
     , jumpRHStoLHSKeys :: [ModKey]
@@ -206,16 +121,10 @@ data Config = Config
     , leaveSubexpressionKeys :: [ModKey]
 
     , recordOpenKeys :: [ModKey]
-    , recordTailColor :: Draw.Color
     , recordAddFieldKeys :: [ModKey]
 
     , caseOpenKeys :: [ModKey]
-    , caseTailColor :: Draw.Color
     , caseAddAltKeys :: [ModKey]
-    , evaluatedPathBGColor :: Draw.Color
-
-    , presentationChoiceScaleFactor :: Vector2 Double
-    , presentationChoiceColor :: Draw.Color
     } deriving (Eq, Generic, Show)
 instance Aeson.ToJSON Config where
     toJSON = Aeson.genericToJSON Aeson.defaultOptions

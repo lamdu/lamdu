@@ -24,6 +24,7 @@ import qualified Graphics.UI.Bottle.Widgets.Box as Box
 import qualified Graphics.UI.GLFW as GLFW
 import           Lamdu.Calc.Type.Scheme (Scheme(..), schemeType)
 import qualified Lamdu.Config as Config
+import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.GUI.ExpressionEdit.BinderEdit as BinderEdit
 import qualified Lamdu.GUI.ExpressionEdit.BuiltinEdit as BuiltinEdit
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
@@ -113,7 +114,7 @@ makeBuiltinDefinition ::
     Sugar.DefinitionBuiltin m -> ExprGuiM m (Widget (T m Widget.EventResult))
 makeBuiltinDefinition def builtin =
     do
-        defColor <- ExprGuiM.readConfig <&> Config.name <&> Config.definitionColor
+        defColor <- ExprGuiM.readTheme <&> Theme.name <&> Theme.definitionColor
         assignment <-
             [ ExpressionGui.makeNameOriginEdit name defColor (Widget.joinId myId ["name"])
             , ExprGuiM.makeLabel "=" (Widget.toAnimId myId) <&> Widget.fromView
@@ -137,12 +138,12 @@ typeIndicatorId myId = Widget.joinId myId ["type indicator"]
 typeIndicator ::
     Monad m => Draw.Color -> Widget.Id -> ExprGuiM m (Widget.R -> View)
 typeIndicator color myId =
-    ExprGuiM.readConfig
+    ExprGuiM.readTheme
     <&>
-    \config width ->
+    \theme width ->
     Anim.unitSquare (Widget.toAnimId (typeIndicatorId myId))
     & View.make 1
-    & View.scale (Vector2 width (realToFrac (Config.typeIndicatorFrameWidth config ^. _2)))
+    & View.scale (Vector2 width (realToFrac (Theme.typeIndicatorFrameWidth theme ^. _2)))
     & View.tint color
 
 acceptableTypeIndicator ::
@@ -173,8 +174,8 @@ makeExprDefinition ::
     ExprGuiM m (Widget.R -> Widget (T m Widget.EventResult))
 makeExprDefinition def bodyExpr =
     do
-        config <- ExprGuiM.readConfig
-        let defColor = Config.definitionColor (Config.name config)
+        theme <- ExprGuiM.readTheme
+        let defColor = Theme.definitionColor (Theme.name theme)
         bodyGui <-
             BinderEdit.make (def ^. Sugar.drName) defColor
             (bodyExpr ^. Sugar.deContent) myId
@@ -182,13 +183,13 @@ makeExprDefinition def bodyExpr =
         mkTypeWidgets <-
             case bodyExpr ^. Sugar.deTypeInfo of
             Sugar.DefinitionExportedTypeInfo scheme ->
-                [ typeIndicator (Config.typeIndicatorMatchColor config) myId
+                [ typeIndicator (Theme.typeIndicatorMatchColor theme) myId
                   <&> fmap Widget.fromView
                 , topLevelSchemeTypeView scheme entityId ["exportedType"]
                 ]
             Sugar.DefinitionNewType (Sugar.AcceptNewType oldExported newInferred accept) ->
                 [ topLevelSchemeTypeView newInferred entityId ["inferredType"]
-                , acceptableTypeIndicator accept (Config.typeIndicatorErrorColor config) myId
+                , acceptableTypeIndicator accept (Theme.typeIndicatorErrorColor theme) myId
                 , topLevelSchemeTypeView oldExported entityId ["exportedType"]
                 ]
             & sequence <&> sequence

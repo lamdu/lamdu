@@ -30,6 +30,7 @@ import qualified Graphics.UI.Bottle.WidgetsEnvT as WE
 import qualified Graphics.UI.GLFW as GLFW
 import           Lamdu.CharClassification (operatorChars)
 import qualified Lamdu.Config as Config
+import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.GUI.CodeEdit.Settings as CESettings
 import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
 import           Lamdu.GUI.ExpressionGui (ExpressionGui)
@@ -95,10 +96,10 @@ mkPresentationModeEdit ::
     ExprGuiM m (Widget (T m Widget.EventResult))
 mkPresentationModeEdit myId prop = do
     cur <- ExprGuiM.transaction $ Transaction.getP prop
-    config <- ExprGuiM.readConfig
+    theme <- ExprGuiM.readTheme
     let mkPair presentationMode = do
             widget <-
-                ExprGuiM.withFgColor (Config.presentationChoiceColor config) .
+                ExprGuiM.withFgColor (Theme.presentationChoiceColor theme) .
                 ExprGuiM.widgetEnv $
                 BWidgets.makeFocusableLabel (Text.pack (show presentationMode)) myId
             return (presentationMode, widget)
@@ -106,7 +107,7 @@ mkPresentationModeEdit myId prop = do
     BWidgets.makeChoiceWidget (Transaction.setP prop) pairs cur
         presentationModeChoiceConfig myId
         & ExprGuiM.widgetEnv
-        <&> Widget.scale (realToFrac <$> Config.presentationChoiceScaleFactor config)
+        <&> Widget.scale (realToFrac <$> Theme.presentationChoiceScaleFactor theme)
 
 data Parts m = Parts
     { pMParamsEdit :: Maybe (ExpressionGui m)
@@ -200,16 +201,16 @@ makeScopeNavEdit ::
     )
 makeScopeNavEdit binder myId curCursor =
     do
-        config <- ExprGuiM.readConfig
+        theme <- ExprGuiM.readTheme
         let mkArrow (txt, mScopeId) =
                 ExpressionGui.makeLabel txt (Widget.toAnimId myId)
                 & ExprGuiM.localEnv
                 ( case mScopeId of
-                  Nothing -> Config.disabledColor config
-                  Just _ -> Config.grammarColor config
+                  Nothing -> Theme.disabledColor theme
+                  Just _ -> Theme.grammarColor theme
                   & WE.setTextColor
                 )
-        let Config.Eval{..} = Config.eval config
+        Config.Eval{..} <- ExprGuiM.readConfig <&> Config.eval
         settings <- ExprGuiM.readSettings
         case settings ^. CESettings.sInfoMode of
             CESettings.Evaluation ->
@@ -376,7 +377,8 @@ makeLetEdit ::
 makeLetEdit item =
     do
         config <- ExprGuiM.readConfig
-        let letColor = Config.letColor (Config.name config)
+        theme <- ExprGuiM.readTheme
+        let letColor = Theme.letColor (Theme.name theme)
         let actionsEventMap =
                 mconcat
                 [ Widget.keysEventMapMovesCursor (Config.delKeys config)
@@ -400,7 +402,7 @@ makeLetEdit item =
             <*> (make (item ^. Sugar.lName) letColor binder myId
                 <&> TreeLayout.widget %~ Widget.weakerEvents eventMap
                 <&> TreeLayout.pad
-                    (Config.letItemPadding config <&> realToFrac)
+                    (Theme.letItemPadding theme <&> realToFrac)
                 )
     where
         bodyId =
@@ -526,7 +528,7 @@ makeParamsEdit ::
     ExprGuiM m [ExpressionGui m]
 makeParamsEdit annotationOpts nearestHoles delVarBackwardsId lhsId rhsId params =
     do
-        paramColor <- ExprGuiM.readConfig <&> Config.name <&> Config.parameterColor
+        paramColor <- ExprGuiM.readTheme <&> Theme.name <&> Theme.parameterColor
         case params of
             Sugar.BinderWithoutParams -> return []
             Sugar.NullParam p ->

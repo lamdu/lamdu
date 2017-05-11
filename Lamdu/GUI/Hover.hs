@@ -11,7 +11,7 @@ import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widget.Layout as Layout
 import           Graphics.UI.Bottle.Widget.Layout (Layout)
-import qualified Lamdu.Config as Config
+import qualified Lamdu.Config.Theme as Theme
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 
@@ -23,11 +23,11 @@ addBackground myId = Widget.backgroundColor (myId <> ["hover background"])
 addDarkBackground :: (Monad m, Layout w) => AnimId -> ExprGuiM m (w a -> w a)
 addDarkBackground animId =
     do
-        config <- ExprGuiM.readConfig
+        theme <- ExprGuiM.readTheme
         return $ \gui ->
             gui
-            & Layout.pad (Config.hoverDarkPadding config <&> realToFrac)
+            & Layout.pad (Theme.hoverDarkPadding theme <&> realToFrac)
             & Layout.widget %~
               Widget.backgroundColor
               (animId <> ["hover dark background"])
-              (Config.hoverDarkBGColor config)
+              (Theme.hoverDarkBGColor theme)

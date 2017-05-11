@@ -1,38 +1,6 @@
 {
-    "fonts": {
-        "fontDefault"     : "fonts/DejaVuSans.ttf",
-        "fontHelp"        : "fonts/DejaVuSans.ttf",
-        "fontAutoName"    : "fonts/DejaVuSerif-BoldItalic.ttf",
-        "fontBinders"     : "fonts/DejaVuSans-Bold.ttf",
-        "fontLiteralText" : "fonts/DejaVuSerif.ttf",
-        "fontLiteralBytes": "fonts/DejaVuSansMono.ttf"
-    },
-    "baseTextSize": 16,
-    "animationTimePeriodSec": 0.11,
-    "animationRemainInPeriod": 0.2,
-    "hoverBGColor": [
-        0.05,
-        0.25,
-        0.3,
-        0.9
-    ],
-    "hoverDarkBGColor": [
-        0.05,
-        0.05,
-        0.05,
-        0.85
-    ],
-    "hoverDarkPadding": [1, 1],
     "maxExprDepth": 40,
-    "maxEvalViewSize": 32,
     "help": {
-        "helpInputDocColor": [
-            0.1,
-            0.7,
-            0.7,
-            1.0
-        ],
-        "helpTextSize": 9,
         "helpKeys": [
             [
                 {
@@ -52,24 +20,6 @@
                 },
                 "Key'H"
             ]
-        ],
-        "helpTextColor": [
-            1.0,
-            1.0,
-            1.0,
-            1.0
-        ],
-        "helpBGColor": [
-            0.2,
-            0.15,
-            0.1,
-            0.5
-        ],
-        "helpTint": [
-            1.0,
-            1.0,
-            1.0,
-            0.8
         ]
     },
     "zoom": {
@@ -177,24 +127,6 @@
                 "Key'Enter"
             ]
         ],
-        "newDefinitionActionColor": [
-            0.3,
-            1.0,
-            0.3,
-            1.0
-        ],
-        "paneActiveBGColor": [
-            1.0,
-            1.0,
-            1.0,
-            0.0
-        ],
-        "paneInactiveTintColor": [
-            1.0,
-            1.0,
-            1.0,
-            1.0
-        ],
         "paneCloseKeys": [
             [
                 {
@@ -205,8 +137,7 @@
                 },
                 "Key'W"
             ]
-        ],
-        "paneHoverPadding": 1.5
+        ]
     },
     "versionControl": {
         "undoKeys": [
@@ -230,12 +161,6 @@
                 },
                 "Key'Y"
             ]
-        ],
-        "selectedBranchColor": [
-            0.25,
-            0.5,
-            0.25,
-            1.0
         ],
         "makeBranchKeys": [
             [
@@ -283,21 +208,7 @@
                 "Key'Tab"
             ]
         ],
-        "holeExtraSymbolColorUnselected": [
-            1.0,
-            1.0,
-            1.0,
-            0.3
-        ],
-        "holeExtraSymbolColorSelected": [
-            1.0,
-            1.0,
-            1.0,
-            1.0
-        ],
         "holeResultCount": 5,
-        "holeResultInjectedScaleExponent": 0.65,
-        "holeResultPadding": [1.0, 0.5],
         "holePickAndMoveToNextHoleKeys": [
             [
                 {
@@ -308,12 +219,6 @@
                 },
                 "Key'Space"
             ]
-        ],
-        "holeSearchTermBGColor": [
-            0.2,
-            0.3,
-            0.5,
-            1.0
         ],
         "holeJumpToPrevKeys": [
             [
@@ -387,7 +292,7 @@
                 },
                 "Key'Enter"
             ]
-        ],
+        ]
     },
     "literalText": {
         "literalTextStartEditingKeys": [
@@ -431,64 +336,6 @@
             ]
         ]
     },
-    "name": {
-        "parameterColor": [
-            0.5,
-            0.9,
-            1.0,
-            1.0
-        ],
-        "letColor": [
-            0.75,
-            0.5,
-            1.0,
-            1.0
-        ],
-        "definitionColor": [
-            1.0,
-            0.5,
-            1.0,
-            1.0
-        ],
-        "collisionSuffixTextColor": [
-            1.0,
-            0.8,
-            0.5,
-            1.0
-        ],
-        "collisionSuffixScaleFactor": [0.5, 0.5],
-        "collisionSuffixBGColor": [
-            0.7,
-            0.0,
-            0.0,
-            1.0
-        ],
-        "recordTagColor": [
-            0.75,
-            0.75,
-            0.75,
-            1.0
-        ],
-        "caseTagColor": [
-            0.5,
-            0.75,
-            0.5,
-            1.0
-        ],
-        "paramTagColor": [
-            0.65,
-            0.65,
-            0.65,
-            1.0
-        ]
-    },
-    "lightLambdaUnderlineColor": [
-        1.0,
-        1.0,
-        1.0,
-        0.3
-    ],
-    "underlineWidth": 2,
     "eval": {
         "prevScopeKeys": [
             [
@@ -511,26 +358,9 @@
                 },
                 "Key'Down"
             ]
-        ],
-        "staleResultTint": [
-            0.5,
-            0.5,
-            0.5,
-            0.5
-        ],
-        "neighborsScaleFactor": [0.65, 0.65],
-        "neighborsPadding": [3, 3]
-    },
-    "indent": {
-        "indentBarWidth": 1.5,
-        "indentBarGap": 0.75,
-        "indentBarColor": [
-            0.8,
-            0.8,
-            1.0,
-            0.1
         ]
     },
+    "theme": "default",
     "previousCursorKeys": [
         [
             {
@@ -541,12 +371,6 @@
             },
             "Key'Left"
         ]
-    ],
-    "typeTint": [
-        1.0,
-        1.0,
-        1.0,
-        0.6
     ],
     "enterSubexpressionKeys": [
         [
@@ -569,12 +393,6 @@
             },
             "Key'Backspace"
         ]
-    ],
-    "cursorBGColor": [
-        0.5,
-        0.5,
-        1.0,
-        0.5
     ],
     "quitKeys": [
         [
@@ -653,24 +471,6 @@
             "Key'O"
         ]
     ],
-    "recordTailColor": [
-        0.4,
-        0.4,
-        0.4,
-        1.0
-    ],
-    "caseTailColor": [
-        0.4,
-        0.8,
-        0.4,
-        1.0
-    ],
-    "evaluatedPathBGColor" : [
-        0.2,
-        1.0,
-        0.2,
-        0.2
-    ],
     "jumpLHStoRHSKeys": [
         [
             {
@@ -682,49 +482,6 @@
             "Key'GraveAccent"
         ]
     ],
-    "valFrameBGColor": [
-        1.0,
-        1.0,
-        1.0,
-        0.05
-    ],
-    "typeFrameBGColor": [
-        0.2,
-        0.6,
-        0.8,
-        0.16
-    ],
-    "valNomBGColor": [
-        0.25,
-        0.1,
-        0.5,
-        0.8
-    ],
-    "valAnnotationBGColor": [
-        0.0,
-        0.0,
-        0.0,
-        0.2
-    ],
-    "valAnnotationHoverBGColor": [
-        0.0,
-        0.0,
-        0.0,
-        0.9
-    ],
-    "typeIndicatorFrameWidth": [2.0, 2.0],
-    "typeIndicatorErrorColor": [
-        1.0,
-        0.2,
-        0.2,
-        1.0
-    ],
-    "typeIndicatorMatchColor": [
-        0.25,
-        0.5,
-        0.25,
-        1.0
-    ],
     "jumpRHStoLHSKeys": [
         [
             {
@@ -735,12 +492,6 @@
             },
             "Key'GraveAccent"
         ]
-    ],
-    "foreignVarColor": [
-        1.0,
-        0.65,
-        0.25,
-        1.0
     ],
     "extractKeys": [
         [
@@ -844,19 +595,6 @@
             "Key'Enter"
         ]
     ],
-    "stdSpacing": [1.0, 0.3],
-    "grammarColor": [
-        0.8,
-        0.8,
-        0.9,
-        1.0
-    ],
-    "disabledColor": [
-        0.4,
-        0.4,
-        0.45,
-        0.5
-    ],
     "recordAddFieldKeys": [
         [
             {
@@ -897,11 +635,6 @@
             "Key'Comma"
         ]
     ],
-    "valAnnotationSpacing": 0.1,
-    "valAnnotationWidthExpansionLimit": 34,
-    "valAnnotationShrinkAtLeast": 80,
-    "valAnnotationMaxHeight": 20,
-    "valFramePadding": [7.0, 7.0],
     "delForwardKeys": [
         [
             {
@@ -922,7 +655,6 @@
             "Key'Delete"
         ]
     ],
-    "letItemPadding": [5, 5],
     "letAddItemKeys": [
         [
             {
@@ -943,31 +675,6 @@
             "Key'L"
         ]
     ],
-    "literalColor": [
-        0.5,
-        1.0,
-        0.5,
-        1.0
-    ],
-    "presentationChoiceColor": [
-        0.4,
-        0.4,
-        0.4,
-        1.0
-    ],
-    "backgroundColor": [
-        0.95,
-        0.98,
-        1.0,
-        0.18
-    ],
-    "baseColor": [
-        1.0,
-        1.0,
-        1.0,
-        1.0
-    ],
-    "presentationChoiceScaleFactor": [0.5, 0.5],
     "jumpToDefinitionKeys": [
         [
             {
@@ -978,17 +685,5 @@
             },
             "Key'Enter"
         ]
-    ],
-    "invalidCursorBGColor": [
-        0.4,
-        0.0,
-        0.0,
-        1.0
-    ],
-    "foreignModuleColor": [
-        1.0,
-        0.3,
-        0.35,
-        1.0
     ]
 }

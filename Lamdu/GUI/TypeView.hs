@@ -21,7 +21,7 @@ import           Graphics.UI.Bottle.WidgetsEnvT (WidgetEnvT)
 import           Lamdu.Calc.Identifier (Identifier(..))
 import           Lamdu.Calc.Type (Type)
 import qualified Lamdu.Calc.Type as T
-import qualified Lamdu.Config as Config
+import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.Data.Anchors as Anchors
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
@@ -129,15 +129,15 @@ makeTInst parentPrecedence tid typeParams =
 addValPadding :: Monad m => View -> M m View
 addValPadding view =
     do
-        config <- egui ExprGuiM.readConfig
-        let padding = realToFrac <$> Config.valFramePadding config
+        theme <- egui ExprGuiM.readTheme
+        let padding = realToFrac <$> Theme.valFramePadding theme
         View.pad padding view & return
 
 addBGColor :: Monad m => View -> M m View
 addBGColor view =
     do
-        config <- egui ExprGuiM.readConfig
-        let color = Config.typeFrameBGColor config
+        theme <- egui ExprGuiM.readTheme
+        let color = Theme.typeFrameBGColor theme
         bgId <- randAnimId
         view
             & View.backgroundColor bgId color
@@ -216,9 +216,9 @@ makeInternal parentPrecedence typ =
 make :: Monad m => Type -> AnimId -> ExprGuiM m View
 make t prefix =
     do
-        config <- ExprGuiM.readConfig
+        theme <- ExprGuiM.readTheme
         makeInternal (Precedence.parent 0) t
             & runM
             & (`evalStateT` Random.mkStdGen 0)
             <&> View.animFrames %~ Anim.mapIdentities (mappend prefix)
-            <&> View.tint (Config.typeTint config)
+            <&> View.tint (Theme.typeTint theme)

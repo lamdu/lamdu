@@ -14,7 +14,6 @@ import qualified Data.Monoid as Monoid
 import           Data.Store.Db (Db)
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
-import           Data.Time.Clock (getCurrentTime)
 import           GHC.Conc (setNumCapabilities, getNumProcessors)
 import           GHC.Stack (whoCreated)
 import qualified Graphics.DrawingCombinators as Draw
@@ -26,10 +25,12 @@ import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.EventMapDoc as EventMapDoc
 import qualified Graphics.UI.GLFW as GLFW
 import qualified Graphics.UI.GLFW.Utils as GLFWUtils
-import           Lamdu.Config (Config(Config))
+import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
-import           Lamdu.Config.Sampler (Sampler)
+import           Lamdu.Config.Sampler (Sampler, sConfig, sTheme)
 import qualified Lamdu.Config.Sampler as ConfigSampler
+import           Lamdu.Config.Theme (Theme(..))
+import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.Data.DbInit as DbInit
 import qualified Lamdu.Data.DbLayout as DbLayout
 import           Lamdu.Data.Export.Codejam (exportFancy)
@@ -133,8 +134,8 @@ exportActions config evalResults =
 
 makeRootWidget ::
     Fonts Draw.Font -> Db -> Zoom -> IORef Settings -> EvalManager.Evaluator ->
-    Config -> Widget.Size -> IO (Widget (MainLoop.M Widget.EventResult))
-makeRootWidget fonts db zoom settingsRef evaluator config size =
+    Config -> Theme -> Widget.Size -> IO (Widget (MainLoop.M Widget.EventResult))
+makeRootWidget fonts db zoom settingsRef evaluator config theme size =
     do
         cursor <-
             DbLayout.cursor DbLayout.revisionProps
@@ -149,8 +150,9 @@ makeRootWidget fonts db zoom settingsRef evaluator config size =
                 , _envExportActions =
                     exportActions config (evalResults ^. current)
                 , _envConfig = config
+                , _envTheme = theme
                 , _envSettings = settings
-                , _envStyle = Style.style config fonts
+                , _envStyle = Style.style theme fonts
                 , _envFullSize = size
                 , _envCursor = cursor
                 }
@@ -172,19 +174,19 @@ printGLVersion =
         ver <- GL.get GL.glVersion
         putStrLn $ "Using GL version: " ++ show ver
 
-zoomConfig :: Widget.R -> Zoom -> Config -> IO Config
-zoomConfig displayScale zoom config =
+zoomConfig :: Widget.R -> Zoom -> Theme -> IO Theme
+zoomConfig displayScale zoom theme =
     do
         factor <- Zoom.getSizeFactor zoom
-        return config
-            { Config.baseTextSize = baseTextSize * realToFrac factor * scale
-            , Config.help =
-              help { Config.helpTextSize = helpTextSize * scale }
+        return theme
+            { Theme.baseTextSize = baseTextSize * realToFrac factor * scale
+            , Theme.help =
+              help { Theme.helpTextSize = helpTextSize * scale }
             }
     where
         scale = realToFrac displayScale
-        Config{help, baseTextSize} = config
-        Config.Help{helpTextSize} = help
+        Theme{help, baseTextSize} = theme
+        Theme.Help{helpTextSize} = help
 
 runEditor :: Opts.EditorOpts -> Db -> IO ()
 runEditor opts db =
@@ -210,16 +212,21 @@ runEditor opts db =
                     displayScale <- GLFWUtils.getDisplayScale win <&> (^. _2)
                     zoom <- Zoom.make
                     let configSampler =
-                            (ConfigSampler.onEachSample . ConfigSampler.sConfig . zoomConfig displayScale) zoom
                             rawConfigSampler
+                            & ConfigSampler.onEachSample
+                                (sTheme %%~ zoomConfig displayScale zoom)
                     let initialSettings = Settings Settings.defaultInfoMode
                     settingsRef <- newIORef initialSettings
                     settingsChangeHandler evaluator initialSettings
                     addHelp <- EventMapDoc.makeToggledHelpAdder EventMapDoc.HelpNotShown
                     mainLoop subpixel win refreshScheduler configSampler $
-                        \fonts config size ->
-                        makeRootWidget fonts db zoom settingsRef evaluator config size
-                        >>= addHelp (Style.help (Font.fontHelp fonts) (Config.help config)) size
+                        \fonts config theme size ->
+                            let helpStyle =
+                                    Style.help (Font.fontHelp fonts)
+                                    (Config.help config) (Theme.help theme)
+                            in  makeRootWidget fonts db zoom settingsRef evaluator
+                                config theme size
+                                >>= addHelp helpStyle size
     where
         subpixel
             | opts ^. Opts.eoSubpixelEnabled = Font.LCDSubPixelEnabled
@@ -237,7 +244,7 @@ prependConfigPath :: ConfigSampler.Sample -> Fonts FilePath -> Fonts FilePath
 prependConfigPath sample =
     Lens.mapped %~ (dir </>)
     where
-        dir = FilePath.takeDirectory (ConfigSampler.sFilePath sample)
+        dir = FilePath.takeDirectory (sample ^. ConfigSampler.sConfigPath)
 
 assignFontSizes ::
     ConfigSampler.Sample -> Fonts FilePath -> Fonts (FontSize, FilePath)
@@ -246,14 +253,14 @@ assignFontSizes sample fonts =
     <&> (,) baseTextSize
     & Font.lfontHelp . _1 .~ helpTextSize
     where
-        baseTextSize = Config.baseTextSize config
-        helpTextSize = Config.helpTextSize (Config.help config)
-        config = sample ^. ConfigSampler.sConfig
+        baseTextSize = Theme.baseTextSize theme
+        helpTextSize = Theme.helpTextSize (Theme.help theme)
+        theme = sample ^. sTheme
 
 curSampleFonts :: ConfigSampler.Sample -> Fonts (FontSize, FilePath)
 curSampleFonts sample =
-    sample ^. ConfigSampler.sConfig
-    & Config.fonts
+    sample ^. sTheme
+    & Theme.fonts
     & prependConfigPath sample
     & assignFontSizes sample
 
@@ -288,28 +295,28 @@ makeGetFonts subpixel configSampler =
 mainLoop ::
     Font.LCDSubPixelEnabled ->
     GLFW.Window -> RefreshScheduler -> Sampler ->
-    (Fonts Draw.Font -> Config -> Widget.Size ->
+    (Fonts Draw.Font -> Config -> Theme -> Widget.Size ->
     IO (Widget (MainLoop.M Widget.EventResult))) -> IO ()
 mainLoop subpixel win refreshScheduler configSampler iteration =
     do
         getFonts <- makeGetFonts subpixel configSampler
-        lastVersionNumRef <- newIORef =<< getCurrentTime
+        lastVersionNumRef <- newIORef []
         let getConfig =
                 ConfigSampler.getSample configSampler
-                <&> Style.mainLoopConfig . (^. ConfigSampler.sConfig)
+                <&> (^. sTheme)
+                <&> Style.mainLoopConfig
         let makeWidget size =
                 do
-                    config <-
-                        ConfigSampler.getSample configSampler
-                        <&> (^. ConfigSampler.sConfig)
+                    sample <- ConfigSampler.getSample configSampler
                     fonts <- getFonts
-                    iteration fonts config size
+                    iteration fonts (sample ^. sConfig) (sample ^. sTheme) size
         let tickHandler =
                 do
                     curVersionNum <-
                         ConfigSampler.getSample configSampler
                         <&> ConfigSampler.sVersion
-                    configChanged <- atomicModifyIORef lastVersionNumRef $ \lastVersionNum ->
+                    configChanged <- atomicModifyIORef lastVersionNumRef $
+                        \lastVersionNum ->
                         (curVersionNum, lastVersionNum /= curVersionNum)
                     if configChanged
                         then return True
@@ -340,12 +347,12 @@ mkWidgetWithFallback dbToIO env =
                 return (isValid, widget)
         unless isValid $ putStrLn $ "Invalid cursor: " ++ show (env ^. GUIMain.envCursor)
         widget
-            & Widget.backgroundColor ["background"] (bgColor isValid config)
+            & Widget.backgroundColor ["background"] (bgColor isValid theme)
             & return
     where
-        config = env ^. GUIMain.envConfig
-        bgColor False = Config.invalidCursorBGColor
-        bgColor True = Config.backgroundColor
+        theme = env ^. GUIMain.envTheme
+        bgColor False = Theme.invalidCursorBGColor
+        bgColor True = Theme.backgroundColor
 
 makeMainGui ::
     (forall a. T DbLayout.DbM a -> IO a) ->

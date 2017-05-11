@@ -10,7 +10,7 @@ import           Graphics.UI.Bottle.Widget.Aligned (AlignedWidget)
 import qualified Graphics.UI.Bottle.Widget.Aligned as AlignedWidget
 import qualified Graphics.UI.Bottle.Widget.TreeLayout as TreeLayout
 import qualified Graphics.UI.Bottle.WidgetsEnvT as WE
-import qualified Lamdu.Config as Config
+import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.GUI.ExpressionEdit.BinderEdit as BinderEdit
 import           Lamdu.GUI.ExpressionGui
     ( ExpressionGui, Precedence, before, after, (<||), (||>) )
@@ -108,7 +108,7 @@ expandingName ::
 expandingName vertOrder (#>) needParen nomId showName =
     do
         space <- ExpressionGui.stdHSpace <&> AlignedWidget.fromCenteredWidget
-        addBg <- ExpressionGui.addValBGWithColor Config.valNomBGColor nomId
+        addBg <- ExpressionGui.addValBGWithColor Theme.valNomBGColor nomId
         horizWithFallback <- ExpressionGui.horizVertFallback mParenInfo
         return $
             \label nameGui subexprGui ->
