@@ -9,11 +9,11 @@ module Lamdu.Config
     ) where
 
 import qualified Data.Aeson.Types as Aeson
-import           Data.Vector.Vector2 (Vector2(..))
+import           Data.Vector.Vector2 (Vector2)
 import           GHC.Generics (Generic)
 import qualified Graphics.DrawingCombinators as Draw
-import           Graphics.UI.Bottle.ModKey (ModKey(..))
-import           Lamdu.Font (FontSize, Fonts(..))
+import           Graphics.UI.Bottle.ModKey (ModKey)
+import           Lamdu.Font (FontSize, Fonts)
 import qualified Lamdu.GUI.VersionControl.Config as VersionControl
 
 data Help = Help
