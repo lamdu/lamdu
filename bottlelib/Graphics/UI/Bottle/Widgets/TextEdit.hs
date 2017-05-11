@@ -25,6 +25,7 @@ import           Graphics.DrawingCombinators.Utils (TextSize(..))
 import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.Direction as Direction
 import qualified Graphics.UI.Bottle.EventMap as E
+import qualified Graphics.UI.Bottle.MetaKey as MetaKey
 import           Graphics.UI.Bottle.ModKey (ModKey(..))
 import qualified Graphics.UI.Bottle.ModKey as ModKey
 import           Graphics.UI.Bottle.Rect (Rect(..))
@@ -260,7 +261,7 @@ eventMap cursor str myId =
         [ keys (insertDoc ["Space"])
             [noMods GLFW.Key'Space, ModKey.shift GLFW.Key'Space] (insert " ") ],
 
-        [ E.pasteOnKey (ctrl GLFW.Key'V) (E.Doc ["Clipboard", "Paste"]) insert ]
+        [ E.pasteOnKey (cmd GLFW.Key'V) (E.Doc ["Clipboard", "Paste"]) insert ]
 
         ]
     where
@@ -301,6 +302,7 @@ eventMap cursor str myId =
         keys = flip E.keyPresses
 
         noMods = ModKey mempty
+        cmd = MetaKey.toModKey . MetaKey.cmd
         ctrl = ModKey.ctrl
         alt = ModKey.alt
         homeKeys = [noMods GLFW.Key'Home, ctrl GLFW.Key'A]
