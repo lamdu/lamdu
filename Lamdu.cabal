@@ -186,6 +186,7 @@ Executable lamdu
                   , Lamdu.Compiler.Flatten
                   , Lamdu.Config
                   , Lamdu.Config.Sampler
+                  , Lamdu.Config.Theme
                   , Lamdu.Data.Anchors
                   , Lamdu.Data.DbInit
                   , Lamdu.Data.DbLayout
