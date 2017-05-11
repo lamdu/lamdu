@@ -4,6 +4,7 @@ module Lamdu.GUI.ExpressionEdit.ApplyEdit
     ) where
 
 import qualified Control.Lens as Lens
+import           Data.Store.Transaction (Transaction)
 import qualified Data.Text as Text
 import           Data.Vector.Vector2 (Vector2(..))
 import qualified Graphics.DrawingCombinators as Draw
@@ -11,9 +12,11 @@ import           Graphics.UI.Bottle.Animation (AnimId)
 import qualified Graphics.UI.Bottle.Animation as Anim
 import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
+import           Graphics.UI.Bottle.Widget.TreeLayout (TreeLayout)
 import qualified Graphics.UI.Bottle.Widget.TreeLayout as TreeLayout
 import qualified Lamdu.CharClassification as CharClassification
 import qualified Lamdu.GUI.ExpressionEdit.BinderEdit as BinderEdit
+import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
 import qualified Lamdu.GUI.ExpressionEdit.GetVarEdit as GetVarEdit
 import qualified Lamdu.GUI.ExpressionEdit.TagEdit as TagEdit
 import           Lamdu.GUI.ExpressionGui (ExpressionGui)
@@ -24,6 +27,7 @@ import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
 import qualified Lamdu.GUI.Precedence as Prec
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Sugar.Names.Types (Name(..))
+import           Lamdu.Sugar.NearestHoles (NearestHoles)
 import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
@@ -69,11 +73,22 @@ addInfixMarker widgetId widget =
     where
         frameId = Widget.toAnimId widgetId ++ ["infix"]
 
+makeFuncVar ::
+    Monad m =>
+    NearestHoles -> Sugar.BinderVar (Name m) m -> Widget.Id ->
+    ExprGuiM m (TreeLayout (Transaction m Widget.EventResult))
+makeFuncVar nearestHoles funcVar myId =
+    do
+        jumpNearestHoles <- ExprEventMap.jumpHolesEventMap nearestHoles
+        GetVarEdit.makeGetBinder funcVar myId
+            <&> TreeLayout.widget %~ Widget.weakerEvents jumpNearestHoles
+
 makeInfixFuncName ::
-    Monad m => Sugar.BinderVar (Name m) m -> Widget.Id -> ExprGuiM m (ExpressionGui m)
-makeInfixFuncName funcVar myId =
-    GetVarEdit.makeGetBinder funcVar myId
-    <&> mAddMarker
+    Monad m =>
+    NearestHoles -> Sugar.BinderVar (Name m) m -> Widget.Id ->
+    ExprGuiM m (ExpressionGui m)
+makeInfixFuncName nearestHoles funcVar myId =
+    makeFuncVar nearestHoles funcVar myId <&> mAddMarker
     where
         mAddMarker
             | funcVar ^. Sugar.bvNameRef . Sugar.nrName & BinderEdit.nonOperatorName =
@@ -92,11 +107,16 @@ makeFuncRow ::
     ExprGuiM m (ExpressionGui m)
 makeFuncRow mParensId prec apply myId =
     case specialArgs of
-    Sugar.NoSpecialArgs -> GetVarEdit.makeGetBinder funcVar myId
+    Sugar.NoSpecialArgs ->
+        case labeledArgs of
+        [] -> error "apply with no args!"
+        (x:_) ->
+            makeFuncVar (ExprGuiT.nextHolesBefore (x ^. Sugar.aaExpr))
+            funcVar myId
     Sugar.ObjectArg arg ->
         ExpressionGui.combineSpacedMParens mParensId
         <*> sequenceA
-        [ GetVarEdit.makeGetBinder funcVar myId
+        [ makeFuncVar (ExprGuiT.nextHolesBefore arg) funcVar myId
         , ExprGuiM.makeSubexpressionWith
           (if isBoxed apply then 0 else prec)
           (ExpressionGui.before .~ prec) arg
@@ -107,12 +127,12 @@ makeFuncRow mParensId prec apply myId =
         [ ExpressionGui.combineSpaced
             <*> sequenceA
             [ ExprGuiM.makeSubexpressionWith 0 (ExpressionGui.after .~ prec) l
-            , makeInfixFuncName funcVar myId
+            , makeInfixFuncName (ExprGuiT.nextHolesBefore r) funcVar myId
             ]
         , ExprGuiM.makeSubexpressionWith (prec+1) (ExpressionGui.before .~ prec+1) r
         ]
     where
-        Sugar.LabeledApply funcVar specialArgs _ = apply
+        Sugar.LabeledApply funcVar specialArgs labeledArgs = apply
 
 makeLabeled ::
     Monad m =>
