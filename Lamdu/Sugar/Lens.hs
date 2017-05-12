@@ -11,6 +11,7 @@ module Lamdu.Sugar.Lens
     , binderLetActions
     , binderContentExpr
     , binderContentEntityId
+    , applyFuncName
     , leftMostLeaf
     ) where
 
@@ -154,6 +155,10 @@ binderContentEntityId f (BinderExpr e) =
     e & rPayload . plEntityId %%~ f <&> BinderExpr
 binderContentEntityId f (BinderLet l) =
     l & lEntityId %%~ f <&> BinderLet
+
+applyFuncName :: Lens' (ApplyFunc name (BinderVar name m)) name
+applyFuncName f (FuncVar v) = (bvNameRef . nrName) f v <&> FuncVar
+applyFuncName f (FuncInject i) = tagGName f i <&> FuncInject
 
 leftMostLeaf :: Expression name m a -> Expression name m a
 leftMostLeaf val =

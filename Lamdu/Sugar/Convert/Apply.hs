@@ -108,7 +108,7 @@ convertLabeled funcS argS argI exprPl =
                 <&> EntityId.ofValI
                 & SetToInnerExpr
         BodyLabeledApply LabeledApply
-            { _aFunc = sBinderVar
+            { _aFunc = FuncVar sBinderVar
             , _aSpecialArgs = NoSpecialArgs
             , _aAnnotatedArgs = args
             }
