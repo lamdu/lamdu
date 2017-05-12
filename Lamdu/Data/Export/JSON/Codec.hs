@@ -51,7 +51,7 @@ data Entity
     = EntitySchemaVersion Int
     | EntityRepl (Definition.Expr (Val UUID))
     | EntityDef (Definition (Val UUID) (Anchors.PresentationMode, Maybe Text, V.Var))
-    | EntityTag TagOrder (Maybe Text) T.Tag
+    | EntityTag TagOrder (Maybe Text) T.Tag Anchors.PresentationMode
     | EntityNominal (Maybe Text) T.NominalId Nominal
     | EntityLamVar (Maybe Anchors.ParamList) (Maybe Text) UUID V.Var
 
@@ -59,7 +59,7 @@ instance AesonTypes.ToJSON Entity where
     toJSON (EntitySchemaVersion ver) = encodeSchemaVersion ver
     toJSON (EntityRepl val) = encodeRepl val
     toJSON (EntityDef def) = encodeDef def
-    toJSON (EntityTag tagOrder mName tag) = encodeNamedTag (tagOrder, mName, tag)
+    toJSON (EntityTag tagOrder mName tag presMode) = encodeNamedTag (tagOrder, mName, tag, presMode)
     toJSON (EntityNominal mName nomId nom) = encodeNamedNominal ((mName, nomId), nom)
     toJSON (EntityLamVar mParamList mName lamI var) =
         encodeNamedLamVar (mParamList, mName, lamI, var)
@@ -69,14 +69,11 @@ instance AesonTypes.FromJSON Entity where
         jsum
         [ decodeRepl json <&> EntityRepl
         , decodeDef json <&> EntityDef
-        , decodeNamedTag json <&> uncurry3 EntityTag
+        , decodeNamedTag json <&> uncurry4 EntityTag
         , decodeNamedNominal json <&> \((mName, nomId), nom) -> EntityNominal mName nomId nom
         , decodeNamedLamVar json <&> uncurry4 EntityLamVar
         , decodeSchemaVersion json <&> EntitySchemaVersion
         ]
-
-uncurry3 :: (a -> b -> c -> d) -> (a, b, c) -> d
-uncurry3 f (x0, x1, x2) = f x0 x1 x2
 
 uncurry4 :: (a -> b -> c -> d -> e) -> (a, b, c, d) -> e
 uncurry4 f (x0, x1, x2, x3) = f x0 x1 x2 x3
@@ -519,22 +516,34 @@ decodeDef =
         scheme <- obj .: "typ" >>= lift . decodeScheme
         Definition body scheme (presentationMode, mName, V.Var globalId) & return
 
-encodeTagOrder :: TagOrder -> Aeson.Object
-encodeTagOrder tagOrder = HashMap.fromList ["tagOrder" .= tagOrder]
+encodeTagData :: (TagOrder, Anchors.PresentationMode) -> Aeson.Object
+encodeTagData (tagOrder, presMode) =
+    ("tagOrder" .= tagOrder)
+    : encPresMode
+    & HashMap.fromList
+    where
+        encPresMode =
+            case presMode of
+            Anchors.Verbose -> []
+            _ -> ["injectPresentationMode" .= encodePresentationMode presMode]
 
-decodeTagOrder :: ExhaustiveDecoder TagOrder
-decodeTagOrder obj = obj .: "tagOrder"
+decodeTagData :: ExhaustiveDecoder (TagOrder, Anchors.PresentationMode)
+decodeTagData obj =
+    (,)
+    <$> obj .: "tagOrder"
+    <*> (optional (obj .: "injectPresentationMode" >>= lift . decodePresentationMode)
+        <&> fromMaybe Anchors.Verbose)
 
-encodeNamedTag :: Encoder (TagOrder, Maybe Text, T.Tag)
-encodeNamedTag (tagOrder, mName, T.Tag ident) =
-    encodeNamed "tag" encodeTagOrder ((mName, ident), tagOrder) & Aeson.Object
+encodeNamedTag :: Encoder (TagOrder, Maybe Text, T.Tag, Anchors.PresentationMode)
+encodeNamedTag (tagOrder, mName, T.Tag ident, presMode) =
+    encodeNamed "tag" encodeTagData ((mName, ident), (tagOrder, presMode)) & Aeson.Object
 
-decodeNamedTag :: Decoder (TagOrder, Maybe Text, T.Tag)
+decodeNamedTag :: Decoder (TagOrder, Maybe Text, T.Tag, Anchors.PresentationMode)
 decodeNamedTag json =
     do
-        ((mName, tag), tagOrder) <-
-            withObject "tag" ?? json $ decodeNamed "tag" decodeTagOrder
-        return (tagOrder, mName, T.Tag tag)
+        ((mName, tag), (tagOrder, presMode)) <-
+            withObject "tag" ?? json $ decodeNamed "tag" decodeTagData
+        return (tagOrder, mName, T.Tag tag, presMode)
 
 encodeParamList :: Encoder Anchors.ParamList
 encodeParamList = Aeson.toJSON . map encodeTagId
@@ -594,4 +603,3 @@ decodeSchemaVersion :: Decoder Int
 decodeSchemaVersion =
     withObject "schemaVersion" $ \obj ->
     obj .: "schemaVersion"
-

@@ -60,7 +60,7 @@ type EntityOrdering = (Int, Identifier)
 
 entityOrdering :: Codec.Entity -> EntityOrdering
 entityOrdering (Codec.EntitySchemaVersion _)                          = (0, "")
-entityOrdering (Codec.EntityTag _ _ (T.Tag ident))                    = (1, ident)
+entityOrdering (Codec.EntityTag _ _ (T.Tag ident) _)                  = (1, ident)
 entityOrdering (Codec.EntityNominal _ (T.NominalId nomId) _)          = (2, nomId)
 entityOrdering (Codec.EntityLamVar _ _ _ (V.Var ident))               = (3, ident)
 entityOrdering (Codec.EntityDef (Definition _ _ (_, _, V.Var ident))) = (4, ident)
@@ -105,7 +105,8 @@ exportTag tag =
     do
         tagOrder <- Transaction.getP (Anchors.assocTagOrder tag) & trans
         mName <- readAssocName tag & trans
-        Codec.EntityTag tagOrder mName tag & tell
+        presentationMode <- Transaction.getP (Anchors.assocPresentationMode tag) & trans
+        Codec.EntityTag tagOrder mName tag presentationMode & tell
     & withVisited visitedTags tag
 
 exportNominal :: T.NominalId -> Export ()
@@ -230,10 +231,11 @@ importRepl defExpr =
     traverse writeValAtUUID defExpr >>=
     Transaction.writeIRef (DbLayout.repl DbLayout.codeIRefs)
 
-importTag :: Codec.TagOrder -> Maybe Text -> T.Tag -> T ViewM ()
-importTag tagOrder mName tag =
+importTag :: Codec.TagOrder -> Maybe Text -> T.Tag -> Anchors.PresentationMode -> T ViewM ()
+importTag tagOrder mName tag presMode =
     do
         Transaction.setP (Anchors.assocTagOrder tag) tagOrder
+        Transaction.setP (Anchors.assocPresentationMode tag) presMode
         traverse_ (setName tag) mName
         tag `insertTo` DbLayout.tags
 
@@ -255,7 +257,7 @@ importNominal mName nomId nominal =
 importOne :: Codec.Entity -> T ViewM ()
 importOne (Codec.EntityDef def) = importDef def
 importOne (Codec.EntityRepl val) = importRepl val
-importOne (Codec.EntityTag tagOrder mName tag) = importTag tagOrder mName tag
+importOne (Codec.EntityTag tagOrder mName tag presMode) = importTag tagOrder mName tag presMode
 importOne (Codec.EntityNominal mName nomId nom) = importNominal mName nomId nom
 importOne (Codec.EntityLamVar paramList mName lamUUID var) =
     importLamVar paramList mName lamUUID var
