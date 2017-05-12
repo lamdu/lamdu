@@ -68,8 +68,8 @@ load themeName configPath =
     where
         readJson path =
             Aeson.eitherDecode' <$> LBS.readFile path
-            >>= either (fail . (msg ++)) return
-        msg = "Failed to parse config file contents at " ++ show configPath ++ ": "
+            >>= either (fail . (msg path ++)) return
+        msg path = "Failed to parse config file contents at " ++ show path ++ ": "
         themePath = calcThemePath configPath themeName
 
 maybeReload :: Sample -> FilePath -> IO Sample
