@@ -69,10 +69,10 @@ parse s =
         modsTexts = init parts
         mods =
             ModifierKeys
-            { _cmdOn = elem "Cmd" modsTexts
-            , _altOn = elem "Alt" modsTexts
-            , _shiftOn = elem "Shift" modsTexts
-            , _metaOn = elem "Meta" modsTexts
+            { _cmdOn = "Cmd" `elem` modsTexts
+            , _altOn = "Alt" `elem` modsTexts
+            , _shiftOn = "Shift" `elem` modsTexts
+            , _metaOn = "Meta" `elem` modsTexts
             }
 
 format :: MetaKey -> Text
