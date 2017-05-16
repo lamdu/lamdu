@@ -41,10 +41,6 @@ extra-deps:
 - testing-feat-0.4.0.3
 - tagshare-0.0
 
-extra-include-dirs:
-- /usr/local/include
-extra-lib-dirs:
-- /usr/local/lib
 resolver: nightly-2017-08-10
 
 allow-newer: true
