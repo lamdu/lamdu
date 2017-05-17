@@ -13,7 +13,7 @@ module Lamdu.GUI.ExpressionGui
     , listWithDelDests
     , makeLabel
     , grammarLabel
-    , addValBG, addValFrame, addValPadding
+    , addValFrame, addValPadding
     , addValBGWithColor
     -- Lifted widgets:
     , makeFocusDelegator

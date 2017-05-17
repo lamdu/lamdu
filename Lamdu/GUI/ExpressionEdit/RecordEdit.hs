@@ -52,9 +52,7 @@ make record@(Sugar.Record fields recordTail addField) pl =
         (gui, resultPicker) <-
             ExprGuiM.listenResultPicker $
             do
-                fieldsGui <-
-                    (if addBg then ExpressionGui.addValPadding else return id)
-                    <*>  makeFieldsWidget fields myId
+                fieldsGui <- makeFieldsWidget fields myId
                 case recordTail of
                     Sugar.ClosedRecord deleteTail ->
                         fieldsGui
@@ -71,14 +69,8 @@ make record@(Sugar.Record fields recordTail addField) pl =
                 & Widget.keysEventMapMovesCursor (Config.recordAddFieldKeys config)
                   (E.Doc ["Edit", "Record", "Add Field"])
                 & ExprGuiM.withHolePicker resultPicker
-        gui
-            & TreeLayout.widget %~ Widget.weakerEvents addFieldEventMap
-            & if addBg
-                then
-                    (<*>)
-                    (ExpressionGui.addValBG myId <&> (TreeLayout.widget %~))
-                    . return
-                else return
+        (if addBg then ExpressionGui.addValFrame myId else return id)
+            ?? (gui & TreeLayout.widget %~ Widget.weakerEvents addFieldEventMap)
     where
         addBg = shouldAddBg record
 
