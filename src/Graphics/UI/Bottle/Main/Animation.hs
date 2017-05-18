@@ -4,12 +4,13 @@ module Graphics.UI.Bottle.Main.Animation
     ( mainLoop, AnimConfig(..), Handlers(..), EventResult(..)
     ) where
 
+import           Control.Concurrent (rtsSupportsBoundThreads)
 import           Control.Concurrent.STM.TVar (TVar, newTVarIO, readTVar, writeTVar, modifyTVar, swapTVar)
 import           Control.Concurrent.Utils (forwardSynchronuousExceptions, withForkedIO)
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
-import           Control.Exception (evaluate)
-import           Control.Monad (mplus, when, forever)
+import           Control.Exception (evaluate, onException)
+import           Control.Monad (forever, mplus, unless, when)
 import qualified Control.Monad.STM as STM
 import           Data.IORef (IORef, newIORef, readIORef, writeIORef)
 import qualified Data.Monoid as Monoid
@@ -204,6 +205,7 @@ animThread tvars animStateRef getAnimationConfig win =
 mainLoop :: GLFW.Window -> IO AnimConfig -> (Anim.Size -> Handlers) -> IO ()
 mainLoop win getAnimationConfig animHandlers =
     do
+        unless rtsSupportsBoundThreads (error "mainLoop requires threaded runtime")
         animStateRef <- initialAnimState >>= newIORef
         initialWinSize <- MainImage.windowSize win
         tvars <-
@@ -215,6 +217,7 @@ mainLoop win getAnimationConfig animHandlers =
                 , _edReversedEvents = []
                 }
             <*> newTVarIO mempty
-        eventsThread <-
-            forwardSynchronuousExceptions (eventHandlerThread tvars animHandlers)
-        withForkedIO eventsThread (animThread tvars animStateRef getAnimationConfig win)
+        eventsThread <- forwardSynchronuousExceptions (eventHandlerThread tvars animHandlers)
+        withForkedIO
+            (eventsThread `onException` GLFW.postEmptyEvent)
+            (animThread tvars animStateRef getAnimationConfig win)
