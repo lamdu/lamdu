@@ -3,7 +3,7 @@ module Graphics.UI.Bottle.Widgets.EventMapDoc
     ( makeView
     , IsHelpShown(..)
     , makeToggledHelpAdder
-    , Config(..)
+    , Config(..), defaultConfig
     ) where
 
 import qualified Control.Lens as Lens
@@ -21,7 +21,7 @@ import           Graphics.UI.Bottle.Animation (AnimId, R)
 import qualified Graphics.UI.Bottle.Animation as Anim
 import           Graphics.UI.Bottle.EventMap (EventMap)
 import qualified Graphics.UI.Bottle.EventMap as E
-import           Graphics.UI.Bottle.MetaKey (MetaKey, toModKey)
+import           Graphics.UI.Bottle.MetaKey (MetaKey(..), toModKey, noMods)
 import           Graphics.UI.Bottle.ModKey (ModKey(..))
 import qualified Graphics.UI.Bottle.ModKey as ModKey
 import           Graphics.UI.Bottle.View (View(..))
@@ -31,6 +31,7 @@ import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.GridView as GridView
 import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
 import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
+import qualified Graphics.UI.GLFW as GLFW
 
 import           Prelude.Compat
 
@@ -40,6 +41,21 @@ data Config = Config
     , configBGColor :: Draw.Color
     , configOverlayDocKeys :: [MetaKey]
     , configTint :: Draw.Color
+    }
+
+defaultConfig :: Draw.Font -> Config
+defaultConfig font =
+    Config
+    { configStyle =
+        TextView.Style
+        { TextView._styleColor = Draw.Color 1 1 1 1
+        , TextView._styleFont = font
+        , TextView._styleUnderline = Nothing
+        }
+    , configInputDocColor = Draw.Color 0.1 0.7 0.7 1
+    , configBGColor = Draw.Color 0.2 0.15 0.1 0.5
+    , configOverlayDocKeys = [MetaKey noMods GLFW.Key'H]
+    , configTint = Draw.Color 1 1 1 0.8
     }
 
 data Tree n l = Leaf l | Branch n [Tree n l]
