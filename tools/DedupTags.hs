@@ -1,6 +1,5 @@
 -- | Deduplicate exported entities of the same name
-
-{-# LANGUAGE TemplateHaskell, LambdaCase, OverloadedStrings, FlexibleContexts #-}
+{-# LANGUAGE NoImplicitPrelude, TemplateHaskell, LambdaCase, OverloadedStrings, FlexibleContexts #-}
 module Main (main) where
 
 import qualified Control.Lens as Lens
@@ -25,9 +24,11 @@ import           Lamdu.Data.Export.JSON.Process (process)
 import qualified Lamdu.Expr.Lens as ExprLens
 import           System.IO (hPutStrLn, stderr)
 
+import           Lamdu.Prelude
+
 data DedupState = DedupState
     { _tagRenames :: Map T.Tag T.Tag
-    , _tagCanonical :: Map String (TagOrder, T.Tag)
+    , _tagCanonical :: Map Text (TagOrder, T.Tag)
     }
 Lens.makeLenses ''DedupState
 
@@ -37,11 +38,12 @@ emptyState = DedupState Map.empty Map.empty
 type EntityOrdering = (Int, Identifier)
 
 entityOrdering :: Codec.Entity -> EntityOrdering
-entityOrdering (Codec.EntityTag _ _ (T.Tag ident))                  = (0, ident)
-entityOrdering (Codec.EntityNominal _ (T.NominalId nomId) _)        = (1, nomId)
-entityOrdering (Codec.EntityLamVar _ _ _ (V.Var ident))             = (2, ident)
-entityOrdering (Codec.EntityDef (Definition _ (_, _, V.Var ident))) = (3, ident)
-entityOrdering (Codec.EntityRepl _)                                 = (4, "")
+entityOrdering Codec.EntitySchemaVersion {}                           = (0, "")
+entityOrdering (Codec.EntityTag _ _ (T.Tag ident))                    = (1, ident)
+entityOrdering (Codec.EntityNominal _ (T.NominalId nomId) _)          = (2, nomId)
+entityOrdering (Codec.EntityLamVar _ _ _ (V.Var ident))               = (3, ident)
+entityOrdering (Codec.EntityDef (Definition _ _ (_, _, V.Var ident))) = (4, ident)
+entityOrdering (Codec.EntityRepl _)                                   = (5, "")
 
 dedup :: [Codec.Entity] -> IO [Codec.Entity]
 dedup entities =
@@ -57,6 +59,7 @@ dedup entities =
                 let rename x = Map.lookup x renames & fromMaybe x
                 g rename entity
         g :: (T.Tag -> T.Tag) -> Codec.Entity -> StateT DedupState IO [Codec.Entity]
+        g _ entity@Codec.EntitySchemaVersion{} = pure [entity]
         g _ entity@(Codec.EntityTag tagOrder (Just name) tag) =
             Lens.use (tagCanonical . Lens.at name)
             >>= \case
@@ -75,12 +78,12 @@ dedup entities =
                             ]
         g _ entity@(Codec.EntityTag _ Nothing _) = pure [entity]
         g rename (Codec.EntityRepl x) =
-            pure [x & ExprLens.valTags %~ rename & Codec.EntityRepl]
+            pure [x & Definition.exprTags ExprLens.valTags %~ rename & Codec.EntityRepl]
         g rename (Codec.EntityDef x) =
             pure
             [x
-             & Definition.defTags %~ rename
-             & Definition.defBody . Lens.mapped . ExprLens.valTags %~ rename
+             & Definition.defType . ExprLens.schemeTags %~ rename
+             & Definition.defBody . Definition._BodyExpr . Definition.exprTags ExprLens.valTags %~ rename
              & Codec.EntityDef]
         g rename (Codec.EntityNominal mName nomId nom) =
             pure
