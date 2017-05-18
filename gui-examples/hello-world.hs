@@ -15,7 +15,7 @@ import           Prelude.Compat
 main :: IO ()
 main =
     do
-        win <- GLFWUtils.createWindow "GUI Demo" Nothing (Vector2 800 100)
+        win <- GLFWUtils.createWindow "Hello World" Nothing (Vector2 800 100)
         Main.mainLoopWidget win hello Main.defaultOptions
     & GLFWUtils.withGLFW
 
