@@ -193,6 +193,7 @@ infixAltOf needle haystack =
         extras '≥' = [">="]
         extras '≤' = ["<="]
         extras '≠' = ["/=", "!=", "<>"]
+        extras '⋲' = ["<{"]
         extras 'α' = ["alpha"]
         extras 'β' = ["beta"]
         extras _ = []
