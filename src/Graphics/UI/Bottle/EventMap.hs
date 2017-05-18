@@ -97,7 +97,7 @@ type Subtitle = Text
 
 newtype Doc = Doc
     { _docStrs :: [Subtitle]
-    } deriving (Generic, Eq, Ord)
+    } deriving (Generic, Eq, Ord, Show)
 Lens.makeLenses ''Doc
 
 data DocHandler a = DocHandler
