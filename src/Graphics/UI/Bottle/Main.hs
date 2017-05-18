@@ -1,6 +1,7 @@
 {-# LANGUAGE DeriveFunctor, NoImplicitPrelude, TemplateHaskell #-}
 module Graphics.UI.Bottle.Main
     ( mainLoopWidget, Config(..), EventResult(..), M(..), m
+    , Options(..), defaultOptions
     ) where
 
 import           Control.Applicative (liftA2)
@@ -11,6 +12,7 @@ import           Control.Monad.IO.Class (MonadIO(..))
 import           Data.IORef
 import           Data.MRUMemo (memoIO)
 import qualified Data.Text as Text
+import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.Bottle.Direction as Direction
 import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Main.Animation as MainAnim
@@ -54,11 +56,35 @@ instance Monad M where
 instance MonadIO M where
     liftIO = M . fmap pure
 
+data Options = Options
+    { tickHandler :: IO Bool
+    , getConfig :: IO Config
+    }
+
+defaultOptions :: Options
+defaultOptions =
+    Options
+    { tickHandler = return False
+    , getConfig =
+        return Config
+        { cAnim =
+            MainAnim.AnimConfig
+            { MainAnim.acTimePeriod = 0.11
+            , MainAnim.acRemainingRatioInPeriod = 0.2
+            }
+        , cCursor =
+            Widget.CursorConfig
+            { Widget.cursorColor = Draw.Color 0.5 0.5 1 0.5
+            }
+        }
+    }
+
 mainLoopWidget ::
-    GLFW.Window -> IO Bool ->
-    (Widget.Size -> IO (Widget (M Widget.EventResult))) -> IO Config ->
+    GLFW.Window ->
+    (Widget.Size -> IO (Widget (M Widget.EventResult))) ->
+    Options ->
     IO ()
-mainLoopWidget win widgetTickHandler mkWidgetUnmemod getConfig =
+mainLoopWidget win mkWidgetUnmemod options =
     do
         mkWidgetRef <- newIORef =<< memoIO mkWidgetUnmemod
         let newWidget = writeIORef mkWidgetRef =<< memoIO mkWidgetUnmemod
@@ -72,10 +98,10 @@ mainLoopWidget win widgetTickHandler mkWidgetUnmemod getConfig =
             lookupEvent widget event =
                 E.lookup (GLFW.getClipboardString win <&> fmap Text.pack) event
                 (widget ^. Widget.eventMap)
-        MainAnim.mainLoop win (getConfig <&> cAnim) $ \size -> MainAnim.Handlers
+        MainAnim.mainLoop win (getConfig options <&> cAnim) $ \size -> MainAnim.Handlers
             { MainAnim.tickHandler =
                 do
-                    anyUpdate <- widgetTickHandler
+                    anyUpdate <- tickHandler options
                     when anyUpdate newWidget
                     return MainAnim.EventResult
                         { MainAnim.erAnimIdMapping =
@@ -99,6 +125,6 @@ mainLoopWidget win widgetTickHandler mkWidgetUnmemod getConfig =
                         }
             , MainAnim.makeFrame =
                 Widget.renderWithCursor
-                <$> (getConfig <&> cCursor)
+                <$> (getConfig options <&> cCursor)
                 <*> getWidget size
             }

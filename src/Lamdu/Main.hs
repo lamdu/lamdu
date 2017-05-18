@@ -307,16 +307,17 @@ mainLoop subpixel win refreshScheduler configSampler iteration =
     do
         getFonts <- makeGetFonts subpixel configSampler
         lastVersionNumRef <- newIORef []
-        let getConfig =
-                ConfigSampler.getSample configSampler
-                <&> (^. sTheme)
-                <&> Style.mainLoopConfig
         let makeWidget size =
                 do
                     sample <- ConfigSampler.getSample configSampler
                     fonts <- getFonts
                     iteration fonts (sample ^. sConfig) (sample ^. sTheme) size
-        let tickHandler =
+        mainLoopWidget win makeWidget MainLoop.Options
+            { getConfig =
+                ConfigSampler.getSample configSampler
+                <&> (^. sTheme)
+                <&> Style.mainLoopConfig
+            , tickHandler =
                 do
                     curVersionNum <-
                         ConfigSampler.getSample configSampler
@@ -327,7 +328,7 @@ mainLoop subpixel win refreshScheduler configSampler iteration =
                     if configChanged
                         then return True
                         else isRefreshScheduled refreshScheduler
-        mainLoopWidget win tickHandler makeWidget getConfig
+            }
 
 mkWidgetWithFallback ::
     (forall a. T DbLayout.DbM a -> IO a) ->
