@@ -41,7 +41,7 @@ data EventsData = EventsData
     , _edRefreshRequested :: !Bool
     , _edWinSize :: !Anim.Size
     , _edReversedEvents :: [Event]
-    }
+    } deriving Show
 Lens.makeLenses ''EventsData
 
 -- Data sent from the events thread to the anim thread
