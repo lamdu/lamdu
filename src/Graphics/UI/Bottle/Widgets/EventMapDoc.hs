@@ -93,7 +93,7 @@ makeShortcutKeyView ::
     Config -> (AnimId, [E.InputDoc]) -> View
 makeShortcutKeyView config (animId, inputDocs) =
     inputDocs
-    <&> TextView.label conf animId
+    <&> (TextView.label conf animId . (mappend " "))
     & GridView.verticalAlign 0
     where
         conf =
@@ -135,7 +135,6 @@ makeTooltip :: Config -> [ModKey] -> AnimId -> View
 makeTooltip config helpKeys animId =
     GridView.horizontalAlign 0
     [ TextView.label (configStyle config) animId "Show help"
-    , Spacer.makeHorizontal 10
     , makeShortcutKeyView config
         (animId ++ ["HelpKeys"], map ModKey.pretty helpKeys)
     ]
