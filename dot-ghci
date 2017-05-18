@@ -1,5 +1,5 @@
 :set -optP-include -optPdist/build/autogen/cabal_macros.h
-:set -ibottlelib
+:set -isrc
 :set -itest
 :set -idist/build/autogen
 :set -Wall
