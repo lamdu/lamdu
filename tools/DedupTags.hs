@@ -1,3 +1,6 @@
+#!/usr/bin/env stack
+-- stack runghc -- -isrc
+
 -- | Deduplicate exported entities of the same name
 {-# LANGUAGE NoImplicitPrelude, TemplateHaskell, LambdaCase, OverloadedStrings, FlexibleContexts #-}
 module Main (main) where
