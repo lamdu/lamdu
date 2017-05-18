@@ -65,8 +65,7 @@
     {
         "tagOrder": 1,
         "tag": "42493a636f6e73000000000000000000",
-        "name": ",",
-        "injectPresentationMode": "Infix"
+        "name": "NonEmpty"
     },
     {
         "tagOrder": 1,
@@ -136,7 +135,7 @@
     {
         "tagOrder": 0,
         "tag": "42493a6e696c00000000000000000000",
-        "name": "[]"
+        "name": "Empty"
     },
     {
         "tagOrder": 0,

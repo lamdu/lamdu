@@ -1,10 +1,11 @@
 {-# LANGUAGE NoImplicitPrelude, OverloadedStrings #-}
 module Lamdu.GUI.ExpressionEdit.InjectEdit
-    ( make, makeInjectTag, prefixPrecedence
+    ( make
     ) where
 
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widget.TreeLayout as TreeLayout
+import qualified Lamdu.GUI.ExpressionEdit.ApplyEdit as ApplyEdit
 import qualified Lamdu.GUI.ExpressionEdit.TagEdit as TagEdit
 import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
@@ -36,25 +37,6 @@ makeCommon tagSuffix tagG nearestHoles valEdits =
     where
         tagId = WidgetIds.fromEntityId (tagG ^. Sugar.tagInstance)
 
-makeInjectTagH ::
-    Monad m =>
-    Sugar.TagG (Name m) -> NearestHoles -> Widget.Id -> [ExpressionGui m] ->
-    ExprGuiM m (ExpressionGui m)
-makeInjectTagH tagG nearestHoles myId views =
-    makeCommon "•" tagG nearestHoles views
-    & ExprGuiM.assignCursor myId tagId
-    where
-        tagId = WidgetIds.fromEntityId (tagG ^. Sugar.tagInstance)
-
-makeInjectTag ::
-    Monad m =>
-    Sugar.TagG (Name m) -> NearestHoles -> Widget.Id ->
-    ExprGuiM m (ExpressionGui m)
-makeInjectTag tagG nearestHoles myId = makeInjectTagH tagG nearestHoles myId []
-
-prefixPrecedence :: Int
-prefixPrecedence = 10
-
 make ::
     Monad m =>
     Sugar.Inject (Name m) (ExprGuiT.SugarExpr m) ->
@@ -70,6 +52,9 @@ make (Sugar.Inject tagG mVal) pl =
         & ExpressionGui.stdWrap pl
     Just val ->
         ExpressionGui.stdWrapParentExpr pl $ \myId ->
-        ExprGuiM.makeSubexpressionWith prefixPrecedence
-        (ExpressionGui.before .~ prefixPrecedence) val <&> (:[])
-        >>= makeInjectTagH tagG (ExprGuiT.nextHolesBefore val) myId
+        ExprGuiM.makeSubexpressionWith ApplyEdit.prefixPrecedence
+        (ExpressionGui.before .~ ApplyEdit.prefixPrecedence) val <&> (:[])
+        >>= makeCommon "•" tagG (ExprGuiT.nextHolesBefore val)
+        & ExprGuiM.assignCursor myId tagId
+    where
+        tagId = WidgetIds.fromEntityId (tagG ^. Sugar.tagInstance)

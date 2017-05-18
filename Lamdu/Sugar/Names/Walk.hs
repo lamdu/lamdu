@@ -162,20 +162,13 @@ toTagG ::
     m (TagG (NewName m))
 toTagG = tagGName %%~ opGetName TagName
 
-toApplyFunc ::
-    MonadNaming m =>
-    ApplyFunc (OldName m) (BinderVar (OldName m) p) ->
-    m (ApplyFunc (NewName m) (BinderVar (NewName m) p))
-toApplyFunc (FuncVar var) = toBinderVar var <&> FuncVar
-toApplyFunc (FuncInject tag) = toTagG tag <&> FuncInject
-
 toLabeledApply ::
     MonadNaming m =>
     LabeledApply (OldName m) (BinderVar (OldName m) p) a ->
     m (LabeledApply (NewName m) (BinderVar (NewName m) p) a)
 toLabeledApply LabeledApply{..} =
     LabeledApply
-    <$> toApplyFunc _aFunc
+    <$> toBinderVar _aFunc
     <*> pure _aSpecialArgs
     <*> (traverse . aaTag) toTagG _aAnnotatedArgs
 
@@ -203,7 +196,7 @@ toBody expr = \case
 voidLabeledApply :: LabeledApply name binderVar a -> LabeledApply () () ()
 voidLabeledApply LabeledApply{..} =
     LabeledApply
-    { _aFunc = FuncVar ()
+    { _aFunc = ()
     , _aSpecialArgs = void _aSpecialArgs
     , _aAnnotatedArgs = _aAnnotatedArgs <&> void <&> aaTag . tagGName .~ ()
     }
@@ -211,17 +204,13 @@ voidLabeledApply LabeledApply{..} =
 toExpression :: MonadNaming m => OldExpression m a -> m (NewExpression m a)
 toExpression expr =
     do
-        app@(LabeledApply func spec anot) <- expr ^? rBody . _BodyLabeledApply
-        let newFunc =
-                case func of
-                FuncVar var ->
-                    var
-                    & bvNameRef . nrName %%~
-                        opGetAppliedFuncName (voidLabeledApply app) (binderVarType (var ^. bvForm))
-                    <&> FuncVar
-                FuncInject tag -> tag & tagGName %%~ opGetName TagName <&> FuncInject
+        app@(LabeledApply funcVar spec anot) <- expr ^? rBody . _BodyLabeledApply
+        let newFuncVar =
+                funcVar
+                & bvNameRef . nrName %%~
+                    opGetAppliedFuncName (voidLabeledApply app) (binderVarType (funcVar ^. bvForm))
         LabeledApply
-            <$> newFunc
+            <$> newFuncVar
             <*> traverse toExpression spec
             <*> traverse onAnnotatedArg anot
             <&> BodyLabeledApply <&> (`Expression` (expr ^. rPayload))

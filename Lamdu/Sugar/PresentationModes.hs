@@ -9,7 +9,6 @@ import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
 import qualified Lamdu.Data.Anchors as Anchors
 import           Lamdu.Sugar.Internal
-import qualified Lamdu.Sugar.Lens as SugarLens
 import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
@@ -25,7 +24,7 @@ addToLabeledApply a =
     Sugar.NoSpecialArgs ->
         do
             presentationMode <-
-                a ^. Sugar.aFunc . SugarLens.applyFuncName
+                a ^. Sugar.aFunc . Sugar.bvNameRef . Sugar.nrName
                 & Anchors.assocPresentationMode & Transaction.getP
             let (specialArgs, annotatedArgs) =
                     case (presentationMode, a ^. Sugar.aAnnotatedArgs) of

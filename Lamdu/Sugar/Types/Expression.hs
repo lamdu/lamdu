@@ -42,7 +42,6 @@ module Lamdu.Sugar.Types.Expression
     , SpecialArgs(..), _NoSpecialArgs, _ObjectArg, _InfixArgs
     , AnnotatedArg(..), aaTag, aaExpr
     , LabeledApply(..), aFunc, aSpecialArgs, aAnnotatedArgs
-    , ApplyFunc(..), _FuncVar, _FuncInject
     , Unwrap(..), _UnwrapAction, _UnwrapTypeMismatch
     , HoleArg(..), haExpr, haUnwrap
     , HoleOption(..), hoVal, hoSugaredBaseExpr, hoResults
@@ -287,13 +286,8 @@ data AnnotatedArg name expr = AnnotatedArg
     , _aaExpr :: expr
     } deriving (Functor, Foldable, Traversable, Eq, Ord, Show)
 
-data ApplyFunc name funcVar
-    = FuncVar funcVar
-    | FuncInject (TagG name)
-    deriving (Eq, Ord, Show)
-
 data LabeledApply name funcVar expr = LabeledApply
-    { _aFunc :: ApplyFunc name funcVar
+    { _aFunc :: funcVar
     , _aSpecialArgs :: SpecialArgs expr
     , _aAnnotatedArgs :: [AnnotatedArg name expr]
     } deriving (Functor, Foldable, Traversable, Eq, Ord, Show)
@@ -367,7 +361,6 @@ Lens.makeLenses ''Record
 Lens.makeLenses ''RecordAddFieldResult
 Lens.makeLenses ''RecordField
 Lens.makeLenses ''TIdG
-Lens.makePrisms ''ApplyFunc
 Lens.makePrisms ''BinderVarForm
 Lens.makePrisms ''BinderVarInline
 Lens.makePrisms ''Body

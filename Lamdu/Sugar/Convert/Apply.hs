@@ -1,6 +1,6 @@
 {-# LANGUAGE NoImplicitPrelude, NamedFieldPuns, OverloadedStrings #-}
 module Lamdu.Sugar.Convert.Apply
-    ( convert, convertLabeled
+    ( convert
     ) where
 
 import qualified Control.Lens as Lens
@@ -10,7 +10,6 @@ import qualified Data.Map as Map
 import           Data.Maybe.Utils (maybeToMPlus)
 import qualified Data.Set as Set
 import qualified Data.Store.Property as Property
-import           Data.UUID.Types (UUID)
 import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Calc.Type.FlatComposite as FlatComposite
 import           Lamdu.Calc.Type.Scheme (schemeType)
@@ -58,22 +57,23 @@ convert app@(V.Apply funcI argI) exprPl =
                     )
                     else return (funcS, argS)
         justToLeft $ convertAppliedCase funcS (funcI ^. Val.payload) argS exprPl
-        justToLeft $ convertLabeledApply funcS argS argI exprPl
+        justToLeft $ convertLabeled funcS argS argI exprPl
         lift $ convertPrefix funcS argS exprPl
 
 noRepetitions :: Ord a => [a] -> Bool
 noRepetitions x = length x == Set.size (Set.fromList x)
 
-convertLabeledApply ::
+convertLabeled ::
     (Monad m, Monoid a) =>
     ExpressionU m a -> ExpressionU m a -> Val (Input.Payload m a) -> Input.Payload m a ->
     MaybeT (ConvertM m) (ExpressionU m a)
-convertLabeledApply funcS argS argI exprPl =
+convertLabeled funcS argS argI exprPl =
     do
+        guard $ Lens.has (Val.body . V._BLeaf . V._LRecEmpty) recordTail
         sBinderVar <-
-            funcS ^? rBody . _BodyGetVar . _GetBinder
-            & maybeToMPlus
+            funcS ^? rBody . _BodyGetVar . _GetBinder & maybeToMPlus
         record <- argS ^? rBody . _BodyRecord & maybeToMPlus
+        guard $ length (record ^. rItems) >= 2
         ctx <- lift ConvertM.readContext
         let var = sBinderVar ^. bvNameRef . nrName & UniqueId.identifierOfUUID & V.Var
         unless (Lens.has (Lens.at var . Lens._Just)
@@ -89,18 +89,6 @@ convertLabeledApply funcS argS argI exprPl =
                 let sFields =
                         record ^.. rItems . traverse . rfTag . tagVal & Set.fromList
                 guard $ Map.keysSet (flatArgs ^. FlatComposite.fields) == sFields
-        convertLabeled (FuncVar sBinderVar) record argI exprPl
-            <&> rPayload . plData <>~ argS ^. rPayload . plData
-
-convertLabeled ::
-    (Monad m, Monoid a) =>
-    ApplyFunc UUID (BinderVar UUID m) -> Record UUID m (ExpressionU m a) ->
-    Val (Input.Payload m a) -> Input.Payload m a ->
-    MaybeT (ConvertM m) (ExpressionU m a)
-convertLabeled func record argI exprPl =
-    do
-        guard $ Lens.has (Val.body . V._BLeaf . V._LRecEmpty) recordTail
-        guard $ length (record ^. rItems) >= 2
         let getArg field =
                 AnnotatedArg
                     { _aaTag = field ^. rfTag
@@ -120,12 +108,15 @@ convertLabeled func record argI exprPl =
                 <&> EntityId.ofValI
                 & SetToInnerExpr
         BodyLabeledApply LabeledApply
-            { _aFunc = func
+            { _aFunc = sBinderVar
             , _aSpecialArgs = NoSpecialArgs
             , _aAnnotatedArgs = args
             }
             & lift . addActions exprPl
-            <&> rPayload . plActions . setToInnerExpr .~ setToInnerExprAction
+            <&> rPayload %~
+                ( plData <>~ argS ^. rPayload . plData ) .
+                ( plActions . setToInnerExpr .~ setToInnerExprAction
+                )
     where
         (fieldsI, recordTail) = RecordVal.unpack argI
 
