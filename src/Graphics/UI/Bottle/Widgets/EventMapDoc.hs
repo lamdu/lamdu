@@ -9,6 +9,7 @@ module Graphics.UI.Bottle.Widgets.EventMapDoc
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Lens.Tuple
+import           Control.Monad (unless)
 import           Control.Monad.IO.Class (MonadIO(..))
 import           Data.Function (on)
 import           Data.IORef (newIORef, readIORef, modifyIORef)
@@ -174,6 +175,7 @@ makeToggledHelpAdder startValue =
         showingHelpVar <- newIORef startValue
         return $ \config size widget ->
             do
+                unless (Widget.isFocused widget) (fail "adding help to non-focused root widget!")
                 showingHelp <- readIORef showingHelpVar & liftIO
                 let (helpView, docStr) =
                         case showingHelp of
