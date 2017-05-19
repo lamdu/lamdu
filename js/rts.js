@@ -189,7 +189,7 @@ module.exports = {
                 write: function (x) { return function() { x[objTag][x[indexTag]] = x[valTag]; return {}; } },
                 append: function (x) { return function() { x[objTag].push(x[valTag]); return {}; } },
                 pop: function (x) { return function() { return x.pop(); } },
-                fromStream: function (x) { return function () { return arrayFromStream(x); } },
+                new: function() { return []; },
                 run: function(st) {
                     var result = st();
                     if (result.hasOwnProperty("cacheId")) {
