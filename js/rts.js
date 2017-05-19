@@ -7,9 +7,6 @@ var conf = require('./rtsConfig.js')
 // Tag names must match those in Lamdu.Builtins.Anchors
 var trueTag = conf.builtinTagName('true');
 var falseTag = conf.builtinTagName('false');
-var consTag = conf.builtinTagName('cons');
-var headTag = conf.builtinTagName('head');
-var tailTag = conf.builtinTagName('tail');
 var objTag = conf.builtinTagName('object');
 var infixlTag = conf.builtinTagName('infixl');
 var infixrTag = conf.builtinTagName('infixr');
@@ -49,16 +46,6 @@ var isEqual = function (a, b) {
 
 var bytes = function (list) {
     return new Uint8Array(list);;
-}
-
-var arrayFromStream = function (stream) {
-    var items = [];
-    while (stream['tag'] == consTag)
-    {
-        items.push(stream['data'][headTag]);
-        stream = stream['data'][tailTag]();
-    }
-    return items;
 }
 
 var encode = function() {
@@ -172,7 +159,7 @@ module.exports = {
             byteAt: function (x) { return x[objTag][x[indexTag]]; },
             slice: function (x) { return x[objTag].subarray(x[startTag], x[stopTag]); },
             unshare: function (x) { return x.slice(); },
-            fromStream: function (x) { return bytes(arrayFromStream(x)); },
+            fromArray: function (x) { return bytes(x); },
         },
         Array: {
             length: function (x) { return x.length; },

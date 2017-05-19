@@ -8158,7 +8158,7 @@
         "defPresentationMode": "OO",
         "builtin": [
             "Bytes",
-            "fromStream"
+            "fromArray"
         ],
         "name": "toBytes",
         "def": "836f5a3422154259bf788f38c6fe5693",
@@ -8170,7 +8170,7 @@
                             "nomId": "42493a666c6f61740000000000000000"
                         }
                     },
-                    "nomId": "42493a73747265616d00000000000000"
+                    "nomId": "42493a61727261790000000000000000"
                 },
                 "funcResult": {
                     "nomId": "42493a62797465730000000000000000"
