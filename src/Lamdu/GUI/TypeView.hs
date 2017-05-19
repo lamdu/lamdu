@@ -8,6 +8,7 @@ import           Control.Monad.Trans.State (StateT, state, evalStateT)
 import qualified Data.Map as Map
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
+import qualified Data.Text as Text
 import           Data.Text.Encoding (decodeUtf8)
 import           Data.Vector.Vector2 (Vector2(..))
 import           Graphics.UI.Bottle.Animation (AnimId)
@@ -58,7 +59,9 @@ randAnimId :: Monad m => M m AnimId
 randAnimId = WidgetId.toAnimId . WidgetIds.fromUUID <$> rand
 
 text :: Monad m => Text -> M m View
-text str = wenv . BWidgets.makeTextView str =<< randAnimId
+text str =
+    randAnimId
+    >>= wenv . BWidgets.makeTextView (Text.replace "\0" "" str)
 
 showIdentifier :: Monad m => Identifier -> M m View
 showIdentifier (Identifier bs) = text (decodeUtf8 bs)
