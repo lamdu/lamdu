@@ -12,7 +12,6 @@ import qualified Data.Foldable as Foldable
 import qualified Data.Store.Property as Property
 import           Data.Store.Transaction (Transaction)
 import           Data.UUID.Types (UUID)
-import qualified Lamdu.Builtins.Anchors as Builtins
 import           Lamdu.Calc.Type (Type)
 import qualified Lamdu.Calc.Val as V
 import           Lamdu.Calc.Val.Annotated (Val(..))
@@ -47,19 +46,7 @@ mkAppliedHoleOptions ::
     ExprIRef.ValIProperty m ->
     [HoleOption UUID m]
 mkAppliedHoleOptions sugarContext argI argS exprPl stored =
-    [ P.app P.hole P.hole | Lens.nullOf (rBody . _BodyLam) argS ] ++
-    [ P.record
-      [ (Builtins.headTag, P.hole)
-      , ( Builtins.tailTag
-        , P.inject Builtins.nilTag P.recEmpty
-          & P.abs "nilNullArg"
-          & P.toNom Builtins.streamTid
-        )
-      ]
-      & P.inject Builtins.consTag
-      & P.abs "consNullArg"
-      & P.toNom Builtins.streamTid
-    ]
+    [ P.app P.hole P.hole | Lens.nullOf (rBody . _BodyLam) argS ]
     <&> ConvertHole.SeedExpr
     <&> ConvertHole.mkHoleOption sugarContext (Just argI) exprPl stored
 

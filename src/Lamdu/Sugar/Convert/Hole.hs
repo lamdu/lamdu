@@ -252,8 +252,6 @@ mkOptions sugarContext mInjectedArg exprPl stored =
             , [ P.abs "NewLambda" P.hole
               , P.recEmpty
               , P.absurd
-              , P.inject Builtins.nilTag P.recEmpty
-                & P.abs "NullParam" & P.toNom Builtins.streamTid
               ]
             ]
             <&> SeedExpr
