@@ -177,7 +177,6 @@ module.exports = {
         Array: {
             length: function (x) { return x.length; },
             item: function (x) { return x[objTag][x[indexTag]]; },
-            fromStream: arrayFromStream,
         },
         Mut: {
             return: function(x) { return function() { return x; }; },
