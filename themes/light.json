@@ -44,8 +44,8 @@
         "helpInputDocColor" : [0, 0.5, 0.5, 1.0],
         "helpTextSize"      : 9,
         "helpTextColor"     : [0, 0, 0, 1.0],
-        "helpBGColor"       : [1, 0.95, 0.8, 0.5],
-        "helpTint"          : [1.0, 1.0, 1.0, 0.8]
+        "helpBGColor"       : [1, 0.95, 0.8, 0.85],
+        "helpTint"          : [1.0, 1.0, 1.0, 1.0]
     },
     "pane": {
         "newDefinitionActionColor" : [0, 0.7, 0, 1.0],
