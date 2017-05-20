@@ -31,13 +31,7 @@ hello ::
 hello addHelp size =
     do
         font <- Draw.openFont (min 100 (realToFrac (size ^. _2))) "fonts/DejaVuSans.ttf"
-        let textStyle =
-                TextView.Style
-                { TextView._styleColor = Draw.Color 1 1 1 1
-                , TextView._styleFont = font
-                , TextView._styleUnderline = Nothing
-                }
-        TextView.makeWidget textStyle "Hello World!" ["hello"]
+        TextView.makeWidget (TextView.whiteText font) "Hello World!" ["hello"]
             & respondToCursor
             & strongerEvents quitEventMap
             & addHelp (EventMapDoc.defaultConfig font) size

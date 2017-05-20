@@ -1,7 +1,7 @@
 {-# LANGUAGE NoImplicitPrelude, BangPatterns, RecordWildCards, TemplateHaskell, OverloadedStrings #-}
 module Graphics.UI.Bottle.Widgets.TextView
     ( Font.Underline(..), Font.underlineColor, Font.underlineWidth
-    , Style(..), styleColor, styleFont, styleUnderline
+    , Style(..), styleColor, styleFont, styleUnderline, whiteText
     , lineHeight
 
     , make, makeWidget
@@ -37,6 +37,14 @@ data Style = Style
     , _styleUnderline :: Maybe Font.Underline
     }
 Lens.makeLenses ''Style
+
+whiteText :: Draw.Font -> Style
+whiteText font =
+    Style
+    { _styleColor = Draw.Color 1 1 1 1
+    , _styleFont = font
+    , _styleUnderline = Nothing
+    }
 
 lineHeight :: Style -> Widget.R
 lineHeight Style{..} = Font.height _styleFont
