@@ -173,19 +173,11 @@ replaceEventMap ::
     Functor m =>
     Config -> Sugar.Actions m -> Widget.EventMap (T m Widget.EventResult)
 replaceEventMap config actions =
-    mconcat
-    [ case actions ^. Sugar.setToInnerExpr of
-      Sugar.SetToInnerExpr action ->
-          mk "Replace with inner expression" delKeys action
-      Sugar.NoInnerExpr -> mempty
-    , case actions ^. Sugar.setToHole of
-      Sugar.SetToHole action ->
-          mk "Delete expression" delKeys (fmap snd action)
-      Sugar.SetWrapperToHole action ->
-          mk "Delete outer hole" delKeys (fmap snd action)
-      Sugar.AlreadyAHole -> mempty
-      Sugar.AlreadyAppliedToHole -> mempty
-    ]
+    case actions ^. Sugar.setToHole of
+    Sugar.SetToHole action -> mk "Delete expression" delKeys (fmap snd action)
+    Sugar.SetWrapperToHole action -> mk "Delete outer hole" delKeys (fmap snd action)
+    Sugar.AlreadyAHole -> mempty
+    Sugar.AlreadyAppliedToHole -> mempty
     where
         mk doc keys = mkEventMap keys (E.Doc ["Edit", doc])
         delKeys = Config.delKeys config
