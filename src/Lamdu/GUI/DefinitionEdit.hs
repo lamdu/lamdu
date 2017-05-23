@@ -126,7 +126,7 @@ makeBuiltinDefinition def builtin =
         typeView <-
             topLevelSchemeTypeView (builtin ^. Sugar.biType) entityId ["builtinType"]
             ?? width
-        Box.vboxCentered [assignment, typeView] & return
+        Box.vboxAlign 0 [assignment, typeView] & return
     where
         name = def ^. Sugar.drName
         entityId = def ^. Sugar.drEntityId
@@ -198,7 +198,7 @@ makeExprDefinition def bodyExpr =
             in
             bodyWidget : mkTypeWidgets (bodyWidget ^. Widget.width)
             & List.intersperse vspace
-            & Box.vboxCentered
+            & Box.vboxAlign 0
     where
         entityId = def ^. Sugar.drEntityId
         myId = WidgetIds.fromEntityId entityId
