@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, NoMonomorphismRestriction, RecordWildCards, OverloadedStrings #-}
+{-# LANGUAGE NoImplicitPrelude, RecordWildCards, OverloadedStrings #-}
 module Lamdu.GUI.ExpressionEdit.HoleEdit
     ( make
     ) where
@@ -75,6 +75,36 @@ addWrapperAbove _ids =
     , searchAreaGui
     ]
 
+makeHoleWithWrapper ::
+    Monad m =>
+    ExpressionGui f -> ExpressionGui f -> Sugar.Payload m ExprGuiT.Payload ->
+    ExprGuiM m (ExpressionGui f)
+makeHoleWithWrapper wrapperGui searchAreaGui pl =
+    do
+        unfocusedWrapperGui <-
+            ExpressionGui.maybeAddAnnotationPl pl ?? wrapperGui
+        isSelected <- WE.isSubCursor (hidHole widgetIds) & ExprGuiM.widgetEnv
+        let layout f =
+                do
+                    lay <- f widgetIds
+                    return $ TreeLayout.render #
+                        \layoutMode ->
+                        (layoutMode & lay
+                        (wrapperGui & TreeLayout.alignment . _1 .~ 0)
+                        searchAreaGui ^. TreeLayout.render)
+                        `AlignedWidget.hoverInPlaceOf`
+                        (layoutMode
+                        & unfocusedWrapperGui ^. TreeLayout.render
+                        & AlignedWidget.alignment . _1 .~ 0)
+        if ExpressionGui.egIsFocused wrapperGui
+            then layout addSearchAreaBelow
+            else if isSelected then
+                     layout addWrapperAbove
+                 else
+                     return unfocusedWrapperGui
+    where
+        widgetIds = HoleWidgetIds.make (pl ^. Sugar.plEntityId)
+
 make ::
     Monad m =>
     Sugar.Hole (Name m) m (ExprGuiT.SugarExpr m) ->
@@ -91,38 +121,15 @@ make hole pl =
                 , hiState = stateProp
                 , hiInferredType = pl ^. Sugar.plAnnotation . Sugar.aInferredType
                 , hiHole = hole
-                , hiIds = WidgetIds{..}
+                , hiIds = widgetIds
                 , hiNearestHoles = pl ^. Sugar.plData . ExprGuiT.plNearestHoles
                 }
 
-        do
-            mWrapperGui <- makeWrapper pl holeInfo
-            case mWrapperGui of
-                Just wrapperGui ->
-                    do
-                        unfocusedWrapperGui <-
-                            ExpressionGui.maybeAddAnnotationPl pl ?? wrapperGui
-                        isSelected <- ExprGuiM.widgetEnv $ WE.isSubCursor hidHole
-                        let layout f =
-                                do
-                                    searchAreaGui <- SearchArea.makeStdWrapped pl holeInfo
-                                    lay <- f WidgetIds{..}
-                                    return $ TreeLayout.render #
-                                        \layoutMode ->
-                                        (layoutMode & lay
-                                        (wrapperGui & TreeLayout.alignment . _1 .~ 0)
-                                        searchAreaGui ^. TreeLayout.render)
-                                        `AlignedWidget.hoverInPlaceOf`
-                                        (layoutMode
-                                        & unfocusedWrapperGui ^. TreeLayout.render
-                                        & AlignedWidget.alignment . _1 .~ 0)
-                        if ExpressionGui.egIsFocused wrapperGui
-                            then layout addSearchAreaBelow
-                            else if isSelected then
-                                     layout addWrapperAbove
-                                 else
-                                     return unfocusedWrapperGui
-                Nothing -> SearchArea.makeStdWrapped pl holeInfo
-            & assignHoleCursor WidgetIds{..} (hole ^. Sugar.holeMArg)
+        searchAreaGui <- SearchArea.makeStdWrapped pl holeInfo
+        mWrapperGui <- makeWrapper pl holeInfo
+        case mWrapperGui of
+            Just wrapperGui -> makeHoleWithWrapper wrapperGui searchAreaGui pl
+            Nothing -> return searchAreaGui
+    & assignHoleCursor widgetIds (hole ^. Sugar.holeMArg)
     where
-        WidgetIds{..} = HoleWidgetIds.make (pl ^. Sugar.plEntityId)
+        widgetIds = HoleWidgetIds.make (pl ^. Sugar.plEntityId)
