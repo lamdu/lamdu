@@ -16,8 +16,8 @@ type T = Transaction
 
 addToLabeledApply ::
     Monad m =>
-    Sugar.LabeledApply UUID (Sugar.BinderVar UUID f) expr ->
-    T m (Sugar.LabeledApply UUID (Sugar.BinderVar UUID f) expr)
+    Sugar.LabeledApply UUID (Sugar.BinderVar UUID f) (Sugar.Expression name f a) ->
+    T m (Sugar.LabeledApply UUID (Sugar.BinderVar UUID f) (Sugar.Expression name f a))
 addToLabeledApply a =
     case a ^. Sugar.aSpecialArgs of
     Sugar.NoSpecialArgs ->
@@ -29,7 +29,7 @@ addToLabeledApply a =
                     case (presentationMode, a ^. Sugar.aAnnotatedArgs) of
                     (Sugar.Infix, a0:a1:as) ->
                         ( Sugar.InfixArgs
-                          (a0 ^. Sugar.aaExpr) (a1 ^. Sugar.aaExpr)
+                          (mkInfixArg a0 a1) (mkInfixArg a1 a0)
                         , as
                         )
                     (Sugar.OO, a0:as) ->
@@ -40,6 +40,11 @@ addToLabeledApply a =
                 & Sugar.aSpecialArgs .~ specialArgs
                 & return
     _ -> return a
+    where
+        mkInfixArg arg other =
+            arg ^. Sugar.aaExpr
+            & Sugar.rBody . Sugar._BodyHole . Sugar.holeActions . Sugar.holeMDelete .~
+                other ^. Sugar.aaExpr . Sugar.rPayload . Sugar.plActions . Sugar.mReplaceParent
 
 addToHoleResult ::
     Monad m => Sugar.HoleResult UUID m -> T m (Sugar.HoleResult UUID m)
