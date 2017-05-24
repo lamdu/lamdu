@@ -66,7 +66,7 @@
     "recordAddFieldKeys"       : [ "A", "Cmd+Comma" ],
     "caseAddAltKeys"           : [ "A", "Cmd+Comma" ],
     "delForwardKeys"           : [ "Delete", "Alt+Delete" ],
-    "replaceParentKeys"        : [ "Cmd+Delete" ],
+    "replaceParentKeys"        : [ "Cmd+Delete", "Cmd+Backspace" ],
     "letAddItemKeys"           : [ "L", "Alt+L" ],
     "jumpToDefinitionKeys"     : [ "Enter" ]
 }

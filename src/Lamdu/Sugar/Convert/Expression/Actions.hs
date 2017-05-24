@@ -118,14 +118,27 @@ addActions exprPl body =
     do
         actions <- mkActions exprPl
         ann <- makeAnnotation exprPl
-        return $ Expression body Payload
-            { _plEntityId = exprPl ^. Input.entityId
-            , _plAnnotation = ann
-            , _plActions = actions
-            , _plData =
-                ConvertPayload
-                { _pStored = exprPl ^. Input.stored
-                , _pUserData = exprPl ^. Input.userData
+        protectedSetToVal <- ConvertM.typeProtectedSetToVal
+        let addReplaceParent innerPl =
+                innerPl
+                & plActions . mReplaceParent .~
+                Just
+                (protectedSetToVal
+                    (exprPl ^. Input.stored)
+                    (innerPl ^. plData . pStored . Property.pVal)
+                    <&> EntityId.ofValI)
+        return Expression
+            { _rBody = body <&> rPayload %~ addReplaceParent
+            , _rPayload =
+                Payload
+                { _plEntityId = exprPl ^. Input.entityId
+                , _plAnnotation = ann
+                , _plActions = actions
+                , _plData =
+                    ConvertPayload
+                    { _pStored = exprPl ^. Input.stored
+                    , _pUserData = exprPl ^. Input.userData
+                    }
                 }
             }
 
