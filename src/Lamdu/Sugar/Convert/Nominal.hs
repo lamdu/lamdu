@@ -8,7 +8,7 @@ import           Data.UUID.Types (UUID)
 import qualified Lamdu.Calc.Val as V
 import           Lamdu.Calc.Val.Annotated (Val(..))
 import qualified Lamdu.Sugar.Convert.Binder as ConvertBinder
-import           Lamdu.Sugar.Convert.Expression.Actions (addActionsWithSetToInner)
+import           Lamdu.Sugar.Convert.Expression.Actions (addActions)
 import qualified Lamdu.Sugar.Convert.Input as Input
 import           Lamdu.Sugar.Convert.Monad (ConvertM)
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
@@ -33,7 +33,7 @@ convertFromNom ::
 convertFromNom nom pl =
     traverse ConvertM.convertSubexpression nom
     <&> convertNom <&> BodyFromNom
-    >>= addActionsWithSetToInner pl (nom ^. V.nomVal)
+    >>= addActions pl
 
 convertToNom ::
     (Monad m, Monoid a) =>
@@ -44,6 +44,6 @@ convertToNom nom pl =
         ConvertText.text nom pl & justToLeft
         traverse ConvertBinder.convertBinderBody nom
             <&> convertNom <&> BodyToNom
-            >>= addActionsWithSetToInner pl (nom ^. V.nomVal)
+            >>= addActions pl
             & lift
     & runMatcherT

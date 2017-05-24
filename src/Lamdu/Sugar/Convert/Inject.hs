@@ -9,7 +9,7 @@ import           Lamdu.Calc.Val.Annotated (Val)
 import qualified Lamdu.Calc.Val.Annotated as Val
 import qualified Lamdu.Expr.Lens as ExprLens
 import qualified Lamdu.Expr.UniqueId as UniqueId
-import           Lamdu.Sugar.Convert.Expression.Actions (addActions, addActionsWithSetToInner)
+import           Lamdu.Sugar.Convert.Expression.Actions (addActions)
 import qualified Lamdu.Sugar.Convert.Input as Input
 import           Lamdu.Sugar.Convert.Monad (ConvertM)
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
@@ -33,12 +33,9 @@ convert (V.Inject tag val) exprPl =
     }
     & traverse ConvertM.convertSubexpression
     <&> BodyInject
-    >>= doAddActions
+    >>= addActions exprPl
     <&> rPayload . plData <>~ hiddenPls
     where
-        doAddActions
-            | isNullary = addActions exprPl
-            | otherwise = addActionsWithSetToInner exprPl val
         isNullary = Lens.has ExprLens.valRecEmpty val
         entityId = exprPl ^. Input.entityId
         (mVal, hiddenPls)

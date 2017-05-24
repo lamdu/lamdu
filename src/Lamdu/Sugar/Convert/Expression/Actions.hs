@@ -1,8 +1,6 @@
 {-# LANGUAGE NoImplicitPrelude, OverloadedStrings #-}
 module Lamdu.Sugar.Convert.Expression.Actions
     ( addActions, makeAnnotation
-    , makeSetToInner
-    , addActionsWithSetToInner
     ) where
 
 import qualified Control.Lens as Lens
@@ -10,13 +8,10 @@ import qualified Data.Map as Map
 import qualified Data.Store.Property as Property
 import           Data.Store.Transaction (Transaction)
 import qualified Lamdu.Calc.Val as V
-import qualified Lamdu.Calc.Val.Annotated as Val
-import           Lamdu.Calc.Val.Annotated (Val)
 import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Eval.Results.Process as ResultsProcess
 import qualified Lamdu.Expr.IRef as ExprIRef
-import qualified Lamdu.Expr.Lens as ExprLens
 import qualified Lamdu.Expr.UniqueId as UniqueId
 import qualified Lamdu.Infer as Infer
 import qualified Lamdu.Sugar.Convert.Input as Input
@@ -107,27 +102,11 @@ mkActions exprPl =
         Actions
             { _wrap = DataOps.wrap stored <* postProcess <&> addEntityId & WrapAction
             , _setToHole = DataOps.setToHole stored <* postProcess <&> addEntityId & SetToHole
-            , _setToInnerExpr = NoInnerExpr
             , _extract = ext
             } & return
     where
         addEntityId valI = (UniqueId.toUUID valI, EntityId.ofValI valI)
         stored = exprPl ^. Input.stored
-
-makeSetToInner ::
-    Monad m => Input.Payload m a -> Val (Input.Payload m b) ->
-    ConvertM m (SetToInnerExpr m)
-makeSetToInner outerPl inner
-    | Lens.nullOf ExprLens.valHole inner =
-        do
-            protectedSetToVal <- ConvertM.typeProtectedSetToVal
-            inner ^. Val.payload . Input.stored
-                & Property.value
-                & protectedSetToVal (outerPl ^. Input.stored)
-                <&> EntityId.ofValI
-                & SetToInnerExpr
-                & return
-    | otherwise = return NoInnerExpr
 
 addActions ::
     Monad m => Input.Payload m a -> BodyU m a -> ConvertM m (ExpressionU m a)
@@ -141,16 +120,6 @@ addActions exprPl body =
             , _plActions = actions
             , _plData = exprPl ^. Input.userData
             }
-
-addActionsWithSetToInner ::
-    Monad m =>
-    Input.Payload m a -> Val (Input.Payload m b) ->
-    BodyU m a -> ConvertM m (ExpressionU m a)
-addActionsWithSetToInner exprPl inner body =
-    do
-        setToInner <- makeSetToInner exprPl inner
-        addActions exprPl body
-            <&> rPayload . plActions . setToInnerExpr .~ setToInner
 
 makeAnnotation :: Monad m => Input.Payload m a -> ConvertM m Annotation
 makeAnnotation payload =

@@ -17,11 +17,10 @@ import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Data.Ops.Subexprs as SubExprs
 import           Lamdu.Expr.IRef (DefI, ValIProperty)
-import qualified Lamdu.Expr.Lens as ExprLens
 import qualified Lamdu.Expr.UniqueId as UniqueId
 import           Lamdu.Sugar.Convert.Binder.Float (makeFloatLetToOuterScope)
 import           Lamdu.Sugar.Convert.Binder.Inline (inlineLet)
-import           Lamdu.Sugar.Convert.Binder.Params (ConventionalParams(..), cpParams, convertParams, convertLamParams, mkStoredLam, makeDeleteLambda)
+import           Lamdu.Sugar.Convert.Binder.Params (ConventionalParams(..), cpParams, convertParams, convertLamParams)
 import           Lamdu.Sugar.Convert.Binder.Redex (Redex(..))
 import qualified Lamdu.Sugar.Convert.Binder.Redex as Redex
 import           Lamdu.Sugar.Convert.Binder.Types (BinderKind(..))
@@ -186,19 +185,11 @@ convertLam ::
     Input.Payload m a -> ConvertM m (ExpressionU m a)
 convertLam lam@(V.Lam _ lamBody) exprPl =
     do
-        deleteLam <- mkStoredLam lam exprPl & makeDeleteLambda BinderKindLambda
         convParams <- convertLamParams lam exprPl
         binder <-
             makeBinder
             (exprPl ^. Input.stored & Property.value & Anchors.assocScopeRef)
             Nothing convParams (lam ^. V.lamResult)
-        let setToInnerExprAction
-                | Lens.nullOf ExprLens.valHole lamBody =
-                  binder ^. bBody . bbContent . SugarLens.binderContentExpr .
-                  rPayload . plEntityId
-                  <$ deleteLam
-                  & SetToInnerExpr
-                | otherwise = NoInnerExpr
         let paramUUIDs =
                 binder ^.. bParams . SugarLens.binderNamedParams .
                 Lens.traversed . npiName
@@ -212,7 +203,6 @@ convertLam lam@(V.Lam _ lamBody) exprPl =
                     & Lambda LightLambda
         BodyLam lambda
             & addActions exprPl
-            <&> rPayload . plActions . setToInnerExpr .~ setToInnerExprAction
 
 useNormalLambda :: Set UUID -> Binder UUID m (Expression UUID m a) -> Bool
 useNormalLambda paramUUIDs binder =

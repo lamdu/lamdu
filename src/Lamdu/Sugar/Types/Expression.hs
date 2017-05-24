@@ -2,10 +2,9 @@
 module Lamdu.Sugar.Types.Expression
     ( WrapAction(..), _WrapperAlready, _WrappedAlready, _WrapNotAllowed, _WrapAction
     , SetToHole(..), _SetToHole, _SetWrapperToHole, _AlreadyAHole
-    , SetToInnerExpr(..), _SetToInnerExpr, _NoInnerExpr
     , ExtractToDestination(..)
     , Actions(..)
-        , wrap, setToHole, setToInnerExpr, extract
+        , wrap, setToHole, extract
     , Literal(..), _LiteralNum, _LiteralBytes, _LiteralText
     , Body(..)
         , _BodyLam, _BodyLabeledApply, _BodySimpleApply
@@ -86,10 +85,6 @@ data SetToHole m
     | AlreadyAHole
     | AlreadyAppliedToHole
 
-data SetToInnerExpr m
-    = SetToInnerExpr (T m EntityId)
-    | NoInnerExpr
-
 data ExtractToDestination
     = ExtractToLet EntityId
     | ExtractToDef EntityId
@@ -97,7 +92,6 @@ data ExtractToDestination
 data Actions m = Actions
     { _wrap :: WrapAction m
     , _setToHole :: SetToHole m
-    , _setToInnerExpr :: SetToInnerExpr m
     , _extract :: T m ExtractToDestination
     }
 
@@ -372,7 +366,6 @@ Lens.makePrisms ''Literal
 Lens.makePrisms ''ParameterForm
 Lens.makePrisms ''RecordTail
 Lens.makePrisms ''SetToHole
-Lens.makePrisms ''SetToInnerExpr
 Lens.makePrisms ''SpecialArgs
 Lens.makePrisms ''Unwrap
 Lens.makePrisms ''WrapAction

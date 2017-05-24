@@ -8,7 +8,7 @@ import qualified Lamdu.Calc.Val as V
 import           Lamdu.Calc.Val.Annotated (Val(..))
 import qualified Lamdu.Expr.Lens as ExprLens
 import qualified Lamdu.Expr.UniqueId as UniqueId
-import           Lamdu.Sugar.Convert.Expression.Actions (addActions, addActionsWithSetToInner)
+import           Lamdu.Sugar.Convert.Expression.Actions (addActions)
 import qualified Lamdu.Sugar.Convert.Input as Input
 import           Lamdu.Sugar.Convert.Monad (ConvertM)
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
@@ -55,7 +55,7 @@ convertGetFieldNonParam (V.GetField recExpr tag) exprPl =
     }
     & traverse ConvertM.convertSubexpression
     <&> BodyGetField
-    >>= addActionsWithSetToInner exprPl recExpr
+    >>= addActions exprPl
     where
         entityId = exprPl ^. Input.entityId
 

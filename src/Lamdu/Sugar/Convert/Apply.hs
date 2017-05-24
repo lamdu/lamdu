@@ -16,7 +16,6 @@ import           Lamdu.Calc.Type.Scheme (schemeType)
 import qualified Lamdu.Calc.Val as V
 import           Lamdu.Calc.Val.Annotated (Val(..))
 import qualified Lamdu.Calc.Val.Annotated as Val
-import qualified Lamdu.Expr.Lens as ExprLens
 import qualified Lamdu.Expr.RecordVal as RecordVal
 import qualified Lamdu.Expr.UniqueId as UniqueId
 import qualified Lamdu.Infer as Infer
@@ -42,18 +41,11 @@ convert app@(V.Apply funcI argI) exprPl =
                 argS <- lift $ ConvertM.convertSubexpression argI
                 justToLeft $ convertAppliedHole app argS exprPl
                 funcS <- ConvertM.convertSubexpression funcI & lift
-                protectedSetToVal <- lift ConvertM.typeProtectedSetToVal
-                let setToFuncAction =
-                        funcI ^. Val.payload . Input.stored
-                        & Property.value
-                        & protectedSetToVal (exprPl ^. Input.stored)
-                        <&> EntityId.ofValI
-                        & SetToInnerExpr
                 if Lens.has (rBody . _BodyHole) argS
                     then
                     return
                     ( funcS & rPayload . plActions . setToHole .~ AlreadyAppliedToHole
-                    , argS & rPayload . plActions . setToInnerExpr .~ setToFuncAction
+                    , argS
                     )
                     else return (funcS, argS)
         justToLeft $ convertAppliedCase funcS (funcI ^. Val.payload) argS exprPl
@@ -69,7 +61,9 @@ convertLabeled ::
     MaybeT (ConvertM m) (ExpressionU m a)
 convertLabeled funcS argS argI exprPl =
     do
-        guard $ Lens.has (Val.body . V._BLeaf . V._LRecEmpty) recordTail
+        RecordVal.unpack argI
+            & Lens.has (_2 . Val.body . V._BLeaf . V._LRecEmpty)
+            & guard
         sBinderVar <-
             funcS ^? rBody . _BodyGetVar . _GetBinder & maybeToMPlus
         record <- argS ^? rBody . _BodyRecord & maybeToMPlus
@@ -97,28 +91,13 @@ convertLabeled funcS argS argI exprPl =
         let args = map getArg $ record ^. rItems
         let tags = args ^.. Lens.traversed . aaTag . tagVal
         unless (noRepetitions tags) $ error "Repetitions should not type-check"
-        protectedSetToVal <- lift ConvertM.typeProtectedSetToVal
-        let innerExpr =
-                case (filter (Lens.nullOf ExprLens.valHole) . map snd . Map.elems) fieldsI of
-                [x] -> x
-                _ -> argI
-        let setToInnerExprAction =
-                innerExpr ^. Val.payload . Input.stored & Property.value
-                & protectedSetToVal (exprPl ^. Input.stored)
-                <&> EntityId.ofValI
-                & SetToInnerExpr
         BodyLabeledApply LabeledApply
             { _aFunc = sBinderVar
             , _aSpecialArgs = NoSpecialArgs
             , _aAnnotatedArgs = args
             }
             & lift . addActions exprPl
-            <&> rPayload %~
-                ( plData <>~ argS ^. rPayload . plData ) .
-                ( plActions . setToInnerExpr .~ setToInnerExprAction
-                )
-    where
-        (fieldsI, recordTail) = RecordVal.unpack argI
+            <&> rPayload . plData <>~ argS ^. rPayload . plData
 
 convertPrefix ::
     Monad m =>
