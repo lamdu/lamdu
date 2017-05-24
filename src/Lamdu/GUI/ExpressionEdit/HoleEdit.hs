@@ -5,10 +5,12 @@ module Lamdu.GUI.ExpressionEdit.HoleEdit
 
 import qualified Control.Lens as Lens
 import qualified Data.Store.Transaction as Transaction
+import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widget.Aligned as AlignedWidget
 import qualified Graphics.UI.Bottle.Widget.TreeLayout as TreeLayout
 import qualified Graphics.UI.Bottle.WidgetsEnvT as WE
+import qualified Lamdu.Config as Config
 import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.Info (HoleInfo(..))
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.SearchArea as SearchArea
@@ -127,9 +129,19 @@ make hole pl =
 
         searchAreaGui <- SearchArea.makeStdWrapped pl holeInfo
         mWrapperGui <- makeWrapper pl holeInfo
+
+        delKeys <- ExprGuiM.readConfig <&> Config.delKeys
+        let deleteEventMap =
+                hole ^. Sugar.holeActions . Sugar.holeMDelete
+                & maybe mempty
+                    ( Widget.keysEventMapMovesCursor delKeys
+                        (E.Doc ["Edit", "Delete hole"])
+                        . fmap WidgetIds.fromEntityId)
+
         case mWrapperGui of
             Just wrapperGui -> makeHoleWithWrapper wrapperGui searchAreaGui pl
             Nothing -> return searchAreaGui
+            <&> TreeLayout.widget %~ Widget.weakerEvents deleteEventMap
     & assignHoleCursor widgetIds (hole ^. Sugar.holeMArg)
     where
         widgetIds = HoleWidgetIds.make (pl ^. Sugar.plEntityId)

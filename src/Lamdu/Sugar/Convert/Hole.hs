@@ -286,6 +286,7 @@ mkWritableHoleActions mInjectedArg exprPl stored = do
               & Pure.toNom Builtins.textTid
               & mkOption
         , _holeUUID = UniqueId.toUUID $ ExprIRef.unValI $ Property.value stored
+        , _holeMDelete = Nothing
         }
 
 -- Ignoring alpha-renames:

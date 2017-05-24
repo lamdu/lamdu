@@ -44,7 +44,7 @@ module Lamdu.Sugar.Types.Expression
     , Unwrap(..), _UnwrapAction, _UnwrapTypeMismatch
     , HoleArg(..), haExpr, haUnwrap
     , HoleOption(..), hoVal, hoSugaredBaseExpr, hoResults
-    , HoleActions(..), holeUUID, holeOptions, holeOptionLiteral
+    , HoleActions(..), holeUUID, holeOptions, holeOptionLiteral, holeMDelete
     , Hole(..), holeActions, holeMArg
     , TIdG(..), tidgName, tidgTId
     , HoleResultScore
@@ -139,6 +139,9 @@ data HoleActions name m = HoleActions
     { _holeUUID :: UUID -- TODO: Replace this with a way to associate data?
     , _holeOptions :: T m [HoleOption name m]
     , _holeOptionLiteral :: Literal Identity -> T m (HoleOption name m)
+    , -- Changes the structure around the hole to remove the hole.
+      -- For example (f _) becomes (f) or (2 + _) becomes 2
+      _holeMDelete :: Maybe (T m EntityId)
     }
 
 data Unwrap m

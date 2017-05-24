@@ -48,9 +48,10 @@ convert app@(V.Apply funcI argI) exprPl =
                     , argS
                     )
                     else return (funcS, argS)
-        justToLeft $ convertAppliedCase funcS (funcI ^. Val.payload) argS exprPl
+        let funcPl = funcI ^. Val.payload
+        justToLeft $ convertAppliedCase funcS funcPl argS exprPl
         justToLeft $ convertLabeled funcS argS argI exprPl
-        lift $ convertPrefix funcS argS exprPl
+        lift $ convertPrefix funcS funcPl argS exprPl
 
 noRepetitions :: Ord a => [a] -> Bool
 noRepetitions x = length x == Set.size (Set.fromList x)
@@ -101,14 +102,21 @@ convertLabeled funcS argS argI exprPl =
 
 convertPrefix ::
     Monad m =>
-    ExpressionU m a -> ExpressionU m a ->
-    Input.Payload m a -> ConvertM m (ExpressionU m a)
-convertPrefix funcS argS applyPl =
-    BodySimpleApply Apply
-    { _applyFunc = funcS
-    , _applyArg = argS
-    }
-    & addActions applyPl
+    ExpressionU m a -> Input.Payload m a -> ExpressionU m a -> Input.Payload m a ->
+    ConvertM m (ExpressionU m a)
+convertPrefix funcS funcPl argS applyPl =
+    do
+        protectedSetToVal <- ConvertM.typeProtectedSetToVal
+        let setToFunc =
+                protectedSetToVal (applyPl ^. Input.stored)
+                (funcPl ^. Input.stored & Property.value)
+                <&> EntityId.ofValI
+        BodySimpleApply Apply
+            { _applyFunc = funcS
+            , _applyArg =
+                argS & rBody . _BodyHole . holeActions . holeMDelete .~ Just setToFunc
+            }
+            & addActions applyPl
 
 convertAppliedCase ::
     (Monad m, Monoid a) =>
