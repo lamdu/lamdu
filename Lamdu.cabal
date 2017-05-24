@@ -172,7 +172,6 @@ Executable lamdu
                   , Lamdu.Expr.GenIds
                   , Lamdu.Expr.IRef
                   , Lamdu.Expr.Load
-                  , Lamdu.Expr.RecordVal
                   , Lamdu.Expr.UniqueId
                   , Lamdu.Font
                   , Lamdu.Formatting

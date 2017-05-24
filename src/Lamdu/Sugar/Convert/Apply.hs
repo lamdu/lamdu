@@ -16,7 +16,6 @@ import           Lamdu.Calc.Type.Scheme (schemeType)
 import qualified Lamdu.Calc.Val as V
 import           Lamdu.Calc.Val.Annotated (Val(..))
 import qualified Lamdu.Calc.Val.Annotated as Val
-import qualified Lamdu.Expr.RecordVal as RecordVal
 import qualified Lamdu.Expr.UniqueId as UniqueId
 import qualified Lamdu.Infer as Infer
 import           Lamdu.Sugar.Convert.Hole.Wrapper (convertAppliedHole)
@@ -50,7 +49,7 @@ convert app@(V.Apply funcI argI) exprPl =
                     else return (funcS, argS)
         let funcPl = funcI ^. Val.payload
         justToLeft $ convertAppliedCase funcS funcPl argS exprPl
-        justToLeft $ convertLabeled funcS argS argI exprPl
+        justToLeft $ convertLabeled funcS argS exprPl
         lift $ convertPrefix funcS funcPl argS exprPl
 
 noRepetitions :: Ord a => [a] -> Bool
@@ -58,16 +57,14 @@ noRepetitions x = length x == Set.size (Set.fromList x)
 
 convertLabeled ::
     (Monad m, Monoid a) =>
-    ExpressionU m a -> ExpressionU m a -> Val (Input.Payload m a) -> Input.Payload m a ->
+    ExpressionU m a -> ExpressionU m a -> Input.Payload m a ->
     MaybeT (ConvertM m) (ExpressionU m a)
-convertLabeled funcS argS argI exprPl =
+convertLabeled funcS argS exprPl =
     do
-        RecordVal.unpack argI
-            & Lens.has (_2 . Val.body . V._BLeaf . V._LRecEmpty)
-            & guard
         sBinderVar <-
             funcS ^? rBody . _BodyGetVar . _GetBinder & maybeToMPlus
         record <- argS ^? rBody . _BodyRecord & maybeToMPlus
+        Lens.has (rTail . _ClosedRecord) record & guard
         guard $ length (record ^. rItems) >= 2
         ctx <- lift ConvertM.readContext
         let var = sBinderVar ^. bvNameRef . nrName & UniqueId.identifierOfUUID & V.Var
