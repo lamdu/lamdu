@@ -14,8 +14,7 @@ import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Calc.Type.FlatComposite as FlatComposite
 import           Lamdu.Calc.Type.Scheme (schemeType)
 import qualified Lamdu.Calc.Val as V
-import           Lamdu.Calc.Val.Annotated (Val(..))
-import qualified Lamdu.Calc.Val.Annotated as Val
+import           Lamdu.Calc.Val.Annotated (Val)
 import qualified Lamdu.Expr.UniqueId as UniqueId
 import qualified Lamdu.Infer as Infer
 import           Lamdu.Sugar.Convert.Hole.Wrapper (convertAppliedHole)
@@ -47,10 +46,9 @@ convert app@(V.Apply funcI argI) exprPl =
                     , argS
                     )
                     else return (funcS, argS)
-        let funcPl = funcI ^. Val.payload
-        justToLeft $ convertAppliedCase funcS funcPl argS exprPl
+        justToLeft $ convertAppliedCase funcS argS exprPl
         justToLeft $ convertLabeled funcS argS exprPl
-        lift $ convertPrefix funcS funcPl argS exprPl
+        lift $ convertPrefix funcS argS exprPl
 
 noRepetitions :: Ord a => [a] -> Bool
 noRepetitions x = length x == Set.size (Set.fromList x)
@@ -99,14 +97,14 @@ convertLabeled funcS argS exprPl =
 
 convertPrefix ::
     Monad m =>
-    ExpressionU m a -> Input.Payload m a -> ExpressionU m a -> Input.Payload m a ->
+    ExpressionU m a -> ExpressionU m a -> Input.Payload m a ->
     ConvertM m (ExpressionU m a)
-convertPrefix funcS funcPl argS applyPl =
+convertPrefix funcS argS applyPl =
     do
         protectedSetToVal <- ConvertM.typeProtectedSetToVal
         let setToFunc =
                 protectedSetToVal (applyPl ^. Input.stored)
-                (funcPl ^. Input.stored & Property.value)
+                (funcS ^. rPayload . plData . pStored & Property.value)
                 <&> EntityId.ofValI
         BodySimpleApply Apply
             { _applyFunc = funcS
@@ -117,9 +115,9 @@ convertPrefix funcS funcPl argS applyPl =
 
 convertAppliedCase ::
     (Monad m, Monoid a) =>
-    ExpressionU m a -> Input.Payload m a -> ExpressionU m a -> Input.Payload m a ->
+    ExpressionU m a -> ExpressionU m a -> Input.Payload m a ->
     MaybeT (ConvertM m) (ExpressionU m a)
-convertAppliedCase funcS funcPl argS exprPl =
+convertAppliedCase funcS argS exprPl =
     do
         caseB <- funcS ^? rBody . _BodyCase & maybeToMPlus
         Lens.has (cKind . _LambdaCase) caseB & guard
@@ -130,7 +128,7 @@ convertAppliedCase funcS funcPl argS exprPl =
                 { _caVal = argS
                 , _caToLambdaCase =
                     protectedSetToVal (exprPl ^. Input.stored)
-                    (funcPl ^. Input.stored & Property.value) <&> EntityId.ofValI
+                    (funcS ^. rPayload . plData . pStored & Property.value) <&> EntityId.ofValI
                 }
             & BodyCase
             & lift . addActions exprPl
