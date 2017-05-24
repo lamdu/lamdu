@@ -183,7 +183,7 @@ convertLam ::
     (Monad m, Monoid a) =>
     V.Lam (Val (Input.Payload m a)) ->
     Input.Payload m a -> ConvertM m (ExpressionU m a)
-convertLam lam@(V.Lam _ lamBody) exprPl =
+convertLam lam exprPl =
     do
         convParams <- convertLamParams lam exprPl
         binder <-
