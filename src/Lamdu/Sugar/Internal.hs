@@ -1,5 +1,5 @@
 module Lamdu.Sugar.Internal
-    ( BodyU, ExpressionU
+    ( ExpressionU
     , replaceWith
     ) where
 
@@ -12,7 +12,6 @@ import           Lamdu.Sugar.Types
 
 type T = Transaction
 
-type BodyU m a = Body UUID m (ExpressionU m a)
 type ExpressionU m a = Expression UUID m a
 
 replaceWith ::

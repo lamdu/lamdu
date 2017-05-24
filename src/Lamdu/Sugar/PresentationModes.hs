@@ -52,7 +52,10 @@ addToHole =
     Lens.mapped . Lens.mapped . Sugar.hoResults . Lens.mapped .
     _2 %~ (>>= addToHoleResult)
 
-addToBody :: Monad m => BodyU m pl -> T m (BodyU m pl)
+addToBody ::
+    Monad m =>
+    Sugar.Body UUID m (ExpressionU m a) ->
+    T m (Sugar.Body UUID m (ExpressionU m a))
 addToBody (Sugar.BodyLabeledApply a) = addToLabeledApply a <&> Sugar.BodyLabeledApply
 addToBody (Sugar.BodyHole a) = addToHole a & Sugar.BodyHole & return
 addToBody b = return b

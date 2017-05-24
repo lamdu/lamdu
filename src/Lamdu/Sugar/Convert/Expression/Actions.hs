@@ -7,6 +7,7 @@ import qualified Control.Lens as Lens
 import qualified Data.Map as Map
 import qualified Data.Store.Property as Property
 import           Data.Store.Transaction (Transaction)
+import           Data.UUID.Types (UUID)
 import qualified Lamdu.Calc.Val as V
 import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Data.Ops as DataOps
@@ -110,7 +111,9 @@ mkActions exprPl =
         stored = exprPl ^. Input.stored
 
 addActions ::
-    Monad m => Input.Payload m a -> BodyU m a -> ConvertM m (ExpressionU m a)
+    Monad m =>
+    Input.Payload m a -> Body UUID m (ExpressionU m a) ->
+    ConvertM m (ExpressionU m a)
 addActions exprPl body =
     do
         actions <- mkActions exprPl
