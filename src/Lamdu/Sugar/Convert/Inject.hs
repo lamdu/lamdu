@@ -34,7 +34,7 @@ convert (V.Inject tag val) exprPl =
     & traverse ConvertM.convertSubexpression
     <&> BodyInject
     >>= addActions exprPl
-    <&> rPayload . plData <>~ hiddenPls
+    <&> rPayload . plData . pUserData <>~ hiddenPls
     where
         isNullary = Lens.has ExprLens.valRecEmpty val
         entityId = exprPl ^. Input.entityId

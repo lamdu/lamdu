@@ -112,7 +112,7 @@ convert (V.Case tag val rest) exprPl = do
     (restCase, hiddenEntities) <-
         case restS ^. rBody of
         BodyCase r | Lens.has (cKind . _LambdaCase) r ->
-            return (r, restS ^. rPayload . plData)
+            return (r, restS ^. rPayload . plData . pUserData)
         _ ->
             do
                 addAlt <- rest ^. Val.payload . Input.stored & makeAddAlt
@@ -135,4 +135,4 @@ convert (V.Case tag val rest) exprPl = do
         & cAddAlt %~ (>>= setTagOrder (1 + length (restCase ^. cAlts)))
         & BodyCase
         & addActions exprPl
-        <&> rPayload . plData <>~ hiddenEntities
+        <&> rPayload . plData . pUserData <>~ hiddenEntities

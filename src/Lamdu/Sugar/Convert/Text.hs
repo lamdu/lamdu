@@ -42,7 +42,7 @@ text (V.Nom tid (Val litPl body)) toNomPl =
                 ExprIRef.writeValBody litIRef . V.BLeaf . V.LLiteral .
                 PrimVal.fromKnown . PrimVal.Bytes . encodeUtf8
             } & LiteralText & BodyLiteral & addActions toNomPl
-            <&> rPayload . plData <>~ litPl ^. Input.userData
+            <&> rPayload . plData . pUserData <>~ litPl ^. Input.userData
             & lift
     where
         litIRef = litPl ^. Input.stored . Property.pVal

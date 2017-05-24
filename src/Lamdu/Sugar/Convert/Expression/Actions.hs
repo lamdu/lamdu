@@ -122,7 +122,11 @@ addActions exprPl body =
             { _plEntityId = exprPl ^. Input.entityId
             , _plAnnotation = ann
             , _plActions = actions
-            , _plData = exprPl ^. Input.userData
+            , _plData =
+                ConvertPayload
+                { _pStored = exprPl ^. Input.stored
+                , _pUserData = exprPl ^. Input.userData
+                }
             }
 
 makeAnnotation :: Monad m => Input.Payload m a -> ConvertM m Annotation

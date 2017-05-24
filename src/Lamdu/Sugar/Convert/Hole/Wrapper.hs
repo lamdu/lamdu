@@ -135,13 +135,12 @@ convertAppliedHole (V.Apply funcI argI) argS exprPl =
                 & rBody . _BodyHole . holeActions . holeOptions . Lens.mapped
                     %~  ConvertHole.addSuggestedOptions suggesteds
                     .   mappend (mkAppliedHoleOptions sugarContext
-                        argI argS exprPl (exprPl ^. Input.stored))
+                        argI (argS <&> (^. pUserData)) exprPl (exprPl ^. Input.stored))
                 & return
             & lift
             <&> rBody . _BodyHole . holeMArg .~ Just holeArg
-            <&> rPayload . plData <>~ funcI ^. Val.payload . Input.userData
+            <&> rPayload . plData . pUserData <>~ funcI ^. Val.payload . Input.userData
             <&> rPayload . plActions . wrap .~ WrapperAlready storedEntityId
     where
         storedEntityId = exprPl ^. Input.stored & Property.value & uuidEntityId
         uuidEntityId valI = (UniqueId.toUUID valI, EntityId.ofValI valI)
-

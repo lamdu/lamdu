@@ -341,7 +341,8 @@ prepareUnstoredPayloads val =
 
 sugar ::
     (Monad m, Monoid a) =>
-    ConvertM.Context m -> Input.Payload m dummy -> Val a -> T m (ExpressionU m a)
+    ConvertM.Context m -> Input.Payload m dummy -> Val a ->
+    T m (Expression UUID m a)
 sugar sugarContext exprPl val =
     val
     <&> mkPayload
@@ -350,6 +351,7 @@ sugar sugarContext exprPl val =
     & prepareUnstoredPayloads
     & ConvertM.convertSubexpression
     & ConvertM.run sugarContext
+    <&> Lens.mapped %~ (^. pUserData)
     where
         mkPayload x entityId = (fakeInferPayload, entityId, x)
         -- A fake Infer payload we use to sugar the base expressions.
@@ -737,7 +739,7 @@ mkHoleResult sugarContext updateDeps entityId stored val =
                 writeConvertTypeChecked entityId sugarContext stored val
         return
             HoleResult
-            { _holeResultConverted = fConverted
+            { _holeResultConverted = fConverted <&> (^. pUserData)
             , _holeResultPick =
                 mkPickedResult fConsistentExpr fWrittenExpr <$
                 do

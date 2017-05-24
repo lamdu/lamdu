@@ -105,7 +105,7 @@ convertExtend (V.RecExtend tag val rest) exprPl = do
     restS <- ConvertM.convertSubexpression rest
     (restRecord, hiddenEntities) <-
         case restS ^. rBody of
-        BodyRecord r -> return (r, restS ^. rPayload . plData)
+        BodyRecord r -> return (r, restS ^. rPayload . plData . pUserData)
         _ ->
             do
                 addField <- rest ^. Val.payload . Input.stored & makeAddField
@@ -122,4 +122,4 @@ convertExtend (V.RecExtend tag val rest) exprPl = do
         & rAddField %~ (>>= setTagOrder (1 + length (restRecord ^. rItems)))
         & BodyRecord
         & addActions exprPl
-        <&> rPayload . plData <>~ hiddenEntities
+        <&> rPayload . plData . pUserData <>~ hiddenEntities

@@ -108,7 +108,8 @@ convertRedex expr redex =
             { _lEntityId = defEntityId
             , _lValue =
                 value
-                & bBody . bbContent . SugarLens.binderContentExpr . rPayload . plData <>~
+                & bBody . bbContent . SugarLens.binderContentExpr
+                    . rPayload . plData . pUserData <>~
                 redex ^. Redex.hiddenPayloads . Lens.traversed . Input.userData
             , _lActions = actions
             , _lName = UniqueId.toUUID param
@@ -229,7 +230,7 @@ allParamsUsed paramUUIDs binder =
             & Set.fromList
 
 markLightParams ::
-    Monad m => Set UUID -> ExpressionU m a -> ExpressionU m a
+    Monad m => Set UUID -> Expression UUID m a -> Expression UUID m a
 markLightParams paramUUIDs (Expression body pl) =
     case body of
     BodyGetVar (GetParam n)

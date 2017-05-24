@@ -95,7 +95,7 @@ convertLabeled funcS argS exprPl =
             , _aAnnotatedArgs = args
             }
             & lift . addActions exprPl
-            <&> rPayload . plData <>~ argS ^. rPayload . plData
+            <&> rPayload . plData . pUserData <>~ argS ^. rPayload . plData . pUserData
 
 convertPrefix ::
     Monad m =>
@@ -134,4 +134,4 @@ convertAppliedCase funcS funcPl argS exprPl =
                 }
             & BodyCase
             & lift . addActions exprPl
-    <&> rPayload . plData <>~ funcS ^. rPayload . plData
+    <&> rPayload . plData . pUserData <>~ funcS ^. rPayload . plData . pUserData

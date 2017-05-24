@@ -8,7 +8,6 @@ import           Data.UUID.Types (UUID)
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
 import qualified Lamdu.Data.Anchors as Anchors
-import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
@@ -54,13 +53,13 @@ addToHole =
 
 addToBody ::
     Monad m =>
-    Sugar.Body UUID m (ExpressionU m a) ->
-    T m (Sugar.Body UUID m (ExpressionU m a))
+    Sugar.Body UUID m (Sugar.Expression UUID m a) ->
+    T m (Sugar.Body UUID m (Sugar.Expression UUID m a))
 addToBody (Sugar.BodyLabeledApply a) = addToLabeledApply a <&> Sugar.BodyLabeledApply
 addToBody (Sugar.BodyHole a) = addToHole a & Sugar.BodyHole & return
 addToBody b = return b
 
-addToExpr :: Monad m => ExpressionU m pl -> T m (ExpressionU m pl)
+addToExpr :: Monad m => Sugar.Expression UUID m pl -> T m (Sugar.Expression UUID m pl)
 addToExpr e =
     e
     & Sugar.rBody %%~ addToBody
@@ -68,27 +67,27 @@ addToExpr e =
 
 addToBinder ::
     Monad m =>
-    Sugar.Binder UUID m (ExpressionU m pl) ->
-    T m (Sugar.Binder UUID m (ExpressionU m pl))
+    Sugar.Binder UUID m (Sugar.Expression UUID m pl) ->
+    T m (Sugar.Binder UUID m (Sugar.Expression UUID m pl))
 addToBinder = Sugar.bBody %%~ addToBinderBody
 
 addToBinderBody ::
     Monad m =>
-    Sugar.BinderBody UUID m (ExpressionU m pl) ->
-    T m (Sugar.BinderBody UUID m (ExpressionU m pl))
+    Sugar.BinderBody UUID m (Sugar.Expression UUID m pl) ->
+    T m (Sugar.BinderBody UUID m (Sugar.Expression UUID m pl))
 addToBinderBody = Sugar.bbContent %%~ addToBinderContent
 
 addToBinderContent ::
     Monad m =>
-    Sugar.BinderContent UUID m (ExpressionU m pl) ->
-    T m (Sugar.BinderContent UUID m (ExpressionU m pl))
+    Sugar.BinderContent UUID m (Sugar.Expression UUID m pl) ->
+    T m (Sugar.BinderContent UUID m (Sugar.Expression UUID m pl))
 addToBinderContent (Sugar.BinderExpr e) = addToExpr e <&> Sugar.BinderExpr
 addToBinderContent (Sugar.BinderLet l) = addToLet l <&> Sugar.BinderLet
 
 addToLet ::
     Monad m =>
-    Sugar.Let UUID m (ExpressionU m pl) ->
-    T m (Sugar.Let UUID m (ExpressionU m pl))
+    Sugar.Let UUID m (Sugar.Expression UUID m pl) ->
+    T m (Sugar.Let UUID m (Sugar.Expression UUID m pl))
 addToLet letItem =
     letItem
     & Sugar.lValue %%~ addToBinder
@@ -96,8 +95,8 @@ addToLet letItem =
 
 addToDef ::
     Monad m =>
-    Sugar.Definition UUID m (ExpressionU m a) ->
-    T m (Sugar.Definition UUID m (ExpressionU m a))
+    Sugar.Definition UUID m (Sugar.Expression UUID m a) ->
+    T m (Sugar.Definition UUID m (Sugar.Expression UUID m a))
 addToDef def =
     def
     & Sugar.drBody . Sugar._DefinitionBodyExpression .

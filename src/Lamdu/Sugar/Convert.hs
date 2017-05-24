@@ -239,6 +239,7 @@ loadRepl ::
     T m (Expression UUID m [EntityId])
 loadRepl evalRes cp =
     convertExpr evalRes cp (Anchors.repl cp)
+    <&> Lens.mapped %~ (^. pUserData)
     >>= OrderTags.orderExpr
     >>= PresentationModes.addToExpr
 
@@ -276,7 +277,11 @@ loadPanes evalRes cp replEntityId =
             <&> stronglyConnectedDefs Anchors.paneDef <&> concat <&> reverse
         let convertPane i def =
                 do
-                    bodyS <- def <&> Anchors.paneDef & convertDefBody evalRes cp
+                    bodyS <-
+                        def
+                        <&> Anchors.paneDef
+                        & convertDefBody evalRes cp
+                        <&> Lens.mapped . Lens.mapped %~ (^. pUserData)
                     let defI = def ^. Definition.defPayload & Anchors.paneDef
                     defS <-
                         OrderTags.orderDef Definition
