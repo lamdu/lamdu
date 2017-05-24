@@ -103,6 +103,7 @@ mkActions exprPl =
             { _wrap = DataOps.wrap stored <* postProcess <&> addEntityId & WrapAction
             , _setToHole = DataOps.setToHole stored <* postProcess <&> addEntityId & SetToHole
             , _extract = ext
+            , _mReplaceParent = Nothing
             } & return
     where
         addEntityId valI = (UniqueId.toUUID valI, EntityId.ofValI valI)

@@ -104,6 +104,7 @@ data Config = Config
     , jumpToDefinitionKeys :: [MetaKey]
     , delForwardKeys :: [MetaKey]
     , delBackwardKeys :: [MetaKey]
+    , replaceParentKeys :: [MetaKey]
     , wrapKeys :: [MetaKey]
 
     , acceptDefinitionTypeKeys :: [MetaKey]

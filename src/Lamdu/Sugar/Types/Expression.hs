@@ -4,7 +4,7 @@ module Lamdu.Sugar.Types.Expression
     , SetToHole(..), _SetToHole, _SetWrapperToHole, _AlreadyAHole
     , ExtractToDestination(..)
     , Actions(..)
-        , wrap, setToHole, extract
+        , wrap, setToHole, extract, mReplaceParent
     , Literal(..), _LiteralNum, _LiteralBytes, _LiteralText
     , Body(..)
         , _BodyLam, _BodyLabeledApply, _BodySimpleApply
@@ -93,6 +93,7 @@ data Actions m = Actions
     { _wrap :: WrapAction m
     , _setToHole :: SetToHole m
     , _extract :: T m ExtractToDestination
+    , _mReplaceParent :: Maybe (T m EntityId)
     }
 
 data Payload m a = Payload

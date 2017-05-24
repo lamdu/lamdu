@@ -123,6 +123,13 @@ actionsEventMap isHoleResult pl holePicker =
             , case isHoleResult of
               HoleResult -> mempty
               NotHoleResult -> extractEventMap config actions
+            , actions ^. Sugar.mReplaceParent
+              & maybe mempty
+                ( Widget.keysEventMapMovesCursor
+                  (Config.replaceParentKeys config)
+                  (E.Doc ["Edit", "Replace parent"])
+                  . fmap WidgetIds.fromEntityId
+                )
             ]
     where
         actions = pl ^. Sugar.plActions
