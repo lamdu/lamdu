@@ -63,8 +63,8 @@
     "nextInfoModeKeys"         : [ "F7" ],
     "leaveSubexpressionKeys"   : [ "Shift+Left" ],
     "acceptDefinitionTypeKeys" : [ "Space", "Enter" ],
-    "recordAddFieldKeys"       : [ "A", "Comma" ],
-    "caseAddAltKeys"           : [ "A", "Comma" ],
+    "recordAddFieldKeys"       : [ "A", "Cmd+Comma" ],
+    "caseAddAltKeys"           : [ "A", "Cmd+Comma" ],
     "delForwardKeys"           : [ "Delete", "Alt+Delete" ],
     "letAddItemKeys"           : [ "L", "Alt+L" ],
     "jumpToDefinitionKeys"     : [ "Enter" ]
