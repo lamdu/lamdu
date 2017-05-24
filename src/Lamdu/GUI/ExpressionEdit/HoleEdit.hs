@@ -9,7 +9,6 @@ import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widget.Aligned as AlignedWidget
 import qualified Graphics.UI.Bottle.Widget.TreeLayout as TreeLayout
 import qualified Graphics.UI.Bottle.WidgetsEnvT as WE
-import qualified Lamdu.Config as Config
 import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.Info (HoleInfo(..))
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.SearchArea as SearchArea
@@ -83,8 +82,6 @@ make ::
     ExprGuiM m (ExpressionGui m)
 make hole pl =
     do
-        Config.Hole{..} <- ExprGuiM.readConfig <&> Config.hole
-
         stateProp <-
             HoleState.assocStateRef (hole ^. Sugar.holeActions . Sugar.holeUUID)
             ^. Transaction.mkProperty & ExprGuiM.transaction
