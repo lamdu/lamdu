@@ -181,8 +181,8 @@ zoomTheme zoom theme =
     do
         factor <- Zoom.getSizeFactor zoom
         return theme
-            { Theme.baseTextSize = baseTextSize * realToFrac factor
-            , Theme.help = help { Theme.helpTextSize = helpTextSize * realToFrac factor }
+            { Theme.baseTextSize = baseTextSize * factor
+            , Theme.help = help { Theme.helpTextSize = helpTextSize * factor }
             }
     where
         Theme{help, baseTextSize} = theme

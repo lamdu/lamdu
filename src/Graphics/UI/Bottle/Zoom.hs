@@ -50,8 +50,8 @@ eventMap (Zoom ref) Config{..} =
         modifyIORef ref (/ realToFrac shrinkFactor)
     ]
 
-getSizeFactor :: Zoom -> IO Widget.R
-getSizeFactor (Zoom ref) = readIORef ref
+getSizeFactor :: Fractional a => Zoom -> IO a
+getSizeFactor (Zoom ref) = readIORef ref <&> realToFrac
 
 make :: GLFW.Window -> IO Zoom
 make win =
