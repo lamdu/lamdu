@@ -11,7 +11,8 @@ import           Graphics.UI.Bottle.MetaKey (MetaKey)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import           Lamdu.Config.Sampler (Sampler)
 import qualified Lamdu.Config.Sampler as ConfigSampler
-import qualified Lamdu.DataFile as DataFile
+import qualified Paths.Utils as Paths
+import qualified Paths_Lamdu
 import qualified System.Directory as Directory
 import           System.FilePath ((</>))
 import qualified System.FilePath as FilePath
@@ -24,7 +25,7 @@ themeEventMap keys configSampler themeRef =
     do
         curTheme <- readIORef themeRef
         themeFiles <-
-            DataFile.getPath "config.json"
+            Paths.get Paths_Lamdu.getDataFileName "config.json"
             <&> FilePath.takeDirectory <&> (</> "themes")
             >>= Directory.getDirectoryContents
             <&> filter ((== ".json") . FilePath.takeExtension)

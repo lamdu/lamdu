@@ -39,11 +39,12 @@ import qualified Lamdu.Calc.Val as V
 import           Lamdu.Calc.Val.Annotated (Val)
 import           Lamdu.Data.Definition (Definition)
 import qualified Lamdu.Data.Definition as Def
-import qualified Lamdu.DataFile as DataFile
 import qualified Lamdu.Eval.JS.Compiler as Compiler
 import           Lamdu.Eval.Results (ScopeId(..), EvalResults(..))
 import qualified Lamdu.Eval.Results as ER
 import           Numeric (readHex)
+import qualified Paths.Utils as Paths
+import qualified Paths_Lamdu
 import           System.FilePath (splitFileName)
 import           System.IO (IOMode(..), Handle, hClose, hIsEOF, hPutStrLn, withFile)
 import qualified System.NodeJS.Path as NodeJS
@@ -307,7 +308,7 @@ asyncStart ::
 asyncStart toUUID fromUUID depsMVar resultsRef val actions =
     do
         nodeExePath <- NodeJS.path
-        rtsPath <- DataFile.getPath "js/rts.js" <&> fst . splitFileName
+        rtsPath <- Paths.get Paths_Lamdu.getDataFileName "js/rts.js" <&> fst . splitFileName
         withProcess (nodeRepl nodeExePath rtsPath) $
             \(Just stdin, Just stdout, Nothing, handle) ->
             withCopyJSOutputTo (actions ^. aCopyJSOutputPath) $ \copyJSOutput ->

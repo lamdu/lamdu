@@ -15,10 +15,11 @@ import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
 import qualified Lamdu.Data.DbLayout as DbLayout
 import           Lamdu.Data.Export.JSON (fileImportAll)
-import qualified Lamdu.DataFile as DataFile
 import qualified Lamdu.Expr.UniqueId as UniqueId
 import qualified Lamdu.GUI.WidgetIdIRef as WidgetIdIRef
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
+import qualified Paths.Utils as Paths
+import qualified Paths_Lamdu
 import qualified System.Directory as Directory
 import           System.FilePath ((</>))
 
@@ -72,7 +73,9 @@ withDB lamduDir body =
         e <- Directory.doesDirectoryExist dbPath
         Db.withDB dbPath (options (not e)) $ \db ->
             do
-                unless e $ DataFile.getPath "freshdb.json" >>= fileImportAll >>= initDb db
+                unless e $
+                    Paths.get Paths_Lamdu.getDataFileName "freshdb.json"
+                    >>= fileImportAll >>= initDb db
                 body db
     where
         options create =

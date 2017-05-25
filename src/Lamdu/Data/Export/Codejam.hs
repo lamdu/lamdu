@@ -27,12 +27,13 @@ import           Lamdu.Data.DbLayout (ViewM)
 import qualified Lamdu.Data.DbLayout as DbLayout
 import qualified Lamdu.Data.Definition as Def
 import           Lamdu.Data.Export.JSON (jsonExportRepl)
-import qualified Lamdu.DataFile as DataFile
 import qualified Lamdu.Eval.JS.Compiler as Compiler
 import           Lamdu.Eval.Results (EvalResults)
 import qualified Lamdu.Eval.Results as EV
 import           Lamdu.Expr.IRef (ValI)
 import qualified Lamdu.Expr.IRef as ExprIRef
+import qualified Paths.Utils as Paths
+import qualified Paths_Lamdu
 
 import           Lamdu.Prelude
 
@@ -104,7 +105,7 @@ formatResult (EV.Val _ b) =
     _ -> "<TODO: Format result>"
 
 readDataFile :: FilePath -> IO String
-readDataFile path = DataFile.getPath path >>= readFile
+readDataFile path = Paths.get Paths_Lamdu.getDataFileName path >>= readFile
 
 exportFancy :: EvalResults (ValI ViewM) -> T ViewM (IO ())
 exportFancy evalResults =

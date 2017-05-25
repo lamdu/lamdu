@@ -164,7 +164,6 @@ Executable lamdu
                   , Lamdu.Data.Export.JSON.Migration.ToVersion2
                   , Lamdu.Data.Ops
                   , Lamdu.Data.Ops.Subexprs
-                  , Lamdu.DataFile
                   , Lamdu.Eval.JS
                   , Lamdu.Eval.JS.Compiler
                   , Lamdu.Eval.Manager
@@ -272,6 +271,7 @@ Executable lamdu
                   , Lamdu.Themes
                   , Lamdu.VersionControl
                   , Lamdu.VersionControl.Actions
+                  , Paths.Utils
                   , Paths_Lamdu
                   , Numeric.Utils
                   , System.Random.Utils

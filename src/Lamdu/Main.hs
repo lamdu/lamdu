@@ -37,7 +37,6 @@ import qualified Lamdu.Data.DbInit as DbInit
 import qualified Lamdu.Data.DbLayout as DbLayout
 import           Lamdu.Data.Export.Codejam (exportFancy)
 import qualified Lamdu.Data.Export.JSON as Export
-import           Lamdu.DataFile (getLamduDir)
 import qualified Lamdu.Eval.Manager as EvalManager
 import           Lamdu.Eval.Results (EvalResults)
 import           Lamdu.Expr.IRef (ValI)
@@ -65,6 +64,9 @@ defaultFontPath sample =
     configDir </> "fonts/Purisa.ttf"
     where
         configDir = FilePath.takeDirectory (sample ^. ConfigSampler.sConfigPath)
+
+getLamduDir :: IO FilePath
+getLamduDir = Directory.getHomeDirectory <&> (</> ".lamdu")
 
 main :: IO ()
 main =
