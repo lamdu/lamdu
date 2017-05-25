@@ -176,24 +176,12 @@ printGLVersion =
         ver <- GL.get GL.glVersion
         putStrLn $ "Using GL version: " ++ show ver
 
-zoomTheme :: Zoom -> Theme -> IO Theme
-zoomTheme zoom theme =
-    do
-        factor <- Zoom.getSizeFactor zoom
-        return theme
-            { Theme.baseTextSize = baseTextSize * factor
-            , Theme.help = help { Theme.helpTextSize = helpTextSize * factor }
-            }
-    where
-        Theme{help, baseTextSize} = theme
-        Theme.Help{helpTextSize} = help
-
 runEditor :: Opts.EditorOpts -> Db -> IO ()
 runEditor opts db =
     do
         -- Load config as early as possible, before we open any windows/etc
         themeRef <- newIORef defaultTheme
-        rawConfigSampler <- ConfigSampler.new defaultTheme
+        configSampler <- ConfigSampler.new defaultTheme
 
         GLFWUtils.withGLFW $ do
             win <-
@@ -211,15 +199,11 @@ runEditor opts db =
                         , EvalManager.copyJSOutputPath = opts ^. Opts.eoCopyJSOutputPath
                         }
                     zoom <- Zoom.make win
-                    let configSampler =
-                            rawConfigSampler
-                            & ConfigSampler.onEachSample
-                                (sTheme %%~ zoomTheme zoom)
                     let initialSettings = Settings Settings.defaultInfoMode
                     settingsRef <- newIORef initialSettings
                     settingsChangeHandler evaluator initialSettings
                     addHelp <- EventMapDoc.makeToggledHelpAdder EventMapDoc.HelpNotShown
-                    mainLoop subpixel win refreshScheduler configSampler $
+                    mainLoop zoom subpixel win refreshScheduler configSampler $
                         \fonts config theme size ->
                             let helpStyle =
                                     Style.help (Font.fontHelp fonts)
@@ -266,24 +250,28 @@ curSampleFonts sample =
     & prependConfigPath sample
     & assignFontSizes (sample ^. sTheme)
 
-makeGetFonts :: Font.LCDSubPixelEnabled -> Sampler -> IO (IO (Fonts Draw.Font))
-makeGetFonts subpixel configSampler =
+makeGetFonts :: Zoom -> Font.LCDSubPixelEnabled -> Sampler -> IO (IO (Fonts Draw.Font))
+makeGetFonts zoom subpixel configSampler =
     Font.new subpixel & uncurry & memoIO
     <&> f
     where
         f cachedLoadFonts =
             do
                 sample <- ConfigSampler.getSample configSampler
-                cachedLoadFonts (defaultFontPath sample, curSampleFonts sample)
+                sizeFactor <- Zoom.getSizeFactor zoom
+                cachedLoadFonts
+                    ( defaultFontPath sample
+                    , curSampleFonts sample <&> _1 *~ sizeFactor
+                    )
 
 mainLoop ::
-    Font.LCDSubPixelEnabled ->
+    Zoom -> Font.LCDSubPixelEnabled ->
     GLFW.Window -> RefreshScheduler -> Sampler ->
     (Fonts Draw.Font -> Config -> Theme -> Widget.Size ->
     IO (Widget (MainLoop.M Widget.EventResult))) -> IO ()
-mainLoop subpixel win refreshScheduler configSampler iteration =
+mainLoop zoom subpixel win refreshScheduler configSampler iteration =
     do
-        getFonts <- makeGetFonts subpixel configSampler
+        getFonts <- makeGetFonts zoom subpixel configSampler
         lastVersionNumRef <- newIORef []
         let makeWidget size =
                 do

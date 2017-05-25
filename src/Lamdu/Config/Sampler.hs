@@ -3,7 +3,7 @@
 module Lamdu.Config.Sampler
     ( Sampler, new
     , Sample(..), sConfigPath, sConfig, sThemePath, sTheme
-    , getSample, onEachSample, setTheme
+    , getSample, setTheme
     ) where
 
 import           Control.Concurrent (threadDelay, ThreadId)
@@ -42,9 +42,6 @@ data Sampler = Sampler
     , getSample :: IO Sample
     , setTheme :: Text -> IO ()
     }
-
-onEachSample :: (Sample -> IO Sample) -> Sampler -> Sampler
-onEachSample act (Sampler t get setT) = Sampler t (get >>= act) setT
 
 withMTime :: FilePath -> IO (Config, FilePath, Theme) -> IO Sample
 withMTime configPath act =
