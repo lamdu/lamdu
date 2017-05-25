@@ -18,6 +18,7 @@ import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Main.Animation as MainAnim
 import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
+import qualified Graphics.UI.Bottle.Widgets.EventMapDoc as EventMapDoc
 import           Graphics.UI.Bottle.Zoom (Zoom)
 import qualified Graphics.UI.Bottle.Zoom as Zoom
 import qualified Graphics.UI.GLFW as GLFW
@@ -62,10 +63,11 @@ instance MonadIO M where
 data Options = Options
     { tickHandler :: IO Bool
     , getConfig :: IO Config
+    , getHelpStyle :: Zoom -> IO EventMapDoc.Config
     }
 
-defaultOptions :: Options
-defaultOptions =
+defaultOptions :: (Widget.Size -> IO Draw.Font) -> Options
+defaultOptions loadHelpFont =
     Options
     { tickHandler = return False
     , getConfig =
@@ -81,6 +83,11 @@ defaultOptions =
             }
         , cZoom = Zoom.defaultConfig
         }
+    , getHelpStyle =
+        \zoom -> do
+            zoomFactor <- Zoom.getSizeFactor zoom
+            helpFont <- loadHelpFont (9 * zoomFactor)
+            EventMapDoc.defaultConfig helpFont & return
     }
 
 mainLoopWidget ::
@@ -90,6 +97,7 @@ mainLoopWidget ::
     IO ()
 mainLoopWidget win mkWidgetUnmemod options =
     do
+        addHelp <- EventMapDoc.makeToggledHelpAdder EventMapDoc.HelpNotShown
         zoom <- Zoom.make win
         let mkZoomEventMap =
                 do
@@ -99,8 +107,10 @@ mainLoopWidget win mkWidgetUnmemod options =
                 memoIO $ \size ->
                 do
                     zoomEventMap <- mkZoomEventMap
+                    helpStyle <- getHelpStyle zoom
                     mkWidgetUnmemod zoom size
                         <&> Widget.strongerEvents zoomEventMap
+                        >>= addHelp helpStyle size
         mkWidgetRef <- mkW >>= newIORef
         let newWidget = mkW >>= writeIORef mkWidgetRef
         let getWidget size = ($ size) =<< readIORef mkWidgetRef
@@ -144,4 +154,4 @@ mainLoopWidget win mkWidgetUnmemod options =
                 <*> getWidget size
             }
     where
-        Options{tickHandler, getConfig} = options
+        Options{tickHandler, getConfig, getHelpStyle} = options

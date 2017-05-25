@@ -23,7 +23,6 @@ import           Graphics.UI.Bottle.Main (mainLoopWidget)
 import qualified Graphics.UI.Bottle.Main as MainLoop
 import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
-import qualified Graphics.UI.Bottle.Widgets.EventMapDoc as EventMapDoc
 import           Graphics.UI.Bottle.Zoom (Zoom)
 import qualified Graphics.UI.Bottle.Zoom as Zoom
 import qualified Graphics.UI.GLFW as GLFW
@@ -200,19 +199,14 @@ runEditor opts db =
                     let initialSettings = Settings Settings.defaultInfoMode
                     settingsRef <- newIORef initialSettings
                     settingsChangeHandler evaluator initialSettings
-                    addHelp <- EventMapDoc.makeToggledHelpAdder EventMapDoc.HelpNotShown
                     mainLoop subpixel win refreshScheduler configSampler $
                         \fonts config theme size ->
-                            let helpStyle =
-                                    Style.help (Font.fontHelp fonts)
-                                    (Config.help config) (Theme.help theme)
-                            in  makeRootWidget fonts db settingsRef evaluator
-                                config theme size
-                                <&> Widget.weakerEvents
-                                    (themeEventMap (Config.changeThemeKeys config) configSampler themeRef
-                                    <&> liftIO
-                                    )
-                                >>= addHelp helpStyle size
+                        let themeEvents =
+                                themeEventMap (Config.changeThemeKeys config) configSampler themeRef
+                                <&> liftIO
+                        in  makeRootWidget fonts db settingsRef evaluator
+                            config theme size
+                            <&> Widget.weakerEvents themeEvents
     where
         subpixel
             | opts ^. Opts.eoSubpixelEnabled = Font.LCDSubPixelEnabled
@@ -294,6 +288,15 @@ mainLoop subpixel win refreshScheduler configSampler iteration =
                     if configChanged
                         then return True
                         else isRefreshScheduled refreshScheduler
+            , getHelpStyle =
+                \zoom ->
+                do
+                    sample <- ConfigSampler.getSample configSampler
+                    fonts <- getFonts zoom sample
+                    let helpConfig = sample ^. sConfig & Config.help
+                    let helpTheme = sample ^. sTheme & Theme.help
+                    Style.help (Font.fontHelp fonts) helpConfig helpTheme
+                        & return
             }
 
 mkWidgetWithFallback ::

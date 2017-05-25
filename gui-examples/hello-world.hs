@@ -11,7 +11,6 @@ import           Graphics.UI.Bottle.EventMap as EventMap
 import qualified Graphics.UI.Bottle.Main as Main
 import           Graphics.UI.Bottle.MetaKey (MetaKey(..), noMods)
 import           Graphics.UI.Bottle.Widget (Widget, Size, EventResult, keysEventMap, strongerEvents, respondToCursor)
-import qualified Graphics.UI.Bottle.Widgets.EventMapDoc as EventMapDoc
 import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
 import           Graphics.UI.Bottle.Zoom (Zoom)
 import qualified Graphics.UI.Bottle.Zoom as Zoom
@@ -28,25 +27,22 @@ main :: IO ()
 main =
     do
         win <- GLFWUtils.createWindow "Hello World" Nothing (Vector2 800 400)
-        addHelp <- EventMapDoc.makeToggledHelpAdder EventMapDoc.HelpNotShown
         cachedOpenFont <- memoIO openFont
-        Main.mainLoopWidget win (hello cachedOpenFont addHelp) Main.defaultOptions
+        Main.mainLoopWidget win (hello cachedOpenFont)
+            (Main.defaultOptions cachedOpenFont)
     & GLFWUtils.withGLFW
 
 hello ::
     Functor m =>
-    (Size -> IO Draw.Font) ->
-    (EventMapDoc.Config -> Size -> Widget (m EventResult) ->
-     IO (Widget (m EventResult))) ->
-    Zoom -> Size -> IO (Widget (m EventResult))
-hello getFont addHelp zoom _size =
+    (Size -> IO Draw.Font) -> Zoom -> Size -> IO (Widget (m EventResult))
+hello getFont zoom _size =
     do
         sizeFactor <- Zoom.getSizeFactor zoom
         font <- getFont (sizeFactor * 20)
         TextView.makeWidget (TextView.whiteText font) "Hello World!" ["hello"]
             & respondToCursor
             & strongerEvents quitEventMap
-            & addHelp (EventMapDoc.defaultConfig font) size
+            & return
 
 quitEventMap :: Functor f => EventMap (f EventResult)
 quitEventMap =
