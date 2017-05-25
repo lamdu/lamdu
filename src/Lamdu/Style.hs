@@ -13,6 +13,7 @@ import           Graphics.UI.Bottle.Widget (CursorConfig(..))
 import qualified Graphics.UI.Bottle.Widgets.EventMapDoc as EventMapDoc
 import qualified Graphics.UI.Bottle.Widgets.TextEdit as TextEdit
 import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
+import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
 import           Lamdu.Config.Theme (Theme)
 import qualified Lamdu.Config.Theme as Theme
@@ -80,8 +81,8 @@ style config fonts =
     where
         Theme.Name{..} = Theme.name config
 
-mainLoopConfig :: Theme -> MainLoop.Config
-mainLoopConfig theme =
+mainLoopConfig :: Config -> Theme -> MainLoop.Config
+mainLoopConfig config theme =
     MainLoop.Config
     { cAnim =
         AnimConfig
@@ -92,4 +93,5 @@ mainLoopConfig theme =
         CursorConfig
         { cursorColor = Theme.cursorBGColor theme
         }
+    , cZoom = Config.zoom config
     }

@@ -2,7 +2,8 @@
 
 module Main where
 
-import           Control.Lens
+import           Control.Lens.Operators
+import           Control.Lens.Tuple
 import           Data.Vector.Vector2 (Vector2(..))
 import qualified Graphics.DrawingCombinators as Draw
 import           Graphics.UI.Bottle.EventMap as EventMap
@@ -11,6 +12,8 @@ import           Graphics.UI.Bottle.MetaKey (MetaKey(..), noMods)
 import           Graphics.UI.Bottle.Widget (Widget, Size, EventResult, keysEventMap, strongerEvents, respondToCursor)
 import qualified Graphics.UI.Bottle.Widgets.EventMapDoc as EventMapDoc
 import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
+import           Graphics.UI.Bottle.Zoom (Zoom)
+import qualified Graphics.UI.Bottle.Zoom as Zoom
 import qualified Graphics.UI.GLFW as GLFW
 import qualified Graphics.UI.GLFW.Utils as GLFWUtils
 
@@ -27,10 +30,11 @@ main =
 hello ::
     Functor m =>
     (EventMapDoc.Config -> Size -> Widget (m EventResult) -> IO (Widget (m EventResult))) ->
-    Size -> IO (Widget (m EventResult))
-hello addHelp size =
+    Zoom -> Size -> IO (Widget (m EventResult))
+hello addHelp zoom size =
     do
-        font <- Draw.openFont (min 100 (realToFrac (size ^. _2))) "fonts/DejaVuSans.ttf"
+        sizeFactor <- Zoom.getSizeFactor zoom
+        font <- Draw.openFont (min 100 (sizeFactor * realToFrac (size ^. _2))) "fonts/DejaVuSans.ttf"
         TextView.makeWidget (TextView.whiteText font) "Hello World!" ["hello"]
             & respondToCursor
             & strongerEvents quitEventMap

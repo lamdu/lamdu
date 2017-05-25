@@ -135,16 +135,15 @@ exportActions config evalResults =
         importAll path = Export.fileImportAll path <&> fmap ((,) (pure ())) & GUIMain.M
 
 makeRootWidget ::
-    Fonts Draw.Font -> Db -> Zoom -> IORef Settings -> EvalManager.Evaluator ->
+    Fonts Draw.Font -> Db -> IORef Settings -> EvalManager.Evaluator ->
     Config -> Theme -> Widget.Size -> IO (Widget (MainLoop.M Widget.EventResult))
-makeRootWidget fonts db zoom settingsRef evaluator config theme size =
+makeRootWidget fonts db settingsRef evaluator config theme size =
     do
         cursor <-
             DbLayout.cursor DbLayout.revisionProps
             & Transaction.getP
             & DbLayout.runDbTransaction db
-        globalEventMap <- Settings.mkEventMap (settingsChangeHandler evaluator) config settingsRef
-        let eventMap = globalEventMap `mappend` Zoom.eventMap zoom (Config.zoom config)
+        eventMap <- Settings.mkEventMap (settingsChangeHandler evaluator) config settingsRef
         evalResults <- EvalManager.getResults evaluator
         settings <- readIORef settingsRef
         let env = GUIMain.Env
@@ -198,17 +197,16 @@ runEditor opts db =
                         , EvalManager.dbMVar = dbMVar
                         , EvalManager.copyJSOutputPath = opts ^. Opts.eoCopyJSOutputPath
                         }
-                    zoom <- Zoom.make win
                     let initialSettings = Settings Settings.defaultInfoMode
                     settingsRef <- newIORef initialSettings
                     settingsChangeHandler evaluator initialSettings
                     addHelp <- EventMapDoc.makeToggledHelpAdder EventMapDoc.HelpNotShown
-                    mainLoop zoom subpixel win refreshScheduler configSampler $
+                    mainLoop subpixel win refreshScheduler configSampler $
                         \fonts config theme size ->
                             let helpStyle =
                                     Style.help (Font.fontHelp fonts)
                                     (Config.help config) (Theme.help theme)
-                            in  makeRootWidget fonts db zoom settingsRef evaluator
+                            in  makeRootWidget fonts db settingsRef evaluator
                                 config theme size
                                 <&> Widget.weakerEvents
                                     (themeEventMap (Config.changeThemeKeys config) configSampler themeRef
@@ -265,24 +263,25 @@ makeGetFonts subpixel =
                     )
 
 mainLoop ::
-    Zoom -> Font.LCDSubPixelEnabled ->
+    Font.LCDSubPixelEnabled ->
     GLFW.Window -> RefreshScheduler -> Sampler ->
     (Fonts Draw.Font -> Config -> Theme -> Widget.Size ->
     IO (Widget (MainLoop.M Widget.EventResult))) -> IO ()
-mainLoop zoom subpixel win refreshScheduler configSampler iteration =
+mainLoop subpixel win refreshScheduler configSampler iteration =
     do
         getFonts <- makeGetFonts subpixel
         lastVersionNumRef <- newIORef []
-        let makeWidget size =
+        let makeWidget zoom size =
                 do
                     sample <- ConfigSampler.getSample configSampler
                     fonts <- getFonts zoom configSampler
                     iteration fonts (sample ^. sConfig) (sample ^. sTheme) size
         mainLoopWidget win makeWidget MainLoop.Options
             { getConfig =
-                ConfigSampler.getSample configSampler
-                <&> (^. sTheme)
-                <&> Style.mainLoopConfig
+                do
+                    sample <- ConfigSampler.getSample configSampler
+                    Style.mainLoopConfig (sample ^. sConfig) (sample ^. sTheme)
+                        & return
             , tickHandler =
                 do
                     curVersionNum <-

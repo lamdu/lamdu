@@ -1,4 +1,4 @@
-{-# LANGUAGE DeriveFunctor, NoImplicitPrelude, TemplateHaskell #-}
+{-# LANGUAGE TemplateHaskell, DeriveFunctor, NoImplicitPrelude, NamedFieldPuns #-}
 module Graphics.UI.Bottle.Main
     ( mainLoopWidget, Config(..), EventResult(..), M(..), m
     , Options(..), defaultOptions
@@ -18,6 +18,8 @@ import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Main.Animation as MainAnim
 import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
+import           Graphics.UI.Bottle.Zoom (Zoom)
+import qualified Graphics.UI.Bottle.Zoom as Zoom
 import qualified Graphics.UI.GLFW as GLFW
 import           Graphics.UI.GLFW.Events as GLFWE
 
@@ -26,6 +28,7 @@ import           Prelude.Compat
 data Config = Config
     { cAnim :: MainAnim.AnimConfig
     , cCursor :: Widget.CursorConfig
+    , cZoom :: Zoom.Config
     }
 
 data EventResult a = EventResult
@@ -76,18 +79,30 @@ defaultOptions =
             Widget.CursorConfig
             { Widget.cursorColor = Draw.Color 0.5 0.5 1 0.5
             }
+        , cZoom = Zoom.defaultConfig
         }
     }
 
 mainLoopWidget ::
     GLFW.Window ->
-    (Widget.Size -> IO (Widget (M Widget.EventResult))) ->
+    (Zoom -> Widget.Size -> IO (Widget (M Widget.EventResult))) ->
     Options ->
     IO ()
 mainLoopWidget win mkWidgetUnmemod options =
     do
-        mkWidgetRef <- newIORef =<< memoIO mkWidgetUnmemod
-        let newWidget = writeIORef mkWidgetRef =<< memoIO mkWidgetUnmemod
+        zoom <- Zoom.make win
+        let mkZoomEventMap =
+                do
+                    zoomConfig <- getConfig <&> cZoom
+                    Zoom.eventMap zoom zoomConfig <&> liftIO & return
+        let mkW =
+                memoIO $ \size ->
+                do
+                    zoomEventMap <- mkZoomEventMap
+                    mkWidgetUnmemod zoom size
+                        <&> Widget.strongerEvents zoomEventMap
+        mkWidgetRef <- mkW >>= newIORef
+        let newWidget = mkW >>= writeIORef mkWidgetRef
         let getWidget size = ($ size) =<< readIORef mkWidgetRef
         let lookupEvent widget (GLFWE.EventMouseButton
                 (GLFWE.MouseButtonEvent GLFW.MouseButton'1
@@ -98,10 +113,10 @@ mainLoopWidget win mkWidgetUnmemod options =
             lookupEvent widget event =
                 E.lookup (GLFW.getClipboardString win <&> fmap Text.pack) event
                 (widget ^. Widget.eventMap)
-        MainAnim.mainLoop win (getConfig options <&> cAnim) $ \size -> MainAnim.Handlers
+        MainAnim.mainLoop win (getConfig <&> cAnim) $ \size -> MainAnim.Handlers
             { MainAnim.tickHandler =
                 do
-                    anyUpdate <- tickHandler options
+                    anyUpdate <- tickHandler
                     when anyUpdate newWidget
                     return MainAnim.EventResult
                         { MainAnim.erAnimIdMapping =
@@ -125,6 +140,8 @@ mainLoopWidget win mkWidgetUnmemod options =
                         }
             , MainAnim.makeFrame =
                 Widget.renderWithCursor
-                <$> (getConfig options <&> cCursor)
+                <$> (getConfig <&> cCursor)
                 <*> getWidget size
             }
+    where
+        Options{tickHandler, getConfig} = options
