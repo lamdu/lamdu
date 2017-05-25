@@ -66,29 +66,33 @@ data Options = Options
     , getHelpStyle :: Zoom -> IO EventMapHelp.Config
     }
 
-defaultOptions :: (Widget.Size -> IO Draw.Font) -> Options
-defaultOptions loadHelpFont =
-    Options
-    { tickHandler = return False
-    , getConfig =
-        return Config
-        { cAnim =
-            MainAnim.AnimConfig
-            { MainAnim.acTimePeriod = 0.11
-            , MainAnim.acRemainingRatioInPeriod = 0.2
+-- TODO: If moving GUI to lib,
+-- include a default help font in the lib rather than get a path.
+defaultOptions :: FilePath -> IO Options
+defaultOptions helpFontPath =
+    do
+        loadHelpFont <- memoIO $ \size -> Draw.openFont size helpFontPath
+        return Options
+            { tickHandler = return False
+            , getConfig =
+                return Config
+                { cAnim =
+                    MainAnim.AnimConfig
+                    { MainAnim.acTimePeriod = 0.11
+                    , MainAnim.acRemainingRatioInPeriod = 0.2
+                    }
+                , cCursor =
+                    Widget.CursorConfig
+                    { Widget.cursorColor = Draw.Color 0.5 0.5 1 0.5
+                    }
+                , cZoom = Zoom.defaultConfig
+                }
+            , getHelpStyle =
+                \zoom -> do
+                    zoomFactor <- Zoom.getSizeFactor zoom
+                    helpFont <- loadHelpFont (9 * zoomFactor)
+                    EventMapHelp.defaultConfig helpFont & return
             }
-        , cCursor =
-            Widget.CursorConfig
-            { Widget.cursorColor = Draw.Color 0.5 0.5 1 0.5
-            }
-        , cZoom = Zoom.defaultConfig
-        }
-    , getHelpStyle =
-        \zoom -> do
-            zoomFactor <- Zoom.getSizeFactor zoom
-            helpFont <- loadHelpFont (9 * zoomFactor)
-            EventMapHelp.defaultConfig helpFont & return
-    }
 
 mainLoopWidget ::
     GLFW.Window ->

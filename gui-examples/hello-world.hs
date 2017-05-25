@@ -19,17 +19,20 @@ import qualified Graphics.UI.GLFW.Utils as GLFWUtils
 
 import           Prelude.Compat
 
+fontPath :: FilePath
+fontPath = "fonts/DejaVuSans.ttf"
+
 openFont :: Size -> IO Draw.Font
 openFont size =
-    Draw.openFont (min 100 (realToFrac (size ^. _2))) "fonts/DejaVuSans.ttf"
+    Draw.openFont (min 100 (realToFrac (size ^. _2))) fontPath
 
 main :: IO ()
 main =
     do
         win <- GLFWUtils.createWindow "Hello World" Nothing (Vector2 800 400)
         cachedOpenFont <- memoIO openFont
-        Main.mainLoopWidget win (hello cachedOpenFont)
-            (Main.defaultOptions cachedOpenFont)
+        Main.defaultOptions fontPath
+            >>= Main.mainLoopWidget win (hello cachedOpenFont)
     & GLFWUtils.withGLFW
 
 hello ::
