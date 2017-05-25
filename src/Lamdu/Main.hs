@@ -23,6 +23,8 @@ import qualified Graphics.UI.Bottle.Main as MainLoop
 import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.EventMapDoc as EventMapDoc
+import           Graphics.UI.Bottle.Zoom (Zoom)
+import qualified Graphics.UI.Bottle.Zoom as Zoom
 import qualified Graphics.UI.GLFW as GLFW
 import qualified Graphics.UI.GLFW.Utils as GLFWUtils
 import           Lamdu.Config (Config)
@@ -44,8 +46,6 @@ import qualified Lamdu.Font as Font
 import           Lamdu.GUI.CodeEdit.Settings (Settings(..))
 import qualified Lamdu.GUI.CodeEdit.Settings as Settings
 import qualified Lamdu.GUI.Main as GUIMain
-import           Lamdu.GUI.Zoom (Zoom)
-import qualified Lamdu.GUI.Zoom as Zoom
 import qualified Lamdu.Opts as Opts
 import qualified Lamdu.Style as Style
 import           Lamdu.Themes (defaultTheme, themeEventMap)
