@@ -55,20 +55,18 @@ stdPixelsPerInch = Vector2 96 96
 stdPixelsPerMM :: Fractional a => Vector2 a
 stdPixelsPerMM = stdPixelsPerInch / 25.4
 
-getDisplayScale :: Fractional a => GLFW.Window -> IO (Vector2 a)
+getDisplayScale :: (Show a, Fractional a) => GLFW.Window -> IO (Vector2 a)
 getDisplayScale window =
     do
         monitor <- guessMonitor window
-        (widthMM, heightMM) <- GLFW.getMonitorPhysicalSize monitor
-        let physSizeMM = Vector2 widthMM heightMM <&> fromIntegral
-        videoModeSize <- getVideoModeSize monitor <&> fmap fromIntegral
-        winSize <- GLFW.getWindowSize window <&> uncurry Vector2 <&> fmap fromIntegral
-        let actualPixelsPerMM = videoModeSize / physSizeMM
-        let physScale = actualPixelsPerMM / stdPixelsPerMM
-
-        -- TODO: Is videoModeSize in "logical" or "framebuffer" pixels?
-        -- If the latter, need to delete "winScale"
-        fbSize <- GLFW.getFramebufferSize window <&> uncurry Vector2 <&> fmap fromIntegral
-        let winScale = fbSize / winSize
-
-        physScale * winScale & return
+        unitsPerMM <-
+            do
+                monitorMM <- GLFW.getMonitorPhysicalSize monitor <&> uncurry Vector2 <&> fmap fromIntegral
+                monitorUnits <- getVideoModeSize monitor <&> fmap fromIntegral
+                monitorUnits / monitorMM & return
+        pixelsPerUnit <-
+            do
+                windowUnits <- GLFW.getWindowSize window <&> uncurry Vector2 <&> fmap fromIntegral
+                windowPixels <- GLFW.getFramebufferSize window <&> uncurry Vector2 <&> fmap fromIntegral
+                windowPixels / windowUnits & return
+        pixelsPerUnit * unitsPerMM / stdPixelsPerMM & return
