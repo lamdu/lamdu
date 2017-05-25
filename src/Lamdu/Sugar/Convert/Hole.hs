@@ -21,7 +21,6 @@ import           Data.CurAndPrev (CurAndPrev(..))
 import           Data.Functor.Identity (Identity(..))
 import qualified Data.List.Class as ListClass
 import qualified Data.Map as Map
-import qualified Data.Monoid as Monoid
 import qualified Data.Set as Set
 import qualified Data.Store.Property as Property
 import           Data.Store.Transaction (Transaction)
@@ -645,28 +644,22 @@ holeResultsInject ::
     Val (Input.Payload n a) -> HoleResultVal n () ->
     StateT Infer.Context (ListT m) (HoleResultVal n IsInjected)
 holeResultsInject injectedArg val =
-    do
-        (Monoid.First (Just injectPointPl), filledVal) <-
-            val
-            & markNotInjected
-            & replaceEachUnwrappedHole inject
-            & ListClass.fromList
-            & lift
-        unify injectedType (injectPointPl ^. _1 . Infer.plType)
-            & Infer.run
-            & mapStateT eitherToListT
-        return filledVal
+    markNotInjected val
+    & replaceEachUnwrappedHole inject
+    & ListClass.fromList
+    & lift
+    & join
     where
         onInjectedPayload pl =
             ( pl ^. Input.inferred
-            , (Just (pl ^. Input.stored . Property.pVal), NotInjected)
+            , (Just (pl ^. Input.stored . Property.pVal), Injected)
             )
         inject pl =
-            ( Monoid.First (Just pl)
-            , injectedArg
-                <&> onInjectedPayload
-                & Val.payload . _2 . _2 .~ Injected
-            )
+            do
+                unify injectedType (fst pl ^. Infer.plType)
+                    & Infer.run
+                    & mapStateT eitherToListT
+                injectedArg <&> onInjectedPayload & return
         injectedType = injectedArg ^. Val.payload . Input.inferredType
 
 mkHoleResultValInjected ::
