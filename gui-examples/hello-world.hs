@@ -39,10 +39,10 @@ hello ::
     (EventMapDoc.Config -> Size -> Widget (m EventResult) ->
      IO (Widget (m EventResult))) ->
     Zoom -> Size -> IO (Widget (m EventResult))
-hello getFont addHelp zoom size =
+hello getFont addHelp zoom _size =
     do
         sizeFactor <- Zoom.getSizeFactor zoom
-        font <- getFont (sizeFactor * realToFrac (size ^. _2))
+        font <- getFont (sizeFactor * 20)
         TextView.makeWidget (TextView.whiteText font) "Hello World!" ["hello"]
             & respondToCursor
             & strongerEvents quitEventMap
