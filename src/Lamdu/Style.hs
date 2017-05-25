@@ -10,7 +10,7 @@ import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.Bottle.Main as MainLoop
 import           Graphics.UI.Bottle.Main.Animation (AnimConfig(..))
 import           Graphics.UI.Bottle.Widget (CursorConfig(..))
-import qualified Graphics.UI.Bottle.Widgets.EventMapDoc as EventMapDoc
+import qualified Graphics.UI.Bottle.Widgets.EventMapHelp as EventMapHelp
 import qualified Graphics.UI.Bottle.Widgets.TextEdit as TextEdit
 import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
 import           Lamdu.Config (Config)
@@ -29,19 +29,19 @@ data Style = Style
     , styleNum :: TextEdit.Style
     }
 
-help :: Draw.Font -> Config.Help -> Theme.Help -> EventMapDoc.Config
+help :: Draw.Font -> Config.Help -> Theme.Help -> EventMapHelp.Config
 help font config theme =
-    EventMapDoc.Config
-    { EventMapDoc.configStyle =
+    EventMapHelp.Config
+    { EventMapHelp.configStyle =
         TextView.Style
         { TextView._styleColor = helpTextColor
         , TextView._styleFont = font
         , TextView._styleUnderline = Nothing
         }
-    , EventMapDoc.configInputDocColor = helpInputDocColor
-    , EventMapDoc.configBGColor = helpBGColor
-    , EventMapDoc.configOverlayDocKeys = helpKeys
-    , EventMapDoc.configTint = helpTint
+    , EventMapHelp.configInputDocColor = helpInputDocColor
+    , EventMapHelp.configBGColor = helpBGColor
+    , EventMapHelp.configOverlayDocKeys = helpKeys
+    , EventMapHelp.configTint = helpTint
     }
     where
         Config.Help{helpKeys} = config

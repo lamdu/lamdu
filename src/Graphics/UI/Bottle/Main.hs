@@ -18,7 +18,7 @@ import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Main.Animation as MainAnim
 import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
-import qualified Graphics.UI.Bottle.Widgets.EventMapDoc as EventMapDoc
+import qualified Graphics.UI.Bottle.Widgets.EventMapHelp as EventMapHelp
 import           Graphics.UI.Bottle.Zoom (Zoom)
 import qualified Graphics.UI.Bottle.Zoom as Zoom
 import qualified Graphics.UI.GLFW as GLFW
@@ -63,7 +63,7 @@ instance MonadIO M where
 data Options = Options
     { tickHandler :: IO Bool
     , getConfig :: IO Config
-    , getHelpStyle :: Zoom -> IO EventMapDoc.Config
+    , getHelpStyle :: Zoom -> IO EventMapHelp.Config
     }
 
 defaultOptions :: (Widget.Size -> IO Draw.Font) -> Options
@@ -87,7 +87,7 @@ defaultOptions loadHelpFont =
         \zoom -> do
             zoomFactor <- Zoom.getSizeFactor zoom
             helpFont <- loadHelpFont (9 * zoomFactor)
-            EventMapDoc.defaultConfig helpFont & return
+            EventMapHelp.defaultConfig helpFont & return
     }
 
 mainLoopWidget ::
@@ -97,7 +97,7 @@ mainLoopWidget ::
     IO ()
 mainLoopWidget win mkWidgetUnmemod options =
     do
-        addHelp <- EventMapDoc.makeToggledHelpAdder EventMapDoc.HelpNotShown
+        addHelp <- EventMapHelp.makeToggledHelpAdder EventMapHelp.HelpNotShown
         zoom <- Zoom.make win
         let mkZoomEventMap =
                 do

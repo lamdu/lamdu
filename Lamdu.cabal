@@ -131,7 +131,7 @@ Executable lamdu
                   , Graphics.UI.Bottle.Widgets
                   , Graphics.UI.Bottle.Widgets.Box
                   , Graphics.UI.Bottle.Widgets.Choice
-                  , Graphics.UI.Bottle.Widgets.EventMapDoc
+                  , Graphics.UI.Bottle.Widgets.EventMapHelp
                   , Graphics.UI.Bottle.Widgets.FocusDelegator
                   , Graphics.UI.Bottle.Widgets.Grid
                   , Graphics.UI.Bottle.Widgets.GridView

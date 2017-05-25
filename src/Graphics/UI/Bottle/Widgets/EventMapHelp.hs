@@ -1,5 +1,5 @@
 {-# LANGUAGE NoImplicitPrelude, OverloadedStrings, DeriveFunctor #-}
-module Graphics.UI.Bottle.Widgets.EventMapDoc
+module Graphics.UI.Bottle.Widgets.EventMapHelp
     ( makeView
     , IsHelpShown(..)
     , makeToggledHelpAdder
