@@ -236,7 +236,7 @@ makeNewDefinitionButton =
         Theme.Pane{newDefinitionActionColor}      <- ExprGuiM.readTheme  <&> Theme.pane
 
         BWidgets.makeFocusableTextView "New..." newDefinitionButtonId
-            & WE.localEnv (WE.setTextColor newDefinitionActionColor)
+            & WE.localEnv (WE.textColor .~ newDefinitionActionColor)
             & ExprGuiM.widgetEnv
             <&> Widget.weakerEvents
                 (newDefinitionEventMap newDefinitionButtonPressKeys)

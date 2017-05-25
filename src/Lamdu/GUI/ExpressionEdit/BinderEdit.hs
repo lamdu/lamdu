@@ -99,9 +99,9 @@ mkPresentationModeEdit myId prop = do
     theme <- ExprGuiM.readTheme
     let mkPair presentationMode = do
             widget <-
-                ExprGuiM.withFgColor (Theme.presentationChoiceColor theme) .
-                ExprGuiM.widgetEnv $
                 BWidgets.makeFocusableLabel (Text.pack (show presentationMode)) myId
+                & WE.localEnv (WE.textColor .~ Theme.presentationChoiceColor theme)
+                & ExprGuiM.widgetEnv
             return (presentationMode, widget)
     pairs <- traverse mkPair [Sugar.OO, Sugar.Verbose, Sugar.Infix]
     BWidgets.makeChoiceWidget (Transaction.setP prop) pairs cur
@@ -205,10 +205,10 @@ makeScopeNavEdit binder myId curCursor =
         let mkArrow (txt, mScopeId) =
                 ExpressionGui.makeLabel txt (Widget.toAnimId myId)
                 & ExprGuiM.localEnv
-                ( case mScopeId of
-                  Nothing -> Theme.disabledColor theme
-                  Just _ -> Theme.grammarColor theme
-                  & WE.setTextColor
+                ( WE.textColor .~
+                    case mScopeId of
+                    Nothing -> Theme.disabledColor theme
+                    Just _ -> Theme.grammarColor theme
                 )
         Config.Eval{..} <- ExprGuiM.readConfig <&> Config.eval
         settings <- ExprGuiM.readSettings

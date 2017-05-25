@@ -644,7 +644,7 @@ grammarLabel text animId =
     do
         theme <- ExprGuiM.readTheme
         makeLabel text animId
-            & ExprGuiM.localEnv (WE.setTextColor (Theme.grammarColor theme))
+            & ExprGuiM.localEnv (WE.textColor .~ Theme.grammarColor theme)
 
 addValBG :: Monad m => Widget.Id -> ExprGuiM m (Widget f -> Widget f)
 addValBG = addValBGWithColor Theme.valFrameBGColor
@@ -687,7 +687,7 @@ makeCollisionSuffixLabel (Collision suffix) animId =
         theme <- ExprGuiM.readTheme
         let Theme.Name{..} = Theme.name theme
         BWidgets.makeLabel (Text.pack (show suffix)) animId
-            & WE.localEnv (WE.setTextColor collisionSuffixTextColor)
+            & WE.localEnv (WE.textColor .~ collisionSuffixTextColor)
             <&> View.scale (realToFrac <$> collisionSuffixScaleFactor)
             <&> View.backgroundColor animId collisionSuffixBGColor
             <&> Just

@@ -14,6 +14,7 @@ import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets as BWidgets
 import qualified Graphics.UI.Bottle.Widgets.Box as Box
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
+import           Graphics.UI.Bottle.WidgetsEnvT as WE
 import qualified Graphics.UI.GLFW as GLFW
 import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.Data.Definition as Definition
@@ -49,7 +50,7 @@ makeNamePartEditor color namePartStr setter myId =
         ( BWidgets.makeWordEdit (Property namePartStr setter)
           (myId `Widget.joinId` ["textedit"])
         )
-    & ExprGuiM.withFgColor color
+    & ExprGuiM.localEnv (WE.textColor .~ color)
 
 make ::
     Monad m =>

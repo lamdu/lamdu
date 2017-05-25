@@ -13,9 +13,10 @@ module Graphics.UI.Bottle.WidgetsEnvT
     , envAssignCursor, envAssignCursorPrefix
 
     , readTextStyle
-    , setTextColor
+    , textColor
     ) where
 
+import           Control.Lens (Lens')
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Monad.Trans.Class (MonadTrans(..))
@@ -86,6 +87,5 @@ envAssignCursorPrefix srcFolder dest =
 localEnv :: (Env -> Env) -> WidgetEnvT m a -> WidgetEnvT m a
 localEnv = (widgetEnvT %~) . Reader.local
 
-setTextColor :: Draw.Color -> Env -> Env
-setTextColor color =
-    envTextStyle . TextEdit.sTextViewStyle . TextView.styleColor .~ color
+textColor :: Lens' Env Draw.Color
+textColor = envTextStyle . TextEdit.sTextViewStyle . TextView.styleColor

@@ -12,6 +12,7 @@ import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import           Graphics.UI.Bottle.Widget.Aligned (AlignedWidget)
 import qualified Graphics.UI.Bottle.Widget.Aligned as AlignedWidget
+import qualified Graphics.UI.Bottle.WidgetsEnvT as WE
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
@@ -35,7 +36,7 @@ makeTagNameEdit ::
 makeTagNameEdit jumpNextEventMap tagColor tagG =
     ExpressionGui.makeNameEditWith (Widget.weakerEvents jumpNextEventMap)
     (tagG ^. Sugar.tagGName) myId
-    & ExprGuiM.withFgColor tagColor
+    & ExprGuiM.localEnv (WE.textColor .~ tagColor)
     <&> Widget.eventMap %~ E.filterChars (/= ',')
     where
         myId = WidgetIds.fromEntityId (tagG ^. Sugar.tagInstance)
@@ -84,7 +85,7 @@ makeParamTag t =
     do
         Theme.Name{..} <- Theme.name <$> ExprGuiM.readTheme
         ExpressionGui.makeNameView (t ^. Sugar.tagGName) animId
-            & ExprGuiM.withFgColor paramTagColor
+            & ExprGuiM.localEnv (WE.textColor .~ paramTagColor)
             <&> Widget.fromView
             <&> AlignedWidget.fromCenteredWidget
     where

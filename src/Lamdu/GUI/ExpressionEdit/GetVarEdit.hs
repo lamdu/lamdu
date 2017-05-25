@@ -63,7 +63,7 @@ makeParamsRecord myId paramsRecordVar =
                 (\i fieldName ->
                     Widget.joinId myId ["params", SBS8.pack (show (i::Int))]
                     & makeSimpleView fieldName
-                    & ExprGuiM.withFgColor parameterColor
+                    & ExprGuiM.localEnv (WE.textColor .~ parameterColor)
                 )
               )
             , ExpressionGui.makeLabel "}" (Widget.toAnimId myId <> ["suffix"])
@@ -200,7 +200,7 @@ makeGetBinder binderVar myId =
                     , processDefinitionWidget defForm myId
                     )
         makeSimpleView
-            <&> Lens.mapped %~ ExprGuiM.withFgColor color
+            <&> Lens.mapped %~ ExprGuiM.localEnv (WE.textColor .~ color)
             & makeNameRef myId (binderVar ^. Sugar.bvNameRef)
             <&> TreeLayout.widget %~
             Widget.weakerEvents
@@ -227,7 +227,7 @@ make getVar pl =
                     <&> Lens.mapped %~ ExpressionGui.styleNameOrigin name parameterColor
                 _ ->
                     makeSimpleView
-                    <&> Lens.mapped %~ ExprGuiM.withFgColor parameterColor
+                    <&> Lens.mapped %~ ExprGuiM.localEnv (WE.textColor .~ parameterColor)
                 & makeNameRef myId (param ^. Sugar.pNameRef)
                 where
                     name = param ^. Sugar.pNameRef . Sugar.nrName

@@ -4,7 +4,7 @@ module Lamdu.GUI.ExpressionGui.Monad
     , widgetEnv
     , makeLabel
     , StoredEntityIds(..)
-    , transaction, localEnv, withFgColor, withLocalUnderline
+    , transaction, localEnv, withLocalUnderline
     , assignCursor, assignCursorPrefix
     , makeFocusDelegator
     --
@@ -129,9 +129,6 @@ Lens.makeLenses ''ExprGuiM
 -- TODO: To lens
 localEnv :: Functor m => (WE.Env -> WE.Env) -> ExprGuiM m a -> ExprGuiM m a
 localEnv = (exprGuiM %~) . RWS.mapRWST . WE.localEnv
-
-withFgColor :: Functor m => Draw.Color -> ExprGuiM m a -> ExprGuiM m a
-withFgColor = localEnv . WE.setTextColor
 
 withLocalUnderline :: Functor m => TextView.Underline -> ExprGuiM m a -> ExprGuiM m a
 withLocalUnderline underline =
