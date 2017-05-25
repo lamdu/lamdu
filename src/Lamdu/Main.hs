@@ -10,6 +10,7 @@ import           Control.Monad (join, replicateM_)
 import           Control.Monad.IO.Class (MonadIO(..))
 import           Data.CurAndPrev (current)
 import           Data.IORef
+import           Data.MRUMemo (memoIO)
 import qualified Data.Monoid as Monoid
 import           Data.Store.Db (Db)
 import           Data.Store.Transaction (Transaction)
@@ -60,11 +61,11 @@ import           Lamdu.Prelude
 
 type T = Transaction
 
-defaultFonts :: Fonts FilePath
-defaultFonts =
-    Fonts defaultFont defaultFont defaultFont defaultFont defaultFont defaultFont
+defaultFontPath :: ConfigSampler.Sample -> FilePath
+defaultFontPath sample =
+    configDir </> "fonts/Purisa.ttf"
     where
-        defaultFont = "fonts/Purisa.ttf"
+        configDir = FilePath.takeDirectory (sample ^. ConfigSampler.sConfigPath)
 
 main :: IO ()
 main =
@@ -272,31 +273,13 @@ curSampleFonts sample =
 
 makeGetFonts :: Font.LCDSubPixelEnabled -> Sampler -> IO (IO (Fonts Draw.Font))
 makeGetFonts subpixel configSampler =
-    do
-        startFontsDef <- getFontsDef
-        fontsDefRef <- newIORef startFontsDef
-        fontsRef <- loadFonts startFontsDef >>= newIORef
-        return $
-            do
-                newFontsDef <- getFontsDef
-                curFontsDef <- readIORef fontsDefRef
-                when (newFontsDef /= curFontsDef) $
-                    do
-                        writeIORef fontsDefRef newFontsDef
-                        loadFonts newFontsDef >>= writeIORef fontsRef
-                readIORef fontsRef
+    Font.new subpixel & uncurry & memoIO
+    <&> f
     where
-        loadFonts (absFonts, defaultFontsAbs) =
-            Font.new subpixel absFonts
-            `E.catch` \E.SomeException {} ->
-            Font.new subpixel defaultFontsAbs
-        getFontsDef =
+        f cachedLoadFonts =
             do
                 sample <- ConfigSampler.getSample configSampler
-                return
-                    ( curSampleFonts sample
-                    , prependConfigPath sample defaultFonts & assignFontSizes sample
-                    )
+                cachedLoadFonts (defaultFontPath sample, curSampleFonts sample)
 
 mainLoop ::
     Font.LCDSubPixelEnabled ->

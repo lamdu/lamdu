@@ -55,5 +55,12 @@ openFont subpixel size path =
         unless exists $ E.throwIO $ MissingFont $ path ++ " does not exist!"
         load subpixel size path
 
-new :: LCDSubPixelEnabled -> Fonts (FontSize, FilePath) -> IO (Fonts Draw.Font)
-new subpixel = traverse (uncurry (openFont subpixel))
+new :: LCDSubPixelEnabled -> FilePath -> Fonts (FontSize, FilePath) -> IO (Fonts Draw.Font)
+new subpixel fallbackFontPath =
+    traverse openEach
+    where
+        openEach (fontSize, fontPath) =
+            open fontSize fontPath
+            `E.catch` \E.SomeException{} ->
+            open fontSize fallbackFontPath
+        open = openFont subpixel
