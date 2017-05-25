@@ -175,8 +175,8 @@ printGLVersion =
         ver <- GL.get GL.glVersion
         putStrLn $ "Using GL version: " ++ show ver
 
-zoomConfig :: Widget.R -> Zoom -> Theme -> IO Theme
-zoomConfig displayScale zoom theme =
+zoomTheme :: Widget.R -> Zoom -> Theme -> IO Theme
+zoomTheme displayScale zoom theme =
     do
         factor <- Zoom.getSizeFactor zoom
         return theme
@@ -216,7 +216,7 @@ runEditor opts db =
                     let configSampler =
                             rawConfigSampler
                             & ConfigSampler.onEachSample
-                                (sTheme %%~ zoomConfig displayScale zoom)
+                                (sTheme %%~ zoomTheme displayScale zoom)
                     let initialSettings = Settings Settings.defaultInfoMode
                     settingsRef <- newIORef initialSettings
                     settingsChangeHandler evaluator initialSettings
