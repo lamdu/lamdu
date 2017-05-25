@@ -1,7 +1,8 @@
-{-# LANGUAGE TemplateHaskell, DeriveFunctor, NoImplicitPrelude, NamedFieldPuns #-}
+{-# LANGUAGE TemplateHaskell, DeriveFunctor, NoImplicitPrelude, NamedFieldPuns, OverloadedStrings #-}
 module Graphics.UI.Bottle.Main
     ( mainLoopWidget, Config(..), EventResult(..), M(..), m
     , Options(..), defaultOptions
+    , quitEventMap
     ) where
 
 import           Control.Applicative (liftA2)
@@ -16,6 +17,7 @@ import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.Bottle.Direction as Direction
 import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Main.Animation as MainAnim
+import qualified Graphics.UI.Bottle.MetaKey as MetaKey
 import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.EventMapHelp as EventMapHelp
@@ -93,6 +95,10 @@ defaultOptions helpFontPath =
                     helpFont <- loadHelpFont (9 * zoomFactor)
                     EventMapHelp.defaultConfig helpFont & return
             }
+
+quitEventMap :: Functor f => Widget.EventMap (f Widget.EventResult)
+quitEventMap =
+    Widget.keysEventMap [MetaKey.cmd GLFW.Key'Q] (E.Doc ["Quit"]) (error "Quit")
 
 mainLoopWidget ::
     GLFW.Window ->

@@ -44,11 +44,5 @@ hello getFont zoom _size =
         font <- getFont (sizeFactor * 20)
         TextView.makeWidget (TextView.whiteText font) "Hello World!" ["hello"]
             & respondToCursor
-            & strongerEvents quitEventMap
+            & strongerEvents Main.quitEventMap
             & return
-
-quitEventMap :: Functor f => EventMap (f EventResult)
-quitEventMap =
-    keysEventMap
-    [MetaKey noMods GLFW.Key'Q] (EventMap.Doc ["Quit"])
-    (error "Quit")
