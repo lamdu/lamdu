@@ -253,23 +253,21 @@ prependConfigPath sample =
     where
         dir = FilePath.takeDirectory (sample ^. ConfigSampler.sConfigPath)
 
-assignFontSizes ::
-    ConfigSampler.Sample -> Fonts FilePath -> Fonts (FontSize, FilePath)
-assignFontSizes sample fonts =
+assignFontSizes :: Theme -> Fonts FilePath -> Fonts (FontSize, FilePath)
+assignFontSizes theme fonts =
     fonts
     <&> (,) baseTextSize
     & Font.lfontHelp . _1 .~ helpTextSize
     where
         baseTextSize = Theme.baseTextSize theme
         helpTextSize = Theme.helpTextSize (Theme.help theme)
-        theme = sample ^. sTheme
 
 curSampleFonts :: ConfigSampler.Sample -> Fonts (FontSize, FilePath)
 curSampleFonts sample =
     sample ^. sTheme
     & Theme.fonts
     & prependConfigPath sample
-    & assignFontSizes sample
+    & assignFontSizes (sample ^. sTheme)
 
 makeGetFonts :: Font.LCDSubPixelEnabled -> Sampler -> IO (IO (Fonts Draw.Font))
 makeGetFonts subpixel configSampler =
