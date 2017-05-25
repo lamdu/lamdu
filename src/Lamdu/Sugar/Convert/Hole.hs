@@ -658,15 +658,15 @@ holeResultsInject injectedArg val =
         return filledVal
     where
         onInjectedPayload pl =
-                ( pl ^. Input.inferred
-                , (Just (pl ^. Input.stored . Property.pVal), NotInjected)
-                )
+            ( pl ^. Input.inferred
+            , (Just (pl ^. Input.stored . Property.pVal), NotInjected)
+            )
         inject pl =
-                ( Monoid.First (Just pl)
-                , injectedArg
-                    <&> onInjectedPayload
-                    & Val.payload . _2 . _2 .~ Injected
-                )
+            ( Monoid.First (Just pl)
+            , injectedArg
+                <&> onInjectedPayload
+                & Val.payload . _2 . _2 .~ Injected
+            )
         injectedType = injectedArg ^. Val.payload . Input.inferredType
 
 mkHoleResultValInjected ::
