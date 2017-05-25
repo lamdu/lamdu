@@ -13,6 +13,7 @@ import           Control.Monad (unless)
 import           Control.Monad.IO.Class (MonadIO(..))
 import           Data.Function (on)
 import           Data.IORef (newIORef, readIORef, modifyIORef)
+import qualified Data.List as List
 import qualified Data.Map as Map
 import qualified Data.Tuple as Tuple
 import           Data.Vector.Vector2 (Vector2(..))
@@ -145,7 +146,9 @@ indent width x =
 
 makeTreeView :: Config -> Vector2 R -> [Tree View View] -> View
 makeTreeView config size =
-    GridView.horizontalAlign 1 . fmap (GridView.make . map toRow) .
+    GridView.horizontalAlign 1 .
+    List.intersperse (Spacer.makeHorizontal indentWidth) .
+    fmap (GridView.make . map toRow) .
     columns (size ^. _2) pairHeight .
     handleResult . go
     where
