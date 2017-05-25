@@ -184,7 +184,6 @@ replaceEventMap config actions =
     Sugar.SetToHole action -> mk "Delete expression" delKeys (fmap snd action)
     Sugar.SetWrapperToHole action -> mk "Delete outer hole" delKeys (fmap snd action)
     Sugar.AlreadyAHole -> mempty
-    Sugar.AlreadyAppliedToHole -> mempty
     where
         mk doc keys = mkEventMap keys (E.Doc ["Edit", doc])
         delKeys = Config.delKeys config

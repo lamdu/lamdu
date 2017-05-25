@@ -83,7 +83,6 @@ data SetToHole m
     = SetToHole (T m (UUID, EntityId))
     | SetWrapperToHole (T m (UUID, EntityId))
     | AlreadyAHole
-    | AlreadyAppliedToHole
 
 data ExtractToDestination
     = ExtractToLet EntityId

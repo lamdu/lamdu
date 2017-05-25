@@ -15,6 +15,7 @@ import qualified Lamdu.Calc.Type.FlatComposite as FlatComposite
 import           Lamdu.Calc.Type.Scheme (schemeType)
 import qualified Lamdu.Calc.Val as V
 import           Lamdu.Calc.Val.Annotated (Val)
+import qualified Lamdu.Calc.Val.Annotated as Val
 import qualified Lamdu.Expr.UniqueId as UniqueId
 import qualified Lamdu.Infer as Infer
 import           Lamdu.Sugar.Convert.Hole.Wrapper (convertAppliedHole)
@@ -39,13 +40,22 @@ convert app@(V.Apply funcI argI) exprPl =
                 argS <- lift $ ConvertM.convertSubexpression argI
                 justToLeft $ convertAppliedHole app argS exprPl
                 funcS <- ConvertM.convertSubexpression funcI & lift
-                if Lens.has (rBody . _BodyHole) argS
-                    then
-                    return
-                    ( funcS & rPayload . plActions . setToHole .~ AlreadyAppliedToHole
+                protectedSetToVal <- lift ConvertM.typeProtectedSetToVal
+                return
+                    ( do
+                        Lens.has (rBody . _BodyHole) argS & guard
+                        let dst = argI ^. Val.payload . Input.stored . Property.pVal
+                        let deleteAction =
+                                (UniqueId.toUUID dst, EntityId.ofValI dst) <$
+                                protectedSetToVal
+                                (exprPl ^. Input.stored)
+                                dst
+                        funcS
+                            & rPayload . plActions . setToHole .~ SetToHole deleteAction
+                            & return
+                        & fromMaybe funcS
                     , argS
                     )
-                    else return (funcS, argS)
         justToLeft $ convertAppliedCase funcS argS exprPl
         justToLeft $ convertLabeled funcS argS exprPl
         lift $ convertPrefix funcS argS exprPl

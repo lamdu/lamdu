@@ -65,7 +65,6 @@ genericEdit getStyle prop pl =
             Sugar.SetToHole action -> mkEditEventMap valText action
             Sugar.SetWrapperToHole action -> mkEditEventMap valText action
             Sugar.AlreadyAHole -> error "Literal val is a hole?!"
-            Sugar.AlreadyAppliedToHole -> error "Literal val is an apply?!"
         valText = prop ^. Property.pVal & format
 
 fdConfig :: Config.LiteralText -> FocusDelegator.Config
