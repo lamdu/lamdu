@@ -176,17 +176,15 @@ printGLVersion =
         ver <- GL.get GL.glVersion
         putStrLn $ "Using GL version: " ++ show ver
 
-zoomTheme :: Widget.R -> Zoom -> Theme -> IO Theme
-zoomTheme displayScale zoom theme =
+zoomTheme :: Zoom -> Theme -> IO Theme
+zoomTheme zoom theme =
     do
         factor <- Zoom.getSizeFactor zoom
         return theme
-            { Theme.baseTextSize = baseTextSize * realToFrac factor * scale
-            , Theme.help =
-              help { Theme.helpTextSize = helpTextSize * scale }
+            { Theme.baseTextSize = baseTextSize * realToFrac factor
+            , Theme.help = help { Theme.helpTextSize = helpTextSize * realToFrac factor }
             }
     where
-        scale = realToFrac displayScale
         Theme{help, baseTextSize} = theme
         Theme.Help{helpTextSize} = help
 
@@ -212,12 +210,11 @@ runEditor opts db =
                         , EvalManager.dbMVar = dbMVar
                         , EvalManager.copyJSOutputPath = opts ^. Opts.eoCopyJSOutputPath
                         }
-                    displayScale <- GLFWUtils.getDisplayScale win <&> (^. _2)
-                    zoom <- Zoom.make
+                    zoom <- Zoom.make win
                     let configSampler =
                             rawConfigSampler
                             & ConfigSampler.onEachSample
-                                (sTheme %%~ zoomTheme displayScale zoom)
+                                (sTheme %%~ zoomTheme zoom)
                     let initialSettings = Settings Settings.defaultInfoMode
                     settingsRef <- newIORef initialSettings
                     settingsChangeHandler evaluator initialSettings

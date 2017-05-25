@@ -12,6 +12,7 @@ import           Graphics.UI.Bottle.MetaKey (MetaKey)
 import qualified Graphics.UI.Bottle.MetaKey as MetaKey
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.GLFW as GLFW
+import qualified Graphics.UI.GLFW.Utils as GLFWUtils
 
 import           Lamdu.Prelude
 
@@ -52,5 +53,8 @@ eventMap (Zoom ref) Config{..} =
 getSizeFactor :: Zoom -> IO Widget.R
 getSizeFactor (Zoom ref) = readIORef ref
 
-make :: IO Zoom
-make = newIORef 1 <&> Zoom
+make :: GLFW.Window -> IO Zoom
+make win =
+    do
+        displayScale <- GLFWUtils.getDisplayScale win
+        newIORef (displayScale ^. _2) <&> Zoom
