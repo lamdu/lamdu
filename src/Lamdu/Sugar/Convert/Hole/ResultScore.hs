@@ -7,6 +7,7 @@ import qualified Control.Lens as Lens
 import qualified Data.Map as Map
 import           Lamdu.Calc.Type (Type(..), Composite(..))
 import           Lamdu.Calc.Val.Annotated (Val(..))
+import qualified Lamdu.Calc.Val.Annotated as Val
 import qualified Lamdu.Calc.Val as V
 import qualified Lamdu.Expr.Lens as ExprLens
 import qualified Lamdu.Infer as Infer
@@ -28,18 +29,14 @@ compositeTypeScore (CExtend _ t r) =
 
 resultScore :: Val Infer.Payload -> [Int]
 resultScore val@(Val pl body) =
-    bodyTopLevelScore body :
+    numWrappers val :
+    (if Lens.has ExprLens.valBodyHole body then 1 else 0) :
     resultTypeScore (pl ^. Infer.plType) ++
-    [length (val ^.. ExprLens.payloadsOf ExprLens.valBodyHole)] ++
-    (bodyParts body >>= resultScore)
+    (body ^.. Lens.traversed >>= resultScore)
 
-bodyParts :: V.Body a -> [a]
-bodyParts (V.BApp (V.Apply f a)) = [a, f]
-bodyParts x = x ^.. Lens.traversed
-
-bodyTopLevelScore :: V.Body (Val a) -> Int
-bodyTopLevelScore body =
-    case body of
-    V.BApp (V.Apply (Val _ (V.BLeaf V.LHole)) _) -> 10
-    V.BLeaf V.LHole -> 1
-    _ -> 0
+numWrappers :: Val a -> Int
+numWrappers val =
+    sum (val ^.. Val.body . traverse <&> numWrappers) +
+    if Lens.has (ExprLens.valApply . V.applyFunc . ExprLens.valHole) val
+    then 1
+    else 0

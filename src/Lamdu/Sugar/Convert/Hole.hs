@@ -650,16 +650,27 @@ holeResultsInject injectedArg val =
     & lift
     & join
     where
+        inject pl =
+            ListClass.fromList
+            [ do
+                unify injectedType (fst pl ^. Infer.plType)
+                    & Infer.run
+                    & mapStateT eitherToListT
+                return injected
+            , V.Apply
+                (Val (fst pl & Infer.plType %~ (`T.TFun` injectedType), (Nothing, NotInjected)) (V.BLeaf V.LHole))
+                injected
+                & V.BApp & Val (fst pl, (Nothing, NotInjected))
+                & return
+            ]
+            & lift
+            & join
+            & mapStateT (ListClass.take 1)
+        injected = injectedArg <&> onInjectedPayload
         onInjectedPayload pl =
             ( pl ^. Input.inferred
             , (Just (pl ^. Input.stored . Property.pVal), Injected)
             )
-        inject pl =
-            do
-                unify injectedType (fst pl ^. Infer.plType)
-                    & Infer.run
-                    & mapStateT eitherToListT
-                injectedArg <&> onInjectedPayload & return
         injectedType = injectedArg ^. Val.payload . Input.inferredType
 
 mkHoleResultValInjected ::
