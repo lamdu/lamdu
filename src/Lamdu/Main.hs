@@ -248,14 +248,15 @@ curSampleFonts sample =
     & prependConfigPath sample
     & assignFontSizes (sample ^. sTheme)
 
-makeGetFonts :: Font.LCDSubPixelEnabled -> IO (Zoom -> Sampler -> IO (Fonts Draw.Font))
+makeGetFonts ::
+    Font.LCDSubPixelEnabled ->
+    IO (Zoom -> ConfigSampler.Sample -> IO (Fonts Draw.Font))
 makeGetFonts subpixel =
     Font.new subpixel & uncurry & memoIO
     <&> f
     where
-        f cachedLoadFonts zoom configSampler =
+        f cachedLoadFonts zoom sample =
             do
-                sample <- ConfigSampler.getSample configSampler
                 sizeFactor <- Zoom.getSizeFactor zoom
                 cachedLoadFonts
                     ( defaultFontPath sample
@@ -274,7 +275,7 @@ mainLoop subpixel win refreshScheduler configSampler iteration =
         let makeWidget zoom size =
                 do
                     sample <- ConfigSampler.getSample configSampler
-                    fonts <- getFonts zoom configSampler
+                    fonts <- getFonts zoom sample
                     iteration fonts (sample ^. sConfig) (sample ^. sTheme) size
         mainLoopWidget win makeWidget MainLoop.Options
             { getConfig =
