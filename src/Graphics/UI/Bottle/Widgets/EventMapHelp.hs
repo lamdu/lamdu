@@ -54,7 +54,7 @@ defaultConfig font =
         }
     , configInputDocColor = Draw.Color 0.1 0.7 0.7 1
     , configBGColor = Draw.Color 0.2 0.15 0.1 0.5
-    , configOverlayDocKeys = [MetaKey noMods GLFW.Key'H]
+    , configOverlayDocKeys = [MetaKey noMods GLFW.Key'F1]
     , configTint = Draw.Color 1 1 1 0.8
     }
 
@@ -129,7 +129,7 @@ makeView size eventMap config animId =
     <&> (_1 %~ (^. E.docStrs)) . Tuple.swap
     & groupInputDocs & groupTree
     <&> makeTextViews config animId
-    & makeTreeView size
+    & makeTreeView config size
 
 makeTooltip :: Config -> [ModKey] -> AnimId -> View
 makeTooltip config helpKeys animId =
@@ -143,8 +143,8 @@ indent :: R -> View -> View
 indent width x =
     GridView.horizontalAlign 0 [Spacer.makeHorizontal width, x]
 
-makeTreeView :: Vector2 R -> [Tree View View] -> View
-makeTreeView size =
+makeTreeView :: Config -> Vector2 R -> [Tree View View] -> View
+makeTreeView config size =
     GridView.horizontalAlign 1 . fmap (GridView.make . map toRow) .
     columns (size ^. _2) pairHeight .
     handleResult . go
@@ -158,10 +158,12 @@ makeTreeView size =
         fromTree (Leaf inputDocsView) = ([], [inputDocsView])
         fromTree (Branch titleView trees) =
             ( (titleView, GridView.verticalAlign 1 inputDocs) :
-                (Lens.traversed . _1 %~ indent 10) titles
+                (Lens.traversed . _1 %~ indent indentWidth) titles
             , [] )
             where
                 (titles, inputDocs) = go trees
+        indentWidth =
+            configStyle config ^. TextView.styleFont & Draw.fontHeight
 
 addToBottomRight :: View -> Widget.Size -> Widget f -> Widget f
 addToBottomRight (View eventMapSize eventMapLayers) size =
