@@ -21,7 +21,6 @@ where
 
 import           Control.Applicative ((<|>))
 import qualified Control.Lens as Lens
-import           Control.Monad.Trans.Class (MonadTrans(..))
 import           Control.Monad.Trans.Reader (ReaderT, runReaderT)
 import qualified Control.Monad.Trans.Reader as Reader
 import           Control.Monad.Trans.State (StateT, runStateT)
