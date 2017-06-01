@@ -316,18 +316,22 @@ eventMap cursor str myId =
 
 getCursor ::
     (MonadReader env m, Widget.HasCursor env) =>
-    Text -> Widget.Id -> m (Maybe Int)
-getCursor str myId =
-    Widget.subId ?? myId <&> fmap decodeCursor
+    m (Text -> Widget.Id -> Maybe Int)
+getCursor =
+    Widget.subId <&> f
     where
-        decodeCursor [x] = min (Text.length str) $ BinUtils.decodeS x
-        decodeCursor _ = Text.length str
+        f sub str myId =
+            sub myId <&> decodeCursor
+            where
+                decodeCursor [x] = min (Text.length str) $ BinUtils.decodeS x
+                decodeCursor _ = Text.length str
 
 make ::
     (MonadReader env m, Widget.HasCursor env) =>
-    EmptyStrings -> Style -> Text -> Widget.Id -> m (Widget (Text, Widget.EventResult))
-make empty style str myId =
-    getCursor str myId
-    <&> \case
+    m (Style -> EmptyStrings -> Text -> Widget.Id -> Widget (Text, Widget.EventResult))
+make =
+    getCursor
+    <&> \get style empty str myId ->
+    case get str myId of
     Nothing -> makeUnfocused empty style str myId
     Just pos -> makeFocused pos empty style str myId

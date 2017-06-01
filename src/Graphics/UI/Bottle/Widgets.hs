@@ -39,7 +39,7 @@ makeTextEdit ::
 makeTextEdit empty text myId =
     do
         style <- WE.readTextStyle
-        TextEdit.make empty style text myId
+        TextEdit.make ?? style ?? empty ?? text ?? myId
 
 makeTextEditor ::
     (Monad m, Applicative f) =>

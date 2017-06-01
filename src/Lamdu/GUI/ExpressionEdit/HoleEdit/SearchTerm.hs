@@ -59,7 +59,7 @@ make holeInfo =
         theme <- ExprGuiM.readTheme
         let holeConfig@Config.Hole{..} = Config.hole config
         let Theme.Hole{..} = Theme.hole theme
-        textCursor <- TextEdit.getCursor searchTerm hidOpenSearchTerm
+        textCursor <- TextEdit.getCursor ?? searchTerm ?? hidOpenSearchTerm
         makeSearchTermPropEdit WidgetIds{..} (HoleInfo.hiSearchTermProperty holeInfo)
             <&> Widget.eventMap
                 %~ EventMap.disallowCharsFromSearchTerm holeConfig holeInfo textCursor
