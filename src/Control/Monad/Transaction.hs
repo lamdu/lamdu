@@ -8,6 +8,7 @@ module Control.Monad.Transaction
     ) where
 
 import           Control.Monad.Trans.Maybe (MaybeT)
+import           Control.Monad.Trans.Reader (ReaderT)
 import           Control.Monad.Trans.State (StateT)
 import           Data.Binary (Binary)
 import           Data.Store.IRef (IRef)
@@ -23,11 +24,9 @@ class Monad m => MonadTransaction n m | m -> n where
 instance Monad m => MonadTransaction m (T m) where
     transaction = id
 
-instance MonadTransaction n m => MonadTransaction n (MaybeT m) where
-    transaction = lift . transaction
-
-instance MonadTransaction n m => MonadTransaction n (StateT s m) where
-    transaction = lift . transaction
+instance MonadTransaction n m => MonadTransaction n (MaybeT    m) where transaction = lift . transaction
+instance MonadTransaction n m => MonadTransaction n (StateT  s m) where transaction = lift . transaction
+instance MonadTransaction n m => MonadTransaction n (ReaderT r m) where transaction = lift . transaction
 
 getP :: (Monad n, MonadTransaction n m) => Transaction.MkProperty n a -> m a
 getP = transaction . Transaction.getP

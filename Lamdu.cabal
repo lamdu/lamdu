@@ -139,7 +139,6 @@ Executable lamdu
                   , Graphics.UI.Bottle.Widgets.TextEdit
                   , Graphics.UI.Bottle.Widgets.TextEdit.Property
                   , Graphics.UI.Bottle.Widgets.TextView
-                  , Lamdu.GUI.WidgetsEnvT
                   , Graphics.UI.Bottle.Zoom
                   , Graphics.UI.GLFW.Events
                   , Graphics.UI.GLFW.Instances
