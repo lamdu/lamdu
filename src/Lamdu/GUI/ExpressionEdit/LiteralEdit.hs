@@ -3,7 +3,6 @@ module Lamdu.GUI.ExpressionEdit.LiteralEdit
     ( make
     ) where
 
-
 import qualified Control.Monad.Reader as Reader
 import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
@@ -81,7 +80,7 @@ textEdit ::
 textEdit prop pl =
     do
         config <- ExprGuiM.readConfig <&> Config.literalText
-        style <- ExprGuiM.readStyle <&> Style.styleText
+        style <- ExprGuiM.readStyle <&> (^. Style.styleText)
         edit <- do
             left <- TextView.makeLabel ?? "“" ?? Widget.toAnimId myId <&> Widget.fromView
             text <- TextEdits.make ?? empty ?? prop ?? innerId
@@ -112,8 +111,8 @@ make ::
     ExprGuiM m (ExpressionGui m)
 make lit pl =
     ( case lit of
-        Sugar.LiteralNum x -> genericEdit Style.styleNum x
-        Sugar.LiteralBytes x -> genericEdit Style.styleBytes x
+        Sugar.LiteralNum x -> genericEdit (^. Style.styleNum) x
+        Sugar.LiteralBytes x -> genericEdit (^. Style.styleBytes) x
         Sugar.LiteralText x -> textEdit x
     ) pl
     & ExpressionGui.stdWrap pl

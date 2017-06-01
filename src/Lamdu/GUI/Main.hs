@@ -97,6 +97,6 @@ make env =
             }
         widgetEnv = WE.Env
             { WE._envCursor = cursor
-            , WE._envTextStyle = Style.styleBase style
+            , WE._envTextStyle = style ^. Style.styleBase
             , WE._stdSpacing = Theme.stdSpacing theme
             }
