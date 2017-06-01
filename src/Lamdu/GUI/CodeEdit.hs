@@ -45,7 +45,6 @@ import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
 import qualified Lamdu.GUI.RedundantAnnotations as RedundantAnnotations
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.GUI.WidgetsEnvT (WidgetEnvT)
-import qualified Lamdu.GUI.WidgetsEnvT as WE
 import           Lamdu.Style (Style)
 import qualified Lamdu.Sugar.Convert as SugarConvert
 import qualified Lamdu.Sugar.Names.Add as AddNames
@@ -210,7 +209,7 @@ makeNewDefinitionEventMap ::
     WidgetEnvT (T m) ([MetaKey] -> Widget.EventMap (T m Widget.EventResult))
 makeNewDefinitionEventMap cp =
     do
-        curCursor <- WE.readCursor
+        curCursor <- Lens.view Widget.cursor
         let newDefinition =
                 do
                     holeI <- DataOps.newHole

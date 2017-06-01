@@ -3,8 +3,6 @@ module Lamdu.GUI.WidgetsEnvT
     ( WidgetEnvT, runWidgetEnvT
     , mapWidgetEnvT
 
-    , readCursor
-
     , Env(..), envCursor, envTextStyle
 
     , readEnv
@@ -55,9 +53,6 @@ mapWidgetEnvT = (widgetEnvT %~) . Reader.mapReaderT
 
 readEnv :: Monad m => WidgetEnvT m Env
 readEnv = WidgetEnvT Reader.ask
-
-readCursor :: Monad m => WidgetEnvT m Widget.Id
-readCursor = readEnv <&> (^. envCursor)
 
 readTextStyle :: Monad m => WidgetEnvT m TextEdit.Style
 readTextStyle = readEnv <&> (^. envTextStyle)

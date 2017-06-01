@@ -166,7 +166,7 @@ withVerbose = exprGuiM %~ RWS.local (aVerbose .~ True)
 
 mkPrejumpPosSaver :: Monad m => ExprGuiM m (T m ())
 mkPrejumpPosSaver =
-    DataOps.savePreJumpPosition <$> readCodeAnchors <*> widgetEnv WE.readCursor
+    DataOps.savePreJumpPosition <$> readCodeAnchors <*> Lens.view Widget.cursor
 
 -- | Vertical spacer as ratio of line height
 vspacer :: Monad m => (Theme -> Double) -> ExprGuiM m (Widget f)
