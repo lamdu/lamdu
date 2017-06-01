@@ -1,6 +1,6 @@
 {-# LANGUAGE NoImplicitPrelude, GeneralizedNewtypeDeriving, TemplateHaskell, OverloadedStrings #-}
 module Lamdu.GUI.ExpressionGui.Monad
-    ( ExprGuiM
+    ( ExprGuiM, Askable
     , widgetEnv
     , makeLabel
     , StoredEntityIds(..)

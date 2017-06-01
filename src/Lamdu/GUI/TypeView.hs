@@ -29,7 +29,6 @@ import           Lamdu.GUI.Precedence (ParentPrecedence(..), MyPrecedence(..), n
 import qualified Lamdu.GUI.Precedence as Precedence
 import qualified Lamdu.GUI.Spacing as Spacing
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
-import           Lamdu.GUI.WidgetsEnvT (WidgetEnvT)
 import           Lamdu.Sugar.OrderTags (orderedFlatComposite)
 import           System.Random (Random, random)
 import qualified System.Random as Random
@@ -39,16 +38,13 @@ import           Lamdu.Prelude
 type T = Transaction
 newtype M m a = M
     { runM :: StateT Random.StdGen (ExprGuiM m) a
-    } deriving (Functor, Applicative, Monad)
+    } deriving (Functor, Applicative, Monad, MonadReader (ExprGuiM.Askable m))
 egui :: Monad m => ExprGuiM m a -> M m a
 egui = M . lift
 transaction :: Monad m => T m a -> M m a
 transaction = egui . ExprGuiM.transaction
 rand :: (Random r, Monad m) => M m r
 rand = M $ state random
-
-wenv :: Monad m => WidgetEnvT (T m) a -> M m a
-wenv = egui . ExprGuiM.widgetEnv
 
 split :: Monad m => M m a -> M m a
 split (M act) =
@@ -63,7 +59,7 @@ text :: Monad m => Text -> M m View
 text str =
     do
         animId <- randAnimId
-        wenv $ TextView.make ?? Text.replace "\0" "" str ?? animId
+        TextView.make ?? Text.replace "\0" "" str ?? animId
 
 showIdentifier :: Monad m => Identifier -> M m View
 showIdentifier (Identifier bs) = text (decodeUtf8 bs)

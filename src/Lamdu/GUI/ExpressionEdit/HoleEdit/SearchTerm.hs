@@ -23,7 +23,6 @@ import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import           Lamdu.GUI.Hover (addBackground)
-import qualified Lamdu.GUI.WidgetsEnvT as WE
 
 import           Lamdu.Prelude
 
@@ -31,9 +30,9 @@ textEditNoEmpty :: TextEdit.EmptyStrings
 textEditNoEmpty = TextEdit.EmptyStrings "  " "  "
 
 makeSearchTermPropEdit ::
-    Monad m =>
-    WidgetIds -> Property m Text ->
-    WE.WidgetEnvT m (Widget (m Widget.EventResult))
+    (MonadReader env m, Widget.HasCursor env, TextEdit.HasStyle env, Monad f) =>
+    WidgetIds -> Property f Text ->
+    m (Widget (f Widget.EventResult))
 makeSearchTermPropEdit WidgetIds{..} searchTermProp =
     TextEdit.make ?? textEditNoEmpty ?? searchTerm ?? hidOpenSearchTerm
     <&> Widget.events %~ \(newSearchTerm, eventRes) ->
@@ -65,7 +64,6 @@ make holeInfo =
             <&> addBackground (Widget.toAnimId hidOpenSearchTerm) holeSearchTermBGColor
             <&> TreeLayout.fromCenteredWidget
             <&> TreeLayout.alignment . _1 .~ 0
-            & ExprGuiM.widgetEnv
     where
       WidgetIds{..} = hiIds holeInfo
       searchTerm = HoleInfo.hiSearchTerm holeInfo
