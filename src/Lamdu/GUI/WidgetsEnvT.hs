@@ -1,6 +1,6 @@
-{-# LANGUAGE NoImplicitPrelude, TemplateHaskell, GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE NoImplicitPrelude, TemplateHaskell, GeneralizedNewtypeDeriving, FlexibleInstances, MultiParamTypeClasses, UndecidableInstances #-}
 module Lamdu.GUI.WidgetsEnvT
-    ( WidgetEnvT, runWidgetEnvT
+    ( WidgetEnvT, hoist, runWidgetEnvT
     , mapWidgetEnvT
 
     , Env(..), envCursor, envTextStyle
@@ -14,6 +14,7 @@ import qualified Control.Lens as Lens
 import           Control.Monad.Reader (ReaderT, runReaderT)
 import qualified Control.Monad.Reader as Reader
 import           Control.Monad.Trans.Class (MonadTrans(..))
+import           Control.Monad.Transaction (MonadTransaction(..), Transaction)
 import           Data.Vector.Vector2 (Vector2)
 import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.Bottle.Widget as Widget
@@ -22,6 +23,8 @@ import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
 import qualified Lamdu.GUI.Spacing as Spacing
 
 import           Lamdu.Prelude
+
+type T = Transaction
 
 data Env = Env
     { _envCursor :: Widget.Id
@@ -40,8 +43,24 @@ newtype WidgetEnvT m a = WidgetEnvT
     } deriving (Functor, Applicative, Monad, MonadTrans, MonadReader Env)
 Lens.makeLenses ''WidgetEnvT
 
+instance MonadTransaction n m => MonadTransaction n (WidgetEnvT m) where
+    transaction = lift . transaction
+
 runWidgetEnvT :: Env -> WidgetEnvT m a -> m a
 runWidgetEnvT env (WidgetEnvT action) = runReaderT action env
+
+hoist ::
+    (MonadReader env m, Widget.HasCursor env,
+     TextEdit.HasStyle env, Spacing.HasStdSpacing env,
+     MonadTransaction n m) =>
+    WidgetEnvT (T n) b -> m b
+hoist action = do
+    env <-
+        Env
+        <$> Lens.view Widget.cursor
+        <*> Lens.view TextEdit.style
+        <*> Lens.view Spacing.stdSpacing
+    runWidgetEnvT env action & transaction
 
 mapWidgetEnvT :: (m a -> n a) -> WidgetEnvT m a -> WidgetEnvT n a
 mapWidgetEnvT = (widgetEnvT %~) . Reader.mapReaderT

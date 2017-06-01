@@ -1,7 +1,6 @@
-{-# LANGUAGE NoImplicitPrelude, GeneralizedNewtypeDeriving, TemplateHaskell, OverloadedStrings, MultiParamTypeClasses, FlexibleInstances #-}
+{-# LANGUAGE NoImplicitPrelude, GeneralizedNewtypeDeriving, TemplateHaskell, OverloadedStrings, MultiParamTypeClasses, FlexibleInstances, FlexibleContexts #-}
 module Lamdu.GUI.ExpressionGui.Monad
     ( ExprGuiM, Askable
-    , widgetEnv
     , makeLabel
     , StoredEntityIds(..)
     , withLocalUnderline
@@ -36,6 +35,7 @@ import qualified Data.Char as Char
 import           Data.CurAndPrev (CurAndPrev)
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Text.Lens as TextLens
+import           Data.Vector.Vector2 (Vector2)
 import qualified Graphics.DrawingCombinators as Draw
 import           Graphics.UI.Bottle.Animation.Id (AnimId)
 import qualified Graphics.UI.Bottle.EventMap as E
@@ -59,8 +59,6 @@ import           Lamdu.GUI.Precedence (Precedence)
 import qualified Lamdu.GUI.Precedence as Precedence
 import qualified Lamdu.GUI.Spacing as Spacing
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
-import           Lamdu.GUI.WidgetsEnvT (WidgetEnvT)
-import qualified Lamdu.GUI.WidgetsEnvT as WE
 import           Lamdu.Style (Style)
 import qualified Lamdu.Sugar.Types as Sugar
 
@@ -98,7 +96,9 @@ newtype StoredEntityIds = StoredEntityIds [Sugar.EntityId]
     deriving (Monoid)
 
 data Askable m = Askable
-    { _aWidgetEnv :: WE.Env
+    { _aCursor :: Widget.Id
+    , _aTextEditStyle :: TextEdit.Style
+    , _aStdSpacing :: Vector2 Double
     , _aSettings :: Settings
     , _aConfig :: Config
     , _aTheme :: Theme
@@ -126,11 +126,10 @@ Lens.makeLenses ''ExprGuiM
 
 instance Monad m => MonadTransaction m (ExprGuiM m) where transaction = ExprGuiM . lift
 
-instance Widget.HasCursor (Askable m) where cursor = aWidgetEnv . Widget.cursor
-instance TextView.HasStyle (Askable m) where style = aWidgetEnv . TextView.style
-instance TextEdit.HasStyle (Askable m) where style = aWidgetEnv . TextEdit.style
-instance Spacing.HasStdSpacing (Askable m) where
-    stdSpacing = aWidgetEnv . Spacing.stdSpacing
+instance Widget.HasCursor (Askable m) where cursor = aCursor
+instance TextView.HasStyle (Askable m) where style = aTextEditStyle . TextView.style
+instance TextEdit.HasStyle (Askable m) where style = aTextEditStyle
+instance Spacing.HasStdSpacing (Askable m) where stdSpacing = aStdSpacing
 
 withLocalUnderline :: Monad m => TextView.Underline -> ExprGuiM m a -> ExprGuiM m a
 withLocalUnderline underline = Reader.local (TextView.underline ?~ underline)
@@ -199,17 +198,22 @@ advanceDepth f animId action =
         mkErrorWidget = TextView.make ?? "..." ?? animId
 
 run ::
-    Monad m =>
+    (Functor m, MonadTransaction m n, MonadReader env n,
+     Widget.HasCursor env, TextEdit.HasStyle env, Spacing.HasStdSpacing env) =>
     (ExprGuiT.SugarExpr m -> ExprGuiM m (ExpressionGui m)) ->
     Anchors.CodeProps m -> Config -> Theme -> Settings -> Style ->
     ExprGuiM m a ->
-    WidgetEnvT (T m) a
+    n a
 run makeSubexpr codeAnchors config theme settings style (ExprGuiM action) =
     do
-        env <- WE.readEnv
+        cursor <- Lens.view Widget.cursor
+        textEditStyle <- Lens.view TextEdit.style
+        stdSpacing <- Lens.view Spacing.stdSpacing
         runRWST action
             Askable
-            { _aWidgetEnv = env
+            { _aCursor = cursor
+            , _aTextEditStyle = textEditStyle
+            , _aStdSpacing = stdSpacing
             , _aConfig = config
             , _aTheme = theme
             , _aSettings = settings
@@ -224,15 +228,10 @@ run makeSubexpr codeAnchors config theme settings style (ExprGuiM action) =
             }
             ()
             <&> (\(x, (), _output) -> x)
-            & lift
+            & transaction
 
 makeLabel :: Monad m => Text -> AnimId -> ExprGuiM m View
 makeLabel text animId = TextView.makeLabel ?? text ?? animId
-
-widgetEnv :: Monad m => WidgetEnvT (T m) a -> ExprGuiM m a
-widgetEnv action = do
-    env <- ExprGuiM $ Lens.view aWidgetEnv
-    WE.runWidgetEnvT env action & transaction
 
 -- Used vars:
 

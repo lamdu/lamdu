@@ -46,6 +46,7 @@ import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
 import qualified Lamdu.GUI.RedundantAnnotations as RedundantAnnotations
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.GUI.WidgetsEnvT (WidgetEnvT)
+import qualified Lamdu.GUI.WidgetsEnvT as WE
 import           Lamdu.Style (Style)
 import qualified Lamdu.Sugar.Convert as SugarConvert
 import qualified Lamdu.Sugar.Names.Add as AddNames
@@ -163,7 +164,7 @@ make env =
         replGui <- makeReplEdit env (workArea ^. Sugar.waRepl)
         panesEdits <- workArea ^. Sugar.waPanes & traverse (makePaneEdit env)
         newDefinitionButton <- makeNewDefinitionButton <&> mLiftWidget
-        eventMap <- panesEventMap env & ExprGuiM.widgetEnv
+        eventMap <- panesEventMap env & WE.hoist
         vspace <- ExpressionGui.stdVSpace
         return $ \width ->
             ExpressionGui.render width replGui ^. AlignedWidget.widget
@@ -231,7 +232,7 @@ makeNewDefinitionButton =
     do
         codeAnchors <- ExprGuiM.readCodeAnchors
         newDefinitionEventMap <-
-            makeNewDefinitionEventMap codeAnchors & ExprGuiM.widgetEnv
+            makeNewDefinitionEventMap codeAnchors & WE.hoist
 
         Config.Pane{newDefinitionButtonPressKeys} <- ExprGuiM.readConfig <&> Config.pane
         Theme.Pane{newDefinitionActionColor}      <- ExprGuiM.readTheme  <&> Theme.pane

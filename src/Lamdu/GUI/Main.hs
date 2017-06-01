@@ -28,7 +28,6 @@ import qualified Lamdu.GUI.Scroll as Scroll
 import qualified Lamdu.GUI.Spacing as Spacing
 import qualified Lamdu.GUI.VersionControl as VersionControlGUI
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
-import           Lamdu.GUI.WidgetsEnvT (runWidgetEnvT)
 import qualified Lamdu.GUI.WidgetsEnvT as WE
 import           Lamdu.Style (Style)
 import qualified Lamdu.Style as Style
@@ -60,7 +59,7 @@ make env =
         actions <-
             VersionControl.makeActions
             <&> VersionControl.Actions.hoist CodeEdit.mLiftTrans
-        runWidgetEnvT widgetEnv $
+        WE.runWidgetEnvT widgetEnv $
             do
                 branchGui <-
                     VersionControlGUI.make (Config.versionControl config) (Theme.versionControl theme)
