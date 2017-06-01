@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, OverloadedStrings, RecordWildCards #-}
+{-# LANGUAGE NoImplicitPrelude, OverloadedStrings #-}
 module Graphics.UI.Bottle.Widgets.FocusDelegator
     ( FocusEntryTarget(..)
     , Config(..)
@@ -25,7 +25,7 @@ data Config = Config
     }
 
 setFocusChildEventMap :: Config -> Widget a -> Widget a
-setFocusChildEventMap Config{..} widgetRecord =
+setFocusChildEventMap config widgetRecord =
     widgetRecord
     -- We're not delegating, so replace the child eventmap with an
     -- event map to either delegate to it (if it is enterable) or to
@@ -36,7 +36,8 @@ setFocusChildEventMap Config{..} widgetRecord =
             case widgetRecord ^. Widget.mEnter of
             Nothing -> mempty
             Just childEnter ->
-                E.keyPresses (focusChildKeys <&> toModKey) focusChildDoc $
+                E.keyPresses (focusChildKeys config <&> toModKey)
+                (focusChildDoc config) $
                 childEnter Direction.Outside ^. Widget.enterResultEvent
 
 modifyEntry ::
@@ -62,7 +63,7 @@ make ::
     (MonadReader env m, Widget.HasCursor env, Applicative f) =>
     Config -> FocusEntryTarget -> Widget.Id ->
     m (Widget (f Widget.EventResult) -> Widget (f Widget.EventResult))
-make config@Config{..} focusEntryTarget myId =
+make config focusEntryTarget myId =
     do
         cursor <- Lens.view Widget.cursor
         return $ \childWidget ->
@@ -87,5 +88,7 @@ make config@Config{..} focusEntryTarget myId =
                     childIsFocused = Widget.isFocused childWidget
                     selfIsFocused = myId == cursor
                     focusParentEventMap =
-                        Widget.keysEventMapMovesCursor focusParentKeys focusParentDoc
+                        Widget.keysEventMapMovesCursor
+                        (focusParentKeys config)
+                        (focusParentDoc config)
                         (pure myId)

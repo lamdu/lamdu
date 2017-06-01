@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, TemplateHaskell, RecordWildCards #-}
+{-# LANGUAGE NoImplicitPrelude, TemplateHaskell #-}
 -- | A vertical-expand (combo-like) choice widget
 
 module Graphics.UI.Bottle.Widgets.Choice
@@ -37,23 +37,23 @@ toBox ::
     Applicative f => Config -> Bool ->
     Widget.Id -> [(IsSelected, f (), Widget (f Widget.EventResult))] ->
     Widget (f Widget.EventResult)
-toBox Config{..} selfFocused myId childrenRecords =
+toBox config selfFocused myId childrenRecords =
     childrenRecords
     <&> applyAction
     & filterVisible
     <&> colorize
-    & Box.makeAlign 0 cwcOrientation
+    & Box.makeAlign 0 (cwcOrientation config)
     & snd
     where
         filterVisible
             | anyChildFocused || (autoExpand && selfFocused) = id
             | otherwise = filter ((== Selected) . fst)
-        autoExpand = Lens.has _AutoExpand cwcExpandMode
+        autoExpand = cwcExpandMode config & Lens.has _AutoExpand
         colorize (isSelected, widget)
             | anyChildFocused = widget -- focus shows selection already
             | otherwise = -- need to show selection even as focus is elsewhere
                 widget
-                & case cwcExpandMode of
+                & case cwcExpandMode config of
                     AutoExpand color
                         | isSelected == Selected ->
                             Widget.backgroundColor (Widget.toAnimId myId) color
@@ -72,9 +72,9 @@ make ::
     (MonadReader env m, Widget.HasCursor env, Applicative f) =>
     Config -> [(IsSelected, f (), Widget (f Widget.EventResult))] ->
     Widget.Id -> m (Widget (f Widget.EventResult))
-make Config{..} children myId =
+make config children myId =
     do
         selfFocused <- Widget.subId ?? myId <&> Lens.has Lens._Just
-        let childrenBox = toBox Config{..} selfFocused myId children
-        FocusDelegator.make cwcFDConfig
+        let childrenBox = toBox config selfFocused myId children
+        FocusDelegator.make (cwcFDConfig config)
             FocusDelegator.FocusEntryParent myId ?? childrenBox
