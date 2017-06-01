@@ -7,6 +7,7 @@ module Lamdu.GUI.CodeEdit
 
 import           Control.Applicative (liftA2)
 import qualified Control.Lens as Lens
+import qualified Control.Monad.Reader as Reader
 import           Data.CurAndPrev (CurAndPrev(..))
 import           Data.Functor.Identity (Identity(..))
 import qualified Data.List as List
@@ -236,8 +237,7 @@ makeNewDefinitionButton =
         Theme.Pane{newDefinitionActionColor}      <- ExprGuiM.readTheme  <&> Theme.pane
 
         TextView.makeFocusable ?? "New..." ?? newDefinitionButtonId
-            & WE.localEnv (WE.textColor .~ newDefinitionActionColor)
-            & ExprGuiM.widgetEnv
+            & Reader.local (TextView.color .~ newDefinitionActionColor)
             <&> Widget.weakerEvents
                 (newDefinitionEventMap newDefinitionButtonPressKeys)
     where

@@ -2,6 +2,7 @@
 module Graphics.UI.Bottle.Widgets.TextView
     ( Font.Underline(..), Font.underlineColor, Font.underlineWidth
     , Style(..), styleColor, styleFont, styleUnderline, whiteText
+    , color, font, underline
     , lineHeight
     , HasStyle(..)
 
@@ -39,11 +40,20 @@ Lens.makeLenses ''Style
 class HasStyle env where style :: Lens' env Style
 instance HasStyle Style where style = id
 
+underline :: HasStyle env => Lens' env (Maybe Font.Underline)
+underline = style . styleUnderline
+
+font :: HasStyle env => Lens' env Draw.Font
+font = style . styleFont
+
+color :: HasStyle env => Lens' env Draw.Color
+color = style . styleColor
+
 whiteText :: Draw.Font -> Style
-whiteText font =
+whiteText f =
     Style
     { _styleColor = Draw.Color 1 1 1 1
-    , _styleFont = font
+    , _styleFont = f
     , _styleUnderline = Nothing
     }
 

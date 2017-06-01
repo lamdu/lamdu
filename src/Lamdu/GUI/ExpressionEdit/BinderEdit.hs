@@ -8,6 +8,7 @@ module Lamdu.GUI.ExpressionEdit.BinderEdit
 
 import           Control.Applicative ((<|>), liftA2)
 import qualified Control.Lens as Lens
+import qualified Control.Monad.Reader as Reader
 import           Data.CurAndPrev (CurAndPrev, current)
 import           Data.List.Utils (nonEmptyAll)
 import qualified Data.Map as Map
@@ -101,8 +102,8 @@ mkPresentationModeEdit myId prop = do
     let mkPair presentationMode = do
             widget <-
                 TextView.makeFocusable ?? text ?? labelId
-                & WE.localEnv (WE.textColor .~ Theme.presentationChoiceColor theme)
-                & ExprGuiM.widgetEnv
+                & Reader.local
+                  (TextView.style . TextView.styleColor .~ Theme.presentationChoiceColor theme)
             return (presentationMode, widget)
             where
                 labelId = Widget.joinId myId [encodeUtf8 text]

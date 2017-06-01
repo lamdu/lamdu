@@ -9,7 +9,6 @@ module Lamdu.GUI.WidgetsEnvT
 
     , readEnv
 
-    , localEnv
     , envAssignCursor, envAssignCursorPrefix
 
     , readTextStyle

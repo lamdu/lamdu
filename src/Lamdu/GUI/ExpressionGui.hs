@@ -41,6 +41,7 @@ module Lamdu.GUI.ExpressionGui
     ) where
 
 import qualified Control.Lens as Lens
+import qualified Control.Monad.Reader as Reader
 import           Data.Binary.Utils (encodeS)
 import           Data.CurAndPrev (CurAndPrev(..), CurPrevTag(..), curPrevTag, fallbackToPrev)
 import qualified Data.List as List
@@ -671,11 +672,10 @@ makeCollisionSuffixLabel (Collision suffix) animId =
         theme <- ExprGuiM.readTheme
         let Theme.Name{..} = Theme.name theme
         TextView.makeLabel ?? Text.pack (show suffix) ?? animId
-            & WE.localEnv (WE.textColor .~ collisionSuffixTextColor)
+            & Reader.local (TextView.color .~ collisionSuffixTextColor)
             <&> View.scale (realToFrac <$> collisionSuffixScaleFactor)
             <&> View.backgroundColor animId collisionSuffixBGColor
             <&> Just
-            & ExprGuiM.widgetEnv
 
 maybeAddAnnotationPl ::
     Monad m =>
