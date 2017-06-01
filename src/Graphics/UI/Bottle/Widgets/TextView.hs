@@ -5,7 +5,6 @@ module Graphics.UI.Bottle.Widgets.TextView
     , lineHeight
 
     , make, makeWidget
-    , label
     , RenderedText(..), renderedTextSize
     , drawText
     , letterRects
@@ -104,6 +103,3 @@ make style text animId =
 
 makeWidget :: Style -> Text -> AnimId -> Widget a
 makeWidget style text = Widget.fromView . make style text
-
-label :: Style -> AnimId -> Text -> View
-label style animId text = make style text $ Anim.augmentId animId text
