@@ -235,7 +235,7 @@ makeLabel :: Monad m => Text -> AnimId -> ExprGuiM m View
 makeLabel text animId = widgetEnv $ BWidgets.makeLabel text animId
 
 transaction :: Monad m => T m a -> ExprGuiM m a
-transaction = widgetEnv . lift
+transaction = ExprGuiM . lift
 
 -- TODO: Remove this:
 widgetEnv :: Monad m => WidgetEnvT (T m) a -> ExprGuiM m a
