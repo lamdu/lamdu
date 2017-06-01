@@ -7,8 +7,6 @@ module Lamdu.GUI.WidgetsEnvT
 
     , readEnv
 
-    , envAssignCursor, envAssignCursorPrefix
-
     , textColor
     ) where
 
@@ -18,9 +16,7 @@ import qualified Control.Monad.Reader as Reader
 import           Control.Monad.Trans.Class (MonadTrans(..))
 import           Data.Vector.Vector2 (Vector2)
 import qualified Graphics.DrawingCombinators as Draw
-import           Graphics.UI.Bottle.Animation (AnimId)
 import qualified Graphics.UI.Bottle.Widget as Widget
-import qualified Graphics.UI.Bottle.Widget.Id as WidgetId
 import qualified Graphics.UI.Bottle.Widgets.TextEdit as TextEdit
 import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
 import qualified Lamdu.GUI.Spacing as Spacing
@@ -52,26 +48,6 @@ mapWidgetEnvT = (widgetEnvT %~) . Reader.mapReaderT
 
 readEnv :: Monad m => WidgetEnvT m Env
 readEnv = WidgetEnvT Reader.ask
-
-envAssignCursor :: Widget.Id -> Widget.Id -> Env -> Env
-envAssignCursor src dest =
-    envCursor %~ replace
-    where
-        replace cursor
-            | cursor == src = dest
-            | otherwise = cursor
-
-envAssignCursorPrefix :: Widget.Id -> (AnimId -> Widget.Id) -> Env -> Env
-envAssignCursorPrefix srcFolder dest =
-    envCursor %~ replace
-    where
-        replace cursor =
-            case WidgetId.subId srcFolder cursor of
-            Nothing -> cursor
-            Just suffix -> dest suffix
-
-localEnv :: Monad m => (Env -> Env) -> WidgetEnvT m a -> WidgetEnvT m a
-localEnv = (widgetEnvT %~) . Reader.local
 
 textColor :: Lens' Env Draw.Color
 textColor = envTextStyle . TextEdit.sTextViewStyle . TextView.styleColor

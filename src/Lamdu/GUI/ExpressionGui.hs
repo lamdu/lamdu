@@ -603,7 +603,7 @@ stdWrapParentExpr ::
 stdWrapParentExpr pl mkGui =
     parentDelegator myId <*> mkGui innerId
     & stdWrap pl
-    & ExprGuiM.assignCursor myId innerId
+    & Widget.assignCursor myId innerId
     where
         myId = WidgetIds.fromExprPayload pl
         innerId = WidgetIds.delegatingId myId

@@ -136,4 +136,4 @@ make annotationOpts showAnnotation prevId nextId param =
         info = param ^. Sugar.fpInfo
         hiddenIds = map WidgetIds.fromEntityId $ param ^. Sugar.fpHiddenIds
         assignCursor x =
-            foldr (`ExprGuiM.assignCursorPrefix` const myId) x hiddenIds
+            foldr (`Widget.assignCursorPrefix` const myId) x hiddenIds

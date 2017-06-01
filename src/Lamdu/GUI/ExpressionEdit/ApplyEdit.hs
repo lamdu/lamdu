@@ -206,4 +206,4 @@ makeSimple (Sugar.Apply func arg) pl =
             , ExprGuiM.makeSubexpressionWith
               prefixPrecedence (ExpressionGui.before .~ prefixPrecedence) arg
             ]
-    & ExprGuiM.assignCursor myId (func ^. Sugar.rPayload & WidgetIds.fromExprPayload)
+    & Widget.assignCursor myId (func ^. Sugar.rPayload & WidgetIds.fromExprPayload)

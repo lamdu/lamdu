@@ -312,7 +312,7 @@ makeParts funcApplyLimit binder delVarBackwardsId myId =
             rhs <- makeBinderBodyEdit params body
             Parts mParamsEdit mScopeNavEdit rhs scopeEventMap & return
             & case mScopeNavEdit of
-              Nothing -> ExprGuiM.assignCursorPrefix scopesNavId (const destId)
+              Nothing -> Widget.assignCursorPrefix scopesNavId (const destId)
               Just _ -> id
             & ExprGuiM.withLocalMScopeId binderScopeId
     where

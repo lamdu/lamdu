@@ -149,7 +149,7 @@ makeReplEdit env replExpr =
     ]
     <&> TreeLayout.widget %~
         Widget.weakerEvents (replEventMap env replExpr) . mLiftWidget
-    & ExprGuiM.assignCursor WidgetIds.replId exprId
+    & Widget.assignCursor WidgetIds.replId exprId
     where
         exprId = replExpr ^. Sugar.rPayload . Sugar.plEntityId & WidgetIds.fromEntityId
 

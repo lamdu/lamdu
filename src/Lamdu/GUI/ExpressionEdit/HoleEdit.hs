@@ -47,14 +47,14 @@ makeWrapper pl holeInfo =
                 & return
 
 assignHoleCursor ::
-    Functor m =>
+    Monad m =>
     WidgetIds -> Maybe (Sugar.HoleArg m expr) -> ExprGuiM m a -> ExprGuiM m a
 assignHoleCursor WidgetIds{..} Nothing =
-    ExprGuiM.assignCursor hidHole hidOpen .
-    ExprGuiM.assignCursor (WidgetIds.notDelegatingId hidHole) hidClosedSearchArea
+    Widget.assignCursor hidHole hidOpen .
+    Widget.assignCursor (WidgetIds.notDelegatingId hidHole) hidClosedSearchArea
 assignHoleCursor WidgetIds{..} (Just _) =
-    ExprGuiM.assignCursor hidHole hidWrapper .
-    ExprGuiM.assignCursor (WidgetIds.notDelegatingId hidHole) hidWrapper
+    Widget.assignCursor hidHole hidWrapper .
+    Widget.assignCursor (WidgetIds.notDelegatingId hidHole) hidWrapper
 
 addSearchAreaBelow ::
     Monad m => WidgetIds ->

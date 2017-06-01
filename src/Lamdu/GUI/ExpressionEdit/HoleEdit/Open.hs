@@ -429,7 +429,7 @@ assignHoleEditCursor holeInfo shownMainResultsIds allShownResultIds searchTermId
                 | shouldBeOnResult && not isOnResult =
                       Reader.local (Widget.cursor .~ destId)
                 | otherwise =
-                      ExprGuiM.assignCursor hidOpen destId
+                      Widget.assignCursor hidOpen destId
         assignSource action
     where
         WidgetIds{..} = hiIds holeInfo

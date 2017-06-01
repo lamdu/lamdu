@@ -48,7 +48,7 @@ make ::
 make (Sugar.Case mArg alts caseTail addAlt cEntityId) pl =
     ExpressionGui.stdWrapParentExpr pl $ \myId ->
     let headerId = Widget.joinId myId ["header"]
-    in ExprGuiM.assignCursor myId (destCursorId alts headerId) $
+    in Widget.assignCursor myId (destCursorId alts headerId) $
     do
         config <- ExprGuiM.readConfig
         let mExprAfterHeader =

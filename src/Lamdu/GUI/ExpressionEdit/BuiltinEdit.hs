@@ -73,7 +73,7 @@ make def myId =
         [moduleName, dot, varName]
             & Box.hboxCentered
             & return
-    & ExprGuiM.assignCursor myId (builtinFFIName myId)
+    & Widget.assignCursor myId (builtinFFIName myId)
     where
         Sugar.DefinitionBuiltin
             (Definition.FFIName modulePath name) setFFIName _ = def

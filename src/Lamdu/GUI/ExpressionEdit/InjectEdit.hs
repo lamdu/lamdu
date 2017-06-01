@@ -55,6 +55,6 @@ make (Sugar.Inject tagG mVal) pl =
         ExprGuiM.makeSubexpressionWith ApplyEdit.prefixPrecedence
         (ExpressionGui.before .~ ApplyEdit.prefixPrecedence) val <&> (:[])
         >>= makeCommon "•" tagG (ExprGuiT.nextHolesBefore val)
-        & ExprGuiM.assignCursor myId tagId
+        & Widget.assignCursor myId tagId
     where
         tagId = WidgetIds.fromEntityId (tagG ^. Sugar.tagInstance)

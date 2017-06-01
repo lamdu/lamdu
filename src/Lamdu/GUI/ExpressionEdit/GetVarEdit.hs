@@ -88,7 +88,7 @@ makeNameRef myId nameRef makeView =
                     WidgetIds.fromEntityId <$> nameRef ^. Sugar.nrGotoDefinition
         makeView (nameRef ^. Sugar.nrName) nameId
             <&> TreeLayout.widget %~ Widget.weakerEvents jumpToDefinitionEventMap
-    & ExprGuiM.assignCursor myId nameId
+    & Widget.assignCursor myId nameId
     where
         nameId = Widget.joinId myId ["name"]
 

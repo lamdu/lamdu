@@ -89,7 +89,7 @@ mkNomGui nameSidePrecLens str asList hCombine valId pl (Sugar.Nominal tid val) =
             <*> (ExpressionGui.makeFocusableView nameId
                  <*> mkNameGui tid nameId)
             <*> val
-    & ExprGuiM.assignCursor myId valId
+    & Widget.assignCursor myId valId
 
 expandingName ::
     Monad m =>

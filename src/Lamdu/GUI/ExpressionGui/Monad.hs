@@ -5,7 +5,6 @@ module Lamdu.GUI.ExpressionGui.Monad
     , makeLabel
     , StoredEntityIds(..)
     , transaction, localEnv, withLocalUnderline
-    , assignCursor, assignCursorPrefix
     --
     , makeSubexpression
     , makeSubexpressionWith
@@ -244,13 +243,6 @@ widgetEnv :: Monad m => WidgetEnvT (T m) a -> ExprGuiM m a
 widgetEnv action = do
     env <- ExprGuiM $ Lens.view aWidgetEnv
     WE.runWidgetEnvT env action & transaction
-
-assignCursor :: Functor m => Widget.Id -> Widget.Id -> ExprGuiM m a -> ExprGuiM m a
-assignCursor x y = localEnv $ WE.envAssignCursor x y
-
-assignCursorPrefix ::
-    Functor m => Widget.Id -> (AnimId -> Widget.Id) -> ExprGuiM m a -> ExprGuiM m a
-assignCursorPrefix x y = localEnv $ WE.envAssignCursorPrefix x y
 
 -- Used vars:
 

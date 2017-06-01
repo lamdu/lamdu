@@ -53,10 +53,14 @@ module Graphics.UI.Bottle.Widget
     , respondToCursorPrefix
     , respondToCursorBy
     , respondToCursor
+
+    , assignCursor
+    , assignCursorPrefix
     ) where
 
 import           Control.Applicative (liftA2)
 import qualified Control.Lens as Lens
+import qualified Control.Monad.Reader as Reader
 import qualified Data.Map as Map
 import qualified Data.Monoid as Monoid
 import           Data.Monoid.Generic (def_mempty, def_mappend)
@@ -307,6 +311,27 @@ respondToCursorPrefix ::
 respondToCursorPrefix =
     respondToCursorBy
     <&> \respond myIdPrefix -> respond (Lens.has Lens._Just . Id.subId myIdPrefix)
+
+assignCursor ::
+    (HasCursor env, MonadReader env m) =>
+    Id -> Id -> m a -> m a
+assignCursor src dest =
+    Reader.local (cursor %~ replace)
+    where
+        replace c
+            | c == src = dest
+            | otherwise = c
+
+assignCursorPrefix ::
+    (HasCursor env, MonadReader env m) =>
+    Id -> (AnimId -> Id) -> m a -> m a
+assignCursorPrefix srcFolder dest =
+    Reader.local (cursor %~ replace)
+    where
+        replace c =
+            case Id.subId srcFolder c of
+            Nothing -> c
+            Just suffix -> dest suffix
 
 makeFocusableView ::
     (MonadReader env m, HasCursor env, Applicative f) =>

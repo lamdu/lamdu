@@ -46,7 +46,7 @@ make ::
     ExprGuiM m (ExpressionGui m)
 make record@(Sugar.Record fields recordTail addField) pl =
     ExpressionGui.stdWrapParentExpr pl $ \myId ->
-    ExprGuiM.assignCursor myId (defaultPos fields myId) $
+    Widget.assignCursor myId (defaultPos fields myId) $
     do
         config <- ExprGuiM.readConfig
         (gui, resultPicker) <-

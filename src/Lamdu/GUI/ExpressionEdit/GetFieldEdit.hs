@@ -37,6 +37,6 @@ make (Sugar.GetField recExpr tagG) pl =
             , TreeLayout.fromAlignedWidget tagEdit
             ]
             & return
-    & ExprGuiM.assignCursor myId tagId
+    & Widget.assignCursor myId tagId
     where
         tagId = WidgetIds.fromEntityId (tagG ^. Sugar.tagInstance)

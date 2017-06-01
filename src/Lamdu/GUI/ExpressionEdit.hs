@@ -19,7 +19,6 @@ import qualified Lamdu.GUI.ExpressionEdit.RecordEdit as RecordEdit
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
 import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
-import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Sugar.Names.Types (Name(..))
@@ -37,7 +36,7 @@ make (Sugar.Expression body pl) =
         myId = WidgetIds.fromExprPayload pl
         assignCursor x =
             exprHiddenEntityIds <&> WidgetIds.fromEntityId
-            & foldr (`ExprGuiM.assignCursorPrefix` const myId) x
+            & foldr (`Widget.assignCursorPrefix` const myId) x
 
 injectedExpr ::
     Monad m => Sugar.Payload m ExprGuiT.Payload -> ExprGuiM m (ExpressionGui m)

@@ -102,7 +102,7 @@ textEdit prop pl =
             ?? FocusDelegator.FocusEntryParent ?? WidgetIds.notDelegatingId myId
             <&> (TreeLayout.widget %~)
             ?? edit
-    & ExprGuiM.assignCursor myId (WidgetIds.notDelegatingId myId)
+    & Widget.assignCursor myId (WidgetIds.notDelegatingId myId)
     where
         empty = TextEdit.EmptyStrings "" ""
         innerId = WidgetIds.delegatingId myId

@@ -117,7 +117,7 @@ make ::
 make lam pl =
     ExprGuiM.withLocalPrecedence 0 (ExpressionGui.before .~ 0) $
     ExpressionGui.stdWrapParentExpr pl $ \myId ->
-    ExprGuiM.assignCursor myId bodyId $
+    Widget.assignCursor myId bodyId $
     do
         BinderEdit.Parts mParamsEdit mScopeEdit bodyEdit eventMap <-
             BinderEdit.makeParts funcApplyLimit binder bodyId myId
