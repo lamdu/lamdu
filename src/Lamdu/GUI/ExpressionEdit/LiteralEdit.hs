@@ -98,8 +98,9 @@ textEdit prop pl =
                     0.5 * (left ^. Widget.height)
             & ExprGuiM.widgetEnv
             & ExprGuiM.localEnv (WE.envTextStyle .~ style)
-        ExpressionGui.makeFocusDelegator (fdConfig config)
+        FocusDelegator.make (fdConfig config)
             FocusDelegator.FocusEntryParent (WidgetIds.notDelegatingId myId)
+            <&> (TreeLayout.widget %~)
             ?? edit
     & ExprGuiM.assignCursor myId (WidgetIds.notDelegatingId myId)
     where

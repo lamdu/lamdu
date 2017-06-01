@@ -46,7 +46,7 @@ makeNamePartEditor ::
     Draw.Color -> Text -> (Text -> f ()) -> Widget.Id ->
     ExprGuiM m (Widget (f Widget.EventResult))
 makeNamePartEditor color namePartStr setter myId =
-    ExprGuiM.makeFocusDelegator builtinFDConfig FocusDelegator.FocusEntryParent myId
+    FocusDelegator.make builtinFDConfig FocusDelegator.FocusEntryParent myId
     <*> ExprGuiM.widgetEnv
         ( TextEdits.makeWordEdit ?? empty ?? Property namePartStr setter ??
           myId `Widget.joinId` ["textedit"]

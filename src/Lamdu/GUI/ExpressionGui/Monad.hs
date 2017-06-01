@@ -6,7 +6,6 @@ module Lamdu.GUI.ExpressionGui.Monad
     , StoredEntityIds(..)
     , transaction, localEnv, withLocalUnderline
     , assignCursor, assignCursorPrefix
-    , makeFocusDelegator
     --
     , makeSubexpression
     , makeSubexpressionWith
@@ -44,7 +43,7 @@ import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import           Graphics.UI.Bottle.Widget.Id (toAnimId)
 import qualified Graphics.UI.Bottle.Widget.TreeLayout as TreeLayout
-import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
+
 import qualified Graphics.UI.Bottle.Widgets.TextEdit as TextEdit
 import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
 import           Lamdu.Config (Config)
@@ -252,15 +251,6 @@ assignCursor x y = localEnv $ WE.envAssignCursor x y
 assignCursorPrefix ::
     Functor m => Widget.Id -> (AnimId -> Widget.Id) -> ExprGuiM m a -> ExprGuiM m a
 assignCursorPrefix x y = localEnv $ WE.envAssignCursorPrefix x y
-
-makeFocusDelegator ::
-    (Applicative f, Monad m) =>
-    FocusDelegator.Config ->
-    FocusDelegator.FocusEntryTarget ->
-    Widget.Id ->
-    ExprGuiM m (Widget (f Widget.EventResult) -> Widget (f Widget.EventResult))
-makeFocusDelegator =
-    FocusDelegator.make <&> Lens.mapped . Lens.mapped %~ widgetEnv
 
 -- Used vars:
 

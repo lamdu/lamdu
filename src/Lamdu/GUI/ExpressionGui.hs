@@ -16,7 +16,6 @@ module Lamdu.GUI.ExpressionGui
     , addValFrame, addValPadding
     , addValBGWithColor
     -- Lifted widgets:
-    , makeFocusDelegator
     , makeFocusableView
     , makeNameView
     , makeNameEdit, makeNameEditWith
@@ -548,7 +547,7 @@ makeNameEditWith ::
     (Widget (T m Widget.EventResult) -> Widget (T m Widget.EventResult)) ->
     Name m -> Widget.Id -> ExprGuiM m (Widget (T m Widget.EventResult))
 makeNameEditWith onActiveEditor (Name nameSrc nameCollision setName name) myId =
-    ExprGuiM.makeFocusDelegator nameEditFDConfig
+    FocusDelegator.make nameEditFDConfig
     FocusDelegator.FocusEntryParent myId
     <*>
     do
@@ -587,24 +586,15 @@ stdWrap pl act =
             | ExprGuiT.plOfHoleResult pl = Widget.strongerEvents
             | otherwise = Widget.weakerEvents
 
-makeFocusDelegator ::
-    (Monad m, Monad f) =>
-    FocusDelegator.Config ->
-    FocusDelegator.FocusEntryTarget ->
-    Widget.Id ->
-    ExprGuiM m (ExpressionGui f -> ExpressionGui f)
-makeFocusDelegator =
-    ExprGuiM.makeFocusDelegator
-    <&> Lens.mapped . Lens.mapped . Lens.mapped %~ (TreeLayout.widget %~)
-
 parentDelegator ::
     (Monad f, Monad m) => Widget.Id ->
     ExprGuiM m (ExpressionGui f -> ExpressionGui f)
 parentDelegator myId =
     do
         config <- ExprGuiM.readConfig
-        makeFocusDelegator (parentExprFDConfig config)
+        FocusDelegator.make (parentExprFDConfig config)
             FocusDelegator.FocusEntryChild (WidgetIds.notDelegatingId myId)
+            <&> (TreeLayout.widget %~)
 
 stdWrapParentExpr ::
     Monad m =>

@@ -45,8 +45,9 @@ makeStdWrapped pl holeInfo =
         let Config.Hole{..} = Config.hole config
             WidgetIds{..} = hiIds holeInfo
             fdWrap =
-                ExpressionGui.makeFocusDelegator (fdConfig (Config.hole config))
+                FocusDelegator.make (fdConfig (Config.hole config))
                 FocusDelegator.FocusEntryChild hidClosedSearchArea
+                <&> (TreeLayout.widget %~)
         closedSearchTermGui <-
             fdWrap <*> SearchTerm.make holeInfo & ExpressionGui.stdWrap pl
         isSelected <- ExprGuiM.widgetEnv $ WE.isSubCursor hidOpen
