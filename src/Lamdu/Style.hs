@@ -49,15 +49,11 @@ help font config theme =
 
 textEdit :: Draw.Color -> Draw.Font -> TextEdit.Style
 textEdit color font =
-    TextEdit.Style
-    { TextEdit._sTextViewStyle =
-      TextView.Style
-      { TextView._styleColor = color
-      , TextView._styleFont = font
-      , TextView._styleUnderline = Nothing
-      }
-    , TextEdit._sCursorColor = TextEdit.defaultCursorColor
-    , TextEdit._sCursorWidth = TextEdit.defaultCursorWidth
+    TextEdit.defaultStyle
+    TextView.Style
+    { TextView._styleColor = color
+    , TextView._styleFont = font
+    , TextView._styleUnderline = Nothing
     }
 
 style :: Theme -> Fonts Draw.Font -> Style

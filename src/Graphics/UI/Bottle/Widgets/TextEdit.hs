@@ -3,8 +3,7 @@ module Graphics.UI.Bottle.Widgets.TextEdit
     ( Style(..), sCursorColor, sCursorWidth, sTextViewStyle
     , EmptyStrings(..), emptyFocusedString, emptyUnfocusedString
     , make
-    , defaultCursorColor
-    , defaultCursorWidth
+    , defaultStyle
     , getCursor
     ) where
 
@@ -50,12 +49,13 @@ Lens.makeLenses ''EmptyStrings
 
 instance TextView.HasStyle Style where style = sTextViewStyle
 
--- TODO: Replace with a defaultStyle :: TextViewStyle -> .. -> Style
-defaultCursorColor :: Draw.Color
-defaultCursorColor = Draw.Color 0 1 0 1
-
-defaultCursorWidth :: Widget.R
-defaultCursorWidth = 4
+defaultStyle :: TextView.Style -> Style
+defaultStyle tvStyle =
+    Style
+    { _sCursorColor = Draw.Color 0 1 0 1
+    , _sCursorWidth = 4
+    , _sTextViewStyle = tvStyle
+    }
 
 tillEndOfWord :: Text -> Text
 tillEndOfWord xs = spaces <> nonSpaces
