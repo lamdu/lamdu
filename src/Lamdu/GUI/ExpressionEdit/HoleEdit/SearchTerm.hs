@@ -28,18 +28,15 @@ import           Lamdu.GUI.Hover (addBackground)
 
 import           Lamdu.Prelude
 
-textEditNoEmpty :: TextEdit.Style -> TextEdit.Style
-textEditNoEmpty textEditStyle =
-    textEditStyle
-    & TextEdit.sEmptyFocusedString .~ "  "
-    & TextEdit.sEmptyUnfocusedString .~ "  "
+textEditNoEmpty :: TextEdit.EmptyStrings
+textEditNoEmpty = TextEdit.EmptyStrings "  " "  "
 
 makeSearchTermPropEdit ::
     Monad m =>
     WidgetIds -> Property m Text ->
     WE.WidgetEnvT m (Widget (m Widget.EventResult))
 makeSearchTermPropEdit WidgetIds{..} searchTermProp =
-    BWidgets.makeTextEdit searchTerm hidOpenSearchTerm
+    BWidgets.makeTextEdit textEditNoEmpty searchTerm hidOpenSearchTerm
     <&> Widget.events %~ \(newSearchTerm, eventRes) ->
         do
             when (newSearchTerm /= searchTerm) $
@@ -69,7 +66,6 @@ make holeInfo =
             <&> addBackground (Widget.toAnimId hidOpenSearchTerm) holeSearchTermBGColor
             <&> TreeLayout.fromCenteredWidget
             <&> TreeLayout.alignment . _1 .~ 0
-            & WE.localEnv (WE.envTextStyle %~ textEditNoEmpty)
             & ExprGuiM.widgetEnv
     where
       WidgetIds{..} = hiIds holeInfo

@@ -85,7 +85,7 @@ textEdit prop pl =
         style <- ExprGuiM.readStyle <&> Style.styleText
         edit <- do
             left <- TextView.makeLabel ?? "“" ?? Widget.toAnimId myId <&> Widget.fromView
-            text <- BWidgets.makeTextEditor prop innerId
+            text <- BWidgets.makeTextEditor empty prop innerId
             right <- TextView.makeLabel ?? "„" ?? Widget.toAnimId myId <&> Widget.fromView
             let quoteSize = text ^. Widget.size & _1 .~ 0
             Box.hboxCentered
@@ -103,6 +103,7 @@ textEdit prop pl =
             ?? edit
     & ExprGuiM.assignCursor myId (WidgetIds.notDelegatingId myId)
     where
+        empty = TextEdit.EmptyStrings "" ""
         innerId = WidgetIds.delegatingId myId
         myId = WidgetIds.fromExprPayload pl
 

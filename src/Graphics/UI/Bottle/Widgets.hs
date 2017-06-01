@@ -34,19 +34,19 @@ import           Lamdu.Prelude
 
 makeTextEdit ::
     Monad m =>
-    Text -> Widget.Id ->
+    TextEdit.EmptyStrings -> Text -> Widget.Id ->
     WidgetEnvT m (Widget (Text, Widget.EventResult))
-makeTextEdit text myId =
+makeTextEdit empty text myId =
     do
         style <- WE.readTextStyle
-        TextEdit.make style text myId
+        TextEdit.make empty style text myId
 
 makeTextEditor ::
     (Monad m, Applicative f) =>
-    Property f Text -> Widget.Id ->
+    TextEdit.EmptyStrings -> Property f Text -> Widget.Id ->
     WidgetEnvT m (Widget (f Widget.EventResult))
-makeTextEditor textRef myId =
-    makeTextEdit (Property.value textRef) myId
+makeTextEditor empty textRef myId =
+    makeTextEdit empty (Property.value textRef) myId
     <&> Widget.events %~ setter
     where
         setter (newText, eventRes) =
@@ -61,19 +61,22 @@ deleteKeyEventHandler key =
 -- TODO: Editor, not Edit (consistent with makeTextEditor vs. makeTextEdit)
 makeLineEdit ::
     (Monad m, Applicative f) =>
-    Property f Text ->
+    TextEdit.EmptyStrings -> Property f Text ->
     Widget.Id ->
     WidgetEnvT m (Widget (f Widget.EventResult))
-makeLineEdit textRef myId =
-    makeTextEditor textRef myId <&> deleteKeyEventHandler (ModKey mempty GLFW.Key'Enter)
+makeLineEdit empty textRef myId =
+    makeTextEditor empty textRef myId
+    <&> deleteKeyEventHandler (ModKey mempty GLFW.Key'Enter)
 
 makeWordEdit ::
     (Monad m, Applicative f) =>
+    TextEdit.EmptyStrings ->
     Property f Text ->
     Widget.Id ->
     WidgetEnvT m (Widget (f Widget.EventResult))
-makeWordEdit textRef myId =
-    makeLineEdit textRef myId <&> deleteKeyEventHandler (ModKey mempty GLFW.Key'Space)
+makeWordEdit empty textRef myId =
+    makeLineEdit empty textRef myId
+    <&> deleteKeyEventHandler (ModKey mempty GLFW.Key'Space)
 
 stdFont :: Monad m => WidgetEnvT m Draw.Font
 stdFont = WE.readEnv <&> (^. WE.envTextStyle . TextEdit.sTextViewStyle . TextView.styleFont)

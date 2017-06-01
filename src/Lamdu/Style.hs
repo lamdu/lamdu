@@ -58,8 +58,6 @@ textEdit color font =
       }
     , TextEdit._sCursorColor = TextEdit.defaultCursorColor
     , TextEdit._sCursorWidth = TextEdit.defaultCursorWidth
-    , TextEdit._sEmptyUnfocusedString = ""
-    , TextEdit._sEmptyFocusedString = ""
     }
 
 style :: Theme -> Fonts Draw.Font -> Style

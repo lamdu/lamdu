@@ -14,14 +14,15 @@ import qualified Graphics.UI.Bottle.EventMap as E
 import           Graphics.UI.Bottle.MetaKey (MetaKey(..), noMods)
 import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
+import qualified Graphics.UI.Bottle.Widgets as BWidgets
 import qualified Graphics.UI.Bottle.Widgets.Box as Box
 import qualified Graphics.UI.Bottle.Widgets.Choice as Choice
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
+import qualified Graphics.UI.Bottle.Widgets.TextEdit as TextEdit
+import           Graphics.UI.Bottle.WidgetsEnvT (WidgetEnvT)
 import qualified Graphics.UI.GLFW as GLFW
 import qualified Lamdu.Data.Anchors as Anchors
-import qualified Graphics.UI.Bottle.Widgets as BWidgets
 import qualified Lamdu.GUI.VersionControl.Config as VersionControl
-import           Graphics.UI.Bottle.WidgetsEnvT (WidgetEnvT)
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.VersionControl.Actions (Actions(..))
 
@@ -105,6 +106,7 @@ make VersionControl.Config{..} VersionControl.Theme{..} rwtransaction rtransacti
             <&> Widget.strongerEvents
                 (globalEventMap VersionControl.Config{..} actions)
     where
+        empty = TextEdit.EmptyStrings "unnamed branch" ""
         makeBranchNameEdit branch =
             do
                 nameProp <-
@@ -114,7 +116,7 @@ make VersionControl.Config{..} VersionControl.Theme{..} rwtransaction rtransacti
                 branchNameEdit <-
                     FocusDelegator.make branchNameFDConfig
                     FocusDelegator.FocusEntryParent (branchDelegatorId branch)
-                    <*> BWidgets.makeLineEdit nameProp (branchTextEditId branch)
+                    <*> BWidgets.makeLineEdit empty nameProp (branchTextEditId branch)
                 let delEventMap
                         | ListUtils.isLengthAtLeast 2 (branches actions) =
                             Widget.keysEventMapMovesCursor

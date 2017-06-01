@@ -1,8 +1,7 @@
 {-# LANGUAGE NoImplicitPrelude, OverloadedStrings, TemplateHaskell, ViewPatterns, LambdaCase, NamedFieldPuns #-}
 module Graphics.UI.Bottle.Widgets.TextEdit
-    ( Style(..)
-        , sCursorColor, sCursorWidth, sEmptyUnfocusedString
-        , sEmptyFocusedString, sTextViewStyle
+    ( Style(..), sCursorColor, sCursorWidth, sTextViewStyle
+    , EmptyStrings(..), emptyFocusedString, emptyUnfocusedString
     , make
     , defaultCursorColor
     , defaultCursorWidth
@@ -39,11 +38,15 @@ type Cursor = Int
 data Style = Style
     { _sCursorColor :: Draw.Color
     , _sCursorWidth :: Widget.R
-    , _sEmptyUnfocusedString :: Text
-    , _sEmptyFocusedString :: Text
     , _sTextViewStyle :: TextView.Style
     }
 Lens.makeLenses ''Style
+
+data EmptyStrings = EmptyStrings
+    { _emptyUnfocusedString :: Text
+    , _emptyFocusedString :: Text
+    }
+Lens.makeLenses ''EmptyStrings
 
 instance TextView.HasStyle Style where style = sTextViewStyle
 
@@ -96,11 +99,11 @@ makeInternal style str displayStr myId =
     where
         animId = Widget.toAnimId myId
 
-makeUnfocused :: Style -> Text -> Widget.Id -> Widget (Text, Widget.EventResult)
-makeUnfocused style str =
+makeUnfocused :: EmptyStrings -> Style -> Text -> Widget.Id -> Widget (Text, Widget.EventResult)
+makeUnfocused empty style str =
     makeInternal style str displayStr
     where
-        displayStr = makeDisplayStr (style ^. sEmptyUnfocusedString) str
+        displayStr = makeDisplayStr (empty ^. emptyUnfocusedString) str
 
 minimumIndex :: Ord a => [a] -> Int
 minimumIndex xs =
@@ -135,9 +138,9 @@ eventResult myId newText newCursor =
 -- | Note: maxLines prevents the *user* from exceeding it, not the
 -- | given text...
 makeFocused ::
-    Cursor -> Style -> Text -> Widget.Id ->
+    Cursor -> EmptyStrings -> Style -> Text -> Widget.Id ->
     Widget (Text, Widget.EventResult)
-makeFocused cursor style str myId =
+makeFocused cursor empty style str myId =
     makeInternal style str displayStr myId
     & Widget.bottomFrame <>~ cursorFrame
     & Widget.mFocus .~
@@ -146,7 +149,7 @@ makeFocused cursor style str myId =
         , Widget._fEventMap = eventMap cursor str myId
         }
     where
-        displayStr = makeDisplayStr (style ^. sEmptyFocusedString) str
+        displayStr = makeDisplayStr (empty ^. emptyFocusedString) str
         cursorRect = mkCursorRect style cursor str
         cursorFrame =
             Anim.unitSquare (Widget.cursorAnimId ++ ["text"])
@@ -322,9 +325,9 @@ getCursor str myId =
 
 make ::
     (MonadReader env m, Widget.HasCursor env) =>
-    Style -> Text -> Widget.Id -> m (Widget (Text, Widget.EventResult))
-make style str myId =
+    EmptyStrings -> Style -> Text -> Widget.Id -> m (Widget (Text, Widget.EventResult))
+make empty style str myId =
     getCursor str myId
     <&> \case
-    Nothing -> makeUnfocused style str myId
-    Just pos -> makeFocused pos style str myId
+    Nothing -> makeUnfocused empty style str myId
+    Just pos -> makeFocused pos empty style str myId
