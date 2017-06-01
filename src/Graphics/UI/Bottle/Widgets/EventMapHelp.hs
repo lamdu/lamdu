@@ -7,9 +7,6 @@ module Graphics.UI.Bottle.Widgets.EventMapHelp
     ) where
 
 import qualified Control.Lens as Lens
-import           Control.Lens.Operators
-import           Control.Lens.Tuple
-import           Control.Monad (unless)
 import           Control.Monad.IO.Class (MonadIO(..))
 import           Data.Function (on)
 import           Data.IORef (newIORef, readIORef, modifyIORef)
@@ -35,7 +32,7 @@ import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
 import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
 import qualified Graphics.UI.GLFW as GLFW
 
-import           Prelude.Compat
+import           Lamdu.Prelude
 
 data Config = Config
     { configStyle :: TextView.Style

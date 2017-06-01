@@ -4,14 +4,13 @@ module Graphics.UI.Bottle.Widget.Id
     , joinId, subId
     ) where
 
-import Prelude.Compat
-
-import Control.Lens.Operators
 import Data.Binary (Binary)
 import Data.List (intercalate)
 import Data.List.Lens (prefixed)
 import Graphics.UI.Bottle.Animation.Id (AnimId)
 import Numeric.Utils (encodeHex)
+
+import Lamdu.Prelude
 
 newtype Id = Id
     { toAnimId :: AnimId

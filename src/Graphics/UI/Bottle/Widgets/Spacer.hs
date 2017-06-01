@@ -9,7 +9,7 @@ import qualified Graphics.UI.Bottle.Animation as Anim
 import           Graphics.UI.Bottle.View (View(..))
 import qualified Graphics.UI.Bottle.View as View
 
-import           Prelude.Compat
+import           Lamdu.Prelude
 
 make :: View.Size -> View
 make size = View size mempty

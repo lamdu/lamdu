@@ -40,8 +40,6 @@ module Graphics.UI.Bottle.Widget.TreeLayout
     ) where
 
 import qualified Control.Lens as Lens
-import           Control.Lens.Operators
-import           Control.Lens.Tuple
 import           Data.Vector.Vector2 (Vector2)
 import           Graphics.UI.Bottle.Alignment (Alignment)
 import           Graphics.UI.Bottle.View (View)
@@ -51,7 +49,7 @@ import qualified Graphics.UI.Bottle.Widget as Widget
 import           Graphics.UI.Bottle.Widget.Aligned (AlignedWidget)
 import qualified Graphics.UI.Bottle.Widget.Aligned as AlignedWidget
 
-import           Prelude.Compat
+import           Lamdu.Prelude
 
 data LayoutMode
     = LayoutNarrow Widget.R -- ^ limited by the contained width field

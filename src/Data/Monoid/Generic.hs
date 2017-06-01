@@ -1,10 +1,11 @@
 {-# LANGUAGE NoImplicitPrelude, TypeOperators, FlexibleContexts #-}
 module Data.Monoid.Generic (GMonoid, def_mempty, def_mappend) where
 
-import Prelude.Compat
+-- | Use Generic class for creating Monoid instances
 
--- Use Generic class for creating Monoid instances
 import GHC.Generics (Generic, M1(..), U1(..), K1(..), (:*:)(..), Rep, from, to)
+
+import Lamdu.Prelude
 
 -- Generic version of Monoid. We'll need to create an instance for each of the
 -- Generic types.

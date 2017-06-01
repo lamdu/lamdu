@@ -17,13 +17,9 @@ module Graphics.UI.Bottle.Widgets
     , readEnv
     ) where
 
-import           Control.Lens.Operators
-import           Control.Lens.Tuple
-import           Control.Monad (when)
 import           Data.List (intersperse)
 import           Data.Store.Property (Property)
 import qualified Data.Store.Property as Property
-import           Data.Text (Text)
 import           Data.Text.Encoding (encodeUtf8)
 import           Data.Vector.Vector2 (Vector2(..))
 import qualified Graphics.DrawingCombinators as Draw
@@ -43,7 +39,7 @@ import           Graphics.UI.Bottle.WidgetsEnvT (WidgetEnvT)
 import qualified Graphics.UI.Bottle.WidgetsEnvT as WE
 import qualified Graphics.UI.GLFW as GLFW
 
-import           Prelude.Compat
+import           Lamdu.Prelude
 
 makeTextView :: Monad m => Text -> AnimId -> WidgetEnvT m View
 makeTextView text myId = do

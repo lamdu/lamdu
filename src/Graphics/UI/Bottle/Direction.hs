@@ -3,13 +3,12 @@ module Graphics.UI.Bottle.Direction
     ( Direction(..), coordinates
     ) where
 
-import           Prelude.Compat
-
 import qualified Control.Lens as Lens
-import           Control.Lens.Operators
 import           Data.Vector.Vector2 (Vector2(..))
 import           Graphics.UI.Bottle.Rect (R, Rect(..))
 import qualified Graphics.UI.Bottle.Rect as Rect
+
+import           Lamdu.Prelude
 
 -- RelativePos pos is relative to the top-left of the widget
 data Direction = Outside | PrevFocalArea Rect | Point (Vector2 R)

@@ -11,10 +11,7 @@ module Graphics.DrawingCombinators.Utils
     ) where
 
 import           Control.Applicative (liftA2)
-import           Control.Lens.Operators
-import           Control.Monad (void)
 import qualified Data.Aeson.Types as Aeson
-import           Data.Text (Text)
 import qualified Data.Text as Text
 import           Data.Vector.Vector2 (Vector2(..))
 import           Foreign.C.Types.Instances ()
@@ -22,7 +19,7 @@ import           GHC.Generics (Generic)
 import qualified Graphics.DrawingCombinators as Draw
 import           Graphics.DrawingCombinators ((%%))
 
-import           Prelude.Compat
+import           Lamdu.Prelude
 
 type Image = Draw.Image ()
 

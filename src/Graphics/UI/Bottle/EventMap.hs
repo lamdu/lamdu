@@ -15,23 +15,17 @@ module Graphics.UI.Bottle.EventMap
     ) where
 
 import qualified Control.Lens as Lens
-import           Control.Lens.Operators
-import           Control.Monad (guard)
 import           Data.Foldable (asum)
-import           Data.Map (Map)
 import qualified Data.Map as Map
 import           Data.Maybe (catMaybes, listToMaybe)
-import           Data.Monoid ((<>))
-import           Data.Set (Set)
 import qualified Data.Set as Set
-import           Data.Text (Text)
 import           GHC.Generics (Generic)
 import           Graphics.UI.Bottle.ModKey (ModKey(..))
 import qualified Graphics.UI.Bottle.ModKey as ModKey
 import qualified Graphics.UI.GLFW as GLFW
 import qualified Graphics.UI.GLFW.Events as Events
 
-import           Prelude.Compat hiding (lookup)
+import           Lamdu.Prelude hiding (lookup)
 
 {-# ANN module ("HLint: ignore Use camelCase"::String) #-}
 

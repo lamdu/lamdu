@@ -8,15 +8,11 @@ module Graphics.UI.Bottle.Widgets.Grid
 
 import           Control.Applicative (liftA2)
 import qualified Control.Lens as Lens
-import           Control.Lens.Operators
-import           Control.Lens.Tuple
 import           Control.Monad (msum)
 import           Data.Foldable (toList)
 import           Data.List (foldl', transpose, find, sortOn)
 import           Data.List.Utils (groupOn, minimumOn)
 import           Data.MRUMemo (memo)
-import           Data.Maybe (fromMaybe)
-import           Data.Monoid ((<>))
 import           Data.Vector.Vector2 (Vector2(..))
 import qualified Data.Vector.Vector2 as Vector2
 import qualified Graphics.UI.Bottle.Direction as Direction
@@ -35,7 +31,7 @@ import qualified Graphics.UI.Bottle.Widgets.GridView as GridView
 import           Graphics.UI.Bottle.Widgets.StdKeys (DirKeys(..), stdDirKeys)
 import qualified Graphics.UI.GLFW as GLFW
 
-import           Prelude.Compat
+import           Lamdu.Prelude
 
 type Cursor = Vector2 Int
 

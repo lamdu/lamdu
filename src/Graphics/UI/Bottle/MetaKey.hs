@@ -11,9 +11,7 @@ module Graphics.UI.Bottle.MetaKey
     ) where
 
 import qualified Control.Lens as Lens
-import           Control.Lens.Operators
 import qualified Data.Aeson as Aeson
-import           Data.Text (Text)
 import qualified Data.Text as Text
 import           Graphics.UI.Bottle.ModKey (ModKey(..))
 import qualified Graphics.UI.GLFW as GLFW
@@ -21,7 +19,7 @@ import           Graphics.UI.GLFW.Instances ()
 import qualified System.Info as SysInfo
 import           Text.Read (readMaybe)
 
-import           Prelude.Compat
+import           Lamdu.Prelude
 
 data ModifierKeys = ModifierKeys
     { _cmdOn :: Bool -- Ctrl on most platforms. Cmd on macOS

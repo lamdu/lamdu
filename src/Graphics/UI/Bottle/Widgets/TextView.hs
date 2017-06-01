@@ -11,9 +11,6 @@ module Graphics.UI.Bottle.Widgets.TextView
     ) where
 
 import qualified Control.Lens as Lens
-import           Control.Lens.Operators
-import           Control.Lens.Tuple
-import           Data.Text (Text)
 import qualified Data.Text as Text
 import           Data.Vector.Vector2 (Vector2(..))
 import qualified Graphics.DrawingCombinators as Draw
@@ -28,7 +25,7 @@ import qualified Graphics.UI.Bottle.View as View
 import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
 
-import           Prelude.Compat
+import           Lamdu.Prelude
 
 data Style = Style
     { _styleColor :: Draw.Color

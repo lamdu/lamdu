@@ -9,19 +9,16 @@ module Graphics.UI.Bottle.Rect
     , distance
     ) where
 
-import           Control.Applicative (liftA2)
 import           Control.DeepSeq (NFData(..))
 import           Control.DeepSeq.Generics (genericRnf)
 import           Control.Lens (Traversal', Lens')
 import qualified Control.Lens as Lens
-import           Control.Lens.Operators
-import           Control.Lens.Tuple
 import           Data.Vector.Vector2 (Vector2(..))
 import           Foreign.C.Types.Instances ()
 import           GHC.Generics (Generic)
 import           Graphics.DrawingCombinators (R)
 
-import           Prelude.Compat
+import           Lamdu.Prelude
 
 data Rect = Rect
     { _topLeft :: !(Vector2 R)
@@ -33,7 +30,7 @@ instance NFData Rect where rnf = genericRnf
 
 {-# INLINE topLeftAndSize #-}
 topLeftAndSize :: Traversal' Rect (Vector2 R)
-topLeftAndSize f (Rect tl s) = liftA2 Rect (f tl) (f s)
+topLeftAndSize f (Rect tl s) = Rect <$> f tl <*> f s
 
 {-# INLINE bottomRight #-}
 bottomRight :: Lens' Rect (Vector2 R)

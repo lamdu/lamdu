@@ -8,17 +8,15 @@ module Graphics.UI.Bottle.ModKey
     , pretty
     ) where
 
-import           Prelude.Compat
-
 import           Data.Aeson (ToJSON(..), FromJSON(..))
 import           Data.List (isPrefixOf)
-import           Data.Monoid ((<>))
-import           Data.Text (Text)
 import qualified Data.Text as Text
 import           GHC.Generics (Generic)
 import qualified Graphics.UI.GLFW as GLFW
 import           Graphics.UI.GLFW.Instances ()
 import qualified System.Info as SysInfo
+
+import           Lamdu.Prelude
 
 instance Monoid GLFW.ModifierKeys where
     mempty = GLFW.ModifierKeys False False False False

@@ -13,8 +13,6 @@ module Graphics.UI.Bottle.Widget.Aligned
 
 import           Control.Lens (Lens')
 import qualified Control.Lens as Lens
-import           Control.Lens.Operators
-import           Control.Lens.Tuple
 import           Data.Vector.Vector2 (Vector2(..))
 import           Graphics.UI.Bottle.Alignment (Alignment(..))
 import qualified Graphics.UI.Bottle.Alignment as Alignment
@@ -24,7 +22,7 @@ import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.Box as Box
 import           Graphics.UI.Bottle.Widgets.Box (Orientation(..))
 
-import           Prelude.Compat
+import           Lamdu.Prelude
 
 data AlignedWidget a = AlignedWidget
     { _alignment :: Alignment

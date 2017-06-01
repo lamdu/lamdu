@@ -16,16 +16,12 @@ module Graphics.UI.Bottle.View
 
 import           Control.Lens (Lens')
 import qualified Control.Lens as Lens
-import           Control.Lens.Operators
-import           Control.Lens.Tuple
-import           Control.Monad (void)
-import           Data.Monoid ((<>))
 import           Data.Vector.Vector2 (Vector2(..))
 import qualified Graphics.DrawingCombinators as Draw
 import           Graphics.UI.Bottle.Animation (AnimId, R)
 import qualified Graphics.UI.Bottle.Animation as Anim
 
-import           Prelude.Compat
+import           Lamdu.Prelude
 
 type Size = Anim.Size
 

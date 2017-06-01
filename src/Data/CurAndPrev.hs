@@ -6,11 +6,10 @@ module Data.CurAndPrev
     , CurPrevTag(..), curPrevTag
     ) where
 
-import           Prelude.Compat
-
 import           Control.Applicative (Alternative(..))
 import           Control.Lens (Lens')
-import           Control.Lens.Operators
+
+import           Lamdu.Prelude
 
 data CurAndPrev a = CurAndPrev
     { _current :: a

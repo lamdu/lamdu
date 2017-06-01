@@ -5,7 +5,6 @@ module Graphics.UI.Bottle.Widgets.FocusDelegator
     , make
     ) where
 
-import           Control.Lens.Operators
 import qualified Graphics.UI.Bottle.Direction as Direction
 import qualified Graphics.UI.Bottle.EventMap as E
 import           Graphics.UI.Bottle.MetaKey (MetaKey, toModKey)
@@ -13,7 +12,7 @@ import           Graphics.UI.Bottle.Rect (Rect(..))
 import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
 
-import           Prelude.Compat
+import           Lamdu.Prelude
 
 data FocusEntryTarget = FocusEntryChild | FocusEntryParent
 

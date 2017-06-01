@@ -7,8 +7,6 @@ module Graphics.UI.Bottle.Main
 
 import           Control.Applicative (liftA2)
 import qualified Control.Lens as Lens
-import           Control.Lens.Operators
-import           Control.Monad (when)
 import           Control.Monad.IO.Class (MonadIO(..))
 import           Data.IORef
 import           Data.MRUMemo (memoIO)
@@ -26,7 +24,7 @@ import qualified Graphics.UI.Bottle.Zoom as Zoom
 import qualified Graphics.UI.GLFW as GLFW
 import           Graphics.UI.GLFW.Events as GLFWE
 
-import           Prelude.Compat
+import           Lamdu.Prelude
 
 data Config = Config
     { cAnim :: MainAnim.AnimConfig

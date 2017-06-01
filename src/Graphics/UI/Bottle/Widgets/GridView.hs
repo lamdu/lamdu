@@ -8,8 +8,6 @@ module Graphics.UI.Bottle.Widgets.GridView
 
 import           Control.Lens (Lens)
 import qualified Control.Lens as Lens
-import           Control.Lens.Operators
-import           Control.Lens.Tuple
 import           Data.Foldable (toList)
 import           Data.List (transpose)
 import           Data.Vector.Vector2 (Vector2(..))
@@ -20,7 +18,7 @@ import qualified Graphics.UI.Bottle.Rect as Rect
 import           Graphics.UI.Bottle.View (View(..))
 import qualified Graphics.UI.Bottle.View as View
 
-import           Prelude.Compat
+import           Lamdu.Prelude
 
 groupSize ::
     (Functor f, Foldable f) =>

@@ -10,7 +10,6 @@ module Graphics.UI.Bottle.Main.Image
     , windowSize
     ) where
 
-import           Control.Lens.Operators
 import           Data.Vector.Vector2 (Vector2(..))
 import           Data.IORef (newIORef, readIORef, writeIORef)
 import           Graphics.DrawingCombinators.Utils (Image)
@@ -22,7 +21,7 @@ import qualified Graphics.UI.GLFW as GLFW
 import           Graphics.UI.GLFW.Events (Event, Next(..), eventLoop)
 import qualified Graphics.UI.GLFW.Events as GLFWEvents
 
-import           Prelude.Compat
+import           Lamdu.Prelude
 
 data Handlers = Handlers
     { eventHandler :: Event -> IO ()

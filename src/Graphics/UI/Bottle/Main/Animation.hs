@@ -8,13 +8,11 @@ import           Control.Concurrent (rtsSupportsBoundThreads)
 import           Control.Concurrent.STM.TVar (TVar, newTVarIO, readTVar, writeTVar, modifyTVar, swapTVar)
 import           Control.Concurrent.Utils (forwardSynchronuousExceptions, withForkedIO)
 import qualified Control.Lens as Lens
-import           Control.Lens.Operators
 import           Control.Exception (evaluate, onException)
-import           Control.Monad (forever, mplus, unless, when)
+import           Control.Monad (mplus)
 import qualified Control.Monad.STM as STM
 import           Data.IORef (IORef, newIORef, readIORef, writeIORef)
 import qualified Data.Monoid as Monoid
-import           Data.Monoid ((<>))
 import           Data.Time.Clock (NominalDiffTime, UTCTime, getCurrentTime, addUTCTime, diffUTCTime)
 import           Graphics.UI.Bottle.Animation (AnimId)
 import qualified Graphics.UI.Bottle.Animation as Anim
@@ -22,7 +20,7 @@ import qualified Graphics.UI.Bottle.Main.Image as MainImage
 import qualified Graphics.UI.GLFW as GLFW
 import           Graphics.UI.GLFW.Events (Event)
 
-import           Prelude.Compat
+import           Lamdu.Prelude
 
 -- Animation thread will have not only the cur frame, but the dest
 -- frame in its mutable current state (to update it asynchronously)

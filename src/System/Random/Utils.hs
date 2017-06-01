@@ -4,11 +4,11 @@ module System.Random.Utils
     ( randFunc, genFromHashable
     ) where
 
-import Prelude.Compat
-
 import Data.Binary (Binary(..))
 import Data.Hashable (Hashable, hashWithSalt)
 import System.Random (Random, StdGen, mkStdGen, random)
+
+import Lamdu.Prelude
 
 -- Yucky work-around for lack of Binary instance
 instance Binary StdGen where

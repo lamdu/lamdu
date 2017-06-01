@@ -4,7 +4,7 @@ module Data.Set.Ordered
     , singleton
     ) where
 
-import Prelude.Compat
+import Lamdu.Prelude
 
 newtype OrderedSet a = OrderedSet [a]
     deriving (Show, Eq, Ord, Foldable)

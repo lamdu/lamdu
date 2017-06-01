@@ -1,8 +1,9 @@
 {-# LANGUAGE NoImplicitPrelude, DeriveFunctor, DeriveFoldable, DeriveTraversable #-}
 module Graphics.UI.Bottle.Widgets.StdKeys (DirKeys(..), stdDirKeys) where
 
-import           Prelude.Compat
 import qualified Graphics.UI.GLFW as GLFW
+
+import           Lamdu.Prelude
 
 data DirKeys key = DirKeys
     { keysLeft, keysRight, keysUp, keysDown :: [key]

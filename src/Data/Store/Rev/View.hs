@@ -3,10 +3,7 @@ module Data.Store.Rev.View
     ( View, curVersion, branch, setBranch, move, new, store
     ) where
 
-import           Prelude.Compat hiding (lookup)
-
-import           Control.Lens.Operators
-import           Control.Monad ((<=<), guard, unless)
+import           Control.Monad ((<=<))
 import qualified Data.List as List
 import           Data.Maybe (catMaybes)
 import           Data.Store.IRef (IRef)
@@ -20,6 +17,8 @@ import qualified Data.Store.Rev.Version as Version
 import           Data.Store.Rev.ViewBranchInternal (BranchData, ViewData(..), View(..), Branch(..), moveView, makeViewKey, applyChangesToView, brViews, vdBranch)
 import           Data.Store.Transaction (Transaction, Store(..))
 import qualified Data.Store.Transaction as Transaction
+
+import           Lamdu.Prelude hiding (lookup)
 
 -- | A Version Map is a large mapping of ObjectKeys to their
 -- | "current-version" values. This serves as a "cache" which is

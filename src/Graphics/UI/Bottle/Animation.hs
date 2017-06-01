@@ -19,11 +19,9 @@ module Graphics.UI.Bottle.Animation
 import           Control.Applicative (liftA2)
 import           Control.Lens (Lens')
 import qualified Control.Lens as Lens
-import           Control.Lens.Operators
-import           Control.Monad (void)
 import qualified Data.List as List
 import           Data.List.Utils (groupOn)
-import           Data.Map (Map, (!))
+import           Data.Map ((!))
 import qualified Data.Map.Strict as Map
 import           Data.Maybe (mapMaybe)
 import qualified Data.Set as Set
@@ -37,7 +35,7 @@ import           Graphics.UI.Bottle.Animation.Id
 import           Graphics.UI.Bottle.Rect (Rect(Rect))
 import qualified Graphics.UI.Bottle.Rect as Rect
 
-import           Prelude.Compat
+import           Lamdu.Prelude
 
 type Size = Vector2 R
 

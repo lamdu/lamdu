@@ -4,9 +4,8 @@ module Control.Lens.Utils
     ) where
 
 import qualified Control.Lens as Lens
-import           Control.Lens.Operators
 
-import           Prelude.Compat
+import           Lamdu.Prelude
 
 {-# INLINE tagged #-}
 tagged :: Lens.Prism' tag () -> Lens.Prism' (a, tag) a

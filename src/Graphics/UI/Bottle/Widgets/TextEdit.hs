@@ -10,14 +10,10 @@ module Graphics.UI.Bottle.Widgets.TextEdit
     ) where
 
 import qualified Control.Lens as Lens
-import           Control.Lens.Operators
-import           Control.Lens.Tuple
 import qualified Data.Binary.Utils as BinUtils
 import           Data.Char (isSpace)
 import           Data.List (genericLength)
 import           Data.List.Utils (minimumOn)
-import           Data.Monoid ((<>))
-import           Data.Text (Text)
 import qualified Data.Text as Text
 import           Data.Vector.Vector2 (Vector2(..))
 import qualified Graphics.DrawingCombinators as Draw
@@ -35,7 +31,7 @@ import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
 import qualified Graphics.UI.GLFW as GLFW
 
-import           Prelude.Compat
+import           Lamdu.Prelude
 
 type Cursor = Int
 

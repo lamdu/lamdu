@@ -18,11 +18,9 @@ module Graphics.UI.Bottle.WidgetsEnvT
 
 import           Control.Lens (Lens')
 import qualified Control.Lens as Lens
-import           Control.Lens.Operators
 import           Control.Monad.Trans.Class (MonadTrans(..))
 import           Control.Monad.Trans.Reader (ReaderT, runReaderT)
 import qualified Control.Monad.Trans.Reader as Reader
-import           Data.Maybe (isJust)
 import           Data.Vector.Vector2 (Vector2)
 import qualified Graphics.DrawingCombinators as Draw
 import           Graphics.UI.Bottle.Animation (AnimId)
@@ -30,7 +28,7 @@ import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.TextEdit as TextEdit
 import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
 
-import           Prelude.Compat
+import           Lamdu.Prelude
 
 data Env = Env
     { _envCursor :: Widget.Id
@@ -60,7 +58,7 @@ subCursor :: Monad m => Widget.Id -> WidgetEnvT m (Maybe AnimId)
 subCursor folder = readCursor <&> Widget.subId folder
 
 isSubCursor :: Monad m => Widget.Id -> WidgetEnvT m Bool
-isSubCursor = fmap isJust . subCursor
+isSubCursor = fmap (Lens.has Lens._Just) . subCursor
 
 readTextStyle :: Monad m => WidgetEnvT m TextEdit.Style
 readTextStyle = readEnv <&> (^. envTextStyle)

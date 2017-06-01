@@ -7,9 +7,6 @@ module Data.Store.Rev.Version
     , walkUp, walkDown, versionsBetween, walk
     ) where
 
-import           Prelude.Compat
-
-import           Control.Lens.Operators
 import           Control.Monad (join)
 import           Data.Binary (Binary(..))
 import           Data.Store.IRef (IRef)
@@ -17,6 +14,8 @@ import           Data.Store.Rev.Change (Change(..), Key, Value)
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
 import           GHC.Generics (Generic)
+
+import           Lamdu.Prelude
 
 newtype Version m = Version { versionIRef :: IRef m (VersionData m) }
     deriving (Eq, Ord, Read, Show, Binary)

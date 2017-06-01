@@ -58,8 +58,6 @@ module Graphics.UI.Bottle.Widget
 import           Control.Applicative (liftA2)
 import           Control.Lens (Lens')
 import qualified Control.Lens as Lens
-import           Control.Lens.Operators
-import           Data.Map (Map)
 import qualified Data.Map as Map
 import qualified Data.Monoid as Monoid
 import           Data.Monoid.Generic (def_mempty, def_mappend)
@@ -79,7 +77,7 @@ import           Graphics.UI.Bottle.View (View(..))
 import qualified Graphics.UI.Bottle.View as View
 import           Graphics.UI.Bottle.Widget.Id
 
-import           Prelude.Compat
+import           Lamdu.Prelude
 
 data EventResult = EventResult
     { _eCursor :: Monoid.Last Id
