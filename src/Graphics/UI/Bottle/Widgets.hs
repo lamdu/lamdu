@@ -1,6 +1,6 @@
 {-# LANGUAGE NoImplicitPrelude, OverloadedStrings #-}
 module Graphics.UI.Bottle.Widgets
-    ( makeFocusableTextView, makeFocusableLabel
+    ( makeFocusableTextView
     , makeTextEdit
     , makeTextEditor, makeLineEdit, makeWordEdit
     , makeFocusDelegator
@@ -16,7 +16,6 @@ module Graphics.UI.Bottle.Widgets
 import           Data.List (intersperse)
 import           Data.Store.Property (Property)
 import qualified Data.Store.Property as Property
-import           Data.Text.Encoding (encodeUtf8)
 import           Data.Vector.Vector2 (Vector2(..))
 import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.Bottle.EventMap as EventMap
@@ -42,12 +41,6 @@ makeFocusableTextView ::
 makeFocusableTextView text myId =
     (Widget.makeFocusableView ?? myId)
     <*> (TextView.make ?? text ?? Widget.toAnimId myId <&> Widget.fromView)
-
-makeFocusableLabel ::
-    (Monad m, Applicative f) =>
-    Text -> Widget.Id -> WidgetEnvT m (Widget (f Widget.EventResult))
-makeFocusableLabel text myIdPrefix =
-    makeFocusableTextView text (Widget.joinId myIdPrefix [encodeUtf8 text])
 
 makeFocusDelegator ::
     (Monad m, Applicative f) =>

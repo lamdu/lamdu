@@ -14,6 +14,7 @@ import qualified Data.Map as Map
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
 import qualified Data.Text as Text
+import           Data.Text.Encoding (encodeUtf8)
 import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.Bottle.EventMap as E
 import           Graphics.UI.Bottle.MetaKey (MetaKey(..), noMods, toModKey)
@@ -99,10 +100,13 @@ mkPresentationModeEdit myId prop = do
     theme <- ExprGuiM.readTheme
     let mkPair presentationMode = do
             widget <-
-                BWidgets.makeFocusableLabel (Text.pack (show presentationMode)) myId
+                BWidgets.makeFocusableTextView text labelId
                 & WE.localEnv (WE.textColor .~ Theme.presentationChoiceColor theme)
                 & ExprGuiM.widgetEnv
             return (presentationMode, widget)
+            where
+                labelId = Widget.joinId myId [encodeUtf8 text]
+                text = show presentationMode & Text.pack
     pairs <- traverse mkPair [Sugar.OO, Sugar.Verbose, Sugar.Infix]
     BWidgets.makeChoiceWidget (Transaction.setP prop) pairs cur
         presentationModeChoiceConfig myId
