@@ -58,7 +58,6 @@ module Graphics.UI.Bottle.Widget
 import           Control.Applicative (liftA2)
 import           Control.Lens (Lens')
 import qualified Control.Lens as Lens
-import           Control.Monad.Reader (MonadReader)
 import qualified Data.Map as Map
 import qualified Data.Monoid as Monoid
 import           Data.Monoid.Generic (def_mempty, def_mappend)

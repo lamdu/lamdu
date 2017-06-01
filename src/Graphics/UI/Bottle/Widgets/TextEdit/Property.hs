@@ -5,7 +5,6 @@ module Graphics.UI.Bottle.Widgets.TextEdit.Property
     ( make, makeLineEdit, makeWordEdit
     ) where
 
-import           Control.Monad.Reader (MonadReader)
 import           Data.Store.Property (Property)
 import qualified Data.Store.Property as Property
 import qualified Graphics.UI.Bottle.EventMap as EventMap

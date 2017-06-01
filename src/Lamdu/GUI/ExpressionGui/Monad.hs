@@ -30,7 +30,6 @@ module Lamdu.GUI.ExpressionGui.Monad
     ) where
 
 import qualified Control.Lens as Lens
-import           Control.Monad.Reader (MonadReader)
 import           Control.Monad.Trans.FastRWS (RWST, runRWST)
 import qualified Control.Monad.Trans.FastRWS as RWS
 import qualified Data.Char as Char

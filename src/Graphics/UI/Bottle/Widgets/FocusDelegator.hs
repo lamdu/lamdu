@@ -6,7 +6,6 @@ module Graphics.UI.Bottle.Widgets.FocusDelegator
     ) where
 
 import qualified Control.Lens as Lens
-import           Control.Monad.Reader (MonadReader)
 import qualified Graphics.UI.Bottle.Direction as Direction
 import qualified Graphics.UI.Bottle.EventMap as E
 import           Graphics.UI.Bottle.MetaKey (MetaKey, toModKey)

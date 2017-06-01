@@ -10,7 +10,6 @@ module Graphics.UI.Bottle.Widgets.TextEdit
 
 import           Control.Lens (Lens')
 import qualified Control.Lens as Lens
-import           Control.Monad.Reader (MonadReader)
 import qualified Data.Binary.Utils as BinUtils
 import           Data.Char (isSpace)
 import           Data.List (genericLength)

@@ -9,7 +9,6 @@ module Graphics.UI.Bottle.Widgets.Choice
     ) where
 
 import qualified Control.Lens as Lens
-import           Control.Monad.Reader (MonadReader)
 import qualified Graphics.DrawingCombinators as Draw
 import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget

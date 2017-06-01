@@ -18,7 +18,7 @@ module Graphics.UI.Bottle.WidgetsEnvT
 
 import           Control.Lens (Lens')
 import qualified Control.Lens as Lens
-import           Control.Monad.Reader (ReaderT, runReaderT, MonadReader)
+import           Control.Monad.Reader (ReaderT, runReaderT)
 import qualified Control.Monad.Reader as Reader
 import           Control.Monad.Trans.Class (MonadTrans(..))
 import           Data.Vector.Vector2 (Vector2)

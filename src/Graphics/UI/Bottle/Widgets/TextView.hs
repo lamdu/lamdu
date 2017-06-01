@@ -13,7 +13,6 @@ module Graphics.UI.Bottle.Widgets.TextView
 
 import           Control.Lens (Lens')
 import qualified Control.Lens as Lens
-import           Control.Monad.Reader (MonadReader)
 import qualified Data.Text as Text
 import           Data.Text.Encoding (encodeUtf8)
 import           Data.Vector.Vector2 (Vector2(..))

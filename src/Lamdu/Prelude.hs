@@ -6,6 +6,7 @@ module Lamdu.Prelude
 import Control.Lens.Operators as X
 import Control.Lens.Tuple as X
 import Control.Monad as X (forever, guard, unless, void, when, join)
+import Control.Monad.Reader as X (MonadReader)
 import Control.Monad.Trans.Class as X (lift)
 import Data.ByteString as X (ByteString)
 import Data.Foldable as X (traverse_)
