@@ -31,12 +31,13 @@ import qualified Control.Monad.Reader as Reader
 import           Control.Monad.Trans.FastRWS (RWST, runRWST)
 import qualified Control.Monad.Trans.FastRWS as RWS
 import           Control.Monad.Transaction (MonadTransaction(..))
+import           Control.Monad.Writer (MonadWriter)
+import qualified Control.Monad.Writer as Writer
 import qualified Data.Char as Char
 import           Data.CurAndPrev (CurAndPrev)
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Text.Lens as TextLens
 import           Data.Vector.Vector2 (Vector2)
-import qualified Graphics.DrawingCombinators as Draw
 import           Graphics.UI.Bottle.Animation.Id (AnimId)
 import qualified Graphics.UI.Bottle.EventMap as E
 import           Graphics.UI.Bottle.View (View)
@@ -119,7 +120,8 @@ data Askable m = Askable
     }
 newtype ExprGuiM m a = ExprGuiM
     { _exprGuiM :: RWST (Askable m) (Output m) () (T m) a
-    } deriving (Functor, Applicative, Monad, MonadReader (Askable m))
+    } deriving (Functor, Applicative, Monad,
+                MonadReader (Askable m), MonadWriter (Output m))
 
 Lens.makeLenses ''Askable
 Lens.makeLenses ''ExprGuiM
@@ -135,25 +137,25 @@ withLocalUnderline :: Monad m => TextView.Underline -> ExprGuiM m a -> ExprGuiM 
 withLocalUnderline underline = Reader.local (TextView.underline ?~ underline)
 
 readStyle :: Monad m => ExprGuiM m Style
-readStyle = ExprGuiM $ Lens.view aStyle
+readStyle = Lens.view aStyle
 
 readSettings :: Monad m => ExprGuiM m Settings
-readSettings = ExprGuiM $ Lens.view aSettings
+readSettings = Lens.view aSettings
 
 readConfig :: Monad m => ExprGuiM m Config
-readConfig = ExprGuiM $ Lens.view aConfig
+readConfig = Lens.view aConfig
 
 readTheme :: Monad m => ExprGuiM m Theme
-readTheme = ExprGuiM $ Lens.view aTheme
+readTheme = Lens.view aTheme
 
 readMinOpPrec :: Monad m => ExprGuiM m Int
-readMinOpPrec = ExprGuiM $ Lens.view aMinOpPrecedence
+readMinOpPrec = Lens.view aMinOpPrecedence
 
 readCodeAnchors :: Monad m => ExprGuiM m (Anchors.CodeProps m)
-readCodeAnchors = ExprGuiM $ Lens.view aCodeAnchors
+readCodeAnchors = Lens.view aCodeAnchors
 
 readVerbose :: Monad m => ExprGuiM m Bool
-readVerbose = ExprGuiM $ Lens.view aVerbose
+readVerbose = Lens.view aVerbose
 
 withVerbose :: ExprGuiM m a -> ExprGuiM m a
 withVerbose = exprGuiM %~ RWS.local (aVerbose .~ True)
@@ -190,7 +192,7 @@ advanceDepth ::
     AnimId -> ExprGuiM m r -> ExprGuiM m r
 advanceDepth f animId action =
     do
-        depth <- ExprGuiM $ Lens.view aSubexpressionLayer
+        depth <- Lens.view aSubexpressionLayer
         if depth <= 0
             then mkErrorWidget >>= f
             else action & exprGuiM %~ RWS.local (aSubexpressionLayer -~ 1)
@@ -245,10 +247,10 @@ listenResultPicker = listener oHolePicker
 
 setResultPicker :: Monad m => T m Widget.EventResult -> ExprGuiM m ()
 setResultPicker picker =
-    ExprGuiM $ RWS.tell mempty { oHolePicker = HolePick picker }
+    Writer.tell mempty { oHolePicker = HolePick picker }
 
 readMScopeId :: Monad m => ExprGuiM m (CurAndPrev (Maybe ScopeId))
-readMScopeId = ExprGuiM $ Lens.view aMScopeId
+readMScopeId = Lens.view aMScopeId
 
 withLocalMScopeId :: CurAndPrev (Maybe ScopeId) -> ExprGuiM m a -> ExprGuiM m a
 withLocalMScopeId mScopeId = exprGuiM %~ RWS.local (aMScopeId .~ mScopeId)
@@ -257,7 +259,7 @@ isExprSelected :: Monad m => Sugar.Payload f a -> ExprGuiM m Bool
 isExprSelected pl = Widget.isSubCursor ?? WidgetIds.fromExprPayload pl
 
 outerPrecedence :: Monad m => ExprGuiM m Precedence
-outerPrecedence = ExprGuiM $ Lens.view aOuterPrecedence
+outerPrecedence = Lens.view aOuterPrecedence
 
 withLocalPrecedence :: Int -> (Precedence -> Precedence) -> ExprGuiM m a -> ExprGuiM m a
 withLocalPrecedence minOpPrec f =
