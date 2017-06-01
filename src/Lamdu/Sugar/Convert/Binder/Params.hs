@@ -11,6 +11,7 @@ module Lamdu.Sugar.Convert.Binder.Params
     ) where
 
 import qualified Control.Lens as Lens
+import           Control.Monad.Transaction (transaction)
 import           Data.CurAndPrev (CurAndPrev)
 import qualified Data.List as List
 import qualified Data.List.Utils as ListUtils
@@ -567,7 +568,7 @@ convertNonEmptyParams binderKind lambda lambdaPl =
                             filter (Lens.nullOf (_2 . ER.body . ER._RError))
                 }
         orderedType <-
-            lambdaPl ^. Input.inferredType & orderType & ConvertM.liftTransaction
+            lambdaPl ^. Input.inferredType & orderType & transaction
         case orderedType of
             T.TFun (T.TRecord composite) _
                 | Just fields <- composite ^? orderedClosedFlatComposite

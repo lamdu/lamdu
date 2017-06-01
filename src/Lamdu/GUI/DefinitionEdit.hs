@@ -4,6 +4,7 @@ module Lamdu.GUI.DefinitionEdit
     ) where
 
 import qualified Control.Lens as Lens
+import           Control.Monad.Transaction (transaction)
 import qualified Data.List as List
 import qualified Data.Store.Property as Property
 import           Data.Store.Transaction (Transaction)
@@ -65,7 +66,7 @@ make def =
     do
         defStateProp <-
             def ^. Sugar.drDefinitionState . Transaction.mkProperty
-            & ExprGuiM.transaction
+            & transaction
         let defState = Property.value defStateProp
         addDeletionDiagonal <-
             case defState of

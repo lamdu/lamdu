@@ -8,6 +8,7 @@ module Lamdu.GUI.ExpressionEdit.HoleEdit.ResultGroups
 
 import qualified Control.Lens as Lens
 import           Control.Monad.ListT (ListT)
+import           Control.Monad.Transaction (MonadTransaction(..))
 import qualified Data.ByteString.Char8 as BS8
 import           Data.Function (on)
 import           Data.Functor.Identity (Identity(..))
@@ -144,7 +145,7 @@ makeAll holeInfo =
             <&> ListClass.mapL (makeResultsList holeInfo)
             <&> ListClass.catMaybes
             >>= collectResults config
-            & ExprGuiM.transaction
+            & transaction
 
 mkGroupId :: Show a => Val a -> WidgetId.Id
 mkGroupId option =

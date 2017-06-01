@@ -9,11 +9,11 @@ module Lamdu.GUI.ExpressionEdit.BinderEdit
 import           Control.Applicative ((<|>), liftA2)
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
+import qualified Control.Monad.Transaction as Transaction
 import           Data.CurAndPrev (CurAndPrev, current)
 import           Data.List.Utils (nonEmptyAll)
 import qualified Data.Map as Map
 import           Data.Store.Transaction (Transaction)
-import qualified Data.Store.Transaction as Transaction
 import qualified Data.Text as Text
 import           Data.Text.Encoding (encodeUtf8)
 import qualified Graphics.DrawingCombinators as Draw
@@ -96,7 +96,7 @@ mkPresentationModeEdit ::
     Transaction.MkProperty m Sugar.PresentationMode ->
     ExprGuiM m (Widget (T m Widget.EventResult))
 mkPresentationModeEdit myId prop = do
-    cur <- ExprGuiM.transaction $ Transaction.getP prop
+    cur <- Transaction.getP prop
     theme <- ExprGuiM.readTheme
     let mkPair presentationMode = do
             widget <-
@@ -154,7 +154,7 @@ readBinderChosenScope ::
     Monad m =>
     Sugar.Binder name m expr -> ExprGuiM m (Maybe Sugar.BinderParamScopeId)
 readBinderChosenScope binder =
-    binder ^. Sugar.bChosenScopeProp & Transaction.getP & ExprGuiM.transaction
+    binder ^. Sugar.bChosenScopeProp & Transaction.getP
 
 mkChosenScopeCursor ::
     Monad m =>

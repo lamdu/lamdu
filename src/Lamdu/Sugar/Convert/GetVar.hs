@@ -7,10 +7,10 @@ import qualified Control.Lens as Lens
 import           Control.Monad.Trans.Either.Utils (runMatcherT, justToLeft)
 import           Control.Monad.Trans.Maybe (MaybeT)
 import           Data.Maybe.Utils (maybeToMPlus)
-import           Data.UUID.Types (UUID)
 import qualified Data.Store.Property as Property
 import           Data.Store.Transaction (Transaction)
-import qualified Data.Store.Transaction as Transaction
+import qualified Control.Monad.Transaction as Transaction
+import           Data.UUID.Types (UUID)
 import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Calc.Val as V
 import qualified Lamdu.Data.Anchors as Anchors
@@ -22,8 +22,8 @@ import qualified Lamdu.Expr.Lens as ExprLens
 import qualified Lamdu.Expr.UniqueId as UniqueId
 import qualified Lamdu.Infer as Infer
 import           Lamdu.Sugar.Convert.Expression.Actions (addActions)
-import qualified Lamdu.Sugar.Convert.Input as Input
 import qualified Lamdu.Sugar.Convert.Hole as ConvertHole
+import qualified Lamdu.Sugar.Convert.Input as Input
 import           Lamdu.Sugar.Convert.Monad (ConvertM, siTagParamInfos, tpiFromParameters)
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
 import           Lamdu.Sugar.Internal
@@ -79,7 +79,7 @@ convertGlobal param exprPl =
         notInScope || isGlobalInScope & guard
         lifeState <-
             Anchors.assocDefinitionState defI
-            & Transaction.getP & ConvertM.liftTransaction & lift
+            & Transaction.getP
         let defForm =
                 case lifeState of
                 DeletedDefinition -> DefDeleted

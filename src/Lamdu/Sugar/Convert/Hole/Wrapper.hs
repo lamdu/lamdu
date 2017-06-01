@@ -8,6 +8,7 @@ module Lamdu.Sugar.Convert.Hole.Wrapper
 import qualified Control.Lens as Lens
 import           Control.Monad.Trans.Maybe (MaybeT(..))
 import           Control.Monad.Trans.State (evalStateT, runStateT)
+import           Control.Monad.Transaction (transaction)
 import qualified Data.Foldable as Foldable
 import qualified Data.Store.Property as Property
 import           Data.Store.Transaction (Transaction)
@@ -130,7 +131,7 @@ convertAppliedHole (V.Apply funcI argI) argS exprPl =
             suggesteds <-
                 mkAppliedHoleSuggesteds sugarContext
                 argI exprPl (exprPl ^. Input.stored)
-                & ConvertM.liftTransaction
+                & transaction
             hole
                 & rBody . _BodyHole . holeActions . holeOptions . Lens.mapped
                     %~  ConvertHole.addSuggestedOptions suggesteds

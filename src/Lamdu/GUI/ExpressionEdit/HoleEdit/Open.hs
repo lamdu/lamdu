@@ -8,6 +8,7 @@ module Lamdu.GUI.ExpressionEdit.HoleEdit.Open
 import           Control.Applicative ((<|>))
 import qualified Control.Lens as Lens
 import           Control.Monad (msum)
+import           Control.Monad.Transaction (MonadTransaction(..))
 import qualified Control.Monad.Reader as Reader
 import           Data.List.Lens (suffixed)
 import qualified Data.Map as Map
@@ -177,7 +178,7 @@ makeShownResult holeInfo result =
     do
         -- Warning: rHoleResult should be ran at most once!
         -- Running it more than once caused a horrible bug (bugfix: 848b6c4407)
-        res <- ExprGuiM.transaction $ rHoleResult result
+        res <- rHoleResult result & transaction
         theme <- Theme.hole <$> ExprGuiM.readTheme
         (widget, mkEventMap) <- makeHoleResultWidget (rId result) res
         stdSpacing <- Spacing.getSpaceSize

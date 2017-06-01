@@ -82,8 +82,9 @@ Executable lamdu
   Other-modules:    Control.Concurrent.Utils
                   , Control.Lens.Utils
                   , Control.Monad.Trans.Either.Utils
-                  , Control.Monad.Trans.FastWriter
                   , Control.Monad.Trans.FastRWS
+                  , Control.Monad.Trans.FastWriter
+                  , Control.Monad.Transaction
                   , Data.Binary.Utils
                   , Data.ByteString.Utils
                   , Data.CurAndPrev

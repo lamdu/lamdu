@@ -1,12 +1,12 @@
-{-# LANGUAGE NoImplicitPrelude, GeneralizedNewtypeDeriving, OverloadedStrings #-}
+{-# LANGUAGE NoImplicitPrelude, GeneralizedNewtypeDeriving, OverloadedStrings, FlexibleInstances, MultiParamTypeClasses #-}
 module Lamdu.GUI.TypeView
     ( make
     ) where
 
 import qualified Control.Lens as Lens
+import           Control.Monad.Transaction (MonadTransaction(..))
 import           Control.Monad.Trans.State (StateT, state, evalStateT)
 import qualified Data.Map as Map
-import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
 import qualified Data.Text as Text
 import           Data.Text.Encoding (decodeUtf8)
@@ -35,16 +35,15 @@ import qualified System.Random as Random
 
 import           Lamdu.Prelude
 
-type T = Transaction
 newtype M m a = M
     { runM :: StateT Random.StdGen (ExprGuiM m) a
     } deriving (Functor, Applicative, Monad, MonadReader (ExprGuiM.Askable m))
 egui :: Monad m => ExprGuiM m a -> M m a
 egui = M . lift
-transaction :: Monad m => T m a -> M m a
-transaction = egui . ExprGuiM.transaction
 rand :: (Random r, Monad m) => M m r
 rand = M $ state random
+
+instance Monad m => MonadTransaction m (M m) where transaction = egui . transaction
 
 split :: Monad m => M m a -> M m a
 split (M act) =

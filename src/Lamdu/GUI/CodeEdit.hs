@@ -8,6 +8,7 @@ module Lamdu.GUI.CodeEdit
 import           Control.Applicative (liftA2)
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
+import           Control.Monad.Transaction (transaction)
 import           Data.CurAndPrev (CurAndPrev(..))
 import           Data.Functor.Identity (Identity(..))
 import qualified Data.List as List
@@ -158,7 +159,7 @@ make ::
     Env m -> WidgetEnvT (T m) (Widget.R -> Widget (M m Widget.EventResult))
 make env =
     do
-        workArea <- loadWorkArea env & ExprGuiM.transaction
+        workArea <- loadWorkArea env & transaction
         replGui <- makeReplEdit env (workArea ^. Sugar.waRepl)
         panesEdits <- workArea ^. Sugar.waPanes & traverse (makePaneEdit env)
         newDefinitionButton <- makeNewDefinitionButton <&> mLiftWidget

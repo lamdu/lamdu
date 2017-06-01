@@ -1,10 +1,10 @@
-{-# LANGUAGE NoImplicitPrelude, GeneralizedNewtypeDeriving, TemplateHaskell, OverloadedStrings #-}
+{-# LANGUAGE NoImplicitPrelude, GeneralizedNewtypeDeriving, TemplateHaskell, OverloadedStrings, MultiParamTypeClasses, FlexibleInstances #-}
 module Lamdu.GUI.ExpressionGui.Monad
     ( ExprGuiM, Askable
     , widgetEnv
     , makeLabel
     , StoredEntityIds(..)
-    , transaction, withLocalUnderline
+    , withLocalUnderline
     --
     , makeSubexpression
     , makeSubexpressionWith
@@ -31,6 +31,7 @@ import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
 import           Control.Monad.Trans.FastRWS (RWST, runRWST)
 import qualified Control.Monad.Trans.FastRWS as RWS
+import           Control.Monad.Transaction (MonadTransaction(..))
 import qualified Data.Char as Char
 import           Data.CurAndPrev (CurAndPrev)
 import           Data.Store.Transaction (Transaction)
@@ -43,7 +44,6 @@ import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import           Graphics.UI.Bottle.Widget.Id (toAnimId)
 import qualified Graphics.UI.Bottle.Widget.TreeLayout as TreeLayout
-
 import qualified Graphics.UI.Bottle.Widgets.TextEdit as TextEdit
 import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
 import           Lamdu.Config (Config)
@@ -123,6 +123,8 @@ newtype ExprGuiM m a = ExprGuiM
 
 Lens.makeLenses ''Askable
 Lens.makeLenses ''ExprGuiM
+
+instance Monad m => MonadTransaction m (ExprGuiM m) where transaction = ExprGuiM . lift
 
 instance Widget.HasCursor (Askable m) where cursor = aWidgetEnv . Widget.cursor
 instance TextView.HasStyle (Askable m) where style = aWidgetEnv . TextView.style
@@ -226,9 +228,6 @@ run makeSubexpr codeAnchors config theme settings style (ExprGuiM action) =
 
 makeLabel :: Monad m => Text -> AnimId -> ExprGuiM m View
 makeLabel text animId = TextView.makeLabel ?? text ?? animId
-
-transaction :: Monad m => T m a -> ExprGuiM m a
-transaction = ExprGuiM . lift
 
 widgetEnv :: Monad m => WidgetEnvT (T m) a -> ExprGuiM m a
 widgetEnv action = do

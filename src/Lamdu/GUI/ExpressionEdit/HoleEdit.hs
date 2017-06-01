@@ -4,6 +4,7 @@ module Lamdu.GUI.ExpressionEdit.HoleEdit
     ) where
 
 import qualified Control.Lens as Lens
+import           Control.Monad.Transaction (transaction)
 import qualified Data.Store.Transaction as Transaction
 import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
@@ -115,7 +116,7 @@ make hole pl =
     do
         stateProp <-
             HoleState.assocStateRef (hole ^. Sugar.holeActions . Sugar.holeUUID)
-            ^. Transaction.mkProperty & ExprGuiM.transaction
+            ^. Transaction.mkProperty & transaction
 
         let holeInfo = HoleInfo
                 { hiEntityId = pl ^. Sugar.plEntityId

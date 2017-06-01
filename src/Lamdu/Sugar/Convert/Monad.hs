@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, GeneralizedNewtypeDeriving, TemplateHaskell, PolymorphicComponents, ConstraintKinds, RecordWildCards #-}
+{-# LANGUAGE NoImplicitPrelude, GeneralizedNewtypeDeriving, TemplateHaskell, PolymorphicComponents, ConstraintKinds, RecordWildCards, FlexibleInstances, MultiParamTypeClasses #-}
 module Lamdu.Sugar.Convert.Monad
     ( TagParamInfo(..)
     , TagFieldParam(..), _TagFieldParam, _CollidingFieldParam
@@ -12,12 +12,13 @@ module Lamdu.Sugar.Convert.Monad
     , scOutdatedDefinitions, scFrozenDeps, scInlineableDefinitions
 
     , ConvertM(..), run
-    , readContext, liftTransaction, local
+    , readContext, local
     , convertSubexpression
     , typeProtectedSetToVal, postProcess
     ) where
 
 import qualified Control.Lens as Lens
+import           Control.Monad.Transaction (MonadTransaction(..))
 import           Control.Monad.Trans.Reader (ReaderT, runReaderT)
 import qualified Control.Monad.Trans.Reader as Reader
 import           Data.Store.Transaction (Transaction)
@@ -70,6 +71,9 @@ type T = Transaction
 
 newtype ConvertM m a = ConvertM (ReaderT (Context m) (T m) a)
     deriving (Functor, Applicative, Monad)
+
+instance Monad m => MonadTransaction m (ConvertM m) where
+    transaction = ConvertM . lift
 
 data PostProcessResult = GoodExpr | BadExpr Infer.Error
 
@@ -132,9 +136,6 @@ readContext = ConvertM Reader.ask
 
 local :: (Context m -> Context m) -> ConvertM m a -> ConvertM m a
 local f (ConvertM act) = ConvertM $ Reader.local f act
-
-liftTransaction :: Monad m => T m a -> ConvertM m a
-liftTransaction = ConvertM . lift
 
 convertSubexpression :: (Monad m, Monoid a) => Val (Input.Payload m a) -> ConvertM m (ExpressionU m a)
 convertSubexpression exprI =

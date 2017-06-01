@@ -5,9 +5,9 @@ module Lamdu.GUI.EvalView
     ) where
 
 import qualified Control.Lens as Lens
+import qualified Control.Monad.Transaction as Transaction
 import qualified Data.Binary.Utils as BinUtils
 import qualified Data.List as List
-import qualified Data.Store.Transaction as Transaction
 import qualified Data.Text as Text
 import           Data.Text.Encoding (decodeUtf8)
 import           Data.Vector.Vector2 (Vector2(..))
@@ -61,7 +61,7 @@ label x animId =
 
 makeTag :: Monad m => AnimId -> T.Tag -> ExprGuiM m View
 makeTag animId tag =
-    Anchors.assocNameRef tag & Transaction.getP & ExprGuiM.transaction
+    Anchors.assocNameRef tag & Transaction.getP
     >>= (`textView` animId)
 
 makeField ::
