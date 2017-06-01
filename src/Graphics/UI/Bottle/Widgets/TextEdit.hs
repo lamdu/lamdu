@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, RecordWildCards, OverloadedStrings, TemplateHaskell, ViewPatterns, LambdaCase #-}
+{-# LANGUAGE NoImplicitPrelude, OverloadedStrings, TemplateHaskell, ViewPatterns, LambdaCase, NamedFieldPuns #-}
 module Graphics.UI.Bottle.Widgets.TextEdit
     ( Style(..)
         , sCursorColor, sCursorWidth, sEmptyUnfocusedString
@@ -89,18 +89,18 @@ cursorRects style str =
         lineHeight = TextView.lineHeight style
 
 makeInternal :: Style -> Text -> Text -> Widget.Id -> Widget (Text, Widget.EventResult)
-makeInternal Style{..} str displayStr myId =
-    TextView.makeWidget _sTextViewStyle displayStr animId
-    & Widget.pad (Vector2 (_sCursorWidth / 2) 0)
-    & Widget.mEnter .~ Just (enterFromDirection Style{..} str myId)
+makeInternal style str displayStr myId =
+    TextView.makeWidget (style ^. sTextViewStyle) displayStr animId
+    & Widget.pad (Vector2 (style ^. sCursorWidth / 2) 0)
+    & Widget.mEnter .~ Just (enterFromDirection style str myId)
     where
         animId = Widget.toAnimId myId
 
 makeUnfocused :: Style -> Text -> Widget.Id -> Widget (Text, Widget.EventResult)
-makeUnfocused Style{..} str =
-    makeInternal Style{..} str displayStr
+makeUnfocused style str =
+    makeInternal style str displayStr
     where
-        displayStr = makeDisplayStr _sEmptyUnfocusedString str
+        displayStr = makeDisplayStr (style ^. sEmptyUnfocusedString) str
 
 minimumIndex :: Ord a => [a] -> Int
 minimumIndex xs =
@@ -114,7 +114,7 @@ cursorNearRect style str fromRect =
 enterFromDirection ::
     Style -> Text -> Widget.Id ->
     Direction.Direction -> Widget.EnterResult (Text, Widget.EventResult)
-enterFromDirection Style{..} str myId dir =
+enterFromDirection style str myId dir =
     Widget.EnterResult cursorRect .
     (,) str . Widget.eventResultFromCursor $
     encodeCursor myId cursor
@@ -122,9 +122,9 @@ enterFromDirection Style{..} str myId dir =
         cursor =
             case dir of
             Direction.Outside -> Text.length str
-            Direction.PrevFocalArea rect -> cursorNearRect _sTextViewStyle str rect
-            Direction.Point x -> cursorNearRect _sTextViewStyle str $ Rect x 0
-        cursorRect = mkCursorRect Style{..} cursor str
+            Direction.PrevFocalArea rect -> cursorNearRect (style ^. sTextViewStyle) str rect
+            Direction.Point x -> cursorNearRect (style ^. sTextViewStyle) str $ Rect x 0
+        cursorRect = mkCursorRect style cursor str
 
 eventResult :: Widget.Id -> Text -> Cursor -> (Text, Widget.EventResult)
 eventResult myId newText newCursor =
@@ -137,31 +137,32 @@ eventResult myId newText newCursor =
 makeFocused ::
     Cursor -> Style -> Text -> Widget.Id ->
     Widget (Text, Widget.EventResult)
-makeFocused cursor Style{..} str myId =
-    makeInternal Style{..} str displayStr myId
+makeFocused cursor style str myId =
+    makeInternal style str displayStr myId
     & Widget.bottomFrame <>~ cursorFrame
     & Widget.mFocus .~
         Just Widget.Focus
-        { _focalArea = cursorRect
-        , _fEventMap = eventMap cursor str myId
+        { Widget._focalArea = cursorRect
+        , Widget._fEventMap = eventMap cursor str myId
         }
     where
-        displayStr = makeDisplayStr _sEmptyFocusedString str
-        cursorRect = mkCursorRect Style{..} cursor str
+        displayStr = makeDisplayStr (style ^. sEmptyFocusedString) str
+        cursorRect = mkCursorRect style cursor str
         cursorFrame =
             Anim.unitSquare (Widget.cursorAnimId ++ ["text"])
-            & Anim.unitImages %~ Draw.tint _sCursorColor
+            & Anim.unitImages %~ Draw.tint (style ^. sCursorColor)
             & Anim.unitIntoRect cursorRect
 
 mkCursorRect :: Style -> Cursor -> Text -> Rect
-mkCursorRect Style{..} cursor str = Rect cursorPos cursorSize
+mkCursorRect style cursor str =
+    Rect cursorPos cursorSize
     where
         beforeCursorLines = Text.splitOn "\n" $ Text.take cursor str
-        lineHeight = TextView.lineHeight _sTextViewStyle
+        lineHeight = TextView.lineHeight (style ^. sTextViewStyle)
         cursorPos = Vector2 cursorPosX cursorPosY
-        cursorSize = Vector2 _sCursorWidth lineHeight
+        cursorSize = Vector2 (style ^. sCursorWidth) lineHeight
         cursorPosX =
-            TextView.drawText _sTextViewStyle (last beforeCursorLines) ^.
+            TextView.drawText (style ^. sTextViewStyle) (last beforeCursorLines) ^.
             TextView.renderedTextSize . Lens.to advance . _1
         cursorPosY = lineHeight * (genericLength beforeCursorLines - 1)
 
