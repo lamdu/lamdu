@@ -76,5 +76,5 @@ make config children myId =
     do
         selfFocused <- Widget.subId ?? myId <&> Lens.has Lens._Just
         let childrenBox = toBox config selfFocused myId children
-        FocusDelegator.make (cwcFDConfig config)
-            FocusDelegator.FocusEntryParent myId ?? childrenBox
+        FocusDelegator.make ?? cwcFDConfig config ??
+            FocusDelegator.FocusEntryParent ?? myId ?? childrenBox

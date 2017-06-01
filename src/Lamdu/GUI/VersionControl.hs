@@ -115,9 +115,9 @@ make VersionControl.Config{..} VersionControl.Theme{..} rwtransaction rtransacti
                     & Lens.mapped . Property.pSet . Lens.mapped %~ rwtransaction
                     & rtransaction & lift
                 branchNameEdit <-
-                    FocusDelegator.make branchNameFDConfig
-                    FocusDelegator.FocusEntryParent (branchDelegatorId branch)
-                    <*> (TextEdits.makeLineEdit ?? empty ?? nameProp ?? branchTextEditId branch)
+                    (FocusDelegator.make ?? branchNameFDConfig
+                     ?? FocusDelegator.FocusEntryParent ?? branchDelegatorId branch
+                    ) <*> (TextEdits.makeLineEdit ?? empty ?? nameProp ?? branchTextEditId branch)
                 let delEventMap
                         | ListUtils.isLengthAtLeast 2 (branches actions) =
                             Widget.keysEventMapMovesCursor

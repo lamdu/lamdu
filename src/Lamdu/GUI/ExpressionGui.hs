@@ -547,9 +547,9 @@ makeNameEditWith ::
     (Widget (T m Widget.EventResult) -> Widget (T m Widget.EventResult)) ->
     Name m -> Widget.Id -> ExprGuiM m (Widget (T m Widget.EventResult))
 makeNameEditWith onActiveEditor (Name nameSrc nameCollision setName name) myId =
-    FocusDelegator.make nameEditFDConfig
-    FocusDelegator.FocusEntryParent myId
-    <*>
+    ( FocusDelegator.make ?? nameEditFDConfig
+      ?? FocusDelegator.FocusEntryParent ?? myId
+    ) <*>
     do
         mCollisionSuffix <-
             makeCollisionSuffixLabel nameCollision (Widget.toAnimId myId)
@@ -592,8 +592,8 @@ parentDelegator ::
 parentDelegator myId =
     do
         config <- ExprGuiM.readConfig
-        FocusDelegator.make (parentExprFDConfig config)
-            FocusDelegator.FocusEntryChild (WidgetIds.notDelegatingId myId)
+        FocusDelegator.make ?? parentExprFDConfig config
+            ?? FocusDelegator.FocusEntryChild ?? WidgetIds.notDelegatingId myId
             <&> (TreeLayout.widget %~)
 
 stdWrapParentExpr ::
