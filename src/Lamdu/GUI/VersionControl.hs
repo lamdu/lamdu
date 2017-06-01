@@ -23,7 +23,6 @@ import qualified Graphics.UI.GLFW as GLFW
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.GUI.VersionControl.Config as VersionControl
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
-import           Lamdu.GUI.WidgetsEnvT (WidgetEnvT)
 import           Lamdu.VersionControl.Actions (Actions(..))
 
 import           Lamdu.Prelude
@@ -87,13 +86,14 @@ branchTextEditId :: Branch t -> Widget.Id
 branchTextEditId = (`Widget.joinId` ["textedit"]) . branchDelegatorId
 
 make ::
-    (Monad mr, Applicative mw, Monad n) =>
+    (MonadReader env mr, Widget.HasCursor env, TextEdit.HasStyle env,
+     Applicative mw, Monad n) =>
     VersionControl.Config -> VersionControl.Theme ->
     (forall a. Transaction n a -> mw a) ->
     (forall a. Transaction n a -> mr a) ->
     Actions n mw ->
-    (Widget (mw Widget.EventResult) -> WidgetEnvT mr (Widget (mw Widget.EventResult))) ->
-    WidgetEnvT mr (Widget (mw Widget.EventResult))
+    (Widget (mw Widget.EventResult) -> mr (Widget (mw Widget.EventResult))) ->
+    mr (Widget (mw Widget.EventResult))
 make VersionControl.Config{..} VersionControl.Theme{..} rwtransaction rtransaction actions mkWidget =
     do
         branchNameEdits <- traverse makeBranchNameEdit $ branches actions
@@ -112,7 +112,7 @@ make VersionControl.Config{..} VersionControl.Theme{..} rwtransaction rtransacti
                 nameProp <-
                     Anchors.assocNameRef (Branch.uuid branch) ^. Transaction.mkProperty
                     & Lens.mapped . Property.pSet . Lens.mapped %~ rwtransaction
-                    & rtransaction & lift
+                    & rtransaction
                 branchNameEdit <-
                     (FocusDelegator.make ?? branchNameFDConfig
                      ?? FocusDelegator.FocusEntryParent ?? branchDelegatorId branch

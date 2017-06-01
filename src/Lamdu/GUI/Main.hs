@@ -64,7 +64,7 @@ make env =
             do
                 branchGui <-
                     VersionControlGUI.make (Config.versionControl config) (Theme.versionControl theme)
-                    CodeEdit.mLiftTrans id actions $
+                    CodeEdit.mLiftTrans lift actions $
                     \branchSelector ->
                     do
                         let codeSize = fullSize - Vector2 0 (branchSelector ^. Widget.height)
