@@ -44,12 +44,9 @@ import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import           Graphics.UI.Bottle.Widget.Id (toAnimId)
 import qualified Graphics.UI.Bottle.Widget.TreeLayout as TreeLayout
-import qualified Graphics.UI.Bottle.Widgets as BWidgets
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 import qualified Graphics.UI.Bottle.Widgets.TextEdit as TextEdit
 import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
-import           Graphics.UI.Bottle.WidgetsEnvT (WidgetEnvT)
-import qualified Graphics.UI.Bottle.WidgetsEnvT as WE
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
 import           Lamdu.Config.Theme (Theme)
@@ -61,7 +58,10 @@ import           Lamdu.GUI.ExpressionGui.Types (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
 import           Lamdu.GUI.Precedence (Precedence)
 import qualified Lamdu.GUI.Precedence as Precedence
+import qualified Lamdu.GUI.Spacing as Spacing
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
+import           Lamdu.GUI.WidgetsEnvT (WidgetEnvT)
+import qualified Lamdu.GUI.WidgetsEnvT as WE
 import           Lamdu.Style (Style)
 import qualified Lamdu.Sugar.Types as Sugar
 
@@ -126,6 +126,10 @@ Lens.makeLenses ''Askable
 Lens.makeLenses ''ExprGuiM
 
 instance Widget.HasCursor (Askable m) where cursor = aWidgetEnv . Widget.cursor
+instance TextView.HasStyle (Askable m) where style = aWidgetEnv . TextView.style
+instance TextEdit.HasStyle (Askable m) where style = aWidgetEnv . TextEdit.style
+instance Spacing.HasStdSpacing (Askable m) where
+    stdSpacing = aWidgetEnv . Spacing.stdSpacing
 
 -- TODO: To lens
 localEnv :: Functor m => (WE.Env -> WE.Env) -> ExprGuiM m a -> ExprGuiM m a
@@ -167,9 +171,7 @@ mkPrejumpPosSaver =
 
 -- | Vertical spacer as ratio of line height
 vspacer :: Monad m => (Theme -> Double) -> ExprGuiM m (Widget f)
-vspacer themeGetter =
-    readTheme <&> themeGetter
-    >>= widgetEnv . BWidgets.vspacer
+vspacer themeGetter = readTheme <&> themeGetter >>= widgetEnv . Spacing.vspacer
 
 makeSubexpression ::
     Monad m =>

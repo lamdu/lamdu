@@ -1,5 +1,5 @@
 {-# LANGUAGE NoImplicitPrelude, TemplateHaskell, GeneralizedNewtypeDeriving #-}
-module Graphics.UI.Bottle.WidgetsEnvT
+module Lamdu.GUI.WidgetsEnvT
     ( WidgetEnvT, runWidgetEnvT
     , mapWidgetEnvT
 
@@ -27,19 +27,21 @@ import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widget.Id as WidgetId
 import qualified Graphics.UI.Bottle.Widgets.TextEdit as TextEdit
 import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
+import qualified Lamdu.GUI.Spacing as Spacing
 
 import           Lamdu.Prelude
 
 data Env = Env
     { _envCursor :: Widget.Id
     , _envTextStyle :: TextEdit.Style
-    , stdSpacing :: Vector2 Double
+    , _stdSpacing :: Vector2 Double
     }
 Lens.makeLenses ''Env
 
 instance Widget.HasCursor Env where cursor = envCursor
 instance TextView.HasStyle Env where style = envTextStyle . TextView.style
 instance TextEdit.HasStyle Env where style = envTextStyle
+instance Spacing.HasStdSpacing Env where stdSpacing = stdSpacing
 
 newtype WidgetEnvT m a = WidgetEnvT
     { _widgetEnvT :: ReaderT Env m a

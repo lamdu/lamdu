@@ -22,8 +22,6 @@ import           Graphics.UI.Bottle.Widget.TreeLayout (TreeLayout)
 import qualified Graphics.UI.Bottle.Widget.TreeLayout as TreeLayout
 import qualified Graphics.UI.Bottle.Widgets.Box as Box
 import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
-import           Graphics.UI.Bottle.WidgetsEnvT (WidgetEnvT)
-import qualified Graphics.UI.Bottle.WidgetsEnvT as WE
 import qualified Lamdu.Calc.Type.Scheme as Scheme
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
@@ -45,6 +43,8 @@ import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
 import qualified Lamdu.GUI.RedundantAnnotations as RedundantAnnotations
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
+import           Lamdu.GUI.WidgetsEnvT (WidgetEnvT)
+import qualified Lamdu.GUI.WidgetsEnvT as WE
 import           Lamdu.Style (Style)
 import qualified Lamdu.Sugar.Convert as SugarConvert
 import qualified Lamdu.Sugar.Names.Add as AddNames

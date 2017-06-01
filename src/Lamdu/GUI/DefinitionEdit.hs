@@ -19,9 +19,8 @@ import qualified Graphics.UI.Bottle.View as View
 import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widget.Aligned as AlignedWidget
-import qualified Graphics.UI.Bottle.Widgets as BWidgets
-import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
 import qualified Graphics.UI.Bottle.Widgets.Box as Box
+import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
 import qualified Graphics.UI.GLFW as GLFW
 import           Lamdu.Calc.Type.Scheme (Scheme(..), schemeType)
 import qualified Lamdu.Config as Config
@@ -32,6 +31,7 @@ import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
+import qualified Lamdu.GUI.Spacing as Spacing
 import qualified Lamdu.GUI.TypeView as TypeView
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Sugar.Names.Types (Name(..), DefinitionN)
@@ -122,7 +122,7 @@ makeBuiltinDefinition def builtin =
             , BuiltinEdit.make builtin myId
             ]
             & sequenceA
-            >>= ExprGuiM.widgetEnv . BWidgets.hboxCenteredSpaced
+            >>= Spacing.hboxCenteredSpaced
         let width = assignment ^. Widget.width
         typeView <-
             topLevelSchemeTypeView (builtin ^. Sugar.biType) entityId ["builtinType"]

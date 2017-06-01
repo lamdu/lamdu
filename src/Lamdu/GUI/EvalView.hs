@@ -18,7 +18,6 @@ import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.Rect as Rect
 import           Graphics.UI.Bottle.View (View(..))
 import qualified Graphics.UI.Bottle.View as View
-import qualified Graphics.UI.Bottle.Widgets as BWidgets
 import qualified Graphics.UI.Bottle.Widgets.GridView as GridView
 import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
 import qualified Lamdu.Builtins.Anchors as Builtins
@@ -33,6 +32,7 @@ import qualified Lamdu.Eval.Results as ER
 import           Lamdu.Formatting (Format(..))
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
+import qualified Lamdu.GUI.Spacing as Spacing
 
 import           Lamdu.Prelude
 
@@ -70,7 +70,7 @@ makeField ::
 makeField parentAnimId tag val =
     do
         tagView <- makeTag (baseId ++ ["tag"]) tag
-        space <- ExprGuiM.widgetEnv BWidgets.stdHSpaceView
+        space <- Spacing.stdHSpaceView
         valView <- makeInner (baseId ++ ["val"]) val
         return
             [ (GridView.Alignment (Vector2 1 0.5), tagView)
@@ -182,7 +182,7 @@ makeInject animId typ inject =
         & sequence <&> hbox
     _ ->
         [ makeTagView
-        , ExprGuiM.widgetEnv BWidgets.stdHSpaceView
+        , Spacing.stdHSpaceView
         , inject ^. V.injectVal & makeInner (animId ++ ["val"])
         ]
         & sequence <&> hbox

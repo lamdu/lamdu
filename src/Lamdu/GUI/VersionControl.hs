@@ -20,11 +20,11 @@ import qualified Graphics.UI.Bottle.Widgets.Choice as Choice
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 import qualified Graphics.UI.Bottle.Widgets.TextEdit as TextEdit
 import qualified Graphics.UI.Bottle.Widgets.TextEdit.Property as TextEdits
-import           Graphics.UI.Bottle.WidgetsEnvT (WidgetEnvT)
 import qualified Graphics.UI.GLFW as GLFW
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.GUI.VersionControl.Config as VersionControl
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
+import           Lamdu.GUI.WidgetsEnvT (WidgetEnvT)
 import           Lamdu.VersionControl.Actions (Actions(..))
 
 import           Lamdu.Prelude

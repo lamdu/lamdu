@@ -16,10 +16,8 @@ import qualified Graphics.UI.Bottle.Animation as Anim
 import           Graphics.UI.Bottle.View (View(..))
 import qualified Graphics.UI.Bottle.View as View
 import qualified Graphics.UI.Bottle.Widget.Id as WidgetId
-import qualified Graphics.UI.Bottle.Widgets as BWidgets
 import qualified Graphics.UI.Bottle.Widgets.GridView as GridView
 import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
-import           Graphics.UI.Bottle.WidgetsEnvT (WidgetEnvT)
 import           Lamdu.Calc.Identifier (Identifier(..))
 import           Lamdu.Calc.Type (Type)
 import qualified Lamdu.Calc.Type as T
@@ -29,7 +27,9 @@ import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import           Lamdu.GUI.Precedence (ParentPrecedence(..), MyPrecedence(..), needParens)
 import qualified Lamdu.GUI.Precedence as Precedence
+import qualified Lamdu.GUI.Spacing as Spacing
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
+import           Lamdu.GUI.WidgetsEnvT (WidgetEnvT)
 import           Lamdu.Sugar.OrderTags (orderedFlatComposite)
 import           System.Random (Random, random)
 import qualified System.Random as Random
@@ -72,7 +72,7 @@ hbox :: [View] -> View
 hbox = GridView.horizontalAlign 0.5
 
 mkHSpace :: Monad m => M m View
-mkHSpace = ExprGuiM.widgetEnv BWidgets.stdHSpaceView & egui
+mkHSpace = Spacing.stdHSpaceView & egui
 
 parensAround :: Monad m => View -> M m View
 parensAround view =

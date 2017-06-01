@@ -14,22 +14,22 @@ import           Data.Vector.Vector2 (Vector2(..))
 import qualified Graphics.UI.Bottle.EventMap as EventMap
 import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
-import qualified Graphics.UI.Bottle.Widgets as BWidgets
 import qualified Graphics.UI.Bottle.Widgets.Box as Box
-import           Graphics.UI.Bottle.WidgetsEnvT (runWidgetEnvT)
-import qualified Graphics.UI.Bottle.WidgetsEnvT as WE
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
-import qualified Lamdu.Config.Theme as Theme
 import           Lamdu.Config.Theme (Theme)
+import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.Data.DbLayout as DbLayout
 import           Lamdu.Eval.Results (EvalResults)
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.GUI.CodeEdit as CodeEdit
 import           Lamdu.GUI.CodeEdit.Settings (Settings(..))
 import qualified Lamdu.GUI.Scroll as Scroll
+import qualified Lamdu.GUI.Spacing as Spacing
 import qualified Lamdu.GUI.VersionControl as VersionControlGUI
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
+import           Lamdu.GUI.WidgetsEnvT (runWidgetEnvT)
+import qualified Lamdu.GUI.WidgetsEnvT as WE
 import           Lamdu.Style (Style)
 import qualified Lamdu.Style as Style
 import qualified Lamdu.VersionControl as VersionControl
@@ -72,7 +72,7 @@ make env =
                             CodeEdit.make codeEditEnv ?? (codeSize ^. _1)
                             & WE.mapWidgetEnvT VersionControl.runAction
                             <&> Widget.events . CodeEdit.m %~ fmap (VersionControl.runEvent cursor)
-                        topPadding <- Theme.topPadding theme & BWidgets.vspacer
+                        topPadding <- Theme.topPadding theme & Spacing.vspacer
                         let scrollBox =
                                 Box.vbox [(0.5, topPadding), (0.5, codeEdit)]
                                 & Widget.padToSizeAlign codeSize 0
@@ -99,5 +99,5 @@ make env =
         widgetEnv = WE.Env
             { WE._envCursor = cursor
             , WE._envTextStyle = Style.styleBase style
-            , WE.stdSpacing = Theme.stdSpacing theme
+            , WE._stdSpacing = Theme.stdSpacing theme
             }

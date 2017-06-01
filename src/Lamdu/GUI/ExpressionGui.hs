@@ -64,7 +64,6 @@ import           Graphics.UI.Bottle.Widget.Aligned (AlignedWidget)
 import qualified Graphics.UI.Bottle.Widget.Aligned as AlignedWidget
 import           Graphics.UI.Bottle.Widget.TreeLayout (TreeLayout(..))
 import qualified Graphics.UI.Bottle.Widget.TreeLayout as TreeLayout
-import qualified Graphics.UI.Bottle.Widgets as BWidgets
 import qualified Graphics.UI.Bottle.Widgets.Box as Box
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 import qualified Graphics.UI.Bottle.Widgets.GridView as GridView
@@ -72,7 +71,6 @@ import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
 import qualified Graphics.UI.Bottle.Widgets.TextEdit as TextEdit
 import qualified Graphics.UI.Bottle.Widgets.TextEdit.Property as TextEdits
 import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
-import qualified Graphics.UI.Bottle.WidgetsEnvT as WE
 import qualified Graphics.UI.GLFW as GLFW
 import           Lamdu.Calc.Type (Type)
 import qualified Lamdu.Calc.Type as T
@@ -89,8 +87,10 @@ import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import           Lamdu.GUI.ExpressionGui.Types (ExpressionGui, ShowAnnotation(..), EvalModeShow(..))
 import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
 import qualified Lamdu.GUI.Precedence as Precedence
+import qualified Lamdu.GUI.Spacing as Spacing
 import qualified Lamdu.GUI.TypeView as TypeView
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
+import qualified Lamdu.GUI.WidgetsEnvT as WE
 import qualified Lamdu.Style as Style
 import           Lamdu.Sugar.Names.Types (Name(..), NameSource(..), NameCollision(..))
 import qualified Lamdu.Sugar.Types as Sugar
@@ -191,14 +191,10 @@ hCombine f layout gui =
 (<||) = flip (hCombine AlignedWidget.addAfter)
 
 stdHSpace :: Monad m => ExprGuiM m (Widget a)
-stdHSpace =
-    ExprGuiM.widgetEnv BWidgets.stdHSpaceView
-    <&> Widget.fromView
+stdHSpace = Spacing.stdHSpaceView <&> Widget.fromView
 
 stdVSpace :: Monad m => ExprGuiM m (Widget a)
-stdVSpace =
-    ExprGuiM.widgetEnv BWidgets.stdVSpaceView
-    <&> Widget.fromView
+stdVSpace = Spacing.stdVSpaceView <&> Widget.fromView
 
 data ParenIndentInfo = ParenIndentInfo
     { piAnimId :: AnimId
@@ -271,7 +267,7 @@ makeParenIndentInfo parensId =
             ExprGuiM.widgetEnv WE.readTextStyle
             <&> (^. TextEdit.sTextViewStyle)
         theme <- ExprGuiM.readTheme <&> Theme.indent
-        stdSpacing <- ExprGuiM.widgetEnv BWidgets.stdSpacing <&> (^. _1)
+        stdSpacing <- Spacing.getSpaceSize <&> (^. _1)
         ParenIndentInfo parensId textStyle theme stdSpacing & return
 
 combineSpaced :: Monad m => ExprGuiM m ([TreeLayout a] -> TreeLayout a)
@@ -352,7 +348,7 @@ processAnnotationGui ::
 processAnnotationGui animId wideAnnotationBehavior =
     f
     <$> (ExprGuiM.readTheme <&> Theme.valAnnotation)
-    <*> ExprGuiM.widgetEnv BWidgets.stdSpacing
+    <*> Spacing.getSpaceSize
     <*> applyWideAnnotationBehavior animId wideAnnotationBehavior
     where
         f theme stdSpacing applyWide minWidth annotationLayout

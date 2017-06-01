@@ -28,10 +28,8 @@ import           Graphics.UI.Bottle.Widget.Aligned (AlignedWidget)
 import qualified Graphics.UI.Bottle.Widget.Aligned as AlignedWidget
 import qualified Graphics.UI.Bottle.Widget.Id as WidgetId
 import qualified Graphics.UI.Bottle.Widget.TreeLayout as TreeLayout
-import qualified Graphics.UI.Bottle.Widgets as BWidgets
 import qualified Graphics.UI.Bottle.Widgets.Box as Box
 import qualified Graphics.UI.Bottle.Widgets.Grid as Grid
-import qualified Graphics.UI.Bottle.WidgetsEnvT as WE
 import           Lamdu.CharClassification (operatorChars)
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Config.Theme as Theme
@@ -52,8 +50,10 @@ import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
 import           Lamdu.GUI.Hover (addBackground, addDarkBackground)
+import qualified Lamdu.GUI.Spacing as Spacing
 import qualified Lamdu.GUI.TypeView as TypeView
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
+import qualified Lamdu.GUI.WidgetsEnvT as WE
 import qualified Lamdu.Sugar.Lens as SugarLens
 import           Lamdu.Sugar.Names.Types (Name(..), ExpressionN)
 import qualified Lamdu.Sugar.NearestHoles as NearestHoles
@@ -181,7 +181,7 @@ makeShownResult holeInfo result =
         res <- ExprGuiM.transaction $ rHoleResult result
         theme <- Theme.hole <$> ExprGuiM.readTheme
         (widget, mkEventMap) <- makeHoleResultWidget (rId result) res
-        stdSpacing <- ExprGuiM.widgetEnv BWidgets.stdSpacing
+        stdSpacing <- Spacing.getSpaceSize
         let padding = Theme.holeResultPadding theme <&> realToFrac & (* stdSpacing)
         let mFirstHoleInside =
                 res ^? Sugar.holeResultConverted
@@ -209,7 +209,7 @@ makeExtraSymbol animId isSelected results
             let extraSymbolColor
                     | isSelected = holeExtraSymbolColorSelected
                     | otherwise = holeExtraSymbolColorUnselected
-            hSpace <- ExprGuiM.widgetEnv BWidgets.stdHSpaceWidth
+            hSpace <- Spacing.getSpaceSize <&> (^. _1)
             ExprGuiM.makeLabel extraSymbol animId
                 <&> View.scale extraSymbolScaleFactor
                 <&> View.tint extraSymbolColor
