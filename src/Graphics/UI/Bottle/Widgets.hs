@@ -2,7 +2,6 @@
 module Graphics.UI.Bottle.Widgets
     ( makeTextEdit
     , makeTextEditor, makeLineEdit, makeWordEdit
-    , makeFocusDelegator
     , makeChoiceWidget
     , stdFontHeight
     , stdSpacing
@@ -24,7 +23,6 @@ import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.Box as Box
 import qualified Graphics.UI.Bottle.Widgets.Choice as Choice
-import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
 import qualified Graphics.UI.Bottle.Widgets.TextEdit as TextEdit
 import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
@@ -33,15 +31,6 @@ import qualified Graphics.UI.Bottle.WidgetsEnvT as WE
 import qualified Graphics.UI.GLFW as GLFW
 
 import           Lamdu.Prelude
-
-makeFocusDelegator ::
-    (Monad m, Applicative f) =>
-    FocusDelegator.Config ->
-    FocusDelegator.FocusEntryTarget ->
-    Widget.Id ->
-    WidgetEnvT m (Widget (f Widget.EventResult) -> Widget (f Widget.EventResult))
-makeFocusDelegator fdConfig focusEntryTarget myId =
-    FocusDelegator.make fdConfig focusEntryTarget myId
 
 makeTextEdit ::
     Monad m =>

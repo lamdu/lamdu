@@ -112,7 +112,7 @@ make VersionControl.Config{..} VersionControl.Theme{..} rwtransaction rtransacti
                     & Lens.mapped . Property.pSet . Lens.mapped %~ rwtransaction
                     & rtransaction & lift
                 branchNameEdit <-
-                    BWidgets.makeFocusDelegator branchNameFDConfig
+                    FocusDelegator.make branchNameFDConfig
                     FocusDelegator.FocusEntryParent (branchDelegatorId branch)
                     <*> BWidgets.makeLineEdit nameProp (branchTextEditId branch)
                 let delEventMap

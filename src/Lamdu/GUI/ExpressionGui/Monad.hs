@@ -259,7 +259,7 @@ makeFocusDelegator ::
     Widget.Id ->
     ExprGuiM m (Widget (f Widget.EventResult) -> Widget (f Widget.EventResult))
 makeFocusDelegator =
-    BWidgets.makeFocusDelegator <&> Lens.mapped . Lens.mapped %~ widgetEnv
+    FocusDelegator.make <&> Lens.mapped . Lens.mapped %~ widgetEnv
 
 -- Used vars:
 
