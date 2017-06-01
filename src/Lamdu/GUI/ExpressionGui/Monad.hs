@@ -99,7 +99,8 @@ newtype StoredEntityIds = StoredEntityIds [Sugar.EntityId]
     deriving (Monoid)
 
 data Askable m = Askable
-    { _aSettings :: Settings
+    { _aWidgetEnv :: WE.Env
+    , _aSettings :: Settings
     , _aConfig :: Config
     , _aTheme :: Theme
     , _aMakeSubexpression :: ExprGuiT.SugarExpr m -> ExprGuiM m (ExpressionGui m)
@@ -119,16 +120,15 @@ data Askable m = Askable
     }
 
 newtype ExprGuiM m a = ExprGuiM
-    { _exprGuiM :: RWST (Askable m) (Output m) () (WidgetEnvT (T m)) a
-    }
-    deriving (Functor, Applicative, Monad)
+    { _exprGuiM :: RWST (Askable m) (Output m) () (T m) a
+    } deriving (Functor, Applicative, Monad)
 
 Lens.makeLenses ''Askable
 Lens.makeLenses ''ExprGuiM
 
 -- TODO: To lens
 localEnv :: Functor m => (WE.Env -> WE.Env) -> ExprGuiM m a -> ExprGuiM m a
-localEnv = (exprGuiM %~) . RWS.mapRWST . WE.localEnv
+localEnv f = exprGuiM %~ RWS.local (aWidgetEnv %~ f)
 
 withLocalUnderline :: Functor m => TextView.Underline -> ExprGuiM m a -> ExprGuiM m a
 withLocalUnderline underline =
@@ -210,31 +210,38 @@ run ::
     ExprGuiM m a ->
     WidgetEnvT (T m) a
 run makeSubexpr codeAnchors config theme settings style (ExprGuiM action) =
-    runRWST action
-    Askable
-    { _aConfig = config
-    , _aTheme = theme
-    , _aSettings = settings
-    , _aMakeSubexpression = makeSubexpr
-    , _aCodeAnchors = codeAnchors
-    , _aSubexpressionLayer = Config.maxExprDepth config
-    , _aMScopeId = Just topLevelScopeId & pure
-    , _aOuterPrecedence = Precedence.make 0
-    , _aMinOpPrecedence = 0
-    , _aStyle = style
-    , _aVerbose = False
-    }
-    ()
-    <&> \(x, (), _output) -> x
-
-widgetEnv :: Monad m => WidgetEnvT (T m) a -> ExprGuiM m a
-widgetEnv = ExprGuiM . lift
+    do
+        env <- WE.readEnv
+        runRWST action
+            Askable
+            { _aWidgetEnv = env
+            , _aConfig = config
+            , _aTheme = theme
+            , _aSettings = settings
+            , _aMakeSubexpression = makeSubexpr
+            , _aCodeAnchors = codeAnchors
+            , _aSubexpressionLayer = Config.maxExprDepth config
+            , _aMScopeId = Just topLevelScopeId & pure
+            , _aOuterPrecedence = Precedence.make 0
+            , _aMinOpPrecedence = 0
+            , _aStyle = style
+            , _aVerbose = False
+            }
+            ()
+            <&> (\(x, (), _output) -> x)
+            & lift
 
 makeLabel :: Monad m => Text -> AnimId -> ExprGuiM m View
 makeLabel text animId = widgetEnv $ BWidgets.makeLabel text animId
 
 transaction :: Monad m => T m a -> ExprGuiM m a
 transaction = widgetEnv . lift
+
+-- TODO: Remove this:
+widgetEnv :: Monad m => WidgetEnvT (T m) a -> ExprGuiM m a
+widgetEnv action = do
+    env <- ExprGuiM $ Lens.view aWidgetEnv
+    WE.runWidgetEnvT env action & transaction
 
 assignCursor :: Functor m => Widget.Id -> Widget.Id -> ExprGuiM m a -> ExprGuiM m a
 assignCursor x y = localEnv $ WE.envAssignCursor x y
