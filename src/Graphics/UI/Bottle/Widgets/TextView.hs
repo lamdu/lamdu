@@ -5,7 +5,7 @@ module Graphics.UI.Bottle.Widgets.TextView
     , lineHeight
     , HasStyle(..)
 
-    , make, makeWidget, makeLabel
+    , make, makeWidget, makeLabel, makeFocusable
     , RenderedText(..), renderedTextSize
     , drawText
     , letterRects
@@ -123,3 +123,14 @@ makeLabel ::
     (MonadReader env m, HasStyle env) =>
     m (Text -> AnimId -> View)
 makeLabel = make <&> \mk text prefix -> mk text $ mappend prefix [encodeUtf8 text]
+
+makeFocusable ::
+    (MonadReader env m, Applicative f, Widget.HasCursor env, HasStyle env) =>
+    m (Text -> Widget.Id -> Widget (f Widget.EventResult))
+makeFocusable =
+    do
+        toFocusable <- Widget.makeFocusableView
+        mkText <- make
+        pure $ \text myId ->
+            mkText text (Widget.toAnimId myId)
+            & Widget.fromView & toFocusable myId

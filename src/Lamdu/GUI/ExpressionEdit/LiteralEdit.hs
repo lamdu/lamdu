@@ -54,7 +54,7 @@ genericEdit ::
 genericEdit getStyle prop pl =
     do
         style <- ExprGuiM.readStyle <&> getStyle
-        BWidgets.makeFocusableTextView ?? valText ?? myId
+        TextView.makeFocusable ?? valText ?? myId
             & ExprGuiM.widgetEnv
             & ExprGuiM.localEnv (WE.envTextStyle .~ style)
             <&> Widget.weakerEvents editEventMap

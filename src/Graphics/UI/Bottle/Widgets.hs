@@ -1,7 +1,6 @@
 {-# LANGUAGE NoImplicitPrelude, OverloadedStrings #-}
 module Graphics.UI.Bottle.Widgets
-    ( makeFocusableTextView
-    , makeTextEdit
+    ( makeTextEdit
     , makeTextEditor, makeLineEdit, makeWordEdit
     , makeFocusDelegator
     , makeChoiceWidget
@@ -34,17 +33,6 @@ import qualified Graphics.UI.Bottle.WidgetsEnvT as WE
 import qualified Graphics.UI.GLFW as GLFW
 
 import           Lamdu.Prelude
-
-makeFocusableTextView ::
-    (Monad m, Applicative f) =>
-    WidgetEnvT m (Text -> Widget.Id -> Widget (f Widget.EventResult))
-makeFocusableTextView =
-    do
-        toFocusable <- Widget.makeFocusableView
-        mkText <- TextView.make
-        pure $ \text myId ->
-            mkText text (Widget.toAnimId myId)
-            & Widget.fromView & toFocusable myId
 
 makeFocusDelegator ::
     (Monad m, Applicative f) =>

@@ -27,6 +27,7 @@ import qualified Graphics.UI.Bottle.Widgets as BWidgets
 import qualified Graphics.UI.Bottle.Widgets.Box as Box
 import qualified Graphics.UI.Bottle.Widgets.Choice as Choice
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
+import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
 import qualified Graphics.UI.Bottle.WidgetsEnvT as WE
 import qualified Graphics.UI.GLFW as GLFW
 import           Lamdu.CharClassification (operatorChars)
@@ -100,7 +101,7 @@ mkPresentationModeEdit myId prop = do
     theme <- ExprGuiM.readTheme
     let mkPair presentationMode = do
             widget <-
-                BWidgets.makeFocusableTextView ?? text ?? labelId
+                TextView.makeFocusable ?? text ?? labelId
                 & WE.localEnv (WE.textColor .~ Theme.presentationChoiceColor theme)
                 & ExprGuiM.widgetEnv
             return (presentationMode, widget)

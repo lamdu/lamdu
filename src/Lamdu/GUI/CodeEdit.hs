@@ -20,8 +20,8 @@ import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widget.Aligned as AlignedWidget
 import           Graphics.UI.Bottle.Widget.TreeLayout (TreeLayout)
 import qualified Graphics.UI.Bottle.Widget.TreeLayout as TreeLayout
-import qualified Graphics.UI.Bottle.Widgets as BWidgets
 import qualified Graphics.UI.Bottle.Widgets.Box as Box
+import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
 import           Graphics.UI.Bottle.WidgetsEnvT (WidgetEnvT)
 import qualified Graphics.UI.Bottle.WidgetsEnvT as WE
 import qualified Lamdu.Calc.Type.Scheme as Scheme
@@ -235,7 +235,7 @@ makeNewDefinitionButton =
         Config.Pane{newDefinitionButtonPressKeys} <- ExprGuiM.readConfig <&> Config.pane
         Theme.Pane{newDefinitionActionColor}      <- ExprGuiM.readTheme  <&> Theme.pane
 
-        BWidgets.makeFocusableTextView ?? "New..." ?? newDefinitionButtonId
+        TextView.makeFocusable ?? "New..." ?? newDefinitionButtonId
             & WE.localEnv (WE.textColor .~ newDefinitionActionColor)
             & ExprGuiM.widgetEnv
             <&> Widget.weakerEvents

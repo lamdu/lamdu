@@ -20,6 +20,7 @@ import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widget.Aligned as AlignedWidget
 import qualified Graphics.UI.Bottle.Widgets as BWidgets
+import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
 import qualified Graphics.UI.Bottle.Widgets.Box as Box
 import qualified Graphics.UI.GLFW as GLFW
 import           Lamdu.Calc.Type.Scheme (Scheme(..), schemeType)
@@ -47,7 +48,7 @@ addUndeleteButton ::
 addUndeleteButton myId undelete mkWidget =
     do
         undelButton <-
-            BWidgets.makeFocusableTextView ?? "Undelete..." ?? undelButtonId
+            TextView.makeFocusable ?? "Undelete..." ?? undelButtonId
             & ExprGuiM.widgetEnv
             <&> Widget.weakerEvents eventMap
         return $ \width -> Box.vboxAlign 0 [mkWidget width, undelButton]
