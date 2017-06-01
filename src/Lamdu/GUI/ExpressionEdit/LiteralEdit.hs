@@ -12,10 +12,10 @@ import           Graphics.UI.Bottle.MetaKey (MetaKey(..), noMods)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widget.Aligned as AlignedWidget
 import qualified Graphics.UI.Bottle.Widget.TreeLayout as TreeLayout
-import qualified Graphics.UI.Bottle.Widgets as BWidgets
 import qualified Graphics.UI.Bottle.Widgets.Box as Box
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 import qualified Graphics.UI.Bottle.Widgets.TextEdit as TextEdit
+import qualified Graphics.UI.Bottle.Widgets.TextEdit.Property as TextEdits
 import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
 import qualified Graphics.UI.Bottle.WidgetsEnvT as WE
 import qualified Graphics.UI.GLFW as GLFW
@@ -85,7 +85,7 @@ textEdit prop pl =
         style <- ExprGuiM.readStyle <&> Style.styleText
         edit <- do
             left <- TextView.makeLabel ?? "“" ?? Widget.toAnimId myId <&> Widget.fromView
-            text <- BWidgets.makeTextEdit ?? empty ?? prop ?? innerId
+            text <- TextEdits.make ?? empty ?? prop ?? innerId
             right <- TextView.makeLabel ?? "„" ?? Widget.toAnimId myId <&> Widget.fromView
             let quoteSize = text ^. Widget.size & _1 .~ 0
             Box.hboxCentered

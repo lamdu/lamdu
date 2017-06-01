@@ -19,6 +19,7 @@ import qualified Graphics.UI.Bottle.Widgets.Box as Box
 import qualified Graphics.UI.Bottle.Widgets.Choice as Choice
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 import qualified Graphics.UI.Bottle.Widgets.TextEdit as TextEdit
+import qualified Graphics.UI.Bottle.Widgets.TextEdit.Property as TextEdits
 import           Graphics.UI.Bottle.WidgetsEnvT (WidgetEnvT)
 import qualified Graphics.UI.GLFW as GLFW
 import qualified Lamdu.Data.Anchors as Anchors
@@ -116,7 +117,7 @@ make VersionControl.Config{..} VersionControl.Theme{..} rwtransaction rtransacti
                 branchNameEdit <-
                     FocusDelegator.make branchNameFDConfig
                     FocusDelegator.FocusEntryParent (branchDelegatorId branch)
-                    <*> (BWidgets.makeLineEdit ?? empty ?? nameProp ?? branchTextEditId branch)
+                    <*> (TextEdits.makeLineEdit ?? empty ?? nameProp ?? branchTextEditId branch)
                 let delEventMap
                         | ListUtils.isLengthAtLeast 2 (branches actions) =
                             Widget.keysEventMapMovesCursor

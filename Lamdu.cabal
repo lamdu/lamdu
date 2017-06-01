@@ -137,6 +137,7 @@ Executable lamdu
                   , Graphics.UI.Bottle.Widgets.Spacer
                   , Graphics.UI.Bottle.Widgets.StdKeys
                   , Graphics.UI.Bottle.Widgets.TextEdit
+                  , Graphics.UI.Bottle.Widgets.TextEdit.Property
                   , Graphics.UI.Bottle.Widgets.TextView
                   , Graphics.UI.Bottle.WidgetsEnvT
                   , Graphics.UI.Bottle.Zoom

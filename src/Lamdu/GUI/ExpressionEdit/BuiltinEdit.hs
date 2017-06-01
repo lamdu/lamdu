@@ -11,10 +11,10 @@ import qualified Graphics.UI.Bottle.EventMap as E
 import           Graphics.UI.Bottle.MetaKey (MetaKey(..), noMods)
 import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
-import qualified Graphics.UI.Bottle.Widgets as BWidgets
 import qualified Graphics.UI.Bottle.Widgets.Box as Box
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 import qualified Graphics.UI.Bottle.Widgets.TextEdit as TextEdit
+import qualified Graphics.UI.Bottle.Widgets.TextEdit.Property as TextEdits
 import           Graphics.UI.Bottle.WidgetsEnvT as WE
 import qualified Graphics.UI.GLFW as GLFW
 import qualified Lamdu.Config.Theme as Theme
@@ -48,7 +48,7 @@ makeNamePartEditor ::
 makeNamePartEditor color namePartStr setter myId =
     ExprGuiM.makeFocusDelegator builtinFDConfig FocusDelegator.FocusEntryParent myId
     <*> ExprGuiM.widgetEnv
-        ( BWidgets.makeWordEdit ?? empty ?? Property namePartStr setter ??
+        ( TextEdits.makeWordEdit ?? empty ?? Property namePartStr setter ??
           myId `Widget.joinId` ["textedit"]
         )
     & ExprGuiM.localEnv (WE.textColor .~ color)
