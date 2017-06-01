@@ -273,7 +273,7 @@ withLocalMScopeId :: CurAndPrev (Maybe ScopeId) -> ExprGuiM m a -> ExprGuiM m a
 withLocalMScopeId mScopeId = exprGuiM %~ RWS.local (aMScopeId .~ mScopeId)
 
 isExprSelected :: Monad m => Sugar.Payload f a -> ExprGuiM m Bool
-isExprSelected = widgetEnv . WE.isSubCursor . WidgetIds.fromExprPayload
+isExprSelected pl = Widget.isSubCursor ?? WidgetIds.fromExprPayload pl
 
 outerPrecedence :: Monad m => ExprGuiM m Precedence
 outerPrecedence = ExprGuiM $ Lens.view aOuterPrecedence

@@ -3,7 +3,7 @@ module Lamdu.GUI.WidgetsEnvT
     ( WidgetEnvT, runWidgetEnvT
     , mapWidgetEnvT
 
-    , readCursor, subCursor, isSubCursor
+    , readCursor
 
     , Env(..), envCursor, envTextStyle
 
@@ -59,13 +59,6 @@ readEnv = WidgetEnvT Reader.ask
 
 readCursor :: Monad m => WidgetEnvT m Widget.Id
 readCursor = readEnv <&> (^. envCursor)
-
--- TODO: Remove:
-subCursor :: Monad m => Widget.Id -> WidgetEnvT m (Maybe AnimId)
-subCursor = (Widget.subId??)
-
-isSubCursor :: Monad m => Widget.Id -> WidgetEnvT m Bool
-isSubCursor = fmap (Lens.has Lens._Just) . subCursor
 
 readTextStyle :: Monad m => WidgetEnvT m TextEdit.Style
 readTextStyle = readEnv <&> (^. envTextStyle)

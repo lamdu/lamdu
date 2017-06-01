@@ -22,7 +22,6 @@ import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
 import qualified Lamdu.GUI.LightLambda as LightLambda
 import qualified Lamdu.GUI.Precedence as Prec
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
-import qualified Lamdu.GUI.WidgetsEnvT as WE
 import qualified Lamdu.Sugar.Lens as SugarLens
 import           Lamdu.Sugar.Names.Types (Name(..))
 import qualified Lamdu.Sugar.Types as Sugar
@@ -92,9 +91,9 @@ mkLightLambda ::
 mkLightLambda params myId =
     do
         isSelected <-
-            mapM (WE.isSubCursor . WidgetIds.fromEntityId) paramIds
+            paramIds <&> WidgetIds.fromEntityId
+            & traverse (Widget.isSubCursor ??)
             <&> or
-            & ExprGuiM.widgetEnv
         let shrinkKeys = [MetaKey noMods GLFW.Key'Escape]
         let shrinkEventMap =
                 Widget.keysEventMapMovesCursor shrinkKeys

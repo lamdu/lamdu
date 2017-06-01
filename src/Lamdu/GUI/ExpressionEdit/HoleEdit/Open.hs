@@ -236,8 +236,8 @@ makeResultGroup holeInfo results =
                 return (Just shownMainResult, extraResWidget, extraPadding)
             else do
                 cursorOnExtra <-
-                    results ^. HoleResults.rlExtraResultsPrefixId
-                    & WE.isSubCursor & ExprGuiM.widgetEnv
+                    Widget.isSubCursor
+                    ?? results ^. HoleResults.rlExtraResultsPrefixId
                 if cursorOnExtra
                     then makeExtra
                     else
@@ -269,9 +269,7 @@ makeExtraResultsWidget holeInfo mainResultHeight extraResults@(firstResult:_) =
         theme <- ExprGuiM.readTheme
         let mkResWidget result =
                 do
-                    isOnResult <-
-                        WE.isSubCursor (rId result)
-                        & ExprGuiM.widgetEnv
+                    isOnResult <- Widget.isSubCursor ?? rId result
                     (widget, shownResult) <- makeShownResult holeInfo result
                     return
                         ( shownResult <$ guard isOnResult

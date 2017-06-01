@@ -24,7 +24,6 @@ import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
 import           Lamdu.GUI.Hover (addDarkBackground)
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
-import qualified Lamdu.GUI.WidgetsEnvT as WE
 import           Lamdu.Sugar.Names.Types (Name(..))
 import qualified Lamdu.Sugar.Types as Sugar
 
@@ -85,7 +84,7 @@ makeHoleWithWrapper wrapperGui searchAreaGui pl =
     do
         unfocusedWrapperGui <-
             ExpressionGui.maybeAddAnnotationPl pl ?? wrapperGui
-        isSelected <- WE.isSubCursor (hidHole widgetIds) & ExprGuiM.widgetEnv
+        isSelected <- Widget.isSubCursor ?? hidHole widgetIds
         let layout f =
                 do
                     lay <- f widgetIds

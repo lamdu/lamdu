@@ -19,7 +19,6 @@ import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
 import qualified Lamdu.GUI.Precedence as Prec
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
-import qualified Lamdu.GUI.WidgetsEnvT as WE
 import qualified Lamdu.Sugar.Lens as SugarLens
 import           Lamdu.Sugar.Names.Types (Name(..))
 import qualified Lamdu.Sugar.Types as Sugar
@@ -76,7 +75,7 @@ mkNomGui nameSidePrecLens str asList hCombine valId pl (Sugar.Nominal tid val) =
         let needParen = Prec.needParens parentPrec (Prec.my nomPrecedence)
         let nomId = Widget.joinId myId ["nom"]
         let nameId = Widget.joinId nomId ["name"]
-        isSelected <- WE.isSubCursor nomId & ExprGuiM.widgetEnv
+        isSelected <- Widget.isSubCursor ?? nomId
         isVerbose <- ExprGuiM.readVerbose
         let nameShowing
                 | isVerbose || ExprGuiT.plOfHoleResult pl = NameShowing

@@ -169,7 +169,7 @@ processDefinitionWidget (Sugar.DefTypeChanged info) myId mkLayout =
                 , _underlineWidth = Theme.underlineWidth theme
                 }
             mkLayout
-        isSelected <- ExprGuiM.widgetEnv $ WE.isSubCursor myId
+        isSelected <- Widget.isSubCursor ?? myId
         if isSelected
             then
             do

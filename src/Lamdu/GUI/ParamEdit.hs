@@ -18,7 +18,6 @@ import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
-import qualified Lamdu.GUI.WidgetsEnvT as WE
 import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
@@ -119,7 +118,7 @@ make annotationOpts showAnnotation prevId nextId param =
                 , maybe mempty (eventMapOrderParam (Config.paramOrderBeforeKeys config) "before") (iMOrderBefore info)
                 , maybe mempty (eventMapOrderParam (Config.paramOrderAfterKeys config) "after") (iMOrderAfter info)
                 ]
-        fpIsSelected <- WE.isSubCursor myId & ExprGuiM.widgetEnv
+        fpIsSelected <- Widget.isSubCursor ?? myId
         let wideAnnotationBehavior =
                 ExpressionGui.wideAnnotationBehaviorFromSelected fpIsSelected
         ExpressionGui.maybeAddAnnotationWith annotationOpts

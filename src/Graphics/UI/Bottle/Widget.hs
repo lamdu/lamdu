@@ -1,6 +1,6 @@
 {-# LANGUAGE NoImplicitPrelude, DeriveFunctor, TemplateHaskell, GeneralizedNewtypeDeriving, DeriveGeneric, OverloadedStrings, NamedFieldPuns, LambdaCase #-}
 module Graphics.UI.Bottle.Widget
-    ( Id(..), subId, Id.joinId
+    ( Id(..), subId, Id.joinId, isSubCursor
     , HasCursor(..)
 
     -- Types:
@@ -283,6 +283,9 @@ class HasCursor env where cursor :: Lens' env Id
 
 subId :: (MonadReader env m, HasCursor env) => m (Id -> Maybe AnimId)
 subId = Lens.view cursor <&> flip Id.subId
+
+isSubCursor :: (MonadReader env m, HasCursor env) => m (Id -> Bool)
+isSubCursor = subId <&> \sub prefix -> sub prefix & Lens.has Lens._Just
 
 respondToCursor :: Widget a -> Widget a
 respondToCursor widget =
