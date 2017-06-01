@@ -40,6 +40,7 @@ Lens.makeLenses ''Env
 
 instance Widget.HasCursor Env where cursor = envCursor
 instance TextView.HasStyle Env where style = envTextStyle . TextView.style
+instance TextEdit.HasStyle Env where style = envTextStyle
 
 newtype WidgetEnvT m a = WidgetEnvT
     { _widgetEnvT :: ReaderT Env m a

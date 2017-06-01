@@ -36,10 +36,7 @@ makeTextEdit ::
     Monad m =>
     TextEdit.EmptyStrings -> Text -> Widget.Id ->
     WidgetEnvT m (Widget (Text, Widget.EventResult))
-makeTextEdit empty text myId =
-    do
-        style <- WE.readTextStyle
-        TextEdit.make ?? style ?? empty ?? text ?? myId
+makeTextEdit empty text myId = TextEdit.make ?? empty ?? text ?? myId
 
 makeTextEditor ::
     (Monad m, Applicative f) =>
