@@ -53,11 +53,11 @@ extractFields (V.RecExtend tag val (Val _ rest)) =
 
 -- TODO: Remove
 textView :: Monad m => Text -> AnimId -> ExprGuiM m View
-textView x animId = TextView.make ?? x ?? animId & ExprGuiM.widgetEnv
+textView x animId = TextView.make ?? x ?? animId
 
 label :: Monad m => Text -> AnimId -> ExprGuiM m View
 label x animId =
-    TextView.make ?? x ?? Anim.augmentId animId x & ExprGuiM.widgetEnv
+    TextView.make ?? x ?? Anim.augmentId animId x
 
 makeTag :: Monad m => AnimId -> T.Tag -> ExprGuiM m View
 makeTag animId tag =
@@ -254,7 +254,7 @@ makeInner animId (Val typ val) =
             | Lens.has traverse val = ExprGuiM.advanceDepth return animId
             | otherwise = id
         asText text =
-            TextView.make ?? cut ?? animId & ExprGuiM.widgetEnv
+            TextView.make ?? cut ?? animId
             where
                 cut =
                     map limLine start ++

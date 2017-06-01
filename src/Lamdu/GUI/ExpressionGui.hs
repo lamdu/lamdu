@@ -553,8 +553,8 @@ makeNameEditWith onActiveEditor (Name nameSrc nameCollision setName name) myId =
             makeCollisionSuffixLabel nameCollision (Widget.toAnimId myId)
             <&> Lens._Just %~ Widget.fromView
         nameEdit <-
-            makeNameWordEdit ?? Property storedName setName ?? WidgetIds.nameEditOf myId
-            & ExprGuiM.widgetEnv
+            makeNameWordEdit ?? Property storedName setName
+            ?? WidgetIds.nameEditOf myId
         return . Box.hboxCentered $ nameEdit : mCollisionSuffix ^.. Lens._Just
     <&> onActiveEditor
     where
@@ -657,7 +657,7 @@ addValFrame myId =
 makeNameView :: Monad m => Name n -> AnimId -> ExprGuiM m View
 makeNameView (Name _ collision _ name) animId =
     do
-        nameView <- TextView.make ?? name ?? animId & ExprGuiM.widgetEnv
+        nameView <- TextView.make ?? name ?? animId
         mSuffixLabel <- makeCollisionSuffixLabel collision $ animId ++ ["suffix"]
         GridView.horizontalAlign 0.5 (nameView : mSuffixLabel ^.. Lens._Just) & return
 

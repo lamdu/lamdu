@@ -49,8 +49,7 @@ makeNamePartEditor ::
 makeNamePartEditor color namePartStr setter myId =
     (FocusDelegator.make ?? builtinFDConfig ?? FocusDelegator.FocusEntryParent
      ?? myId)
-    <*> ExprGuiM.widgetEnv
-        ( TextEdits.makeWordEdit ?? empty ?? Property namePartStr setter ??
+    <*> ( TextEdits.makeWordEdit ?? empty ?? Property namePartStr setter ??
           myId `Widget.joinId` ["textedit"]
         )
     & Reader.local (TextView.color .~ color)

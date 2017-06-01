@@ -41,7 +41,7 @@ makeSimpleView ::
     Name m -> Widget.Id ->
     ExprGuiM m (ExpressionGui f)
 makeSimpleView name myId =
-    ExprGuiM.widgetEnv (Widget.makeFocusableView ?? myId)
+    (Widget.makeFocusableView ?? myId)
     <*> (ExpressionGui.makeNameView name (Widget.toAnimId myId) <&> Widget.fromView)
     <&> TreeLayout.fromCenteredWidget
 

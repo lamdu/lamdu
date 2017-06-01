@@ -163,7 +163,7 @@ mkPrejumpPosSaver =
 
 -- | Vertical spacer as ratio of line height
 vspacer :: Monad m => (Theme -> Double) -> ExprGuiM m (Widget f)
-vspacer themeGetter = readTheme <&> themeGetter >>= widgetEnv . Spacing.vspacer
+vspacer themeGetter = readTheme <&> themeGetter >>= Spacing.vspacer
 
 makeSubexpression ::
     Monad m =>
@@ -194,9 +194,7 @@ advanceDepth f animId action =
             then mkErrorWidget >>= f
             else action & exprGuiM %~ RWS.local (aSubexpressionLayer -~ 1)
     where
-        mkErrorWidget =
-            TextView.make ?? "..." ?? animId
-            & widgetEnv
+        mkErrorWidget = TextView.make ?? "..." ?? animId
 
 run ::
     Monad m =>
@@ -227,12 +225,11 @@ run makeSubexpr codeAnchors config theme settings style (ExprGuiM action) =
             & lift
 
 makeLabel :: Monad m => Text -> AnimId -> ExprGuiM m View
-makeLabel text animId = TextView.makeLabel ?? text ?? animId & widgetEnv
+makeLabel text animId = TextView.makeLabel ?? text ?? animId
 
 transaction :: Monad m => T m a -> ExprGuiM m a
 transaction = ExprGuiM . lift
 
--- TODO: Remove this:
 widgetEnv :: Monad m => WidgetEnvT (T m) a -> ExprGuiM m a
 widgetEnv action = do
     env <- ExprGuiM $ Lens.view aWidgetEnv

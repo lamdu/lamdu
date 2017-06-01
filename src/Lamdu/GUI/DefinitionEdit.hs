@@ -49,7 +49,6 @@ addUndeleteButton myId undelete mkWidget =
     do
         undelButton <-
             TextView.makeFocusable ?? "Undelete..." ?? undelButtonId
-            & ExprGuiM.widgetEnv
             <&> Widget.weakerEvents eventMap
         return $ \width -> Box.vboxAlign 0 [mkWidget width, undelButton]
     where

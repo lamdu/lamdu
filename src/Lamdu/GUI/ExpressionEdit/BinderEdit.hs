@@ -110,7 +110,6 @@ mkPresentationModeEdit myId prop = do
     pairs <- traverse mkPair [Sugar.OO, Sugar.Verbose, Sugar.Infix]
     Choice.make ?? Transaction.setP prop ?? pairs ?? cur
         ?? presentationModeChoiceConfig ?? myId
-        & ExprGuiM.widgetEnv
         <&> Widget.scale (realToFrac <$> Theme.presentationChoiceScaleFactor theme)
 
 data Parts m = Parts
@@ -218,7 +217,7 @@ makeScopeNavEdit binder myId curCursor =
         settings <- ExprGuiM.readSettings
         case settings ^. CESettings.sInfoMode of
             CESettings.Evaluation ->
-                ExprGuiM.widgetEnv (Widget.makeFocusableView ?? myId <&> (AlignedWidget.widget %~))
+                (Widget.makeFocusableView ?? myId <&> (AlignedWidget.widget %~))
                 <*> (mapM mkArrow scopes <&> AlignedWidget.hbox 0.5)
                 <&> AlignedWidget.widget %~ Widget.weakerEvents
                     (mkScopeEventMap leftKeys rightKeys `mappend` blockEventMap)
