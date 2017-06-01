@@ -88,11 +88,10 @@ addAnimIds animId (Branch a cs) =
     where
         tAnimId = Anim.augmentId animId a
 
-label :: TextView.Style -> AnimId -> Text -> View
-label style animId text = TextView.make style text $ Anim.augmentId animId text
+label :: TextView.HasStyle env => env -> AnimId -> Text -> View
+label env animId text = TextView.make env text $ Anim.augmentId animId text
 
-makeShortcutKeyView ::
-    Config -> (AnimId, [E.InputDoc]) -> View
+makeShortcutKeyView :: Config -> (AnimId, [E.InputDoc]) -> View
 makeShortcutKeyView config (animId, inputDocs) =
     inputDocs
     <&> (label conf animId . (mappend " "))

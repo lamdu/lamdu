@@ -3,6 +3,7 @@ module Graphics.UI.Bottle.Widgets.TextView
     ( Font.Underline(..), Font.underlineColor, Font.underlineWidth
     , Style(..), styleColor, styleFont, styleUnderline, whiteText
     , lineHeight
+    , HasStyle(..)
 
     , make, makeWidget
     , RenderedText(..), renderedTextSize
@@ -10,16 +11,18 @@ module Graphics.UI.Bottle.Widgets.TextView
     , letterRects
     ) where
 
+import           Control.Lens (Lens')
 import qualified Control.Lens as Lens
+import           Control.Monad.Reader (MonadReader)
 import qualified Data.Text as Text
 import           Data.Vector.Vector2 (Vector2(..))
 import qualified Graphics.DrawingCombinators as Draw
 import           Graphics.UI.Bottle.Animation (AnimId, Size)
 import qualified Graphics.UI.Bottle.Animation as Anim
-import           Graphics.UI.Bottle.Rect (Rect(Rect))
-import qualified Graphics.UI.Bottle.Rect as Rect
 import           Graphics.UI.Bottle.Font (TextSize(..))
 import qualified Graphics.UI.Bottle.Font as Font
+import           Graphics.UI.Bottle.Rect (Rect(Rect))
+import qualified Graphics.UI.Bottle.Rect as Rect
 import           Graphics.UI.Bottle.View (View(..))
 import qualified Graphics.UI.Bottle.View as View
 import           Graphics.UI.Bottle.Widget (Widget)
@@ -33,6 +36,9 @@ data Style = Style
     , _styleUnderline :: Maybe Font.Underline
     }
 Lens.makeLenses ''Style
+
+class HasStyle env where style :: Lens' env Style
+instance HasStyle Style where style = id
 
 whiteText :: Draw.Font -> Style
 whiteText font =
@@ -60,12 +66,12 @@ nestedFrame ::
     Show a =>
     Style ->
     (a, RenderedText (Draw.Image ())) -> RenderedText (AnimId -> Anim.Frame)
-nestedFrame style (i, RenderedText size img) =
+nestedFrame s (i, RenderedText size img) =
     RenderedText size draw
     where
         draw animId =
             Anim.sizedFrame (Anim.augmentId animId i) anchorSize img
-        anchorSize = pure (lineHeight style)
+        anchorSize = pure (lineHeight s)
 
 -- | Returns at least one rect
 letterRects :: Style -> Text -> [[Rect]]
@@ -89,14 +95,25 @@ letterRects Style{..} text =
                 makeLetterRect size xpos =
                     Rect (Vector2 (advance xpos) 0) (bounding size)
 
-drawText :: Style -> Text -> RenderedText (AnimId -> Anim.Frame)
-drawText style text = nestedFrame style ("text" :: Text, fontRender style text)
+drawText ::
+    (MonadReader env m, HasStyle env) =>
+    m (Text -> RenderedText (AnimId -> Anim.Frame))
+drawText =
+    do
+        s <- Lens.view style
+        pure $ \text -> nestedFrame s ("text" :: Text, fontRender s text)
 
-make :: Style -> Text -> AnimId -> View
-make style text animId =
-    View.make (bounding textSize) (frame animId)
-    where
-        RenderedText textSize frame = drawText style text
+make ::
+    (MonadReader env m, HasStyle env) =>
+    m (Text -> AnimId -> View)
+make =
+    do
+        draw <- drawText
+        pure $ \text animId ->
+            let RenderedText textSize frame = draw text
+            in View.make (bounding textSize) (frame animId)
 
-makeWidget :: Style -> Text -> AnimId -> Widget a
-makeWidget style text = Widget.fromView . make style text
+makeWidget ::
+    (MonadReader env m, HasStyle env) =>
+    m (Text -> AnimId -> Widget a)
+makeWidget = make <&> Lens.mapped . Lens.mapped %~ Widget.fromView
