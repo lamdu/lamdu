@@ -20,6 +20,7 @@ import           Graphics.UI.Bottle.View (View(..))
 import qualified Graphics.UI.Bottle.View as View
 import qualified Graphics.UI.Bottle.Widgets as BWidgets
 import qualified Graphics.UI.Bottle.Widgets.GridView as GridView
+import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
 import qualified Lamdu.Builtins.Anchors as Builtins
 import qualified Lamdu.Builtins.PrimVal as PrimVal
 import           Lamdu.Calc.Type (Type)
@@ -50,12 +51,13 @@ extractFields (V.RecExtend tag val (Val _ rest)) =
           & EvalTypeError & RecordExtendsError
         )
 
+-- TODO: Remove
 textView :: Monad m => Text -> AnimId -> ExprGuiM m View
-textView x animId = BWidgets.makeTextView ?? x ?? animId & ExprGuiM.widgetEnv
+textView x animId = TextView.make ?? x ?? animId & ExprGuiM.widgetEnv
 
 label :: Monad m => Text -> AnimId -> ExprGuiM m View
 label x animId =
-    BWidgets.makeTextView ?? x ?? Anim.augmentId animId x & ExprGuiM.widgetEnv
+    TextView.make ?? x ?? Anim.augmentId animId x & ExprGuiM.widgetEnv
 
 makeTag :: Monad m => AnimId -> T.Tag -> ExprGuiM m View
 makeTag animId tag =
@@ -252,7 +254,7 @@ makeInner animId (Val typ val) =
             | Lens.has traverse val = ExprGuiM.advanceDepth return animId
             | otherwise = id
         asText text =
-            BWidgets.makeTextView ?? cut ?? animId & ExprGuiM.widgetEnv
+            TextView.make ?? cut ?? animId & ExprGuiM.widgetEnv
             where
                 cut =
                     map limLine start ++

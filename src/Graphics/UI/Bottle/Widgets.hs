@@ -1,6 +1,6 @@
 {-# LANGUAGE NoImplicitPrelude, OverloadedStrings #-}
 module Graphics.UI.Bottle.Widgets
-    ( makeTextView, makeLabel
+    ( makeLabel
     , makeFocusableView
     , makeFocusableTextView, makeFocusableLabel
     , makeTextEdit
@@ -39,14 +39,8 @@ import qualified Graphics.UI.GLFW as GLFW
 
 import           Lamdu.Prelude
 
-makeTextView :: Monad m => WidgetEnvT m (Text -> AnimId -> View)
-makeTextView = do
-    style <- WE.readTextStyle
-    return $ \text myId ->
-        TextView.make (style ^. TextEdit.sTextViewStyle) text myId
-
 makeLabel :: Monad m => WidgetEnvT m (Text -> AnimId -> View)
-makeLabel = makeTextView <&> \make text prefix -> make text $ mappend prefix [encodeUtf8 text]
+makeLabel = TextView.make <&> \make text prefix -> make text $ mappend prefix [encodeUtf8 text]
 
 makeFocusableView ::
     (Monad m, Applicative f) =>
@@ -63,7 +57,7 @@ makeFocusableTextView ::
     Text -> Widget.Id -> WidgetEnvT m (Widget (f Widget.EventResult))
 makeFocusableTextView text myId =
     makeFocusableView myId
-    <*> (makeTextView ?? text ?? Widget.toAnimId myId <&> Widget.fromView)
+    <*> (TextView.make ?? text ?? Widget.toAnimId myId <&> Widget.fromView)
 
 makeFocusableLabel ::
     (Monad m, Applicative f) =>

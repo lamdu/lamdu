@@ -18,6 +18,7 @@ import qualified Graphics.UI.Bottle.View as View
 import qualified Graphics.UI.Bottle.Widget.Id as WidgetId
 import qualified Graphics.UI.Bottle.Widgets as BWidgets
 import qualified Graphics.UI.Bottle.Widgets.GridView as GridView
+import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
 import           Graphics.UI.Bottle.WidgetsEnvT (WidgetEnvT)
 import           Lamdu.Calc.Identifier (Identifier(..))
 import           Lamdu.Calc.Type (Type)
@@ -62,7 +63,7 @@ text :: Monad m => Text -> M m View
 text str =
     do
         animId <- randAnimId
-        wenv $ BWidgets.makeTextView ?? Text.replace "\0" "" str ?? animId
+        wenv $ TextView.make ?? Text.replace "\0" "" str ?? animId
 
 showIdentifier :: Monad m => Identifier -> M m View
 showIdentifier (Identifier bs) = text (decodeUtf8 bs)

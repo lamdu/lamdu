@@ -675,7 +675,7 @@ addValFrame myId =
 makeNameView :: Monad m => Name n -> AnimId -> ExprGuiM m View
 makeNameView (Name _ collision _ name) animId =
     do
-        nameView <- BWidgets.makeTextView ?? name ?? animId & ExprGuiM.widgetEnv
+        nameView <- TextView.make ?? name ?? animId & ExprGuiM.widgetEnv
         mSuffixLabel <- makeCollisionSuffixLabel collision $ animId ++ ["suffix"]
         GridView.horizontalAlign 0.5 (nameView : mSuffixLabel ^.. Lens._Just) & return
 

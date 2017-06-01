@@ -45,6 +45,8 @@ data Style = Style
     }
 Lens.makeLenses ''Style
 
+instance TextView.HasStyle Style where style = sTextViewStyle
+
 -- TODO: Replace with a defaultStyle :: TextViewStyle -> .. -> Style
 defaultCursorColor :: Draw.Color
 defaultCursorColor = Draw.Color 0 1 0 1
