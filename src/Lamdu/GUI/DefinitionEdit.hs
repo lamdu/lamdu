@@ -47,7 +47,7 @@ addUndeleteButton ::
 addUndeleteButton myId undelete mkWidget =
     do
         undelButton <-
-            BWidgets.makeFocusableTextView "Undelete..." undelButtonId
+            BWidgets.makeFocusableTextView ?? "Undelete..." ?? undelButtonId
             & ExprGuiM.widgetEnv
             <&> Widget.weakerEvents eventMap
         return $ \width -> Box.vboxAlign 0 [mkWidget width, undelButton]

@@ -100,7 +100,7 @@ mkPresentationModeEdit myId prop = do
     theme <- ExprGuiM.readTheme
     let mkPair presentationMode = do
             widget <-
-                BWidgets.makeFocusableTextView text labelId
+                BWidgets.makeFocusableTextView ?? text ?? labelId
                 & WE.localEnv (WE.textColor .~ Theme.presentationChoiceColor theme)
                 & ExprGuiM.widgetEnv
             return (presentationMode, widget)

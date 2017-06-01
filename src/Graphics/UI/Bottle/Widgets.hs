@@ -37,10 +37,14 @@ import           Lamdu.Prelude
 
 makeFocusableTextView ::
     (Monad m, Applicative f) =>
-    Text -> Widget.Id -> WidgetEnvT m (Widget (f Widget.EventResult))
-makeFocusableTextView text myId =
-    (Widget.makeFocusableView ?? myId)
-    <*> (TextView.make ?? text ?? Widget.toAnimId myId <&> Widget.fromView)
+    WidgetEnvT m (Text -> Widget.Id -> Widget (f Widget.EventResult))
+makeFocusableTextView =
+    do
+        toFocusable <- Widget.makeFocusableView
+        mkText <- TextView.make
+        pure $ \text myId ->
+            mkText text (Widget.toAnimId myId)
+            & Widget.fromView & toFocusable myId
 
 makeFocusDelegator ::
     (Monad m, Applicative f) =>
