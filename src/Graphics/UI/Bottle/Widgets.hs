@@ -39,14 +39,14 @@ import qualified Graphics.UI.GLFW as GLFW
 
 import           Lamdu.Prelude
 
-makeTextView :: Monad m => Text -> AnimId -> WidgetEnvT m View
-makeTextView text myId = do
+makeTextView :: Monad m => WidgetEnvT m (Text -> AnimId -> View)
+makeTextView = do
     style <- WE.readTextStyle
-    return $
+    return $ \text myId ->
         TextView.make (style ^. TextEdit.sTextViewStyle) text myId
 
-makeLabel :: Monad m => Text -> AnimId -> WidgetEnvT m View
-makeLabel text prefix = makeTextView text $ mappend prefix [encodeUtf8 text]
+makeLabel :: Monad m => WidgetEnvT m (Text -> AnimId -> View)
+makeLabel = makeTextView <&> \make text prefix -> make text $ mappend prefix [encodeUtf8 text]
 
 makeFocusableView ::
     (Monad m, Applicative f) =>
@@ -63,7 +63,7 @@ makeFocusableTextView ::
     Text -> Widget.Id -> WidgetEnvT m (Widget (f Widget.EventResult))
 makeFocusableTextView text myId =
     makeFocusableView myId
-    <*> (makeTextView text (Widget.toAnimId myId) <&> Widget.fromView)
+    <*> (makeTextView ?? text ?? Widget.toAnimId myId <&> Widget.fromView)
 
 makeFocusableLabel ::
     (Monad m, Applicative f) =>

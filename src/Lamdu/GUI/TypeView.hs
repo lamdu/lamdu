@@ -60,8 +60,9 @@ randAnimId = WidgetId.toAnimId . WidgetIds.fromUUID <$> rand
 
 text :: Monad m => Text -> M m View
 text str =
-    randAnimId
-    >>= wenv . BWidgets.makeTextView (Text.replace "\0" "" str)
+    do
+        animId <- randAnimId
+        wenv $ BWidgets.makeTextView ?? Text.replace "\0" "" str ?? animId
 
 showIdentifier :: Monad m => Identifier -> M m View
 showIdentifier (Identifier bs) = text (decodeUtf8 bs)

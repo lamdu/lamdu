@@ -202,7 +202,7 @@ advanceDepth f animId action =
             else action & exprGuiM %~ RWS.local (aSubexpressionLayer -~ 1)
     where
         mkErrorWidget =
-            BWidgets.makeTextView "..." animId
+            BWidgets.makeTextView ?? "..." ?? animId
             & widgetEnv
 
 run ::
@@ -234,7 +234,7 @@ run makeSubexpr codeAnchors config theme settings style (ExprGuiM action) =
             & lift
 
 makeLabel :: Monad m => Text -> AnimId -> ExprGuiM m View
-makeLabel text animId = widgetEnv $ BWidgets.makeLabel text animId
+makeLabel text animId = BWidgets.makeLabel ?? text ?? animId & widgetEnv
 
 transaction :: Monad m => T m a -> ExprGuiM m a
 transaction = ExprGuiM . lift
