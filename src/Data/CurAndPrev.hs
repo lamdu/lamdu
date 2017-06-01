@@ -7,7 +7,6 @@ module Data.CurAndPrev
     ) where
 
 import           Control.Applicative (Alternative(..))
-import           Control.Lens (Lens')
 
 import           Lamdu.Prelude
 

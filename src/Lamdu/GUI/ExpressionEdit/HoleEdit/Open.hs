@@ -6,7 +6,6 @@ module Lamdu.GUI.ExpressionEdit.HoleEdit.Open
     ) where
 
 import           Control.Applicative ((<|>))
-import           Control.Lens (Lens')
 import qualified Control.Lens as Lens
 import           Control.Monad (msum)
 import qualified Control.Monad.Reader as Reader

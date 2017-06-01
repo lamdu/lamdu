@@ -14,7 +14,6 @@ module Lamdu.Sugar.Lens
     , leftMostLeaf
     ) where
 
-import           Control.Lens (Lens')
 import qualified Control.Lens as Lens
 import           Data.Store.Transaction (Transaction)
 import           Lamdu.Calc.Type.Scheme (Scheme)

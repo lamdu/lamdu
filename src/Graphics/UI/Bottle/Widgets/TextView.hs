@@ -11,7 +11,6 @@ module Graphics.UI.Bottle.Widgets.TextView
     , letterRects
     ) where
 
-import           Control.Lens (Lens')
 import qualified Control.Lens as Lens
 import qualified Data.Text as Text
 import           Data.Text.Encoding (encodeUtf8)

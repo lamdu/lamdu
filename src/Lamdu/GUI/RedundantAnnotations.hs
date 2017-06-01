@@ -3,7 +3,6 @@ module Lamdu.GUI.RedundantAnnotations
     ( markAnnotationsToDisplay
     ) where
 
-import           Control.Lens (Lens')
 import qualified Control.Lens as Lens
 import qualified Lamdu.GUI.ExpressionGui.Types as T
 import qualified Lamdu.Sugar.Lens as SugarLens

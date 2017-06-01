@@ -11,7 +11,7 @@ module Graphics.UI.Bottle.Rect
 
 import           Control.DeepSeq (NFData(..))
 import           Control.DeepSeq.Generics (genericRnf)
-import           Control.Lens (Traversal', Lens')
+import           Control.Lens (Traversal')
 import qualified Control.Lens as Lens
 import           Data.Vector.Vector2 (Vector2(..))
 import           Foreign.C.Types.Instances ()

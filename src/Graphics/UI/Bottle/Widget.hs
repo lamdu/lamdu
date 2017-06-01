@@ -56,7 +56,6 @@ module Graphics.UI.Bottle.Widget
     ) where
 
 import           Control.Applicative (liftA2)
-import           Control.Lens (Lens')
 import qualified Control.Lens as Lens
 import qualified Data.Map as Map
 import qualified Data.Monoid as Monoid

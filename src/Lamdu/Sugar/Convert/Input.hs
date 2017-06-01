@@ -8,7 +8,6 @@ module Lamdu.Sugar.Convert.Input
     , preparePayloads
     ) where
 
-import           Control.Lens (Lens')
 import qualified Control.Lens as Lens
 import           Data.CurAndPrev (CurAndPrev(..))
 import qualified Data.Map as Map

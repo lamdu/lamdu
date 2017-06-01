@@ -11,7 +11,6 @@ module Graphics.UI.Bottle.Widget.Aligned
     , box, hbox, vbox
     ) where
 
-import           Control.Lens (Lens')
 import qualified Control.Lens as Lens
 import           Data.Vector.Vector2 (Vector2(..))
 import           Graphics.UI.Bottle.Alignment (Alignment(..))

@@ -3,7 +3,6 @@ module Lamdu.GUI.Scroll
     ( focusAreaIntoWindow
     ) where
 
-import           Control.Lens (Lens')
 import qualified Control.Lens as Lens
 import           Data.Vector.Vector2 (Vector2(..))
 import qualified Graphics.UI.Bottle.Rect as Rect

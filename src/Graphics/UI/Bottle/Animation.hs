@@ -17,7 +17,6 @@ module Graphics.UI.Bottle.Animation
     ) where
 
 import           Control.Applicative (liftA2)
-import           Control.Lens (Lens')
 import qualified Control.Lens as Lens
 import qualified Data.List as List
 import           Data.List.Utils (groupOn)

@@ -8,7 +8,6 @@ module Graphics.UI.Bottle.Widgets.TextEdit
     , getCursor
     ) where
 
-import           Control.Lens (Lens')
 import qualified Control.Lens as Lens
 import qualified Data.Binary.Utils as BinUtils
 import           Data.Char (isSpace)

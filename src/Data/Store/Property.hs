@@ -1,14 +1,14 @@
-{-# LANGUAGE TemplateHaskell, Rank2Types #-}
+{-# LANGUAGE NoImplicitPrelude, TemplateHaskell, Rank2Types #-}
 module Data.Store.Property
     ( Property(..), pVal, pSet, value, set
     , compose, pureCompose, composeLens
     , modify_, pureModify
     ) where
 
-import           Control.Lens (Lens')
 import qualified Control.Lens as Lens
-import           Control.Lens.Operators
 import           Control.Monad ((<=<))
+
+import           Lamdu.Prelude
 
 data Property m a = Property
     { _pVal :: a

@@ -6,7 +6,6 @@ module Graphics.UI.Bottle.Widgets.GridView
     , horizontalAlign, horizontal
     ) where
 
-import           Control.Lens (Lens)
 import qualified Control.Lens as Lens
 import           Data.Foldable (toList)
 import           Data.List (transpose)

@@ -3,6 +3,7 @@ module Lamdu.Prelude
     ( module X
     ) where
 
+import Control.Lens as X (Lens, Lens')
 import Control.Lens.Operators as X
 import Control.Lens.Tuple as X
 import Control.Monad as X (forever, guard, unless, void, when, join)
