@@ -3,6 +3,7 @@ module Lamdu.GUI.ExpressionEdit.BuiltinEdit
     ( make
     ) where
 
+import qualified Control.Monad.Reader as Reader
 import           Data.Store.Property (Property(..))
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Text as Text
@@ -15,12 +16,12 @@ import qualified Graphics.UI.Bottle.Widgets.Box as Box
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 import qualified Graphics.UI.Bottle.Widgets.TextEdit as TextEdit
 import qualified Graphics.UI.Bottle.Widgets.TextEdit.Property as TextEdits
+import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
 import qualified Graphics.UI.GLFW as GLFW
 import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.Data.Definition as Definition
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
-import           Lamdu.GUI.WidgetsEnvT as WE
 import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
@@ -52,7 +53,7 @@ makeNamePartEditor color namePartStr setter myId =
         ( TextEdits.makeWordEdit ?? empty ?? Property namePartStr setter ??
           myId `Widget.joinId` ["textedit"]
         )
-    & ExprGuiM.localEnv (WE.textColor .~ color)
+    & Reader.local (TextView.color .~ color)
     where
         empty = TextEdit.EmptyStrings "unnamed builtin" ""
 

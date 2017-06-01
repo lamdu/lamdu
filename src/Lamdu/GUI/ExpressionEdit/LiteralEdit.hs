@@ -4,6 +4,7 @@ module Lamdu.GUI.ExpressionEdit.LiteralEdit
     ) where
 
 
+import qualified Control.Monad.Reader as Reader
 import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
 import           Data.UUID.Types (UUID)
@@ -27,7 +28,6 @@ import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
-import qualified Lamdu.GUI.WidgetsEnvT as WE
 import           Lamdu.Style (Style)
 import qualified Lamdu.Style as Style
 import qualified Lamdu.Sugar.Types as Sugar
@@ -56,7 +56,7 @@ genericEdit getStyle prop pl =
         style <- ExprGuiM.readStyle <&> getStyle
         TextView.makeFocusable ?? valText ?? myId
             & ExprGuiM.widgetEnv
-            & ExprGuiM.localEnv (WE.envTextStyle .~ style)
+            & Reader.local (TextEdit.style .~ style)
             <&> Widget.weakerEvents editEventMap
             <&> TreeLayout.fromCenteredWidget
     where
@@ -96,8 +96,7 @@ textEdit prop pl =
                 <&> TreeLayout.fromCenteredWidget
                 <&> TreeLayout.alignedWidget . AlignedWidget.absAlignedWidget . _1 . _2 .~
                     0.5 * (left ^. Widget.height)
-            & ExprGuiM.widgetEnv
-            & ExprGuiM.localEnv (WE.envTextStyle .~ style)
+            & Reader.local (TextEdit.style .~ style)
         FocusDelegator.make ?? fdConfig config
             ?? FocusDelegator.FocusEntryParent ?? WidgetIds.notDelegatingId myId
             <&> (TreeLayout.widget %~)

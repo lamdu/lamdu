@@ -53,7 +53,6 @@ import           Lamdu.GUI.Hover (addBackground, addDarkBackground)
 import qualified Lamdu.GUI.Spacing as Spacing
 import qualified Lamdu.GUI.TypeView as TypeView
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
-import qualified Lamdu.GUI.WidgetsEnvT as WE
 import qualified Lamdu.Sugar.Lens as SugarLens
 import           Lamdu.Sugar.Names.Types (Name(..), ExpressionN)
 import qualified Lamdu.Sugar.NearestHoles as NearestHoles
@@ -314,7 +313,7 @@ makeHoleResultWidget resultId holeResult =
                 -- so that even if we're on the search term, we can have valid
                 -- event maps of any result (we actually use the first one's
                 -- event map)
-                ExprGuiM.localEnv (WE.envCursor .~ idWithinResultWidget) mkWidget
+                Reader.local (Widget.cursor .~ idWithinResultWidget) mkWidget
                 <&> (^. Widget.eventMap)
         widget <-
             (Widget.makeFocusableView ?? resultId) <*> mkWidget

@@ -41,7 +41,6 @@ import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
 import qualified Lamdu.GUI.ParamEdit as ParamEdit
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
-import qualified Lamdu.GUI.WidgetsEnvT as WE
 import qualified Lamdu.Sugar.Lens as SugarLens
 import           Lamdu.Sugar.Names.Types (Name(..), NameSource(..))
 import           Lamdu.Sugar.NearestHoles (NearestHoles)
@@ -209,8 +208,8 @@ makeScopeNavEdit binder myId curCursor =
         theme <- ExprGuiM.readTheme
         let mkArrow (txt, mScopeId) =
                 ExpressionGui.makeLabel txt (Widget.toAnimId myId)
-                & ExprGuiM.localEnv
-                ( WE.textColor .~
+                & Reader.local
+                ( TextView.color .~
                     case mScopeId of
                     Nothing -> Theme.disabledColor theme
                     Just _ -> Theme.grammarColor theme

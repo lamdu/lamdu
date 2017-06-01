@@ -4,7 +4,7 @@ module Lamdu.GUI.ExpressionGui.Monad
     , widgetEnv
     , makeLabel
     , StoredEntityIds(..)
-    , transaction, localEnv, withLocalUnderline
+    , transaction, withLocalUnderline
     --
     , makeSubexpression
     , makeSubexpressionWith
@@ -28,6 +28,7 @@ module Lamdu.GUI.ExpressionGui.Monad
     ) where
 
 import qualified Control.Lens as Lens
+import qualified Control.Monad.Reader as Reader
 import           Control.Monad.Trans.FastRWS (RWST, runRWST)
 import qualified Control.Monad.Trans.FastRWS as RWS
 import qualified Data.Char as Char
@@ -129,15 +130,8 @@ instance TextEdit.HasStyle (Askable m) where style = aWidgetEnv . TextEdit.style
 instance Spacing.HasStdSpacing (Askable m) where
     stdSpacing = aWidgetEnv . Spacing.stdSpacing
 
--- TODO: To lens
-localEnv :: Functor m => (WE.Env -> WE.Env) -> ExprGuiM m a -> ExprGuiM m a
-localEnv f = exprGuiM %~ RWS.local (aWidgetEnv %~ f)
-
-withLocalUnderline :: Functor m => TextView.Underline -> ExprGuiM m a -> ExprGuiM m a
-withLocalUnderline underline =
-    WE.envTextStyle . TextEdit.sTextViewStyle .
-    TextView.styleUnderline ?~ underline
-    & localEnv
+withLocalUnderline :: Monad m => TextView.Underline -> ExprGuiM m a -> ExprGuiM m a
+withLocalUnderline underline = Reader.local (TextView.underline ?~ underline)
 
 readStyle :: Monad m => ExprGuiM m Style
 readStyle = ExprGuiM $ Lens.view aStyle

@@ -4,6 +4,7 @@ module Lamdu.GUI.ExpressionEdit.GetVarEdit
     ) where
 
 import qualified Control.Lens as Lens
+import qualified Control.Monad.Reader as Reader
 import qualified Data.ByteString.Char8 as SBS8
 import           Data.Store.Transaction (Transaction)
 import qualified Graphics.UI.Bottle.EventMap as E
@@ -13,6 +14,7 @@ import           Graphics.UI.Bottle.Widget.Aligned (AlignedWidget)
 import qualified Graphics.UI.Bottle.Widget.Aligned as AlignedWidget
 import           Graphics.UI.Bottle.Widget.TreeLayout (TreeLayout)
 import qualified Graphics.UI.Bottle.Widget.TreeLayout as TreeLayout
+import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
 import           Lamdu.Calc.Type.Scheme (schemeType)
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
@@ -27,7 +29,6 @@ import qualified Lamdu.GUI.Hover as Hover
 import qualified Lamdu.GUI.LightLambda as LightLambda
 import qualified Lamdu.GUI.TypeView as TypeView
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
-import qualified Lamdu.GUI.WidgetsEnvT as WE
 import           Lamdu.Sugar.Names.Types (Name(..))
 import qualified Lamdu.Sugar.Types as Sugar
 
@@ -62,7 +63,7 @@ makeParamsRecord myId paramsRecordVar =
                 (\i fieldName ->
                     Widget.joinId myId ["params", SBS8.pack (show (i::Int))]
                     & makeSimpleView fieldName
-                    & ExprGuiM.localEnv (WE.textColor .~ parameterColor)
+                    & Reader.local (TextView.color .~ parameterColor)
                 )
               )
             , ExpressionGui.makeLabel "}" (Widget.toAnimId myId <> ["suffix"])
@@ -199,7 +200,7 @@ makeGetBinder binderVar myId =
                     , processDefinitionWidget defForm myId
                     )
         makeSimpleView
-            <&> Lens.mapped %~ ExprGuiM.localEnv (WE.textColor .~ color)
+            <&> Lens.mapped %~ Reader.local (TextView.color .~ color)
             & makeNameRef myId (binderVar ^. Sugar.bvNameRef)
             <&> TreeLayout.widget %~
             Widget.weakerEvents
@@ -226,7 +227,7 @@ make getVar pl =
                     <&> Lens.mapped %~ ExpressionGui.styleNameOrigin name parameterColor
                 _ ->
                     makeSimpleView
-                    <&> Lens.mapped %~ ExprGuiM.localEnv (WE.textColor .~ parameterColor)
+                    <&> Lens.mapped %~ Reader.local (TextView.color .~ parameterColor)
                 & makeNameRef myId (param ^. Sugar.pNameRef)
                 where
                     name = param ^. Sugar.pNameRef . Sugar.nrName

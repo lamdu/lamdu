@@ -5,6 +5,7 @@ module Lamdu.GUI.ExpressionEdit.TagEdit
     , diveToRecordTag, diveToCaseTag
     ) where
 
+import qualified Control.Monad.Reader as Reader
 import           Data.Store.Transaction (Transaction)
 import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.Bottle.EventMap as E
@@ -12,6 +13,7 @@ import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import           Graphics.UI.Bottle.Widget.Aligned (AlignedWidget)
 import qualified Graphics.UI.Bottle.Widget.Aligned as AlignedWidget
+import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
@@ -19,7 +21,6 @@ import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
-import qualified Lamdu.GUI.WidgetsEnvT as WE
 import           Lamdu.Sugar.Names.Types (Name(..))
 import           Lamdu.Sugar.NearestHoles (NearestHoles)
 import qualified Lamdu.Sugar.NearestHoles as NearestHoles
@@ -36,7 +37,7 @@ makeTagNameEdit ::
 makeTagNameEdit jumpNextEventMap tagColor tagG =
     ExpressionGui.makeNameEditWith (Widget.weakerEvents jumpNextEventMap)
     (tagG ^. Sugar.tagGName) myId
-    & ExprGuiM.localEnv (WE.textColor .~ tagColor)
+    & Reader.local (TextView.color .~ tagColor)
     <&> Widget.eventMap %~ E.filterChars (/= ',')
     where
         myId = WidgetIds.fromEntityId (tagG ^. Sugar.tagInstance)
@@ -85,7 +86,7 @@ makeParamTag t =
     do
         Theme.Name{..} <- Theme.name <$> ExprGuiM.readTheme
         ExpressionGui.makeNameView (t ^. Sugar.tagGName) animId
-            & ExprGuiM.localEnv (WE.textColor .~ paramTagColor)
+            & Reader.local (TextView.color .~ paramTagColor)
             <&> Widget.fromView
             <&> AlignedWidget.fromCenteredWidget
     where
