@@ -23,7 +23,6 @@ import qualified Graphics.UI.Bottle.Widget as Widget
 import           Graphics.UI.Bottle.Widget.Aligned (AlignedWidget)
 import qualified Graphics.UI.Bottle.Widget.Aligned as AlignedWidget
 import qualified Graphics.UI.Bottle.Widget.TreeLayout as TreeLayout
-import qualified Graphics.UI.Bottle.Widgets as BWidgets
 import qualified Graphics.UI.Bottle.Widgets.Box as Box
 import qualified Graphics.UI.Bottle.Widgets.Choice as Choice
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
@@ -109,8 +108,8 @@ mkPresentationModeEdit myId prop = do
                 labelId = Widget.joinId myId [encodeUtf8 text]
                 text = show presentationMode & Text.pack
     pairs <- traverse mkPair [Sugar.OO, Sugar.Verbose, Sugar.Infix]
-    BWidgets.makeChoiceWidget (Transaction.setP prop) pairs cur
-        presentationModeChoiceConfig myId
+    Choice.make ?? Transaction.setP prop ?? pairs ?? cur
+        ?? presentationModeChoiceConfig ?? myId
         & ExprGuiM.widgetEnv
         <&> Widget.scale (realToFrac <$> Theme.presentationChoiceScaleFactor theme)
 

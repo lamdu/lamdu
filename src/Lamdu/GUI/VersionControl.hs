@@ -14,7 +14,6 @@ import qualified Graphics.UI.Bottle.EventMap as E
 import           Graphics.UI.Bottle.MetaKey (MetaKey(..), noMods)
 import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
-import qualified Graphics.UI.Bottle.Widgets as BWidgets
 import qualified Graphics.UI.Bottle.Widgets.Box as Box
 import qualified Graphics.UI.Bottle.Widgets.Choice as Choice
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
@@ -99,10 +98,10 @@ make VersionControl.Config{..} VersionControl.Theme{..} rwtransaction rtransacti
     do
         branchNameEdits <- traverse makeBranchNameEdit $ branches actions
         branchSelector <-
-            BWidgets.makeChoiceWidget (setCurrentBranch actions)
-            branchNameEdits (currentBranch actions)
-            (choiceWidgetConfig VersionControl.Config{..} VersionControl.Theme{..})
-            WidgetIds.branchSelection
+            Choice.make ?? setCurrentBranch actions
+            ?? branchNameEdits ?? currentBranch actions
+            ?? choiceWidgetConfig VersionControl.Config{..} VersionControl.Theme{..}
+            ?? WidgetIds.branchSelection
         mkWidget branchSelector
             <&> Widget.strongerEvents
                 (globalEventMap VersionControl.Config{..} actions)

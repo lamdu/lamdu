@@ -127,7 +127,6 @@ Executable lamdu
                   , Graphics.UI.Bottle.Widget.Layout
                   , Graphics.UI.Bottle.Widget.TreeLayout
                   , Graphics.UI.Bottle.Widget.Id
-                  , Graphics.UI.Bottle.Widgets
                   , Graphics.UI.Bottle.Widgets.Box
                   , Graphics.UI.Bottle.Widgets.Choice
                   , Graphics.UI.Bottle.Widgets.EventMapHelp

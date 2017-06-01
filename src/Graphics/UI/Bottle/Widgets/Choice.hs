@@ -3,7 +3,6 @@
 
 module Graphics.UI.Bottle.Widgets.Choice
     ( make
-    , IsSelected(..)
     , Config(..)
     , ExpandMode(..)
     ) where
@@ -68,13 +67,32 @@ toBox config selfFocused myId childrenRecords =
             childrenRecords
             & Lens.orOf (Lens.traversed . _3 . Lens.to Widget.isFocused)
 
-make ::
+makeInternal ::
     (MonadReader env m, Widget.HasCursor env, Applicative f) =>
-    Config -> [(IsSelected, f (), Widget (f Widget.EventResult))] ->
-    Widget.Id -> m (Widget (f Widget.EventResult))
-make config children myId =
+    m (Config -> [(IsSelected, f (), Widget (f Widget.EventResult))] ->
+       Widget.Id -> Widget (f Widget.EventResult))
+makeInternal =
     do
-        selfFocused <- Widget.subId ?? myId <&> Lens.has Lens._Just
-        let childrenBox = toBox config selfFocused myId children
-        FocusDelegator.make ?? cwcFDConfig config ??
-            FocusDelegator.FocusEntryParent ?? myId ?? childrenBox
+        sub <- Widget.subId
+        fd <- FocusDelegator.make
+        pure $ \config children myId ->
+            let selfFocused = sub myId & Lens.has Lens._Just
+                childrenBox = toBox config selfFocused myId children
+            in  fd (cwcFDConfig config) FocusDelegator.FocusEntryParent myId childrenBox
+
+make ::
+    (Eq a, MonadReader env m, Applicative f, Widget.HasCursor env) =>
+    m
+    ((a -> f ()) -> [(a, Widget (f Widget.EventResult))] -> a ->
+     Config -> Widget.Id -> Widget (f Widget.EventResult))
+make =
+    makeInternal <&> f
+    where
+        f mk choose children curChild choiceConfig =
+            mk choiceConfig (children <&> annotate)
+            where
+                annotate (item, widget) =
+                    ( if item == curChild then Selected else NotSelected
+                    , choose item
+                    , widget
+                    )
