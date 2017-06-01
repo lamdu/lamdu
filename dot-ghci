@@ -3,3 +3,5 @@
 :set -itest
 :set -idist/build/autogen
 :set -Wall
+:set -odir=ghci-out
+:set -outputdir=ghci-out
