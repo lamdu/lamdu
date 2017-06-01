@@ -1,7 +1,6 @@
 {-# LANGUAGE NoImplicitPrelude, OverloadedStrings #-}
 module Graphics.UI.Bottle.Widgets
-    ( makeTextEdit
-    , makeTextEditor, makeLineEdit, makeWordEdit
+    ( makeTextEdit, makeLineEdit, makeWordEdit
     , makeChoiceWidget
     , stdFontHeight
     , stdSpacing
@@ -33,47 +32,45 @@ import qualified Graphics.UI.GLFW as GLFW
 import           Lamdu.Prelude
 
 makeTextEdit ::
-    Monad m =>
-    TextEdit.EmptyStrings -> Text -> Widget.Id ->
-    WidgetEnvT m (Widget (Text, Widget.EventResult))
-makeTextEdit empty text myId = TextEdit.make ?? empty ?? text ?? myId
-
-makeTextEditor ::
     (Monad m, Applicative f) =>
-    TextEdit.EmptyStrings -> Property f Text -> Widget.Id ->
-    WidgetEnvT m (Widget (f Widget.EventResult))
-makeTextEditor empty textRef myId =
-    makeTextEdit empty (Property.value textRef) myId
-    <&> Widget.events %~ setter
+    WidgetEnvT m
+    (TextEdit.EmptyStrings -> Property f Text -> Widget.Id ->
+     Widget (f Widget.EventResult))
+makeTextEdit =
+    TextEdit.make <&> f
     where
-        setter (newText, eventRes) =
-            eventRes <$
-            when (newText /= Property.value textRef) (Property.set textRef newText)
+        f make empty textRef myId =
+            make empty (Property.value textRef) myId
+            & Widget.events %~ setter
+            where
+                setter (newText, eventRes) =
+                    eventRes <$
+                    when (newText /= Property.value textRef) (Property.set textRef newText)
 
 deleteKeyEventHandler :: ModKey -> Widget a -> Widget a
 deleteKeyEventHandler key =
     Widget.eventMap %~
     EventMap.deleteKey (EventMap.KeyEvent GLFW.KeyState'Pressed key)
 
--- TODO: Editor, not Edit (consistent with makeTextEditor vs. makeTextEdit)
 makeLineEdit ::
     (Monad m, Applicative f) =>
-    TextEdit.EmptyStrings -> Property f Text ->
-    Widget.Id ->
-    WidgetEnvT m (Widget (f Widget.EventResult))
-makeLineEdit empty textRef myId =
-    makeTextEditor empty textRef myId
-    <&> deleteKeyEventHandler (ModKey mempty GLFW.Key'Enter)
+    WidgetEnvT m
+    (TextEdit.EmptyStrings -> Property f Text -> Widget.Id ->
+     Widget (f Widget.EventResult))
+makeLineEdit =
+    makeTextEdit
+    <&> \make empty textRef myId ->
+    make empty textRef myId
+    & deleteKeyEventHandler (ModKey mempty GLFW.Key'Enter)
 
 makeWordEdit ::
     (Monad m, Applicative f) =>
-    TextEdit.EmptyStrings ->
-    Property f Text ->
-    Widget.Id ->
-    WidgetEnvT m (Widget (f Widget.EventResult))
-makeWordEdit empty textRef myId =
-    makeLineEdit empty textRef myId
-    <&> deleteKeyEventHandler (ModKey mempty GLFW.Key'Space)
+    WidgetEnvT m
+    (TextEdit.EmptyStrings -> Property f Text -> Widget.Id -> Widget (f Widget.EventResult))
+makeWordEdit =
+    makeLineEdit
+    <&> \make empty textRef myId -> make empty textRef myId
+    & deleteKeyEventHandler (ModKey mempty GLFW.Key'Space)
 
 stdFont :: Monad m => WidgetEnvT m Draw.Font
 stdFont = WE.readEnv <&> (^. WE.envTextStyle . TextEdit.sTextViewStyle . TextView.styleFont)

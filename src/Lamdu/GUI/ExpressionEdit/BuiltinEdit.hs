@@ -48,8 +48,8 @@ makeNamePartEditor ::
 makeNamePartEditor color namePartStr setter myId =
     ExprGuiM.makeFocusDelegator builtinFDConfig FocusDelegator.FocusEntryParent myId
     <*> ExprGuiM.widgetEnv
-        ( BWidgets.makeWordEdit empty (Property namePartStr setter)
-          (myId `Widget.joinId` ["textedit"])
+        ( BWidgets.makeWordEdit ?? empty ?? Property namePartStr setter ??
+          myId `Widget.joinId` ["textedit"]
         )
     & ExprGuiM.localEnv (WE.textColor .~ color)
     where

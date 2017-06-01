@@ -12,7 +12,6 @@ import qualified Data.Text as Text
 import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widget.TreeLayout as TreeLayout
-import qualified Graphics.UI.Bottle.Widgets as BWidgets
 import qualified Graphics.UI.Bottle.Widgets.TextEdit as TextEdit
 import qualified Graphics.UI.Bottle.WidgetsEnvT as WE
 import qualified Lamdu.Config as Config
@@ -36,7 +35,7 @@ makeSearchTermPropEdit ::
     WidgetIds -> Property m Text ->
     WE.WidgetEnvT m (Widget (m Widget.EventResult))
 makeSearchTermPropEdit WidgetIds{..} searchTermProp =
-    BWidgets.makeTextEdit textEditNoEmpty searchTerm hidOpenSearchTerm
+    TextEdit.make ?? textEditNoEmpty ?? searchTerm ?? hidOpenSearchTerm
     <&> Widget.events %~ \(newSearchTerm, eventRes) ->
         do
             when (newSearchTerm /= searchTerm) $
