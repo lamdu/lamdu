@@ -26,7 +26,6 @@ instance Aeson.FromJSON Help
 data Pane = Pane
     { paneInactiveTintColor :: Draw.Color
     , paneActiveBGColor :: Draw.Color
-    , paneHoverPadding :: Draw.R
     , newDefinitionActionColor :: Draw.Color
     } deriving (Eq, Generic, Show)
 instance Aeson.ToJSON Pane where
@@ -99,6 +98,7 @@ data Theme = Theme
     , hole :: Hole
     , name :: Name
     , eval :: Eval
+    , topPadding :: Draw.R
     , maxEvalViewSize :: Int
     , versionControl :: VersionControl.Theme
     , valAnnotation :: ValAnnotation

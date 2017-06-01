@@ -72,11 +72,9 @@ make env =
                             CodeEdit.make codeEditEnv ?? (codeSize ^. _1)
                             & WE.mapWidgetEnvT VersionControl.runAction
                             <&> Widget.events . CodeEdit.m %~ fmap (VersionControl.runEvent cursor)
-                        hoverPadding <-
-                            Theme.pane theme & Theme.paneHoverPadding
-                            & BWidgets.vspacer
+                        topPadding <- Theme.topPadding theme & BWidgets.vspacer
                         let scrollBox =
-                                Box.vbox [(0.5, hoverPadding), (0.5, codeEdit)]
+                                Box.vbox [(0.5, topPadding), (0.5, codeEdit)]
                                 & Widget.padToSizeAlign codeSize 0
                                 & Scroll.focusAreaIntoWindow fullSize
                                 & Widget.size .~ codeSize
