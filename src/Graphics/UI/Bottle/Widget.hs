@@ -294,16 +294,16 @@ respondToCursor widget =
 
 respondToCursorBy ::
     (MonadReader env m, HasCursor env) =>
-    (Id -> Bool) -> m (Widget a -> Widget a)
-respondToCursorBy f =
-    Lens.view cursor <&> f <&> \case
-    True -> respondToCursor
-    False -> id
+    m ((Id -> Bool) -> Widget a -> Widget a)
+respondToCursorBy =
+    Lens.view cursor
+    <&> \c f -> if f c then respondToCursor else id
 
 respondToCursorPrefix ::
-    (MonadReader env m, HasCursor env) => Id -> m (Widget a -> Widget a)
-respondToCursorPrefix myIdPrefix =
-    respondToCursorBy (Lens.has Lens._Just . Id.subId myIdPrefix)
+    (MonadReader env m, HasCursor env) => m (Id -> Widget a -> Widget a)
+respondToCursorPrefix =
+    respondToCursorBy
+    <&> \respond myIdPrefix -> respond (Lens.has Lens._Just . Id.subId myIdPrefix)
 
 cursorAnimId :: AnimId
 cursorAnimId = ["background"]

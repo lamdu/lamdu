@@ -42,7 +42,7 @@ makeFocusableView ::
     Widget.Id ->
     WidgetEnvT m (Widget (f Widget.EventResult) -> Widget (f Widget.EventResult))
 makeFocusableView myIdPrefix =
-    Widget.respondToCursorPrefix myIdPrefix
+    Widget.respondToCursorPrefix ?? myIdPrefix
     <&>
     -- TODO: make it non-prefix-related?
     fmap (Widget.takesFocus (const (pure myIdPrefix)))
