@@ -686,7 +686,7 @@ makeCollisionSuffixLabel (Collision suffix) animId =
     do
         theme <- ExprGuiM.readTheme
         let Theme.Name{..} = Theme.name theme
-        BWidgets.makeLabel ?? Text.pack (show suffix) ?? animId
+        TextView.makeLabel ?? Text.pack (show suffix) ?? animId
             & WE.localEnv (WE.textColor .~ collisionSuffixTextColor)
             <&> View.scale (realToFrac <$> collisionSuffixScaleFactor)
             <&> View.backgroundColor animId collisionSuffixBGColor

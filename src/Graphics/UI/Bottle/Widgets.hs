@@ -1,7 +1,6 @@
 {-# LANGUAGE NoImplicitPrelude, OverloadedStrings #-}
 module Graphics.UI.Bottle.Widgets
-    ( makeLabel
-    , makeFocusableView
+    ( makeFocusableView
     , makeFocusableTextView, makeFocusableLabel
     , makeTextEdit
     , makeTextEditor, makeLineEdit, makeWordEdit
@@ -21,7 +20,6 @@ import qualified Data.Store.Property as Property
 import           Data.Text.Encoding (encodeUtf8)
 import           Data.Vector.Vector2 (Vector2(..))
 import qualified Graphics.DrawingCombinators as Draw
-import           Graphics.UI.Bottle.Animation (AnimId)
 import qualified Graphics.UI.Bottle.EventMap as EventMap
 import           Graphics.UI.Bottle.ModKey (ModKey(..))
 import           Graphics.UI.Bottle.View (View)
@@ -38,9 +36,6 @@ import qualified Graphics.UI.Bottle.WidgetsEnvT as WE
 import qualified Graphics.UI.GLFW as GLFW
 
 import           Lamdu.Prelude
-
-makeLabel :: Monad m => WidgetEnvT m (Text -> AnimId -> View)
-makeLabel = TextView.make <&> \make text prefix -> make text $ mappend prefix [encodeUtf8 text]
 
 makeFocusableView ::
     (Monad m, Applicative f) =>

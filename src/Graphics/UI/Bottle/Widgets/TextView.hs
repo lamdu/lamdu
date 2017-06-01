@@ -5,7 +5,7 @@ module Graphics.UI.Bottle.Widgets.TextView
     , lineHeight
     , HasStyle(..)
 
-    , make, makeWidget
+    , make, makeWidget, makeLabel
     , RenderedText(..), renderedTextSize
     , drawText
     , letterRects
@@ -15,6 +15,7 @@ import           Control.Lens (Lens')
 import qualified Control.Lens as Lens
 import           Control.Monad.Reader (MonadReader)
 import qualified Data.Text as Text
+import           Data.Text.Encoding (encodeUtf8)
 import           Data.Vector.Vector2 (Vector2(..))
 import qualified Graphics.DrawingCombinators as Draw
 import           Graphics.UI.Bottle.Animation (AnimId, Size)
@@ -117,3 +118,8 @@ makeWidget ::
     (MonadReader env m, HasStyle env) =>
     m (Text -> AnimId -> Widget a)
 makeWidget = make <&> Lens.mapped . Lens.mapped %~ Widget.fromView
+
+makeLabel ::
+    (MonadReader env m, HasStyle env) =>
+    m (Text -> AnimId -> View)
+makeLabel = make <&> \mk text prefix -> mk text $ mappend prefix [encodeUtf8 text]

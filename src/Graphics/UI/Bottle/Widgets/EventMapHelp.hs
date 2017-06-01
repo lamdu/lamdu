@@ -12,7 +12,6 @@ import           Data.Function (on)
 import           Data.IORef (newIORef, readIORef, modifyIORef)
 import qualified Data.List as List
 import qualified Data.Map as Map
-import           Data.Text (Text)
 import qualified Data.Tuple as Tuple
 import           Data.Vector.Vector2 (Vector2(..))
 import qualified Graphics.DrawingCombinators as Draw
@@ -88,16 +87,14 @@ addAnimIds animId (Branch a cs) =
     where
         tAnimId = Anim.augmentId animId a
 
-label :: TextView.HasStyle env => env -> AnimId -> Text -> View
-label env animId text = TextView.make env text $ Anim.augmentId animId text
-
-makeShortcutKeyView :: Config -> (AnimId, [E.InputDoc]) -> View
+makeShortcutKeyView ::
+    Config -> (AnimId, [E.InputDoc]) -> View
 makeShortcutKeyView config (animId, inputDocs) =
     inputDocs
-    <&> (label conf animId . (mappend " "))
+    <&> (flip (TextView.makeLabel style) animId . (mappend " "))
     & GridView.verticalAlign 1
     where
-        conf =
+        style =
             configStyle config
             & TextView.styleColor .~ configInputDocColor config
 
@@ -107,7 +104,7 @@ makeTextViews ::
     Tree View View
 makeTextViews config =
     fmap
-    ( (treeNodes %~ uncurry (label (configStyle config)))
+    ( (treeNodes %~ uncurry (flip (TextView.makeLabel (configStyle config))))
     . fmap (makeShortcutKeyView config)
     ) . addAnimIds
 
@@ -135,7 +132,7 @@ makeView size eventMap config animId =
 makeTooltip :: Config -> [ModKey] -> AnimId -> View
 makeTooltip config helpKeys animId =
     GridView.horizontalAlign 0
-    [ label (configStyle config) animId "Show help"
+    [ TextView.makeLabel (configStyle config) "Show help" animId
     , makeShortcutKeyView config
         (animId ++ ["HelpKeys"], map ModKey.pretty helpKeys)
     ]
