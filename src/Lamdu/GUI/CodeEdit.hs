@@ -8,7 +8,7 @@ module Lamdu.GUI.CodeEdit
 import           Control.Applicative (liftA2)
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
-import           Control.Monad.Transaction (transaction)
+import           Control.Monad.Transaction (MonadTransaction(..))
 import           Data.CurAndPrev (CurAndPrev(..))
 import           Data.Functor.Identity (Identity(..))
 import qualified Data.List as List
@@ -23,6 +23,7 @@ import qualified Graphics.UI.Bottle.Widget.Aligned as AlignedWidget
 import           Graphics.UI.Bottle.Widget.TreeLayout (TreeLayout)
 import qualified Graphics.UI.Bottle.Widget.TreeLayout as TreeLayout
 import qualified Graphics.UI.Bottle.Widgets.Box as Box
+import qualified Graphics.UI.Bottle.Widgets.TextEdit as TextEdit
 import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
 import qualified Lamdu.Calc.Type.Scheme as Scheme
 import           Lamdu.Config (Config)
@@ -44,9 +45,8 @@ import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
 import qualified Lamdu.GUI.RedundantAnnotations as RedundantAnnotations
+import qualified Lamdu.GUI.Spacing as Spacing
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
-import           Lamdu.GUI.WidgetsEnvT (WidgetEnvT)
-import qualified Lamdu.GUI.WidgetsEnvT as WE
 import           Lamdu.Style (Style)
 import qualified Lamdu.Sugar.Convert as SugarConvert
 import qualified Lamdu.Sugar.Names.Add as AddNames
@@ -156,15 +156,16 @@ makeReplEdit env replExpr =
         exprId = replExpr ^. Sugar.rPayload . Sugar.plEntityId & WidgetIds.fromEntityId
 
 make ::
-    Monad m =>
-    Env m -> WidgetEnvT (T m) (Widget.R -> Widget (M m Widget.EventResult))
+    (Monad m, MonadTransaction m n, MonadReader env n,
+     Widget.HasCursor env, TextEdit.HasStyle env, Spacing.HasStdSpacing env) =>
+    Env m -> n (Widget.R -> Widget (M m Widget.EventResult))
 make env =
     do
         workArea <- loadWorkArea env & transaction
         replGui <- makeReplEdit env (workArea ^. Sugar.waRepl)
         panesEdits <- workArea ^. Sugar.waPanes & traverse (makePaneEdit env)
         newDefinitionButton <- makeNewDefinitionButton <&> mLiftWidget
-        eventMap <- panesEventMap env & WE.hoist
+        eventMap <- panesEventMap env
         vspace <- ExpressionGui.stdVSpace
         return $ \width ->
             ExpressionGui.render width replGui ^. AlignedWidget.widget
@@ -206,9 +207,9 @@ makePaneEdit env pane =
             ] & mconcat
 
 makeNewDefinitionEventMap ::
-    Monad m =>
+    (Monad m, MonadReader env n, Widget.HasCursor env) =>
     Anchors.CodeProps m ->
-    WidgetEnvT (T m) ([MetaKey] -> Widget.EventMap (T m Widget.EventResult))
+    n ([MetaKey] -> Widget.EventMap (T m Widget.EventResult))
 makeNewDefinitionEventMap cp =
     do
         curCursor <- Lens.view Widget.cursor
@@ -231,8 +232,7 @@ makeNewDefinitionButton :: Monad m => ExprGuiM m (Widget (T m Widget.EventResult
 makeNewDefinitionButton =
     do
         codeAnchors <- ExprGuiM.readCodeAnchors
-        newDefinitionEventMap <-
-            makeNewDefinitionEventMap codeAnchors & WE.hoist
+        newDefinitionEventMap <- makeNewDefinitionEventMap codeAnchors
 
         Config.Pane{newDefinitionButtonPressKeys} <- ExprGuiM.readConfig <&> Config.pane
         Theme.Pane{newDefinitionActionColor}      <- ExprGuiM.readTheme  <&> Theme.pane
@@ -264,11 +264,11 @@ replEventMap env replExpr =
         Config.Pane{newDefinitionButtonPressKeys} = Config.pane (config env)
 
 panesEventMap ::
-    Monad m =>
-    Env m -> WidgetEnvT (T m) (Widget.EventMap (M m Widget.EventResult))
+    (Monad m, MonadTransaction m n, MonadReader env n, Widget.HasCursor env) =>
+    Env m -> n (Widget.EventMap (M m Widget.EventResult))
 panesEventMap Env{config,codeProps,exportActions} =
     do
-        mJumpBack <- DataOps.jumpBack codeProps & lift <&> fmap mLiftTrans
+        mJumpBack <- DataOps.jumpBack codeProps & transaction <&> fmap mLiftTrans
         newDefinitionEventMap <- makeNewDefinitionEventMap codeProps
         return $ mconcat
             [ newDefinitionEventMap (Config.newDefinitionKeys (Config.pane config))
