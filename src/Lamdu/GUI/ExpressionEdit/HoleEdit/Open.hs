@@ -258,7 +258,7 @@ makeResultGroup holeInfo results =
     where
         mainResult = results ^. HoleResults.rlMain
         focusFirstExtraResult [] = return id
-        focusFirstExtraResult (result:_) = makeFocusable (rId result)
+        focusFirstExtraResult (result:_) = Widget.makeFocusableView ?? rId result
 
 makeExtraResultsWidget ::
     Monad m =>
@@ -295,12 +295,6 @@ makeExtraResultsWidget holeInfo mainResultHeight extraResults@(firstResult:_) =
                 & max 0
             )
 
-makeFocusable ::
-    (Monad m, Applicative f) =>
-    Widget.Id ->
-    ExprGuiM m (Widget (f Widget.EventResult) -> Widget (f Widget.EventResult))
-makeFocusable = ExprGuiM.widgetEnv . BWidgets.makeFocusableView
-
 applyResultLayout ::
     Functor f => f (ExpressionGui m) -> f (AlignedWidget (T m Widget.EventResult))
 applyResultLayout fGui =
@@ -326,7 +320,7 @@ makeHoleResultWidget resultId holeResult =
                 ExprGuiM.localEnv (WE.envCursor .~ idWithinResultWidget) mkWidget
                 <&> (^. Widget.eventMap)
         widget <-
-            makeFocusable resultId <*> mkWidget
+            (Widget.makeFocusableView ?? resultId) <*> mkWidget
             <&> Widget.view . View.animFrames %~
                 Anim.mapIdentities (<> (resultSuffix # Widget.toAnimId resultId))
         return (widget, mkEventMap)

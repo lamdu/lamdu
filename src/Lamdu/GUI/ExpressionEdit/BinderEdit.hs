@@ -214,7 +214,7 @@ makeScopeNavEdit binder myId curCursor =
         settings <- ExprGuiM.readSettings
         case settings ^. CESettings.sInfoMode of
             CESettings.Evaluation ->
-                ExprGuiM.widgetEnv (BWidgets.makeFocusableView myId <&> (AlignedWidget.widget %~))
+                ExprGuiM.widgetEnv (Widget.makeFocusableView ?? myId <&> (AlignedWidget.widget %~))
                 <*> (mapM mkArrow scopes <&> AlignedWidget.hbox 0.5)
                 <&> AlignedWidget.widget %~ Widget.weakerEvents
                     (mkScopeEventMap leftKeys rightKeys `mappend` blockEventMap)

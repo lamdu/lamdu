@@ -1,7 +1,6 @@
 {-# LANGUAGE NoImplicitPrelude, OverloadedStrings #-}
 module Graphics.UI.Bottle.Widgets
-    ( makeFocusableView
-    , makeFocusableTextView, makeFocusableLabel
+    ( makeFocusableTextView, makeFocusableLabel
     , makeTextEdit
     , makeTextEditor, makeLineEdit, makeWordEdit
     , makeFocusDelegator
@@ -37,21 +36,11 @@ import qualified Graphics.UI.GLFW as GLFW
 
 import           Lamdu.Prelude
 
-makeFocusableView ::
-    (Monad m, Applicative f) =>
-    Widget.Id ->
-    WidgetEnvT m (Widget (f Widget.EventResult) -> Widget (f Widget.EventResult))
-makeFocusableView myIdPrefix =
-    Widget.respondToCursorPrefix ?? myIdPrefix
-    <&>
-    -- TODO: make it non-prefix-related?
-    fmap (Widget.takesFocus (const (pure myIdPrefix)))
-
 makeFocusableTextView ::
     (Monad m, Applicative f) =>
     Text -> Widget.Id -> WidgetEnvT m (Widget (f Widget.EventResult))
 makeFocusableTextView text myId =
-    makeFocusableView myId
+    (Widget.makeFocusableView ?? myId)
     <*> (TextView.make ?? text ?? Widget.toAnimId myId <&> Widget.fromView)
 
 makeFocusableLabel ::

@@ -156,9 +156,7 @@ acceptableTypeIndicator accept color myId =
         let acceptKeyMap =
                 Widget.keysEventMapMovesCursor (Config.acceptDefinitionTypeKeys config)
                 (E.Doc ["Edit", "Accept inferred type"]) (accept >> return myId)
-        makeFocusable <-
-            BWidgets.makeFocusableView (typeIndicatorId myId)
-            & ExprGuiM.widgetEnv
+        makeFocusable <- Widget.makeFocusableView ?? typeIndicatorId myId
         makeIndicator <- typeIndicator color myId
         return $
             \width ->

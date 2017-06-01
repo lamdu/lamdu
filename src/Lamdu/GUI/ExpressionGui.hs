@@ -633,7 +633,7 @@ makeFocusableView ::
       AlignedWidget (f Widget.EventResult)
     )
 makeFocusableView myId =
-    ExprGuiM.widgetEnv (BWidgets.makeFocusableView myId)
+    Widget.makeFocusableView ?? myId
     <&> (AlignedWidget.widget %~)
 
 makeLabel :: Monad m => Text -> AnimId -> ExprGuiM m (AlignedWidget a)

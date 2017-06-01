@@ -48,6 +48,8 @@ module Graphics.UI.Bottle.Widget
     , backgroundColor
     , tint
 
+    , makeFocusableView
+
     , respondToCursorPrefix
     , respondToCursorBy
     , respondToCursor
@@ -304,6 +306,15 @@ respondToCursorPrefix ::
 respondToCursorPrefix =
     respondToCursorBy
     <&> \respond myIdPrefix -> respond (Lens.has Lens._Just . Id.subId myIdPrefix)
+
+makeFocusableView ::
+    (MonadReader env m, HasCursor env, Applicative f) =>
+    m (Id -> Widget (f EventResult) -> Widget (f EventResult))
+makeFocusableView =
+    respondToCursorPrefix
+    <&> \respond myIdPrefix ->
+    respond myIdPrefix
+    <&> takesFocus (const (pure myIdPrefix))
 
 cursorAnimId :: AnimId
 cursorAnimId = ["background"]

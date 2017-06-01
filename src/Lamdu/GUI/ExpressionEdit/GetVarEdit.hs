@@ -13,7 +13,6 @@ import           Graphics.UI.Bottle.Widget.Aligned (AlignedWidget)
 import qualified Graphics.UI.Bottle.Widget.Aligned as AlignedWidget
 import           Graphics.UI.Bottle.Widget.TreeLayout (TreeLayout)
 import qualified Graphics.UI.Bottle.Widget.TreeLayout as TreeLayout
-import qualified Graphics.UI.Bottle.Widgets as BWidgets
 import qualified Graphics.UI.Bottle.WidgetsEnvT as WE
 import           Lamdu.Calc.Type.Scheme (schemeType)
 import           Lamdu.Config (Config)
@@ -41,7 +40,7 @@ makeSimpleView ::
     Name m -> Widget.Id ->
     ExprGuiM m (ExpressionGui f)
 makeSimpleView name myId =
-    ExprGuiM.widgetEnv (BWidgets.makeFocusableView myId)
+    ExprGuiM.widgetEnv (Widget.makeFocusableView ?? myId)
     <*> (ExpressionGui.makeNameView name (Widget.toAnimId myId) <&> Widget.fromView)
     <&> TreeLayout.fromCenteredWidget
 
