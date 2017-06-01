@@ -78,15 +78,15 @@ rightSideOfRect rect =
 
 cursorRects :: TextView.Style -> Text -> [Rect]
 cursorRects style str =
-    concat .
+    TextView.letterRects style str
+    <&> Lens.mapped %~ rightSideOfRect
+    & zipWith addFirstCursor (iterate (+lineHeight) 0)
     -- A bit ugly: letterRects returns rects for all but newlines, and
     -- returns a list of lines. Then addFirstCursor adds the left-most
     -- cursor of each line, thereby the number of rects becomes the
     -- original number of letters which can be used to match the
     -- original string index-wise.
-    zipWith addFirstCursor (iterate (+lineHeight) 0) .
-    (map . map) rightSideOfRect $
-    TextView.letterRects style str
+    & concat
     where
         addFirstCursor y = (Rect (Vector2 0 y) (Vector2 0 lineHeight) :)
         lineHeight = TextView.lineHeight style
