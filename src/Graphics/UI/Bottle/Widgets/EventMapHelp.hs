@@ -91,7 +91,7 @@ makeShortcutKeyView ::
     Config -> (AnimId, [E.InputDoc]) -> View
 makeShortcutKeyView config (animId, inputDocs) =
     inputDocs
-    <&> (flip (TextView.makeLabel style) animId . (mappend " "))
+    <&> flip (TextView.makeLabel style) animId . mappend " "
     & GridView.verticalAlign 1
     where
         style =

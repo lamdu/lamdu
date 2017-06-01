@@ -66,8 +66,8 @@ makeChoiceWidget ::
     (Eq a, Monad m, Applicative f) =>
     (a -> f ()) -> [(a, Widget (f Widget.EventResult))] -> a ->
     Choice.Config -> Widget.Id -> WidgetEnvT m (Widget (f Widget.EventResult))
-makeChoiceWidget choose children curChild choiceConfig myId =
-    Choice.make choiceConfig (children <&> annotate) myId
+makeChoiceWidget choose children curChild choiceConfig =
+    Choice.make choiceConfig (children <&> annotate)
     where
         annotate (item, widget) =
             ( if item == curChild then Choice.Selected else Choice.NotSelected
