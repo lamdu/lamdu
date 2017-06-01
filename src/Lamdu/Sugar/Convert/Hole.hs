@@ -12,7 +12,7 @@ module Lamdu.Sugar.Convert.Hole
 
 import           Control.Applicative ((<|>))
 import qualified Control.Lens as Lens
-import           Control.Monad (filterM, join)
+import           Control.Monad (filterM)
 import           Control.Monad.ListT (ListT)
 import           Control.Monad.Trans.Either (EitherT(..))
 import           Control.Monad.Trans.State (StateT(..), mapStateT)

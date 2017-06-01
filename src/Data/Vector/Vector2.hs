@@ -11,7 +11,6 @@ import           Control.Applicative (liftA2)
 import           Control.DeepSeq (NFData(..))
 import           Control.DeepSeq.Generics (genericRnf)
 import qualified Control.Lens as Lens
-import           Control.Monad (join)
 import qualified Data.Aeson.Types as Aeson
 import           Data.Binary (Binary(..))
 import           Data.Monoid.Generic (def_mempty, def_mappend)

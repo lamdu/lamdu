@@ -6,7 +6,7 @@ module Main
 import           Control.Concurrent.MVar
 import qualified Control.Exception as E
 import qualified Control.Lens as Lens
-import           Control.Monad (join, replicateM_)
+import           Control.Monad (replicateM_)
 import           Control.Monad.IO.Class (MonadIO(..))
 import           Data.CurAndPrev (current)
 import           Data.IORef
