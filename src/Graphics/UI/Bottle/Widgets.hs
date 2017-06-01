@@ -13,8 +13,6 @@ module Graphics.UI.Bottle.Widgets
     , stdVSpaceHeight, stdVSpaceView
     , vspacer
     , hboxCenteredSpaced
-    , respondToCursorPrefix
-    , readEnv
     ) where
 
 import           Data.List (intersperse)
@@ -50,20 +48,12 @@ makeTextView text myId = do
 makeLabel :: Monad m => Text -> AnimId -> WidgetEnvT m View
 makeLabel text prefix = makeTextView text $ mappend prefix [encodeUtf8 text]
 
-readEnv :: Monad m => WidgetEnvT m Widget.Env
-readEnv = WE.readEnv <&> (^. WE.envCursor) <&> Widget.Env
-
-respondToCursorPrefix ::
-    Monad m => Widget.Id -> WidgetEnvT m (Widget f -> Widget f)
-respondToCursorPrefix myIdPrefix =
-    readEnv <&> Widget.respondToCursorPrefix myIdPrefix
-
 makeFocusableView ::
     (Monad m, Applicative f) =>
     Widget.Id ->
     WidgetEnvT m (Widget (f Widget.EventResult) -> Widget (f Widget.EventResult))
 makeFocusableView myIdPrefix =
-    respondToCursorPrefix myIdPrefix
+    Widget.respondToCursorPrefix myIdPrefix
     <&>
     -- TODO: make it non-prefix-related?
     fmap (Widget.takesFocus (const (pure myIdPrefix)))
@@ -88,7 +78,7 @@ makeFocusDelegator ::
     Widget.Id ->
     WidgetEnvT m (Widget (f Widget.EventResult) -> Widget (f Widget.EventResult))
 makeFocusDelegator fdConfig focusEntryTarget myId =
-    readEnv <&> FocusDelegator.make fdConfig focusEntryTarget myId
+    FocusDelegator.make fdConfig focusEntryTarget myId
 
 makeTextEdit ::
     Monad m =>
@@ -97,8 +87,7 @@ makeTextEdit ::
 makeTextEdit text myId =
     do
         style <- WE.readTextStyle
-        env <- readEnv
-        TextEdit.make style text myId env & return
+        TextEdit.make style text myId
 
 makeTextEditor ::
     (Monad m, Applicative f) =>
@@ -176,10 +165,7 @@ makeChoiceWidget ::
     (a -> f ()) -> [(a, Widget (f Widget.EventResult))] -> a ->
     Choice.Config -> Widget.Id -> WidgetEnvT m (Widget (f Widget.EventResult))
 makeChoiceWidget choose children curChild choiceConfig myId =
-    do
-        widgetEnv <- readEnv
-        Choice.make choiceConfig (children <&> annotate) myId widgetEnv
-            & return
+    Choice.make choiceConfig (children <&> annotate) myId
     where
         annotate (item, widget) =
             ( if item == curChild then Choice.Selected else Choice.NotSelected

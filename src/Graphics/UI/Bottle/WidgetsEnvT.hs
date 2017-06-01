@@ -18,13 +18,14 @@ module Graphics.UI.Bottle.WidgetsEnvT
 
 import           Control.Lens (Lens')
 import qualified Control.Lens as Lens
+import           Control.Monad.Reader (ReaderT, runReaderT, MonadReader)
+import qualified Control.Monad.Reader as Reader
 import           Control.Monad.Trans.Class (MonadTrans(..))
-import           Control.Monad.Trans.Reader (ReaderT, runReaderT)
-import qualified Control.Monad.Trans.Reader as Reader
 import           Data.Vector.Vector2 (Vector2)
 import qualified Graphics.DrawingCombinators as Draw
 import           Graphics.UI.Bottle.Animation (AnimId)
 import qualified Graphics.UI.Bottle.Widget as Widget
+import qualified Graphics.UI.Bottle.Widget.Id as WidgetId
 import qualified Graphics.UI.Bottle.Widgets.TextEdit as TextEdit
 import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
 
@@ -37,9 +38,11 @@ data Env = Env
     }
 Lens.makeLenses ''Env
 
+instance Widget.HasCursor Env where cursor = envCursor
+
 newtype WidgetEnvT m a = WidgetEnvT
     { _widgetEnvT :: ReaderT Env m a
-    } deriving (Functor, Applicative, Monad, MonadTrans)
+    } deriving (Functor, Applicative, Monad, MonadTrans, MonadReader Env)
 Lens.makeLenses ''WidgetEnvT
 
 runWidgetEnvT :: Env -> WidgetEnvT m a -> m a
@@ -54,8 +57,9 @@ readEnv = WidgetEnvT Reader.ask
 readCursor :: Monad m => WidgetEnvT m Widget.Id
 readCursor = readEnv <&> (^. envCursor)
 
+-- TODO: Remove:
 subCursor :: Monad m => Widget.Id -> WidgetEnvT m (Maybe AnimId)
-subCursor folder = readCursor <&> Widget.subId folder
+subCursor = Widget.subId
 
 isSubCursor :: Monad m => Widget.Id -> WidgetEnvT m Bool
 isSubCursor = fmap (Lens.has Lens._Just) . subCursor
@@ -63,8 +67,7 @@ isSubCursor = fmap (Lens.has Lens._Just) . subCursor
 readTextStyle :: Monad m => WidgetEnvT m TextEdit.Style
 readTextStyle = readEnv <&> (^. envTextStyle)
 
-envAssignCursor
-    :: Widget.Id -> Widget.Id -> Env -> Env
+envAssignCursor :: Widget.Id -> Widget.Id -> Env -> Env
 envAssignCursor src dest =
     envCursor %~ replace
     where
@@ -72,17 +75,16 @@ envAssignCursor src dest =
             | cursor == src = dest
             | otherwise = cursor
 
-envAssignCursorPrefix
-    :: Widget.Id -> (AnimId -> Widget.Id) -> Env -> Env
+envAssignCursorPrefix :: Widget.Id -> (AnimId -> Widget.Id) -> Env -> Env
 envAssignCursorPrefix srcFolder dest =
     envCursor %~ replace
     where
         replace cursor =
-            case Widget.subId srcFolder cursor of
+            case WidgetId.subId srcFolder cursor of
             Nothing -> cursor
             Just suffix -> dest suffix
 
-localEnv :: (Env -> Env) -> WidgetEnvT m a -> WidgetEnvT m a
+localEnv :: Monad m => (Env -> Env) -> WidgetEnvT m a -> WidgetEnvT m a
 localEnv = (widgetEnvT %~) . Reader.local
 
 textColor :: Lens' Env Draw.Color

@@ -1,6 +1,7 @@
-{-# LANGUAGE NoImplicitPrelude, DeriveFunctor, TemplateHaskell, GeneralizedNewtypeDeriving, DeriveGeneric, OverloadedStrings, RecordWildCards #-}
+{-# LANGUAGE NoImplicitPrelude, DeriveFunctor, TemplateHaskell, GeneralizedNewtypeDeriving, DeriveGeneric, OverloadedStrings, NamedFieldPuns, LambdaCase #-}
 module Graphics.UI.Bottle.Widget
-    ( module Graphics.UI.Bottle.Widget.Id
+    ( Id(..), subId, Id.joinId
+    , HasCursor(..)
 
     -- Types:
     , R, Size
@@ -47,9 +48,6 @@ module Graphics.UI.Bottle.Widget
     , backgroundColor
     , tint
 
-    -- Env:
-    , Env(..), envCursor
-
     , respondToCursorPrefix
     , respondToCursorBy
     , respondToCursor
@@ -58,6 +56,7 @@ module Graphics.UI.Bottle.Widget
 import           Control.Applicative (liftA2)
 import           Control.Lens (Lens')
 import qualified Control.Lens as Lens
+import           Control.Monad.Reader (MonadReader)
 import qualified Data.Map as Map
 import qualified Data.Monoid as Monoid
 import           Data.Monoid.Generic (def_mempty, def_mappend)
@@ -75,7 +74,8 @@ import           Graphics.UI.Bottle.Rect (Rect(..))
 import qualified Graphics.UI.Bottle.Rect as Rect
 import           Graphics.UI.Bottle.View (View(..))
 import qualified Graphics.UI.Bottle.View as View
-import           Graphics.UI.Bottle.Widget.Id
+import           Graphics.UI.Bottle.Widget.Id (Id(..))
+import qualified Graphics.UI.Bottle.Widget.Id as Id
 
 import           Lamdu.Prelude
 
@@ -147,8 +147,8 @@ eventMap :: Lens.Traversal' (Widget a) (EventMap a)
 eventMap = mFocus . Lens._Just . fEventMap
 
 eventResultFromCursor :: Id -> EventResult
-eventResultFromCursor cursor = EventResult
-    { _eCursor = Monoid.Last $ Just cursor
+eventResultFromCursor c = EventResult
+    { _eCursor = Just c & Monoid.Last
     , _eAnimIdMapping = mempty
     }
 
@@ -279,20 +279,10 @@ padToSizeAlign newSize alignment widget =
     where
         sizeDiff = max <$> 0 <*> newSize - widget ^. size
 
-data Env = Env
-    { -- | Where the cursor is pointing:
-        _envCursor :: Id
-    } deriving (Show, Eq, Ord)
-Lens.makeLenses ''Env
+class HasCursor env where cursor :: Lens' env Id
 
-respondToCursorPrefix :: Id -> Env -> Widget a -> Widget a
-respondToCursorPrefix myIdPrefix =
-    respondToCursorBy (Lens.has Lens._Just . subId myIdPrefix)
-
-respondToCursorBy :: (Id -> Bool) -> Env -> Widget a -> Widget a
-respondToCursorBy f env
-    | f (env ^. envCursor) = respondToCursor
-    | otherwise = id
+subId :: (MonadReader env m, HasCursor env) => Id -> m (Maybe AnimId)
+subId prefix = Lens.view cursor <&> Id.subId prefix
 
 respondToCursor :: Widget a -> Widget a
 respondToCursor widget =
@@ -302,6 +292,19 @@ respondToCursor widget =
         , _fEventMap = mempty
         }
 
+respondToCursorBy ::
+    (MonadReader env m, HasCursor env) =>
+    (Id -> Bool) -> m (Widget a -> Widget a)
+respondToCursorBy f =
+    Lens.view cursor <&> f <&> \case
+    True -> respondToCursor
+    False -> id
+
+respondToCursorPrefix ::
+    (MonadReader env m, HasCursor env) => Id -> m (Widget a -> Widget a)
+respondToCursorPrefix myIdPrefix =
+    respondToCursorBy (Lens.has Lens._Just . Id.subId myIdPrefix)
+
 cursorAnimId :: AnimId
 cursorAnimId = ["background"]
 
@@ -310,7 +313,7 @@ newtype CursorConfig = CursorConfig
     }
 
 renderWithCursor :: CursorConfig -> Widget a -> Anim.Frame
-renderWithCursor CursorConfig{..} widget =
+renderWithCursor CursorConfig{cursorColor} widget =
     maybe mempty renderCursor (widget ^? mFocus . Lens._Just . focalArea)
     & (`mappend` View.render (widget ^. view))
     where

@@ -9,6 +9,7 @@ import           Control.Applicative ((<|>))
 import           Control.Lens (Lens')
 import qualified Control.Lens as Lens
 import           Control.Monad (msum)
+import qualified Control.Monad.Reader as Reader
 import           Data.List.Lens (suffixed)
 import qualified Data.Map as Map
 import           Data.Maybe (isJust)
@@ -26,8 +27,8 @@ import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import           Graphics.UI.Bottle.Widget.Aligned (AlignedWidget)
 import qualified Graphics.UI.Bottle.Widget.Aligned as AlignedWidget
-import qualified Graphics.UI.Bottle.Widget.TreeLayout as TreeLayout
 import qualified Graphics.UI.Bottle.Widget.Id as WidgetId
+import qualified Graphics.UI.Bottle.Widget.TreeLayout as TreeLayout
 import qualified Graphics.UI.Bottle.Widgets as BWidgets
 import qualified Graphics.UI.Bottle.Widgets.Box as Box
 import qualified Graphics.UI.Bottle.Widgets.Grid as Grid
@@ -430,16 +431,15 @@ assignHoleEditCursor ::
     ExprGuiM m a
 assignHoleEditCursor holeInfo shownMainResultsIds allShownResultIds searchTermId action =
     do
-        cursor <- ExprGuiM.widgetEnv WE.readCursor
-        let sub = isJust . flip Widget.subId cursor
-        let shouldBeOnResult = sub hidResultsPrefix
-        let isOnResult = any sub allShownResultIds
-        -- TODO: Instead of assignSource, use setCursor
-        -- vs. assignCursor?
+        let sub x = Widget.subId x <&> isJust
+        shouldBeOnResult <- sub hidResultsPrefix
+        isOnResult <- traverse sub allShownResultIds <&> or
         let assignSource
-                | shouldBeOnResult && not isOnResult = cursor
-                | otherwise = hidOpen
-        ExprGuiM.assignCursor assignSource destId action
+                | shouldBeOnResult && not isOnResult =
+                      Reader.local (Widget.cursor .~ destId)
+                | otherwise =
+                      ExprGuiM.assignCursor hidOpen destId
+        assignSource action
     where
         WidgetIds{..} = hiIds holeInfo
         destId

@@ -30,6 +30,7 @@ module Lamdu.GUI.ExpressionGui.Monad
     ) where
 
 import qualified Control.Lens as Lens
+import           Control.Monad.Reader (MonadReader)
 import           Control.Monad.Trans.FastRWS (RWST, runRWST)
 import qualified Control.Monad.Trans.FastRWS as RWS
 import qualified Data.Char as Char
@@ -42,8 +43,8 @@ import qualified Graphics.UI.Bottle.EventMap as E
 import           Graphics.UI.Bottle.View (View)
 import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
-import qualified Graphics.UI.Bottle.Widget.TreeLayout as TreeLayout
 import           Graphics.UI.Bottle.Widget.Id (toAnimId)
+import qualified Graphics.UI.Bottle.Widget.TreeLayout as TreeLayout
 import qualified Graphics.UI.Bottle.Widgets as BWidgets
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 import qualified Graphics.UI.Bottle.Widgets.TextEdit as TextEdit
@@ -51,8 +52,8 @@ import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
 import           Graphics.UI.Bottle.WidgetsEnvT (WidgetEnvT)
 import qualified Graphics.UI.Bottle.WidgetsEnvT as WE
 import           Lamdu.Config (Config)
-import           Lamdu.Config.Theme (Theme)
 import qualified Lamdu.Config as Config
+import           Lamdu.Config.Theme (Theme)
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Ops as DataOps
 import           Lamdu.Eval.Results (ScopeId, topLevelScopeId)
@@ -118,13 +119,14 @@ data Askable m = Askable
     , _aStyle :: Style
     , _aVerbose :: Bool
     }
-
 newtype ExprGuiM m a = ExprGuiM
     { _exprGuiM :: RWST (Askable m) (Output m) () (T m) a
-    } deriving (Functor, Applicative, Monad)
+    } deriving (Functor, Applicative, Monad, MonadReader (Askable m))
 
 Lens.makeLenses ''Askable
 Lens.makeLenses ''ExprGuiM
+
+instance Widget.HasCursor (Askable m) where cursor = aWidgetEnv . Widget.cursor
 
 -- TODO: To lens
 localEnv :: Functor m => (WE.Env -> WE.Env) -> ExprGuiM m a -> ExprGuiM m a

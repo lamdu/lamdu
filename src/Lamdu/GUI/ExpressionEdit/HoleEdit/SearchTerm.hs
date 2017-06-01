@@ -62,11 +62,10 @@ make holeInfo =
         theme <- ExprGuiM.readTheme
         let holeConfig@Config.Hole{..} = Config.hole config
         let Theme.Hole{..} = Theme.hole theme
-        we <- ExprGuiM.widgetEnv BWidgets.readEnv
+        textCursor <- TextEdit.getCursor searchTerm hidOpenSearchTerm
         makeSearchTermPropEdit WidgetIds{..} (HoleInfo.hiSearchTermProperty holeInfo)
             <&> Widget.eventMap
-                %~ EventMap.disallowCharsFromSearchTerm holeConfig holeInfo
-                    (TextEdit.getCursor searchTerm hidOpenSearchTerm we)
+                %~ EventMap.disallowCharsFromSearchTerm holeConfig holeInfo textCursor
             <&> addBackground (Widget.toAnimId hidOpenSearchTerm) holeSearchTermBGColor
             <&> TreeLayout.fromCenteredWidget
             <&> TreeLayout.alignment . _1 .~ 0

@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, RecordWildCards, OverloadedStrings, TemplateHaskell, ViewPatterns #-}
+{-# LANGUAGE NoImplicitPrelude, RecordWildCards, OverloadedStrings, TemplateHaskell, ViewPatterns, LambdaCase #-}
 module Graphics.UI.Bottle.Widgets.TextEdit
     ( Style(..)
         , sCursorColor, sCursorWidth, sEmptyUnfocusedString
@@ -10,6 +10,7 @@ module Graphics.UI.Bottle.Widgets.TextEdit
     ) where
 
 import qualified Control.Lens as Lens
+import           Control.Monad.Reader (MonadReader)
 import qualified Data.Binary.Utils as BinUtils
 import           Data.Char (isSpace)
 import           Data.List (genericLength)
@@ -307,19 +308,20 @@ eventMap cursor str myId =
         lineCount = length $ Text.splitOn "\n" str
         (before, after) = Text.splitAt cursor str
 
-getCursor :: Text -> Widget.Id -> Widget.Env -> Maybe Int
-getCursor str myId env =
-    Widget.subId myId (env ^. Widget.envCursor) <&> decodeCursor
+getCursor ::
+    (MonadReader env m, Widget.HasCursor env) =>
+    Text -> Widget.Id -> m (Maybe Int)
+getCursor str myId =
+    Widget.subId myId <&> fmap decodeCursor
     where
         decodeCursor [x] = min (Text.length str) $ BinUtils.decodeS x
         decodeCursor _ = Text.length str
 
 make ::
-    Style -> Text -> Widget.Id -> Widget.Env -> Widget (Text, Widget.EventResult)
-make style str myId env =
-    makeFunc style str myId
-    where
-        makeFunc =
-            case getCursor str myId env of
-            Nothing -> makeUnfocused
-            Just pos -> makeFocused pos
+    (MonadReader env m, Widget.HasCursor env) =>
+    Style -> Text -> Widget.Id -> m (Widget (Text, Widget.EventResult))
+make style str myId =
+    getCursor str myId
+    <&> \case
+    Nothing -> makeUnfocused style str myId
+    Just pos -> makeFocused pos style str myId

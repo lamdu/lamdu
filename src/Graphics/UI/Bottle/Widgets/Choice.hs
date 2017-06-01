@@ -9,6 +9,7 @@ module Graphics.UI.Bottle.Widgets.Choice
     ) where
 
 import qualified Control.Lens as Lens
+import           Control.Monad.Reader (MonadReader)
 import qualified Graphics.DrawingCombinators as Draw
 import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
@@ -69,15 +70,12 @@ toBox Config{..} selfFocused myId childrenRecords =
             & Lens.orOf (Lens.traversed . _3 . Lens.to Widget.isFocused)
 
 make ::
-    Applicative f =>
+    (MonadReader env m, Widget.HasCursor env, Applicative f) =>
     Config -> [(IsSelected, f (), Widget (f Widget.EventResult))] ->
-    Widget.Id -> Widget.Env -> Widget (f Widget.EventResult)
-make Config{..} children myId widgetEnv =
-    FocusDelegator.make cwcFDConfig
-    FocusDelegator.FocusEntryParent myId widgetEnv childrenBox
-    where
-        childrenBox = toBox Config{..} selfFocused myId children
-        selfFocused =
-            widgetEnv ^. Widget.envCursor
-            & Widget.subId myId
-            & Lens.has Lens._Just
+    Widget.Id -> m (Widget (f Widget.EventResult))
+make Config{..} children myId =
+    do
+        selfFocused <- Widget.subId myId <&> Lens.has Lens._Just
+        let childrenBox = toBox Config{..} selfFocused myId children
+        FocusDelegator.make cwcFDConfig
+            FocusDelegator.FocusEntryParent myId ?? childrenBox

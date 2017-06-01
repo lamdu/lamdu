@@ -5,6 +5,8 @@ module Graphics.UI.Bottle.Widgets.FocusDelegator
     , make
     ) where
 
+import qualified Control.Lens as Lens
+import           Control.Monad.Reader (MonadReader)
 import qualified Graphics.UI.Bottle.Direction as Direction
 import qualified Graphics.UI.Bottle.EventMap as E
 import           Graphics.UI.Bottle.MetaKey (MetaKey, toModKey)
@@ -58,28 +60,33 @@ modifyEntry myId fullChildRect = f
             }
 
 make ::
-    Applicative f =>
+    (MonadReader env m, Widget.HasCursor env, Applicative f) =>
     Config -> FocusEntryTarget -> Widget.Id ->
-    Widget.Env -> Widget (f Widget.EventResult) -> Widget (f Widget.EventResult)
-make config@Config{..} focusEntryTarget myId env childWidget
-    | selfIsFocused =
-        Widget.respondToCursor childWidget
-        & setFocusChildEventMap config
-        -- NOTE: Intentionally not checking whether child is also
-        -- focused. That's a bug, which will usefully show up as two
-        -- cursors displaying rather than a crash.
+    m (Widget (f Widget.EventResult) -> Widget (f Widget.EventResult))
+make config@Config{..} focusEntryTarget myId =
+    do
+        cursor <- Lens.view Widget.cursor
+        return $ \childWidget ->
+            case () of
+            ()
+                | selfIsFocused ->
+                    Widget.respondToCursor childWidget
+                    & setFocusChildEventMap config
+                    -- NOTE: Intentionally not checking whether child is also
+                    -- focused. That's a bug, which will usefully show up as two
+                    -- cursors displaying rather than a crash.
 
-    | childIsFocused =
-        childWidget
-        & Widget.weakerEvents focusParentEventMap
+                | childIsFocused ->
+                    childWidget
+                    & Widget.weakerEvents focusParentEventMap
 
-    | otherwise =
-        childWidget
-        & Widget.mEnter %~ modifyEntry myId fullChildRect focusEntryTarget
-    where
-        fullChildRect = Rect 0 (childWidget ^. Widget.size)
-        childIsFocused = Widget.isFocused childWidget
-        selfIsFocused = myId == env ^. Widget.envCursor
-        focusParentEventMap =
-            Widget.keysEventMapMovesCursor focusParentKeys focusParentDoc
-            (pure myId)
+                | otherwise ->
+                    childWidget
+                    & Widget.mEnter %~ modifyEntry myId fullChildRect focusEntryTarget
+                where
+                    fullChildRect = Rect 0 (childWidget ^. Widget.size)
+                    childIsFocused = Widget.isFocused childWidget
+                    selfIsFocused = myId == cursor
+                    focusParentEventMap =
+                        Widget.keysEventMapMovesCursor focusParentKeys focusParentDoc
+                        (pure myId)
