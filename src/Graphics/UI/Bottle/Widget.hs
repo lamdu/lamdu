@@ -283,8 +283,8 @@ padToSizeAlign newSize alignment widget =
 
 class HasCursor env where cursor :: Lens' env Id
 
-subId :: (MonadReader env m, HasCursor env) => Id -> m (Maybe AnimId)
-subId prefix = Lens.view cursor <&> Id.subId prefix
+subId :: (MonadReader env m, HasCursor env) => m (Id -> Maybe AnimId)
+subId = Lens.view cursor <&> flip Id.subId
 
 respondToCursor :: Widget a -> Widget a
 respondToCursor widget =

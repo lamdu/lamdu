@@ -318,7 +318,7 @@ getCursor ::
     (MonadReader env m, Widget.HasCursor env) =>
     Text -> Widget.Id -> m (Maybe Int)
 getCursor str myId =
-    Widget.subId myId <&> fmap decodeCursor
+    Widget.subId ?? myId <&> fmap decodeCursor
     where
         decodeCursor [x] = min (Text.length str) $ BinUtils.decodeS x
         decodeCursor _ = Text.length str

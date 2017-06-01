@@ -75,7 +75,7 @@ make ::
     Widget.Id -> m (Widget (f Widget.EventResult))
 make Config{..} children myId =
     do
-        selfFocused <- Widget.subId myId <&> Lens.has Lens._Just
+        selfFocused <- Widget.subId ?? myId <&> Lens.has Lens._Just
         let childrenBox = toBox Config{..} selfFocused myId children
         FocusDelegator.make cwcFDConfig
             FocusDelegator.FocusEntryParent myId ?? childrenBox

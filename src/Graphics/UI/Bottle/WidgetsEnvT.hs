@@ -60,7 +60,7 @@ readCursor = readEnv <&> (^. envCursor)
 
 -- TODO: Remove:
 subCursor :: Monad m => Widget.Id -> WidgetEnvT m (Maybe AnimId)
-subCursor = Widget.subId
+subCursor = (Widget.subId??)
 
 isSubCursor :: Monad m => Widget.Id -> WidgetEnvT m Bool
 isSubCursor = fmap (Lens.has Lens._Just) . subCursor

@@ -425,7 +425,7 @@ assignHoleEditCursor ::
     ExprGuiM m a
 assignHoleEditCursor holeInfo shownMainResultsIds allShownResultIds searchTermId action =
     do
-        let sub x = Widget.subId x <&> isJust
+        let sub x = Widget.subId ?? x <&> isJust
         shouldBeOnResult <- sub hidResultsPrefix
         isOnResult <- traverse sub allShownResultIds <&> or
         let assignSource
