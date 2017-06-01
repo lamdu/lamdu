@@ -263,9 +263,7 @@ combine = combineWith Nothing id id
 makeParenIndentInfo :: Monad m => AnimId -> ExprGuiM m ParenIndentInfo
 makeParenIndentInfo parensId =
     do
-        textStyle <-
-            ExprGuiM.widgetEnv WE.readTextStyle
-            <&> (^. TextEdit.sTextViewStyle)
+        textStyle <- Lens.view TextView.style
         theme <- ExprGuiM.readTheme <&> Theme.indent
         stdSpacing <- Spacing.getSpaceSize <&> (^. _1)
         ParenIndentInfo parensId textStyle theme stdSpacing & return

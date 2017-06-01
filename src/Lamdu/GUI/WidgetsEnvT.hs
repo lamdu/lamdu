@@ -9,7 +9,6 @@ module Lamdu.GUI.WidgetsEnvT
 
     , envAssignCursor, envAssignCursorPrefix
 
-    , readTextStyle
     , textColor
     ) where
 
@@ -53,9 +52,6 @@ mapWidgetEnvT = (widgetEnvT %~) . Reader.mapReaderT
 
 readEnv :: Monad m => WidgetEnvT m Env
 readEnv = WidgetEnvT Reader.ask
-
-readTextStyle :: Monad m => WidgetEnvT m TextEdit.Style
-readTextStyle = readEnv <&> (^. envTextStyle)
 
 envAssignCursor :: Widget.Id -> Widget.Id -> Env -> Env
 envAssignCursor src dest =
