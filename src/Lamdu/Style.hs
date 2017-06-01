@@ -1,5 +1,4 @@
-{-# LANGUAGE RecordWildCards #-}
-{-# LANGUAGE NamedFieldPuns, OverloadedStrings #-}
+{-# LANGUAGE NamedFieldPuns, OverloadedStrings, DisambiguateRecordFields #-}
 module Lamdu.Style
     ( help
     , Style(..), style
@@ -72,8 +71,6 @@ style config fonts =
     , styleNum =
       textEdit (Theme.literalColor config) (Fonts.fontDefault fonts)
     }
-    where
-        Theme.Name{..} = Theme.name config
 
 mainLoopConfig :: Config -> Theme -> MainLoop.Config
 mainLoopConfig config theme =
