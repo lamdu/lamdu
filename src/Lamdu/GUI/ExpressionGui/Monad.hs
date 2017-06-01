@@ -43,7 +43,7 @@ import           Graphics.UI.Bottle.View (View)
 import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widget.TreeLayout as TreeLayout
-import           Graphics.UI.Bottle.WidgetId (toAnimId)
+import           Graphics.UI.Bottle.Widget.Id (toAnimId)
 import qualified Graphics.UI.Bottle.Widgets as BWidgets
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 import qualified Graphics.UI.Bottle.Widgets.TextEdit as TextEdit

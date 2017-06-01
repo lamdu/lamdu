@@ -23,7 +23,7 @@ import           Data.Store.Rev.View (View)
 import           Data.Store.Transaction (MkProperty(..))
 import qualified Data.Store.Transaction as Transaction
 import           GHC.Generics (Generic)
-import qualified Graphics.UI.Bottle.WidgetId as WidgetId
+import qualified Graphics.UI.Bottle.Widget.Id as WidgetId
 import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Data.Definition as Definition
 import           Lamdu.Eval.Results (ScopeId)

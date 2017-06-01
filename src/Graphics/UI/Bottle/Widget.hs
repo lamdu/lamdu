@@ -1,6 +1,6 @@
 {-# LANGUAGE NoImplicitPrelude, DeriveFunctor, TemplateHaskell, GeneralizedNewtypeDeriving, DeriveGeneric, OverloadedStrings, RecordWildCards #-}
 module Graphics.UI.Bottle.Widget
-    ( module Graphics.UI.Bottle.WidgetId
+    ( module Graphics.UI.Bottle.Widget.Id
 
     -- Types:
     , R, Size
@@ -77,7 +77,7 @@ import           Graphics.UI.Bottle.Rect (Rect(..))
 import qualified Graphics.UI.Bottle.Rect as Rect
 import           Graphics.UI.Bottle.View (View(..))
 import qualified Graphics.UI.Bottle.View as View
-import           Graphics.UI.Bottle.WidgetId
+import           Graphics.UI.Bottle.Widget.Id
 
 import           Prelude.Compat
 

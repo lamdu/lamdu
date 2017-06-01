@@ -11,7 +11,7 @@ import           Data.Store.IRef (IRef)
 import qualified Data.Store.IRef as IRef
 import           Data.UUID.Types (UUID)
 import qualified Data.UUID.Types as UUID
-import           Graphics.UI.Bottle.WidgetId (Id(..))
+import           Graphics.UI.Bottle.Widget.Id (Id(..))
 
 fromUUID :: UUID -> Id
 fromUUID = Id . (: []) . strictifyBS . UUID.toByteString

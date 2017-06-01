@@ -1,5 +1,5 @@
 {-# LANGUAGE NoImplicitPrelude, GeneralizedNewtypeDeriving #-}
-module Graphics.UI.Bottle.WidgetId
+module Graphics.UI.Bottle.Widget.Id
     ( Id(..)
     , joinId, subId
     ) where

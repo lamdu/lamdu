@@ -15,7 +15,7 @@ import           Data.List (sortOn)
 import qualified Data.List.Class as ListClass
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Text as Text
-import qualified Graphics.UI.Bottle.WidgetId as WidgetId
+import qualified Graphics.UI.Bottle.Widget.Id as WidgetId
 import qualified Lamdu.Calc.Val as V
 import           Lamdu.Calc.Val.Annotated (Val)
 import qualified Lamdu.Config as Config
