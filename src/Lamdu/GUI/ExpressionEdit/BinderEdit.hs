@@ -307,7 +307,10 @@ makeParts funcApplyLimit binder delVarBackwardsId myId =
             mParamsEdit <-
                 makeMParamsEdit mScopeCursor isScopeNavFocused delVarBackwardsId myId
                 (binderContentNearestHoles bodyContent) bodyId params
-            rhs <- makeBinderBodyEdit params body
+            jumpToLhsEventMap <- makeJumpToLHSEventMap params
+            rhs <-
+                makeBinderBodyEdit body
+                <&> TreeLayout.widget %~ Widget.weakerEvents jumpToLhsEventMap
             Parts mParamsEdit mScopeNavEdit rhs scopeEventMap & return
             & case mScopeNavEdit of
               Nothing -> Widget.assignCursorPrefix scopesNavId (const destId)
@@ -426,10 +429,9 @@ jumpToRHS keys (rhsDoc, rhsId) = do
 
 makeBinderBodyEdit ::
     Monad m =>
-    Sugar.BinderParams name m ->
     Sugar.BinderBody (Name m) m (ExprGuiT.SugarExpr m) ->
     ExprGuiM m (ExpressionGui m)
-makeBinderBodyEdit params (Sugar.BinderBody addOuterLet content) =
+makeBinderBodyEdit (Sugar.BinderBody addOuterLet content) =
     do
         config <- ExprGuiM.readConfig
         savePos <- ExprGuiM.mkPrejumpPosSaver
@@ -438,15 +440,16 @@ makeBinderBodyEdit params (Sugar.BinderBody addOuterLet content) =
                 <&> WidgetIds.fromEntityId <&> WidgetIds.nameEditOf
                 & Widget.keysEventMapMovesCursor (Config.letAddItemKeys config)
                   (E.Doc ["Edit", "Let clause", "Add"])
-        makeBinderContentEdit params content
+        makeBinderContentEdit content
             <&> TreeLayout.widget %~ Widget.weakerEvents newLetEventMap
 
 makeBinderContentEdit ::
     Monad m =>
-    Sugar.BinderParams name m ->
     Sugar.BinderContent (Name m) m (ExprGuiT.SugarExpr m) ->
     ExprGuiM m (ExpressionGui m)
-makeBinderContentEdit params (Sugar.BinderLet l) =
+makeBinderContentEdit (Sugar.BinderExpr binderBody) =
+    ExprGuiM.makeSubexpression binderBody
+makeBinderContentEdit (Sugar.BinderLet l) =
     do
         config <- ExprGuiM.readConfig
         let delEventMap =
@@ -469,7 +472,7 @@ makeBinderContentEdit params (Sugar.BinderLet l) =
                   ( sequence
                     [ makeLetEdit l
                       <&> TreeLayout.widget %~ Widget.weakerEvents moveToInnerEventMap
-                    , makeBinderBodyEdit params body
+                    , makeBinderBodyEdit body
                       & ExprGuiM.withLocalMScopeId letBodyScope
                     ] <&> map (TreeLayout.alignment . _1 .~ 0)
                   )
@@ -478,24 +481,27 @@ makeBinderContentEdit params (Sugar.BinderLet l) =
     where
         letEntityId = l ^. Sugar.lEntityId & WidgetIds.fromEntityId
         body = l ^. Sugar.lBody
-makeBinderContentEdit params (Sugar.BinderExpr binderBody) =
+
+makeJumpToLHSEventMap ::
+    Monad m =>
+    Sugar.BinderParams name f ->
+    ExprGuiM m (Widget.EventMap (Transaction m Widget.EventResult))
+makeJumpToLHSEventMap params =
     do
         savePos <- ExprGuiM.mkPrejumpPosSaver
         config <- ExprGuiM.readConfig
-        let jumpToLhsEventMap =
-                case params of
-                Sugar.BinderWithoutParams -> mempty
-                Sugar.NullParam _ -> mempty
-                Sugar.VarParam param ->
-                    Widget.keysEventMapMovesCursor
-                    (Config.jumpRHStoLHSKeys config) (E.Doc ["Navigation", "Jump to param"]) $
-                    WidgetIds.fromEntityId (param ^. Sugar.fpId) <$ savePos
-                Sugar.FieldParams ps ->
-                    Widget.keysEventMapMovesCursor
-                    (Config.jumpRHStoLHSKeys config) (E.Doc ["Navigation", "Jump to last param"]) $
-                    WidgetIds.fromEntityId (last ps ^. _2 . Sugar.fpId) <$ savePos
-        ExprGuiM.makeSubexpression binderBody
-            <&> TreeLayout.widget %~ Widget.weakerEvents jumpToLhsEventMap
+        case params of
+            Sugar.BinderWithoutParams -> mempty
+            Sugar.NullParam _ -> mempty
+            Sugar.VarParam param ->
+                Widget.keysEventMapMovesCursor
+                (Config.jumpRHStoLHSKeys config) (E.Doc ["Navigation", "Jump to param"]) $
+                WidgetIds.fromEntityId (param ^. Sugar.fpId) <$ savePos
+            Sugar.FieldParams ps ->
+                Widget.keysEventMapMovesCursor
+                (Config.jumpRHStoLHSKeys config) (E.Doc ["Navigation", "Jump to last param"]) $
+                WidgetIds.fromEntityId (last ps ^. _2 . Sugar.fpId) <$ savePos
+            & return
 
 namedParamEditInfo :: Monad m => Draw.Color -> Sugar.NamedParamInfo (Name m) m -> ParamEdit.Info m
 namedParamEditInfo color paramInfo =

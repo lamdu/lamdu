@@ -35,7 +35,7 @@ makeToNom ::
     Sugar.Payload m ExprGuiT.Payload ->
     ExprGuiM m (ExpressionGui m)
 makeToNom nom pl =
-    nom <&> BinderEdit.makeBinderBodyEdit Sugar.BinderWithoutParams
+    nom <&> BinderEdit.makeBinderBodyEdit
     & mkNomGui before "«" (\a b -> [a, b]) (||>) valId pl
     where
         valId =
