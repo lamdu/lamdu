@@ -23,7 +23,6 @@ make ::
     Sugar.Payload m ExprGuiT.Payload ->
     ExprGuiM m (ExpressionGui m)
 make (Sugar.GetField recExpr tagG) pl =
-    ExpressionGui.stdWrapParentExpr pl $ \myId ->
     do
         recExprEdit <-
             ExprGuiM.makeSubexpressionWith 0 (ExpressionGui.after .~ 11) recExpr
@@ -38,5 +37,7 @@ make (Sugar.GetField recExpr tagG) pl =
             ]
             & return
     & Widget.assignCursor myId tagId
+    & ExpressionGui.stdWrapParentExpr pl
     where
+        myId = WidgetIds.fromExprPayload pl
         tagId = WidgetIds.fromEntityId (tagG ^. Sugar.tagInstance)

@@ -148,19 +148,19 @@ makeLabeled apply pl =
         let fixPrec
                 | needParens = ExprGuiM.withLocalPrecedence 0 (const (Prec.make 0))
                 | otherwise = id
-        fixPrec . ExpressionGui.stdWrapParentExpr pl $
-            \myId ->
-            do
-                let mParensId
-                        | needParens = Just (Widget.toAnimId myId)
-                        | otherwise = Nothing
-                makeFuncRow mParensId prec apply myId
-                    &
-                    if isBoxed apply
-                    then mkBoxed (apply ^. Sugar.aAnnotatedArgs) myId
-                    else id
+        let mParensId
+                | needParens = Just (Widget.toAnimId myId)
+                | otherwise = Nothing
+        let addBox
+                | isBoxed apply = mkBoxed (apply ^. Sugar.aAnnotatedArgs) myId
+                | otherwise = id
+        makeFuncRow mParensId prec apply myId
+            & addBox
+            & ExpressionGui.stdWrapParentExpr pl
+            & fixPrec
     where
         prec = mkPrecedence apply
+        myId = WidgetIds.fromExprPayload pl
 
 makeArgRows ::
     Monad m =>
@@ -192,7 +192,6 @@ makeSimple ::
     Sugar.Payload m ExprGuiT.Payload ->
     ExprGuiM m (ExpressionGui m)
 makeSimple (Sugar.Apply func arg) pl =
-    ExpressionGui.stdWrapParentExpr pl $ \myId ->
     do
         parentPrec <- ExprGuiM.outerPrecedence <&> Prec.ParentPrecedence
         let mParensId
@@ -207,3 +206,6 @@ makeSimple (Sugar.Apply func arg) pl =
               prefixPrecedence (ExpressionGui.before .~ prefixPrecedence) arg
             ]
     & Widget.assignCursor myId (func ^. Sugar.rPayload & WidgetIds.fromExprPayload)
+    & ExpressionGui.stdWrapParentExpr pl
+    where
+        myId = WidgetIds.fromExprPayload pl

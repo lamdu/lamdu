@@ -46,9 +46,6 @@ make ::
     Sugar.Payload m ExprGuiT.Payload ->
     ExprGuiM m (ExpressionGui m)
 make (Sugar.Case mArg alts caseTail addAlt cEntityId) pl =
-    ExpressionGui.stdWrapParentExpr pl $ \myId ->
-    let headerId = Widget.joinId myId ["header"]
-    in Widget.assignCursor myId (destCursorId alts headerId) $
     do
         config <- ExprGuiM.readConfig
         let mExprAfterHeader =
@@ -108,6 +105,11 @@ make (Sugar.Case mArg alts caseTail addAlt cEntityId) pl =
             <*> (ExpressionGui.vboxTopFocalSpaced ??
                  ([header, altsGui] <&> TreeLayout.alignment . _1 .~ 0))
             <&> TreeLayout.widget %~ Widget.weakerEvents addAltEventMap
+    & Widget.assignCursor myId (destCursorId alts headerId)
+    & ExpressionGui.stdWrapParentExpr pl
+    where
+        myId = WidgetIds.fromExprPayload pl
+        headerId = Widget.joinId myId ["header"]
 
 makeAltRow ::
     Monad m =>

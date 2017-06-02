@@ -115,9 +115,6 @@ make ::
     Sugar.Payload m ExprGuiT.Payload ->
     ExprGuiM m (ExpressionGui m)
 make lam pl =
-    ExprGuiM.withLocalPrecedence 0 (ExpressionGui.before .~ 0) $
-    ExpressionGui.stdWrapParentExpr pl $ \myId ->
-    Widget.assignCursor myId bodyId $
     do
         BinderEdit.Parts mParamsEdit mScopeEdit bodyEdit eventMap <-
             BinderEdit.makeParts funcApplyLimit binder bodyId myId
@@ -135,7 +132,11 @@ make lam pl =
             <*> (ExpressionGui.combineSpaced ?? paramsAndLabelEdits
                 <&> (: [bodyEdit]))
             <&> TreeLayout.widget %~ Widget.weakerEvents eventMap
+    & Widget.assignCursor myId bodyId
+    & ExpressionGui.stdWrapParentExpr pl
+    & ExprGuiM.withLocalPrecedence 0 (ExpressionGui.before .~ 0)
     where
+        myId = WidgetIds.fromExprPayload pl
         funcApplyLimit = pl ^. Sugar.plData . ExprGuiT.plShowAnnotation . ExprGuiT.funcApplyLimit
         params = binder ^. Sugar.bParams
         binder = lam ^. Sugar.lamBinder

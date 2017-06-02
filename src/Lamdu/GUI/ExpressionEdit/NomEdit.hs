@@ -67,9 +67,6 @@ mkNomGui ::
     Sugar.Nominal (Name m) (ExprGuiM m (ExpressionGui m)) ->
     ExprGuiM m (ExpressionGui m)
 mkNomGui nameSidePrecLens str asList hCombine valId pl (Sugar.Nominal tid val) =
-    ExprGuiM.withLocalPrecedence 0 (nameSidePrecLens .~ 0) $
-    ExpressionGui.stdWrapParentExpr pl $
-    \myId ->
     do
         parentPrec <- ExprGuiM.outerPrecedence <&> Prec.ParentPrecedence
         let needParen = Prec.needParens parentPrec (Prec.my nomPrecedence)
@@ -90,6 +87,10 @@ mkNomGui nameSidePrecLens str asList hCombine valId pl (Sugar.Nominal tid val) =
                  <*> mkNameGui tid nameId)
             <*> val
     & Widget.assignCursor myId valId
+    & ExpressionGui.stdWrapParentExpr pl
+    & ExprGuiM.withLocalPrecedence 0 (nameSidePrecLens .~ 0)
+    where
+        myId = WidgetIds.fromExprPayload pl
 
 expandingName ::
     Monad m =>

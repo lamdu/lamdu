@@ -45,8 +45,6 @@ make ::
     Sugar.Payload m ExprGuiT.Payload ->
     ExprGuiM m (ExpressionGui m)
 make record@(Sugar.Record fields recordTail addField) pl =
-    ExpressionGui.stdWrapParentExpr pl $ \myId ->
-    Widget.assignCursor myId (defaultPos fields myId) $
     do
         config <- ExprGuiM.readConfig
         (gui, resultPicker) <-
@@ -71,7 +69,10 @@ make record@(Sugar.Record fields recordTail addField) pl =
                 & ExprGuiM.withHolePicker resultPicker
         (if addBg then ExpressionGui.addValFrame myId else return id)
             ?? (gui & TreeLayout.widget %~ Widget.weakerEvents addFieldEventMap)
+    & Widget.assignCursor myId (defaultPos fields myId)
+    & ExpressionGui.stdWrapParentExpr pl
     where
+        myId = WidgetIds.fromExprPayload pl
         addBg = shouldAddBg record
 
 makeFieldRow ::

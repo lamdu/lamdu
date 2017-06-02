@@ -598,15 +598,11 @@ parentDelegator myId =
 stdWrapParentExpr ::
     Monad m =>
     Sugar.Payload m ExprGuiT.Payload ->
-    (Widget.Id -> ExprGuiM m (ExpressionGui m)) ->
+    ExprGuiM m (ExpressionGui m) ->
     ExprGuiM m (ExpressionGui m)
 stdWrapParentExpr pl mkGui =
-    parentDelegator myId <*> mkGui innerId
+    parentDelegator (WidgetIds.fromExprPayload pl) <*> mkGui
     & stdWrap pl
-    & Widget.assignCursor myId innerId
-    where
-        myId = WidgetIds.fromExprPayload pl
-        innerId = WidgetIds.delegatingId myId
 
 makeFocusableView ::
     (Applicative f, Monad m) =>
