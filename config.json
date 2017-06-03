@@ -55,8 +55,6 @@
     "wrapKeys"                 : [ "Space" ],
     "recordOpenKeys"           : [ "Alt+O" ],
     "caseOpenKeys"             : [ "Alt+O" ],
-    "jumpLHStoRHSKeys"         : [ "GraveAccent" ],
-    "jumpRHStoLHSKeys"         : [ "GraveAccent" ],
     "extractKeys"              : [ "Cmd+X", "X", "Alt+Up" ],
     "moveLetInwardKeys"        : [ "Alt+Down" ],
     "inlineKeys"               : [ "Cmd+V", "V" ],

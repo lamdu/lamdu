@@ -106,9 +106,6 @@ data Config = Config
     , inlineKeys :: [MetaKey]
     , moveLetInwardKeys:: [MetaKey]
 
-    , jumpLHStoRHSKeys :: [MetaKey]
-    , jumpRHStoLHSKeys :: [MetaKey]
-
     , enterSubexpressionKeys :: [MetaKey]
     , leaveSubexpressionKeys :: [MetaKey]
 
