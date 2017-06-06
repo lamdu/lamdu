@@ -129,8 +129,8 @@ makeWidget = make <&> Lens.mapped . Lens.mapped %~ Widget.fromView
 
 makeLabel ::
     (MonadReader env m, HasStyle env) =>
-    m (Text -> AnimId -> View)
-makeLabel = make <&> \mk text prefix -> mk text $ mappend prefix [encodeUtf8 text]
+    Text -> m (AnimId -> View)
+makeLabel text = make <&> \mk prefix -> mk text $ mappend prefix [encodeUtf8 text]
 
 makeFocusable ::
     (MonadReader env m, Applicative f, Widget.HasCursor env, HasStyle env) =>

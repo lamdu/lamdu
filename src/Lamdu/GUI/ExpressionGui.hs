@@ -665,7 +665,7 @@ makeCollisionSuffixLabel (Collision suffix) animId =
     do
         theme <- ExprGuiM.readTheme
         let Theme.Name{..} = Theme.name theme
-        TextView.makeLabel ?? Text.pack (show suffix) ?? animId
+        TextView.makeLabel (Text.pack (show suffix)) ?? animId
             & Reader.local (TextView.color .~ collisionSuffixTextColor)
             <&> View.scale (realToFrac <$> collisionSuffixScaleFactor)
             <&> View.backgroundColor animId collisionSuffixBGColor

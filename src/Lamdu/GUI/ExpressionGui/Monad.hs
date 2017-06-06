@@ -233,7 +233,7 @@ run makeSubexpr codeAnchors config theme settings style (ExprGuiM action) =
             & transaction
 
 makeLabel :: Monad m => Text -> AnimId -> ExprGuiM m View
-makeLabel text animId = TextView.makeLabel ?? text ?? animId
+makeLabel text animId = TextView.makeLabel text ?? animId
 
 -- Used vars:
 

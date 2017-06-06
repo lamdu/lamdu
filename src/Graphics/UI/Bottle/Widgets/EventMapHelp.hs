@@ -91,7 +91,7 @@ makeShortcutKeyView ::
     Config -> (AnimId, [E.InputDoc]) -> View
 makeShortcutKeyView config (animId, inputDocs) =
     inputDocs
-    <&> flip (TextView.makeLabel style) animId . mappend " "
+    <&> (TextView.makeLabel ?? style ?? animId) . mappend " "
     & GridView.verticalAlign 1
     where
         style =
@@ -104,7 +104,7 @@ makeTextViews ::
     Tree View View
 makeTextViews config =
     fmap
-    ( (treeNodes %~ uncurry (flip (TextView.makeLabel (configStyle config))))
+    ( (treeNodes %~ uncurry (flip (TextView.makeLabel ?? configStyle config)))
     . fmap (makeShortcutKeyView config)
     ) . addAnimIds
 
@@ -132,7 +132,7 @@ makeView size eventMap config animId =
 makeTooltip :: Config -> [ModKey] -> AnimId -> View
 makeTooltip config helpKeys animId =
     GridView.horizontalAlign 0
-    [ TextView.makeLabel (configStyle config) "Show help" animId
+    [ TextView.makeLabel "Show help" (configStyle config) animId
     , makeShortcutKeyView config
         (animId ++ ["HelpKeys"], map ModKey.pretty helpKeys)
     ]
