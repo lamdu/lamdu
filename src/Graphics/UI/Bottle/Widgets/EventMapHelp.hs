@@ -41,6 +41,7 @@ data Config = Config
     , _configTint :: Draw.Color
     }
 Lens.makeLenses ''Config
+instance TextView.HasStyle Config where style = configStyle
 
 defaultConfig :: Draw.Font -> Config
 defaultConfig font =
@@ -81,7 +82,7 @@ groupTree = foldr step []
 groupInputDocs :: [([E.Subtitle], E.InputDoc)] -> [([E.Subtitle], [E.InputDoc])]
 groupInputDocs = Map.toList . Map.fromListWith (++) . (Lens.traversed . _2 %~) (:[])
 
-addAnimIds :: (Show a, Show b) => AnimId -> Tree a b -> Tree (AnimId, a) (AnimId, b)
+addAnimIds :: Show a => AnimId -> Tree a b -> Tree (AnimId, a) (AnimId, b)
 addAnimIds animId (Leaf b) = Leaf (animId ++ ["leaf"], b)
 addAnimIds animId (Branch a cs) =
     Branch (tAnimId, a) $ map (addAnimIds tAnimId) cs
@@ -89,24 +90,23 @@ addAnimIds animId (Branch a cs) =
         tAnimId = Anim.augmentId animId a
 
 makeShortcutKeyView ::
-    Config -> (AnimId, [E.InputDoc]) -> View
-makeShortcutKeyView config (animId, inputDocs) =
+    Config -> AnimId -> [E.InputDoc] -> View
+makeShortcutKeyView config animId inputDocs =
     inputDocs
-    <&> (TextView.makeLabel ?? style ?? animId) . mappend " "
+    <&> (<> " ")
+    <&> (TextView.makeLabel ?? style ?? animId)
     & GridView.verticalAlign 1
     where
-        style =
-            config ^. configStyle
-            & TextView.styleColor .~ (config ^. configInputDocColor)
+        style = config & TextView.style . TextView.styleColor .~ (config ^. configInputDocColor)
 
 makeTextViews ::
-    Config -> AnimId ->
+    Config ->
     Tree E.Subtitle [E.InputDoc] ->
     Tree View View
-makeTextViews config animId tree =
-    addAnimIds animId tree
-    <&> makeShortcutKeyView config
-    & treeNodes %~ uncurry (flip (TextView.makeLabel ?? (config ^. configStyle)))
+makeTextViews config tree =
+    addAnimIds helpAnimId tree
+    <&> uncurry (makeShortcutKeyView config)
+    & treeNodes %~ uncurry (flip (TextView.makeLabel ?? config))
 
 columns :: R -> (a -> R) -> [a] -> [[a]]
 columns maxHeight itemHeight =
@@ -121,37 +121,43 @@ columns maxHeight itemHeight =
             where
                 newHeight = itemHeight new
 
-makeView :: Vector2 R -> EventMap a -> Config -> AnimId -> View
-makeView size eventMap config animId =
+makeView :: Vector2 R -> EventMap a -> Config -> View
+makeView size eventMap config =
     eventMap ^.. E.emDocs . Lens.withIndex
     <&> (_1 %~ (^. E.docStrs)) . Tuple.swap
     & groupInputDocs & groupTree
-    <&> makeTextViews config animId
+    <&> makeTextViews config
     & makeTreeView config size
 
-makeTooltip :: Config -> [ModKey] -> AnimId -> View
-makeTooltip config helpKeys animId =
+makeTooltip :: Config -> [ModKey] -> View
+makeTooltip config helpKeys =
     GridView.horizontalAlign 0
-    [ TextView.makeLabel "Show help" (config ^. configStyle) animId
-    , makeShortcutKeyView config
-        (animId ++ ["HelpKeys"], map ModKey.pretty helpKeys)
+    [ TextView.makeLabel "Show help" config helpAnimId
+    , makeShortcutKeyView config (helpAnimId ++ ["HelpKeys"]) (helpKeys <&> ModKey.pretty)
     ]
 
 indent :: R -> View -> View
 indent width x =
     GridView.horizontalAlign 0 [Spacer.makeHorizontal width, x]
 
-makeTreeView :: Config -> Vector2 R -> [Tree View View] -> View
-makeTreeView config size =
-    GridView.horizontalAlign 1 .
-    List.intersperse (Spacer.makeHorizontal indentWidth) .
-    fmap (GridView.make . map toRow) .
-    columns (size ^. _2) pairHeight .
-    handleResult . go
+makeFlatTreeView :: Config -> Vector2 R -> [(View, View)] -> View
+makeFlatTreeView config size pairs =
+    pairs
+    & columns (size ^. _2) pairHeight
+    <&> map toRow
+    <&> GridView.make
+    & List.intersperse (Spacer.makeHorizontal colSpace)
+    & GridView.horizontalAlign 1
     where
         toRow (titleView, docView) =
             [(0, titleView), (GridView.Alignment (Vector2 1 0), docView)]
         pairHeight (titleView, docView) = (max `on` (^. View.height)) titleView docView
+        colSpace = config ^. configStyle . TextView.styleFont & Draw.fontHeight
+
+makeTreeView :: Config -> Vector2 R -> [Tree View View] -> View
+makeTreeView config size =
+    makeFlatTreeView config size . handleResult . go
+    where
         handleResult (pairs, []) = pairs
         handleResult _ = error "Leafs at root of tree!"
         go = mconcat . map fromTree
@@ -179,6 +185,9 @@ toggle :: IsHelpShown -> IsHelpShown
 toggle HelpShown = HelpNotShown
 toggle HelpNotShown = HelpShown
 
+helpAnimId :: AnimId
+helpAnimId = ["help box"]
+
 makeToggledHelpAdder ::
     MonadIO m =>
     IsHelpShown ->
@@ -197,11 +206,10 @@ makeToggledHelpAdder startValue =
                         case showingHelp of
                         HelpShown ->
                             ( makeView size (widget ^. Widget.eventMap) config
-                              animId
                             , "Hide"
                             )
                         HelpNotShown ->
-                            ( makeTooltip config (config ^. configOverlayDocKeys <&> toModKey) animId
+                            ( makeTooltip config (config ^. configOverlayDocKeys <&> toModKey)
                             , "Show"
                             )
                 let toggleEventMap =
@@ -210,9 +218,7 @@ makeToggledHelpAdder startValue =
                         liftIO $ modifyIORef showingHelpVar toggle
                 let bgHelpView =
                         helpView
-                        & View.backgroundColor animId (config ^. configBGColor)
+                        & View.backgroundColor helpAnimId (config ^. configBGColor)
                         & View.tint (config ^. configTint)
                 return . addToBottomRight bgHelpView size $
                     Widget.strongerEvents toggleEventMap widget
-    where
-        animId = ["help box"]
