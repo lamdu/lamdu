@@ -5,7 +5,6 @@ module Lamdu.GUI.ExpressionEdit.LambdaEdit
 
 import qualified Control.Lens as Lens
 import           Data.Store.Transaction (Transaction)
-import           Graphics.UI.Bottle.Animation (AnimId)
 import qualified Graphics.UI.Bottle.EventMap as E
 import           Graphics.UI.Bottle.MetaKey (MetaKey(..), noMods)
 import qualified Graphics.UI.Bottle.Widget as Widget
@@ -41,14 +40,14 @@ mkLhsEdits mParamsEdit mScopeEdit =
     mParamsEdit <&> addScopeEdit mScopeEdit & (^.. Lens._Just)
 
 mkExpanded ::
-    Monad m => AnimId ->
+    Monad m =>
     ExprGuiM m
     (Maybe (ExpressionGui m) ->
      Maybe (AlignedWidget (T m Widget.EventResult)) ->
      [ExpressionGui m])
-mkExpanded animId =
+mkExpanded =
     do
-        labelEdit <- ExpressionGui.grammarLabel "→" animId
+        labelEdit <- ExpressionGui.grammarLabel "→"
         return $ \mParamsEdit mScopeEdit ->
             mkLhsEdits mParamsEdit mScopeEdit ++
             [TreeLayout.fromAlignedWidget labelEdit]
@@ -71,15 +70,13 @@ mkShrunk paramIds myId =
         theme <- ExprGuiM.readTheme
         lamLabel <-
             ExpressionGui.makeFocusableView (lamId myId)
-            <*> ExpressionGui.grammarLabel "λ" animId
+            <*> ExpressionGui.grammarLabel "λ"
             <&> TreeLayout.fromAlignedWidget
             & LightLambda.withUnderline theme
         return $ \mScopeEdit ->
             [ addScopeEdit mScopeEdit lamLabel
               & TreeLayout.widget %~ Widget.weakerEvents expandEventMap
             ]
-    where
-        animId = Widget.toAnimId myId
 
 mkLightLambda ::
     Monad n =>
@@ -100,14 +97,13 @@ mkLightLambda params myId =
                 (E.Doc ["View", "Shrink Lambda Params"]) (return (lamId myId))
         if isSelected
             then
-                 mkExpanded animId
+                 mkExpanded
                  <&> Lens.mapped . Lens.mapped . Lens.mapped . TreeLayout.widget %~
                      Widget.weakerEvents shrinkEventMap
             else mkShrunk paramIds myId
                  <&> \mk _mParamsEdit mScopeEdit -> mk mScopeEdit
     where
         paramIds = params ^.. SugarLens.binderNamedParams . Sugar.fpId
-        animId = Widget.toAnimId myId
 
 make ::
     Monad m =>
@@ -123,7 +119,7 @@ make lam pl =
             case (lam ^. Sugar.lamMode, params) of
             (_, Sugar.NullParam{}) -> mkLhsEdits mParamsEdit mScopeEdit & return
             (Sugar.LightLambda, _) -> mkLightLambda params myId ?? mParamsEdit ?? mScopeEdit
-            _ -> mkExpanded animId ?? mParamsEdit ?? mScopeEdit
+            _ -> mkExpanded ?? mParamsEdit ?? mScopeEdit
         parentPrec <- ExprGuiM.outerPrecedence <&> Prec.ParentPrecedence
         let mParensId
                 | Prec.needParens parentPrec (Prec.my 0) = Just animId

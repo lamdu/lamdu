@@ -53,9 +53,8 @@ makeParamsRecord myId paramsRecordVar =
         theme <- ExprGuiM.readTheme
         let Theme.Name{..} = Theme.name theme
         sequence
-            [ ExpressionGui.makeLabel "Params {"
-              (Widget.toAnimId myId <> ["prefix"])
-              <&> TreeLayout.fromAlignedWidget
+            [ TextView.makeLabel "Params {"
+              <&> TreeLayout.fromCenteredView
             , ExpressionGui.combineSpaced
               <*>
               ( fieldNames
@@ -66,8 +65,8 @@ makeParamsRecord myId paramsRecordVar =
                     & Reader.local (TextView.color .~ parameterColor)
                 )
               )
-            , ExpressionGui.makeLabel "}" (Widget.toAnimId myId <> ["suffix"])
-              <&> TreeLayout.fromAlignedWidget
+            , TextView.makeLabel "}"
+              <&> TreeLayout.fromCenteredView
             ] <&> ExpressionGui.combine
     where
         Sugar.ParamsRecordVar fieldNames = paramsRecordVar
@@ -113,14 +112,13 @@ definitionTypeChangeBox ::
     ExprGuiM m (AlignedWidget (T m Widget.EventResult))
 definitionTypeChangeBox info getVarId =
     do
-        headerLabel <-
-            ExpressionGui.makeLabel "Type was:" animId
+        headerLabel <- TextView.makeLabel "Type was:" <&> AlignedWidget.fromCenteredView
         typeWhenUsed <-
             mkTypeWidget "typeWhenUsed" (info ^. Sugar.defTypeWhenUsed)
         spacing <- ExpressionGui.stdVSpace <&> AlignedWidget.fromCenteredWidget
         sepLabel <-
             ExpressionGui.makeFocusableView myId
-            <*> ExpressionGui.makeLabel "Update to:" animId
+            <*> (TextView.makeLabel "Update to:" <&> AlignedWidget.fromCenteredView)
         typeCurrent <- mkTypeWidget "typeCurrent" (info ^. Sugar.defTypeCurrent)
         config <- ExprGuiM.readConfig
         theme <- ExprGuiM.readTheme

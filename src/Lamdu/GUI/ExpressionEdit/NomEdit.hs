@@ -79,7 +79,7 @@ mkNomGui nameSidePrecLens str asList hCombine valId pl (Sugar.Nominal tid val) =
                 | isSelected = NameHovering
                 | otherwise = NameCollapsed
         expandingName asList hCombine needParen nomId nameShowing
-            <*> (ExpressionGui.grammarLabel str (Widget.toAnimId myId)
+            <*> (ExpressionGui.grammarLabel str
                 <&> if isSelected then id
                     else AlignedWidget.widget %~ Widget.takesFocus (const (pure nameId))
                 )

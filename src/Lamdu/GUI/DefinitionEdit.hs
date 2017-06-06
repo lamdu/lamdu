@@ -4,6 +4,7 @@ module Lamdu.GUI.DefinitionEdit
     ) where
 
 import qualified Control.Lens as Lens
+import qualified Control.Monad.Reader as Reader
 import           Control.Monad.Transaction (transaction)
 import qualified Data.List as List
 import qualified Data.Store.Property as Property
@@ -118,7 +119,7 @@ makeBuiltinDefinition def builtin =
         defColor <- ExprGuiM.readTheme <&> Theme.name <&> Theme.definitionColor
         assignment <-
             [ ExpressionGui.makeNameOriginEdit name defColor (Widget.joinId myId ["name"])
-            , ExprGuiM.makeLabel "=" (Widget.toAnimId myId) <&> Widget.fromView
+            , TextView.makeLabel "=" <&> Widget.fromView
             , BuiltinEdit.make builtin myId
             ]
             & sequenceA
@@ -128,6 +129,7 @@ makeBuiltinDefinition def builtin =
             topLevelSchemeTypeView (builtin ^. Sugar.biType) entityId ["builtinType"]
             ?? width
         Box.vboxAlign 0 [assignment, typeView] & return
+    & Reader.local (View.animIdPrefix .~ Widget.toAnimId myId)
     where
         name = def ^. Sugar.drName
         entityId = def ^. Sugar.drEntityId

@@ -2,7 +2,7 @@
 module Graphics.UI.Bottle.Widget.Aligned
     ( AlignedWidget, alignment, widget
     , asTuple, width
-    , empty, fromCenteredWidget
+    , empty, fromCenteredWidget, fromCenteredView
     , scaleAround, scale, pad
     , hoverInPlaceOf
     , AbsAlignedWidget, absAlignedWidget
@@ -15,6 +15,7 @@ import qualified Control.Lens as Lens
 import           Data.Vector.Vector2 (Vector2(..))
 import           Graphics.UI.Bottle.Alignment (Alignment(..))
 import qualified Graphics.UI.Bottle.Alignment as Alignment
+import           Graphics.UI.Bottle.View (View)
 import qualified Graphics.UI.Bottle.View as View
 import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
@@ -35,6 +36,9 @@ width = widget . Widget.width
 
 fromCenteredWidget :: Widget a -> AlignedWidget a
 fromCenteredWidget = AlignedWidget 0.5
+
+fromCenteredView :: View -> AlignedWidget a
+fromCenteredView = fromCenteredWidget . Widget.fromView
 
 empty :: AlignedWidget a
 empty = fromCenteredWidget Widget.empty

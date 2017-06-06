@@ -30,7 +30,7 @@ makeCommon tagSuffix tagG nearestHoles valEdits =
             TagEdit.makeCaseTag nearestHoles tagG
             <&> TreeLayout.fromAlignedWidget
         suffixLabel <-
-            ExpressionGui.grammarLabel tagSuffix (Widget.toAnimId tagId)
+            ExpressionGui.grammarLabel tagSuffix
             <&> TreeLayout.fromAlignedWidget
         tag : suffixLabel : valEdits & ExpressionGui.combine
             & return

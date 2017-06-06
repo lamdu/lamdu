@@ -551,12 +551,12 @@ makeNameEditWith onActiveEditor (Name nameSrc nameCollision setName name) myId =
     ) <*>
     do
         mCollisionSuffix <-
-            makeCollisionSuffixLabel nameCollision (Widget.toAnimId myId)
-            <&> Lens._Just %~ Widget.fromView
+            makeCollisionSuffixLabel nameCollision <&> Lens._Just %~ Widget.fromView
         nameEdit <-
             makeNameWordEdit ?? Property storedName setName
             ?? WidgetIds.nameEditOf myId
         return . Box.hboxCentered $ nameEdit : mCollisionSuffix ^.. Lens._Just
+    & Reader.local (View.animIdPrefix .~ Widget.toAnimId myId)
     <&> onActiveEditor
     where
         empty = TextEdit.EmptyStrings name ""
@@ -576,11 +576,14 @@ stdWrap ::
     ExprGuiM m (ExpressionGui m)
 stdWrap pl act =
     do
-        (res, holePicker) <- ExprGuiM.listenResultPicker act
+        (res, holePicker) <-
+            Reader.local (View.animIdPrefix .~ animId) act
+            & ExprGuiM.listenResultPicker
         exprEventMap <- ExprEventMap.make pl holePicker
         maybeAddAnnotationPl pl ?? res
             <&> TreeLayout.widget %~ addEvents exprEventMap
     where
+        animId = Widget.toAnimId (WidgetIds.fromExprPayload pl)
         addEvents
             | ExprGuiT.plOfHoleResult pl = Widget.strongerEvents
             | otherwise = Widget.weakerEvents
@@ -615,14 +618,14 @@ makeFocusableView myId =
     Widget.makeFocusableView ?? myId
     <&> (AlignedWidget.widget %~)
 
-makeLabel :: Monad m => Text -> AnimId -> ExprGuiM m (AlignedWidget a)
-makeLabel text animId = ExprGuiM.makeLabel text animId <&> Widget.fromView <&> AlignedWidget.fromCenteredWidget
+makeLabel :: Monad m => Text -> ExprGuiM m (AlignedWidget a)
+makeLabel text = TextView.makeLabel text <&> Widget.fromView <&> AlignedWidget.fromCenteredWidget
 
-grammarLabel :: Monad m => Text -> AnimId -> ExprGuiM m (AlignedWidget f)
-grammarLabel text animId =
+grammarLabel :: Monad m => Text -> ExprGuiM m (AlignedWidget f)
+grammarLabel text =
     do
         theme <- ExprGuiM.readTheme
-        makeLabel text animId
+        makeLabel text
             & Reader.local (TextView.color .~ Theme.grammarColor theme)
 
 addValBG :: Monad m => Widget.Id -> ExprGuiM m (Widget f -> Widget f)
@@ -655,20 +658,22 @@ makeNameView :: Monad m => Name n -> AnimId -> ExprGuiM m View
 makeNameView (Name _ collision _ name) animId =
     do
         nameView <- TextView.make ?? name ?? animId
-        mSuffixLabel <- makeCollisionSuffixLabel collision $ animId ++ ["suffix"]
+        mSuffixLabel <- makeCollisionSuffixLabel collision
         GridView.horizontalAlign 0.5 (nameView : mSuffixLabel ^.. Lens._Just) & return
+    & Reader.local (View.animIdPrefix .~ animId)
 
 -- TODO: This doesn't belong here
-makeCollisionSuffixLabel :: Monad m => NameCollision -> AnimId -> ExprGuiM m (Maybe View)
-makeCollisionSuffixLabel NoCollision _ = return Nothing
-makeCollisionSuffixLabel (Collision suffix) animId =
+makeCollisionSuffixLabel :: Monad m => NameCollision -> ExprGuiM m (Maybe View)
+makeCollisionSuffixLabel NoCollision = return Nothing
+makeCollisionSuffixLabel (Collision suffix) =
     do
         theme <- ExprGuiM.readTheme
         let Theme.Name{..} = Theme.name theme
-        TextView.makeLabel (Text.pack (show suffix)) ?? animId
+        (View.backgroundColor ?? collisionSuffixBGColor)
+            <*>
+            (TextView.makeLabel (Text.pack (show suffix))
             & Reader.local (TextView.color .~ collisionSuffixTextColor)
-            <&> View.scale (realToFrac <$> collisionSuffixScaleFactor)
-            <&> View.backgroundColor animId collisionSuffixBGColor
+            <&> View.scale (realToFrac <$> collisionSuffixScaleFactor))
             <&> Just
 
 maybeAddAnnotationPl ::

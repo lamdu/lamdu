@@ -31,6 +31,7 @@ import qualified Graphics.UI.Bottle.Widget.Id as WidgetId
 import qualified Graphics.UI.Bottle.Widget.TreeLayout as TreeLayout
 import qualified Graphics.UI.Bottle.Widgets.Box as Box
 import qualified Graphics.UI.Bottle.Widgets.Grid as Grid
+import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
 import           Lamdu.CharClassification (operatorChars)
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Config.Theme as Theme
@@ -200,8 +201,8 @@ makeShownResult holeInfo result =
               }
             )
 
-makeExtraSymbol :: Monad m => AnimId -> Bool -> ResultsList n -> ExprGuiM m View
-makeExtraSymbol animId isSelected results
+makeExtraSymbol :: Monad m => Bool -> ResultsList n -> ExprGuiM m View
+makeExtraSymbol isSelected results
     | Lens.nullOf (HoleResults.rlExtra . traverse) results = pure View.empty
     | otherwise =
         do
@@ -210,7 +211,7 @@ makeExtraSymbol animId isSelected results
                     | isSelected = holeExtraSymbolColorSelected
                     | otherwise = holeExtraSymbolColorUnselected
             hSpace <- Spacing.getSpaceSize <&> (^. _1)
-            ExprGuiM.makeLabel extraSymbol animId
+            TextView.makeLabel extraSymbol
                 <&> View.scale extraSymbolScaleFactor
                 <&> View.tint extraSymbolColor
                 <&> View.assymetricPad (Vector2 hSpace 0) 0
@@ -246,8 +247,9 @@ makeResultGroup holeInfo results =
                     <&> \x -> (Nothing, x, 0)
         let isSelected = Lens.has Lens._Just mSelectedResult
         extraSymbolWidget <-
-            makeExtraSymbol (Widget.toAnimId (rId mainResult)) isSelected results
+            makeExtraSymbol isSelected results
             <&> Widget.fromView
+            & Reader.local (View.animIdPrefix .~ Widget.toAnimId (rId mainResult))
         return ResultGroupWidgets
             { _rgwMainResult = shownMainResult
             , _rgwMSelectedResult = mSelectedResult
@@ -350,16 +352,13 @@ postProcessSugar expr =
             & ExprGuiT.plShowAnnotation .~ ExprGuiT.neverShowAnnotations
 
 makeNoResults ::
-    Monad m => AnimId -> ExprGuiM m (Widget (T m Widget.EventResult))
-makeNoResults animId =
-    ExpressionGui.makeLabel "(No results)" animId
-    <&> (^. AlignedWidget.widget)
+    Monad m => ExprGuiM m (Widget (T m Widget.EventResult))
+makeNoResults = TextView.makeLabel "(No results)" <&> Widget.fromView
 
 makeHiddenResultsMView ::
-    Monad m => HaveHiddenResults -> Widget.Id -> ExprGuiM m (Maybe View)
-makeHiddenResultsMView HaveHiddenResults myId =
-    Just <$> ExprGuiM.makeLabel "..." (Widget.toAnimId myId)
-makeHiddenResultsMView NoHiddenResults _ = return Nothing
+    Monad m => HaveHiddenResults -> ExprGuiM m (Maybe View)
+makeHiddenResultsMView NoHiddenResults = return Nothing
+makeHiddenResultsMView HaveHiddenResults = TextView.makeLabel "..." <&> Just
 
 addMResultPicker :: Monad m => Maybe (ShownResult m) -> ExprGuiM m ()
 addMResultPicker mSelectedResult =
@@ -377,14 +376,14 @@ calcPadding =
 
 layoutResults ::
     Monad m =>
-    [ResultGroupWidgets m] -> HaveHiddenResults -> Widget.Id ->
+    [ResultGroupWidgets m] -> HaveHiddenResults ->
     ExprGuiM m (Widget (T m Widget.EventResult))
-layoutResults groups hiddenResults myId
-    | null groups = makeNoResults (Widget.toAnimId myId)
+layoutResults groups hiddenResults
+    | null groups = makeNoResults
     | otherwise =
         do
             hiddenResultsWidgets <-
-                makeHiddenResultsMView hiddenResults myId <&> (^.. Lens._Just)
+                makeHiddenResultsMView hiddenResults <&> (^.. Lens._Just)
                 <&> map Widget.fromView
             let grid =
                   rows
@@ -412,7 +411,7 @@ makeResultsWidget holeInfo shownResultsLists hiddenResults =
         let mFirstResult = groupsWidgets ^? Lens.traversed . rgwMainResult
         let mResult = mSelectedResult <|> mFirstResult
         addMResultPicker mResult
-        widget <- hiIds holeInfo & hidOpen & layoutResults groupsWidgets hiddenResults
+        widget <- layoutResults groupsWidgets hiddenResults
         return (mResult, widget)
 
 assignHoleEditCursor ::

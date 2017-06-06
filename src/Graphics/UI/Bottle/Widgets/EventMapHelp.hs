@@ -42,7 +42,14 @@ data Config = Config
     , _configTint :: Draw.Color
     }
 Lens.makeLenses ''Config
-instance TextView.HasStyle Config where style = configStyle
+
+data Env = Env
+    { _eConfig :: Config
+    , _eAnimIdPrefix :: AnimId
+    }
+Lens.makeLenses ''Env
+instance View.HasAnimIdPrefix Env where animIdPrefix = eAnimIdPrefix
+instance TextView.HasStyle Env where style = eConfig . configStyle
 
 defaultConfig :: Draw.Font -> Config
 defaultConfig font =
@@ -90,30 +97,32 @@ addAnimIds animId (Branch a cs) =
     where
         tAnimId = Anim.augmentId animId a
 
-makeShortcutKeyView ::
-    AnimId -> [E.InputDoc] -> Config -> View
-makeShortcutKeyView animId inputDocs =
+makeShortcutKeyView :: [E.InputDoc] -> Env -> View
+makeShortcutKeyView inputDocs =
     inputDocs
     <&> (<> " ")
-    <&> TextView.makeLabel
-    & traverse (?? animId)
+    & traverse TextView.makeLabel
     <&> GridView.verticalAlign 1
     & Reader.local setColor
     where
-        setColor config =
-            config & TextView.style . TextView.styleColor .~ (config ^. configInputDocColor)
+        setColor env =
+            env & TextView.style . TextView.styleColor .~ (env ^. eConfig . configInputDocColor)
 
 makeTextViews ::
     Tree E.Subtitle [E.InputDoc] ->
-    Config ->
+    Env ->
     Tree View View
 makeTextViews tree =
     addAnimIds helpAnimId tree
     & traverse shortcut
     >>= treeNodes mkDoc
     where
-        shortcut (animId, doc) = makeShortcutKeyView animId doc
-        mkDoc (animId, subtitle) = TextView.makeLabel subtitle ?? animId
+        shortcut (animId, doc) =
+            makeShortcutKeyView doc
+            & Reader.local (View.animIdPrefix .~ animId)
+        mkDoc (animId, subtitle) =
+            TextView.makeLabel subtitle
+            & Reader.local (View.animIdPrefix .~ animId)
 
 columns :: R -> (a -> R) -> [a] -> [[a]]
 columns maxHeight itemHeight =
@@ -128,7 +137,7 @@ columns maxHeight itemHeight =
             where
                 newHeight = itemHeight new
 
-makeView :: Vector2 R -> EventMap a -> Config -> View
+makeView :: Vector2 R -> EventMap a -> Env -> View
 makeView size eventMap =
     eventMap ^.. E.emDocs . Lens.withIndex
     <&> (_1 %~ (^. E.docStrs)) . Tuple.swap
@@ -136,11 +145,11 @@ makeView size eventMap =
     & traverse makeTextViews
     >>= makeTreeView size
 
-makeTooltip :: [ModKey] -> Config -> View
+makeTooltip :: [ModKey] -> Env -> View
 makeTooltip helpKeys =
     sequence
-    [ TextView.makeLabel "Show help" ?? helpAnimId
-    , makeShortcutKeyView (helpAnimId ++ ["HelpKeys"]) (helpKeys <&> ModKey.pretty)
+    [ TextView.makeLabel "Show help"
+    , makeShortcutKeyView (helpKeys <&> ModKey.pretty)
     ]
     <&> GridView.horizontalAlign 0
 
@@ -221,14 +230,15 @@ makeToggledHelpAdder startValue =
             do
                 unless (Widget.isFocused widget) (fail "adding help to non-focused root widget!")
                 showingHelp <- readIORef showingHelpVar & liftIO
+                let env = Env config ["help box"]
                 let (helpView, docStr) =
                         case showingHelp of
                         HelpShown ->
-                            ( makeView size (widget ^. Widget.eventMap) config
+                            ( makeView size (widget ^. Widget.eventMap) env
                             , "Hide"
                             )
                         HelpNotShown ->
-                            ( makeTooltip (config ^. configOverlayDocKeys <&> toModKey) config
+                            ( makeTooltip (config ^. configOverlayDocKeys <&> toModKey) env
                             , "Show"
                             )
                 let toggleEventMap =

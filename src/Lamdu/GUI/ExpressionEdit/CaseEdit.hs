@@ -45,7 +45,7 @@ make ::
     Sugar.Case (Name m) m (ExprGuiT.SugarExpr m) ->
     Sugar.Payload m ExprGuiT.Payload ->
     ExprGuiM m (ExpressionGui m)
-make (Sugar.Case mArg alts caseTail addAlt cEntityId) pl =
+make (Sugar.Case mArg alts caseTail addAlt _cEntityId) pl =
     do
         config <- ExprGuiM.readConfig
         let mExprAfterHeader =
@@ -59,10 +59,8 @@ make (Sugar.Case mArg alts caseTail addAlt cEntityId) pl =
         let headerLabel text =
                 ExpressionGui.makeFocusableView headerId
                 <*>
-                (ExpressionGui.grammarLabel text
-                    (Widget.toAnimId (WidgetIds.fromEntityId cEntityId))
-                    <&> AlignedWidget.widget
-                        %~ Widget.weakerEvents labelJumpHoleEventMap
+                ( ExpressionGui.grammarLabel text
+                    <&> AlignedWidget.widget %~ Widget.weakerEvents labelJumpHoleEventMap
                 )
                 <&> TreeLayout.fromAlignedWidget
         (mActiveTag, header) <-
@@ -139,7 +137,7 @@ makeAltsWidget ::
     Widget.Id -> ExprGuiM m (ExpressionGui m)
 makeAltsWidget _ [] myId =
     ExpressionGui.makeFocusableView (Widget.joinId myId ["Ø"])
-    <*> ExpressionGui.grammarLabel "Ø" (Widget.toAnimId myId)
+    <*> ExpressionGui.grammarLabel "Ø"
     <&> TreeLayout.fromAlignedWidget
 makeAltsWidget mActiveTag alts myId =
     ExpressionGui.vboxTopFocalSpaced <*> mapM (makeAltRow myId mActiveTag) alts

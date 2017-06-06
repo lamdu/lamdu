@@ -26,7 +26,7 @@ make (Sugar.GetField recExpr tagG) pl =
     do
         recExprEdit <-
             ExprGuiM.makeSubexpressionWith 0 (ExpressionGui.after .~ 11) recExpr
-        dotLabel <- ExpressionGui.grammarLabel "." (Widget.toAnimId myId)
+        dotLabel <- ExpressionGui.grammarLabel "."
         tagEdit <-
             TagEdit.makeRecordTag
             (pl ^. Sugar.plData . ExprGuiT.plNearestHoles) tagG

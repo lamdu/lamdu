@@ -82,9 +82,9 @@ textEdit prop pl =
         config <- ExprGuiM.readConfig <&> Config.literalText
         style <- ExprGuiM.readStyle <&> (^. Style.styleText)
         edit <- do
-            left <- TextView.makeLabel "“" ?? Widget.toAnimId myId <&> Widget.fromView
+            left <- TextView.makeLabel "“" <&> Widget.fromView
             text <- TextEdits.make ?? empty ?? prop ?? innerId
-            right <- TextView.makeLabel "„" ?? Widget.toAnimId myId <&> Widget.fromView
+            right <- TextView.makeLabel "„" <&> Widget.fromView
             let quoteSize = text ^. Widget.size & _1 .~ 0
             Box.hboxCentered
                 [ Widget.padToSizeAlign quoteSize 0 left

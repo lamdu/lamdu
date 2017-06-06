@@ -10,7 +10,7 @@ module Graphics.UI.Bottle.View
     , pad, assymetricPad
     , Size, R
     , translate, scale, tint
-    , HasAnimIdPrefix(..)
+    , HasAnimIdPrefix(..), subAnimId
     , addDiagonal, addInnerFrame , backgroundColor
     ) where
 

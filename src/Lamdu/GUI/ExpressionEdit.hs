@@ -41,8 +41,8 @@ make (Sugar.Expression body pl) =
 injectedExpr ::
     Monad m => Sugar.Payload m ExprGuiT.Payload -> ExprGuiM m (ExpressionGui m)
 injectedExpr pl =
-    WidgetIds.fromExprPayload pl & Widget.toAnimId
-    & ExpressionGui.makeLabel "★" <&> TreeLayout.fromAlignedWidget
+    ExpressionGui.makeLabel "★" <&> TreeLayout.fromAlignedWidget
+    & ExpressionGui.stdWrap pl
 
 makeEditor ::
     Monad m =>

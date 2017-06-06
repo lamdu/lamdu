@@ -1,7 +1,6 @@
 {-# LANGUAGE NoImplicitPrelude, GeneralizedNewtypeDeriving, TemplateHaskell, OverloadedStrings, MultiParamTypeClasses, FlexibleInstances, FlexibleContexts #-}
 module Lamdu.GUI.ExpressionGui.Monad
     ( ExprGuiM, Askable
-    , makeLabel
     , StoredEntityIds(..)
     , withLocalUnderline
     --
@@ -41,6 +40,7 @@ import           Data.Vector.Vector2 (Vector2)
 import           Graphics.UI.Bottle.Animation.Id (AnimId)
 import qualified Graphics.UI.Bottle.EventMap as E
 import           Graphics.UI.Bottle.View (View)
+import qualified Graphics.UI.Bottle.View as View
 import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import           Graphics.UI.Bottle.Widget.Id (toAnimId)
@@ -100,6 +100,7 @@ data Askable m = Askable
     { _aCursor :: Widget.Id
     , _aTextEditStyle :: TextEdit.Style
     , _aStdSpacing :: Vector2 Double
+    , _aAnimIdPrefix :: AnimId
     , _aSettings :: Settings
     , _aConfig :: Config
     , _aTheme :: Theme
@@ -132,6 +133,7 @@ instance Widget.HasCursor (Askable m) where cursor = aCursor
 instance TextView.HasStyle (Askable m) where style = aTextEditStyle . TextView.style
 instance TextEdit.HasStyle (Askable m) where style = aTextEditStyle
 instance Spacing.HasStdSpacing (Askable m) where stdSpacing = aStdSpacing
+instance View.HasAnimIdPrefix (Askable m) where animIdPrefix = aAnimIdPrefix
 
 withLocalUnderline :: Monad m => TextView.Underline -> ExprGuiM m a -> ExprGuiM m a
 withLocalUnderline underline = Reader.local (TextView.underline ?~ underline)
@@ -216,6 +218,7 @@ run makeSubexpr codeAnchors config theme settings style (ExprGuiM action) =
             { _aCursor = cursor
             , _aTextEditStyle = textEditStyle
             , _aStdSpacing = stdSpacing
+            , _aAnimIdPrefix = ["outermost"]
             , _aConfig = config
             , _aTheme = theme
             , _aSettings = settings
@@ -231,9 +234,6 @@ run makeSubexpr codeAnchors config theme settings style (ExprGuiM action) =
             ()
             <&> (\(x, (), _output) -> x)
             & transaction
-
-makeLabel :: Monad m => Text -> AnimId -> ExprGuiM m View
-makeLabel text animId = TextView.makeLabel text ?? animId
 
 -- Used vars:
 

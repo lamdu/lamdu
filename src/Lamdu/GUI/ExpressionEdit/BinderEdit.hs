@@ -19,6 +19,7 @@ import           Data.Text.Encoding (encodeUtf8)
 import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.Bottle.EventMap as E
 import           Graphics.UI.Bottle.MetaKey (MetaKey(..), noMods, toModKey)
+import qualified Graphics.UI.Bottle.View as View
 import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import           Graphics.UI.Bottle.Widget.Aligned (AlignedWidget)
@@ -203,7 +204,7 @@ makeScopeNavEdit binder myId curCursor =
     do
         theme <- ExprGuiM.readTheme
         let mkArrow (txt, mScopeId) =
-                ExpressionGui.makeLabel txt (Widget.toAnimId myId)
+                ExpressionGui.makeLabel txt
                 & Reader.local
                 ( TextView.color .~
                     case mScopeId of
@@ -356,7 +357,7 @@ make name color binder myId =
                     <&> TreeLayout.alignment . _1 .~ 0.5)
                 <&> TreeLayout.widget %~ Widget.strongerEvents rhsJumperEquals
                 <&> Just
-        equals <- ExpressionGui.makeLabel "=" (Widget.toAnimId myId)
+        equals <- ExpressionGui.makeLabel "="
         ExpressionGui.combineSpaced
             <&>
             (\hbox ->
@@ -365,6 +366,7 @@ make name color binder myId =
             , bodyEdit
             ] )
             <&> TreeLayout.widget %~ Widget.weakerEvents eventMap
+    & Reader.local (View.animIdPrefix .~ Widget.toAnimId myId)
     where
         presentationChoiceId = Widget.joinId myId ["presentation"]
         body = binder ^. Sugar.bBody . Sugar.bbContent
@@ -397,12 +399,13 @@ makeLetEdit item =
                 ]
         let eventMap = mappend actionsEventMap usageEventMap
         ExpressionGui.tagItem
-            <*> ExpressionGui.grammarLabel "let" (Widget.toAnimId myId)
+            <*> ExpressionGui.grammarLabel "let"
             <*> (make (item ^. Sugar.lName) letColor binder myId
                 <&> TreeLayout.widget %~ Widget.weakerEvents eventMap
                 <&> TreeLayout.pad
                     (Theme.letItemPadding theme <&> realToFrac)
                 )
+    & Reader.local (View.animIdPrefix .~ Widget.toAnimId myId)
     where
         bodyId =
             item ^. Sugar.lBody . Sugar.bbContent . SugarLens.binderContentEntityId
@@ -493,7 +496,7 @@ nullParamEditInfo mActions =
     { ParamEdit.iMakeNameEdit =
       \myId ->
       ExpressionGui.makeFocusableView myId
-      <*> ExpressionGui.grammarLabel "◗" (Widget.toAnimId myId)
+      <*> ExpressionGui.grammarLabel "◗"
       <&> TreeLayout.fromAlignedWidget
     , ParamEdit.iMAddNext = Nothing
     , ParamEdit.iMOrderBefore = Nothing
