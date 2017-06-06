@@ -189,9 +189,10 @@ strongerEvents eMap = eventMap %~ (eMap `mappend`)
 weakerEvents :: EventMap a -> Widget a -> Widget a
 weakerEvents eMap = eventMap %~ (`mappend` eMap)
 
-backgroundColor :: AnimId -> Draw.Color -> Widget a -> Widget a
-backgroundColor animId color =
-    view %~ View.backgroundColor animId color
+backgroundColor ::
+    (MonadReader env m, View.HasAnimIdPrefix env) =>
+    m (Draw.Color -> Widget a -> Widget a)
+backgroundColor = View.backgroundColor <&> Lens.mapped %~ (view %~)
 
 animIdMappingFromPrefixMap :: Map AnimId AnimId -> Monoid.Endo AnimId
 animIdMappingFromPrefixMap = Monoid.Endo . Anim.mappingFromPrefixMap

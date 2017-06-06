@@ -514,7 +514,7 @@ addDeletionDiagonal =
     do
         theme <- ExprGuiM.readTheme
         return $ \thickness animId ->
-            View.addDiagonal thickness (animId ++ ["diagonal"])
+            View.addDiagonal animId thickness
             (Theme.typeIndicatorErrorColor theme)
 
 makeNameOriginEdit ::

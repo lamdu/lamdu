@@ -87,9 +87,7 @@ make WidgetIds{..} arg =
             ?? argGui
             <&> TreeLayout.pad (frameWidth & _2 .~ 0)
             <&> TreeLayout.widget . Widget.view %~
-                View.addInnerFrame frameId frameColor frameWidth
+                View.addInnerFrame (Widget.toAnimId hidWrapper) frameColor frameWidth
             <&> TreeLayout.widget . Widget.eventMap %~
                 modifyWrappedEventMap config argIsFocused arg WidgetIds{..}
             <&> TreeLayout.widget %~ Widget.weakerEvents unwrapEventMap
-    where
-        frameId = Widget.toAnimId hidWrapper <> ["hole frame"]

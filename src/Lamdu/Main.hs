@@ -19,6 +19,7 @@ import           GHC.Conc (setNumCapabilities, getNumProcessors)
 import           GHC.Stack (whoCreated)
 import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.Rendering.OpenGL.GL as GL
+import           Graphics.UI.Bottle.Animation (AnimId)
 import           Graphics.UI.Bottle.Main (mainLoopWidget)
 import qualified Graphics.UI.Bottle.Main as MainLoop
 import           Graphics.UI.Bottle.Widget (Widget)
@@ -325,7 +326,7 @@ mkWidgetWithFallback dbToIO env =
                 return (isValid, widget)
         unless isValid $ putStrLn $ "Invalid cursor: " ++ show (env ^. GUIMain.envCursor)
         widget
-            & Widget.backgroundColor ["background"] (bgColor isValid theme)
+            & Widget.backgroundColor (["background"] :: AnimId) (bgColor isValid theme)
             & return
     where
         theme = env ^. GUIMain.envTheme

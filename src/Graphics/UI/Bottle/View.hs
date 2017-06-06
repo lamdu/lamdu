@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, RecordWildCards, RankNTypes, OverloadedStrings, TemplateHaskell #-}
+{-# LANGUAGE NoImplicitPrelude, RecordWildCards, RankNTypes, OverloadedStrings, TemplateHaskell, TypeSynonymInstances, FlexibleInstances #-}
 module Graphics.UI.Bottle.View
     ( View(..), make
     , empty
@@ -9,9 +9,9 @@ module Graphics.UI.Bottle.View
     , width, height
     , pad, assymetricPad
     , Size, R
-    , addDiagonal, addInnerFrame
-    , backgroundColor
     , translate, scale, tint
+    , HasAnimIdPrefix(..)
+    , addDiagonal, addInnerFrame , backgroundColor
     ) where
 
 import qualified Control.Lens as Lens
@@ -64,36 +64,6 @@ width = size . _1
 height :: Lens' View R
 height = size . _2
 
--- | Add a diagonal line (top-left to right-bottom). Useful as a
--- "deletion" GUI annotation
-addDiagonal :: R -> AnimId -> Draw.Color -> View -> View
-addDiagonal thickness animId color view=
-    view & animLayers . layers . Lens.reversed . Lens.ix 0 <>~ line
-    where
-        line =
-            Draw.convexPoly
-            [ (0, thickness)
-            , (0, 0)
-            , (thickness, 0)
-            , (1, 1-thickness)
-            , (1, 1)
-            , (1-thickness, 1)
-            ]
-            & Draw.tint color
-            & void
-            & Anim.simpleFrame animId
-            & Anim.scale (view ^. size)
-
-backgroundColor :: AnimId -> Draw.Color -> View -> View
-backgroundColor animId color view =
-    view
-    & animLayers . layers %~ addBg
-    where
-        bgAnimId = animId ++ ["bg"]
-        bg = Anim.backgroundColor bgAnimId color (view ^. size)
-        addBg [] = [bg]
-        addBg (x:xs) = x <> bg : xs
-
 scale :: Vector2 Draw.R -> View -> View
 scale ratio view =
     view
@@ -118,10 +88,56 @@ tint color = animFrames . Anim.unitImages %~ Draw.tint color
 bottomFrame :: Lens.Traversal' View Anim.Frame
 bottomFrame = animLayers . layers . Lens.ix 0
 
-addInnerFrame :: AnimId -> Draw.Color -> Vector2 R -> View -> View
-addInnerFrame animId color frameWidth view =
-    view & bottomFrame %~ mappend emptyRectangle
+class HasAnimIdPrefix env where animIdPrefix :: Lens' env AnimId
+instance HasAnimIdPrefix AnimId where animIdPrefix = id
+
+subAnimId :: (MonadReader env m, HasAnimIdPrefix env) => AnimId -> m AnimId
+subAnimId suffix = Lens.view animIdPrefix <&> (++ suffix)
+
+backgroundColor ::
+    (MonadReader env m, HasAnimIdPrefix env) =>
+    m (Draw.Color -> View -> View)
+backgroundColor =
+    subAnimId ["bg"] <&>
+    \animId color view ->
+    view
+    & animLayers . layers %~ addBg (Anim.backgroundColor animId color (view ^. size))
     where
-        emptyRectangle =
-            Anim.emptyRectangle frameWidth (view ^. size) animId
+        addBg bg [] = [bg]
+        addBg bg (x:xs) = x <> bg : xs
+
+-- | Add a diagonal line (top-left to right-bottom). Useful as a
+-- "deletion" GUI annotation
+addDiagonal ::
+    (MonadReader env m, HasAnimIdPrefix env) =>
+    m (R -> Draw.Color -> View -> View)
+addDiagonal =
+    subAnimId ["diagonal"] <&>
+    \animId thickness color view ->
+    view
+    & animLayers . layers . Lens.reversed . Lens.ix 0 <>~
+    ( Draw.convexPoly
+        [ (0, thickness)
+        , (0, 0)
+        , (thickness, 0)
+        , (1, 1-thickness)
+        , (1, 1)
+        , (1-thickness, 1)
+        ]
+        & Draw.tint color
+        & void
+        & Anim.simpleFrame (animId ++ ["diagonal"])
+        & Anim.scale (view ^. size)
+    )
+
+addInnerFrame ::
+    (MonadReader env m, HasAnimIdPrefix env) =>
+    m (Draw.Color -> Vector2 R -> View -> View)
+addInnerFrame =
+    subAnimId ["inner-frame"] <&>
+    \animId color frameWidth view ->
+    view & bottomFrame %~
+        mappend
+        ( Anim.emptyRectangle frameWidth (view ^. size) animId
             & Anim.unitImages %~ Draw.tint color
+        )
