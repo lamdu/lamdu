@@ -44,7 +44,6 @@ module Graphics.UI.Bottle.Widget
     , pad, assymetricPad, padToSizeAlign
     , addInnerFrame
     , backgroundColor
-    , tint
 
     , makeFocusableView
 
@@ -217,9 +216,6 @@ applyIdMapping widgetIdMap eventResult =
             & Map.mapKeys toAnimId & Map.map toAnimId
         mapCursor (Id oldCursor) =
             Id $ Anim.mappingFromPrefixMap animIdMap oldCursor
-
-tint :: Draw.Color -> Widget a -> Widget a
-tint color = view %~ View.tint color
 
 keysEventMap ::
     Functor f => [MetaKey] -> EventMap.Doc ->

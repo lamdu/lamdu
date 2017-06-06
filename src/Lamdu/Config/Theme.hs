@@ -1,7 +1,7 @@
 {-# LANGUAGE DeriveGeneric #-}
 -- | The themes/ config format
 module Lamdu.Config.Theme
-    ( Help(..), Pane(..), Hole(..), Name(..), Eval(..), Indent(..), ValAnnotation(..), Theme(..)
+    ( Help(..), Hole(..), Name(..), Eval(..), Indent(..), ValAnnotation(..), Theme(..)
     ) where
 
 import qualified Data.Aeson.Types as Aeson
@@ -22,15 +22,6 @@ data Help = Help
 instance Aeson.ToJSON Help where
     toJSON = Aeson.genericToJSON Aeson.defaultOptions
 instance Aeson.FromJSON Help
-
-data Pane = Pane
-    { paneInactiveTintColor :: Draw.Color
-    , paneActiveBGColor :: Draw.Color
-    , newDefinitionActionColor :: Draw.Color
-    } deriving (Eq, Generic, Show)
-instance Aeson.ToJSON Pane where
-    toJSON = Aeson.genericToJSON Aeson.defaultOptions
-instance Aeson.FromJSON Pane
 
 data Hole = Hole
     { holeResultPadding :: Vector2 Double
@@ -94,10 +85,10 @@ data Theme = Theme
     , animationTimePeriodSec :: Double
     , animationRemainInPeriod :: Double
     , help :: Help
-    , pane :: Pane
     , hole :: Hole
     , name :: Name
     , eval :: Eval
+    , newDefinitionActionColor :: Draw.Color
     , topPadding :: Draw.R
     , maxEvalViewSize :: Int
     , versionControl :: VersionControl.Theme

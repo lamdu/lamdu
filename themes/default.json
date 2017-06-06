@@ -33,6 +33,7 @@
     "invalidCursorBGColor": [0.4, 0.0, 0.0, 1.0],
     "foreignModuleColor": [1.0, 0.3, 0.35, 1.0],
     "topPadding": 1.5,
+    "newDefinitionActionColor": [0.3, 1.0, 0.3, 1.0],
     "fonts": {
         "fontDefault"     : "fonts/DejaVuSans.ttf",
         "fontHelp"        : "fonts/DejaVuSans.ttf",
@@ -47,11 +48,6 @@
         "helpTextColor": [1.0, 1.0, 1.0, 1.0],
         "helpBGColor": [0.2, 0.15, 0.1, 0.85],
         "helpTint": [1.0, 1.0, 1.0, 1.0]
-    },
-    "pane": {
-        "newDefinitionActionColor": [0.3, 1.0, 0.3, 1.0],
-        "paneActiveBGColor": [1.0, 1.0, 1.0, 0.0],
-        "paneInactiveTintColor": [1.0, 1.0, 1.0, 1.0]
     },
     "versionControl": {
         "selectedBranchColor": [0.25, 0.5, 0.25, 1.0]

@@ -50,7 +50,7 @@ import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Style (Style)
 import qualified Lamdu.Sugar.Convert as SugarConvert
 import qualified Lamdu.Sugar.Names.Add as AddNames
-import           Lamdu.Sugar.Names.Types (DefinitionN, Name)
+import           Lamdu.Sugar.Names.Types (Name)
 import           Lamdu.Sugar.NearestHoles (NearestHoles)
 import qualified Lamdu.Sugar.NearestHoles as NearestHoles
 import qualified Lamdu.Sugar.Types as Sugar
@@ -181,7 +181,7 @@ makePaneEdit ::
     Env m -> Sugar.Pane (Name m) m ExprGuiT.Payload ->
     ExprGuiM m (Widget.R -> Widget (M m Widget.EventResult))
 makePaneEdit env pane =
-    makePaneWidget (pane ^. Sugar.paneDefinition)
+    DefinitionEdit.make (pane ^. Sugar.paneDefinition)
     <&> Lens.mapped %~ Widget.weakerEvents paneEventMap . mLiftWidget
     where
         delKeys = Config.delKeys (config env)
@@ -235,10 +235,10 @@ makeNewDefinitionButton =
         newDefinitionEventMap <- makeNewDefinitionEventMap codeAnchors
 
         Config.Pane{newDefinitionButtonPressKeys} <- ExprGuiM.readConfig <&> Config.pane
-        Theme.Pane{newDefinitionActionColor}      <- ExprGuiM.readTheme  <&> Theme.pane
+        theme <- ExprGuiM.readTheme
 
         TextView.makeFocusable ?? "New..." ?? newDefinitionButtonId
-            & Reader.local (TextView.color .~ newDefinitionActionColor)
+            & Reader.local (TextView.color .~ Theme.newDefinitionActionColor theme)
             <&> Widget.weakerEvents
                 (newDefinitionEventMap newDefinitionButtonPressKeys)
     where
@@ -288,20 +288,3 @@ panesEventMap Env{config,codeProps,exportActions} =
     where
         ExportActions{importAll,exportAll} = exportActions
         Config.Export{exportPath,importKeys,exportAllKeys} = Config.export config
-
-makePaneWidget ::
-    Monad m =>
-    DefinitionN m ExprGuiT.Payload ->
-    ExprGuiM m (Widget.R -> Widget (T m Widget.EventResult))
-makePaneWidget defS =
-    do
-        Theme.Pane{paneActiveBGColor,paneInactiveTintColor} <-
-            ExprGuiM.readTheme <&> Theme.pane
-        let colorizeInactivePane = Widget.tint paneInactiveTintColor
-        let colorizeActivePane =
-                Widget.backgroundColor WidgetIds.activePaneBackground
-                paneActiveBGColor
-        let colorize widget
-                | Widget.isFocused widget = colorizeActivePane widget
-                | otherwise = colorizeInactivePane widget
-        DefinitionEdit.make defS <&> Lens.mapped %~ colorize
