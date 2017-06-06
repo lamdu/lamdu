@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, OverloadedStrings, DeriveFunctor, TemplateHaskell #-}
+{-# LANGUAGE NoImplicitPrelude, OverloadedStrings, DeriveFunctor, DeriveTraversable, TemplateHaskell #-}
 module Graphics.UI.Bottle.Widgets.EventMapHelp
     ( makeView
     , IsHelpShown(..)
@@ -59,7 +59,7 @@ defaultConfig font =
     }
 
 data Tree n l = Leaf l | Branch n [Tree n l]
-    deriving (Eq, Ord, Show, Functor)
+    deriving (Eq, Ord, Show, Functor, Foldable, Traversable)
 
 bitraverseTree :: Applicative f => (n0 -> f n1) -> (l0 -> f l1) -> Tree n0 l0 -> f (Tree n1 l1)
 bitraverseTree _ onLeaf (Leaf l) = Leaf <$> onLeaf l
@@ -90,8 +90,8 @@ addAnimIds animId (Branch a cs) =
         tAnimId = Anim.augmentId animId a
 
 makeShortcutKeyView ::
-    Config -> AnimId -> [E.InputDoc] -> View
-makeShortcutKeyView config animId inputDocs =
+    AnimId -> [E.InputDoc] -> Config -> View
+makeShortcutKeyView animId inputDocs config =
     inputDocs
     <&> (<> " ")
     <&> (TextView.makeLabel ?? style ?? animId)
@@ -100,13 +100,16 @@ makeShortcutKeyView config animId inputDocs =
         style = config & TextView.style . TextView.styleColor .~ (config ^. configInputDocColor)
 
 makeTextViews ::
-    Config ->
     Tree E.Subtitle [E.InputDoc] ->
+    Config ->
     Tree View View
-makeTextViews config tree =
+makeTextViews tree =
     addAnimIds helpAnimId tree
-    <&> uncurry (makeShortcutKeyView config)
-    & treeNodes %~ uncurry (flip (TextView.makeLabel ?? config))
+    & traverse shortcut
+    >>= treeNodes mkDoc
+    where
+        shortcut (animId, doc) = makeShortcutKeyView animId doc
+        mkDoc (animId, doc) = TextView.makeLabel doc ?? animId
 
 columns :: R -> (a -> R) -> [a] -> [[a]]
 columns maxHeight itemHeight =
@@ -126,22 +129,23 @@ makeView size eventMap config =
     eventMap ^.. E.emDocs . Lens.withIndex
     <&> (_1 %~ (^. E.docStrs)) . Tuple.swap
     & groupInputDocs & groupTree
-    <&> makeTextViews config
-    & makeTreeView config size
+    <&> (makeTextViews ?? config)
+    & (makeTreeView size ?? config)
 
-makeTooltip :: Config -> [ModKey] -> View
-makeTooltip config helpKeys =
-    GridView.horizontalAlign 0
-    [ TextView.makeLabel "Show help" config helpAnimId
-    , makeShortcutKeyView config (helpAnimId ++ ["HelpKeys"]) (helpKeys <&> ModKey.pretty)
+makeTooltip :: [ModKey] -> Config -> View
+makeTooltip helpKeys =
+    sequence
+    [ TextView.makeLabel "Show help" ?? helpAnimId
+    , makeShortcutKeyView (helpAnimId ++ ["HelpKeys"]) (helpKeys <&> ModKey.pretty)
     ]
+    <&> GridView.horizontalAlign 0
 
 indent :: R -> View -> View
 indent width x =
     GridView.horizontalAlign 0 [Spacer.makeHorizontal width, x]
 
-makeFlatTreeView :: Config -> Vector2 R -> [(View, View)] -> View
-makeFlatTreeView config size pairs =
+makeFlatTreeView :: Vector2 R -> [(View, View)] -> Config -> View
+makeFlatTreeView size pairs config =
     pairs
     & columns (size ^. _2) pairHeight
     <&> map toRow
@@ -154,20 +158,20 @@ makeFlatTreeView config size pairs =
         pairHeight (titleView, docView) = (max `on` (^. View.height)) titleView docView
         colSpace = config ^. configStyle . TextView.styleFont & Draw.fontHeight
 
-makeTreeView :: Config -> Vector2 R -> [Tree View View] -> View
-makeTreeView config size =
-    makeFlatTreeView config size . handleResult . go
+makeTreeView :: Vector2 R -> [Tree View View] -> Config -> View
+makeTreeView size trees config =
+    makeFlatTreeView size (handleResult (go trees)) config
     where
         handleResult (pairs, []) = pairs
         handleResult _ = error "Leafs at root of tree!"
         go = mconcat . map fromTree
         fromTree (Leaf inputDocsView) = ([], [inputDocsView])
-        fromTree (Branch titleView trees) =
+        fromTree (Branch titleView ts) =
             ( (titleView, GridView.verticalAlign 1 inputDocs) :
                 (Lens.traversed . _1 %~ indent indentWidth) titles
             , [] )
             where
-                (titles, inputDocs) = go trees
+                (titles, inputDocs) = go ts
         indentWidth = config ^. configStyle . TextView.styleFont & Draw.fontHeight
 
 addToBottomRight :: View -> Widget.Size -> Widget f -> Widget f
@@ -209,7 +213,7 @@ makeToggledHelpAdder startValue =
                             , "Hide"
                             )
                         HelpNotShown ->
-                            ( makeTooltip config (config ^. configOverlayDocKeys <&> toModKey)
+                            ( makeTooltip (config ^. configOverlayDocKeys <&> toModKey) config
                             , "Show"
                             )
                 let toggleEventMap =
