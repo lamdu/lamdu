@@ -8,6 +8,7 @@ module Graphics.UI.Bottle.Widgets.EventMapHelp
 
 import qualified Control.Lens as Lens
 import           Control.Monad.IO.Class (MonadIO(..))
+import qualified Control.Monad.Reader as Reader
 import           Data.Function (on)
 import           Data.IORef (newIORef, readIORef, modifyIORef)
 import qualified Data.List as List
@@ -91,13 +92,16 @@ addAnimIds animId (Branch a cs) =
 
 makeShortcutKeyView ::
     AnimId -> [E.InputDoc] -> Config -> View
-makeShortcutKeyView animId inputDocs config =
+makeShortcutKeyView animId inputDocs =
     inputDocs
     <&> (<> " ")
-    <&> (TextView.makeLabel ?? style ?? animId)
-    & GridView.verticalAlign 1
+    <&> TextView.makeLabel
+    & traverse (?? animId)
+    <&> GridView.verticalAlign 1
+    & Reader.local setColor
     where
-        style = config & TextView.style . TextView.styleColor .~ (config ^. configInputDocColor)
+        setColor config =
+            config & TextView.style . TextView.styleColor .~ (config ^. configInputDocColor)
 
 makeTextViews ::
     Tree E.Subtitle [E.InputDoc] ->
@@ -109,7 +113,7 @@ makeTextViews tree =
     >>= treeNodes mkDoc
     where
         shortcut (animId, doc) = makeShortcutKeyView animId doc
-        mkDoc (animId, doc) = TextView.makeLabel doc ?? animId
+        mkDoc (animId, subtitle) = TextView.makeLabel subtitle ?? animId
 
 columns :: R -> (a -> R) -> [a] -> [[a]]
 columns maxHeight itemHeight =
@@ -125,12 +129,12 @@ columns maxHeight itemHeight =
                 newHeight = itemHeight new
 
 makeView :: Vector2 R -> EventMap a -> Config -> View
-makeView size eventMap config =
+makeView size eventMap =
     eventMap ^.. E.emDocs . Lens.withIndex
     <&> (_1 %~ (^. E.docStrs)) . Tuple.swap
     & groupInputDocs & groupTree
-    <&> (makeTextViews ?? config)
-    & (makeTreeView size ?? config)
+    & traverse makeTextViews
+    >>= makeTreeView size
 
 makeTooltip :: [ModKey] -> Config -> View
 makeTooltip helpKeys =
@@ -144,35 +148,46 @@ indent :: R -> View -> View
 indent width x =
     GridView.horizontalAlign 0 [Spacer.makeHorizontal width, x]
 
-makeFlatTreeView :: Vector2 R -> [(View, View)] -> Config -> View
-makeFlatTreeView size pairs config =
-    pairs
-    & columns (size ^. _2) pairHeight
-    <&> map toRow
-    <&> GridView.make
-    & List.intersperse (Spacer.makeHorizontal colSpace)
-    & GridView.horizontalAlign 1
+fontHeight :: (MonadReader env m, TextView.HasStyle env) => m R
+fontHeight =
+    Lens.view (TextView.style . TextView.styleFont) <&> Draw.fontHeight
+
+makeFlatTreeView ::
+    (MonadReader env m, TextView.HasStyle env) =>
+    Vector2 R -> [(View, View)] -> m View
+makeFlatTreeView size pairs =
+    fontHeight
+    <&> Spacer.makeHorizontal
+    <&> List.intersperse
+    ?? colViews
+    <&> GridView.horizontalAlign 1
     where
+        colViews =
+            pairs
+            & columns (size ^. _2) pairHeight
+            <&> map toRow
+            <&> GridView.make
         toRow (titleView, docView) =
             [(0, titleView), (GridView.Alignment (Vector2 1 0), docView)]
         pairHeight (titleView, docView) = (max `on` (^. View.height)) titleView docView
-        colSpace = config ^. configStyle . TextView.styleFont & Draw.fontHeight
 
-makeTreeView :: Vector2 R -> [Tree View View] -> Config -> View
-makeTreeView size trees config =
-    makeFlatTreeView size (handleResult (go trees)) config
-    where
-        handleResult (pairs, []) = pairs
-        handleResult _ = error "Leafs at root of tree!"
-        go = mconcat . map fromTree
-        fromTree (Leaf inputDocsView) = ([], [inputDocsView])
-        fromTree (Branch titleView ts) =
-            ( (titleView, GridView.verticalAlign 1 inputDocs) :
-                (Lens.traversed . _1 %~ indent indentWidth) titles
-            , [] )
-            where
-                (titles, inputDocs) = go ts
-        indentWidth = config ^. configStyle . TextView.styleFont & Draw.fontHeight
+makeTreeView ::
+    (MonadReader env m, TextView.HasStyle env) =>
+    Vector2 R -> [Tree View View] -> m View
+makeTreeView size trees =
+    do
+        indentWidth <- fontHeight
+        let go ts = ts <&> fromTree & mconcat
+            fromTree (Leaf inputDocsView) = ([], [inputDocsView])
+            fromTree (Branch titleView ts) =
+                ( (titleView, GridView.verticalAlign 1 inputDocs) :
+                    (Lens.traversed . _1 %~ indent indentWidth) titles
+                , [] )
+                where
+                    (titles, inputDocs) = go ts
+        let handleResult (pairs, []) = pairs
+            handleResult _ = error "Leafs at root of tree!"
+        go trees & handleResult & makeFlatTreeView size
 
 addToBottomRight :: View -> Widget.Size -> Widget f -> Widget f
 addToBottomRight (View eventMapSize eventMapLayers) size =
