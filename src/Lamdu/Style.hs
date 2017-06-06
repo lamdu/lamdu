@@ -36,16 +36,16 @@ Lens.makeLenses ''Style
 help :: Draw.Font -> Config.Help -> Theme.Help -> EventMapHelp.Config
 help font config theme =
     EventMapHelp.Config
-    { EventMapHelp.configStyle =
+    { EventMapHelp._configStyle =
         TextView.Style
         { TextView._styleColor = helpTextColor
         , TextView._styleFont = font
         , TextView._styleUnderline = Nothing
         }
-    , EventMapHelp.configInputDocColor = helpInputDocColor
-    , EventMapHelp.configBGColor = helpBGColor
-    , EventMapHelp.configOverlayDocKeys = helpKeys
-    , EventMapHelp.configTint = helpTint
+    , EventMapHelp._configInputDocColor = helpInputDocColor
+    , EventMapHelp._configBGColor = helpBGColor
+    , EventMapHelp._configOverlayDocKeys = helpKeys
+    , EventMapHelp._configTint = helpTint
     }
     where
         Config.Help{helpKeys} = config

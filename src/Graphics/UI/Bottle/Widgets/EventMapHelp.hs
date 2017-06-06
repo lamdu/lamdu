@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, OverloadedStrings, DeriveFunctor #-}
+{-# LANGUAGE NoImplicitPrelude, OverloadedStrings, DeriveFunctor, TemplateHaskell #-}
 module Graphics.UI.Bottle.Widgets.EventMapHelp
     ( makeView
     , IsHelpShown(..)
@@ -34,26 +34,27 @@ import qualified Graphics.UI.GLFW as GLFW
 import           Lamdu.Prelude
 
 data Config = Config
-    { configStyle :: TextView.Style
-    , configInputDocColor :: Draw.Color
-    , configBGColor :: Draw.Color
-    , configOverlayDocKeys :: [MetaKey]
-    , configTint :: Draw.Color
+    { _configStyle :: TextView.Style
+    , _configInputDocColor :: Draw.Color
+    , _configBGColor :: Draw.Color
+    , _configOverlayDocKeys :: [MetaKey]
+    , _configTint :: Draw.Color
     }
+Lens.makeLenses ''Config
 
 defaultConfig :: Draw.Font -> Config
 defaultConfig font =
     Config
-    { configStyle =
+    { _configStyle =
         TextView.Style
         { TextView._styleColor = Draw.Color 1 1 1 1
         , TextView._styleFont = font
         , TextView._styleUnderline = Nothing
         }
-    , configInputDocColor = Draw.Color 0.1 0.7 0.7 1
-    , configBGColor = Draw.Color 0.2 0.15 0.1 0.5
-    , configOverlayDocKeys = [MetaKey noMods GLFW.Key'F1]
-    , configTint = Draw.Color 1 1 1 0.8
+    , _configInputDocColor = Draw.Color 0.1 0.7 0.7 1
+    , _configBGColor = Draw.Color 0.2 0.15 0.1 0.5
+    , _configOverlayDocKeys = [MetaKey noMods GLFW.Key'F1]
+    , _configTint = Draw.Color 1 1 1 0.8
     }
 
 data Tree n l = Leaf l | Branch n [Tree n l]
@@ -95,18 +96,17 @@ makeShortcutKeyView config (animId, inputDocs) =
     & GridView.verticalAlign 1
     where
         style =
-            configStyle config
-            & TextView.styleColor .~ configInputDocColor config
+            config ^. configStyle
+            & TextView.styleColor .~ (config ^. configInputDocColor)
 
 makeTextViews ::
     Config -> AnimId ->
     Tree E.Subtitle [E.InputDoc] ->
     Tree View View
-makeTextViews config =
-    fmap
-    ( (treeNodes %~ uncurry (flip (TextView.makeLabel ?? configStyle config)))
-    . fmap (makeShortcutKeyView config)
-    ) . addAnimIds
+makeTextViews config animId tree =
+    addAnimIds animId tree
+    <&> makeShortcutKeyView config
+    & treeNodes %~ uncurry (flip (TextView.makeLabel ?? (config ^. configStyle)))
 
 columns :: R -> (a -> R) -> [a] -> [[a]]
 columns maxHeight itemHeight =
@@ -132,7 +132,7 @@ makeView size eventMap config animId =
 makeTooltip :: Config -> [ModKey] -> AnimId -> View
 makeTooltip config helpKeys animId =
     GridView.horizontalAlign 0
-    [ TextView.makeLabel "Show help" (configStyle config) animId
+    [ TextView.makeLabel "Show help" (config ^. configStyle) animId
     , makeShortcutKeyView config
         (animId ++ ["HelpKeys"], map ModKey.pretty helpKeys)
     ]
@@ -162,8 +162,7 @@ makeTreeView config size =
             , [] )
             where
                 (titles, inputDocs) = go trees
-        indentWidth =
-            configStyle config ^. TextView.styleFont & Draw.fontHeight
+        indentWidth = config ^. configStyle . TextView.styleFont & Draw.fontHeight
 
 addToBottomRight :: View -> Widget.Size -> Widget f -> Widget f
 addToBottomRight (View eventMapSize eventMapLayers) size =
@@ -202,17 +201,17 @@ makeToggledHelpAdder startValue =
                             , "Hide"
                             )
                         HelpNotShown ->
-                            ( makeTooltip config (configOverlayDocKeys config <&> toModKey) animId
+                            ( makeTooltip config (config ^. configOverlayDocKeys <&> toModKey) animId
                             , "Show"
                             )
                 let toggleEventMap =
-                        Widget.keysEventMap (configOverlayDocKeys config)
+                        Widget.keysEventMap (config ^. configOverlayDocKeys)
                         (E.Doc ["Help", "Key Bindings", docStr]) $
                         liftIO $ modifyIORef showingHelpVar toggle
                 let bgHelpView =
                         helpView
-                        & View.backgroundColor animId (configBGColor config)
-                        & View.tint (configTint config)
+                        & View.backgroundColor animId (config ^. configBGColor)
+                        & View.tint (config ^. configTint)
                 return . addToBottomRight bgHelpView size $
                     Widget.strongerEvents toggleEventMap widget
     where
