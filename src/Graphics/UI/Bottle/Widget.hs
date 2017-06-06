@@ -24,9 +24,7 @@ module Graphics.UI.Bottle.Widget
     , MEnter
     , Focus(..), fEventMap, focalArea
     , size, width, height, events
-    -- , animFrames
     , bottomFrame
-    -- , animFrame
 
     , isFocused
 
@@ -123,13 +121,6 @@ isFocused = Lens.has (mFocus . Lens._Just)
 
 empty :: Widget f
 empty = fromView View.empty
-
--- {-# INLINE animFrame #-}
--- animFrame :: Lens' (Widget a) Anim.Frame
--- animFrame = view . View.animFrame
-
--- animFrames :: Lens.Traversal' (Widget a) Anim.Frame
--- animFrames = view . View.animFrames
 
 bottomFrame :: Lens.Traversal' (Widget a) Anim.Frame
 bottomFrame = view . View.animLayers . View.layers . Lens.ix 0
