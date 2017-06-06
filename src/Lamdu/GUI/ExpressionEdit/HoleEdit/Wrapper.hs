@@ -6,6 +6,7 @@ module Lamdu.GUI.ExpressionEdit.HoleEdit.Wrapper
 
 import qualified Data.Store.Transaction as Transaction
 import qualified Graphics.UI.Bottle.EventMap as E
+import qualified Graphics.UI.Bottle.View as View
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widget.TreeLayout as TreeLayout
 import           Lamdu.Config (Config)
@@ -85,8 +86,8 @@ make WidgetIds{..} arg =
             <&> (TreeLayout.alignedWidget %~)
             ?? argGui
             <&> TreeLayout.pad (frameWidth & _2 .~ 0)
-            <&> TreeLayout.widget %~
-                Widget.addInnerFrame frameId frameColor frameWidth
+            <&> TreeLayout.widget . Widget.view %~
+                View.addInnerFrame frameId frameColor frameWidth
             <&> TreeLayout.widget . Widget.eventMap %~
                 modifyWrappedEventMap config argIsFocused arg WidgetIds{..}
             <&> TreeLayout.widget %~ Widget.weakerEvents unwrapEventMap

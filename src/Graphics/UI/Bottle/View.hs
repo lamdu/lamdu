@@ -5,11 +5,11 @@ module Graphics.UI.Bottle.View
     , size, animLayers
     , Layers(..), layers
     , render
-    , animFrames
+    , animFrames, bottomFrame
     , width, height
     , pad, assymetricPad
     , Size, R
-    , addDiagonal
+    , addDiagonal, addInnerFrame
     , backgroundColor
     , translate, scale, tint
     ) where
@@ -114,3 +114,14 @@ assymetricPad leftAndTop rightAndBottom view =
 
 tint :: Draw.Color -> View -> View
 tint color = animFrames . Anim.unitImages %~ Draw.tint color
+
+bottomFrame :: Lens.Traversal' View Anim.Frame
+bottomFrame = animLayers . layers . Lens.ix 0
+
+addInnerFrame :: AnimId -> Draw.Color -> Vector2 R -> View -> View
+addInnerFrame animId color frameWidth view =
+    view & bottomFrame %~ mappend emptyRectangle
+    where
+        emptyRectangle =
+            Anim.emptyRectangle frameWidth (view ^. size) animId
+            & Anim.unitImages %~ Draw.tint color

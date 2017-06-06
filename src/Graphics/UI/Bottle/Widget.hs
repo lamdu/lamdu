@@ -42,7 +42,6 @@ module Graphics.UI.Bottle.Widget
     , strongerEvents, weakerEvents
     , translate, scale
     , pad, assymetricPad, padToSizeAlign
-    , addInnerFrame
     , backgroundColor
 
     , makeFocusableView
@@ -122,7 +121,7 @@ empty :: Widget f
 empty = fromView View.empty
 
 bottomFrame :: Lens.Traversal' (Widget a) Anim.Frame
-bottomFrame = view . View.animLayers . View.layers . Lens.ix 0
+bottomFrame = view . View.bottomFrame
 
 {-# INLINE size #-}
 size :: Lens' (Widget a) Size
@@ -193,14 +192,6 @@ weakerEvents eMap = eventMap %~ (`mappend` eMap)
 backgroundColor :: AnimId -> Draw.Color -> Widget a -> Widget a
 backgroundColor animId color =
     view %~ View.backgroundColor animId color
-
-addInnerFrame :: AnimId -> Draw.Color -> Vector2 R -> Widget a -> Widget a
-addInnerFrame animId color frameWidth widget =
-    widget & bottomFrame %~ mappend emptyRectangle
-    where
-        emptyRectangle =
-            Anim.emptyRectangle frameWidth (widget ^. size) animId
-            & Anim.unitImages %~ Draw.tint color
 
 animIdMappingFromPrefixMap :: Map AnimId AnimId -> Monoid.Endo AnimId
 animIdMappingFromPrefixMap = Monoid.Endo . Anim.mappingFromPrefixMap
