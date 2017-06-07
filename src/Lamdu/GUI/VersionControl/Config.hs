@@ -21,7 +21,7 @@ instance Aeson.ToJSON Config where
     toJSON = Aeson.genericToJSON Aeson.defaultOptions
 instance Aeson.FromJSON Config
 
-data Theme = Theme
+newtype Theme = Theme
     { selectedBranchColor :: Draw.Color
     } deriving (Eq, Generic, Show)
 instance Aeson.ToJSON Theme where

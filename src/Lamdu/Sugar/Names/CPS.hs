@@ -5,7 +5,7 @@ module Lamdu.Sugar.Names.CPS
 
 import Lamdu.Prelude
 
-data CPS m a = CPS { runCPS :: forall r. m r -> m (a, r) }
+newtype CPS m a = CPS { runCPS :: forall r. m r -> m (a, r) }
     deriving (Functor)
 
 instance Functor m => Applicative (CPS m) where

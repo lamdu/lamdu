@@ -15,7 +15,7 @@ import qualified System.Directory as Directory
 
 import           Lamdu.Prelude
 
-data MissingFont = MissingFont FilePath deriving (Show, Typeable)
+newtype MissingFont = MissingFont FilePath deriving (Show, Typeable)
 instance E.Exception MissingFont
 
 data Fonts a = Fonts

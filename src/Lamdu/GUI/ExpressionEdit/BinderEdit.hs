@@ -417,7 +417,7 @@ jumpToRHS ::
     Monad f =>
     Sugar.EntityId ->
     ExprGuiM f (Widget.EventMap (T f Widget.EventResult))
-jumpToRHS rhsId = do
+jumpToRHS rhsId =
     ExprGuiM.mkPrejumpPosSaver
     <&> Lens.mapped .~ WidgetIds.fromEntityId rhsId
     <&> Widget.keysEventMapMovesCursor [MetaKey noMods GLFW.Key'Equal]

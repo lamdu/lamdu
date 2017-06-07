@@ -15,7 +15,7 @@ import qualified Graphics.UI.Bottle.Zoom as Zoom
 import qualified Lamdu.GUI.VersionControl.Config as VersionControl
 import           Lamdu.Prelude
 
-data Help = Help
+newtype Help = Help
     { helpKeys :: [MetaKey]
     } deriving (Eq, Generic, Show)
 instance Aeson.ToJSON Help where

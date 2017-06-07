@@ -34,8 +34,6 @@ makeCommon tagSuffix tagG nearestHoles valEdits =
             <&> TreeLayout.fromAlignedWidget
         tag : suffixLabel : valEdits & ExpressionGui.combine
             & return
-    where
-        tagId = WidgetIds.fromEntityId (tagG ^. Sugar.tagInstance)
 
 make ::
     Monad m =>

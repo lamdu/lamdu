@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, OverloadedStrings, ScopedTypeVariables, LambdaCase #-}
+{-# LANGUAGE NoImplicitPrelude, OverloadedStrings, ScopedTypeVariables #-}
 module Lamdu.Sugar.Convert.DefExpr
     ( convert
     ) where
