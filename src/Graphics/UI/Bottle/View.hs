@@ -60,10 +60,10 @@ make :: Size -> Anim.Frame -> View
 make sz frame = View sz (Layers [frame])
 
 render :: HasView a => a -> Anim.Frame
-render x = x ^. view . animLayers . layers . Lens.reversed . traverse
+render x = x ^. animLayers . layers . Lens.reversed . traverse
 
 animFrames :: HasView a => Lens.Traversal' a Anim.Frame
-animFrames = view . animLayers . layers . traverse
+animFrames = animLayers . layers . traverse
 
 empty :: View
 empty = make 0 mempty
@@ -78,7 +78,7 @@ tint :: HasView a => Draw.Color -> a -> a
 tint color = animFrames . Anim.unitImages %~ Draw.tint color
 
 bottomFrame :: HasView a => Lens.Traversal' a Anim.Frame
-bottomFrame = view . animLayers . layers . Lens.ix 0
+bottomFrame = animLayers . layers . Lens.ix 0
 
 class HasAnimIdPrefix env where animIdPrefix :: Lens' env AnimId
 instance HasAnimIdPrefix AnimId where animIdPrefix = id
@@ -93,7 +93,7 @@ backgroundColor =
     subAnimId ["bg"] <&>
     \animId color x ->
     x
-    & view . animLayers . layers %~ addBg (Anim.backgroundColor animId color (x ^. view . size))
+    & animLayers . layers %~ addBg (Anim.backgroundColor animId color (x ^. size))
     where
         addBg bg [] = [bg]
         addBg bg (x:xs) = x <> bg : xs
@@ -107,7 +107,7 @@ addDiagonal =
     subAnimId ["diagonal"] <&>
     \animId color thickness x ->
     x
-    & view . animLayers . layers . Lens.reversed . Lens.ix 0 <>~
+    & animLayers . layers . Lens.reversed . Lens.ix 0 <>~
     ( Draw.convexPoly
         [ (0, thickness)
         , (0, 0)
@@ -119,7 +119,7 @@ addDiagonal =
         & Draw.tint color
         & void
         & Anim.simpleFrame (animId ++ ["diagonal"])
-        & Anim.scale (x ^. view . size)
+        & Anim.scale (x ^. size)
     )
 
 addInnerFrame ::
@@ -130,7 +130,7 @@ addInnerFrame =
     \animId color frameWidth x ->
     x & bottomFrame %~
         mappend
-        ( Anim.emptyRectangle frameWidth (x ^. view . size) animId
+        ( Anim.emptyRectangle frameWidth (x ^. size) animId
             & Anim.unitImages %~ Draw.tint color
         )
 
