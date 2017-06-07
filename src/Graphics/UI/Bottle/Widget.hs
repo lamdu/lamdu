@@ -112,6 +112,7 @@ Lens.makeLenses ''EventResult
 Lens.makeLenses ''Focus
 Lens.makeLenses ''Widget
 
+instance View.MkView (Widget a) where setView = wView
 instance View.HasView (Widget a) where view = wView
 
 isFocused :: Widget a -> Bool

@@ -483,7 +483,6 @@ addEvaluationResult mNeigh resDisp wideBehavior entityId =
     case (erdVal resDisp ^. ER.payload, erdVal resDisp ^. ER.body) of
     (T.TRecord T.CEmpty, _) ->
         addValBGWithColor Theme.evaluatedPathBGColor
-        <&> (TreeLayout.widget %~)
     (_, ER.RFunc{}) -> return id
     _ -> addAnnotationH (makeEvalView mNeigh resDisp) wideBehavior entityId
 
@@ -506,7 +505,7 @@ nameEditFDConfig = FocusDelegator.Config
     , FocusDelegator.focusParentDoc = E.Doc ["Edit", "Done renaming"]
     }
 
-addDeletionDiagonal :: (Monad m, View.HasView a) => ExprGuiM m (Widget.R -> a -> a)
+addDeletionDiagonal :: (Monad m, View.MkView a) => ExprGuiM m (Widget.R -> a -> a)
 addDeletionDiagonal =
     View.addDiagonal <*> (ExprGuiM.readTheme <&> Theme.typeIndicatorErrorColor)
 
@@ -621,11 +620,11 @@ grammarLabel text =
         makeLabel text
             & Reader.local (TextView.color .~ Theme.grammarColor theme)
 
-addValBG :: Monad m => ExprGuiM m (Widget f -> Widget f)
+addValBG :: (Monad m, View.MkView a) => ExprGuiM m (a -> a)
 addValBG = addValBGWithColor Theme.valFrameBGColor
 
 addValBGWithColor ::
-    (Monad m, View.HasView a) =>
+    (Monad m, View.MkView a) =>
     (Theme -> Draw.Color) -> ExprGuiM m (a -> a)
 addValBGWithColor color = View.backgroundColor <*> (ExprGuiM.readTheme <&> color)
 
@@ -637,7 +636,7 @@ addValPadding =
 addValFrame :: Monad m => ExprGuiM m (TreeLayout a -> TreeLayout a)
 addValFrame =
     (.)
-    <$> (addValBG <&> (TreeLayout.widget %~))
+    <$> addValBG
     <*> addValPadding
     & Reader.local (View.animIdPrefix <>~ ["val"])
 

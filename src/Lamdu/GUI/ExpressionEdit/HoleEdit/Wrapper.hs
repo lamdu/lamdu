@@ -82,7 +82,7 @@ make WidgetIds{..} arg =
             & ExprGuiM.withVerbose
         let argIsFocused = ExpressionGui.egIsFocused argGui
         unwrapEventMap <- makeUnwrapEventMap arg WidgetIds{..}
-        (View.addInnerFrame ?? frameColor ?? frameWidth <&> (TreeLayout.widget %~))
+        (View.addInnerFrame ?? frameColor ?? frameWidth)
             <*>
             ( ExpressionGui.makeFocusableView hidWrapper
                 <&> (TreeLayout.alignedWidget %~)

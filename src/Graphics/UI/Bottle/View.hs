@@ -4,7 +4,7 @@ module Graphics.UI.Bottle.View
     , empty
     , Layers(..), layers
     , pad, assymetricPad, translate, scale
-    , HasView(..)
+    , HasView(..), MkView(..)
     , size, animLayers
     , render
     , animFrames, bottomFrame
@@ -47,7 +47,10 @@ data View = View
     }
 Lens.makeLenses ''View
 
-class HasView a where view :: Lens' a View
+class MkView a where setView :: Lens.Setter' a View
+instance MkView View where setView = id
+
+class MkView a => HasView a where view :: Lens' a View
 instance HasView View where view = id
 
 size :: HasView a => Lens' a Size
@@ -77,8 +80,8 @@ height = view . size . _2
 tint :: HasView a => Draw.Color -> a -> a
 tint color = animFrames . Anim.unitImages %~ Draw.tint color
 
-bottomFrame :: HasView a => Lens.Traversal' a Anim.Frame
-bottomFrame = animLayers . layers . Lens.ix 0
+bottomFrame :: MkView a => Lens.Setter' a Anim.Frame
+bottomFrame = setView . animLayers . layers . Lens.ix 0
 
 class HasAnimIdPrefix env where animIdPrefix :: Lens' env AnimId
 instance HasAnimIdPrefix AnimId where animIdPrefix = id
@@ -87,11 +90,11 @@ subAnimId :: (MonadReader env m, HasAnimIdPrefix env) => AnimId -> m AnimId
 subAnimId suffix = Lens.view animIdPrefix <&> (++ suffix)
 
 backgroundColor ::
-    (MonadReader env m, HasAnimIdPrefix env, HasView a) =>
+    (MonadReader env m, HasAnimIdPrefix env, MkView a) =>
     m (Draw.Color -> a -> a)
 backgroundColor =
     subAnimId ["bg"] <&>
-    \animId color x ->
+    \animId color -> setView %~ \x ->
     x
     & animLayers . layers %~ addBg (Anim.backgroundColor animId color (x ^. size))
     where
@@ -101,11 +104,11 @@ backgroundColor =
 -- | Add a diagonal line (top-left to right-bottom). Useful as a
 -- "deletion" GUI annotation
 addDiagonal ::
-    (MonadReader env m, HasAnimIdPrefix env, HasView a) =>
+    (MonadReader env m, HasAnimIdPrefix env, MkView a) =>
     m (Draw.Color -> R -> a -> a)
 addDiagonal =
     subAnimId ["diagonal"] <&>
-    \animId color thickness x ->
+    \animId color thickness -> setView %~ \x ->
     x
     & animLayers . layers . Lens.reversed . Lens.ix 0 <>~
     ( Draw.convexPoly
@@ -123,11 +126,11 @@ addDiagonal =
     )
 
 addInnerFrame ::
-    (MonadReader env m, HasAnimIdPrefix env, HasView a) =>
+    (MonadReader env m, HasAnimIdPrefix env, MkView a) =>
     m (Draw.Color -> Vector2 R -> a -> a)
 addInnerFrame =
     subAnimId ["inner-frame"] <&>
-    \animId color frameWidth x ->
+    \animId color frameWidth -> setView %~ \x ->
     x & bottomFrame %~
         mappend
         ( Anim.emptyRectangle frameWidth (x ^. size) animId

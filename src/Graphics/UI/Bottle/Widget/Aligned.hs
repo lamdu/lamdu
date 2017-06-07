@@ -29,6 +29,7 @@ data AlignedWidget a = AlignedWidget
     , _widget :: Widget a
     }
 Lens.makeLenses ''AlignedWidget
+instance View.MkView (AlignedWidget a) where setView = widget . View.setView
 instance View.HasView (AlignedWidget a) where view = widget . View.view
 
 fromCenteredWidget :: Widget a -> AlignedWidget a

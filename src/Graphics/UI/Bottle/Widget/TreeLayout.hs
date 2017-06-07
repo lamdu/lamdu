@@ -76,6 +76,7 @@ newtype TreeLayout a = TreeLayout
     { _render :: LayoutParams -> AlignedWidget a
     }
 Lens.makeLenses ''TreeLayout
+instance View.MkView (TreeLayout a) where setView = render . Lens.mapped . View.setView
 
 alignedWidget ::
     Lens.Setter

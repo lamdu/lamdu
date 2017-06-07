@@ -154,7 +154,7 @@ processDefinitionWidget ::
     ExprGuiM m (TreeLayout (T m Widget.EventResult))
 processDefinitionWidget Sugar.DefUpToDate _myId mkLayout = mkLayout
 processDefinitionWidget Sugar.DefDeleted _myId mkLayout =
-    (ExpressionGui.addDeletionDiagonal ?? 0.1 <&> (TreeLayout.widget %~))
+    (ExpressionGui.addDeletionDiagonal ?? 0.1)
     <*> mkLayout
 processDefinitionWidget (Sugar.DefTypeChanged info) myId mkLayout =
     do
