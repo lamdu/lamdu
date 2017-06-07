@@ -70,9 +70,6 @@ instance Monad m => Applicative (M m) where
 mLiftTrans :: Functor m => T m a -> M m a
 mLiftTrans = M . pure . fmap pure
 
-mLiftWidget :: Functor m => Widget (T m a) -> Widget (M m a)
-mLiftWidget = Widget.events %~ mLiftTrans
-
 data ExportActions m = ExportActions
     { exportRepl :: M m ()
     , exportAll :: M m ()
@@ -149,8 +146,9 @@ makeReplEdit env replExpr =
       <&> TreeLayout.fromAlignedWidget
     , ExprGuiM.makeSubexpressionWith 0 id replExpr
     ]
+    <&> Lens.mapped %~ mLiftTrans
     <&> TreeLayout.widget %~
-        Widget.weakerEvents (replEventMap env replExpr) . mLiftWidget
+        Widget.weakerEvents (replEventMap env replExpr)
     & Widget.assignCursor WidgetIds.replId exprId
     where
         exprId = replExpr ^. Sugar.rPayload . Sugar.plEntityId & WidgetIds.fromEntityId
@@ -164,7 +162,7 @@ make env =
         workArea <- loadWorkArea env & transaction
         replGui <- makeReplEdit env (workArea ^. Sugar.waRepl)
         panesEdits <- workArea ^. Sugar.waPanes & traverse (makePaneEdit env)
-        newDefinitionButton <- makeNewDefinitionButton <&> mLiftWidget
+        newDefinitionButton <- makeNewDefinitionButton <&> fmap mLiftTrans
         eventMap <- panesEventMap env
         vspace <- ExpressionGui.stdVSpace
         return $ \width ->
@@ -182,7 +180,8 @@ makePaneEdit ::
     ExprGuiM m (Widget.R -> Widget (M m Widget.EventResult))
 makePaneEdit env pane =
     DefinitionEdit.make (pane ^. Sugar.paneDefinition)
-    <&> Lens.mapped %~ Widget.weakerEvents paneEventMap . mLiftWidget
+    <&> Lens.mapped . Lens.mapped %~ mLiftTrans
+    <&> Lens.mapped %~ Widget.weakerEvents paneEventMap
     where
         delKeys = Config.delKeys (config env)
         Config.Pane{paneCloseKeys} =

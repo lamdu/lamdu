@@ -90,12 +90,12 @@ data EnterResult a = EnterResult
       -- Used in Grid to decide which cell's EnterResult to use.
       _enterResultRect :: Rect
     , _enterResultEvent :: a
-    }
+    } deriving Functor
 
 data Focus a = Focus
     { _focalArea :: Rect
     , _fEventMap :: EventMap a
-    }
+    } deriving Functor
 
 -- When focused, mEnter may still be relevant, e.g: Mouse click in an
 -- active textedit, to move to a different text-edit position.
@@ -105,7 +105,7 @@ data Widget a = Widget
     { _wView :: View
     , _mEnter :: MEnter a -- Nothing if we're not enterable
     , _mFocus :: Maybe (Focus a)
-    }
+    } deriving Functor
 
 Lens.makeLenses ''EnterResult
 Lens.makeLenses ''EventResult

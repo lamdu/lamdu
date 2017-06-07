@@ -27,7 +27,7 @@ import           Lamdu.Prelude
 data AlignedWidget a = AlignedWidget
     { _alignment :: Alignment
     , _widget :: Widget a
-    }
+    } deriving Functor
 Lens.makeLenses ''AlignedWidget
 instance View.MkView (AlignedWidget a) where setView = widget . View.setView
 instance View.HasView (AlignedWidget a) where view = widget . View.view

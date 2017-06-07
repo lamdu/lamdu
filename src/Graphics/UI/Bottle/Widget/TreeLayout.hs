@@ -19,7 +19,7 @@
 -- of a vertically laid out parent will not use parentheses as the
 -- hierarchy is already clear in the layout itself.
 
-{-# LANGUAGE NoImplicitPrelude, TemplateHaskell #-}
+{-# LANGUAGE NoImplicitPrelude, TemplateHaskell, DeriveFunctor #-}
 
 module Graphics.UI.Bottle.Widget.TreeLayout
     ( TreeLayout(..), render
@@ -74,7 +74,7 @@ Lens.makeLenses ''LayoutParams
 
 newtype TreeLayout a = TreeLayout
     { _render :: LayoutParams -> AlignedWidget a
-    }
+    } deriving Functor
 Lens.makeLenses ''TreeLayout
 instance View.MkView (TreeLayout a) where setView = render . Lens.mapped . View.setView
 
