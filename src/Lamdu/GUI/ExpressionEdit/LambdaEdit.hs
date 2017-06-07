@@ -75,7 +75,7 @@ mkShrunk paramIds myId =
             & LightLambda.withUnderline theme
         return $ \mScopeEdit ->
             [ addScopeEdit mScopeEdit lamLabel
-              & TreeLayout.widget %~ Widget.weakerEvents expandEventMap
+              & E.weakerEvents expandEventMap
             ]
 
 mkLightLambda ::
@@ -98,8 +98,8 @@ mkLightLambda params myId =
         if isSelected
             then
                  mkExpanded
-                 <&> Lens.mapped . Lens.mapped . Lens.mapped . TreeLayout.widget %~
-                     Widget.weakerEvents shrinkEventMap
+                 <&> Lens.mapped . Lens.mapped . Lens.mapped %~
+                     E.weakerEvents shrinkEventMap
             else mkShrunk paramIds myId
                  <&> \mk _mParamsEdit mScopeEdit -> mk mScopeEdit
     where
@@ -127,7 +127,7 @@ make lam pl =
         ExpressionGui.combineSpacedMParens mParensId
             <*> (ExpressionGui.combineSpaced ?? paramsAndLabelEdits
                 <&> (: [bodyEdit]))
-            <&> TreeLayout.widget %~ Widget.weakerEvents eventMap
+            <&> E.weakerEvents eventMap
     & Widget.assignCursor myId bodyId
     & ExpressionGui.stdWrapParentExpr pl
     & ExprGuiM.withLocalPrecedence 0 (ExpressionGui.before .~ 0)

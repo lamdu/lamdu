@@ -12,6 +12,7 @@ module Graphics.UI.Bottle.EventMap
     , dropEventMap
     , deleteKey, deleteKeys
     , filterChars
+    , HasEventMap(..), weakerEvents, strongerEvents
     ) where
 
 import qualified Control.Lens as Lens
@@ -149,11 +150,11 @@ filterCharGroups f =
     (Lens.traversed . cgChars %~ Set.filter f)
 
 isCharConflict :: EventMap a -> Char -> Bool
-isCharConflict eventMap char =
-    char `Set.member` (eventMap ^. emCharGroupChars) ||
+isCharConflict x char =
+    char `Set.member` (x ^. emCharGroupChars) ||
     (not . null . catMaybes)
     (($ char) . (^. chDocHandler . dhHandler) <$>
-      eventMap ^. emAllCharsHandler)
+      x ^. emAllCharsHandler)
 
 filterChars
     :: (Char -> Bool) -> EventMap a -> EventMap a
@@ -188,17 +189,17 @@ deleteKeys :: [KeyEvent] -> EventMap a -> EventMap a
 deleteKeys = foldr ((.) . deleteKey) id
 
 lookup :: Applicative f => f (Maybe Clipboard) -> Events.Event -> EventMap a -> f (Maybe a)
-lookup _ (Events.EventDropPaths paths) eventMap =
-    map applyHandler (eventMap ^. emDropHandlers) & asum & pure
+lookup _ (Events.EventDropPaths paths) x =
+    map applyHandler (x ^. emDropHandlers) & asum & pure
     where
         applyHandler dh = dh ^. dropDocHandler . dhHandler $ paths
-lookup getClipboard (Events.EventKey event) eventMap
+lookup getClipboard (Events.EventKey event) x
     | Just action <- lookupKeyMap getClipboard dict event = action
     | Just res <- lookupCharGroup charGroups event = pure (Just res)
     | Just res <- lookupAllCharHandler allCharHandlers event = pure (Just res)
     | otherwise = pure Nothing
     where
-        EventMap dict _dropHandlers charGroups _ allCharHandlers = eventMap
+        EventMap dict _dropHandlers charGroups _ allCharHandlers = x
 lookup _ _ _ = pure Nothing
 
 lookupKeyMap ::
@@ -283,3 +284,12 @@ dropEventMap iDoc oDoc handler =
 pasteOnKey :: ModKey -> Doc -> (Clipboard -> a) -> EventMap a
 pasteOnKey key doc handler =
     keyEventMapH (KeyEvent GLFW.KeyState'Pressed key) doc (WantsClipboard handler)
+
+class HasEventMap f where eventMap :: Lens.Setter' (f a) (EventMap a)
+instance HasEventMap EventMap where eventMap = id
+
+strongerEvents :: HasEventMap f => EventMap a -> f a -> f a
+strongerEvents eMap = eventMap %~ (eMap `mappend`)
+
+weakerEvents :: HasEventMap f => EventMap a -> f a -> f a
+weakerEvents eMap = eventMap %~ (`mappend` eMap)

@@ -51,7 +51,7 @@ addUndeleteButton myId undelete mkWidget =
     do
         undelButton <-
             TextView.makeFocusable ?? "Undelete..." ?? undelButtonId
-            <&> Widget.weakerEvents eventMap
+            <&> E.weakerEvents eventMap
         return $ \width -> Box.vboxAlign 0 [mkWidget width, undelButton]
     where
         eventMap =
@@ -165,7 +165,7 @@ acceptableTypeIndicator accept color myId =
             makeIndicator width
             & Widget.fromView
             & makeFocusable
-            & Widget.weakerEvents acceptKeyMap
+            & E.weakerEvents acceptKeyMap
 
 makeExprDefinition ::
     Monad m =>

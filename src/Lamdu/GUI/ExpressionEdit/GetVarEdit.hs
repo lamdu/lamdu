@@ -87,7 +87,7 @@ makeNameRef myId nameRef makeView =
                     DataOps.savePreJumpPosition cp myId
                     WidgetIds.fromEntityId <$> nameRef ^. Sugar.nrGotoDefinition
         makeView (nameRef ^. Sugar.nrName) nameId
-            <&> TreeLayout.widget %~ Widget.weakerEvents jumpToDefinitionEventMap
+            <&> E.weakerEvents jumpToDefinitionEventMap
     & Widget.assignCursor myId nameId
     where
         nameId = Widget.joinId myId ["name"]
@@ -136,8 +136,7 @@ definitionTypeChangeBox info getVarId =
         let update = (info ^. Sugar.defTypeUseCurrent) >> return getVarId
         Hover.addDarkBackground animId
             ?? box
-            <&> AlignedWidget.widget %~
-                Widget.weakerEvents
+            <&> E.weakerEvents
                 (Widget.keysEventMapMovesCursor keys
                  (E.Doc ["Edit", "Update definition type"]) update)
     where
@@ -197,9 +196,8 @@ makeGetBinder binderVar myId =
         makeSimpleView
             <&> Lens.mapped %~ Reader.local (TextView.color .~ color)
             & makeNameRef myId (binderVar ^. Sugar.bvNameRef)
-            <&> TreeLayout.widget %~
-            Widget.weakerEvents
-            (makeInlineEventMap config (binderVar ^. Sugar.bvInline))
+            <&> E.weakerEvents
+                (makeInlineEventMap config (binderVar ^. Sugar.bvInline))
             & processDef
 
 

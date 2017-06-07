@@ -67,13 +67,13 @@ makeBinderNameEdit binderActions rhsJumperEquals name color myId =
         config <- ExprGuiM.readConfig
         ExpressionGui.makeNameOriginEdit name color myId
             <&> jumpToRHSViaEquals name
-            <&> Widget.weakerEvents
+            <&> E.weakerEvents
                 (ParamEdit.eventMapAddFirstParam config
                  (binderActions ^. Sugar.baAddFirstParam))
             <&> TreeLayout.fromCenteredWidget
     where
         jumpToRHSViaEquals n
-            | nonOperatorName n = Widget.strongerEvents rhsJumperEquals
+            | nonOperatorName n = E.strongerEvents rhsJumperEquals
             | otherwise = id
 
 presentationModeChoiceConfig :: Choice.Config
@@ -217,8 +217,7 @@ makeScopeNavEdit binder myId curCursor =
             CESettings.Evaluation ->
                 (Widget.makeFocusableView ?? myId <&> (AlignedWidget.widget %~))
                 <*> (mapM mkArrow scopes <&> AlignedWidget.hbox 0.5)
-                <&> AlignedWidget.widget %~ Widget.weakerEvents
-                    (mkScopeEventMap leftKeys rightKeys `mappend` blockEventMap)
+                <&> E.weakerEvents (mkScopeEventMap leftKeys rightKeys `mappend` blockEventMap)
                 <&> Just
                 <&> (,) (mkScopeEventMap prevScopeKeys nextScopeKeys)
             _ -> return (mempty, Nothing)
@@ -351,7 +350,7 @@ make name color binder myId =
                 (presentationEdits
                 <&> AlignedWidget.fromCenteredWidget
                 <&> AlignedWidget.alignment . _1 .~ 0)
-            <&> TreeLayout.widget %~ Widget.weakerEvents jumpHolesEventMap
+            <&> E.weakerEvents jumpHolesEventMap
         mLhsEdit <-
             case mParamsEdit of
             Nothing -> return Nothing
@@ -359,7 +358,7 @@ make name color binder myId =
                 ExpressionGui.vboxTopFocalSpaced
                 ?? (paramsEdit : fmap TreeLayout.fromAlignedWidget mScopeEdit ^.. Lens._Just
                     <&> TreeLayout.alignment . _1 .~ 0.5)
-                <&> TreeLayout.widget %~ Widget.strongerEvents rhsJumperEquals
+                <&> E.strongerEvents rhsJumperEquals
                 <&> Just
         equals <- ExpressionGui.makeLabel "="
         ExpressionGui.combineSpaced
@@ -369,7 +368,7 @@ make name color binder myId =
             [ hbox (defNameEdit : (mLhsEdit ^.. Lens._Just) ++ [TreeLayout.fromAlignedWidget equals])
             , bodyEdit
             ] )
-            <&> TreeLayout.widget %~ Widget.weakerEvents eventMap
+            <&> E.weakerEvents eventMap
     & Reader.local (View.animIdPrefix .~ Widget.toAnimId myId)
     where
         presentationChoiceId = Widget.joinId myId ["presentation"]
@@ -405,7 +404,7 @@ makeLetEdit item =
         ExpressionGui.tagItem
             <*> ExpressionGui.grammarLabel "let"
             <*> (make (item ^. Sugar.lName) letColor binder myId
-                <&> TreeLayout.widget %~ Widget.weakerEvents eventMap
+                <&> E.weakerEvents eventMap
                 <&> TreeLayout.pad
                     (Theme.letItemPadding theme <&> realToFrac)
                 )
@@ -440,8 +439,7 @@ makeBinderBodyEdit (Sugar.BinderBody addOuterLet content) =
                 <&> WidgetIds.fromEntityId <&> WidgetIds.nameEditOf
                 & Widget.keysEventMapMovesCursor (Config.letAddItemKeys config)
                   (E.Doc ["Edit", "Let clause", "Add"])
-        makeBinderContentEdit content
-            <&> TreeLayout.widget %~ Widget.weakerEvents newLetEventMap
+        makeBinderContentEdit content <&> E.weakerEvents newLetEventMap
 
 makeBinderContentEdit ::
     Monad m =>
@@ -470,14 +468,13 @@ makeBinderContentEdit (Sugar.BinderLet l) =
             <*> ( ExpressionGui.vboxTopFocalSpaced
                   <*>
                   ( sequence
-                    [ makeLetEdit l
-                      <&> TreeLayout.widget %~ Widget.weakerEvents moveToInnerEventMap
+                    [ makeLetEdit l <&> E.weakerEvents moveToInnerEventMap
                     , makeBinderBodyEdit body
                       & ExprGuiM.withLocalMScopeId letBodyScope
                     ] <&> map (TreeLayout.alignment . _1 .~ 0)
                   )
                 )
-            <&> TreeLayout.widget %~ Widget.weakerEvents delEventMap
+            <&> E.weakerEvents delEventMap
     where
         letEntityId = l ^. Sugar.lEntityId & WidgetIds.fromEntityId
         body = l ^. Sugar.lBody
@@ -535,8 +532,7 @@ makeParamsEdit annotationOpts nearestHoles delVarBackwardsId lhsId rhsId params 
                 jumpHolesEventMap <- ExprEventMap.jumpHolesEventMap nearestHoles
                 let mkParam (prevId, nextId, param) =
                         ParamEdit.make annotationOpts showParamAnnotation prevId nextId param
-                        <&> TreeLayout.widget
-                        %~ Widget.weakerEvents jumpHolesEventMap
+                        <&> E.weakerEvents jumpHolesEventMap
                 ExpressionGui.listWithDelDests delDestFirst delDestLast
                     (WidgetIds.fromEntityId . (^. Sugar.fpId)) paramList
                     & traverse mkParam

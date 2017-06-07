@@ -10,6 +10,7 @@ import           Data.Vector.Vector2 (Vector2(..))
 import qualified Graphics.DrawingCombinators as Draw
 import           Graphics.UI.Bottle.Animation (AnimId)
 import qualified Graphics.UI.Bottle.Animation as Anim
+import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.View as View
 import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
@@ -79,10 +80,9 @@ makeFuncVar ::
     NearestHoles -> Sugar.BinderVar (Name m) m -> Widget.Id ->
     ExprGuiM m (TreeLayout (Transaction m Widget.EventResult))
 makeFuncVar nearestHoles funcVar myId =
-    do
-        jumpNearestHoles <- ExprEventMap.jumpHolesEventMap nearestHoles
-        GetVarEdit.makeGetBinder funcVar myId
-            <&> TreeLayout.widget %~ Widget.weakerEvents jumpNearestHoles
+    E.weakerEvents
+    <$> ExprEventMap.jumpHolesEventMap nearestHoles
+    <*> GetVarEdit.makeGetBinder funcVar myId
 
 makeInfixFuncName ::
     Monad m =>

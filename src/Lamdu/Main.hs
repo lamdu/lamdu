@@ -20,6 +20,7 @@ import           GHC.Stack (whoCreated)
 import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.Rendering.OpenGL.GL as GL
 import           Graphics.UI.Bottle.Animation (AnimId)
+import qualified Graphics.UI.Bottle.EventMap as EventMap
 import           Graphics.UI.Bottle.Main (mainLoopWidget)
 import qualified Graphics.UI.Bottle.Main as MainLoop
 import qualified Graphics.UI.Bottle.View as View
@@ -166,7 +167,7 @@ makeRootWidget fonts db settingsRef evaluator config theme size =
                     EvalManager.runTransactionAndMaybeRestartEvaluator evaluator action
                 _ -> DbLayout.runDbTransaction db action
         mkWidgetWithFallback dbToIO env
-            <&> Widget.weakerEvents (eventMap <&> liftIO)
+            <&> EventMap.weakerEvents (eventMap <&> liftIO)
 
 withMVarProtection :: a -> (MVar (Maybe a) -> IO b) -> IO b
 withMVarProtection val =
@@ -210,7 +211,7 @@ runEditor opts db =
                                 <&> liftIO
                         in  makeRootWidget fonts db settingsRef evaluator
                             config theme size
-                            <&> Widget.weakerEvents themeEvents
+                            <&> EventMap.weakerEvents themeEvents
     where
         subpixel
             | opts ^. Opts.eoSubpixelEnabled = Font.LCDSubPixelEnabled

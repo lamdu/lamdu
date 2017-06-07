@@ -249,5 +249,6 @@ makeToggledHelpAdder startValue =
                         helpView
                         & View.backgroundColor helpAnimId (config ^. configBGColor)
                         & View.tint (config ^. configTint)
-                return . addToBottomRight bgHelpView size $
-                    Widget.strongerEvents toggleEventMap widget
+                E.strongerEvents toggleEventMap widget
+                    & addToBottomRight bgHelpView size
+                    & return

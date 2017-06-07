@@ -15,6 +15,7 @@ import qualified Control.Lens as Lens
 import           Data.Vector.Vector2 (Vector2(..))
 import           Graphics.UI.Bottle.Alignment (Alignment(..))
 import qualified Graphics.UI.Bottle.Alignment as Alignment
+import qualified Graphics.UI.Bottle.EventMap as E
 import           Graphics.UI.Bottle.View (View)
 import qualified Graphics.UI.Bottle.View as View
 import           Graphics.UI.Bottle.Widget (Widget)
@@ -31,6 +32,7 @@ data AlignedWidget a = AlignedWidget
 Lens.makeLenses ''AlignedWidget
 instance View.MkView (AlignedWidget a) where setView = widget . View.setView
 instance View.HasView (AlignedWidget a) where view = widget . View.view
+instance E.HasEventMap AlignedWidget where eventMap = widget . E.eventMap
 
 fromCenteredWidget :: Widget a -> AlignedWidget a
 fromCenteredWidget = AlignedWidget 0.5

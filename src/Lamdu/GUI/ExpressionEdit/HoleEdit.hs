@@ -45,9 +45,7 @@ makeWrapper pl holeInfo =
                 Wrapper.make (hiIds holeInfo) holeArg
                 & ExprGuiM.listenResultPicker
             exprEventMap <- ExprEventMap.make pl holePicker
-            wrapper
-                & TreeLayout.widget %~ Widget.weakerEvents exprEventMap
-                & return
+            E.weakerEvents exprEventMap wrapper & return
 
 assignHoleCursor ::
     Monad m =>
@@ -143,7 +141,7 @@ make hole pl =
         case mWrapperGui of
             Just wrapperGui -> makeHoleWithWrapper wrapperGui searchAreaGui pl
             Nothing -> return searchAreaGui
-            <&> TreeLayout.widget %~ Widget.weakerEvents deleteEventMap
+            <&> E.weakerEvents deleteEventMap
     & assignHoleCursor widgetIds (hole ^. Sugar.holeMArg)
     & Reader.local (View.animIdPrefix .~ Widget.toAnimId (hidHole widgetIds))
     where

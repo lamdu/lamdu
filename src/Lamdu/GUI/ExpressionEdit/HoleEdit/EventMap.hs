@@ -18,7 +18,6 @@ import qualified Graphics.UI.Bottle.EventMap as E
 import           Graphics.UI.Bottle.MetaKey (MetaKey(..))
 import qualified Graphics.UI.Bottle.MetaKey as MetaKey
 import           Graphics.UI.Bottle.ModKey (ModKey(..))
-import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.Grid as Grid
 import qualified Graphics.UI.GLFW as GLFW
@@ -37,13 +36,13 @@ import           Lamdu.Prelude
 
 type T = Transaction.Transaction
 
-blockDownEvents :: (Monoid a, Applicative f) => Widget (f a) -> Widget (f a)
+blockDownEvents :: (Monoid a, E.HasEventMap w, Applicative f) => w (f a) -> w (f a)
 blockDownEvents =
-    Widget.weakerEvents $
-    E.keyPresses
-    [ModKey mempty GLFW.Key'Down]
-    (E.Doc ["Navigation", "Move", "down (blocked)"]) $
     pure mempty
+    & E.keyPresses
+        [ModKey mempty GLFW.Key'Down]
+        (E.Doc ["Navigation", "Move", "down (blocked)"])
+    & E.weakerEvents
 
 adHocTextEditEventMap ::
     Monad m =>

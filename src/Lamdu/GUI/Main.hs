@@ -93,9 +93,7 @@ make env =
                         & return
             let quitEventMap =
                     Widget.keysEventMap (Config.quitKeys config) (EventMap.Doc ["Quit"]) (error "Quit")
-            branchGui
-                & Widget.strongerEvents quitEventMap
-                & return
+            EventMap.strongerEvents quitEventMap branchGui & return
             & (`runReaderT` env)
     where
         Env evalResults exportActions config theme settings style fullSize cursor = env

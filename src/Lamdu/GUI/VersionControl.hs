@@ -103,8 +103,7 @@ make VersionControl.Config{..} VersionControl.Theme{..} rwtransaction rtransacti
             ?? choiceWidgetConfig VersionControl.Config{..} VersionControl.Theme{..}
             ?? WidgetIds.branchSelection
         mkWidget branchSelector
-            <&> Widget.strongerEvents
-                (globalEventMap VersionControl.Config{..} actions)
+            <&> E.strongerEvents (globalEventMap VersionControl.Config{..} actions)
     where
         empty = TextEdit.EmptyStrings "unnamed branch" ""
         makeBranchNameEdit branch =
@@ -123,4 +122,4 @@ make VersionControl.Config{..} VersionControl.Theme{..} rwtransaction rtransacti
                             delBranchKeys (E.Doc ["Branches", "Delete"])
                             (branchDelegatorId <$> deleteBranch actions branch)
                         | otherwise = mempty
-                return (branch, branchNameEdit & Widget.weakerEvents delEventMap)
+                return (branch, E.weakerEvents delEventMap branchNameEdit)

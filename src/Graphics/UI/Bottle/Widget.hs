@@ -38,7 +38,6 @@ module Graphics.UI.Bottle.Widget
     , takesFocus, doesntTakeFocus
 
     -- Operations:
-    , strongerEvents, weakerEvents
     , translate, scale
     , pad, assymetricPad, padToSizeAlign
 
@@ -114,6 +113,7 @@ Lens.makeLenses ''Widget
 
 instance View.MkView (Widget a) where setView = wView
 instance View.HasView (Widget a) where view = wView
+instance EventMap.HasEventMap Widget where eventMap = eventMap
 
 isFocused :: Widget a -> Bool
 isFocused = Lens.has (mFocus . Lens._Just)
@@ -166,14 +166,6 @@ takesFocus enterFunc widget =
 
 doesntTakeFocus :: Widget a -> Widget a
 doesntTakeFocus = mEnter .~ Nothing
-
--- ^ If doesn't take focus, does nothing
-strongerEvents :: EventMap a -> Widget a -> Widget a
-strongerEvents eMap = eventMap %~ (eMap `mappend`)
-
--- ^ If doesn't take focus, does nothing
-weakerEvents :: EventMap a -> Widget a -> Widget a
-weakerEvents eMap = eventMap %~ (`mappend` eMap)
 
 animIdMappingFromPrefixMap :: Map AnimId AnimId -> Monoid.Endo AnimId
 animIdMappingFromPrefixMap = Monoid.Endo . Anim.mappingFromPrefixMap

@@ -573,12 +573,12 @@ stdWrap pl act =
             & ExprGuiM.listenResultPicker
         exprEventMap <- ExprEventMap.make pl holePicker
         maybeAddAnnotationPl pl ?? res
-            <&> TreeLayout.widget %~ addEvents exprEventMap
+            <&> addEvents exprEventMap
     where
         animId = Widget.toAnimId (WidgetIds.fromExprPayload pl)
         addEvents
-            | ExprGuiT.plOfHoleResult pl = Widget.strongerEvents
-            | otherwise = Widget.weakerEvents
+            | ExprGuiT.plOfHoleResult pl = E.strongerEvents
+            | otherwise = E.weakerEvents
 
 parentDelegator ::
     (Monad f, Monad m) => Widget.Id ->

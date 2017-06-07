@@ -147,8 +147,7 @@ makeReplEdit env replExpr =
     , ExprGuiM.makeSubexpressionWith 0 id replExpr
     ]
     <&> Lens.mapped %~ mLiftTrans
-    <&> TreeLayout.widget %~
-        Widget.weakerEvents (replEventMap env replExpr)
+    <&> E.weakerEvents (replEventMap env replExpr)
     & Widget.assignCursor WidgetIds.replId exprId
     where
         exprId = replExpr ^. Sugar.rPayload . Sugar.plEntityId & WidgetIds.fromEntityId
@@ -170,7 +169,7 @@ make env =
             : (panesEdits ?? width) ++ [newDefinitionButton]
             & List.intersperse vspace
             & Box.vboxAlign 0
-            & Widget.weakerEvents eventMap
+            & E.weakerEvents eventMap
     & ExprGuiM.run ExpressionEdit.make
       (codeProps env) (config env) (theme env) (settings env) (style env)
 
@@ -181,7 +180,7 @@ makePaneEdit ::
 makePaneEdit env pane =
     DefinitionEdit.make (pane ^. Sugar.paneDefinition)
     <&> Lens.mapped . Lens.mapped %~ mLiftTrans
-    <&> Lens.mapped %~ Widget.weakerEvents paneEventMap
+    <&> Lens.mapped %~ E.weakerEvents paneEventMap
     where
         delKeys = Config.delKeys (config env)
         Config.Pane{paneCloseKeys} =
@@ -238,8 +237,7 @@ makeNewDefinitionButton =
 
         TextView.makeFocusable ?? "New..." ?? newDefinitionButtonId
             & Reader.local (TextView.color .~ Theme.newDefinitionActionColor theme)
-            <&> Widget.weakerEvents
-                (newDefinitionEventMap newDefinitionButtonPressKeys)
+            <&> E.weakerEvents (newDefinitionEventMap newDefinitionButtonPressKeys)
     where
         newDefinitionButtonId = Widget.Id ["NewDefinition"]
 

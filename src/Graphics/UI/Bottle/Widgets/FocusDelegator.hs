@@ -77,8 +77,7 @@ make =
             -- cursors displaying rather than a crash.
 
         | childIsFocused ->
-            childWidget
-            & Widget.weakerEvents focusParentEventMap
+            E.weakerEvents focusParentEventMap childWidget
 
         | otherwise ->
             childWidget

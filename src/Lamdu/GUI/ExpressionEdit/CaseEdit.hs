@@ -60,7 +60,7 @@ make (Sugar.Case mArg alts caseTail addAlt _cEntityId) pl =
                 ExpressionGui.makeFocusableView headerId
                 <*>
                 ( ExpressionGui.grammarLabel text
-                    <&> AlignedWidget.widget %~ Widget.weakerEvents labelJumpHoleEventMap
+                    <&> E.weakerEvents labelJumpHoleEventMap
                 )
                 <&> TreeLayout.fromAlignedWidget
         (mActiveTag, header) <-
@@ -70,8 +70,7 @@ make (Sugar.Case mArg alts caseTail addAlt _cEntityId) pl =
                 do
                     argEdit <-
                         ExprGuiM.makeSubexpression arg
-                        <&> TreeLayout.widget %~ Widget.weakerEvents
-                            (toLambdaCaseEventMap config toLambdaCase)
+                        <&> E.weakerEvents (toLambdaCaseEventMap config toLambdaCase)
                     caseLabel <- headerLabel ":"
                     mTag <-
                         ExpressionGui.evaluationResult (arg ^. Sugar.rPayload)
@@ -83,14 +82,10 @@ make (Sugar.Case mArg alts caseTail addAlt _cEntityId) pl =
                 altsGui <- makeAltsWidget mActiveTag alts myId
                 case caseTail of
                     Sugar.ClosedCase deleteTail ->
-                        altsGui
-                        & TreeLayout.widget %~
-                          Widget.weakerEvents
-                          (caseOpenEventMap config deleteTail)
+                        E.weakerEvents (caseOpenEventMap config deleteTail) altsGui
                         & return
                     Sugar.CaseExtending rest ->
-                        altsGui
-                        & makeOpenCase rest (Widget.toAnimId myId)
+                        makeOpenCase rest (Widget.toAnimId myId) altsGui
         let addAltEventMap =
                 addAlt
                 <&> (^. Sugar.caarNewTag . Sugar.tagInstance)
@@ -102,7 +97,7 @@ make (Sugar.Case mArg alts caseTail addAlt _cEntityId) pl =
         ExpressionGui.addValFrame
             <*> (ExpressionGui.vboxTopFocalSpaced ??
                  ([header, altsGui] <&> TreeLayout.alignment . _1 .~ 0))
-            <&> TreeLayout.widget %~ Widget.weakerEvents addAltEventMap
+            <&> E.weakerEvents addAltEventMap
     & Widget.assignCursor myId (destCursorId alts headerId)
     & ExpressionGui.stdWrapParentExpr pl
     where
@@ -126,7 +121,7 @@ makeAltRow mActiveTag (Sugar.CaseAlt delete tag altExpr) =
         altExprGui <- ExprGuiM.makeSubexpression altExpr
         let itemEventMap = caseDelEventMap config delete
         ExpressionGui.tagItem ?? altRefGui ?? altExprGui
-            <&> TreeLayout.widget %~ Widget.weakerEvents itemEventMap
+            <&> E.weakerEvents itemEventMap
 
 makeAltsWidget ::
     Monad m =>

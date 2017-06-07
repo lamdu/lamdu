@@ -42,6 +42,7 @@ module Graphics.UI.Bottle.Widget.TreeLayout
 import qualified Control.Lens as Lens
 import           Data.Vector.Vector2 (Vector2)
 import           Graphics.UI.Bottle.Alignment (Alignment)
+import qualified Graphics.UI.Bottle.EventMap as E
 import           Graphics.UI.Bottle.View (View)
 import qualified Graphics.UI.Bottle.View as View
 import           Graphics.UI.Bottle.Widget (Widget)
@@ -76,7 +77,8 @@ newtype TreeLayout a = TreeLayout
     { _render :: LayoutParams -> AlignedWidget a
     } deriving Functor
 Lens.makeLenses ''TreeLayout
-instance View.MkView (TreeLayout a) where setView = render . Lens.mapped . View.setView
+instance View.MkView (TreeLayout a) where setView = widget . View.setView
+instance E.HasEventMap TreeLayout where eventMap = widget . E.eventMap
 
 alignedWidget ::
     Lens.Setter

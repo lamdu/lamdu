@@ -56,7 +56,7 @@ genericEdit getStyle prop pl =
         style <- ExprGuiM.readStyle <&> getStyle
         TextView.makeFocusable ?? valText ?? myId
             & Reader.local (TextEdit.style .~ style)
-            <&> Widget.weakerEvents editEventMap
+            <&> E.weakerEvents editEventMap
             <&> TreeLayout.fromCenteredWidget
     where
         myId = WidgetIds.fromExprPayload pl

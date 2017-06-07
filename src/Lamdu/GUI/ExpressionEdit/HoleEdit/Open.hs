@@ -461,7 +461,7 @@ makeUnderCursorAssignment shownResultsLists hasHiddenResults holeInfo =
             ??
             ( resultsWidget
               & View.width %~ max (typeView ^. View.width)
-              & Widget.strongerEvents resultsEventMap
+              & E.strongerEvents resultsEventMap
               & addBackground (Widget.toAnimId hidResultsPrefix)
                 (Theme.hoverBGColor theme)
               & AlignedWidget.fromCenteredWidget
@@ -475,10 +475,7 @@ makeUnderCursorAssignment shownResultsLists hasHiddenResults holeInfo =
         searchTermGui <- SearchTerm.make holeInfo
         return $ TreeLayout.render # \layoutMode ->
             let w = layoutMode
-                    & ( searchTermGui
-                        & TreeLayout.widget %~
-                          Widget.weakerEvents searchTermEventMap
-                      ) ^. TreeLayout.render
+                    & E.weakerEvents searchTermEventMap searchTermGui ^. TreeLayout.render
             in
                 w
                 & AlignedWidget.addAfter AlignedWidget.Vertical
@@ -512,4 +509,4 @@ makeOpenSearchAreaGui pl holeInfo =
             hasHiddenResults holeInfo
             & assignHoleEditCursor holeInfo shownMainResultsIds
               allShownResultIds (holeInfo & hiIds & hidOpenSearchTerm)
-            <&> TreeLayout.widget %~ Widget.weakerEvents exprEventMap
+            <&> E.weakerEvents exprEventMap

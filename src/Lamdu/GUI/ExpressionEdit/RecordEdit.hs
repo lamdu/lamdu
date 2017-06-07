@@ -53,9 +53,7 @@ make record@(Sugar.Record fields recordTail addField) pl =
                 fieldsGui <- makeFieldsWidget fields myId
                 case recordTail of
                     Sugar.ClosedRecord deleteTail ->
-                        fieldsGui
-                        & TreeLayout.widget %~
-                          Widget.weakerEvents (recordOpenEventMap config deleteTail)
+                        E.weakerEvents (recordOpenEventMap config deleteTail) fieldsGui
                         & return
                     Sugar.RecordExtending rest ->
                         makeOpenRecord fieldsGui rest (Widget.toAnimId myId)
@@ -68,7 +66,7 @@ make record@(Sugar.Record fields recordTail addField) pl =
                   (E.Doc ["Edit", "Record", "Add Field"])
                 & ExprGuiM.withHolePicker resultPicker
         (if addBg then ExpressionGui.addValFrame else return id)
-            ?? (gui & TreeLayout.widget %~ Widget.weakerEvents addFieldEventMap)
+            ?? E.weakerEvents addFieldEventMap gui
     & Widget.assignCursor myId (defaultPos fields myId)
     & ExpressionGui.stdWrapParentExpr pl
     where
@@ -87,7 +85,7 @@ makeFieldRow (Sugar.RecordField delete tag fieldExpr) =
         fieldExprGui <- ExprGuiM.makeSubexpression fieldExpr
         let itemEventMap = recordDelEventMap config delete
         ExpressionGui.tagItem ?? fieldRefGui ?? fieldExprGui
-            <&> TreeLayout.widget %~ Widget.weakerEvents itemEventMap
+            <&> E.weakerEvents itemEventMap
 
 makeFieldsWidget ::
     Monad m =>

@@ -127,7 +127,7 @@ make annotationOpts showAnnotation prevId nextId param =
             entityId
             <*>
             ( iMakeNameEdit info myId
-              <&> TreeLayout.widget %~ Widget.weakerEvents paramEventMap
+              <&> E.weakerEvents paramEventMap
               <&> TreeLayout.alignment . _1 .~ 0.5
             )
     where

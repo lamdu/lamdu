@@ -117,7 +117,7 @@ mainLoopWidget win mkWidgetUnmemod options =
                     zoomEventMap <- mkZoomEventMap
                     helpStyle <- getHelpStyle zoom
                     mkWidgetUnmemod zoom size
-                        <&> Widget.strongerEvents zoomEventMap
+                        <&> E.strongerEvents zoomEventMap
                         >>= addHelp helpStyle size
         mkWidgetRef <- mkW >>= newIORef
         let newWidget = mkW >>= writeIORef mkWidgetRef

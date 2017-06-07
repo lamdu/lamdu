@@ -89,6 +89,5 @@ make WidgetIds{..} arg =
                 ?? argGui
                 <&> TreeLayout.pad (frameWidth & _2 .~ 0)
             )
-            <&> TreeLayout.widget . Widget.eventMap %~
-                modifyWrappedEventMap config argIsFocused arg WidgetIds{..}
-            <&> TreeLayout.widget %~ Widget.weakerEvents unwrapEventMap
+            <&> E.eventMap %~ modifyWrappedEventMap config argIsFocused arg WidgetIds{..}
+            <&> E.weakerEvents unwrapEventMap
