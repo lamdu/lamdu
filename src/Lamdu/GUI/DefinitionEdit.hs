@@ -71,8 +71,7 @@ make def =
         let defState = Property.value defStateProp
         addDeletionDiagonal <-
             case defState of
-            Sugar.DeletedDefinition ->
-                ExpressionGui.addDeletionDiagonal ?? 0.02 ?? Widget.toAnimId myId
+            Sugar.DeletedDefinition -> ExpressionGui.addDeletionDiagonal ?? 0.02
             Sugar.LiveDefinition -> return id
         let mUndelete =
                 case defState of
@@ -86,6 +85,7 @@ make def =
                 makeBuiltinDefinition def builtin <&> const
             <&> Lens.mapped %~ addDeletionDiagonal
             >>= maybe return (addUndeleteButton myId) mUndelete
+    & Reader.local (View.animIdPrefix .~ Widget.toAnimId myId)
     where
         myId = def ^. Sugar.drEntityId & WidgetIds.fromEntityId
 
@@ -129,7 +129,6 @@ makeBuiltinDefinition def builtin =
             topLevelSchemeTypeView (builtin ^. Sugar.biType) entityId ["builtinType"]
             ?? width
         Box.vboxAlign 0 [assignment, typeView] & return
-    & Reader.local (View.animIdPrefix .~ Widget.toAnimId myId)
     where
         name = def ^. Sugar.drName
         entityId = def ^. Sugar.drEntityId

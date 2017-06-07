@@ -506,13 +506,9 @@ nameEditFDConfig = FocusDelegator.Config
     , FocusDelegator.focusParentDoc = E.Doc ["Edit", "Done renaming"]
     }
 
-addDeletionDiagonal :: (Monad m, View.HasView a) => ExprGuiM m (Widget.R -> AnimId -> a -> a)
+addDeletionDiagonal :: (Monad m, View.HasView a) => ExprGuiM m (Widget.R -> a -> a)
 addDeletionDiagonal =
-    do
-        theme <- ExprGuiM.readTheme
-        return $ \thickness animId ->
-            View.addDiagonal animId thickness
-            (Theme.typeIndicatorErrorColor theme)
+    View.addDiagonal <*> (ExprGuiM.readTheme <&> Theme.typeIndicatorErrorColor)
 
 makeNameOriginEdit ::
     Monad m =>

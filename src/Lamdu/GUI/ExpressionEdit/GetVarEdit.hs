@@ -153,12 +153,9 @@ processDefinitionWidget ::
     ExprGuiM m (TreeLayout (T m Widget.EventResult)) ->
     ExprGuiM m (TreeLayout (T m Widget.EventResult))
 processDefinitionWidget Sugar.DefUpToDate _myId mkLayout = mkLayout
-processDefinitionWidget Sugar.DefDeleted myId mkLayout =
-    do
-        addDiagonal <- ExpressionGui.addDeletionDiagonal
-        mkLayout <&> TreeLayout.widget %~ addDiagonal 0.1 animId
-    where
-        animId = Widget.toAnimId myId
+processDefinitionWidget Sugar.DefDeleted _myId mkLayout =
+    (ExpressionGui.addDeletionDiagonal ?? 0.1 <&> (TreeLayout.widget %~))
+    <*> mkLayout
 processDefinitionWidget (Sugar.DefTypeChanged info) myId mkLayout =
     do
         theme <- ExprGuiM.readTheme

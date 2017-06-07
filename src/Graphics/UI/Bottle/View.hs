@@ -102,10 +102,10 @@ backgroundColor =
 -- "deletion" GUI annotation
 addDiagonal ::
     (MonadReader env m, HasAnimIdPrefix env, HasView a) =>
-    m (R -> Draw.Color -> a -> a)
+    m (Draw.Color -> R -> a -> a)
 addDiagonal =
     subAnimId ["diagonal"] <&>
-    \animId thickness color x ->
+    \animId color thickness x ->
     x
     & view . animLayers . layers . Lens.reversed . Lens.ix 0 <>~
     ( Draw.convexPoly

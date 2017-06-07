@@ -4,9 +4,11 @@ module Lamdu.GUI.ExpressionEdit.HoleEdit
     ) where
 
 import qualified Control.Lens as Lens
+import qualified Control.Monad.Reader as Reader
 import           Control.Monad.Transaction (transaction)
 import qualified Data.Store.Transaction as Transaction
 import qualified Graphics.UI.Bottle.EventMap as E
+import qualified Graphics.UI.Bottle.View as View
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widget.Aligned as AlignedWidget
 import qualified Graphics.UI.Bottle.Widget.TreeLayout as TreeLayout
@@ -143,5 +145,6 @@ make hole pl =
             Nothing -> return searchAreaGui
             <&> TreeLayout.widget %~ Widget.weakerEvents deleteEventMap
     & assignHoleCursor widgetIds (hole ^. Sugar.holeMArg)
+    & Reader.local (View.animIdPrefix .~ Widget.toAnimId (hidHole widgetIds))
     where
         widgetIds = HoleWidgetIds.make (pl ^. Sugar.plEntityId)
