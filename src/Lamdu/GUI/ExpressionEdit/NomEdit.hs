@@ -108,7 +108,7 @@ expandingName ::
 expandingName vertOrder (#>) needParen nomId showName =
     do
         space <- ExpressionGui.stdHSpace <&> AlignedWidget.fromCenteredWidget
-        addBg <- ExpressionGui.addValBGWithColor Theme.valNomBGColor nomId
+        addBg <- ExpressionGui.addValBGWithColor Theme.valNomBGColor
         horizWithFallback <- ExpressionGui.horizVertFallback mParenInfo
         return $
             \label nameGui subexprGui ->

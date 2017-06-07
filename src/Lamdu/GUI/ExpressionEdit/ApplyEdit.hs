@@ -153,7 +153,7 @@ makeLabeled apply pl =
                 | needParens = Just (Widget.toAnimId myId)
                 | otherwise = Nothing
         let addBox
-                | isBoxed apply = mkBoxed (apply ^. Sugar.aAnnotatedArgs) myId
+                | isBoxed apply = mkBoxed (apply ^. Sugar.aAnnotatedArgs)
                 | otherwise = id
         makeFuncRow mParensId prec apply myId
             & addBox
@@ -175,15 +175,14 @@ makeArgRows arg =
 mkBoxed ::
     Monad m =>
     [Sugar.AnnotatedArg (Name m) (ExprGuiT.SugarExpr m)] ->
-    Widget.Id ->
     ExprGuiM m (ExpressionGui m) ->
     ExprGuiM m (ExpressionGui m)
-mkBoxed annotatedArgs myId mkFuncRow =
+mkBoxed annotatedArgs mkFuncRow =
     do
         argRows <- traverse makeArgRows annotatedArgs
         funcRow <- ExprGuiM.withLocalPrecedence 0 (const (Prec.make 0)) mkFuncRow
         vbox <- ExpressionGui.vboxTopFocalSpaced
-        ExpressionGui.addValFrame myId
+        ExpressionGui.addValFrame
             ?? vbox
                 ([funcRow, vbox argRows] <&> TreeLayout.alignment . _1 .~ 0)
 

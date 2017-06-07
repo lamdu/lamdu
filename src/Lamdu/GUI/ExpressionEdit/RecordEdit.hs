@@ -67,7 +67,7 @@ make record@(Sugar.Record fields recordTail addField) pl =
                 & Widget.keysEventMapMovesCursor (Config.recordAddFieldKeys config)
                   (E.Doc ["Edit", "Record", "Add Field"])
                 & ExprGuiM.withHolePicker resultPicker
-        (if addBg then ExpressionGui.addValFrame myId else return id)
+        (if addBg then ExpressionGui.addValFrame else return id)
             ?? (gui & TreeLayout.widget %~ Widget.weakerEvents addFieldEventMap)
     & Widget.assignCursor myId (defaultPos fields myId)
     & ExpressionGui.stdWrapParentExpr pl

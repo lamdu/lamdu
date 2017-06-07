@@ -482,7 +482,7 @@ addEvaluationResult ::
 addEvaluationResult mNeigh resDisp wideBehavior entityId =
     case (erdVal resDisp ^. ER.payload, erdVal resDisp ^. ER.body) of
     (T.TRecord T.CEmpty, _) ->
-        addValBGWithColor Theme.evaluatedPathBGColor (WidgetIds.fromEntityId entityId)
+        addValBGWithColor Theme.evaluatedPathBGColor
         <&> (TreeLayout.widget %~)
     (_, ER.RFunc{}) -> return id
     _ -> addAnnotationH (makeEvalView mNeigh resDisp) wideBehavior entityId
@@ -621,30 +621,25 @@ grammarLabel text =
         makeLabel text
             & Reader.local (TextView.color .~ Theme.grammarColor theme)
 
-addValBG :: Monad m => Widget.Id -> ExprGuiM m (Widget f -> Widget f)
+addValBG :: Monad m => ExprGuiM m (Widget f -> Widget f)
 addValBG = addValBGWithColor Theme.valFrameBGColor
 
 addValBGWithColor ::
     (Monad m, View.HasView a) =>
-    (Theme -> Draw.Color) -> Widget.Id -> ExprGuiM m (a -> a)
-addValBGWithColor color myId =
-    do
-        theme <- ExprGuiM.readTheme
-        View.backgroundColor animId (color theme) & return
-    where
-        animId = Widget.toAnimId myId ++ ["val"]
+    (Theme -> Draw.Color) -> ExprGuiM m (a -> a)
+addValBGWithColor color = View.backgroundColor <*> (ExprGuiM.readTheme <&> color)
 
 addValPadding :: Monad m => ExprGuiM m (TreeLayout a -> TreeLayout a)
 addValPadding =
     ExprGuiM.readTheme <&> Theme.valFramePadding <&> fmap realToFrac
     <&> TreeLayout.pad
 
-addValFrame ::
-    Monad m => Widget.Id -> ExprGuiM m (TreeLayout a -> TreeLayout a)
-addValFrame myId =
+addValFrame :: Monad m => ExprGuiM m (TreeLayout a -> TreeLayout a)
+addValFrame =
     (.)
-    <$> (addValBG myId <&> (TreeLayout.widget %~))
+    <$> (addValBG <&> (TreeLayout.widget %~))
     <*> addValPadding
+    & Reader.local (View.animIdPrefix <>~ ["val"])
 
 -- TODO: This doesn't belong here
 makeNameView :: Monad m => Name n -> AnimId -> ExprGuiM m View

@@ -99,7 +99,7 @@ make (Sugar.Case mArg alts caseTail addAlt _cEntityId) pl =
                 & Widget.keysEventMapMovesCursor (Config.caseAddAltKeys config)
                   (E.Doc ["Edit", "Case", "Add Alt"])
                 & ExprGuiM.withHolePicker resultPicker
-        ExpressionGui.addValFrame myId
+        ExpressionGui.addValFrame
             <*> (ExpressionGui.vboxTopFocalSpaced ??
                  ([header, altsGui] <&> TreeLayout.alignment . _1 .~ 0))
             <&> TreeLayout.widget %~ Widget.weakerEvents addAltEventMap
@@ -111,15 +111,13 @@ make (Sugar.Case mArg alts caseTail addAlt _cEntityId) pl =
 
 makeAltRow ::
     Monad m =>
-    Widget.Id -> Maybe Tag ->
+    Maybe Tag ->
     Sugar.CaseAlt (Name m) m (Sugar.Expression (Name m) m ExprGuiT.Payload) ->
     ExprGuiM m (ExpressionGui m)
-makeAltRow myId mActiveTag (Sugar.CaseAlt delete tag altExpr) =
+makeAltRow mActiveTag (Sugar.CaseAlt delete tag altExpr) =
     do
         config <- ExprGuiM.readConfig
-        addBg <-
-            ExpressionGui.addValBGWithColor Theme.evaluatedPathBGColor
-            (Widget.joinId myId ["ActiveAlt"])
+        addBg <- ExpressionGui.addValBGWithColor Theme.evaluatedPathBGColor
         altRefGui <-
             TagEdit.makeCaseTag (ExprGuiT.nextHolesBefore altExpr) tag
             <&> if mActiveTag == Just (tag ^. Sugar.tagVal)
@@ -139,8 +137,8 @@ makeAltsWidget _ [] myId =
     ExpressionGui.makeFocusableView (Widget.joinId myId ["Ø"])
     <*> ExpressionGui.grammarLabel "Ø"
     <&> TreeLayout.fromAlignedWidget
-makeAltsWidget mActiveTag alts myId =
-    ExpressionGui.vboxTopFocalSpaced <*> mapM (makeAltRow myId mActiveTag) alts
+makeAltsWidget mActiveTag alts _myId =
+    ExpressionGui.vboxTopFocalSpaced <*> mapM (makeAltRow mActiveTag) alts
 
 separationBar :: Theme -> Widget.R -> Anim.AnimId -> View
 separationBar theme width animId =

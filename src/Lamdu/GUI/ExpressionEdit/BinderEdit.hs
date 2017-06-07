@@ -254,13 +254,17 @@ makeMParamsEdit mScopeCursor isScopeNavFocused delVarBackwardsId myId nearestHol
     >>= \case
     [] -> return Nothing
     paramEdits ->
-        ExpressionGui.combineSpaced
-        ?? (paramEdits <&> TreeLayout.alignment . _1 .~ 0.5)
-        & case params of
-          Sugar.FieldParams{} -> (ExpressionGui.addValFrame myId <*>)
-          _ -> id
+        frame
+        <*>
+        ( ExpressionGui.combineSpaced ??
+            (paramEdits <&> TreeLayout.alignment . _1 .~ 0.5)
+        )
         <&> Just
     where
+        frame =
+            case params of
+            Sugar.FieldParams{} -> ExpressionGui.addValFrame
+            _ -> return id
         mCurCursor =
             do
                 ScopeNavIsFocused == isScopeNavFocused & guard
