@@ -12,6 +12,7 @@ import qualified Control.Lens as Lens
 import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.Bottle.Main as MainLoop
 import           Graphics.UI.Bottle.Main.Animation (AnimConfig(..))
+import           Graphics.UI.Bottle.MetaKey (MetaKey)
 import           Graphics.UI.Bottle.Widget (CursorConfig(..))
 import qualified Graphics.UI.Bottle.Widgets.EventMapHelp as EventMapHelp
 import qualified Graphics.UI.Bottle.Widgets.TextEdit as TextEdit
@@ -33,8 +34,8 @@ data Style = Style
     }
 Lens.makeLenses ''Style
 
-help :: Draw.Font -> Config.Help -> Theme.Help -> EventMapHelp.Config
-help font config theme =
+help :: Draw.Font -> [MetaKey] -> Theme.Help -> EventMapHelp.Config
+help font helpKeys theme =
     EventMapHelp.Config
     { EventMapHelp._configStyle =
         TextView.Style
@@ -48,7 +49,6 @@ help font config theme =
     , EventMapHelp._configTint = helpTint
     }
     where
-        Config.Help{helpKeys} = config
         Theme.Help{helpTextColor, helpInputDocColor, helpBGColor, helpTint} = theme
 
 textEdit :: Draw.Color -> Draw.Font -> TextEdit.Style

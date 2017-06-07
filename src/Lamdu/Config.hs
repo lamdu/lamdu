@@ -1,7 +1,7 @@
 {-# OPTIONS -O0 #-}
 {-# LANGUAGE DeriveGeneric, NoImplicitPrelude #-}
 module Lamdu.Config
-    ( Help(..), Export(..), Pane(..), Hole(..)
+    ( Export(..), Pane(..), Hole(..)
     , Eval(..)
     , LiteralText(..)
     , Config(..)
@@ -14,13 +14,6 @@ import           Graphics.UI.Bottle.MetaKey (MetaKey)
 import qualified Graphics.UI.Bottle.Zoom as Zoom
 import qualified Lamdu.GUI.VersionControl.Config as VersionControl
 import           Lamdu.Prelude
-
-newtype Help = Help
-    { helpKeys :: [MetaKey]
-    } deriving (Eq, Generic, Show)
-instance Aeson.ToJSON Help where
-    toJSON = Aeson.genericToJSON Aeson.defaultOptions
-instance Aeson.FromJSON Help
 
 data Export = Export
     { exportPath :: FilePath
@@ -73,8 +66,7 @@ instance Aeson.ToJSON LiteralText where
 instance Aeson.FromJSON LiteralText
 
 data Config = Config
-    { help :: Help
-    , zoom :: Zoom.Config
+    { zoom :: Zoom.Config
     , export :: Export
     , pane :: Pane
     , versionControl :: VersionControl.Config
@@ -84,6 +76,7 @@ data Config = Config
 
     , maxExprDepth :: Int
 
+    , helpKeys :: [MetaKey]
     , quitKeys :: [MetaKey]
     , changeThemeKeys :: [MetaKey]
     , nextInfoModeKeys :: [MetaKey]

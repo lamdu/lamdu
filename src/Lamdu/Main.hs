@@ -296,9 +296,9 @@ mainLoop subpixel win refreshScheduler configSampler iteration =
                 do
                     sample <- ConfigSampler.getSample configSampler
                     fonts <- getFonts zoom sample
-                    let helpConfig = sample ^. sConfig & Config.help
+                    let helpKeys = sample ^. sConfig & Config.helpKeys
                     let helpTheme = sample ^. sTheme & Theme.help
-                    Style.help (Font.fontHelp fonts) helpConfig helpTheme
+                    Style.help (Font.fontHelp fonts) helpKeys helpTheme
                         & return
             }
 

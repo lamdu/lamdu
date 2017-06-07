@@ -1,6 +1,5 @@
 {
     "maxExprDepth": 40,
-    "help": { "helpKeys": [ "F1", "Alt+H" ] },
     "zoom": {
         "shrinkKeys"    : [ "Cmd+Minus" ],
         "enlargeKeys"   : [ "Cmd+Equal" ],
@@ -44,6 +43,7 @@
         "prevScopeKeys": [ "Cmd+Up" ],
         "nextScopeKeys": [ "Cmd+Down" ]
     },
+    "helpKeys": [ "F1", "Alt+H" ],
     "previousCursorKeys"       : [ "Alt+Left" ],
     "enterSubexpressionKeys"   : [ "Shift+Right" ],
     "delBackwardKeys"          : [ "Backspace" ],
