@@ -30,6 +30,7 @@ module Lamdu.Sugar.Types.Expression
     , GetField(..), gfRecord, gfTag
     , Inject(..), iTag, iMVal
     , ParameterForm(..), _GetFieldParameter, _GetParameter
+    , NameRef(..), nrName, nrGotoDefinition
     , Param(..), pNameRef, pForm, pBinderMode
     , BinderVarForm(..), _GetDefinition, _GetLet
     , DefinitionForm(..), _DefUpToDate, _DefDeleted, _DefTypeChanged
@@ -234,6 +235,11 @@ data Inject name expr = Inject
 data ParameterForm = GetFieldParameter | GetParameter
     deriving (Eq, Ord)
 
+data NameRef name m = NameRef
+    { _nrName :: name
+    , _nrGotoDefinition :: T m EntityId
+    }
+
 data Param name m = Param
     { _pNameRef :: NameRef name m
     , _pForm :: ParameterForm
@@ -349,6 +355,7 @@ Lens.makeLenses ''HoleResult
 Lens.makeLenses ''Inject
 Lens.makeLenses ''LabeledApply
 Lens.makeLenses ''Lambda
+Lens.makeLenses ''NameRef
 Lens.makeLenses ''Nominal
 Lens.makeLenses ''Param
 Lens.makeLenses ''ParamsRecordVar

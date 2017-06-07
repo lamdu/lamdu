@@ -5,8 +5,6 @@ module Lamdu.Sugar.Types.Binder
     , Annotation(..), aInferredType, aMEvaluationResult
     -- Tags
     , TagG(..), tagGName, tagVal, tagInstance
-    -- Names
-    , NameRef(..), nrName, nrGotoDefinition
     -- Let
     , LetFloatResult(..)
     , LetActions(..)
@@ -115,11 +113,6 @@ data TagG name = TagG
     , _tagGName :: name
     } deriving (Eq, Ord, Show)
 
-data NameRef name m = NameRef
-    { _nrName :: name
-    , _nrGotoDefinition :: T m EntityId
-    }
-
 data BinderMode = NormalBinder | LightLambda
 
 instance Show name => Show (NamedParamInfo name m) where
@@ -205,7 +198,6 @@ Lens.makeLenses ''FuncParam
 Lens.makeLenses ''FuncParamActions
 Lens.makeLenses ''Let
 Lens.makeLenses ''LetActions
-Lens.makeLenses ''NameRef
 Lens.makeLenses ''NamedParamInfo
 Lens.makeLenses ''NullParamActions
 Lens.makeLenses ''TagG
