@@ -121,9 +121,9 @@ makeOpenRecord fieldsGui rest animId =
         return $ TreeLayout.render #
             \layoutMode ->
             let restLayout = layoutMode & restExpr ^. TreeLayout.render
-                minWidth = restLayout ^. AlignedWidget.widget . Widget.width
+                minWidth = restLayout ^. View.width
                 fields = layoutMode & fieldsGui ^. TreeLayout.render
-                targetWidth = fields ^. AlignedWidget.widget . Widget.width
+                targetWidth = fields ^. View.width
             in
             fields
             & AlignedWidget.alignment . _1 .~ 0

@@ -121,10 +121,10 @@ maybeIndent (Just piInfo) =
                 content
                 & AlignedWidget.addBefore AlignedWidget.Horizontal
                     [ Spacer.make
-                        (Vector2 barWidth (content ^. AlignedWidget.widget . Widget.height))
-                        & Widget.fromView
-                        & Widget.backgroundColor bgAnimId
+                        (Vector2 barWidth (content ^. View.height))
+                        & View.backgroundColor bgAnimId
                           (Theme.indentBarColor indentConf)
+                        & Widget.fromView
                         & AlignedWidget.fromCenteredWidget
                         & AlignedWidget.alignment . _2 .~ 0
                     , Spacer.make (Vector2 gapWidth 0)
@@ -177,7 +177,7 @@ hCombine f layout gui =
     TreeLayout.LayoutParams
     { _layoutMode =
         layoutParams ^. TreeLayout.layoutMode
-        & TreeLayout.modeWidths -~ layout ^. AlignedWidget.width
+        & TreeLayout.modeWidths -~ layout ^. View.width
     , _layoutContext = TreeLayout.LayoutHorizontal
     }
     & gui ^. TreeLayout.render
@@ -233,7 +233,7 @@ horizVertFallbackH mParenInfo horiz vert =
             & AlignedWidget.addAfter AlignedWidget.Horizontal [parenLabel parenInfo ")"]
         _ -> wide
     TreeLayout.LayoutNarrow limit
-        | wide ^. AlignedWidget.width > limit ->
+        | wide ^. View.width > limit ->
             layoutParams & maybeIndent mParenInfo vert ^. TreeLayout.render
         | otherwise -> wide
 
@@ -288,18 +288,18 @@ tagItem =
             tag ||> (space ||> (item & TreeLayout.alignment . _1 .~ 0))
 
 addAnnotationBackgroundH ::
-    (Theme.ValAnnotation -> Draw.Color) -> Theme.ValAnnotation -> AnimId ->
-    View -> View
+    View.HasView a =>
+    (Theme.ValAnnotation -> Draw.Color) -> Theme.ValAnnotation -> AnimId -> a -> a
 addAnnotationBackgroundH getColor theme animId =
     View.backgroundColor bgAnimId bgColor
     where
         bgAnimId = animId ++ ["annotation background"]
         bgColor = getColor theme
 
-addAnnotationBackground :: Theme.ValAnnotation -> AnimId -> View -> View
+addAnnotationBackground :: View.HasView a => Theme.ValAnnotation -> AnimId -> a -> a
 addAnnotationBackground = addAnnotationBackgroundH Theme.valAnnotationBGColor
 
-addAnnotationHoverBackground :: Theme.ValAnnotation -> AnimId -> View -> View
+addAnnotationHoverBackground :: View.HasView a => Theme.ValAnnotation -> AnimId -> a -> a
 addAnnotationHoverBackground = addAnnotationBackgroundH Theme.valAnnotationHoverBGColor
 
 data WideAnnotationBehavior
@@ -320,22 +320,20 @@ applyWideAnnotationBehavior ::
 applyWideAnnotationBehavior animId KeepWideAnnotation =
     do
         theme <- ExprGuiM.readTheme <&> Theme.valAnnotation
-        AlignedWidget.widget . Widget.view %~ addAnnotationBackground theme animId
-            & const & return
+        addAnnotationBackground theme animId & const & return
 applyWideAnnotationBehavior animId ShrinkWideAnnotation =
     ExprGuiM.readTheme <&> Theme.valAnnotation
     <&>
     \theme shrinkRatio layout ->
     AlignedWidget.scaleAround (Alignment 0) shrinkRatio layout
-    & AlignedWidget.widget . Widget.view %~ addAnnotationBackground theme animId
+    & addAnnotationBackground theme animId
 applyWideAnnotationBehavior animId HoverWideAnnotation =
     do
         theme <- ExprGuiM.readTheme <&> Theme.valAnnotation
         shrinker <- applyWideAnnotationBehavior animId ShrinkWideAnnotation
         return $
             \shrinkRatio layout ->
-                layout
-                & AlignedWidget.widget . Widget.view %~ addAnnotationHoverBackground theme animId
+                addAnnotationHoverBackground theme animId layout
                 & (`AlignedWidget.hoverInPlaceOf` shrinker shrinkRatio layout)
 
 processAnnotationGui ::
@@ -354,16 +352,16 @@ processAnnotationGui animId wideAnnotationBehavior =
                 applyWide shrinkRatio annotationLayout
             | otherwise =
                 maybeTooNarrow annotationLayout
-                & AlignedWidget.widget . Widget.view %~ addAnnotationBackground theme animId
+                & addAnnotationBackground theme animId
             where
-                annotationWidth = annotationLayout ^. AlignedWidget.width
+                annotationWidth = annotationLayout ^. View.width
                 expansionLimit =
                     Theme.valAnnotationWidthExpansionLimit theme & realToFrac
                 maxWidth = minWidth + expansionLimit
                 shrinkAtLeast = Theme.valAnnotationShrinkAtLeast theme & realToFrac
                 heightShrinkRatio =
                     Theme.valAnnotationMaxHeight theme * stdSpacing ^. _2
-                    / annotationLayout ^. AlignedWidget.widget . Widget.height
+                    / annotationLayout ^. View.height
                 shrinkRatio =
                     annotationWidth - shrinkAtLeast & min maxWidth & max minWidth
                     & (/ annotationWidth) & min heightShrinkRatio & pure
@@ -419,8 +417,7 @@ makeEvalView mNeighbours evalRes animId =
                 Just _ -> animId ++ [encodeS (erdScope res)]
         let makeEvaluationResultViewBG res =
                 makeEvaluationResultView (mkAnimId res) res
-                <&> AlignedWidget.widget . Widget.view %~
-                    addAnnotationBackground (Theme.valAnnotation theme) (mkAnimId res)
+                <&> addAnnotationBackground (Theme.valAnnotation theme) (mkAnimId res)
         let neighbourViews n yPos =
                 n ^.. Lens._Just
                 <&> makeEvaluationResultViewBG
@@ -464,7 +461,7 @@ addAnnotationH f wideBehavior entityId =
             in  layout
                 & AlignedWidget.addAfter AlignedWidget.Vertical
                 [ vspace
-                , processAnn (layout ^. AlignedWidget.width) annotationLayout
+                , processAnn (layout ^. View.width) annotationLayout
                      & AlignedWidget.alignment . _1 .~ layout ^. AlignedWidget.alignment . _1
                 ]
     where
@@ -509,7 +506,7 @@ nameEditFDConfig = FocusDelegator.Config
     , FocusDelegator.focusParentDoc = E.Doc ["Edit", "Done renaming"]
     }
 
-addDeletionDiagonal :: Monad m => ExprGuiM m (Widget.R -> AnimId -> View -> View)
+addDeletionDiagonal :: (Monad m, View.HasView a) => ExprGuiM m (Widget.R -> AnimId -> a -> a)
 addDeletionDiagonal =
     do
         theme <- ExprGuiM.readTheme
@@ -632,12 +629,12 @@ addValBG :: Monad m => Widget.Id -> ExprGuiM m (Widget f -> Widget f)
 addValBG = addValBGWithColor Theme.valFrameBGColor
 
 addValBGWithColor ::
-    Monad m =>
-    (Theme -> Draw.Color) -> Widget.Id -> ExprGuiM m (Widget f -> Widget f)
+    (Monad m, View.HasView a) =>
+    (Theme -> Draw.Color) -> Widget.Id -> ExprGuiM m (a -> a)
 addValBGWithColor color myId =
     do
         theme <- ExprGuiM.readTheme
-        Widget.backgroundColor animId (color theme) & return
+        View.backgroundColor animId (color theme) & return
     where
         animId = Widget.toAnimId myId ++ ["val"]
 

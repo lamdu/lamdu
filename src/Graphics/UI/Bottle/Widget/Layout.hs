@@ -1,5 +1,7 @@
 -- | A type-class for operations that work on layouts
 
+-- TODO: Remove and consider moving `pad` to `HasView` class
+
 module Graphics.UI.Bottle.Widget.Layout
     ( Layout(..)
     ) where

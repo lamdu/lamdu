@@ -156,7 +156,7 @@ processDefinitionWidget Sugar.DefUpToDate _myId mkLayout = mkLayout
 processDefinitionWidget Sugar.DefDeleted myId mkLayout =
     do
         addDiagonal <- ExpressionGui.addDeletionDiagonal
-        mkLayout <&> TreeLayout.widget . Widget.view %~ addDiagonal 0.1 animId
+        mkLayout <&> TreeLayout.widget %~ addDiagonal 0.1 animId
     where
         animId = Widget.toAnimId myId
 processDefinitionWidget (Sugar.DefTypeChanged info) myId mkLayout =

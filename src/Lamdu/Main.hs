@@ -22,6 +22,7 @@ import qualified Graphics.Rendering.OpenGL.GL as GL
 import           Graphics.UI.Bottle.Animation (AnimId)
 import           Graphics.UI.Bottle.Main (mainLoopWidget)
 import qualified Graphics.UI.Bottle.Main as MainLoop
+import qualified Graphics.UI.Bottle.View as View
 import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import           Graphics.UI.Bottle.Zoom (Zoom)
@@ -326,7 +327,7 @@ mkWidgetWithFallback dbToIO env =
                 return (isValid, widget)
         unless isValid $ putStrLn $ "Invalid cursor: " ++ show (env ^. GUIMain.envCursor)
         widget
-            & Widget.backgroundColor (["background"] :: AnimId) (bgColor isValid theme)
+            & View.backgroundColor (["background"] :: AnimId) (bgColor isValid theme)
             & return
     where
         theme = env ^. GUIMain.envTheme

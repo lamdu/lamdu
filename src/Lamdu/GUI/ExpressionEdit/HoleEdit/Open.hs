@@ -226,7 +226,7 @@ makeResultGroup holeInfo results =
         Config.Hole{..} <- Config.hole <$> ExprGuiM.readConfig
         (mainResultWidget, shownMainResult) <-
             makeShownResult holeInfo mainResult
-        let mainResultHeight = mainResultWidget ^. Widget.height
+        let mainResultHeight = mainResultWidget ^. View.height
         let makeExtra =
                 results ^. HoleResults.rlExtra
                 & makeExtraResultsWidget holeInfo mainResultHeight
@@ -279,7 +279,7 @@ makeExtraResultsWidget holeInfo mainResultHeight extraResults@(firstResult:_) =
                         )
         (mResults, widgets) <-
             unzip <$> traverse mkResWidget extraResults
-        let headHeight = head widgets ^. Widget.height
+        let headHeight = head widgets ^. View.height
         let height = min mainResultHeight headHeight
         let widget =
                 Box.vboxAlign 0 widgets
@@ -288,9 +288,9 @@ makeExtraResultsWidget holeInfo mainResultHeight extraResults@(firstResult:_) =
         return
             ( msum mResults
             , widget
-                & Widget.size .~ Vector2 0 height
+                & View.size .~ Vector2 0 height
                 & Widget.translate (Vector2 0 (0.5 * (height - headHeight)))
-            , (widget ^. Widget.size . _2) - 0.5 * (headHeight + mainResultHeight)
+            , (widget ^. View.height) - 0.5 * (headHeight + mainResultHeight)
                 & max 0
             )
 
@@ -320,7 +320,7 @@ makeHoleResultWidget resultId holeResult =
                 <&> (^. Widget.eventMap)
         widget <-
             (Widget.makeFocusableView ?? resultId) <*> mkWidget
-            <&> Widget.view . View.animFrames %~
+            <&> View.animFrames %~
                 Anim.mapIdentities (<> (resultSuffix # Widget.toAnimId resultId))
         return (widget, mkEventMap)
     where
@@ -371,7 +371,7 @@ calcPadding =
     foldl step 0
     where
         step accum item =
-            max 0 (accum - (head (item ^. rgwRow) ^. Widget.size . _2))
+            max 0 (accum - (head (item ^. rgwRow) ^. View.height))
             + (item ^. rgwPadding)
 
 layoutResults ::
@@ -392,7 +392,7 @@ layoutResults groups hiddenResults
                   & EventMap.blockDownEvents
             let padHeight =
                     calcPadding groups
-                    - sum (hiddenResultsWidgets ^.. Lens.traversed . Widget.size . _2)
+                    - sum (hiddenResultsWidgets ^.. Lens.traversed . View.height)
                     & max 0
             grid : hiddenResultsWidgets & Box.vboxCentered
                 & Widget.assymetricPad 0 (Vector2 0 padHeight)
@@ -460,7 +460,7 @@ makeUnderCursorAssignment shownResultsLists hasHiddenResults holeInfo =
             addDarkBackground (Widget.toAnimId hidResultsPrefix)
             ??
             ( resultsWidget
-              & Widget.width %~ max (typeView ^. View.width)
+              & View.width %~ max (typeView ^. View.width)
               & Widget.strongerEvents resultsEventMap
               & addBackground (Widget.toAnimId hidResultsPrefix)
                 (Theme.hoverBGColor theme)

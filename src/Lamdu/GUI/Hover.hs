@@ -7,8 +7,8 @@ module Lamdu.GUI.Hover
 
 import qualified Graphics.DrawingCombinators as Draw
 import           Graphics.UI.Bottle.Animation (AnimId)
+import qualified Graphics.UI.Bottle.View as View
 import           Graphics.UI.Bottle.Widget (Widget)
-import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widget.Layout as Layout
 import           Graphics.UI.Bottle.Widget.Layout (Layout)
 import qualified Lamdu.Config.Theme as Theme
@@ -18,7 +18,7 @@ import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import           Lamdu.Prelude
 
 addBackground :: AnimId -> Draw.Color -> Widget f -> Widget f
-addBackground myId = Widget.backgroundColor (myId <> ["hover background"])
+addBackground myId = View.backgroundColor (myId <> ["hover background"])
 
 addDarkBackground :: (Monad m, Layout w) => AnimId -> ExprGuiM m (w a -> w a)
 addDarkBackground animId =
@@ -28,6 +28,6 @@ addDarkBackground animId =
             gui
             & Layout.pad (Theme.hoverDarkPadding theme <&> realToFrac)
             & Layout.widget %~
-              Widget.backgroundColor
-              (animId <> ["hover dark background"])
-              (Theme.hoverDarkBGColor theme)
+                View.backgroundColor
+                (animId <> ["hover dark background"])
+                (Theme.hoverDarkBGColor theme)

@@ -10,6 +10,7 @@ import qualified Graphics.UI.Bottle.Direction as Direction
 import qualified Graphics.UI.Bottle.EventMap as E
 import           Graphics.UI.Bottle.MetaKey (MetaKey, toModKey)
 import           Graphics.UI.Bottle.Rect (Rect(..))
+import qualified Graphics.UI.Bottle.View as View
 import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
 
@@ -83,7 +84,7 @@ make =
             childWidget
             & Widget.mEnter %~ modifyEntry myId fullChildRect focusEntryTarget
         where
-            fullChildRect = Rect 0 (childWidget ^. Widget.size)
+            fullChildRect = Rect 0 (childWidget ^. View.size)
             childIsFocused = Widget.isFocused childWidget
             selfIsFocused = myId == cursor
             focusParentEventMap =

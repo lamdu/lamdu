@@ -20,11 +20,10 @@ module Graphics.UI.Bottle.Widget
     , keysEventMapMovesCursor
 
     -- Widget type and lenses:
-    , Widget(..), view, mEnter, mFocus, eventMap
+    , Widget(..), mEnter, mFocus, eventMap
     , MEnter
     , Focus(..), fEventMap, focalArea
-    , size, width, height, events
-    , bottomFrame
+    , events
 
     , isFocused
 
@@ -42,7 +41,6 @@ module Graphics.UI.Bottle.Widget
     , strongerEvents, weakerEvents
     , translate, scale
     , pad, assymetricPad, padToSizeAlign
-    , backgroundColor
 
     , makeFocusableView
 
@@ -104,7 +102,7 @@ data Focus a = Focus
 type MEnter a = Maybe (Direction -> EnterResult a)
 
 data Widget a = Widget
-    { _view :: View
+    { _wView :: View
     , _mEnter :: MEnter a -- Nothing if we're not enterable
     , _mFocus :: Maybe (Focus a)
     }
@@ -114,26 +112,13 @@ Lens.makeLenses ''EventResult
 Lens.makeLenses ''Focus
 Lens.makeLenses ''Widget
 
+instance View.HasView (Widget a) where view = wView
+
 isFocused :: Widget a -> Bool
 isFocused = Lens.has (mFocus . Lens._Just)
 
 empty :: Widget f
 empty = fromView View.empty
-
-bottomFrame :: Lens.Traversal' (Widget a) Anim.Frame
-bottomFrame = view . View.bottomFrame
-
-{-# INLINE size #-}
-size :: Lens' (Widget a) Size
-size = view . View.size
-
-{-# INLINE width #-}
-width :: Lens' (Widget a) R
-width = view . View.width
-
-{-# INLINE height #-}
-height :: Lens' (Widget a) R
-height = view . View.height
 
 {-# INLINE eventMap #-}
 eventMap :: Lens.Traversal' (Widget a) (EventMap a)
@@ -163,7 +148,7 @@ fromView :: View -> Widget a
 fromView v =
     Widget
     { _mFocus = Nothing
-    , _view = v
+    , _wView = v
     , _mEnter = Nothing
     }
 
@@ -176,7 +161,7 @@ takesFocus enterFunc widget =
         enter =
             enterFunc
             <&> Lens.mapped %~ eventResultFromCursor
-            <&> EnterResult (Rect 0 (widget ^. size))
+            <&> EnterResult (Rect 0 (widget ^. View.size))
 
 doesntTakeFocus :: Widget a -> Widget a
 doesntTakeFocus = mEnter .~ Nothing
@@ -188,11 +173,6 @@ strongerEvents eMap = eventMap %~ (eMap `mappend`)
 -- ^ If doesn't take focus, does nothing
 weakerEvents :: EventMap a -> Widget a -> Widget a
 weakerEvents eMap = eventMap %~ (`mappend` eMap)
-
-backgroundColor ::
-    (MonadReader env m, View.HasAnimIdPrefix env) =>
-    m (Draw.Color -> Widget a -> Widget a)
-backgroundColor = View.backgroundColor <&> Lens.mapped %~ (view %~)
 
 animIdMappingFromPrefixMap :: Map AnimId AnimId -> Monoid.Endo AnimId
 animIdMappingFromPrefixMap = Monoid.Endo . Anim.mappingFromPrefixMap
@@ -234,12 +214,12 @@ translate pos widget =
     & mEnter . Lens._Just . Lens.mapped .
         enterResultRect . Rect.topLeft +~ pos
     & mFocus . Lens._Just . focalArea . Rect.topLeft +~ pos
-    & view %~ View.translate pos
+    & View.view %~ View.translate pos
 
 scale :: Vector2 R -> Widget a -> Widget a
 scale mult widget =
     widget
-    & view %~ View.scale mult
+    & View.view %~ View.scale mult
     & mFocus . Lens._Just . focalArea . Rect.topLeftAndSize *~ mult
     & mEnter . Lens._Just . Lens.mapped . enterResultRect . Rect.topLeftAndSize *~ mult
     & mEnter . Lens._Just . Lens.argument . Direction.coordinates . Rect.topLeftAndSize //~ mult
@@ -251,16 +231,16 @@ pad p = assymetricPad p p
 assymetricPad :: Vector2 R -> Vector2 R -> Widget a -> Widget a
 assymetricPad leftAndTop rightAndBottom widget =
     widget
-    & size +~ leftAndTop + rightAndBottom
+    & View.size +~ leftAndTop + rightAndBottom
     & translate leftAndTop
 
 padToSizeAlign :: Size -> Vector2 R -> Widget a -> Widget a
 padToSizeAlign newSize alignment widget =
     widget
     & translate (sizeDiff * alignment)
-    & size %~ liftA2 max newSize
+    & View.size %~ liftA2 max newSize
     where
-        sizeDiff = max <$> 0 <*> newSize - widget ^. size
+        sizeDiff = max <$> 0 <*> newSize - widget ^. View.size
 
 class HasCursor env where cursor :: Lens' env Id
 
@@ -274,7 +254,7 @@ respondToCursor :: Widget a -> Widget a
 respondToCursor widget =
     widget & mFocus .~ Just
         Focus
-        { _focalArea = Rect 0 (widget ^. size)
+        { _focalArea = Rect 0 (widget ^. View.size)
         , _fEventMap = mempty
         }
 
@@ -331,7 +311,7 @@ newtype CursorConfig = CursorConfig
 renderWithCursor :: CursorConfig -> Widget a -> Anim.Frame
 renderWithCursor CursorConfig{cursorColor} widget =
     maybe mempty renderCursor (widget ^? mFocus . Lens._Just . focalArea)
-    & (`mappend` View.render (widget ^. view))
+    & (`mappend` View.render widget)
     where
         renderCursor area =
             Anim.backgroundColor cursorAnimId cursorColor

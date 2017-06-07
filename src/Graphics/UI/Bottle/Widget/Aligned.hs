@@ -1,7 +1,7 @@
 {-# LANGUAGE NoImplicitPrelude, TypeFamilies, TemplateHaskell, RankNTypes, FlexibleContexts, DeriveFunctor, DeriveFoldable, DeriveTraversable #-}
 module Graphics.UI.Bottle.Widget.Aligned
     ( AlignedWidget, alignment, widget
-    , asTuple, width
+    , asTuple
     , empty, fromCenteredWidget, fromCenteredView
     , scaleAround, scale, pad
     , hoverInPlaceOf
@@ -29,10 +29,7 @@ data AlignedWidget a = AlignedWidget
     , _widget :: Widget a
     }
 Lens.makeLenses ''AlignedWidget
-
-{-# INLINE width #-}
-width :: Lens' (AlignedWidget a) Widget.R
-width = widget . Widget.width
+instance View.HasView (AlignedWidget a) where view = widget . View.view
 
 fromCenteredWidget :: Widget a -> AlignedWidget a
 fromCenteredWidget = AlignedWidget 0.5
@@ -59,7 +56,7 @@ pad :: Vector2 Widget.R -> AlignedWidget a -> AlignedWidget a
 pad padding (AlignedWidget (Alignment align) w) =
     AlignedWidget
     { _alignment =
-        (align * (w ^. Widget.size) + padding) / (paddedWidget ^. Widget.size)
+        (align * (w ^. View.size) + padding) / (paddedWidget ^. View.size)
         & Alignment
     , _widget = paddedWidget
     }
@@ -71,14 +68,14 @@ hoverInPlaceOf :: AlignedWidget a -> AlignedWidget a -> AlignedWidget a
 layout `hoverInPlaceOf` src =
     ( srcAbsAlignment
     , layoutWidget
-        & Widget.view . View.animLayers . View.layers %~ (mempty :)
+        & View.animLayers . View.layers %~ (mempty :)
         & Widget.translate (srcAbsAlignment - layoutAbsAlignment)
-        & Widget.size .~ srcSize
+        & View.size .~ srcSize
     ) ^. Lens.from absAlignedWidget
     where
         (layoutAbsAlignment, layoutWidget) = layout ^. absAlignedWidget
         (srcAbsAlignment, srcWidget) = src ^. absAlignedWidget
-        srcSize = srcWidget ^. Widget.size
+        srcSize = srcWidget ^. View.size
 
 {-# INLINE asTuple #-}
 asTuple ::
@@ -97,7 +94,7 @@ absAlignedWidget ::
 absAlignedWidget =
     asTuple . Lens.iso (f ((*) . (^. Alignment.ratio))) (f (fmap Alignment . fromAbs))
     where
-        f op w = w & _1 %~ (`op` (w ^. _2 . Widget.size))
+        f op w = w & _1 %~ (`op` (w ^. _2 . View.size))
         fromAbs align size
             | size == 0 = 0
             | otherwise = align / size

@@ -25,6 +25,7 @@ import           Graphics.UI.Bottle.ModKey (ModKey(..))
 import qualified Graphics.UI.Bottle.ModKey as ModKey
 import           Graphics.UI.Bottle.Rect (Rect(..))
 import qualified Graphics.UI.Bottle.Rect as Rect
+import qualified Graphics.UI.Bottle.View as View
 import           Graphics.UI.Bottle.Widget (Widget(..))
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
@@ -145,7 +146,7 @@ makeFocused ::
     Widget (Text, Widget.EventResult)
 makeFocused cursor empty s str myId =
     makeInternal s str displayStr myId
-    & Widget.bottomFrame <>~ cursorFrame
+    & View.bottomFrame <>~ cursorFrame
     & Widget.mFocus .~
         Just Widget.Focus
         { Widget._focalArea = cursorRect

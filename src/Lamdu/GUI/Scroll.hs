@@ -6,6 +6,7 @@ module Lamdu.GUI.Scroll
 import qualified Control.Lens as Lens
 import           Data.Vector.Vector2 (Vector2(..))
 import qualified Graphics.UI.Bottle.Rect as Rect
+import qualified Graphics.UI.Bottle.View as View
 import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
 
@@ -17,7 +18,7 @@ focusAreaIntoWindow winSize widget =
     & intoWindow _1
     & intoWindow _2
     where
-        widgetSize = widget ^. Widget.size
+        widgetSize = widget ^. View.size
         center = winSize / 2
         allowedScroll = winSize - widgetSize
         intoWindow rawLens

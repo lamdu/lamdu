@@ -9,6 +9,7 @@ module Graphics.UI.Bottle.Widgets.Choice
 
 import qualified Control.Lens as Lens
 import qualified Graphics.DrawingCombinators as Draw
+import qualified Graphics.UI.Bottle.View as View
 import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.Box as Box
@@ -55,7 +56,7 @@ toBox config selfFocused myId childrenRecords =
                 & case cwcExpandMode config of
                     AutoExpand color
                         | isSelected == Selected ->
-                            Widget.backgroundColor (Widget.toAnimId myId) color
+                            View.backgroundColor (Widget.toAnimId myId) color
                     _ -> id
         applyAction (isSelected, action, widget) =
             ( isSelected

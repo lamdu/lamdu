@@ -169,7 +169,7 @@ makeWithKeys keys children =
             & Lens.mapped . Lens.mapped %~ toTriplet
             & GridView.makePlacements
         toTriplet (alignment, widget) =
-            (alignment, widget ^. Widget.size, widget)
+            (alignment, widget ^. View.size, widget)
 
 toWidgetWithKeys ::
     (Foldable vert, Foldable horiz) =>
@@ -177,12 +177,12 @@ toWidgetWithKeys ::
     vert (horiz (Rect, Widget a)) -> Widget a
 toWidgetWithKeys keys mCursor size sChildren =
     Widget
-    { _view = View size layers
+    { _wView = View size layers
     , _mEnter = toList mEnterss <&> toList & combineMEnters size
     , _mFocus = mFocus
     }
     where
-        layers = widgets ^. Lens.folded . Lens.folded . Widget.view . View.animLayers
+        layers = widgets ^. Lens.folded . Lens.folded . View.animLayers
         translateChildWidget (rect, widget) =
             Widget.translate (rect ^. Rect.topLeft) widget
         widgets = toList sChildren <&> toList <&> Lens.mapped %~ translateChildWidget

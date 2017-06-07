@@ -9,6 +9,7 @@ import qualified Data.Store.Transaction as Transaction
 import           Data.UUID.Types (UUID)
 import qualified Graphics.UI.Bottle.EventMap as E
 import           Graphics.UI.Bottle.MetaKey (MetaKey(..), noMods)
+import qualified Graphics.UI.Bottle.View as View
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widget.Aligned as AlignedWidget
 import qualified Graphics.UI.Bottle.Widget.TreeLayout as TreeLayout
@@ -85,7 +86,7 @@ textEdit prop pl =
             left <- TextView.makeLabel "“" <&> Widget.fromView
             text <- TextEdits.make ?? empty ?? prop ?? innerId
             right <- TextView.makeLabel "„" <&> Widget.fromView
-            let quoteSize = text ^. Widget.size & _1 .~ 0
+            let quoteSize = text ^. View.size & _1 .~ 0
             Box.hboxCentered
                 [ Widget.padToSizeAlign quoteSize 0 left
                 , text
@@ -93,7 +94,7 @@ textEdit prop pl =
                 ] & return
                 <&> TreeLayout.fromCenteredWidget
                 <&> TreeLayout.alignedWidget . AlignedWidget.absAlignedWidget . _1 . _2 .~
-                    0.5 * (left ^. Widget.height)
+                    0.5 * (left ^. View.height)
             & Reader.local (TextEdit.style .~ style)
         FocusDelegator.make ?? fdConfig config
             ?? FocusDelegator.FocusEntryParent ?? WidgetIds.notDelegatingId myId

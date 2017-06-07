@@ -198,9 +198,9 @@ makeTreeView size trees =
             handleResult _ = error "Leafs at root of tree!"
         go trees & handleResult & makeFlatTreeView size
 
-addToBottomRight :: View -> Widget.Size -> Widget f -> Widget f
+addToBottomRight :: View.HasView a => View -> Widget.Size -> a -> a
 addToBottomRight (View eventMapSize eventMapLayers) size =
-    Widget.view . View.animLayers . View.layers <>~ docLayers ^. View.layers
+    View.animLayers . View.layers <>~ docLayers ^. View.layers
     where
         docLayers =
             eventMapLayers

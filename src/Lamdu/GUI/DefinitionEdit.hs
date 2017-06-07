@@ -84,7 +84,7 @@ make def =
                 makeExprDefinition def bodyExpr
             Sugar.DefinitionBodyBuiltin builtin ->
                 makeBuiltinDefinition def builtin <&> const
-            <&> Lens.mapped . Widget.view %~ addDeletionDiagonal
+            <&> Lens.mapped %~ addDeletionDiagonal
             >>= maybe return (addUndeleteButton myId) mUndelete
     where
         myId = def ^. Sugar.drEntityId & WidgetIds.fromEntityId
@@ -94,7 +94,7 @@ expandTo width eg
     | padding <= 0 = eg
     | otherwise = eg & Widget.pad (Vector2 (padding / 2) 0)
     where
-        padding = width - eg ^. Widget.width
+        padding = width - eg ^. View.width
 
 topLevelSchemeTypeView ::
     Monad m =>
@@ -124,7 +124,7 @@ makeBuiltinDefinition def builtin =
             ]
             & sequenceA
             >>= Spacing.hboxCenteredSpaced
-        let width = assignment ^. Widget.width
+        let width = assignment ^. View.width
         typeView <-
             topLevelSchemeTypeView (builtin ^. Sugar.biType) entityId ["builtinType"]
             ?? width
@@ -197,7 +197,7 @@ makeExprDefinition def bodyExpr =
         return $ \width ->
             let bodyWidget = ExpressionGui.render width bodyGui ^. AlignedWidget.widget
             in
-            bodyWidget : mkTypeWidgets (bodyWidget ^. Widget.width)
+            bodyWidget : mkTypeWidgets (bodyWidget ^. View.width)
             & List.intersperse vspace
             & Box.vboxAlign 0
     where

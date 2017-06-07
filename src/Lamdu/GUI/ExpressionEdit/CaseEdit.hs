@@ -163,9 +163,9 @@ makeOpenCase rest animId altsGui =
         return $ TreeLayout.render #
             \layoutMode ->
             let restLayout = layoutMode & restExpr ^. TreeLayout.render
-                minWidth = restLayout ^. AlignedWidget.widget . Widget.width
+                minWidth = restLayout ^. View.width
                 alts = layoutMode & altsGui ^. TreeLayout.render
-                targetWidth = alts ^. AlignedWidget.widget . Widget.width
+                targetWidth = alts ^. View.width
             in
             alts
             & AlignedWidget.alignment . _1 .~ 0

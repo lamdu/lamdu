@@ -86,8 +86,7 @@ make WidgetIds{..} arg =
             <&> (TreeLayout.alignedWidget %~)
             ?? argGui
             <&> TreeLayout.pad (frameWidth & _2 .~ 0)
-            <&> TreeLayout.widget . Widget.view %~
-                View.addInnerFrame (Widget.toAnimId hidWrapper) frameColor frameWidth
+            <&> TreeLayout.widget %~ View.addInnerFrame (Widget.toAnimId hidWrapper) frameColor frameWidth
             <&> TreeLayout.widget . Widget.eventMap %~
                 modifyWrappedEventMap config argIsFocused arg WidgetIds{..}
             <&> TreeLayout.widget %~ Widget.weakerEvents unwrapEventMap

@@ -10,6 +10,7 @@ import           Data.Vector.Vector2 (Vector2(..))
 import qualified Graphics.DrawingCombinators as Draw
 import           Graphics.UI.Bottle.Animation (AnimId)
 import qualified Graphics.UI.Bottle.Animation as Anim
+import qualified Graphics.UI.Bottle.View as View
 import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import           Graphics.UI.Bottle.Widget.TreeLayout (TreeLayout)
@@ -68,8 +69,8 @@ infixMarker (Vector2 w h) =
 addInfixMarker :: Widget.Id -> Widget a -> Widget a
 addInfixMarker widgetId widget =
     widget
-    & Widget.bottomFrame
-    <>~ Anim.simpleFrame frameId (infixMarker (widget ^. Widget.size))
+    & View.bottomFrame
+    <>~ Anim.simpleFrame frameId (infixMarker (widget ^. View.size))
     where
         frameId = Widget.toAnimId widgetId ++ ["infix"]
 

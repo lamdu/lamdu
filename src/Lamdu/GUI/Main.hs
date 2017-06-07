@@ -14,6 +14,7 @@ import           Data.CurAndPrev (CurAndPrev(..))
 import           Data.Store.Transaction (Transaction)
 import           Data.Vector.Vector2 (Vector2(..))
 import qualified Graphics.UI.Bottle.EventMap as EventMap
+import qualified Graphics.UI.Bottle.View as View
 import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.Box as Box
@@ -77,7 +78,7 @@ make env =
                 CodeEdit.mLiftTrans lift actions $
                 \branchSelector ->
                 do
-                    let codeSize = fullSize - Vector2 0 (branchSelector ^. Widget.height)
+                    let codeSize = fullSize - Vector2 0 (branchSelector ^. View.height)
                     codeEdit <-
                         CodeEdit.make codeEditEnv ?? (codeSize ^. _1)
                         & Reader.mapReaderT VersionControl.runAction
@@ -87,7 +88,7 @@ make env =
                             Box.vbox [(0.5, topPadding), (0.5, codeEdit)]
                             & Widget.padToSizeAlign codeSize 0
                             & Scroll.focusAreaIntoWindow fullSize
-                            & Widget.size .~ codeSize
+                            & View.size .~ codeSize
                     Box.vbox [(0.5, scrollBox), (0.5, branchSelector)]
                         & return
             let quitEventMap =
