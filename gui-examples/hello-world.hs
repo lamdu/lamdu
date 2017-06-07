@@ -5,8 +5,9 @@ module Main where
 import           Data.MRUMemo (memoIO)
 import           Data.Vector.Vector2 (Vector2(..))
 import qualified Graphics.DrawingCombinators as Draw
+import           Graphics.UI.Bottle.EventMap (strongerEvents)
 import qualified Graphics.UI.Bottle.Main as Main
-import           Graphics.UI.Bottle.Widget (Widget, Size, EventResult, strongerEvents, respondToCursor)
+import           Graphics.UI.Bottle.Widget (Widget, Size, EventResult, respondToCursor)
 import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
 import qualified Graphics.UI.Bottle.Zoom as Zoom
 import qualified Graphics.UI.GLFW.Utils as GLFWUtils
