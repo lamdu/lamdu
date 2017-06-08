@@ -16,7 +16,6 @@ module Lamdu.GUI.ExpressionGui
     , addValFrame, addValPadding
     , addValBGWithColor
     -- Lifted widgets:
-    , makeFocusableView
     , makeNameView
     , makeNameEdit, makeNameEditWith
     , makeNameOriginEdit, styleNameOrigin
@@ -102,7 +101,7 @@ type T = Transaction
 egIsFocused :: TreeLayout a -> Bool
 -- TODO: Fix this:
 egIsFocused tl =
-    (tl ^. TreeLayout.render) params ^. AlignedWidget.widget & Widget.isFocused
+    (tl ^. TreeLayout.render) params ^. AlignedWidget.aWidget & Widget.isFocused
     where
         params =
             TreeLayout.LayoutParams
@@ -588,7 +587,6 @@ parentDelegator myId =
         config <- ExprGuiM.readConfig
         FocusDelegator.make ?? parentExprFDConfig config
             ?? FocusDelegator.FocusEntryChild ?? WidgetIds.notDelegatingId myId
-            <&> (TreeLayout.widget %~)
 
 stdWrapParentExpr ::
     Monad m =>
@@ -598,17 +596,6 @@ stdWrapParentExpr ::
 stdWrapParentExpr pl mkGui =
     parentDelegator (WidgetIds.fromExprPayload pl) <*> mkGui
     & stdWrap pl
-
-makeFocusableView ::
-    (Applicative f, Monad m) =>
-    Widget.Id ->
-    ExprGuiM m
-    ( AlignedWidget (f Widget.EventResult) ->
-      AlignedWidget (f Widget.EventResult)
-    )
-makeFocusableView myId =
-    Widget.makeFocusableView ?? myId
-    <&> (AlignedWidget.widget %~)
 
 makeLabel :: Monad m => Text -> ExprGuiM m (AlignedWidget a)
 makeLabel text = TextView.makeLabel text <&> Widget.fromView <&> AlignedWidget.fromCenteredWidget

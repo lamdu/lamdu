@@ -329,7 +329,7 @@ makeHoleResultWidget resultId holeResult =
             & postProcessSugar
             & ExprGuiM.makeSubexpression
             & applyResultLayout
-            <&> (^. AlignedWidget.widget)
+            <&> (^. AlignedWidget.aWidget)
         holeResultEntityId =
             holeResultConverted ^. Sugar.rPayload . Sugar.plEntityId
         idWithinResultWidget =
@@ -471,7 +471,7 @@ makeUnderCursorAssignment shownResultsLists hasHiddenResults holeInfo =
                 ]
               & TreeLayout.fromAlignedWidget
             ) & applyResultLayout
-            <&> (^. AlignedWidget.widget)
+            <&> (^. AlignedWidget.aWidget)
         searchTermGui <- SearchTerm.make holeInfo
         return $ TreeLayout.render # \layoutMode ->
             let w = layoutMode

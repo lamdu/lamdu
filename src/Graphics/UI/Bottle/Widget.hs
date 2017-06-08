@@ -25,6 +25,8 @@ module Graphics.UI.Bottle.Widget
     , Focus(..), fEventMap, focalArea
     , events
 
+    , HasWidget(..)
+
     , isFocused
 
     , CursorConfig(..)
@@ -106,6 +108,9 @@ data Widget a = Widget
     , _mFocus :: Maybe (Focus a)
     } deriving Functor
 
+class HasWidget w where widget :: Lens.Setter (w a) (w b) (Widget a) (Widget b)
+instance HasWidget Widget where widget = id
+
 Lens.makeLenses ''EnterResult
 Lens.makeLenses ''EventResult
 Lens.makeLenses ''Focus
@@ -134,18 +139,18 @@ eventResultFromCursor c = EventResult
     , _eAnimIdMapping = mempty
     }
 
-events :: Lens.Setter (Widget a) (Widget b) a b
+events :: HasWidget w => Lens.Setter (w a) (w b) a b
 events =
-    Lens.sets atEvents
+    widget . Lens.sets atEvents
     where
         atEvents :: (a -> b) -> Widget a -> Widget b
-        atEvents f widget =
-            widget
+        atEvents f w =
+            w
             { _mEnter =
                   (Lens.mapped . Lens.mapped . enterResultEvent %~ f) $
-                  _mEnter widget
+                  _mEnter w
             , _mFocus =
-                widget ^. mFocus & Lens._Just . fEventMap . Lens.mapped %~ f
+                w ^. mFocus & Lens._Just . fEventMap . Lens.mapped %~ f
             }
 
 fromView :: View -> Widget a
@@ -157,18 +162,20 @@ fromView v =
     }
 
 takesFocus ::
-    Functor f =>
-    (Direction -> f Id) -> Widget (f EventResult) -> Widget (f EventResult)
-takesFocus enterFunc widget =
-    widget & mEnter .~ Just enter
-    where
-        enter =
-            enterFunc
-            <&> Lens.mapped %~ eventResultFromCursor
-            <&> EnterResult (Rect 0 (widget ^. View.size))
+    (HasWidget w, Functor f) =>
+    (Direction -> f Id) -> w (f EventResult) -> w (f EventResult)
+takesFocus enterFunc =
+    widget %~
+    \w ->
+    w & mEnter .~
+    Just (
+        enterFunc
+        <&> Lens.mapped %~ eventResultFromCursor
+        <&> EnterResult (Rect 0 (w ^. View.size))
+        )
 
-doesntTakeFocus :: Widget a -> Widget a
-doesntTakeFocus = mEnter .~ Nothing
+doesntTakeFocus :: HasWidget w => w a -> w a
+doesntTakeFocus = widget . mEnter .~ Nothing
 
 animIdMappingFromPrefixMap :: Map AnimId AnimId -> Monoid.Endo AnimId
 animIdMappingFromPrefixMap = Monoid.Endo . Anim.mappingFromPrefixMap
@@ -203,8 +210,8 @@ keysEventMapMovesCursor keys doc act =
 -- remains same, but it is now translated away from 0..size
 -- Should expose higher-level combinators instead?
 translate :: Vector2 R -> Widget f -> Widget f
-translate pos widget =
-    widget
+translate pos w =
+    w
     & mEnter . Lens._Just . Lens.argument .
         Direction.coordinates . Rect.topLeft -~ pos
     & mEnter . Lens._Just . Lens.mapped .
@@ -213,26 +220,26 @@ translate pos widget =
     & View.view %~ View.translate pos
 
 scale :: Vector2 R -> Widget a -> Widget a
-scale mult widget =
-    widget
+scale mult w =
+    w
     & View.view %~ View.scale mult
     & mFocus . Lens._Just . focalArea . Rect.topLeftAndSize *~ mult
     & mEnter . Lens._Just . Lens.mapped . enterResultRect . Rect.topLeftAndSize *~ mult
     & mEnter . Lens._Just . Lens.argument . Direction.coordinates . Rect.topLeftAndSize //~ mult
 
 assymetricPad :: Vector2 R -> Vector2 R -> Widget a -> Widget a
-assymetricPad leftAndTop rightAndBottom widget =
-    widget
+assymetricPad leftAndTop rightAndBottom w =
+    w
     & View.size +~ leftAndTop + rightAndBottom
     & translate leftAndTop
 
 padToSizeAlign :: Size -> Vector2 R -> Widget a -> Widget a
-padToSizeAlign newSize alignment widget =
-    widget
+padToSizeAlign newSize alignment w =
+    w
     & translate (sizeDiff * alignment)
     & View.size %~ liftA2 max newSize
     where
-        sizeDiff = max <$> 0 <*> newSize - widget ^. View.size
+        sizeDiff = max <$> 0 <*> newSize - w ^. View.size
 
 class HasCursor env where cursor :: Lens' env Id
 
@@ -242,23 +249,26 @@ subId = Lens.view cursor <&> flip Id.subId
 isSubCursor :: (MonadReader env m, HasCursor env) => m (Id -> Bool)
 isSubCursor = subId <&> \sub prefix -> sub prefix & Lens.has Lens._Just
 
-respondToCursor :: Widget a -> Widget a
-respondToCursor widget =
-    widget & mFocus .~ Just
-        Focus
-        { _focalArea = Rect 0 (widget ^. View.size)
-        , _fEventMap = mempty
-        }
+respondToCursor :: HasWidget w => w a -> w a
+respondToCursor =
+    widget %~
+    \w ->
+    w & mFocus .~
+    Just Focus
+    { _focalArea = Rect 0 (w ^. View.size)
+    , _fEventMap = mempty
+    }
 
 respondToCursorBy ::
-    (MonadReader env m, HasCursor env) =>
-    m ((Id -> Bool) -> Widget a -> Widget a)
+    (MonadReader env m, HasCursor env, HasWidget w) =>
+    m ((Id -> Bool) -> w a -> w a)
 respondToCursorBy =
     Lens.view cursor
     <&> \c f -> if f c then respondToCursor else id
 
 respondToCursorPrefix ::
-    (MonadReader env m, HasCursor env) => m (Id -> Widget a -> Widget a)
+    (MonadReader env m, HasCursor env, HasWidget w) =>
+    m (Id -> w a -> w a)
 respondToCursorPrefix =
     respondToCursorBy
     <&> \respond myIdPrefix -> respond (Lens.has Lens._Just . Id.subId myIdPrefix)
@@ -285,8 +295,8 @@ assignCursorPrefix srcFolder dest =
             Just suffix -> dest suffix
 
 makeFocusableView ::
-    (MonadReader env m, HasCursor env, Applicative f) =>
-    m (Id -> Widget (f EventResult) -> Widget (f EventResult))
+    (MonadReader env m, HasCursor env, Applicative f, HasWidget w) =>
+    m (Id -> w (f EventResult) -> w (f EventResult))
 makeFocusableView =
     respondToCursorPrefix
     <&> \respond myIdPrefix ->
@@ -301,9 +311,9 @@ newtype CursorConfig = CursorConfig
     }
 
 renderWithCursor :: CursorConfig -> Widget a -> Anim.Frame
-renderWithCursor CursorConfig{cursorColor} widget =
-    maybe mempty renderCursor (widget ^? mFocus . Lens._Just . focalArea)
-    & (`mappend` View.render widget)
+renderWithCursor CursorConfig{cursorColor} w =
+    maybe mempty renderCursor (w ^? mFocus . Lens._Just . focalArea)
+    & (`mappend` View.render w)
     where
         renderCursor area =
             Anim.backgroundColor cursorAnimId cursorColor

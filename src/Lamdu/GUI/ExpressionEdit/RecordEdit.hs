@@ -92,7 +92,7 @@ makeFieldsWidget ::
     [Sugar.RecordField (Name m) m (Sugar.Expression (Name m) m ExprGuiT.Payload)] ->
     Widget.Id -> ExprGuiM m (ExpressionGui m)
 makeFieldsWidget [] myId =
-    ExpressionGui.makeFocusableView myId
+    (Widget.makeFocusableView ?? myId)
     <*> ExpressionGui.grammarLabel "()"
     <&> TreeLayout.fromAlignedWidget
 makeFieldsWidget fields _ =

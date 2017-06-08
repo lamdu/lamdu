@@ -118,7 +118,7 @@ definitionTypeChangeBox info getVarId =
             mkTypeWidget "typeWhenUsed" (info ^. Sugar.defTypeWhenUsed)
         spacing <- ExpressionGui.stdVSpace <&> AlignedWidget.fromCenteredWidget
         sepLabel <-
-            ExpressionGui.makeFocusableView myId
+            (Widget.makeFocusableView ?? myId)
             <*> (TextView.makeLabel "Update to:" <&> AlignedWidget.fromCenteredView)
         typeCurrent <- mkTypeWidget "typeCurrent" (info ^. Sugar.defTypeCurrent)
         config <- ExprGuiM.readConfig

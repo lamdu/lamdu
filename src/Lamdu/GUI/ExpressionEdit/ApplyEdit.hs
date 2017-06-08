@@ -12,7 +12,6 @@ import           Graphics.UI.Bottle.Animation (AnimId)
 import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.View as View
-import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import           Graphics.UI.Bottle.Widget.TreeLayout (TreeLayout)
 import qualified Graphics.UI.Bottle.Widget.TreeLayout as TreeLayout
@@ -67,11 +66,11 @@ infixMarker (Vector2 w h) =
     where
         x = min w h / 4
 
-addInfixMarker :: Widget.Id -> Widget a -> Widget a
-addInfixMarker widgetId widget =
-    widget
+addInfixMarker :: View.HasView a => Widget.Id -> a -> a
+addInfixMarker widgetId v =
+    v
     & View.bottomFrame
-    <>~ Anim.simpleFrame frameId (infixMarker (widget ^. View.size))
+    <>~ Anim.simpleFrame frameId (infixMarker (v ^. View.size))
     where
         frameId = Widget.toAnimId widgetId ++ ["infix"]
 
@@ -93,7 +92,7 @@ makeInfixFuncName nearestHoles funcVar myId =
     where
         mAddMarker
             | funcVar ^. Sugar.bvNameRef . Sugar.nrName & BinderEdit.nonOperatorName =
-                TreeLayout.widget %~ addInfixMarker myId
+                View.setView %~ addInfixMarker myId
             | otherwise = id
 
 isBoxed :: Sugar.LabeledApply name binderVar a -> Bool

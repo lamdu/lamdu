@@ -61,12 +61,12 @@ modifyEntry myId fullChildRect = f
             }
 
 make ::
-    (MonadReader env m, Widget.HasCursor env, Applicative f) =>
+    (MonadReader env m, Widget.HasCursor env, Applicative f, Widget.HasWidget w) =>
     m (Config -> FocusEntryTarget -> Widget.Id ->
-       Widget (f Widget.EventResult) -> Widget (f Widget.EventResult))
+       w (f Widget.EventResult) -> w (f Widget.EventResult))
 make =
     Lens.view Widget.cursor <&>
-    \cursor config focusEntryTarget myId childWidget ->
+    \cursor config focusEntryTarget myId -> Widget.widget %~ \childWidget ->
     case () of
     ()
         | selfIsFocused ->

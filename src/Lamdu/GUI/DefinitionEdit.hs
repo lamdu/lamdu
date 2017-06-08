@@ -194,7 +194,7 @@ makeExprDefinition def bodyExpr =
                 ]
             & sequence <&> sequence
         return $ \width ->
-            let bodyWidget = ExpressionGui.render width bodyGui ^. AlignedWidget.widget
+            let bodyWidget = ExpressionGui.render width bodyGui ^. AlignedWidget.aWidget
             in
             bodyWidget : mkTypeWidgets (bodyWidget ^. View.width)
             & List.intersperse vspace

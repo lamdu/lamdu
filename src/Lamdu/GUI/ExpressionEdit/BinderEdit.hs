@@ -215,7 +215,7 @@ makeScopeNavEdit binder myId curCursor =
         settings <- ExprGuiM.readSettings
         case settings ^. CESettings.sInfoMode of
             CESettings.Evaluation ->
-                (Widget.makeFocusableView ?? myId <&> (AlignedWidget.widget %~))
+                (Widget.makeFocusableView ?? myId)
                 <*> (mapM mkArrow scopes <&> AlignedWidget.hbox 0.5)
                 <&> E.weakerEvents (mkScopeEventMap leftKeys rightKeys `mappend` blockEventMap)
                 <&> Just
@@ -302,7 +302,7 @@ makeParts funcApplyLimit binder delVarBackwardsId myId =
         let isScopeNavFocused =
                 case mScopeNavEdit of
                 Just layout
-                    | Widget.isFocused (layout ^. AlignedWidget.widget) -> ScopeNavIsFocused
+                    | Widget.isFocused (layout ^. AlignedWidget.aWidget) -> ScopeNavIsFocused
                 _ -> ScopeNavNotFocused
         do
             mParamsEdit <-
@@ -495,7 +495,7 @@ nullParamEditInfo mActions =
     ParamEdit.Info
     { ParamEdit.iMakeNameEdit =
       \myId ->
-      ExpressionGui.makeFocusableView myId
+      (Widget.makeFocusableView ?? myId)
       <*> ExpressionGui.grammarLabel "◗"
       <&> TreeLayout.fromAlignedWidget
     , ParamEdit.iMAddNext = Nothing

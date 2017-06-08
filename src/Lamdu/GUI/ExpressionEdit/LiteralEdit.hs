@@ -98,7 +98,6 @@ textEdit prop pl =
             & Reader.local (TextEdit.style .~ style)
         FocusDelegator.make ?? fdConfig config
             ?? FocusDelegator.FocusEntryParent ?? WidgetIds.notDelegatingId myId
-            <&> (TreeLayout.widget %~)
             ?? edit
     & Widget.assignCursor myId (WidgetIds.notDelegatingId myId)
     where

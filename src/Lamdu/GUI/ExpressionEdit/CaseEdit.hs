@@ -57,11 +57,9 @@ make (Sugar.Case mArg alts caseTail addAlt _cEntityId) pl =
             & Lens._Just ExprEventMap.jumpHolesEventMap
             <&> fromMaybe mempty
         let headerLabel text =
-                ExpressionGui.makeFocusableView headerId
-                <*>
-                ( ExpressionGui.grammarLabel text
-                    <&> E.weakerEvents labelJumpHoleEventMap
-                )
+                (Widget.makeFocusableView ?? headerId)
+                <*> ExpressionGui.grammarLabel text
+                <&> E.weakerEvents labelJumpHoleEventMap
                 <&> TreeLayout.fromAlignedWidget
         (mActiveTag, header) <-
             case mArg of
@@ -116,7 +114,7 @@ makeAltRow mActiveTag (Sugar.CaseAlt delete tag altExpr) =
         altRefGui <-
             TagEdit.makeCaseTag (ExprGuiT.nextHolesBefore altExpr) tag
             <&> if mActiveTag == Just (tag ^. Sugar.tagVal)
-                then AlignedWidget.widget %~ addBg
+                then addBg
                 else id
         altExprGui <- ExprGuiM.makeSubexpression altExpr
         let itemEventMap = caseDelEventMap config delete
@@ -129,7 +127,7 @@ makeAltsWidget ::
     [Sugar.CaseAlt (Name m) m (Sugar.Expression (Name m) m ExprGuiT.Payload)] ->
     Widget.Id -> ExprGuiM m (ExpressionGui m)
 makeAltsWidget _ [] myId =
-    ExpressionGui.makeFocusableView (Widget.joinId myId ["Ø"])
+    (Widget.makeFocusableView ?? Widget.joinId myId ["Ø"])
     <*> ExpressionGui.grammarLabel "Ø"
     <&> TreeLayout.fromAlignedWidget
 makeAltsWidget mActiveTag alts _myId =

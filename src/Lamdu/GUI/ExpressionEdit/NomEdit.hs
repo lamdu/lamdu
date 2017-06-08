@@ -81,10 +81,9 @@ mkNomGui nameSidePrecLens str asList hCombine valId pl (Sugar.Nominal tid val) =
         expandingName asList hCombine needParen nomId nameShowing
             <*> (ExpressionGui.grammarLabel str
                 <&> if isSelected then id
-                    else AlignedWidget.widget %~ Widget.takesFocus (const (pure nameId))
+                    else Widget.takesFocus (const (pure nameId))
                 )
-            <*> (ExpressionGui.makeFocusableView nameId
-                 <*> mkNameGui tid nameId)
+            <*> ((Widget.makeFocusableView ?? nameId) <*> mkNameGui tid nameId)
             <*> val
     & Widget.assignCursor myId valId
     & ExpressionGui.stdWrapParentExpr pl
@@ -118,10 +117,10 @@ expandingName vertOrder (#>) needParen nomId showName =
                     , TreeLayout._layoutContext = TreeLayout.LayoutClear
                     }
                     & (nameGui #> TreeLayout.fromAlignedWidget label) ^. TreeLayout.render
-                    & AlignedWidget.widget %~ addBg
+                    & addBg
                 horiz =
                     case showName of
-                    NameCollapsed -> label & AlignedWidget.widget %~ addBg
+                    NameCollapsed -> addBg label
                     NameShowing -> nameShowing
                     NameHovering -> nameShowing `AlignedWidget.hoverInPlaceOf` label
                     #> (space #> subexprGui)

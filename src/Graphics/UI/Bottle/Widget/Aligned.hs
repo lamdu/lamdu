@@ -1,6 +1,6 @@
 {-# LANGUAGE NoImplicitPrelude, TypeFamilies, TemplateHaskell, RankNTypes, FlexibleContexts, DeriveFunctor, DeriveFoldable, DeriveTraversable #-}
 module Graphics.UI.Bottle.Widget.Aligned
-    ( AlignedWidget, alignment, widget
+    ( AlignedWidget, alignment, aWidget
     , asTuple
     , empty, fromCenteredWidget, fromCenteredView
     , scaleAround, scale
@@ -27,24 +27,25 @@ import           Lamdu.Prelude
 
 data AlignedWidget a = AlignedWidget
     { _alignment :: Alignment
-    , _widget :: Widget a
+    , _aWidget :: Widget a
     } deriving Functor
 Lens.makeLenses ''AlignedWidget
 
 instance View.MkView (AlignedWidget a) where
-    setView = widget . View.setView
+    setView = aWidget . View.setView
     pad padding (AlignedWidget (Alignment align) w) =
         AlignedWidget
         { _alignment =
             (align * (w ^. View.size) + padding) / (paddedWidget ^. View.size)
             & Alignment
-        , _widget = paddedWidget
+        , _aWidget = paddedWidget
         }
         where
             paddedWidget = View.pad padding w
 
-instance View.HasView (AlignedWidget a) where view = widget . View.view
-instance E.HasEventMap AlignedWidget where eventMap = widget . E.eventMap
+instance View.HasView (AlignedWidget a) where view = aWidget . View.view
+instance E.HasEventMap AlignedWidget where eventMap = aWidget . E.eventMap
+instance Widget.HasWidget AlignedWidget where widget = aWidget
 
 fromCenteredWidget :: Widget a -> AlignedWidget a
 fromCenteredWidget = AlignedWidget 0.5
@@ -61,11 +62,11 @@ scaleAround :: Alignment -> Vector2 Widget.R -> AlignedWidget a -> AlignedWidget
 scaleAround (Alignment point) ratio (AlignedWidget (Alignment align) w) =
     AlignedWidget
     { _alignment = point + (align - point) / ratio & Alignment
-    , _widget = Widget.scale ratio w
+    , _aWidget = Widget.scale ratio w
     }
 
 scale :: Vector2 Widget.R -> AlignedWidget a -> AlignedWidget a
-scale ratio = widget %~ Widget.scale ratio
+scale ratio = aWidget %~ Widget.scale ratio
 
 -- Resize a layout to be the same alignment/size as another layout
 hoverInPlaceOf :: AlignedWidget a -> AlignedWidget a -> AlignedWidget a
@@ -87,7 +88,7 @@ asTuple ::
 asTuple =
     Lens.iso toTup fromTup
     where
-        toTup w = (w ^. alignment, w ^. widget)
+        toTup w = (w ^. alignment, w ^. aWidget)
         fromTup (a, w) = AlignedWidget a w
 
 type AbsAlignedWidget a = (Vector2 Widget.R, Widget a)
@@ -108,9 +109,9 @@ axis Horizontal = _1
 axis Vertical = _2
 
 data BoxComponents a = BoxComponents
-    { __widgetsBefore :: [a]
+    { __aWidgetsBefore :: [a]
     , _focalWidget :: a
-    , __widgetsAfter :: [a]
+    , __aWidgetsAfter :: [a]
     } deriving (Functor, Foldable, Traversable)
 Lens.makeLenses ''BoxComponents
 
@@ -119,7 +120,7 @@ boxComponentsToWidget ::
 boxComponentsToWidget orientation boxComponents =
     AlignedWidget
     { _alignment = boxAlign ^. focalWidget
-    , _widget = boxWidget
+    , _aWidget = boxWidget
     }
     where
         (boxAlign, boxWidget) =

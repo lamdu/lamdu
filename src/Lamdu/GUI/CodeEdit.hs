@@ -141,7 +141,7 @@ makeReplEdit ::
 makeReplEdit env replExpr =
     ExpressionGui.combineSpaced
     <*> sequence
-    [ ExpressionGui.makeFocusableView (Widget.joinId WidgetIds.replId ["symbol"])
+    [ (Widget.makeFocusableView ?? Widget.joinId WidgetIds.replId ["symbol"])
       <*> ExpressionGui.makeLabel "⋙"
       <&> TreeLayout.fromAlignedWidget
     , ExprGuiM.makeSubexpressionWith 0 id replExpr
@@ -165,7 +165,7 @@ make env =
         eventMap <- panesEventMap env
         vspace <- ExpressionGui.stdVSpace
         return $ \width ->
-            ExpressionGui.render width replGui ^. AlignedWidget.widget
+            ExpressionGui.render width replGui ^. AlignedWidget.aWidget
             : (panesEdits ?? width) ++ [newDefinitionButton]
             & List.intersperse vspace
             & Box.vboxAlign 0

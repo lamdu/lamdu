@@ -30,7 +30,7 @@ module Graphics.UI.Bottle.Widget.TreeLayout
     , LayoutDisambiguationContext(..)
 
     -- * Lenses
-    , alignedWidget, widget, alignment, modeWidths
+    , alignedWidget, alignment, modeWidths
 
     -- * Leaf generation
     , fromAlignedWidget, fromCenteredWidget, fromCenteredView, empty
@@ -75,7 +75,7 @@ newtype TreeLayout a = TreeLayout
 Lens.makeLenses ''TreeLayout
 
 instance View.MkView (TreeLayout a) where
-    setView = widget . View.setView
+    setView = Widget.widget . View.setView
     -- | Adds space around a given 'TreeLayout'. Each of the 'Vector2'
     -- components is added to the size twice (once on each side). Only the
     -- width component of the 'Vector2' affects layout decisions by
@@ -85,16 +85,15 @@ instance View.MkView (TreeLayout a) where
         & render . Lens.argument . layoutMode . modeWidths -~ 2 * (p ^. _1)
         & render . Lens.mapped %~ View.pad p
 
-instance E.HasEventMap TreeLayout where eventMap = widget . E.eventMap
+instance E.HasEventMap TreeLayout where eventMap = Widget.widget . E.eventMap
+
+instance Widget.HasWidget TreeLayout where widget = alignedWidget . Widget.widget
 
 alignedWidget ::
     Lens.Setter
     (TreeLayout a) (TreeLayout b)
     (AlignedWidget a) (AlignedWidget b)
 alignedWidget = render . Lens.mapped
-
-widget :: Lens.Setter (TreeLayout a) (TreeLayout b) (Widget a) (Widget b)
-widget = alignedWidget . AlignedWidget.widget
 
 alignment :: Lens.Setter' (TreeLayout a) Alignment
 alignment = alignedWidget . AlignedWidget.alignment

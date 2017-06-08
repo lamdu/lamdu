@@ -69,7 +69,7 @@ mkShrunk paramIds myId =
                    WidgetIds.fromEntityId)
         theme <- ExprGuiM.readTheme
         lamLabel <-
-            ExpressionGui.makeFocusableView (lamId myId)
+            (Widget.makeFocusableView ?? lamId myId)
             <*> ExpressionGui.grammarLabel "λ"
             <&> TreeLayout.fromAlignedWidget
             & LightLambda.withUnderline theme

@@ -8,7 +8,6 @@ import qualified Data.Store.Transaction as Transaction
 import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.View as View
 import qualified Graphics.UI.Bottle.Widget as Widget
-import qualified Graphics.UI.Bottle.Widget.TreeLayout as TreeLayout
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Config.Theme as Theme
@@ -84,9 +83,7 @@ make WidgetIds{..} arg =
         unwrapEventMap <- makeUnwrapEventMap arg WidgetIds{..}
         (View.addInnerFrame ?? frameColor ?? frameWidth)
             <*>
-            ( ExpressionGui.makeFocusableView hidWrapper
-                <&> (TreeLayout.alignedWidget %~)
-                ?? argGui
+            ( Widget.makeFocusableView ?? hidWrapper ?? argGui
                 <&> View.pad (frameWidth & _2 .~ 0)
             )
             <&> E.eventMap %~ modifyWrappedEventMap config argIsFocused arg WidgetIds{..}
