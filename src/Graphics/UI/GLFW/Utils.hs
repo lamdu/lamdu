@@ -9,6 +9,7 @@ module Graphics.UI.GLFW.Utils
 
 import           Control.Exception (bracket_)
 import           Control.Lens.Operators
+import           Control.Lens.Tuple
 import           Control.Monad (unless)
 import           Data.Vector.Vector2 (Vector2(..))
 import qualified Graphics.UI.GLFW as GLFW
@@ -62,9 +63,11 @@ getDisplayScale window =
         monitor <- guessMonitor window
         unitsPerMM <-
             do
-                monitorMM <- GLFW.getMonitorPhysicalSize monitor <&> uncurry Vector2 <&> fmap fromIntegral
-                monitorUnits <- getVideoModeSize monitor <&> fmap fromIntegral
-                monitorUnits / monitorMM & return
+                monitorMM <- GLFW.getMonitorPhysicalSize monitor <&> uncurry Vector2
+                monitorUnits <- getVideoModeSize monitor
+                if monitorMM ^. _1 == 0 || monitorMM ^. _2 == 0
+                    then return stdPixelsPerMM
+                    else (monitorUnits <&> fromIntegral) / (monitorMM <&> fromIntegral) & return
         pixelsPerUnit <-
             do
                 windowUnits <- GLFW.getWindowSize window <&> uncurry Vector2 <&> fmap fromIntegral
