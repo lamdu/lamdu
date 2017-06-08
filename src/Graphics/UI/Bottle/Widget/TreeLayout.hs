@@ -34,13 +34,9 @@ module Graphics.UI.Bottle.Widget.TreeLayout
 
     -- * Leaf generation
     , fromAlignedWidget, fromCenteredWidget, fromCenteredView, empty
-
-    -- * Operations
-    , pad
     ) where
 
 import qualified Control.Lens as Lens
-import           Data.Vector.Vector2 (Vector2)
 import           Graphics.UI.Bottle.Alignment (Alignment)
 import qualified Graphics.UI.Bottle.EventMap as E
 import           Graphics.UI.Bottle.View (View)
@@ -77,7 +73,18 @@ newtype TreeLayout a = TreeLayout
     { _render :: LayoutParams -> AlignedWidget a
     } deriving Functor
 Lens.makeLenses ''TreeLayout
-instance View.MkView (TreeLayout a) where setView = widget . View.setView
+
+instance View.MkView (TreeLayout a) where
+    setView = widget . View.setView
+    -- | Adds space around a given 'TreeLayout'. Each of the 'Vector2'
+    -- components is added to the size twice (once on each side). Only the
+    -- width component of the 'Vector2' affects layout decisions by
+    -- shrinking the width available to the given 'TreeLayout'.
+    pad p w =
+        w
+        & render . Lens.argument . layoutMode . modeWidths -~ 2 * (p ^. _1)
+        & render . Lens.mapped %~ View.pad p
+
 instance E.HasEventMap TreeLayout where eventMap = widget . E.eventMap
 
 alignedWidget ::
@@ -109,13 +116,3 @@ fromCenteredView = fromCenteredWidget . Widget.fromView
 -- | The empty 'TreeLayout'
 empty :: TreeLayout a
 empty = fromCenteredView View.empty
-
--- | Adds space around a given 'TreeLayout'. Each of the 'Vector2'
--- components is added to the size twice (once on each side). Only the
--- width component of the 'Vector2' affects layout decisions by
--- shrinking the width available to the given 'TreeLayout'.
-pad :: Vector2 Widget.R -> TreeLayout a -> TreeLayout a
-pad p w =
-    w
-    & render . Lens.argument . layoutMode . modeWidths -~ 2 * (p ^. _1)
-    & alignedWidget %~ AlignedWidget.pad p

@@ -87,7 +87,7 @@ make WidgetIds{..} arg =
             ( ExpressionGui.makeFocusableView hidWrapper
                 <&> (TreeLayout.alignedWidget %~)
                 ?? argGui
-                <&> TreeLayout.pad (frameWidth & _2 .~ 0)
+                <&> View.pad (frameWidth & _2 .~ 0)
             )
             <&> E.eventMap %~ modifyWrappedEventMap config argIsFocused arg WidgetIds{..}
             <&> E.weakerEvents unwrapEventMap

@@ -39,7 +39,7 @@ module Graphics.UI.Bottle.Widget
 
     -- Operations:
     , translate, scale
-    , pad, assymetricPad, padToSizeAlign
+    , assymetricPad, padToSizeAlign
 
     , makeFocusableView
 
@@ -111,7 +111,10 @@ Lens.makeLenses ''EventResult
 Lens.makeLenses ''Focus
 Lens.makeLenses ''Widget
 
-instance View.MkView (Widget a) where setView = wView
+instance View.MkView (Widget a) where
+    setView = wView
+    pad p = assymetricPad p p
+
 instance View.HasView (Widget a) where view = wView
 instance EventMap.HasEventMap Widget where eventMap = eventMap
 
@@ -216,10 +219,6 @@ scale mult widget =
     & mFocus . Lens._Just . focalArea . Rect.topLeftAndSize *~ mult
     & mEnter . Lens._Just . Lens.mapped . enterResultRect . Rect.topLeftAndSize *~ mult
     & mEnter . Lens._Just . Lens.argument . Direction.coordinates . Rect.topLeftAndSize //~ mult
-
--- Surround a widget with padding
-pad :: Vector2 R -> Widget a -> Widget a
-pad p = assymetricPad p p
 
 assymetricPad :: Vector2 R -> Vector2 R -> Widget a -> Widget a
 assymetricPad leftAndTop rightAndBottom widget =

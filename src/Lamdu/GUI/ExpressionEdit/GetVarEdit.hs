@@ -9,6 +9,7 @@ import qualified Data.ByteString.Char8 as SBS8
 import           Data.Store.Transaction (Transaction)
 import qualified Graphics.UI.Bottle.EventMap as E
 import           Graphics.UI.Bottle.Font (Underline(..))
+import qualified Graphics.UI.Bottle.View as View
 import qualified Graphics.UI.Bottle.Widget as Widget
 import           Graphics.UI.Bottle.Widget.Aligned (AlignedWidget)
 import qualified Graphics.UI.Bottle.Widget.Aligned as AlignedWidget
@@ -127,7 +128,7 @@ definitionTypeChangeBox info getVarId =
                 [headerLabel, typeWhenUsed, spacing, sepLabel, typeCurrent]
                 <&> AlignedWidget.alignment .~ 0
                 & AlignedWidget.vbox 0
-                & AlignedWidget.pad padding
+                & View.pad padding
                 & AlignedWidget.alignment .~ 0
                 & Hover.addBackground animId (Theme.hoverBGColor theme)
         -- TODO: unify config's button press keys

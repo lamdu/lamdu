@@ -405,8 +405,7 @@ makeLetEdit item =
             <*> ExpressionGui.grammarLabel "let"
             <*> (make (item ^. Sugar.lName) letColor binder myId
                 <&> E.weakerEvents eventMap
-                <&> TreeLayout.pad
-                    (Theme.letItemPadding theme <&> realToFrac)
+                <&> View.pad (Theme.letItemPadding theme <&> realToFrac)
                 )
     & Reader.local (View.animIdPrefix .~ Widget.toAnimId myId)
     where

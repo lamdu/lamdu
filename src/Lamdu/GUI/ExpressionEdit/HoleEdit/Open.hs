@@ -188,7 +188,7 @@ makeShownResult holeInfo result =
                 res ^? Sugar.holeResultConverted
                 . SugarLens.holePayloads . Sugar.plEntityId
         return
-            ( widget & Widget.pad padding
+            ( View.pad padding widget
             , ShownResult
               { srMkEventMap =
                   mkEventMap <&> mappend (fixNumWithDotEventMap holeInfo res)

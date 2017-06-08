@@ -92,7 +92,7 @@ make def =
 expandTo :: Widget.R -> Widget a -> Widget a
 expandTo width eg
     | padding <= 0 = eg
-    | otherwise = eg & Widget.pad (Vector2 (padding / 2) 0)
+    | otherwise = View.pad (Vector2 (padding / 2) 0) eg
     where
         padding = width - eg ^. View.width
 

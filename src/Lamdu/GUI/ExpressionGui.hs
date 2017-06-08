@@ -366,7 +366,7 @@ processAnnotationGui animId wideAnnotationBehavior =
                     annotationWidth - shrinkAtLeast & min maxWidth & max minWidth
                     & (/ annotationWidth) & min heightShrinkRatio & pure
                 maybeTooNarrow
-                    | minWidth > annotationWidth = AlignedWidget.pad (Vector2 ((minWidth - annotationWidth) / 2) 0)
+                    | minWidth > annotationWidth = View.pad (Vector2 ((minWidth - annotationWidth) / 2) 0)
                     | otherwise = id
 
 data EvalResDisplay = EvalResDisplay
@@ -422,7 +422,7 @@ makeEvalView mNeighbours evalRes animId =
                 n ^.. Lens._Just
                 <&> makeEvaluationResultViewBG
                 <&> Lens.mapped %~
-                    AlignedWidget.pad (neighborsPadding <&> realToFrac) .
+                    View.pad (neighborsPadding <&> realToFrac) .
                     AlignedWidget.scale (neighborsScaleFactor <&> realToFrac)
                 <&> Lens.mapped . AlignedWidget.alignment . _2 .~ yPos
         (prevs, nexts) <-
@@ -628,12 +628,12 @@ addValBGWithColor ::
     (Theme -> Draw.Color) -> ExprGuiM m (a -> a)
 addValBGWithColor color = View.backgroundColor <*> (ExprGuiM.readTheme <&> color)
 
-addValPadding :: Monad m => ExprGuiM m (TreeLayout a -> TreeLayout a)
+addValPadding :: (Monad m, View.MkView a) => ExprGuiM m (a -> a)
 addValPadding =
     ExprGuiM.readTheme <&> Theme.valFramePadding <&> fmap realToFrac
-    <&> TreeLayout.pad
+    <&> View.pad
 
-addValFrame :: Monad m => ExprGuiM m (TreeLayout a -> TreeLayout a)
+addValFrame :: (Monad m, View.MkView a) => ExprGuiM m (a -> a)
 addValFrame =
     (.)
     <$> addValBG

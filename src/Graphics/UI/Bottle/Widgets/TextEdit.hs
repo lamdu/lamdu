@@ -98,7 +98,7 @@ cursorRects s str =
 makeInternal :: Style -> Text -> Text -> Widget.Id -> Widget (Text, Widget.EventResult)
 makeInternal s str displayStr myId =
     TextView.makeWidget (s ^. sTextViewStyle) displayStr animId
-    & Widget.pad (Vector2 (s ^. sCursorWidth / 2) 0)
+    & View.pad (Vector2 (s ^. sCursorWidth / 2) 0)
     & Widget.mEnter .~ Just (enterFromDirection s str myId)
     where
         animId = Widget.toAnimId myId

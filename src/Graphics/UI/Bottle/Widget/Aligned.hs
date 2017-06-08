@@ -3,7 +3,7 @@ module Graphics.UI.Bottle.Widget.Aligned
     ( AlignedWidget, alignment, widget
     , asTuple
     , empty, fromCenteredWidget, fromCenteredView
-    , scaleAround, scale, pad
+    , scaleAround, scale
     , hoverInPlaceOf
     , AbsAlignedWidget, absAlignedWidget
     , Orientation(..)
@@ -30,7 +30,19 @@ data AlignedWidget a = AlignedWidget
     , _widget :: Widget a
     } deriving Functor
 Lens.makeLenses ''AlignedWidget
-instance View.MkView (AlignedWidget a) where setView = widget . View.setView
+
+instance View.MkView (AlignedWidget a) where
+    setView = widget . View.setView
+    pad padding (AlignedWidget (Alignment align) w) =
+        AlignedWidget
+        { _alignment =
+            (align * (w ^. View.size) + padding) / (paddedWidget ^. View.size)
+            & Alignment
+        , _widget = paddedWidget
+        }
+        where
+            paddedWidget = View.pad padding w
+
 instance View.HasView (AlignedWidget a) where view = widget . View.view
 instance E.HasEventMap AlignedWidget where eventMap = widget . E.eventMap
 
@@ -54,17 +66,6 @@ scaleAround (Alignment point) ratio (AlignedWidget (Alignment align) w) =
 
 scale :: Vector2 Widget.R -> AlignedWidget a -> AlignedWidget a
 scale ratio = widget %~ Widget.scale ratio
-
-pad :: Vector2 Widget.R -> AlignedWidget a -> AlignedWidget a
-pad padding (AlignedWidget (Alignment align) w) =
-    AlignedWidget
-    { _alignment =
-        (align * (w ^. View.size) + padding) / (paddedWidget ^. View.size)
-        & Alignment
-    , _widget = paddedWidget
-    }
-    where
-        paddedWidget = Widget.pad padding w
 
 -- Resize a layout to be the same alignment/size as another layout
 hoverInPlaceOf :: AlignedWidget a -> AlignedWidget a -> AlignedWidget a
