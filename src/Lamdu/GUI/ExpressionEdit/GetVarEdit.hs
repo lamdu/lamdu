@@ -129,8 +129,7 @@ definitionTypeChangeBox info getVarId =
                 & AlignedWidget.vbox 0
                 & AlignedWidget.pad padding
                 & AlignedWidget.alignment .~ 0
-                & AlignedWidget.widget %~
-                    Hover.addBackground animId (Theme.hoverBGColor theme)
+                & Hover.addBackground animId (Theme.hoverBGColor theme)
         -- TODO: unify config's button press keys
         let keys = Config.newDefinitionButtonPressKeys (Config.pane config)
         let update = (info ^. Sugar.defTypeUseCurrent) >> return getVarId
