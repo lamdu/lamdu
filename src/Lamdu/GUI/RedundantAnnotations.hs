@@ -26,13 +26,15 @@ forceShowType :: Expression name m T.Payload -> Expression name m T.Payload
 forceShowType =
     rPayload . showAnn %~
     (T.showExpanded .~ True) .
-    (T.showInEvalMode .~ T.EvalModeShowType)
+    (T.showInEvalMode .~ T.EvalModeShowType) .
+    (T.showInTypeMode .~ True)
 
 forceShowTypeOrEval :: Expression name m T.Payload -> Expression name m T.Payload
 forceShowTypeOrEval =
     rPayload . showAnn %~
     (T.showExpanded .~ True) .
-    (T.showInEvalMode .~ T.EvalModeShowEval)
+    (T.showInEvalMode .~ T.EvalModeShowEval) .
+    (T.showInTypeMode .~ True)
 
 markAnnotationsToDisplay ::
     Expression name m T.Payload ->
