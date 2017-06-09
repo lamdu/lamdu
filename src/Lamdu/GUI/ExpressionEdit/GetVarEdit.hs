@@ -207,24 +207,24 @@ make ::
     Sugar.Payload m ExprGuiT.Payload ->
     ExprGuiM m (ExpressionGui m)
 make getVar pl =
-    do
-        theme <- ExprGuiM.readTheme
-        let Theme.Name{..} = Theme.name theme
-        case getVar of
-            Sugar.GetBinder binderVar -> makeGetBinder binderVar myId
-            Sugar.GetParam param ->
-                case param ^. Sugar.pBinderMode of
+    case getVar of
+    Sugar.GetBinder binderVar -> makeGetBinder binderVar myId
+    Sugar.GetParamsRecord paramsRecordVar -> makeParamsRecord myId paramsRecordVar
+    Sugar.GetParam param ->
+        do
+            theme <- ExprGuiM.readTheme
+            let paramColor = Theme.name theme & Theme.parameterColor
+            case param ^. Sugar.pBinderMode of
                 Sugar.LightLambda ->
                     makeSimpleView
                     <&> Lens.mapped %~ LightLambda.withUnderline theme
-                    <&> Lens.mapped %~ ExpressionGui.styleNameOrigin name parameterColor
+                    <&> Lens.mapped %~ ExpressionGui.styleNameOrigin name paramColor
                 _ ->
                     makeSimpleView
-                    <&> Lens.mapped %~ Reader.local (TextView.color .~ parameterColor)
+                    <&> Lens.mapped %~ Reader.local (TextView.color .~ paramColor)
                 & makeNameRef myId (param ^. Sugar.pNameRef)
-                where
-                    name = param ^. Sugar.pNameRef . Sugar.nrName
-            Sugar.GetParamsRecord paramsRecordVar -> makeParamsRecord myId paramsRecordVar
-            & ExpressionGui.stdWrap pl
+        where
+            name = param ^. Sugar.pNameRef . Sugar.nrName
+    & ExpressionGui.stdWrap pl
     where
         myId = WidgetIds.fromExprPayload pl
