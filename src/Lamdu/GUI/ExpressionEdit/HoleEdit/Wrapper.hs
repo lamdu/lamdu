@@ -47,13 +47,11 @@ makeUnwrapEventMap ::
     ExprGuiM m (Widget.EventMap (T f Widget.EventResult))
 makeUnwrapEventMap arg widgetIds =
     do
-        config <- ExprGuiM.readConfig
-        let unwrapKeys = Config.hole config & Config.holeUnwrapKeys
+        unwrapKeys <- ExprGuiM.readConfig <&> Config.hole <&> Config.holeUnwrapKeys
         pure $
             case arg ^? Sugar.haUnwrap . Sugar._UnwrapAction of
             Just unwrap ->
-                Widget.keysEventMapMovesCursor
-                (unwrapKeys ++ Config.delKeys config)
+                Widget.keysEventMapMovesCursor unwrapKeys
                 (E.Doc ["Edit", "Unwrap"]) $ WidgetIds.fromEntityId <$> unwrap
             Nothing ->
                 hidOpenSearchTerm widgetIds & pure
