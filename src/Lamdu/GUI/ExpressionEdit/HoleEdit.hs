@@ -100,10 +100,11 @@ makeHoleWithWrapper wrapperGui searchAreaGui pl =
                         & AlignedWidget.alignment . _1 .~ 0)
         if ExpressionGui.egIsFocused wrapperGui
             then layout addSearchAreaBelow
-            else if isSelected then
-                     layout addWrapperAbove
-                 else
-                     return unfocusedWrapperGui
+            else
+                if isSelected then
+                    layout addWrapperAbove
+                else
+                    return unfocusedWrapperGui
     where
         widgetIds = HoleWidgetIds.make (pl ^. Sugar.plEntityId)
 
