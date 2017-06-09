@@ -62,12 +62,8 @@ addSearchAreaBelow WidgetIds{..} =
     \f wrapperGui searchAreaGui ->
     ExpressionGui.vboxTopFocal [wrapperGui, f searchAreaGui]
 
-addWrapperAbove ::
-    Monad m =>
-    WidgetIds -> ExprGuiM m (ExpressionGui f -> ExpressionGui f -> ExpressionGui f)
-addWrapperAbove _ids =
-    return $
-    \wrapperGui searchAreaGui ->
+addWrapperAbove :: ExpressionGui f -> ExpressionGui f -> ExpressionGui f
+addWrapperAbove wrapperGui searchAreaGui =
     ExpressionGui.vboxTopFocal
     [ wrapperGui
     , searchAreaGui
@@ -82,23 +78,21 @@ makeHoleWithWrapper wrapperGui searchAreaGui pl =
         unfocusedWrapperGui <-
             ExpressionGui.maybeAddAnnotationPl pl ?? wrapperGui
         isSelected <- Widget.isSubCursor ?? hidHole widgetIds
-        let layout f =
-                do
-                    lay <- f widgetIds
-                    return $ TreeLayout.render #
-                        \layoutMode ->
-                        (layoutMode & lay
-                        (wrapperGui & TreeLayout.alignment . _1 .~ 0)
-                        searchAreaGui ^. TreeLayout.render)
-                        `AlignedWidget.hoverInPlaceOf`
-                        (layoutMode
-                        & unfocusedWrapperGui ^. TreeLayout.render
-                        & AlignedWidget.alignment . _1 .~ 0)
+        let layout lay =
+                TreeLayout.render #
+                \layoutMode ->
+                (layoutMode & lay
+                (wrapperGui & TreeLayout.alignment . _1 .~ 0)
+                searchAreaGui ^. TreeLayout.render)
+                `AlignedWidget.hoverInPlaceOf`
+                (layoutMode
+                & unfocusedWrapperGui ^. TreeLayout.render
+                & AlignedWidget.alignment . _1 .~ 0)
         if ExpressionGui.egIsFocused wrapperGui
-            then layout addSearchAreaBelow
+            then addSearchAreaBelow widgetIds <&> layout
             else
                 if isSelected then
-                    layout addWrapperAbove
+                    layout addWrapperAbove & return
                 else
                     return unfocusedWrapperGui
     where
