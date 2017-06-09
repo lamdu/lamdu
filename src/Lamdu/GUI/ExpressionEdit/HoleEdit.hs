@@ -48,14 +48,10 @@ makeWrapper pl holeInfo =
             E.weakerEvents exprEventMap wrapper & return
 
 assignHoleCursor ::
-    Monad m =>
-    WidgetIds -> Maybe (Sugar.HoleArg m expr) -> ExprGuiM m a -> ExprGuiM m a
-assignHoleCursor WidgetIds{..} Nothing =
+    Monad m => WidgetIds -> ExprGuiM m a -> ExprGuiM m a
+assignHoleCursor WidgetIds{..} =
     Widget.assignCursor hidHole hidOpen .
     Widget.assignCursor (WidgetIds.notDelegatingId hidHole) hidClosedSearchArea
-assignHoleCursor WidgetIds{..} (Just _) =
-    Widget.assignCursor hidHole hidWrapper .
-    Widget.assignCursor (WidgetIds.notDelegatingId hidHole) hidWrapper
 
 addSearchAreaBelow ::
     Monad m => WidgetIds ->
@@ -143,7 +139,7 @@ make hole pl =
             Just wrapperGui -> makeHoleWithWrapper wrapperGui searchAreaGui pl
             Nothing -> return searchAreaGui
             <&> E.weakerEvents deleteEventMap
-    & assignHoleCursor widgetIds (hole ^. Sugar.holeMArg)
+    & assignHoleCursor widgetIds
     & Reader.local (View.animIdPrefix .~ Widget.toAnimId (hidHole widgetIds))
     where
         widgetIds = HoleWidgetIds.make (pl ^. Sugar.plEntityId)
