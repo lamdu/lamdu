@@ -38,11 +38,8 @@ make (Sugar.Expression body pl) =
             exprHiddenEntityIds <&> WidgetIds.fromEntityId
             & foldr (`Widget.assignCursorPrefix` const myId) x
 
-injectedExpr ::
-    Monad m => Sugar.Payload m ExprGuiT.Payload -> ExprGuiM m (ExpressionGui m)
-injectedExpr pl =
-    ExpressionGui.makeLabel "★" <&> TreeLayout.fromAlignedWidget
-    & ExpressionGui.stdWrap pl
+injectedExpr :: Monad m => ExprGuiM m (ExpressionGui m)
+injectedExpr = ExpressionGui.makeLabel "★" <&> TreeLayout.fromAlignedWidget
 
 makeEditor ::
     Monad m =>
@@ -63,4 +60,4 @@ makeEditor body =
     Sugar.BodyGetVar       x -> x & GetVarEdit.make
     Sugar.BodyToNom        x -> x & NomEdit.makeToNom
     Sugar.BodyFromNom      x -> x & NomEdit.makeFromNom
-    Sugar.BodyInjectedExpression -> injectedExpr
+    Sugar.BodyInjectedExpression -> const injectedExpr
