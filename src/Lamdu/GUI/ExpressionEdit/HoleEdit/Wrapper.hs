@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, OverloadedStrings, RecordWildCards #-}
+{-# LANGUAGE NoImplicitPrelude, OverloadedStrings #-}
 -- | Wrapper hole
 module Lamdu.GUI.ExpressionEdit.HoleEdit.Wrapper
     ( make
@@ -30,11 +30,11 @@ modifyWrappedEventMap ::
     Config -> Bool -> Sugar.HoleArg m (ExpressionN m a) -> WidgetIds ->
     Widget.EventMap (f Widget.EventResult) ->
     Widget.EventMap (f Widget.EventResult)
-modifyWrappedEventMap config argIsFocused arg WidgetIds{..} eventMap
+modifyWrappedEventMap config argIsFocused arg widgetIds eventMap
     | argIsFocused =
         eventMap <>
         Widget.keysEventMapMovesCursor (Config.leaveSubexpressionKeys config)
-        (E.Doc ["Navigation", "Go to parent wrapper"]) (pure hidWrapper)
+        (E.Doc ["Navigation", "Go to parent wrapper"]) (pure (hidWrapper widgetIds))
     | otherwise =
         Widget.keysEventMapMovesCursor (Config.enterSubexpressionKeys config)
         (E.Doc ["Navigation", "Go to wrapped expr"]) .
@@ -45,30 +45,30 @@ makeUnwrapEventMap ::
     (Monad m, Monad f) =>
     Sugar.HoleArg f (ExpressionN f a) -> WidgetIds ->
     ExprGuiM m (Widget.EventMap (T f Widget.EventResult))
-makeUnwrapEventMap arg WidgetIds{..} =
+makeUnwrapEventMap arg widgetIds =
     do
         config <- ExprGuiM.readConfig
-        let Config.Hole{..} = Config.hole config
+        let unwrapKeys = Config.hole config & Config.holeUnwrapKeys
         pure $
             case arg ^? Sugar.haUnwrap . Sugar._UnwrapAction of
             Just unwrap ->
                 Widget.keysEventMapMovesCursor
-                (holeUnwrapKeys ++ Config.delKeys config)
+                (unwrapKeys ++ Config.delKeys config)
                 (E.Doc ["Edit", "Unwrap"]) $ WidgetIds.fromEntityId <$> unwrap
             Nothing ->
-                Widget.keysEventMapMovesCursor holeUnwrapKeys doc $ pure hidOpenSearchTerm
+                hidOpenSearchTerm widgetIds & pure
+                & Widget.keysEventMapMovesCursor unwrapKeys doc
                 where
-                        doc = E.Doc ["Navigation", "Hole", "Open"]
+                    doc = E.Doc ["Navigation", "Hole", "Open"]
 
 make ::
     Monad m => WidgetIds ->
     Sugar.HoleArg m (ExpressionN m ExprGuiT.Payload) ->
     ExprGuiM m (ExpressionGui m)
-make WidgetIds{..} arg =
+make widgetIds arg =
     do
         config <- ExprGuiM.readConfig
         theme <- ExprGuiM.readTheme
-        let Theme.Hole{..} = Theme.hole theme
         let frameColor =
                 theme &
                 case arg ^. Sugar.haUnwrap of
@@ -80,11 +80,11 @@ make WidgetIds{..} arg =
             & ExprGuiM.makeSubexpression
             & ExprGuiM.withVerbose
         let argIsFocused = ExpressionGui.egIsFocused argGui
-        unwrapEventMap <- makeUnwrapEventMap arg WidgetIds{..}
+        unwrapEventMap <- makeUnwrapEventMap arg widgetIds
         (View.addInnerFrame ?? frameColor ?? frameWidth)
             <*>
-            ( Widget.makeFocusableView ?? hidWrapper ?? argGui
+            ( Widget.makeFocusableView ?? hidWrapper widgetIds ?? argGui
                 <&> View.pad (frameWidth & _2 .~ 0)
             )
-            <&> E.eventMap %~ modifyWrappedEventMap config argIsFocused arg WidgetIds{..}
+            <&> E.eventMap %~ modifyWrappedEventMap config argIsFocused arg widgetIds
             <&> E.weakerEvents unwrapEventMap
