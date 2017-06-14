@@ -161,13 +161,10 @@ make width env =
         workArea <- loadWorkArea env & transaction
         replGui <- makeReplEdit env (workArea ^. Sugar.waRepl)
         panesEdits <- workArea ^. Sugar.waPanes & traverse (makePaneEdit env)
-        newDefinitionButton <-
-            makeNewDefinitionButton <&> fmap mLiftTrans
-            <&> TreeLayout.fromCenteredWidget
+        newDefinitionButton <- makeNewDefinitionButton <&> fmap mLiftTrans <&> TreeLayout.fromWidget
         eventMap <- panesEventMap env
         ExpressionGui.vboxTopFocalSpaced
-            ?? (replGui : panesEdits ++ [newDefinitionButton]
-                <&> TreeLayout.alignment . _1 .~ 0)
+            ?? (replGui : panesEdits ++ [newDefinitionButton])
             <&> E.weakerEvents eventMap
     & ExprGuiM.run ExpressionEdit.make
       (codeProps env) (config env) (theme env) (settings env) (style env)

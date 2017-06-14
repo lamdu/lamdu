@@ -1,8 +1,8 @@
 {-# LANGUAGE NoImplicitPrelude, TypeFamilies, TemplateHaskell, RankNTypes, FlexibleContexts, DeriveFunctor, DeriveFoldable, DeriveTraversable #-}
 module Graphics.UI.Bottle.Widget.Aligned
-    ( AlignedWidget, alignment, aWidget
+    ( AlignedWidget(..), alignment, aWidget
     , asTuple
-    , empty, fromCenteredWidget, fromCenteredView
+    , empty
     , scaleAround, scale
     , hoverInPlaceOf
     , AbsAlignedWidget, absAlignedWidget
@@ -16,7 +16,6 @@ import           Data.Vector.Vector2 (Vector2(..))
 import           Graphics.UI.Bottle.Alignment (Alignment(..))
 import qualified Graphics.UI.Bottle.Alignment as Alignment
 import qualified Graphics.UI.Bottle.EventMap as E
-import           Graphics.UI.Bottle.View (View)
 import qualified Graphics.UI.Bottle.View as View
 import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
@@ -47,14 +46,8 @@ instance View.HasView (AlignedWidget a) where view = aWidget . View.view
 instance E.HasEventMap AlignedWidget where eventMap = aWidget . E.eventMap
 instance Widget.HasWidget AlignedWidget where widget = aWidget
 
-fromCenteredWidget :: Widget a -> AlignedWidget a
-fromCenteredWidget = AlignedWidget 0.5
-
-fromCenteredView :: View -> AlignedWidget a
-fromCenteredView = fromCenteredWidget . Widget.fromView
-
 empty :: AlignedWidget a
-empty = fromCenteredWidget Widget.empty
+empty = AlignedWidget 0 Widget.empty
 
 -- | scale = scaleAround 0.5
 --   scaleFromTopMiddle = scaleAround (Vector2 0.5 0)

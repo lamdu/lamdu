@@ -182,7 +182,7 @@ makeSubexpressionWith minOpPrec onPrecedence expr =
     do
         maker <- Lens.view aMakeSubexpression & ExprGuiM
         maker expr & withLocalPrecedence minOpPrec onPrecedence
-    & advanceDepth (return . TreeLayout.fromCenteredView) animId
+    & advanceDepth (return . TreeLayout.fromView) animId
     where
         animId = toAnimId $ WidgetIds.fromExprPayload $ expr ^. Sugar.rPayload
 

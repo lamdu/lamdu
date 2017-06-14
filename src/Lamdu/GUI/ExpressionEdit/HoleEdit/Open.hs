@@ -25,7 +25,7 @@ import           Graphics.UI.Bottle.View (View)
 import qualified Graphics.UI.Bottle.View as View
 import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
-import           Graphics.UI.Bottle.Widget.Aligned (AlignedWidget)
+import           Graphics.UI.Bottle.Widget.Aligned (AlignedWidget(..))
 import qualified Graphics.UI.Bottle.Widget.Aligned as AlignedWidget
 import qualified Graphics.UI.Bottle.Widget.Id as WidgetId
 import qualified Graphics.UI.Bottle.Widget.TreeLayout as TreeLayout
@@ -464,10 +464,10 @@ makeUnderCursorAssignment shownResultsLists hasHiddenResults holeInfo =
               & E.strongerEvents resultsEventMap
               & addBackground (Widget.toAnimId hidResultsPrefix)
                 (Theme.hoverBGColor theme)
-              & AlignedWidget.fromCenteredWidget
+              & AlignedWidget 0
               & AlignedWidget.addAfter AlignedWidget.Vertical
                 [ vspace
-                , Widget.fromView typeView & AlignedWidget.fromCenteredWidget
+                , Widget.fromView typeView & AlignedWidget 0
                 ]
               & TreeLayout.fromAlignedWidget
             ) & applyResultLayout
@@ -478,10 +478,7 @@ makeUnderCursorAssignment shownResultsLists hasHiddenResults holeInfo =
                     & E.weakerEvents searchTermEventMap searchTermGui ^. TreeLayout.render
             in
                 w
-                & AlignedWidget.addAfter AlignedWidget.Vertical
-                    [ AlignedWidget.fromCenteredWidget hoverResultsWidget
-                        & AlignedWidget.alignment . _1 .~ 0
-                    ]
+                & AlignedWidget.addAfter AlignedWidget.Vertical [AlignedWidget 0 hoverResultsWidget]
                 & alignment .~ w ^. alignment
     where
         alignment :: Lens' (AlignedWidget f) (Vector2 Widget.R)

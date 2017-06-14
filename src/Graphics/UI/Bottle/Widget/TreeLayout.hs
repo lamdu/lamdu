@@ -33,7 +33,7 @@ module Graphics.UI.Bottle.Widget.TreeLayout
     , alignedWidget, alignment, modeWidths
 
     -- * Leaf generation
-    , fromAlignedWidget, fromCenteredWidget, fromCenteredView, empty
+    , fromAlignedWidget, fromWidget, fromView, empty
     ) where
 
 import qualified Control.Lens as Lens
@@ -43,7 +43,7 @@ import           Graphics.UI.Bottle.View (View)
 import qualified Graphics.UI.Bottle.View as View
 import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
-import           Graphics.UI.Bottle.Widget.Aligned (AlignedWidget)
+import           Graphics.UI.Bottle.Widget.Aligned (AlignedWidget(..))
 import qualified Graphics.UI.Bottle.Widget.Aligned as AlignedWidget
 
 import           Lamdu.Prelude
@@ -102,16 +102,14 @@ alignment = alignedWidget . AlignedWidget.alignment
 fromAlignedWidget :: AlignedWidget a -> TreeLayout a
 fromAlignedWidget = TreeLayout . const
 
--- | Lifts a Widget into a 'TreeLayout' with an alignment point at the
--- widget's center
-fromCenteredWidget :: Widget a -> TreeLayout a
-fromCenteredWidget = fromAlignedWidget . AlignedWidget.fromCenteredWidget
+-- | Lifts a Widget into a 'TreeLayout' with an alignment point at the top left
+fromWidget :: Widget a -> TreeLayout a
+fromWidget = fromAlignedWidget . AlignedWidget 0
 
--- | Lifts a View into a 'TreeLayout' with an alignment point at the
--- view's center
-fromCenteredView :: View -> TreeLayout a
-fromCenteredView = fromCenteredWidget . Widget.fromView
+-- | Lifts a View into a 'TreeLayout' with an alignment point at the top left
+fromView :: View -> TreeLayout a
+fromView = fromWidget . Widget.fromView
 
 -- | The empty 'TreeLayout'
 empty :: TreeLayout a
-empty = fromCenteredView View.empty
+empty = fromView View.empty

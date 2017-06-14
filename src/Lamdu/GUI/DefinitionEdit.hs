@@ -102,8 +102,7 @@ make def =
             Sugar.DefinitionBodyExpression bodyExpr ->
                 makeExprDefinition def bodyExpr
             Sugar.DefinitionBodyBuiltin builtin ->
-                makeBuiltinDefinition def builtin
-                <&> TreeLayout.fromCenteredWidget
+                makeBuiltinDefinition def builtin <&> TreeLayout.fromWidget
             <&> addDeletionDiagonal
         case defState of
             Sugar.LiveDefinition -> return defGui
@@ -111,7 +110,7 @@ make def =
                 do
                     buttonGui <-
                         myId <$ Property.set defStateProp Sugar.LiveDefinition
-                        & undeleteButton <&> TreeLayout.fromCenteredWidget
+                        & undeleteButton <&> TreeLayout.fromWidget
                     ExpressionGui.vboxTopFocal [defGui, buttonGui] & return
     & Reader.local (View.animIdPrefix .~ Widget.toAnimId myId)
     where

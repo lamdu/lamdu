@@ -11,6 +11,7 @@ import qualified Graphics.UI.Bottle.EventMap as E
 import           Graphics.UI.Bottle.View (View(..))
 import qualified Graphics.UI.Bottle.View as View
 import qualified Graphics.UI.Bottle.Widget as Widget
+import           Graphics.UI.Bottle.Widget.Aligned (AlignedWidget(..))
 import qualified Graphics.UI.Bottle.Widget.Aligned as AlignedWidget
 import qualified Graphics.UI.Bottle.Widget.TreeLayout as TreeLayout
 import           Lamdu.Calc.Type (Tag)
@@ -159,14 +160,12 @@ makeOpenCase rest animId altsGui =
                 targetWidth = alts ^. View.width
             in
             alts
-            & AlignedWidget.alignment . _1 .~ 0
             & AlignedWidget.addAfter AlignedWidget.Vertical
-            ( [ separationBar theme (max minWidth targetWidth) animId
-                & Widget.fromView & AlignedWidget.fromCenteredWidget
-              , AlignedWidget.fromCenteredWidget vspace
-              , restLayout
-              ] <&> (AlignedWidget.alignment . _1 .~ 0)
-            )
+            [ separationBar theme (max minWidth targetWidth) animId
+                & Widget.fromView & AlignedWidget 0
+            , AlignedWidget 0 vspace
+            , restLayout
+            ]
 
 caseOpenEventMap ::
     Monad m =>

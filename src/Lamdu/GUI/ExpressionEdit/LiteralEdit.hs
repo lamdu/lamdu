@@ -11,7 +11,6 @@ import qualified Graphics.UI.Bottle.EventMap as E
 import           Graphics.UI.Bottle.MetaKey (MetaKey(..), noMods)
 import qualified Graphics.UI.Bottle.View as View
 import qualified Graphics.UI.Bottle.Widget as Widget
-import qualified Graphics.UI.Bottle.Widget.Aligned as AlignedWidget
 import qualified Graphics.UI.Bottle.Widget.TreeLayout as TreeLayout
 import qualified Graphics.UI.Bottle.Widgets.Box as Box
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
@@ -57,7 +56,7 @@ genericEdit getStyle prop pl =
         TextView.makeFocusable ?? valText ?? myId
             & Reader.local (TextEdit.style .~ style)
             <&> E.weakerEvents editEventMap
-            <&> TreeLayout.fromCenteredWidget
+            <&> TreeLayout.fromWidget
     where
         myId = WidgetIds.fromExprPayload pl
         editEventMap =
@@ -91,10 +90,7 @@ textEdit prop pl =
                 [ Widget.padToSizeAlign quoteSize 0 left
                 , text
                 , Widget.padToSizeAlign quoteSize 1 right
-                ] & return
-                <&> TreeLayout.fromCenteredWidget
-                <&> TreeLayout.alignedWidget . AlignedWidget.absAlignedWidget . _1 . _2 .~
-                    0.5 * (left ^. View.height)
+                ] & TreeLayout.fromWidget & return
             & Reader.local (TextEdit.style .~ style)
         FocusDelegator.make ?? fdConfig config
             ?? FocusDelegator.FocusEntryParent ?? WidgetIds.notDelegatingId myId

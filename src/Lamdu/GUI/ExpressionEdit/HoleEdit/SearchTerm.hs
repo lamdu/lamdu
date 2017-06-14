@@ -62,8 +62,7 @@ make holeInfo =
             <&> Widget.eventMap
                 %~ EventMap.disallowCharsFromSearchTerm holeConfig holeInfo textCursor
             <&> addBackground (Widget.toAnimId hidOpenSearchTerm) holeSearchTermBGColor
-            <&> TreeLayout.fromCenteredWidget
-            <&> TreeLayout.alignment . _1 .~ 0
+            <&> TreeLayout.fromWidget
     where
-      WidgetIds{..} = hiIds holeInfo
-      searchTerm = HoleInfo.hiSearchTerm holeInfo
+        WidgetIds{..} = hiIds holeInfo
+        searchTerm = HoleInfo.hiSearchTerm holeInfo

@@ -10,6 +10,7 @@ import qualified Graphics.UI.Bottle.EventMap as E
 import           Graphics.UI.Bottle.View (View(..))
 import qualified Graphics.UI.Bottle.View as View
 import qualified Graphics.UI.Bottle.Widget as Widget
+import           Graphics.UI.Bottle.Widget.Aligned (AlignedWidget(..))
 import qualified Graphics.UI.Bottle.Widget.Aligned as AlignedWidget
 import qualified Graphics.UI.Bottle.Widget.TreeLayout as TreeLayout
 import           Lamdu.Config (Config)
@@ -124,15 +125,13 @@ makeOpenRecord fieldsGui rest animId =
                 targetWidth = fields ^. View.width
             in
             fields
-            & AlignedWidget.alignment . _1 .~ 0
             & AlignedWidget.addAfter AlignedWidget.Vertical
-            ( [ separationBar theme (max minWidth targetWidth) animId
+            [ separationBar theme (max minWidth targetWidth) animId
                 & Widget.fromView
-                & AlignedWidget.fromCenteredWidget
-              , AlignedWidget.fromCenteredWidget vspace
-              , restLayout
-              ] <&> AlignedWidget.alignment . _1 .~ 0
-            )
+                & AlignedWidget 0
+            , AlignedWidget 0 vspace
+            , restLayout
+            ]
 
 recordOpenEventMap ::
     Monad m =>

@@ -6,7 +6,7 @@ module Lamdu.GUI.ExpressionEdit.NomEdit
 import qualified Control.Lens as Lens
 import           Data.Store.Transaction (Transaction)
 import qualified Graphics.UI.Bottle.Widget as Widget
-import           Graphics.UI.Bottle.Widget.Aligned (AlignedWidget)
+import           Graphics.UI.Bottle.Widget.Aligned (AlignedWidget(..))
 import qualified Graphics.UI.Bottle.Widget.Aligned as AlignedWidget
 import qualified Graphics.UI.Bottle.Widget.TreeLayout as TreeLayout
 import qualified Lamdu.Config.Theme as Theme
@@ -106,7 +106,7 @@ expandingName ::
     )
 expandingName vertOrder (#>) needParen nomId showName =
     do
-        space <- ExpressionGui.stdHSpace <&> AlignedWidget.fromCenteredWidget
+        space <- ExpressionGui.stdHSpace <&> AlignedWidget 0
         addBg <- ExpressionGui.addValBGWithColor Theme.valNomBGColor
         horizWithFallback <- ExpressionGui.horizVertFallback mParenInfo
         return $
@@ -139,5 +139,4 @@ mkNameGui ::
     Monad m => Sugar.TIdG (Name m) -> Widget.Id -> ExprGuiM m (AlignedWidget b)
 mkNameGui tidg nameId =
     ExpressionGui.makeNameView (tidg ^. Sugar.tidgName) (Widget.toAnimId nameId)
-    <&> Widget.fromView
-    <&> AlignedWidget.fromCenteredWidget
+    <&> Widget.fromView <&> AlignedWidget 0

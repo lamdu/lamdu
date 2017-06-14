@@ -21,7 +21,7 @@ import           Graphics.UI.Bottle.MetaKey (MetaKey(..), noMods, toModKey)
 import qualified Graphics.UI.Bottle.View as View
 import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
-import           Graphics.UI.Bottle.Widget.Aligned (AlignedWidget)
+import           Graphics.UI.Bottle.Widget.Aligned (AlignedWidget(..))
 import qualified Graphics.UI.Bottle.Widget.Aligned as AlignedWidget
 import qualified Graphics.UI.Bottle.Widget.TreeLayout as TreeLayout
 import qualified Graphics.UI.Bottle.Widgets.Box as Box
@@ -69,7 +69,7 @@ makeBinderNameEdit binderActions rhsJumperEquals name color myId =
             <&> E.weakerEvents
                 (ParamEdit.eventMapAddFirstParam config
                  (binderActions ^. Sugar.baAddFirstParam))
-            <&> TreeLayout.fromCenteredWidget
+            <&> TreeLayout.fromWidget
     where
         jumpToRHSViaEquals n
             | nonOperatorName n = E.strongerEvents rhsJumperEquals
@@ -341,12 +341,9 @@ make name color binder myId =
         defNameEdit <-
             makeBinderNameEdit (binder ^. Sugar.bActions) rhsJumperEquals
             name color myId
-            <&> TreeLayout.alignment . _1 .~ 0
             <&> TreeLayout.alignedWidget %~
                 AlignedWidget.addAfter AlignedWidget.Vertical
-                (presentationEdits
-                <&> AlignedWidget.fromCenteredWidget
-                <&> AlignedWidget.alignment . _1 .~ 0)
+                (presentationEdits <&> AlignedWidget 0)
             <&> E.weakerEvents jumpHolesEventMap
         mLhsEdit <-
             case mParamsEdit of
@@ -479,8 +476,8 @@ namedParamEditInfo :: Monad m => Draw.Color -> Sugar.NamedParamInfo (Name m) m -
 namedParamEditInfo color paramInfo =
     ParamEdit.Info
     { ParamEdit.iMakeNameEdit =
-      ExpressionGui.makeNameOriginEdit (paramInfo ^. Sugar.npiName) color
-      <&> Lens.mapped %~ TreeLayout.fromCenteredWidget
+        ExpressionGui.makeNameOriginEdit (paramInfo ^. Sugar.npiName) color
+        <&> Lens.mapped %~ TreeLayout.fromWidget
     , ParamEdit.iMAddNext = paramInfo ^. Sugar.npiActions . Sugar.fpAddNext & Just
     , ParamEdit.iMOrderBefore = paramInfo ^. Sugar.npiActions . Sugar.fpMOrderBefore
     , ParamEdit.iMOrderAfter = paramInfo ^. Sugar.npiActions . Sugar.fpMOrderAfter

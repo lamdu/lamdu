@@ -11,7 +11,7 @@ import qualified Graphics.UI.Bottle.EventMap as E
 import           Graphics.UI.Bottle.Font (Underline(..))
 import qualified Graphics.UI.Bottle.View as View
 import qualified Graphics.UI.Bottle.Widget as Widget
-import           Graphics.UI.Bottle.Widget.Aligned (AlignedWidget)
+import           Graphics.UI.Bottle.Widget.Aligned (AlignedWidget(..))
 import qualified Graphics.UI.Bottle.Widget.Aligned as AlignedWidget
 import           Graphics.UI.Bottle.Widget.TreeLayout (TreeLayout)
 import qualified Graphics.UI.Bottle.Widget.TreeLayout as TreeLayout
@@ -44,7 +44,7 @@ makeSimpleView ::
 makeSimpleView name myId =
     (Widget.makeFocusableView ?? myId)
     <*> (ExpressionGui.makeNameView name (Widget.toAnimId myId) <&> Widget.fromView)
-    <&> TreeLayout.fromCenteredWidget
+    <&> TreeLayout.fromWidget
 
 makeParamsRecord ::
     Monad m => Widget.Id -> Sugar.ParamsRecordVar (Name m) ->
@@ -54,8 +54,7 @@ makeParamsRecord myId paramsRecordVar =
         theme <- ExprGuiM.readTheme
         let Theme.Name{..} = Theme.name theme
         sequence
-            [ TextView.makeLabel "Params {"
-              <&> TreeLayout.fromCenteredView
+            [ TextView.makeLabel "Params {" <&> TreeLayout.fromView
             , ExpressionGui.combineSpaced
               <*>
               ( fieldNames
@@ -66,8 +65,7 @@ makeParamsRecord myId paramsRecordVar =
                     & Reader.local (TextView.color .~ parameterColor)
                 )
               )
-            , TextView.makeLabel "}"
-              <&> TreeLayout.fromCenteredView
+            , TextView.makeLabel "}" <&> TreeLayout.fromView
             ] <&> ExpressionGui.combine
     where
         Sugar.ParamsRecordVar fieldNames = paramsRecordVar
@@ -113,23 +111,21 @@ definitionTypeChangeBox ::
     ExprGuiM m (AlignedWidget (T m Widget.EventResult))
 definitionTypeChangeBox info getVarId =
     do
-        headerLabel <- TextView.makeLabel "Type was:" <&> AlignedWidget.fromCenteredView
+        headerLabel <- TextView.makeLabel "Type was:" <&> fromView
         typeWhenUsed <-
             mkTypeWidget "typeWhenUsed" (info ^. Sugar.defTypeWhenUsed)
-        spacing <- ExpressionGui.stdVSpace <&> AlignedWidget.fromCenteredWidget
+        spacing <- ExpressionGui.stdVSpace <&> AlignedWidget 0
         sepLabel <-
             (Widget.makeFocusableView ?? myId)
-            <*> (TextView.makeLabel "Update to:" <&> AlignedWidget.fromCenteredView)
+            <*> (TextView.makeLabel "Update to:" <&> fromView)
         typeCurrent <- mkTypeWidget "typeCurrent" (info ^. Sugar.defTypeCurrent)
         config <- ExprGuiM.readConfig
         theme <- ExprGuiM.readTheme
         let padding = realToFrac <$> Theme.valFramePadding theme
         let box =
                 [headerLabel, typeWhenUsed, spacing, sepLabel, typeCurrent]
-                <&> AlignedWidget.alignment .~ 0
                 & AlignedWidget.vbox 0
                 & View.pad padding
-                & AlignedWidget.alignment .~ 0
                 & Hover.addBackground animId (Theme.hoverBGColor theme)
         -- TODO: unify config's button press keys
         let keys = Config.newDefinitionButtonPressKeys (Config.pane config)
@@ -140,9 +136,10 @@ definitionTypeChangeBox info getVarId =
                 (Widget.keysEventMapMovesCursor keys
                  (E.Doc ["Edit", "Update definition type"]) update)
     where
+        fromView = AlignedWidget 0 . Widget.fromView
         mkTypeWidget idSuffix scheme =
             TypeView.make (scheme ^. schemeType) (animId ++ [idSuffix])
-            <&> Widget.fromView <&> AlignedWidget.fromCenteredWidget
+            <&> Widget.fromView <&> AlignedWidget 0
         myId = Widget.joinId getVarId ["type change"]
         animId = Widget.toAnimId myId
 

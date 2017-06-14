@@ -11,8 +11,7 @@ import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.Bottle.EventMap as E
 import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
-import           Graphics.UI.Bottle.Widget.Aligned (AlignedWidget)
-import qualified Graphics.UI.Bottle.Widget.Aligned as AlignedWidget
+import           Graphics.UI.Bottle.Widget.Aligned (AlignedWidget(..))
 import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Config.Theme as Theme
@@ -61,7 +60,7 @@ makeTagH tagColor nearestHoles tagG =
         let Theme.Name{..} = Theme.name theme
         makeTagNameEdit jumpNextEventMap tagColor tagG
             <&> E.weakerEvents jumpHolesEventMap
-            <&> AlignedWidget.fromCenteredWidget
+            <&> AlignedWidget 0
 
 makeRecordTag ::
     Monad m => NearestHoles -> Sugar.TagG (Name m) ->
@@ -87,8 +86,7 @@ makeParamTag t =
         Theme.Name{..} <- Theme.name <$> ExprGuiM.readTheme
         ExpressionGui.makeNameView (t ^. Sugar.tagGName) animId
             & Reader.local (TextView.color .~ paramTagColor)
-            <&> Widget.fromView
-            <&> AlignedWidget.fromCenteredWidget
+            <&> Widget.fromView <&> AlignedWidget 0
     where
         animId = t ^. Sugar.tagInstance & WidgetIds.fromEntityId & Widget.toAnimId
 

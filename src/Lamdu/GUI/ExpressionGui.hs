@@ -59,7 +59,7 @@ import           Graphics.UI.Bottle.View (View)
 import qualified Graphics.UI.Bottle.View as View
 import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
-import           Graphics.UI.Bottle.Widget.Aligned (AlignedWidget)
+import           Graphics.UI.Bottle.Widget.Aligned (AlignedWidget(..))
 import qualified Graphics.UI.Bottle.Widget.Aligned as AlignedWidget
 import           Graphics.UI.Bottle.Widget.TreeLayout (TreeLayout(..))
 import qualified Graphics.UI.Bottle.Widget.TreeLayout as TreeLayout
@@ -123,11 +123,9 @@ maybeIndent (Just piInfo) =
                         (Vector2 barWidth (content ^. View.height))
                         & View.backgroundColor bgAnimId
                           (Theme.indentBarColor indentConf)
-                        & Widget.fromView
-                        & AlignedWidget.fromCenteredWidget
-                        & AlignedWidget.alignment . _2 .~ 0
+                        & Widget.fromView & AlignedWidget 0
                     , Spacer.make (Vector2 gapWidth 0)
-                        & Widget.fromView & AlignedWidget.fromCenteredWidget
+                        & Widget.fromView & AlignedWidget 0
                     ]
                 where
                     indentConf = piIndentTheme piInfo
@@ -162,7 +160,7 @@ vboxTopFocalSpaced ::
     Monad m => ExprGuiM m ([TreeLayout a] -> TreeLayout a)
 vboxTopFocalSpaced =
     stdVSpace
-    <&> TreeLayout.fromCenteredWidget
+    <&> TreeLayout.fromWidget
     <&> List.intersperse
     <&> fmap vboxTopFocal
 
@@ -205,7 +203,7 @@ parenLabel :: ParenIndentInfo -> Text -> AlignedWidget a
 parenLabel parenInfo t =
     TextView.make (piTextStyle parenInfo) t
     (piAnimId parenInfo ++ [encodeUtf8 t])
-    & Widget.fromView & AlignedWidget.fromCenteredWidget
+    & Widget.fromView & AlignedWidget 0
 
 horizVertFallback ::
     Monad m =>
@@ -244,7 +242,7 @@ combineWith ::
 combineWith mParenInfo onHGuis onVGuis guis =
     horizVertFallbackH mParenInfo wide vert
     where
-        vert = vboxTopFocal (onVGuis guis <&> TreeLayout.alignment . _1 .~ 0)
+        vert = vboxTopFocal (onVGuis guis)
         wide =
             guis ^.. Lens.traverse . TreeLayout.render
             ?? TreeLayout.LayoutParams
@@ -252,7 +250,7 @@ combineWith mParenInfo onHGuis onVGuis guis =
                 , _layoutContext = TreeLayout.LayoutHorizontal
                 }
             & onHGuis
-            & AlignedWidget.hbox 0.5
+            & AlignedWidget.hbox 0
             & TreeLayout.fromAlignedWidget
 
 combine :: [TreeLayout a] -> TreeLayout a
@@ -273,15 +271,15 @@ combineSpacedMParens ::
     Monad m => Maybe AnimId -> ExprGuiM m ([TreeLayout a] -> TreeLayout a)
 combineSpacedMParens mParensId =
     do
-        hSpace <- stdHSpace <&> AlignedWidget.fromCenteredWidget
-        vSpace <- stdVSpace <&> TreeLayout.fromCenteredWidget
+        hSpace <- stdHSpace <&> AlignedWidget 0
+        vSpace <- stdVSpace <&> TreeLayout.fromWidget
         mParenInfo <- mParensId & Lens._Just %%~ makeParenIndentInfo
         return $ combineWith mParenInfo (List.intersperse hSpace) (List.intersperse vSpace)
 
 tagItem ::
     Monad m => ExprGuiM m (AlignedWidget a -> TreeLayout a -> TreeLayout a)
 tagItem =
-    stdHSpace <&> AlignedWidget.fromCenteredWidget <&> f
+    stdHSpace <&> AlignedWidget 0 <&> f
     where
         f space tag item =
             tag ||> (space ||> (item & TreeLayout.alignment . _1 .~ 0))
@@ -385,12 +383,11 @@ makeEvaluationResultView animId res =
             Current -> id
             Prev -> View.tint (Theme.staleResultTint (Theme.eval theme))
             & return
-    <&> Widget.fromView
-    <&> AlignedWidget.fromCenteredWidget
+    <&> Widget.fromView <&> AlignedWidget 0
 
 makeTypeView :: Monad m => Type -> AnimId -> ExprGuiM m (AlignedWidget f)
 makeTypeView typ animId =
-    TypeView.make typ animId <&> AlignedWidget.fromCenteredWidget . Widget.fromView
+    TypeView.make typ animId <&> Widget.fromView <&> AlignedWidget 0
 
 data NeighborVals a = NeighborVals
     { prevNeighbor :: a
@@ -431,7 +428,9 @@ makeEvalView mNeighbours evalRes animId =
                 (,)
                 <$> sequence (neighbourViews mPrev 1)
                 <*> sequence (neighbourViews mNext 0)
-        evalView <- makeEvaluationResultView (mkAnimId evalRes) evalRes
+        evalView <-
+            makeEvaluationResultView (mkAnimId evalRes) evalRes
+            <&> AlignedWidget.alignment . _2 .~ 0.5
         evalView
             & AlignedWidget.addBefore AlignedWidget.Horizontal prevs
             & AlignedWidget.addAfter AlignedWidget.Horizontal nexts
@@ -441,7 +440,7 @@ makeEvalView mNeighbours evalRes animId =
 annotationSpacer :: Monad m => ExprGuiM m (AlignedWidget a)
 annotationSpacer =
     ExprGuiM.vspacer (Theme.valAnnotationSpacing . Theme.valAnnotation)
-    <&> AlignedWidget.fromCenteredWidget
+    <&> AlignedWidget 0
 
 addAnnotationH ::
     Monad m =>
@@ -598,7 +597,7 @@ stdWrapParentExpr pl mkGui =
     & stdWrap pl
 
 makeLabel :: Monad m => Text -> ExprGuiM m (AlignedWidget a)
-makeLabel text = TextView.makeLabel text <&> Widget.fromView <&> AlignedWidget.fromCenteredWidget
+makeLabel text = TextView.makeLabel text <&> Widget.fromView <&> AlignedWidget 0
 
 grammarLabel :: Monad m => Text -> ExprGuiM m (AlignedWidget f)
 grammarLabel text =
