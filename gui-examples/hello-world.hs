@@ -7,7 +7,7 @@ import           Data.Vector.Vector2 (Vector2(..))
 import qualified Graphics.DrawingCombinators as Draw
 import           Graphics.UI.Bottle.EventMap (strongerEvents)
 import qualified Graphics.UI.Bottle.Main as Main
-import           Graphics.UI.Bottle.Widget (Widget, Size, EventResult, respondToCursor)
+import           Graphics.UI.Bottle.Widget (Widget, Size, EventResult, setFocused)
 import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
 import qualified Graphics.UI.Bottle.Zoom as Zoom
 import qualified Graphics.UI.GLFW.Utils as GLFWUtils
@@ -36,5 +36,5 @@ hello getFont zoom _size =
         font <- getFont (sizeFactor * 20)
         return $
             strongerEvents Main.quitEventMap $
-            respondToCursor $
+            setFocused $
             TextView.makeWidget (TextView.whiteText font) "Hello World!" ["hello"]

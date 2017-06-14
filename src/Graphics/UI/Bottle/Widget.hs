@@ -47,7 +47,7 @@ module Graphics.UI.Bottle.Widget
 
     , respondToCursorPrefix
     , respondToCursorBy
-    , respondToCursor
+    , setFocused
 
     , assignCursor
     , assignCursorPrefix
@@ -249,8 +249,8 @@ subId = Lens.view cursor <&> flip Id.subId
 isSubCursor :: (MonadReader env m, HasCursor env) => m (Id -> Bool)
 isSubCursor = subId <&> \sub prefix -> sub prefix & Lens.has Lens._Just
 
-respondToCursor :: HasWidget w => w a -> w a
-respondToCursor =
+setFocused :: HasWidget w => w a -> w a
+setFocused =
     widget %~
     \w ->
     w & mFocus .~
@@ -264,7 +264,7 @@ respondToCursorBy ::
     m ((Id -> Bool) -> w a -> w a)
 respondToCursorBy =
     Lens.view cursor
-    <&> \c f -> if f c then respondToCursor else id
+    <&> \c f -> if f c then setFocused else id
 
 respondToCursorPrefix ::
     (MonadReader env m, HasCursor env, HasWidget w) =>
