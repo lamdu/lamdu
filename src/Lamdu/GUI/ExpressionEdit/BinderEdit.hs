@@ -27,6 +27,7 @@ import qualified Graphics.UI.Bottle.Widget.TreeLayout as TreeLayout
 import qualified Graphics.UI.Bottle.Widgets.Box as Box
 import qualified Graphics.UI.Bottle.Widgets.Choice as Choice
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
+import qualified Graphics.UI.Bottle.Widgets.GridView as GridView
 import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
 import qualified Graphics.UI.GLFW as GLFW
 import           Lamdu.CharClassification (operatorChars)
@@ -109,7 +110,7 @@ mkPresentationModeEdit myId prop = do
 
 data Parts m = Parts
     { pMParamsEdit :: Maybe (ExpressionGui m)
-    , pMScopesEdit :: Maybe (AlignedWidget (T m Widget.EventResult))
+    , pMScopesEdit :: Maybe (Widget (T m Widget.EventResult))
     , pBodyEdit :: ExpressionGui m
     , pEventMap :: Widget.EventMap (T m Widget.EventResult)
     }
@@ -195,13 +196,13 @@ makeScopeNavEdit ::
     Sugar.Binder name m expr -> Widget.Id -> ScopeCursor ->
     ExprGuiM m
     ( Widget.EventMap (T m Widget.EventResult)
-    , Maybe (AlignedWidget (T m Widget.EventResult))
+    , Maybe (Widget (T m Widget.EventResult))
     )
 makeScopeNavEdit binder myId curCursor =
     do
         theme <- ExprGuiM.readTheme
         let mkArrow (txt, mScopeId) =
-                ExpressionGui.makeLabel txt
+                TextView.makeLabel txt
                 & Reader.local
                 ( TextView.color .~
                     case mScopeId of
@@ -213,7 +214,7 @@ makeScopeNavEdit binder myId curCursor =
         case settings ^. CESettings.sInfoMode of
             CESettings.Evaluation ->
                 (Widget.makeFocusableView ?? myId)
-                <*> (mapM mkArrow scopes <&> AlignedWidget.hbox 0.5)
+                <*> (mapM mkArrow scopes <&> GridView.horizontalAlign 0.5 <&> Widget.fromView)
                 <&> E.weakerEvents (mkScopeEventMap leftKeys rightKeys `mappend` blockEventMap)
                 <&> Just
                 <&> (,) (mkScopeEventMap prevScopeKeys nextScopeKeys)
@@ -298,8 +299,7 @@ makeParts funcApplyLimit binder delVarBackwardsId myId =
             & maybe (return (mempty, Nothing)) (makeScopeNavEdit binder scopesNavId)
         let isScopeNavFocused =
                 case mScopeNavEdit of
-                Just layout
-                    | Widget.isFocused (layout ^. AlignedWidget.aWidget) -> ScopeNavIsFocused
+                Just edit | Widget.isFocused edit -> ScopeNavIsFocused
                 _ -> ScopeNavNotFocused
         do
             mParamsEdit <-
@@ -350,16 +350,16 @@ make name color binder myId =
             Nothing -> return Nothing
             Just paramsEdit ->
                 ExpressionGui.vboxTopFocalSpaced
-                ?? (paramsEdit : fmap TreeLayout.fromAlignedWidget mScopeEdit ^.. Lens._Just
+                ?? (paramsEdit : fmap TreeLayout.fromWidget mScopeEdit ^.. Lens._Just
                     <&> TreeLayout.alignment . _1 .~ 0.5)
                 <&> E.strongerEvents rhsJumperEquals
                 <&> Just
-        equals <- ExpressionGui.makeLabel "="
+        equals <- TextView.makeLabel "="
         ExpressionGui.combineSpaced
             <&>
             (\hbox ->
             hbox
-            [ hbox (defNameEdit : (mLhsEdit ^.. Lens._Just) ++ [TreeLayout.fromAlignedWidget equals])
+            [ hbox (defNameEdit : (mLhsEdit ^.. Lens._Just) ++ [TreeLayout.fromView equals])
             , bodyEdit
             ] )
             <&> E.weakerEvents eventMap

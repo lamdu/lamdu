@@ -119,7 +119,7 @@ makeAltRow mActiveTag (Sugar.CaseAlt delete tag altExpr) =
                 else id
         altExprGui <- ExprGuiM.makeSubexpression altExpr
         let itemEventMap = caseDelEventMap config delete
-        ExpressionGui.tagItem ?? altRefGui ?? altExprGui
+        ExpressionGui.tagItem ?? (AlignedWidget 0 altRefGui) ?? altExprGui
             <&> E.weakerEvents itemEventMap
 
 makeAltsWidget ::

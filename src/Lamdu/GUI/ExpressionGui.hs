@@ -11,7 +11,6 @@ module Lamdu.GUI.ExpressionGui
     , horizVertFallback
     , tagItem
     , listWithDelDests
-    , makeLabel
     , grammarLabel
     , addValFrame, addValPadding
     , addValBGWithColor
@@ -596,14 +595,12 @@ stdWrapParentExpr pl mkGui =
     parentDelegator (WidgetIds.fromExprPayload pl) <*> mkGui
     & stdWrap pl
 
-makeLabel :: Monad m => Text -> ExprGuiM m (AlignedWidget a)
-makeLabel text = TextView.makeLabel text <&> Widget.fromView <&> AlignedWidget 0
-
 grammarLabel :: Monad m => Text -> ExprGuiM m (AlignedWidget f)
 grammarLabel text =
     do
         theme <- ExprGuiM.readTheme
-        makeLabel text
+        TextView.makeLabel text
+            <&> Widget.fromView <&> AlignedWidget 0
             & Reader.local (TextView.color .~ Theme.grammarColor theme)
 
 addValBG :: (Monad m, View.MkView a) => ExprGuiM m (a -> a)

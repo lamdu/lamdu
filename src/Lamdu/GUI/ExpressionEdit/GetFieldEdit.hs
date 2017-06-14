@@ -33,7 +33,7 @@ make (Sugar.GetField recExpr tagG) pl =
         ExpressionGui.combine
             [ recExprEdit
             , TreeLayout.fromAlignedWidget dotLabel
-            , TreeLayout.fromAlignedWidget tagEdit
+            , TreeLayout.fromWidget tagEdit
             ]
             & return
     & Widget.assignCursor myId tagId

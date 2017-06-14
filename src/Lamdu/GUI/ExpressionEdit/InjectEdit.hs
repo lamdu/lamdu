@@ -26,9 +26,7 @@ makeCommon ::
     ExprGuiM m (ExpressionGui m)
 makeCommon tagSuffix tagG nearestHoles valEdits =
     do
-        tag <-
-            TagEdit.makeCaseTag nearestHoles tagG
-            <&> TreeLayout.fromAlignedWidget
+        tag <- TagEdit.makeCaseTag nearestHoles tagG <&> TreeLayout.fromWidget
         suffixLabel <-
             ExpressionGui.grammarLabel tagSuffix
             <&> TreeLayout.fromAlignedWidget

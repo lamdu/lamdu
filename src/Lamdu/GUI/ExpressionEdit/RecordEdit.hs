@@ -85,7 +85,7 @@ makeFieldRow (Sugar.RecordField delete tag fieldExpr) =
             TagEdit.makeRecordTag (ExprGuiT.nextHolesBefore fieldExpr) tag
         fieldExprGui <- ExprGuiM.makeSubexpression fieldExpr
         let itemEventMap = recordDelEventMap config delete
-        ExpressionGui.tagItem ?? fieldRefGui ?? fieldExprGui
+        ExpressionGui.tagItem ?? AlignedWidget 0 fieldRefGui ?? fieldExprGui
             <&> E.weakerEvents itemEventMap
 
 makeFieldsWidget ::

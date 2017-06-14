@@ -139,7 +139,7 @@ definitionTypeChangeBox info getVarId =
         fromView = AlignedWidget 0 . Widget.fromView
         mkTypeWidget idSuffix scheme =
             TypeView.make (scheme ^. schemeType) (animId ++ [idSuffix])
-            <&> Widget.fromView <&> AlignedWidget 0
+            <&> fromView
         myId = Widget.joinId getVarId ["type change"]
         animId = Widget.toAnimId myId
 

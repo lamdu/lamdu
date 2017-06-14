@@ -83,7 +83,9 @@ mkNomGui nameSidePrecLens str asList hCombine valId pl (Sugar.Nominal tid val) =
                 <&> if isSelected then id
                     else Widget.takesFocus (const (pure nameId))
                 )
-            <*> ((Widget.makeFocusableView ?? nameId) <*> mkNameGui tid nameId)
+            <*> ((Widget.makeFocusableView ?? nameId)
+                <*> (ExpressionGui.makeNameView (tid ^. Sugar.tidgName) (Widget.toAnimId nameId)
+                    <&> Widget.fromView <&> AlignedWidget 0))
             <*> val
     & Widget.assignCursor myId valId
     & ExpressionGui.stdWrapParentExpr pl
@@ -134,9 +136,3 @@ expandingName vertOrder (#>) needParen nomId showName =
         mParenInfo
             | needParen = Widget.toAnimId nomId & Just
             | otherwise = Nothing
-
-mkNameGui ::
-    Monad m => Sugar.TIdG (Name m) -> Widget.Id -> ExprGuiM m (AlignedWidget b)
-mkNameGui tidg nameId =
-    ExpressionGui.makeNameView (tidg ^. Sugar.tidgName) (Widget.toAnimId nameId)
-    <&> Widget.fromView <&> AlignedWidget 0

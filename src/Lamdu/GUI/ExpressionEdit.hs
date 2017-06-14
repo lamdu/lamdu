@@ -6,6 +6,7 @@ module Lamdu.GUI.ExpressionEdit
 import qualified Data.List as List
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widget.TreeLayout as TreeLayout
+import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
 import qualified Lamdu.GUI.ExpressionEdit.ApplyEdit as ApplyEdit
 import qualified Lamdu.GUI.ExpressionEdit.CaseEdit as CaseEdit
 import qualified Lamdu.GUI.ExpressionEdit.GetFieldEdit as GetFieldEdit
@@ -16,7 +17,6 @@ import qualified Lamdu.GUI.ExpressionEdit.LambdaEdit as LambdaEdit
 import qualified Lamdu.GUI.ExpressionEdit.LiteralEdit as LiteralEdit
 import qualified Lamdu.GUI.ExpressionEdit.NomEdit as NomEdit
 import qualified Lamdu.GUI.ExpressionEdit.RecordEdit as RecordEdit
-import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
 import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
@@ -39,7 +39,7 @@ make (Sugar.Expression body pl) =
             & foldr (`Widget.assignCursorPrefix` const myId) x
 
 injectedExpr :: Monad m => ExprGuiM m (ExpressionGui m)
-injectedExpr = ExpressionGui.makeLabel "★" <&> TreeLayout.fromAlignedWidget
+injectedExpr = TextView.makeLabel "★" <&> TreeLayout.fromView
 
 makeEditor ::
     Monad m =>

@@ -44,7 +44,7 @@ makeTagNameEdit jumpNextEventMap tagColor tagG =
 makeTagH ::
     Monad m =>
     Draw.Color -> NearestHoles -> Sugar.TagG (Name m) ->
-    ExprGuiM m (AlignedWidget (T m Widget.EventResult))
+    ExprGuiM m (Widget (T m Widget.EventResult))
 makeTagH tagColor nearestHoles tagG =
     do
         config <- ExprGuiM.readConfig
@@ -60,11 +60,10 @@ makeTagH tagColor nearestHoles tagG =
         let Theme.Name{..} = Theme.name theme
         makeTagNameEdit jumpNextEventMap tagColor tagG
             <&> E.weakerEvents jumpHolesEventMap
-            <&> AlignedWidget 0
 
 makeRecordTag ::
     Monad m => NearestHoles -> Sugar.TagG (Name m) ->
-    ExprGuiM m (AlignedWidget (T m Widget.EventResult))
+    ExprGuiM m (Widget (T m Widget.EventResult))
 makeRecordTag nearestHoles tagG =
     do
         Theme.Name{..} <- Theme.name <$> ExprGuiM.readTheme
@@ -72,7 +71,7 @@ makeRecordTag nearestHoles tagG =
 
 makeCaseTag ::
     Monad m => NearestHoles -> Sugar.TagG (Name m) ->
-    ExprGuiM m (AlignedWidget (T m Widget.EventResult))
+    ExprGuiM m (Widget (T m Widget.EventResult))
 makeCaseTag nearestHoles tagG =
     do
         Theme.Name{..} <- Theme.name <$> ExprGuiM.readTheme

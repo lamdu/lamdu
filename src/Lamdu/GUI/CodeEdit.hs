@@ -141,8 +141,7 @@ makeReplEdit env replExpr =
     ExpressionGui.combineSpaced
     <*> sequence
     [ (Widget.makeFocusableView ?? Widget.joinId WidgetIds.replId ["symbol"])
-      <*> ExpressionGui.makeLabel "⋙"
-      <&> TreeLayout.fromAlignedWidget
+      <*> (TextView.makeLabel "⋙" <&> TreeLayout.fromView)
     , ExprGuiM.makeSubexpressionWith 0 id replExpr
     ]
     <&> Lens.mapped %~ mLiftTrans
