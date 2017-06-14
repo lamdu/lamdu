@@ -21,9 +21,7 @@ main :: IO ()
 main =
     GLFWUtils.withGLFW $ do
         win <- GLFWUtils.createWindow "Hello World" Nothing (Vector2 800 400)
-        cachedOpenFont <-
-            memoIO $ \size ->
-            Draw.openFont (min 100 size) fontPath
+        cachedOpenFont <- memoIO (`Draw.openFont` fontPath)
         Main.defaultOptions fontPath
             >>= Main.mainLoopWidget win (hello cachedOpenFont)
 
