@@ -72,9 +72,6 @@ make =
         | selfIsFocused ->
             Widget.setFocused childWidget
             & setFocusChildEventMap config
-            -- NOTE: Intentionally not checking whether child is also
-            -- focused. That's a bug, which will usefully show up as two
-            -- cursors displaying rather than a crash.
 
         | childIsFocused ->
             E.weakerEvents focusParentEventMap childWidget
