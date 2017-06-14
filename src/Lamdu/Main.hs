@@ -136,7 +136,7 @@ exportActions config evalResults =
         Config.Export{exportPath} = Config.export config
         export x = x <&> (`MainLoop.EventResult` ()) & return & GUIMain.M
         fileExport exporter = exporter exportPath & export
-        importAll path = Export.fileImportAll path <&> fmap (MainLoop.EventResult (pure ())) & GUIMain.M
+        importAll path = Export.fileImportAll path <&> fmap pure & GUIMain.M
 
 makeRootWidget ::
     Fonts Draw.Font -> Db -> IORef Settings -> EvalManager.Evaluator ->
