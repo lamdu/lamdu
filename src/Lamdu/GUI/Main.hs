@@ -80,7 +80,7 @@ make env =
                 do
                     let codeSize = fullSize - Vector2 0 (branchSelector ^. View.height)
                     codeEdit <-
-                        CodeEdit.make codeEditEnv ?? (codeSize ^. _1)
+                        CodeEdit.make (codeSize ^. _1) codeEditEnv
                         & Reader.mapReaderT VersionControl.runAction
                         <&> Widget.events . CodeEdit.m %~ fmap (VersionControl.runEvent cursor)
                     topPadding <- Theme.topPadding theme & Spacing.vspacer

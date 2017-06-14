@@ -11,7 +11,6 @@ import qualified Control.Monad.Reader as Reader
 import           Control.Monad.Transaction (MonadTransaction(..))
 import           Data.CurAndPrev (CurAndPrev(..))
 import           Data.Functor.Identity (Identity(..))
-import qualified Data.List as List
 import           Data.Orphans () -- Imported for Monoid (IO ()) instance
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
@@ -23,7 +22,6 @@ import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widget.Aligned as AlignedWidget
 import           Graphics.UI.Bottle.Widget.TreeLayout (TreeLayout)
 import qualified Graphics.UI.Bottle.Widget.TreeLayout as TreeLayout
-import qualified Graphics.UI.Bottle.Widgets.Box as Box
 import qualified Graphics.UI.Bottle.Widgets.TextEdit as TextEdit
 import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
 import qualified Lamdu.Calc.Type.Scheme as Scheme
@@ -156,32 +154,34 @@ makeReplEdit env replExpr =
 make ::
     (Monad m, MonadTransaction m n, MonadReader env n,
      Widget.HasCursor env, TextEdit.HasStyle env, Spacing.HasStdSpacing env) =>
-    Env m -> n (Widget.R -> Widget (M m Widget.EventResult))
-make env =
+    Widget.R ->
+    Env m -> n (Widget (M m Widget.EventResult))
+make width env =
     do
         workArea <- loadWorkArea env & transaction
         replGui <- makeReplEdit env (workArea ^. Sugar.waRepl)
         panesEdits <- workArea ^. Sugar.waPanes & traverse (makePaneEdit env)
-        newDefinitionButton <- makeNewDefinitionButton <&> fmap mLiftTrans
+        newDefinitionButton <-
+            makeNewDefinitionButton <&> fmap mLiftTrans
+            <&> TreeLayout.fromCenteredWidget
         eventMap <- panesEventMap env
-        vspace <- ExpressionGui.stdVSpace
-        return $ \width ->
-            ExpressionGui.render width replGui ^. AlignedWidget.aWidget
-            : (panesEdits ?? width) ++ [newDefinitionButton]
-            & List.intersperse vspace
-            & Box.vboxAlign 0
-            & E.weakerEvents eventMap
+        ExpressionGui.vboxTopFocalSpaced
+            ?? (replGui : panesEdits ++ [newDefinitionButton]
+                <&> TreeLayout.alignment . _1 .~ 0)
+            <&> E.weakerEvents eventMap
     & ExprGuiM.run ExpressionEdit.make
       (codeProps env) (config env) (theme env) (settings env) (style env)
+    <&> ExpressionGui.render width
+    <&> (^. AlignedWidget.aWidget)
 
 makePaneEdit ::
     Monad m =>
     Env m -> Sugar.Pane (Name m) m ExprGuiT.Payload ->
-    ExprGuiM m (Widget.R -> Widget (M m Widget.EventResult))
+    ExprGuiM m (TreeLayout (M m Widget.EventResult))
 makePaneEdit env pane =
     DefinitionEdit.make (pane ^. Sugar.paneDefinition)
-    <&> Lens.mapped . Lens.mapped %~ mLiftTrans
-    <&> Lens.mapped %~ E.weakerEvents paneEventMap
+    <&> Lens.mapped %~ mLiftTrans
+    <&> E.weakerEvents paneEventMap
     where
         delKeys = Config.delKeys (config env)
         Config.Pane{paneCloseKeys} =
