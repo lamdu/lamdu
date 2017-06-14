@@ -8,10 +8,10 @@ import           Control.Monad.Transaction (transaction)
 import qualified Data.Store.Property as Property
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
-import           Data.Vector.Vector2 (Vector2(..))
 import           Graphics.UI.Bottle.Animation (AnimId)
 import qualified Graphics.UI.Bottle.EventMap as E
 import           Graphics.UI.Bottle.MetaKey (MetaKey(..), noMods)
+import           Graphics.UI.Bottle.View (View)
 import qualified Graphics.UI.Bottle.View as View
 import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
@@ -76,11 +76,8 @@ makeBuiltinDefinition def builtin =
             ]
             & sequenceA
             >>= Spacing.hboxCenteredSpaced
-        let width = assignment ^. View.width
-        typeView <-
-            topLevelSchemeTypeView (builtin ^. Sugar.biType) entityId ["builtinType"]
-            ?? width
-        Box.vboxAlign 0 [assignment, typeView] & return
+        typeView <- topLevelSchemeTypeView (builtin ^. Sugar.biType) entityId ["builtinType"]
+        Box.vboxAlign 0 [assignment, Widget.fromView typeView] & return
     where
         name = def ^. Sugar.drName
         entityId = def ^. Sugar.drEntityId
@@ -116,17 +113,8 @@ make def =
     where
         myId = def ^. Sugar.drEntityId & WidgetIds.fromEntityId
 
-expandTo :: Widget.R -> Widget a -> Widget a
-expandTo width eg
-    | padding <= 0 = eg
-    | otherwise = View.pad (Vector2 (padding / 2) 0) eg
-    where
-        padding = width - eg ^. View.width
-
 topLevelSchemeTypeView ::
-    Monad m =>
-    Scheme -> Sugar.EntityId -> AnimId ->
-    ExprGuiM m (Widget.R -> Widget a)
+    Monad m => Scheme -> Sugar.EntityId -> AnimId -> ExprGuiM m View
 topLevelSchemeTypeView scheme entityId suffix =
     -- At the definition-level, Schemes can be shown as ordinary
     -- types to avoid confusing forall's:
@@ -134,5 +122,3 @@ topLevelSchemeTypeView scheme entityId suffix =
     & (`Widget.joinId` suffix)
     & Widget.toAnimId
     & TypeView.make (scheme ^. schemeType)
-    <&> Widget.fromView
-    <&> flip expandTo
