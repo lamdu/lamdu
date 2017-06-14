@@ -6,7 +6,7 @@ packages:
   extra-dep: True
 - location:
     git: https://github.com/lamdu/Algorithm-W-Step-By-Step
-    commit: dcc86b5b66fcfcb2eda1cc115411ff9ff219493c
+    commit: cdfa2f9e2ff096789e374d6097af4bf0a8070160
   extra-dep: True
 - location:
     git: https://github.com/lamdu/graphics-drawingcombinators
