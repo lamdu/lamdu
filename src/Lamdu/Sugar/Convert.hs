@@ -156,7 +156,9 @@ convertInferDefExpr evalRes cp defType defExpr defI =
         (valInferred, newInferContext) <-
             Load.inferDef evalRes defExpr defVar <&> Load.assertInferSuccess
         nomsMap <- makeNominalsMap valInferred
-        outdatedDefinitions <- OutdatedDefs.scan defExpr setDefExpr
+        outdatedDefinitions <-
+            OutdatedDefs.scan defExpr setDefExpr
+            <&> Lens.mapped . defTypeUseCurrent %~ (<* postProcessDef defI)
         let context =
                 Context
                 { _scInferContext = newInferContext
