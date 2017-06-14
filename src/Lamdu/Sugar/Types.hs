@@ -7,11 +7,7 @@ module Lamdu.Sugar.Types
     , WorkArea(..), waPanes, waRepl
     , Definition(..), drDefinitionState, drEntityId, drName, drBody, drDefI
     , DefinitionBody(..), _DefinitionBodyExpression, _DefinitionBodyBuiltin
-    , DefinitionExpression(..), deContent, deTypeInfo
-    , AcceptNewType(..)
-    , DefinitionTypeInfo(..)
-        , _DefinitionExportedTypeInfo
-        , _DefinitionNewType
+    , DefinitionExpression(..), deContent, deType
     , Anchors.PresentationMode(..)
     , Anchors.DefinitionState(..)
     , DefinitionBuiltin(..), biType, biName, biSetName
@@ -33,18 +29,8 @@ import           Lamdu.Prelude
 
 type T = Transaction
 
-data AcceptNewType m = AcceptNewType
-    { antOldExportedType :: Scheme
-    , antNewInferredType :: Scheme
-    , antAccept :: T m ()
-    }
-
-data DefinitionTypeInfo m
-    = DefinitionExportedTypeInfo Scheme
-    | DefinitionNewType (AcceptNewType m)
-
 data DefinitionExpression name m expr = DefinitionExpression
-    { _deTypeInfo :: DefinitionTypeInfo m
+    { _deType :: Scheme
     , _deContent :: Binder name m expr
     } deriving (Functor, Foldable, Traversable)
 
@@ -85,4 +71,3 @@ Lens.makeLenses ''DefinitionExpression
 Lens.makeLenses ''Pane
 Lens.makeLenses ''WorkArea
 Lens.makePrisms ''DefinitionBody
-Lens.makePrisms ''DefinitionTypeInfo

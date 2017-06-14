@@ -85,23 +85,12 @@ holeArgs ::
     (Payload m a)
 holeArgs = subExprsOf _BodyHole
 
-defTypeInfoSchemes :: Lens.Traversal' (DefinitionTypeInfo m) Scheme
-defTypeInfoSchemes f (DefinitionExportedTypeInfo s) =
-    f s <&> DefinitionExportedTypeInfo
-defTypeInfoSchemes f (DefinitionNewType (AcceptNewType ot nt a)) =
-    DefinitionNewType <$>
-    ( AcceptNewType
-      <$> f ot
-      <*> f nt
-      ?? a
-    )
-
 defBodySchemes :: Lens.Traversal' (DefinitionBody name m expr) Scheme
 defBodySchemes f (DefinitionBodyBuiltin b) =
     b & biType %%~ f
     <&> DefinitionBodyBuiltin
 defBodySchemes f (DefinitionBodyExpression de) =
-    de & deTypeInfo . defTypeInfoSchemes %%~ f
+    de & deType %%~ f
     <&> DefinitionBodyExpression
 
 defSchemes :: Lens.Traversal' (Definition name m expr) Scheme

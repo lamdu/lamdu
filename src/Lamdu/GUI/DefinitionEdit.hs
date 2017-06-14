@@ -25,7 +25,6 @@ import qualified Graphics.UI.Bottle.Widgets.Box as Box
 import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
 import qualified Graphics.UI.GLFW as GLFW
 import           Lamdu.Calc.Type.Scheme (Scheme(..), schemeType)
-import qualified Lamdu.Config as Config
 import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.GUI.ExpressionEdit.BinderEdit as BinderEdit
 import qualified Lamdu.GUI.ExpressionEdit.BuiltinEdit as BuiltinEdit
@@ -146,25 +145,6 @@ typeIndicator color myId =
     & View.scale (Vector2 width (realToFrac (Theme.typeIndicatorFrameWidth theme ^. _2)))
     & View.tint color
 
-acceptableTypeIndicator ::
-    Monad m =>
-    T m a -> Draw.Color -> Widget.Id ->
-    ExprGuiM m (Widget.R -> Widget (T m Widget.EventResult))
-acceptableTypeIndicator accept color myId =
-    do
-        config <- ExprGuiM.readConfig
-        let acceptKeyMap =
-                Widget.keysEventMapMovesCursor (Config.acceptDefinitionTypeKeys config)
-                (E.Doc ["Edit", "Accept inferred type"]) (accept >> return myId)
-        makeFocusable <- Widget.makeFocusableView ?? typeIndicatorId myId
-        makeIndicator <- typeIndicator color myId
-        return $
-            \width ->
-            makeIndicator width
-            & Widget.fromView
-            & makeFocusable
-            & E.weakerEvents acceptKeyMap
-
 makeExprDefinition ::
     Monad m =>
     Sugar.Definition (Name m) m (ExprGuiT.SugarExpr m) ->
@@ -179,18 +159,11 @@ makeExprDefinition def bodyExpr =
             (bodyExpr ^. Sugar.deContent) myId
         vspace <- ExpressionGui.stdVSpace
         mkTypeWidgets <-
-            case bodyExpr ^. Sugar.deTypeInfo of
-            Sugar.DefinitionExportedTypeInfo scheme ->
-                [ typeIndicator (Theme.typeIndicatorMatchColor theme) myId
-                  <&> fmap Widget.fromView
-                , topLevelSchemeTypeView scheme entityId ["exportedType"]
-                ]
-            Sugar.DefinitionNewType (Sugar.AcceptNewType oldExported newInferred accept) ->
-                [ topLevelSchemeTypeView newInferred entityId ["inferredType"]
-                , acceptableTypeIndicator accept (Theme.typeIndicatorErrorColor theme) myId
-                , topLevelSchemeTypeView oldExported entityId ["exportedType"]
-                ]
-            & sequence <&> sequence
+            [ typeIndicator (Theme.typeIndicatorMatchColor theme) myId
+                <&> fmap Widget.fromView
+            , topLevelSchemeTypeView (bodyExpr ^. Sugar.deType) entityId
+                ["exportedType"]
+            ] & sequence <&> sequence
         return $ \width ->
             let bodyWidget = ExpressionGui.render width bodyGui ^. AlignedWidget.aWidget
             in

@@ -91,8 +91,6 @@ data Config = Config
     , replaceParentKeys :: [MetaKey]
     , wrapKeys :: [MetaKey]
 
-    , acceptDefinitionTypeKeys :: [MetaKey]
-
     , letAddItemKeys :: [MetaKey]
 
     , extractKeys :: [MetaKey]

@@ -3,8 +3,6 @@ module Lamdu.Sugar.Convert.DefExpr
     ( convert
     ) where
 
-import           Data.Store.Transaction (Transaction)
-import qualified Data.Store.Transaction as Transaction
 import           Data.UUID.Types (UUID)
 import           Lamdu.Calc.Type.Scheme (Scheme)
 import qualified Lamdu.Calc.Type.Scheme as Scheme
@@ -22,33 +20,6 @@ import           Lamdu.Sugar.Types
 
 import           Lamdu.Prelude
 
-acceptNewType :: Monad m => DefI m -> Scheme -> Transaction m ()
-acceptNewType defI inferredType =
-    Transaction.readIRef defI
-    <&> Definition.defType .~ inferredType
-    >>= Transaction.writeIRef defI
-
-makeExprDefTypeInfo ::
-    Monad m =>
-    Scheme -> Definition.Expr (Val (Input.Payload m a)) -> DefI m ->
-    ConvertM m (DefinitionTypeInfo m)
-makeExprDefTypeInfo defType defExpr defI =
-    do
-        sugarContext <- ConvertM.readContext
-        let inferContext = sugarContext ^. ConvertM.scInferContext
-        let inferredType =
-                defExpr ^. Definition.expr . Val.payload . Input.inferredType
-                & Infer.makeScheme inferContext
-        if Scheme.alphaEq defType inferredType
-            then DefinitionExportedTypeInfo defType & return
-            else
-                DefinitionNewType AcceptNewType
-                { antOldExportedType = defType
-                , antNewInferredType = inferredType
-                , antAccept = acceptNewType defI inferredType
-                }
-                & return
-
 convert ::
     (Monoid a, Monad m) =>
     Scheme -> Definition.Expr (Val (Input.Payload m a)) -> DefI m ->
@@ -57,8 +28,14 @@ convert defType defExpr defI =
     do
         content <-
             ConvertBinder.convertDefinitionBinder defI (defExpr ^. Definition.expr)
-        typeInfo <- makeExprDefTypeInfo defType defExpr defI
+        sugarContext <- ConvertM.readContext
+        let inferContext = sugarContext ^. ConvertM.scInferContext
+        let inferredType =
+                defExpr ^. Definition.expr . Val.payload . Input.inferredType
+                & Infer.makeScheme inferContext
+        unless (Scheme.alphaEq defType inferredType) $
+            fail "Def type mismatches its inferred type!"
         return $ DefinitionBodyExpression DefinitionExpression
             { _deContent = content
-            , _deTypeInfo = typeInfo
+            , _deType = defType
             }

@@ -60,7 +60,6 @@
     "inlineKeys"               : [ "Cmd+V", "V" ],
     "nextInfoModeKeys"         : [ "F7" ],
     "leaveSubexpressionKeys"   : [ "Shift+Left" ],
-    "acceptDefinitionTypeKeys" : [ "Space", "Enter" ],
     "recordAddFieldKeys"       : [ "A", "Cmd+Comma" ],
     "caseAddAltKeys"           : [ "A", "Cmd+Comma" ],
     "delForwardKeys"           : [ "Delete", "Alt+Delete" ],
