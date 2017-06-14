@@ -134,9 +134,9 @@ exportActions config evalResults =
     }
     where
         Config.Export{exportPath} = Config.export config
-        export x = x <&> flip (,) () & return & GUIMain.M
+        export x = x <&> (`MainLoop.EventResult` ()) & return & GUIMain.M
         fileExport exporter = exporter exportPath & export
-        importAll path = Export.fileImportAll path <&> fmap ((,) (pure ())) & GUIMain.M
+        importAll path = Export.fileImportAll path <&> fmap (MainLoop.EventResult (pure ())) & GUIMain.M
 
 makeRootWidget ::
     Fonts Draw.Font -> Db -> IORef Settings -> EvalManager.Evaluator ->
@@ -342,10 +342,10 @@ makeMainGui dbToIO env =
     GUIMain.make env
     <&> Widget.events %~ \act ->
     act ^. GUIMain.m
-    & Lens.mapped %~ (>>= _2 attachCursor)
+    & Lens.mapped %~ (>>= traverse attachCursor)
     <&> dbToIO
     & join
-    <&> uncurry MainLoop.EventResult & MainLoop.M
+    & MainLoop.M
     where
         attachCursor eventResult =
             eventResult ^. Widget.eCursor

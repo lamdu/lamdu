@@ -16,6 +16,7 @@ import           Data.Orphans () -- Imported for Monoid (IO ()) instance
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
 import qualified Graphics.UI.Bottle.EventMap as E
+import qualified Graphics.UI.Bottle.Main as Main
 import           Graphics.UI.Bottle.MetaKey (MetaKey)
 import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
@@ -59,7 +60,7 @@ import           Lamdu.Prelude
 
 type T = Transaction
 
-newtype M m a = M { _m :: IO (T m (IO (), a)) }
+newtype M m a = M { _m :: IO (T m (Main.EventResult a)) }
     deriving (Functor)
 Lens.makeLenses ''M
 

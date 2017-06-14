@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell, DeriveFunctor, NoImplicitPrelude, NamedFieldPuns, OverloadedStrings #-}
+{-# LANGUAGE TemplateHaskell, DeriveFunctor, DeriveFoldable, DeriveTraversable, NoImplicitPrelude, NamedFieldPuns, OverloadedStrings #-}
 module Graphics.UI.Bottle.Main
     ( mainLoopWidget, Config(..), EventResult(..), M(..), m
     , Options(..), defaultOptions
@@ -35,7 +35,7 @@ data Config = Config
 data EventResult a = EventResult
     { erExecuteInMainThread :: IO ()
     , erVal :: a
-    } deriving Functor
+    } deriving (Functor, Foldable, Traversable)
 
 instance Applicative EventResult where
     pure x = EventResult { erExecuteInMainThread = return (), erVal = x }
