@@ -26,6 +26,7 @@ data EditorOpts = EditorOpts
 data Command
     = DeleteDb
     | Undo Int
+    | Import FilePath
     | Editor EditorOpts
 
 data Parsed = Parsed
@@ -47,6 +48,10 @@ subcommands =
       (P.info
        (P.argument (Undo <$> P.auto) (P.metavar "COUNT"))
        (P.progDesc "Perform undos on the database"))
+    , P.command "import"
+      (P.info
+       (P.argument (Import <$> P.str) (P.metavar "IMPORTPATH"))
+       (P.progDesc "Import from a given JSON file path into the database"))
     ] & P.hsubparser
 
 maybePath :: P.Mod P.OptionFields String -> P.Parser (Maybe FilePath)

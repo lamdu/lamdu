@@ -81,6 +81,7 @@ main =
         case _pCommand of
             Opts.DeleteDb -> deleteDB lamduDir
             Opts.Undo n -> withDB (undoN n)
+            Opts.Import path -> withDB (importPath path)
             Opts.Editor opts -> withDB $ runEditor opts
     `E.catch` \e@E.SomeException{} -> do
     hPutStrLn stderr $ "Main exiting due to exception: " ++ show e
@@ -103,6 +104,12 @@ undoN n db =
             do
                 actions <- VersionControl.makeActions
                 fromMaybe (fail "Cannot undo any further") $ mUndo actions
+
+importPath :: FilePath -> Db -> IO ()
+importPath path db =
+    Export.fileImportAll path
+    <&> VersionControl.runAction
+    >>= DbLayout.runDbTransaction db
 
 createWindow :: String -> Opts.WindowMode -> IO GLFW.Window
 createWindow title mode =
