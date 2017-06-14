@@ -15,7 +15,6 @@ import           Data.List.Utils (nonEmptyAll)
 import qualified Data.Map as Map
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Text as Text
-import           Data.Text.Encoding (encodeUtf8)
 import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.Bottle.EventMap as E
 import           Graphics.UI.Bottle.MetaKey (MetaKey(..), noMods, toModKey)
@@ -96,16 +95,14 @@ mkPresentationModeEdit ::
 mkPresentationModeEdit myId prop = do
     cur <- Transaction.getP prop
     theme <- ExprGuiM.readTheme
-    let mkPair presentationMode = do
-            widget <-
-                TextView.makeFocusable ?? text ?? labelId
-                & Reader.local
-                  (TextView.style . TextView.styleColor .~ Theme.presentationChoiceColor theme)
-            return (presentationMode, widget)
+    let mkPair presentationMode =
+            TextView.makeFocusableLabel text <&> (,) presentationMode
             where
-                labelId = Widget.joinId myId [encodeUtf8 text]
                 text = show presentationMode & Text.pack
-    pairs <- traverse mkPair [Sugar.OO, Sugar.Verbose, Sugar.Infix]
+    pairs <-
+        traverse mkPair [Sugar.OO, Sugar.Verbose, Sugar.Infix]
+        & Reader.local
+            (TextView.style . TextView.styleColor .~ Theme.presentationChoiceColor theme)
     Choice.make ?? Transaction.setP prop ?? pairs ?? cur
         ?? presentationModeChoiceConfig ?? myId
         <&> Widget.scale (realToFrac <$> Theme.presentationChoiceScaleFactor theme)

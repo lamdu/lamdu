@@ -44,20 +44,18 @@ import           Lamdu.Prelude
 type T = Transaction
 
 addUndeleteButton ::
-    Monad m => Widget.Id -> T m Widget.Id ->
+    Monad m =>
+    T m Widget.Id ->
     (Widget.R -> Widget (T m Widget.EventResult)) ->
     ExprGuiM m (Widget.R -> Widget (T m Widget.EventResult))
-addUndeleteButton myId undelete mkWidget =
-    do
-        undelButton <-
-            TextView.makeFocusable ?? "Undelete..." ?? undelButtonId
-            <&> E.weakerEvents eventMap
-        return $ \width -> Box.vboxAlign 0 [mkWidget width, undelButton]
+addUndeleteButton undelete mkWidget =
+    TextView.makeFocusableLabel "Undelete..."
+    <&> E.weakerEvents eventMap
+    <&> \undelButton width -> Box.vboxAlign 0 [mkWidget width, undelButton]
     where
         eventMap =
             Widget.keysEventMapMovesCursor [MetaKey noMods GLFW.Key'Enter]
             (E.Doc ["Edit", "Undelete definition"]) undelete
-        undelButtonId = Widget.joinId myId ["Undelete"]
 
 make ::
     Monad m =>
@@ -84,7 +82,7 @@ make def =
             Sugar.DefinitionBodyBuiltin builtin ->
                 makeBuiltinDefinition def builtin <&> const
             <&> Lens.mapped %~ addDeletionDiagonal
-            >>= maybe return (addUndeleteButton myId) mUndelete
+            >>= maybe return addUndeleteButton mUndelete
     & Reader.local (View.animIdPrefix .~ Widget.toAnimId myId)
     where
         myId = def ^. Sugar.drEntityId & WidgetIds.fromEntityId

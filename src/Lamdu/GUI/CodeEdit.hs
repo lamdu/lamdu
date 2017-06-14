@@ -236,11 +236,9 @@ makeNewDefinitionButton =
         Config.Pane{newDefinitionButtonPressKeys} <- ExprGuiM.readConfig <&> Config.pane
         theme <- ExprGuiM.readTheme
 
-        TextView.makeFocusable ?? "New..." ?? newDefinitionButtonId
+        TextView.makeFocusableLabel "New..."
             & Reader.local (TextView.color .~ Theme.newDefinitionActionColor theme)
             <&> E.weakerEvents (newDefinitionEventMap newDefinitionButtonPressKeys)
-    where
-        newDefinitionButtonId = Widget.Id ["NewDefinition"]
 
 replEventMap ::
     Monad m =>

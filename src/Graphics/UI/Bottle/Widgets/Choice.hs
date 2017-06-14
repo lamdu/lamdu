@@ -5,6 +5,7 @@ module Graphics.UI.Bottle.Widgets.Choice
     ( make
     , Config(..)
     , ExpandMode(..)
+    , Box.Orientation(..)
     ) where
 
 import qualified Control.Lens as Lens
