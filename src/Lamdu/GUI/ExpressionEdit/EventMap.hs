@@ -81,14 +81,16 @@ extractCursor (Sugar.ExtractToDef defId) =
     WidgetIds.nameEditOf (WidgetIds.fromEntityId defId)
 
 extractEventMap ::
-    Functor m =>
-    Config -> Sugar.Actions m -> Widget.EventMap (T m Widget.EventResult)
-extractEventMap config actions =
+    (MonadReader env m, Config.HasConfig env, Functor f) =>
+    Sugar.Actions f -> m (Widget.EventMap (T f Widget.EventResult))
+extractEventMap actions =
+    Lens.view Config.config <&> Config.extractKeys
+    <&>
+    \k ->
     actions ^. Sugar.extract <&> extractCursor
-    & Widget.keysEventMapMovesCursor keys doc
+    & Widget.keysEventMapMovesCursor k doc
     where
         doc = E.Doc ["Edit", "Extract"]
-        keys = Config.extractKeys config
 
 replaceOrComeToParentEventMap ::
     (MonadReader env m, Config.HasConfig env, Widget.HasCursor env, Monad f) =>
@@ -115,23 +117,26 @@ actionsEventMap ::
     IsHoleResult -> Sugar.Payload f ExprGuiT.Payload -> ExprGuiM.HolePicker f ->
     ExprGuiM m (Widget.EventMap (T f Widget.EventResult))
 actionsEventMap isHoleResult pl holePicker =
-    do
+    sequence
+    [ case actions ^. Sugar.wrap of
+      Sugar.WrapAction act -> wrapEventMap (act <&> snd)
+      _ -> return mempty
+    , applyOperatorEventMap pl holePicker
+    , case isHoleResult of
+        HoleResult -> return mempty
+        NotHoleResult -> extractEventMap actions
+    , do
         config <- Lens.view Config.config
-        opEventMap <- applyOperatorEventMap pl holePicker
-        return $ mconcat
-            [ wrapEventMap config actions
-            , opEventMap
-            , case isHoleResult of
-              HoleResult -> mempty
-              NotHoleResult -> extractEventMap config actions
-            , actions ^. Sugar.mReplaceParent
-              & maybe mempty
-                ( Widget.keysEventMapMovesCursor
-                  (Config.replaceParentKeys config)
-                  (E.Doc ["Edit", "Replace parent"])
-                  . fmap WidgetIds.fromEntityId
-                )
-            ]
+        actions ^. Sugar.mReplaceParent
+            & maybe mempty
+            ( Widget.keysEventMapMovesCursor
+                (Config.replaceParentKeys config)
+                (E.Doc ["Edit", "Replace parent"])
+                . fmap WidgetIds.fromEntityId
+            )
+            & return
+    ]
+    <&> mconcat
     where
         actions = pl ^. Sugar.plActions
 
@@ -164,18 +169,15 @@ applyOperatorEventMap pl holePicker =
         doc = E.Doc ["Edit", "Apply operator"]
 
 wrapEventMap ::
-    Monad m =>
-    Config -> Sugar.Actions m -> Widget.EventMap (T m Widget.EventResult)
-wrapEventMap config actions =
-    case actions ^. Sugar.wrap of
-    Sugar.WrapAction wrap ->
-        Widget.keysEventMapMovesCursor
-        (Config.wrapKeys config)
-        (E.Doc ["Edit", "Wrap"])
-        (wrap <&> snd <&> HoleWidgetIds.make <&> HoleWidgetIds.hidOpen)
-    Sugar.WrapperAlready _ -> mempty
-    Sugar.WrappedAlready _ -> mempty
-    Sugar.WrapNotAllowed -> mempty
+    (MonadReader env m, Config.HasConfig env, Monad f) =>
+    T f Sugar.EntityId -> m (Widget.EventMap (T f Widget.EventResult))
+wrapEventMap wrap =
+    Lens.view Config.config <&> Config.wrapKeys
+    <&>
+    \k ->
+    Widget.keysEventMapMovesCursor k
+    (E.Doc ["Edit", "Wrap"])
+    (wrap <&> HoleWidgetIds.make <&> HoleWidgetIds.hidOpen)
 
 replaceEventMap ::
     Functor m =>
