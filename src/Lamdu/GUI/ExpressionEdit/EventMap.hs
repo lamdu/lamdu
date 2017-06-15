@@ -3,6 +3,7 @@ module Lamdu.GUI.ExpressionEdit.EventMap
     ( make
     , jumpHolesEventMap
     , extractCursor
+    , wrapEventMap
     ) where
 
 import qualified Control.Lens as Lens

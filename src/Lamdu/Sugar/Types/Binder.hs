@@ -8,7 +8,7 @@ module Lamdu.Sugar.Types.Binder
     -- Let
     , LetFloatResult(..)
     , LetActions(..)
-        , laSetToInner, laSetToHole, laFloat
+        , laSetToInner, laSetToHole, laFloat, laWrap
     , Let(..)
         , lEntityId, lValue, lName, lUsages
         , lActions, lAnnotation, lBodyScope, lBody
@@ -37,6 +37,7 @@ module Lamdu.Sugar.Types.Binder
 import qualified Control.Lens as Lens
 import           Data.CurAndPrev (CurAndPrev)
 import           Data.Store.Transaction (Transaction, MkProperty)
+import           Data.UUID.Types (UUID)
 import           Lamdu.Calc.Type (Type)
 import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Calc.Val as V
@@ -133,6 +134,7 @@ data LetActions m = LetActions
     { _laSetToInner :: T m ()
     , _laSetToHole :: T m EntityId
     , _laFloat :: T m LetFloatResult
+    , _laWrap :: T m (UUID, EntityId)
     }
 
 data Let name m expr = Let

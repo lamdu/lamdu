@@ -443,11 +443,14 @@ makeBinderContentEdit (Sugar.BinderExpr binderBody) =
 makeBinderContentEdit (Sugar.BinderLet l) =
     do
         config <- Lens.view Config.config
-        let delEventMap =
-                l ^. Sugar.lActions . Sugar.laSetToHole
-                <&> WidgetIds.fromEntityId
-                & Widget.keysEventMapMovesCursor (Config.delKeys config)
-                  (E.Doc ["Edit", "Delete let expression"])
+        let eventMap =
+                mconcat
+                [ l ^. Sugar.lActions . Sugar.laSetToHole
+                    <&> WidgetIds.fromEntityId
+                    & Widget.keysEventMapMovesCursor (Config.delKeys config)
+                    (E.Doc ["Edit", "Delete let expression"])
+                , ExprEventMap.wrapEventMap (l ^. Sugar.lActions . Sugar.laWrap <&> snd) config
+                ]
         let moveToInnerEventMap =
                 body
                 ^? Sugar.bbContent . Sugar._BinderLet
@@ -467,7 +470,7 @@ makeBinderContentEdit (Sugar.BinderLet l) =
                     ] <&> map (TreeLayout.alignment . _1 .~ 0)
                   )
                 )
-            <&> E.weakerEvents delEventMap
+            <&> E.weakerEvents eventMap
     where
         letEntityId = l ^. Sugar.lEntityId & WidgetIds.fromEntityId
         body = l ^. Sugar.lBody

@@ -56,8 +56,10 @@ mkLetItemActions topLevelProp redex =
                 <* postProcess
                 <&> EntityId.ofValI
             , _laFloat = float
+            , _laWrap = DataOps.wrap topLevelProp <* postProcess <&> addEntityId
             }
     where
+        addEntityId valI = (UniqueId.toUUID valI, EntityId.ofValI valI)
         V.Lam param body = redex ^. Redex.lam
 
 localNewExtractDestPos ::
