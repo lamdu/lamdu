@@ -41,7 +41,6 @@ import           Graphics.UI.Bottle.Animation.Id (AnimId)
 import qualified Graphics.UI.Bottle.EventMap as E
 import           Graphics.UI.Bottle.View (View)
 import qualified Graphics.UI.Bottle.View as View
-import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import           Graphics.UI.Bottle.Widget.Id (toAnimId)
 import qualified Graphics.UI.Bottle.Widget.TreeLayout as TreeLayout
@@ -167,7 +166,7 @@ mkPrejumpPosSaver =
     DataOps.savePreJumpPosition <$> readCodeAnchors <*> Lens.view Widget.cursor
 
 -- | Vertical spacer as ratio of line height
-vspacer :: Monad m => (Theme -> Double) -> ExprGuiM m (Widget f)
+vspacer :: Monad m => (Theme -> Double) -> ExprGuiM m View
 vspacer themeGetter = readTheme <&> themeGetter >>= Spacing.vspacer
 
 makeSubexpression ::

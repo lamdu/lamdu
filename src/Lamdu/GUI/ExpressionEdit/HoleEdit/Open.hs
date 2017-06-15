@@ -459,19 +459,14 @@ makeUnderCursorAssignment shownResultsLists hasHiddenResults holeInfo =
         hoverResultsWidget <-
             addDarkBackground (Widget.toAnimId hidResultsPrefix)
             ??
-            ( resultsWidget
-              & View.width %~ max (typeView ^. View.width)
-              & E.strongerEvents resultsEventMap
-              & addBackground (Widget.toAnimId hidResultsPrefix)
-                (Theme.hoverBGColor theme)
-              & AlignedWidget 0
-              & AlignedWidget.addAfter AlignedWidget.Vertical
-                [ vspace
-                , AlignedWidget.fromView 0 typeView
-                ]
-              & TreeLayout.fromAlignedWidget
-            ) & applyResultLayout
-            <&> (^. AlignedWidget.aWidget)
+            Box.vboxAlign 0
+            [ resultsWidget
+                & View.width %~ max (typeView ^. View.width)
+                & addBackground (Widget.toAnimId hidResultsPrefix) (Theme.hoverBGColor theme)
+            , Widget.fromView vspace
+            , Widget.fromView typeView
+            ]
+            <&> E.strongerEvents resultsEventMap
         searchTermGui <- SearchTerm.make holeInfo
         return $ TreeLayout.render # \layoutMode ->
             let w = layoutMode

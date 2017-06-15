@@ -85,11 +85,11 @@ make env =
                         <&> Widget.events . CodeEdit.m %~ fmap (VersionControl.runEvent cursor)
                     topPadding <- Theme.topPadding theme & Spacing.vspacer
                     let scrollBox =
-                            Box.vbox [(0.5, topPadding), (0.5, codeEdit)]
+                            Box.vboxAlign 0.5 [Widget.fromView topPadding, codeEdit]
                             & Widget.padToSizeAlign codeSize 0
                             & Scroll.focusAreaIntoWindow fullSize
                             & View.size .~ codeSize
-                    Box.vbox [(0.5, scrollBox), (0.5, branchSelector)]
+                    Box.vboxAlign 0.5 [scrollBox, branchSelector]
                         & return
             let quitEventMap =
                     Widget.keysEventMap (Config.quitKeys config) (EventMap.Doc ["Quit"]) (error "Quit")

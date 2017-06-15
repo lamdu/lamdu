@@ -433,10 +433,8 @@ makeEvalView mNeighbours evalRes animId =
             & (`AlignedWidget.hoverInPlaceOf` evalView)
             & return
 
-annotationSpacer :: Monad m => ExprGuiM m (AlignedWidget a)
-annotationSpacer =
-    ExprGuiM.vspacer (Theme.valAnnotationSpacing . Theme.valAnnotation)
-    <&> AlignedWidget 0
+annotationSpacer :: Monad m => ExprGuiM m View
+annotationSpacer = ExprGuiM.vspacer (Theme.valAnnotationSpacing . Theme.valAnnotation)
 
 addAnnotationH ::
     Monad m =>
@@ -454,7 +452,7 @@ addAnnotationH f wideBehavior entityId =
             let layout = lp & tl ^. TreeLayout.render
             in  layout
                 & AlignedWidget.addAfter AlignedWidget.Vertical
-                [ vspace
+                [ AlignedWidget.fromView 0 vspace
                 , processAnn (layout ^. View.width) annotationLayout
                      & AlignedWidget.alignment . _1 .~ layout ^. AlignedWidget.alignment . _1
                 ]
