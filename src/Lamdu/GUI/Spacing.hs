@@ -28,7 +28,7 @@ class TextView.HasStyle env => HasStdSpacing env where
     stdSpacing :: Lens' env (Vector2 Double)
 
 -- | Vertical spacer as ratio of line height
-vspacer :: (MonadReader env m, HasStdSpacing env) => Double -> m (Widget f)
+vspacer :: (MonadReader env m, TextView.HasStyle env) => Double -> m (Widget f)
 vspacer ratio =
     stdFont <&> Draw.fontHeight <&> (ratio *) <&> Spacer.makeVertical
     <&> Widget.fromView
