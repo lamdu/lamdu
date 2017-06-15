@@ -34,6 +34,9 @@ module Graphics.UI.Bottle.Widget.TreeLayout
 
     -- * Leaf generation
     , fromAlignedWidget, fromWidget, fromView, empty
+
+    -- * Combinators
+    , vbox
     ) where
 
 import qualified Control.Lens as Lens
@@ -113,3 +116,20 @@ fromView = fromWidget . Widget.fromView
 -- | The empty 'TreeLayout'
 empty :: TreeLayout a
 empty = fromView View.empty
+
+-- | Vertical box with the alignment point from the top widget
+vbox :: [TreeLayout a] -> TreeLayout a
+vbox [] = empty
+vbox (gui:guis) =
+    TreeLayout $
+    \layoutParams ->
+    let cp =
+            LayoutParams
+            { _layoutMode = layoutParams ^. layoutMode
+            , _layoutContext = LayoutVertical
+            }
+    in
+    cp
+    & gui ^. render
+    & AlignedWidget.addAfter AlignedWidget.Vertical
+        (guis ^.. traverse . render ?? cp)

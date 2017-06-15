@@ -7,7 +7,7 @@ module Lamdu.GUI.ExpressionGui
     , stdHSpace, stdVSpace
     , combine, combineSpaced, combineSpacedMParens
     , (||>), (<||)
-    , vboxTopFocal, vboxTopFocalSpaced
+    , vboxTopFocalSpaced
     , horizVertFallback
     , tagItem
     , listWithDelDests

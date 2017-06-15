@@ -11,6 +11,7 @@ import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.View as View
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widget.Aligned as AlignedWidget
+import           Graphics.UI.Bottle.Widget.TreeLayout (TreeLayout)
 import qualified Graphics.UI.Bottle.Widget.TreeLayout as TreeLayout
 import qualified Lamdu.Config as Config
 import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
@@ -54,20 +55,16 @@ assignHoleCursor WidgetIds{..} =
     Widget.assignCursor (WidgetIds.notDelegatingId hidHole) hidClosedSearchArea
 
 addSearchAreaBelow ::
-    Monad m => WidgetIds ->
-    ExprGuiM m (ExpressionGui f -> ExpressionGui f -> ExpressionGui f)
+    Monad m =>
+    WidgetIds -> ExprGuiM m (TreeLayout a -> TreeLayout a -> TreeLayout a)
 addSearchAreaBelow WidgetIds{..} =
     addDarkBackground (Widget.toAnimId hidOpen ++ ["searchArea", "DarkBg"])
     <&>
     \f wrapperGui searchAreaGui ->
-    ExpressionGui.vboxTopFocal [wrapperGui, f searchAreaGui]
+    TreeLayout.vbox [wrapperGui, f searchAreaGui]
 
-addWrapperAbove :: ExpressionGui f -> ExpressionGui f -> ExpressionGui f
-addWrapperAbove wrapperGui searchAreaGui =
-    ExpressionGui.vboxTopFocal
-    [ wrapperGui
-    , searchAreaGui
-    ]
+addWrapperAbove :: TreeLayout a -> TreeLayout a -> TreeLayout a
+addWrapperAbove wrapperGui searchAreaGui = TreeLayout.vbox [wrapperGui, searchAreaGui]
 
 makeHoleWithWrapper ::
     Monad m =>

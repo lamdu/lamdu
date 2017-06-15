@@ -33,7 +33,7 @@ addScopeEdit :: Maybe (Widget (T m Widget.EventResult)) -> ExpressionGui m -> Ex
 addScopeEdit mScopeEdit e =
     e : (mScopeEdit ^.. Lens._Just <&> TreeLayout.fromWidget)
     <&> TreeLayout.alignment . _1 .~ 0.5
-    & ExpressionGui.vboxTopFocal
+    & TreeLayout.vbox
 
 mkLhsEdits :: Maybe (ExpressionGui m) -> Maybe (Widget (T m Widget.EventResult)) -> [ExpressionGui m]
 mkLhsEdits mParamsEdit mScopeEdit =

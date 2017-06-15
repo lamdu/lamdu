@@ -108,7 +108,7 @@ make def =
                     buttonGui <-
                         myId <$ Property.set defStateProp Sugar.LiveDefinition
                         & undeleteButton <&> TreeLayout.fromWidget
-                    ExpressionGui.vboxTopFocal [defGui, buttonGui] & return
+                    TreeLayout.vbox [defGui, buttonGui] & return
     & Reader.local (View.animIdPrefix .~ Widget.toAnimId myId)
     where
         myId = def ^. Sugar.drEntityId & WidgetIds.fromEntityId
