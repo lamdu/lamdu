@@ -96,13 +96,14 @@ make env =
             EventMap.strongerEvents quitEventMap branchGui & return
             & (`runReaderT` env)
     where
-        Env evalResults exportActions config theme settings style fullSize cursor = env
-        codeEditEnv = CodeEdit.Env
-            { codeProps = DbLayout.codeProps
-            , evalResults
-            , config
-            , theme
-            , settings
-            , style
-            , exportActions
+        Env _evalResults _exportActions config theme _settings _style fullSize cursor = env
+        codeEditEnv =
+            CodeEdit.Env
+            { _codeProps = DbLayout.codeProps
+            , _evalResults
+            , _config = config
+            , _theme = theme
+            , _settings
+            , _style
+            , _exportActions
             }

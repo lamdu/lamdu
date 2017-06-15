@@ -1,7 +1,8 @@
 {-# LANGUAGE NoImplicitPrelude, OverloadedStrings, DeriveFunctor, TemplateHaskell, NamedFieldPuns, DisambiguateRecordFields #-}
 module Lamdu.GUI.CodeEdit
     ( make
-    , Env(..), ExportActions(..)
+    , Env(..), codeProps, exportActions, evalResults, config, theme, settings, style
+    , ExportActions(..)
     , M(..), m, mLiftTrans
     ) where
 
@@ -84,14 +85,15 @@ data ExportActions m = ExportActions
     }
 
 data Env m = Env
-    { codeProps :: Anchors.CodeProps m
-    , exportActions :: ExportActions m
-    , evalResults :: CurAndPrev (EvalResults (ValI m))
-    , config :: Config
-    , theme :: Theme
-    , settings :: Settings
-    , style :: Style
+    { _codeProps :: Anchors.CodeProps m
+    , _exportActions :: ExportActions m
+    , _evalResults :: CurAndPrev (EvalResults (ValI m))
+    , _config :: Config
+    , _theme :: Theme
+    , _settings :: Settings
+    , _style :: Style
     }
+Lens.makeLenses ''Env
 
 toExprGuiMPayload :: ([Sugar.EntityId], NearestHoles) -> ExprGuiT.Payload
 toExprGuiMPayload (entityIds, nearestHoles) =
@@ -126,7 +128,7 @@ loadWorkArea :: Monad m => Env m -> T m (Sugar.WorkArea (Name m) m ExprGuiT.Payl
 loadWorkArea env =
     do
         Sugar.WorkArea { _waPanes, _waRepl } <-
-            SugarConvert.loadWorkArea (evalResults env) (codeProps env)
+            SugarConvert.loadWorkArea (env ^. evalResults) (env ^. codeProps)
             >>= AddNames.addToWorkArea
         Sugar.WorkArea
             (_waPanes <&> Sugar.paneDefinition %~ fmap postProcessExpr . traverseAddNearestHoles)
@@ -166,7 +168,7 @@ make width env =
             ?? (replGui : panesEdits ++ [newDefinitionButton])
             <&> E.weakerEvents eventMap
     & ExprGuiM.run ExpressionEdit.make
-      (codeProps env) (config env) (theme env) (settings env) (style env)
+      (env ^. codeProps) (env ^. config) (env ^. theme) (env ^. settings) (env ^. style)
     <&> ExpressionGui.render width
     <&> (^. AlignedWidget.aWidget)
 
@@ -179,10 +181,9 @@ makePaneEdit env pane =
     <&> Lens.mapped %~ mLiftTrans
     <&> E.weakerEvents paneEventMap
     where
-        delKeys = Config.delKeys (config env)
-        Config.Pane{paneCloseKeys} =
-            Config.pane (config env)
-        Config.Export{exportKeys} = Config.export (config env)
+        delKeys = Config.delKeys (env ^. config)
+        paneCloseKeys = Config.paneCloseKeys (Config.pane (env ^. config))
+        exportKeys = Config.exportKeys (Config.export (env ^. config))
         paneEventMap =
             [ pane ^. Sugar.paneClose & mLiftTrans
               <&> WidgetIds.fromEntityId
@@ -196,7 +197,7 @@ makePaneEdit env pane =
               <&> WidgetIds.fromEntityId
               & Widget.keysEventMapMovesCursor delKeys
                 (E.Doc ["Edit", "Definition", "Delete"])
-            , exportDef (exportActions env) (pane ^. Sugar.paneDefinition . Sugar.drDefI)
+            , exportDef (env ^. exportActions) (pane ^. Sugar.paneDefinition . Sugar.drDefI)
               & Widget.keysEventMap exportKeys
                 (E.Doc ["Collaboration", "Export definition to JSON file"])
             ] & mconcat
@@ -230,10 +231,10 @@ makeNewDefinitionButton =
         newDefinitionEventMap <- makeNewDefinitionEventMap codeAnchors
 
         Config.Pane{newDefinitionButtonPressKeys} <- ExprGuiM.readConfig <&> Config.pane
-        theme <- ExprGuiM.readTheme
+        color <- ExprGuiM.readTheme <&> Theme.newDefinitionActionColor
 
         TextView.makeFocusableLabel "New..."
-            & Reader.local (TextView.color .~ Theme.newDefinitionActionColor theme)
+            & Reader.local (TextView.color .~ color)
             <&> E.weakerEvents (newDefinitionEventMap newDefinitionButtonPressKeys)
 
 replEventMap ::
@@ -243,7 +244,8 @@ replEventMap env replExpr =
     mconcat
     [ replExpr ^. Sugar.rPayload . Sugar.plActions . Sugar.extract
       <&> ExprEventMap.extractCursor & mLiftTrans
-      & Widget.keysEventMapMovesCursor newDefinitionButtonPressKeys
+      & Widget.keysEventMapMovesCursor
+        (Config.newDefinitionButtonPressKeys (Config.pane (env ^. config)))
         (E.Doc ["Edit", "Extract to definition"])
     , Widget.keysEventMap exportKeys
       (E.Doc ["Collaboration", "Export repl to JSON file"]) exportRepl
@@ -251,25 +253,24 @@ replEventMap env replExpr =
       (E.Doc ["Collaboration", "Export repl for Codejam"]) exportFancy
     ]
     where
-        ExportActions{exportRepl, exportFancy} = exportActions env
-        Config.Export{exportKeys, exportFancyKeys} = Config.export (config env)
-        Config.Pane{newDefinitionButtonPressKeys} = Config.pane (config env)
+        ExportActions{exportRepl, exportFancy} = env ^. exportActions
+        Config.Export{exportKeys, exportFancyKeys} = Config.export (env ^. config)
 
 panesEventMap ::
     (Monad m, MonadTransaction m n, MonadReader env n, Widget.HasCursor env) =>
     Env m -> n (Widget.EventMap (M m Widget.EventResult))
-panesEventMap Env{config,codeProps,exportActions} =
+panesEventMap env =
     do
-        mJumpBack <- DataOps.jumpBack codeProps & transaction <&> fmap mLiftTrans
-        newDefinitionEventMap <- makeNewDefinitionEventMap codeProps
+        mJumpBack <- DataOps.jumpBack (env ^. codeProps) & transaction <&> fmap mLiftTrans
+        newDefinitionEventMap <- makeNewDefinitionEventMap (env ^. codeProps)
         return $ mconcat
-            [ newDefinitionEventMap (Config.newDefinitionKeys (Config.pane config))
+            [ newDefinitionEventMap (Config.newDefinitionKeys (Config.pane (env ^. config)))
               <&> mLiftTrans
             , E.dropEventMap "Drag&drop JSON files"
               (E.Doc ["Collaboration", "Import JSON file"]) (Just . traverse_ importAll)
               <&> fmap (\() -> mempty)
             , maybe mempty
-              (Widget.keysEventMapMovesCursor (Config.previousCursorKeys config)
+              (Widget.keysEventMapMovesCursor (Config.previousCursorKeys (env ^. config))
                (E.Doc ["Navigation", "Go back"])) mJumpBack
             , Widget.keysEventMap exportAllKeys
               (E.Doc ["Collaboration", "Export everything to JSON file"]) exportAll
@@ -278,5 +279,5 @@ panesEventMap Env{config,codeProps,exportActions} =
                 (E.Doc ["Collaboration", "Import repl from JSON file"])
             ]
     where
-        ExportActions{importAll,exportAll} = exportActions
-        Config.Export{exportPath,importKeys,exportAllKeys} = Config.export config
+        ExportActions{importAll,exportAll} = (env ^. exportActions)
+        Config.Export{exportPath,importKeys,exportAllKeys} = Config.export (env ^. config)
