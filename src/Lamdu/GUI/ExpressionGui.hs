@@ -116,15 +116,12 @@ maybeIndent (Just piInfo) =
         f mkLayout lp =
             case lp ^. TreeLayout.layoutContext of
             TreeLayout.LayoutVertical ->
-                content
-                & AlignedWidget.addBefore AlignedWidget.Horizontal
-                    [ Spacer.make
-                        (Vector2 barWidth (content ^. View.height))
-                        & View.backgroundColor bgAnimId
-                          (Theme.indentBarColor indentConf)
-                        & Widget.fromView & AlignedWidget 0
-                    , Spacer.make (Vector2 gapWidth 0)
-                        & Widget.fromView & AlignedWidget 0
+                Spacer.make (Vector2 barWidth (content ^. View.height))
+                & View.backgroundColor bgAnimId (Theme.indentBarColor indentConf)
+                & Widget.fromView & AlignedWidget 0
+                & AlignedWidget.addAfter AlignedWidget.Horizontal
+                    [ Spacer.make (Vector2 gapWidth 0) & Widget.fromView & AlignedWidget 0
+                    , content
                     ]
                 where
                     indentConf = piIndentTheme piInfo
@@ -135,7 +132,7 @@ maybeIndent (Just piInfo) =
                     content =
                         lp & TreeLayout.layoutMode . TreeLayout.modeWidths -~ indentWidth
                         & mkLayout
-                        & AlignedWidget.alignment . _2 .~ 0
+                        & AlignedWidget.alignment .~ 0
                     bgAnimId = piAnimId piInfo ++ ["("]
             _ -> mkLayout lp
 

@@ -43,8 +43,7 @@ makeSimpleView ::
     ExprGuiM m (ExpressionGui f)
 makeSimpleView name myId =
     (Widget.makeFocusableView ?? myId)
-    <*> (ExpressionGui.makeNameView name (Widget.toAnimId myId) <&> Widget.fromView)
-    <&> TreeLayout.fromWidget
+    <*> (ExpressionGui.makeNameView name (Widget.toAnimId myId) <&> TreeLayout.fromView)
 
 makeParamsRecord ::
     Monad m => Widget.Id -> Sugar.ParamsRecordVar (Name m) ->

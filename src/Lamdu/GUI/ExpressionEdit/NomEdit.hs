@@ -129,7 +129,6 @@ expandingName vertOrder (#>) needParen nomId showName =
                 vert =
                     TreeLayout.fromAlignedWidget nameShowing
                     `vertOrder` subexprGui
-                    <&> TreeLayout.alignment . _1 .~ 0
                     & ExpressionGui.vboxTopFocal
             in horiz `horizWithFallback` vert
     where
