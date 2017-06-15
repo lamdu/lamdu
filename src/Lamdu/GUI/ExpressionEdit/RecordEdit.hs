@@ -23,6 +23,7 @@ import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
+import qualified Lamdu.GUI.Spacing as Spacing
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Sugar.Names.Types (Name(..))
 import qualified Lamdu.Sugar.Types as Sugar
@@ -113,7 +114,7 @@ makeOpenRecord ::
 makeOpenRecord fieldsGui rest animId =
     do
         theme <- ExprGuiM.readTheme
-        vspace <- ExpressionGui.stdVSpace
+        vspace <- Spacing.stdVSpaceView
         restExpr <-
             ExpressionGui.addValPadding
             <*> ExprGuiM.makeSubexpression rest
@@ -127,7 +128,7 @@ makeOpenRecord fieldsGui rest animId =
             fields
             & AlignedWidget.addAfter AlignedWidget.Vertical
             [ separationBar theme (max minWidth targetWidth) animId & AlignedWidget.fromView 0
-            , AlignedWidget 0 vspace
+            , AlignedWidget.fromView 0 vspace
             , restLayout
             ]
 

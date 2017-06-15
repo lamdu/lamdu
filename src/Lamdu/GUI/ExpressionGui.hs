@@ -4,7 +4,6 @@ module Lamdu.GUI.ExpressionGui
     , egIsFocused
     , render
     -- General:
-    , stdHSpace, stdVSpace
     , combine, combineSpaced, combineSpacedMParens
     , (||>), (<||)
     , vboxTopFocalSpaced
@@ -155,8 +154,8 @@ vboxTopFocal (gui:guis) =
 vboxTopFocalSpaced ::
     Monad m => ExprGuiM m ([TreeLayout a] -> TreeLayout a)
 vboxTopFocalSpaced =
-    stdVSpace
-    <&> TreeLayout.fromWidget
+    Spacing.stdVSpaceView
+    <&> TreeLayout.fromView
     <&> List.intersperse
     <&> fmap vboxTopFocal
 
@@ -181,12 +180,6 @@ hCombine f layout gui =
 
 (<||) :: TreeLayout a -> AlignedWidget a -> TreeLayout a
 (<||) = flip (hCombine AlignedWidget.addAfter)
-
-stdHSpace :: Monad m => ExprGuiM m (Widget a)
-stdHSpace = Spacing.stdHSpaceView <&> Widget.fromView
-
-stdVSpace :: Monad m => ExprGuiM m (Widget a)
-stdVSpace = Spacing.stdVSpaceView <&> Widget.fromView
 
 data ParenIndentInfo = ParenIndentInfo
     { piAnimId :: AnimId
@@ -267,15 +260,15 @@ combineSpacedMParens ::
     Monad m => Maybe AnimId -> ExprGuiM m ([TreeLayout a] -> TreeLayout a)
 combineSpacedMParens mParensId =
     do
-        hSpace <- stdHSpace <&> AlignedWidget 0
-        vSpace <- stdVSpace <&> TreeLayout.fromWidget
+        hSpace <- Spacing.stdHSpaceView <&> AlignedWidget.fromView 0
+        vSpace <- Spacing.stdVSpaceView <&> TreeLayout.fromView
         mParenInfo <- mParensId & Lens._Just %%~ makeParenIndentInfo
         return $ combineWith mParenInfo (List.intersperse hSpace) (List.intersperse vSpace)
 
 tagItem ::
     Monad m => ExprGuiM m (AlignedWidget a -> TreeLayout a -> TreeLayout a)
 tagItem =
-    stdHSpace <&> AlignedWidget 0 <&> f
+    Spacing.stdHSpaceView <&> AlignedWidget.fromView 0 <&> f
     where
         f space tag item =
             tag ||> (space ||> (item & TreeLayout.alignment . _1 .~ 0))

@@ -10,11 +10,13 @@ import           Data.Store.Transaction (Transaction)
 import qualified Graphics.UI.Bottle.EventMap as E
 import           Graphics.UI.Bottle.Font (Underline(..))
 import qualified Graphics.UI.Bottle.View as View
+import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import           Graphics.UI.Bottle.Widget.Aligned (AlignedWidget(..))
 import qualified Graphics.UI.Bottle.Widget.Aligned as AlignedWidget
 import           Graphics.UI.Bottle.Widget.TreeLayout (TreeLayout)
 import qualified Graphics.UI.Bottle.Widget.TreeLayout as TreeLayout
+import qualified Graphics.UI.Bottle.Widgets.Box as Box
 import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
 import           Lamdu.Calc.Type.Scheme (schemeType)
 import           Lamdu.Config (Config)
@@ -28,6 +30,7 @@ import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
 import qualified Lamdu.GUI.Hover as Hover
 import qualified Lamdu.GUI.LightLambda as LightLambda
+import qualified Lamdu.GUI.Spacing as Spacing
 import qualified Lamdu.GUI.TypeView as TypeView
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Sugar.Names.Types (Name(..))
@@ -107,23 +110,23 @@ makeInlineEventMap _ _ = mempty
 definitionTypeChangeBox ::
     Monad m =>
     Sugar.DefinitionOutdatedType m -> Widget.Id ->
-    ExprGuiM m (AlignedWidget (T m Widget.EventResult))
+    ExprGuiM m (Widget (T m Widget.EventResult))
 definitionTypeChangeBox info getVarId =
     do
-        headerLabel <- TextView.makeLabel "Type was:" <&> AlignedWidget.fromView 0
+        headerLabel <- TextView.makeLabel "Type was:" <&> Widget.fromView
         typeWhenUsed <-
             mkTypeWidget "typeWhenUsed" (info ^. Sugar.defTypeWhenUsed)
-        spacing <- ExpressionGui.stdVSpace <&> AlignedWidget 0
+        spacing <- Spacing.stdVSpaceView <&> Widget.fromView
         sepLabel <-
             (Widget.makeFocusableView ?? myId)
-            <*> (TextView.makeLabel "Update to:" <&> AlignedWidget.fromView 0)
+            <*> (TextView.makeLabel "Update to:" <&> Widget.fromView)
         typeCurrent <- mkTypeWidget "typeCurrent" (info ^. Sugar.defTypeCurrent)
         config <- ExprGuiM.readConfig
         theme <- ExprGuiM.readTheme
         let padding = realToFrac <$> Theme.valFramePadding theme
         let box =
                 [headerLabel, typeWhenUsed, spacing, sepLabel, typeCurrent]
-                & AlignedWidget.vbox 0
+                & Box.vboxAlign 0
                 & View.pad padding
                 & Hover.addBackground animId (Theme.hoverBGColor theme)
         -- TODO: unify config's button press keys
@@ -137,7 +140,7 @@ definitionTypeChangeBox info getVarId =
     where
         mkTypeWidget idSuffix scheme =
             TypeView.make (scheme ^. schemeType) (animId ++ [idSuffix])
-            <&> AlignedWidget.fromView 0
+            <&> Widget.fromView
         myId = Widget.joinId getVarId ["type change"]
         animId = Widget.toAnimId myId
 
@@ -165,10 +168,9 @@ processDefinitionWidget (Sugar.DefTypeChanged info) myId mkLayout =
             do
                 box <- definitionTypeChangeBox info myId
                 layout
-                    & TreeLayout.alignment . _1 .~ 0
                     & TreeLayout.alignedWidget %~
                         AlignedWidget.addAfter AlignedWidget.Vertical
-                        [box `AlignedWidget.hoverInPlaceOf` AlignedWidget.empty]
+                        [AlignedWidget 0 box `AlignedWidget.hoverInPlaceOf` AlignedWidget.empty]
                     & return
             else return layout
 

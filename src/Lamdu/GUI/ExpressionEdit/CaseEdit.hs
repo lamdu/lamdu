@@ -28,6 +28,7 @@ import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
+import qualified Lamdu.GUI.Spacing as Spacing
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Sugar.Names.Types (Name(..))
 import qualified Lamdu.Sugar.Types as Sugar
@@ -148,7 +149,7 @@ makeOpenCase ::
 makeOpenCase rest animId altsGui =
     do
         theme <- ExprGuiM.readTheme
-        vspace <- ExpressionGui.stdVSpace
+        vspace <- Spacing.stdVSpaceView
         restExpr <-
             ExpressionGui.addValPadding
             <*> ExprGuiM.makeSubexpression rest
@@ -163,7 +164,7 @@ makeOpenCase rest animId altsGui =
             & AlignedWidget.addAfter AlignedWidget.Vertical
             [ separationBar theme (max minWidth targetWidth) animId
                 & AlignedWidget.fromView 0
-            , AlignedWidget 0 vspace
+            , AlignedWidget.fromView 0 vspace
             , restLayout
             ]
 
