@@ -118,7 +118,7 @@ make hole pl =
         searchAreaGui <- SearchArea.makeStdWrapped pl holeInfo
         mWrapperGui <- makeWrapper pl holeInfo
 
-        delKeys <- ExprGuiM.readConfig <&> Config.delKeys
+        delKeys <- Config.delKeys
         let deleteEventMap =
                 hole ^. Sugar.holeActions . Sugar.holeMDelete
                 & maybe mempty

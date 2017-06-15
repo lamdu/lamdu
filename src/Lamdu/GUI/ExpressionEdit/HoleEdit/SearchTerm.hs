@@ -5,6 +5,7 @@ module Lamdu.GUI.ExpressionEdit.HoleEdit.SearchTerm
     ( make
     ) where
 
+import qualified Control.Lens as Lens
 import qualified Data.Monoid as Monoid
 import           Data.Store.Property (Property)
 import qualified Data.Store.Property as Property
@@ -53,7 +54,7 @@ makeSearchTermPropEdit WidgetIds{..} searchTermProp =
 make :: Monad m => HoleInfo m -> ExprGuiM m (ExpressionGui m)
 make holeInfo =
     do
-        config <- ExprGuiM.readConfig
+        config <- Lens.view Config.config
         theme <- ExprGuiM.readTheme
         let holeConfig@Config.Hole{..} = Config.hole config
         let Theme.Hole{..} = Theme.hole theme

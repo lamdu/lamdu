@@ -79,7 +79,7 @@ makeNameRef ::
 makeNameRef myId nameRef makeView =
     do
         cp <- ExprGuiM.readCodeAnchors
-        config <- ExprGuiM.readConfig
+        config <- Lens.view Config.config
         let jumpToDefinitionEventMap =
                 Widget.keysEventMapMovesCursor
                 (Config.jumpToDefinitionKeys config ++ Config.extractKeys config)
@@ -121,7 +121,7 @@ definitionTypeChangeBox info getVarId =
             (Widget.makeFocusableView ?? myId)
             <*> (TextView.makeLabel "Update to:" <&> Widget.fromView)
         typeCurrent <- mkTypeWidget "typeCurrent" (info ^. Sugar.defTypeCurrent)
-        config <- ExprGuiM.readConfig
+        config <- Lens.view Config.config
         theme <- ExprGuiM.readTheme
         let padding = realToFrac <$> Theme.valFramePadding theme
         let box =
@@ -180,7 +180,7 @@ makeGetBinder ::
     ExprGuiM m (TreeLayout (T m Widget.EventResult))
 makeGetBinder binderVar myId =
     do
-        config <- ExprGuiM.readConfig
+        config <- Lens.view Config.config
         theme <- ExprGuiM.readTheme
         let Theme.Name{..} = Theme.name theme
         let (color, processDef) =
@@ -196,7 +196,6 @@ makeGetBinder binderVar myId =
             <&> E.weakerEvents
                 (makeInlineEventMap config (binderVar ^. Sugar.bvInline))
             & processDef
-
 
 make ::
     Monad m =>

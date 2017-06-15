@@ -49,7 +49,7 @@ make ::
     ExprGuiM m (ExpressionGui m)
 make (Sugar.Case mArg alts caseTail addAlt _cEntityId) pl =
     do
-        config <- ExprGuiM.readConfig
+        config <- Lens.view Config.config
         let mExprAfterHeader =
                 ( alts ^.. Lens.traversed . Lens.traversed
                 ++ caseTail ^.. Lens.traversed
@@ -111,7 +111,7 @@ makeAltRow ::
     ExprGuiM m (ExpressionGui m)
 makeAltRow mActiveTag (Sugar.CaseAlt delete tag altExpr) =
     do
-        config <- ExprGuiM.readConfig
+        config <- Lens.view Config.config
         addBg <- ExpressionGui.addValBGWithColor Theme.evaluatedPathBGColor
         altRefGui <-
             TagEdit.makeCaseTag (ExprGuiT.nextHolesBefore altExpr) tag

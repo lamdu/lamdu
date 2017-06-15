@@ -5,6 +5,7 @@ module Lamdu.GUI.ExpressionEdit.TagEdit
     , diveToRecordTag, diveToCaseTag
     ) where
 
+import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
 import           Data.Store.Transaction (Transaction)
 import qualified Graphics.DrawingCombinators as Draw
@@ -48,7 +49,7 @@ makeTagH ::
     ExprGuiM m (Widget (T m Widget.EventResult))
 makeTagH tagColor nearestHoles tagG =
     do
-        config <- ExprGuiM.readConfig
+        config <- Lens.view Config.config
         theme <- ExprGuiM.readTheme
         jumpHolesEventMap <- ExprEventMap.jumpHolesEventMap nearestHoles
         let keys = Config.holePickAndMoveToNextHoleKeys (Config.hole config)

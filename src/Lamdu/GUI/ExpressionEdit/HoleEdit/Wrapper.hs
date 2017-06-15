@@ -4,6 +4,7 @@ module Lamdu.GUI.ExpressionEdit.HoleEdit.Wrapper
     ( make
     ) where
 
+import qualified Control.Lens as Lens
 import qualified Data.Store.Transaction as Transaction
 import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.View as View
@@ -24,22 +25,22 @@ import           Lamdu.Prelude
 type T = Transaction.Transaction
 
 makeUnwrapEventMap ::
-    (Monad m, Monad f) =>
+    (MonadReader env m, Config.HasConfig env, Monad f) =>
     Sugar.HoleArg f (ExpressionN f a) -> WidgetIds ->
-    ExprGuiM m (Widget.EventMap (T f Widget.EventResult))
+    m (Widget.EventMap (T f Widget.EventResult))
 makeUnwrapEventMap arg widgetIds =
-    do
-        unwrapKeys <- ExprGuiM.readConfig <&> Config.hole <&> Config.holeUnwrapKeys
-        pure $
-            case arg ^? Sugar.haUnwrap . Sugar._UnwrapAction of
-            Just unwrap ->
-                Widget.keysEventMapMovesCursor unwrapKeys
-                (E.Doc ["Edit", "Unwrap"]) $ WidgetIds.fromEntityId <$> unwrap
-            Nothing ->
-                hidOpenSearchTerm widgetIds & pure
-                & Widget.keysEventMapMovesCursor unwrapKeys doc
-                where
-                    doc = E.Doc ["Navigation", "Hole", "Open"]
+    Lens.view Config.config <&> Config.hole <&> Config.holeUnwrapKeys
+    <&>
+    \unwrapKeys ->
+    case arg ^? Sugar.haUnwrap . Sugar._UnwrapAction of
+    Just unwrap ->
+        Widget.keysEventMapMovesCursor unwrapKeys
+        (E.Doc ["Edit", "Unwrap"]) $ WidgetIds.fromEntityId <$> unwrap
+    Nothing ->
+        hidOpenSearchTerm widgetIds & pure
+        & Widget.keysEventMapMovesCursor unwrapKeys doc
+        where
+            doc = E.Doc ["Navigation", "Hole", "Open"]
 
 make ::
     Monad m => WidgetIds ->

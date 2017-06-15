@@ -5,6 +5,7 @@ module Lamdu.GUI.ExpressionEdit.EventMap
     , extractCursor
     ) where
 
+import qualified Control.Lens as Lens
 import qualified Data.Store.Transaction as Transaction
 import qualified Data.Text as Text
 import qualified Graphics.UI.Bottle.EventMap as E
@@ -45,11 +46,11 @@ make pl holePicker =
             | otherwise = NotHoleResult
 
 jumpHolesEventMap ::
-    (Monad m, Monad f) =>
-    NearestHoles -> ExprGuiM m (Widget.EventMap (T f Widget.EventResult))
+    (MonadReader env m, Config.HasConfig env, Monad f) =>
+    NearestHoles -> m (Widget.EventMap (T f Widget.EventResult))
 jumpHolesEventMap hg =
     do
-        config <- ExprGuiM.readConfig <&> Config.hole
+        config <- Lens.view Config.config <&> Config.hole
         let jumpEventMap keys dirStr lens =
                 maybe mempty
                 (Widget.keysEventMapMovesCursor (keys config)
@@ -64,9 +65,9 @@ jumpHolesEventMap hg =
         jumpDoc dirStr = "Jump to " <> dirStr <> " hole"
 
 jumpHolesEventMapIfSelected ::
-    (Monad m, Monad f) =>
+    (MonadReader env m, Config.HasConfig env, Widget.HasCursor env, Monad f) =>
     Sugar.Payload dummy ExprGuiT.Payload ->
-    ExprGuiM m (Widget.EventMap (T f Widget.EventResult))
+    m (Widget.EventMap (T f Widget.EventResult))
 jumpHolesEventMapIfSelected pl =
     do
         isSelected <- ExprGuiM.isExprSelected pl
@@ -90,12 +91,12 @@ extractEventMap config actions =
         keys = Config.extractKeys config
 
 replaceOrComeToParentEventMap ::
-    (Monad m, Monad f) =>
+    (MonadReader env m, Config.HasConfig env, Widget.HasCursor env, Monad f) =>
     Sugar.Payload f ExprGuiT.Payload ->
-    ExprGuiM m (Widget.EventMap (T f Widget.EventResult))
+    m (Widget.EventMap (T f Widget.EventResult))
 replaceOrComeToParentEventMap pl =
     do
-        config <- ExprGuiM.readConfig
+        config <- Lens.view Config.config
         isSelected <- ExprGuiM.isExprSelected pl
         return $
             if isSelected
@@ -115,7 +116,7 @@ actionsEventMap ::
     ExprGuiM m (Widget.EventMap (T f Widget.EventResult))
 actionsEventMap isHoleResult pl holePicker =
     do
-        config <- ExprGuiM.readConfig
+        config <- Lens.view Config.config
         opEventMap <- applyOperatorEventMap pl holePicker
         return $ mconcat
             [ wrapEventMap config actions

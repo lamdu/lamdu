@@ -8,6 +8,7 @@ module Lamdu.GUI.ExpressionEdit.HoleEdit.SearchArea
     ( makeStdWrapped
     ) where
 
+import qualified Control.Lens as Lens
 import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widget.Aligned as AlignedWidget
@@ -21,7 +22,6 @@ import           Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds (WidgetIds(..))
 import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
-import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
 import qualified Lamdu.Sugar.Types as Sugar
 
@@ -41,7 +41,7 @@ makeStdWrapped ::
     Sugar.Payload m ExprGuiT.Payload -> HoleInfo m -> ExprGuiM m (ExpressionGui m)
 makeStdWrapped pl holeInfo =
     do
-        config <- ExprGuiM.readConfig
+        config <- Lens.view Config.config
         let Config.Hole{..} = Config.hole config
             WidgetIds{..} = hiIds holeInfo
             fdWrap =

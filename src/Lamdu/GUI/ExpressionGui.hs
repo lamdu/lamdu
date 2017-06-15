@@ -566,13 +566,11 @@ stdWrap pl act =
             | otherwise = E.weakerEvents
 
 parentDelegator ::
-    (Monad f, Monad m) => Widget.Id ->
-    ExprGuiM m (ExpressionGui f -> ExpressionGui f)
+    (MonadReader env m, Config.HasConfig env, Widget.HasCursor env, Applicative f) =>
+    Widget.Id -> m (TreeLayout (f Widget.EventResult) -> TreeLayout (f Widget.EventResult))
 parentDelegator myId =
-    do
-        config <- ExprGuiM.readConfig
-        FocusDelegator.make ?? parentExprFDConfig config
-            ?? FocusDelegator.FocusEntryChild ?? WidgetIds.notDelegatingId myId
+    FocusDelegator.make <*> (Lens.view Config.config <&> parentExprFDConfig)
+    ?? FocusDelegator.FocusEntryChild ?? WidgetIds.notDelegatingId myId
 
 stdWrapParentExpr ::
     Monad m =>

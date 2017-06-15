@@ -3,6 +3,7 @@ module Lamdu.GUI.ExpressionEdit.LiteralEdit
     ( make
     ) where
 
+import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
 import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
@@ -79,7 +80,7 @@ textEdit ::
     Sugar.Payload m ExprGuiT.Payload -> ExprGuiM m (ExpressionGui m)
 textEdit prop pl =
     do
-        config <- ExprGuiM.readConfig <&> Config.literalText
+        config <- Lens.view Config.config <&> Config.literalText
         style <- ExprGuiM.readStyle <&> (^. Style.styleText)
         edit <- do
             left <- TextView.makeLabel "“" <&> Widget.fromView

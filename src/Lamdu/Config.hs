@@ -5,14 +5,17 @@ module Lamdu.Config
     , Eval(..)
     , LiteralText(..)
     , Config(..)
+    , HasConfig(..)
     , delKeys
     ) where
 
+import qualified Control.Lens as Lens
 import qualified Data.Aeson.Types as Aeson
 import           GHC.Generics (Generic)
 import           Graphics.UI.Bottle.MetaKey (MetaKey)
 import qualified Graphics.UI.Bottle.Zoom as Zoom
 import qualified Lamdu.GUI.VersionControl.Config as VersionControl
+
 import           Lamdu.Prelude
 
 data Export = Export
@@ -110,5 +113,8 @@ instance Aeson.ToJSON Config where
     toJSON = Aeson.genericToJSON Aeson.defaultOptions
 instance Aeson.FromJSON Config
 
-delKeys :: Config -> [MetaKey]
-delKeys config = delForwardKeys config ++ delBackwardKeys config
+class HasConfig env where config :: Lens' env Config
+instance HasConfig Config where config = id
+
+delKeys :: (MonadReader env m, HasConfig env) => m [MetaKey]
+delKeys = sequence [Lens.view config <&> delForwardKeys, Lens.view config <&> delBackwardKeys] <&> mconcat

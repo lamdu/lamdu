@@ -3,6 +3,7 @@ module Lamdu.GUI.ExpressionEdit.RecordEdit
     ( make
     ) where
 
+import qualified Control.Lens as Lens
 import           Data.Vector.Vector2 (Vector2(..))
 import           Graphics.UI.Bottle.Animation (AnimId)
 import qualified Graphics.UI.Bottle.Animation as Anim
@@ -48,7 +49,7 @@ make ::
     ExprGuiM m (ExpressionGui m)
 make record@(Sugar.Record fields recordTail addField) pl =
     do
-        config <- ExprGuiM.readConfig
+        config <- Lens.view Config.config
         (gui, resultPicker) <-
             ExprGuiM.listenResultPicker $
             do
@@ -81,7 +82,7 @@ makeFieldRow ::
     ExprGuiM m (ExpressionGui m)
 makeFieldRow (Sugar.RecordField delete tag fieldExpr) =
     do
-        config <- ExprGuiM.readConfig
+        config <- Lens.view Config.config
         fieldRefGui <-
             TagEdit.makeRecordTag (ExprGuiT.nextHolesBefore fieldExpr) tag
         fieldExprGui <- ExprGuiM.makeSubexpression fieldExpr

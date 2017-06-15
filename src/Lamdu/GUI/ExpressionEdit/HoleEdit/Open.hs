@@ -223,7 +223,7 @@ makeResultGroup ::
     ExprGuiM m (ResultGroupWidgets m)
 makeResultGroup holeInfo results =
     do
-        Config.Hole{..} <- Config.hole <$> ExprGuiM.readConfig
+        Config.Hole{..} <- Config.hole <$> Lens.view Config.config
         (mainResultWidget, shownMainResult) <-
             makeShownResult holeInfo mainResult
         let mainResultHeight = mainResultWidget ^. View.height

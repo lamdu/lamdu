@@ -164,7 +164,7 @@ removeUnwanted ::
     Monad m => ExprGuiM m (Widget.EventMap a -> Widget.EventMap a)
 removeUnwanted =
     do
-        config <- ExprGuiM.readConfig
+        config <- Lens.view Config.config
         minOpPrec <- ExprGuiM.readMinOpPrec
         let Config.Hole{..} = Config.hole config
         let unwantedKeys =
@@ -244,7 +244,7 @@ makeOpenEventMaps ::
     )
 makeOpenEventMaps holeInfo mShownResult =
     do
-        holeConfig <- ExprGuiM.readConfig <&> Config.hole
+        holeConfig <- Lens.view Config.config <&> Config.hole
         -- below ad-hoc and search term edit:
         eventMap <-
             case mShownResult of

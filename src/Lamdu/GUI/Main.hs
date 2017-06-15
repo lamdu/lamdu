@@ -101,7 +101,7 @@ make env =
             CodeEdit.Env
             { _codeProps = DbLayout.codeProps
             , _evalResults
-            , _config = config
+            , _eConfig = config
             , _theme = theme
             , _settings
             , _style

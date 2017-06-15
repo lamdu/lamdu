@@ -25,8 +25,6 @@ import           Lamdu.Formatting (Format(..))
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.Info (HoleInfo(..), hiSearchTerm)
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.ValTerms as ValTerms
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds as HoleWidgetIds
-import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
-import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Sugar.Names.Types (Name(..))
 import qualified Lamdu.Sugar.Types as Sugar
@@ -135,11 +133,12 @@ collectResults Config.Hole{..} resultsM =
         isGoodResult = (< [5])
 
 makeAll ::
-    Monad m => HoleInfo m ->
-    ExprGuiM m ([ResultsList m], HaveHiddenResults)
+    (Monad n, MonadTransaction n m, MonadReader env m, Config.HasConfig env) =>
+    HoleInfo n ->
+    m ([ResultsList n], HaveHiddenResults)
 makeAll holeInfo =
     do
-        config <- ExprGuiM.readConfig <&> Config.hole
+        config <- Lens.view Config.config <&> Config.hole
         makeAllGroups holeInfo
             <&> ListClass.fromList
             <&> ListClass.mapL (makeResultsList holeInfo)

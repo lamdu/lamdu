@@ -1,7 +1,7 @@
 {-# LANGUAGE NoImplicitPrelude, OverloadedStrings, DeriveFunctor, TemplateHaskell, NamedFieldPuns, DisambiguateRecordFields #-}
 module Lamdu.GUI.CodeEdit
     ( make
-    , Env(..), codeProps, exportActions, evalResults, config, theme, settings, style
+    , Env(..), codeProps, exportActions, evalResults, eConfig, theme, settings, style
     , ExportActions(..)
     , M(..), m, mLiftTrans
     ) where
@@ -88,12 +88,14 @@ data Env m = Env
     { _codeProps :: Anchors.CodeProps m
     , _exportActions :: ExportActions m
     , _evalResults :: CurAndPrev (EvalResults (ValI m))
-    , _config :: Config
+    , _eConfig :: Config
     , _theme :: Theme
     , _settings :: Settings
     , _style :: Style
     }
 Lens.makeLenses ''Env
+
+instance Config.HasConfig (Env m) where config = eConfig
 
 toExprGuiMPayload :: ([Sugar.EntityId], NearestHoles) -> ExprGuiT.Payload
 toExprGuiMPayload (entityIds, nearestHoles) =
@@ -168,7 +170,7 @@ make width env =
             ?? (replGui : panesEdits ++ [newDefinitionButton])
             <&> E.weakerEvents eventMap
     & ExprGuiM.run ExpressionEdit.make
-      (env ^. codeProps) (env ^. config) (env ^. theme) (env ^. settings) (env ^. style)
+      (env ^. codeProps) (env ^. eConfig) (env ^. theme) (env ^. settings) (env ^. style)
     <&> ExpressionGui.render width
     <&> (^. AlignedWidget.aWidget)
 
@@ -181,9 +183,8 @@ makePaneEdit env pane =
     <&> Lens.mapped %~ mLiftTrans
     <&> E.weakerEvents paneEventMap
     where
-        delKeys = Config.delKeys (env ^. config)
-        paneCloseKeys = Config.paneCloseKeys (Config.pane (env ^. config))
-        exportKeys = Config.exportKeys (Config.export (env ^. config))
+        paneCloseKeys = Config.paneCloseKeys (Config.pane (env ^. eConfig))
+        exportKeys = Config.exportKeys (Config.export (env ^. eConfig))
         paneEventMap =
             [ pane ^. Sugar.paneClose & mLiftTrans
               <&> WidgetIds.fromEntityId
@@ -195,7 +196,7 @@ makePaneEdit env pane =
                   pane ^. Sugar.paneClose
               & mLiftTrans
               <&> WidgetIds.fromEntityId
-              & Widget.keysEventMapMovesCursor delKeys
+              & Widget.keysEventMapMovesCursor (Config.delKeys env)
                 (E.Doc ["Edit", "Definition", "Delete"])
             , exportDef (env ^. exportActions) (pane ^. Sugar.paneDefinition . Sugar.drDefI)
               & Widget.keysEventMap exportKeys
@@ -230,7 +231,7 @@ makeNewDefinitionButton =
         codeAnchors <- ExprGuiM.readCodeAnchors
         newDefinitionEventMap <- makeNewDefinitionEventMap codeAnchors
 
-        Config.Pane{newDefinitionButtonPressKeys} <- ExprGuiM.readConfig <&> Config.pane
+        Config.Pane{newDefinitionButtonPressKeys} <- Lens.view Config.config <&> Config.pane
         color <- ExprGuiM.readTheme <&> Theme.newDefinitionActionColor
 
         TextView.makeFocusableLabel "New..."
@@ -245,7 +246,7 @@ replEventMap env replExpr =
     [ replExpr ^. Sugar.rPayload . Sugar.plActions . Sugar.extract
       <&> ExprEventMap.extractCursor & mLiftTrans
       & Widget.keysEventMapMovesCursor
-        (Config.newDefinitionButtonPressKeys (Config.pane (env ^. config)))
+        (Config.newDefinitionButtonPressKeys (Config.pane (env ^. eConfig)))
         (E.Doc ["Edit", "Extract to definition"])
     , Widget.keysEventMap exportKeys
       (E.Doc ["Collaboration", "Export repl to JSON file"]) exportRepl
@@ -254,7 +255,7 @@ replEventMap env replExpr =
     ]
     where
         ExportActions{exportRepl, exportFancy} = env ^. exportActions
-        Config.Export{exportKeys, exportFancyKeys} = Config.export (env ^. config)
+        Config.Export{exportKeys, exportFancyKeys} = Config.export (env ^. eConfig)
 
 panesEventMap ::
     (Monad m, MonadTransaction m n, MonadReader env n, Widget.HasCursor env) =>
@@ -264,13 +265,13 @@ panesEventMap env =
         mJumpBack <- DataOps.jumpBack (env ^. codeProps) & transaction <&> fmap mLiftTrans
         newDefinitionEventMap <- makeNewDefinitionEventMap (env ^. codeProps)
         return $ mconcat
-            [ newDefinitionEventMap (Config.newDefinitionKeys (Config.pane (env ^. config)))
+            [ newDefinitionEventMap (Config.newDefinitionKeys (Config.pane (env ^. eConfig)))
               <&> mLiftTrans
             , E.dropEventMap "Drag&drop JSON files"
               (E.Doc ["Collaboration", "Import JSON file"]) (Just . traverse_ importAll)
               <&> fmap (\() -> mempty)
             , maybe mempty
-              (Widget.keysEventMapMovesCursor (Config.previousCursorKeys (env ^. config))
+              (Widget.keysEventMapMovesCursor (Config.previousCursorKeys (env ^. eConfig))
                (E.Doc ["Navigation", "Go back"])) mJumpBack
             , Widget.keysEventMap exportAllKeys
               (E.Doc ["Collaboration", "Export everything to JSON file"]) exportAll
@@ -280,4 +281,4 @@ panesEventMap env =
             ]
     where
         ExportActions{importAll,exportAll} = (env ^. exportActions)
-        Config.Export{exportPath,importKeys,exportAllKeys} = Config.export (env ^. config)
+        Config.Export{exportPath,importKeys,exportAllKeys} = Config.export (env ^. eConfig)

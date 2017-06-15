@@ -64,7 +64,7 @@ makeBinderNameEdit ::
     ExprGuiM m (ExpressionGui m)
 makeBinderNameEdit binderActions rhsJumperEquals name color myId =
     do
-        config <- ExprGuiM.readConfig
+        config <- Lens.view Config.config
         ExpressionGui.makeNameOriginEdit name color myId
             <&> jumpToRHSViaEquals name
             <&> E.weakerEvents
@@ -209,7 +209,7 @@ makeScopeNavEdit binder myId curCursor =
                     Nothing -> Theme.disabledColor theme
                     Just _ -> Theme.grammarColor theme
                 )
-        Config.Eval{..} <- ExprGuiM.readConfig <&> Config.eval
+        Config.Eval{..} <- Lens.view Config.config <&> Config.eval
         settings <- ExprGuiM.readSettings
         case settings ^. CESettings.sInfoMode of
             CESettings.Evaluation ->
@@ -374,7 +374,7 @@ makeLetEdit ::
     ExprGuiM m (ExpressionGui m)
 makeLetEdit item =
     do
-        config <- ExprGuiM.readConfig
+        config <- Lens.view Config.config
         theme <- ExprGuiM.readTheme
         let letColor = Theme.letColor (Theme.name theme)
         let actionsEventMap =
@@ -425,7 +425,7 @@ makeBinderBodyEdit ::
     ExprGuiM m (ExpressionGui m)
 makeBinderBodyEdit (Sugar.BinderBody addOuterLet content) =
     do
-        config <- ExprGuiM.readConfig
+        config <- Lens.view Config.config
         savePos <- ExprGuiM.mkPrejumpPosSaver
         let newLetEventMap =
                 savePos >> addOuterLet
@@ -442,7 +442,7 @@ makeBinderContentEdit (Sugar.BinderExpr binderBody) =
     ExprGuiM.makeSubexpression binderBody
 makeBinderContentEdit (Sugar.BinderLet l) =
     do
-        config <- ExprGuiM.readConfig
+        config <- Lens.view Config.config
         let delEventMap =
                 l ^. Sugar.lActions . Sugar.laSetToHole
                 <&> WidgetIds.fromEntityId

@@ -4,6 +4,7 @@ module Lamdu.GUI.ParamEdit
     , eventMapAddFirstParam
     ) where
 
+import qualified Control.Lens as Lens
 import qualified Data.Map as Map
 import           Data.Store.Transaction (Transaction)
 import qualified Graphics.UI.Bottle.EventMap as E
@@ -15,7 +16,6 @@ import qualified Lamdu.Config as Config
 import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
-import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.Sugar.Types as Sugar
@@ -110,7 +110,7 @@ make ::
 make annotationOpts showAnnotation prevId nextId param =
     assignCursor $
     do
-        config <- ExprGuiM.readConfig
+        config <- Lens.view Config.config
         let paramEventMap = mconcat
                 [ eventParamDelEventMap (iDel info) (Config.delForwardKeys config) "" nextId
                 , eventParamDelEventMap (iDel info) (Config.delBackwardKeys config) " backwards" prevId

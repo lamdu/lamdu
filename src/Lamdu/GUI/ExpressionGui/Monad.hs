@@ -8,7 +8,7 @@ module Lamdu.GUI.ExpressionGui.Monad
     , makeSubexpressionWith
     , advanceDepth, resetDepth
     --
-    , readConfig, readTheme, readMinOpPrec, readSettings, readStyle
+    , readTheme, readMinOpPrec, readSettings, readStyle
     , readCodeAnchors, mkPrejumpPosSaver
     , vspacer
     --
@@ -133,6 +133,7 @@ instance TextView.HasStyle (Askable m) where style = aTextEditStyle . TextView.s
 instance TextEdit.HasStyle (Askable m) where style = aTextEditStyle
 instance Spacing.HasStdSpacing (Askable m) where stdSpacing = aStdSpacing
 instance View.HasAnimIdPrefix (Askable m) where animIdPrefix = aAnimIdPrefix
+instance Config.HasConfig (Askable m) where config = aConfig
 
 withLocalUnderline :: Monad m => TextView.Underline -> ExprGuiM m a -> ExprGuiM m a
 withLocalUnderline underline = Reader.local (TextView.underline ?~ underline)
@@ -142,9 +143,6 @@ readStyle = Lens.view aStyle
 
 readSettings :: Monad m => ExprGuiM m Settings
 readSettings = Lens.view aSettings
-
-readConfig :: Monad m => ExprGuiM m Config
-readConfig = Lens.view aConfig
 
 readTheme :: Monad m => ExprGuiM m Theme
 readTheme = Lens.view aTheme
@@ -254,7 +252,9 @@ readMScopeId = Lens.view aMScopeId
 withLocalMScopeId :: CurAndPrev (Maybe ScopeId) -> ExprGuiM m a -> ExprGuiM m a
 withLocalMScopeId mScopeId = exprGuiM %~ RWS.local (aMScopeId .~ mScopeId)
 
-isExprSelected :: Monad m => Sugar.Payload f a -> ExprGuiM m Bool
+isExprSelected ::
+    (MonadReader env m, Widget.HasCursor env) =>
+    Sugar.Payload f a -> m Bool
 isExprSelected pl = Widget.isSubCursor ?? WidgetIds.fromExprPayload pl
 
 outerPrecedence :: Monad m => ExprGuiM m Precedence

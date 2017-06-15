@@ -60,7 +60,7 @@ mkShrunk ::
     ExprGuiM m (Maybe (Widget (T m Widget.EventResult)) -> [ExpressionGui m])
 mkShrunk paramIds myId =
     do
-        jumpKeys <- ExprGuiM.readConfig <&> Config.jumpToDefinitionKeys
+        jumpKeys <- Lens.view Config.config <&> Config.jumpToDefinitionKeys
         let expandEventMap =
                 paramIds ^? Lens.traverse
                 & maybe mempty
