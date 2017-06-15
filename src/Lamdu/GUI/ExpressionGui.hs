@@ -118,9 +118,9 @@ maybeIndent (Just piInfo) =
             TreeLayout.LayoutVertical ->
                 Spacer.make (Vector2 barWidth (content ^. View.height))
                 & View.backgroundColor bgAnimId (Theme.indentBarColor indentConf)
-                & Widget.fromView & AlignedWidget 0
+                & AlignedWidget.fromView 0
                 & AlignedWidget.addAfter AlignedWidget.Horizontal
-                    [ Spacer.make (Vector2 gapWidth 0) & Widget.fromView & AlignedWidget 0
+                    [ Spacer.make (Vector2 gapWidth 0) & AlignedWidget.fromView 0
                     , content
                     ]
                 where
@@ -199,7 +199,7 @@ parenLabel :: ParenIndentInfo -> Text -> AlignedWidget a
 parenLabel parenInfo t =
     TextView.make (piTextStyle parenInfo) t
     (piAnimId parenInfo ++ [encodeUtf8 t])
-    & Widget.fromView & AlignedWidget 0
+    & AlignedWidget.fromView 0
 
 horizVertFallback ::
     Monad m =>
@@ -379,11 +379,11 @@ makeEvaluationResultView animId res =
             Current -> id
             Prev -> View.tint (Theme.staleResultTint (Theme.eval theme))
             & return
-    <&> Widget.fromView <&> AlignedWidget 0
+    <&> AlignedWidget.fromView 0
 
 makeTypeView :: Monad m => Type -> AnimId -> ExprGuiM m (AlignedWidget f)
 makeTypeView typ animId =
-    TypeView.make typ animId <&> Widget.fromView <&> AlignedWidget 0
+    TypeView.make typ animId <&> AlignedWidget.fromView 0
 
 data NeighborVals a = NeighborVals
     { prevNeighbor :: a
@@ -597,7 +597,7 @@ grammarLabel text =
     do
         theme <- ExprGuiM.readTheme
         TextView.makeLabel text
-            <&> Widget.fromView <&> AlignedWidget 0
+            <&> AlignedWidget.fromView 0
             & Reader.local (TextView.color .~ Theme.grammarColor theme)
 
 addValBG :: (Monad m, View.MkView a) => ExprGuiM m (a -> a)

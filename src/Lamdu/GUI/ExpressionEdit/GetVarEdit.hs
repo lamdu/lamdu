@@ -110,13 +110,13 @@ definitionTypeChangeBox ::
     ExprGuiM m (AlignedWidget (T m Widget.EventResult))
 definitionTypeChangeBox info getVarId =
     do
-        headerLabel <- TextView.makeLabel "Type was:" <&> fromView
+        headerLabel <- TextView.makeLabel "Type was:" <&> AlignedWidget.fromView 0
         typeWhenUsed <-
             mkTypeWidget "typeWhenUsed" (info ^. Sugar.defTypeWhenUsed)
         spacing <- ExpressionGui.stdVSpace <&> AlignedWidget 0
         sepLabel <-
             (Widget.makeFocusableView ?? myId)
-            <*> (TextView.makeLabel "Update to:" <&> fromView)
+            <*> (TextView.makeLabel "Update to:" <&> AlignedWidget.fromView 0)
         typeCurrent <- mkTypeWidget "typeCurrent" (info ^. Sugar.defTypeCurrent)
         config <- ExprGuiM.readConfig
         theme <- ExprGuiM.readTheme
@@ -135,10 +135,9 @@ definitionTypeChangeBox info getVarId =
                 (Widget.keysEventMapMovesCursor keys
                  (E.Doc ["Edit", "Update definition type"]) update)
     where
-        fromView = AlignedWidget 0 . Widget.fromView
         mkTypeWidget idSuffix scheme =
             TypeView.make (scheme ^. schemeType) (animId ++ [idSuffix])
-            <&> fromView
+            <&> AlignedWidget.fromView 0
         myId = Widget.joinId getVarId ["type change"]
         animId = Widget.toAnimId myId
 

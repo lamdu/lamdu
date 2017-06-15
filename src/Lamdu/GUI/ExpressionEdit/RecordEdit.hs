@@ -126,9 +126,7 @@ makeOpenRecord fieldsGui rest animId =
             in
             fields
             & AlignedWidget.addAfter AlignedWidget.Vertical
-            [ separationBar theme (max minWidth targetWidth) animId
-                & Widget.fromView
-                & AlignedWidget 0
+            [ separationBar theme (max minWidth targetWidth) animId & AlignedWidget.fromView 0
             , AlignedWidget 0 vspace
             , restLayout
             ]

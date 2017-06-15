@@ -162,7 +162,7 @@ makeOpenCase rest animId altsGui =
             alts
             & AlignedWidget.addAfter AlignedWidget.Vertical
             [ separationBar theme (max minWidth targetWidth) animId
-                & Widget.fromView & AlignedWidget 0
+                & AlignedWidget.fromView 0
             , AlignedWidget 0 vspace
             , restLayout
             ]

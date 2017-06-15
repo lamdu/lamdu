@@ -2,7 +2,7 @@
 module Graphics.UI.Bottle.Widget.Aligned
     ( AlignedWidget(..), alignment, aWidget
     , asTuple
-    , empty
+    , empty, fromView
     , scaleAround, scale
     , hoverInPlaceOf
     , AbsAlignedWidget, absAlignedWidget
@@ -16,6 +16,7 @@ import           Data.Vector.Vector2 (Vector2(..))
 import           Graphics.UI.Bottle.Alignment (Alignment(..))
 import qualified Graphics.UI.Bottle.Alignment as Alignment
 import qualified Graphics.UI.Bottle.EventMap as E
+import           Graphics.UI.Bottle.View (View)
 import qualified Graphics.UI.Bottle.View as View
 import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
@@ -48,6 +49,9 @@ instance Widget.HasWidget AlignedWidget where widget = aWidget
 
 empty :: AlignedWidget a
 empty = AlignedWidget 0 Widget.empty
+
+fromView :: Alignment -> View -> AlignedWidget a
+fromView x = AlignedWidget x . Widget.fromView
 
 -- | scale = scaleAround 0.5
 --   scaleFromTopMiddle = scaleAround (Vector2 0.5 0)

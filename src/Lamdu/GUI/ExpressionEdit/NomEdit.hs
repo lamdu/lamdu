@@ -85,7 +85,7 @@ mkNomGui nameSidePrecLens str asList hCombine valId pl (Sugar.Nominal tid val) =
                 )
             <*> ((Widget.makeFocusableView ?? nameId)
                 <*> (ExpressionGui.makeNameView (tid ^. Sugar.tidgName) (Widget.toAnimId nameId)
-                    <&> Widget.fromView <&> AlignedWidget 0))
+                    <&> AlignedWidget.fromView 0))
             <*> val
     & Widget.assignCursor myId valId
     & ExpressionGui.stdWrapParentExpr pl
