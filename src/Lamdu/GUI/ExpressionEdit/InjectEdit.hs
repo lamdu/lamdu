@@ -21,17 +21,14 @@ import           Lamdu.Prelude
 
 makeCommon ::
     Monad m =>
-    Text -> Sugar.TagG (Name m) ->
+    Sugar.TagG (Name m) ->
     NearestHoles -> [ExpressionGui m] ->
     ExprGuiM m (ExpressionGui m)
-makeCommon tagSuffix tagG nearestHoles valEdits =
-    do
-        tag <- TagEdit.makeCaseTag nearestHoles tagG <&> TreeLayout.fromWidget
-        suffixLabel <-
-            ExpressionGui.grammarLabel tagSuffix
-            <&> TreeLayout.fromAlignedWidget
-        tag : suffixLabel : valEdits & ExpressionGui.combine
-            & return
+makeCommon tagG nearestHoles valEdits =
+    ExpressionGui.combineSpaced
+    <*> ( TagEdit.makeCaseTag nearestHoles tagG
+          <&> TreeLayout.fromWidget <&> (: valEdits)
+        )
 
 make ::
     Monad m =>
@@ -41,7 +38,7 @@ make ::
 make (Sugar.Inject tagG mVal) pl =
     case mVal of
     Nothing ->
-        makeCommon "◦"
+        makeCommon
         -- Give the tag widget the identity of the whole inject
         (tagG & Sugar.tagInstance .~ (pl ^. Sugar.plEntityId))
         (pl ^. Sugar.plData . ExprGuiT.plNearestHoles) []
@@ -49,7 +46,7 @@ make (Sugar.Inject tagG mVal) pl =
     Just val ->
         ExprGuiM.makeSubexpressionWith ApplyEdit.prefixPrecedence
         (ExpressionGui.before .~ ApplyEdit.prefixPrecedence) val <&> (:[])
-        >>= makeCommon "•" tagG (ExprGuiT.nextHolesBefore val)
+        >>= makeCommon tagG (ExprGuiT.nextHolesBefore val)
         & Widget.assignCursor myId tagId
         & ExpressionGui.stdWrapParentExpr pl
     where
