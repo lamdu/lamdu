@@ -135,7 +135,7 @@ convertAppliedCase funcS argS exprPl =
         caseB
             & cKind .~ CaseWithArg
                 CaseArg
-                { _caVal = argS
+                { _caVal = simplifyCaseArg argS
                 , _caToLambdaCase =
                     protectedSetToVal (exprPl ^. Input.stored)
                     (funcS ^. rPayload . plData . pStored & Property.value) <&> EntityId.ofValI
@@ -143,3 +143,12 @@ convertAppliedCase funcS argS exprPl =
             & BodyCase
             & lift . addActions exprPl
     <&> rPayload . plData . pUserData <>~ funcS ^. rPayload . plData . pUserData
+
+simplifyCaseArg :: Monoid a => ExpressionU m a -> ExpressionU m a
+simplifyCaseArg argS =
+    case argS ^. rBody of
+    BodyFromNom nom | Lens.nullOf (nVal . rBody . _BodyHole) nom ->
+        nom ^. nVal
+        & rPayload . plData . pUserData <>~ argS ^. rPayload . plData . pUserData
+        & rPayload . plActions . setToHole .~ argS ^. rPayload . plActions . setToHole
+    _ -> argS
