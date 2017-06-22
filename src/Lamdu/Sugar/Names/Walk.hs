@@ -180,6 +180,7 @@ toLabeledApply app@LabeledApply{..} =
     )
     <*> pure _aSpecialArgs
     <*> (traverse . aaTag) toTagG _aAnnotatedArgs
+    <*> (traverse . raValue) toParam _aRelayedArgs
 
 toBody ::
     MonadNaming m => (a -> m b) ->

@@ -4,6 +4,7 @@ module Lamdu.Sugar.PresentationModes
     ) where
 
 import qualified Control.Lens as Lens
+import           Data.Either (partitionEithers)
 import           Data.UUID.Types (UUID)
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
@@ -16,8 +17,8 @@ type T = Transaction
 
 addToLabeledApply ::
     Monad m =>
-    Sugar.LabeledApply UUID f (Sugar.Expression name f a) ->
-    T m (Sugar.LabeledApply UUID f (Sugar.Expression name f a))
+    Sugar.LabeledApply UUID f (Sugar.Expression UUID f a) ->
+    T m (Sugar.LabeledApply UUID f (Sugar.Expression UUID f a))
 addToLabeledApply a =
     case a ^. Sugar.aSpecialArgs of
     Sugar.NoSpecialArgs ->
@@ -25,7 +26,7 @@ addToLabeledApply a =
             presentationMode <-
                 a ^. Sugar.aFunc . Sugar.bvNameRef . Sugar.nrName
                 & Anchors.assocPresentationMode & Transaction.getP
-            let (specialArgs, annotatedArgs) =
+            let (specialArgs, otherArgs) =
                     case (presentationMode, a ^. Sugar.aAnnotatedArgs) of
                     (Sugar.Infix, a0:a1:as) ->
                         ( Sugar.InfixArgs
@@ -35,9 +36,11 @@ addToLabeledApply a =
                     (Sugar.OO, a0:as) ->
                         (Sugar.ObjectArg (a0 ^. Sugar.aaExpr), as)
                     (_, args) -> (Sugar.NoSpecialArgs, args)
+            let (annotatedArgs, relayedArgs) = otherArgs <&> processArg & partitionEithers
             a
-                & Sugar.aAnnotatedArgs .~ annotatedArgs
                 & Sugar.aSpecialArgs .~ specialArgs
+                & Sugar.aAnnotatedArgs .~ annotatedArgs
+                & Sugar.aRelayedArgs .~ relayedArgs
                 & return
     _ -> return a
     where
@@ -45,6 +48,16 @@ addToLabeledApply a =
             arg ^. Sugar.aaExpr
             & Sugar.rBody . Sugar._BodyHole . Sugar.holeActions . Sugar.holeMDelete .~
                 other ^. Sugar.aaExpr . Sugar.rPayload . Sugar.plActions . Sugar.mReplaceParent
+        processArg arg =
+            do
+                param <- arg ^? Sugar.aaExpr . Sugar.rBody . Sugar._BodyGetVar . Sugar._GetParam
+                param ^. Sugar.pNameRef . Sugar.nrName == arg ^. Sugar.aaTag . Sugar.tagGName & guard
+                Right Sugar.RelayedArg
+                    { Sugar._raValue = param
+                    , Sugar._raId = arg ^. Sugar.aaExpr . Sugar.rPayload . Sugar.plEntityId
+                    , Sugar._raActions = arg ^. Sugar.aaExpr . Sugar.rPayload . Sugar.plActions
+                    } & return
+            & fromMaybe (Left arg)
 
 addToHoleResult ::
     Monad m => Sugar.HoleResult UUID m -> T m (Sugar.HoleResult UUID m)

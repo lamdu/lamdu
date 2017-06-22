@@ -96,7 +96,9 @@ makeInfixFuncName nearestHoles funcVar myId =
             | otherwise = id
 
 isBoxed :: Sugar.LabeledApply name binderVar a -> Bool
-isBoxed = Lens.has (Sugar.aAnnotatedArgs . Lens.traversed)
+isBoxed apply =
+    Lens.has (Sugar.aAnnotatedArgs . traverse) apply
+    || Lens.has (Sugar.aRelayedArgs . traverse) apply
 
 makeFuncRow ::
     Monad m =>
@@ -152,7 +154,7 @@ makeLabeled apply pl =
                 | needParens = Just (Widget.toAnimId myId)
                 | otherwise = Nothing
         let addBox
-                | isBoxed apply = mkBoxed (apply ^. Sugar.aAnnotatedArgs)
+                | isBoxed apply = mkBoxed apply (pl ^. Sugar.plData . ExprGuiT.plNearestHoles)
                 | otherwise = id
         makeFuncRow mParensId prec apply myId
             & addBox
@@ -171,19 +173,49 @@ makeArgRows arg =
     <*> TagEdit.makeParamTag (arg ^. Sugar.aaTag)
     <*> ExprGuiM.makeSubexpression (arg ^. Sugar.aaExpr)
 
+mkRelayedArgs :: Monad m => NearestHoles -> [Sugar.RelayedArg (Name m) m] -> ExprGuiM m (ExpressionGui m)
+mkRelayedArgs nearestHoles args =
+    do
+        argEdits <- mapM makeArgEdit args
+        collapsed <- ExpressionGui.grammarLabel "➾" <&> TreeLayout.fromAlignedWidget
+        ExpressionGui.combineSpaced ?? collapsed : argEdits
+    where
+        makeArgEdit arg =
+            do
+                eventMap <-
+                    ExprEventMap.make
+                    Sugar.Payload
+                    { Sugar._plAnnotation = error "not showing annotations for relayed args"
+                    , Sugar._plActions = arg ^. Sugar.raActions
+                    , Sugar._plEntityId = arg ^. Sugar.raId
+                    , Sugar._plData =
+                        ExprGuiT.Payload
+                        { ExprGuiT._plStoredEntityIds = []
+                        , ExprGuiT._plNearestHoles = nearestHoles
+                        , ExprGuiT._plShowAnnotation = ExprGuiT.neverShowAnnotations
+                        }
+                    } ExprGuiM.NoHolePick
+                GetVarEdit.makeGetParam (arg ^. Sugar.raValue) (WidgetIds.fromEntityId (arg ^. Sugar.raId))
+                    <&> E.weakerEvents eventMap
+
 mkBoxed ::
     Monad m =>
-    [Sugar.AnnotatedArg (Name m) (ExprGuiT.SugarExpr m)] ->
+    Sugar.LabeledApply (Name m) m (ExprGuiT.SugarExpr m) ->
+    NearestHoles ->
     ExprGuiM m (ExpressionGui m) ->
     ExprGuiM m (ExpressionGui m)
-mkBoxed annotatedArgs mkFuncRow =
+mkBoxed apply nearestHoles mkFuncRow =
     do
-        argRows <- traverse makeArgRows annotatedArgs
+        argRows <- apply ^. Sugar.aAnnotatedArgs & traverse makeArgRows
         funcRow <- ExprGuiM.withLocalPrecedence 0 (const (Prec.make 0)) mkFuncRow
+        relayedArgs <-
+            case apply ^. Sugar.aRelayedArgs of
+            [] -> return []
+            args -> mkRelayedArgs nearestHoles args <&> (:[])
         vbox <- ExpressionGui.vboxTopFocalSpaced
         ExpressionGui.addValFrame
             ?? vbox
-                ([funcRow, vbox argRows] <&> TreeLayout.alignment . _1 .~ 0)
+                ([funcRow, vbox argRows] ++ relayedArgs <&> TreeLayout.alignment . _1 .~ 0)
 
 makeSimple ::
     Monad m =>

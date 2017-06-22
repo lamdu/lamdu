@@ -101,6 +101,10 @@ convertLabeled funcS argS exprPl =
             { _aFunc = sBinderVar
             , _aSpecialArgs = NoSpecialArgs
             , _aAnnotatedArgs = args
+            , _aRelayedArgs =
+                -- Hidden args must be determined along with the special args.
+                -- One never wants to hide an infix operator's args.
+                []
             }
             & lift . addActions exprPl
             <&> rPayload . plData . pUserData <>~ argS ^. rPayload . plData . pUserData

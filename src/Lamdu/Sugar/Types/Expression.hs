@@ -41,7 +41,8 @@ module Lamdu.Sugar.Types.Expression
     , ParamsRecordVar(..), prvFieldNames
     , SpecialArgs(..), _NoSpecialArgs, _ObjectArg, _InfixArgs
     , AnnotatedArg(..), aaTag, aaExpr
-    , LabeledApply(..), aFunc, aSpecialArgs, aAnnotatedArgs
+    , RelayedArg(..), raValue, raId, raActions
+    , LabeledApply(..), aFunc, aSpecialArgs, aAnnotatedArgs, aRelayedArgs
     , Unwrap(..), _UnwrapAction, _UnwrapTypeMismatch
     , HoleArg(..), haExpr, haUnwrap
     , HoleOption(..), hoVal, hoSugaredBaseExpr, hoResults
@@ -289,10 +290,17 @@ data AnnotatedArg name expr = AnnotatedArg
     , _aaExpr :: expr
     } deriving (Functor, Foldable, Traversable)
 
+data RelayedArg name m = RelayedArg
+    { _raValue :: Param name m
+    , _raId :: EntityId
+    , _raActions :: Actions m
+    }
+
 data LabeledApply name m expr = LabeledApply
     { _aFunc :: BinderVar name m
     , _aSpecialArgs :: SpecialArgs expr
     , _aAnnotatedArgs :: [AnnotatedArg name expr]
+    , _aRelayedArgs :: [RelayedArg name m]
     } deriving (Functor, Foldable, Traversable)
 
 data Nominal name expr = Nominal
@@ -347,6 +355,7 @@ Lens.makeLenses ''CaseArg
 Lens.makeLenses ''DefinitionOutdatedType
 Lens.makeLenses ''Expression
 Lens.makeLenses ''GetField
+Lens.makeLenses ''RelayedArg
 Lens.makeLenses ''Hole
 Lens.makeLenses ''HoleActions
 Lens.makeLenses ''HoleArg

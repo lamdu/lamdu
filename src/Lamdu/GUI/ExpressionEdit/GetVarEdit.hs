@@ -1,6 +1,6 @@
 {-# LANGUAGE NoImplicitPrelude, RecordWildCards, OverloadedStrings #-}
 module Lamdu.GUI.ExpressionEdit.GetVarEdit
-    ( make, makeGetBinder
+    ( make, makeGetBinder, makeGetParam
     ) where
 
 import qualified Control.Lens as Lens
