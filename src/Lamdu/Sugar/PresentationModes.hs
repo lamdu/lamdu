@@ -16,8 +16,8 @@ type T = Transaction
 
 addToLabeledApply ::
     Monad m =>
-    Sugar.LabeledApply UUID (Sugar.BinderVar UUID f) (Sugar.Expression name f a) ->
-    T m (Sugar.LabeledApply UUID (Sugar.BinderVar UUID f) (Sugar.Expression name f a))
+    Sugar.LabeledApply UUID f (Sugar.Expression name f a) ->
+    T m (Sugar.LabeledApply UUID f (Sugar.Expression name f a))
 addToLabeledApply a =
     case a ^. Sugar.aSpecialArgs of
     Sugar.NoSpecialArgs ->

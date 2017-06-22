@@ -72,14 +72,12 @@ p0cpsNameConvertor :: Monad tm => Walk.CPSNameConvertor (Pass0LoadNames tm)
 p0cpsNameConvertor uuid =
     CPS $ \k -> (,) <$> getMStoredName uuid <*> k
 
-type FunctionSignature = LabeledApply () () ()
-
 -- | Info about a single instance of use of a name:
 data NameInstance = NameInstance
     { _niUUID :: !UUID
     , -- | Is the name used in a function application context? We consider
       -- the application as a disambiguator
-      _niMApplied :: !(Maybe FunctionSignature)
+      _niMApplied :: !(Maybe Walk.FunctionSignature)
     , _niNameType :: !Walk.NameType
     } deriving (Eq, Ord, Show)
 Lens.makeLenses ''NameInstance
@@ -153,7 +151,7 @@ instance Monad tm => MonadNaming (Pass1PropagateUp tm) where
     opGetAppliedFuncName = p1nameConvertor . Just
 
 pass1Result ::
-    Maybe FunctionSignature -> Walk.NameType -> MStoredName ->
+    Maybe Walk.FunctionSignature -> Walk.NameType -> MStoredName ->
     Pass1PropagateUp tm (StoredNamesWithin -> StoredNames)
 pass1Result mApplied nameType sn@(MStoredName mName uuid) =
     do
@@ -182,7 +180,7 @@ pass1Result mApplied nameType sn@(MStoredName mName uuid) =
             Local -> mempty
             Global -> myNameUUIDMap
 
-p1nameConvertor :: Maybe FunctionSignature -> Walk.NameType -> Walk.NameConvertor (Pass1PropagateUp tm)
+p1nameConvertor :: Maybe Walk.FunctionSignature -> Walk.NameType -> Walk.NameConvertor (Pass1PropagateUp tm)
 p1nameConvertor mApplied nameType mStoredName =
     pass1Result mApplied nameType mStoredName
     <&> ($ mempty)

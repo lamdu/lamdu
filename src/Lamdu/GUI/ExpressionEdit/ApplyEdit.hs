@@ -36,7 +36,7 @@ import           Lamdu.Prelude
 prefixPrecedence :: Int
 prefixPrecedence = 10
 
-mkPrecedence :: Sugar.LabeledApply n0 (Sugar.BinderVar (Name m) m0) expr -> Int
+mkPrecedence :: Sugar.LabeledApply (Name m) p expr -> Int
 mkPrecedence apply =
     case apply ^. Sugar.aSpecialArgs of
     Sugar.NoSpecialArgs -> 0
@@ -102,7 +102,7 @@ makeFuncRow ::
     Monad m =>
     Maybe AnimId ->
     Int ->
-    Sugar.LabeledApply name (Sugar.BinderVar (Name m) m) (ExprGuiT.SugarExpr m) ->
+    Sugar.LabeledApply (Name m) m (ExprGuiT.SugarExpr m) ->
     Widget.Id ->
     ExprGuiM m (ExpressionGui m)
 makeFuncRow mParensId prec apply myId =
@@ -136,7 +136,7 @@ makeFuncRow mParensId prec apply myId =
 
 makeLabeled ::
     Monad m =>
-    Sugar.LabeledApply (Name m) (Sugar.BinderVar (Name m) m) (ExprGuiT.SugarExpr m) ->
+    Sugar.LabeledApply (Name m) m (ExprGuiT.SugarExpr m) ->
     Sugar.Payload m ExprGuiT.Payload ->
     ExprGuiM m (ExpressionGui m)
 makeLabeled apply pl =

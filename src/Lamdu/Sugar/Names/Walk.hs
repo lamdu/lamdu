@@ -1,12 +1,13 @@
 {-# LANGUAGE LambdaCase, NoImplicitPrelude, FlexibleContexts, TypeFamilies, RecordWildCards, NamedFieldPuns #-}
 module Lamdu.Sugar.Names.Walk
     ( MonadNaming(..)
-    , NameType(..)
+    , NameType(..), FunctionSignature(..)
     , NameConvertor, CPSNameConvertor
     , OldExpression, NewExpression
     , toWorkArea, toDef, toExpression, toBody
     ) where
 
+import qualified Data.Set as Set
 import           Data.Store.Transaction (Transaction)
 import           Lamdu.Calc.Type (Type)
 import qualified Lamdu.Calc.Type as T
@@ -24,6 +25,11 @@ type NameConvertor m = OldName m -> m (NewName m)
 data NameType = DefName | TagName | NominalName | ParamName
     deriving (Eq, Ord, Show)
 
+data FunctionSignature = FunctionSignature
+    { sSpecialArgs :: SpecialArgs ()
+    , sNormalArgs :: Set (TagG ())
+    } deriving (Eq, Ord, Show)
+
 -- TODO: Rename MonadNameWalk
 class (Monad m, Monad (TM m)) => MonadNaming m where
     type OldName m
@@ -36,7 +42,7 @@ class (Monad m, Monad (TM m)) => MonadNaming m where
     opWithTagName :: CPSNameConvertor m
     opGetName :: NameType -> NameConvertor m
 
-    opGetAppliedFuncName :: LabeledApply () () () -> NameType -> NameConvertor m
+    opGetAppliedFuncName :: FunctionSignature -> NameType -> NameConvertor m
     opGetAppliedFuncName _ = opGetName
 
 type OldExpression m a = Expression (OldName m) (TM m) a
@@ -164,8 +170,8 @@ toTagG = tagGName %%~ opGetName TagName
 
 toLabeledApply ::
     MonadNaming m =>
-    LabeledApply (OldName m) (BinderVar (OldName m) p) a ->
-    m (LabeledApply (NewName m) (BinderVar (NewName m) p) a)
+    LabeledApply (OldName m) p a ->
+    m (LabeledApply (NewName m) p a)
 toLabeledApply LabeledApply{..} =
     LabeledApply
     <$> toBinderVar _aFunc
@@ -193,12 +199,11 @@ toBody expr = \case
     where
         toTIdG = tidgName %%~ opGetName NominalName
 
-voidLabeledApply :: LabeledApply name binderVar a -> LabeledApply () () ()
-voidLabeledApply LabeledApply{..} =
-    LabeledApply
-    { _aFunc = ()
-    , _aSpecialArgs = void _aSpecialArgs
-    , _aAnnotatedArgs = _aAnnotatedArgs <&> void <&> aaTag . tagGName .~ ()
+funcSignature :: LabeledApply name binderVar a -> FunctionSignature
+funcSignature apply =
+    FunctionSignature
+    { sSpecialArgs = apply ^. aSpecialArgs & void
+    , sNormalArgs = apply ^.. aAnnotatedArgs . traverse . aaTag <&> tagGName .~ () & Set.fromList
     }
 
 toExpression :: MonadNaming m => OldExpression m a -> m (NewExpression m a)
@@ -208,7 +213,7 @@ toExpression expr =
         let newFuncVar =
                 funcVar
                 & bvNameRef . nrName %%~
-                    opGetAppliedFuncName (voidLabeledApply app) (binderVarType (funcVar ^. bvForm))
+                    opGetAppliedFuncName (funcSignature app) (binderVarType (funcVar ^. bvForm))
         LabeledApply
             <$> newFuncVar
             <*> traverse toExpression spec

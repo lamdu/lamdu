@@ -287,13 +287,13 @@ data SpecialArgs expr
 data AnnotatedArg name expr = AnnotatedArg
     { _aaTag :: TagG name
     , _aaExpr :: expr
-    } deriving (Functor, Foldable, Traversable, Eq, Ord, Show)
+    } deriving (Functor, Foldable, Traversable)
 
-data LabeledApply name funcVar expr = LabeledApply
-    { _aFunc :: funcVar
+data LabeledApply name m expr = LabeledApply
+    { _aFunc :: BinderVar name m
     , _aSpecialArgs :: SpecialArgs expr
     , _aAnnotatedArgs :: [AnnotatedArg name expr]
-    } deriving (Functor, Foldable, Traversable, Eq, Ord, Show)
+    } deriving (Functor, Foldable, Traversable)
 
 data Nominal name expr = Nominal
     { _nTId :: TIdG name
@@ -308,7 +308,7 @@ data Lambda name m expr = Lambda
 data Body name m expr
     = BodyLam (Lambda name m expr)
     | BodySimpleApply (V.Apply expr)
-    | BodyLabeledApply (LabeledApply name (BinderVar name m) expr)
+    | BodyLabeledApply (LabeledApply name m expr)
     | BodyHole (Hole name m expr)
     | BodyLiteral (Literal (Property m))
     | BodyRecord (Record name m expr)
