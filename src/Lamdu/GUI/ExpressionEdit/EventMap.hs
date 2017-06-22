@@ -12,7 +12,6 @@ import qualified Data.Text as Text
 import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
 import           Lamdu.CharClassification (operatorChars, charPrecedence)
-import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.State (HoleState(..))
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.State as HoleEditState
@@ -39,7 +38,7 @@ make pl holePicker =
     mconcat <$> sequenceA
     [ actionsEventMap isHoleResult pl holePicker
     , jumpHolesEventMapIfSelected pl
-    , replaceOrComeToParentEventMap pl
+    , maybeReplaceEventMap pl
     ]
     where
         isHoleResult
@@ -93,25 +92,16 @@ extractEventMap actions =
     where
         doc = E.Doc ["Edit", "Extract"]
 
-replaceOrComeToParentEventMap ::
+maybeReplaceEventMap ::
     (MonadReader env m, Config.HasConfig env, Widget.HasCursor env, Monad f) =>
     Sugar.Payload f a ->
     m (Widget.EventMap (T f Widget.EventResult))
-replaceOrComeToParentEventMap pl =
+maybeReplaceEventMap pl =
     do
-        config <- Lens.view Config.config
         isSelected <- ExprGuiM.isExprSelected pl
-        return $
-            if isSelected
-            then replaceEventMap config (pl ^. Sugar.plActions)
-            else
-                Widget.keysEventMapMovesCursor (Config.delKeys config)
-                (E.Doc ["Navigation", "Select parent"]) selectParent
-    where
-        selectParent =
-            WidgetIds.fromExprPayload pl
-            & WidgetIds.notDelegatingId
-            & return
+        if isSelected
+            then replaceEventMap (pl ^. Sugar.plActions)
+            else return mempty
 
 actionsEventMap ::
     (Monad m, Monad f) =>
@@ -181,16 +171,16 @@ wrapEventMap wrap =
     (wrap <&> HoleWidgetIds.make <&> HoleWidgetIds.hidOpen)
 
 replaceEventMap ::
-    Functor m =>
-    Config -> Sugar.Actions m -> Widget.EventMap (T m Widget.EventResult)
-replaceEventMap config actions =
-    case actions ^. Sugar.setToHole of
-    Sugar.SetToHole action -> mk "Delete expression" delKeys (fmap snd action)
-    Sugar.SetWrapperToHole action -> mk "Delete outer hole" delKeys (fmap snd action)
-    Sugar.AlreadyAHole -> mempty
-    where
-        mk doc keys = mkEventMap keys (E.Doc ["Edit", doc])
-        delKeys = Config.delKeys config
-        mkEventMap keys doc =
-            Widget.keysEventMapMovesCursor keys doc .
-            fmap WidgetIds.fromEntityId
+    (MonadReader env m, Config.HasConfig env, Widget.HasCursor env, Monad f) =>
+    Sugar.Actions f -> m (Widget.EventMap (T f Widget.EventResult))
+replaceEventMap actions =
+    do
+        config <- Lens.view Config.config
+        let mk doc action =
+                action <&> snd <&> WidgetIds.fromEntityId
+                & Widget.keysEventMapMovesCursor (Config.delKeys config) (E.Doc ["Edit", doc])
+        case actions ^. Sugar.setToHole of
+            Sugar.SetToHole action -> mk "Delete expression" action
+            Sugar.SetWrapperToHole action -> mk "Delete outer hole" action
+            Sugar.AlreadyAHole -> mempty
+            & return
