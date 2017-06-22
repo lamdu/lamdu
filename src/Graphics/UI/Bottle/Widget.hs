@@ -12,7 +12,6 @@ module Graphics.UI.Bottle.Widget
     , EventResult(..), eCursor, eAnimIdMapping
     , eventResultFromCursor
     , applyIdMapping
-    , animIdMappingFromPrefixMap
 
     -- Events:
     , EventMap
@@ -37,7 +36,7 @@ module Graphics.UI.Bottle.Widget
     , fromView
 
     -- Focus handlers:
-    , takesFocus, doesntTakeFocus
+    , takesFocus
 
     -- Operations:
     , translate, scale
@@ -174,16 +173,10 @@ takesFocus enterFunc =
         <&> EnterResult (Rect 0 (w ^. View.size))
         )
 
-doesntTakeFocus :: HasWidget w => w a -> w a
-doesntTakeFocus = widget . mEnter .~ Nothing
-
-animIdMappingFromPrefixMap :: Map AnimId AnimId -> Monoid.Endo AnimId
-animIdMappingFromPrefixMap = Monoid.Endo . Anim.mappingFromPrefixMap
-
 applyIdMapping :: Map Id Id -> EventResult -> EventResult
 applyIdMapping widgetIdMap eventResult =
     eventResult
-    & eAnimIdMapping <>~ animIdMappingFromPrefixMap animIdMap
+    & eAnimIdMapping <>~ Monoid.Endo (Anim.mappingFromPrefixMap animIdMap)
     & eCursor . Lens._Wrapped' . Lens._Just %~ mapCursor
     where
         animIdMap =

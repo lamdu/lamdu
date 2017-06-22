@@ -5,7 +5,7 @@ module Lamdu.Expr.IRef
     , ValIProperty
     , Lam, Apply
     , newValBody, readValBody, writeValBody
-    , newVar, newVal, readVal
+    , newVar, readVal
     , writeValWithStoredSubexpressions
     , DefI
     , addProperties
@@ -69,9 +69,6 @@ readValBody = Transaction.readIRef . unValI
 writeValBody ::
     Monad m => ValI m -> ValBody m -> T m ()
 writeValBody = Transaction.writeIRef . unValI
-
-newVal :: Monad m => Val () -> T m (ValI m)
-newVal = fmap (^. Val.payload . _1) . writeValWithStoredSubexpressions . ((,) Nothing <$>)
 
 readVal :: Monad m => ValI m -> T m (Val (ValI m))
 readVal =

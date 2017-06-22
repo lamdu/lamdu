@@ -1,8 +1,6 @@
 {-# LANGUAGE NoImplicitPrelude, MultiParamTypeClasses, FlexibleInstances, TypeFamilies, DeriveGeneric #-}
 module Data.Vector.Vector2
     ( Vector2(Vector2)
-    , (***),both,zip
-    , swap
     , curry,uncurry,sqrNorm
     )
 where
@@ -63,19 +61,6 @@ instance a ~ b => Lens.Field2 (Vector2 a) (Vector2 b) a b where
 --   where
 --     vectors = range r
 
-swap :: Vector2 a -> Vector2 a
-swap (Vector2 x y) = Vector2 y x
-
-infixr 3 ***
-(***) :: (a -> b) -> (a -> b) -> Vector2 a -> Vector2 b
-(f *** g) (Vector2 x y) = Vector2 (f x) (g y)
-
-both :: (a -> b) -> Vector2 a -> Vector2 b
-both = join (***)
-
-zip :: [a] -> [a] -> [Vector2 a]
-zip = zipWith Vector2
-
 curry :: (Vector2 a -> b) -> a -> a -> b
 curry f x y = f (Vector2 x y)
 
@@ -86,7 +71,7 @@ sqrNorm :: Num a => Vector2 a -> a
 sqrNorm = uncurry (+) . (^ (2::Int))
 
 instance Functor Vector2 where
-    fmap = both
+    fmap f (Vector2 x y) = Vector2 (f x) (f y)
 instance Applicative Vector2 where
     pure x = Vector2 x x
     Vector2 f g <*> Vector2 x y = Vector2 (f x) (g y)

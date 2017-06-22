@@ -1,7 +1,6 @@
 module Data.List.Utils
     ( groupOn
     , minimumOn
-    , insertAt
     , removeAt
     , nonEmptyAll
     , isLengthAtLeast
@@ -29,9 +28,6 @@ minimumOn = minimumBy . comparing
 
 removeAt :: Int -> [a] -> [a]
 removeAt n xs = take n xs ++ drop (n+1) xs
-
-insertAt :: Int -> a -> [a] -> [a]
-insertAt n x xs = take n xs ++ x : drop n xs
 
 isLengthAtLeast :: Int -> [a] -> Bool
 isLengthAtLeast n

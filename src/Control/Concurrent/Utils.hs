@@ -1,5 +1,5 @@
 module Control.Concurrent.Utils
-    ( forkIOUnmasked, runAfter, asyncThrowTo, forwardSynchronuousExceptions, withForkedIO
+    ( forkIOUnmasked, runAfter, forwardSynchronuousExceptions, withForkedIO
     ) where
 
 import           Control.Concurrent (ThreadId, forkIOWithUnmask, threadDelay, myThreadId)

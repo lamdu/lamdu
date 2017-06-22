@@ -36,7 +36,7 @@ makeTagNameEdit ::
     Widget.EventMap (T m Widget.EventResult) -> Draw.Color ->
     Sugar.TagG (Name m) -> ExprGuiM m (Widget (T m Widget.EventResult))
 makeTagNameEdit jumpNextEventMap tagColor tagG =
-    ExpressionGui.makeNameEditWith (E.weakerEvents jumpNextEventMap)
+    ExpressionGui.makeNameEdit (E.weakerEvents jumpNextEventMap)
     (tagG ^. Sugar.tagGName) myId
     & Reader.local (TextView.color .~ tagColor)
     <&> Widget.eventMap %~ E.filterChars (/= ',')

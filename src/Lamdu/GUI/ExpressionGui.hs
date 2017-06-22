@@ -15,7 +15,7 @@ module Lamdu.GUI.ExpressionGui
     , addValBGWithColor
     -- Lifted widgets:
     , makeNameView
-    , makeNameEdit, makeNameEditWith
+    , makeNameEdit
     , makeNameOriginEdit, styleNameOrigin
     , addDeletionDiagonal
     -- Info adding
@@ -499,7 +499,7 @@ makeNameOriginEdit ::
     Name m -> Draw.Color -> Widget.Id ->
     ExprGuiM m (Widget (T m Widget.EventResult))
 makeNameOriginEdit name color myId =
-    makeNameEdit name myId
+    makeNameEdit id name myId
     & styleNameOrigin name color
 
 styleNameOrigin :: Monad m => Name n -> Draw.Color -> ExprGuiM m b -> ExprGuiM m b
@@ -515,14 +515,10 @@ styleNameOrigin name color act =
         act & Reader.local (TextEdit.style .~ textEditStyle)
 
 makeNameEdit ::
-    Monad m => Name m -> Widget.Id -> ExprGuiM m (Widget (T m Widget.EventResult))
-makeNameEdit = makeNameEditWith id
-
-makeNameEditWith ::
     Monad m =>
     (Widget (T m Widget.EventResult) -> Widget (T m Widget.EventResult)) ->
     Name m -> Widget.Id -> ExprGuiM m (Widget (T m Widget.EventResult))
-makeNameEditWith onActiveEditor (Name nameSrc nameCollision setName name) myId =
+makeNameEdit onActiveEditor (Name nameSrc nameCollision setName name) myId =
     ( FocusDelegator.make ?? nameEditFDConfig
       ?? FocusDelegator.FocusEntryParent ?? myId
     ) <*>

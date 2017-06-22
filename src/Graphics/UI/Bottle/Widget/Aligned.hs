@@ -1,7 +1,6 @@
 {-# LANGUAGE NoImplicitPrelude, TypeFamilies, TemplateHaskell, RankNTypes, FlexibleContexts, DeriveFunctor, DeriveFoldable, DeriveTraversable #-}
 module Graphics.UI.Bottle.Widget.Aligned
     ( AlignedWidget(..), alignment, aWidget
-    , asTuple
     , empty, fromView
     , scaleAround, scale
     , hoverInPlaceOf

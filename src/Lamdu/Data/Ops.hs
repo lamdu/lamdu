@@ -9,7 +9,6 @@ module Lamdu.Data.Ops
     , newPublicDefinitionToIRef
     , savePreJumpPosition, jumpBack
     , newPane
-    , isInfix
     , newIdentityLambda
     ) where
 
