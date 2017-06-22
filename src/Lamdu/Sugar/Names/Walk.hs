@@ -172,9 +172,12 @@ toLabeledApply ::
     MonadNaming m =>
     LabeledApply (OldName m) p a ->
     m (LabeledApply (NewName m) p a)
-toLabeledApply LabeledApply{..} =
+toLabeledApply app@LabeledApply{..} =
     LabeledApply
-    <$> toBinderVar _aFunc
+    <$>
+    ( _aFunc & bvNameRef . nrName %%~
+        opGetAppliedFuncName (funcSignature app) (binderVarType (_aFunc ^. bvForm))
+    )
     <*> pure _aSpecialArgs
     <*> (traverse . aaTag) toTagG _aAnnotatedArgs
 
@@ -207,25 +210,7 @@ funcSignature apply =
     }
 
 toExpression :: MonadNaming m => OldExpression m a -> m (NewExpression m a)
-toExpression expr =
-    do
-        app@(LabeledApply funcVar spec anot) <- expr ^? rBody . _BodyLabeledApply
-        let newFuncVar =
-                funcVar
-                & bvNameRef . nrName %%~
-                    opGetAppliedFuncName (funcSignature app) (binderVarType (funcVar ^. bvForm))
-        LabeledApply
-            <$> newFuncVar
-            <*> traverse toExpression spec
-            <*> traverse onAnnotatedArg anot
-            <&> BodyLabeledApply <&> (`Expression` (expr ^. rPayload))
-            & Just
-    & fromMaybe (rBody (toBody toExpression) expr)
-    where
-        onAnnotatedArg (AnnotatedArg tag e) =
-            AnnotatedArg
-            <$> toTagG tag
-            <*> toExpression e
+toExpression = rBody (toBody toExpression)
 
 withBinderParams ::
     MonadNaming m =>
