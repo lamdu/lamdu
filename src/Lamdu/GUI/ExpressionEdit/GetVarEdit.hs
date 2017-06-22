@@ -197,6 +197,26 @@ makeGetBinder binderVar myId =
                 (makeInlineEventMap config (binderVar ^. Sugar.bvInline))
             & processDef
 
+makeGetParam ::
+    Monad m =>
+    Sugar.Param (Name m) m -> Widget.Id ->
+    ExprGuiM m (TreeLayout (T m Widget.EventResult))
+makeGetParam param myId =
+    do
+        theme <- ExprGuiM.readTheme
+        let paramColor = Theme.name theme & Theme.parameterColor
+        case param ^. Sugar.pBinderMode of
+            Sugar.LightLambda ->
+                makeSimpleView
+                <&> Lens.mapped %~ LightLambda.withUnderline theme
+                <&> Lens.mapped %~ ExpressionGui.styleNameOrigin name paramColor
+            _ ->
+                makeSimpleView
+                <&> Lens.mapped %~ Reader.local (TextView.color .~ paramColor)
+            & makeNameRef myId (param ^. Sugar.pNameRef)
+    where
+        name = param ^. Sugar.pNameRef . Sugar.nrName
+
 make ::
     Monad m =>
     Sugar.GetVar (Name m) m ->
@@ -206,21 +226,7 @@ make getVar pl =
     case getVar of
     Sugar.GetBinder binderVar -> makeGetBinder binderVar myId
     Sugar.GetParamsRecord paramsRecordVar -> makeParamsRecord myId paramsRecordVar
-    Sugar.GetParam param ->
-        do
-            theme <- ExprGuiM.readTheme
-            let paramColor = Theme.name theme & Theme.parameterColor
-            case param ^. Sugar.pBinderMode of
-                Sugar.LightLambda ->
-                    makeSimpleView
-                    <&> Lens.mapped %~ LightLambda.withUnderline theme
-                    <&> Lens.mapped %~ ExpressionGui.styleNameOrigin name paramColor
-                _ ->
-                    makeSimpleView
-                    <&> Lens.mapped %~ Reader.local (TextView.color .~ paramColor)
-                & makeNameRef myId (param ^. Sugar.pNameRef)
-        where
-            name = param ^. Sugar.pNameRef . Sugar.nrName
+    Sugar.GetParam param -> makeGetParam param myId
     & ExpressionGui.stdWrap pl
     where
         myId = WidgetIds.fromExprPayload pl
