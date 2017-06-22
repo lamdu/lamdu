@@ -95,7 +95,7 @@ extractEventMap actions =
 
 replaceOrComeToParentEventMap ::
     (MonadReader env m, Config.HasConfig env, Widget.HasCursor env, Monad f) =>
-    Sugar.Payload f ExprGuiT.Payload ->
+    Sugar.Payload f a ->
     m (Widget.EventMap (T f Widget.EventResult))
 replaceOrComeToParentEventMap pl =
     do
@@ -115,7 +115,7 @@ replaceOrComeToParentEventMap pl =
 
 actionsEventMap ::
     (Monad m, Monad f) =>
-    IsHoleResult -> Sugar.Payload f ExprGuiT.Payload -> ExprGuiM.HolePicker f ->
+    IsHoleResult -> Sugar.Payload f a -> ExprGuiM.HolePicker f ->
     ExprGuiM m (Widget.EventMap (T f Widget.EventResult))
 actionsEventMap isHoleResult pl holePicker =
     sequence
@@ -143,7 +143,7 @@ actionsEventMap isHoleResult pl holePicker =
 
 applyOperatorEventMap ::
     (Monad m, Monad f) =>
-    Sugar.Payload f ExprGuiT.Payload -> ExprGuiM.HolePicker f ->
+    Sugar.Payload f a -> ExprGuiM.HolePicker f ->
     ExprGuiM m (Widget.EventMap (T f Widget.EventResult))
 applyOperatorEventMap pl holePicker =
     do
