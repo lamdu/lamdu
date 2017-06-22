@@ -106,9 +106,9 @@ makeFuncRow ::
     Widget.Id ->
     ExprGuiM m (ExpressionGui m)
 makeFuncRow mParensId prec apply myId =
-    case specialArgs of
+    case apply ^. Sugar.aSpecialArgs of
     Sugar.NoSpecialArgs ->
-        case labeledArgs of
+        case apply ^. Sugar.aAnnotatedArgs of
         [] -> error "apply with no args!"
         (x:_) ->
             makeFuncVar (ExprGuiT.nextHolesBefore (x ^. Sugar.aaExpr))
@@ -132,7 +132,7 @@ makeFuncRow mParensId prec apply myId =
         , ExprGuiM.makeSubexpressionWith (prec+1) (ExpressionGui.before .~ prec+1) r
         ]
     where
-        Sugar.LabeledApply funcVar specialArgs labeledArgs = apply
+        funcVar = apply ^. Sugar.aFunc
 
 makeLabeled ::
     Monad m =>
