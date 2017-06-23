@@ -31,8 +31,14 @@ resultScore :: Val Infer.Payload -> [Int]
 resultScore val@(Val pl body) =
     numWrappers val :
     (if Lens.has ExprLens.valBodyHole body then 1 else 0) :
+    resultScopeScore :
     resultTypeScore (pl ^. Infer.plType) ++
     (body ^.. Lens.traversed >>= resultScore)
+    where
+        resultScopeScore =
+            case body ^? ExprLens.valBodyVar <&> (`Map.member` Infer.scopeToTypeMap (pl ^. Infer.plScope)) of
+            Just False -> 1
+            _ -> 0
 
 numWrappers :: Val a -> Int
 numWrappers val =
