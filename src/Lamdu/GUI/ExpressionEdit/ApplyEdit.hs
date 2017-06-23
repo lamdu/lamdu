@@ -215,7 +215,7 @@ mkBoxed apply nearestHoles mkFuncRow =
         vbox <- ExpressionGui.vboxTopFocalSpaced
         ExpressionGui.addValFrame
             ?? vbox
-                ([funcRow, vbox argRows] ++ relayedArgs <&> TreeLayout.alignment . _1 .~ 0)
+                (funcRow : argRows ++ relayedArgs <&> TreeLayout.alignment . _1 .~ 0)
 
 makeSimple ::
     Monad m =>
