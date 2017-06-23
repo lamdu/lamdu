@@ -127,13 +127,13 @@ expandingName vertOrder (#>) needParen nomId showName =
                     NameShowing -> nameShowing
                     NameHovering -> nameShowing `AlignedWidget.hoverInPlaceOf` label
                     #> (AlignedWidget.fromView 0 space #> subexprGui)
+                    & TreeLayout.alignment . _1 .~ 0
                 vert =
                     TreeLayout.fromAlignedWidget (nameShowing & AlignedWidget.alignment .~ 0)
                     `vertOrder` subexprGui
                     & TreeLayout.vbox
             in
             horiz `horizWithFallback` vert
-            & TreeLayout.alignment .~ 0
     where
         mParenInfo
             | needParen = Widget.toAnimId nomId & Just
