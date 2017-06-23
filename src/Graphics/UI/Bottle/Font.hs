@@ -46,10 +46,11 @@ render font color mUnderline str =
         size = DrawUtils.textSize font str
 
 drawUnderline :: Draw.Font -> Vector2 Draw.R -> Underline -> Draw.Image ()
-drawUnderline font size (Underline color width) =
+drawUnderline font size (Underline color relativeWidth) =
     DrawUtils.square
     & (DrawUtils.scale (Vector2 (size ^. _1) width) %%)
     & (DrawUtils.translate (Vector2 0 (size ^. _2 + descender + width/2)) %%)
     & Draw.tint color
     where
+        width = relativeWidth * height font
         descender = Draw.fontDescender font

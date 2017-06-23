@@ -46,7 +46,7 @@
         "paramTagColor": [0.65, 0.65, 0.65, 1.0]
     },
     "lightLambdaUnderlineColor": [1.0, 1.0, 1.0, 0.3],
-    "underlineWidth": 2,
+    "underlineWidth": 0.15,
     "eval": {
         "staleResultTint": [0.5, 0.5, 0.5, 0.5],
         "neighborsScaleFactor": [1.0, 1.0],

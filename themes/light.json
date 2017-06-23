@@ -8,7 +8,7 @@
     "hoverDarkPadding"              : [1.0, 1.0],
     "maxEvalViewSize"               : 32,
     "lightLambdaUnderlineColor"     : [0.0, 0.0, 0.0, 0.6],
-    "underlineWidth"                : 2,
+    "underlineWidth"                : 0.1,
     "typeTint"                      : [1.0, 1.0, 1.0, 0.6],
     "cursorBGColor"                 : [0.25, 0.25, 0.75, 0.25],
     "recordTailColor"               : [0.6, 0.6, 0.6, 1.0],
