@@ -115,17 +115,17 @@ actionsEventMap isHoleResult pl holePicker =
     , applyOperatorEventMap pl holePicker
     , case isHoleResult of
         HoleResult -> return mempty
-        NotHoleResult -> extractEventMap actions
-    , do
-        config <- Lens.view Config.config
-        actions ^. Sugar.mReplaceParent
-            & maybe mempty
-            ( Widget.keysEventMapMovesCursor
-                (Config.replaceParentKeys config)
-                (E.Doc ["Edit", "Replace parent"])
-                . fmap WidgetIds.fromEntityId
-            )
-            & return
+        NotHoleResult ->
+            sequence
+            [ extractEventMap actions
+            , do
+                replaceKeys <- Lens.view Config.config <&> Config.replaceParentKeys
+                actions ^. Sugar.mReplaceParent
+                    <&> Lens.mapped %~ WidgetIds.fromEntityId
+                    & maybe mempty
+                        (Widget.keysEventMapMovesCursor replaceKeys (E.Doc ["Edit", "Replace parent"]))
+                    & return
+            ] <&> mconcat
     ]
     <&> mconcat
     where
