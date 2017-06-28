@@ -17,7 +17,6 @@ import qualified Lamdu.Data.DbLayout as DbLayout
 import           Lamdu.Data.Export.JSON (fileImportAll)
 import qualified Lamdu.Expr.UniqueId as UniqueId
 import qualified Lamdu.GUI.WidgetIdIRef as WidgetIdIRef
-import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Paths.Utils as Paths
 import qualified Paths_Lamdu
 import qualified System.Directory as Directory
@@ -50,7 +49,6 @@ initDb db importAct =
         writeRevAnchor DbLayout.currentBranch master
         writeRevAnchor DbLayout.redos []
         let paneWId = WidgetIdIRef.fromIRef $ DbLayout.panes DbLayout.codeIRefs
-        writeRevAnchor DbLayout.cursor WidgetIds.replId
         DbLayout.runViewTransaction view $
             do
                 let writeCodeAnchor f = Transaction.writeIRef (f DbLayout.codeIRefs)

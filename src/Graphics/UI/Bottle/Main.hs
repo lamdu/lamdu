@@ -65,6 +65,7 @@ data Options = Options
     { tickHandler :: IO Bool
     , getConfig :: IO Config
     , getHelpStyle :: Zoom -> IO EventMapHelp.Config
+    , cursorStartPos :: Widget.Id
     }
 
 -- TODO: If moving GUI to lib,
@@ -93,6 +94,10 @@ defaultOptions helpFontPath =
                     zoomFactor <- Zoom.getSizeFactor zoom
                     helpFont <- loadHelpFont (9 * zoomFactor)
                     EventMapHelp.defaultConfig helpFont & return
+            , cursorStartPos =
+                -- Note that not every app is necessarily interactive and even uses a cursor,
+                -- so an empty value might be fitting.
+                Widget.Id []
             }
 
 quitEventMap :: Functor f => Widget.EventMap (f Widget.EventResult)
@@ -102,9 +107,10 @@ quitEventMap =
 data Env = Env
     { _eZoom :: Zoom
     , _eWindowSize :: Widget.Size
+    , _eCursor :: Widget.Id
     }
-
 Lens.makeLenses ''Env
+instance Widget.HasCursor Env where cursor = eCursor
 
 mainLoopWidget ::
     GLFW.Window ->
@@ -119,15 +125,18 @@ mainLoopWidget win mkWidgetUnmemod options =
                 do
                     zoomConfig <- getConfig <&> cZoom
                     Zoom.eventMap zoom zoomConfig <&> liftIO & return
+        cursorRef <- newIORef (cursorStartPos options)
         let mkW =
                 memoIO $ \size ->
                 do
                     zoomEventMap <- mkZoomEventMap
                     helpStyle <- getHelpStyle zoom
+                    cursor <- readIORef cursorRef
                     mkWidgetUnmemod
                         Env
                         { _eZoom = zoom
                         , _eWindowSize = size
+                        , _eCursor = cursor
                         }
                         <&> E.strongerEvents zoomEventMap
                         >>= addHelp helpStyle size
@@ -159,13 +168,15 @@ mainLoopWidget win mkWidgetUnmemod options =
                 do
                     widget <- getWidget size
                     mWidgetRes <- lookupEvent widget event
-                    EventResult runInMainThread mAnimIdMapping <-
-                        (sequenceA mWidgetRes <&> fmap (^. Widget.eAnimIdMapping)) ^. m
-                    case mAnimIdMapping of
+                    EventResult runInMainThread mRes <- sequenceA mWidgetRes ^. m
+                    case mRes of
                         Nothing -> return ()
-                        Just _ -> newWidget
+                        Just res ->
+                            do
+                                traverse_ (writeIORef cursorRef) (res ^. Widget.eCursor)
+                                newWidget
                     return MainAnim.EventResult
-                        { MainAnim.erAnimIdMapping = mAnimIdMapping
+                        { MainAnim.erAnimIdMapping = mRes <&> (^. Widget.eAnimIdMapping)
                         , MainAnim.erExecuteInMainThread = runInMainThread
                         }
             , MainAnim.makeFrame =

@@ -52,7 +52,6 @@ revisionIRefs :: Revision (IRef DbM) DbM
 revisionIRefs = Revision
     { branches = IRef.anchor "branches"
     , currentBranch = IRef.anchor "currentBranch"
-    , cursor = IRef.anchor "cursor"
     , redos = IRef.anchor "redos"
     , view = IRef.anchor "view"
     }

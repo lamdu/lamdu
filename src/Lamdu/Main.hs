@@ -11,10 +11,8 @@ import           Control.Monad.IO.Class (MonadIO(..))
 import           Data.CurAndPrev (current)
 import           Data.IORef
 import           Data.MRUMemo (memoIO)
-import qualified Data.Monoid as Monoid
 import           Data.Store.Db (Db)
 import           Data.Store.Transaction (Transaction)
-import qualified Data.Store.Transaction as Transaction
 import           GHC.Conc (setNumCapabilities, getNumProcessors)
 import           GHC.Stack (whoCreated)
 import qualified Graphics.DrawingCombinators as Draw
@@ -147,13 +145,9 @@ exportActions config evalResults =
 
 makeRootWidget ::
     Fonts Draw.Font -> Db -> IORef Settings -> EvalManager.Evaluator ->
-    Config -> Theme -> Widget.Size -> IO (Widget (MainLoop.M Widget.EventResult))
-makeRootWidget fonts db settingsRef evaluator config theme size =
+    Config -> Theme -> MainLoop.Env -> IO (Widget (MainLoop.M Widget.EventResult))
+makeRootWidget fonts db settingsRef evaluator config theme mainLoopEnv =
     do
-        cursor <-
-            DbLayout.cursor DbLayout.revisionProps
-            & Transaction.getP
-            & DbLayout.runDbTransaction db
         eventMap <- Settings.mkEventMap (settingsChangeHandler evaluator) config settingsRef
         evalResults <- EvalManager.getResults evaluator
         settings <- readIORef settingsRef
@@ -165,8 +159,7 @@ makeRootWidget fonts db settingsRef evaluator config theme size =
                 , _envTheme = theme
                 , _envSettings = settings
                 , _envStyle = Style.style theme fonts
-                , _envFullSize = size
-                , _envCursor = cursor
+                , _envMainLoop = mainLoopEnv
                 }
         let dbToIO action =
                 case settings ^. Settings.sInfoMode of
@@ -212,12 +205,12 @@ runEditor opts db =
                     settingsRef <- newIORef initialSettings
                     settingsChangeHandler evaluator initialSettings
                     mainLoop subpixel win refreshScheduler configSampler $
-                        \fonts config theme size ->
+                        \fonts config theme env ->
                         let themeEvents =
                                 themeEventMap (Config.changeThemeKeys config) configSampler themeRef
                                 <&> liftIO
                         in  makeRootWidget fonts db settingsRef evaluator
-                            config theme size
+                            config theme env
                             <&> EventMap.weakerEvents themeEvents
     where
         subpixel
@@ -272,7 +265,7 @@ makeGetFonts subpixel =
 mainLoop ::
     Font.LCDSubPixelEnabled ->
     GLFW.Window -> RefreshScheduler -> Sampler ->
-    (Fonts Draw.Font -> Config -> Theme -> Widget.Size ->
+    (Fonts Draw.Font -> Config -> Theme -> MainLoop.Env ->
     IO (Widget (MainLoop.M Widget.EventResult))) -> IO ()
 mainLoop subpixel win refreshScheduler configSampler iteration =
     do
@@ -282,7 +275,7 @@ mainLoop subpixel win refreshScheduler configSampler iteration =
                 do
                     sample <- ConfigSampler.getSample configSampler
                     fonts <- getFonts (env ^. MainLoop.eZoom) sample
-                    iteration fonts (sample ^. sConfig) (sample ^. sTheme) (env ^. MainLoop.eWindowSize)
+                    iteration fonts (sample ^. sConfig) (sample ^. sTheme) env
         mainLoopWidget win makeWidget MainLoop.Options
             { getConfig =
                 do
@@ -309,6 +302,7 @@ mainLoop subpixel win refreshScheduler configSampler iteration =
                     let helpTheme = sample ^. sTheme & Theme.help
                     Style.help (Font.fontHelp fonts) helpKeys helpTheme
                         & return
+            , cursorStartPos = GUIMain.defaultCursor
             }
 
 mkWidgetWithFallback ::
@@ -323,13 +317,10 @@ mkWidgetWithFallback dbToIO env =
                 (isValid, widget) <-
                     if Widget.isFocused candidateWidget
                     then return (True, candidateWidget)
-                    else do
-                        finalWidget <-
-                            env & Widget.cursor .~ GUIMain.defaultCursor
-                            & makeMainGui dbToIO
-                        Transaction.setP (DbLayout.cursor DbLayout.revisionProps)
-                            GUIMain.defaultCursor
-                        return (False, finalWidget)
+                    else
+                        env & Widget.cursor .~ GUIMain.defaultCursor
+                        & makeMainGui dbToIO
+                        <&> (,) False
                 unless (Widget.isFocused widget) $
                     fail "Root cursor did not match"
                 return (isValid, widget)
@@ -349,14 +340,6 @@ makeMainGui dbToIO env =
     GUIMain.make env
     <&> Widget.events %~ \act ->
     act ^. GUIMain.m
-    & Lens.mapped %~ (>>= traverse attachCursor)
     <&> dbToIO
     & join
     & MainLoop.M
-    where
-        attachCursor eventResult =
-            eventResult ^. Widget.eCursor
-            & Monoid.getLast
-            & maybe (return ())
-              (Transaction.setP (DbLayout.cursor DbLayout.revisionProps))
-            & (eventResult <$)

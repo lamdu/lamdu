@@ -54,13 +54,12 @@ onCode f (Code x0 x1 x2 x3 x4 x5 x6 x7) =
 data Revision f m = Revision
     { branches :: f [Branch m]
     , currentBranch :: f (Branch m)
-    , cursor :: f WidgetId.Id
     , redos :: f [Version m]
     , view :: f (View m)
     }
 onRevision :: (forall a. Binary a => f a -> g a) -> Revision f m -> Revision g m
-onRevision f (Revision x0 x1 x2 x3 x4) =
-    Revision (f x0) (f x1) (f x2) (f x3) (f x4)
+onRevision f (Revision x0 x1 x2 x3) =
+    Revision (f x0) (f x1) (f x2) (f x3)
 
 newtype BinderParamScopeId = BinderParamScopeId
     { _bParamScopeId :: ScopeId

@@ -3,7 +3,7 @@ module Lamdu.GUI.Main
     ( make
     , Env(..), CodeEdit.ExportActions(..)
       , envEvalRes, envExportActions
-      , envConfig, envTheme, envSettings, envStyle, envFullSize
+      , envConfig, envTheme, envSettings, envStyle, envMainLoop
     , CodeEdit.M(..), CodeEdit.m, defaultCursor
     ) where
 
@@ -14,6 +14,7 @@ import           Data.CurAndPrev (CurAndPrev(..))
 import           Data.Store.Transaction (Transaction)
 import           Data.Vector.Vector2 (Vector2(..))
 import qualified Graphics.UI.Bottle.EventMap as EventMap
+import qualified Graphics.UI.Bottle.Main as MainLoop
 import qualified Graphics.UI.Bottle.View as View
 import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
@@ -49,12 +50,11 @@ data Env = Env
     , _envTheme :: Theme
     , _envSettings :: Settings
     , _envStyle :: Style
-    , _envFullSize :: Widget.Size
-    , _envCursor :: Widget.Id
+    , _envMainLoop :: MainLoop.Env
     }
 Lens.makeLenses ''Env
 
-instance Widget.HasCursor Env where cursor = envCursor
+instance Widget.HasCursor Env where cursor = envMainLoop . Widget.cursor
 instance TextEdit.HasStyle Env where style = envStyle . Style.styleBase
 instance TextView.HasStyle Env where style = TextEdit.style . TextView.style
 
@@ -82,7 +82,7 @@ make env =
                     codeEdit <-
                         CodeEdit.make (codeSize ^. _1) codeEditEnv
                         & Reader.mapReaderT VersionControl.runAction
-                        <&> Widget.events . CodeEdit.m %~ fmap (VersionControl.runEvent cursor)
+                        <&> Widget.events . CodeEdit.m %~ fmap (VersionControl.runEvent (mainEnv ^. Widget.cursor))
                     topPadding <- Theme.topPadding theme & Spacing.vspacer
                     let scrollBox =
                             Box.vboxAlign 0.5 [Widget.fromView topPadding, codeEdit]
@@ -96,7 +96,8 @@ make env =
             EventMap.strongerEvents quitEventMap branchGui & return
             & (`runReaderT` env)
     where
-        Env _evalResults _exportActions config theme _settings _style fullSize cursor = env
+        fullSize = mainEnv ^. MainLoop.eWindowSize
+        Env _evalResults _exportActions config theme _settings _style mainEnv = env
         codeEditEnv =
             CodeEdit.Env
             { _codeProps = DbLayout.codeProps
