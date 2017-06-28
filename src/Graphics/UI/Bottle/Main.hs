@@ -1,6 +1,7 @@
 {-# LANGUAGE TemplateHaskell, DeriveFunctor, DeriveFoldable, DeriveTraversable, NoImplicitPrelude, NamedFieldPuns, OverloadedStrings #-}
 module Graphics.UI.Bottle.Main
-    ( mainLoopWidget, Config(..), EventResult(..), M(..), m
+    ( mainLoopWidget
+    , Config(..), EventResult(..), M(..), m, Env(..), eWindowSize, eZoom
     , Options(..), defaultOptions
     , quitEventMap
     ) where
@@ -98,9 +99,16 @@ quitEventMap :: Functor f => Widget.EventMap (f Widget.EventResult)
 quitEventMap =
     Widget.keysEventMap [MetaKey.cmd GLFW.Key'Q] (E.Doc ["Quit"]) (error "Quit")
 
+data Env = Env
+    { _eZoom :: Zoom
+    , _eWindowSize :: Widget.Size
+    }
+
+Lens.makeLenses ''Env
+
 mainLoopWidget ::
     GLFW.Window ->
-    (Zoom -> Widget.Size -> IO (Widget (M Widget.EventResult))) ->
+    (Env -> IO (Widget (M Widget.EventResult))) ->
     Options ->
     IO ()
 mainLoopWidget win mkWidgetUnmemod options =
@@ -116,7 +124,11 @@ mainLoopWidget win mkWidgetUnmemod options =
                 do
                     zoomEventMap <- mkZoomEventMap
                     helpStyle <- getHelpStyle zoom
-                    mkWidgetUnmemod zoom size
+                    mkWidgetUnmemod
+                        Env
+                        { _eZoom = zoom
+                        , _eWindowSize = size
+                        }
                         <&> E.strongerEvents zoomEventMap
                         >>= addHelp helpStyle size
         mkWidgetRef <- mkW >>= newIORef

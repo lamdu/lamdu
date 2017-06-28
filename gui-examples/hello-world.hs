@@ -2,6 +2,7 @@
 
 module Main where
 
+import           Control.Lens.Operators ((&), (^.))
 import           Data.MRUMemo (memoIO)
 import           Data.Vector.Vector2 (Vector2(..))
 import qualified Graphics.DrawingCombinators as Draw
@@ -19,20 +20,21 @@ fontPath = "fonts/DejaVuSans.ttf"
 
 main :: IO ()
 main =
-    GLFWUtils.withGLFW $ do
+    do
         win <- GLFWUtils.createWindow "Hello World" Nothing (Vector2 800 400)
         cachedOpenFont <- memoIO (`Draw.openFont` fontPath)
         Main.defaultOptions fontPath
             >>= Main.mainLoopWidget win (hello cachedOpenFont)
+    & GLFWUtils.withGLFW
 
 hello ::
     Functor m =>
-    (Float -> IO Draw.Font) -> Zoom.Zoom -> Size -> IO (Widget (m EventResult))
-hello getFont zoom _size =
+    (Float -> IO Draw.Font) -> Main.Env -> IO (Widget (m EventResult))
+hello getFont env =
     do
-        sizeFactor <- Zoom.getSizeFactor zoom
+        sizeFactor <- Zoom.getSizeFactor (env ^. Main.eZoom)
         font <- getFont (sizeFactor * 20)
-        return $
-            strongerEvents Main.quitEventMap $
-            setFocused $
-            TextView.makeWidget (TextView.whiteText font) "Hello World!" ["hello"]
+        TextView.makeWidget (TextView.whiteText font) "Hello World!" ["hello"]
+            & setFocused
+            & strongerEvents Main.quitEventMap
+            & return

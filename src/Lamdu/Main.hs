@@ -278,11 +278,11 @@ mainLoop subpixel win refreshScheduler configSampler iteration =
     do
         getFonts <- makeGetFonts subpixel
         lastVersionNumRef <- newIORef []
-        let makeWidget zoom size =
+        let makeWidget env =
                 do
                     sample <- ConfigSampler.getSample configSampler
-                    fonts <- getFonts zoom sample
-                    iteration fonts (sample ^. sConfig) (sample ^. sTheme) size
+                    fonts <- getFonts (env ^. MainLoop.eZoom) sample
+                    iteration fonts (sample ^. sConfig) (sample ^. sTheme) (env ^. MainLoop.eWindowSize)
         mainLoopWidget win makeWidget MainLoop.Options
             { getConfig =
                 do
