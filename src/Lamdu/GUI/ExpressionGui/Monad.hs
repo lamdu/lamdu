@@ -18,8 +18,6 @@ module Lamdu.GUI.ExpressionGui.Monad
     , outerPrecedence
     , withLocalPrecedence
     --
-    , readVerbose, withVerbose
-    --
     , HolePicker(..), withHolePicker
     , setResultPicker, listenResultPicker
     , run
@@ -116,7 +114,6 @@ data Askable m = Askable
       -- precedence (e.g: in "x % 3 == 0 || ..." the hole for "3" does
       -- not allow operators, making the == apply at the parent expr)
     , _aStyle :: Style
-    , _aVerbose :: Bool
     }
 newtype ExprGuiM m a = ExprGuiM
     { _exprGuiM :: RWST (Askable m) (Output m) () (T m) a
@@ -152,12 +149,6 @@ readMinOpPrec = Lens.view aMinOpPrecedence
 
 readCodeAnchors :: Monad m => ExprGuiM m (Anchors.CodeProps m)
 readCodeAnchors = Lens.view aCodeAnchors
-
-readVerbose :: Monad m => ExprGuiM m Bool
-readVerbose = Lens.view aVerbose
-
-withVerbose :: ExprGuiM m a -> ExprGuiM m a
-withVerbose = exprGuiM %~ RWS.local (aVerbose .~ True)
 
 mkPrejumpPosSaver :: Monad m => ExprGuiM m (T m ())
 mkPrejumpPosSaver =
@@ -226,7 +217,6 @@ run makeSubexpr codeAnchors config theme settings style (ExprGuiM action) =
             , _aOuterPrecedence = Precedence.make 0
             , _aMinOpPrecedence = 0
             , _aStyle = style
-            , _aVerbose = False
             }
             ()
             <&> (\(x, (), _output) -> x)

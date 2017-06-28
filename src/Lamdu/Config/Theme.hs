@@ -111,7 +111,6 @@ data Theme = Theme
     , typeTint :: Draw.Color
     , valFrameBGColor :: Draw.Color
     , valFramePadding :: Vector2 Double
-    , valNomBGColor :: Draw.Color
     , typeFrameBGColor :: Draw.Color
     , stdSpacing :: Vector2 Double -- as ratio of space character size
     , cursorBGColor :: Draw.Color

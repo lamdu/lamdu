@@ -55,10 +55,7 @@ make widgetIds arg =
                 Sugar.UnwrapAction {} -> Theme.typeIndicatorMatchColor
                 Sugar.UnwrapTypeMismatch {} -> Theme.typeIndicatorErrorColor
         let frameWidth = Theme.typeIndicatorFrameWidth theme <&> realToFrac
-        argGui <-
-            arg ^. Sugar.haExpr
-            & ExprGuiM.makeSubexpression
-            & ExprGuiM.withVerbose
+        argGui <- ExprGuiM.makeSubexpression (arg ^. Sugar.haExpr)
         unwrapEventMap <- makeUnwrapEventMap arg widgetIds
         View.addInnerFrame ?? frameColor ?? frameWidth ?? View.pad (frameWidth & _2 .~ 0) argGui
             <&> E.weakerEvents unwrapEventMap

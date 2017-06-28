@@ -3,22 +3,18 @@ module Lamdu.GUI.ExpressionEdit.NomEdit
     ( makeFromNom, makeToNom
     ) where
 
-import qualified Control.Lens as Lens
 import           Data.Store.Transaction (Transaction)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import           Graphics.UI.Bottle.Widget.Aligned (AlignedWidget(..))
 import qualified Graphics.UI.Bottle.Widget.Aligned as AlignedWidget
 import qualified Graphics.UI.Bottle.Widget.TreeLayout as TreeLayout
-import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.GUI.ExpressionEdit.BinderEdit as BinderEdit
-import           Lamdu.GUI.ExpressionGui
-    ( ExpressionGui, Precedence, before, after, (<||), (||>) )
+import           Lamdu.GUI.ExpressionGui (ExpressionGui, before, (<||), (||>))
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
 import qualified Lamdu.GUI.Precedence as Prec
-import qualified Lamdu.GUI.Spacing as Spacing
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.Sugar.Lens as SugarLens
 import           Lamdu.Sugar.Names.Types (Name(..))
@@ -28,8 +24,6 @@ import           Lamdu.Prelude
 
 type T = Transaction
 
-data ShowName = NameHovering | NameShowing | NameCollapsed
-
 makeToNom ::
     Monad m =>
     Sugar.Nominal (Name m) (Sugar.BinderBody (Name m) m (ExprGuiT.SugarExpr m)) ->
@@ -37,7 +31,7 @@ makeToNom ::
     ExprGuiM m (ExpressionGui m)
 makeToNom nom pl =
     nom <&> BinderEdit.makeBinderBodyEdit
-    & mkNomGui before "«" (\a b -> [a, b]) (||>) valId pl
+    & mkNomGui "«" (||>) valId pl
     where
         valId =
             nom ^. Sugar.nVal . Sugar.bbContent . SugarLens.binderContentExpr
@@ -49,8 +43,8 @@ makeFromNom ::
     Sugar.Payload m ExprGuiT.Payload ->
     ExprGuiM m (ExpressionGui m)
 makeFromNom nom pl =
-    nom <&> ExprGuiM.makeSubexpressionWith 0 (after .~ nomPrecedence+1)
-    & mkNomGui after "»" (\a b -> [b, a]) (flip (<||)) valId pl
+    nom <&> ExprGuiM.makeSubexpressionWith 0 (before .~ nomPrecedence+1)
+    & mkNomGui "»" (flip (<||)) valId pl
     where
         valId = nom ^. Sugar.nVal . Sugar.rPayload . Sugar.plEntityId & WidgetIds.fromEntityId
 
@@ -59,82 +53,34 @@ nomPrecedence = 9
 
 mkNomGui ::
     Monad m =>
-    Lens.ASetter' Precedence Int ->
     Text ->
-    (ExpressionGui m -> ExpressionGui m -> [ExpressionGui m]) ->
     (AlignedWidget (T m Widget.EventResult) -> ExpressionGui m -> ExpressionGui m) ->
     Widget.Id ->
     Sugar.Payload m ExprGuiT.Payload ->
     Sugar.Nominal (Name m) (ExprGuiM m (ExpressionGui m)) ->
     ExprGuiM m (ExpressionGui m)
-mkNomGui nameSidePrecLens str asList hCombine valId pl (Sugar.Nominal tid val) =
+mkNomGui str hCombine valId pl (Sugar.Nominal tid val) =
     do
         parentPrec <- ExprGuiM.outerPrecedence <&> Prec.ParentPrecedence
-        let needParen = Prec.needParens parentPrec (Prec.my nomPrecedence)
-        let nomId = Widget.joinId myId ["nom"]
-        let nameId = Widget.joinId nomId ["name"]
-        isSelected <- Widget.isSubCursor ?? nomId
-        isVerbose <- ExprGuiM.readVerbose
-        let nameShowing
-                | isVerbose || ExprGuiT.plOfHoleResult pl = NameShowing
-                | isSelected = NameHovering
-                | otherwise = NameCollapsed
-        expandingName asList hCombine needParen nomId nameShowing
-            <*> (ExpressionGui.grammarLabel str
-                <&> if isSelected then id
-                    else Widget.takesFocus (const (pure nameId))
-                )
-            <*> ((Widget.makeFocusableView ?? nameId)
-                <*> (ExpressionGui.makeNameView (tid ^. Sugar.tidgName) (Widget.toAnimId nameId)
-                    <&> AlignedWidget.fromView 0))
-            <*> val
+        let mParenInfo
+                | Prec.needParens parentPrec (Prec.my nomPrecedence) =
+                    Widget.toAnimId nomId & Just
+                | otherwise = Nothing
+        ExpressionGui.combineSpacedMParens mParenInfo <*>
+            sequence
+            [ do
+                label <- ExpressionGui.grammarLabel str <&> TreeLayout.fromAlignedWidget
+                nameGui <-
+                    (Widget.makeFocusableView ?? nameId)
+                    <*> (ExpressionGui.makeNameView (tid ^. Sugar.tidgName) (Widget.toAnimId nameId) <&> AlignedWidget.fromView 0)
+                nameGui `hCombine` label & TreeLayout.alignment .~ 0
+                    & return
+            , val
+            ]
     & Widget.assignCursor myId valId
     & ExpressionGui.stdWrapParentExpr pl
-    & ExprGuiM.withLocalPrecedence 0 (nameSidePrecLens .~ 0)
+    & ExprGuiM.withLocalPrecedence 0 (before .~ 0)
     where
         myId = WidgetIds.fromExprPayload pl
-
-expandingName ::
-    Monad m =>
-    (ExpressionGui f -> ExpressionGui f -> [ExpressionGui f]) ->
-    (AlignedWidget (T f Widget.EventResult) -> ExpressionGui f -> ExpressionGui f) ->
-    Bool -> --need paren
-    Widget.Id -> -- nomId
-    ShowName ->
-    ExprGuiM m
-    ( AlignedWidget (T f Widget.EventResult) -> -- label
-      AlignedWidget (T f Widget.EventResult) -> -- name gui
-      ExpressionGui f -> -- subexpr gui
-      ExpressionGui f
-    )
-expandingName vertOrder (#>) needParen nomId showName =
-    do
-        space <- Spacing.stdHSpaceView
-        addBg <- ExpressionGui.addValBGWithColor Theme.valNomBGColor
-        horizWithFallback <- ExpressionGui.horizVertFallback mParenInfo
-        return $
-            \label nameGui subexprGui ->
-            let nameShowing =
-                    TreeLayout.LayoutParams
-                    { TreeLayout._layoutMode = TreeLayout.LayoutWide
-                    , TreeLayout._layoutContext = TreeLayout.LayoutClear
-                    }
-                    & (nameGui #> TreeLayout.fromAlignedWidget label) ^. TreeLayout.render
-                    & addBg
-                horiz =
-                    case showName of
-                    NameCollapsed -> addBg label
-                    NameShowing -> nameShowing
-                    NameHovering -> nameShowing `AlignedWidget.hoverInPlaceOf` label
-                    #> (AlignedWidget.fromView 0 space #> subexprGui)
-                    & TreeLayout.alignment . _1 .~ 0
-                vert =
-                    TreeLayout.fromAlignedWidget (nameShowing & AlignedWidget.alignment .~ 0)
-                    `vertOrder` subexprGui
-                    & TreeLayout.vbox
-            in
-            horiz `horizWithFallback` vert
-    where
-        mParenInfo
-            | needParen = Widget.toAnimId nomId & Just
-            | otherwise = Nothing
+        nomId = Widget.joinId myId ["nom"]
+        nameId = Widget.joinId nomId ["name"]
