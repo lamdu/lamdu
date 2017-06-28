@@ -280,5 +280,5 @@ panesEventMap env =
                 (E.Doc ["Collaboration", "Import repl from JSON file"])
             ]
     where
-        ExportActions{importAll,exportAll} = (env ^. exportActions)
+        ExportActions{importAll,exportAll} = env ^. exportActions
         Config.Export{exportPath,importKeys,exportAllKeys} = Config.export (env ^. eConfig)
