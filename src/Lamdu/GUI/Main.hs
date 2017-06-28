@@ -3,7 +3,7 @@ module Lamdu.GUI.Main
     ( make
     , Env(..), CodeEdit.ExportActions(..)
       , envEvalRes, envExportActions
-      , envConfig, envTheme, envSettings, envStyle, envFullSize, envCursor
+      , envConfig, envTheme, envSettings, envStyle, envFullSize
     , CodeEdit.M(..), CodeEdit.m, defaultCursor
     ) where
 

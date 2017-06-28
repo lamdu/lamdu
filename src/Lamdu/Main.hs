@@ -325,7 +325,7 @@ mkWidgetWithFallback dbToIO env =
                     then return (True, candidateWidget)
                     else do
                         finalWidget <-
-                            env & GUIMain.envCursor .~ GUIMain.defaultCursor
+                            env & Widget.cursor .~ GUIMain.defaultCursor
                             & makeMainGui dbToIO
                         Transaction.setP (DbLayout.cursor DbLayout.revisionProps)
                             GUIMain.defaultCursor
@@ -333,7 +333,7 @@ mkWidgetWithFallback dbToIO env =
                 unless (Widget.isFocused widget) $
                     fail "Root cursor did not match"
                 return (isValid, widget)
-        unless isValid $ putStrLn $ "Invalid cursor: " ++ show (env ^. GUIMain.envCursor)
+        unless isValid $ putStrLn $ "Invalid cursor: " ++ show (env ^. Widget.cursor)
         widget
             & View.backgroundColor (["background"] :: AnimId) (bgColor isValid theme)
             & return
