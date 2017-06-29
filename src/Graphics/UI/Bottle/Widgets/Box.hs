@@ -10,12 +10,12 @@ module Graphics.UI.Bottle.Widgets.Box
     ) where
 
 import qualified Control.Lens as Lens
-import           Control.Lens.Operators
-import           Control.Lens.Tuple
 import           Data.Functor.Identity (Identity(..))
 import           Graphics.UI.Bottle.Widget (Widget)
 import           Graphics.UI.Bottle.Widgets.Grid (Alignment(..))
 import qualified Graphics.UI.Bottle.Widgets.Grid as Grid
+
+import           Lamdu.Prelude
 
 type Cursor = Int
 

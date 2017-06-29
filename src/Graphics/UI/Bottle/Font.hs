@@ -10,15 +10,13 @@ module Graphics.UI.Bottle.Font
     ) where
 
 import qualified Control.Lens as Lens
-import           Control.Lens.Operators
-import           Control.Lens.Tuple
-import           Data.Monoid ((<>))
-import           Data.Text (Text)
 import           Data.Vector.Vector2 (Vector2(..))
 import           Graphics.DrawingCombinators ((%%))
 import qualified Graphics.DrawingCombinators as Draw
 import           Graphics.DrawingCombinators.Utils (TextSize(..))
 import qualified Graphics.DrawingCombinators.Utils as DrawUtils
+
+import           Lamdu.Prelude
 
 data Underline = Underline
     { _underlineColor :: Draw.Color

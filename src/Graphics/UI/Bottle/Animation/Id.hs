@@ -4,14 +4,12 @@ module Graphics.UI.Bottle.Animation.Id
     , mappingFromPrefixMap
     ) where
 
-import           Control.Lens.Operators
 import qualified Data.ByteString as SBS
 import qualified Data.ByteString.Char8 as SBS8
 import           Data.List.Lens (prefixed)
-import           Data.Map (Map)
 import qualified Data.Map as Map
-import           Data.Maybe (fromMaybe)
-import           Data.Monoid ((<>))
+
+import           Lamdu.Prelude
 
 type AnimId = [SBS.ByteString]
 

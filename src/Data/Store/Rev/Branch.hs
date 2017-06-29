@@ -2,8 +2,6 @@ module Data.Store.Rev.Branch
     (Branch, uuid, new, move, curVersion, newVersion)
 where
 
-import           Control.Lens.Operators
-import           Data.Foldable (traverse_)
 import           Data.UUID.Types (UUID)
 import qualified Data.Store.IRef as IRef
 import           Data.Store.Rev.Change (Change)
@@ -12,6 +10,8 @@ import qualified Data.Store.Rev.Version as Version
 import           Data.Store.Rev.ViewBranchInternal (BranchData(..), Branch(..), moveView, brVersion)
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
+
+import           Lamdu.Prelude
 
 uuid :: Branch t -> UUID
 uuid = IRef.uuid . unBranch
