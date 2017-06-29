@@ -102,6 +102,7 @@ data Theme = Theme
     , backgroundColor :: Draw.Color
     , baseColor :: Draw.Color
     , invalidCursorBGColor :: Draw.Color
+    , nomColor :: Draw.Color
     , literalColor :: Draw.Color
     , typeIndicatorErrorColor :: Draw.Color
     , typeIndicatorMatchColor :: Draw.Color

@@ -1,15 +1,17 @@
-{-# LANGUAGE NoImplicitPrelude, OverloadedStrings #-}
+{-# LANGUAGE NoImplicitPrelude, OverloadedStrings, RankNTypes #-}
 module Lamdu.GUI.ExpressionEdit.NomEdit
     ( makeFromNom, makeToNom
     ) where
 
-import           Data.Store.Transaction (Transaction)
+import qualified Control.Lens as Lens
+import qualified Control.Monad.Reader as Reader
 import qualified Graphics.UI.Bottle.Widget as Widget
-import           Graphics.UI.Bottle.Widget.Aligned (AlignedWidget(..))
 import qualified Graphics.UI.Bottle.Widget.Aligned as AlignedWidget
 import qualified Graphics.UI.Bottle.Widget.TreeLayout as TreeLayout
+import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
+import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.GUI.ExpressionEdit.BinderEdit as BinderEdit
-import           Lamdu.GUI.ExpressionGui (ExpressionGui, before, (<||), (||>))
+import           Lamdu.GUI.ExpressionGui (ExpressionGui, before, after, (<||))
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
@@ -22,8 +24,6 @@ import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
 
-type T = Transaction
-
 makeToNom ::
     Monad m =>
     Sugar.Nominal (Name m) (Sugar.BinderBody (Name m) m (ExprGuiT.SugarExpr m)) ->
@@ -31,7 +31,7 @@ makeToNom ::
     ExprGuiM m (ExpressionGui m)
 makeToNom nom pl =
     nom <&> BinderEdit.makeBinderBodyEdit
-    & mkNomGui "«" (||>) valId pl
+    & mkNomGui id "«" valId pl
     where
         valId =
             nom ^. Sugar.nVal . Sugar.bbContent . SugarLens.binderContentExpr
@@ -43,8 +43,8 @@ makeFromNom ::
     Sugar.Payload m ExprGuiT.Payload ->
     ExprGuiM m (ExpressionGui m)
 makeFromNom nom pl =
-    nom <&> ExprGuiM.makeSubexpressionWith 0 (before .~ nomPrecedence+1)
-    & mkNomGui "»" (flip (<||)) valId pl
+    nom <&> ExprGuiM.makeSubexpressionWith 0 (after .~ nomPrecedence+1)
+    & mkNomGui reverse "»" valId pl
     where
         valId = nom ^. Sugar.nVal . Sugar.rPayload . Sugar.plEntityId & WidgetIds.fromEntityId
 
@@ -53,30 +53,31 @@ nomPrecedence = 9
 
 mkNomGui ::
     Monad m =>
+    (forall a. [a] -> [a]) ->
     Text ->
-    (AlignedWidget (T m Widget.EventResult) -> ExpressionGui m -> ExpressionGui m) ->
     Widget.Id ->
     Sugar.Payload m ExprGuiT.Payload ->
     Sugar.Nominal (Name m) (ExprGuiM m (ExpressionGui m)) ->
     ExprGuiM m (ExpressionGui m)
-mkNomGui str hCombine valId pl (Sugar.Nominal tid val) =
+mkNomGui ordering str valId pl (Sugar.Nominal tid val) =
     do
         parentPrec <- ExprGuiM.outerPrecedence <&> Prec.ParentPrecedence
         let mParenInfo
                 | Prec.needParens parentPrec (Prec.my nomPrecedence) =
                     Widget.toAnimId nomId & Just
                 | otherwise = Nothing
+        nomColor <- Lens.view Theme.theme <&> Theme.nomColor
         ExpressionGui.combineSpacedMParens mParenInfo <*>
-            sequence
-            [ do
-                label <- ExpressionGui.grammarLabel str <&> TreeLayout.fromAlignedWidget
-                nameGui <-
-                    (Widget.makeFocusableView ?? nameId)
-                    <*> (ExpressionGui.makeNameView (tid ^. Sugar.tidgName) (Widget.toAnimId nameId) <&> AlignedWidget.fromView 0)
-                nameGui `hCombine` label & TreeLayout.alignment .~ 0
-                    & return
-            , val
-            ]
+            ( ordering [ (Widget.makeFocusableView ?? nameId) <*>
+                do
+                    label <- ExpressionGui.grammarLabel str <&> TreeLayout.fromAlignedWidget
+                    nameGui <- ExpressionGui.makeNameView (tid ^. Sugar.tidgName) (Widget.toAnimId nameId) <&> AlignedWidget.fromView 0
+                    label <|| nameGui & TreeLayout.alignment .~ 0
+                        & return
+                & Reader.local (TextView.color .~ nomColor)
+              , val
+              ] & sequence
+            )
     & Widget.assignCursor myId valId
     & ExpressionGui.stdWrapParentExpr pl
     & ExprGuiM.withLocalPrecedence 0 (before .~ 0)
