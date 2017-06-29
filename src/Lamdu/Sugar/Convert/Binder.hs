@@ -39,7 +39,7 @@ import           Lamdu.Prelude
 
 mkLetItemActions ::
     Monad m =>
-    ValIProperty m -> Redex (ValIProperty m) ->
+    ValIProperty m -> Redex (Input.Payload m a) ->
     ConvertM m (LetActions m)
 mkLetItemActions topLevelProp redex =
     do
@@ -49,8 +49,8 @@ mkLetItemActions topLevelProp redex =
             LetActions
             { _laSetToInner =
                 do
-                    SubExprs.getVarsToHole param body
-                    body ^. Val.payload & replaceWith topLevelProp & void
+                    SubExprs.getVarsToHole param (body <&> (^. Input.stored))
+                    body ^. Val.payload . Input.stored & replaceWith topLevelProp & void
                 <* postProcess
             , _laSetToHole =
                 DataOps.setToHole topLevelProp
@@ -92,9 +92,7 @@ convertRedex expr redex =
         value <-
             convertBinder binderKind defUUID (redex ^. Redex.arg)
             & localNewExtractDestPos expr
-        actions <-
-            mkLetItemActions (expr ^. Val.payload . Input.stored)
-            (redex <&> (^. Input.stored))
+        actions <- mkLetItemActions (expr ^. Val.payload . Input.stored) redex
         letBody <-
             convertBinderBody body
             & localNewExtractDestPos expr

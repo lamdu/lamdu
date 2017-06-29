@@ -142,20 +142,22 @@ addFieldToLetParamsRecord fieldTags varToReplace letLam storedLam =
         mkNewArg = V.LVar varToReplace & V.BLeaf & ExprIRef.newValBody
 
 addLetParam ::
-    Monad m => V.Var -> Redex (ValIProperty m) -> T m (NewLet m)
+    Monad m => V.Var -> Redex (Input.Payload m a) -> T m (NewLet m)
 addLetParam varToReplace redex =
-    case redex ^. Redex.arg . Val.body of
+    case storedRedex ^. Redex.arg . Val.body of
     V.BLam lam | isVarAlwaysApplied (redex ^. Redex.lam) ->
-        case redex ^. Redex.argInferPl . Infer.plType of
+        case redex ^. Redex.arg . Val.payload . Input.inferred . Infer.plType of
         T.TFun (T.TRecord composite) _
             | Just fields <- composite ^? orderedClosedFlatComposite
             , Params.isParamAlwaysUsedWithGetField lam ->
             addFieldToLetParamsRecord
-                (fields <&> fst) varToReplace (redex ^. Redex.lam) storedLam
-        _ -> convertLetParamToRecord varToReplace (redex ^. Redex.lam) storedLam
+                (fields <&> fst) varToReplace (storedRedex ^. Redex.lam) storedLam
+        _ -> convertLetParamToRecord varToReplace (storedRedex ^. Redex.lam) storedLam
         where
-            storedLam = Params.StoredLam lam (redex ^. Redex.arg . Val.payload)
-    _ -> convertLetToLam varToReplace redex
+            storedLam = Params.StoredLam lam (storedRedex ^. Redex.arg . Val.payload)
+    _ -> convertLetToLam varToReplace storedRedex
+    where
+        storedRedex = redex <&> (^. Input.stored)
 
 sameLet :: Redex (ValIProperty m) -> NewLet m
 sameLet redex =
@@ -165,10 +167,10 @@ sameLet redex =
     }
 
 processLet ::
-    Monad m => ConvertM.OuterScopeInfo f -> Redex (ValIProperty m) -> T m (NewLet m)
+    Monad m => ConvertM.OuterScopeInfo f -> Redex (Input.Payload m a) -> T m (NewLet m)
 processLet outerScopeInfo redex =
     case varsToRemove of
-    [] -> sameLet redex & return
+    [] -> sameLet (redex <&> (^. Input.stored)) & return
     [x] -> addLetParam x redex
     _ -> error "multiple osiVarsUnderPos not expected!?"
     where
@@ -177,20 +179,20 @@ processLet outerScopeInfo redex =
             & Set.fromList
         varsToRemove =
             Set.toList usedVars
-            & filter (`Map.member` Infer.scopeToTypeMap (redex ^. Redex.argInferPl . Infer.plScope))
+            & filter (`Map.member` Infer.scopeToTypeMap (redex ^. Redex.arg . Val.payload . Input.inferred . Infer.plScope))
             & filter (`Map.notMember` Infer.scopeToTypeMap (outerScopeInfo ^. ConvertM.osiScope))
 
 floatLetToOuterScope ::
     Monad m =>
     (ValI m -> T m ()) ->
-    Redex (ValIProperty m) -> ConvertM.Context m ->
+    Redex (Input.Payload m a) -> ConvertM.Context m ->
     T m LetFloatResult
 floatLetToOuterScope setTopLevel redex ctx =
     do
-        redex ^. Redex.lam . V.lamResult . Val.payload . Property.pVal & setTopLevel
+        redex ^. Redex.lam . V.lamResult . Val.payload . Input.stored . Property.pVal & setTopLevel
         newLet <-
             redex
-            & Redex.lam . V.lamResult . Val.payload . Property.pSet .~ setTopLevel
+            & Redex.lam . V.lamResult . Val.payload . Input.stored . Property.pSet .~ setTopLevel
             & processLet outerScopeInfo
         resultEntity <-
             case outerScopeInfo ^. ConvertM.osiPos of
@@ -217,7 +219,7 @@ floatLetToOuterScope setTopLevel redex ctx =
 
 makeFloatLetToOuterScope ::
     Monad m =>
-    (ValI m -> T m ()) -> Redex (ValIProperty m) ->
+    (ValI m -> T m ()) -> Redex (Input.Payload m a) ->
     ConvertM m (T m LetFloatResult)
 makeFloatLetToOuterScope setTopLevel redex =
     ConvertM.readContext <&> floatLetToOuterScope setTopLevel redex
