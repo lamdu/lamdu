@@ -25,7 +25,7 @@
     "valFramePadding": [7.0, 7.0],
     "letItemPadding": [5, 5],
     "literalColor": [0.5, 1.0, 0.5, 1.0],
-    "nomColor": [0.5, 0.5, 0.5, 1.0],
+    "nomColor": [1.0, 1.0, 1.0, 0.4],
     "presentationChoiceColor": [0.4, 0.4, 0.4, 1.0],
     "backgroundColor": [0.95, 0.98, 1.0, 0.18],
     "baseColor": [1.0, 1.0, 1.0, 1.0],
