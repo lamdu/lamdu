@@ -1,7 +1,7 @@
 {-# LANGUAGE NoImplicitPrelude, OverloadedStrings #-}
 
 module Lamdu.Themes
-    ( themeEventMap , defaultTheme
+    ( themeSwitchEventMap, defaultTheme
     ) where
 
 import           Data.IORef
@@ -19,9 +19,9 @@ import qualified System.FilePath as FilePath
 
 import           Lamdu.Prelude
 
-themeEventMap ::
+themeSwitchEventMap ::
     [MetaKey] -> Sampler -> IORef Text -> Widget.EventMap (IO Widget.EventResult)
-themeEventMap keys configSampler themeRef =
+themeSwitchEventMap keys configSampler themeRef =
     do
         curTheme <- readIORef themeRef
         themeFiles <-

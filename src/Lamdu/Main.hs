@@ -48,7 +48,7 @@ import qualified Lamdu.GUI.CodeEdit.Settings as Settings
 import qualified Lamdu.GUI.Main as GUIMain
 import qualified Lamdu.Opts as Opts
 import qualified Lamdu.Style as Style
-import           Lamdu.Themes (defaultTheme, themeEventMap)
+import           Lamdu.Themes (defaultTheme, themeSwitchEventMap)
 import qualified Lamdu.VersionControl as VersionControl
 import           Lamdu.VersionControl.Actions (mUndo)
 import qualified System.Directory as Directory
@@ -207,7 +207,7 @@ runEditor opts db =
                     mainLoop subpixel win refreshScheduler configSampler $
                         \fonts config theme env ->
                         let themeEvents =
-                                themeEventMap (Config.changeThemeKeys config) configSampler themeRef
+                                themeSwitchEventMap (Config.changeThemeKeys config) configSampler themeRef
                                 <&> liftIO
                         in  makeRootWidget fonts db settingsRef evaluator
                             config theme env
