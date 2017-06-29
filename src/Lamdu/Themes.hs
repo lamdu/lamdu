@@ -1,7 +1,7 @@
 {-# LANGUAGE NoImplicitPrelude, OverloadedStrings #-}
 
 module Lamdu.Themes
-    ( themeSwitchEventMap, defaultTheme
+    ( themeSwitchEventMap, defaultTheme, getThemeFiles
     ) where
 
 import           Data.IORef
@@ -19,17 +19,24 @@ import qualified System.FilePath as FilePath
 
 import           Lamdu.Prelude
 
+getThemeFiles :: IO [FilePath]
+getThemeFiles =
+    do
+        themesDir <-
+            Paths.get Paths_Lamdu.getDataFileName "config.json"
+            <&> FilePath.takeDirectory <&> (</> "themes")
+        Directory.getDirectoryContents themesDir
+            <&> filter ((== ".json") . FilePath.takeExtension)
+            <&> map (themesDir </>)
+
 themeSwitchEventMap ::
     [MetaKey] -> Sampler -> IORef Text -> Widget.EventMap (IO Widget.EventResult)
 themeSwitchEventMap keys configSampler themeRef =
     do
         curTheme <- readIORef themeRef
         themeFiles <-
-            Paths.get Paths_Lamdu.getDataFileName "config.json"
-            <&> FilePath.takeDirectory <&> (</> "themes")
-            >>= Directory.getDirectoryContents
-            <&> filter ((== ".json") . FilePath.takeExtension)
-            <&> map (Text.pack . FilePath.dropExtension)
+            getThemeFiles
+            <&> map (Text.pack . FilePath.takeFileName . FilePath.dropExtension)
         let newTheme = dropWhile (/= curTheme) themeFiles ++ themeFiles & tail & head
         writeIORef themeRef newTheme
         ConfigSampler.setTheme configSampler newTheme
