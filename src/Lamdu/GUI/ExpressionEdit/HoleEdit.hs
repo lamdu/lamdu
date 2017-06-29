@@ -11,7 +11,6 @@ import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.View as View
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widget.Aligned as AlignedWidget
-import           Graphics.UI.Bottle.Widget.TreeLayout (TreeLayout)
 import qualified Graphics.UI.Bottle.Widget.TreeLayout as TreeLayout
 import qualified Lamdu.Config as Config
 import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
@@ -54,18 +53,6 @@ assignHoleCursor WidgetIds{..} =
     Widget.assignCursor hidHole hidOpen .
     Widget.assignCursor (WidgetIds.notDelegatingId hidHole) hidClosedSearchArea
 
-addSearchAreaBelow ::
-    Monad m =>
-    WidgetIds -> ExprGuiM m (TreeLayout a -> TreeLayout a -> TreeLayout a)
-addSearchAreaBelow WidgetIds{..} =
-    addDarkBackground (Widget.toAnimId hidOpen ++ ["searchArea", "DarkBg"])
-    <&>
-    \f wrapperGui searchAreaGui ->
-    TreeLayout.vbox [wrapperGui, f searchAreaGui]
-
-addWrapperAbove :: TreeLayout a -> TreeLayout a -> TreeLayout a
-addWrapperAbove wrapperGui searchAreaGui = TreeLayout.vbox [wrapperGui, searchAreaGui]
-
 makeHoleWithWrapper ::
     Monad m =>
     ExpressionGui f -> ExpressionGui f -> Sugar.Payload m ExprGuiT.Payload ->
@@ -75,23 +62,16 @@ makeHoleWithWrapper wrapperGui searchAreaGui pl =
         unfocusedWrapperGui <-
             ExpressionGui.maybeAddAnnotationPl pl ?? wrapperGui
         isSelected <- Widget.isSubCursor ?? hidHole widgetIds
-        let layout lay =
-                TreeLayout.render #
+        if ExpressionGui.egIsFocused wrapperGui || isSelected
+            then
+                addDarkBackground (Widget.toAnimId (hidOpen widgetIds) ++ ["searchArea", "DarkBg"])
+                <&>
+                \addBg ->
+                TreeLayout.vbox [wrapperGui, addBg searchAreaGui]
+                & TreeLayout.render . Lens.imapped %@~
                 \layoutMode ->
-                (layoutMode & lay
-                (wrapperGui & TreeLayout.alignment . _1 .~ 0)
-                searchAreaGui ^. TreeLayout.render)
-                `AlignedWidget.hoverInPlaceOf`
-                (layoutMode
-                & unfocusedWrapperGui ^. TreeLayout.render
-                & AlignedWidget.alignment . _1 .~ 0)
-        if ExpressionGui.egIsFocused wrapperGui
-            then addSearchAreaBelow widgetIds <&> layout
-            else
-                if isSelected then
-                    layout addWrapperAbove & return
-                else
-                    return unfocusedWrapperGui
+                (`AlignedWidget.hoverInPlaceOf` (unfocusedWrapperGui ^. TreeLayout.render) layoutMode)
+            else return unfocusedWrapperGui
     where
         widgetIds = HoleWidgetIds.make (pl ^. Sugar.plEntityId)
 
