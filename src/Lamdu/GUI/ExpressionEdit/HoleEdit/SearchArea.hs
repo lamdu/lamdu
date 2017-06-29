@@ -44,9 +44,11 @@ makeStdWrapped pl holeInfo =
         config <- Lens.view Config.config
         let Config.Hole{..} = Config.hole config
             WidgetIds{..} = hiIds holeInfo
-            fdWrap =
-                FocusDelegator.make ?? fdConfig (Config.hole config)
-                ?? FocusDelegator.FocusEntryChild ?? hidClosedSearchArea
+            fdWrap
+                | ExprGuiT.plOfHoleResult pl = return id
+                | otherwise =
+                    FocusDelegator.make ?? fdConfig (Config.hole config)
+                    ?? FocusDelegator.FocusEntryChild ?? hidClosedSearchArea
         closedSearchTermGui <-
             fdWrap <*> SearchTerm.make holeInfo & ExpressionGui.stdWrap pl
         isSelected <- Widget.isSubCursor ?? hidOpen

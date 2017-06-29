@@ -166,14 +166,10 @@ removeUnwanted =
     do
         config <- Lens.view Config.config
         minOpPrec <- ExprGuiM.readMinOpPrec
-        let Config.Hole{..} = Config.hole config
         let unwantedKeys =
                 concat
                 [ Config.delKeys config
-                , holeOpenKeys, holeCloseKeys
                 , Foldable.toList Grid.stdKeys
-                , Config.leaveSubexpressionKeys config
-                , Config.enterSubexpressionKeys config
                 , Config.letAddItemKeys config
                 ]
                 <&> MetaKey.toModKey
