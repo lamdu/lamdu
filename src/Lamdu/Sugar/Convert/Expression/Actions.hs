@@ -119,16 +119,25 @@ addActions exprPl body =
         actions <- mkActions exprPl
         ann <- makeAnnotation exprPl
         protectedSetToVal <- ConvertM.typeProtectedSetToVal
-        let addReplaceParent innerPl =
-                innerPl
-                & plActions . mReplaceParent .~
+        let setToExpr srcPl =
+                plActions . mReplaceParent .~
                 Just
                 (protectedSetToVal
                     (exprPl ^. Input.stored)
-                    (innerPl ^. plData . pStored . Property.pVal)
+                    (srcPl ^. plData . pStored . Property.pVal)
                     <&> EntityId.ofValI)
+        let addReplaceParent innerPl = setToExpr innerPl innerPl
+        let fixHoleReplaceParent child =
+                case child ^. rBody of
+                BodyHole (Hole _ (Just arg)) ->
+                    -- Hole's replaces parent rather than the hole.
+                    child & rPayload %~ setToExpr (arg ^. haExpr . rPayload)
+                _ -> child
         return Expression
-            { _rBody = body <&> rPayload %~ addReplaceParent
+            { _rBody =
+                body
+                <&> rPayload %~ addReplaceParent
+                <&> fixHoleReplaceParent
             , _rPayload =
                 Payload
                 { _plEntityId = exprPl ^. Input.entityId
