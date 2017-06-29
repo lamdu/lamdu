@@ -31,10 +31,10 @@ mkExtract ::
 mkExtract exprPl =
     do
         ctx <- ConvertM.readContext
-        case ctx ^. ConvertM.scScopeInfo . ConvertM.siOuter . ConvertM.osiPos of
+        case ctx ^. ConvertM.scScopeInfo . ConvertM.siMOuter of
             Nothing -> mkExtractToDef ctx exprPl <&> ExtractToDef
-            Just extractDestPos ->
-                mkExtractToLet extractDestPos (exprPl ^. Input.stored)
+            Just outerScope ->
+                mkExtractToLet (outerScope ^. ConvertM.osiPos) (exprPl ^. Input.stored)
                 <&> ExtractToLet
             & return
 

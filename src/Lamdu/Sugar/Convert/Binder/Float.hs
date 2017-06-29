@@ -167,8 +167,8 @@ sameLet redex =
     }
 
 processLet ::
-    Monad m => ConvertM.OuterScopeInfo f -> Redex (Input.Payload m a) -> T m (NewLet m)
-processLet outerScopeInfo redex =
+    Monad m => Maybe (ConvertM.OuterScopeInfo f) -> Redex (Input.Payload m a) -> T m (NewLet m)
+processLet mOuterScopeInfo redex =
     case varsToRemove of
     [] -> sameLet (redex <&> (^. Input.stored)) & return
     [x] -> addLetParam x redex
@@ -180,7 +180,11 @@ processLet outerScopeInfo redex =
         varsToRemove =
             Set.toList usedVars
             & filter (`Map.member` Infer.scopeToTypeMap (redex ^. Redex.arg . Val.payload . Input.inferred . Infer.plScope))
-            & filter (`Map.notMember` Infer.scopeToTypeMap (outerScopeInfo ^. ConvertM.osiScope))
+            &
+            case mOuterScopeInfo of
+            Nothing -> id
+            Just outerScopeInfo ->
+                filter (`Map.notMember` Infer.scopeToTypeMap (outerScopeInfo ^. ConvertM.osiScope))
 
 floatLetToOuterScope ::
     Monad m =>
@@ -193,9 +197,9 @@ floatLetToOuterScope setTopLevel redex ctx =
         newLet <-
             redex
             & Redex.lam . V.lamResult . Val.payload . Input.stored . Property.pSet .~ setTopLevel
-            & processLet outerScopeInfo
+            & processLet (ctx ^. ConvertM.scScopeInfo . ConvertM.siMOuter)
         resultEntity <-
-            case outerScopeInfo ^. ConvertM.osiPos of
+            case ctx ^. ConvertM.scScopeInfo . ConvertM.siMOuter of
             Nothing ->
                 EntityId.ofIRef (ExprIRef.defI param) <$
                 moveToGlobalScope ctx param innerDefExpr
@@ -206,16 +210,15 @@ floatLetToOuterScope setTopLevel redex ctx =
                         ctx ^. ConvertM.scFrozenDeps . Property.pVal
                         & Definition.Expr (redex ^. Redex.arg)
                         & Definition.pruneDefExprDeps
-            Just outerScope ->
+            Just outerScopeInfo ->
                 EntityId.ofLambdaParam param <$
-                DataOps.redexWrapWithGivenParam param (nlIRef newLet) outerScope
+                DataOps.redexWrapWithGivenParam param (nlIRef newLet) (outerScopeInfo ^. ConvertM.osiPos)
         return LetFloatResult
             { lfrNewEntity = resultEntity
             , lfrMVarToTags = nlMVarToTags newLet
             }
     where
         param = redex ^. Redex.lam . V.lamParamId
-        outerScopeInfo = ctx ^. ConvertM.scScopeInfo . ConvertM.siOuter
 
 makeFloatLetToOuterScope ::
     Monad m =>

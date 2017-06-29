@@ -36,7 +36,7 @@ import qualified Lamdu.Sugar.Convert.DefExpr.OutdatedDefs as OutdatedDefs
 import qualified Lamdu.Sugar.Convert.Expression as ConvertExpr
 import qualified Lamdu.Sugar.Convert.Input as Input
 import qualified Lamdu.Sugar.Convert.Load as Load
-import           Lamdu.Sugar.Convert.Monad (Context(..), ScopeInfo(..), OuterScopeInfo(..))
+import           Lamdu.Sugar.Convert.Monad (Context(..), ScopeInfo(..))
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
 import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
@@ -121,10 +121,7 @@ emptyScopeInfo =
     { _siTagParamInfos = mempty
     , _siNullParams = mempty
     , _siLetItems = mempty
-    , _siOuter = OuterScopeInfo
-        { _osiPos = Nothing
-        , _osiScope = Infer.emptyScope
-        }
+    , _siMOuter = Nothing
     }
 
 makeNominalsMap ::

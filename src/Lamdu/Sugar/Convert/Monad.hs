@@ -3,7 +3,7 @@ module Lamdu.Sugar.Convert.Monad
     ( TagParamInfo(..)
     , TagFieldParam(..), _TagFieldParam, _CollidingFieldParam
     , OuterScopeInfo(..), osiPos, osiScope
-    , ScopeInfo(..), siTagParamInfos, siNullParams, siLetItems, siOuter
+    , ScopeInfo(..), siTagParamInfos, siNullParams, siLetItems, siMOuter
 
     , PostProcessResult(..)
     , Context(..)
@@ -50,7 +50,7 @@ data TagFieldParam
       CollidingFieldParam TagParamInfo
 
 data OuterScopeInfo m = OuterScopeInfo
-    { _osiPos :: Maybe (ExprIRef.ValIProperty m)
+    { _osiPos :: ExprIRef.ValIProperty m
     , _osiScope :: Infer.Scope
     }
 Lens.makeLenses ''OuterScopeInfo
@@ -62,7 +62,7 @@ data ScopeInfo m = ScopeInfo
       _siLetItems :: Map V.Var (Sugar.BinderVarInline m)
       -- TODO: siTagParamInfos needs a reverse-lookup map too
     , -- Where "extract to let" goes:
-      _siOuter :: OuterScopeInfo m
+      _siMOuter :: Maybe (OuterScopeInfo m)
     }
 Lens.makeLenses ''ScopeInfo
 
