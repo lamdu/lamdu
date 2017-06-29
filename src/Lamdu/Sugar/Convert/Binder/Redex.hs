@@ -6,14 +6,13 @@ module Lamdu.Sugar.Convert.Binder.Redex
       , lam
       , paramRefs
       , arg
-      , argType
+      , argInferPl
       , hiddenPayloads
     , check
     ) where
 
 import qualified Control.Lens as Lens
 import           Data.CurAndPrev (CurAndPrev)
-import           Lamdu.Calc.Type (Type)
 import qualified Lamdu.Calc.Val as V
 import           Lamdu.Calc.Val.Annotated (Val(..))
 import qualified Lamdu.Calc.Val.Annotated as Val
@@ -30,7 +29,7 @@ data Redex a = Redex
     , _lam :: V.Lam (Val a)
     , _paramRefs :: [EntityId]
     , _arg :: Val a
-    , _argType :: Type
+    , _argInferPl :: Infer.Payload
     , _hiddenPayloads :: [a]
     } deriving (Functor, Foldable, Traversable)
 Lens.makeLenses ''Redex
@@ -46,7 +45,7 @@ check expr = do
             <&> (^. Input.eAppliesOfLam)
             <&> Lens.traversed %~ getRedexApplies
         , _arg = a
-        , _argType = a ^. Val.payload . Input.inferred . Infer.plType
+        , _argInferPl = a ^. Val.payload . Input.inferred
         , _hiddenPayloads = (^. Val.payload) <$> [expr, func]
         , _paramRefs = func ^. Val.payload . Input.varRefsOfLambda
         }

@@ -145,7 +145,7 @@ addLetParam ::
 addLetParam varToReplace redex =
     case redex ^. Redex.arg . Val.body of
     V.BLam lam | isVarAlwaysApplied param body ->
-        case redex ^. Redex.argType of
+        case redex ^. Redex.argInferPl . Infer.plType of
         T.TFun (T.TRecord composite) _
             | Just fields <- composite ^? orderedClosedFlatComposite
             , Params.isParamAlwaysUsedWithGetField lam ->
