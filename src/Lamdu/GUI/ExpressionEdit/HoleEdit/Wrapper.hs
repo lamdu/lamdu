@@ -48,7 +48,7 @@ make ::
     ExprGuiM m (ExpressionGui m)
 make widgetIds arg =
     do
-        theme <- ExprGuiM.readTheme
+        theme <- Lens.view Theme.theme
         let frameColor =
                 theme &
                 case arg ^. Sugar.haUnwrap of

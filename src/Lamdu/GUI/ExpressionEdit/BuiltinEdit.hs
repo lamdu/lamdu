@@ -3,6 +3,7 @@ module Lamdu.GUI.ExpressionEdit.BuiltinEdit
     ( make
     ) where
 
+import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
 import           Data.Store.Property (Property(..))
 import           Data.Store.Transaction (Transaction)
@@ -21,7 +22,6 @@ import qualified Graphics.UI.GLFW as GLFW
 import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.Data.Definition as Definition
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
-import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
@@ -62,7 +62,7 @@ make ::
     ExprGuiM m (Widget (T m Widget.EventResult))
 make def myId =
     do
-        theme <- ExprGuiM.readTheme
+        theme <- Lens.view Theme.theme
         moduleName <-
             makeNamePartEditor (Theme.foreignModuleColor theme)
             modulePathStr modulePathSetter (builtinFFIPath myId)

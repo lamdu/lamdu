@@ -148,7 +148,7 @@ makeOpenCase ::
     ExprGuiM m (ExpressionGui m)
 makeOpenCase rest animId altsGui =
     do
-        theme <- ExprGuiM.readTheme
+        theme <- Lens.view Theme.theme
         vspace <- Spacing.stdVSpaceView
         restExpr <-
             ExpressionGui.addValPadding

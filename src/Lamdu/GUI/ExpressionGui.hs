@@ -236,7 +236,7 @@ makeParenIndentInfo :: Monad m => AnimId -> ExprGuiM m ParenIndentInfo
 makeParenIndentInfo parensId =
     do
         textStyle <- Lens.view TextView.style
-        theme <- ExprGuiM.readTheme <&> Theme.indent
+        theme <- Lens.view Theme.theme <&> Theme.indent
         stdSpacing <- Spacing.getSpaceSize <&> (^. _1)
         ParenIndentInfo parensId textStyle theme stdSpacing & return
 
@@ -292,17 +292,17 @@ applyWideAnnotationBehavior ::
     ExprGuiM m (Vector2 Widget.R -> AlignedWidget a -> AlignedWidget a)
 applyWideAnnotationBehavior animId KeepWideAnnotation =
     do
-        theme <- ExprGuiM.readTheme <&> Theme.valAnnotation
+        theme <- Lens.view Theme.theme <&> Theme.valAnnotation
         addAnnotationBackground theme animId & const & return
 applyWideAnnotationBehavior animId ShrinkWideAnnotation =
-    ExprGuiM.readTheme <&> Theme.valAnnotation
+    Lens.view Theme.theme <&> Theme.valAnnotation
     <&>
     \theme shrinkRatio layout ->
     AlignedWidget.scaleAround (Alignment 0) shrinkRatio layout
     & addAnnotationBackground theme animId
 applyWideAnnotationBehavior animId HoverWideAnnotation =
     do
-        theme <- ExprGuiM.readTheme <&> Theme.valAnnotation
+        theme <- Lens.view Theme.theme <&> Theme.valAnnotation
         shrinker <- applyWideAnnotationBehavior animId ShrinkWideAnnotation
         return $
             \shrinkRatio layout ->
@@ -315,7 +315,7 @@ processAnnotationGui ::
     ExprGuiM m (Widget.R -> AlignedWidget a -> AlignedWidget a)
 processAnnotationGui animId wideAnnotationBehavior =
     f
-    <$> (ExprGuiM.readTheme <&> Theme.valAnnotation)
+    <$> (Lens.view Theme.theme <&> Theme.valAnnotation)
     <*> Spacing.getSpaceSize
     <*> applyWideAnnotationBehavior animId wideAnnotationBehavior
     where
@@ -352,7 +352,7 @@ makeEvaluationResultView ::
     Monad m => AnimId -> EvalResDisplay -> ExprGuiM m (AlignedWidget a)
 makeEvaluationResultView animId res =
     do
-        theme <- ExprGuiM.readTheme
+        theme <- Lens.view Theme.theme
         view <- EvalView.make animId (erdVal res)
         view
             & case erdSource res of
@@ -376,7 +376,7 @@ makeEvalView ::
     AnimId -> ExprGuiM m (AlignedWidget a)
 makeEvalView mNeighbours evalRes animId =
     do
-        theme <- ExprGuiM.readTheme
+        theme <- Lens.view Theme.theme
         let Theme.Eval{..} = Theme.eval theme
         let mkAnimId res =
                 -- When we can scroll between eval view results we
@@ -479,7 +479,7 @@ nameEditFDConfig = FocusDelegator.Config
 
 addDeletionDiagonal :: (Monad m, View.MkView a) => ExprGuiM m (Widget.R -> a -> a)
 addDeletionDiagonal =
-    View.addDiagonal <*> (ExprGuiM.readTheme <&> Theme.typeIndicatorErrorColor)
+    View.addDiagonal <*> (Lens.view Theme.theme <&> Theme.typeIndicatorErrorColor)
 
 makeNameOriginEdit ::
     Monad m =>
@@ -567,7 +567,7 @@ stdWrapParentExpr pl mkGui =
 grammarLabel :: Monad m => Text -> ExprGuiM m (AlignedWidget f)
 grammarLabel text =
     do
-        theme <- ExprGuiM.readTheme
+        theme <- Lens.view Theme.theme
         TextView.makeLabel text
             <&> AlignedWidget.fromView 0
             & Reader.local (TextView.color .~ Theme.grammarColor theme)
@@ -578,11 +578,11 @@ addValBG = addValBGWithColor Theme.valFrameBGColor
 addValBGWithColor ::
     (Monad m, View.MkView a) =>
     (Theme -> Draw.Color) -> ExprGuiM m (a -> a)
-addValBGWithColor color = View.backgroundColor <*> (ExprGuiM.readTheme <&> color)
+addValBGWithColor color = View.backgroundColor <*> (Lens.view Theme.theme <&> color)
 
 addValPadding :: (Monad m, View.MkView a) => ExprGuiM m (a -> a)
 addValPadding =
-    ExprGuiM.readTheme <&> Theme.valFramePadding <&> fmap realToFrac
+    Lens.view Theme.theme <&> Theme.valFramePadding <&> fmap realToFrac
     <&> View.pad
 
 addValFrame :: (Monad m, View.MkView a) => ExprGuiM m (a -> a)
@@ -606,7 +606,7 @@ makeCollisionSuffixLabel :: Monad m => NameCollision -> ExprGuiM m (Maybe View)
 makeCollisionSuffixLabel NoCollision = return Nothing
 makeCollisionSuffixLabel (Collision suffix) =
     do
-        theme <- ExprGuiM.readTheme
+        theme <- Lens.view Theme.theme
         let Theme.Name{..} = Theme.name theme
         (View.backgroundColor ?? collisionSuffixBGColor)
             <*>

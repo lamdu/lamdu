@@ -1,9 +1,11 @@
 {-# LANGUAGE DeriveGeneric #-}
 -- | The themes/ config format
 module Lamdu.Config.Theme
-    ( Help(..), Hole(..), Name(..), Eval(..), Indent(..), ValAnnotation(..), Theme(..)
+    ( Help(..), Hole(..), Name(..), Eval(..), Indent(..), ValAnnotation(..)
+    , Theme(..), HasTheme(..)
     ) where
 
+import           Control.Lens (Lens')
 import qualified Data.Aeson.Types as Aeson
 import           Data.Vector.Vector2 (Vector2)
 import           GHC.Generics (Generic)
@@ -126,3 +128,6 @@ data Theme = Theme
 instance Aeson.ToJSON Theme where
     toJSON = Aeson.genericToJSON Aeson.defaultOptions
 instance Aeson.FromJSON Theme
+
+class HasTheme env where theme :: Lens' env Theme
+instance HasTheme Theme where theme = id

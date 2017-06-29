@@ -129,15 +129,13 @@ makeTInst parentPrecedence tid typeParams =
 addValPadding :: Monad m => View -> M m View
 addValPadding view =
     do
-        theme <- egui ExprGuiM.readTheme
-        let padding = realToFrac <$> Theme.valFramePadding theme
+        padding <- Lens.view Theme.theme <&> Theme.valFramePadding <&> fmap realToFrac
         View.pad padding view & return
 
 addBGColor :: Monad m => View -> M m View
 addBGColor view =
     do
-        theme <- egui ExprGuiM.readTheme
-        let color = Theme.typeFrameBGColor theme
+        color <- Lens.view Theme.theme <&> Theme.typeFrameBGColor
         bgId <- randAnimId
         view
             & View.backgroundColor bgId color
@@ -216,9 +214,9 @@ makeInternal parentPrecedence typ =
 make :: Monad m => Type -> AnimId -> ExprGuiM m View
 make t prefix =
     do
-        theme <- ExprGuiM.readTheme
+        typeTint <- Lens.view Theme.theme <&> Theme.typeTint
         makeInternal (Precedence.parent 0) t
             & runM
             & (`evalStateT` Random.mkStdGen 0)
             <&> View.animFrames %~ Anim.mapIdentities (mappend prefix)
-            <&> View.tint (Theme.typeTint theme)
+            <&> View.tint typeTint

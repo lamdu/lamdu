@@ -12,6 +12,7 @@ import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widget.TreeLayout as TreeLayout
 import qualified Graphics.UI.GLFW as GLFW
 import qualified Lamdu.Config as Config
+import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.GUI.ExpressionEdit.BinderEdit as BinderEdit
 import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
@@ -67,7 +68,7 @@ mkShrunk paramIds myId =
                   (Widget.keysEventMapMovesCursor jumpKeys
                    (E.Doc ["View", "Expand Lambda Params"]) . return .
                    WidgetIds.fromEntityId)
-        theme <- ExprGuiM.readTheme
+        theme <- Lens.view Theme.theme
         lamLabel <-
             (Widget.makeFocusableView ?? lamId myId)
             <*> ExpressionGui.grammarLabel "λ"

@@ -20,7 +20,6 @@ import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
-import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Sugar.Names.Types (Name(..))
 import           Lamdu.Sugar.NearestHoles (NearestHoles)
@@ -50,7 +49,7 @@ makeTagH ::
 makeTagH tagColor nearestHoles tagG =
     do
         config <- Lens.view Config.config
-        theme <- ExprGuiM.readTheme
+        theme <- Lens.view Theme.theme
         jumpHolesEventMap <- ExprEventMap.jumpHolesEventMap nearestHoles
         let keys = Config.holePickAndMoveToNextHoleKeys (Config.hole config)
         let jumpNextEventMap =
@@ -68,7 +67,7 @@ makeRecordTag ::
     ExprGuiM m (Widget (T m Widget.EventResult))
 makeRecordTag nearestHoles tagG =
     do
-        Theme.Name{..} <- Theme.name <$> ExprGuiM.readTheme
+        Theme.Name{..} <- Theme.name <$> Lens.view Theme.theme
         makeTagH recordTagColor nearestHoles tagG
 
 makeCaseTag ::
@@ -76,7 +75,7 @@ makeCaseTag ::
     ExprGuiM m (Widget (T m Widget.EventResult))
 makeCaseTag nearestHoles tagG =
     do
-        Theme.Name{..} <- Theme.name <$> ExprGuiM.readTheme
+        Theme.Name{..} <- Theme.name <$> Lens.view Theme.theme
         makeTagH caseTagColor nearestHoles tagG
 
 -- | Unfocusable tag view (e.g: in apply params)
@@ -84,7 +83,7 @@ makeParamTag ::
     Monad m => Sugar.TagG (Name m) -> ExprGuiM m (AlignedWidget a)
 makeParamTag t =
     do
-        Theme.Name{..} <- Theme.name <$> ExprGuiM.readTheme
+        Theme.Name{..} <- Theme.name <$> Lens.view Theme.theme
         ExpressionGui.makeNameView (t ^. Sugar.tagGName) animId
             & Reader.local (TextView.color .~ paramTagColor)
             <&> AlignedWidget.fromView 0

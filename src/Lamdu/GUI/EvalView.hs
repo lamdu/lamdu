@@ -205,7 +205,7 @@ depthCounts v =
 make :: Monad m => AnimId -> Val Type -> ExprGuiM m View
 make animId v =
     do
-        maxEvalViewSize <- ExprGuiM.readTheme <&> Theme.maxEvalViewSize
+        maxEvalViewSize <- Lens.view Theme.theme <&> Theme.maxEvalViewSize
         let depthLimit =
                 depthCounts v & scanl (+) 0 & tail
                 & takeWhile (< maxEvalViewSize) & length

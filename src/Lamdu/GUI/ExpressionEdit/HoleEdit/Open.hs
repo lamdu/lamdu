@@ -180,7 +180,7 @@ makeShownResult holeInfo result =
         -- Warning: rHoleResult should be ran at most once!
         -- Running it more than once caused a horrible bug (bugfix: 848b6c4407)
         res <- rHoleResult result & transaction
-        theme <- Theme.hole <$> ExprGuiM.readTheme
+        theme <- Theme.hole <$> Lens.view Theme.theme
         (widget, mkEventMap) <- makeHoleResultWidget (rId result) res
         stdSpacing <- Spacing.getSpaceSize
         let padding = Theme.holeResultPadding theme <&> realToFrac & (* stdSpacing)
@@ -206,7 +206,7 @@ makeExtraSymbol isSelected results
     | Lens.nullOf (HoleResults.rlExtra . traverse) results = pure View.empty
     | otherwise =
         do
-            Theme.Hole{..} <- Theme.hole <$> ExprGuiM.readTheme
+            Theme.Hole{..} <- Theme.hole <$> Lens.view Theme.theme
             let extraSymbolColor
                     | isSelected = holeExtraSymbolColorSelected
                     | otherwise = holeExtraSymbolColorUnselected
@@ -268,7 +268,7 @@ makeExtraResultsWidget ::
 makeExtraResultsWidget _ _ [] = return (Nothing, Widget.empty, 0)
 makeExtraResultsWidget holeInfo mainResultHeight extraResults@(firstResult:_) =
     do
-        theme <- ExprGuiM.readTheme
+        theme <- Lens.view Theme.theme
         let mkResWidget result =
                 do
                     isOnResult <- Widget.isSubCursor ?? rId result
@@ -309,7 +309,7 @@ makeHoleResultWidget ::
     ExprGuiM m (Widget (T m Widget.EventResult), ExprGuiM m (Widget.EventMap (T m Widget.EventResult)))
 makeHoleResultWidget resultId holeResult =
     do
-        Theme.Hole{..} <- ExprGuiM.readTheme <&> Theme.hole
+        Theme.Hole{..} <- Lens.view Theme.theme <&> Theme.hole
         let mkEventMap =
                 -- Create a hidden result widget that we never display, but only
                 -- keep the event map from. We always tell it that it has focus,
@@ -442,7 +442,7 @@ makeUnderCursorAssignment ::
     HoleInfo m -> ExprGuiM m (ExpressionGui m)
 makeUnderCursorAssignment shownResultsLists hasHiddenResults holeInfo =
     do
-        theme <- ExprGuiM.readTheme
+        theme <- Lens.view Theme.theme
 
         (mShownResult, resultsWidget) <-
             makeResultsWidget holeInfo shownResultsLists hasHiddenResults

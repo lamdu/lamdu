@@ -53,7 +53,7 @@ makeParamsRecord ::
     ExprGuiM m (ExpressionGui m)
 makeParamsRecord myId paramsRecordVar =
     do
-        theme <- ExprGuiM.readTheme
+        theme <- Lens.view Theme.theme
         let Theme.Name{..} = Theme.name theme
         sequence
             [ TextView.makeLabel "Params {" <&> TreeLayout.fromView
@@ -122,7 +122,7 @@ definitionTypeChangeBox info getVarId =
             <*> (TextView.makeLabel "Update to:" <&> Widget.fromView)
         typeCurrent <- mkTypeWidget "typeCurrent" (info ^. Sugar.defTypeCurrent)
         config <- Lens.view Config.config
-        theme <- ExprGuiM.readTheme
+        theme <- Lens.view Theme.theme
         let padding = realToFrac <$> Theme.valFramePadding theme
         let box =
                 [headerLabel, typeWhenUsed, spacing, sepLabel, typeCurrent]
@@ -155,7 +155,7 @@ processDefinitionWidget Sugar.DefDeleted _myId mkLayout =
     <*> mkLayout
 processDefinitionWidget (Sugar.DefTypeChanged info) myId mkLayout =
     do
-        theme <- ExprGuiM.readTheme
+        theme <- Lens.view Theme.theme
         layout <-
             ExprGuiM.withLocalUnderline Underline
                 { _underlineColor = Theme.typeIndicatorErrorColor theme
@@ -181,7 +181,7 @@ makeGetBinder ::
 makeGetBinder binderVar myId =
     do
         config <- Lens.view Config.config
-        theme <- ExprGuiM.readTheme
+        theme <- Lens.view Theme.theme
         let Theme.Name{..} = Theme.name theme
         let (color, processDef) =
                 case binderVar ^. Sugar.bvForm of
@@ -203,7 +203,7 @@ makeGetParam ::
     ExprGuiM m (TreeLayout (T m Widget.EventResult))
 makeGetParam param myId =
     do
-        theme <- ExprGuiM.readTheme
+        theme <- Lens.view Theme.theme
         let paramColor = Theme.name theme & Theme.parameterColor
         case param ^. Sugar.pBinderMode of
             Sugar.LightLambda ->

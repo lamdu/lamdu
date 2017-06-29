@@ -3,6 +3,7 @@ module Lamdu.GUI.DefinitionEdit
     ( make
     ) where
 
+import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
 import           Control.Monad.Transaction (transaction)
 import qualified Data.Store.Property as Property
@@ -25,7 +26,6 @@ import qualified Lamdu.GUI.ExpressionEdit.BinderEdit as BinderEdit
 import qualified Lamdu.GUI.ExpressionEdit.BuiltinEdit as BuiltinEdit
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
-import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import           Lamdu.GUI.ExpressionGui.Types (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
 import qualified Lamdu.GUI.Spacing as Spacing
@@ -54,7 +54,7 @@ makeExprDefinition ::
     ExprGuiM m (ExpressionGui m)
 makeExprDefinition def bodyExpr =
     do
-        theme <- ExprGuiM.readTheme
+        theme <- Lens.view Theme.theme
         let defColor = Theme.definitionColor (Theme.name theme)
         BinderEdit.make (def ^. Sugar.drName) defColor
             (bodyExpr ^. Sugar.deContent) myId
@@ -68,7 +68,7 @@ makeBuiltinDefinition ::
     Sugar.DefinitionBuiltin m -> ExprGuiM m (Widget (T m Widget.EventResult))
 makeBuiltinDefinition def builtin =
     do
-        defColor <- ExprGuiM.readTheme <&> Theme.name <&> Theme.definitionColor
+        defColor <- Lens.view Theme.theme <&> Theme.name <&> Theme.definitionColor
         assignment <-
             [ ExpressionGui.makeNameOriginEdit name defColor (Widget.joinId myId ["name"])
             , TextView.makeLabel "=" <&> Widget.fromView

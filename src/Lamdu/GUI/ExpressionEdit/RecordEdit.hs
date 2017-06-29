@@ -114,7 +114,7 @@ makeOpenRecord ::
     ExprGuiM m (ExpressionGui m)
 makeOpenRecord fieldsGui rest animId =
     do
-        theme <- ExprGuiM.readTheme
+        theme <- Lens.view Theme.theme
         vspace <- Spacing.stdVSpaceView
         restExpr <-
             ExpressionGui.addValPadding

@@ -22,7 +22,6 @@ import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.Info as HoleInfo
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds (WidgetIds(..))
 import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
-import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import           Lamdu.GUI.Hover (addBackground)
 
 import           Lamdu.Prelude
@@ -55,7 +54,7 @@ make :: Monad m => HoleInfo m -> ExprGuiM m (ExpressionGui m)
 make holeInfo =
     do
         config <- Lens.view Config.config
-        theme <- ExprGuiM.readTheme
+        theme <- Lens.view Theme.theme
         let holeConfig@Config.Hole{..} = Config.hole config
         let Theme.Hole{..} = Theme.hole theme
         textCursor <- TextEdit.getCursor ?? searchTerm ?? hidOpenSearchTerm

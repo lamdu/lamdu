@@ -95,7 +95,7 @@ mkPresentationModeEdit ::
     ExprGuiM m (Widget (T m Widget.EventResult))
 mkPresentationModeEdit myId prop = do
     cur <- Transaction.getP prop
-    theme <- ExprGuiM.readTheme
+    theme <- Lens.view Theme.theme
     let mkPair presentationMode =
             TextView.makeFocusableLabel text <&> (,) presentationMode
             where
@@ -200,7 +200,7 @@ makeScopeNavEdit ::
     )
 makeScopeNavEdit binder myId curCursor =
     do
-        theme <- ExprGuiM.readTheme
+        theme <- Lens.view Theme.theme
         let mkArrow (txt, mScopeId) =
                 TextView.makeLabel txt
                 & Reader.local
@@ -376,7 +376,7 @@ makeLetEdit ::
 makeLetEdit item =
     do
         config <- Lens.view Config.config
-        theme <- ExprGuiM.readTheme
+        theme <- Lens.view Theme.theme
         let letColor = Theme.letColor (Theme.name theme)
         let actionsEventMap =
                 mconcat
@@ -510,7 +510,7 @@ makeParamsEdit ::
     ExprGuiM m [ExpressionGui m]
 makeParamsEdit annotationOpts nearestHoles delVarBackwardsId lhsId rhsId params =
     do
-        paramColor <- ExprGuiM.readTheme <&> Theme.name <&> Theme.parameterColor
+        paramColor <- Lens.view Theme.theme <&> Theme.name <&> Theme.parameterColor
         case params of
             Sugar.BinderWithoutParams -> return []
             Sugar.NullParam p ->

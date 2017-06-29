@@ -8,7 +8,7 @@ module Lamdu.GUI.ExpressionGui.Monad
     , makeSubexpressionWith
     , advanceDepth, resetDepth
     --
-    , readTheme, readMinOpPrec, readSettings, readStyle
+    , readMinOpPrec, readSettings, readStyle
     , readCodeAnchors, mkPrejumpPosSaver
     , vspacer
     --
@@ -47,6 +47,7 @@ import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
 import           Lamdu.Config.Theme (Theme)
+import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Ops as DataOps
 import           Lamdu.Eval.Results (ScopeId, topLevelScopeId)
@@ -131,6 +132,7 @@ instance TextEdit.HasStyle (Askable m) where style = aTextEditStyle
 instance Spacing.HasStdSpacing (Askable m) where stdSpacing = aStdSpacing
 instance View.HasAnimIdPrefix (Askable m) where animIdPrefix = aAnimIdPrefix
 instance Config.HasConfig (Askable m) where config = aConfig
+instance Theme.HasTheme (Askable m) where theme = aTheme
 
 withLocalUnderline :: Monad m => TextView.Underline -> ExprGuiM m a -> ExprGuiM m a
 withLocalUnderline underline = Reader.local (TextView.underline ?~ underline)
@@ -140,9 +142,6 @@ readStyle = Lens.view aStyle
 
 readSettings :: Monad m => ExprGuiM m Settings
 readSettings = Lens.view aSettings
-
-readTheme :: Monad m => ExprGuiM m Theme
-readTheme = Lens.view aTheme
 
 readMinOpPrec :: Monad m => ExprGuiM m Int
 readMinOpPrec = Lens.view aMinOpPrecedence
@@ -156,7 +155,7 @@ mkPrejumpPosSaver =
 
 -- | Vertical spacer as ratio of line height
 vspacer :: Monad m => (Theme -> Double) -> ExprGuiM m View
-vspacer themeGetter = readTheme <&> themeGetter >>= Spacing.vspacer
+vspacer themeGetter = Lens.view Theme.theme <&> themeGetter >>= Spacing.vspacer
 
 makeSubexpression ::
     Monad m =>
@@ -191,16 +190,19 @@ advanceDepth f animId action =
 
 run ::
     (Functor m, MonadTransaction m n, MonadReader env n,
-     Widget.HasCursor env, TextEdit.HasStyle env, Spacing.HasStdSpacing env) =>
+     Widget.HasCursor env, TextEdit.HasStyle env, Spacing.HasStdSpacing env,
+     Config.HasConfig env, Theme.HasTheme env) =>
     (ExprGuiT.SugarExpr m -> ExprGuiM m (ExpressionGui m)) ->
-    Anchors.CodeProps m -> Config -> Theme -> Settings -> Style ->
+    Anchors.CodeProps m -> Settings -> Style ->
     ExprGuiM m a ->
     n a
-run makeSubexpr codeAnchors config theme settings style (ExprGuiM action) =
+run makeSubexpr codeAnchors settings style (ExprGuiM action) =
     do
         cursor <- Lens.view Widget.cursor
         textEditStyle <- Lens.view TextEdit.style
         stdSpacing <- Lens.view Spacing.stdSpacing
+        config <- Lens.view Config.config
+        theme <- Lens.view Theme.theme
         runRWST action
             Askable
             { _aCursor = cursor

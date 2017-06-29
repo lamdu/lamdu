@@ -57,6 +57,8 @@ Lens.makeLenses ''Env
 instance Widget.HasCursor Env where cursor = envMainLoop . Widget.cursor
 instance TextEdit.HasStyle Env where style = envStyle . Style.styleBase
 instance TextView.HasStyle Env where style = TextEdit.style . TextView.style
+instance Theme.HasTheme Env where theme = envTheme
+instance Config.HasConfig Env where config = envConfig
 
 themeStdSpacing :: Lens' Theme (Vector2 Double)
 themeStdSpacing f theme =

@@ -96,6 +96,7 @@ data Env m = Env
 Lens.makeLenses ''Env
 
 instance Config.HasConfig (Env m) where config = eConfig
+instance Theme.HasTheme (Env m) where theme = theme
 
 toExprGuiMPayload :: ([Sugar.EntityId], NearestHoles) -> ExprGuiT.Payload
 toExprGuiMPayload (entityIds, nearestHoles) =
@@ -155,8 +156,10 @@ makeReplEdit env replExpr =
         exprId = replExpr ^. Sugar.rPayload . Sugar.plEntityId & WidgetIds.fromEntityId
 
 make ::
-    (Monad m, MonadTransaction m n, MonadReader env n,
-     Widget.HasCursor env, TextEdit.HasStyle env, Spacing.HasStdSpacing env) =>
+    ( Monad m, MonadTransaction m n, MonadReader env n, Config.HasConfig env
+    , Theme.HasTheme env, Widget.HasCursor env, TextEdit.HasStyle env
+    , Spacing.HasStdSpacing env
+    ) =>
     Widget.R ->
     Env m -> n (Widget (M m Widget.EventResult))
 make width env =
@@ -170,7 +173,7 @@ make width env =
             ?? (replGui : panesEdits ++ [newDefinitionButton])
             <&> E.weakerEvents eventMap
     & ExprGuiM.run ExpressionEdit.make
-      (env ^. codeProps) (env ^. eConfig) (env ^. theme) (env ^. settings) (env ^. style)
+      (env ^. codeProps) (env ^. settings) (env ^. style)
     <&> ExpressionGui.render width
     <&> (^. AlignedWidget.aWidget)
 
@@ -232,7 +235,7 @@ makeNewDefinitionButton =
         newDefinitionEventMap <- makeNewDefinitionEventMap codeAnchors
 
         Config.Pane{newDefinitionButtonPressKeys} <- Lens.view Config.config <&> Config.pane
-        color <- ExprGuiM.readTheme <&> Theme.newDefinitionActionColor
+        color <- Lens.view Theme.theme <&> Theme.newDefinitionActionColor
 
         TextView.makeFocusableLabel "New..."
             & Reader.local (TextView.color .~ color)
