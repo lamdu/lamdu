@@ -68,9 +68,9 @@ data NewLet m = NewLet
     , nlMVarToTags :: Maybe VarToTags
     }
 
-isVarAlwaysApplied :: V.Var -> Val a -> Bool
-isVarAlwaysApplied var =
-    go False
+isVarAlwaysApplied :: V.Lam (Val a) -> Bool
+isVarAlwaysApplied (V.Lam var body) =
+    go False body
     where
         go isApplied (Val _ (V.BLeaf (V.LVar v))) | v == var = isApplied
         go _ (Val _ (V.BApp (V.Apply f a))) = go True f && go False a
@@ -145,7 +145,7 @@ addLetParam ::
     Monad m => V.Var -> Redex (ValIProperty m) -> T m (NewLet m)
 addLetParam varToReplace redex =
     case redex ^. Redex.arg . Val.body of
-    V.BLam lam | isVarAlwaysApplied param body ->
+    V.BLam lam | isVarAlwaysApplied (redex ^. Redex.lam) ->
         case redex ^. Redex.argInferPl . Infer.plType of
         T.TFun (T.TRecord composite) _
             | Just fields <- composite ^? orderedClosedFlatComposite
@@ -156,8 +156,6 @@ addLetParam varToReplace redex =
         where
             storedLam = Params.StoredLam lam (redex ^. Redex.arg . Val.payload)
     _ -> convertLetToLam varToReplace redex
-    where
-        V.Lam param body = redex ^. Redex.lam
 
 sameLet :: Redex (ValIProperty m) -> NewLet m
 sameLet redex =
