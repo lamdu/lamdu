@@ -62,16 +62,17 @@ makeHoleWithWrapper wrapperGui searchAreaGui pl =
         unfocusedWrapperGui <-
             ExpressionGui.maybeAddAnnotationPl pl ?? wrapperGui
         isSelected <- Widget.isSubCursor ?? hidHole widgetIds
-        if ExpressionGui.egIsFocused wrapperGui || isSelected
+        addDarkBackground (Widget.toAnimId (hidOpen widgetIds) ++ ["searchArea", "DarkBg"])
+            <&>
+            \addBg ->
+            unfocusedWrapperGui
+            & TreeLayout.render . Lens.imapped %@~
+            \layoutMode wrapper ->
+            if isSelected || Widget.isFocused (wrapper ^. AlignedWidget.aWidget)
             then
-                addDarkBackground (Widget.toAnimId (hidOpen widgetIds) ++ ["searchArea", "DarkBg"])
-                <&>
-                \addBg ->
-                TreeLayout.vbox [wrapperGui, addBg searchAreaGui]
-                & TreeLayout.render . Lens.imapped %@~
-                \layoutMode ->
-                (`AlignedWidget.hoverInPlaceOf` (unfocusedWrapperGui ^. TreeLayout.render) layoutMode)
-            else return unfocusedWrapperGui
+                (TreeLayout.vbox [wrapperGui, addBg searchAreaGui] ^. TreeLayout.render) layoutMode
+                `AlignedWidget.hoverInPlaceOf` wrapper
+            else wrapper
     where
         widgetIds = HoleWidgetIds.make (pl ^. Sugar.plEntityId)
 

@@ -1,7 +1,6 @@
 {-# LANGUAGE NoImplicitPrelude, RecordWildCards, OverloadedStrings, RankNTypes, TypeFamilies, LambdaCase, DeriveFunctor, DeriveFoldable, DeriveTraversable #-}
 module Lamdu.GUI.ExpressionGui
     ( ExpressionGui
-    , egIsFocused
     , render
     -- General:
     , combine, combineSpaced, combineSpacedMParens
@@ -94,18 +93,6 @@ import qualified Lamdu.Sugar.Types as Sugar
 import           Lamdu.Prelude
 
 type T = Transaction
-
-{-# INLINE egIsFocused #-}
-egIsFocused :: TreeLayout a -> Bool
--- TODO: Fix this:
-egIsFocused tl =
-    (tl ^. TreeLayout.render) params ^. AlignedWidget.aWidget & Widget.isFocused
-    where
-        params =
-            TreeLayout.LayoutParams
-            { _layoutMode = TreeLayout.LayoutWide
-            , _layoutContext = TreeLayout.LayoutClear
-            }
 
 maybeIndent :: Maybe ParenIndentInfo -> TreeLayout a -> TreeLayout a
 maybeIndent Nothing = id
