@@ -5,6 +5,7 @@ module Lamdu.Sugar.Convert.Binder.Float
     ) where
 
 import qualified Control.Lens as Lens
+import qualified Data.Map as Map
 import qualified Data.Set as Set
 import qualified Data.Store.Property as Property
 import           Data.Store.Transaction (Transaction)
@@ -177,8 +178,9 @@ processLet outerScopeInfo redex =
             redex ^.. Redex.arg . ExprLens.valLeafs . V._LVar
             & Set.fromList
         varsToRemove =
-            filter (`Set.member` usedVars)
-            (outerScopeInfo ^. ConvertM.osiVarsUnderPos)
+            Set.toList usedVars
+            & filter (`Map.member` Infer.scopeToTypeMap (redex ^. Redex.argInferPl . Infer.plScope))
+            & filter (`Map.notMember` Infer.scopeToTypeMap (outerScopeInfo ^. ConvertM.osiScope))
 
 floatLetToOuterScope ::
     Monad m =>

@@ -2,7 +2,7 @@
 module Lamdu.Sugar.Convert.Monad
     ( TagParamInfo(..)
     , TagFieldParam(..), _TagFieldParam, _CollidingFieldParam
-    , OuterScopeInfo(..), osiPos, osiVarsUnderPos
+    , OuterScopeInfo(..), osiPos, osiScope
     , ScopeInfo(..), siTagParamInfos, siNullParams, siLetItems, siOuter
 
     , PostProcessResult(..)
@@ -51,8 +51,7 @@ data TagFieldParam
 
 data OuterScopeInfo m = OuterScopeInfo
     { _osiPos :: Maybe (ExprIRef.ValIProperty m)
-    , -- The vars that disappear from scope when moving up to pos
-      _osiVarsUnderPos :: [V.Var]
+    , _osiScope :: Infer.Scope
     }
 Lens.makeLenses ''OuterScopeInfo
 

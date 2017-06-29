@@ -118,14 +118,14 @@ postProcessExpr mkProp =
 emptyScopeInfo :: ScopeInfo m
 emptyScopeInfo =
     ScopeInfo
-      { _siTagParamInfos = mempty
-      , _siNullParams = mempty
-      , _siLetItems = mempty
-      , _siOuter = OuterScopeInfo
+    { _siTagParamInfos = mempty
+    , _siNullParams = mempty
+    , _siLetItems = mempty
+    , _siOuter = OuterScopeInfo
         { _osiPos = Nothing
-        , _osiVarsUnderPos = []
+        , _osiScope = Infer.emptyScope
         }
-      }
+    }
 
 makeNominalsMap ::
     Monad m => Val (Input.Payload m a) -> T m (Map T.NominalId N.Nominal)

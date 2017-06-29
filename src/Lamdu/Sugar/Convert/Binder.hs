@@ -19,6 +19,7 @@ import qualified Lamdu.Data.Ops.Subexprs as SubExprs
 import           Lamdu.Expr.IRef (DefI, ValIProperty)
 import qualified Lamdu.Expr.Lens as ExprLens
 import qualified Lamdu.Expr.UniqueId as UniqueId
+import qualified Lamdu.Infer as Infer
 import           Lamdu.Sugar.Convert.Binder.Float (makeFloatLetToOuterScope)
 import           Lamdu.Sugar.Convert.Binder.Inline (inlineLet)
 import           Lamdu.Sugar.Convert.Binder.Params (ConventionalParams(..), cpParams, convertParams, convertLamParams)
@@ -68,13 +69,8 @@ localNewExtractDestPos val =
     ConvertM.scScopeInfo . ConvertM.siOuter .~
     ConvertM.OuterScopeInfo
     { _osiPos = val ^. Val.payload . Input.stored & Just
-    , _osiVarsUnderPos = []
+    , _osiScope = val ^. Val.payload . Input.inferred . Infer.plScope
     }
-    & ConvertM.local
-
-localVarsUnderExtractDestPos :: [V.Var] -> ConvertM m a -> ConvertM m a
-localVarsUnderExtractDestPos vars =
-    ConvertM.scScopeInfo . ConvertM.siOuter . ConvertM.osiVarsUnderPos <>~ vars
     & ConvertM.local
 
 makeInline :: Monad m => ValIProperty m -> Redex (Input.Payload m a) -> BinderVarInline m
@@ -101,7 +97,6 @@ convertRedex expr redex =
             (redex <&> (^. Input.stored))
         letBody <-
             convertBinderBody body
-            & localVarsUnderExtractDestPos [param]
             & localNewExtractDestPos expr
             & ConvertM.local (scScopeInfo . siLetItems <>~
                 Map.singleton param
@@ -162,9 +157,7 @@ makeBinder :: (Monad m, Monoid a) =>
     ConvertM m (Binder UUID m (ExpressionU m a))
 makeBinder chosenScopeProp mPresentationModeProp ConventionalParams{..} funcBody =
     do
-        binderBody <-
-            convertBinderBody funcBody
-            & localVarsUnderExtractDestPos (cpMLamParam ^.. Lens._Just)
+        binderBody <- convertBinderBody funcBody
         return Binder
             { _bParams = _cpParams
             , _bMPresentationModeProp = mPresentationModeProp
