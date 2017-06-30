@@ -5,7 +5,6 @@ module Graphics.UI.Bottle.Widgets.Box
     , Cursor
     , Orientation(..)
     , hboxAlign, vboxAlign
-    , hbox, vbox
     ) where
 
 import qualified Control.Lens as Lens
@@ -43,9 +42,3 @@ hboxAlign = boxAlign Horizontal
 
 vboxAlign :: Traversable t => Alignment -> t (Widget a) -> Widget a
 vboxAlign = boxAlign Vertical
-
-hbox :: Traversable t => t (Alignment, Widget a) -> Widget a
-hbox = snd . make Horizontal
-
-vbox :: Traversable t => t (Alignment, Widget a) -> Widget a
-vbox = snd . make Vertical
