@@ -28,7 +28,6 @@ import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import           Lamdu.GUI.ExpressionGui.Types (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
-import qualified Lamdu.GUI.Spacing as Spacing
 import qualified Lamdu.GUI.TypeView as TypeView
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Sugar.Names.Types (Name(..), DefinitionN)
@@ -71,11 +70,11 @@ makeBuiltinDefinition def builtin =
         defColor <- Lens.view Theme.theme <&> Theme.name <&> Theme.definitionColor
         assignment <-
             [ ExpressionGui.makeNameOriginEdit name defColor (Widget.joinId myId ["name"])
-            , TextView.makeLabel "=" <&> Widget.fromView
+            , TextView.makeLabel " = " <&> Widget.fromView
             , BuiltinEdit.make builtin myId
             ]
             & sequenceA
-            >>= Spacing.hboxCenteredSpaced
+            <&> Box.hboxAlign 0
         typeView <- topLevelSchemeTypeView (builtin ^. Sugar.biType) entityId ["builtinType"]
         Box.vboxAlign 0 [assignment, Widget.fromView typeView] & return
     where

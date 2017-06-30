@@ -87,8 +87,8 @@ textEdit prop pl =
             text <- TextEdits.make ?? empty ?? prop ?? innerId
             right <- TextView.makeLabel "„" <&> Widget.fromView
             let quoteSize = text ^. View.size & _1 .~ 0
-            Box.hboxCentered
-                [ Widget.padToSizeAlign quoteSize 0 left
+            Box.hboxAlign 0
+                [ left
                 , text
                 , Widget.padToSizeAlign quoteSize 1 right
                 ] & TreeLayout.fromWidget & return

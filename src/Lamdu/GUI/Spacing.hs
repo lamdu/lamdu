@@ -5,17 +5,12 @@ module Lamdu.GUI.Spacing
     , stdHSpaceView
     , stdVSpaceView
     , vspacer
-    , hboxCenteredSpaced
     ) where
 
 import qualified Control.Lens as Lens
-import           Data.List (intersperse)
 import           Data.Vector.Vector2 (Vector2(..))
 import qualified Graphics.DrawingCombinators as Draw
 import           Graphics.UI.Bottle.View (View)
-import           Graphics.UI.Bottle.Widget (Widget)
-import qualified Graphics.UI.Bottle.Widget as Widget
-import qualified Graphics.UI.Bottle.Widgets.Box as Box
 import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
 import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
 
@@ -44,10 +39,3 @@ stdHSpaceView = getSpaceSize <&> _2 .~ 0 <&> Spacer.make
 
 stdVSpaceView :: (MonadReader env m, HasStdSpacing env) => m View
 stdVSpaceView = getSpaceSize <&> _1 .~ 0 <&> Spacer.make
-
-hboxCenteredSpaced ::
-    (MonadReader env m, HasStdSpacing env) => [Widget f] -> m (Widget f)
-hboxCenteredSpaced widgets =
-    stdHSpaceView
-    <&> Widget.fromView
-    <&> Box.hboxAlign 0.5 . (`intersperse` widgets)

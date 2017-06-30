@@ -5,7 +5,6 @@ module Graphics.UI.Bottle.Widgets.Box
     , Cursor
     , Orientation(..)
     , hboxAlign, vboxAlign
-    , hboxCentered, vboxCentered
     , hbox, vbox
     ) where
 
@@ -44,12 +43,6 @@ hboxAlign = boxAlign Horizontal
 
 vboxAlign :: Traversable t => Alignment -> t (Widget a) -> Widget a
 vboxAlign = boxAlign Vertical
-
-vboxCentered :: Traversable t => t (Widget a) -> Widget a
-vboxCentered = vboxAlign 0.5
-
-hboxCentered :: Traversable t => t (Widget a) -> Widget a
-hboxCentered = hboxAlign 0.5
 
 hbox :: Traversable t => t (Alignment, Widget a) -> Widget a
 hbox = snd . make Horizontal

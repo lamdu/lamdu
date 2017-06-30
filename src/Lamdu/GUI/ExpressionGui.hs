@@ -515,7 +515,7 @@ makeNameEdit onActiveEditor (Name nameSrc nameCollision setName name) myId =
         nameEdit <-
             makeNameWordEdit ?? Property storedName setName
             ?? WidgetIds.nameEditOf myId
-        return . Box.hboxCentered $ nameEdit : mCollisionSuffix ^.. Lens._Just
+        return . Box.hboxAlign 0 $ nameEdit : mCollisionSuffix ^.. Lens._Just
     & Reader.local (View.animIdPrefix .~ Widget.toAnimId myId)
     <&> onActiveEditor
     where

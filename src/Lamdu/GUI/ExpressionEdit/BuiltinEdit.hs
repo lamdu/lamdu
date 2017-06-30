@@ -71,7 +71,7 @@ make def myId =
             (builtinFFIName myId)
         dot <- TextView.makeLabel "." <&> Widget.fromView
         [moduleName, dot, varName]
-            & Box.hboxCentered
+            & Box.hboxAlign 0
             & return
     & Widget.assignCursor myId (builtinFFIName myId)
     where
