@@ -1,6 +1,7 @@
 {-# LANGUAGE NoImplicitPrelude, OverloadedStrings #-}
 module Lamdu.GUI.ExpressionEdit.EventMap
     ( make
+    , ExprInfo(..), makeWith
     , jumpHolesEventMap
     , extractCursor
     , wrapEventMap

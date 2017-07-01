@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, OverloadedStrings #-}
+{-# LANGUAGE NoImplicitPrelude, OverloadedStrings, DisambiguateRecordFields #-}
 module Lamdu.GUI.ExpressionEdit.ApplyEdit
     ( makeSimple, makeLabeled, prefixPrecedence
     ) where
@@ -183,17 +183,11 @@ mkRelayedArgs nearestHoles args =
         makeArgEdit arg =
             do
                 eventMap <-
-                    ExprEventMap.make
-                    Sugar.Payload
-                    { Sugar._plAnnotation = error "not showing annotations for relayed args"
-                    , Sugar._plActions = arg ^. Sugar.raActions
-                    , Sugar._plEntityId = arg ^. Sugar.raId
-                    , Sugar._plData =
-                        ExprGuiT.Payload
-                        { ExprGuiT._plStoredEntityIds = []
-                        , ExprGuiT._plNearestHoles = nearestHoles
-                        , ExprGuiT._plShowAnnotation = ExprGuiT.neverShowAnnotations
-                        }
+                    ExprEventMap.makeWith ExprEventMap.ExprInfo
+                    { exprInfoActions = arg ^. Sugar.raActions
+                    , exprInfoEntityId = arg ^. Sugar.raId
+                    , exprInfoNearestHoles = nearestHoles
+                    , exprInfoIsHoleResult = False
                     } ExprGuiM.NoHolePick
                 GetVarEdit.makeGetParam (arg ^. Sugar.raValue) (WidgetIds.fromEntityId (arg ^. Sugar.raId))
                     <&> E.weakerEvents eventMap
