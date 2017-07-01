@@ -126,29 +126,13 @@ maybeIndent (Just piInfo) =
                     bgAnimId = piAnimId piInfo ++ ["("]
             _ -> mkLayout lp
 
-vboxTopFocal :: [TreeLayout a] -> TreeLayout a
-vboxTopFocal [] = TreeLayout.empty
-vboxTopFocal (gui:guis) =
-    TreeLayout.render #
-    \layoutParams ->
-    let cp =
-            TreeLayout.LayoutParams
-            { _layoutMode = layoutParams ^. TreeLayout.layoutMode
-            , _layoutContext = TreeLayout.LayoutVertical
-            }
-    in
-    cp
-    & gui ^. TreeLayout.render
-    & AlignedWidget.addAfter AlignedWidget.Vertical
-        (guis ^.. Lens.traverse . TreeLayout.render ?? cp)
-
 vboxTopFocalSpaced ::
     Monad m => ExprGuiM m ([TreeLayout a] -> TreeLayout a)
 vboxTopFocalSpaced =
     Spacing.stdVSpaceView
     <&> TreeLayout.fromView
     <&> List.intersperse
-    <&> fmap vboxTopFocal
+    <&> Lens.mapped %~ TreeLayout.vbox
 
 hCombine ::
     (AlignedWidget.Orientation -> [AlignedWidget a] -> AlignedWidget a ->
@@ -222,7 +206,7 @@ combineWith ::
 combineWith mParenInfo onHGuis onVGuis guis =
     horizVertFallbackH mParenInfo wide vert
     where
-        vert = vboxTopFocal (onVGuis guis)
+        vert = TreeLayout.vbox (onVGuis guis)
         wide =
             guis ^.. Lens.traverse . TreeLayout.render
             ?? TreeLayout.LayoutParams
