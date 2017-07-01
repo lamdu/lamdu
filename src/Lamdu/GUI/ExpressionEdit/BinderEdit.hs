@@ -397,7 +397,7 @@ makeLetEdit item =
                 ]
         let eventMap = mappend actionsEventMap usageEventMap
         ExpressionGui.tagItem
-            <*> ExpressionGui.grammarLabel "let"
+            <*> (ExpressionGui.grammarLabel "let" <&> AlignedWidget.fromView 0)
             <*> (make (item ^. Sugar.lName) letColor binder myId
                 <&> E.weakerEvents eventMap
                 <&> View.pad (Theme.letItemPadding theme <&> realToFrac)
@@ -494,8 +494,7 @@ nullParamEditInfo mActions =
     { ParamEdit.iMakeNameEdit =
       \myId ->
       (Widget.makeFocusableView ?? myId)
-      <*> ExpressionGui.grammarLabel "◗"
-      <&> TreeLayout.fromAlignedWidget
+      <*> (ExpressionGui.grammarLabel "◗" <&> TreeLayout.fromView)
     , ParamEdit.iMAddNext = Nothing
     , ParamEdit.iMOrderBefore = Nothing
     , ParamEdit.iMOrderAfter = Nothing

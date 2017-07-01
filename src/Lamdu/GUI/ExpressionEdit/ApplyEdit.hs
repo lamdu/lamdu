@@ -177,7 +177,7 @@ mkRelayedArgs :: Monad m => NearestHoles -> [Sugar.RelayedArg (Name m) m] -> Exp
 mkRelayedArgs nearestHoles args =
     do
         argEdits <- mapM makeArgEdit args
-        collapsed <- ExpressionGui.grammarLabel "➾" <&> TreeLayout.fromAlignedWidget
+        collapsed <- ExpressionGui.grammarLabel "➾" <&> TreeLayout.fromView
         ExpressionGui.combineSpaced ?? collapsed : argEdits
     where
         makeArgEdit arg =

@@ -87,7 +87,7 @@ mkNomGui ordering nomStr str mDel valId pl (Sugar.Nominal tid val) =
         ExpressionGui.combineSpacedMParens mParenInfo <*>
             ( ordering [ (Widget.makeFocusableView ?? nameId) <*>
                 do
-                    label <- ExpressionGui.grammarLabel str <&> TreeLayout.fromAlignedWidget
+                    label <- ExpressionGui.grammarLabel str <&> TreeLayout.fromView
                     nameGui <- ExpressionGui.makeNameView (tid ^. Sugar.tidgName) (Widget.toAnimId nameId) <&> AlignedWidget.fromView 0
                     label <|| nameGui & TreeLayout.alignment .~ 0
                         & return

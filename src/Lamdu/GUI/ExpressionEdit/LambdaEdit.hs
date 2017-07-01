@@ -48,10 +48,9 @@ mkExpanded ::
      [ExpressionGui m])
 mkExpanded =
     do
-        labelEdit <- ExpressionGui.grammarLabel "→"
+        labelEdit <- ExpressionGui.grammarLabel "→" <&> TreeLayout.fromView
         return $ \mParamsEdit mScopeEdit ->
-            mkLhsEdits mParamsEdit mScopeEdit ++
-            [TreeLayout.fromAlignedWidget labelEdit]
+            mkLhsEdits mParamsEdit mScopeEdit ++ [labelEdit]
 
 lamId :: Widget.Id -> Widget.Id
 lamId = (`Widget.joinId` ["lam"])
@@ -71,8 +70,7 @@ mkShrunk paramIds myId =
         theme <- Lens.view Theme.theme
         lamLabel <-
             (Widget.makeFocusableView ?? lamId myId)
-            <*> ExpressionGui.grammarLabel "λ"
-            <&> TreeLayout.fromAlignedWidget
+            <*> (ExpressionGui.grammarLabel "λ" <&> TreeLayout.fromView)
             & LightLambda.withUnderline theme
         return $ \mScopeEdit ->
             [ addScopeEdit mScopeEdit lamLabel

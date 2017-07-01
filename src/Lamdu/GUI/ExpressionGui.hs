@@ -553,12 +553,11 @@ stdWrapParentExpr pl mkGui
     | otherwise =
         parentDelegator (WidgetIds.fromExprPayload pl) <*> mkGui & stdWrap pl
 
-grammarLabel :: Monad m => Text -> ExprGuiM m (AlignedWidget f)
+grammarLabel :: Monad m => Text -> ExprGuiM m View
 grammarLabel text =
     do
         theme <- Lens.view Theme.theme
         TextView.makeLabel text
-            <&> AlignedWidget.fromView 0
             & Reader.local (TextView.color .~ Theme.grammarColor theme)
 
 addValBG :: (Monad m, View.MkView a) => ExprGuiM m (a -> a)
