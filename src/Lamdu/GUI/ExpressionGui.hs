@@ -410,16 +410,14 @@ addAnnotationH f wideBehavior entityId =
         vspace <- annotationSpacer
         annotationLayout <- f animId
         processAnn <- processAnnotationGui animId wideBehavior
-        return $
-            \tl ->
-            TreeLayout.render # \lp ->
-            let layout = lp & tl ^. TreeLayout.render
-            in  layout
-                & AlignedWidget.addAfter AlignedWidget.Vertical
+        let onAlignedWidget w =
+                AlignedWidget.addAfter AlignedWidget.Vertical
                 [ AlignedWidget.fromView 0 vspace
-                , processAnn (layout ^. View.width) annotationLayout
-                     & AlignedWidget.alignment . _1 .~ layout ^. AlignedWidget.alignment . _1
+                , processAnn (w ^. View.width) annotationLayout
+                    & AlignedWidget.alignment . _1 .~ w ^. AlignedWidget.alignment . _1
                 ]
+                w
+        return $ TreeLayout.alignedWidget %~ onAlignedWidget
     where
         animId = WidgetIds.fromEntityId entityId & Widget.toAnimId
 
