@@ -47,7 +47,6 @@ import qualified Data.Text as Text
 import           Data.Text.Encoding (encodeUtf8)
 import           Data.Vector.Vector2 (Vector2(..))
 import qualified Graphics.DrawingCombinators as Draw
-import           Graphics.UI.Bottle.Alignment (Alignment(..))
 import           Graphics.UI.Bottle.Animation (AnimId)
 import qualified Graphics.UI.Bottle.EventMap as E
 import           Graphics.UI.Bottle.MetaKey (MetaKey(..), noMods)
@@ -273,7 +272,7 @@ wideAnnotationBehaviorFromSelected True = HoverWideAnnotation
 applyWideAnnotationBehavior ::
     Monad m =>
     AnimId -> WideAnnotationBehavior ->
-    ExprGuiM m (Vector2 Widget.R -> AlignedWidget a -> AlignedWidget a)
+    ExprGuiM m (Vector2 Widget.R -> View -> View)
 applyWideAnnotationBehavior animId KeepWideAnnotation =
     do
         theme <- Lens.view Theme.theme <&> Theme.valAnnotation
@@ -282,7 +281,7 @@ applyWideAnnotationBehavior animId ShrinkWideAnnotation =
     Lens.view Theme.theme <&> Theme.valAnnotation
     <&>
     \theme shrinkRatio layout ->
-    AlignedWidget.scaleAround (Alignment 0) shrinkRatio layout
+    View.scale shrinkRatio layout
     & addAnnotationBackground theme animId
 applyWideAnnotationBehavior animId HoverWideAnnotation =
     do
@@ -291,34 +290,34 @@ applyWideAnnotationBehavior animId HoverWideAnnotation =
         return $
             \shrinkRatio layout ->
                 addAnnotationHoverBackground theme animId layout
-                & (`AlignedWidget.hoverInPlaceOf` shrinker shrinkRatio layout)
+                & (`View.hoverInPlaceOf` shrinker shrinkRatio layout)
 
 processAnnotationGui ::
     Monad m =>
     AnimId -> WideAnnotationBehavior ->
-    ExprGuiM m (Widget.R -> AlignedWidget a -> AlignedWidget a)
+    ExprGuiM m (Widget.R -> View -> View)
 processAnnotationGui animId wideAnnotationBehavior =
     f
     <$> (Lens.view Theme.theme <&> Theme.valAnnotation)
     <*> Spacer.getSpaceSize
     <*> applyWideAnnotationBehavior animId wideAnnotationBehavior
     where
-        f theme stdSpacing applyWide minWidth annotationLayout
+        f theme stdSpacing applyWide minWidth annotation
             | annotationWidth > minWidth + max shrinkAtLeast expansionLimit
             || heightShrinkRatio < 1 =
-                applyWide shrinkRatio annotationLayout
+                applyWide shrinkRatio annotation
             | otherwise =
-                maybeTooNarrow annotationLayout
+                maybeTooNarrow annotation
                 & addAnnotationBackground theme animId
             where
-                annotationWidth = annotationLayout ^. View.width
+                annotationWidth = annotation ^. View.width
                 expansionLimit =
                     Theme.valAnnotationWidthExpansionLimit theme & realToFrac
                 maxWidth = minWidth + expansionLimit
                 shrinkAtLeast = Theme.valAnnotationShrinkAtLeast theme & realToFrac
                 heightShrinkRatio =
                     Theme.valAnnotationMaxHeight theme * stdSpacing ^. _2
-                    / annotationLayout ^. View.height
+                    / annotation ^. View.height
                 shrinkRatio =
                     annotationWidth - shrinkAtLeast & min maxWidth & max minWidth
                     & (/ annotationWidth) & min heightShrinkRatio & pure
@@ -333,21 +332,15 @@ data EvalResDisplay = EvalResDisplay
     }
 
 makeEvaluationResultView ::
-    Monad m => AnimId -> EvalResDisplay -> ExprGuiM m (AlignedWidget a)
+    Monad m => AnimId -> EvalResDisplay -> ExprGuiM m View
 makeEvaluationResultView animId res =
     do
         theme <- Lens.view Theme.theme
-        view <- EvalView.make animId (erdVal res)
-        view
-            & case erdSource res of
+        EvalView.make animId (erdVal res)
+            <&>
+            case erdSource res of
             Current -> id
             Prev -> View.tint (Theme.staleResultTint (Theme.eval theme))
-            & return
-    <&> AlignedWidget.fromView 0
-
-makeTypeView :: Monad m => Type -> AnimId -> ExprGuiM m (AlignedWidget f)
-makeTypeView typ animId =
-    TypeView.make typ animId <&> AlignedWidget.fromView 0
 
 data NeighborVals a = NeighborVals
     { prevNeighbor :: a
@@ -357,7 +350,7 @@ data NeighborVals a = NeighborVals
 makeEvalView ::
     Monad m =>
     Maybe (NeighborVals (Maybe EvalResDisplay)) -> EvalResDisplay ->
-    AnimId -> ExprGuiM m (AlignedWidget a)
+    AnimId -> ExprGuiM m View
 makeEvalView mNeighbours evalRes animId =
     do
         theme <- Lens.view Theme.theme
@@ -374,27 +367,23 @@ makeEvalView mNeighbours evalRes animId =
         let makeEvaluationResultViewBG res =
                 makeEvaluationResultView (mkAnimId res) res
                 <&> addAnnotationBackground (Theme.valAnnotation theme) (mkAnimId res)
-        let neighbourViews n yPos =
+        let neighbourViews n =
                 n ^.. Lens._Just
                 <&> makeEvaluationResultViewBG
-                <&> Lens.mapped %~
-                    View.pad (neighborsPadding <&> realToFrac) .
-                    AlignedWidget.scale (neighborsScaleFactor <&> realToFrac)
-                <&> Lens.mapped . AlignedWidget.alignment . _2 .~ yPos
+                <&> Lens.mapped %~ View.scale (neighborsScaleFactor <&> realToFrac)
+                <&> Lens.mapped %~ View.pad (neighborsPadding <&> realToFrac)
         (prevs, nexts) <-
             case mNeighbours of
             Nothing -> ([], []) & pure
             Just (NeighborVals mPrev mNext) ->
                 (,)
-                <$> sequence (neighbourViews mPrev 1)
-                <*> sequence (neighbourViews mNext 0)
-        evalView <-
-            makeEvaluationResultView (mkAnimId evalRes) evalRes
-            <&> AlignedWidget.alignment . _2 .~ 0.5
+                <$> sequence (neighbourViews mPrev)
+                <*> sequence (neighbourViews mNext)
+        evalView <- makeEvaluationResultView (mkAnimId evalRes) evalRes <&> AlignedWidget.fromView 0.5
         evalView
-            & AlignedWidget.addBefore AlignedWidget.Horizontal prevs
-            & AlignedWidget.addAfter AlignedWidget.Horizontal nexts
+            & AlignedWidget.boxWithViews AlignedWidget.Horizontal (prevs <&> (,) 1) (nexts <&> (,) 0)
             & (`AlignedWidget.hoverInPlaceOf` evalView)
+            & (^. View.view)
             & return
 
 annotationSpacer :: Monad m => ExprGuiM m View
@@ -402,7 +391,7 @@ annotationSpacer = ExprGuiM.vspacer (Theme.valAnnotationSpacing . Theme.valAnnot
 
 addAnnotationH ::
     Monad m =>
-    (AnimId -> ExprGuiM m (AlignedWidget a)) ->
+    (AnimId -> ExprGuiM m View) ->
     WideAnnotationBehavior -> Sugar.EntityId ->
     ExprGuiM m (TreeLayout a -> TreeLayout a)
 addAnnotationH f wideBehavior entityId =
@@ -411,10 +400,12 @@ addAnnotationH f wideBehavior entityId =
         annotationLayout <- f animId
         processAnn <- processAnnotationGui animId wideBehavior
         let onAlignedWidget w =
-                AlignedWidget.addAfter AlignedWidget.Vertical
-                [ AlignedWidget.fromView 0 vspace
-                , processAnn (w ^. View.width) annotationLayout
-                    & AlignedWidget.alignment . _1 .~ w ^. AlignedWidget.alignment . _1
+                AlignedWidget.boxWithViews AlignedWidget.Vertical
+                []
+                [ (0, vspace)
+                , ( w ^. AlignedWidget.alignment . _1
+                  , processAnn (w ^. View.width) annotationLayout
+                  )
                 ]
                 w
         return $ TreeLayout.alignedWidget %~ onAlignedWidget
@@ -425,7 +416,7 @@ addInferredType ::
     Monad m =>
     Type -> WideAnnotationBehavior -> Sugar.EntityId ->
     ExprGuiM m (TreeLayout a -> TreeLayout a)
-addInferredType typ = addAnnotationH (makeTypeView typ)
+addInferredType typ = addAnnotationH (TypeView.make typ)
 
 addEvaluationResult ::
     Monad m =>
