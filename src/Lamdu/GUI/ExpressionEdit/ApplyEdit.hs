@@ -207,8 +207,7 @@ mkBoxed apply nearestHoles mkFuncRow =
             [] -> return []
             args -> mkRelayedArgs nearestHoles args <&> (:[])
         ExpressionGui.addValFrame
-            <*> (TreeLayout.vboxSpaced ?? funcRow : argRows ++ relayedArgs)
-            <&> TreeLayout.alignment . _1 .~ 0
+            <*> (TreeLayout.vboxSpaced ?? (funcRow : argRows ++ relayedArgs <&> TreeLayout.alignment . _1 .~ 0))
 
 makeSimple ::
     Monad m =>
