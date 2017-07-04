@@ -206,10 +206,9 @@ mkBoxed apply nearestHoles mkFuncRow =
             case apply ^. Sugar.aRelayedArgs of
             [] -> return []
             args -> mkRelayedArgs nearestHoles args <&> (:[])
-        vbox <- ExpressionGui.vboxTopFocalSpaced
         ExpressionGui.addValFrame
-            ?? vbox
-                (funcRow : argRows ++ relayedArgs <&> TreeLayout.alignment . _1 .~ 0)
+            <*> (TreeLayout.vboxSpaced ?? funcRow : argRows ++ relayedArgs)
+            <&> TreeLayout.alignment . _1 .~ 0
 
 makeSimple ::
     Monad m =>

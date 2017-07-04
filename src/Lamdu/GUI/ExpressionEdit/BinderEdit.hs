@@ -349,7 +349,7 @@ make name color binder myId =
             case mParamsEdit of
             Nothing -> return Nothing
             Just paramsEdit ->
-                ExpressionGui.vboxTopFocalSpaced
+                TreeLayout.vboxSpaced
                 ?? (paramsEdit : fmap TreeLayout.fromWidget mScopeEdit ^.. Lens._Just
                     <&> TreeLayout.alignment . _1 .~ 0.5)
                 <&> TreeLayout.alignment . _1 .~ 0
@@ -462,7 +462,7 @@ makeBinderContentEdit (Sugar.BinderLet l) =
         mOuterScopeId <- ExprGuiM.readMScopeId
         let letBodyScope = liftA2 lookupMKey mOuterScopeId (l ^. Sugar.lBodyScope)
         ExpressionGui.parentDelegator letEntityId
-            <*> ( ExpressionGui.vboxTopFocalSpaced
+            <*> ( TreeLayout.vboxSpaced
                   <*>
                   ( sequence
                     [ makeLetEdit l <&> E.weakerEvents moveToInnerEventMap

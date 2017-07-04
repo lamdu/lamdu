@@ -36,10 +36,11 @@ module Graphics.UI.Bottle.Widget.TreeLayout
     , fromAlignedWidget, fromWidget, fromView, empty
 
     -- * Combinators
-    , vbox
+    , vbox, vboxSpaced
     ) where
 
 import qualified Control.Lens as Lens
+import qualified Data.List as List
 import           Graphics.UI.Bottle.Alignment (Alignment)
 import qualified Graphics.UI.Bottle.EventMap as E
 import           Graphics.UI.Bottle.View (View)
@@ -48,6 +49,7 @@ import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import           Graphics.UI.Bottle.Widget.Aligned (AlignedWidget(..))
 import qualified Graphics.UI.Bottle.Widget.Aligned as AlignedWidget
+import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
 
 import           Lamdu.Prelude
 
@@ -133,3 +135,12 @@ vbox (gui:guis) =
     & gui ^. render
     & AlignedWidget.addAfter AlignedWidget.Vertical
         (guis ^.. traverse . render ?? cp)
+
+vboxSpaced ::
+    (MonadReader env m, Spacer.HasStdSpacing env) =>
+    m ([TreeLayout a] -> TreeLayout a)
+vboxSpaced =
+    Spacer.stdVSpaceView
+    <&> fromView
+    <&> List.intersperse
+    <&> Lens.mapped %~ vbox

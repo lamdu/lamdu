@@ -94,7 +94,7 @@ make (Sugar.Case mArg alts caseTail addAlt _cEntityId) pl =
                   (E.Doc ["Edit", "Case", "Add Alt"])
                 & ExprGuiM.withHolePicker resultPicker
         ExpressionGui.addValFrame
-            <*> (ExpressionGui.vboxTopFocalSpaced ??
+            <*> (TreeLayout.vboxSpaced ??
                  ([header, altsGui] <&> TreeLayout.alignment . _1 .~ 0))
             <&> E.weakerEvents addAltEventMap
     & Widget.assignCursor myId (destCursorId alts headerId)
@@ -131,7 +131,7 @@ makeAltsWidget _ [] myId =
     (Widget.makeFocusableView ?? Widget.joinId myId ["Ø"])
     <*> (ExpressionGui.grammarLabel "Ø" <&> TreeLayout.fromView)
 makeAltsWidget mActiveTag alts _myId =
-    ExpressionGui.vboxTopFocalSpaced <*> mapM (makeAltRow mActiveTag) alts
+    TreeLayout.vboxSpaced <*> mapM (makeAltRow mActiveTag) alts
 
 separationBar :: Theme -> Widget.R -> Anim.AnimId -> View
 separationBar theme width animId =

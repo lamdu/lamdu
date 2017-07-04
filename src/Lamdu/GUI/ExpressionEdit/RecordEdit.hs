@@ -98,7 +98,7 @@ makeFieldsWidget [] myId =
     (Widget.makeFocusableView ?? myId)
     <*> (ExpressionGui.grammarLabel "()" <&> TreeLayout.fromView)
 makeFieldsWidget fields _ =
-    ExpressionGui.vboxTopFocalSpaced <*> mapM makeFieldRow fields
+    TreeLayout.vboxSpaced <*> mapM makeFieldRow fields
 
 separationBar :: Theme -> Widget.R -> Anim.AnimId -> View
 separationBar theme width animId =
