@@ -210,7 +210,9 @@ combineWith mParenInfo onHGuis onVGuis guis =
 combine :: [TreeLayout a] -> TreeLayout a
 combine = combineWith Nothing id id
 
-makeParenIndentInfo :: Monad m => AnimId -> ExprGuiM m ParenIndentInfo
+makeParenIndentInfo ::
+    (MonadReader env m, TextView.HasStyle env, Theme.HasTheme env, Spacer.HasStdSpacing env) =>
+    AnimId -> m ParenIndentInfo
 makeParenIndentInfo parensId =
     do
         textStyle <- Lens.view TextView.style
@@ -218,11 +220,14 @@ makeParenIndentInfo parensId =
         stdSpacing <- Spacer.getSpaceSize <&> (^. _1)
         ParenIndentInfo parensId textStyle theme stdSpacing & return
 
-combineSpaced :: Monad m => ExprGuiM m ([TreeLayout a] -> TreeLayout a)
+combineSpaced ::
+    (MonadReader env m, TextView.HasStyle env, Theme.HasTheme env, Spacer.HasStdSpacing env) =>
+    m ([TreeLayout a] -> TreeLayout a)
 combineSpaced = combineSpacedMParens Nothing
 
 combineSpacedMParens ::
-    Monad m => Maybe AnimId -> ExprGuiM m ([TreeLayout a] -> TreeLayout a)
+    (MonadReader env m, TextView.HasStyle env, Theme.HasTheme env, Spacer.HasStdSpacing env) =>
+    Maybe AnimId -> m ([TreeLayout a] -> TreeLayout a)
 combineSpacedMParens mParensId =
     do
         hSpace <- Spacer.stdHSpaceView <&> AlignedWidget.fromView 0
@@ -231,7 +236,8 @@ combineSpacedMParens mParensId =
         return $ combineWith mParenInfo (List.intersperse hSpace) (List.intersperse vSpace)
 
 tagItem ::
-    Monad m => ExprGuiM m (AlignedWidget a -> TreeLayout a -> TreeLayout a)
+    (MonadReader env m, Spacer.HasStdSpacing env) =>
+    m (AlignedWidget a -> TreeLayout a -> TreeLayout a)
 tagItem =
     Spacer.stdHSpaceView <&> AlignedWidget.fromView 0 <&> f
     where
