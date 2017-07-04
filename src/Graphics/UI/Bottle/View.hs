@@ -14,8 +14,10 @@ module Graphics.UI.Bottle.View
     , HasAnimIdPrefix(..), subAnimId
     , addDiagonal, addInnerFrame , backgroundColor
     , hoverInPlaceOf
+    , padToSizeAlign
     ) where
 
+import           Control.Applicative (liftA2)
 import qualified Control.Lens as Lens
 import           Data.Vector.Vector2 (Vector2(..))
 import qualified Graphics.DrawingCombinators as Draw
@@ -162,6 +164,13 @@ assymetricPad leftAndTop rightAndBottom x =
     x
     & size +~ leftAndTop + rightAndBottom
     & translate leftAndTop
+
+padToSizeAlign :: Size -> Vector2 R -> View -> View
+padToSizeAlign newSize alignment x =
+    translate (sizeDiff * alignment) x
+    & size %~ liftA2 max newSize
+    where
+        sizeDiff = max <$> 0 <*> newSize - x ^. size
 
 hoverInPlaceOf :: MkView a => View -> a -> a
 hoverInPlaceOf onTop =
