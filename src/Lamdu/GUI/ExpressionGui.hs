@@ -58,7 +58,6 @@ import           Graphics.UI.Bottle.Widget.Aligned (AlignedWidget(..))
 import qualified Graphics.UI.Bottle.Widget.Aligned as AlignedWidget
 import           Graphics.UI.Bottle.Widget.TreeLayout (TreeLayout(..))
 import qualified Graphics.UI.Bottle.Widget.TreeLayout as TreeLayout
-import qualified Graphics.UI.Bottle.Widgets.Box as Box
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 import qualified Graphics.UI.Bottle.Widgets.GridView as GridView
 import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
@@ -483,12 +482,12 @@ makeNameEdit onActiveEditor (Name nameSrc nameCollision setName name) myId =
       ?? FocusDelegator.FocusEntryParent ?? myId
     ) <*>
     do
-        mCollisionSuffix <-
-            makeCollisionSuffixLabel nameCollision <&> Lens._Just %~ Widget.fromView
-        nameEdit <-
-            makeNameWordEdit ?? Property storedName setName
+        mCollisionSuffix <- makeCollisionSuffixLabel nameCollision
+        let addSuffix v = v : mCollisionSuffix ^.. Lens._Just & GridView.horizontalAlign 0
+        makeNameWordEdit
+            ?? Property storedName setName
             ?? WidgetIds.nameEditOf myId
-        return . Box.hboxAlign 0 $ nameEdit : mCollisionSuffix ^.. Lens._Just
+            <&> View.view %~ addSuffix
     & Reader.local (View.animIdPrefix .~ Widget.toAnimId myId)
     <&> onActiveEditor
     where
