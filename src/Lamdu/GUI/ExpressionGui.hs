@@ -151,11 +151,10 @@ data ParenIndentInfo = ParenIndentInfo
     , piStdHorizSpacing :: Widget.R
     }
 
-parenLabel :: ParenIndentInfo -> Text -> AlignedWidget a
+parenLabel :: ParenIndentInfo -> Text -> View
 parenLabel parenInfo t =
     TextView.make (piTextStyle parenInfo) t
     (piAnimId parenInfo ++ [encodeUtf8 t])
-    & AlignedWidget.fromView 0
 
 horizVertFallback ::
     Monad m =>
@@ -177,9 +176,10 @@ horizVertFallbackH mParenInfo horiz vert =
     TreeLayout.LayoutWide ->
         case (mParenInfo, layoutParams ^. TreeLayout.layoutContext) of
         (Just parenInfo, TreeLayout.LayoutHorizontal) ->
+            AlignedWidget.boxWithViews AlignedWidget.Horizontal
+            [(0, parenLabel parenInfo "(")]
+            [(0, parenLabel parenInfo ")")]
             wide
-            & AlignedWidget.addBefore AlignedWidget.Horizontal [parenLabel parenInfo "("]
-            & AlignedWidget.addAfter AlignedWidget.Horizontal [parenLabel parenInfo ")"]
         _ -> wide
     TreeLayout.LayoutNarrow limit
         | wide ^. View.width > limit ->
