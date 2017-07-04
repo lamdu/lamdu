@@ -118,11 +118,10 @@ makeOpenRecord fieldsGui rest animId =
         restExpr <-
             ExpressionGui.addValPadding
             <*> ExprGuiM.makeSubexpression rest
-        return $ TreeLayout.render #
-            \layoutMode ->
-            let restLayout = layoutMode & restExpr ^. TreeLayout.render
-                minWidth = restLayout ^. View.width
-                fields = layoutMode & fieldsGui ^. TreeLayout.render
+        return $ fieldsGui & TreeLayout.render . Lens.imapped %@~
+            \layoutMode fields ->
+            let restW = (restExpr ^. TreeLayout.render) layoutMode
+                minWidth = restW ^. View.width
                 targetWidth = fields ^. View.width
             in
             fields
@@ -130,7 +129,7 @@ makeOpenRecord fieldsGui rest animId =
             & AlignedWidget.addAfter AlignedWidget.Vertical
             [ separationBar theme (max minWidth targetWidth) animId & AlignedWidget.fromView 0
             , AlignedWidget.fromView 0 vspace
-            , restLayout
+            , restW
             ]
 
 recordOpenEventMap ::

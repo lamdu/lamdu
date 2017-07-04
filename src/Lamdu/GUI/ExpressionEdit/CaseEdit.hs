@@ -151,11 +151,10 @@ makeOpenCase rest animId altsGui =
         restExpr <-
             ExpressionGui.addValPadding
             <*> ExprGuiM.makeSubexpression rest
-        return $ TreeLayout.render #
-            \layoutMode ->
+        return $ altsGui & TreeLayout.render . Lens.imapped %@~
+            \layoutMode alts ->
             let restLayout = layoutMode & restExpr ^. TreeLayout.render
                 minWidth = restLayout ^. View.width
-                alts = layoutMode & altsGui ^. TreeLayout.render
                 targetWidth = alts ^. View.width
             in
             alts
