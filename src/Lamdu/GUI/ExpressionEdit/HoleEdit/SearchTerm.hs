@@ -9,10 +9,10 @@ import qualified Control.Lens as Lens
 import qualified Data.Monoid as Monoid
 import           Data.Store.Property (Property)
 import qualified Data.Store.Property as Property
+import           Data.Store.Transaction (Transaction)
 import qualified Data.Text as Text
 import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
-import qualified Graphics.UI.Bottle.Widget.TreeLayout as TreeLayout
 import qualified Graphics.UI.Bottle.Widgets.TextEdit as TextEdit
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Config.Theme as Theme
@@ -20,7 +20,6 @@ import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.EventMap as EventMap
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.Info (HoleInfo(..))
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.Info as HoleInfo
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds (WidgetIds(..))
-import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import           Lamdu.GUI.Hover (addBackground)
 
@@ -50,7 +49,7 @@ makeSearchTermPropEdit WidgetIds{..} searchTermProp =
     where
         searchTerm = Property.value searchTermProp
 
-make :: Monad m => HoleInfo m -> ExprGuiM m (ExpressionGui m)
+make :: Monad m => HoleInfo m -> ExprGuiM m (Widget (Transaction m Widget.EventResult))
 make holeInfo =
     do
         config <- Lens.view Config.config
@@ -62,7 +61,6 @@ make holeInfo =
             <&> Widget.eventMap
                 %~ EventMap.disallowCharsFromSearchTerm holeConfig holeInfo textCursor
             <&> addBackground (Widget.toAnimId hidOpenSearchTerm) holeSearchTermBGColor
-            <&> TreeLayout.fromWidget
     where
         WidgetIds{..} = hiIds holeInfo
         searchTerm = HoleInfo.hiSearchTerm holeInfo

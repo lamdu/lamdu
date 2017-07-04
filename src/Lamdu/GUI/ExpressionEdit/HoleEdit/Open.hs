@@ -439,7 +439,7 @@ assignHoleEditCursor holeInfo shownMainResultsIds allShownResultIds searchTermId
 makeUnderCursorAssignment ::
     Monad m =>
     [ResultsList m] -> HaveHiddenResults ->
-    HoleInfo m -> ExprGuiM m (ExpressionGui m)
+    HoleInfo m -> ExprGuiM m (Widget (T m Widget.EventResult))
 makeUnderCursorAssignment shownResultsLists hasHiddenResults holeInfo =
     do
         theme <- Lens.view Theme.theme
@@ -467,22 +467,14 @@ makeUnderCursorAssignment shownResultsLists hasHiddenResults holeInfo =
             , Widget.fromView typeView
             ]
             <&> E.strongerEvents resultsEventMap
-        searchTermGui <- SearchTerm.make holeInfo
-        return $ TreeLayout.render # \layoutMode ->
-            let w = layoutMode
-                    & E.weakerEvents searchTermEventMap searchTermGui ^. TreeLayout.render
-            in
-                w
-                & AlignedWidget.addAfter AlignedWidget.Vertical [AlignedWidget 0 hoverResultsWidget]
-                & alignment .~ w ^. alignment
+        searchTermWidget <- SearchTerm.make holeInfo <&> E.weakerEvents searchTermEventMap
+        Box.vboxAlign 0 [searchTermWidget, hoverResultsWidget] & return
     where
-        alignment :: Lens' (AlignedWidget f) (Vector2 Widget.R)
-        alignment = AlignedWidget.absAlignedWidget . _1
         WidgetIds{..} = hiIds holeInfo
 
 makeOpenSearchAreaGui ::
     Monad m =>
-    Sugar.Payload m ExprGuiT.Payload -> HoleInfo m -> ExprGuiM m (ExpressionGui m)
+    Sugar.Payload m ExprGuiT.Payload -> HoleInfo m -> ExprGuiM m (Widget (T m Widget.EventResult))
 makeOpenSearchAreaGui pl holeInfo =
     do
         (shownResultsLists, hasHiddenResults) <-
