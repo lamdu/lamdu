@@ -12,8 +12,9 @@ import qualified Graphics.UI.Bottle.EventMap as E
 import           Graphics.UI.Bottle.MetaKey (MetaKey(..), noMods)
 import qualified Graphics.UI.Bottle.View as View
 import qualified Graphics.UI.Bottle.Widget as Widget
+import           Graphics.UI.Bottle.Widget.Aligned (AlignedWidget(..))
+import qualified Graphics.UI.Bottle.Widget.Aligned as AlignedWidget
 import qualified Graphics.UI.Bottle.Widget.TreeLayout as TreeLayout
-import qualified Graphics.UI.Bottle.Widgets.Box as Box
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 import qualified Graphics.UI.Bottle.Widgets.TextEdit as TextEdit
 import qualified Graphics.UI.Bottle.Widgets.TextEdit.Property as TextEdits
@@ -77,21 +78,19 @@ fdConfig Config.LiteralText{..} = FocusDelegator.Config
 
 textEdit ::
     Monad m => Transaction.Property m Text ->
-    Sugar.Payload m ExprGuiT.Payload -> ExprGuiM m (ExpressionGui m)
+    Sugar.Payload m ExprGuiT.Payload -> ExprGuiM m (AlignedWidget (T m Widget.EventResult))
 textEdit prop pl =
     do
         config <- Lens.view Config.config <&> Config.literalText
         style <- ExprGuiM.readStyle <&> (^. Style.styleText)
         edit <- do
-            left <- TextView.makeLabel "“" <&> Widget.fromView
-            text <- TextEdits.make ?? empty ?? prop ?? innerId
-            right <- TextView.makeLabel "„" <&> Widget.fromView
-            let quoteSize = text ^. View.size & _1 .~ 0
-            Box.hboxAlign 0
-                [ left
-                , text
-                , Widget.padToSizeAlign quoteSize 1 right
-                ] & TreeLayout.fromWidget & return
+            left <- TextView.makeLabel "“"
+            text <- TextEdits.make ?? empty ?? prop ?? innerId <&> AlignedWidget 0
+            right <-
+                TextView.makeLabel "„"
+                <&> View.padToSizeAlign (text ^. View.size & _1 .~ 0) 1
+            AlignedWidget.boxWithViews AlignedWidget.Horizontal [(0, left)] [(0, right)] text
+                & return
             & Reader.local (TextEdit.style .~ style)
         FocusDelegator.make ?? fdConfig config
             ?? FocusDelegator.FocusEntryParent ?? WidgetIds.notDelegatingId myId
@@ -107,9 +106,8 @@ make ::
     Sugar.Literal (Transaction.Property m) -> Sugar.Payload m ExprGuiT.Payload ->
     ExprGuiM m (ExpressionGui m)
 make lit pl =
-    ( case lit of
-        Sugar.LiteralNum x -> genericEdit (^. Style.styleNum) x
-        Sugar.LiteralBytes x -> genericEdit (^. Style.styleBytes) x
-        Sugar.LiteralText x -> textEdit x
-    ) pl
+    case lit of
+    Sugar.LiteralNum x -> genericEdit (^. Style.styleNum) x pl
+    Sugar.LiteralBytes x -> genericEdit (^. Style.styleBytes) x pl
+    Sugar.LiteralText x -> textEdit x pl <&> TreeLayout.fromAlignedWidget
     & ExpressionGui.stdWrap pl
