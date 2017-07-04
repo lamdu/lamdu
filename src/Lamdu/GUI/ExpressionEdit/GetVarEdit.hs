@@ -16,7 +16,6 @@ import           Graphics.UI.Bottle.Widget.Aligned (AlignedWidget(..))
 import qualified Graphics.UI.Bottle.Widget.Aligned as AlignedWidget
 import           Graphics.UI.Bottle.Widget.TreeLayout (TreeLayout)
 import qualified Graphics.UI.Bottle.Widget.TreeLayout as TreeLayout
-import qualified Graphics.UI.Bottle.Widgets.Box as Box
 import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
 import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
 import           Lamdu.Calc.Type.Scheme (schemeType)
@@ -113,20 +112,22 @@ definitionTypeChangeBox ::
     ExprGuiM m (Widget (T m Widget.EventResult))
 definitionTypeChangeBox info getVarId =
     do
-        headerLabel <- TextView.makeLabel "Type was:" <&> Widget.fromView
+        headerLabel <- TextView.makeLabel "Type was:"
         typeWhenUsed <-
-            mkTypeWidget "typeWhenUsed" (info ^. Sugar.defTypeWhenUsed)
-        spacing <- Spacer.stdVSpaceView <&> Widget.fromView
+            mkTypeView "typeWhenUsed" (info ^. Sugar.defTypeWhenUsed)
+        spacing <- Spacer.stdVSpaceView
         sepLabel <-
             (Widget.makeFocusableView ?? myId)
             <*> (TextView.makeLabel "Update to:" <&> Widget.fromView)
-        typeCurrent <- mkTypeWidget "typeCurrent" (info ^. Sugar.defTypeCurrent)
+        typeCurrent <- mkTypeView "typeCurrent" (info ^. Sugar.defTypeCurrent)
         config <- Lens.view Config.config
         theme <- Lens.view Theme.theme
         let padding = realToFrac <$> Theme.valFramePadding theme
         let box =
-                [headerLabel, typeWhenUsed, spacing, sepLabel, typeCurrent]
-                & Box.vboxAlign 0
+                AlignedWidget.boxWithViews AlignedWidget.Vertical
+                ([headerLabel, typeWhenUsed, spacing] <&> (,) 0) [(0, typeCurrent)]
+                (AlignedWidget 0 sepLabel)
+                ^. AlignedWidget.aWidget
                 & View.pad padding
                 & Hover.addBackground animId (Theme.hoverBGColor theme)
         -- TODO: unify config's button press keys
@@ -138,9 +139,7 @@ definitionTypeChangeBox info getVarId =
                 (Widget.keysEventMapMovesCursor keys
                  (E.Doc ["Edit", "Update definition type"]) update)
     where
-        mkTypeWidget idSuffix scheme =
-            TypeView.make (scheme ^. schemeType) (animId ++ [idSuffix])
-            <&> Widget.fromView
+        mkTypeView idSuffix scheme = TypeView.make (scheme ^. schemeType) (animId ++ [idSuffix])
         myId = Widget.joinId getVarId ["type change"]
         animId = Widget.toAnimId myId
 
