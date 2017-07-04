@@ -14,6 +14,7 @@ import qualified Graphics.UI.Bottle.Widget as Widget
 import           Graphics.UI.Bottle.Widget.Aligned (AlignedWidget(..))
 import qualified Graphics.UI.Bottle.Widget.Aligned as AlignedWidget
 import qualified Graphics.UI.Bottle.Widget.TreeLayout as TreeLayout
+import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
 import           Lamdu.Calc.Type (Tag)
 import qualified Lamdu.Calc.Val as V
 import           Lamdu.Config (Config)
@@ -28,7 +29,6 @@ import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
-import qualified Lamdu.GUI.Spacing as Spacing
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Sugar.Names.Types (Name(..))
 import qualified Lamdu.Sugar.Types as Sugar
@@ -147,7 +147,7 @@ makeOpenCase ::
 makeOpenCase rest animId altsGui =
     do
         theme <- Lens.view Theme.theme
-        vspace <- Spacing.stdVSpaceView
+        vspace <- Spacer.stdVSpaceView
         restExpr <-
             ExpressionGui.addValPadding
             <*> ExprGuiM.makeSubexpression rest

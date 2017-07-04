@@ -209,7 +209,6 @@ Executable lamdu
                   , Lamdu.GUI.Precedence
                   , Lamdu.GUI.RedundantAnnotations
                   , Lamdu.GUI.Scroll
-                  , Lamdu.GUI.Spacing
                   , Lamdu.GUI.TypeView
                   , Lamdu.GUI.VersionControl
                   , Lamdu.GUI.VersionControl.Config

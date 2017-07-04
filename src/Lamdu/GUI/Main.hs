@@ -19,6 +19,7 @@ import qualified Graphics.UI.Bottle.View as View
 import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.Box as Box
+import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
 import qualified Graphics.UI.Bottle.Widgets.TextEdit as TextEdit
 import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
 import           Lamdu.Config (Config)
@@ -31,7 +32,6 @@ import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.GUI.CodeEdit as CodeEdit
 import           Lamdu.GUI.CodeEdit.Settings (Settings(..))
 import qualified Lamdu.GUI.Scroll as Scroll
-import qualified Lamdu.GUI.Spacing as Spacing
 import qualified Lamdu.GUI.VersionControl as VersionControlGUI
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Style (Style)
@@ -63,7 +63,7 @@ instance Config.HasConfig Env where config = envConfig
 themeStdSpacing :: Lens' Theme (Vector2 Double)
 themeStdSpacing f theme =
     Theme.stdSpacing theme & f <&> \new -> theme { Theme.stdSpacing = new }
-instance Spacing.HasStdSpacing Env where stdSpacing = envTheme . themeStdSpacing
+instance Spacer.HasStdSpacing Env where stdSpacing = envTheme . themeStdSpacing
 
 defaultCursor :: Widget.Id
 defaultCursor = WidgetIds.replId
@@ -85,7 +85,7 @@ make env =
                         CodeEdit.make (codeSize ^. _1) codeEditEnv
                         & Reader.mapReaderT VersionControl.runAction
                         <&> Widget.events . CodeEdit.m %~ fmap (VersionControl.runEvent (mainEnv ^. Widget.cursor))
-                    topPadding <- Theme.topPadding theme & Spacing.vspacer
+                    topPadding <- Theme.topPadding theme & Spacer.vspaceLines
                     let scrollBox =
                             Box.vboxAlign 0.5 [Widget.fromView topPadding, codeEdit]
                             & Widget.padToSizeAlign codeSize 0

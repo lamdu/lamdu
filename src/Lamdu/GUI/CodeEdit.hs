@@ -23,6 +23,7 @@ import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widget.Aligned as AlignedWidget
 import           Graphics.UI.Bottle.Widget.TreeLayout (TreeLayout)
 import qualified Graphics.UI.Bottle.Widget.TreeLayout as TreeLayout
+import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
 import qualified Graphics.UI.Bottle.Widgets.TextEdit as TextEdit
 import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
 import qualified Lamdu.Calc.Type.Scheme as Scheme
@@ -45,7 +46,6 @@ import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
 import qualified Lamdu.GUI.RedundantAnnotations as RedundantAnnotations
-import qualified Lamdu.GUI.Spacing as Spacing
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Style (Style)
 import qualified Lamdu.Sugar.Convert as SugarConvert
@@ -158,7 +158,7 @@ makeReplEdit env replExpr =
 make ::
     ( Monad m, MonadTransaction m n, MonadReader env n, Config.HasConfig env
     , Theme.HasTheme env, Widget.HasCursor env, TextEdit.HasStyle env
-    , Spacing.HasStdSpacing env
+    , Spacer.HasStdSpacing env
     ) =>
     Widget.R ->
     Env m -> n (Widget (M m Widget.EventResult))

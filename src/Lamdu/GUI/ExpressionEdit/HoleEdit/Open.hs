@@ -31,6 +31,7 @@ import qualified Graphics.UI.Bottle.Widget.Id as WidgetId
 import qualified Graphics.UI.Bottle.Widget.TreeLayout as TreeLayout
 import qualified Graphics.UI.Bottle.Widgets.Box as Box
 import qualified Graphics.UI.Bottle.Widgets.Grid as Grid
+import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
 import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
 import           Lamdu.CharClassification (operatorChars)
 import qualified Lamdu.Config as Config
@@ -52,7 +53,6 @@ import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
 import           Lamdu.GUI.Hover (addBackground, addDarkBackground)
-import qualified Lamdu.GUI.Spacing as Spacing
 import qualified Lamdu.GUI.TypeView as TypeView
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.Sugar.Lens as SugarLens
@@ -182,7 +182,7 @@ makeShownResult holeInfo result =
         res <- rHoleResult result & transaction
         theme <- Theme.hole <$> Lens.view Theme.theme
         (widget, mkEventMap) <- makeHoleResultWidget (rId result) res
-        stdSpacing <- Spacing.getSpaceSize
+        stdSpacing <- Spacer.getSpaceSize
         let padding = Theme.holeResultPadding theme <&> realToFrac & (* stdSpacing)
         let mFirstHoleInside =
                 res ^? Sugar.holeResultConverted
@@ -210,7 +210,7 @@ makeExtraSymbol isSelected results
             let extraSymbolColor
                     | isSelected = holeExtraSymbolColorSelected
                     | otherwise = holeExtraSymbolColorUnselected
-            hSpace <- Spacing.getSpaceSize <&> (^. _1)
+            hSpace <- Spacer.getSpaceSize <&> (^. _1)
             TextView.makeLabel extraSymbol
                 <&> View.scale extraSymbolScaleFactor
                 <&> View.tint extraSymbolColor

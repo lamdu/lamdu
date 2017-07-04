@@ -17,6 +17,7 @@ import qualified Graphics.UI.Bottle.Widget.Aligned as AlignedWidget
 import           Graphics.UI.Bottle.Widget.TreeLayout (TreeLayout)
 import qualified Graphics.UI.Bottle.Widget.TreeLayout as TreeLayout
 import qualified Graphics.UI.Bottle.Widgets.Box as Box
+import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
 import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
 import           Lamdu.Calc.Type.Scheme (schemeType)
 import           Lamdu.Config (Config)
@@ -30,7 +31,6 @@ import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
 import qualified Lamdu.GUI.Hover as Hover
 import qualified Lamdu.GUI.LightLambda as LightLambda
-import qualified Lamdu.GUI.Spacing as Spacing
 import qualified Lamdu.GUI.TypeView as TypeView
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Sugar.Names.Types (Name(..))
@@ -116,7 +116,7 @@ definitionTypeChangeBox info getVarId =
         headerLabel <- TextView.makeLabel "Type was:" <&> Widget.fromView
         typeWhenUsed <-
             mkTypeWidget "typeWhenUsed" (info ^. Sugar.defTypeWhenUsed)
-        spacing <- Spacing.stdVSpaceView <&> Widget.fromView
+        spacing <- Spacer.stdVSpaceView <&> Widget.fromView
         sepLabel <-
             (Widget.makeFocusableView ?? myId)
             <*> (TextView.makeLabel "Update to:" <&> Widget.fromView)

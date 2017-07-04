@@ -83,7 +83,6 @@ import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import           Lamdu.GUI.ExpressionGui.Types (ExpressionGui, ShowAnnotation(..), EvalModeShow(..))
 import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
 import qualified Lamdu.GUI.Precedence as Precedence
-import qualified Lamdu.GUI.Spacing as Spacing
 import qualified Lamdu.GUI.TypeView as TypeView
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.Style as Style
@@ -129,7 +128,7 @@ maybeIndent (Just piInfo) =
 vboxTopFocalSpaced ::
     Monad m => ExprGuiM m ([TreeLayout a] -> TreeLayout a)
 vboxTopFocalSpaced =
-    Spacing.stdVSpaceView
+    Spacer.stdVSpaceView
     <&> TreeLayout.fromView
     <&> List.intersperse
     <&> Lens.mapped %~ TreeLayout.vbox
@@ -225,7 +224,7 @@ makeParenIndentInfo parensId =
     do
         textStyle <- Lens.view TextView.style
         theme <- Lens.view Theme.theme <&> Theme.indent
-        stdSpacing <- Spacing.getSpaceSize <&> (^. _1)
+        stdSpacing <- Spacer.getSpaceSize <&> (^. _1)
         ParenIndentInfo parensId textStyle theme stdSpacing & return
 
 combineSpaced :: Monad m => ExprGuiM m ([TreeLayout a] -> TreeLayout a)
@@ -235,15 +234,15 @@ combineSpacedMParens ::
     Monad m => Maybe AnimId -> ExprGuiM m ([TreeLayout a] -> TreeLayout a)
 combineSpacedMParens mParensId =
     do
-        hSpace <- Spacing.stdHSpaceView <&> AlignedWidget.fromView 0
-        vSpace <- Spacing.stdVSpaceView <&> TreeLayout.fromView
+        hSpace <- Spacer.stdHSpaceView <&> AlignedWidget.fromView 0
+        vSpace <- Spacer.stdVSpaceView <&> TreeLayout.fromView
         mParenInfo <- mParensId & Lens._Just %%~ makeParenIndentInfo
         return $ combineWith mParenInfo (List.intersperse hSpace) (List.intersperse vSpace)
 
 tagItem ::
     Monad m => ExprGuiM m (AlignedWidget a -> TreeLayout a -> TreeLayout a)
 tagItem =
-    Spacing.stdHSpaceView <&> AlignedWidget.fromView 0 <&> f
+    Spacer.stdHSpaceView <&> AlignedWidget.fromView 0 <&> f
     where
         f space tag item =
             tag ||> (space ||> (item & TreeLayout.alignment . _1 .~ 0))
@@ -304,7 +303,7 @@ processAnnotationGui ::
 processAnnotationGui animId wideAnnotationBehavior =
     f
     <$> (Lens.view Theme.theme <&> Theme.valAnnotation)
-    <*> Spacing.getSpaceSize
+    <*> Spacer.getSpaceSize
     <*> applyWideAnnotationBehavior animId wideAnnotationBehavior
     where
         f theme stdSpacing applyWide minWidth annotationLayout
