@@ -8,6 +8,7 @@ module Graphics.UI.Bottle.Widget.Aligned
     , Orientation(..)
     , addBefore, addAfter
     , box, hbox, vbox
+    , boxWithViews
     ) where
 
 import qualified Control.Lens as Lens
@@ -15,6 +16,7 @@ import           Data.Vector.Vector2 (Vector2(..))
 import           Graphics.UI.Bottle.Alignment (Alignment(..))
 import qualified Graphics.UI.Bottle.Alignment as Alignment
 import qualified Graphics.UI.Bottle.EventMap as E
+import qualified Graphics.UI.Bottle.Rect as Rect
 import           Graphics.UI.Bottle.View (View)
 import qualified Graphics.UI.Bottle.View as View
 import           Graphics.UI.Bottle.Widget (Widget)
@@ -148,3 +150,26 @@ hbox = box Horizontal
 
 vbox :: Widget.R -> [AlignedWidget a] -> AlignedWidget a
 vbox = box Vertical
+
+boxWithViews :: Orientation -> [(Widget.R, View)] -> [(Widget.R, View)] -> AlignedWidget a -> AlignedWidget a
+boxWithViews orientation befores afters w =
+    AlignedWidget
+    { _alignment = resultAlignment
+    , _aWidget =
+        w ^. aWidget
+        & Widget.translate (wRect ^. Rect.topLeft)
+        & View.size .~ size
+        & View.animLayers <>~ layers beforesPlacements <> layers aftersPlacements
+    }
+    where
+        toTriplet (align, view) = (align, view ^. View.size, view)
+        toAlignment x = 0 & axis orientation .~ x
+        (size, BoxComponents beforesPlacements (resultAlignment, wRect, _v) aftersPlacements) =
+            BoxComponents
+                (befores <&> _1 %~ toAlignment)
+                (w ^. alignment, w ^. View.view)
+                (afters <&> _1 %~ toAlignment)
+            <&> toTriplet
+            & Box.makePlacements orientation
+        layers placements = placements <&> translateView & mconcat
+        translateView (_alignment, rect, view) = View.translate (rect ^. Rect.topLeft) view ^. View.animLayers
