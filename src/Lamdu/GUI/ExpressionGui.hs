@@ -5,7 +5,6 @@ module Lamdu.GUI.ExpressionGui
     -- General:
     , combine, combineSpaced, combineSpacedMParens
     , (||>), (<||)
-    , vboxTopFocalSpaced
     , horizVertFallback
     , tagItem
     , listWithDelDests
@@ -124,14 +123,6 @@ maybeIndent (Just piInfo) =
                         & mkLayout
                     bgAnimId = piAnimId piInfo ++ ["("]
             _ -> mkLayout lp
-
-vboxTopFocalSpaced ::
-    Monad m => ExprGuiM m ([TreeLayout a] -> TreeLayout a)
-vboxTopFocalSpaced =
-    Spacer.stdVSpaceView
-    <&> TreeLayout.fromView
-    <&> List.intersperse
-    <&> Lens.mapped %~ TreeLayout.vbox
 
 hCombine ::
     (AlignedWidget.Orientation -> [AlignedWidget a] -> AlignedWidget a ->
