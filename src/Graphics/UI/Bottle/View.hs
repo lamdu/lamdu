@@ -13,6 +13,7 @@ module Graphics.UI.Bottle.View
     , tint
     , HasAnimIdPrefix(..), subAnimId
     , addDiagonal, addInnerFrame , backgroundColor
+    , hoverInPlaceOf
     ) where
 
 import qualified Control.Lens as Lens
@@ -161,3 +162,7 @@ assymetricPad leftAndTop rightAndBottom x =
     x
     & size +~ leftAndTop + rightAndBottom
     & translate leftAndTop
+
+hoverInPlaceOf :: MkView a => View -> a -> a
+hoverInPlaceOf onTop =
+    setView . animLayers . layers .~ mempty : onTop ^. animLayers . layers
