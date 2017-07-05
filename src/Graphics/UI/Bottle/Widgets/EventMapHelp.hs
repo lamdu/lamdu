@@ -202,9 +202,7 @@ addToBottomRight :: View.MkView a => View -> Widget.Size -> a -> a
 addToBottomRight (View eventMapSize eventMapLayers) size =
     View.setView . View.vAnimLayers . View.layers <>~ docLayers ^. View.layers
     where
-        docLayers =
-            eventMapLayers
-            & View.layers . traverse %~ Anim.translate (size - eventMapSize)
+        docLayers = View.translateLayers (size - eventMapSize) eventMapLayers
 
 data IsHelpShown = HelpShown | HelpNotShown
     deriving (Eq, Ord, Read, Show)
