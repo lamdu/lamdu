@@ -81,7 +81,7 @@ hoverInPlaceOf ::
 layout `hoverInPlaceOf` src =
     ( srcAbsAlignment
     , layoutWidget
-        & View.setView . View.vAnimLayers . View.layers %~ (mempty :)
+        & View.setView . View.vMakeLayers . Lens.mapped . View.layers %~ (mempty :)
         & Widget.translate (srcAbsAlignment - layoutAbsAlignment)
         & View.size .~ srcSize
     ) ^. Lens.from absAlignedWidget
@@ -192,7 +192,7 @@ boxWithViews orientation befores afters w =
         w ^. aWidget
         & Widget.translate (wRect ^. Rect.topLeft)
         & View.size .~ size
-        & View.setView . View.vAnimLayers <>~ layers beforesPlacements <> layers aftersPlacements
+        & View.setView . View.vMakeLayers <>~ layers beforesPlacements <> layers aftersPlacements
     }
     where
         toTriplet (align, view) = (align, view ^. View.size, view)
@@ -206,4 +206,4 @@ boxWithViews orientation befores afters w =
             & Box.makePlacements orientation
         layers placements = placements <&> translateView & mconcat
         translateView (_alignment, rect, view) =
-            View.translateLayers (rect ^. Rect.topLeft) (view ^. View.vAnimLayers)
+            View.translateMakeLayers (rect ^. Rect.topLeft) (view ^. View.vMakeLayers)

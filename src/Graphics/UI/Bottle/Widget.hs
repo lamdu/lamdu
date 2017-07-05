@@ -226,7 +226,7 @@ translate pos w =
     & mFocus . Lens._Just . fEventMap . Lens.argument . virtualCursor . Rect.topLeft -~ pos
     & Lens.mapped . Lens.mapped . eVirtualCursor . Lens.mapped .
       _NewVirtualCursor . virtualCursor . Rect.topLeft +~ pos
-    & View.setView . View.vAnimLayers %~ View.translateLayers pos
+    & View.setView . View.vMakeLayers %~ View.translateMakeLayers pos
 
 scale :: Functor f => Vector2 R -> Widget (f EventResult) -> Widget (f EventResult)
 scale mult w =

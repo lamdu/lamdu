@@ -200,7 +200,7 @@ toWidgetWithKeys keys mCursor size sChildren =
     , _mFocus = mFocus
     }
     where
-        layers = widgets ^. Lens.folded . Lens.folded . Widget.wView . View.vAnimLayers
+        layers = widgets ^. Lens.folded . Lens.folded . Widget.wView . View.vMakeLayers
         translateChildWidget (rect, widget) =
             Widget.translate (rect ^. Rect.topLeft) widget
         widgets = toList sChildren <&> toList <&> Lens.mapped %~ translateChildWidget

@@ -200,9 +200,9 @@ makeTreeView size trees =
 
 addToBottomRight :: View.MkView a => View -> Widget.Size -> a -> a
 addToBottomRight (View eventMapSize eventMapLayers) size =
-    View.setView . View.vAnimLayers %~ View.addLayersAbove docLayers
+    View.setView . View.vMakeLayers %~ View.addLayersAbove docLayers
     where
-        docLayers = View.translateLayers (size - eventMapSize) eventMapLayers
+        docLayers = View.translateMakeLayers (size - eventMapSize) eventMapLayers
 
 data IsHelpShown = HelpShown | HelpNotShown
     deriving (Eq, Ord, Read, Show)

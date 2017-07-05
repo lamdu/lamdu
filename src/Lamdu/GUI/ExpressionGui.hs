@@ -408,8 +408,8 @@ makeEvalView mNeighbours evalRes animId =
         let prevPos = Vector2 0 0.5 * evalView ^. View.size - prev ^. View.size
         let nextPos = Vector2 1 0.5 * evalView ^. View.size
         evalView
-            & View.vAnimLayers <>~ View.translateLayers prevPos (prev ^. View.vAnimLayers)
-            & View.vAnimLayers <>~ View.translateLayers nextPos (next ^. View.vAnimLayers)
+            & View.vMakeLayers <>~ View.translateMakeLayers prevPos (prev ^. View.vMakeLayers)
+            & View.vMakeLayers <>~ View.translateMakeLayers nextPos (next ^. View.vMakeLayers)
             & return
 
 annotationSpacer :: Monad m => ExprGuiM m View
