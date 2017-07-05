@@ -6,7 +6,7 @@ module Graphics.UI.Bottle.Widgets.TextView
     , lineHeight
     , HasStyle(..)
 
-    , make, makeWidget, makeLabel, makeFocusable, makeFocusableLabel
+    , make, makeLabel, makeFocusable, makeFocusableLabel
     , RenderedText(..), renderedTextSize
     , drawText
     , letterRects
@@ -121,11 +121,6 @@ make =
         pure $ \text animId ->
             let RenderedText textSize frame = draw text
             in View.make (bounding textSize) (frame animId)
-
-makeWidget ::
-    (MonadReader env m, HasStyle env) =>
-    m (Text -> AnimId -> Widget a)
-makeWidget = make <&> Lens.mapped . Lens.mapped %~ Widget.fromView
 
 makeLabel ::
     (MonadReader env m, HasStyle env, View.HasAnimIdPrefix env) =>
