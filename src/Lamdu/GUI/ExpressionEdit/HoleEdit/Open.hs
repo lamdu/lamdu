@@ -90,6 +90,7 @@ eventResultOfPickedResult pr =
         { Widget._eCursor = Monoid.Last Nothing
         , Widget._eAnimIdMapping =
             Monoid.Endo $ pickedResultAnimIdTranslation $ pr ^. Sugar.prIdTranslation
+        , Widget._eVirtualCursor = Monoid.Last Nothing
         }
     , _pickedIdTranslations =
         pr ^. Sugar.prIdTranslation
@@ -318,13 +319,17 @@ makeHoleResultWidget resultId holeResult =
                 -- event maps of any result (we actually use the first one's
                 -- event map)
                 Reader.local (Widget.cursor .~ idWithinResultWidget) mkWidget
-                <&> (^. Widget.eventMap)
+                <&> getEvents
         widget <-
             (Widget.makeFocusableView ?? resultId) <*> mkWidget
             <&> View.animFrames %~
                 Anim.mapIdentities (<> (resultSuffix # Widget.toAnimId resultId))
         return (widget, mkEventMap)
     where
+        getEvents widget =
+            case widget ^. Widget.mFocus of
+            Nothing -> mempty
+            Just focus -> (focus ^. Widget.fEventMap) (Widget.VirtualCursor (focus ^. Widget.focalArea))
         mkWidget =
             holeResultConverted
             & postProcessSugar

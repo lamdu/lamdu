@@ -150,7 +150,9 @@ makeFocused cursor empty s str myId =
     & Widget.mFocus .~
         Just Widget.Focus
         { Widget._focalArea = cursorRect
-        , Widget._fEventMap = eventMap cursor str myId
+        , Widget._fEventMap =
+            -- TODO: Implement intra-TextEdit virtual cursor
+            \_virtCursor -> eventMap cursor str myId
         }
     where
         displayStr = makeDisplayStr (empty ^. emptyFocusedString) str

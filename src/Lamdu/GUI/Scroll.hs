@@ -12,7 +12,9 @@ import qualified Graphics.UI.Bottle.Widget as Widget
 
 import           Lamdu.Prelude
 
-focusAreaIntoWindow :: Widget.Size -> Widget f -> Widget f
+focusAreaIntoWindow ::
+    Functor f =>
+    Widget.Size -> Widget (f Widget.EventResult) -> Widget (f Widget.EventResult)
 focusAreaIntoWindow winSize widget =
     widget
     & intoWindow _1

@@ -30,13 +30,17 @@ import           Lamdu.Prelude
 
 type T = Transaction
 
-addScopeEdit :: Maybe (Widget (T m Widget.EventResult)) -> ExpressionGui m -> ExpressionGui m
+addScopeEdit ::
+    Functor m =>
+    Maybe (Widget (T m Widget.EventResult)) -> ExpressionGui m -> ExpressionGui m
 addScopeEdit mScopeEdit e =
     e : (mScopeEdit ^.. Lens._Just <&> TreeLayout.fromWidget)
     <&> TreeLayout.alignment . _1 .~ 0.5
     & TreeLayout.vbox
 
-mkLhsEdits :: Maybe (ExpressionGui m) -> Maybe (Widget (T m Widget.EventResult)) -> [ExpressionGui m]
+mkLhsEdits ::
+    Functor m =>
+    Maybe (ExpressionGui m) -> Maybe (Widget (T m Widget.EventResult)) -> [ExpressionGui m]
 mkLhsEdits mParamsEdit mScopeEdit =
     mParamsEdit <&> addScopeEdit mScopeEdit & (^.. Lens._Just)
 

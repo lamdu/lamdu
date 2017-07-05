@@ -138,10 +138,18 @@ hCombine f layout gui =
     & gui ^. TreeLayout.render
     & f AlignedWidget.Horizontal [layout]
 
-(||>) :: AlignedWidget a -> TreeLayout a -> TreeLayout a
+(||>) ::
+    Functor f =>
+    AlignedWidget (f Widget.EventResult) ->
+    TreeLayout (f Widget.EventResult) ->
+    TreeLayout (f Widget.EventResult)
 (||>) = hCombine AlignedWidget.addBefore
 
-(<||) :: TreeLayout a -> AlignedWidget a -> TreeLayout a
+(<||) ::
+    Functor f =>
+    TreeLayout (f Widget.EventResult) ->
+    AlignedWidget (f Widget.EventResult) ->
+    TreeLayout (f Widget.EventResult)
 (<||) = flip (hCombine AlignedWidget.addAfter)
 
 data ParenIndentInfo = ParenIndentInfo
@@ -157,14 +165,22 @@ parenLabel parenInfo t =
     (piAnimId parenInfo ++ [encodeUtf8 t])
 
 horizVertFallback ::
-    Monad m =>
-    Maybe AnimId -> ExprGuiM m (TreeLayout a -> TreeLayout a -> TreeLayout a)
+    (Monad m, Functor f) =>
+    Maybe AnimId ->
+    ExprGuiM m
+    (TreeLayout (f Widget.EventResult) ->
+     TreeLayout (f Widget.EventResult) ->
+     TreeLayout (f Widget.EventResult))
 horizVertFallback mParenId =
     mParenId & Lens._Just %%~ makeParenIndentInfo
     <&> horizVertFallbackH
 
 horizVertFallbackH ::
-    Maybe ParenIndentInfo -> TreeLayout a -> TreeLayout a -> TreeLayout a
+    Functor f =>
+    Maybe ParenIndentInfo ->
+    TreeLayout (f Widget.EventResult) ->
+    TreeLayout (f Widget.EventResult) ->
+    TreeLayout (f Widget.EventResult)
 horizVertFallbackH mParenInfo horiz vert =
     TreeLayout.render #
     \layoutParams ->
@@ -187,10 +203,12 @@ horizVertFallbackH mParenInfo horiz vert =
         | otherwise -> wide
 
 combineWith ::
-    Maybe ParenIndentInfo ->
-    ([AlignedWidget a] -> [AlignedWidget a]) ->
-    ([TreeLayout a] -> [TreeLayout a]) ->
-    [TreeLayout a] -> TreeLayout a
+    Functor f => Maybe ParenIndentInfo ->
+    ([AlignedWidget (f Widget.EventResult)] ->
+     [AlignedWidget (f Widget.EventResult)]) ->
+    ([TreeLayout (f Widget.EventResult)] ->
+     [TreeLayout (f Widget.EventResult)]) ->
+    [TreeLayout (f Widget.EventResult)] -> TreeLayout (f Widget.EventResult)
 combineWith mParenInfo onHGuis onVGuis guis =
     horizVertFallbackH mParenInfo wide vert
     where
@@ -205,7 +223,9 @@ combineWith mParenInfo onHGuis onVGuis guis =
             & AlignedWidget.hbox 0
             & TreeLayout.fromAlignedWidget
 
-combine :: [TreeLayout a] -> TreeLayout a
+combine ::
+    Functor f => [TreeLayout (f Widget.EventResult)] ->
+    TreeLayout (f Widget.EventResult)
 combine = combineWith Nothing id id
 
 makeParenIndentInfo ::
@@ -219,13 +239,17 @@ makeParenIndentInfo parensId =
         ParenIndentInfo parensId textStyle theme stdSpacing & return
 
 combineSpaced ::
-    (MonadReader env m, TextView.HasStyle env, Theme.HasTheme env, Spacer.HasStdSpacing env) =>
-    m ([TreeLayout a] -> TreeLayout a)
+    (MonadReader env m, TextView.HasStyle env, Theme.HasTheme env,
+     Spacer.HasStdSpacing env, Functor f) =>
+    m ([TreeLayout (f Widget.EventResult)] -> TreeLayout (f Widget.EventResult))
 combineSpaced = combineSpacedMParens Nothing
 
 combineSpacedMParens ::
-    (MonadReader env m, TextView.HasStyle env, Theme.HasTheme env, Spacer.HasStdSpacing env) =>
-    Maybe AnimId -> m ([TreeLayout a] -> TreeLayout a)
+    (MonadReader env m, TextView.HasStyle env, Theme.HasTheme env,
+     Spacer.HasStdSpacing env, Functor f) =>
+    Maybe AnimId ->
+    m ([TreeLayout (f Widget.EventResult)] ->
+       TreeLayout (f Widget.EventResult))
 combineSpacedMParens mParensId =
     do
         hSpace <- Spacer.stdHSpaceView <&> AlignedWidget.fromView 0
@@ -234,8 +258,10 @@ combineSpacedMParens mParensId =
         return $ combineWith mParenInfo (List.intersperse hSpace) (List.intersperse vSpace)
 
 tagItem ::
-    (MonadReader env m, Spacer.HasStdSpacing env) =>
-    m (AlignedWidget a -> TreeLayout a -> TreeLayout a)
+    (MonadReader env m, Spacer.HasStdSpacing env, Functor f) =>
+    m (AlignedWidget (f Widget.EventResult) ->
+        TreeLayout (f Widget.EventResult) ->
+        TreeLayout (f Widget.EventResult))
 tagItem =
     Spacer.stdHSpaceView <&> AlignedWidget.fromView 0 <&> f
     where
@@ -378,9 +404,14 @@ makeEvalView mNeighbours evalRes animId =
                 (,)
                 <$> sequence (neighbourViews mPrev)
                 <*> sequence (neighbourViews mNext)
-        evalView <- makeEvaluationResultView (mkAnimId evalRes) evalRes <&> AlignedWidget.fromView 0.5
+        evalView <-
+            makeEvaluationResultView (mkAnimId evalRes) evalRes
+            <&> AlignedWidget.fromView 0.5
+            -- TODO: HACK: Just make "f EventResult" non-ambiguous about 'f'
+            <&> Lens.mapped .~ Lens.Identity mempty
         evalView
-            & AlignedWidget.boxWithViews AlignedWidget.Horizontal (prevs <&> (,) 1) (nexts <&> (,) 0)
+            & AlignedWidget.boxWithViews AlignedWidget.Horizontal
+              (prevs <&> (,) 1) (nexts <&> (,) 0)
             & (`AlignedWidget.hoverInPlaceOf` evalView)
             & (^. View.view)
             & return
@@ -389,10 +420,12 @@ annotationSpacer :: Monad m => ExprGuiM m View
 annotationSpacer = ExprGuiM.vspacer (Theme.valAnnotationSpacing . Theme.valAnnotation)
 
 addAnnotationH ::
-    Monad m =>
+    (Functor f, Monad m) =>
     (AnimId -> ExprGuiM m View) ->
     WideAnnotationBehavior -> Sugar.EntityId ->
-    ExprGuiM m (TreeLayout a -> TreeLayout a)
+    ExprGuiM m
+    (TreeLayout (f Widget.EventResult) ->
+     TreeLayout (f Widget.EventResult))
 addAnnotationH f wideBehavior entityId =
     do
         vspace <- annotationSpacer
@@ -412,16 +445,18 @@ addAnnotationH f wideBehavior entityId =
         animId = WidgetIds.fromEntityId entityId & Widget.toAnimId
 
 addInferredType ::
-    Monad m =>
+    (Functor f, Monad m) =>
     Type -> WideAnnotationBehavior -> Sugar.EntityId ->
-    ExprGuiM m (TreeLayout a -> TreeLayout a)
+    ExprGuiM m (TreeLayout (f Widget.EventResult) -> TreeLayout (f Widget.EventResult))
 addInferredType typ = addAnnotationH (TypeView.make typ)
 
 addEvaluationResult ::
-    Monad m =>
+    (Functor f, Monad m) =>
     Maybe (NeighborVals (Maybe EvalResDisplay)) -> EvalResDisplay ->
     WideAnnotationBehavior -> Sugar.EntityId ->
-    ExprGuiM m (TreeLayout a -> TreeLayout a)
+    ExprGuiM m
+    (TreeLayout (f Widget.EventResult) ->
+     TreeLayout (f Widget.EventResult))
 -- REVIEW(Eyal): This is misleading when it refers to Previous results
 addEvaluationResult mNeigh resDisp wideBehavior entityId =
     case (erdVal resDisp ^. ER.payload, erdVal resDisp ^. ER.body) of
@@ -588,7 +623,7 @@ makeCollisionSuffixLabel (Collision suffix) =
             <&> Just
 
 maybeAddAnnotationPl ::
-    Monad m =>
+    (Functor f, Monad m) =>
     Sugar.Payload x ExprGuiT.Payload ->
     ExprGuiM m (ExpressionGui f -> ExpressionGui f)
 maybeAddAnnotationPl pl =
@@ -617,7 +652,7 @@ data EvalAnnotationOptions
     | WithNeighbouringEvalAnnotations (NeighborVals (Maybe Sugar.BinderParamScopeId))
 
 maybeAddAnnotation ::
-    Monad m =>
+    (Functor f, Monad m) =>
     WideAnnotationBehavior -> ShowAnnotation -> Sugar.Annotation -> Sugar.EntityId ->
     ExprGuiM m (ExpressionGui f -> ExpressionGui f)
 maybeAddAnnotation = maybeAddAnnotationWith NormalEvalAnnotation
@@ -646,7 +681,7 @@ getAnnotationMode opt annotation =
                 & Just
 
 maybeAddAnnotationWith ::
-    Monad m =>
+    (Functor f, Monad m) =>
     EvalAnnotationOptions -> WideAnnotationBehavior -> ShowAnnotation ->
     Sugar.Annotation -> Sugar.EntityId ->
     ExprGuiM m (ExpressionGui f -> ExpressionGui f)

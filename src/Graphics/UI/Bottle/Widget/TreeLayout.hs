@@ -19,7 +19,7 @@
 -- of a vertically laid out parent will not use parentheses as the
 -- hierarchy is already clear in the layout itself.
 
-{-# LANGUAGE NoImplicitPrelude, TemplateHaskell, DeriveFunctor #-}
+{-# LANGUAGE NoImplicitPrelude, TemplateHaskell, DeriveFunctor, FlexibleInstances #-}
 
 module Graphics.UI.Bottle.Widget.TreeLayout
     ( TreeLayout(..), render
@@ -80,7 +80,7 @@ newtype TreeLayout a = TreeLayout
 Lens.makeLenses ''TreeLayout
 
 instance View.MkView (TreeLayout a) where setView = Widget.widget . View.setView
-instance View.Pad (TreeLayout a) where
+instance Functor f => View.Pad (TreeLayout (f Widget.EventResult)) where
     -- | Adds space around a given 'TreeLayout'. Each of the 'Vector2'
     -- components is added to the size twice (once on each side). Only the
     -- width component of the 'Vector2' affects layout decisions by
@@ -120,7 +120,9 @@ empty :: TreeLayout a
 empty = fromView View.empty
 
 -- | Vertical box with the alignment point from the top widget
-vbox :: [TreeLayout a] -> TreeLayout a
+vbox ::
+    Functor f =>
+    [TreeLayout (f Widget.EventResult)] -> TreeLayout (f Widget.EventResult)
 vbox [] = empty
 vbox (gui:guis) =
     TreeLayout $
@@ -137,8 +139,8 @@ vbox (gui:guis) =
         (guis ^.. traverse . render ?? cp)
 
 vboxSpaced ::
-    (MonadReader env m, Spacer.HasStdSpacing env) =>
-    m ([TreeLayout a] -> TreeLayout a)
+    (MonadReader env m, Spacer.HasStdSpacing env, Functor f) =>
+    m ([TreeLayout (f Widget.EventResult)] -> TreeLayout (f Widget.EventResult))
 vboxSpaced =
     Spacer.stdVSpaceView
     <&> fromView

@@ -54,7 +54,7 @@ assignHoleCursor WidgetIds{..} =
     Widget.assignCursor (WidgetIds.notDelegatingId hidHole) hidClosedSearchArea
 
 makeHoleWithWrapper ::
-    Monad m =>
+    (Functor f, Monad m) =>
     ExpressionGui f -> ExpressionGui f -> Sugar.Payload m ExprGuiT.Payload ->
     ExprGuiM m (ExpressionGui f)
 makeHoleWithWrapper wrapperGui searchAreaGui pl =

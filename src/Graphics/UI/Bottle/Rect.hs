@@ -1,7 +1,7 @@
 {-# LANGUAGE NoImplicitPrelude, DeriveGeneric, TemplateHaskell #-}
 module Graphics.UI.Bottle.Rect
     ( R, Rect(..), topLeft, size
-    , topLeftAndSize
+    , topLeftAndSize, verticalRange, horizontalRange
     , left, top, right, bottom
     , width, height
     , bottomRight
@@ -31,6 +31,16 @@ instance NFData Rect where rnf = genericRnf
 {-# INLINE topLeftAndSize #-}
 topLeftAndSize :: Traversal' Rect (Vector2 R)
 topLeftAndSize f (Rect tl s) = Rect <$> f tl <*> f s
+
+{-# INLINE verticalRange #-}
+verticalRange :: Lens' Rect (R, R)
+verticalRange f (Rect (Vector2 l t) (Vector2 w h)) =
+    f (t, h) <&> \(t', h') -> Rect (Vector2 l t') (Vector2 w h')
+
+{-# INLINE horizontalRange #-}
+horizontalRange :: Lens' Rect (R, R)
+horizontalRange f (Rect (Vector2 l t) (Vector2 w h)) =
+    f (l, w) <&> \(l', w') -> Rect (Vector2 l' t) (Vector2 w' h)
 
 {-# INLINE bottomRight #-}
 bottomRight :: Lens' Rect (Vector2 R)

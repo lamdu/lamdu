@@ -52,33 +52,47 @@ data NavDests a = NavDests
     , rightMostCursor :: Maybe (Widget.EnterResult a)
     }
 
-mkNavDests :: Widget.Size -> Rect -> Cursor -> [[Widget.MEnter a]] -> NavDests a
-mkNavDests widgetSize prevFocalArea cursor@(Vector2 cursorX cursorY) mEnterss =
+mkNavDests ::
+    Functor f =>
+    Widget.Size -> Cursor -> Widget.VirtualCursor ->
+    [[Widget.MEnter (f Widget.EventResult)]] -> NavDests (f Widget.EventResult)
+mkNavDests widgetSize cursor@(Vector2 cursorX cursorY) virtCursor mEnterss =
     NavDests
-    { leftOfCursor    = givePrevFocalArea . reverse $ take cursorX curRow
-    , aboveCursor     = givePrevFocalArea . reverse $ take cursorY curColumn
-    , rightOfCursor   = givePrevFocalArea $ drop (cursorX+1) curRow
-    , belowCursor     = givePrevFocalArea $ drop (cursorY+1) curColumn
+    { leftOfCursor    = take cursorX curRow    & reverse & enterFromPrevArea <&> setHVirt
+    , aboveCursor     = take cursorY curColumn & reverse & enterFromPrevArea <&> setVVirt
+    , rightOfCursor   = drop (cursorX+1) curRow          & enterFromPrevArea <&> setHVirt
+    , belowCursor     = drop (cursorY+1) curColumn       & enterFromPrevArea <&> setVVirt
 
-    , topCursor       = giveEdge (Vector2 Nothing (Just 0)) $ take (min 1 cursorY) curColumn
-    , leftMostCursor  = giveEdge (Vector2 (Just 0) Nothing) $ take (min 1 cursorX) curRow
-    , bottomCursor    = giveEdge (Vector2 Nothing (Just 1)) . take 1 . reverse $ drop (cursorY+1) curColumn
-    , rightMostCursor = giveEdge (Vector2 (Just 1) Nothing) . take 1 . reverse $ drop (cursorX+1) curRow
+    , topCursor       = take (min 1 cursorY) curColumn                & enterFromEdge (Vector2 Nothing (Just 0)) <&> setVVirt
+    , leftMostCursor  = take (min 1 cursorX) curRow                   & enterFromEdge (Vector2 (Just 0) Nothing) <&> setHVirt
+    , bottomCursor    = drop (cursorY+1) curColumn & reverse & take 1 & enterFromEdge (Vector2 Nothing (Just 1)) <&> setVVirt
+    , rightMostCursor = drop (cursorX+1) curRow    & reverse & take 1 & enterFromEdge (Vector2 (Just 1) Nothing) <&> setHVirt
     }
     where
+        setHVirt = setVirt Rect.verticalRange
+        setVVirt = setVirt Rect.horizontalRange
+        setVirt axis enterResult =
+            enterResult
+            & Widget.enterResultEvent . Lens.mapped . Widget.eVirtualCursor . Lens._Wrapped ?~
+            Widget.NewVirtualCursor
+            ( enterResult ^. Widget.enterResultRect
+                & Lens.cloneLens axis .~ prevArea ^. Lens.cloneLens axis
+                & Widget.VirtualCursor
+            )
         curRow = fromMaybe [] $ mEnterss ^? Lens.ix cappedY
         curColumn = fromMaybe [] $ transpose mEnterss ^? Lens.ix cappedX
         Vector2 cappedX cappedY = capCursor size cursor
         size = length2d mEnterss
 
-        give rect = fmap ($ Direction.PrevFocalArea rect) . msum
-        givePrevFocalArea = give prevFocalArea
-        giveEdge edge = give Rect
+        prevArea = virtCursor ^. Widget.virtualCursor
+        enterFrom rect mEnters = mEnters & msum ?? Direction.PrevFocalArea rect
+        enterFromPrevArea = enterFrom prevArea
+        enterFromEdge edge = enterFrom Rect
             { Rect._topLeft =
-                    liftA2 fromMaybe (Rect._topLeft prevFocalArea) $
+                    liftA2 fromMaybe (Rect._topLeft prevArea) $
                     liftA2 (fmap . (*)) widgetSize edge
             , Rect._size =
-                    liftA2 fromMaybe (Rect._size prevFocalArea) $
+                    liftA2 fromMaybe (Rect._size prevArea) $
                     (fmap . fmap) (const 0) edge
             }
 
@@ -149,13 +163,16 @@ getCursor widgets =
     <&> fst
 
 make ::
-    (Traversable vert, Traversable horiz) =>
-    vert (horiz (Alignment, Widget a)) -> (vert (horiz Alignment), Widget a)
+    (Traversable vert, Traversable horiz, Functor f) =>
+    vert (horiz (Alignment, Widget (f Widget.EventResult))) ->
+    (vert (horiz Alignment), Widget (f Widget.EventResult))
 make = makeWithKeys (stdKeys <&> MetaKey.toModKey)
 
 makeWithKeys ::
-    (Traversable vert, Traversable horiz) =>
-    Keys ModKey -> vert (horiz (Alignment, Widget a)) -> (vert (horiz Alignment), Widget a)
+    (Traversable vert, Traversable horiz, Functor f) =>
+    Keys ModKey ->
+    vert (horiz (Alignment, Widget (f Widget.EventResult))) ->
+    (vert (horiz Alignment), Widget (f Widget.EventResult))
 makeWithKeys keys children =
     ( content <&> Lens.mapped %~ (^. _1)
     , content
@@ -172,9 +189,10 @@ makeWithKeys keys children =
             (alignment, widget ^. View.size, widget)
 
 toWidgetWithKeys ::
-    (Foldable vert, Foldable horiz) =>
+    (Foldable vert, Foldable horiz, Functor f) =>
     Keys ModKey -> Maybe Cursor -> Widget.Size ->
-    vert (horiz (Rect, Widget a)) -> Widget a
+    vert (horiz (Rect, Widget (f Widget.EventResult))) ->
+    Widget (f Widget.EventResult)
 toWidgetWithKeys keys mCursor size sChildren =
     Widget
     { _wView = View size layers
@@ -192,17 +210,17 @@ toWidgetWithKeys keys mCursor size sChildren =
             Nothing -> Nothing
             Just cursor ->
                 selectedWidgetFocus
-                & Widget.fEventMap %~ addNavEventmap keys navDests
+                & Widget.fEventMap . Lens.imapped %@~ f
                 & Just
                 where
+                    f virtCursor =
+                        mEnterss & toList <&> toList
+                        & mkNavDests size cursor virtCursor
+                        & addNavEventmap keys
                     selectedWidgetFocus =
                         selectedWidget ^. Widget.mFocus
                         & fromMaybe (error "selected unfocused widget?")
                     selectedWidget = index2d widgets cursor
-                    navDests =
-                        mEnterss & toList <&> toList
-                        & mkNavDests size (selectedWidgetFocus ^. Widget.focalArea)
-                          cursor
 
 groupSortOn :: Ord b => (a -> b) -> [a] -> [[a]]
 groupSortOn f = groupOn f . sortOn f

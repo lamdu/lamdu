@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, TypeFamilies, TemplateHaskell, RankNTypes, FlexibleContexts, DeriveFunctor, DeriveFoldable, DeriveTraversable #-}
+{-# LANGUAGE NoImplicitPrelude, TypeFamilies, TemplateHaskell, RankNTypes, FlexibleContexts, DeriveFunctor, DeriveFoldable, DeriveTraversable, FlexibleInstances #-}
 module Graphics.UI.Bottle.Widget.Aligned
     ( AlignedWidget(..), alignment, aWidget
     , empty, fromView
@@ -33,7 +33,7 @@ data AlignedWidget a = AlignedWidget
 Lens.makeLenses ''AlignedWidget
 
 instance View.MkView (AlignedWidget a) where setView = aWidget . View.setView
-instance View.Pad (AlignedWidget a) where
+instance Functor f => View.Pad (AlignedWidget (f Widget.EventResult)) where
     pad padding (AlignedWidget (Alignment align) w) =
         AlignedWidget
         { _alignment =
@@ -56,18 +56,28 @@ fromView x = AlignedWidget x . Widget.fromView
 
 -- | scale = scaleAround 0.5
 --   scaleFromTopMiddle = scaleAround (Vector2 0.5 0)
-scaleAround :: Alignment -> Vector2 Widget.R -> AlignedWidget a -> AlignedWidget a
+scaleAround ::
+    Functor f => Alignment -> Vector2 Widget.R ->
+    AlignedWidget (f Widget.EventResult) ->
+    AlignedWidget (f Widget.EventResult)
 scaleAround (Alignment point) ratio (AlignedWidget (Alignment align) w) =
     AlignedWidget
     { _alignment = point + (align - point) / ratio & Alignment
     , _aWidget = Widget.scale ratio w
     }
 
-scale :: Vector2 Widget.R -> AlignedWidget a -> AlignedWidget a
+scale ::
+    Functor f => Vector2 Widget.R ->
+    AlignedWidget (f Widget.EventResult) ->
+    AlignedWidget (f Widget.EventResult)
 scale ratio = aWidget %~ Widget.scale ratio
 
 -- Resize a layout to be the same alignment/size as another layout
-hoverInPlaceOf :: AlignedWidget a -> AlignedWidget a -> AlignedWidget a
+hoverInPlaceOf ::
+    Functor f =>
+    AlignedWidget (f Widget.EventResult) ->
+    AlignedWidget (f Widget.EventResult) ->
+    AlignedWidget (f Widget.EventResult)
 layout `hoverInPlaceOf` src =
     ( srcAbsAlignment
     , layoutWidget
@@ -114,7 +124,9 @@ data BoxComponents a = BoxComponents
 Lens.makeLenses ''BoxComponents
 
 boxComponentsToWidget ::
-    Orientation -> BoxComponents (AlignedWidget a) -> AlignedWidget a
+    Functor f => Orientation ->
+    BoxComponents (AlignedWidget (f Widget.EventResult)) ->
+    AlignedWidget (f Widget.EventResult)
 boxComponentsToWidget orientation boxComponents =
     AlignedWidget
     { _alignment = boxAlign ^. focalWidget
@@ -125,18 +137,29 @@ boxComponentsToWidget orientation boxComponents =
             boxComponents <&> (^. asTuple)
             & Box.make orientation
 
-addBefore :: Orientation -> [AlignedWidget a] -> AlignedWidget a -> AlignedWidget a
+addBefore ::
+    Functor f => Orientation ->
+    [AlignedWidget (f Widget.EventResult)] ->
+    AlignedWidget (f Widget.EventResult) ->
+    AlignedWidget (f Widget.EventResult)
 addBefore orientation befores layout =
     BoxComponents befores layout []
     & boxComponentsToWidget orientation
-addAfter :: Orientation -> [AlignedWidget a] -> AlignedWidget a -> AlignedWidget a
+addAfter ::
+    Functor f => Orientation ->
+    [AlignedWidget (f Widget.EventResult)] ->
+    AlignedWidget (f Widget.EventResult) ->
+    AlignedWidget (f Widget.EventResult)
 addAfter orientation afters layout =
     BoxComponents [] layout afters
     & boxComponentsToWidget orientation
 
 -- The axisAlignment is the alignment point to choose within the resulting box
 -- i.e: Horizontal box -> choose eventual horizontal alignment point
-box :: Orientation -> Widget.R -> [AlignedWidget a] -> AlignedWidget a
+box ::
+    Functor f => Orientation -> Widget.R ->
+    [AlignedWidget (f Widget.EventResult)] ->
+    AlignedWidget (f Widget.EventResult)
 box orientation axisAlignment layouts =
     componentsFromList layouts
     & boxComponentsToWidget orientation
@@ -145,13 +168,23 @@ box orientation axisAlignment layouts =
         componentsFromList [] = BoxComponents [] (AlignedWidget 0 Widget.empty) []
         componentsFromList (w:ws) = BoxComponents [] w ws
 
-hbox :: Widget.R -> [AlignedWidget a] -> AlignedWidget a
+hbox ::
+    Functor f => Widget.R ->
+    [AlignedWidget (f Widget.EventResult)] ->
+    AlignedWidget (f Widget.EventResult)
 hbox = box Horizontal
 
-vbox :: Widget.R -> [AlignedWidget a] -> AlignedWidget a
+vbox ::
+    Functor f => Widget.R ->
+    [AlignedWidget (f Widget.EventResult)] ->
+    AlignedWidget (f Widget.EventResult)
 vbox = box Vertical
 
-boxWithViews :: Orientation -> [(Widget.R, View)] -> [(Widget.R, View)] -> AlignedWidget a -> AlignedWidget a
+boxWithViews ::
+    Functor f =>
+    Orientation -> [(Widget.R, View)] -> [(Widget.R, View)] ->
+    AlignedWidget (f Widget.EventResult) ->
+    AlignedWidget (f Widget.EventResult)
 boxWithViews orientation befores afters w =
     AlignedWidget
     { _alignment = resultAlignment

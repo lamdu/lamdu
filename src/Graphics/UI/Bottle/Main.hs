@@ -112,6 +112,12 @@ data Env = Env
 Lens.makeLenses ''Env
 instance Widget.HasCursor Env where cursor = eCursor
 
+data Cursor = Cursor
+    { _cursorId :: !Widget.Id
+    , _cursorVirtual :: !Widget.VirtualCursorUpdate
+    }
+Lens.makeLenses ''Cursor
+
 mainLoopWidget ::
     GLFW.Window ->
     (Env -> IO (Widget (M Widget.EventResult))) ->
@@ -125,7 +131,13 @@ mainLoopWidget win mkWidgetUnmemod options =
                 do
                     zoomConfig <- getConfig <&> cZoom
                     Zoom.eventMap zoom zoomConfig <&> liftIO & return
-        cursorRef <- newIORef (cursorStartPos options)
+        cursorRef <-
+            newIORef Cursor
+            { _cursorId = cursorStartPos options
+            , _cursorVirtual =
+                -- Will update when have a focal area
+                Widget.ResetVirtualCursor
+            }
         let mkW =
                 memoIO $ \size ->
                 do
@@ -136,7 +148,7 @@ mainLoopWidget win mkWidgetUnmemod options =
                         Env
                         { _eZoom = zoom
                         , _eWindowSize = size
-                        , _eCursor = cursor
+                        , _eCursor = cursor ^. cursorId
                         }
                         <&> E.strongerEvents zoomEventMap
                         >>= addHelp helpStyle size
@@ -150,8 +162,20 @@ mainLoopWidget win mkWidgetUnmemod options =
                 Nothing -> return Nothing
                 Just enter -> enter (Direction.Point mousePosF) ^. Widget.enterResultEvent & Just & return
             lookupEvent widget event =
-                E.lookup (GLFW.getClipboardString win <&> fmap Text.pack) event
-                (widget ^. Widget.eventMap)
+                case widget ^. Widget.mFocus of
+                Nothing -> return Nothing
+                Just focus ->
+                    do
+                        virtCursorState <- readIORef cursorRef <&> (^. cursorVirtual)
+                        virtCursor <-
+                            case virtCursorState of
+                            Widget.NewVirtualCursor x -> return x
+                            Widget.ResetVirtualCursor ->
+                                res <$ modifyIORef cursorRef (cursorVirtual .~ Widget.NewVirtualCursor res)
+                                where
+                                    res = focus ^. Widget.focalArea & Widget.VirtualCursor
+                        E.lookup (GLFW.getClipboardString win <&> fmap Text.pack) event
+                            ((focus ^. Widget.fEventMap) virtCursor)
         MainAnim.mainLoop win (getConfig <&> cAnim) $ \size -> MainAnim.Handlers
             { MainAnim.tickHandler =
                 do
@@ -173,7 +197,8 @@ mainLoopWidget win mkWidgetUnmemod options =
                         Nothing -> return ()
                         Just res ->
                             do
-                                traverse_ (writeIORef cursorRef) (res ^. Widget.eCursor)
+                                traverse_ (modifyIORef cursorRef . (cursorId .~)) (res ^. Widget.eCursor)
+                                traverse_ (modifyIORef cursorRef . (cursorVirtual .~)) (res ^. Widget.eVirtualCursor)
                                 newWidget
                     return MainAnim.EventResult
                         { MainAnim.erAnimIdMapping = mRes <&> (^. Widget.eAnimIdMapping)

@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, DeriveFunctor, TemplateHaskell, GeneralizedNewtypeDeriving, DeriveGeneric, OverloadedStrings, NamedFieldPuns, LambdaCase #-}
+{-# LANGUAGE NoImplicitPrelude, DeriveFunctor, TemplateHaskell, GeneralizedNewtypeDeriving, DeriveGeneric, OverloadedStrings, NamedFieldPuns, LambdaCase, FlexibleInstances #-}
 module Graphics.UI.Bottle.Widget
     ( Id(..), subId, Id.joinId, isSubCursor
     , HasCursor(..)
@@ -9,7 +9,8 @@ module Graphics.UI.Bottle.Widget
     , EnterResult(..), enterResultEvent, enterResultRect
 
     -- Event Result:
-    , EventResult(..), eCursor, eAnimIdMapping
+    , EventResult(..), eCursor, eVirtualCursor, eAnimIdMapping
+    , VirtualCursorUpdate(..), _NewVirtualCursor, _ResetVirtualCursor
     , eventResultFromCursor
     , applyIdMapping
 
@@ -19,8 +20,9 @@ module Graphics.UI.Bottle.Widget
     , keysEventMapMovesCursor
 
     -- Widget type and lenses:
-    , Widget(..), mEnter, mFocus, eventMap
+    , Widget(..), mEnter, mFocus, eventMapMaker
     , MEnter
+    , VirtualCursor(..), virtualCursor
     , Focus(..), fEventMap, focalArea
     , events
 
@@ -77,8 +79,20 @@ import qualified Graphics.UI.Bottle.Widget.Id as Id
 
 import           Lamdu.Prelude
 
+-- The virtual cursor is the focal area that would ideally match the
+-- direction of user movements
+newtype VirtualCursor = VirtualCursor { _virtualCursor :: Rect }
+Lens.makeLenses ''VirtualCursor
+
+data VirtualCursorUpdate
+    = NewVirtualCursor VirtualCursor
+    | -- Set the virtual cursor to the new focal area
+      ResetVirtualCursor
+Lens.makePrisms ''VirtualCursorUpdate
+
 data EventResult = EventResult
     { _eCursor :: Monoid.Last Id
+    , _eVirtualCursor :: Monoid.Last VirtualCursorUpdate
     , _eAnimIdMapping :: Monoid.Endo AnimId
     } deriving (Generic)
 instance Monoid EventResult where
@@ -94,7 +108,7 @@ data EnterResult a = EnterResult
 
 data Focus a = Focus
     { _focalArea :: Rect
-    , _fEventMap :: EventMap a
+    , _fEventMap :: VirtualCursor -> EventMap a
     } deriving Functor
 
 -- When focused, mEnter may still be relevant, e.g: Mouse click in an
@@ -116,10 +130,10 @@ Lens.makeLenses ''Focus
 Lens.makeLenses ''Widget
 
 instance View.MkView (Widget a) where setView = wView
-instance View.Pad (Widget a) where pad p = assymetricPad p p
+instance Functor f => View.Pad (Widget (f EventResult)) where pad p = assymetricPad p p
 
 instance View.HasView (Widget a) where view = wView
-instance EventMap.HasEventMap Widget where eventMap = eventMap
+instance EventMap.HasEventMap Widget where eventMap = eventMapMaker . Lens.mapped
 
 isFocused :: Widget a -> Bool
 isFocused = Lens.has (mFocus . Lens._Just)
@@ -127,13 +141,13 @@ isFocused = Lens.has (mFocus . Lens._Just)
 empty :: Widget f
 empty = fromView View.empty
 
-{-# INLINE eventMap #-}
-eventMap :: Lens.Traversal' (Widget a) (EventMap a)
-eventMap = mFocus . Lens._Just . fEventMap
+eventMapMaker :: Lens.Traversal' (Widget a) (VirtualCursor -> EventMap a)
+eventMapMaker = mFocus . Lens._Just . fEventMap
 
 eventResultFromCursor :: Id -> EventResult
 eventResultFromCursor c = EventResult
     { _eCursor = Just c & Monoid.Last
+    , _eVirtualCursor = Just ResetVirtualCursor & Monoid.Last
     , _eAnimIdMapping = mempty
     }
 
@@ -148,7 +162,7 @@ events =
                   (Lens.mapped . Lens.mapped . enterResultEvent %~ f) $
                   _mEnter w
             , _mFocus =
-                w ^. mFocus & Lens._Just . fEventMap . Lens.mapped %~ f
+                w ^. mFocus & Lens._Just . fEventMap . Lens.mapped . Lens.mapped %~ f
             }
 
 fromView :: View -> Widget a
@@ -201,7 +215,7 @@ keysEventMapMovesCursor keys doc act =
 -- TODO: This actually makes an incorrect widget because its size
 -- remains same, but it is now translated away from 0..size
 -- Should expose higher-level combinators instead?
-translate :: Vector2 R -> Widget f -> Widget f
+translate :: Functor f => Vector2 R -> Widget (f EventResult) -> Widget (f EventResult)
 translate pos w =
     w
     & mEnter . Lens._Just . Lens.argument .
@@ -209,23 +223,30 @@ translate pos w =
     & mEnter . Lens._Just . Lens.mapped .
         enterResultRect . Rect.topLeft +~ pos
     & mFocus . Lens._Just . focalArea . Rect.topLeft +~ pos
+    & mFocus . Lens._Just . fEventMap . Lens.argument . virtualCursor . Rect.topLeft -~ pos
+    & Lens.mapped . Lens.mapped . eVirtualCursor . Lens.mapped .
+      _NewVirtualCursor . virtualCursor . Rect.topLeft +~ pos
     & View.view %~ View.translate pos
 
-scale :: Vector2 R -> Widget a -> Widget a
+scale :: Functor f => Vector2 R -> Widget (f EventResult) -> Widget (f EventResult)
 scale mult w =
     w
     & View.view %~ View.scale mult
     & mFocus . Lens._Just . focalArea . Rect.topLeftAndSize *~ mult
+    & mFocus . Lens._Just . fEventMap . Lens.argument . virtualCursor . Rect.topLeftAndSize //~ mult
     & mEnter . Lens._Just . Lens.mapped . enterResultRect . Rect.topLeftAndSize *~ mult
     & mEnter . Lens._Just . Lens.argument . Direction.coordinates . Rect.topLeftAndSize //~ mult
+    & Lens.mapped . Lens.mapped . eVirtualCursor . Lens.mapped .
+      _NewVirtualCursor . virtualCursor . Rect.topLeftAndSize *~ mult
 
-assymetricPad :: Vector2 R -> Vector2 R -> Widget a -> Widget a
+assymetricPad :: Functor f => Vector2 R -> Vector2 R -> Widget (f EventResult) -> Widget (f EventResult)
 assymetricPad leftAndTop rightAndBottom w =
     w
     & View.size +~ leftAndTop + rightAndBottom
     & translate leftAndTop
 
-padToSizeAlign :: Size -> Vector2 R -> Widget a -> Widget a
+padToSizeAlign ::
+    Functor f => Size -> Vector2 R -> Widget (f EventResult) -> Widget (f EventResult)
 padToSizeAlign newSize alignment w =
     w
     & translate (sizeDiff * alignment)

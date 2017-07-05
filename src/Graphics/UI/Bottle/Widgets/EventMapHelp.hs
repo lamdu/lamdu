@@ -228,13 +228,18 @@ makeToggledHelpAdder startValue =
         showingHelpVar <- newIORef startValue
         return $ \config size widget ->
             do
-                unless (Widget.isFocused widget) (fail "adding help to non-focused root widget!")
+                focus <-
+                    case widget ^. Widget.mFocus of
+                    Nothing -> fail "adding help to non-focused root widget!"
+                    Just x -> return x
                 showingHelp <- readIORef showingHelpVar & liftIO
                 let env = Env config ["help box"]
                 let (helpView, docStr) =
                         case showingHelp of
                         HelpShown ->
-                            ( makeView size (widget ^. Widget.eventMap) env
+                            ( makeView size
+                                ((focus ^. Widget.fEventMap) (Widget.VirtualCursor (focus ^. Widget.focalArea)))
+                                env
                             , "Hide"
                             )
                         HelpNotShown ->
