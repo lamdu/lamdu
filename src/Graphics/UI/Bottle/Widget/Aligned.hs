@@ -163,7 +163,7 @@ boxWithViews orientation befores afters w =
     }
     where
         toTriplet (align, view) = (align, view ^. View.size, view)
-        toAlignment x = 0 & axis orientation .~ x
+        toAlignment x = Alignment (Vector2 x x)
         (size, BoxComponents beforesPlacements (resultAlignment, wRect, _v) aftersPlacements) =
             BoxComponents
                 (befores <&> _1 %~ toAlignment)
