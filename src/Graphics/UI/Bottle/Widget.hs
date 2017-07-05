@@ -115,9 +115,8 @@ Lens.makeLenses ''EventResult
 Lens.makeLenses ''Focus
 Lens.makeLenses ''Widget
 
-instance View.MkView (Widget a) where
-    setView = wView
-    pad p = assymetricPad p p
+instance View.MkView (Widget a) where setView = wView
+instance View.Pad (Widget a) where pad p = assymetricPad p p
 
 instance View.HasView (Widget a) where view = wView
 instance EventMap.HasEventMap Widget where eventMap = eventMap

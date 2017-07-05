@@ -4,7 +4,7 @@ module Graphics.UI.Bottle.View
     , empty
     , Layers(..), layers
     , assymetricPad, translate, scale
-    , HasView(..), MkView(..)
+    , HasView(..), MkView(..), Pad(..)
     , size, animLayers
     , render
     , animFrames, bottomFrame
@@ -52,13 +52,14 @@ Lens.makeLenses ''View
 
 class MkView a where
     setView :: Lens.Setter' a View
+
+class MkView a => Pad a where
     -- Different `MkView`s do additional things when padding
     -- (Moving focal points, alignments, etc)
     pad :: Vector2 R -> a -> a
 
-instance MkView View where
-    setView = id
-    pad p = assymetricPad p p
+instance MkView View where setView = id
+instance Pad View where pad p = assymetricPad p p
 
 class MkView a => HasView a where view :: Lens' a View
 instance HasView View where view = id

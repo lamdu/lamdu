@@ -32,8 +32,8 @@ data AlignedWidget a = AlignedWidget
     } deriving Functor
 Lens.makeLenses ''AlignedWidget
 
-instance View.MkView (AlignedWidget a) where
-    setView = aWidget . View.setView
+instance View.MkView (AlignedWidget a) where setView = aWidget . View.setView
+instance View.Pad (AlignedWidget a) where
     pad padding (AlignedWidget (Alignment align) w) =
         AlignedWidget
         { _alignment =
