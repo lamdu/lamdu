@@ -392,28 +392,24 @@ makeEvalView mNeighbours evalRes animId =
         let makeEvaluationResultViewBG res =
                 makeEvaluationResultView (mkAnimId res) res
                 <&> addAnnotationBackground (Theme.valAnnotation theme) (mkAnimId res)
-        let neighbourViews n =
-                n ^.. Lens._Just
-                <&> makeEvaluationResultViewBG
+        let neighbourView n =
+                Lens._Just makeEvaluationResultViewBG n
                 <&> Lens.mapped %~ View.scale (neighborsScaleFactor <&> realToFrac)
                 <&> Lens.mapped %~ View.pad (neighborsPadding <&> realToFrac)
-        (prevs, nexts) <-
+                <&> fromMaybe View.empty
+        (prev, next) <-
             case mNeighbours of
-            Nothing -> ([], []) & pure
+            Nothing -> pure (View.empty, View.empty)
             Just (NeighborVals mPrev mNext) ->
                 (,)
-                <$> sequence (neighbourViews mPrev)
-                <*> sequence (neighbourViews mNext)
-        evalView <-
-            makeEvaluationResultView (mkAnimId evalRes) evalRes
-            <&> AlignedWidget.fromView 0.5
-            -- TODO: HACK: Just make "f EventResult" non-ambiguous about 'f'
-            <&> Lens.mapped .~ Lens.Identity mempty
+                <$> neighbourView mPrev
+                <*> neighbourView mNext
+        evalView <- makeEvaluationResultView (mkAnimId evalRes) evalRes
+        let prevPos = Vector2 0 0.5 * evalView ^. View.size - prev ^. View.size
+        let nextPos = Vector2 1 0.5 * evalView ^. View.size
         evalView
-            & AlignedWidget.boxWithViews AlignedWidget.Horizontal
-              (prevs <&> (,) 1) (nexts <&> (,) 0)
-            & (`AlignedWidget.hoverInPlaceOf` evalView)
-            & (^. View.view)
+            & View.animLayers <>~ View.translate prevPos prev ^. View.animLayers
+            & View.animLayers <>~ View.translate nextPos next ^. View.animLayers
             & return
 
 annotationSpacer :: Monad m => ExprGuiM m View
