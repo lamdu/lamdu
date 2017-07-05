@@ -99,7 +99,7 @@ maybeIndent (Just piInfo) =
             case lp ^. TreeLayout.layoutContext of
             TreeLayout.LayoutVertical ->
                 content
-                & View.view %~ addIndent
+                & View.setView %~ addIndent
                 & AlignedWidget.alignment .~ 0
                 where
                     addIndent x =
@@ -522,7 +522,7 @@ makeNameEdit onActiveEditor (Name nameSrc nameCollision setName name) myId =
         makeNameWordEdit
             ?? Property storedName setName
             ?? WidgetIds.nameEditOf myId
-            <&> View.view %~ addSuffix
+            <&> View.setView %~ addSuffix
     & Reader.local (View.animIdPrefix .~ Widget.toAnimId myId)
     <&> onActiveEditor
     where

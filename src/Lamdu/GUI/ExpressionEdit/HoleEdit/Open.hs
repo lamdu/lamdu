@@ -467,7 +467,7 @@ makeUnderCursorAssignment shownResultsLists hasHiddenResults holeInfo =
                 resultsWidget
                 & View.width %~ max (typeView ^. View.width)
                 & addBackground (Widget.toAnimId hidResultsPrefix) (Theme.hoverBGColor theme)
-                & View.view %~ addType
+                & View.setView %~ addType
                 & E.strongerEvents resultsEventMap
         hoverResultsWidget <- addDarkBackground (Widget.toAnimId hidResultsPrefix) ?? widget
         searchTermWidget <- SearchTerm.make holeInfo <&> E.weakerEvents searchTermEventMap
