@@ -1,11 +1,10 @@
 {-# LANGUAGE NoImplicitPrelude, RecordWildCards, RankNTypes, OverloadedStrings, TemplateHaskell, TypeSynonymInstances, FlexibleInstances #-}
 module Graphics.UI.Bottle.View
-    ( View(..), make
+    ( View(..), vAnimLayers, make
     , empty
     , Layers(..), layers
     , assymetricPad, translate, scale
-    , HasView(..), MkView(..), Pad(..)
-    , size, animLayers
+    , HasSize(..), MkView(..), Pad(..)
     , render
     , animFrames, bottomFrame
     , width, height
@@ -61,38 +60,32 @@ class MkView a => Pad a where
 instance MkView View where setView = id
 instance Pad View where pad p = assymetricPad p p
 
-class MkView a => HasView a where view :: Lens' a View
-instance HasView View where view = id
-
-size :: HasView a => Lens' a Size
-size = view . vSize
-
-animLayers :: HasView a => Lens' a Layers
-animLayers = view . vAnimLayers
+class HasSize a where size :: Lens' a Size
+instance HasSize View where size = vSize
 
 make :: Size -> Anim.Frame -> View
 make sz frame = View sz (Layers [frame])
 
-render :: HasView a => a -> Anim.Frame
-render x = x ^. animLayers . layers . Lens.reversed . traverse
+render :: View -> Anim.Frame
+render x = x ^. vAnimLayers . layers . Lens.reversed . traverse
 
-animFrames :: HasView a => Lens.Traversal' a Anim.Frame
-animFrames = animLayers . layers . traverse
+animFrames :: Lens.Traversal' View Anim.Frame
+animFrames = vAnimLayers . layers . traverse
 
 empty :: View
 empty = make 0 mempty
 
-width :: HasView a => Lens' a R
-width = view . size . _1
+width :: HasSize a => Lens' a R
+width = size . _1
 
-height :: HasView a => Lens' a R
-height = view . size . _2
+height :: HasSize a => Lens' a R
+height = size . _2
 
-tint :: HasView a => Draw.Color -> a -> a
-tint color = animFrames . Anim.unitImages %~ Draw.tint color
+tint :: MkView a => Draw.Color -> a -> a
+tint color = setView . animFrames . Anim.unitImages %~ Draw.tint color
 
 bottomFrame :: MkView a => Lens.Setter' a Anim.Frame
-bottomFrame = setView . animLayers . layers . Lens.ix 0
+bottomFrame = setView . vAnimLayers . layers . Lens.ix 0
 
 class HasAnimIdPrefix env where animIdPrefix :: Lens' env AnimId
 instance HasAnimIdPrefix AnimId where animIdPrefix = id
@@ -107,7 +100,7 @@ backgroundColor =
     subAnimId ["bg"] <&>
     \animId color -> setView %~ \x ->
     x
-    & animLayers . layers %~ addBg (Anim.backgroundColor animId color (x ^. size))
+    & vAnimLayers . layers %~ addBg (Anim.backgroundColor animId color (x ^. size))
     where
         addBg bg [] = [bg]
         addBg bg (x:xs) = x <> bg : xs
@@ -121,7 +114,7 @@ addDiagonal =
     subAnimId ["diagonal"] <&>
     \animId color thickness -> setView %~ \x ->
     x
-    & animLayers . layers . Lens.reversed . Lens.ix 0 <>~
+    & vAnimLayers . layers . Lens.reversed . Lens.ix 0 <>~
     ( Draw.convexPoly
         [ (0, thickness)
         , (0, 0)
@@ -148,9 +141,6 @@ addInnerFrame =
             & Anim.unitImages %~ Draw.tint color
         )
 
--- `scale`, `pad`, `translate`, and `assymetricPad` are not lifted to any `HasView` instance,
--- because all their uses in `Widget`s require additional changes in the widget.
-
 scale :: Vector2 Draw.R -> View -> View
 scale ratio x =
     x
@@ -175,4 +165,4 @@ padToSizeAlign newSize alignment x =
 
 hoverInPlaceOf :: MkView a => View -> a -> a
 hoverInPlaceOf onTop =
-    setView . animLayers . layers .~ mempty : onTop ^. animLayers . layers
+    setView . vAnimLayers . layers .~ mempty : onTop ^. vAnimLayers . layers

@@ -44,7 +44,7 @@ instance Functor f => View.Pad (AlignedWidget (f Widget.EventResult)) where
         where
             paddedWidget = View.pad padding w
 
-instance View.HasView (AlignedWidget a) where view = aWidget . View.view
+instance View.HasSize (AlignedWidget a) where size = aWidget . View.size
 instance E.HasEventMap AlignedWidget where eventMap = aWidget . E.eventMap
 instance Widget.HasWidget AlignedWidget where widget = aWidget
 
@@ -81,7 +81,7 @@ hoverInPlaceOf ::
 layout `hoverInPlaceOf` src =
     ( srcAbsAlignment
     , layoutWidget
-        & View.animLayers . View.layers %~ (mempty :)
+        & View.setView . View.vAnimLayers . View.layers %~ (mempty :)
         & Widget.translate (srcAbsAlignment - layoutAbsAlignment)
         & View.size .~ srcSize
     ) ^. Lens.from absAlignedWidget
@@ -192,7 +192,7 @@ boxWithViews orientation befores afters w =
         w ^. aWidget
         & Widget.translate (wRect ^. Rect.topLeft)
         & View.size .~ size
-        & View.animLayers <>~ layers beforesPlacements <> layers aftersPlacements
+        & View.setView . View.vAnimLayers <>~ layers beforesPlacements <> layers aftersPlacements
     }
     where
         toTriplet (align, view) = (align, view ^. View.size, view)
@@ -200,9 +200,9 @@ boxWithViews orientation befores afters w =
         (size, BoxComponents beforesPlacements (resultAlignment, wRect, _v) aftersPlacements) =
             BoxComponents
                 (befores <&> _1 %~ toAlignment)
-                (w ^. alignment, w ^. View.view)
+                (w ^. alignment, w ^. aWidget . Widget.wView)
                 (afters <&> _1 %~ toAlignment)
             <&> toTriplet
             & Box.makePlacements orientation
         layers placements = placements <&> translateView & mconcat
-        translateView (_alignment, rect, view) = View.translate (rect ^. Rect.topLeft) view ^. View.animLayers
+        translateView (_alignment, rect, view) = View.translate (rect ^. Rect.topLeft) view ^. View.vAnimLayers

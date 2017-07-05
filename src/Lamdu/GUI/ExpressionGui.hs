@@ -269,7 +269,7 @@ tagItem =
             tag ||> (space ||> (item & TreeLayout.alignment . _1 .~ 0))
 
 addAnnotationBackgroundH ::
-    View.HasView a =>
+    View.MkView a =>
     (Theme.ValAnnotation -> Draw.Color) -> Theme.ValAnnotation -> AnimId -> a -> a
 addAnnotationBackgroundH getColor theme animId =
     View.backgroundColor bgAnimId bgColor
@@ -277,10 +277,10 @@ addAnnotationBackgroundH getColor theme animId =
         bgAnimId = animId ++ ["annotation background"]
         bgColor = getColor theme
 
-addAnnotationBackground :: View.HasView a => Theme.ValAnnotation -> AnimId -> a -> a
+addAnnotationBackground :: View.MkView a => Theme.ValAnnotation -> AnimId -> a -> a
 addAnnotationBackground = addAnnotationBackgroundH Theme.valAnnotationBGColor
 
-addAnnotationHoverBackground :: View.HasView a => Theme.ValAnnotation -> AnimId -> a -> a
+addAnnotationHoverBackground :: View.MkView a => Theme.ValAnnotation -> AnimId -> a -> a
 addAnnotationHoverBackground = addAnnotationBackgroundH Theme.valAnnotationHoverBGColor
 
 data WideAnnotationBehavior
@@ -408,8 +408,8 @@ makeEvalView mNeighbours evalRes animId =
         let prevPos = Vector2 0 0.5 * evalView ^. View.size - prev ^. View.size
         let nextPos = Vector2 1 0.5 * evalView ^. View.size
         evalView
-            & View.animLayers <>~ View.translate prevPos prev ^. View.animLayers
-            & View.animLayers <>~ View.translate nextPos next ^. View.animLayers
+            & View.vAnimLayers <>~ View.translate prevPos prev ^. View.vAnimLayers
+            & View.vAnimLayers <>~ View.translate nextPos next ^. View.vAnimLayers
             & return
 
 annotationSpacer :: Monad m => ExprGuiM m View

@@ -20,7 +20,7 @@ module Graphics.UI.Bottle.Widget
     , keysEventMapMovesCursor
 
     -- Widget type and lenses:
-    , Widget(..), mEnter, mFocus, eventMapMaker
+    , Widget(..), wView, mEnter, mFocus, eventMapMaker
     , MEnter
     , VirtualCursor(..), virtualCursor
     , Focus(..), fEventMap, focalArea
@@ -132,7 +132,7 @@ Lens.makeLenses ''Widget
 instance View.MkView (Widget a) where setView = wView
 instance Functor f => View.Pad (Widget (f EventResult)) where pad p = assymetricPad p p
 
-instance View.HasView (Widget a) where view = wView
+instance View.HasSize (Widget a) where size = wView . View.size
 instance EventMap.HasEventMap Widget where eventMap = eventMapMaker . Lens.mapped
 
 isFocused :: Widget a -> Bool
@@ -326,7 +326,7 @@ newtype CursorConfig = CursorConfig
 renderWithCursor :: CursorConfig -> Widget a -> Anim.Frame
 renderWithCursor CursorConfig{cursorColor} w =
     maybe mempty renderCursor (w ^? mFocus . Lens._Just . focalArea)
-    & (`mappend` View.render w)
+    & (`mappend` View.render (w ^. wView))
     where
         renderCursor area =
             Anim.backgroundColor cursorAnimId cursorColor
