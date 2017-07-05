@@ -2,8 +2,8 @@
 module Graphics.UI.Bottle.View
     ( View(..), vAnimLayers, make
     , empty
-    , Layers(..), layers
-    , assymetricPad, translate, scale
+    , Layers(..), layers, translateLayers
+    , assymetricPad, scale
     , HasSize(..), MkView(..), Pad(..)
     , render
     , animFrames, bottomFrame
@@ -147,18 +147,19 @@ scale ratio x =
     & size *~ ratio
     & animFrames %~ Anim.scale ratio
 
-translate :: Vector2 R -> View -> View
-translate pos = animFrames %~ Anim.translate pos
+translateLayers :: Vector2 R -> Layers -> Layers
+translateLayers pos = layers . traverse %~ Anim.translate pos
 
 assymetricPad :: Vector2 R -> Vector2 R -> View -> View
 assymetricPad leftAndTop rightAndBottom x =
     x
     & size +~ leftAndTop + rightAndBottom
-    & translate leftAndTop
+    & vAnimLayers %~ translateLayers leftAndTop
 
 padToSizeAlign :: Size -> Vector2 R -> View -> View
 padToSizeAlign newSize alignment x =
-    translate (sizeDiff * alignment) x
+    x
+    & vAnimLayers %~ translateLayers (sizeDiff * alignment)
     & size %~ liftA2 max newSize
     where
         sizeDiff = max <$> 0 <*> newSize - x ^. size

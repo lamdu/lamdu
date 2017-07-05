@@ -205,4 +205,5 @@ boxWithViews orientation befores afters w =
             <&> toTriplet
             & Box.makePlacements orientation
         layers placements = placements <&> translateView & mconcat
-        translateView (_alignment, rect, view) = View.translate (rect ^. Rect.topLeft) view ^. View.vAnimLayers
+        translateView (_alignment, rect, view) =
+            View.translateLayers (rect ^. Rect.topLeft) (view ^. View.vAnimLayers)
