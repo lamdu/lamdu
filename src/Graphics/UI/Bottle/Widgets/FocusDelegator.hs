@@ -31,7 +31,7 @@ setFocusChildEventMap config widgetRecord =
     -- We're not delegating, so replace the child eventmap with an
     -- event map to either delegate to it (if it is enterable) or to
     -- nothing (if it is not):
-    & Widget.eventMap .~ neeventMap
+    & E.eventMap .~ neeventMap
     where
         neeventMap =
             case widgetRecord ^. Widget.mEnter of

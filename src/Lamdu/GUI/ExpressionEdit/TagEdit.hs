@@ -38,7 +38,7 @@ makeTagNameEdit jumpNextEventMap tagColor tagG =
     ExpressionGui.makeNameEdit (E.weakerEvents jumpNextEventMap)
     (tagG ^. Sugar.tagGName) myId
     & Reader.local (TextView.color .~ tagColor)
-    <&> Widget.eventMap %~ E.filterChars (/= ',')
+    <&> E.eventMap %~ E.filterChars (/= ',')
     where
         myId = WidgetIds.fromEntityId (tagG ^. Sugar.tagInstance)
 

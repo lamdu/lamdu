@@ -498,7 +498,7 @@ makeNameEdit onActiveEditor (Name nameSrc nameCollision setName name) myId =
             NameSourceStored -> name
         makeNameWordEdit =
             TextEdits.makeWordEdit ?? empty
-            <&> Lens.mapped . Lens.mapped . Widget.eventMap
+            <&> Lens.mapped . Lens.mapped . E.eventMap
                 %~ E.filterChars (`notElem` disallowedNameChars)
 
 stdWrap ::

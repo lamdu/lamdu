@@ -7,7 +7,7 @@ module Graphics.UI.Bottle.Widgets.TextEdit.Property
 
 import           Data.Store.Property (Property)
 import qualified Data.Store.Property as Property
-import qualified Graphics.UI.Bottle.EventMap as EventMap
+import qualified Graphics.UI.Bottle.EventMap as E
 import           Graphics.UI.Bottle.ModKey (ModKey(..))
 import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
@@ -33,10 +33,9 @@ make =
                     eventRes <$
                     when (newText /= Property.value textRef) (Property.set textRef newText)
 
-deleteKeyEventHandler :: ModKey -> Widget a -> Widget a
+deleteKeyEventHandler :: E.HasEventMap f => ModKey -> f a -> f a
 deleteKeyEventHandler key =
-    Widget.eventMap %~
-    EventMap.deleteKey (EventMap.KeyEvent GLFW.KeyState'Pressed key)
+    E.eventMap %~ E.deleteKey (E.KeyEvent GLFW.KeyState'Pressed key)
 
 makeLineEdit ::
     (MonadReader env m, Applicative f, Widget.HasCursor env, TextEdit.HasStyle env) =>

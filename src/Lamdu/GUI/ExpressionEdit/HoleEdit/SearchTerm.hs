@@ -11,6 +11,7 @@ import           Data.Store.Property (Property)
 import qualified Data.Store.Property as Property
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Text as Text
+import qualified Graphics.UI.Bottle.EventMap as E
 import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.TextEdit as TextEdit
@@ -58,7 +59,7 @@ make holeInfo =
         let Theme.Hole{..} = Theme.hole theme
         textCursor <- TextEdit.getCursor ?? searchTerm ?? hidOpenSearchTerm
         makeSearchTermPropEdit WidgetIds{..} (HoleInfo.hiSearchTermProperty holeInfo)
-            <&> Widget.eventMap
+            <&> E.eventMap
                 %~ EventMap.disallowCharsFromSearchTerm holeConfig holeInfo textCursor
             <&> addBackground (Widget.toAnimId hidOpenSearchTerm) holeSearchTermBGColor
     where
