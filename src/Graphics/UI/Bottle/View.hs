@@ -2,7 +2,7 @@
 module Graphics.UI.Bottle.View
     ( View(..), vAnimLayers, make
     , empty
-    , Layers(..), layers, translateLayers
+    , Layers(..), layers, translateLayers, addLayersAbove
     , assymetricPad, scale
     , HasSize(..), MkView(..), Pad(..)
     , render
@@ -42,6 +42,9 @@ instance Monoid Layers where
         Layers (x<>y : rest ^. layers)
         where
             rest = Layers xs <> Layers ys
+
+addLayersAbove :: Layers -> Layers -> Layers
+addLayersAbove (Layers xs) (Layers ys) = Layers (ys ++ xs)
 
 data View = View
     { _vSize :: Size

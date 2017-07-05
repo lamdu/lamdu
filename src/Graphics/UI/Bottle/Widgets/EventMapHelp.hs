@@ -200,7 +200,7 @@ makeTreeView size trees =
 
 addToBottomRight :: View.MkView a => View -> Widget.Size -> a -> a
 addToBottomRight (View eventMapSize eventMapLayers) size =
-    View.setView . View.vAnimLayers . View.layers <>~ docLayers ^. View.layers
+    View.setView . View.vAnimLayers %~ View.addLayersAbove docLayers
     where
         docLayers = View.translateLayers (size - eventMapSize) eventMapLayers
 
