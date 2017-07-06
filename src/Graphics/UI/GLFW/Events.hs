@@ -55,6 +55,7 @@ data MouseButtonEvent = MouseButtonEvent
 data Event
     = EventKey KeyEvent
     | EventMouseButton MouseButtonEvent
+    | EventMouseMove (Vector2 Double)
     | EventWindowClose
     | EventWindowRefresh
     | EventDropPaths [FilePath]
@@ -110,8 +111,11 @@ translate (x : xs) state =
         -- Only change the window position
         translate xs state { epWindowSize = size }
     RawMousePosition newPos ->
-        -- Only change the mouse position
         translate xs state { epMousePos = newPos }
+        & _1 %~
+        (:) (EventMouseMove
+                (newPos * (fromIntegral <$> epFrameBufferSize state)
+                / (fromIntegral <$> epWindowSize state)))
     RawMouseButton button buttonState modKeys ->
         simple $ EventMouseButton $
             MouseButtonEvent button buttonState modKeys

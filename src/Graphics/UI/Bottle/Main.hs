@@ -12,11 +12,15 @@ import           Control.Monad.IO.Class (MonadIO(..))
 import           Data.IORef
 import           Data.MRUMemo (memoIO)
 import qualified Data.Text as Text
+import           Data.Vector.Vector2 (Vector2(..))
 import qualified Graphics.DrawingCombinators as Draw
+import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.Direction as Direction
 import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Main.Animation as MainAnim
 import qualified Graphics.UI.Bottle.MetaKey as MetaKey
+import qualified Graphics.UI.Bottle.Rect as Rect
+import qualified Graphics.UI.Bottle.View as View
 import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.EventMapHelp as EventMapHelp
@@ -201,13 +205,35 @@ mainLoopWidget win mkWidgetUnmemod options =
                                 traverse_ (modifyIORef cursorRef . (cursorVirtual .~)) (res ^. Widget.eVirtualCursor)
                                 newWidget
                     return MainAnim.EventResult
-                        { MainAnim.erAnimIdMapping = mRes <&> (^. Widget.eAnimIdMapping)
+                        { MainAnim.erAnimIdMapping =
+                            case (mRes, event) of
+                            (Just res, _) -> Just (res ^. Widget.eAnimIdMapping)
+                            (Nothing, GLFWE.EventMouseMove{}) -> Just mempty
+                            _ -> Nothing
                         , MainAnim.erExecuteInMainThread = runInMainThread
                         }
             , MainAnim.makeFrame =
-                Widget.renderWithCursor
-                <$> (getConfig <&> cCursor)
-                <*> getWidget size
+                do
+                    pos <-
+                        (/)
+                        <$>
+                        ( (*)
+                            <$> (GLFW.getCursorPos win <&> uncurry Vector2)
+                            <*> (GLFW.getFramebufferSize win <&> uncurry Vector2 <&> Lens.mapped %~ fromIntegral)
+                        ) <*> (GLFW.getWindowSize win <&> uncurry Vector2 <&> Lens.mapped %~ fromIntegral)
+                    let addEnter widget =
+                            case widget ^. Widget.mEnter of
+                            Nothing -> widget
+                            Just enter ->
+                                widget & Widget.wView . View.animFrames <>~
+                                    ( Anim.backgroundColor ["test"] (Draw.Color 1 1 0 0.5) (rect ^. Rect.size)
+                                    & Anim.translate (rect ^. Rect.topLeft)
+                                    )
+                                where
+                                    rect = enter (Direction.Point pos) ^. Widget.enterResultRect
+                    Widget.renderWithCursor
+                        <$> (getConfig <&> cCursor)
+                        <*> (getWidget size <&> addEnter)
             }
     where
         Options{tickHandler, getConfig, getHelpStyle} = options
