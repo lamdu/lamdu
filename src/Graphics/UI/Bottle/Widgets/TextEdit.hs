@@ -123,7 +123,7 @@ enterFromDirection ::
     Style -> Text -> Widget.Id ->
     Direction.Direction -> Widget.EnterResult (Text, Widget.EventResult)
 enterFromDirection s str myId dir =
-    Widget.EnterResult cursorRect .
+    Widget.EnterResult cursorRect 0 .
     (,) str . Widget.eventResultFromCursor $
     encodeCursor myId cursor
     where

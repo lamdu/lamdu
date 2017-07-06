@@ -82,6 +82,7 @@ layout `hoverInPlaceOf` src =
     ( srcAbsAlignment
     , layoutWidget
         & View.setView . View.vMakeLayers . Lens.mapped . View.layers %~ (mempty :)
+        & Widget.mEnter . Lens._Just . Lens.mapped . Widget.enterResultLayer +~ 1
         & Widget.translate (srcAbsAlignment - layoutAbsAlignment)
         & View.size .~ srcSize
     ) ^. Lens.from absAlignedWidget

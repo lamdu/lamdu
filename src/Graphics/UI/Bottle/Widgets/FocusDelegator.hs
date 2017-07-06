@@ -57,6 +57,7 @@ modifyEntry myId fullChildRect = f
         focusParent =
             Widget.EnterResult
             { Widget._enterResultRect = fullChildRect
+            , Widget._enterResultLayer = 0
             , Widget._enterResultEvent = pure $ Widget.eventResultFromCursor myId
             }
 

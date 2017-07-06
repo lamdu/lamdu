@@ -6,7 +6,7 @@ module Graphics.UI.Bottle.Widget
     -- Types:
     , R, Size
 
-    , EnterResult(..), enterResultEvent, enterResultRect
+    , EnterResult(..), enterResultEvent, enterResultRect, enterResultLayer
 
     -- Event Result:
     , EventResult(..), eCursor, eVirtualCursor, eAnimIdMapping
@@ -103,6 +103,8 @@ data EnterResult a = EnterResult
     { -- The new focal area upon this entrace.
       -- Used in Grid to decide which cell's EnterResult to use.
       _enterResultRect :: Rect
+    , -- Used to allow grid to choose hovering results over the results below them.
+      _enterResultLayer :: Int
     , _enterResultEvent :: a
     } deriving Functor
 
@@ -183,7 +185,7 @@ takesFocus enterFunc =
     Just (
         enterFunc
         <&> Lens.mapped %~ eventResultFromCursor
-        <&> EnterResult (Rect 0 (w ^. View.size))
+        <&> EnterResult (Rect 0 (w ^. View.size)) 0
         )
 
 applyIdMapping :: Map Id Id -> EventResult -> EventResult

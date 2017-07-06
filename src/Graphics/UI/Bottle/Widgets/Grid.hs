@@ -234,12 +234,16 @@ combineMEnters size children =
         byDirection dir =
             filteredByEdge edge <&> (dir &) & minimumOn score
             where
-                score enter =
-                    enter ^. Widget.enterResultRect
-                    & Rect.distance dirRect
-                    & modifyDistance
-                    & abs
-                    & Vector2.uncurry (+)
+                score enter
+                    | dist > 0 = dist
+                    | otherwise = enter ^. Widget.enterResultLayer & negate & fromIntegral
+                    where
+                        dist =
+                            enter ^. Widget.enterResultRect
+                            & Rect.distance dirRect
+                            & modifyDistance
+                            & abs
+                            & Vector2.uncurry (+)
                 removeUninterestingAxis :: Vector2 R -> Vector2 R
                 removeUninterestingAxis = ((1 - abs (fromIntegral <$> edge)) *)
                 (modifyDistance, dirRect) =
@@ -247,9 +251,15 @@ combineMEnters size children =
                     Direction.Outside -> (id, Rect 0 0)
                     Direction.PrevFocalArea x -> (removeUninterestingAxis, x)
                     Direction.Point x -> (id, Rect x 0)
-                edge = asEdge size dirRect
+                edge =
+                    case dir of
+                    Direction.Point{} ->
+                        -- Check all widgets for mouse movements (for hovers)
+                        Vector2 0 0
+                    _ -> asEdge size dirRect
 
-        filteredByEdge = memo $ \(Vector2 hEdge vEdge) ->
+        filteredByEdge =
+            memo $ \(Vector2 hEdge vEdge) ->
             map snd .
             safeHead . groupSortOn ((* (-hEdge)) . (^._1._1)) .
             safeHead . groupSortOn ((* (-vEdge)) . (^._1._2)) $
