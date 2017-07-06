@@ -232,14 +232,18 @@ combineMEnters size children =
         chooseClosest _ = Just byDirection
 
         byDirection dir =
-            minimumOn
-            (Vector2.uncurry (+) . abs . modifyDistance .
-              Rect.distance dirRect . (^. Widget.enterResultRect)) .
-            map ($ dir) $ filteredByEdge edge
+            filteredByEdge edge <&> (dir &) & minimumOn score
             where
+                score enter =
+                    enter ^. Widget.enterResultRect
+                    & Rect.distance dirRect
+                    & modifyDistance
+                    & abs
+                    & Vector2.uncurry (+)
                 removeUninterestingAxis :: Vector2 R -> Vector2 R
                 removeUninterestingAxis = ((1 - abs (fromIntegral <$> edge)) *)
-                (modifyDistance, dirRect) = case dir of
+                (modifyDistance, dirRect) =
+                    case dir of
                     Direction.Outside -> (id, Rect 0 0)
                     Direction.PrevFocalArea x -> (removeUninterestingAxis, x)
                     Direction.Point x -> (id, Rect x 0)
