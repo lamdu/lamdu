@@ -514,11 +514,13 @@ makeNameEdit onActiveEditor (Name nameSrc nameCollision setName name) myId =
     ) <*>
     do
         mCollisionSuffix <- makeCollisionSuffixLabel nameCollision
-        let addSuffix v = v : mCollisionSuffix ^.. Lens._Just & GridView.horizontalAlign 0
         makeNameWordEdit
             ?? Property storedName setName
             ?? WidgetIds.nameEditOf myId
-            <&> View.setView %~ addSuffix
+            <&> AlignedWidget 0
+            <&> AlignedWidget.boxWithViews AlignedWidget.Horizontal []
+                (mCollisionSuffix ^.. Lens._Just <&> (,) 0)
+            <&> (^. AlignedWidget.aWidget)
     & Reader.local (View.animIdPrefix .~ Widget.toAnimId myId)
     <&> onActiveEditor
     where
