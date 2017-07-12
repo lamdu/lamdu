@@ -54,8 +54,8 @@ import           Graphics.UI.Bottle.View (View)
 import qualified Graphics.UI.Bottle.View as View
 import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
-import           Graphics.UI.Bottle.Widget.Aligned (AlignedWidget(..))
-import qualified Graphics.UI.Bottle.Widget.Aligned as AlignedWidget
+import           Graphics.UI.Bottle.Aligned (Aligned(..))
+import qualified Graphics.UI.Bottle.Aligned as Aligned
 import           Graphics.UI.Bottle.Widget.TreeLayout (TreeLayout(..))
 import qualified Graphics.UI.Bottle.Widget.TreeLayout as TreeLayout
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
@@ -102,11 +102,11 @@ maybeIndent (Just piInfo) =
         f mkLayout lp =
             case lp ^. TreeLayout.layoutContext of
             TreeLayout.LayoutVertical ->
-                AlignedWidget.boxWithViews AlignedWidget.Horizontal
+                Aligned.boxWithViews Aligned.Horizontal
                 [ (0, indentBar)
                 , (0, Spacer.make (Vector2 gapWidth 0))
                 ] [] content
-                & AlignedWidget.alignment .~ 0
+                & Aligned.alignment .~ 0
                 where
                     indentBar =
                         Spacer.make (Vector2 barWidth (content ^. View.height))
@@ -123,9 +123,9 @@ maybeIndent (Just piInfo) =
             _ -> mkLayout lp
 
 hCombine ::
-    (AlignedWidget.Orientation -> [AlignedWidget a] -> AlignedWidget a ->
-     AlignedWidget a) ->
-    AlignedWidget a -> TreeLayout a -> TreeLayout a
+    (Aligned.Orientation -> [Aligned (Widget a)] -> Aligned (Widget a) ->
+     Aligned (Widget a)) ->
+    Aligned (Widget a) -> TreeLayout a -> TreeLayout a
 hCombine f layout gui =
     TreeLayout.render #
     \layoutParams ->
@@ -136,21 +136,21 @@ hCombine f layout gui =
     , _layoutContext = TreeLayout.LayoutHorizontal
     }
     & gui ^. TreeLayout.render
-    & f AlignedWidget.Horizontal [layout]
+    & f Aligned.Horizontal [layout]
 
 (||>) ::
     Functor f =>
-    AlignedWidget (f Widget.EventResult) ->
+    Aligned (Widget (f Widget.EventResult)) ->
     TreeLayout (f Widget.EventResult) ->
     TreeLayout (f Widget.EventResult)
-(||>) = hCombine AlignedWidget.addBefore
+(||>) = hCombine Aligned.addBefore
 
 (<||) ::
     Functor f =>
     TreeLayout (f Widget.EventResult) ->
-    AlignedWidget (f Widget.EventResult) ->
+    Aligned (Widget (f Widget.EventResult)) ->
     TreeLayout (f Widget.EventResult)
-(<||) = flip (hCombine AlignedWidget.addAfter)
+(<||) = flip (hCombine Aligned.addAfter)
 
 data ParenIndentInfo = ParenIndentInfo
     { piAnimId :: AnimId
@@ -192,7 +192,7 @@ horizVertFallbackH mParenInfo horiz vert =
     TreeLayout.LayoutWide ->
         case (mParenInfo, layoutParams ^. TreeLayout.layoutContext) of
         (Just parenInfo, TreeLayout.LayoutHorizontal) ->
-            AlignedWidget.boxWithViews AlignedWidget.Horizontal
+            Aligned.boxWithViews Aligned.Horizontal
             [(0, parenLabel parenInfo "(")]
             [(0, parenLabel parenInfo ")")]
             wide
@@ -204,8 +204,8 @@ horizVertFallbackH mParenInfo horiz vert =
 
 combineWith ::
     Functor f => Maybe ParenIndentInfo ->
-    ([AlignedWidget (f Widget.EventResult)] ->
-     [AlignedWidget (f Widget.EventResult)]) ->
+    ([Aligned (Widget (f Widget.EventResult))] ->
+     [Aligned (Widget (f Widget.EventResult))]) ->
     ([TreeLayout (f Widget.EventResult)] ->
      [TreeLayout (f Widget.EventResult)]) ->
     [TreeLayout (f Widget.EventResult)] -> TreeLayout (f Widget.EventResult)
@@ -220,7 +220,7 @@ combineWith mParenInfo onHGuis onVGuis guis =
                 , _layoutContext = TreeLayout.LayoutHorizontal
                 }
             & onHGuis
-            & AlignedWidget.hbox 0
+            & Aligned.hbox 0
             & TreeLayout.fromAlignedWidget
 
 combine ::
@@ -252,18 +252,18 @@ combineSpacedMParens ::
        TreeLayout (f Widget.EventResult))
 combineSpacedMParens mParensId =
     do
-        hSpace <- Spacer.stdHSpaceView <&> AlignedWidget.fromView 0
+        hSpace <- Spacer.stdHSpaceView <&> Aligned.fromView 0
         vSpace <- Spacer.stdVSpaceView <&> TreeLayout.fromView
         mParenInfo <- mParensId & Lens._Just %%~ makeParenIndentInfo
         return $ combineWith mParenInfo (List.intersperse hSpace) (List.intersperse vSpace)
 
 tagItem ::
     (MonadReader env m, Spacer.HasStdSpacing env, Functor f) =>
-    m (AlignedWidget (f Widget.EventResult) ->
+    m (Aligned (Widget (f Widget.EventResult)) ->
         TreeLayout (f Widget.EventResult) ->
         TreeLayout (f Widget.EventResult))
 tagItem =
-    Spacer.stdHSpaceView <&> AlignedWidget.fromView 0 <&> f
+    Spacer.stdHSpaceView <&> Aligned.fromView 0 <&> f
     where
         f space tag item =
             tag ||> (space ||> (item & TreeLayout.alignment . _1 .~ 0))
@@ -428,10 +428,10 @@ addAnnotationH f wideBehavior entityId =
         annotationLayout <- f animId
         processAnn <- processAnnotationGui animId wideBehavior
         let onAlignedWidget w =
-                AlignedWidget.boxWithViews AlignedWidget.Vertical
+                Aligned.boxWithViews Aligned.Vertical
                 []
                 [ (0, vspace)
-                , ( w ^. AlignedWidget.alignment . _1
+                , ( w ^. Aligned.alignment . _1
                   , processAnn (w ^. View.width) annotationLayout
                   )
                 ]
@@ -517,10 +517,10 @@ makeNameEdit onActiveEditor (Name nameSrc nameCollision setName name) myId =
         makeNameWordEdit
             ?? Property storedName setName
             ?? WidgetIds.nameEditOf myId
-            <&> AlignedWidget 0
-            <&> AlignedWidget.boxWithViews AlignedWidget.Horizontal []
+            <&> Aligned 0
+            <&> Aligned.boxWithViews Aligned.Horizontal []
                 (mCollisionSuffix ^.. Lens._Just <&> (,) 0)
-            <&> (^. AlignedWidget.aWidget)
+            <&> (^. Aligned.value)
     & Reader.local (View.animIdPrefix .~ Widget.toAnimId myId)
     <&> onActiveEditor
     where
@@ -726,7 +726,7 @@ valOfScopePreferCur annotation = valOfScope annotation . pure . Just
 listWithDelDests :: k -> k -> (a -> k) -> [a] -> [(k, k, a)]
 listWithDelDests = ListUtils.withPrevNext
 
-render :: Widget.R -> TreeLayout a -> AlignedWidget a
+render :: Widget.R -> TreeLayout a -> Aligned (Widget a)
 render width gui =
     (gui ^. TreeLayout.render)
     TreeLayout.LayoutParams

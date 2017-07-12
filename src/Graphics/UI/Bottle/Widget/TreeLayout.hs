@@ -47,8 +47,8 @@ import           Graphics.UI.Bottle.View (View)
 import qualified Graphics.UI.Bottle.View as View
 import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
-import           Graphics.UI.Bottle.Widget.Aligned (AlignedWidget(..))
-import qualified Graphics.UI.Bottle.Widget.Aligned as AlignedWidget
+import           Graphics.UI.Bottle.Aligned (Aligned(..))
+import qualified Graphics.UI.Bottle.Aligned as Aligned
 import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
 
 import           Lamdu.Prelude
@@ -75,7 +75,7 @@ data LayoutParams = LayoutParams
 Lens.makeLenses ''LayoutParams
 
 newtype TreeLayout a = TreeLayout
-    { _render :: LayoutParams -> AlignedWidget a
+    { _render :: LayoutParams -> Aligned (Widget a)
     } deriving Functor
 Lens.makeLenses ''TreeLayout
 
@@ -93,24 +93,24 @@ instance Functor f => View.Resizable (TreeLayout (f Widget.EventResult)) where
 
 instance E.HasEventMap TreeLayout where eventMap = Widget.widget . E.eventMap
 
-instance Widget.HasWidget TreeLayout where widget = alignedWidget . Widget.widget
+instance Widget.HasWidget TreeLayout where widget = alignedWidget . Aligned.value
 
 alignedWidget ::
     Lens.Setter
     (TreeLayout a) (TreeLayout b)
-    (AlignedWidget a) (AlignedWidget b)
+    (Aligned (Widget a)) (Aligned (Widget b))
 alignedWidget = render . Lens.mapped
 
 alignment :: Lens.Setter' (TreeLayout a) Alignment
-alignment = alignedWidget . AlignedWidget.alignment
+alignment = alignedWidget . Aligned.alignment
 
 -- | Lifts a Widget into a 'TreeLayout'
-fromAlignedWidget :: AlignedWidget a -> TreeLayout a
+fromAlignedWidget :: Aligned (Widget a) -> TreeLayout a
 fromAlignedWidget = TreeLayout . const
 
 -- | Lifts a Widget into a 'TreeLayout' with an alignment point at the top left
 fromWidget :: Widget a -> TreeLayout a
-fromWidget = fromAlignedWidget . AlignedWidget 0
+fromWidget = fromAlignedWidget . Aligned 0
 
 -- | Lifts a View into a 'TreeLayout' with an alignment point at the top left
 fromView :: View -> TreeLayout a
@@ -136,7 +136,7 @@ vbox (gui:guis) =
     in
     cp
     & gui ^. render
-    & AlignedWidget.addAfter AlignedWidget.Vertical
+    & Aligned.addAfter Aligned.Vertical
         (guis ^.. traverse . render ?? cp)
 
 vboxSpaced ::

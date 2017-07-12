@@ -21,8 +21,8 @@ import           Graphics.UI.Bottle.MetaKey (MetaKey(..), noMods, toModKey)
 import qualified Graphics.UI.Bottle.View as View
 import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
-import           Graphics.UI.Bottle.Widget.Aligned (AlignedWidget(..))
-import qualified Graphics.UI.Bottle.Widget.Aligned as AlignedWidget
+import           Graphics.UI.Bottle.Aligned (Aligned(..))
+import qualified Graphics.UI.Bottle.Aligned as Aligned
 import qualified Graphics.UI.Bottle.Widget.TreeLayout as TreeLayout
 import qualified Graphics.UI.Bottle.Widgets.Box as Box
 import qualified Graphics.UI.Bottle.Widgets.Choice as Choice
@@ -342,8 +342,8 @@ make name color binder myId =
             makeBinderNameEdit (binder ^. Sugar.bActions) rhsJumperEquals
             name color myId
             <&> TreeLayout.alignedWidget %~
-                AlignedWidget.addAfter AlignedWidget.Vertical
-                (presentationEdits <&> AlignedWidget 0)
+                Aligned.addAfter Aligned.Vertical
+                (presentationEdits <&> Aligned 0)
             <&> E.weakerEvents jumpHolesEventMap
         mLhsEdit <-
             case mParamsEdit of
@@ -397,7 +397,7 @@ makeLetEdit item =
                 ]
         let eventMap = mappend actionsEventMap usageEventMap
         ExpressionGui.tagItem
-            <*> (ExpressionGui.grammarLabel "let" <&> AlignedWidget.fromView 0)
+            <*> (ExpressionGui.grammarLabel "let" <&> Aligned.fromView 0)
             <*> (make (item ^. Sugar.lName) letColor binder myId
                 <&> E.weakerEvents eventMap
                 <&> View.pad (Theme.letItemPadding theme <&> realToFrac)

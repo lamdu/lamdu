@@ -25,8 +25,8 @@ import           Graphics.UI.Bottle.View (View)
 import qualified Graphics.UI.Bottle.View as View
 import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
-import           Graphics.UI.Bottle.Widget.Aligned (AlignedWidget(..))
-import qualified Graphics.UI.Bottle.Widget.Aligned as AlignedWidget
+import           Graphics.UI.Bottle.Aligned (Aligned(..))
+import qualified Graphics.UI.Bottle.Aligned as Aligned
 import qualified Graphics.UI.Bottle.Widget.Id as WidgetId
 import qualified Graphics.UI.Bottle.Widget.TreeLayout as TreeLayout
 import qualified Graphics.UI.Bottle.Widgets.Box as Box
@@ -296,7 +296,7 @@ makeExtraResultsWidget holeInfo mainResultHeight extraResults@(firstResult:_) =
             )
 
 applyResultLayout ::
-    Functor f => f (ExpressionGui m) -> f (AlignedWidget (T m Widget.EventResult))
+    Functor f => f (ExpressionGui m) -> f (Aligned (Widget (T m Widget.EventResult)))
 applyResultLayout fGui =
     fGui <&> (^. TreeLayout.render)
     ?? TreeLayout.LayoutParams
@@ -336,7 +336,7 @@ makeHoleResultWidget resultId holeResult =
             & postProcessSugar
             & ExprGuiM.makeSubexpression
             & applyResultLayout
-            <&> (^. AlignedWidget.aWidget)
+            <&> (^. Aligned.value)
         holeResultEntityId =
             holeResultConverted ^. Sugar.rPayload . Sugar.plEntityId
         idWithinResultWidget =
@@ -467,9 +467,9 @@ makeUnderCursorAssignment shownResultsLists hasHiddenResults holeInfo =
                 resultsWidget
                 & View.width %~ max (typeView ^. View.width)
                 & addBackground (Widget.toAnimId hidResultsPrefix) (Theme.hoverBGColor theme)
-                & AlignedWidget 0
-                & AlignedWidget.boxWithViews AlignedWidget.Vertical [] [(0, vspace), (0, typeView)]
-                & (^. AlignedWidget.aWidget)
+                & Aligned 0
+                & Aligned.boxWithViews Aligned.Vertical [] [(0, vspace), (0, typeView)]
+                & (^. Aligned.value)
                 & E.strongerEvents resultsEventMap
         hoverResultsWidget <- addDarkBackground (Widget.toAnimId hidResultsPrefix) ?? widget
         searchTermWidget <- SearchTerm.make holeInfo <&> E.weakerEvents searchTermEventMap

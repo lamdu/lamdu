@@ -11,8 +11,8 @@ import qualified Graphics.UI.Bottle.EventMap as E
 import           Graphics.UI.Bottle.View (View(..))
 import qualified Graphics.UI.Bottle.View as View
 import qualified Graphics.UI.Bottle.Widget as Widget
-import           Graphics.UI.Bottle.Widget.Aligned (AlignedWidget(..))
-import qualified Graphics.UI.Bottle.Widget.Aligned as AlignedWidget
+import           Graphics.UI.Bottle.Aligned (Aligned(..))
+import qualified Graphics.UI.Bottle.Aligned as Aligned
 import qualified Graphics.UI.Bottle.Widget.TreeLayout as TreeLayout
 import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
 import           Lamdu.Config (Config)
@@ -87,7 +87,7 @@ makeFieldRow (Sugar.RecordField delete tag fieldExpr) =
             TagEdit.makeRecordTag (ExprGuiT.nextHolesBefore fieldExpr) tag
         fieldExprGui <- ExprGuiM.makeSubexpression fieldExpr
         let itemEventMap = recordDelEventMap config delete
-        ExpressionGui.tagItem ?? AlignedWidget 0 fieldRefGui ?? fieldExprGui
+        ExpressionGui.tagItem ?? Aligned 0 fieldRefGui ?? fieldExprGui
             <&> E.weakerEvents itemEventMap
 
 makeFieldsWidget ::
@@ -125,10 +125,10 @@ makeOpenRecord fieldsGui rest animId =
                 targetWidth = fields ^. View.width
             in
             fields
-            & AlignedWidget.alignment .~ 0
-            & AlignedWidget.addAfter AlignedWidget.Vertical
-            [ separationBar theme (max minWidth targetWidth) animId & AlignedWidget.fromView 0
-            , AlignedWidget.fromView 0 vspace
+            & Aligned.alignment .~ 0
+            & Aligned.addAfter Aligned.Vertical
+            [ separationBar theme (max minWidth targetWidth) animId & Aligned.fromView 0
+            , Aligned.fromView 0 vspace
             , restW
             ]
 

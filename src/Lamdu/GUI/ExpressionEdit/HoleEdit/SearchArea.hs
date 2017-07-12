@@ -11,8 +11,8 @@ module Lamdu.GUI.ExpressionEdit.HoleEdit.SearchArea
 import qualified Control.Lens as Lens
 import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
-import           Graphics.UI.Bottle.Widget.Aligned (AlignedWidget(..))
-import qualified Graphics.UI.Bottle.Widget.Aligned as AlignedWidget
+import           Graphics.UI.Bottle.Aligned (Aligned(..))
+import qualified Graphics.UI.Bottle.Aligned as Aligned
 import qualified Graphics.UI.Bottle.Widget.TreeLayout as TreeLayout
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 import qualified Lamdu.Config as Config
@@ -64,5 +64,5 @@ makeStdWrapped pl holeInfo =
                  \open ->
                  closedSearchTermGui & TreeLayout.alignedWidget %~
                  \closed ->
-                 AlignedWidget 0 open `AlignedWidget.hoverInPlaceOf` closed
+                 Aligned 0 open `Aligned.hoverInPlaceOf` closed
             else return closedSearchTermGui

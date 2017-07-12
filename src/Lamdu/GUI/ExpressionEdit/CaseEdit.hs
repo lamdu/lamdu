@@ -11,8 +11,8 @@ import qualified Graphics.UI.Bottle.EventMap as E
 import           Graphics.UI.Bottle.View (View(..))
 import qualified Graphics.UI.Bottle.View as View
 import qualified Graphics.UI.Bottle.Widget as Widget
-import           Graphics.UI.Bottle.Widget.Aligned (AlignedWidget(..))
-import qualified Graphics.UI.Bottle.Widget.Aligned as AlignedWidget
+import           Graphics.UI.Bottle.Aligned (Aligned(..))
+import qualified Graphics.UI.Bottle.Aligned as Aligned
 import qualified Graphics.UI.Bottle.Widget.TreeLayout as TreeLayout
 import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
 import           Lamdu.Calc.Type (Tag)
@@ -119,7 +119,7 @@ makeAltRow mActiveTag (Sugar.CaseAlt delete tag altExpr) =
                 else id
         altExprGui <- ExprGuiM.makeSubexpression altExpr
         let itemEventMap = caseDelEventMap config delete
-        ExpressionGui.tagItem ?? AlignedWidget 0 altRefGui ?? altExprGui
+        ExpressionGui.tagItem ?? Aligned 0 altRefGui ?? altExprGui
             <&> E.weakerEvents itemEventMap
 
 makeAltsWidget ::
@@ -158,10 +158,10 @@ makeOpenCase rest animId altsGui =
                 targetWidth = alts ^. View.width
             in
             alts
-            & AlignedWidget.addAfter AlignedWidget.Vertical
+            & Aligned.addAfter Aligned.Vertical
             [ separationBar theme (max minWidth targetWidth) animId
-                & AlignedWidget.fromView 0
-            , AlignedWidget.fromView 0 vspace
+                & Aligned.fromView 0
+            , Aligned.fromView 0 vspace
             , restLayout
             ]
 

@@ -8,12 +8,13 @@ import qualified Control.Monad.Reader as Reader
 import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
 import           Data.UUID.Types (UUID)
+import           Graphics.UI.Bottle.Aligned (Aligned(..))
+import qualified Graphics.UI.Bottle.Aligned as Aligned
 import qualified Graphics.UI.Bottle.EventMap as E
 import           Graphics.UI.Bottle.MetaKey (MetaKey(..), noMods)
 import qualified Graphics.UI.Bottle.View as View
+import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
-import           Graphics.UI.Bottle.Widget.Aligned (AlignedWidget(..))
-import qualified Graphics.UI.Bottle.Widget.Aligned as AlignedWidget
 import qualified Graphics.UI.Bottle.Widget.TreeLayout as TreeLayout
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 import qualified Graphics.UI.Bottle.Widgets.TextEdit as TextEdit
@@ -78,23 +79,24 @@ fdConfig Config.LiteralText{..} = FocusDelegator.Config
 
 textEdit ::
     Monad m => Transaction.Property m Text ->
-    Sugar.Payload m ExprGuiT.Payload -> ExprGuiM m (AlignedWidget (T m Widget.EventResult))
+    Sugar.Payload m ExprGuiT.Payload -> ExprGuiM m (Aligned (Widget (T m Widget.EventResult)))
 textEdit prop pl =
     do
         config <- Lens.view Config.config <&> Config.literalText
         style <- ExprGuiM.readStyle <&> (^. Style.styleText)
-        edit <- do
+        do
             left <- TextView.makeLabel "“"
-            text <- TextEdits.make ?? empty ?? prop ?? innerId <&> AlignedWidget 0
+            text <- TextEdits.make ?? empty ?? prop ?? innerId <&> Aligned 0
             right <-
                 TextView.makeLabel "„"
                 <&> View.padToSizeAlign (text ^. View.size & _1 .~ 0) 1
-            AlignedWidget.boxWithViews AlignedWidget.Horizontal [(0, left)] [(0, right)] text
+            Aligned.boxWithViews Aligned.Horizontal [(0, left)] [(0, right)] text
                 & return
             & Reader.local (TextEdit.style .~ style)
-        FocusDelegator.make ?? fdConfig config
-            ?? FocusDelegator.FocusEntryParent ?? WidgetIds.notDelegatingId myId
-            ?? edit
+            >>= Aligned.value %%~
+                (FocusDelegator.make ?? fdConfig config
+                ?? FocusDelegator.FocusEntryParent
+                ?? WidgetIds.notDelegatingId myId ??)
     & Widget.assignCursor myId (WidgetIds.notDelegatingId myId)
     where
         empty = TextEdit.EmptyStrings "" ""

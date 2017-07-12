@@ -32,7 +32,7 @@ For hovering submenus and their like it has several layers of `Frame`s, so that 
 
 **TODO:** `Widget` should also support smart positioning of hovers so they don't get placed outside of the screen.
 
-## Graphics.UI.Bottle.Widget.Aligned
+## Graphics.UI.Bottle.Aligned
 
 `AlignedWidget` is simply a `Widget` with an added alignment-point, used for positioning widgets when laying them out together in horizontal or vertical boxes.
 

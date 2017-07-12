@@ -1,10 +1,9 @@
 {-# LANGUAGE NoImplicitPrelude, TypeFamilies, TemplateHaskell, RankNTypes, FlexibleContexts, DeriveFunctor, DeriveFoldable, DeriveTraversable, FlexibleInstances #-}
-module Graphics.UI.Bottle.Widget.Aligned
-    ( AlignedWidget(..), alignment, aWidget
+module Graphics.UI.Bottle.Aligned
+    ( Aligned(..), alignment, value
     , fromView
     , scaleAround
     , hoverInPlaceOf
-    , AbsAlignedWidget, absAlignedWidget
     , Orientation(..)
     , addBefore, addAfter
     , box, hbox, vbox
@@ -15,7 +14,6 @@ import qualified Control.Lens as Lens
 import           Data.Vector.Vector2 (Vector2(..))
 import           Graphics.UI.Bottle.Alignment (Alignment(..))
 import qualified Graphics.UI.Bottle.Alignment as Alignment
-import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Rect as Rect
 import           Graphics.UI.Bottle.View (View)
 import qualified Graphics.UI.Bottle.View as View
@@ -26,50 +24,47 @@ import           Graphics.UI.Bottle.Widgets.Box (Orientation(..))
 
 import           Lamdu.Prelude
 
-data AlignedWidget a = AlignedWidget
+data Aligned a = Aligned
     { _alignment :: Alignment
-    , _aWidget :: Widget a
+    , _value :: a
     } deriving Functor
-Lens.makeLenses ''AlignedWidget
+Lens.makeLenses ''Aligned
 
-instance View.SetLayers (AlignedWidget a) where setLayers = aWidget . View.setLayers
-instance Functor f => View.Resizable (AlignedWidget (f Widget.EventResult)) where
-    pad padding (AlignedWidget (Alignment align) w) =
-        AlignedWidget
+instance View.SetLayers a => View.SetLayers (Aligned a) where setLayers = value . View.setLayers
+instance (View.HasSize a, View.Resizable a) => View.Resizable (Aligned a) where
+    pad padding (Aligned (Alignment align) w) =
+        Aligned
         { _alignment =
             (align * (w ^. View.size) + padding) / (paddedWidget ^. View.size)
             & Alignment
-        , _aWidget = paddedWidget
+        , _value = paddedWidget
         }
         where
             paddedWidget = View.pad padding w
-    scale ratio = aWidget %~ View.scale ratio
+    scale ratio = value %~ View.scale ratio
 
-instance View.HasSize (AlignedWidget a) where size = aWidget . View.size
-instance E.HasEventMap AlignedWidget where eventMap = aWidget . E.eventMap
-instance Widget.HasWidget AlignedWidget where widget = aWidget
+instance View.HasSize a => View.HasSize (Aligned a) where size = value . View.size
 
-fromView :: Alignment -> View -> AlignedWidget a
-fromView x = AlignedWidget x . Widget.fromView
+-- TODO: Remove
+fromView :: Alignment -> View -> Aligned (Widget a)
+fromView x = Aligned x . Widget.fromView
 
 -- | scale = scaleAround 0.5
 --   scaleFromTopMiddle = scaleAround (Vector2 0.5 0)
 scaleAround ::
-    Functor f => Alignment -> Vector2 Widget.R ->
-    AlignedWidget (f Widget.EventResult) ->
-    AlignedWidget (f Widget.EventResult)
-scaleAround (Alignment point) ratio (AlignedWidget (Alignment align) w) =
-    AlignedWidget
+    View.Resizable a => Alignment -> Vector2 Widget.R -> Aligned a -> Aligned a
+scaleAround (Alignment point) ratio (Aligned (Alignment align) w) =
+    Aligned
     { _alignment = point + (align - point) / ratio & Alignment
-    , _aWidget = View.scale ratio w
+    , _value = View.scale ratio w
     }
 
 -- Resize a layout to be the same alignment/size as another layout
 hoverInPlaceOf ::
     Functor f =>
-    AlignedWidget (f Widget.EventResult) ->
-    AlignedWidget (f Widget.EventResult) ->
-    AlignedWidget (f Widget.EventResult)
+    Aligned (Widget (f Widget.EventResult)) ->
+    Aligned (Widget (f Widget.EventResult)) ->
+    Aligned (Widget (f Widget.EventResult))
 layout `hoverInPlaceOf` src =
     ( srcAbsAlignment
     , layoutWidget
@@ -77,27 +72,27 @@ layout `hoverInPlaceOf` src =
         & Widget.mEnter . Lens._Just . Lens.mapped . Widget.enterResultLayer +~ 1
         & Widget.translate (srcAbsAlignment - layoutAbsAlignment)
         & View.size .~ srcSize
-    ) ^. Lens.from absAlignedWidget
+    ) ^. Lens.from absAligned
     where
-        (layoutAbsAlignment, layoutWidget) = layout ^. absAlignedWidget
-        (srcAbsAlignment, srcWidget) = src ^. absAlignedWidget
+        (layoutAbsAlignment, layoutWidget) = layout ^. absAligned
+        (srcAbsAlignment, srcWidget) = src ^. absAligned
         srcSize = srcWidget ^. View.size
 
 {-# INLINE asTuple #-}
-asTuple ::
-    Lens.Iso (AlignedWidget a) (AlignedWidget b) (Alignment, Widget a) (Alignment, Widget b)
+asTuple :: Lens.Iso (Aligned a) (Aligned b) (Alignment, a) (Alignment, b)
 asTuple =
     Lens.iso toTup fromTup
     where
-        toTup w = (w ^. alignment, w ^. aWidget)
-        fromTup (a, w) = AlignedWidget a w
+        toTup w = (w ^. alignment, w ^. value)
+        fromTup (a, w) = Aligned a w
 
-type AbsAlignedWidget a = (Vector2 Widget.R, Widget a)
+type AbsAligned a = (Vector2 Widget.R, a)
 
-{-# INLINE absAlignedWidget #-}
-absAlignedWidget ::
-    Lens.Iso (AlignedWidget a) (AlignedWidget b) (AbsAlignedWidget a) (AbsAlignedWidget b)
-absAlignedWidget =
+{-# INLINE absAligned #-}
+absAligned ::
+    (View.HasSize a, View.HasSize b) =>
+    Lens.Iso (Aligned a) (Aligned b) (AbsAligned a) (AbsAligned b)
+absAligned =
     asTuple . Lens.iso (f ((*) . (^. Alignment.ratio))) (f (fmap Alignment . fromAbs))
     where
         f op w = w & _1 %~ (`op` (w ^. _2 . View.size))
@@ -110,20 +105,20 @@ axis Horizontal = _1
 axis Vertical = _2
 
 data BoxComponents a = BoxComponents
-    { __aWidgetsBefore :: [a]
+    { __before :: [a]
     , _focalWidget :: a
-    , __aWidgetsAfter :: [a]
+    , __after :: [a]
     } deriving (Functor, Foldable, Traversable)
 Lens.makeLenses ''BoxComponents
 
 boxComponentsToWidget ::
     Functor f => Orientation ->
-    BoxComponents (AlignedWidget (f Widget.EventResult)) ->
-    AlignedWidget (f Widget.EventResult)
+    BoxComponents (Aligned (Widget (f Widget.EventResult))) ->
+    Aligned (Widget (f Widget.EventResult))
 boxComponentsToWidget orientation boxComponents =
-    AlignedWidget
+    Aligned
     { _alignment = boxAlign ^. focalWidget
-    , _aWidget = boxWidget
+    , _value = boxWidget
     }
     where
         (boxAlign, boxWidget) =
@@ -132,17 +127,17 @@ boxComponentsToWidget orientation boxComponents =
 
 addBefore ::
     Functor f => Orientation ->
-    [AlignedWidget (f Widget.EventResult)] ->
-    AlignedWidget (f Widget.EventResult) ->
-    AlignedWidget (f Widget.EventResult)
+    [Aligned (Widget (f Widget.EventResult))] ->
+    Aligned (Widget (f Widget.EventResult)) ->
+    Aligned (Widget (f Widget.EventResult))
 addBefore orientation befores layout =
     BoxComponents befores layout []
     & boxComponentsToWidget orientation
 addAfter ::
     Functor f => Orientation ->
-    [AlignedWidget (f Widget.EventResult)] ->
-    AlignedWidget (f Widget.EventResult) ->
-    AlignedWidget (f Widget.EventResult)
+    [Aligned (Widget (f Widget.EventResult))] ->
+    Aligned (Widget (f Widget.EventResult)) ->
+    Aligned (Widget (f Widget.EventResult))
 addAfter orientation afters layout =
     BoxComponents [] layout afters
     & boxComponentsToWidget orientation
@@ -151,38 +146,38 @@ addAfter orientation afters layout =
 -- i.e: Horizontal box -> choose eventual horizontal alignment point
 box ::
     Functor f => Orientation -> Widget.R ->
-    [AlignedWidget (f Widget.EventResult)] ->
-    AlignedWidget (f Widget.EventResult)
+    [Aligned (Widget (f Widget.EventResult))] ->
+    Aligned (Widget (f Widget.EventResult))
 box orientation axisAlignment layouts =
     componentsFromList layouts
     & boxComponentsToWidget orientation
     & alignment . axis orientation .~ axisAlignment
     where
-        componentsFromList [] = BoxComponents [] (AlignedWidget 0 Widget.empty) []
+        componentsFromList [] = BoxComponents [] (Aligned 0 Widget.empty) []
         componentsFromList (w:ws) = BoxComponents [] w ws
 
 hbox ::
     Functor f => Widget.R ->
-    [AlignedWidget (f Widget.EventResult)] ->
-    AlignedWidget (f Widget.EventResult)
+    [Aligned (Widget (f Widget.EventResult))] ->
+    Aligned (Widget (f Widget.EventResult))
 hbox = box Horizontal
 
 vbox ::
     Functor f => Widget.R ->
-    [AlignedWidget (f Widget.EventResult)] ->
-    AlignedWidget (f Widget.EventResult)
+    [Aligned (Widget (f Widget.EventResult))] ->
+    Aligned (Widget (f Widget.EventResult))
 vbox = box Vertical
 
 boxWithViews ::
     Functor f =>
     Orientation -> [(Widget.R, View)] -> [(Widget.R, View)] ->
-    AlignedWidget (f Widget.EventResult) ->
-    AlignedWidget (f Widget.EventResult)
+    Aligned (Widget (f Widget.EventResult)) ->
+    Aligned (Widget (f Widget.EventResult))
 boxWithViews orientation befores afters w =
-    AlignedWidget
+    Aligned
     { _alignment = resultAlignment
-    , _aWidget =
-        w ^. aWidget
+    , _value =
+        w ^. value
         & Widget.translate (wRect ^. Rect.topLeft)
         & View.size .~ size
         & View.setLayers <>~ layers beforesPlacements <> layers aftersPlacements
@@ -193,7 +188,7 @@ boxWithViews orientation befores afters w =
         (size, BoxComponents beforesPlacements (resultAlignment, wRect, _v) aftersPlacements) =
             BoxComponents
                 (befores <&> _1 %~ toAlignment)
-                (w ^. alignment, w ^. aWidget . Widget.wView)
+                (w ^. alignment, w ^. value . Widget.wView)
                 (afters <&> _1 %~ toAlignment)
             <&> toTriplet
             & Box.makePlacements orientation

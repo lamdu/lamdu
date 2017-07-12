@@ -12,8 +12,8 @@ import           Graphics.UI.Bottle.Font (Underline(..))
 import qualified Graphics.UI.Bottle.View as View
 import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
-import           Graphics.UI.Bottle.Widget.Aligned (AlignedWidget(..))
-import qualified Graphics.UI.Bottle.Widget.Aligned as AlignedWidget
+import           Graphics.UI.Bottle.Aligned (Aligned(..))
+import qualified Graphics.UI.Bottle.Aligned as Aligned
 import           Graphics.UI.Bottle.Widget.TreeLayout (TreeLayout)
 import qualified Graphics.UI.Bottle.Widget.TreeLayout as TreeLayout
 import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
@@ -124,10 +124,10 @@ definitionTypeChangeBox info getVarId =
         theme <- Lens.view Theme.theme
         let padding = realToFrac <$> Theme.valFramePadding theme
         let box =
-                AlignedWidget.boxWithViews AlignedWidget.Vertical
+                Aligned.boxWithViews Aligned.Vertical
                 ([headerLabel, typeWhenUsed, spacing] <&> (,) 0) [(0, typeCurrent)]
-                (AlignedWidget 0 sepLabel)
-                ^. AlignedWidget.aWidget
+                (Aligned 0 sepLabel)
+                ^. Aligned.value
                 & View.pad padding
                 & Hover.addBackground animId (Theme.hoverBGColor theme)
         -- TODO: unify config's button press keys
@@ -168,9 +168,9 @@ processDefinitionWidget (Sugar.DefTypeChanged info) myId mkLayout =
                 box <- definitionTypeChangeBox info myId
                 layout
                     & TreeLayout.alignedWidget %~
-                        AlignedWidget.addAfter AlignedWidget.Vertical
-                        [AlignedWidget 0 box `AlignedWidget.hoverInPlaceOf`
-                         AlignedWidget 0 Widget.empty]
+                        Aligned.addAfter Aligned.Vertical
+                        [Aligned 0 box `Aligned.hoverInPlaceOf`
+                         Aligned 0 Widget.empty]
                     & return
             else return layout
 

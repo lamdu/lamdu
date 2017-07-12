@@ -8,7 +8,7 @@ import qualified Control.Monad.Reader as Reader
 import           Data.Store.Transaction (Transaction)
 import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
-import qualified Graphics.UI.Bottle.Widget.Aligned as AlignedWidget
+import qualified Graphics.UI.Bottle.Aligned as Aligned
 import qualified Graphics.UI.Bottle.Widget.TreeLayout as TreeLayout
 import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
 import qualified Lamdu.Config as Config
@@ -88,7 +88,7 @@ mkNomGui ordering nomStr str mDel valId pl (Sugar.Nominal tid val) =
             ( ordering [ (Widget.makeFocusableView ?? nameId) <*>
                 do
                     label <- ExpressionGui.grammarLabel str <&> TreeLayout.fromView
-                    nameGui <- ExpressionGui.makeNameView (tid ^. Sugar.tidgName) (Widget.toAnimId nameId) <&> AlignedWidget.fromView 0
+                    nameGui <- ExpressionGui.makeNameView (tid ^. Sugar.tidgName) (Widget.toAnimId nameId) <&> Aligned.fromView 0
                     label <|| nameGui & TreeLayout.alignment .~ 0
                         & return
                 & Reader.local (TextView.color .~ nomColor)
