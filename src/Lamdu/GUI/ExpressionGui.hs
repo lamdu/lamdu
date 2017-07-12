@@ -90,7 +90,11 @@ import           Lamdu.Prelude
 
 type T = Transaction
 
-maybeIndent :: Maybe ParenIndentInfo -> TreeLayout a -> TreeLayout a
+maybeIndent ::
+    Functor f =>
+    Maybe ParenIndentInfo ->
+    TreeLayout (f Widget.EventResult) ->
+    TreeLayout (f Widget.EventResult)
 maybeIndent Nothing = id
 maybeIndent (Just piInfo) =
     TreeLayout.render %~ f
@@ -98,16 +102,12 @@ maybeIndent (Just piInfo) =
         f mkLayout lp =
             case lp ^. TreeLayout.layoutContext of
             TreeLayout.LayoutVertical ->
-                content
-                & View.setView %~ addIndent
+                AlignedWidget.boxWithViews AlignedWidget.Horizontal
+                [ (0, indentBar)
+                , (0, Spacer.make (Vector2 gapWidth 0))
+                ] [] content
                 & AlignedWidget.alignment .~ 0
                 where
-                    addIndent x =
-                        GridView.horizontalAlign 0
-                        [ indentBar
-                        , Spacer.make (Vector2 gapWidth 0)
-                        , x
-                        ]
                     indentBar =
                         Spacer.make (Vector2 barWidth (content ^. View.height))
                         & View.backgroundColor bgAnimId (Theme.indentBarColor indentConf)
