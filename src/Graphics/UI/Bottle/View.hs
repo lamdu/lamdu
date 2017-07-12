@@ -46,6 +46,12 @@ instance Monoid Layers where
 addLayersAbove :: Layers -> Layers -> Layers
 addLayersAbove (Layers xs) (Layers ys) = Layers (ys ++ xs)
 
+bottomLayer :: Lens.Setter' Layers Anim.Frame
+bottomLayer = layers . Lens.ix 0
+
+topLayer :: Lens.Setter' Layers Anim.Frame
+topLayer = layers . Lens.reversed . Lens.ix 0
+
 data View = View
     { _vSize :: Size
     , _vAnimLayers :: Layers
@@ -88,7 +94,7 @@ tint :: MkView a => Draw.Color -> a -> a
 tint color = setView . animFrames . Anim.unitImages %~ Draw.tint color
 
 bottomFrame :: MkView a => Lens.Setter' a Anim.Frame
-bottomFrame = setView . vAnimLayers . layers . Lens.ix 0
+bottomFrame = setView . vAnimLayers . bottomLayer
 
 class HasAnimIdPrefix env where animIdPrefix :: Lens' env AnimId
 instance HasAnimIdPrefix AnimId where animIdPrefix = id
@@ -117,7 +123,7 @@ addDiagonal =
     subAnimId ["diagonal"] <&>
     \animId color thickness -> setView %~ \x ->
     x
-    & vAnimLayers . layers . Lens.reversed . Lens.ix 0 <>~
+    & vAnimLayers . topLayer <>~
     ( Draw.convexPoly
         [ (0, thickness)
         , (0, 0)
