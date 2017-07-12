@@ -161,7 +161,7 @@ wView f (Widget size state) =
             \(View newSize newMakeLayers) ->
             x & Lens.cloneLens lens .~ newMakeLayers & cons & Widget newSize
 
-instance Functor f => View.Pad (Widget (f EventResult)) where pad p = assymetricPad p p
+instance Functor f => View.Resizable (Widget (f EventResult)) where pad p = assymetricPad p p
 
 instance View.HasSize (Widget a) where size = wSize
 instance EventMap.HasEventMap Widget where eventMap = eventMapMaker . Lens.mapped

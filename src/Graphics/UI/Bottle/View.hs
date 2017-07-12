@@ -5,7 +5,7 @@ module Graphics.UI.Bottle.View
     , Layers(..), layers, translateLayers, addLayersAbove
       , topLayer, bottomLayer
     , assymetricPad, scale
-    , HasSize(..), SetLayers(..), Pad(..)
+    , HasSize(..), SetLayers(..), Resizable(..)
     , render
     , animFrames, bottomFrame
     , width, height
@@ -62,14 +62,14 @@ Lens.makeLenses ''View
 class SetLayers a where
     setLayers :: Lens.IndexedSetter' Size a Layers
 
-class SetLayers a => Pad a where
+class SetLayers a => Resizable a where
     -- Different `SetLayers`s do additional things when padding
     -- (Moving focal points, alignments, etc)
     pad :: Vector2 R -> a -> a
 
 instance SetLayers View where setLayers f (View sz ls) = Lens.indexed f sz ls <&> View sz
 
-instance Pad View where pad p = assymetricPad p p
+instance Resizable View where pad p = assymetricPad p p
 
 class HasSize a where size :: Lens' a Size
 instance HasSize View where size = vSize

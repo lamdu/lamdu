@@ -33,7 +33,7 @@ data AlignedWidget a = AlignedWidget
 Lens.makeLenses ''AlignedWidget
 
 instance View.SetLayers (AlignedWidget a) where setLayers = aWidget . View.setLayers
-instance Functor f => View.Pad (AlignedWidget (f Widget.EventResult)) where
+instance Functor f => View.Resizable (AlignedWidget (f Widget.EventResult)) where
     pad padding (AlignedWidget (Alignment align) w) =
         AlignedWidget
         { _alignment =

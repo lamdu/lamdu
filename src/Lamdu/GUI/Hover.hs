@@ -18,7 +18,7 @@ addBackground :: View.SetLayers a => AnimId -> Draw.Color -> a -> a
 addBackground myId = View.backgroundColor (myId <> ["hover background"])
 
 addDarkBackground ::
-    (Theme.HasTheme env, View.Pad a, MonadReader env m) => AnimId -> m (a -> a)
+    (Theme.HasTheme env, View.Resizable a, MonadReader env m) => AnimId -> m (a -> a)
 addDarkBackground animId =
     Lens.view Theme.theme
     <&>

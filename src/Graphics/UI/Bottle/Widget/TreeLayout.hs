@@ -80,7 +80,7 @@ newtype TreeLayout a = TreeLayout
 Lens.makeLenses ''TreeLayout
 
 instance View.SetLayers (TreeLayout a) where setLayers = Widget.widget . View.setLayers
-instance Functor f => View.Pad (TreeLayout (f Widget.EventResult)) where
+instance Functor f => View.Resizable (TreeLayout (f Widget.EventResult)) where
     -- | Adds space around a given 'TreeLayout'. Each of the 'Vector2'
     -- components is added to the size twice (once on each side). Only the
     -- width component of the 'Vector2' affects layout decisions by

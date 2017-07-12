@@ -585,12 +585,12 @@ addValBGWithColor ::
     (Theme -> Draw.Color) -> ExprGuiM m (a -> a)
 addValBGWithColor color = View.backgroundColor <*> (Lens.view Theme.theme <&> color)
 
-addValPadding :: (Monad m, View.Pad a) => ExprGuiM m (a -> a)
+addValPadding :: (Monad m, View.Resizable a) => ExprGuiM m (a -> a)
 addValPadding =
     Lens.view Theme.theme <&> Theme.valFramePadding <&> fmap realToFrac
     <&> View.pad
 
-addValFrame :: (Monad m, View.Pad a) => ExprGuiM m (a -> a)
+addValFrame :: (Monad m, View.Resizable a) => ExprGuiM m (a -> a)
 addValFrame =
     (.)
     <$> addValBG
