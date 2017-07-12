@@ -31,7 +31,6 @@ import qualified Graphics.UI.Bottle.Widget.Id as WidgetId
 import qualified Graphics.UI.Bottle.Widget.TreeLayout as TreeLayout
 import qualified Graphics.UI.Bottle.Widgets.Box as Box
 import qualified Graphics.UI.Bottle.Widgets.Grid as Grid
-import qualified Graphics.UI.Bottle.Widgets.GridView as GridView
 import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
 import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
 import           Lamdu.CharClassification (operatorChars)
@@ -464,12 +463,13 @@ makeUnderCursorAssignment shownResultsLists hasHiddenResults holeInfo =
         typeView <- TypeView.make (hiInferredType holeInfo) (Widget.toAnimId hidHole)
 
         vspace <- ExpressionGui.annotationSpacer
-        let addType x = GridView.verticalAlign 0 [x, vspace, typeView]
         let widget =
                 resultsWidget
                 & View.width %~ max (typeView ^. View.width)
                 & addBackground (Widget.toAnimId hidResultsPrefix) (Theme.hoverBGColor theme)
-                & View.setView %~ addType
+                & AlignedWidget 0
+                & AlignedWidget.boxWithViews AlignedWidget.Vertical [] [(0, vspace), (0, typeView)]
+                & (^. AlignedWidget.aWidget)
                 & E.strongerEvents resultsEventMap
         hoverResultsWidget <- addDarkBackground (Widget.toAnimId hidResultsPrefix) ?? widget
         searchTermWidget <- SearchTerm.make holeInfo <&> E.weakerEvents searchTermEventMap
