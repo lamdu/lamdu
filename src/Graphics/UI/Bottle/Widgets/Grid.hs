@@ -206,12 +206,12 @@ toWidgetWithKeys keys mCursor size sChildren =
         case mCursor of
         Nothing ->
             Widget.StateUnfocused Widget.Unfocused
-            { _uMakeLayers = layers
+            { _uLayers = layers
             , _uMEnter = mEnter
             }
         Just cursor ->
             Widget.StateFocused Widget.Focused
-            { Widget._fMakeLayers = layers
+            { Widget._fLayers = layers
             , Widget._fMEnter = mEnter
             , Widget._fEventMap =
                 focusedChild ^. Widget.fEventMap & Lens.imapped %@~ f

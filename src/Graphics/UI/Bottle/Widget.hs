@@ -25,8 +25,8 @@ module Graphics.UI.Bottle.Widget
     , Widget(..), wSize, wState
         , wView, mEnter, eventMapMaker, events
     , VirtualCursor(..), virtualCursor
-    , Unfocused(..), uMEnter, uMakeLayers
-    , Focused(..), fFocalArea, fEventMap, fMEnter, fMakeLayers
+    , Unfocused(..), uMEnter, uLayers
+    , Focused(..), fFocalArea, fEventMap, fMEnter, fLayers
 
     , HasWidget(..)
 
@@ -119,12 +119,12 @@ data Focused a = Focused
     , _fEventMap :: VirtualCursor -> EventMap a
     , -- TODO: Replace with fMEnterPoint that is for Point direction only
       _fMEnter :: Maybe (Direction -> EnterResult a)
-    , _fMakeLayers :: View.Layers
+    , _fLayers :: View.Layers
     } deriving Functor
 
 data Unfocused a = Unfocused
     { _uMEnter :: Maybe (Direction -> EnterResult a)
-    , _uMakeLayers :: View.Layers
+    , _uLayers :: View.Layers
     } deriving Functor
 
 data Widget a = Widget
@@ -152,8 +152,8 @@ instance View.SetLayers (Widget a) where setLayers = wView . View.setLayers
 wView :: Lens' (Widget a) View
 wView f (Widget size state) =
     case state of
-    StateUnfocused x -> g StateUnfocused uMakeLayers x
-    StateFocused   x -> g StateFocused   fMakeLayers x
+    StateUnfocused x -> g StateUnfocused uLayers x
+    StateFocused   x -> g StateFocused   fLayers x
     where
         g cons lens x =
             f (View size (x ^. Lens.cloneLens lens))
@@ -214,7 +214,7 @@ fromView (View size mkLayers) =
     , _wState =
         StateUnfocused Unfocused
         { _uMEnter = Nothing
-        , _uMakeLayers = mkLayers
+        , _uLayers = mkLayers
         }
     }
 
@@ -226,8 +226,8 @@ mEnter :: Lens' (Widget a) (Maybe (Direction -> EnterResult a))
 mEnter = wState . stateMEnter
 
 stateMakeLayers :: Lens' (State a) View.Layers
-stateMakeLayers f (StateUnfocused x) = uMakeLayers f x <&> StateUnfocused
-stateMakeLayers f (StateFocused   x) = fMakeLayers f x <&> StateFocused
+stateMakeLayers f (StateUnfocused x) = uLayers f x <&> StateUnfocused
+stateMakeLayers f (StateFocused   x) = fLayers f x <&> StateFocused
 
 makeLayers :: Lens' (Widget a) View.Layers
 makeLayers = wState . stateMakeLayers
@@ -320,7 +320,7 @@ setFocusedWith rect eventMap w =
     { _fFocalArea = rect
     , _fEventMap = eventMap
     , _fMEnter = w ^. mEnter
-    , _fMakeLayers = w ^. makeLayers
+    , _fLayers = w ^. makeLayers
     }
 
 respondToCursorBy ::
