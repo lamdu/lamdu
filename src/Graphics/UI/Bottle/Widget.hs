@@ -21,7 +21,6 @@ module Graphics.UI.Bottle.Widget
 
     -- Widget type and lenses:
     , Widget(..), wView, mEnter, mFocus, eventMapMaker
-    , MEnter
     , VirtualCursor(..), virtualCursor
     , Focus(..), fEventMap, focalArea
     , events
@@ -113,13 +112,11 @@ data Focus a = Focus
     , _fEventMap :: VirtualCursor -> EventMap a
     } deriving Functor
 
--- When focused, mEnter may still be relevant, e.g: Mouse click in an
--- active textedit, to move to a different text-edit position.
-type MEnter a = Maybe (Direction -> EnterResult a)
-
 data Widget a = Widget
     { _wView :: View
-    , _mEnter :: MEnter a -- Nothing if we're not enterable
+    -- When focused, mEnter may still be relevant, e.g: Mouse click in an
+    -- active textedit, to move to a different text-edit position.
+    , _mEnter :: Maybe (Direction -> EnterResult a) -- Nothing if we're not enterable
     , _mFocus :: Maybe (Focus a)
     } deriving Functor
 

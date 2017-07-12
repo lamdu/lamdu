@@ -15,6 +15,7 @@ import           Data.List.Utils (groupOn, minimumOn)
 import           Data.MRUMemo (memo)
 import           Data.Vector.Vector2 (Vector2(..))
 import qualified Data.Vector.Vector2 as Vector2
+import           Graphics.UI.Bottle.Direction (Direction)
 import qualified Graphics.UI.Bottle.Direction as Direction
 import qualified Graphics.UI.Bottle.EventMap as EventMap
 import           Graphics.UI.Bottle.MetaKey (MetaKey(..), noMods)
@@ -55,7 +56,8 @@ data NavDests a = NavDests
 mkNavDests ::
     Functor f =>
     Widget.Size -> Cursor -> Widget.VirtualCursor ->
-    [[Widget.MEnter (f Widget.EventResult)]] -> NavDests (f Widget.EventResult)
+    [[Maybe (Direction -> Widget.EnterResult (f Widget.EventResult))]] ->
+    NavDests (f Widget.EventResult)
 mkNavDests widgetSize cursor@(Vector2 cursorX cursorY) virtCursor mEnterss =
     NavDests
     { leftOfCursor    = take cursorX curRow    & reverse & enterFromPrevArea <&> setHVirt
@@ -220,7 +222,10 @@ toWidgetWithKeys keys mCursor size sChildren =
 groupSortOn :: Ord b => (a -> b) -> [a] -> [[a]]
 groupSortOn f = groupOn f . sortOn f
 
-combineMEnters :: Widget.Size -> [[Widget.MEnter a]] -> Widget.MEnter a
+combineMEnters ::
+    Widget.Size ->
+    [[Maybe (Direction -> Widget.EnterResult a)]] ->
+    Maybe (Direction -> Widget.EnterResult a)
 combineMEnters size children =
     chooseClosest childEnters
     where

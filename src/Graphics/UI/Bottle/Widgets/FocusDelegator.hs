@@ -6,6 +6,7 @@ module Graphics.UI.Bottle.Widgets.FocusDelegator
     ) where
 
 import qualified Control.Lens as Lens
+import           Graphics.UI.Bottle.Direction (Direction)
 import qualified Graphics.UI.Bottle.Direction as Direction
 import qualified Graphics.UI.Bottle.EventMap as E
 import           Graphics.UI.Bottle.MetaKey (MetaKey, toModKey)
@@ -44,8 +45,8 @@ setFocusChildEventMap config widgetRecord =
 modifyEntry ::
     Applicative f =>
     Widget.Id -> Rect -> FocusEntryTarget ->
-    Widget.MEnter (f Widget.EventResult) ->
-    Widget.MEnter (f Widget.EventResult)
+    Maybe (Direction -> Widget.EnterResult (f Widget.EventResult)) ->
+    Maybe (Direction -> Widget.EnterResult (f Widget.EventResult))
 modifyEntry myId fullChildRect = f
     where
         f FocusEntryParent _ = Just $ const focusParent
