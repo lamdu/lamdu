@@ -148,13 +148,7 @@ makeFocused ::
 makeFocused cursor empty s str myId =
     makeInternal s str displayStr myId
     & View.bottomFrame <>~ cursorFrame
-    & Widget.mFocus .~
-        Just Widget.Focus
-        { Widget._focalArea = cursorRect
-        , Widget._fEventMap =
-            -- TODO: Implement intra-TextEdit virtual cursor
-            \_virtCursor -> eventMap cursor str myId
-        }
+    & Widget.setFocusedWith cursorRect (eventMap cursor str myId)
     where
         displayStr = makeDisplayStr (empty ^. emptyFocusedString) str
         cursorRect = mkCursorRect s cursor str
@@ -176,8 +170,11 @@ mkCursorRect s cursor str =
             TextView.renderedTextSize . Lens.to advance . _1
         cursorPosY = lineHeight * (genericLength beforeCursorLines - 1)
 
-eventMap :: Cursor -> Text -> Widget.Id -> Widget.EventMap (Text, Widget.EventResult)
-eventMap cursor str myId =
+-- TODO: Implement intra-TextEdit virtual cursor
+eventMap ::
+    Cursor -> Text -> Widget.Id -> Widget.VirtualCursor ->
+    Widget.EventMap (Text, Widget.EventResult)
+eventMap cursor str myId _virtualCursor =
     mconcat . concat $ [
         [ E.keyPressOrRepeat (noMods GLFW.Key'Left) (moveDoc ["left"]) $
             moveRelative (-1)

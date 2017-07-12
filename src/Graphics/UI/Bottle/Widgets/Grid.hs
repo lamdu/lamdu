@@ -23,7 +23,6 @@ import qualified Graphics.UI.Bottle.MetaKey as MetaKey
 import           Graphics.UI.Bottle.ModKey (ModKey)
 import           Graphics.UI.Bottle.Rect (Rect(..))
 import qualified Graphics.UI.Bottle.Rect as Rect
-import           Graphics.UI.Bottle.View (View(..))
 import qualified Graphics.UI.Bottle.View as View
 import           Graphics.UI.Bottle.Widget (R, Widget(Widget))
 import qualified Graphics.UI.Bottle.Widget as Widget
@@ -193,6 +192,8 @@ makeWithKeys keys children =
 each2d :: (Traversable vert, Traversable horiz) => Lens.Traversal (vert (horiz a)) (vert (horiz b)) a b
 each2d = traverse . traverse
 
+-- TODO: We assume that the given Cursor selects a focused
+-- widget. Prove it by passing the Focused data of that widget
 toWidgetWithKeys ::
     Functor f =>
     Keys ModKey -> Maybe Cursor -> Widget.Size ->
@@ -200,24 +201,37 @@ toWidgetWithKeys ::
     Widget (f Widget.EventResult)
 toWidgetWithKeys keys mCursor size sChildren =
     Widget
-    { _wView = View size layers
-    , _mEnter = combineMEnters size mEnterss
-    , _mFocus = mCursor <&> makeFocus
+    { _wSize = size
+    , _wState =
+        case mCursor of
+        Nothing ->
+            Widget.StateUnfocused Widget.Unfocused
+            { _uMakeLayers = layers
+            , _uMEnter = mEnter
+            }
+        Just cursor ->
+            Widget.StateFocused Widget.Focused
+            { Widget._fMakeLayers = layers
+            , Widget._fMEnter = mEnter
+            , Widget._fEventMap =
+                focusedChild ^. Widget.fEventMap & Lens.imapped %@~ f
+            , Widget._fFocalArea = focusedChild ^. Widget.fFocalArea
+            }
+            where
+                focusedChild =
+                    index2d widgets cursor ^? Widget.wState . Widget._StateFocused
+                    & fromMaybe (error "selected unfocused widget?")
+                f virtCursor =
+                    mkNavDests size cursor virtCursor mEnterss
+                    & addNavEventmap keys
     }
     where
+        mEnter = combineMEnters size mEnterss
         layers = widgets ^. Lens.folded . Lens.folded . Widget.wView . View.vMakeLayers
         translateChildWidget (rect, widget) =
             Widget.translate (rect ^. Rect.topLeft) widget
         widgets = sChildren & each2d %~ translateChildWidget
         mEnterss = widgets & each2d %~ (^. Widget.mEnter)
-        makeFocus cursor =
-            index2d widgets cursor ^. Widget.mFocus
-            & fromMaybe (error "selected unfocused widget?")
-            & Widget.fEventMap . Lens.imapped %@~ f
-            where
-                f virtCursor =
-                    mkNavDests size cursor virtCursor mEnterss
-                    & addNavEventmap keys
 
 groupSortOn :: Ord b => (a -> b) -> [a] -> [[a]]
 groupSortOn f = groupOn f . sortOn f

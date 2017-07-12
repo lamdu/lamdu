@@ -327,9 +327,11 @@ makeHoleResultWidget resultId holeResult =
         return (widget, mkEventMap)
     where
         getEvents widget =
-            case widget ^. Widget.mFocus of
-            Nothing -> mempty
-            Just focus -> (focus ^. Widget.fEventMap) (Widget.VirtualCursor (focus ^. Widget.focalArea))
+            case widget ^. Widget.wState of
+            Widget.StateUnfocused {} -> mempty
+            Widget.StateFocused focus ->
+                (focus ^. Widget.fEventMap)
+                (Widget.VirtualCursor (focus ^. Widget.fFocalArea))
         mkWidget =
             holeResultConverted
             & postProcessSugar

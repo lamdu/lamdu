@@ -162,9 +162,9 @@ mainLoopWidget win mkWidgetUnmemod options =
                 Nothing -> return Nothing
                 Just enter -> enter (Direction.Point mousePosF) ^. Widget.enterResultEvent & Just & return
             lookupEvent widget event =
-                case widget ^. Widget.mFocus of
-                Nothing -> return Nothing
-                Just focus ->
+                case widget ^. Widget.wState of
+                Widget.StateUnfocused {} -> return Nothing
+                Widget.StateFocused focus ->
                     do
                         virtCursorState <- readIORef cursorRef <&> (^. cursorVirtual)
                         virtCursor <-
@@ -173,7 +173,7 @@ mainLoopWidget win mkWidgetUnmemod options =
                             Widget.ResetVirtualCursor ->
                                 res <$ modifyIORef cursorRef (cursorVirtual .~ Widget.NewVirtualCursor res)
                                 where
-                                    res = focus ^. Widget.focalArea & Widget.VirtualCursor
+                                    res = focus ^. Widget.fFocalArea & Widget.VirtualCursor
                         E.lookup (GLFW.getClipboardString win <&> fmap Text.pack) event
                             ((focus ^. Widget.fEventMap) virtCursor)
         MainAnim.mainLoop win (getConfig <&> cAnim) $ \size -> MainAnim.Handlers
