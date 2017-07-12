@@ -83,8 +83,8 @@ instance HasSize View where size = vSize
 make :: Size -> Anim.Frame -> View
 make sz frame = View sz (Layers [frame])
 
-render :: View -> Anim.Frame
-render x = x ^. vAnimLayers . layers . Lens.reversed . traverse
+render :: Layers -> Anim.Frame
+render x = x ^. layers . Lens.reversed . traverse
 
 animFrames :: Lens.Traversal' View Anim.Frame
 animFrames = vAnimLayers . layers . traverse

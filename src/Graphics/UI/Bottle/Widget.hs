@@ -147,7 +147,13 @@ Lens.makeLenses ''Unfocused
 Lens.makeLenses ''Widget
 Lens.makePrisms ''State
 
-instance View.SetLayers (Widget a) where setLayers = wView . View.setLayers
+instance View.SetLayers (Widget a) where
+    setLayers f (Widget sz state) =
+        stateLayers (Lens.indexed f sz) state <&> Widget sz
+
+stateLayers :: Lens' (State a) View.Layers
+stateLayers f (StateUnfocused x) = uLayers f x <&> StateUnfocused
+stateLayers f (StateFocused x) = fLayers f x <&> StateFocused
 
 wView :: Lens' (Widget a) View
 wView f (Widget size state) =
@@ -377,7 +383,7 @@ newtype CursorConfig = CursorConfig
 renderWithCursor :: CursorConfig -> Widget a -> Anim.Frame
 renderWithCursor CursorConfig{cursorColor} w =
     maybe mempty renderCursor (w ^? wState . _StateFocused . fFocalArea)
-    & (`mappend` View.render (w ^. wView))
+    & (`mappend` View.render (w ^. wState . stateLayers))
     where
         renderCursor area =
             Anim.backgroundColor cursorAnimId cursorColor
