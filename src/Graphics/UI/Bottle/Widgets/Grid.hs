@@ -227,7 +227,7 @@ toWidgetWithKeys keys mCursor size sChildren =
     }
     where
         mEnter = combineMEnters size mEnterss
-        layers = widgets ^. Lens.folded . Lens.folded . Widget.wView . View.vAnimLayers
+        layers = widgets ^. Lens.folded . Lens.folded . Widget.wState . Widget.stateMakeLayers
         translateChildWidget (rect, widget) =
             Widget.translate (rect ^. Rect.topLeft) widget
         widgets = sChildren & each2d %~ translateChildWidget

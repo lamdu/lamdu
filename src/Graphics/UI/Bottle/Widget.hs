@@ -21,8 +21,9 @@ module Graphics.UI.Bottle.Widget
 
     -- Widget type and lenses:
     , State(..), _StateFocused, _StateUnfocused
+        , stateMakeLayers
     , Widget(..), wSize, wState
-      , wView, mEnter, eventMapMaker, events
+        , wView, mEnter, eventMapMaker, events
     , VirtualCursor(..), virtualCursor
     , Unfocused(..), uMEnter, uMakeLayers
     , Focused(..), fFocalArea, fEventMap, fMEnter, fMakeLayers
