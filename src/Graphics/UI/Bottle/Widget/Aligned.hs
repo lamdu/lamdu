@@ -2,7 +2,7 @@
 module Graphics.UI.Bottle.Widget.Aligned
     ( AlignedWidget(..), alignment, aWidget
     , fromView
-    , scaleAround, scale
+    , scaleAround
     , hoverInPlaceOf
     , AbsAlignedWidget, absAlignedWidget
     , Orientation(..)
@@ -43,6 +43,7 @@ instance Functor f => View.Resizable (AlignedWidget (f Widget.EventResult)) wher
         }
         where
             paddedWidget = View.pad padding w
+    scale ratio = aWidget %~ View.scale ratio
 
 instance View.HasSize (AlignedWidget a) where size = aWidget . View.size
 instance E.HasEventMap AlignedWidget where eventMap = aWidget . E.eventMap
@@ -60,14 +61,8 @@ scaleAround ::
 scaleAround (Alignment point) ratio (AlignedWidget (Alignment align) w) =
     AlignedWidget
     { _alignment = point + (align - point) / ratio & Alignment
-    , _aWidget = Widget.scale ratio w
+    , _aWidget = View.scale ratio w
     }
-
-scale ::
-    Functor f => Vector2 Widget.R ->
-    AlignedWidget (f Widget.EventResult) ->
-    AlignedWidget (f Widget.EventResult)
-scale ratio = aWidget %~ Widget.scale ratio
 
 -- Resize a layout to be the same alignment/size as another layout
 hoverInPlaceOf ::

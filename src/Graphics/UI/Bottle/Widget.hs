@@ -43,7 +43,7 @@ module Graphics.UI.Bottle.Widget
     , takesFocus
 
     -- Operations:
-    , translate, scale
+    , translate
     , assymetricPad, padToSizeAlign
 
     , makeFocusableView
@@ -161,7 +161,18 @@ wView f (Widget size state) =
             \(View newSize newMakeLayers) ->
             x & Lens.cloneLens lens .~ newMakeLayers & cons & Widget newSize
 
-instance Functor f => View.Resizable (Widget (f EventResult)) where pad p = assymetricPad p p
+instance Functor f => View.Resizable (Widget (f EventResult)) where
+    pad p = assymetricPad p p
+    scale mult w =
+        w
+        & View.setLayers . View.layers . Lens.mapped %~ Anim.scale mult
+        & wSize *~ mult
+        & wState . _StateFocused . fFocalArea . Rect.topLeftAndSize *~ mult
+        & wState . _StateFocused . fEventMap . Lens.argument . virtualCursor . Rect.topLeftAndSize //~ mult
+        & mEnter . Lens._Just . Lens.mapped . enterResultRect . Rect.topLeftAndSize *~ mult
+        & mEnter . Lens._Just . Lens.argument . Direction.coordinates . Rect.topLeftAndSize //~ mult
+        & Lens.mapped . Lens.mapped . eVirtualCursor . Lens.mapped .
+          _NewVirtualCursor . virtualCursor . Rect.topLeftAndSize *~ mult
 
 instance View.HasSize (Widget a) where size = wSize
 instance EventMap.HasEventMap Widget where eventMap = eventMapMaker . Lens.mapped
@@ -275,18 +286,6 @@ translate pos w =
     & Lens.mapped . Lens.mapped . eVirtualCursor . Lens.mapped .
       _NewVirtualCursor . virtualCursor . Rect.topLeft +~ pos
     & View.setLayers %~ View.translateLayers pos
-
-scale :: Functor f => Vector2 R -> Widget (f EventResult) -> Widget (f EventResult)
-scale mult w =
-    w
-    & View.setLayers . View.layers . Lens.mapped %~ Anim.scale mult
-    & wSize *~ mult
-    & wState . _StateFocused . fFocalArea . Rect.topLeftAndSize *~ mult
-    & wState . _StateFocused . fEventMap . Lens.argument . virtualCursor . Rect.topLeftAndSize //~ mult
-    & mEnter . Lens._Just . Lens.mapped . enterResultRect . Rect.topLeftAndSize *~ mult
-    & mEnter . Lens._Just . Lens.argument . Direction.coordinates . Rect.topLeftAndSize //~ mult
-    & Lens.mapped . Lens.mapped . eVirtualCursor . Lens.mapped .
-      _NewVirtualCursor . virtualCursor . Rect.topLeftAndSize *~ mult
 
 assymetricPad :: Functor f => Vector2 R -> Vector2 R -> Widget (f EventResult) -> Widget (f EventResult)
 assymetricPad leftAndTop rightAndBottom w =
