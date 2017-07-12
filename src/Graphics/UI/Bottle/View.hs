@@ -1,10 +1,8 @@
 {-# LANGUAGE NoImplicitPrelude, RecordWildCards, RankNTypes, OverloadedStrings, TemplateHaskell, TypeSynonymInstances, FlexibleInstances #-}
 module Graphics.UI.Bottle.View
-    ( View(..), vMakeLayers, make
+    ( View(..), vAnimLayers, make
     , empty
-    , Surrounding, sLeft, sTop, sRight, sBottom
-    , Layers(..), layers
-    , translateMakeLayers, addLayersAbove
+    , Layers(..), layers, translateLayers, addLayersAbove
     , assymetricPad, scale
     , HasSize(..), MkView(..), Pad(..)
     , render
@@ -29,16 +27,6 @@ import           Lamdu.Prelude
 
 type Size = Anim.Size
 
--- Area on screen around a view.
--- Used for positioning of tooltips and hovers around Views.
-data Surrounding = Surrounding
-    { _sLeft :: !R
-    , _sTop :: !R
-    , _sRight :: !R
-    , _sBottom :: !R
-    } deriving (Eq, Ord, Show)
-Lens.makeLenses ''Surrounding
-
 -- | Layers is a list of animation frames that overlay on top of each
 -- other (first element is most obscured one). When composing Views,
 -- the layers at the same list index are composed together and all
@@ -55,15 +43,12 @@ instance Monoid Layers where
         where
             rest = Layers xs <> Layers ys
 
-addLayersAbove :: (Surrounding -> Layers) -> (Surrounding -> Layers) -> Surrounding -> Layers
-addLayersAbove x y =
-    f <$> x <*> y
-    where
-        f (Layers xs) (Layers ys) = Layers (ys ++ xs)
+addLayersAbove :: Layers -> Layers -> Layers
+addLayersAbove (Layers xs) (Layers ys) = Layers (ys ++ xs)
 
 data View = View
     { _vSize :: Size
-    , _vMakeLayers :: Surrounding -> Layers
+    , _vAnimLayers :: Layers
     }
 Lens.makeLenses ''View
 
@@ -82,13 +67,13 @@ class HasSize a where size :: Lens' a Size
 instance HasSize View where size = vSize
 
 make :: Size -> Anim.Frame -> View
-make sz frame = View sz (\_surrounding -> Layers [frame])
+make sz frame = View sz (Layers [frame])
 
 render :: View -> Anim.Frame
-render x = (x ^. vMakeLayers) (Surrounding 0 0 0 0) ^. layers . Lens.reversed . traverse
+render x = x ^. vAnimLayers . layers . Lens.reversed . traverse
 
-animFrames :: Lens.Setter' View Anim.Frame
-animFrames = vMakeLayers . Lens.mapped . layers . traverse
+animFrames :: Lens.Traversal' View Anim.Frame
+animFrames = vAnimLayers . layers . traverse
 
 empty :: View
 empty = make 0 mempty
@@ -103,7 +88,7 @@ tint :: MkView a => Draw.Color -> a -> a
 tint color = setView . animFrames . Anim.unitImages %~ Draw.tint color
 
 bottomFrame :: MkView a => Lens.Setter' a Anim.Frame
-bottomFrame = setView . vMakeLayers . Lens.mapped . layers . Lens.ix 0
+bottomFrame = setView . vAnimLayers . layers . Lens.ix 0
 
 class HasAnimIdPrefix env where animIdPrefix :: Lens' env AnimId
 instance HasAnimIdPrefix AnimId where animIdPrefix = id
@@ -118,7 +103,7 @@ backgroundColor =
     subAnimId ["bg"] <&>
     \animId color -> setView %~ \x ->
     x
-    & vMakeLayers . Lens.mapped . layers %~ addBg (Anim.backgroundColor animId color (x ^. size))
+    & vAnimLayers . layers %~ addBg (Anim.backgroundColor animId color (x ^. size))
     where
         addBg bg [] = [bg]
         addBg bg (x:xs) = x <> bg : xs
@@ -132,7 +117,7 @@ addDiagonal =
     subAnimId ["diagonal"] <&>
     \animId color thickness -> setView %~ \x ->
     x
-    & vMakeLayers . Lens.mapped . layers . Lens.reversed . Lens.ix 0 <>~
+    & vAnimLayers . layers . Lens.reversed . Lens.ix 0 <>~
     ( Draw.convexPoly
         [ (0, thickness)
         , (0, 0)
@@ -160,37 +145,28 @@ addInnerFrame =
         )
 
 scale :: Vector2 Draw.R -> View -> View
-scale ratio v =
-    v
+scale ratio x =
+    x
     & size *~ ratio
-    & vMakeLayers . Lens.argument . sRight -~ (v ^. width) * (ratio ^. _1 - 1)
-    & vMakeLayers . Lens.argument . sBottom -~ (v ^. height) * (ratio ^. _2 - 1)
     & animFrames %~ Anim.scale ratio
 
-translateMakeLayers :: Vector2 R -> (Surrounding -> Layers) -> Surrounding -> Layers
-translateMakeLayers pos mkLayers surrounding =
-    surrounding
-    & sLeft +~ pos ^. _1
-    & sTop +~ pos ^. _2
-    & sRight -~ pos ^. _1
-    & sBottom -~ pos ^. _2
-    & mkLayers
-    & layers . traverse %~ Anim.translate pos
+translateLayers :: Vector2 R -> Layers -> Layers
+translateLayers pos = layers . traverse %~ Anim.translate pos
 
 assymetricPad :: Vector2 R -> Vector2 R -> View -> View
 assymetricPad leftAndTop rightAndBottom x =
     x
     & size +~ leftAndTop + rightAndBottom
-    & vMakeLayers %~ translateMakeLayers leftAndTop
+    & vAnimLayers %~ translateLayers leftAndTop
 
 padToSizeAlign :: Size -> Vector2 R -> View -> View
 padToSizeAlign newSize alignment x =
     x
-    & vMakeLayers %~ translateMakeLayers (sizeDiff * alignment)
+    & vAnimLayers %~ translateLayers (sizeDiff * alignment)
     & size %~ liftA2 max newSize
     where
         sizeDiff = max <$> 0 <*> newSize - x ^. size
 
 hoverInPlaceOf :: MkView a => View -> a -> a
 hoverInPlaceOf onTop =
-    setView . vMakeLayers .~ (onTop ^. vMakeLayers <&> layers %~ (mempty :))
+    setView . vAnimLayers . layers .~ mempty : onTop ^. vAnimLayers . layers

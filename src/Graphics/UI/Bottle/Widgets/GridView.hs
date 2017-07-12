@@ -81,7 +81,7 @@ make views =
     & uncurry View
     where
         toTriplet (alignment, View size layers) = (alignment, size, layers)
-        translate (_alignment, rect, layers) = View.translateMakeLayers (rect ^. Rect.topLeft) layers
+        translate (_alignment, rect, layers) = View.translateLayers (rect ^. Rect.topLeft) layers
         toFrame placements =
             placements
             <&> toList

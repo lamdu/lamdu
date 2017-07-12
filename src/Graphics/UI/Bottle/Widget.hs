@@ -118,12 +118,12 @@ data Focused a = Focused
     , _fEventMap :: VirtualCursor -> EventMap a
     , -- TODO: Replace with fMEnterPoint that is for Point direction only
       _fMEnter :: Maybe (Direction -> EnterResult a)
-    , _fMakeLayers :: View.Surrounding -> View.Layers
+    , _fMakeLayers :: View.Layers
     } deriving Functor
 
 data Unfocused a = Unfocused
     { _uMEnter :: Maybe (Direction -> EnterResult a)
-    , _uMakeLayers :: View.Surrounding -> View.Layers
+    , _uMakeLayers :: View.Layers
     } deriving Functor
 
 data Widget a = Widget
@@ -213,11 +213,11 @@ stateMEnter f (StateFocused   x) = fMEnter f x <&> StateFocused
 mEnter :: Lens' (Widget a) (Maybe (Direction -> EnterResult a))
 mEnter = wState . stateMEnter
 
-stateMakeLayers :: Lens' (State a) (View.Surrounding -> View.Layers)
+stateMakeLayers :: Lens' (State a) View.Layers
 stateMakeLayers f (StateUnfocused x) = uMakeLayers f x <&> StateUnfocused
 stateMakeLayers f (StateFocused   x) = fMakeLayers f x <&> StateFocused
 
-makeLayers :: Lens' (Widget a) (View.Surrounding -> View.Layers)
+makeLayers :: Lens' (Widget a) View.Layers
 makeLayers = wState . stateMakeLayers
 
 takesFocus ::
@@ -273,7 +273,7 @@ translate pos w =
     & wState . _StateFocused . fEventMap . Lens.argument . virtualCursor . Rect.topLeft -~ pos
     & Lens.mapped . Lens.mapped . eVirtualCursor . Lens.mapped .
       _NewVirtualCursor . virtualCursor . Rect.topLeft +~ pos
-    & View.setView . View.vMakeLayers %~ View.translateMakeLayers pos
+    & View.setView . View.vAnimLayers %~ View.translateLayers pos
 
 scale :: Functor f => Vector2 R -> Widget (f EventResult) -> Widget (f EventResult)
 scale mult w =
