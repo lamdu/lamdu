@@ -321,7 +321,7 @@ makeHoleResultWidget resultId holeResult =
                 <&> getEvents
         widget <-
             (Widget.makeFocusableView ?? resultId) <*> mkWidget
-            <&> View.setView . View.animFrames %~
+            <&> View.setView . View.layers . Lens.traverse %~
                 Anim.mapIdentities (<> (resultSuffix # Widget.toAnimId resultId))
         return (widget, mkEventMap)
     where

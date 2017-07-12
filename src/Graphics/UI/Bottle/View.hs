@@ -1,8 +1,9 @@
-{-# LANGUAGE NoImplicitPrelude, RecordWildCards, RankNTypes, OverloadedStrings, TemplateHaskell, TypeSynonymInstances, FlexibleInstances #-}
+{-# LANGUAGE NoImplicitPrelude, FlexibleContexts, RecordWildCards, RankNTypes, OverloadedStrings, TemplateHaskell, TypeSynonymInstances, FlexibleInstances #-}
 module Graphics.UI.Bottle.View
     ( View(..), vAnimLayers, make
     , empty
     , Layers(..), layers, translateLayers, addLayersAbove
+      , topLayer, bottomLayer
     , assymetricPad, scale
     , HasSize(..), MkView(..), Pad(..)
     , render
@@ -58,15 +59,17 @@ data View = View
     }
 Lens.makeLenses ''View
 
+-- TODO: Rename to MakeSizedLayers
 class MkView a where
-    setView :: Lens.Setter' a View
+    setView :: Lens.IndexedSetter' Size a Layers
 
 class MkView a => Pad a where
     -- Different `MkView`s do additional things when padding
     -- (Moving focal points, alignments, etc)
     pad :: Vector2 R -> a -> a
 
-instance MkView View where setView = id
+instance MkView View where setView f (View sz ls) = Lens.indexed f sz ls <&> View sz
+
 instance Pad View where pad p = assymetricPad p p
 
 class HasSize a where size :: Lens' a Size
@@ -91,10 +94,10 @@ height :: HasSize a => Lens' a R
 height = size . _2
 
 tint :: MkView a => Draw.Color -> a -> a
-tint color = setView . animFrames . Anim.unitImages %~ Draw.tint color
+tint color = setView . layers . traverse . Anim.unitImages %~ Draw.tint color
 
 bottomFrame :: MkView a => Lens.Setter' a Anim.Frame
-bottomFrame = setView . vAnimLayers . bottomLayer
+bottomFrame = setView . bottomLayer
 
 class HasAnimIdPrefix env where animIdPrefix :: Lens' env AnimId
 instance HasAnimIdPrefix AnimId where animIdPrefix = id
@@ -107,9 +110,9 @@ backgroundColor ::
     m (Draw.Color -> a -> a)
 backgroundColor =
     subAnimId ["bg"] <&>
-    \animId color -> setView %~ \x ->
+    \animId color -> setView %@~ \sz x ->
     x
-    & vAnimLayers . layers %~ addBg (Anim.backgroundColor animId color (x ^. size))
+    & layers %~ addBg (Anim.backgroundColor animId color sz)
     where
         addBg bg [] = [bg]
         addBg bg (x:xs) = x <> bg : xs
@@ -121,9 +124,8 @@ addDiagonal ::
     m (Draw.Color -> R -> a -> a)
 addDiagonal =
     subAnimId ["diagonal"] <&>
-    \animId color thickness -> setView %~ \x ->
-    x
-    & vAnimLayers . topLayer <>~
+    \animId color thickness -> setView %@~
+    \sz -> topLayer <>~
     ( Draw.convexPoly
         [ (0, thickness)
         , (0, 0)
@@ -135,7 +137,7 @@ addDiagonal =
         & Draw.tint color
         & void
         & Anim.simpleFrame (animId ++ ["diagonal"])
-        & Anim.scale (x ^. size)
+        & Anim.scale sz
     )
 
 addInnerFrame ::
@@ -143,10 +145,10 @@ addInnerFrame ::
     m (Draw.Color -> Vector2 R -> a -> a)
 addInnerFrame =
     subAnimId ["inner-frame"] <&>
-    \animId color frameWidth -> setView %~ \x ->
-    x & bottomFrame %~
+    \animId color frameWidth -> setView %@~ \sz ->
+    layers . Lens.ix 0 %~
         mappend
-        ( Anim.emptyRectangle frameWidth (x ^. size) animId
+        ( Anim.emptyRectangle frameWidth sz animId
             & Anim.unitImages %~ Draw.tint color
         )
 
@@ -175,4 +177,4 @@ padToSizeAlign newSize alignment x =
 
 hoverInPlaceOf :: MkView a => View -> a -> a
 hoverInPlaceOf onTop =
-    setView . vAnimLayers . layers .~ mempty : onTop ^. vAnimLayers . layers
+    setView . layers .~ mempty : onTop ^. vAnimLayers . layers

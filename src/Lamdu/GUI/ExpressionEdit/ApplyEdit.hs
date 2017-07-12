@@ -66,11 +66,11 @@ infixMarker (Vector2 w h) =
     where
         x = min w h / 4
 
-addInfixMarker :: (View.MkView a, View.HasSize a) => Widget.Id -> a -> a
-addInfixMarker widgetId v =
-    v
-    & View.bottomFrame
-    <>~ Anim.simpleFrame frameId (infixMarker (v ^. View.size))
+addInfixMarker :: View.MkView a => Widget.Id -> a -> a
+addInfixMarker widgetId =
+    View.setView %@~
+    \size ->
+    View.bottomLayer <>~ Anim.simpleFrame frameId (infixMarker size)
     where
         frameId = Widget.toAnimId widgetId ++ ["infix"]
 
@@ -92,7 +92,7 @@ makeInfixFuncName nearestHoles funcVar myId =
     where
         mAddMarker
             | funcVar ^. Sugar.bvNameRef . Sugar.nrName & BinderEdit.nonOperatorName =
-                View.setView %~ addInfixMarker myId
+                addInfixMarker myId
             | otherwise = id
 
 isBoxed :: Sugar.LabeledApply name binderVar a -> Bool

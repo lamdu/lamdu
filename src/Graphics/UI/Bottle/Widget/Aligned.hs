@@ -81,7 +81,7 @@ hoverInPlaceOf ::
 layout `hoverInPlaceOf` src =
     ( srcAbsAlignment
     , layoutWidget
-        & View.setView . View.vAnimLayers . View.layers %~ (mempty :)
+        & View.setView . View.layers %~ (mempty :)
         & Widget.mEnter . Lens._Just . Lens.mapped . Widget.enterResultLayer +~ 1
         & Widget.translate (srcAbsAlignment - layoutAbsAlignment)
         & View.size .~ srcSize
@@ -193,7 +193,7 @@ boxWithViews orientation befores afters w =
         w ^. aWidget
         & Widget.translate (wRect ^. Rect.topLeft)
         & View.size .~ size
-        & View.setView . View.vAnimLayers <>~ layers beforesPlacements <> layers aftersPlacements
+        & View.setView <>~ layers beforesPlacements <> layers aftersPlacements
     }
     where
         toTriplet (align, view) = (align, view ^. View.size, view)
