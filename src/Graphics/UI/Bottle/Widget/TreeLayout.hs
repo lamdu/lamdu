@@ -89,7 +89,8 @@ instance Functor f => View.Resizable (TreeLayout (f Widget.EventResult)) where
         w
         & render . Lens.argument . layoutMode . modeWidths -~ 2 * (p ^. _1)
         & render . Lens.mapped %~ View.pad p
-    scale = error "Not Implemented"
+    scale = error "TreeLayout: scale not Implemented"
+    assymetricPad = error "TreeLayout: assymetricPad not implemented"
 
 instance E.HasEventMap TreeLayout where eventMap = Widget.widget . E.eventMap
 

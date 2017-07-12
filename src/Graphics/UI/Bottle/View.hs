@@ -4,7 +4,6 @@ module Graphics.UI.Bottle.View
     , empty
     , Layers(..), layers, translateLayers, addLayersAbove
       , topLayer, bottomLayer
-    , assymetricPad
     , HasSize(..), SetLayers(..), Resizable(..)
     , render
     , animFrames, bottomFrame
@@ -66,12 +65,17 @@ class SetLayers a => Resizable a where
     -- Different `SetLayers`s do additional things when padding
     -- (Moving focal points, alignments, etc)
     pad :: Vector2 R -> a -> a
+    pad p = assymetricPad p p
+    assymetricPad :: Vector2 R -> Vector2 R -> a -> a
     scale :: Vector2 R -> a -> a
 
 instance SetLayers View where setLayers f (View sz ls) = Lens.indexed f sz ls <&> View sz
 
 instance Resizable View where
-    pad p = assymetricPad p p
+    assymetricPad leftAndTop rightAndBottom x =
+        x
+        & size +~ leftAndTop + rightAndBottom
+        & vAnimLayers %~ translateLayers leftAndTop
     scale ratio x =
         x
         & size *~ ratio
@@ -159,12 +163,6 @@ addInnerFrame =
 
 translateLayers :: Vector2 R -> Layers -> Layers
 translateLayers pos = layers . traverse %~ Anim.translate pos
-
-assymetricPad :: Vector2 R -> Vector2 R -> View -> View
-assymetricPad leftAndTop rightAndBottom x =
-    x
-    & size +~ leftAndTop + rightAndBottom
-    & vAnimLayers %~ translateLayers leftAndTop
 
 padToSizeAlign :: Size -> Vector2 R -> View -> View
 padToSizeAlign newSize alignment x =

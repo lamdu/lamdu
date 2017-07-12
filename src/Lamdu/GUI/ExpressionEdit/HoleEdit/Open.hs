@@ -402,7 +402,7 @@ layoutResults groups hiddenResults
                     - sum (hiddenResultsWidgets ^.. Lens.traversed . View.height)
                     & max 0
             grid : hiddenResultsWidgets & Box.vboxAlign 0
-                & Widget.assymetricPad 0 (Vector2 0 padHeight)
+                & View.assymetricPad 0 (Vector2 0 padHeight)
                 & return
     where
         rows = groups ^.. Lens.traversed . rgwRow

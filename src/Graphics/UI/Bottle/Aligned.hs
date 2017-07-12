@@ -41,6 +41,7 @@ instance (View.HasSize a, View.Resizable a) => View.Resizable (Aligned a) where
         }
         where
             paddedWidget = View.pad padding w
+    assymetricPad = error "Aligned: assymetricPad not implemented"
     scale ratio = value %~ View.scale ratio
 
 instance View.HasSize a => View.HasSize (Aligned a) where size = value . View.size

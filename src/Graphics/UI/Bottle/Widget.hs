@@ -44,7 +44,7 @@ module Graphics.UI.Bottle.Widget
 
     -- Operations:
     , translate
-    , assymetricPad, padToSizeAlign
+    , padToSizeAlign
 
     , makeFocusableView
 
@@ -168,7 +168,10 @@ wView f (Widget size state) =
             x & Lens.cloneLens lens .~ newMakeLayers & cons & Widget newSize
 
 instance Functor f => View.Resizable (Widget (f EventResult)) where
-    pad p = assymetricPad p p
+    assymetricPad leftAndTop rightAndBottom w =
+        w
+        & View.size +~ leftAndTop + rightAndBottom
+        & translate leftAndTop
     scale mult w =
         w
         & View.setLayers . View.layers . Lens.mapped %~ Anim.scale mult
@@ -292,12 +295,6 @@ translate pos w =
     & Lens.mapped . Lens.mapped . eVirtualCursor . Lens.mapped .
       _NewVirtualCursor . virtualCursor . Rect.topLeft +~ pos
     & View.setLayers %~ View.translateLayers pos
-
-assymetricPad :: Functor f => Vector2 R -> Vector2 R -> Widget (f EventResult) -> Widget (f EventResult)
-assymetricPad leftAndTop rightAndBottom w =
-    w
-    & View.size +~ leftAndTop + rightAndBottom
-    & translate leftAndTop
 
 padToSizeAlign ::
     Functor f => Size -> Vector2 R -> Widget (f EventResult) -> Widget (f EventResult)
