@@ -278,7 +278,8 @@ translate pos w =
 scale :: Functor f => Vector2 R -> Widget (f EventResult) -> Widget (f EventResult)
 scale mult w =
     w
-    & wView %~ View.scale mult
+    & View.setLayers . View.layers . Lens.mapped %~ Anim.scale mult
+    & wSize *~ mult
     & wState . _StateFocused . fFocalArea . Rect.topLeftAndSize *~ mult
     & wState . _StateFocused . fEventMap . Lens.argument . virtualCursor . Rect.topLeftAndSize //~ mult
     & mEnter . Lens._Just . Lens.mapped . enterResultRect . Rect.topLeftAndSize *~ mult
