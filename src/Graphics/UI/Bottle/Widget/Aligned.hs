@@ -1,7 +1,7 @@
 {-# LANGUAGE NoImplicitPrelude, TypeFamilies, TemplateHaskell, RankNTypes, FlexibleContexts, DeriveFunctor, DeriveFoldable, DeriveTraversable, FlexibleInstances #-}
 module Graphics.UI.Bottle.Widget.Aligned
     ( AlignedWidget(..), alignment, aWidget
-    , empty, fromView
+    , fromView
     , scaleAround, scale
     , hoverInPlaceOf
     , AbsAlignedWidget, absAlignedWidget
@@ -47,9 +47,6 @@ instance Functor f => View.Pad (AlignedWidget (f Widget.EventResult)) where
 instance View.HasSize (AlignedWidget a) where size = aWidget . View.size
 instance E.HasEventMap AlignedWidget where eventMap = aWidget . E.eventMap
 instance Widget.HasWidget AlignedWidget where widget = aWidget
-
-empty :: AlignedWidget a
-empty = AlignedWidget 0 Widget.empty
 
 fromView :: Alignment -> View -> AlignedWidget a
 fromView x = AlignedWidget x . Widget.fromView

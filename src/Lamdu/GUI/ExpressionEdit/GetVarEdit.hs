@@ -169,7 +169,8 @@ processDefinitionWidget (Sugar.DefTypeChanged info) myId mkLayout =
                 layout
                     & TreeLayout.alignedWidget %~
                         AlignedWidget.addAfter AlignedWidget.Vertical
-                        [AlignedWidget 0 box `AlignedWidget.hoverInPlaceOf` AlignedWidget.empty]
+                        [AlignedWidget 0 box `AlignedWidget.hoverInPlaceOf`
+                         AlignedWidget 0 Widget.empty]
                     & return
             else return layout
 
