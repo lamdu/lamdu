@@ -79,7 +79,7 @@ newtype TreeLayout a = TreeLayout
     } deriving Functor
 Lens.makeLenses ''TreeLayout
 
-instance View.MkView (TreeLayout a) where setView = Widget.widget . View.setView
+instance View.SetLayers (TreeLayout a) where setLayers = Widget.widget . View.setLayers
 instance Functor f => View.Pad (TreeLayout (f Widget.EventResult)) where
     -- | Adds space around a given 'TreeLayout'. Each of the 'Vector2'
     -- components is added to the size twice (once on each side). Only the

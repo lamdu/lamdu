@@ -32,7 +32,7 @@ data AlignedWidget a = AlignedWidget
     } deriving Functor
 Lens.makeLenses ''AlignedWidget
 
-instance View.MkView (AlignedWidget a) where setView = aWidget . View.setView
+instance View.SetLayers (AlignedWidget a) where setLayers = aWidget . View.setLayers
 instance Functor f => View.Pad (AlignedWidget (f Widget.EventResult)) where
     pad padding (AlignedWidget (Alignment align) w) =
         AlignedWidget
@@ -81,7 +81,7 @@ hoverInPlaceOf ::
 layout `hoverInPlaceOf` src =
     ( srcAbsAlignment
     , layoutWidget
-        & View.setView . View.layers %~ (mempty :)
+        & View.setLayers . View.layers %~ (mempty :)
         & Widget.mEnter . Lens._Just . Lens.mapped . Widget.enterResultLayer +~ 1
         & Widget.translate (srcAbsAlignment - layoutAbsAlignment)
         & View.size .~ srcSize
@@ -193,7 +193,7 @@ boxWithViews orientation befores afters w =
         w ^. aWidget
         & Widget.translate (wRect ^. Rect.topLeft)
         & View.size .~ size
-        & View.setView <>~ layers beforesPlacements <> layers aftersPlacements
+        & View.setLayers <>~ layers beforesPlacements <> layers aftersPlacements
     }
     where
         toTriplet (align, view) = (align, view ^. View.size, view)

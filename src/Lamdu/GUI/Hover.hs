@@ -14,7 +14,7 @@ import qualified Lamdu.Config.Theme as Theme
 
 import           Lamdu.Prelude
 
-addBackground :: View.MkView a => AnimId -> Draw.Color -> a -> a
+addBackground :: View.SetLayers a => AnimId -> Draw.Color -> a -> a
 addBackground myId = View.backgroundColor (myId <> ["hover background"])
 
 addDarkBackground ::

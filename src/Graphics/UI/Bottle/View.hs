@@ -5,7 +5,7 @@ module Graphics.UI.Bottle.View
     , Layers(..), layers, translateLayers, addLayersAbove
       , topLayer, bottomLayer
     , assymetricPad, scale
-    , HasSize(..), MkView(..), Pad(..)
+    , HasSize(..), SetLayers(..), Pad(..)
     , render
     , animFrames, bottomFrame
     , width, height
@@ -59,16 +59,15 @@ data View = View
     }
 Lens.makeLenses ''View
 
--- TODO: Rename to MakeSizedLayers
-class MkView a where
-    setView :: Lens.IndexedSetter' Size a Layers
+class SetLayers a where
+    setLayers :: Lens.IndexedSetter' Size a Layers
 
-class MkView a => Pad a where
-    -- Different `MkView`s do additional things when padding
+class SetLayers a => Pad a where
+    -- Different `SetLayers`s do additional things when padding
     -- (Moving focal points, alignments, etc)
     pad :: Vector2 R -> a -> a
 
-instance MkView View where setView f (View sz ls) = Lens.indexed f sz ls <&> View sz
+instance SetLayers View where setLayers f (View sz ls) = Lens.indexed f sz ls <&> View sz
 
 instance Pad View where pad p = assymetricPad p p
 
@@ -93,11 +92,11 @@ width = size . _1
 height :: HasSize a => Lens' a R
 height = size . _2
 
-tint :: MkView a => Draw.Color -> a -> a
-tint color = setView . layers . traverse . Anim.unitImages %~ Draw.tint color
+tint :: SetLayers a => Draw.Color -> a -> a
+tint color = setLayers . layers . traverse . Anim.unitImages %~ Draw.tint color
 
-bottomFrame :: MkView a => Lens.Setter' a Anim.Frame
-bottomFrame = setView . bottomLayer
+bottomFrame :: SetLayers a => Lens.Setter' a Anim.Frame
+bottomFrame = setLayers . bottomLayer
 
 class HasAnimIdPrefix env where animIdPrefix :: Lens' env AnimId
 instance HasAnimIdPrefix AnimId where animIdPrefix = id
@@ -106,11 +105,11 @@ subAnimId :: (MonadReader env m, HasAnimIdPrefix env) => AnimId -> m AnimId
 subAnimId suffix = Lens.view animIdPrefix <&> (++ suffix)
 
 backgroundColor ::
-    (MonadReader env m, HasAnimIdPrefix env, MkView a) =>
+    (MonadReader env m, HasAnimIdPrefix env, SetLayers a) =>
     m (Draw.Color -> a -> a)
 backgroundColor =
     subAnimId ["bg"] <&>
-    \animId color -> setView %@~ \sz x ->
+    \animId color -> setLayers %@~ \sz x ->
     x
     & layers %~ addBg (Anim.backgroundColor animId color sz)
     where
@@ -120,11 +119,11 @@ backgroundColor =
 -- | Add a diagonal line (top-left to right-bottom). Useful as a
 -- "deletion" GUI annotation
 addDiagonal ::
-    (MonadReader env m, HasAnimIdPrefix env, MkView a) =>
+    (MonadReader env m, HasAnimIdPrefix env, SetLayers a) =>
     m (Draw.Color -> R -> a -> a)
 addDiagonal =
     subAnimId ["diagonal"] <&>
-    \animId color thickness -> setView %@~
+    \animId color thickness -> setLayers %@~
     \sz -> topLayer <>~
     ( Draw.convexPoly
         [ (0, thickness)
@@ -141,11 +140,11 @@ addDiagonal =
     )
 
 addInnerFrame ::
-    (MonadReader env m, HasAnimIdPrefix env, MkView a) =>
+    (MonadReader env m, HasAnimIdPrefix env, SetLayers a) =>
     m (Draw.Color -> Vector2 R -> a -> a)
 addInnerFrame =
     subAnimId ["inner-frame"] <&>
-    \animId color frameWidth -> setView %@~ \sz ->
+    \animId color frameWidth -> setLayers %@~ \sz ->
     layers . Lens.ix 0 %~
         mappend
         ( Anim.emptyRectangle frameWidth sz animId
@@ -175,6 +174,6 @@ padToSizeAlign newSize alignment x =
     where
         sizeDiff = max <$> 0 <*> newSize - x ^. size
 
-hoverInPlaceOf :: MkView a => View -> a -> a
+hoverInPlaceOf :: SetLayers a => View -> a -> a
 hoverInPlaceOf onTop =
-    setView . layers .~ mempty : onTop ^. vAnimLayers . layers
+    setLayers . layers .~ mempty : onTop ^. vAnimLayers . layers

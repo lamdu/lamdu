@@ -66,9 +66,9 @@ infixMarker (Vector2 w h) =
     where
         x = min w h / 4
 
-addInfixMarker :: View.MkView a => Widget.Id -> a -> a
+addInfixMarker :: View.SetLayers a => Widget.Id -> a -> a
 addInfixMarker widgetId =
-    View.setView %@~
+    View.setLayers %@~
     \size ->
     View.bottomLayer <>~ Anim.simpleFrame frameId (infixMarker size)
     where

@@ -146,7 +146,7 @@ Lens.makeLenses ''Unfocused
 Lens.makeLenses ''Widget
 Lens.makePrisms ''State
 
-instance View.MkView (Widget a) where setView = wView . View.setView
+instance View.SetLayers (Widget a) where setLayers = wView . View.setLayers
 
 wView :: Lens' (Widget a) View
 wView f (Widget size state) =
@@ -273,7 +273,7 @@ translate pos w =
     & wState . _StateFocused . fEventMap . Lens.argument . virtualCursor . Rect.topLeft -~ pos
     & Lens.mapped . Lens.mapped . eVirtualCursor . Lens.mapped .
       _NewVirtualCursor . virtualCursor . Rect.topLeft +~ pos
-    & View.setView %~ View.translateLayers pos
+    & View.setLayers %~ View.translateLayers pos
 
 scale :: Functor f => Vector2 R -> Widget (f EventResult) -> Widget (f EventResult)
 scale mult w =

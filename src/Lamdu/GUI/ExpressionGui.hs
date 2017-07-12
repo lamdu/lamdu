@@ -269,7 +269,7 @@ tagItem =
             tag ||> (space ||> (item & TreeLayout.alignment . _1 .~ 0))
 
 addAnnotationBackgroundH ::
-    View.MkView a =>
+    View.SetLayers a =>
     (Theme.ValAnnotation -> Draw.Color) -> Theme.ValAnnotation -> AnimId -> a -> a
 addAnnotationBackgroundH getColor theme animId =
     View.backgroundColor bgAnimId bgColor
@@ -277,10 +277,10 @@ addAnnotationBackgroundH getColor theme animId =
         bgAnimId = animId ++ ["annotation background"]
         bgColor = getColor theme
 
-addAnnotationBackground :: View.MkView a => Theme.ValAnnotation -> AnimId -> a -> a
+addAnnotationBackground :: View.SetLayers a => Theme.ValAnnotation -> AnimId -> a -> a
 addAnnotationBackground = addAnnotationBackgroundH Theme.valAnnotationBGColor
 
-addAnnotationHoverBackground :: View.MkView a => Theme.ValAnnotation -> AnimId -> a -> a
+addAnnotationHoverBackground :: View.SetLayers a => Theme.ValAnnotation -> AnimId -> a -> a
 addAnnotationHoverBackground = addAnnotationBackgroundH Theme.valAnnotationHoverBGColor
 
 data WideAnnotationBehavior
@@ -480,7 +480,7 @@ nameEditFDConfig = FocusDelegator.Config
     , FocusDelegator.focusParentDoc = E.Doc ["Edit", "Done renaming"]
     }
 
-addDeletionDiagonal :: (Monad m, View.MkView a) => ExprGuiM m (Widget.R -> a -> a)
+addDeletionDiagonal :: (Monad m, View.SetLayers a) => ExprGuiM m (Widget.R -> a -> a)
 addDeletionDiagonal =
     View.addDiagonal <*> (Lens.view Theme.theme <&> Theme.typeIndicatorErrorColor)
 
@@ -577,11 +577,11 @@ grammarLabel text =
         TextView.makeLabel text
             & Reader.local (TextView.color .~ Theme.grammarColor theme)
 
-addValBG :: (Monad m, View.MkView a) => ExprGuiM m (a -> a)
+addValBG :: (Monad m, View.SetLayers a) => ExprGuiM m (a -> a)
 addValBG = addValBGWithColor Theme.valFrameBGColor
 
 addValBGWithColor ::
-    (Monad m, View.MkView a) =>
+    (Monad m, View.SetLayers a) =>
     (Theme -> Draw.Color) -> ExprGuiM m (a -> a)
 addValBGWithColor color = View.backgroundColor <*> (Lens.view Theme.theme <&> color)
 
