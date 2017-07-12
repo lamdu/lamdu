@@ -19,7 +19,7 @@
 -- of a vertically laid out parent will not use parentheses as the
 -- hierarchy is already clear in the layout itself.
 
-{-# LANGUAGE NoImplicitPrelude, TemplateHaskell, DeriveFunctor, FlexibleInstances #-}
+{-# LANGUAGE NoImplicitPrelude, TemplateHaskell, DeriveFunctor, FlexibleContexts, FlexibleInstances, MultiParamTypeClasses, TypeFamilies, UndecidableInstances #-}
 
 module Graphics.UI.Bottle.Widget.TreeLayout
     ( TreeLayout(..), render
@@ -47,7 +47,7 @@ import           Graphics.UI.Bottle.View (View)
 import qualified Graphics.UI.Bottle.View as View
 import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
-import           Graphics.UI.Bottle.Aligned (Aligned(..))
+import           Graphics.UI.Bottle.Aligned (Aligned(..), AlignTo)
 import qualified Graphics.UI.Bottle.Aligned as Aligned
 import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
 
@@ -79,12 +79,33 @@ newtype TreeLayout a = TreeLayout
     } deriving Functor
 Lens.makeLenses ''TreeLayout
 
+adjustWidth ::
+    View.HasSize v => View.Orientation -> v -> TreeLayout a -> TreeLayout a
+adjustWidth View.Vertical _ = id
+adjustWidth View.Horizontal v =
+    render . Lens.argument . layoutMode . modeWidths -~ v ^. View.size . _1
+
+instance ( View.GluesTo (Aligned (Widget a)) (AlignTo b) (Aligned (Widget a))
+         , View.HasSize b
+         ) => View.Glue (TreeLayout a) (AlignTo b) where
+    type Glued (TreeLayout a) (AlignTo b) = TreeLayout a
+    glue orientation l v =
+        l
+        & adjustWidth orientation v
+        & render . Lens.mapped %~ (View.glue orientation ?? v)
+
+instance ( View.GluesTo (AlignTo a) (Aligned (Widget b)) (Aligned (Widget b))
+         , View.HasSize a
+         ) => View.Glue (AlignTo a) (TreeLayout b) where
+    type Glued (AlignTo a) (TreeLayout b) = TreeLayout b
+    glue orientation v l =
+        l
+        & adjustWidth orientation v
+        & render . Lens.mapped %~ View.glue orientation v
+
 instance View.SetLayers (TreeLayout a) where setLayers = Widget.widget . View.setLayers
 instance Functor f => View.Resizable (TreeLayout (f Widget.EventResult)) where
-    -- | Adds space around a given 'TreeLayout'. Each of the 'Vector2'
-    -- components is added to the size twice (once on each side). Only the
-    -- width component of the 'Vector2' affects layout decisions by
-    -- shrinking the width available to the given 'TreeLayout'.
+    empty = TreeLayout (const View.empty)
     pad p w =
         w
         & render . Lens.argument . layoutMode . modeWidths -~ 2 * (p ^. _1)
@@ -135,10 +156,8 @@ vbox (gui:guis) =
             , _layoutContext = LayoutVertical
             }
     in
-    cp
-    & gui ^. render
-    & Aligned.addAfter Aligned.Vertical
-        (guis ^.. traverse . render ?? cp)
+    (gui ^. render) cp : (guis ^.. traverse . render ?? cp)
+    & View.vbox
 
 vboxSpaced ::
     (MonadReader env m, Spacer.HasStdSpacing env, Functor f) =>

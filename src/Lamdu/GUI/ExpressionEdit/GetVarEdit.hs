@@ -9,6 +9,7 @@ import qualified Data.ByteString.Char8 as SBS8
 import           Data.Store.Transaction (Transaction)
 import qualified Graphics.UI.Bottle.EventMap as E
 import           Graphics.UI.Bottle.Font (Underline(..))
+import           Graphics.UI.Bottle.View ((/-/))
 import qualified Graphics.UI.Bottle.View as View
 import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
@@ -124,10 +125,7 @@ definitionTypeChangeBox info getVarId =
         theme <- Lens.view Theme.theme
         let padding = realToFrac <$> Theme.valFramePadding theme
         let box =
-                Aligned.boxWithViews Aligned.Vertical
-                ([headerLabel, typeWhenUsed, spacing] <&> (,) 0) [(0, typeCurrent)]
-                (Aligned 0 sepLabel)
-                ^. Aligned.value
+                headerLabel /-/ typeWhenUsed /-/ spacing /-/ sepLabel /-/ typeCurrent
                 & View.pad padding
                 & Hover.addBackground animId (Theme.hoverBGColor theme)
         -- TODO: unify config's button press keys
@@ -168,9 +166,7 @@ processDefinitionWidget (Sugar.DefTypeChanged info) myId mkLayout =
                 box <- definitionTypeChangeBox info myId
                 layout
                     & TreeLayout.alignedWidget %~
-                        Aligned.addAfter Aligned.Vertical
-                        [Aligned 0 box `Aligned.hoverInPlaceOf`
-                         Aligned 0 Widget.empty]
+                        (/-/ (Aligned 0 box `Aligned.hoverInPlaceOf` View.empty))
                     & return
             else return layout
 

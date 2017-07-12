@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, DeriveFunctor, TemplateHaskell, GeneralizedNewtypeDeriving, DeriveGeneric, OverloadedStrings, NamedFieldPuns, LambdaCase, FlexibleInstances #-}
+{-# LANGUAGE NoImplicitPrelude, DeriveFunctor, TemplateHaskell, GeneralizedNewtypeDeriving, DeriveGeneric, OverloadedStrings, NamedFieldPuns, LambdaCase, FlexibleInstances, MultiParamTypeClasses, TypeFamilies #-}
 module Graphics.UI.Bottle.Widget
     ( Id(..), subId, Id.joinId, isSubCursor
     , HasCursor(..)
@@ -23,7 +23,7 @@ module Graphics.UI.Bottle.Widget
     , State(..), _StateFocused, _StateUnfocused
         , stateMakeLayers
     , Widget(..), wSize, wState
-        , wView, mEnter, eventMapMaker, events
+        , mEnter, eventMapMaker, events
     , VirtualCursor(..), virtualCursor
     , Unfocused(..), uMEnter, uLayers
     , Focused(..), fFocalArea, fEventMap, fMEnter, fLayers
@@ -36,7 +36,6 @@ module Graphics.UI.Bottle.Widget
     , renderWithCursor, cursorAnimId
 
     -- Construct widgets:
-    , empty
     , fromView
 
     -- Focus handlers:
@@ -64,6 +63,7 @@ import qualified Data.Map as Map
 import qualified Data.Monoid as Monoid
 import           Data.Monoid.Generic (def_mempty, def_mappend)
 import           Data.Vector.Vector2 (Vector2(..))
+import qualified Data.Vector.Vector2 as Vector2
 import           GHC.Generics (Generic)
 import qualified Graphics.DrawingCombinators as Draw
 import           Graphics.UI.Bottle.Animation (AnimId, R, Size)
@@ -73,12 +73,15 @@ import qualified Graphics.UI.Bottle.Direction as Direction
 import           Graphics.UI.Bottle.EventMap (EventMap)
 import qualified Graphics.UI.Bottle.EventMap as EventMap
 import           Graphics.UI.Bottle.MetaKey (MetaKey, toModKey)
+import           Graphics.UI.Bottle.ModKey (ModKey(..))
 import           Graphics.UI.Bottle.Rect (Rect(..))
 import qualified Graphics.UI.Bottle.Rect as Rect
 import           Graphics.UI.Bottle.View (View(..))
 import qualified Graphics.UI.Bottle.View as View
 import           Graphics.UI.Bottle.Widget.Id (Id(..))
 import qualified Graphics.UI.Bottle.Widget.Id as Id
+import           Graphics.UI.Bottle.Widgets.StdKeys as StdKeys
+import qualified Graphics.UI.GLFW as GLFW
 
 import           Lamdu.Prelude
 
@@ -155,19 +158,8 @@ stateLayers :: Lens' (State a) View.Layers
 stateLayers f (StateUnfocused x) = uLayers f x <&> StateUnfocused
 stateLayers f (StateFocused x) = fLayers f x <&> StateFocused
 
-wView :: Lens' (Widget a) View
-wView f (Widget size state) =
-    case state of
-    StateUnfocused x -> g StateUnfocused uLayers x
-    StateFocused   x -> g StateFocused   fLayers x
-    where
-        g cons lens x =
-            f (View size (x ^. Lens.cloneLens lens))
-            <&>
-            \(View newSize newMakeLayers) ->
-            x & Lens.cloneLens lens .~ newMakeLayers & cons & Widget newSize
-
 instance Functor f => View.Resizable (Widget (f EventResult)) where
+    empty = fromView View.empty
     assymetricPad leftAndTop rightAndBottom w =
         w
         & View.size +~ leftAndTop + rightAndBottom
@@ -186,11 +178,123 @@ instance Functor f => View.Resizable (Widget (f EventResult)) where
 instance View.HasSize (Widget a) where size = wSize
 instance EventMap.HasEventMap Widget where eventMap = eventMapMaker . Lens.mapped
 
+instance View.Glue (Widget a) View where
+    type Glued (Widget a) View = Widget a
+    glue = View.glueH $ \sz w v -> w ^. wState & stateLayers <>~ v ^. View.vAnimLayers & Widget sz
+
+instance Functor f => View.Glue View (Widget (f EventResult)) where
+    type Glued View (Widget (f EventResult)) = Widget (f EventResult)
+    glue = View.glueH $ \sz v w -> w ^. wState & stateLayers <>~ v ^. View.vAnimLayers & Widget sz
+
+instance Functor f => View.Glue (Widget (f EventResult)) (Widget (f EventResult)) where
+    type Glued (Widget (f EventResult)) (Widget (f EventResult)) = Widget (f EventResult)
+    glue orientation =
+        View.glueH
+        (\sz w0 w1 -> combineStates orientation dirPrev dirNext sz (w0 ^. wState) (w1 ^. wState) & Widget sz)
+        orientation
+        where
+            (dirPrev, dirNext) =
+                case orientation of
+                View.Horizontal ->
+                    ( ("left", StdKeys.keysLeft StdKeys.stdDirKeys)
+                    , ("right", StdKeys.keysRight StdKeys.stdDirKeys)
+                    )
+                View.Vertical ->
+                    ( ("up", StdKeys.keysUp StdKeys.stdDirKeys)
+                    , ("down", StdKeys.keysDown StdKeys.stdDirKeys)
+                    )
+
+combineStates ::
+    Functor f =>
+    View.Orientation -> (Text, [GLFW.Key]) -> (Text, [GLFW.Key]) -> Size ->
+    State (f EventResult) -> State (f EventResult) -> State (f EventResult)
+combineStates _ _ _ _ StateFocused{} StateFocused{} = error "joining two focused widgets!!"
+combineStates _ _ _ sz (StateUnfocused u0) (StateUnfocused u1) =
+    Unfocused (combineMEnters sz (u0 ^. uMEnter) (u1 ^. uMEnter)) (u0 ^. uLayers <> u1 ^. uLayers)
+    & StateUnfocused
+-- TODO: move between widgets
+combineStates orientation _ (nameNext, keysNext) sz (StateFocused f) (StateUnfocused u) =
+    f
+    & fMEnter %~ combineMEnters sz (u ^. uMEnter)
+    & fEventMap . Lens.imapped %@~ addEvents
+    & fLayers <>~ u ^. uLayers
+    & StateFocused
+    where
+        addEvents virtCursor =
+            case u ^. uMEnter of
+            Nothing -> mempty
+            Just enter ->
+                setVirt orientation virtCursor
+                (enter (Direction.PrevFocalArea (virtCursor ^. virtualCursor)))
+                ^. enterResultEvent
+                & EventMap.keyPresses (keysNext <&> ModKey mempty) (EventMap.Doc ["Navigation", "Move", nameNext])
+            & EventMap.weakerEvents
+combineStates orientation dirPrev dirNext sz (StateUnfocused u) (StateFocused f) =
+    combineStates orientation dirNext dirPrev sz (StateFocused f) (StateUnfocused u)
+
+setVirt :: Functor f => View.Orientation -> VirtualCursor -> EnterResult (f EventResult) -> EnterResult (f EventResult)
+setVirt orientation virtCursor enterResult =
+    enterResult
+    & enterResultEvent . Lens.mapped . eVirtualCursor . Lens._Wrapped ?~
+    NewVirtualCursor
+    ( enterResult ^. enterResultRect
+        & Lens.cloneLens axis .~ virtCursor ^. virtualCursor . Lens.cloneLens axis
+        & VirtualCursor
+    )
+    where
+        axis =
+            case orientation of
+            View.Horizontal -> Rect.verticalRange
+            View.Vertical -> Rect.horizontalRange
+
+combineMEnters ::
+    Size ->
+    Maybe (Direction -> EnterResult a) ->
+    Maybe (Direction -> EnterResult a) ->
+    Maybe (Direction -> EnterResult a)
+combineMEnters _ Nothing x = x
+combineMEnters _ (Just x) Nothing = Just x
+combineMEnters sz (Just x) (Just y) = Just (combineEnters sz x y)
+
+combineEnters ::
+    Size ->
+    (Direction -> EnterResult a) -> (Direction -> EnterResult a) ->
+    Direction -> EnterResult a
+combineEnters sz e0 e1 dir = chooseEnter sz (e0 dir) (e1 dir) dir
+
+chooseEnter :: Size -> EnterResult a -> EnterResult a -> Direction -> EnterResult a
+chooseEnter sz r0 r1 dir
+    | score r0 <= score r1 = r0
+    | otherwise = r1
+    where
+        edge =
+            Vector2 hEdge vEdge
+            where
+                hEdge = boolToInt rightEdge - boolToInt leftEdge
+                vEdge = boolToInt bottomEdge - boolToInt topEdge
+                boolToInt False = 0
+                boolToInt True = 1
+                Vector2 leftEdge topEdge =
+                    (<= 0) <$> (rect ^. Rect.bottomRight)
+                Vector2 rightEdge bottomEdge =
+                    liftA2 (>=) (rect ^. Rect.topLeft) sz
+        rect =
+            case dir of
+            Direction.Outside -> Rect 0 0
+            Direction.Point x -> Rect x 0
+            Direction.PrevFocalArea x -> x
+        distance r =
+            case dir of
+            Direction.PrevFocalArea x -> Rect.distance x r * (1 - abs edge)
+            _ -> Rect.distance rect r
+        score enter
+            | dist > 0 = dist
+            | otherwise = enter ^. enterResultLayer & negate & fromIntegral
+            where
+                dist = enter ^. enterResultRect & distance & abs & Vector2.uncurry (+)
+
 isFocused :: Widget a -> Bool
 isFocused = Lens.has (wState . _StateFocused)
-
-empty :: Widget f
-empty = fromView View.empty
 
 eventMapMaker :: Lens.Traversal' (Widget a) (VirtualCursor -> EventMap a)
 eventMapMaker = wState . _StateFocused . fEventMap
@@ -206,7 +310,6 @@ events :: HasWidget w => Lens.Setter (w a) (w b) a b
 events =
     widget . wState . atEvents
     where
-        atEvents :: Lens.Settable f => (a -> f b) -> State a -> f (State b)
         atEvents f (StateUnfocused x) = (uMEnter . atMEnter) f x <&> StateUnfocused
         atEvents f (StateFocused x) = Lens.sets atFocus f x <&> StateFocused
         atMEnter f = (Lens._Just . Lens.mapped . enterResultEvent) f

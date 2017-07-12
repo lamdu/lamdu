@@ -1,12 +1,10 @@
-{-# LANGUAGE NoImplicitPrelude, RecordWildCards, OverloadedStrings, RankNTypes, TypeFamilies, LambdaCase, DeriveFunctor, DeriveFoldable, DeriveTraversable #-}
+{-# LANGUAGE NoImplicitPrelude, RecordWildCards, OverloadedStrings, RankNTypes, TypeFamilies, LambdaCase, DeriveFunctor, DeriveFoldable, DeriveTraversable , FlexibleContexts #-}
 module Lamdu.GUI.ExpressionGui
     ( ExpressionGui
     , render
     -- General:
     , combine, combineSpaced, combineSpacedMParens
-    , (||>), (<||)
     , horizVertFallback
-    , tagItem
     , listWithDelDests
     , grammarLabel
     , addValFrame, addValPadding
@@ -50,11 +48,11 @@ import qualified Graphics.DrawingCombinators as Draw
 import           Graphics.UI.Bottle.Animation (AnimId)
 import qualified Graphics.UI.Bottle.EventMap as E
 import           Graphics.UI.Bottle.MetaKey (MetaKey(..), noMods)
-import           Graphics.UI.Bottle.View (View)
+import           Graphics.UI.Bottle.View (View, (/|/), (/-/))
 import qualified Graphics.UI.Bottle.View as View
 import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
-import           Graphics.UI.Bottle.Aligned (Aligned(..))
+import           Graphics.UI.Bottle.Aligned (Aligned(..), AlignTo(..))
 import qualified Graphics.UI.Bottle.Aligned as Aligned
 import           Graphics.UI.Bottle.Widget.TreeLayout (TreeLayout(..))
 import qualified Graphics.UI.Bottle.Widget.TreeLayout as TreeLayout
@@ -102,11 +100,8 @@ maybeIndent (Just piInfo) =
         f mkLayout lp =
             case lp ^. TreeLayout.layoutContext of
             TreeLayout.LayoutVertical ->
-                Aligned.boxWithViews Aligned.Horizontal
-                [ (0, indentBar)
-                , (0, Spacer.make (Vector2 gapWidth 0))
-                ] [] content
-                & Aligned.alignment .~ 0
+                indentBar /|/ Spacer.make (Vector2 gapWidth 0) /|/ (content ^. Aligned.value)
+                & Aligned 0
                 where
                     indentBar =
                         Spacer.make (Vector2 barWidth (content ^. View.height))
@@ -121,36 +116,6 @@ maybeIndent (Just piInfo) =
                         & mkLayout
                     bgAnimId = piAnimId piInfo ++ ["("]
             _ -> mkLayout lp
-
-hCombine ::
-    (Aligned.Orientation -> [Aligned (Widget a)] -> Aligned (Widget a) ->
-     Aligned (Widget a)) ->
-    Aligned (Widget a) -> TreeLayout a -> TreeLayout a
-hCombine f layout gui =
-    TreeLayout.render #
-    \layoutParams ->
-    TreeLayout.LayoutParams
-    { _layoutMode =
-        layoutParams ^. TreeLayout.layoutMode
-        & TreeLayout.modeWidths -~ layout ^. View.width
-    , _layoutContext = TreeLayout.LayoutHorizontal
-    }
-    & gui ^. TreeLayout.render
-    & f Aligned.Horizontal [layout]
-
-(||>) ::
-    Functor f =>
-    Aligned (Widget (f Widget.EventResult)) ->
-    TreeLayout (f Widget.EventResult) ->
-    TreeLayout (f Widget.EventResult)
-(||>) = hCombine Aligned.addBefore
-
-(<||) ::
-    Functor f =>
-    TreeLayout (f Widget.EventResult) ->
-    Aligned (Widget (f Widget.EventResult)) ->
-    TreeLayout (f Widget.EventResult)
-(<||) = flip (hCombine Aligned.addAfter)
 
 data ParenIndentInfo = ParenIndentInfo
     { piAnimId :: AnimId
@@ -192,10 +157,9 @@ horizVertFallbackH mParenInfo horiz vert =
     TreeLayout.LayoutWide ->
         case (mParenInfo, layoutParams ^. TreeLayout.layoutContext) of
         (Just parenInfo, TreeLayout.LayoutHorizontal) ->
-            Aligned.boxWithViews Aligned.Horizontal
-            [(0, parenLabel parenInfo "(")]
-            [(0, parenLabel parenInfo ")")]
-            wide
+            AlignTo 0 (parenLabel parenInfo "(")
+            /|/ wide /|/
+            AlignTo 0 (parenLabel parenInfo ")")
         _ -> wide
     TreeLayout.LayoutNarrow limit
         | wide ^. View.width > limit ->
@@ -220,7 +184,7 @@ combineWith mParenInfo onHGuis onVGuis guis =
                 , _layoutContext = TreeLayout.LayoutHorizontal
                 }
             & onHGuis
-            & Aligned.hbox 0
+            & View.hbox
             & TreeLayout.fromAlignedWidget
 
 combine ::
@@ -252,21 +216,10 @@ combineSpacedMParens ::
        TreeLayout (f Widget.EventResult))
 combineSpacedMParens mParensId =
     do
-        hSpace <- Spacer.stdHSpaceView <&> Aligned.fromView 0
+        hSpace <- Spacer.stdHSpaceView <&> Widget.fromView <&> Aligned 0
         vSpace <- Spacer.stdVSpaceView <&> TreeLayout.fromView
         mParenInfo <- mParensId & Lens._Just %%~ makeParenIndentInfo
         return $ combineWith mParenInfo (List.intersperse hSpace) (List.intersperse vSpace)
-
-tagItem ::
-    (MonadReader env m, Spacer.HasStdSpacing env, Functor f) =>
-    m (Aligned (Widget (f Widget.EventResult)) ->
-        TreeLayout (f Widget.EventResult) ->
-        TreeLayout (f Widget.EventResult))
-tagItem =
-    Spacer.stdHSpaceView <&> Aligned.fromView 0 <&> f
-    where
-        f space tag item =
-            tag ||> (space ||> (item & TreeLayout.alignment . _1 .~ 0))
 
 addAnnotationBackgroundH ::
     View.SetLayers a =>
@@ -428,14 +381,9 @@ addAnnotationH f wideBehavior entityId =
         annotationLayout <- f animId
         processAnn <- processAnnotationGui animId wideBehavior
         let onAlignedWidget w =
-                Aligned.boxWithViews Aligned.Vertical
-                []
-                [ (0, vspace)
-                , ( w ^. Aligned.alignment . _1
-                  , processAnn (w ^. View.width) annotationLayout
-                  )
-                ]
-                w
+                w /-/ AlignTo 0 vspace /-/
+                AlignTo (w ^. Aligned.alignment . _1)
+                (processAnn (w ^. View.width) annotationLayout)
         return $ TreeLayout.alignedWidget %~ onAlignedWidget
     where
         animId = WidgetIds.fromEntityId entityId & Widget.toAnimId
@@ -517,10 +465,7 @@ makeNameEdit onActiveEditor (Name nameSrc nameCollision setName name) myId =
         makeNameWordEdit
             ?? Property storedName setName
             ?? WidgetIds.nameEditOf myId
-            <&> Aligned 0
-            <&> Aligned.boxWithViews Aligned.Horizontal []
-                (mCollisionSuffix ^.. Lens._Just <&> (,) 0)
-            <&> (^. Aligned.value)
+            <&> maybe id (flip (/|/)) mCollisionSuffix
     & Reader.local (View.animIdPrefix .~ Widget.toAnimId myId)
     <&> onActiveEditor
     where

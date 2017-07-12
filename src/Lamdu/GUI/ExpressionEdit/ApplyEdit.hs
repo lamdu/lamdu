@@ -8,14 +8,16 @@ import           Data.Store.Transaction (Transaction)
 import qualified Data.Text as Text
 import           Data.Vector.Vector2 (Vector2(..))
 import qualified Graphics.DrawingCombinators as Draw
+import           Graphics.UI.Bottle.Aligned (AlignTo(..))
 import           Graphics.UI.Bottle.Animation (AnimId)
 import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.EventMap as E
+import           Graphics.UI.Bottle.View ((/|/))
 import qualified Graphics.UI.Bottle.View as View
-import qualified Graphics.UI.Bottle.Aligned as Aligned
 import qualified Graphics.UI.Bottle.Widget as Widget
 import           Graphics.UI.Bottle.Widget.TreeLayout (TreeLayout)
 import qualified Graphics.UI.Bottle.Widget.TreeLayout as TreeLayout
+import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
 import qualified Lamdu.CharClassification as CharClassification
 import qualified Lamdu.GUI.ExpressionEdit.BinderEdit as BinderEdit
 import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
@@ -165,14 +167,16 @@ makeLabeled apply pl =
         prec = mkPrecedence apply
         myId = WidgetIds.fromExprPayload pl
 
-makeArgRows ::
+makeArgRow ::
     Monad m =>
     Sugar.AnnotatedArg (Name m) (ExprGuiT.SugarExpr m) ->
     ExprGuiM m (ExpressionGui m)
-makeArgRows arg =
-    ExpressionGui.tagItem
-    <*> (TagEdit.makeParamTag (arg ^. Sugar.aaTag) <&> Aligned.fromView 0)
-    <*> ExprGuiM.makeSubexpression (arg ^. Sugar.aaExpr)
+makeArgRow arg =
+    do
+        paramTag <- TagEdit.makeParamTag (arg ^. Sugar.aaTag)
+        space <- Spacer.stdHSpaceView
+        expr <- ExprGuiM.makeSubexpression (arg ^. Sugar.aaExpr)
+        AlignTo 0 (paramTag /|/ space) /|/ expr & return
 
 mkRelayedArgs :: Monad m => NearestHoles -> [Sugar.RelayedArg (Name m) m] -> ExprGuiM m (ExpressionGui m)
 mkRelayedArgs nearestHoles args =
@@ -201,7 +205,7 @@ mkBoxed ::
     ExprGuiM m (ExpressionGui m)
 mkBoxed apply nearestHoles mkFuncRow =
     do
-        argRows <- apply ^. Sugar.aAnnotatedArgs & traverse makeArgRows
+        argRows <- apply ^. Sugar.aAnnotatedArgs & traverse makeArgRow
         funcRow <- ExprGuiM.withLocalPrecedence 0 (const (Prec.make 0)) mkFuncRow
         relayedArgs <-
             case apply ^. Sugar.aRelayedArgs of

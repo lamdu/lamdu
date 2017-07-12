@@ -8,13 +8,13 @@ import qualified Control.Monad.Reader as Reader
 import           Data.Store.Transaction (Transaction)
 import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
-import qualified Graphics.UI.Bottle.Aligned as Aligned
 import qualified Graphics.UI.Bottle.Widget.TreeLayout as TreeLayout
 import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
+import           Graphics.UI.Bottle.View ((/|/))
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.GUI.ExpressionEdit.BinderEdit as BinderEdit
-import           Lamdu.GUI.ExpressionGui (ExpressionGui, before, after, (<||))
+import           Lamdu.GUI.ExpressionGui (ExpressionGui, before, after)
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
@@ -85,12 +85,12 @@ mkNomGui ordering nomStr str mDel valId pl (Sugar.Nominal tid val) =
                 (E.Doc ["Edit", "Nominal", "Delete " <> nomStr])
         let eventMap = mDel ^. Lens._Just . Lens.to mkEventMap
         ExpressionGui.combineSpacedMParens mParenInfo <*>
-            ( ordering [ (Widget.makeFocusableView ?? nameId) <*>
+            ( ordering
+                [ (Widget.makeFocusableView ?? nameId) <*>
                 do
-                    label <- ExpressionGui.grammarLabel str <&> TreeLayout.fromView
-                    nameGui <- ExpressionGui.makeNameView (tid ^. Sugar.tidgName) (Widget.toAnimId nameId) <&> Aligned.fromView 0
-                    label <|| nameGui & TreeLayout.alignment .~ 0
-                        & return
+                    label <- ExpressionGui.grammarLabel str
+                    nameGui <- ExpressionGui.makeNameView (tid ^. Sugar.tidgName) (Widget.toAnimId nameId)
+                    label /|/ nameGui & TreeLayout.fromView & return
                 & Reader.local (TextView.color .~ nomColor)
                 <&> E.weakerEvents eventMap
               , val

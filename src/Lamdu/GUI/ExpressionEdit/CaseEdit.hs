@@ -8,11 +8,10 @@ import           Data.Vector.Vector2 (Vector2(..))
 import           Graphics.UI.Bottle.Animation (AnimId)
 import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.EventMap as E
-import           Graphics.UI.Bottle.View (View(..))
+import           Graphics.UI.Bottle.View (View, (/-/), (/|/))
 import qualified Graphics.UI.Bottle.View as View
 import qualified Graphics.UI.Bottle.Widget as Widget
-import           Graphics.UI.Bottle.Aligned (Aligned(..))
-import qualified Graphics.UI.Bottle.Aligned as Aligned
+import           Graphics.UI.Bottle.Aligned (AlignTo(..))
 import qualified Graphics.UI.Bottle.Widget.TreeLayout as TreeLayout
 import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
 import           Lamdu.Calc.Type (Tag)
@@ -112,15 +111,17 @@ makeAltRow mActiveTag (Sugar.CaseAlt delete tag altExpr) =
     do
         config <- Lens.view Config.config
         addBg <- ExpressionGui.addValBGWithColor Theme.evaluatedPathBGColor
-        altRefGui <-
+        tagLabel <-
             TagEdit.makeCaseTag (ExprGuiT.nextHolesBefore altExpr) tag
             <&> if mActiveTag == Just (tag ^. Sugar.tagVal)
                 then addBg
                 else id
+        hspace <- Spacer.stdHSpaceView
         altExprGui <- ExprGuiM.makeSubexpression altExpr
         let itemEventMap = caseDelEventMap config delete
-        ExpressionGui.tagItem ?? Aligned 0 altRefGui ?? altExprGui
-            <&> E.weakerEvents itemEventMap
+        AlignTo 0 (tagLabel /|/ hspace) /|/ altExprGui
+            & E.weakerEvents itemEventMap
+            & return
 
 makeAltsWidget ::
     Monad m =>
@@ -158,12 +159,10 @@ makeOpenCase rest animId altsGui =
                 targetWidth = alts ^. View.width
             in
             alts
-            & Aligned.addAfter Aligned.Vertical
-            [ separationBar theme (max minWidth targetWidth) animId
-                & Aligned.fromView 0
-            , Aligned.fromView 0 vspace
-            , restLayout
-            ]
+            /-/
+            AlignTo 0 (separationBar theme (max minWidth targetWidth) animId /-/ vspace)
+            /-/
+            restLayout
 
 caseOpenEventMap ::
     Monad m =>

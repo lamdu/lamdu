@@ -8,10 +8,10 @@ import           Data.Vector.Vector2 (Vector2(..))
 import           Graphics.UI.Bottle.Animation (AnimId)
 import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.EventMap as E
-import           Graphics.UI.Bottle.View (View(..))
+import           Graphics.UI.Bottle.View (View, (/-/), (/|/))
 import qualified Graphics.UI.Bottle.View as View
 import qualified Graphics.UI.Bottle.Widget as Widget
-import           Graphics.UI.Bottle.Aligned (Aligned(..))
+import           Graphics.UI.Bottle.Aligned (AlignTo(..))
 import qualified Graphics.UI.Bottle.Aligned as Aligned
 import qualified Graphics.UI.Bottle.Widget.TreeLayout as TreeLayout
 import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
@@ -83,12 +83,13 @@ makeFieldRow ::
 makeFieldRow (Sugar.RecordField delete tag fieldExpr) =
     do
         config <- Lens.view Config.config
-        fieldRefGui <-
-            TagEdit.makeRecordTag (ExprGuiT.nextHolesBefore fieldExpr) tag
-        fieldExprGui <- ExprGuiM.makeSubexpression fieldExpr
+        tagLabel <- TagEdit.makeRecordTag (ExprGuiT.nextHolesBefore fieldExpr) tag
+        hspace <- Spacer.stdHSpaceView
+        fieldGui <- ExprGuiM.makeSubexpression fieldExpr
         let itemEventMap = recordDelEventMap config delete
-        ExpressionGui.tagItem ?? Aligned 0 fieldRefGui ?? fieldExprGui
-            <&> E.weakerEvents itemEventMap
+        AlignTo 0 (tagLabel /|/ hspace) /|/ fieldGui
+            & E.weakerEvents itemEventMap
+            & return
 
 makeFieldsWidget ::
     Monad m =>
@@ -124,13 +125,11 @@ makeOpenRecord fieldsGui rest animId =
                 minWidth = restW ^. View.width
                 targetWidth = fields ^. View.width
             in
-            fields
-            & Aligned.alignment .~ 0
-            & Aligned.addAfter Aligned.Vertical
-            [ separationBar theme (max minWidth targetWidth) animId & Aligned.fromView 0
-            , Aligned.fromView 0 vspace
-            , restW
-            ]
+            (fields & Aligned.alignment .~ 0)
+            /-/
+            AlignTo 0 (separationBar theme (max minWidth targetWidth) animId /-/ vspace)
+            /-/
+            restW
 
 recordOpenEventMap ::
     Monad m =>

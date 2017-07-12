@@ -17,7 +17,6 @@ import qualified Graphics.UI.Bottle.View as View
 import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widget.TreeLayout as TreeLayout
-import qualified Graphics.UI.Bottle.Widgets.Box as Box
 import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
 import qualified Graphics.UI.GLFW as GLFW
 import           Lamdu.Calc.Type.Scheme (Scheme(..), schemeType)
@@ -74,9 +73,9 @@ makeBuiltinDefinition def builtin =
             , BuiltinEdit.make builtin myId
             ]
             & sequenceA
-            <&> Box.hboxAlign 0
+            <&> View.hbox
         typeView <- topLevelSchemeTypeView (builtin ^. Sugar.biType) entityId ["builtinType"]
-        Box.vboxAlign 0 [assignment, Widget.fromView typeView] & return
+        View.vbox [assignment, Widget.fromView typeView] & return
     where
         name = def ^. Sugar.drName
         entityId = def ^. Sugar.drEntityId

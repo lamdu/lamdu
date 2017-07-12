@@ -1,10 +1,11 @@
-{-# LANGUAGE NoImplicitPrelude, FlexibleContexts, RecordWildCards, RankNTypes, OverloadedStrings, TemplateHaskell, TypeSynonymInstances, FlexibleInstances #-}
+{-# LANGUAGE NoImplicitPrelude, FlexibleContexts, RecordWildCards, RankNTypes, OverloadedStrings, TemplateHaskell, TypeSynonymInstances, FlexibleInstances, TypeFamilies, MultiParamTypeClasses, ConstraintKinds #-}
 module Graphics.UI.Bottle.View
     ( View(..), vAnimLayers, make
-    , empty
     , Layers(..), layers, translateLayers, addLayersAbove
       , topLayer, bottomLayer
     , HasSize(..), SetLayers(..), Resizable(..)
+    , Glue(..), GluesTo, (/|/), (/-/), Orientation(..), glueH
+    , box, hbox, vbox
     , render
     , animFrames, bottomFrame
     , width, height
@@ -68,6 +69,18 @@ class SetLayers a => Resizable a where
     pad p = assymetricPad p p
     assymetricPad :: Vector2 R -> Vector2 R -> a -> a
     scale :: Vector2 R -> a -> a
+    empty :: a
+
+class HasSize a where size :: Lens' a Size
+
+data Orientation = Horizontal | Vertical
+    deriving (Eq, Show, Ord)
+
+type GluesTo a b c = (Glue a b, Glued a b ~ c)
+
+class Glue a b where
+    type Glued a b
+    glue :: Orientation -> a -> b -> Glued a b
 
 instance SetLayers View where setLayers f (View sz ls) = Lens.indexed f sz ls <&> View sz
 
@@ -80,9 +93,43 @@ instance Resizable View where
         x
         & size *~ ratio
         & animFrames %~ Anim.scale ratio
+    empty = make 0 mempty
 
-class HasSize a where size :: Lens' a Size
 instance HasSize View where size = vSize
+
+instance Glue View View where
+    type Glued View View = View
+    glue = glueH $ \sz v0 v1 -> View sz (v0 ^. vAnimLayers <> v1 ^. vAnimLayers)
+
+-- Horizontal glue
+(/|/) :: Glue a b => a -> b -> Glued a b
+(/|/) = glue Horizontal
+
+-- Vertical glue
+(/-/) :: Glue a b => a -> b -> Glued a b
+(/-/) = glue Vertical
+
+glueH ::
+    (HasSize a, HasSize b, Resizable b) =>
+    (Size -> a -> b -> Glued a b) -> Orientation -> a -> b -> Glued a b
+glueH f orientation v0 v1 =
+    f sz v0 (assymetricPad t 0 v1)
+    where
+        Vector2 w0 h0 = v0 ^. size
+        Vector2 w1 h1 = v1 ^. size
+        (sz, t) =
+            case orientation of
+            Horizontal -> (Vector2 (w0 + w1) (max h0 h1), Vector2 w0 0)
+            Vertical -> (Vector2 (max w0 w1) (h0 + h1), Vector2 0 h0)
+
+box :: (Resizable a, GluesTo a a a) => Orientation -> [a] -> a
+box orientation = foldl (glue orientation) empty
+
+hbox :: (Resizable a, GluesTo a a a) => [a] -> a
+hbox = box Horizontal
+
+vbox :: (Resizable a, GluesTo a a a) => [a] -> a
+vbox = box Vertical
 
 make :: Size -> Anim.Frame -> View
 make sz frame = View sz (Layers [frame])
@@ -92,9 +139,6 @@ render x = x ^. layers . Lens.reversed . traverse
 
 animFrames :: Lens.Traversal' View Anim.Frame
 animFrames = vAnimLayers . layers . traverse
-
-empty :: View
-empty = make 0 mempty
 
 width :: HasSize a => Lens' a R
 width = size . _1

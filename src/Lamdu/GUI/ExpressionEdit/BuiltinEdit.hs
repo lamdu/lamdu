@@ -11,9 +11,9 @@ import qualified Data.Text as Text
 import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.Bottle.EventMap as E
 import           Graphics.UI.Bottle.MetaKey (MetaKey(..), noMods)
+import qualified Graphics.UI.Bottle.View as View
 import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
-import qualified Graphics.UI.Bottle.Widgets.Box as Box
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 import qualified Graphics.UI.Bottle.Widgets.TextEdit as TextEdit
 import qualified Graphics.UI.Bottle.Widgets.TextEdit.Property as TextEdits
@@ -70,9 +70,7 @@ make def myId =
             makeNamePartEditor (Theme.foreignVarColor theme) name nameSetter
             (builtinFFIName myId)
         dot <- TextView.makeLabel "." <&> Widget.fromView
-        [moduleName, dot, varName]
-            & Box.hboxAlign 0
-            & return
+        View.hbox [moduleName, dot, varName] & return
     & Widget.assignCursor myId (builtinFFIName myId)
     where
         Sugar.DefinitionBuiltin

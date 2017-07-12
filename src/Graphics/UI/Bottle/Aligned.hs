@@ -1,36 +1,34 @@
-{-# LANGUAGE NoImplicitPrelude, TypeFamilies, TemplateHaskell, RankNTypes, FlexibleContexts, DeriveFunctor, DeriveFoldable, DeriveTraversable, FlexibleInstances #-}
+{-# LANGUAGE NoImplicitPrelude, TypeFamilies, TemplateHaskell, RankNTypes, FlexibleContexts, DeriveFunctor, DeriveFoldable, DeriveTraversable, FlexibleInstances, MultiParamTypeClasses #-}
 module Graphics.UI.Bottle.Aligned
     ( Aligned(..), alignment, value
-    , fromView
+    , AlignTo(..), alignTo, alignedTo
     , hoverInPlaceOf
     , Orientation(..)
-    , addBefore, addAfter
-    , box, hbox, vbox
-    , boxWithViews
     ) where
 
 import qualified Control.Lens as Lens
+import           Control.Lens (Lens')
 import           Data.Vector.Vector2 (Vector2(..))
 import           Graphics.UI.Bottle.Alignment (Alignment(..))
 import qualified Graphics.UI.Bottle.Alignment as Alignment
-import qualified Graphics.UI.Bottle.Rect as Rect
-import           Graphics.UI.Bottle.View (View)
+import           Graphics.UI.Bottle.View (Orientation)
 import qualified Graphics.UI.Bottle.View as View
-import           Graphics.UI.Bottle.Widget (Widget)
+import           Graphics.UI.Bottle.Widget (Widget, R)
 import qualified Graphics.UI.Bottle.Widget as Widget
-import qualified Graphics.UI.Bottle.Widgets.Box as Box
-import           Graphics.UI.Bottle.Widgets.Box (Orientation(..))
 
 import           Lamdu.Prelude
 
 data Aligned a = Aligned
     { _alignment :: Alignment
     , _value :: a
-    } deriving Functor
+    } deriving (Functor, Foldable, Traversable)
 Lens.makeLenses ''Aligned
 
-instance View.SetLayers a => View.SetLayers (Aligned a) where setLayers = value . View.setLayers
+instance View.SetLayers a => View.SetLayers (Aligned a) where
+    setLayers = value . View.setLayers
+
 instance (View.HasSize a, View.Resizable a) => View.Resizable (Aligned a) where
+    empty = Aligned 0 View.empty
     pad padding (Aligned (Alignment align) w) =
         Aligned
         { _alignment =
@@ -45,9 +43,61 @@ instance (View.HasSize a, View.Resizable a) => View.Resizable (Aligned a) where
 
 instance View.HasSize a => View.HasSize (Aligned a) where size = value . View.size
 
--- TODO: Remove
-fromView :: Alignment -> View -> Aligned (Widget a)
-fromView x = Aligned x . Widget.fromView
+data AlignTo a = AlignTo
+    { _alignTo :: R
+    , _alignedTo :: a
+    } deriving (Functor, Foldable, Traversable)
+Lens.makeLenses ''AlignTo
+
+instance View.HasSize a => View.HasSize (AlignTo a) where size = alignedTo . View.size
+
+toAbsPair :: View.HasSize a => AlignTo a -> (Vector2 R, a)
+toAbsPair (AlignTo xRatio xw) = (pure xRatio * xw ^. View.size, xw)
+
+-- Takes the alignment point of the first item.
+instance ( View.HasSize (View.Glued a b)
+         , View.HasSize a, View.Resizable a
+         , View.HasSize b, View.Resizable b
+         , View.Glue a b ) => View.Glue (Aligned a) (Aligned b) where
+    type Glued (Aligned a) (Aligned b) = Aligned (View.Glued a b)
+    glue o a b = glueHelper fst o (a ^. absAligned) (b ^. absAligned)
+
+instance ( View.HasSize (View.Glued a b)
+         , View.HasSize a, View.Resizable a
+         , View.HasSize b, View.Resizable b
+         , View.Glue a b ) => View.Glue (Aligned a) (AlignTo b) where
+    type Glued (Aligned a) (AlignTo b) = Aligned (View.Glued a b)
+    glue o a b = glueHelper fst o (a ^. absAligned) (toAbsPair b)
+
+instance ( View.HasSize (View.Glued a b)
+         , View.HasSize a, View.Resizable a
+         , View.HasSize b, View.Resizable b
+         , View.Glue a b ) =>
+         View.Glue (AlignTo a) (Aligned b) where
+    type Glued (AlignTo a) (Aligned b) = Aligned (View.Glued a b)
+    glue o a b = glueHelper snd o (toAbsPair a) (b ^. absAligned)
+
+glueHelper ::
+    ( View.Glue a b, View.Resizable a, View.Resizable b
+    , View.HasSize (View.Glued a b), View.HasSize a
+    ) =>
+    ((Vector2 R, Vector2 R) -> Vector2 R) -> Orientation ->
+    (Vector2 R, a) -> (Vector2 R, b) -> Aligned (View.Glued a b)
+glueHelper chooseAlign orientation (aAbsAlign, aw) (bAbsAlign, bw) =
+    ( chooseAlign
+        ( aAbsAlign + max 0 aToB
+        , bAbsAlign + max 0 bToA + bGlueTranslation
+        )
+    , View.glue orientation (syncAlign aToB aw) (syncAlign bToA bw)
+    ) ^. Lens.from absAligned
+    where
+        l :: Lens' (Vector2 a) a
+        l = axis orientation
+        -- Duplicates the logic from underlying glue:
+        bGlueTranslation = 0 & l .~ aw ^. View.size . l
+        aToB = (bAbsAlign & l .~ 0) - (aAbsAlign & l .~ 0)
+        bToA = -aToB
+        syncAlign move = View.assymetricPad (max 0 move) 0
 
 -- Resize a layout to be the same alignment/size as another layout
 hoverInPlaceOf ::
@@ -76,7 +126,7 @@ asTuple =
         toTup w = (w ^. alignment, w ^. value)
         fromTup (a, w) = Aligned a w
 
-type AbsAligned a = (Vector2 Widget.R, a)
+type AbsAligned a = (Vector2 R, a)
 
 {-# INLINE absAligned #-}
 absAligned ::
@@ -90,98 +140,6 @@ absAligned =
             | size == 0 = 0
             | otherwise = align / size
 
-axis :: Orientation -> Lens' Alignment Widget.R
-axis Horizontal = _1
-axis Vertical = _2
-
-data BoxComponents a = BoxComponents
-    { __before :: [a]
-    , _focalWidget :: a
-    , __after :: [a]
-    } deriving (Functor, Foldable, Traversable)
-Lens.makeLenses ''BoxComponents
-
-boxComponentsToWidget ::
-    Functor f => Orientation ->
-    BoxComponents (Aligned (Widget (f Widget.EventResult))) ->
-    Aligned (Widget (f Widget.EventResult))
-boxComponentsToWidget orientation boxComponents =
-    Aligned
-    { _alignment = boxAlign ^. focalWidget
-    , _value = boxWidget
-    }
-    where
-        (boxAlign, boxWidget) =
-            boxComponents <&> (^. asTuple)
-            & Box.make orientation
-
-addBefore ::
-    Functor f => Orientation ->
-    [Aligned (Widget (f Widget.EventResult))] ->
-    Aligned (Widget (f Widget.EventResult)) ->
-    Aligned (Widget (f Widget.EventResult))
-addBefore orientation befores layout =
-    BoxComponents befores layout []
-    & boxComponentsToWidget orientation
-addAfter ::
-    Functor f => Orientation ->
-    [Aligned (Widget (f Widget.EventResult))] ->
-    Aligned (Widget (f Widget.EventResult)) ->
-    Aligned (Widget (f Widget.EventResult))
-addAfter orientation afters layout =
-    BoxComponents [] layout afters
-    & boxComponentsToWidget orientation
-
--- The axisAlignment is the alignment point to choose within the resulting box
--- i.e: Horizontal box -> choose eventual horizontal alignment point
-box ::
-    Functor f => Orientation -> Widget.R ->
-    [Aligned (Widget (f Widget.EventResult))] ->
-    Aligned (Widget (f Widget.EventResult))
-box orientation axisAlignment layouts =
-    componentsFromList layouts
-    & boxComponentsToWidget orientation
-    & alignment . axis orientation .~ axisAlignment
-    where
-        componentsFromList [] = BoxComponents [] (Aligned 0 Widget.empty) []
-        componentsFromList (w:ws) = BoxComponents [] w ws
-
-hbox ::
-    Functor f => Widget.R ->
-    [Aligned (Widget (f Widget.EventResult))] ->
-    Aligned (Widget (f Widget.EventResult))
-hbox = box Horizontal
-
-vbox ::
-    Functor f => Widget.R ->
-    [Aligned (Widget (f Widget.EventResult))] ->
-    Aligned (Widget (f Widget.EventResult))
-vbox = box Vertical
-
-boxWithViews ::
-    Functor f =>
-    Orientation -> [(Widget.R, View)] -> [(Widget.R, View)] ->
-    Aligned (Widget (f Widget.EventResult)) ->
-    Aligned (Widget (f Widget.EventResult))
-boxWithViews orientation befores afters w =
-    Aligned
-    { _alignment = resultAlignment
-    , _value =
-        w ^. value
-        & Widget.translate (wRect ^. Rect.topLeft)
-        & View.size .~ size
-        & View.setLayers <>~ layers beforesPlacements <> layers aftersPlacements
-    }
-    where
-        toTriplet (align, view) = (align, view ^. View.size, view)
-        toAlignment x = Alignment (Vector2 x x)
-        (size, BoxComponents beforesPlacements (resultAlignment, wRect, _v) aftersPlacements) =
-            BoxComponents
-                (befores <&> _1 %~ toAlignment)
-                (w ^. alignment, w ^. value . Widget.wView)
-                (afters <&> _1 %~ toAlignment)
-            <&> toTriplet
-            & Box.makePlacements orientation
-        layers placements = placements <&> translateView & mconcat
-        translateView (_alignment, rect, view) =
-            View.translateLayers (rect ^. Rect.topLeft) (view ^. View.vAnimLayers)
+axis :: Orientation -> Lens' (Vector2 a) a
+axis View.Horizontal = _1
+axis View.Vertical = _2

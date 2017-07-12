@@ -15,10 +15,10 @@ import           Data.Store.Transaction (Transaction)
 import           Data.Vector.Vector2 (Vector2(..))
 import qualified Graphics.UI.Bottle.EventMap as EventMap
 import qualified Graphics.UI.Bottle.Main as MainLoop
+import           Graphics.UI.Bottle.View ((/-/))
 import qualified Graphics.UI.Bottle.View as View
 import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
-import qualified Graphics.UI.Bottle.Widgets.Box as Box
 import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
 import qualified Graphics.UI.Bottle.Widgets.TextEdit as TextEdit
 import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
@@ -87,11 +87,11 @@ make env =
                         <&> Widget.events . CodeEdit.m %~ fmap (VersionControl.runEvent (mainEnv ^. Widget.cursor))
                     topPadding <- Theme.topPadding theme & Spacer.vspaceLines
                     let scrollBox =
-                            Box.vboxAlign 0.5 [Widget.fromView topPadding, codeEdit]
+                            topPadding /-/ codeEdit
                             & Widget.padToSizeAlign codeSize 0
                             & Scroll.focusAreaIntoWindow fullSize
                             & View.size .~ codeSize
-                    Box.vboxAlign 0.5 [scrollBox, branchSelector]
+                    scrollBox /-/ branchSelector
                         & return
             let quitEventMap =
                     Widget.keysEventMap (Config.quitKeys config) (EventMap.Doc ["Quit"]) (error "Quit")

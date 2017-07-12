@@ -16,18 +16,18 @@ import qualified Data.Map as Map
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Text as Text
 import qualified Graphics.DrawingCombinators as Draw
+import           Graphics.UI.Bottle.Aligned (AlignTo(..))
 import qualified Graphics.UI.Bottle.EventMap as E
 import           Graphics.UI.Bottle.MetaKey (MetaKey(..), noMods, toModKey)
+import           Graphics.UI.Bottle.View ((/-/), (/|/))
 import qualified Graphics.UI.Bottle.View as View
 import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
-import           Graphics.UI.Bottle.Aligned (Aligned(..))
-import qualified Graphics.UI.Bottle.Aligned as Aligned
 import qualified Graphics.UI.Bottle.Widget.TreeLayout as TreeLayout
-import qualified Graphics.UI.Bottle.Widgets.Box as Box
 import qualified Graphics.UI.Bottle.Widgets.Choice as Choice
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 import qualified Graphics.UI.Bottle.Widgets.GridView as GridView
+import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
 import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
 import qualified Graphics.UI.GLFW as GLFW
 import           Lamdu.CharClassification (operatorChars)
@@ -85,7 +85,7 @@ presentationModeChoiceConfig = Choice.Config
         , FocusDelegator.focusParentKeys = [MetaKey noMods GLFW.Key'Enter]
         , FocusDelegator.focusParentDoc = E.Doc ["Presentation Mode", "Choose selected"]
         }
-    , Choice.cwcOrientation = Box.Vertical
+    , Choice.cwcOrientation = View.Vertical
     , Choice.cwcExpandMode = Choice.ExplicitEntry
     }
 
@@ -333,17 +333,16 @@ make name color binder myId =
         Parts mParamsEdit mScopeEdit bodyEdit eventMap <-
             makeParts ExprGuiT.UnlimitedFuncApply binder myId myId
         rhsJumperEquals <- jumpToRHS (body ^. SugarLens.binderContentEntityId)
-        presentationEdits <-
-            binder ^.. Sugar.bMPresentationModeProp . Lens._Just
-            & traverse (mkPresentationModeEdit presentationChoiceId)
+        mPresentationEdit <-
+            binder ^. Sugar.bMPresentationModeProp
+            & Lens._Just (mkPresentationModeEdit presentationChoiceId)
         jumpHolesEventMap <-
             ExprEventMap.jumpHolesEventMap (binderContentNearestHoles body)
         defNameEdit <-
             makeBinderNameEdit (binder ^. Sugar.bActions) rhsJumperEquals
             name color myId
             <&> TreeLayout.alignedWidget %~
-                Aligned.addAfter Aligned.Vertical
-                (presentationEdits <&> Aligned 0)
+                maybe id (\x -> (/-/ AlignTo 0 x)) mPresentationEdit
             <&> E.weakerEvents jumpHolesEventMap
         mLhsEdit <-
             case mParamsEdit of
@@ -396,12 +395,13 @@ makeLetEdit item =
                 | usage <- take 1 (item ^. Sugar.lUsages)
                 ]
         let eventMap = mappend actionsEventMap usageEventMap
-        ExpressionGui.tagItem
-            <*> (ExpressionGui.grammarLabel "let" <&> Aligned.fromView 0)
-            <*> (make (item ^. Sugar.lName) letColor binder myId
-                <&> E.weakerEvents eventMap
-                <&> View.pad (Theme.letItemPadding theme <&> realToFrac)
-                )
+        letLabel <- ExpressionGui.grammarLabel "let"
+        space <- Spacer.stdHSpaceView
+        letEquation <-
+            make (item ^. Sugar.lName) letColor binder myId
+            <&> E.weakerEvents eventMap
+            <&> View.pad (Theme.letItemPadding theme <&> realToFrac)
+        AlignTo 0 (letLabel /|/ space) /|/ letEquation & return
     & Reader.local (View.animIdPrefix .~ Widget.toAnimId myId)
     where
         bodyId =

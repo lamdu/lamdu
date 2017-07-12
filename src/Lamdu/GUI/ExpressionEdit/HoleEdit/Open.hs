@@ -21,7 +21,7 @@ import           Data.Vector.Vector2 (Vector2(..))
 import           Graphics.UI.Bottle.Animation (AnimId)
 import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.EventMap as E
-import           Graphics.UI.Bottle.View (View)
+import           Graphics.UI.Bottle.View (View, (/-/))
 import qualified Graphics.UI.Bottle.View as View
 import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
@@ -29,7 +29,6 @@ import           Graphics.UI.Bottle.Aligned (Aligned(..))
 import qualified Graphics.UI.Bottle.Aligned as Aligned
 import qualified Graphics.UI.Bottle.Widget.Id as WidgetId
 import qualified Graphics.UI.Bottle.Widget.TreeLayout as TreeLayout
-import qualified Graphics.UI.Bottle.Widgets.Box as Box
 import qualified Graphics.UI.Bottle.Widgets.Grid as Grid
 import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
 import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
@@ -244,7 +243,7 @@ makeResultGroup holeInfo results =
                     then makeExtra
                     else
                     focusFirstExtraResult (results ^. HoleResults.rlExtra)
-                    <&> ($ Widget.empty)
+                    <&> (View.empty &)
                     <&> \x -> (Nothing, x, 0)
         let isSelected = Lens.has Lens._Just mSelectedResult
         extraSymbolWidget <-
@@ -266,7 +265,7 @@ makeExtraResultsWidget ::
     Monad m =>
     HoleInfo m -> Anim.R -> [Result m] ->
     ExprGuiM m (Maybe (ShownResult m), Widget (T m Widget.EventResult), Widget.R)
-makeExtraResultsWidget _ _ [] = return (Nothing, Widget.empty, 0)
+makeExtraResultsWidget _ _ [] = return (Nothing, View.empty, 0)
 makeExtraResultsWidget holeInfo mainResultHeight extraResults@(firstResult:_) =
     do
         theme <- Lens.view Theme.theme
@@ -283,7 +282,7 @@ makeExtraResultsWidget holeInfo mainResultHeight extraResults@(firstResult:_) =
         let headHeight = head widgets ^. View.height
         let height = min mainResultHeight headHeight
         let widget =
-                Box.vboxAlign 0 widgets
+                View.vbox widgets
                 & addBackground (Widget.toAnimId (rId firstResult))
                   (Theme.hoverBGColor theme)
         return
@@ -401,7 +400,7 @@ layoutResults groups hiddenResults
                     calcPadding groups
                     - sum (hiddenResultsWidgets ^.. Lens.traversed . View.height)
                     & max 0
-            grid : hiddenResultsWidgets & Box.vboxAlign 0
+            grid : hiddenResultsWidgets & View.vbox
                 & View.assymetricPad 0 (Vector2 0 padHeight)
                 & return
     where
@@ -467,13 +466,12 @@ makeUnderCursorAssignment shownResultsLists hasHiddenResults holeInfo =
                 resultsWidget
                 & View.width %~ max (typeView ^. View.width)
                 & addBackground (Widget.toAnimId hidResultsPrefix) (Theme.hoverBGColor theme)
-                & Aligned 0
-                & Aligned.boxWithViews Aligned.Vertical [] [(0, vspace), (0, typeView)]
-                & (^. Aligned.value)
                 & E.strongerEvents resultsEventMap
-        hoverResultsWidget <- addDarkBackground (Widget.toAnimId hidResultsPrefix) ?? widget
+        hoverResultsWidget <-
+            addDarkBackground (Widget.toAnimId hidResultsPrefix) ??
+            widget /-/ vspace /-/ typeView
         searchTermWidget <- SearchTerm.make holeInfo <&> E.weakerEvents searchTermEventMap
-        Box.vboxAlign 0 [searchTermWidget, hoverResultsWidget] & return
+        View.vbox [searchTermWidget, hoverResultsWidget] & return
     where
         WidgetIds{..} = hiIds holeInfo
 

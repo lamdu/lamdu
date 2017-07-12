@@ -8,10 +8,9 @@ import qualified Control.Monad.Reader as Reader
 import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
 import           Data.UUID.Types (UUID)
-import           Graphics.UI.Bottle.Aligned (Aligned(..))
-import qualified Graphics.UI.Bottle.Aligned as Aligned
 import qualified Graphics.UI.Bottle.EventMap as E
 import           Graphics.UI.Bottle.MetaKey (MetaKey(..), noMods)
+import           Graphics.UI.Bottle.View ((/|/))
 import qualified Graphics.UI.Bottle.View as View
 import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
@@ -79,22 +78,20 @@ fdConfig Config.LiteralText{..} = FocusDelegator.Config
 
 textEdit ::
     Monad m => Transaction.Property m Text ->
-    Sugar.Payload m ExprGuiT.Payload -> ExprGuiM m (Aligned (Widget (T m Widget.EventResult)))
+    Sugar.Payload m ExprGuiT.Payload -> ExprGuiM m (Widget (T m Widget.EventResult))
 textEdit prop pl =
     do
         config <- Lens.view Config.config <&> Config.literalText
         style <- ExprGuiM.readStyle <&> (^. Style.styleText)
         do
             left <- TextView.makeLabel "“"
-            text <- TextEdits.make ?? empty ?? prop ?? innerId <&> Aligned 0
+            text <- TextEdits.make ?? empty ?? prop ?? innerId
             right <-
                 TextView.makeLabel "„"
                 <&> View.padToSizeAlign (text ^. View.size & _1 .~ 0) 1
-            Aligned.boxWithViews Aligned.Horizontal [(0, left)] [(0, right)] text
-                & return
+            left /|/ text /|/ right & return
             & Reader.local (TextEdit.style .~ style)
-            >>= Aligned.value %%~
-                (FocusDelegator.make ?? fdConfig config
+            >>= (FocusDelegator.make ?? fdConfig config
                 ?? FocusDelegator.FocusEntryParent
                 ?? WidgetIds.notDelegatingId myId ??)
     & Widget.assignCursor myId (WidgetIds.notDelegatingId myId)
@@ -111,5 +108,5 @@ make lit pl =
     case lit of
     Sugar.LiteralNum x -> genericEdit (^. Style.styleNum) x pl
     Sugar.LiteralBytes x -> genericEdit (^. Style.styleBytes) x pl
-    Sugar.LiteralText x -> textEdit x pl <&> TreeLayout.fromAlignedWidget
+    Sugar.LiteralText x -> textEdit x pl <&> TreeLayout.fromWidget
     & ExpressionGui.stdWrap pl
