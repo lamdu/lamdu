@@ -31,7 +31,16 @@ focusAreaIntoWindow winSize widget =
                 movement = center ^. l - focalPoint ^. l
                 l :: Lens' (Vector2 Widget.R) Widget.R
                 l = Lens.cloneLens rawLens
+        surrounding =
+            Widget.Surrounding
+            { Widget._sLeft = 0
+            , Widget._sTop = 0
+            , Widget._sRight = extraSize ^. _1
+            , Widget._sBottom = extraSize ^. _2
+            }
+        extraSize = max 0 (winSize - widgetSize)
         focalPoint =
-            widget ^? Widget.wState . Widget._StateFocused . Widget.fFocalArea
-            <&> (^. Rect.center)
+            widget ^? Widget.wState . Widget._StateFocused
+            <&> (surrounding &)
+            <&> (^. Widget.fFocalArea . Rect.center)
             & fromMaybe 0

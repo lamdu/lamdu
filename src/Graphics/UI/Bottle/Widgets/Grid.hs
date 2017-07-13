@@ -2,7 +2,6 @@
 module Graphics.UI.Bottle.Widgets.Grid
     ( make, makeWithKeys
     , Alignment(..)
-    , Cursor
     , Keys(..), stdKeys
     ) where
 
@@ -146,12 +145,6 @@ addNavEventmap Keys{..} navDests eMap =
               (^. Widget.enterResultEvent)) <$>
             f navDests
 
-index2d :: (Traversable vert, Traversable horiz) => Vector2 Int -> Lens.Traversal' (vert (horiz a)) a
-index2d (Vector2 x y) = Lens.element y . Lens.element x
-
-getCursor :: [[Widget k]] -> Maybe Cursor
-getCursor widgets = widgets ^? each2d . Lens.filtered Widget.isFocused . Lens.asIndex
-
 make ::
     (Traversable vert, Traversable horiz, Functor f) =>
     vert (horiz (Alignment, Widget (f Widget.EventResult))) ->
@@ -191,36 +184,37 @@ toWidgetWithKeys keys size sChildren =
     Widget
     { _wSize = size
     , _wState =
-        case mCursor of
+        case widgets ^@? each2d <. (Widget.wState . Widget._StateFocused) of
         Nothing ->
             Widget.StateUnfocused Widget.Unfocused
-            { _uLayers = layers
-            , _uMEnter = mEnter
+            { _uLayers = unfocusedLayers
+            , _uMEnter = combineMEnters size unfocusedMEnters
             }
-        Just cursor ->
-            Widget.StateFocused Widget.Focused
-            { Widget._fLayers = layers
-            , Widget._fMEnter = mEnter
-            , Widget._fEventMap =
-                focusedChild ^. Widget.fEventMap & Lens.imapped %@~ f
-            , Widget._fFocalArea = focusedChild ^. Widget.fFocalArea
-            }
-            where
-                focusedChild =
-                    widgets ^? index2d cursor . Widget.wState . Widget._StateFocused
-                    & fromMaybe (error "selected unfocused widget?")
-                f virtCursor =
-                    mkNavDests size cursor virtCursor mEnterss
+        Just (cursor, makeFocusedChild) ->
+            Widget.StateFocused $
+            \surrounding ->
+            let focusedChild = makeFocusedChild surrounding
+                mEnters =
+                    unfocusedMEnters
+                    & Lens.ix (cursor ^. _2) . Lens.ix (cursor ^. _1) .~ focusedChild ^. Widget.fMEnter
+                addNavDests virtCursor =
+                    mkNavDests size cursor virtCursor mEnters
                     & addNavEventmap keys
+            in
+            Widget.Focused
+            { Widget._fLayers = focusedChild ^. Widget.fLayers <> unfocusedLayers
+            , Widget._fFocalArea = focusedChild ^. Widget.fFocalArea
+            , Widget._fMEnter = combineMEnters size mEnters
+            , Widget._fEventMap = focusedChild ^. Widget.fEventMap & Lens.imapped %@~ addNavDests
+            }
     }
     where
-        mEnter = combineMEnters size mEnterss
-        layers = widgets ^. Lens.folded . Lens.folded . Widget.wState . Widget.stateMakeLayers
         translateChildWidget (rect, widget) =
             Widget.translate (rect ^. Rect.topLeft) widget
         widgets = sChildren & each2d %~ translateChildWidget
-        mEnterss = widgets & each2d %~ (^. Widget.mEnter)
-        mCursor = toList sChildren & each2d %~ (^. _2) & getCursor
+        unfocused = widgets & each2d %~ (^? Widget.wState . Widget._StateUnfocused)
+        unfocusedMEnters = unfocused & each2d %~ (>>= (^. Widget.uMEnter))
+        unfocusedLayers = unfocused ^. each2d . Lens._Just . Widget.uLayers
 
 groupSortOn :: Ord b => (a -> b) -> [a] -> [[a]]
 groupSortOn f = groupOn f . sortOn f

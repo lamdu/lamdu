@@ -12,7 +12,6 @@ import qualified Graphics.UI.Bottle.EventMap as E
 import           Graphics.UI.Bottle.MetaKey (MetaKey, toModKey)
 import           Graphics.UI.Bottle.Rect (Rect(..))
 import qualified Graphics.UI.Bottle.View as View
-import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
 
 import           Lamdu.Prelude
@@ -26,16 +25,15 @@ data Config = Config
     , focusParentDoc :: E.Doc
     }
 
-setFocusChildEventMap :: Config -> Widget a -> Widget a
-setFocusChildEventMap config widgetRecord =
-    widgetRecord
+setFocusChildEventMap :: Config -> Widget.Focused a -> Widget.Focused a
+setFocusChildEventMap config f =
     -- We're not delegating, so replace the child eventmap with an
     -- event map to either delegate to it (if it is enterable) or to
     -- nothing (if it is not):
-    & E.eventMap .~ neeventMap
+    f & Widget.fEventMap . Lens.mapped .~ neeventMap
     where
         neeventMap =
-            case widgetRecord ^. Widget.mEnter of
+            case f ^. Widget.fMEnter of
             Nothing -> mempty
             Just childEnter ->
                 E.keyPresses (focusChildKeys config <&> toModKey)
@@ -73,7 +71,7 @@ make =
     ()
         | selfIsFocused ->
             Widget.setFocused childWidget
-            & setFocusChildEventMap config
+            & Widget.wState . Widget._StateFocused . Lens.mapped %~ setFocusChildEventMap config
 
         | childIsFocused ->
             E.weakerEvents focusParentEventMap childWidget

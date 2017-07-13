@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, OverloadedStrings, DeriveFunctor, DeriveTraversable, TemplateHaskell #-}
+{-# LANGUAGE NoImplicitPrelude, OverloadedStrings, DeriveFunctor, DeriveTraversable, TemplateHaskell, LambdaCase #-}
 module Graphics.UI.Bottle.Widgets.EventMapHelp
     ( makeView
     , IsHelpShown(..)
@@ -198,9 +198,9 @@ makeTreeView size trees =
             handleResult _ = error "Leafs at root of tree!"
         go trees & handleResult & makeFlatTreeView size
 
-addToBottomRight :: View.SetLayers a => View -> Widget.Size -> a -> a
+addToBottomRight :: View -> Widget.Size -> View.Layers -> View.Layers
 addToBottomRight (View eventMapSize eventMapLayers) size =
-    View.setLayers %~ View.addLayersAbove docLayers
+    View.addLayersAbove docLayers
     where
         docLayers = View.translateLayers (size - eventMapSize) eventMapLayers
 
@@ -222,36 +222,41 @@ makeToggledHelpAdder ::
      Widget (m Widget.EventResult) ->
      IO (Widget (m Widget.EventResult)))
 makeToggledHelpAdder startValue =
-    do
-        showingHelpVar <- newIORef startValue
-        return $ \config size widget ->
-            do
-                focus <-
-                    case widget ^. Widget.wState of
-                    Widget.StateUnfocused {} -> fail "adding help to non-focused root widget!"
-                    Widget.StateFocused x -> return x
-                showingHelp <- readIORef showingHelpVar & liftIO
-                let env = Env config ["help box"]
+    newIORef startValue
+    <&>
+    \showingHelpVar config size widget ->
+    widget & Widget.wState %%~
+    \case
+    Widget.StateUnfocused {} -> fail "adding help to non-focused root widget!"
+    Widget.StateFocused makeFocus ->
+        do
+            let env = Env config ["help box"]
+            showingHelp <- readIORef showingHelpVar
+            return makeFocus
+                <&> Lens.mapped %~
+                \focus ->
                 let (helpView, docStr) =
                         case showingHelp of
+                        HelpNotShown ->
+                            ( makeTooltip (config ^. configOverlayDocKeys <&> toModKey) env
+                            , "Show"
+                            )
                         HelpShown ->
                             ( makeView size
                                 ((focus ^. Widget.fEventMap) (Widget.VirtualCursor (focus ^. Widget.fFocalArea)))
                                 env
                             , "Hide"
                             )
-                        HelpNotShown ->
-                            ( makeTooltip (config ^. configOverlayDocKeys <&> toModKey) env
-                            , "Show"
-                            )
-                let toggleEventMap =
+                    toggleEventMap =
                         Widget.keysEventMap (config ^. configOverlayDocKeys)
                         (E.Doc ["Help", "Key Bindings", docStr]) $
                         liftIO $ modifyIORef showingHelpVar toggle
-                let bgHelpView =
+                    bgHelpView =
                         helpView
                         & View.backgroundColor helpAnimId (config ^. configBGColor)
                         & View.tint (config ^. configTint)
-                E.strongerEvents toggleEventMap widget
-                    & addToBottomRight bgHelpView size
-                    & return
+                in
+                focus
+                & Widget.fLayers %~ addToBottomRight bgHelpView size
+                & Widget.fEventMap . Lens.mapped %~ E.strongerEvents toggleEventMap
+        <&> Widget.StateFocused

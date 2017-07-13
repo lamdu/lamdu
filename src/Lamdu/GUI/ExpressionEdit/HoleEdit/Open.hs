@@ -327,7 +327,9 @@ makeHoleResultWidget resultId holeResult =
         getEvents widget =
             case widget ^. Widget.wState of
             Widget.StateUnfocused {} -> mempty
-            Widget.StateFocused focus ->
+            Widget.StateFocused makeFocus ->
+                let focus = makeFocus (Widget.Surrounding 0 0 0 0)
+                in
                 (focus ^. Widget.fEventMap)
                 (Widget.VirtualCursor (focus ^. Widget.fFocalArea))
         mkWidget =

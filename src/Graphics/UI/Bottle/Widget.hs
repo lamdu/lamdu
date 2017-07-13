@@ -27,6 +27,7 @@ module Graphics.UI.Bottle.Widget
     , VirtualCursor(..), virtualCursor
     , Unfocused(..), uMEnter, uLayers
     , Focused(..), fFocalArea, fEventMap, fMEnter, fLayers
+    , Surrounding(..), sLeft, sTop, sRight, sBottom
 
     , HasWidget(..)
 
@@ -134,9 +135,17 @@ data Widget a = Widget
     , _wState :: State a
     } deriving Functor
 
+-- Area on screen around a focused widget. Used for positioning of hovers.
+data Surrounding = Surrounding
+    { _sLeft :: !R
+    , _sTop :: !R
+    , _sRight :: !R
+    , _sBottom :: !R
+    } deriving (Eq, Ord, Show)
+
 data State a
     = StateUnfocused (Unfocused a)
-    | StateFocused (Focused a)
+    | StateFocused (Surrounding -> Focused a)
     deriving Functor
 
 class HasWidget w where widget :: Lens.Setter (w a) (w b) (Widget a) (Widget b)
@@ -145,6 +154,7 @@ instance HasWidget Widget where widget = id
 Lens.makeLenses ''EnterResult
 Lens.makeLenses ''EventResult
 Lens.makeLenses ''Focused
+Lens.makeLenses ''Surrounding
 Lens.makeLenses ''Unfocused
 Lens.makeLenses ''Widget
 Lens.makePrisms ''State
@@ -153,9 +163,9 @@ instance View.SetLayers (Widget a) where
     setLayers f (Widget sz state) =
         stateLayers (Lens.indexed f sz) state <&> Widget sz
 
-stateLayers :: Lens' (State a) View.Layers
+stateLayers :: Lens.Setter' (State a) View.Layers
 stateLayers f (StateUnfocused x) = uLayers f x <&> StateUnfocused
-stateLayers f (StateFocused x) = fLayers f x <&> StateFocused
+stateLayers f (StateFocused x) = (Lens.mapped . fLayers) f x <&> StateFocused
 
 instance Functor f => View.Resizable (Widget (f EventResult)) where
     empty = fromView View.empty
@@ -167,8 +177,8 @@ instance Functor f => View.Resizable (Widget (f EventResult)) where
         w
         & View.setLayers . View.layers . Lens.mapped %~ Anim.scale mult
         & wSize *~ mult
-        & wState . _StateFocused . fFocalArea . Rect.topLeftAndSize *~ mult
-        & wState . _StateFocused . fEventMap . Lens.argument . virtualCursor . Rect.topLeftAndSize //~ mult
+        & wState . _StateFocused . Lens.mapped . fFocalArea . Rect.topLeftAndSize *~ mult
+        & wState . _StateFocused . Lens.mapped . fEventMap . Lens.argument . virtualCursor . Rect.topLeftAndSize //~ mult
         & mEnter . Lens._Just . Lens.mapped . enterResultRect . Rect.topLeftAndSize *~ mult
         & mEnter . Lens._Just . Lens.argument . Direction.coordinates . Rect.topLeftAndSize //~ mult
         & Lens.mapped . Lens.mapped . eVirtualCursor . Lens.mapped .
@@ -213,9 +223,9 @@ combineStates o _ _ sz (StateUnfocused u0) (StateUnfocused u1) =
     & StateUnfocused
 combineStates orientation _ (nameNext, keysNext) sz (StateFocused f) (StateUnfocused u) =
     f
-    & fMEnter %~ combineMEnters orientation sz (u ^. uMEnter)
-    & fEventMap . Lens.imapped %@~ addEvents
-    & fLayers <>~ u ^. uLayers
+    <&> fMEnter %~ combineMEnters orientation sz (u ^. uMEnter)
+    <&> fEventMap . Lens.imapped %@~ addEvents
+    <&> fLayers <>~ u ^. uLayers
     & StateFocused
     where
         addEvents virtCursor =
@@ -281,8 +291,8 @@ chooseEnter orientation sz dir r0 r1
 isFocused :: Widget a -> Bool
 isFocused = Lens.has (wState . _StateFocused)
 
-eventMapMaker :: Lens.Traversal' (Widget a) (VirtualCursor -> EventMap a)
-eventMapMaker = wState . _StateFocused . fEventMap
+eventMapMaker :: Lens.Setter' (Widget a) (VirtualCursor -> EventMap a)
+eventMapMaker = wState . _StateFocused . Lens.mapped . fEventMap
 
 eventResultFromCursor :: Id -> EventResult
 eventResultFromCursor c = EventResult
@@ -296,7 +306,7 @@ events =
     widget . wState . atEvents
     where
         atEvents f (StateUnfocused x) = (uMEnter . atMEnter) f x <&> StateUnfocused
-        atEvents f (StateFocused x) = Lens.sets atFocus f x <&> StateFocused
+        atEvents f (StateFocused x) = (Lens.mapped . Lens.sets atFocus) f x <&> StateFocused
         atMEnter f = (Lens._Just . Lens.mapped . enterResultEvent) f
         atFocus f focused =
             focused
@@ -315,19 +325,16 @@ fromView (View size mkLayers) =
         }
     }
 
-stateMEnter :: Lens' (State a) (Maybe (Direction -> EnterResult a))
+stateMEnter :: Lens.Setter' (State a) (Maybe (Direction -> EnterResult a))
 stateMEnter f (StateUnfocused x) = uMEnter f x <&> StateUnfocused
-stateMEnter f (StateFocused   x) = fMEnter f x <&> StateFocused
+stateMEnter f (StateFocused   x) = (Lens.mapped . fMEnter) f x <&> StateFocused
 
-mEnter :: Lens' (Widget a) (Maybe (Direction -> EnterResult a))
+mEnter :: Lens.Setter' (Widget a) (Maybe (Direction -> EnterResult a))
 mEnter = wState . stateMEnter
 
-stateMakeLayers :: Lens' (State a) View.Layers
+stateMakeLayers :: Lens.Setter' (State a) View.Layers
 stateMakeLayers f (StateUnfocused x) = uLayers f x <&> StateUnfocused
-stateMakeLayers f (StateFocused   x) = fLayers f x <&> StateFocused
-
-makeLayers :: Lens' (Widget a) View.Layers
-makeLayers = wState . stateMakeLayers
+stateMakeLayers f (StateFocused   x) = (Lens.mapped . fLayers) f x <&> StateFocused
 
 takesFocus ::
     (HasWidget w, Functor f) =>
@@ -378,8 +385,8 @@ translate pos w =
         Direction.coordinates . Rect.topLeft -~ pos
     & mEnter . Lens._Just . Lens.mapped .
         enterResultRect . Rect.topLeft +~ pos
-    & wState . _StateFocused . fFocalArea . Rect.topLeft +~ pos
-    & wState . _StateFocused . fEventMap . Lens.argument . virtualCursor . Rect.topLeft -~ pos
+    & wState . _StateFocused . Lens.mapped . fFocalArea . Rect.topLeft +~ pos
+    & wState . _StateFocused . Lens.mapped . fEventMap . Lens.argument . virtualCursor . Rect.topLeft -~ pos
     & Lens.mapped . Lens.mapped . eVirtualCursor . Lens.mapped .
       _NewVirtualCursor . virtualCursor . Rect.topLeft +~ pos
     & View.setLayers %~ View.translateLayers pos
@@ -405,14 +412,23 @@ setFocused :: HasWidget w => w a -> w a
 setFocused = widget %~ \w -> setFocusedWith (Rect 0 (w ^. wSize)) mempty w
 
 setFocusedWith :: Rect -> (VirtualCursor -> EventMap a) -> Widget a -> Widget a
-setFocusedWith rect eventMap w =
-    w & wState .~
-    StateFocused Focused
-    { _fFocalArea = rect
-    , _fEventMap = eventMap
-    , _fMEnter = w ^. mEnter
-    , _fLayers = w ^. makeLayers
-    }
+setFocusedWith rect eventMap =
+    wState %~
+    \s ->
+    case s of
+    StateUnfocused u ->
+        const Focused
+        { _fFocalArea = rect
+        , _fEventMap = eventMap
+        , _fMEnter = u ^. uMEnter
+        , _fLayers = u ^. uLayers
+        }
+    StateFocused makeFocus ->
+        -- TODO: does this case make sense or is this an error?
+        makeFocus
+        <&> fFocalArea .~ rect
+        <&> fEventMap .~ eventMap
+    & StateFocused
 
 respondToCursorBy ::
     (MonadReader env m, HasCursor env, HasWidget w) =>
@@ -465,12 +481,19 @@ newtype CursorConfig = CursorConfig
     { cursorColor :: Draw.Color
     }
 
-renderWithCursor :: CursorConfig -> Widget a -> Anim.Frame
+renderWithCursor ::
+    CursorConfig -> Widget a ->
+    (Anim.Frame, Maybe (Direction -> EnterResult a), Maybe (Rect, VirtualCursor -> EventMap a))
 renderWithCursor CursorConfig{cursorColor} w =
-    maybe mempty renderCursor (w ^? wState . _StateFocused . fFocalArea)
-    & (`mappend` View.render (w ^. wState . stateLayers))
-    where
-        renderCursor area =
-            Anim.backgroundColor cursorAnimId cursorColor
-            (area ^. Rect.size)
-            & Anim.translate (area ^. Rect.topLeft)
+    case w ^. wState of
+    StateUnfocused u ->
+        -- Unfocused top level widget! TODO: Is this some sort of error?
+        (View.render (u ^. uLayers), u ^. uMEnter, Nothing)
+    StateFocused f ->
+        (cursorFrame <> View.render (r ^. fLayers), r ^. fMEnter, Just (r ^. fFocalArea, r ^. fEventMap))
+        where
+            r = f (Surrounding 0 0 0 0)
+            area = r ^. fFocalArea
+            cursorFrame =
+                Anim.backgroundColor cursorAnimId cursorColor (area ^. Rect.size)
+                & Anim.translate (area ^. Rect.topLeft)
