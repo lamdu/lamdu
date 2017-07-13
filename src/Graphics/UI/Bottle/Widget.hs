@@ -56,7 +56,6 @@ module Graphics.UI.Bottle.Widget
     , assignCursorPrefix
     ) where
 
-import           Control.Applicative (liftA2)
 import           Control.Lens (Lens')
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
@@ -172,8 +171,8 @@ instance Functor f => View.Resizable (Widget (f EventResult)) where
     empty = fromView View.empty
     assymetricPad leftAndTop rightAndBottom w =
         w
-        & View.size +~ leftAndTop + rightAndBottom
         & translate leftAndTop
+        & Widget (w ^. View.size + leftAndTop + rightAndBottom)
     scale mult w =
         w
         & View.setLayers . View.layers . Lens.mapped %~ Anim.scale mult
@@ -379,25 +378,26 @@ keysEventMapMovesCursor keys doc act =
 -- TODO: This actually makes an incorrect widget because its size
 -- remains same, but it is now translated away from 0..size
 -- Should expose higher-level combinators instead?
-translate :: Functor f => Vector2 R -> Widget (f EventResult) -> Widget (f EventResult)
+translate ::
+    Functor f => Vector2 R -> Widget (f EventResult) -> State (f EventResult)
 translate pos w =
-    w
-    & mEnter . Lens._Just . Lens.argument .
+    w ^. wState
+    & stateMEnter . Lens._Just . Lens.argument .
         Direction.coordinates . Rect.topLeft -~ pos
-    & mEnter . Lens._Just . Lens.mapped .
+    & stateMEnter . Lens._Just . Lens.mapped .
         enterResultRect . Rect.topLeft +~ pos
-    & wState . _StateFocused . Lens.mapped . fFocalArea . Rect.topLeft +~ pos
-    & wState . _StateFocused . Lens.mapped . fEventMap . Lens.argument . virtualCursor . Rect.topLeft -~ pos
+    & _StateFocused . Lens.mapped . fFocalArea . Rect.topLeft +~ pos
+    & _StateFocused . Lens.mapped . fEventMap . Lens.argument . virtualCursor . Rect.topLeft -~ pos
     & Lens.mapped . Lens.mapped . eVirtualCursor . Lens.mapped .
       _NewVirtualCursor . virtualCursor . Rect.topLeft +~ pos
-    & View.setLayers %~ View.translateLayers pos
+    & stateLayers %~ View.translateLayers pos
 
 padToSizeAlign ::
     Functor f => Size -> Vector2 R -> Widget (f EventResult) -> Widget (f EventResult)
 padToSizeAlign newSize alignment w =
     w
     & translate (sizeDiff * alignment)
-    & View.size %~ liftA2 max newSize
+    & Widget (max <$> w ^. View.size <*> newSize)
     where
         sizeDiff = max <$> 0 <*> newSize - w ^. View.size
 

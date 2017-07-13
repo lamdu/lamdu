@@ -23,7 +23,7 @@ import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.EventMap as E
 import           Graphics.UI.Bottle.View (View, (/-/))
 import qualified Graphics.UI.Bottle.View as View
-import           Graphics.UI.Bottle.Widget (Widget)
+import           Graphics.UI.Bottle.Widget (Widget(..))
 import qualified Graphics.UI.Bottle.Widget as Widget
 import           Graphics.UI.Bottle.Aligned (Aligned(..))
 import qualified Graphics.UI.Bottle.Aligned as Aligned
@@ -288,8 +288,8 @@ makeExtraResultsWidget holeInfo mainResultHeight extraResults@(firstResult:_) =
         return
             ( msum mResults
             , widget
-                & View.size .~ Vector2 0 height
                 & Widget.translate (Vector2 0 (0.5 * (height - headHeight)))
+                & Widget (Vector2 0 height)
             , (widget ^. View.height) - 0.5 * (headHeight + mainResultHeight)
                 & max 0
             )

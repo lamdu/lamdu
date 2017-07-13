@@ -184,7 +184,7 @@ toWidgetWithKeys keys size sChildren =
     Widget
     { _wSize = size
     , _wState =
-        case widgets ^@? each2d <. (Widget.wState . Widget._StateFocused) of
+        case states ^@? each2d <. Widget._StateFocused of
         Nothing ->
             Widget.StateUnfocused Widget.Unfocused
             { _uLayers = unfocusedLayers
@@ -211,8 +211,8 @@ toWidgetWithKeys keys size sChildren =
     where
         translateChildWidget (rect, widget) =
             Widget.translate (rect ^. Rect.topLeft) widget
-        widgets = sChildren & each2d %~ translateChildWidget
-        unfocused = widgets & each2d %~ (^? Widget.wState . Widget._StateUnfocused)
+        states = sChildren & each2d %~ translateChildWidget
+        unfocused = states & each2d %~ (^? Widget._StateUnfocused)
         unfocusedMEnters = unfocused & each2d %~ (>>= (^. Widget.uMEnter))
         unfocusedLayers = unfocused ^. each2d . Lens._Just . Widget.uLayers
 

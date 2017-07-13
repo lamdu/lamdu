@@ -7,7 +7,7 @@ import qualified Control.Lens as Lens
 import           Data.Vector.Vector2 (Vector2(..))
 import qualified Graphics.UI.Bottle.Rect as Rect
 import qualified Graphics.UI.Bottle.View as View
-import           Graphics.UI.Bottle.Widget (Widget)
+import           Graphics.UI.Bottle.Widget (Widget(..))
 import qualified Graphics.UI.Bottle.Widget as Widget
 
 import           Lamdu.Prelude
@@ -23,10 +23,12 @@ focusAreaIntoWindow winSize widget =
         widgetSize = widget ^. View.size
         center = winSize / 2
         allowedScroll = winSize - widgetSize
-        intoWindow rawLens
+        intoWindow rawLens w
             | widgetSize ^. l > winSize ^. l && movement < 0 =
-              Widget.translate (0 & l .~ max (allowedScroll ^. l) movement)
-            | otherwise = id
+              w
+              & Widget.translate (0 & l .~ max (allowedScroll ^. l) movement)
+              & Widget winSize
+            | otherwise = w
             where
                 movement = center ^. l - focalPoint ^. l
                 l :: Lens' (Vector2 Widget.R) Widget.R

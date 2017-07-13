@@ -13,7 +13,7 @@ import           Graphics.UI.Bottle.Alignment (Alignment(..))
 import qualified Graphics.UI.Bottle.Alignment as Alignment
 import           Graphics.UI.Bottle.View (Orientation)
 import qualified Graphics.UI.Bottle.View as View
-import           Graphics.UI.Bottle.Widget (Widget, R)
+import           Graphics.UI.Bottle.Widget (Widget(..), R)
 import qualified Graphics.UI.Bottle.Widget as Widget
 
 import           Lamdu.Prelude
@@ -111,7 +111,7 @@ layout `hoverInPlaceOf` src =
         & View.setLayers . View.layers %~ (mempty :)
         & Widget.mEnter . Lens._Just . Lens.mapped . Widget.enterResultLayer +~ 1
         & Widget.translate (srcAbsAlignment - layoutAbsAlignment)
-        & View.size .~ srcSize
+        & Widget srcSize
     ) ^. Lens.from absAligned
     where
         (layoutAbsAlignment, layoutWidget) = layout ^. absAligned
