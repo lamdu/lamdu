@@ -12,6 +12,7 @@ import           Graphics.UI.Bottle.Animation (AnimId)
 import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.View as View
+import qualified Graphics.UI.Bottle.Aligned as Aligned
 import qualified Graphics.UI.Bottle.Widget as Widget
 import           Graphics.UI.Bottle.Widget.TreeLayout (TreeLayout)
 import qualified Graphics.UI.Bottle.Widget.TreeLayout as TreeLayout
@@ -170,7 +171,7 @@ makeArgRows ::
     ExprGuiM m (ExpressionGui m)
 makeArgRows arg =
     ExpressionGui.tagItem
-    <*> TagEdit.makeParamTag (arg ^. Sugar.aaTag)
+    <*> (TagEdit.makeParamTag (arg ^. Sugar.aaTag) <&> Aligned.fromView 0)
     <*> ExprGuiM.makeSubexpression (arg ^. Sugar.aaExpr)
 
 mkRelayedArgs :: Monad m => NearestHoles -> [Sugar.RelayedArg (Name m) m] -> ExprGuiM m (ExpressionGui m)

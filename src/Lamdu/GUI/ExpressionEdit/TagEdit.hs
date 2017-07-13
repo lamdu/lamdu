@@ -10,10 +10,9 @@ import qualified Control.Monad.Reader as Reader
 import           Data.Store.Transaction (Transaction)
 import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.Bottle.EventMap as E
+import           Graphics.UI.Bottle.View (View)
 import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
-import           Graphics.UI.Bottle.Aligned (Aligned)
-import qualified Graphics.UI.Bottle.Aligned as Aligned
 import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Config.Theme as Theme
@@ -80,13 +79,12 @@ makeCaseTag nearestHoles tagG =
 
 -- | Unfocusable tag view (e.g: in apply params)
 makeParamTag ::
-    Monad m => Sugar.TagG (Name m) -> ExprGuiM m (Aligned (Widget a))
+    Monad m => Sugar.TagG (Name m) -> ExprGuiM m View
 makeParamTag t =
     do
         Theme.Name{..} <- Theme.name <$> Lens.view Theme.theme
         ExpressionGui.makeNameView (t ^. Sugar.tagGName) animId
             & Reader.local (TextView.color .~ paramTagColor)
-            <&> Aligned.fromView 0
     where
         animId = t ^. Sugar.tagInstance & WidgetIds.fromEntityId & Widget.toAnimId
 
