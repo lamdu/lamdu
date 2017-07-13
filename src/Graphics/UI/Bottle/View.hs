@@ -2,9 +2,12 @@
 module Graphics.UI.Bottle.View
     ( View(..), vAnimLayers, make
     , Layers(..), layers, translateLayers, addLayersAbove
-      , topLayer, bottomLayer
+        , topLayer, bottomLayer
     , HasSize(..), SetLayers(..), Resizable(..)
-    , Glue(..), GluesTo, (/|/), (/-/), Orientation(..), glueH
+    , Glue(..)
+        , glueH, GluesTo
+        , (/|/), (/-/)
+    , Orientation(..), axis
     , box, hbox, vbox
     , render
     , animFrames, bottomFrame
@@ -75,6 +78,10 @@ class HasSize a where size :: Lens' a Size
 
 data Orientation = Horizontal | Vertical
     deriving (Eq, Show, Ord)
+
+axis :: Orientation -> Lens' (Vector2 a) a
+axis Horizontal = _1
+axis Vertical = _2
 
 type GluesTo a b c = (Glue a b, Glued a b ~ c)
 

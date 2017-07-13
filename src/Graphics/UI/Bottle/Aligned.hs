@@ -92,7 +92,7 @@ glueHelper chooseAlign orientation (aAbsAlign, aw) (bAbsAlign, bw) =
     ) ^. Lens.from absAligned
     where
         l :: Lens' (Vector2 a) a
-        l = axis orientation
+        l = View.axis orientation
         -- Duplicates the logic from underlying glue:
         bGlueTranslation = 0 & l .~ aw ^. View.size . l
         aToB = (bAbsAlign & l .~ 0) - (aAbsAlign & l .~ 0)
@@ -139,7 +139,3 @@ absAligned =
         fromAbs align size
             | size == 0 = 0
             | otherwise = align / size
-
-axis :: Orientation -> Lens' (Vector2 a) a
-axis View.Horizontal = _1
-axis View.Vertical = _2
