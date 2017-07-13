@@ -63,7 +63,6 @@ import qualified Data.Map as Map
 import qualified Data.Monoid as Monoid
 import           Data.Monoid.Generic (def_mempty, def_mappend)
 import           Data.Vector.Vector2 (Vector2(..))
-import qualified Data.Vector.Vector2 as Vector2
 import           GHC.Generics (Generic)
 import qualified Graphics.DrawingCombinators as Draw
 import           Graphics.UI.Bottle.Animation (AnimId, R, Size)
@@ -209,13 +208,13 @@ combineStates ::
     View.Orientation -> (Text, [GLFW.Key]) -> (Text, [GLFW.Key]) -> Size ->
     State (f EventResult) -> State (f EventResult) -> State (f EventResult)
 combineStates _ _ _ _ StateFocused{} StateFocused{} = error "joining two focused widgets!!"
-combineStates _ _ _ sz (StateUnfocused u0) (StateUnfocused u1) =
-    Unfocused (combineMEnters sz (u0 ^. uMEnter) (u1 ^. uMEnter)) (u0 ^. uLayers <> u1 ^. uLayers)
+combineStates o _ _ sz (StateUnfocused u0) (StateUnfocused u1) =
+    Unfocused (combineMEnters o sz (u0 ^. uMEnter) (u1 ^. uMEnter)) (u0 ^. uLayers <> u1 ^. uLayers)
     & StateUnfocused
 -- TODO: move between widgets
 combineStates orientation _ (nameNext, keysNext) sz (StateFocused f) (StateUnfocused u) =
     f
-    & fMEnter %~ combineMEnters sz (u ^. uMEnter)
+    & fMEnter %~ combineMEnters orientation sz (u ^. uMEnter)
     & fEventMap . Lens.imapped %@~ addEvents
     & fLayers <>~ u ^. uLayers
     & StateFocused
@@ -248,50 +247,37 @@ setVirt orientation virtCursor enterResult =
             View.Vertical -> Rect.horizontalRange
 
 combineMEnters ::
-    Size ->
+    View.Orientation -> Size ->
     Maybe (Direction -> EnterResult a) ->
     Maybe (Direction -> EnterResult a) ->
     Maybe (Direction -> EnterResult a)
-combineMEnters _ Nothing x = x
-combineMEnters _ (Just x) Nothing = Just x
-combineMEnters sz (Just x) (Just y) = Just (combineEnters sz x y)
+combineMEnters _ _ Nothing x = x
+combineMEnters _ _ (Just x) Nothing = Just x
+combineMEnters o sz (Just x) (Just y) = Just (combineEnters o sz x y)
 
 combineEnters ::
-    Size ->
+    View.Orientation -> Size ->
     (Direction -> EnterResult a) -> (Direction -> EnterResult a) ->
     Direction -> EnterResult a
-combineEnters sz e0 e1 dir = chooseEnter sz (e0 dir) (e1 dir) dir
+combineEnters o sz e0 e1 dir = chooseEnter o sz dir (e0 dir) (e1 dir)
 
-chooseEnter :: Size -> EnterResult a -> EnterResult a -> Direction -> EnterResult a
-chooseEnter sz r0 r1 dir
-    | score r0 <= score r1 = r0
+chooseEnter :: View.Orientation -> Size -> Direction -> EnterResult a -> EnterResult a -> EnterResult a
+chooseEnter orientation sz dir r0 r1
+    -- coming in from the left/up, always choose the left/up one:
+    | rect ^. Rect.bottomRight . l < 0 = r0
+    -- coming in from the right/bottom, always choose the right/bottom one:
+    | rect ^. Rect.topLeft . l > sz ^. l = r1
+    | Rect.distance rect (r0 ^. enterResultRect) <
+      Rect.distance rect (r1 ^. enterResultRect) = r0
     | otherwise = r1
     where
-        edge =
-            Vector2 hEdge vEdge
-            where
-                hEdge = boolToInt rightEdge - boolToInt leftEdge
-                vEdge = boolToInt bottomEdge - boolToInt topEdge
-                boolToInt False = 0
-                boolToInt True = 1
-                Vector2 leftEdge topEdge =
-                    (<= 0) <$> (rect ^. Rect.bottomRight)
-                Vector2 rightEdge bottomEdge =
-                    liftA2 (>=) (rect ^. Rect.topLeft) sz
+        l :: Lens' (Vector2 a) a
+        l = View.axis orientation
         rect =
             case dir of
             Direction.Outside -> Rect 0 0
             Direction.Point x -> Rect x 0
             Direction.PrevFocalArea x -> x
-        distance r =
-            case dir of
-            Direction.PrevFocalArea x -> Rect.distance x r * (1 - abs edge)
-            _ -> Rect.distance rect r
-        score enter
-            | dist > 0 = dist
-            | otherwise = enter ^. enterResultLayer & negate & fromIntegral
-            where
-                dist = enter ^. enterResultRect & distance & abs & Vector2.uncurry (+)
 
 isFocused :: Widget a -> Bool
 isFocused = Lens.has (wState . _StateFocused)
