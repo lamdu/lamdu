@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, DeriveFunctor, TemplateHaskell, GeneralizedNewtypeDeriving, DeriveGeneric, OverloadedStrings, NamedFieldPuns, LambdaCase, FlexibleInstances, MultiParamTypeClasses, TypeFamilies #-}
+{-# LANGUAGE NoImplicitPrelude, DeriveFunctor, TemplateHaskell, GeneralizedNewtypeDeriving, DeriveGeneric, OverloadedStrings, NamedFieldPuns, LambdaCase, FlexibleInstances, MultiParamTypeClasses, TypeFamilies, FlexibleContexts #-}
 module Graphics.UI.Bottle.Widget
     ( Id(..), subId, Id.joinId, isSubCursor
     , HasCursor(..)
@@ -159,9 +159,10 @@ Lens.makeLenses ''Unfocused
 Lens.makeLenses ''Widget
 Lens.makePrisms ''State
 
-instance View.SetLayers (Widget a) where
-    setLayers f (Widget sz state) =
-        stateLayers (Lens.indexed f sz) state <&> Widget sz
+sizedState :: Lens.IndexedLens' Size (Widget a) (State a)
+sizedState f (Widget sz state) = Lens.indexed f sz state <&> Widget sz
+
+instance View.SetLayers (Widget a) where setLayers = sizedState <. stateLayers
 
 stateLayers :: Lens.Setter' (State a) View.Layers
 stateLayers f (StateUnfocused x) = uLayers f x <&> StateUnfocused
