@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, OverloadedStrings, RecordWildCards, DeriveFunctor, DeriveFoldable, DeriveTraversable #-}
+{-# LANGUAGE NoImplicitPrelude, OverloadedStrings, RecordWildCards, DeriveFunctor, DeriveFoldable, DeriveTraversable, FlexibleContexts, RankNTypes #-}
 module Graphics.UI.Bottle.Widgets.Grid
     ( make, makeWithKeys
     , Alignment(..)
@@ -10,7 +10,7 @@ import           Control.Applicative (liftA2)
 import qualified Control.Lens as Lens
 import           Control.Monad (msum)
 import           Data.Foldable (toList)
-import           Data.List (foldl', transpose, find, sortOn)
+import           Data.List (foldl', transpose, sortOn)
 import           Data.List.Utils (groupOn, minimumOn)
 import           Data.MRUMemo (memo)
 import           Data.Vector.Vector2 (Vector2(..))
@@ -146,22 +146,11 @@ addNavEventmap Keys{..} navDests eMap =
               (^. Widget.enterResultEvent)) <$>
             f navDests
 
-enumerate2d ::
-    (Foldable vert, Foldable horiz) =>
-    vert (horiz a) -> [(Vector2 Int, a)]
-enumerate2d xss =
-    xss ^@.. Lens.folded <.> Lens.folded
-    <&> _1 %~ uncurry (flip Vector2)
-
-index2d :: (Foldable vert, Foldable horiz) => vert (horiz a) -> Vector2 Int -> a
-index2d xss (Vector2 x y) = toList (toList xss !! y) !! x
+index2d :: (Traversable vert, Traversable horiz) => Vector2 Int -> Lens.Traversal' (vert (horiz a)) a
+index2d (Vector2 x y) = Lens.element y . Lens.element x
 
 getCursor :: [[Widget k]] -> Maybe Cursor
-getCursor widgets =
-    widgets
-    & enumerate2d
-    & find (Widget.isFocused . snd)
-    <&> fst
+getCursor widgets = widgets ^? each2d . Lens.filtered Widget.isFocused . Lens.asIndex
 
 make ::
     (Traversable vert, Traversable horiz, Functor f) =>
@@ -188,8 +177,8 @@ makeWithKeys keys children =
         toTriplet (alignment, widget) =
             (alignment, widget ^. View.size, widget)
 
-each2d :: (Traversable vert, Traversable horiz) => Lens.Traversal (vert (horiz a)) (vert (horiz b)) a b
-each2d = traverse . traverse
+each2d :: (Traversable vert, Traversable horiz) => Lens.IndexedTraversal Cursor (vert (horiz a)) (vert (horiz b)) a b
+each2d = Lens.traversed <.> Lens.traversed & Lens.reindexed (uncurry (flip Vector2))
 
 -- TODO: We assume that the given Cursor selects a focused
 -- widget. Prove it by passing the Focused data of that widget
@@ -218,7 +207,7 @@ toWidgetWithKeys keys size sChildren =
             }
             where
                 focusedChild =
-                    index2d widgets cursor ^? Widget.wState . Widget._StateFocused
+                    widgets ^? index2d cursor . Widget.wState . Widget._StateFocused
                     & fromMaybe (error "selected unfocused widget?")
                 f virtCursor =
                     mkNavDests size cursor virtCursor mEnterss
@@ -243,9 +232,7 @@ combineMEnters ::
 combineMEnters size children =
     chooseClosest childEnters
     where
-        childEnters =
-                (enumerate2d children <&> Lens.sequenceAOf _2)
-                ^.. Lens.traverse . Lens._Just
+        childEnters = children ^@.. each2d . Lens._Just
 
         chooseClosest [] = Nothing
         chooseClosest _ = Just byDirection
