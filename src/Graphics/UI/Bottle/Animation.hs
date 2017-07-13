@@ -140,7 +140,7 @@ setNewDest destFrame state =
                     | otherwise = destImage
                 redX = Draw.tint red unitX
         curFrame = currentFrame state
-        sortedDestIds = destFrame ^.. frameImages . traverse . iAnimId & List.sort
+        sortedDestIds = destFrame ^.. images . iAnimId & List.sort
         duplicateDestIds =
             List.group sortedDestIds <&> tail & concat & Set.fromAscList
         destIds = Set.fromAscList sortedDestIds
@@ -160,7 +160,7 @@ nextState movement (Just dest) state =
 
 {-# INLINE images #-}
 images :: Lens.Traversal' Frame Image
-images = frameImages . Lens.traversed
+images = frameImages . traverse
 
 {-# INLINE unitImages #-}
 unitImages :: Lens.Traversal' Frame (Draw.Image ())
@@ -245,7 +245,7 @@ relocateSubRect srcSubRect srcSuperRect dstSuperRect =
             fmap (max 1) (srcSuperRect ^. Rect.size)
 
 mapIdentities :: (AnimId -> AnimId) -> Frame -> Frame
-mapIdentities f = frameImages . traverse . iAnimId %~ f
+mapIdentities f = images . iAnimId %~ f
 
 unitSquare :: AnimId -> Frame
 unitSquare animId = simpleFrame animId DrawUtils.square
@@ -268,7 +268,7 @@ emptyRectangle (Vector2 fX fY) totalSize@(Vector2 sX sY) animId =
 backgroundColor :: AnimId -> Draw.Color -> Vector2 R -> Frame
 backgroundColor animId color size =
     unitSquare animId
-    & images . iUnitImage %~ Draw.tint color
+    & unitImages %~ Draw.tint color
     & scale size
 
 translate :: Vector2 R -> Frame -> Frame
