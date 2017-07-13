@@ -130,7 +130,7 @@ glueH f orientation v0 v1 =
             Vertical -> (Vector2 (max w0 w1) (h0 + h1), Vector2 0 h0)
 
 box :: (Resizable a, GluesTo a a a) => Orientation -> [a] -> a
-box orientation = foldl (glue orientation) empty
+box orientation = foldr (glue orientation) empty
 
 hbox :: (Resizable a, GluesTo a a a) => [a] -> a
 hbox = box Horizontal
