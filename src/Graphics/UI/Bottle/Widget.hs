@@ -211,7 +211,6 @@ combineStates _ _ _ _ StateFocused{} StateFocused{} = error "joining two focused
 combineStates o _ _ sz (StateUnfocused u0) (StateUnfocused u1) =
     Unfocused (combineMEnters o sz (u0 ^. uMEnter) (u1 ^. uMEnter)) (u0 ^. uLayers <> u1 ^. uLayers)
     & StateUnfocused
--- TODO: move between widgets
 combineStates orientation _ (nameNext, keysNext) sz (StateFocused f) (StateUnfocused u) =
     f
     & fMEnter %~ combineMEnters orientation sz (u ^. uMEnter)
