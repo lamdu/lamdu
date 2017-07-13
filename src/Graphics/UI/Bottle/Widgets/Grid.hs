@@ -178,10 +178,9 @@ makeWithKeys keys children =
     ( content & each2d %~ (^. _1)
     , toList content <&> toList
       & each2d %~ (\(_align, rect, widget) -> (rect, widget))
-      & toWidgetWithKeys keys mCursor size
+      & toWidgetWithKeys keys size
     )
     where
-        mCursor = toList children <&> toList & each2d %~ (^. _2) & getCursor
         (size, content) =
             children
             & each2d %~ toTriplet
@@ -196,10 +195,10 @@ each2d = traverse . traverse
 -- widget. Prove it by passing the Focused data of that widget
 toWidgetWithKeys ::
     Functor f =>
-    Keys ModKey -> Maybe Cursor -> Widget.Size ->
+    Keys ModKey -> Widget.Size ->
     [[(Rect, Widget (f Widget.EventResult))]] ->
     Widget (f Widget.EventResult)
-toWidgetWithKeys keys mCursor size sChildren =
+toWidgetWithKeys keys size sChildren =
     Widget
     { _wSize = size
     , _wState =
@@ -232,6 +231,7 @@ toWidgetWithKeys keys mCursor size sChildren =
             Widget.translate (rect ^. Rect.topLeft) widget
         widgets = sChildren & each2d %~ translateChildWidget
         mEnterss = widgets & each2d %~ (^. Widget.mEnter)
+        mCursor = toList sChildren & each2d %~ (^. _2) & getCursor
 
 groupSortOn :: Ord b => (a -> b) -> [a] -> [[a]]
 groupSortOn f = groupOn f . sortOn f
