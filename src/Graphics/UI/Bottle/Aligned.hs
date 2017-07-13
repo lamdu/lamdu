@@ -2,7 +2,6 @@
 module Graphics.UI.Bottle.Aligned
     ( Aligned(..), alignment, value
     , fromView
-    , scaleAround
     , hoverInPlaceOf
     , Orientation(..)
     , addBefore, addAfter
@@ -49,16 +48,6 @@ instance View.HasSize a => View.HasSize (Aligned a) where size = value . View.si
 -- TODO: Remove
 fromView :: Alignment -> View -> Aligned (Widget a)
 fromView x = Aligned x . Widget.fromView
-
--- | scale = scaleAround 0.5
---   scaleFromTopMiddle = scaleAround (Vector2 0.5 0)
-scaleAround ::
-    View.Resizable a => Alignment -> Vector2 Widget.R -> Aligned a -> Aligned a
-scaleAround (Alignment point) ratio (Aligned (Alignment align) w) =
-    Aligned
-    { _alignment = point + (align - point) / ratio & Alignment
-    , _value = View.scale ratio w
-    }
 
 -- Resize a layout to be the same alignment/size as another layout
 hoverInPlaceOf ::
