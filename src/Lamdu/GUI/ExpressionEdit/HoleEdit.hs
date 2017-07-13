@@ -108,7 +108,7 @@ make hole pl =
                         . fmap WidgetIds.fromEntityId)
 
         case mWrapperGui of
-            Just wrapperGui -> makeHoleWithWrapper wrapperGui searchAreaGui pl
+            Just wrapperGui -> makeHoleWithWrapper (wrapperGui & TreeLayout.alignment .~ 0) searchAreaGui pl
             Nothing -> return searchAreaGui
             <&> E.weakerEvents deleteEventMap
     & assignHoleCursor widgetIds
