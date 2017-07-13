@@ -6,11 +6,13 @@ module Graphics.UI.Bottle.Aligned
     , Orientation(..)
     ) where
 
-import qualified Control.Lens as Lens
 import           Control.Lens (Lens')
+import qualified Control.Lens as Lens
 import           Data.Vector.Vector2 (Vector2(..))
+import qualified Graphics.DrawingCombinators as Draw
 import           Graphics.UI.Bottle.Alignment (Alignment(..))
 import qualified Graphics.UI.Bottle.Alignment as Alignment
+import qualified Graphics.UI.Bottle.Animation as Anim
 import           Graphics.UI.Bottle.View (Orientation)
 import qualified Graphics.UI.Bottle.View as View
 import           Graphics.UI.Bottle.Widget (Widget, R)
@@ -77,27 +79,44 @@ instance ( View.HasSize (View.Glued a b)
     type Glued (AlignTo a) (Aligned b) = Aligned (View.Glued a b)
     glue o a b = glueHelper snd o (toAbsPair a) (b ^. absAligned)
 
+alignmentPointFrame :: (Vector2 R, Draw.Color) -> Anim.Frame
+alignmentPointFrame (pos, color) =
+    Anim.unitSquare []
+    & Anim.unitImages %~ Draw.tint color
+    & Anim.scale 5
+    & Anim.translate pos
+
 glueHelper ::
     ( View.Glue a b, View.Resizable a, View.Resizable b
     , View.HasSize (View.Glued a b), View.HasSize a
     ) =>
-    ((Vector2 R, Vector2 R) -> Vector2 R) -> Orientation ->
+    (forall x. (x, x) -> x) -> Orientation ->
     (Vector2 R, a) -> (Vector2 R, b) -> Aligned (View.Glued a b)
 glueHelper chooseAlign orientation (aAbsAlign, aw) (bAbsAlign, bw) =
     ( chooseAlign
-        ( aAbsAlign + max 0 aToB
-        , bAbsAlign + max 0 bToA + bGlueTranslation
+        ( aAlign
+        , bAlign + bGlueTranslation
         )
-    , View.glue orientation (syncAlign aToB aw) (syncAlign bToA bw)
+    , View.glue orientation
+        (syncAlign aAlignPoint aToB aw)
+        (syncAlign bAlignPoint bToA bw)
     ) ^. Lens.from absAligned
     where
+        aAlign = aAbsAlign + max 0 aToB
+        bAlign = bAbsAlign + max 0 bToA
+        red = Draw.Color 1 0 0 1
+        green = Draw.Color 0 1 0 1
         l :: Lens' (Vector2 a) a
         l = View.axis orientation
         -- Duplicates the logic from underlying glue:
         bGlueTranslation = 0 & l .~ aw ^. View.size . l
         aToB = (bAbsAlign & l .~ 0) - (aAbsAlign & l .~ 0)
         bToA = -aToB
-        syncAlign move = View.assymetricPad (max 0 move) 0
+        aAlignPoint = (aAlign, chooseAlign (green, red))
+        bAlignPoint = (bAlign, chooseAlign (red, green))
+        syncAlign alignPoint move w =
+            View.assymetricPad (max 0 move) 0 w
+            & View.setLayers . View.topLayer <>~ alignmentPointFrame alignPoint
 
 -- Resize a layout to be the same alignment/size as another layout
 hoverInPlaceOf ::
