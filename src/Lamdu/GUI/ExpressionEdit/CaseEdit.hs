@@ -84,6 +84,7 @@ make (Sugar.Case mArg alts caseTail addAlt _cEntityId) pl =
                         & return
                     Sugar.CaseExtending rest ->
                         makeOpenCase rest (Widget.toAnimId myId) altsGui
+            <&> TreeLayout.alignment . _1 .~ 0
         let addAltEventMap =
                 addAlt
                 <&> (^. Sugar.caarNewTag . Sugar.tagInstance)
@@ -93,8 +94,7 @@ make (Sugar.Case mArg alts caseTail addAlt _cEntityId) pl =
                   (E.Doc ["Edit", "Case", "Add Alt"])
                 & ExprGuiM.withHolePicker resultPicker
         ExpressionGui.addValFrame
-            <*> (TreeLayout.vboxSpaced ??
-                 ([header, altsGui] <&> TreeLayout.alignment . _1 .~ 0))
+            <*> (TreeLayout.vboxSpaced ?? [header, altsGui])
             <&> E.weakerEvents addAltEventMap
     & Widget.assignCursor myId (destCursorId alts headerId)
     & ExpressionGui.stdWrapParentExpr pl

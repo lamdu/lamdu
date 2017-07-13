@@ -95,7 +95,7 @@ glueHelper chooseAlign orientation (aAbsAlign, aw) (bAbsAlign, bw) =
         l = View.axis orientation
         -- Duplicates the logic from underlying glue:
         bGlueTranslation = 0 & l .~ aw ^. View.size . l
-        aToB = (bAbsAlign & l .~ 0) - (aAbsAlign & l .~ 0)
+        aToB = bAbsAlign - aAbsAlign & l .~ 0
         bToA = -aToB
         syncAlign move = View.assymetricPad (max 0 move) 0
 

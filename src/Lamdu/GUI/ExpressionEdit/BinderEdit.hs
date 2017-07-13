@@ -468,7 +468,7 @@ makeBinderContentEdit (Sugar.BinderLet l) =
                     [ makeLetEdit l <&> E.weakerEvents moveToInnerEventMap
                     , makeBinderBodyEdit body
                       & ExprGuiM.withLocalMScopeId letBodyScope
-                    ] <&> map (TreeLayout.alignment . _1 .~ 0)
+                    ] <&> Lens.mapped . TreeLayout.alignment . _1 .~ 0
                   )
                 )
             <&> E.weakerEvents eventMap
