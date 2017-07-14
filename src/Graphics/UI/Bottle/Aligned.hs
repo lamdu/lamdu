@@ -4,6 +4,7 @@ module Graphics.UI.Bottle.Aligned
     , AlignTo(..), alignTo, alignedTo
     , hoverInPlaceOf
     , Orientation(..)
+    , boxAlign, hboxAlign, vboxAlign
     ) where
 
 import qualified Control.Lens as Lens
@@ -139,3 +140,13 @@ absAligned =
         fromAbs align size
             | size == 0 = 0
             | otherwise = align / size
+
+boxAlign :: (View.HasSize a, View.Resizable a, View.GluesTo a a a) => Orientation -> Widget.R -> [a] -> a
+boxAlign orientation r xs =
+    View.box orientation (xs <&> Aligned (Alignment (pure r))) ^. value
+
+vboxAlign :: (View.HasSize a, View.Resizable a, View.GluesTo a a a) => Widget.R -> [a] -> a
+vboxAlign = boxAlign View.Vertical
+
+hboxAlign :: (View.HasSize a, View.Resizable a, View.GluesTo a a a) => Widget.R -> [a] -> a
+hboxAlign = boxAlign View.Horizontal

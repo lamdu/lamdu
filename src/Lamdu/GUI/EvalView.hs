@@ -92,7 +92,7 @@ makeError err animId =
             _ -> Text.pack (show err)
 
 hbox :: [View] -> View
-hbox = GridView.horizontalAlign 0.5
+hbox = Aligned.hboxAlign 0.5
 
 arrayCutoff :: Int
 arrayCutoff = 10

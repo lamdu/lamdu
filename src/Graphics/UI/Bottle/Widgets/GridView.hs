@@ -2,8 +2,6 @@
 module Graphics.UI.Bottle.Widgets.GridView
     ( make, makePlacements
     , Alignment(..)
-    , verticalAlign, vertical
-    , horizontalAlign, horizontal
     ) where
 
 import qualified Control.Lens as Lens
@@ -81,15 +79,3 @@ make views =
     & uncurry View
     where
         translate (_alignment, rect, view) = View.translateLayers (rect ^. Rect.topLeft) (view ^. View.vAnimLayers)
-
-vertical :: [(Alignment, View)] -> View
-vertical = make . map (:[])
-
-horizontal :: [(Alignment, View)] -> View
-horizontal = make . (:[])
-
-verticalAlign :: Alignment -> [View] -> View
-verticalAlign align = vertical . map ((,) align)
-
-horizontalAlign :: Alignment -> [View] -> View
-horizontalAlign align = horizontal . map ((,) align)

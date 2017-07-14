@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, OverloadedStrings, DeriveFunctor, DeriveTraversable, TemplateHaskell, LambdaCase #-}
+{-# LANGUAGE NoImplicitPrelude, OverloadedStrings, DeriveFunctor, DeriveTraversable, TemplateHaskell, LambdaCase, TypeFamilies #-}
 module Graphics.UI.Bottle.Widgets.EventMapHelp
     ( makeView
     , IsHelpShown(..)
@@ -18,6 +18,7 @@ import           Data.Vector.Vector2 (Vector2(..))
 import qualified Graphics.DrawingCombinators as Draw
 import           Graphics.UI.Bottle.Animation (AnimId, R)
 import qualified Graphics.UI.Bottle.Animation as Anim
+import qualified Graphics.UI.Bottle.Aligned as Aligned
 import           Graphics.UI.Bottle.EventMap (EventMap)
 import qualified Graphics.UI.Bottle.EventMap as E
 import           Graphics.UI.Bottle.MetaKey (MetaKey(..), toModKey, noMods)
@@ -102,7 +103,7 @@ makeShortcutKeyView inputDocs =
     inputDocs
     <&> (<> " ")
     & traverse TextView.makeLabel
-    <&> GridView.verticalAlign 1
+    <&> Aligned.vboxAlign 1
     & Reader.local setColor
     where
         setColor env =
@@ -166,7 +167,7 @@ makeFlatTreeView size pairs =
     <&> Spacer.makeHorizontal
     <&> List.intersperse
     ?? colViews
-    <&> GridView.horizontalAlign 1
+    <&> Aligned.hboxAlign 1
     where
         colViews =
             pairs
@@ -186,7 +187,7 @@ makeTreeView size trees =
         let go ts = ts <&> fromTree & mconcat
             fromTree (Leaf inputDocsView) = ([], [inputDocsView])
             fromTree (Branch titleView ts) =
-                ( (titleView, GridView.verticalAlign 1 inputDocs) :
+                ( (titleView, Aligned.vboxAlign 1 inputDocs) :
                     (Lens.traversed . _1 %~ indent indentWidth) titles
                 , [] )
                 where

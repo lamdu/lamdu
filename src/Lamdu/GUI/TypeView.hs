@@ -66,7 +66,7 @@ showIdentifier :: Monad m => Identifier -> M m View
 showIdentifier (Identifier bs) = text (decodeUtf8 bs)
 
 hbox :: [View] -> View
-hbox = GridView.horizontalAlign 0.5
+hbox = Aligned.hboxAlign 0.5
 
 mkHSpace :: Monad m => M m View
 mkHSpace = Spacer.stdHSpaceView & egui
