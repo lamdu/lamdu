@@ -382,15 +382,24 @@ translate ::
     Functor f => Vector2 R -> Widget (f EventResult) -> State (f EventResult)
 translate pos w =
     w ^. wState
-    & stateMEnter . Lens._Just . Lens.argument .
-        Direction.coordinates . Rect.topLeft -~ pos
-    & stateMEnter . Lens._Just . Lens.mapped .
-        enterResultRect . Rect.topLeft +~ pos
+    & stateMEnter %~ translateMEnter pos
     & _StateFocused . Lens.mapped . fFocalArea . Rect.topLeft +~ pos
     & _StateFocused . Lens.mapped . fEventMap . Lens.argument . virtualCursor . Rect.topLeft -~ pos
     & Lens.mapped . Lens.mapped . eVirtualCursor . Lens.mapped .
       _NewVirtualCursor . virtualCursor . Rect.topLeft +~ pos
     & stateLayers %~ View.translateLayers pos
+
+translateMEnter ::
+    Vector2 R ->
+    Maybe (Direction -> EnterResult a) ->
+    Maybe (Direction -> EnterResult a)
+translateMEnter pos =
+    Lens._Just %~ translateEnter
+    where
+        translateEnter enter =
+            enter
+            & Lens.argument . Direction.coordinates . Rect.topLeft -~ pos
+            & Lens.mapped . enterResultRect . Rect.topLeft +~ pos
 
 padToSizeAlign ::
     Functor f => Size -> Vector2 R -> Widget (f EventResult) -> Widget (f EventResult)
