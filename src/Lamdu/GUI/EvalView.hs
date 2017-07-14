@@ -137,7 +137,7 @@ makeRecExtend animId typ recExtend =
                 , [ label "..." itemId | idx == cutoff ]
                 ] & concat
                 & sequence
-                <&> GridView.horizontalAlign 0
+                <&> View.hbox
                 where
                     itemId = Anim.augmentId animId (idx :: Int)
             cutoff = 4
