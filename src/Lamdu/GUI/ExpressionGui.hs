@@ -460,11 +460,13 @@ makeNameEdit onActiveEditor (Name nameSrc nameCollision setName name) myId =
       ?? FocusDelegator.FocusEntryParent ?? myId
     ) <*>
     do
-        mCollisionSuffix <- makeCollisionSuffixLabel nameCollision
+        mCollisionSuffix <- makeCollisionSuffixLabel nameCollision <&> Lens._Just %~ Aligned 0.5
         makeNameWordEdit
             ?? Property storedName setName
             ?? WidgetIds.nameEditOf myId
+            <&> Aligned 0.5
             <&> maybe id (flip (/|/)) mCollisionSuffix
+            <&> (^. Aligned.value)
     & Reader.local (View.animIdPrefix .~ Widget.toAnimId myId)
     <&> onActiveEditor
     where
