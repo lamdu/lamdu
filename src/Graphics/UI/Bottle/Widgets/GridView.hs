@@ -32,8 +32,8 @@ traverseList :: Traversable t => Lens (t a) (t b) [a] [b]
 traverseList = Lens.unsafePartsOf traverse
 
 makePlacements ::
-    (Traversable vert, Traversable horiz) =>
-    vert (horiz (Alignment, View.Size, a)) ->
+    (Traversable vert, Traversable horiz, View.HasSize a) =>
+    vert (horiz (Alignment, a)) ->
     (View.Size, vert (horiz (Alignment, Rect, a)))
 makePlacements rows =
     ( totalSize
@@ -65,8 +65,10 @@ makePlacements rows =
         colSizes = posRowsList & transpose <&> groupSize _1 . fmap (^. _2)
         rowSizes = posRowsList             <&> groupSize _2 . fmap (^. _2)
         posRows = (fmap . fmap) calcPos rows
-        calcPos (Alignment alignment, size, x) =
+        calcPos (Alignment alignment, x) =
             (size, (alignment * size, (1 - alignment) * size), x)
+            where
+                size = x ^. View.size
 
 --- Displays:
 
@@ -74,20 +76,11 @@ make ::
     (Traversable horiz, Traversable vert) =>
     vert (horiz (Alignment, View)) -> View
 make views =
-    views
-    <&> Lens.mapped %~ toTriplet
-    & makePlacements
-    & _2 %~ toFrame
+    makePlacements views
+    & _2 %~ (^. traverse . traverse . Lens.to translate)
     & uncurry View
     where
-        toTriplet (alignment, View size layers) = (alignment, size, layers)
-        translate (_alignment, rect, layers) = View.translateLayers (rect ^. Rect.topLeft) layers
-        toFrame placements =
-            placements
-            <&> toList
-            & concat
-            <&> translate
-            & mconcat
+        translate (_alignment, rect, view) = View.translateLayers (rect ^. Rect.topLeft) (view ^. View.vAnimLayers)
 
 vertical :: [(Alignment, View)] -> View
 vertical = make . map (:[])

@@ -22,7 +22,6 @@ import qualified Graphics.UI.Bottle.MetaKey as MetaKey
 import           Graphics.UI.Bottle.ModKey (ModKey)
 import           Graphics.UI.Bottle.Rect (Rect(..))
 import qualified Graphics.UI.Bottle.Rect as Rect
-import qualified Graphics.UI.Bottle.View as View
 import           Graphics.UI.Bottle.Widget (R, Widget(Widget))
 import qualified Graphics.UI.Bottle.Widget as Widget
 import           Graphics.UI.Bottle.Widgets.GridView (Alignment(..))
@@ -163,12 +162,7 @@ makeWithKeys keys children =
       & toWidgetWithKeys keys size
     )
     where
-        (size, content) =
-            children
-            & each2d %~ toTriplet
-            & GridView.makePlacements
-        toTriplet (alignment, widget) =
-            (alignment, widget ^. View.size, widget)
+        (size, content) = GridView.makePlacements children
 
 each2d :: (Traversable vert, Traversable horiz) => Lens.IndexedTraversal Cursor (vert (horiz a)) (vert (horiz b)) a b
 each2d = Lens.traversed <.> Lens.traversed & Lens.reindexed (uncurry (flip Vector2))
