@@ -13,6 +13,7 @@ import           Data.Text.Encoding (decodeUtf8)
 import           Data.Vector.Vector2 (Vector2(..))
 import           Graphics.UI.Bottle.Aligned (Aligned(..))
 import qualified Graphics.UI.Bottle.Aligned as Aligned
+import           Graphics.UI.Bottle.Alignment (Alignment(..))
 import           Graphics.UI.Bottle.Animation (AnimId)
 import qualified Graphics.UI.Bottle.Animation as Anim
 import           Graphics.UI.Bottle.View (View(..), (/-/))
@@ -112,9 +113,9 @@ makeTInst parentPrecedence tid typeParams =
                     paramIdView <- showIdentifier tParamId
                     typeView <- splitMake (Precedence.parent 0) arg
                     return
-                        [ (GridView.Alignment (Vector2 1 0.5), paramIdView)
-                        , (0.5, hspace)
-                        , (GridView.Alignment (Vector2 0 0.5), typeView)
+                        [ Aligned (Alignment (Vector2 1 0.5)) paramIdView
+                        , Aligned 0.5 hspace
+                        , Aligned (Alignment (Vector2 0 0.5)) typeView
                         ]
         case Map.toList typeParams of
             [] -> pure nameView
@@ -154,27 +155,27 @@ makeTag tag =
     Anchors.assocNameRef tag & Transaction.getP & transaction
     >>= text
 
-makeField :: Monad m => (T.Tag, Type) -> M m [(GridView.Alignment, View)]
+makeField :: Monad m => (T.Tag, Type) -> M m [Aligned View]
 makeField (tag, fieldType) =
-    Lens.sequenceOf (Lens.traversed . _2)
-    [ (GridView.Alignment (Vector2 1 0.5), makeTag tag)
-    , (0.5, mkHSpace)
-    , (GridView.Alignment (Vector2 0 0.5), splitMake (Precedence.parent 0) fieldType)
+    Lens.sequenceOf (Lens.traversed . Aligned.value)
+    [ Aligned (Alignment (Vector2 1 0.5)) (makeTag tag)
+    , Aligned 0.5 mkHSpace
+    , Aligned (Alignment (Vector2 0 0.5)) (splitMake (Precedence.parent 0) fieldType)
     ]
 
-makeSumField :: Monad m => (T.Tag, Type) -> M m [(GridView.Alignment, View)]
+makeSumField :: Monad m => (T.Tag, Type) -> M m [Aligned View]
 makeSumField (tag, T.TRecord T.CEmpty) =
-    makeTag tag <&> (,) (GridView.Alignment (Vector2 1 0.5)) <&> (:[])
+    makeTag tag <&> Aligned (Alignment (Vector2 1 0.5)) <&> (:[])
 makeSumField (tag, fieldType) =
-    Lens.sequenceOf (Lens.traversed . _2)
-    [ (GridView.Alignment (Vector2 1 0.5), makeTag tag)
-    , (0.5, mkHSpace)
-    , (GridView.Alignment (Vector2 0 0.5), splitMake (Precedence.parent 0) fieldType)
+    Lens.sequenceOf (Lens.traversed . Aligned.value)
+    [ Aligned (Alignment (Vector2 1 0.5)) (makeTag tag)
+    , Aligned 0.5 mkHSpace
+    , Aligned (Alignment (Vector2 0 0.5)) (splitMake (Precedence.parent 0) fieldType)
     ]
 
 makeComposite ::
     Monad m =>
-    ((T.Tag, Type) -> M m [(GridView.Alignment, View)]) -> T.Composite t -> M m View
+    ((T.Tag, Type) -> M m [Aligned View]) -> T.Composite t -> M m View
 makeComposite _ T.CEmpty = makeEmptyRecord
 makeComposite mkField composite =
     do

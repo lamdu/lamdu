@@ -27,6 +27,7 @@ import           Graphics.UI.Bottle.Widget (Widget(..))
 import qualified Graphics.UI.Bottle.Widget as Widget
 import           Graphics.UI.Bottle.Aligned (Aligned(..))
 import qualified Graphics.UI.Bottle.Aligned as Aligned
+import           Graphics.UI.Bottle.Alignment (Alignment(..))
 import qualified Graphics.UI.Bottle.Widget.Id as WidgetId
 import qualified Graphics.UI.Bottle.Widget.TreeLayout as TreeLayout
 import qualified Graphics.UI.Bottle.Widgets.Grid as Grid
@@ -395,7 +396,7 @@ layoutResults groups hiddenResults
                 <&> map Widget.fromView
             let grid =
                   rows
-                  & Lens.mapped . Lens.mapped %~ (,) (Grid.Alignment (Vector2 0 0.5))
+                  <&> Lens.mapped %~ Aligned (Alignment (Vector2 0 0.5))
                   & Grid.make & snd
                   & EventMap.blockDownEvents
             let padHeight =

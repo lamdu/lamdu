@@ -8,6 +8,7 @@ import qualified Control.Lens as Lens
 import           Data.Foldable (toList)
 import           Data.List (transpose)
 import           Data.Vector.Vector2 (Vector2(..))
+import           Graphics.UI.Bottle.Aligned (Aligned(..))
 import           Graphics.UI.Bottle.Alignment (Alignment(..))
 import qualified Graphics.UI.Bottle.Animation as Anim
 import           Graphics.UI.Bottle.Rect (Rect(..))
@@ -31,7 +32,7 @@ traverseList = Lens.unsafePartsOf traverse
 
 makePlacements ::
     (Traversable vert, Traversable horiz, View.HasSize a) =>
-    vert (horiz (Alignment, a)) ->
+    vert (horiz (Aligned a)) ->
     (View.Size, vert (horiz (Alignment, Rect, a)))
 makePlacements rows =
     ( totalSize
@@ -62,17 +63,15 @@ makePlacements rows =
         posRowsList = posRows & toList <&> toList
         colSizes = posRowsList & transpose <&> groupSize _1 . fmap (^. _2)
         rowSizes = posRowsList             <&> groupSize _2 . fmap (^. _2)
-        posRows = (fmap . fmap) calcPos rows
-        calcPos (Alignment alignment, x) =
+        posRows = rows <&> Lens.mapped %~ calcPos
+        calcPos (Aligned (Alignment alignment) x) =
             (size, (alignment * size, (1 - alignment) * size), x)
             where
                 size = x ^. View.size
 
 --- Displays:
 
-make ::
-    (Traversable horiz, Traversable vert) =>
-    vert (horiz (Alignment, View)) -> View
+make :: (Traversable horiz, Traversable vert) => vert (horiz (Aligned View)) -> View
 make views =
     makePlacements views
     & _2 %~ (^. traverse . traverse . Lens.to translate)

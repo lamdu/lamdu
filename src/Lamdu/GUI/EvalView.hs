@@ -15,6 +15,7 @@ import           Graphics.DrawingCombinators ((%%))
 import qualified Graphics.DrawingCombinators.Utils as DrawUtils
 import           Graphics.UI.Bottle.Aligned (Aligned(..))
 import qualified Graphics.UI.Bottle.Aligned as Aligned
+import           Graphics.UI.Bottle.Alignment (Alignment(..))
 import           Graphics.UI.Bottle.Animation (AnimId)
 import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.Rect as Rect
@@ -68,16 +69,16 @@ makeTag animId tag =
 
 makeField ::
     Monad m =>
-    AnimId -> T.Tag -> Val Type -> ExprGuiM m [(GridView.Alignment, View)]
+    AnimId -> T.Tag -> Val Type -> ExprGuiM m [Aligned View]
 makeField parentAnimId tag val =
     do
         tagView <- makeTag (baseId ++ ["tag"]) tag
         space <- Spacer.stdHSpaceView
         valView <- makeInner (baseId ++ ["val"]) val
         return
-            [ (GridView.Alignment (Vector2 1 0.5), tagView)
-            , (0.5, space)
-            , (GridView.Alignment (Vector2 0 0.5), valView)
+            [ Aligned (Alignment (Vector2 1 0.5)) tagView
+            , Aligned 0.5 space
+            , Aligned (Alignment (Vector2 0 0.5)) valView
             ]
     where
         baseId = parentAnimId ++ [BinUtils.encodeS tag]

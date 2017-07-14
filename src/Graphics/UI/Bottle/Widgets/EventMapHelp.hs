@@ -18,7 +18,9 @@ import           Data.Vector.Vector2 (Vector2(..))
 import qualified Graphics.DrawingCombinators as Draw
 import           Graphics.UI.Bottle.Animation (AnimId, R)
 import qualified Graphics.UI.Bottle.Animation as Anim
+import           Graphics.UI.Bottle.Aligned (Aligned(..))
 import qualified Graphics.UI.Bottle.Aligned as Aligned
+import           Graphics.UI.Bottle.Alignment (Alignment(..))
 import           Graphics.UI.Bottle.EventMap (EventMap)
 import qualified Graphics.UI.Bottle.EventMap as E
 import           Graphics.UI.Bottle.MetaKey (MetaKey(..), toModKey, noMods)
@@ -175,7 +177,7 @@ makeFlatTreeView size pairs =
             <&> map toRow
             <&> GridView.make
         toRow (titleView, docView) =
-            [(0, titleView), (GridView.Alignment (Vector2 1 0), docView)]
+            [Aligned 0 titleView, Aligned (Alignment (Vector2 1 0)) docView]
         pairHeight (titleView, docView) = (max `on` (^. View.height)) titleView docView
 
 makeTreeView ::

@@ -14,6 +14,7 @@ import           Data.List.Utils (groupOn, minimumOn)
 import           Data.MRUMemo (memo)
 import           Data.Vector.Vector2 (Vector2(..))
 import qualified Data.Vector.Vector2 as Vector2
+import           Graphics.UI.Bottle.Aligned (Aligned(..))
 import           Graphics.UI.Bottle.Direction (Direction)
 import qualified Graphics.UI.Bottle.Direction as Direction
 import qualified Graphics.UI.Bottle.EventMap as EventMap
@@ -146,14 +147,14 @@ addNavEventmap Keys{..} navDests eMap =
 
 make ::
     (Traversable vert, Traversable horiz, Functor f) =>
-    vert (horiz (Alignment, Widget (f Widget.EventResult))) ->
+    vert (horiz (Aligned (Widget (f Widget.EventResult)))) ->
     (vert (horiz Alignment), Widget (f Widget.EventResult))
 make = makeWithKeys (stdKeys <&> MetaKey.toModKey)
 
 makeWithKeys ::
     (Traversable vert, Traversable horiz, Functor f) =>
     Keys ModKey ->
-    vert (horiz (Alignment, Widget (f Widget.EventResult))) ->
+    vert (horiz (Aligned (Widget (f Widget.EventResult)))) ->
     (vert (horiz Alignment), Widget (f Widget.EventResult))
 makeWithKeys keys children =
     ( content & each2d %~ (^. _1)
