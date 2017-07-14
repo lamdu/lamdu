@@ -102,9 +102,9 @@ glueHelper chooseAlign orientation (aAbsAlign, aw) (bAbsAlign, bw) =
 
 -- Resize a layout to be the same alignment/size as another layout
 hoverInPlaceOf ::
-    Functor f =>
+    (Functor f, View.HasSize a) =>
     Aligned (Widget (f Widget.EventResult)) ->
-    Aligned (Widget (f Widget.EventResult)) ->
+    Aligned a ->
     Aligned (Widget (f Widget.EventResult))
 layout `hoverInPlaceOf` src =
     ( srcAbsAlignment

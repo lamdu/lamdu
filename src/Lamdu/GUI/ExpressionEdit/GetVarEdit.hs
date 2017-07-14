@@ -9,7 +9,7 @@ import qualified Data.ByteString.Char8 as SBS8
 import           Data.Store.Transaction (Transaction)
 import qualified Graphics.UI.Bottle.EventMap as E
 import           Graphics.UI.Bottle.Font (Underline(..))
-import           Graphics.UI.Bottle.View ((/-/))
+import           Graphics.UI.Bottle.View (View, (/-/))
 import qualified Graphics.UI.Bottle.View as View
 import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
@@ -166,7 +166,7 @@ processDefinitionWidget (Sugar.DefTypeChanged info) myId mkLayout =
                 box <- definitionTypeChangeBox info myId
                 layout
                     & TreeLayout.alignedWidget %~
-                        (/-/ (Aligned 0 box `Aligned.hoverInPlaceOf` View.empty))
+                        (/-/ (Aligned 0 box `Aligned.hoverInPlaceOf` (View.empty :: Aligned View)))
                     & return
             else return layout
 
