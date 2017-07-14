@@ -13,10 +13,12 @@ import           Data.Text.Encoding (decodeUtf8)
 import           Data.Vector.Vector2 (Vector2(..))
 import           Graphics.DrawingCombinators ((%%))
 import qualified Graphics.DrawingCombinators.Utils as DrawUtils
+import           Graphics.UI.Bottle.Aligned (Aligned(..))
+import qualified Graphics.UI.Bottle.Aligned as Aligned
 import           Graphics.UI.Bottle.Animation (AnimId)
 import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.Rect as Rect
-import           Graphics.UI.Bottle.View (View(..))
+import           Graphics.UI.Bottle.View (View(..), (/-/))
 import qualified Graphics.UI.Bottle.View as View
 import qualified Graphics.UI.Bottle.Widgets.GridView as GridView
 import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
@@ -128,7 +130,7 @@ makeRecExtend animId typ recExtend =
             subtreeViews <-
                 subtrees ^.. ER.body . ER._RArray . Lens.traverse
                 & zipWith makeItem [0..cutoff] & sequence
-            rootView : subtreeViews & GridView.verticalAlign 0 & return
+            rootView : subtreeViews & View.vbox & return
         where
             makeItem idx val =
                 [ [ label "* " itemId ]
@@ -151,14 +153,15 @@ makeRecExtend animId typ recExtend =
                 case recStatus of
                 RecordComputed -> return View.empty
                 RecordExtendsError err ->
-                    do
-                        v <- makeError err animId
-                        GridView.verticalAlign 0.5 [sqr, v] & return
+                    makeError err animId
+                    <&> Aligned 0.5
+                    <&> (sqr /-/)
                     where
                         sqr =
                             View.make 1 (Anim.unitSquare (animId ++ ["line"]))
                             & View.scale (Vector2 barWidth 1)
-            GridView.verticalAlign 0.5 [fieldsView, restView] & return
+                            & Aligned 0.5
+            (Aligned 0.5 fieldsView /-/ restView) ^. Aligned.value & return
     where
         (fields, recStatus) = extractFields recExtend
 

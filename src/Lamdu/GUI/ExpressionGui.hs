@@ -57,7 +57,6 @@ import qualified Graphics.UI.Bottle.Aligned as Aligned
 import           Graphics.UI.Bottle.Widget.TreeLayout (TreeLayout(..))
 import qualified Graphics.UI.Bottle.Widget.TreeLayout as TreeLayout
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
-import qualified Graphics.UI.Bottle.Widgets.GridView as GridView
 import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
 import qualified Graphics.UI.Bottle.Widgets.TextEdit as TextEdit
 import qualified Graphics.UI.Bottle.Widgets.TextEdit.Property as TextEdits
@@ -546,9 +545,12 @@ addValFrame =
 makeNameView :: Monad m => Name n -> AnimId -> ExprGuiM m View
 makeNameView (Name _ collision _ name) animId =
     do
-        nameView <- TextView.make ?? name ?? animId
-        mSuffixLabel <- makeCollisionSuffixLabel collision
-        GridView.horizontalAlign 0.5 (nameView : mSuffixLabel ^.. Lens._Just) & return
+        mSuffixLabel <-
+            makeCollisionSuffixLabel collision <&> Lens._Just %~ Aligned 0.5
+        TextView.make ?? name ?? animId
+            <&> Aligned 0.5
+            <&> maybe id (flip (/|/)) mSuffixLabel
+            <&> (^. Aligned.value)
     & Reader.local (View.animIdPrefix .~ animId)
 
 -- TODO: This doesn't belong here

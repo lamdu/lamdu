@@ -11,9 +11,11 @@ import qualified Data.Store.Transaction as Transaction
 import qualified Data.Text as Text
 import           Data.Text.Encoding (decodeUtf8)
 import           Data.Vector.Vector2 (Vector2(..))
+import           Graphics.UI.Bottle.Aligned (Aligned(..))
+import qualified Graphics.UI.Bottle.Aligned as Aligned
 import           Graphics.UI.Bottle.Animation (AnimId)
 import qualified Graphics.UI.Bottle.Animation as Anim
-import           Graphics.UI.Bottle.View (View(..))
+import           Graphics.UI.Bottle.View (View(..), (/-/))
 import qualified Graphics.UI.Bottle.View as View
 import qualified Graphics.UI.Bottle.Widget.Id as WidgetId
 import qualified Graphics.UI.Bottle.Widgets.GridView as GridView
@@ -189,9 +191,9 @@ makeComposite mkField composite =
                     let sqr =
                             View.make 1 (Anim.unitSquare sqrId)
                             & View.scale (Vector2 barWidth 10)
-                    v <- makeTVar var
-                    return $ GridView.verticalAlign 0.5 [sqr, v]
-        GridView.verticalAlign 0.5 [fieldsView, varView] & addBackgroundFrame
+                            & Aligned 0.5
+                    makeTVar var <&> Aligned 0.5 <&> (sqr /-/)
+        (Aligned 0.5 fieldsView /-/ varView) ^. Aligned.value & addBackgroundFrame
     where
         (fields, extension) = composite ^. orderedFlatComposite
 
