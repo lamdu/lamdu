@@ -21,7 +21,7 @@ module Graphics.UI.Bottle.Widget
 
     -- Widget type and lenses:
     , State(..), _StateFocused, _StateUnfocused
-        , stateMakeLayers
+        , stateLayers
     , Widget(..), wSize, wState
         , mEnter, eventMapMaker, events
     , VirtualCursor(..), virtualCursor
@@ -162,10 +162,6 @@ sizedState :: Lens.IndexedLens' Size (Widget a) (State a)
 sizedState f (Widget sz state) = Lens.indexed f sz state <&> Widget sz
 
 instance View.SetLayers (Widget a) where setLayers = sizedState <. stateLayers
-
-stateLayers :: Lens.Setter' (State a) View.Layers
-stateLayers f (StateUnfocused x) = uLayers f x <&> StateUnfocused
-stateLayers f (StateFocused x) = (Lens.mapped . fLayers) f x <&> StateFocused
 
 instance Functor f => View.Resizable (Widget (f EventResult)) where
     empty = fromView View.empty
@@ -332,9 +328,9 @@ stateMEnter f (StateFocused   x) = (Lens.mapped . fMEnter) f x <&> StateFocused
 mEnter :: Lens.Setter' (Widget a) (Maybe (Direction -> EnterResult a))
 mEnter = wState . stateMEnter
 
-stateMakeLayers :: Lens.Setter' (State a) View.Layers
-stateMakeLayers f (StateUnfocused x) = uLayers f x <&> StateUnfocused
-stateMakeLayers f (StateFocused   x) = (Lens.mapped . fLayers) f x <&> StateFocused
+stateLayers :: Lens.Setter' (State a) View.Layers
+stateLayers f (StateUnfocused x) = uLayers f x <&> StateUnfocused
+stateLayers f (StateFocused   x) = (Lens.mapped . fLayers) f x <&> StateFocused
 
 takesFocus ::
     (HasWidget w, Functor f) =>
