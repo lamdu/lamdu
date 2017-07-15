@@ -215,8 +215,8 @@ combineSpacedMParens ::
        TreeLayout (f Widget.EventResult))
 combineSpacedMParens mParensId =
     do
-        hSpace <- Spacer.stdHSpaceView <&> Widget.fromView <&> Aligned 0
-        vSpace <- Spacer.stdVSpaceView <&> TreeLayout.fromView
+        hSpace <- Spacer.stdHSpace <&> Widget.fromView <&> Aligned 0
+        vSpace <- Spacer.stdVSpace <&> TreeLayout.fromView
         mParenInfo <- mParensId & Lens._Just %%~ makeParenIndentInfo
         return $ combineWith mParenInfo (List.intersperse hSpace) (List.intersperse vSpace)
 

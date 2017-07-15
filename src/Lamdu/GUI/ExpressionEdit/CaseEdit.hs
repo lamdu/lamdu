@@ -116,7 +116,7 @@ makeAltRow mActiveTag (Sugar.CaseAlt delete tag altExpr) =
             <&> if mActiveTag == Just (tag ^. Sugar.tagVal)
                 then addBg
                 else id
-        hspace <- Spacer.stdHSpaceView
+        hspace <- Spacer.stdHSpace
         altExprGui <- ExprGuiM.makeSubexpression altExpr
         let itemEventMap = caseDelEventMap config delete
         AlignTo 0 (tagLabel /|/ hspace) /|/ altExprGui
@@ -148,7 +148,7 @@ makeOpenCase ::
 makeOpenCase rest animId altsGui =
     do
         theme <- Lens.view Theme.theme
-        vspace <- Spacer.stdVSpaceView
+        vspace <- Spacer.stdVSpace
         restExpr <-
             ExpressionGui.addValPadding
             <*> ExprGuiM.makeSubexpression rest

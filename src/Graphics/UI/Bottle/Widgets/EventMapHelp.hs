@@ -1,6 +1,6 @@
 {-# LANGUAGE NoImplicitPrelude, OverloadedStrings, DeriveFunctor, DeriveTraversable, TemplateHaskell, LambdaCase, TypeFamilies #-}
 module Graphics.UI.Bottle.Widgets.EventMapHelp
-    ( makeView
+    ( make
     , IsHelpShown(..)
     , makeToggledHelpAdder
     , Config(..), defaultConfig
@@ -140,8 +140,8 @@ columns maxHeight itemHeight =
             where
                 newHeight = itemHeight new
 
-makeView :: Vector2 R -> EventMap a -> Env -> View
-makeView size eventMap =
+make :: Vector2 R -> EventMap a -> Env -> View
+make size eventMap =
     eventMap ^.. E.emDocs . Lens.withIndex
     <&> (_1 %~ (^. E.docStrs)) . Tuple.swap
     & groupInputDocs & groupTree
@@ -242,7 +242,7 @@ makeToggledHelpAdder startValue =
                             , "Show"
                             )
                         HelpShown ->
-                            ( makeView size
+                            ( make size
                                 ((focus ^. Widget.fEventMap) (Widget.VirtualCursor (focus ^. Widget.fFocalArea)))
                                 env
                             , "Hide"

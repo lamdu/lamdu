@@ -396,7 +396,7 @@ makeLetEdit item =
                 ]
         let eventMap = mappend actionsEventMap usageEventMap
         letLabel <- ExpressionGui.grammarLabel "let"
-        space <- Spacer.stdHSpaceView
+        space <- Spacer.stdHSpace
         letEquation <-
             make (item ^. Sugar.lName) letColor binder myId
             <&> E.weakerEvents eventMap

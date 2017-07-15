@@ -163,7 +163,7 @@ vboxSpaced ::
     (MonadReader env m, Spacer.HasStdSpacing env, Functor f) =>
     m ([TreeLayout (f Widget.EventResult)] -> TreeLayout (f Widget.EventResult))
 vboxSpaced =
-    Spacer.stdVSpaceView
+    Spacer.stdVSpace
     <&> fromView
     <&> List.intersperse
     <&> Lens.mapped %~ vbox

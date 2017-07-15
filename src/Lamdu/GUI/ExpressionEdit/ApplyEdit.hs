@@ -174,7 +174,7 @@ makeArgRow ::
 makeArgRow arg =
     do
         paramTag <- TagEdit.makeParamTag (arg ^. Sugar.aaTag)
-        space <- Spacer.stdHSpaceView
+        space <- Spacer.stdHSpace
         expr <- ExprGuiM.makeSubexpression (arg ^. Sugar.aaExpr)
         AlignTo 0 (paramTag /|/ space) /|/ expr & return
 

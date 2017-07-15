@@ -84,7 +84,7 @@ makeFieldRow (Sugar.RecordField delete tag fieldExpr) =
     do
         config <- Lens.view Config.config
         tagLabel <- TagEdit.makeRecordTag (ExprGuiT.nextHolesBefore fieldExpr) tag
-        hspace <- Spacer.stdHSpaceView
+        hspace <- Spacer.stdHSpace
         fieldGui <- ExprGuiM.makeSubexpression fieldExpr
         let itemEventMap = recordDelEventMap config delete
         AlignTo 0 (tagLabel /|/ hspace) /|/ fieldGui
@@ -115,7 +115,7 @@ makeOpenRecord ::
 makeOpenRecord fieldsGui rest animId =
     do
         theme <- Lens.view Theme.theme
-        vspace <- Spacer.stdVSpaceView
+        vspace <- Spacer.stdVSpace
         restExpr <-
             ExpressionGui.addValPadding
             <*> ExprGuiM.makeSubexpression rest

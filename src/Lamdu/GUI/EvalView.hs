@@ -73,7 +73,7 @@ makeField ::
 makeField parentAnimId tag val =
     do
         tagView <- makeTag (baseId ++ ["tag"]) tag
-        space <- Spacer.stdHSpaceView
+        space <- Spacer.stdHSpace
         valView <- makeInner (baseId ++ ["val"]) val
         return
             [ Aligned (Alignment (Vector2 1 0.5)) tagView
@@ -186,7 +186,7 @@ makeInject animId typ inject =
         & sequence <&> hbox
     _ ->
         [ makeTagView
-        , Spacer.stdHSpaceView
+        , Spacer.stdHSpace
         , inject ^. V.injectVal & makeInner (animId ++ ["val"])
         ]
         & sequence <&> hbox

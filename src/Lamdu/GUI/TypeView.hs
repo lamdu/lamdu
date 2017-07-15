@@ -70,7 +70,7 @@ hbox :: [View] -> View
 hbox = Aligned.hboxAlign 0.5
 
 mkHSpace :: Monad m => M m View
-mkHSpace = Spacer.stdHSpaceView & egui
+mkHSpace = Spacer.stdHSpace & egui
 
 parensAround :: Monad m => View -> M m View
 parensAround view =

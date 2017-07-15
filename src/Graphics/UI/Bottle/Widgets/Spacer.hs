@@ -3,7 +3,7 @@ module Graphics.UI.Bottle.Widgets.Spacer
     ( make
     , makeHorizontal, makeVertical
     , vspaceLines
-    , HasStdSpacing(..), getSpaceSize , stdHSpaceView, stdVSpaceView
+    , HasStdSpacing(..), getSpaceSize , stdHSpace, stdVSpace
     ) where
 
 import qualified Control.Lens as Lens
@@ -42,8 +42,8 @@ getSpaceSize =
         factor * Vector2 (Draw.textAdvance font " ") (Draw.fontHeight font)
             & pure
 
-stdHSpaceView :: (MonadReader env m, HasStdSpacing env) => m View
-stdHSpaceView = getSpaceSize <&> _2 .~ 0 <&> make
+stdHSpace :: (MonadReader env m, HasStdSpacing env) => m View
+stdHSpace = getSpaceSize <&> _2 .~ 0 <&> make
 
-stdVSpaceView :: (MonadReader env m, HasStdSpacing env) => m View
-stdVSpaceView = getSpaceSize <&> _1 .~ 0 <&> make
+stdVSpace :: (MonadReader env m, HasStdSpacing env) => m View
+stdVSpace = getSpaceSize <&> _1 .~ 0 <&> make

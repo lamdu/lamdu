@@ -76,7 +76,7 @@ makeNameRef ::
     Monad m => Widget.Id -> Sugar.NameRef name m ->
     (name -> Widget.Id -> ExprGuiM m (ExpressionGui m)) ->
     ExprGuiM m (ExpressionGui m)
-makeNameRef myId nameRef makeView =
+makeNameRef myId nameRef maker =
     do
         cp <- ExprGuiM.readCodeAnchors
         config <- Lens.view Config.config
@@ -87,7 +87,7 @@ makeNameRef myId nameRef makeView =
                 do
                     DataOps.savePreJumpPosition cp myId
                     WidgetIds.fromEntityId <$> nameRef ^. Sugar.nrGotoDefinition
-        makeView (nameRef ^. Sugar.nrName) nameId
+        maker (nameRef ^. Sugar.nrName) nameId
             <&> E.weakerEvents jumpToDefinitionEventMap
     & Widget.assignCursor myId nameId
     where
@@ -116,7 +116,7 @@ definitionTypeChangeBox info getVarId =
         headerLabel <- TextView.makeLabel "Type was:"
         typeWhenUsed <-
             mkTypeView "typeWhenUsed" (info ^. Sugar.defTypeWhenUsed)
-        spacing <- Spacer.stdVSpaceView
+        spacing <- Spacer.stdVSpace
         sepLabel <-
             (Widget.makeFocusableView ?? myId)
             <*> (TextView.makeLabel "Update to:" <&> Widget.fromView)
