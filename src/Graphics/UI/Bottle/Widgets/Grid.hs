@@ -23,6 +23,7 @@ import qualified Graphics.UI.Bottle.MetaKey as MetaKey
 import           Graphics.UI.Bottle.ModKey (ModKey)
 import           Graphics.UI.Bottle.Rect (Rect(..))
 import qualified Graphics.UI.Bottle.Rect as Rect
+import qualified Graphics.UI.Bottle.View as View
 import           Graphics.UI.Bottle.Widget (R, Widget(Widget))
 import qualified Graphics.UI.Bottle.Widget as Widget
 import           Graphics.UI.Bottle.Widgets.GridView (Alignment(..))
@@ -205,7 +206,12 @@ toWidgetWithKeys keys size sChildren =
     }
     where
         translateChildWidget (rect, widget) =
-            Widget.translate (rect ^. Rect.topLeft) widget
+            widget
+            -- Each child is set to the size of the entire grid and
+            -- then translated to its place in order to fix the
+            -- Surrounding parameters of all children
+            & View.size .~ size
+            & Widget.translate (rect ^. Rect.topLeft)
         states = sChildren & each2d %~ translateChildWidget
         unfocused = states & each2d %~ (^? Widget._StateUnfocused)
         unfocusedMEnters = unfocused & each2d %~ (>>= (^. Widget.uMEnter))

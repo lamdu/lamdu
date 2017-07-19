@@ -7,8 +7,8 @@ module Graphics.UI.Bottle.Aligned
     , boxAlign, hboxAlign, vboxAlign
     ) where
 
-import qualified Control.Lens as Lens
 import           Control.Lens (Lens')
+import qualified Control.Lens as Lens
 import           Data.Vector.Vector2 (Vector2(..))
 import           Graphics.UI.Bottle.Alignment (Alignment(..))
 import qualified Graphics.UI.Bottle.Alignment as Alignment
@@ -112,12 +112,14 @@ layout `hoverInPlaceOf` src =
         & View.setLayers . View.layers %~ (mempty :)
         & Widget.mEnter . Lens._Just . Lens.mapped . Widget.enterResultLayer +~ 1
         & Widget.translate (srcAbsAlignment - layoutAbsAlignment)
-        & Widget srcSize
+        -- We start out as layout size and resize explicitly to src
+        -- size - allowing the surrounding to be corrected by the size lens:
+        & Widget (layoutWidget ^. View.size)
+        & View.size .~ (srcWidget ^. View.size)
     ) ^. Lens.from absAligned
     where
         (layoutAbsAlignment, layoutWidget) = layout ^. absAligned
         (srcAbsAlignment, srcWidget) = src ^. absAligned
-        srcSize = srcWidget ^. View.size
 
 {-# INLINE asTuple #-}
 asTuple :: Lens.Iso (Aligned a) (Aligned b) (Alignment, a) (Alignment, b)

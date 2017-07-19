@@ -26,8 +26,8 @@ focusAreaIntoWindow winSize widget =
         intoWindow rawLens w
             | widgetSize ^. l > winSize ^. l && movement < 0 =
               w
-              & Widget.translate (0 & l .~ max (allowedScroll ^. l) movement)
-              & Widget winSize
+              & Widget.wState .~ Widget.translate (0 & l .~ max (allowedScroll ^. l) movement) w
+              & View.size .~ winSize
             | otherwise = w
             where
                 movement = center ^. l - focalPoint ^. l

@@ -22,7 +22,7 @@ module Graphics.UI.Bottle.Widget
     -- Widget type and lenses:
     , State(..), _StateFocused, _StateUnfocused
         , stateLayers
-    , Widget(..), wSize, wState
+    , Widget(..), wState
         , mEnter, eventMapMaker, events
     , VirtualCursor(..), virtualCursor
     , Unfocused(..), uMEnter, uLayers
@@ -167,12 +167,12 @@ instance Functor f => View.Resizable (Widget (f EventResult)) where
     empty = fromView View.empty
     assymetricPad leftAndTop rightAndBottom w =
         w
-        & translate leftAndTop
-        & Widget (w ^. View.size + leftAndTop + rightAndBottom)
+        & wState .~ translate leftAndTop w
+        & View.size +~ leftAndTop + rightAndBottom
     scale mult w =
         w
         & View.setLayers . View.layers . Lens.mapped %~ Anim.scale mult
-        & wSize *~ mult
+        & View.size *~ mult
         & wState . _StateFocused . Lens.mapped . fFocalArea . Rect.topLeftAndSize *~ mult
         & wState . _StateFocused . Lens.mapped . fEventMap . Lens.argument . virtualCursor . Rect.topLeftAndSize //~ mult
         & mEnter . Lens._Just . Lens.mapped . enterResultRect . Rect.topLeftAndSize *~ mult
@@ -180,7 +180,17 @@ instance Functor f => View.Resizable (Widget (f EventResult)) where
         & Lens.mapped . Lens.mapped . eVirtualCursor . Lens.mapped .
           _NewVirtualCursor . virtualCursor . Rect.topLeftAndSize *~ mult
 
-instance View.HasSize (Widget a) where size = wSize
+instance View.HasSize (Widget a) where
+    size f w =
+        w
+        & wSize f
+        <&> sizedState <. (_StateFocused . Lens.argument) %@~ fixSurrounding
+        where
+            fixSurrounding (Vector2 nw nh) surrounding =
+                surrounding
+                & sRight +~ nw - ow
+                & sBottom +~ nh - oh
+            Vector2 ow oh = w ^. wSize
 instance EventMap.HasEventMap Widget where eventMap = eventMapMaker . Lens.mapped
 
 instance View.Glue (Widget a) View where
@@ -451,8 +461,8 @@ padToSizeAlign ::
     Functor f => Size -> Vector2 R -> Widget (f EventResult) -> Widget (f EventResult)
 padToSizeAlign newSize alignment w =
     w
-    & translate (sizeDiff * alignment)
-    & Widget (max <$> w ^. View.size <*> newSize)
+    & wState .~ translate (sizeDiff * alignment) w
+    & View.size %~ (max <$> newSize <*>)
     where
         sizeDiff = max <$> 0 <*> newSize - w ^. View.size
 

@@ -290,6 +290,7 @@ makeExtraResultsWidget holeInfo mainResultHeight extraResults@(firstResult:_) =
             ( msum mResults
             , widget
                 & Widget.translate (Vector2 0 (0.5 * (height - headHeight)))
+                -- TODO(HOVER): Fix this:
                 & Widget (Vector2 0 height)
             , (widget ^. View.height) - 0.5 * (headHeight + mainResultHeight)
                 & max 0
