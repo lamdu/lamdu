@@ -16,8 +16,8 @@ import qualified Data.Map as Map
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Text as Text
 import qualified Graphics.DrawingCombinators as Draw
-import           Graphics.UI.Bottle.Aligned (AlignTo(..))
-import qualified Graphics.UI.Bottle.Aligned as Aligned
+import           Graphics.UI.Bottle.Align (AlignTo(..))
+import qualified Graphics.UI.Bottle.Align as Aligned
 import qualified Graphics.UI.Bottle.EventMap as E
 import           Graphics.UI.Bottle.MetaKey (MetaKey(..), noMods, toModKey)
 import           Graphics.UI.Bottle.View ((/-/), (/|/))

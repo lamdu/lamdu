@@ -11,8 +11,8 @@ module Lamdu.GUI.ExpressionEdit.HoleEdit.SearchArea
 import qualified Control.Lens as Lens
 import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
-import           Graphics.UI.Bottle.Aligned (Aligned(..))
-import qualified Graphics.UI.Bottle.Aligned as Aligned
+import           Graphics.UI.Bottle.Align (Aligned(..))
+import qualified Graphics.UI.Bottle.Align as Aligned
 import qualified Graphics.UI.Bottle.Widget.TreeLayout as TreeLayout
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 import qualified Lamdu.Config as Config

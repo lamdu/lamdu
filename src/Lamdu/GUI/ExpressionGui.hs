@@ -52,8 +52,8 @@ import           Graphics.UI.Bottle.View (View, (/|/), (/-/))
 import qualified Graphics.UI.Bottle.View as View
 import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
-import           Graphics.UI.Bottle.Aligned (Aligned(..), AlignTo(..))
-import qualified Graphics.UI.Bottle.Aligned as Aligned
+import           Graphics.UI.Bottle.Align (Aligned(..), AlignTo(..))
+import qualified Graphics.UI.Bottle.Align as Aligned
 import           Graphics.UI.Bottle.Widget.TreeLayout (TreeLayout(..))
 import qualified Graphics.UI.Bottle.Widget.TreeLayout as TreeLayout
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator

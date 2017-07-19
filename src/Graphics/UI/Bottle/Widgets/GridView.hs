@@ -7,7 +7,7 @@ import qualified Control.Lens as Lens
 import           Data.Foldable (toList)
 import           Data.List (transpose)
 import           Data.Vector.Vector2 (Vector2(..))
-import           Graphics.UI.Bottle.Aligned (Aligned(..))
+import           Graphics.UI.Bottle.Align (Aligned(..))
 import qualified Graphics.UI.Bottle.Animation as Anim
 import           Graphics.UI.Bottle.Rect (Rect(..))
 import qualified Graphics.UI.Bottle.Rect as Rect

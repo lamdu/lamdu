@@ -10,7 +10,7 @@ import qualified Data.Store.Transaction as Transaction
 import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.View as View
 import qualified Graphics.UI.Bottle.Widget as Widget
-import qualified Graphics.UI.Bottle.Aligned as Aligned
+import qualified Graphics.UI.Bottle.Align as Aligned
 import qualified Graphics.UI.Bottle.Widget.TreeLayout as TreeLayout
 import qualified Lamdu.Config as Config
 import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap

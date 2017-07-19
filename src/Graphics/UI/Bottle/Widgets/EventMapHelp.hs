@@ -18,8 +18,8 @@ import           Data.Vector.Vector2 (Vector2(..))
 import qualified Graphics.DrawingCombinators as Draw
 import           Graphics.UI.Bottle.Animation (AnimId, R)
 import qualified Graphics.UI.Bottle.Animation as Anim
-import           Graphics.UI.Bottle.Aligned (Aligned(..))
-import qualified Graphics.UI.Bottle.Aligned as Aligned
+import           Graphics.UI.Bottle.Align (Aligned(..))
+import qualified Graphics.UI.Bottle.Align as Aligned
 import           Graphics.UI.Bottle.EventMap (EventMap)
 import qualified Graphics.UI.Bottle.EventMap as E
 import           Graphics.UI.Bottle.MetaKey (MetaKey(..), toModKey, noMods)

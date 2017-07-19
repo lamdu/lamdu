@@ -11,8 +11,8 @@ import qualified Graphics.UI.Bottle.EventMap as E
 import           Graphics.UI.Bottle.View (View, (/-/), (/|/))
 import qualified Graphics.UI.Bottle.View as View
 import qualified Graphics.UI.Bottle.Widget as Widget
-import           Graphics.UI.Bottle.Aligned (AlignTo(..))
-import qualified Graphics.UI.Bottle.Aligned as Aligned
+import           Graphics.UI.Bottle.Align (AlignTo(..))
+import qualified Graphics.UI.Bottle.Align as Aligned
 import qualified Graphics.UI.Bottle.Widget.TreeLayout as TreeLayout
 import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
 import           Lamdu.Config (Config)

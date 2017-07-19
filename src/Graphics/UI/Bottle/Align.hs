@@ -1,5 +1,5 @@
 {-# LANGUAGE NoImplicitPrelude, TypeFamilies, TemplateHaskell, RankNTypes, FlexibleContexts, DeriveFunctor, DeriveFoldable, DeriveTraversable, FlexibleInstances, MultiParamTypeClasses #-}
-module Graphics.UI.Bottle.Aligned
+module Graphics.UI.Bottle.Align
     ( Aligned(..), alignmentRatio, value
     , AlignTo(..), alignTo, alignedTo
     , hoverInPlaceOf
