@@ -43,7 +43,7 @@ module Graphics.UI.Bottle.Widget
     , takesFocus
 
     -- Operations:
-    , translate
+    , translate, translateFocused
     , padToSizeAlign
 
     , makeFocusableView
@@ -374,16 +374,46 @@ keysEventMapMovesCursor keys doc act =
 -- TODO: This actually makes an incorrect widget because its size
 -- remains same, but it is now translated away from 0..size
 -- Should expose higher-level combinators instead?
-translate ::
-    Functor f => Vector2 R -> Widget (f EventResult) -> State (f EventResult)
-translate pos w =
-    w ^. wState
-    & stateMEnter %~ translateMEnter pos
-    & _StateFocused . Lens.mapped . fFocalArea . Rect.topLeft +~ pos
-    & _StateFocused . Lens.mapped . fEventMap . Lens.argument . virtualCursor . Rect.topLeft -~ pos
-    & Lens.mapped . Lens.mapped . eVirtualCursor . Lens.mapped .
-      _NewVirtualCursor . virtualCursor . Rect.topLeft +~ pos
-    & stateLayers %~ View.translateLayers pos
+translate :: Functor f => Vector2 R -> Widget (f EventResult) -> State (f EventResult)
+translate pos = translateGeneric (fmap (translateEventResult pos)) pos
+
+translateGeneric :: (a -> b) -> Vector2 R -> Widget a -> State b
+translateGeneric f pos w =
+    case w ^. wState of
+    StateUnfocused x -> translateUnfocused x & StateUnfocused
+    StateFocused x ->
+        x
+        & Lens.argument %~ fixSurrounding
+        <&> translateFocusedGeneric f pos
+        & StateFocused
+    where
+        fixSurrounding s =
+            s
+            & sLeft +~ pos ^. _1
+            & sRight -~ pos ^. _1
+            & sTop +~ pos ^. _2
+            & sBottom -~ pos ^. _2
+        translateUnfocused u =
+            u
+            & uMEnter %~ translateMEnter pos
+            & uLayers %~ View.translateLayers pos
+            <&> f
+
+translateEventResult :: Vector2 R -> EventResult -> EventResult
+translateEventResult pos =
+    eVirtualCursor . Lens.mapped . _NewVirtualCursor . virtualCursor . Rect.topLeft +~ pos
+
+translateFocusedGeneric :: (a -> b) -> Vector2 R -> Focused a -> Focused b
+translateFocusedGeneric f pos x =
+    x
+    & fMEnter %~ translateMEnter pos
+    & fFocalArea . Rect.topLeft +~ pos
+    & fEventMap . Lens.argument . virtualCursor . Rect.topLeft -~ pos
+    & fLayers %~ View.translateLayers pos
+    <&> f
+
+translateFocused :: Functor f => Vector2 R -> Focused (f EventResult) -> Focused (f EventResult)
+translateFocused pos = translateFocusedGeneric (fmap (translateEventResult pos)) pos
 
 translateMEnter ::
     Vector2 R ->
