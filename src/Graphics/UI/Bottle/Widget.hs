@@ -56,7 +56,7 @@ module Graphics.UI.Bottle.Widget
     , assignCursorPrefix
     ) where
 
-import           Control.Lens (Lens')
+import           Control.Lens (LensLike)
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
 import qualified Data.Map as Map
@@ -297,12 +297,25 @@ eventResultFromCursor c = EventResult
     , _eAnimIdMapping = mempty
     }
 
+onState ::
+    Functor f =>
+    (Unfocused a -> f (Unfocused b)) ->
+    ((Surrounding -> Focused a) -> f (Surrounding -> Focused b)) ->
+    State a -> f (State b)
+onState onUnfocused _ (StateUnfocused x) = onUnfocused x <&> StateUnfocused
+onState _   onFocused (StateFocused   x) = onFocused   x <&> StateFocused
+
+stateLens ::
+    Functor f =>
+    LensLike f (Unfocused s) (Unfocused t) a b ->
+    LensLike f (Surrounding -> Focused s) (Surrounding -> Focused t) a b ->
+    LensLike f (State s) (State t) a b
+stateLens uLens fLens f = onState (uLens f) (fLens f)
+
 events :: HasWidget w => Lens.Setter (w a) (w b) a b
 events =
-    widget . wState . atEvents
+    widget . wState . stateLens (uMEnter . atMEnter) (Lens.mapped . Lens.sets atFocus)
     where
-        atEvents f (StateUnfocused x) = (uMEnter . atMEnter) f x <&> StateUnfocused
-        atEvents f (StateFocused x) = (Lens.mapped . Lens.sets atFocus) f x <&> StateFocused
         atMEnter f = (Lens._Just . Lens.mapped . enterResultEvent) f
         atFocus f focused =
             focused
@@ -322,15 +335,13 @@ fromView (View size mkLayers) =
     }
 
 stateMEnter :: Lens.Setter' (State a) (Maybe (Direction -> EnterResult a))
-stateMEnter f (StateUnfocused x) = uMEnter f x <&> StateUnfocused
-stateMEnter f (StateFocused   x) = (Lens.mapped . fMEnter) f x <&> StateFocused
+stateMEnter = stateLens uMEnter (Lens.mapped . fMEnter)
 
 mEnter :: Lens.Setter' (Widget a) (Maybe (Direction -> EnterResult a))
 mEnter = wState . stateMEnter
 
 stateLayers :: Lens.Setter' (State a) View.Layers
-stateLayers f (StateUnfocused x) = uLayers f x <&> StateUnfocused
-stateLayers f (StateFocused   x) = (Lens.mapped . fLayers) f x <&> StateFocused
+stateLayers = stateLens uLayers (Lens.mapped . fLayers)
 
 takesFocus ::
     (HasWidget w, Functor f) =>
@@ -379,10 +390,10 @@ translate pos = translateGeneric (fmap (translateEventResult pos)) pos
 
 translateGeneric :: (a -> b) -> Vector2 R -> Widget a -> State b
 translateGeneric f pos w =
-    case w ^. wState of
-    StateUnfocused x -> translateUnfocused x & StateUnfocused
-    StateFocused x -> translateFocusedGeneric f pos x & StateFocused
+    w ^. wState & onStatePure translateUnfocused (translateFocusedGeneric f pos)
     where
+        onStatePure onU onF =
+            Lens.runIdentity . onState (Lens.Identity . onU) (Lens.Identity . onF)
         translateUnfocused u =
             u
             & uMEnter %~ translateMEnter pos
