@@ -73,9 +73,10 @@ makeParamsRecord myId paramsRecordVar =
         Sugar.ParamsRecordVar fieldNames = paramsRecordVar
 
 makeNameRef ::
-    Monad m => Widget.Id -> Sugar.NameRef name m ->
-    (name -> Widget.Id -> ExprGuiM m (ExpressionGui m)) ->
-    ExprGuiM m (ExpressionGui m)
+    (E.HasEventMap f, Monad m) =>
+    Widget.Id -> Sugar.NameRef name m ->
+    (name -> Widget.Id -> ExprGuiM m (f (T m Widget.EventResult))) ->
+    ExprGuiM m (f (T m Widget.EventResult))
 makeNameRef myId nameRef maker =
     do
         cp <- ExprGuiM.readCodeAnchors
