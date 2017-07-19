@@ -185,17 +185,19 @@ instance EventMap.HasEventMap Widget where eventMap = eventMapMaker . Lens.mappe
 
 instance View.Glue (Widget a) View where
     type Glued (Widget a) View = Widget a
-    glue = View.glueH $ \sz w v -> w ^. wState & stateLayers <>~ v ^. View.vAnimLayers & Widget sz
+    glue = View.glueH $ \w v -> w & View.setLayers <>~ v ^. View.vAnimLayers
 
 instance Functor f => View.Glue View (Widget (f EventResult)) where
     type Glued View (Widget (f EventResult)) = Widget (f EventResult)
-    glue = View.glueH $ \sz v w -> w ^. wState & stateLayers <>~ v ^. View.vAnimLayers & Widget sz
+    glue = View.glueH $ \v w -> w & View.setLayers <>~ v ^. View.vAnimLayers
 
 instance Functor f => View.Glue (Widget (f EventResult)) (Widget (f EventResult)) where
     type Glued (Widget (f EventResult)) (Widget (f EventResult)) = Widget (f EventResult)
     glue orientation =
         View.glueH
-        (\sz w0 w1 -> combineStates orientation dirPrev dirNext sz (w0 ^. wState) (w1 ^. wState) & Widget sz)
+        (\w0 w1 ->
+         w0
+         & wState .~ combineStates orientation dirPrev dirNext (w0 ^. wSize) (w0 ^. wState) (w1 ^. wState))
         orientation
         where
             (dirPrev, dirNext) =

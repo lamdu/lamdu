@@ -106,7 +106,7 @@ instance HasSize View where size = vSize
 
 instance Glue View View where
     type Glued View View = View
-    glue = glueH $ \sz v0 v1 -> View sz (v0 ^. vAnimLayers <> v1 ^. vAnimLayers)
+    glue = glueH $ \v0 v1 -> v0 & vAnimLayers <>~ v1 ^. vAnimLayers
 
 -- Horizontal glue
 (/|/) :: Glue a b => a -> b -> Glued a b
@@ -118,13 +118,13 @@ instance Glue View View where
 
 glueH ::
     (HasSize a, HasSize b, Resizable b) =>
-    (Size -> a -> b -> Glued a b) -> Orientation -> a -> b -> Glued a b
+    (a -> b -> Glued a b) -> Orientation -> a -> b -> Glued a b
 glueH f orientation v0 v1 =
-    f sz v0 (assymetricPad t 0 v1)
+    f (v0 & size .~ newSize) (assymetricPad t 0 v1 & size .~ newSize)
     where
         Vector2 w0 h0 = v0 ^. size
         Vector2 w1 h1 = v1 ^. size
-        (sz, t) =
+        (newSize, t) =
             case orientation of
             Horizontal -> (Vector2 (w0 + w1) (max h0 h1), Vector2 w0 0)
             Vertical -> (Vector2 (max w0 w1) (h0 + h1), Vector2 0 h0)
