@@ -125,7 +125,7 @@ makeOpenRecord fieldsGui rest animId =
                 minWidth = restW ^. View.width
                 targetWidth = fields ^. View.width
             in
-            (fields & Aligned.alignment .~ 0)
+            (fields & Aligned.alignmentRatio .~ 0)
             /-/
             AlignTo 0 (separationBar theme (max minWidth targetWidth) animId /-/ vspace)
             /-/

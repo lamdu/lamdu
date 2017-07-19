@@ -1,7 +1,6 @@
 {-# LANGUAGE NoImplicitPrelude #-}
 module Graphics.UI.Bottle.Widgets.GridView
     ( make, makePlacements
-    , Alignment(..)
     ) where
 
 import qualified Control.Lens as Lens
@@ -9,7 +8,6 @@ import           Data.Foldable (toList)
 import           Data.List (transpose)
 import           Data.Vector.Vector2 (Vector2(..))
 import           Graphics.UI.Bottle.Aligned (Aligned(..))
-import           Graphics.UI.Bottle.Alignment (Alignment(..))
 import qualified Graphics.UI.Bottle.Animation as Anim
 import           Graphics.UI.Bottle.Rect (Rect(..))
 import qualified Graphics.UI.Bottle.Rect as Rect
@@ -56,13 +54,13 @@ makePlacements rows =
               & traverseList %~ zipWith alignPos colPos
             )
         itemResult alignY alignX (itemSize, (Vector2 preX preY, _), a) =
-            Aligned (Alignment (Vector2 alignX alignY / totalSize))
+            Aligned (Vector2 alignX alignY / totalSize)
             (Rect (Vector2 (alignX - preX) (alignY - preY)) itemSize, a)
         posRowsList = toList posRows <&> toList
         colSizes = posRowsList & transpose <&> groupSize _1 . fmap (^. _2)
         rowSizes = posRowsList             <&> groupSize _2 . fmap (^. _2)
         posRows = rows <&> Lens.mapped %~ calcPos
-        calcPos (Aligned (Alignment alignment) x) =
+        calcPos (Aligned alignment x) =
             (size, (alignment * size, (1 - alignment) * size), x)
             where
                 size = x ^. View.size

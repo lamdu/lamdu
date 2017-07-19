@@ -41,11 +41,11 @@ module Graphics.UI.Bottle.Widget.TreeLayout
 
 import qualified Control.Lens as Lens
 import qualified Data.List as List
-import           Graphics.UI.Bottle.Alignment (Alignment)
+import           Data.Vector.Vector2 (Vector2)
 import qualified Graphics.UI.Bottle.EventMap as E
 import           Graphics.UI.Bottle.View (View)
 import qualified Graphics.UI.Bottle.View as View
-import           Graphics.UI.Bottle.Widget (Widget)
+import           Graphics.UI.Bottle.Widget (Widget, R)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import           Graphics.UI.Bottle.Aligned (Aligned(..), AlignTo)
 import qualified Graphics.UI.Bottle.Aligned as Aligned
@@ -123,8 +123,8 @@ alignedWidget ::
     (Aligned (Widget a)) (Aligned (Widget b))
 alignedWidget = render . Lens.mapped
 
-alignment :: Lens.Setter' (TreeLayout a) Alignment
-alignment = alignedWidget . Aligned.alignment
+alignment :: Lens.Setter' (TreeLayout a) (Vector2 R)
+alignment = alignedWidget . Aligned.alignmentRatio
 
 -- | Lifts a Widget into a 'TreeLayout'
 fromAlignedWidget :: Aligned (Widget a) -> TreeLayout a

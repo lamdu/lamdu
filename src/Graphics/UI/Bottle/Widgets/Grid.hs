@@ -1,7 +1,6 @@
 {-# LANGUAGE NoImplicitPrelude, OverloadedStrings, RecordWildCards, DeriveFunctor, DeriveFoldable, DeriveTraversable, FlexibleContexts, RankNTypes #-}
 module Graphics.UI.Bottle.Widgets.Grid
     ( make, makeWithKeys
-    , Alignment(..)
     , Keys(..), stdKeys
     ) where
 
@@ -15,7 +14,6 @@ import           Data.MRUMemo (memo)
 import           Data.Vector.Vector2 (Vector2(..))
 import qualified Data.Vector.Vector2 as Vector2
 import           Graphics.UI.Bottle.Aligned (Aligned(..))
-import qualified Graphics.UI.Bottle.Aligned as Aligned
 import           Graphics.UI.Bottle.Direction (Direction)
 import qualified Graphics.UI.Bottle.Direction as Direction
 import qualified Graphics.UI.Bottle.EventMap as EventMap
@@ -27,7 +25,6 @@ import qualified Graphics.UI.Bottle.Rect as Rect
 import qualified Graphics.UI.Bottle.View as View
 import           Graphics.UI.Bottle.Widget (R, Widget(Widget))
 import qualified Graphics.UI.Bottle.Widget as Widget
-import           Graphics.UI.Bottle.Widgets.GridView (Alignment(..))
 import qualified Graphics.UI.Bottle.Widgets.GridView as GridView
 import           Graphics.UI.Bottle.Widgets.StdKeys (DirKeys(..), stdDirKeys)
 import qualified Graphics.UI.GLFW as GLFW
@@ -150,16 +147,16 @@ addNavEventmap Keys{..} navDests eMap =
 make ::
     (Traversable vert, Traversable horiz, Functor f) =>
     vert (horiz (Aligned (Widget (f Widget.EventResult)))) ->
-    (vert (horiz Alignment), Widget (f Widget.EventResult))
+    (vert (horiz (Aligned ())), Widget (f Widget.EventResult))
 make = makeWithKeys (stdKeys <&> MetaKey.toModKey)
 
 makeWithKeys ::
     (Traversable vert, Traversable horiz, Functor f) =>
     Keys ModKey ->
     vert (horiz (Aligned (Widget (f Widget.EventResult)))) ->
-    (vert (horiz Alignment), Widget (f Widget.EventResult))
+    (vert (horiz (Aligned ())), Widget (f Widget.EventResult))
 makeWithKeys keys children =
-    ( content & each2d %~ (^. Aligned.alignment)
+    ( content & each2d %~ void
     , toList content <&> toList
       & each2d %~ (\(Aligned _ (rect, widget)) -> (rect, widget))
       & toWidgetWithKeys keys size

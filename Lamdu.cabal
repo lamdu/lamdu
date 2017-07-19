@@ -106,7 +106,6 @@ Executable lamdu
                   , Data.Vector.Vector2
                   , Foreign.C.Types.Instances
                   , Graphics.DrawingCombinators.Utils
-                  , Graphics.UI.Bottle.Alignment
                   , Graphics.UI.Bottle.Animation
                   , Graphics.UI.Bottle.Animation.Id
                   , Graphics.UI.Bottle.Direction

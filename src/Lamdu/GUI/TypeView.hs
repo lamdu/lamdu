@@ -13,7 +13,6 @@ import           Data.Text.Encoding (decodeUtf8)
 import           Data.Vector.Vector2 (Vector2(..))
 import           Graphics.UI.Bottle.Aligned (Aligned(..))
 import qualified Graphics.UI.Bottle.Aligned as Aligned
-import           Graphics.UI.Bottle.Alignment (Alignment(..))
 import           Graphics.UI.Bottle.Animation (AnimId)
 import qualified Graphics.UI.Bottle.Animation as Anim
 import           Graphics.UI.Bottle.View (View(..), (/-/))
@@ -113,9 +112,9 @@ makeTInst parentPrecedence tid typeParams =
                     paramIdView <- showIdentifier tParamId
                     typeView <- splitMake (Precedence.parent 0) arg
                     return
-                        [ Aligned (Alignment (Vector2 1 0.5)) paramIdView
+                        [ Aligned (Vector2 1 0.5) paramIdView
                         , Aligned 0.5 hspace
-                        , Aligned (Alignment (Vector2 0 0.5)) typeView
+                        , Aligned (Vector2 0 0.5) typeView
                         ]
         case Map.toList typeParams of
             [] -> pure nameView
@@ -158,19 +157,19 @@ makeTag tag =
 makeField :: Monad m => (T.Tag, Type) -> M m [Aligned View]
 makeField (tag, fieldType) =
     Lens.sequenceOf (Lens.traversed . Aligned.value)
-    [ Aligned (Alignment (Vector2 1 0.5)) (makeTag tag)
+    [ Aligned (Vector2 1 0.5) (makeTag tag)
     , Aligned 0.5 mkHSpace
-    , Aligned (Alignment (Vector2 0 0.5)) (splitMake (Precedence.parent 0) fieldType)
+    , Aligned (Vector2 0 0.5) (splitMake (Precedence.parent 0) fieldType)
     ]
 
 makeSumField :: Monad m => (T.Tag, Type) -> M m [Aligned View]
 makeSumField (tag, T.TRecord T.CEmpty) =
-    makeTag tag <&> Aligned (Alignment (Vector2 1 0.5)) <&> (:[])
+    makeTag tag <&> Aligned (Vector2 1 0.5) <&> (:[])
 makeSumField (tag, fieldType) =
     Lens.sequenceOf (Lens.traversed . Aligned.value)
-    [ Aligned (Alignment (Vector2 1 0.5)) (makeTag tag)
+    [ Aligned (Vector2 1 0.5) (makeTag tag)
     , Aligned 0.5 mkHSpace
-    , Aligned (Alignment (Vector2 0 0.5)) (splitMake (Precedence.parent 0) fieldType)
+    , Aligned (Vector2 0 0.5) (splitMake (Precedence.parent 0) fieldType)
     ]
 
 makeComposite ::

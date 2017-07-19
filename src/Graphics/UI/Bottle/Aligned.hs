@@ -1,6 +1,6 @@
 {-# LANGUAGE NoImplicitPrelude, TypeFamilies, TemplateHaskell, RankNTypes, FlexibleContexts, DeriveFunctor, DeriveFoldable, DeriveTraversable, FlexibleInstances, MultiParamTypeClasses #-}
 module Graphics.UI.Bottle.Aligned
-    ( Aligned(..), alignment, value
+    ( Aligned(..), alignmentRatio, value
     , AlignTo(..), alignTo, alignedTo
     , hoverInPlaceOf
     , Orientation(..)
@@ -10,8 +10,6 @@ module Graphics.UI.Bottle.Aligned
 import           Control.Lens (Lens')
 import qualified Control.Lens as Lens
 import           Data.Vector.Vector2 (Vector2(..))
-import           Graphics.UI.Bottle.Alignment (Alignment(..))
-import qualified Graphics.UI.Bottle.Alignment as Alignment
 import           Graphics.UI.Bottle.View (Orientation)
 import qualified Graphics.UI.Bottle.View as View
 import           Graphics.UI.Bottle.Widget (Widget(..), R)
@@ -20,7 +18,7 @@ import qualified Graphics.UI.Bottle.Widget as Widget
 import           Lamdu.Prelude
 
 data Aligned a = Aligned
-    { _alignment :: Alignment
+    { _alignmentRatio :: Vector2 R
     , _value :: a
     } deriving (Functor, Foldable, Traversable)
 Lens.makeLenses ''Aligned
@@ -30,11 +28,9 @@ instance View.SetLayers a => View.SetLayers (Aligned a) where
 
 instance (View.HasSize a, View.Resizable a) => View.Resizable (Aligned a) where
     empty = Aligned 0 View.empty
-    pad padding (Aligned (Alignment align) w) =
+    pad padding (Aligned ratio w) =
         Aligned
-        { _alignment =
-            (align * (w ^. View.size) + padding) / (paddedWidget ^. View.size)
-            & Alignment
+        { _alignmentRatio = (ratio * (w ^. View.size) + padding) / paddedWidget ^. View.size
         , _value = paddedWidget
         }
         where
@@ -133,11 +129,11 @@ layout `hoverInPlaceOf` src =
         (srcAbsAlignment, srcWidget) = src ^. absAligned
 
 {-# INLINE asTuple #-}
-asTuple :: Lens.Iso (Aligned a) (Aligned b) (Alignment, a) (Alignment, b)
+asTuple :: Lens.Iso (Aligned a) (Aligned b) (Vector2 R, a) (Vector2 R, b)
 asTuple =
     Lens.iso toTup fromTup
     where
-        toTup w = (w ^. alignment, w ^. value)
+        toTup w = (w ^. alignmentRatio, w ^. value)
         fromTup (a, w) = Aligned a w
 
 type AbsAligned a = (Vector2 R, a)
@@ -147,7 +143,7 @@ absAligned ::
     (View.HasSize a, View.HasSize b) =>
     Lens.Iso (Aligned a) (Aligned b) (AbsAligned a) (AbsAligned b)
 absAligned =
-    asTuple . Lens.iso (f ((*) . (^. Alignment.ratio))) (f (fmap Alignment . fromAbs))
+    asTuple . Lens.iso (f (*)) (f fromAbs)
     where
         f op w = w & _1 %~ (`op` (w ^. _2 . View.size))
         fromAbs align size
@@ -156,7 +152,7 @@ absAligned =
 
 boxAlign :: (View.HasSize a, View.Resizable a, View.GluesTo a a a) => Orientation -> Widget.R -> [a] -> a
 boxAlign orientation r xs =
-    View.box orientation (xs <&> Aligned (Alignment (pure r))) ^. value
+    View.box orientation (xs <&> Aligned (pure r)) ^. value
 
 vboxAlign :: (View.HasSize a, View.Resizable a, View.GluesTo a a a) => Widget.R -> [a] -> a
 vboxAlign = boxAlign View.Vertical

@@ -381,7 +381,7 @@ addAnnotationH f wideBehavior entityId =
         processAnn <- processAnnotationGui animId wideBehavior
         let onAlignedWidget w =
                 w /-/ AlignTo 0 vspace /-/
-                AlignTo (w ^. Aligned.alignment . _1)
+                AlignTo (w ^. Aligned.alignmentRatio . _1)
                 (processAnn (w ^. View.width) annotationLayout)
         return $ TreeLayout.alignedWidget %~ onAlignedWidget
     where

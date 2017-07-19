@@ -15,7 +15,6 @@ import           Graphics.DrawingCombinators ((%%))
 import qualified Graphics.DrawingCombinators.Utils as DrawUtils
 import           Graphics.UI.Bottle.Aligned (Aligned(..))
 import qualified Graphics.UI.Bottle.Aligned as Aligned
-import           Graphics.UI.Bottle.Alignment (Alignment(..))
 import           Graphics.UI.Bottle.Animation (AnimId)
 import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.Rect as Rect
@@ -76,9 +75,9 @@ makeField parentAnimId tag val =
         space <- Spacer.stdHSpace
         valView <- makeInner (baseId ++ ["val"]) val
         return
-            [ Aligned (Alignment (Vector2 1 0.5)) tagView
+            [ Aligned (Vector2 1 0.5) tagView
             , Aligned 0.5 space
-            , Aligned (Alignment (Vector2 0 0.5)) valView
+            , Aligned (Vector2 0 0.5) valView
             ]
     where
         baseId = parentAnimId ++ [BinUtils.encodeS tag]
