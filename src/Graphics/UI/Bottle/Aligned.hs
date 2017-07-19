@@ -78,6 +78,14 @@ instance ( View.HasSize (View.Glued a b)
     type Glued (AlignTo a) (Aligned b) = Aligned (View.Glued a b)
     glue o a b = glueHelper snd o (toAbsPair a) (b ^. absAligned)
 
+instance ( View.HasSize (View.Glued a b)
+         , View.HasSize a, View.Resizable a
+         , View.HasSize b, View.Resizable b
+         , View.Glue a b ) =>
+         View.Glue (AlignTo a) (AlignTo b) where
+    type Glued (AlignTo a) (AlignTo b) = View.Glued a b
+    glue o a b = glueHelper snd o (toAbsPair a) (toAbsPair b) ^. value
+
 glueHelper ::
     ( View.Glue a b, View.Resizable a, View.Resizable b
     , View.HasSize (View.Glued a b), View.HasSize a
