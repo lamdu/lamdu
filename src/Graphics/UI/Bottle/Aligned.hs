@@ -109,15 +109,18 @@ hoverInPlaceOf ::
 layout `hoverInPlaceOf` src =
     ( srcAbsAlignment
     , layoutWidget
-        & View.setLayers . View.layers %~ (mempty :)
-        & Widget.mEnter . Lens._Just . Lens.mapped . Widget.enterResultLayer +~ 1
         & Widget.translate (srcAbsAlignment - layoutAbsAlignment)
         -- We start out as layout size and resize explicitly to src
         -- size - allowing the surrounding to be corrected by the size lens:
         & Widget (layoutWidget ^. View.size)
         & View.size .~ (srcWidget ^. View.size)
+        & liftLayer
     ) ^. Lens.from absAligned
     where
+        liftLayer w =
+            w
+            & View.setLayers . View.layers %~ (mempty :)
+            & Widget.mEnter . Lens._Just . Lens.mapped . Widget.enterResultLayer +~ 1
         (layoutAbsAlignment, layoutWidget) = layout ^. absAligned
         (srcAbsAlignment, srcWidget) = src ^. absAligned
 
