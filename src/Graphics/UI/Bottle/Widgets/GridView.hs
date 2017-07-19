@@ -33,7 +33,7 @@ traverseList = Lens.unsafePartsOf traverse
 makePlacements ::
     (Traversable vert, Traversable horiz, View.HasSize a) =>
     vert (horiz (Aligned a)) ->
-    (View.Size, vert (horiz (Alignment, Rect, a)))
+    (View.Size, vert (horiz (Aligned (Rect, a))))
 makePlacements rows =
     ( totalSize
     , posRows
@@ -56,11 +56,9 @@ makePlacements rows =
               & traverseList %~ zipWith alignPos colPos
             )
         itemResult alignY alignX (itemSize, (Vector2 preX preY, _), a) =
-            ( Alignment (Vector2 alignX alignY / totalSize)
-            , Rect (Vector2 (alignX - preX) (alignY - preY)) itemSize
-            , a
-            )
-        posRowsList = posRows & toList <&> toList
+            Aligned (Alignment (Vector2 alignX alignY / totalSize))
+            (Rect (Vector2 (alignX - preX) (alignY - preY)) itemSize, a)
+        posRowsList = toList posRows <&> toList
         colSizes = posRowsList & transpose <&> groupSize _1 . fmap (^. _2)
         rowSizes = posRowsList             <&> groupSize _2 . fmap (^. _2)
         posRows = rows <&> Lens.mapped %~ calcPos
@@ -77,4 +75,4 @@ make views =
     & _2 %~ (^. traverse . traverse . Lens.to translate)
     & uncurry View
     where
-        translate (_alignment, rect, view) = View.translateLayers (rect ^. Rect.topLeft) (view ^. View.vAnimLayers)
+        translate (Aligned _ (rect, view)) = View.translateLayers (rect ^. Rect.topLeft) (view ^. View.vAnimLayers)

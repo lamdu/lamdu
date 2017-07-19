@@ -15,6 +15,7 @@ import           Data.MRUMemo (memo)
 import           Data.Vector.Vector2 (Vector2(..))
 import qualified Data.Vector.Vector2 as Vector2
 import           Graphics.UI.Bottle.Aligned (Aligned(..))
+import qualified Graphics.UI.Bottle.Aligned as Aligned
 import           Graphics.UI.Bottle.Direction (Direction)
 import qualified Graphics.UI.Bottle.Direction as Direction
 import qualified Graphics.UI.Bottle.EventMap as EventMap
@@ -158,9 +159,9 @@ makeWithKeys ::
     vert (horiz (Aligned (Widget (f Widget.EventResult)))) ->
     (vert (horiz Alignment), Widget (f Widget.EventResult))
 makeWithKeys keys children =
-    ( content & each2d %~ (^. _1)
+    ( content & each2d %~ (^. Aligned.alignment)
     , toList content <&> toList
-      & each2d %~ (\(_align, rect, widget) -> (rect, widget))
+      & each2d %~ (\(Aligned _ (rect, widget)) -> (rect, widget))
       & toWidgetWithKeys keys size
     )
     where
