@@ -1,6 +1,7 @@
 {-# LANGUAGE NoImplicitPrelude #-}
 module Lamdu.Prelude
     ( module X
+    , traceId
     ) where
 
 -- .@~ is missing in Control.Lens.Operators in lens-4.15.3
@@ -17,5 +18,10 @@ import Data.Monoid as X ((<>))
 import Data.Map as X (Map)
 import Data.Set as X (Set)
 import Data.Text as X (Text)
+import Debug.Trace (trace)
 
 import Prelude.Compat as X
+
+{-# DEPRECATED traceId "Leaving traces in the code" #-}
+traceId :: Show a => String -> a -> a
+traceId prefix x = trace (prefix ++ show x) x
