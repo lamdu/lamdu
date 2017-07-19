@@ -381,18 +381,8 @@ translateGeneric :: (a -> b) -> Vector2 R -> Widget a -> State b
 translateGeneric f pos w =
     case w ^. wState of
     StateUnfocused x -> translateUnfocused x & StateUnfocused
-    StateFocused x ->
-        x
-        & Lens.argument %~ fixSurrounding
-        <&> translateFocusedGeneric f pos
-        & StateFocused
+    StateFocused x -> translateFocusedGeneric f pos x & StateFocused
     where
-        fixSurrounding s =
-            s
-            & sLeft +~ pos ^. _1
-            & sRight -~ pos ^. _1
-            & sTop +~ pos ^. _2
-            & sBottom -~ pos ^. _2
         translateUnfocused u =
             u
             & uMEnter %~ translateMEnter pos
@@ -403,16 +393,33 @@ translateEventResult :: Vector2 R -> EventResult -> EventResult
 translateEventResult pos =
     eVirtualCursor . Lens.mapped . _NewVirtualCursor . virtualCursor . Rect.topLeft +~ pos
 
-translateFocusedGeneric :: (a -> b) -> Vector2 R -> Focused a -> Focused b
+translateFocusedGeneric ::
+    (a -> b) -> Vector2 R ->
+    (Surrounding -> Focused a) ->
+    Surrounding -> Focused b
 translateFocusedGeneric f pos x =
     x
-    & fMEnter %~ translateMEnter pos
-    & fFocalArea . Rect.topLeft +~ pos
-    & fEventMap . Lens.argument . virtualCursor . Rect.topLeft -~ pos
-    & fLayers %~ View.translateLayers pos
-    <&> f
+    & Lens.argument %~ translateSurrounding
+    <&> onFocused
+    where
+        translateSurrounding s =
+            s
+            & sLeft +~ pos ^. _1
+            & sRight -~ pos ^. _1
+            & sTop +~ pos ^. _2
+            & sBottom -~ pos ^. _2
+        onFocused focused =
+            focused
+            & fMEnter %~ translateMEnter pos
+            & fFocalArea . Rect.topLeft +~ pos
+            & fEventMap . Lens.argument . virtualCursor . Rect.topLeft -~ pos
+            & fLayers %~ View.translateLayers pos
+            <&> f
 
-translateFocused :: Functor f => Vector2 R -> Focused (f EventResult) -> Focused (f EventResult)
+translateFocused ::
+    Functor f =>
+    Vector2 R -> (Surrounding -> Focused (f EventResult)) ->
+    Surrounding -> Focused (f EventResult)
 translateFocused pos = translateFocusedGeneric (fmap (translateEventResult pos)) pos
 
 translateMEnter ::
