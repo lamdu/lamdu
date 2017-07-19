@@ -8,14 +8,15 @@ import           Data.Store.Transaction (Transaction)
 import qualified Data.Text as Text
 import           Data.Vector.Vector2 (Vector2(..))
 import qualified Graphics.DrawingCombinators as Draw
-import           Graphics.UI.Bottle.Aligned (AlignTo(..))
+import           Graphics.UI.Bottle.Aligned (Aligned(..), AlignTo(..))
+import qualified Graphics.UI.Bottle.Aligned as Aligned
 import           Graphics.UI.Bottle.Animation (AnimId)
 import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.EventMap as E
 import           Graphics.UI.Bottle.View ((/|/))
 import qualified Graphics.UI.Bottle.View as View
+import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
-import           Graphics.UI.Bottle.Widget.TreeLayout (TreeLayout)
 import qualified Graphics.UI.Bottle.Widget.TreeLayout as TreeLayout
 import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
 import qualified Lamdu.CharClassification as CharClassification
@@ -80,16 +81,17 @@ addInfixMarker widgetId =
 makeFuncVar ::
     Monad m =>
     NearestHoles -> Sugar.BinderVar (Name m) m -> Widget.Id ->
-    ExprGuiM m (TreeLayout (Transaction m Widget.EventResult))
+    ExprGuiM m (Aligned (Widget (Transaction m Widget.EventResult)))
 makeFuncVar nearestHoles funcVar myId =
-    E.weakerEvents
-    <$> ExprEventMap.jumpHolesEventMap nearestHoles
-    <*> GetVarEdit.makeGetBinder funcVar myId
+    do
+        jump <- ExprEventMap.jumpHolesEventMap nearestHoles
+        GetVarEdit.makeGetBinder funcVar myId
+            <&> Aligned.value %~ E.weakerEvents jump
 
 makeInfixFuncName ::
     Monad m =>
     NearestHoles -> Sugar.BinderVar (Name m) m -> Widget.Id ->
-    ExprGuiM m (ExpressionGui m)
+    ExprGuiM m (Aligned (Widget (Transaction m Widget.EventResult)))
 makeInfixFuncName nearestHoles funcVar myId =
     makeFuncVar nearestHoles funcVar myId <&> mAddMarker
     where
@@ -116,12 +118,13 @@ makeFuncRow mParensId prec apply myId =
         case apply ^. Sugar.aAnnotatedArgs of
         [] -> error "apply with no args!"
         (x:_) ->
-            makeFuncVar (ExprGuiT.nextHolesBefore (x ^. Sugar.aaExpr))
-            funcVar myId
+            makeFuncVar (ExprGuiT.nextHolesBefore (x ^. Sugar.aaExpr)) funcVar
+            myId <&> TreeLayout.fromAlignedWidget
     Sugar.ObjectArg arg ->
         ExpressionGui.combineSpacedMParens mParensId
         <*> sequenceA
         [ makeFuncVar (ExprGuiT.nextHolesBefore arg) funcVar myId
+            <&> TreeLayout.fromAlignedWidget
         , ExprGuiM.makeSubexpressionWith
           (if isBoxed apply then 0 else prec)
           (ExpressionGui.before .~ prec) arg
@@ -133,6 +136,7 @@ makeFuncRow mParensId prec apply myId =
             <*> sequenceA
             [ ExprGuiM.makeSubexpressionWith 0 (ExpressionGui.after .~ prec) l
             , makeInfixFuncName (ExprGuiT.nextHolesBefore r) funcVar myId
+                <&> TreeLayout.fromAlignedWidget
             ]
         , ExprGuiM.makeSubexpressionWith (prec+1) (ExpressionGui.before .~ prec+1) r
         ]
@@ -195,6 +199,7 @@ mkRelayedArgs nearestHoles args =
                     , exprInfoIsHoleResult = False
                     } ExprGuiM.NoHolePick
                 GetVarEdit.makeGetParam (arg ^. Sugar.raValue) (WidgetIds.fromEntityId (arg ^. Sugar.raId))
+                    <&> TreeLayout.fromWidget
                     <&> E.weakerEvents eventMap
 
 mkBoxed ::

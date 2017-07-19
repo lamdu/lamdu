@@ -15,7 +15,6 @@ import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import           Graphics.UI.Bottle.Aligned (Aligned(..))
 import qualified Graphics.UI.Bottle.Aligned as Aligned
-import           Graphics.UI.Bottle.Widget.TreeLayout (TreeLayout)
 import qualified Graphics.UI.Bottle.Widget.TreeLayout as TreeLayout
 import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
 import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
@@ -41,12 +40,12 @@ import           Lamdu.Prelude
 type T = Transaction
 
 makeSimpleView ::
-    (Monad f, Monad m) =>
+    (Applicative f, Monad m) =>
     Name m -> Widget.Id ->
-    ExprGuiM m (ExpressionGui f)
+    ExprGuiM m (Widget (f Widget.EventResult))
 makeSimpleView name myId =
     (Widget.makeFocusableView ?? myId)
-    <*> (ExpressionGui.makeNameView name (Widget.toAnimId myId) <&> TreeLayout.fromView)
+    <*> (ExpressionGui.makeNameView name (Widget.toAnimId myId) <&> Widget.fromView)
 
 makeParamsRecord ::
     Monad m => Widget.Id -> Sugar.ParamsRecordVar (Name m) ->
@@ -63,7 +62,7 @@ makeParamsRecord myId paramsRecordVar =
                 & Lens.itraverse
                 (\i fieldName ->
                     Widget.joinId myId ["params", SBS8.pack (show (i::Int))]
-                    & makeSimpleView fieldName
+                    & makeSimpleView fieldName <&> TreeLayout.fromWidget
                     & Reader.local (TextView.color .~ parameterColor)
                 )
               )
@@ -145,8 +144,8 @@ definitionTypeChangeBox info getVarId =
 processDefinitionWidget ::
     Monad m =>
     Sugar.DefinitionForm m -> Widget.Id ->
-    ExprGuiM m (TreeLayout (T m Widget.EventResult)) ->
-    ExprGuiM m (TreeLayout (T m Widget.EventResult))
+    ExprGuiM m (Aligned (Widget (T m Widget.EventResult))) ->
+    ExprGuiM m (Aligned (Widget (T m Widget.EventResult)))
 processDefinitionWidget Sugar.DefUpToDate _myId mkLayout = mkLayout
 processDefinitionWidget Sugar.DefDeleted _myId mkLayout =
     (ExpressionGui.addDeletionDiagonal ?? 0.1)
@@ -165,16 +164,14 @@ processDefinitionWidget (Sugar.DefTypeChanged info) myId mkLayout =
             then
             do
                 box <- definitionTypeChangeBox info myId
-                layout
-                    & TreeLayout.alignedWidget %~
-                        (/-/ (Aligned 0 box `Aligned.hoverInPlaceOf` (View.empty :: Aligned View)))
+                layout /-/ (Aligned 0 box `Aligned.hoverInPlaceOf` (View.empty :: Aligned View))
                     & return
             else return layout
 
 makeGetBinder ::
     Monad m =>
     Sugar.BinderVar (Name m) m -> Widget.Id ->
-    ExprGuiM m (TreeLayout (T m Widget.EventResult))
+    ExprGuiM m (Aligned (Widget (T m Widget.EventResult)))
 makeGetBinder binderVar myId =
     do
         config <- Lens.view Config.config
@@ -192,12 +189,13 @@ makeGetBinder binderVar myId =
             & makeNameRef myId (binderVar ^. Sugar.bvNameRef)
             <&> E.weakerEvents
                 (makeInlineEventMap config (binderVar ^. Sugar.bvInline))
+            <&> Aligned 0
             & processDef
 
 makeGetParam ::
     Monad m =>
     Sugar.Param (Name m) m -> Widget.Id ->
-    ExprGuiM m (TreeLayout (T m Widget.EventResult))
+    ExprGuiM m (Widget (T m Widget.EventResult))
 makeGetParam param myId =
     do
         theme <- Lens.view Theme.theme
@@ -221,9 +219,12 @@ make ::
     ExprGuiM m (ExpressionGui m)
 make getVar pl =
     case getVar of
-    Sugar.GetBinder binderVar -> makeGetBinder binderVar myId
-    Sugar.GetParamsRecord paramsRecordVar -> makeParamsRecord myId paramsRecordVar
-    Sugar.GetParam param -> makeGetParam param myId
+    Sugar.GetBinder binderVar ->
+        makeGetBinder binderVar myId <&> TreeLayout.fromAlignedWidget
+    Sugar.GetParamsRecord paramsRecordVar ->
+        makeParamsRecord myId paramsRecordVar
+    Sugar.GetParam param ->
+        makeGetParam param myId <&> TreeLayout.fromWidget
     & ExpressionGui.stdWrap pl
     where
         myId = WidgetIds.fromExprPayload pl
