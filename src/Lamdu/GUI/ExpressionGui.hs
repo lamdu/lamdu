@@ -53,7 +53,7 @@ import qualified Graphics.UI.Bottle.View as View
 import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import           Graphics.UI.Bottle.Align (Aligned(..), AlignTo(..))
-import qualified Graphics.UI.Bottle.Align as Aligned
+import qualified Graphics.UI.Bottle.Align as Align
 import           Graphics.UI.Bottle.Widget.TreeLayout (TreeLayout(..))
 import qualified Graphics.UI.Bottle.Widget.TreeLayout as TreeLayout
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
@@ -99,7 +99,7 @@ maybeIndent (Just piInfo) =
         f mkLayout lp =
             case lp ^. TreeLayout.layoutContext of
             TreeLayout.LayoutVertical ->
-                indentBar /|/ Spacer.make (Vector2 gapWidth 0) /|/ (content ^. Aligned.value)
+                indentBar /|/ Spacer.make (Vector2 gapWidth 0) /|/ (content ^. Align.value)
                 & Aligned 0
                 where
                     indentBar =
@@ -381,7 +381,7 @@ addAnnotationH f wideBehavior entityId =
         processAnn <- processAnnotationGui animId wideBehavior
         let onAlignedWidget w =
                 w /-/ AlignTo 0 vspace /-/
-                AlignTo (w ^. Aligned.alignmentRatio . _1)
+                AlignTo (w ^. Align.alignmentRatio . _1)
                 (processAnn (w ^. View.width) annotationLayout)
         return $ TreeLayout.alignedWidget %~ onAlignedWidget
     where
@@ -466,7 +466,7 @@ makeNameEdit onActiveEditor (Name nameSrc nameCollision setName name) myId =
             ?? WidgetIds.nameEditOf myId
             <&> Aligned 0.5
             <&> maybe id (flip (/|/)) mCollisionSuffix
-            <&> (^. Aligned.value)
+            <&> (^. Align.value)
     & Reader.local (View.animIdPrefix .~ Widget.toAnimId myId)
     <&> onActiveEditor
     where
@@ -552,7 +552,7 @@ makeNameView (Name _ collision _ name) animId =
         TextView.make ?? name ?? animId
             <&> Aligned 0.5
             <&> maybe id (flip (/|/)) mSuffixLabel
-            <&> (^. Aligned.value)
+            <&> (^. Align.value)
     & Reader.local (View.animIdPrefix .~ animId)
 
 -- TODO: This doesn't belong here

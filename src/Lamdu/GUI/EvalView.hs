@@ -14,7 +14,7 @@ import           Data.Vector.Vector2 (Vector2(..))
 import           Graphics.DrawingCombinators ((%%))
 import qualified Graphics.DrawingCombinators.Utils as DrawUtils
 import           Graphics.UI.Bottle.Align (Aligned(..))
-import qualified Graphics.UI.Bottle.Align as Aligned
+import qualified Graphics.UI.Bottle.Align as Align
 import           Graphics.UI.Bottle.Animation (AnimId)
 import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.Rect as Rect
@@ -92,7 +92,7 @@ makeError err animId =
             _ -> Text.pack (show err)
 
 hbox :: [View] -> View
-hbox = Aligned.hboxAlign 0.5
+hbox = Align.hboxAlign 0.5
 
 arrayCutoff :: Int
 arrayCutoff = 10
@@ -161,7 +161,7 @@ makeRecExtend animId typ recExtend =
                             View.make 1 (Anim.unitSquare (animId ++ ["line"]))
                             & View.scale (Vector2 barWidth 1)
                             & Aligned 0.5
-            (Aligned 0.5 fieldsView /-/ restView) ^. Aligned.value & return
+            (Aligned 0.5 fieldsView /-/ restView) ^. Align.value & return
     where
         (fields, recStatus) = extractFields recExtend
 

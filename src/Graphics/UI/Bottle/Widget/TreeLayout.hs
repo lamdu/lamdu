@@ -48,7 +48,7 @@ import qualified Graphics.UI.Bottle.View as View
 import           Graphics.UI.Bottle.Widget (Widget, R)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import           Graphics.UI.Bottle.Align (Aligned(..), AlignTo(..))
-import qualified Graphics.UI.Bottle.Align as Aligned
+import qualified Graphics.UI.Bottle.Align as Align
 import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
 
 import           Lamdu.Prelude
@@ -115,7 +115,7 @@ instance Functor f => View.Resizable (TreeLayout (f Widget.EventResult)) where
 
 instance E.HasEventMap TreeLayout where eventMap = Widget.widget . E.eventMap
 
-instance Widget.HasWidget TreeLayout where widget = alignedWidget . Aligned.value
+instance Widget.HasWidget TreeLayout where widget = alignedWidget . Align.value
 
 alignedWidget ::
     Lens.Setter
@@ -124,7 +124,7 @@ alignedWidget ::
 alignedWidget = render . Lens.mapped
 
 alignment :: Lens.Setter' (TreeLayout a) (Vector2 R)
-alignment = alignedWidget . Aligned.alignmentRatio
+alignment = alignedWidget . Align.alignmentRatio
 
 -- | Lifts a Widget into a 'TreeLayout'
 fromAlignedWidget :: Aligned (Widget a) -> TreeLayout a

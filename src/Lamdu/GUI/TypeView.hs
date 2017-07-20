@@ -12,7 +12,7 @@ import qualified Data.Text as Text
 import           Data.Text.Encoding (decodeUtf8)
 import           Data.Vector.Vector2 (Vector2(..))
 import           Graphics.UI.Bottle.Align (Aligned(..))
-import qualified Graphics.UI.Bottle.Align as Aligned
+import qualified Graphics.UI.Bottle.Align as Align
 import           Graphics.UI.Bottle.Animation (AnimId)
 import qualified Graphics.UI.Bottle.Animation as Anim
 import           Graphics.UI.Bottle.View (View(..), (/-/))
@@ -66,7 +66,7 @@ showIdentifier :: Monad m => Identifier -> M m View
 showIdentifier (Identifier bs) = text (decodeUtf8 bs)
 
 hbox :: [View] -> View
-hbox = Aligned.hboxAlign 0.5
+hbox = Align.hboxAlign 0.5
 
 mkHSpace :: Monad m => M m View
 mkHSpace = Spacer.stdHSpace & egui
@@ -156,7 +156,7 @@ makeTag tag =
 
 makeField :: Monad m => (T.Tag, Type) -> M m [Aligned View]
 makeField (tag, fieldType) =
-    Lens.sequenceOf (Lens.traversed . Aligned.value)
+    Lens.sequenceOf (Lens.traversed . Align.value)
     [ Aligned (Vector2 1 0.5) (makeTag tag)
     , Aligned 0.5 mkHSpace
     , Aligned (Vector2 0 0.5) (splitMake (Precedence.parent 0) fieldType)
@@ -166,7 +166,7 @@ makeSumField :: Monad m => (T.Tag, Type) -> M m [Aligned View]
 makeSumField (tag, T.TRecord T.CEmpty) =
     makeTag tag <&> Aligned (Vector2 1 0.5) <&> (:[])
 makeSumField (tag, fieldType) =
-    Lens.sequenceOf (Lens.traversed . Aligned.value)
+    Lens.sequenceOf (Lens.traversed . Align.value)
     [ Aligned (Vector2 1 0.5) (makeTag tag)
     , Aligned 0.5 mkHSpace
     , Aligned (Vector2 0 0.5) (splitMake (Precedence.parent 0) fieldType)
@@ -193,7 +193,7 @@ makeComposite mkField composite =
                             & View.scale (Vector2 barWidth 10)
                             & Aligned 0.5
                     makeTVar var <&> Aligned 0.5 <&> (sqr /-/)
-        (Aligned 0.5 fieldsView /-/ varView) ^. Aligned.value & addBackgroundFrame
+        (Aligned 0.5 fieldsView /-/ varView) ^. Align.value & addBackgroundFrame
     where
         (fields, extension) = composite ^. orderedFlatComposite
 

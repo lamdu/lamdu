@@ -19,7 +19,7 @@ import qualified Graphics.DrawingCombinators as Draw
 import           Graphics.UI.Bottle.Animation (AnimId, R)
 import qualified Graphics.UI.Bottle.Animation as Anim
 import           Graphics.UI.Bottle.Align (Aligned(..))
-import qualified Graphics.UI.Bottle.Align as Aligned
+import qualified Graphics.UI.Bottle.Align as Align
 import           Graphics.UI.Bottle.EventMap (EventMap)
 import qualified Graphics.UI.Bottle.EventMap as E
 import           Graphics.UI.Bottle.MetaKey (MetaKey(..), toModKey, noMods)
@@ -104,7 +104,7 @@ makeShortcutKeyView inputDocs =
     inputDocs
     <&> (<> " ")
     & traverse TextView.makeLabel
-    <&> Aligned.vboxAlign 1
+    <&> Align.vboxAlign 1
     & Reader.local setColor
     where
         setColor env =
@@ -168,7 +168,7 @@ makeFlatTreeView size pairs =
     <&> Spacer.makeHorizontal
     <&> List.intersperse
     ?? colViews
-    <&> Aligned.hboxAlign 1
+    <&> Align.hboxAlign 1
     where
         colViews =
             pairs
@@ -187,7 +187,7 @@ makeTreeView size trees =
         let go ts = ts <&> fromTree & mconcat
             fromTree (Leaf inputDocsView) = ([], [inputDocsView])
             fromTree (Branch titleView ts) =
-                ( (titleView, Aligned.vboxAlign 1 inputDocs) :
+                ( (titleView, Align.vboxAlign 1 inputDocs) :
                     (Lens.traversed . _1 %~ indent indentWidth) titles
                 , [] )
                 where

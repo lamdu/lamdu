@@ -14,7 +14,7 @@ import qualified Graphics.UI.Bottle.View as View
 import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import           Graphics.UI.Bottle.Align (Aligned(..))
-import qualified Graphics.UI.Bottle.Align as Aligned
+import qualified Graphics.UI.Bottle.Align as Align
 import qualified Graphics.UI.Bottle.Widget.TreeLayout as TreeLayout
 import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
 import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
@@ -164,7 +164,7 @@ processDefinitionWidget (Sugar.DefTypeChanged info) myId mkLayout =
             then
             do
                 box <- definitionTypeChangeBox info myId
-                (layout /-/ Aligned 0 box) `Aligned.hoverInPlaceOf` layout
+                (layout /-/ Aligned 0 box) `Align.hoverInPlaceOf` layout
                     & return
             else return layout
 

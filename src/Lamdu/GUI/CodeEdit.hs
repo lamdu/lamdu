@@ -20,7 +20,7 @@ import qualified Graphics.UI.Bottle.Main as Main
 import           Graphics.UI.Bottle.MetaKey (MetaKey)
 import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
-import qualified Graphics.UI.Bottle.Align as Aligned
+import qualified Graphics.UI.Bottle.Align as Align
 import           Graphics.UI.Bottle.Widget.TreeLayout (TreeLayout)
 import qualified Graphics.UI.Bottle.Widget.TreeLayout as TreeLayout
 import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
@@ -175,7 +175,7 @@ make width env =
     & ExprGuiM.run ExpressionEdit.make
       (env ^. codeProps) (env ^. settings) (env ^. style)
     <&> ExpressionGui.render width
-    <&> (^. Aligned.value)
+    <&> (^. Align.value)
 
 makePaneEdit ::
     Monad m =>

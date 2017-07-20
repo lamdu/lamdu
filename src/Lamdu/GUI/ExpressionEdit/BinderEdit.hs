@@ -17,7 +17,7 @@ import           Data.Store.Transaction (Transaction)
 import qualified Data.Text as Text
 import qualified Graphics.DrawingCombinators as Draw
 import           Graphics.UI.Bottle.Align (AlignTo(..))
-import qualified Graphics.UI.Bottle.Align as Aligned
+import qualified Graphics.UI.Bottle.Align as Align
 import qualified Graphics.UI.Bottle.EventMap as E
 import           Graphics.UI.Bottle.MetaKey (MetaKey(..), noMods, toModKey)
 import           Graphics.UI.Bottle.View ((/-/), (/|/))
@@ -214,7 +214,7 @@ makeScopeNavEdit binder myId curCursor =
         case settings ^. CESettings.sInfoMode of
             CESettings.Evaluation ->
                 (Widget.makeFocusableView ?? myId)
-                <*> (mapM mkArrow scopes <&> Aligned.hboxAlign 0.5 <&> Widget.fromView)
+                <*> (mapM mkArrow scopes <&> Align.hboxAlign 0.5 <&> Widget.fromView)
                 <&> E.weakerEvents (mkScopeEventMap leftKeys rightKeys `mappend` blockEventMap)
                 <&> Just
                 <&> (,) (mkScopeEventMap prevScopeKeys nextScopeKeys)

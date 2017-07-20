@@ -14,7 +14,7 @@ import qualified Graphics.UI.Bottle.View as View
 import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import           Graphics.UI.Bottle.Align (AlignTo(..))
-import qualified Graphics.UI.Bottle.Align as Aligned
+import qualified Graphics.UI.Bottle.Align as Align
 import qualified Graphics.UI.Bottle.Widget.TreeLayout as TreeLayout
 import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
 import           Lamdu.Config (Config)
@@ -125,7 +125,7 @@ makeOpenRecord fieldsGui rest animId =
                 minWidth = restW ^. View.width
                 targetWidth = fields ^. View.width
             in
-            (fields & Aligned.alignmentRatio .~ 0)
+            (fields & Align.alignmentRatio .~ 0)
             /-/
             AlignTo 0 (separationBar theme (max minWidth targetWidth) animId /-/ vspace)
             /-/
