@@ -116,10 +116,7 @@ hoverInPlaceOf ::
 layout `hoverInPlaceOf` src =
     ( srcAbsAlignment
     , layoutWidget
-        & Widget.translate (srcAbsAlignment - layoutAbsAlignment)
-        -- We start out as layout size and resize explicitly to src
-        -- size - allowing the surrounding to be corrected by the size lens:
-        & Widget (layoutWidget ^. View.size)
+        & View.assymetricPad (srcAbsAlignment - layoutAbsAlignment) 0
         & View.size .~ (srcWidget ^. View.size)
         & liftLayer
     ) ^. Lens.from absAligned
