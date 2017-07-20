@@ -87,9 +87,7 @@ instance ( View.HasSize (View.Glued a b)
     glue o a b = glueHelper snd o (toAbsPair a) (toAbsPair b) ^. _2
 
 glueHelper ::
-    ( View.Glue a b, View.Resizable a, View.Resizable b
-    , View.HasSize (View.Glued a b), View.HasSize a
-    ) =>
+    (View.Glue a b, View.Resizable a, View.Resizable b, View.HasSize a) =>
     ((Vector2 R, Vector2 R) -> Vector2 R) -> Orientation ->
     (Vector2 R, a) -> (Vector2 R, b) -> (Vector2 R, View.Glued a b)
 glueHelper chooseAlign orientation (aAbsAlign, aw) (bAbsAlign, bw) =
