@@ -289,9 +289,9 @@ makeExtraResultsWidget holeInfo mainResultHeight extraResults@(firstResult:_) =
         return
             ( msum mResults
             , widget
-                & Widget.translate (Vector2 0 (0.5 * (height - headHeight)))
+                & View.assymetricPad (Vector2 0 (0.5 * (height - headHeight))) 0
                 -- TODO(HOVER): Fix this:
-                & Widget (Vector2 0 height)
+                & View.width .~ 0
             , (widget ^. View.height) - 0.5 * (headHeight + mainResultHeight)
                 & max 0
             )
