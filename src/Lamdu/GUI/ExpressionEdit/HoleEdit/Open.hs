@@ -242,8 +242,8 @@ makeResultGroup holeInfo results =
                 if cursorOnExtra
                     then makeExtra
                     else
-                    focusFirstExtraResult (results ^. HoleResults.rlExtra)
-                    <&> (View.empty &)
+                    results ^. HoleResults.rlExtra
+                    & focusFirstExtraResult
                     <&> \x -> (Nothing, x, 0)
         let isSelected = Lens.has Lens._Just mSelectedResult
         extraSymbolWidget <-
@@ -258,8 +258,9 @@ makeResultGroup holeInfo results =
             }
     where
         mainResult = results ^. HoleResults.rlMain
-        focusFirstExtraResult [] = return id
-        focusFirstExtraResult (result:_) = Widget.makeFocusableView ?? rId result
+        focusFirstExtraResult [] = return View.empty
+        focusFirstExtraResult (result:_) =
+            Widget.makeFocusableView ?? rId result ?? View.empty
 
 makeExtraResultsWidget ::
     Monad m =>
