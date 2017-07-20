@@ -161,7 +161,12 @@ Lens.makePrisms ''State
 sizedState :: Lens.IndexedLens' Size (Widget a) (State a)
 sizedState f (Widget sz state) = Lens.indexed f sz state <&> Widget sz
 
-instance View.SetLayers (Widget a) where setLayers = sizedState <. stateLayers
+instance View.SetLayers (Widget a) where
+    setLayers = sizedState <. stateLayers
+    hoverLayers w =
+        w
+        & View.setLayers . View.layers %~ (mempty :)
+        & mEnter . Lens._Just . Lens.mapped . enterResultLayer +~ 1
 
 instance Functor f => View.Resizable (Widget (f EventResult)) where
     empty = fromView View.empty

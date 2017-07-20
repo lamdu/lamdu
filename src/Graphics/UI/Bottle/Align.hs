@@ -12,7 +12,7 @@ import qualified Control.Lens as Lens
 import           Data.Vector.Vector2 (Vector2(..))
 import           Graphics.UI.Bottle.View (Orientation)
 import qualified Graphics.UI.Bottle.View as View
-import           Graphics.UI.Bottle.Widget (Widget(..), R)
+import           Graphics.UI.Bottle.Widget (R)
 import qualified Graphics.UI.Bottle.Widget as Widget
 
 import           Lamdu.Prelude
@@ -25,6 +25,7 @@ Lens.makeLenses ''Aligned
 
 instance View.SetLayers a => View.SetLayers (Aligned a) where
     setLayers = value . View.setLayers
+    hoverLayers = value %~ View.hoverLayers
 
 instance (View.HasSize a, View.Resizable a) => View.Resizable (Aligned a) where
     empty = Aligned 0 View.empty
@@ -109,22 +110,18 @@ glueHelper chooseAlign orientation (aAbsAlign, aw) (bAbsAlign, bw) =
 
 -- Resize a layout to be the same alignment/size as another layout
 hoverInPlaceOf ::
-    (Functor f, View.HasSize a) =>
-    Aligned (Widget (f Widget.EventResult)) ->
+    (View.HasSize a, View.Resizable a, View.HasSize b) =>
     Aligned a ->
-    Aligned (Widget (f Widget.EventResult))
+    Aligned b ->
+    Aligned a
 layout `hoverInPlaceOf` src =
     ( srcAbsAlignment
     , layoutWidget
         & View.assymetricPad (srcAbsAlignment - layoutAbsAlignment) 0
         & View.size .~ (srcWidget ^. View.size)
-        & liftLayer
+        & View.hoverLayers
     ) ^. Lens.from absAligned
     where
-        liftLayer w =
-            w
-            & View.setLayers . View.layers %~ (mempty :)
-            & Widget.mEnter . Lens._Just . Lens.mapped . Widget.enterResultLayer +~ 1
         (layoutAbsAlignment, layoutWidget) = layout ^. absAligned
         (srcAbsAlignment, srcWidget) = src ^. absAligned
 

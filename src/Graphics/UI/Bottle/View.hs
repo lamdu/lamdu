@@ -64,6 +64,7 @@ Lens.makeLenses ''View
 
 class SetLayers a where
     setLayers :: Lens.IndexedSetter' Size a Layers
+    hoverLayers :: a -> a
 
 class SetLayers a => Resizable a where
     -- Different `SetLayers`s do additional things when padding
@@ -89,7 +90,9 @@ class Glue a b where
     type Glued a b
     glue :: Orientation -> a -> b -> Glued a b
 
-instance SetLayers View where setLayers f (View sz ls) = Lens.indexed f sz ls <&> View sz
+instance SetLayers View where
+    setLayers f (View sz ls) = Lens.indexed f sz ls <&> View sz
+    hoverLayers = setLayers . layers %~ (mempty:)
 
 instance Resizable View where
     assymetricPad leftAndTop rightAndBottom x =

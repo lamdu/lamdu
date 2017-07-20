@@ -103,7 +103,10 @@ instance ( View.GluesTo (AlignTo a) (Aligned (Widget b)) (Aligned (Widget b))
         & adjustWidth orientation v
         & render . Lens.mapped %~ View.glue orientation v
 
-instance View.SetLayers (TreeLayout a) where setLayers = Widget.widget . View.setLayers
+instance View.SetLayers (TreeLayout a) where
+    setLayers = Widget.widget . View.setLayers
+    hoverLayers = Widget.widget %~ View.hoverLayers
+
 instance Functor f => View.Resizable (TreeLayout (f Widget.EventResult)) where
     empty = TreeLayout (const View.empty)
     pad p w =
