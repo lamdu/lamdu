@@ -218,10 +218,10 @@ addInnerFrame =
 translateLayers :: Vector2 R -> Layers -> Layers
 translateLayers pos = layers . traverse %~ Anim.translate pos
 
-padToSizeAlign :: Size -> Vector2 R -> View -> View
+padToSizeAlign :: (HasSize a, SetLayers a) => Size -> Vector2 R -> a -> a
 padToSizeAlign newSize alignment x =
     x
-    & vAnimLayers %~ translateLayers (sizeDiff * alignment)
+    & setLayers %~ translateLayers (sizeDiff * alignment)
     & size %~ liftA2 max newSize
     where
         sizeDiff = max <$> 0 <*> newSize - x ^. size

@@ -9,9 +9,11 @@ import           Data.Store.Property (Property(..))
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Text as Text
 import qualified Graphics.DrawingCombinators as Draw
+import           Graphics.UI.Bottle.Align (WithTextPos)
+import qualified Graphics.UI.Bottle.Align as Align
 import qualified Graphics.UI.Bottle.EventMap as E
 import           Graphics.UI.Bottle.MetaKey (MetaKey(..), noMods)
-import qualified Graphics.UI.Bottle.View as View
+import           Graphics.UI.Bottle.View ((/|/))
 import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
@@ -45,10 +47,10 @@ builtinFFIName = flip Widget.joinId ["FFIName"]
 makeNamePartEditor ::
     (Monad f, Monad m) =>
     Draw.Color -> Text -> (Text -> f ()) -> Widget.Id ->
-    ExprGuiM m (Widget (f Widget.EventResult))
+    ExprGuiM m (WithTextPos (Widget (f Widget.EventResult)))
 makeNamePartEditor color namePartStr setter myId =
     (FocusDelegator.make ?? builtinFDConfig ?? FocusDelegator.FocusEntryParent
-     ?? myId)
+     ?? myId <&> (Align.tValue %~))
     <*> ( TextEdits.makeWordEdit ?? empty ?? Property namePartStr setter ??
           myId `Widget.joinId` ["textedit"]
         )
@@ -59,7 +61,7 @@ makeNamePartEditor color namePartStr setter myId =
 make ::
     Monad m =>
     Sugar.DefinitionBuiltin m -> Widget.Id ->
-    ExprGuiM m (Widget (T m Widget.EventResult))
+    ExprGuiM m (WithTextPos (Widget (T m Widget.EventResult)))
 make def myId =
     do
         theme <- Lens.view Theme.theme
@@ -69,8 +71,8 @@ make def myId =
         varName <-
             makeNamePartEditor (Theme.foreignVarColor theme) name nameSetter
             (builtinFFIName myId)
-        dot <- TextView.makeLabel "." <&> Widget.fromView
-        View.hbox [moduleName, dot, varName] & return
+        dot <- TextView.makeLabel "."
+        moduleName /|/ dot /|/ varName & return
     & Widget.assignCursor myId (builtinFFIName myId)
     where
         Sugar.DefinitionBuiltin

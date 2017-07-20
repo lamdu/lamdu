@@ -17,6 +17,8 @@ import qualified Data.Text as Text
 import           Data.Text.Encoding (encodeUtf8)
 import           Data.Vector.Vector2 (Vector2(..))
 import qualified Graphics.DrawingCombinators as Draw
+import           Graphics.UI.Bottle.Align (WithTextPos(..))
+import qualified Graphics.UI.Bottle.Align as Align
 import           Graphics.UI.Bottle.Animation (AnimId, Size)
 import qualified Graphics.UI.Bottle.Animation as Anim
 import           Graphics.UI.Bottle.Font (TextSize(..))
@@ -114,34 +116,39 @@ drawText =
 
 make ::
     (MonadReader env m, HasStyle env) =>
-    m (Text -> AnimId -> View)
+    m (Text -> AnimId -> WithTextPos View)
 make =
     do
         draw <- drawText
         pure $ \text animId ->
             let RenderedText textSize frame = draw text
-            in View.make (bounding textSize) (frame animId)
+            in  WithTextPos
+                { _textTop = 0
+                , _tValue = View.make (bounding textSize) (frame animId)
+                }
 
 makeLabel ::
     (MonadReader env m, HasStyle env, View.HasAnimIdPrefix env) =>
-    Text -> m View
+    Text -> m (WithTextPos View)
 makeLabel text = (make ?? text) <*> View.subAnimId [encodeUtf8 text]
 
 makeFocusable ::
     (MonadReader env m, Applicative f, Widget.HasCursor env, HasStyle env) =>
-    m (Text -> Widget.Id -> Widget (f Widget.EventResult))
+    m (Text -> Widget.Id -> WithTextPos (Widget (f Widget.EventResult)))
 makeFocusable =
     do
         toFocusable <- Widget.makeFocusableView
         mkText <- make
         pure $ \text myId ->
             mkText text (Widget.toAnimId myId)
-            & Widget.fromView & toFocusable myId
+            & Align.tValue %~ toFocusable myId . Widget.fromView
 
 makeFocusableLabel ::
     (MonadReader env m, Applicative f, Widget.HasCursor env, HasStyle env, View.HasAnimIdPrefix env) =>
-    Text -> m (Widget (f Widget.EventResult))
+    Text -> m (WithTextPos (Widget (f Widget.EventResult)))
 makeFocusableLabel text =
-    Widget.makeFocusableView
-    <*> (View.subAnimId [encodeUtf8 text] <&> Widget.Id)
-    <*> (makeLabel text <&> Widget.fromView)
+    do
+        toFocusable <- Widget.makeFocusableView
+        animId <- View.subAnimId [encodeUtf8 text] <&> Widget.Id
+        makeLabel text
+            <&> Align.tValue %~ toFocusable animId . Widget.fromView

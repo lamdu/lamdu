@@ -13,7 +13,7 @@ import           Graphics.UI.Bottle.View (View, (/-/), (/|/))
 import qualified Graphics.UI.Bottle.View as View
 import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
-import           Graphics.UI.Bottle.Align (AlignTo(..))
+import           Graphics.UI.Bottle.Align (WithTextPos)
 import qualified Graphics.UI.Bottle.Align as Align
 import qualified Graphics.UI.Bottle.Widget.TreeLayout as TreeLayout
 import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
@@ -81,15 +81,20 @@ make record@(Sugar.Record fields recordTail addField) pl =
 makeFieldRow ::
     Monad m =>
     Sugar.RecordField (Name m) m (Sugar.Expression (Name m) m ExprGuiT.Payload) ->
-    ExprGuiM m (Widget (Transaction m Widget.EventResult), ExpressionGui m)
+    ExprGuiM m
+    ( WithTextPos (Widget (Transaction m Widget.EventResult))
+    , ExpressionGui m
+    )
 makeFieldRow (Sugar.RecordField delete tag fieldExpr) =
     do
         config <- Lens.view Config.config
-        tagLabel <- TagEdit.makeRecordTag (ExprGuiT.nextHolesBefore fieldExpr) tag
+        let itemEventMap = recordDelEventMap config delete
+        tagLabel <-
+            TagEdit.makeRecordTag (ExprGuiT.nextHolesBefore fieldExpr) tag
+            <&> Align.tValue %~ E.weakerEvents itemEventMap
         hspace <- Spacer.stdHSpace
         fieldGui <- ExprGuiM.makeSubexpression fieldExpr
-        let itemEventMap = recordDelEventMap config delete
-        return (E.weakerEvents itemEventMap tagLabel /|/ hspace, E.weakerEvents itemEventMap fieldGui)
+        return (tagLabel /|/ hspace, E.weakerEvents itemEventMap fieldGui)
 
 makeFieldsWidget ::
     Monad m =>
@@ -97,7 +102,7 @@ makeFieldsWidget ::
     Widget.Id -> ExprGuiM m (ExpressionGui m)
 makeFieldsWidget [] myId =
     (Widget.makeFocusableView ?? myId)
-    <*> (ExpressionGui.grammarLabel "()" <&> TreeLayout.fromView)
+    <*> (ExpressionGui.grammarLabel "()" <&> TreeLayout.fromTextView)
 makeFieldsWidget fields _ =
     TreeLayout.taggedList <*> mapM makeFieldRow fields
 
@@ -125,9 +130,11 @@ makeOpenRecord fieldsGui rest animId =
                 minWidth = restW ^. View.width
                 targetWidth = fields ^. View.width
             in
-            (fields & Align.alignmentRatio .~ 0)
+            fields
             /-/
-            AlignTo 0 (separationBar theme (max minWidth targetWidth) animId /-/ vspace)
+            separationBar theme (max minWidth targetWidth) animId
+            /-/
+            vspace
             /-/
             restW
 

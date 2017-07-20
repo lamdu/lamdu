@@ -90,7 +90,7 @@ mkNomGui ordering nomStr str mDel valId pl (Sugar.Nominal tid val) =
                 do
                     label <- ExpressionGui.grammarLabel str
                     nameGui <- ExpressionGui.makeNameView (tid ^. Sugar.tidgName) (Widget.toAnimId nameId)
-                    label /|/ nameGui & TreeLayout.fromView & return
+                    label /|/ nameGui & TreeLayout.fromTextView & return
                 & Reader.local (TextView.color .~ nomColor)
                 <&> E.weakerEvents eventMap
               , val

@@ -104,6 +104,7 @@ makeShortcutKeyView inputDocs =
     inputDocs
     <&> (<> " ")
     & traverse TextView.makeLabel
+    <&> map (^. Align.tValue)
     <&> Align.vboxAlign 1
     & Reader.local setColor
     where
@@ -124,6 +125,7 @@ makeTextViews tree =
             & Reader.local (View.animIdPrefix .~ animId)
         mkDoc (animId, subtitle) =
             TextView.makeLabel subtitle
+            <&> (^. Align.tValue)
             & Reader.local (View.animIdPrefix .~ animId)
 
 columns :: R -> (a -> R) -> [a] -> [[a]]
@@ -149,7 +151,7 @@ make size eventMap =
 
 makeTooltip :: [ModKey] -> Env -> View
 makeTooltip helpKeys env =
-    TextView.makeLabel "Show help" env
+    (TextView.makeLabel "Show help" env ^. Align.tValue)
     /|/
     makeShortcutKeyView (helpKeys <&> ModKey.pretty) env
 

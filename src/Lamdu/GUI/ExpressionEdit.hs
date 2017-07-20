@@ -39,7 +39,7 @@ make (Sugar.Expression body pl) =
             & foldr (`Widget.assignCursorPrefix` const myId) x
 
 injectedExpr :: Monad m => ExprGuiM m (ExpressionGui m)
-injectedExpr = TextView.makeLabel "★" <&> TreeLayout.fromView
+injectedExpr = TextView.makeLabel "★" <&> TreeLayout.fromTextView
 
 makeEditor ::
     Monad m =>

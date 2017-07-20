@@ -8,7 +8,7 @@ import           Data.Store.Transaction (Transaction)
 import qualified Data.Text as Text
 import           Data.Vector.Vector2 (Vector2(..))
 import qualified Graphics.DrawingCombinators as Draw
-import           Graphics.UI.Bottle.Align (Aligned(..))
+import           Graphics.UI.Bottle.Align (WithTextPos)
 import qualified Graphics.UI.Bottle.Align as Align
 import           Graphics.UI.Bottle.Animation (AnimId)
 import qualified Graphics.UI.Bottle.Animation as Anim
@@ -81,17 +81,17 @@ addInfixMarker widgetId =
 makeFuncVar ::
     Monad m =>
     NearestHoles -> Sugar.BinderVar (Name m) m -> Widget.Id ->
-    ExprGuiM m (Aligned (Widget (Transaction m Widget.EventResult)))
+    ExprGuiM m (WithTextPos (Widget (Transaction m Widget.EventResult)))
 makeFuncVar nearestHoles funcVar myId =
     do
         jump <- ExprEventMap.jumpHolesEventMap nearestHoles
         GetVarEdit.makeGetBinder funcVar myId
-            <&> Align.value %~ E.weakerEvents jump
+            <&> Align.tValue %~ E.weakerEvents jump
 
 makeInfixFuncName ::
     Monad m =>
     NearestHoles -> Sugar.BinderVar (Name m) m -> Widget.Id ->
-    ExprGuiM m (Aligned (Widget (Transaction m Widget.EventResult)))
+    ExprGuiM m (WithTextPos (Widget (Transaction m Widget.EventResult)))
 makeInfixFuncName nearestHoles funcVar myId =
     makeFuncVar nearestHoles funcVar myId <&> mAddMarker
     where
@@ -119,12 +119,12 @@ makeFuncRow mParensId prec apply myId =
         [] -> error "apply with no args!"
         (x:_) ->
             makeFuncVar (ExprGuiT.nextHolesBefore (x ^. Sugar.aaExpr)) funcVar
-            myId <&> TreeLayout.fromAlignedWidget
+            myId <&> TreeLayout.fromWithTextPos
     Sugar.ObjectArg arg ->
         ExpressionGui.combineSpacedMParens mParensId
         <*> sequenceA
         [ makeFuncVar (ExprGuiT.nextHolesBefore arg) funcVar myId
-            <&> TreeLayout.fromAlignedWidget
+            <&> TreeLayout.fromWithTextPos
         , ExprGuiM.makeSubexpressionWith
           (if isBoxed apply then 0 else prec)
           (ExpressionGui.before .~ prec) arg
@@ -136,7 +136,7 @@ makeFuncRow mParensId prec apply myId =
             <*> sequenceA
             [ ExprGuiM.makeSubexpressionWith 0 (ExpressionGui.after .~ prec) l
             , makeInfixFuncName (ExprGuiT.nextHolesBefore r) funcVar myId
-                <&> TreeLayout.fromAlignedWidget
+                <&> TreeLayout.fromWithTextPos
             ]
         , ExprGuiM.makeSubexpressionWith (prec+1) (ExpressionGui.before .~ prec+1) r
         ]
@@ -174,7 +174,7 @@ makeLabeled apply pl =
 makeArgRow ::
     Monad m =>
     Sugar.AnnotatedArg (Name m) (ExprGuiT.SugarExpr m) ->
-    ExprGuiM m (View, ExpressionGui m)
+    ExprGuiM m (WithTextPos View, ExpressionGui m)
 makeArgRow arg =
     do
         paramTag <- TagEdit.makeParamTag (arg ^. Sugar.aaTag)
@@ -186,7 +186,7 @@ mkRelayedArgs :: Monad m => NearestHoles -> [Sugar.RelayedArg (Name m) m] -> Exp
 mkRelayedArgs nearestHoles args =
     do
         argEdits <- mapM makeArgEdit args
-        collapsed <- ExpressionGui.grammarLabel "➾" <&> TreeLayout.fromView
+        collapsed <- ExpressionGui.grammarLabel "➾" <&> TreeLayout.fromTextView
         ExpressionGui.combineSpaced ?? collapsed : argEdits
     where
         makeArgEdit arg =
@@ -199,7 +199,7 @@ mkRelayedArgs nearestHoles args =
                     , exprInfoIsHoleResult = False
                     } ExprGuiM.NoHolePick
                 GetVarEdit.makeGetParam (arg ^. Sugar.raValue) (WidgetIds.fromEntityId (arg ^. Sugar.raId))
-                    <&> TreeLayout.fromWidget
+                    <&> TreeLayout.fromWithTextPos
                     <&> E.weakerEvents eventMap
 
 mkBoxed ::
@@ -213,14 +213,16 @@ mkBoxed apply nearestHoles mkFuncRow =
         argRows <-
             case apply ^. Sugar.aAnnotatedArgs of
             [] -> return []
-            xs -> TreeLayout.taggedList <*> (traverse makeArgRow xs <&> Lens.mapped . _1 %~ Widget.fromView) <&> (:[])
+            xs ->
+                TreeLayout.taggedList
+                <*> (traverse makeArgRow xs <&> Lens.mapped . _1 . Align.tValue %~ Widget.fromView) <&> (:[])
         funcRow <- ExprGuiM.withLocalPrecedence 0 (const (Prec.make 0)) mkFuncRow
         relayedArgs <-
             case apply ^. Sugar.aRelayedArgs of
             [] -> return []
             args -> mkRelayedArgs nearestHoles args <&> (:[])
         ExpressionGui.addValFrame
-            <*> (TreeLayout.vboxSpaced ?? (funcRow : argRows ++ relayedArgs <&> TreeLayout.alignment . _1 .~ 0))
+            <*> (TreeLayout.vboxSpaced ?? (funcRow : argRows ++ relayedArgs))
 
 makeSimple ::
     Monad m =>

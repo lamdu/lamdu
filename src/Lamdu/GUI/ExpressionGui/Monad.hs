@@ -35,6 +35,7 @@ import           Data.CurAndPrev (CurAndPrev)
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Text.Lens as TextLens
 import           Data.Vector.Vector2 (Vector2)
+import           Graphics.UI.Bottle.Align (WithTextPos)
 import           Graphics.UI.Bottle.Animation.Id (AnimId)
 import qualified Graphics.UI.Bottle.EventMap as E
 import           Graphics.UI.Bottle.View (View)
@@ -169,7 +170,7 @@ makeSubexpressionWith minOpPrec onPrecedence expr =
     do
         maker <- Lens.view aMakeSubexpression & ExprGuiM
         maker expr & withLocalPrecedence minOpPrec onPrecedence
-    & advanceDepth (return . TreeLayout.fromView) animId
+    & advanceDepth (return . TreeLayout.fromTextView) animId
     where
         animId = toAnimId $ WidgetIds.fromExprPayload $ expr ^. Sugar.rPayload
 
@@ -177,7 +178,7 @@ resetDepth :: Int -> ExprGuiM m r -> ExprGuiM m r
 resetDepth depth = exprGuiM %~ RWS.local (aSubexpressionLayer .~ depth)
 
 advanceDepth ::
-    Monad m => (View -> ExprGuiM m r) ->
+    Monad m => (WithTextPos View -> ExprGuiM m r) ->
     AnimId -> ExprGuiM m r -> ExprGuiM m r
 advanceDepth f animId action =
     do

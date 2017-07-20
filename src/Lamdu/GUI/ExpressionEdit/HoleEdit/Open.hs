@@ -3,13 +3,14 @@
 
 module Lamdu.GUI.ExpressionEdit.HoleEdit.Open
     ( makeOpenSearchAreaGui
+    , ResultsPlacement(..)
     ) where
 
 import           Control.Applicative ((<|>))
 import qualified Control.Lens as Lens
 import           Control.Monad (msum)
-import           Control.Monad.Transaction (MonadTransaction(..))
 import qualified Control.Monad.Reader as Reader
+import           Control.Monad.Transaction (MonadTransaction(..))
 import           Data.List.Lens (suffixed)
 import qualified Data.Map as Map
 import           Data.Maybe (isJust)
@@ -18,18 +19,17 @@ import qualified Data.Store.Property as Property
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Text as Text
 import           Data.Vector.Vector2 (Vector2(..))
+import           Graphics.UI.Bottle.Align (Aligned(..), WithTextPos(..), AnchoredWidget)
+import qualified Graphics.UI.Bottle.Align as Align
 import           Graphics.UI.Bottle.Animation (AnimId)
 import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.EventMap as E
-import           Graphics.UI.Bottle.View (View, (/-/))
+import           Graphics.UI.Bottle.View (View, (/-/), (/|/))
 import qualified Graphics.UI.Bottle.View as View
-import           Graphics.UI.Bottle.Widget (Widget(..))
+import           Graphics.UI.Bottle.Widget (Widget(..), EventResult)
 import qualified Graphics.UI.Bottle.Widget as Widget
-import           Graphics.UI.Bottle.Align (Aligned(..))
-import qualified Graphics.UI.Bottle.Align as Align
 import qualified Graphics.UI.Bottle.Widget.Id as WidgetId
 import qualified Graphics.UI.Bottle.Widget.TreeLayout as TreeLayout
-import qualified Graphics.UI.Bottle.Widgets.Grid as Grid
 import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
 import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
 import           Lamdu.CharClassification (operatorChars)
@@ -66,8 +66,9 @@ type T = Transaction
 data ResultGroupWidgets m = ResultGroupWidgets
     { _rgwMainResult :: ShownResult m
     , _rgwMSelectedResult :: Maybe (ShownResult m) -- Can be an extra result
-    , _rgwRow :: [Widget (T m Widget.EventResult)]
-    , _rgwPadding :: Widget.R
+    , _rgwMainResultWidget :: WithTextPos (Widget (T m Widget.EventResult))
+    , _rgwExtraResultSymbol :: WithTextPos View
+    , _rgwExtraResultsWidget ::  Widget (T m Widget.EventResult)
     }
 Lens.makeLenses ''ResultGroupWidgets
 
@@ -174,7 +175,7 @@ fixNumWithDotEventMap holeInfo res
 makeShownResult ::
     Monad m =>
     HoleInfo m -> Result m ->
-    ExprGuiM m (Widget (T m Widget.EventResult), ShownResult m)
+    ExprGuiM m (WithTextPos (Widget (T m Widget.EventResult)), ShownResult m)
 makeShownResult holeInfo result =
     do
         -- Warning: rHoleResult should be ran at most once!
@@ -201,7 +202,7 @@ makeShownResult holeInfo result =
               }
             )
 
-makeExtraSymbol :: Monad m => Bool -> ResultsList n -> ExprGuiM m View
+makeExtraSymbol :: Monad m => Bool -> ResultsList n -> ExprGuiM m (WithTextPos View)
 makeExtraSymbol isSelected results
     | Lens.nullOf (HoleResults.rlExtra . traverse) results = pure View.empty
     | otherwise =
@@ -224,17 +225,12 @@ makeResultGroup ::
 makeResultGroup holeInfo results =
     do
         Config.Hole{..} <- Config.hole <$> Lens.view Config.config
-        (mainResultWidget, shownMainResult) <-
-            makeShownResult holeInfo mainResult
-        let mainResultHeight = mainResultWidget ^. View.height
-        let makeExtra =
-                results ^. HoleResults.rlExtra
-                & makeExtraResultsWidget holeInfo mainResultHeight
-        (mSelectedResult, extraResWidget, extraPadding) <-
-            if Widget.isFocused mainResultWidget
+        (mainResultWidget, shownMainResult) <- makeShownResult holeInfo mainResult
+        (mSelectedResult, extraResWidget) <-
+            if Widget.isFocused (mainResultWidget ^. Align.tValue)
             then do
-                (_, extraResWidget, extraPadding) <- makeExtra
-                return (Just shownMainResult, extraResWidget, extraPadding)
+                (_, extraResWidget) <- makeExtra
+                return (Just shownMainResult, extraResWidget)
             else do
                 cursorOnExtra <-
                     Widget.isSubCursor
@@ -244,30 +240,35 @@ makeResultGroup holeInfo results =
                     else
                     results ^. HoleResults.rlExtra
                     & focusFirstExtraResult
-                    <&> \x -> (Nothing, x, 0)
+                    <&> \x -> (Nothing, x)
         let isSelected = Lens.has Lens._Just mSelectedResult
         extraSymbolWidget <-
             makeExtraSymbol isSelected results
-            <&> Widget.fromView
             & Reader.local (View.animIdPrefix .~ Widget.toAnimId (rId mainResult))
         return ResultGroupWidgets
             { _rgwMainResult = shownMainResult
             , _rgwMSelectedResult = mSelectedResult
-            , _rgwRow = [mainResultWidget, extraSymbolWidget, extraResWidget]
-            , _rgwPadding = extraPadding
+            , _rgwMainResultWidget = mainResultWidget
+            , _rgwExtraResultSymbol = extraSymbolWidget
+            , _rgwExtraResultsWidget = extraResWidget
             }
     where
         mainResult = results ^. HoleResults.rlMain
+        makeExtra =
+            makeExtraResultsWidget holeInfo (results ^. HoleResults.rlExtra)
+            <&> Lens.mapped %~ (^. Align.tValue)
         focusFirstExtraResult [] = return View.empty
-        focusFirstExtraResult (result:_) =
-            Widget.makeFocusableView ?? rId result ?? View.empty
+        focusFirstExtraResult (result:_) = Widget.makeFocusableView ?? rId result ?? View.empty
 
 makeExtraResultsWidget ::
     Monad m =>
-    HoleInfo m -> Anim.R -> [Result m] ->
-    ExprGuiM m (Maybe (ShownResult m), Widget (T m Widget.EventResult), Widget.R)
-makeExtraResultsWidget _ _ [] = return (Nothing, View.empty, 0)
-makeExtraResultsWidget holeInfo mainResultHeight extraResults@(firstResult:_) =
+    HoleInfo m -> [Result m] ->
+    ExprGuiM m
+    ( Maybe (ShownResult m)
+    , WithTextPos (Widget (T m Widget.EventResult))
+    )
+makeExtraResultsWidget _ [] = return (Nothing, View.empty)
+makeExtraResultsWidget holeInfo extraResults@(firstResult:_) =
     do
         theme <- Lens.view Theme.theme
         let mkResWidget result =
@@ -278,26 +279,16 @@ makeExtraResultsWidget holeInfo mainResultHeight extraResults@(firstResult:_) =
                         ( shownResult <$ guard isOnResult
                         , widget
                         )
-        (mResults, widgets) <-
-            unzip <$> traverse mkResWidget extraResults
-        let headHeight = head widgets ^. View.height
-        let height = min mainResultHeight headHeight
-        let widget =
-                View.vbox widgets
-                & addBackground (Widget.toAnimId (rId firstResult))
-                  (Theme.hoverBGColor theme)
+        (mResults, widgets) <- traverse mkResWidget extraResults <&> unzip
         return
             ( msum mResults
-            , widget
-                & View.assymetricPad (Vector2 0 (0.5 * (height - headHeight))) 0
-                -- TODO(HOVER): Fix this:
-                & View.width .~ 0
-            , (widget ^. View.height) - 0.5 * (headHeight + mainResultHeight)
-                & max 0
+            , View.vbox widgets
+                & addBackground (Widget.toAnimId (rId firstResult))
+                  (Theme.hoverBGColor theme)
             )
 
 applyResultLayout ::
-    Functor f => f (ExpressionGui m) -> f (Aligned (Widget (T m Widget.EventResult)))
+    Functor f => f (ExpressionGui m) -> f (WithTextPos (Widget (T m Widget.EventResult)))
 applyResultLayout fGui =
     fGui <&> (^. TreeLayout.render)
     ?? TreeLayout.LayoutParams
@@ -308,7 +299,10 @@ applyResultLayout fGui =
 makeHoleResultWidget ::
     Monad m =>
     Widget.Id -> Sugar.HoleResult (Name m) m ->
-    ExprGuiM m (Widget (T m Widget.EventResult), ExprGuiM m (Widget.EventMap (T m Widget.EventResult)))
+    ExprGuiM m
+    ( WithTextPos (Widget (T m Widget.EventResult))
+    , ExprGuiM m (Widget.EventMap (T m Widget.EventResult))
+    )
 makeHoleResultWidget resultId holeResult =
     do
         Theme.Hole{..} <- Lens.view Theme.theme <&> Theme.hole
@@ -321,13 +315,14 @@ makeHoleResultWidget resultId holeResult =
                 Reader.local (Widget.cursor .~ idWithinResultWidget) mkWidget
                 <&> getEvents
         widget <-
-            (Widget.makeFocusableView ?? resultId) <*> mkWidget
+            (Widget.makeFocusableView ?? resultId <&> (Align.tValue %~))
+            <*> mkWidget
             <&> View.setLayers . View.layers . Lens.traverse %~
                 Anim.mapIdentities (<> (resultSuffix # Widget.toAnimId resultId))
         return (widget, mkEventMap)
     where
         getEvents widget =
-            case widget ^. Widget.wState of
+            case widget ^. Align.tValue . Widget.wState of
             Widget.StateUnfocused {} -> mempty
             Widget.StateFocused makeFocus ->
                 let focus = makeFocus (Widget.Surrounding 0 0 0 0)
@@ -339,7 +334,6 @@ makeHoleResultWidget resultId holeResult =
             & postProcessSugar
             & ExprGuiM.makeSubexpression
             & applyResultLayout
-            <&> (^. Align.value)
         holeResultEntityId =
             holeResultConverted ^. Sugar.rPayload . Sugar.plEntityId
         idWithinResultWidget =
@@ -361,12 +355,11 @@ postProcessSugar expr =
             ExprGuiT.emptyPayload NearestHoles.none
             & ExprGuiT.plShowAnnotation .~ ExprGuiT.neverShowAnnotations
 
-makeNoResults ::
-    Monad m => ExprGuiM m (Widget (T m Widget.EventResult))
-makeNoResults = TextView.makeLabel "(No results)" <&> Widget.fromView
+makeNoResults :: Monad m => ExprGuiM m (WithTextPos View)
+makeNoResults = TextView.makeLabel "(No results)"
 
 makeHiddenResultsMView ::
-    Monad m => HaveHiddenResults -> ExprGuiM m (Maybe View)
+    Monad m => HaveHiddenResults -> ExprGuiM m (Maybe (WithTextPos View))
 makeHiddenResultsMView NoHiddenResults = return Nothing
 makeHiddenResultsMView HaveHiddenResults = TextView.makeLabel "..." <&> Just
 
@@ -376,39 +369,28 @@ addMResultPicker mSelectedResult =
     Nothing -> return ()
     Just res -> ExprGuiM.setResultPicker $ (^. pickedEventResult) <$> srPick res
 
-calcPadding :: [ResultGroupWidgets m] -> Widget.R
-calcPadding =
-    foldl step 0
-    where
-        step accum item =
-            max 0 (accum - (head (item ^. rgwRow) ^. View.height))
-            + (item ^. rgwPadding)
-
 layoutResults ::
     Monad m =>
     [ResultGroupWidgets m] -> HaveHiddenResults ->
     ExprGuiM m (Widget (T m Widget.EventResult))
 layoutResults groups hiddenResults
-    | null groups = makeNoResults
+    | null groups = makeNoResults <&> (^. Align.tValue) <&> Widget.fromView
     | otherwise =
         do
-            hiddenResultsWidgets <-
-                makeHiddenResultsMView hiddenResults <&> (^.. Lens._Just)
-                <&> map Widget.fromView
-            let grid =
-                  rows
-                  <&> Lens.mapped %~ Aligned (Vector2 0 0.5)
-                  & Grid.make & snd
-                  & EventMap.blockDownEvents
-            let padHeight =
-                    calcPadding groups
-                    - sum (hiddenResultsWidgets ^.. Lens.traversed . View.height)
-                    & max 0
-            grid : hiddenResultsWidgets & View.vbox
-                & View.assymetricPad 0 (Vector2 0 padHeight)
-                & return
+            hiddenResultsWidget <-
+                makeHiddenResultsMView hiddenResults
+                <&> maybe View.empty (^. Align.tValue)
+            View.vbox (groups <&> layoutGroup) /-/ hiddenResultsWidget & EventMap.blockDownEvents & return
     where
-        rows = groups ^.. Lens.traversed . rgwRow
+        layoutGroup group =
+            Align.hoverInPlaceOf
+            (Align.hoverBesideOptionsAxis View.Horizontal (group ^. rgwExtraResultsWidget) base)
+            base
+            where
+                base =
+                    ((group ^. rgwMainResultWidget & View.width .~ maxMainResultWidth)
+                        /|/ (group ^. rgwExtraResultSymbol)) ^. Align.tValue & Align.anchor
+        maxMainResultWidth = groups ^.. Lens.traversed . rgwMainResultWidget . View.width & maximum
 
 makeResultsWidget ::
     Monad m => HoleInfo m ->
@@ -446,10 +428,32 @@ assignHoleEditCursor holeInfo shownMainResultsIds allShownResultIds searchTermId
             | Text.null (HoleInfo.hiSearchTerm holeInfo) = searchTermId
             | otherwise = head (shownMainResultsIds ++ [searchTermId])
 
+data ResultsPlacement = Above | Below | AnyPlace
+
+resultsHoverOptions ::
+    Functor f =>
+    ResultsPlacement ->
+    (Widget (f EventResult) -> Widget (f EventResult)) -> (Widget (f EventResult) -> Widget (f EventResult)) ->
+    Widget (f EventResult) -> AnchoredWidget (f EventResult) -> [AnchoredWidget (f EventResult)]
+resultsHoverOptions pos addBg addAnnotation results searchTerm =
+    case pos of
+    AnyPlace -> [below, above]
+    Above -> [above]
+    Below ->
+        [ below
+        , Aligned 1 annotatedTerm /|/ Aligned 1 bgResults ^. Align.value
+        , Aligned 1 bgResults /|/ Aligned 1 annotatedTerm ^. Align.value
+        ]
+    where
+        above = bgResults /-/ annotatedTerm
+        below = searchTerm /-/ addAnnotation results
+        bgResults = addBg results
+        annotatedTerm = searchTerm & Widget.widget %~ addAnnotation
+
 makeUnderCursorAssignment ::
     Monad m =>
-    [ResultsList m] -> HaveHiddenResults ->
-    HoleInfo m -> ExprGuiM m (Widget (T m Widget.EventResult))
+    [ResultsList m] -> HaveHiddenResults -> HoleInfo m ->
+    ExprGuiM m (ResultsPlacement -> WithTextPos (Widget (T m Widget.EventResult)))
 makeUnderCursorAssignment shownResultsLists hasHiddenResults holeInfo =
     do
         theme <- Lens.view Theme.theme
@@ -463,7 +467,7 @@ makeUnderCursorAssignment shownResultsLists hasHiddenResults holeInfo =
         -- We make our own type view here instead of
         -- ExpressionGui.stdWrap, because we want to synchronize the
         -- active BG width with the inferred type width
-        typeView <- TypeView.make (hiInferredType holeInfo) (Widget.toAnimId hidHole)
+        typeView <- TypeView.make (hiInferredType holeInfo) (Widget.toAnimId hidHole) <&> (^. Align.tValue)
 
         vspace <- ExpressionGui.annotationSpacer
         let widget =
@@ -471,17 +475,25 @@ makeUnderCursorAssignment shownResultsLists hasHiddenResults holeInfo =
                 & View.width %~ max (typeView ^. View.width)
                 & addBackground (Widget.toAnimId hidResultsPrefix) (Theme.hoverBGColor theme)
                 & E.strongerEvents resultsEventMap
-        hoverResultsWidget <-
-            addDarkBackground (Widget.toAnimId hidResultsPrefix) ??
-            widget /-/ vspace /-/ typeView
-        searchTermWidget <- SearchTerm.make holeInfo <&> E.weakerEvents searchTermEventMap
-        View.vbox [searchTermWidget, hoverResultsWidget] & return
+        addBg <- addDarkBackground (Widget.toAnimId hidResultsPrefix)
+        resBg <- addDarkBackground (Widget.toAnimId hidResultsPrefix ++ ["results"])
+        let addAnnotation x = addBg (x /-/ vspace /-/ typeView)
+        searchTermWidget <-
+            SearchTerm.make holeInfo
+            <&> Align.tValue %~ Align.anchor . E.weakerEvents searchTermEventMap
+        return $
+            \placement ->
+            searchTermWidget
+            & Align.tValue %~
+                Align.hoverInPlaceOf
+                (resultsHoverOptions placement resBg addAnnotation widget (searchTermWidget ^. Align.tValue))
     where
         WidgetIds{..} = hiIds holeInfo
 
 makeOpenSearchAreaGui ::
     Monad m =>
-    Sugar.Payload m ExprGuiT.Payload -> HoleInfo m -> ExprGuiM m (Widget (T m Widget.EventResult))
+    Sugar.Payload m ExprGuiT.Payload -> HoleInfo m ->
+    ExprGuiM m (ResultsPlacement -> WithTextPos (Widget (T m Widget.EventResult)))
 makeOpenSearchAreaGui pl holeInfo =
     do
         (shownResultsLists, hasHiddenResults) <-
@@ -500,4 +512,4 @@ makeOpenSearchAreaGui pl holeInfo =
             hasHiddenResults holeInfo
             & assignHoleEditCursor holeInfo shownMainResultsIds
               allShownResultIds (holeInfo & hiIds & hidOpenSearchTerm)
-            <&> E.weakerEvents exprEventMap
+            <&> Lens.mapped . Align.tValue %~ E.weakerEvents exprEventMap

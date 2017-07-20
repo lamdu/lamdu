@@ -17,6 +17,8 @@ import qualified Data.Text as Text
 import           Data.Vector.Vector2 (Vector2(..))
 import qualified Graphics.DrawingCombinators as Draw
 import           Graphics.DrawingCombinators.Utils (TextSize(..))
+import           Graphics.UI.Bottle.Align (WithTextPos(..))
+import qualified Graphics.UI.Bottle.Align as Align
 import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.Direction as Direction
 import qualified Graphics.UI.Bottle.EventMap as E
@@ -95,16 +97,18 @@ cursorRects s str =
         addFirstCursor y = (Rect (Vector2 0 y) (Vector2 0 lineHeight) :)
         lineHeight = TextView.lineHeight s
 
-makeInternal :: Style -> Text -> Text -> Widget.Id -> Widget (Text, Widget.EventResult)
+makeInternal ::
+    Style -> Text -> Text -> Widget.Id ->
+    WithTextPos (Widget (Text, Widget.EventResult))
 makeInternal s str displayStr myId =
     TextView.make (s ^. sTextViewStyle) displayStr animId
     & View.pad (Vector2 (s ^. sCursorWidth / 2) 0)
-    & Widget.fromView
-    & Widget.mEnter .~ Just (enterFromDirection s str myId)
+    & Align.tValue %~ Widget.fromView
+    & Align.tValue %~ Widget.mEnter ?~ enterFromDirection s str myId
     where
         animId = Widget.toAnimId myId
 
-makeUnfocused :: EmptyStrings -> Style -> Text -> Widget.Id -> Widget (Text, Widget.EventResult)
+makeUnfocused :: EmptyStrings -> Style -> Text -> Widget.Id -> WithTextPos (Widget (Text, Widget.EventResult))
 makeUnfocused empty s str =
     makeInternal s str displayStr
     where
@@ -144,11 +148,11 @@ eventResult myId newText newCursor =
 -- | given text...
 makeFocused ::
     Cursor -> EmptyStrings -> Style -> Text -> Widget.Id ->
-    Widget (Text, Widget.EventResult)
+    WithTextPos (Widget (Text, Widget.EventResult))
 makeFocused cursor empty s str myId =
     makeInternal s str displayStr myId
     & View.bottomFrame <>~ cursorFrame
-    & Widget.setFocusedWith cursorRect (eventMap cursor str myId)
+    & Align.tValue %~ Widget.setFocusedWith cursorRect (eventMap cursor str myId)
     where
         displayStr = makeDisplayStr (empty ^. emptyFocusedString) str
         cursorRect = mkCursorRect s cursor str
@@ -332,7 +336,9 @@ getCursor =
 
 make ::
     (MonadReader env m, Widget.HasCursor env, HasStyle env) =>
-    m (EmptyStrings -> Text -> Widget.Id -> Widget (Text, Widget.EventResult))
+    m ( EmptyStrings -> Text -> Widget.Id ->
+        WithTextPos (Widget (Text, Widget.EventResult))
+      )
 make =
     do
         get <- getCursor

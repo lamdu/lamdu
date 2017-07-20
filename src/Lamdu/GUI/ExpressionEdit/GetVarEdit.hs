@@ -13,7 +13,7 @@ import           Graphics.UI.Bottle.View ((/-/))
 import qualified Graphics.UI.Bottle.View as View
 import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
-import           Graphics.UI.Bottle.Align (Aligned(..))
+import           Graphics.UI.Bottle.Align (WithTextPos)
 import qualified Graphics.UI.Bottle.Align as Align
 import qualified Graphics.UI.Bottle.Widget.TreeLayout as TreeLayout
 import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
@@ -42,10 +42,12 @@ type T = Transaction
 makeSimpleView ::
     (Applicative f, Monad m) =>
     Name m -> Widget.Id ->
-    ExprGuiM m (Widget (f Widget.EventResult))
+    ExprGuiM m (WithTextPos (Widget (f Widget.EventResult)))
 makeSimpleView name myId =
-    (Widget.makeFocusableView ?? myId)
-    <*> (ExpressionGui.makeNameView name (Widget.toAnimId myId) <&> Widget.fromView)
+    (Widget.makeFocusableView ?? myId <&> (Align.tValue %~))
+    <*> ( ExpressionGui.makeNameView name (Widget.toAnimId myId)
+          <&> Align.tValue %~ Widget.fromView
+        )
 
 makeParamsRecord ::
     Monad m => Widget.Id -> Sugar.ParamsRecordVar (Name m) ->
@@ -55,18 +57,18 @@ makeParamsRecord myId paramsRecordVar =
         theme <- Lens.view Theme.theme
         let Theme.Name{..} = Theme.name theme
         sequence
-            [ TextView.makeLabel "Params {" <&> TreeLayout.fromView
+            [ TextView.makeLabel "Params {" <&> TreeLayout.fromTextView
             , ExpressionGui.combineSpaced
               <*>
               ( fieldNames
                 & Lens.itraverse
                 (\i fieldName ->
                     Widget.joinId myId ["params", SBS8.pack (show (i::Int))]
-                    & makeSimpleView fieldName <&> TreeLayout.fromWidget
+                    & makeSimpleView fieldName <&> TreeLayout.fromWithTextPos
                     & Reader.local (TextView.color .~ parameterColor)
                 )
               )
-            , TextView.makeLabel "}" <&> TreeLayout.fromView
+            , TextView.makeLabel "}" <&> TreeLayout.fromTextView
             ] <&> ExpressionGui.combine
     where
         Sugar.ParamsRecordVar fieldNames = paramsRecordVar
@@ -74,8 +76,8 @@ makeParamsRecord myId paramsRecordVar =
 makeNameRef ::
     Monad m =>
     Widget.Id -> Sugar.NameRef name m ->
-    (name -> Widget.Id -> ExprGuiM m (Widget (T m Widget.EventResult))) ->
-    ExprGuiM m (Widget (T m Widget.EventResult))
+    (name -> Widget.Id -> ExprGuiM m (WithTextPos (Widget (T m Widget.EventResult)))) ->
+    ExprGuiM m (WithTextPos (Widget (T m Widget.EventResult)))
 makeNameRef myId nameRef maker =
     do
         cp <- ExprGuiM.readCodeAnchors
@@ -88,7 +90,7 @@ makeNameRef myId nameRef maker =
                     DataOps.savePreJumpPosition cp myId
                     WidgetIds.fromEntityId <$> nameRef ^. Sugar.nrGotoDefinition
         maker (nameRef ^. Sugar.nrName) nameId
-            <&> E.weakerEvents jumpToDefinitionEventMap
+            <&> Align.tValue %~ E.weakerEvents jumpToDefinitionEventMap
     & Widget.assignCursor myId nameId
     where
         nameId = Widget.joinId myId ["name"]
@@ -110,7 +112,7 @@ makeInlineEventMap _ _ = mempty
 definitionTypeChangeBox ::
     Monad m =>
     Sugar.DefinitionOutdatedType m -> Widget.Id ->
-    ExprGuiM m (Widget (T m Widget.EventResult))
+    ExprGuiM m (WithTextPos (Widget (T m Widget.EventResult)))
 definitionTypeChangeBox info getVarId =
     do
         headerLabel <- TextView.makeLabel "Type was:"
@@ -118,8 +120,8 @@ definitionTypeChangeBox info getVarId =
             mkTypeView "typeWhenUsed" (info ^. Sugar.defTypeWhenUsed)
         spacing <- Spacer.stdVSpace
         sepLabel <-
-            (Widget.makeFocusableView ?? myId)
-            <*> (TextView.makeLabel "Update to:" <&> Widget.fromView)
+            (Widget.makeFocusableView ?? myId <&> (Align.tValue %~))
+            <*> (TextView.makeLabel "Update to:" <&> Align.tValue %~ Widget.fromView)
         typeCurrent <- mkTypeView "typeCurrent" (info ^. Sugar.defTypeCurrent)
         config <- Lens.view Config.config
         theme <- Lens.view Theme.theme
@@ -133,7 +135,7 @@ definitionTypeChangeBox info getVarId =
         let update = (info ^. Sugar.defTypeUseCurrent) >> return getVarId
         Hover.addDarkBackground animId
             ?? box
-            <&> E.weakerEvents
+            <&> Align.tValue %~ E.weakerEvents
                 (Widget.keysEventMapMovesCursor keys
                  (E.Doc ["Edit", "Update definition type"]) update)
     where
@@ -144,8 +146,8 @@ definitionTypeChangeBox info getVarId =
 processDefinitionWidget ::
     Monad m =>
     Sugar.DefinitionForm m -> Widget.Id ->
-    ExprGuiM m (Aligned (Widget (T m Widget.EventResult))) ->
-    ExprGuiM m (Aligned (Widget (T m Widget.EventResult)))
+    ExprGuiM m (WithTextPos (Widget (T m Widget.EventResult))) ->
+    ExprGuiM m (WithTextPos (Widget (T m Widget.EventResult)))
 processDefinitionWidget Sugar.DefUpToDate _myId mkLayout = mkLayout
 processDefinitionWidget Sugar.DefDeleted _myId mkLayout =
     (ExpressionGui.addDeletionDiagonal ?? 0.1)
@@ -163,15 +165,20 @@ processDefinitionWidget (Sugar.DefTypeChanged info) myId mkLayout =
         if isSelected
             then
             do
-                box <- definitionTypeChangeBox info myId
-                (layout /-/ Aligned 0 box) `Align.hoverInPlaceOf` layout
+                box <-
+                    definitionTypeChangeBox info myId
+                    -- Remove the text alignment so it can be placed at different vertical positions
+                    <&> (^. Align.tValue)
+                let a = layout & Align.tValue %~ Align.anchor
+                a & Align.tValue %~
+                    Align.hoverInPlaceOf (Align.hoverBesideOptions box (a ^. Align.tValue))
                     & return
             else return layout
 
 makeGetBinder ::
     Monad m =>
     Sugar.BinderVar (Name m) m -> Widget.Id ->
-    ExprGuiM m (Aligned (Widget (T m Widget.EventResult)))
+    ExprGuiM m (WithTextPos (Widget (T m Widget.EventResult)))
 makeGetBinder binderVar myId =
     do
         config <- Lens.view Config.config
@@ -187,15 +194,14 @@ makeGetBinder binderVar myId =
         makeSimpleView
             <&> Lens.mapped %~ Reader.local (TextView.color .~ color)
             & makeNameRef myId (binderVar ^. Sugar.bvNameRef)
-            <&> E.weakerEvents
+            <&> Align.tValue %~ E.weakerEvents
                 (makeInlineEventMap config (binderVar ^. Sugar.bvInline))
-            <&> Aligned 0
             & processDef
 
 makeGetParam ::
     Monad m =>
     Sugar.Param (Name m) m -> Widget.Id ->
-    ExprGuiM m (Widget (T m Widget.EventResult))
+    ExprGuiM m (WithTextPos (Widget (T m Widget.EventResult)))
 makeGetParam param myId =
     do
         theme <- Lens.view Theme.theme
@@ -220,11 +226,11 @@ make ::
 make getVar pl =
     case getVar of
     Sugar.GetBinder binderVar ->
-        makeGetBinder binderVar myId <&> TreeLayout.fromAlignedWidget
+        makeGetBinder binderVar myId <&> TreeLayout.fromWithTextPos
     Sugar.GetParamsRecord paramsRecordVar ->
         makeParamsRecord myId paramsRecordVar
     Sugar.GetParam param ->
-        makeGetParam param myId <&> TreeLayout.fromWidget
+        makeGetParam param myId <&> TreeLayout.fromWithTextPos
     & ExpressionGui.stdWrap pl
     where
         myId = WidgetIds.fromExprPayload pl

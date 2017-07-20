@@ -52,7 +52,7 @@ import           Graphics.UI.Bottle.View (View, (/|/), (/-/))
 import qualified Graphics.UI.Bottle.View as View
 import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
-import           Graphics.UI.Bottle.Align (Aligned(..), AlignTo(..))
+import           Graphics.UI.Bottle.Align (Aligned(..), WithTextPos(..))
 import qualified Graphics.UI.Bottle.Align as Align
 import           Graphics.UI.Bottle.Widget.TreeLayout (TreeLayout(..))
 import qualified Graphics.UI.Bottle.Widget.TreeLayout as TreeLayout
@@ -99,8 +99,7 @@ maybeIndent (Just piInfo) =
         f mkLayout lp =
             case lp ^. TreeLayout.layoutContext of
             TreeLayout.LayoutVertical ->
-                indentBar /|/ Spacer.make (Vector2 gapWidth 0) /|/ (content ^. Align.value)
-                & Aligned 0
+                indentBar /|/ Spacer.make (Vector2 gapWidth 0) /|/ content
                 where
                     indentBar =
                         Spacer.make (Vector2 barWidth (content ^. View.height))
@@ -123,7 +122,7 @@ data ParenIndentInfo = ParenIndentInfo
     , piStdHorizSpacing :: Widget.R
     }
 
-parenLabel :: ParenIndentInfo -> Text -> View
+parenLabel :: ParenIndentInfo -> Text -> WithTextPos View
 parenLabel parenInfo t =
     TextView.make (piTextStyle parenInfo) t
     (piAnimId parenInfo ++ [encodeUtf8 t])
@@ -156,9 +155,9 @@ horizVertFallbackH mParenInfo horiz vert =
     TreeLayout.LayoutWide ->
         case (mParenInfo, layoutParams ^. TreeLayout.layoutContext) of
         (Just parenInfo, TreeLayout.LayoutHorizontal) ->
-            AlignTo 0 (parenLabel parenInfo "(")
+            parenLabel parenInfo "("
             /|/ wide /|/
-            AlignTo 0 (parenLabel parenInfo ")")
+            parenLabel parenInfo ")"
         _ -> wide
     TreeLayout.LayoutNarrow limit
         | wide ^. View.width > limit ->
@@ -167,8 +166,8 @@ horizVertFallbackH mParenInfo horiz vert =
 
 combineWith ::
     Functor f => Maybe ParenIndentInfo ->
-    ([Aligned (Widget (f Widget.EventResult))] ->
-     [Aligned (Widget (f Widget.EventResult))]) ->
+    ([WithTextPos (Widget (f Widget.EventResult))] ->
+     [WithTextPos (Widget (f Widget.EventResult))]) ->
     ([TreeLayout (f Widget.EventResult)] ->
      [TreeLayout (f Widget.EventResult)]) ->
     [TreeLayout (f Widget.EventResult)] -> TreeLayout (f Widget.EventResult)
@@ -184,7 +183,7 @@ combineWith mParenInfo onHGuis onVGuis guis =
                 }
             & onHGuis
             & View.hbox
-            & TreeLayout.fromAlignedWidget
+            & TreeLayout.fromWithTextPos
 
 combine ::
     Functor f => [TreeLayout (f Widget.EventResult)] ->
@@ -215,7 +214,7 @@ combineSpacedMParens ::
        TreeLayout (f Widget.EventResult))
 combineSpacedMParens mParensId =
     do
-        hSpace <- Spacer.stdHSpace <&> Widget.fromView <&> Aligned 0
+        hSpace <- Spacer.stdHSpace <&> Widget.fromView <&> WithTextPos 0
         vSpace <- Spacer.stdVSpace <&> TreeLayout.fromView
         mParenInfo <- mParensId & Lens._Just %%~ makeParenIndentInfo
         return $ combineWith mParenInfo (List.intersperse hSpace) (List.intersperse vSpace)
@@ -309,7 +308,7 @@ data EvalResDisplay = EvalResDisplay
     }
 
 makeEvaluationResultView ::
-    Monad m => AnimId -> EvalResDisplay -> ExprGuiM m View
+    Monad m => AnimId -> EvalResDisplay -> ExprGuiM m (WithTextPos View)
 makeEvaluationResultView animId res =
     do
         theme <- Lens.view Theme.theme
@@ -327,7 +326,7 @@ data NeighborVals a = NeighborVals
 makeEvalView ::
     Monad m =>
     Maybe (NeighborVals (Maybe EvalResDisplay)) -> EvalResDisplay ->
-    AnimId -> ExprGuiM m View
+    AnimId -> ExprGuiM m (WithTextPos View)
 makeEvalView mNeighbours evalRes animId =
     do
         theme <- Lens.view Theme.theme
@@ -344,6 +343,7 @@ makeEvalView mNeighbours evalRes animId =
         let makeEvaluationResultViewBG res =
                 makeEvaluationResultView (mkAnimId res) res
                 <&> addAnnotationBackground (Theme.valAnnotation theme) (mkAnimId res)
+                <&> (^. Align.tValue)
         let neighbourView n =
                 Lens._Just makeEvaluationResultViewBG n
                 <&> Lens.mapped %~ View.scale (neighborsScaleFactor <&> realToFrac)
@@ -360,8 +360,8 @@ makeEvalView mNeighbours evalRes animId =
         let prevPos = Vector2 0 0.5 * evalView ^. View.size - prev ^. View.size
         let nextPos = Vector2 1 0.5 * evalView ^. View.size
         evalView
-            & View.vAnimLayers <>~ View.translateLayers prevPos (prev ^. View.vAnimLayers)
-            & View.vAnimLayers <>~ View.translateLayers nextPos (next ^. View.vAnimLayers)
+            & View.setLayers <>~ View.translateLayers prevPos (prev ^. View.vAnimLayers)
+            & View.setLayers <>~ View.translateLayers nextPos (next ^. View.vAnimLayers)
             & return
 
 annotationSpacer :: Monad m => ExprGuiM m View
@@ -369,7 +369,7 @@ annotationSpacer = ExprGuiM.vspacer (Theme.valAnnotationSpacing . Theme.valAnnot
 
 addAnnotationH ::
     (Functor f, Monad m) =>
-    (AnimId -> ExprGuiM m View) ->
+    (AnimId -> ExprGuiM m (WithTextPos View)) ->
     WideAnnotationBehavior -> Sugar.EntityId ->
     ExprGuiM m
     (TreeLayout (f Widget.EventResult) ->
@@ -377,12 +377,13 @@ addAnnotationH ::
 addAnnotationH f wideBehavior entityId =
     do
         vspace <- annotationSpacer
-        annotationLayout <- f animId
+        annotationLayout <- f animId <&> (^. Align.tValue)
         processAnn <- processAnnotationGui animId wideBehavior
         let onAlignedWidget w =
-                w /-/ AlignTo 0 vspace /-/
-                AlignTo (w ^. Align.alignmentRatio . _1)
-                (processAnn (w ^. View.width) annotationLayout)
+                w /-/ vspace /-/
+-- TODO (ALIGN):
+--                AlignTo (w ^. Align.alignmentRatio . _1)
+                processAnn (w ^. View.width) annotationLayout
         return $ TreeLayout.alignedWidget %~ onAlignedWidget
     where
         animId = WidgetIds.fromEntityId entityId & Widget.toAnimId
@@ -434,7 +435,7 @@ addDeletionDiagonal =
 makeNameOriginEdit ::
     Monad m =>
     Name m -> Draw.Color -> Widget.Id ->
-    ExprGuiM m (Widget (T m Widget.EventResult))
+    ExprGuiM m (WithTextPos (Widget (T m Widget.EventResult)))
 makeNameOriginEdit name color myId =
     makeNameEdit id name myId
     & styleNameOrigin name color
@@ -453,20 +454,26 @@ styleNameOrigin name color act =
 
 makeNameEdit ::
     Monad m =>
-    (Widget (T m Widget.EventResult) -> Widget (T m Widget.EventResult)) ->
-    Name m -> Widget.Id -> ExprGuiM m (Widget (T m Widget.EventResult))
+    (WithTextPos (Widget (T m Widget.EventResult)) ->
+     WithTextPos (Widget (T m Widget.EventResult))) ->
+    Name m -> Widget.Id ->
+    ExprGuiM m (WithTextPos (Widget (T m Widget.EventResult)))
 makeNameEdit onActiveEditor (Name nameSrc nameCollision setName name) myId =
     ( FocusDelegator.make ?? nameEditFDConfig
       ?? FocusDelegator.FocusEntryParent ?? myId
+      <&> (Align.tValue %~)
     ) <*>
     do
-        mCollisionSuffix <- makeCollisionSuffixLabel nameCollision <&> Lens._Just %~ Aligned 0.5
+        mCollisionSuffix <- makeCollisionSuffixLabel nameCollision
         makeNameWordEdit
             ?? Property storedName setName
             ?? WidgetIds.nameEditOf myId
-            <&> Aligned 0.5
-            <&> maybe id (flip (/|/)) mCollisionSuffix
-            <&> (^. Align.value)
+            <&> case mCollisionSuffix of
+                Nothing -> id
+                Just collisionSuffix ->
+                    \nameEdit ->
+                        (Aligned 0.5 nameEdit /|/ Aligned 0.5 collisionSuffix)
+                        ^. Align.value
     & Reader.local (View.animIdPrefix .~ Widget.toAnimId myId)
     <&> onActiveEditor
     where
@@ -477,7 +484,7 @@ makeNameEdit onActiveEditor (Name nameSrc nameCollision setName name) myId =
             NameSourceStored -> name
         makeNameWordEdit =
             TextEdits.makeWordEdit ?? empty
-            <&> Lens.mapped . Lens.mapped . E.eventMap
+            <&> Lens.mapped . Lens.mapped . Align.tValue . E.eventMap
                 %~ E.filterChars (`notElem` disallowedNameChars)
 
 stdWrap ::
@@ -516,7 +523,7 @@ stdWrapParentExpr pl mkGui
     | otherwise =
         parentDelegator (WidgetIds.fromExprPayload pl) <*> mkGui & stdWrap pl
 
-grammarLabel :: Monad m => Text -> ExprGuiM m View
+grammarLabel :: Monad m => Text -> ExprGuiM m (WithTextPos View)
 grammarLabel text =
     do
         theme <- Lens.view Theme.theme
@@ -544,7 +551,7 @@ addValFrame =
     & Reader.local (View.animIdPrefix <>~ ["val"])
 
 -- TODO: This doesn't belong here
-makeNameView :: Monad m => Name n -> AnimId -> ExprGuiM m View
+makeNameView :: Monad m => Name n -> AnimId -> ExprGuiM m (WithTextPos View)
 makeNameView (Name _ collision _ name) animId =
     do
         mSuffixLabel <-
@@ -567,7 +574,8 @@ makeCollisionSuffixLabel (Collision suffix) =
             (TextView.makeLabel (Text.pack (show suffix))
             & Reader.local (TextView.color .~ collisionSuffixTextColor)
             <&> View.scale (realToFrac <$> collisionSuffixScaleFactor))
-            <&> Just
+    <&> (^. Align.tValue)
+    <&> Just
 
 maybeAddAnnotationPl ::
     (Functor f, Monad m) =>
@@ -675,7 +683,7 @@ valOfScopePreferCur annotation = valOfScope annotation . pure . Just
 listWithDelDests :: k -> k -> (a -> k) -> [a] -> [(k, k, a)]
 listWithDelDests = ListUtils.withPrevNext
 
-render :: Widget.R -> TreeLayout a -> Aligned (Widget a)
+render :: Widget.R -> TreeLayout a -> WithTextPos (Widget a)
 render width gui =
     (gui ^. TreeLayout.render)
     TreeLayout.LayoutParams

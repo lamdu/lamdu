@@ -13,12 +13,12 @@ import           Data.Text.Encoding (decodeUtf8)
 import           Data.Vector.Vector2 (Vector2(..))
 import           Graphics.DrawingCombinators ((%%))
 import qualified Graphics.DrawingCombinators.Utils as DrawUtils
-import           Graphics.UI.Bottle.Align (Aligned(..))
+import           Graphics.UI.Bottle.Align (Aligned(..), WithTextPos(..))
 import qualified Graphics.UI.Bottle.Align as Align
 import           Graphics.UI.Bottle.Animation (AnimId)
 import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.Rect as Rect
-import           Graphics.UI.Bottle.View (View(..), (/-/))
+import           Graphics.UI.Bottle.View (View(..), (/-/), (/|/))
 import qualified Graphics.UI.Bottle.View as View
 import qualified Graphics.UI.Bottle.Widgets.GridView as GridView
 import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
@@ -54,14 +54,14 @@ extractFields (V.RecExtend tag val (Val _ rest)) =
         )
 
 -- TODO: Remove
-textView :: Monad m => Text -> AnimId -> ExprGuiM m View
+textView :: Monad m => Text -> AnimId -> ExprGuiM m (WithTextPos View)
 textView x animId = TextView.make ?? x ?? animId
 
-label :: Monad m => Text -> AnimId -> ExprGuiM m View
+label :: Monad m => Text -> AnimId -> ExprGuiM m (WithTextPos View)
 label x animId =
     TextView.make ?? x ?? Anim.augmentId animId x
 
-makeTag :: Monad m => AnimId -> T.Tag -> ExprGuiM m View
+makeTag :: Monad m => AnimId -> T.Tag -> ExprGuiM m (WithTextPos View)
 makeTag animId tag =
     Anchors.assocNameRef tag & Transaction.getP
     >>= (`textView` animId)
@@ -75,14 +75,16 @@ makeField parentAnimId tag val =
         space <- Spacer.stdHSpace
         valView <- makeInner (baseId ++ ["val"]) val
         return
-            [ Aligned (Vector2 1 0.5) tagView
+            [ toAligned 1 tagView
             , Aligned 0.5 space
-            , Aligned (Vector2 0 0.5) valView
+            , toAligned 0 valView
             ]
     where
+        toAligned x (WithTextPos y w) =
+            Aligned (Vector2 x (y / w ^. View.height)) w
         baseId = parentAnimId ++ [BinUtils.encodeS tag]
 
-makeError :: Monad m => EvalError -> AnimId -> ExprGuiM m View
+makeError :: Monad m => EvalError -> AnimId -> ExprGuiM m (WithTextPos View)
 makeError err animId =
     textView msg $ animId ++ ["error"]
     where
@@ -91,19 +93,16 @@ makeError err animId =
             EvalHole -> "?"
             _ -> Text.pack (show err)
 
-hbox :: [View] -> View
-hbox = Align.hboxAlign 0.5
-
 arrayCutoff :: Int
 arrayCutoff = 10
 
-makeArray :: Monad m => AnimId -> [Val Type] -> ExprGuiM m View
+makeArray :: Monad m => AnimId -> [Val Type] -> ExprGuiM m (WithTextPos View)
 makeArray animId items =
     do
         itemViews <- zipWith makeItem [0..arrayCutoff] items & sequence
         opener <- label "[" animId
         closer <- label "]" animId
-        opener : itemViews ++ [closer] & hbox & return
+        opener : itemViews ++ [closer] & View.hbox & return
     where
         makeItem idx val =
             [ [ label ", " itemId | idx > 0 ]
@@ -112,12 +111,13 @@ makeArray animId items =
             , [ label "..." itemId | idx == arrayCutoff ]
             ] & concat
             & sequence
-            <&> hbox
+            <&> View.hbox
             where
                 itemId = Anim.augmentId animId (idx :: Int)
 
 makeRecExtend ::
-    Monad m => AnimId -> Type -> V.RecExtend (Val Type) -> ExprGuiM m View
+    Monad m =>
+    AnimId -> Type -> V.RecExtend (Val Type) -> ExprGuiM m (WithTextPos View)
 makeRecExtend animId typ recExtend =
     case
         ( typ, recStatus
@@ -154,6 +154,7 @@ makeRecExtend animId typ recExtend =
                 RecordComputed -> return View.empty
                 RecordExtendsError err ->
                     makeError err animId
+                    <&> (^. Align.tValue)
                     <&> Aligned 0.5
                     <&> (sqr /-/)
                     where
@@ -161,12 +162,12 @@ makeRecExtend animId typ recExtend =
                             View.make 1 (Anim.unitSquare (animId ++ ["line"]))
                             & View.scale (Vector2 barWidth 1)
                             & Aligned 0.5
-            (Aligned 0.5 fieldsView /-/ restView) ^. Align.value & return
+            (Aligned 0.5 fieldsView /-/ restView) ^. Align.value & Align.WithTextPos 0 & return
     where
         (fields, recStatus) = extractFields recExtend
 
 makeInject ::
-    Monad m => AnimId -> Type -> V.Inject (Val Type) -> ExprGuiM m View
+    Monad m => AnimId -> Type -> V.Inject (Val Type) -> ExprGuiM m (WithTextPos View)
 makeInject animId typ inject =
     case
         ( typ
@@ -182,13 +183,13 @@ makeInject animId typ inject =
         , makeInner (animId ++ ["head"]) head_
         , label ", …]" animId
         ]
-        & sequence <&> hbox
+        & sequence <&> View.hbox
     _ ->
-        [ makeTagView
-        , Spacer.stdHSpace
-        , inject ^. V.injectVal & makeInner (animId ++ ["val"])
-        ]
-        & sequence <&> hbox
+        do
+            tag <- makeTagView
+            s <- Spacer.stdHSpace
+            i <- inject ^. V.injectVal & makeInner (animId ++ ["val"])
+            tag /|/ s /|/ i & pure
     where
         makeTagView = inject ^. V.injectTag & makeTag (animId ++ ["tag"])
         (fields, mRecStatus) =
@@ -205,7 +206,7 @@ depthCounts v =
     <&> sum
     & (1 :)
 
-make :: Monad m => AnimId -> Val Type -> ExprGuiM m View
+make :: Monad m => AnimId -> Val Type -> ExprGuiM m (WithTextPos View)
 make animId v =
     do
         maxEvalViewSize <- Lens.view Theme.theme <&> Theme.maxEvalViewSize
@@ -217,9 +218,9 @@ make animId v =
     <&> fixSize
 
 -- Make animation frames of eval views animate from the whole rect
-fixSize :: View -> View
+fixSize :: WithTextPos View -> WithTextPos View
 fixSize view =
-    view & View.animFrames . Anim.frameImages . traverse %~ onImage
+    view & Align.tValue . View.animFrames . Anim.frameImages . traverse %~ onImage
     where
         size = view ^. View.size
         onImage image =
@@ -228,7 +229,7 @@ fixSize view =
             & Anim.iUnitImage %~
             (DrawUtils.scale (image ^. Anim.iRect . Rect.size / view ^. View.size) %%)
 
-makeInner :: Monad m => AnimId -> Val Type -> ExprGuiM m View
+makeInner :: Monad m => AnimId -> Val Type -> ExprGuiM m (WithTextPos View)
 makeInner animId (Val typ val) =
     case val of
     RError err -> makeError err animId
@@ -247,7 +248,7 @@ makeInner animId (Val typ val) =
           PrimVal.Float x -> toText x
         where
             pv = PrimVal.toKnown primVal
-            toText :: (Format r, Monad m) => r -> ExprGuiM m View
+            toText :: (Format r, Monad m) => r -> ExprGuiM m (WithTextPos View)
             toText = asText . format
     RArray items -> makeArray animId items
     & advanceDepth

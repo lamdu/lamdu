@@ -7,14 +7,16 @@ import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
 import           Control.Monad.Transaction (transaction)
 import qualified Data.Store.Transaction as Transaction
+import qualified Graphics.UI.Bottle.Align as Align
 import qualified Graphics.UI.Bottle.EventMap as E
+import           Graphics.UI.Bottle.View ((/-/))
 import qualified Graphics.UI.Bottle.View as View
 import qualified Graphics.UI.Bottle.Widget as Widget
-import qualified Graphics.UI.Bottle.Align as Align
 import qualified Graphics.UI.Bottle.Widget.TreeLayout as TreeLayout
 import qualified Lamdu.Config as Config
 import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.Info (HoleInfo(..))
+import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.Open as Open
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.SearchArea as SearchArea
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.State as HoleState
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds (WidgetIds(..))
@@ -55,7 +57,7 @@ assignHoleCursor WidgetIds{..} =
 
 makeHoleWithWrapper ::
     (Functor f, Monad m) =>
-    ExpressionGui f -> ExpressionGui f -> Sugar.Payload m ExprGuiT.Payload ->
+    ExpressionGui f -> (Open.ResultsPlacement -> ExpressionGui f) -> Sugar.Payload m ExprGuiT.Payload ->
     ExprGuiM m (ExpressionGui f)
 makeHoleWithWrapper wrapperGui searchAreaGui pl =
     do
@@ -68,11 +70,19 @@ makeHoleWithWrapper wrapperGui searchAreaGui pl =
             unfocusedWrapperGui
             & TreeLayout.render . Lens.imapped %@~
             \layoutMode wrapper ->
-            if isSelected || Widget.isFocused (wrapper ^. Align.value)
-            then
-                (TreeLayout.vbox [wrapperGui, addBg searchAreaGui] ^. TreeLayout.render) layoutMode
-                `Align.hoverInPlaceOf` wrapper
-            else wrapper
+            case isSelected || Widget.isFocused (wrapper ^. Align.tValue) of
+            True ->
+                wrapper & Align.tValue %~ Align.hoverInPlaceOf options . Align.anchor
+                where
+                    options =
+                        [ hoverWrapper /-/ searchArea Open.Below
+                        , searchArea Open.Above /-/ hoverWrapper
+                        ]
+                        <&> (^. Align.tValue)
+                    hoverWrapper = render wrapperGui & Align.tValue %~ Align.anchor
+                    searchArea p = render (addBg (searchAreaGui p))
+                    render x = (x ^. TreeLayout.render) layoutMode
+            False -> wrapper
     where
         widgetIds = HoleWidgetIds.make (pl ^. Sugar.plEntityId)
 
@@ -108,8 +118,8 @@ make hole pl =
                         . fmap WidgetIds.fromEntityId)
 
         case mWrapperGui of
-            Just wrapperGui -> makeHoleWithWrapper (wrapperGui & TreeLayout.alignment .~ 0) searchAreaGui pl
-            Nothing -> return searchAreaGui
+            Just wrapperGui -> makeHoleWithWrapper wrapperGui searchAreaGui pl
+            Nothing -> return (searchAreaGui Open.AnyPlace)
             <&> E.weakerEvents deleteEventMap
     & assignHoleCursor widgetIds
     & Reader.local (View.animIdPrefix .~ Widget.toAnimId (hidHole widgetIds))

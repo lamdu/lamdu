@@ -30,10 +30,10 @@ module Graphics.UI.Bottle.Widget.TreeLayout
     , LayoutDisambiguationContext(..)
 
     -- * Lenses
-    , alignedWidget, alignment, modeWidths
+    , alignedWidget, modeWidths
 
     -- * Leaf generation
-    , fromAlignedWidget, fromWidget, fromView, empty
+    , fromAlignedWidget, fromWithTextPos, fromWidget, fromView, fromTextView, empty
 
     -- * Combinators
     , vbox, vboxSpaced, taggedList
@@ -45,9 +45,9 @@ import           Data.Vector.Vector2 (Vector2(..))
 import qualified Graphics.UI.Bottle.EventMap as E
 import           Graphics.UI.Bottle.View (View, (/|/))
 import qualified Graphics.UI.Bottle.View as View
-import           Graphics.UI.Bottle.Widget (Widget, R)
+import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
-import           Graphics.UI.Bottle.Align (Aligned(..), AlignTo(..))
+import           Graphics.UI.Bottle.Align (Aligned(..), WithTextPos(..))
 import qualified Graphics.UI.Bottle.Align as Align
 import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
 
@@ -75,7 +75,7 @@ data LayoutParams = LayoutParams
 Lens.makeLenses ''LayoutParams
 
 newtype TreeLayout a = TreeLayout
-    { _render :: LayoutParams -> Aligned (Widget a)
+    { _render :: LayoutParams -> WithTextPos (Widget a)
     } deriving Functor
 Lens.makeLenses ''TreeLayout
 
@@ -85,19 +85,19 @@ adjustWidth View.Vertical _ = id
 adjustWidth View.Horizontal v =
     render . Lens.argument . layoutMode . modeWidths -~ v ^. View.size . _1
 
-instance ( View.GluesTo (Aligned (Widget a)) (AlignTo b) (Aligned (Widget a))
+instance ( View.GluesTo (WithTextPos (Widget a)) (WithTextPos b) (WithTextPos (Widget a))
          , View.HasSize b
-         ) => View.Glue (TreeLayout a) (AlignTo b) where
-    type Glued (TreeLayout a) (AlignTo b) = TreeLayout a
+         ) => View.Glue (TreeLayout a) (WithTextPos b) where
+    type Glued (TreeLayout a) (WithTextPos b) = TreeLayout a
     glue orientation l v =
         l
         & adjustWidth orientation v
         & render . Lens.mapped %~ (View.glue orientation ?? v)
 
-instance ( View.GluesTo (AlignTo a) (Aligned (Widget b)) (Aligned (Widget b))
+instance ( View.GluesTo (WithTextPos a) (WithTextPos (Widget b)) (WithTextPos (Widget b))
          , View.HasSize a
-         ) => View.Glue (AlignTo a) (TreeLayout b) where
-    type Glued (AlignTo a) (TreeLayout b) = TreeLayout b
+         ) => View.Glue (WithTextPos a) (TreeLayout b) where
+    type Glued (WithTextPos a) (TreeLayout b) = TreeLayout b
     glue orientation v l =
         l
         & adjustWidth orientation v
@@ -118,20 +118,23 @@ instance Functor f => View.Resizable (TreeLayout (f Widget.EventResult)) where
 
 instance E.HasEventMap TreeLayout where eventMap = Widget.widget . E.eventMap
 
-instance Widget.HasWidget TreeLayout where widget = alignedWidget . Align.value
+instance Widget.HasWidget TreeLayout where widget = alignedWidget . Align.tValue
 
 alignedWidget ::
     Lens.Setter
     (TreeLayout a) (TreeLayout b)
-    (Aligned (Widget a)) (Aligned (Widget b))
+    (WithTextPos (Widget a)) (WithTextPos (Widget b))
 alignedWidget = render . Lens.mapped
-
-alignment :: Lens.Setter' (TreeLayout a) (Vector2 R)
-alignment = alignedWidget . Align.alignmentRatio
 
 -- | Lifts a Widget into a 'TreeLayout'
 fromAlignedWidget :: Aligned (Widget a) -> TreeLayout a
-fromAlignedWidget = TreeLayout . const
+fromAlignedWidget (Aligned a w) =
+    WithTextPos (a ^. _2 * w ^. View.height) w
+    & const
+    & TreeLayout
+
+fromWithTextPos :: WithTextPos (Widget a) -> TreeLayout a
+fromWithTextPos = TreeLayout . const
 
 -- | Lifts a Widget into a 'TreeLayout' with an alignment point at the top left
 fromWidget :: Widget a -> TreeLayout a
@@ -140,6 +143,10 @@ fromWidget = fromAlignedWidget . Aligned 0
 -- | Lifts a View into a 'TreeLayout' with an alignment point at the top left
 fromView :: View -> TreeLayout a
 fromView = fromWidget . Widget.fromView
+
+-- | Lifts a View into a 'TreeLayout' with an alignment point at the top left
+fromTextView :: WithTextPos View -> TreeLayout a
+fromTextView tv = tv & Align.tValue %~ Widget.fromView & fromWithTextPos
 
 -- | The empty 'TreeLayout'
 empty :: TreeLayout a
@@ -171,18 +178,15 @@ vboxSpaced =
     <&> List.intersperse
     <&> Lens.mapped %~ vbox
 
--- TODO: We should get "WithTextPos" of Widgets when that exists.
--- TODO: In future this may have multiple layout options!
 taggedList ::
     (MonadReader env m, Spacer.HasStdSpacing env, Functor f) =>
-    m ([(Widget (f Widget.EventResult), TreeLayout (f Widget.EventResult))] -> TreeLayout (f Widget.EventResult))
+    m ([(WithTextPos (Widget (f Widget.EventResult)), TreeLayout (f Widget.EventResult))] -> TreeLayout (f Widget.EventResult))
 taggedList =
     vboxSpaced <&>
     \box pairs ->
     let headerWidth = pairs ^.. traverse . _1 . View.width & maximum
         renderPair (header, treeLayout) =
-            AlignTo 0 (View.assymetricPad (Vector2 (headerWidth - header ^. View.width) 0) 0 header)
+            View.assymetricPad (Vector2 (headerWidth - header ^. View.width) 0) 0 header
             /|/ treeLayout
     in
     pairs <&> renderPair & box
-    & alignment . _1 .~ 0 -- TODO: remove when no horizontal alignment

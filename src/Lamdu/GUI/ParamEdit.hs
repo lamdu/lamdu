@@ -10,7 +10,6 @@ import           Data.Store.Transaction (Transaction)
 import qualified Graphics.UI.Bottle.EventMap as E
 import           Graphics.UI.Bottle.MetaKey (MetaKey, toModKey)
 import qualified Graphics.UI.Bottle.Widget as Widget
-import qualified Graphics.UI.Bottle.Widget.TreeLayout as TreeLayout
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
 import           Lamdu.GUI.ExpressionGui (ExpressionGui)
@@ -128,7 +127,8 @@ make annotationOpts showAnnotation prevId nextId param =
             <*>
             ( iMakeNameEdit info myId
               <&> E.weakerEvents paramEventMap
-              <&> TreeLayout.alignment . _1 .~ 0.5
+              -- TODO (ALIGN):
+              -- <&> TreeLayout.alignment . _1 .~ 0.5
             )
     where
         entityId = param ^. Sugar.fpId

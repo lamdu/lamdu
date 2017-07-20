@@ -6,6 +6,8 @@ module Lamdu.GUI.ExpressionEdit.CaseEdit
 import qualified Control.Lens as Lens
 import           Data.Store.Transaction (Transaction)
 import           Data.Vector.Vector2 (Vector2(..))
+import           Graphics.UI.Bottle.Align (WithTextPos)
+import qualified Graphics.UI.Bottle.Align as Align
 import           Graphics.UI.Bottle.Animation (AnimId)
 import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.EventMap as E
@@ -13,7 +15,6 @@ import           Graphics.UI.Bottle.View (View, (/-/), (/|/))
 import qualified Graphics.UI.Bottle.View as View
 import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
-import           Graphics.UI.Bottle.Align (AlignTo(..))
 import qualified Graphics.UI.Bottle.Widget.TreeLayout as TreeLayout
 import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
 import           Lamdu.Calc.Type (Tag)
@@ -61,7 +62,7 @@ make (Sugar.Case mArg alts caseTail addAlt _cEntityId) pl =
             <&> fromMaybe mempty
         let headerLabel text =
                 (Widget.makeFocusableView ?? headerId)
-                <*> (ExpressionGui.grammarLabel text <&> TreeLayout.fromView)
+                <*> (ExpressionGui.grammarLabel text <&> TreeLayout.fromTextView)
                 <&> E.weakerEvents labelJumpHoleEventMap
         (mActiveTag, header) <-
             case mArg of
@@ -86,7 +87,6 @@ make (Sugar.Case mArg alts caseTail addAlt _cEntityId) pl =
                         & return
                     Sugar.CaseExtending rest ->
                         makeOpenCase rest (Widget.toAnimId myId) altsGui
-            <&> TreeLayout.alignment . _1 .~ 0
         let addAltEventMap =
                 addAlt
                 <&> (^. Sugar.caarNewTag . Sugar.tagInstance)
@@ -108,20 +108,22 @@ makeAltRow ::
     Monad m =>
     Maybe Tag ->
     Sugar.CaseAlt (Name m) m (Sugar.Expression (Name m) m ExprGuiT.Payload) ->
-    ExprGuiM m (Widget (Transaction m Widget.EventResult), ExpressionGui m)
+    ExprGuiM m (WithTextPos (Widget (Transaction m Widget.EventResult)), ExpressionGui m)
 makeAltRow mActiveTag (Sugar.CaseAlt delete tag altExpr) =
     do
         config <- Lens.view Config.config
         addBg <- ExpressionGui.addValBGWithColor Theme.evaluatedPathBGColor
+        let itemEventMap = caseDelEventMap config delete
         tagLabel <-
             TagEdit.makeCaseTag (ExprGuiT.nextHolesBefore altExpr) tag
+            <&> Align.tValue %~ E.weakerEvents itemEventMap
             <&> if mActiveTag == Just (tag ^. Sugar.tagVal)
                 then addBg
                 else id
         hspace <- Spacer.stdHSpace
-        altExprGui <- ExprGuiM.makeSubexpression altExpr
-        let itemEventMap = caseDelEventMap config delete
-        return (E.weakerEvents itemEventMap tagLabel /|/ hspace, E.weakerEvents itemEventMap altExprGui)
+        altExprGui <-
+            ExprGuiM.makeSubexpression altExpr <&> E.weakerEvents itemEventMap
+        return (tagLabel /|/ hspace, altExprGui)
 
 makeAltsWidget ::
     Monad m =>
@@ -130,7 +132,7 @@ makeAltsWidget ::
     Widget.Id -> ExprGuiM m (ExpressionGui m)
 makeAltsWidget _ [] myId =
     (Widget.makeFocusableView ?? Widget.joinId myId ["Ø"])
-    <*> (ExpressionGui.grammarLabel "Ø" <&> TreeLayout.fromView)
+    <*> (ExpressionGui.grammarLabel "Ø" <&> TreeLayout.fromTextView)
 makeAltsWidget mActiveTag alts _myId =
     TreeLayout.taggedList <*> mapM (makeAltRow mActiveTag) alts
 
@@ -160,7 +162,9 @@ makeOpenCase rest animId altsGui =
             in
             alts
             /-/
-            AlignTo 0 (separationBar theme (max minWidth targetWidth) animId /-/ vspace)
+            separationBar theme (max minWidth targetWidth) animId
+            /-/
+            vspace
             /-/
             restLayout
 

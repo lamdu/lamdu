@@ -16,7 +16,7 @@ import qualified Data.Map as Map
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Text as Text
 import qualified Graphics.DrawingCombinators as Draw
-import           Graphics.UI.Bottle.Align (AlignTo(..))
+import           Graphics.UI.Bottle.Align (WithTextPos)
 import qualified Graphics.UI.Bottle.Align as Align
 import qualified Graphics.UI.Bottle.EventMap as E
 import           Graphics.UI.Bottle.MetaKey (MetaKey(..), noMods, toModKey)
@@ -61,19 +61,18 @@ makeBinderNameEdit ::
     Sugar.BinderActions m ->
     Widget.EventMap (T m Widget.EventResult) ->
     Name m -> Draw.Color -> Widget.Id ->
-    ExprGuiM m (ExpressionGui m)
+    ExprGuiM m (WithTextPos (Widget (T m Widget.EventResult)))
 makeBinderNameEdit binderActions rhsJumperEquals name color myId =
     do
         config <- Lens.view Config.config
         ExpressionGui.makeNameOriginEdit name color myId
             <&> jumpToRHSViaEquals name
-            <&> E.weakerEvents
+            <&> Align.tValue %~ E.weakerEvents
                 (ParamEdit.eventMapAddFirstParam config
                  (binderActions ^. Sugar.baAddFirstParam))
-            <&> TreeLayout.fromWidget
     where
         jumpToRHSViaEquals n
-            | nonOperatorName n = E.strongerEvents rhsJumperEquals
+            | nonOperatorName n = Align.tValue %~ E.strongerEvents rhsJumperEquals
             | otherwise = id
 
 presentationModeChoiceConfig :: Choice.Config
@@ -97,7 +96,8 @@ mkPresentationModeEdit myId prop = do
     cur <- Transaction.getP prop
     theme <- Lens.view Theme.theme
     let mkPair presentationMode =
-            TextView.makeFocusableLabel text <&> (,) presentationMode
+            TextView.makeFocusableLabel text <&> (^. Align.tValue)
+            <&> (,) presentationMode
             where
                 text = show presentationMode & Text.pack
     pairs <-
@@ -203,6 +203,7 @@ makeScopeNavEdit binder myId curCursor =
         theme <- Lens.view Theme.theme
         let mkArrow (txt, mScopeId) =
                 TextView.makeLabel txt
+                <&> (^. Align.tValue)
                 & Reader.local
                 ( TextView.color .~
                     case mScopeId of
@@ -214,7 +215,7 @@ makeScopeNavEdit binder myId curCursor =
         case settings ^. CESettings.sInfoMode of
             CESettings.Evaluation ->
                 (Widget.makeFocusableView ?? myId)
-                <*> (mapM mkArrow scopes <&> Align.hboxAlign 0.5 <&> Widget.fromView)
+                <*> (mapM mkArrow scopes <&> View.hbox <&> Widget.fromView)
                 <&> E.weakerEvents (mkScopeEventMap leftKeys rightKeys `mappend` blockEventMap)
                 <&> Just
                 <&> (,) (mkScopeEventMap prevScopeKeys nextScopeKeys)
@@ -252,10 +253,7 @@ makeMParamsEdit mScopeCursor isScopeNavFocused delVarBackwardsId myId nearestHol
     [] -> return Nothing
     paramEdits ->
         frame
-        <*>
-        ( ExpressionGui.combineSpaced ??
-            (paramEdits <&> TreeLayout.alignment . _1 .~ 0.5)
-        )
+        <*> (ExpressionGui.combineSpaced ?? paramEdits)
         <&> Just
     where
         frame =
@@ -341,17 +339,15 @@ make name color binder myId =
         defNameEdit <-
             makeBinderNameEdit (binder ^. Sugar.bActions) rhsJumperEquals
             name color myId
-            <&> TreeLayout.alignedWidget %~
-                maybe id (\x -> (/-/ AlignTo 0 x)) mPresentationEdit
+            <&> (/-/ fromMaybe View.empty mPresentationEdit)
+            <&> TreeLayout.fromWithTextPos
             <&> E.weakerEvents jumpHolesEventMap
         mLhsEdit <-
             case mParamsEdit of
             Nothing -> return Nothing
             Just paramsEdit ->
                 TreeLayout.vboxSpaced
-                ?? (paramsEdit : fmap TreeLayout.fromWidget mScopeEdit ^.. Lens._Just
-                    <&> TreeLayout.alignment . _1 .~ 0.5)
-                <&> TreeLayout.alignment . _1 .~ 0
+                ?? (paramsEdit : fmap TreeLayout.fromWidget mScopeEdit ^.. Lens._Just)
                 <&> E.strongerEvents rhsJumperEquals
                 <&> Just
         equals <- TextView.makeLabel "="
@@ -359,7 +355,7 @@ make name color binder myId =
             <&>
             (\hbox ->
             hbox
-            [ hbox (defNameEdit : (mLhsEdit ^.. Lens._Just) ++ [TreeLayout.fromView equals])
+            [ hbox (defNameEdit : (mLhsEdit ^.. Lens._Just) ++ [TreeLayout.fromTextView equals])
             , bodyEdit
             ] )
             <&> E.weakerEvents eventMap
@@ -401,7 +397,7 @@ makeLetEdit item =
             make (item ^. Sugar.lName) letColor binder myId
             <&> E.weakerEvents eventMap
             <&> View.pad (Theme.letItemPadding theme <&> realToFrac)
-        AlignTo 0 (letLabel /|/ space) /|/ letEquation & return
+        letLabel /|/ space /|/ letEquation & return
     & Reader.local (View.animIdPrefix .~ Widget.toAnimId myId)
     where
         bodyId =
@@ -464,12 +460,11 @@ makeBinderContentEdit (Sugar.BinderLet l) =
         ExpressionGui.parentDelegator letEntityId
             <*> ( TreeLayout.vboxSpaced
                   <*>
-                  ( sequence
-                    [ makeLetEdit l <&> E.weakerEvents moveToInnerEventMap
-                    , makeBinderBodyEdit body
-                      & ExprGuiM.withLocalMScopeId letBodyScope
-                    ] <&> Lens.mapped . TreeLayout.alignment . _1 .~ 0
-                  )
+                  sequence
+                  [ makeLetEdit l <&> E.weakerEvents moveToInnerEventMap
+                  , makeBinderBodyEdit body
+                    & ExprGuiM.withLocalMScopeId letBodyScope
+                  ]
                 )
             <&> E.weakerEvents eventMap
     where
@@ -481,7 +476,7 @@ namedParamEditInfo color paramInfo =
     ParamEdit.Info
     { ParamEdit.iMakeNameEdit =
         ExpressionGui.makeNameOriginEdit (paramInfo ^. Sugar.npiName) color
-        <&> Lens.mapped %~ TreeLayout.fromWidget
+        <&> Lens.mapped %~ TreeLayout.fromWithTextPos
     , ParamEdit.iMAddNext = paramInfo ^. Sugar.npiActions . Sugar.fpAddNext & Just
     , ParamEdit.iMOrderBefore = paramInfo ^. Sugar.npiActions . Sugar.fpMOrderBefore
     , ParamEdit.iMOrderAfter = paramInfo ^. Sugar.npiActions . Sugar.fpMOrderAfter
@@ -494,7 +489,7 @@ nullParamEditInfo mActions =
     { ParamEdit.iMakeNameEdit =
       \myId ->
       (Widget.makeFocusableView ?? myId)
-      <*> (ExpressionGui.grammarLabel "◗" <&> TreeLayout.fromView)
+      <*> (ExpressionGui.grammarLabel "◗" <&> TreeLayout.fromTextView)
     , ParamEdit.iMAddNext = Nothing
     , ParamEdit.iMOrderBefore = Nothing
     , ParamEdit.iMOrderAfter = Nothing

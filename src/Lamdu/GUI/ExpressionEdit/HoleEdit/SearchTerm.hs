@@ -11,6 +11,8 @@ import           Data.Store.Property (Property)
 import qualified Data.Store.Property as Property
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Text as Text
+import           Graphics.UI.Bottle.Align (WithTextPos)
+import qualified Graphics.UI.Bottle.Align as Align
 import qualified Graphics.UI.Bottle.EventMap as E
 import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
@@ -32,10 +34,10 @@ textEditNoEmpty = TextEdit.EmptyStrings "  " "  "
 makeSearchTermPropEdit ::
     (MonadReader env m, Widget.HasCursor env, TextEdit.HasStyle env, Monad f) =>
     WidgetIds -> Property f Text ->
-    m (Widget (f Widget.EventResult))
+    m (WithTextPos (Widget (f Widget.EventResult)))
 makeSearchTermPropEdit WidgetIds{..} searchTermProp =
     TextEdit.make ?? textEditNoEmpty ?? searchTerm ?? hidOpenSearchTerm
-    <&> Widget.events %~ \(newSearchTerm, eventRes) ->
+    <&> Align.tValue . Widget.events %~ \(newSearchTerm, eventRes) ->
         do
             when (newSearchTerm /= searchTerm) $
                 Property.set searchTermProp newSearchTerm
@@ -50,7 +52,7 @@ makeSearchTermPropEdit WidgetIds{..} searchTermProp =
     where
         searchTerm = Property.value searchTermProp
 
-make :: Monad m => HoleInfo m -> ExprGuiM m (Widget (Transaction m Widget.EventResult))
+make :: Monad m => HoleInfo m -> ExprGuiM m (WithTextPos (Widget (Transaction m Widget.EventResult)))
 make holeInfo =
     do
         config <- Lens.view Config.config
@@ -59,7 +61,7 @@ make holeInfo =
         let Theme.Hole{..} = Theme.hole theme
         textCursor <- TextEdit.getCursor ?? searchTerm ?? hidOpenSearchTerm
         makeSearchTermPropEdit WidgetIds{..} (HoleInfo.hiSearchTermProperty holeInfo)
-            <&> E.eventMap
+            <&> Align.tValue . E.eventMap
                 %~ EventMap.disallowCharsFromSearchTerm holeConfig holeInfo textCursor
             <&> addBackground (Widget.toAnimId hidOpenSearchTerm) holeSearchTermBGColor
     where

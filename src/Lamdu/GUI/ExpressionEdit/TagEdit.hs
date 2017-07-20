@@ -9,6 +9,8 @@ import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
 import           Data.Store.Transaction (Transaction)
 import qualified Graphics.DrawingCombinators as Draw
+import           Graphics.UI.Bottle.Align (WithTextPos)
+import qualified Graphics.UI.Bottle.Align as Align
 import qualified Graphics.UI.Bottle.EventMap as E
 import           Graphics.UI.Bottle.View (View)
 import           Graphics.UI.Bottle.Widget (Widget)
@@ -32,19 +34,19 @@ type T = Transaction
 makeTagNameEdit ::
     Monad m =>
     Widget.EventMap (T m Widget.EventResult) -> Draw.Color ->
-    Sugar.TagG (Name m) -> ExprGuiM m (Widget (T m Widget.EventResult))
+    Sugar.TagG (Name m) -> ExprGuiM m (WithTextPos (Widget (T m Widget.EventResult)))
 makeTagNameEdit jumpNextEventMap tagColor tagG =
-    ExpressionGui.makeNameEdit (E.weakerEvents jumpNextEventMap)
+    ExpressionGui.makeNameEdit (Align.tValue %~ E.weakerEvents jumpNextEventMap)
     (tagG ^. Sugar.tagGName) myId
     & Reader.local (TextView.color .~ tagColor)
-    <&> E.eventMap %~ E.filterChars (/= ',')
+    <&> Align.tValue . E.eventMap %~ E.filterChars (/= ',')
     where
         myId = WidgetIds.fromEntityId (tagG ^. Sugar.tagInstance)
 
 makeTagH ::
     Monad m =>
     Draw.Color -> NearestHoles -> Sugar.TagG (Name m) ->
-    ExprGuiM m (Widget (T m Widget.EventResult))
+    ExprGuiM m (WithTextPos (Widget (T m Widget.EventResult)))
 makeTagH tagColor nearestHoles tagG =
     do
         config <- Lens.view Config.config
@@ -59,11 +61,11 @@ makeTagH tagColor nearestHoles tagG =
                    return . WidgetIds.fromEntityId)
         let Theme.Name{..} = Theme.name theme
         makeTagNameEdit jumpNextEventMap tagColor tagG
-            <&> E.weakerEvents jumpHolesEventMap
+            <&> Align.tValue %~ E.weakerEvents jumpHolesEventMap
 
 makeRecordTag ::
     Monad m => NearestHoles -> Sugar.TagG (Name m) ->
-    ExprGuiM m (Widget (T m Widget.EventResult))
+    ExprGuiM m (WithTextPos (Widget (T m Widget.EventResult)))
 makeRecordTag nearestHoles tagG =
     do
         Theme.Name{..} <- Theme.name <$> Lens.view Theme.theme
@@ -71,15 +73,14 @@ makeRecordTag nearestHoles tagG =
 
 makeCaseTag ::
     Monad m => NearestHoles -> Sugar.TagG (Name m) ->
-    ExprGuiM m (Widget (T m Widget.EventResult))
+    ExprGuiM m (WithTextPos (Widget (T m Widget.EventResult)))
 makeCaseTag nearestHoles tagG =
     do
         Theme.Name{..} <- Theme.name <$> Lens.view Theme.theme
         makeTagH caseTagColor nearestHoles tagG
 
 -- | Unfocusable tag view (e.g: in apply params)
-makeParamTag ::
-    Monad m => Sugar.TagG (Name m) -> ExprGuiM m View
+makeParamTag :: Monad m => Sugar.TagG (Name m) -> ExprGuiM m (WithTextPos View)
 makeParamTag t =
     do
         Theme.Name{..} <- Theme.name <$> Lens.view Theme.theme

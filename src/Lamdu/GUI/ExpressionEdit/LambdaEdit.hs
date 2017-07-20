@@ -5,8 +5,11 @@ module Lamdu.GUI.ExpressionEdit.LambdaEdit
 
 import qualified Control.Lens as Lens
 import           Data.Store.Transaction (Transaction)
+import           Graphics.UI.Bottle.Align (WithTextPos(..))
 import qualified Graphics.UI.Bottle.EventMap as E
 import           Graphics.UI.Bottle.MetaKey (MetaKey(..), noMods)
+import           Graphics.UI.Bottle.View ((/-/))
+import qualified Graphics.UI.Bottle.View as View
 import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widget.TreeLayout as TreeLayout
@@ -32,27 +35,25 @@ type T = Transaction
 
 addScopeEdit ::
     Functor m =>
-    Maybe (Widget (T m Widget.EventResult)) -> ExpressionGui m -> ExpressionGui m
-addScopeEdit mScopeEdit e =
-    e : (mScopeEdit ^.. Lens._Just <&> TreeLayout.fromWidget)
-    <&> TreeLayout.alignment . _1 .~ 0.5
-    & TreeLayout.vbox
+    Maybe (Widget (T m Widget.EventResult)) -> ExpressionGui m ->
+    ExpressionGui m
+addScopeEdit mScopeEdit = (/-/ maybe View.empty (WithTextPos 0) mScopeEdit)
 
 mkLhsEdits ::
     Functor m =>
-    Maybe (ExpressionGui m) -> Maybe (Widget (T m Widget.EventResult)) -> [ExpressionGui m]
+    Maybe (ExpressionGui m) ->
+    Maybe (Widget (T m Widget.EventResult)) -> [ExpressionGui m]
 mkLhsEdits mParamsEdit mScopeEdit =
     mParamsEdit <&> addScopeEdit mScopeEdit & (^.. Lens._Just)
 
 mkExpanded ::
     Monad m =>
     ExprGuiM m
-    (Maybe (ExpressionGui m) ->
-     Maybe (Widget (T m Widget.EventResult)) ->
+    (Maybe (ExpressionGui m) -> Maybe (Widget (T m Widget.EventResult)) ->
      [ExpressionGui m])
 mkExpanded =
     do
-        labelEdit <- ExpressionGui.grammarLabel "→" <&> TreeLayout.fromView
+        labelEdit <- ExpressionGui.grammarLabel "→" <&> TreeLayout.fromTextView
         return $ \mParamsEdit mScopeEdit ->
             mkLhsEdits mParamsEdit mScopeEdit ++ [labelEdit]
 
@@ -74,7 +75,7 @@ mkShrunk paramIds myId =
         theme <- Lens.view Theme.theme
         lamLabel <-
             (Widget.makeFocusableView ?? lamId myId)
-            <*> (ExpressionGui.grammarLabel "λ" <&> TreeLayout.fromView)
+            <*> (ExpressionGui.grammarLabel "λ" <&> TreeLayout.fromTextView)
             & LightLambda.withUnderline theme
         return $ \mScopeEdit ->
             [ addScopeEdit mScopeEdit lamLabel
@@ -85,8 +86,7 @@ mkLightLambda ::
     Monad n =>
     Sugar.BinderParams a m -> Widget.Id ->
     ExprGuiM n
-    (Maybe (ExpressionGui n) ->
-     Maybe (Widget (T n Widget.EventResult)) ->
+    (Maybe (ExpressionGui n) -> Maybe (Widget (T n Widget.EventResult)) ->
      [ExpressionGui n])
 mkLightLambda params myId =
     do

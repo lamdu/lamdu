@@ -146,7 +146,7 @@ makeReplEdit env replExpr =
     ExpressionGui.combineSpaced
     <*> sequence
     [ (Widget.makeFocusableView ?? Widget.joinId WidgetIds.replId ["symbol"])
-      <*> (TextView.makeLabel "⋙" <&> TreeLayout.fromView)
+      <*> (TextView.makeLabel "⋙" <&> TreeLayout.fromTextView)
     , ExprGuiM.makeSubexpressionWith 0 id replExpr
     ]
     <&> Lens.mapped %~ mLiftTrans
@@ -175,7 +175,7 @@ make width env =
     & ExprGuiM.run ExpressionEdit.make
       (env ^. codeProps) (env ^. settings) (env ^. style)
     <&> ExpressionGui.render width
-    <&> (^. Align.value)
+    <&> (^. Align.tValue)
 
 makePaneEdit ::
     Monad m =>
@@ -239,6 +239,7 @@ makeNewDefinitionButton =
 
         TextView.makeFocusableLabel "New..."
             & Reader.local (TextView.color .~ color)
+            <&> (^. Align.tValue)
             <&> E.weakerEvents (newDefinitionEventMap newDefinitionButtonPressKeys)
 
 replEventMap ::

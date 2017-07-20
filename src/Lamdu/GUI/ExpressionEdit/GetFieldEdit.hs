@@ -32,8 +32,8 @@ make (Sugar.GetField recExpr tagG) pl =
             (pl ^. Sugar.plData . ExprGuiT.plNearestHoles) tagG
         ExpressionGui.combine
             [ recExprEdit
-            , TreeLayout.fromView dotLabel
-            , TreeLayout.fromWidget tagEdit
+            , TreeLayout.fromTextView dotLabel
+            , TreeLayout.fromWithTextPos tagEdit
             ]
             & return
     & Widget.assignCursor myId tagId

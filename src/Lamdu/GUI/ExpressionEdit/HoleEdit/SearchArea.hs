@@ -11,13 +11,12 @@ module Lamdu.GUI.ExpressionEdit.HoleEdit.SearchArea
 import qualified Control.Lens as Lens
 import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
-import           Graphics.UI.Bottle.Align (Aligned(..))
 import qualified Graphics.UI.Bottle.Align as Align
 import qualified Graphics.UI.Bottle.Widget.TreeLayout as TreeLayout
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 import qualified Lamdu.Config as Config
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.Info (HoleInfo(..))
-import           Lamdu.GUI.ExpressionEdit.HoleEdit.Open (makeOpenSearchAreaGui)
+import           Lamdu.GUI.ExpressionEdit.HoleEdit.Open (makeOpenSearchAreaGui, ResultsPlacement)
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.SearchTerm as SearchTerm
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds (WidgetIds(..))
 import           Lamdu.GUI.ExpressionGui (ExpressionGui)
@@ -39,7 +38,8 @@ fdConfig Config.Hole{..} = FocusDelegator.Config
 -- Has an ExpressionGui.stdWrap/typeView under the search term
 makeStdWrapped ::
     Monad m =>
-    Sugar.Payload m ExprGuiT.Payload -> HoleInfo m -> ExprGuiM m (ExpressionGui m)
+    Sugar.Payload m ExprGuiT.Payload -> HoleInfo m ->
+    ExprGuiM m (ResultsPlacement -> ExpressionGui m)
 makeStdWrapped pl holeInfo =
     do
         config <- Lens.view Config.config
@@ -50,8 +50,10 @@ makeStdWrapped pl holeInfo =
                 | otherwise =
                     FocusDelegator.make ?? fdConfig (Config.hole config)
                     ?? FocusDelegator.FocusEntryChild ?? hidClosedSearchArea
+                    <&> (Align.tValue %~)
         closedSearchTermGui <-
-            fdWrap <*> SearchTerm.make holeInfo <&> TreeLayout.fromWidget & ExpressionGui.stdWrap pl
+            fdWrap <*> SearchTerm.make holeInfo <&> TreeLayout.fromWithTextPos
+            & ExpressionGui.stdWrap pl
         isSelected <- Widget.isSubCursor ?? hidOpen
         if isSelected
             then -- ideally the fdWrap would be "inside" the
@@ -59,10 +61,10 @@ makeStdWrapped pl holeInfo =
                  -- important in the case the FD is selected, and
                  -- it is harder to implement, so just wrap it
                  -- here
-                 fdWrap <*> makeOpenSearchAreaGui pl holeInfo
-                 <&>
+                 (fdWrap <&> (Lens.mapped %~))
+                 <*> makeOpenSearchAreaGui pl holeInfo
+                 <&> Lens.mapped %~
                  \open ->
-                 closedSearchTermGui & TreeLayout.alignedWidget %~
-                 \closed ->
-                 Aligned 0 open `Align.hoverInPlaceOf` closed
-            else return closedSearchTermGui
+                 closedSearchTermGui & TreeLayout.alignedWidget . Align.tValue %~
+                 Align.hoverInPlaceOf [Align.anchor (open ^. Align.tValue)] . Align.anchor
+            else return (const closedSearchTermGui)

@@ -1,21 +1,22 @@
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE NoImplicitPrelude, GeneralizedNewtypeDeriving, OverloadedStrings, FlexibleInstances, MultiParamTypeClasses #-}
 module Lamdu.GUI.TypeView
     ( make
     ) where
 
 import qualified Control.Lens as Lens
-import           Control.Monad.Transaction (MonadTransaction(..))
 import           Control.Monad.Trans.State (StateT, state, evalStateT)
+import           Control.Monad.Transaction (MonadTransaction(..))
 import qualified Data.Map as Map
 import qualified Data.Store.Transaction as Transaction
 import qualified Data.Text as Text
 import           Data.Text.Encoding (decodeUtf8)
 import           Data.Vector.Vector2 (Vector2(..))
-import           Graphics.UI.Bottle.Align (Aligned(..))
+import           Graphics.UI.Bottle.Align (Aligned(..), WithTextPos(..))
 import qualified Graphics.UI.Bottle.Align as Align
 import           Graphics.UI.Bottle.Animation (AnimId)
 import qualified Graphics.UI.Bottle.Animation as Anim
-import           Graphics.UI.Bottle.View (View(..), (/-/))
+import           Graphics.UI.Bottle.View (R, View(..), (/-/), (/|/))
 import qualified Graphics.UI.Bottle.View as View
 import qualified Graphics.UI.Bottle.Widget.Id as WidgetId
 import qualified Graphics.UI.Bottle.Widgets.GridView as GridView
@@ -56,38 +57,33 @@ split (M act) =
 randAnimId :: Monad m => M m AnimId
 randAnimId = WidgetId.toAnimId . WidgetIds.fromUUID <$> rand
 
-text :: Monad m => Text -> M m View
+text :: Monad m => Text -> M m (WithTextPos View)
 text str =
     do
         animId <- randAnimId
         TextView.make ?? Text.replace "\0" "" str ?? animId
 
-showIdentifier :: Monad m => Identifier -> M m View
+showIdentifier :: Monad m => Identifier -> M m (WithTextPos View)
 showIdentifier (Identifier bs) = text (decodeUtf8 bs)
 
-hbox :: [View] -> View
-hbox = Align.hboxAlign 0.5
-
-mkHSpace :: Monad m => M m View
-mkHSpace = Spacer.stdHSpace & egui
-
-parensAround :: Monad m => View -> M m View
+parensAround :: Monad m => WithTextPos View -> M m (WithTextPos View)
 parensAround view =
     do
         openParenView <- text "("
         closeParenView <- text ")"
-        return $ hbox [openParenView, view, closeParenView]
+        return $ View.hbox [openParenView, view, closeParenView]
 
 parens ::
-    Monad m => ParentPrecedence -> MyPrecedence -> View -> M m View
+    Monad m => ParentPrecedence -> MyPrecedence ->
+    WithTextPos View -> M m (WithTextPos View)
 parens parent my view
     | needParens parent my = parensAround view
     | otherwise = return view
 
-makeTVar :: Monad m => T.Var p -> M m View
+makeTVar :: Monad m => T.Var p -> M m (WithTextPos View)
 makeTVar (T.Var name) = showIdentifier name
 
-makeTFun :: Monad m => ParentPrecedence -> Type -> Type -> M m View
+makeTFun :: Monad m => ParentPrecedence -> Type -> Type -> M m (WithTextPos View)
 makeTFun parentPrecedence a b =
     case a of
     T.TRecord T.CEmpty -> [text "◗ "]
@@ -97,24 +93,26 @@ makeTFun parentPrecedence a b =
         ]
     ++ [splitMake (Precedence.parent 0) b]
     & sequence
-    <&> hbox
+    <&> View.hbox
     >>= parens parentPrecedence (Precedence.my 0)
 
-makeTInst :: Monad m => ParentPrecedence -> T.NominalId -> Map T.ParamId Type -> M m View
+makeTInst ::
+    Monad m => ParentPrecedence -> T.NominalId -> Map T.ParamId Type ->
+    M m (WithTextPos View)
 makeTInst parentPrecedence tid typeParams =
     do
         nameView <-
             Anchors.assocNameRef tid & Transaction.getP & transaction >>= text
-        hspace <- mkHSpace
-        let afterName paramsView = hbox [nameView, hspace, paramsView]
+        hspace <- Spacer.stdHSpace
+        let afterName paramsView = nameView /|/ hspace /|/ paramsView
         let makeTypeParam (T.ParamId tParamId, arg) =
                 do
                     paramIdView <- showIdentifier tParamId
                     typeView <- splitMake (Precedence.parent 0) arg
                     return
-                        [ Aligned (Vector2 1 0.5) paramIdView
+                        [ toAligned 1 paramIdView
                         , Aligned 0.5 hspace
-                        , Aligned (Vector2 0 0.5) typeView
+                        , toAligned 0 typeView
                         ]
         case Map.toList typeParams of
             [] -> pure nameView
@@ -125,16 +123,21 @@ makeTInst parentPrecedence tid typeParams =
             params ->
                 mapM makeTypeParam params
                 <&> GridView.make
-                >>= addBackgroundFrame
+                >>= addValPadding
+                >>= addBGColor
                 <&> afterName
 
-addValPadding :: Monad m => View -> M m View
+toAligned :: View.HasSize a => R -> WithTextPos a -> Aligned a
+toAligned x (WithTextPos y w) =
+    Aligned (Vector2 x (y / w ^. View.height)) w
+
+addValPadding :: (View.Resizable a, Monad m) => a -> M m a
 addValPadding view =
     do
         padding <- Lens.view Theme.theme <&> Theme.valFramePadding <&> fmap realToFrac
         View.pad padding view & return
 
-addBGColor :: Monad m => View -> M m View
+addBGColor :: (View.SetLayers a, Monad m) => a -> M m a
 addBGColor view =
     do
         color <- Lens.view Theme.theme <&> Theme.typeFrameBGColor
@@ -143,38 +146,30 @@ addBGColor view =
             & View.backgroundColor bgId color
             & return
 
-addBackgroundFrame :: Monad m => View -> M m View
-addBackgroundFrame v = v & addValPadding >>= addBGColor
-
-makeEmptyRecord :: Monad m => M m View
+makeEmptyRecord :: Monad m => M m (WithTextPos View)
 makeEmptyRecord = text "Ø"
 
-makeTag :: Monad m => T.Tag -> M m View
+makeTag :: Monad m => T.Tag -> M m (WithTextPos View)
 makeTag tag =
     Anchors.assocNameRef tag & Transaction.getP & transaction
     >>= text
 
 makeField :: Monad m => (T.Tag, Type) -> M m [Aligned View]
 makeField (tag, fieldType) =
-    Lens.sequenceOf (Lens.traversed . Align.value)
-    [ Aligned (Vector2 1 0.5) (makeTag tag)
-    , Aligned 0.5 mkHSpace
-    , Aligned (Vector2 0 0.5) (splitMake (Precedence.parent 0) fieldType)
+    sequence
+    [ makeTag tag <&> toAligned 1
+    , Spacer.stdHSpace <&> Aligned 0.5
+    , splitMake (Precedence.parent 0) fieldType <&> toAligned 0
     ]
 
 makeSumField :: Monad m => (T.Tag, Type) -> M m [Aligned View]
 makeSumField (tag, T.TRecord T.CEmpty) =
-    makeTag tag <&> Aligned (Vector2 1 0.5) <&> (:[])
-makeSumField (tag, fieldType) =
-    Lens.sequenceOf (Lens.traversed . Align.value)
-    [ Aligned (Vector2 1 0.5) (makeTag tag)
-    , Aligned 0.5 mkHSpace
-    , Aligned (Vector2 0 0.5) (splitMake (Precedence.parent 0) fieldType)
-    ]
+    makeTag tag <&> toAligned 1 <&> (:[])
+makeSumField (tag, fieldType) = makeField (tag, fieldType)
 
 makeComposite ::
     Monad m =>
-    ((T.Tag, Type) -> M m [Aligned View]) -> T.Composite t -> M m View
+    ((T.Tag, Type) -> M m [Aligned View]) -> T.Composite t -> M m (WithTextPos View)
 makeComposite _ T.CEmpty = makeEmptyRecord
 makeComposite mkField composite =
     do
@@ -192,15 +187,17 @@ makeComposite mkField composite =
                             View.make 1 (Anim.unitSquare sqrId)
                             & View.scale (Vector2 barWidth 10)
                             & Aligned 0.5
-                    makeTVar var <&> Aligned 0.5 <&> (sqr /-/)
-        (Aligned 0.5 fieldsView /-/ varView) ^. Align.value & addBackgroundFrame
+                    makeTVar var <&> (^. Align.tValue) <&> Aligned 0.5 <&> (sqr /-/)
+        (Aligned 0.5 fieldsView /-/ varView) ^. Align.value & Align.WithTextPos 0
+            & addValPadding
+            >>= addBGColor
     where
         (fields, extension) = composite ^. orderedFlatComposite
 
-splitMake :: Monad m => ParentPrecedence -> Type -> M m View
+splitMake :: Monad m => ParentPrecedence -> Type -> M m (WithTextPos View)
 splitMake parentPrecedence typ = split $ makeInternal parentPrecedence typ
 
-makeInternal :: Monad m => ParentPrecedence -> Type -> M m View
+makeInternal :: Monad m => ParentPrecedence -> Type -> M m (WithTextPos View)
 makeInternal parentPrecedence typ =
     case typ of
     T.TVar var -> makeTVar var
@@ -211,14 +208,14 @@ makeInternal parentPrecedence typ =
         [ text "+"
         , makeComposite makeSumField composite
         ] & sequenceA
-        <&> hbox
+        <&> View.hbox
 
-make :: Monad m => Type -> AnimId -> ExprGuiM m View
+make :: Monad m => Type -> AnimId -> ExprGuiM m (WithTextPos View)
 make t prefix =
     do
         typeTint <- Lens.view Theme.theme <&> Theme.typeTint
         makeInternal (Precedence.parent 0) t
             & runM
             & (`evalStateT` Random.mkStdGen 0)
-            <&> View.animFrames %~ Anim.mapIdentities (mappend prefix)
+            <&> View.setLayers . View.layers . Lens.mapped %~ Anim.mapIdentities (mappend prefix)
             <&> View.tint typeTint

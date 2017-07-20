@@ -9,10 +9,12 @@ import           Control.Monad.Transaction (transaction)
 import qualified Data.Store.Property as Property
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
+import           Graphics.UI.Bottle.Align (WithTextPos)
+import qualified Graphics.UI.Bottle.Align as Align
 import           Graphics.UI.Bottle.Animation (AnimId)
 import qualified Graphics.UI.Bottle.EventMap as E
 import           Graphics.UI.Bottle.MetaKey (MetaKey(..), noMods)
-import           Graphics.UI.Bottle.View (View)
+import           Graphics.UI.Bottle.View (View, (/-/), (/|/))
 import qualified Graphics.UI.Bottle.View as View
 import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
@@ -37,9 +39,11 @@ import           Lamdu.Prelude
 type T = Transaction
 
 undeleteButton ::
-    Monad m => T m Widget.Id -> ExprGuiM m (Widget (T m Widget.EventResult))
+    Monad m =>
+    T m Widget.Id -> ExprGuiM m (WithTextPos (Widget (T m Widget.EventResult)))
 undeleteButton undelete =
-    TextView.makeFocusableLabel "Undelete..." <&> E.weakerEvents eventMap
+    TextView.makeFocusableLabel "Undelete..."
+    <&> Align.tValue %~ E.weakerEvents eventMap
     where
         eventMap =
             Widget.keysEventMapMovesCursor [MetaKey noMods GLFW.Key'Enter]
@@ -63,19 +67,19 @@ makeExprDefinition def bodyExpr =
 makeBuiltinDefinition ::
     Monad m =>
     Sugar.Definition (Name m) m (ExprGuiT.SugarExpr m) ->
-    Sugar.DefinitionBuiltin m -> ExprGuiM m (Widget (T m Widget.EventResult))
+    Sugar.DefinitionBuiltin m ->
+    ExprGuiM m (WithTextPos (Widget (T m Widget.EventResult)))
 makeBuiltinDefinition def builtin =
     do
         defColor <- Lens.view Theme.theme <&> Theme.name <&> Theme.definitionColor
-        assignment <-
-            [ ExpressionGui.makeNameOriginEdit name defColor (Widget.joinId myId ["name"])
-            , TextView.makeLabel " = " <&> Widget.fromView
-            , BuiltinEdit.make builtin myId
-            ]
-            & sequenceA
-            <&> View.hbox
+        nameEdit <- ExpressionGui.makeNameOriginEdit name defColor (Widget.joinId myId ["name"])
+        equals <- TextView.makeLabel " = "
+        builtinEdit <- BuiltinEdit.make builtin myId
         typeView <- topLevelSchemeTypeView (builtin ^. Sugar.biType) entityId ["builtinType"]
-        View.vbox [assignment, Widget.fromView typeView] & return
+        (nameEdit /|/ equals /|/ builtinEdit)
+            /-/
+            typeView
+            & return
     where
         name = def ^. Sugar.drName
         entityId = def ^. Sugar.drEntityId
@@ -97,7 +101,7 @@ make def =
             Sugar.DefinitionBodyExpression bodyExpr ->
                 makeExprDefinition def bodyExpr
             Sugar.DefinitionBodyBuiltin builtin ->
-                makeBuiltinDefinition def builtin <&> TreeLayout.fromWidget
+                makeBuiltinDefinition def builtin <&> TreeLayout.fromWithTextPos
             <&> addDeletionDiagonal
         case defState of
             Sugar.LiveDefinition -> return defGui
@@ -105,14 +109,14 @@ make def =
                 do
                     buttonGui <-
                         myId <$ Property.set defStateProp Sugar.LiveDefinition
-                        & undeleteButton <&> TreeLayout.fromWidget
+                        & undeleteButton <&> TreeLayout.fromWithTextPos
                     TreeLayout.vbox [defGui, buttonGui] & return
     & Reader.local (View.animIdPrefix .~ Widget.toAnimId myId)
     where
         myId = def ^. Sugar.drEntityId & WidgetIds.fromEntityId
 
 topLevelSchemeTypeView ::
-    Monad m => Scheme -> Sugar.EntityId -> AnimId -> ExprGuiM m View
+    Monad m => Scheme -> Sugar.EntityId -> AnimId -> ExprGuiM m (WithTextPos View)
 topLevelSchemeTypeView scheme entityId suffix =
     -- At the definition-level, Schemes can be shown as ordinary
     -- types to avoid confusing forall's:

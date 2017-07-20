@@ -54,6 +54,8 @@ module Graphics.UI.Bottle.Widget
 
     , assignCursor
     , assignCursorPrefix
+
+    , glueStates
     ) where
 
 import           Control.Lens (LensLike)
@@ -208,23 +210,25 @@ instance Functor f => View.Glue View (Widget (f EventResult)) where
 
 instance Functor f => View.Glue (Widget (f EventResult)) (Widget (f EventResult)) where
     type Glued (Widget (f EventResult)) (Widget (f EventResult)) = Widget (f EventResult)
-    glue orientation =
-        View.glueH
-        (\w0 w1 ->
-         w0
-         & wState .~ combineStates orientation dirPrev dirNext (w0 ^. wSize) (w0 ^. wState) (w1 ^. wState))
-        orientation
-        where
-            (dirPrev, dirNext) =
-                case orientation of
-                View.Horizontal ->
-                    ( ("left", StdKeys.keysLeft StdKeys.stdDirKeys)
-                    , ("right", StdKeys.keysRight StdKeys.stdDirKeys)
-                    )
-                View.Vertical ->
-                    ( ("up", StdKeys.keysUp StdKeys.stdDirKeys)
-                    , ("down", StdKeys.keysDown StdKeys.stdDirKeys)
-                    )
+    glue orientation = View.glueH (glueStates orientation) orientation
+
+glueStates ::
+    Functor f =>
+    View.Orientation -> Widget (f EventResult) -> Widget (f EventResult) -> Widget (f EventResult)
+glueStates orientation w0 w1 =
+    w0
+    & wState .~ combineStates orientation dirPrev dirNext (w0 ^. wSize) (w0 ^. wState) (w1 ^. wState)
+    where
+        (dirPrev, dirNext) =
+            case orientation of
+            View.Horizontal ->
+                ( ("left", StdKeys.keysLeft StdKeys.stdDirKeys)
+                , ("right", StdKeys.keysRight StdKeys.stdDirKeys)
+                )
+            View.Vertical ->
+                ( ("up", StdKeys.keysUp StdKeys.stdDirKeys)
+                , ("down", StdKeys.keysDown StdKeys.stdDirKeys)
+                )
 
 combineStates ::
     Functor f =>

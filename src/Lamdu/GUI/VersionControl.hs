@@ -10,6 +10,7 @@ import           Data.Store.Rev.Branch (Branch)
 import qualified Data.Store.Rev.Branch as Branch
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
+import qualified Graphics.UI.Bottle.Align as Align
 import qualified Graphics.UI.Bottle.EventMap as E
 import           Graphics.UI.Bottle.MetaKey (MetaKey(..), noMods)
 import qualified Graphics.UI.Bottle.View as View
@@ -96,7 +97,7 @@ make ::
     mr (Widget (mw Widget.EventResult))
 make VersionControl.Config{..} VersionControl.Theme{..} rwtransaction rtransaction actions mkWidget =
     do
-        branchNameEdits <- traverse makeBranchNameEdit $ branches actions
+        branchNameEdits <- branches actions & traverse makeBranchNameEdit
         branchSelector <-
             Choice.make ?? setCurrentBranch actions
             ?? branchNameEdits ?? currentBranch actions
@@ -115,7 +116,9 @@ make VersionControl.Config{..} VersionControl.Theme{..} rwtransaction rtransacti
                 branchNameEdit <-
                     (FocusDelegator.make ?? branchNameFDConfig
                      ?? FocusDelegator.FocusEntryParent ?? branchDelegatorId branch
-                    ) <*> (TextEdits.makeLineEdit ?? empty ?? nameProp ?? branchTextEditId branch)
+                    ) <*>
+                    ( TextEdits.makeLineEdit ?? empty ?? nameProp ?? branchTextEditId branch
+                      <&> (^. Align.tValue) )
                 let delEventMap
                         | ListUtils.isLengthAtLeast 2 (branches actions) =
                             Widget.keysEventMapMovesCursor
