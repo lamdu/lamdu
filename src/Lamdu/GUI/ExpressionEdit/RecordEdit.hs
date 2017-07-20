@@ -4,12 +4,14 @@ module Lamdu.GUI.ExpressionEdit.RecordEdit
     ) where
 
 import qualified Control.Lens as Lens
+import           Data.Store.Transaction (Transaction)
 import           Data.Vector.Vector2 (Vector2(..))
 import           Graphics.UI.Bottle.Animation (AnimId)
 import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.EventMap as E
 import           Graphics.UI.Bottle.View (View, (/-/), (/|/))
 import qualified Graphics.UI.Bottle.View as View
+import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import           Graphics.UI.Bottle.Align (AlignTo(..))
 import qualified Graphics.UI.Bottle.Align as Aligned
@@ -79,7 +81,7 @@ make record@(Sugar.Record fields recordTail addField) pl =
 makeFieldRow ::
     Monad m =>
     Sugar.RecordField (Name m) m (Sugar.Expression (Name m) m ExprGuiT.Payload) ->
-    ExprGuiM m (ExpressionGui m)
+    ExprGuiM m (Widget (Transaction m Widget.EventResult), ExpressionGui m)
 makeFieldRow (Sugar.RecordField delete tag fieldExpr) =
     do
         config <- Lens.view Config.config
@@ -87,9 +89,7 @@ makeFieldRow (Sugar.RecordField delete tag fieldExpr) =
         hspace <- Spacer.stdHSpace
         fieldGui <- ExprGuiM.makeSubexpression fieldExpr
         let itemEventMap = recordDelEventMap config delete
-        AlignTo 0 (tagLabel /|/ hspace) /|/ fieldGui
-            & E.weakerEvents itemEventMap
-            & return
+        return (E.weakerEvents itemEventMap tagLabel /|/ hspace, E.weakerEvents itemEventMap fieldGui)
 
 makeFieldsWidget ::
     Monad m =>
@@ -99,7 +99,7 @@ makeFieldsWidget [] myId =
     (Widget.makeFocusableView ?? myId)
     <*> (ExpressionGui.grammarLabel "()" <&> TreeLayout.fromView)
 makeFieldsWidget fields _ =
-    TreeLayout.vboxSpaced <*> mapM makeFieldRow fields
+    TreeLayout.taggedList <*> mapM makeFieldRow fields
 
 separationBar :: Theme -> Widget.R -> Anim.AnimId -> View
 separationBar theme width animId =

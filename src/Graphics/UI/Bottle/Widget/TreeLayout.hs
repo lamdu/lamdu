@@ -36,18 +36,18 @@ module Graphics.UI.Bottle.Widget.TreeLayout
     , fromAlignedWidget, fromWidget, fromView, empty
 
     -- * Combinators
-    , vbox, vboxSpaced
+    , vbox, vboxSpaced, taggedList
     ) where
 
 import qualified Control.Lens as Lens
 import qualified Data.List as List
-import           Data.Vector.Vector2 (Vector2)
+import           Data.Vector.Vector2 (Vector2(..))
 import qualified Graphics.UI.Bottle.EventMap as E
-import           Graphics.UI.Bottle.View (View)
+import           Graphics.UI.Bottle.View (View, (/|/))
 import qualified Graphics.UI.Bottle.View as View
 import           Graphics.UI.Bottle.Widget (Widget, R)
 import qualified Graphics.UI.Bottle.Widget as Widget
-import           Graphics.UI.Bottle.Align (Aligned(..), AlignTo)
+import           Graphics.UI.Bottle.Align (Aligned(..), AlignTo(..))
 import qualified Graphics.UI.Bottle.Align as Aligned
 import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
 
@@ -167,3 +167,19 @@ vboxSpaced =
     <&> fromView
     <&> List.intersperse
     <&> Lens.mapped %~ vbox
+
+-- TODO: We should get "WithTextPos" of Widgets when that exists.
+-- TODO: In future this may have multiple layout options!
+taggedList ::
+    (MonadReader env m, Spacer.HasStdSpacing env, Functor f) =>
+    m ([(Widget (f Widget.EventResult), TreeLayout (f Widget.EventResult))] -> TreeLayout (f Widget.EventResult))
+taggedList =
+    vboxSpaced <&>
+    \box pairs ->
+    let headerWidth = pairs ^.. traverse . _1 . View.width & maximum
+        renderPair (header, treeLayout) =
+            AlignTo 0 (View.assymetricPad (Vector2 (headerWidth - header ^. View.width) 0) 0 header)
+            /|/ treeLayout
+    in
+    pairs <&> renderPair & box
+    & alignment . _1 .~ 0 -- TODO: remove when no horizontal alignment

@@ -4,12 +4,14 @@ module Lamdu.GUI.ExpressionEdit.CaseEdit
     ) where
 
 import qualified Control.Lens as Lens
+import           Data.Store.Transaction (Transaction)
 import           Data.Vector.Vector2 (Vector2(..))
 import           Graphics.UI.Bottle.Animation (AnimId)
 import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.EventMap as E
 import           Graphics.UI.Bottle.View (View, (/-/), (/|/))
 import qualified Graphics.UI.Bottle.View as View
+import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import           Graphics.UI.Bottle.Align (AlignTo(..))
 import qualified Graphics.UI.Bottle.Widget.TreeLayout as TreeLayout
@@ -106,7 +108,7 @@ makeAltRow ::
     Monad m =>
     Maybe Tag ->
     Sugar.CaseAlt (Name m) m (Sugar.Expression (Name m) m ExprGuiT.Payload) ->
-    ExprGuiM m (ExpressionGui m)
+    ExprGuiM m (Widget (Transaction m Widget.EventResult), ExpressionGui m)
 makeAltRow mActiveTag (Sugar.CaseAlt delete tag altExpr) =
     do
         config <- Lens.view Config.config
@@ -119,9 +121,7 @@ makeAltRow mActiveTag (Sugar.CaseAlt delete tag altExpr) =
         hspace <- Spacer.stdHSpace
         altExprGui <- ExprGuiM.makeSubexpression altExpr
         let itemEventMap = caseDelEventMap config delete
-        AlignTo 0 (tagLabel /|/ hspace) /|/ altExprGui
-            & E.weakerEvents itemEventMap
-            & return
+        return (E.weakerEvents itemEventMap tagLabel /|/ hspace, E.weakerEvents itemEventMap altExprGui)
 
 makeAltsWidget ::
     Monad m =>
@@ -132,7 +132,7 @@ makeAltsWidget _ [] myId =
     (Widget.makeFocusableView ?? Widget.joinId myId ["Ø"])
     <*> (ExpressionGui.grammarLabel "Ø" <&> TreeLayout.fromView)
 makeAltsWidget mActiveTag alts _myId =
-    TreeLayout.vboxSpaced <*> mapM (makeAltRow mActiveTag) alts
+    TreeLayout.taggedList <*> mapM (makeAltRow mActiveTag) alts
 
 separationBar :: Theme -> Widget.R -> Anim.AnimId -> View
 separationBar theme width animId =
