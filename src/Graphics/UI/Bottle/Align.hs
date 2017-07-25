@@ -12,6 +12,7 @@ import           Control.Lens (Lens')
 import qualified Control.Lens as Lens
 import           Data.List.Utils (minimumOn)
 import           Data.Vector.Vector2 (Vector2(..))
+import           Graphics.UI.Bottle.Rect (Rect(..))
 import           Graphics.UI.Bottle.View (View, Orientation)
 import qualified Graphics.UI.Bottle.View as View
 import           Graphics.UI.Bottle.Widget (Widget(..), R, EventResult)
@@ -243,6 +244,7 @@ hoverInPlaceOf hoverOptions@(defaultOption:_) place
             & Widget.sRight -~ sizeDiff ^. _1
             & Widget.sBottom -~ sizeDiff ^. _2
             & Widget.translateFocused (translation hover) hMakeFocused
+            & Widget.fFocalAreas %~ (Rect 0 (place ^. View.size) :)
             where
                 (hover, hMakeFocused) = pickOption surrounding
                 sizeDiff = hover ^. View.size - place ^. View.size

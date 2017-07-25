@@ -243,7 +243,7 @@ makeToggledHelpAdder startValue =
                             )
                         HelpShown ->
                             ( make size
-                                ((focus ^. Widget.fEventMap) (Widget.VirtualCursor (focus ^. Widget.fFocalArea)))
+                                ((focus ^. Widget.fEventMap) (Widget.VirtualCursor (last (focus ^. Widget.fFocalAreas))))
                                 env
                             , "Hide"
                             )

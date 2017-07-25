@@ -328,7 +328,7 @@ makeHoleResultWidget resultId holeResult =
                 let focus = makeFocus (Widget.Surrounding 0 0 0 0)
                 in
                 (focus ^. Widget.fEventMap)
-                (Widget.VirtualCursor (focus ^. Widget.fFocalArea))
+                (Widget.VirtualCursor (last (focus ^. Widget.fFocalAreas)))
         mkWidget =
             holeResultConverted
             & postProcessSugar
@@ -437,16 +437,25 @@ resultsHoverOptions ::
     Widget (f EventResult) -> AnchoredWidget (f EventResult) -> [AnchoredWidget (f EventResult)]
 resultsHoverOptions pos addBg addAnnotation results searchTerm =
     case pos of
-    AnyPlace -> [below, above]
-    Above -> [above]
+    Above -> [ above, aboveLeft ]
+    AnyPlace ->
+        [ below
+        , above
+        , belowLeft
+        , aboveLeft
+        , Aligned 0.5 annotatedTerm /|/ Aligned 0.5 bgResults ^. Align.value
+        ]
     Below ->
         [ below
+        , belowLeft
         , Aligned 1 annotatedTerm /|/ Aligned 1 bgResults ^. Align.value
         , Aligned 1 bgResults /|/ Aligned 1 annotatedTerm ^. Align.value
         ]
     where
         above = bgResults /-/ annotatedTerm
+        aboveLeft = Aligned 1 bgResults /-/ Aligned 1 annotatedTerm ^. Align.value
         below = searchTerm /-/ addAnnotation results
+        belowLeft = Aligned 1 searchTerm /-/ Aligned 1 (addAnnotation results) ^. Align.value
         bgResults = addBg results
         annotatedTerm = searchTerm & Widget.widget %~ addAnnotation
 

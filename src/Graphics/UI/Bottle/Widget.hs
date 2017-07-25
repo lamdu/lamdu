@@ -26,7 +26,7 @@ module Graphics.UI.Bottle.Widget
         , mEnter, eventMapMaker, events
     , VirtualCursor(..), virtualCursor
     , Unfocused(..), uMEnter, uLayers
-    , Focused(..), fFocalArea, fEventMap, fMEnter, fLayers
+    , Focused(..), fFocalAreas, fEventMap, fMEnter, fLayers
     , Surrounding(..), sLeft, sTop, sRight, sBottom
 
     , HasWidget(..)
@@ -119,7 +119,10 @@ data EnterResult a = EnterResult
 -- active textedit, to move to a different text-edit position.
 
 data Focused a = Focused
-    { _fFocalArea :: Rect
+    { -- When browsing sub-menus each selected menu is considered focal.
+      -- The last focal area is where the cursor is,
+      -- however Zoom should care about the first focal area
+      _fFocalAreas :: [Rect]
     , _fEventMap :: VirtualCursor -> EventMap a
     , -- TODO: Replace with fMEnterPoint that is for Point direction only
       _fMEnter :: Maybe (Direction -> EnterResult a)
@@ -180,7 +183,7 @@ instance Functor f => View.Resizable (Widget (f EventResult)) where
         w
         & View.setLayers . View.layers . Lens.mapped %~ Anim.scale mult
         & View.size *~ mult
-        & wState . _StateFocused . Lens.mapped . fFocalArea . Rect.topLeftAndSize *~ mult
+        & wState . _StateFocused . Lens.mapped . fFocalAreas . traverse . Rect.topLeftAndSize *~ mult
         & wState . _StateFocused . Lens.mapped . fEventMap . Lens.argument . virtualCursor . Rect.topLeftAndSize //~ mult
         & mEnter . Lens._Just . Lens.mapped . enterResultRect . Rect.topLeftAndSize *~ mult
         & mEnter . Lens._Just . Lens.argument . Direction.coordinates . Rect.topLeftAndSize //~ mult
@@ -443,7 +446,7 @@ translateFocusedGeneric f pos x =
         onFocused focused =
             focused
             & fMEnter %~ translateMEnter pos
-            & fFocalArea . Rect.topLeft +~ pos
+            & fFocalAreas . traverse . Rect.topLeft +~ pos
             & fEventMap . Lens.argument . virtualCursor . Rect.topLeft -~ pos
             & fLayers %~ View.translateLayers pos
             <&> f
@@ -493,7 +496,7 @@ setFocusedWith rect eventMap =
     case s of
     StateUnfocused u ->
         const Focused
-        { _fFocalArea = rect
+        { _fFocalAreas = [rect]
         , _fEventMap = eventMap
         , _fMEnter = u ^. uMEnter
         , _fLayers = u ^. uLayers
@@ -501,7 +504,7 @@ setFocusedWith rect eventMap =
     StateFocused makeFocus ->
         -- TODO: does this case make sense or is this an error?
         makeFocus
-        <&> fFocalArea .~ rect
+        <&> fFocalAreas .~ [rect]
         <&> fEventMap .~ eventMap
     & StateFocused
 
@@ -565,10 +568,10 @@ renderWithCursor CursorConfig{cursorColor} w =
         -- Unfocused top level widget! TODO: Is this some sort of error?
         (View.render (u ^. uLayers), u ^. uMEnter, Nothing)
     StateFocused f ->
-        (cursorFrame <> View.render (r ^. fLayers), r ^. fMEnter, Just (r ^. fFocalArea, r ^. fEventMap))
+        (cursorFrame <> View.render (r ^. fLayers), r ^. fMEnter, Just (area, r ^. fEventMap))
         where
             r = f (Surrounding 0 0 0 0)
-            area = r ^. fFocalArea
+            area = last (r ^. fFocalAreas)
             cursorFrame =
                 Anim.backgroundColor cursorAnimId cursorColor (area ^. Rect.size)
                 & Anim.translate (area ^. Rect.topLeft)

@@ -197,7 +197,7 @@ toWidgetWithKeys keys size sChildren =
             in
             Widget.Focused
             { Widget._fLayers = focusedChild ^. Widget.fLayers <> unfocusedLayers
-            , Widget._fFocalArea = focusedChild ^. Widget.fFocalArea
+            , Widget._fFocalAreas = focusedChild ^. Widget.fFocalAreas
             , Widget._fMEnter = combineMEnters size mEnters
             , Widget._fEventMap = focusedChild ^. Widget.fEventMap & Lens.imapped %@~ addNavDests
             }

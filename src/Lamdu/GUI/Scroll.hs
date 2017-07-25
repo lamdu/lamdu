@@ -44,5 +44,5 @@ focusAreaIntoWindow winSize widget =
         focalPoint =
             widget ^? Widget.wState . Widget._StateFocused
             <&> (surrounding &)
-            <&> (^. Widget.fFocalArea . Rect.center)
+            >>= (^? Widget.fFocalAreas . Lens.element 0 . Rect.center)
             & fromMaybe 0
