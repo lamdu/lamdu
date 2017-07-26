@@ -1,6 +1,6 @@
 {-# LANGUAGE LambdaCase, NoImplicitPrelude, OverloadedStrings, RecordWildCards #-}
 module Lamdu.GUI.ExpressionEdit.HoleEdit.EventMap
-    ( blockDownEvents, disallowCharsFromSearchTerm
+    ( blockDownEvents, blockUpEvents, disallowCharsFromSearchTerm
     , makeOpenEventMaps
     ) where
 
@@ -36,12 +36,20 @@ import           Lamdu.Prelude
 
 type T = Transaction.Transaction
 
-blockDownEvents :: (Monoid a, E.HasEventMap w, Applicative f) => w (f a) -> w (f a)
-blockDownEvents =
+blockDownEvents :: (Monoid a, Applicative f, E.HasEventMap w) => w (f a) -> w (f a)
+blockDownEvents = blockDirection GLFW.Key'Down "down"
+
+blockUpEvents :: (Monoid a, Applicative f, E.HasEventMap w) => w (f a) -> w (f a)
+blockUpEvents = blockDirection GLFW.Key'Up "up"
+
+blockDirection ::
+    (Monoid a, Applicative f, E.HasEventMap w) =>
+    GLFW.Key -> E.Subtitle -> w (f a) -> w (f a)
+blockDirection key keyName =
     pure mempty
     & E.keyPresses
-        [ModKey mempty GLFW.Key'Down]
-        (E.Doc ["Navigation", "Move", "down (blocked)"])
+        [ModKey mempty key]
+        (E.Doc ["Navigation", "Move", keyName <> " (blocked)"])
     & E.weakerEvents
 
 adHocTextEditEventMap ::

@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell, PatternGuards, NoImplicitPrelude, FlexibleContexts, OverloadedStrings, TypeFamilies #-}
+{-# LANGUAGE TemplateHaskell, PatternGuards, NoImplicitPrelude, FlexibleContexts, OverloadedStrings, TypeFamilies, DeriveFunctor, DeriveFoldable, DeriveTraversable #-}
 -- | The search area (search term + results) of an open/active hole.
 
 module Lamdu.GUI.ExpressionEdit.HoleEdit.Open
@@ -363,16 +363,24 @@ addMResultPicker mSelectedResult =
 layoutResults ::
     Monad m =>
     Widget.R -> [ResultGroupWidgets m] -> HaveHiddenResults ->
-    ExprGuiM m (Widget (T m Widget.EventResult))
+    ExprGuiM m (OrderedResults (Widget (T m Widget.EventResult)))
 layoutResults minWidth groups hiddenResults
-    | null groups = makeNoResults <&> (^. Align.tValue) <&> Widget.fromView
+    | null groups = makeNoResults <&> (^. Align.tValue) <&> Widget.fromView <&> pure
     | otherwise =
         do
             hiddenResultsWidget <-
                 makeHiddenResultsMView hiddenResults
                 <&> maybe View.empty (^. Align.tValue)
-            View.vbox (groups <&> layoutGroup) /-/ hiddenResultsWidget
-                & EventMap.blockDownEvents & return
+                <&> Widget.fromView
+            OrderedResults
+                { resultsFromTop = EventMap.blockDownEvents
+                , resultsFromBottom = EventMap.blockUpEvents
+                } <*>
+                ( OrderedResults
+                    { resultsFromTop = View.vbox
+                    , resultsFromBottom = View.vbox . reverse
+                    } ?? ((groups <&> layoutGroup) ++ [hiddenResultsWidget])
+                ) & return
     where
         layoutGroup group =
             Align.hoverInPlaceOf
@@ -391,7 +399,10 @@ layoutResults minWidth groups hiddenResults
 makeResultsWidget ::
     Monad m =>
     Widget.R -> HoleInfo m -> [ResultsList m] -> HaveHiddenResults ->
-    ExprGuiM m (Maybe (ShownResult m), Widget (T m Widget.EventResult))
+    ExprGuiM m
+    ( Maybe (ShownResult m)
+    , OrderedResults (Widget (T m Widget.EventResult))
+    )
 makeResultsWidget minWidth holeInfo shownResultsLists hiddenResults =
     do
         theme <- Lens.view Theme.theme
@@ -402,7 +413,9 @@ makeResultsWidget minWidth holeInfo shownResultsLists hiddenResults =
         addMResultPicker mResult
         widget <-
             layoutResults minWidth groupsWidgets hiddenResults
-            <&> addBackground (Widget.toAnimId (hidResultsPrefix hids)) (Theme.hoverBGColor theme)
+            <&> Lens.mapped %~
+                addBackground (Widget.toAnimId (hidResultsPrefix hids))
+                (Theme.hoverBGColor theme)
         return (mResult, widget)
     where
         hids = hiIds holeInfo
@@ -429,14 +442,33 @@ assignHoleEditCursor holeInfo shownMainResultsIds allShownResultIds searchTermId
             | Text.null (HoleInfo.hiSearchTerm holeInfo) = searchTermId
             | otherwise = head (shownMainResultsIds ++ [searchTermId])
 
+data OrderedResults a = OrderedResults
+    { resultsFromTop :: a
+    , resultsFromBottom :: a
+    } deriving (Functor, Foldable, Traversable)
+
+instance Applicative OrderedResults where
+    pure = join OrderedResults
+    OrderedResults fa fb <*> OrderedResults xa xb =
+        OrderedResults (fa xa) (fb xb)
+
+-- In a wrapper hole, first we hover the search term.
+--
+-- If the search term was placed below, we mustn't place the results
+-- back above (it'd hide the wrapped expr). Ditto for above.
+--
+-- Ordinary holes have no such restriction (AnyPlace)
 data ResultsPlacement = Above | Below | AnyPlace
 
 resultsHoverOptions ::
     Functor f =>
     ResultsPlacement ->
-    (Widget (f EventResult) -> Widget (f EventResult)) -> (Widget (f EventResult) -> Widget (f EventResult)) ->
-    Widget (f EventResult) -> AnchoredWidget (f EventResult) -> [AnchoredWidget (f EventResult)]
-resultsHoverOptions pos addBg addAnnotation results searchTerm =
+    (Widget (f EventResult) -> Widget (f EventResult)) ->
+    (Widget (f EventResult) -> Widget (f EventResult)) ->
+    OrderedResults (Widget (f EventResult))  ->
+    AnchoredWidget (f EventResult) ->
+    [AnchoredWidget (f EventResult)]
+resultsHoverOptions pos addBg addBgAnnotation results searchTerm =
     case pos of
     Above -> [ above, aboveLeft ]
     AnyPlace ->
@@ -444,21 +476,30 @@ resultsHoverOptions pos addBg addAnnotation results searchTerm =
         , above
         , belowLeft
         , aboveLeft
-        , Aligned 0.5 annotatedTerm /|/ Aligned 0.5 bgResults ^. Align.value
+        , Aligned 0.5 annotatedTerm /|/ Aligned 0.5 (resultsFromTop bgResults)
+            ^. Align.value
         ]
     Below ->
         [ below
         , belowLeft
-        , Aligned 1 annotatedTerm /|/ Aligned 1 bgResults ^. Align.value
-        , Aligned 1 bgResults /|/ Aligned 1 annotatedTerm ^. Align.value
+        , Aligned 1 annotatedTerm /|/ Aligned 1 (resultsFromBottom bgResults)
+            ^. Align.value
+        , Aligned 1 (resultsFromBottom bgResults) /|/ Aligned 1 annotatedTerm
+            ^. Align.value
         ]
     where
-        above = bgResults /-/ annotatedTerm
-        aboveLeft = Aligned 1 bgResults /-/ Aligned 1 annotatedTerm ^. Align.value
-        below = searchTerm /-/ addAnnotation results
-        belowLeft = Aligned 1 searchTerm /-/ Aligned 1 (addAnnotation results) ^. Align.value
-        bgResults = addBg results
-        annotatedTerm = searchTerm & Widget.widget %~ addAnnotation
+        above = resultsFromBottom bgResults /-/ annotatedTerm
+        aboveLeft =
+            Aligned 1 (resultsFromBottom bgResults)
+            /-/ Aligned 1 annotatedTerm
+            ^. Align.value
+        below = searchTerm /-/ addBgAnnotation (resultsFromTop results)
+        belowLeft =
+            Aligned 1 searchTerm
+            /-/ Aligned 1 (addBgAnnotation (resultsFromTop results))
+            ^. Align.value
+        bgResults = results <&> addBg
+        annotatedTerm = searchTerm & Widget.widget %~ addBgAnnotation
 
 makeUnderCursorAssignment ::
     Monad m =>
@@ -473,13 +514,13 @@ makeUnderCursorAssignment shownResultsLists hasHiddenResults holeInfo =
             TypeView.make (hiInferredType holeInfo) (Widget.toAnimId (hidHole hids))
             <&> (^. Align.tValue)
 
-        (mShownResult, resultsWidget) <-
+        (mShownResult, rawResultsWidgets) <-
             makeResultsWidget (typeView ^. View.width) holeInfo shownResultsLists hasHiddenResults
 
         (searchTermEventMap, resultsEventMap) <-
             EventMap.makeOpenEventMaps holeInfo mShownResult
 
-        let widget = E.strongerEvents resultsEventMap resultsWidget
+        let resultsWidgets = rawResultsWidgets <&> E.strongerEvents resultsEventMap
         vspace <- ExpressionGui.annotationSpacer
         addBg <- addDarkBackground (Widget.toAnimId (hidResultsPrefix hids))
         resBg <-
@@ -493,7 +534,8 @@ makeUnderCursorAssignment shownResultsLists hasHiddenResults holeInfo =
             searchTermWidget
             & Align.tValue %~
                 Align.hoverInPlaceOf
-                (resultsHoverOptions placement resBg addAnnotation widget (searchTermWidget ^. Align.tValue))
+                (resultsHoverOptions placement resBg addAnnotation resultsWidgets
+                    (searchTermWidget ^. Align.tValue))
     where
         hids = hiIds holeInfo
 
