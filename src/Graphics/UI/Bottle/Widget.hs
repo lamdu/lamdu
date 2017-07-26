@@ -10,7 +10,6 @@ module Graphics.UI.Bottle.Widget
 
     -- Event Result:
     , EventResult(..), eCursor, eVirtualCursor, eAnimIdMapping
-    , VirtualCursorUpdate(..), _NewVirtualCursor, _ResetVirtualCursor
     , eventResultFromCursor
     , applyIdMapping
 
@@ -91,15 +90,9 @@ import           Lamdu.Prelude
 newtype VirtualCursor = VirtualCursor { _virtualCursor :: Rect }
 Lens.makeLenses ''VirtualCursor
 
-data VirtualCursorUpdate
-    = NewVirtualCursor VirtualCursor
-    | -- Set the virtual cursor to the new focal area
-      ResetVirtualCursor
-Lens.makePrisms ''VirtualCursorUpdate
-
 data EventResult = EventResult
     { _eCursor :: Monoid.Last Id
-    , _eVirtualCursor :: Monoid.Last VirtualCursorUpdate
+    , _eVirtualCursor :: Monoid.Last VirtualCursor
     , _eAnimIdMapping :: Monoid.Endo AnimId
     } deriving (Generic)
 instance Monoid EventResult where
@@ -188,7 +181,7 @@ instance Functor f => View.Resizable (Widget (f EventResult)) where
         & mEnter . Lens._Just . Lens.mapped . enterResultRect . Rect.topLeftAndSize *~ mult
         & mEnter . Lens._Just . Lens.argument . Direction.coordinates . Rect.topLeftAndSize //~ mult
         & Lens.mapped . Lens.mapped . eVirtualCursor . Lens.mapped .
-          _NewVirtualCursor . virtualCursor . Rect.topLeftAndSize *~ mult
+          virtualCursor . Rect.topLeftAndSize *~ mult
 
 instance View.HasSize (Widget a) where
     size f w =
@@ -264,7 +257,6 @@ setVirt :: Functor f => View.Orientation -> VirtualCursor -> EnterResult (f Even
 setVirt orientation virtCursor enterResult =
     enterResult
     & enterResultEvent . Lens.mapped . eVirtualCursor . Lens._Wrapped ?~
-    NewVirtualCursor
     ( enterResult ^. enterResultRect
         & Lens.cloneLens axis .~ virtCursor ^. virtualCursor . Lens.cloneLens axis
         & VirtualCursor
@@ -317,7 +309,7 @@ eventMapMaker = wState . _StateFocused . Lens.mapped . fEventMap
 eventResultFromCursor :: Id -> EventResult
 eventResultFromCursor c = EventResult
     { _eCursor = Just c & Monoid.Last
-    , _eVirtualCursor = Just ResetVirtualCursor & Monoid.Last
+    , _eVirtualCursor = mempty
     , _eAnimIdMapping = mempty
     }
 
@@ -426,7 +418,7 @@ translateGeneric f pos w =
 
 translateEventResult :: Vector2 R -> EventResult -> EventResult
 translateEventResult pos =
-    eVirtualCursor . Lens.mapped . _NewVirtualCursor . virtualCursor . Rect.topLeft +~ pos
+    eVirtualCursor . Lens.mapped . virtualCursor . Rect.topLeft +~ pos
 
 translateFocusedGeneric ::
     (a -> b) -> Vector2 R ->

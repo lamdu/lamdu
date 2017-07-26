@@ -116,7 +116,7 @@ instance Widget.HasCursor Env where cursor = eCursor
 
 data Cursor = Cursor
     { _cursorId :: !Widget.Id
-    , _cursorVirtual :: !Widget.VirtualCursorUpdate
+    , _cursorVirtual :: !(Maybe Widget.VirtualCursor)
     }
 Lens.makeLenses ''Cursor
 
@@ -137,9 +137,9 @@ lookupEvent getClipboard cursorRef mEnter mFocus event =
             virtCursorState <- readIORef cursorRef <&> (^. cursorVirtual)
             virtCursor <-
                 case virtCursorState of
-                Widget.NewVirtualCursor x -> return x
-                Widget.ResetVirtualCursor ->
-                    res <$ modifyIORef cursorRef (cursorVirtual .~ Widget.NewVirtualCursor res)
+                Just x -> return x
+                Nothing ->
+                    res <$ modifyIORef cursorRef (cursorVirtual ?~ res)
                     where
                         res = VirtualCursor focalArea
             E.lookup getClipboard event (mkEventMap virtCursor)
@@ -161,9 +161,7 @@ mainLoopWidget win mkWidgetUnmemod options =
         cursorRef <-
             newIORef Cursor
             { _cursorId = cursorStartPos options
-            , _cursorVirtual =
-                -- Will update when have a focal area
-                Widget.ResetVirtualCursor
+            , _cursorVirtual = Nothing -- Will update when have a focal area
             }
         let mkW =
                 memoIO $ \size ->
@@ -207,7 +205,8 @@ mainLoopWidget win mkWidgetUnmemod options =
                         Just res ->
                             do
                                 traverse_ (modifyIORef cursorRef . (cursorId .~)) (res ^. Widget.eCursor)
-                                traverse_ (modifyIORef cursorRef . (cursorVirtual .~)) (res ^. Widget.eVirtualCursor)
+                                cursorVirtual .~ res ^. Widget.eVirtualCursor . Lens._Wrapped
+                                    & modifyIORef cursorRef
                                 newWidget
                     return MainAnim.EventResult
                         { MainAnim.erAnimIdMapping = mRes <&> (^. Widget.eAnimIdMapping)

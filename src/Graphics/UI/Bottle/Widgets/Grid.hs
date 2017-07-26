@@ -73,7 +73,6 @@ mkNavDests widgetSize cursor@(Vector2 cursorX cursorY) virtCursor mEnterss =
         setVirt axis enterResult =
             enterResult
             & Widget.enterResultEvent . Lens.mapped . Widget.eVirtualCursor . Lens._Wrapped ?~
-            Widget.NewVirtualCursor
             ( enterResult ^. Widget.enterResultRect
                 & Lens.cloneLens axis .~ prevArea ^. Lens.cloneLens axis
                 & Widget.VirtualCursor
