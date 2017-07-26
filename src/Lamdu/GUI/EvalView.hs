@@ -17,6 +17,7 @@ import           Graphics.UI.Bottle.Align (Aligned(..), WithTextPos(..))
 import qualified Graphics.UI.Bottle.Align as Align
 import           Graphics.UI.Bottle.Animation (AnimId)
 import qualified Graphics.UI.Bottle.Animation as Anim
+import qualified Graphics.UI.Bottle.Animation.Id as AnimId
 import qualified Graphics.UI.Bottle.Rect as Rect
 import           Graphics.UI.Bottle.View (View(..), (/-/), (/|/))
 import qualified Graphics.UI.Bottle.View as View
@@ -38,7 +39,9 @@ import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 
 import           Lamdu.Prelude
 
-data RecordStatus = RecordComputed | RecordExtendsError EvalError
+data RecordStatus =
+    RecordComputed | RecordExtendsError EvalError
+    deriving (Eq, Ord, Show)
 
 extractFields :: V.RecExtend (Val a) -> ([(T.Tag, Val a)], RecordStatus)
 extractFields (V.RecExtend tag val (Val _ rest)) =
@@ -96,13 +99,45 @@ makeError err animId =
 arrayCutoff :: Int
 arrayCutoff = 10
 
+tableCutoff :: Int
+tableCutoff = 6
+
 makeArray :: Monad m => AnimId -> [Val Type] -> ExprGuiM m (WithTextPos View)
 makeArray animId items =
-    do
-        itemViews <- zipWith makeItem [0..arrayCutoff] items & sequence
-        opener <- label "[" animId
-        closer <- label "]" animId
-        opener : itemViews ++ [closer] & View.hbox & return
+    case sequence (items <&> (^? ER.body . ER._RRecExtend)) <&> Lens.mapped %~ extractFields of
+    Just pairs@(x:_:_) | all (== RecordComputed) (pairs ^.. traverse . _2) ->
+        do
+            header <- mapM makeHeader tags
+            rows <- pairs ^.. traverse . _1 & zip [0..tableCutoff-1] & mapM row
+            s <- Spacer.stdHSpace
+            let table =
+                    header : rows <&> traverse %~ (^. Align.tValue)
+                    <&> List.intersperse s
+                    <&> traverse %~ Aligned 0.5
+                    & GridView.make & Align.WithTextPos 0
+            remainView <-
+                if null (drop tableCutoff pairs)
+                then return View.empty
+                else label "..." animId
+            Aligned 0.5 table /-/ Aligned 0.5 remainView ^. Align.value & return
+        where
+            tags = x ^.. _1 . traverse . _1
+            makeHeader tag = makeTag (AnimId.augmentId animId tag) tag
+            row (rowI, tagVals)
+                | length tagVals /= length tags = error "makeArray: tags mismatch"
+                | otherwise =
+                    tags <&> (`lookup` tagVals) & sequence & fromMaybe (error "makeArray: tags mismatch")
+                    & zip [(0::Int)..]
+                    & mapM makeCell
+                where
+                    rowId = AnimId.augmentId animId rowI
+                    makeCell (colI, v) = makeInner (AnimId.augmentId rowId colI) v
+    _ ->
+        do
+            itemViews <- zipWith makeItem [0..arrayCutoff] items & sequence
+            opener <- label "[" animId
+            closer <- label "]" animId
+            opener : itemViews ++ [closer] & View.hbox & return
     where
         makeItem idx val =
             [ [ label ", " itemId | idx > 0 ]

@@ -2,7 +2,7 @@
 -- Those which are supported in the runtime are repeated in JS in rts.js.
 
 module Lamdu.Builtins.Anchors
-    ( bytesTid, floatTid, streamTid, textTid, treeTid
+    ( bytesTid, floatTid, streamTid, textTid, treeTid, arrayTid
     , headTag, tailTag, rootTag, subtreesTag
     , valTypeParamId
     ) where
@@ -27,6 +27,9 @@ floatTid = bi "float"
 
 streamTid :: T.NominalId
 streamTid = bi "stream"
+
+arrayTid :: T.NominalId
+arrayTid = bi "array"
 
 textTid :: T.NominalId
 textTid = bi "text"

@@ -25,7 +25,7 @@ newtype ScopeId = ScopeId Int
 data EvalError
     = EvalHole
     | EvalTypeError String
-    deriving Show
+    deriving (Show, Eq, Ord)
 
 topLevelScopeId :: ScopeId
 topLevelScopeId = ScopeId 0
