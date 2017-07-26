@@ -74,12 +74,8 @@ postProcessDef defI =
             Definition.BodyBuiltin {} -> return ConvertM.GoodExpr
             Definition.BodyExpr defExpr ->
                 do
-                    loaded <-
-                        Definition.expr
-                        (Load.readValAndAddProperties (error "postProcessDef root setIRef"))
-                        defExpr
-                    inferRes <- Load.inferDef (pure Results.empty) loaded (ExprIRef.globalId defI)
-                    case inferRes of
+                    loaded <- Definition.expr ExprIRef.readVal defExpr
+                    case Load.inferCheckDef loaded (ExprIRef.globalId defI) of
                         Left err -> ConvertM.BadExpr err & return
                         Right (inferredVal, inferContext) ->
                             do
@@ -92,7 +88,7 @@ postProcessDef defI =
                                     & Transaction.writeIRef defI
                                 return ConvertM.GoodExpr
                             where
-                                inferredType = inferredVal ^. Val.payload . Input.inferredType
+                                inferredType = inferredVal ^. Val.payload . _1 . Infer.plType
 
 postProcessExpr ::
     Monad m =>
