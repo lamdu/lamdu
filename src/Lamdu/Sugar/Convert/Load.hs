@@ -100,11 +100,12 @@ loadInferPrepareInput evalRes val =
         setUserData pl =
             pl & Input.userData %~ \() -> [pl ^. Input.entityId]
 
-readValAndAddProperties :: Monad m => ValI m -> T m (Val (ValIProperty m))
-readValAndAddProperties valI =
+readValAndAddProperties ::
+    Monad m => (ValI m -> T m ()) -> ValI m -> T m (Val (ValIProperty m))
+readValAndAddProperties setRoot valI =
     ExprIRef.readVal valI
     <&> fmap (flip (,) ())
-    <&> ExprIRef.addProperties (error "TODO: DefExpr root setIRef")
+    <&> ExprIRef.addProperties setRoot
     <&> fmap fst
 
 inferDef ::

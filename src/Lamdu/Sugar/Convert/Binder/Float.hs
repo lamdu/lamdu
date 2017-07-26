@@ -43,7 +43,10 @@ moveToGlobalScope ctx param defExpr =
     do
         scheme <-
             do
-                loaded <- Definition.expr Load.readValAndAddProperties defExpr
+                loaded <-
+                    Definition.expr
+                    (Load.readValAndAddProperties (error "moveToGlobalScope set root IRef"))
+                    defExpr
                 inferRes <- Load.inferDef (pure Results.empty) loaded param
                 case inferRes of
                     Left _err -> error "extract to global scope failed inference"

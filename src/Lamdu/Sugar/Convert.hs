@@ -74,7 +74,10 @@ postProcessDef defI =
             Definition.BodyBuiltin {} -> return ConvertM.GoodExpr
             Definition.BodyExpr defExpr ->
                 do
-                    loaded <- Definition.expr Load.readValAndAddProperties defExpr
+                    loaded <-
+                        Definition.expr
+                        (Load.readValAndAddProperties (error "postProcessDef root setIRef"))
+                        defExpr
                     inferRes <- Load.inferDef (pure Results.empty) loaded (ExprIRef.globalId defI)
                     case inferRes of
                         Left err -> ConvertM.BadExpr err & return
@@ -100,7 +103,10 @@ postProcessExpr mkProp =
         prop <- mkProp ^. Transaction.mkProperty
         -- TODO: This is code duplication with the above Load.inferDef
         -- & functions inside Load itself
-        defExpr <- Definition.expr Load.readValAndAddProperties (prop ^. Property.pVal)
+        defExpr <-
+            Definition.expr
+            (Load.readValAndAddProperties (error "postProcessExpr root setIRef"))
+            (prop ^. Property.pVal)
         inferred <-
             Load.inferDefExpr Infer.emptyScope defExpr
             & InferT.liftInfer
