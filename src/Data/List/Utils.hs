@@ -10,7 +10,7 @@ module Data.List.Utils
 
 import qualified Control.Lens as Lens
 import           Data.Function (on)
-import           Data.List (groupBy, minimumBy, maximumBy)
+import           Data.List (groupBy, minimumBy)
 import           Data.Ord (comparing)
 
 rightPad :: Int -> a -> [a] -> [a]
