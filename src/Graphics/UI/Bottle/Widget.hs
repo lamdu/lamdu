@@ -80,7 +80,7 @@ import           Graphics.UI.Bottle.View (View(..))
 import qualified Graphics.UI.Bottle.View as View
 import           Graphics.UI.Bottle.Widget.Id (Id(..))
 import qualified Graphics.UI.Bottle.Widget.Id as Id
-import           Graphics.UI.Bottle.Widgets.StdKeys as StdKeys
+import           Graphics.UI.Bottle.Widgets.StdKeys (DirKeys(..), stdDirKeys)
 import qualified Graphics.UI.GLFW as GLFW
 
 import           Lamdu.Prelude
@@ -208,6 +208,11 @@ instance Functor f => View.Glue (Widget (f EventResult)) (Widget (f EventResult)
     type Glued (Widget (f EventResult)) (Widget (f EventResult)) = Widget (f EventResult)
     glue orientation = View.glueH (glueStates orientation) orientation
 
+data NavDir = NavDir
+    { dirName :: Text
+    , dirKeys :: [GLFW.Key]
+    }
+
 glueStates ::
     Functor f =>
     View.Orientation -> Widget (f EventResult) -> Widget (f EventResult) -> Widget (f EventResult)
@@ -218,23 +223,23 @@ glueStates orientation w0 w1 =
         (dirPrev, dirNext) =
             case orientation of
             View.Horizontal ->
-                ( ("left", StdKeys.keysLeft StdKeys.stdDirKeys)
-                , ("right", StdKeys.keysRight StdKeys.stdDirKeys)
+                ( NavDir "left" (keysLeft stdDirKeys)
+                , NavDir "right" (keysRight stdDirKeys)
                 )
             View.Vertical ->
-                ( ("up", StdKeys.keysUp StdKeys.stdDirKeys)
-                , ("down", StdKeys.keysDown StdKeys.stdDirKeys)
+                ( NavDir "up" (keysUp stdDirKeys)
+                , NavDir "down" (keysDown stdDirKeys)
                 )
 
 combineStates ::
     Functor f =>
-    View.Orientation -> (Text, [GLFW.Key]) -> (Text, [GLFW.Key]) -> Size ->
+    View.Orientation -> NavDir -> NavDir -> Size ->
     State (f EventResult) -> State (f EventResult) -> State (f EventResult)
 combineStates _ _ _ _ StateFocused{} StateFocused{} = error "joining two focused widgets!!"
 combineStates o _ _ sz (StateUnfocused u0) (StateUnfocused u1) =
     Unfocused (combineMEnters o sz (u0 ^. uMEnter) (u1 ^. uMEnter)) (u0 ^. uLayers <> u1 ^. uLayers)
     & StateUnfocused
-combineStates orientation _ (nameNext, keysNext) sz (StateFocused f) (StateUnfocused u) =
+combineStates orientation _ nextDir sz (StateFocused f) (StateUnfocused u) =
     f
     <&> fMEnter %~ combineMEnters orientation sz (u ^. uMEnter)
     <&> fEventMap . Lens.imapped %@~ addEvents
@@ -248,7 +253,7 @@ combineStates orientation _ (nameNext, keysNext) sz (StateFocused f) (StateUnfoc
                 setVirt orientation virtCursor
                 (enter (Direction.PrevFocalArea (virtCursor ^. virtualCursor)))
                 ^. enterResultEvent
-                & EventMap.keyPresses (keysNext <&> ModKey mempty) (EventMap.Doc ["Navigation", "Move", nameNext])
+                & EventMap.keyPresses (dirKeys nextDir <&> ModKey mempty) (EventMap.Doc ["Navigation", "Move", dirName nextDir])
             & EventMap.weakerEvents
 combineStates orientation dirPrev dirNext sz (StateUnfocused u) (StateFocused f) =
     combineStates orientation dirNext dirPrev sz (StateFocused f) (StateUnfocused u)
