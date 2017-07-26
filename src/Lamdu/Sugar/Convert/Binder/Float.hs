@@ -166,25 +166,32 @@ sameLet redex =
     , nlMVarToTags = Nothing
     }
 
+ordNub :: Ord a => [a] -> [a]
+ordNub = Set.toList . Set.fromList
+
 processLet ::
     Monad m => Maybe (ConvertM.OuterScopeInfo f) -> Redex (Input.Payload m a) -> T m (NewLet m)
 processLet mOuterScopeInfo redex =
-    case varsToRemove of
+    case varsExitingScope of
     [] -> sameLet (redex <&> (^. Input.stored)) & return
     [x] -> addLetParam x redex
     _ -> error "multiple osiVarsUnderPos not expected!?"
     where
-        usedVars =
+        innerScope =
+            redex ^. Redex.arg . Val.payload . Input.inferred . Infer.plScope
+            & Infer.scopeToTypeMap
+        usedLocalVars =
             redex ^.. Redex.arg . ExprLens.valLeafs . V._LVar
-            & Set.fromList
-        varsToRemove =
-            Set.toList usedVars
-            & filter (`Map.member` Infer.scopeToTypeMap (redex ^. Redex.arg . Val.payload . Input.inferred . Infer.plScope))
-            &
+            & ordNub
+            & filter (`Map.member` innerScope)
+        varsExitingScope =
             case mOuterScopeInfo of
-            Nothing -> id
+            Nothing -> usedLocalVars
             Just outerScopeInfo ->
-                filter (`Map.notMember` Infer.scopeToTypeMap (outerScopeInfo ^. ConvertM.osiScope))
+                filter (`Map.notMember` outerScope) usedLocalVars
+                where
+                    outerScope =
+                        outerScopeInfo ^. ConvertM.osiScope & Infer.scopeToTypeMap
 
 floatLetToOuterScope ::
     Monad m =>
