@@ -394,13 +394,18 @@ makeResultsWidget ::
     ExprGuiM m (Maybe (ShownResult m), Widget (T m Widget.EventResult))
 makeResultsWidget minWidth holeInfo shownResultsLists hiddenResults =
     do
+        theme <- Lens.view Theme.theme
         groupsWidgets <- traverse (makeResultGroup holeInfo) shownResultsLists
         let mSelectedResult = groupsWidgets ^? Lens.traversed . rgwMSelectedResult . Lens._Just
         let mFirstResult = groupsWidgets ^? Lens.traversed . rgwMainResult
         let mResult = mSelectedResult <|> mFirstResult
         addMResultPicker mResult
-        widget <- layoutResults minWidth groupsWidgets hiddenResults
+        widget <-
+            layoutResults minWidth groupsWidgets hiddenResults
+            <&> addBackground (Widget.toAnimId (hidResultsPrefix hids)) (Theme.hoverBGColor theme)
         return (mResult, widget)
+    where
+        hids = hiIds holeInfo
 
 assignHoleEditCursor ::
     Monad m =>
@@ -461,8 +466,6 @@ makeUnderCursorAssignment ::
     ExprGuiM m (ResultsPlacement -> WithTextPos (Widget (T m Widget.EventResult)))
 makeUnderCursorAssignment shownResultsLists hasHiddenResults holeInfo =
     do
-        theme <- Lens.view Theme.theme
-
         -- We make our own type view here instead of
         -- ExpressionGui.stdWrap, because we want to synchronize the
         -- active BG width with the inferred type width
@@ -476,11 +479,7 @@ makeUnderCursorAssignment shownResultsLists hasHiddenResults holeInfo =
         (searchTermEventMap, resultsEventMap) <-
             EventMap.makeOpenEventMaps holeInfo mShownResult
 
-        let widget =
-                resultsWidget
-                & addBackground (Widget.toAnimId (hidResultsPrefix hids))
-                    (Theme.hoverBGColor theme)
-                & E.strongerEvents resultsEventMap
+        let widget = E.strongerEvents resultsEventMap resultsWidget
         vspace <- ExpressionGui.annotationSpacer
         addBg <- addDarkBackground (Widget.toAnimId (hidResultsPrefix hids))
         resBg <-
