@@ -76,7 +76,7 @@ import           Graphics.UI.Bottle.MetaKey (MetaKey, toModKey)
 import           Graphics.UI.Bottle.ModKey (ModKey(..))
 import           Graphics.UI.Bottle.Rect (Rect(..))
 import qualified Graphics.UI.Bottle.Rect as Rect
-import           Graphics.UI.Bottle.View (View(..))
+import           Graphics.UI.Bottle.View (View(..), Orientation(..))
 import qualified Graphics.UI.Bottle.View as View
 import           Graphics.UI.Bottle.Widget.Id (Id(..))
 import qualified Graphics.UI.Bottle.Widget.Id as Id
@@ -209,31 +209,32 @@ instance Functor f => View.Glue (Widget (f EventResult)) (Widget (f EventResult)
     glue orientation = View.glueH (glueStates orientation) orientation
 
 data NavDir = NavDir
-    { dirName :: Text
+    { dirCons :: Rect.Range R -> Direction
+    , dirName :: Text
     , dirKeys :: [GLFW.Key]
     }
 
 glueStates ::
     Functor f =>
-    View.Orientation -> Widget (f EventResult) -> Widget (f EventResult) -> Widget (f EventResult)
+    Orientation -> Widget (f EventResult) -> Widget (f EventResult) -> Widget (f EventResult)
 glueStates orientation w0 w1 =
     w0
     & wState .~ combineStates orientation dirPrev dirNext (w0 ^. wSize) (w0 ^. wState) (w1 ^. wState)
     where
         (dirPrev, dirNext) =
             case orientation of
-            View.Horizontal ->
-                ( NavDir "left" (keysLeft stdDirKeys)
-                , NavDir "right" (keysRight stdDirKeys)
+            Horizontal ->
+                ( NavDir Direction.FromRight "left"  (keysLeft stdDirKeys )
+                , NavDir Direction.FromLeft  "right" (keysRight stdDirKeys)
                 )
-            View.Vertical ->
-                ( NavDir "up" (keysUp stdDirKeys)
-                , NavDir "down" (keysDown stdDirKeys)
+            Vertical ->
+                ( NavDir Direction.FromBelow "up"    (keysUp stdDirKeys   )
+                , NavDir Direction.FromAbove "down"  (keysDown stdDirKeys )
                 )
 
 combineStates ::
     Functor f =>
-    View.Orientation -> NavDir -> NavDir -> Size ->
+    Orientation -> NavDir -> NavDir -> Size ->
     State (f EventResult) -> State (f EventResult) -> State (f EventResult)
 combineStates _ _ _ _ StateFocused{} StateFocused{} = error "joining two focused widgets!!"
 combineStates o _ _ sz (StateUnfocused u0) (StateUnfocused u1) =
@@ -246,34 +247,23 @@ combineStates orientation _ nextDir sz (StateFocused f) (StateUnfocused u) =
     <&> fLayers <>~ u ^. uLayers
     & StateFocused
     where
+        chooseRange =
+            case orientation of
+            Horizontal -> Rect.verticalRange
+            Vertical   -> Rect.horizontalRange
         addEvents virtCursor =
             case u ^. uMEnter of
             Nothing -> mempty
             Just enter ->
-                setVirt orientation virtCursor
-                (enter (Direction.PrevFocalArea (virtCursor ^. virtualCursor)))
+                enter (dirCons nextDir (virtCursor ^. virtualCursor . chooseRange))
                 ^. enterResultEvent
                 & EventMap.keyPresses (dirKeys nextDir <&> ModKey mempty) (EventMap.Doc ["Navigation", "Move", dirName nextDir])
             & EventMap.weakerEvents
 combineStates orientation dirPrev dirNext sz (StateUnfocused u) (StateFocused f) =
     combineStates orientation dirNext dirPrev sz (StateFocused f) (StateUnfocused u)
 
-setVirt :: Functor f => View.Orientation -> VirtualCursor -> EnterResult (f EventResult) -> EnterResult (f EventResult)
-setVirt orientation virtCursor enterResult =
-    enterResult
-    & enterResultEvent . Lens.mapped . eVirtualCursor . Lens._Wrapped ?~
-    ( enterResult ^. enterResultRect
-        & Lens.cloneLens axis .~ virtCursor ^. virtualCursor . Lens.cloneLens axis
-        & VirtualCursor
-    )
-    where
-        axis =
-            case orientation of
-            View.Horizontal -> Rect.verticalRange
-            View.Vertical -> Rect.horizontalRange
-
 combineMEnters ::
-    View.Orientation -> Size ->
+    Orientation -> Size ->
     Maybe (Direction -> EnterResult a) ->
     Maybe (Direction -> EnterResult a) ->
     Maybe (Direction -> EnterResult a)
@@ -282,28 +272,42 @@ combineMEnters _ _ (Just x) Nothing = Just x
 combineMEnters o sz (Just x) (Just y) = Just (combineEnters o sz x y)
 
 combineEnters ::
-    View.Orientation -> Size ->
+    Orientation -> Size ->
     (Direction -> EnterResult a) -> (Direction -> EnterResult a) ->
     Direction -> EnterResult a
 combineEnters o sz e0 e1 dir = chooseEnter o sz dir (e0 dir) (e1 dir)
 
-chooseEnter :: View.Orientation -> Size -> Direction -> EnterResult a -> EnterResult a -> EnterResult a
-chooseEnter orientation sz dir r0 r1
-    -- coming in from the left/up, always choose the left/up one:
-    | rect ^. Rect.bottomRight . l < 0 = r0
-    -- coming in from the right/bottom, always choose the right/bottom one:
-    | rect ^. Rect.topLeft . l > sz ^. l = r1
-    | Rect.distance rect (r0 ^. enterResultRect) <
-      Rect.distance rect (r1 ^. enterResultRect) = r0
+closer :: Rect -> EnterResult a -> EnterResult a -> EnterResult a
+closer r r0 r1
+    | Rect.distance r (r0 ^. enterResultRect) <=
+      Rect.distance r (r1 ^. enterResultRect) = r0
     | otherwise = r1
+
+chooseEnter :: Orientation -> Size -> Direction -> EnterResult a -> EnterResult a -> EnterResult a
+chooseEnter _          _ Direction.Outside   r0 _  = r0 -- left-biased
+chooseEnter _          _ (Direction.Point p) r0 r1 = closer (Rect p 0) r0 r1
+chooseEnter Horizontal _ Direction.FromLeft{}  r0 _  = r0
+chooseEnter Vertical   _ Direction.FromAbove{} r0 _  = r0
+chooseEnter Horizontal _ Direction.FromRight{} _  r1 = r1
+chooseEnter Vertical   _ Direction.FromBelow{} _  r1 = r1
+chooseEnter Horizontal _ (Direction.FromAbove r) r0 r1 =
+    closer topBarrier r0 r1
     where
-        l :: Lens' (Vector2 a) a
-        l = View.axis orientation
-        rect =
-            case dir of
-            Direction.Outside -> Rect 0 0
-            Direction.Point x -> Rect x 0
-            Direction.PrevFocalArea x -> x
+        topBarrier = Rect 0 0 & Rect.horizontalRange .~ r
+chooseEnter Horizontal sz (Direction.FromBelow r) r0 r1 =
+    closer bottomBarrier r0 r1
+    where
+        bottomBarrier =
+            Rect 0 0 & Rect.top .~ sz ^. _2 & Rect.horizontalRange .~ r
+chooseEnter Vertical _ (Direction.FromLeft r) r0 r1 =
+    closer leftBarrier r0 r1
+    where
+        leftBarrier = Rect 0 0 & Rect.verticalRange .~ r
+chooseEnter Vertical sz (Direction.FromRight r) r0 r1 =
+    closer rightBarrier r0 r1
+    where
+        rightBarrier =
+            Rect 0 0 & Rect.left .~ sz ^. _1 & Rect.verticalRange .~ r
 
 isFocused :: Widget a -> Bool
 isFocused = Lens.has (wState . _StateFocused)
@@ -370,12 +374,24 @@ takesFocus ::
 takesFocus enterFunc =
     widget %~
     \w ->
-    w & mEnter .~
-    Just (
-        enterFunc
-        <&> Lens.mapped %~ eventResultFromCursor
-        <&> EnterResult (Rect 0 (w ^. View.size)) 0
-        )
+        let rect = Rect 0 (w ^. View.size)
+        in  w & mEnter ?~
+            ( enterFunc
+                <&> Lens.mapped %~ eventResultFromCursor
+                & Lens.imapped <.
+                    (Lens.mapped . eVirtualCursor . Lens._Wrapped)
+                    .@~ fmap VirtualCursor . mkVirtCursor rect
+                <&> EnterResult rect 0
+            )
+    where
+        mkVirtCursor rect dir =
+            case dir of
+            Direction.FromRight r -> rect & Rect.horizontalRange .~ r & Just
+            Direction.FromLeft  r -> rect & Rect.horizontalRange .~ r & Just
+            Direction.FromAbove r -> rect & Rect.verticalRange   .~ r & Just
+            Direction.FromBelow r -> rect & Rect.verticalRange   .~ r & Just
+            Direction.Outside     -> Nothing
+            Direction.Point p     -> Rect p 0 & Just
 
 applyIdMapping :: Map Id Id -> EventResult -> EventResult
 applyIdMapping widgetIdMap eventResult =

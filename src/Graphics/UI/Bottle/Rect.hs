@@ -1,6 +1,7 @@
-{-# LANGUAGE NoImplicitPrelude, DeriveGeneric, TemplateHaskell #-}
+{-# LANGUAGE NoImplicitPrelude, DeriveGeneric, TemplateHaskell, DeriveFunctor, DeriveFoldable, DeriveTraversable #-}
 module Graphics.UI.Bottle.Rect
     ( R, Rect(..), topLeft, size
+    , Range(..), rangeStart, rangeSize
     , topLeftAndSize, verticalRange, horizontalRange
     , left, top, right, bottom
     , width, height
@@ -32,15 +33,23 @@ instance NFData Rect where rnf = genericRnf
 topLeftAndSize :: Traversal' Rect (Vector2 R)
 topLeftAndSize f (Rect tl s) = Rect <$> f tl <*> f s
 
+data Range a = Range
+    { _rangeStart :: a
+    , _rangeSize :: a
+    } deriving (Functor, Foldable, Traversable)
+
+Lens.makeLenses ''Range
+
+
 {-# INLINE verticalRange #-}
-verticalRange :: Lens' Rect (R, R)
+verticalRange :: Lens' Rect (Range R)
 verticalRange f (Rect (Vector2 l t) (Vector2 w h)) =
-    f (t, h) <&> \(t', h') -> Rect (Vector2 l t') (Vector2 w h')
+    f (Range t h) <&> \(Range t' h') -> Rect (Vector2 l t') (Vector2 w h')
 
 {-# INLINE horizontalRange #-}
-horizontalRange :: Lens' Rect (R, R)
+horizontalRange :: Lens' Rect (Range R)
 horizontalRange f (Rect (Vector2 l t) (Vector2 w h)) =
-    f (l, w) <&> \(l', w') -> Rect (Vector2 l' t) (Vector2 w' h)
+    f (Range l w) <&> \(Range l' w') -> Rect (Vector2 l' t) (Vector2 w' h)
 
 {-# INLINE bottomRight #-}
 bottomRight :: Lens' Rect (Vector2 R)

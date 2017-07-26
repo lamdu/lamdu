@@ -14,8 +14,7 @@ import           Data.MRUMemo (memo)
 import           Data.Vector.Vector2 (Vector2(..))
 import qualified Data.Vector.Vector2 as Vector2
 import           Graphics.UI.Bottle.Align (Aligned(..))
-import           Graphics.UI.Bottle.Direction (Direction)
-import qualified Graphics.UI.Bottle.Direction as Direction
+import           Graphics.UI.Bottle.Direction (Direction(..))
 import qualified Graphics.UI.Bottle.EventMap as EventMap
 import           Graphics.UI.Bottle.MetaKey (MetaKey(..), noMods)
 import qualified Graphics.UI.Bottle.MetaKey as MetaKey
@@ -52,22 +51,24 @@ data NavDests a = NavDests
 
 mkNavDests ::
     Functor f =>
-    Widget.Size -> Cursor -> Widget.VirtualCursor ->
+    Cursor -> Widget.VirtualCursor ->
     [[Maybe (Direction -> Widget.EnterResult (f Widget.EventResult))]] ->
     NavDests (f Widget.EventResult)
-mkNavDests widgetSize cursor@(Vector2 cursorX cursorY) virtCursor mEnterss =
+mkNavDests cursor@(Vector2 cursorX cursorY) virtCursor mEnterss =
     NavDests
-    { leftOfCursor    = take cursorX curRow    & reverse & enterFromPrevArea <&> setHVirt
-    , aboveCursor     = take cursorY curColumn & reverse & enterFromPrevArea <&> setVVirt
-    , rightOfCursor   = drop (cursorX+1) curRow          & enterFromPrevArea <&> setHVirt
-    , belowCursor     = drop (cursorY+1) curColumn       & enterFromPrevArea <&> setVVirt
+    { leftOfCursor    = take cursorX curRow    & reverse & enterHoriz FromRight
+    , aboveCursor     = take cursorY curColumn & reverse & enterVert  FromBelow
+    , rightOfCursor   = drop (cursorX+1) curRow          & enterHoriz FromLeft
+    , belowCursor     = drop (cursorY+1) curColumn       & enterVert  FromAbove
 
-    , topCursor       = take (min 1 cursorY) curColumn                & enterFromEdge (Vector2 Nothing (Just 0)) <&> setVVirt
-    , leftMostCursor  = take (min 1 cursorX) curRow                   & enterFromEdge (Vector2 (Just 0) Nothing) <&> setHVirt
-    , bottomCursor    = drop (cursorY+1) curColumn & reverse & take 1 & enterFromEdge (Vector2 Nothing (Just 1)) <&> setVVirt
-    , rightMostCursor = drop (cursorX+1) curRow    & reverse & take 1 & enterFromEdge (Vector2 (Just 1) Nothing) <&> setHVirt
+    , topCursor       = take (min 1 cursorY) curColumn                & enterVert  FromAbove
+    , leftMostCursor  = take (min 1 cursorX) curRow                   & enterHoriz FromLeft
+    , bottomCursor    = drop (cursorY+1) curColumn & reverse & take 1 & enterVert  FromBelow
+    , rightMostCursor = drop (cursorX+1) curRow    & reverse & take 1 & enterHoriz FromRight
     }
     where
+        enterHoriz cons x = enterFrom (cons (prevArea ^. Rect.verticalRange  )) x <&> setHVirt
+        enterVert  cons x = enterFrom (cons (prevArea ^. Rect.horizontalRange)) x <&> setVVirt
         setHVirt = setVirt Rect.verticalRange
         setVVirt = setVirt Rect.horizontalRange
         setVirt axis enterResult =
@@ -81,18 +82,8 @@ mkNavDests widgetSize cursor@(Vector2 cursorX cursorY) virtCursor mEnterss =
         curColumn = fromMaybe [] $ transpose mEnterss ^? Lens.ix cappedX
         Vector2 cappedX cappedY = capCursor size cursor
         size = length2d mEnterss
-
         prevArea = virtCursor ^. Widget.virtualCursor
-        enterFrom rect mEnters = mEnters & msum ?? Direction.PrevFocalArea rect
-        enterFromPrevArea = enterFrom prevArea
-        enterFromEdge edge = enterFrom Rect
-            { Rect._topLeft =
-                    liftA2 fromMaybe (Rect._topLeft prevArea) $
-                    liftA2 (fmap . (*)) widgetSize edge
-            , Rect._size =
-                    liftA2 fromMaybe (Rect._size prevArea) $
-                    (fmap . fmap) (const 0) edge
-            }
+        enterFrom dir mEnters = mEnters & msum ?? dir
 
 data Keys key = Keys
     { keysDir :: DirKeys key
@@ -181,7 +172,7 @@ toWidgetWithKeys keys size sChildren =
         Nothing ->
             Widget.StateUnfocused Widget.Unfocused
             { _uLayers = unfocusedLayers
-            , _uMEnter = combineMEnters size unfocusedMEnters
+            , _uMEnter = combineMEnters unfocusedMEnters
             }
         Just (cursor, makeFocusedChild) ->
             Widget.StateFocused $
@@ -190,14 +181,12 @@ toWidgetWithKeys keys size sChildren =
                 mEnters =
                     unfocusedMEnters
                     & Lens.ix (cursor ^. _2) . Lens.ix (cursor ^. _1) .~ focusedChild ^. Widget.fMEnter
-                addNavDests virtCursor =
-                    mkNavDests size cursor virtCursor mEnters
-                    & addNavEventmap keys
+                addNavDests virtCursor = mkNavDests cursor virtCursor mEnters & addNavEventmap keys
             in
             Widget.Focused
             { Widget._fLayers = focusedChild ^. Widget.fLayers <> unfocusedLayers
             , Widget._fFocalAreas = focusedChild ^. Widget.fFocalAreas
-            , Widget._fMEnter = combineMEnters size mEnters
+            , Widget._fMEnter = combineMEnters mEnters
             , Widget._fEventMap = focusedChild ^. Widget.fEventMap & Lens.imapped %@~ addNavDests
             }
     }
@@ -218,10 +207,9 @@ groupSortOn :: Ord b => (a -> b) -> [a] -> [[a]]
 groupSortOn f = groupOn f . sortOn f
 
 combineMEnters ::
-    Widget.Size ->
     [[Maybe (Direction -> Widget.EnterResult a)]] ->
     Maybe (Direction -> Widget.EnterResult a)
-combineMEnters size children =
+combineMEnters children =
     chooseClosest childEnters
     where
         childEnters = children ^@.. each2d . Lens._Just
@@ -239,22 +227,28 @@ combineMEnters size children =
                         dist =
                             enter ^. Widget.enterResultRect
                             & Rect.distance dirRect
-                            & modifyDistance
+                            & removeUninterestingAxis
                             & abs
                             & Vector2.uncurry (+)
                 removeUninterestingAxis :: Vector2 R -> Vector2 R
                 removeUninterestingAxis = ((1 - abs (fromIntegral <$> edge)) *)
-                (modifyDistance, dirRect) =
+                dirRect =
+                    Rect 0 0 &
                     case dir of
-                    Direction.Outside -> (id, Rect 0 0)
-                    Direction.PrevFocalArea x -> (removeUninterestingAxis, x)
-                    Direction.Point x -> (id, Rect x 0)
+                    Outside -> id
+                    Point x -> Rect.topLeft .~ x
+                    FromAbove x -> Rect.horizontalRange .~ x
+                    FromBelow x -> Rect.horizontalRange .~ x
+                    FromLeft  x -> Rect.verticalRange .~ x
+                    FromRight x -> Rect.verticalRange .~ x
                 edge =
                     case dir of
-                    Direction.Point{} ->
-                        -- Check all widgets for mouse movements (for hovers)
-                        Vector2 0 0
-                    _ -> asEdge size dirRect
+                    Point{} -> Vector2 0 0 -- Check all widgets for mouse movements (for hovers)
+                    Outside -> Vector2 0 0
+                    FromAbove{} -> Vector2 0 (-1)
+                    FromBelow{} -> Vector2 0 1
+                    FromLeft{}  -> Vector2 (-1) 0
+                    FromRight{} -> Vector2 1 0
 
         filteredByEdge =
             memo $ \(Vector2 hEdge vEdge) ->
@@ -265,16 +259,3 @@ combineMEnters size children =
 
 safeHead :: Monoid a => [a] -> a
 safeHead = mconcat . take 1
-
-asEdge :: Vector2 R -> Rect -> Vector2 Int
-asEdge size rect =
-    Vector2 hEdge vEdge
-    where
-        hEdge = boolToInt rightEdge - boolToInt leftEdge
-        vEdge = boolToInt bottomEdge - boolToInt topEdge
-        boolToInt False = 0
-        boolToInt True = 1
-        Vector2 leftEdge topEdge =
-            (<= 0) <$> (rect ^. Rect.bottomRight)
-        Vector2 rightEdge bottomEdge =
-            liftA2 (>=) (rect ^. Rect.topLeft) size

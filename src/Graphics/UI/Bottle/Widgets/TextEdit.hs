@@ -101,11 +101,12 @@ makeInternal ::
     Style -> Text -> Text -> Widget.Id ->
     WithTextPos (Widget (Text, Widget.EventResult))
 makeInternal s str displayStr myId =
-    TextView.make (s ^. sTextViewStyle) displayStr animId
-    & View.pad (Vector2 (s ^. sCursorWidth / 2) 0)
+    v
     & Align.tValue %~ Widget.fromView
-    & Align.tValue %~ Widget.mEnter ?~ enterFromDirection s str myId
+    & Align.tValue %~ Widget.mEnter ?~ enterFromDirection (v ^. View.size) s str myId
     where
+        v = TextView.make (s ^. sTextViewStyle) displayStr animId
+            & View.pad (Vector2 (s ^. sCursorWidth / 2) 0)
         animId = Widget.toAnimId myId
 
 makeUnfocused :: EmptyStrings -> Style -> Text -> Widget.Id -> WithTextPos (Widget (Text, Widget.EventResult))
@@ -124,9 +125,9 @@ cursorNearRect s str fromRect =
     & minimumIndex -- cursorRects(TextView.letterRects) should never return an empty list
 
 enterFromDirection ::
-    Style -> Text -> Widget.Id ->
+    Widget.Size -> Style -> Text -> Widget.Id ->
     Direction.Direction -> Widget.EnterResult (Text, Widget.EventResult)
-enterFromDirection s str myId dir =
+enterFromDirection sz sty str myId dir =
     Widget.EnterResult cursorRect 0 .
     (,) str . Widget.eventResultFromCursor $
     encodeCursor myId cursor
@@ -134,9 +135,14 @@ enterFromDirection s str myId dir =
         cursor =
             case dir of
             Direction.Outside -> Text.length str
-            Direction.PrevFocalArea rect -> cursorNearRect (s ^. sTextViewStyle) str rect
-            Direction.Point x -> cursorNearRect (s ^. sTextViewStyle) str $ Rect x 0
-        cursorRect = mkCursorRect s cursor str
+            Direction.Point x -> Rect x 0 & fromRect
+            Direction.FromLeft  r -> Rect 0 0    & Rect.verticalRange   .~ r & fromRect
+            Direction.FromRight r -> edgeRect _1 & Rect.verticalRange   .~ r & fromRect
+            Direction.FromAbove r -> Rect 0 0    & Rect.horizontalRange .~ r & fromRect
+            Direction.FromBelow r -> edgeRect _2 & Rect.horizontalRange .~ r & fromRect
+        edgeRect l = Rect (0 & Lens.cloneLens l .~ sz ^. Lens.cloneLens l) 0
+        cursorRect = mkCursorRect sty cursor str
+        fromRect = cursorNearRect (sty ^. sTextViewStyle) str
 
 eventResult :: Widget.Id -> Text -> Cursor -> (Text, Widget.EventResult)
 eventResult myId newText newCursor =
