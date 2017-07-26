@@ -10,6 +10,7 @@ import qualified Data.Set as Set
 import qualified Data.Store.Property as Property
 import           Data.Store.Transaction (Transaction)
 import qualified Lamdu.Calc.Type as T
+import qualified Lamdu.Calc.Type.Vars as TV
 import qualified Lamdu.Calc.Val as V
 import           Lamdu.Calc.Val.Annotated (Val(..))
 import qualified Lamdu.Calc.Val.Annotated as Val
@@ -175,22 +176,30 @@ processLet mOuterScopeInfo redex =
     [] -> sameLet (redex <&> (^. Input.stored)) & return
     [x] -> addLetParam x redex
     _ -> error "multiple osiVarsUnderPos not expected!?"
+    <* maybeWrapHole
     where
+        maybeWrapHole
+            | TV.null skolemsExitingScope = return ()
+            | otherwise =
+                Load.readValAndAddProperties (redex ^. Redex.lam . V.lamResult . Val.payload . Input.stored)
+                >>= SubExprs.onGetVars (void . DataOps.wrap) (redex ^. Redex.lam . V.lamParamId)
         innerScope =
             redex ^. Redex.arg . Val.payload . Input.inferred . Infer.plScope
-            & Infer.scopeToTypeMap
         usedLocalVars =
             redex ^.. Redex.arg . ExprLens.valLeafs . V._LVar
             & ordNub
-            & filter (`Map.member` innerScope)
-        varsExitingScope =
+            & filter (`Map.member` Infer.scopeToTypeMap innerScope)
+        innerSkolems = Infer.skolems innerScope ^. Infer.skolemScopeVars
+        (varsExitingScope, skolemsExitingScope) =
             case mOuterScopeInfo of
-            Nothing -> usedLocalVars
+            Nothing -> (usedLocalVars, mempty)
             Just outerScopeInfo ->
-                filter (`Map.notMember` outerScope) usedLocalVars
+                ( filter (`Map.notMember` Infer.scopeToTypeMap outerScope) usedLocalVars
+                , innerSkolems `TV.difference` outerSkolems
+                )
                 where
-                    outerScope =
-                        outerScopeInfo ^. ConvertM.osiScope & Infer.scopeToTypeMap
+                    outerSkolems = Infer.skolems outerScope ^. Infer.skolemScopeVars
+                    outerScope = outerScopeInfo ^. ConvertM.osiScope
 
 floatLetToOuterScope ::
     Monad m =>
