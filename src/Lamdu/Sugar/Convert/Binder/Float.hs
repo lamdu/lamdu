@@ -16,7 +16,6 @@ import qualified Lamdu.Calc.Val.Annotated as Val
 import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Data.Ops.Subexprs as SubExprs
-import qualified Lamdu.Eval.Results as Results
 import           Lamdu.Expr.IRef (ValI, ValIProperty)
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Lens as ExprLens
@@ -41,19 +40,16 @@ moveToGlobalScope ::
     Monad m => ConvertM.Context m -> V.Var -> Definition.Expr (ValI m) -> T m ()
 moveToGlobalScope ctx param defExpr =
     do
+        inferRes <-
+            Definition.expr ExprIRef.readVal defExpr
+            <&> (`Load.inferCheckDef` param)
         scheme <-
-            do
-                loaded <-
-                    Definition.expr
-                    (Load.readValAndAddProperties (error "moveToGlobalScope set root IRef"))
-                    defExpr
-                inferRes <- Load.inferDef (pure Results.empty) loaded param
-                case inferRes of
-                    Left _err -> error "extract to global scope failed inference"
-                    Right (inferredVal, inferContext) ->
-                        inferredVal ^. Val.payload . Input.inferredType
-                        & Infer.makeScheme inferContext
-                    & return
+            case inferRes of
+            Left _err -> fail "extract to global scope failed inference"
+            Right (inferredVal, inferContext) ->
+                inferredVal ^. Val.payload . _1 . Infer.plType
+                & Infer.makeScheme inferContext
+                & return
         DataOps.newPublicDefinitionToIRef
             (ctx ^. ConvertM.scCodeAnchors)
             (Definition.Definition (Definition.BodyExpr defExpr) scheme ())
