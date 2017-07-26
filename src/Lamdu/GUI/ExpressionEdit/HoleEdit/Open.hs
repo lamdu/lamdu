@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell, PatternGuards, NoImplicitPrelude, FlexibleContexts, RecordWildCards, OverloadedStrings, TypeFamilies #-}
+{-# LANGUAGE TemplateHaskell, PatternGuards, NoImplicitPrelude, FlexibleContexts, OverloadedStrings, TypeFamilies #-}
 -- | The search area (search term + results) of an open/active hole.
 
 module Lamdu.GUI.ExpressionEdit.HoleEdit.Open
@@ -33,7 +33,6 @@ import qualified Graphics.UI.Bottle.Widget.TreeLayout as TreeLayout
 import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
 import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
 import           Lamdu.CharClassification (operatorChars)
-import qualified Lamdu.Config as Config
 import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.EventMap as EventMap
@@ -204,10 +203,10 @@ makeExtraSymbol isSelected results
     | Lens.nullOf (HoleResults.rlExtra . traverse) results = pure View.empty
     | otherwise =
         do
-            Theme.Hole{..} <- Theme.hole <$> Lens.view Theme.theme
+            holeTheme <- Lens.view Theme.theme <&> Theme.hole
             let extraSymbolColor
-                    | isSelected = holeExtraSymbolColorSelected
-                    | otherwise = holeExtraSymbolColorUnselected
+                    | isSelected = Theme.holeExtraSymbolColorSelected holeTheme
+                    | otherwise = Theme.holeExtraSymbolColorUnselected holeTheme
             hSpace <- Spacer.getSpaceSize <&> (^. _1)
             TextView.makeLabel extraSymbol
                 <&> View.tint extraSymbolColor
@@ -220,7 +219,6 @@ makeResultGroup ::
     ExprGuiM m (ResultGroupWidgets m)
 makeResultGroup holeInfo results =
     do
-        Config.Hole{..} <- Config.hole <$> Lens.view Config.config
         (mainResultWidget, shownMainResult) <- makeShownResult holeInfo mainResult
         (mSelectedResult, extraResWidget) <-
             if Widget.isFocused (mainResultWidget ^. Align.tValue)
@@ -288,8 +286,8 @@ applyResultLayout ::
 applyResultLayout fGui =
     fGui <&> (^. TreeLayout.render)
     ?? TreeLayout.LayoutParams
-        { _layoutMode = TreeLayout.LayoutWide
-        , _layoutContext = TreeLayout.LayoutClear
+        { TreeLayout._layoutMode = TreeLayout.LayoutWide
+        , TreeLayout._layoutContext = TreeLayout.LayoutClear
         }
 
 makeHoleResultWidget ::
@@ -300,23 +298,20 @@ makeHoleResultWidget ::
     , ExprGuiM m (Widget.EventMap (T m Widget.EventResult))
     )
 makeHoleResultWidget resultId holeResult =
-    do
-        Theme.Hole{..} <- Lens.view Theme.theme <&> Theme.hole
-        let mkEventMap =
-                -- Create a hidden result widget that we never display, but only
-                -- keep the event map from. We always tell it that it has focus,
-                -- so that even if we're on the search term, we can have valid
-                -- event maps of any result (we actually use the first one's
-                -- event map)
-                Reader.local (Widget.cursor .~ idWithinResultWidget) mkWidget
-                <&> getEvents
-        widget <-
-            (Widget.makeFocusableView ?? resultId <&> (Align.tValue %~))
-            <*> mkWidget
-            <&> View.setLayers . View.layers . Lens.traverse %~
-                Anim.mapIdentities (<> (resultSuffix # Widget.toAnimId resultId))
-        return (widget, mkEventMap)
+    (Widget.makeFocusableView ?? resultId <&> (Align.tValue %~))
+    <*> mkWidget
+    <&> View.setLayers . View.layers . Lens.traverse %~
+        Anim.mapIdentities (<> (resultSuffix # Widget.toAnimId resultId))
+    <&> flip (,) mkEventMap
     where
+        mkEventMap =
+            -- Create a hidden result widget that we never display, but only
+            -- keep the event map from. We always tell it that it has focus,
+            -- so that even if we're on the search term, we can have valid
+            -- event maps of any result (we actually use the first one's
+            -- event map)
+            Reader.local (Widget.cursor .~ idWithinResultWidget) mkWidget
+            <&> getEvents
         getEvents widget =
             case widget ^. Align.tValue . Widget.wState of
             Widget.StateUnfocused {} -> mempty
@@ -415,16 +410,16 @@ assignHoleEditCursor ::
 assignHoleEditCursor holeInfo shownMainResultsIds allShownResultIds searchTermId action =
     do
         let sub x = Widget.subId ?? x <&> isJust
-        shouldBeOnResult <- sub hidResultsPrefix
+        shouldBeOnResult <- sub (hidResultsPrefix hids)
         isOnResult <- traverse sub allShownResultIds <&> or
         let assignSource
                 | shouldBeOnResult && not isOnResult =
                       Reader.local (Widget.cursor .~ destId)
                 | otherwise =
-                      Widget.assignCursor hidOpen destId
+                      Widget.assignCursor (hidOpen hids) destId
         assignSource action
     where
-        WidgetIds{..} = hiIds holeInfo
+        hids = hiIds holeInfo
         destId
             | Text.null (HoleInfo.hiSearchTerm holeInfo) = searchTermId
             | otherwise = head (shownMainResultsIds ++ [searchTermId])
@@ -471,7 +466,9 @@ makeUnderCursorAssignment shownResultsLists hasHiddenResults holeInfo =
         -- We make our own type view here instead of
         -- ExpressionGui.stdWrap, because we want to synchronize the
         -- active BG width with the inferred type width
-        typeView <- TypeView.make (hiInferredType holeInfo) (Widget.toAnimId hidHole) <&> (^. Align.tValue)
+        typeView <-
+            TypeView.make (hiInferredType holeInfo) (Widget.toAnimId (hidHole hids))
+            <&> (^. Align.tValue)
 
         (mShownResult, resultsWidget) <-
             makeResultsWidget (typeView ^. View.width) holeInfo shownResultsLists hasHiddenResults
@@ -481,11 +478,13 @@ makeUnderCursorAssignment shownResultsLists hasHiddenResults holeInfo =
 
         let widget =
                 resultsWidget
-                & addBackground (Widget.toAnimId hidResultsPrefix) (Theme.hoverBGColor theme)
+                & addBackground (Widget.toAnimId (hidResultsPrefix hids))
+                    (Theme.hoverBGColor theme)
                 & E.strongerEvents resultsEventMap
         vspace <- ExpressionGui.annotationSpacer
-        addBg <- addDarkBackground (Widget.toAnimId hidResultsPrefix)
-        resBg <- addDarkBackground (Widget.toAnimId hidResultsPrefix ++ ["results"])
+        addBg <- addDarkBackground (Widget.toAnimId (hidResultsPrefix hids))
+        resBg <-
+            addDarkBackground (Widget.toAnimId (hidResultsPrefix hids) ++ ["results"])
         let addAnnotation x = addBg (x /-/ vspace /-/ typeView)
         searchTermWidget <-
             SearchTerm.make holeInfo
@@ -497,7 +496,7 @@ makeUnderCursorAssignment shownResultsLists hasHiddenResults holeInfo =
                 Align.hoverInPlaceOf
                 (resultsHoverOptions placement resBg addAnnotation widget (searchTermWidget ^. Align.tValue))
     where
-        WidgetIds{..} = hiIds holeInfo
+        hids = hiIds holeInfo
 
 makeOpenSearchAreaGui ::
     Monad m =>
