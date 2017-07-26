@@ -91,7 +91,7 @@ make env =
                             & Widget.padToSizeAlign codeSize 0
                             & Scroll.focusAreaIntoWindow fullSize
                             & View.size .~ codeSize
-                    scrollBox /-/ branchSelector
+                    scrollBox /-/ View.hoverLayers branchSelector
                         & return
             let quitEventMap =
                     Widget.keysEventMap (Config.quitKeys config) (EventMap.Doc ["Quit"]) (error "Quit")
