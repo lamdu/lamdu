@@ -79,25 +79,27 @@ instance View.HasSize (AnchoredWidget a) where size = anchored . View.size
 
 instance View.Glue (AnchoredWidget a) View where
     type Glued (AnchoredWidget a) View = AnchoredWidget a
-    glue = View.glueH $ \w v -> w & View.setLayers <>~ v ^. View.vAnimLayers
+    glue = View.glueH $ \w v -> w & View.setLayers <>~ View.hoverLayers v ^. View.vAnimLayers
 
 instance Functor f => View.Glue View (AnchoredWidget (f EventResult)) where
     type Glued View (AnchoredWidget (f EventResult)) = AnchoredWidget (f EventResult)
-    glue = View.glueH $ \v w -> w & View.setLayers <>~ v ^. View.vAnimLayers
+    glue = View.glueH $ \v w -> w & View.setLayers <>~ View.hoverLayers v ^. View.vAnimLayers
 
 instance Functor f => View.Glue (AnchoredWidget (f EventResult)) (Widget (f EventResult)) where
     type Glued (AnchoredWidget (f EventResult)) (Widget (f EventResult)) = AnchoredWidget (f EventResult)
     glue orientation =
         View.glueH f orientation
         where
-            f (AnchoredWidget pos w0) w1 = AnchoredWidget pos (Widget.glueStates orientation w0 w1)
+            f (AnchoredWidget pos w0) w1 =
+                AnchoredWidget pos (Widget.glueStates orientation w0 (View.hoverLayers w1))
 
 instance Functor f => View.Glue (Widget (f EventResult)) (AnchoredWidget (f EventResult)) where
     type Glued (Widget (f EventResult)) (AnchoredWidget (f EventResult)) = AnchoredWidget (f EventResult)
     glue orientation =
         View.glueH f orientation
         where
-            f w0 (AnchoredWidget pos w1) = AnchoredWidget pos (Widget.glueStates orientation w0 w1)
+            f w0 (AnchoredWidget pos w1) =
+                AnchoredWidget pos (Widget.glueStates orientation (View.hoverLayers w0) w1)
 
 instance View.SetLayers a => View.SetLayers (WithTextPos a) where
     setLayers = tValue . View.setLayers
@@ -225,7 +227,6 @@ hoverInPlaceOf hoverOptions@(defaultOption:_) place
     | null focusedOptions =
         View.assymetricPad (translation defaultOption) 0 (defaultOption ^. anchored)
         & View.size .~ place ^. View.size
-        & View.hoverLayers
     | otherwise =
         Widget
         { Widget._wSize = place ^. View.size
