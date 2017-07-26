@@ -75,9 +75,6 @@ Lens.makeLenses ''ResultGroupWidgets
 extraSymbol :: Text
 extraSymbol = "▷"
 
-extraSymbolScaleFactor :: Fractional a => a
-extraSymbolScaleFactor = 0.5
-
 compose :: [a -> a] -> a -> a
 compose = foldr (.) id
 
@@ -213,7 +210,6 @@ makeExtraSymbol isSelected results
                     | otherwise = holeExtraSymbolColorUnselected
             hSpace <- Spacer.getSpaceSize <&> (^. _1)
             TextView.makeLabel extraSymbol
-                <&> View.scale extraSymbolScaleFactor
                 <&> View.tint extraSymbolColor
                 <&> View.assymetricPad (Vector2 hSpace 0) 0
 
@@ -371,16 +367,17 @@ addMResultPicker mSelectedResult =
 
 layoutResults ::
     Monad m =>
-    [ResultGroupWidgets m] -> HaveHiddenResults ->
+    Widget.R -> [ResultGroupWidgets m] -> HaveHiddenResults ->
     ExprGuiM m (Widget (T m Widget.EventResult))
-layoutResults groups hiddenResults
+layoutResults minWidth groups hiddenResults
     | null groups = makeNoResults <&> (^. Align.tValue) <&> Widget.fromView
     | otherwise =
         do
             hiddenResultsWidget <-
                 makeHiddenResultsMView hiddenResults
                 <&> maybe View.empty (^. Align.tValue)
-            View.vbox (groups <&> layoutGroup) /-/ hiddenResultsWidget & EventMap.blockDownEvents & return
+            View.vbox (groups <&> layoutGroup) /-/ hiddenResultsWidget
+                & EventMap.blockDownEvents & return
     where
         layoutGroup group =
             Align.hoverInPlaceOf
@@ -388,22 +385,26 @@ layoutResults groups hiddenResults
             base
             where
                 base =
-                    ((group ^. rgwMainResultWidget & View.width .~ maxMainResultWidth)
+                    ((group ^. rgwMainResultWidget
+                         & View.width .~ maxMainResultWidth - group ^. rgwExtraResultSymbol . View.width)
                         /|/ (group ^. rgwExtraResultSymbol)) ^. Align.tValue & Align.anchor
-        maxMainResultWidth = groups ^.. Lens.traversed . rgwMainResultWidget . View.width & maximum
+        maxMainResultWidth = groups <&> groupMinWidth & maximum & max minWidth
+        groupMinWidth group =
+            group ^. rgwMainResultWidget . View.width +
+            group ^. rgwExtraResultSymbol . View.width
 
 makeResultsWidget ::
-    Monad m => HoleInfo m ->
-    [ResultsList m] -> HaveHiddenResults ->
+    Monad m =>
+    Widget.R -> HoleInfo m -> [ResultsList m] -> HaveHiddenResults ->
     ExprGuiM m (Maybe (ShownResult m), Widget (T m Widget.EventResult))
-makeResultsWidget holeInfo shownResultsLists hiddenResults =
+makeResultsWidget minWidth holeInfo shownResultsLists hiddenResults =
     do
         groupsWidgets <- traverse (makeResultGroup holeInfo) shownResultsLists
         let mSelectedResult = groupsWidgets ^? Lens.traversed . rgwMSelectedResult . Lens._Just
         let mFirstResult = groupsWidgets ^? Lens.traversed . rgwMainResult
         let mResult = mSelectedResult <|> mFirstResult
         addMResultPicker mResult
-        widget <- layoutResults groupsWidgets hiddenResults
+        widget <- layoutResults minWidth groupsWidgets hiddenResults
         return (mResult, widget)
 
 assignHoleEditCursor ::
@@ -467,23 +468,22 @@ makeUnderCursorAssignment shownResultsLists hasHiddenResults holeInfo =
     do
         theme <- Lens.view Theme.theme
 
-        (mShownResult, resultsWidget) <-
-            makeResultsWidget holeInfo shownResultsLists hasHiddenResults
-
-        (searchTermEventMap, resultsEventMap) <-
-            EventMap.makeOpenEventMaps holeInfo mShownResult
-
         -- We make our own type view here instead of
         -- ExpressionGui.stdWrap, because we want to synchronize the
         -- active BG width with the inferred type width
         typeView <- TypeView.make (hiInferredType holeInfo) (Widget.toAnimId hidHole) <&> (^. Align.tValue)
 
-        vspace <- ExpressionGui.annotationSpacer
+        (mShownResult, resultsWidget) <-
+            makeResultsWidget (typeView ^. View.width) holeInfo shownResultsLists hasHiddenResults
+
+        (searchTermEventMap, resultsEventMap) <-
+            EventMap.makeOpenEventMaps holeInfo mShownResult
+
         let widget =
                 resultsWidget
-                & View.width %~ max (typeView ^. View.width)
                 & addBackground (Widget.toAnimId hidResultsPrefix) (Theme.hoverBGColor theme)
                 & E.strongerEvents resultsEventMap
+        vspace <- ExpressionGui.annotationSpacer
         addBg <- addDarkBackground (Widget.toAnimId hidResultsPrefix)
         resBg <- addDarkBackground (Widget.toAnimId hidResultsPrefix ++ ["results"])
         let addAnnotation x = addBg (x /-/ vspace /-/ typeView)
