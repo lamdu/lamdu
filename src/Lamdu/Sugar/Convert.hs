@@ -4,6 +4,7 @@ module Lamdu.Sugar.Convert
     ) where
 
 import qualified Control.Lens as Lens
+import           Control.Monad.Trans.State (StateT(..))
 import qualified Control.Monad.Trans.State as State
 import           Data.CurAndPrev (CurAndPrev)
 import qualified Data.Graph as Graph
@@ -23,14 +24,13 @@ import qualified Lamdu.Calc.Val.Annotated as Val
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Definition as Definition
 import           Lamdu.Eval.Results (EvalResults)
-import qualified Lamdu.Eval.Results as Results
 import           Lamdu.Expr.IRef (DefI, ValI, ValIProperty)
 import qualified Lamdu.Expr.IRef as ExprIRef
-import qualified Lamdu.Infer.Trans as InferT
 import qualified Lamdu.Expr.Lens as ExprLens
 import qualified Lamdu.Expr.Load as ExprLoad
 import qualified Lamdu.Expr.UniqueId as UniqueId
 import qualified Lamdu.Infer as Infer
+import qualified Lamdu.Infer.Trans as InferT
 import qualified Lamdu.Sugar.Convert.DefExpr as ConvertDefExpr
 import qualified Lamdu.Sugar.Convert.DefExpr.OutdatedDefs as OutdatedDefs
 import qualified Lamdu.Sugar.Convert.Expression as ConvertExpr
@@ -99,15 +99,11 @@ postProcessExpr mkProp =
         prop <- mkProp ^. Transaction.mkProperty
         -- TODO: This is code duplication with the above Load.inferDef
         -- & functions inside Load itself
-        defExpr <-
-            Definition.expr
-            (Load.readValAndAddProperties (error "postProcessExpr root setIRef"))
-            (prop ^. Property.pVal)
-        inferred <-
-            Load.inferDefExpr Infer.emptyScope defExpr
-            & InferT.liftInfer
-            >>= Load.loadInferPrepareInput (pure Results.empty)
-            & InferT.run
+        defExpr <- Definition.expr ExprIRef.readVal (prop ^. Property.pVal)
+        let inferred =
+                Load.inferDefExpr Infer.emptyScope defExpr
+                & Infer.run
+                & (`runStateT` Infer.initialContext)
         case inferred of
             Left err -> ConvertM.BadExpr err & return
             Right _ ->
