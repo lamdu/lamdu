@@ -179,7 +179,7 @@ instance Functor f => View.Resizable (Widget (f EventResult)) where
         & wState . _StateFocused . Lens.mapped . fFocalAreas . traverse . Rect.topLeftAndSize *~ mult
         & wState . _StateFocused . Lens.mapped . fEventMap . Lens.argument . virtualCursor . Rect.topLeftAndSize //~ mult
         & mEnter . Lens._Just . Lens.mapped . enterResultRect . Rect.topLeftAndSize *~ mult
-        & mEnter . Lens._Just . Lens.argument . Direction.coordinates . Rect.topLeftAndSize //~ mult
+        & mEnter . Lens._Just . Lens.argument %~ Direction.scale (1 / mult)
         & Lens.mapped . Lens.mapped . eVirtualCursor . Lens.mapped .
           virtualCursor . Rect.topLeftAndSize *~ mult
 
@@ -458,7 +458,7 @@ translateMEnter pos =
     where
         translateEnter enter =
             enter
-            & Lens.argument . Direction.coordinates . Rect.topLeft -~ pos
+            & Lens.argument %~ Direction.translate (negate pos)
             & Lens.mapped . enterResultRect . Rect.topLeft +~ pos
 
 padToSizeAlign ::
