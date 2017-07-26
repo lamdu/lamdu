@@ -13,11 +13,13 @@ import           Data.IORef
 import           Data.MRUMemo (memoIO)
 import qualified Data.Text as Text
 import qualified Graphics.DrawingCombinators as Draw
+import           Graphics.UI.Bottle.Direction (Direction)
 import qualified Graphics.UI.Bottle.Direction as Direction
 import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Main.Animation as MainAnim
 import qualified Graphics.UI.Bottle.MetaKey as MetaKey
-import           Graphics.UI.Bottle.Widget (Widget)
+import           Graphics.UI.Bottle.Rect (Rect)
+import           Graphics.UI.Bottle.Widget (Widget, VirtualCursor(..))
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.EventMapHelp as EventMapHelp
 import           Graphics.UI.Bottle.Zoom (Zoom)
@@ -118,6 +120,31 @@ data Cursor = Cursor
     }
 Lens.makeLenses ''Cursor
 
+lookupEvent ::
+    IO (Maybe E.Clipboard) -> IORef Cursor ->
+    Maybe (Direction -> Widget.EnterResult a) ->
+    Maybe (Rect, VirtualCursor -> Widget.EventMap a) -> Event -> IO (Maybe a)
+lookupEvent getClipboard cursorRef mEnter mFocus event =
+    case (mEnter, mFocus, event) of
+    (Just enter, _
+        , GLFWE.EventMouseButton
+          (GLFWE.MouseButtonEvent GLFW.MouseButton'1
+           GLFW.MouseButtonState'Released _ mousePosF _)) ->
+        enter (Direction.Point mousePosF)
+        ^. Widget.enterResultEvent & Just & pure
+    (_, Just (focalArea, mkEventMap), _) ->
+        do
+            virtCursorState <- readIORef cursorRef <&> (^. cursorVirtual)
+            virtCursor <-
+                case virtCursorState of
+                Widget.NewVirtualCursor x -> return x
+                Widget.ResetVirtualCursor ->
+                    res <$ modifyIORef cursorRef (cursorVirtual .~ Widget.NewVirtualCursor res)
+                    where
+                        res = VirtualCursor focalArea
+            E.lookup getClipboard event (mkEventMap virtCursor)
+    _ -> pure Nothing
+
 mainLoopWidget ::
     GLFW.Window ->
     (Env -> IO (Widget (M Widget.EventResult))) ->
@@ -158,25 +185,6 @@ mainLoopWidget win mkWidgetUnmemod options =
                 Widget.renderWithCursor
                 <$> (getConfig <&> cCursor)
                 <*> (readIORef mkWidgetRef >>= (size &))
-        let lookupEvent mEnter _ (GLFWE.EventMouseButton
-                (GLFWE.MouseButtonEvent GLFW.MouseButton'1
-                    GLFW.MouseButtonState'Released _ mousePosF _)) =
-                case mEnter of
-                Nothing -> return Nothing
-                Just enter -> enter (Direction.Point mousePosF) ^. Widget.enterResultEvent & Just & return
-            lookupEvent _ Nothing _ = return Nothing
-            lookupEvent _ (Just (focalArea, mkEventMap)) event =
-                do
-                    virtCursorState <- readIORef cursorRef <&> (^. cursorVirtual)
-                    virtCursor <-
-                        case virtCursorState of
-                        Widget.NewVirtualCursor x -> return x
-                        Widget.ResetVirtualCursor ->
-                            res <$ modifyIORef cursorRef (cursorVirtual .~ Widget.NewVirtualCursor res)
-                            where
-                                res = Widget.VirtualCursor focalArea
-                    E.lookup (GLFW.getClipboardString win <&> fmap Text.pack) event
-                        (mkEventMap virtCursor)
         MainAnim.mainLoop win (getConfig <&> cAnim) $ \size -> MainAnim.Handlers
             { MainAnim.tickHandler =
                 do
@@ -192,7 +200,7 @@ mainLoopWidget win mkWidgetUnmemod options =
             , MainAnim.eventHandler = \event ->
                 do
                     (_, mEnter, mFocus) <- renderWidget size
-                    mWidgetRes <- lookupEvent mEnter mFocus event
+                    mWidgetRes <- lookupEvent getClipboard cursorRef mEnter mFocus event
                     EventResult runInMainThread mRes <- sequenceA mWidgetRes ^. m
                     case mRes of
                         Nothing -> return ()
@@ -208,4 +216,5 @@ mainLoopWidget win mkWidgetUnmemod options =
             , MainAnim.makeFrame = renderWidget size <&> (^. _1)
             }
     where
+        getClipboard = GLFW.getClipboardString win <&> fmap Text.pack
         Options{tickHandler, getConfig, getHelpStyle} = options

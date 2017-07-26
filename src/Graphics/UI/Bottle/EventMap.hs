@@ -2,7 +2,7 @@
 module Graphics.UI.Bottle.EventMap
     ( KeyEvent(..)
     , InputDoc, Subtitle, Doc(..), docStrs
-    , MaybeWantsClipboard(..)
+    , Clipboard, MaybeWantsClipboard(..)
     , EventMap, lookup
     , emDocs
     , charEventMap, allChars
