@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, OverloadedStrings #-}
+{-# LANGUAGE NoImplicitPrelude, OverloadedStrings, TypeFamilies, FlexibleContexts #-}
 -- | Manage, read, write lambda-associated param lists
 module Lamdu.Sugar.Convert.ParamList
     ( ParamList, loadForLambdas
@@ -28,8 +28,18 @@ import           Lamdu.Prelude
 
 type T = Transaction
 
-loadStored :: Monad m => ExprIRef.ValIProperty m -> T m (Maybe ParamList)
-loadStored = Transaction.getP . assocFieldParamList . Property.value
+class Monad (M a) => ParamListPayload a where
+    type M a :: * -> *
+    iref :: a -> ExprIRef.ValI (M a)
+    inferPl :: Lens' a Infer.Payload
+
+instance Monad m => ParamListPayload (Input.Payload m a) where
+    type M (Input.Payload m a) = m
+    iref x = x ^. Input.stored . Property.pVal
+    inferPl = Input.inferred
+
+loadStored :: Monad m => ExprIRef.ValI m -> T m (Maybe ParamList)
+loadStored = Transaction.getP . assocFieldParamList
 
 mkFuncType :: Infer.Scope -> ParamList -> Infer Type
 mkFuncType scope paramList =
@@ -39,14 +49,13 @@ mkFuncType scope paramList =
     where
         step tag rest = T.CExtend tag <$> Infer.freshInferredVar scope "t" <*> rest
 
-loadForLambdas ::
-    Monad m => Val (Input.Payload m a) -> InferT.M (T m) (Val (Input.Payload m a))
+loadForLambdas :: ParamListPayload a => Val a -> InferT.M (T (M a)) (Val a)
 loadForLambdas val =
     do
         Lens.itraverseOf_ ExprLens.subExprPayloads loadLambdaParamList val
         val
-            & traverse . Input.inferredType %%~ update
-            >>= traverse . Input.inferredScope %%~ update
+            & traverse . inferPl . Infer.plType %%~ update
+            >>= traverse . inferPl . Infer.plScope %%~ update
             & Update.run & State.gets
     where
         loadLambdaParamList (Val _ V.BLam {}) pl = loadUnifyParamList pl
@@ -54,12 +63,12 @@ loadForLambdas val =
 
         loadUnifyParamList pl =
             do
-                mParamList <- loadStored (pl ^. Input.stored) & InferT.liftInner
+                mParamList <- loadStored (iref pl) & InferT.liftInner
                 case mParamList of
                     Nothing -> return ()
                     Just paramList ->
                         do
                             funcType <-
-                                mkFuncType (pl ^. Input.inferredScope) paramList
-                            unify (pl ^. Input.inferredType) funcType
+                                mkFuncType (pl ^. inferPl . Infer.plScope) paramList
+                            unify (pl ^. inferPl . Infer.plType) funcType
                         & InferT.liftInfer
