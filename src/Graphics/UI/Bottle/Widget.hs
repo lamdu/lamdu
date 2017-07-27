@@ -386,10 +386,10 @@ takesFocus enterFunc =
     where
         mkVirtCursor rect dir =
             case dir of
-            Direction.FromRight r -> rect & Rect.horizontalRange .~ r & Just
-            Direction.FromLeft  r -> rect & Rect.horizontalRange .~ r & Just
-            Direction.FromAbove r -> rect & Rect.verticalRange   .~ r & Just
-            Direction.FromBelow r -> rect & Rect.verticalRange   .~ r & Just
+            Direction.FromRight r -> rect & Rect.verticalRange   .~ r & Just
+            Direction.FromLeft  r -> rect & Rect.verticalRange   .~ r & Just
+            Direction.FromAbove r -> rect & Rect.horizontalRange .~ r & Just
+            Direction.FromBelow r -> rect & Rect.horizontalRange .~ r & Just
             Direction.Outside     -> Nothing
             Direction.Point p     -> Rect p 0 & Just
 
