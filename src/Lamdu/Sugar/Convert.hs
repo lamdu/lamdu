@@ -75,7 +75,8 @@ postProcessDef defI =
             Definition.BodyExpr defExpr ->
                 do
                     loaded <- Definition.expr ExprIRef.readVal defExpr
-                    case Load.inferCheckDef loaded (ExprIRef.globalId defI) of
+                    checked <- Load.inferCheckDef loaded (ExprIRef.globalId defI)
+                    case checked of
                         Left err -> ConvertM.BadExpr err & return
                         Right (inferredVal, inferContext) ->
                             do

@@ -43,7 +43,7 @@ moveToGlobalScope ctx param defExpr =
     do
         inferRes <-
             Definition.expr ExprIRef.readVal defExpr
-            <&> (`Load.inferCheckDef` param)
+            >>= (`Load.inferCheckDef` param)
         scheme <-
             case inferRes of
             Left _err -> fail "extract to global scope failed inference"

@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, OverloadedStrings, TypeFamilies, FlexibleContexts #-}
+{-# LANGUAGE NoImplicitPrelude, OverloadedStrings, TypeFamilies, FlexibleContexts, FlexibleInstances #-}
 -- | Manage, read, write lambda-associated param lists
 module Lamdu.Sugar.Convert.ParamList
     ( ParamList, loadForLambdas
@@ -37,6 +37,11 @@ instance Monad m => ParamListPayload (Input.Payload m a) where
     type M (Input.Payload m a) = m
     iref x = x ^. Input.stored . Property.pVal
     inferPl = Input.inferred
+
+instance Monad m => ParamListPayload (Infer.Payload, ExprIRef.ValI m) where
+    type M (Infer.Payload, ExprIRef.ValI m) = m
+    iref (_, x) = x
+    inferPl = _1
 
 loadStored :: Monad m => ExprIRef.ValI m -> T m (Maybe ParamList)
 loadStored = Transaction.getP . assocFieldParamList

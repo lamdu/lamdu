@@ -12,7 +12,6 @@ module Lamdu.Sugar.Convert.Load
     ) where
 
 import qualified Control.Lens as Lens
-import           Control.Monad.Trans.State (StateT(..))
 import           Data.CurAndPrev (CurAndPrev)
 import           Data.Store.Property (Property)
 import qualified Data.Store.Property as Property
@@ -123,9 +122,11 @@ inferDef results defExpr defVar =
     & InferT.run
 
 inferCheckDef ::
-    Definition.Expr (Val a) -> V.Var ->
-    Either Infer.Error (Val (Infer.Payload, a), Infer.Context)
+    Monad m =>
+    Definition.Expr (Val (ValI m)) -> V.Var ->
+    T m (Either Infer.Error (Val (Infer.Payload, (ValI m)), Infer.Context))
 inferCheckDef defExpr defVar =
     inferRecursive defExpr defVar
-    & Infer.run
-    & (`runStateT` Infer.initialContext)
+    & InferT.liftInfer
+    >>= ParamList.loadForLambdas
+    & InferT.run
