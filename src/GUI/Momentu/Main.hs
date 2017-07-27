@@ -1,9 +1,10 @@
-{-# LANGUAGE TemplateHaskell, DeriveTraversable, NoImplicitPrelude, NamedFieldPuns, OverloadedStrings #-}
+{-# LANGUAGE TemplateHaskell, DeriveTraversable, NoImplicitPrelude, NamedFieldPuns, OverloadedStrings, LambdaCase #-}
 module GUI.Momentu.Main
     ( mainLoopWidget
     , Config(..), EventResult(..), M(..), m
     , Env(..), eWindowSize, eZoom
     , HasMainLoopEnv(..)
+    , DebugOptions(..), defaultDebugOptions
     , Options(..), defaultOptions
     , quitEventMap
     ) where
@@ -14,13 +15,16 @@ import           Control.Monad.IO.Class (MonadIO(..))
 import           Data.IORef
 import           Data.MRUMemo (memoIO)
 import qualified Data.Text as Text
-import qualified Graphics.DrawingCombinators as Draw
+import qualified GUI.Momentu.Animation as Anim
 import           GUI.Momentu.Direction (Direction)
 import qualified GUI.Momentu.Direction as Direction
+import qualified GUI.Momentu.Draw as Draw
 import qualified GUI.Momentu.EventMap as E
+import           GUI.Momentu.Font (Font, openFont)
 import qualified GUI.Momentu.Main.Animation as MainAnim
 import qualified GUI.Momentu.MetaKey as MetaKey
 import           GUI.Momentu.Rect (Rect)
+import qualified GUI.Momentu.Rect as Rect
 import           GUI.Momentu.Widget (Widget, VirtualCursor(..))
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.EventMapHelp as EventMapHelp
@@ -65,12 +69,24 @@ instance Monad M where
 instance MonadIO M where
     liftIO = M . fmap pure
 
+data DebugOptions = DebugOptions
+    { fpsFont :: Zoom -> IO (Maybe Font)
+    , virtualCursorColor :: IO (Maybe Draw.Color)
+    }
+
 data Options = Options
     { tickHandler :: IO Bool
-    , fpsFont :: Zoom -> IO (Maybe Draw.Font)
     , getConfig :: IO Config
     , getHelpStyle :: Zoom -> IO EventMapHelp.Config
     , cursorStartPos :: Widget.Id
+    , debug :: DebugOptions
+    }
+
+defaultDebugOptions :: DebugOptions
+defaultDebugOptions =
+    DebugOptions
+    { fpsFont = const (pure Nothing)
+    , virtualCursorColor = pure Nothing
     }
 
 -- TODO: If moving GUI to lib,
@@ -78,10 +94,9 @@ data Options = Options
 defaultOptions :: FilePath -> IO Options
 defaultOptions helpFontPath =
     do
-        loadHelpFont <- memoIO $ \size -> Draw.openFont size helpFontPath
+        loadHelpFont <- memoIO $ \size -> openFont size helpFontPath
         return Options
             { tickHandler = pure False
-            , fpsFont = const (pure Nothing)
             , getConfig =
                 return Config
                 { cAnim =
@@ -104,6 +119,7 @@ defaultOptions helpFontPath =
                 -- Note that not every app is necessarily interactive and even uses a cursor,
                 -- so an empty value might be fitting.
                 Widget.Id []
+            , debug = defaultDebugOptions
             }
 
 quitEventMap :: Functor f => Widget.EventMap (f Widget.EventResult)
@@ -152,6 +168,16 @@ lookupEvent getClipboard cursorRef mEnter mFocus event =
             E.lookup getClipboard event (mkEventMap virtCursor)
     _ -> pure Nothing
 
+virtualCursorImage :: Maybe VirtualCursor -> DebugOptions -> IO Anim.Frame
+virtualCursorImage Nothing _ = pure mempty
+virtualCursorImage (Just (VirtualCursor r)) debug =
+    virtualCursorColor debug
+    <&> \case
+    Nothing -> mempty
+    Just color ->
+        Anim.backgroundColor ["debug-virtual-cursor"] color
+        (r ^. Rect.size) & Anim.translate (r ^. Rect.topLeft)
+
 mainLoopWidget ::
     GLFW.Window ->
     (Env -> IO (Widget (M Widget.EventResult))) ->
@@ -187,9 +213,13 @@ mainLoopWidget win mkWidgetUnmemod options =
         mkWidgetRef <- mkW >>= newIORef
         let newWidget = mkW >>= writeIORef mkWidgetRef
         let renderWidget size =
-                Widget.renderWithCursor
-                <$> (getConfig <&> cCursor)
-                <*> (readIORef mkWidgetRef >>= (size &))
+                do
+                    cursor <- readIORef cursorRef
+                    vcursorimg <- virtualCursorImage (cursor ^. cursorVirtual) debug
+                    Widget.renderWithCursor
+                        <$> (getConfig <&> cCursor)
+                        <*> (readIORef mkWidgetRef >>= (size &))
+                        <&> _1 <>~ vcursorimg
         MainAnim.mainLoop win (fpsFont zoom) (getConfig <&> cAnim) $ \size -> MainAnim.Handlers
             { MainAnim.tickHandler =
                 do
@@ -223,4 +253,5 @@ mainLoopWidget win mkWidgetUnmemod options =
             }
     where
         getClipboard = GLFW.getClipboardString win <&> fmap Text.pack
-        Options{tickHandler, fpsFont, getConfig, getHelpStyle} = options
+        Options{tickHandler, debug, getConfig, getHelpStyle} = options
+        DebugOptions{fpsFont} = debug

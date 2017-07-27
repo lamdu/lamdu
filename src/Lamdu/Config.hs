@@ -63,6 +63,7 @@ deriveJSON defaultOptions ''LiteralText
 
 data Debug = Debug
     { debugShowFPS :: Bool
+    , virtualCursorShown :: Bool
     } deriving (Eq, Show)
 deriveJSON defaultOptions ''Debug
 

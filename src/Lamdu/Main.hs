@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, TemplateHaskell, OverloadedStrings, Rank2Types, DisambiguateRecordFields, NamedFieldPuns, MultiParamTypeClasses #-}
+{-# LANGUAGE NoImplicitPrelude, TemplateHaskell, OverloadedStrings, Rank2Types, DisambiguateRecordFields, NamedFieldPuns, MultiParamTypeClasses, LambdaCase #-}
 module Main
     ( main
     ) where
@@ -320,14 +320,24 @@ mainLoop subpixel win refreshScheduler configSampler iteration =
                     let helpTheme = sample ^. sTheme & Theme.help
                     Style.help (Font.fontHelp fonts) helpKeys helpTheme
                         & return
-            , fpsFont =
-                \zoom ->
-                do
-                    sample <- ConfigSampler.getSample configSampler
-                    if sample ^. sConfig & Config.debug & Config.debugShowFPS
-                        then getFonts zoom sample <&> fontDefault <&> Just
-                        else pure Nothing
             , cursorStartPos = GUIMain.defaultCursor
+            , debug = MainLoop.DebugOptions
+                { fpsFont =
+                  \zoom ->
+                  do
+                      sample <- ConfigSampler.getSample configSampler
+                      if sample ^. sConfig & Config.debug & Config.debugShowFPS
+                          then getFonts zoom sample <&> fontDefault <&> Just
+                          else pure Nothing
+                , virtualCursorColor =
+                    ConfigSampler.getSample configSampler
+                    <&> (^. sConfig)
+                    <&> Config.debug
+                    <&> Config.virtualCursorShown
+                    <&> \case
+                        False -> Nothing
+                        True -> Just (M.Color 1 1 0 0.5)
+                }
             }
 
 mkWidgetWithFallback ::
