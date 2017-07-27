@@ -47,13 +47,14 @@ modifyEntry ::
     Maybe (Direction -> Widget.EnterResult (f Widget.EventResult))
 modifyEntry myId fullChildRect = f
     where
-        f FocusEntryParent _ = Just $ const focusParent
-        f FocusEntryChild Nothing = Just $ const focusParent
+        f FocusEntryParent _ = Just parentEnter
+        f FocusEntryChild Nothing = Just parentEnter
         f FocusEntryChild (Just childEnter) = Just $ wrapEnter childEnter
-        wrapEnter _          Direction.Outside = focusParent
+        wrapEnter _          Direction.Outside = parentEnterResult
         wrapEnter enterChild dir               = enterChild dir
 
-        focusParent =
+        parentEnter = Widget.enterFuncAddVirtualCursor fullChildRect (const parentEnterResult)
+        parentEnterResult =
             Widget.EnterResult
             { Widget._enterResultRect = fullChildRect
             , Widget._enterResultLayer = 0

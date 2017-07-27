@@ -40,6 +40,7 @@ module Graphics.UI.Bottle.Widget
 
     -- Focus handlers:
     , takesFocus
+    , enterFuncAddVirtualCursor
 
     -- Operations:
     , translate, translateFocused
@@ -378,20 +379,25 @@ takesFocus enterFunc =
         in  w & mEnter ?~
             ( enterFunc
                 <&> Lens.mapped %~ eventResultFromCursor
-                & Lens.imapped <.
-                    (Lens.mapped . eVirtualCursor . Lens._Wrapped)
-                    .@~ fmap VirtualCursor . mkVirtCursor rect
                 <&> EnterResult rect 0
+                & enterFuncAddVirtualCursor rect
             )
+
+enterFuncAddVirtualCursor ::
+    Functor f =>
+    Rect -> (Direction -> EnterResult (f EventResult)) -> (Direction -> EnterResult (f EventResult))
+enterFuncAddVirtualCursor destRect =
+    Lens.imapped <. (enterResultEvent . Lens.mapped . eVirtualCursor . Lens._Wrapped) .@~ mkVirtCursor
     where
-        mkVirtCursor rect dir =
+        mkVirtCursor dir =
             case dir of
-            Direction.FromRight r -> rect & Rect.verticalRange   .~ r & Just
-            Direction.FromLeft  r -> rect & Rect.verticalRange   .~ r & Just
-            Direction.FromAbove r -> rect & Rect.horizontalRange .~ r & Just
-            Direction.FromBelow r -> rect & Rect.horizontalRange .~ r & Just
+            Direction.FromRight r -> destRect & Rect.verticalRange   .~ r & Just
+            Direction.FromLeft  r -> destRect & Rect.verticalRange   .~ r & Just
+            Direction.FromAbove r -> destRect & Rect.horizontalRange .~ r & Just
+            Direction.FromBelow r -> destRect & Rect.horizontalRange .~ r & Just
             Direction.Outside     -> Nothing
             Direction.Point p     -> Rect p 0 & Just
+            <&> VirtualCursor
 
 applyIdMapping :: Map Id Id -> EventResult -> EventResult
 applyIdMapping widgetIdMap eventResult =
