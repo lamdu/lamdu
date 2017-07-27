@@ -110,16 +110,19 @@ makeFuncRow ::
     Maybe AnimId ->
     Int ->
     Sugar.LabeledApply (Name m) m (ExprGuiT.SugarExpr m) ->
+    NearestHoles ->
     Widget.Id ->
     ExprGuiM m (ExpressionGui m)
-makeFuncRow mParensId prec apply myId =
+makeFuncRow mParensId prec apply applyNearestHoles myId =
     case apply ^. Sugar.aSpecialArgs of
     Sugar.NoSpecialArgs ->
-        case apply ^. Sugar.aAnnotatedArgs of
-        [] -> error "apply with no args!"
-        (x:_) ->
-            makeFuncVar (ExprGuiT.nextHolesBefore (x ^. Sugar.aaExpr)) funcVar
-            myId <&> TreeLayout.fromWithTextPos
+        makeFuncVar nextHoles funcVar
+        myId <&> TreeLayout.fromWithTextPos
+        where
+            nextHoles =
+                case apply ^. Sugar.aAnnotatedArgs of
+                [] -> applyNearestHoles -- all args are relayed args
+                (x:_) -> x ^. Sugar.aaExpr & ExprGuiT.nextHolesBefore
     Sugar.ObjectArg arg ->
         ExpressionGui.combineSpacedMParens mParensId
         <*> sequenceA
@@ -163,7 +166,7 @@ makeLabeled apply pl =
         let addBox
                 | isBoxed apply = mkBoxed apply (pl ^. Sugar.plData . ExprGuiT.plNearestHoles)
                 | otherwise = id
-        makeFuncRow mParensId prec apply myId
+        makeFuncRow mParensId prec apply (pl ^. Sugar.plData . ExprGuiT.plNearestHoles) myId
             & addBox
             & ExpressionGui.stdWrapParentExpr pl
             & fixPrec
