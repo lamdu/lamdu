@@ -19,8 +19,9 @@ import qualified Graphics.DrawingCombinators as Draw
 import           Graphics.UI.Bottle.Align (WithTextPos)
 import qualified Graphics.UI.Bottle.Align as Align
 import qualified Graphics.UI.Bottle.EventMap as E
+import           Graphics.UI.Bottle.Glue ((/-/), (/|/))
+import qualified Graphics.UI.Bottle.Glue as Glue
 import           Graphics.UI.Bottle.MetaKey (MetaKey(..), noMods, toModKey)
-import           Graphics.UI.Bottle.View ((/-/), (/|/))
 import qualified Graphics.UI.Bottle.View as View
 import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
@@ -84,7 +85,7 @@ presentationModeChoiceConfig = Choice.Config
         , FocusDelegator.focusParentKeys = [MetaKey noMods GLFW.Key'Enter]
         , FocusDelegator.focusParentDoc = E.Doc ["Presentation Mode", "Choose selected"]
         }
-    , Choice.cwcOrientation = View.Vertical
+    , Choice.cwcOrientation = Choice.Vertical
     , Choice.cwcExpandMode = Choice.ExplicitEntry
     }
 
@@ -215,7 +216,7 @@ makeScopeNavEdit binder myId curCursor =
         case settings ^. CESettings.sInfoMode of
             CESettings.Evaluation ->
                 (Widget.makeFocusableView ?? myId)
-                <*> (mapM mkArrow scopes <&> View.hbox <&> Widget.fromView)
+                <*> (mapM mkArrow scopes <&> Glue.hbox <&> Widget.fromView)
                 <&> E.weakerEvents (mkScopeEventMap leftKeys rightKeys `mappend` blockEventMap)
                 <&> Just
                 <&> (,) (mkScopeEventMap prevScopeKeys nextScopeKeys)

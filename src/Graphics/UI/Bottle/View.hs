@@ -1,14 +1,9 @@
-{-# LANGUAGE NoImplicitPrelude, FlexibleContexts, RecordWildCards, RankNTypes, OverloadedStrings, TemplateHaskell, TypeSynonymInstances, FlexibleInstances, TypeFamilies, MultiParamTypeClasses, ConstraintKinds #-}
+{-# LANGUAGE NoImplicitPrelude, TemplateHaskell, FlexibleContexts, FlexibleInstances, OverloadedStrings #-}
 module Graphics.UI.Bottle.View
     ( View(..), vAnimLayers, make
     , Layers(..), layers, translateLayers, addLayersAbove
         , topLayer, bottomLayer
     , HasSize(..), SetLayers(..), Resizable(..)
-    , Glue(..)
-        , glueH, GluesTo
-        , (/|/), (/-/)
-    , Orientation(..), axis
-    , box, hbox, vbox
     , render
     , animFrames, bottomFrame
     , width, height
@@ -22,6 +17,7 @@ module Graphics.UI.Bottle.View
 
 import           Control.Applicative (liftA2)
 import qualified Control.Lens as Lens
+import qualified Data.ByteString as SBS
 import           Data.Vector.Vector2 (Vector2(..))
 import qualified Graphics.DrawingCombinators as Draw
 import           Graphics.UI.Bottle.Animation (AnimId, R)
@@ -77,19 +73,6 @@ class SetLayers a => Resizable a where
 
 class HasSize a where size :: Lens' a Size
 
-data Orientation = Horizontal | Vertical
-    deriving (Eq, Show, Ord)
-
-axis :: Orientation -> Lens' (Vector2 a) a
-axis Horizontal = _1
-axis Vertical = _2
-
-type GluesTo a b c = (Glue a b, Glued a b ~ c)
-
-class Glue a b where
-    type Glued a b
-    glue :: Orientation -> a -> b -> Glued a b
-
 instance SetLayers View where
     setLayers f (View sz ls) = Lens.indexed f sz ls <&> View sz
     hoverLayers = setLayers . layers %~ (mempty:)
@@ -106,40 +89,6 @@ instance Resizable View where
     empty = make 0 mempty
 
 instance HasSize View where size = vSize
-
-instance Glue View View where
-    type Glued View View = View
-    glue = glueH $ \v0 v1 -> v0 & vAnimLayers <>~ v1 ^. vAnimLayers
-
--- Horizontal glue
-(/|/) :: Glue a b => a -> b -> Glued a b
-(/|/) = glue Horizontal
-
--- Vertical glue
-(/-/) :: Glue a b => a -> b -> Glued a b
-(/-/) = glue Vertical
-
-glueH ::
-    (HasSize a, HasSize b, Resizable b) =>
-    (a -> b -> Glued a b) -> Orientation -> a -> b -> Glued a b
-glueH f orientation v0 v1 =
-    f (v0 & size .~ newSize) (assymetricPad t 0 v1 & size .~ newSize)
-    where
-        Vector2 w0 h0 = v0 ^. size
-        Vector2 w1 h1 = v1 ^. size
-        (newSize, t) =
-            case orientation of
-            Horizontal -> (Vector2 (w0 + w1) (max h0 h1), Vector2 w0 0)
-            Vertical -> (Vector2 (max w0 w1) (h0 + h1), Vector2 0 h0)
-
-box :: (Resizable a, GluesTo a a a) => Orientation -> [a] -> a
-box orientation = foldr (glue orientation) empty
-
-hbox :: (Resizable a, GluesTo a a a) => [a] -> a
-hbox = box Horizontal
-
-vbox :: (Resizable a, GluesTo a a a) => [a] -> a
-vbox = box Vertical
 
 make :: Size -> Anim.Frame -> View
 make sz frame = View sz (Layers [frame])
@@ -163,7 +112,7 @@ bottomFrame :: SetLayers a => Lens.Setter' a Anim.Frame
 bottomFrame = setLayers . bottomLayer
 
 class HasAnimIdPrefix env where animIdPrefix :: Lens' env AnimId
-instance HasAnimIdPrefix AnimId where animIdPrefix = id
+instance HasAnimIdPrefix [SBS.ByteString] where animIdPrefix = id
 
 subAnimId :: (MonadReader env m, HasAnimIdPrefix env) => AnimId -> m AnimId
 subAnimId suffix = Lens.view animIdPrefix <&> (++ suffix)

@@ -8,8 +8,8 @@ import qualified Control.Monad.Reader as Reader
 import qualified Data.ByteString.Char8 as SBS8
 import           Data.Store.Transaction (Transaction)
 import qualified Graphics.UI.Bottle.EventMap as E
+import           Graphics.UI.Bottle.Glue ((/-/))
 import           Graphics.UI.Bottle.Font (Underline(..))
-import           Graphics.UI.Bottle.View ((/-/))
 import qualified Graphics.UI.Bottle.View as View
 import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget

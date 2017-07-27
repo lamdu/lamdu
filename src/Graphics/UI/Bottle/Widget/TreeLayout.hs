@@ -43,7 +43,9 @@ import qualified Control.Lens as Lens
 import qualified Data.List as List
 import           Data.Vector.Vector2 (Vector2(..))
 import qualified Graphics.UI.Bottle.EventMap as E
-import           Graphics.UI.Bottle.View (View, (/|/))
+import           Graphics.UI.Bottle.Glue (Glue(..), GluesTo, (/|/), Orientation(..))
+import qualified Graphics.UI.Bottle.Glue as Glue
+import           Graphics.UI.Bottle.View (View)
 import qualified Graphics.UI.Bottle.View as View
 import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
@@ -79,29 +81,28 @@ newtype TreeLayout a = TreeLayout
     } deriving Functor
 Lens.makeLenses ''TreeLayout
 
-adjustWidth ::
-    View.HasSize v => View.Orientation -> v -> TreeLayout a -> TreeLayout a
-adjustWidth View.Vertical _ = id
-adjustWidth View.Horizontal v =
+adjustWidth :: View.HasSize v => Orientation -> v -> TreeLayout a -> TreeLayout a
+adjustWidth Vertical _ = id
+adjustWidth Horizontal v =
     render . Lens.argument . layoutMode . modeWidths -~ v ^. View.size . _1
 
-instance ( View.GluesTo (WithTextPos (Widget a)) (WithTextPos b) (WithTextPos (Widget a))
+instance ( GluesTo (WithTextPos (Widget a)) (WithTextPos b) (WithTextPos (Widget a))
          , View.HasSize b
-         ) => View.Glue (TreeLayout a) (WithTextPos b) where
+         ) => Glue (TreeLayout a) (WithTextPos b) where
     type Glued (TreeLayout a) (WithTextPos b) = TreeLayout a
     glue orientation l v =
         l
         & adjustWidth orientation v
-        & render . Lens.mapped %~ (View.glue orientation ?? v)
+        & render . Lens.mapped %~ (glue orientation ?? v)
 
-instance ( View.GluesTo (WithTextPos a) (WithTextPos (Widget b)) (WithTextPos (Widget b))
+instance ( GluesTo (WithTextPos a) (WithTextPos (Widget b)) (WithTextPos (Widget b))
          , View.HasSize a
-         ) => View.Glue (WithTextPos a) (TreeLayout b) where
+         ) => Glue (WithTextPos a) (TreeLayout b) where
     type Glued (WithTextPos a) (TreeLayout b) = TreeLayout b
     glue orientation v l =
         l
         & adjustWidth orientation v
-        & render . Lens.mapped %~ View.glue orientation v
+        & render . Lens.mapped %~ glue orientation v
 
 instance View.SetLayers (TreeLayout a) where
     setLayers = Widget.widget . View.setLayers
@@ -167,7 +168,7 @@ vbox (gui:guis) =
             }
     in
     (gui ^. render) cp : (guis ^.. traverse . render ?? cp)
-    & View.vbox
+    & Glue.vbox
 
 vboxSpaced ::
     (MonadReader env m, Spacer.HasStdSpacing env, Functor f) =>

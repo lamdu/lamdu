@@ -5,11 +5,13 @@ module Graphics.UI.Bottle.Widgets.Choice
     ( make
     , Config(..)
     , ExpandMode(..)
-    , View.Orientation(..)
+    , Orientation(..)
     ) where
 
 import qualified Control.Lens as Lens
 import qualified Graphics.DrawingCombinators as Draw
+import           Graphics.UI.Bottle.Glue (Orientation(..))
+import qualified Graphics.UI.Bottle.Glue as Glue
 import qualified Graphics.UI.Bottle.View as View
 import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
@@ -26,7 +28,7 @@ Lens.makePrisms ''ExpandMode
 
 data Config = Config
     { cwcFDConfig :: FocusDelegator.Config
-    , cwcOrientation :: View.Orientation
+    , cwcOrientation :: Orientation
     , cwcExpandMode :: ExpandMode
     }
 
@@ -42,7 +44,7 @@ toBox config selfFocused myId childrenRecords =
     <&> applyAction
     & filterVisible
     <&> colorize
-    & View.box (cwcOrientation config)
+    & Glue.box (cwcOrientation config)
     where
         filterVisible
             | anyChildFocused || (autoExpand && selfFocused) = id

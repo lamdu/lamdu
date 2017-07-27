@@ -47,8 +47,10 @@ import           Data.Vector.Vector2 (Vector2(..))
 import qualified Graphics.DrawingCombinators as Draw
 import           Graphics.UI.Bottle.Animation (AnimId)
 import qualified Graphics.UI.Bottle.EventMap as E
+import           Graphics.UI.Bottle.Glue ((/-/), (/|/))
+import qualified Graphics.UI.Bottle.Glue as Glue
 import           Graphics.UI.Bottle.MetaKey (MetaKey(..), noMods)
-import           Graphics.UI.Bottle.View (View, (/|/), (/-/))
+import           Graphics.UI.Bottle.View (View)
 import qualified Graphics.UI.Bottle.View as View
 import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
@@ -182,7 +184,7 @@ combineWith mParenInfo onHGuis onVGuis guis =
                 , _layoutContext = TreeLayout.LayoutHorizontal
                 }
             & onHGuis
-            & View.hbox
+            & Glue.hbox
             & TreeLayout.fromWithTextPos
 
 combine ::

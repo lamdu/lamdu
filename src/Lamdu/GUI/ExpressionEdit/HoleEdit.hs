@@ -9,7 +9,7 @@ import           Control.Monad.Transaction (transaction)
 import qualified Data.Store.Transaction as Transaction
 import qualified Graphics.UI.Bottle.Align as Align
 import qualified Graphics.UI.Bottle.EventMap as E
-import           Graphics.UI.Bottle.View ((/-/))
+import           Graphics.UI.Bottle.Glue ((/-/))
 import qualified Graphics.UI.Bottle.View as View
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widget.TreeLayout as TreeLayout

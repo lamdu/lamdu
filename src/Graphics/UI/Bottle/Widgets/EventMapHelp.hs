@@ -22,10 +22,11 @@ import           Graphics.UI.Bottle.Align (Aligned(..))
 import qualified Graphics.UI.Bottle.Align as Align
 import           Graphics.UI.Bottle.EventMap (EventMap)
 import qualified Graphics.UI.Bottle.EventMap as E
+import           Graphics.UI.Bottle.Glue ((/|/))
 import           Graphics.UI.Bottle.MetaKey (MetaKey(..), toModKey, noMods)
 import           Graphics.UI.Bottle.ModKey (ModKey(..))
 import qualified Graphics.UI.Bottle.ModKey as ModKey
-import           Graphics.UI.Bottle.View (View(..), (/|/))
+import           Graphics.UI.Bottle.View (View(..))
 import qualified Graphics.UI.Bottle.View as View
 import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget

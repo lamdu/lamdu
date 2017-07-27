@@ -18,8 +18,9 @@ import qualified Graphics.UI.Bottle.Align as Align
 import           Graphics.UI.Bottle.Animation (AnimId)
 import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.Animation.Id as AnimId
+import           Graphics.UI.Bottle.Glue ((/-/), (/|/), hbox, vbox)
 import qualified Graphics.UI.Bottle.Rect as Rect
-import           Graphics.UI.Bottle.View (View(..), (/-/), (/|/))
+import           Graphics.UI.Bottle.View (View(..))
 import qualified Graphics.UI.Bottle.View as View
 import qualified Graphics.UI.Bottle.Widgets.GridView as GridView
 import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
@@ -137,7 +138,7 @@ makeArray animId items =
             itemViews <- zipWith makeItem [0..arrayCutoff] items & sequence
             opener <- label "[" animId
             closer <- label "]" animId
-            opener : itemViews ++ [closer] & View.hbox & return
+            opener : itemViews ++ [closer] & hbox & return
     where
         makeItem idx val =
             [ [ label ", " itemId | idx > 0 ]
@@ -146,7 +147,7 @@ makeArray animId items =
             , [ label "..." itemId | idx == arrayCutoff ]
             ] & concat
             & sequence
-            <&> View.hbox
+            <&> hbox
             where
                 itemId = Anim.augmentId animId (idx :: Int)
 
@@ -165,7 +166,7 @@ makeRecExtend animId typ recExtend =
             subtreeViews <-
                 subtrees ^.. ER.body . ER._RArray . Lens.traverse
                 & zipWith makeItem [0..cutoff] & sequence
-            rootView : subtreeViews & View.vbox & return
+            rootView : subtreeViews & vbox & return
         where
             makeItem idx val =
                 [ [ label "* " itemId ]
@@ -174,7 +175,7 @@ makeRecExtend animId typ recExtend =
                 , [ label "..." itemId | idx == cutoff ]
                 ] & concat
                 & sequence
-                <&> View.hbox
+                <&> hbox
                 where
                     itemId = Anim.augmentId animId (idx :: Int)
             cutoff = 4
@@ -218,7 +219,7 @@ makeInject animId typ inject =
         , makeInner (animId ++ ["head"]) head_
         , label ", …]" animId
         ]
-        & sequence <&> View.hbox
+        & sequence <&> hbox
     _ ->
         do
             tag <- makeTagView

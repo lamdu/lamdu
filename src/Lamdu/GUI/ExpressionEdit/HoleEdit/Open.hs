@@ -24,7 +24,9 @@ import qualified Graphics.UI.Bottle.Align as Align
 import           Graphics.UI.Bottle.Animation (AnimId)
 import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.EventMap as E
-import           Graphics.UI.Bottle.View (View, (/-/), (/|/))
+import           Graphics.UI.Bottle.Glue ((/-/), (/|/))
+import qualified Graphics.UI.Bottle.Glue as Glue
+import           Graphics.UI.Bottle.View (View)
 import qualified Graphics.UI.Bottle.View as View
 import           Graphics.UI.Bottle.Widget (Widget(..), EventResult)
 import qualified Graphics.UI.Bottle.Widget as Widget
@@ -276,7 +278,7 @@ makeExtraResultsWidget holeInfo extraResults@(firstResult:_) =
         (mResults, widgets) <- traverse mkResWidget extraResults <&> unzip
         return
             ( msum mResults
-            , View.vbox widgets
+            , Glue.vbox widgets
                 & addBackground (Widget.toAnimId (rId firstResult))
                   (Theme.hoverBGColor theme)
             )
@@ -377,14 +379,14 @@ layoutResults minWidth groups hiddenResults
                 , resultsFromBottom = EventMap.blockUpEvents
                 } <*>
                 ( OrderedResults
-                    { resultsFromTop = View.vbox
-                    , resultsFromBottom = View.vbox . reverse
+                    { resultsFromTop = Glue.vbox
+                    , resultsFromBottom = Glue.vbox . reverse
                     } ?? ((groups <&> layoutGroup) ++ [hiddenResultsWidget])
                 ) & return
     where
         layoutGroup group =
             Align.hoverInPlaceOf
-            (Align.hoverBesideOptionsAxis View.Horizontal (group ^. rgwExtraResultsWidget) base)
+            (Align.hoverBesideOptionsAxis Glue.Horizontal (group ^. rgwExtraResultsWidget) base)
             base
             where
                 base =

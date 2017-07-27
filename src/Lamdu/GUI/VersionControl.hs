@@ -13,7 +13,6 @@ import qualified Data.Store.Transaction as Transaction
 import qualified Graphics.UI.Bottle.Align as Align
 import qualified Graphics.UI.Bottle.EventMap as E
 import           Graphics.UI.Bottle.MetaKey (MetaKey(..), noMods)
-import qualified Graphics.UI.Bottle.View as View
 import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.Choice as Choice
@@ -77,7 +76,7 @@ choiceWidgetConfig VersionControl.Config{..} VersionControl.Theme{..} =
         , FocusDelegator.focusParentDoc = E.Doc ["Branches", "Choose selected"]
         }
     , Choice.cwcExpandMode = Choice.AutoExpand selectedBranchColor
-    , Choice.cwcOrientation = View.Vertical
+    , Choice.cwcOrientation = Choice.Vertical
     }
 
 branchDelegatorId :: Branch t -> Widget.Id

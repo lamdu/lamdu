@@ -7,8 +7,8 @@ import qualified Control.Lens as Lens
 import           Data.Store.Transaction (Transaction)
 import           Graphics.UI.Bottle.Align (WithTextPos(..))
 import qualified Graphics.UI.Bottle.EventMap as E
+import           Graphics.UI.Bottle.Glue ((/-/))
 import           Graphics.UI.Bottle.MetaKey (MetaKey(..), noMods)
-import           Graphics.UI.Bottle.View ((/-/))
 import qualified Graphics.UI.Bottle.View as View
 import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget

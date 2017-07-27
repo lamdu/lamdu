@@ -16,7 +16,8 @@ import           Graphics.UI.Bottle.Align (Aligned(..), WithTextPos(..))
 import qualified Graphics.UI.Bottle.Align as Align
 import           Graphics.UI.Bottle.Animation (AnimId)
 import qualified Graphics.UI.Bottle.Animation as Anim
-import           Graphics.UI.Bottle.View (R, View(..), (/-/), (/|/))
+import           Graphics.UI.Bottle.Glue ((/-/), (/|/), hbox)
+import           Graphics.UI.Bottle.View (R, View(..))
 import qualified Graphics.UI.Bottle.View as View
 import qualified Graphics.UI.Bottle.Widget.Id as WidgetId
 import qualified Graphics.UI.Bottle.Widgets.GridView as GridView
@@ -71,7 +72,7 @@ parensAround view =
     do
         openParenView <- text "("
         closeParenView <- text ")"
-        return $ View.hbox [openParenView, view, closeParenView]
+        return $ hbox [openParenView, view, closeParenView]
 
 parens ::
     Monad m => ParentPrecedence -> MyPrecedence ->
@@ -93,7 +94,7 @@ makeTFun parentPrecedence a b =
         ]
     ++ [splitMake (Precedence.parent 0) b]
     & sequence
-    <&> View.hbox
+    <&> hbox
     >>= parens parentPrecedence (Precedence.my 0)
 
 makeTInst ::
@@ -208,7 +209,7 @@ makeInternal parentPrecedence typ =
         [ text "+"
         , makeComposite makeSumField composite
         ] & sequenceA
-        <&> View.hbox
+        <&> hbox
 
 make :: Monad m => Type -> AnimId -> ExprGuiM m (WithTextPos View)
 make t prefix =

@@ -73,11 +73,13 @@ import           Graphics.UI.Bottle.Direction (Direction)
 import qualified Graphics.UI.Bottle.Direction as Direction
 import           Graphics.UI.Bottle.EventMap (EventMap)
 import qualified Graphics.UI.Bottle.EventMap as EventMap
+import           Graphics.UI.Bottle.Glue (Glue(..), Orientation(..))
+import qualified Graphics.UI.Bottle.Glue as Glue
 import           Graphics.UI.Bottle.MetaKey (MetaKey, toModKey)
 import           Graphics.UI.Bottle.ModKey (ModKey(..))
 import           Graphics.UI.Bottle.Rect (Rect(..))
 import qualified Graphics.UI.Bottle.Rect as Rect
-import           Graphics.UI.Bottle.View (View(..), Orientation(..))
+import           Graphics.UI.Bottle.View (View(..))
 import qualified Graphics.UI.Bottle.View as View
 import           Graphics.UI.Bottle.Widget.Id (Id(..))
 import qualified Graphics.UI.Bottle.Widget.Id as Id
@@ -197,17 +199,17 @@ instance View.HasSize (Widget a) where
             Vector2 ow oh = w ^. wSize
 instance EventMap.HasEventMap Widget where eventMap = eventMapMaker . Lens.mapped
 
-instance View.Glue (Widget a) View where
+instance Glue (Widget a) View where
     type Glued (Widget a) View = Widget a
-    glue = View.glueH $ \w v -> w & View.setLayers <>~ v ^. View.vAnimLayers
+    glue = Glue.glueH $ \w v -> w & View.setLayers <>~ v ^. View.vAnimLayers
 
-instance Functor f => View.Glue View (Widget (f EventResult)) where
+instance Functor f => Glue View (Widget (f EventResult)) where
     type Glued View (Widget (f EventResult)) = Widget (f EventResult)
-    glue = View.glueH $ \v w -> w & View.setLayers <>~ v ^. View.vAnimLayers
+    glue = Glue.glueH $ \v w -> w & View.setLayers <>~ v ^. View.vAnimLayers
 
-instance Functor f => View.Glue (Widget (f EventResult)) (Widget (f EventResult)) where
+instance Functor f => Glue (Widget (f EventResult)) (Widget (f EventResult)) where
     type Glued (Widget (f EventResult)) (Widget (f EventResult)) = Widget (f EventResult)
-    glue orientation = View.glueH (glueStates orientation) orientation
+    glue orientation = Glue.glueH (glueStates orientation) orientation
 
 data NavDir = NavDir
     { dirCons :: Rect.Range R -> Direction
