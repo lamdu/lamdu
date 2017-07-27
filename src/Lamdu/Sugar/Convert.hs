@@ -24,7 +24,6 @@ import qualified Lamdu.Calc.Val.Annotated as Val
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Definition as Definition
 import           Lamdu.Eval.Results (EvalResults)
-import qualified Lamdu.Eval.Results as Results
 import           Lamdu.Expr.IRef (DefI, ValI, ValIProperty)
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Lens as ExprLens
@@ -75,9 +74,8 @@ postProcessDef defI =
             Definition.BodyBuiltin {} -> return ConvertM.GoodExpr
             Definition.BodyExpr defExpr ->
                 do
-                    loaded <- Definition.expr load defExpr
-                    inferRes <- Load.inferDef (pure Results.empty) loaded (ExprIRef.globalId defI)
-                    case inferRes of
+                    loaded <- Definition.expr ExprIRef.readVal defExpr
+                    case Load.inferCheckDef loaded (ExprIRef.globalId defI) of
                         Left err -> ConvertM.BadExpr err & return
                         Right (inferredVal, inferContext) ->
                             do
@@ -90,9 +88,7 @@ postProcessDef defI =
                                     & Transaction.writeIRef defI
                                 return ConvertM.GoodExpr
                             where
-                                inferredType = inferredVal ^. Val.payload . Input.inferredType
-    where
-        load x = Load.readValAndAddProperties (Property x (error "postProcessDef root setIRef"))
+                                inferredType = inferredVal ^. Val.payload . _1 . Infer.plType
 
 postProcessExpr ::
     Monad m =>
