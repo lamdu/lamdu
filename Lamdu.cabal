@@ -111,6 +111,7 @@ Executable lamdu
                   , Graphics.UI.Bottle.Direction
                   , Graphics.UI.Bottle.EventMap
                   , Graphics.UI.Bottle.Glue
+                  , Graphics.UI.Bottle.Hover
                   , Graphics.UI.Bottle.Main
                   , Graphics.UI.Bottle.Main.Animation
                   , Graphics.UI.Bottle.Main.Image

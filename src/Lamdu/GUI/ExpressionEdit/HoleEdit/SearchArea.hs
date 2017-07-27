@@ -12,6 +12,7 @@ import qualified Control.Lens as Lens
 import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Align as Align
+import qualified Graphics.UI.Bottle.Hover as Hover
 import qualified Graphics.UI.Bottle.Widget.TreeLayout as TreeLayout
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 import qualified Lamdu.Config as Config
@@ -66,5 +67,5 @@ makeStdWrapped pl holeInfo =
                  <&> Lens.mapped %~
                  \open ->
                  closedSearchTermGui & TreeLayout.alignedWidget . Align.tValue %~
-                 Align.hoverInPlaceOf [Align.anchor (open ^. Align.tValue)] . Align.anchor
+                 Hover.hoverInPlaceOf [Hover.anchor (open ^. Align.tValue)] . Hover.anchor
             else return (const closedSearchTermGui)

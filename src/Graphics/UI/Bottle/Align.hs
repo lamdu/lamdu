@@ -1,23 +1,18 @@
-{-# LANGUAGE NoImplicitPrelude, TypeFamilies, TemplateHaskell, RankNTypes, FlexibleContexts, DeriveFunctor, DeriveFoldable, DeriveTraversable, FlexibleInstances, MultiParamTypeClasses #-}
+{-# LANGUAGE NoImplicitPrelude, TemplateHaskell, DeriveFunctor, DeriveFoldable, DeriveTraversable, MultiParamTypeClasses, FlexibleContexts, TypeFamilies #-}
 module Graphics.UI.Bottle.Align
     ( Aligned(..), alignmentRatio, value
-    , AnchoredWidget, anchor
-    , hoverInPlaceOf, hoverBesideOptions, hoverBesideOptionsAxis
-    , Orientation(..)
     , boxAlign, hboxAlign, vboxAlign
     , WithTextPos(..), textTop, tValue
     ) where
 
 import           Control.Lens (Lens')
 import qualified Control.Lens as Lens
-import           Data.List.Utils (minimumOn)
 import           Data.Vector.Vector2 (Vector2(..))
 import           Graphics.UI.Bottle.Glue (Glue(..), GluesTo, Orientation)
 import qualified Graphics.UI.Bottle.Glue as Glue
-import           Graphics.UI.Bottle.Rect (Rect(..))
 import           Graphics.UI.Bottle.View (View)
 import qualified Graphics.UI.Bottle.View as View
-import           Graphics.UI.Bottle.Widget (Widget(..), R, EventResult)
+import           Graphics.UI.Bottle.Widget (Widget(..), R)
 import qualified Graphics.UI.Bottle.Widget as Widget
 
 import           Lamdu.Prelude
@@ -27,12 +22,6 @@ data Aligned a = Aligned
     , _value :: a
     } deriving (Functor, Foldable, Traversable)
 Lens.makeLenses ''Aligned
-
-data AnchoredWidget a = AnchoredWidget
-    { _anchorPoint :: Vector2 R
-    , _anchored :: Widget a
-    } deriving Functor
-Lens.makeLenses ''AnchoredWidget
 
 data WithTextPos a = WithTextPos
     { _textTop :: R
@@ -57,51 +46,6 @@ instance (View.HasSize a, View.Resizable a) => View.Resizable (Aligned a) where
     scale ratio = value %~ View.scale ratio
 
 instance View.HasSize a => View.HasSize (Aligned a) where size = value . View.size
-
-instance Widget.HasWidget AnchoredWidget where widget = anchored
-
-instance View.SetLayers (AnchoredWidget a) where
-    setLayers = anchored . View.setLayers
-    hoverLayers = anchored %~ View.hoverLayers
-
-instance Functor f => View.Resizable (AnchoredWidget (f EventResult)) where
-    empty = AnchoredWidget 0 View.empty
-    assymetricPad tl br (AnchoredWidget point w) =
-        AnchoredWidget
-        { _anchorPoint = point + tl
-        , _anchored = View.assymetricPad tl br w
-        }
-    scale ratio (AnchoredWidget point w) =
-        AnchoredWidget
-        { _anchorPoint = point * ratio
-        , _anchored = View.scale ratio w
-        }
-
-instance View.HasSize (AnchoredWidget a) where size = anchored . View.size
-
-instance Glue (AnchoredWidget a) View where
-    type Glued (AnchoredWidget a) View = AnchoredWidget a
-    glue = Glue.glueH $ \w v -> w & View.setLayers <>~ View.hoverLayers v ^. View.vAnimLayers
-
-instance Functor f => Glue View (AnchoredWidget (f EventResult)) where
-    type Glued View (AnchoredWidget (f EventResult)) = AnchoredWidget (f EventResult)
-    glue = Glue.glueH $ \v w -> w & View.setLayers <>~ View.hoverLayers v ^. View.vAnimLayers
-
-instance Functor f => Glue (AnchoredWidget (f EventResult)) (Widget (f EventResult)) where
-    type Glued (AnchoredWidget (f EventResult)) (Widget (f EventResult)) = AnchoredWidget (f EventResult)
-    glue orientation =
-        Glue.glueH f orientation
-        where
-            f (AnchoredWidget pos w0) w1 =
-                AnchoredWidget pos (Widget.glueStates orientation w0 (View.hoverLayers w1))
-
-instance Functor f => Glue (Widget (f EventResult)) (AnchoredWidget (f EventResult)) where
-    type Glued (Widget (f EventResult)) (AnchoredWidget (f EventResult)) = AnchoredWidget (f EventResult)
-    glue orientation =
-        Glue.glueH f orientation
-        where
-            f w0 (AnchoredWidget pos w1) =
-                AnchoredWidget pos (Widget.glueStates orientation (View.hoverLayers w0) w1)
 
 instance View.SetLayers a => View.SetLayers (WithTextPos a) where
     setLayers = tValue . View.setLayers
@@ -174,9 +118,6 @@ instance Glue View a => Glue View (WithTextPos a) where
         , _tValue = glue o a b
         }
 
-anchor :: Widget a -> AnchoredWidget a
-anchor = AnchoredWidget 0
-
 glueHelper ::
     (Glue a b, View.Resizable a, View.Resizable b, View.HasSize a) =>
     ((Vector2 R, Vector2 R) -> Vector2 R) -> Orientation ->
@@ -201,73 +142,6 @@ glueHelper chooseAlign orientation (aAbsAlign, aw) (bAbsAlign, bw) =
 axis :: (Field1 s s a a, Field2 s s a a, Functor f) => Orientation -> (a -> f a) -> s -> f s
 axis Glue.Horizontal = _1
 axis Glue.Vertical = _2
-
-hoverBesideOptions ::
-    ( Glue a b, Glue b a, Glued a b ~ Glued b a
-    , View.HasSize a, View.HasSize b, View.HasSize (Glued a b)
-    , View.Resizable a, View.Resizable b
-    ) =>
-    a -> b -> [Glued a b]
-hoverBesideOptions hover src =
-    do
-        o <- [Glue.Vertical, Glue.Horizontal]
-        hoverBesideOptionsAxis o hover src
-
-hoverBesideOptionsAxis ::
-    ( Glue a b, Glue b a, Glued a b ~ Glued b a
-    , View.HasSize a, View.HasSize b, View.HasSize (Glued a b)
-    , View.Resizable a, View.Resizable b
-    ) =>
-    Orientation -> a -> b -> [Glued a b]
-hoverBesideOptionsAxis o hover src =
-    do
-        x <- [0, 1]
-        let aSrc = Aligned x src
-        let aHover = Aligned x hover
-        [glue o aSrc aHover, glue o aHover aSrc] <&> (^. value)
-
-hoverInPlaceOf ::
-    Functor f =>
-    [AnchoredWidget (f EventResult)] -> AnchoredWidget a -> Widget (f EventResult)
-hoverInPlaceOf [] _ = error "no hover options!"
-hoverInPlaceOf hoverOptions@(defaultOption:_) place
-    | null focusedOptions =
-        View.assymetricPad (translation defaultOption) 0 (defaultOption ^. anchored)
-        & View.size .~ place ^. View.size
-    | otherwise =
-        Widget
-        { Widget._wSize = place ^. View.size
-        , Widget._wState = Widget.StateFocused makeFocused
-        }
-    where
-        translation hover = place ^. anchorPoint - hover ^. anchorPoint
-        -- All hovers *should* be same the - either focused or unfocused..
-        focusedOptions =
-            do
-                x <- hoverOptions
-                mkFocused <- x ^.. anchored . Widget.wState . Widget._StateFocused
-                return (x, mkFocused)
-        makeFocused surrounding =
-            surrounding
-            & Widget.sRight -~ sizeDiff ^. _1
-            & Widget.sBottom -~ sizeDiff ^. _2
-            & Widget.translateFocused (translation hover) hMakeFocused
-            & Widget.fFocalAreas %~ (Rect 0 (place ^. View.size) :)
-            where
-                (hover, hMakeFocused) = pickOption surrounding
-                sizeDiff = hover ^. View.size - place ^. View.size
-        pickOption surrounding = minimumOn (negate . remainSurrouding surrounding . (^. _1)) focusedOptions
-        remainSurrouding surrounding hover =
-            filter (>= 0)
-            [ surrounding ^. Widget.sLeft - tl ^. _1
-            , surrounding ^. Widget.sTop - tl ^. _2
-            , surrounding ^. Widget.sRight - br ^. _1
-            , surrounding ^. Widget.sBottom - br ^. _2
-            ]
-            & length
-            where
-                tl = negate (translation hover)
-                br = hover ^. View.size - place ^. View.size - tl
 
 {-# INLINE asTuple #-}
 asTuple :: Lens.Iso (Aligned a) (Aligned b) (Vector2 R, a) (Vector2 R, b)

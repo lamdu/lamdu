@@ -7,14 +7,15 @@ import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
 import qualified Data.ByteString.Char8 as SBS8
 import           Data.Store.Transaction (Transaction)
+import           Graphics.UI.Bottle.Align (WithTextPos)
+import qualified Graphics.UI.Bottle.Align as Align
 import qualified Graphics.UI.Bottle.EventMap as E
-import           Graphics.UI.Bottle.Glue ((/-/))
 import           Graphics.UI.Bottle.Font (Underline(..))
+import           Graphics.UI.Bottle.Glue ((/-/))
+import qualified Graphics.UI.Bottle.Hover as Hover
 import qualified Graphics.UI.Bottle.View as View
 import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
-import           Graphics.UI.Bottle.Align (WithTextPos)
-import qualified Graphics.UI.Bottle.Align as Align
 import qualified Graphics.UI.Bottle.Widget.TreeLayout as TreeLayout
 import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
 import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
@@ -169,9 +170,9 @@ processDefinitionWidget (Sugar.DefTypeChanged info) myId mkLayout =
                     definitionTypeChangeBox info myId
                     -- Remove the text alignment so it can be placed at different vertical positions
                     <&> (^. Align.tValue)
-                let a = layout & Align.tValue %~ Align.anchor
+                let a = layout & Align.tValue %~ Hover.anchor
                 a & Align.tValue %~
-                    Align.hoverInPlaceOf (Align.hoverBesideOptions box (a ^. Align.tValue))
+                    Hover.hoverInPlaceOf (Hover.hoverBesideOptions box (a ^. Align.tValue))
                     & return
             else return layout
 

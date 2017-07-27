@@ -19,13 +19,14 @@ import qualified Data.Store.Property as Property
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Text as Text
 import           Data.Vector.Vector2 (Vector2(..))
-import           Graphics.UI.Bottle.Align (Aligned(..), WithTextPos(..), AnchoredWidget)
+import           Graphics.UI.Bottle.Align (Aligned(..), WithTextPos(..))
 import qualified Graphics.UI.Bottle.Align as Align
 import           Graphics.UI.Bottle.Animation (AnimId)
 import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.EventMap as E
 import           Graphics.UI.Bottle.Glue ((/-/), (/|/))
 import qualified Graphics.UI.Bottle.Glue as Glue
+import qualified Graphics.UI.Bottle.Hover as Hover
 import           Graphics.UI.Bottle.View (View)
 import qualified Graphics.UI.Bottle.View as View
 import           Graphics.UI.Bottle.Widget (Widget(..), EventResult)
@@ -385,14 +386,14 @@ layoutResults minWidth groups hiddenResults
                 ) & return
     where
         layoutGroup group =
-            Align.hoverInPlaceOf
-            (Align.hoverBesideOptionsAxis Glue.Horizontal (group ^. rgwExtraResultsWidget) base)
+            Hover.hoverInPlaceOf
+            (Hover.hoverBesideOptionsAxis Glue.Horizontal (group ^. rgwExtraResultsWidget) base)
             base
             where
                 base =
                     ((group ^. rgwMainResultWidget
                          & View.width .~ maxMainResultWidth - group ^. rgwExtraResultSymbol . View.width)
-                        /|/ (group ^. rgwExtraResultSymbol)) ^. Align.tValue & Align.anchor
+                        /|/ (group ^. rgwExtraResultSymbol)) ^. Align.tValue & Hover.anchor
         maxMainResultWidth = groups <&> groupMinWidth & maximum & max minWidth
         groupMinWidth group =
             group ^. rgwMainResultWidget . View.width +
@@ -468,8 +469,8 @@ resultsHoverOptions ::
     (Widget (f EventResult) -> Widget (f EventResult)) ->
     (Widget (f EventResult) -> Widget (f EventResult)) ->
     OrderedResults (Widget (f EventResult))  ->
-    AnchoredWidget (f EventResult) ->
-    [AnchoredWidget (f EventResult)]
+    Hover.AnchoredWidget (f EventResult) ->
+    [Hover.AnchoredWidget (f EventResult)]
 resultsHoverOptions pos addBg addBgAnnotation results searchTerm =
     case pos of
     Above -> [ above, aboveLeft ]
@@ -530,12 +531,12 @@ makeUnderCursorAssignment shownResultsLists hasHiddenResults holeInfo =
         let addAnnotation x = addBg (x /-/ vspace /-/ typeView)
         searchTermWidget <-
             SearchTerm.make holeInfo
-            <&> Align.tValue %~ Align.anchor . E.weakerEvents searchTermEventMap
+            <&> Align.tValue %~ Hover.anchor . E.weakerEvents searchTermEventMap
         return $
             \placement ->
             searchTermWidget
             & Align.tValue %~
-                Align.hoverInPlaceOf
+                Hover.hoverInPlaceOf
                 (resultsHoverOptions placement resBg addAnnotation resultsWidgets
                     (searchTermWidget ^. Align.tValue))
     where

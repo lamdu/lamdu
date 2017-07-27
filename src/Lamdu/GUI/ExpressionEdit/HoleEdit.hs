@@ -10,6 +10,7 @@ import qualified Data.Store.Transaction as Transaction
 import qualified Graphics.UI.Bottle.Align as Align
 import qualified Graphics.UI.Bottle.EventMap as E
 import           Graphics.UI.Bottle.Glue ((/-/))
+import qualified Graphics.UI.Bottle.Hover as Hover
 import qualified Graphics.UI.Bottle.View as View
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widget.TreeLayout as TreeLayout
@@ -72,14 +73,14 @@ makeHoleWithWrapper wrapperGui searchAreaGui pl =
             \layoutMode wrapper ->
             case isSelected || Widget.isFocused (wrapper ^. Align.tValue) of
             True ->
-                wrapper & Align.tValue %~ Align.hoverInPlaceOf options . Align.anchor
+                wrapper & Align.tValue %~ Hover.hoverInPlaceOf options . Hover.anchor
                 where
                     options =
                         [ hoverWrapper /-/ searchArea Open.Below
                         , searchArea Open.Above /-/ hoverWrapper
                         ]
                         <&> (^. Align.tValue)
-                    hoverWrapper = render wrapperGui & Align.tValue %~ Align.anchor
+                    hoverWrapper = render wrapperGui & Align.tValue %~ Hover.anchor
                     searchArea p = render (addBg (searchAreaGui p))
                     render x = (x ^. TreeLayout.render) layoutMode
             False -> wrapper
