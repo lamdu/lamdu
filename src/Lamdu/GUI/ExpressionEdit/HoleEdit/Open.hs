@@ -36,6 +36,7 @@ import qualified Graphics.UI.Bottle.Widget.TreeLayout as TreeLayout
 import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
 import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
 import           Lamdu.CharClassification (operatorChars)
+import qualified Lamdu.Config as Config
 import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.EventMap as EventMap
@@ -560,8 +561,16 @@ makeOpenSearchAreaGui pl holeInfo =
                 , (^. HoleResults.rlExtraResultsPrefixId)
                 ] <*> shownResultsLists
         exprEventMap <- ExprEventMap.make pl ExprGuiM.NoHolePick
+        delKeys <- Config.delKeys
+        let unwrapAsDelEventMap =
+                hiHole holeInfo ^? Sugar.holeMArg . Lens._Just . Sugar.haUnwrap . Sugar._UnwrapAction
+                & maybe mempty
+                    ( Widget.keysEventMapMovesCursor delKeys
+                        (E.Doc ["Edit", "Unwrap"])
+                        . fmap WidgetIds.fromEntityId
+                    )
         makeUnderCursorAssignment shownResultsLists
             hasHiddenResults holeInfo
             & assignHoleEditCursor holeInfo shownMainResultsIds
               allShownResultIds (holeInfo & hiIds & hidOpenSearchTerm)
-            <&> Lens.mapped . Align.tValue %~ E.weakerEvents exprEventMap
+            <&> Lens.mapped . Align.tValue %~ E.weakerEvents (mappend unwrapAsDelEventMap exprEventMap)
