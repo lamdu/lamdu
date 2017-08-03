@@ -29,12 +29,14 @@ makeUnwrapEventMap ::
     Sugar.HoleArg f (ExpressionN f a) -> WidgetIds ->
     m (Widget.EventMap (T f Widget.EventResult))
 makeUnwrapEventMap arg widgetIds =
-    Lens.view Config.config <&> Config.hole <&> Config.holeUnwrapKeys
+    Lens.view Config.config
     <&>
-    \unwrapKeys ->
+    \config ->
+    let unwrapKeys = Config.hole config & Config.holeUnwrapKeys
+    in
     case arg ^? Sugar.haUnwrap . Sugar._UnwrapAction of
     Just unwrap ->
-        Widget.keysEventMapMovesCursor unwrapKeys
+        Widget.keysEventMapMovesCursor (unwrapKeys ++ Config.replaceParentKeys config)
         (E.Doc ["Edit", "Unwrap"]) $ WidgetIds.fromEntityId <$> unwrap
     Nothing ->
         hidOpenSearchTerm widgetIds & pure
