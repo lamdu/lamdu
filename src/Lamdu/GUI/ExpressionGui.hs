@@ -371,12 +371,13 @@ annotationSpacer = ExprGuiM.vspacer (Theme.valAnnotationSpacing . Theme.valAnnot
 
 addAnnotationH ::
     (Functor f, Monad m) =>
+    Widget.R ->
     (AnimId -> ExprGuiM m (WithTextPos View)) ->
     WideAnnotationBehavior -> Sugar.EntityId ->
     ExprGuiM m
     (TreeLayout (f Widget.EventResult) ->
      TreeLayout (f Widget.EventResult))
-addAnnotationH f wideBehavior entityId =
+addAnnotationH minWidth f wideBehavior entityId =
     do
         vspace <- annotationSpacer
         annotationLayout <- f animId <&> (^. Align.tValue)
@@ -385,7 +386,7 @@ addAnnotationH f wideBehavior entityId =
                 w /-/ vspace /-/
 -- TODO (ALIGN):
 --                AlignTo (w ^. Align.alignmentRatio . _1)
-                processAnn (w ^. View.width) annotationLayout
+                (processAnn (w ^. View.width) annotationLayout & View.width %~ max minWidth)
         return $ TreeLayout.alignedWidget %~ onAlignedWidget
     where
         animId = WidgetIds.fromEntityId entityId & Widget.toAnimId
@@ -394,22 +395,23 @@ addInferredType ::
     (Functor f, Monad m) =>
     Type -> WideAnnotationBehavior -> Sugar.EntityId ->
     ExprGuiM m (TreeLayout (f Widget.EventResult) -> TreeLayout (f Widget.EventResult))
-addInferredType typ = addAnnotationH (TypeView.make typ)
+addInferredType typ = addAnnotationH 0 (TypeView.make typ)
 
 addEvaluationResult ::
     (Functor f, Monad m) =>
+    Widget.R ->
     Maybe (NeighborVals (Maybe EvalResDisplay)) -> EvalResDisplay ->
     WideAnnotationBehavior -> Sugar.EntityId ->
     ExprGuiM m
     (TreeLayout (f Widget.EventResult) ->
      TreeLayout (f Widget.EventResult))
 -- REVIEW(Eyal): This is misleading when it refers to Previous results
-addEvaluationResult mNeigh resDisp wideBehavior entityId =
+addEvaluationResult minWidth mNeigh resDisp wideBehavior entityId =
     case (erdVal resDisp ^. ER.payload, erdVal resDisp ^. ER.body) of
     (T.TRecord T.CEmpty, _) ->
         addValBGWithColor Theme.evaluatedPathBGColor
     (_, ER.RFunc{}) -> return id
-    _ -> addAnnotationH (makeEvalView mNeigh resDisp) wideBehavior entityId
+    _ -> addAnnotationH minWidth (makeEvalView mNeigh resDisp) wideBehavior entityId
 
 parentExprFDConfig :: Config -> FocusDelegator.Config
 parentExprFDConfig config = FocusDelegator.Config
@@ -663,8 +665,11 @@ maybeAddAnnotationWith opt wideAnnotationBehavior ShowAnnotation{..} annotation 
         withType =
             addInferredType inferredType wideAnnotationBehavior entityId
         withVal mNeighborVals scopeAndVal =
-            addEvaluationResult mNeighborVals scopeAndVal
-            wideAnnotationBehavior entityId
+            do
+                typeWidth <-
+                    TypeView.make inferredType (Widget.toAnimId (WidgetIds.fromEntityId entityId))
+                    <&> (^. View.width)
+                addEvaluationResult typeWidth mNeighborVals scopeAndVal wideAnnotationBehavior entityId
 
 valOfScope :: Sugar.Annotation -> CurAndPrev (Maybe ER.ScopeId) -> Maybe EvalResDisplay
 valOfScope annotation mScopeIds =
