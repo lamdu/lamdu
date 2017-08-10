@@ -70,7 +70,7 @@ makeWidget ::
     IORef Text -> (Float -> IO Draw.Font) -> MainLoop.Env -> IO (Widget (m Widget.EventResult))
 makeWidget choiceRef getFont mainEnv =
     do
-        sizeFactor <- Zoom.getSizeFactor (mainEnv ^. MainLoop.eZoom)
+        sizeFactor <- Zoom.getZoomFactor (mainEnv ^. MainLoop.eZoom)
         font <- getFont (sizeFactor * 20)
         let env =
                 Env

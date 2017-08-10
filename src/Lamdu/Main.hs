@@ -256,7 +256,7 @@ makeGetFonts subpixel =
     where
         f cachedLoadFonts zoom sample =
             do
-                sizeFactor <- Zoom.getSizeFactor zoom
+                sizeFactor <- Zoom.getZoomFactor zoom
                 cachedLoadFonts
                     ( defaultFontPath sample
                     , curSampleFonts sample <&> _1 *~ sizeFactor

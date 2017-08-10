@@ -34,7 +34,7 @@ hello ::
     (Float -> IO Draw.Font) -> Main.Env -> IO (Widget (m Widget.EventResult))
 hello getFont env =
     do
-        sizeFactor <- Zoom.getSizeFactor (env ^. Main.eZoom)
+        sizeFactor <- Zoom.getZoomFactor (env ^. Main.eZoom)
         font <- getFont (sizeFactor * 20)
         TextView.make (TextView.whiteText font) "Hello World!" ["hello"]
             ^. Align.tValue

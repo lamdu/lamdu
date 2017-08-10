@@ -1,6 +1,6 @@
 {-# LANGUAGE NoImplicitPrelude, DeriveGeneric, RecordWildCards, OverloadedStrings #-}
 module GUI.Momentu.Zoom
-    ( Zoom, make, eventMap, getSizeFactor
+    ( Zoom, make, eventMap, getZoomFactor
     , Config(..), defaultConfig
     ) where
 
@@ -50,8 +50,8 @@ eventMap (Zoom ref) Config{..} =
         modifyIORef ref (/ realToFrac shrinkFactor)
     ]
 
-getSizeFactor :: Fractional a => Zoom -> IO a
-getSizeFactor (Zoom ref) = readIORef ref <&> realToFrac
+getZoomFactor :: Fractional a => Zoom -> IO a
+getZoomFactor (Zoom ref) = readIORef ref <&> realToFrac
 
 make :: GLFW.Window -> IO Zoom
 make win =

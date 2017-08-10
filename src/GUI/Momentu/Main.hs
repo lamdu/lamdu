@@ -93,7 +93,7 @@ defaultOptions helpFontPath =
                 }
             , getHelpStyle =
                 \zoom -> do
-                    zoomFactor <- Zoom.getSizeFactor zoom
+                    zoomFactor <- Zoom.getZoomFactor zoom
                     helpFont <- loadHelpFont (9 * zoomFactor)
                     EventMapHelp.defaultConfig helpFont & return
             , cursorStartPos =
