@@ -170,14 +170,16 @@ ordNub :: Ord a => [a] -> [a]
 ordNub = Set.toList . Set.fromList
 
 processLet ::
-    Monad m => Maybe (ConvertM.OuterScopeInfo f) -> Redex (Input.Payload m a) -> T m (NewLet m)
-processLet mOuterScopeInfo redex =
+    Monad m => ConvertM.ScopeInfo f -> Redex (Input.Payload m a) -> T m (NewLet m)
+processLet scopeInfo redex =
     case varsExitingScope of
     [] -> sameLet (redex <&> (^. Input.stored)) & return
     [x] -> addLetParam x redex
     _ -> error "multiple osiVarsUnderPos not expected!?"
     <* maybeWrapHole
     where
+        globalsInScope = scopeInfo ^. ConvertM.siGlobalsInScope
+        isGlobal = (`Set.member` globalsInScope) . ExprIRef.defI
         maybeWrapHole
             | TV.null skolemsExitingScope = return ()
             | otherwise =
@@ -188,10 +190,11 @@ processLet mOuterScopeInfo redex =
         usedLocalVars =
             redex ^.. Redex.arg . ExprLens.valLeafs . V._LVar
             & ordNub
+            & filter (not . isGlobal)
             & filter (`Map.member` Infer.scopeToTypeMap innerScope)
         innerSkolems = Infer.skolems innerScope ^. Infer.skolemScopeVars
         (varsExitingScope, skolemsExitingScope) =
-            case mOuterScopeInfo of
+            case scopeInfo ^. ConvertM.siMOuter of
             Nothing -> (usedLocalVars, mempty)
             Just outerScopeInfo ->
                 ( filter (`Map.notMember` Infer.scopeToTypeMap outerScope) usedLocalVars
@@ -212,7 +215,7 @@ floatLetToOuterScope setTopLevel redex ctx =
         newLet <-
             redex
             & Redex.lam . V.lamResult . Val.payload . Input.stored . Property.pSet .~ setTopLevel
-            & processLet (ctx ^. ConvertM.scScopeInfo . ConvertM.siMOuter)
+            & processLet (ctx ^. ConvertM.scScopeInfo)
         resultEntity <-
             case ctx ^. ConvertM.scScopeInfo . ConvertM.siMOuter of
             Nothing ->
