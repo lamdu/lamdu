@@ -282,8 +282,8 @@ combineEnters o sz e0 e1 dir = chooseEnter o sz dir (e0 dir) (e1 dir)
 
 closer :: Rect -> EnterResult a -> EnterResult a -> EnterResult a
 closer r r0 r1
-    | Rect.distance r (r0 ^. enterResultRect) <=
-      Rect.distance r (r1 ^. enterResultRect) = r0
+    | Rect.sqrDistance r (r0 ^. enterResultRect) <=
+      Rect.sqrDistance r (r1 ^. enterResultRect) = r0
     | otherwise = r1
 
 chooseEnter :: Orientation -> Size -> Direction -> EnterResult a -> EnterResult a -> EnterResult a

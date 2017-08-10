@@ -121,7 +121,7 @@ minimumIndex xs =
 
 cursorNearRect :: TextView.Style -> Text -> Rect -> Cursor
 cursorNearRect s str fromRect =
-    cursorRects s str <&> Rect.distance fromRect
+    cursorRects s str <&> Rect.sqrDistance fromRect
     & minimumIndex -- cursorRects(TextView.letterRects) should never return an empty list
 
 enterFromDirection ::

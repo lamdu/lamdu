@@ -226,10 +226,9 @@ combineMEnters children =
                     where
                         dist =
                             enter ^. Widget.enterResultRect
-                            & Rect.distance dirRect
+                            & Rect.distances dirRect
                             & removeUninterestingAxis
-                            & abs
-                            & Vector2.uncurry (+)
+                            & Vector2.sqrNorm
                 removeUninterestingAxis :: Vector2 R -> Vector2 R
                 removeUninterestingAxis = ((1 - abs (fromIntegral <$> edge)) *)
                 dirRect =

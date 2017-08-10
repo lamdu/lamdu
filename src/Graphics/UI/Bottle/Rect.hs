@@ -7,7 +7,7 @@ module Graphics.UI.Bottle.Rect
     , width, height
     , bottomRight
     , center, centeredSize
-    , distance
+    , distances, sqrDistance
     ) where
 
 import           Control.DeepSeq (NFData(..))
@@ -15,6 +15,7 @@ import           Control.DeepSeq.Generics (genericRnf)
 import           Control.Lens (Traversal')
 import qualified Control.Lens as Lens
 import           Data.Vector.Vector2 (Vector2(..))
+import qualified Data.Vector.Vector2 as Vector2
 import           Foreign.C.Types.Instances ()
 import           GHC.Generics (Generic)
 import           Graphics.DrawingCombinators (R)
@@ -100,8 +101,8 @@ height = size . _2
 
 -- | Returns the linear distance between the 2 closest points in 2
 -- rects
-distance :: Rect -> Rect -> Vector2 R
-distance r1 r2 =
+distances :: Rect -> Rect -> Vector2 R
+distances r1 r2 =
     max
     <$> tl2 - br1
     <*> tl1 - br2
@@ -111,3 +112,6 @@ distance r1 r2 =
         tl2 = r2 ^. topLeft
         br1 = r1 ^. bottomRight
         br2 = r2 ^. bottomRight
+
+sqrDistance :: Rect -> Rect -> R
+sqrDistance r1 r2 = Vector2.sqrNorm (distances r1 r2)
