@@ -32,6 +32,7 @@ import qualified Lamdu.Sugar.Convert.Monad as ConvertM
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import           Lamdu.Sugar.OrderTags (orderedClosedFlatComposite)
 import           Lamdu.Sugar.Types
+import           Text.PrettyPrint.HughesPJClass (prettyShow)
 
 import           Lamdu.Prelude
 
@@ -46,7 +47,7 @@ moveToGlobalScope ctx param defExpr =
             >>= (`Load.inferCheckDef` param)
         scheme <-
             case inferRes of
-            Left _err -> fail "extract to global scope failed inference"
+            Left err -> fail ("extract to global scope failed inference: " ++ show (prettyShow err))
             Right (inferredVal, inferContext) ->
                 inferredVal ^. Val.payload . _1 . Infer.plType
                 & Infer.makeScheme inferContext
