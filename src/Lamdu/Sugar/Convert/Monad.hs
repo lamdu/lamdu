@@ -3,7 +3,7 @@ module Lamdu.Sugar.Convert.Monad
     ( TagParamInfo(..)
     , TagFieldParam(..), _TagFieldParam, _CollidingFieldParam
     , OuterScopeInfo(..), osiPos, osiScope
-    , RecursiveRef(..), rrDefI
+    , RecursiveRef(..), rrDefI, rrDefType
     , ScopeInfo(..), siTagParamInfos, siNullParams, siLetItems, siMOuter
 
     , PostProcessResult(..)
@@ -19,13 +19,14 @@ module Lamdu.Sugar.Convert.Monad
     ) where
 
 import qualified Control.Lens as Lens
-import           Control.Monad.Transaction (MonadTransaction(..))
 import           Control.Monad.Trans.Reader (ReaderT, runReaderT)
 import qualified Control.Monad.Trans.Reader as Reader
+import           Control.Monad.Transaction (MonadTransaction(..))
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
 import qualified Lamdu.Calc.Type as T
 import           Lamdu.Calc.Type.Nominal (Nominal(..))
+import           Lamdu.Calc.Type.Scheme (Scheme(..))
 import qualified Lamdu.Calc.Val as V
 import           Lamdu.Calc.Val.Annotated (Val)
 import qualified Lamdu.Data.Anchors as Anchors
@@ -56,8 +57,9 @@ data OuterScopeInfo m = OuterScopeInfo
     }
 Lens.makeLenses ''OuterScopeInfo
 
-newtype RecursiveRef m = RecursiveRef
+data RecursiveRef m = RecursiveRef
     { _rrDefI :: ExprIRef.DefI m
+    , _rrDefType :: Scheme
     }
 Lens.makeLenses ''RecursiveRef
 

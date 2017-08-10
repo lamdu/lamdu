@@ -165,6 +165,7 @@ convertInferDefExpr evalRes cp defType defExpr defI =
                         emptyScopeInfo
                         ( Just RecursiveRef
                           { _rrDefI = defI
+                          , _rrDefType = defType
                           }
                         )
                 , _scPostProcessRoot = postProcessDef defI
