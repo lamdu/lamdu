@@ -188,7 +188,7 @@ makeComposite mkField composite =
                 do
                     sqrId <- randAnimId
                     let sqr =
-                            View.make 1 (Anim.unitSquare sqrId)
+                            View.unitSquare sqrId
                             & Element.scale (Vector2 barWidth 10)
                             & Aligned 0.5
                     makeTVar var <&> (^. Align.tValue) <&> Aligned 0.5 <&> (sqr /-/)

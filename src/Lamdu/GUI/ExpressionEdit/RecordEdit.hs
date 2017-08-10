@@ -110,8 +110,7 @@ makeFieldsWidget fields _ =
 
 separationBar :: Theme -> Widget.R -> Anim.AnimId -> View
 separationBar theme width animId =
-    Anim.unitSquare (animId <> ["tailsep"])
-    & View.make 1
+    View.unitSquare (animId <> ["tailsep"])
     & Element.tint (Theme.recordTailColor theme)
     & Element.scale (Vector2 width 10)
 

@@ -196,7 +196,7 @@ makeRecExtend animId typ recExtend =
                     <&> (sqr /-/)
                     where
                         sqr =
-                            View.make 1 (Anim.unitSquare (animId ++ ["line"]))
+                            View.unitSquare (animId ++ ["line"])
                             & Element.scale (Vector2 barWidth 1)
                             & Aligned 0.5
             (Aligned 0.5 fieldsView /-/ restView) ^. Align.value & Align.WithTextPos 0 & return

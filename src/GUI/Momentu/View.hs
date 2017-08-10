@@ -4,10 +4,11 @@ module GUI.Momentu.View
     , animFrames
     , Size, R
     , hoverInPlaceOf
+    , unitSquare
     ) where
 
 import qualified Control.Lens as Lens
-import           GUI.Momentu.Animation (R, Size)
+import           GUI.Momentu.Animation (R, Size, AnimId)
 import qualified GUI.Momentu.Animation as Anim
 import           GUI.Momentu.Element (Element, SizedElement)
 import qualified GUI.Momentu.Element as Element
@@ -51,3 +52,6 @@ animFrames = vAnimLayers . Element.layers . traverse
 hoverInPlaceOf :: Element a => View -> a -> a
 hoverInPlaceOf onTop =
     Element.setLayers . Element.layers .~ mempty : onTop ^. vAnimLayers . Element.layers
+
+unitSquare :: AnimId -> View
+unitSquare = make 1 . Anim.unitSquare

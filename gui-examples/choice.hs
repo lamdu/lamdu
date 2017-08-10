@@ -3,7 +3,7 @@
 module Main where
 
 import qualified Control.Lens as Lens
-import           Control.Lens.Operators ((&), (^.), (%~))
+import           Control.Lens.Operators ((&), (^.))
 import           Control.Monad.IO.Class (MonadIO(..))
 import           Data.IORef
 import           Data.MRUMemo (memoIO)
@@ -11,13 +11,12 @@ import           Data.Text (Text)
 import           Data.Vector.Vector2 (Vector2(..))
 import qualified GUI.Momentu.Align as Align
 import           GUI.Momentu.Animation (AnimId)
-import qualified GUI.Momentu.Animation as Anim
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Glue ((/-/))
 import qualified GUI.Momentu.Main as MainLoop
 import           GUI.Momentu.MetaKey (MetaKey(..), noMods)
-import qualified GUI.Momentu.View as View
+import qualified GUI.Momentu.Draw as MDraw
 import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Choice as Choice
@@ -88,9 +87,8 @@ makeWidget choiceRef getFont mainEnv =
                 choiceConfig (Widget.Id [])
         let Just color = lookup choice colors
         let box =
-                Anim.unitSquare ["square"]
-                & Anim.unitImages %~ Draw.tint color
-                & View.make 1
+                MDraw.unitSquare ["square"]
+                & Element.tint color
                 & Element.scale 100
         choiceWidget /-/ box
             & E.strongerEvents MainLoop.quitEventMap
