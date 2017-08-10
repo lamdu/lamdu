@@ -5,8 +5,8 @@ module Lamdu.GUI.Scroll
 
 import qualified Control.Lens as Lens
 import           Data.Vector.Vector2 (Vector2(..))
+import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.Rect as Rect
-import qualified GUI.Momentu.View as View
 import           GUI.Momentu.Widget (Widget(..))
 import qualified GUI.Momentu.Widget as Widget
 
@@ -20,14 +20,14 @@ focusAreaIntoWindow winSize widget =
     & intoWindow _1
     & intoWindow _2
     where
-        widgetSize = widget ^. View.size
+        widgetSize = widget ^. Element.size
         center = winSize / 2
         allowedScroll = winSize - widgetSize
         intoWindow rawLens w
             | widgetSize ^. l > winSize ^. l && movement < 0 =
               w
               & Widget.wState .~ Widget.translate (0 & l .~ max (allowedScroll ^. l) movement) w
-              & View.size .~ winSize
+              & Element.size .~ winSize
             | otherwise = w
             where
                 movement = center ^. l - focalPoint ^. l

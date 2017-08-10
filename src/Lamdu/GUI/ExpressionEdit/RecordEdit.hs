@@ -6,17 +6,18 @@ module Lamdu.GUI.ExpressionEdit.RecordEdit
 import qualified Control.Lens as Lens
 import           Data.Store.Transaction (Transaction)
 import           Data.Vector.Vector2 (Vector2(..))
+import           GUI.Momentu.Align (WithTextPos)
+import qualified GUI.Momentu.Align as Align
 import           GUI.Momentu.Animation (AnimId)
 import qualified GUI.Momentu.Animation as Anim
+import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Glue ((/-/), (/|/))
+import qualified GUI.Momentu.Responsive as Responsive
 import           GUI.Momentu.View (View)
 import qualified GUI.Momentu.View as View
 import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
-import           GUI.Momentu.Align (WithTextPos)
-import qualified GUI.Momentu.Align as Align
-import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
@@ -111,8 +112,8 @@ separationBar :: Theme -> Widget.R -> Anim.AnimId -> View
 separationBar theme width animId =
     Anim.unitSquare (animId <> ["tailsep"])
     & View.make 1
-    & View.tint (Theme.recordTailColor theme)
-    & View.scale (Vector2 width 10)
+    & Element.tint (Theme.recordTailColor theme)
+    & Element.scale (Vector2 width 10)
 
 makeOpenRecord ::
     Monad m =>
@@ -128,8 +129,8 @@ makeOpenRecord fieldsGui rest animId =
         return $ fieldsGui & Responsive.render . Lens.imapped %@~
             \layoutMode fields ->
             let restW = (restExpr ^. Responsive.render) layoutMode
-                minWidth = restW ^. View.width
-                targetWidth = fields ^. View.width
+                minWidth = restW ^. Element.width
+                targetWidth = fields ^. Element.width
             in
             fields
             /-/

@@ -67,11 +67,12 @@ import           Data.Monoid.Generic (def_mempty, def_mappend)
 import           Data.Vector.Vector2 (Vector2(..))
 import qualified Data.Vector.Vector2 as Vector2
 import           GHC.Generics (Generic)
-import qualified Graphics.DrawingCombinators as Draw
 import           GUI.Momentu.Animation (AnimId, R, Size)
 import qualified GUI.Momentu.Animation as Anim
 import           GUI.Momentu.Direction (Direction)
 import qualified GUI.Momentu.Direction as Direction
+import           GUI.Momentu.Element (Element, SizedElement)
+import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as EventMap
 import           GUI.Momentu.Glue (Glue(..), Orientation(..))
@@ -85,6 +86,7 @@ import qualified GUI.Momentu.View as View
 import           GUI.Momentu.Widget.Id (Id(..))
 import qualified GUI.Momentu.Widget.Id as Id
 import           GUI.Momentu.Widgets.StdKeys (DirKeys(..), stdDirKeys)
+import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.GLFW as GLFW
 
 import           Lamdu.Prelude
@@ -163,21 +165,21 @@ Lens.makePrisms ''State
 sizedState :: Lens.IndexedLens' Size (Widget a) (State a)
 sizedState f (Widget sz state) = Lens.indexed f sz state <&> Widget sz
 
-instance Functor f => View.Element (Widget (f EventResult)) where
+instance Functor f => Element (Widget (f EventResult)) where
     setLayers = sizedState <. stateLayers
     hoverLayers w =
         w
-        & View.setLayers . View.layers %~ (mempty :)
+        & Element.setLayers . View.layers %~ (mempty :)
         & mEnter . Lens._Just . Lens.mapped . enterResultLayer +~ 1
-    empty = fromView View.empty
+    empty = fromView Element.empty
     assymetricPad leftAndTop rightAndBottom w =
         w
         & wState .~ translate leftAndTop w
-        & View.size +~ leftAndTop + rightAndBottom
+        & Element.size +~ leftAndTop + rightAndBottom
     scale mult w =
         w
-        & View.setLayers . View.layers . Lens.mapped %~ Anim.scale mult
-        & View.size *~ mult
+        & Element.setLayers . View.layers . Lens.mapped %~ Anim.scale mult
+        & Element.size *~ mult
         & wState . _StateFocused . Lens.mapped . fFocalAreas . traverse . Rect.topLeftAndSize *~ mult
         & wState . _StateFocused . Lens.mapped . fEventMap . Lens.argument . virtualCursor . Rect.topLeftAndSize //~ mult
         & mEnter . Lens._Just . Lens.mapped . enterResultRect . Rect.topLeftAndSize *~ mult
@@ -185,7 +187,7 @@ instance Functor f => View.Element (Widget (f EventResult)) where
         & Lens.mapped . Lens.mapped . eVirtualCursor . Lens.mapped .
           virtualCursor . Rect.topLeftAndSize *~ mult
 
-instance Functor f => View.SizedElement (Widget (f EventResult)) where
+instance Functor f => SizedElement (Widget (f EventResult)) where
     size f w =
         w
         & wSize f
@@ -200,11 +202,11 @@ instance EventMap.HasEventMap Widget where eventMap = eventMapMaker . Lens.mappe
 
 instance Functor f => Glue (Widget (f EventResult)) View where
     type Glued (Widget (f EventResult)) View = Widget (f EventResult)
-    glue = Glue.glueH $ \w v -> w & View.setLayers <>~ v ^. View.vAnimLayers
+    glue = Glue.glueH $ \w v -> w & Element.setLayers <>~ v ^. View.vAnimLayers
 
 instance Functor f => Glue View (Widget (f EventResult)) where
     type Glued View (Widget (f EventResult)) = Widget (f EventResult)
-    glue = Glue.glueH $ \v w -> w & View.setLayers <>~ v ^. View.vAnimLayers
+    glue = Glue.glueH $ \v w -> w & Element.setLayers <>~ v ^. View.vAnimLayers
 
 instance Functor f => Glue (Widget (f EventResult)) (Widget (f EventResult)) where
     type Glued (Widget (f EventResult)) (Widget (f EventResult)) = Widget (f EventResult)
@@ -380,7 +382,7 @@ takesFocus ::
 takesFocus enterFunc =
     widget %~
     \w ->
-        let rect = Rect 0 (w ^. View.size)
+        let rect = Rect 0 (w ^. Element.size)
         in  w & mEnter ?~
             ( enterFunc
                 <&> Lens.mapped %~ eventResultFromCursor
@@ -498,9 +500,9 @@ padToSizeAlign ::
 padToSizeAlign newSize alignment w =
     w
     & wState .~ translate (sizeDiff * alignment) w
-    & View.size %~ (max <$> newSize <*>)
+    & Element.size %~ (max <$> newSize <*>)
     where
-        sizeDiff = max <$> 0 <*> newSize - w ^. View.size
+        sizeDiff = max <$> 0 <*> newSize - w ^. Element.size
 
 class HasCursor env where cursor :: Lens' env Id
 

@@ -23,16 +23,17 @@ import           GUI.Momentu.Align (Aligned(..), WithTextPos(..))
 import qualified GUI.Momentu.Align as Align
 import           GUI.Momentu.Animation (AnimId)
 import qualified GUI.Momentu.Animation as Anim
+import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Glue ((/-/), (/|/))
 import qualified GUI.Momentu.Glue as Glue
 import qualified GUI.Momentu.Hover as Hover
+import qualified GUI.Momentu.Responsive as Responsive
 import           GUI.Momentu.View (View)
 import qualified GUI.Momentu.View as View
 import           GUI.Momentu.Widget (Widget(..), EventResult)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widget.Id as WidgetId
-import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified GUI.Momentu.Widgets.TextView as TextView
 import           Lamdu.CharClassification (operatorChars)
@@ -189,7 +190,7 @@ makeShownResult holeInfo result =
                 res ^? Sugar.holeResultConverted
                 . SugarLens.holePayloads . Sugar.plEntityId
         return
-            ( View.pad padding widget
+            ( Element.pad padding widget
             , ShownResult
               { srMkEventMap =
                   mkEventMap <&> mappend (fixNumWithDotEventMap holeInfo res)
@@ -204,7 +205,7 @@ makeShownResult holeInfo result =
 
 makeExtraSymbol :: Monad m => Bool -> ResultsList n -> ExprGuiM m (WithTextPos View)
 makeExtraSymbol isSelected results
-    | Lens.nullOf (HoleResults.rlExtra . traverse) results = pure View.empty
+    | Lens.nullOf (HoleResults.rlExtra . traverse) results = pure Element.empty
     | otherwise =
         do
             holeTheme <- Lens.view Theme.theme <&> Theme.hole
@@ -213,8 +214,8 @@ makeExtraSymbol isSelected results
                     | otherwise = Theme.holeExtraSymbolColorUnselected holeTheme
             hSpace <- Spacer.getSpaceSize <&> (^. _1)
             TextView.makeLabel extraSymbol
-                <&> View.tint extraSymbolColor
-                <&> View.assymetricPad (Vector2 hSpace 0) 0
+                <&> Element.tint extraSymbolColor
+                <&> Element.assymetricPad (Vector2 hSpace 0) 0
 
 makeResultGroup ::
     Monad m =>
@@ -242,7 +243,7 @@ makeResultGroup holeInfo results =
         let isSelected = Lens.has Lens._Just mSelectedResult
         extraSymbolWidget <-
             makeExtraSymbol isSelected results
-            & Reader.local (View.animIdPrefix .~ Widget.toAnimId (rId mainResult))
+            & Reader.local (Element.animIdPrefix .~ Widget.toAnimId (rId mainResult))
         return ResultGroupWidgets
             { _rgwMainResult = shownMainResult
             , _rgwMSelectedResult = mSelectedResult
@@ -255,8 +256,8 @@ makeResultGroup holeInfo results =
         makeExtra =
             makeExtraResultsWidget holeInfo (results ^. HoleResults.rlExtra)
             <&> Lens.mapped %~ (^. Align.tValue)
-        focusFirstExtraResult [] = return View.empty
-        focusFirstExtraResult (result:_) = Widget.makeFocusableView ?? rId result ?? View.empty
+        focusFirstExtraResult [] = return Element.empty
+        focusFirstExtraResult (result:_) = Widget.makeFocusableView ?? rId result ?? Element.empty
 
 makeExtraResultsWidget ::
     Monad m =>
@@ -265,7 +266,7 @@ makeExtraResultsWidget ::
     ( Maybe (ShownResult m)
     , WithTextPos (Widget (T m Widget.EventResult))
     )
-makeExtraResultsWidget _ [] = return (Nothing, View.empty)
+makeExtraResultsWidget _ [] = return (Nothing, Element.empty)
 makeExtraResultsWidget holeInfo extraResults@(firstResult:_) =
     do
         theme <- Lens.view Theme.theme
@@ -304,7 +305,7 @@ makeHoleResultWidget ::
 makeHoleResultWidget resultId holeResult =
     (Widget.makeFocusableView ?? resultId <&> (Align.tValue %~))
     <*> mkWidget
-    <&> View.setLayers . View.layers . Lens.traverse %~
+    <&> Element.setLayers . View.layers . Lens.traverse %~
         Anim.mapIdentities (<> (resultSuffix # Widget.toAnimId resultId))
     <&> flip (,) mkEventMap
     where
@@ -374,7 +375,7 @@ layoutResults minWidth groups hiddenResults
         do
             hiddenResultsWidget <-
                 makeHiddenResultsMView hiddenResults
-                <&> maybe View.empty (^. Align.tValue)
+                <&> maybe Element.empty (^. Align.tValue)
                 <&> Widget.fromView
             OrderedResults
                 { resultsFromTop = EventMap.blockDownEvents
@@ -393,12 +394,12 @@ layoutResults minWidth groups hiddenResults
             where
                 base =
                     ((group ^. rgwMainResultWidget
-                         & View.width .~ maxMainResultWidth - group ^. rgwExtraResultSymbol . View.width)
+                         & Element.width .~ maxMainResultWidth - group ^. rgwExtraResultSymbol . Element.width)
                         /|/ (group ^. rgwExtraResultSymbol)) ^. Align.tValue & Hover.anchor
         maxMainResultWidth = groups <&> groupMinWidth & maximum & max minWidth
         groupMinWidth group =
-            group ^. rgwMainResultWidget . View.width +
-            group ^. rgwExtraResultSymbol . View.width
+            group ^. rgwMainResultWidget . Element.width +
+            group ^. rgwExtraResultSymbol . Element.width
 
 makeResultsWidget ::
     Monad m =>
@@ -519,7 +520,7 @@ makeUnderCursorAssignment shownResultsLists hasHiddenResults holeInfo =
             <&> (^. Align.tValue)
 
         (mShownResult, rawResultsWidgets) <-
-            makeResultsWidget (typeView ^. View.width) holeInfo shownResultsLists hasHiddenResults
+            makeResultsWidget (typeView ^. Element.width) holeInfo shownResultsLists hasHiddenResults
 
         (searchTermEventMap, resultsEventMap) <-
             EventMap.makeOpenEventMaps holeInfo mShownResult

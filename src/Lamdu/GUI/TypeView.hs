@@ -16,6 +16,8 @@ import           GUI.Momentu.Align (Aligned(..), WithTextPos(..))
 import qualified GUI.Momentu.Align as Align
 import           GUI.Momentu.Animation (AnimId)
 import qualified GUI.Momentu.Animation as Anim
+import           GUI.Momentu.Element (Element, SizedElement)
+import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.Glue ((/-/), (/|/), hbox)
 import           GUI.Momentu.View (R, View(..))
 import qualified GUI.Momentu.View as View
@@ -128,23 +130,23 @@ makeTInst parentPrecedence tid typeParams =
                 >>= addBGColor
                 <&> afterName
 
-toAligned :: View.SizedElement a => R -> WithTextPos a -> Aligned a
+toAligned :: SizedElement a => R -> WithTextPos a -> Aligned a
 toAligned x (WithTextPos y w) =
-    Aligned (Vector2 x (y / w ^. View.height)) w
+    Aligned (Vector2 x (y / w ^. Element.height)) w
 
-addValPadding :: (View.Element a, Monad m) => a -> M m a
+addValPadding :: (Element a, Monad m) => a -> M m a
 addValPadding view =
     do
         padding <- Lens.view Theme.theme <&> Theme.valFramePadding <&> fmap realToFrac
-        View.pad padding view & return
+        Element.pad padding view & return
 
-addBGColor :: (View.Element a, Monad m) => a -> M m a
+addBGColor :: (Element a, Monad m) => a -> M m a
 addBGColor view =
     do
         color <- Lens.view Theme.theme <&> Theme.typeFrameBGColor
         bgId <- randAnimId
         view
-            & View.backgroundColor bgId color
+            & Element.backgroundColor bgId color
             & return
 
 makeEmptyRecord :: Monad m => M m (WithTextPos View)
@@ -177,16 +179,16 @@ makeComposite mkField composite =
         fieldsView <- GridView.make <$> mapM mkField fields
         let barWidth
                 | null fields = 150
-                | otherwise = fieldsView ^. View.width
+                | otherwise = fieldsView ^. Element.width
         varView <-
             case extension of
-            Nothing -> pure View.empty
+            Nothing -> pure Element.empty
             Just var ->
                 do
                     sqrId <- randAnimId
                     let sqr =
                             View.make 1 (Anim.unitSquare sqrId)
-                            & View.scale (Vector2 barWidth 10)
+                            & Element.scale (Vector2 barWidth 10)
                             & Aligned 0.5
                     makeTVar var <&> (^. Align.tValue) <&> Aligned 0.5 <&> (sqr /-/)
         (Aligned 0.5 fieldsView /-/ varView) ^. Align.value & Align.WithTextPos 0
@@ -218,5 +220,5 @@ make t prefix =
         makeInternal (Precedence.parent 0) t
             & runM
             & (`evalStateT` Random.mkStdGen 0)
-            <&> View.setLayers . View.layers . Lens.mapped %~ Anim.mapIdentities (mappend prefix)
-            <&> View.tint typeTint
+            <&> Element.setLayers . View.layers . Lens.mapped %~ Anim.mapIdentities (mappend prefix)
+            <&> Element.tint typeTint

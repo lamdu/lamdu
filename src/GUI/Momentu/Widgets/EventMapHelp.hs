@@ -15,11 +15,11 @@ import qualified Data.List as List
 import qualified Data.Map as Map
 import qualified Data.Tuple as Tuple
 import           Data.Vector.Vector2 (Vector2(..))
-import qualified Graphics.DrawingCombinators as Draw
-import           GUI.Momentu.Animation (AnimId, R)
-import qualified GUI.Momentu.Animation as Anim
 import           GUI.Momentu.Align (Aligned(..))
 import qualified GUI.Momentu.Align as Align
+import           GUI.Momentu.Animation (AnimId, R)
+import qualified GUI.Momentu.Animation as Anim
+import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Glue ((/|/))
@@ -33,6 +33,7 @@ import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.GridView as GridView
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified GUI.Momentu.Widgets.TextView as TextView
+import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.GLFW as GLFW
 
 import           Lamdu.Prelude
@@ -51,7 +52,7 @@ data Env = Env
     , _eAnimIdPrefix :: AnimId
     }
 Lens.makeLenses ''Env
-instance View.HasAnimIdPrefix Env where animIdPrefix = eAnimIdPrefix
+instance Element.HasAnimIdPrefix Env where animIdPrefix = eAnimIdPrefix
 instance TextView.HasStyle Env where style = eConfig . configStyle
 
 defaultConfig :: Draw.Font -> Config
@@ -123,11 +124,11 @@ makeTextViews tree =
     where
         shortcut (animId, doc) =
             makeShortcutKeyView doc
-            & Reader.local (View.animIdPrefix .~ animId)
+            & Reader.local (Element.animIdPrefix .~ animId)
         mkDoc (animId, subtitle) =
             TextView.makeLabel subtitle
             <&> (^. Align.tValue)
-            & Reader.local (View.animIdPrefix .~ animId)
+            & Reader.local (Element.animIdPrefix .~ animId)
 
 columns :: R -> (a -> R) -> [a] -> [[a]]
 columns maxHeight itemHeight =
@@ -179,7 +180,7 @@ makeFlatTreeView size pairs =
             <&> map toRow
             <&> GridView.make
         toRow (titleView, docView) = [Aligned 0 titleView, Aligned (Vector2 1 0) docView]
-        pairHeight (titleView, docView) = (max `on` (^. View.height)) titleView docView
+        pairHeight (titleView, docView) = (max `on` (^. Element.height)) titleView docView
 
 makeTreeView ::
     (MonadReader env m, TextView.HasStyle env) =>
@@ -254,8 +255,8 @@ makeToggledHelpAdder startValue =
                         liftIO $ modifyIORef showingHelpVar toggle
                     bgHelpView =
                         helpView
-                        & View.backgroundColor helpAnimId (config ^. configBGColor)
-                        & View.tint (config ^. configTint)
+                        & Element.backgroundColor helpAnimId (config ^. configBGColor)
+                        & Element.tint (config ^. configTint)
                 in
                 focus
                 & Widget.fLayers %~ addToBottomRight bgHelpView size

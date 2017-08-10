@@ -44,25 +44,27 @@ import           Data.Store.Transaction (Transaction)
 import qualified Data.Text as Text
 import           Data.Text.Encoding (encodeUtf8)
 import           Data.Vector.Vector2 (Vector2(..))
-import qualified Graphics.DrawingCombinators as Draw
+import           GUI.Momentu.Align (Aligned(..), WithTextPos(..))
+import qualified GUI.Momentu.Align as Align
 import           GUI.Momentu.Animation (AnimId)
+import           GUI.Momentu.Element (Element)
+import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Glue ((/-/), (/|/))
 import qualified GUI.Momentu.Glue as Glue
 import           GUI.Momentu.MetaKey (MetaKey(..), noMods)
+import           GUI.Momentu.Responsive (Responsive(..))
+import qualified GUI.Momentu.Responsive as Responsive
 import           GUI.Momentu.View (View)
 import qualified GUI.Momentu.View as View
 import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
-import           GUI.Momentu.Align (Aligned(..), WithTextPos(..))
-import qualified GUI.Momentu.Align as Align
-import           GUI.Momentu.Responsive (Responsive(..))
-import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.Widgets.FocusDelegator as FocusDelegator
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
 import qualified GUI.Momentu.Widgets.TextEdit.Property as TextEdits
 import qualified GUI.Momentu.Widgets.TextView as TextView
+import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.GLFW as GLFW
 import           Lamdu.Calc.Type (Type)
 import qualified Lamdu.Calc.Type as T
@@ -104,8 +106,8 @@ maybeIndent (Just piInfo) =
                 indentBar /|/ Spacer.make (Vector2 gapWidth 0) /|/ content
                 where
                     indentBar =
-                        Spacer.make (Vector2 barWidth (content ^. View.height))
-                        & View.backgroundColor bgAnimId (Theme.indentBarColor indentConf)
+                        Spacer.make (Vector2 barWidth (content ^. Element.height))
+                        & Element.backgroundColor bgAnimId (Theme.indentBarColor indentConf)
                     indentConf = piIndentTheme piInfo
                     stdSpace = piStdHorizSpacing piInfo
                     barWidth = stdSpace * Theme.indentBarWidth indentConf
@@ -162,7 +164,7 @@ horizVertFallbackH mParenInfo horiz vert =
             parenLabel parenInfo ")"
         _ -> wide
     Responsive.LayoutNarrow limit
-        | wide ^. View.width > limit ->
+        | wide ^. Element.width > limit ->
             layoutParams & maybeIndent mParenInfo vert ^. Responsive.render
         | otherwise -> wide
 
@@ -222,18 +224,18 @@ combineSpacedMParens mParensId =
         return $ combineWith mParenInfo (List.intersperse hSpace) (List.intersperse vSpace)
 
 addAnnotationBackgroundH ::
-    View.Element a =>
+    Element a =>
     (Theme.ValAnnotation -> Draw.Color) -> Theme.ValAnnotation -> AnimId -> a -> a
 addAnnotationBackgroundH getColor theme animId =
-    View.backgroundColor bgAnimId bgColor
+    Element.backgroundColor bgAnimId bgColor
     where
         bgAnimId = animId ++ ["annotation background"]
         bgColor = getColor theme
 
-addAnnotationBackground :: View.Element a => Theme.ValAnnotation -> AnimId -> a -> a
+addAnnotationBackground :: Element a => Theme.ValAnnotation -> AnimId -> a -> a
 addAnnotationBackground = addAnnotationBackgroundH Theme.valAnnotationBGColor
 
-addAnnotationHoverBackground :: View.Element a => Theme.ValAnnotation -> AnimId -> a -> a
+addAnnotationHoverBackground :: Element a => Theme.ValAnnotation -> AnimId -> a -> a
 addAnnotationHoverBackground = addAnnotationBackgroundH Theme.valAnnotationHoverBGColor
 
 data WideAnnotationBehavior
@@ -259,7 +261,7 @@ applyWideAnnotationBehavior animId ShrinkWideAnnotation =
     Lens.view Theme.theme <&> Theme.valAnnotation
     <&>
     \theme shrinkRatio layout ->
-    View.scale shrinkRatio layout
+    Element.scale shrinkRatio layout
     & addAnnotationBackground theme animId
 applyWideAnnotationBehavior animId HoverWideAnnotation =
     do
@@ -270,7 +272,7 @@ applyWideAnnotationBehavior animId HoverWideAnnotation =
                 addAnnotationHoverBackground theme animId layout
                 -- TODO: This is a buggy hover that ignores
                 -- Surrounding (and exits screen).
-                & (`View.hoverInPlaceOf` shrinker shrinkRatio layout)
+                & (`Element.hoverInPlaceOf` shrinker shrinkRatio layout)
 
 processAnnotationGui ::
     Monad m =>
@@ -290,19 +292,19 @@ processAnnotationGui animId wideAnnotationBehavior =
                 maybeTooNarrow annotation
                 & addAnnotationBackground theme animId
             where
-                annotationWidth = annotation ^. View.width
+                annotationWidth = annotation ^. Element.width
                 expansionLimit =
                     Theme.valAnnotationWidthExpansionLimit theme & realToFrac
                 maxWidth = minWidth + expansionLimit
                 shrinkAtLeast = Theme.valAnnotationShrinkAtLeast theme & realToFrac
                 heightShrinkRatio =
                     Theme.valAnnotationMaxHeight theme * stdSpacing ^. _2
-                    / annotation ^. View.height
+                    / annotation ^. Element.height
                 shrinkRatio =
                     annotationWidth - shrinkAtLeast & min maxWidth & max minWidth
                     & (/ annotationWidth) & min heightShrinkRatio & pure
                 maybeTooNarrow
-                    | minWidth > annotationWidth = View.pad (Vector2 ((minWidth - annotationWidth) / 2) 0)
+                    | minWidth > annotationWidth = Element.pad (Vector2 ((minWidth - annotationWidth) / 2) 0)
                     | otherwise = id
 
 data EvalResDisplay = EvalResDisplay
@@ -320,7 +322,7 @@ makeEvaluationResultView animId res =
             <&>
             case erdSource res of
             Current -> id
-            Prev -> View.tint (Theme.staleResultTint (Theme.eval theme))
+            Prev -> Element.tint (Theme.staleResultTint (Theme.eval theme))
 
 data NeighborVals a = NeighborVals
     { prevNeighbor :: a
@@ -350,22 +352,22 @@ makeEvalView mNeighbours evalRes animId =
                 <&> (^. Align.tValue)
         let neighbourView n =
                 Lens._Just makeEvaluationResultViewBG n
-                <&> Lens.mapped %~ View.scale (neighborsScaleFactor <&> realToFrac)
-                <&> Lens.mapped %~ View.pad (neighborsPadding <&> realToFrac)
-                <&> fromMaybe View.empty
+                <&> Lens.mapped %~ Element.scale (neighborsScaleFactor <&> realToFrac)
+                <&> Lens.mapped %~ Element.pad (neighborsPadding <&> realToFrac)
+                <&> fromMaybe Element.empty
         (prev, next) <-
             case mNeighbours of
-            Nothing -> pure (View.empty, View.empty)
+            Nothing -> pure (Element.empty, Element.empty)
             Just (NeighborVals mPrev mNext) ->
                 (,)
                 <$> neighbourView mPrev
                 <*> neighbourView mNext
         evalView <- makeEvaluationResultView (mkAnimId evalRes) evalRes
-        let prevPos = Vector2 0 0.5 * evalView ^. View.size - prev ^. View.size
-        let nextPos = Vector2 1 0.5 * evalView ^. View.size
+        let prevPos = Vector2 0 0.5 * evalView ^. Element.size - prev ^. Element.size
+        let nextPos = Vector2 1 0.5 * evalView ^. Element.size
         evalView
-            & View.setLayers <>~ View.translateLayers prevPos (prev ^. View.vAnimLayers)
-            & View.setLayers <>~ View.translateLayers nextPos (next ^. View.vAnimLayers)
+            & Element.setLayers <>~ View.translateLayers prevPos (prev ^. View.vAnimLayers)
+            & Element.setLayers <>~ View.translateLayers nextPos (next ^. View.vAnimLayers)
             & return
 
 annotationSpacer :: Monad m => ExprGuiM m View
@@ -388,7 +390,7 @@ addAnnotationH minWidth f wideBehavior entityId =
                 w /-/ vspace /-/
 -- TODO (ALIGN):
 --                AlignTo (w ^. Align.alignmentRatio . _1)
-                (processAnn (w ^. View.width) annotationLayout & View.width %~ max minWidth)
+                (processAnn (w ^. Element.width) annotationLayout & Element.width %~ max minWidth)
         return $ Responsive.alignedWidget %~ onAlignedWidget
     where
         animId = WidgetIds.fromEntityId entityId & Widget.toAnimId
@@ -434,9 +436,9 @@ nameEditFDConfig = FocusDelegator.Config
     , FocusDelegator.focusParentDoc = E.Doc ["Edit", "Done renaming"]
     }
 
-addDeletionDiagonal :: (Monad m, View.Element a) => ExprGuiM m (Widget.R -> a -> a)
+addDeletionDiagonal :: (Monad m, Element a) => ExprGuiM m (Widget.R -> a -> a)
 addDeletionDiagonal =
-    View.addDiagonal <*> (Lens.view Theme.theme <&> Theme.typeIndicatorErrorColor)
+    Element.addDiagonal <*> (Lens.view Theme.theme <&> Theme.typeIndicatorErrorColor)
 
 makeNameOriginEdit ::
     Monad m =>
@@ -480,7 +482,7 @@ makeNameEdit onActiveEditor (Name nameSrc nameCollision setName name) myId =
                     \nameEdit ->
                         (Aligned 0.5 nameEdit /|/ Aligned 0.5 collisionSuffix)
                         ^. Align.value
-    & Reader.local (View.animIdPrefix .~ Widget.toAnimId myId)
+    & Reader.local (Element.animIdPrefix .~ Widget.toAnimId myId)
     <&> onActiveEditor
     where
         empty = TextEdit.EmptyStrings name ""
@@ -501,7 +503,7 @@ stdWrap ::
 stdWrap pl act =
     do
         (res, holePicker) <-
-            Reader.local (View.animIdPrefix .~ animId) act
+            Reader.local (Element.animIdPrefix .~ animId) act
             & ExprGuiM.listenResultPicker
         exprEventMap <- ExprEventMap.make pl holePicker
         maybeAddAnnotationPl pl ?? res
@@ -536,25 +538,25 @@ grammarLabel text =
         TextView.makeLabel text
             & Reader.local (TextView.color .~ Theme.grammarColor theme)
 
-addValBG :: (Monad m, View.Element a) => ExprGuiM m (a -> a)
+addValBG :: (Monad m, Element a) => ExprGuiM m (a -> a)
 addValBG = addValBGWithColor Theme.valFrameBGColor
 
 addValBGWithColor ::
-    (Monad m, View.Element a) =>
+    (Monad m, Element a) =>
     (Theme -> Draw.Color) -> ExprGuiM m (a -> a)
-addValBGWithColor color = View.backgroundColor <*> (Lens.view Theme.theme <&> color)
+addValBGWithColor color = Element.backgroundColor <*> (Lens.view Theme.theme <&> color)
 
-addValPadding :: (Monad m, View.Element a) => ExprGuiM m (a -> a)
+addValPadding :: (Monad m, Element a) => ExprGuiM m (a -> a)
 addValPadding =
     Lens.view Theme.theme <&> Theme.valFramePadding <&> fmap realToFrac
-    <&> View.pad
+    <&> Element.pad
 
-addValFrame :: (Monad m, View.Element a) => ExprGuiM m (a -> a)
+addValFrame :: (Monad m, Element a) => ExprGuiM m (a -> a)
 addValFrame =
     (.)
     <$> addValBG
     <*> addValPadding
-    & Reader.local (View.animIdPrefix <>~ ["val"])
+    & Reader.local (Element.animIdPrefix <>~ ["val"])
 
 -- TODO: This doesn't belong here
 makeNameView :: Monad m => Name n -> AnimId -> ExprGuiM m (WithTextPos View)
@@ -566,7 +568,7 @@ makeNameView (Name _ collision _ name) animId =
             <&> Aligned 0.5
             <&> maybe id (flip (/|/)) mSuffixLabel
             <&> (^. Align.value)
-    & Reader.local (View.animIdPrefix .~ animId)
+    & Reader.local (Element.animIdPrefix .~ animId)
 
 -- TODO: This doesn't belong here
 makeCollisionSuffixLabel :: Monad m => NameCollision -> ExprGuiM m (Maybe View)
@@ -575,11 +577,11 @@ makeCollisionSuffixLabel (Collision suffix) =
     do
         theme <- Lens.view Theme.theme
         let Theme.Name{..} = Theme.name theme
-        (View.backgroundColor ?? collisionSuffixBGColor)
+        (Element.backgroundColor ?? collisionSuffixBGColor)
             <*>
             (TextView.makeLabel (Text.pack (show suffix))
             & Reader.local (TextView.color .~ collisionSuffixTextColor)
-            <&> View.scale (realToFrac <$> collisionSuffixScaleFactor))
+            <&> Element.scale (realToFrac <$> collisionSuffixScaleFactor))
     <&> (^. Align.tValue)
     <&> Just
 
@@ -670,7 +672,7 @@ maybeAddAnnotationWith opt wideAnnotationBehavior ShowAnnotation{..} annotation 
             do
                 typeWidth <-
                     TypeView.make inferredType (Widget.toAnimId (WidgetIds.fromEntityId entityId))
-                    <&> (^. View.width)
+                    <&> (^. Element.width)
                 addEvaluationResult typeWidth mNeighborVals scopeAndVal wideAnnotationBehavior entityId
 
 valOfScope :: Sugar.Annotation -> CurAndPrev (Maybe ER.ScopeId) -> Maybe EvalResDisplay

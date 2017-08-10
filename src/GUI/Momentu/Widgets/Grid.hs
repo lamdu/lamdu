@@ -15,13 +15,13 @@ import           Data.Vector.Vector2 (Vector2(..))
 import qualified Data.Vector.Vector2 as Vector2
 import           GUI.Momentu.Align (Aligned(..))
 import           GUI.Momentu.Direction (Direction(..))
+import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.EventMap as EventMap
 import           GUI.Momentu.MetaKey (MetaKey(..), noMods)
 import qualified GUI.Momentu.MetaKey as MetaKey
 import           GUI.Momentu.ModKey (ModKey)
 import           GUI.Momentu.Rect (Rect(..))
 import qualified GUI.Momentu.Rect as Rect
-import qualified GUI.Momentu.View as View
 import           GUI.Momentu.Widget (R, Widget(Widget))
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.GridView as GridView
@@ -196,7 +196,7 @@ toWidgetWithKeys keys size sChildren =
             -- Each child is set to the size of the entire grid and
             -- then translated to its place in order to fix the
             -- Surrounding parameters of all children
-            & View.size .~ size
+            & Element.size .~ size
             & Widget.translate (rect ^. Rect.topLeft)
         states = sChildren & each2d %~ translateChildWidget
         unfocused = states & each2d %~ (^? Widget._StateUnfocused)

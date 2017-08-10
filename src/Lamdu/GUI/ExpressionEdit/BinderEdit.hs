@@ -15,21 +15,21 @@ import           Data.List.Utils (nonEmptyAll)
 import qualified Data.Map as Map
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Text as Text
-import qualified Graphics.DrawingCombinators as Draw
 import           GUI.Momentu.Align (WithTextPos)
 import qualified GUI.Momentu.Align as Align
+import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Glue ((/-/), (/|/))
 import qualified GUI.Momentu.Glue as Glue
 import           GUI.Momentu.MetaKey (MetaKey(..), noMods, toModKey)
-import qualified GUI.Momentu.View as View
+import qualified GUI.Momentu.Responsive as Responsive
 import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
-import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.Widgets.Choice as Choice
 import qualified GUI.Momentu.Widgets.FocusDelegator as FocusDelegator
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified GUI.Momentu.Widgets.TextView as TextView
+import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.GLFW as GLFW
 import           Lamdu.CharClassification (operatorChars)
 import qualified Lamdu.Config as Config
@@ -107,7 +107,7 @@ mkPresentationModeEdit myId prop = do
             (TextView.style . TextView.styleColor .~ Theme.presentationChoiceColor theme)
     Choice.make ?? Transaction.setP prop ?? pairs ?? cur
         ?? presentationModeChoiceConfig ?? myId
-        <&> View.scale (realToFrac <$> Theme.presentationChoiceScaleFactor theme)
+        <&> Element.scale (realToFrac <$> Theme.presentationChoiceScaleFactor theme)
 
 data Parts m = Parts
     { pMParamsEdit :: Maybe (ExpressionGui m)
@@ -340,7 +340,7 @@ make name color binder myId =
         defNameEdit <-
             makeBinderNameEdit (binder ^. Sugar.bActions) rhsJumperEquals
             name color myId
-            <&> (/-/ fromMaybe View.empty mPresentationEdit)
+            <&> (/-/ fromMaybe Element.empty mPresentationEdit)
             <&> Responsive.fromWithTextPos
             <&> E.weakerEvents jumpHolesEventMap
         mLhsEdit <-
@@ -360,7 +360,7 @@ make name color binder myId =
             , bodyEdit
             ] )
             <&> E.weakerEvents eventMap
-    & Reader.local (View.animIdPrefix .~ Widget.toAnimId myId)
+    & Reader.local (Element.animIdPrefix .~ Widget.toAnimId myId)
     where
         presentationChoiceId = Widget.joinId myId ["presentation"]
         body = binder ^. Sugar.bBody . Sugar.bbContent
@@ -397,9 +397,9 @@ makeLetEdit item =
         letEquation <-
             make (item ^. Sugar.lName) letColor binder myId
             <&> E.weakerEvents eventMap
-            <&> View.pad (Theme.letItemPadding theme <&> realToFrac)
+            <&> Element.pad (Theme.letItemPadding theme <&> realToFrac)
         letLabel /|/ space /|/ letEquation & return
-    & Reader.local (View.animIdPrefix .~ Widget.toAnimId myId)
+    & Reader.local (Element.animIdPrefix .~ Widget.toAnimId myId)
     where
         bodyId =
             item ^. Sugar.lBody . Sugar.bbContent . SugarLens.binderContentEntityId

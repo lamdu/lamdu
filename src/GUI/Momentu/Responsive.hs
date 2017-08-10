@@ -42,15 +42,16 @@ module GUI.Momentu.Responsive
 import qualified Control.Lens as Lens
 import qualified Data.List as List
 import           Data.Vector.Vector2 (Vector2(..))
+import           GUI.Momentu.Align (Aligned(..), WithTextPos(..))
+import qualified GUI.Momentu.Align as Align
+import           GUI.Momentu.Element (Element, SizedElement)
+import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Glue (Glue(..), GluesTo, (/|/), Orientation(..))
 import qualified GUI.Momentu.Glue as Glue
 import           GUI.Momentu.View (View)
-import qualified GUI.Momentu.View as View
 import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
-import           GUI.Momentu.Align (Aligned(..), WithTextPos(..))
-import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 
 import           Lamdu.Prelude
@@ -81,13 +82,13 @@ newtype Responsive a = Responsive
     } deriving Functor
 Lens.makeLenses ''Responsive
 
-adjustWidth :: View.SizedElement v => Orientation -> v -> Responsive a -> Responsive a
+adjustWidth :: SizedElement v => Orientation -> v -> Responsive a -> Responsive a
 adjustWidth Vertical _ = id
 adjustWidth Horizontal v =
-    render . Lens.argument . layoutMode . modeWidths -~ v ^. View.size . _1
+    render . Lens.argument . layoutMode . modeWidths -~ v ^. Element.size . _1
 
 instance ( GluesTo (WithTextPos (Widget a)) (WithTextPos b) (WithTextPos (Widget a))
-         , View.SizedElement b
+         , SizedElement b
          ) => Glue (Responsive a) (WithTextPos b) where
     type Glued (Responsive a) (WithTextPos b) = Responsive a
     glue orientation l v =
@@ -96,7 +97,7 @@ instance ( GluesTo (WithTextPos (Widget a)) (WithTextPos b) (WithTextPos (Widget
         & render . Lens.mapped %~ (glue orientation ?? v)
 
 instance ( GluesTo (WithTextPos a) (WithTextPos (Widget b)) (WithTextPos (Widget b))
-         , View.SizedElement a
+         , SizedElement a
          ) => Glue (WithTextPos a) (Responsive b) where
     type Glued (WithTextPos a) (Responsive b) = Responsive b
     glue orientation v l =
@@ -104,14 +105,14 @@ instance ( GluesTo (WithTextPos a) (WithTextPos (Widget b)) (WithTextPos (Widget
         & adjustWidth orientation v
         & render . Lens.mapped %~ glue orientation v
 
-instance Functor f => View.Element (Responsive (f Widget.EventResult)) where
-    setLayers = Widget.widget . View.setLayers
-    hoverLayers = Widget.widget %~ View.hoverLayers
-    empty = Responsive (const View.empty)
+instance Functor f => Element (Responsive (f Widget.EventResult)) where
+    setLayers = Widget.widget . Element.setLayers
+    hoverLayers = Widget.widget %~ Element.hoverLayers
+    empty = Responsive (const Element.empty)
     pad p w =
         w
         & render . Lens.argument . layoutMode . modeWidths -~ 2 * (p ^. _1)
-        & render . Lens.mapped %~ View.pad p
+        & render . Lens.mapped %~ Element.pad p
     scale = error "Responsive: scale not Implemented"
     assymetricPad = error "Responsive: assymetricPad not implemented"
 
@@ -130,7 +131,7 @@ fromAlignedWidget ::
     Functor f =>
     Aligned (Widget (f Widget.EventResult)) -> Responsive (f Widget.EventResult)
 fromAlignedWidget (Aligned a w) =
-    WithTextPos (a ^. _2 * w ^. View.height) w
+    WithTextPos (a ^. _2 * w ^. Element.height) w
     & const
     & Responsive
 
@@ -151,7 +152,7 @@ fromTextView tv = tv & Align.tValue %~ Widget.fromView & fromWithTextPos
 
 -- | The empty 'Responsive'
 empty :: Functor f => Responsive (f Widget.EventResult)
-empty = fromView View.empty
+empty = fromView Element.empty
 
 -- | Vertical box with the alignment point from the top widget
 vbox ::
@@ -185,9 +186,9 @@ taggedList ::
 taggedList =
     vboxSpaced <&>
     \box pairs ->
-    let headerWidth = pairs ^.. traverse . _1 . View.width & maximum
+    let headerWidth = pairs ^.. traverse . _1 . Element.width & maximum
         renderPair (header, treeLayout) =
-            View.assymetricPad (Vector2 (headerWidth - header ^. View.width) 0) 0 header
+            Element.assymetricPad (Vector2 (headerWidth - header ^. Element.width) 0) 0 header
             /|/ treeLayout
     in
     pairs <&> renderPair & box

@@ -33,7 +33,7 @@ data Env = Env
 Lens.makeLenses ''Env
 
 instance TextView.HasStyle Env where style = eTextStyle
-instance View.HasAnimIdPrefix Env where animIdPrefix = eAnimIdPrefix
+instance Element.HasAnimIdPrefix Env where animIdPrefix = eAnimIdPrefix
 instance Widget.HasCursor Env where cursor = eCursor
 
 fontPath :: FilePath

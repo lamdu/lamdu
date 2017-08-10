@@ -10,13 +10,14 @@ import           GUI.Momentu.Align (WithTextPos)
 import qualified GUI.Momentu.Align as Align
 import           GUI.Momentu.Animation (AnimId)
 import qualified GUI.Momentu.Animation as Anim
+import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Glue ((/-/), (/|/))
+import qualified GUI.Momentu.Responsive as Responsive
 import           GUI.Momentu.View (View)
 import qualified GUI.Momentu.View as View
 import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
-import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import           Lamdu.Calc.Type (Tag)
 import qualified Lamdu.Calc.Val as V
@@ -141,8 +142,8 @@ separationBar :: Theme -> Widget.R -> Anim.AnimId -> View
 separationBar theme width animId =
     Anim.unitSquare (animId <> ["tailsep"])
     & View.make 1
-    & View.tint (Theme.caseTailColor theme)
-    & View.scale (Vector2 width 10)
+    & Element.tint (Theme.caseTailColor theme)
+    & Element.scale (Vector2 width 10)
 
 makeOpenCase ::
     Monad m =>
@@ -158,8 +159,8 @@ makeOpenCase rest animId altsGui =
         return $ altsGui & Responsive.render . Lens.imapped %@~
             \layoutMode alts ->
             let restLayout = layoutMode & restExpr ^. Responsive.render
-                minWidth = restLayout ^. View.width
-                targetWidth = alts ^. View.width
+                minWidth = restLayout ^. Element.width
+                targetWidth = alts ^. Element.width
             in
             alts
             /-/

@@ -15,22 +15,22 @@ import           Data.List (genericLength)
 import           Data.List.Utils (minimumOn)
 import qualified Data.Text as Text
 import           Data.Vector.Vector2 (Vector2(..))
-import qualified Graphics.DrawingCombinators as Draw
-import           Graphics.DrawingCombinators.Utils (TextSize(..))
 import           GUI.Momentu.Align (WithTextPos(..))
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Animation as Anim
 import qualified GUI.Momentu.Direction as Direction
+import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.MetaKey as MetaKey
 import           GUI.Momentu.ModKey (ModKey(..))
 import qualified GUI.Momentu.ModKey as ModKey
 import           GUI.Momentu.Rect (Rect(..))
 import qualified GUI.Momentu.Rect as Rect
-import qualified GUI.Momentu.View as View
 import           GUI.Momentu.Widget (Widget(..))
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.TextView as TextView
+import qualified Graphics.DrawingCombinators as Draw
+import           Graphics.DrawingCombinators.Utils (TextSize(..))
 import qualified Graphics.UI.GLFW as GLFW
 
 import           Lamdu.Prelude
@@ -103,10 +103,10 @@ makeInternal ::
 makeInternal s str displayStr myId =
     v
     & Align.tValue %~ Widget.fromView
-    & Align.tValue %~ Widget.mEnter ?~ enterFromDirection (v ^. View.size) s str myId
+    & Align.tValue %~ Widget.mEnter ?~ enterFromDirection (v ^. Element.size) s str myId
     where
         v = TextView.make (s ^. sTextViewStyle) displayStr animId
-            & View.pad (Vector2 (s ^. sCursorWidth / 2) 0)
+            & Element.pad (Vector2 (s ^. sCursorWidth / 2) 0)
         animId = Widget.toAnimId myId
 
 makeUnfocused :: EmptyStrings -> Style -> Text -> Widget.Id -> WithTextPos (Widget (Text, Widget.EventResult))
@@ -157,7 +157,7 @@ makeFocused ::
     WithTextPos (Widget (Text, Widget.EventResult))
 makeFocused cursor empty s str myId =
     makeInternal s str displayStr myId
-    & View.bottomFrame <>~ cursorFrame
+    & Element.bottomLayer <>~ cursorFrame
     & Align.tValue %~ Widget.setFocusedWith cursorRect (eventMap cursor str myId)
     where
         displayStr = makeDisplayStr (empty ^. emptyFocusedString) str

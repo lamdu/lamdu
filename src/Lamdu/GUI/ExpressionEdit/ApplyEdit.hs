@@ -7,19 +7,20 @@ import qualified Control.Lens as Lens
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Text as Text
 import           Data.Vector.Vector2 (Vector2(..))
-import qualified Graphics.DrawingCombinators as Draw
 import           GUI.Momentu.Align (WithTextPos)
 import qualified GUI.Momentu.Align as Align
 import           GUI.Momentu.Animation (AnimId)
 import qualified GUI.Momentu.Animation as Anim
+import           GUI.Momentu.Element (Element)
+import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Glue ((/|/))
+import qualified GUI.Momentu.Responsive as Responsive
 import           GUI.Momentu.View (View)
-import qualified GUI.Momentu.View as View
 import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
-import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
+import qualified Graphics.DrawingCombinators as Draw
 import qualified Lamdu.CharClassification as CharClassification
 import qualified Lamdu.GUI.ExpressionEdit.BinderEdit as BinderEdit
 import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
@@ -71,11 +72,10 @@ infixMarker (Vector2 w h) =
     where
         x = min w h / 4
 
-addInfixMarker :: View.Element a => Widget.Id -> a -> a
+addInfixMarker :: Element a => Widget.Id -> a -> a
 addInfixMarker widgetId =
-    View.setLayers %@~
-    \size ->
-    View.bottomLayer <>~ Anim.simpleFrame frameId (infixMarker size)
+    Element.bottomLayer %@~
+    \size -> Anim.simpleFrame frameId (infixMarker size) & flip mappend
     where
         frameId = Widget.toAnimId widgetId ++ ["infix"]
 

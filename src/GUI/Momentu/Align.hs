@@ -8,10 +8,11 @@ module GUI.Momentu.Align
 import           Control.Lens (Lens')
 import qualified Control.Lens as Lens
 import           Data.Vector.Vector2 (Vector2(..))
+import           GUI.Momentu.Element (Element, SizedElement)
+import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.Glue (Glue(..), GluesTo, Orientation)
 import qualified GUI.Momentu.Glue as Glue
 import           GUI.Momentu.View (View)
-import qualified GUI.Momentu.View as View
 import           GUI.Momentu.Widget (Widget(..), R)
 import qualified GUI.Momentu.Widget as Widget
 
@@ -29,51 +30,51 @@ data WithTextPos a = WithTextPos
     } deriving (Functor, Foldable, Traversable)
 Lens.makeLenses ''WithTextPos
 
-instance View.SizedElement a => View.Element (Aligned a) where
-    setLayers = value . View.setLayers
-    hoverLayers = value %~ View.hoverLayers
-    empty = Aligned 0 View.empty
+instance SizedElement a => Element (Aligned a) where
+    setLayers = value . Element.setLayers
+    hoverLayers = value %~ Element.hoverLayers
+    empty = Aligned 0 Element.empty
     pad padding (Aligned ratio w) =
         Aligned
-        { _alignmentRatio = (ratio * (w ^. View.size) + padding) / paddedWidget ^. View.size
+        { _alignmentRatio = (ratio * (w ^. Element.size) + padding) / paddedWidget ^. Element.size
         , _value = paddedWidget
         }
         where
-            paddedWidget = View.pad padding w
+            paddedWidget = Element.pad padding w
     assymetricPad = error "Aligned: assymetricPad not implemented"
-    scale ratio = value %~ View.scale ratio
+    scale ratio = value %~ Element.scale ratio
 
-instance View.SizedElement a => View.SizedElement (Aligned a) where size = value . View.size
+instance SizedElement a => SizedElement (Aligned a) where size = value . Element.size
 
-instance View.SizedElement a => View.Element (WithTextPos a) where
-    setLayers = tValue . View.setLayers
-    hoverLayers = tValue %~ View.hoverLayers
-    empty = WithTextPos 0 View.empty
+instance SizedElement a => Element (WithTextPos a) where
+    setLayers = tValue . Element.setLayers
+    hoverLayers = tValue %~ Element.hoverLayers
+    empty = WithTextPos 0 Element.empty
     assymetricPad tl br (WithTextPos y w) =
         WithTextPos
         { _textTop = y + tl ^. _2
-        , _tValue = View.assymetricPad tl br w
+        , _tValue = Element.assymetricPad tl br w
         }
     scale ratio (WithTextPos y w) =
         WithTextPos
         { _textTop = y * ratio ^. _2
-        , _tValue = View.scale ratio w
+        , _tValue = Element.scale ratio w
         }
 
-instance View.SizedElement a => View.SizedElement (WithTextPos a) where size = tValue . View.size
+instance SizedElement a => SizedElement (WithTextPos a) where size = tValue . Element.size
 
 -- Takes the alignment point of the first item.
-instance ( View.SizedElement (Glued a b)
-         , View.SizedElement a
-         , View.SizedElement b, Glue a b
+instance ( SizedElement (Glued a b)
+         , SizedElement a
+         , SizedElement b, Glue a b
          ) => Glue (Aligned a) (Aligned b) where
     type Glued (Aligned a) (Aligned b) = Aligned (Glued a b)
     glue o a b =
         glueHelper fst o (a ^. absAligned) (b ^. absAligned) ^. Lens.from absAligned
 
-instance ( View.SizedElement (Glued a b)
-         , View.SizedElement a
-         , View.SizedElement b
+instance ( SizedElement (Glued a b)
+         , SizedElement a
+         , SizedElement b
          , Glue a b ) => Glue (WithTextPos a) (WithTextPos b) where
     type Glued (WithTextPos a) (WithTextPos b) = WithTextPos (Glued a b)
     -- | Vertical glue takes the top text pos
@@ -87,14 +88,14 @@ instance Glue a (Widget b) => Glue (WithTextPos a) (Widget b) where
     type Glued (WithTextPos a) (Widget b) = WithTextPos (Glued a (Widget b))
     glue o (WithTextPos y a) b = WithTextPos y (glue o a b)
 
-instance (View.SizedElement (Widget a), Glue (Widget a) b) =>
+instance (SizedElement (Widget a), Glue (Widget a) b) =>
          Glue (Widget a) (WithTextPos b) where
     type Glued (Widget a) (WithTextPos b) = WithTextPos (Glued (Widget a) b)
     glue o a (WithTextPos y b) =
         WithTextPos
         { _textTop =
             case o of
-            Glue.Vertical -> y + a ^. View.height
+            Glue.Vertical -> y + a ^. Element.height
             Glue.Horizontal -> y
         , _tValue = glue o a b
         }
@@ -109,13 +110,13 @@ instance Glue View a => Glue View (WithTextPos a) where
         WithTextPos
         { _textTop =
             case o of
-            Glue.Vertical -> y + a ^. View.height
+            Glue.Vertical -> y + a ^. Element.height
             Glue.Horizontal -> y
         , _tValue = glue o a b
         }
 
 glueHelper ::
-    (Glue a b, View.Element b, View.SizedElement a) =>
+    (Glue a b, Element b, SizedElement a) =>
     ((Vector2 R, Vector2 R) -> Vector2 R) -> Orientation ->
     (Vector2 R, a) -> (Vector2 R, b) -> (Vector2 R, Glued a b)
 glueHelper chooseAlign orientation (aAbsAlign, aw) (bAbsAlign, bw) =
@@ -130,10 +131,10 @@ glueHelper chooseAlign orientation (aAbsAlign, aw) (bAbsAlign, bw) =
         l = axis orientation
 
         -- Duplicates the logic from underlying glue:
-        bGlueTranslation = 0 & l .~ aw ^. View.size . l
+        bGlueTranslation = 0 & l .~ aw ^. Element.size . l
         aToB = bAbsAlign - aAbsAlign & l .~ 0
         bToA = -aToB
-        syncAlign move = View.assymetricPad (max 0 move) 0
+        syncAlign move = Element.assymetricPad (max 0 move) 0
 
 axis :: (Field1 s s a a, Field2 s s a a, Functor f) => Orientation -> (a -> f a) -> s -> f s
 axis Glue.Horizontal = _1
@@ -151,22 +152,22 @@ type AbsAligned a = (Vector2 R, a)
 
 {-# INLINE absAligned #-}
 absAligned ::
-    (View.SizedElement a, View.SizedElement b) =>
+    (SizedElement a, SizedElement b) =>
     Lens.Iso (Aligned a) (Aligned b) (AbsAligned a) (AbsAligned b)
 absAligned =
     asTuple . Lens.iso (f (*)) (f fromAbs)
     where
-        f op w = w & _1 %~ (`op` (w ^. _2 . View.size))
+        f op w = w & _1 %~ (`op` (w ^. _2 . Element.size))
         fromAbs align size
             | size == 0 = 0
             | otherwise = align / size
 
-boxAlign :: (View.SizedElement a, GluesTo a a a) => Orientation -> Widget.R -> [a] -> a
+boxAlign :: (SizedElement a, GluesTo a a a) => Orientation -> Widget.R -> [a] -> a
 boxAlign orientation r xs =
     Glue.box orientation (xs <&> Aligned (pure r)) ^. value
 
-vboxAlign :: (View.SizedElement a, GluesTo a a a) => Widget.R -> [a] -> a
+vboxAlign :: (SizedElement a, GluesTo a a a) => Widget.R -> [a] -> a
 vboxAlign = boxAlign Glue.Vertical
 
-hboxAlign :: (View.SizedElement a, GluesTo a a a) => Widget.R -> [a] -> a
+hboxAlign :: (SizedElement a, GluesTo a a a) => Widget.R -> [a] -> a
 hboxAlign = boxAlign Glue.Horizontal

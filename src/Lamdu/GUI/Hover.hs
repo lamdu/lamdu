@@ -7,24 +7,25 @@ module Lamdu.GUI.Hover
     ) where
 
 import qualified Control.Lens as Lens
-import qualified Graphics.DrawingCombinators as Draw
 import           GUI.Momentu.Animation (AnimId)
-import qualified GUI.Momentu.View as View
+import           GUI.Momentu.Element (Element)
+import qualified GUI.Momentu.Element as Element
+import qualified Graphics.DrawingCombinators as Draw
 import qualified Lamdu.Config.Theme as Theme
 
 import           Lamdu.Prelude
 
-addBackground :: View.Element a => AnimId -> Draw.Color -> a -> a
-addBackground myId = View.backgroundColor (myId <> ["hover background"])
+addBackground :: Element a => AnimId -> Draw.Color -> a -> a
+addBackground myId = Element.backgroundColor (myId <> ["hover background"])
 
 addDarkBackground ::
-    (Theme.HasTheme env, View.Element a, MonadReader env m) => AnimId -> m (a -> a)
+    (Theme.HasTheme env, Element a, MonadReader env m) => AnimId -> m (a -> a)
 addDarkBackground animId =
     Lens.view Theme.theme
     <&>
     \theme gui ->
     gui
-    & View.pad (Theme.hoverDarkPadding theme <&> realToFrac)
-    & View.backgroundColor
+    & Element.pad (Theme.hoverDarkPadding theme <&> realToFrac)
+    & Element.backgroundColor
         (animId <> ["hover dark background"])
         (Theme.hoverDarkBGColor theme)

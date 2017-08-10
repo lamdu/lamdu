@@ -12,14 +12,14 @@ import qualified Data.Store.Transaction as Transaction
 import           GUI.Momentu.Align (WithTextPos)
 import qualified GUI.Momentu.Align as Align
 import           GUI.Momentu.Animation (AnimId)
+import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Glue ((/-/), (/|/))
 import           GUI.Momentu.MetaKey (MetaKey(..), noMods)
+import qualified GUI.Momentu.Responsive as Responsive
 import           GUI.Momentu.View (View)
-import qualified GUI.Momentu.View as View
 import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
-import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.Widgets.TextView as TextView
 import qualified Graphics.UI.GLFW as GLFW
 import           Lamdu.Calc.Type.Scheme (Scheme(..), schemeType)
@@ -112,7 +112,7 @@ make def =
                         myId <$ Property.set defStateProp Sugar.LiveDefinition
                         & undeleteButton <&> Responsive.fromWithTextPos
                     Responsive.vbox [defGui, buttonGui] & return
-    & Reader.local (View.animIdPrefix .~ Widget.toAnimId myId)
+    & Reader.local (Element.animIdPrefix .~ Widget.toAnimId myId)
     where
         myId = def ^. Sugar.drEntityId & WidgetIds.fromEntityId
 

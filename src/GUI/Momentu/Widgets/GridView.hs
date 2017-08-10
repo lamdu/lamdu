@@ -9,6 +9,8 @@ import           Data.List (transpose)
 import           Data.Vector.Vector2 (Vector2(..))
 import           GUI.Momentu.Align (Aligned(..))
 import qualified GUI.Momentu.Animation as Anim
+import qualified GUI.Momentu.Element as Element
+import           GUI.Momentu.Element (SizedElement)
 import           GUI.Momentu.Rect (Rect(..))
 import qualified GUI.Momentu.Rect as Rect
 import           GUI.Momentu.View (View(..))
@@ -29,9 +31,9 @@ traverseList :: Traversable t => Lens (t a) (t b) [a] [b]
 traverseList = Lens.unsafePartsOf traverse
 
 makePlacements ::
-    (Traversable vert, Traversable horiz, View.SizedElement a) =>
+    (Traversable vert, Traversable horiz, SizedElement a) =>
     vert (horiz (Aligned a)) ->
-    (View.Size, vert (horiz (Aligned (Rect, a))))
+    (Element.Size, vert (horiz (Aligned (Rect, a))))
 makePlacements rows =
     ( totalSize
     , posRows
@@ -63,7 +65,7 @@ makePlacements rows =
         calcPos (Aligned alignment x) =
             (size, (alignment * size, (1 - alignment) * size), x)
             where
-                size = x ^. View.size
+                size = x ^. Element.size
 
 --- Displays:
 

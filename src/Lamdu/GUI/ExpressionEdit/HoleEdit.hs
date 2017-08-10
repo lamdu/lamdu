@@ -8,12 +8,12 @@ import qualified Control.Monad.Reader as Reader
 import           Control.Monad.Transaction (transaction)
 import qualified Data.Store.Transaction as Transaction
 import qualified GUI.Momentu.Align as Align
+import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Glue ((/-/))
 import qualified GUI.Momentu.Hover as Hover
-import qualified GUI.Momentu.View as View
-import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Responsive as Responsive
+import qualified GUI.Momentu.Widget as Widget
 import qualified Lamdu.Config as Config
 import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.Info (HoleInfo(..))
@@ -123,6 +123,6 @@ make hole pl =
             Nothing -> return (searchAreaGui Open.AnyPlace)
             <&> E.weakerEvents deleteEventMap
     & assignHoleCursor widgetIds
-    & Reader.local (View.animIdPrefix .~ Widget.toAnimId (hidHole widgetIds))
+    & Reader.local (Element.animIdPrefix .~ Widget.toAnimId (hidHole widgetIds))
     where
         widgetIds = HoleWidgetIds.make (pl ^. Sugar.plEntityId)

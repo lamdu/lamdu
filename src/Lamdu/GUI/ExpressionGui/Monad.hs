@@ -37,12 +37,12 @@ import qualified Data.Text.Lens as TextLens
 import           Data.Vector.Vector2 (Vector2)
 import           GUI.Momentu.Align (WithTextPos)
 import           GUI.Momentu.Animation.Id (AnimId)
+import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.EventMap as E
+import qualified GUI.Momentu.Responsive as Responsive
 import           GUI.Momentu.View (View)
-import qualified GUI.Momentu.View as View
 import qualified GUI.Momentu.Widget as Widget
 import           GUI.Momentu.Widget.Id (toAnimId)
-import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
 import qualified GUI.Momentu.Widgets.TextView as TextView
@@ -131,7 +131,7 @@ instance Widget.HasCursor (Askable m) where cursor = aCursor
 instance TextView.HasStyle (Askable m) where style = aTextEditStyle . TextView.style
 instance TextEdit.HasStyle (Askable m) where style = aTextEditStyle
 instance Spacer.HasStdSpacing (Askable m) where stdSpacing = aStdSpacing
-instance View.HasAnimIdPrefix (Askable m) where animIdPrefix = aAnimIdPrefix
+instance Element.HasAnimIdPrefix (Askable m) where animIdPrefix = aAnimIdPrefix
 instance Config.HasConfig (Askable m) where config = aConfig
 instance Theme.HasTheme (Askable m) where theme = aTheme
 

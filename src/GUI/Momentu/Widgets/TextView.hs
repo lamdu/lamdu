@@ -16,11 +16,11 @@ import qualified Control.Lens as Lens
 import qualified Data.Text as Text
 import           Data.Text.Encoding (encodeUtf8)
 import           Data.Vector.Vector2 (Vector2(..))
-import qualified Graphics.DrawingCombinators as Draw
 import           GUI.Momentu.Align (WithTextPos(..))
 import qualified GUI.Momentu.Align as Align
 import           GUI.Momentu.Animation (AnimId, Size)
 import qualified GUI.Momentu.Animation as Anim
+import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.Font (TextSize(..))
 import qualified GUI.Momentu.Font as Font
 import           GUI.Momentu.Rect (Rect(Rect))
@@ -29,6 +29,7 @@ import           GUI.Momentu.View (View(..))
 import qualified GUI.Momentu.View as View
 import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
+import qualified Graphics.DrawingCombinators as Draw
 
 import           Lamdu.Prelude
 
@@ -128,9 +129,9 @@ make =
                 }
 
 makeLabel ::
-    (MonadReader env m, HasStyle env, View.HasAnimIdPrefix env) =>
+    (MonadReader env m, HasStyle env, Element.HasAnimIdPrefix env) =>
     Text -> m (WithTextPos View)
-makeLabel text = (make ?? text) <*> View.subAnimId [encodeUtf8 text]
+makeLabel text = (make ?? text) <*> Element.subAnimId [encodeUtf8 text]
 
 makeFocusable ::
     (MonadReader env m, Applicative f, Widget.HasCursor env, HasStyle env) =>
@@ -144,11 +145,11 @@ makeFocusable =
             & Align.tValue %~ toFocusable myId . Widget.fromView
 
 makeFocusableLabel ::
-    (MonadReader env m, Applicative f, Widget.HasCursor env, HasStyle env, View.HasAnimIdPrefix env) =>
+    (MonadReader env m, Applicative f, Widget.HasCursor env, HasStyle env, Element.HasAnimIdPrefix env) =>
     Text -> m (WithTextPos (Widget (f Widget.EventResult)))
 makeFocusableLabel text =
     do
         toFocusable <- Widget.makeFocusableView
-        animId <- View.subAnimId [encodeUtf8 text] <&> Widget.Id
+        animId <- Element.subAnimId [encodeUtf8 text] <&> Widget.Id
         makeLabel text
             <&> Align.tValue %~ toFocusable animId . Widget.fromView

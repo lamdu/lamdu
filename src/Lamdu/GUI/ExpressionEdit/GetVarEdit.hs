@@ -9,14 +9,14 @@ import qualified Data.ByteString.Char8 as SBS8
 import           Data.Store.Transaction (Transaction)
 import           GUI.Momentu.Align (WithTextPos)
 import qualified GUI.Momentu.Align as Align
+import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Font (Underline(..))
 import           GUI.Momentu.Glue ((/-/))
 import qualified GUI.Momentu.Hover as Hover
-import qualified GUI.Momentu.View as View
+import qualified GUI.Momentu.Responsive as Responsive
 import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
-import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified GUI.Momentu.Widgets.TextView as TextView
 import           Lamdu.Calc.Type.Scheme (schemeType)
@@ -129,7 +129,7 @@ definitionTypeChangeBox info getVarId =
         let padding = realToFrac <$> Theme.valFramePadding theme
         let box =
                 headerLabel /-/ typeWhenUsed /-/ spacing /-/ sepLabel /-/ typeCurrent
-                & View.pad padding
+                & Element.pad padding
                 & Hover.addBackground animId (Theme.hoverBGColor theme)
         -- TODO: unify config's button press keys
         let keys = Config.newDefinitionButtonPressKeys (Config.pane config)

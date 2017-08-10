@@ -8,15 +8,15 @@ import qualified Control.Monad.Reader as Reader
 import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
 import           Data.UUID.Types (UUID)
-import qualified GUI.Momentu.Align as Align
 import           GUI.Momentu.Align (WithTextPos)
+import qualified GUI.Momentu.Align as Align
+import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Glue ((/|/))
 import           GUI.Momentu.MetaKey (MetaKey(..), noMods)
-import qualified GUI.Momentu.View as View
+import qualified GUI.Momentu.Responsive as Responsive
 import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
-import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.Widgets.FocusDelegator as FocusDelegator
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
 import qualified GUI.Momentu.Widgets.TextEdit.Property as TextEdits
@@ -91,7 +91,7 @@ textEdit prop pl =
             text <- TextEdits.make ?? empty ?? prop ?? innerId
             right <-
                 TextView.makeLabel "„"
-                <&> View.padToSizeAlign (text ^. View.size & _1 .~ 0) 1
+                <&> Element.padToSizeAlign (text ^. Element.size & _1 .~ 0) 1
             left /|/ text /|/ right & return
             & Reader.local (TextEdit.style .~ style)
             >>= Align.tValue %%~

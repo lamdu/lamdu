@@ -13,10 +13,10 @@ import qualified Control.Monad.Reader as Reader
 import           Data.CurAndPrev (CurAndPrev(..))
 import           Data.Store.Transaction (Transaction)
 import           Data.Vector.Vector2 (Vector2(..))
+import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.EventMap as EventMap
 import           GUI.Momentu.Glue ((/-/))
 import qualified GUI.Momentu.Main as MainLoop
-import qualified GUI.Momentu.View as View
 import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
@@ -80,7 +80,7 @@ make env =
                 CodeEdit.mLiftTrans lift actions $
                 \branchSelector ->
                 do
-                    let codeSize = fullSize - Vector2 0 (branchSelector ^. View.height)
+                    let codeSize = fullSize - Vector2 0 (branchSelector ^. Element.height)
                     codeEdit <-
                         CodeEdit.make (codeSize ^. _1) codeEditEnv
                         & Reader.mapReaderT VersionControl.runAction
@@ -90,8 +90,8 @@ make env =
                             topPadding /-/ codeEdit
                             & Widget.padToSizeAlign codeSize 0
                             & Scroll.focusAreaIntoWindow fullSize
-                            & View.size .~ codeSize
-                    scrollBox /-/ View.hoverLayers branchSelector
+                            & Element.size .~ codeSize
+                    scrollBox /-/ Element.hoverLayers branchSelector
                         & return
             let quitEventMap =
                     Widget.keysEventMap (Config.quitKeys config) (EventMap.Doc ["Quit"]) (error "Quit")

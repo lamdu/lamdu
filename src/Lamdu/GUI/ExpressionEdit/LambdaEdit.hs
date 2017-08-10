@@ -6,13 +6,13 @@ module Lamdu.GUI.ExpressionEdit.LambdaEdit
 import qualified Control.Lens as Lens
 import           Data.Store.Transaction (Transaction)
 import           GUI.Momentu.Align (WithTextPos(..))
+import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Glue ((/-/))
 import           GUI.Momentu.MetaKey (MetaKey(..), noMods)
-import qualified GUI.Momentu.View as View
+import qualified GUI.Momentu.Responsive as Responsive
 import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
-import qualified GUI.Momentu.Responsive as Responsive
 import qualified Graphics.UI.GLFW as GLFW
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Config.Theme as Theme
@@ -37,7 +37,7 @@ addScopeEdit ::
     Functor m =>
     Maybe (Widget (T m Widget.EventResult)) -> ExpressionGui m ->
     ExpressionGui m
-addScopeEdit mScopeEdit = (/-/ maybe View.empty (WithTextPos 0) mScopeEdit)
+addScopeEdit mScopeEdit = (/-/ maybe Element.empty (WithTextPos 0) mScopeEdit)
 
 mkLhsEdits ::
     Functor m =>

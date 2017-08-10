@@ -8,6 +8,8 @@ module GUI.Momentu.Glue
     ) where
 
 import           Data.Vector.Vector2 (Vector2(..))
+import           GUI.Momentu.Element (Element, SizedElement)
+import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.View (View)
 import qualified GUI.Momentu.View as View
 
@@ -35,23 +37,26 @@ instance Glue View View where
 (/-/) = glue Vertical
 
 glueH ::
-    (View.SizedElement a, View.SizedElement b) =>
+    (SizedElement a, SizedElement b) =>
     (a -> b -> Glued a b) -> Orientation -> a -> b -> Glued a b
 glueH f orientation v0 v1 =
-    f (v0 & View.size .~ newSize) (View.assymetricPad t 0 v1 & View.size .~ newSize)
+    f (v0 & Element.size .~ newSize)
+    ( Element.assymetricPad t 0 v1
+    & Element.size .~ newSize
+    )
     where
-        Vector2 w0 h0 = v0 ^. View.size
-        Vector2 w1 h1 = v1 ^. View.size
+        Vector2 w0 h0 = v0 ^. Element.size
+        Vector2 w1 h1 = v1 ^. Element.size
         (newSize, t) =
             case orientation of
             Horizontal -> (Vector2 (w0 + w1) (max h0 h1), Vector2 w0 0)
             Vertical -> (Vector2 (max w0 w1) (h0 + h1), Vector2 0 h0)
 
-box :: (View.Element a, GluesTo a a a) => Orientation -> [a] -> a
-box orientation = foldr (glue orientation) View.empty
+box :: (Element a, GluesTo a a a) => Orientation -> [a] -> a
+box orientation = foldr (glue orientation) Element.empty
 
-hbox :: (View.Element a, GluesTo a a a) => [a] -> a
+hbox :: (Element a, GluesTo a a a) => [a] -> a
 hbox = box Horizontal
 
-vbox :: (View.Element a, GluesTo a a a) => [a] -> a
+vbox :: (Element a, GluesTo a a a) => [a] -> a
 vbox = box Vertical

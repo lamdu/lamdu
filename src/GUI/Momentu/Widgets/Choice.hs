@@ -9,13 +9,13 @@ module GUI.Momentu.Widgets.Choice
     ) where
 
 import qualified Control.Lens as Lens
-import qualified Graphics.DrawingCombinators as Draw
+import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.Glue (Orientation(..))
 import qualified GUI.Momentu.Glue as Glue
-import qualified GUI.Momentu.View as View
 import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.FocusDelegator as FocusDelegator
+import qualified Graphics.DrawingCombinators as Draw
 
 import           Lamdu.Prelude
 
@@ -57,7 +57,7 @@ toBox config selfFocused myId childrenRecords =
                 & case cwcExpandMode config of
                     AutoExpand color
                         | isSelected == Selected ->
-                            View.backgroundColor (Widget.toAnimId myId) color
+                            Element.backgroundColor (Widget.toAnimId myId) color
                     _ -> id
         applyAction (isSelected, action, widget) =
             ( isSelected

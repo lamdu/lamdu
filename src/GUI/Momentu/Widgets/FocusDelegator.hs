@@ -8,10 +8,10 @@ module GUI.Momentu.Widgets.FocusDelegator
 import qualified Control.Lens as Lens
 import           GUI.Momentu.Direction (Direction)
 import qualified GUI.Momentu.Direction as Direction
+import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.MetaKey (MetaKey, toModKey)
 import           GUI.Momentu.Rect (Rect(..))
-import qualified GUI.Momentu.View as View
 import qualified GUI.Momentu.Widget as Widget
 
 import           Lamdu.Prelude
@@ -81,7 +81,7 @@ make =
             childWidget
             & Widget.mEnter %~ modifyEntry myId fullChildRect focusEntryTarget
         where
-            fullChildRect = Rect 0 (childWidget ^. View.size)
+            fullChildRect = Rect 0 (childWidget ^. Element.size)
             childIsFocused = Widget.isFocused childWidget
             selfIsFocused = myId == cursor
             focusParentEventMap =

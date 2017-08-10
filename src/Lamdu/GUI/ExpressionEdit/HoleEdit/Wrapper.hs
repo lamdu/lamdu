@@ -6,8 +6,8 @@ module Lamdu.GUI.ExpressionEdit.HoleEdit.Wrapper
 
 import qualified Control.Lens as Lens
 import qualified Data.Store.Transaction as Transaction
+import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.EventMap as E
-import qualified GUI.Momentu.View as View
 import qualified GUI.Momentu.Widget as Widget
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Config.Theme as Theme
@@ -59,5 +59,5 @@ make widgetIds arg =
         let frameWidth = Theme.typeIndicatorFrameWidth theme <&> realToFrac
         argGui <- ExprGuiM.makeSubexpression (arg ^. Sugar.haExpr)
         unwrapEventMap <- makeUnwrapEventMap arg widgetIds
-        View.addInnerFrame ?? frameColor ?? frameWidth ?? View.pad (frameWidth & _2 .~ 0) argGui
+        Element.addInnerFrame ?? frameColor ?? frameWidth ?? Element.pad (frameWidth & _2 .~ 0) argGui
             <&> E.weakerEvents unwrapEventMap

@@ -11,13 +11,12 @@ import qualified Data.List as List
 import qualified Data.Text as Text
 import           Data.Text.Encoding (decodeUtf8)
 import           Data.Vector.Vector2 (Vector2(..))
-import           Graphics.DrawingCombinators ((%%))
-import qualified Graphics.DrawingCombinators.Utils as DrawUtils
 import           GUI.Momentu.Align (Aligned(..), WithTextPos(..))
 import qualified GUI.Momentu.Align as Align
 import           GUI.Momentu.Animation (AnimId)
 import qualified GUI.Momentu.Animation as Anim
 import qualified GUI.Momentu.Animation.Id as AnimId
+import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.Glue ((/-/), (/|/), hbox, vbox)
 import qualified GUI.Momentu.Rect as Rect
 import           GUI.Momentu.View (View(..))
@@ -25,6 +24,8 @@ import qualified GUI.Momentu.View as View
 import qualified GUI.Momentu.Widgets.GridView as GridView
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified GUI.Momentu.Widgets.TextView as TextView
+import           Graphics.DrawingCombinators ((%%))
+import qualified Graphics.DrawingCombinators.Utils as DrawUtils
 import qualified Lamdu.Builtins.Anchors as Builtins
 import qualified Lamdu.Builtins.PrimVal as PrimVal
 import           Lamdu.Calc.Type (Type)
@@ -85,7 +86,7 @@ makeField parentAnimId tag val =
             ]
     where
         toAligned x (WithTextPos y w) =
-            Aligned (Vector2 x (y / w ^. View.height)) w
+            Aligned (Vector2 x (y / w ^. Element.height)) w
         baseId = parentAnimId ++ [BinUtils.encodeS tag]
 
 makeError :: Monad m => EvalError -> AnimId -> ExprGuiM m (WithTextPos View)
@@ -118,7 +119,7 @@ makeArray animId items =
                     & GridView.make & Align.WithTextPos 0
             remainView <-
                 if null (drop tableCutoff pairs)
-                then return View.empty
+                then return Element.empty
                 else label "..." animId
             Aligned 0.5 table /-/ Aligned 0.5 remainView ^. Align.value & return
         where
@@ -184,10 +185,10 @@ makeRecExtend animId typ recExtend =
             fieldsView <- mapM (uncurry (makeField animId)) fields <&> GridView.make
             let barWidth
                     | null fields = 150
-                    | otherwise = fieldsView ^. View.width
+                    | otherwise = fieldsView ^. Element.width
             restView <-
                 case recStatus of
-                RecordComputed -> return View.empty
+                RecordComputed -> return Element.empty
                 RecordExtendsError err ->
                     makeError err animId
                     <&> (^. Align.tValue)
@@ -196,7 +197,7 @@ makeRecExtend animId typ recExtend =
                     where
                         sqr =
                             View.make 1 (Anim.unitSquare (animId ++ ["line"]))
-                            & View.scale (Vector2 barWidth 1)
+                            & Element.scale (Vector2 barWidth 1)
                             & Aligned 0.5
             (Aligned 0.5 fieldsView /-/ restView) ^. Align.value & Align.WithTextPos 0 & return
     where
@@ -258,12 +259,12 @@ fixSize :: WithTextPos View -> WithTextPos View
 fixSize view =
     view & Align.tValue . View.animFrames . Anim.frameImages . traverse %~ onImage
     where
-        size = view ^. View.size
+        size = view ^. Element.size
         onImage image =
             image
             & Anim.iRect . Rect.size .~ size
             & Anim.iUnitImage %~
-            (DrawUtils.scale (image ^. Anim.iRect . Rect.size / view ^. View.size) %%)
+            (DrawUtils.scale (image ^. Anim.iRect . Rect.size / view ^. Element.size) %%)
 
 makeInner :: Monad m => AnimId -> Val Type -> ExprGuiM m (WithTextPos View)
 makeInner animId (Val typ val) =
