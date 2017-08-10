@@ -71,7 +71,7 @@ infixMarker (Vector2 w h) =
     where
         x = min w h / 4
 
-addInfixMarker :: View.SetLayers a => Widget.Id -> a -> a
+addInfixMarker :: View.Element a => Widget.Id -> a -> a
 addInfixMarker widgetId =
     View.setLayers %@~
     \size ->

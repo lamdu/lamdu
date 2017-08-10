@@ -163,14 +163,12 @@ Lens.makePrisms ''State
 sizedState :: Lens.IndexedLens' Size (Widget a) (State a)
 sizedState f (Widget sz state) = Lens.indexed f sz state <&> Widget sz
 
-instance View.SetLayers (Widget a) where
+instance Functor f => View.Element (Widget (f EventResult)) where
     setLayers = sizedState <. stateLayers
     hoverLayers w =
         w
         & View.setLayers . View.layers %~ (mempty :)
         & mEnter . Lens._Just . Lens.mapped . enterResultLayer +~ 1
-
-instance Functor f => View.Resizable (Widget (f EventResult)) where
     empty = fromView View.empty
     assymetricPad leftAndTop rightAndBottom w =
         w
@@ -200,8 +198,8 @@ instance View.HasSize (Widget a) where
             Vector2 ow oh = w ^. wSize
 instance EventMap.HasEventMap Widget where eventMap = eventMapMaker . Lens.mapped
 
-instance Glue (Widget a) View where
-    type Glued (Widget a) View = Widget a
+instance Functor f => Glue (Widget (f EventResult)) View where
+    type Glued (Widget (f EventResult)) View = Widget (f EventResult)
     glue = Glue.glueH $ \w v -> w & View.setLayers <>~ v ^. View.vAnimLayers
 
 instance Functor f => Glue View (Widget (f EventResult)) where

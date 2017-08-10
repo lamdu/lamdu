@@ -104,11 +104,9 @@ instance ( GluesTo (WithTextPos a) (WithTextPos (Widget b)) (WithTextPos (Widget
         & adjustWidth orientation v
         & render . Lens.mapped %~ glue orientation v
 
-instance View.SetLayers (Responsive a) where
+instance Functor f => View.Element (Responsive (f Widget.EventResult)) where
     setLayers = Widget.widget . View.setLayers
     hoverLayers = Widget.widget %~ View.hoverLayers
-
-instance Functor f => View.Resizable (Responsive (f Widget.EventResult)) where
     empty = Responsive (const View.empty)
     pad p w =
         w

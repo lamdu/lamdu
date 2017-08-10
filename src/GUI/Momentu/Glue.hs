@@ -35,7 +35,7 @@ instance Glue View View where
 (/-/) = glue Vertical
 
 glueH ::
-    (View.HasSize a, View.HasSize b, View.Resizable b) =>
+    (View.HasSize a, View.HasSize b, View.Element b) =>
     (a -> b -> Glued a b) -> Orientation -> a -> b -> Glued a b
 glueH f orientation v0 v1 =
     f (v0 & View.size .~ newSize) (View.assymetricPad t 0 v1 & View.size .~ newSize)
@@ -47,11 +47,11 @@ glueH f orientation v0 v1 =
             Horizontal -> (Vector2 (w0 + w1) (max h0 h1), Vector2 w0 0)
             Vertical -> (Vector2 (max w0 w1) (h0 + h1), Vector2 0 h0)
 
-box :: (View.Resizable a, GluesTo a a a) => Orientation -> [a] -> a
+box :: (View.Element a, GluesTo a a a) => Orientation -> [a] -> a
 box orientation = foldr (glue orientation) View.empty
 
-hbox :: (View.Resizable a, GluesTo a a a) => [a] -> a
+hbox :: (View.Element a, GluesTo a a a) => [a] -> a
 hbox = box Horizontal
 
-vbox :: (View.Resizable a, GluesTo a a a) => [a] -> a
+vbox :: (View.Element a, GluesTo a a a) => [a] -> a
 vbox = box Vertical

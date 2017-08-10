@@ -27,11 +27,9 @@ Lens.makeLenses ''AnchoredWidget
 
 instance Widget.HasWidget AnchoredWidget where widget = anchored
 
-instance View.SetLayers (AnchoredWidget a) where
+instance Functor f => View.Element (AnchoredWidget (f EventResult)) where
     setLayers = anchored . View.setLayers
     hoverLayers = anchored %~ View.hoverLayers
-
-instance Functor f => View.Resizable (AnchoredWidget (f EventResult)) where
     empty = AnchoredWidget 0 View.empty
     assymetricPad tl br (AnchoredWidget point w) =
         AnchoredWidget
@@ -46,8 +44,8 @@ instance Functor f => View.Resizable (AnchoredWidget (f EventResult)) where
 
 instance View.HasSize (AnchoredWidget a) where size = anchored . View.size
 
-instance Glue (AnchoredWidget a) View where
-    type Glued (AnchoredWidget a) View = AnchoredWidget a
+instance Functor f => Glue (AnchoredWidget (f EventResult)) View where
+    type Glued (AnchoredWidget (f EventResult)) View = AnchoredWidget (f EventResult)
     glue = Glue.glueH $ \w v -> w & View.setLayers <>~ View.hoverLayers v ^. View.vAnimLayers
 
 instance Functor f => Glue View (AnchoredWidget (f EventResult)) where
@@ -76,7 +74,7 @@ anchor = AnchoredWidget 0
 hoverBesideOptions ::
     ( Glue a b, Glue b a, Glued a b ~ Glued b a
     , View.HasSize a, View.HasSize b, View.HasSize (Glued a b)
-    , View.Resizable a, View.Resizable b
+    , View.Element a, View.Element b
     ) =>
     a -> b -> [Glued a b]
 hoverBesideOptions hover src =
@@ -87,7 +85,7 @@ hoverBesideOptions hover src =
 hoverBesideOptionsAxis ::
     ( Glue a b, Glue b a, Glued a b ~ Glued b a
     , View.HasSize a, View.HasSize b, View.HasSize (Glued a b)
-    , View.Resizable a, View.Resizable b
+    , View.Element a, View.Element b
     ) =>
     Orientation -> a -> b -> [Glued a b]
 hoverBesideOptionsAxis o hover src =

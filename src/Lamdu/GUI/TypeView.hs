@@ -132,13 +132,13 @@ toAligned :: View.HasSize a => R -> WithTextPos a -> Aligned a
 toAligned x (WithTextPos y w) =
     Aligned (Vector2 x (y / w ^. View.height)) w
 
-addValPadding :: (View.Resizable a, Monad m) => a -> M m a
+addValPadding :: (View.Element a, Monad m) => a -> M m a
 addValPadding view =
     do
         padding <- Lens.view Theme.theme <&> Theme.valFramePadding <&> fmap realToFrac
         View.pad padding view & return
 
-addBGColor :: (View.SetLayers a, Monad m) => a -> M m a
+addBGColor :: (View.Element a, Monad m) => a -> M m a
 addBGColor view =
     do
         color <- Lens.view Theme.theme <&> Theme.typeFrameBGColor

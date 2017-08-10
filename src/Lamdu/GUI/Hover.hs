@@ -14,11 +14,11 @@ import qualified Lamdu.Config.Theme as Theme
 
 import           Lamdu.Prelude
 
-addBackground :: View.SetLayers a => AnimId -> Draw.Color -> a -> a
+addBackground :: View.Element a => AnimId -> Draw.Color -> a -> a
 addBackground myId = View.backgroundColor (myId <> ["hover background"])
 
 addDarkBackground ::
-    (Theme.HasTheme env, View.Resizable a, MonadReader env m) => AnimId -> m (a -> a)
+    (Theme.HasTheme env, View.Element a, MonadReader env m) => AnimId -> m (a -> a)
 addDarkBackground animId =
     Lens.view Theme.theme
     <&>

@@ -222,7 +222,7 @@ combineSpacedMParens mParensId =
         return $ combineWith mParenInfo (List.intersperse hSpace) (List.intersperse vSpace)
 
 addAnnotationBackgroundH ::
-    View.SetLayers a =>
+    View.Element a =>
     (Theme.ValAnnotation -> Draw.Color) -> Theme.ValAnnotation -> AnimId -> a -> a
 addAnnotationBackgroundH getColor theme animId =
     View.backgroundColor bgAnimId bgColor
@@ -230,10 +230,10 @@ addAnnotationBackgroundH getColor theme animId =
         bgAnimId = animId ++ ["annotation background"]
         bgColor = getColor theme
 
-addAnnotationBackground :: View.SetLayers a => Theme.ValAnnotation -> AnimId -> a -> a
+addAnnotationBackground :: View.Element a => Theme.ValAnnotation -> AnimId -> a -> a
 addAnnotationBackground = addAnnotationBackgroundH Theme.valAnnotationBGColor
 
-addAnnotationHoverBackground :: View.SetLayers a => Theme.ValAnnotation -> AnimId -> a -> a
+addAnnotationHoverBackground :: View.Element a => Theme.ValAnnotation -> AnimId -> a -> a
 addAnnotationHoverBackground = addAnnotationBackgroundH Theme.valAnnotationHoverBGColor
 
 data WideAnnotationBehavior
@@ -432,7 +432,7 @@ nameEditFDConfig = FocusDelegator.Config
     , FocusDelegator.focusParentDoc = E.Doc ["Edit", "Done renaming"]
     }
 
-addDeletionDiagonal :: (Monad m, View.SetLayers a) => ExprGuiM m (Widget.R -> a -> a)
+addDeletionDiagonal :: (Monad m, View.Element a) => ExprGuiM m (Widget.R -> a -> a)
 addDeletionDiagonal =
     View.addDiagonal <*> (Lens.view Theme.theme <&> Theme.typeIndicatorErrorColor)
 
@@ -534,20 +534,20 @@ grammarLabel text =
         TextView.makeLabel text
             & Reader.local (TextView.color .~ Theme.grammarColor theme)
 
-addValBG :: (Monad m, View.SetLayers a) => ExprGuiM m (a -> a)
+addValBG :: (Monad m, View.Element a) => ExprGuiM m (a -> a)
 addValBG = addValBGWithColor Theme.valFrameBGColor
 
 addValBGWithColor ::
-    (Monad m, View.SetLayers a) =>
+    (Monad m, View.Element a) =>
     (Theme -> Draw.Color) -> ExprGuiM m (a -> a)
 addValBGWithColor color = View.backgroundColor <*> (Lens.view Theme.theme <&> color)
 
-addValPadding :: (Monad m, View.Resizable a) => ExprGuiM m (a -> a)
+addValPadding :: (Monad m, View.Element a) => ExprGuiM m (a -> a)
 addValPadding =
     Lens.view Theme.theme <&> Theme.valFramePadding <&> fmap realToFrac
     <&> View.pad
 
-addValFrame :: (Monad m, View.Resizable a) => ExprGuiM m (a -> a)
+addValFrame :: (Monad m, View.Element a) => ExprGuiM m (a -> a)
 addValFrame =
     (.)
     <$> addValBG
