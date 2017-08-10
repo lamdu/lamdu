@@ -268,6 +268,8 @@ applyWideAnnotationBehavior animId HoverWideAnnotation =
         return $
             \shrinkRatio layout ->
                 addAnnotationHoverBackground theme animId layout
+                -- TODO: This is a buggy hover that ignores
+                -- Surrounding (and exits screen).
                 & (`View.hoverInPlaceOf` shrinker shrinkRatio layout)
 
 processAnnotationGui ::

@@ -171,6 +171,7 @@ padToSizeAlign newSize alignment x =
     where
         sizeDiff = max <$> 0 <*> newSize - x ^. size
 
+-- TODO: Remove this
 hoverInPlaceOf :: Element a => View -> a -> a
 hoverInPlaceOf onTop =
     setLayers . layers .~ mempty : onTop ^. vAnimLayers . layers
