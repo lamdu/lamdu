@@ -108,6 +108,7 @@ Executable lamdu
                   , GUI.Momentu.Animation
                   , GUI.Momentu.Animation.Id
                   , GUI.Momentu.Direction
+                  , GUI.Momentu.Draw
                   , GUI.Momentu.Element
                   , GUI.Momentu.EventMap
                   , GUI.Momentu.Font

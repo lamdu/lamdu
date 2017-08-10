@@ -16,7 +16,7 @@ import           Data.Store.Transaction (Transaction)
 import           GHC.Conc (setNumCapabilities, getNumProcessors)
 import           GHC.Stack (whoCreated)
 import           GUI.Momentu.Animation (AnimId)
-import qualified GUI.Momentu.Element as Element
+import qualified GUI.Momentu.Draw as MDraw
 import qualified GUI.Momentu.EventMap as EventMap
 import           GUI.Momentu.Main (mainLoopWidget)
 import qualified GUI.Momentu.Main as MainLoop
@@ -326,7 +326,7 @@ mkWidgetWithFallback dbToIO env =
                 return (isValid, widget)
         unless isValid $ putStrLn $ "Invalid cursor: " ++ show (env ^. Widget.cursor)
         widget
-            & Element.backgroundColor (["background"] :: AnimId) (bgColor isValid theme)
+            & MDraw.backgroundColor (["background"] :: AnimId) (bgColor isValid theme)
             & return
     where
         theme = env ^. GUIMain.envTheme

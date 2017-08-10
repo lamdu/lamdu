@@ -19,6 +19,7 @@ import           GUI.Momentu.Align (Aligned(..))
 import qualified GUI.Momentu.Align as Align
 import           GUI.Momentu.Animation (AnimId, R)
 import qualified GUI.Momentu.Animation as Anim
+import qualified GUI.Momentu.Draw as MDraw
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
@@ -255,7 +256,7 @@ makeToggledHelpAdder startValue =
                         liftIO $ modifyIORef showingHelpVar toggle
                     bgHelpView =
                         helpView
-                        & Element.backgroundColor helpAnimId (config ^. configBGColor)
+                        & MDraw.backgroundColor helpAnimId (config ^. configBGColor)
                         & Element.tint (config ^. configTint)
                 in
                 focus

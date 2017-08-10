@@ -1,4 +1,3 @@
-{-# LANGUAGE FlexibleContexts #-}
 -- | The dark background is meant to be added around the set of
 -- rectangular shaped hovering UI elements (e.g: annotations)
 {-# LANGUAGE NoImplicitPrelude, OverloadedStrings #-}
@@ -8,6 +7,7 @@ module Lamdu.GUI.Hover
 
 import qualified Control.Lens as Lens
 import           GUI.Momentu.Animation (AnimId)
+import qualified GUI.Momentu.Draw as MDraw
 import           GUI.Momentu.Element (Element)
 import qualified GUI.Momentu.Element as Element
 import qualified Graphics.DrawingCombinators as Draw
@@ -16,7 +16,7 @@ import qualified Lamdu.Config.Theme as Theme
 import           Lamdu.Prelude
 
 addBackground :: Element a => AnimId -> Draw.Color -> a -> a
-addBackground myId = Element.backgroundColor (myId <> ["hover background"])
+addBackground myId = MDraw.backgroundColor (myId <> ["hover background"])
 
 addDarkBackground ::
     (Theme.HasTheme env, Element a, MonadReader env m) => AnimId -> m (a -> a)
@@ -26,6 +26,6 @@ addDarkBackground animId =
     \theme gui ->
     gui
     & Element.pad (Theme.hoverDarkPadding theme <&> realToFrac)
-    & Element.backgroundColor
+    & MDraw.backgroundColor
         (animId <> ["hover dark background"])
         (Theme.hoverDarkBGColor theme)

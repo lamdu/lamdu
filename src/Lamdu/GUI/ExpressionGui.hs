@@ -47,6 +47,8 @@ import           Data.Vector.Vector2 (Vector2(..))
 import           GUI.Momentu.Align (Aligned(..), WithTextPos(..))
 import qualified GUI.Momentu.Align as Align
 import           GUI.Momentu.Animation (AnimId)
+import qualified GUI.Momentu.Animation as Anim
+import qualified GUI.Momentu.Draw as MDraw
 import           GUI.Momentu.Element (Element)
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.EventMap as E
@@ -107,7 +109,7 @@ maybeIndent (Just piInfo) =
                 where
                     indentBar =
                         Spacer.make (Vector2 barWidth (content ^. Element.height))
-                        & Element.backgroundColor bgAnimId (Theme.indentBarColor indentConf)
+                        & MDraw.backgroundColor bgAnimId (Theme.indentBarColor indentConf)
                     indentConf = piIndentTheme piInfo
                     stdSpace = piStdHorizSpacing piInfo
                     barWidth = stdSpace * Theme.indentBarWidth indentConf
@@ -227,7 +229,7 @@ addAnnotationBackgroundH ::
     Element a =>
     (Theme.ValAnnotation -> Draw.Color) -> Theme.ValAnnotation -> AnimId -> a -> a
 addAnnotationBackgroundH getColor theme animId =
-    Element.backgroundColor bgAnimId bgColor
+    MDraw.backgroundColor bgAnimId bgColor
     where
         bgAnimId = animId ++ ["annotation background"]
         bgColor = getColor theme
@@ -436,9 +438,32 @@ nameEditFDConfig = FocusDelegator.Config
     , FocusDelegator.focusParentDoc = E.Doc ["Edit", "Done renaming"]
     }
 
+-- | Add a diagonal line (top-left to right-bottom). Useful as a
+-- "deletion" GUI annotation
+addDiagonal ::
+    (MonadReader env m, Element.HasAnimIdPrefix env, Element a) =>
+    m (Draw.Color -> Draw.R -> a -> a)
+addDiagonal =
+    Element.subAnimId ["diagonal"] <&>
+    \animId color thickness -> Element.topLayer %@~
+    \sz ->
+    Draw.convexPoly
+    [ (0, thickness)
+    , (0, 0)
+    , (thickness, 0)
+    , (1, 1-thickness)
+    , (1, 1)
+    , (1-thickness, 1)
+    ]
+    & Draw.tint color
+    & void
+    & Anim.simpleFrame (animId ++ ["diagonal"])
+    & Anim.scale sz
+    & flip mappend
+
 addDeletionDiagonal :: (Monad m, Element a) => ExprGuiM m (Widget.R -> a -> a)
 addDeletionDiagonal =
-    Element.addDiagonal <*> (Lens.view Theme.theme <&> Theme.typeIndicatorErrorColor)
+    addDiagonal <*> (Lens.view Theme.theme <&> Theme.typeIndicatorErrorColor)
 
 makeNameOriginEdit ::
     Monad m =>
@@ -544,7 +569,7 @@ addValBG = addValBGWithColor Theme.valFrameBGColor
 addValBGWithColor ::
     (Monad m, Element a) =>
     (Theme -> Draw.Color) -> ExprGuiM m (a -> a)
-addValBGWithColor color = Element.backgroundColor <*> (Lens.view Theme.theme <&> color)
+addValBGWithColor color = MDraw.backgroundColor <*> (Lens.view Theme.theme <&> color)
 
 addValPadding :: (Monad m, Element a) => ExprGuiM m (a -> a)
 addValPadding =
@@ -577,7 +602,7 @@ makeCollisionSuffixLabel (Collision suffix) =
     do
         theme <- Lens.view Theme.theme
         let Theme.Name{..} = Theme.name theme
-        (Element.backgroundColor ?? collisionSuffixBGColor)
+        (MDraw.backgroundColor ?? collisionSuffixBGColor)
             <*>
             (TextView.makeLabel (Text.pack (show suffix))
             & Reader.local (TextView.color .~ collisionSuffixTextColor)

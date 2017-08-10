@@ -16,6 +16,7 @@ import           GUI.Momentu.Align (Aligned(..), WithTextPos(..))
 import qualified GUI.Momentu.Align as Align
 import           GUI.Momentu.Animation (AnimId)
 import qualified GUI.Momentu.Animation as Anim
+import qualified GUI.Momentu.Draw as MDraw
 import           GUI.Momentu.Element (Element, SizedElement)
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.Glue ((/-/), (/|/), hbox)
@@ -146,7 +147,7 @@ addBGColor view =
         color <- Lens.view Theme.theme <&> Theme.typeFrameBGColor
         bgId <- randAnimId
         view
-            & Element.backgroundColor bgId color
+            & MDraw.backgroundColor bgId color
             & return
 
 makeEmptyRecord :: Monad m => M m (WithTextPos View)
