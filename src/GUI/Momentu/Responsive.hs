@@ -126,7 +126,9 @@ alignedWidget ::
 alignedWidget = render . Lens.mapped
 
 -- | Lifts a Widget into a 'Responsive'
-fromAlignedWidget :: Aligned (Widget a) -> Responsive a
+fromAlignedWidget ::
+    Functor f =>
+    Aligned (Widget (f Widget.EventResult)) -> Responsive (f Widget.EventResult)
 fromAlignedWidget (Aligned a w) =
     WithTextPos (a ^. _2 * w ^. View.height) w
     & const
@@ -136,11 +138,11 @@ fromWithTextPos :: WithTextPos (Widget a) -> Responsive a
 fromWithTextPos = Responsive . const
 
 -- | Lifts a Widget into a 'Responsive' with an alignment point at the top left
-fromWidget :: Widget a -> Responsive a
+fromWidget :: Functor f => Widget (f Widget.EventResult) -> Responsive (f Widget.EventResult)
 fromWidget = fromAlignedWidget . Aligned 0
 
 -- | Lifts a View into a 'Responsive' with an alignment point at the top left
-fromView :: View -> Responsive a
+fromView :: Functor f => View -> Responsive (f Widget.EventResult)
 fromView = fromWidget . Widget.fromView
 
 -- | Lifts a View into a 'Responsive' with an alignment point at the top left
@@ -148,7 +150,7 @@ fromTextView :: WithTextPos View -> Responsive a
 fromTextView tv = tv & Align.tValue %~ Widget.fromView & fromWithTextPos
 
 -- | The empty 'Responsive'
-empty :: Responsive a
+empty :: Functor f => Responsive (f Widget.EventResult)
 empty = fromView View.empty
 
 -- | Vertical box with the alignment point from the top widget

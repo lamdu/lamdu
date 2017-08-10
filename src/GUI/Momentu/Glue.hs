@@ -35,7 +35,7 @@ instance Glue View View where
 (/-/) = glue Vertical
 
 glueH ::
-    (View.SizedElement a, View.SizedElement b, View.Element b) =>
+    (View.SizedElement a, View.SizedElement b) =>
     (a -> b -> Glued a b) -> Orientation -> a -> b -> Glued a b
 glueH f orientation v0 v1 =
     f (v0 & View.size .~ newSize) (View.assymetricPad t 0 v1 & View.size .~ newSize)

@@ -69,7 +69,7 @@ class Element a where
     scale :: Vector2 R -> a -> a
     empty :: a
 
-class SizedElement a where size :: Lens' a Size
+class Element a => SizedElement a where size :: Lens' a Size
 
 instance Element View where
     setLayers f (View sz ls) = Lens.indexed f sz ls <&> View sz
@@ -163,7 +163,7 @@ addInnerFrame =
 translateLayers :: Vector2 R -> Layers -> Layers
 translateLayers pos = layers . traverse %~ Anim.translate pos
 
-padToSizeAlign :: (SizedElement a, Element a) => Size -> Vector2 R -> a -> a
+padToSizeAlign :: SizedElement a => Size -> Vector2 R -> a -> a
 padToSizeAlign newSize alignment x =
     x
     & setLayers %~ translateLayers (sizeDiff * alignment)

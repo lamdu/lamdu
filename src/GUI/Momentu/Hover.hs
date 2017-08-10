@@ -42,7 +42,8 @@ instance Functor f => View.Element (AnchoredWidget (f EventResult)) where
         , _anchored = View.scale ratio w
         }
 
-instance View.SizedElement (AnchoredWidget a) where size = anchored . View.size
+instance Functor f => View.SizedElement (AnchoredWidget (f EventResult)) where
+    size = anchored . View.size
 
 instance Functor f => Glue (AnchoredWidget (f EventResult)) View where
     type Glued (AnchoredWidget (f EventResult)) View = AnchoredWidget (f EventResult)
@@ -74,7 +75,6 @@ anchor = AnchoredWidget 0
 hoverBesideOptions ::
     ( Glue a b, Glue b a, Glued a b ~ Glued b a
     , View.SizedElement a, View.SizedElement b, View.SizedElement (Glued a b)
-    , View.Element a, View.Element b
     ) =>
     a -> b -> [Glued a b]
 hoverBesideOptions hover src =
@@ -85,7 +85,6 @@ hoverBesideOptions hover src =
 hoverBesideOptionsAxis ::
     ( Glue a b, Glue b a, Glued a b ~ Glued b a
     , View.SizedElement a, View.SizedElement b, View.SizedElement (Glued a b)
-    , View.Element a, View.Element b
     ) =>
     Orientation -> a -> b -> [Glued a b]
 hoverBesideOptionsAxis o hover src =
@@ -97,7 +96,8 @@ hoverBesideOptionsAxis o hover src =
 
 hoverInPlaceOf ::
     Functor f =>
-    [AnchoredWidget (f EventResult)] -> AnchoredWidget a -> Widget (f EventResult)
+    [AnchoredWidget (f EventResult)] ->
+    AnchoredWidget (f EventResult) -> Widget (f EventResult)
 hoverInPlaceOf [] _ = error "no hover options!"
 hoverInPlaceOf hoverOptions@(defaultOption:_) place
     | null focusedOptions =
