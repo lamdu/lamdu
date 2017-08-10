@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, OverloadedStrings #-}
+{-# LANGUAGE NoImplicitPrelude #-}
 module Lamdu.GUI.ExpressionEdit.InjectEdit
     ( make
     ) where

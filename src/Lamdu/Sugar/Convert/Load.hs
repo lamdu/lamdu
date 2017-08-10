@@ -124,7 +124,7 @@ inferDef results defExpr defVar =
 inferCheckDef ::
     Monad m =>
     Definition.Expr (Val (ValI m)) -> V.Var ->
-    T m (Either Infer.Error (Val (Infer.Payload, (ValI m)), Infer.Context))
+    T m (Either Infer.Error (Val (Infer.Payload, ValI m), Infer.Context))
 inferCheckDef defExpr defVar =
     inferRecursive defExpr defVar
     & InferT.liftInfer

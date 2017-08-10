@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, FlexibleContexts, OverloadedStrings, TypeFamilies, Rank2Types #-}
+{-# LANGUAGE NoImplicitPrelude, FlexibleContexts, TypeFamilies, Rank2Types #-}
 module Lamdu.Sugar.Convert.Expression
     ( convert
     ) where

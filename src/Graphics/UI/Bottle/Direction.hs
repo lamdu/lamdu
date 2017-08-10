@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, TemplateHaskell #-}
+{-# LANGUAGE NoImplicitPrelude #-}
 module Graphics.UI.Bottle.Direction
     ( Direction(..), translate, scale
     ) where

@@ -1,4 +1,4 @@
-{-# LANGUAGE OverloadedStrings, NoImplicitPrelude #-}
+{-# LANGUAGE NoImplicitPrelude #-}
 -- | Convert wrapper holes
 
 module Lamdu.Sugar.Convert.Hole.Wrapper

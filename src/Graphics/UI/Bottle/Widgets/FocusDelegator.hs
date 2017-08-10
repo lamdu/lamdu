@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, OverloadedStrings #-}
+{-# LANGUAGE NoImplicitPrelude #-}
 module Graphics.UI.Bottle.Widgets.FocusDelegator
     ( FocusEntryTarget(..)
     , Config(..)

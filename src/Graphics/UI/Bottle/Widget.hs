@@ -343,6 +343,8 @@ stateLens ::
     LensLike f (State s) (State t) a b
 stateLens uLens fLens f = onState (uLens f) (fLens f)
 
+{-# ANN module ("HLint: ignore Eta reduce"::String) #-}
+
 events :: HasWidget w => Lens.Setter (w a) (w b) a b
 events =
     widget . wState . stateLens (uMEnter . atMEnter) (Lens.mapped . Lens.sets atFocus)
