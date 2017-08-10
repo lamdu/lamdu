@@ -36,9 +36,15 @@ extra-deps:
 - bitmap-0.0.2
 - bitmap-opengl-0.0.1.5
 - stb-image-0.2.1
+- GLFW-b-1.4.8.1
+- bindings-GLFW-3.1.2.2
+- testing-feat-0.4.0.3
+- tagshare-0.0
 
 extra-include-dirs:
 - /usr/local/include
 extra-lib-dirs:
 - /usr/local/lib
-resolver: lts-9.0
+resolver: nightly-2017-08-10
+
+allow-newer: true
