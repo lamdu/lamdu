@@ -79,7 +79,6 @@ textSize font str =
         height = Draw.fontHeight font * fromIntegral numLines
         numLines = 1 + Text.count "\n" str
 
-{-# NOINLINE drawText #-}
 drawText :: Draw.Font -> Draw.TextAttrs -> Text -> Image
 drawText font textAttrs str =
     Draw.text font str textAttrs
