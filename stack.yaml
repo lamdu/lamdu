@@ -36,10 +36,9 @@ extra-deps:
 - bitmap-0.0.2
 - bitmap-opengl-0.0.1.5
 - stb-image-0.2.1
-- uuid-aeson-0.1.0.0
 
 extra-include-dirs:
 - /usr/local/include
 extra-lib-dirs:
 - /usr/local/lib
-resolver: lts-8.6
+resolver: lts-9.0

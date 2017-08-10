@@ -19,7 +19,6 @@ import           Data.Either.Combinators (swapEither)
 import qualified Data.HashMap.Strict as HashMap
 import qualified Data.Map as Map
 import qualified Data.Set as Set
-import           Data.UUID.Aeson ()
 import           Data.UUID.Types (UUID)
 import qualified Data.Vector as Vector
 import           Lamdu.Calc.Identifier (Identifier, identHex, identFromHex)
