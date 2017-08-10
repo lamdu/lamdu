@@ -87,8 +87,8 @@ Executable lamdu
                   , Data.Function.Decycle
                   , Data.IORef.Utils
                   , Data.List.Utils
-                  , Data.Map.Utils
                   , Data.MRUMemo
+                  , Data.Map.Utils
                   , Data.Maybe.Utils
                   , Data.Monoid.Generic
                   , Data.Set.Ordered
@@ -105,10 +105,12 @@ Executable lamdu
                   , Data.Vector.Vector2
                   , Foreign.C.Types.Instances
                   , Graphics.DrawingCombinators.Utils
+                  , Graphics.UI.Bottle.Align
                   , Graphics.UI.Bottle.Animation
                   , Graphics.UI.Bottle.Animation.Id
                   , Graphics.UI.Bottle.Direction
                   , Graphics.UI.Bottle.EventMap
+                  , Graphics.UI.Bottle.Font
                   , Graphics.UI.Bottle.Glue
                   , Graphics.UI.Bottle.Hover
                   , Graphics.UI.Bottle.Main
@@ -117,12 +119,10 @@ Executable lamdu
                   , Graphics.UI.Bottle.MetaKey
                   , Graphics.UI.Bottle.ModKey
                   , Graphics.UI.Bottle.Rect
-                  , Graphics.UI.Bottle.Font
                   , Graphics.UI.Bottle.View
                   , Graphics.UI.Bottle.Widget
-                  , Graphics.UI.Bottle.Align
-                  , Graphics.UI.Bottle.Widget.TreeLayout
                   , Graphics.UI.Bottle.Widget.Id
+                  , Graphics.UI.Bottle.Widget.TreeLayout
                   , Graphics.UI.Bottle.Widgets.Choice
                   , Graphics.UI.Bottle.Widgets.EventMapHelp
                   , Graphics.UI.Bottle.Widgets.FocusDelegator
@@ -151,10 +151,10 @@ Executable lamdu
                   , Lamdu.Data.Export.Codejam
                   , Lamdu.Data.Export.JSON
                   , Lamdu.Data.Export.JSON.Codec
-                  , Lamdu.Data.Export.JSON.Process
                   , Lamdu.Data.Export.JSON.Migration
                   , Lamdu.Data.Export.JSON.Migration.ToVersion1
                   , Lamdu.Data.Export.JSON.Migration.ToVersion2
+                  , Lamdu.Data.Export.JSON.Process
                   , Lamdu.Data.Ops
                   , Lamdu.Data.Ops.Subexprs
                   , Lamdu.Eval.JS
@@ -233,9 +233,9 @@ Executable lamdu
                   , Lamdu.Sugar.Convert.GetField
                   , Lamdu.Sugar.Convert.GetVar
                   , Lamdu.Sugar.Convert.Hole
-                  , Lamdu.Sugar.Convert.Hole.Wrapper
                   , Lamdu.Sugar.Convert.Hole.ResultScore
                   , Lamdu.Sugar.Convert.Hole.Suggest
+                  , Lamdu.Sugar.Convert.Hole.Wrapper
                   , Lamdu.Sugar.Convert.Inject
                   , Lamdu.Sugar.Convert.Input
                   , Lamdu.Sugar.Convert.Load
@@ -264,9 +264,9 @@ Executable lamdu
                   , Lamdu.Themes
                   , Lamdu.VersionControl
                   , Lamdu.VersionControl.Actions
+                  , Numeric.Utils
                   , Paths.Utils
                   , Paths_Lamdu
-                  , Numeric.Utils
                   , System.Random.Utils
 
   ghc-options:         -O2 -Wall -threaded
