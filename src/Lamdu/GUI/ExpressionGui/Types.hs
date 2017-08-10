@@ -18,7 +18,7 @@ module Lamdu.GUI.ExpressionGui.Types
 import qualified Control.Lens as Lens
 import           Data.Store.Transaction (Transaction)
 import qualified GUI.Momentu.Widget as Widget
-import           GUI.Momentu.Responsive (TreeLayout(..))
+import           GUI.Momentu.Responsive (Responsive(..))
 import qualified Lamdu.Sugar.Lens as SugarLens
 import           Lamdu.Sugar.Names.Types (ExpressionN)
 import           Lamdu.Sugar.NearestHoles (NearestHoles)
@@ -27,7 +27,7 @@ import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
 
-type ExpressionGui m = TreeLayout (Transaction m Widget.EventResult)
+type ExpressionGui m = Responsive (Transaction m Widget.EventResult)
 
 data EvalModeShow = EvalModeShowNothing | EvalModeShowType | EvalModeShowEval
     deriving (Eq, Ord, Show)

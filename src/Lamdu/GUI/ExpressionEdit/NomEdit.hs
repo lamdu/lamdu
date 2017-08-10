@@ -9,7 +9,7 @@ import           Data.Store.Transaction (Transaction)
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Glue ((/|/))
 import qualified GUI.Momentu.Widget as Widget
-import qualified GUI.Momentu.Responsive as TreeLayout
+import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.Widgets.TextView as TextView
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Config.Theme as Theme
@@ -90,7 +90,7 @@ mkNomGui ordering nomStr str mDel valId pl (Sugar.Nominal tid val) =
                 do
                     label <- ExpressionGui.grammarLabel str
                     nameGui <- ExpressionGui.makeNameView (tid ^. Sugar.tidgName) (Widget.toAnimId nameId)
-                    label /|/ nameGui & TreeLayout.fromTextView & return
+                    label /|/ nameGui & Responsive.fromTextView & return
                 & Reader.local (TextView.color .~ nomColor)
                 <&> E.weakerEvents eventMap
               , val

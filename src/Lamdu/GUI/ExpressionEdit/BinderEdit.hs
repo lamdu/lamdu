@@ -25,7 +25,7 @@ import           GUI.Momentu.MetaKey (MetaKey(..), noMods, toModKey)
 import qualified GUI.Momentu.View as View
 import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
-import qualified GUI.Momentu.Responsive as TreeLayout
+import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.Widgets.Choice as Choice
 import qualified GUI.Momentu.Widgets.FocusDelegator as FocusDelegator
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
@@ -341,14 +341,14 @@ make name color binder myId =
             makeBinderNameEdit (binder ^. Sugar.bActions) rhsJumperEquals
             name color myId
             <&> (/-/ fromMaybe View.empty mPresentationEdit)
-            <&> TreeLayout.fromWithTextPos
+            <&> Responsive.fromWithTextPos
             <&> E.weakerEvents jumpHolesEventMap
         mLhsEdit <-
             case mParamsEdit of
             Nothing -> return Nothing
             Just paramsEdit ->
-                TreeLayout.vboxSpaced
-                ?? (paramsEdit : fmap TreeLayout.fromWidget mScopeEdit ^.. Lens._Just)
+                Responsive.vboxSpaced
+                ?? (paramsEdit : fmap Responsive.fromWidget mScopeEdit ^.. Lens._Just)
                 <&> E.strongerEvents rhsJumperEquals
                 <&> Just
         equals <- TextView.makeLabel "="
@@ -356,7 +356,7 @@ make name color binder myId =
             <&>
             (\hbox ->
             hbox
-            [ hbox (defNameEdit : (mLhsEdit ^.. Lens._Just) ++ [TreeLayout.fromTextView equals])
+            [ hbox (defNameEdit : (mLhsEdit ^.. Lens._Just) ++ [Responsive.fromTextView equals])
             , bodyEdit
             ] )
             <&> E.weakerEvents eventMap
@@ -459,7 +459,7 @@ makeBinderContentEdit (Sugar.BinderLet l) =
         mOuterScopeId <- ExprGuiM.readMScopeId
         let letBodyScope = liftA2 lookupMKey mOuterScopeId (l ^. Sugar.lBodyScope)
         ExpressionGui.parentDelegator letEntityId
-            <*> ( TreeLayout.vboxSpaced
+            <*> ( Responsive.vboxSpaced
                   <*>
                   sequence
                   [ makeLetEdit l <&> E.weakerEvents moveToInnerEventMap
@@ -477,7 +477,7 @@ namedParamEditInfo color paramInfo =
     ParamEdit.Info
     { ParamEdit.iMakeNameEdit =
         ExpressionGui.makeNameOriginEdit (paramInfo ^. Sugar.npiName) color
-        <&> Lens.mapped %~ TreeLayout.fromWithTextPos
+        <&> Lens.mapped %~ Responsive.fromWithTextPos
     , ParamEdit.iMAddNext = paramInfo ^. Sugar.npiActions . Sugar.fpAddNext & Just
     , ParamEdit.iMOrderBefore = paramInfo ^. Sugar.npiActions . Sugar.fpMOrderBefore
     , ParamEdit.iMOrderAfter = paramInfo ^. Sugar.npiActions . Sugar.fpMOrderAfter
@@ -490,7 +490,7 @@ nullParamEditInfo mActions =
     { ParamEdit.iMakeNameEdit =
       \myId ->
       (Widget.makeFocusableView ?? myId)
-      <*> (ExpressionGui.grammarLabel "◗" <&> TreeLayout.fromTextView)
+      <*> (ExpressionGui.grammarLabel "◗" <&> Responsive.fromTextView)
     , ParamEdit.iMAddNext = Nothing
     , ParamEdit.iMOrderBefore = Nothing
     , ParamEdit.iMOrderAfter = Nothing

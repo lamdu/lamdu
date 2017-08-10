@@ -38,4 +38,4 @@ For hovering submenus and their like it has several layers of `Frame`s, so that 
 
 ## GUI.Momentu.Responsive
 
-`TreeLayout` is a way of "laying out" a widget given layout constraints, designed for automatic layout of program code. Different nodes may be layed out either horizontally or vertically depending on the constraints.
+`Responsive` is a way of "laying out" a widget given layout constraints, designed for automatic layout of program code. Different nodes may be layed out either horizontally or vertically depending on the constraints.

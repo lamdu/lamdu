@@ -18,7 +18,7 @@ import           GUI.Momentu.View (View)
 import qualified GUI.Momentu.View as View
 import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
-import qualified GUI.Momentu.Responsive as TreeLayout
+import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified Lamdu.CharClassification as CharClassification
 import qualified Lamdu.GUI.ExpressionEdit.BinderEdit as BinderEdit
@@ -118,7 +118,7 @@ makeFuncRow mParensId prec apply applyNearestHoles myId =
     case apply ^. Sugar.aSpecialArgs of
     Sugar.NoSpecialArgs ->
         makeFuncVar nextHoles funcVar
-        myId <&> TreeLayout.fromWithTextPos
+        myId <&> Responsive.fromWithTextPos
         where
             nextHoles =
                 case apply ^. Sugar.aAnnotatedArgs of
@@ -128,7 +128,7 @@ makeFuncRow mParensId prec apply applyNearestHoles myId =
         ExpressionGui.combineSpacedMParens mParensId
         <*> sequenceA
         [ makeFuncVar (ExprGuiT.nextHolesBefore arg) funcVar myId
-            <&> TreeLayout.fromWithTextPos
+            <&> Responsive.fromWithTextPos
         , ExprGuiM.makeSubexpressionWith
           (if isBoxed apply then 0 else prec)
           (ExpressionGui.before .~ prec) arg
@@ -140,7 +140,7 @@ makeFuncRow mParensId prec apply applyNearestHoles myId =
             <*> sequenceA
             [ ExprGuiM.makeSubexpressionWith 0 (ExpressionGui.after .~ prec) l
             , makeInfixFuncName (ExprGuiT.nextHolesBefore r) funcVar myId
-                <&> TreeLayout.fromWithTextPos
+                <&> Responsive.fromWithTextPos
             ]
         , ExprGuiM.makeSubexpressionWith (prec+1) (ExpressionGui.before .~ prec+1) r
         ]
@@ -190,7 +190,7 @@ mkRelayedArgs :: Monad m => NearestHoles -> [Sugar.RelayedArg (Name m) m] -> Exp
 mkRelayedArgs nearestHoles args =
     do
         argEdits <- mapM makeArgEdit args
-        collapsed <- ExpressionGui.grammarLabel "➾" <&> TreeLayout.fromTextView
+        collapsed <- ExpressionGui.grammarLabel "➾" <&> Responsive.fromTextView
         ExpressionGui.combineSpaced ?? collapsed : argEdits
     where
         makeArgEdit arg =
@@ -203,7 +203,7 @@ mkRelayedArgs nearestHoles args =
                     , exprInfoIsHoleResult = False
                     } ExprGuiM.NoHolePick
                 GetVarEdit.makeGetParam (arg ^. Sugar.raValue) (WidgetIds.fromEntityId (arg ^. Sugar.raId))
-                    <&> TreeLayout.fromWithTextPos
+                    <&> Responsive.fromWithTextPos
                     <&> E.weakerEvents eventMap
 
 mkBoxed ::
@@ -218,7 +218,7 @@ mkBoxed apply nearestHoles mkFuncRow =
             case apply ^. Sugar.aAnnotatedArgs of
             [] -> return []
             xs ->
-                TreeLayout.taggedList
+                Responsive.taggedList
                 <*> (traverse makeArgRow xs <&> Lens.mapped . _1 . Align.tValue %~ Widget.fromView) <&> (:[])
         funcRow <- ExprGuiM.withLocalPrecedence 0 (const (Prec.make 0)) mkFuncRow
         relayedArgs <-
@@ -226,7 +226,7 @@ mkBoxed apply nearestHoles mkFuncRow =
             [] -> return []
             args -> mkRelayedArgs nearestHoles args <&> (:[])
         ExpressionGui.addValFrame
-            <*> (TreeLayout.vboxSpaced ?? (funcRow : argRows ++ relayedArgs))
+            <*> (Responsive.vboxSpaced ?? (funcRow : argRows ++ relayedArgs))
 
 makeSimple ::
     Monad m =>

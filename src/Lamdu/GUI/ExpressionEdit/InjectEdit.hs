@@ -4,7 +4,7 @@ module Lamdu.GUI.ExpressionEdit.InjectEdit
     ) where
 
 import qualified GUI.Momentu.Widget as Widget
-import qualified GUI.Momentu.Responsive as TreeLayout
+import qualified GUI.Momentu.Responsive as Responsive
 import qualified Lamdu.GUI.ExpressionEdit.ApplyEdit as ApplyEdit
 import qualified Lamdu.GUI.ExpressionEdit.TagEdit as TagEdit
 import           Lamdu.GUI.ExpressionGui (ExpressionGui)
@@ -27,7 +27,7 @@ makeCommon ::
 makeCommon tagG nearestHoles valEdits =
     ExpressionGui.combineSpaced
     <*> ( TagEdit.makeCaseTag nearestHoles tagG
-          <&> TreeLayout.fromWithTextPos <&> (: valEdits)
+          <&> Responsive.fromWithTextPos <&> (: valEdits)
         )
 
 make ::

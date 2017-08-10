@@ -16,7 +16,7 @@ import           GUI.Momentu.MetaKey (MetaKey(..), noMods)
 import qualified GUI.Momentu.View as View
 import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
-import qualified GUI.Momentu.Responsive as TreeLayout
+import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.Widgets.FocusDelegator as FocusDelegator
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
 import qualified GUI.Momentu.Widgets.TextEdit.Property as TextEdits
@@ -60,7 +60,7 @@ genericEdit getStyle prop pl =
         TextView.makeFocusable ?? valText ?? myId
             & Reader.local (TextEdit.style .~ style)
             <&> Align.tValue %~ E.weakerEvents editEventMap
-            <&> TreeLayout.fromWithTextPos
+            <&> Responsive.fromWithTextPos
     where
         myId = WidgetIds.fromExprPayload pl
         editEventMap =
@@ -112,5 +112,5 @@ make lit pl =
     case lit of
     Sugar.LiteralNum x -> genericEdit (^. Style.styleNum) x pl
     Sugar.LiteralBytes x -> genericEdit (^. Style.styleBytes) x pl
-    Sugar.LiteralText x -> textEdit x pl <&> TreeLayout.fromWithTextPos
+    Sugar.LiteralText x -> textEdit x pl <&> Responsive.fromWithTextPos
     & ExpressionGui.stdWrap pl

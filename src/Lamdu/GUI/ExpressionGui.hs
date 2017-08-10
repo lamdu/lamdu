@@ -56,8 +56,8 @@ import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
 import           GUI.Momentu.Align (Aligned(..), WithTextPos(..))
 import qualified GUI.Momentu.Align as Align
-import           GUI.Momentu.Responsive (TreeLayout(..))
-import qualified GUI.Momentu.Responsive as TreeLayout
+import           GUI.Momentu.Responsive (Responsive(..))
+import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.Widgets.FocusDelegator as FocusDelegator
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
@@ -92,15 +92,15 @@ type T = Transaction
 maybeIndent ::
     Functor f =>
     Maybe ParenIndentInfo ->
-    TreeLayout (f Widget.EventResult) ->
-    TreeLayout (f Widget.EventResult)
+    Responsive (f Widget.EventResult) ->
+    Responsive (f Widget.EventResult)
 maybeIndent Nothing = id
 maybeIndent (Just piInfo) =
-    TreeLayout.render %~ f
+    Responsive.render %~ f
     where
         f mkLayout lp =
-            case lp ^. TreeLayout.layoutContext of
-            TreeLayout.LayoutVertical ->
+            case lp ^. Responsive.layoutContext of
+            Responsive.LayoutVertical ->
                 indentBar /|/ Spacer.make (Vector2 gapWidth 0) /|/ content
                 where
                     indentBar =
@@ -112,7 +112,7 @@ maybeIndent (Just piInfo) =
                     gapWidth = stdSpace * Theme.indentBarGap indentConf
                     indentWidth = barWidth + gapWidth
                     content =
-                        lp & TreeLayout.layoutMode . TreeLayout.modeWidths -~ indentWidth
+                        lp & Responsive.layoutMode . Responsive.modeWidths -~ indentWidth
                         & mkLayout
                     bgAnimId = piAnimId piInfo ++ ["("]
             _ -> mkLayout lp
@@ -133,9 +133,9 @@ horizVertFallback ::
     (Monad m, Functor f) =>
     Maybe AnimId ->
     ExprGuiM m
-    (TreeLayout (f Widget.EventResult) ->
-     TreeLayout (f Widget.EventResult) ->
-     TreeLayout (f Widget.EventResult))
+    (Responsive (f Widget.EventResult) ->
+     Responsive (f Widget.EventResult) ->
+     Responsive (f Widget.EventResult))
 horizVertFallback mParenId =
     mParenId & Lens._Just %%~ makeParenIndentInfo
     <&> horizVertFallbackH
@@ -143,53 +143,53 @@ horizVertFallback mParenId =
 horizVertFallbackH ::
     Functor f =>
     Maybe ParenIndentInfo ->
-    TreeLayout (f Widget.EventResult) ->
-    TreeLayout (f Widget.EventResult) ->
-    TreeLayout (f Widget.EventResult)
+    Responsive (f Widget.EventResult) ->
+    Responsive (f Widget.EventResult) ->
+    Responsive (f Widget.EventResult)
 horizVertFallbackH mParenInfo horiz vert =
-    TreeLayout.render #
+    Responsive.render #
     \layoutParams ->
     let wide =
-            layoutParams & TreeLayout.layoutMode .~ TreeLayout.LayoutWide
-            & horiz ^. TreeLayout.render
+            layoutParams & Responsive.layoutMode .~ Responsive.LayoutWide
+            & horiz ^. Responsive.render
     in
-    case layoutParams ^. TreeLayout.layoutMode of
-    TreeLayout.LayoutWide ->
-        case (mParenInfo, layoutParams ^. TreeLayout.layoutContext) of
-        (Just parenInfo, TreeLayout.LayoutHorizontal) ->
+    case layoutParams ^. Responsive.layoutMode of
+    Responsive.LayoutWide ->
+        case (mParenInfo, layoutParams ^. Responsive.layoutContext) of
+        (Just parenInfo, Responsive.LayoutHorizontal) ->
             parenLabel parenInfo "("
             /|/ wide /|/
             parenLabel parenInfo ")"
         _ -> wide
-    TreeLayout.LayoutNarrow limit
+    Responsive.LayoutNarrow limit
         | wide ^. View.width > limit ->
-            layoutParams & maybeIndent mParenInfo vert ^. TreeLayout.render
+            layoutParams & maybeIndent mParenInfo vert ^. Responsive.render
         | otherwise -> wide
 
 combineWith ::
     Functor f => Maybe ParenIndentInfo ->
     ([WithTextPos (Widget (f Widget.EventResult))] ->
      [WithTextPos (Widget (f Widget.EventResult))]) ->
-    ([TreeLayout (f Widget.EventResult)] ->
-     [TreeLayout (f Widget.EventResult)]) ->
-    [TreeLayout (f Widget.EventResult)] -> TreeLayout (f Widget.EventResult)
+    ([Responsive (f Widget.EventResult)] ->
+     [Responsive (f Widget.EventResult)]) ->
+    [Responsive (f Widget.EventResult)] -> Responsive (f Widget.EventResult)
 combineWith mParenInfo onHGuis onVGuis guis =
     horizVertFallbackH mParenInfo wide vert
     where
-        vert = TreeLayout.vbox (onVGuis guis)
+        vert = Responsive.vbox (onVGuis guis)
         wide =
-            guis ^.. Lens.traverse . TreeLayout.render
-            ?? TreeLayout.LayoutParams
-                { _layoutMode = TreeLayout.LayoutWide
-                , _layoutContext = TreeLayout.LayoutHorizontal
+            guis ^.. Lens.traverse . Responsive.render
+            ?? Responsive.LayoutParams
+                { _layoutMode = Responsive.LayoutWide
+                , _layoutContext = Responsive.LayoutHorizontal
                 }
             & onHGuis
             & Glue.hbox
-            & TreeLayout.fromWithTextPos
+            & Responsive.fromWithTextPos
 
 combine ::
-    Functor f => [TreeLayout (f Widget.EventResult)] ->
-    TreeLayout (f Widget.EventResult)
+    Functor f => [Responsive (f Widget.EventResult)] ->
+    Responsive (f Widget.EventResult)
 combine = combineWith Nothing id id
 
 makeParenIndentInfo ::
@@ -205,19 +205,19 @@ makeParenIndentInfo parensId =
 combineSpaced ::
     (MonadReader env m, TextView.HasStyle env, Theme.HasTheme env,
      Spacer.HasStdSpacing env, Functor f) =>
-    m ([TreeLayout (f Widget.EventResult)] -> TreeLayout (f Widget.EventResult))
+    m ([Responsive (f Widget.EventResult)] -> Responsive (f Widget.EventResult))
 combineSpaced = combineSpacedMParens Nothing
 
 combineSpacedMParens ::
     (MonadReader env m, TextView.HasStyle env, Theme.HasTheme env,
      Spacer.HasStdSpacing env, Functor f) =>
     Maybe AnimId ->
-    m ([TreeLayout (f Widget.EventResult)] ->
-       TreeLayout (f Widget.EventResult))
+    m ([Responsive (f Widget.EventResult)] ->
+       Responsive (f Widget.EventResult))
 combineSpacedMParens mParensId =
     do
         hSpace <- Spacer.stdHSpace <&> Widget.fromView <&> WithTextPos 0
-        vSpace <- Spacer.stdVSpace <&> TreeLayout.fromView
+        vSpace <- Spacer.stdVSpace <&> Responsive.fromView
         mParenInfo <- mParensId & Lens._Just %%~ makeParenIndentInfo
         return $ combineWith mParenInfo (List.intersperse hSpace) (List.intersperse vSpace)
 
@@ -375,8 +375,8 @@ addAnnotationH ::
     (AnimId -> ExprGuiM m (WithTextPos View)) ->
     WideAnnotationBehavior -> Sugar.EntityId ->
     ExprGuiM m
-    (TreeLayout (f Widget.EventResult) ->
-     TreeLayout (f Widget.EventResult))
+    (Responsive (f Widget.EventResult) ->
+     Responsive (f Widget.EventResult))
 addAnnotationH minWidth f wideBehavior entityId =
     do
         vspace <- annotationSpacer
@@ -387,14 +387,14 @@ addAnnotationH minWidth f wideBehavior entityId =
 -- TODO (ALIGN):
 --                AlignTo (w ^. Align.alignmentRatio . _1)
                 (processAnn (w ^. View.width) annotationLayout & View.width %~ max minWidth)
-        return $ TreeLayout.alignedWidget %~ onAlignedWidget
+        return $ Responsive.alignedWidget %~ onAlignedWidget
     where
         animId = WidgetIds.fromEntityId entityId & Widget.toAnimId
 
 addInferredType ::
     (Functor f, Monad m) =>
     Type -> WideAnnotationBehavior -> Sugar.EntityId ->
-    ExprGuiM m (TreeLayout (f Widget.EventResult) -> TreeLayout (f Widget.EventResult))
+    ExprGuiM m (Responsive (f Widget.EventResult) -> Responsive (f Widget.EventResult))
 addInferredType typ = addAnnotationH 0 (TypeView.make typ)
 
 addEvaluationResult ::
@@ -403,8 +403,8 @@ addEvaluationResult ::
     Maybe (NeighborVals (Maybe EvalResDisplay)) -> EvalResDisplay ->
     WideAnnotationBehavior -> Sugar.EntityId ->
     ExprGuiM m
-    (TreeLayout (f Widget.EventResult) ->
-     TreeLayout (f Widget.EventResult))
+    (Responsive (f Widget.EventResult) ->
+     Responsive (f Widget.EventResult))
 -- REVIEW(Eyal): This is misleading when it refers to Previous results
 addEvaluationResult minWidth mNeigh resDisp wideBehavior entityId =
     case (erdVal resDisp ^. ER.payload, erdVal resDisp ^. ER.body) of
@@ -512,7 +512,7 @@ stdWrap pl act =
 
 parentDelegator ::
     (MonadReader env m, Config.HasConfig env, Widget.HasCursor env, Applicative f) =>
-    Widget.Id -> m (TreeLayout (f Widget.EventResult) -> TreeLayout (f Widget.EventResult))
+    Widget.Id -> m (Responsive (f Widget.EventResult) -> Responsive (f Widget.EventResult))
 parentDelegator myId =
     FocusDelegator.make <*> (Lens.view Config.config <&> parentExprFDConfig)
     ?? FocusDelegator.FocusEntryChild ?? WidgetIds.notDelegatingId myId
@@ -690,10 +690,10 @@ valOfScopePreferCur annotation = valOfScope annotation . pure . Just
 listWithDelDests :: k -> k -> (a -> k) -> [a] -> [(k, k, a)]
 listWithDelDests = ListUtils.withPrevNext
 
-render :: Widget.R -> TreeLayout a -> WithTextPos (Widget a)
+render :: Widget.R -> Responsive a -> WithTextPos (Widget a)
 render width gui =
-    (gui ^. TreeLayout.render)
-    TreeLayout.LayoutParams
-    { _layoutMode = TreeLayout.LayoutNarrow width
-    , _layoutContext = TreeLayout.LayoutClear
+    (gui ^. Responsive.render)
+    Responsive.LayoutParams
+    { _layoutMode = Responsive.LayoutNarrow width
+    , _layoutContext = Responsive.LayoutClear
     }

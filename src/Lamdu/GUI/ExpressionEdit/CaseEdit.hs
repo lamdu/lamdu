@@ -16,7 +16,7 @@ import           GUI.Momentu.View (View)
 import qualified GUI.Momentu.View as View
 import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
-import qualified GUI.Momentu.Responsive as TreeLayout
+import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import           Lamdu.Calc.Type (Tag)
 import qualified Lamdu.Calc.Val as V
@@ -63,7 +63,7 @@ make (Sugar.Case mArg alts caseTail addAlt _cEntityId) pl =
             <&> fromMaybe mempty
         let headerLabel text =
                 (Widget.makeFocusableView ?? headerId)
-                <*> (ExpressionGui.grammarLabel text <&> TreeLayout.fromTextView)
+                <*> (ExpressionGui.grammarLabel text <&> Responsive.fromTextView)
                 <&> E.weakerEvents labelJumpHoleEventMap
         (mActiveTag, header) <-
             case mArg of
@@ -97,7 +97,7 @@ make (Sugar.Case mArg alts caseTail addAlt _cEntityId) pl =
                   (E.Doc ["Edit", "Case", "Add Alt"])
                 & ExprGuiM.withHolePicker resultPicker
         ExpressionGui.addValFrame
-            <*> (TreeLayout.vboxSpaced ?? [header, altsGui])
+            <*> (Responsive.vboxSpaced ?? [header, altsGui])
             <&> E.weakerEvents addAltEventMap
     & Widget.assignCursor myId (destCursorId alts headerId)
     & ExpressionGui.stdWrapParentExpr pl
@@ -133,9 +133,9 @@ makeAltsWidget ::
     Widget.Id -> ExprGuiM m (ExpressionGui m)
 makeAltsWidget _ [] myId =
     (Widget.makeFocusableView ?? Widget.joinId myId ["Ø"])
-    <*> (ExpressionGui.grammarLabel "Ø" <&> TreeLayout.fromTextView)
+    <*> (ExpressionGui.grammarLabel "Ø" <&> Responsive.fromTextView)
 makeAltsWidget mActiveTag alts _myId =
-    TreeLayout.taggedList <*> mapM (makeAltRow mActiveTag) alts
+    Responsive.taggedList <*> mapM (makeAltRow mActiveTag) alts
 
 separationBar :: Theme -> Widget.R -> Anim.AnimId -> View
 separationBar theme width animId =
@@ -155,9 +155,9 @@ makeOpenCase rest animId altsGui =
         restExpr <-
             ExpressionGui.addValPadding
             <*> ExprGuiM.makeSubexpression rest
-        return $ altsGui & TreeLayout.render . Lens.imapped %@~
+        return $ altsGui & Responsive.render . Lens.imapped %@~
             \layoutMode alts ->
-            let restLayout = layoutMode & restExpr ^. TreeLayout.render
+            let restLayout = layoutMode & restExpr ^. Responsive.render
                 minWidth = restLayout ^. View.width
                 targetWidth = alts ^. View.width
             in

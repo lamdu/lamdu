@@ -12,7 +12,7 @@ import           GUI.Momentu.MetaKey (MetaKey(..), noMods)
 import qualified GUI.Momentu.View as View
 import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
-import qualified GUI.Momentu.Responsive as TreeLayout
+import qualified GUI.Momentu.Responsive as Responsive
 import qualified Graphics.UI.GLFW as GLFW
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Config.Theme as Theme
@@ -53,7 +53,7 @@ mkExpanded ::
      [ExpressionGui m])
 mkExpanded =
     do
-        labelEdit <- ExpressionGui.grammarLabel "→" <&> TreeLayout.fromTextView
+        labelEdit <- ExpressionGui.grammarLabel "→" <&> Responsive.fromTextView
         return $ \mParamsEdit mScopeEdit ->
             mkLhsEdits mParamsEdit mScopeEdit ++ [labelEdit]
 
@@ -75,7 +75,7 @@ mkShrunk paramIds myId =
         theme <- Lens.view Theme.theme
         lamLabel <-
             (Widget.makeFocusableView ?? lamId myId)
-            <*> (ExpressionGui.grammarLabel "λ" <&> TreeLayout.fromTextView)
+            <*> (ExpressionGui.grammarLabel "λ" <&> Responsive.fromTextView)
             & LightLambda.withUnderline theme
         return $ \mScopeEdit ->
             [ addScopeEdit mScopeEdit lamLabel

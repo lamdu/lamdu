@@ -1,4 +1,4 @@
--- | TreeLayout is a layout form intended for visualizing tree-data,
+-- | Responsive is a layout form intended for visualizing tree-data,
 -- such as program code.
 --
 -- Its design goals are:
@@ -22,7 +22,7 @@
 {-# LANGUAGE NoImplicitPrelude, TemplateHaskell, DeriveFunctor, FlexibleContexts, FlexibleInstances, MultiParamTypeClasses, TypeFamilies, UndecidableInstances #-}
 
 module GUI.Momentu.Responsive
-    ( TreeLayout(..), render
+    ( Responsive(..), render
 
     -- * Layout params
     , LayoutParams(..), layoutMode, layoutContext
@@ -76,20 +76,20 @@ data LayoutParams = LayoutParams
     }
 Lens.makeLenses ''LayoutParams
 
-newtype TreeLayout a = TreeLayout
+newtype Responsive a = Responsive
     { _render :: LayoutParams -> WithTextPos (Widget a)
     } deriving Functor
-Lens.makeLenses ''TreeLayout
+Lens.makeLenses ''Responsive
 
-adjustWidth :: View.HasSize v => Orientation -> v -> TreeLayout a -> TreeLayout a
+adjustWidth :: View.HasSize v => Orientation -> v -> Responsive a -> Responsive a
 adjustWidth Vertical _ = id
 adjustWidth Horizontal v =
     render . Lens.argument . layoutMode . modeWidths -~ v ^. View.size . _1
 
 instance ( GluesTo (WithTextPos (Widget a)) (WithTextPos b) (WithTextPos (Widget a))
          , View.HasSize b
-         ) => Glue (TreeLayout a) (WithTextPos b) where
-    type Glued (TreeLayout a) (WithTextPos b) = TreeLayout a
+         ) => Glue (Responsive a) (WithTextPos b) where
+    type Glued (Responsive a) (WithTextPos b) = Responsive a
     glue orientation l v =
         l
         & adjustWidth orientation v
@@ -97,69 +97,69 @@ instance ( GluesTo (WithTextPos (Widget a)) (WithTextPos b) (WithTextPos (Widget
 
 instance ( GluesTo (WithTextPos a) (WithTextPos (Widget b)) (WithTextPos (Widget b))
          , View.HasSize a
-         ) => Glue (WithTextPos a) (TreeLayout b) where
-    type Glued (WithTextPos a) (TreeLayout b) = TreeLayout b
+         ) => Glue (WithTextPos a) (Responsive b) where
+    type Glued (WithTextPos a) (Responsive b) = Responsive b
     glue orientation v l =
         l
         & adjustWidth orientation v
         & render . Lens.mapped %~ glue orientation v
 
-instance View.SetLayers (TreeLayout a) where
+instance View.SetLayers (Responsive a) where
     setLayers = Widget.widget . View.setLayers
     hoverLayers = Widget.widget %~ View.hoverLayers
 
-instance Functor f => View.Resizable (TreeLayout (f Widget.EventResult)) where
-    empty = TreeLayout (const View.empty)
+instance Functor f => View.Resizable (Responsive (f Widget.EventResult)) where
+    empty = Responsive (const View.empty)
     pad p w =
         w
         & render . Lens.argument . layoutMode . modeWidths -~ 2 * (p ^. _1)
         & render . Lens.mapped %~ View.pad p
-    scale = error "TreeLayout: scale not Implemented"
-    assymetricPad = error "TreeLayout: assymetricPad not implemented"
+    scale = error "Responsive: scale not Implemented"
+    assymetricPad = error "Responsive: assymetricPad not implemented"
 
-instance E.HasEventMap TreeLayout where eventMap = Widget.widget . E.eventMap
+instance E.HasEventMap Responsive where eventMap = Widget.widget . E.eventMap
 
-instance Widget.HasWidget TreeLayout where widget = alignedWidget . Align.tValue
+instance Widget.HasWidget Responsive where widget = alignedWidget . Align.tValue
 
 alignedWidget ::
     Lens.Setter
-    (TreeLayout a) (TreeLayout b)
+    (Responsive a) (Responsive b)
     (WithTextPos (Widget a)) (WithTextPos (Widget b))
 alignedWidget = render . Lens.mapped
 
--- | Lifts a Widget into a 'TreeLayout'
-fromAlignedWidget :: Aligned (Widget a) -> TreeLayout a
+-- | Lifts a Widget into a 'Responsive'
+fromAlignedWidget :: Aligned (Widget a) -> Responsive a
 fromAlignedWidget (Aligned a w) =
     WithTextPos (a ^. _2 * w ^. View.height) w
     & const
-    & TreeLayout
+    & Responsive
 
-fromWithTextPos :: WithTextPos (Widget a) -> TreeLayout a
-fromWithTextPos = TreeLayout . const
+fromWithTextPos :: WithTextPos (Widget a) -> Responsive a
+fromWithTextPos = Responsive . const
 
--- | Lifts a Widget into a 'TreeLayout' with an alignment point at the top left
-fromWidget :: Widget a -> TreeLayout a
+-- | Lifts a Widget into a 'Responsive' with an alignment point at the top left
+fromWidget :: Widget a -> Responsive a
 fromWidget = fromAlignedWidget . Aligned 0
 
--- | Lifts a View into a 'TreeLayout' with an alignment point at the top left
-fromView :: View -> TreeLayout a
+-- | Lifts a View into a 'Responsive' with an alignment point at the top left
+fromView :: View -> Responsive a
 fromView = fromWidget . Widget.fromView
 
--- | Lifts a View into a 'TreeLayout' with an alignment point at the top left
-fromTextView :: WithTextPos View -> TreeLayout a
+-- | Lifts a View into a 'Responsive' with an alignment point at the top left
+fromTextView :: WithTextPos View -> Responsive a
 fromTextView tv = tv & Align.tValue %~ Widget.fromView & fromWithTextPos
 
--- | The empty 'TreeLayout'
-empty :: TreeLayout a
+-- | The empty 'Responsive'
+empty :: Responsive a
 empty = fromView View.empty
 
 -- | Vertical box with the alignment point from the top widget
 vbox ::
     Functor f =>
-    [TreeLayout (f Widget.EventResult)] -> TreeLayout (f Widget.EventResult)
+    [Responsive (f Widget.EventResult)] -> Responsive (f Widget.EventResult)
 vbox [] = empty
 vbox (gui:guis) =
-    TreeLayout $
+    Responsive $
     \layoutParams ->
     let cp =
             LayoutParams
@@ -172,7 +172,7 @@ vbox (gui:guis) =
 
 vboxSpaced ::
     (MonadReader env m, Spacer.HasStdSpacing env, Functor f) =>
-    m ([TreeLayout (f Widget.EventResult)] -> TreeLayout (f Widget.EventResult))
+    m ([Responsive (f Widget.EventResult)] -> Responsive (f Widget.EventResult))
 vboxSpaced =
     Spacer.stdVSpace
     <&> fromView
@@ -181,7 +181,7 @@ vboxSpaced =
 
 taggedList ::
     (MonadReader env m, Spacer.HasStdSpacing env, Functor f) =>
-    m ([(WithTextPos (Widget (f Widget.EventResult)), TreeLayout (f Widget.EventResult))] -> TreeLayout (f Widget.EventResult))
+    m ([(WithTextPos (Widget (f Widget.EventResult)), Responsive (f Widget.EventResult))] -> Responsive (f Widget.EventResult))
 taggedList =
     vboxSpaced <&>
     \box pairs ->

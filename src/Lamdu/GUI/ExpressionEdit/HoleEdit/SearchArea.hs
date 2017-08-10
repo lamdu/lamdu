@@ -13,7 +13,7 @@ import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Hover as Hover
-import qualified GUI.Momentu.Responsive as TreeLayout
+import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.Widgets.FocusDelegator as FocusDelegator
 import qualified Lamdu.Config as Config
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.Info (HoleInfo(..))
@@ -53,7 +53,7 @@ makeStdWrapped pl holeInfo =
                     ?? FocusDelegator.FocusEntryChild ?? hidClosedSearchArea
                     <&> (Align.tValue %~)
         closedSearchTermGui <-
-            fdWrap <*> SearchTerm.make holeInfo <&> TreeLayout.fromWithTextPos
+            fdWrap <*> SearchTerm.make holeInfo <&> Responsive.fromWithTextPos
             & ExpressionGui.stdWrap pl
         isSelected <- Widget.isSubCursor ?? hidOpen
         if isSelected
@@ -66,6 +66,6 @@ makeStdWrapped pl holeInfo =
                  <*> makeOpenSearchAreaGui pl holeInfo
                  <&> Lens.mapped %~
                  \open ->
-                 closedSearchTermGui & TreeLayout.alignedWidget . Align.tValue %~
+                 closedSearchTermGui & Responsive.alignedWidget . Align.tValue %~
                  Hover.hoverInPlaceOf [Hover.anchor (open ^. Align.tValue)] . Hover.anchor
             else return (const closedSearchTermGui)

@@ -13,7 +13,7 @@ import           GUI.Momentu.Glue ((/-/))
 import qualified GUI.Momentu.Hover as Hover
 import qualified GUI.Momentu.View as View
 import qualified GUI.Momentu.Widget as Widget
-import qualified GUI.Momentu.Responsive as TreeLayout
+import qualified GUI.Momentu.Responsive as Responsive
 import qualified Lamdu.Config as Config
 import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.Info (HoleInfo(..))
@@ -69,7 +69,7 @@ makeHoleWithWrapper wrapperGui searchAreaGui pl =
             <&>
             \addBg ->
             unfocusedWrapperGui
-            & TreeLayout.render . Lens.imapped %@~
+            & Responsive.render . Lens.imapped %@~
             \layoutMode wrapper ->
             case isSelected || Widget.isFocused (wrapper ^. Align.tValue) of
             True ->
@@ -82,7 +82,7 @@ makeHoleWithWrapper wrapperGui searchAreaGui pl =
                         <&> (^. Align.tValue)
                     hoverWrapper = render wrapperGui & Align.tValue %~ Hover.anchor
                     searchArea p = render (addBg (searchAreaGui p))
-                    render x = (x ^. TreeLayout.render) layoutMode
+                    render x = (x ^. Responsive.render) layoutMode
             False -> wrapper
     where
         widgetIds = HoleWidgetIds.make (pl ^. Sugar.plEntityId)

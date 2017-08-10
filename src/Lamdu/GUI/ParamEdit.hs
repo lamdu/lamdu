@@ -128,7 +128,7 @@ make annotationOpts showAnnotation prevId nextId param =
             ( iMakeNameEdit info myId
               <&> E.weakerEvents paramEventMap
               -- TODO (ALIGN):
-              -- <&> TreeLayout.alignment . _1 .~ 0.5
+              -- <&> Responsive.alignment . _1 .~ 0.5
             )
     where
         entityId = param ^. Sugar.fpId

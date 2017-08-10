@@ -16,7 +16,7 @@ import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
 import           GUI.Momentu.Align (WithTextPos)
 import qualified GUI.Momentu.Align as Align
-import qualified GUI.Momentu.Responsive as TreeLayout
+import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
@@ -103,9 +103,9 @@ makeFieldsWidget ::
     Widget.Id -> ExprGuiM m (ExpressionGui m)
 makeFieldsWidget [] myId =
     (Widget.makeFocusableView ?? myId)
-    <*> (ExpressionGui.grammarLabel "()" <&> TreeLayout.fromTextView)
+    <*> (ExpressionGui.grammarLabel "()" <&> Responsive.fromTextView)
 makeFieldsWidget fields _ =
-    TreeLayout.taggedList <*> mapM makeFieldRow fields
+    Responsive.taggedList <*> mapM makeFieldRow fields
 
 separationBar :: Theme -> Widget.R -> Anim.AnimId -> View
 separationBar theme width animId =
@@ -125,9 +125,9 @@ makeOpenRecord fieldsGui rest animId =
         restExpr <-
             ExpressionGui.addValPadding
             <*> ExprGuiM.makeSubexpression rest
-        return $ fieldsGui & TreeLayout.render . Lens.imapped %@~
+        return $ fieldsGui & Responsive.render . Lens.imapped %@~
             \layoutMode fields ->
-            let restW = (restExpr ^. TreeLayout.render) layoutMode
+            let restW = (restExpr ^. Responsive.render) layoutMode
                 minWidth = restW ^. View.width
                 targetWidth = fields ^. View.width
             in

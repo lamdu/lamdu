@@ -19,7 +19,7 @@ import           GUI.Momentu.View (View)
 import qualified GUI.Momentu.View as View
 import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
-import qualified GUI.Momentu.Responsive as TreeLayout
+import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.Widgets.TextView as TextView
 import qualified Graphics.UI.GLFW as GLFW
 import           Lamdu.Calc.Type.Scheme (Scheme(..), schemeType)
@@ -102,7 +102,7 @@ make def =
             Sugar.DefinitionBodyExpression bodyExpr ->
                 makeExprDefinition def bodyExpr
             Sugar.DefinitionBodyBuiltin builtin ->
-                makeBuiltinDefinition def builtin <&> TreeLayout.fromWithTextPos
+                makeBuiltinDefinition def builtin <&> Responsive.fromWithTextPos
             <&> addDeletionDiagonal
         case defState of
             Sugar.LiveDefinition -> return defGui
@@ -110,8 +110,8 @@ make def =
                 do
                     buttonGui <-
                         myId <$ Property.set defStateProp Sugar.LiveDefinition
-                        & undeleteButton <&> TreeLayout.fromWithTextPos
-                    TreeLayout.vbox [defGui, buttonGui] & return
+                        & undeleteButton <&> Responsive.fromWithTextPos
+                    Responsive.vbox [defGui, buttonGui] & return
     & Reader.local (View.animIdPrefix .~ Widget.toAnimId myId)
     where
         myId = def ^. Sugar.drEntityId & WidgetIds.fromEntityId

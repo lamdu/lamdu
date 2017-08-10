@@ -16,7 +16,7 @@ import qualified GUI.Momentu.Hover as Hover
 import qualified GUI.Momentu.View as View
 import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
-import qualified GUI.Momentu.Responsive as TreeLayout
+import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified GUI.Momentu.Widgets.TextView as TextView
 import           Lamdu.Calc.Type.Scheme (schemeType)
@@ -58,18 +58,18 @@ makeParamsRecord myId paramsRecordVar =
         theme <- Lens.view Theme.theme
         let Theme.Name{..} = Theme.name theme
         sequence
-            [ TextView.makeLabel "Params {" <&> TreeLayout.fromTextView
+            [ TextView.makeLabel "Params {" <&> Responsive.fromTextView
             , ExpressionGui.combineSpaced
               <*>
               ( fieldNames
                 & Lens.itraverse
                 (\i fieldName ->
                     Widget.joinId myId ["params", SBS8.pack (show (i::Int))]
-                    & makeSimpleView fieldName <&> TreeLayout.fromWithTextPos
+                    & makeSimpleView fieldName <&> Responsive.fromWithTextPos
                     & Reader.local (TextView.color .~ parameterColor)
                 )
               )
-            , TextView.makeLabel "}" <&> TreeLayout.fromTextView
+            , TextView.makeLabel "}" <&> Responsive.fromTextView
             ] <&> ExpressionGui.combine
     where
         Sugar.ParamsRecordVar fieldNames = paramsRecordVar
@@ -227,11 +227,11 @@ make ::
 make getVar pl =
     case getVar of
     Sugar.GetBinder binderVar ->
-        makeGetBinder binderVar myId <&> TreeLayout.fromWithTextPos
+        makeGetBinder binderVar myId <&> Responsive.fromWithTextPos
     Sugar.GetParamsRecord paramsRecordVar ->
         makeParamsRecord myId paramsRecordVar
     Sugar.GetParam param ->
-        makeGetParam param myId <&> TreeLayout.fromWithTextPos
+        makeGetParam param myId <&> Responsive.fromWithTextPos
     & ExpressionGui.stdWrap pl
     where
         myId = WidgetIds.fromExprPayload pl

@@ -4,7 +4,7 @@ module Lamdu.GUI.ExpressionEdit.GetFieldEdit
     ) where
 
 import qualified GUI.Momentu.Widget as Widget
-import qualified GUI.Momentu.Responsive as TreeLayout
+import qualified GUI.Momentu.Responsive as Responsive
 import qualified Lamdu.GUI.ExpressionEdit.TagEdit as TagEdit
 import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
@@ -32,8 +32,8 @@ make (Sugar.GetField recExpr tagG) pl =
             (pl ^. Sugar.plData . ExprGuiT.plNearestHoles) tagG
         ExpressionGui.combine
             [ recExprEdit
-            , TreeLayout.fromTextView dotLabel
-            , TreeLayout.fromWithTextPos tagEdit
+            , Responsive.fromTextView dotLabel
+            , Responsive.fromWithTextPos tagEdit
             ]
             & return
     & Widget.assignCursor myId tagId

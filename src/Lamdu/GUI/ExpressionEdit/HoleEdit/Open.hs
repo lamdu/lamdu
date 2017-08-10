@@ -32,7 +32,7 @@ import qualified GUI.Momentu.View as View
 import           GUI.Momentu.Widget (Widget(..), EventResult)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widget.Id as WidgetId
-import qualified GUI.Momentu.Responsive as TreeLayout
+import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified GUI.Momentu.Widgets.TextView as TextView
 import           Lamdu.CharClassification (operatorChars)
@@ -288,10 +288,10 @@ makeExtraResultsWidget holeInfo extraResults@(firstResult:_) =
 applyResultLayout ::
     Functor f => f (ExpressionGui m) -> f (WithTextPos (Widget (T m Widget.EventResult)))
 applyResultLayout fGui =
-    fGui <&> (^. TreeLayout.render)
-    ?? TreeLayout.LayoutParams
-        { TreeLayout._layoutMode = TreeLayout.LayoutWide
-        , TreeLayout._layoutContext = TreeLayout.LayoutClear
+    fGui <&> (^. Responsive.render)
+    ?? Responsive.LayoutParams
+        { Responsive._layoutMode = Responsive.LayoutWide
+        , Responsive._layoutContext = Responsive.LayoutClear
         }
 
 makeHoleResultWidget ::

@@ -21,8 +21,8 @@ import           GUI.Momentu.MetaKey (MetaKey)
 import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Align as Align
-import           GUI.Momentu.Responsive (TreeLayout)
-import qualified GUI.Momentu.Responsive as TreeLayout
+import           GUI.Momentu.Responsive (Responsive)
+import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
 import qualified GUI.Momentu.Widgets.TextView as TextView
@@ -141,12 +141,12 @@ loadWorkArea env =
 makeReplEdit ::
     Monad m =>
     Env m -> ExprGuiT.SugarExpr m ->
-    ExprGuiM m (TreeLayout (M m Widget.EventResult))
+    ExprGuiM m (Responsive (M m Widget.EventResult))
 makeReplEdit env replExpr =
     ExpressionGui.combineSpaced
     <*> sequence
     [ (Widget.makeFocusableView ?? Widget.joinId WidgetIds.replId ["symbol"])
-      <*> (TextView.makeLabel "⋙" <&> TreeLayout.fromTextView)
+      <*> (TextView.makeLabel "⋙" <&> Responsive.fromTextView)
     , ExprGuiM.makeSubexpressionWith 0 id replExpr
     ]
     <&> Lens.mapped %~ mLiftTrans
@@ -167,9 +167,9 @@ make width env =
         workArea <- loadWorkArea env & transaction
         replGui <- makeReplEdit env (workArea ^. Sugar.waRepl)
         panesEdits <- workArea ^. Sugar.waPanes & traverse (makePaneEdit env)
-        newDefinitionButton <- makeNewDefinitionButton <&> fmap mLiftTrans <&> TreeLayout.fromWidget
+        newDefinitionButton <- makeNewDefinitionButton <&> fmap mLiftTrans <&> Responsive.fromWidget
         eventMap <- panesEventMap env
-        TreeLayout.vboxSpaced
+        Responsive.vboxSpaced
             ?? (replGui : panesEdits ++ [newDefinitionButton])
             <&> E.weakerEvents eventMap
     & ExprGuiM.run ExpressionEdit.make
@@ -180,7 +180,7 @@ make width env =
 makePaneEdit ::
     Monad m =>
     Env m -> Sugar.Pane (Name m) m ExprGuiT.Payload ->
-    ExprGuiM m (TreeLayout (M m Widget.EventResult))
+    ExprGuiM m (Responsive (M m Widget.EventResult))
 makePaneEdit env pane =
     DefinitionEdit.make (pane ^. Sugar.paneDefinition)
     <&> Lens.mapped %~ mLiftTrans
