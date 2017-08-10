@@ -65,6 +65,7 @@ import qualified Data.Map as Map
 import qualified Data.Monoid as Monoid
 import           Data.Monoid.Generic (def_mempty, def_mappend)
 import           Data.Vector.Vector2 (Vector2(..))
+import qualified Data.Vector.Vector2 as Vector2
 import           GHC.Generics (Generic)
 import qualified Graphics.DrawingCombinators as Draw
 import           Graphics.UI.Bottle.Animation (AnimId, R, Size)
@@ -280,34 +281,36 @@ combineEnters ::
     Direction -> EnterResult a
 combineEnters o sz e0 e1 dir = chooseEnter o sz dir (e0 dir) (e1 dir)
 
-closer :: Rect -> EnterResult a -> EnterResult a -> EnterResult a
-closer r r0 r1
-    | Rect.sqrDistance r (r0 ^. enterResultRect) <=
-      Rect.sqrDistance r (r1 ^. enterResultRect) = r0
+closer ::
+    (Vector2 R -> R) -> Rect -> EnterResult a -> EnterResult a -> EnterResult a
+closer axis r r0 r1
+    | axis (Rect.distances r (r0 ^. enterResultRect)) <=
+      axis (Rect.distances r (r1 ^. enterResultRect)) = r0
     | otherwise = r1
 
 chooseEnter :: Orientation -> Size -> Direction -> EnterResult a -> EnterResult a -> EnterResult a
 chooseEnter _          _ Direction.Outside   r0 _  = r0 -- left-biased
-chooseEnter _          _ (Direction.Point p) r0 r1 = closer (Rect p 0) r0 r1
+chooseEnter _          _ (Direction.Point p) r0 r1 =
+    closer Vector2.sqrNorm (Rect p 0) r0 r1
 chooseEnter Horizontal _ Direction.FromLeft{}  r0 _  = r0
 chooseEnter Vertical   _ Direction.FromAbove{} r0 _  = r0
 chooseEnter Horizontal _ Direction.FromRight{} _  r1 = r1
 chooseEnter Vertical   _ Direction.FromBelow{} _  r1 = r1
 chooseEnter Horizontal _ (Direction.FromAbove r) r0 r1 =
-    closer topBarrier r0 r1
+    closer (^. _1) topBarrier r0 r1
     where
         topBarrier = Rect 0 0 & Rect.horizontalRange .~ r
 chooseEnter Horizontal sz (Direction.FromBelow r) r0 r1 =
-    closer bottomBarrier r0 r1
+    closer (^. _1) bottomBarrier r0 r1
     where
         bottomBarrier =
             Rect 0 0 & Rect.top .~ sz ^. _2 & Rect.horizontalRange .~ r
 chooseEnter Vertical _ (Direction.FromLeft r) r0 r1 =
-    closer leftBarrier r0 r1
+    closer (^. _2) leftBarrier r0 r1
     where
         leftBarrier = Rect 0 0 & Rect.verticalRange .~ r
 chooseEnter Vertical sz (Direction.FromRight r) r0 r1 =
-    closer rightBarrier r0 r1
+    closer (^. _2) rightBarrier r0 r1
     where
         rightBarrier =
             Rect 0 0 & Rect.left .~ sz ^. _1 & Rect.verticalRange .~ r
