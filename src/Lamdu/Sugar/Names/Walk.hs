@@ -191,6 +191,7 @@ toBody expr = \case
     BodyInject       x -> traverse expr x >>= iTag toTagG <&> BodyInject
     BodyRecord       x -> traverse expr x >>= (rItems . traverse . rfTag) toTagG <&> BodyRecord
     BodyCase         x -> traverse expr x >>= (cAlts . traverse . caTag) toTagG <&> BodyCase
+    BodyGuard        x -> traverse expr x <&> BodyGuard
     BodySimpleApply  x -> traverse expr x <&> BodySimpleApply
     BodyLabeledApply x -> traverse expr x >>= toLabeledApply <&> BodyLabeledApply
     BodyHole         x -> traverse expr x >>= holeActions toHoleActions <&> BodyHole

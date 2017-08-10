@@ -3,7 +3,7 @@
 
 module Lamdu.Builtins.Anchors
     ( bytesTid, floatTid, streamTid, textTid, treeTid, arrayTid
-    , headTag, tailTag, rootTag, subtreesTag
+    , headTag, tailTag, rootTag, subtreesTag, trueTag, falseTag
     , valTypeParamId
     ) where
 
@@ -42,6 +42,12 @@ headTag = bi "head"
 
 tailTag :: Tag
 tailTag = bi "tail"
+
+trueTag :: Tag
+trueTag = bi "true"
+
+falseTag :: Tag
+falseTag = bi "false"
 
 rootTag :: Tag
 rootTag = bi "root"

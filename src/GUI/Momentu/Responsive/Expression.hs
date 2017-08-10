@@ -4,7 +4,8 @@
 {-# LANGUAGE NoImplicitPrelude, DeriveGeneric, OverloadedStrings #-}
 
 module GUI.Momentu.Responsive.Expression
-    ( Style(..), HasStyle(..), disambiguators, boxSpacedDisambiguated, boxSpacedMDisamb
+    ( Style(..), HasStyle(..)
+    , disambiguators, boxSpacedDisambiguated, boxSpacedMDisamb, indent
     ) where
 
 import qualified Control.Lens as Lens

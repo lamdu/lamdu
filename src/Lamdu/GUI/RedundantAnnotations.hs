@@ -78,6 +78,14 @@ markAnnotationsToDisplay (Expression oldBody pl) =
         Expression (BodySimpleApply (app & applyFunc %~ dontShowAnnotation)) pl
     BodyLabeledApply _ ->
         Expression newBody pl
+    BodyGuard g ->
+        Expression (BodyGuard g') pl
+        where
+            g' =
+                g
+                & gThen %~ onCaseAlt
+                & gElseIfs . traverse . geThen %~ onCaseAlt
+                & gElse %~ onCaseAlt
     BodyHole hole ->
         Expression (BodyHole hole') pl & forceShowType
         where
@@ -91,9 +99,10 @@ markAnnotationsToDisplay (Expression oldBody pl) =
                 -- visible (for case alts that aren't lambdas), so
                 -- maybe we do want to show the annotation
                 & cKind . Lens.mapped %~ dontShowAnnotation
-                & cAlts . Lens.mapped . Lens.mapped %~
-                  (rBody . _BodyLam . lamBinder . bBody . bbContent .
-                   SugarLens.binderContentExpr %~ dontShowAnnotation) .
-                  (rPayload . showAnn . T.funcApplyLimit .~ T.AtMostOneFuncApply)
+                & cAlts . Lens.mapped . Lens.mapped %~ onCaseAlt
     where
         newBody = oldBody <&> markAnnotationsToDisplay
+        onCaseAlt a =
+            a
+            & rBody . _BodyLam . lamBinder . bBody . bbContent . SugarLens.binderContentExpr %~ dontShowAnnotation
+            & rPayload . showAnn . T.funcApplyLimit .~ T.AtMostOneFuncApply

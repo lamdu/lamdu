@@ -43,6 +43,7 @@ bodyShape = \case
         case cas of
             Sugar.Case Sugar.LambdaCase [] Sugar.ClosedCase{} _ -> ["absurd"]
             _ -> []
+    Sugar.BodyGuard {} -> ["if", "case", ":"]
     Sugar.BodyInject {} -> ["[]"]
     Sugar.BodyLiteral i -> [formatLiteral i]
     Sugar.BodyGetVar Sugar.GetParamsRecord {} -> ["Params"]

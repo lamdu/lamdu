@@ -78,6 +78,7 @@ orderBody (Sugar.BodyRecord r) = orderRecord r <&> Sugar.BodyRecord
 orderBody (Sugar.BodyLabeledApply a) = orderLabeledApply a <&> Sugar.BodyLabeledApply
 orderBody (Sugar.BodyCase c) = orderCase c <&> Sugar.BodyCase
 orderBody (Sugar.BodyHole a) = orderHole a & Sugar.BodyHole & return
+orderBody x@Sugar.BodyGuard{} = return x
 orderBody x@Sugar.BodySimpleApply{} = return x
 orderBody x@Sugar.BodyLiteral{} = return x
 orderBody x@Sugar.BodyGetField{} = return x

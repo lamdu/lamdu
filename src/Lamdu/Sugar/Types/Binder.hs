@@ -12,6 +12,7 @@ module Lamdu.Sugar.Types.Binder
     , Let(..)
         , lEntityId, lValue, lName, lUsages
         , lActions, lAnnotation, lBodyScope, lBody
+    , ChildScopeMapping
     -- Binders
     , BinderMode(..)
     , VarToTags(..), TagsToVar(..)
@@ -137,6 +138,11 @@ data LetActions m = LetActions
     , _laWrap :: T m (UUID, EntityId)
     }
 
+-- This is a mapping from a parent scope to the inner scope in:
+-- * A redex lambda body (executed exactly once)
+-- * Also used for guard-sugar where guard scopes are executed no more than once
+type ChildScopeMapping = CurAndPrev (Map ER.ScopeId ER.ScopeId)
+
 data Let name m expr = Let
     { _lValue :: Binder name m expr -- "let [[foo = bar]] in x"
     , _lEntityId :: EntityId
@@ -144,10 +150,7 @@ data Let name m expr = Let
     , _lAnnotation :: Annotation
     , _lName :: name
     , _lActions :: LetActions m
-    , -- This is a mapping from parent scope (the ScopeId inside
-      -- BinderParamScopeId for outer-most let) to the inside of the
-      -- redex lambda (redex is applied exactly once):
-      _lBodyScope :: CurAndPrev (Map ER.ScopeId ER.ScopeId)
+    , _lBodyScope :: ChildScopeMapping
     , _lBody :: BinderBody name m expr -- "let foo = bar in [[x]]"
     }
 

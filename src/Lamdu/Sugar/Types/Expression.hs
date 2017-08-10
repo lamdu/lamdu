@@ -10,7 +10,7 @@ module Lamdu.Sugar.Types.Expression
         , _BodyLam, _BodyLabeledApply, _BodySimpleApply
         , _BodyGetVar, _BodyGetField, _BodyInject, _BodyHole
         , _BodyLiteral, _BodyCase, _BodyRecord
-        , _BodyFromNom, _BodyToNom
+        , _BodyFromNom, _BodyToNom, _BodyGuard
     , Payload(..), plEntityId, plAnnotation, plActions, plData
     , Expression(..), rBody, rPayload
     -- record:
@@ -25,6 +25,8 @@ module Lamdu.Sugar.Types.Expression
     , CaseArg(..), caVal, caToLambdaCase
     , CaseKind(..), _LambdaCase, _CaseWithArg
     , Case(..), cKind, cAlts, cAddAlt, cTail
+    , GuardElseIf(..), geScopes, geEntityId, geCond, geThen, geDelete
+    , Guard(..), gIf, gThen, gElseIfs, gElse, gDeleteIf
     , Nominal(..), nTId, nVal
     --
     , GetField(..), gfRecord, gfTag
@@ -221,6 +223,23 @@ data Case name m expr = Case
     } deriving (Functor, Foldable, Traversable)
 {- Case end -}
 
+data GuardElseIf m expr = GuardElseIf
+    { _geScopes :: ChildScopeMapping
+    , _geEntityId :: EntityId
+    , _geCond :: expr
+    , _geThen :: expr
+    , _geDelete :: T m EntityId
+    } deriving (Functor, Foldable, Traversable)
+
+data Guard m expr = Guard
+    { -- "if" is different than "else if" in that it doesn't have a scope that it run in
+      _gIf :: expr
+    , _gThen :: expr
+    , _gElseIfs :: [GuardElseIf m expr]
+    , _gElse :: expr
+    , _gDeleteIf :: T m EntityId
+    } deriving (Functor, Foldable, Traversable)
+
 data GetField name expr = GetField
     { _gfRecord :: expr
     , _gfTag :: TagG name
@@ -320,6 +339,7 @@ data Body name m expr
     | BodyRecord (Record name m expr)
     | BodyGetField (GetField name expr)
     | BodyCase (Case name m expr)
+    | BodyGuard (Guard m expr)
     | BodyInject (Inject name expr)
     | BodyGetVar (GetVar name m)
     | BodyToNom (Nominal name (BinderBody name m expr))
@@ -336,6 +356,7 @@ instance Show (Body name m expr) where
     show BodyRecord {} = "Record:TODO"
     show BodyGetField {} = "GetField:TODO"
     show BodyCase {} = "Case:TODO"
+    show BodyGuard {} = "If:TODO"
     show BodyInject {} = "Inject:TODO"
     show BodyGetVar {} = "GetVar:TODO"
     show BodyFromNom {} = "FromNom:TODO"
@@ -353,6 +374,8 @@ Lens.makeLenses ''CaseArg
 Lens.makeLenses ''DefinitionOutdatedType
 Lens.makeLenses ''Expression
 Lens.makeLenses ''GetField
+Lens.makeLenses ''Guard
+Lens.makeLenses ''GuardElseIf
 Lens.makeLenses ''RelayedArg
 Lens.makeLenses ''Hole
 Lens.makeLenses ''HoleActions

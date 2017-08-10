@@ -10,12 +10,17 @@ import qualified Data.Map as Map
 import           Data.Maybe.Utils (maybeToMPlus)
 import qualified Data.Set as Set
 import qualified Data.Store.Property as Property
+import           Data.Store.Transaction (Transaction)
+import           Data.UUID.Types (UUID)
+import           Lamdu.Builtins.Anchors (trueTag, falseTag)
 import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Calc.Type.FlatComposite as FlatComposite
 import           Lamdu.Calc.Type.Scheme (schemeType)
 import qualified Lamdu.Calc.Val as V
 import           Lamdu.Calc.Val.Annotated (Val)
 import qualified Lamdu.Calc.Val.Annotated as Val
+import           Lamdu.Data.Anchors (bParamScopeId)
+import           Lamdu.Expr.IRef (ValI)
 import qualified Lamdu.Expr.UniqueId as UniqueId
 import qualified Lamdu.Infer as Infer
 import           Lamdu.Sugar.Convert.Hole.Wrapper (convertAppliedHole)
@@ -136,17 +141,71 @@ convertAppliedCase funcS argS exprPl =
         caseB <- funcS ^? rBody . _BodyCase & maybeToMPlus
         Lens.has (cKind . _LambdaCase) caseB & guard
         protectedSetToVal <- lift ConvertM.typeProtectedSetToVal
-        caseB
-            & cKind .~ CaseWithArg
-                CaseArg
-                { _caVal = simplifyCaseArg argS
-                , _caToLambdaCase =
-                    protectedSetToVal (exprPl ^. Input.stored)
-                    (funcS ^. rPayload . plData . pStored & Property.value) <&> EntityId.ofValI
-                }
-            & BodyCase
-            & lift . addActions exprPl
+        let setTo = protectedSetToVal (exprPl ^. Input.stored)
+        let appliedCaseB =
+                caseB
+                & cKind .~ CaseWithArg
+                    CaseArg
+                    { _caVal = simplifyCaseArg argS
+                    , _caToLambdaCase =
+                        setTo (funcS ^. rPayload . plData . pStored . Property.pVal) <&> EntityId.ofValI
+                    }
+        maybeGuard setTo appliedCaseB & addActions exprPl & lift
     <&> rPayload . plData . pUserData <>~ funcS ^. rPayload . plData . pUserData
+
+maybeGuard ::
+    Functor m =>
+    (ValI m -> Transaction m (ValI m)) -> Case UUID m (ExpressionU m a) -> Body UUID m (ExpressionU m a)
+maybeGuard setToVal caseBody =
+    case (caseBody ^? cKind . _CaseWithArg . caVal, caseBody ^. cAlts) of
+    (Just arg, [alt0, alt1])
+        | tagOf alt0 == trueTag && tagOf alt1 == falseTag -> convGuard arg alt0 alt1
+        | tagOf alt1 == trueTag && tagOf alt0 == falseTag -> convGuard arg alt1 alt0
+    _ -> BodyCase caseBody
+    where
+        tagOf alt = alt ^. caTag . tagVal
+        convGuard cond altTrue altFalse =
+            case mAltFalseBinder of
+            Just binder ->
+                case mAltFalseBinderExpr of
+                Just altFalseBinderExpr ->
+                    case altFalseBinderExpr ^. rBody of
+                    BodyGuard innerGuard ->
+                        GuardElseIf
+                        { _geScopes =
+                            case binder ^. bBodyScopes of
+                            SameAsParentScope -> error "lambda body should have scopes"
+                            BinderBodyScope x -> x <&> Lens.mapped %~ getScope
+                        , _geEntityId = altFalseBinderExpr ^. rPayload . plEntityId
+                        , _geCond = innerGuard ^. gIf
+                        , _geThen = innerGuard ^. gThen
+                        , _geDelete = innerGuard ^. gDeleteIf
+                        }
+                        : innerGuard ^. gElseIfs
+                        & makeRes (innerGuard ^. gElse)
+                        where
+                            getScope [x] = x ^. bParamScopeId
+                            getScope _ = error "guard evaluated more than once in same scope?"
+                    _ -> simpleIfElse
+                Nothing -> simpleIfElse
+            Nothing -> simpleIfElse
+            & BodyGuard
+            where
+                mAltFalseBinder = altFalse ^? caHandler . rBody . _BodyLam . lamBinder
+                mAltFalseBinderExpr = mAltFalseBinder ^? Lens._Just . bBody . bbContent . _BinderExpr
+                simpleIfElse = makeRes (altFalse ^. caHandler) []
+                makeRes els elseIfs =
+                    Guard
+                    { _gIf = cond
+                    , _gThen = altTrue ^. caHandler
+                    , _gElseIfs = elseIfs
+                    , _gElse = els
+                    , _gDeleteIf =
+                        fromMaybe (altFalse ^. caHandler) mAltFalseBinderExpr
+                        ^. rPayload . plData . pStored . Property.pVal
+                        & setToVal
+                        <&> EntityId.ofValI
+                    }
 
 simplifyCaseArg :: Monoid a => ExpressionU m a -> ExpressionU m a
 simplifyCaseArg argS =
