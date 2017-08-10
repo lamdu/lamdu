@@ -28,13 +28,12 @@ For hovering submenus and their like it has several layers of `Frame`s, so that 
 
 ## GUI.Momentu.Widget
 
-`Widget` is a view with added interactivity, via events that may affect things, and navigation related events and cursor information.
+`Widget` is like a view, but also supports interactivity and responsive hovers.
 
-**TODO:** `Widget` should also support smart positioning of hovers so they don't get placed outside of the screen.
+## GUI.Momentu.Align - WithTextPos
 
-## GUI.Momentu.Align
-
-`AlignedWidget` is simply a `Widget` with an added alignment-point, used for positioning widgets when laying them out together in horizontal or vertical boxes.
+`WithTextPos` is simply a `Widget` with an added alignment-point for the vertical position of texts,
+so that when widgets with text are glued together the text stays properly aligned.
 
 ## GUI.Momentu.Responsive
 
