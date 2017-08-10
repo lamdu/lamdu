@@ -228,6 +228,7 @@ floatLetToOuterScope setTopLevel redex ctx =
                     innerDeps =
                         -- Outer deps, pruned:
                         ctx ^. ConvertM.scFrozenDeps . Property.pVal
+                        & addRecursiveRefAsDep
                         & Definition.Expr (redex ^. Redex.arg)
                         & Definition.pruneDefExprDeps
             Just outerScopeInfo ->
@@ -238,6 +239,11 @@ floatLetToOuterScope setTopLevel redex ctx =
             , lfrMVarToTags = nlMVarToTags newLet
             }
     where
+        addRecursiveRefAsDep =
+            case ctx ^. ConvertM.scScopeInfo . ConvertM.siRecursiveRef of
+            Nothing -> id
+            Just (ConvertM.RecursiveRef defI defType) ->
+                Infer.depsGlobalTypes . Lens.at (ExprIRef.globalId defI) ?~ defType
         param = redex ^. Redex.lam . V.lamParamId
 
 makeFloatLetToOuterScope ::
