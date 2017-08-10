@@ -114,13 +114,14 @@ postProcessExpr mkProp =
                         & Property.pureModify prop
                     return ConvertM.GoodExpr
 
-emptyScopeInfo :: ScopeInfo m
-emptyScopeInfo =
+emptyScopeInfo :: Set (ExprIRef.DefI m) -> ScopeInfo m
+emptyScopeInfo globalsInScope =
     ScopeInfo
     { _siTagParamInfos = mempty
     , _siNullParams = mempty
     , _siLetItems = mempty
     , _siMOuter = Nothing
+    , _siGlobalsInScope = globalsInScope
     }
 
 makeNominalsMap ::
@@ -159,9 +160,8 @@ convertInferDefExpr evalRes cp defType defExpr defI =
                 Context
                 { _scInferContext = newInferContext
                 , _scNominalsMap = nomsMap
-                , _scGlobalsInScope = Set.singleton defI
                 , _scCodeAnchors = cp
-                , _scScopeInfo = emptyScopeInfo
+                , _scScopeInfo = emptyScopeInfo (Set.singleton defI)
                 , _scPostProcessRoot = postProcessDef defI
                 , _scOutdatedDefinitions = outdatedDefinitions
                 , _scInlineableDefinitions =
@@ -214,9 +214,8 @@ convertExpr evalRes cp prop =
                 Context
                 { _scInferContext = newInferContext
                 , _scNominalsMap = nomsMap
-                , _scGlobalsInScope = Set.empty
                 , _scCodeAnchors = cp
-                , _scScopeInfo = emptyScopeInfo
+                , _scScopeInfo = emptyScopeInfo Set.empty
                 , _scPostProcessRoot = postProcessExpr prop
                 , _scOutdatedDefinitions = outdatedDefinitions
                 , _scInlineableDefinitions =

@@ -75,7 +75,7 @@ convertGlobal param exprPl =
     do
         ctx <- lift ConvertM.readContext
         let isGlobalInScope =
-                ctx ^. ConvertM.scGlobalsInScope . Lens.contains defI
+                ctx ^. ConvertM.scScopeInfo . ConvertM.siGlobalsInScope . Lens.contains defI
         notInScope || isGlobalInScope & guard
         lifeState <-
             Anchors.assocDefinitionState defI

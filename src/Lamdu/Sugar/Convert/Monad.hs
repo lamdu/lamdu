@@ -7,7 +7,7 @@ module Lamdu.Sugar.Convert.Monad
 
     , PostProcessResult(..)
     , Context(..)
-    , scInferContext, scPostProcessRoot, scGlobalsInScope
+    , scInferContext, scPostProcessRoot, siGlobalsInScope
     , scCodeAnchors, scScopeInfo, scNominalsMap
     , scOutdatedDefinitions, scFrozenDeps, scInlineableDefinitions
 
@@ -63,6 +63,9 @@ data ScopeInfo m = ScopeInfo
       -- TODO: siTagParamInfos needs a reverse-lookup map too
     , -- Where "extract to let" goes:
       _siMOuter :: Maybe (OuterScopeInfo m)
+    , -- The globals we artificially inject into the scope in order to
+      -- infer their type supporting mutual recursions
+      _siGlobalsInScope :: Set (ExprIRef.DefI m)
     }
 Lens.makeLenses ''ScopeInfo
 
@@ -78,9 +81,6 @@ data PostProcessResult = GoodExpr | BadExpr Infer.Error
 
 data Context m = Context
     { _scInferContext :: Infer.Context
-    , -- The globals we artificially inject into the scope in order to
-      -- infer their type supporting mutual recursions
-      _scGlobalsInScope :: Set (ExprIRef.DefI m)
     , _scCodeAnchors :: Anchors.CodeProps m
     , _scScopeInfo :: ScopeInfo m
     , -- Check whether the definition is valid after an edit,

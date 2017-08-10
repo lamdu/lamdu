@@ -208,7 +208,7 @@ locals sugarContext exprPl =
     & filter (not . isGlobalInScope)
     where
         isGlobalInScope varId =
-            sugarContext ^. ConvertM.scGlobalsInScope .
+            sugarContext ^. ConvertM.scScopeInfo . ConvertM.siGlobalsInScope .
             Lens.contains (ExprIRef.defI varId)
 
 mkNominalOptions :: [(T.NominalId, N.Nominal)] -> [Val ()]
