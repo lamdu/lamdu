@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, OverloadedStrings, TemplateHaskell #-}
+{-# LANGUAGE NoImplicitPrelude, OverloadedStrings, TemplateHaskell, DisambiguateRecordFields #-}
 
 module Main where
 
@@ -97,13 +97,13 @@ makeWidget choiceRef getFont mainEnv =
 choiceConfig :: Choice.Config
 choiceConfig =
     Choice.Config
-    { Choice.cwcFDConfig =
+    { cwcFDConfig =
         FocusDelegator.Config
-        { FocusDelegator.focusChildKeys = [MetaKey noMods GLFW.Key'Enter]
-        , FocusDelegator.focusChildDoc = E.Doc ["Color", "Select"]
-        , FocusDelegator.focusParentKeys = [MetaKey noMods GLFW.Key'Enter]
-        , FocusDelegator.focusParentDoc = E.Doc ["Color", "Choose selected"]
+        { focusChildKeys = [MetaKey noMods GLFW.Key'Enter]
+        , focusChildDoc = E.Doc ["Color", "Select"]
+        , focusParentKeys = [MetaKey noMods GLFW.Key'Enter]
+        , focusParentDoc = E.Doc ["Color", "Choose selected"]
         }
-    , Choice.cwcOrientation = Choice.Vertical
-    , Choice.cwcExpandMode = Choice.ExplicitEntry
+    , cwcOrientation = Choice.Vertical
+    , cwcExpandMode = Choice.ExplicitEntry
     }
