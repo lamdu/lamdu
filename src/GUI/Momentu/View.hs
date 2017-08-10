@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, TemplateHaskell, FlexibleContexts, FlexibleInstances, OverloadedStrings #-}
+{-# LANGUAGE NoImplicitPrelude, TemplateHaskell #-}
 module GUI.Momentu.View
     ( View(..), vSize, vAnimLayers, make
     , Layers(..), layers, translateLayers, addLayersAbove
