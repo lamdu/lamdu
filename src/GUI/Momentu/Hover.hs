@@ -42,7 +42,7 @@ instance Functor f => View.Element (AnchoredWidget (f EventResult)) where
         , _anchored = View.scale ratio w
         }
 
-instance View.HasSize (AnchoredWidget a) where size = anchored . View.size
+instance View.SizedElement (AnchoredWidget a) where size = anchored . View.size
 
 instance Functor f => Glue (AnchoredWidget (f EventResult)) View where
     type Glued (AnchoredWidget (f EventResult)) View = AnchoredWidget (f EventResult)
@@ -73,7 +73,7 @@ anchor = AnchoredWidget 0
 
 hoverBesideOptions ::
     ( Glue a b, Glue b a, Glued a b ~ Glued b a
-    , View.HasSize a, View.HasSize b, View.HasSize (Glued a b)
+    , View.SizedElement a, View.SizedElement b, View.SizedElement (Glued a b)
     , View.Element a, View.Element b
     ) =>
     a -> b -> [Glued a b]
@@ -84,7 +84,7 @@ hoverBesideOptions hover src =
 
 hoverBesideOptionsAxis ::
     ( Glue a b, Glue b a, Glued a b ~ Glued b a
-    , View.HasSize a, View.HasSize b, View.HasSize (Glued a b)
+    , View.SizedElement a, View.SizedElement b, View.SizedElement (Glued a b)
     , View.Element a, View.Element b
     ) =>
     Orientation -> a -> b -> [Glued a b]

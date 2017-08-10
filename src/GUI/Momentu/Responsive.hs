@@ -81,13 +81,13 @@ newtype Responsive a = Responsive
     } deriving Functor
 Lens.makeLenses ''Responsive
 
-adjustWidth :: View.HasSize v => Orientation -> v -> Responsive a -> Responsive a
+adjustWidth :: View.SizedElement v => Orientation -> v -> Responsive a -> Responsive a
 adjustWidth Vertical _ = id
 adjustWidth Horizontal v =
     render . Lens.argument . layoutMode . modeWidths -~ v ^. View.size . _1
 
 instance ( GluesTo (WithTextPos (Widget a)) (WithTextPos b) (WithTextPos (Widget a))
-         , View.HasSize b
+         , View.SizedElement b
          ) => Glue (Responsive a) (WithTextPos b) where
     type Glued (Responsive a) (WithTextPos b) = Responsive a
     glue orientation l v =
@@ -96,7 +96,7 @@ instance ( GluesTo (WithTextPos (Widget a)) (WithTextPos b) (WithTextPos (Widget
         & render . Lens.mapped %~ (glue orientation ?? v)
 
 instance ( GluesTo (WithTextPos a) (WithTextPos (Widget b)) (WithTextPos (Widget b))
-         , View.HasSize a
+         , View.SizedElement a
          ) => Glue (WithTextPos a) (Responsive b) where
     type Glued (WithTextPos a) (Responsive b) = Responsive b
     glue orientation v l =

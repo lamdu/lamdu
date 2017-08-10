@@ -3,7 +3,7 @@ module GUI.Momentu.View
     ( View(..), vAnimLayers, make
     , Layers(..), layers, translateLayers, addLayersAbove
         , topLayer, bottomLayer
-    , HasSize(..), Element(..)
+    , SizedElement(..), Element(..)
     , render
     , animFrames, bottomFrame
     , width, height
@@ -69,7 +69,7 @@ class Element a where
     scale :: Vector2 R -> a -> a
     empty :: a
 
-class HasSize a where size :: Lens' a Size
+class SizedElement a where size :: Lens' a Size
 
 instance Element View where
     setLayers f (View sz ls) = Lens.indexed f sz ls <&> View sz
@@ -84,7 +84,7 @@ instance Element View where
         & animFrames %~ Anim.scale ratio
     empty = make 0 mempty
 
-instance HasSize View where size = vSize
+instance SizedElement View where size = vSize
 
 make :: Size -> Anim.Frame -> View
 make sz frame = View sz (Layers [frame])
@@ -95,10 +95,10 @@ render x = x ^. layers . Lens.reversed . traverse
 animFrames :: Lens.Traversal' View Anim.Frame
 animFrames = vAnimLayers . layers . traverse
 
-width :: HasSize a => Lens' a R
+width :: SizedElement a => Lens' a R
 width = size . _1
 
-height :: HasSize a => Lens' a R
+height :: SizedElement a => Lens' a R
 height = size . _2
 
 tint :: Element a => Draw.Color -> a -> a
@@ -163,7 +163,7 @@ addInnerFrame =
 translateLayers :: Vector2 R -> Layers -> Layers
 translateLayers pos = layers . traverse %~ Anim.translate pos
 
-padToSizeAlign :: (HasSize a, Element a) => Size -> Vector2 R -> a -> a
+padToSizeAlign :: (SizedElement a, Element a) => Size -> Vector2 R -> a -> a
 padToSizeAlign newSize alignment x =
     x
     & setLayers %~ translateLayers (sizeDiff * alignment)

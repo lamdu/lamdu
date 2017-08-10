@@ -29,7 +29,7 @@ traverseList :: Traversable t => Lens (t a) (t b) [a] [b]
 traverseList = Lens.unsafePartsOf traverse
 
 makePlacements ::
-    (Traversable vert, Traversable horiz, View.HasSize a) =>
+    (Traversable vert, Traversable horiz, View.SizedElement a) =>
     vert (horiz (Aligned a)) ->
     (View.Size, vert (horiz (Aligned (Rect, a))))
 makePlacements rows =

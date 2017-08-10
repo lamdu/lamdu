@@ -128,7 +128,7 @@ makeTInst parentPrecedence tid typeParams =
                 >>= addBGColor
                 <&> afterName
 
-toAligned :: View.HasSize a => R -> WithTextPos a -> Aligned a
+toAligned :: View.SizedElement a => R -> WithTextPos a -> Aligned a
 toAligned x (WithTextPos y w) =
     Aligned (Vector2 x (y / w ^. View.height)) w
 

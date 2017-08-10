@@ -185,7 +185,7 @@ instance Functor f => View.Element (Widget (f EventResult)) where
         & Lens.mapped . Lens.mapped . eVirtualCursor . Lens.mapped .
           virtualCursor . Rect.topLeftAndSize *~ mult
 
-instance View.HasSize (Widget a) where
+instance View.SizedElement (Widget a) where
     size f w =
         w
         & wSize f
