@@ -81,8 +81,7 @@ nestedFrame ::
 nestedFrame s (i, RenderedText size img) =
     RenderedText size draw
     where
-        draw animId =
-            Anim.sizedFrame (Anim.augmentId animId i) anchorSize img
+        draw animId = Anim.singletonFrame anchorSize (Anim.augmentId animId i) img
         anchorSize = pure (lineHeight s)
 
 -- | Returns at least one rect

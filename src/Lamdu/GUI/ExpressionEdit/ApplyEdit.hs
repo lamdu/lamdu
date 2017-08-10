@@ -75,7 +75,7 @@ infixMarker (Vector2 w h) =
 addInfixMarker :: Element a => Widget.Id -> a -> a
 addInfixMarker widgetId =
     Element.bottomLayer %@~
-    \size -> Anim.simpleFrame frameId (infixMarker size) & flip mappend
+    \size -> Anim.singletonFrame 1 frameId (infixMarker size) & flip mappend
     where
         frameId = Widget.toAnimId widgetId ++ ["infix"]
 

@@ -457,7 +457,7 @@ addDiagonal =
     ]
     & Draw.tint color
     & void
-    & Anim.simpleFrame (animId ++ ["diagonal"])
+    & Anim.singletonFrame 1 (animId ++ ["diagonal"])
     & Anim.scale sz
     & flip mappend
 

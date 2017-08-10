@@ -11,7 +11,7 @@ module GUI.Momentu.Animation
     , backgroundColor
     , translate, scale
     , unitIntoRect
-    , simpleFrame, sizedFrame
+    , singletonFrame
     , State, stateMapIdentities
     , module GUI.Momentu.Animation.Id
     ) where
@@ -166,14 +166,13 @@ images = frameImages . traverse
 unitImages :: Lens.Traversal' Frame (Draw.Image ())
 unitImages = images . iUnitImage
 
-simpleFrame :: AnimId -> Draw.Image () -> Frame
-simpleFrame animId image = Frame [Image animId image (Rect 0 1)]
-
-sizedFrame :: AnimId -> Size -> Draw.Image () -> Frame
-sizedFrame animId size =
+singletonFrame :: Size -> AnimId -> Draw.Image () -> Frame
+singletonFrame size animId =
     scale size .
-    simpleFrame animId .
+    singletonUnitImage .
     (DrawUtils.scale (1 / size) %%)
+    where
+        singletonUnitImage image = Frame [Image animId image (Rect 0 1)]
 
 instance Monoid Frame where
     mempty = Frame mempty
@@ -248,7 +247,7 @@ mapIdentities :: (AnimId -> AnimId) -> Frame -> Frame
 mapIdentities f = images . iAnimId %~ f
 
 unitSquare :: AnimId -> Frame
-unitSquare animId = simpleFrame animId DrawUtils.square
+unitSquare animId = singletonFrame 1 animId DrawUtils.square
 
 emptyRectangle :: Vector2 R -> Vector2 R -> AnimId -> Frame
 emptyRectangle (Vector2 fX fY) totalSize@(Vector2 sX sY) animId =
@@ -258,7 +257,7 @@ emptyRectangle (Vector2 fX fY) totalSize@(Vector2 sX sY) animId =
     , rect (Vector2 0 fY)         (Vector2 fX (sY - fY*2))
     , rect (Vector2 (sX - fX) fY) (Vector2 fX (sY - fY*2))
     ]
-    & sizedFrame animId totalSize
+    & singletonFrame totalSize animId
     where
         rect origin size =
             DrawUtils.square
