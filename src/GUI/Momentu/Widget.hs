@@ -125,12 +125,12 @@ data Focused a = Focused
     , _fEventMap :: VirtualCursor -> EventMap a
     , -- TODO: Replace with fMEnterPoint that is for Point direction only
       _fMEnter :: Maybe (Direction -> EnterResult a)
-    , _fLayers :: View.Layers
+    , _fLayers :: Element.Layers
     } deriving Functor
 
 data Unfocused a = Unfocused
     { _uMEnter :: Maybe (Direction -> EnterResult a)
-    , _uLayers :: View.Layers
+    , _uLayers :: Element.Layers
     } deriving Functor
 
 data Widget a = Widget
@@ -169,7 +169,7 @@ instance Functor f => Element (Widget (f EventResult)) where
     setLayers = sizedState <. stateLayers
     hoverLayers w =
         w
-        & Element.setLayers . View.layers %~ (mempty :)
+        & Element.setLayers . Element.layers %~ (mempty :)
         & mEnter . Lens._Just . Lens.mapped . enterResultLayer +~ 1
     empty = fromView Element.empty
     assymetricPad leftAndTop rightAndBottom w =
@@ -178,7 +178,7 @@ instance Functor f => Element (Widget (f EventResult)) where
         & Element.size +~ leftAndTop + rightAndBottom
     scale mult w =
         w
-        & Element.setLayers . View.layers . Lens.mapped %~ Anim.scale mult
+        & Element.setLayers . Element.layers . Lens.mapped %~ Anim.scale mult
         & Element.size *~ mult
         & wState . _StateFocused . Lens.mapped . fFocalAreas . traverse . Rect.topLeftAndSize *~ mult
         & wState . _StateFocused . Lens.mapped . fEventMap . Lens.argument . virtualCursor . Rect.topLeftAndSize //~ mult
@@ -373,7 +373,7 @@ stateMEnter = stateLens uMEnter (Lens.mapped . fMEnter)
 mEnter :: Lens.Setter' (Widget a) (Maybe (Direction -> EnterResult a))
 mEnter = wState . stateMEnter
 
-stateLayers :: Lens.Setter' (State a) View.Layers
+stateLayers :: Lens.Setter' (State a) Element.Layers
 stateLayers = stateLens uLayers (Lens.mapped . fLayers)
 
 takesFocus ::
@@ -447,7 +447,7 @@ translateGeneric f pos w =
         translateUnfocused u =
             u
             & uMEnter %~ translateMEnter pos
-            & uLayers %~ View.translateLayers pos
+            & uLayers %~ Element.translateLayers pos
             <&> f
 
 translateEventResult :: Vector2 R -> EventResult -> EventResult
@@ -474,7 +474,7 @@ translateFocusedGeneric f pos x =
             & fMEnter %~ translateMEnter pos
             & fFocalAreas . traverse . Rect.topLeft +~ pos
             & fEventMap . Lens.argument . virtualCursor . Rect.topLeft -~ pos
-            & fLayers %~ View.translateLayers pos
+            & fLayers %~ Element.translateLayers pos
             <&> f
 
 translateFocused ::
@@ -592,9 +592,9 @@ renderWithCursor CursorConfig{cursorColor} w =
     case w ^. wState of
     StateUnfocused u ->
         -- Unfocused top level widget! TODO: Is this some sort of error?
-        (View.render (u ^. uLayers), u ^. uMEnter, Nothing)
+        (Element.render (u ^. uLayers), u ^. uMEnter, Nothing)
     StateFocused f ->
-        (cursorFrame <> View.render (r ^. fLayers), r ^. fMEnter, Just (area, r ^. fEventMap))
+        (cursorFrame <> Element.render (r ^. fLayers), r ^. fMEnter, Just (area, r ^. fEventMap))
         where
             r = f (Surrounding 0 0 0 0)
             area = last (r ^. fFocalAreas)

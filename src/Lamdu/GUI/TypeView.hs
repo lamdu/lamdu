@@ -221,5 +221,5 @@ make t prefix =
         makeInternal (Precedence.parent 0) t
             & runM
             & (`evalStateT` Random.mkStdGen 0)
-            <&> Element.setLayers . View.layers . Lens.mapped %~ Anim.mapIdentities (mappend prefix)
+            <&> Element.setLayers . Element.layers . Lens.mapped %~ Anim.mapIdentities (mappend prefix)
             <&> Element.tint typeTint

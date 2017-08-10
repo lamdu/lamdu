@@ -10,8 +10,6 @@ module GUI.Momentu.Glue
 import           Data.Vector.Vector2 (Vector2(..))
 import           GUI.Momentu.Element (Element, SizedElement)
 import qualified GUI.Momentu.Element as Element
-import           GUI.Momentu.View (View)
-import qualified GUI.Momentu.View as View
 
 import           Lamdu.Prelude
 
@@ -23,10 +21,6 @@ class Glue a b where
     glue :: Orientation -> a -> b -> Glued a b
 
 type GluesTo a b c = (Glue a b, Glued a b ~ c)
-
-instance Glue View View where
-    type Glued View View = View
-    glue = glueH $ \v0 v1 -> v0 & View.vAnimLayers <>~ v1 ^. View.vAnimLayers
 
 -- Horizontal glue
 (/|/) :: Glue a b => a -> b -> Glued a b

@@ -30,7 +30,6 @@ import qualified GUI.Momentu.Glue as Glue
 import qualified GUI.Momentu.Hover as Hover
 import qualified GUI.Momentu.Responsive as Responsive
 import           GUI.Momentu.View (View)
-import qualified GUI.Momentu.View as View
 import           GUI.Momentu.Widget (Widget(..), EventResult)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widget.Id as WidgetId
@@ -305,7 +304,7 @@ makeHoleResultWidget ::
 makeHoleResultWidget resultId holeResult =
     (Widget.makeFocusableView ?? resultId <&> (Align.tValue %~))
     <*> mkWidget
-    <&> Element.setLayers . View.layers . Lens.traverse %~
+    <&> Element.setLayers . Element.layers . Lens.traverse %~
         Anim.mapIdentities (<> (resultSuffix # Widget.toAnimId resultId))
     <&> flip (,) mkEventMap
     where

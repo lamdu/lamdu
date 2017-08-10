@@ -274,7 +274,7 @@ applyWideAnnotationBehavior animId HoverWideAnnotation =
                 addAnnotationHoverBackground theme animId layout
                 -- TODO: This is a buggy hover that ignores
                 -- Surrounding (and exits screen).
-                & (`Element.hoverInPlaceOf` shrinker shrinkRatio layout)
+                & (`View.hoverInPlaceOf` shrinker shrinkRatio layout)
 
 processAnnotationGui ::
     Monad m =>
@@ -368,8 +368,8 @@ makeEvalView mNeighbours evalRes animId =
         let prevPos = Vector2 0 0.5 * evalView ^. Element.size - prev ^. Element.size
         let nextPos = Vector2 1 0.5 * evalView ^. Element.size
         evalView
-            & Element.setLayers <>~ View.translateLayers prevPos (prev ^. View.vAnimLayers)
-            & Element.setLayers <>~ View.translateLayers nextPos (next ^. View.vAnimLayers)
+            & Element.setLayers <>~ Element.translateLayers prevPos (prev ^. View.vAnimLayers)
+            & Element.setLayers <>~ Element.translateLayers nextPos (next ^. View.vAnimLayers)
             & return
 
 annotationSpacer :: Monad m => ExprGuiM m View

@@ -28,7 +28,6 @@ import           GUI.Momentu.MetaKey (MetaKey(..), toModKey, noMods)
 import           GUI.Momentu.ModKey (ModKey(..))
 import qualified GUI.Momentu.ModKey as ModKey
 import           GUI.Momentu.View (View(..))
-import qualified GUI.Momentu.View as View
 import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.GridView as GridView
@@ -201,11 +200,11 @@ makeTreeView size trees =
             handleResult _ = error "Leafs at root of tree!"
         go trees & handleResult & makeFlatTreeView size
 
-addToBottomRight :: View -> Widget.Size -> View.Layers -> View.Layers
+addToBottomRight :: View -> Widget.Size -> Element.Layers -> Element.Layers
 addToBottomRight (View eventMapSize eventMapLayers) size =
-    View.addLayersAbove docLayers
+    Element.addLayersAbove docLayers
     where
-        docLayers = View.translateLayers (size - eventMapSize) eventMapLayers
+        docLayers = Element.translateLayers (size - eventMapSize) eventMapLayers
 
 data IsHelpShown = HelpShown | HelpNotShown
     deriving (Eq, Ord, Read, Show)

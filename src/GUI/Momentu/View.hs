@@ -1,53 +1,53 @@
-{-# LANGUAGE NoImplicitPrelude, TemplateHaskell #-}
+{-# LANGUAGE NoImplicitPrelude, TemplateHaskell, MultiParamTypeClasses, TypeFamilies #-}
 module GUI.Momentu.View
     ( View(..), vSize, vAnimLayers, make
-    , Layers(..), layers, translateLayers, addLayersAbove
-    , render
     , animFrames
     , Size, R
+    , hoverInPlaceOf
     ) where
 
 import qualified Control.Lens as Lens
-import           Data.Vector.Vector2 (Vector2(..))
-import qualified Graphics.DrawingCombinators as Draw
 import           GUI.Momentu.Animation (R, Size)
 import qualified GUI.Momentu.Animation as Anim
+import           GUI.Momentu.Element (Element, SizedElement)
+import qualified GUI.Momentu.Element as Element
+import qualified GUI.Momentu.Glue as Glue
+import           GUI.Momentu.Glue (Glue)
 
 import           Lamdu.Prelude
 
--- | Layers is a list of animation frames that overlay on top of each
--- other (first element is most obscured one). When composing Views,
--- the layers at the same list index are composed together and all
--- obscure the layers from a lower index.
-newtype Layers = Layers { _layers :: [Anim.Frame] }
-Lens.makeLenses ''Layers
-
-instance Monoid Layers where
-    mempty = Layers []
-    mappend xs (Layers []) = xs
-    mappend (Layers []) ys = ys
-    mappend (Layers (x:xs)) (Layers (y:ys)) =
-        Layers (x<>y : rest ^. layers)
-        where
-            rest = Layers xs <> Layers ys
-
-addLayersAbove :: Layers -> Layers -> Layers
-addLayersAbove (Layers xs) (Layers ys) = Layers (ys ++ xs)
-
 data View = View
     { _vSize :: Size
-    , _vAnimLayers :: Layers
+    , _vAnimLayers :: Element.Layers
     }
 Lens.makeLenses ''View
 
-make :: Size -> Anim.Frame -> View
-make sz frame = View sz (Layers [frame])
+instance Element View where
+    setLayers f (View sz ls) = Lens.indexed f sz ls <&> View sz
+    hoverLayers = Element.setLayers . Element.layers %~ (mempty:)
+    assymetricPad leftAndTop rightAndBottom x =
+        x
+        & Element.size +~ leftAndTop + rightAndBottom
+        & vAnimLayers %~ Element.translateLayers leftAndTop
+    scale ratio x =
+        x
+        & Element.size *~ ratio
+        & animFrames %~ Anim.scale ratio
+    empty = make 0 mempty
 
-render :: Layers -> Anim.Frame
-render x = x ^. layers . Lens.reversed . traverse
+instance SizedElement View where size = vSize
+
+instance Glue View View where
+    type Glued View View = View
+    glue = Glue.glueH $ \v0 v1 -> v0 & vAnimLayers <>~ v1 ^. vAnimLayers
+
+make :: Size -> Anim.Frame -> View
+make sz frame = View sz (Element.Layers [frame])
 
 animFrames :: Lens.Traversal' View Anim.Frame
-animFrames = vAnimLayers . layers . traverse
+animFrames = vAnimLayers . Element.layers . traverse
 
-translateLayers :: Vector2 R -> Layers -> Layers
-translateLayers pos = layers . traverse %~ Anim.translate pos
+-- TODO: Remove this
+hoverInPlaceOf :: Element a => View -> a -> a
+hoverInPlaceOf onTop =
+    Element.setLayers . Element.layers .~ mempty : onTop ^. vAnimLayers . Element.layers

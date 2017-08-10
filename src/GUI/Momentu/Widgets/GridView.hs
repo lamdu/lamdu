@@ -75,4 +75,4 @@ make views =
     & _2 %~ (^. traverse . traverse . Lens.to translate)
     & uncurry View
     where
-        translate (Aligned _ (rect, view)) = View.translateLayers (rect ^. Rect.topLeft) (view ^. View.vAnimLayers)
+        translate (Aligned _ (rect, view)) = Element.translateLayers (rect ^. Rect.topLeft) (view ^. View.vAnimLayers)
