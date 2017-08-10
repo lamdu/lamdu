@@ -9,13 +9,13 @@ import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
 import           Data.Store.Transaction (Transaction)
 import qualified Graphics.DrawingCombinators as Draw
-import           Graphics.UI.Bottle.Align (WithTextPos)
-import qualified Graphics.UI.Bottle.Align as Align
-import qualified Graphics.UI.Bottle.EventMap as E
-import           Graphics.UI.Bottle.View (View)
-import           Graphics.UI.Bottle.Widget (Widget)
-import qualified Graphics.UI.Bottle.Widget as Widget
-import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
+import           GUI.Momentu.Align (WithTextPos)
+import qualified GUI.Momentu.Align as Align
+import qualified GUI.Momentu.EventMap as E
+import           GUI.Momentu.View (View)
+import           GUI.Momentu.Widget (Widget)
+import qualified GUI.Momentu.Widget as Widget
+import qualified GUI.Momentu.Widgets.TextView as TextView
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap

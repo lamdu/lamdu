@@ -9,18 +9,18 @@ import           Control.Monad.Transaction (transaction)
 import qualified Data.Store.Property as Property
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
-import           Graphics.UI.Bottle.Align (WithTextPos)
-import qualified Graphics.UI.Bottle.Align as Align
-import           Graphics.UI.Bottle.Animation (AnimId)
-import qualified Graphics.UI.Bottle.EventMap as E
-import           Graphics.UI.Bottle.Glue ((/-/), (/|/))
-import           Graphics.UI.Bottle.MetaKey (MetaKey(..), noMods)
-import           Graphics.UI.Bottle.View (View)
-import qualified Graphics.UI.Bottle.View as View
-import           Graphics.UI.Bottle.Widget (Widget)
-import qualified Graphics.UI.Bottle.Widget as Widget
-import qualified Graphics.UI.Bottle.Widget.TreeLayout as TreeLayout
-import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
+import           GUI.Momentu.Align (WithTextPos)
+import qualified GUI.Momentu.Align as Align
+import           GUI.Momentu.Animation (AnimId)
+import qualified GUI.Momentu.EventMap as E
+import           GUI.Momentu.Glue ((/-/), (/|/))
+import           GUI.Momentu.MetaKey (MetaKey(..), noMods)
+import           GUI.Momentu.View (View)
+import qualified GUI.Momentu.View as View
+import           GUI.Momentu.Widget (Widget)
+import qualified GUI.Momentu.Widget as Widget
+import qualified GUI.Momentu.Widget.TreeLayout as TreeLayout
+import qualified GUI.Momentu.Widgets.TextView as TextView
 import qualified Graphics.UI.GLFW as GLFW
 import           Lamdu.Calc.Type.Scheme (Scheme(..), schemeType)
 import qualified Lamdu.Config.Theme as Theme

@@ -11,12 +11,12 @@ import           Data.Store.Property (Property)
 import qualified Data.Store.Property as Property
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Text as Text
-import           Graphics.UI.Bottle.Align (WithTextPos)
-import qualified Graphics.UI.Bottle.Align as Align
-import qualified Graphics.UI.Bottle.EventMap as E
-import           Graphics.UI.Bottle.Widget (Widget)
-import qualified Graphics.UI.Bottle.Widget as Widget
-import qualified Graphics.UI.Bottle.Widgets.TextEdit as TextEdit
+import           GUI.Momentu.Align (WithTextPos)
+import qualified GUI.Momentu.Align as Align
+import qualified GUI.Momentu.EventMap as E
+import           GUI.Momentu.Widget (Widget)
+import qualified GUI.Momentu.Widget as Widget
+import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.EventMap as EventMap

@@ -7,7 +7,7 @@ import qualified Data.Aeson.Types as Aeson
 import           GHC.Generics (Generic)
 import qualified Graphics.DrawingCombinators as Draw
 import           Graphics.DrawingCombinators.Utils ()
-import           Graphics.UI.Bottle.MetaKey (MetaKey)
+import           GUI.Momentu.MetaKey (MetaKey)
 
 data Config = Config
     { undoKeys :: [MetaKey]

@@ -12,8 +12,8 @@ module Lamdu.Config
 import qualified Control.Lens as Lens
 import qualified Data.Aeson.Types as Aeson
 import           GHC.Generics (Generic)
-import           Graphics.UI.Bottle.MetaKey (MetaKey)
-import qualified Graphics.UI.Bottle.Zoom as Zoom
+import           GUI.Momentu.MetaKey (MetaKey)
+import qualified GUI.Momentu.Zoom as Zoom
 import qualified Lamdu.GUI.VersionControl.Config as VersionControl
 
 import           Lamdu.Prelude

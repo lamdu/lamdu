@@ -6,11 +6,11 @@ module Lamdu.GUI.ExpressionEdit.NomEdit
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
 import           Data.Store.Transaction (Transaction)
-import qualified Graphics.UI.Bottle.EventMap as E
-import           Graphics.UI.Bottle.Glue ((/|/))
-import qualified Graphics.UI.Bottle.Widget as Widget
-import qualified Graphics.UI.Bottle.Widget.TreeLayout as TreeLayout
-import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
+import qualified GUI.Momentu.EventMap as E
+import           GUI.Momentu.Glue ((/|/))
+import qualified GUI.Momentu.Widget as Widget
+import qualified GUI.Momentu.Widget.TreeLayout as TreeLayout
+import qualified GUI.Momentu.Widgets.TextView as TextView
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.GUI.ExpressionEdit.BinderEdit as BinderEdit

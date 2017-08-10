@@ -9,7 +9,7 @@ import           Data.Binary (Binary)
 import           Data.UUID.Types (UUID)
 import qualified Data.Store.Transaction as Transaction
 import           GHC.Generics (Generic)
-import qualified Graphics.UI.Bottle.Widget as Widget
+import qualified GUI.Momentu.Widget as Widget
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds (WidgetIds(..))
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds as WidgetIds
 import qualified Lamdu.Sugar.Types as Sugar

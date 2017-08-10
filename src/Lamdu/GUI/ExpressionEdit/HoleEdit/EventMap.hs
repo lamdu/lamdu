@@ -14,12 +14,12 @@ import           Data.Store.Property (Property(..))
 import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
 import qualified Data.Text as Text
-import qualified Graphics.UI.Bottle.EventMap as E
-import           Graphics.UI.Bottle.MetaKey (MetaKey(..))
-import qualified Graphics.UI.Bottle.MetaKey as MetaKey
-import           Graphics.UI.Bottle.ModKey (ModKey(..))
-import qualified Graphics.UI.Bottle.Widget as Widget
-import qualified Graphics.UI.Bottle.Widgets.Grid as Grid
+import qualified GUI.Momentu.EventMap as E
+import           GUI.Momentu.MetaKey (MetaKey(..))
+import qualified GUI.Momentu.MetaKey as MetaKey
+import           GUI.Momentu.ModKey (ModKey(..))
+import qualified GUI.Momentu.Widget as Widget
+import qualified GUI.Momentu.Widgets.Grid as Grid
 import qualified Graphics.UI.GLFW as GLFW
 import           Lamdu.CharClassification (operatorChars, bracketChars, digitChars, hexDigitChars, charPrecedence)
 import qualified Lamdu.Config as Config

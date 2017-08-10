@@ -17,8 +17,8 @@ module Lamdu.GUI.ExpressionGui.Types
 
 import qualified Control.Lens as Lens
 import           Data.Store.Transaction (Transaction)
-import qualified Graphics.UI.Bottle.Widget as Widget
-import           Graphics.UI.Bottle.Widget.TreeLayout (TreeLayout(..))
+import qualified GUI.Momentu.Widget as Widget
+import           GUI.Momentu.Widget.TreeLayout (TreeLayout(..))
 import qualified Lamdu.Sugar.Lens as SugarLens
 import           Lamdu.Sugar.Names.Types (ExpressionN)
 import           Lamdu.Sugar.NearestHoles (NearestHoles)

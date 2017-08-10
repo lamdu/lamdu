@@ -19,22 +19,22 @@ import qualified Data.Store.Property as Property
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Text as Text
 import           Data.Vector.Vector2 (Vector2(..))
-import           Graphics.UI.Bottle.Align (Aligned(..), WithTextPos(..))
-import qualified Graphics.UI.Bottle.Align as Align
-import           Graphics.UI.Bottle.Animation (AnimId)
-import qualified Graphics.UI.Bottle.Animation as Anim
-import qualified Graphics.UI.Bottle.EventMap as E
-import           Graphics.UI.Bottle.Glue ((/-/), (/|/))
-import qualified Graphics.UI.Bottle.Glue as Glue
-import qualified Graphics.UI.Bottle.Hover as Hover
-import           Graphics.UI.Bottle.View (View)
-import qualified Graphics.UI.Bottle.View as View
-import           Graphics.UI.Bottle.Widget (Widget(..), EventResult)
-import qualified Graphics.UI.Bottle.Widget as Widget
-import qualified Graphics.UI.Bottle.Widget.Id as WidgetId
-import qualified Graphics.UI.Bottle.Widget.TreeLayout as TreeLayout
-import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
-import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
+import           GUI.Momentu.Align (Aligned(..), WithTextPos(..))
+import qualified GUI.Momentu.Align as Align
+import           GUI.Momentu.Animation (AnimId)
+import qualified GUI.Momentu.Animation as Anim
+import qualified GUI.Momentu.EventMap as E
+import           GUI.Momentu.Glue ((/-/), (/|/))
+import qualified GUI.Momentu.Glue as Glue
+import qualified GUI.Momentu.Hover as Hover
+import           GUI.Momentu.View (View)
+import qualified GUI.Momentu.View as View
+import           GUI.Momentu.Widget (Widget(..), EventResult)
+import qualified GUI.Momentu.Widget as Widget
+import qualified GUI.Momentu.Widget.Id as WidgetId
+import qualified GUI.Momentu.Widget.TreeLayout as TreeLayout
+import qualified GUI.Momentu.Widgets.Spacer as Spacer
+import qualified GUI.Momentu.Widgets.TextView as TextView
 import           Lamdu.CharClassification (operatorChars)
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Config.Theme as Theme

@@ -15,17 +15,17 @@ import           Data.Functor.Identity (Identity(..))
 import           Data.Orphans () -- Imported for Monoid (IO ()) instance
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
-import qualified Graphics.UI.Bottle.EventMap as E
-import qualified Graphics.UI.Bottle.Main as Main
-import           Graphics.UI.Bottle.MetaKey (MetaKey)
-import           Graphics.UI.Bottle.Widget (Widget)
-import qualified Graphics.UI.Bottle.Widget as Widget
-import qualified Graphics.UI.Bottle.Align as Align
-import           Graphics.UI.Bottle.Widget.TreeLayout (TreeLayout)
-import qualified Graphics.UI.Bottle.Widget.TreeLayout as TreeLayout
-import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
-import qualified Graphics.UI.Bottle.Widgets.TextEdit as TextEdit
-import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
+import qualified GUI.Momentu.EventMap as E
+import qualified GUI.Momentu.Main as Main
+import           GUI.Momentu.MetaKey (MetaKey)
+import           GUI.Momentu.Widget (Widget)
+import qualified GUI.Momentu.Widget as Widget
+import qualified GUI.Momentu.Align as Align
+import           GUI.Momentu.Widget.TreeLayout (TreeLayout)
+import qualified GUI.Momentu.Widget.TreeLayout as TreeLayout
+import qualified GUI.Momentu.Widgets.Spacer as Spacer
+import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
+import qualified GUI.Momentu.Widgets.TextView as TextView
 import qualified Lamdu.Calc.Type.Scheme as Scheme
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config

@@ -35,17 +35,17 @@ import           Data.CurAndPrev (CurAndPrev)
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Text.Lens as TextLens
 import           Data.Vector.Vector2 (Vector2)
-import           Graphics.UI.Bottle.Align (WithTextPos)
-import           Graphics.UI.Bottle.Animation.Id (AnimId)
-import qualified Graphics.UI.Bottle.EventMap as E
-import           Graphics.UI.Bottle.View (View)
-import qualified Graphics.UI.Bottle.View as View
-import qualified Graphics.UI.Bottle.Widget as Widget
-import           Graphics.UI.Bottle.Widget.Id (toAnimId)
-import qualified Graphics.UI.Bottle.Widget.TreeLayout as TreeLayout
-import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
-import qualified Graphics.UI.Bottle.Widgets.TextEdit as TextEdit
-import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
+import           GUI.Momentu.Align (WithTextPos)
+import           GUI.Momentu.Animation.Id (AnimId)
+import qualified GUI.Momentu.EventMap as E
+import           GUI.Momentu.View (View)
+import qualified GUI.Momentu.View as View
+import qualified GUI.Momentu.Widget as Widget
+import           GUI.Momentu.Widget.Id (toAnimId)
+import qualified GUI.Momentu.Widget.TreeLayout as TreeLayout
+import qualified GUI.Momentu.Widgets.Spacer as Spacer
+import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
+import qualified GUI.Momentu.Widgets.TextView as TextView
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
 import           Lamdu.Config.Theme (Theme)

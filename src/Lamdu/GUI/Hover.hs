@@ -8,8 +8,8 @@ module Lamdu.GUI.Hover
 
 import qualified Control.Lens as Lens
 import qualified Graphics.DrawingCombinators as Draw
-import           Graphics.UI.Bottle.Animation (AnimId)
-import qualified Graphics.UI.Bottle.View as View
+import           GUI.Momentu.Animation (AnimId)
+import qualified GUI.Momentu.View as View
 import qualified Lamdu.Config.Theme as Theme
 
 import           Lamdu.Prelude

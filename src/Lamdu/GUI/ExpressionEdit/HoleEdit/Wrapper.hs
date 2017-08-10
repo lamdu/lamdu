@@ -6,9 +6,9 @@ module Lamdu.GUI.ExpressionEdit.HoleEdit.Wrapper
 
 import qualified Control.Lens as Lens
 import qualified Data.Store.Transaction as Transaction
-import qualified Graphics.UI.Bottle.EventMap as E
-import qualified Graphics.UI.Bottle.View as View
-import qualified Graphics.UI.Bottle.Widget as Widget
+import qualified GUI.Momentu.EventMap as E
+import qualified GUI.Momentu.View as View
+import qualified GUI.Momentu.Widget as Widget
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Config.Theme as Theme
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds (WidgetIds(..))

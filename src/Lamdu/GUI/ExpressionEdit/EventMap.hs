@@ -10,8 +10,8 @@ module Lamdu.GUI.ExpressionEdit.EventMap
 import qualified Control.Lens as Lens
 import qualified Data.Store.Transaction as Transaction
 import qualified Data.Text as Text
-import qualified Graphics.UI.Bottle.EventMap as E
-import qualified Graphics.UI.Bottle.Widget as Widget
+import qualified GUI.Momentu.EventMap as E
+import qualified GUI.Momentu.Widget as Widget
 import           Lamdu.CharClassification (operatorChars, charPrecedence)
 import qualified Lamdu.Config as Config
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.State (HoleState(..))

@@ -5,10 +5,10 @@ module Lamdu.GUI.Scroll
 
 import qualified Control.Lens as Lens
 import           Data.Vector.Vector2 (Vector2(..))
-import qualified Graphics.UI.Bottle.Rect as Rect
-import qualified Graphics.UI.Bottle.View as View
-import           Graphics.UI.Bottle.Widget (Widget(..))
-import qualified Graphics.UI.Bottle.Widget as Widget
+import qualified GUI.Momentu.Rect as Rect
+import qualified GUI.Momentu.View as View
+import           GUI.Momentu.Widget (Widget(..))
+import qualified GUI.Momentu.Widget as Widget
 
 import           Lamdu.Prelude
 

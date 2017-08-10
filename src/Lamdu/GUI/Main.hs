@@ -13,15 +13,15 @@ import qualified Control.Monad.Reader as Reader
 import           Data.CurAndPrev (CurAndPrev(..))
 import           Data.Store.Transaction (Transaction)
 import           Data.Vector.Vector2 (Vector2(..))
-import qualified Graphics.UI.Bottle.EventMap as EventMap
-import           Graphics.UI.Bottle.Glue ((/-/))
-import qualified Graphics.UI.Bottle.Main as MainLoop
-import qualified Graphics.UI.Bottle.View as View
-import           Graphics.UI.Bottle.Widget (Widget)
-import qualified Graphics.UI.Bottle.Widget as Widget
-import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
-import qualified Graphics.UI.Bottle.Widgets.TextEdit as TextEdit
-import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
+import qualified GUI.Momentu.EventMap as EventMap
+import           GUI.Momentu.Glue ((/-/))
+import qualified GUI.Momentu.Main as MainLoop
+import qualified GUI.Momentu.View as View
+import           GUI.Momentu.Widget (Widget)
+import qualified GUI.Momentu.Widget as Widget
+import qualified GUI.Momentu.Widgets.Spacer as Spacer
+import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
+import qualified GUI.Momentu.Widgets.TextView as TextView
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
 import           Lamdu.Config.Theme (Theme)

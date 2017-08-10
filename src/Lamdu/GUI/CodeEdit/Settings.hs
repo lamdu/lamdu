@@ -8,8 +8,8 @@ module Lamdu.GUI.CodeEdit.Settings
 import qualified Control.Lens as Lens
 import           Data.IORef
 import qualified Data.Text as Text
-import qualified Graphics.UI.Bottle.EventMap as EventMap
-import qualified Graphics.UI.Bottle.Widget as Widget
+import qualified GUI.Momentu.EventMap as EventMap
+import qualified GUI.Momentu.Widget as Widget
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
 

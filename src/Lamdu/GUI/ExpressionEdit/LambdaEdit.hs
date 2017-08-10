@@ -5,14 +5,14 @@ module Lamdu.GUI.ExpressionEdit.LambdaEdit
 
 import qualified Control.Lens as Lens
 import           Data.Store.Transaction (Transaction)
-import           Graphics.UI.Bottle.Align (WithTextPos(..))
-import qualified Graphics.UI.Bottle.EventMap as E
-import           Graphics.UI.Bottle.Glue ((/-/))
-import           Graphics.UI.Bottle.MetaKey (MetaKey(..), noMods)
-import qualified Graphics.UI.Bottle.View as View
-import           Graphics.UI.Bottle.Widget (Widget)
-import qualified Graphics.UI.Bottle.Widget as Widget
-import qualified Graphics.UI.Bottle.Widget.TreeLayout as TreeLayout
+import           GUI.Momentu.Align (WithTextPos(..))
+import qualified GUI.Momentu.EventMap as E
+import           GUI.Momentu.Glue ((/-/))
+import           GUI.Momentu.MetaKey (MetaKey(..), noMods)
+import qualified GUI.Momentu.View as View
+import           GUI.Momentu.Widget (Widget)
+import qualified GUI.Momentu.Widget as Widget
+import qualified GUI.Momentu.Widget.TreeLayout as TreeLayout
 import qualified Graphics.UI.GLFW as GLFW
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Config.Theme as Theme

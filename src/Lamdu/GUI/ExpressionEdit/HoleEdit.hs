@@ -7,13 +7,13 @@ import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
 import           Control.Monad.Transaction (transaction)
 import qualified Data.Store.Transaction as Transaction
-import qualified Graphics.UI.Bottle.Align as Align
-import qualified Graphics.UI.Bottle.EventMap as E
-import           Graphics.UI.Bottle.Glue ((/-/))
-import qualified Graphics.UI.Bottle.Hover as Hover
-import qualified Graphics.UI.Bottle.View as View
-import qualified Graphics.UI.Bottle.Widget as Widget
-import qualified Graphics.UI.Bottle.Widget.TreeLayout as TreeLayout
+import qualified GUI.Momentu.Align as Align
+import qualified GUI.Momentu.EventMap as E
+import           GUI.Momentu.Glue ((/-/))
+import qualified GUI.Momentu.Hover as Hover
+import qualified GUI.Momentu.View as View
+import qualified GUI.Momentu.Widget as Widget
+import qualified GUI.Momentu.Widget.TreeLayout as TreeLayout
 import qualified Lamdu.Config as Config
 import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.Info (HoleInfo(..))

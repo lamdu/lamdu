@@ -6,9 +6,9 @@ module Lamdu.Themes
 
 import           Data.IORef
 import qualified Data.Text as Text
-import qualified Graphics.UI.Bottle.EventMap as E
-import           Graphics.UI.Bottle.MetaKey (MetaKey)
-import qualified Graphics.UI.Bottle.Widget as Widget
+import qualified GUI.Momentu.EventMap as E
+import           GUI.Momentu.MetaKey (MetaKey)
+import qualified GUI.Momentu.Widget as Widget
 import           Lamdu.Config.Sampler (Sampler)
 import qualified Lamdu.Config.Sampler as ConfigSampler
 import qualified Paths.Utils as Paths

@@ -10,13 +10,13 @@ module Lamdu.Style
 
 import qualified Control.Lens as Lens
 import qualified Graphics.DrawingCombinators as Draw
-import qualified Graphics.UI.Bottle.Main as MainLoop
-import           Graphics.UI.Bottle.Main.Animation (AnimConfig(..))
-import           Graphics.UI.Bottle.MetaKey (MetaKey)
-import           Graphics.UI.Bottle.Widget (CursorConfig(..))
-import qualified Graphics.UI.Bottle.Widgets.EventMapHelp as EventMapHelp
-import qualified Graphics.UI.Bottle.Widgets.TextEdit as TextEdit
-import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
+import qualified GUI.Momentu.Main as MainLoop
+import           GUI.Momentu.Main.Animation (AnimConfig(..))
+import           GUI.Momentu.MetaKey (MetaKey)
+import           GUI.Momentu.Widget (CursorConfig(..))
+import qualified GUI.Momentu.Widgets.EventMapHelp as EventMapHelp
+import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
+import qualified GUI.Momentu.Widgets.TextView as TextView
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
 import           Lamdu.Config.Theme (Theme)

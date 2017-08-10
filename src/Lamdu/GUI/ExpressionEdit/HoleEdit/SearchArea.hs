@@ -9,12 +9,12 @@ module Lamdu.GUI.ExpressionEdit.HoleEdit.SearchArea
     ) where
 
 import qualified Control.Lens as Lens
-import qualified Graphics.UI.Bottle.EventMap as E
-import qualified Graphics.UI.Bottle.Widget as Widget
-import qualified Graphics.UI.Bottle.Align as Align
-import qualified Graphics.UI.Bottle.Hover as Hover
-import qualified Graphics.UI.Bottle.Widget.TreeLayout as TreeLayout
-import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
+import qualified GUI.Momentu.EventMap as E
+import qualified GUI.Momentu.Widget as Widget
+import qualified GUI.Momentu.Align as Align
+import qualified GUI.Momentu.Hover as Hover
+import qualified GUI.Momentu.Widget.TreeLayout as TreeLayout
+import qualified GUI.Momentu.Widgets.FocusDelegator as FocusDelegator
 import qualified Lamdu.Config as Config
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.Info (HoleInfo(..))
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.Open (makeOpenSearchAreaGui, ResultsPlacement)

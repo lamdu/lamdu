@@ -13,18 +13,18 @@ import           Data.Text.Encoding (decodeUtf8)
 import           Data.Vector.Vector2 (Vector2(..))
 import           Graphics.DrawingCombinators ((%%))
 import qualified Graphics.DrawingCombinators.Utils as DrawUtils
-import           Graphics.UI.Bottle.Align (Aligned(..), WithTextPos(..))
-import qualified Graphics.UI.Bottle.Align as Align
-import           Graphics.UI.Bottle.Animation (AnimId)
-import qualified Graphics.UI.Bottle.Animation as Anim
-import qualified Graphics.UI.Bottle.Animation.Id as AnimId
-import           Graphics.UI.Bottle.Glue ((/-/), (/|/), hbox, vbox)
-import qualified Graphics.UI.Bottle.Rect as Rect
-import           Graphics.UI.Bottle.View (View(..))
-import qualified Graphics.UI.Bottle.View as View
-import qualified Graphics.UI.Bottle.Widgets.GridView as GridView
-import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
-import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
+import           GUI.Momentu.Align (Aligned(..), WithTextPos(..))
+import qualified GUI.Momentu.Align as Align
+import           GUI.Momentu.Animation (AnimId)
+import qualified GUI.Momentu.Animation as Anim
+import qualified GUI.Momentu.Animation.Id as AnimId
+import           GUI.Momentu.Glue ((/-/), (/|/), hbox, vbox)
+import qualified GUI.Momentu.Rect as Rect
+import           GUI.Momentu.View (View(..))
+import qualified GUI.Momentu.View as View
+import qualified GUI.Momentu.Widgets.GridView as GridView
+import qualified GUI.Momentu.Widgets.Spacer as Spacer
+import qualified GUI.Momentu.Widgets.TextView as TextView
 import qualified Lamdu.Builtins.Anchors as Builtins
 import qualified Lamdu.Builtins.PrimVal as PrimVal
 import           Lamdu.Calc.Type (Type)

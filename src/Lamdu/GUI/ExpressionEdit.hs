@@ -4,9 +4,9 @@ module Lamdu.GUI.ExpressionEdit
     ) where
 
 import qualified Data.List as List
-import qualified Graphics.UI.Bottle.Widget as Widget
-import qualified Graphics.UI.Bottle.Widget.TreeLayout as TreeLayout
-import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
+import qualified GUI.Momentu.Widget as Widget
+import qualified GUI.Momentu.Widget.TreeLayout as TreeLayout
+import qualified GUI.Momentu.Widgets.TextView as TextView
 import qualified Lamdu.GUI.ExpressionEdit.ApplyEdit as ApplyEdit
 import qualified Lamdu.GUI.ExpressionEdit.CaseEdit as CaseEdit
 import qualified Lamdu.GUI.ExpressionEdit.GetFieldEdit as GetFieldEdit

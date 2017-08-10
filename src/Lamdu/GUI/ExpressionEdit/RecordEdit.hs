@@ -6,18 +6,18 @@ module Lamdu.GUI.ExpressionEdit.RecordEdit
 import qualified Control.Lens as Lens
 import           Data.Store.Transaction (Transaction)
 import           Data.Vector.Vector2 (Vector2(..))
-import           Graphics.UI.Bottle.Animation (AnimId)
-import qualified Graphics.UI.Bottle.Animation as Anim
-import qualified Graphics.UI.Bottle.EventMap as E
-import           Graphics.UI.Bottle.Glue ((/-/), (/|/))
-import           Graphics.UI.Bottle.View (View)
-import qualified Graphics.UI.Bottle.View as View
-import           Graphics.UI.Bottle.Widget (Widget)
-import qualified Graphics.UI.Bottle.Widget as Widget
-import           Graphics.UI.Bottle.Align (WithTextPos)
-import qualified Graphics.UI.Bottle.Align as Align
-import qualified Graphics.UI.Bottle.Widget.TreeLayout as TreeLayout
-import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
+import           GUI.Momentu.Animation (AnimId)
+import qualified GUI.Momentu.Animation as Anim
+import qualified GUI.Momentu.EventMap as E
+import           GUI.Momentu.Glue ((/-/), (/|/))
+import           GUI.Momentu.View (View)
+import qualified GUI.Momentu.View as View
+import           GUI.Momentu.Widget (Widget)
+import qualified GUI.Momentu.Widget as Widget
+import           GUI.Momentu.Align (WithTextPos)
+import qualified GUI.Momentu.Align as Align
+import qualified GUI.Momentu.Widget.TreeLayout as TreeLayout
+import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
 import           Lamdu.Config.Theme (Theme)

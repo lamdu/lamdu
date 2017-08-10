@@ -12,17 +12,17 @@ import qualified Data.Store.Transaction as Transaction
 import qualified Data.Text as Text
 import           Data.Text.Encoding (decodeUtf8)
 import           Data.Vector.Vector2 (Vector2(..))
-import           Graphics.UI.Bottle.Align (Aligned(..), WithTextPos(..))
-import qualified Graphics.UI.Bottle.Align as Align
-import           Graphics.UI.Bottle.Animation (AnimId)
-import qualified Graphics.UI.Bottle.Animation as Anim
-import           Graphics.UI.Bottle.Glue ((/-/), (/|/), hbox)
-import           Graphics.UI.Bottle.View (R, View(..))
-import qualified Graphics.UI.Bottle.View as View
-import qualified Graphics.UI.Bottle.Widget.Id as WidgetId
-import qualified Graphics.UI.Bottle.Widgets.GridView as GridView
-import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
-import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
+import           GUI.Momentu.Align (Aligned(..), WithTextPos(..))
+import qualified GUI.Momentu.Align as Align
+import           GUI.Momentu.Animation (AnimId)
+import qualified GUI.Momentu.Animation as Anim
+import           GUI.Momentu.Glue ((/-/), (/|/), hbox)
+import           GUI.Momentu.View (R, View(..))
+import qualified GUI.Momentu.View as View
+import qualified GUI.Momentu.Widget.Id as WidgetId
+import qualified GUI.Momentu.Widgets.GridView as GridView
+import qualified GUI.Momentu.Widgets.Spacer as Spacer
+import qualified GUI.Momentu.Widgets.TextView as TextView
 import           Lamdu.Calc.Identifier (Identifier(..))
 import           Lamdu.Calc.Type (Type)
 import qualified Lamdu.Calc.Type as T

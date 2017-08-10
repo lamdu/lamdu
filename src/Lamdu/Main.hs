@@ -17,15 +17,15 @@ import           GHC.Conc (setNumCapabilities, getNumProcessors)
 import           GHC.Stack (whoCreated)
 import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.Rendering.OpenGL.GL as GL
-import           Graphics.UI.Bottle.Animation (AnimId)
-import qualified Graphics.UI.Bottle.EventMap as EventMap
-import           Graphics.UI.Bottle.Main (mainLoopWidget)
-import qualified Graphics.UI.Bottle.Main as MainLoop
-import qualified Graphics.UI.Bottle.View as View
-import           Graphics.UI.Bottle.Widget (Widget)
-import qualified Graphics.UI.Bottle.Widget as Widget
-import           Graphics.UI.Bottle.Zoom (Zoom)
-import qualified Graphics.UI.Bottle.Zoom as Zoom
+import           GUI.Momentu.Animation (AnimId)
+import qualified GUI.Momentu.EventMap as EventMap
+import           GUI.Momentu.Main (mainLoopWidget)
+import qualified GUI.Momentu.Main as MainLoop
+import qualified GUI.Momentu.View as View
+import           GUI.Momentu.Widget (Widget)
+import qualified GUI.Momentu.Widget as Widget
+import           GUI.Momentu.Zoom (Zoom)
+import qualified GUI.Momentu.Zoom as Zoom
 import qualified Graphics.UI.GLFW as GLFW
 import qualified Graphics.UI.GLFW.Utils as GLFWUtils
 import           Lamdu.Config (Config)

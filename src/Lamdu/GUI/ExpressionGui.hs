@@ -45,24 +45,24 @@ import qualified Data.Text as Text
 import           Data.Text.Encoding (encodeUtf8)
 import           Data.Vector.Vector2 (Vector2(..))
 import qualified Graphics.DrawingCombinators as Draw
-import           Graphics.UI.Bottle.Animation (AnimId)
-import qualified Graphics.UI.Bottle.EventMap as E
-import           Graphics.UI.Bottle.Glue ((/-/), (/|/))
-import qualified Graphics.UI.Bottle.Glue as Glue
-import           Graphics.UI.Bottle.MetaKey (MetaKey(..), noMods)
-import           Graphics.UI.Bottle.View (View)
-import qualified Graphics.UI.Bottle.View as View
-import           Graphics.UI.Bottle.Widget (Widget)
-import qualified Graphics.UI.Bottle.Widget as Widget
-import           Graphics.UI.Bottle.Align (Aligned(..), WithTextPos(..))
-import qualified Graphics.UI.Bottle.Align as Align
-import           Graphics.UI.Bottle.Widget.TreeLayout (TreeLayout(..))
-import qualified Graphics.UI.Bottle.Widget.TreeLayout as TreeLayout
-import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
-import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
-import qualified Graphics.UI.Bottle.Widgets.TextEdit as TextEdit
-import qualified Graphics.UI.Bottle.Widgets.TextEdit.Property as TextEdits
-import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
+import           GUI.Momentu.Animation (AnimId)
+import qualified GUI.Momentu.EventMap as E
+import           GUI.Momentu.Glue ((/-/), (/|/))
+import qualified GUI.Momentu.Glue as Glue
+import           GUI.Momentu.MetaKey (MetaKey(..), noMods)
+import           GUI.Momentu.View (View)
+import qualified GUI.Momentu.View as View
+import           GUI.Momentu.Widget (Widget)
+import qualified GUI.Momentu.Widget as Widget
+import           GUI.Momentu.Align (Aligned(..), WithTextPos(..))
+import qualified GUI.Momentu.Align as Align
+import           GUI.Momentu.Widget.TreeLayout (TreeLayout(..))
+import qualified GUI.Momentu.Widget.TreeLayout as TreeLayout
+import qualified GUI.Momentu.Widgets.FocusDelegator as FocusDelegator
+import qualified GUI.Momentu.Widgets.Spacer as Spacer
+import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
+import qualified GUI.Momentu.Widgets.TextEdit.Property as TextEdits
+import qualified GUI.Momentu.Widgets.TextView as TextView
 import qualified Graphics.UI.GLFW as GLFW
 import           Lamdu.Calc.Type (Type)
 import qualified Lamdu.Calc.Type as T

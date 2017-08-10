@@ -7,9 +7,9 @@ module Lamdu.GUI.ParamEdit
 import qualified Control.Lens as Lens
 import qualified Data.Map as Map
 import           Data.Store.Transaction (Transaction)
-import qualified Graphics.UI.Bottle.EventMap as E
-import           Graphics.UI.Bottle.MetaKey (MetaKey, toModKey)
-import qualified Graphics.UI.Bottle.Widget as Widget
+import qualified GUI.Momentu.EventMap as E
+import           GUI.Momentu.MetaKey (MetaKey, toModKey)
+import qualified GUI.Momentu.Widget as Widget
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
 import           Lamdu.GUI.ExpressionGui (ExpressionGui)

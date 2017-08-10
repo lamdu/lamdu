@@ -9,17 +9,17 @@ import           Data.Store.Property (Property(..))
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Text as Text
 import qualified Graphics.DrawingCombinators as Draw
-import           Graphics.UI.Bottle.Align (WithTextPos)
-import qualified Graphics.UI.Bottle.Align as Align
-import qualified Graphics.UI.Bottle.EventMap as E
-import           Graphics.UI.Bottle.Glue ((/|/))
-import           Graphics.UI.Bottle.MetaKey (MetaKey(..), noMods)
-import           Graphics.UI.Bottle.Widget (Widget)
-import qualified Graphics.UI.Bottle.Widget as Widget
-import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
-import qualified Graphics.UI.Bottle.Widgets.TextEdit as TextEdit
-import qualified Graphics.UI.Bottle.Widgets.TextEdit.Property as TextEdits
-import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
+import           GUI.Momentu.Align (WithTextPos)
+import qualified GUI.Momentu.Align as Align
+import qualified GUI.Momentu.EventMap as E
+import           GUI.Momentu.Glue ((/|/))
+import           GUI.Momentu.MetaKey (MetaKey(..), noMods)
+import           GUI.Momentu.Widget (Widget)
+import qualified GUI.Momentu.Widget as Widget
+import qualified GUI.Momentu.Widgets.FocusDelegator as FocusDelegator
+import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
+import qualified GUI.Momentu.Widgets.TextEdit.Property as TextEdits
+import qualified GUI.Momentu.Widgets.TextView as TextView
 import qualified Graphics.UI.GLFW as GLFW
 import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.Data.Definition as Definition

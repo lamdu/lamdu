@@ -104,36 +104,36 @@ Executable lamdu
                   , Data.UUID.Utils
                   , Data.Vector.Vector2
                   , Foreign.C.Types.Instances
+                  , GUI.Momentu.Align
+                  , GUI.Momentu.Animation
+                  , GUI.Momentu.Animation.Id
+                  , GUI.Momentu.Direction
+                  , GUI.Momentu.EventMap
+                  , GUI.Momentu.Font
+                  , GUI.Momentu.Glue
+                  , GUI.Momentu.Hover
+                  , GUI.Momentu.Main
+                  , GUI.Momentu.Main.Animation
+                  , GUI.Momentu.Main.Image
+                  , GUI.Momentu.MetaKey
+                  , GUI.Momentu.ModKey
+                  , GUI.Momentu.Rect
+                  , GUI.Momentu.View
+                  , GUI.Momentu.Widget
+                  , GUI.Momentu.Widget.Id
+                  , GUI.Momentu.Widget.TreeLayout
+                  , GUI.Momentu.Widgets.Choice
+                  , GUI.Momentu.Widgets.EventMapHelp
+                  , GUI.Momentu.Widgets.FocusDelegator
+                  , GUI.Momentu.Widgets.Grid
+                  , GUI.Momentu.Widgets.GridView
+                  , GUI.Momentu.Widgets.Spacer
+                  , GUI.Momentu.Widgets.StdKeys
+                  , GUI.Momentu.Widgets.TextEdit
+                  , GUI.Momentu.Widgets.TextEdit.Property
+                  , GUI.Momentu.Widgets.TextView
+                  , GUI.Momentu.Zoom
                   , Graphics.DrawingCombinators.Utils
-                  , Graphics.UI.Bottle.Align
-                  , Graphics.UI.Bottle.Animation
-                  , Graphics.UI.Bottle.Animation.Id
-                  , Graphics.UI.Bottle.Direction
-                  , Graphics.UI.Bottle.EventMap
-                  , Graphics.UI.Bottle.Font
-                  , Graphics.UI.Bottle.Glue
-                  , Graphics.UI.Bottle.Hover
-                  , Graphics.UI.Bottle.Main
-                  , Graphics.UI.Bottle.Main.Animation
-                  , Graphics.UI.Bottle.Main.Image
-                  , Graphics.UI.Bottle.MetaKey
-                  , Graphics.UI.Bottle.ModKey
-                  , Graphics.UI.Bottle.Rect
-                  , Graphics.UI.Bottle.View
-                  , Graphics.UI.Bottle.Widget
-                  , Graphics.UI.Bottle.Widget.Id
-                  , Graphics.UI.Bottle.Widget.TreeLayout
-                  , Graphics.UI.Bottle.Widgets.Choice
-                  , Graphics.UI.Bottle.Widgets.EventMapHelp
-                  , Graphics.UI.Bottle.Widgets.FocusDelegator
-                  , Graphics.UI.Bottle.Widgets.Grid
-                  , Graphics.UI.Bottle.Widgets.GridView
-                  , Graphics.UI.Bottle.Widgets.Spacer
-                  , Graphics.UI.Bottle.Widgets.StdKeys
-                  , Graphics.UI.Bottle.Widgets.TextEdit
-                  , Graphics.UI.Bottle.Widgets.TextEdit.Property
-                  , Graphics.UI.Bottle.Widgets.TextView
-                  , Graphics.UI.Bottle.Zoom
                   , Graphics.UI.GLFW.Events
                   , Graphics.UI.GLFW.Instances
                   , Graphics.UI.GLFW.Utils

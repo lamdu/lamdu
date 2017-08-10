@@ -5,7 +5,7 @@ module Lamdu.VersionControl.Actions
 
 import           Control.Lens
 import           Data.Store.Rev.Branch (Branch)
-import qualified Graphics.UI.Bottle.Widget as Widget
+import qualified GUI.Momentu.Widget as Widget
 
 data Actions t m = Actions
     { branches :: [Branch t]

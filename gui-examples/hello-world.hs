@@ -6,12 +6,12 @@ import           Control.Lens.Operators ((&), (^.))
 import           Data.MRUMemo (memoIO)
 import           Data.Vector.Vector2 (Vector2(..))
 import qualified Graphics.DrawingCombinators as Draw
-import           Graphics.UI.Bottle.EventMap (strongerEvents)
-import qualified Graphics.UI.Bottle.Main as Main
-import           Graphics.UI.Bottle.Widget (Widget)
-import qualified Graphics.UI.Bottle.Widget as Widget
-import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
-import qualified Graphics.UI.Bottle.Zoom as Zoom
+import           GUI.Momentu.EventMap (strongerEvents)
+import qualified GUI.Momentu.Main as Main
+import           GUI.Momentu.Widget (Widget)
+import qualified GUI.Momentu.Widget as Widget
+import qualified GUI.Momentu.Widgets.TextView as TextView
+import qualified GUI.Momentu.Zoom as Zoom
 import qualified Graphics.UI.GLFW.Utils as GLFWUtils
 
 import           Prelude.Compat

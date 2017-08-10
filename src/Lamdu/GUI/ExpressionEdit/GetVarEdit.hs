@@ -7,18 +7,18 @@ import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
 import qualified Data.ByteString.Char8 as SBS8
 import           Data.Store.Transaction (Transaction)
-import           Graphics.UI.Bottle.Align (WithTextPos)
-import qualified Graphics.UI.Bottle.Align as Align
-import qualified Graphics.UI.Bottle.EventMap as E
-import           Graphics.UI.Bottle.Font (Underline(..))
-import           Graphics.UI.Bottle.Glue ((/-/))
-import qualified Graphics.UI.Bottle.Hover as Hover
-import qualified Graphics.UI.Bottle.View as View
-import           Graphics.UI.Bottle.Widget (Widget)
-import qualified Graphics.UI.Bottle.Widget as Widget
-import qualified Graphics.UI.Bottle.Widget.TreeLayout as TreeLayout
-import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
-import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
+import           GUI.Momentu.Align (WithTextPos)
+import qualified GUI.Momentu.Align as Align
+import qualified GUI.Momentu.EventMap as E
+import           GUI.Momentu.Font (Underline(..))
+import           GUI.Momentu.Glue ((/-/))
+import qualified GUI.Momentu.Hover as Hover
+import qualified GUI.Momentu.View as View
+import           GUI.Momentu.Widget (Widget)
+import qualified GUI.Momentu.Widget as Widget
+import qualified GUI.Momentu.Widget.TreeLayout as TreeLayout
+import qualified GUI.Momentu.Widgets.Spacer as Spacer
+import qualified GUI.Momentu.Widgets.TextView as TextView
 import           Lamdu.Calc.Type.Scheme (schemeType)
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config

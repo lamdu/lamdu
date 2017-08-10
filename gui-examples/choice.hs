@@ -9,17 +9,17 @@ import           Data.IORef
 import           Data.MRUMemo (memoIO)
 import           Data.Vector.Vector2 (Vector2(..))
 import qualified Graphics.DrawingCombinators as Draw
-import           Graphics.UI.Bottle.Animation (AnimId)
-import qualified Graphics.UI.Bottle.EventMap as E
-import qualified Graphics.UI.Bottle.Main as MainLoop
-import           Graphics.UI.Bottle.MetaKey (MetaKey(..), noMods, toModKey)
-import qualified Graphics.UI.Bottle.View as View
-import qualified Graphics.UI.Bottle.Widget as Widget
-import           Graphics.UI.Bottle.Widget (Widget)
-import qualified Graphics.UI.Bottle.Widgets.Choice as Choice
-import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
-import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
-import qualified Graphics.UI.Bottle.Zoom as Zoom
+import           GUI.Momentu.Animation (AnimId)
+import qualified GUI.Momentu.EventMap as E
+import qualified GUI.Momentu.Main as MainLoop
+import           GUI.Momentu.MetaKey (MetaKey(..), noMods, toModKey)
+import qualified GUI.Momentu.View as View
+import qualified GUI.Momentu.Widget as Widget
+import           GUI.Momentu.Widget (Widget)
+import qualified GUI.Momentu.Widgets.Choice as Choice
+import qualified GUI.Momentu.Widgets.FocusDelegator as FocusDelegator
+import qualified GUI.Momentu.Widgets.TextView as TextView
+import qualified GUI.Momentu.Zoom as Zoom
 import qualified Graphics.UI.GLFW as GLFW
 import qualified Graphics.UI.GLFW.Utils as GLFWUtils
 

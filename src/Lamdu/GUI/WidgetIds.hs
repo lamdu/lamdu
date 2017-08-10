@@ -6,9 +6,9 @@ module Lamdu.GUI.WidgetIds
 
 import           Data.UUID.Types (UUID)
 import qualified Data.UUID.Utils as UUIDUtils
-import           Graphics.UI.Bottle.Animation (AnimId)
-import qualified Graphics.UI.Bottle.Widget as Widget
-import           Graphics.UI.Bottle.Widget.Id (Id(..))
+import           GUI.Momentu.Animation (AnimId)
+import qualified GUI.Momentu.Widget as Widget
+import           GUI.Momentu.Widget.Id (Id(..))
 import           Lamdu.GUI.WidgetIdIRef
 import qualified Lamdu.Sugar.EntityId as EntityId
 import qualified Lamdu.Sugar.Types as Sugar

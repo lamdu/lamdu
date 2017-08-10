@@ -16,7 +16,7 @@ import           Data.Store.Rev.View (View)
 import qualified Data.Store.Rev.View as View
 import           Data.Store.Transaction (Transaction, setP, getP, modP)
 import qualified Data.Store.Transaction as Transaction
-import qualified Graphics.UI.Bottle.Widget as Widget
+import qualified GUI.Momentu.Widget as Widget
 import           Lamdu.Data.DbLayout (DbM)
 import qualified Lamdu.Data.DbLayout as DbLayout
 import           Lamdu.VersionControl.Actions (Actions(Actions))

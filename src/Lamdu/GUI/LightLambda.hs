@@ -3,7 +3,7 @@ module Lamdu.GUI.LightLambda
     ( withUnderline
     ) where
 
-import           Graphics.UI.Bottle.Widgets.TextView (Underline(..))
+import           GUI.Momentu.Widgets.TextView (Underline(..))
 import           Lamdu.Config.Theme (Theme)
 import qualified Lamdu.Config.Theme as Theme
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)

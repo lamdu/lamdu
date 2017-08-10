@@ -6,7 +6,7 @@ module Lamdu.GUI.ExpressionEdit.HoleEdit.ShownResult
 
 import qualified Control.Lens as Lens
 import qualified Data.Store.Transaction as Transaction
-import qualified Graphics.UI.Bottle.Widget as Widget
+import qualified GUI.Momentu.Widget as Widget
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 
 type T = Transaction.Transaction
