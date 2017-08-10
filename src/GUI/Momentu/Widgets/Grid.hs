@@ -26,7 +26,6 @@ import           GUI.Momentu.Widget (R, Widget(Widget))
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.GridView as GridView
 import           GUI.Momentu.Widgets.StdKeys (DirKeys(..), stdDirKeys)
-import qualified Graphics.UI.GLFW as GLFW
 
 import           Lamdu.Prelude
 
@@ -98,12 +97,12 @@ data Keys key = Keys
 stdKeys :: Keys MetaKey
 stdKeys = Keys
     { keysDir = k <$> stdDirKeys
-    , keysMoreLeft = [k GLFW.Key'Home]
-    , keysMoreRight = [k GLFW.Key'End]
-    , keysLeftMost = [MetaKey.cmd GLFW.Key'Home]
-    , keysRightMost = [MetaKey.cmd GLFW.Key'End]
-    , keysTop = [k GLFW.Key'PageUp]
-    , keysBottom = [k GLFW.Key'PageDown]
+    , keysMoreLeft = [k MetaKey.Key'Home]
+    , keysMoreRight = [k MetaKey.Key'End]
+    , keysLeftMost = [MetaKey.cmd MetaKey.Key'Home]
+    , keysRightMost = [MetaKey.cmd MetaKey.Key'End]
+    , keysTop = [k MetaKey.Key'PageUp]
+    , keysBottom = [k MetaKey.Key'PageDown]
     }
     where
         k = MetaKey noMods

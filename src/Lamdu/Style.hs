@@ -9,7 +9,7 @@ module Lamdu.Style
     ) where
 
 import qualified Control.Lens as Lens
-import qualified Graphics.DrawingCombinators as Draw
+import qualified GUI.Momentu.Draw as Draw
 import qualified GUI.Momentu.Main as MainLoop
 import           GUI.Momentu.Main.Animation (AnimConfig(..))
 import           GUI.Momentu.MetaKey (MetaKey)

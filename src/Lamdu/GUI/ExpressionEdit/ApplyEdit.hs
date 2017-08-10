@@ -11,6 +11,7 @@ import           GUI.Momentu.Align (WithTextPos)
 import qualified GUI.Momentu.Align as Align
 import           GUI.Momentu.Animation (AnimId)
 import qualified GUI.Momentu.Animation as Anim
+import qualified GUI.Momentu.Draw as Draw
 import           GUI.Momentu.Element (Element)
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.EventMap as E
@@ -20,7 +21,6 @@ import           GUI.Momentu.View (View)
 import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
-import qualified Graphics.DrawingCombinators as Draw
 import qualified Lamdu.CharClassification as CharClassification
 import qualified Lamdu.GUI.ExpressionEdit.BinderEdit as BinderEdit
 import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
@@ -56,7 +56,7 @@ mkPrecedence apply =
             apply ^. Sugar.aFunc . Sugar.bvNameRef . Sugar.nrName
             & nName & Text.unpack
 
-infixMarker :: Vector2 Anim.R -> Draw.Image ()
+infixMarker :: Vector2 Anim.R -> Draw.Image
 infixMarker (Vector2 w h) =
     mconcat
     [ Draw.line (x, 0) (0,x)

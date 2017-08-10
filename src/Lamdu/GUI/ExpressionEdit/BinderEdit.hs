@@ -17,11 +17,13 @@ import           Data.Store.Transaction (Transaction)
 import qualified Data.Text as Text
 import           GUI.Momentu.Align (WithTextPos)
 import qualified GUI.Momentu.Align as Align
+import qualified GUI.Momentu.Draw as Draw
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Glue ((/-/), (/|/))
 import qualified GUI.Momentu.Glue as Glue
 import           GUI.Momentu.MetaKey (MetaKey(..), noMods, toModKey)
+import qualified GUI.Momentu.MetaKey as MetaKey
 import qualified GUI.Momentu.Responsive as Responsive
 import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
@@ -29,8 +31,6 @@ import qualified GUI.Momentu.Widgets.Choice as Choice
 import qualified GUI.Momentu.Widgets.FocusDelegator as FocusDelegator
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified GUI.Momentu.Widgets.TextView as TextView
-import qualified Graphics.DrawingCombinators as Draw
-import qualified Graphics.UI.GLFW as GLFW
 import           Lamdu.CharClassification (operatorChars)
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Config.Theme as Theme
@@ -80,9 +80,9 @@ presentationModeChoiceConfig :: Choice.Config
 presentationModeChoiceConfig = Choice.Config
     { Choice.cwcFDConfig =
         FocusDelegator.Config
-        { FocusDelegator.focusChildKeys = [MetaKey noMods GLFW.Key'Enter]
+        { FocusDelegator.focusChildKeys = [MetaKey noMods MetaKey.Key'Enter]
         , FocusDelegator.focusChildDoc = E.Doc ["Presentation Mode", "Select"]
-        , FocusDelegator.focusParentKeys = [MetaKey noMods GLFW.Key'Enter]
+        , FocusDelegator.focusParentKeys = [MetaKey noMods MetaKey.Key'Enter]
         , FocusDelegator.focusParentDoc = E.Doc ["Presentation Mode", "Choose selected"]
         }
     , Choice.cwcOrientation = Choice.Vertical
@@ -190,7 +190,7 @@ blockEventMap =
     & E.keyPresses (dirKeys <&> toModKey)
     (E.Doc ["Navigation", "Move", "(blocked)"])
     where
-        dirKeys = [GLFW.Key'Left, GLFW.Key'Right] <&> MetaKey noMods
+        dirKeys = [MetaKey.Key'Left, MetaKey.Key'Right] <&> MetaKey noMods
 
 makeScopeNavEdit ::
     Monad m =>
@@ -223,8 +223,8 @@ makeScopeNavEdit binder myId curCursor =
             _ -> return (mempty, Nothing)
     where
         mkScopeEventMap l r = makeScopeEventMap l r curCursor setScope
-        leftKeys = [MetaKey noMods GLFW.Key'Left]
-        rightKeys = [MetaKey noMods GLFW.Key'Right]
+        leftKeys = [MetaKey noMods MetaKey.Key'Left]
+        rightKeys = [MetaKey noMods MetaKey.Key'Right]
         scopes :: [(Text, Maybe Sugar.BinderParamScopeId)]
         scopes =
             [ ("◀", sMPrevParamScope curCursor)
@@ -414,7 +414,7 @@ jumpToRHS ::
 jumpToRHS rhsId =
     ExprGuiM.mkPrejumpPosSaver
     <&> Lens.mapped .~ WidgetIds.fromEntityId rhsId
-    <&> Widget.keysEventMapMovesCursor [MetaKey noMods GLFW.Key'Equal]
+    <&> Widget.keysEventMapMovesCursor [MetaKey noMods MetaKey.Key'Equal]
         (E.Doc ["Navigation", "Jump to Def Body"])
 
 makeBinderBodyEdit ::

@@ -8,9 +8,9 @@ module Lamdu.GUI.ExpressionEdit.TagEdit
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
 import           Data.Store.Transaction (Transaction)
-import qualified Graphics.DrawingCombinators as Draw
 import           GUI.Momentu.Align (WithTextPos)
 import qualified GUI.Momentu.Align as Align
+import qualified GUI.Momentu.Draw as Draw
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.View (View)
 import           GUI.Momentu.Widget (Widget)

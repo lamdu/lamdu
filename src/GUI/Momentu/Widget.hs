@@ -79,6 +79,7 @@ import           GUI.Momentu.Glue (Glue(..), Orientation(..))
 import qualified GUI.Momentu.Glue as Glue
 import           GUI.Momentu.MetaKey (MetaKey, toModKey)
 import           GUI.Momentu.ModKey (ModKey(..))
+import qualified GUI.Momentu.ModKey as ModKey
 import           GUI.Momentu.Rect (Rect(..))
 import qualified GUI.Momentu.Rect as Rect
 import           GUI.Momentu.View (View(..))
@@ -87,7 +88,6 @@ import           GUI.Momentu.Widget.Id (Id(..))
 import qualified GUI.Momentu.Widget.Id as Id
 import           GUI.Momentu.Widgets.StdKeys (DirKeys(..), stdDirKeys)
 import qualified Graphics.DrawingCombinators as Draw
-import qualified Graphics.UI.GLFW as GLFW
 
 import           Lamdu.Prelude
 
@@ -215,7 +215,7 @@ instance Functor f => Glue (Widget (f EventResult)) (Widget (f EventResult)) whe
 data NavDir = NavDir
     { dirCons :: Rect.Range R -> Direction
     , dirName :: Text
-    , dirKeys :: [GLFW.Key]
+    , dirKeys :: [ModKey.Key]
     }
 
 glueStates ::

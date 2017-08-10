@@ -20,7 +20,6 @@ import qualified GUI.Momentu.MetaKey as MetaKey
 import           GUI.Momentu.ModKey (ModKey(..))
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Grid as Grid
-import qualified Graphics.UI.GLFW as GLFW
 import           Lamdu.CharClassification (operatorChars, bracketChars, digitChars, hexDigitChars, charPrecedence)
 import qualified Lamdu.Config as Config
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.Info (HoleInfo(..))
@@ -37,14 +36,14 @@ import           Lamdu.Prelude
 type T = Transaction.Transaction
 
 blockDownEvents :: (Monoid a, Applicative f, E.HasEventMap w) => w (f a) -> w (f a)
-blockDownEvents = blockDirection GLFW.Key'Down "down"
+blockDownEvents = blockDirection MetaKey.Key'Down "down"
 
 blockUpEvents :: (Monoid a, Applicative f, E.HasEventMap w) => w (f a) -> w (f a)
-blockUpEvents = blockDirection GLFW.Key'Up "up"
+blockUpEvents = blockDirection MetaKey.Key'Up "up"
 
 blockDirection ::
     (Monoid a, Applicative f, E.HasEventMap w) =>
-    GLFW.Key -> E.Subtitle -> w (f a) -> w (f a)
+    MetaKey.Key -> E.Subtitle -> w (f a) -> w (f a)
 blockDirection key keyName =
     pure mempty
     & E.keyPresses
@@ -69,7 +68,7 @@ adHocTextEditEventMap holeConfig holeInfo searchTermProp =
         deleteCharEventMap
             | Text.null searchTerm = mempty
             | otherwise =
-                  E.keyPress (ModKey mempty GLFW.Key'Backspace)
+                  E.keyPress (ModKey mempty MetaKey.Key'Backspace)
                   (E.Doc ["Edit", "Search Term", "Delete backwards"]) $
                   changeText Text.init
         snoc x = (<> Text.singleton x)
@@ -81,8 +80,8 @@ disallowedHoleChars = "`\"\n "
 
 toLiteralTextKeys :: [MetaKey]
 toLiteralTextKeys =
-    [ MetaKey.shift GLFW.Key'Apostrophe
-    , MetaKey MetaKey.noMods GLFW.Key'Apostrophe
+    [ MetaKey.shift MetaKey.Key'Apostrophe
+    , MetaKey MetaKey.noMods MetaKey.Key'Apostrophe
     ]
 
 allowedCharsFromSearchTerm ::
@@ -131,7 +130,7 @@ disallowCharsFromSearchTerm Config.Hole{..} holeInfo mPos =
     E.filterChars (allowedCharsFromSearchTerm holeInfo mPos)
 
 deleteKeys :: [ModKey] -> E.EventMap a -> E.EventMap a
-deleteKeys = E.deleteKeys . map (E.KeyEvent GLFW.KeyState'Pressed)
+deleteKeys = E.deleteKeys . map (E.KeyEvent MetaKey.KeyState'Pressed)
 
 pickEventMap ::
     Monad m =>

@@ -15,19 +15,9 @@ import           Data.Store.Db (Db)
 import           Data.Store.Transaction (Transaction)
 import           GHC.Conc (setNumCapabilities, getNumProcessors)
 import           GHC.Stack (whoCreated)
-import           GUI.Momentu.Animation (AnimId)
-import qualified GUI.Momentu.Draw as MDraw
-import qualified GUI.Momentu.EventMap as EventMap
-import           GUI.Momentu.Main (mainLoopWidget)
+import qualified GUI.Momentu as M
 import qualified GUI.Momentu.Main as MainLoop
-import           GUI.Momentu.Widget (Widget)
-import qualified GUI.Momentu.Widget as Widget
-import           GUI.Momentu.Zoom (Zoom)
-import qualified GUI.Momentu.Zoom as Zoom
-import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.Rendering.OpenGL.GL as GL
-import qualified Graphics.UI.GLFW as GLFW
-import qualified Graphics.UI.GLFW.Utils as GLFWUtils
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
 import           Lamdu.Config.Sampler (Sampler, sConfig, sTheme)
@@ -109,14 +99,14 @@ importPath path db =
     <&> VersionControl.runAction
     >>= DbLayout.runDbTransaction db
 
-createWindow :: String -> Opts.WindowMode -> IO GLFW.Window
+createWindow :: String -> Opts.WindowMode -> IO M.Window
 createWindow title mode =
     do
         monitor <-
-            GLFW.getPrimaryMonitor
+            M.getPrimaryMonitor
             >>= maybe (fail "GLFW: Can't get primary monitor") return
-        videoModeSize <- GLFWUtils.getVideoModeSize monitor
-        let createWin = GLFWUtils.createWindow title
+        videoModeSize <- M.getVideoModeSize monitor
+        let createWin = M.createWindow title
         case mode of
             Opts.FullScreen         -> createWin (Just monitor) videoModeSize
             Opts.VideoModeSize      -> createWin Nothing videoModeSize
@@ -144,8 +134,8 @@ exportActions config evalResults =
         importAll path = Export.fileImportAll path <&> fmap pure & GUIMain.M
 
 makeRootWidget ::
-    Fonts Draw.Font -> Db -> IORef Settings -> EvalManager.Evaluator ->
-    Config -> Theme -> MainLoop.Env -> IO (Widget (MainLoop.M Widget.EventResult))
+    Fonts M.Font -> Db -> IORef Settings -> EvalManager.Evaluator ->
+    Config -> Theme -> MainLoop.Env -> IO (M.Widget (MainLoop.M M.EventResult))
 makeRootWidget fonts db settingsRef evaluator config theme mainLoopEnv =
     do
         eventMap <- Settings.mkEventMap (settingsChangeHandler evaluator) config settingsRef
@@ -167,7 +157,7 @@ makeRootWidget fonts db settingsRef evaluator config theme mainLoopEnv =
                     EvalManager.runTransactionAndMaybeRestartEvaluator evaluator action
                 _ -> DbLayout.runDbTransaction db action
         mkWidgetWithFallback dbToIO env
-            <&> EventMap.weakerEvents (eventMap <&> liftIO)
+            <&> M.weakerEvents (eventMap <&> liftIO)
 
 withMVarProtection :: a -> (MVar (Maybe a) -> IO b) -> IO b
 withMVarProtection val =
@@ -186,7 +176,7 @@ runEditor opts db =
         themeRef <- newIORef defaultTheme
         configSampler <- ConfigSampler.new defaultTheme
 
-        GLFWUtils.withGLFW $ do
+        M.withGLFW $ do
             win <-
                 createWindow
                 (opts ^. Opts.eoWindowTitle)
@@ -211,7 +201,7 @@ runEditor opts db =
                                 <&> liftIO
                         in  makeRootWidget fonts db settingsRef evaluator
                             config theme env
-                            <&> EventMap.weakerEvents themeEvents
+                            <&> M.weakerEvents themeEvents
     where
         subpixel
             | opts ^. Opts.eoSubpixelEnabled = Font.LCDSubPixelEnabled
@@ -249,14 +239,14 @@ curSampleFonts sample =
 
 makeGetFonts ::
     Font.LCDSubPixelEnabled ->
-    IO (Zoom -> ConfigSampler.Sample -> IO (Fonts Draw.Font))
+    IO (M.Zoom -> ConfigSampler.Sample -> IO (Fonts M.Font))
 makeGetFonts subpixel =
     Font.new subpixel & uncurry & memoIO
     <&> f
     where
         f cachedLoadFonts zoom sample =
             do
-                sizeFactor <- Zoom.getZoomFactor zoom
+                sizeFactor <- M.getZoomFactor zoom
                 cachedLoadFonts
                     ( defaultFontPath sample
                     , curSampleFonts sample <&> _1 *~ sizeFactor
@@ -264,9 +254,9 @@ makeGetFonts subpixel =
 
 mainLoop ::
     Font.LCDSubPixelEnabled ->
-    GLFW.Window -> RefreshScheduler -> Sampler ->
-    (Fonts Draw.Font -> Config -> Theme -> MainLoop.Env ->
-    IO (Widget (MainLoop.M Widget.EventResult))) -> IO ()
+    M.Window -> RefreshScheduler -> Sampler ->
+    (Fonts M.Font -> Config -> Theme -> MainLoop.Env ->
+    IO (M.Widget (MainLoop.M M.EventResult))) -> IO ()
 mainLoop subpixel win refreshScheduler configSampler iteration =
     do
         getFonts <- makeGetFonts subpixel
@@ -276,7 +266,7 @@ mainLoop subpixel win refreshScheduler configSampler iteration =
                     sample <- ConfigSampler.getSample configSampler
                     fonts <- getFonts (env ^. MainLoop.eZoom) sample
                     iteration fonts (sample ^. sConfig) (sample ^. sTheme) env
-        mainLoopWidget win makeWidget MainLoop.Options
+        M.mainLoopWidget win makeWidget MainLoop.Options
             { getConfig =
                 do
                     sample <- ConfigSampler.getSample configSampler
@@ -307,7 +297,7 @@ mainLoop subpixel win refreshScheduler configSampler iteration =
 
 mkWidgetWithFallback ::
     (forall a. T DbLayout.DbM a -> IO a) ->
-    GUIMain.Env -> IO (Widget (MainLoop.M Widget.EventResult))
+    GUIMain.Env -> IO (M.Widget (MainLoop.M M.EventResult))
 mkWidgetWithFallback dbToIO env =
     do
         (isValid, widget) <-
@@ -315,18 +305,18 @@ mkWidgetWithFallback dbToIO env =
             do
                 candidateWidget <- makeMainGui dbToIO env
                 (isValid, widget) <-
-                    if Widget.isFocused candidateWidget
+                    if M.isFocused candidateWidget
                     then return (True, candidateWidget)
                     else
-                        env & Widget.cursor .~ GUIMain.defaultCursor
+                        env & M.cursor .~ GUIMain.defaultCursor
                         & makeMainGui dbToIO
                         <&> (,) False
-                unless (Widget.isFocused widget) $
+                unless (M.isFocused widget) $
                     fail "Root cursor did not match"
                 return (isValid, widget)
-        unless isValid $ putStrLn $ "Invalid cursor: " ++ show (env ^. Widget.cursor)
+        unless isValid $ putStrLn $ "Invalid cursor: " ++ show (env ^. M.cursor)
         widget
-            & MDraw.backgroundColor (["background"] :: AnimId) (bgColor isValid theme)
+            & M.backgroundColor (["background"] :: M.AnimId) (bgColor isValid theme)
             & return
     where
         theme = env ^. GUIMain.envTheme
@@ -335,10 +325,10 @@ mkWidgetWithFallback dbToIO env =
 
 makeMainGui ::
     (forall a. T DbLayout.DbM a -> IO a) ->
-    GUIMain.Env -> T DbLayout.DbM (Widget (MainLoop.M Widget.EventResult))
+    GUIMain.Env -> T DbLayout.DbM (M.Widget (MainLoop.M M.EventResult))
 makeMainGui dbToIO env =
     GUIMain.make env
-    <&> Widget.events %~ \act ->
+    <&> M.widgetEvents %~ \act ->
     act ^. GUIMain.m
     <&> dbToIO
     & join

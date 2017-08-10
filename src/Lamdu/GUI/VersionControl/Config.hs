@@ -5,8 +5,7 @@ module Lamdu.GUI.VersionControl.Config
 
 import qualified Data.Aeson.Types as Aeson
 import           GHC.Generics (Generic)
-import qualified Graphics.DrawingCombinators as Draw
-import           Graphics.DrawingCombinators.Utils ()
+import qualified GUI.Momentu.Draw as Draw
 import           GUI.Momentu.MetaKey (MetaKey)
 
 data Config = Config

@@ -29,8 +29,8 @@ instance Aeson.FromJSON Config
 defaultConfig :: Config
 defaultConfig =
     Config
-    { shrinkKeys = [MetaKey.cmd GLFW.Key'Minus]
-    , enlargeKeys = [MetaKey.cmd GLFW.Key'Equal]
+    { shrinkKeys = [MetaKey.cmd MetaKey.Key'Minus]
+    , enlargeKeys = [MetaKey.cmd MetaKey.Key'Equal]
     , shrinkFactor = 1.1
     , enlargeFactor = 1.1
     }

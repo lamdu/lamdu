@@ -31,7 +31,7 @@ import           Lamdu.Prelude hiding (lookup)
 
 {-# ANN module ("HLint: ignore Use camelCase"::String) #-}
 
-data KeyEvent = KeyEvent GLFW.KeyState ModKey
+data KeyEvent = KeyEvent ModKey.KeyState ModKey
     deriving (Generic, Show, Eq, Ord)
 
 type Clipboard = Text
@@ -103,9 +103,9 @@ data EventMap a = EventMap
     } deriving (Generic, Functor)
 
 prettyKeyEvent :: KeyEvent -> InputDoc
-prettyKeyEvent (KeyEvent GLFW.KeyState'Pressed modKey) = ModKey.pretty modKey
-prettyKeyEvent (KeyEvent GLFW.KeyState'Repeating modKey) = "Repeat " <> ModKey.pretty modKey
-prettyKeyEvent (KeyEvent GLFW.KeyState'Released modKey) = "Depress " <> ModKey.pretty modKey
+prettyKeyEvent (KeyEvent ModKey.KeyState'Pressed modKey) = ModKey.pretty modKey
+prettyKeyEvent (KeyEvent ModKey.KeyState'Repeating modKey) = "Repeat " <> ModKey.pretty modKey
+prettyKeyEvent (KeyEvent ModKey.KeyState'Released modKey) = "Depress " <> ModKey.pretty modKey
 
 emDocs :: Lens.IndexedTraversal' InputDoc (EventMap a) Doc
 emDocs f EventMap{..} =
@@ -176,7 +176,7 @@ isCharMods modKeys =
         ]
 
 -- TODO: Remove this:
-mkModKey :: GLFW.ModifierKeys -> GLFW.Key -> ModKey
+mkModKey :: GLFW.ModifierKeys -> ModKey.Key -> ModKey
 mkModKey = ModKey
 
 filterByKey :: (k -> Bool) -> Map k v -> Map k v
@@ -218,7 +218,7 @@ lookupCharGroup :: [CharGroupHandler a] -> Events.KeyEvent -> Maybe a
 lookupCharGroup charGroups (Events.KeyEvent _k _scanCode keyState _modKeys mchar) =
     listToMaybe $
     do
-        GLFW.KeyState'Pressed <- return keyState
+        ModKey.KeyState'Pressed <- return keyState
         char <- mchar ^.. Lens._Just
         CharGroupHandler _ chars handler <- charGroups
         guard $ Set.member char chars
@@ -228,7 +228,7 @@ lookupAllCharHandler :: [AllCharsHandler t] -> Events.KeyEvent -> Maybe t
 lookupAllCharHandler allCharHandlers (Events.KeyEvent _k _scanCode keyState _modKeys mchar) =
     listToMaybe $
     do
-        GLFW.KeyState'Pressed <- return keyState
+        ModKey.KeyState'Pressed <- return keyState
         char <- mchar ^.. Lens._Just
         AllCharsHandler _ handler <- allCharHandlers
         (handler ^. dhHandler) char ^.. Lens._Just
@@ -267,15 +267,15 @@ keyEventMap :: KeyEvent -> Doc -> a -> EventMap a
 keyEventMap eventType doc handler = keyEventMapH eventType doc (Doesn'tWantClipboard handler)
 
 keyPress :: ModKey -> Doc -> a -> EventMap a
-keyPress key = keyEventMap (KeyEvent GLFW.KeyState'Pressed key)
+keyPress key = keyEventMap (KeyEvent ModKey.KeyState'Pressed key)
 
 keyPresses :: [ModKey] -> Doc -> a -> EventMap a
 keyPresses = mconcat . map keyPress
 
 keyPressOrRepeat :: ModKey -> Doc -> a -> EventMap a
 keyPressOrRepeat key doc res =
-    keyEventMap (KeyEvent GLFW.KeyState'Pressed key) doc res <>
-    keyEventMap (KeyEvent GLFW.KeyState'Repeating key) doc res
+    keyEventMap (KeyEvent ModKey.KeyState'Pressed key) doc res <>
+    keyEventMap (KeyEvent ModKey.KeyState'Repeating key) doc res
 
 dropEventMap :: InputDoc -> Doc -> ([FilePath] -> Maybe a) -> EventMap a
 dropEventMap iDoc oDoc handler =
@@ -283,7 +283,7 @@ dropEventMap iDoc oDoc handler =
 
 pasteOnKey :: ModKey -> Doc -> (Clipboard -> a) -> EventMap a
 pasteOnKey key doc handler =
-    keyEventMapH (KeyEvent GLFW.KeyState'Pressed key) doc (WantsClipboard handler)
+    keyEventMapH (KeyEvent ModKey.KeyState'Pressed key) doc (WantsClipboard handler)
 
 class HasEventMap f where eventMap :: Lens.Setter' (f a) (EventMap a)
 instance HasEventMap EventMap where eventMap = id

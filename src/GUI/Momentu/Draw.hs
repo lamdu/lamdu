@@ -3,6 +3,10 @@
 
 module GUI.Momentu.Draw
     ( addInnerFrame, backgroundColor
+    , Draw.Font, Draw.openFont, Draw.openFontNoLCD
+    , Draw.line, Draw.convexPoly, Draw.sprite
+    , Draw.tint
+    , Draw.Color(..), Draw.R, Image
     ) where
 
 import           Data.Vector.Vector2 (Vector2(..))
@@ -11,8 +15,11 @@ import qualified GUI.Momentu.Animation as Anim
 import           GUI.Momentu.Element (Element)
 import qualified GUI.Momentu.Element as Element
 import qualified Graphics.DrawingCombinators as Draw
+import           Graphics.DrawingCombinators.Utils ()
 
 import           Lamdu.Prelude
+
+type Image = Draw.Image ()
 
 backgroundColor ::
     (MonadReader env m, Element.HasAnimIdPrefix env, Element a) =>

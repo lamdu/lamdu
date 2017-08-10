@@ -8,37 +8,23 @@ import           Control.Monad.IO.Class (MonadIO(..))
 import           Data.IORef
 import           Data.MRUMemo (memoIO)
 import           Data.Text (Text)
-import           Data.Vector.Vector2 (Vector2(..))
-import qualified GUI.Momentu.Align as Align
-import           GUI.Momentu.Animation (AnimId)
-import qualified GUI.Momentu.Element as Element
-import qualified GUI.Momentu.EventMap as E
-import           GUI.Momentu.Glue ((/-/))
-import qualified GUI.Momentu.Main as MainLoop
-import           GUI.Momentu.MetaKey (MetaKey(..), noMods)
-import qualified GUI.Momentu.Draw as MDraw
-import           GUI.Momentu.Widget (Widget)
-import qualified GUI.Momentu.Widget as Widget
+import qualified GUI.Momentu as M
 import qualified GUI.Momentu.Widgets.Choice as Choice
 import qualified GUI.Momentu.Widgets.FocusDelegator as FocusDelegator
 import qualified GUI.Momentu.Widgets.TextView as TextView
-import qualified GUI.Momentu.Zoom as Zoom
-import qualified Graphics.DrawingCombinators as Draw
-import qualified Graphics.UI.GLFW as GLFW
-import qualified Graphics.UI.GLFW.Utils as GLFWUtils
 
 import           Prelude.Compat
 
 data Env = Env
-    { _eCursor :: Widget.Id
-    , _eAnimIdPrefix :: AnimId
+    { _eCursor :: M.WidgetId
+    , _eAnimIdPrefix :: M.AnimId
     , _eTextStyle :: TextView.Style
     }
 Lens.makeLenses ''Env
 
-instance TextView.HasStyle Env where style = eTextStyle
-instance Element.HasAnimIdPrefix Env where animIdPrefix = eAnimIdPrefix
-instance Widget.HasCursor Env where cursor = eCursor
+instance M.HasStyle Env where style = eTextStyle
+instance M.HasAnimIdPrefix Env where animIdPrefix = eAnimIdPrefix
+instance M.HasCursor Env where cursor = eCursor
 
 fontPath :: FilePath
 fontPath = "fonts/DejaVuSans.ttf"
@@ -46,52 +32,53 @@ fontPath = "fonts/DejaVuSans.ttf"
 main :: IO ()
 main =
     do
-        win <- GLFWUtils.createWindow "Hello World" Nothing (Vector2 800 400)
-        cachedOpenFont <- memoIO (`Draw.openFont` fontPath)
+        win <- M.createWindow "Hello World" Nothing (M.Vector2 800 400)
+        cachedOpenFont <- memoIO (`M.openFont` fontPath)
         choiceRef <- newIORef "blue"
-        MainLoop.defaultOptions fontPath
-            >>= MainLoop.mainLoopWidget win (makeWidget choiceRef cachedOpenFont)
-    & GLFWUtils.withGLFW
+        M.defaultOptions fontPath
+            >>= M.mainLoopWidget win (makeWidget choiceRef cachedOpenFont)
+    & M.withGLFW
 
-colors :: [(Text, Draw.Color)]
+colors :: [(Text, M.Color)]
 colors =
-    [ ("black" , Draw.Color 0 0 0 1)
-    , ("blue"  , Draw.Color 0 0 1 1)
-    , ("green" , Draw.Color 0 1 0 1)
-    , ("teal"  , Draw.Color 0 1 1 1)
-    , ("red"   , Draw.Color 1 0 0 1)
-    , ("purple", Draw.Color 1 0 1 1)
-    , ("brown" , Draw.Color 0 0.5 0.5 1)
-    , ("grey"  , Draw.Color 0.5 0.5 0.5 1)
+    [ ("black" , M.Color 0 0 0 1)
+    , ("blue"  , M.Color 0 0 1 1)
+    , ("green" , M.Color 0 1 0 1)
+    , ("teal"  , M.Color 0 1 1 1)
+    , ("red"   , M.Color 1 0 0 1)
+    , ("purple", M.Color 1 0 1 1)
+    , ("brown" , M.Color 0.8 0.5 0 1)
+    , ("grey"  , M.Color 0.5 0.5 0.5 1)
     ]
 
 makeWidget ::
     MonadIO m =>
-    IORef Text -> (Float -> IO Draw.Font) -> MainLoop.Env -> IO (Widget (m Widget.EventResult))
+    IORef Text -> (Float -> IO M.Font) -> M.MainLoopEnv ->
+    IO (M.Widget (m M.EventResult))
 makeWidget choiceRef getFont mainEnv =
     do
-        sizeFactor <- Zoom.getZoomFactor (mainEnv ^. MainLoop.eZoom)
+        sizeFactor <- M.getZoomFactor (mainEnv ^. M.eZoom)
         font <- getFont (sizeFactor * 20)
         let env =
                 Env
                 { _eTextStyle = TextView.whiteText font
-                , _eCursor = mainEnv ^. Widget.cursor
+                , _eCursor = mainEnv ^. M.cursor
                 , _eAnimIdPrefix = []
                 }
         let makeChoice (name, _color) =
-                (name, TextView.makeFocusableLabel name env ^. Align.tValue)
+                (name, TextView.makeFocusableLabel name env ^. M.tValue)
         choice <- readIORef choiceRef
         let choiceWidget =
                 Choice.make env (liftIO . writeIORef choiceRef)
                 (map makeChoice colors) choice
-                choiceConfig (Widget.Id [])
+                choiceConfig (M.WidgetId [])
         let Just color = lookup choice colors
         let box =
-                MDraw.unitSquare ["square"]
-                & Element.tint color
-                & Element.scale 100
-        choiceWidget /-/ box
-            & E.strongerEvents MainLoop.quitEventMap
+                M.unitSquare ["square"]
+                & M.tint color
+                & M.scale 100
+        box `M.above` choiceWidget
+            & M.strongerEvents M.quitEventMap
             & return
 
 choiceConfig :: Choice.Config
@@ -99,10 +86,10 @@ choiceConfig =
     Choice.Config
     { cwcFDConfig =
         FocusDelegator.Config
-        { focusChildKeys = [MetaKey noMods GLFW.Key'Enter]
-        , focusChildDoc = E.Doc ["Color", "Select"]
-        , focusParentKeys = [MetaKey noMods GLFW.Key'Enter]
-        , focusParentDoc = E.Doc ["Color", "Choose selected"]
+        { focusChildKeys = [M.MetaKey M.noMods M.Key'Enter]
+        , focusChildDoc = M.Doc ["Color", "Select"]
+        , focusParentKeys = [M.MetaKey M.noMods M.Key'Enter]
+        , focusParentDoc = M.Doc ["Color", "Choose selected"]
         }
     , cwcOrientation = Choice.Vertical
     , cwcExpandMode = Choice.ExplicitEntry

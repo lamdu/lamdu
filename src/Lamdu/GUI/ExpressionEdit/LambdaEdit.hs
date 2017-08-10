@@ -10,10 +10,10 @@ import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Glue ((/-/))
 import           GUI.Momentu.MetaKey (MetaKey(..), noMods)
+import qualified GUI.Momentu.MetaKey as MetaKey
 import qualified GUI.Momentu.Responsive as Responsive
 import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
-import qualified Graphics.UI.GLFW as GLFW
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.GUI.ExpressionEdit.BinderEdit as BinderEdit
@@ -94,7 +94,7 @@ mkLightLambda params myId =
             paramIds <&> WidgetIds.fromEntityId
             & traverse (Widget.isSubCursor ??)
             <&> or
-        let shrinkKeys = [MetaKey noMods GLFW.Key'Escape]
+        let shrinkKeys = [MetaKey noMods MetaKey.Key'Escape]
         let shrinkEventMap =
                 Widget.keysEventMapMovesCursor shrinkKeys
                 (E.Doc ["View", "Shrink Lambda Params"]) (return (lamId myId))

@@ -9,8 +9,7 @@ import           Control.Lens (Lens')
 import qualified Data.Aeson.Types as Aeson
 import           Data.Vector.Vector2 (Vector2)
 import           GHC.Generics (Generic)
-import qualified Graphics.DrawingCombinators as Draw
-import           Graphics.DrawingCombinators.Utils ()
+import qualified GUI.Momentu.Draw as Draw
 import           Lamdu.Font (FontSize, Fonts)
 import qualified Lamdu.GUI.VersionControl.Config as VersionControl
 
