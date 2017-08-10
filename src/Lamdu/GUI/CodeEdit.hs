@@ -21,8 +21,8 @@ import           GUI.Momentu.MetaKey (MetaKey)
 import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Align as Align
-import           GUI.Momentu.Widget.TreeLayout (TreeLayout)
-import qualified GUI.Momentu.Widget.TreeLayout as TreeLayout
+import           GUI.Momentu.Responsive (TreeLayout)
+import qualified GUI.Momentu.Responsive as TreeLayout
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
 import qualified GUI.Momentu.Widgets.TextView as TextView

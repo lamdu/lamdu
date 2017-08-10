@@ -21,7 +21,7 @@
 
 {-# LANGUAGE NoImplicitPrelude, TemplateHaskell, DeriveFunctor, FlexibleContexts, FlexibleInstances, MultiParamTypeClasses, TypeFamilies, UndecidableInstances #-}
 
-module GUI.Momentu.Widget.TreeLayout
+module GUI.Momentu.Responsive
     ( TreeLayout(..), render
 
     -- * Layout params

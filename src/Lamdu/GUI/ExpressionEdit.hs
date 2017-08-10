@@ -5,7 +5,7 @@ module Lamdu.GUI.ExpressionEdit
 
 import qualified Data.List as List
 import qualified GUI.Momentu.Widget as Widget
-import qualified GUI.Momentu.Widget.TreeLayout as TreeLayout
+import qualified GUI.Momentu.Responsive as TreeLayout
 import qualified GUI.Momentu.Widgets.TextView as TextView
 import qualified Lamdu.GUI.ExpressionEdit.ApplyEdit as ApplyEdit
 import qualified Lamdu.GUI.ExpressionEdit.CaseEdit as CaseEdit

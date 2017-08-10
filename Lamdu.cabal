@@ -118,10 +118,10 @@ Executable lamdu
                   , GUI.Momentu.MetaKey
                   , GUI.Momentu.ModKey
                   , GUI.Momentu.Rect
+                  , GUI.Momentu.Responsive
                   , GUI.Momentu.View
                   , GUI.Momentu.Widget
                   , GUI.Momentu.Widget.Id
-                  , GUI.Momentu.Widget.TreeLayout
                   , GUI.Momentu.Widgets.Choice
                   , GUI.Momentu.Widgets.EventMapHelp
                   , GUI.Momentu.Widgets.FocusDelegator

@@ -36,6 +36,6 @@ For hovering submenus and their like it has several layers of `Frame`s, so that 
 
 `AlignedWidget` is simply a `Widget` with an added alignment-point, used for positioning widgets when laying them out together in horizontal or vertical boxes.
 
-## GUI.Momentu.Widget.TreeLayout
+## GUI.Momentu.Responsive
 
 `TreeLayout` is a way of "laying out" a widget given layout constraints, designed for automatic layout of program code. Different nodes may be layed out either horizontally or vertically depending on the constraints.
