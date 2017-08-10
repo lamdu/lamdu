@@ -36,7 +36,7 @@ import qualified Lamdu.Sugar.Convert.DefExpr.OutdatedDefs as OutdatedDefs
 import qualified Lamdu.Sugar.Convert.Expression as ConvertExpr
 import qualified Lamdu.Sugar.Convert.Input as Input
 import qualified Lamdu.Sugar.Convert.Load as Load
-import           Lamdu.Sugar.Convert.Monad (Context(..), ScopeInfo(..))
+import           Lamdu.Sugar.Convert.Monad (Context(..), ScopeInfo(..), RecursiveRef(..))
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
 import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
@@ -114,14 +114,14 @@ postProcessExpr mkProp =
                         & Property.pureModify prop
                     return ConvertM.GoodExpr
 
-emptyScopeInfo :: Set (ExprIRef.DefI m) -> ScopeInfo m
-emptyScopeInfo globalsInScope =
+emptyScopeInfo :: Maybe (RecursiveRef m) -> ScopeInfo m
+emptyScopeInfo recursiveRef =
     ScopeInfo
     { _siTagParamInfos = mempty
     , _siNullParams = mempty
     , _siLetItems = mempty
     , _siMOuter = Nothing
-    , _siGlobalsInScope = globalsInScope
+    , _siRecursiveRef = recursiveRef
     }
 
 makeNominalsMap ::
@@ -161,7 +161,12 @@ convertInferDefExpr evalRes cp defType defExpr defI =
                 { _scInferContext = newInferContext
                 , _scNominalsMap = nomsMap
                 , _scCodeAnchors = cp
-                , _scScopeInfo = emptyScopeInfo (Set.singleton defI)
+                , _scScopeInfo =
+                        emptyScopeInfo
+                        ( Just RecursiveRef
+                          { _rrDefI = defI
+                          }
+                        )
                 , _scPostProcessRoot = postProcessDef defI
                 , _scOutdatedDefinitions = outdatedDefinitions
                 , _scInlineableDefinitions =
@@ -215,7 +220,7 @@ convertExpr evalRes cp prop =
                 { _scInferContext = newInferContext
                 , _scNominalsMap = nomsMap
                 , _scCodeAnchors = cp
-                , _scScopeInfo = emptyScopeInfo Set.empty
+                , _scScopeInfo = emptyScopeInfo Nothing
                 , _scPostProcessRoot = postProcessExpr prop
                 , _scOutdatedDefinitions = outdatedDefinitions
                 , _scInlineableDefinitions =

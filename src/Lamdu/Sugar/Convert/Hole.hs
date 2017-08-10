@@ -205,11 +205,13 @@ locals sugarContext exprPl =
     exprPl ^. Input.inferredScope
     & Infer.scopeToTypeMap
     & Map.keys
-    & filter (not . isGlobalInScope)
+    & filter (not . isRecursiveRef)
     where
-        isGlobalInScope varId =
-            sugarContext ^. ConvertM.scScopeInfo . ConvertM.siGlobalsInScope .
-            Lens.contains (ExprIRef.defI varId)
+        recursiveVar =
+            sugarContext
+            ^? ConvertM.scScopeInfo . ConvertM.siRecursiveRef . Lens._Just .
+            ConvertM.rrDefI . Lens.to ExprIRef.globalId
+        isRecursiveRef varId = maybe False (== varId) recursiveVar
 
 mkNominalOptions :: [(T.NominalId, N.Nominal)] -> [Val ()]
 mkNominalOptions nominals =

@@ -74,9 +74,11 @@ convertGlobal ::
 convertGlobal param exprPl =
     do
         ctx <- lift ConvertM.readContext
-        let isGlobalInScope =
-                ctx ^. ConvertM.scScopeInfo . ConvertM.siGlobalsInScope . Lens.contains defI
-        notInScope || isGlobalInScope & guard
+        let recursiveVar =
+                ctx ^? ConvertM.scScopeInfo . ConvertM.siRecursiveRef .
+                Lens._Just . ConvertM.rrDefI
+        let isRecursiveRef = maybe False (== defI) recursiveVar
+        notInScope || isRecursiveRef & guard
         lifeState <-
             Anchors.assocDefinitionState defI
             & Transaction.getP

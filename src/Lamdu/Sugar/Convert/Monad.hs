@@ -3,11 +3,12 @@ module Lamdu.Sugar.Convert.Monad
     ( TagParamInfo(..)
     , TagFieldParam(..), _TagFieldParam, _CollidingFieldParam
     , OuterScopeInfo(..), osiPos, osiScope
+    , RecursiveRef(..), rrDefI
     , ScopeInfo(..), siTagParamInfos, siNullParams, siLetItems, siMOuter
 
     , PostProcessResult(..)
     , Context(..)
-    , scInferContext, scPostProcessRoot, siGlobalsInScope
+    , scInferContext, scPostProcessRoot, siRecursiveRef
     , scCodeAnchors, scScopeInfo, scNominalsMap
     , scOutdatedDefinitions, scFrozenDeps, scInlineableDefinitions
 
@@ -55,6 +56,11 @@ data OuterScopeInfo m = OuterScopeInfo
     }
 Lens.makeLenses ''OuterScopeInfo
 
+newtype RecursiveRef m = RecursiveRef
+    { _rrDefI :: ExprIRef.DefI m
+    }
+Lens.makeLenses ''RecursiveRef
+
 data ScopeInfo m = ScopeInfo
     { _siTagParamInfos :: Map T.Tag TagFieldParam -- tag uuids
     , _siNullParams :: Set V.Var
@@ -65,7 +71,7 @@ data ScopeInfo m = ScopeInfo
       _siMOuter :: Maybe (OuterScopeInfo m)
     , -- The globals we artificially inject into the scope in order to
       -- infer their type supporting mutual recursions
-      _siGlobalsInScope :: Set (ExprIRef.DefI m)
+      _siRecursiveRef :: Maybe (RecursiveRef m)
     }
 Lens.makeLenses ''ScopeInfo
 

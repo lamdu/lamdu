@@ -179,8 +179,9 @@ processLet scopeInfo redex =
     _ -> error "multiple osiVarsUnderPos not expected!?"
     <* maybeWrapHole
     where
-        globalsInScope = scopeInfo ^. ConvertM.siGlobalsInScope
-        isGlobal = (`Set.member` globalsInScope) . ExprIRef.defI
+        mRecursiveRef = scopeInfo ^. ConvertM.siRecursiveRef
+        mDefI = mRecursiveRef ^? Lens._Just . ConvertM.rrDefI <&> ExprIRef.globalId
+        isRecursiveDefRef var = maybe False (== var) mDefI
         maybeWrapHole
             | TV.null skolemsExitingScope = return ()
             | otherwise =
@@ -191,7 +192,7 @@ processLet scopeInfo redex =
         usedLocalVars =
             redex ^.. Redex.arg . ExprLens.valLeafs . V._LVar
             & ordNub
-            & filter (not . isGlobal)
+            & filter (not . isRecursiveDefRef)
             & filter (`Map.member` Infer.scopeToTypeMap innerScope)
         innerSkolems = Infer.skolems innerScope ^. Infer.skolemScopeVars
         (varsExitingScope, skolemsExitingScope) =
