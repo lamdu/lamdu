@@ -5,13 +5,14 @@ module Main where
 import           Control.Lens.Operators ((&), (^.))
 import           Data.MRUMemo (memoIO)
 import           Data.Vector.Vector2 (Vector2(..))
-import qualified Graphics.DrawingCombinators as Draw
+import qualified GUI.Momentu.Align as Align
 import           GUI.Momentu.EventMap (strongerEvents)
 import qualified GUI.Momentu.Main as Main
 import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.TextView as TextView
 import qualified GUI.Momentu.Zoom as Zoom
+import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.GLFW.Utils as GLFWUtils
 
 import           Prelude.Compat
@@ -36,6 +37,7 @@ hello getFont env =
         sizeFactor <- Zoom.getSizeFactor (env ^. Main.eZoom)
         font <- getFont (sizeFactor * 20)
         TextView.make (TextView.whiteText font) "Hello World!" ["hello"]
+            ^. Align.tValue
             & Widget.fromView
             & Widget.setFocused
             & strongerEvents Main.quitEventMap
