@@ -10,7 +10,6 @@ module GUI.Momentu.Animation
     , unitSquare, emptyRectangle
     , backgroundColor
     , translate, scale
-    , unitIntoRect
     , singletonFrame
     , State, stateMapIdentities
     , module GUI.Momentu.Animation.Id
@@ -275,9 +274,3 @@ translate pos = images . iRect . Rect.topLeft +~ pos
 
 scale :: Vector2 R -> Frame -> Frame
 scale factor = images . iRect . Rect.topLeftAndSize *~ factor
-
--- Scale/translate a Unit-sized frame into a given rect
-unitIntoRect :: Rect -> Frame -> Frame
-unitIntoRect r =
-    translate (r ^. Rect.topLeft) .
-    scale (r ^. Rect.size)

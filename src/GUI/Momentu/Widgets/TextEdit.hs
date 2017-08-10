@@ -161,11 +161,15 @@ makeFocused cursor empty s str myId =
     & Align.tValue %~ Widget.setFocusedWith cursorRect (eventMap cursor str myId)
     where
         displayStr = makeDisplayStr (empty ^. emptyFocusedString) str
-        cursorRect = mkCursorRect s cursor str
+        cursorRect@(Rect origin size) = mkCursorRect s cursor str
         cursorFrame =
             Anim.unitSquare (Widget.cursorAnimId ++ ["text"])
             & Anim.unitImages %~ Draw.tint (s ^. sCursorColor)
-            & Anim.unitIntoRect cursorRect
+            & unitIntoCursorRect
+        unitIntoCursorRect img =
+            img
+            & Anim.scale size
+            & Anim.translate origin
 
 mkCursorRect :: Style -> Cursor -> Text -> Rect
 mkCursorRect s cursor str =
