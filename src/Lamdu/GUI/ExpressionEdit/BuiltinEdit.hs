@@ -8,19 +8,19 @@ import qualified Control.Monad.Reader as Reader
 import           Data.Store.Property (Property(..))
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Text as Text
-import qualified Graphics.DrawingCombinators as Draw
 import           GUI.Momentu.Align (WithTextPos)
 import qualified GUI.Momentu.Align as Align
+import qualified GUI.Momentu.Draw as MDraw
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Glue ((/|/))
 import           GUI.Momentu.MetaKey (MetaKey(..), noMods)
+import qualified GUI.Momentu.MetaKey as MetaKey
 import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.FocusDelegator as FocusDelegator
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
 import qualified GUI.Momentu.Widgets.TextEdit.Property as TextEdits
 import qualified GUI.Momentu.Widgets.TextView as TextView
-import qualified Graphics.UI.GLFW as GLFW
 import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.Data.Definition as Definition
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
@@ -32,9 +32,9 @@ type T = Transaction
 
 builtinFDConfig :: FocusDelegator.Config
 builtinFDConfig = FocusDelegator.Config
-    { FocusDelegator.focusChildKeys = [MetaKey noMods GLFW.Key'Enter]
+    { FocusDelegator.focusChildKeys = [MetaKey noMods MetaKey.Key'Enter]
     , FocusDelegator.focusChildDoc = E.Doc ["Edit", "Change imported name"]
-    , FocusDelegator.focusParentKeys = [MetaKey noMods GLFW.Key'Escape]
+    , FocusDelegator.focusParentKeys = [MetaKey noMods MetaKey.Key'Escape]
     , FocusDelegator.focusParentDoc = E.Doc ["Edit", "Stop changing name"]
     }
 
@@ -46,7 +46,7 @@ builtinFFIName = flip Widget.joinId ["FFIName"]
 
 makeNamePartEditor ::
     (Monad f, Monad m) =>
-    Draw.Color -> Text -> (Text -> f ()) -> Widget.Id ->
+    MDraw.Color -> Text -> (Text -> f ()) -> Widget.Id ->
     ExprGuiM m (WithTextPos (Widget (f Widget.EventResult)))
 makeNamePartEditor color namePartStr setter myId =
     (FocusDelegator.make ?? builtinFDConfig ?? FocusDelegator.FocusEntryParent

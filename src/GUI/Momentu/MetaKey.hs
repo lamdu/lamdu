@@ -6,6 +6,7 @@ module GUI.Momentu.MetaKey
     ( ModifierKeys(..), cmdOn, altOn, shiftOn, metaOn
     , noMods, cmd, shift, numModsOn
     , MetaKey(..), modifiers, key
+    , ModKey.Key(..), ModKey.KeyState(..)
     , parse, format
     , toModKey, toGLFWModifiers
     ) where
@@ -14,6 +15,7 @@ import qualified Control.Lens as Lens
 import qualified Data.Aeson as Aeson
 import qualified Data.Text as Text
 import           GUI.Momentu.ModKey (ModKey(..))
+import qualified GUI.Momentu.ModKey as ModKey
 import qualified Graphics.UI.GLFW as GLFW
 import           Graphics.UI.GLFW.Instances ()
 import qualified System.Info as SysInfo
@@ -31,7 +33,7 @@ Lens.makeLenses ''ModifierKeys
 
 data MetaKey = MetaKey
     { _modifiers :: ModifierKeys
-    , _key :: GLFW.Key
+    , _key :: ModKey.Key
     }
     deriving (Show, Eq, Ord)
 Lens.makeLenses ''MetaKey
@@ -47,10 +49,10 @@ numModsOn mods =
             | mods ^. m = 1
             | otherwise = 0
 
-cmd :: GLFW.Key -> MetaKey
+cmd :: ModKey.Key -> MetaKey
 cmd = MetaKey (noMods & cmdOn .~ True)
 
-shift :: GLFW.Key -> MetaKey
+shift :: ModKey.Key -> MetaKey
 shift = MetaKey (noMods & shiftOn .~ True)
 
 parse :: Text -> Maybe MetaKey

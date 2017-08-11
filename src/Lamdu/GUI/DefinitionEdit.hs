@@ -16,12 +16,12 @@ import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Glue ((/-/), (/|/))
 import           GUI.Momentu.MetaKey (MetaKey(..), noMods)
+import qualified GUI.Momentu.MetaKey as MetaKey
 import qualified GUI.Momentu.Responsive as Responsive
 import           GUI.Momentu.View (View)
 import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.TextView as TextView
-import qualified Graphics.UI.GLFW as GLFW
 import           Lamdu.Calc.Type.Scheme (Scheme(..), schemeType)
 import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.GUI.ExpressionEdit.BinderEdit as BinderEdit
@@ -47,7 +47,7 @@ undeleteButton undelete =
     <&> Align.tValue %~ E.weakerEvents eventMap
     where
         eventMap =
-            Widget.keysEventMapMovesCursor [MetaKey noMods GLFW.Key'Enter]
+            Widget.keysEventMapMovesCursor [MetaKey noMods MetaKey.Key'Enter]
             (E.Doc ["Edit", "Undelete definition"]) undelete
 
 makeExprDefinition ::

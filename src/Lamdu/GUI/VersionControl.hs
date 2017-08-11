@@ -13,13 +13,13 @@ import qualified Data.Store.Transaction as Transaction
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.MetaKey (MetaKey(..), noMods)
+import qualified GUI.Momentu.MetaKey as MetaKey
 import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Choice as Choice
 import qualified GUI.Momentu.Widgets.FocusDelegator as FocusDelegator
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
 import qualified GUI.Momentu.Widgets.TextEdit.Property as TextEdits
-import qualified Graphics.UI.GLFW as GLFW
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.GUI.VersionControl.Config as VersionControl
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
@@ -29,9 +29,9 @@ import           Lamdu.Prelude
 
 branchNameFDConfig :: FocusDelegator.Config
 branchNameFDConfig = FocusDelegator.Config
-    { FocusDelegator.focusChildKeys = [MetaKey noMods GLFW.Key'F2]
+    { FocusDelegator.focusChildKeys = [MetaKey noMods MetaKey.Key'F2]
     , FocusDelegator.focusChildDoc = E.Doc ["Branches", "Rename"]
-    , FocusDelegator.focusParentKeys = [MetaKey noMods GLFW.Key'Enter]
+    , FocusDelegator.focusParentKeys = [MetaKey noMods MetaKey.Key'Enter]
     , FocusDelegator.focusParentDoc = E.Doc ["Branches", "Done renaming"]
     }
 
@@ -70,9 +70,9 @@ choiceWidgetConfig VersionControl.Config{..} VersionControl.Theme{..} =
     Choice.Config
     { Choice.cwcFDConfig =
         FocusDelegator.Config
-        { FocusDelegator.focusChildKeys = [MetaKey noMods GLFW.Key'Enter]
+        { FocusDelegator.focusChildKeys = [MetaKey noMods MetaKey.Key'Enter]
         , FocusDelegator.focusChildDoc = E.Doc ["Branches", "Select"]
-        , FocusDelegator.focusParentKeys = [MetaKey noMods GLFW.Key'Enter]
+        , FocusDelegator.focusParentKeys = [MetaKey noMods MetaKey.Key'Enter]
         , FocusDelegator.focusParentDoc = E.Doc ["Branches", "Choose selected"]
         }
     , Choice.cwcExpandMode = Choice.AutoExpand selectedBranchColor

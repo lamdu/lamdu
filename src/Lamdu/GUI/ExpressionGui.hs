@@ -48,13 +48,14 @@ import           GUI.Momentu.Align (Aligned(..), WithTextPos(..))
 import qualified GUI.Momentu.Align as Align
 import           GUI.Momentu.Animation (AnimId)
 import qualified GUI.Momentu.Animation as Anim
-import qualified GUI.Momentu.Draw as MDraw
+import qualified GUI.Momentu.Draw as Draw
 import           GUI.Momentu.Element (Element)
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Glue ((/-/), (/|/))
 import qualified GUI.Momentu.Glue as Glue
 import           GUI.Momentu.MetaKey (MetaKey(..), noMods)
+import qualified GUI.Momentu.MetaKey as MetaKey
 import           GUI.Momentu.Responsive (Responsive(..))
 import qualified GUI.Momentu.Responsive as Responsive
 import           GUI.Momentu.View (View)
@@ -66,8 +67,6 @@ import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
 import qualified GUI.Momentu.Widgets.TextEdit.Property as TextEdits
 import qualified GUI.Momentu.Widgets.TextView as TextView
-import qualified Graphics.DrawingCombinators as Draw
-import qualified Graphics.UI.GLFW as GLFW
 import           Lamdu.Calc.Type (Type)
 import qualified Lamdu.Calc.Type as T
 import           Lamdu.Config (Config)
@@ -109,7 +108,7 @@ maybeIndent (Just piInfo) =
                 where
                     indentBar =
                         Spacer.make (Vector2 barWidth (content ^. Element.height))
-                        & MDraw.backgroundColor bgAnimId (Theme.indentBarColor indentConf)
+                        & Draw.backgroundColor bgAnimId (Theme.indentBarColor indentConf)
                     indentConf = piIndentTheme piInfo
                     stdSpace = piStdHorizSpacing piInfo
                     barWidth = stdSpace * Theme.indentBarWidth indentConf
@@ -229,7 +228,7 @@ addAnnotationBackgroundH ::
     Element a =>
     (Theme.ValAnnotation -> Draw.Color) -> Theme.ValAnnotation -> AnimId -> a -> a
 addAnnotationBackgroundH getColor theme animId =
-    MDraw.backgroundColor bgAnimId bgColor
+    Draw.backgroundColor bgAnimId bgColor
     where
         bgAnimId = animId ++ ["annotation background"]
         bgColor = getColor theme
@@ -432,9 +431,9 @@ disallowedNameChars = "[]\\`()"
 
 nameEditFDConfig :: FocusDelegator.Config
 nameEditFDConfig = FocusDelegator.Config
-    { FocusDelegator.focusChildKeys = [MetaKey noMods GLFW.Key'Enter]
+    { FocusDelegator.focusChildKeys = [MetaKey noMods MetaKey.Key'Enter]
     , FocusDelegator.focusChildDoc = E.Doc ["Edit", "Rename"]
-    , FocusDelegator.focusParentKeys = [MetaKey noMods GLFW.Key'Escape]
+    , FocusDelegator.focusParentKeys = [MetaKey noMods MetaKey.Key'Escape]
     , FocusDelegator.focusParentDoc = E.Doc ["Edit", "Done renaming"]
     }
 
@@ -569,7 +568,7 @@ addValBG = addValBGWithColor Theme.valFrameBGColor
 addValBGWithColor ::
     (Monad m, Element a) =>
     (Theme -> Draw.Color) -> ExprGuiM m (a -> a)
-addValBGWithColor color = MDraw.backgroundColor <*> (Lens.view Theme.theme <&> color)
+addValBGWithColor color = Draw.backgroundColor <*> (Lens.view Theme.theme <&> color)
 
 addValPadding :: (Monad m, Element a) => ExprGuiM m (a -> a)
 addValPadding =
@@ -602,7 +601,7 @@ makeCollisionSuffixLabel (Collision suffix) =
     do
         theme <- Lens.view Theme.theme
         let Theme.Name{..} = Theme.name theme
-        (MDraw.backgroundColor ?? collisionSuffixBGColor)
+        (Draw.backgroundColor ?? collisionSuffixBGColor)
             <*>
             (TextView.makeLabel (Text.pack (show suffix))
             & Reader.local (TextView.color .~ collisionSuffixTextColor)

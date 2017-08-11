@@ -31,7 +31,7 @@ import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.TextView as TextView
 import qualified Graphics.DrawingCombinators as Draw
 import           Graphics.DrawingCombinators.Utils (TextSize(..))
-import qualified Graphics.UI.GLFW as GLFW
+
 
 import           Lamdu.Prelude
 
@@ -190,26 +190,26 @@ eventMap ::
     Widget.EventMap (Text, Widget.EventResult)
 eventMap cursor str myId _virtualCursor =
     mconcat . concat $ [
-        [ E.keyPressOrRepeat (noMods GLFW.Key'Left) (moveDoc ["left"]) $
+        [ E.keyPressOrRepeat (noMods MetaKey.Key'Left) (moveDoc ["left"]) $
             moveRelative (-1)
         | cursor > 0 ],
 
-        [ E.keyPressOrRepeat (noMods GLFW.Key'Right) (moveDoc ["right"]) $
+        [ E.keyPressOrRepeat (noMods MetaKey.Key'Right) (moveDoc ["right"]) $
             moveRelative 1
         | cursor < textLength ],
 
-        [ keys (moveDoc ["word", "left"]) [ctrl GLFW.Key'Left]
+        [ keys (moveDoc ["word", "left"]) [ctrl MetaKey.Key'Left]
             backMoveWord
         | cursor > 0 ],
 
-        [ keys (moveDoc ["word", "right"]) [ctrl GLFW.Key'Right] moveWord
+        [ keys (moveDoc ["word", "right"]) [ctrl MetaKey.Key'Right] moveWord
         | cursor < textLength ],
 
-        [ E.keyPressOrRepeat (noMods GLFW.Key'Up) (moveDoc ["up"]) $
+        [ E.keyPressOrRepeat (noMods MetaKey.Key'Up) (moveDoc ["up"]) $
             moveRelative (- cursorX - 1 - Text.length (Text.drop cursorX prevLine))
         | cursorY > 0 ],
 
-        [ E.keyPressOrRepeat (noMods GLFW.Key'Down) (moveDoc ["down"]) $
+        [ E.keyPressOrRepeat (noMods MetaKey.Key'Down) (moveDoc ["down"]) $
             moveRelative
             (Text.length curLineAfter + 1 +
              min cursorX (Text.length nextLine))
@@ -231,11 +231,11 @@ eventMap cursor str myId _virtualCursor =
             moveAbsolute textLength
         | Text.null curLineAfter && cursor < textLength ],
 
-        [ keys (deleteDoc ["backwards"]) [noMods GLFW.Key'Backspace] $
+        [ keys (deleteDoc ["backwards"]) [noMods MetaKey.Key'Backspace] $
             backDelete 1
         | cursor > 0 ],
 
-        [ keys (deleteDoc ["word", "backwards"]) [ctrl GLFW.Key'W]
+        [ keys (deleteDoc ["word", "backwards"]) [ctrl MetaKey.Key'W]
             backDeleteWord
         | cursor > 0 ],
 
@@ -247,27 +247,27 @@ eventMap cursor str myId _virtualCursor =
 
         in
 
-        [ keys (editDoc ["Swap letters"]) [ctrl GLFW.Key'T]
+        [ keys (editDoc ["Swap letters"]) [ctrl MetaKey.Key'T]
             swapLetters
         | cursor > 0 && textLength >= 2 ],
 
-        [ keys (deleteDoc ["forward"]) [noMods GLFW.Key'Delete] $
+        [ keys (deleteDoc ["forward"]) [noMods MetaKey.Key'Delete] $
             delete 1
         | cursor < textLength ],
 
-        [ keys (deleteDoc ["word", "forward"]) [alt GLFW.Key'D]
+        [ keys (deleteDoc ["word", "forward"]) [alt MetaKey.Key'D]
             deleteWord
         | cursor < textLength ],
 
-        [ keys (deleteDoc ["till", "end of line"]) [ctrl GLFW.Key'K] $
+        [ keys (deleteDoc ["till", "end of line"]) [ctrl MetaKey.Key'K] $
             delete (Text.length curLineAfter)
         | not . Text.null $ curLineAfter ],
 
-        [ keys (deleteDoc ["newline"]) [ctrl GLFW.Key'K] $
+        [ keys (deleteDoc ["newline"]) [ctrl MetaKey.Key'K] $
             delete 1
         | Text.null curLineAfter && cursor < textLength ],
 
-        [ keys (deleteDoc ["till", "beginning of line"]) [ctrl GLFW.Key'U] $
+        [ keys (deleteDoc ["till", "beginning of line"]) [ctrl MetaKey.Key'U] $
             backDelete (Text.length curLineBefore)
         | not . Text.null $ curLineBefore ],
 
@@ -277,12 +277,12 @@ eventMap cursor str myId _virtualCursor =
         ],
 
         [ keys (insertDoc ["Newline"])
-            [noMods GLFW.Key'Enter, ModKey.shift GLFW.Key'Enter] (insert "\n") ],
+            [noMods MetaKey.Key'Enter, ModKey.shift MetaKey.Key'Enter] (insert "\n") ],
 
         [ keys (insertDoc ["Space"])
-            [noMods GLFW.Key'Space, ModKey.shift GLFW.Key'Space] (insert " ") ],
+            [noMods MetaKey.Key'Space, ModKey.shift MetaKey.Key'Space] (insert " ") ],
 
-        [ E.pasteOnKey (cmd GLFW.Key'V) (E.Doc ["Clipboard", "Paste"]) insert ]
+        [ E.pasteOnKey (cmd MetaKey.Key'V) (E.Doc ["Clipboard", "Paste"]) insert ]
 
         ]
     where
@@ -326,8 +326,8 @@ eventMap cursor str myId _virtualCursor =
         cmd = MetaKey.toModKey . MetaKey.cmd
         ctrl = ModKey.ctrl
         alt = ModKey.alt
-        homeKeys = [noMods GLFW.Key'Home, ctrl GLFW.Key'A]
-        endKeys = [noMods GLFW.Key'End, ctrl GLFW.Key'E]
+        homeKeys = [noMods MetaKey.Key'Home, ctrl MetaKey.Key'A]
+        endKeys = [noMods MetaKey.Key'End, ctrl MetaKey.Key'E]
         textLength = Text.length str
         lineCount = length $ Text.splitOn "\n" str
         (before, after) = Text.splitAt cursor str

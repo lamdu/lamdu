@@ -1,7 +1,7 @@
 {-# LANGUAGE NoImplicitPrelude, DeriveFunctor, DeriveFoldable, DeriveTraversable #-}
 module GUI.Momentu.Widgets.StdKeys (DirKeys(..), stdDirKeys) where
 
-import qualified Graphics.UI.GLFW as GLFW
+import qualified GUI.Momentu.MetaKey as MetaKey
 
 import           Lamdu.Prelude
 
@@ -9,10 +9,10 @@ data DirKeys key = DirKeys
     { keysLeft, keysRight, keysUp, keysDown :: [key]
     } deriving (Functor, Foldable, Traversable)
 
-stdDirKeys :: DirKeys GLFW.Key
+stdDirKeys :: DirKeys MetaKey.Key
 stdDirKeys = DirKeys
-    { keysLeft  = [GLFW.Key'Left,  GLFW.Key'H]
-    , keysRight = [GLFW.Key'Right, GLFW.Key'L]
-    , keysUp    = [GLFW.Key'Up,    GLFW.Key'K]
-    , keysDown  = [GLFW.Key'Down,  GLFW.Key'J]
+    { keysLeft  = [MetaKey.Key'Left,  MetaKey.Key'H]
+    , keysRight = [MetaKey.Key'Right, MetaKey.Key'L]
+    , keysUp    = [MetaKey.Key'Up,    MetaKey.Key'K]
+    , keysDown  = [MetaKey.Key'Down,  MetaKey.Key'J]
     }

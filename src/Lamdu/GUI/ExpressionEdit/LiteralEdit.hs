@@ -14,6 +14,7 @@ import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Glue ((/|/))
 import           GUI.Momentu.MetaKey (MetaKey(..), noMods)
+import qualified GUI.Momentu.MetaKey as MetaKey
 import qualified GUI.Momentu.Responsive as Responsive
 import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
@@ -21,7 +22,6 @@ import qualified GUI.Momentu.Widgets.FocusDelegator as FocusDelegator
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
 import qualified GUI.Momentu.Widgets.TextEdit.Property as TextEdits
 import qualified GUI.Momentu.Widgets.TextView as TextView
-import qualified Graphics.UI.GLFW as GLFW
 import qualified Lamdu.Config as Config
 import           Lamdu.Formatting (Format(..))
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.State (HoleState(..), setHoleStateAndJump)
@@ -44,7 +44,7 @@ mkEditEventMap ::
     Text -> T m (UUID, Sugar.EntityId) ->
     Widget.EventMap (T m Widget.EventResult)
 mkEditEventMap valText setToHole =
-    Widget.keysEventMapMovesCursor [MetaKey noMods GLFW.Key'Enter]
+    Widget.keysEventMapMovesCursor [MetaKey noMods MetaKey.Key'Enter]
     (E.Doc ["Edit", "Value"]) $
     do
         (uuid, entityId) <- setToHole

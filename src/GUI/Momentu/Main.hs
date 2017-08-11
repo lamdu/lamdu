@@ -93,7 +93,7 @@ defaultOptions helpFontPath =
                 }
             , getHelpStyle =
                 \zoom -> do
-                    zoomFactor <- Zoom.getSizeFactor zoom
+                    zoomFactor <- Zoom.getZoomFactor zoom
                     helpFont <- loadHelpFont (9 * zoomFactor)
                     EventMapHelp.defaultConfig helpFont & return
             , cursorStartPos =
@@ -104,7 +104,7 @@ defaultOptions helpFontPath =
 
 quitEventMap :: Functor f => Widget.EventMap (f Widget.EventResult)
 quitEventMap =
-    Widget.keysEventMap [MetaKey.cmd GLFW.Key'Q] (E.Doc ["Quit"]) (error "Quit")
+    Widget.keysEventMap [MetaKey.cmd MetaKey.Key'Q] (E.Doc ["Quit"]) (error "Quit")
 
 data Env = Env
     { _eZoom :: Zoom

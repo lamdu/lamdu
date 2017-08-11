@@ -10,7 +10,7 @@ import qualified Control.Lens as Lens
 import qualified Data.Aeson.Types as Aeson
 import           Data.Typeable (Typeable)
 import           GHC.Generics (Generic)
-import qualified Graphics.DrawingCombinators as Draw
+import qualified GUI.Momentu.Draw as Draw
 import qualified System.Directory as Directory
 
 import           Lamdu.Prelude

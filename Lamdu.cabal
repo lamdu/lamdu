@@ -104,6 +104,7 @@ Executable lamdu
                   , Data.UUID.Utils
                   , Data.Vector.Vector2
                   , Foreign.C.Types.Instances
+                  , GUI.Momentu
                   , GUI.Momentu.Align
                   , GUI.Momentu.Animation
                   , GUI.Momentu.Animation.Id

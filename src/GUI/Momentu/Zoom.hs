@@ -1,6 +1,6 @@
 {-# LANGUAGE NoImplicitPrelude, DeriveGeneric, RecordWildCards, OverloadedStrings #-}
 module GUI.Momentu.Zoom
-    ( Zoom, make, eventMap, getSizeFactor
+    ( Zoom, make, eventMap, getZoomFactor
     , Config(..), defaultConfig
     ) where
 
@@ -29,8 +29,8 @@ instance Aeson.FromJSON Config
 defaultConfig :: Config
 defaultConfig =
     Config
-    { shrinkKeys = [MetaKey.cmd GLFW.Key'Minus]
-    , enlargeKeys = [MetaKey.cmd GLFW.Key'Equal]
+    { shrinkKeys = [MetaKey.cmd MetaKey.Key'Minus]
+    , enlargeKeys = [MetaKey.cmd MetaKey.Key'Equal]
     , shrinkFactor = 1.1
     , enlargeFactor = 1.1
     }
@@ -50,8 +50,8 @@ eventMap (Zoom ref) Config{..} =
         modifyIORef ref (/ realToFrac shrinkFactor)
     ]
 
-getSizeFactor :: Fractional a => Zoom -> IO a
-getSizeFactor (Zoom ref) = readIORef ref <&> realToFrac
+getZoomFactor :: Fractional a => Zoom -> IO a
+getZoomFactor (Zoom ref) = readIORef ref <&> realToFrac
 
 make :: GLFW.Window -> IO Zoom
 make win =

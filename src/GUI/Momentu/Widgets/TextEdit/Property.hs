@@ -11,10 +11,10 @@ import           GUI.Momentu.Align (WithTextPos)
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.ModKey (ModKey(..))
+import qualified GUI.Momentu.ModKey as ModKey
 import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
-import qualified Graphics.UI.GLFW as GLFW
 
 import           Lamdu.Prelude
 
@@ -37,7 +37,7 @@ make =
 
 deleteKeyEventHandler :: E.HasEventMap f => ModKey -> f a -> f a
 deleteKeyEventHandler key =
-    E.eventMap %~ E.deleteKey (E.KeyEvent GLFW.KeyState'Pressed key)
+    E.eventMap %~ E.deleteKey (E.KeyEvent ModKey.KeyState'Pressed key)
 
 makeLineEdit ::
     (MonadReader env m, Applicative f, Widget.HasCursor env, TextEdit.HasStyle env) =>
@@ -48,7 +48,7 @@ makeLineEdit =
     make
     <&> \mk empty textRef myId ->
     mk empty textRef myId
-    & Align.tValue %~ deleteKeyEventHandler (ModKey mempty GLFW.Key'Enter)
+    & Align.tValue %~ deleteKeyEventHandler (ModKey mempty ModKey.Key'Enter)
 
 makeWordEdit ::
     (MonadReader env m, Applicative f, Widget.HasCursor env, TextEdit.HasStyle env) =>
@@ -58,4 +58,4 @@ makeWordEdit ::
 makeWordEdit =
     makeLineEdit
     <&> \mk empty textRef myId -> mk empty textRef myId
-    & Align.tValue %~ deleteKeyEventHandler (ModKey mempty GLFW.Key'Space)
+    & Align.tValue %~ deleteKeyEventHandler (ModKey mempty ModKey.Key'Space)

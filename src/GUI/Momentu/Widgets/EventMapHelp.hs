@@ -25,6 +25,7 @@ import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Glue ((/|/))
 import           GUI.Momentu.MetaKey (MetaKey(..), toModKey, noMods)
+import qualified GUI.Momentu.MetaKey as MetaKey
 import           GUI.Momentu.ModKey (ModKey(..))
 import qualified GUI.Momentu.ModKey as ModKey
 import           GUI.Momentu.View (View(..))
@@ -34,7 +35,6 @@ import qualified GUI.Momentu.Widgets.GridView as GridView
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified GUI.Momentu.Widgets.TextView as TextView
 import qualified Graphics.DrawingCombinators as Draw
-import qualified Graphics.UI.GLFW as GLFW
 
 import           Lamdu.Prelude
 
@@ -66,7 +66,7 @@ defaultConfig font =
         }
     , _configInputDocColor = Draw.Color 0.1 0.7 0.7 1
     , _configBGColor = Draw.Color 0.2 0.15 0.1 0.5
-    , _configOverlayDocKeys = [MetaKey noMods GLFW.Key'F1]
+    , _configOverlayDocKeys = [MetaKey noMods MetaKey.Key'F1]
     , _configTint = Draw.Color 1 1 1 0.8
     }
 

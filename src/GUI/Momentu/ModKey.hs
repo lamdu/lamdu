@@ -3,6 +3,7 @@
 {-# LANGUAGE NoImplicitPrelude, DeriveGeneric, OverloadedStrings #-}
 module GUI.Momentu.ModKey
     ( ModKey(..), ctrlMods, altMods, shiftMods, superMods
+    , GLFW.KeyState(..), GLFW.Key(..)
     , ctrl, alt, shift, super
     , prettyKey
     , pretty
