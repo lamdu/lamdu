@@ -20,7 +20,7 @@ module GUI.Momentu
 
     -- | Widget
     , Widget, Widget.EventResult
-    , Widget.isFocused, widgetEvents
+    , Widget.isFocused
     , WidgetId, pattern WidgetId
 
     -- | View
@@ -88,9 +88,6 @@ type MainLoopEnv = MainLoop.Env
 type WidgetId = Widget.Id
 pattern WidgetId :: AnimId -> Widget.Id
 pattern WidgetId animId = Widget.Id animId
-
-widgetEvents :: Widget.HasWidget w => Lens.Setter (w a) (w b) a b
-widgetEvents = Widget.events
 
 parseMetaKey :: Text -> Maybe MetaKey
 parseMetaKey = MetaKey.parse

@@ -4,7 +4,6 @@ module Main where
 
 import           Control.Lens.Operators ((&), (^.))
 import           Data.MRUMemo (memoIO)
-import           Data.Vector.Vector2 (Vector2(..))
 import qualified GUI.Momentu as M
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.TextView as TextView
@@ -17,7 +16,7 @@ fontPath = "fonts/DejaVuSans.ttf"
 main :: IO ()
 main =
     do
-        win <- M.createWindow "Hello World" Nothing (Vector2 800 400)
+        win <- M.createWindow "Hello World" Nothing (M.Vector2 800 400)
         cachedOpenFont <- memoIO (`M.openFont` fontPath)
         M.defaultOptions fontPath
             >>= M.mainLoopWidget win (hello cachedOpenFont)

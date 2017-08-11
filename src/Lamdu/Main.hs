@@ -328,7 +328,7 @@ makeMainGui ::
     GUIMain.Env -> T DbLayout.DbM (M.Widget (MainLoop.M M.EventResult))
 makeMainGui dbToIO env =
     GUIMain.make env
-    <&> M.widgetEvents %~ \act ->
+    <&> Lens.mapped %~ \act ->
     act ^. GUIMain.m
     <&> dbToIO
     & join
