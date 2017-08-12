@@ -30,7 +30,7 @@ make (Sugar.GetField recExpr tagG) pl =
         tagEdit <-
             TagEdit.makeRecordTag
             (pl ^. Sugar.plData . ExprGuiT.plNearestHoles) tagG
-        ExpressionGui.combine
+        Responsive.box Responsive.disambiguationNone
             [ recExprEdit
             , Responsive.fromTextView dotLabel
             , Responsive.fromWithTextPos tagEdit

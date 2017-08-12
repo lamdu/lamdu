@@ -141,7 +141,7 @@ makeReplEdit ::
 makeReplEdit theExportActions replExpr =
     do
         theConfig <- Lens.view config
-        ExpressionGui.combineSpaced
+        (Responsive.boxSpaced ?? Responsive.disambiguationNone)
             <*> sequence
             [ (Widget.makeFocusableView ?? Widget.joinId WidgetIds.replId ["symbol"] <&> (Align.tValue %~))
               <*> TextView.makeLabel "⋙"

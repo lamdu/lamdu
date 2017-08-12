@@ -58,7 +58,7 @@ makeParamsRecord myId paramsRecordVar =
         respondToCursor <- Widget.respondToCursorPrefix ?? myId
         sequence
             [ TextView.makeLabel "Params {" <&> Responsive.fromTextView
-            , ExpressionGui.combineSpaced
+            , (Responsive.boxSpaced ?? Responsive.disambiguationNone)
               <*>
               ( fieldNames
                 & Lens.itraverse
@@ -69,7 +69,7 @@ makeParamsRecord myId paramsRecordVar =
                 )
               )
             , TextView.makeLabel "}" <&> Responsive.fromTextView
-            ] <&> ExpressionGui.combine <&> respondToCursor
+            ] <&> Responsive.box Responsive.disambiguationNone <&> respondToCursor
     where
         Sugar.ParamsRecordVar fieldNames = paramsRecordVar
 

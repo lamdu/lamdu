@@ -254,7 +254,7 @@ makeMParamsEdit mScopeCursor isScopeNavFocused delVarBackwardsId myId nearestHol
     [] -> return Nothing
     paramEdits ->
         frame
-        <*> (ExpressionGui.combineSpaced ?? paramEdits)
+        <*> (Responsive.boxSpaced ?? Responsive.disambiguationNone ?? paramEdits)
         <&> Just
     where
         frame =
@@ -352,7 +352,7 @@ make name color binder myId =
                 <&> E.strongerEvents rhsJumperEquals
                 <&> Just
         equals <- TextView.makeLabel "="
-        ExpressionGui.combineSpaced
+        Responsive.boxSpaced ?? Responsive.disambiguationNone
             <&>
             (\hbox ->
             hbox

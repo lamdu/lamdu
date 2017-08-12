@@ -37,6 +37,11 @@ module GUI.Momentu.Responsive
 
     -- * Combinators
     , vbox, vboxSpaced, taggedList
+    , box, boxSpaced
+
+    , vertLayoutMaybeDisambiguate
+    , Disambiguators(..), disambHoriz, disambVert
+    , horizVertFallback, disambiguationNone
     ) where
 
 import qualified Control.Lens as Lens
@@ -50,7 +55,7 @@ import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Glue (Glue(..), GluesTo, (/|/), Orientation(..))
 import qualified GUI.Momentu.Glue as Glue
 import           GUI.Momentu.View (View)
-import           GUI.Momentu.Widget (Widget)
+import           GUI.Momentu.Widget (Widget, EventResult)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 
@@ -192,3 +197,88 @@ taggedList =
             /|/ treeLayout
     in
     pairs <&> renderPair & box
+
+-- | Apply a given vertical disambiguator (such as indentation) when necessary,
+-- according to the layout context.
+-- For example a vertical list inside a vertical list will require disambiguation
+-- to know the inner list apart for the outer one.
+vertLayoutMaybeDisambiguate ::
+    (Responsive a -> Responsive a) -> Responsive a -> Responsive a
+vertLayoutMaybeDisambiguate disamb vert =
+    Responsive $
+    \layoutParams ->
+    case layoutParams ^. layoutContext of
+    LayoutVertical -> (disamb vert ^. render) layoutParams
+    _ -> (vert ^. render) layoutParams
+
+data Disambiguators a = Disambiguators
+    { _disambHoriz :: WithTextPos (Widget a) -> WithTextPos (Widget a)
+    , _disambVert :: Responsive a -> Responsive a
+    }
+
+Lens.makeLenses ''Disambiguators
+
+disambiguationNone :: Disambiguators a
+disambiguationNone = Disambiguators id id
+
+-- | Use a given horizontal layout if there's room for it, or a vertical layout otherwise.
+-- Apply a given disambiguation according to the decided layout.
+-- A disambiguation is need when using a horizontal layout inside a horizontal layout,
+-- or a vertical inside a vertical one.
+-- If no disambiguation is needed (such is the case when operators have an order of operation),
+-- pass over `disambiguationNone` as the disamiguator.
+horizVertFallback ::
+    Functor f =>
+    Disambiguators (f EventResult) ->
+    Responsive (f EventResult) -> Responsive (f EventResult) -> Responsive (f EventResult)
+horizVertFallback disamb horiz vert =
+    Responsive $
+    \layoutParams ->
+    let wide = (horiz ^. render) (layoutParams & layoutMode .~ LayoutWide)
+    in
+    case layoutParams of
+    LayoutParams LayoutWide LayoutHorizontal -> (disamb ^. disambHoriz) wide
+    LayoutParams LayoutWide _ -> wide
+    LayoutParams (LayoutNarrow limit) _
+        | wide ^. Element.width <= limit ->
+            -- There is enough room for the horizontal layout.
+            -- No disambiguation necessary because parent is vertical
+            wide
+    _ -> (vertLayoutMaybeDisambiguate (disamb ^. disambVert) vert ^. render) layoutParams
+
+boxH ::
+    Functor f =>
+    ([WithTextPos (Widget a)] -> [WithTextPos (Widget (f EventResult))]) ->
+    ([Responsive a] -> [Responsive (f EventResult)]) ->
+    Disambiguators (f EventResult) ->
+    [Responsive a] ->
+    Responsive (f EventResult)
+boxH onHGuis onVGuis disamb guis =
+    horizVertFallback disamb wide vert
+    where
+        vert = onVGuis guis & vbox
+        wide =
+            guis ^.. traverse . render
+            ?? LayoutParams
+                { _layoutMode = LayoutWide
+                , _layoutContext = LayoutHorizontal
+                }
+            & onHGuis
+            & Glue.hbox
+            & fromWithTextPos
+
+box ::
+    Functor f =>
+    Disambiguators (f EventResult) ->
+    [Responsive (f EventResult)] ->
+    Responsive (f EventResult)
+box = boxH id id
+
+boxSpaced ::
+    (MonadReader env m, Spacer.HasStdSpacing env, Functor f) =>
+    m (Disambiguators (f Widget.EventResult) -> [Responsive (f Widget.EventResult)] -> Responsive (f Widget.EventResult))
+boxSpaced =
+    do
+        hSpace <- Spacer.stdHSpace <&> Widget.fromView <&> WithTextPos 0
+        vSpace <- Spacer.stdVSpace <&> fromView
+        boxH (List.intersperse hSpace) (List.intersperse vSpace) & return

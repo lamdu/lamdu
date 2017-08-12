@@ -13,6 +13,7 @@ import           GUI.Momentu.Glue ((/-/))
 import           GUI.Momentu.MetaKey (MetaKey(..), noMods)
 import qualified GUI.Momentu.MetaKey as MetaKey
 import qualified GUI.Momentu.Responsive as Responsive
+import qualified GUI.Momentu.Responsive.Expression as ResponsiveExpr
 import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
 import qualified Lamdu.Config as Config
@@ -129,8 +130,8 @@ make lam pl =
         let mParensId
                 | Prec.needParens parentPrec (Prec.my 0) = Just animId
                 | otherwise = Nothing
-        ExpressionGui.combineSpacedMParens mParensId
-            <*> (ExpressionGui.combineSpaced ?? paramsAndLabelEdits
+        (ResponsiveExpr.boxSpacedMDisamb ?? mParensId)
+            <*> (Responsive.boxSpaced ?? Responsive.disambiguationNone ?? paramsAndLabelEdits
                 <&> (: [bodyEdit]))
             <&> E.weakerEvents eventMap
     & Widget.assignCursor myId bodyId

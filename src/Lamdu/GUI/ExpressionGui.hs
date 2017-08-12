@@ -3,8 +3,6 @@ module Lamdu.GUI.ExpressionGui
     ( ExpressionGui
     , render
     -- General:
-    , combine, combineSpaced, combineSpacedMParens
-    , horizVertFallback
     , listWithDelDests
     , grammarLabel
     , addValFrame, addValPadding
@@ -37,12 +35,10 @@ import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
 import           Data.Binary.Utils (encodeS)
 import           Data.CurAndPrev (CurAndPrev(..), CurPrevTag(..), curPrevTag, fallbackToPrev)
-import qualified Data.List as List
 import qualified Data.List.Utils as ListUtils
 import           Data.Store.Property (Property(..))
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Text as Text
-import           Data.Text.Encoding (encodeUtf8)
 import           Data.Vector.Vector2 (Vector2(..))
 import           GUI.Momentu.Align (Aligned(..), WithTextPos(..))
 import qualified GUI.Momentu.Align as Align
@@ -53,7 +49,6 @@ import           GUI.Momentu.Element (Element)
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Glue ((/-/), (/|/))
-import qualified GUI.Momentu.Glue as Glue
 import           GUI.Momentu.MetaKey (MetaKey(..), noMods)
 import qualified GUI.Momentu.MetaKey as MetaKey
 import           GUI.Momentu.Responsive (Responsive(..))
@@ -91,138 +86,6 @@ import qualified Lamdu.Sugar.Types as Sugar
 import           Lamdu.Prelude
 
 type T = Transaction
-
-maybeIndent ::
-    Functor f =>
-    Maybe ParenIndentInfo ->
-    Responsive (f Widget.EventResult) ->
-    Responsive (f Widget.EventResult)
-maybeIndent Nothing = id
-maybeIndent (Just piInfo) =
-    Responsive.render %~ f
-    where
-        f mkLayout lp =
-            case lp ^. Responsive.layoutContext of
-            Responsive.LayoutVertical ->
-                indentBar /|/ Spacer.make (Vector2 gapWidth 0) /|/ content
-                where
-                    indentBar =
-                        Spacer.make (Vector2 barWidth (content ^. Element.height))
-                        & Draw.backgroundColor bgAnimId (Theme.indentBarColor indentConf)
-                    indentConf = piIndentTheme piInfo
-                    stdSpace = piStdHorizSpacing piInfo
-                    barWidth = stdSpace * Theme.indentBarWidth indentConf
-                    gapWidth = stdSpace * Theme.indentBarGap indentConf
-                    indentWidth = barWidth + gapWidth
-                    content =
-                        lp & Responsive.layoutMode . Responsive.modeWidths -~ indentWidth
-                        & mkLayout
-                    bgAnimId = piAnimId piInfo ++ ["("]
-            _ -> mkLayout lp
-
-data ParenIndentInfo = ParenIndentInfo
-    { piAnimId :: AnimId
-    , piTextStyle :: TextView.Style
-    , piIndentTheme :: Theme.Indent
-    , piStdHorizSpacing :: Widget.R
-    }
-
-parenLabel :: ParenIndentInfo -> Text -> WithTextPos View
-parenLabel parenInfo t =
-    TextView.make (piTextStyle parenInfo) t
-    (piAnimId parenInfo ++ [encodeUtf8 t])
-
-horizVertFallback ::
-    (Monad m, Functor f) =>
-    Maybe AnimId ->
-    ExprGuiM m
-    (Responsive (f Widget.EventResult) ->
-     Responsive (f Widget.EventResult) ->
-     Responsive (f Widget.EventResult))
-horizVertFallback mParenId =
-    mParenId & Lens._Just %%~ makeParenIndentInfo
-    <&> horizVertFallbackH
-
-horizVertFallbackH ::
-    Functor f =>
-    Maybe ParenIndentInfo ->
-    Responsive (f Widget.EventResult) ->
-    Responsive (f Widget.EventResult) ->
-    Responsive (f Widget.EventResult)
-horizVertFallbackH mParenInfo horiz vert =
-    Responsive.render #
-    \layoutParams ->
-    let wide =
-            layoutParams & Responsive.layoutMode .~ Responsive.LayoutWide
-            & horiz ^. Responsive.render
-    in
-    case layoutParams ^. Responsive.layoutMode of
-    Responsive.LayoutWide ->
-        case (mParenInfo, layoutParams ^. Responsive.layoutContext) of
-        (Just parenInfo, Responsive.LayoutHorizontal) ->
-            parenLabel parenInfo "("
-            /|/ wide /|/
-            parenLabel parenInfo ")"
-        _ -> wide
-    Responsive.LayoutNarrow limit
-        | wide ^. Element.width > limit ->
-            layoutParams & maybeIndent mParenInfo vert ^. Responsive.render
-        | otherwise -> wide
-
-combineWith ::
-    Functor f => Maybe ParenIndentInfo ->
-    ([WithTextPos (Widget (f Widget.EventResult))] ->
-     [WithTextPos (Widget (f Widget.EventResult))]) ->
-    ([Responsive (f Widget.EventResult)] ->
-     [Responsive (f Widget.EventResult)]) ->
-    [Responsive (f Widget.EventResult)] -> Responsive (f Widget.EventResult)
-combineWith mParenInfo onHGuis onVGuis guis =
-    horizVertFallbackH mParenInfo wide vert
-    where
-        vert = Responsive.vbox (onVGuis guis)
-        wide =
-            guis ^.. Lens.traverse . Responsive.render
-            ?? Responsive.LayoutParams
-                { _layoutMode = Responsive.LayoutWide
-                , _layoutContext = Responsive.LayoutHorizontal
-                }
-            & onHGuis
-            & Glue.hbox
-            & Responsive.fromWithTextPos
-
-combine ::
-    Functor f => [Responsive (f Widget.EventResult)] ->
-    Responsive (f Widget.EventResult)
-combine = combineWith Nothing id id
-
-makeParenIndentInfo ::
-    (MonadReader env m, TextView.HasStyle env, Theme.HasTheme env, Spacer.HasStdSpacing env) =>
-    AnimId -> m ParenIndentInfo
-makeParenIndentInfo parensId =
-    do
-        textStyle <- Lens.view TextView.style
-        theme <- Lens.view Theme.theme <&> Theme.indent
-        stdSpacing <- Spacer.getSpaceSize <&> (^. _1)
-        ParenIndentInfo parensId textStyle theme stdSpacing & return
-
-combineSpaced ::
-    (MonadReader env m, TextView.HasStyle env, Theme.HasTheme env,
-     Spacer.HasStdSpacing env, Functor f) =>
-    m ([Responsive (f Widget.EventResult)] -> Responsive (f Widget.EventResult))
-combineSpaced = combineSpacedMParens Nothing
-
-combineSpacedMParens ::
-    (MonadReader env m, TextView.HasStyle env, Theme.HasTheme env,
-     Spacer.HasStdSpacing env, Functor f) =>
-    Maybe AnimId ->
-    m ([Responsive (f Widget.EventResult)] ->
-       Responsive (f Widget.EventResult))
-combineSpacedMParens mParensId =
-    do
-        hSpace <- Spacer.stdHSpace <&> Widget.fromView <&> WithTextPos 0
-        vSpace <- Spacer.stdVSpace <&> Responsive.fromView
-        mParenInfo <- mParensId & Lens._Just %%~ makeParenIndentInfo
-        return $ combineWith mParenInfo (List.intersperse hSpace) (List.intersperse vSpace)
 
 addAnnotationBackgroundH ::
     Element a =>

@@ -11,6 +11,7 @@ import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Glue ((/|/))
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Responsive as Responsive
+import qualified GUI.Momentu.Responsive.Expression as ResponsiveExpr
 import qualified GUI.Momentu.Widgets.TextView as TextView
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Config.Theme as Theme
@@ -85,7 +86,7 @@ mkNomGui ordering nomStr str mDel valId pl (Sugar.Nominal tid val) =
                 & Widget.keysEventMapMovesCursor (Config.delKeys config)
                 (E.Doc ["Edit", "Nominal", "Delete " <> nomStr])
         let eventMap = mDel ^. Lens._Just . Lens.to mkEventMap
-        ExpressionGui.combineSpacedMParens mParenInfo <*>
+        (ResponsiveExpr.boxSpacedMDisamb ?? mParenInfo) <*>
             ( ordering
                 [
                 do

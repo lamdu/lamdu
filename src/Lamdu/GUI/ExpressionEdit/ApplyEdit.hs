@@ -17,6 +17,7 @@ import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Glue ((/|/))
 import qualified GUI.Momentu.Responsive as Responsive
+import qualified GUI.Momentu.Responsive.Expression as ResponsiveExpr
 import           GUI.Momentu.View (View)
 import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
@@ -125,7 +126,7 @@ makeFuncRow mParensId prec apply applyNearestHoles myId =
                 [] -> applyNearestHoles -- all args are relayed args
                 (x:_) -> x ^. Sugar.aaExpr & ExprGuiT.nextHolesBefore
     Sugar.ObjectArg arg ->
-        ExpressionGui.combineSpacedMParens mParensId
+        (ResponsiveExpr.boxSpacedMDisamb ?? mParensId)
         <*> sequenceA
         [ makeFuncVar (ExprGuiT.nextHolesBefore arg) funcVar myId
             <&> Responsive.fromWithTextPos
@@ -134,9 +135,9 @@ makeFuncRow mParensId prec apply applyNearestHoles myId =
           (ExpressionGui.before .~ prec) arg
         ]
     Sugar.InfixArgs l r ->
-        ExpressionGui.combineSpacedMParens mParensId
+        (ResponsiveExpr.boxSpacedMDisamb ?? mParensId)
         <*> sequenceA
-        [ ExpressionGui.combineSpaced
+        [ (Responsive.boxSpaced ?? Responsive.disambiguationNone)
             <*> sequenceA
             [ ExprGuiM.makeSubexpressionWith 0 (ExpressionGui.after .~ prec) l
             , makeInfixFuncName (ExprGuiT.nextHolesBefore r) funcVar myId
@@ -191,7 +192,7 @@ mkRelayedArgs nearestHoles args =
     do
         argEdits <- mapM makeArgEdit args
         collapsed <- ExpressionGui.grammarLabel "➾" <&> Responsive.fromTextView
-        ExpressionGui.combineSpaced ?? collapsed : argEdits
+        Responsive.boxSpaced ?? Responsive.disambiguationNone ?? collapsed : argEdits
     where
         makeArgEdit arg =
             do
@@ -240,7 +241,7 @@ makeSimple (Sugar.Apply func arg) pl =
                 | Prec.needParens parentPrec (Prec.my prefixPrecedence) =
                     Just (Widget.toAnimId myId)
                 | otherwise = Nothing
-        ExpressionGui.combineSpacedMParens mParensId
+        (ResponsiveExpr.boxSpacedMDisamb ?? mParensId)
             <*> sequenceA
             [ ExprGuiM.makeSubexpressionWith
               0 (ExpressionGui.after .~ prefixPrecedence+1) func

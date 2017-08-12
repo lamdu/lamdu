@@ -79,7 +79,7 @@ make (Sugar.Case mArg alts caseTail addAlt _cEntityId) pl =
                     mTag <-
                         ExpressionGui.evaluationResult (arg ^. Sugar.rPayload)
                         <&> (>>= (^? ER.body . ER._RInject . V.injectTag))
-                    return (mTag, ExpressionGui.combine [argEdit, caseLabel])
+                    return (mTag, Responsive.box Responsive.disambiguationNone [argEdit, caseLabel])
         (altsGui, resultPicker) <-
             ExprGuiM.listenResultPicker $
             do

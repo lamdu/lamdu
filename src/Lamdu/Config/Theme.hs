@@ -1,7 +1,7 @@
 {-# LANGUAGE NoImplicitPrelude, DeriveGeneric #-}
 -- | The themes/ config format
 module Lamdu.Config.Theme
-    ( Help(..), Hole(..), Name(..), Eval(..), Indent(..), ValAnnotation(..)
+    ( Help(..), Hole(..), Name(..), Eval(..), ValAnnotation(..)
     , Theme(..), themeStdSpacing
     , HasTheme(..)
     ) where
@@ -10,6 +10,7 @@ import qualified Data.Aeson.Types as Aeson
 import           Data.Vector.Vector2 (Vector2)
 import           GHC.Generics (Generic)
 import qualified GUI.Momentu.Draw as Draw
+import qualified GUI.Momentu.Responsive.Expression as Expression
 import           Lamdu.Font (FontSize, Fonts)
 import qualified Lamdu.GUI.VersionControl.Config as VersionControl
 
@@ -61,15 +62,6 @@ instance Aeson.ToJSON Eval where
     toJSON = Aeson.genericToJSON Aeson.defaultOptions
 instance Aeson.FromJSON Eval
 
-data Indent = Indent
-    { indentBarWidth :: Double
-    , indentBarGap :: Double
-    , indentBarColor :: Draw.Color
-    } deriving (Eq, Generic, Show)
-instance Aeson.ToJSON Indent where
-    toJSON = Aeson.genericToJSON Aeson.defaultOptions
-instance Aeson.FromJSON Indent
-
 data ValAnnotation = ValAnnotation
     { valAnnotationBGColor :: Draw.Color
     , valAnnotationHoverBGColor :: Draw.Color
@@ -96,7 +88,7 @@ data Theme = Theme
     , maxEvalViewSize :: Int
     , versionControl :: VersionControl.Theme
     , valAnnotation :: ValAnnotation
-    , indent :: Indent
+    , indent :: Expression.Style
     , hoverBGColor :: Draw.Color
     , hoverDarkPadding :: Vector2 Double
     , hoverDarkBGColor :: Draw.Color

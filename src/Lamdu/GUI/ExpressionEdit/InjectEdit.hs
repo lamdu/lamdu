@@ -25,7 +25,7 @@ makeCommon ::
     NearestHoles -> [ExpressionGui m] ->
     ExprGuiM m (ExpressionGui m)
 makeCommon tagG nearestHoles valEdits =
-    ExpressionGui.combineSpaced
+    (Responsive.boxSpaced ?? Responsive.disambiguationNone)
     <*> ( TagEdit.makeCaseTag nearestHoles tagG
           <&> Responsive.fromWithTextPos <&> (: valEdits)
         )
