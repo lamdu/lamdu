@@ -61,7 +61,6 @@ module GUI.Momentu
     , Vector2(..)
     ) where
 
-import qualified Control.Lens as Lens
 import           Data.Text (Text)
 import           Data.Vector.Vector2 (Vector2(..))
 import qualified GUI.Momentu.Align as Align
