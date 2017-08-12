@@ -1,23 +1,25 @@
 {-# OPTIONS -fno-warn-orphans #-}
-{-# LANGUAGE NoImplicitPrelude, StandaloneDeriving, DeriveFunctor, DeriveFoldable, DeriveTraversable, DeriveGeneric, OverloadedStrings #-}
+{-# LANGUAGE NoImplicitPrelude, TemplateHaskell, StandaloneDeriving, DeriveFunctor, DeriveFoldable, DeriveTraversable, DeriveGeneric, OverloadedStrings #-}
 module Graphics.DrawingCombinators.Utils
     ( Image
     , square
-    , TextSize(..)
+    , TextSize(..), bounding, advance
     , Draw.fontHeight, textSize
-    , drawText
+    , RenderedText(..), renderedTextSize, renderedText
+    , renderText
     , scale, translate
     , Draw.clearRender
     ) where
 
 import           Control.Applicative (liftA2)
+import qualified Control.Lens as Lens
 import qualified Data.Aeson.Types as Aeson
 import qualified Data.Text as Text
 import           Data.Vector.Vector2 (Vector2(..))
 import           Foreign.C.Types.Instances ()
 import           GHC.Generics (Generic)
-import qualified Graphics.DrawingCombinators as Draw
 import           Graphics.DrawingCombinators ((%%))
+import qualified Graphics.DrawingCombinators as Draw
 
 import           Lamdu.Prelude
 
@@ -45,8 +47,8 @@ square :: Image
 square = void $ Draw.convexPoly [ (0, 0), (1, 0), (1, 1), (0, 1) ]
 
 data TextSize a = TextSize
-    { bounding :: a
-    , advance :: a
+    { _bounding :: a
+    , _advance :: a
     } deriving (Functor, Foldable, Traversable)
 instance Applicative TextSize where
     pure x = TextSize x x
@@ -59,18 +61,26 @@ instance Num a => Num (TextSize a) where
     signum = fmap signum
     negate = fmap negate
 
+Lens.makeLenses ''TextSize
+
 textWidth :: Draw.Font -> Text -> TextSize Draw.R
 textWidth font str =
     TextSize
-    { bounding =
+    { _bounding =
       Draw.textBoundingWidth font str
       -- max with advance because spaces are counted only in advance
       -- but not the bounding width
       & max adv
-    , advance = adv
+    , _advance = adv
     }
     where
         adv = Draw.textAdvance font str
+
+data RenderedText a = RenderedText
+    { _renderedTextSize :: TextSize (Vector2 Draw.R)
+    , _renderedText :: a
+    }
+Lens.makeLenses ''RenderedText
 
 textSize :: Draw.Font -> Text -> TextSize (Vector2 Draw.R)
 textSize font str =
@@ -79,12 +89,16 @@ textSize font str =
         height = Draw.fontHeight font * fromIntegral numLines
         numLines = 1 + Text.count "\n" str
 
-drawText :: Draw.Font -> Draw.TextAttrs -> Text -> Image
-drawText font textAttrs str =
-    Draw.text font str textAttrs
-    & void
-    -- Text is normally at height -0.5..1.5.  We move it to be -textHeight..0
-    & (translate (Vector2 0 (-Draw.fontHeight font - Draw.fontDescender font)) %%)
-    -- We want to reverse it so that higher y is down, and it is also
-    -- moved to 0..2
-    & (scale (Vector2 1 (-1)) %%)
+renderText :: Draw.Font -> Draw.TextAttrs -> Text -> RenderedText Image
+renderText font textAttrs str =
+    RenderedText
+    { _renderedTextSize = textSize font str
+    , _renderedText =
+        Draw.text font str textAttrs
+        & void
+        -- Text is normally at height -0.5..1.5.  We move it to be -textHeight..0
+        & (translate (Vector2 0 (-Draw.fontHeight font - Draw.fontDescender font)) %%)
+        -- We want to reverse it so that higher y is down, and it is also
+        -- moved to 0..2
+        & (scale (Vector2 1 (-1)) %%)
+    }

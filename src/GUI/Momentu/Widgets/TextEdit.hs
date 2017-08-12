@@ -21,6 +21,7 @@ import qualified GUI.Momentu.Animation as Anim
 import qualified GUI.Momentu.Direction as Direction
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.EventMap as E
+import qualified GUI.Momentu.Font as Font
 import qualified GUI.Momentu.MetaKey as MetaKey
 import           GUI.Momentu.ModKey (ModKey(..))
 import qualified GUI.Momentu.ModKey as ModKey
@@ -30,8 +31,6 @@ import           GUI.Momentu.Widget (Widget(..))
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.TextView as TextView
 import qualified Graphics.DrawingCombinators as Draw
-import           Graphics.DrawingCombinators.Utils (TextSize(..))
-
 
 import           Lamdu.Prelude
 
@@ -181,7 +180,7 @@ mkCursorRect s cursor str =
         cursorSize = Vector2 (s ^. sCursorWidth) lineHeight
         cursorPosX =
             TextView.drawText (s ^. sTextViewStyle) (last beforeCursorLines) ^.
-            TextView.renderedTextSize . Lens.to advance . _1
+            TextView.renderedTextSize . Font.advance . _1
         cursorPosY = lineHeight * (genericLength beforeCursorLines - 1)
 
 -- TODO: Implement intra-TextEdit virtual cursor

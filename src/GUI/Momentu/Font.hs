@@ -4,7 +4,8 @@
 module GUI.Momentu.Font
     ( Underline(..), underlineColor, underlineWidth
     , render
-    , DrawUtils.TextSize(..)
+    , RenderedText(..), DrawUtils.renderedText, DrawUtils.renderedTextSize
+    , TextSize(..), DrawUtils.bounding, DrawUtils.advance
     , DrawUtils.textSize
     , height
     ) where
@@ -13,7 +14,8 @@ import qualified Control.Lens as Lens
 import           Data.Vector.Vector2 (Vector2(..))
 import           Graphics.DrawingCombinators ((%%))
 import qualified Graphics.DrawingCombinators as Draw
-import           Graphics.DrawingCombinators.Utils (TextSize(..))
+import           Graphics.DrawingCombinators.Utils (TextSize(..), Image)
+import           Graphics.DrawingCombinators.Utils (RenderedText, renderedText, renderedTextSize)
 import qualified Graphics.DrawingCombinators.Utils as DrawUtils
 
 import           Lamdu.Prelude
@@ -29,19 +31,18 @@ height = DrawUtils.fontHeight
 
 render ::
     Draw.Font -> Draw.Color -> Maybe Underline -> Text ->
-    (TextSize (Vector2 Draw.R), Draw.Image ())
+    RenderedText Image
 render font color mUnderline str =
-    ( size
-    , DrawUtils.drawText font attrs str
-      <> maybe mempty (drawUnderline font (DrawUtils.bounding size)) mUnderline
-    )
+    r
+    & renderedText <>~
+        maybe mempty (drawUnderline font (r ^. renderedTextSize . DrawUtils.bounding)) mUnderline
     where
+        r = DrawUtils.renderText font attrs str
         attrs =
             Draw.defTextAttrs
             { Draw.gamma = 1.0
             , Draw.foregroundColor = color
             }
-        size = DrawUtils.textSize font str
 
 drawUnderline :: Draw.Font -> Vector2 Draw.R -> Underline -> Draw.Image ()
 drawUnderline font size (Underline color relativeWidth) =

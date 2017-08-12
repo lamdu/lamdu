@@ -7,7 +7,7 @@ module GUI.Momentu.Widgets.TextView
     , HasStyle(..)
 
     , make, makeLabel, makeFocusable, makeFocusableLabel
-    , RenderedText(..), renderedTextSize
+    , RenderedText(..), renderedText, renderedTextSize
     , drawText
     , letterRects
     ) where
@@ -18,10 +18,11 @@ import           Data.Text.Encoding (encodeUtf8)
 import           Data.Vector.Vector2 (Vector2(..))
 import           GUI.Momentu.Align (WithTextPos(..))
 import qualified GUI.Momentu.Align as Align
-import           GUI.Momentu.Animation (AnimId, Size)
+import           GUI.Momentu.Animation (AnimId)
 import qualified GUI.Momentu.Animation as Anim
 import qualified GUI.Momentu.Element as Element
-import           GUI.Momentu.Font (TextSize(..))
+import           GUI.Momentu.Font (bounding, advance)
+import           GUI.Momentu.Font (RenderedText(..), renderedText, renderedTextSize)
 import qualified GUI.Momentu.Font as Font
 import           GUI.Momentu.Rect (Rect(Rect))
 import qualified GUI.Momentu.Rect as Rect
@@ -63,16 +64,8 @@ whiteText f =
 lineHeight :: Style -> Widget.R
 lineHeight Style{..} = Font.height _styleFont
 
-data RenderedText a = RenderedText
-    { _renderedTextSize :: TextSize Size
-    , renderedText :: a
-    }
-Lens.makeLenses ''RenderedText
-
 fontRender :: Style -> Text -> RenderedText (Draw.Image ())
-fontRender Style{..} str =
-    Font.render _styleFont _styleColor _styleUnderline str
-    & uncurry RenderedText
+fontRender Style{..} = Font.render _styleFont _styleColor _styleUnderline
 
 nestedFrame ::
     Show a =>
@@ -104,7 +97,7 @@ letterRects Style{..} text =
                     Text.unpack textLine
                     <&> Font.textSize _styleFont . Text.singleton
                 makeLetterRect size xpos =
-                    Rect (Vector2 (advance xpos) 0) (bounding size)
+                    Rect (Vector2 (xpos ^. advance) 0) (size ^. bounding)
 
 drawText ::
     (MonadReader env m, HasStyle env) =>
@@ -124,7 +117,7 @@ make =
             let RenderedText textSize frame = draw text
             in  WithTextPos
                 { _textTop = 0
-                , _tValue = View.make (bounding textSize) (frame animId)
+                , _tValue = View.make (textSize ^. bounding) (frame animId)
                 }
 
 makeLabel ::
