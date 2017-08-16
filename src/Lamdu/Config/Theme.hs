@@ -1,17 +1,18 @@
-{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE NoImplicitPrelude, DeriveGeneric #-}
 -- | The themes/ config format
 module Lamdu.Config.Theme
     ( Help(..), Hole(..), Name(..), Eval(..), Indent(..), ValAnnotation(..)
     , Theme(..), HasTheme(..)
     ) where
 
-import           Control.Lens (Lens')
 import qualified Data.Aeson.Types as Aeson
 import           Data.Vector.Vector2 (Vector2)
 import           GHC.Generics (Generic)
 import qualified GUI.Momentu.Draw as Draw
 import           Lamdu.Font (FontSize, Fonts)
 import qualified Lamdu.GUI.VersionControl.Config as VersionControl
+
+import           Lamdu.Prelude
 
 data Help = Help
     { helpTextSize :: FontSize

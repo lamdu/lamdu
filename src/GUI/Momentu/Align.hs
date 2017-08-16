@@ -5,7 +5,6 @@ module GUI.Momentu.Align
     , WithTextPos(..), textTop, tValue
     ) where
 
-import           Control.Lens (Lens')
 import qualified Control.Lens as Lens
 import           Data.Vector.Vector2 (Vector2(..))
 import           GUI.Momentu.Element (Element, SizedElement)
