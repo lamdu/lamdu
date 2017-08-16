@@ -47,7 +47,7 @@ makeStdWrapped pl holeInfo =
         let Config.Hole{..} = Config.hole config
             WidgetIds{..} = hiIds holeInfo
             fdWrap
-                | ExprGuiT.plOfHoleResult pl = return id
+                | ExprGuiT.isHoleResult pl = return id
                 | otherwise =
                     FocusDelegator.make ?? fdConfig (Config.hole config)
                     ?? FocusDelegator.FocusEntryChild ?? hidClosedSearchArea

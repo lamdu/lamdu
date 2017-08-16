@@ -39,7 +39,7 @@ data ExprInfo m = ExprInfo
 exprInfoFromPl :: Sugar.Payload f ExprGuiT.Payload -> ExprInfo f
 exprInfoFromPl pl =
     ExprInfo
-    { exprInfoIsHoleResult = ExprGuiT.plOfHoleResult pl
+    { exprInfoIsHoleResult = ExprGuiT.isHoleResult pl
     , exprInfoEntityId = pl ^. Sugar.plEntityId
     , exprInfoNearestHoles = pl ^. Sugar.plData . ExprGuiT.plNearestHoles
     , exprInfoActions = pl ^. Sugar.plActions

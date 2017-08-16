@@ -551,7 +551,7 @@ makeOpenSearchAreaGui pl holeInfo =
     do
         (shownResultsLists, hasHiddenResults) <-
             -- Don't generate results of open holes inside hole results
-            if ExprGuiT.plOfHoleResult pl
+            if ExprGuiT.isHoleResult pl
             then return ([], HaveHiddenResults)
             else HoleResults.makeAll holeInfo
         let shownMainResultsIds =

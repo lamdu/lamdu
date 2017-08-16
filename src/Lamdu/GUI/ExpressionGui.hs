@@ -535,7 +535,7 @@ stdWrap pl act =
     where
         animId = Widget.toAnimId (WidgetIds.fromExprPayload pl)
         addEvents
-            | ExprGuiT.plOfHoleResult pl = E.strongerEvents
+            | ExprGuiT.isHoleResult pl = E.strongerEvents
             | otherwise = E.weakerEvents
 
 parentDelegator ::
@@ -551,7 +551,7 @@ stdWrapParentExpr ::
     ExprGuiM m (ExpressionGui m) ->
     ExprGuiM m (ExpressionGui m)
 stdWrapParentExpr pl mkGui
-    | ExprGuiT.plOfHoleResult pl = stdWrap pl mkGui
+    | ExprGuiT.isHoleResult pl = stdWrap pl mkGui
     | otherwise =
         parentDelegator (WidgetIds.fromExprPayload pl) <*> mkGui & stdWrap pl
 
