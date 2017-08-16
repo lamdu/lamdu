@@ -31,7 +31,7 @@ import           Lamdu.Eval.Results (EvalResults)
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.GUI.CodeEdit as CodeEdit
 import           Lamdu.GUI.CodeEdit.Settings (Settings(..))
-import qualified Lamdu.GUI.Scroll as Scroll
+import qualified GUI.Momentu.Scroll as Scroll
 import qualified Lamdu.GUI.VersionControl as VersionControlGUI
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Style (Style)

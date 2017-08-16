@@ -122,6 +122,7 @@ Executable lamdu
                   , GUI.Momentu.ModKey
                   , GUI.Momentu.Rect
                   , GUI.Momentu.Responsive
+                  , GUI.Momentu.Scroll
                   , GUI.Momentu.View
                   , GUI.Momentu.Widget
                   , GUI.Momentu.Widget.Id
@@ -210,7 +211,6 @@ Executable lamdu
                   , Lamdu.GUI.ParamEdit
                   , Lamdu.GUI.Precedence
                   , Lamdu.GUI.RedundantAnnotations
-                  , Lamdu.GUI.Scroll
                   , Lamdu.GUI.TypeView
                   , Lamdu.GUI.VersionControl
                   , Lamdu.GUI.VersionControl.Config

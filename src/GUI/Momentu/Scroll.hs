@@ -1,5 +1,5 @@
 {-# LANGUAGE NoImplicitPrelude #-}
-module Lamdu.GUI.Scroll
+module GUI.Momentu.Scroll
     ( focusAreaIntoWindow
     ) where
 
