@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, OverloadedStrings, RecordWildCards #-}
+{-# LANGUAGE NoImplicitPrelude, OverloadedStrings #-}
 -- | A hole's search term component
 
 module Lamdu.GUI.ExpressionEdit.HoleEdit.SearchTerm
@@ -35,8 +35,8 @@ makeSearchTermPropEdit ::
     (MonadReader env m, Widget.HasCursor env, TextEdit.HasStyle env, Monad f) =>
     WidgetIds -> Property f Text ->
     m (WithTextPos (Widget (f Widget.EventResult)))
-makeSearchTermPropEdit WidgetIds{..} searchTermProp =
-    TextEdit.make ?? textEditNoEmpty ?? searchTerm ?? hidOpenSearchTerm
+makeSearchTermPropEdit widgetIds searchTermProp =
+    TextEdit.make ?? textEditNoEmpty ?? searchTerm ?? hidOpenSearchTerm widgetIds
     <&> Align.tValue . Widget.events %~ \(newSearchTerm, eventRes) ->
         do
             when (newSearchTerm /= searchTerm) $
@@ -45,7 +45,9 @@ makeSearchTermPropEdit WidgetIds{..} searchTermProp =
                 -- When first letter is typed in search term, jump to the
                 -- results, which will go to first result:
                 & ( if Text.null searchTerm && (not . Text.null) newSearchTerm
-                    then Widget.eCursor .~ Monoid.Last (Just hidResultsPrefix)
+                    then
+                        Widget.eCursor .~
+                        Monoid.Last (Just (hidResultsPrefix widgetIds))
                     else id
                   )
                 & return
@@ -57,13 +59,14 @@ make holeInfo =
     do
         config <- Lens.view Config.config
         theme <- Lens.view Theme.theme
-        let holeConfig@Config.Hole{..} = Config.hole config
-        let Theme.Hole{..} = Theme.hole theme
-        textCursor <- TextEdit.getCursor ?? searchTerm ?? hidOpenSearchTerm
-        makeSearchTermPropEdit WidgetIds{..} (HoleInfo.hiSearchTermProperty holeInfo)
+        let holeConfig = Config.hole config
+        let holeTheme = Theme.hole theme
+        textCursor <- TextEdit.getCursor ?? searchTerm ?? hidOpenSearchTerm widgetIds
+        makeSearchTermPropEdit widgetIds (HoleInfo.hiSearchTermProperty holeInfo)
             <&> Align.tValue . E.eventMap
                 %~ EventMap.disallowCharsFromSearchTerm holeConfig holeInfo textCursor
-            <&> addBackground (Widget.toAnimId hidOpenSearchTerm) holeSearchTermBGColor
+            <&> addBackground (Widget.toAnimId (hidOpenSearchTerm widgetIds))
+                (Theme.holeSearchTermBGColor holeTheme)
     where
-        WidgetIds{..} = hiIds holeInfo
+        widgetIds = hiIds holeInfo
         searchTerm = HoleInfo.hiSearchTerm holeInfo
