@@ -256,11 +256,9 @@ makeOpenEventMaps holeInfo mShownResult =
             Just shownResult ->
                 mkEventsOnPickedResult shownResult
                 <&> mappend (pickEventMap holeConfig holeInfo shownResult)
-                <&> deleteKeys (toLiteralTextKeys <&> MetaKey.toModKey)
+            <&> mappend maybeLiteralTextEventMap
         adHocEdit <- adHocTextEditEventMap holeInfo
-        (eventMap, adHocEdit <> eventMap)
-            & Lens.both %~ mappend maybeLiteralTextEventMap
-            & pure
+        pure (eventMap, adHocEdit <> eventMap)
     where
         isWrapperHole = hiHole holeInfo & Lens.has (Sugar.holeMArg . Lens._Just)
         maybeLiteralTextEventMap
