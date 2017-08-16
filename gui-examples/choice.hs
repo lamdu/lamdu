@@ -22,7 +22,7 @@ data Env = Env
     }
 Lens.makeLenses ''Env
 
-instance M.HasStyle Env where style = eTextStyle
+instance TextView.HasStyle Env where style = eTextStyle
 instance M.HasAnimIdPrefix Env where animIdPrefix = eAnimIdPrefix
 instance M.HasCursor Env where cursor = eCursor
 

@@ -41,7 +41,6 @@ module GUI.Momentu
     , MDraw.addInnerFrame
 
     -- | Environments
-    , TextView.HasStyle(..)
     , Element.HasAnimIdPrefix(..)
     , Widget.HasCursor(..)
     , Widget.HasWidget(..)
@@ -76,7 +75,6 @@ import qualified GUI.Momentu.MetaKey as MetaKey
 import qualified GUI.Momentu.View as View
 import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
-import qualified GUI.Momentu.Widgets.TextView as TextView
 import           GUI.Momentu.Zoom (Zoom)
 import qualified GUI.Momentu.Zoom as Zoom
 import qualified Graphics.UI.GLFW as GLFW
