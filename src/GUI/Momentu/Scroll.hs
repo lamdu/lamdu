@@ -21,16 +21,18 @@ focusAreaIntoWindow winSize widget =
     & intoWindow _2
     where
         widgetSize = widget ^. Element.size
-        center = winSize / 2
+        winCenter = winSize / 2
         allowedScroll = winSize - widgetSize
+        extraSize = max 0 allowedScroll
         intoWindow rawLens w
             | widgetSize ^. l > winSize ^. l && movement < 0 =
               w
-              & Widget.wState .~ Widget.translate (0 & l .~ max (allowedScroll ^. l) movement) w
+              & Widget.wState .~ Widget.translate translation w
               & Element.size .~ winSize
             | otherwise = w
             where
-                movement = center ^. l - focalPoint ^. l
+                translation = 0 & l .~ max (allowedScroll ^. l) movement
+                movement = winCenter ^. l - focalPoint ^. l
                 l :: Lens' (Vector2 Widget.R) Widget.R
                 l = Lens.cloneLens rawLens
         surrounding =
@@ -40,7 +42,6 @@ focusAreaIntoWindow winSize widget =
             , Widget._sRight = extraSize ^. _1
             , Widget._sBottom = extraSize ^. _2
             }
-        extraSize = max 0 (winSize - widgetSize)
         focalPoint =
             widget ^? Widget.wState . Widget._StateFocused
             <&> (surrounding &)
