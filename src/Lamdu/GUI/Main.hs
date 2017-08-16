@@ -89,7 +89,7 @@ make env =
                     let scrollBox =
                             topPadding /-/ codeEdit
                             & Widget.padToSizeAlign codeSize 0
-                            & Scroll.focusAreaIntoWindow fullSize
+                            & Scroll.focusAreaIntoWindow codeSize
                             & Element.size .~ codeSize
                     scrollBox /-/ Element.hoverLayers branchSelector
                         & return
