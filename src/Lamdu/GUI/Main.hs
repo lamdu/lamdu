@@ -88,7 +88,7 @@ make env =
                     topPadding <- Theme.topPadding theme & Spacer.vspaceLines
                     let scrollBox =
                             topPadding /-/ codeEdit
-                            & Scroll.focusAreaIntoWindow codeSize
+                            & Scroll.focusAreaInto codeSize
                             & Element.size .~ codeSize
                     scrollBox /-/ Element.hoverLayers branchSelector
                         & return

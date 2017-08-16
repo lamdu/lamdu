@@ -1,6 +1,6 @@
 {-# LANGUAGE NoImplicitPrelude #-}
 module GUI.Momentu.Scroll
-    ( focusAreaIntoWindow
+    ( focusAreaInto
     ) where
 
 import qualified Control.Lens as Lens
@@ -12,27 +12,28 @@ import qualified GUI.Momentu.Widget as Widget
 
 import           Lamdu.Prelude
 
-focusAreaIntoWindow ::
+-- Focus area into the given region
+focusAreaInto ::
     Functor f =>
     Widget.Size -> Widget (f Widget.EventResult) -> Widget (f Widget.EventResult)
-focusAreaIntoWindow winSize widget =
+focusAreaInto regionSize widget =
     widget
-    & intoWindow _1
-    & intoWindow _2
+    & intoRegion _1
+    & intoRegion _2
     where
         widgetSize = widget ^. Element.size
-        winCenter = winSize / 2
-        allowedScroll = winSize - widgetSize
+        regionCenter = regionSize / 2
+        allowedScroll = regionSize - widgetSize
         extraSize = max 0 allowedScroll
-        intoWindow rawLens w
-            | widgetSize ^. l > winSize ^. l && movement < 0 =
+        intoRegion rawLens w
+            | widgetSize ^. l > regionSize ^. l && movement < 0 =
               w
               & Widget.wState .~ Widget.translate translation w
-              & Element.size .~ winSize
+              & Element.size .~ regionSize
             | otherwise = w
             where
                 translation = 0 & l .~ max (allowedScroll ^. l) movement
-                movement = winCenter ^. l - focalPoint ^. l
+                movement = regionCenter ^. l - focalPoint ^. l
                 l :: Lens' (Vector2 Widget.R) Widget.R
                 l = Lens.cloneLens rawLens
         surrounding =
