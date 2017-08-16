@@ -32,7 +32,7 @@ fontPath = "fonts/DejaVuSans.ttf"
 main :: IO ()
 main =
     do
-        win <- M.createWindow "Hello World" Nothing (M.Vector2 800 400)
+        win <- M.createWindow "Hello World" Nothing (M.Vector2 400 800)
         cachedOpenFont <- memoIO (`M.openFont` fontPath)
         choiceRef <- newIORef "blue"
         M.defaultOptions fontPath
