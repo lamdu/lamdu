@@ -10,7 +10,6 @@ import           Data.Functor.Identity (Identity(..))
 import           Data.List (isInfixOf)
 import           Data.List.Class (List)
 import qualified Data.List.Class as List
-import           Data.Store.Property (Property(..))
 import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
 import qualified Data.Text as Text
@@ -52,19 +51,21 @@ blockDirection key keyName =
     & E.weakerEvents
 
 adHocTextEditEventMap ::
-    Monad m =>
-    Config.Hole -> HoleInfo m -> Property (T m) Text -> Widget.EventMap (T m Widget.EventResult)
-adHocTextEditEventMap holeConfig holeInfo searchTermProp =
-    appendCharEventMap <> deleteCharEventMap
+    Monad m => HoleInfo m -> ExprGuiM m (Widget.EventMap (T m Widget.EventResult))
+adHocTextEditEventMap holeInfo =
+    do
+        holeConfig <- Lens.view Config.config <&> Config.hole
+        let appendCharEventMap =
+                E.allChars "Character"
+                (E.Doc ["Edit", "Search Term", "Append character"])
+                (changeText . snoc)
+                & disallowCharsFromSearchTerm holeConfig holeInfo Nothing
+                & if Text.null searchTerm
+                  then E.filterChars (`notElem` operatorChars)
+                  else id
+        appendCharEventMap <> deleteCharEventMap & pure
     where
-        appendCharEventMap =
-            E.allChars "Character"
-            (E.Doc ["Edit", "Search Term", "Append character"])
-            (changeText . snoc)
-            & disallowCharsFromSearchTerm holeConfig holeInfo Nothing
-            & if Text.null searchTerm
-              then E.filterChars (`notElem` operatorChars)
-              else id
+        searchTermProp = HoleInfo.hiSearchTermProperty holeInfo
         deleteCharEventMap
             | Text.null searchTerm = mempty
             | otherwise =
@@ -256,14 +257,14 @@ makeOpenEventMaps holeInfo mShownResult =
                 mkEventsOnPickedResult shownResult
                 <&> mappend (pickEventMap holeConfig holeInfo shownResult)
                 <&> deleteKeys (toLiteralTextKeys <&> MetaKey.toModKey)
-        let adHocEdit = adHocTextEditEventMap holeConfig holeInfo searchTermProp
+        adHocEdit <- adHocTextEditEventMap holeInfo
         (eventMap, adHocEdit <> eventMap)
             & Lens.both %~ mappend maybeLiteralTextEventMap
             & pure
     where
         isWrapperHole = hiHole holeInfo & Lens.has (Sugar.holeMArg . Lens._Just)
         maybeLiteralTextEventMap
-            | Text.null (searchTermProp ^. Property.pVal) && not isWrapperHole =
+            | Text.null searchTerm && not isWrapperHole =
               toLiteralTextEventMap holeInfo
             | otherwise = mempty
-        searchTermProp = HoleInfo.hiSearchTermProperty holeInfo
+        searchTerm = HoleInfo.hiSearchTermProperty holeInfo ^. Property.pVal
