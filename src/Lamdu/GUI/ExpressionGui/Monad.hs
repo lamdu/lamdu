@@ -105,7 +105,7 @@ data Askable m = Askable
     , _aTheme :: Theme
     , _aMakeSubexpression :: ExprGuiT.SugarExpr m -> ExprGuiM m (ExpressionGui m)
     , _aCodeAnchors :: Anchors.CodeProps m
-    , _aSubexpressionLayer :: Int
+    , _aDepthLeft :: Int
     , _aMScopeId :: CurAndPrev (Maybe ScopeId)
     , _aOuterPrecedence :: Precedence
     , _aMinOpPrecedence :: Int
@@ -175,17 +175,17 @@ makeSubexpressionWith minOpPrec onPrecedence expr =
         animId = toAnimId $ WidgetIds.fromExprPayload $ expr ^. Sugar.rPayload
 
 resetDepth :: Int -> ExprGuiM m r -> ExprGuiM m r
-resetDepth depth = exprGuiM %~ RWS.local (aSubexpressionLayer .~ depth)
+resetDepth depth = exprGuiM %~ RWS.local (aDepthLeft .~ depth)
 
 advanceDepth ::
     Monad m => (WithTextPos View -> ExprGuiM m r) ->
     AnimId -> ExprGuiM m r -> ExprGuiM m r
 advanceDepth f animId action =
     do
-        depth <- Lens.view aSubexpressionLayer
+        depth <- Lens.view aDepthLeft
         if depth <= 0
             then mkErrorWidget >>= f
-            else action & exprGuiM %~ RWS.local (aSubexpressionLayer -~ 1)
+            else action & exprGuiM %~ RWS.local (aDepthLeft -~ 1)
     where
         mkErrorWidget = TextView.make ?? "..." ?? animId
 
@@ -215,7 +215,7 @@ run makeSubexpr codeAnchors settings style (ExprGuiM action) =
             , _aSettings = settings
             , _aMakeSubexpression = makeSubexpr
             , _aCodeAnchors = codeAnchors
-            , _aSubexpressionLayer = Config.maxExprDepth config
+            , _aDepthLeft = Config.maxExprDepth config
             , _aMScopeId = Just topLevelScopeId & pure
             , _aOuterPrecedence = Precedence.make 0
             , _aMinOpPrecedence = 0
