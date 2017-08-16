@@ -1,6 +1,7 @@
 {-# LANGUAGE NoImplicitPrelude, TemplateHaskell, OverloadedStrings #-}
 module Lamdu.GUI.CodeEdit.Settings
     ( Settings(..), sInfoMode, InfoMode(..), defaultInfoMode
+    , HasSettings(..)
     , nextInfoMode
     , mkEventMap
     ) where
@@ -26,6 +27,8 @@ newtype Settings = Settings
     }
 Lens.makeLenses ''Settings
 
+class HasSettings env where settings :: Lens' env Settings
+
 cyclicSucc :: (Eq a, Enum a, Bounded a) => a -> a
 cyclicSucc x
     | x == maxBound = minBound
@@ -39,11 +42,11 @@ mkEventMap ::
     IO (Widget.EventMap (IO Widget.EventResult))
 mkEventMap onSettingsChange config settingsRef =
     do
-        settings <- readIORef settingsRef
-        let next = settings ^. sInfoMode & nextInfoMode
+        theSettings <- readIORef settingsRef
+        let next = theSettings ^. sInfoMode & nextInfoMode
         let nextDoc =
                 EventMap.Doc ["View", "Subtext", "Show " <> Text.pack (show next)]
-        let nextSettings = settings & sInfoMode .~ next
+        let nextSettings = theSettings & sInfoMode .~ next
         do
             writeIORef settingsRef nextSettings
             onSettingsChange nextSettings

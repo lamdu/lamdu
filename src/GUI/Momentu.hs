@@ -44,6 +44,7 @@ module GUI.Momentu
     , Element.HasAnimIdPrefix(..)
     , Widget.HasCursor(..)
     , Widget.HasWidget(..)
+    , Spacer.HasStdSpacing(..)
 
     -- | Setup
     , GLFW.getPrimaryMonitor
@@ -75,6 +76,7 @@ import qualified GUI.Momentu.MetaKey as MetaKey
 import qualified GUI.Momentu.View as View
 import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
+import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import           GUI.Momentu.Zoom (Zoom)
 import qualified GUI.Momentu.Zoom as Zoom
 import qualified Graphics.UI.GLFW as GLFW

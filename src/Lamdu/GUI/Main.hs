@@ -1,40 +1,38 @@
-{-# LANGUAGE NoImplicitPrelude, TemplateHaskell, RankNTypes, DisambiguateRecordFields, NamedFieldPuns, OverloadedStrings #-}
+{-# LANGUAGE NoImplicitPrelude, TemplateHaskell, RankNTypes, DisambiguateRecordFields, NamedFieldPuns, OverloadedStrings, FlexibleContexts #-}
 module Lamdu.GUI.Main
     ( make
-    , Env(..), CodeEdit.ExportActions(..)
-      , envEvalRes, envExportActions
-      , envConfig, envTheme, envSettings, envStyle, envMainLoop
+    , CodeEdit.ExportActions(..)
     , CodeEdit.M(..), CodeEdit.m, defaultCursor
+    , CodeEdit.HasEvalResults(..)
+    , CodeEdit.HasExportActions(..)
+    , EvalResults
     ) where
 
 import qualified Control.Lens as Lens
 import           Control.Monad.Reader (ReaderT(..))
 import qualified Control.Monad.Reader as Reader
-import           Data.CurAndPrev (CurAndPrev(..))
+import           Data.CurAndPrev (CurAndPrev)
 import           Data.Store.Transaction (Transaction)
 import           Data.Vector.Vector2 (Vector2(..))
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.EventMap as EventMap
 import           GUI.Momentu.Glue ((/-/))
 import qualified GUI.Momentu.Main as MainLoop
+import qualified GUI.Momentu.Scroll as Scroll
 import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
-import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
-import qualified GUI.Momentu.Widgets.TextView as TextView
-import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
-import           Lamdu.Config.Theme (Theme)
 import qualified Lamdu.Config.Theme as Theme
+import           Lamdu.Data.DbLayout (DbM, ViewM)
 import qualified Lamdu.Data.DbLayout as DbLayout
-import           Lamdu.Eval.Results (EvalResults)
+import qualified Lamdu.Eval.Results as Results
 import qualified Lamdu.Expr.IRef as ExprIRef
+import           Lamdu.GUI.CodeEdit (M)
 import qualified Lamdu.GUI.CodeEdit as CodeEdit
-import           Lamdu.GUI.CodeEdit.Settings (Settings(..))
-import qualified GUI.Momentu.Scroll as Scroll
+import qualified Lamdu.GUI.CodeEdit.Settings as Settings
 import qualified Lamdu.GUI.VersionControl as VersionControlGUI
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
-import           Lamdu.Style (Style)
 import qualified Lamdu.Style as Style
 import qualified Lamdu.VersionControl as VersionControl
 import qualified Lamdu.VersionControl.Actions as VersionControl.Actions
@@ -43,69 +41,67 @@ import           Lamdu.Prelude
 
 type T = Transaction
 
-data Env = Env
-    { _envEvalRes :: CurAndPrev (EvalResults (ExprIRef.ValI DbLayout.ViewM))
-    , _envExportActions :: CodeEdit.ExportActions DbLayout.ViewM
-    , _envConfig :: Config
-    , _envTheme :: Theme
-    , _envSettings :: Settings
-    , _envStyle :: Style
-    , _envMainLoop :: MainLoop.Env
-    }
-Lens.makeLenses ''Env
-
-instance Widget.HasCursor Env where cursor = envMainLoop . Widget.cursor
-instance TextEdit.HasStyle Env where style = envStyle . Style.styleBase
-instance TextView.HasStyle Env where style = TextEdit.style . TextView.style
-instance Theme.HasTheme Env where theme = envTheme
-instance Config.HasConfig Env where config = envConfig
-
-themeStdSpacing :: Lens' Theme (Vector2 Double)
-themeStdSpacing f theme =
-    Theme.stdSpacing theme & f <&> \new -> theme { Theme.stdSpacing = new }
-instance Spacer.HasStdSpacing Env where stdSpacing = envTheme . themeStdSpacing
-
 defaultCursor :: Widget.Id
 defaultCursor = WidgetIds.replId
 
-make :: Env -> T DbLayout.DbM (Widget (CodeEdit.M DbLayout.DbM Widget.EventResult))
+type EvalResults = CurAndPrev (Results.EvalResults (ExprIRef.ValI ViewM))
+
+makeInnerGui ::
+    ( MainLoop.HasMainLoopEnv env
+    , Style.HasStyle env
+    , Settings.HasSettings env
+    , Spacer.HasStdSpacing env
+    , Widget.HasCursor env
+    , Theme.HasTheme env
+    , Config.HasConfig env
+    , CodeEdit.HasEvalResults env ViewM
+    , CodeEdit.HasExportActions env ViewM
+    ) =>
+    Widget (M DbM Widget.EventResult) ->
+    ReaderT env (T DbM) (Widget (M DbM Widget.EventResult))
+makeInnerGui branchSelector =
+    do
+        fullSize <- Lens.view (MainLoop.mainLoopEnv . MainLoop.eWindowSize)
+        let codeSize = fullSize - Vector2 0 (branchSelector ^. Element.height)
+        theCursor <- Lens.view Widget.cursor
+        codeEdit <-
+            CodeEdit.make DbLayout.codeAnchors (codeSize ^. _1)
+            & Reader.mapReaderT VersionControl.runAction
+            <&> Widget.events . CodeEdit.m . Lens.mapped %~
+                VersionControl.runEvent theCursor
+        theTheme <- Lens.view Theme.theme
+        topPadding <- Spacer.vspaceLines (Theme.topPadding theTheme)
+        let scrollBox =
+                topPadding /-/ codeEdit
+                & Scroll.focusAreaInto codeSize
+                & Element.size .~ codeSize
+        scrollBox /-/ Element.hoverLayers branchSelector
+            & return
+
+make ::
+    ( MainLoop.HasMainLoopEnv env
+    , Style.HasStyle env
+    , Config.HasConfig env
+    , Spacer.HasStdSpacing env
+    , Theme.HasTheme env
+    , Settings.HasSettings env
+    , CodeEdit.HasEvalResults env ViewM
+    , CodeEdit.HasExportActions env ViewM
+    ) =>
+    env -> T DbM (Widget (M DbM Widget.EventResult))
 make env =
     do
         actions <-
             VersionControl.makeActions
             <&> VersionControl.Actions.hoist CodeEdit.mLiftTrans
+        let versionControlCfg = Config.versionControl (env ^. Config.config)
+        let versionControlThm = Theme.versionControl (env ^. Theme.theme)
         do
             branchGui <-
-                VersionControlGUI.make (Config.versionControl config) (Theme.versionControl theme)
-                CodeEdit.mLiftTrans lift actions $
-                \branchSelector ->
-                do
-                    let codeSize = fullSize - Vector2 0 (branchSelector ^. Element.height)
-                    codeEdit <-
-                        CodeEdit.make (codeSize ^. _1) codeEditEnv
-                        & Reader.mapReaderT VersionControl.runAction
-                        <&> Widget.events . CodeEdit.m %~ fmap (VersionControl.runEvent (mainEnv ^. Widget.cursor))
-                    topPadding <- Theme.topPadding theme & Spacer.vspaceLines
-                    let scrollBox =
-                            topPadding /-/ codeEdit
-                            & Scroll.focusAreaInto codeSize
-                            & Element.size .~ codeSize
-                    scrollBox /-/ Element.hoverLayers branchSelector
-                        & return
+                VersionControlGUI.make versionControlCfg versionControlThm
+                CodeEdit.mLiftTrans lift actions makeInnerGui
+                & (`runReaderT` env)
             let quitEventMap =
-                    Widget.keysEventMap (Config.quitKeys config) (EventMap.Doc ["Quit"]) (error "Quit")
+                    Widget.keysEventMap (Config.quitKeys (env ^. Config.config))
+                    (EventMap.Doc ["Quit"]) (error "Quit")
             EventMap.strongerEvents quitEventMap branchGui & return
-            & (`runReaderT` env)
-    where
-        fullSize = mainEnv ^. MainLoop.eWindowSize
-        Env _evalResults _exportActions config theme _settings _style mainEnv = env
-        codeEditEnv =
-            CodeEdit.Env
-            { _codeAnchors = DbLayout.codeAnchors
-            , _evalResults
-            , _eConfig = config
-            , _theme = theme
-            , _settings
-            , _style
-            , _exportActions
-            }

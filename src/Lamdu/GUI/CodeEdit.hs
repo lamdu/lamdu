@@ -1,8 +1,8 @@
-{-# LANGUAGE NoImplicitPrelude, OverloadedStrings, DeriveFunctor, TemplateHaskell, NamedFieldPuns, DisambiguateRecordFields #-}
+{-# LANGUAGE NoImplicitPrelude, OverloadedStrings, DeriveFunctor, TemplateHaskell, NamedFieldPuns, DisambiguateRecordFields, MultiParamTypeClasses #-}
 module Lamdu.GUI.CodeEdit
     ( make
-    , Env(..), codeAnchors, exportActions, evalResults, eConfig, theme, settings, style
-    , ExportActions(..)
+    , HasEvalResults(..)
+    , ExportActions(..), HasExportActions(..)
     , M(..), m, mLiftTrans
     ) where
 
@@ -15,21 +15,20 @@ import           Data.Functor.Identity (Identity(..))
 import           Data.Orphans () -- Imported for Monoid (IO ()) instance
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
+import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.Main as Main
 import           GUI.Momentu.MetaKey (MetaKey)
-import           GUI.Momentu.Widget (Widget)
-import qualified GUI.Momentu.Widget as Widget
-import qualified GUI.Momentu.Align as Align
 import           GUI.Momentu.Responsive (Responsive)
 import qualified GUI.Momentu.Responsive as Responsive
+import           GUI.Momentu.Widget (Widget)
+import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
 import qualified GUI.Momentu.Widgets.TextView as TextView
 import qualified Lamdu.Calc.Type.Scheme as Scheme
-import           Lamdu.Config (Config)
+import           Lamdu.Config (Config, config)
 import qualified Lamdu.Config as Config
-import           Lamdu.Config.Theme (Theme)
 import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.Data.Anchors as Anchors
 import           Lamdu.Data.Definition (Definition(..))
@@ -37,7 +36,7 @@ import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Data.Ops as DataOps
 import           Lamdu.Eval.Results (EvalResults)
 import           Lamdu.Expr.IRef (DefI, ValI)
-import           Lamdu.GUI.CodeEdit.Settings (Settings)
+import           Lamdu.GUI.CodeEdit.Settings (HasSettings)
 import qualified Lamdu.GUI.DefinitionEdit as DefinitionEdit
 import qualified Lamdu.GUI.ExpressionEdit as ExpressionEdit
 import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
@@ -47,7 +46,7 @@ import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
 import qualified Lamdu.GUI.RedundantAnnotations as RedundantAnnotations
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
-import           Lamdu.Style (Style)
+import           Lamdu.Style (HasStyle)
 import qualified Lamdu.Sugar.Convert as SugarConvert
 import qualified Lamdu.Sugar.Names.Add as AddNames
 import           Lamdu.Sugar.Names.Types (Name)
@@ -84,19 +83,10 @@ data ExportActions m = ExportActions
     , importAll :: FilePath -> M m ()
     }
 
-data Env m = Env
-    { _codeAnchors :: Anchors.CodeAnchors m
-    , _exportActions :: ExportActions m
-    , _evalResults :: CurAndPrev (EvalResults (ValI m))
-    , _eConfig :: Config
-    , _theme :: Theme
-    , _settings :: Settings
-    , _style :: Style
-    }
-Lens.makeLenses ''Env
+class HasEvalResults env m where
+    evalResults :: Lens' env (CurAndPrev (EvalResults (ValI m)))
 
-instance Config.HasConfig (Env m) where config = eConfig
-instance Theme.HasTheme (Env m) where theme = theme
+class HasExportActions env m where exportActions :: Lens' env (ExportActions m)
 
 toExprGuiMPayload :: ([Sugar.EntityId], NearestHoles) -> ExprGuiT.Payload
 toExprGuiMPayload (entityIds, nearestHoles) =
@@ -127,12 +117,17 @@ postProcessExpr expr =
     <&> toExprGuiMPayload
     & RedundantAnnotations.markAnnotationsToDisplay
 
-loadWorkArea :: Monad m => Env m -> T m (Sugar.WorkArea (Name m) m ExprGuiT.Payload)
-loadWorkArea env =
+loadWorkArea ::
+    Monad m =>
+    CurAndPrev (EvalResults (ValI m)) ->
+    Anchors.CodeAnchors m ->
+    ExprGuiM m (Sugar.WorkArea (Name m) m ExprGuiT.Payload)
+loadWorkArea theEvalResults theCodeAnchors =
     do
         Sugar.WorkArea { _waPanes, _waRepl } <-
-            SugarConvert.loadWorkArea (env ^. evalResults) (env ^. codeAnchors)
+            SugarConvert.loadWorkArea theEvalResults theCodeAnchors
             >>= AddNames.addToWorkArea
+            & transaction
         Sugar.WorkArea
             (_waPanes <&> Sugar.paneDefinition %~ fmap postProcessExpr . traverseAddNearestHoles)
             (_waRepl & exprAddNearestHoles & postProcessExpr)
@@ -140,71 +135,81 @@ loadWorkArea env =
 
 makeReplEdit ::
     Monad m =>
-    Env m -> ExprGuiT.SugarExpr m ->
+    ExportActions m ->
+    ExprGuiT.SugarExpr m ->
     ExprGuiM m (Responsive (M m Widget.EventResult))
-makeReplEdit env replExpr =
-    ExpressionGui.combineSpaced
-    <*> sequence
-    [ (Widget.makeFocusableView ?? Widget.joinId WidgetIds.replId ["symbol"])
-      <*> (TextView.makeLabel "⋙" <&> Responsive.fromTextView)
-    , ExprGuiM.makeSubexpressionWith 0 id replExpr
-    ]
-    <&> Lens.mapped %~ mLiftTrans
-    <&> E.weakerEvents (replEventMap env replExpr)
-    & Widget.assignCursor WidgetIds.replId exprId
+makeReplEdit theExportActions replExpr =
+    do
+        theConfig <- Lens.view config
+        ExpressionGui.combineSpaced
+            <*> sequence
+            [ (Widget.makeFocusableView ?? Widget.joinId WidgetIds.replId ["symbol"])
+              <*> (TextView.makeLabel "⋙" <&> Responsive.fromTextView)
+            , ExprGuiM.makeSubexpressionWith 0 id replExpr
+            ]
+            <&> Lens.mapped %~ mLiftTrans
+            <&> E.weakerEvents (replEventMap theConfig theExportActions replExpr)
+            & Widget.assignCursor WidgetIds.replId exprId
     where
         exprId = replExpr ^. Sugar.rPayload . Sugar.plEntityId & WidgetIds.fromEntityId
 
 make ::
     ( Monad m, MonadTransaction m n, MonadReader env n, Config.HasConfig env
     , Theme.HasTheme env, Widget.HasCursor env, TextEdit.HasStyle env
-    , Spacer.HasStdSpacing env
+    , Spacer.HasStdSpacing env, HasEvalResults env m, HasExportActions env m
+    , HasSettings env, HasStyle env
     ) =>
-    Widget.R ->
-    Env m -> n (Widget (M m Widget.EventResult))
-make width env =
+    Anchors.CodeAnchors m -> Widget.R ->
+    n (Widget (M m Widget.EventResult))
+make theCodeAnchors width =
     do
-        workArea <- loadWorkArea env & transaction
-        replGui <- makeReplEdit env (workArea ^. Sugar.waRepl)
-        panesEdits <- workArea ^. Sugar.waPanes & traverse (makePaneEdit env)
-        newDefinitionButton <- makeNewDefinitionButton <&> fmap mLiftTrans <&> Responsive.fromWidget
-        eventMap <- panesEventMap env
-        Responsive.vboxSpaced
-            ?? (replGui : panesEdits ++ [newDefinitionButton])
-            <&> E.weakerEvents eventMap
-    & ExprGuiM.run ExpressionEdit.make
-      (env ^. codeAnchors) (env ^. settings) (env ^. style)
-    <&> ExpressionGui.render width
-    <&> (^. Align.tValue)
+        theEvalResults <- Lens.view evalResults
+        theExportActions <- Lens.view exportActions
+        do
+            workArea <- loadWorkArea theEvalResults theCodeAnchors
+            replGui <- makeReplEdit theExportActions (workArea ^. Sugar.waRepl)
+            panesEdits <-
+                workArea ^. Sugar.waPanes
+                & traverse (makePaneEdit theExportActions)
+            newDefinitionButton <- makeNewDefinitionButton <&> fmap mLiftTrans <&> Responsive.fromWidget
+            eventMap <- panesEventMap theExportActions theCodeAnchors
+            Responsive.vboxSpaced
+                ?? (replGui : panesEdits ++ [newDefinitionButton])
+                <&> E.weakerEvents eventMap
+            & ExprGuiM.run ExpressionEdit.make theCodeAnchors
+            <&> ExpressionGui.render width
+            <&> (^. Align.tValue)
 
 makePaneEdit ::
     Monad m =>
-    Env m -> Sugar.Pane (Name m) m ExprGuiT.Payload ->
+    ExportActions m ->
+    Sugar.Pane (Name m) m ExprGuiT.Payload ->
     ExprGuiM m (Responsive (M m Widget.EventResult))
-makePaneEdit env pane =
-    DefinitionEdit.make (pane ^. Sugar.paneDefinition)
-    <&> Lens.mapped %~ mLiftTrans
-    <&> E.weakerEvents paneEventMap
-    where
-        paneCloseKeys = Config.paneCloseKeys (Config.pane (env ^. eConfig))
-        exportKeys = Config.exportKeys (Config.export (env ^. eConfig))
-        paneEventMap =
-            [ pane ^. Sugar.paneClose & mLiftTrans
-              <&> WidgetIds.fromEntityId
-              & Widget.keysEventMapMovesCursor paneCloseKeys
-                (E.Doc ["View", "Pane", "Close"])
-            , do
-                  Transaction.setP (pane ^. Sugar.paneDefinition . Sugar.drDefinitionState)
-                      Sugar.DeletedDefinition
-                  pane ^. Sugar.paneClose
-              & mLiftTrans
-              <&> WidgetIds.fromEntityId
-              & Widget.keysEventMapMovesCursor (Config.delKeys env)
-                (E.Doc ["Edit", "Definition", "Delete"])
-            , exportDef (env ^. exportActions) (pane ^. Sugar.paneDefinition . Sugar.drDefI)
-              & Widget.keysEventMap exportKeys
-                (E.Doc ["Collaboration", "Export definition to JSON file"])
-            ] & mconcat
+makePaneEdit theExportActions pane =
+    do
+        theConfig <- Lens.view config
+        let paneEventMap =
+                [ pane ^. Sugar.paneClose & mLiftTrans
+                  <&> WidgetIds.fromEntityId
+                  & Widget.keysEventMapMovesCursor paneCloseKeys
+                    (E.Doc ["View", "Pane", "Close"])
+                , do
+                      Transaction.setP (pane ^. Sugar.paneDefinition . Sugar.drDefinitionState)
+                          Sugar.DeletedDefinition
+                      pane ^. Sugar.paneClose
+                  & mLiftTrans
+                  <&> WidgetIds.fromEntityId
+                  & Widget.keysEventMapMovesCursor (Config.delKeys theConfig)
+                    (E.Doc ["Edit", "Definition", "Delete"])
+                , exportDef theExportActions (pane ^. Sugar.paneDefinition . Sugar.drDefI)
+                  & Widget.keysEventMap exportKeys
+                    (E.Doc ["Collaboration", "Export definition to JSON file"])
+                ] & mconcat
+            paneCloseKeys = Config.paneCloseKeys (Config.pane theConfig)
+            exportKeys = Config.exportKeys (Config.export theConfig)
+        DefinitionEdit.make (pane ^. Sugar.paneDefinition)
+            <&> Lens.mapped %~ mLiftTrans
+            <&> E.weakerEvents paneEventMap
 
 makeNewDefinitionEventMap ::
     (Monad m, MonadReader env n, Widget.HasCursor env) =>
@@ -244,13 +249,14 @@ makeNewDefinitionButton =
 
 replEventMap ::
     Monad m =>
-    Env m -> Sugar.Expression name m a -> Widget.EventMap (M m Widget.EventResult)
-replEventMap env replExpr =
+    Config -> ExportActions m ->
+    Sugar.Expression name m a -> Widget.EventMap (M m Widget.EventResult)
+replEventMap theConfig theExportActions replExpr =
     mconcat
     [ replExpr ^. Sugar.rPayload . Sugar.plActions . Sugar.extract
       <&> ExprEventMap.extractCursor & mLiftTrans
       & Widget.keysEventMapMovesCursor
-        (Config.newDefinitionButtonPressKeys (Config.pane (env ^. eConfig)))
+        (Config.newDefinitionButtonPressKeys (Config.pane theConfig))
         (E.Doc ["Edit", "Extract to definition"])
     , Widget.keysEventMap exportKeys
       (E.Doc ["Collaboration", "Export repl to JSON file"]) exportRepl
@@ -258,24 +264,28 @@ replEventMap env replExpr =
       (E.Doc ["Collaboration", "Export repl for Codejam"]) exportFancy
     ]
     where
-        ExportActions{exportRepl, exportFancy} = env ^. exportActions
-        Config.Export{exportKeys, exportFancyKeys} = Config.export (env ^. eConfig)
+        ExportActions{exportRepl, exportFancy} = theExportActions
+        Config.Export{exportKeys, exportFancyKeys} = Config.export theConfig
 
 panesEventMap ::
-    (Monad m, MonadTransaction m n, MonadReader env n, Widget.HasCursor env) =>
-    Env m -> n (Widget.EventMap (M m Widget.EventResult))
-panesEventMap env =
+    Monad m =>
+    ExportActions m -> Anchors.CodeAnchors m ->
+    ExprGuiM m (Widget.EventMap (M m Widget.EventResult))
+panesEventMap theExportActions theCodeAnchors =
     do
-        mJumpBack <- DataOps.jumpBack (env ^. codeAnchors) & transaction <&> fmap mLiftTrans
-        newDefinitionEventMap <- makeNewDefinitionEventMap (env ^. codeAnchors)
+        theConfig <- Lens.view config
+        let Config.Export{exportPath,importKeys,exportAllKeys} = Config.export theConfig
+        mJumpBack <-
+            DataOps.jumpBack theCodeAnchors & transaction <&> fmap mLiftTrans
+        newDefinitionEventMap <- makeNewDefinitionEventMap theCodeAnchors
         return $ mconcat
-            [ newDefinitionEventMap (Config.newDefinitionKeys (Config.pane (env ^. eConfig)))
+            [ newDefinitionEventMap (Config.newDefinitionKeys (Config.pane theConfig))
               <&> mLiftTrans
             , E.dropEventMap "Drag&drop JSON files"
               (E.Doc ["Collaboration", "Import JSON file"]) (Just . traverse_ importAll)
               <&> fmap (\() -> mempty)
             , maybe mempty
-              (Widget.keysEventMapMovesCursor (Config.previousCursorKeys (env ^. eConfig))
+              (Widget.keysEventMapMovesCursor (Config.previousCursorKeys theConfig)
                (E.Doc ["Navigation", "Go back"])) mJumpBack
             , Widget.keysEventMap exportAllKeys
               (E.Doc ["Collaboration", "Export everything to JSON file"]) exportAll
@@ -284,5 +294,4 @@ panesEventMap env =
                 (E.Doc ["Collaboration", "Import repl from JSON file"])
             ]
     where
-        ExportActions{importAll,exportAll} = env ^. exportActions
-        Config.Export{exportPath,importKeys,exportAllKeys} = Config.export (env ^. eConfig)
+        ExportActions{importAll,exportAll} = theExportActions

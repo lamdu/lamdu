@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, OverloadedStrings, Rank2Types, DisambiguateRecordFields, NamedFieldPuns #-}
+{-# LANGUAGE NoImplicitPrelude, TemplateHaskell, OverloadedStrings, Rank2Types, DisambiguateRecordFields, NamedFieldPuns, MultiParamTypeClasses #-}
 module Main
     ( main
     ) where
@@ -17,6 +17,8 @@ import           GHC.Conc (setNumCapabilities, getNumProcessors)
 import           GHC.Stack (whoCreated)
 import qualified GUI.Momentu as M
 import qualified GUI.Momentu.Main as MainLoop
+import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
+import qualified GUI.Momentu.Widgets.TextView as TextView
 import qualified Graphics.Rendering.OpenGL.GL as GL
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
@@ -49,6 +51,29 @@ import           System.IO (hPutStrLn, stderr)
 import           Lamdu.Prelude
 
 type T = Transaction
+
+data Env = Env
+    { _envEvalRes :: GUIMain.EvalResults
+    , _envExportActions :: GUIMain.ExportActions DbLayout.ViewM
+    , _envConfig :: Config
+    , _envTheme :: Theme
+    , _envSettings :: Settings
+    , _envStyle :: Style.Style
+    , _envMainLoop :: MainLoop.Env
+    }
+Lens.makeLenses ''Env
+
+instance GUIMain.HasExportActions Env DbLayout.ViewM where exportActions = envExportActions
+instance GUIMain.HasEvalResults Env DbLayout.ViewM where evalResults = envEvalRes
+instance Settings.HasSettings Env where settings = envSettings
+instance Style.HasStyle Env where style = envStyle
+instance MainLoop.HasMainLoopEnv Env where mainLoopEnv = envMainLoop
+instance M.HasStdSpacing Env where stdSpacing = Theme.theme . Theme.themeStdSpacing
+instance M.HasCursor Env where cursor = envMainLoop . M.cursor
+instance TextEdit.HasStyle Env where style = envStyle . Style.styleBase
+instance TextView.HasStyle Env where style = TextEdit.style . TextView.style
+instance Theme.HasTheme Env where theme = envTheme
+instance Config.HasConfig Env where config = envConfig
 
 defaultFontPath :: ConfigSampler.Sample -> FilePath
 defaultFontPath sample =
@@ -141,14 +166,14 @@ makeRootWidget fonts db settingsRef evaluator config theme mainLoopEnv =
         eventMap <- Settings.mkEventMap (settingsChangeHandler evaluator) config settingsRef
         evalResults <- EvalManager.getResults evaluator
         settings <- readIORef settingsRef
-        let env = GUIMain.Env
+        let env = Env
                 { _envEvalRes = evalResults
                 , _envExportActions =
                     exportActions config (evalResults ^. current)
                 , _envConfig = config
                 , _envTheme = theme
                 , _envSettings = settings
-                , _envStyle = Style.style theme fonts
+                , _envStyle = Style.makeStyle theme fonts
                 , _envMainLoop = mainLoopEnv
                 }
         let dbToIO action =
@@ -297,7 +322,7 @@ mainLoop subpixel win refreshScheduler configSampler iteration =
 
 mkWidgetWithFallback ::
     (forall a. T DbLayout.DbM a -> IO a) ->
-    GUIMain.Env -> IO (M.Widget (MainLoop.M M.EventResult))
+    Env -> IO (M.Widget (MainLoop.M M.EventResult))
 mkWidgetWithFallback dbToIO env =
     do
         (isValid, widget) <-
@@ -319,13 +344,13 @@ mkWidgetWithFallback dbToIO env =
             & M.backgroundColor (["background"] :: M.AnimId) (bgColor isValid theme)
             & return
     where
-        theme = env ^. GUIMain.envTheme
+        theme = env ^. envTheme
         bgColor False = Theme.invalidCursorBGColor
         bgColor True = Theme.backgroundColor
 
 makeMainGui ::
     (forall a. T DbLayout.DbM a -> IO a) ->
-    GUIMain.Env -> T DbLayout.DbM (M.Widget (MainLoop.M M.EventResult))
+    Env -> T DbLayout.DbM (M.Widget (MainLoop.M M.EventResult))
 makeMainGui dbToIO env =
     GUIMain.make env
     <&> Lens.mapped %~ \act ->

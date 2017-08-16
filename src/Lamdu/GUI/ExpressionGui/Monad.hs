@@ -53,13 +53,13 @@ import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Ops as DataOps
 import           Lamdu.Eval.Results (ScopeId, topLevelScopeId)
-import           Lamdu.GUI.CodeEdit.Settings (Settings)
+import           Lamdu.GUI.CodeEdit.Settings (Settings, HasSettings(..))
 import           Lamdu.GUI.ExpressionGui.Types (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
 import           Lamdu.GUI.Precedence (Precedence)
 import qualified Lamdu.GUI.Precedence as Precedence
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
-import           Lamdu.Style (Style)
+import           Lamdu.Style (Style, HasStyle(..))
 import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
@@ -190,36 +190,40 @@ advanceDepth f animId action =
         mkErrorWidget = TextView.make ?? "..." ?? animId
 
 run ::
-    (Functor m, MonadTransaction m n, MonadReader env n,
-     Widget.HasCursor env, TextEdit.HasStyle env, Spacer.HasStdSpacing env,
-     Config.HasConfig env, Theme.HasTheme env) =>
+    ( Functor m, MonadTransaction m n, MonadReader env n
+    , Widget.HasCursor env, Spacer.HasStdSpacing env
+    , Config.HasConfig env, Theme.HasTheme env
+    , HasSettings env, HasStyle env
+    ) =>
     (ExprGuiT.SugarExpr m -> ExprGuiM m (ExpressionGui m)) ->
-    Anchors.CodeAnchors m -> Settings -> Style ->
+    Anchors.CodeAnchors m ->
     ExprGuiM m a ->
     n a
-run makeSubexpr codeAnchors settings style (ExprGuiM action) =
+run makeSubexpr theCodeAnchors (ExprGuiM action) =
     do
-        cursor <- Lens.view Widget.cursor
-        textEditStyle <- Lens.view TextEdit.style
-        stdSpacing <- Lens.view Spacer.stdSpacing
-        config <- Lens.view Config.config
-        theme <- Lens.view Theme.theme
+        theSettings <- Lens.view settings
+        theStyle <- Lens.view style
+        theCursor <- Lens.view Widget.cursor
+        theTextEditStyle <- Lens.view TextEdit.style
+        theStdSpacing <- Lens.view Spacer.stdSpacing
+        theConfig <- Lens.view Config.config
+        theTheme <- Lens.view Theme.theme
         runRWST action
             Askable
-            { _aCursor = cursor
-            , _aTextEditStyle = textEditStyle
-            , _aStdSpacing = stdSpacing
+            { _aCursor = theCursor
+            , _aTextEditStyle = theTextEditStyle
+            , _aStdSpacing = theStdSpacing
             , _aAnimIdPrefix = ["outermost"]
-            , _aConfig = config
-            , _aTheme = theme
-            , _aSettings = settings
+            , _aConfig = theConfig
+            , _aTheme = theTheme
+            , _aSettings = theSettings
             , _aMakeSubexpression = makeSubexpr
-            , _aCodeAnchors = codeAnchors
-            , _aDepthLeft = Config.maxExprDepth config
+            , _aCodeAnchors = theCodeAnchors
+            , _aDepthLeft = Config.maxExprDepth theConfig
             , _aMScopeId = Just topLevelScopeId & pure
             , _aOuterPrecedence = Precedence.make 0
             , _aMinOpPrecedence = 0
-            , _aStyle = style
+            , _aStyle = theStyle
             }
             ()
             <&> (\(x, (), _output) -> x)

@@ -1,7 +1,8 @@
-{-# LANGUAGE TemplateHaskell, NamedFieldPuns, OverloadedStrings, DisambiguateRecordFields #-}
+{-# LANGUAGE NoImplicitPrelude, TemplateHaskell, NamedFieldPuns, OverloadedStrings, DisambiguateRecordFields #-}
 module Lamdu.Style
     ( help
-    , Style(..), style
+    , Style(..), makeStyle
+    , HasStyle(..)
     , mainLoopConfig
 
     , styleBase, styleAutoNameOrigin, styleNameOrigin
@@ -24,6 +25,8 @@ import qualified Lamdu.Config.Theme as Theme
 import           Lamdu.Font (Fonts(..))
 import qualified Lamdu.Font as Fonts
 
+import           Lamdu.Prelude
+
 data Style = Style
     { _styleBase :: TextEdit.Style
     , _styleAutoNameOrigin :: TextEdit.Style
@@ -33,6 +36,8 @@ data Style = Style
     , _styleNum :: TextEdit.Style
     }
 Lens.makeLenses ''Style
+
+class TextEdit.HasStyle env => HasStyle env where style :: Lens' env Style
 
 help :: Draw.Font -> [MetaKey] -> Theme.Help -> EventMapHelp.Config
 help font helpKeys theme =
@@ -60,8 +65,8 @@ textEdit color font =
     , TextView._styleUnderline = Nothing
     }
 
-style :: Theme -> Fonts Draw.Font -> Style
-style config fonts =
+makeStyle :: Theme -> Fonts Draw.Font -> Style
+makeStyle config fonts =
     Style
     { _styleBase =
       textEdit (Theme.baseColor config) (Fonts.fontDefault fonts)

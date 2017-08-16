@@ -1,7 +1,9 @@
 {-# LANGUAGE TemplateHaskell, DeriveFunctor, DeriveFoldable, DeriveTraversable, NoImplicitPrelude, NamedFieldPuns, OverloadedStrings #-}
 module GUI.Momentu.Main
     ( mainLoopWidget
-    , Config(..), EventResult(..), M(..), m, Env(..), eWindowSize, eZoom
+    , Config(..), EventResult(..), M(..), m
+    , Env(..), eWindowSize, eZoom
+    , HasMainLoopEnv(..)
     , Options(..), defaultOptions
     , quitEventMap
     ) where
@@ -113,6 +115,9 @@ data Env = Env
     }
 Lens.makeLenses ''Env
 instance Widget.HasCursor Env where cursor = eCursor
+
+class Widget.HasCursor env => HasMainLoopEnv env where mainLoopEnv :: Lens' env Env
+instance HasMainLoopEnv Env where mainLoopEnv = id
 
 data Cursor = Cursor
     { _cursorId :: !Widget.Id

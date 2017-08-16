@@ -43,7 +43,7 @@ data Style = Style
     }
 Lens.makeLenses ''Style
 
-class HasStyle env where style :: Lens' env Style
+class TextView.HasStyle env => HasStyle env where style :: Lens' env Style
 instance HasStyle Style where style = id
 
 data EmptyStrings = EmptyStrings

@@ -2,7 +2,8 @@
 -- | The themes/ config format
 module Lamdu.Config.Theme
     ( Help(..), Hole(..), Name(..), Eval(..), Indent(..), ValAnnotation(..)
-    , Theme(..), HasTheme(..)
+    , Theme(..), themeStdSpacing
+    , HasTheme(..)
     ) where
 
 import qualified Data.Aeson.Types as Aeson
@@ -132,3 +133,6 @@ instance Aeson.FromJSON Theme
 
 class HasTheme env where theme :: Lens' env Theme
 instance HasTheme Theme where theme = id
+
+themeStdSpacing :: Lens' Theme (Vector2 Double)
+themeStdSpacing f t = stdSpacing t & f <&> \new -> t { stdSpacing = new }
