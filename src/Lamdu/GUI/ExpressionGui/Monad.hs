@@ -104,7 +104,7 @@ data Askable m = Askable
     , _aConfig :: Config
     , _aTheme :: Theme
     , _aMakeSubexpression :: ExprGuiT.SugarExpr m -> ExprGuiM m (ExpressionGui m)
-    , _aCodeAnchors :: Anchors.CodeProps m
+    , _aCodeAnchors :: Anchors.CodeAnchors m
     , _aDepthLeft :: Int
     , _aMScopeId :: CurAndPrev (Maybe ScopeId)
     , _aOuterPrecedence :: Precedence
@@ -147,7 +147,7 @@ readSettings = Lens.view aSettings
 readMinOpPrec :: Monad m => ExprGuiM m Int
 readMinOpPrec = Lens.view aMinOpPrecedence
 
-readCodeAnchors :: Monad m => ExprGuiM m (Anchors.CodeProps m)
+readCodeAnchors :: Monad m => ExprGuiM m (Anchors.CodeAnchors m)
 readCodeAnchors = Lens.view aCodeAnchors
 
 mkPrejumpPosSaver :: Monad m => ExprGuiM m (T m ())
@@ -194,7 +194,7 @@ run ::
      Widget.HasCursor env, TextEdit.HasStyle env, Spacer.HasStdSpacing env,
      Config.HasConfig env, Theme.HasTheme env) =>
     (ExprGuiT.SugarExpr m -> ExprGuiM m (ExpressionGui m)) ->
-    Anchors.CodeProps m -> Settings -> Style ->
+    Anchors.CodeAnchors m -> Settings -> Style ->
     ExprGuiM m a ->
     n a
 run makeSubexpr codeAnchors settings style (ExprGuiM action) =

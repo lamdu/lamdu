@@ -33,7 +33,7 @@ import           Lamdu.Sugar.Types
 import           Lamdu.Prelude
 
 jumpToDefI ::
-    Monad m => Anchors.CodeProps m -> DefI m -> Transaction m EntityId
+    Monad m => Anchors.CodeAnchors m -> DefI m -> Transaction m EntityId
 jumpToDefI cp defI = EntityId.ofIRef defI <$ DataOps.newPane cp defI
 
 inlineDef ::

@@ -101,7 +101,7 @@ make env =
         Env _evalResults _exportActions config theme _settings _style mainEnv = env
         codeEditEnv =
             CodeEdit.Env
-            { _codeProps = DbLayout.codeProps
+            { _codeAnchors = DbLayout.codeAnchors
             , _evalResults
             , _eConfig = config
             , _theme = theme

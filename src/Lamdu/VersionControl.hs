@@ -31,8 +31,8 @@ type TV = Transaction DbLayout.ViewM
 revProp :: (DbLayout.RevisionProps -> a) -> a
 revProp x = x DbLayout.revisionProps
 
-codeProp :: (DbLayout.CodeProps -> a) -> a
-codeProp x = x DbLayout.codeProps
+codeProp :: (DbLayout.CodeAnchors -> a) -> a
+codeProp x = x DbLayout.codeAnchors
 
 setCurrentBranch :: View DbM -> Branch DbM -> TDB ()
 setCurrentBranch view branch = do

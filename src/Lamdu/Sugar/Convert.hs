@@ -145,7 +145,7 @@ nonRepeating = concat . filter (null . tail) . List.group . List.sort
 
 convertInferDefExpr ::
     Monad m =>
-    CurAndPrev (EvalResults (ValI m)) -> Anchors.CodeProps m ->
+    CurAndPrev (EvalResults (ValI m)) -> Anchors.CodeAnchors m ->
     Scheme -> Definition.Expr (Val (ValIProperty m)) -> DefI m ->
     T m (DefinitionBody UUID m (ExpressionU m [EntityId]))
 convertInferDefExpr evalRes cp defType defExpr defI =
@@ -192,7 +192,7 @@ convertInferDefExpr evalRes cp defType defExpr defI =
 
 convertDefBody ::
     Monad m =>
-    CurAndPrev (EvalResults (ValI m)) -> Anchors.CodeProps m ->
+    CurAndPrev (EvalResults (ValI m)) -> Anchors.CodeAnchors m ->
     Definition.Definition (Val (ValIProperty m)) (DefI m) ->
     T m (DefinitionBody UUID m (ExpressionU m [EntityId]))
 convertDefBody evalRes cp (Definition.Definition body defType defI) =
@@ -202,7 +202,7 @@ convertDefBody evalRes cp (Definition.Definition body defType defI) =
 
 convertExpr ::
     Monad m =>
-    CurAndPrev (EvalResults (ValI m)) -> Anchors.CodeProps m ->
+    CurAndPrev (EvalResults (ValI m)) -> Anchors.CodeAnchors m ->
     Transaction.MkProperty m (Definition.Expr (ValI m)) ->
     T m (ExpressionU m [EntityId])
 convertExpr evalRes cp prop =
@@ -238,7 +238,7 @@ convertExpr evalRes cp prop =
 
 loadRepl ::
     Monad m =>
-    CurAndPrev (EvalResults (ValI m)) -> Anchors.CodeProps m ->
+    CurAndPrev (EvalResults (ValI m)) -> Anchors.CodeAnchors m ->
     T m (Expression UUID m [EntityId])
 loadRepl evalRes cp =
     convertExpr evalRes cp (Anchors.repl cp)
@@ -270,7 +270,7 @@ loadAnnotatedDef getDefI annotation =
 
 loadPanes ::
     Monad m =>
-    CurAndPrev (EvalResults (ValI m)) -> Anchors.CodeProps m -> EntityId ->
+    CurAndPrev (EvalResults (ValI m)) -> Anchors.CodeAnchors m -> EntityId ->
     T m [Pane UUID m [EntityId]]
 loadPanes evalRes cp replEntityId =
     do
@@ -308,7 +308,7 @@ loadPanes evalRes cp replEntityId =
         ordered & Lens.itraversed %%@~ convertPane
 
 loadWorkArea ::
-    Monad m => CurAndPrev (EvalResults (ValI m)) -> Anchors.CodeProps m ->
+    Monad m => CurAndPrev (EvalResults (ValI m)) -> Anchors.CodeAnchors m ->
     T m (WorkArea UUID m [EntityId])
 loadWorkArea evalRes cp =
     do

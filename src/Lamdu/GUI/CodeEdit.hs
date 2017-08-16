@@ -1,7 +1,7 @@
 {-# LANGUAGE NoImplicitPrelude, OverloadedStrings, DeriveFunctor, TemplateHaskell, NamedFieldPuns, DisambiguateRecordFields #-}
 module Lamdu.GUI.CodeEdit
     ( make
-    , Env(..), codeProps, exportActions, evalResults, eConfig, theme, settings, style
+    , Env(..), codeAnchors, exportActions, evalResults, eConfig, theme, settings, style
     , ExportActions(..)
     , M(..), m, mLiftTrans
     ) where
@@ -85,7 +85,7 @@ data ExportActions m = ExportActions
     }
 
 data Env m = Env
-    { _codeProps :: Anchors.CodeProps m
+    { _codeAnchors :: Anchors.CodeAnchors m
     , _exportActions :: ExportActions m
     , _evalResults :: CurAndPrev (EvalResults (ValI m))
     , _eConfig :: Config
@@ -131,7 +131,7 @@ loadWorkArea :: Monad m => Env m -> T m (Sugar.WorkArea (Name m) m ExprGuiT.Payl
 loadWorkArea env =
     do
         Sugar.WorkArea { _waPanes, _waRepl } <-
-            SugarConvert.loadWorkArea (env ^. evalResults) (env ^. codeProps)
+            SugarConvert.loadWorkArea (env ^. evalResults) (env ^. codeAnchors)
             >>= AddNames.addToWorkArea
         Sugar.WorkArea
             (_waPanes <&> Sugar.paneDefinition %~ fmap postProcessExpr . traverseAddNearestHoles)
@@ -173,7 +173,7 @@ make width env =
             ?? (replGui : panesEdits ++ [newDefinitionButton])
             <&> E.weakerEvents eventMap
     & ExprGuiM.run ExpressionEdit.make
-      (env ^. codeProps) (env ^. settings) (env ^. style)
+      (env ^. codeAnchors) (env ^. settings) (env ^. style)
     <&> ExpressionGui.render width
     <&> (^. Align.tValue)
 
@@ -208,7 +208,7 @@ makePaneEdit env pane =
 
 makeNewDefinitionEventMap ::
     (Monad m, MonadReader env n, Widget.HasCursor env) =>
-    Anchors.CodeProps m ->
+    Anchors.CodeAnchors m ->
     n ([MetaKey] -> Widget.EventMap (T m Widget.EventResult))
 makeNewDefinitionEventMap cp =
     do
@@ -231,8 +231,8 @@ makeNewDefinitionEventMap cp =
 makeNewDefinitionButton :: Monad m => ExprGuiM m (Widget (T m Widget.EventResult))
 makeNewDefinitionButton =
     do
-        codeAnchors <- ExprGuiM.readCodeAnchors
-        newDefinitionEventMap <- makeNewDefinitionEventMap codeAnchors
+        anchors <- ExprGuiM.readCodeAnchors
+        newDefinitionEventMap <- makeNewDefinitionEventMap anchors
 
         Config.Pane{newDefinitionButtonPressKeys} <- Lens.view Config.config <&> Config.pane
         color <- Lens.view Theme.theme <&> Theme.newDefinitionActionColor
@@ -266,8 +266,8 @@ panesEventMap ::
     Env m -> n (Widget.EventMap (M m Widget.EventResult))
 panesEventMap env =
     do
-        mJumpBack <- DataOps.jumpBack (env ^. codeProps) & transaction <&> fmap mLiftTrans
-        newDefinitionEventMap <- makeNewDefinitionEventMap (env ^. codeProps)
+        mJumpBack <- DataOps.jumpBack (env ^. codeAnchors) & transaction <&> fmap mLiftTrans
+        newDefinitionEventMap <- makeNewDefinitionEventMap (env ^. codeAnchors)
         return $ mconcat
             [ newDefinitionEventMap (Config.newDefinitionKeys (Config.pane (env ^. eConfig)))
               <&> mLiftTrans

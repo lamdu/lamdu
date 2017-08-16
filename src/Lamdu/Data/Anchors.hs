@@ -3,7 +3,7 @@ module Lamdu.Data.Anchors
     ( Code(..), onCode
     , Revision(..), onRevision
     , Pane(..)
-    , CodeProps, RevisionProps
+    , CodeAnchors, RevisionProps
     , assocNameRef
     , assocScopeRef
     , PresentationMode(..), assocPresentationMode
@@ -65,7 +65,7 @@ newtype BinderParamScopeId = BinderParamScopeId
     { _bParamScopeId :: ScopeId
     } deriving (Eq, Ord, Binary)
 
-type CodeProps m = Code (MkProperty m) m
+type CodeAnchors m = Code (MkProperty m) m
 type RevisionProps m = Revision (MkProperty m) m
 
 assocNameRef :: (UniqueId.ToUUID a, Monad m) => a -> MkProperty m Text

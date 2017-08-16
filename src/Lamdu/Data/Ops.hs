@@ -127,27 +127,27 @@ case_ tailI =
         V.Case tag newValueI tailI & V.BCase & ExprIRef.newValBody
             <&> CaseResult tag newValueI
 
-newPane :: Monad m => Anchors.CodeProps m -> DefI m -> T m ()
-newPane codeProps defI =
+newPane :: Monad m => Anchors.CodeAnchors m -> DefI m -> T m ()
+newPane codeAnchors defI =
     do
-        let panesProp = Anchors.panes codeProps
+        let panesProp = Anchors.panes codeAnchors
         panes <- getP panesProp
         when (defI `notElem` Set.map Anchors.paneDef panes) $
             setP panesProp $ Set.insert (Anchors.Pane defI) panes
 
-savePreJumpPosition :: Monad m => Anchors.CodeProps m -> WidgetId.Id -> T m ()
-savePreJumpPosition codeProps pos = modP (Anchors.preJumps codeProps) $ (pos :) . take 19
+savePreJumpPosition :: Monad m => Anchors.CodeAnchors m -> WidgetId.Id -> T m ()
+savePreJumpPosition codeAnchors pos = modP (Anchors.preJumps codeAnchors) $ (pos :) . take 19
 
-jumpBack :: Monad m => Anchors.CodeProps m -> T m (Maybe (T m WidgetId.Id))
-jumpBack codeProps =
+jumpBack :: Monad m => Anchors.CodeAnchors m -> T m (Maybe (T m WidgetId.Id))
+jumpBack codeAnchors =
     do
-        preJumps <- getP (Anchors.preJumps codeProps)
+        preJumps <- getP (Anchors.preJumps codeAnchors)
         return $
             case preJumps of
             [] -> Nothing
             (j:js) ->
                 Just $ do
-                    setP (Anchors.preJumps codeProps) js
+                    setP (Anchors.preJumps codeAnchors) js
                     return j
 
 isInfix :: Text -> Bool
@@ -170,24 +170,24 @@ newDefinition name presentationMode def =
 -- Used when writing a definition into an identifier which was a variable.
 -- Used in float.
 newPublicDefinitionToIRef ::
-    Monad m => Anchors.CodeProps m -> Definition (ValI m) () -> DefI m -> T m ()
-newPublicDefinitionToIRef codeProps def defI =
+    Monad m => Anchors.CodeAnchors m -> Definition (ValI m) () -> DefI m -> T m ()
+newPublicDefinitionToIRef codeAnchors def defI =
     do
         Transaction.writeIRef defI def
         getP (Anchors.assocNameRef defI)
             <&> presentationModeOfName
             >>= setP (Anchors.assocPresentationMode defI)
-        modP (Anchors.globals codeProps) (Set.insert defI)
-        newPane codeProps defI
+        modP (Anchors.globals codeAnchors) (Set.insert defI)
+        newPane codeAnchors defI
 
 newPublicDefinitionWithPane ::
     Monad m =>
-    Text -> Anchors.CodeProps m -> Definition (ValI m) () -> T m (DefI m)
-newPublicDefinitionWithPane name codeProps def =
+    Text -> Anchors.CodeAnchors m -> Definition (ValI m) () -> T m (DefI m)
+newPublicDefinitionWithPane name codeAnchors def =
     do
         defI <- newDefinition name (presentationModeOfName name) def
-        modP (Anchors.globals codeProps) (Set.insert defI)
-        newPane codeProps defI
+        modP (Anchors.globals codeAnchors) (Set.insert defI)
+        newPane codeAnchors defI
         return defI
 
 newIdentityLambda :: Monad m => T m (V.Var, ValI m)

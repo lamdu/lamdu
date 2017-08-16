@@ -2,7 +2,7 @@
 module Lamdu.Data.DbLayout
     ( DbM, runDbTransaction
     , ViewM, runViewTransaction
-    , CodeProps, codeProps, codeIRefs
+    , CodeAnchors, codeAnchors, codeIRefs
     , RevisionProps, revisionProps, revisionIRefs
     , module Lamdu.Data.Anchors
     ) where
@@ -56,11 +56,11 @@ revisionIRefs = Revision
     , view = IRef.anchor "view"
     }
 
-type CodeProps = Anchors.CodeProps ViewM
+type CodeAnchors = Anchors.CodeAnchors ViewM
 type RevisionProps = Anchors.RevisionProps DbM
 
-codeProps :: CodeProps
-codeProps = Anchors.onCode Transaction.mkPropertyFromIRef codeIRefs
+codeAnchors :: CodeAnchors
+codeAnchors = Anchors.onCode Transaction.mkPropertyFromIRef codeIRefs
 
 revisionProps :: RevisionProps
 revisionProps = Anchors.onRevision Transaction.mkPropertyFromIRef revisionIRefs

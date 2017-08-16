@@ -89,7 +89,7 @@ data PostProcessResult = GoodExpr | BadExpr Infer.Error
 
 data Context m = Context
     { _scInferContext :: Infer.Context
-    , _scCodeAnchors :: Anchors.CodeProps m
+    , _scCodeAnchors :: Anchors.CodeAnchors m
     , _scScopeInfo :: ScopeInfo m
     , -- Check whether the definition is valid after an edit,
       -- so that can hole-wrap bad edits.
