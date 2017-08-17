@@ -57,15 +57,16 @@ makeStdWrapped pl holeInfo =
             & ExpressionGui.stdWrap pl
         isSelected <- Widget.isSubCursor ?? hidOpen
         if isSelected
-            then -- ideally the fdWrap would be "inside" the
-                 -- type-view addition and stdWrap, but it's not
-                 -- important in the case the FD is selected, and
-                 -- it is harder to implement, so just wrap it
-                 -- here
-                 (fdWrap <&> (Lens.mapped %~))
-                 <*> makeOpenSearchAreaGui pl holeInfo
-                 <&> Lens.mapped %~
-                 \open ->
-                 closedSearchTermGui & Responsive.alignedWidget . Align.tValue %~
-                 Hover.hoverInPlaceOf [Hover.anchor (open ^. Align.tValue)] . Hover.anchor
+            then
+                -- ideally the fdWrap would be "inside" the
+                -- type-view addition and stdWrap, but it's not
+                -- important in the case the FD is selected, and
+                -- it is harder to implement, so just wrap it
+                -- here
+                (fdWrap <&> (Lens.mapped %~))
+                <*> makeOpenSearchAreaGui pl holeInfo
+                <&> Lens.mapped %~
+                \open ->
+                closedSearchTermGui & Responsive.alignedWidget . Align.tValue %~
+                Hover.hoverInPlaceOf [Hover.anchor (open ^. Align.tValue)] . Hover.anchor
             else return (const closedSearchTermGui)
