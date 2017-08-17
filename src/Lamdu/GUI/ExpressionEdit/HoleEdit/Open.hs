@@ -13,7 +13,6 @@ import qualified Control.Monad.Reader as Reader
 import           Control.Monad.Transaction (MonadTransaction(..))
 import           Data.List.Lens (suffixed)
 import qualified Data.Map as Map
-import           Data.Maybe (isJust)
 import qualified Data.Monoid as Monoid
 import qualified Data.Store.Property as Property
 import           Data.Store.Transaction (Transaction)
@@ -431,7 +430,7 @@ assignHoleEditCursor ::
     ExprGuiM m a
 assignHoleEditCursor holeInfo shownMainResultsIds allShownResultIds searchTermId action =
     do
-        let sub x = Widget.subId ?? x <&> isJust
+        let sub x = Widget.isSubCursor ?? x
         shouldBeOnResult <- sub (hidResultsPrefix hids)
         isOnResult <- traverse sub allShownResultIds <&> or
         let assignSource
