@@ -34,7 +34,7 @@ setHoleStateAndJump :: Monad m => UUID -> HoleState -> Sugar.EntityId -> T m Wid
 setHoleStateAndJump uuid state entityId = do
     Transaction.setP (assocStateRef uuid) state
     let WidgetIds{..} = WidgetIds.make entityId
-    return hidOpenSearchTerm
+    return hidOpen
 
 assocStateRef :: Monad m => UUID -> Transaction.MkProperty m HoleState
 assocStateRef = Transaction.assocDataRefDef emptyState "searchTerm"

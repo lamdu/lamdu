@@ -81,11 +81,16 @@ makeHoleWithWrapper wrapperGui searchAreaGui pl =
                         ]
                         <&> (^. Align.tValue)
                     hoverWrapper = render wrapperGui & Align.tValue %~ Hover.anchor
-                    searchArea p = render (addBg (searchAreaGui p))
+                    searchArea p =
+                        render (addBg (searchAreaGui p))
+                        & hideIfInHole
                     render x = (x ^. Responsive.render) layoutMode
             False -> wrapper
     where
         widgetIds = HoleWidgetIds.make (pl ^. Sugar.plEntityId)
+        hideIfInHole
+            | ExprGuiT.isHoleResult pl = Element.setLayers .~ mempty
+            | otherwise = id
 
 make ::
     Monad m =>

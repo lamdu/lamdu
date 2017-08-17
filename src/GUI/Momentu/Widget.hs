@@ -22,7 +22,7 @@ module GUI.Momentu.Widget
     , State(..), _StateFocused, _StateUnfocused
         , stateLayers
     , Widget(..), wState
-        , mEnter, eventMapMaker, events, enterResultCursor
+        , mEnter, eventMapMaker, events, enterResultCursor, sizedState
     , VirtualCursor(..), virtualCursor
     , Unfocused(..), uMEnter, uLayers
     , Focused(..), fFocalAreas, fEventMap, fMEnter, fLayers

@@ -16,6 +16,8 @@ import qualified GUI.Momentu.Hover as Hover
 import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.Widgets.FocusDelegator as FocusDelegator
 import qualified Lamdu.Config as Config
+import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
+import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.EventMap as HoleEventMap
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.Info (HoleInfo(..))
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.Open (makeOpenSearchAreaGui, ResultsPlacement)
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.SearchTerm as SearchTerm
@@ -23,6 +25,7 @@ import           Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds (WidgetIds(..))
 import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
+import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
 import qualified Lamdu.Sugar.Types as Sugar
 
@@ -47,7 +50,7 @@ makeStdWrapped pl holeInfo =
         let Config.Hole{..} = Config.hole config
             WidgetIds{..} = hiIds holeInfo
             fdWrap
-                | ExprGuiT.isHoleResult pl = return id
+                | isAHoleInHole = return id
                 | otherwise =
                     FocusDelegator.make ?? fdConfig (Config.hole config)
                     ?? FocusDelegator.FocusEntryChild ?? hidClosedSearchArea
@@ -55,9 +58,10 @@ makeStdWrapped pl holeInfo =
         closedSearchTermGui <-
             fdWrap <*> SearchTerm.make holeInfo <&> Responsive.fromWithTextPos
             & ExpressionGui.stdWrap pl
+            <&> Widget.enterResultCursor .~ hidOpen
         isSelected <- Widget.isSubCursor ?? hidOpen
-        if isSelected
-            then
+        case (isSelected, isAHoleInHole) of
+            (True, False) ->
                 -- ideally the fdWrap would be "inside" the
                 -- type-view addition and stdWrap, but it's not
                 -- important in the case the FD is selected, and
@@ -69,4 +73,16 @@ makeStdWrapped pl holeInfo =
                 \open ->
                 closedSearchTermGui & Responsive.alignedWidget . Align.tValue %~
                 Hover.hoverInPlaceOf [Hover.anchor (open ^. Align.tValue)] . Hover.anchor
-            else return (const closedSearchTermGui)
+            (True, True) ->
+                do
+                    eventMap <-
+                        sequence
+                        [ HoleEventMap.makeOpenEventMap holeInfo
+                        , ExprEventMap.make pl ExprGuiM.NoHolePick
+                        ] <&> mconcat
+                    Widget.setFocused closedSearchTermGui
+                        & E.weakerEvents eventMap
+                        & const & pure
+            (False, _) -> const closedSearchTermGui & pure
+    where
+        isAHoleInHole = ExprGuiT.isHoleResult pl

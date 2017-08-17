@@ -57,6 +57,7 @@ makeParamsRecord myId paramsRecordVar =
     do
         theme <- Lens.view Theme.theme
         let Theme.Name{..} = Theme.name theme
+        respondToCursor <- Widget.respondToCursorPrefix ?? myId
         sequence
             [ TextView.makeLabel "Params {" <&> Responsive.fromTextView
             , ExpressionGui.combineSpaced
@@ -70,7 +71,7 @@ makeParamsRecord myId paramsRecordVar =
                 )
               )
             , TextView.makeLabel "}" <&> Responsive.fromTextView
-            ] <&> ExpressionGui.combine
+            ] <&> ExpressionGui.combine <&> respondToCursor
     where
         Sugar.ParamsRecordVar fieldNames = paramsRecordVar
 
