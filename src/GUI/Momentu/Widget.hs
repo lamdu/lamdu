@@ -22,7 +22,7 @@ module GUI.Momentu.Widget
     , State(..), _StateFocused, _StateUnfocused
         , stateLayers
     , Widget(..), wState
-        , mEnter, eventMapMaker, events
+        , mEnter, eventMapMaker, events, enterResultCursor
     , VirtualCursor(..), virtualCursor
     , Unfocused(..), uMEnter, uLayers
     , Focused(..), fFocalAreas, fEventMap, fMEnter, fLayers
@@ -372,6 +372,11 @@ stateMEnter = stateLens uMEnter (Lens.mapped . fMEnter)
 
 mEnter :: Lens.Setter' (Widget a) (Maybe (Direction -> EnterResult a))
 mEnter = wState . stateMEnter
+
+enterResultCursor :: (HasWidget w, Functor f) => Lens.Setter' (w (f EventResult)) Id
+enterResultCursor =
+    widget . mEnter . Lens._Just . Lens.mapped .
+    enterResultEvent . Lens.mapped . eCursor . Lens.mapped
 
 stateLayers :: Lens.Setter' (State a) Element.Layers
 stateLayers = stateLens uLayers (Lens.mapped . fLayers)
