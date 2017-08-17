@@ -196,7 +196,6 @@ mkEventsOnPickedResult shownResult =
     <&> E.emDocs . E.docStrs . Lens._last %~ (<> " (On picked result)")
     <&> Lens.mapped %~ pickBefore shownResult
 
--- To make HoleEdit
 emptyPickEventMap ::
     Monad f => Config.Hole -> Widget.EventMap (f Widget.EventResult)
 emptyPickEventMap Config.Hole{..} =
