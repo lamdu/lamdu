@@ -6,15 +6,10 @@ module Lamdu.GUI.ExpressionEdit.HoleEdit.Open
     , ResultsPlacement(..)
     ) where
 
-import           Control.Applicative ((<|>))
 import qualified Control.Lens as Lens
-import           Control.Monad (msum)
 import qualified Control.Monad.Reader as Reader
 import           Control.Monad.Transaction (MonadTransaction(..))
 import           Data.List.Lens (suffixed)
-import qualified Data.Map as Map
-import qualified Data.Monoid as Monoid
-import qualified Data.Store.Property as Property
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Text as Text
 import           Data.Vector.Vector2 (Vector2(..))
@@ -31,10 +26,8 @@ import qualified GUI.Momentu.Responsive as Responsive
 import           GUI.Momentu.View (View)
 import           GUI.Momentu.Widget (Widget(..), EventResult)
 import qualified GUI.Momentu.Widget as Widget
-import qualified GUI.Momentu.Widget.Id as WidgetId
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified GUI.Momentu.Widgets.TextView as TextView
-import           Lamdu.CharClassification (operatorChars)
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
@@ -44,9 +37,6 @@ import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.Info as HoleInfo
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.ResultGroups (ResultsList(..), Result(..), HaveHiddenResults(..))
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.ResultGroups as HoleResults
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.SearchTerm as SearchTerm
-import           Lamdu.GUI.ExpressionEdit.HoleEdit.ShownResult (PickedResult(..), ShownResult(..), pickedEventResult, pickedIdTranslations)
-import           Lamdu.GUI.ExpressionEdit.HoleEdit.State (HoleState(..))
-import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.State as HoleState
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds (WidgetIds(..))
 import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
@@ -66,140 +56,30 @@ import           Lamdu.Prelude
 type T = Transaction
 
 data ResultGroupWidgets m = ResultGroupWidgets
-    { _rgwMainResult :: ShownResult m
-    , _rgwMSelectedResult :: Maybe (ShownResult m) -- Can be an extra result
-    , _rgwMainResultWidget :: WithTextPos (Widget (T m Widget.EventResult))
+    { _rgwMainResultWidget :: WithTextPos (Widget (T m Widget.EventResult))
     , _rgwExtraResultSymbol :: WithTextPos View
-    , _rgwExtraResultsWidget ::  Widget (T m Widget.EventResult)
+    , _rgwExtraResultsWidget :: Widget (T m Widget.EventResult)
     }
 Lens.makeLenses ''ResultGroupWidgets
 
 extraSymbol :: Text
 extraSymbol = "▷"
 
-compose :: [a -> a] -> a -> a
-compose = foldr (.) id
-
-eventResultOfPickedResult :: Sugar.PickedResult -> PickedResult
-eventResultOfPickedResult pr =
-    PickedResult
-    { _pickedEventResult =
-        Widget.EventResult
-        { Widget._eCursor = Monoid.Last Nothing
-        , Widget._eAnimIdMapping =
-            Monoid.Endo $ pickedResultAnimIdTranslation $ pr ^. Sugar.prIdTranslation
-        , Widget._eVirtualCursor = Monoid.Last Nothing
-        }
-    , _pickedIdTranslations =
-        pr ^. Sugar.prIdTranslation
-        & Lens.mapped . Lens.both %~ WidgetIds.fromEntityId
-        & mapPrefix
-    }
-    where
-        mapPrefix = compose . map reprefix
-        reprefix (old, new) ident =
-            maybe ident (WidgetId.joinId new) $ WidgetId.subId old ident
-        pickedResultAnimIdTranslation idTranslations =
-            -- Map only the first anim id component
-            Lens.ix 0 %~ \x -> fromMaybe x $ Map.lookup x idMap
-            where
-                idMap =
-                    idTranslations
-                    & Lens.traversed . Lens.both %~
-                      head . Widget.toAnimId . WidgetIds.fromEntityId
-                    & Map.fromList
-
 resultSuffix :: Lens.Prism' AnimId AnimId
 resultSuffix = suffixed ["result suffix"]
 
-afterPick ::
-    Monad m =>
-    HoleInfo m -> Widget.Id -> Maybe Sugar.EntityId ->
-    Sugar.PickedResult -> T m PickedResult
-afterPick holeInfo resultId mFirstHoleInside pr =
-    do
-        Property.set (hiState holeInfo) HoleState.emptyState
-        result
-            & pickedEventResult . Widget.eCursor .~ Monoid.Last (Just cursorId)
-            & pickedEventResult . Widget.eAnimIdMapping %~
-              mappend (Monoid.Endo obliterateOtherResults)
-            & return
-    where
-        result = eventResultOfPickedResult pr
-        cursorId =
-            mFirstHoleInside <&> WidgetIds.fromEntityId
-            & fromMaybe myHoleId
-            & result ^. pickedIdTranslations
-        myHoleId =
-            WidgetIds.fromEntityId $ hiEntityId holeInfo
-        obliterateOtherResults animId =
-            case animId ^? resultSuffix of
-            Nothing -> animId
-            Just unsuffixed
-                | Lens.has (suffixed (Widget.toAnimId resultId)) unsuffixed ->
-                      animId
-                | otherwise -> "obliterated" : animId
-
-fixNumWithDotEventMap ::
-    Monad m =>
-    HoleInfo m -> Sugar.HoleResult name m ->
-    Widget.EventMap (T m Widget.EventResult)
-fixNumWithDotEventMap holeInfo res
-    | endsWithDot
-    , Lens.has literalNum conv
-    , Sugar.WrapAction wrap <- conv ^. hrWrapAction = mkAction wrap
-    | endsWithDot
-    , Lens.has (wrappedExpr . literalNum) conv
-    , Sugar.WrapperAlready t <- conv ^. hrWrapAction = mkAction (return t)
-    | otherwise = mempty
-    where
-        mkAction toHole =
-            E.charGroup "Operator" doc operatorChars $
-            \c ->
-            do
-                (uuid, entityId) <- toHole
-                cursor <-
-                    HoleState.setHoleStateAndJump uuid
-                    (HoleState ("." <> Text.singleton c)) entityId
-                return $ Widget.eventResultFromCursor cursor
-        endsWithDot = "." `Text.isSuffixOf` HoleInfo.hiSearchTerm holeInfo
-        doc = E.Doc ["Edit", "Apply Operator"]
-        conv = res ^. Sugar.holeResultConverted
-        literalNum = Sugar.rBody . Sugar._BodyLiteral . Sugar._LiteralNum
-        wrappedExpr =
-            Sugar.rBody . Sugar._BodyHole .
-            Sugar.holeMArg . Lens._Just . Sugar.haExpr
-        hrWrapAction = Sugar.rPayload . Sugar.plActions . Sugar.wrap
-
 makeShownResult ::
     Monad m =>
-    HoleInfo m -> Result m ->
-    ExprGuiM m (WithTextPos (Widget (T m Widget.EventResult)), ShownResult m)
-makeShownResult holeInfo result =
+    Result m -> ExprGuiM m (WithTextPos (Widget (T m Widget.EventResult)))
+makeShownResult result =
     do
         -- Warning: rHoleResult should be ran at most once!
         -- Running it more than once caused a horrible bug (bugfix: 848b6c4407)
         res <- rHoleResult result & transaction
         theme <- Theme.hole <$> Lens.view Theme.theme
-        (widget, mkEventMap) <- makeHoleResultWidget (rId result) res
         stdSpacing <- Spacer.getSpaceSize
         let padding = Theme.holeResultPadding theme <&> realToFrac & (* stdSpacing)
-        let mFirstHoleInside =
-                res ^? Sugar.holeResultConverted
-                . SugarLens.holePayloads . Sugar.plEntityId
-        return
-            ( Element.pad padding widget
-            , ShownResult
-              { srMkEventMap =
-                  mkEventMap <&> mappend (fixNumWithDotEventMap holeInfo res)
-              , srHasHoles =
-                  Lens.has (Sugar.holeResultConverted . SugarLens.holePayloads)
-                  res
-              , srPick =
-                  res ^. Sugar.holeResultPick
-                  >>= afterPick holeInfo (rId result) mFirstHoleInside
-              }
-            )
+        makeHoleResultWidget (rId result) res <&> Element.pad padding
 
 makeExtraSymbol :: Monad m => Bool -> ResultsList n -> ExprGuiM m (WithTextPos View)
 makeExtraSymbol isSelected results
@@ -217,72 +97,45 @@ makeExtraSymbol isSelected results
 
 makeResultGroup ::
     Monad m =>
-    HoleInfo m ->
     ResultsList m ->
     ExprGuiM m (ResultGroupWidgets m)
-makeResultGroup holeInfo results =
+makeResultGroup results =
     do
-        (mainResultWidget, shownMainResult) <- makeShownResult holeInfo mainResult
-        (mSelectedResult, extraResWidget) <-
-            if Widget.isFocused (mainResultWidget ^. Align.tValue)
-            then do
-                (_, extraResWidget) <- makeExtra
-                return (Just shownMainResult, extraResWidget)
-            else do
-                cursorOnExtra <-
-                    Widget.isSubCursor
-                    ?? results ^. HoleResults.rlExtraResultsPrefixId
-                if cursorOnExtra
-                    then makeExtra
-                    else
-                    results ^. HoleResults.rlExtra
-                    & focusFirstExtraResult
-                    <&> \x -> (Nothing, x)
-        let isSelected = Lens.has Lens._Just mSelectedResult
+        mainResultWidget <- makeShownResult mainResult
+        let mainFocused = Widget.isFocused (mainResultWidget ^. Align.tValue)
+        cursorOnExtra <-
+            Widget.isSubCursor
+            ?? results ^. HoleResults.rlExtraResultsPrefixId
+        let isSelected = mainFocused || cursorOnExtra
+        extraResWidget <-
+            if isSelected
+            then makeExtra
+            else focusFirstExtraResult (results ^. HoleResults.rlExtra)
         extraSymbolWidget <-
             makeExtraSymbol isSelected results
             & Reader.local (Element.animIdPrefix .~ Widget.toAnimId (rId mainResult))
         return ResultGroupWidgets
-            { _rgwMainResult = shownMainResult
-            , _rgwMSelectedResult = mSelectedResult
-            , _rgwMainResultWidget = mainResultWidget
+            { _rgwMainResultWidget = mainResultWidget
             , _rgwExtraResultSymbol = extraSymbolWidget
             , _rgwExtraResultsWidget = extraResWidget
             }
     where
         mainResult = results ^. HoleResults.rlMain
-        makeExtra =
-            makeExtraResultsWidget holeInfo (results ^. HoleResults.rlExtra)
-            <&> Lens.mapped %~ (^. Align.tValue)
+        makeExtra = makeExtraResultsWidget (results ^. HoleResults.rlExtra) <&> (^. Align.tValue)
         focusFirstExtraResult [] = return Element.empty
         focusFirstExtraResult (result:_) = Widget.makeFocusableView ?? rId result ?? Element.empty
 
 makeExtraResultsWidget ::
     Monad m =>
-    HoleInfo m -> [Result m] ->
-    ExprGuiM m
-    ( Maybe (ShownResult m)
-    , WithTextPos (Widget (T m Widget.EventResult))
-    )
-makeExtraResultsWidget _ [] = return (Nothing, Element.empty)
-makeExtraResultsWidget holeInfo extraResults@(firstResult:_) =
+    [Result m] ->
+    ExprGuiM m (WithTextPos (Widget (T m Widget.EventResult)))
+makeExtraResultsWidget [] = return Element.empty
+makeExtraResultsWidget extraResults@(firstResult:_) =
     do
         theme <- Lens.view Theme.theme
-        let mkResWidget result =
-                do
-                    isOnResult <- Widget.isSubCursor ?? rId result
-                    (widget, shownResult) <- makeShownResult holeInfo result
-                    return
-                        ( shownResult <$ guard isOnResult
-                        , widget
-                        )
-        (mResults, widgets) <- traverse mkResWidget extraResults <&> unzip
-        return
-            ( msum mResults
-            , Glue.vbox widgets
-                & addBackground (Widget.toAnimId (rId firstResult))
-                  (Theme.hoverBGColor theme)
-            )
+        traverse makeShownResult extraResults
+            <&> Glue.vbox
+            <&> addBackground (Widget.toAnimId (rId firstResult)) (Theme.hoverBGColor theme)
 
 applyResultLayout ::
     Functor f => f (ExpressionGui m) -> f (WithTextPos (Widget (T m Widget.EventResult)))
@@ -296,37 +149,18 @@ applyResultLayout fGui =
 makeHoleResultWidget ::
     Monad m =>
     Widget.Id -> Sugar.HoleResult (Name m) m ->
-    ExprGuiM m
-    ( WithTextPos (Widget (T m Widget.EventResult))
-    , ExprGuiM m (Widget.EventMap (T m Widget.EventResult))
-    )
+    ExprGuiM m (WithTextPos (Widget (T m Widget.EventResult)))
 makeHoleResultWidget resultId holeResult =
     (Widget.makeFocusableView ?? resultId <&> (Align.tValue %~))
     <*> mkWidget
     <&> Element.setLayers . Element.layers . Lens.traverse %~
         Anim.mapIdentities (<> (resultSuffix # Widget.toAnimId resultId))
-    <&> flip (,) mkEventMap
     where
-        mkEventMap =
-            -- Create a hidden result widget that we never display, but only
-            -- keep the event map from. We always tell it that it has focus,
-            -- so that even if we're on the search term, we can have valid
-            -- event maps of any result (we actually use the first one's
-            -- event map)
-            Reader.local (Widget.cursor .~ idWithinResultWidget) mkWidget
-            <&> getEvents
-        getEvents widget =
-            case widget ^. Align.tValue . Widget.wState of
-            Widget.StateUnfocused {} -> mempty
-            Widget.StateFocused makeFocus ->
-                let focus = makeFocus (Widget.Surrounding 0 0 0 0)
-                in
-                (focus ^. Widget.fEventMap)
-                (Widget.VirtualCursor (last (focus ^. Widget.fFocalAreas)))
         mkWidget =
             holeResultConverted
             & postProcessSugar
             & ExprGuiM.makeSubexpression
+            & Widget.assignCursor resultId idWithinResultWidget
             & applyResultLayout
         holeResultEntityId =
             holeResultConverted ^. Sugar.rPayload . Sugar.plEntityId
@@ -356,12 +190,6 @@ makeHiddenResultsMView ::
     Monad m => HaveHiddenResults -> ExprGuiM m (Maybe (WithTextPos View))
 makeHiddenResultsMView NoHiddenResults = return Nothing
 makeHiddenResultsMView HaveHiddenResults = TextView.makeLabel "..." <&> Just
-
-addMResultPicker :: Monad m => Maybe (ShownResult m) -> ExprGuiM m ()
-addMResultPicker mSelectedResult =
-    case mSelectedResult of
-    Nothing -> return ()
-    Just res -> ExprGuiM.setResultPicker $ (^. pickedEventResult) <$> srPick res
 
 layoutResults ::
     Monad m =>
@@ -402,24 +230,15 @@ layoutResults minWidth groups hiddenResults
 makeResultsWidget ::
     Monad m =>
     Widget.R -> HoleInfo m -> [ResultsList m] -> HaveHiddenResults ->
-    ExprGuiM m
-    ( Maybe (ShownResult m)
-    , OrderedResults (Widget (T m Widget.EventResult))
-    )
+    ExprGuiM m (OrderedResults (Widget (T m Widget.EventResult)))
 makeResultsWidget minWidth holeInfo shownResultsLists hiddenResults =
     do
         theme <- Lens.view Theme.theme
-        groupsWidgets <- traverse (makeResultGroup holeInfo) shownResultsLists
-        let mSelectedResult = groupsWidgets ^? Lens.traversed . rgwMSelectedResult . Lens._Just
-        let mFirstResult = groupsWidgets ^? Lens.traversed . rgwMainResult
-        let mResult = mSelectedResult <|> mFirstResult
-        addMResultPicker mResult
-        widget <-
-            layoutResults minWidth groupsWidgets hiddenResults
+        groupsWidgets <- traverse makeResultGroup shownResultsLists
+        layoutResults minWidth groupsWidgets hiddenResults
             <&> Lens.mapped %~
                 addBackground (Widget.toAnimId (hidResultsPrefix hids))
                 (Theme.hoverBGColor theme)
-        return (mResult, widget)
     where
         hids = hiIds holeInfo
 
@@ -517,21 +336,17 @@ makeUnderCursorAssignment shownResultsLists hasHiddenResults holeInfo =
             TypeView.make (hiInferredType holeInfo) (Widget.toAnimId (hidHole hids))
             <&> (^. Align.tValue)
 
-        (mShownResult, rawResultsWidgets) <-
+        resultsWidgets <-
             makeResultsWidget (typeView ^. Element.width) holeInfo shownResultsLists hasHiddenResults
 
-        (searchTermEventMap, resultsEventMap) <-
-            EventMap.makeOpenEventMaps holeInfo mShownResult
+        searchTermEventMap <- EventMap.makeOpenEventMap holeInfo
 
-        let resultsWidgets = rawResultsWidgets <&> E.strongerEvents resultsEventMap
         vspace <- ExpressionGui.annotationSpacer
         addBg <- addDarkBackground (Widget.toAnimId (hidResultsPrefix hids))
         resBg <-
             addDarkBackground (Widget.toAnimId (hidResultsPrefix hids) ++ ["results"])
         let addAnnotation x = addBg (x /-/ vspace /-/ typeView)
-        searchTermWidget <-
-            SearchTerm.make holeInfo
-            <&> Align.tValue %~ Hover.anchor . E.weakerEvents searchTermEventMap
+        searchTermWidget <- SearchTerm.make holeInfo <&> Align.tValue %~ Hover.anchor
         return $
             \placement ->
             searchTermWidget
@@ -539,6 +354,7 @@ makeUnderCursorAssignment shownResultsLists hasHiddenResults holeInfo =
                 Hover.hoverInPlaceOf
                 (resultsHoverOptions placement resBg addAnnotation resultsWidgets
                     (searchTermWidget ^. Align.tValue))
+            & Align.tValue %~ E.weakerEvents searchTermEventMap
     where
         hids = hiIds holeInfo
 

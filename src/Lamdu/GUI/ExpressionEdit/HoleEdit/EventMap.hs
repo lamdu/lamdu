@@ -1,11 +1,10 @@
 {-# LANGUAGE LambdaCase, NoImplicitPrelude, OverloadedStrings, RecordWildCards #-}
 module Lamdu.GUI.ExpressionEdit.HoleEdit.EventMap
     ( blockDownEvents, blockUpEvents, disallowCharsFromSearchTerm
-    , makeOpenEventMaps
+    , makeOpenEventMap
     ) where
 
 import qualified Control.Lens as Lens
-import qualified Data.Foldable as Foldable
 import           Data.Functor.Identity (Identity(..))
 import           Data.List (isInfixOf)
 import           Data.List.Class (List)
@@ -18,16 +17,12 @@ import           GUI.Momentu.MetaKey (MetaKey(..))
 import qualified GUI.Momentu.MetaKey as MetaKey
 import           GUI.Momentu.ModKey (ModKey(..))
 import qualified GUI.Momentu.Widget as Widget
-import qualified GUI.Momentu.Widgets.Grid as Grid
-import           Lamdu.CharClassification (operatorChars, bracketChars, digitChars, hexDigitChars, charPrecedence)
+import           Lamdu.CharClassification (operatorChars, bracketChars, digitChars, hexDigitChars)
 import qualified Lamdu.Config as Config
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.Info (HoleInfo(..))
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.Info as HoleInfo
-import           Lamdu.GUI.ExpressionEdit.HoleEdit.ShownResult (PickedResult(..), ShownResult(..))
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
-import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
-import qualified Lamdu.Sugar.NearestHoles as NearestHoles
 import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
@@ -133,77 +128,6 @@ disallowCharsFromSearchTerm Config.Hole{..} holeInfo mPos =
 deleteKeys :: [ModKey] -> E.EventMap a -> E.EventMap a
 deleteKeys = E.deleteKeys . map (E.KeyEvent MetaKey.KeyState'Pressed)
 
-pickEventMap ::
-    Monad m =>
-    Config.Hole -> HoleInfo m -> ShownResult m ->
-    Widget.EventMap (T m Widget.EventResult)
-pickEventMap Config.Hole{..} holeInfo shownResult =
-    -- TODO: Does this entityId business make sense?
-    case hiNearestHoles holeInfo ^. NearestHoles.next of
-    Just nextHoleEntityId | not (srHasHoles shownResult) ->
-        simplePickRes holePickResultKeys <>
-        pickAndMoveToNextHole nextHoleEntityId
-    _ ->
-        simplePickRes $
-        holePickResultKeys ++
-        holePickAndMoveToNextHoleKeys
-    <&> pickBefore shownResult
-    where
-        pickAndMoveToNextHole nextHoleEntityId =
-            Widget.keysEventMapMovesCursor holePickAndMoveToNextHoleKeys
-            (E.Doc ["Edit", "Result", "Pick and move to next hole"]) .
-            return $ WidgetIds.fromEntityId nextHoleEntityId
-        simplePickRes keys =
-            Widget.keysEventMap keys (E.Doc ["Edit", "Result", "Pick"]) $
-            return ()
-
-pickBefore :: Monad m => ShownResult m -> T m Widget.EventResult -> T m Widget.EventResult
-pickBefore shownResult action =
-    do
-        PickedResult{..} <- srPick shownResult
-        actionResult <-
-            action
-            <&> Widget.eCursor . Lens._Wrapped' . Lens.mapped %~
-                _pickedIdTranslations
-        return $ _pickedEventResult <> actionResult
-
--- | Remove unwanted event handlers from a hole result
-removeUnwanted ::
-    Monad m => ExprGuiM m (Widget.EventMap a -> Widget.EventMap a)
-removeUnwanted =
-    do
-        config <- Lens.view Config.config
-        minOpPrec <- ExprGuiM.readMinOpPrec
-        let unwantedKeys =
-                concat
-                [ Config.delKeys config
-                , Foldable.toList Grid.stdKeys
-                , Config.letAddItemKeys config
-                ]
-                <&> MetaKey.toModKey
-        let disallowedOperator '.' = False
-            disallowedOperator char
-                | char `notElem` operatorChars = False
-                | otherwise = charPrecedence char < minOpPrec
-        return (E.filterChars (not . disallowedOperator) . deleteKeys unwantedKeys)
-
-mkEventsOnPickedResult ::
-    Monad m =>
-    ShownResult m -> ExprGuiM m (Widget.EventMap (T m Widget.EventResult))
-mkEventsOnPickedResult shownResult =
-    removeUnwanted
-    <*> srMkEventMap shownResult
-    <&> E.emDocs . E.docStrs . Lens._last %~ (<> " (On picked result)")
-    <&> Lens.mapped %~ pickBefore shownResult
-
-emptyPickEventMap ::
-    Monad f => Config.Hole -> Widget.EventMap (f Widget.EventResult)
-emptyPickEventMap Config.Hole{..} =
-    return ()
-    & Widget.keysEventMap keys (E.Doc ["Edit", "Result", "Pick (N/A)"])
-    where
-        keys = holePickResultKeys ++ holePickAndMoveToNextHoleKeys
-
 listTHead :: List t => b -> t b -> List.ItemM t b
 listTHead nil l =
     l
@@ -238,26 +162,13 @@ toLiteralTextEventMap holeInfo =
             & WidgetIds.delegatingId
             & pure
 
-makeOpenEventMaps ::
+makeOpenEventMap ::
     Monad m =>
-    HoleInfo m -> Maybe (ShownResult m) ->
-    ExprGuiM m
-    ( Widget.EventMap (T m Widget.EventResult)
-    , Widget.EventMap (T m Widget.EventResult)
-    )
-makeOpenEventMaps holeInfo mShownResult =
-    do
-        holeConfig <- Lens.view Config.config <&> Config.hole
-        -- below ad-hoc and search term edit:
-        eventMap <-
-            case mShownResult of
-            Nothing -> pure (emptyPickEventMap holeConfig)
-            Just shownResult ->
-                mkEventsOnPickedResult shownResult
-                <&> mappend (pickEventMap holeConfig holeInfo shownResult)
-            <&> mappend maybeLiteralTextEventMap
-        adHocEdit <- adHocTextEditEventMap holeInfo
-        pure (eventMap, adHocEdit <> eventMap)
+    HoleInfo m ->
+    ExprGuiM m (Widget.EventMap (T m Widget.EventResult))
+makeOpenEventMap holeInfo =
+    adHocTextEditEventMap holeInfo
+    <&> mappend maybeLiteralTextEventMap
     where
         isWrapperHole = hiHole holeInfo & Lens.has (Sugar.holeMArg . Lens._Just)
         maybeLiteralTextEventMap
