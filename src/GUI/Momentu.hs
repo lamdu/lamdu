@@ -95,7 +95,7 @@ formatMetaKey :: MetaKey -> Text
 formatMetaKey = MetaKey.format
 
 above :: Glue a b => a -> b -> Glued a b
-above x = (/-/) x
+above = (/-/)
 
 leftOf :: Glue a b => a -> b -> Glued a b
-leftOf x = (/|/) x
+leftOf = (/|/)

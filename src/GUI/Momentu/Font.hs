@@ -14,8 +14,7 @@ import qualified Control.Lens as Lens
 import           Data.Vector.Vector2 (Vector2(..))
 import           Graphics.DrawingCombinators ((%%))
 import qualified Graphics.DrawingCombinators as Draw
-import           Graphics.DrawingCombinators.Utils (TextSize(..), Image)
-import           Graphics.DrawingCombinators.Utils (RenderedText, renderedText, renderedTextSize)
+import           Graphics.DrawingCombinators.Utils (TextSize(..), Image, RenderedText, renderedText, renderedTextSize)
 import qualified Graphics.DrawingCombinators.Utils as DrawUtils
 
 import           Lamdu.Prelude

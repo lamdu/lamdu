@@ -211,7 +211,7 @@ locals sugarContext exprPl =
             sugarContext
             ^? ConvertM.scScopeInfo . ConvertM.siRecursiveRef . Lens._Just .
             ConvertM.rrDefI . Lens.to ExprIRef.globalId
-        isRecursiveRef varId = maybe False (== varId) recursiveVar
+        isRecursiveRef varId = recursiveVar == Just varId
 
 mkNominalOptions :: [(T.NominalId, N.Nominal)] -> [Val ()]
 mkNominalOptions nominals =

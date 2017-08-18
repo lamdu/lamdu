@@ -21,8 +21,7 @@ import qualified GUI.Momentu.Align as Align
 import           GUI.Momentu.Animation (AnimId)
 import qualified GUI.Momentu.Animation as Anim
 import qualified GUI.Momentu.Element as Element
-import           GUI.Momentu.Font (bounding, advance)
-import           GUI.Momentu.Font (RenderedText(..), renderedText, renderedTextSize)
+import           GUI.Momentu.Font (RenderedText(..), renderedText, renderedTextSize, bounding, advance)
 import qualified GUI.Momentu.Font as Font
 import           GUI.Momentu.Rect (Rect(Rect))
 import qualified GUI.Momentu.Rect as Rect

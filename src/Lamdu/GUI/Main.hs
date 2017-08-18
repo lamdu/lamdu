@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, TemplateHaskell, RankNTypes, DisambiguateRecordFields, NamedFieldPuns, OverloadedStrings, FlexibleContexts #-}
+{-# LANGUAGE NoImplicitPrelude, RankNTypes, DisambiguateRecordFields, NamedFieldPuns, OverloadedStrings, FlexibleContexts #-}
 module Lamdu.GUI.Main
     ( make
     , CodeEdit.ExportActions(..)

@@ -182,7 +182,7 @@ eventResultOfPickedResult pr =
         & mapPrefix
     }
     where
-        mapPrefix = foldr (.) id . map reprefix
+        mapPrefix = foldr ((.) . reprefix) id
         reprefix (old, new) ident =
             WidgetId.subId old ident & maybe ident (WidgetId.joinId new)
         pickedResultAnimIdTranslation idTranslations =

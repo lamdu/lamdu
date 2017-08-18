@@ -86,11 +86,11 @@ mkNomGui ordering nomStr str mDel valId pl (Sugar.Nominal tid val) =
         let eventMap = mDel ^. Lens._Just . Lens.to mkEventMap
         ExpressionGui.combineSpacedMParens mParenInfo <*>
             ( ordering
-                [ (Widget.makeFocusableView ?? nameId) <*>
+                [
                 do
                     label <- ExpressionGui.grammarLabel str
                     nameGui <- ExpressionGui.makeNameView (tid ^. Sugar.tidgName) (Widget.toAnimId nameId)
-                    label /|/ nameGui & Responsive.fromTextView & return
+                    Widget.makeFocusableView ?? nameId ?? Responsive.fromTextView (label /|/ nameGui)
                 & Reader.local (TextView.color .~ nomColor)
                 <&> E.weakerEvents eventMap
               , val

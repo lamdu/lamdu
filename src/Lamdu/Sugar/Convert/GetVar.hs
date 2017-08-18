@@ -77,7 +77,7 @@ convertGlobal param exprPl =
         let recursiveVar =
                 ctx ^? ConvertM.scScopeInfo . ConvertM.siRecursiveRef .
                 Lens._Just . ConvertM.rrDefI
-        let isRecursiveRef = maybe False (== defI) recursiveVar
+        let isRecursiveRef = recursiveVar == Just defI
         notInScope || isRecursiveRef & guard
         lifeState <-
             Anchors.assocDefinitionState defI

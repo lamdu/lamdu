@@ -181,7 +181,7 @@ processLet scopeInfo redex =
     where
         mRecursiveRef = scopeInfo ^. ConvertM.siRecursiveRef
         mDefI = mRecursiveRef ^? Lens._Just . ConvertM.rrDefI <&> ExprIRef.globalId
-        isRecursiveDefRef var = maybe False (== var) mDefI
+        isRecursiveDefRef var = mDefI == Just var
         maybeWrapHole
             | TV.null skolemsExitingScope = return ()
             | otherwise =
