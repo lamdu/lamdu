@@ -46,9 +46,7 @@ makeSimpleView ::
     ExprGuiM m (WithTextPos (Widget (f Widget.EventResult)))
 makeSimpleView name myId =
     (Widget.makeFocusableView ?? myId <&> (Align.tValue %~))
-    <*> ( ExpressionGui.makeNameView name (Widget.toAnimId myId)
-          <&> Align.tValue %~ Widget.fromView
-        )
+    <*> ExpressionGui.makeNameView name (Widget.toAnimId myId)
 
 makeParamsRecord ::
     Monad m => Widget.Id -> Sugar.ParamsRecordVar (Name m) ->
@@ -123,7 +121,7 @@ definitionTypeChangeBox info getVarId =
         spacing <- Spacer.stdVSpace
         sepLabel <-
             (Widget.makeFocusableView ?? myId <&> (Align.tValue %~))
-            <*> (TextView.makeLabel "Update to:" <&> Align.tValue %~ Widget.fromView)
+            <*> TextView.makeLabel "Update to:"
         typeCurrent <- mkTypeView "typeCurrent" (info ^. Sugar.defTypeCurrent)
         config <- Lens.view Config.config
         theme <- Lens.view Theme.theme

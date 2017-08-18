@@ -5,6 +5,7 @@ module Lamdu.GUI.ExpressionEdit.LambdaEdit
 
 import qualified Control.Lens as Lens
 import           Data.Store.Transaction (Transaction)
+import qualified GUI.Momentu.Align as Align
 import           GUI.Momentu.Align (WithTextPos(..))
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.EventMap as E
@@ -74,8 +75,9 @@ mkShrunk paramIds myId =
                    WidgetIds.fromEntityId)
         theme <- Lens.view Theme.theme
         lamLabel <-
-            (Widget.makeFocusableView ?? lamId myId)
-            <*> (ExpressionGui.grammarLabel "λ" <&> Responsive.fromTextView)
+            (Widget.makeFocusableView ?? lamId myId <&> (Align.tValue %~))
+            <*> ExpressionGui.grammarLabel "λ"
+            <&> Responsive.fromWithTextPos
             & LightLambda.withUnderline theme
         return $ \mScopeEdit ->
             [ addScopeEdit mScopeEdit lamLabel

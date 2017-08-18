@@ -103,8 +103,9 @@ makeFieldsWidget ::
     [Sugar.RecordField (Name m) m (Sugar.Expression (Name m) m ExprGuiT.Payload)] ->
     Widget.Id -> ExprGuiM m (ExpressionGui m)
 makeFieldsWidget [] myId =
-    (Widget.makeFocusableView ?? myId)
-    <*> (ExpressionGui.grammarLabel "()" <&> Responsive.fromTextView)
+    (Widget.makeFocusableView ?? myId <&> (Align.tValue %~))
+    <*> ExpressionGui.grammarLabel "()"
+    <&> Responsive.fromWithTextPos
 makeFieldsWidget fields _ =
     Responsive.taggedList <*> mapM makeFieldRow fields
 

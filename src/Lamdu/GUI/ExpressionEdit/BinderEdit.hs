@@ -216,7 +216,7 @@ makeScopeNavEdit binder myId curCursor =
         case settings ^. CESettings.sInfoMode of
             CESettings.Evaluation ->
                 (Widget.makeFocusableView ?? myId)
-                <*> (mapM mkArrow scopes <&> Glue.hbox <&> Widget.fromView)
+                <*> (mapM mkArrow scopes <&> Glue.hbox)
                 <&> E.weakerEvents (mkScopeEventMap leftKeys rightKeys `mappend` blockEventMap)
                 <&> Just
                 <&> (,) (mkScopeEventMap prevScopeKeys nextScopeKeys)
@@ -489,8 +489,9 @@ nullParamEditInfo mActions =
     ParamEdit.Info
     { ParamEdit.iMakeNameEdit =
       \myId ->
-      (Widget.makeFocusableView ?? myId)
-      <*> (ExpressionGui.grammarLabel "◗" <&> Responsive.fromTextView)
+      (Widget.makeFocusableView ?? myId <&> (Align.tValue %~))
+      <*> ExpressionGui.grammarLabel "◗"
+      <&> Responsive.fromWithTextPos
     , ParamEdit.iMAddNext = Nothing
     , ParamEdit.iMOrderBefore = Nothing
     , ParamEdit.iMOrderAfter = Nothing

@@ -63,8 +63,9 @@ make (Sugar.Case mArg alts caseTail addAlt _cEntityId) pl =
             & Lens._Just ExprEventMap.jumpHolesEventMap
             <&> fromMaybe mempty
         let headerLabel text =
-                (Widget.makeFocusableView ?? headerId)
-                <*> (ExpressionGui.grammarLabel text <&> Responsive.fromTextView)
+                (Widget.makeFocusableView ?? headerId <&> (Align.tValue %~))
+                <*> ExpressionGui.grammarLabel text
+                <&> Responsive.fromWithTextPos
                 <&> E.weakerEvents labelJumpHoleEventMap
         (mActiveTag, header) <-
             case mArg of
@@ -133,8 +134,9 @@ makeAltsWidget ::
     [Sugar.CaseAlt (Name m) m (Sugar.Expression (Name m) m ExprGuiT.Payload)] ->
     Widget.Id -> ExprGuiM m (ExpressionGui m)
 makeAltsWidget _ [] myId =
-    (Widget.makeFocusableView ?? Widget.joinId myId ["Ø"])
-    <*> (ExpressionGui.grammarLabel "Ø" <&> Responsive.fromTextView)
+    (Widget.makeFocusableView ?? Widget.joinId myId ["Ø"] <&> (Align.tValue %~))
+    <*> ExpressionGui.grammarLabel "Ø"
+    <&> Responsive.fromWithTextPos
 makeAltsWidget mActiveTag alts _myId =
     Responsive.taggedList <*> mapM (makeAltRow mActiveTag) alts
 

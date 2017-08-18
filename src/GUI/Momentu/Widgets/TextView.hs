@@ -133,7 +133,7 @@ makeFocusable =
         mkText <- make
         pure $ \text myId ->
             mkText text (Widget.toAnimId myId)
-            & Align.tValue %~ toFocusable myId . Widget.fromView
+            & Align.tValue %~ toFocusable myId
 
 makeFocusableLabel ::
     (MonadReader env m, Applicative f, Widget.HasCursor env, HasStyle env, Element.HasAnimIdPrefix env) =>
@@ -142,5 +142,4 @@ makeFocusableLabel text =
     do
         toFocusable <- Widget.makeFocusableView
         animId <- Element.subAnimId [encodeUtf8 text] <&> Widget.Id
-        makeLabel text
-            <&> Align.tValue %~ toFocusable animId . Widget.fromView
+        makeLabel text <&> Align.tValue %~ toFocusable animId

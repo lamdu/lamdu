@@ -6,6 +6,7 @@ module Lamdu.GUI.ExpressionEdit.NomEdit
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
 import           Data.Store.Transaction (Transaction)
+import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Glue ((/|/))
 import qualified GUI.Momentu.Widget as Widget
@@ -90,7 +91,8 @@ mkNomGui ordering nomStr str mDel valId pl (Sugar.Nominal tid val) =
                 do
                     label <- ExpressionGui.grammarLabel str
                     nameGui <- ExpressionGui.makeNameView (tid ^. Sugar.tidgName) (Widget.toAnimId nameId)
-                    Widget.makeFocusableView ?? nameId ?? Responsive.fromTextView (label /|/ nameGui)
+                    Widget.makeFocusableView ?? nameId <&> (Align.tValue %~) ?? label /|/ nameGui
+                <&> Responsive.fromWithTextPos
                 & Reader.local (TextView.color .~ nomColor)
                 <&> E.weakerEvents eventMap
               , val

@@ -143,8 +143,9 @@ makeReplEdit theExportActions replExpr =
         theConfig <- Lens.view config
         ExpressionGui.combineSpaced
             <*> sequence
-            [ (Widget.makeFocusableView ?? Widget.joinId WidgetIds.replId ["symbol"])
-              <*> (TextView.makeLabel "⋙" <&> Responsive.fromTextView)
+            [ (Widget.makeFocusableView ?? Widget.joinId WidgetIds.replId ["symbol"] <&> (Align.tValue %~))
+              <*> TextView.makeLabel "⋙"
+              <&> Responsive.fromWithTextPos
             , ExprGuiM.makeSubexpressionWith 0 id replExpr
             ]
             <&> Lens.mapped %~ mLiftTrans

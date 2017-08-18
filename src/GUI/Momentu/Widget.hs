@@ -575,13 +575,14 @@ assignCursorPrefix srcFolder dest =
             Just suffix -> dest suffix
 
 makeFocusableView ::
-    (MonadReader env m, HasCursor env, Applicative f, HasWidget w) =>
-    m (Id -> w (f EventResult) -> w (f EventResult))
+    (MonadReader env m, HasCursor env, Applicative f) =>
+    m (Id -> View -> Widget (f EventResult))
 makeFocusableView =
     respondToCursorPrefix
-    <&> \respond myIdPrefix ->
-    respond myIdPrefix
-    <&> takesFocus (const (pure myIdPrefix))
+    <&> \respond myIdPrefix view ->
+    fromView view
+    & respond myIdPrefix
+    & takesFocus (const (pure myIdPrefix))
 
 cursorAnimId :: AnimId
 cursorAnimId = ["background"]
