@@ -25,3 +25,5 @@
 /private
 /.ghci
 /.vscode
+/ghcid.txt
+/autogen/
