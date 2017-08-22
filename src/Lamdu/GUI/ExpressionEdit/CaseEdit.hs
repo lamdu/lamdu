@@ -51,7 +51,7 @@ make ::
     Sugar.Case (Name m) m (ExprGuiT.SugarExpr m) ->
     Sugar.Payload m ExprGuiT.Payload ->
     ExprGuiM m (ExpressionGui m)
-make (Sugar.Case mArg alts caseTail addAlt _cEntityId) pl =
+make (Sugar.Case mArg alts caseTail addAlt) pl =
     do
         config <- Lens.view Config.config
         let mExprAfterHeader =

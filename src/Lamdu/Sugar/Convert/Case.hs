@@ -69,7 +69,6 @@ convertAbsurd exprPl =
                     <&> EntityId.ofValI
                     & ClosedCase
             , _cAddAlt = addAlt
-            , _cEntityId = exprPl ^. Input.entityId
             }
             & addActions exprPl
 
@@ -122,7 +121,6 @@ convert (V.Case tag val rest) exprPl = do
                         , _cAlts = []
                         , _cTail = CaseExtending restS
                         , _cAddAlt = addAlt
-                        , _cEntityId = exprPl ^. Input.entityId
                         }
                     , mempty
                     )

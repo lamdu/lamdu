@@ -24,7 +24,7 @@ module Lamdu.Sugar.Types.Expression
     , CaseAddAltResult(..), caarNewTag, caarNewVal, caarCase
     , CaseArg(..), caVal, caToLambdaCase
     , CaseKind(..), _LambdaCase, _CaseWithArg
-    , Case(..), cKind, cAlts, cAddAlt, cTail, cEntityId
+    , Case(..), cKind, cAlts, cAddAlt, cTail
     , Nominal(..), nTId, nVal
     --
     , GetField(..), gfRecord, gfTag
@@ -218,8 +218,6 @@ data Case name m expr = Case
     , _cAlts :: [CaseAlt name m expr]
     , _cTail :: CaseTail m expr
     , _cAddAlt :: T m CaseAddAltResult
-    , -- The entity id of the underlying lambda-case
-      _cEntityId :: EntityId
     } deriving (Functor, Foldable, Traversable)
 {- Case end -}
 

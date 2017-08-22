@@ -41,7 +41,7 @@ bodyShape = \case
     Sugar.BodyCase cas ->
         ["case", ":"] ++
         case cas of
-            Sugar.Case Sugar.LambdaCase [] Sugar.ClosedCase{} _ _ -> ["absurd"]
+            Sugar.Case Sugar.LambdaCase [] Sugar.ClosedCase{} _ -> ["absurd"]
             _ -> []
     Sugar.BodyInject {} -> ["[]"]
     Sugar.BodyLiteral i -> [formatLiteral i]
