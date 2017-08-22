@@ -38,8 +38,11 @@ make (Sugar.Expression body pl) =
             exprHiddenEntityIds <&> WidgetIds.fromEntityId
             & foldr (`Widget.assignCursorPrefix` const myId) x
 
-injectedExpr :: Monad m => ExprGuiM m (ExpressionGui m)
-injectedExpr = TextView.makeLabel "★" <&> Responsive.fromTextView
+injectedExpr :: Monad m => Sugar.Payload m ExprGuiT.Payload -> ExprGuiM m (ExpressionGui m)
+injectedExpr pl =
+    (Widget.makeFocusableView ?? WidgetIds.fromExprPayload pl <&> fmap)
+    <*> TextView.makeLabel "★"
+    <&> Responsive.fromWithTextPos
 
 makeEditor ::
     Monad m =>
@@ -60,4 +63,4 @@ makeEditor body =
     Sugar.BodyGetVar       x -> x & GetVarEdit.make
     Sugar.BodyToNom        x -> x & NomEdit.makeToNom
     Sugar.BodyFromNom      x -> x & NomEdit.makeFromNom
-    Sugar.BodyInjectedExpression -> const injectedExpr
+    Sugar.BodyInjectedExpression -> injectedExpr
