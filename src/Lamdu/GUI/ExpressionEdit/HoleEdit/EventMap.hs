@@ -46,20 +46,14 @@ blockDirection key keyName =
     & E.weakerEvents
 
 adHocTextEditEventMap ::
-    Monad m => HoleInfo m -> ExprGuiM m (Widget.EventMap (T m Widget.EventResult))
+    Monad m => HoleInfo m -> Widget.EventMap (T m Widget.EventResult)
 adHocTextEditEventMap holeInfo =
-    do
-        holeConfig <- Lens.view Config.config <&> Config.hole
-        let appendCharEventMap =
-                E.allChars "Character"
-                (E.Doc ["Edit", "Search Term", "Append character"])
-                (changeText . flip Text.snoc)
-                & disallowCharsFromSearchTerm holeConfig holeInfo Nothing
-                & if Text.null searchTerm
-                  then E.filterChars (`notElem` operatorChars)
-                  else id
-        appendCharEventMap <> deleteCharEventMap & pure
+    appendCharEventMap <> deleteCharEventMap
     where
+        appendCharEventMap =
+            E.allChars "Character"
+            (E.Doc ["Edit", "Search Term", "Append character"])
+            (changeText . flip Text.snoc)
         searchTermProp = HoleInfo.hiSearchTermProperty holeInfo
         deleteCharEventMap
             | Text.null searchTerm = mempty
@@ -168,9 +162,17 @@ makeOpenEventMap ::
     HoleInfo m ->
     ExprGuiM m (Widget.EventMap (T m Widget.EventResult))
 makeOpenEventMap holeInfo =
-    adHocTextEditEventMap holeInfo
-    <&> mappend maybeLiteralTextEventMap
+    do
+        holeConfig <- Lens.view Config.config <&> Config.hole
+        adHocTextEditEventMap holeInfo
+            & disallowCharsFromSearchTerm holeConfig holeInfo Nothing
+            & disallowFirstOperatorChar
+            & mappend maybeLiteralTextEventMap
+            & pure
     where
+        disallowFirstOperatorChar
+            | Text.null searchTerm = E.filterChars (`notElem` operatorChars)
+            | otherwise = id
         isWrapperHole = hiHole holeInfo & Lens.has (Sugar.holeMArg . Lens._Just)
         maybeLiteralTextEventMap
             | Text.null searchTerm && not isWrapperHole =
