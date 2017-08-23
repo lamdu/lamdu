@@ -76,7 +76,7 @@ indent =
         makeBar <- indentBar
         let f :: Functor f => AnimId -> WithTextPos (Widget (f EventResult)) -> WithTextPos (Widget (f EventResult))
             f myId w = makeBar (w ^. Element.height) myId /|/ w
-        return (\myId -> (Responsive.render . Lens.mapped %~ f myId) . reduceWidth)
+        return (\myId -> (Responsive.alignedWidget %~ f myId) . reduceWidth)
 
 totalBarWidth :: (MonadReader env m, HasStyle env, Spacer.HasStdSpacing env) => m Double
 totalBarWidth =
