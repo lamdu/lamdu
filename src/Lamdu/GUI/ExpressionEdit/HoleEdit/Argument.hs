@@ -1,6 +1,6 @@
 {-# LANGUAGE NoImplicitPrelude, OverloadedStrings #-}
 -- | Wrapper hole
-module Lamdu.GUI.ExpressionEdit.HoleEdit.Wrapper
+module Lamdu.GUI.ExpressionEdit.HoleEdit.Argument
     ( make
     ) where
 
