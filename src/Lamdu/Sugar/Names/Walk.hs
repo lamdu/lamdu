@@ -170,9 +170,10 @@ toTagG = tagGName %%~ opGetName TagName
 
 toLabeledApply ::
     MonadNaming m =>
+    (a -> m b) ->
     LabeledApply (OldName m) p a ->
-    m (LabeledApply (NewName m) p a)
-toLabeledApply app@LabeledApply{..} =
+    m (LabeledApply (NewName m) p b)
+toLabeledApply expr app@LabeledApply{..} =
     LabeledApply
     <$>
     ( _aFunc & bvNameRef . nrName %%~
@@ -181,25 +182,26 @@ toLabeledApply app@LabeledApply{..} =
     <*> pure _aSpecialArgs
     <*> (traverse . aaTag) toTagG _aAnnotatedArgs
     <*> (traverse . raValue) toParam _aRelayedArgs
+    >>= traverse expr
 
 toBody ::
     MonadNaming m => (a -> m b) ->
     Body (OldName m) (TM m) a ->
     m (Body (NewName m) (TM m) b)
 toBody expr = \case
-    BodyGetField     x -> traverse expr x >>= gfTag toTagG <&> BodyGetField
-    BodyInject       x -> traverse expr x >>= iTag toTagG <&> BodyInject
-    BodyRecord       x -> traverse expr x >>= (rItems . traverse . rfTag) toTagG <&> BodyRecord
-    BodyCase         x -> traverse expr x >>= (cAlts . traverse . caTag) toTagG <&> BodyCase
-    BodyGuard        x -> traverse expr x <&> BodyGuard
-    BodySimpleApply  x -> traverse expr x <&> BodySimpleApply
-    BodyLabeledApply x -> traverse expr x >>= toLabeledApply <&> BodyLabeledApply
-    BodyHole         x -> traverse expr x >>= holeActions toHoleActions <&> BodyHole
-    BodyFromNom      x -> traverse expr x >>= nTId toTIdG <&> BodyFromNom
-    BodyToNom        x -> traverse (toBinderBody expr) x >>= nTId toTIdG <&> BodyToNom
-    BodyGetVar       x -> toGetVar x <&> BodyGetVar
-    BodyLiteral      x -> pure $ BodyLiteral x
-    BodyLam          x -> toLam expr x <&> BodyLam
+    BodyGetField     x -> x & traverse expr >>= gfTag toTagG <&> BodyGetField
+    BodyInject       x -> x & traverse expr >>= iTag toTagG <&> BodyInject
+    BodyRecord       x -> x & traverse expr >>= (rItems . traverse . rfTag) toTagG <&> BodyRecord
+    BodyCase         x -> x & traverse expr >>= (cAlts . traverse . caTag) toTagG <&> BodyCase
+    BodyGuard        x -> x & traverse expr <&> BodyGuard
+    BodySimpleApply  x -> x & traverse expr <&> BodySimpleApply
+    BodyLabeledApply x -> x & toLabeledApply expr <&> BodyLabeledApply
+    BodyHole         x -> x & traverse expr >>= holeActions toHoleActions <&> BodyHole
+    BodyFromNom      x -> x & traverse expr >>= nTId toTIdG <&> BodyFromNom
+    BodyToNom        x -> x & traverse (toBinderBody expr) >>= nTId toTIdG <&> BodyToNom
+    BodyGetVar       x -> x & toGetVar <&> BodyGetVar
+    BodyLiteral      x -> x & BodyLiteral & pure
+    BodyLam          x -> x & toLam expr <&> BodyLam
     BodyInjectedExpression -> return BodyInjectedExpression
     where
         toTIdG = tidgName %%~ opGetName NominalName
