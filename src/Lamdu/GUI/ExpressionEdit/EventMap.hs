@@ -143,9 +143,9 @@ actionsEventMap exprInfo holePicker =
             , do
                 replaceKeys <- Lens.view Config.config <&> Config.replaceParentKeys
                 exprInfoActions exprInfo ^. Sugar.mReplaceParent
-                    <&> Lens.mapped %~ WidgetIds.fromEntityId
+                    <&> void
                     & maybe mempty
-                        (Widget.keysEventMapMovesCursor replaceKeys (E.Doc ["Edit", "Replace parent"]))
+                        (Widget.keysEventMap replaceKeys (E.Doc ["Edit", "Replace parent"]))
                     & return
             ] <&> mconcat
     ]
