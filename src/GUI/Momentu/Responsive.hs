@@ -42,6 +42,7 @@ module GUI.Momentu.Responsive
     , vertLayoutMaybeDisambiguate
     , Disambiguators(..), disambHoriz, disambVert
     , horizVertFallback, disambiguationNone
+    , hboxVertFallback
     ) where
 
 import qualified Control.Lens as Lens
@@ -246,17 +247,17 @@ horizVertFallback disamb horiz vert =
             wide
     _ -> (vertLayoutMaybeDisambiguate (disamb ^. disambVert) vert ^. render) layoutParams
 
-boxH ::
+-- | Use an hbox if there is enough room, or a given vertical layout.
+-- Gets a combinator on horizontically layed out guis to potentially add spaces between them.
+hboxVertFallback ::
     Functor f =>
-    ([WithTextPos (Widget a)] -> [WithTextPos (Widget (f EventResult))]) ->
-    ([Responsive a] -> [Responsive (f EventResult)]) ->
     Disambiguators (f EventResult) ->
-    [Responsive a] ->
+    ([WithTextPos (Widget a)] -> [WithTextPos (Widget (f EventResult))]) -> [Responsive a] ->
+    Responsive (f EventResult) ->
     Responsive (f EventResult)
-boxH onHGuis onVGuis disamb guis =
+hboxVertFallback disamb onHGuis guis vert =
     horizVertFallback disamb wide vert
     where
-        vert = onVGuis guis & vbox
         wide =
             guis ^.. traverse . render
             ?? LayoutParams
@@ -266,6 +267,16 @@ boxH onHGuis onVGuis disamb guis =
             & onHGuis
             & Glue.hbox
             & fromWithTextPos
+
+boxH ::
+    Functor f =>
+    ([WithTextPos (Widget a)] -> [WithTextPos (Widget (f EventResult))]) ->
+    ([Responsive a] -> [Responsive (f EventResult)]) ->
+    Disambiguators (f EventResult) ->
+    [Responsive a] ->
+    Responsive (f EventResult)
+boxH onHGuis onVGuis disamb guis =
+    hboxVertFallback disamb onHGuis guis (vbox (onVGuis guis))
 
 box ::
     Functor f =>
