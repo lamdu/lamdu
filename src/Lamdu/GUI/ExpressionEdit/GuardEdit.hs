@@ -16,6 +16,7 @@ import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.Responsive.Expression as ResponsiveExpr
 import           GUI.Momentu.View (View)
 import qualified GUI.Momentu.Widget as Widget
+import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified Lamdu.Config as Config
 import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
@@ -66,17 +67,17 @@ makeElseIf (Sugar.GuardElseIf scopes entityId cond res delete) makeRest =
         mOuterScopeId <- ExprGuiM.readMScopeId
         let mInnerScope = lookupMKey <$> mOuterScopeId <*> scopes
         -- TODO: green evaluation backgrounds, "◗"?
-        elseLabel <- ExpressionGui.grammarLabel "else "
+        elseLabel <- ExpressionGui.grammarLabel "else"
+        space <- Spacer.stdHSpace
         Responsive.vboxSpaced <*>
             sequence
-            [ makeGuardRow delete elseLabel entityId
+            [ makeGuardRow delete (elseLabel /|/ space) entityId
                 <*> ExprGuiM.makeSubexpression cond
                 <*> ExprGuiM.makeSubexpression res
             , makeRest
             ]
-            -- TODO: scope mapping should also apply to later else-ifs and else
+            & Reader.local (Element.animIdPrefix .~ Widget.toAnimId (WidgetIds.fromEntityId entityId))
             & ExprGuiM.withLocalMScopeId mInnerScope
-    & Reader.local (Element.animIdPrefix .~ Widget.toAnimId (WidgetIds.fromEntityId entityId))
     where
         -- TODO: cleaner way to write this?
         lookupMKey k m = k >>= (`Map.lookup` m)
@@ -93,13 +94,16 @@ make guards pl =
             <*> ExprGuiM.makeSubexpression (guards ^. Sugar.gIf)
             <*> ExprGuiM.makeSubexpression (guards ^. Sugar.gThen)
         let makeElse =
-                (genRow ?? elseIndentAnimId)
+                (genRow ?? elseAnimId)
                 <*>
-                (ExpressionGui.grammarLabel "else: " <&> Responsive.fromTextView)
-                <*> ExprGuiM.makeSubexpression (guards ^. Sugar.gElse)
+                ((/|/)
+                    <$> ExpressionGui.grammarLabel "else"
+                    <*> (ExpressionGui.grammarLabel ": " & Reader.local (Element.animIdPrefix .~ elseAnimId))
+                    <&> Responsive.fromTextView
+                ) <*> ExprGuiM.makeSubexpression (guards ^. Sugar.gElse)
         elses <- foldr makeElseIf makeElse (guards ^. Sugar.gElseIfs)
         Responsive.vboxSpaced ?? [ifRow, elses]
     & ExpressionGui.stdWrapParentExpr pl
     where
-        elseIndentAnimId = Widget.toAnimId elseId
+        elseAnimId = Widget.toAnimId elseId
         elseId = WidgetIds.fromExprPayload (guards ^. Sugar.gElse . Sugar.rPayload)
