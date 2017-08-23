@@ -5,17 +5,14 @@ module Lamdu.GUI.ExpressionEdit.GuardEdit
 
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
-import qualified Data.List as List
 import qualified Data.Map as Map
 import           Data.Store.Transaction (Transaction)
-import           GUI.Momentu.Align (WithTextPos(..))
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Glue ((/|/))
 import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.Responsive.Expression as ResponsiveExpr
 import qualified GUI.Momentu.Widget as Widget
-import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified Lamdu.Config as Config
 import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
@@ -39,7 +36,6 @@ makeGuardRow delete labelText entityId =
         let eventMap =
                 delete <&> WidgetIds.fromEntityId
                 & Widget.keysEventMapMovesCursor (Config.delKeys config) (E.Doc ["Edit", "Guard", "Delete"])
-        hSpace <- Spacer.stdHSpace <&> Widget.fromView <&> WithTextPos 0
         vbox <- Responsive.vboxSpaced
         indent <- ResponsiveExpr.indent
         return $
@@ -47,7 +43,7 @@ makeGuardRow delete labelText entityId =
             let condRow = label /|/ cond /|/ colon
             in
             Responsive.hboxVertFallback Responsive.disambiguationNone
-            (List.intersperse hSpace) [condRow, result]
+            id [condRow, result]
             (vbox [condRow, indent animId result])
             & E.weakerEvents eventMap
     where
