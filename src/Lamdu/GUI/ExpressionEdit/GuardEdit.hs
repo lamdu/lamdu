@@ -103,7 +103,9 @@ make guards pl =
                 ) <*> ExprGuiM.makeSubexpression (guards ^. Sugar.gElse)
         elses <- foldr makeElseIf makeElse (guards ^. Sugar.gElseIfs)
         Responsive.vboxSpaced ?? [ifRow, elses]
+    & Widget.assignCursor myId (WidgetIds.fromExprPayload (guards ^. Sugar.gIf . Sugar.rPayload))
     & ExpressionGui.stdWrapParentExpr pl
     where
+        myId = WidgetIds.fromExprPayload pl
         elseAnimId = Widget.toAnimId elseId
         elseId = WidgetIds.fromExprPayload (guards ^. Sugar.gElse . Sugar.rPayload)
