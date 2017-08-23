@@ -418,7 +418,12 @@ stdWrapParentExpr pl mkGui
     | otherwise =
         parentDelegator (WidgetIds.fromExprPayload pl) <*> mkGui & stdWrap pl
 
-grammarLabel :: Monad m => Text -> ExprGuiM m (WithTextPos View)
+grammarLabel ::
+    ( MonadReader env m
+    , Theme.HasTheme env
+    , TextView.HasStyle env
+    , Element.HasAnimIdPrefix env
+    ) => Text -> m (WithTextPos View)
 grammarLabel text =
     do
         theme <- Lens.view Theme.theme
