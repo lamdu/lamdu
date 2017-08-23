@@ -40,7 +40,7 @@ makeWrapper ::
     Sugar.Payload m ExprGuiT.Payload -> HoleInfo m ->
     ExprGuiM m (Maybe (ExpressionGui m))
 makeWrapper pl holeInfo =
-    hiHole holeInfo ^. Sugar.holeMArg
+    hiHole holeInfo ^? Sugar.holeKind . Sugar._WrapperHole
     & Lens._Just %%~
         \holeArg ->
         do

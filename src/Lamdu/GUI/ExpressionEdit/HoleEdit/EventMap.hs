@@ -108,7 +108,7 @@ allowedCharsFromSearchTerm holeInfo mPos =
         allowAll = const True
         allowOnly = flip elem
         disallow = flip notElem
-        isLeafHole = hiHole holeInfo & Lens.has (Sugar.holeMArg . Lens._Nothing)
+        isLeafHole = hiHole holeInfo & Lens.has (Sugar.holeKind . Sugar._LeafHole)
 
 disallowCharsFromSearchTerm ::
     Config.Hole -> HoleInfo m -> Maybe Int -> E.EventMap a -> E.EventMap a
@@ -146,9 +146,11 @@ toLiteralTextEventMap holeInfo =
             >>= listTHead (error "Literal hole option has no results?!")
         result <- mkResult
         pickedResult <- result ^. Sugar.holeResultPick
-        case result ^. Sugar.holeResultConverted . Sugar.rBody of
-            Sugar.BodyHole Sugar.Hole{ Sugar._holeMArg = Just x } ->
-                x ^. Sugar.haExpr
+        let argExpr =
+                Sugar.holeResultConverted . Sugar.rBody . Sugar._BodyHole .
+                Sugar.holeKind . Sugar._WrapperHole . Sugar.haExpr
+        case result ^? argExpr of
+            Just arg -> arg
             _ -> result ^. Sugar.holeResultConverted
             ^. Sugar.rPayload . Sugar.plEntityId
             & (`lookup` (pickedResult ^. Sugar.prIdTranslation))
@@ -173,7 +175,7 @@ makeOpenEventMap holeInfo =
         disallowFirstOperatorChar
             | Text.null searchTerm = E.filterChars (`notElem` operatorChars)
             | otherwise = id
-        isWrapperHole = hiHole holeInfo & Lens.has (Sugar.holeMArg . Lens._Just)
+        isWrapperHole = hiHole holeInfo & Lens.has (Sugar.holeKind . Sugar._WrapperHole)
         maybeLiteralTextEventMap
             | Text.null searchTerm && not isWrapperHole =
               toLiteralTextEventMap holeInfo

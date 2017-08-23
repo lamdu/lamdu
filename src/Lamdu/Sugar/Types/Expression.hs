@@ -49,7 +49,8 @@ module Lamdu.Sugar.Types.Expression
     , HoleArg(..), haExpr, haUnwrap
     , HoleOption(..), hoVal, hoSugaredBaseExpr, hoResults
     , HoleActions(..), holeUUID, holeOptions, holeOptionLiteral, holeMDelete
-    , Hole(..), holeActions, holeMArg
+    , HoleKind(..), _LeafHole, _WrapperHole
+    , Hole(..), holeActions, holeKind
     , TIdG(..), tidgName, tidgTId
     , HoleResultScore
     , HoleResult(..)
@@ -157,9 +158,14 @@ data HoleArg m expr = HoleArg
     , _haUnwrap :: Unwrap m
     } deriving (Functor, Foldable, Traversable)
 
+data HoleKind m expr
+    = LeafHole
+    | WrapperHole (HoleArg m expr)
+    deriving (Functor, Foldable, Traversable)
+
 data Hole name m expr = Hole
     { _holeActions :: HoleActions name m
-    , _holeMArg :: Maybe (HoleArg m expr)
+    , _holeKind :: HoleKind m expr
     } deriving (Functor, Foldable, Traversable)
 
 {- Record start -}
@@ -376,7 +382,6 @@ Lens.makeLenses ''Expression
 Lens.makeLenses ''GetField
 Lens.makeLenses ''Guard
 Lens.makeLenses ''GuardElseIf
-Lens.makeLenses ''RelayedArg
 Lens.makeLenses ''Hole
 Lens.makeLenses ''HoleActions
 Lens.makeLenses ''HoleArg
@@ -394,6 +399,7 @@ Lens.makeLenses ''PickedResult
 Lens.makeLenses ''Record
 Lens.makeLenses ''RecordAddFieldResult
 Lens.makeLenses ''RecordField
+Lens.makeLenses ''RelayedArg
 Lens.makeLenses ''TIdG
 Lens.makePrisms ''BinderVarForm
 Lens.makePrisms ''BinderVarInline
@@ -402,6 +408,7 @@ Lens.makePrisms ''CaseKind
 Lens.makePrisms ''CaseTail
 Lens.makePrisms ''DefinitionForm
 Lens.makePrisms ''GetVar
+Lens.makePrisms ''HoleKind
 Lens.makePrisms ''Literal
 Lens.makePrisms ''ParameterForm
 Lens.makePrisms ''RecordTail

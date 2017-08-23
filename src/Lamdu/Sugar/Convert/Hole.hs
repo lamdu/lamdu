@@ -375,7 +375,7 @@ mkHole mInjectedArg exprPl = do
     actions <- mkWritableHoleActions mInjectedArg exprPl (exprPl ^. Input.stored)
     pure Hole
         { _holeActions = actions
-        , _holeMArg = Nothing
+        , _holeKind = LeafHole
         }
 
 getLocalScopeGetVars :: ConvertM.Context m -> V.Var -> [Val ()]

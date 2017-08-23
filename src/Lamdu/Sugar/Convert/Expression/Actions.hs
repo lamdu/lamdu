@@ -129,7 +129,7 @@ addActions exprPl body =
         let addReplaceParent innerPl = setToExpr innerPl innerPl
         let fixHoleReplaceParent child =
                 case child ^. rBody of
-                BodyHole (Hole _ (Just arg)) ->
+                BodyHole (Hole _ (WrapperHole arg)) ->
                     -- Hole's replaces parent rather than the hole.
                     child & rPayload %~ setToExpr (arg ^. haExpr . rPayload)
                 _ -> child

@@ -139,7 +139,7 @@ convertAppliedHole (V.Apply funcI argI) argS exprPl =
                         argI (argS <&> (^. pUserData)) exprPl (exprPl ^. Input.stored))
                 & return
             & lift
-            <&> rBody . _BodyHole . holeMArg .~ Just holeArg
+            <&> rBody . _BodyHole . holeKind .~ WrapperHole holeArg
             <&> rPayload . plData . pUserData <>~ funcI ^. Val.payload . Input.userData
             <&> rPayload . plActions . wrap .~ WrapperAlready storedEntityId
     where

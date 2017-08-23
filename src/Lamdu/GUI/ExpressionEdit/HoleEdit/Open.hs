@@ -272,7 +272,7 @@ fixNumWithDotEventMap holeInfo res
         literalNum = Sugar.rBody . Sugar._BodyLiteral . Sugar._LiteralNum
         wrappedExpr =
             Sugar.rBody . Sugar._BodyHole .
-            Sugar.holeMArg . Lens._Just . Sugar.haExpr
+            Sugar.holeKind . Sugar._WrapperHole . Sugar.haExpr
         hrWrapAction = Sugar.rPayload . Sugar.plActions . Sugar.wrap
 
 makeHoleResultWidget ::
@@ -548,7 +548,7 @@ makeOpenSearchAreaGui pl holeInfo =
         exprEventMap <- ExprEventMap.make pl ExprGuiM.NoHolePick
         delKeys <- Config.delKeys
         let unwrapAsDelEventMap =
-                hiHole holeInfo ^? Sugar.holeMArg . Lens._Just . Sugar.haUnwrap . Sugar._UnwrapAction
+                hiHole holeInfo ^? Sugar.holeKind . Sugar._WrapperHole . Sugar.haUnwrap . Sugar._UnwrapAction
                 & maybe mempty
                     ( Widget.keysEventMapMovesCursor delKeys
                         (E.Doc ["Edit", "Unwrap"])

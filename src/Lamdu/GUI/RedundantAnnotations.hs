@@ -89,7 +89,7 @@ markAnnotationsToDisplay (Expression oldBody pl) =
     BodyHole hole ->
         Expression (BodyHole hole') pl & forceShowType
         where
-            hole' = hole & holeMArg . Lens._Just . haExpr %~ forceShowTypeOrEval
+            hole' = hole & holeKind . _WrapperHole . haExpr %~ forceShowTypeOrEval
     BodyCase cas ->
         Expression (BodyCase cas') pl
         where
