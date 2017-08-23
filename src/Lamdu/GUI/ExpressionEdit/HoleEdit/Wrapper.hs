@@ -60,5 +60,7 @@ make widgetIds arg =
         let frameWidth = Theme.typeIndicatorFrameWidth theme <&> realToFrac
         argGui <- ExprGuiM.makeSubexpression (arg ^. Sugar.haExpr)
         unwrapEventMap <- makeUnwrapEventMap arg widgetIds
-        MDraw.addInnerFrame ?? frameColor ?? frameWidth ?? Element.pad (frameWidth & _2 .~ 0) argGui
+        MDraw.addInnerFrame
+            ?? frameColor ?? frameWidth
+            ?? Element.pad (frameWidth & _2 .~ 0) argGui
             <&> E.weakerEvents unwrapEventMap
