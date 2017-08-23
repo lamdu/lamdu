@@ -8,6 +8,7 @@ import qualified Control.Monad.Reader as Reader
 import qualified Data.Map as Map
 import           Data.Store.Transaction (Transaction)
 import           GUI.Momentu.Align (WithTextPos)
+import           GUI.Momentu.Animation (AnimId)
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Glue ((/|/))
@@ -26,10 +27,22 @@ import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
 
+genRow ::
+    Monad m =>
+    ExprGuiM m (AnimId -> ExpressionGui m -> ExpressionGui m -> ExpressionGui m)
+genRow =
+    do
+        vbox <- Responsive.vboxSpaced
+        indent <- ResponsiveExpr.indent
+        pure $ \indentAnimId condRow result ->
+            Responsive.hboxVertFallback Responsive.disambiguationNone
+            id [condRow, result]
+            (vbox [condRow, indent indentAnimId result])
+
 makeGuardRow ::
     Monad m =>
     Transaction m Sugar.EntityId -> WithTextPos View -> Sugar.EntityId ->
-    ExprGuiM m (ExpressionGui m -> ExpressionGui m ->ExpressionGui m)
+    ExprGuiM m (ExpressionGui m -> ExpressionGui m -> ExpressionGui m)
 makeGuardRow delete prefixLabel entityId =
     do
         label <- ExpressionGui.grammarLabel "if "
@@ -38,18 +51,11 @@ makeGuardRow delete prefixLabel entityId =
         let eventMap =
                 delete <&> WidgetIds.fromEntityId
                 & Widget.keysEventMapMovesCursor (Config.delKeys config) (E.Doc ["Edit", "Guard", "Delete"])
-        vbox <- Responsive.vboxSpaced
-        indent <- ResponsiveExpr.indent
-        return $
-            \cond result ->
-            let condRow = prefixLabel /|/ label /|/ cond /|/ colon
-            in
-            Responsive.hboxVertFallback Responsive.disambiguationNone
-            id [condRow, result]
-            (vbox [condRow, indent animId result])
+        genRow <&> \gen cond result ->
+            gen indentAnimId (prefixLabel /|/ label /|/ cond /|/ colon) result
             & E.weakerEvents eventMap
     where
-        animId = WidgetIds.fromEntityId entityId & Widget.toAnimId
+        indentAnimId = WidgetIds.fromEntityId entityId & Widget.toAnimId
 
 makeElseIf ::
     Monad m =>
@@ -87,12 +93,13 @@ make guards pl =
             <*> ExprGuiM.makeSubexpression (guards ^. Sugar.gIf)
             <*> ExprGuiM.makeSubexpression (guards ^. Sugar.gThen)
         let makeElse =
-                sequence
-                [ ExpressionGui.grammarLabel "else: " <&> Responsive.fromTextView
-                , ExprGuiM.makeSubexpression (guards ^. Sugar.gElse)
-                ]
-                <&> Responsive.box Responsive.disambiguationNone
+                (genRow ?? elseIndentAnimId)
+                <*>
+                (ExpressionGui.grammarLabel "else: " <&> Responsive.fromTextView)
+                <*> ExprGuiM.makeSubexpression (guards ^. Sugar.gElse)
         elses <- foldr makeElseIf makeElse (guards ^. Sugar.gElseIfs)
         Responsive.vboxSpaced ?? [ifRow, elses]
     & ExpressionGui.stdWrapParentExpr pl
-
+    where
+        elseIndentAnimId = Widget.toAnimId elseId
+        elseId = WidgetIds.fromExprPayload (guards ^. Sugar.gElse . Sugar.rPayload)
