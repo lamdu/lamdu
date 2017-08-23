@@ -140,7 +140,6 @@ convertAppliedHole (V.Apply funcI argI) argS exprPl =
                 & return
             & lift
             <&> rBody . _BodyHole . holeKind .~ WrapperHole holeArg
-            <&> rPayload . plData . pUserData <>~ funcI ^. Val.payload . Input.userData
             <&> rPayload . plActions . wrap .~ WrapperAlready storedEntityId
     where
         storedEntityId = exprPl ^. Input.stored & Property.value & uuidEntityId

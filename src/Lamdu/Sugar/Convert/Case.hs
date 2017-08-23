@@ -108,22 +108,19 @@ convert ::
     Input.Payload m a -> ConvertM m (ExpressionU m a)
 convert (V.Case tag val rest) exprPl = do
     restS <- ConvertM.convertSubexpression rest
-    (restCase, hiddenEntities) <-
+    restCase <-
         case restS ^. rBody of
         BodyCase r | Lens.has (cKind . _LambdaCase) r ->
-            return (r, restS ^. rPayload . plData . pUserData)
+            return r
         _ ->
             do
                 addAlt <- rest ^. Val.payload . Input.stored & makeAddAlt
-                return
-                    ( Case
-                        { _cKind = LambdaCase
-                        , _cAlts = []
-                        , _cTail = CaseExtending restS
-                        , _cAddAlt = addAlt
-                        }
-                    , mempty
-                    )
+                return Case
+                    { _cKind = LambdaCase
+                    , _cAlts = []
+                    , _cTail = CaseExtending restS
+                    , _cAddAlt = addAlt
+                    }
     altS <-
         convertAlt
         (exprPl ^. Input.stored) (rest ^. Val.payload . plValI)
@@ -133,4 +130,3 @@ convert (V.Case tag val rest) exprPl = do
         & cAddAlt %~ (>>= setTagOrder (1 + length (restCase ^. cAlts)))
         & BodyCase
         & addActions exprPl
-        <&> rPayload . plData . pUserData <>~ hiddenEntities

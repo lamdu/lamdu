@@ -103,16 +103,13 @@ convertExtend ::
     Input.Payload m a -> ConvertM m (ExpressionU m a)
 convertExtend (V.RecExtend tag val rest) exprPl = do
     restS <- ConvertM.convertSubexpression rest
-    (restRecord, hiddenEntities) <-
+    restRecord <-
         case restS ^. rBody of
-        BodyRecord r -> return (r, restS ^. rPayload . plData . pUserData)
+        BodyRecord r -> return r
         _ ->
             do
                 addField <- rest ^. Val.payload . Input.stored & makeAddField
-                return
-                    ( Record [] (RecordExtending restS) addField
-                    , mempty
-                    )
+                Record [] (RecordExtending restS) addField & return
     fieldS <-
         convertField
         (exprPl ^. Input.stored) (rest ^. Val.payload . plValI)
@@ -122,4 +119,3 @@ convertExtend (V.RecExtend tag val rest) exprPl = do
         & rAddField %~ (>>= setTagOrder (1 + length (restRecord ^. rItems)))
         & BodyRecord
         & addActions exprPl
-        <&> rPayload . plData . pUserData <>~ hiddenEntities

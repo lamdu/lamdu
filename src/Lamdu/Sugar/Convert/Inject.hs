@@ -6,7 +6,6 @@ module Lamdu.Sugar.Convert.Inject
 import qualified Control.Lens as Lens
 import qualified Lamdu.Calc.Val as V
 import           Lamdu.Calc.Val.Annotated (Val)
-import qualified Lamdu.Calc.Val.Annotated as Val
 import qualified Lamdu.Expr.Lens as ExprLens
 import qualified Lamdu.Expr.UniqueId as UniqueId
 import           Lamdu.Sugar.Convert.Expression.Actions (addActions)
@@ -34,10 +33,9 @@ convert (V.Inject tag val) exprPl =
     & traverse ConvertM.convertSubexpression
     <&> BodyInject
     >>= addActions exprPl
-    <&> rPayload . plData . pUserData <>~ hiddenPls
     where
         isNullary = Lens.has ExprLens.valRecEmpty val
         entityId = exprPl ^. Input.entityId
-        (mVal, hiddenPls)
-            | isNullary = (Nothing, val ^. Val.payload . Input.userData)
-            | otherwise = (Just val, mempty)
+        mVal
+            | isNullary = Nothing
+            | otherwise = Just val

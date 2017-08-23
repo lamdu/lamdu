@@ -112,7 +112,6 @@ convertLabeled funcS argS exprPl =
                 []
             }
             & lift . addActions exprPl
-            <&> rPayload . plData . pUserData <>~ argS ^. rPayload . plData . pUserData
 
 convertPrefix ::
     Monad m =>
@@ -151,7 +150,6 @@ convertAppliedCase funcS argS exprPl =
                         setTo (funcS ^. rPayload . plData . pStored . Property.pVal) <&> EntityId.ofValI
                     }
         maybeGuard setTo appliedCaseB & addActions exprPl & lift
-    <&> rPayload . plData . pUserData <>~ funcS ^. rPayload . plData . pUserData
 
 maybeGuard ::
     Functor m =>
@@ -212,6 +210,5 @@ simplifyCaseArg argS =
     case argS ^. rBody of
     BodyFromNom nom | Lens.nullOf (nVal . rBody . _BodyHole) nom ->
         nom ^. nVal
-        & rPayload . plData . pUserData <>~ argS ^. rPayload . plData . pUserData
         & rPayload . plActions . setToHole .~ argS ^. rPayload . plActions . setToHole
     _ -> argS

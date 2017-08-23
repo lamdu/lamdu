@@ -107,11 +107,7 @@ convertRedex expr redex =
         ann <- redex ^. Redex.arg . Val.payload & makeAnnotation
         return Let
             { _lEntityId = defEntityId
-            , _lValue =
-                value
-                & bBody . bbContent . SugarLens.binderContentExpr
-                    . rPayload . plData . pUserData <>~
-                redex ^. Redex.hiddenPayloads . Lens.traversed . Input.userData
+            , _lValue = value
             , _lActions = actions
             , _lName = UniqueId.toUUID param
             , _lAnnotation = ann

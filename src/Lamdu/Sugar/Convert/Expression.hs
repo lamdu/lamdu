@@ -4,6 +4,7 @@ module Lamdu.Sugar.Convert.Expression
     ) where
 
 import qualified Data.ByteString as SBS
+import qualified Data.Set as Set
 import           Data.Store.Property (Property(..))
 import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
@@ -25,6 +26,7 @@ import           Lamdu.Sugar.Convert.Monad (ConvertM)
 import qualified Lamdu.Sugar.Convert.Nominal as ConvertNominal
 import qualified Lamdu.Sugar.Convert.Record as ConvertRecord
 import           Lamdu.Sugar.Internal
+import           Lamdu.Sugar.Internal.EntityId (ofValI)
 import           Lamdu.Sugar.Types
 
 import           Lamdu.Prelude
@@ -52,6 +54,21 @@ convertLiteralBytes ::
     Monad m => SBS.ByteString -> Input.Payload m a -> ConvertM m (ExpressionU m a)
 convertLiteralBytes = convertLiteralCommon LiteralBytes PrimVal.Bytes
 
+addHiddenEntities :: Monoid a => Val (Input.Payload m a) -> ExpressionU m a -> ExpressionU m a
+addHiddenEntities val sugared =
+    sugared
+    & rPayload . plData . pUserData <>~ mconcat (val ^.. Val.body . traverse <&> bodyData)
+    where
+        sugarChildren =
+            sugared ^.. rBody . traverse . rPayload . plData . pStored . Property.pVal
+            <&> ofValI
+            & Set.fromList
+        bodyData node
+            | Set.member (node ^. Val.payload . Input.entityId) sugarChildren =
+                mempty
+            | otherwise =
+                node ^. Val.payload . Input.userData <> mconcat (node ^.. Val.body . traverse <&> bodyData)
+
 convert :: (Monad m, Monoid a) => Val (Input.Payload m a) -> ConvertM m (ExpressionU m a)
 convert v =
     v ^. Val.payload
@@ -72,3 +89,4 @@ convert v =
       V.BLeaf V.LHole -> ConvertHole.convert
       V.BLeaf V.LRecEmpty -> ConvertRecord.convertEmpty
       V.BLeaf V.LAbsurd -> ConvertCase.convertAbsurd
+    <&> addHiddenEntities v
