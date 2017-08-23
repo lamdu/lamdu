@@ -164,20 +164,20 @@ mkGroup option =
 
 tryBuildLiteral ::
     (Format a, Monad m) => (Identity a -> Sugar.Literal Identity) -> HoleInfo m ->
-    T m (Maybe (Sugar.HoleOption (Name m) m))
+    Maybe (T m (Sugar.HoleOption (Name m) m))
 tryBuildLiteral mkLiteral holeInfo =
     hiSearchTerm holeInfo
     & tryParse
     <&> Identity
     <&> mkLiteral
-    & Lens._Just %%~ hiHole holeInfo ^. Sugar.holeActions . Sugar.holeOptionLiteral
+    <&> hiHole holeInfo ^. Sugar.holeActions . Sugar.holeOptionLiteral
 
-literalGroups :: Monad m => HoleInfo m -> T m [Sugar.HoleOption (Name m) m]
+literalGroups :: Monad m => HoleInfo m -> [T m (Sugar.HoleOption (Name m) m)]
 literalGroups holeInfo =
     [ tryBuildLiteral Sugar.LiteralNum holeInfo
     , tryBuildLiteral Sugar.LiteralBytes holeInfo
     , tryBuildLiteral Sugar.LiteralText holeInfo
-    ] & sequenceA <&> (^.. Lens.traverse . Lens._Just)
+    ] ^.. Lens.traverse . Lens._Just
 
 insensitivePrefixOf :: Text -> Text -> Bool
 insensitivePrefixOf = Text.isPrefixOf `on` Text.toLower
@@ -204,7 +204,7 @@ insensitiveInfixAltOf = infixAltOf `on` Text.toLower
 makeAllGroups :: Monad m => HoleInfo m -> T m [Group m]
 makeAllGroups holeInfo =
     (++)
-    <$> (literalGroups holeInfo >>= mapM mkGroup)
+    <$> (literalGroups holeInfo & sequenceA >>= mapM mkGroup)
     <*> (hiHole holeInfo ^. Sugar.holeActions . Sugar.holeOptions
          >>= mapM mkGroup
          <&> holeMatches (hiSearchTerm holeInfo))
