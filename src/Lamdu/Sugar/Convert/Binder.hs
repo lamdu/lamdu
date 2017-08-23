@@ -8,7 +8,7 @@ import qualified Data.Map as Map
 import qualified Data.Set as Set
 import qualified Data.Store.IRef as IRef
 import qualified Data.Store.Property as Property
-import           Data.Store.Transaction (MkProperty)
+import           Data.Store.Transaction (Transaction, MkProperty)
 import           Data.UUID.Types (UUID)
 import qualified Lamdu.Calc.Val as V
 import           Lamdu.Calc.Val.Annotated (Val(..))
@@ -37,6 +37,12 @@ import           Lamdu.Sugar.Types
 
 import           Lamdu.Prelude
 
+lamParamToHole ::
+    Monad m =>
+    V.Lam (Val (Input.Payload m a)) -> Transaction m ()
+lamParamToHole (V.Lam param body) =
+    SubExprs.getVarsToHole param (body <&> (^. Input.stored))
+
 mkLetItemActions ::
     Monad m =>
     ValIProperty m -> Redex (Input.Payload m a) ->
@@ -49,8 +55,9 @@ mkLetItemActions topLevelProp redex =
             LetActions
             { _laSetToInner =
                 do
-                    SubExprs.getVarsToHole param (body <&> (^. Input.stored))
-                    body ^. Val.payload . Input.stored & replaceWith topLevelProp & void
+                    lamParamToHole (redex ^. Redex.lam)
+                    redex ^. Redex.lam . V.lamResult . Val.payload . Input.stored
+                        & replaceWith topLevelProp & void
                 <* postProcess
             , _laSetToHole =
                 DataOps.setToHole topLevelProp
@@ -61,7 +68,6 @@ mkLetItemActions topLevelProp redex =
             }
     where
         addEntityId valI = (UniqueId.toUUID valI, EntityId.ofValI valI)
-        V.Lam param body = redex ^. Redex.lam
 
 localNewExtractDestPos ::
     Val (Input.Payload m x) -> ConvertM m a -> ConvertM m a
