@@ -1,4 +1,4 @@
-{-# LANGUAGE LambdaCase, NoImplicitPrelude, OverloadedStrings, RecordWildCards #-}
+{-# LANGUAGE LambdaCase, NoImplicitPrelude, OverloadedStrings, NamedFieldPuns, DisambiguateRecordFields #-}
 module Lamdu.GUI.ExpressionEdit.HoleEdit.EventMap
     ( blockDownEvents, blockUpEvents, disallowCharsFromSearchTerm
     , makeOpenEventMap
@@ -119,11 +119,13 @@ allowedCharsFromSearchTerm holeInfo mPos =
 
 disallowCharsFromSearchTerm ::
     Config.Hole -> HoleInfo m -> Maybe Int -> E.EventMap a -> E.EventMap a
-disallowCharsFromSearchTerm Config.Hole{..} holeInfo mPos =
+disallowCharsFromSearchTerm hole holeInfo mPos =
     E.filterChars (`notElem` disallowedHoleChars) .
     deleteKeys
     (holePickAndMoveToNextHoleKeys ++ holePickResultKeys <&> MetaKey.toModKey) .
     E.filterChars (allowedCharsFromSearchTerm holeInfo mPos)
+    where
+        Config.Hole{holePickAndMoveToNextHoleKeys, holePickResultKeys} = hole
 
 deleteKeys :: [ModKey] -> E.EventMap a -> E.EventMap a
 deleteKeys = E.deleteKeys . map (E.KeyEvent MetaKey.KeyState'Pressed)

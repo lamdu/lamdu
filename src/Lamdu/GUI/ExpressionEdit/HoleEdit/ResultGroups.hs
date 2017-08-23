@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, FlexibleContexts, RecordWildCards, OverloadedStrings, TemplateHaskell #-}
+{-# LANGUAGE NoImplicitPrelude, TemplateHaskell, FlexibleContexts, OverloadedStrings, NamedFieldPuns, DisambiguateRecordFields #-}
 module Lamdu.GUI.ExpressionEdit.HoleEdit.ResultGroups
     ( makeAll, HaveHiddenResults(..)
     , Result(..)
@@ -105,7 +105,7 @@ makeResultsList holeInfo group =
 data HaveHiddenResults = HaveHiddenResults | NoHiddenResults
 
 collectResults :: Monad m => Config.Hole -> ListT m (ResultsList f) -> m ([ResultsList f], HaveHiddenResults)
-collectResults Config.Hole{..} resultsM =
+collectResults Config.Hole{holeResultCount} resultsM =
     do
         (collectedResults, remainingResultsM) <-
             ListClass.splitWhenM (return . (>= holeResultCount) . length . fst) $

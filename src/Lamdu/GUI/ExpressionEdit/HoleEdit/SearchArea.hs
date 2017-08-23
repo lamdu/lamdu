@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, FlexibleContexts, RecordWildCards, OverloadedStrings, TypeFamilies #-}
+{-# LANGUAGE NoImplicitPrelude, FlexibleContexts, NamedFieldPuns, DisambiguateRecordFields, OverloadedStrings, TypeFamilies #-}
 -- | The search area (search term + results) of a hole.
 -- When it is open it hovers over the space it takes when closed.
 --
@@ -32,7 +32,7 @@ import qualified Lamdu.Sugar.Types as Sugar
 import           Lamdu.Prelude
 
 fdConfig :: Config.Hole -> FocusDelegator.Config
-fdConfig Config.Hole{..} = FocusDelegator.Config
+fdConfig Config.Hole{holeOpenKeys, holeCloseKeys} = FocusDelegator.Config
     { FocusDelegator.focusChildKeys = holeOpenKeys
     , FocusDelegator.focusChildDoc = E.Doc ["Navigation", "Hole", "Open"]
     , FocusDelegator.focusParentKeys = holeCloseKeys
@@ -47,9 +47,7 @@ makeStdWrapped ::
 makeStdWrapped pl holeInfo =
     do
         config <- Lens.view Config.config
-        let Config.Hole{..} = Config.hole config
-            WidgetIds{..} = hiIds holeInfo
-            fdWrap
+        let fdWrap
                 | isAHoleInHole = return id
                 | otherwise =
                     FocusDelegator.make ?? fdConfig (Config.hole config)
@@ -85,4 +83,5 @@ makeStdWrapped pl holeInfo =
                         & const & pure
             (False, _) -> const closedSearchTermGui & pure
     where
+        WidgetIds{hidClosedSearchArea,hidOpen} = hiIds holeInfo
         isAHoleInHole = ExprGuiT.isHoleResult pl

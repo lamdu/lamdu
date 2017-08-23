@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, RecordWildCards, OverloadedStrings, TemplateHaskell, DeriveGeneric #-}
+{-# LANGUAGE NoImplicitPrelude, OverloadedStrings, TemplateHaskell, DeriveGeneric #-}
 module Lamdu.GUI.ExpressionEdit.HoleEdit.State
     ( HoleState(..), hsSearchTerm
     , emptyState, setHoleStateAndJump, assocStateRef
@@ -33,8 +33,7 @@ emptyState =
 setHoleStateAndJump :: Monad m => UUID -> HoleState -> Sugar.EntityId -> T m Widget.Id
 setHoleStateAndJump uuid state entityId = do
     Transaction.setP (assocStateRef uuid) state
-    let WidgetIds{..} = WidgetIds.make entityId
-    return hidOpen
+    WidgetIds.make entityId & hidOpen & return
 
 assocStateRef :: Monad m => UUID -> Transaction.MkProperty m HoleState
 assocStateRef = Transaction.assocDataRefDef emptyState "searchTerm"

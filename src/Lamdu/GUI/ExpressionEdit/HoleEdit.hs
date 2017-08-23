@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, RecordWildCards, OverloadedStrings #-}
+{-# LANGUAGE NoImplicitPrelude, OverloadedStrings, NamedFieldPuns #-}
 module Lamdu.GUI.ExpressionEdit.HoleEdit
     ( make
     ) where
@@ -52,9 +52,11 @@ makeWrapper pl holeInfo =
 
 assignHoleCursor ::
     Monad m => WidgetIds -> ExprGuiM m a -> ExprGuiM m a
-assignHoleCursor WidgetIds{..} =
+assignHoleCursor widgetIds =
     Widget.assignCursor hidHole hidOpen .
     Widget.assignCursor (WidgetIds.notDelegatingId hidHole) hidClosedSearchArea
+    where
+        WidgetIds{hidHole,hidOpen,hidClosedSearchArea} = widgetIds
 
 makeHoleWithWrapper ::
     (Functor f, Monad m) =>
