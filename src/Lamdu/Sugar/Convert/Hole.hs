@@ -267,31 +267,32 @@ mkWritableHoleActions ::
     Maybe (Val (Input.Payload m a)) ->
     Input.Payload m a -> ValIProperty m ->
     ConvertM m (HoleActions UUID m)
-mkWritableHoleActions mInjectedArg exprPl stored = do
-    sugarContext <- ConvertM.readContext
-    let mkOption =
-            return . mkHoleOption sugarContext mInjectedArg exprPl stored . SeedExpr
-    let mkLiteralOption =
-            mkOption . Val () . V.BLeaf . V.LLiteral . PrimVal.fromKnown
-    pure HoleActions
-        { _holeOptions =
-            mkOptions sugarContext mInjectedArg exprPl stored
-            <&> addSuggestedOptions
-                (mkHoleSuggesteds sugarContext mInjectedArg exprPl stored)
-        , _holeOptionLiteral =
-          \case
-          LiteralNum (Identity x) -> PrimVal.Float x & mkLiteralOption
-          LiteralBytes (Identity x) -> PrimVal.Bytes x & mkLiteralOption
-          LiteralText (Identity x) ->
-              encodeUtf8 x
-              & PrimVal.Bytes
-              & PrimVal.fromKnown
-              & V.LLiteral & Pure.leaf
-              & Pure.toNom Builtins.textTid
-              & mkOption
-        , _holeUUID = UniqueId.toUUID $ ExprIRef.unValI $ Property.value stored
-        , _holeMDelete = Nothing
-        }
+mkWritableHoleActions mInjectedArg exprPl stored =
+    do
+        sugarContext <- ConvertM.readContext
+        let mkOption =
+                return . mkHoleOption sugarContext mInjectedArg exprPl stored . SeedExpr
+        let mkLiteralOption =
+                mkOption . Val () . V.BLeaf . V.LLiteral . PrimVal.fromKnown
+        pure HoleActions
+            { _holeOptions =
+                mkOptions sugarContext mInjectedArg exprPl stored
+                <&> addSuggestedOptions
+                    (mkHoleSuggesteds sugarContext mInjectedArg exprPl stored)
+            , _holeOptionLiteral =
+              \case
+              LiteralNum (Identity x) -> PrimVal.Float x & mkLiteralOption
+              LiteralBytes (Identity x) -> PrimVal.Bytes x & mkLiteralOption
+              LiteralText (Identity x) ->
+                  encodeUtf8 x
+                  & PrimVal.Bytes
+                  & PrimVal.fromKnown
+                  & V.LLiteral & Pure.leaf
+                  & Pure.toNom Builtins.textTid
+                  & mkOption
+            , _holeUUID = UniqueId.toUUID $ ExprIRef.unValI $ Property.value stored
+            , _holeMDelete = Nothing
+            }
 
 -- Ignoring alpha-renames:
 consistentExprIds :: EntityId -> Val (EntityId -> a) -> Val a
@@ -371,12 +372,13 @@ mkHole ::
     Monad m =>
     Maybe (Val (Input.Payload m a)) ->
     Input.Payload m a -> ConvertM m (Hole UUID m (ExpressionU m a))
-mkHole mInjectedArg exprPl = do
-    actions <- mkWritableHoleActions mInjectedArg exprPl (exprPl ^. Input.stored)
-    pure Hole
-        { _holeActions = actions
-        , _holeKind = LeafHole
-        }
+mkHole mInjectedArg exprPl =
+    do
+        actions <- mkWritableHoleActions mInjectedArg exprPl (exprPl ^. Input.stored)
+        pure Hole
+            { _holeActions = actions
+            , _holeKind = LeafHole
+            }
 
 getLocalScopeGetVars :: ConvertM.Context m -> V.Var -> [Val ()]
 getLocalScopeGetVars sugarContext par
@@ -419,67 +421,68 @@ writeConvertTypeChecked ::
     , Val (Input.Payload m ())
     , Val (ValIProperty m, Input.Payload m ())
     )
-writeConvertTypeChecked holeEntityId sugarContext holeStored inferredVal = do
-    -- With the real stored uuids:
-    writtenExpr <-
-        inferredVal
-        <&> intoStorePoint
-        & writeExprMStored (Property.value holeStored)
-        <&> ExprIRef.addProperties (Property.set holeStored)
-        <&> Input.preparePayloads . fmap toPayload
-    let -- Replace the entity ids with consistent ones:
+writeConvertTypeChecked holeEntityId sugarContext holeStored inferredVal =
+    do
+        -- With the real stored uuids:
+        writtenExpr <-
+            inferredVal
+            <&> intoStorePoint
+            & writeExprMStored (Property.value holeStored)
+            <&> ExprIRef.addProperties (Property.set holeStored)
+            <&> Input.preparePayloads . fmap toPayload
+        let -- Replace the entity ids with consistent ones:
 
-        -- The sugar convert must apply *inside* the forked transaction
-        -- upon the *written* expr because we actually make use of the
-        -- resulting actions (e.g: press ',' on a list hole result).
-        -- However, the written expr goes crazy with new uuids every time.
-        --
-        -- So, we do something a bit odd: Take the written expr with
-        -- its in-tact stored allowing actions to be built correctly
-        -- but replace the Input.entityId with determinstic/consistent
-        -- pseudo-random generated ones that preserve proper
-        -- animations and cursor navigation. The uuids are kept as
-        -- metadata anchors.
+            -- The sugar convert must apply *inside* the forked transaction
+            -- upon the *written* expr because we actually make use of the
+            -- resulting actions (e.g: press ',' on a list hole result).
+            -- However, the written expr goes crazy with new uuids every time.
+            --
+            -- So, we do something a bit odd: Take the written expr with
+            -- its in-tact stored allowing actions to be built correctly
+            -- but replace the Input.entityId with determinstic/consistent
+            -- pseudo-random generated ones that preserve proper
+            -- animations and cursor navigation. The uuids are kept as
+            -- metadata anchors.
 
-        makeConsistentPayload (False, (_, pl)) entityId = pl
-            & Input.entityId .~ entityId
-        makeConsistentPayload (True, (_, pl)) _ = pl
-        consistentExpr =
-            writtenExpr
-            <&> makeConsistentPayload
-            & consistentExprIds holeEntityId
-    converted <-
-        replaceInjected consistentExpr
-        & ConvertM.convertSubexpression
-        & ConvertM.run sugarContext
-    return
-        ( converted
-        , consistentExpr <&> void
-        , writtenExpr <&> snd <&> _2 %~ void
-        )
-    where
-        intoStorePoint (inferred, (mStorePoint, a)) =
-            (mStorePoint, (inferred, Lens.has Lens._Just mStorePoint, a))
-        toPayload (stored, (inferred, wasStored, a)) =
-            -- TODO: Evaluate hole results instead of Map.empty's?
-            ( eId
-            , \varRefs ->
-              ( wasStored
-              , ( stored
-                , Input.Payload
-                  { Input._varRefsOfLambda = varRefs
-                  , Input._userData = a
-                  , Input._inferred = inferred
-                  , Input._evalResults = CurAndPrev noEval noEval
-                  , Input._stored = stored
-                  , Input._entityId = eId
-                  }
-                )
-              )
+            makeConsistentPayload (False, (_, pl)) entityId = pl
+                & Input.entityId .~ entityId
+            makeConsistentPayload (True, (_, pl)) _ = pl
+            consistentExpr =
+                writtenExpr
+                <&> makeConsistentPayload
+                & consistentExprIds holeEntityId
+        converted <-
+            replaceInjected consistentExpr
+            & ConvertM.convertSubexpression
+            & ConvertM.run sugarContext
+        return
+            ( converted
+            , consistentExpr <&> void
+            , writtenExpr <&> snd <&> _2 %~ void
             )
-            where
-                eId = Property.value stored & EntityId.ofValI
-        noEval = Input.EvalResultsForExpr Map.empty Map.empty
+        where
+            intoStorePoint (inferred, (mStorePoint, a)) =
+                (mStorePoint, (inferred, Lens.has Lens._Just mStorePoint, a))
+            toPayload (stored, (inferred, wasStored, a)) =
+                -- TODO: Evaluate hole results instead of Map.empty's?
+                ( eId
+                , \varRefs ->
+                  ( wasStored
+                  , ( stored
+                    , Input.Payload
+                      { Input._varRefsOfLambda = varRefs
+                      , Input._userData = a
+                      , Input._inferred = inferred
+                      , Input._evalResults = CurAndPrev noEval noEval
+                      , Input._stored = stored
+                      , Input._entityId = eId
+                      }
+                    )
+                  )
+                )
+                where
+                    eId = Property.value stored & EntityId.ofValI
+            noEval = Input.EvalResultsForExpr Map.empty Map.empty
 
 idTranslations ::
     Val (EntityId, Type) ->
@@ -614,24 +617,25 @@ replaceEachUnwrappedHole :: Applicative f => (a -> f (Val a)) -> Val a -> [f (Va
 replaceEachUnwrappedHole replaceHole =
     map fst . filter snd . (`runStateT` False) . go
     where
-        go oldVal@(Val x body) = do
-            alreadyReplaced <- State.get
-            if alreadyReplaced
-                then return (pure oldVal)
-                else
-                    case body of
-                    V.BLeaf V.LHole ->
-                        join $ lift
-                            [ replace x
-                            , return $ pure oldVal
-                            ]
-                    V.BApp (V.Apply (Val f (V.BLeaf V.LHole)) arg@(Val _ (V.BLeaf V.LHole))) ->
-                        join $ lift
-                            [ replace f
-                                <&> fmap (Val x . V.BApp . (`V.Apply` arg))
-                            , return $ pure oldVal
-                            ]
-                    _ -> traverse go body <&> fmap (Val x) . sequenceA
+        go oldVal@(Val x body) =
+            do
+                alreadyReplaced <- State.get
+                if alreadyReplaced
+                    then return (pure oldVal)
+                    else
+                        case body of
+                        V.BLeaf V.LHole ->
+                            join $ lift
+                                [ replace x
+                                , return $ pure oldVal
+                                ]
+                        V.BApp (V.Apply (Val f (V.BLeaf V.LHole)) arg@(Val _ (V.BLeaf V.LHole))) ->
+                            join $ lift
+                                [ replace f
+                                    <&> fmap (Val x . V.BApp . (`V.Apply` arg))
+                                , return $ pure oldVal
+                                ]
+                        _ -> traverse go body <&> fmap (Val x) . sequenceA
         replace x =
             do
                 State.put True
