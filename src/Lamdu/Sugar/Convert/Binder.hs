@@ -17,7 +17,6 @@ import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Data.Ops.Subexprs as SubExprs
 import           Lamdu.Expr.IRef (DefI, ValIProperty)
-import qualified Lamdu.Expr.Lens as ExprLens
 import qualified Lamdu.Expr.UniqueId as UniqueId
 import qualified Lamdu.Infer as Infer
 import           Lamdu.Sugar.Convert.Binder.Float (makeFloatLetToOuterScope)
@@ -180,13 +179,6 @@ makeBinder chosenScopeProp mPresentationModeProp ConventionalParams{..} funcBody
             NullParam {} -> Set.fromList (cpMLamParam ^.. Lens._Just)
             _ -> Set.empty
 
-firstParamId :: BinderParams n m -> EntityId
-firstParamId BinderWithoutParams = error "no param"
-firstParamId (NullParam x) = x ^. fpId
-firstParamId (VarParam x) = x ^. fpId
-firstParamId (FieldParams []) = error "no param"
-firstParamId (FieldParams ((_,x):_)) = x ^. fpId
-
 convertLam ::
     (Monad m, Monoid a) =>
     V.Lam (Val (Input.Payload m a)) ->
@@ -209,20 +201,9 @@ convertLam lam exprPl =
                     binder
                     & bBody . Lens.traverse %~ markLightParams paramUUIDs
                     & Lambda LightLambda
-        let mBlockDelete
-                | paramUsed =
-                    -- Cannot replace lambda by body because then param will not exist
-                    rBody . Lens.mapped . rPayload . plActions . mReplaceParent .~
-                    Just (return (firstParamId (convParams ^. cpParams)))
-                | otherwise = id
         BodyLam lambda
             & addActions exprPl
-            <&> mBlockDelete
-    where
-        paramUsed =
-            Lens.has
-            (V.lamResult . ExprLens.valLeafs . V._LVar . Lens.only (lam ^. V.lamParamId))
-            lam
+            <&> rBody . Lens.mapped . rPayload . plActions . mReplaceParent . Lens._Just %~ (lamParamToHole lam >>)
 
 useNormalLambda :: Set UUID -> Binder UUID m (Expression UUID m a) -> Bool
 useNormalLambda paramUUIDs binder =
