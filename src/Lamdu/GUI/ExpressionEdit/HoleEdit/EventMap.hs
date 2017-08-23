@@ -53,7 +53,7 @@ adHocTextEditEventMap holeInfo =
         let appendCharEventMap =
                 E.allChars "Character"
                 (E.Doc ["Edit", "Search Term", "Append character"])
-                (changeText . snoc)
+                (changeText . flip Text.snoc)
                 & disallowCharsFromSearchTerm holeConfig holeInfo Nothing
                 & if Text.null searchTerm
                   then E.filterChars (`notElem` operatorChars)
@@ -67,7 +67,6 @@ adHocTextEditEventMap holeInfo =
                   E.keyPress (ModKey mempty MetaKey.Key'Backspace)
                   (E.Doc ["Edit", "Search Term", "Delete backwards"]) $
                   changeText Text.init
-        snoc x = (<> Text.singleton x)
         searchTerm = Property.value searchTermProp
         changeText f = mempty <$ Property.pureModify searchTermProp f
 
