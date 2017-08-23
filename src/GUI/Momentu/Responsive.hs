@@ -255,8 +255,8 @@ hboxVertFallback ::
     ([WithTextPos (Widget a)] -> [WithTextPos (Widget (f EventResult))]) -> [Responsive a] ->
     Responsive (f EventResult) ->
     Responsive (f EventResult)
-hboxVertFallback disamb onHGuis guis vert =
-    horizVertFallback disamb wide vert
+hboxVertFallback disamb onHGuis guis =
+    horizVertFallback disamb wide
     where
         wide =
             guis ^.. traverse . render
