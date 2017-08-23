@@ -7,11 +7,13 @@ import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
 import qualified Data.Map as Map
 import           Data.Store.Transaction (Transaction)
+import           GUI.Momentu.Align (WithTextPos)
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Glue ((/|/))
 import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.Responsive.Expression as ResponsiveExpr
+import           GUI.Momentu.View (View)
 import qualified GUI.Momentu.Widget as Widget
 import qualified Lamdu.Config as Config
 import           Lamdu.GUI.ExpressionGui (ExpressionGui)
@@ -26,11 +28,11 @@ import           Lamdu.Prelude
 
 makeGuardRow ::
     Monad m =>
-    Transaction m Sugar.EntityId -> Text -> Sugar.EntityId ->
+    Transaction m Sugar.EntityId -> WithTextPos View -> Sugar.EntityId ->
     ExprGuiM m (ExpressionGui m -> ExpressionGui m ->ExpressionGui m)
-makeGuardRow delete labelText entityId =
+makeGuardRow delete prefixLabel entityId =
     do
-        label <- ExpressionGui.grammarLabel labelText
+        label <- ExpressionGui.grammarLabel "if "
         colon <- ExpressionGui.grammarLabel ": "
         config <- Lens.view Config.config
         let eventMap =
@@ -40,7 +42,7 @@ makeGuardRow delete labelText entityId =
         indent <- ResponsiveExpr.indent
         return $
             \cond result ->
-            let condRow = label /|/ cond /|/ colon
+            let condRow = prefixLabel /|/ label /|/ cond /|/ colon
             in
             Responsive.hboxVertFallback Responsive.disambiguationNone
             id [condRow, result]
@@ -58,9 +60,10 @@ makeElseIf (Sugar.GuardElseIf scopes entityId cond res delete) makeRest =
         mOuterScopeId <- ExprGuiM.readMScopeId
         let mInnerScope = lookupMKey <$> mOuterScopeId <*> scopes
         -- TODO: green evaluation backgrounds, "◗"?
+        elseLabel <- ExpressionGui.grammarLabel "else "
         Responsive.vboxSpaced <*>
             sequence
-            [ makeGuardRow delete "else if " entityId
+            [ makeGuardRow delete elseLabel entityId
                 <*> ExprGuiM.makeSubexpression cond
                 <*> ExprGuiM.makeSubexpression res
             , makeRest
@@ -80,7 +83,7 @@ make ::
 make guards pl =
     do
         ifRow <-
-            makeGuardRow (guards ^. Sugar.gDeleteIf) "if " (pl ^. Sugar.plEntityId)
+            makeGuardRow (guards ^. Sugar.gDeleteIf) Element.empty (pl ^. Sugar.plEntityId)
             <*> ExprGuiM.makeSubexpression (guards ^. Sugar.gIf)
             <*> ExprGuiM.makeSubexpression (guards ^. Sugar.gThen)
         let makeElse =
