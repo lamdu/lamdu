@@ -80,12 +80,8 @@ toHoleActions ::
     m (HoleActions (NewName m) (TM m))
 toHoleActions ha@HoleActions {..} =
     do
-        run0 <- opRun
-        run1 <- opRun
-        pure ha
-            { _holeOptions = _holeOptions >>= run0 . traverse toHoleOption
-            , _holeOptionLiteral = _holeOptionLiteral <&> (>>= run1 . toHoleOption)
-            }
+        run <- opRun
+        pure ha { _holeOptions = _holeOptions >>= run . traverse toHoleOption }
 
 toParam ::
     MonadNaming m =>
@@ -184,6 +180,28 @@ toLabeledApply expr app@LabeledApply{..} =
     <*> (traverse . raValue) toParam _aRelayedArgs
     >>= traverse expr
 
+toLeafHoleActions ::
+    MonadNaming m =>
+    LeafHoleActions (OldName m) (TM m) -> m (LeafHoleActions (NewName m) (TM m))
+toLeafHoleActions ha@LeafHoleActions {..} =
+    do
+        run <- opRun
+        pure ha { _holeOptionLiteral = _holeOptionLiteral <&> (>>= run . toHoleOption) }
+
+toHoleKind ::
+    MonadNaming m =>
+    (a -> m b) -> HoleKind (OldName m) (TM m) a -> m (HoleKind (NewName m) (TM m) b)
+toHoleKind expr (WrapperHole holeArg) = traverse expr holeArg <&> WrapperHole
+toHoleKind _ (LeafHole actions) = toLeafHoleActions actions <&> LeafHole
+
+toHole ::
+    MonadNaming m =>
+    (a -> m b) -> Hole (OldName m) (TM m) a -> m (Hole (NewName m) (TM m) b)
+toHole expr Hole{..} =
+    Hole
+    <$> toHoleActions _holeActions
+    <*> toHoleKind expr _holeKind
+
 toBody ::
     MonadNaming m => (a -> m b) ->
     Body (OldName m) (TM m) a ->
@@ -196,7 +214,7 @@ toBody expr = \case
     BodyGuard        x -> x & traverse expr <&> BodyGuard
     BodySimpleApply  x -> x & traverse expr <&> BodySimpleApply
     BodyLabeledApply x -> x & toLabeledApply expr <&> BodyLabeledApply
-    BodyHole         x -> x & traverse expr >>= holeActions toHoleActions <&> BodyHole
+    BodyHole         x -> x & toHole expr <&> BodyHole
     BodyFromNom      x -> x & traverse expr >>= nTId toTIdG <&> BodyFromNom
     BodyToNom        x -> x & traverse (toBinderBody expr) >>= nTId toTIdG <&> BodyToNom
     BodyGetVar       x -> x & toGetVar <&> BodyGetVar

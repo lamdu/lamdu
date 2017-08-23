@@ -166,11 +166,16 @@ tryBuildLiteral ::
     (Format a, Monad m) => (Identity a -> Sugar.Literal Identity) -> HoleInfo m ->
     Maybe (T m (Sugar.HoleOption (Name m) m))
 tryBuildLiteral mkLiteral holeInfo =
-    hiSearchTerm holeInfo
-    & tryParse
-    <&> Identity
-    <&> mkLiteral
-    <&> hiHole holeInfo ^. Sugar.holeActions . Sugar.holeOptionLiteral
+    mkHoleOption <*> literal
+    where
+        literal =
+            hiSearchTerm holeInfo
+            & tryParse
+            <&> Identity
+            <&> mkLiteral
+        mkHoleOption =
+            hiHole holeInfo ^? Sugar.holeKind . Sugar._LeafHole .
+            Sugar.holeOptionLiteral
 
 literalGroups :: Monad m => HoleInfo m -> [T m (Sugar.HoleOption (Name m) m)]
 literalGroups holeInfo =

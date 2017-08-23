@@ -134,24 +134,20 @@ listTHead nil l =
 -- TODO: This is ugly, maybe Sugar.HoleOption should
 -- have a canonical result?
 toLiteralTextEventMap ::
-    Monad m => HoleInfo m -> Widget.EventMap (T m Widget.EventResult)
-toLiteralTextEventMap holeInfo =
+    Monad m =>
+    Sugar.LeafHoleActions name m -> Widget.EventMap (T m Widget.EventResult)
+toLiteralTextEventMap actions =
     Widget.keysEventMapMovesCursor toLiteralTextKeys
     (E.Doc ["Edit", "Create Text Literal"]) $
     do
         (_score, mkResult) <-
             Sugar.LiteralText (Identity "")
-            & hiHole holeInfo ^. Sugar.holeActions . Sugar.holeOptionLiteral
+            & actions ^. Sugar.holeOptionLiteral
             <&> (^. Sugar.hoResults)
             >>= listTHead (error "Literal hole option has no results?!")
         result <- mkResult
         pickedResult <- result ^. Sugar.holeResultPick
-        let argExpr =
-                Sugar.holeResultConverted . Sugar.rBody . Sugar._BodyHole .
-                Sugar.holeKind . Sugar._WrapperHole . Sugar.haExpr
-        case result ^? argExpr of
-            Just {} -> error "Applied on wrapper hole?"
-            Nothing -> result ^. Sugar.holeResultConverted
+        result ^. Sugar.holeResultConverted
             ^. Sugar.rPayload . Sugar.plEntityId
             & (`lookup` (pickedResult ^. Sugar.prIdTranslation))
             & fromMaybe (error "PickedResult missing translation for expr")
@@ -175,9 +171,9 @@ makeOpenEventMap holeInfo =
         disallowFirstOperatorChar
             | Text.null searchTerm = E.filterChars (`notElem` operatorChars)
             | otherwise = id
-        isWrapperHole = hiHole holeInfo & Lens.has (Sugar.holeKind . Sugar._WrapperHole)
         maybeLiteralTextEventMap
-            | Text.null searchTerm && not isWrapperHole =
-              toLiteralTextEventMap holeInfo
+            | Text.null searchTerm =
+              hiHole holeInfo ^.
+                Sugar.holeKind . Sugar._LeafHole . Lens.to toLiteralTextEventMap
             | otherwise = mempty
         searchTerm = HoleInfo.hiSearchTermProperty holeInfo ^. Property.pVal

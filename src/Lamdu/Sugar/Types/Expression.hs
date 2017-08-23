@@ -48,7 +48,8 @@ module Lamdu.Sugar.Types.Expression
     , Unwrap(..), _UnwrapAction, _UnwrapTypeMismatch
     , HoleArg(..), haExpr, haUnwrap
     , HoleOption(..), hoVal, hoSugaredBaseExpr, hoResults
-    , HoleActions(..), holeUUID, holeOptions, holeOptionLiteral, holeMDelete
+    , LeafHoleActions(..), holeOptionLiteral
+    , HoleActions(..), holeUUID, holeOptions, holeMDelete
     , HoleKind(..), _LeafHole, _WrapperHole
     , Hole(..), holeActions, holeKind
     , TIdG(..), tidgName, tidgTId
@@ -143,10 +144,13 @@ data Literal f
 data HoleActions name m = HoleActions
     { _holeUUID :: UUID -- TODO: Replace this with a way to associate data?
     , _holeOptions :: T m [HoleOption name m]
-    , _holeOptionLiteral :: Literal Identity -> T m (HoleOption name m)
     , -- Changes the structure around the hole to remove the hole.
       -- For example (f _) becomes (f) or (2 + _) becomes 2
       _holeMDelete :: Maybe (T m EntityId)
+    }
+
+newtype LeafHoleActions name m = LeafHoleActions
+    { _holeOptionLiteral :: Literal Identity -> T m (HoleOption name m)
     }
 
 data Unwrap m
@@ -158,14 +162,14 @@ data HoleArg m expr = HoleArg
     , _haUnwrap :: Unwrap m
     } deriving (Functor, Foldable, Traversable)
 
-data HoleKind m expr
-    = LeafHole
+data HoleKind name m expr
+    = LeafHole (LeafHoleActions name m)
     | WrapperHole (HoleArg m expr)
     deriving (Functor, Foldable, Traversable)
 
 data Hole name m expr = Hole
     { _holeActions :: HoleActions name m
-    , _holeKind :: HoleKind m expr
+    , _holeKind :: HoleKind name m expr
     } deriving (Functor, Foldable, Traversable)
 
 {- Record start -}
@@ -390,6 +394,7 @@ Lens.makeLenses ''HoleResult
 Lens.makeLenses ''Inject
 Lens.makeLenses ''LabeledApply
 Lens.makeLenses ''Lambda
+Lens.makeLenses ''LeafHoleActions
 Lens.makeLenses ''NameRef
 Lens.makeLenses ''Nominal
 Lens.makeLenses ''Param

@@ -263,33 +263,18 @@ mkOptions sugarContext mInjectedArg exprPl stored =
             & return
 
 mkWritableHoleActions ::
-    (Monad m) =>
+    Monad m =>
     Maybe (Val (Input.Payload m a)) ->
     Input.Payload m a -> ValIProperty m ->
     ConvertM m (HoleActions UUID m)
 mkWritableHoleActions mInjectedArg exprPl stored =
     do
         sugarContext <- ConvertM.readContext
-        let mkOption =
-                return . mkHoleOption sugarContext mInjectedArg exprPl stored . SeedExpr
-        let mkLiteralOption =
-                mkOption . Val () . V.BLeaf . V.LLiteral . PrimVal.fromKnown
         pure HoleActions
             { _holeOptions =
                 mkOptions sugarContext mInjectedArg exprPl stored
                 <&> addSuggestedOptions
                     (mkHoleSuggesteds sugarContext mInjectedArg exprPl stored)
-            , _holeOptionLiteral =
-              \case
-              LiteralNum (Identity x) -> PrimVal.Float x & mkLiteralOption
-              LiteralBytes (Identity x) -> PrimVal.Bytes x & mkLiteralOption
-              LiteralText (Identity x) ->
-                  encodeUtf8 x
-                  & PrimVal.Bytes
-                  & PrimVal.fromKnown
-                  & V.LLiteral & Pure.leaf
-                  & Pure.toNom Builtins.textTid
-                  & mkOption
             , _holeUUID = UniqueId.toUUID $ ExprIRef.unValI $ Property.value stored
             , _holeMDelete = Nothing
             }
@@ -368,6 +353,31 @@ sugar sugarContext exprPl val =
             , Infer._plScope = exprPl ^. Input.inferred . Infer.plScope
             }
 
+mkLeafActions ::
+    Monad m =>
+    Maybe (Val (Input.Payload m a)) -> Input.Payload m a -> ValIProperty m ->
+    ConvertM m (LeafHoleActions UUID m)
+mkLeafActions mInjectedArg exprPl stored =
+    do
+        sugarContext <- ConvertM.readContext
+        let mkOption =
+                pure . mkHoleOption sugarContext mInjectedArg exprPl stored . SeedExpr
+        let mkLiteralOption =
+                mkOption . Val () . V.BLeaf . V.LLiteral . PrimVal.fromKnown
+        pure LeafHoleActions
+            { _holeOptionLiteral =
+                \case
+                LiteralNum (Identity x) -> PrimVal.Float x & mkLiteralOption
+                LiteralBytes (Identity x) -> PrimVal.Bytes x & mkLiteralOption
+                LiteralText (Identity x) ->
+                    encodeUtf8 x
+                    & PrimVal.Bytes
+                    & PrimVal.fromKnown
+                    & V.LLiteral & Pure.leaf
+                    & Pure.toNom Builtins.textTid
+                    & mkOption
+            }
+
 mkHole ::
     Monad m =>
     Maybe (Val (Input.Payload m a)) ->
@@ -375,9 +385,10 @@ mkHole ::
 mkHole mInjectedArg exprPl =
     do
         actions <- mkWritableHoleActions mInjectedArg exprPl (exprPl ^. Input.stored)
+        leafActions <- mkLeafActions mInjectedArg exprPl (exprPl ^. Input.stored)
         pure Hole
             { _holeActions = actions
-            , _holeKind = LeafHole
+            , _holeKind = LeafHole leafActions
             }
 
 getLocalScopeGetVars :: ConvertM.Context m -> V.Var -> [Val ()]
