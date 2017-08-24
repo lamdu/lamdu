@@ -64,16 +64,10 @@ hbox ::
     WideLayoutOption [] (f EventResult)
 hbox disamb spacer =
     WideLayoutOption
-    { _wContexts = contexts
+    { _wContexts = Lens.reindexed (const LayoutHorizontal) Lens.traversed
     , _wLayout = layout
     }
     where
-        contexts :: Lens.AnIndexedTraversal LayoutDisambiguationContext [a] [b] a b
-        contexts _ [] = pure []
-        contexts f (x:xs) =
-            (:)
-            <$> Lens.indexed f LayoutHorizontal x
-            <*> contexts f xs
         layout c = mDisamb c . Glue.hbox . spacer
         mDisamb LayoutHorizontal = disamb
         mDisamb _ = id
