@@ -21,7 +21,7 @@ module GUI.Momentu.Widget
     -- Widget type and lenses:
     , State(..), _StateFocused, _StateUnfocused
         , stateLayers
-    , Widget(..), wState
+    , Widget(..), wState, wSize
         , mEnter, eventMapMaker, events, enterResultCursor, sizedState
     , VirtualCursor(..), virtualCursor
     , Unfocused(..), uMEnter, uLayers
