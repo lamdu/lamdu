@@ -3,7 +3,7 @@
 module GUI.Momentu.Responsive.Options
     ( WideLayoutOption(..), wContexts, wLayout
     , tryWideLayout
-    , hbox
+    , hbox, table
 
     , Disambiguators(..), disambHoriz, disambVert
     , disambiguationNone
@@ -11,9 +11,12 @@ module GUI.Momentu.Responsive.Options
     ) where
 
 import qualified Control.Lens as Lens
+import           Data.Functor.Compose (Compose(..))
 import qualified Data.List as List
-import           GUI.Momentu.Align (WithTextPos(..))
+import           Data.Vector.Vector2 (Vector2(..))
+import           GUI.Momentu.Align (Aligned(..), WithTextPos(..))
 import qualified GUI.Momentu.Align as Align
+import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.Glue as Glue
 import           GUI.Momentu.Responsive
     ( Responsive(..), LayoutParams(..), LayoutMode(..), LayoutDisambiguationContext(..)
@@ -21,6 +24,7 @@ import           GUI.Momentu.Responsive
     )
 import           GUI.Momentu.Widget (Widget, EventResult)
 import qualified GUI.Momentu.Widget as Widget
+import qualified GUI.Momentu.Widgets.Grid as Grid
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 
 import           Lamdu.Prelude
@@ -71,6 +75,26 @@ hbox disamb spacer =
         layout c = mDisamb c . Glue.hbox . spacer
         mDisamb LayoutHorizontal = disamb
         mDisamb _ = id
+
+table ::
+    (Traversable t0, Traversable t1, Functor f) =>
+    WideLayoutOption (Compose t0 t1) (f EventResult)
+table =
+    WideLayoutOption
+    { _wContexts = Lens.reindexed (const LayoutClear) (Lens._Wrapped . Lens.traversed . Lens.traversed)
+    , _wLayout = const layout
+    }
+    where
+        layout (Compose elems) =
+            WithTextPos
+            { _textTop =
+                gridWidget ^. Element.height
+                * alignments ^?! traverse . traverse . Align.alignmentRatio . _2
+            , _tValue = gridWidget
+            }
+            where
+                (alignments, gridWidget) = elems <&> Lens.mapped %~ toAligned & Grid.make
+        toAligned (WithTextPos y w) = Aligned (Vector2 0 (y / w ^. Element.height)) w
 
 type HorizDisambiguator a = WithTextPos (Widget a) -> WithTextPos (Widget a)
 
