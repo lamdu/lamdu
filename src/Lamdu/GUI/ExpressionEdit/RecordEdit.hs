@@ -37,10 +37,9 @@ import           Lamdu.Prelude
 
 defaultPos ::
     [Sugar.RecordField name m (Sugar.Expression name m a)] ->
-    Widget.Id -> Widget.Id
+    Sugar.EntityId -> Sugar.EntityId
 defaultPos [] myId = myId
-defaultPos (f : _) _ =
-    f ^. Sugar.rfExpr . Sugar.rPayload & WidgetIds.fromExprPayload
+defaultPos (f : _) _ = f ^. Sugar.rfExpr . Sugar.rPayload . Sugar.plEntityId
 
 shouldAddBg :: Sugar.Record name m a -> Bool
 shouldAddBg (Sugar.Record [] Sugar.ClosedRecord{} _) = False
@@ -74,8 +73,7 @@ make record@(Sugar.Record fields recordTail addField) pl =
                 & ExprGuiM.withHolePicker resultPicker
         (if addBg then ExpressionGui.addValFrame else return id)
             ?? E.weakerEvents addFieldEventMap gui
-    & Widget.assignCursor myId (defaultPos fields myId)
-    & ExpressionGui.stdWrapParentExpr pl
+    & ExpressionGui.stdWrapParentExpr pl (defaultPos fields (pl ^. Sugar.plEntityId))
     where
         myId = WidgetIds.fromExprPayload pl
         addBg = shouldAddBg record

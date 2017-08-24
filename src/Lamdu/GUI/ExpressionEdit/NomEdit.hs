@@ -46,9 +46,7 @@ makeToNom nom pl =
     where
         bbContent = nom ^. Sugar.nVal . Sugar.bbContent
         mDel = bbContent ^? Sugar._BinderExpr . mReplaceParent
-        valId =
-            bbContent ^. SugarLens.binderContentExpr . Sugar.rPayload .
-            Sugar.plEntityId & WidgetIds.fromEntityId
+        valId = bbContent ^. SugarLens.binderContentExpr . Sugar.rPayload . Sugar.plEntityId
 
 makeFromNom ::
     Monad m =>
@@ -60,7 +58,7 @@ makeFromNom nom pl =
     & mkNomGui reverse "FromNominal" "»" mDel valId pl
     where
         mDel = nom ^? Sugar.nVal . mReplaceParent
-        valId = nom ^. Sugar.nVal . Sugar.rPayload . Sugar.plEntityId & WidgetIds.fromEntityId
+        valId = nom ^. Sugar.nVal . Sugar.rPayload . Sugar.plEntityId
 
 nomPrecedence :: Int
 nomPrecedence = 9
@@ -68,7 +66,7 @@ nomPrecedence = 9
 mkNomGui ::
     Monad m =>
     (forall a. [a] -> [a]) ->
-    Text -> Text -> Maybe (T m Sugar.EntityId) -> Widget.Id ->
+    Text -> Text -> Maybe (T m Sugar.EntityId) -> Sugar.EntityId ->
     Sugar.Payload m ExprGuiT.Payload ->
     Sugar.Nominal (Name m) (ExprGuiM m (ExpressionGui m)) ->
     ExprGuiM m (ExpressionGui m)
@@ -99,8 +97,7 @@ mkNomGui ordering nomStr str mDel valId pl (Sugar.Nominal tid val) =
               , val
               ] & sequence
             )
-    & Widget.assignCursor myId valId
-    & ExpressionGui.stdWrapParentExpr pl
+    & ExpressionGui.stdWrapParentExpr pl valId
     & ExprGuiM.withLocalPrecedence 0 (before .~ 0)
     where
         myId = WidgetIds.fromExprPayload pl

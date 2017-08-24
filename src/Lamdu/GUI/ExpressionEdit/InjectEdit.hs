@@ -3,7 +3,6 @@ module Lamdu.GUI.ExpressionEdit.InjectEdit
     ( make
     ) where
 
-import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.Responsive.Options as Options
 import qualified Lamdu.GUI.ExpressionEdit.ApplyEdit as ApplyEdit
@@ -13,7 +12,6 @@ import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
-import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Sugar.Names.Types (Name(..))
 import           Lamdu.Sugar.NearestHoles (NearestHoles)
 import qualified Lamdu.Sugar.Types as Sugar
@@ -48,8 +46,4 @@ make (Sugar.Inject tagG mVal) pl =
         ExprGuiM.makeSubexpressionWith ApplyEdit.prefixPrecedence
         (ExpressionGui.before .~ ApplyEdit.prefixPrecedence) val <&> (:[])
         >>= makeCommon tagG (ExprGuiT.nextHolesBefore val)
-        & Widget.assignCursor myId tagId
-        & ExpressionGui.stdWrapParentExpr pl
-    where
-        myId = WidgetIds.fromExprPayload pl
-        tagId = WidgetIds.fromEntityId (tagG ^. Sugar.tagInstance)
+        & ExpressionGui.stdWrapParentExpr pl (tagG ^. Sugar.tagInstance)

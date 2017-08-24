@@ -120,7 +120,7 @@ make ::
 make lam pl =
     do
         BinderEdit.Parts mParamsEdit mScopeEdit bodyEdit eventMap <-
-            BinderEdit.makeParts funcApplyLimit binder bodyId myId
+            BinderEdit.makeParts funcApplyLimit binder (WidgetIds.fromEntityId bodyId) myId
         let animId = Widget.toAnimId myId
         paramsAndLabelEdits <-
             case (lam ^. Sugar.lamMode, params) of
@@ -135,14 +135,11 @@ make lam pl =
             <*> (Options.boxSpaced ?? Options.disambiguationNone ?? paramsAndLabelEdits
                 <&> (: [bodyEdit]))
             <&> E.weakerEvents eventMap
-    & Widget.assignCursor myId bodyId
-    & ExpressionGui.stdWrapParentExpr pl
+    & ExpressionGui.stdWrapParentExpr pl bodyId
     & ExprGuiM.withLocalPrecedence 0 (ExpressionGui.before .~ 0)
     where
         myId = WidgetIds.fromExprPayload pl
         funcApplyLimit = pl ^. Sugar.plData . ExprGuiT.plShowAnnotation . ExprGuiT.funcApplyLimit
         params = binder ^. Sugar.bParams
         binder = lam ^. Sugar.lamBinder
-        bodyId =
-            binder ^. Sugar.bBody . Sugar.bbContent . SugarLens.binderContentEntityId
-            & WidgetIds.fromEntityId
+        bodyId = binder ^. Sugar.bBody . Sugar.bbContent . SugarLens.binderContentEntityId

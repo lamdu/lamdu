@@ -139,10 +139,8 @@ make guards pl =
         <$> makeIf
         <*> foldr makeElseIf (makeElse guards <&> (:[])) (guards ^. Sugar.gElseIfs)
     )
-    & Widget.assignCursor myId (WidgetIds.fromExprPayload (guards ^. Sugar.gIf . Sugar.rPayload))
-    & ExpressionGui.stdWrapParentExpr pl
+    & ExpressionGui.stdWrapParentExpr pl (guards ^. Sugar.gIf . Sugar.rPayload . Sugar.plEntityId)
     where
-        myId = WidgetIds.fromExprPayload pl
         makeIf =
             makeGuardRow (guards ^. Sugar.gDeleteIf) Element.empty (pl ^. Sugar.plEntityId)
             <*> ExprGuiM.makeSubexpression (guards ^. Sugar.gIf)

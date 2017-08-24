@@ -411,12 +411,18 @@ parentDelegator myId =
 stdWrapParentExpr ::
     Monad m =>
     Sugar.Payload m ExprGuiT.Payload ->
+    Sugar.EntityId ->
     ExprGuiM m (ExpressionGui m) ->
     ExprGuiM m (ExpressionGui m)
-stdWrapParentExpr pl mkGui
-    | ExprGuiT.isHoleResult pl = stdWrap pl mkGui
-    | otherwise =
-        parentDelegator (WidgetIds.fromExprPayload pl) <*> mkGui & stdWrap pl
+stdWrapParentExpr pl delegateTo mkGui =
+    mkGui
+    & Widget.assignCursor (WidgetIds.fromExprPayload pl) (WidgetIds.fromEntityId delegateTo)
+    & delegator
+    & stdWrap pl
+    where
+        delegator
+            | ExprGuiT.isHoleResult pl = id
+            | otherwise = (parentDelegator (WidgetIds.fromExprPayload pl) <*>)
 
 grammarLabel ::
     ( MonadReader env m

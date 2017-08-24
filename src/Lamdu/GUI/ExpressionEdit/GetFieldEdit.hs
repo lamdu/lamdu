@@ -3,7 +3,6 @@ module Lamdu.GUI.ExpressionEdit.GetFieldEdit
     ( make
     ) where
 
-import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.Responsive.Options as Options
 import qualified Lamdu.GUI.ExpressionEdit.TagEdit as TagEdit
@@ -14,7 +13,6 @@ import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
 import           Lamdu.Sugar.Names.Types (Name(..))
 import qualified Lamdu.Sugar.Types as Sugar
-import qualified Lamdu.GUI.WidgetIds as WidgetIds
 
 import           Lamdu.Prelude
 
@@ -37,8 +35,4 @@ make (Sugar.GetField recExpr tagG) pl =
             , Responsive.fromWithTextPos tagEdit
             ]
             & return
-    & Widget.assignCursor myId tagId
-    & ExpressionGui.stdWrapParentExpr pl
-    where
-        myId = WidgetIds.fromExprPayload pl
-        tagId = WidgetIds.fromEntityId (tagG ^. Sugar.tagInstance)
+    & ExpressionGui.stdWrapParentExpr pl (tagG ^. Sugar.tagInstance)

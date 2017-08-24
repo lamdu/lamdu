@@ -42,10 +42,9 @@ import           Lamdu.Prelude
 
 destCursorId ::
     [Sugar.CaseAlt name n (Sugar.Expression name n p)] ->
-    Widget.Id -> Widget.Id
+    Sugar.EntityId -> Sugar.EntityId
 destCursorId [] defDestId = defDestId
-destCursorId (alt : _) _ =
-    alt ^. Sugar.caHandler . Sugar.rPayload & WidgetIds.fromExprPayload
+destCursorId (alt : _) _ = alt ^. Sugar.caHandler . Sugar.rPayload . Sugar.plEntityId
 
 make ::
     Monad m =>
@@ -102,8 +101,8 @@ make (Sugar.Case mArg alts caseTail addAlt) pl =
         ExpressionGui.addValFrame
             <*> (Responsive.vboxSpaced ?? [header, altsGui])
             <&> E.weakerEvents addAltEventMap
-    & Widget.assignCursor myId (destCursorId alts headerId)
-    & ExpressionGui.stdWrapParentExpr pl
+    & Widget.assignCursor myId headerId
+    & ExpressionGui.stdWrapParentExpr pl (destCursorId alts (pl ^. Sugar.plEntityId))
     where
         myId = WidgetIds.fromExprPayload pl
         headerId = Widget.joinId myId ["header"]

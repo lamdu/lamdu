@@ -171,7 +171,7 @@ makeLabeled apply pl =
                 | otherwise = id
         makeFuncRow mParensId prec apply (pl ^. Sugar.plData . ExprGuiT.plNearestHoles) myId
             & addBox
-            & ExpressionGui.stdWrapParentExpr pl
+            & ExpressionGui.stdWrapParentExpr pl (pl ^. Sugar.plEntityId)
             & fixPrec
     where
         prec = mkPrecedence apply
@@ -249,7 +249,6 @@ makeSimple (Sugar.Apply func arg) pl =
             , ExprGuiM.makeSubexpressionWith
               prefixPrecedence (ExpressionGui.before .~ prefixPrecedence) arg
             ]
-    & Widget.assignCursor myId (func ^. Sugar.rPayload & WidgetIds.fromExprPayload)
-    & ExpressionGui.stdWrapParentExpr pl
+    & ExpressionGui.stdWrapParentExpr pl (func ^. Sugar.rPayload . Sugar.plEntityId)
     where
         myId = WidgetIds.fromExprPayload pl
