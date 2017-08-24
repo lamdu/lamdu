@@ -5,6 +5,7 @@ module Lamdu.GUI.ExpressionEdit.GetFieldEdit
 
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Responsive as Responsive
+import qualified GUI.Momentu.Responsive.Options as Options
 import qualified Lamdu.GUI.ExpressionEdit.TagEdit as TagEdit
 import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
@@ -30,7 +31,7 @@ make (Sugar.GetField recExpr tagG) pl =
         tagEdit <-
             TagEdit.makeRecordTag
             (pl ^. Sugar.plData . ExprGuiT.plNearestHoles) tagG
-        Responsive.box Responsive.disambiguationNone
+        Options.box Options.disambiguationNone
             [ recExprEdit
             , Responsive.fromTextView dotLabel
             , Responsive.fromWithTextPos tagEdit

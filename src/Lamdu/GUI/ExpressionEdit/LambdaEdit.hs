@@ -14,6 +14,7 @@ import           GUI.Momentu.MetaKey (MetaKey(..), noMods)
 import qualified GUI.Momentu.MetaKey as MetaKey
 import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.Responsive.Expression as ResponsiveExpr
+import qualified GUI.Momentu.Responsive.Options as Options
 import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
 import qualified Lamdu.Config as Config
@@ -131,7 +132,7 @@ make lam pl =
                 | Prec.needParens parentPrec (Prec.my 0) = Just animId
                 | otherwise = Nothing
         (ResponsiveExpr.boxSpacedMDisamb ?? mParensId)
-            <*> (Responsive.boxSpaced ?? Responsive.disambiguationNone ?? paramsAndLabelEdits
+            <*> (Options.boxSpaced ?? Options.disambiguationNone ?? paramsAndLabelEdits
                 <&> (: [bodyEdit]))
             <&> E.weakerEvents eventMap
     & Widget.assignCursor myId bodyId

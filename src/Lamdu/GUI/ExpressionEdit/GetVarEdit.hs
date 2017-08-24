@@ -15,6 +15,7 @@ import           GUI.Momentu.Font (Underline(..))
 import           GUI.Momentu.Glue ((/-/))
 import qualified GUI.Momentu.Hover as Hover
 import qualified GUI.Momentu.Responsive as Responsive
+import qualified GUI.Momentu.Responsive.Options as Options
 import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
@@ -58,7 +59,7 @@ makeParamsRecord myId paramsRecordVar =
         respondToCursor <- Widget.respondToCursorPrefix ?? myId
         sequence
             [ TextView.makeLabel "Params {" <&> Responsive.fromTextView
-            , (Responsive.boxSpaced ?? Responsive.disambiguationNone)
+            , (Options.boxSpaced ?? Options.disambiguationNone)
               <*>
               ( fieldNames
                 & Lens.itraverse
@@ -69,7 +70,7 @@ makeParamsRecord myId paramsRecordVar =
                 )
               )
             , TextView.makeLabel "}" <&> Responsive.fromTextView
-            ] <&> Responsive.box Responsive.disambiguationNone <&> respondToCursor
+            ] <&> Options.box Options.disambiguationNone <&> respondToCursor
     where
         Sugar.ParamsRecordVar fieldNames = paramsRecordVar
 

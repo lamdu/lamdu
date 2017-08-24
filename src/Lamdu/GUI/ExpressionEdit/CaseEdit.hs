@@ -14,6 +14,7 @@ import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Glue ((/-/), (/|/))
 import qualified GUI.Momentu.Responsive as Responsive
+import qualified GUI.Momentu.Responsive.Options as Options
 import           GUI.Momentu.View (View)
 import qualified GUI.Momentu.View as View
 import           GUI.Momentu.Widget (Widget)
@@ -79,7 +80,7 @@ make (Sugar.Case mArg alts caseTail addAlt) pl =
                     mTag <-
                         ExpressionGui.evaluationResult (arg ^. Sugar.rPayload)
                         <&> (>>= (^? ER.body . ER._RInject . V.injectTag))
-                    return (mTag, Responsive.box Responsive.disambiguationNone [argEdit, caseLabel])
+                    return (mTag, Options.box Options.disambiguationNone [argEdit, caseLabel])
         (altsGui, resultPicker) <-
             ExprGuiM.listenResultPicker $
             do

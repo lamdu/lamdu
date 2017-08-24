@@ -25,6 +25,7 @@ import qualified GUI.Momentu.Glue as Glue
 import           GUI.Momentu.MetaKey (MetaKey(..), noMods, toModKey)
 import qualified GUI.Momentu.MetaKey as MetaKey
 import qualified GUI.Momentu.Responsive as Responsive
+import qualified GUI.Momentu.Responsive.Options as Options
 import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Choice as Choice
@@ -254,7 +255,7 @@ makeMParamsEdit mScopeCursor isScopeNavFocused delVarBackwardsId myId nearestHol
     [] -> return Nothing
     paramEdits ->
         frame
-        <*> (Responsive.boxSpaced ?? Responsive.disambiguationNone ?? paramEdits)
+        <*> (Options.boxSpaced ?? Options.disambiguationNone ?? paramEdits)
         <&> Just
     where
         frame =
@@ -352,7 +353,7 @@ make name color binder myId =
                 <&> E.strongerEvents rhsJumperEquals
                 <&> Just
         equals <- TextView.makeLabel "="
-        Responsive.boxSpaced ?? Responsive.disambiguationNone
+        Options.boxSpaced ?? Options.disambiguationNone
             <&>
             (\hbox ->
             hbox

@@ -18,6 +18,7 @@ import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Glue ((/|/))
 import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.Responsive.Expression as ResponsiveExpr
+import qualified GUI.Momentu.Responsive.Options as Options
 import           GUI.Momentu.View (View)
 import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
@@ -137,7 +138,7 @@ makeFuncRow mParensId prec apply applyNearestHoles myId =
     Sugar.InfixArgs l r ->
         (ResponsiveExpr.boxSpacedMDisamb ?? mParensId)
         <*> sequenceA
-        [ (Responsive.boxSpaced ?? Responsive.disambiguationNone)
+        [ (Options.boxSpaced ?? Options.disambiguationNone)
             <*> sequenceA
             [ ExprGuiM.makeSubexpressionWith 0 (ExpressionGui.after .~ prec) l
             , makeInfixFuncName (ExprGuiT.nextHolesBefore r) funcVar myId
@@ -192,7 +193,7 @@ mkRelayedArgs nearestHoles args =
     do
         argEdits <- mapM makeArgEdit args
         collapsed <- ExpressionGui.grammarLabel "➾" <&> Responsive.fromTextView
-        Responsive.boxSpaced ?? Responsive.disambiguationNone ?? collapsed : argEdits
+        Options.boxSpaced ?? Options.disambiguationNone ?? collapsed : argEdits
     where
         makeArgEdit arg =
             do

@@ -123,6 +123,7 @@ Executable lamdu
                   , GUI.Momentu.Rect
                   , GUI.Momentu.Responsive
                   , GUI.Momentu.Responsive.Expression
+                  , GUI.Momentu.Responsive.Options
                   , GUI.Momentu.Scroll
                   , GUI.Momentu.View
                   , GUI.Momentu.Widget

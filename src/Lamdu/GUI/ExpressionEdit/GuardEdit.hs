@@ -13,6 +13,7 @@ import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Glue ((/|/))
 import qualified GUI.Momentu.Responsive as Responsive
+import qualified GUI.Momentu.Responsive.Options as ResponsiveOpt
 import qualified GUI.Momentu.Responsive.Expression as ResponsiveExpr
 import           GUI.Momentu.View (View)
 import qualified GUI.Momentu.Widget as Widget
@@ -37,7 +38,7 @@ genRow =
         indent <- ResponsiveExpr.indent
         pure $ \indentAnimId condRow result ->
             vbox [condRow, indent indentAnimId result]
-            & Responsive.tryWideLayout (Responsive.hbox id id) [condRow, result]
+            & ResponsiveOpt.tryWideLayout (ResponsiveOpt.hbox id id) [condRow, result]
 
 makeGuardRow ::
     Monad m =>

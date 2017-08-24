@@ -21,6 +21,7 @@ import qualified GUI.Momentu.Main as Main
 import           GUI.Momentu.MetaKey (MetaKey)
 import           GUI.Momentu.Responsive (Responsive)
 import qualified GUI.Momentu.Responsive as Responsive
+import qualified GUI.Momentu.Responsive.Options as Options
 import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
@@ -141,7 +142,7 @@ makeReplEdit ::
 makeReplEdit theExportActions replExpr =
     do
         theConfig <- Lens.view config
-        (Responsive.boxSpaced ?? Responsive.disambiguationNone)
+        (Options.boxSpaced ?? Options.disambiguationNone)
             <*> sequence
             [ (Widget.makeFocusableView ?? Widget.joinId WidgetIds.replId ["symbol"] <&> (Align.tValue %~))
               <*> TextView.makeLabel "⋙"

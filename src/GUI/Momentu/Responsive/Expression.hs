@@ -20,6 +20,7 @@ import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.Glue ((/|/))
 import           GUI.Momentu.Responsive (Responsive)
 import qualified GUI.Momentu.Responsive as Responsive
+import qualified GUI.Momentu.Responsive.Options as Options
 import           GUI.Momentu.View (View)
 import           GUI.Momentu.Widget (Widget, EventResult)
 import qualified GUI.Momentu.Widget as Widget
@@ -42,12 +43,12 @@ instance HasStyle Style where style = id
 
 disambiguators ::
     (MonadReader env m, HasStyle env, Spacer.HasStdSpacing env, Functor f) =>
-    m (AnimId -> Responsive.Disambiguators (f EventResult))
+    m (AnimId -> Options.Disambiguators (f EventResult))
 disambiguators =
     do
         h <- addParens
         v <- indent
-        Responsive.Disambiguators <$> h <*> v & return
+        Options.Disambiguators <$> h <*> v & return
 
 addParens ::
     (MonadReader env m, TextView.HasStyle env, Functor f) =>
@@ -111,7 +112,7 @@ boxSpacedDisambiguated ::
 boxSpacedDisambiguated =
     do
         disamb <- disambiguators
-        b <- Responsive.boxSpaced
+        b <- Options.boxSpaced
         return (b . disamb)
 
 boxSpacedMDisamb ::
@@ -120,5 +121,5 @@ boxSpacedMDisamb ::
 boxSpacedMDisamb =
     do
         disamb <- disambiguators
-        b <- Responsive.boxSpaced
-        return (b . maybe Responsive.disambiguationNone disamb)
+        b <- Options.boxSpaced
+        return (b . maybe Options.disambiguationNone disamb)
