@@ -21,6 +21,7 @@ import           GUI.Momentu.View (View)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified Lamdu.Config as Config
+import           Lamdu.GUI.ExpressionEdit.BinderEdit (addLetEventMap)
 import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
@@ -62,16 +63,17 @@ makeElseIf ::
     Monad m =>
     Sugar.GuardElseIf m (ExprGuiT.SugarExpr m) ->
     ExprGuiM m [Row (ExpressionGui m)] -> ExprGuiM m [Row (ExpressionGui m)]
-makeElseIf (Sugar.GuardElseIf scopes entityId cond res delete) makeRest =
+makeElseIf (Sugar.GuardElseIf scopes entityId cond res delete addLet) makeRest =
     do
         mOuterScopeId <- ExprGuiM.readMScopeId
         let mInnerScope = lookupMKey <$> mOuterScopeId <*> scopes
         -- TODO: green evaluation backgrounds, "◗"?
         elseLabel <- ExpressionGui.grammarLabel "el"
+        letEventMap <- addLetEventMap addLet
         (:)
             <$>
             ( makeGuardRow delete elseLabel entityId
-                <*> ExprGuiM.makeSubexpression cond
+                <*> (ExprGuiM.makeSubexpression cond <&> E.weakerEvents letEventMap)
                 <*> ExprGuiM.makeSubexpression res
             )
             <*>  makeRest

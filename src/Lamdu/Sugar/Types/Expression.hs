@@ -25,7 +25,7 @@ module Lamdu.Sugar.Types.Expression
     , CaseArg(..), caVal, caToLambdaCase
     , CaseKind(..), _LambdaCase, _CaseWithArg
     , Case(..), cKind, cAlts, cAddAlt, cTail
-    , GuardElseIf(..), geScopes, geEntityId, geCond, geThen, geDelete
+    , GuardElseIf(..), geScopes, geEntityId, geCond, geThen, geDelete, geCondAddLet
     , Guard(..), gIf, gThen, gElseIfs, gElse, gDeleteIf
     , Nominal(..), nTId, nVal
     --
@@ -239,6 +239,7 @@ data GuardElseIf m expr = GuardElseIf
     , _geCond :: expr
     , _geThen :: expr
     , _geDelete :: T m EntityId
+    , _geCondAddLet :: T m EntityId
     } deriving (Functor, Foldable, Traversable)
 
 data Guard m expr = Guard

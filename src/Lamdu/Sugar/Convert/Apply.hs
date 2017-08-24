@@ -178,6 +178,7 @@ maybeGuard setToVal caseBody =
                         , _geCond = innerGuard ^. gIf
                         , _geThen = innerGuard ^. gThen
                         , _geDelete = innerGuard ^. gDeleteIf
+                        , _geCondAddLet = binder ^. bBody . bbAddOuterLet
                         }
                         : innerGuard ^. gElseIfs
                         & makeRes (innerGuard ^. gElse)

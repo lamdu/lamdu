@@ -2,6 +2,7 @@
 module Lamdu.GUI.ExpressionEdit.BinderEdit
     ( make
     , makeBinderBodyEdit
+    , addLetEventMap
     , Parts(..), makeParts
     , nonOperatorName
     ) where
@@ -418,19 +419,24 @@ jumpToRHS rhsId =
     <&> Widget.keysEventMapMovesCursor [MetaKey noMods MetaKey.Key'Equal]
         (E.Doc ["Navigation", "Jump to Def Body"])
 
+addLetEventMap :: Monad m => T m Sugar.EntityId -> ExprGuiM m (Widget.EventMap (T m Widget.EventResult))
+addLetEventMap addLet =
+    do
+        config <- Lens.view Config.config
+        savePos <- ExprGuiM.mkPrejumpPosSaver
+        savePos >> addLet
+            <&> WidgetIds.fromEntityId <&> WidgetIds.nameEditOf
+            & Widget.keysEventMapMovesCursor (Config.letAddItemKeys config)
+                (E.Doc ["Edit", "Let clause", "Add"])
+            & pure
+
 makeBinderBodyEdit ::
     Monad m =>
     Sugar.BinderBody (Name m) m (ExprGuiT.SugarExpr m) ->
     ExprGuiM m (ExpressionGui m)
 makeBinderBodyEdit (Sugar.BinderBody addOuterLet content) =
     do
-        config <- Lens.view Config.config
-        savePos <- ExprGuiM.mkPrejumpPosSaver
-        let newLetEventMap =
-                savePos >> addOuterLet
-                <&> WidgetIds.fromEntityId <&> WidgetIds.nameEditOf
-                & Widget.keysEventMapMovesCursor (Config.letAddItemKeys config)
-                  (E.Doc ["Edit", "Let clause", "Add"])
+        newLetEventMap <- addLetEventMap addOuterLet
         makeBinderContentEdit content <&> E.weakerEvents newLetEventMap
 
 makeBinderContentEdit ::
