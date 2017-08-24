@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, TemplateHaskell, DeriveFunctor, DeriveFoldable, DeriveTraversable #-}
+{-# LANGUAGE NoImplicitPrelude, TemplateHaskell, DeriveTraversable #-}
 
 module Lamdu.Sugar.Convert.Binder.Redex
     ( Redex(..)

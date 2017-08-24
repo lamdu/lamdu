@@ -1,5 +1,5 @@
 {-# LANGUAGE TemplateHaskell #-}
-{-# LANGUAGE NoImplicitPrelude, DeriveFunctor, DeriveFoldable, DeriveTraversable #-}
+{-# LANGUAGE NoImplicitPrelude, DeriveTraversable #-}
 module Lamdu.Config.Sampler
     ( Sampler, new
     , Sample(..), sConfigPath, sConfig, sThemePath, sTheme

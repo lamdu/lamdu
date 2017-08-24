@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, TemplateHaskell, DeriveFunctor, DeriveFoldable, DeriveTraversable #-}
+{-# LANGUAGE NoImplicitPrelude, TemplateHaskell, DeriveTraversable #-}
 -- TODO: Move to more general place?
 module Lamdu.Compiler.Flatten
     ( Composite(..), tags, rest

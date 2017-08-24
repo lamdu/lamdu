@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, TemplateHaskell, DeriveFunctor, DeriveFoldable, DeriveTraversable, MultiParamTypeClasses, FlexibleContexts, TypeFamilies #-}
+{-# LANGUAGE NoImplicitPrelude, TemplateHaskell, DeriveTraversable, MultiParamTypeClasses, FlexibleContexts, TypeFamilies #-}
 module GUI.Momentu.Align
     ( Aligned(..), alignmentRatio, value
     , boxAlign, hboxAlign, vboxAlign

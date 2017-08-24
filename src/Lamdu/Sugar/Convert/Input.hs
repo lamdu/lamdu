@@ -1,5 +1,5 @@
 -- | Preprocess of input to sugar
-{-# LANGUAGE NoImplicitPrelude, RecordWildCards, DeriveFunctor, DeriveFoldable, DeriveTraversable, TemplateHaskell #-}
+{-# LANGUAGE NoImplicitPrelude, RecordWildCards, DeriveTraversable, TemplateHaskell #-}
 module Lamdu.Sugar.Convert.Input
     ( Payload(..)
         , varRefsOfLambda, entityId, inferred, stored, evalResults, userData

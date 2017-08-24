@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, DeriveGeneric, TemplateHaskell, DeriveFunctor, DeriveFoldable, DeriveTraversable #-}
+{-# LANGUAGE NoImplicitPrelude, DeriveGeneric, TemplateHaskell, DeriveTraversable #-}
 module GUI.Momentu.Rect
     ( R, Rect(..), topLeft, size
     , Range(..), rangeStart, rangeSize

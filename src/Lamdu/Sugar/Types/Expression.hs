@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, TemplateHaskell, DeriveFunctor, DeriveFoldable, DeriveTraversable, GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE NoImplicitPrelude, TemplateHaskell, DeriveTraversable, GeneralizedNewtypeDeriving #-}
 module Lamdu.Sugar.Types.Expression
     ( WrapAction(..), _WrapperAlready, _WrappedAlready, _WrapNotAllowed, _WrapAction
     , SetToHole(..), _SetToHole, _SetWrapperToHole, _AlreadyAHole

@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, TemplateHaskell, DeriveFunctor, DeriveFoldable, DeriveTraversable #-}
+{-# LANGUAGE NoImplicitPrelude, TemplateHaskell, DeriveTraversable #-}
 module Lamdu.Sugar.Types
     ( module Lamdu.Sugar.Types.Binder
     , module Lamdu.Sugar.Types.Expression

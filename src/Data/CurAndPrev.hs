@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, RecordWildCards, DeriveFunctor, DeriveFoldable, DeriveTraversable #-}
+{-# LANGUAGE NoImplicitPrelude, RecordWildCards, DeriveTraversable #-}
 
 module Data.CurAndPrev
     ( CurAndPrev(..), current, prev

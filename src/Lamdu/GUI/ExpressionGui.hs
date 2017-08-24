@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, RecordWildCards, OverloadedStrings, RankNTypes, TypeFamilies, LambdaCase, DeriveFunctor, DeriveFoldable, DeriveTraversable , FlexibleContexts #-}
+{-# LANGUAGE NoImplicitPrelude, RecordWildCards, OverloadedStrings, RankNTypes, TypeFamilies, LambdaCase, DeriveTraversable , FlexibleContexts #-}
 module Lamdu.GUI.ExpressionGui
     ( ExpressionGui
     , render

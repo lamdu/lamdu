@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell, PatternGuards, NoImplicitPrelude, FlexibleContexts, OverloadedStrings, TypeFamilies, DeriveFunctor, DeriveFoldable, DeriveTraversable #-}
+{-# LANGUAGE TemplateHaskell, PatternGuards, NoImplicitPrelude, FlexibleContexts, OverloadedStrings, TypeFamilies, DeriveTraversable #-}
 -- | The search area (search term + results) of an open/active hole.
 
 module Lamdu.GUI.ExpressionEdit.HoleEdit.Open

@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, OverloadedStrings, RecordWildCards, DeriveFunctor, DeriveFoldable, DeriveTraversable, FlexibleContexts, RankNTypes #-}
+{-# LANGUAGE NoImplicitPrelude, OverloadedStrings, RecordWildCards, DeriveTraversable, FlexibleContexts, RankNTypes #-}
 module GUI.Momentu.Widgets.Grid
     ( make, makeWithKeys
     , Keys(..), stdKeys
