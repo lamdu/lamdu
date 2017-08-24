@@ -19,7 +19,7 @@
 -- of a vertically laid out parent will not use parentheses as the
 -- hierarchy is already clear in the layout itself.
 
-{-# LANGUAGE NoImplicitPrelude, TemplateHaskell, DeriveFunctor, FlexibleContexts, FlexibleInstances, MultiParamTypeClasses, TypeFamilies, UndecidableInstances #-}
+{-# LANGUAGE NoImplicitPrelude, TemplateHaskell, DeriveFunctor, FlexibleInstances, MultiParamTypeClasses, TypeFamilies, UndecidableInstances #-}
 
 module GUI.Momentu.Responsive
     ( Responsive(..), render
@@ -110,12 +110,11 @@ instance Functor f => Element (Responsive (f Widget.EventResult)) where
     setLayers = Widget.widget . Element.setLayers
     hoverLayers = Widget.widget %~ Element.hoverLayers
     empty = Responsive (const Element.empty)
-    pad p w =
-        w
-        & render . Lens.argument . layoutMode . modeWidths -~ 2 * (p ^. _1)
-        & render . Lens.mapped %~ Element.pad p
     scale = error "Responsive: scale not Implemented"
-    assymetricPad = error "Responsive: assymetricPad not implemented"
+    assymetricPad topLeft bottomRight w =
+        w
+        & render . Lens.argument . layoutMode . modeWidths -~ topLeft ^. _1 + bottomRight ^. _1
+        & render . Lens.mapped %~ Element.assymetricPad topLeft bottomRight
 
 instance E.HasEventMap Responsive where eventMap = Widget.widget . E.eventMap
 
