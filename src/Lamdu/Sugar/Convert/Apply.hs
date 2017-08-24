@@ -12,7 +12,7 @@ import qualified Data.Set as Set
 import qualified Data.Store.Property as Property
 import           Data.Store.Transaction (Transaction)
 import           Data.UUID.Types (UUID)
-import           Lamdu.Builtins.Anchors (trueTag, falseTag)
+import           Lamdu.Builtins.Anchors (boolTid, trueTag, falseTag)
 import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Calc.Type.FlatComposite as FlatComposite
 import           Lamdu.Calc.Type.Scheme (schemeType)
@@ -155,12 +155,21 @@ maybeGuard ::
     Functor m =>
     (ValI m -> Transaction m (ValI m)) -> Case UUID m (ExpressionU m a) -> Body UUID m (ExpressionU m a)
 maybeGuard setToVal caseBody =
-    case (caseBody ^? cKind . _CaseWithArg . caVal, caseBody ^. cAlts) of
-    (Just arg, [alt0, alt1])
-        | tagOf alt0 == trueTag && tagOf alt1 == falseTag -> convGuard arg alt0 alt1
-        | tagOf alt1 == trueTag && tagOf alt0 == falseTag -> convGuard arg alt1 alt0
-    _ -> BodyCase caseBody
+    case caseBody ^? cKind . _CaseWithArg . caVal of
+    Just arg ->
+        case arg ^. rBody of
+        BodyFromNom nom | nom ^. nTId . tidgTId == boolTid -> tryGuard (nom ^. nVal)
+        _ | arg ^? rPayload . plAnnotation . aInferredType . T._TInst . _1 == Just boolTid -> tryGuard arg
+        _ -> notAGuard
+    _ -> notAGuard
     where
+        notAGuard = BodyCase caseBody
+        tryGuard cond =
+            case caseBody ^. cAlts of
+            [alt0, alt1]
+                | tagOf alt0 == trueTag && tagOf alt1 == falseTag -> convGuard cond alt0 alt1
+                | tagOf alt1 == trueTag && tagOf alt0 == falseTag -> convGuard cond alt1 alt0
+            _ -> notAGuard
         tagOf alt = alt ^. caTag . tagVal
         convGuard cond altTrue altFalse =
             case mAltFalseBinder of
