@@ -36,9 +36,8 @@ genRow =
         vbox <- Responsive.vboxSpaced
         indent <- ResponsiveExpr.indent
         pure $ \indentAnimId condRow result ->
-            Responsive.hboxVertFallback Responsive.disambiguationNone
-            id [condRow, result]
-            (vbox [condRow, indent indentAnimId result])
+            vbox [condRow, indent indentAnimId result]
+            & Responsive.tryWideLayout (Responsive.hbox id id) [condRow, result]
 
 makeGuardRow ::
     Monad m =>

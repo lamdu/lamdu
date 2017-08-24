@@ -37,12 +37,17 @@ module GUI.Momentu.Responsive
 
     -- * Combinators
     , vbox, vboxSpaced, taggedList
-    , box, boxSpaced
 
-    , vertLayoutMaybeDisambiguate
+    -- * Responsive layout options
+    , WideLayoutOption(..), wContexts, wLayout
+    , tryWideLayout
+    , hbox
+
+    -- * Layouts with horizontal options
     , Disambiguators(..), disambHoriz, disambVert
-    , horizVertFallback, disambiguationNone
-    , hboxVertFallback
+    , vertLayoutMaybeDisambiguate
+    , disambiguationNone
+    , box, boxSpaced
     ) where
 
 import qualified Control.Lens as Lens
@@ -186,6 +191,38 @@ vboxSpaced =
     <&> List.intersperse
     <&> Lens.mapped %~ vbox
 
+data WideLayoutOption t a = WideLayoutOption
+    { _wContexts ::
+        Lens.AnIndexedTraversal LayoutDisambiguationContext
+        (t (Responsive a)) (t (WithTextPos (Widget a)))
+        (Responsive a) (WithTextPos (Widget a))
+    , _wLayout ::
+        LayoutDisambiguationContext ->
+        t (WithTextPos (Widget a)) ->
+        WithTextPos (Widget a)
+    }
+Lens.makeLenses ''WideLayoutOption
+
+tryWideLayout :: WideLayoutOption t a -> t (Responsive a) -> Responsive a -> Responsive a
+tryWideLayout layoutOption elements fallback =
+    Responsive $
+    \layoutParams ->
+    case layoutParams of
+    LayoutParams LayoutWide context -> (layoutOption ^. wLayout) context renderedElements
+    LayoutParams (LayoutNarrow limit) context
+        | wide ^. Align.tValue . Widget.wSize . _1 <= limit -> wide
+        | otherwise -> (fallback ^. render) layoutParams
+        where
+            wide = (layoutOption ^. wLayout) context renderedElements
+    where
+        renderedElements = elements & Lens.cloneIndexedTraversal (layoutOption ^. wContexts) %@~ renderElement
+        renderElement context element =
+            (element ^. render)
+            LayoutParams
+            { _layoutMode = LayoutWide
+            , _layoutContext = context
+            }
+
 taggedList ::
     (MonadReader env m, Spacer.HasStdSpacing env, Functor f) =>
     m ([(WithTextPos (Widget (f Widget.EventResult)), Responsive (f Widget.EventResult))] -> Responsive (f Widget.EventResult))
@@ -212,8 +249,10 @@ vertLayoutMaybeDisambiguate disamb vert =
     LayoutVertical -> (disamb vert ^. render) layoutParams
     _ -> (vert ^. render) layoutParams
 
+type HorizDisambiguator a = WithTextPos (Widget a) -> WithTextPos (Widget a)
+
 data Disambiguators a = Disambiguators
-    { _disambHoriz :: WithTextPos (Widget a) -> WithTextPos (Widget a)
+    { _disambHoriz :: HorizDisambiguator a
     , _disambVert :: Responsive a -> Responsive a
     }
 
@@ -222,61 +261,36 @@ Lens.makeLenses ''Disambiguators
 disambiguationNone :: Disambiguators a
 disambiguationNone = Disambiguators id id
 
--- | Use a given horizontal layout if there's room for it, or a vertical layout otherwise.
--- Apply a given disambiguation according to the decided layout.
--- A disambiguation is need when using a horizontal layout inside a horizontal layout,
--- or a vertical inside a vertical one.
--- If no disambiguation is needed (such is the case when operators have an order of operation),
--- pass over `disambiguationNone` as the disamiguator.
-horizVertFallback ::
+hbox ::
     Functor f =>
-    Disambiguators (f EventResult) ->
-    Responsive (f EventResult) -> Responsive (f EventResult) -> Responsive (f EventResult)
-horizVertFallback disamb horiz vert =
-    Responsive $
-    \layoutParams ->
-    let wide = (horiz ^. render) (layoutParams & layoutMode .~ LayoutWide)
-    in
-    case layoutParams of
-    LayoutParams LayoutWide LayoutHorizontal -> (disamb ^. disambHoriz) wide
-    LayoutParams LayoutWide _ -> wide
-    LayoutParams (LayoutNarrow limit) _
-        | wide ^. Element.width <= limit ->
-            -- There is enough room for the horizontal layout.
-            -- No disambiguation necessary because parent is vertical
-            wide
-    _ -> (vertLayoutMaybeDisambiguate (disamb ^. disambVert) vert ^. render) layoutParams
-
--- | Use an hbox if there is enough room, or a given vertical layout.
--- Gets a combinator on horizontically layed out guis to potentially add spaces between them.
-hboxVertFallback ::
-    Functor f =>
-    Disambiguators (f EventResult) ->
-    ([WithTextPos (Widget a)] -> [WithTextPos (Widget (f EventResult))]) -> [Responsive a] ->
-    Responsive (f EventResult) ->
-    Responsive (f EventResult)
-hboxVertFallback disamb onHGuis guis =
-    horizVertFallback disamb wide
+    HorizDisambiguator (f EventResult) ->
+    ([WithTextPos (Widget (f EventResult))] -> [WithTextPos (Widget (f EventResult))]) ->
+    WideLayoutOption [] (f EventResult)
+hbox disamb spacer =
+    WideLayoutOption
+    { _wContexts = contexts
+    , _wLayout = layout
+    }
     where
-        wide =
-            guis ^.. traverse . render
-            ?? LayoutParams
-                { _layoutMode = LayoutWide
-                , _layoutContext = LayoutHorizontal
-                }
-            & onHGuis
-            & Glue.hbox
-            & fromWithTextPos
+        contexts _ [] = pure []
+        contexts f (x:xs) =
+            (:)
+            <$> Lens.indexed f LayoutHorizontal x
+            <*> contexts f xs
+        layout c = mDisamb c . Glue.hbox . spacer
+        mDisamb LayoutHorizontal = disamb
+        mDisamb _ = id
 
 boxH ::
     Functor f =>
-    ([WithTextPos (Widget a)] -> [WithTextPos (Widget (f EventResult))]) ->
-    ([Responsive a] -> [Responsive (f EventResult)]) ->
+    ([WithTextPos (Widget (f EventResult))] -> [WithTextPos (Widget (f EventResult))]) ->
+    ([Responsive (f EventResult)] -> [Responsive (f EventResult)]) ->
     Disambiguators (f EventResult) ->
-    [Responsive a] ->
+    [Responsive (f EventResult)] ->
     Responsive (f EventResult)
 boxH onHGuis onVGuis disamb guis =
-    hboxVertFallback disamb onHGuis guis (vbox (onVGuis guis))
+    vbox (onVGuis guis)
+    & tryWideLayout (hbox (disamb ^. disambHoriz) onHGuis) guis
 
 box ::
     Functor f =>
