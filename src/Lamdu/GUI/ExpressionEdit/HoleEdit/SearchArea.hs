@@ -56,7 +56,7 @@ makeStdWrapped pl holeInfo =
         closedSearchTermGui <-
             fdWrap <*> SearchTerm.make holeInfo <&> Responsive.fromWithTextPos
             & ExpressionGui.stdWrap pl
-            <&> Widget.enterResultCursor .~ hidOpen
+            <&> Widget.enterResultCursor .~ hidClosedSearchArea
         isSelected <- Widget.isSubCursor ?? hidOpen
         case (isSelected, isAHoleInHole) of
             (True, False) ->
