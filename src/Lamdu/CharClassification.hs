@@ -10,7 +10,7 @@ import qualified Data.Map as Map
 import Lamdu.Prelude
 
 operatorChars :: String
-operatorChars = "\\+-*/^=><&|%$:.,!;#?@~≥≤≠⋲"
+operatorChars = "\\+-*/^=><&|%$:.!;#?@~≥≤≠⋲"
 
 bracketChars :: String
 bracketChars = "()[]{}"
