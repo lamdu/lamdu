@@ -497,7 +497,7 @@ nullParamEditInfo mActions =
     { ParamEdit.iMakeNameEdit =
       \myId ->
       (Widget.makeFocusableView ?? myId <&> (Align.tValue %~))
-      <*> ExpressionGui.grammarLabel "◗"
+      <*> ExpressionGui.grammarLabel "|"
       <&> Responsive.fromWithTextPos
     , ParamEdit.iMAddNext = Nothing
     , ParamEdit.iMOrderBefore = Nothing

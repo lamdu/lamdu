@@ -90,7 +90,7 @@ makeTVar (T.Var name) = showIdentifier name
 makeTFun :: Monad m => ParentPrecedence -> Type -> Type -> M m (WithTextPos View)
 makeTFun parentPrecedence a b =
     case a of
-    T.TRecord T.CEmpty -> [text "◗ "]
+    T.TRecord T.CEmpty -> [text "| "]
     _ ->
         [ splitMake (Precedence.parent 1) a
         , text " → "
