@@ -1,6 +1,6 @@
 {-# LANGUAGE LambdaCase, NoImplicitPrelude, OverloadedStrings, NamedFieldPuns, DisambiguateRecordFields #-}
 module Lamdu.GUI.ExpressionEdit.HoleEdit.EventMap
-    ( blockDownEvents, blockUpEvents, disallowCharsFromSearchTerm
+    ( disallowCharsFromSearchTerm
     , makeOpenEventMap
     ) where
 
@@ -28,22 +28,6 @@ import qualified Lamdu.Sugar.Types as Sugar
 import           Lamdu.Prelude
 
 type T = Transaction.Transaction
-
-blockDownEvents :: (Monoid a, Applicative f, E.HasEventMap w) => w (f a) -> w (f a)
-blockDownEvents = blockDirection MetaKey.Key'Down "down"
-
-blockUpEvents :: (Monoid a, Applicative f, E.HasEventMap w) => w (f a) -> w (f a)
-blockUpEvents = blockDirection MetaKey.Key'Up "up"
-
-blockDirection ::
-    (Monoid a, Applicative f, E.HasEventMap w) =>
-    MetaKey.Key -> E.Subtitle -> w (f a) -> w (f a)
-blockDirection key keyName =
-    pure mempty
-    & E.keyPresses
-        [ModKey mempty key]
-        (E.Doc ["Navigation", "Move", keyName <> " (blocked)"])
-    & E.weakerEvents
 
 adHocTextEditEventMap ::
     Monad m => HoleInfo m -> E.EventMap (T m Widget.EventResult)

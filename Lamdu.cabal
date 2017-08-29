@@ -133,6 +133,7 @@ Executable lamdu
                   , GUI.Momentu.Widgets.FocusDelegator
                   , GUI.Momentu.Widgets.Grid
                   , GUI.Momentu.Widgets.GridView
+                  , GUI.Momentu.Widgets.Menu
                   , GUI.Momentu.Widgets.Spacer
                   , GUI.Momentu.Widgets.StdKeys
                   , GUI.Momentu.Widgets.TextEdit

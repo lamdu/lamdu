@@ -15,11 +15,12 @@ import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Hover as Hover
 import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.Widgets.FocusDelegator as FocusDelegator
+import qualified GUI.Momentu.Widgets.Menu as Menu
 import qualified Lamdu.Config as Config
 import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.EventMap as HoleEventMap
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.Info (HoleInfo(..))
-import           Lamdu.GUI.ExpressionEdit.HoleEdit.Open (makeOpenSearchAreaGui, ResultsPlacement)
+import           Lamdu.GUI.ExpressionEdit.HoleEdit.Open (makeOpenSearchAreaGui)
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.SearchTerm as SearchTerm
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds (WidgetIds(..))
 import           Lamdu.GUI.ExpressionGui (ExpressionGui)
@@ -43,7 +44,7 @@ fdConfig Config.Hole{holeOpenKeys, holeCloseKeys} = FocusDelegator.Config
 makeStdWrapped ::
     Monad m =>
     Sugar.Payload m ExprGuiT.Payload -> HoleInfo m ->
-    ExprGuiM m (ResultsPlacement -> ExpressionGui m)
+    ExprGuiM m (Menu.Placement -> ExpressionGui m)
 makeStdWrapped pl holeInfo =
     do
         config <- Lens.view Config.config

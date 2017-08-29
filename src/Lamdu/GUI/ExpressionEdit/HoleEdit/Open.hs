@@ -3,7 +3,6 @@
 
 module Lamdu.GUI.ExpressionEdit.HoleEdit.Open
     ( makeOpenSearchAreaGui
-    , ResultsPlacement(..)
     ) where
 
 import qualified Control.Lens as Lens
@@ -31,6 +30,7 @@ import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widget.Id as WidgetId
 import qualified GUI.Momentu.Widgets.Grid as Grid
+import qualified GUI.Momentu.Widgets.Menu as Menu
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified GUI.Momentu.Widgets.TextView as TextView
 import           Lamdu.CharClassification (charPrecedence, operatorChars)
@@ -39,7 +39,7 @@ import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.EventMap as EventMap
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.Info (HoleInfo(..), hiSearchTerm)
-import           Lamdu.GUI.ExpressionEdit.HoleEdit.ResultGroups (ResultsList(..), Result(..), HaveHiddenResults(..))
+import           Lamdu.GUI.ExpressionEdit.HoleEdit.ResultGroups (ResultsList(..), Result(..))
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.ResultGroups as HoleResults
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.SearchTerm as SearchTerm
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.State (HoleState(..))
@@ -61,14 +61,6 @@ import qualified Lamdu.Sugar.Types as Sugar
 import           Lamdu.Prelude
 
 type T = Transaction
-
-data ResultGroupWidgets m = ResultGroupWidgets
-    { _rgwMainResultPickEventMap :: Widget.EventMap (T m Widget.EventResult)
-    , _rgwMainResultWidget :: WithTextPos (Widget (T m Widget.EventResult))
-    , _rgwExtraResultSymbol :: WithTextPos View
-    , _rgwExtraResultsWidget :: Widget (T m Widget.EventResult)
-    }
-Lens.makeLenses ''ResultGroupWidgets
 
 data PickedResult = PickedResult
     { _pickedEventResult :: Widget.EventResult
@@ -114,7 +106,7 @@ makeResultGroup ::
     Monad m =>
     HoleInfo m ->
     ResultsList m ->
-    ExprGuiM m (ResultGroupWidgets m)
+    ExprGuiM m (Menu.Option (T m))
 makeResultGroup holeInfo results =
     do
         (pickMain, mainResultWidget) <- makeShownResult holeInfo mainResult
@@ -130,11 +122,11 @@ makeResultGroup holeInfo results =
         extraSymbolWidget <-
             makeExtraSymbol isSelected results
             & Reader.local (Element.animIdPrefix .~ Widget.toAnimId (rId mainResult))
-        return ResultGroupWidgets
-            { _rgwMainResultPickEventMap = pickMain
-            , _rgwMainResultWidget = mainResultWidget
-            , _rgwExtraResultSymbol = extraSymbolWidget
-            , _rgwExtraResultsWidget = extraResWidget
+        return Menu.Option
+            { Menu._oPickEventMap = pickMain
+            , Menu._oWidget = mainResultWidget
+            , Menu._oSubmenuSymbol = extraSymbolWidget
+            , Menu._oSubmenuWidget = extraResWidget
             }
     where
         mainResult = results ^. HoleResults.rlMain
@@ -342,50 +334,6 @@ postProcessSugar expr =
             ExprGuiT.emptyPayload NearestHoles.none
             & ExprGuiT.plShowAnnotation .~ ExprGuiT.neverShowAnnotations
 
-makeNoResults :: Monad m => ExprGuiM m (WithTextPos View)
-makeNoResults = TextView.makeLabel "(No results)"
-
-makeHiddenResultsView ::
-    Monad m => HaveHiddenResults -> ExprGuiM m (WithTextPos View)
-makeHiddenResultsView NoHiddenResults = pure Element.empty
-makeHiddenResultsView HaveHiddenResults = TextView.makeLabel "..."
-
-layoutResults ::
-    Monad m =>
-    Widget.R -> [ResultGroupWidgets m] -> HaveHiddenResults ->
-    ExprGuiM m (OrderedResults (Widget (T m Widget.EventResult)))
-layoutResults minWidth groups hiddenResults
-    | null groups = makeNoResults <&> (^. Align.tValue) <&> Widget.fromView <&> pure
-    | otherwise =
-        do
-            hiddenResultsWidget <-
-                makeHiddenResultsView hiddenResults
-                <&> (^. Align.tValue)
-                <&> Widget.fromView
-            OrderedResults
-                { resultsFromTop = EventMap.blockDownEvents
-                , resultsFromBottom = EventMap.blockUpEvents
-                } <*>
-                ( OrderedResults
-                    { resultsFromTop = Glue.vbox
-                    , resultsFromBottom = Glue.vbox . reverse
-                    } ?? ((groups <&> layoutGroup) ++ [hiddenResultsWidget])
-                ) & return
-    where
-        layoutGroup group =
-            Hover.hoverInPlaceOf
-            (Hover.hoverBesideOptionsAxis Glue.Horizontal (group ^. rgwExtraResultsWidget) base)
-            base
-            where
-                base =
-                    ((group ^. rgwMainResultWidget
-                         & Element.width .~ maxMainResultWidth - group ^. rgwExtraResultSymbol . Element.width)
-                        /|/ (group ^. rgwExtraResultSymbol)) ^. Align.tValue & Hover.anchor
-        maxMainResultWidth = groups <&> groupMinWidth & maximum & max minWidth
-        groupMinWidth group =
-            group ^. rgwMainResultWidget . Element.width +
-            group ^. rgwExtraResultSymbol . Element.width
-
 emptyPickEventMap ::
     (Monad m, Applicative f) => ExprGuiM m (Widget.EventMap (f Widget.EventResult))
 emptyPickEventMap =
@@ -397,17 +345,17 @@ emptyPickEventMap =
 
 makeResultsWidget ::
     Monad m =>
-    Widget.R -> HoleInfo m -> [ResultsList m] -> HaveHiddenResults ->
-    ExprGuiM m (Widget.EventMap (T m Widget.EventResult), OrderedResults (Widget (T m Widget.EventResult)))
+    Widget.R -> HoleInfo m -> [ResultsList m] -> Menu.HasMoreOptions ->
+    ExprGuiM m (Widget.EventMap (T m Widget.EventResult), Menu.OrderedOptions (Widget (T m Widget.EventResult)))
 makeResultsWidget minWidth holeInfo shownResultsLists hiddenResults =
     do
         groupsWidgets <- traverse (makeResultGroup holeInfo) shownResultsLists
         pickResultEventMap <-
             case groupsWidgets of
             [] -> emptyPickEventMap
-            (x:_) -> x ^. rgwMainResultPickEventMap & return
+            (x:_) -> x ^. Menu.oPickEventMap & return
         theme <- Lens.view Theme.theme
-        layoutResults minWidth groupsWidgets hiddenResults
+        Menu.layout minWidth groupsWidgets hiddenResults
             <&> Lens.mapped %~
                 addBackground (Widget.toAnimId (hidResultsPrefix hids))
                 (Theme.hoverBGColor theme)
@@ -435,69 +383,51 @@ assignHoleEditCursor holeInfo shownMainResultsIds allShownResultIds searchTermId
         hids = hiIds holeInfo
         destId = head (shownMainResultsIds ++ [searchTermId])
 
-data OrderedResults a = OrderedResults
-    { resultsFromTop :: a
-    , resultsFromBottom :: a
-    } deriving (Functor, Foldable, Traversable)
-
-instance Applicative OrderedResults where
-    pure = join OrderedResults
-    OrderedResults fa fb <*> OrderedResults xa xb =
-        OrderedResults (fa xa) (fb xb)
-
--- In a wrapper hole, first we hover the search term.
---
--- If the search term was placed below, we mustn't place the results
--- back above (it'd hide the wrapped expr). Ditto for above.
---
--- Ordinary holes have no such restriction (AnyPlace)
-data ResultsPlacement = Above | Below | AnyPlace
-
 resultsHoverOptions ::
     Functor f =>
-    ResultsPlacement ->
+    Menu.Placement ->
     (Widget (f EventResult) -> Widget (f EventResult)) ->
     (Widget (f EventResult) -> Widget (f EventResult)) ->
-    OrderedResults (Widget (f EventResult))  ->
+    Menu.OrderedOptions (Widget (f EventResult)) ->
     Hover.AnchoredWidget (f EventResult) ->
     [Hover.AnchoredWidget (f EventResult)]
 resultsHoverOptions pos addBg addBgAnnotation results searchTerm =
     case pos of
-    Above -> [ above, aboveLeft ]
-    AnyPlace ->
+    Menu.Above -> [ above, aboveLeft ]
+    Menu.AnyPlace ->
         [ below
         , above
         , belowLeft
         , aboveLeft
-        , Aligned 0.5 annotatedTerm /|/ Aligned 0.5 (resultsFromTop bgResults)
+        , Aligned 0.5 annotatedTerm /|/ Aligned 0.5 (bgResults ^. Menu.optionsFromTop)
             ^. Align.value
         ]
-    Below ->
+    Menu.Below ->
         [ below
         , belowLeft
-        , Aligned 1 annotatedTerm /|/ Aligned 1 (resultsFromBottom bgResults)
+        , Aligned 1 annotatedTerm /|/ Aligned 1 (bgResults ^. Menu.optionsFromBottom)
             ^. Align.value
-        , Aligned 1 (resultsFromBottom bgResults) /|/ Aligned 1 annotatedTerm
+        , Aligned 1 (bgResults ^. Menu.optionsFromBottom) /|/ Aligned 1 annotatedTerm
             ^. Align.value
         ]
     where
-        above = resultsFromBottom bgResults /-/ annotatedTerm
+        above = (bgResults ^. Menu.optionsFromBottom) /-/ annotatedTerm
         aboveLeft =
-            Aligned 1 (resultsFromBottom bgResults)
+            Aligned 1 (bgResults ^. Menu.optionsFromBottom)
             /-/ Aligned 1 annotatedTerm
             ^. Align.value
-        below = searchTerm /-/ addBgAnnotation (resultsFromTop results)
+        below = searchTerm /-/ addBgAnnotation (results ^. Menu.optionsFromTop)
         belowLeft =
             Aligned 1 searchTerm
-            /-/ Aligned 1 (addBgAnnotation (resultsFromTop results))
+            /-/ Aligned 1 (addBgAnnotation (results ^. Menu.optionsFromTop))
             ^. Align.value
         bgResults = results <&> addBg
         annotatedTerm = searchTerm & Widget.widget %~ addBgAnnotation
 
 makeUnderCursorAssignment ::
     Monad m =>
-    [ResultsList m] -> HaveHiddenResults -> HoleInfo m ->
-    ExprGuiM m (ResultsPlacement -> WithTextPos (Widget (T m Widget.EventResult)))
+    [ResultsList m] -> Menu.HasMoreOptions -> HoleInfo m ->
+    ExprGuiM m (Menu.Placement -> WithTextPos (Widget (T m Widget.EventResult)))
 makeUnderCursorAssignment shownResultsLists hasHiddenResults holeInfo =
     do
         -- We make our own type view here instead of
@@ -534,7 +464,7 @@ makeUnderCursorAssignment shownResultsLists hasHiddenResults holeInfo =
 makeOpenSearchAreaGui ::
     Monad m =>
     Sugar.Payload m ExprGuiT.Payload -> HoleInfo m ->
-    ExprGuiM m (ResultsPlacement -> WithTextPos (Widget (T m Widget.EventResult)))
+    ExprGuiM m (Menu.Placement -> WithTextPos (Widget (T m Widget.EventResult)))
 makeOpenSearchAreaGui pl holeInfo =
     do
         (shownResultsLists, hasHiddenResults) <- HoleResults.makeAll holeInfo

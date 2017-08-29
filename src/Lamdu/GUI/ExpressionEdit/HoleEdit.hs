@@ -14,11 +14,11 @@ import           GUI.Momentu.Glue ((/-/))
 import qualified GUI.Momentu.Hover as Hover
 import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.Widget as Widget
+import qualified GUI.Momentu.Widgets.Menu as Menu
 import qualified Lamdu.Config as Config
 import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.Argument as Wrapper
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.Info (HoleInfo(..))
-import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.Open as Open
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.SearchArea as SearchArea
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.State as HoleState
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds (WidgetIds(..))
@@ -60,7 +60,7 @@ assignHoleCursor widgetIds =
 
 makeHoleWithWrapper ::
     (Functor f, Monad m) =>
-    ExpressionGui f -> (Open.ResultsPlacement -> ExpressionGui f) -> Sugar.Payload m ExprGuiT.Payload ->
+    ExpressionGui f -> (Menu.Placement -> ExpressionGui f) -> Sugar.Payload m ExprGuiT.Payload ->
     ExprGuiM m (ExpressionGui f)
 makeHoleWithWrapper wrapperGui searchAreaGui pl =
     do
@@ -78,8 +78,8 @@ makeHoleWithWrapper wrapperGui searchAreaGui pl =
                 wrapper & Align.tValue %~ Hover.hoverInPlaceOf options . Hover.anchor
                 where
                     options =
-                        [ hoverWrapper /-/ searchArea Open.Below
-                        , searchArea Open.Above /-/ hoverWrapper
+                        [ hoverWrapper /-/ searchArea Menu.Below
+                        , searchArea Menu.Above /-/ hoverWrapper
                         ]
                         <&> (^. Align.tValue)
                     hoverWrapper = render wrapperGui & Align.tValue %~ Hover.anchor
@@ -127,7 +127,7 @@ make hole pl =
 
         case mWrapperGui of
             Just wrapperGui -> makeHoleWithWrapper wrapperGui searchAreaGui pl
-            Nothing -> return (searchAreaGui Open.AnyPlace)
+            Nothing -> return (searchAreaGui Menu.AnyPlace)
             <&> E.weakerEvents deleteEventMap
     & assignHoleCursor widgetIds
     & Reader.local (Element.animIdPrefix .~ Widget.toAnimId (hidHole widgetIds))

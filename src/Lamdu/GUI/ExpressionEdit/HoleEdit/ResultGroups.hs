@@ -1,6 +1,6 @@
 {-# LANGUAGE NoImplicitPrelude, TemplateHaskell, FlexibleContexts, OverloadedStrings, NamedFieldPuns, DisambiguateRecordFields #-}
 module Lamdu.GUI.ExpressionEdit.HoleEdit.ResultGroups
-    ( makeAll, HaveHiddenResults(..)
+    ( makeAll
     , Result(..)
     , ResultsList(..), rlExtraResultsPrefixId, rlMain, rlExtra
     , prefixId
@@ -17,6 +17,7 @@ import qualified Data.List.Class as ListClass
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Text as Text
 import qualified GUI.Momentu.Widget.Id as WidgetId
+import qualified GUI.Momentu.Widgets.Menu as Menu
 import qualified Lamdu.Calc.Val as V
 import           Lamdu.Calc.Val.Annotated (Val)
 import qualified Lamdu.Config as Config
@@ -102,9 +103,7 @@ makeResultsList holeInfo group =
             | otherwise = NotPreferred
         searchTerm = hiSearchTerm holeInfo
 
-data HaveHiddenResults = HaveHiddenResults | NoHiddenResults
-
-collectResults :: Monad m => Config.Hole -> ListT m (ResultsList f) -> m ([ResultsList f], HaveHiddenResults)
+collectResults :: Monad m => Config.Hole -> ListT m (ResultsList f) -> m ([ResultsList f], Menu.HasMoreOptions)
 collectResults Config.Hole{holeResultCount} resultsM =
     do
         (collectedResults, remainingResultsM) <-
@@ -121,8 +120,8 @@ collectResults Config.Hole{holeResultCount} resultsM =
             & _2 %~ haveHiddenResults
             & return
     where
-        haveHiddenResults [] = NoHiddenResults
-        haveHiddenResults _ = HaveHiddenResults
+        haveHiddenResults [] = Menu.NoMoreOptions
+        haveHiddenResults _ = Menu.MoreOptionsAvailable
         resultsListScore x = (x ^. rlPreferred, rScore (x ^. rlMain))
         step results x =
             results
@@ -135,7 +134,7 @@ collectResults Config.Hole{holeResultCount} resultsM =
 makeAll ::
     (Monad n, MonadTransaction n m, MonadReader env m, Config.HasConfig env) =>
     HoleInfo n ->
-    m ([ResultsList n], HaveHiddenResults)
+    m ([ResultsList n], Menu.HasMoreOptions)
 makeAll holeInfo =
     do
         config <- Lens.view Config.config <&> Config.hole
