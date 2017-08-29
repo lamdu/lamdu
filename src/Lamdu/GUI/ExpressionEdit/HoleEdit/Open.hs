@@ -345,10 +345,10 @@ postProcessSugar expr =
 makeNoResults :: Monad m => ExprGuiM m (WithTextPos View)
 makeNoResults = TextView.makeLabel "(No results)"
 
-makeHiddenResultsMView ::
-    Monad m => HaveHiddenResults -> ExprGuiM m (Maybe (WithTextPos View))
-makeHiddenResultsMView NoHiddenResults = return Nothing
-makeHiddenResultsMView HaveHiddenResults = TextView.makeLabel "..." <&> Just
+makeHiddenResultsView ::
+    Monad m => HaveHiddenResults -> ExprGuiM m (WithTextPos View)
+makeHiddenResultsView NoHiddenResults = pure Element.empty
+makeHiddenResultsView HaveHiddenResults = TextView.makeLabel "..."
 
 layoutResults ::
     Monad m =>
@@ -359,8 +359,8 @@ layoutResults minWidth groups hiddenResults
     | otherwise =
         do
             hiddenResultsWidget <-
-                makeHiddenResultsMView hiddenResults
-                <&> maybe Element.empty (^. Align.tValue)
+                makeHiddenResultsView hiddenResults
+                <&> (^. Align.tValue)
                 <&> Widget.fromView
             OrderedResults
                 { resultsFromTop = EventMap.blockDownEvents
