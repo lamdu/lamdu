@@ -12,6 +12,7 @@ import           Data.Store.Transaction (Transaction)
 import qualified Control.Monad.Transaction as Transaction
 import           Data.UUID.Types (UUID)
 import qualified Lamdu.Calc.Type as T
+import qualified Lamdu.Calc.Type.Scheme as Scheme
 import qualified Lamdu.Calc.Val as V
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Definition as Def
@@ -63,11 +64,11 @@ inlineDef ctx globalId dest =
                 Property.pureModify (ctx ^. ConvertM.scFrozenDeps) (<> defExpr ^. Def.exprFrozenDeps)
                 newDefExpr <- DataOps.newHole
                 def & Def.defBody .~ Def.BodyExpr (Def.Expr newDefExpr mempty)
+                    & Def.defType .~ Scheme.any
                     & Transaction.writeIRef defI
                 Transaction.setP (Anchors.assocDefinitionState defI) DeletedDefinition
                 _ <- ctx ^. ConvertM.scPostProcessRoot
                 defExpr ^. Def.expr & EntityId.ofValI & return
-
 
 convertGlobal ::
     Monad m => V.Var -> Input.Payload m a -> MaybeT (ConvertM m) (GetVar UUID m)
