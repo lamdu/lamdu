@@ -5,10 +5,8 @@ module Lamdu.GUI.ExpressionEdit.HoleEdit.Argument
     ) where
 
 import qualified Control.Lens as Lens
-import qualified Data.Store.Transaction as Transaction
-import qualified GUI.Momentu.Draw as MDraw
-import qualified GUI.Momentu.Element as Element
-import qualified GUI.Momentu.EventMap as E
+import           Data.Store.Transaction (Transaction)
+import qualified GUI.Momentu as Momentu
 import qualified GUI.Momentu.Widget as Widget
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Config.Theme as Theme
@@ -23,12 +21,10 @@ import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
 
-type T = Transaction.Transaction
-
 makeUnwrapEventMap ::
     (MonadReader env m, Config.HasConfig env, Monad f) =>
     Sugar.HoleArg f (ExpressionN f a) -> WidgetIds ->
-    m (Widget.EventMap (T f Widget.EventResult))
+    m (Widget.EventMap (Transaction f Widget.EventResult))
 makeUnwrapEventMap arg widgetIds =
     Lens.view Config.config
     <&>
@@ -38,12 +34,12 @@ makeUnwrapEventMap arg widgetIds =
     case arg ^? Sugar.haUnwrap . Sugar._UnwrapAction of
     Just unwrap ->
         Widget.keysEventMapMovesCursor (unwrapKeys ++ Config.replaceParentKeys config)
-        (E.Doc ["Edit", "Unwrap"]) $ WidgetIds.fromEntityId <$> unwrap
+        (Momentu.Doc ["Edit", "Unwrap"]) $ WidgetIds.fromEntityId <$> unwrap
     Nothing ->
         hidOpenSearchTerm widgetIds & pure
         & Widget.keysEventMapMovesCursor unwrapKeys doc
         where
-            doc = E.Doc ["Navigation", "Hole", "Open"]
+            doc = Momentu.Doc ["Navigation", "Hole", "Open"]
 
 make ::
     Monad m => WidgetIds ->
@@ -60,7 +56,7 @@ make widgetIds arg =
         let frameWidth = Theme.typeIndicatorFrameWidth theme <&> realToFrac
         argGui <- ExprGuiM.makeSubexpression (arg ^. Sugar.haExpr)
         unwrapEventMap <- makeUnwrapEventMap arg widgetIds
-        MDraw.addInnerFrame
+        Momentu.addInnerFrame
             ?? frameColor ?? frameWidth
-            ?? Element.pad (frameWidth & _2 .~ 0) argGui
-            <&> E.weakerEvents unwrapEventMap
+            ?? Momentu.pad (frameWidth & _2 .~ 0) argGui
+            <&> Momentu.weakerEvents unwrapEventMap

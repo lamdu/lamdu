@@ -11,10 +11,9 @@ import           Data.Store.Property (Property)
 import qualified Data.Store.Property as Property
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Text as Text
-import           GUI.Momentu.Align (WithTextPos)
+import           GUI.Momentu (Widget, WithTextPos)
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.EventMap as E
-import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
 import qualified Lamdu.Config as Config

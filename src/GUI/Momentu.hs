@@ -24,6 +24,7 @@ module GUI.Momentu
     , WidgetId, pattern WidgetId
 
     -- | View
+    , View
     , View.unitSquare
 
     -- | GUI Layout
@@ -73,6 +74,7 @@ import           GUI.Momentu.Glue ((/-/), (/|/), Glued, Glue)
 import qualified GUI.Momentu.Main as MainLoop
 import           GUI.Momentu.MetaKey (MetaKey(..))
 import qualified GUI.Momentu.MetaKey as MetaKey
+import           GUI.Momentu.View (View)
 import qualified GUI.Momentu.View as View
 import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget

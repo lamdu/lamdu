@@ -12,8 +12,8 @@ import qualified Data.List.Class as List
 import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
 import qualified Data.Text as Text
+import           GUI.Momentu (MetaKey(..))
 import qualified GUI.Momentu.EventMap as E
-import           GUI.Momentu.MetaKey (MetaKey(..))
 import qualified GUI.Momentu.MetaKey as MetaKey
 import           GUI.Momentu.ModKey (ModKey(..))
 import qualified GUI.Momentu.Widget as Widget
@@ -46,7 +46,7 @@ blockDirection key keyName =
     & E.weakerEvents
 
 adHocTextEditEventMap ::
-    Monad m => HoleInfo m -> Widget.EventMap (T m Widget.EventResult)
+    Monad m => HoleInfo m -> E.EventMap (T m Widget.EventResult)
 adHocTextEditEventMap holeInfo =
     appendCharEventMap <> deleteCharEventMap
     where
@@ -135,7 +135,7 @@ listTHead nil l =
 -- have a canonical result?
 toLiteralTextEventMap ::
     Monad m =>
-    Sugar.LeafHoleActions name m -> Widget.EventMap (T m Widget.EventResult)
+    Sugar.LeafHoleActions name m -> E.EventMap (T m Widget.EventResult)
 toLiteralTextEventMap actions =
     Widget.keysEventMapMovesCursor toLiteralTextKeys
     (E.Doc ["Edit", "Create Text Literal"]) $
@@ -158,7 +158,7 @@ toLiteralTextEventMap actions =
 makeOpenEventMap ::
     Monad m =>
     HoleInfo m ->
-    ExprGuiM m (Widget.EventMap (T m Widget.EventResult))
+    ExprGuiM m (E.EventMap (T m Widget.EventResult))
 makeOpenEventMap holeInfo =
     do
         holeConfig <- Lens.view Config.config <&> Config.hole

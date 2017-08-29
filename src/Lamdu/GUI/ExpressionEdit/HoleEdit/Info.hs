@@ -33,4 +33,4 @@ hiSearchTermProperty :: HoleInfo m -> Property (T m) Text
 hiSearchTermProperty holeInfo = hiState holeInfo & Property.composeLens hsSearchTerm
 
 hiSearchTerm :: HoleInfo m -> Text
-hiSearchTerm holeInfo = Property.value (hiState holeInfo) ^. hsSearchTerm
+hiSearchTerm holeInfo = hiState holeInfo ^. Property.pVal . hsSearchTerm
