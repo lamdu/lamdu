@@ -6,6 +6,7 @@ module Lamdu.GUI.ExpressionEdit.HoleEdit.ValTerms
 import           Data.Store.Property (Property)
 import qualified Data.Store.Property as Property
 import qualified Data.Text as Text
+import qualified Lamdu.Builtins.Anchors as Builtins
 import           Lamdu.Formatting (Format(..))
 import qualified Lamdu.Sugar.Lens as SugarLens
 import qualified Lamdu.Sugar.Names.Get as NamesGet
@@ -49,7 +50,9 @@ bodyShape = \case
     Sugar.BodyGetVar Sugar.GetParamsRecord {} -> ["Params"]
     Sugar.BodyGetVar {} -> []
     Sugar.BodyToNom {} -> []
-    Sugar.BodyFromNom {} -> []
+    Sugar.BodyFromNom nom
+        | nom ^. Sugar.nTId . Sugar.tidgTId == Builtins.boolTid -> ["if"]
+        | otherwise -> []
     Sugar.BodyHole {} -> []
     Sugar.BodyInjectedExpression {} -> []
 

@@ -253,9 +253,6 @@ mkOptions sugarContext mInjectedArg exprPl stored =
             , [ P.abs "NewLambda" P.hole
               , P.recEmpty
               , P.absurd
-              , P._case Builtins.trueTag (P.abs "then" P.hole)
-                (P._case Builtins.falseTag (P.abs "else" P.hole) P.absurd)
-                P.$$ P.fromNom Builtins.boolTid P.hole
               ]
             ]
             <&> SeedExpr
