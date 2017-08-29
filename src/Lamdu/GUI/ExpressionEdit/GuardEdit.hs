@@ -98,11 +98,10 @@ verticalRowRender =
     do
         indent <- ResponsiveExpr.indent
         vbox <- Responsive.vboxSpaced
-        box <- Options.boxSpaced ?? Options.disambiguationNone
         return $
             \row ->
             vbox
-            [ box [row ^. rKeyword, row ^. rPredicate]
+            [ Options.box Options.disambiguationNone [row ^. rKeyword, row ^. rPredicate]
             , indent (row ^. rIndentId) (row ^. rResult)
             ]
 
