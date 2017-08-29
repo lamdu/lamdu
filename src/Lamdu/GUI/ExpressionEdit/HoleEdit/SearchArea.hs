@@ -51,12 +51,11 @@ makeStdWrapped pl holeInfo =
                 | isAHoleInHole = return id
                 | otherwise =
                     FocusDelegator.make ?? fdConfig (Config.hole config)
-                    ?? FocusDelegator.FocusEntryChild ?? hidClosedSearchArea
+                    ?? FocusDelegator.FocusEntryParent ?? hidClosedSearchArea
                     <&> (Align.tValue %~)
         closedSearchTermGui <-
             fdWrap <*> SearchTerm.make holeInfo <&> Responsive.fromWithTextPos
             & ExpressionGui.stdWrap pl
-            <&> Widget.enterResultCursor .~ hidClosedSearchArea
         isSelected <- Widget.isSubCursor ?? hidOpen
         case (isSelected, isAHoleInHole) of
             (True, False) ->
