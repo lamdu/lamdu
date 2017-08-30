@@ -11,6 +11,7 @@ import           Data.Vector.Vector2 (Vector2)
 import           GHC.Generics (Generic)
 import qualified GUI.Momentu.Draw as Draw
 import qualified GUI.Momentu.Responsive.Expression as Expression
+import qualified GUI.Momentu.Widgets.Menu as Menu
 import           Lamdu.Font (FontSize, Fonts)
 import qualified Lamdu.GUI.VersionControl.Config as VersionControl
 
@@ -29,8 +30,6 @@ instance Aeson.FromJSON Help
 
 data Hole = Hole
     { holeResultPadding :: Vector2 Double
-    , holeExtraSymbolColorUnselected :: Draw.Color
-    , holeExtraSymbolColorSelected :: Draw.Color
     , holeSearchTermBGColor :: Draw.Color
     , holeActiveSearchTermBGColor :: Draw.Color
     } deriving (Eq, Generic, Show)
@@ -81,6 +80,7 @@ data Theme = Theme
     , animationRemainInPeriod :: Double
     , help :: Help
     , hole :: Hole
+    , menu :: Menu.Style
     , name :: Name
     , eval :: Eval
     , newDefinitionActionColor :: Draw.Color
@@ -129,5 +129,5 @@ instance HasTheme Theme where theme = id
 themeStdSpacing :: Lens' Theme (Vector2 Double)
 themeStdSpacing f t = stdSpacing t & f <&> \new -> t { stdSpacing = new }
 
-instance Expression.HasStyle Theme where
-    style f t = f (indent t) <&> \x -> t { indent = x }
+instance Expression.HasStyle Theme where style f t = f (indent t) <&> \x -> t { indent = x }
+instance Menu.HasStyle Theme where style f t = f (menu t) <&> \x -> t { menu = x }

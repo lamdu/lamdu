@@ -14,8 +14,7 @@ import qualified Data.Monoid as Monoid
 import qualified Data.Store.Property as Property
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Text as Text
-import           Data.Vector.Vector2 (Vector2(..))
-import           GUI.Momentu (Widget, View, EventResult, AnimId)
+import           GUI.Momentu (Widget, EventResult, AnimId)
 import           GUI.Momentu.Align (Aligned(..), WithTextPos(..))
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Animation as Anim
@@ -32,7 +31,6 @@ import qualified GUI.Momentu.Widget.Id as WidgetId
 import qualified GUI.Momentu.Widgets.Grid as Grid
 import qualified GUI.Momentu.Widgets.Menu as Menu
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
-import qualified GUI.Momentu.Widgets.TextView as TextView
 import           Lamdu.CharClassification (charPrecedence, operatorChars)
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Config.Theme as Theme
@@ -68,16 +66,16 @@ data PickedResult = PickedResult
     }
 Lens.makeLenses ''PickedResult
 
-extraSymbol :: Text
-extraSymbol = "▷"
-
 resultSuffix :: Lens.Prism' AnimId AnimId
 resultSuffix = suffixed ["result suffix"]
 
 makeShownResult ::
     Monad m =>
     HoleInfo m -> Result m ->
-    ExprGuiM m (Widget.EventMap (T m Widget.EventResult), WithTextPos (Widget (T m Widget.EventResult)))
+    ExprGuiM m
+    ( Widget.EventMap (T m Widget.EventResult)
+    , WithTextPos (Widget (T m Widget.EventResult))
+    )
 makeShownResult holeInfo result =
     do
         -- Warning: rHoleResult should be ran at most once!
@@ -87,20 +85,6 @@ makeShownResult holeInfo result =
         stdSpacing <- Spacer.getSpaceSize
         let padding = Theme.holeResultPadding theme <&> realToFrac & (* stdSpacing)
         makeHoleResultWidget holeInfo (rId result) res <&> _2 %~ Element.pad padding
-
-makeExtraSymbol :: Monad m => Bool -> ResultsList n -> ExprGuiM m (WithTextPos View)
-makeExtraSymbol isSelected results
-    | Lens.nullOf (HoleResults.rlExtra . traverse) results = pure Element.empty
-    | otherwise =
-        do
-            holeTheme <- Lens.view Theme.theme <&> Theme.hole
-            let extraSymbolColor
-                    | isSelected = Theme.holeExtraSymbolColorSelected holeTheme
-                    | otherwise = Theme.holeExtraSymbolColorUnselected holeTheme
-            hSpace <- Spacer.getSpaceSize <&> (^. _1)
-            TextView.makeLabel extraSymbol
-                <&> Element.tint extraSymbolColor
-                <&> Element.assymetricPad (Vector2 hSpace 0) 0
 
 makeResultGroup ::
     Monad m =>
@@ -119,26 +103,24 @@ makeResultGroup holeInfo results =
             if isSelected
             then makeExtra
             else focusFirstExtraResult (results ^. HoleResults.rlExtra)
-        extraSymbolWidget <-
-            makeExtraSymbol isSelected results
-            & Reader.local (Element.animIdPrefix .~ Widget.toAnimId (rId mainResult))
         return Menu.Option
-            { Menu._oPickEventMap = pickMain
+            { Menu._oId = rId (results ^. HoleResults.rlMain)
+            , Menu._oPickEventMap = pickMain
             , Menu._oWidget = mainResultWidget
-            , Menu._oSubmenuSymbol = extraSymbolWidget
             , Menu._oSubmenuWidget = extraResWidget
             }
     where
         mainResult = results ^. HoleResults.rlMain
-        makeExtra = makeExtraResultsWidget holeInfo (results ^. HoleResults.rlExtra) <&> (^. Align.tValue)
-        focusFirstExtraResult [] = return Element.empty
-        focusFirstExtraResult (result:_) = Widget.makeFocusableView ?? rId result ?? Element.empty
+        makeExtra = makeExtraResultsWidget holeInfo (results ^. HoleResults.rlExtra) <&> fmap (^. Align.tValue)
+        focusFirstExtraResult [] = return Nothing
+        focusFirstExtraResult (result:_) =
+            Widget.makeFocusableView ?? rId result ?? Element.empty <&> Just
 
 makeExtraResultsWidget ::
     Monad m =>
     HoleInfo m -> [Result m] ->
-    ExprGuiM m (WithTextPos (Widget (T m Widget.EventResult)))
-makeExtraResultsWidget _ [] = return Element.empty
+    ExprGuiM m (Maybe (WithTextPos (Widget (T m Widget.EventResult))))
+makeExtraResultsWidget _ [] = return Nothing
 makeExtraResultsWidget holeInfo extraResults@(firstResult:_) =
     do
         theme <- Lens.view Theme.theme
@@ -146,6 +128,7 @@ makeExtraResultsWidget holeInfo extraResults@(firstResult:_) =
             <&> map snd
             <&> Glue.vbox
             <&> addBackground (Widget.toAnimId (rId firstResult)) (Theme.hoverBGColor theme)
+            <&> Just
 
 applyResultLayout ::
     Functor f => f (ExpressionGui m) -> f (WithTextPos (Widget (T m Widget.EventResult)))

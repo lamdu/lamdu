@@ -44,6 +44,7 @@ import qualified GUI.Momentu.Responsive.Expression as ResponsiveExpr
 import           GUI.Momentu.View (View)
 import qualified GUI.Momentu.Widget as Widget
 import           GUI.Momentu.Widget.Id (toAnimId)
+import qualified GUI.Momentu.Widgets.Menu as Menu
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
 import qualified GUI.Momentu.Widgets.TextView as TextView
@@ -136,6 +137,7 @@ instance Element.HasAnimIdPrefix (Askable m) where animIdPrefix = aAnimIdPrefix
 instance Config.HasConfig (Askable m) where config = aConfig
 instance Theme.HasTheme (Askable m) where theme = aTheme
 instance ResponsiveExpr.HasStyle (Askable m) where style = aTheme . ResponsiveExpr.style
+instance Menu.HasStyle (Askable m) where style = aTheme . Menu.style
 
 withLocalUnderline :: Monad m => TextView.Underline -> ExprGuiM m a -> ExprGuiM m a
 withLocalUnderline underline = Reader.local (TextView.underline ?~ underline)

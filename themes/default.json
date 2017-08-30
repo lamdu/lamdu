@@ -52,9 +52,11 @@
     "versionControl": {
         "selectedBranchColor": [0.25, 0.5, 0.25, 1.0]
     },
+    "menu": {
+        "submenuSymbolColorUnselected": [1.0, 1.0, 1.0, 0.3],
+        "submenuSymbolColorSelected": [1.0, 1.0, 1.0, 1.0]
+    },
     "hole": {
-        "holeExtraSymbolColorUnselected": [1.0, 1.0, 1.0, 0.3],
-        "holeExtraSymbolColorSelected": [1.0, 1.0, 1.0, 1.0],
         "holeResultPadding": [1.0, 0.5],
         "holeSearchTermBGColor": [0.2, 0.3, 0.5, 1.0],
         "holeActiveSearchTermBGColor": [0.3, 0.5, 0.2, 1.0]

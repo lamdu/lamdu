@@ -7,6 +7,7 @@ module GUI.Momentu.Widgets.TextView
     , HasStyle(..)
 
     , make, makeLabel, makeFocusable, makeFocusableLabel
+    , Font.TextSize(..), bounding, advance
     , RenderedText(..), renderedText, renderedTextSize
     , drawText
     , letterRects

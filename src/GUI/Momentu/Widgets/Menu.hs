@@ -1,38 +1,53 @@
-{-# LANGUAGE NoImplicitPrelude, TemplateHaskell, OverloadedStrings, DeriveTraversable #-}
+{-# LANGUAGE NoImplicitPrelude, TemplateHaskell, DeriveGeneric, OverloadedStrings, DeriveTraversable #-}
 
 module GUI.Momentu.Widgets.Menu
-    ( Option(..), oPickEventMap, oWidget, oSubmenuSymbol, oSubmenuWidget
+    ( Style(..), HasStyle(..)
+    , Option(..), oId, oPickEventMap, oWidget, oSubmenuWidget
     , OrderedOptions(..), optionsFromTop, optionsFromBottom
     , Placement(..), HasMoreOptions(..)
     , layout
     ) where
 
 import qualified Control.Lens as Lens
-import qualified GUI.Momentu.Align as Align
+import qualified Control.Monad.Reader as Reader
+import qualified Data.Aeson.Types as Aeson
+import           GHC.Generics (Generic)
 import           GUI.Momentu.Align (WithTextPos)
+import qualified GUI.Momentu.Align as Align
+import qualified GUI.Momentu.Draw as Draw
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.EventMap as E
-import qualified GUI.Momentu.Glue as Glue
 import           GUI.Momentu.Glue ((/|/))
+import qualified GUI.Momentu.Glue as Glue
 import qualified GUI.Momentu.Hover as Hover
 import qualified GUI.Momentu.MetaKey as MetaKey
 import           GUI.Momentu.ModKey (ModKey(..))
 import           GUI.Momentu.View (View)
-import qualified GUI.Momentu.Widget as Widget
 import           GUI.Momentu.Widget (Widget)
+import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.TextView as TextView
 
 import           Lamdu.Prelude
 
+data Style = Style
+    { submenuSymbolColorUnselected :: Draw.Color
+    , submenuSymbolColorSelected :: Draw.Color
+    } deriving (Eq, Generic, Show)
+instance Aeson.ToJSON Style where
+    toJSON = Aeson.genericToJSON Aeson.defaultOptions
+instance Aeson.FromJSON Style
+
+class HasStyle env where style :: Lens' env Style
+instance HasStyle Style where style = id
+
 data Option m = Option
-    { -- An event-map to pick this option
-      _oPickEventMap :: Widget.EventMap (m Widget.EventResult)
+    { _oId :: !Widget.Id
+    , -- An event-map to pick this option
+      _oPickEventMap :: !(Widget.EventMap (m Widget.EventResult))
     , -- A widget that represents this option
-      _oWidget :: WithTextPos (Widget (m Widget.EventResult))
-    , -- An optionally empty symbol indicating a submenu is available
-      _oSubmenuSymbol :: WithTextPos View
+      _oWidget :: !(WithTextPos (Widget (m Widget.EventResult)))
     , -- An optionally empty submenu
-      _oSubmenuWidget :: Widget (m Widget.EventResult)
+      _oSubmenuWidget :: !(Maybe (Widget (m Widget.EventResult)))
     }
 Lens.makeLenses ''Option
 
@@ -80,33 +95,78 @@ blockEvents =
                 (E.Doc ["Navigation", "Move", keyName <> " (blocked)"])
             & E.weakerEvents
 
+
+submenuSymbolText :: Text
+submenuSymbolText = " ▷"
+
+makeSubmenuSymbol ::
+    ( MonadReader env m, HasStyle env, Element.HasAnimIdPrefix env
+    , TextView.HasStyle env
+    ) =>
+    Bool -> m (WithTextPos View)
+makeSubmenuSymbol isSelected =
+    do
+        color <- Lens.view style <&> submenuSymbolColor
+        TextView.makeLabel submenuSymbolText
+            & Reader.local (TextView.color .~ color)
+    where
+        submenuSymbolColor
+            | isSelected = submenuSymbolColorSelected
+            | otherwise = submenuSymbolColorUnselected
+
+layoutOption ::
+    ( MonadReader env m, Element.HasAnimIdPrefix env, TextView.HasStyle env
+    , HasStyle env, Functor f
+    ) =>
+    Widget.R -> Option f -> m (Widget (f Widget.EventResult))
+layoutOption maxOptionWidth option =
+    case option ^. oSubmenuWidget of
+    Nothing ->
+        option ^. oWidget . Align.tValue & Element.width .~ maxOptionWidth & pure
+    Just submenu ->
+        do
+            submenuSymbol <-
+                makeSubmenuSymbol isSelected
+                & Reader.local (Element.animIdPrefix .~ Widget.toAnimId (option ^. oId))
+            let base =
+                    ((option ^. oWidget
+                      & Element.width .~ maxOptionWidth - submenuSymbol ^. Element.width)
+                     /|/ submenuSymbol) ^. Align.tValue & Hover.anchor
+            Hover.hoverInPlaceOf
+                (Hover.hoverBesideOptionsAxis Glue.Horizontal submenu base)
+                base & pure
+    where
+        isSelected =
+            Widget.isFocused (option ^. oWidget . Align.tValue)
+            || maybe False Widget.isFocused (option ^. oSubmenuWidget)
+
 layout ::
-    (MonadReader env m, TextView.HasStyle env, Element.HasAnimIdPrefix env, Applicative f) =>
+    ( MonadReader env m, TextView.HasStyle env
+    , Element.HasAnimIdPrefix env, HasStyle env
+    , Applicative f
+    ) =>
     Widget.R -> [Option f] -> HasMoreOptions ->
     m (OrderedOptions (Widget (f Widget.EventResult)))
 layout minWidth options hiddenResults
     | null options = makeNoResults <&> (^. Align.tValue) <&> Widget.fromView <&> pure
     | otherwise =
         do
+            submenuSymbolWidth <-
+                TextView.drawText ?? submenuSymbolText
+                <&> (^. TextView.renderedTextSize . TextView.bounding . _1)
+            let optionMinWidth option =
+                    option ^. oWidget . Element.width +
+                    case option ^. oSubmenuWidget of
+                    Nothing -> 0
+                    Just _ -> submenuSymbolWidth
+            let maxOptionWidth = options <&> optionMinWidth & maximum & max minWidth
             hiddenOptionsWidget <- makeMoreOptionsView hiddenResults
+            laidOutOptions <- traverse (layoutOption maxOptionWidth) options
             blockEvents <*>
                 ( OrderedOptions
                     { _optionsFromTop = id
                     , _optionsFromBottom = reverse
-                    } ?? ((options <&> layoutOption) ++ [Widget.fromView (hiddenOptionsWidget ^. Align.tValue)])
+                    } ?? (laidOutOptions ++ [Widget.fromView (hiddenOptionsWidget ^. Align.tValue)])
                     <&> Glue.vbox
                 ) & pure
-    where
-        layoutOption option =
-            Hover.hoverInPlaceOf
-            (Hover.hoverBesideOptionsAxis Glue.Horizontal (option ^. oSubmenuWidget) base)
-            base
-            where
-                base =
-                    ((option ^. oWidget
-                         & Element.width .~ maxMainResultWidth - option ^. oSubmenuSymbol . Element.width)
-                        /|/ (option ^. oSubmenuSymbol)) ^. Align.tValue & Hover.anchor
-        maxMainResultWidth = options <&> optionMinWidth & maximum & max minWidth
-        optionMinWidth option =
-            option ^. oWidget . Element.width +
-            option ^. oSubmenuSymbol . Element.width
+
