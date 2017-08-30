@@ -135,11 +135,7 @@ instance Spacer.HasStdSpacing (Askable m) where stdSpacing = aStdSpacing
 instance Element.HasAnimIdPrefix (Askable m) where animIdPrefix = aAnimIdPrefix
 instance Config.HasConfig (Askable m) where config = aConfig
 instance Theme.HasTheme (Askable m) where theme = aTheme
-instance ResponsiveExpr.HasStyle (Askable m) where
-    style =
-        aTheme . indent
-        where
-            indent f theme = f (Theme.indent theme) <&> \x -> theme { Theme.indent = x }
+instance ResponsiveExpr.HasStyle (Askable m) where style = aTheme . ResponsiveExpr.style
 
 withLocalUnderline :: Monad m => TextView.Underline -> ExprGuiM m a -> ExprGuiM m a
 withLocalUnderline underline = Reader.local (TextView.underline ?~ underline)

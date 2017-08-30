@@ -128,3 +128,6 @@ instance HasTheme Theme where theme = id
 
 themeStdSpacing :: Lens' Theme (Vector2 Double)
 themeStdSpacing f t = stdSpacing t & f <&> \new -> t { stdSpacing = new }
+
+instance Expression.HasStyle Theme where
+    style f t = f (indent t) <&> \x -> t { indent = x }
