@@ -2,7 +2,7 @@
 
 module GUI.Momentu.Widgets.Menu
     ( Style(..), HasStyle(..)
-    , Option(..), oId, oPickEventMap, oWidget, oSubmenuWidget
+    , Option(..), oId, oWidget, oSubmenuWidget
     , OrderedOptions(..), optionsFromTop, optionsFromBottom
     , Placement(..), HasMoreOptions(..)
     , layout
@@ -42,8 +42,6 @@ instance HasStyle Style where style = id
 
 data Option m = Option
     { _oId :: !Widget.Id
-    , -- An event-map to pick this option
-      _oPickEventMap :: !(Widget.EventMap (m Widget.EventResult))
     , -- A widget that represents this option
       _oWidget :: !(WithTextPos (Widget (m Widget.EventResult)))
     , -- An optionally empty submenu

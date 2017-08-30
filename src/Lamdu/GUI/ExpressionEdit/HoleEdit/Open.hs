@@ -69,6 +69,12 @@ Lens.makeLenses ''PickedResult
 resultSuffix :: Lens.Prism' AnimId AnimId
 resultSuffix = suffixed ["result suffix"]
 
+data ResultGroup m = ResultGroup
+    { _rgOption :: !(Menu.Option (T m))
+    , _rgPickEventMap :: !(Widget.EventMap (T m Widget.EventResult))
+    }
+Lens.makeLenses ''ResultGroup
+
 makeShownResult ::
     Monad m =>
     HoleInfo m -> Result m ->
@@ -90,7 +96,7 @@ makeResultGroup ::
     Monad m =>
     HoleInfo m ->
     ResultsList m ->
-    ExprGuiM m (Menu.Option (T m))
+    ExprGuiM m (ResultGroup m)
 makeResultGroup holeInfo results =
     do
         (pickMain, mainResultWidget) <- makeShownResult holeInfo mainResult
@@ -103,11 +109,13 @@ makeResultGroup holeInfo results =
             if isSelected
             then makeExtra
             else focusFirstExtraResult (results ^. HoleResults.rlExtra)
-        return Menu.Option
-            { Menu._oId = rId (results ^. HoleResults.rlMain)
-            , Menu._oPickEventMap = pickMain
-            , Menu._oWidget = mainResultWidget
-            , Menu._oSubmenuWidget = extraResWidget
+        return ResultGroup
+            { _rgOption = Menu.Option
+                { Menu._oId = rId (results ^. HoleResults.rlMain)
+                , Menu._oWidget = mainResultWidget
+                , Menu._oSubmenuWidget = extraResWidget
+                }
+            , _rgPickEventMap = pickMain
             }
     where
         mainResult = results ^. HoleResults.rlMain
@@ -336,9 +344,9 @@ makeResultsWidget minWidth holeInfo shownResultsLists hiddenResults =
         pickResultEventMap <-
             case groupsWidgets of
             [] -> emptyPickEventMap
-            (x:_) -> x ^. Menu.oPickEventMap & return
+            (x:_) -> x ^. rgPickEventMap & return
         theme <- Lens.view Theme.theme
-        Menu.layout minWidth groupsWidgets hiddenResults
+        Menu.layout minWidth (groupsWidgets <&> (^. rgOption)) hiddenResults
             <&> Lens.mapped %~
                 addBackground (Widget.toAnimId (hidResultsPrefix hids))
                 (Theme.hoverBGColor theme)
