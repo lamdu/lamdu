@@ -10,21 +10,17 @@ import qualified Data.Map as Map
 import           Data.Maybe.Utils (maybeToMPlus)
 import qualified Data.Set as Set
 import qualified Data.Store.Property as Property
-import           Data.Store.Transaction (Transaction)
-import           Data.UUID.Types (UUID)
-import           Lamdu.Builtins.Anchors (boolTid, trueTag, falseTag)
 import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Calc.Type.FlatComposite as FlatComposite
 import           Lamdu.Calc.Type.Scheme (schemeType)
 import qualified Lamdu.Calc.Val as V
 import           Lamdu.Calc.Val.Annotated (Val)
 import qualified Lamdu.Calc.Val.Annotated as Val
-import           Lamdu.Data.Anchors (bParamScopeId)
-import           Lamdu.Expr.IRef (ValI)
 import qualified Lamdu.Expr.UniqueId as UniqueId
 import qualified Lamdu.Infer as Infer
-import           Lamdu.Sugar.Convert.Hole.Wrapper (convertAppliedHole)
+import           Lamdu.Sugar.Convert.Case (convertAppliedCase)
 import           Lamdu.Sugar.Convert.Expression.Actions (addActions)
+import           Lamdu.Sugar.Convert.Hole.Wrapper (convertAppliedHole)
 import qualified Lamdu.Sugar.Convert.Input as Input
 import           Lamdu.Sugar.Convert.Monad (ConvertM)
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
@@ -130,95 +126,3 @@ convertPrefix funcS argS applyPl =
                 argS & rBody . _BodyHole . holeActions . holeMDelete .~ Just setToFunc
             }
             & addActions applyPl
-
-convertAppliedCase ::
-    (Monad m, Monoid a) =>
-    ExpressionU m a -> ExpressionU m a -> Input.Payload m a ->
-    MaybeT (ConvertM m) (ExpressionU m a)
-convertAppliedCase funcS argS exprPl =
-    do
-        caseB <- funcS ^? rBody . _BodyCase & maybeToMPlus
-        Lens.has (cKind . _LambdaCase) caseB & guard
-        protectedSetToVal <- lift ConvertM.typeProtectedSetToVal
-        let setTo = protectedSetToVal (exprPl ^. Input.stored)
-        let appliedCaseB =
-                caseB
-                & cKind .~ CaseWithArg
-                    CaseArg
-                    { _caVal = simplifyCaseArg argS
-                    , _caToLambdaCase =
-                        setTo (funcS ^. rPayload . plData . pStored . Property.pVal) <&> EntityId.ofValI
-                    }
-        maybeGuard setTo appliedCaseB & addActions exprPl & lift
-
-maybeGuard ::
-    Functor m =>
-    (ValI m -> Transaction m (ValI m)) -> Case UUID m (ExpressionU m a) -> Body UUID m (ExpressionU m a)
-maybeGuard setToVal caseBody =
-    case caseBody ^? cKind . _CaseWithArg . caVal of
-    Just arg ->
-        case arg ^. rBody of
-        BodyFromNom nom | nom ^. nTId . tidgTId == boolTid -> tryGuard (nom ^. nVal)
-        _ | arg ^? rPayload . plAnnotation . aInferredType . T._TInst . _1 == Just boolTid -> tryGuard arg
-        _ -> notAGuard
-    _ -> notAGuard
-    where
-        notAGuard = BodyCase caseBody
-        tryGuard cond =
-            case caseBody ^. cAlts of
-            [alt0, alt1]
-                | tagOf alt0 == trueTag && tagOf alt1 == falseTag -> convGuard cond alt0 alt1
-                | tagOf alt1 == trueTag && tagOf alt0 == falseTag -> convGuard cond alt1 alt0
-            _ -> notAGuard
-        tagOf alt = alt ^. caTag . tagVal
-        convGuard cond altTrue altFalse =
-            case mAltFalseBinder of
-            Just binder ->
-                case mAltFalseBinderExpr of
-                Just altFalseBinderExpr ->
-                    case altFalseBinderExpr ^. rBody of
-                    BodyGuard innerGuard ->
-                        GuardElseIf
-                        { _geScopes =
-                            case binder ^. bBodyScopes of
-                            SameAsParentScope -> error "lambda body should have scopes"
-                            BinderBodyScope x -> x <&> Lens.mapped %~ getScope
-                        , _geEntityId = altFalseBinderExpr ^. rPayload . plEntityId
-                        , _geCond = innerGuard ^. gIf
-                        , _geThen = innerGuard ^. gThen
-                        , _geDelete = innerGuard ^. gDeleteIf
-                        , _geCondAddLet = binder ^. bBody . bbAddOuterLet
-                        }
-                        : innerGuard ^. gElseIfs
-                        & makeRes (innerGuard ^. gElse)
-                        where
-                            getScope [x] = x ^. bParamScopeId
-                            getScope _ = error "guard evaluated more than once in same scope?"
-                    _ -> simpleIfElse
-                Nothing -> simpleIfElse
-            Nothing -> simpleIfElse
-            & BodyGuard
-            where
-                mAltFalseBinder = altFalse ^? caHandler . rBody . _BodyLam . lamBinder
-                mAltFalseBinderExpr = mAltFalseBinder ^? Lens._Just . bBody . bbContent . _BinderExpr
-                simpleIfElse = makeRes (altFalse ^. caHandler) []
-                makeRes els elseIfs =
-                    Guard
-                    { _gIf = cond
-                    , _gThen = altTrue ^. caHandler
-                    , _gElseIfs = elseIfs
-                    , _gElse = els
-                    , _gDeleteIf =
-                        fromMaybe (altFalse ^. caHandler) mAltFalseBinderExpr
-                        ^. rPayload . plData . pStored . Property.pVal
-                        & setToVal
-                        <&> EntityId.ofValI
-                    }
-
-simplifyCaseArg :: Monoid a => ExpressionU m a -> ExpressionU m a
-simplifyCaseArg argS =
-    case argS ^. rBody of
-    BodyFromNom nom | Lens.nullOf (nVal . rBody . _BodyHole) nom ->
-        nom ^. nVal
-        & rPayload . plActions . setToHole .~ argS ^. rPayload . plActions . setToHole
-    _ -> argS

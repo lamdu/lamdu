@@ -2,9 +2,12 @@
 module Lamdu.Sugar.Convert.Case
     ( convert
     , convertAbsurd
+    , convertAppliedCase
     ) where
 
 import qualified Control.Lens as Lens
+import           Control.Monad.Trans.Maybe (MaybeT(..))
+import           Data.Maybe.Utils (maybeToMPlus)
 import qualified Data.Store.Property as Property
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
@@ -18,6 +21,7 @@ import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.UniqueId as UniqueId
 import           Lamdu.Sugar.Convert.Expression.Actions (addActions)
+import           Lamdu.Sugar.Convert.Guard (convertGuard)
 import qualified Lamdu.Sugar.Convert.Input as Input
 import           Lamdu.Sugar.Convert.Monad (ConvertM)
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
@@ -130,3 +134,33 @@ convert (V.Case tag val rest) exprPl = do
         & cAddAlt %~ (>>= setTagOrder (1 + length (restCase ^. cAlts)))
         & BodyCase
         & addActions exprPl
+
+convertAppliedCase ::
+    (Monad m, Monoid a) =>
+    ExpressionU m a -> ExpressionU m a -> Input.Payload m a ->
+    MaybeT (ConvertM m) (ExpressionU m a)
+convertAppliedCase funcS argS exprPl =
+    do
+        caseB <- funcS ^? rBody . _BodyCase & maybeToMPlus
+        Lens.has (cKind . _LambdaCase) caseB & guard
+        protectedSetToVal <- lift ConvertM.typeProtectedSetToVal
+        let setTo = protectedSetToVal (exprPl ^. Input.stored)
+        let appliedCaseB =
+                caseB
+                & cKind .~ CaseWithArg
+                    CaseArg
+                    { _caVal = simplifyCaseArg argS
+                    , _caToLambdaCase =
+                        setTo (funcS ^. rPayload . plData . pStored . Property.pVal) <&> EntityId.ofValI
+                    }
+        convertGuard setTo appliedCaseB
+            & maybe (BodyCase appliedCaseB) BodyGuard
+            & addActions exprPl & lift
+
+simplifyCaseArg :: Monoid a => ExpressionU m a -> ExpressionU m a
+simplifyCaseArg argS =
+    case argS ^. rBody of
+    BodyFromNom nom | Lens.nullOf (nVal . rBody . _BodyHole) nom ->
+        nom ^. nVal
+        & rPayload . plActions . setToHole .~ argS ^. rPayload . plActions . setToHole
+    _ -> argS
