@@ -2,7 +2,7 @@
 -- rectangular shaped hovering UI elements (e.g: annotations)
 {-# LANGUAGE NoImplicitPrelude, OverloadedStrings #-}
 module Lamdu.GUI.Hover
-    ( addBackground, addDarkBackground
+    ( addDarkBackground
     ) where
 
 import qualified Control.Lens as Lens
@@ -13,9 +13,6 @@ import qualified GUI.Momentu.Element as Element
 import qualified Lamdu.Config.Theme as Theme
 
 import           Lamdu.Prelude
-
-addBackground :: Element a => AnimId -> Draw.Color -> a -> a
-addBackground myId = Draw.backgroundColor (myId <> ["hover background"])
 
 addDarkBackground ::
     (Theme.HasTheme env, Element a, MonadReader env m) => AnimId -> m (a -> a)

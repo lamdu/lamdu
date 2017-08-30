@@ -9,6 +9,7 @@ import qualified Data.ByteString.Char8 as SBS8
 import           Data.Store.Transaction (Transaction)
 import           GUI.Momentu.Align (WithTextPos)
 import qualified GUI.Momentu.Align as Align
+import qualified GUI.Momentu.Draw as Draw
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Font (Underline(..))
@@ -130,7 +131,8 @@ definitionTypeChangeBox info getVarId =
         let box =
                 headerLabel /-/ typeWhenUsed /-/ spacing /-/ sepLabel /-/ typeCurrent
                 & Element.pad padding
-                & Hover.addBackground animId (Theme.hoverBGColor theme)
+                & Draw.backgroundColor (animId <> ["hover background"])
+                  (Theme.hoverBGColor theme)
         -- TODO: unify config's button press keys
         let keys = Config.newDefinitionButtonPressKeys (Config.pane config)
         let update = (info ^. Sugar.defTypeUseCurrent) >> return getVarId

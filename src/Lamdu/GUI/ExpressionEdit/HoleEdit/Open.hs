@@ -18,6 +18,7 @@ import           GUI.Momentu (Widget, EventResult, AnimId)
 import           GUI.Momentu.Align (Aligned(..), WithTextPos(..))
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Animation as Anim
+import qualified GUI.Momentu.Draw as Draw
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Glue ((/-/), (/|/))
@@ -48,7 +49,7 @@ import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
-import           Lamdu.GUI.Hover (addBackground, addDarkBackground)
+import           Lamdu.GUI.Hover (addDarkBackground)
 import qualified Lamdu.GUI.TypeView as TypeView
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.Sugar.Lens as SugarLens
@@ -136,8 +137,11 @@ makeExtraResultsWidget holeInfo extraResults@(firstResult:_) =
         traverse (makeShownResult holeInfo) extraResults
             <&> map snd
             <&> Glue.vbox
-            <&> addBackground (Widget.toAnimId (rId firstResult)) (Theme.hoverBGColor theme)
+            <&> Draw.backgroundColor (animId <> ["hover background"])
+                (Theme.hoverBGColor theme)
             <&> Just
+    where
+        animId = rId firstResult & Widget.toAnimId
 
 applyResultLayout ::
     Functor f => f (ExpressionGui m) -> f (WithTextPos (Widget (T m Widget.EventResult)))
@@ -349,10 +353,11 @@ makeResultsWidget minWidth holeInfo shownResultsLists hiddenResults =
         theme <- Lens.view Theme.theme
         Menu.layout minWidth (groupsWidgets <&> (^. rgOption)) hiddenResults
             <&> Lens.mapped %~
-                addBackground (Widget.toAnimId (hidResultsPrefix hids))
+                Draw.backgroundColor (animId <> ["hover background"])
                 (Theme.hoverBGColor theme)
             <&> (,) pickResultEventMap
     where
+        animId = Widget.toAnimId (hidResultsPrefix hids)
         hids = hiIds holeInfo
 
 assignHoleEditCursor ::

@@ -13,6 +13,7 @@ import           Data.Store.Transaction (Transaction)
 import qualified Data.Text as Text
 import           GUI.Momentu (Widget, WithTextPos)
 import qualified GUI.Momentu.Align as Align
+import qualified GUI.Momentu.Draw as Draw
 import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
@@ -24,7 +25,6 @@ import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.Info as HoleInfo
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds (WidgetIds(..))
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds as WidgetIds
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
-import           Lamdu.GUI.Hover (addBackground)
 
 import           Lamdu.Prelude
 
@@ -69,8 +69,9 @@ make holeInfo =
         makeSearchTermPropEdit widgetIds (HoleInfo.hiSearchTermProperty holeInfo)
             <&> Align.tValue . E.eventMap
                 %~ EventMap.disallowCharsFromSearchTerm holeConfig holeInfo textCursor
-            <&> addBackground (Widget.toAnimId (hidOpenSearchTerm widgetIds))
-                (bgColor holeTheme)
+            <&> Draw.backgroundColor bgAnimId (bgColor holeTheme)
     where
+        bgAnimId =
+            Widget.toAnimId (hidOpenSearchTerm widgetIds) <> ["hover background"]
         widgetIds = hiIds holeInfo
         searchTerm = HoleInfo.hiSearchTerm holeInfo
