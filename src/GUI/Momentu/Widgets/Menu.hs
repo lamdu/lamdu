@@ -84,8 +84,8 @@ layout ::
     (MonadReader env m, TextView.HasStyle env, Element.HasAnimIdPrefix env, Applicative f) =>
     Widget.R -> [Option f] -> HasMoreOptions ->
     m (OrderedOptions (Widget (f Widget.EventResult)))
-layout minWidth groups hiddenResults
-    | null groups = makeNoResults <&> (^. Align.tValue) <&> Widget.fromView <&> pure
+layout minWidth options hiddenResults
+    | null options = makeNoResults <&> (^. Align.tValue) <&> Widget.fromView <&> pure
     | otherwise =
         do
             hiddenOptionsWidget <- makeMoreOptionsView hiddenResults
@@ -93,20 +93,20 @@ layout minWidth groups hiddenResults
                 ( OrderedOptions
                     { _optionsFromTop = id
                     , _optionsFromBottom = reverse
-                    } ?? ((groups <&> layoutGroup) ++ [Widget.fromView (hiddenOptionsWidget ^. Align.tValue)])
+                    } ?? ((options <&> layoutOption) ++ [Widget.fromView (hiddenOptionsWidget ^. Align.tValue)])
                     <&> Glue.vbox
                 ) & pure
     where
-        layoutGroup group =
+        layoutOption option =
             Hover.hoverInPlaceOf
-            (Hover.hoverBesideOptionsAxis Glue.Horizontal (group ^. oSubmenuWidget) base)
+            (Hover.hoverBesideOptionsAxis Glue.Horizontal (option ^. oSubmenuWidget) base)
             base
             where
                 base =
-                    ((group ^. oWidget
-                         & Element.width .~ maxMainResultWidth - group ^. oSubmenuSymbol . Element.width)
-                        /|/ (group ^. oSubmenuSymbol)) ^. Align.tValue & Hover.anchor
-        maxMainResultWidth = groups <&> groupMinWidth & maximum & max minWidth
-        groupMinWidth group =
-            group ^. oWidget . Element.width +
-            group ^. oSubmenuSymbol . Element.width
+                    ((option ^. oWidget
+                         & Element.width .~ maxMainResultWidth - option ^. oSubmenuSymbol . Element.width)
+                        /|/ (option ^. oSubmenuSymbol)) ^. Align.tValue & Hover.anchor
+        maxMainResultWidth = options <&> optionMinWidth & maximum & max minWidth
+        optionMinWidth option =
+            option ^. oWidget . Element.width +
+            option ^. oSubmenuSymbol . Element.width
