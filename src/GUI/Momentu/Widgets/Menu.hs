@@ -45,7 +45,7 @@ data Option m = Option
     , -- A widget that represents this option
       _oWidget :: !(WithTextPos (Widget (m Widget.EventResult)))
     , -- An optionally empty submenu
-      _oSubmenuWidget :: !(Maybe (Widget (m Widget.EventResult)))
+      _oSubmenuWidget :: !(Maybe (WithTextPos (Widget (m Widget.EventResult))))
     }
 Lens.makeLenses ''Option
 
@@ -116,27 +116,32 @@ layoutOption ::
     ( MonadReader env m, Element.HasAnimIdPrefix env, TextView.HasStyle env
     , HasStyle env, Functor f
     ) =>
-    Widget.R -> Option f -> m (Widget (f Widget.EventResult))
+    Widget.R -> Option f -> m (WithTextPos (Widget (f Widget.EventResult)))
 layoutOption maxOptionWidth option =
     case option ^. oSubmenuWidget of
     Nothing ->
-        option ^. oWidget . Align.tValue & Element.width .~ maxOptionWidth & pure
+        option ^. oWidget & Element.width .~ maxOptionWidth & pure
     Just submenu ->
         do
             submenuSymbol <-
                 makeSubmenuSymbol isSelected
                 & Reader.local (Element.animIdPrefix .~ Widget.toAnimId (option ^. oId))
             let base =
-                    ((option ^. oWidget
-                      & Element.width .~ maxOptionWidth - submenuSymbol ^. Element.width)
-                     /|/ submenuSymbol) ^. Align.tValue & Hover.anchor
-            Hover.hoverInPlaceOf
-                (Hover.hoverBesideOptionsAxis Glue.Horizontal submenu base)
-                base & pure
+                    (option ^. oWidget
+                     & Element.width .~ maxOptionWidth - submenuSymbol ^. Element.width)
+                    /|/ submenuSymbol
+                    & Align.tValue %~ Hover.anchor
+            base
+                & Align.tValue %~
+                Hover.hoverInPlaceOf
+                (Hover.hoverBesideOptionsAxis Glue.Horizontal submenu base
+                 <&> (^. Align.tValue))
+                & pure
     where
         isSelected =
             Widget.isFocused (option ^. oWidget . Align.tValue)
-            || maybe False Widget.isFocused (option ^. oSubmenuWidget)
+            || Lens.anyOf (oSubmenuWidget . Lens._Just . Align.tValue)
+               Widget.isFocused option
 
 layout ::
     ( MonadReader env m, TextView.HasStyle env
@@ -158,13 +163,17 @@ layout minWidth options hiddenResults
                     Nothing -> 0
                     Just _ -> submenuSymbolWidth
             let maxOptionWidth = options <&> optionMinWidth & maximum & max minWidth
-            hiddenOptionsWidget <- makeMoreOptionsView hiddenResults
-            laidOutOptions <- traverse (layoutOption maxOptionWidth) options
+            hiddenOptionsWidget <-
+                makeMoreOptionsView hiddenResults
+                <&> (^. Align.tValue) <&> Widget.fromView
+            laidOutOptions <-
+                traverse (layoutOption maxOptionWidth) options
+                <&> map (^. Align.tValue)
             blockEvents <*>
                 ( OrderedOptions
                     { _optionsFromTop = id
                     , _optionsFromBottom = reverse
-                    } ?? (laidOutOptions ++ [Widget.fromView (hiddenOptionsWidget ^. Align.tValue)])
+                    } ?? (laidOutOptions ++ [hiddenOptionsWidget])
                     <&> Glue.vbox
                 ) & pure
 

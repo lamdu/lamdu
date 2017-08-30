@@ -119,10 +119,11 @@ makeResultGroup holeInfo results =
             }
     where
         mainResult = results ^. HoleResults.rlMain
-        makeExtra = makeExtraResultsWidget holeInfo (results ^. HoleResults.rlExtra) <&> fmap (^. Align.tValue)
+        makeExtra = makeExtraResultsWidget holeInfo (results ^. HoleResults.rlExtra)
         focusFirstExtraResult [] = return Nothing
         focusFirstExtraResult (result:_) =
-            Widget.makeFocusableView ?? rId result ?? Element.empty <&> Just
+            Widget.makeFocusableView ?? rId result ?? Element.empty
+            <&> Align.WithTextPos 0 <&> Just
 
 makeExtraResultsWidget ::
     Monad m =>
