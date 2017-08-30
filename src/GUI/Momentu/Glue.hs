@@ -32,7 +32,7 @@ type GluesTo a b c = (Glue a b, Glued a b ~ c)
 
 glueH ::
     (SizedElement a, SizedElement b) =>
-    (a -> b -> Glued a b) -> Orientation -> a -> b -> Glued a b
+    (a -> b -> c) -> Orientation -> a -> b -> c
 glueH f orientation v0 v1 =
     f (v0 & Element.size .~ newSize)
     ( Element.assymetricPad t 0 v1
