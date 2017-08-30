@@ -1,6 +1,7 @@
 {-# LANGUAGE NoImplicitPrelude, TemplateHaskell, DeriveFunctor, FlexibleInstances, MultiParamTypeClasses, TypeFamilies, FlexibleContexts #-}
 module GUI.Momentu.Hover
     ( AnchoredWidget, anchor
+    , Hover, hover
     , hoverInPlaceOf, hoverBesideOptions, hoverBesideOptionsAxis
     , Orientation(..)
     ) where
@@ -27,6 +28,22 @@ data AnchoredWidget a = AnchoredWidget
     } deriving Functor
 Lens.makeLenses ''AnchoredWidget
 
+newtype Hover a = Hover { _unHover :: a }
+Lens.makeLenses ''Hover
+
+instance Element a => Element (Hover a) where
+    setLayers = unHover . Element.setLayers
+    hoverLayers = unHover %~ Element.hoverLayers
+    assymetricPad p0 p1 = unHover %~ Element.assymetricPad p0 p1
+    scale r = unHover %~ Element.scale r
+    empty = Hover Element.empty
+
+instance SizedElement a => SizedElement (Hover a) where
+    size = unHover . Element.size
+
+hover :: Element a => a -> Hover a
+hover = Hover . Element.hoverLayers
+
 instance Widget.HasWidget AnchoredWidget where widget = anchored
 
 instance Functor f => Element (AnchoredWidget (f EventResult)) where
@@ -47,29 +64,35 @@ instance Functor f => Element (AnchoredWidget (f EventResult)) where
 instance Functor f => SizedElement (AnchoredWidget (f EventResult)) where
     size = anchored . Element.size
 
-instance Functor f => Glue (AnchoredWidget (f EventResult)) View where
-    type Glued (AnchoredWidget (f EventResult)) View = AnchoredWidget (f EventResult)
-    glue = Glue.glueH $ \w v -> w & Element.setLayers <>~ Element.hoverLayers v ^. View.vAnimLayers
+instance Functor f => Glue (AnchoredWidget (f EventResult)) (Hover View) where
+    type Glued (AnchoredWidget (f EventResult)) (Hover View) = AnchoredWidget (f EventResult)
+    glue o ow (Hover ov) =
+        Glue.glueH f o ow ov
+        where
+            f w v = w & Element.setLayers <>~ v ^. View.vAnimLayers
 
-instance Functor f => Glue View (AnchoredWidget (f EventResult)) where
-    type Glued View (AnchoredWidget (f EventResult)) = AnchoredWidget (f EventResult)
-    glue = Glue.glueH $ \v w -> w & Element.setLayers <>~ Element.hoverLayers v ^. View.vAnimLayers
+instance Functor f => Glue (Hover View) (AnchoredWidget (f EventResult)) where
+    type Glued (Hover View) (AnchoredWidget (f EventResult)) = AnchoredWidget (f EventResult)
+    glue o (Hover ov) ow =
+        Glue.glueH f o ov ow
+        where
+            f v w = w & Element.setLayers <>~ v ^. View.vAnimLayers
 
-instance Functor f => Glue (AnchoredWidget (f EventResult)) (Widget (f EventResult)) where
-    type Glued (AnchoredWidget (f EventResult)) (Widget (f EventResult)) = AnchoredWidget (f EventResult)
-    glue orientation =
-        Glue.glueH f orientation
+instance Functor f => Glue (AnchoredWidget (f EventResult)) (Hover (Widget (f EventResult))) where
+    type Glued (AnchoredWidget (f EventResult)) (Hover (Widget (f EventResult))) = AnchoredWidget (f EventResult)
+    glue orientation ow0 (Hover ow1) =
+        Glue.glueH f orientation ow0 ow1
         where
             f (AnchoredWidget pos w0) w1 =
-                AnchoredWidget pos (Widget.glueStates orientation w0 (Element.hoverLayers w1))
+                AnchoredWidget pos (Widget.glueStates orientation w0 w1)
 
-instance Functor f => Glue (Widget (f EventResult)) (AnchoredWidget (f EventResult)) where
-    type Glued (Widget (f EventResult)) (AnchoredWidget (f EventResult)) = AnchoredWidget (f EventResult)
-    glue orientation =
-        Glue.glueH f orientation
+instance Functor f => Glue (Hover (Widget (f EventResult))) (AnchoredWidget (f EventResult)) where
+    type Glued (Hover (Widget (f EventResult))) (AnchoredWidget (f EventResult)) = AnchoredWidget (f EventResult)
+    glue orientation (Hover ow0) ow1 =
+        Glue.glueH f orientation ow0 ow1
         where
             f w0 (AnchoredWidget pos w1) =
-                AnchoredWidget pos (Widget.glueStates orientation (Element.hoverLayers w0) w1)
+                AnchoredWidget pos (Widget.glueStates orientation w0 w1)
 
 anchor :: Widget a -> AnchoredWidget a
 anchor = AnchoredWidget 0
@@ -79,21 +102,21 @@ hoverBesideOptions ::
     , SizedElement a, SizedElement b, SizedElement (Glued a b)
     ) =>
     a -> b -> [Glued a b]
-hoverBesideOptions hover src =
+hoverBesideOptions h src =
     do
         o <- [Glue.Vertical, Glue.Horizontal]
-        hoverBesideOptionsAxis o hover src
+        hoverBesideOptionsAxis o h src
 
 hoverBesideOptionsAxis ::
     ( Glue a b, Glue b a
     , SizedElement a, SizedElement b, SizedElement (Glued a b)
     ) =>
     Orientation -> a -> b -> [Glued a b]
-hoverBesideOptionsAxis o hover src =
+hoverBesideOptionsAxis o h src =
     do
         x <- [0, 1]
         let aSrc = Aligned x src
-        let aHover = Aligned x hover
+        let aHover = Aligned x h
         [glue o aSrc aHover, glue o aHover aSrc] <&> (^. value)
 
 hoverInPlaceOf ::
@@ -111,7 +134,7 @@ hoverInPlaceOf hoverOptions@(defaultOption:_) place
         , Widget._wState = Widget.StateFocused makeFocused
         }
     where
-        translation hover = place ^. anchorPoint - hover ^. anchorPoint
+        translation h = place ^. anchorPoint - h ^. anchorPoint
         -- All hovers *should* be same the - either focused or unfocused..
         focusedOptions =
             do
@@ -122,13 +145,13 @@ hoverInPlaceOf hoverOptions@(defaultOption:_) place
             surrounding
             & Widget.sRight -~ sizeDiff ^. _1
             & Widget.sBottom -~ sizeDiff ^. _2
-            & Widget.translateFocused (translation hover) hMakeFocused
+            & Widget.translateFocused (translation h) hMakeFocused
             & Widget.fFocalAreas %~ (Rect 0 (place ^. Element.size) :)
             where
-                (hover, hMakeFocused) = pickOption surrounding
-                sizeDiff = hover ^. Element.size - place ^. Element.size
+                (h, hMakeFocused) = pickOption surrounding
+                sizeDiff = h ^. Element.size - place ^. Element.size
         pickOption surrounding = minimumOn (negate . remainSurrouding surrounding . (^. _1)) focusedOptions
-        remainSurrouding surrounding hover =
+        remainSurrouding surrounding h =
             filter (>= 0)
             [ surrounding ^. Widget.sLeft - tl ^. _1
             , surrounding ^. Widget.sTop - tl ^. _2
@@ -137,5 +160,5 @@ hoverInPlaceOf hoverOptions@(defaultOption:_) place
             ]
             & length
             where
-                tl = negate (translation hover)
-                br = hover ^. Element.size - place ^. Element.size - tl
+                tl = negate (translation h)
+                br = h ^. Element.size - place ^. Element.size - tl

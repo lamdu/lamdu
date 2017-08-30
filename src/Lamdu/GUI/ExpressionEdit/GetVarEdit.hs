@@ -174,7 +174,8 @@ processDefinitionWidget (Sugar.DefTypeChanged info) myId mkLayout =
                     <&> (^. Align.tValue)
                 let a = layout & Align.tValue %~ Hover.anchor
                 a & Align.tValue %~
-                    Hover.hoverInPlaceOf (Hover.hoverBesideOptions box (a ^. Align.tValue))
+                    Hover.hoverInPlaceOf
+                    (Hover.hoverBesideOptions (Hover.hover box) (a ^. Align.tValue))
                     & return
             else return layout
 

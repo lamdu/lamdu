@@ -78,8 +78,8 @@ makeHoleWithWrapper wrapperGui searchAreaGui pl =
                 wrapper & Align.tValue %~ Hover.hoverInPlaceOf options . Hover.anchor
                 where
                     options =
-                        [ hoverWrapper /-/ searchArea Menu.Below
-                        , searchArea Menu.Above /-/ hoverWrapper
+                        [ hoverWrapper /-/ (searchArea Menu.Below <&> Hover.hover)
+                        , (searchArea Menu.Above <&> Hover.hover) /-/ hoverWrapper
                         ]
                         <&> (^. Align.tValue)
                     hoverWrapper = render wrapperGui & Align.tValue %~ Hover.anchor

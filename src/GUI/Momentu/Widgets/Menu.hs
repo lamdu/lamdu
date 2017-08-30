@@ -134,7 +134,8 @@ layoutOption maxOptionWidth option =
             base
                 & Align.tValue %~
                 Hover.hoverInPlaceOf
-                (Hover.hoverBesideOptionsAxis Glue.Horizontal submenu base
+                (Hover.hoverBesideOptionsAxis Glue.Horizontal
+                    (submenu & Align.tValue %~ Hover.hover) base
                  <&> (^. Align.tValue))
                 & pure
     where

@@ -396,30 +396,40 @@ resultsHoverOptions pos addBg addBgAnnotation results searchTerm =
         , above
         , belowLeft
         , aboveLeft
-        , Aligned 0.5 annotatedTerm /|/ Aligned 0.5 (bgResults ^. Menu.optionsFromTop)
-            ^. Align.value
+        , atRight
         ]
     Menu.Below ->
         [ below
         , belowLeft
-        , Aligned 1 annotatedTerm /|/ Aligned 1 (bgResults ^. Menu.optionsFromBottom)
-            ^. Align.value
-        , Aligned 1 (bgResults ^. Menu.optionsFromBottom) /|/ Aligned 1 annotatedTerm
-            ^. Align.value
+        , annotatedTerm 1
+            /|/ resultsAbove 1
+        , resultsAbove 1
+            /|/ annotatedTerm 1
         ]
+    <&> (^. Align.value)
     where
-        above = (bgResults ^. Menu.optionsFromBottom) /-/ annotatedTerm
+        above = resultsAbove 0 /-/ annotatedTerm 0
         aboveLeft =
-            Aligned 1 (bgResults ^. Menu.optionsFromBottom)
-            /-/ Aligned 1 annotatedTerm
-            ^. Align.value
-        below = searchTerm /-/ addBgAnnotation (results ^. Menu.optionsFromTop)
+            resultsAbove 1
+            /-/ annotatedTerm 1
+        below =
+            Aligned 0 searchTerm
+            /-/
+            Aligned 0 resultsBelow
         belowLeft =
             Aligned 1 searchTerm
-            /-/ Aligned 1 (addBgAnnotation (results ^. Menu.optionsFromTop))
-            ^. Align.value
+            /-/
+            Aligned 1 resultsBelow
+        atRight =
+            annotatedTerm 0.5
+            /|/
+            Aligned 0.5 (Hover.hover (bgResults ^. Menu.optionsFromTop))
         bgResults = results <&> addBg
-        annotatedTerm = searchTerm & Widget.widget %~ addBgAnnotation
+        resultsAbove alignment =
+            bgResults ^. Menu.optionsFromBottom & Hover.hover & Aligned alignment
+        resultsBelow = results ^. Menu.optionsFromTop & addBgAnnotation & Hover.hover
+        annotatedTerm alignment =
+            searchTerm & Widget.widget %~ addBgAnnotation & Aligned alignment
 
 makeUnderCursorAssignment ::
     Monad m =>
