@@ -29,7 +29,6 @@ instance Aeson.FromJSON Help
 
 data Hole = Hole
     { holeResultPadding :: Vector2 Double
-    , holeResultInjectedScaleExponent :: Double
     , holeExtraSymbolColorUnselected :: Draw.Color
     , holeExtraSymbolColorSelected :: Draw.Color
     , holeSearchTermBGColor :: Draw.Color
