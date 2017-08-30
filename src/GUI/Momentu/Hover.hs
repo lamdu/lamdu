@@ -75,7 +75,7 @@ anchor :: Widget a -> AnchoredWidget a
 anchor = AnchoredWidget 0
 
 hoverBesideOptions ::
-    ( Glue a b, Glue b a, Glued a b ~ Glued b a
+    ( Glue a b, Glue b a
     , SizedElement a, SizedElement b, SizedElement (Glued a b)
     ) =>
     a -> b -> [Glued a b]
@@ -85,7 +85,7 @@ hoverBesideOptions hover src =
         hoverBesideOptionsAxis o hover src
 
 hoverBesideOptionsAxis ::
-    ( Glue a b, Glue b a, Glued a b ~ Glued b a
+    ( Glue a b, Glue b a
     , SizedElement a, SizedElement b, SizedElement (Glued a b)
     ) =>
     Orientation -> a -> b -> [Glued a b]

@@ -16,7 +16,7 @@ import           Lamdu.Prelude
 data Orientation = Horizontal | Vertical
     deriving (Eq, Show, Ord)
 
-class Glue a b where
+class (Glued b a ~ Glued a b) => Glue a b where
     type Glued a b
     glue :: Orientation -> a -> b -> Glued a b
 
