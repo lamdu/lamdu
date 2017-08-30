@@ -43,16 +43,16 @@ Lens.makeLenses ''WideLayoutOption
 
 tryWideLayout :: WideLayoutOption t a -> t (Responsive a) -> Responsive a -> Responsive a
 tryWideLayout layoutOption elements fallback =
-    Responsive $
-    \layoutParams ->
-    case layoutParams of
-    LayoutParams LayoutWide context -> (layoutOption ^. wLayout) context renderedElements
-    LayoutParams (LayoutNarrow limit) context
-        | wide ^. Align.tValue . Widget.wSize . _1 <= limit -> wide
-        | otherwise -> (fallback ^. render) layoutParams
-        where
-            wide = (layoutOption ^. wLayout) context renderedElements
+    Responsive r
     where
+        r layoutParams@(LayoutParams mode context) =
+            case mode of
+            LayoutWide -> wide
+            LayoutNarrow limit
+                | wide ^. Align.tValue . Widget.wSize . _1 <= limit -> wide
+                | otherwise -> (fallback ^. render) layoutParams
+            where
+                wide = (layoutOption ^. wLayout) context renderedElements
         renderedElements = elements & Lens.cloneIndexedTraversal (layoutOption ^. wContexts) %@~ renderElement
         renderElement context element =
             (element ^. render)
