@@ -4,8 +4,6 @@
     "stdSpacing"                    : [1.0, 0.3],
     "baseTextSize"                  : 16,
     "hoverBGColor"                  : [0.8, 0.9, 0.95, 1.0],
-    "hoverDarkBGColor"              : [0.5, 0.5, 0.5, 0.85],
-    "hoverDarkPadding"              : [1.0, 1.0],
     "maxEvalViewSize"               : 32,
     "lightLambdaUnderlineColor"     : [0.0, 0.0, 0.0, 0.6],
     "underlineWidth"                : 0.1,
@@ -34,6 +32,10 @@
     "foreignModuleColor"            : [1.0, 0.3, 0.35, 1.0],
     "topPadding"                    : 1.5,
     "newDefinitionActionColor"      : [0, 0.7, 0, 1.0],
+    "hover": {
+        "frameColor"                : [0.5, 0.5, 0.5, 0.85],
+        "framePadding"              : [1.0, 1.0]
+    },
     "fonts": {
         "fontDefault"      : "fonts/DejaVuSans.ttf",
         "fontHelp"         : "fonts/DejaVuSans.ttf",

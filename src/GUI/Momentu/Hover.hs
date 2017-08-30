@@ -1,15 +1,20 @@
-{-# LANGUAGE NoImplicitPrelude, TemplateHaskell, DeriveFunctor, FlexibleInstances, MultiParamTypeClasses, TypeFamilies, FlexibleContexts #-}
+{-# LANGUAGE NoImplicitPrelude, DeriveGeneric, TemplateHaskell, DeriveFunctor, FlexibleInstances, MultiParamTypeClasses, TypeFamilies, FlexibleContexts, OverloadedStrings #-}
 module GUI.Momentu.Hover
-    ( AnchoredWidget, anchor
+    ( Style(..)
     , Hover, hover
+    , HasStyle(..)
+    , AnchoredWidget, anchor
     , hoverInPlaceOf, hoverBesideOptions, hoverBesideOptionsAxis
     , Orientation(..)
     ) where
 
 import qualified Control.Lens as Lens
+import qualified Data.Aeson.Types as Aeson
 import           Data.List.Utils (minimumOn)
 import           Data.Vector.Vector2 (Vector2(..))
+import           GHC.Generics (Generic)
 import           GUI.Momentu.Align (Aligned(..), value)
+import qualified GUI.Momentu.Draw as Draw
 import           GUI.Momentu.Element (Element, SizedElement)
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.Glue (Glue(..), Orientation)
@@ -21,6 +26,17 @@ import           GUI.Momentu.Widget (Widget(..), R, EventResult)
 import qualified GUI.Momentu.Widget as Widget
 
 import           Lamdu.Prelude
+
+data Style = Style
+    { frameColor :: Draw.Color
+    , framePadding :: Vector2 R
+    } deriving (Eq, Generic, Show)
+instance Aeson.ToJSON Style where
+    toJSON = Aeson.genericToJSON Aeson.defaultOptions
+instance Aeson.FromJSON Style
+
+class HasStyle env where style :: Lens' env Style
+instance HasStyle Style where style = id
 
 data AnchoredWidget a = AnchoredWidget
     { _anchorPoint :: Vector2 R
@@ -41,8 +57,13 @@ instance Element a => Element (Hover a) where
 instance SizedElement a => SizedElement (Hover a) where
     size = unHover . Element.size
 
-hover :: Element a => a -> Hover a
-hover = Hover . Element.hoverLayers
+hover ::
+    (MonadReader env m, Element a, HasStyle env, Element.HasAnimIdPrefix env) =>
+    m (a -> Hover a)
+hover =
+    do
+        frame <- addFrame
+        pure (Hover . Element.hoverLayers . frame)
 
 instance Widget.HasWidget AnchoredWidget where widget = anchored
 
@@ -106,6 +127,18 @@ hoverBesideOptions h src =
     do
         o <- [Glue.Vertical, Glue.Horizontal]
         hoverBesideOptionsAxis o h src
+
+addFrame ::
+    (MonadReader env m, HasStyle env, Element a, Element.HasAnimIdPrefix env) =>
+    m (a -> a)
+addFrame =
+    do
+        s <- Lens.view style
+        animId <- Element.subAnimId ["hover frame"]
+        pure $ \gui ->
+            gui
+            & Element.pad (framePadding s <&> realToFrac)
+            & Draw.backgroundColor animId (frameColor s)
 
 hoverBesideOptionsAxis ::
     ( Glue a b, Glue b a

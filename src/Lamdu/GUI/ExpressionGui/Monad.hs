@@ -39,6 +39,7 @@ import           GUI.Momentu.Align (WithTextPos)
 import           GUI.Momentu.Animation.Id (AnimId)
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.EventMap as E
+import qualified GUI.Momentu.Hover as Hover
 import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.Responsive.Expression as ResponsiveExpr
 import           GUI.Momentu.View (View)
@@ -138,6 +139,7 @@ instance Config.HasConfig (Askable m) where config = aConfig
 instance Theme.HasTheme (Askable m) where theme = aTheme
 instance ResponsiveExpr.HasStyle (Askable m) where style = aTheme . ResponsiveExpr.style
 instance Menu.HasStyle (Askable m) where style = aTheme . Menu.style
+instance Hover.HasStyle (Askable m) where style = aTheme . Hover.style
 
 withLocalUnderline :: Monad m => TextView.Underline -> ExprGuiM m a -> ExprGuiM m a
 withLocalUnderline underline = Reader.local (TextView.underline ?~ underline)

@@ -114,7 +114,7 @@ makeSubmenuSymbol isSelected =
 
 layoutOption ::
     ( MonadReader env m, Element.HasAnimIdPrefix env, TextView.HasStyle env
-    , HasStyle env, Functor f
+    , Hover.HasStyle env, HasStyle env, Functor f
     ) =>
     Widget.R -> Option f -> m (WithTextPos (Widget (f Widget.EventResult)))
 layoutOption maxOptionWidth option =
@@ -123,21 +123,20 @@ layoutOption maxOptionWidth option =
         option ^. oWidget & Element.width .~ maxOptionWidth & pure
     Just submenu ->
         do
-            submenuSymbol <-
-                makeSubmenuSymbol isSelected
-                & Reader.local (Element.animIdPrefix .~ Widget.toAnimId (option ^. oId))
+            submenuSymbol <- makeSubmenuSymbol isSelected
             let base =
                     (option ^. oWidget
                      & Element.width .~ maxOptionWidth - submenuSymbol ^. Element.width)
                     /|/ submenuSymbol
                     & Align.tValue %~ Hover.anchor
+            hover <- Hover.hover
             base
                 & Align.tValue %~
                 Hover.hoverInPlaceOf
-                (Hover.hoverBesideOptionsAxis Glue.Horizontal
-                    (submenu & Align.tValue %~ Hover.hover) base
+                (Hover.hoverBesideOptionsAxis Glue.Horizontal (submenu <&> hover) base
                  <&> (^. Align.tValue))
                 & pure
+    & Reader.local (Element.animIdPrefix .~ Widget.toAnimId (option ^. oId))
     where
         isSelected =
             Widget.isFocused (option ^. oWidget . Align.tValue)
@@ -145,7 +144,7 @@ layoutOption maxOptionWidth option =
                Widget.isFocused option
 
 layout ::
-    ( MonadReader env m, TextView.HasStyle env
+    ( MonadReader env m, TextView.HasStyle env, Hover.HasStyle env
     , Element.HasAnimIdPrefix env, HasStyle env
     , Applicative f
     ) =>

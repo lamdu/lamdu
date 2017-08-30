@@ -28,7 +28,6 @@ import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
-import           Lamdu.GUI.Hover (addDarkBackground)
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Sugar.Names.Types (Name(..))
 import qualified Lamdu.Sugar.Types as Sugar
@@ -67,27 +66,26 @@ makeHoleWithWrapper wrapperGui searchAreaGui pl =
         unfocusedWrapperGui <-
             ExpressionGui.maybeAddAnnotationPl pl ?? wrapperGui
         isSelected <- Widget.isSubCursor ?? hidHole widgetIds
-        addDarkBackground (Widget.toAnimId (hidOpen widgetIds) ++ ["searchArea", "DarkBg"])
-            <&>
-            \addBg ->
-            unfocusedWrapperGui
-            & Responsive.render . Lens.imapped %@~
-            \layoutMode wrapper ->
-            case isSelected || Widget.isFocused (wrapper ^. Align.tValue) of
-            True ->
-                wrapper & Align.tValue %~ Hover.hoverInPlaceOf options . Hover.anchor
-                where
-                    options =
-                        [ hoverWrapper /-/ (searchArea Menu.Below <&> Hover.hover)
-                        , (searchArea Menu.Above <&> Hover.hover) /-/ hoverWrapper
-                        ]
-                        <&> (^. Align.tValue)
-                    hoverWrapper = render wrapperGui & Align.tValue %~ Hover.anchor
-                    searchArea p =
-                        render (addBg (searchAreaGui p))
-                        & hideIfInHole
-                    render x = (x ^. Responsive.render) layoutMode
-            False -> wrapper
+        hover <- Hover.hover
+        let f layoutMode wrapper =
+                case isSelected || Widget.isFocused (wrapper ^. Align.tValue) of
+                True ->
+                    wrapper & Align.tValue %~ Hover.hoverInPlaceOf options . Hover.anchor
+                    where
+                        options =
+                            [ hoverWrapper /-/ (searchArea Menu.Below <&> hover)
+                            , (searchArea Menu.Above <&> hover) /-/ hoverWrapper
+                            ]
+                            <&> (^. Align.tValue)
+                        hoverWrapper = render wrapperGui & Align.tValue %~ Hover.anchor
+                        searchArea p =
+                            render (searchAreaGui p)
+                            & hideIfInHole
+                        render x = (x ^. Responsive.render) layoutMode
+                False -> wrapper
+        unfocusedWrapperGui
+            & Responsive.render . Lens.imapped %@~ f
+            & pure
     where
         widgetIds = HoleWidgetIds.make (pl ^. Sugar.plEntityId)
         hideIfInHole

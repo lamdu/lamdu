@@ -10,6 +10,7 @@ import qualified Data.Aeson.Types as Aeson
 import           Data.Vector.Vector2 (Vector2)
 import           GHC.Generics (Generic)
 import qualified GUI.Momentu.Draw as Draw
+import qualified GUI.Momentu.Hover as Hover
 import qualified GUI.Momentu.Responsive.Expression as Expression
 import qualified GUI.Momentu.Widgets.Menu as Menu
 import           Lamdu.Font (FontSize, Fonts)
@@ -83,6 +84,7 @@ data Theme = Theme
     , menu :: Menu.Style
     , name :: Name
     , eval :: Eval
+    , hover :: Hover.Style
     , newDefinitionActionColor :: Draw.Color
     , topPadding :: Draw.R
     , maxEvalViewSize :: Int
@@ -90,8 +92,6 @@ data Theme = Theme
     , valAnnotation :: ValAnnotation
     , indent :: Expression.Style
     , hoverBGColor :: Draw.Color
-    , hoverDarkPadding :: Vector2 Double
-    , hoverDarkBGColor :: Draw.Color
     , backgroundColor :: Draw.Color
     , baseColor :: Draw.Color
     , invalidCursorBGColor :: Draw.Color
@@ -131,3 +131,4 @@ themeStdSpacing f t = stdSpacing t & f <&> \new -> t { stdSpacing = new }
 
 instance Expression.HasStyle Theme where style f t = f (indent t) <&> \x -> t { indent = x }
 instance Menu.HasStyle Theme where style f t = f (menu t) <&> \x -> t { menu = x }
+instance Hover.HasStyle Theme where style f t = f (hover t) <&> \x -> t { hover = x }

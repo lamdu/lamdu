@@ -49,7 +49,6 @@ import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
-import           Lamdu.GUI.Hover (addDarkBackground)
 import qualified Lamdu.GUI.TypeView as TypeView
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.Sugar.Lens as SugarLens
@@ -381,37 +380,26 @@ assignHoleEditCursor holeInfo shownMainResultsIds allShownResultIds searchTermId
         destId = head (shownMainResultsIds ++ [searchTermId])
 
 resultsHoverOptions ::
-    Functor f =>
-    Menu.Placement ->
-    (Widget (f EventResult) -> Widget (f EventResult)) ->
-    (Widget (f EventResult) -> Widget (f EventResult)) ->
-    Menu.OrderedOptions (Widget (f EventResult)) ->
-    Hover.AnchoredWidget (f EventResult) ->
-    [Hover.AnchoredWidget (f EventResult)]
-resultsHoverOptions pos addBg addBgAnnotation results searchTerm =
-    case pos of
-    Menu.Above -> [ above, aboveLeft ]
-    Menu.AnyPlace ->
-        [ below
-        , above
-        , belowLeft
-        , aboveLeft
-        , atRight
-        ]
-    Menu.Below ->
-        [ below
-        , belowLeft
-        , annotatedTerm 1
-            /|/ resultsAbove 1
-        , resultsAbove 1
-            /|/ annotatedTerm 1
-        ]
-    <&> (^. Align.value)
-    where
+    ( MonadReader env m, Hover.HasStyle env, Element.HasAnimIdPrefix env
+    , Functor f
+    ) =>
+    m
+    (Menu.Placement ->
+     (Widget (f EventResult) -> Widget (f EventResult)) ->
+     Menu.OrderedOptions (Widget (f EventResult)) ->
+     Hover.AnchoredWidget (f EventResult) ->
+     [Hover.AnchoredWidget (f EventResult)])
+resultsHoverOptions =
+    Hover.hover <&> \hover pos addAnnotation results searchTerm ->
+    let resultsAbove alignment =
+            results ^. Menu.optionsFromBottom & hover & Aligned alignment
+        annotatedTerm alignment =
+            searchTerm & Widget.widget %~ addAnnotation & Aligned alignment
         above = resultsAbove 0 /-/ annotatedTerm 0
         aboveLeft =
             resultsAbove 1
             /-/ annotatedTerm 1
+        resultsBelow = results ^. Menu.optionsFromTop & addAnnotation & hover
         below =
             Aligned 0 searchTerm
             /-/
@@ -423,13 +411,25 @@ resultsHoverOptions pos addBg addBgAnnotation results searchTerm =
         atRight =
             annotatedTerm 0.5
             /|/
-            Aligned 0.5 (Hover.hover (bgResults ^. Menu.optionsFromTop))
-        bgResults = results <&> addBg
-        resultsAbove alignment =
-            bgResults ^. Menu.optionsFromBottom & Hover.hover & Aligned alignment
-        resultsBelow = results ^. Menu.optionsFromTop & addBgAnnotation & Hover.hover
-        annotatedTerm alignment =
-            searchTerm & Widget.widget %~ addBgAnnotation & Aligned alignment
+            Aligned 0.5 (hover (results ^. Menu.optionsFromTop))
+    in  case pos of
+        Menu.Above -> [ above, aboveLeft ]
+        Menu.AnyPlace ->
+            [ below
+            , above
+            , belowLeft
+            , aboveLeft
+            , atRight
+            ]
+        Menu.Below ->
+            [ below
+            , belowLeft
+            , annotatedTerm 1
+                /|/ resultsAbove 1
+            , resultsAbove 1
+                /|/ annotatedTerm 1
+            ]
+        <&> (^. Align.value)
 
 makeUnderCursorAssignment ::
     Monad m =>
@@ -451,19 +451,17 @@ makeUnderCursorAssignment shownResultsLists hasHiddenResults holeInfo =
             <&> _2 . Lens.mapped %~ E.strongerEvents searchTermEventMap
 
         vspace <- ExpressionGui.annotationSpacer
-        addBg <- addDarkBackground (Widget.toAnimId (hidResultsPrefix hids))
-        resBg <-
-            addDarkBackground (Widget.toAnimId (hidResultsPrefix hids) ++ ["results"])
-        let addAnnotation x = addBg (x /-/ vspace /-/ typeView)
+        let addAnnotation x = x /-/ vspace /-/ typeView
         searchTermWidget <-
             SearchTerm.make holeInfo
             <&> Align.tValue %~ Hover.anchor . E.weakerEvents (searchTermEventMap <> pickFirstResult)
+        mkOptions <- resultsHoverOptions & Reader.local (Element.animIdPrefix .~ WidgetId.toAnimId (hidOpen hids))
         return $
             \placement ->
             searchTermWidget
             & Align.tValue %~
                 Hover.hoverInPlaceOf
-                (resultsHoverOptions placement resBg addAnnotation resultsWidgets
+                (mkOptions placement addAnnotation resultsWidgets
                     (searchTermWidget ^. Align.tValue))
     where
         hids = hiIds holeInfo

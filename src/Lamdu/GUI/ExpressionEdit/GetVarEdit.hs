@@ -31,7 +31,6 @@ import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
-import qualified Lamdu.GUI.Hover as Hover
 import qualified Lamdu.GUI.LightLambda as LightLambda
 import qualified Lamdu.GUI.TypeView as TypeView
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
@@ -136,11 +135,11 @@ definitionTypeChangeBox info getVarId =
         -- TODO: unify config's button press keys
         let keys = Config.newDefinitionButtonPressKeys (Config.pane config)
         let update = (info ^. Sugar.defTypeUseCurrent) >> return getVarId
-        Hover.addDarkBackground animId
-            ?? box
-            <&> Align.tValue %~ E.weakerEvents
-                (Widget.keysEventMapMovesCursor keys
-                 (E.Doc ["Edit", "Update definition type"]) update)
+        box
+            & Align.tValue %~ E.weakerEvents
+            (Widget.keysEventMapMovesCursor keys
+                (E.Doc ["Edit", "Update definition type"]) update)
+            & pure
     where
         mkTypeView idSuffix scheme = TypeView.make (scheme ^. schemeType) (animId ++ [idSuffix])
         myId = Widget.joinId getVarId ["type change"]
@@ -169,13 +168,15 @@ processDefinitionWidget (Sugar.DefTypeChanged info) myId mkLayout =
             then
             do
                 box <-
-                    definitionTypeChangeBox info myId
-                    -- Remove the text alignment so it can be placed at different vertical positions
-                    <&> (^. Align.tValue)
+                    Hover.hover
+                    <*> (definitionTypeChangeBox info myId
+                        -- Remove the text alignment so it can be
+                        -- placed at different vertical positions
+                         <&> (^. Align.tValue))
                 let a = layout & Align.tValue %~ Hover.anchor
                 a & Align.tValue %~
                     Hover.hoverInPlaceOf
-                    (Hover.hoverBesideOptions (Hover.hover box) (a ^. Align.tValue))
+                    (Hover.hoverBesideOptions box (a ^. Align.tValue))
                     & return
             else return layout
 
