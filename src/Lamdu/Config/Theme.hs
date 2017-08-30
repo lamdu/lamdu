@@ -33,6 +33,7 @@ data Hole = Hole
     , holeExtraSymbolColorUnselected :: Draw.Color
     , holeExtraSymbolColorSelected :: Draw.Color
     , holeSearchTermBGColor :: Draw.Color
+    , holeActiveSearchTermBGColor :: Draw.Color
     } deriving (Eq, Generic, Show)
 instance Aeson.ToJSON Hole where
     toJSON = Aeson.genericToJSON Aeson.defaultOptions

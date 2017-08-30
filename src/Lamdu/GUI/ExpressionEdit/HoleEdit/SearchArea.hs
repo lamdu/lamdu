@@ -9,11 +9,11 @@ module Lamdu.GUI.ExpressionEdit.HoleEdit.SearchArea
     ) where
 
 import qualified Control.Lens as Lens
-import qualified GUI.Momentu.EventMap as E
-import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Align as Align
+import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.Hover as Hover
 import qualified GUI.Momentu.Responsive as Responsive
+import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.FocusDelegator as FocusDelegator
 import qualified GUI.Momentu.Widgets.Menu as Menu
 import qualified Lamdu.Config as Config
@@ -23,6 +23,7 @@ import           Lamdu.GUI.ExpressionEdit.HoleEdit.Info (HoleInfo(..))
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.Open (makeOpenSearchAreaGui)
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.SearchTerm as SearchTerm
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds (WidgetIds(..))
+import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds as WidgetIds
 import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
@@ -52,13 +53,13 @@ makeStdWrapped pl holeInfo =
                 | isAHoleInHole = return id
                 | otherwise =
                     FocusDelegator.make ?? fdConfig (Config.hole config)
-                    ?? FocusDelegator.FocusEntryParent ?? hidClosedSearchArea
+                    ?? FocusDelegator.FocusEntryParent ?? hidClosedSearchArea (hiIds holeInfo)
                     <&> (Align.tValue %~)
         closedSearchTermGui <-
             fdWrap <*> SearchTerm.make holeInfo <&> Responsive.fromWithTextPos
             & ExpressionGui.stdWrap pl
-        isSelected <- Widget.isSubCursor ?? hidOpen
-        case (isSelected, isAHoleInHole) of
+        isActive <- WidgetIds.isActive (hiIds holeInfo)
+        case (isActive, isAHoleInHole) of
             (True, False) ->
                 -- ideally the fdWrap would be "inside" the
                 -- type-view addition and stdWrap, but it's not
@@ -83,5 +84,4 @@ makeStdWrapped pl holeInfo =
                         & const & pure
             (False, _) -> const closedSearchTermGui & pure
     where
-        WidgetIds{hidClosedSearchArea,hidOpen} = hiIds holeInfo
         isAHoleInHole = ExprGuiT.isHoleResult pl

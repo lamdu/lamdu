@@ -1,12 +1,15 @@
 -- | The widget ids of exposed hole components
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE NoImplicitPrelude, OverloadedStrings #-}
 module Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds
     ( WidgetIds(..), make
+    , isActive
     ) where
 
 import qualified GUI.Momentu.Widget as Widget
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Sugar.EntityId (EntityId)
+
+import           Lamdu.Prelude
 
 data WidgetIds = WidgetIds
     { hidHole :: Widget.Id
@@ -26,3 +29,6 @@ make entityId = WidgetIds
     }
     where
         holeId = WidgetIds.fromEntityId entityId
+
+isActive :: (MonadReader env m, Widget.HasCursor env) => WidgetIds -> m Bool
+isActive widgetIds = Widget.isSubCursor ?? hidOpen widgetIds

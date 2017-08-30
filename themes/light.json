@@ -57,7 +57,8 @@
         "holeExtraSymbolColorSelected"    : [0, 0, 0, 1.0],
         "holeResultInjectedScaleExponent" : 0.65,
         "holeResultPadding"               : [1.0, 0.5],
-        "holeSearchTermBGColor"           : [0.7, 0.8, 1.0, 1.0]
+        "holeSearchTermBGColor"           : [0.7, 0.8, 1.0, 1.0],
+        "holeActiveSearchTermBGColor"     : [0.8, 1.0, 0.7, 1.0]
     },
     "name": {
         "parameterColor"             : [0.0, 0.4, 0.5, 1.0],

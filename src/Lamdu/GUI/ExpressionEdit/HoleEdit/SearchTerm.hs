@@ -22,6 +22,7 @@ import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.EventMap as EventMap
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.Info (HoleInfo(..))
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.Info as HoleInfo
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds (WidgetIds(..))
+import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds as WidgetIds
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import           Lamdu.GUI.Hover (addBackground)
 
@@ -61,11 +62,15 @@ make holeInfo =
         let holeConfig = Config.hole config
         let holeTheme = Theme.hole theme
         textCursor <- TextEdit.getCursor ?? searchTerm ?? hidOpenSearchTerm widgetIds
+        isActive <- WidgetIds.isActive widgetIds
+        let bgColor
+                | isActive = Theme.holeActiveSearchTermBGColor
+                | otherwise = Theme.holeSearchTermBGColor
         makeSearchTermPropEdit widgetIds (HoleInfo.hiSearchTermProperty holeInfo)
             <&> Align.tValue . E.eventMap
                 %~ EventMap.disallowCharsFromSearchTerm holeConfig holeInfo textCursor
             <&> addBackground (Widget.toAnimId (hidOpenSearchTerm widgetIds))
-                (Theme.holeSearchTermBGColor holeTheme)
+                (bgColor holeTheme)
     where
         widgetIds = hiIds holeInfo
         searchTerm = HoleInfo.hiSearchTerm holeInfo
