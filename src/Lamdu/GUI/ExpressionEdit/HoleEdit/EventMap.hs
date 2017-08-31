@@ -153,9 +153,13 @@ makeOpenEventMap holeInfo =
         holeConfig <- Lens.view Config.config <&> Config.hole
         adHocTextEditEventMap holeInfo
             & disallowCharsFromSearchTerm holeConfig holeInfo Nothing
+            & disallowFirstOperatorChar
             & mappend maybeLiteralTextEventMap
             & pure
     where
+        disallowFirstOperatorChar
+            | Text.null searchTerm = E.filterChars (`notElem` operatorChars)
+            | otherwise = id
         maybeLiteralTextEventMap
             | Text.null searchTerm =
               hiHole holeInfo ^.
