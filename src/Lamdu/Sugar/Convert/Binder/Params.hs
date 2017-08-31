@@ -245,7 +245,6 @@ delFieldParamAndFixCalls binderKind tags fp storedLam =
                     { ttvReplacedTag = tagGForLambdaTagParam paramVar x
                     , ttvReplacedByVar = paramVar
                     , ttvReplacedByVarEntityId = EntityId.ofLambdaParam paramVar
-                    , ttvDeletedTag = tagGForLambdaTagParam paramVar tag
                     }
                 )
             xs -> (Just xs, Nothing, ParamDelResultDelTag)
@@ -325,7 +324,6 @@ convertRecordParams binderKind fieldParams lam@(V.Lam param _) pl =
                             x ^.. Lens.traversed . Lens.traversed
                                 & Map.fromList & Just
                     }
-                , _fpHiddenIds = []
                 }
             )
 
@@ -464,7 +462,6 @@ mkFuncParam paramEntityId lamExprPl info =
                             <&> ResultsProcess.addTypes noms typ
                             & Just
                 }
-            , _fpHiddenIds = []
             }
     where
         typ = lamParamType lamExprPl
@@ -651,15 +648,7 @@ convertParams binderKind expr =
         postProcess <- ConvertM.postProcess
         case expr ^. Val.body of
             V.BLam lambda ->
-                do
-                    params <-
-                        convertNonEmptyParams binderKind lambda (expr ^. Val.payload)
-                        -- The lambda disappears here, so add its id to the first
-                        -- param's hidden ids:
-                        <&> cpParams . _VarParam . fpHiddenIds <>~ hiddenIds
-                        <&> cpParams . _FieldParams . Lens.ix 0 . _2 . fpHiddenIds <>~ hiddenIds
-                    return (params, lambda ^. V.lamResult)
-                where
-                      hiddenIds = [expr ^. Val.payload . Input.entityId]
+                convertNonEmptyParams binderKind lambda (expr ^. Val.payload)
+                <&> flip (,) (lambda ^. V.lamResult)
             _ -> return (convertEmptyParams binderKind expr, expr)
             <&> _1 %~ postProcessActions postProcess

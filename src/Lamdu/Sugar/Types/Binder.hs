@@ -19,7 +19,7 @@ module Lamdu.Sugar.Types.Binder
     , ParamDelResult(..), ParamAddResult(..)
     , FuncParamActions(..), fpAddNext, fpDelete, fpMOrderBefore, fpMOrderAfter
     , NamedParamInfo(..), npiName, npiActions
-    , FuncParam(..), fpId, fpInfo, fpAnnotation, fpHiddenIds
+    , FuncParam(..), fpId, fpInfo, fpAnnotation
     , Anchors.PresentationMode(..)
     , Anchors.DefinitionState(..)
     , BinderActions(..), baAddFirstParam
@@ -76,7 +76,6 @@ data TagsToVar = TagsToVar
     { ttvReplacedTag :: TagG ()
     , ttvReplacedByVar :: V.Var
     , ttvReplacedByVarEntityId :: EntityId
-    , ttvDeletedTag :: TagG ()
     }
 
 data ParamDelResult
@@ -105,8 +104,6 @@ data FuncParam info = FuncParam
     { _fpId :: EntityId
     , _fpAnnotation :: Annotation
     , _fpInfo :: info
-    , -- Sometimes the Lambda disappears in Sugar, the Param "swallows" its id
-      _fpHiddenIds :: [EntityId]
     } deriving (Functor, Foldable, Traversable)
 
 data TagG name = TagG

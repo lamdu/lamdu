@@ -107,7 +107,6 @@ make ::
     ExprGuiT.ShowAnnotation -> Widget.Id -> Widget.Id ->
     Sugar.FuncParam (Info m) -> ExprGuiM m (ExpressionGui m)
 make annotationOpts showAnnotation prevId nextId param =
-    assignCursor $
     do
         config <- Lens.view Config.config
         let paramEventMap = mconcat
@@ -134,6 +133,3 @@ make annotationOpts showAnnotation prevId nextId param =
         entityId = param ^. Sugar.fpId
         myId = WidgetIds.fromEntityId entityId
         info = param ^. Sugar.fpInfo
-        hiddenIds = map WidgetIds.fromEntityId $ param ^. Sugar.fpHiddenIds
-        assignCursor x =
-            foldr (`Widget.assignCursorPrefix` const myId) x hiddenIds
