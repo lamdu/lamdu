@@ -376,7 +376,9 @@ assignHoleEditCursor holeInfo shownMainResultsIds allShownResultIds searchTermId
         assignSource action
     where
         hids = hiIds holeInfo
-        destId = head (shownMainResultsIds ++ [searchTermId])
+        destId
+            | Text.null (hiSearchTerm holeInfo) = searchTermId
+            | otherwise = head (shownMainResultsIds ++ [searchTermId])
 
 resultsHoverOptions ::
     ( MonadReader env m, Hover.HasStyle env, Element.HasAnimIdPrefix env
