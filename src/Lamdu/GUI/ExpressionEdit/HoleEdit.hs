@@ -88,9 +88,12 @@ makeHoleWithWrapper wrapperGui searchAreaGui pl =
             & pure
     where
         widgetIds = HoleWidgetIds.make (pl ^. Sugar.plEntityId)
-        hideIfInHole
-            | ExprGuiT.isHoleResult pl = Element.setLayers .~ mempty
-            | otherwise = id
+        hideIfInHole x
+            | ExprGuiT.isHoleResult pl =
+                x
+                & Element.setLayers .~ mempty
+                & Element.size .~ 0
+            | otherwise = x
 
 make ::
     Monad m =>
