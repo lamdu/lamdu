@@ -18,8 +18,9 @@ module Lamdu.Sugar.Types.Binder
     , VarToTags(..), TagsToVar(..)
     , ParamDelResult(..), ParamAddResult(..)
     , FuncParamActions(..), fpAddNext, fpDelete, fpMOrderBefore, fpMOrderAfter
-    , NamedParamInfo(..), npiName, npiActions
-    , FuncParam(..), fpId, fpInfo, fpAnnotation
+    , VarParamInfo(..), vpiName, vpiActions, vpiId
+    , FieldParamInfo(..), fpiActions, fpiTag
+    , FuncParam(..), fpInfo, fpAnnotation
     , Anchors.PresentationMode(..)
     , Anchors.DefinitionState(..)
     , BinderActions(..), baAddFirstParam
@@ -91,18 +92,23 @@ data FuncParamActions m =
     , _fpMOrderAfter :: Maybe (T m ())
     }
 
-data NamedParamInfo name m = NamedParamInfo
-    { _npiName :: name
-    , _npiActions :: FuncParamActions m
-    }
-
 newtype NullParamActions m = NullParamActions
     { _npDeleteLambda :: T m ()
     }
 
+data VarParamInfo name m = VarParamInfo
+    { _vpiName :: name
+    , _vpiId :: EntityId
+    , _vpiActions :: FuncParamActions m
+    }
+
+data FieldParamInfo name m = FieldParamInfo
+    { _fpiTag :: TagG name
+    , _fpiActions :: FuncParamActions m
+    }
+
 data FuncParam info = FuncParam
-    { _fpId :: EntityId
-    , _fpAnnotation :: Annotation
+    { _fpAnnotation :: Annotation
     , _fpInfo :: info
     } deriving (Functor, Foldable, Traversable)
 
@@ -114,13 +120,14 @@ data TagG name = TagG
 
 data BinderMode = NormalBinder | LightLambda
 
-instance Show name => Show (NamedParamInfo name m) where
-    show NamedParamInfo{..} =
-        "(NamedParamInfo " ++ show _npiName ++ ")"
+instance Show name => Show (VarParamInfo name m) where
+    show VarParamInfo{..} =
+        "(VarParamInfo " ++ show _vpiName ++ ")"
 
 instance Show info => Show (FuncParam info) where
-    show FuncParam{..} = "(FuncParam " ++ show _fpId ++ " " ++ show _fpInfo ++
-                                              " " ++ show _fpAnnotation ++ " )"
+    show FuncParam{..} =
+        "(FuncParam " ++ show _fpInfo ++
+        " " ++ show _fpAnnotation ++ " )"
 
 
 data LetFloatResult = LetFloatResult
@@ -162,8 +169,8 @@ data BinderParams name m
       -- to be the empty record.
       -- This is often used to represent "deferred execution"
       NullParam (FuncParam (NullParamActions m))
-    | VarParam (FuncParam (NamedParamInfo name m))
-    | FieldParams [(T.Tag, FuncParam (NamedParamInfo name m))]
+    | VarParam (FuncParam (VarParamInfo name m))
+    | FieldParams [FuncParam (FieldParamInfo name m)]
 
 data BinderContent name m expr
     = BinderLet (Let name m expr)
@@ -195,13 +202,14 @@ Lens.makeLenses ''Annotation
 Lens.makeLenses ''Binder
 Lens.makeLenses ''BinderActions
 Lens.makeLenses ''BinderBody
+Lens.makeLenses ''FieldParamInfo
 Lens.makeLenses ''FuncParam
 Lens.makeLenses ''FuncParamActions
 Lens.makeLenses ''Let
 Lens.makeLenses ''LetActions
-Lens.makeLenses ''NamedParamInfo
 Lens.makeLenses ''NullParamActions
 Lens.makeLenses ''TagG
+Lens.makeLenses ''VarParamInfo
 Lens.makePrisms ''BinderContent
 Lens.makePrisms ''BinderParams
 

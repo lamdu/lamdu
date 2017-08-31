@@ -242,18 +242,9 @@ withBinderParams BinderWithoutParams = pure BinderWithoutParams
 withBinderParams (NullParam a) = pure (NullParam a)
 withBinderParams (VarParam fp) =
     opWithParamName (isFunctionType (fp ^. fpAnnotation . aInferredType))
-    (fp ^. fpInfo . npiName)
-    <&> VarParam . \newName -> fp & fpInfo . npiName .~ newName
-withBinderParams (FieldParams xs) = onTagParams xs <&> FieldParams
-
-onTagParams ::
-    MonadNaming m =>
-    [(T.Tag, FuncParam (NamedParamInfo (OldName m) p))] ->
-    CPS m [(T.Tag, FuncParam (NamedParamInfo (NewName m) p))]
-onTagParams =
-    (traverse . second . fpInfo . npiName) opWithTagName
-    where
-        second f (x, y) = (,) x <$> f y
+    (fp ^. fpInfo . vpiName)
+    <&> VarParam . \newName -> fp & fpInfo . vpiName .~ newName
+withBinderParams (FieldParams xs) = (traverse . fpInfo . fpiTag . tagGName) opWithTagName xs <&> FieldParams
 
 toDefinitionBody ::
     MonadNaming m => (a -> m b) ->

@@ -187,8 +187,7 @@ convertLam lam exprPl =
             (exprPl ^. Input.stored & Property.value & Anchors.assocScopeRef)
             Nothing convParams (lam ^. V.lamResult)
         let paramUUIDs =
-                binder ^.. bParams . SugarLens.binderNamedParams .
-                Lens.traversed . npiName
+                binder ^.. bParams . _FieldParams . traverse . fpInfo . fpiTag . tagGName
                 & Set.fromList
         let lambda
                 | useNormalLambda paramUUIDs binder =
@@ -213,8 +212,10 @@ useNormalLambda paramUUIDs binder =
         forbiddenLightLamSubExprs :: Lens.Traversal' (Body name m a) ()
         forbiddenLightLamSubExprs =
             Lens.failing (_BodyHole . Lens.united)
-            (_BodyLam . lamBinder . bParams . SugarLens.binderNamedParams .
+            (_BodyLam . lamBinder . bParams . namedParams .
              Lens.united)
+        namedParams :: Lens.Traversal' (BinderParams name m) ()
+        namedParams = Lens.failing (_VarParam . Lens.united) (_FieldParams . Lens.united)
 
 allParamsUsed :: Set UUID -> Binder UUID m (Expression UUID m a) -> Bool
 allParamsUsed paramUUIDs binder =

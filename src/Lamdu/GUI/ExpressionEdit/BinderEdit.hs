@@ -314,9 +314,12 @@ makeParts funcApplyLimit binder delVarBackwardsId myId =
             & ExprGuiM.withLocalMScopeId binderScopeId
     where
         destId =
-            params ^? SugarLens.binderNamedParams . Sugar.fpId
-            <&> WidgetIds.fromEntityId
-            & fromMaybe bodyId
+            case params of
+            Sugar.BinderWithoutParams -> bodyId
+            Sugar.NullParam{} -> bodyId
+            Sugar.VarParam v -> v ^. Sugar.fpInfo . Sugar.vpiId & WidgetIds.fromEntityId
+            Sugar.FieldParams ps ->
+                ps ^?! traverse . Sugar.fpInfo . Sugar.fpiTag . Sugar.tagInstance & WidgetIds.fromEntityId
         params = binder ^. Sugar.bParams
         body = binder ^. Sugar.bBody
         bodyContent = body ^. Sugar.bbContent
@@ -479,20 +482,23 @@ makeBinderContentEdit (Sugar.BinderLet l) =
         letEntityId = l ^. Sugar.lEntityId & WidgetIds.fromEntityId
         body = l ^. Sugar.lBody
 
-namedParamEditInfo :: Monad m => Draw.Color -> Sugar.NamedParamInfo (Name m) m -> ParamEdit.Info m
-namedParamEditInfo color paramInfo =
+namedParamEditInfo ::
+    Monad m =>
+    Draw.Color -> Sugar.EntityId -> Name m -> Sugar.FuncParamActions m -> ParamEdit.Info m
+namedParamEditInfo color entityId name actions =
     ParamEdit.Info
     { ParamEdit.iMakeNameEdit =
-        ExpressionGui.makeNameOriginEdit (paramInfo ^. Sugar.npiName) color
+        ExpressionGui.makeNameOriginEdit name color
         <&> Lens.mapped %~ Responsive.fromWithTextPos
-    , ParamEdit.iMAddNext = paramInfo ^. Sugar.npiActions . Sugar.fpAddNext & Just
-    , ParamEdit.iMOrderBefore = paramInfo ^. Sugar.npiActions . Sugar.fpMOrderBefore
-    , ParamEdit.iMOrderAfter = paramInfo ^. Sugar.npiActions . Sugar.fpMOrderAfter
-    , ParamEdit.iDel = paramInfo ^. Sugar.npiActions . Sugar.fpDelete
+    , ParamEdit.iMAddNext = actions ^. Sugar.fpAddNext & Just
+    , ParamEdit.iMOrderBefore = actions ^. Sugar.fpMOrderBefore
+    , ParamEdit.iMOrderAfter = actions ^. Sugar.fpMOrderAfter
+    , ParamEdit.iDel = actions ^. Sugar.fpDelete
+    , ParamEdit.iId = WidgetIds.fromEntityId entityId
     }
 
-nullParamEditInfo :: Monad m => Sugar.NullParamActions m -> ParamEdit.Info m
-nullParamEditInfo mActions =
+nullParamEditInfo :: Monad m => Widget.Id -> Sugar.NullParamActions m -> ParamEdit.Info m
+nullParamEditInfo widgetId mActions =
     ParamEdit.Info
     { ParamEdit.iMakeNameEdit =
       \myId ->
@@ -503,6 +509,7 @@ nullParamEditInfo mActions =
     , ParamEdit.iMOrderBefore = Nothing
     , ParamEdit.iMOrderAfter = Nothing
     , ParamEdit.iDel = Sugar.ParamDelResultDelVar <$ mActions ^. Sugar.npDeleteLambda
+    , ParamEdit.iId = widgetId
     }
 
 makeParamsEdit ::
@@ -518,13 +525,16 @@ makeParamsEdit annotationOpts nearestHoles delVarBackwardsId lhsId rhsId params 
             Sugar.BinderWithoutParams -> return []
             Sugar.NullParam p ->
                 fromParamList ExprGuiT.showAnnotationWhenVerbose delVarBackwardsId rhsId
-                [p & Sugar.fpInfo %~ nullParamEditInfo]
+                [p & Sugar.fpInfo %~ nullParamEditInfo lhsId]
             Sugar.VarParam p ->
                 fromParamList ExprGuiT.alwaysShowAnnotations delVarBackwardsId rhsId
-                [p & Sugar.fpInfo %~ namedParamEditInfo paramColor]
+                [p & Sugar.fpInfo %~
+                    \x -> namedParamEditInfo paramColor (x ^. Sugar.vpiId) (x ^. Sugar.vpiName) (x ^. Sugar.vpiActions)]
             Sugar.FieldParams ps ->
-                ps ^.. Lens.traversed . _2
-                & traverse . Sugar.fpInfo %~ namedParamEditInfo paramColor
+                ps
+                & traverse . Sugar.fpInfo %~
+                    (\x -> namedParamEditInfo paramColor
+                        (x ^. Sugar.fpiTag . Sugar.tagInstance) (x ^. Sugar.fpiTag . Sugar.tagGName) (x ^. Sugar.fpiActions))
                 & fromParamList ExprGuiT.alwaysShowAnnotations lhsId rhsId
     where
         fromParamList showParamAnnotation delDestFirst delDestLast paramList =
@@ -534,5 +544,5 @@ makeParamsEdit annotationOpts nearestHoles delVarBackwardsId lhsId rhsId params 
                         ParamEdit.make annotationOpts showParamAnnotation prevId nextId param
                         <&> E.weakerEvents jumpHolesEventMap
                 ExpressionGui.listWithDelDests delDestFirst delDestLast
-                    (WidgetIds.fromEntityId . (^. Sugar.fpId)) paramList
+                    (ParamEdit.iId . (^. Sugar.fpInfo)) paramList
                     & traverse mkParam

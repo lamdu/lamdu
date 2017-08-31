@@ -95,11 +95,11 @@ orderExpr e =
     >>= Sugar.rBody %%~ orderBody
     >>= Sugar.rBody . Lens.traversed %%~ orderExpr
 
-orderParams :: Monad m => Order m [(T.Tag, Sugar.FuncParam info)]
+orderParams :: Monad m => Order m [Sugar.FuncParam (Sugar.FieldParamInfo name m)]
 orderParams xs =
     xs
-    & Lens.traversed . _2 . Sugar.fpAnnotation . Sugar.aInferredType %%~ orderType
-    >>= orderByTag (^. _1)
+    & Lens.traversed . Sugar.fpAnnotation . Sugar.aInferredType %%~ orderType
+    >>= orderByTag (^. Sugar.fpInfo . Sugar.fpiTag . Sugar.tagVal)
 
 orderBinder ::
     Monad m => Order m (Sugar.Binder name m a)

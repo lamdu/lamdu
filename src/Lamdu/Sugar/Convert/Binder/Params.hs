@@ -305,27 +305,29 @@ convertRecordParams binderKind fieldParams lam@(V.Lam param _) pl =
         mkFieldParamInfo fp = mkParamInfo param fp <&> ConvertM.TagFieldParam
         storedLam = mkStoredLam lam pl
         mkParam fp =
-            ( fpTag fp
-            , FuncParam
-                { _fpInfo =
-                  NamedParamInfo
-                  { _npiName = UniqueId.toUUID $ fpTag fp
-                  , _npiActions = fieldParamActions binderKind tags fp storedLam
-                  }
-                , _fpId = fpIdEntityId param fp
-                , _fpAnnotation =
-                    Annotation
-                    { _aInferredType = fpFieldType fp
-                    , _aMEvaluationResult =
-                        fpValue fp <&>
-                        \x ->
-                        do
-                            Map.null x & not & guard
-                            x ^.. Lens.traversed . Lens.traversed
-                                & Map.fromList & Just
+            FuncParam
+            { _fpInfo =
+                FieldParamInfo
+                { _fpiActions = fieldParamActions binderKind tags fp storedLam
+                , _fpiTag =
+                    TagG
+                    { _tagInstance = fpIdEntityId param fp
+                    , _tagVal = fpTag fp
+                    , _tagGName = UniqueId.toUUID $ fpTag fp
                     }
                 }
-            )
+            , _fpAnnotation =
+                Annotation
+                { _aInferredType = fpFieldType fp
+                , _aMEvaluationResult =
+                    fpValue fp <&>
+                    \x ->
+                    do
+                        Map.null x & not & guard
+                        x ^.. Lens.traversed . Lens.traversed
+                            & Map.fromList & Just
+                }
+            }
 
 removeCallsToVar :: Monad m => V.Var -> Val (ValIProperty m) -> T m ()
 removeCallsToVar funcVar val =
@@ -439,15 +441,12 @@ makeNonRecordParamActions binderKind storedLam =
             , _fpMOrderAfter = Nothing
             }
 
-mkFuncParam ::
-    Monad m =>
-    EntityId -> Input.Payload m a -> info -> ConvertM m (FuncParam info)
-mkFuncParam paramEntityId lamExprPl info =
+mkFuncParam :: Monad m => Input.Payload m a -> info -> ConvertM m (FuncParam info)
+mkFuncParam lamExprPl info =
     do
         noms <- ConvertM.readContext <&> (^. ConvertM.scNominalsMap)
         return FuncParam
             { _fpInfo = info
-            , _fpId = paramEntityId
             , _fpAnnotation =
                 Annotation
                 { _aInferredType = typ
@@ -480,13 +479,14 @@ convertNonRecordParam binderKind lam@(V.Lam param _) lamExprPl =
                   funcParamActions ^. fpDelete
                   & void
                   & NullParamActions
-                  & mkFuncParam paramEntityId lamExprPl
+                  & mkFuncParam lamExprPl
                   <&> NullParam
             _ ->
-                NamedParamInfo
-                { _npiName = UniqueId.toUUID param
-                , _npiActions = funcParamActions
-                } & mkFuncParam paramEntityId lamExprPl
+                VarParamInfo
+                { _vpiName = UniqueId.toUUID param
+                , _vpiActions = funcParamActions
+                , _vpiId = paramEntityId
+                } & mkFuncParam lamExprPl
                 <&> VarParam
         pure ConventionalParams
             { cpTags = mempty
@@ -522,9 +522,9 @@ postProcessActions ::
 postProcessActions post x =
     x
     & cpAddFirstParam %~ (<* post)
-    & cpParams . SugarLens.binderNamedParamsActions . fpAddNext %~ (<* post)
+    & cpParams . SugarLens.binderFuncParamActions . fpAddNext %~ (<* post)
     & if Lens.has (cpParams . _FieldParams) x
-        then cpParams . SugarLens.binderNamedParamsActions . fpDelete %~ (<* post)
+        then cpParams . SugarLens.binderFuncParamActions . fpDelete %~ (<* post)
         else id
 
 convertLamParams ::

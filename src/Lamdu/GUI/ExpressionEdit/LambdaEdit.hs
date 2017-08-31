@@ -110,7 +110,12 @@ mkLightLambda params myId =
             else mkShrunk paramIds myId
                  <&> \mk _mParamsEdit mScopeEdit -> mk mScopeEdit
     where
-        paramIds = params ^.. SugarLens.binderNamedParams . Sugar.fpId
+        paramIds =
+            case params of
+            Sugar.BinderWithoutParams -> []
+            Sugar.NullParam{} -> []
+            Sugar.VarParam p -> [p ^. Sugar.fpInfo . Sugar.vpiId]
+            Sugar.FieldParams ps -> ps <&> (^. Sugar.fpInfo . Sugar.fpiTag . Sugar.tagInstance)
 
 make ::
     Monad m =>

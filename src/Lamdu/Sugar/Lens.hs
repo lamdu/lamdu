@@ -4,8 +4,7 @@ module Lamdu.Sugar.Lens
     , payloadsOf
     , holePayloads, holeArgs
     , defSchemes
-    , binderNamedParams
-    , binderNamedParamsActions
+    , binderFuncParamActions
     , binderFuncParamAdds
     , binderFuncParamDeletes
     , binderLetActions
@@ -96,20 +95,12 @@ defBodySchemes f (DefinitionBodyExpression de) =
 defSchemes :: Lens.Traversal' (Definition name m expr) Scheme
 defSchemes = drBody . defBodySchemes
 
-binderNamedParams ::
-    Lens.Traversal
-    (BinderParams a m)
-    (BinderParams b m)
-    (FuncParam (NamedParamInfo a m))
-    (FuncParam (NamedParamInfo b m))
-binderNamedParams _ BinderWithoutParams = pure BinderWithoutParams
-binderNamedParams _ (NullParam a) = pure (NullParam a)
-binderNamedParams f (VarParam p) = VarParam <$> f p
-binderNamedParams f (FieldParams ps) = FieldParams <$> (Lens.traverse . _2) f ps
-
-binderNamedParamsActions ::
+binderFuncParamActions ::
     Lens.Traversal' (BinderParams name m) (FuncParamActions m)
-binderNamedParamsActions = binderNamedParams . fpInfo . npiActions
+binderFuncParamActions _ BinderWithoutParams = pure BinderWithoutParams
+binderFuncParamActions _ (NullParam a) = pure (NullParam a)
+binderFuncParamActions f (VarParam p) = (fpInfo . vpiActions) f p <&> VarParam
+binderFuncParamActions f (FieldParams ps) = (traverse . fpInfo . fpiActions) f ps <&> FieldParams
 
 binderLetActions ::
     Lens.Traversal'
@@ -123,14 +114,14 @@ binderFuncParamAdds ::
     (Transaction m ParamAddResult)
 binderFuncParamAdds f Binder{..} =
     (\_bParams _bActions -> Binder{..})
-    <$> (_bParams & binderNamedParamsActions . fpAddNext %%~ f)
+    <$> (_bParams & binderFuncParamActions . fpAddNext %%~ f)
     <*> (_bActions & baAddFirstParam %%~ f)
 
 binderFuncParamDeletes ::
     Lens.Traversal'
     (Binder name m (Expression name m a))
     (Transaction m ParamDelResult)
-binderFuncParamDeletes = bParams . binderNamedParamsActions . fpDelete
+binderFuncParamDeletes = bParams . binderFuncParamActions . fpDelete
 
 binderContentExpr :: Lens' (BinderContent name m a) a
 binderContentExpr f (BinderLet l) = l & lBody . bbContent . binderContentExpr %%~ f <&> BinderLet

@@ -98,6 +98,7 @@ data Info m = Info
     , iMAddNext :: Maybe (T m Sugar.ParamAddResult)
     , iMOrderBefore :: Maybe (T m ())
     , iMOrderAfter :: Maybe (T m ())
+    , iId :: Widget.Id
     }
 
 -- exported for use in definition sugaring.
@@ -130,6 +131,5 @@ make annotationOpts showAnnotation prevId nextId param =
               -- <&> Responsive.alignment . _1 .~ 0.5
             )
     where
-        entityId = param ^. Sugar.fpId
-        myId = WidgetIds.fromEntityId entityId
+        myId = iId info
         info = param ^. Sugar.fpInfo
