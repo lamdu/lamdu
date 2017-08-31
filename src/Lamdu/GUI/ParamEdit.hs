@@ -122,7 +122,7 @@ make annotationOpts showAnnotation prevId nextId param =
         ExpressionGui.maybeAddAnnotationWith annotationOpts
             wideAnnotationBehavior showAnnotation
             (param ^. Sugar.fpAnnotation)
-            entityId
+            (Widget.toAnimId myId)
             <*>
             ( iMakeNameEdit info myId
               <&> E.weakerEvents paramEventMap

@@ -241,11 +241,11 @@ addAnnotationH ::
     (Functor f, Monad m) =>
     Widget.R ->
     (AnimId -> ExprGuiM m (WithTextPos View)) ->
-    WideAnnotationBehavior -> Sugar.EntityId ->
+    WideAnnotationBehavior -> AnimId ->
     ExprGuiM m
     (Responsive (f Widget.EventResult) ->
      Responsive (f Widget.EventResult))
-addAnnotationH minWidth f wideBehavior entityId =
+addAnnotationH minWidth f wideBehavior animId =
     do
         vspace <- annotationSpacer
         annotationLayout <- f animId <&> (^. Align.tValue)
@@ -256,12 +256,10 @@ addAnnotationH minWidth f wideBehavior entityId =
 --                AlignTo (w ^. Align.alignmentRatio . _1)
                 (processAnn (w ^. Element.width) annotationLayout & Element.width %~ max minWidth)
         return $ Responsive.alignedWidget %~ onAlignedWidget
-    where
-        animId = WidgetIds.fromEntityId entityId & Widget.toAnimId
 
 addInferredType ::
     (Functor f, Monad m) =>
-    Type -> WideAnnotationBehavior -> Sugar.EntityId ->
+    Type -> WideAnnotationBehavior -> AnimId ->
     ExprGuiM m (Responsive (f Widget.EventResult) -> Responsive (f Widget.EventResult))
 addInferredType typ = addAnnotationH 0 (TypeView.make typ)
 
@@ -269,7 +267,7 @@ addEvaluationResult ::
     (Functor f, Monad m) =>
     Widget.R ->
     Maybe (NeighborVals (Maybe EvalResDisplay)) -> EvalResDisplay ->
-    WideAnnotationBehavior -> Sugar.EntityId ->
+    WideAnnotationBehavior -> AnimId ->
     ExprGuiM m
     (Responsive (f Widget.EventResult) ->
      Responsive (f Widget.EventResult))
@@ -496,7 +494,7 @@ maybeAddAnnotationPl pl =
         maybeAddAnnotation wideAnnotationBehavior
             showAnnotation
             (pl ^. Sugar.plAnnotation)
-            (pl ^. Sugar.plEntityId)
+            (Widget.toAnimId (WidgetIds.fromEntityId (pl ^. Sugar.plEntityId)))
     where
         showAnnotation = pl ^. Sugar.plData . ExprGuiT.plShowAnnotation
 
@@ -514,7 +512,7 @@ data EvalAnnotationOptions
 
 maybeAddAnnotation ::
     (Functor f, Monad m) =>
-    WideAnnotationBehavior -> ShowAnnotation -> Sugar.Annotation -> Sugar.EntityId ->
+    WideAnnotationBehavior -> ShowAnnotation -> Sugar.Annotation -> AnimId ->
     ExprGuiM m (ExpressionGui f -> ExpressionGui f)
 maybeAddAnnotation = maybeAddAnnotationWith NormalEvalAnnotation
 
@@ -544,9 +542,9 @@ getAnnotationMode opt annotation =
 maybeAddAnnotationWith ::
     (Functor f, Monad m) =>
     EvalAnnotationOptions -> WideAnnotationBehavior -> ShowAnnotation ->
-    Sugar.Annotation -> Sugar.EntityId ->
+    Sugar.Annotation -> AnimId ->
     ExprGuiM m (ExpressionGui f -> ExpressionGui f)
-maybeAddAnnotationWith opt wideAnnotationBehavior ShowAnnotation{..} annotation entityId =
+maybeAddAnnotationWith opt wideAnnotationBehavior ShowAnnotation{..} annotation animId =
     getAnnotationMode opt annotation
     >>= \case
     AnnotationModeNone
@@ -565,13 +563,13 @@ maybeAddAnnotationWith opt wideAnnotationBehavior ShowAnnotation{..} annotation 
         -- concise mode and eval mode with no result
         inferredType = annotation ^. Sugar.aInferredType
         withType =
-            addInferredType inferredType wideAnnotationBehavior entityId
+            addInferredType inferredType wideAnnotationBehavior animId
         withVal mNeighborVals scopeAndVal =
             do
                 typeWidth <-
-                    TypeView.make inferredType (Widget.toAnimId (WidgetIds.fromEntityId entityId))
+                    TypeView.make inferredType animId
                     <&> (^. Element.width)
-                addEvaluationResult typeWidth mNeighborVals scopeAndVal wideAnnotationBehavior entityId
+                addEvaluationResult typeWidth mNeighborVals scopeAndVal wideAnnotationBehavior animId
 
 valOfScope :: Sugar.Annotation -> CurAndPrev (Maybe ER.ScopeId) -> Maybe EvalResDisplay
 valOfScope annotation mScopeIds =
