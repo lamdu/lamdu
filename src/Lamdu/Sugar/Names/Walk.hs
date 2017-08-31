@@ -27,7 +27,7 @@ data NameType = DefName | TagName | NominalName | ParamName
 
 data FunctionSignature = FunctionSignature
     { sSpecialArgs :: SpecialArgs ()
-    , sNormalArgs :: Set (TagG ())
+    , sNormalArgs :: Set T.Tag
     } deriving (Eq, Ord, Show)
 
 -- TODO: Rename MonadNameWalk
@@ -228,7 +228,7 @@ funcSignature :: LabeledApply name binderVar a -> FunctionSignature
 funcSignature apply =
     FunctionSignature
     { sSpecialArgs = apply ^. aSpecialArgs & void
-    , sNormalArgs = apply ^.. aAnnotatedArgs . traverse . aaTag <&> tagGName .~ () & Set.fromList
+    , sNormalArgs = apply ^.. aAnnotatedArgs . traverse . aaTag . tagVal & Set.fromList
     }
 
 toExpression :: MonadNaming m => OldExpression m a -> m (NewExpression m a)
