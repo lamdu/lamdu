@@ -36,7 +36,7 @@ import           Lamdu.CharClassification (charPrecedence, operatorChars)
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.EventMap as EventMap
-import           Lamdu.GUI.ExpressionEdit.HoleEdit.Info (HoleInfo(..), hiSearchTerm)
+import           Lamdu.GUI.ExpressionEdit.HoleEdit.Info (HoleInfo(..), hiSearchTerm, hiSearchTermProperty)
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.ResultGroups (ResultsList(..), Result(..))
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.ResultGroups as HoleResults
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.SearchTerm as SearchTerm
@@ -445,7 +445,7 @@ makeUnderCursorAssignment shownResultsLists hasHiddenResults holeInfo =
             TypeView.make (hiInferredType holeInfo) (Widget.toAnimId (hidHole hids))
             <&> (^. Align.tValue)
 
-        searchTermEventMap <- EventMap.makeOpenEventMap holeInfo
+        searchTermEventMap <- EventMap.makeOpenEventMap holeInfo <&> disallowFirstOperatorChar
 
         (pickFirstResult, resultsWidgets) <-
             makeResultsWidget (typeView ^. Element.width) holeInfo shownResultsLists hasHiddenResults
@@ -466,6 +466,10 @@ makeUnderCursorAssignment shownResultsLists hasHiddenResults holeInfo =
                     (searchTermWidget ^. Align.tValue))
     where
         hids = hiIds holeInfo
+        disallowFirstOperatorChar
+            | Text.null searchTerm = E.filterChars (`notElem` operatorChars)
+            | otherwise = id
+        searchTerm = hiSearchTermProperty holeInfo ^. Property.pVal
 
 makeOpenSearchAreaGui ::
     Monad m =>
