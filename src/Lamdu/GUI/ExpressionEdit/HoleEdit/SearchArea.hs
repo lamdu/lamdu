@@ -9,6 +9,7 @@ module Lamdu.GUI.ExpressionEdit.HoleEdit.SearchArea
     ) where
 
 import qualified Control.Lens as Lens
+import qualified Data.Monoid as Monoid
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.Hover as Hover
@@ -59,6 +60,16 @@ makeStdWrapped pl holeInfo =
             fdWrap <*> SearchTerm.make holeInfo <&> Responsive.fromWithTextPos
             & ExpressionGui.stdWrap pl
         isActive <- WidgetIds.isActive (hiIds holeInfo)
+        let fixEventMapCursor
+                | isActive = id
+                | otherwise =
+                    Lens.mapped . Lens.mapped . Widget.eCursor .~
+                    Monoid.Last (Just (hidOpen (hiIds holeInfo)))
+        eventMap <-
+            sequence
+            [ HoleEventMap.makeOpenEventMap holeInfo <&> fixEventMapCursor
+            , ExprEventMap.make pl ExprGuiM.NoHolePick
+            ] <&> mconcat
         case (isActive, isAHoleInHole) of
             (True, False) ->
                 -- ideally the fdWrap would be "inside" the
@@ -67,21 +78,13 @@ makeStdWrapped pl holeInfo =
                 -- it is harder to implement, so just wrap it
                 -- here
                 (fdWrap <&> (Lens.mapped %~))
-                <*> makeOpenSearchAreaGui pl holeInfo
+                <*> makeOpenSearchAreaGui holeInfo
                 <&> Lens.mapped %~
                 \open ->
                 closedSearchTermGui & Responsive.alignedWidget . Align.tValue %~
                 Hover.hoverInPlaceOf [Hover.anchor (open ^. Align.tValue)] . Hover.anchor
-            (True, True) ->
-                do
-                    eventMap <-
-                        sequence
-                        [ HoleEventMap.makeOpenEventMap holeInfo
-                        , ExprEventMap.make pl ExprGuiM.NoHolePick
-                        ] <&> mconcat
-                    Widget.setFocused closedSearchTermGui
-                        & E.weakerEvents eventMap
-                        & const & pure
+            (True, True) -> Widget.setFocused closedSearchTermGui & const & pure
             (False, _) -> const closedSearchTermGui & pure
+            <&> Lens.mapped %~ E.weakerEvents eventMap
     where
         isAHoleInHole = ExprGuiT.isHoleResult pl

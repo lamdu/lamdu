@@ -35,7 +35,6 @@ import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import           Lamdu.CharClassification (charPrecedence, operatorChars)
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Config.Theme as Theme
-import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.EventMap as EventMap
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.Info (HoleInfo(..), hiSearchTerm)
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.ResultGroups (ResultsList(..), Result(..))
@@ -454,7 +453,7 @@ makeUnderCursorAssignment shownResultsLists hasHiddenResults holeInfo =
         let addAnnotation x = x /-/ vspace /-/ typeView
         searchTermWidget <-
             SearchTerm.make holeInfo
-            <&> Align.tValue %~ Hover.anchor . E.weakerEvents (searchTermEventMap <> pickFirstResult)
+            <&> Align.tValue %~ Hover.anchor . E.weakerEvents pickFirstResult
         mkOptions <- resultsHoverOptions & Reader.local (Element.animIdPrefix .~ WidgetId.toAnimId (hidOpen hids))
         return $
             \placement ->
@@ -468,9 +467,9 @@ makeUnderCursorAssignment shownResultsLists hasHiddenResults holeInfo =
 
 makeOpenSearchAreaGui ::
     Monad m =>
-    Sugar.Payload m ExprGuiT.Payload -> HoleInfo m ->
+    HoleInfo m ->
     ExprGuiM m (Menu.Placement -> WithTextPos (Widget (T m Widget.EventResult)))
-makeOpenSearchAreaGui pl holeInfo =
+makeOpenSearchAreaGui holeInfo =
     do
         (shownResultsLists, hasHiddenResults) <- HoleResults.makeAll holeInfo
         let shownMainResultsIds = shownResultsLists <&> rId . (^. HoleResults.rlMain)
@@ -478,7 +477,6 @@ makeOpenSearchAreaGui pl holeInfo =
                 [ rId . (^. HoleResults.rlMain)
                 , (^. HoleResults.rlExtraResultsPrefixId)
                 ] <*> shownResultsLists
-        exprEventMap <- ExprEventMap.make pl ExprGuiM.NoHolePick
         delKeys <- Config.delKeys
         let unwrapAsDelEventMap =
                 hiHole holeInfo ^? Sugar.holeKind . Sugar._WrapperHole . Sugar.haUnwrap . Sugar._UnwrapAction
@@ -491,4 +489,4 @@ makeOpenSearchAreaGui pl holeInfo =
             hasHiddenResults holeInfo
             & assignHoleEditCursor holeInfo shownMainResultsIds
               allShownResultIds (holeInfo & hiIds & hidOpenSearchTerm)
-            <&> Lens.mapped . Align.tValue %~ E.weakerEvents (mappend unwrapAsDelEventMap exprEventMap)
+            <&> Lens.mapped . Align.tValue %~ E.weakerEvents unwrapAsDelEventMap
