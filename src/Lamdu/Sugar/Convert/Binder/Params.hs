@@ -147,7 +147,7 @@ addFieldParam ::
 addFieldParam mkArg binderKind mkNewTags storedLam =
     do
         tag <- newTag
-        let tagG =
+        let tagS =
                 Tag
                 { _tagInstance =
                     EntityId.ofLambdaTagParam
@@ -159,10 +159,10 @@ addFieldParam mkArg binderKind mkNewTags storedLam =
         let addFieldToCall argI =
                 do
                     newArg <- mkArg
-                    V.RecExtend (tagG ^. tagVal) newArg argI
+                    V.RecExtend (tagS ^. tagVal) newArg argI
                         & V.BRecExtend & ExprIRef.newValBody
         fixUsagesOfLamBinder addFieldToCall binderKind storedLam
-        return tagG
+        return tagS
 
 mkCpScopesOfLam :: Input.Payload m a -> CurAndPrev (Map ER.ScopeId [BinderParamScopeId])
 mkCpScopesOfLam x =
@@ -216,8 +216,8 @@ fixCallToSingleArg tag argI =
                 | otherwise -> fixCallToSingleArg tag restI
             _ -> return argI
 
-tagGForLambdaTagParam :: V.Var -> T.Tag -> Tag ()
-tagGForLambdaTagParam paramVar tag = Tag (EntityId.ofLambdaTagParam paramVar tag) tag ()
+tagForLambdaTagParam :: V.Var -> T.Tag -> Tag ()
+tagForLambdaTagParam paramVar tag = Tag (EntityId.ofLambdaTagParam paramVar tag) tag ()
 
 delFieldParamAndFixCalls ::
     Monad m =>
@@ -242,7 +242,7 @@ delFieldParamAndFixCalls binderKind tags fp storedLam =
                 ( Nothing
                 , Just x
                 , ParamDelResultTagsToVar TagsToVar
-                    { ttvReplacedTag = tagGForLambdaTagParam paramVar x
+                    { ttvReplacedTag = tagForLambdaTagParam paramVar x
                     , ttvReplacedByVar = paramVar
                     , ttvReplacedByVarEntityId = EntityId.ofLambdaParam paramVar
                     }
@@ -402,8 +402,8 @@ convertToRecordParams mkNewArg binderKind storedLam newParamPosition =
                 VarToTags
                 { vttReplacedVar = paramVar
                 , vttReplacedVarEntityId = EntityId.ofLambdaParam paramVar
-                , vttReplacedByTag = tagGForLambdaTagParam paramVar tagForVar
-                , vttNewTag = tagGForLambdaTagParam paramVar tagForNewVar
+                , vttReplacedByTag = tagForLambdaTagParam paramVar tagForVar
+                , vttNewTag = tagForLambdaTagParam paramVar tagForNewVar
                 }
         case newParamPosition of
             NewParamBefore -> [tagForNewVar, tagForVar]

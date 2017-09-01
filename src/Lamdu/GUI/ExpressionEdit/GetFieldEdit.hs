@@ -21,18 +21,18 @@ make ::
     Sugar.GetField (Name m) (ExprGuiT.SugarExpr m) ->
     Sugar.Payload m ExprGuiT.Payload ->
     ExprGuiM m (ExpressionGui m)
-make (Sugar.GetField recExpr tagG) pl =
+make (Sugar.GetField recExpr tag) pl =
     do
         recExprEdit <-
             ExprGuiM.makeSubexpressionWith 0 (ExpressionGui.after .~ 11) recExpr
         dotLabel <- ExpressionGui.grammarLabel "."
         tagEdit <-
             TagEdit.makeRecordTag
-            (pl ^. Sugar.plData . ExprGuiT.plNearestHoles) tagG
+            (pl ^. Sugar.plData . ExprGuiT.plNearestHoles) tag
         Options.box Options.disambiguationNone
             [ recExprEdit
             , Responsive.fromTextView dotLabel
             , Responsive.fromWithTextPos tagEdit
             ]
             & return
-    & ExpressionGui.stdWrapParentExpr pl (tagG ^. Sugar.tagInstance)
+    & ExpressionGui.stdWrapParentExpr pl (tag ^. Sugar.tagInstance)

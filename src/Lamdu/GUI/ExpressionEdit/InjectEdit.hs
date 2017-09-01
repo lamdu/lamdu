@@ -23,9 +23,9 @@ makeCommon ::
     Sugar.Tag (Name m) ->
     NearestHoles -> [ExpressionGui m] ->
     ExprGuiM m (ExpressionGui m)
-makeCommon tagG nearestHoles valEdits =
+makeCommon tag nearestHoles valEdits =
     (Options.boxSpaced ?? Options.disambiguationNone)
-    <*> ( TagEdit.makeCaseTag nearestHoles tagG
+    <*> ( TagEdit.makeCaseTag nearestHoles tag
           <&> Responsive.fromWithTextPos <&> (: valEdits)
         )
 
@@ -34,16 +34,16 @@ make ::
     Sugar.Inject (Name m) (ExprGuiT.SugarExpr m) ->
     Sugar.Payload m ExprGuiT.Payload ->
     ExprGuiM m (ExpressionGui m)
-make (Sugar.Inject tagG mVal) pl =
+make (Sugar.Inject tag mVal) pl =
     case mVal of
     Nothing ->
         makeCommon
         -- Give the tag widget the identity of the whole inject
-        (tagG & Sugar.tagInstance .~ (pl ^. Sugar.plEntityId))
+        (tag & Sugar.tagInstance .~ (pl ^. Sugar.plEntityId))
         (pl ^. Sugar.plData . ExprGuiT.plNearestHoles) []
         & ExpressionGui.stdWrap pl
     Just val ->
         ExprGuiM.makeSubexpressionWith ApplyEdit.prefixPrecedence
         (ExpressionGui.before .~ ApplyEdit.prefixPrecedence) val <&> (:[])
-        >>= makeCommon tagG (ExprGuiT.nextHolesBefore val)
-        & ExpressionGui.stdWrapParentExpr pl (tagG ^. Sugar.tagInstance)
+        >>= makeCommon tag (ExprGuiT.nextHolesBefore val)
+        & ExpressionGui.stdWrapParentExpr pl (tag ^. Sugar.tagInstance)
