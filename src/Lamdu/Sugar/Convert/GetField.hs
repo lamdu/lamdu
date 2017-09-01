@@ -48,8 +48,11 @@ convertGetFieldNonParam (V.GetField recExpr tag) exprPl =
     { _gfRecord = recExpr
     , _gfTag =
         Tag
-        { _tagInstance = EntityId.ofGetFieldTag entityId
-        , _tagVal = tag
+        { _tagInfo =
+            TagInfo
+            { _tagInstance = EntityId.ofGetFieldTag entityId
+            , _tagVal = tag
+            }
         , _tagName = UniqueId.toUUID tag
         }
     }

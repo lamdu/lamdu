@@ -30,7 +30,11 @@ plValI :: Lens.Lens' (Input.Payload m a) (ExprIRef.ValI m)
 plValI = Input.stored . Property.pVal
 
 convertTag :: EntityId -> T.Tag -> Tag UUID
-convertTag inst tag = Tag inst tag $ UniqueId.toUUID tag
+convertTag inst tag =
+    Tag
+    { _tagInfo = TagInfo inst tag
+    , _tagName = UniqueId.toUUID tag
+    }
 
 deleteField ::
     Monad m =>
@@ -70,7 +74,7 @@ makeAddField stored =
             let resultEntity = EntityId.ofValI resultI
             return
                 RecordAddFieldResult
-                { _rafrNewTag = Tag (EntityId.ofRecExtendTag resultEntity) tag ()
+                { _rafrNewTag = TagInfo (EntityId.ofRecExtendTag resultEntity) tag
                 , _rafrNewVal = EntityId.ofValI newValI
                 , _rafrRecExtend = resultEntity
                 }

@@ -41,7 +41,7 @@ makeTagNameEdit jumpNextEventMap tagColor tag =
     & Reader.local (TextView.color .~ tagColor)
     <&> Align.tValue . E.eventMap %~ E.filterChars (/= ',')
     where
-        myId = WidgetIds.fromEntityId (tag ^. Sugar.tagInstance)
+        myId = WidgetIds.fromEntityId (tag ^. Sugar.tagInfo . Sugar.tagInstance)
 
 makeTagH ::
     Monad m =>
@@ -87,7 +87,7 @@ makeParamTag t =
         ExpressionGui.makeNameView (t ^. Sugar.tagName) animId
             & Reader.local (TextView.color .~ paramTagColor)
     where
-        animId = t ^. Sugar.tagInstance & WidgetIds.fromEntityId & Widget.toAnimId
+        animId = t ^. Sugar.tagInfo . Sugar.tagInstance & WidgetIds.fromEntityId & Widget.toAnimId
 
 diveToRecordTag :: Widget.Id -> Widget.Id
 diveToRecordTag = WidgetIds.nameEditOf

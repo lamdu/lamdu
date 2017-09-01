@@ -319,7 +319,7 @@ makeParts funcApplyLimit binder delVarBackwardsId myId =
             Sugar.NullParam{} -> bodyId
             Sugar.VarParam v -> v ^. Sugar.fpInfo . Sugar.vpiId & WidgetIds.fromEntityId
             Sugar.FieldParams ps ->
-                ps ^?! traverse . Sugar.fpInfo . Sugar.fpiTag . Sugar.tagInstance & WidgetIds.fromEntityId
+                ps ^?! traverse . Sugar.fpInfo . Sugar.fpiTag . Sugar.tagInfo . Sugar.tagInstance & WidgetIds.fromEntityId
         params = binder ^. Sugar.bParams
         body = binder ^. Sugar.bBody
         bodyContent = body ^. Sugar.bbContent
@@ -534,7 +534,8 @@ makeParamsEdit annotationOpts nearestHoles delVarBackwardsId lhsId rhsId params 
                 ps
                 & traverse . Sugar.fpInfo %~
                     (\x -> namedParamEditInfo paramColor
-                        (x ^. Sugar.fpiTag . Sugar.tagInstance) (x ^. Sugar.fpiTag . Sugar.tagName) (x ^. Sugar.fpiActions))
+                        (x ^. Sugar.fpiTag . Sugar.tagInfo . Sugar.tagInstance)
+                        (x ^. Sugar.fpiTag . Sugar.tagName) (x ^. Sugar.fpiActions))
                 & fromParamList ExprGuiT.alwaysShowAnnotations lhsId rhsId
     where
         fromParamList showParamAnnotation delDestFirst delDestLast paramList =

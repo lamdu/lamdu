@@ -25,8 +25,11 @@ convert (V.Inject tag val) exprPl =
     { _iMVal = mVal
     , _iTag =
         Tag
-        { _tagInstance = EntityId.ofInjectTag entityId
-        , _tagVal = tag
+        { _tagInfo =
+            TagInfo
+            { _tagInstance = EntityId.ofInjectTag entityId
+            , _tagVal = tag
+            }
         , _tagName = UniqueId.toUUID tag
         }
     }

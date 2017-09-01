@@ -39,11 +39,11 @@ make (Sugar.Inject tag mVal) pl =
     Nothing ->
         makeCommon
         -- Give the tag widget the identity of the whole inject
-        (tag & Sugar.tagInstance .~ (pl ^. Sugar.plEntityId))
+        (tag & Sugar.tagInfo . Sugar.tagInstance .~ (pl ^. Sugar.plEntityId))
         (pl ^. Sugar.plData . ExprGuiT.plNearestHoles) []
         & ExpressionGui.stdWrap pl
     Just val ->
         ExprGuiM.makeSubexpressionWith ApplyEdit.prefixPrecedence
         (ExpressionGui.before .~ ApplyEdit.prefixPrecedence) val <&> (:[])
         >>= makeCommon tag (ExprGuiT.nextHolesBefore val)
-        & ExpressionGui.stdWrapParentExpr pl (tag ^. Sugar.tagInstance)
+        & ExpressionGui.stdWrapParentExpr pl (tag ^. Sugar.tagInfo . Sugar.tagInstance)

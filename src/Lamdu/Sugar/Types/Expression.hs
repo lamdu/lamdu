@@ -185,7 +185,7 @@ data RecordTail m expr
     deriving (Functor, Foldable, Traversable)
 
 data RecordAddFieldResult = RecordAddFieldResult
-    { _rafrNewTag :: Tag ()
+    { _rafrNewTag :: TagInfo
     , _rafrNewVal :: EntityId
     , _rafrRecExtend :: EntityId
     }
@@ -210,7 +210,7 @@ data CaseTail m expr
     deriving (Functor, Foldable, Traversable)
 
 data CaseAddAltResult = CaseAddAltResult
-    { _caarNewTag :: Tag ()
+    { _caarNewTag :: TagInfo
     , _caarNewVal :: EntityId
     , _caarCase :: EntityId
     }

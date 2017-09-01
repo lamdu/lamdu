@@ -53,10 +53,10 @@ orderType t =
     >>= ExprLens.nextLayer orderType
 
 orderRecord :: Monad m => Order m (Sugar.Record name f a)
-orderRecord = Sugar.rItems %%~ orderByTag (^. Sugar.rfTag . Sugar.tagVal)
+orderRecord = Sugar.rItems %%~ orderByTag (^. Sugar.rfTag . Sugar.tagInfo . Sugar.tagVal)
 
 orderLabeledApply :: Monad m => Order m (Sugar.LabeledApply name binderVar a)
-orderLabeledApply = Sugar.aAnnotatedArgs %%~ orderByTag (^. Sugar.aaTag . Sugar.tagVal)
+orderLabeledApply = Sugar.aAnnotatedArgs %%~ orderByTag (^. Sugar.aaTag . Sugar.tagInfo . Sugar.tagVal)
 
 orderHoleResult :: Monad m => Order m (Sugar.HoleResult name m)
 orderHoleResult = Sugar.holeResultConverted %%~ orderExpr
@@ -67,7 +67,7 @@ orderHole =
     Sugar.hoResults . Lens.mapped . Lens._2 %~ (>>= orderHoleResult)
 
 orderCase :: Monad m => Order m (Sugar.Case name m a)
-orderCase = Sugar.cAlts %%~ orderByTag (^. Sugar.caTag . Sugar.tagVal)
+orderCase = Sugar.cAlts %%~ orderByTag (^. Sugar.caTag . Sugar.tagInfo . Sugar.tagVal)
 
 orderLam :: Monad m => Order m (Sugar.Lambda name m a)
 orderLam = Sugar.lamBinder orderBinder
@@ -99,7 +99,7 @@ orderParams :: Monad m => Order m [Sugar.FuncParam (Sugar.FieldParamInfo name m)
 orderParams xs =
     xs
     & Lens.traversed . Sugar.fpAnnotation . Sugar.aInferredType %%~ orderType
-    >>= orderByTag (^. Sugar.fpInfo . Sugar.fpiTag . Sugar.tagVal)
+    >>= orderByTag (^. Sugar.fpInfo . Sugar.fpiTag . Sugar.tagInfo . Sugar.tagVal)
 
 orderBinder ::
     Monad m => Order m (Sugar.Binder name m a)

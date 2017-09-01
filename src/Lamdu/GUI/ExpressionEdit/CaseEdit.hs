@@ -120,7 +120,7 @@ makeAltRow mActiveTag (Sugar.CaseAlt delete tag altExpr) =
         tagLabel <-
             TagEdit.makeCaseTag (ExprGuiT.nextHolesBefore altExpr) tag
             <&> Align.tValue %~ E.weakerEvents itemEventMap
-            <&> if mActiveTag == Just (tag ^. Sugar.tagVal)
+            <&> if mActiveTag == Just (tag ^. Sugar.tagInfo . Sugar.tagVal)
                 then addBg
                 else id
         hspace <- Spacer.stdHSpace

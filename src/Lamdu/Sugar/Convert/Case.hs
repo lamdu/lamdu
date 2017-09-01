@@ -38,7 +38,11 @@ plValI :: Lens.Lens' (Input.Payload m a) (ExprIRef.ValI m)
 plValI = Input.stored . Property.pVal
 
 convertTag :: EntityId -> T.Tag -> Tag UUID
-convertTag inst tag = Tag inst tag $ UniqueId.toUUID tag
+convertTag inst tag =
+    Tag
+    { _tagInfo = TagInfo inst tag
+    , _tagName = UniqueId.toUUID tag
+    }
 
 makeAddAlt :: Monad m =>
     ExprIRef.ValIProperty m ->
@@ -53,7 +57,7 @@ makeAddAlt stored =
             let resultEntity = EntityId.ofValI resultI
             return
                 CaseAddAltResult
-                { _caarNewTag = Tag (EntityId.ofRecExtendTag resultEntity) tag ()
+                { _caarNewTag = TagInfo (EntityId.ofRecExtendTag resultEntity) tag
                 , _caarNewVal = EntityId.ofValI newValI
                 , _caarCase = resultEntity
                 }

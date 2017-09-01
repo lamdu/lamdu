@@ -115,7 +115,7 @@ mkLightLambda params myId =
             Sugar.BinderWithoutParams -> []
             Sugar.NullParam{} -> []
             Sugar.VarParam p -> [p ^. Sugar.fpInfo . Sugar.vpiId]
-            Sugar.FieldParams ps -> ps <&> (^. Sugar.fpInfo . Sugar.fpiTag . Sugar.tagInstance)
+            Sugar.FieldParams ps -> ps <&> (^. Sugar.fpInfo . Sugar.fpiTag . Sugar.tagInfo . Sugar.tagInstance)
 
 make ::
     Monad m =>

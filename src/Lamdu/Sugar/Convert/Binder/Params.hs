@@ -143,17 +143,16 @@ fixUsagesOfLamBinder fixOp binderKind storedLam =
 addFieldParam ::
     Monad m =>
     T m (ValI m) -> BinderKind m -> (T.Tag -> ParamList) -> StoredLam m ->
-    T m (Tag ())
+    T m TagInfo
 addFieldParam mkArg binderKind mkNewTags storedLam =
     do
         tag <- newTag
         let tagS =
-                Tag
+                TagInfo
                 { _tagInstance =
                     EntityId.ofLambdaTagParam
                     (storedLam ^. slLam . V.lamParamId) tag
                 , _tagVal = tag
-                , _tagName = ()
                 }
         mkNewTags tag & setParamList (slParamList storedLam)
         let addFieldToCall argI =
@@ -216,8 +215,8 @@ fixCallToSingleArg tag argI =
                 | otherwise -> fixCallToSingleArg tag restI
             _ -> return argI
 
-tagForLambdaTagParam :: V.Var -> T.Tag -> Tag ()
-tagForLambdaTagParam paramVar tag = Tag (EntityId.ofLambdaTagParam paramVar tag) tag ()
+tagForLambdaTagParam :: V.Var -> T.Tag -> TagInfo
+tagForLambdaTagParam paramVar tag = TagInfo (EntityId.ofLambdaTagParam paramVar tag) tag
 
 delFieldParamAndFixCalls ::
     Monad m =>
@@ -311,8 +310,11 @@ convertRecordParams binderKind fieldParams lam@(V.Lam param _) pl =
                 { _fpiActions = fieldParamActions binderKind tags fp storedLam
                 , _fpiTag =
                     Tag
-                    { _tagInstance = fpIdEntityId param fp
-                    , _tagVal = fpTag fp
+                    { _tagInfo =
+                        TagInfo
+                        { _tagInstance = fpIdEntityId param fp
+                        , _tagVal = fpTag fp
+                        }
                     , _tagName = UniqueId.toUUID $ fpTag fp
                     }
                 }

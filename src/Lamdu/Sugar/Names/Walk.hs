@@ -228,7 +228,7 @@ funcSignature :: LabeledApply name binderVar a -> FunctionSignature
 funcSignature apply =
     FunctionSignature
     { sSpecialArgs = apply ^. aSpecialArgs & void
-    , sNormalArgs = apply ^.. aAnnotatedArgs . traverse . aaTag . tagVal & Set.fromList
+    , sNormalArgs = apply ^.. aAnnotatedArgs . traverse . aaTag . tagInfo . tagVal & Set.fromList
     }
 
 toExpression :: MonadNaming m => OldExpression m a -> m (NewExpression m a)
