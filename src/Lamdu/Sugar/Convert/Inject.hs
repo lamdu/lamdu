@@ -24,10 +24,10 @@ convert (V.Inject tag val) exprPl =
     Inject
     { _iMVal = mVal
     , _iTag =
-        TagG
+        Tag
         { _tagInstance = EntityId.ofInjectTag entityId
         , _tagVal = tag
-        , _tagGName = UniqueId.toUUID tag
+        , _tagName = UniqueId.toUUID tag
         }
     }
     & traverse ConvertM.convertSubexpression

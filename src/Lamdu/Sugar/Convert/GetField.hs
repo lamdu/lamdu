@@ -47,10 +47,10 @@ convertGetFieldNonParam (V.GetField recExpr tag) exprPl =
     GetField
     { _gfRecord = recExpr
     , _gfTag =
-        TagG
+        Tag
         { _tagInstance = EntityId.ofGetFieldTag entityId
         , _tagVal = tag
-        , _tagGName = UniqueId.toUUID tag
+        , _tagName = UniqueId.toUUID tag
         }
     }
     & traverse ConvertM.convertSubexpression

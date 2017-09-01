@@ -51,7 +51,7 @@ addToLabeledApply a =
         processArg arg =
             do
                 param <- arg ^? Sugar.aaExpr . Sugar.rBody . Sugar._BodyGetVar . Sugar._GetParam
-                param ^. Sugar.pNameRef . Sugar.nrName == arg ^. Sugar.aaTag . Sugar.tagGName & guard
+                param ^. Sugar.pNameRef . Sugar.nrName == arg ^. Sugar.aaTag . Sugar.tagName & guard
                 Right Sugar.RelayedArg
                     { Sugar._raValue = param
                     , Sugar._raId = arg ^. Sugar.aaExpr . Sugar.rPayload . Sugar.plEntityId

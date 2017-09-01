@@ -175,7 +175,7 @@ data Hole name m expr = Hole
 {- Record start -}
 data RecordField name m expr = RecordField
     { _rfDelete :: T m EntityId
-    , _rfTag :: TagG name
+    , _rfTag :: Tag name
     , _rfExpr :: expr -- field type or val
     } deriving (Functor, Foldable, Traversable)
 
@@ -185,7 +185,7 @@ data RecordTail m expr
     deriving (Functor, Foldable, Traversable)
 
 data RecordAddFieldResult = RecordAddFieldResult
-    { _rafrNewTag :: TagG ()
+    { _rafrNewTag :: Tag ()
     , _rafrNewVal :: EntityId
     , _rafrRecExtend :: EntityId
     }
@@ -200,7 +200,7 @@ data Record name m expr = Record
 {- Case start -}
 data CaseAlt name m expr = CaseAlt
     { _caDelete :: T m EntityId
-    , _caTag :: TagG name
+    , _caTag :: Tag name
     , _caHandler :: expr
     } deriving (Functor, Foldable, Traversable)
 
@@ -210,7 +210,7 @@ data CaseTail m expr
     deriving (Functor, Foldable, Traversable)
 
 data CaseAddAltResult = CaseAddAltResult
-    { _caarNewTag :: TagG ()
+    { _caarNewTag :: Tag ()
     , _caarNewVal :: EntityId
     , _caarCase :: EntityId
     }
@@ -253,11 +253,11 @@ data Guard m expr = Guard
 
 data GetField name expr = GetField
     { _gfRecord :: expr
-    , _gfTag :: TagG name
+    , _gfTag :: Tag name
     } deriving (Functor, Foldable, Traversable)
 
 data Inject name expr = Inject
-    { _iTag :: TagG name
+    { _iTag :: Tag name
     , _iMVal :: Maybe expr
     } deriving (Functor, Foldable, Traversable)
 
@@ -314,7 +314,7 @@ data SpecialArgs expr
     deriving (Functor, Foldable, Traversable, Eq, Ord, Show)
 
 data AnnotatedArg name expr = AnnotatedArg
-    { _aaTag :: TagG name
+    { _aaTag :: Tag name
     , _aaExpr :: expr
     } deriving (Functor, Foldable, Traversable)
 

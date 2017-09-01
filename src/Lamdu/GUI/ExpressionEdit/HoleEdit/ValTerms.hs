@@ -38,7 +38,7 @@ bodyShape = \case
         Sugar.Record [] Sugar.ClosedRecord{} _ -> ["empty"]
         _ -> []
     Sugar.BodyGetField gf ->
-        [".", "field", "." <> ofName (gf ^. Sugar.gfTag . Sugar.tagGName)]
+        [".", "field", "." <> ofName (gf ^. Sugar.gfTag . Sugar.tagName)]
     Sugar.BodyCase cas ->
         ["case", ":"] ++
         case cas of

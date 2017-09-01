@@ -158,11 +158,11 @@ toLam ::
     m (Lambda (NewName m) p b)
 toLam = lamBinder . toBinder
 
-toTagG ::
+toTag ::
     MonadNaming m =>
-    TagG (OldName m) ->
-    m (TagG (NewName m))
-toTagG = tagGName %%~ opGetName TagName
+    Tag (OldName m) ->
+    m (Tag (NewName m))
+toTag = tagName %%~ opGetName TagName
 
 toLabeledApply ::
     MonadNaming m =>
@@ -176,7 +176,7 @@ toLabeledApply expr app@LabeledApply{..} =
         opGetAppliedFuncName (funcSignature app) (binderVarType (_aFunc ^. bvForm))
     )
     <*> pure _aSpecialArgs
-    <*> (traverse . aaTag) toTagG _aAnnotatedArgs
+    <*> (traverse . aaTag) toTag _aAnnotatedArgs
     <*> (traverse . raValue) toParam _aRelayedArgs
     >>= traverse expr
 
@@ -207,10 +207,10 @@ toBody ::
     Body (OldName m) (TM m) a ->
     m (Body (NewName m) (TM m) b)
 toBody expr = \case
-    BodyGetField     x -> x & traverse expr >>= gfTag toTagG <&> BodyGetField
-    BodyInject       x -> x & traverse expr >>= iTag toTagG <&> BodyInject
-    BodyRecord       x -> x & traverse expr >>= (rItems . traverse . rfTag) toTagG <&> BodyRecord
-    BodyCase         x -> x & traverse expr >>= (cAlts . traverse . caTag) toTagG <&> BodyCase
+    BodyGetField     x -> x & traverse expr >>= gfTag toTag <&> BodyGetField
+    BodyInject       x -> x & traverse expr >>= iTag toTag <&> BodyInject
+    BodyRecord       x -> x & traverse expr >>= (rItems . traverse . rfTag) toTag <&> BodyRecord
+    BodyCase         x -> x & traverse expr >>= (cAlts . traverse . caTag) toTag <&> BodyCase
     BodyGuard        x -> x & traverse expr <&> BodyGuard
     BodySimpleApply  x -> x & traverse expr <&> BodySimpleApply
     BodyLabeledApply x -> x & toLabeledApply expr <&> BodyLabeledApply
@@ -244,7 +244,7 @@ withBinderParams (VarParam fp) =
     opWithParamName (isFunctionType (fp ^. fpAnnotation . aInferredType))
     (fp ^. fpInfo . vpiName)
     <&> VarParam . \newName -> fp & fpInfo . vpiName .~ newName
-withBinderParams (FieldParams xs) = (traverse . fpInfo . fpiTag . tagGName) opWithTagName xs <&> FieldParams
+withBinderParams (FieldParams xs) = (traverse . fpInfo . fpiTag . tagName) opWithTagName xs <&> FieldParams
 
 toDefinitionBody ::
     MonadNaming m => (a -> m b) ->

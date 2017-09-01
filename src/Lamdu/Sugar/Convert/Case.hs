@@ -37,8 +37,8 @@ import           Lamdu.Prelude
 plValI :: Lens.Lens' (Input.Payload m a) (ExprIRef.ValI m)
 plValI = Input.stored . Property.pVal
 
-convertTag :: EntityId -> T.Tag -> TagG UUID
-convertTag inst tag = TagG inst tag $ UniqueId.toUUID tag
+convertTag :: EntityId -> T.Tag -> Tag UUID
+convertTag inst tag = Tag inst tag $ UniqueId.toUUID tag
 
 makeAddAlt :: Monad m =>
     ExprIRef.ValIProperty m ->
@@ -53,7 +53,7 @@ makeAddAlt stored =
             let resultEntity = EntityId.ofValI resultI
             return
                 CaseAddAltResult
-                { _caarNewTag = TagG (EntityId.ofRecExtendTag resultEntity) tag ()
+                { _caarNewTag = Tag (EntityId.ofRecExtendTag resultEntity) tag ()
                 , _caarNewVal = EntityId.ofValI newValI
                 , _caarCase = resultEntity
                 }

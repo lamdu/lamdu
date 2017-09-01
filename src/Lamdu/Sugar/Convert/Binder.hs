@@ -187,7 +187,7 @@ convertLam lam exprPl =
             (exprPl ^. Input.stored & Property.value & Anchors.assocScopeRef)
             Nothing convParams (lam ^. V.lamResult)
         let paramUUIDs =
-                binder ^.. bParams . _FieldParams . traverse . fpInfo . fpiTag . tagGName
+                binder ^.. bParams . _FieldParams . traverse . fpInfo . fpiTag . tagName
                 & Set.fromList
         let lambda
                 | useNormalLambda paramUUIDs binder =

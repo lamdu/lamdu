@@ -34,10 +34,10 @@ type T = Transaction
 makeTagNameEdit ::
     Monad m =>
     Widget.EventMap (T m Widget.EventResult) -> Draw.Color ->
-    Sugar.TagG (Name m) -> ExprGuiM m (WithTextPos (Widget (T m Widget.EventResult)))
+    Sugar.Tag (Name m) -> ExprGuiM m (WithTextPos (Widget (T m Widget.EventResult)))
 makeTagNameEdit jumpNextEventMap tagColor tagG =
     ExpressionGui.makeNameEdit (Align.tValue %~ E.weakerEvents jumpNextEventMap)
-    (tagG ^. Sugar.tagGName) myId
+    (tagG ^. Sugar.tagName) myId
     & Reader.local (TextView.color .~ tagColor)
     <&> Align.tValue . E.eventMap %~ E.filterChars (/= ',')
     where
@@ -45,7 +45,7 @@ makeTagNameEdit jumpNextEventMap tagColor tagG =
 
 makeTagH ::
     Monad m =>
-    Draw.Color -> NearestHoles -> Sugar.TagG (Name m) ->
+    Draw.Color -> NearestHoles -> Sugar.Tag (Name m) ->
     ExprGuiM m (WithTextPos (Widget (T m Widget.EventResult)))
 makeTagH tagColor nearestHoles tagG =
     do
@@ -64,7 +64,7 @@ makeTagH tagColor nearestHoles tagG =
             <&> Align.tValue %~ E.weakerEvents jumpHolesEventMap
 
 makeRecordTag ::
-    Monad m => NearestHoles -> Sugar.TagG (Name m) ->
+    Monad m => NearestHoles -> Sugar.Tag (Name m) ->
     ExprGuiM m (WithTextPos (Widget (T m Widget.EventResult)))
 makeRecordTag nearestHoles tagG =
     do
@@ -72,7 +72,7 @@ makeRecordTag nearestHoles tagG =
         makeTagH recordTagColor nearestHoles tagG
 
 makeCaseTag ::
-    Monad m => NearestHoles -> Sugar.TagG (Name m) ->
+    Monad m => NearestHoles -> Sugar.Tag (Name m) ->
     ExprGuiM m (WithTextPos (Widget (T m Widget.EventResult)))
 makeCaseTag nearestHoles tagG =
     do
@@ -80,11 +80,11 @@ makeCaseTag nearestHoles tagG =
         makeTagH caseTagColor nearestHoles tagG
 
 -- | Unfocusable tag view (e.g: in apply params)
-makeParamTag :: Monad m => Sugar.TagG (Name m) -> ExprGuiM m (WithTextPos View)
+makeParamTag :: Monad m => Sugar.Tag (Name m) -> ExprGuiM m (WithTextPos View)
 makeParamTag t =
     do
         Theme.Name{..} <- Theme.name <$> Lens.view Theme.theme
-        ExpressionGui.makeNameView (t ^. Sugar.tagGName) animId
+        ExpressionGui.makeNameView (t ^. Sugar.tagName) animId
             & Reader.local (TextView.color .~ paramTagColor)
     where
         animId = t ^. Sugar.tagInstance & WidgetIds.fromEntityId & Widget.toAnimId

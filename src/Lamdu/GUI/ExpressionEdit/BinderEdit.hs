@@ -534,7 +534,7 @@ makeParamsEdit annotationOpts nearestHoles delVarBackwardsId lhsId rhsId params 
                 ps
                 & traverse . Sugar.fpInfo %~
                     (\x -> namedParamEditInfo paramColor
-                        (x ^. Sugar.fpiTag . Sugar.tagInstance) (x ^. Sugar.fpiTag . Sugar.tagGName) (x ^. Sugar.fpiActions))
+                        (x ^. Sugar.fpiTag . Sugar.tagInstance) (x ^. Sugar.fpiTag . Sugar.tagName) (x ^. Sugar.fpiActions))
                 & fromParamList ExprGuiT.alwaysShowAnnotations lhsId rhsId
     where
         fromParamList showParamAnnotation delDestFirst delDestLast paramList =

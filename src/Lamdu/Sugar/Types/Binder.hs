@@ -4,7 +4,7 @@ module Lamdu.Sugar.Types.Binder
       EvaluationResult
     , Annotation(..), aInferredType, aMEvaluationResult
     -- Tags
-    , TagG(..), tagGName, tagVal, tagInstance
+    , Tag(..), tagName, tagVal, tagInstance
     -- Let
     , LetFloatResult(..)
     , LetActions(..)
@@ -64,17 +64,17 @@ data VarToTags = VarToTags
     , vttReplacedVarEntityId :: EntityId
       -- Since this is just a result of a transaction, no name is
       -- actually needed in the Tags below
-    , vttReplacedByTag :: TagG ()
-    , vttNewTag :: TagG ()
+    , vttReplacedByTag :: Tag ()
+    , vttNewTag :: Tag ()
     }
 
 data ParamAddResult
     = ParamAddResultNewVar EntityId V.Var
     | ParamAddResultVarToTags VarToTags
-    | ParamAddResultNewTag (TagG ())
+    | ParamAddResultNewTag (Tag ())
 
 data TagsToVar = TagsToVar
-    { ttvReplacedTag :: TagG ()
+    { ttvReplacedTag :: Tag ()
     , ttvReplacedByVar :: V.Var
     , ttvReplacedByVarEntityId :: EntityId
     }
@@ -103,7 +103,7 @@ data VarParamInfo name m = VarParamInfo
     }
 
 data FieldParamInfo name m = FieldParamInfo
-    { _fpiTag :: TagG name
+    { _fpiTag :: Tag name
     , _fpiActions :: FuncParamActions m
     }
 
@@ -112,10 +112,10 @@ data FuncParam info = FuncParam
     , _fpInfo :: info
     } deriving (Functor, Foldable, Traversable)
 
-data TagG name = TagG
+data Tag name = Tag
     { _tagInstance :: EntityId -- Unique across different uses of a tag
     , _tagVal :: T.Tag
-    , _tagGName :: name
+    , _tagName :: name
     } deriving (Eq, Ord, Show)
 
 data BinderMode = NormalBinder | LightLambda
@@ -208,7 +208,7 @@ Lens.makeLenses ''FuncParamActions
 Lens.makeLenses ''Let
 Lens.makeLenses ''LetActions
 Lens.makeLenses ''NullParamActions
-Lens.makeLenses ''TagG
+Lens.makeLenses ''Tag
 Lens.makeLenses ''VarParamInfo
 Lens.makePrisms ''BinderContent
 Lens.makePrisms ''BinderParams
