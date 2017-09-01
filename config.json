@@ -31,7 +31,7 @@
         "holePickAndMoveToNextHoleKeys" : [ "Space" ],
         "holeJumpToPrevKeys"            : [ "Shift+Tab" ],
         "holePickResultKeys"            : [ "Enter" ],
-        "holeOpenKeys"                  : [ "Enter" ],
+        "holeOpenKeys"                  : [ "Space", "Enter" ],
         "holeCloseKeys"                 : [ "Escape", "Cmd+LeftBracket" ],
         "holeUnwrapKeys"                : [ "Space", "Enter" ]
     },
