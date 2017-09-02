@@ -509,7 +509,7 @@ nullParamEditInfo widgetId mActions =
     , ParamEdit.iMOrderBefore = Nothing
     , ParamEdit.iMOrderAfter = Nothing
     , ParamEdit.iDel = Sugar.ParamDelResultDelVar <$ mActions ^. Sugar.npDeleteLambda
-    , ParamEdit.iId = widgetId
+    , ParamEdit.iId = Widget.joinId widgetId ["param"]
     }
 
 makeParamsEdit ::
