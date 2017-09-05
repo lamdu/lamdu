@@ -92,11 +92,12 @@ convertLabeled funcS argS exprPl =
                 guard $ Map.keysSet (flatArgs ^. FlatComposite.fields) == sFields
         let getArg field =
                 AnnotatedArg
-                    { _aaTag = field ^. rfTag
+                    { _aaTag = field ^. rfTag . tagInfo
+                    , _aaName = field ^. rfTag . tagName
                     , _aaExpr = field ^. rfExpr
                     }
         let args = map getArg $ record ^. rItems
-        let tags = args ^.. Lens.traversed . aaTag . tagInfo . tagVal
+        let tags = args ^.. Lens.traversed . aaTag . tagVal
         unless (noRepetitions tags) $ error "Repetitions should not type-check"
         BodyLabeledApply LabeledApply
             { _aFunc = sBinderVar

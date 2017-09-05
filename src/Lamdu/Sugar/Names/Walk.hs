@@ -176,7 +176,7 @@ toLabeledApply expr app@LabeledApply{..} =
         opGetAppliedFuncName (funcSignature app) (binderVarType (_aFunc ^. bvForm))
     )
     <*> pure _aSpecialArgs
-    <*> (traverse . aaTag) toTag _aAnnotatedArgs
+    <*> (traverse . aaName) (opGetName TagName) _aAnnotatedArgs
     <*> (traverse . raValue) toParam _aRelayedArgs
     >>= traverse expr
 
@@ -228,7 +228,7 @@ funcSignature :: LabeledApply name binderVar a -> FunctionSignature
 funcSignature apply =
     FunctionSignature
     { sSpecialArgs = apply ^. aSpecialArgs & void
-    , sNormalArgs = apply ^.. aAnnotatedArgs . traverse . aaTag . tagInfo . tagVal & Set.fromList
+    , sNormalArgs = apply ^.. aAnnotatedArgs . traverse . aaTag . tagVal & Set.fromList
     }
 
 toExpression :: MonadNaming m => OldExpression m a -> m (NewExpression m a)

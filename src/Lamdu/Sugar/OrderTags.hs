@@ -56,7 +56,7 @@ orderRecord :: Monad m => Order m (Sugar.Record name f a)
 orderRecord = Sugar.rItems %%~ orderByTag (^. Sugar.rfTag . Sugar.tagInfo . Sugar.tagVal)
 
 orderLabeledApply :: Monad m => Order m (Sugar.LabeledApply name binderVar a)
-orderLabeledApply = Sugar.aAnnotatedArgs %%~ orderByTag (^. Sugar.aaTag . Sugar.tagInfo . Sugar.tagVal)
+orderLabeledApply = Sugar.aAnnotatedArgs %%~ orderByTag (^. Sugar.aaTag . Sugar.tagVal)
 
 orderHoleResult :: Monad m => Order m (Sugar.HoleResult name m)
 orderHoleResult = Sugar.holeResultConverted %%~ orderExpr

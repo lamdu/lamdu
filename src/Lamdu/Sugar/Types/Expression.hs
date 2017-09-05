@@ -42,7 +42,7 @@ module Lamdu.Sugar.Types.Expression
     , GetVar(..), _GetParam, _GetParamsRecord, _GetBinder
     , ParamsRecordVar(..), prvFieldNames
     , SpecialArgs(..), _NoSpecialArgs, _ObjectArg, _InfixArgs
-    , AnnotatedArg(..), aaTag, aaExpr
+    , AnnotatedArg(..), aaTag, aaExpr, aaName
     , RelayedArg(..), raValue, raId, raActions
     , LabeledApply(..), aFunc, aSpecialArgs, aAnnotatedArgs, aRelayedArgs
     , Unwrap(..), _UnwrapAction, _UnwrapTypeMismatch
@@ -314,7 +314,8 @@ data SpecialArgs expr
     deriving (Functor, Foldable, Traversable, Eq, Ord, Show)
 
 data AnnotatedArg name expr = AnnotatedArg
-    { _aaTag :: Tag name
+    { _aaTag :: TagInfo
+    , _aaName :: name
     , _aaExpr :: expr
     } deriving (Functor, Foldable, Traversable)
 

@@ -80,14 +80,14 @@ makeCaseTag nearestHoles tag =
         makeTagH caseTagColor nearestHoles tag
 
 -- | Unfocusable tag view (e.g: in apply params)
-makeParamTag :: Monad m => Sugar.Tag (Name m) -> ExprGuiM m (WithTextPos View)
-makeParamTag t =
+makeParamTag :: Monad m => Name m -> Sugar.EntityId -> ExprGuiM m (WithTextPos View)
+makeParamTag name entityId =
     do
         Theme.Name{..} <- Theme.name <$> Lens.view Theme.theme
-        ExpressionGui.makeNameView (t ^. Sugar.tagName) animId
+        ExpressionGui.makeNameView name animId
             & Reader.local (TextView.color .~ paramTagColor)
     where
-        animId = t ^. Sugar.tagInfo . Sugar.tagInstance & WidgetIds.fromEntityId & Widget.toAnimId
+        animId = WidgetIds.fromEntityId entityId & Widget.toAnimId
 
 diveToRecordTag :: Widget.Id -> Widget.Id
 diveToRecordTag = WidgetIds.nameEditOf
