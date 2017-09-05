@@ -10,6 +10,8 @@ module Lamdu.GUI.ExpressionEdit.HoleEdit.SearchArea
 
 import qualified Control.Lens as Lens
 import qualified Data.Monoid as Monoid
+import qualified Data.Store.Property as Property
+import qualified Data.Text as Text
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.Hover as Hover
@@ -20,7 +22,7 @@ import qualified GUI.Momentu.Widgets.Menu as Menu
 import qualified Lamdu.Config as Config
 import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.EventMap as HoleEventMap
-import           Lamdu.GUI.ExpressionEdit.HoleEdit.Info (HoleInfo(..))
+import           Lamdu.GUI.ExpressionEdit.HoleEdit.Info (HoleInfo(..), hiSearchTermProperty)
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.Open (makeOpenSearchAreaGui)
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.SearchTerm as SearchTerm
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds (WidgetIds(..))
@@ -50,11 +52,14 @@ makeStdWrapped ::
 makeStdWrapped pl holeInfo =
     do
         config <- Lens.view Config.config
+        let fdMode
+                | Text.null searchTerm = FocusDelegator.FocusEntryParent
+                | otherwise = FocusDelegator.FocusEntryChild
         let fdWrap
                 | isAHoleInHole = return id
                 | otherwise =
                     FocusDelegator.make ?? fdConfig (Config.hole config)
-                    ?? FocusDelegator.FocusEntryParent ?? hidClosedSearchArea (hiIds holeInfo)
+                    ?? fdMode ?? hidClosedSearchArea (hiIds holeInfo)
                     <&> (Align.tValue %~)
         closedSearchTermGui <-
             fdWrap <*> SearchTerm.make holeInfo <&> Responsive.fromWithTextPos
@@ -88,3 +93,4 @@ makeStdWrapped pl holeInfo =
             <&> Lens.mapped %~ E.weakerEvents eventMap
     where
         isAHoleInHole = ExprGuiT.isHoleResult pl
+        searchTerm = hiSearchTermProperty holeInfo ^. Property.pVal
