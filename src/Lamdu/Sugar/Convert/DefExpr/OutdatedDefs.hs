@@ -26,6 +26,7 @@ import           Lamdu.Expr.IRef (ValI, ValIProperty)
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Lens as ExprLens
 import qualified Lamdu.Infer as Infer
+import           Lamdu.Sugar.Convert.Monad (PostProcessResult(..))
 import           Lamdu.Sugar.Types (DefinitionOutdatedType(..))
 
 import           Lamdu.Prelude
@@ -194,20 +195,25 @@ updateDefType ::
     Monad m =>
     Scheme -> Scheme -> V.Var ->
     Def.Expr (Val (ValIProperty m)) -> (Def.Expr (ValI m) -> T m ()) ->
+    T m PostProcessResult ->
     T m ()
-updateDefType prevType newType usedDefVar defExpr setDefExpr =
+updateDefType prevType newType usedDefVar defExpr setDefExpr typeCheck =
     do
-        fixDefExpr prevType newType usedDefVar (defExpr ^. Def.expr)
         defExpr
             <&> (^. Val.payload . Property.pVal)
             & Def.exprFrozenDeps . Infer.depsGlobalTypes . Lens.at usedDefVar ?~ newType
             & setDefExpr
+        x <- typeCheck
+        case x of
+            GoodExpr -> return ()
+            BadExpr{} -> fixDefExpr prevType newType usedDefVar (defExpr ^. Def.expr)
 
 scan ::
     Monad m =>
     Def.Expr (Val (ValIProperty m)) -> (Def.Expr (ValI m) -> T m ()) ->
+    T m PostProcessResult ->
     T m (Map V.Var (DefinitionOutdatedType m))
-scan defExpr setDefExpr =
+scan defExpr setDefExpr typeCheck =
     defExpr ^. Def.exprFrozenDeps . Infer.depsGlobalTypes
     & Map.toList & mapM (uncurry scanDef) <&> mconcat
     where
@@ -222,6 +228,6 @@ scan defExpr setDefExpr =
                 { _defTypeWhenUsed = usedType
                 , _defTypeCurrent = newUsedDefType
                 , _defTypeUseCurrent =
-                    updateDefType usedType newUsedDefType globalVar defExpr setDefExpr
+                    updateDefType usedType newUsedDefType globalVar defExpr setDefExpr typeCheck
                 }
                 & Map.singleton globalVar
