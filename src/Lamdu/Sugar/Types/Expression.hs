@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, TemplateHaskell, DeriveTraversable, GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE NoImplicitPrelude, TemplateHaskell, DeriveTraversable, GeneralizedNewtypeDeriving, KindSignatures #-}
 module Lamdu.Sugar.Types.Expression
     ( WrapAction(..), _WrapperAlready, _WrappedAlready, _WrapNotAllowed, _WrapAction
     , SetToHole(..), _SetToHole, _SetWrapperToHole, _AlreadyAHole
@@ -175,7 +175,7 @@ data Hole name m expr = Hole
 {- Record start -}
 data RecordField name m expr = RecordField
     { _rfDelete :: T m EntityId
-    , _rfTag :: Tag name
+    , _rfTag :: Tag name m
     , _rfExpr :: expr -- field type or val
     } deriving (Functor, Foldable, Traversable)
 
@@ -200,7 +200,7 @@ data Record name m expr = Record
 {- Case start -}
 data CaseAlt name m expr = CaseAlt
     { _caDelete :: T m EntityId
-    , _caTag :: Tag name
+    , _caTag :: Tag name m
     , _caHandler :: expr
     } deriving (Functor, Foldable, Traversable)
 
@@ -251,13 +251,13 @@ data Guard m expr = Guard
     , _gDeleteIf :: T m EntityId
     } deriving (Functor, Foldable, Traversable)
 
-data GetField name expr = GetField
+data GetField name m expr = GetField
     { _gfRecord :: expr
-    , _gfTag :: Tag name
+    , _gfTag :: Tag name m
     } deriving (Functor, Foldable, Traversable)
 
-data Inject name expr = Inject
-    { _iTag :: Tag name
+data Inject name m expr = Inject
+    { _iTag :: Tag name m
     , _iMVal :: Maybe expr
     } deriving (Functor, Foldable, Traversable)
 
@@ -349,10 +349,10 @@ data Body name m expr
     | BodyHole (Hole name m expr)
     | BodyLiteral (Literal (Property m))
     | BodyRecord (Record name m expr)
-    | BodyGetField (GetField name expr)
+    | BodyGetField (GetField name m expr)
     | BodyCase (Case name m expr)
     | BodyGuard (Guard m expr)
-    | BodyInject (Inject name expr)
+    | BodyInject (Inject name m expr)
     | BodyGetVar (GetVar name m)
     | BodyToNom (Nominal name (BinderBody name m expr))
     | BodyFromNom (Nominal name expr)

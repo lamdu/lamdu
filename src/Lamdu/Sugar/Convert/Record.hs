@@ -29,11 +29,12 @@ import           Lamdu.Sugar.Types
 plValI :: Lens.Lens' (Input.Payload m a) (ExprIRef.ValI m)
 plValI = Input.stored . Property.pVal
 
-convertTag :: EntityId -> T.Tag -> Tag UUID
+convertTag :: EntityId -> T.Tag -> Tag UUID m
 convertTag inst tag =
     Tag
     { _tagInfo = TagInfo inst tag
     , _tagName = UniqueId.toUUID tag
+    , _tagActions = error "TODO: tagActions"
     }
 
 deleteField ::

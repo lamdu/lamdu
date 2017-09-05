@@ -316,6 +316,7 @@ convertRecordParams binderKind fieldParams lam@(V.Lam param _) pl =
                         , _tagVal = fpTag fp
                         }
                     , _tagName = UniqueId.toUUID $ fpTag fp
+                    , _tagActions = error "TODO: tagActions"
                     }
                 }
             , _fpAnnotation =

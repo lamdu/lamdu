@@ -20,7 +20,7 @@ import           Lamdu.Prelude
 
 makeCommon ::
     Monad m =>
-    Sugar.Tag (Name m) ->
+    Sugar.Tag (Name m) m ->
     NearestHoles -> [ExpressionGui m] ->
     ExprGuiM m (ExpressionGui m)
 makeCommon tag nearestHoles valEdits =
@@ -31,7 +31,7 @@ makeCommon tag nearestHoles valEdits =
 
 make ::
     Monad m =>
-    Sugar.Inject (Name m) (ExprGuiT.SugarExpr m) ->
+    Sugar.Inject (Name m) m (ExprGuiT.SugarExpr m) ->
     Sugar.Payload m ExprGuiT.Payload ->
     ExprGuiM m (ExpressionGui m)
 make (Sugar.Inject tag mVal) pl =

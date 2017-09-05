@@ -4,8 +4,9 @@ module Lamdu.Sugar.Types.Binder
       EvaluationResult
     , Annotation(..), aInferredType, aMEvaluationResult
     -- Tags
-    , Tag(..), tagName, tagInfo
+    , Tag(..), tagName, tagInfo, tagActions
     , TagInfo(..), tagVal, tagInstance
+    , TagActions(..), taOptions, taChangeTag
     -- Let
     , LetFloatResult(..)
     , LetActions(..)
@@ -104,7 +105,7 @@ data VarParamInfo name m = VarParamInfo
     }
 
 data FieldParamInfo name m = FieldParamInfo
-    { _fpiTag :: Tag name
+    { _fpiTag :: Tag name m
     , _fpiActions :: FuncParamActions m
     }
 
@@ -118,10 +119,16 @@ data TagInfo = TagInfo
     , _tagVal :: T.Tag
     } deriving (Eq, Ord, Show)
 
-data Tag name = Tag
+data TagActions m = TagActions
+    { _taOptions :: T m [T.Tag]
+    , _taChangeTag :: T.Tag -> T m ()
+    }
+
+data Tag name m = Tag
     { _tagInfo :: TagInfo
     , _tagName :: name
-    } deriving (Eq, Ord, Show)
+    , _tagActions :: TagActions m
+    }
 
 data BinderMode = NormalBinder | LightLambda
 
@@ -214,6 +221,7 @@ Lens.makeLenses ''Let
 Lens.makeLenses ''LetActions
 Lens.makeLenses ''NullParamActions
 Lens.makeLenses ''Tag
+Lens.makeLenses ''TagActions
 Lens.makeLenses ''TagInfo
 Lens.makeLenses ''VarParamInfo
 Lens.makePrisms ''BinderContent

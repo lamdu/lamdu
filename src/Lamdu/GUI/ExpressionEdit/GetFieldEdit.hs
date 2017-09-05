@@ -18,7 +18,7 @@ import           Lamdu.Prelude
 
 make ::
     Monad m =>
-    Sugar.GetField (Name m) (ExprGuiT.SugarExpr m) ->
+    Sugar.GetField (Name m) m (ExprGuiT.SugarExpr m) ->
     Sugar.Payload m ExprGuiT.Payload ->
     ExprGuiM m (ExpressionGui m)
 make (Sugar.GetField recExpr tag) pl =

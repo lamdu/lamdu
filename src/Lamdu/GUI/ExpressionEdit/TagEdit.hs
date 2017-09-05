@@ -34,7 +34,7 @@ type T = Transaction
 makeTagNameEdit ::
     Monad m =>
     Widget.EventMap (T m Widget.EventResult) -> Draw.Color ->
-    Sugar.Tag (Name m) -> ExprGuiM m (WithTextPos (Widget (T m Widget.EventResult)))
+    Sugar.Tag (Name m) m -> ExprGuiM m (WithTextPos (Widget (T m Widget.EventResult)))
 makeTagNameEdit jumpNextEventMap tagColor tag =
     ExpressionGui.makeNameEdit (Align.tValue %~ E.weakerEvents jumpNextEventMap)
     (tag ^. Sugar.tagName) myId
@@ -45,7 +45,7 @@ makeTagNameEdit jumpNextEventMap tagColor tag =
 
 makeTagH ::
     Monad m =>
-    Draw.Color -> NearestHoles -> Sugar.Tag (Name m) ->
+    Draw.Color -> NearestHoles -> Sugar.Tag (Name m) m ->
     ExprGuiM m (WithTextPos (Widget (T m Widget.EventResult)))
 makeTagH tagColor nearestHoles tag =
     do
@@ -64,7 +64,7 @@ makeTagH tagColor nearestHoles tag =
             <&> Align.tValue %~ E.weakerEvents jumpHolesEventMap
 
 makeRecordTag ::
-    Monad m => NearestHoles -> Sugar.Tag (Name m) ->
+    Monad m => NearestHoles -> Sugar.Tag (Name m) m ->
     ExprGuiM m (WithTextPos (Widget (T m Widget.EventResult)))
 makeRecordTag nearestHoles tag =
     do
@@ -72,7 +72,7 @@ makeRecordTag nearestHoles tag =
         makeTagH recordTagColor nearestHoles tag
 
 makeCaseTag ::
-    Monad m => NearestHoles -> Sugar.Tag (Name m) ->
+    Monad m => NearestHoles -> Sugar.Tag (Name m) m ->
     ExprGuiM m (WithTextPos (Widget (T m Widget.EventResult)))
 makeCaseTag nearestHoles tag =
     do

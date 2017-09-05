@@ -160,8 +160,8 @@ toLam = lamBinder . toBinder
 
 toTag ::
     MonadNaming m =>
-    Tag (OldName m) ->
-    m (Tag (NewName m))
+    Tag (OldName m) p ->
+    m (Tag (NewName m) p)
 toTag = tagName %%~ opGetName TagName
 
 toLabeledApply ::
