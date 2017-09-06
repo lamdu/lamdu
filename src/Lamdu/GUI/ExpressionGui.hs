@@ -330,7 +330,7 @@ makeNameOriginEdit ::
     Name m -> Draw.Color -> Widget.Id ->
     ExprGuiM m (WithTextPos (Widget (T m Widget.EventResult)))
 makeNameOriginEdit name color myId =
-    makeNameEdit id name myId
+    makeNameEdit name myId
     & styleNameOrigin name color
 
 styleNameOrigin :: Monad m => Name n -> Draw.Color -> ExprGuiM m b -> ExprGuiM m b
@@ -347,11 +347,9 @@ styleNameOrigin name color act =
 
 makeNameEdit ::
     Monad m =>
-    (WithTextPos (Widget (T m Widget.EventResult)) ->
-     WithTextPos (Widget (T m Widget.EventResult))) ->
     Name m -> Widget.Id ->
     ExprGuiM m (WithTextPos (Widget (T m Widget.EventResult)))
-makeNameEdit onActiveEditor (Name nameSrc nameCollision setName name) myId =
+makeNameEdit (Name nameSrc nameCollision setName name) myId =
     ( FocusDelegator.make ?? nameEditFDConfig
       ?? FocusDelegator.FocusEntryParent ?? myId
       <&> (Align.tValue %~)
@@ -368,7 +366,6 @@ makeNameEdit onActiveEditor (Name nameSrc nameCollision setName name) myId =
                         (Aligned 0.5 nameEdit /|/ Aligned 0.5 collisionSuffix)
                         ^. Align.value
     & Reader.local (Element.animIdPrefix .~ Widget.toAnimId myId)
-    <&> onActiveEditor
     where
         empty = TextEdit.EmptyStrings name ""
         storedName =
