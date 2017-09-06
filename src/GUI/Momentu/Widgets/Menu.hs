@@ -2,6 +2,7 @@
 
 module GUI.Momentu.Widgets.Menu
     ( Style(..), HasStyle(..)
+    , Submenu(..)
     , Option(..), oId, oWidget, oSubmenuWidgets
     , OrderedOptions(..), optionsFromTop, optionsFromBottom
     , Placement(..), HasMoreOptions(..)
@@ -42,12 +43,19 @@ instance Aeson.FromJSON Style
 class HasStyle env where style :: Lens' env Style
 instance HasStyle Style where style = id
 
-data Option a = Option
-    { _oId :: !Widget.Id
+data Submenu f a
+    = SubmenuEmpty
+    | SubmenuItems (f [WithTextPos (Widget a)])
+    deriving (Functor)
+
+data Option f a = Option
+    { -- | Must be the prefix of all submenu options, also used to
+      -- create this option's submenu arrow frame:
+      _oId :: !Widget.Id
     , -- A widget that represents this option
       _oWidget :: !(WithTextPos (Widget a))
     , -- An optionally empty submenu
-      _oSubmenuWidgets :: ![WithTextPos (Widget a)]
+      _oSubmenuWidgets :: !(Submenu f a)
     }
 Lens.makeLenses ''Option
 
@@ -125,43 +133,48 @@ addBackground =
 
 layoutOption ::
     ( MonadReader env m, Element.HasAnimIdPrefix env, TextView.HasStyle env
-    , Hover.HasStyle env, HasStyle env, Functor f
+    , Widget.HasCursor env, Hover.HasStyle env, HasStyle env, Functor f
     ) =>
-    Widget.R -> Option (f Widget.EventResult) -> m (WithTextPos (Widget (f Widget.EventResult)))
+    Widget.R -> Option m (f Widget.EventResult) -> m (WithTextPos (Widget (f Widget.EventResult)))
 layoutOption maxOptionWidth option =
     case option ^. oSubmenuWidgets of
-    [] -> option ^. oWidget & Element.width .~ maxOptionWidth & pure
-    submenus ->
+    SubmenuEmpty -> singular
+    SubmenuItems action ->
         do
-            submenuSymbol <- makeSubmenuSymbol isSelected
+            isOnSubmenu <- Widget.isSubCursor ?? option ^. oId
+            let isSelected = isOnSubmenu || isOnOption
+            submenuSymbol <-
+                makeSubmenuSymbol isSelected
             let base =
                     (option ^. oWidget
                      & Element.width .~ maxOptionWidth - submenuSymbol ^. Element.width)
                     /|/ submenuSymbol
-                    & Align.tValue %~ Hover.anchor
-            hover <- Hover.hover
-            addBg <- addBackground
-            base
-                & Align.tValue %~
-                Hover.hoverInPlaceOf
-                (Hover.hoverBesideOptionsAxis Glue.Horizontal
-                 (Glue.vbox submenus & addBg <&> hover) base
-                 <&> (^. Align.tValue))
-                & pure
+            if isSelected
+                then do
+                    hover <- Hover.hover
+                    addBg <- addBackground
+                    submenus <- action
+                    let anchored = base & Align.tValue %~ Hover.anchor
+                    anchored
+                        & Align.tValue %~
+                        Hover.hoverInPlaceOf
+                        (Hover.hoverBesideOptionsAxis Glue.Horizontal
+                         (Glue.vbox submenus & addBg <&> hover) anchored
+                         <&> (^. Align.tValue))
+                        & pure
+                else pure base
     & Reader.local (Element.animIdPrefix .~ animId)
     where
+        isOnOption = Widget.isFocused (option ^. oWidget . Align.tValue)
+        singular = option ^. oWidget & Element.width .~ maxOptionWidth & pure
         animId = option ^. oId & Widget.toAnimId
-        isSelected =
-            Widget.isFocused (option ^. oWidget . Align.tValue)
-            || Lens.anyOf (oSubmenuWidgets . traverse . Align.tValue)
-               Widget.isFocused option
 
 layout ::
     ( MonadReader env m, TextView.HasStyle env, Hover.HasStyle env
-    , Element.HasAnimIdPrefix env, HasStyle env
+    , Element.HasAnimIdPrefix env, HasStyle env, Widget.HasCursor env
     , Applicative f
     ) =>
-    Widget.R -> [Option (f Widget.EventResult)] -> HasMoreOptions ->
+    Widget.R -> [Option m (f Widget.EventResult)] -> HasMoreOptions ->
     m (OrderedOptions (Widget (f Widget.EventResult)))
 layout minWidth options hiddenResults =
     (addBackground <&> fmap) <*>
@@ -175,8 +188,8 @@ layout minWidth options hiddenResults =
             let optionMinWidth option =
                     option ^. oWidget . Element.width +
                     case option ^. oSubmenuWidgets of
-                    [] -> 0
-                    _:_ -> submenuSymbolWidth
+                    SubmenuEmpty -> 0
+                    SubmenuItems {} -> submenuSymbolWidth
             let maxOptionWidth = options <&> optionMinWidth & maximum & max minWidth
             hiddenOptionsWidget <-
                 makeMoreOptionsView hiddenResults

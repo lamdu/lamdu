@@ -67,7 +67,7 @@ resultSuffix :: Lens.Prism' AnimId AnimId
 resultSuffix = suffixed ["result suffix"]
 
 data ResultGroup m = ResultGroup
-    { _rgOption :: !(Menu.Option (T m Widget.EventResult))
+    { _rgOption :: !(Menu.Option (ExprGuiM m) (T m Widget.EventResult))
     , _rgPickEventMap :: !(Widget.EventMap (T m Widget.EventResult))
     }
 Lens.makeLenses ''ResultGroup
@@ -97,31 +97,20 @@ makeResultGroup ::
 makeResultGroup holeInfo results =
     do
         (pickMain, mainResultWidget) <- makeShownResult holeInfo mainResult
-        let mainFocused = Widget.isFocused (mainResultWidget ^. Align.tValue)
-        cursorOnExtra <-
-            Widget.isSubCursor
-            ?? results ^. HoleResults.rlExtraResultsPrefixId
-        let isSelected = mainFocused || cursorOnExtra
-        extraResWidget <-
-            if isSelected
-            then
-                results ^. HoleResults.rlExtra
-                & traverse (fmap snd . makeShownResult holeInfo)
-            else focusFirstExtraResult (results ^. HoleResults.rlExtra)
         return ResultGroup
             { _rgOption = Menu.Option
-                { Menu._oId = rId (results ^. HoleResults.rlMain)
+                { Menu._oId = results ^. HoleResults.rlExtraResultsPrefixId
                 , Menu._oWidget = mainResultWidget
-                , Menu._oSubmenuWidgets = extraResWidget
+                , Menu._oSubmenuWidgets =
+                    if null extras
+                    then Menu.SubmenuEmpty
+                    else Menu.SubmenuItems (traverse (makeShownResult holeInfo) extras <&> map snd)
                 }
             , _rgPickEventMap = pickMain
             }
     where
+        extras = results ^. HoleResults.rlExtra
         mainResult = results ^. HoleResults.rlMain
-        focusFirstExtraResult [] = return []
-        focusFirstExtraResult (result:_) =
-            Widget.makeFocusableView ?? rId result ?? Element.empty
-            <&> Align.WithTextPos 0 <&> (: [])
 
 applyResultLayout ::
     Functor f => f (ExpressionGui m) -> f (WithTextPos (Widget (T m Widget.EventResult)))
