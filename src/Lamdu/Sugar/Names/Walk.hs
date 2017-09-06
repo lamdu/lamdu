@@ -11,7 +11,7 @@ import qualified Data.Set as Set
 import           Data.Store.Transaction (Transaction)
 import           Lamdu.Calc.Type (Type)
 import qualified Lamdu.Calc.Type as T
-import           Lamdu.Sugar.Names.CPS (CPS(..))
+import           Lamdu.Sugar.Names.CPS (CPS(..), liftCPS)
 import qualified Lamdu.Sugar.Names.NameGen as NameGen
 import           Lamdu.Sugar.Types
 
@@ -116,8 +116,8 @@ toGetVar (GetParamsRecord x) = traverse (opGetName TagName) x <&> GetParamsRecor
 
 toLet ::
     MonadNaming m => (a -> m b) ->
-    Let (OldName m) p a ->
-    m (Let (NewName m) p b)
+    Let (OldName m) (TM m) a ->
+    m (Let (NewName m) (TM m) b)
 toLet expr item@Let{..} =
     do
         (name, body) <-
@@ -128,21 +128,21 @@ toLet expr item@Let{..} =
 
 toBinderContent ::
     MonadNaming m => (a -> m b) ->
-    BinderContent (OldName m) p a ->
-    m (BinderContent (NewName m) p b)
+    BinderContent (OldName m) (TM m) a ->
+    m (BinderContent (NewName m) (TM m) b)
 toBinderContent expr (BinderLet l) = toLet expr l <&> BinderLet
 toBinderContent expr (BinderExpr e) = expr e <&> BinderExpr
 
 toBinderBody ::
     MonadNaming m => (a -> m b) ->
-    BinderBody (OldName m) p a ->
-    m (BinderBody (NewName m) p b)
+    BinderBody (OldName m) (TM m) a ->
+    m (BinderBody (NewName m) (TM m) b)
 toBinderBody expr = bbContent %%~ toBinderContent expr
 
 toBinder ::
     MonadNaming m => (a -> m b) ->
-    Binder (OldName m) p a ->
-    m (Binder (NewName m) p b)
+    Binder (OldName m) (TM m) a ->
+    m (Binder (NewName m) (TM m) b)
 toBinder expr binder@Binder{..} =
     do
         (params, body) <-
@@ -154,15 +154,20 @@ toBinder expr binder@Binder{..} =
 
 toLam ::
     MonadNaming m => (a -> m b) ->
-    Lambda (OldName m) p a ->
-    m (Lambda (NewName m) p b)
+    Lambda (OldName m) (TM m) a ->
+    m (Lambda (NewName m) (TM m) b)
 toLam = lamBinder . toBinder
 
 toTag ::
     MonadNaming m =>
-    Tag (OldName m) p ->
-    m (Tag (NewName m) p)
-toTag = tagName %%~ opGetName TagName
+    Tag (OldName m) (TM m) ->
+    m (Tag (NewName m) (TM m))
+toTag (Tag info name actions) =
+    do
+        run <- opRun
+        Tag info
+            <$> opGetName TagName name
+            ?? (actions & taOptions %~ (>>= run . (traverse . _1) (opGetName TagName)))
 
 toLabeledApply ::
     MonadNaming m =>
@@ -234,22 +239,33 @@ funcSignature apply =
 toExpression :: MonadNaming m => OldExpression m a -> m (NewExpression m a)
 toExpression = rBody (toBody toExpression)
 
+withTag :: MonadNaming m => Tag (OldName m) (TM m) -> CPS m (Tag (NewName m) (TM m))
+withTag (Tag info name actions) =
+    Tag info
+    <$> opWithTagName name
+    <*> newActions
+    where
+        newActions =
+            liftCPS opRun <&>
+            \run -> actions & taOptions %~ (>>= run . (traverse . _1) (opGetName TagName))
+
 withBinderParams ::
     MonadNaming m =>
-    BinderParams (OldName m) p ->
-    CPS m (BinderParams (NewName m) p)
+    BinderParams (OldName m) (TM m) ->
+    CPS m (BinderParams (NewName m) (TM m))
 withBinderParams BinderWithoutParams = pure BinderWithoutParams
 withBinderParams (NullParam a) = pure (NullParam a)
 withBinderParams (VarParam fp) =
     opWithParamName (isFunctionType (fp ^. fpAnnotation . aInferredType))
     (fp ^. fpInfo . vpiName)
     <&> VarParam . \newName -> fp & fpInfo . vpiName .~ newName
-withBinderParams (FieldParams xs) = (traverse . fpInfo . fpiTag . tagName) opWithTagName xs <&> FieldParams
+withBinderParams (FieldParams xs) =
+    (traverse . fpInfo . fpiTag) withTag xs <&> FieldParams
 
 toDefinitionBody ::
     MonadNaming m => (a -> m b) ->
-    DefinitionBody (OldName m) p a ->
-    m (DefinitionBody (NewName m) p b)
+    DefinitionBody (OldName m) (TM m) a ->
+    m (DefinitionBody (NewName m) (TM m) b)
 toDefinitionBody _ (DefinitionBodyBuiltin bi) = pure (DefinitionBodyBuiltin bi)
 toDefinitionBody f (DefinitionBodyExpression (DefinitionExpression typeInfo content)) =
      toBinder f content
@@ -258,8 +274,8 @@ toDefinitionBody f (DefinitionBodyExpression (DefinitionExpression typeInfo cont
 
 toDef ::
     MonadNaming m => (a -> m b) ->
-    Definition (OldName m) p a ->
-    m (Definition (NewName m) p b)
+    Definition (OldName m) (TM m) a ->
+    m (Definition (NewName m) (TM m) b)
 toDef f def@Definition {..} =
     do
         name <- opGetName DefName _drName

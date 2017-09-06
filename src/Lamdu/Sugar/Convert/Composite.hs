@@ -56,11 +56,14 @@ convertCompositeItem stored restI inst tag expr =
                         sugarContext ^. ConvertM.scCodeAnchors
                         & Anchors.tags & Transaction.getP
                         <&> Set.toList
+                        <&> map toOption
                     }
                 }
             , _ciExpr = exprS
             , _ciDelete = delItem
             }
+    where
+        toOption x = (UniqueId.toUUID x, x)
 
 setTagOrder :: Monad m => Int -> CompositeAddItemResult -> Transaction m CompositeAddItemResult
 setTagOrder i r =

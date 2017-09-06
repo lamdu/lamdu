@@ -119,15 +119,15 @@ data TagInfo = TagInfo
     , _tagVal :: T.Tag
     } deriving (Eq, Ord, Show)
 
-data TagActions m = TagActions
-    { _taOptions :: T m [T.Tag]
+data TagActions name m = TagActions
+    { _taOptions :: T m [(name, T.Tag)]
     , _taChangeTag :: T.Tag -> T m ()
     }
 
 data Tag name m = Tag
     { _tagInfo :: TagInfo
     , _tagName :: name
-    , _tagActions :: TagActions m
+    , _tagActions :: TagActions name m
     }
 
 data BinderMode = NormalBinder | LightLambda

@@ -1,12 +1,16 @@
 {-# LANGUAGE NoImplicitPrelude, DeriveFunctor, RankNTypes #-}
 module Lamdu.Sugar.Names.CPS
     ( CPS(..)
+    , liftCPS
     ) where
 
 import Lamdu.Prelude
 
 newtype CPS m a = CPS { runCPS :: forall r. m r -> m (a, r) }
     deriving (Functor)
+
+liftCPS :: Monad m => m a -> CPS m a
+liftCPS action = CPS $ \inner -> (,) <$> action <*> inner
 
 instance Functor m => Applicative (CPS m) where
     pure x = CPS $ fmap ((,) x)
