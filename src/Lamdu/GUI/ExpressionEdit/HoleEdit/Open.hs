@@ -106,7 +106,7 @@ makeResultGroup holeInfo results =
         let isSelected = mainFocused || cursorOnExtra
         extraResWidget <-
             if isSelected
-            then makeExtra
+            then makeExtraResultsWidget holeInfo (results ^. HoleResults.rlExtra)
             else focusFirstExtraResult (results ^. HoleResults.rlExtra)
         return ResultGroup
             { _rgOption = Menu.Option
@@ -118,7 +118,6 @@ makeResultGroup holeInfo results =
             }
     where
         mainResult = results ^. HoleResults.rlMain
-        makeExtra = makeExtraResultsWidget holeInfo (results ^. HoleResults.rlExtra)
         focusFirstExtraResult [] = return Nothing
         focusFirstExtraResult (result:_) =
             Widget.makeFocusableView ?? rId result ?? Element.empty
