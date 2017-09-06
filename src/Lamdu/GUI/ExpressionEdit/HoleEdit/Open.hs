@@ -67,7 +67,7 @@ resultSuffix :: Lens.Prism' AnimId AnimId
 resultSuffix = suffixed ["result suffix"]
 
 data ResultGroup m = ResultGroup
-    { _rgOption :: !(Menu.Option (T m))
+    { _rgOption :: !(Menu.Option (T m Widget.EventResult))
     , _rgPickEventMap :: !(Widget.EventMap (T m Widget.EventResult))
     }
 Lens.makeLenses ''ResultGroup

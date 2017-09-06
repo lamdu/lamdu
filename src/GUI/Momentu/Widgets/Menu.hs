@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, TemplateHaskell, DeriveGeneric, OverloadedStrings, DeriveTraversable #-}
+{-# LANGUAGE NoImplicitPrelude, TemplateHaskell, DeriveGeneric, OverloadedStrings, DeriveTraversable, FlexibleContexts #-}
 
 module GUI.Momentu.Widgets.Menu
     ( Style(..), HasStyle(..)
@@ -42,12 +42,12 @@ instance Aeson.FromJSON Style
 class HasStyle env where style :: Lens' env Style
 instance HasStyle Style where style = id
 
-data Option m = Option
+data Option a = Option
     { _oId :: !Widget.Id
     , -- A widget that represents this option
-      _oWidget :: !(WithTextPos (Widget (m Widget.EventResult)))
+      _oWidget :: !(WithTextPos (Widget a))
     , -- An optionally empty submenu
-      _oSubmenuWidgets :: ![WithTextPos (Widget (m Widget.EventResult))]
+      _oSubmenuWidgets :: ![WithTextPos (Widget a)]
     }
 Lens.makeLenses ''Option
 
@@ -127,7 +127,7 @@ layoutOption ::
     ( MonadReader env m, Element.HasAnimIdPrefix env, TextView.HasStyle env
     , Hover.HasStyle env, HasStyle env, Functor f
     ) =>
-    Widget.R -> Option f -> m (WithTextPos (Widget (f Widget.EventResult)))
+    Widget.R -> Option (f Widget.EventResult) -> m (WithTextPos (Widget (f Widget.EventResult)))
 layoutOption maxOptionWidth option =
     case option ^. oSubmenuWidgets of
     [] -> option ^. oWidget & Element.width .~ maxOptionWidth & pure
@@ -161,7 +161,7 @@ layout ::
     , Element.HasAnimIdPrefix env, HasStyle env
     , Applicative f
     ) =>
-    Widget.R -> [Option f] -> HasMoreOptions ->
+    Widget.R -> [Option (f Widget.EventResult)] -> HasMoreOptions ->
     m (OrderedOptions (Widget (f Widget.EventResult)))
 layout minWidth options hiddenResults =
     (addBackground <&> fmap) <*>
