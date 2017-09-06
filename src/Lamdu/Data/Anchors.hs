@@ -39,7 +39,7 @@ instance Binary (Pane m)
 
 data Code f m = Code
     { repl :: f (Definition.Expr (ValI m))
-    , panes :: f (Set (Pane m))
+    , panes :: f [Pane m]
     , globals :: f (Set (DefI m))
     , preJumps :: f [WidgetId.Id]
     , preCursor :: f WidgetId.Id

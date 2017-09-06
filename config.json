@@ -16,7 +16,9 @@
     "pane": {
         "newDefinitionKeys"            : [ "Alt+N" ],
         "newDefinitionButtonPressKeys" : [ "Space", "Enter" ],
-        "paneCloseKeys"                : [ "Alt+W" ]
+        "paneCloseKeys"                : [ "Alt+W" ],
+        "paneMoveUpKeys"               : [ "Alt+Up" ],
+        "paneMoveDownKeys"             : [ "Alt+Down" ]
     },
     "versionControl": {
         "undoKeys"           : [ "Cmd+Z" ],

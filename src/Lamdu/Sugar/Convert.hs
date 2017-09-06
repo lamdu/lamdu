@@ -3,11 +3,13 @@ module Lamdu.Sugar.Convert
     ( loadWorkArea
     ) where
 
+import           Control.Applicative ((<|>))
 import qualified Control.Lens as Lens
 import           Control.Monad.Trans.State (StateT(..))
 import qualified Control.Monad.Trans.State as State
 import           Data.CurAndPrev (CurAndPrev)
 import qualified Data.List as List
+import           Data.List.Utils (insertAt, removeAt)
 import qualified Data.Map as Map
 import qualified Data.Set as Set
 import           Data.Store.Property (Property(..))
@@ -259,7 +261,28 @@ loadPanes ::
 loadPanes evalRes cp replEntityId =
     do
         Property panes setPanes <- Anchors.panes cp ^. Transaction.mkProperty
-        ordered <- Set.toList panes & mapM (loadAnnotatedDef Anchors.paneDef)
+        paneDefs <- mapM (loadAnnotatedDef Anchors.paneDef) panes
+        let mkDelPane i =
+                do
+                    setPanes newPanes
+                    newPanes ^? Lens.ix i
+                        <|> newPanes ^? Lens.ix (i-1)
+                        <&> (EntityId.ofIRef . Anchors.paneDef)
+                        & fromMaybe replEntityId
+                        & return
+                where
+                    newPanes = removeAt i panes
+        let movePane oldIndex newIndex =
+                insertAt newIndex item (before ++ after)
+                & setPanes
+                where
+                    (before, item:after) = splitAt oldIndex panes
+        let mkMMovePaneDown i
+                | i+1 < length paneDefs = Just $ movePane i (i+1)
+                | otherwise = Nothing
+        let mkMMovePaneUp i
+                | i-1 >= 0 = Just $ movePane i (i-1)
+                | otherwise = Nothing
         let convertPane i def =
                 do
                     bodyS <-
@@ -279,15 +302,11 @@ loadPanes evalRes cp replEntityId =
                         >>= PresentationModes.addToDef
                     return Pane
                         { _paneDefinition = defS
-                        , _paneClose =
-                          do
-                              Set.delete (def ^. Definition.defPayload) panes
-                                  & setPanes
-                              ordered ^? Lens.ix (i-1) . Definition.defPayload
-                                  & maybe replEntityId (EntityId.ofIRef . Anchors.paneDef)
-                                  & return
+                        , _paneClose = mkDelPane i
+                        , _paneMoveDown = mkMMovePaneDown i
+                        , _paneMoveUp = mkMMovePaneUp i
                         }
-        ordered & Lens.itraversed %%@~ convertPane
+        paneDefs & Lens.itraversed %%@~ convertPane
 
 loadWorkArea ::
     Monad m => CurAndPrev (EvalResults (ValI m)) -> Anchors.CodeAnchors m ->

@@ -3,7 +3,7 @@ module Lamdu.Sugar.Types
     ( module Lamdu.Sugar.Types.Binder
     , module Lamdu.Sugar.Types.Expression
     , EntityId
-    , Pane(..), paneDefinition, paneClose
+    , Pane(..), paneDefinition, paneClose, paneMoveDown, paneMoveUp
     , WorkArea(..), waPanes, waRepl
     , Definition(..), drDefinitionState, drEntityId, drName, drBody, drDefI
     , DefinitionBody(..), _DefinitionBodyExpression, _DefinitionBodyBuiltin
@@ -58,6 +58,8 @@ type DefinitionU m a = Definition UUID m (Expression UUID m a)
 data Pane name m a = Pane
     { _paneDefinition :: Definition name m (Expression name m a)
     , _paneClose :: T m EntityId
+    , _paneMoveDown :: Maybe (T m ())
+    , _paneMoveUp :: Maybe (T m ())
     } deriving (Functor, Foldable, Traversable)
 
 data WorkArea name m a = WorkArea

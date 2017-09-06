@@ -89,6 +89,7 @@ class HasEvalResults env m where
 
 class HasExportActions env m where exportActions :: Lens' env (ExportActions m)
 
+
 toExprGuiMPayload :: ([Sugar.EntityId], NearestHoles) -> ExprGuiT.Payload
 toExprGuiMPayload (entityIds, nearestHoles) =
     ExprGuiT.emptyPayload nearestHoles & ExprGuiT.plStoredEntityIds .~ entityIds
@@ -203,11 +204,19 @@ makePaneEdit theExportActions pane =
                   <&> WidgetIds.fromEntityId
                   & Widget.keysEventMapMovesCursor (Config.delKeys theConfig)
                     (E.Doc ["Edit", "Definition", "Delete"])
+                , pane ^. Sugar.paneMoveDown <&> mLiftTrans
+                  & maybe mempty
+                    (Widget.keysEventMap paneMoveDownKeys
+                    (E.Doc ["View", "Pane", "Move down"]))
+                , pane ^. Sugar.paneMoveUp <&> mLiftTrans
+                  & maybe mempty
+                    (Widget.keysEventMap paneMoveUpKeys
+                    (E.Doc ["View", "Pane", "Move up"]))
                 , exportDef theExportActions (pane ^. Sugar.paneDefinition . Sugar.drDefI)
                   & Widget.keysEventMap exportKeys
                     (E.Doc ["Collaboration", "Export definition to JSON file"])
                 ] & mconcat
-            paneCloseKeys = Config.paneCloseKeys (Config.pane theConfig)
+            Config.Pane{paneCloseKeys, paneMoveDownKeys, paneMoveUpKeys} = Config.pane theConfig
             exportKeys = Config.exportKeys (Config.export theConfig)
         DefinitionEdit.make (pane ^. Sugar.paneDefinition)
             <&> Lens.mapped %~ mLiftTrans

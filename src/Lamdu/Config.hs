@@ -31,6 +31,8 @@ instance Aeson.FromJSON Export
 
 data Pane = Pane
     { paneCloseKeys :: [MetaKey]
+    , paneMoveDownKeys :: [MetaKey]
+    , paneMoveUpKeys :: [MetaKey]
     , newDefinitionKeys :: [MetaKey]
     , newDefinitionButtonPressKeys :: [MetaKey]
     } deriving (Eq, Generic, Show)
