@@ -22,7 +22,6 @@ import qualified GUI.Momentu.Draw as Draw
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Glue ((/-/), (/|/))
-import qualified GUI.Momentu.Glue as Glue
 import qualified GUI.Momentu.Hover as Hover
 import qualified GUI.Momentu.MetaKey as MetaKey
 import           GUI.Momentu.Rect (Rect(..))
@@ -106,39 +105,24 @@ makeResultGroup holeInfo results =
         let isSelected = mainFocused || cursorOnExtra
         extraResWidget <-
             if isSelected
-            then makeExtraResultsWidget holeInfo (results ^. HoleResults.rlExtra)
+            then
+                results ^. HoleResults.rlExtra
+                & traverse (fmap snd . makeShownResult holeInfo)
             else focusFirstExtraResult (results ^. HoleResults.rlExtra)
         return ResultGroup
             { _rgOption = Menu.Option
                 { Menu._oId = rId (results ^. HoleResults.rlMain)
                 , Menu._oWidget = mainResultWidget
-                , Menu._oSubmenuWidget = extraResWidget
+                , Menu._oSubmenuWidgets = extraResWidget
                 }
             , _rgPickEventMap = pickMain
             }
     where
         mainResult = results ^. HoleResults.rlMain
-        focusFirstExtraResult [] = return Nothing
+        focusFirstExtraResult [] = return []
         focusFirstExtraResult (result:_) =
             Widget.makeFocusableView ?? rId result ?? Element.empty
-            <&> Align.WithTextPos 0 <&> Just
-
-makeExtraResultsWidget ::
-    Monad m =>
-    HoleInfo m -> [Result m] ->
-    ExprGuiM m (Maybe (WithTextPos (Widget (T m Widget.EventResult))))
-makeExtraResultsWidget _ [] = return Nothing
-makeExtraResultsWidget holeInfo extraResults@(firstResult:_) =
-    do
-        theme <- Lens.view Theme.theme
-        traverse (makeShownResult holeInfo) extraResults
-            <&> map snd
-            <&> Glue.vbox
-            <&> Draw.backgroundColor (animId <> ["hover background"])
-                (Theme.hoverBGColor theme)
-            <&> Just
-    where
-        animId = rId firstResult & Widget.toAnimId
+            <&> Align.WithTextPos 0 <&> (: [])
 
 applyResultLayout ::
     Functor f => f (ExpressionGui m) -> f (WithTextPos (Widget (T m Widget.EventResult)))

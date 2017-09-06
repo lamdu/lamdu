@@ -2,7 +2,7 @@
 
 module GUI.Momentu.Widgets.Menu
     ( Style(..), HasStyle(..)
-    , Option(..), oId, oWidget, oSubmenuWidget
+    , Option(..), oId, oWidget, oSubmenuWidgets
     , OrderedOptions(..), optionsFromTop, optionsFromBottom
     , Placement(..), HasMoreOptions(..)
     , layout
@@ -32,6 +32,7 @@ import           Lamdu.Prelude
 data Style = Style
     { submenuSymbolColorUnselected :: Draw.Color
     , submenuSymbolColorSelected :: Draw.Color
+    , bgColor :: Draw.Color
     } deriving (Eq, Generic, Show)
 instance Aeson.ToJSON Style where
     toJSON = Aeson.genericToJSON Aeson.defaultOptions
@@ -45,7 +46,7 @@ data Option m = Option
     , -- A widget that represents this option
       _oWidget :: !(WithTextPos (Widget (m Widget.EventResult)))
     , -- An optionally empty submenu
-      _oSubmenuWidget :: !(Maybe (WithTextPos (Widget (m Widget.EventResult))))
+      _oSubmenuWidgets :: ![WithTextPos (Widget (m Widget.EventResult))]
     }
 Lens.makeLenses ''Option
 
@@ -118,10 +119,9 @@ layoutOption ::
     ) =>
     Widget.R -> Option f -> m (WithTextPos (Widget (f Widget.EventResult)))
 layoutOption maxOptionWidth option =
-    case option ^. oSubmenuWidget of
-    Nothing ->
-        option ^. oWidget & Element.width .~ maxOptionWidth & pure
-    Just submenu ->
+    case option ^. oSubmenuWidgets of
+    [] -> option ^. oWidget & Element.width .~ maxOptionWidth & pure
+    submenus ->
         do
             submenuSymbol <- makeSubmenuSymbol isSelected
             let base =
@@ -130,6 +130,11 @@ layoutOption maxOptionWidth option =
                     /|/ submenuSymbol
                     & Align.tValue %~ Hover.anchor
             hover <- Hover.hover
+            s <- Lens.view style
+            let submenu =
+                    Glue.vbox submenus
+                    & Draw.backgroundColor (animId <> ["hover background"])
+                    (bgColor s)
             base
                 & Align.tValue %~
                 Hover.hoverInPlaceOf
@@ -138,9 +143,10 @@ layoutOption maxOptionWidth option =
                 & pure
     & Reader.local (Element.animIdPrefix .~ Widget.toAnimId (option ^. oId))
     where
+        animId = option ^. oId & Widget.toAnimId
         isSelected =
             Widget.isFocused (option ^. oWidget . Align.tValue)
-            || Lens.anyOf (oSubmenuWidget . Lens._Just . Align.tValue)
+            || Lens.anyOf (oSubmenuWidgets . traverse . Align.tValue)
                Widget.isFocused option
 
 layout ::
@@ -159,9 +165,9 @@ layout minWidth options hiddenResults
                 <&> (^. TextView.renderedTextSize . TextView.bounding . _1)
             let optionMinWidth option =
                     option ^. oWidget . Element.width +
-                    case option ^. oSubmenuWidget of
-                    Nothing -> 0
-                    Just _ -> submenuSymbolWidth
+                    case option ^. oSubmenuWidgets of
+                    [] -> 0
+                    _:_ -> submenuSymbolWidth
             let maxOptionWidth = options <&> optionMinWidth & maximum & max minWidth
             hiddenOptionsWidget <-
                 makeMoreOptionsView hiddenResults
