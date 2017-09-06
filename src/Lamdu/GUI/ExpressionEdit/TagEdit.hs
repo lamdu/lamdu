@@ -13,6 +13,8 @@ import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Draw as Draw
 import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.Hover as Hover
+import           GUI.Momentu.MetaKey (MetaKey(..), noMods)
+import qualified GUI.Momentu.MetaKey as MetaKey
 import           GUI.Momentu.View (View)
 import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
@@ -32,6 +34,12 @@ import           Lamdu.Prelude
 
 type T = Transaction
 
+tagRenameId :: Widget.Id -> Widget.Id
+tagRenameId = (`Widget.joinId` ["rename"])
+
+tagViewId :: Widget.Id -> Widget.Id
+tagViewId = (`Widget.joinId` ["view"])
+
 makeTagNameEdit ::
     Monad m =>
     NearestHoles -> Widget.Id ->
@@ -47,12 +55,17 @@ makeTagNameEdit nearestHoles myId tag =
                    (E.Doc ["Navigation", "Jump to next hole"]) .
                    return . WidgetIds.fromEntityId)
         ExpressionGui.makeNameEdit
-            (tag ^. Sugar.tagName) myId
+            (tag ^. Sugar.tagName) (tagRenameId myId)
             <&> Align.tValue . E.eventMap %~ E.filterChars (/= ',')
             <&> Align.tValue %~ E.weakerEvents jumpNextEventMap
-
-tagRenameId :: Widget.Id -> Widget.Id
-tagRenameId tagId = tagId `Widget.joinId` ["rename"]
+            <&> Align.tValue %~ E.weakerEvents stopEditingEventMap
+    where
+        stopEditingEventMap =
+            Widget.keysEventMapMovesCursor
+            [ MetaKey noMods MetaKey.Key'Escape
+            , MetaKey noMods MetaKey.Key'Enter
+            ]
+            (E.Doc ["Edit", "Tag", "Stop editing"]) (pure (tagViewId myId))
 
 makeTagEdit ::
     Monad m =>
@@ -61,11 +74,11 @@ makeTagEdit ::
 makeTagEdit tagColor nearestHoles tag =
     do
         jumpHolesEventMap <- ExprEventMap.jumpHolesEventMap nearestHoles
-        isRenaming <- Widget.isSubCursor ?? renameId
+        isRenaming <- Widget.isSubCursor ?? tagRenameId myId
         config <- Lens.view Config.config
         let startRenaming =
                 Widget.keysEventMapMovesCursor (Config.jumpToDefinitionKeys config)
-                (E.Doc ["Edit", "Tag", "Open"]) (pure renameId)
+                (E.Doc ["Edit", "Tag", "Open"]) (pure (tagRenameId myId))
         nameView <-
             (Widget.makeFocusableView ?? viewId <&> fmap) <*>
             ExpressionGui.makeNameView (tag ^. Sugar.tagName) (Widget.toAnimId myId)
@@ -74,7 +87,7 @@ makeTagEdit tagColor nearestHoles tag =
             if isRenaming
             then ( Hover.hoverBeside Align.tValue ?? nameView )
                  <*>
-                 ( makeTagNameEdit nearestHoles renameId tag <&> (^. Align.tValue) )
+                 ( makeTagNameEdit nearestHoles myId tag <&> (^. Align.tValue) )
             else pure nameView
         widget
             <&> E.weakerEvents jumpHolesEventMap
@@ -83,8 +96,7 @@ makeTagEdit tagColor nearestHoles tag =
     & Widget.assignCursor myId viewId
     where
         myId = WidgetIds.fromEntityId (tag ^. Sugar.tagInfo . Sugar.tagInstance)
-        renameId = myId `Widget.joinId` ["rename"]
-        viewId = myId `Widget.joinId` ["view"]
+        viewId = tagViewId myId
 
 makeRecordTag ::
     Monad m => NearestHoles -> Sugar.Tag (Name m) m ->
