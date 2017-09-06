@@ -9,8 +9,6 @@ import qualified Data.ByteString.Char8 as SBS8
 import           Data.Store.Transaction (Transaction)
 import           GUI.Momentu.Align (WithTextPos)
 import qualified GUI.Momentu.Align as Align
-import qualified GUI.Momentu.Draw as Draw
-import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Font (Underline(..))
 import           GUI.Momentu.Glue ((/-/))
@@ -125,17 +123,10 @@ definitionTypeChangeBox info getVarId =
             <*> TextView.makeLabel "Update to:"
         typeCurrent <- mkTypeView "typeCurrent" (info ^. Sugar.defTypeCurrent)
         config <- Lens.view Config.config
-        theme <- Lens.view Theme.theme
-        let padding = realToFrac <$> Theme.valFramePadding theme
-        let box =
-                headerLabel /-/ typeWhenUsed /-/ spacing /-/ sepLabel /-/ typeCurrent
-                & Element.pad padding
-                & Draw.backgroundColor (animId <> ["hover background"])
-                  (Theme.hoverBGColor theme)
         -- TODO: unify config's button press keys
         let keys = Config.newDefinitionButtonPressKeys (Config.pane config)
         let update = (info ^. Sugar.defTypeUseCurrent) >> return getVarId
-        box
+        headerLabel /-/ typeWhenUsed /-/ spacing /-/ sepLabel /-/ typeCurrent
             & Align.tValue %~ E.weakerEvents
             (Widget.keysEventMapMovesCursor keys
                 (E.Doc ["Edit", "Update definition type"]) update)

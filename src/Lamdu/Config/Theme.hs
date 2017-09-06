@@ -91,7 +91,6 @@ data Theme = Theme
     , versionControl :: VersionControl.Theme
     , valAnnotation :: ValAnnotation
     , indent :: Expression.Style
-    , hoverBGColor :: Draw.Color
     , backgroundColor :: Draw.Color
     , baseColor :: Draw.Color
     , invalidCursorBGColor :: Draw.Color

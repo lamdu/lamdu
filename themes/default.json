@@ -4,7 +4,6 @@
     "stdSpacing": [1.0, 0.3],
     "baseTextSize": 16,
     "maxEvalViewSize": 32,
-    "hoverBGColor": [0.05, 0.25, 0.3, 1.0],
     "lightLambdaUnderlineColor": [1.0, 1.0, 1.0, 0.3],
     "underlineWidth": 0.15,
     "typeTint": [1.0, 1.0, 1.0, 0.6],
@@ -33,8 +32,10 @@
     "topPadding": 1.5,
     "newDefinitionActionColor": [0.3, 1.0, 0.3, 1.0],
     "hover": {
+        "frameColor": [0.05, 0.05, 0.05, 1.0],
         "framePadding": [1, 1],
-        "frameColor": [0.05, 0.05, 0.05, 1.0]
+        "bgColor": [0.05, 0.25, 0.3, 1.0],
+        "bgPadding": [7.0, 7.0]
     },
     "fonts": {
         "fontDefault"     : "fonts/DejaVuSans.ttf",
@@ -55,7 +56,6 @@
         "selectedBranchColor": [0.25, 0.5, 0.25, 1.0]
     },
     "menu": {
-        "bgColor": [0.05, 0.25, 0.3, 1.0],
         "submenuSymbolColorUnselected": [1.0, 1.0, 1.0, 0.3],
         "submenuSymbolColorSelected": [1.0, 1.0, 1.0, 1.0]
     },

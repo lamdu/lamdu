@@ -16,7 +16,6 @@ import           GHC.Generics (Generic)
 import           GUI.Momentu.Align (WithTextPos)
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Draw as Draw
-import           GUI.Momentu.Element (Element)
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Glue ((/|/))
@@ -34,7 +33,6 @@ import           Lamdu.Prelude
 data Style = Style
     { submenuSymbolColorUnselected :: Draw.Color
     , submenuSymbolColorSelected :: Draw.Color
-    , bgColor :: Draw.Color
     } deriving (Eq, Generic, Show)
 instance Aeson.ToJSON Style where
     toJSON = Aeson.genericToJSON Aeson.defaultOptions
@@ -122,15 +120,6 @@ makeSubmenuSymbol isSelected =
             | isSelected = submenuSymbolColorSelected
             | otherwise = submenuSymbolColorUnselected
 
-addBackground ::
-    (MonadReader env m, Element.HasAnimIdPrefix env, HasStyle env, Element a) =>
-    m (a -> a)
-addBackground =
-    do
-        animId <- Element.subAnimId ["hover background"]
-        color <- Lens.view style <&> bgColor
-        Draw.backgroundColor animId color & pure
-
 layoutOption ::
     ( MonadReader env m, Element.HasAnimIdPrefix env, TextView.HasStyle env
     , Widget.HasCursor env, Hover.HasStyle env, HasStyle env, Functor f
@@ -152,14 +141,13 @@ layoutOption maxOptionWidth option =
             if isSelected
                 then do
                     hover <- Hover.hover
-                    addBg <- addBackground
                     submenus <- action
                     let anchored = base & Align.tValue %~ Hover.anchor
                     anchored
                         & Align.tValue %~
                         Hover.hoverInPlaceOf
                         (Hover.hoverBesideOptionsAxis Glue.Horizontal
-                         (Glue.vbox submenus & addBg <&> hover) anchored
+                         (Glue.vbox submenus <&> hover) anchored
                          <&> (^. Align.tValue))
                         & pure
                 else pure base
@@ -177,7 +165,6 @@ layout ::
     Widget.R -> [Option m (f Widget.EventResult)] -> HasMoreOptions ->
     m (OrderedOptions (Widget (f Widget.EventResult)))
 layout minWidth options hiddenResults =
-    (addBackground <&> fmap) <*>
     case options of
     [] -> makeNoResults <&> (^. Align.tValue) <&> Widget.fromView <&> pure
     _:_ ->

@@ -31,6 +31,8 @@ import           Lamdu.Prelude
 data Style = Style
     { frameColor :: Draw.Color
     , framePadding :: Vector2 R
+    , bgColor :: Draw.Color
+    , bgPadding :: Vector2 R
     } deriving (Eq, Generic, Show)
 instance Aeson.ToJSON Style where
     toJSON = Aeson.genericToJSON Aeson.defaultOptions
@@ -135,11 +137,13 @@ addFrame ::
 addFrame =
     do
         s <- Lens.view style
-        animId <- Element.subAnimId ["hover frame"]
+        animId <- Lens.view Element.animIdPrefix
         pure $ \gui ->
             gui
+            & Element.pad (bgPadding s <&> realToFrac)
+            & Draw.backgroundColor (animId <> ["hover bg"]) (bgColor s)
             & Element.pad (framePadding s <&> realToFrac)
-            & Draw.backgroundColor animId (frameColor s)
+            & Draw.backgroundColor (animId <> ["hover frame"]) (frameColor s)
 
 hoverBesideOptionsAxis ::
     ( Glue a b, Glue b a
