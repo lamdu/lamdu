@@ -51,6 +51,9 @@ makeTagNameEdit nearestHoles myId tag =
             <&> Align.tValue . E.eventMap %~ E.filterChars (/= ',')
             <&> Align.tValue %~ E.weakerEvents jumpNextEventMap
 
+tagRenameId :: Widget.Id -> Widget.Id
+tagRenameId tagId = tagId `Widget.joinId` ["rename"]
+
 makeTagEdit ::
     Monad m =>
     Draw.Color -> NearestHoles -> Sugar.Tag (Name m) m ->
@@ -110,7 +113,7 @@ makeParamTag name entityId =
         animId = WidgetIds.fromEntityId entityId & Widget.toAnimId
 
 diveToRecordTag :: Widget.Id -> Widget.Id
-diveToRecordTag = WidgetIds.nameEditOf
+diveToRecordTag = tagRenameId
 
 diveToCaseTag :: Widget.Id -> Widget.Id
-diveToCaseTag = WidgetIds.nameEditOf
+diveToCaseTag = tagRenameId
