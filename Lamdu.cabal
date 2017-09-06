@@ -184,6 +184,7 @@ Executable lamdu
                   , Lamdu.GUI.ExpressionEdit.BinderEdit
                   , Lamdu.GUI.ExpressionEdit.BuiltinEdit
                   , Lamdu.GUI.ExpressionEdit.CaseEdit
+                  , Lamdu.GUI.ExpressionEdit.Composite
                   , Lamdu.GUI.ExpressionEdit.EventMap
                   , Lamdu.GUI.ExpressionEdit.GetFieldEdit
                   , Lamdu.GUI.ExpressionEdit.GetVarEdit
@@ -231,6 +232,7 @@ Executable lamdu
                   , Lamdu.Sugar.Convert.Binder.Redex
                   , Lamdu.Sugar.Convert.Binder.Types
                   , Lamdu.Sugar.Convert.Case
+                  , Lamdu.Sugar.Convert.Composite
                   , Lamdu.Sugar.Convert.DefExpr
                   , Lamdu.Sugar.Convert.DefExpr.OutdatedDefs
                   , Lamdu.Sugar.Convert.Expression

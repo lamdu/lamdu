@@ -14,12 +14,11 @@ module Lamdu.Sugar.Types.Expression
     , Payload(..), plEntityId, plAnnotation, plActions, plData
     , Expression(..), rBody, rPayload
     -- record:
-    , RecordField(..), rfDelete, rfTag, rfExpr
+    , CompositeItem(..), ciDelete, ciTag, ciExpr
     , RecordTail(..), _RecordExtending, _ClosedRecord
     , RecordAddFieldResult(..), rafrNewTag, rafrNewVal, rafrRecExtend
     , Record(..), rItems, rAddField, rTail
     -- case
-    , CaseAlt(..), caDelete, caTag, caHandler
     , CaseTail(..), _CaseExtending, _ClosedCase
     , CaseAddAltResult(..), caarNewTag, caarNewVal, caarCase
     , CaseArg(..), caVal, caToLambdaCase
@@ -173,10 +172,10 @@ data Hole name m expr = Hole
     } deriving (Functor, Foldable, Traversable)
 
 {- Record start -}
-data RecordField name m expr = RecordField
-    { _rfDelete :: T m EntityId
-    , _rfTag :: Tag name m
-    , _rfExpr :: expr
+data CompositeItem name m expr = CompositeItem
+    { _ciDelete :: T m EntityId
+    , _ciTag :: Tag name m
+    , _ciExpr :: expr
     } deriving (Functor, Foldable, Traversable)
 
 data RecordTail m expr
@@ -191,18 +190,11 @@ data RecordAddFieldResult = RecordAddFieldResult
     }
 
 data Record name m expr = Record
-    { _rItems :: [RecordField name m expr]
+    { _rItems :: [CompositeItem name m expr]
     , _rTail :: RecordTail m expr
     , _rAddField :: T m RecordAddFieldResult
     } deriving (Functor, Foldable, Traversable)
 {- Record end -}
-
-{- Case start -}
-data CaseAlt name m expr = CaseAlt
-    { _caDelete :: T m EntityId
-    , _caTag :: Tag name m
-    , _caHandler :: expr
-    } deriving (Functor, Foldable, Traversable)
 
 data CaseTail m expr
     = CaseExtending expr
@@ -227,7 +219,7 @@ data CaseKind m expr
 
 data Case name m expr = Case
     { _cKind :: CaseKind m expr
-    , _cAlts :: [CaseAlt name m expr]
+    , _cAlts :: [CompositeItem name m expr]
     , _cTail :: CaseTail m expr
     , _cAddAlt :: T m CaseAddAltResult
     } deriving (Functor, Foldable, Traversable)
@@ -381,8 +373,8 @@ Lens.makeLenses ''BinderVar
 Lens.makeLenses ''Body
 Lens.makeLenses ''Case
 Lens.makeLenses ''CaseAddAltResult
-Lens.makeLenses ''CaseAlt
 Lens.makeLenses ''CaseArg
+Lens.makeLenses ''CompositeItem
 Lens.makeLenses ''DefinitionOutdatedType
 Lens.makeLenses ''Expression
 Lens.makeLenses ''GetField
@@ -405,7 +397,6 @@ Lens.makeLenses ''Payload
 Lens.makeLenses ''PickedResult
 Lens.makeLenses ''Record
 Lens.makeLenses ''RecordAddFieldResult
-Lens.makeLenses ''RecordField
 Lens.makeLenses ''RelayedArg
 Lens.makeLenses ''TId
 Lens.makePrisms ''BinderVarForm

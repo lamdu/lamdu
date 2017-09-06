@@ -88,13 +88,13 @@ convertLabeled funcS argS exprPl =
                 let flatArgs = FlatComposite.fromComposite defArgs
                 flatArgs ^? FlatComposite.extension . Lens._Nothing & maybeToMPlus
                 let sFields =
-                        record ^.. rItems . traverse . rfTag . tagInfo . tagVal & Set.fromList
+                        record ^.. rItems . traverse . ciTag . tagInfo . tagVal & Set.fromList
                 guard $ Map.keysSet (flatArgs ^. FlatComposite.fields) == sFields
         let getArg field =
                 AnnotatedArg
-                    { _aaTag = field ^. rfTag . tagInfo
-                    , _aaName = field ^. rfTag . tagName
-                    , _aaExpr = field ^. rfExpr
+                    { _aaTag = field ^. ciTag . tagInfo
+                    , _aaName = field ^. ciTag . tagName
+                    , _aaExpr = field ^. ciExpr
                     }
         let args = map getArg $ record ^. rItems
         let tags = args ^.. Lens.traversed . aaTag . tagVal

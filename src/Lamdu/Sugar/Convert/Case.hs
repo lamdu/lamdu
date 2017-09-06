@@ -11,15 +11,13 @@ import           Data.Maybe.Utils (maybeToMPlus)
 import qualified Data.Store.Property as Property
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
-import           Data.UUID.Types (UUID)
-import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Calc.Val as V
 import           Lamdu.Calc.Val.Annotated (Val(..))
 import qualified Lamdu.Calc.Val.Annotated as Val
 import           Lamdu.Data.Anchors (assocTagOrder)
 import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Expr.IRef as ExprIRef
-import qualified Lamdu.Expr.UniqueId as UniqueId
+import           Lamdu.Sugar.Convert.Composite (convertCompositeItem)
 import           Lamdu.Sugar.Convert.Expression.Actions (addActions)
 import           Lamdu.Sugar.Convert.Guard (convertGuard)
 import qualified Lamdu.Sugar.Convert.Input as Input
@@ -36,14 +34,6 @@ import           Lamdu.Prelude
 
 plValI :: Lens.Lens' (Input.Payload m a) (ExprIRef.ValI m)
 plValI = Input.stored . Property.pVal
-
-convertTag :: EntityId -> T.Tag -> Tag UUID m
-convertTag inst tag =
-    Tag
-    { _tagInfo = TagInfo inst tag
-    , _tagName = UniqueId.toUUID tag
-    , _tagActions = error "TODO: tagActions"
-    }
 
 makeAddAlt :: Monad m =>
     ExprIRef.ValIProperty m ->
@@ -81,30 +71,6 @@ convertAbsurd exprPl =
             }
             & addActions exprPl
 
-deleteAlt ::
-    Monad m =>
-    ExprIRef.ValIProperty m -> ExprIRef.ValI m ->
-    ConvertM m (Transaction m EntityId)
-deleteAlt stored restI =
-    do
-        protectedSetToVal <- ConvertM.typeProtectedSetToVal
-        protectedSetToVal stored restI <&> EntityId.ofValI & return
-
-convertAlt ::
-    (Monad m, Monoid a) =>
-    ExprIRef.ValIProperty m -> ExprIRef.ValI m ->
-    EntityId -> T.Tag -> Val (Input.Payload m a) ->
-    ConvertM m (CaseAlt UUID m (ExpressionU m a))
-convertAlt stored restI inst tag expr =
-    do
-        exprS <- ConvertM.convertSubexpression expr
-        delAlt <- deleteAlt stored restI
-        return CaseAlt
-            { _caTag = convertTag inst tag
-            , _caHandler = exprS
-            , _caDelete = delAlt
-            }
-
 setTagOrder ::
     Monad m => Int -> CaseAddAltResult -> Transaction m CaseAddAltResult
 setTagOrder i r =
@@ -131,7 +97,7 @@ convert (V.Case tag val rest) exprPl = do
                     , _cAddAlt = addAlt
                     }
     altS <-
-        convertAlt
+        convertCompositeItem
         (exprPl ^. Input.stored) (rest ^. Val.payload . plValI)
         (EntityId.ofCaseTag (exprPl ^. Input.entityId)) tag val
     restCase

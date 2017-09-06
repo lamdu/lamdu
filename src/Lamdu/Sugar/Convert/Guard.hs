@@ -33,7 +33,7 @@ convertGuard setToVal caseBody =
                 | tagOf alt0 == trueTag && tagOf alt1 == falseTag -> convGuard cond alt0 alt1
                 | tagOf alt1 == trueTag && tagOf alt0 == falseTag -> convGuard cond alt1 alt0
             _ -> Nothing
-        tagOf alt = alt ^. caTag . tagInfo . tagVal
+        tagOf alt = alt ^. ciTag . tagInfo . tagVal
         convGuard cond altTrue altFalse =
             case mAltFalseBinder of
             Just binder ->
@@ -62,17 +62,17 @@ convertGuard setToVal caseBody =
             Nothing -> simpleIfElse
             & Just
             where
-                mAltFalseBinder = altFalse ^? caHandler . rBody . _BodyLam . lamBinder
+                mAltFalseBinder = altFalse ^? ciExpr . rBody . _BodyLam . lamBinder
                 mAltFalseBinderExpr = mAltFalseBinder ^? Lens._Just . bBody . bbContent . _BinderExpr
-                simpleIfElse = makeRes (altFalse ^. caHandler) []
+                simpleIfElse = makeRes (altFalse ^. ciExpr) []
                 makeRes els elseIfs =
                     Guard
                     { _gIf = cond
-                    , _gThen = altTrue ^. caHandler
+                    , _gThen = altTrue ^. ciExpr
                     , _gElseIfs = elseIfs
                     , _gElse = els
                     , _gDeleteIf =
-                        fromMaybe (altFalse ^. caHandler) mAltFalseBinderExpr
+                        fromMaybe (altFalse ^. ciExpr) mAltFalseBinderExpr
                         ^. rPayload . plData . pStored . Property.pVal
                         & setToVal
                         <&> EntityId.ofValI

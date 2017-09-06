@@ -27,6 +27,7 @@ import qualified Lamdu.Config as Config
 import           Lamdu.Config.Theme (Theme)
 import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.Eval.Results as ER
+import           Lamdu.GUI.ExpressionEdit.Composite (destCursorId)
 import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
 import qualified Lamdu.GUI.ExpressionEdit.TagEdit as TagEdit
 import           Lamdu.GUI.ExpressionGui (ExpressionGui)
@@ -39,12 +40,6 @@ import           Lamdu.Sugar.Names.Types (Name(..))
 import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
-
-destCursorId ::
-    [Sugar.CaseAlt name n (Sugar.Expression name n p)] ->
-    Sugar.EntityId -> Sugar.EntityId
-destCursorId [] defDestId = defDestId
-destCursorId (alt : _) _ = alt ^. Sugar.caHandler . Sugar.rPayload . Sugar.plEntityId
 
 make ::
     Monad m =>
@@ -110,9 +105,9 @@ make (Sugar.Case mArg alts caseTail addAlt) pl =
 makeAltRow ::
     Monad m =>
     Maybe Tag ->
-    Sugar.CaseAlt (Name m) m (Sugar.Expression (Name m) m ExprGuiT.Payload) ->
+    Sugar.CompositeItem (Name m) m (Sugar.Expression (Name m) m ExprGuiT.Payload) ->
     ExprGuiM m (WithTextPos (Widget (Transaction m Widget.EventResult)), ExpressionGui m)
-makeAltRow mActiveTag (Sugar.CaseAlt delete tag altExpr) =
+makeAltRow mActiveTag (Sugar.CompositeItem delete tag altExpr) =
     do
         config <- Lens.view Config.config
         addBg <- ExpressionGui.addValBGWithColor Theme.evaluatedPathBGColor
@@ -131,7 +126,7 @@ makeAltRow mActiveTag (Sugar.CaseAlt delete tag altExpr) =
 makeAltsWidget ::
     Monad m =>
     Maybe Tag ->
-    [Sugar.CaseAlt (Name m) m (Sugar.Expression (Name m) m ExprGuiT.Payload)] ->
+    [Sugar.CompositeItem (Name m) m (Sugar.Expression (Name m) m ExprGuiT.Payload)] ->
     Widget.Id -> ExprGuiM m (ExpressionGui m)
 makeAltsWidget _ [] myId =
     (Widget.makeFocusableView ?? Widget.joinId myId ["Ø"] <&> (Align.tValue %~))

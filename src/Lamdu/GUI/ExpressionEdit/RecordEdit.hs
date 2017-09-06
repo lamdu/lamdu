@@ -23,6 +23,7 @@ import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
 import           Lamdu.Config.Theme (Theme)
 import qualified Lamdu.Config.Theme as Theme
+import           Lamdu.GUI.ExpressionEdit.Composite (destCursorId)
 import qualified Lamdu.GUI.ExpressionEdit.TagEdit as TagEdit
 import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
@@ -34,12 +35,6 @@ import           Lamdu.Sugar.Names.Types (Name(..))
 import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
-
-defaultPos ::
-    [Sugar.RecordField name m (Sugar.Expression name m a)] ->
-    Sugar.EntityId -> Sugar.EntityId
-defaultPos [] myId = myId
-defaultPos (f : _) _ = f ^. Sugar.rfExpr . Sugar.rPayload . Sugar.plEntityId
 
 shouldAddBg :: Sugar.Record name m a -> Bool
 shouldAddBg (Sugar.Record [] Sugar.ClosedRecord{} _) = False
@@ -73,19 +68,19 @@ make record@(Sugar.Record fields recordTail addField) pl =
                 & ExprGuiM.withHolePicker resultPicker
         (if addBg then ExpressionGui.addValFrame else return id)
             ?? E.weakerEvents addFieldEventMap gui
-    & ExpressionGui.stdWrapParentExpr pl (defaultPos fields (pl ^. Sugar.plEntityId))
+    & ExpressionGui.stdWrapParentExpr pl (destCursorId fields (pl ^. Sugar.plEntityId))
     where
         myId = WidgetIds.fromExprPayload pl
         addBg = shouldAddBg record
 
 makeFieldRow ::
     Monad m =>
-    Sugar.RecordField (Name m) m (Sugar.Expression (Name m) m ExprGuiT.Payload) ->
+    Sugar.CompositeItem (Name m) m (Sugar.Expression (Name m) m ExprGuiT.Payload) ->
     ExprGuiM m
     ( WithTextPos (Widget (Transaction m Widget.EventResult))
     , ExpressionGui m
     )
-makeFieldRow (Sugar.RecordField delete tag fieldExpr) =
+makeFieldRow (Sugar.CompositeItem delete tag fieldExpr) =
     do
         config <- Lens.view Config.config
         let itemEventMap = recordDelEventMap config delete
@@ -98,7 +93,7 @@ makeFieldRow (Sugar.RecordField delete tag fieldExpr) =
 
 makeFieldsWidget ::
     Monad m =>
-    [Sugar.RecordField (Name m) m (Sugar.Expression (Name m) m ExprGuiT.Payload)] ->
+    [Sugar.CompositeItem (Name m) m (Sugar.Expression (Name m) m ExprGuiT.Payload)] ->
     Widget.Id -> ExprGuiM m (ExpressionGui m)
 makeFieldsWidget [] myId =
     (Widget.makeFocusableView ?? myId <&> (Align.tValue %~))
