@@ -52,7 +52,7 @@ module Lamdu.Sugar.Types.Expression
     , HoleActions(..), holeUUID, holeOptions, holeMDelete
     , HoleKind(..), _LeafHole, _WrapperHole
     , Hole(..), holeActions, holeKind
-    , TIdG(..), tidgName, tidgTId
+    , TId(..), tidName, tidTId
     , HoleResultScore
     , HoleResult(..)
         , holeResultConverted
@@ -124,9 +124,9 @@ data HoleResult name m = HoleResult
     , _holeResultPick :: T m PickedResult
     }
 
-data TIdG name = TIdG
-    { _tidgName :: name
-    , _tidgTId :: T.NominalId
+data TId name = TId
+    { _tidName :: name
+    , _tidTId :: T.NominalId
     }
 
 data HoleOption name m = HoleOption
@@ -333,7 +333,7 @@ data LabeledApply name m expr = LabeledApply
     } deriving (Functor, Foldable, Traversable)
 
 data Nominal name expr = Nominal
-    { _nTId :: TIdG name
+    { _nTId :: TId name
     , _nVal :: expr
     } deriving (Functor, Foldable, Traversable)
 
@@ -407,7 +407,7 @@ Lens.makeLenses ''Record
 Lens.makeLenses ''RecordAddFieldResult
 Lens.makeLenses ''RecordField
 Lens.makeLenses ''RelayedArg
-Lens.makeLenses ''TIdG
+Lens.makeLenses ''TId
 Lens.makePrisms ''BinderVarForm
 Lens.makePrisms ''BinderVarInline
 Lens.makePrisms ''Body

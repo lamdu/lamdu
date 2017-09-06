@@ -1,4 +1,4 @@
-module Lamdu.Sugar.Convert.TIdG
+module Lamdu.Sugar.Convert.TId
     ( convert
     ) where
 
@@ -7,9 +7,9 @@ import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Expr.UniqueId as UniqueId
 import           Lamdu.Sugar.Types
 
-convert :: T.NominalId -> TIdG UUID
+convert :: T.NominalId -> TId UUID
 convert tid =
-    TIdG
-    { _tidgName = UniqueId.toUUID tid
-    , _tidgTId = tid
+    TId
+    { _tidName = UniqueId.toUUID tid
+    , _tidTId = tid
     }

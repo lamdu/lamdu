@@ -12,7 +12,7 @@ import           Lamdu.Sugar.Convert.Expression.Actions (addActions)
 import qualified Lamdu.Sugar.Convert.Input as Input
 import           Lamdu.Sugar.Convert.Monad (ConvertM)
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
-import qualified Lamdu.Sugar.Convert.TIdG as ConvertTIdG
+import qualified Lamdu.Sugar.Convert.TId as ConvertTId
 import qualified Lamdu.Sugar.Convert.Text as ConvertText
 import           Lamdu.Sugar.Internal
 import           Lamdu.Sugar.Types
@@ -22,7 +22,7 @@ import           Lamdu.Prelude
 convertNom :: V.Nom expr -> Nominal UUID expr
 convertNom (V.Nom tid val) =
     Nominal
-    { _nTId = ConvertTIdG.convert tid
+    { _nTId = ConvertTId.convert tid
     , _nVal = val
     }
 

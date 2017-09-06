@@ -215,14 +215,14 @@ toBody expr = \case
     BodySimpleApply  x -> x & traverse expr <&> BodySimpleApply
     BodyLabeledApply x -> x & toLabeledApply expr <&> BodyLabeledApply
     BodyHole         x -> x & toHole expr <&> BodyHole
-    BodyFromNom      x -> x & traverse expr >>= nTId toTIdG <&> BodyFromNom
-    BodyToNom        x -> x & traverse (toBinderBody expr) >>= nTId toTIdG <&> BodyToNom
+    BodyFromNom      x -> x & traverse expr >>= nTId toTId <&> BodyFromNom
+    BodyToNom        x -> x & traverse (toBinderBody expr) >>= nTId toTId <&> BodyToNom
     BodyGetVar       x -> x & toGetVar <&> BodyGetVar
     BodyLiteral      x -> x & BodyLiteral & pure
     BodyLam          x -> x & toLam expr <&> BodyLam
     BodyInjectedExpression -> return BodyInjectedExpression
     where
-        toTIdG = tidgName %%~ opGetName NominalName
+        toTId = tidName %%~ opGetName NominalName
 
 funcSignature :: LabeledApply name binderVar a -> FunctionSignature
 funcSignature apply =

@@ -51,7 +51,7 @@ bodyShape = \case
     Sugar.BodyGetVar {} -> []
     Sugar.BodyToNom {} -> []
     Sugar.BodyFromNom nom
-        | nom ^. Sugar.nTId . Sugar.tidgTId == Builtins.boolTid -> ["if"]
+        | nom ^. Sugar.nTId . Sugar.tidTId == Builtins.boolTid -> ["if"]
         | otherwise -> []
     Sugar.BodyHole {} -> []
     Sugar.BodyInjectedExpression {} -> []

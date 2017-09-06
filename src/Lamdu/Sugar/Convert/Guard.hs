@@ -23,7 +23,7 @@ convertGuard setToVal caseBody =
     do
         arg <- caseBody ^? cKind . _CaseWithArg . caVal
         case arg ^. rBody of
-            BodyFromNom nom | nom ^. nTId . tidgTId == boolTid -> tryGuard (nom ^. nVal)
+            BodyFromNom nom | nom ^. nTId . tidTId == boolTid -> tryGuard (nom ^. nVal)
             _ | arg ^? rPayload . plAnnotation . aInferredType . T._TInst . _1 == Just boolTid -> tryGuard arg
             _ -> Nothing
     where
