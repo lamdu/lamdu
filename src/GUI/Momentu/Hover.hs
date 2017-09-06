@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, DeriveGeneric, TemplateHaskell, DeriveFunctor, FlexibleInstances, MultiParamTypeClasses, TypeFamilies, FlexibleContexts, OverloadedStrings #-}
+{-# LANGUAGE NoImplicitPrelude, DeriveGeneric, TemplateHaskell, DeriveFunctor, FlexibleInstances, MultiParamTypeClasses, TypeFamilies, FlexibleContexts, OverloadedStrings, RankNTypes #-}
 module GUI.Momentu.Hover
     ( Style(..)
     , Hover, hover
@@ -6,6 +6,7 @@ module GUI.Momentu.Hover
     , AnchoredWidget, anchor
     , hoverInPlaceOf, hoverBesideOptions, hoverBesideOptionsAxis
     , Orientation(..)
+    , hoverBeside
     ) where
 
 import qualified Control.Lens as Lens
@@ -17,7 +18,7 @@ import           GUI.Momentu.Align (Aligned(..), value)
 import qualified GUI.Momentu.Draw as Draw
 import           GUI.Momentu.Element (Element, SizedElement)
 import qualified GUI.Momentu.Element as Element
-import           GUI.Momentu.Glue (Glue(..), Orientation)
+import           GUI.Momentu.Glue (Glue(..), Orientation, GluesTo)
 import qualified GUI.Momentu.Glue as Glue
 import           GUI.Momentu.Rect (Rect(..))
 import           GUI.Momentu.View (View)
@@ -195,3 +196,23 @@ hoverInPlaceOf hoverOptions@(defaultOption:_) place
             where
                 tl = negate (translation h)
                 br = h ^. Element.size - place ^. Element.size - tl
+
+hoverBeside ::
+    ( GluesTo (Hover w) (AnchoredWidget (f EventResult)) (AnchoredWidget (f EventResult))
+    , SizedElement w
+    , Element.HasAnimIdPrefix env, HasStyle env, MonadReader env m
+    , Functor f
+    ) =>
+    (forall a b. Lens (t a) (t b) a b) ->
+    m
+    ( t (Widget (f EventResult)) ->
+      w -> t (Widget (f EventResult))
+    )
+hoverBeside lens =
+    do
+        mkHover <- hover
+        pure $ \layout h ->
+            let a = layout & lens %~ anchor
+            in  a & lens %~
+                hoverInPlaceOf
+                (hoverBesideOptions (mkHover h) (a ^. lens))

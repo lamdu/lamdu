@@ -20,7 +20,7 @@ class (Glued b a ~ Glued a b) => Glue a b where
     type Glued a b
     glue :: Orientation -> a -> b -> Glued a b
 
-type GluesTo a b c = (Glue a b, Glued a b ~ c)
+type GluesTo a b c = (Glue a b, Glue b a, Glued a b ~ c)
 
 -- Horizontal glue
 (/|/) :: Glue a b => a -> b -> Glued a b

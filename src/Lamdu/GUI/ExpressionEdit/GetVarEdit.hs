@@ -166,18 +166,9 @@ processDefinitionWidget (Sugar.DefTypeChanged info) myId mkLayout =
         isSelected <- Widget.isSubCursor ?? myId
         if isSelected
             then
-            do
-                box <-
-                    Hover.hover
-                    <*> (definitionTypeChangeBox info myId
-                        -- Remove the text alignment so it can be
-                        -- placed at different vertical positions
-                         <&> (^. Align.tValue))
-                let a = layout & Align.tValue %~ Hover.anchor
-                a & Align.tValue %~
-                    Hover.hoverInPlaceOf
-                    (Hover.hoverBesideOptions box (a ^. Align.tValue))
-                    & return
+                ( Hover.hoverBeside Align.tValue ?? layout )
+                <*>
+                ( definitionTypeChangeBox info myId <&> (^. Align.tValue) )
             else return layout
 
 makeGetBinder ::
