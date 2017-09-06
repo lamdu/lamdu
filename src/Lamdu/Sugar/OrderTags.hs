@@ -52,8 +52,8 @@ orderType t =
     >>= T._TSum %%~ orderComposite
     >>= ExprLens.nextLayer orderType
 
-orderRecord :: Monad m => Order m (Sugar.Record name f a)
-orderRecord = Sugar.rItems %%~ orderByTag (^. Sugar.ciTag . Sugar.tagInfo . Sugar.tagVal)
+orderRecord :: Monad m => Order m (Sugar.Composite name f a)
+orderRecord = Sugar.cItems %%~ orderByTag (^. Sugar.ciTag . Sugar.tagInfo . Sugar.tagVal)
 
 orderLabeledApply :: Monad m => Order m (Sugar.LabeledApply name binderVar a)
 orderLabeledApply = Sugar.aAnnotatedArgs %%~ orderByTag (^. Sugar.aaTag . Sugar.tagVal)
@@ -67,7 +67,7 @@ orderHole =
     Sugar.hoResults . Lens.mapped . Lens._2 %~ (>>= orderHoleResult)
 
 orderCase :: Monad m => Order m (Sugar.Case name m a)
-orderCase = Sugar.cAlts %%~ orderByTag (^. Sugar.ciTag . Sugar.tagInfo . Sugar.tagVal)
+orderCase = Sugar.cBody %%~ orderRecord
 
 orderLam :: Monad m => Order m (Sugar.Lambda name m a)
 orderLam = Sugar.lamBinder orderBinder

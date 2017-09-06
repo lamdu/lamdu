@@ -35,14 +35,14 @@ bodyShape = \case
     Sugar.BodyRecord r ->
         ["record", "{}", "()"] ++
         case r of
-        Sugar.Record [] Sugar.ClosedComposite{} _ -> ["empty"]
+        Sugar.Composite [] Sugar.ClosedComposite{} _ -> ["empty"]
         _ -> []
     Sugar.BodyGetField gf ->
         [".", "field", "." <> ofName (gf ^. Sugar.gfTag . Sugar.tagName)]
     Sugar.BodyCase cas ->
         ["case", ":"] ++
         case cas of
-            Sugar.Case Sugar.LambdaCase [] Sugar.ClosedComposite{} _ -> ["absurd"]
+            Sugar.Case Sugar.LambdaCase (Sugar.Composite [] Sugar.ClosedComposite{} _) -> ["absurd"]
             _ -> []
     Sugar.BodyGuard {} -> ["if", ":"]
     Sugar.BodyInject {} -> ["[]"]

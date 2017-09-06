@@ -17,11 +17,11 @@ module Lamdu.Sugar.Types.Expression
     , CompositeItem(..), ciDelete, ciTag, ciExpr
     , CompositeTail(..), _CompositeExtending, _ClosedComposite
     , CompositeAddItemResult(..), cairNewTag, cairNewVal, cairItem
-    , Record(..), rItems, rAddField, rTail
+    , Composite(..), cItems, cAddItem, cTail
     -- case
     , CaseArg(..), caVal, caToLambdaCase
     , CaseKind(..), _LambdaCase, _CaseWithArg
-    , Case(..), cKind, cAlts, cAddAlt, cTail
+    , Case(..), cKind, cBody
     , GuardElseIf(..), geScopes, geEntityId, geCond, geThen, geDelete, geCondAddLet
     , Guard(..), gIf, gThen, gElseIfs, gElse, gDeleteIf
     , Nominal(..), nTId, nVal
@@ -169,7 +169,7 @@ data Hole name m expr = Hole
     , _holeKind :: HoleKind name m expr
     } deriving (Functor, Foldable, Traversable)
 
-{- Record start -}
+{- Composites start -}
 data CompositeItem name m expr = CompositeItem
     { _ciDelete :: T m EntityId
     , _ciTag :: Tag name m
@@ -187,12 +187,11 @@ data CompositeAddItemResult = CompositeAddItemResult
     , _cairItem :: EntityId
     }
 
-data Record name m expr = Record
-    { _rItems :: [CompositeItem name m expr]
-    , _rTail :: CompositeTail m expr
-    , _rAddField :: T m CompositeAddItemResult
+data Composite name m expr = Composite
+    { _cItems :: [CompositeItem name m expr]
+    , _cTail :: CompositeTail m expr
+    , _cAddItem :: T m CompositeAddItemResult
     } deriving (Functor, Foldable, Traversable)
-{- Record end -}
 
 data CaseArg m expr = CaseArg
     { _caVal :: expr
@@ -206,11 +205,9 @@ data CaseKind m expr
 
 data Case name m expr = Case
     { _cKind :: CaseKind m expr
-    , _cAlts :: [CompositeItem name m expr]
-    , _cTail :: CompositeTail m expr
-    , _cAddAlt :: T m CompositeAddItemResult
+    , _cBody :: Composite name m expr
     } deriving (Functor, Foldable, Traversable)
-{- Case end -}
+{- Composites end -}
 
 data GuardElseIf m expr = GuardElseIf
     { _geScopes :: ChildScopeMapping
@@ -327,7 +324,7 @@ data Body name m expr
     | BodyLabeledApply (LabeledApply name m expr)
     | BodyHole (Hole name m expr)
     | BodyLiteral (Literal (Property m))
-    | BodyRecord (Record name m expr)
+    | BodyRecord (Composite name m expr)
     | BodyGetField (GetField name m expr)
     | BodyCase (Case name m expr)
     | BodyGuard (Guard m expr)
@@ -360,6 +357,7 @@ Lens.makeLenses ''BinderVar
 Lens.makeLenses ''Body
 Lens.makeLenses ''Case
 Lens.makeLenses ''CaseArg
+Lens.makeLenses ''Composite
 Lens.makeLenses ''CompositeAddItemResult
 Lens.makeLenses ''CompositeItem
 Lens.makeLenses ''DefinitionOutdatedType
@@ -382,7 +380,6 @@ Lens.makeLenses ''Param
 Lens.makeLenses ''ParamsRecordVar
 Lens.makeLenses ''Payload
 Lens.makeLenses ''PickedResult
-Lens.makeLenses ''Record
 Lens.makeLenses ''RelayedArg
 Lens.makeLenses ''TId
 Lens.makePrisms ''BinderVarForm

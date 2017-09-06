@@ -26,16 +26,16 @@ plValI = Input.stored . Property.pVal
 
 convertEmpty :: Monad m => Input.Payload m a -> ConvertM m (ExpressionU m a)
 convertEmpty exprPl = do
-    addField <- exprPl ^. Input.stored & makeAddItem DataOps.recExtend
+    addItem <- exprPl ^. Input.stored & makeAddItem DataOps.recExtend
     postProcess <- ConvertM.postProcess
-    BodyRecord Record
-        { _rItems = []
-        , _rTail =
+    BodyRecord Composite
+        { _cItems = []
+        , _cTail =
                 DataOps.replaceWithHole (exprPl ^. Input.stored)
                 <* postProcess
                 <&> EntityId.ofValI
                 & ClosedComposite
-        , _rAddField = addField
+        , _cAddItem = addItem
         }
         & addActions exprPl
 
@@ -50,13 +50,13 @@ convertExtend (V.RecExtend tag val rest) exprPl = do
         _ ->
             do
                 addField <- rest ^. Val.payload . Input.stored & makeAddItem DataOps.recExtend
-                Record [] (CompositeExtending restS) addField & return
+                Composite [] (CompositeExtending restS) addField & return
     fieldS <-
         convertCompositeItem
         (exprPl ^. Input.stored) (rest ^. Val.payload . plValI)
         (EntityId.ofRecExtendTag (exprPl ^. Input.entityId)) tag val
     restRecord
-        & rItems %~ (fieldS:)
-        & rAddField %~ (>>= setTagOrder (1 + length (restRecord ^. rItems)))
+        & cItems %~ (fieldS:)
+        & cAddItem %~ (>>= setTagOrder (1 + length (restRecord ^. cItems)))
         & BodyRecord
         & addActions exprPl

@@ -209,8 +209,8 @@ toBody ::
 toBody expr = \case
     BodyGetField     x -> x & traverse expr >>= gfTag toTag <&> BodyGetField
     BodyInject       x -> x & traverse expr >>= iTag toTag <&> BodyInject
-    BodyRecord       x -> x & traverse expr >>= (rItems . traverse . ciTag) toTag <&> BodyRecord
-    BodyCase         x -> x & traverse expr >>= (cAlts . traverse . ciTag) toTag <&> BodyCase
+    BodyRecord       x -> x & traverse expr >>= (cItems . traverse . ciTag) toTag <&> BodyRecord
+    BodyCase         x -> x & traverse expr >>= (cBody . cItems . traverse . ciTag) toTag <&> BodyCase
     BodyGuard        x -> x & traverse expr <&> BodyGuard
     BodySimpleApply  x -> x & traverse expr <&> BodySimpleApply
     BodyLabeledApply x -> x & toLabeledApply expr <&> BodyLabeledApply

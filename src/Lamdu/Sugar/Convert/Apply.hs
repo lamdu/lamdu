@@ -73,8 +73,8 @@ convertLabeled funcS argS exprPl =
         sBinderVar <-
             funcS ^? rBody . _BodyGetVar . _GetBinder & maybeToMPlus
         record <- argS ^? rBody . _BodyRecord & maybeToMPlus
-        Lens.has (rTail . _ClosedComposite) record & guard
-        guard $ length (record ^. rItems) >= 2
+        Lens.has (cTail . _ClosedComposite) record & guard
+        guard $ length (record ^. cItems) >= 2
         ctx <- lift ConvertM.readContext
         let var = sBinderVar ^. bvNameRef . nrName & UniqueId.identifierOfUUID & V.Var
         unless (Lens.has (Lens.at var . Lens._Just)
@@ -88,7 +88,7 @@ convertLabeled funcS argS exprPl =
                 let flatArgs = FlatComposite.fromComposite defArgs
                 flatArgs ^? FlatComposite.extension . Lens._Nothing & maybeToMPlus
                 let sFields =
-                        record ^.. rItems . traverse . ciTag . tagInfo . tagVal & Set.fromList
+                        record ^.. cItems . traverse . ciTag . tagInfo . tagVal & Set.fromList
                 guard $ Map.keysSet (flatArgs ^. FlatComposite.fields) == sFields
         let getArg field =
                 AnnotatedArg
@@ -96,7 +96,7 @@ convertLabeled funcS argS exprPl =
                     , _aaName = field ^. ciTag . tagName
                     , _aaExpr = field ^. ciExpr
                     }
-        let args = map getArg $ record ^. rItems
+        let args = map getArg $ record ^. cItems
         let tags = args ^.. Lens.traversed . aaTag . tagVal
         unless (noRepetitions tags) $ error "Repetitions should not type-check"
         BodyLabeledApply LabeledApply

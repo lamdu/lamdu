@@ -99,7 +99,7 @@ markAnnotationsToDisplay (Expression oldBody pl) =
                 -- visible (for case alts that aren't lambdas), so
                 -- maybe we do want to show the annotation
                 & cKind . Lens.mapped %~ dontShowAnnotation
-                & cAlts . Lens.mapped . Lens.mapped %~ onCaseAlt
+                & cBody . cItems . Lens.mapped . Lens.mapped %~ onCaseAlt
     where
         newBody = oldBody <&> markAnnotationsToDisplay
         onCaseAlt a =

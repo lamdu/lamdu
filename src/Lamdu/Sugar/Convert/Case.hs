@@ -39,13 +39,15 @@ convertAbsurd exprPl =
         postProcess <- ConvertM.postProcess
         BodyCase Case
             { _cKind = LambdaCase
-            , _cAlts = []
-            , _cTail =
-                    DataOps.replaceWithHole (exprPl ^. Input.stored)
-                    <* postProcess
-                    <&> EntityId.ofValI
-                    & ClosedComposite
-            , _cAddAlt = addAlt
+            , _cBody = Composite
+                { _cItems = []
+                , _cTail =
+                        DataOps.replaceWithHole (exprPl ^. Input.stored)
+                        <* postProcess
+                        <&> EntityId.ofValI
+                        & ClosedComposite
+                , _cAddItem = addAlt
+                }
             }
             & addActions exprPl
 
@@ -63,17 +65,19 @@ convert (V.Case tag val rest) exprPl = do
                 addAlt <- rest ^. Val.payload . Input.stored & makeAddItem DataOps.case_
                 return Case
                     { _cKind = LambdaCase
-                    , _cAlts = []
-                    , _cTail = CompositeExtending restS
-                    , _cAddAlt = addAlt
+                    , _cBody = Composite
+                        { _cItems = []
+                        , _cTail = CompositeExtending restS
+                        , _cAddItem = addAlt
+                        }
                     }
     altS <-
         convertCompositeItem
         (exprPl ^. Input.stored) (rest ^. Val.payload . plValI)
         (EntityId.ofCaseTag (exprPl ^. Input.entityId)) tag val
     restCase
-        & cAlts %~ (altS:)
-        & cAddAlt %~ (>>= setTagOrder (1 + length (restCase ^. cAlts)))
+        & cBody . cItems %~ (altS:)
+        & cBody . cAddItem %~ (>>= setTagOrder (1 + length (restCase ^. cBody . cItems)))
         & BodyCase
         & addActions exprPl
 

@@ -28,7 +28,7 @@ convertGuard setToVal caseBody =
             _ -> Nothing
     where
         tryGuard cond =
-            case caseBody ^. cAlts of
+            case caseBody ^. cBody . cItems of
             [alt0, alt1]
                 | tagOf alt0 == trueTag && tagOf alt1 == falseTag -> convGuard cond alt0 alt1
                 | tagOf alt1 == trueTag && tagOf alt0 == falseTag -> convGuard cond alt1 alt0

@@ -36,16 +36,16 @@ import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
 
-shouldAddBg :: Sugar.Record name m a -> Bool
-shouldAddBg (Sugar.Record [] Sugar.ClosedComposite{} _) = False
+shouldAddBg :: Sugar.Composite name m a -> Bool
+shouldAddBg (Sugar.Composite [] Sugar.ClosedComposite{} _) = False
 shouldAddBg _ = True
 
 make ::
     Monad m =>
-    Sugar.Record (Name m) m (ExprGuiT.SugarExpr m) ->
+    Sugar.Composite (Name m) m (ExprGuiT.SugarExpr m) ->
     Sugar.Payload m ExprGuiT.Payload ->
     ExprGuiM m (ExpressionGui m)
-make record@(Sugar.Record fields recordTail addField) pl =
+make record@(Sugar.Composite fields recordTail addField) pl =
     do
         config <- Lens.view Config.config
         (gui, resultPicker) <-
