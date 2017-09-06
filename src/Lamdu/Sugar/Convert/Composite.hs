@@ -4,13 +4,14 @@ module Lamdu.Sugar.Convert.Composite
     ( convertCompositeItem, setTagOrder, makeAddItem
     ) where
 
+import qualified Data.Set as Set
 import qualified Data.Store.Property as Property
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
 import           Data.UUID.Types (UUID)
 import qualified Lamdu.Calc.Type as T
 import           Lamdu.Calc.Val.Annotated (Val(..))
-import           Lamdu.Data.Anchors (assocTagOrder)
+import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.UniqueId as UniqueId
@@ -22,14 +23,6 @@ import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import           Lamdu.Sugar.Types
 
 import           Lamdu.Prelude
-
-convertTag :: EntityId -> T.Tag -> Tag UUID m
-convertTag inst tag =
-    Tag
-    { _tagInfo = TagInfo inst tag
-    , _tagName = UniqueId.toUUID tag
-    , _tagActions = error "TODO: tagActions"
-    }
 
 deleteItem ::
     Monad m =>
@@ -50,8 +43,21 @@ convertCompositeItem stored restI inst tag expr =
     do
         exprS <- ConvertM.convertSubexpression expr
         delItem <- deleteItem stored restI
+        sugarContext <- ConvertM.readContext
         return CompositeItem
-            { _ciTag = convertTag inst tag
+            { _ciTag =
+                Tag
+                { _tagInfo = TagInfo inst tag
+                , _tagName = UniqueId.toUUID tag
+                , _tagActions =
+                    TagActions
+                    { _taChangeTag = error "TODO: taChangeTag"
+                    , _taOptions =
+                        sugarContext ^. ConvertM.scCodeAnchors
+                        & Anchors.tags & Transaction.getP
+                        <&> Set.toList
+                    }
+                }
             , _ciExpr = exprS
             , _ciDelete = delItem
             }
@@ -59,7 +65,7 @@ convertCompositeItem stored restI inst tag expr =
 setTagOrder :: Monad m => Int -> CompositeAddItemResult -> Transaction m CompositeAddItemResult
 setTagOrder i r =
     do
-        Transaction.setP (assocTagOrder (r ^. cairNewTag . tagVal)) i
+        Transaction.setP (Anchors.assocTagOrder (r ^. cairNewTag . tagVal)) i
         return r
 
 makeAddItem :: Monad m =>
