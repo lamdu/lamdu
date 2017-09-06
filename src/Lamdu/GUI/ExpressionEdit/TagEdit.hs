@@ -43,11 +43,11 @@ makeTagNameEdit jumpNextEventMap tagColor tag =
     where
         myId = WidgetIds.fromEntityId (tag ^. Sugar.tagInfo . Sugar.tagInstance)
 
-makeTagH ::
+makeTagEdit ::
     Monad m =>
     Draw.Color -> NearestHoles -> Sugar.Tag (Name m) m ->
     ExprGuiM m (WithTextPos (Widget (T m Widget.EventResult)))
-makeTagH tagColor nearestHoles tag =
+makeTagEdit tagColor nearestHoles tag =
     do
         config <- Lens.view Config.config
         theme <- Lens.view Theme.theme
@@ -69,7 +69,7 @@ makeRecordTag ::
 makeRecordTag nearestHoles tag =
     do
         Theme.Name{..} <- Theme.name <$> Lens.view Theme.theme
-        makeTagH recordTagColor nearestHoles tag
+        makeTagEdit recordTagColor nearestHoles tag
 
 makeCaseTag ::
     Monad m => NearestHoles -> Sugar.Tag (Name m) m ->
@@ -77,7 +77,7 @@ makeCaseTag ::
 makeCaseTag nearestHoles tag =
     do
         Theme.Name{..} <- Theme.name <$> Lens.view Theme.theme
-        makeTagH caseTagColor nearestHoles tag
+        makeTagEdit caseTagColor nearestHoles tag
 
 -- | Unfocusable tag view (e.g: in apply params)
 makeParamTag :: Monad m => Name m -> Sugar.EntityId -> ExprGuiM m (WithTextPos View)
