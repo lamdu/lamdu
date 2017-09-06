@@ -7,7 +7,6 @@ import qualified Control.Lens as Lens
 import           Control.Monad.Trans.State (StateT(..))
 import qualified Control.Monad.Trans.State as State
 import           Data.CurAndPrev (CurAndPrev)
-import qualified Data.Graph as Graph
 import qualified Data.List as List
 import qualified Data.Map as Map
 import qualified Data.Set as Set
@@ -246,21 +245,6 @@ loadRepl evalRes cp =
     >>= OrderTags.orderExpr
     >>= PresentationModes.addToExpr
 
--- | Returns the list of definition-sets (topographically-sorted by usages)
--- This allows us to choose type inference order with maximal generality
-stronglyConnectedDefs ::
-    (pl -> DefI m) ->
-    [Definition.Definition (Val a) pl] ->
-    [[Definition.Definition (Val a) pl]]
-stronglyConnectedDefs getDefI defs =
-    defs <&> node & Graph.stronglyConnComp <&> Graph.flattenSCC
-    where
-        node def =
-            ( def
-            , def ^. Definition.defPayload & getDefI & ExprIRef.globalId
-            , def ^.. Definition.defBody . Lens.traverse . ExprLens.valGlobals mempty
-            )
-
 loadAnnotatedDef ::
     Monad m =>
     (pl -> DefI m) ->
@@ -275,9 +259,7 @@ loadPanes ::
 loadPanes evalRes cp replEntityId =
     do
         Property panes setPanes <- Anchors.panes cp ^. Transaction.mkProperty
-        ordered <-
-            Set.toList panes & mapM (loadAnnotatedDef Anchors.paneDef)
-            <&> stronglyConnectedDefs Anchors.paneDef <&> concat <&> reverse
+        ordered <- Set.toList panes & mapM (loadAnnotatedDef Anchors.paneDef)
         let convertPane i def =
                 do
                     bodyS <-
