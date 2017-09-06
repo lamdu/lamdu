@@ -12,6 +12,7 @@ import           GUI.Momentu.Align (WithTextPos)
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Draw as Draw
 import qualified GUI.Momentu.EventMap as E
+import qualified GUI.Momentu.Hover as Hover
 import           GUI.Momentu.View (View)
 import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
@@ -33,9 +34,9 @@ type T = Transaction
 
 makeTagNameEdit ::
     Monad m =>
-    NearestHoles -> Draw.Color ->
+    NearestHoles -> Widget.Id ->
     Sugar.Tag (Name m) m -> ExprGuiM m (WithTextPos (Widget (T m Widget.EventResult)))
-makeTagNameEdit nearestHoles tagColor tag =
+makeTagNameEdit nearestHoles myId tag =
     do
         config <- Lens.view Config.config <&> Config.hole
         let keys = Config.holePickAndMoveToNextHoleKeys config
@@ -47,11 +48,8 @@ makeTagNameEdit nearestHoles tagColor tag =
                    return . WidgetIds.fromEntityId)
         ExpressionGui.makeNameEdit
             (tag ^. Sugar.tagName) myId
-            & Reader.local (TextView.color .~ tagColor)
             <&> Align.tValue . E.eventMap %~ E.filterChars (/= ',')
             <&> Align.tValue %~ E.weakerEvents jumpNextEventMap
-    where
-        myId = WidgetIds.fromEntityId (tag ^. Sugar.tagInfo . Sugar.tagInstance)
 
 makeTagEdit ::
     Monad m =>
@@ -60,8 +58,30 @@ makeTagEdit ::
 makeTagEdit tagColor nearestHoles tag =
     do
         jumpHolesEventMap <- ExprEventMap.jumpHolesEventMap nearestHoles
-        makeTagNameEdit nearestHoles tagColor tag
-            <&> Align.tValue %~ E.weakerEvents jumpHolesEventMap
+        isRenaming <- Widget.isSubCursor ?? renameId
+        config <- Lens.view Config.config
+        let startRenaming =
+                Widget.keysEventMapMovesCursor (Config.jumpToDefinitionKeys config)
+                (E.Doc ["Edit", "Tag", "Open"]) (pure renameId)
+        nameView <-
+            (Widget.makeFocusableView ?? viewId <&> fmap) <*>
+            ExpressionGui.makeNameView (tag ^. Sugar.tagName) (Widget.toAnimId myId)
+            <&> Lens.mapped %~ E.weakerEvents startRenaming
+        widget <-
+            if isRenaming
+            then ( Hover.hoverBeside Align.tValue ?? nameView )
+                 <*>
+                 ( makeTagNameEdit nearestHoles renameId tag <&> (^. Align.tValue) )
+            else pure nameView
+        widget
+            <&> E.weakerEvents jumpHolesEventMap
+            & pure
+    & Reader.local (TextView.color .~ tagColor)
+    & Widget.assignCursor myId viewId
+    where
+        myId = WidgetIds.fromEntityId (tag ^. Sugar.tagInfo . Sugar.tagInstance)
+        renameId = myId `Widget.joinId` ["rename"]
+        viewId = myId `Widget.joinId` ["view"]
 
 makeRecordTag ::
     Monad m => NearestHoles -> Sugar.Tag (Name m) m ->

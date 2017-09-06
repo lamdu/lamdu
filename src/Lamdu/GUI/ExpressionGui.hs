@@ -330,7 +330,10 @@ makeNameOriginEdit ::
     Name m -> Draw.Color -> Widget.Id ->
     ExprGuiM m (WithTextPos (Widget (T m Widget.EventResult)))
 makeNameOriginEdit name color myId =
-    makeNameEdit name myId
+    ( FocusDelegator.make ?? nameEditFDConfig
+      ?? FocusDelegator.FocusEntryParent ?? myId
+      <&> (Align.tValue %~)
+    ) <*> makeNameEdit name (WidgetIds.nameEditOf myId)
     & styleNameOrigin name color
 
 styleNameOrigin :: Monad m => Name n -> Draw.Color -> ExprGuiM m b -> ExprGuiM m b
@@ -350,15 +353,11 @@ makeNameEdit ::
     Name m -> Widget.Id ->
     ExprGuiM m (WithTextPos (Widget (T m Widget.EventResult)))
 makeNameEdit (Name nameSrc nameCollision setName name) myId =
-    ( FocusDelegator.make ?? nameEditFDConfig
-      ?? FocusDelegator.FocusEntryParent ?? myId
-      <&> (Align.tValue %~)
-    ) <*>
     do
         mCollisionSuffix <- makeCollisionSuffixLabel nameCollision
         makeNameWordEdit
             ?? Property storedName setName
-            ?? WidgetIds.nameEditOf myId
+            ?? myId
             <&> case mCollisionSuffix of
                 Nothing -> id
                 Just collisionSuffix ->
