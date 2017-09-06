@@ -176,7 +176,7 @@ data Hole name m expr = Hole
 data RecordField name m expr = RecordField
     { _rfDelete :: T m EntityId
     , _rfTag :: Tag name m
-    , _rfExpr :: expr -- field type or val
+    , _rfExpr :: expr
     } deriving (Functor, Foldable, Traversable)
 
 data RecordTail m expr
