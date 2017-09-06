@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, RecordWildCards, OverloadedStrings #-}
+{-# LANGUAGE NoImplicitPrelude, OverloadedStrings #-}
 module Lamdu.GUI.ExpressionEdit.TagEdit
     ( makeRecordTag, makeCaseTag
     , makeParamTag
@@ -37,9 +37,7 @@ makeTagNameEdit ::
     Sugar.Tag (Name m) m -> ExprGuiM m (WithTextPos (Widget (T m Widget.EventResult)))
 makeTagNameEdit nearestHoles tagColor tag =
     do
-        theme <- Lens.view Theme.theme
         config <- Lens.view Config.config <&> Config.hole
-        let Theme.Name{..} = Theme.name theme
         let keys = Config.holePickAndMoveToNextHoleKeys config
             jumpNextEventMap =
                 nearestHoles ^. NearestHoles.next
@@ -70,24 +68,24 @@ makeRecordTag ::
     ExprGuiM m (WithTextPos (Widget (T m Widget.EventResult)))
 makeRecordTag nearestHoles tag =
     do
-        Theme.Name{..} <- Theme.name <$> Lens.view Theme.theme
-        makeTagEdit recordTagColor nearestHoles tag
+        theme <- Lens.view Theme.theme <&> Theme.name
+        makeTagEdit (Theme.recordTagColor theme) nearestHoles tag
 
 makeCaseTag ::
     Monad m => NearestHoles -> Sugar.Tag (Name m) m ->
     ExprGuiM m (WithTextPos (Widget (T m Widget.EventResult)))
 makeCaseTag nearestHoles tag =
     do
-        Theme.Name{..} <- Theme.name <$> Lens.view Theme.theme
-        makeTagEdit caseTagColor nearestHoles tag
+        theme <- Lens.view Theme.theme <&> Theme.name
+        makeTagEdit (Theme.caseTagColor theme) nearestHoles tag
 
 -- | Unfocusable tag view (e.g: in apply params)
 makeParamTag :: Monad m => Name m -> Sugar.EntityId -> ExprGuiM m (WithTextPos View)
 makeParamTag name entityId =
     do
-        Theme.Name{..} <- Theme.name <$> Lens.view Theme.theme
+        theme <- Lens.view Theme.theme <&> Theme.name
         ExpressionGui.makeNameView name animId
-            & Reader.local (TextView.color .~ paramTagColor)
+            & Reader.local (TextView.color .~ Theme.paramTagColor theme)
     where
         animId = WidgetIds.fromEntityId entityId & Widget.toAnimId
 
