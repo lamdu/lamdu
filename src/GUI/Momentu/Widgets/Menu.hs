@@ -79,7 +79,7 @@ makeMoreOptionsView MoreOptionsAvailable = TextView.makeLabel "..."
 
 blockEvents ::
     Applicative f =>
-    OrderedOptions (Widget (f (Widget.EventResult)) -> Widget (f (Widget.EventResult)))
+    OrderedOptions (Widget (f Widget.EventResult) -> Widget (f Widget.EventResult))
 blockEvents =
     OrderedOptions
     { _optionsFromTop = blockDirection MetaKey.Key'Down "down"

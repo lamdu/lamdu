@@ -94,8 +94,8 @@ instance Functor f => Glue (AnchoredWidget (f EventResult)) (Hover View) where
 
 instance Functor f => Glue (Hover View) (AnchoredWidget (f EventResult)) where
     type Glued (Hover View) (AnchoredWidget (f EventResult)) = AnchoredWidget (f EventResult)
-    glue o (Hover ov) ow =
-        Glue.glueH f o ov ow
+    glue o (Hover ov) =
+        Glue.glueH f o ov
         where
             f v w = w & Element.setLayers <>~ v ^. View.vAnimLayers
 
@@ -109,8 +109,8 @@ instance Functor f => Glue (AnchoredWidget (f EventResult)) (Hover (Widget (f Ev
 
 instance Functor f => Glue (Hover (Widget (f EventResult))) (AnchoredWidget (f EventResult)) where
     type Glued (Hover (Widget (f EventResult))) (AnchoredWidget (f EventResult)) = AnchoredWidget (f EventResult)
-    glue orientation (Hover ow0) ow1 =
-        Glue.glueH f orientation ow0 ow1
+    glue orientation (Hover ow0) =
+        Glue.glueH f orientation ow0
         where
             f w0 (AnchoredWidget pos w1) =
                 AnchoredWidget pos (Widget.glueStates orientation w0 w1)
