@@ -33,14 +33,25 @@ type T = Transaction
 
 makeTagNameEdit ::
     Monad m =>
-    Widget.EventMap (T m Widget.EventResult) -> Draw.Color ->
+    NearestHoles -> Draw.Color ->
     Sugar.Tag (Name m) m -> ExprGuiM m (WithTextPos (Widget (T m Widget.EventResult)))
-makeTagNameEdit jumpNextEventMap tagColor tag =
-    ExpressionGui.makeNameEdit
-    (tag ^. Sugar.tagName) myId
-    & Reader.local (TextView.color .~ tagColor)
-    <&> Align.tValue . E.eventMap %~ E.filterChars (/= ',')
-    <&> Align.tValue %~ E.weakerEvents jumpNextEventMap
+makeTagNameEdit nearestHoles tagColor tag =
+    do
+        theme <- Lens.view Theme.theme
+        config <- Lens.view Config.config <&> Config.hole
+        let Theme.Name{..} = Theme.name theme
+        let keys = Config.holePickAndMoveToNextHoleKeys config
+            jumpNextEventMap =
+                nearestHoles ^. NearestHoles.next
+                & maybe mempty
+                  (Widget.keysEventMapMovesCursor keys
+                   (E.Doc ["Navigation", "Jump to next hole"]) .
+                   return . WidgetIds.fromEntityId)
+        ExpressionGui.makeNameEdit
+            (tag ^. Sugar.tagName) myId
+            & Reader.local (TextView.color .~ tagColor)
+            <&> Align.tValue . E.eventMap %~ E.filterChars (/= ',')
+            <&> Align.tValue %~ E.weakerEvents jumpNextEventMap
     where
         myId = WidgetIds.fromEntityId (tag ^. Sugar.tagInfo . Sugar.tagInstance)
 
@@ -50,18 +61,8 @@ makeTagEdit ::
     ExprGuiM m (WithTextPos (Widget (T m Widget.EventResult)))
 makeTagEdit tagColor nearestHoles tag =
     do
-        config <- Lens.view Config.config
-        theme <- Lens.view Theme.theme
         jumpHolesEventMap <- ExprEventMap.jumpHolesEventMap nearestHoles
-        let keys = Config.holePickAndMoveToNextHoleKeys (Config.hole config)
-        let jumpNextEventMap =
-                nearestHoles ^. NearestHoles.next
-                & maybe mempty
-                  (Widget.keysEventMapMovesCursor keys
-                   (E.Doc ["Navigation", "Jump to next hole"]) .
-                   return . WidgetIds.fromEntityId)
-        let Theme.Name{..} = Theme.name theme
-        makeTagNameEdit jumpNextEventMap tagColor tag
+        makeTagNameEdit nearestHoles tagColor tag
             <&> Align.tValue %~ E.weakerEvents jumpHolesEventMap
 
 makeRecordTag ::
