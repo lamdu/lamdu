@@ -73,7 +73,7 @@ convertLabeled funcS argS exprPl =
         sBinderVar <-
             funcS ^? rBody . _BodyGetVar . _GetBinder & maybeToMPlus
         record <- argS ^? rBody . _BodyRecord & maybeToMPlus
-        Lens.has (rTail . _ClosedRecord) record & guard
+        Lens.has (rTail . _ClosedComposite) record & guard
         guard $ length (record ^. rItems) >= 2
         ctx <- lift ConvertM.readContext
         let var = sBinderVar ^. bvNameRef . nrName & UniqueId.identifierOfUUID & V.Var

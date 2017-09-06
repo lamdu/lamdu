@@ -9,15 +9,12 @@ import qualified Control.Lens as Lens
 import           Control.Monad.Trans.Maybe (MaybeT(..))
 import           Data.Maybe.Utils (maybeToMPlus)
 import qualified Data.Store.Property as Property
-import           Data.Store.Transaction (Transaction)
-import qualified Data.Store.Transaction as Transaction
 import qualified Lamdu.Calc.Val as V
 import           Lamdu.Calc.Val.Annotated (Val(..))
 import qualified Lamdu.Calc.Val.Annotated as Val
-import           Lamdu.Data.Anchors (assocTagOrder)
 import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Expr.IRef as ExprIRef
-import           Lamdu.Sugar.Convert.Composite (convertCompositeItem)
+import           Lamdu.Sugar.Convert.Composite (convertCompositeItem, setTagOrder, makeAddItem)
 import           Lamdu.Sugar.Convert.Expression.Actions (addActions)
 import           Lamdu.Sugar.Convert.Guard (convertGuard)
 import qualified Lamdu.Sugar.Convert.Input as Input
@@ -35,29 +32,10 @@ import           Lamdu.Prelude
 plValI :: Lens.Lens' (Input.Payload m a) (ExprIRef.ValI m)
 plValI = Input.stored . Property.pVal
 
-makeAddAlt :: Monad m =>
-    ExprIRef.ValIProperty m ->
-    ConvertM m (Transaction m CaseAddAltResult)
-makeAddAlt stored =
-    do
-        protectedSetToVal <- ConvertM.typeProtectedSetToVal
-        do
-            DataOps.CaseResult tag newValI resultI <-
-                DataOps.case_ (stored ^. Property.pVal)
-            _ <- protectedSetToVal stored resultI
-            let resultEntity = EntityId.ofValI resultI
-            return
-                CaseAddAltResult
-                { _caarNewTag = TagInfo (EntityId.ofRecExtendTag resultEntity) tag
-                , _caarNewVal = EntityId.ofValI newValI
-                , _caarCase = resultEntity
-                }
-            & return
-
 convertAbsurd :: Monad m => Input.Payload m a -> ConvertM m (ExpressionU m a)
 convertAbsurd exprPl =
     do
-        addAlt <- exprPl ^. Input.stored & makeAddAlt
+        addAlt <- exprPl ^. Input.stored & makeAddItem DataOps.case_
         postProcess <- ConvertM.postProcess
         BodyCase Case
             { _cKind = LambdaCase
@@ -66,17 +44,10 @@ convertAbsurd exprPl =
                     DataOps.replaceWithHole (exprPl ^. Input.stored)
                     <* postProcess
                     <&> EntityId.ofValI
-                    & ClosedCase
+                    & ClosedComposite
             , _cAddAlt = addAlt
             }
             & addActions exprPl
-
-setTagOrder ::
-    Monad m => Int -> CaseAddAltResult -> Transaction m CaseAddAltResult
-setTagOrder i r =
-    do
-        Transaction.setP (assocTagOrder (r ^. caarNewTag . tagVal)) i
-        return r
 
 convert ::
     (Monad m, Monoid a) => V.Case (Val (Input.Payload m a)) ->
@@ -89,11 +60,11 @@ convert (V.Case tag val rest) exprPl = do
             return r
         _ ->
             do
-                addAlt <- rest ^. Val.payload . Input.stored & makeAddAlt
+                addAlt <- rest ^. Val.payload . Input.stored & makeAddItem DataOps.case_
                 return Case
                     { _cKind = LambdaCase
                     , _cAlts = []
-                    , _cTail = CaseExtending restS
+                    , _cTail = CompositeExtending restS
                     , _cAddAlt = addAlt
                     }
     altS <-

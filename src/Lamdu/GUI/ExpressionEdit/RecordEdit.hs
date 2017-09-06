@@ -37,7 +37,7 @@ import qualified Lamdu.Sugar.Types as Sugar
 import           Lamdu.Prelude
 
 shouldAddBg :: Sugar.Record name m a -> Bool
-shouldAddBg (Sugar.Record [] Sugar.ClosedRecord{} _) = False
+shouldAddBg (Sugar.Record [] Sugar.ClosedComposite{} _) = False
 shouldAddBg _ = True
 
 make ::
@@ -53,14 +53,14 @@ make record@(Sugar.Record fields recordTail addField) pl =
             do
                 fieldsGui <- makeFieldsWidget fields myId
                 case recordTail of
-                    Sugar.ClosedRecord deleteTail ->
+                    Sugar.ClosedComposite deleteTail ->
                         E.weakerEvents (recordOpenEventMap config deleteTail) fieldsGui
                         & return
-                    Sugar.RecordExtending rest ->
+                    Sugar.CompositeExtending rest ->
                         makeOpenRecord fieldsGui rest (Widget.toAnimId myId)
         let addFieldEventMap =
                 addField
-                <&> (^. Sugar.rafrNewTag . Sugar.tagInstance)
+                <&> (^. Sugar.cairNewTag . Sugar.tagInstance)
                 <&> WidgetIds.fromEntityId
                 <&> TagEdit.diveToRecordTag
                 & Widget.keysEventMapMovesCursor (Config.recordAddFieldKeys config)

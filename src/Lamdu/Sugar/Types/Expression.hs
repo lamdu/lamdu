@@ -15,12 +15,10 @@ module Lamdu.Sugar.Types.Expression
     , Expression(..), rBody, rPayload
     -- record:
     , CompositeItem(..), ciDelete, ciTag, ciExpr
-    , RecordTail(..), _RecordExtending, _ClosedRecord
-    , RecordAddFieldResult(..), rafrNewTag, rafrNewVal, rafrRecExtend
+    , CompositeTail(..), _CompositeExtending, _ClosedComposite
+    , CompositeAddItemResult(..), cairNewTag, cairNewVal, cairItem
     , Record(..), rItems, rAddField, rTail
     -- case
-    , CaseTail(..), _CaseExtending, _ClosedCase
-    , CaseAddAltResult(..), caarNewTag, caarNewVal, caarCase
     , CaseArg(..), caVal, caToLambdaCase
     , CaseKind(..), _LambdaCase, _CaseWithArg
     , Case(..), cKind, cAlts, cAddAlt, cTail
@@ -178,34 +176,23 @@ data CompositeItem name m expr = CompositeItem
     , _ciExpr :: expr
     } deriving (Functor, Foldable, Traversable)
 
-data RecordTail m expr
-    = RecordExtending expr
-    | ClosedRecord (T m EntityId) -- delete action
+data CompositeTail m expr
+    = CompositeExtending expr
+    | ClosedComposite (T m EntityId) -- delete action
     deriving (Functor, Foldable, Traversable)
 
-data RecordAddFieldResult = RecordAddFieldResult
-    { _rafrNewTag :: TagInfo
-    , _rafrNewVal :: EntityId
-    , _rafrRecExtend :: EntityId
+data CompositeAddItemResult = CompositeAddItemResult
+    { _cairNewTag :: TagInfo
+    , _cairNewVal :: EntityId
+    , _cairItem :: EntityId
     }
 
 data Record name m expr = Record
     { _rItems :: [CompositeItem name m expr]
-    , _rTail :: RecordTail m expr
-    , _rAddField :: T m RecordAddFieldResult
+    , _rTail :: CompositeTail m expr
+    , _rAddField :: T m CompositeAddItemResult
     } deriving (Functor, Foldable, Traversable)
 {- Record end -}
-
-data CaseTail m expr
-    = CaseExtending expr
-    | ClosedCase (T m EntityId) -- delete action
-    deriving (Functor, Foldable, Traversable)
-
-data CaseAddAltResult = CaseAddAltResult
-    { _caarNewTag :: TagInfo
-    , _caarNewVal :: EntityId
-    , _caarCase :: EntityId
-    }
 
 data CaseArg m expr = CaseArg
     { _caVal :: expr
@@ -220,8 +207,8 @@ data CaseKind m expr
 data Case name m expr = Case
     { _cKind :: CaseKind m expr
     , _cAlts :: [CompositeItem name m expr]
-    , _cTail :: CaseTail m expr
-    , _cAddAlt :: T m CaseAddAltResult
+    , _cTail :: CompositeTail m expr
+    , _cAddAlt :: T m CompositeAddItemResult
     } deriving (Functor, Foldable, Traversable)
 {- Case end -}
 
@@ -372,8 +359,8 @@ Lens.makeLenses ''AnnotatedArg
 Lens.makeLenses ''BinderVar
 Lens.makeLenses ''Body
 Lens.makeLenses ''Case
-Lens.makeLenses ''CaseAddAltResult
 Lens.makeLenses ''CaseArg
+Lens.makeLenses ''CompositeAddItemResult
 Lens.makeLenses ''CompositeItem
 Lens.makeLenses ''DefinitionOutdatedType
 Lens.makeLenses ''Expression
@@ -396,20 +383,18 @@ Lens.makeLenses ''ParamsRecordVar
 Lens.makeLenses ''Payload
 Lens.makeLenses ''PickedResult
 Lens.makeLenses ''Record
-Lens.makeLenses ''RecordAddFieldResult
 Lens.makeLenses ''RelayedArg
 Lens.makeLenses ''TId
 Lens.makePrisms ''BinderVarForm
 Lens.makePrisms ''BinderVarInline
 Lens.makePrisms ''Body
 Lens.makePrisms ''CaseKind
-Lens.makePrisms ''CaseTail
+Lens.makePrisms ''CompositeTail
 Lens.makePrisms ''DefinitionForm
 Lens.makePrisms ''GetVar
 Lens.makePrisms ''HoleKind
 Lens.makePrisms ''Literal
 Lens.makePrisms ''ParameterForm
-Lens.makePrisms ''RecordTail
 Lens.makePrisms ''SetToHole
 Lens.makePrisms ''SpecialArgs
 Lens.makePrisms ''Unwrap

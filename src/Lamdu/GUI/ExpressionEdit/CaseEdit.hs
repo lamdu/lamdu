@@ -80,14 +80,14 @@ make (Sugar.Case mArg alts caseTail addAlt) pl =
             do
                 altsGui <- makeAltsWidget mActiveTag alts myId
                 case caseTail of
-                    Sugar.ClosedCase deleteTail ->
+                    Sugar.ClosedComposite deleteTail ->
                         E.weakerEvents (caseOpenEventMap config deleteTail) altsGui
                         & return
-                    Sugar.CaseExtending rest ->
+                    Sugar.CompositeExtending rest ->
                         makeOpenCase rest (Widget.toAnimId myId) altsGui
         let addAltEventMap =
                 addAlt
-                <&> (^. Sugar.caarNewTag . Sugar.tagInstance)
+                <&> (^. Sugar.cairNewTag . Sugar.tagInstance)
                 <&> WidgetIds.fromEntityId
                 <&> TagEdit.diveToCaseTag
                 & Widget.keysEventMapMovesCursor (Config.caseAddAltKeys config)

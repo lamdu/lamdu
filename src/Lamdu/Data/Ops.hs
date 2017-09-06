@@ -3,8 +3,9 @@ module Lamdu.Data.Ops
     ( newHole, wrap, setToWrapper
     , replace, replaceWithHole, setToHole, lambdaWrap, redexWrap
     , redexWrapWithGivenParam
-    , recExtend, RecExtendResult(..)
-    , case_, CaseResult(..)
+    , CompositeExtendResult(..)
+    , recExtend
+    , case_
     , newPublicDefinitionWithPane
     , newPublicDefinitionToIRef
     , savePreJumpPosition, jumpBack
@@ -99,33 +100,27 @@ redexWrap exprP =
         _ <- redexWrapWithGivenParam newParam newValueI exprP
         return newParam
 
-data RecExtendResult m = RecExtendResult
-    { rerNewTag :: T.Tag
-    , rerNewVal :: ValI m
-    , rerResult :: ValI m
+data CompositeExtendResult m = CompositeExtendResult
+    { cerNewTag :: T.Tag
+    , cerNewVal :: ValI m
+    , cerResult :: ValI m
     }
 
-recExtend :: Monad m => ValI m -> T m (RecExtendResult m)
+recExtend :: Monad m => ValI m -> T m (CompositeExtendResult m)
 recExtend valI =
     do
         tag <- fst . GenIds.randomTag . RandomUtils.genFromHashable <$> Transaction.newKey
         newValueI <- newHole
         V.RecExtend tag newValueI valI & V.BRecExtend & ExprIRef.newValBody
-            <&> RecExtendResult tag newValueI
+            <&> CompositeExtendResult tag newValueI
 
-data CaseResult m = CaseResult
-    { crNewTag :: T.Tag
-    , crNewVal :: ValI m
-    , crResult :: ValI m
-    }
-
-case_ :: Monad m => ValI m -> T m (CaseResult m)
+case_ :: Monad m => ValI m -> T m (CompositeExtendResult m)
 case_ tailI =
     do
         tag <- fst . GenIds.randomTag . RandomUtils.genFromHashable <$> Transaction.newKey
         newValueI <- newHole
         V.Case tag newValueI tailI & V.BCase & ExprIRef.newValBody
-            <&> CaseResult tag newValueI
+            <&> CompositeExtendResult tag newValueI
 
 newPane :: Monad m => Anchors.CodeAnchors m -> DefI m -> T m ()
 newPane codeAnchors defI =
