@@ -15,6 +15,7 @@ import           GHC.Generics (Generic)
 import           GUI.Momentu.Align (WithTextPos)
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Draw as Draw
+import           GUI.Momentu.Element (Element)
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Glue ((/|/))
@@ -113,6 +114,15 @@ makeSubmenuSymbol isSelected =
             | isSelected = submenuSymbolColorSelected
             | otherwise = submenuSymbolColorUnselected
 
+addBackground ::
+    (MonadReader env m, Element.HasAnimIdPrefix env, HasStyle env, Element a) =>
+    m (a -> a)
+addBackground =
+    do
+        animId <- Element.subAnimId ["hover background"]
+        color <- Lens.view style <&> bgColor
+        Draw.backgroundColor animId color & pure
+
 layoutOption ::
     ( MonadReader env m, Element.HasAnimIdPrefix env, TextView.HasStyle env
     , Hover.HasStyle env, HasStyle env, Functor f
@@ -130,18 +140,15 @@ layoutOption maxOptionWidth option =
                     /|/ submenuSymbol
                     & Align.tValue %~ Hover.anchor
             hover <- Hover.hover
-            s <- Lens.view style
-            let submenu =
-                    Glue.vbox submenus
-                    & Draw.backgroundColor (animId <> ["hover background"])
-                    (bgColor s)
+            addBg <- addBackground
             base
                 & Align.tValue %~
                 Hover.hoverInPlaceOf
-                (Hover.hoverBesideOptionsAxis Glue.Horizontal (submenu <&> hover) base
+                (Hover.hoverBesideOptionsAxis Glue.Horizontal
+                 (Glue.vbox submenus & addBg <&> hover) base
                  <&> (^. Align.tValue))
                 & pure
-    & Reader.local (Element.animIdPrefix .~ Widget.toAnimId (option ^. oId))
+    & Reader.local (Element.animIdPrefix .~ animId)
     where
         animId = option ^. oId & Widget.toAnimId
         isSelected =
@@ -156,9 +163,11 @@ layout ::
     ) =>
     Widget.R -> [Option f] -> HasMoreOptions ->
     m (OrderedOptions (Widget (f Widget.EventResult)))
-layout minWidth options hiddenResults
-    | null options = makeNoResults <&> (^. Align.tValue) <&> Widget.fromView <&> pure
-    | otherwise =
+layout minWidth options hiddenResults =
+    (addBackground <&> fmap) <*>
+    case options of
+    [] -> makeNoResults <&> (^. Align.tValue) <&> Widget.fromView <&> pure
+    _:_ ->
         do
             submenuSymbolWidth <-
                 TextView.drawText ?? submenuSymbolText
@@ -182,4 +191,3 @@ layout minWidth options hiddenResults
                     } ?? (laidOutOptions ++ [hiddenOptionsWidget])
                     <&> Glue.vbox
                 ) & pure
-

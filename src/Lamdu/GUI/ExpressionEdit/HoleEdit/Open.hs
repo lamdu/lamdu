@@ -18,7 +18,6 @@ import           GUI.Momentu (Widget, EventResult, AnimId)
 import           GUI.Momentu.Align (Aligned(..), WithTextPos(..))
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Animation as Anim
-import qualified GUI.Momentu.Draw as Draw
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Glue ((/-/), (/|/))
@@ -331,15 +330,8 @@ makeResultsWidget minWidth holeInfo shownResultsLists hiddenResults =
             case groupsWidgets of
             [] -> emptyPickEventMap
             (x:_) -> x ^. rgPickEventMap & return
-        theme <- Lens.view Theme.theme
         Menu.layout minWidth (groupsWidgets <&> (^. rgOption)) hiddenResults
-            <&> Lens.mapped %~
-                Draw.backgroundColor (animId <> ["hover background"])
-                (Theme.hoverBGColor theme)
             <&> (,) pickResultEventMap
-    where
-        animId = Widget.toAnimId (hidResultsPrefix hids)
-        hids = hiIds holeInfo
 
 assignHoleEditCursor ::
     Monad m =>
