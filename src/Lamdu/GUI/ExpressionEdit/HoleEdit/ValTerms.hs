@@ -10,7 +10,7 @@ import qualified Lamdu.Builtins.Anchors as Builtins
 import           Lamdu.Formatting (Format(..))
 import qualified Lamdu.Sugar.Lens as SugarLens
 import qualified Lamdu.Sugar.Names.Get as NamesGet
-import           Lamdu.Sugar.Names.Types (Name(..), NameCollision(..), ExpressionN)
+import           Lamdu.Sugar.Names.Types (Name(..), Collision(..), ExpressionN)
 import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude

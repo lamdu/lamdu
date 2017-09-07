@@ -46,7 +46,8 @@ import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
 import qualified Lamdu.GUI.ParamEdit as ParamEdit
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.Sugar.Lens as SugarLens
-import           Lamdu.Sugar.Names.Types (Name(..), NameSource(..))
+import           Lamdu.Sugar.Names.Types (Name(..))
+import qualified Lamdu.Sugar.Names.Types as Name
 import           Lamdu.Sugar.NearestHoles (NearestHoles)
 import qualified Lamdu.Sugar.Types as Sugar
 
@@ -55,7 +56,7 @@ import           Lamdu.Prelude
 type T = Transaction
 
 nonOperatorName :: Name m -> Bool
-nonOperatorName (Name NameSourceStored _ _ x) =
+nonOperatorName (Name Name.SourceStored _ _ x) =
     nonEmptyAll (`notElem` operatorChars) (Text.unpack x)
 nonOperatorName _ = False
 
