@@ -55,9 +55,10 @@ mkPrecedence apply =
         x:_ -> CharClassification.charPrecedence x
         _ -> 20
     where
-        funcName =
-            apply ^. Sugar.aFunc . Sugar.bvNameRef . Sugar.nrName . Name.text
-            & Text.unpack
+        (visibleName, _mCollision) =
+            apply ^. Sugar.aFunc . Sugar.bvNameRef . Sugar.nrName . Name.form
+            & Name.visible
+        funcName = Text.unpack visibleName
 
 infixMarker :: Vector2 Anim.R -> Draw.Image
 infixMarker (Vector2 w h) =
@@ -100,7 +101,8 @@ makeInfixFuncName nearestHoles funcVar myId =
     makeFuncVar nearestHoles funcVar myId <&> mAddMarker
     where
         mAddMarker
-            | funcVar ^. Sugar.bvNameRef . Sugar.nrName & BinderEdit.nonOperatorName =
+            | funcVar ^. Sugar.bvNameRef . Sugar.nrName . Name.form
+              & BinderEdit.nonOperatorName =
                 addInfixMarker myId
             | otherwise = id
 

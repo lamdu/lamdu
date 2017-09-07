@@ -43,7 +43,7 @@ makeSimpleView ::
     (Applicative f, Monad m) =>
     Name m -> Widget.Id ->
     ExprGuiM m (WithTextPos (Widget (f Widget.EventResult)))
-makeSimpleView name myId =
+makeSimpleView (Name name _) myId =
     (Widget.makeFocusableView ?? myId <&> (Align.tValue %~))
     <*> ExpressionGui.makeNameView name (Widget.toAnimId myId)
 

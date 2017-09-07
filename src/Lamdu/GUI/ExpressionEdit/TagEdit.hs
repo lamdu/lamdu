@@ -55,11 +55,8 @@ makeTagNameEdit nearestHoles myId tag =
                   (Widget.keysEventMapMovesCursor keys
                    (E.Doc ["Navigation", "Jump to next hole"]) .
                    return . WidgetIds.fromEntityId)
-        ExpressionGui.makeNameEdit
-            ( tag ^. Sugar.tagName
-                -- TODO: cleaner way to do this
-                & Name.collisionSuffix .~ Name.NoCollision
-            )
+        ExpressionGui.makeBareNameEdit
+            (tag ^. Sugar.tagName)
             (tagRenameId myId)
             <&> Align.tValue . E.eventMap %~ E.filterChars (/= ',')
             <&> Align.tValue %~ E.weakerEvents jumpNextEventMap
@@ -86,7 +83,7 @@ makeTagEdit tagColor nearestHoles tag =
                 (E.Doc ["Edit", "Tag", "Open"]) (pure (tagRenameId myId))
         nameView <-
             (Widget.makeFocusableView ?? viewId <&> fmap) <*>
-            ExpressionGui.makeNameView (tag ^. Sugar.tagName) (Widget.toAnimId myId)
+            ExpressionGui.makeNameView (tag ^. Sugar.tagName . Name.form) (Widget.toAnimId myId)
             <&> Lens.mapped %~ E.weakerEvents startRenaming
         widget <-
             if isRenaming
@@ -124,7 +121,7 @@ makeParamTag :: Monad m => Name m -> Sugar.EntityId -> ExprGuiM m (WithTextPos V
 makeParamTag name entityId =
     do
         theme <- Lens.view Theme.theme <&> Theme.name
-        ExpressionGui.makeNameView name animId
+        ExpressionGui.makeNameView (name ^. Name.form) animId
             & Reader.local (TextView.color .~ Theme.paramTagColor theme)
     where
         animId = WidgetIds.fromEntityId entityId & Widget.toAnimId

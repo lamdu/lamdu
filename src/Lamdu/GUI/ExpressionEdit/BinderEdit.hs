@@ -55,8 +55,8 @@ import           Lamdu.Prelude
 
 type T = Transaction
 
-nonOperatorName :: Name m -> Bool
-nonOperatorName (Name Name.SourceStored _ _ x) =
+nonOperatorName :: Name.Form -> Bool
+nonOperatorName (Name.Stored x _) =
     nonEmptyAll (`notElem` operatorChars) (Text.unpack x)
 nonOperatorName _ = False
 
@@ -70,13 +70,14 @@ makeBinderNameEdit binderActions rhsJumperEquals name color myId =
     do
         config <- Lens.view Config.config
         ExpressionGui.makeNameOriginEdit name color myId
-            <&> jumpToRHSViaEquals name
+            <&> jumpToRHSViaEquals
             <&> Align.tValue %~ E.weakerEvents
                 (ParamEdit.eventMapAddFirstParam config
                  (binderActions ^. Sugar.baAddFirstParam))
     where
-        jumpToRHSViaEquals n
-            | nonOperatorName n = Align.tValue %~ E.strongerEvents rhsJumperEquals
+        jumpToRHSViaEquals
+            | nonOperatorName (name ^. Name.form) =
+                Align.tValue %~ E.strongerEvents rhsJumperEquals
             | otherwise = id
 
 presentationModeChoiceConfig :: Choice.Config

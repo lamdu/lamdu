@@ -9,9 +9,9 @@ import           Data.Store.Transaction (Transaction)
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Glue ((/|/))
-import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.Responsive.Expression as ResponsiveExpr
+import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.TextView as TextView
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Config.Theme as Theme
@@ -25,6 +25,7 @@ import qualified Lamdu.GUI.Precedence as Prec
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.Sugar.Lens as SugarLens
 import           Lamdu.Sugar.Names.Types (Name(..))
+import qualified Lamdu.Sugar.Names.Types as Name
 import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
@@ -89,8 +90,12 @@ mkNomGui ordering nomStr str mDel valId pl (Sugar.Nominal tid val) =
                 [
                 do
                     label <- ExpressionGui.grammarLabel str
-                    nameGui <- ExpressionGui.makeNameView (tid ^. Sugar.tidName) (Widget.toAnimId nameId)
-                    Widget.makeFocusableView ?? nameId <&> (Align.tValue %~) ?? label /|/ nameGui
+                    nameGui <-
+                        ExpressionGui.makeNameView
+                        (tid ^. Sugar.tidName . Name.form)
+                        (Widget.toAnimId nameId)
+                    Widget.makeFocusableView ?? nameId
+                        <&> (Align.tValue %~) ?? label /|/ nameGui
                 <&> Responsive.fromWithTextPos
                 & Reader.local (TextView.color .~ nomColor)
                 <&> E.weakerEvents eventMap
