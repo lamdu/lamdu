@@ -36,6 +36,7 @@ import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
 import qualified Lamdu.GUI.Precedence as Prec
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Sugar.Names.Types (Name(..))
+import qualified Lamdu.Sugar.Names.Types as Name
 import           Lamdu.Sugar.NearestHoles (NearestHoles)
 import qualified Lamdu.Sugar.Types as Sugar
 
@@ -55,8 +56,8 @@ mkPrecedence apply =
         _ -> 20
     where
         funcName =
-            apply ^. Sugar.aFunc . Sugar.bvNameRef . Sugar.nrName
-            & nName & Text.unpack
+            apply ^. Sugar.aFunc . Sugar.bvNameRef . Sugar.nrName . Name.text
+            & Text.unpack
 
 infixMarker :: Vector2 Anim.R -> Draw.Image
 infixMarker (Vector2 w h) =
