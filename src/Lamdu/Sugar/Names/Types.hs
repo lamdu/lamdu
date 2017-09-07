@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, RecordWildCards #-}
+{-# LANGUAGE NoImplicitPrelude #-}
 module Lamdu.Sugar.Names.Types
     ( NameSource(..), NameCollision(..), Name(..)
     , ExpressionN, BodyN, DefinitionN
@@ -22,12 +22,12 @@ data Name m = Name
     , nName :: Text
     }
 instance Show (Name m) where
-    show Name{..} =
+    show name =
         concat
         [ "(Name "
-        , show nNameSource, " "
-        , show nNameCollisionSuffix, " "
-        , show nName
+        , show (nNameSource name), " "
+        , show (nNameCollisionSuffix name), " "
+        , show (nName name)
         , ")"
         ]
 
