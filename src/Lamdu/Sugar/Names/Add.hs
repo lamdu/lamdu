@@ -310,9 +310,6 @@ makeFinalName ::
 makeFinalName src storedName namesWithin uuid env =
     fst $ makeFinalNameEnv src storedName namesWithin uuid env
 
-compose :: [a -> a] -> a -> a
-compose = foldr (.) id
-
 makeFinalNameEnv ::
     Monad tm =>
     Source -> Text -> NamesWithin -> UUID -> P2Env -> (Name tm, P2Env)
@@ -327,7 +324,7 @@ makeFinalNameEnv src name namesWithin uuid env =
         envWithName uuids = env
             & p2Names %~ Set.insert name
             -- This name is first occurence, so we get suffix 0
-            & p2NameSuffixes %~ compose ((Lens.itraversed %@~ flip Map.insert) uuids)
+            & p2NameSuffixes <>~ Map.fromList (uuids & Lens.itraversed %@~ flip (,))
         mSuffixFromAbove =
             Map.lookup uuid $ env ^. p2NameSuffixes
         collidingUUIDs =
