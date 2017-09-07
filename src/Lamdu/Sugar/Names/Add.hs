@@ -4,11 +4,12 @@ module Lamdu.Sugar.Names.Add
     ) where
 
 import qualified Control.Lens as Lens
+import           Control.Monad.Trans.FastWriter (Writer, runWriter)
+import qualified Control.Monad.Trans.FastWriter as Writer
 import           Control.Monad.Trans.Reader (Reader, runReader)
 import qualified Control.Monad.Trans.Reader as Reader
 import           Control.Monad.Trans.State (runState, evalState)
-import           Control.Monad.Trans.FastWriter (Writer, runWriter)
-import qualified Control.Monad.Trans.FastWriter as Writer
+import           Data.List (nub)
 import qualified Data.List.Utils as ListUtils
 import qualified Data.Map as Map
 import qualified Data.Map.Utils as MapUtils
@@ -236,7 +237,7 @@ uuidSuffixes nameInstances
         getNames nameType = byType ^. Lens.ix nameType
         byType =
             nameInstances ^.. Lens.folded & MapUtils.partition (^. niNameType)
-        uuids = (nameInstances ^. Lens.folded . niUUID . Lens.to OrderedSet.singleton) ^.. Lens.folded
+        uuids = nameInstances ^.. Lens.folded . niUUID & nub
 
 -- | Given a list of UUIDs that are being referred to via the same
 -- textual name, generate a suffix map
@@ -327,9 +328,9 @@ makeFinalNameEnv src name namesWithin uuid env =
             Map.lookup uuid $ env ^. p2NameSuffixes
         collidingUUIDs =
             namesWithin
-            ^. snwUUIDMap . Lens.at name . Lens._Just .
-                Lens.folded . niUUID . Lens.filtered (/= uuid) . Lens.to OrderedSet.singleton
-            ^.. Lens.folded
+            ^.. snwUUIDMap . Lens.at name . Lens._Just .
+                Lens.folded . niUUID . Lens.filtered (/= uuid)
+            & nub
 
 p2cpsNameConvertor ::
     Monad tm =>
