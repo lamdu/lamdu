@@ -107,8 +107,8 @@ instance Monoid NameUUIDMap where
     NameUUIDMap x `mappend` NameUUIDMap y =
         NameUUIDMap $ Map.unionWith mappend x y
 
-nameUUIDMapSingleton :: NameInstance -> StoredName -> NameUUIDMap
-nameUUIDMapSingleton nameInstance name =
+nameUUIDMapSingleton :: StoredName -> NameInstance -> NameUUIDMap
+nameUUIDMapSingleton name nameInstance =
     OrderedSet.singleton nameInstance & Map.singleton name & NameUUIDMap
 
 data StoredNamesWithin = StoredNamesWithin
@@ -172,13 +172,12 @@ pass1Result mApplied nameType (P0Out mName uuid) =
             case mName of
             Nothing -> mempty
             Just name ->
-                nameUUIDMapSingleton
+                nameUUIDMapSingleton name
                 NameInstance
                 { _niUUID = uuid
                 , _niMApplied = mApplied
                 , _niNameType = nameType
-                } name
-                & buildStoredNamesWithin
+                } & buildStoredNamesWithin
         buildStoredNamesWithin myNameUUIDMap =
             globalNames myNameUUIDMap
             & StoredNamesWithin myNameUUIDMap
