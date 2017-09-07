@@ -34,7 +34,6 @@ import           Lamdu.Sugar.Types
 import           Lamdu.Prelude
 
 type T = Transaction
-
 type StoredName = Text
 
 ------------------------------
@@ -89,10 +88,10 @@ data NameInstance = NameInstance
 Lens.makeLenses ''NameInstance
 
 -- Wrap the Map for a more sensible (recursive) Monoid instance
-newtype NameUUIDMap = NameUUIDMap (Map StoredName (OrderedSet NameInstance))
+newtype NameUUIDMap = NameUUIDMap (Map Text (OrderedSet NameInstance))
     deriving Show
 
-type instance Lens.Index NameUUIDMap = StoredName
+type instance Lens.Index NameUUIDMap = Text
 type instance Lens.IxValue NameUUIDMap = OrderedSet NameInstance
 
 instance Lens.Ixed NameUUIDMap where
@@ -107,34 +106,39 @@ instance Monoid NameUUIDMap where
     NameUUIDMap x `mappend` NameUUIDMap y =
         NameUUIDMap $ Map.unionWith mappend x y
 
-nameUUIDMapSingleton :: StoredName -> NameInstance -> NameUUIDMap
+nameUUIDMapSingleton :: Text -> NameInstance -> NameUUIDMap
 nameUUIDMapSingleton name nameInstance =
     OrderedSet.singleton nameInstance & Map.singleton name & NameUUIDMap
 
-data StoredNamesWithin = StoredNamesWithin
+data NamesWithin = NamesWithin
     { _snwUUIDMap :: NameUUIDMap
     -- Names of tags and defs: considered conflicted if used in two
     -- different meanings anywhere in the whole definition:
     , _snwGlobalNames :: NameUUIDMap
     } deriving (Generic)
-Lens.makeLenses ''StoredNamesWithin
-instance Monoid StoredNamesWithin where
+Lens.makeLenses ''NamesWithin
+instance Monoid NamesWithin where
     mempty = def_mempty
     mappend = def_mappend
 
+data MName = Unnamed | Named Text
+    deriving (Show, Eq, Ord)
+toText :: MName -> Text
+toText Unnamed = "Unnamed"
+toText (Named name) = name
+
 data P1Out = P1Out
-    { p1StoredName :: Maybe StoredName
-    , _p1StoredUUID :: UUID
-    , p1StoredNamesWithin :: StoredNamesWithin
+    { p1Name :: Maybe MName
+    , p1StoredUUID :: UUID
+    , p1NamesWithin :: NamesWithin
     }
-Lens.makeLenses ''P1Out
-newtype Pass1PropagateUp (tm :: * -> *) a = Pass1PropagateUp (Writer StoredNamesWithin a)
+newtype Pass1PropagateUp (tm :: * -> *) a = Pass1PropagateUp (Writer NamesWithin a)
     deriving (Functor, Applicative, Monad)
-p1TellStoredNames :: StoredNamesWithin -> Pass1PropagateUp tm ()
-p1TellStoredNames = Pass1PropagateUp . Writer.tell
-p1ListenStoredNames :: Pass1PropagateUp tm a -> Pass1PropagateUp tm (a, StoredNamesWithin)
-p1ListenStoredNames (Pass1PropagateUp act) = Pass1PropagateUp $ Writer.listen act
-runPass1PropagateUp :: Pass1PropagateUp tm a -> (a, StoredNamesWithin)
+p1TellNames :: NamesWithin -> Pass1PropagateUp tm ()
+p1TellNames = Pass1PropagateUp . Writer.tell
+p1ListenNames :: Pass1PropagateUp tm a -> Pass1PropagateUp tm (a, NamesWithin)
+p1ListenNames (Pass1PropagateUp act) = Pass1PropagateUp $ Writer.listen act
+runPass1PropagateUp :: Pass1PropagateUp tm a -> (a, NamesWithin)
 runPass1PropagateUp (Pass1PropagateUp act) = runWriter act
 
 data NameScope = Local | Global
@@ -158,29 +162,34 @@ instance Monad tm => MonadNaming (Pass1PropagateUp tm) where
 
 pass1Result ::
     Maybe Walk.FunctionSignature -> Walk.NameType -> P0Out ->
-    Pass1PropagateUp tm (StoredNamesWithin -> P1Out)
+    Pass1PropagateUp tm (NamesWithin -> P1Out)
 pass1Result mApplied nameType (P0Out mName uuid) =
     do
-        p1TellStoredNames myStoredNamesWithin
-        pure $ \storedNamesUnder -> P1Out
-            { p1StoredName = mName
-            , _p1StoredUUID = uuid
-            , p1StoredNamesWithin = myStoredNamesWithin `mappend` storedNamesUnder
+        p1TellNames myNamesWithin
+        pure $ \namesUnder -> P1Out
+            { p1Name = givenName
+            , p1StoredUUID = uuid
+            , p1NamesWithin = myNamesWithin `mappend` namesUnder
             }
     where
-        myStoredNamesWithin =
-            case mName of
-            Nothing -> mempty
-            Just name ->
-                nameUUIDMapSingleton name
-                NameInstance
-                { _niUUID = uuid
-                , _niMApplied = mApplied
-                , _niNameType = nameType
-                } & buildStoredNamesWithin
-        buildStoredNamesWithin myNameUUIDMap =
+        singleton nameText =
+            nameUUIDMapSingleton nameText
+            NameInstance
+            { _niUUID = uuid
+            , _niMApplied = mApplied
+            , _niNameType = nameType
+            } & buildNamesWithin
+        givenName =
+            case (mName, nameType) of
+            (Just name, _) -> Just (Named name)
+            (Nothing, Walk.TagName) -> Just Unnamed
+            (Nothing, Walk.DefName) -> Just Unnamed
+            (Nothing, Walk.NominalName) -> Just Unnamed
+            (Nothing, Walk.ParamName) -> Nothing
+        myNamesWithin = maybe mempty (singleton . toText) givenName
+        buildNamesWithin myNameUUIDMap =
             globalNames myNameUUIDMap
-            & StoredNamesWithin myNameUUIDMap
+            & NamesWithin myNameUUIDMap
         globalNames myNameUUIDMap =
             case nameTypeScope nameType of
             Local -> mempty
@@ -195,8 +204,8 @@ p1cpsNameConvertor :: Walk.NameType -> Walk.CPSNameConvertor (Pass1PropagateUp t
 p1cpsNameConvertor nameType mNameSrc =
     CPS $ \k -> do
         result <- pass1Result Nothing nameType mNameSrc
-        (res, storedNamesWithin) <- p1ListenStoredNames k
-        pure (result storedNamesWithin, res)
+        (res, namesWithin) <- p1ListenNames k
+        pure (result namesWithin, res)
 
 ------------------------------
 ---------- Pass 2 ------------
@@ -204,8 +213,8 @@ p1cpsNameConvertor nameType mNameSrc =
 
 data P2Env = P2Env
     { _p2NameGen :: NameGen UUID
-    , _p2StoredNameSuffixes :: Map UUID Int
-    , _p2StoredNames :: Set Text
+    , _p2NameSuffixes :: Map UUID Int
+    , _p2Names :: Set Text
     }
 Lens.makeLenses ''P2Env
 
@@ -268,8 +277,8 @@ emptyP2Env :: NameUUIDMap -> P2Env
 emptyP2Env (NameUUIDMap globalNamesMap) =
     P2Env
     { _p2NameGen = NameGen.initial
-    , _p2StoredNames = mempty
-    , _p2StoredNameSuffixes = globalNamesMap ^.. traverse <&> uuidSuffixes & mconcat
+    , _p2Names = mempty
+    , _p2NameSuffixes = globalNamesMap ^.. traverse <&> uuidSuffixes & mconcat
     }
 
 newtype Pass2MakeNames (tm :: * -> *) a = Pass2MakeNames (Reader P2Env a)
@@ -281,8 +290,8 @@ p2GetEnv = Pass2MakeNames Reader.ask
 p2WithEnv :: (P2Env -> P2Env) -> Pass2MakeNames tm a -> Pass2MakeNames tm a
 p2WithEnv f (Pass2MakeNames act) = Pass2MakeNames $ Reader.local f act
 
-runPass2MakeNamesInitial :: StoredNamesWithin -> Pass2MakeNames tm a -> a
-runPass2MakeNamesInitial storedNamesWithin = runPass2MakeNames (emptyP2Env (storedNamesWithin ^. snwGlobalNames))
+runPass2MakeNamesInitial :: NamesWithin -> Pass2MakeNames tm a -> a
+runPass2MakeNamesInitial namesWithin = runPass2MakeNames (emptyP2Env (namesWithin ^. snwGlobalNames))
 
 setName :: Monad tm => UUID -> StoredName -> T tm ()
 setName = Transaction.setP . assocNameRef
@@ -292,52 +301,56 @@ instance Monad tm => MonadNaming (Pass2MakeNames tm) where
     type NewName (Pass2MakeNames tm) = Name tm
     type TM (Pass2MakeNames tm) = tm
     opRun = p2GetEnv <&> runPass2MakeNames <&> (return .)
-    opWithTagName = p2cpsNameConvertorGlobal "tag_"
+    opWithTagName = p2cpsNameConvertorGlobal
     opWithParamName = p2cpsNameConvertorLocal
     opWithLetName = p2cpsNameConvertorLocal
-    opGetName Walk.ParamName (P1Out mName uuid storedNamesUnder) =
+    opGetName Walk.ParamName (P1Out mName uuid namesUnder) =
         case mName of
             Just name ->
-                makeFinalName name storedNamesUnder uuid <$> p2GetEnv
+                makeFinalName name namesUnder uuid <$> p2GetEnv
             Nothing ->
                 do
                     nameGen <- (^. p2NameGen) <$> p2GetEnv
                     let name = evalState (NameGen.existingName uuid) nameGen
                     pure $
                         Name NameSourceAutoGenerated NoCollision (setName uuid) name
-    opGetName Walk.TagName x = p2nameConvertor "tag_" x
-    opGetName Walk.NominalName x = p2nameConvertor "nom_" x
-    opGetName Walk.DefName x = p2nameConvertor "def_" x
+    opGetName Walk.TagName x = p2nameConvertorGlobal x
+    opGetName Walk.NominalName x = p2nameConvertorGlobal x
+    opGetName Walk.DefName x = p2nameConvertorGlobal x
 
 makeFinalName ::
-    Monad tm => StoredName -> StoredNamesWithin -> UUID -> P2Env -> Name tm
-makeFinalName name storedNamesWithin uuid env =
-    fst $ makeFinalNameEnv name storedNamesWithin uuid env
+    Monad tm => MName -> NamesWithin -> UUID -> P2Env -> Name tm
+makeFinalName name namesWithin uuid env =
+    fst $ makeFinalNameEnv name namesWithin uuid env
 
 compose :: [a -> a] -> a -> a
 compose = foldr (.) id
 
 makeFinalNameEnv ::
     Monad tm =>
-    StoredName ->
-    StoredNamesWithin -> UUID -> P2Env -> (Name tm, P2Env)
-makeFinalNameEnv name storedNamesWithin uuid env =
-    (Name NameSourceStored collision (setName uuid) name, newEnv)
+    MName -> NamesWithin -> UUID -> P2Env -> (Name tm, P2Env)
+makeFinalNameEnv name namesWithin uuid env =
+    (Name nameSrc collision (setName uuid) (toText name), newEnv)
     where
+        nameSrc =
+            case name of
+            Unnamed -> NameSourceAutoGenerated
+            Named _ -> NameSourceStored
         (collision, newEnv) =
             case (mSuffixFromAbove, collidingUUIDs) of
                 (Just suffix, _) -> (Collision suffix, env)
                 (Nothing, []) -> (NoCollision, envWithName [])
                 (Nothing, otherUUIDs) -> (Collision 0, envWithName (uuid:otherUUIDs))
+        nameText = toText name
         envWithName uuids = env
-            & p2StoredNames %~ Set.insert name
+            & p2Names %~ Set.insert nameText
             -- This name is first occurence, so we get suffix 0
-            & p2StoredNameSuffixes %~ compose ((Lens.itraversed %@~ flip Map.insert) uuids)
+            & p2NameSuffixes %~ compose ((Lens.itraversed %@~ flip Map.insert) uuids)
         mSuffixFromAbove =
-            Map.lookup uuid $ env ^. p2StoredNameSuffixes
+            Map.lookup uuid $ env ^. p2NameSuffixes
         collidingUUIDs =
-            storedNamesWithin
-            ^. snwUUIDMap . Lens.at name . Lens._Just .
+            namesWithin
+            ^. snwUUIDMap . Lens.at nameText . Lens._Just .
                 Lens.folded . niUUID . Lens.filtered (/= uuid) . Lens.to OrderedSet.singleton
             ^.. Lens.folded
 
@@ -346,45 +359,43 @@ p2cpsNameConvertor ::
     P1Out ->
     (P2Env -> (Name tm, P2Env)) ->
     CPS (Pass2MakeNames tm) (Name tm)
-p2cpsNameConvertor (P1Out mName uuid storedNamesWithin) nameMaker =
+p2cpsNameConvertor (P1Out mName uuid namesWithin) nameMaker =
     CPS $ \k ->
     do
         oldEnv <- p2GetEnv
         let (newName, newEnv) =
                 case mName of
-                Just name -> makeFinalNameEnv name storedNamesWithin uuid oldEnv
+                Just name -> makeFinalNameEnv name namesWithin uuid oldEnv
                 Nothing -> nameMaker oldEnv
         res <- p2WithEnv (const newEnv) k
         return (newName, res)
 
-makeUUIDName :: Monad tm => Text -> UUID -> Name tm
-makeUUIDName prefix uuid =
-    Name NameSourceAutoGenerated NoCollision (setName uuid)
-    (prefix <> Text.pack (take 8 (show uuid)))
-
-p2cpsNameConvertorGlobal :: Monad tm => Text -> Walk.CPSNameConvertor (Pass2MakeNames tm)
-p2cpsNameConvertorGlobal prefix storedNames =
-    p2cpsNameConvertor storedNames $
-    \p2env -> (makeUUIDName prefix (storedNames ^. p1StoredUUID), p2env)
+p2cpsNameConvertorGlobal :: Monad tm => Walk.CPSNameConvertor (Pass2MakeNames tm)
+p2cpsNameConvertorGlobal p1out =
+    makeFinalNameEnv Unnamed (p1NamesWithin p1out) (p1StoredUUID p1out)
+    & p2cpsNameConvertor p1out
 
 p2cpsNameConvertorLocal :: Monad tm => NameGen.VarInfo -> Walk.CPSNameConvertor (Pass2MakeNames tm)
-p2cpsNameConvertorLocal isFunction storedNames =
-    p2cpsNameConvertor storedNames $ \p2env ->
+p2cpsNameConvertorLocal isFunction p1out =
+    p2cpsNameConvertor p1out $ \p2env ->
     (`runState` p2env) . Lens.zoom p2NameGen $
         let conflict name =
-                Lens.has (snwUUIDMap . Lens.at name . Lens._Just) storedNamesWithin ||
-                (p2env ^. p2StoredNames . Lens.contains name)
+                Lens.has (snwUUIDMap . Lens.at name . Lens._Just) namesWithin ||
+                (p2env ^. p2Names . Lens.contains name)
         in
             Name NameSourceAutoGenerated NoCollision (setName uuid) <$>
             NameGen.newName (not . conflict) isFunction uuid
     where
-        P1Out _ uuid storedNamesWithin = storedNames
+        P1Out _ uuid namesWithin = p1out
 
-p2nameConvertor :: Monad tm => Text -> Walk.NameConvertor (Pass2MakeNames tm)
-p2nameConvertor prefix (P1Out mName uuid storedNamesWithin) =
-    case mName of
-    Just str -> makeFinalName str storedNamesWithin uuid <$> p2GetEnv
-    Nothing -> pure $ makeUUIDName prefix uuid
+p2nameConvertorGlobal :: Monad tm => Walk.NameConvertor (Pass2MakeNames tm)
+p2nameConvertorGlobal (P1Out mName uuid namesWithin) =
+    p2GetEnv <&> makeFinalName name namesWithin uuid
+    where
+        -- We use "Nothing" to signify auto-gen needed as output from
+        -- phase1, and we only do so for local names, whereas this is
+        -- a global name:
+        name = fromMaybe (Named "TODO: Bug") mName
 
 fixVarToTags :: Monad m => VarToTags -> T m ()
 fixVarToTags VarToTags {..} =
@@ -443,8 +454,8 @@ runPasses f0 f1 f2 =
     where
         pass0 = runPass0LoadNames . f0
         pass1 = runPass1PropagateUp . f1
-        pass2 (x, storedNamesWithin) =
-            f2 x & runPass2MakeNamesInitial storedNamesWithin
+        pass2 (x, namesWithin) =
+            f2 x & runPass2MakeNamesInitial namesWithin
 
 fixDef ::
     Monad tm =>
