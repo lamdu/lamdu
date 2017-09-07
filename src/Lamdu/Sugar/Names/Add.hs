@@ -162,15 +162,20 @@ instance Monad tm => MonadNaming (Pass1PropagateUp tm) where
 
 pass1Result ::
     Maybe Walk.FunctionSignature -> Walk.NameType -> P0Out ->
-    Pass1PropagateUp tm (NamesWithin -> P1Out)
+    CPS (Pass1PropagateUp tm) P1Out
 pass1Result mApplied nameType (P0Out mName uuid) =
+    CPS $ \inner ->
     do
         p1TellNames myNamesWithin
-        pure $ \namesUnder -> P1Out
-            { p1Name = givenName
-            , p1StoredUUID = uuid
-            , p1NamesWithin = myNamesWithin `mappend` namesUnder
-            }
+        (r, namesUnder) <- p1ListenNames inner
+        pure
+            ( P1Out
+                { p1Name = givenName
+                , p1StoredUUID = uuid
+                , p1NamesWithin = myNamesWithin `mappend` namesUnder
+                }
+            , r
+            )
     where
         singleton nameText =
             nameUUIDMapSingleton nameText
@@ -197,15 +202,10 @@ pass1Result mApplied nameType (P0Out mName uuid) =
 
 p1nameConvertor :: Maybe Walk.FunctionSignature -> Walk.NameType -> Walk.NameConvertor (Pass1PropagateUp tm)
 p1nameConvertor mApplied nameType mStoredName =
-    pass1Result mApplied nameType mStoredName
-    <&> ($ mempty)
+    runCPS (pass1Result mApplied nameType mStoredName) (pure ()) <&> fst
 
 p1cpsNameConvertor :: Walk.NameType -> Walk.CPSNameConvertor (Pass1PropagateUp tm)
-p1cpsNameConvertor nameType mNameSrc =
-    CPS $ \k -> do
-        result <- pass1Result Nothing nameType mNameSrc
-        (res, namesWithin) <- p1ListenNames k
-        pure (result namesWithin, res)
+p1cpsNameConvertor = pass1Result Nothing
 
 ------------------------------
 ---------- Pass 2 ------------
