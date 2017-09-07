@@ -26,6 +26,7 @@ import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Sugar.Names.Types (Name(..))
+import qualified Lamdu.Sugar.Names.Types as Name
 import           Lamdu.Sugar.NearestHoles (NearestHoles)
 import qualified Lamdu.Sugar.NearestHoles as NearestHoles
 import qualified Lamdu.Sugar.Types as Sugar
@@ -55,7 +56,11 @@ makeTagNameEdit nearestHoles myId tag =
                    (E.Doc ["Navigation", "Jump to next hole"]) .
                    return . WidgetIds.fromEntityId)
         ExpressionGui.makeNameEdit
-            (tag ^. Sugar.tagName) (tagRenameId myId)
+            ( tag ^. Sugar.tagName
+                -- TODO: cleaner way to do this
+                & Name.collisionSuffix .~ Name.NoCollision
+            )
+            (tagRenameId myId)
             <&> Align.tValue . E.eventMap %~ E.filterChars (/= ',')
             <&> Align.tValue %~ E.weakerEvents jumpNextEventMap
             <&> Align.tValue %~ E.weakerEvents stopEditingEventMap
