@@ -38,7 +38,7 @@ type T = Transaction
 type StoredName = Text
 
 -- pass 0
-data MStoredName = MStoredName
+data P0Out = P0Out
     { _mStoredName :: Maybe StoredName
     , _mStoredUUID :: UUID
     }
@@ -48,7 +48,7 @@ newtype Pass0LoadNames tm a = Pass0LoadNames { runPass0LoadNames :: T tm a }
 
 instance Monad tm => MonadNaming (Pass0LoadNames tm) where
     type OldName (Pass0LoadNames tm) = UUID
-    type NewName (Pass0LoadNames tm) = MStoredName
+    type NewName (Pass0LoadNames tm) = P0Out
     type TM (Pass0LoadNames tm) = tm
     opRun = pure runPass0LoadNames
     opWithParamName _ = p0cpsNameConvertor
@@ -56,21 +56,21 @@ instance Monad tm => MonadNaming (Pass0LoadNames tm) where
     opWithTagName = p0cpsNameConvertor
     opGetName _ = p0nameConvertor
 
-getMStoredName :: Monad tm => UUID -> Pass0LoadNames tm MStoredName
-getMStoredName uuid =
+getP0Out :: Monad tm => UUID -> Pass0LoadNames tm P0Out
+getP0Out uuid =
     Pass0LoadNames $ do
         nameStr <- Transaction.getP $ assocNameRef uuid
-        pure MStoredName
+        pure P0Out
             { _mStoredName = if Text.null nameStr then Nothing else Just nameStr
             , _mStoredUUID = uuid
             }
 
 p0nameConvertor :: Monad tm => Walk.NameConvertor (Pass0LoadNames tm)
-p0nameConvertor = getMStoredName
+p0nameConvertor = getP0Out
 
 p0cpsNameConvertor :: Monad tm => Walk.CPSNameConvertor (Pass0LoadNames tm)
 p0cpsNameConvertor uuid =
-    CPS $ \k -> (,) <$> getMStoredName uuid <*> k
+    CPS $ \k -> (,) <$> getP0Out uuid <*> k
 
 -- | Info about a single instance of use of a name:
 data NameInstance = NameInstance
@@ -141,7 +141,7 @@ nameTypeScope Walk.NominalName = Global
 nameTypeScope Walk.DefName = Global
 
 instance Monad tm => MonadNaming (Pass1PropagateUp tm) where
-    type OldName (Pass1PropagateUp tm) = MStoredName
+    type OldName (Pass1PropagateUp tm) = P0Out
     type NewName (Pass1PropagateUp tm) = P1Out
     type TM (Pass1PropagateUp tm) = tm
     opRun = pure (return . fst . runPass1PropagateUp)
@@ -152,9 +152,9 @@ instance Monad tm => MonadNaming (Pass1PropagateUp tm) where
     opGetAppliedFuncName = p1nameConvertor . Just
 
 pass1Result ::
-    Maybe Walk.FunctionSignature -> Walk.NameType -> MStoredName ->
+    Maybe Walk.FunctionSignature -> Walk.NameType -> P0Out ->
     Pass1PropagateUp tm (StoredNamesWithin -> P1Out)
-pass1Result mApplied nameType (MStoredName mName uuid) =
+pass1Result mApplied nameType (P0Out mName uuid) =
     do
         p1TellStoredNames myStoredNamesWithin
         pure $ \storedNamesUnder -> P1Out
