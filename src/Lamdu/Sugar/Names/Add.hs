@@ -261,8 +261,8 @@ namesClash nameInstances =
         hasSameCallType = uniqueCount nameApps < length nameApps
         uniqueCount = Set.size . Set.fromList
 
-emptyP2Env :: NameUUIDMap -> P2Env
-emptyP2Env (NameUUIDMap globalNamesMap) =
+initialP2Env :: NameUUIDMap -> P2Env
+initialP2Env (NameUUIDMap globalNamesMap) =
     P2Env
     { _p2NameGen = NameGen.initial
     , _p2NameSuffixes = globalNamesMap ^.. traverse <&> uuidSuffixes & mconcat
@@ -278,7 +278,7 @@ p2WithEnv :: (P2Env -> P2Env) -> Pass2MakeNames tm a -> Pass2MakeNames tm a
 p2WithEnv f (Pass2MakeNames act) = Pass2MakeNames $ Reader.local f act
 
 runPass2MakeNamesInitial :: NamesWithin -> Pass2MakeNames tm a -> a
-runPass2MakeNamesInitial namesWithin = runPass2MakeNames (emptyP2Env (namesWithin ^. snwGlobalNames))
+runPass2MakeNamesInitial namesWithin = runPass2MakeNames (initialP2Env (namesWithin ^. snwGlobalNames))
 
 setUuidName :: Monad tm => UUID -> StoredName -> T tm ()
 setUuidName = Transaction.setP . assocNameRef
