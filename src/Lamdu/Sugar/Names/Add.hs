@@ -37,7 +37,9 @@ type T = Transaction
 
 type StoredName = Text
 
--- pass 0
+------------------------------
+---------- Pass 0 ------------
+------------------------------
 data P0Out = P0Out
     { _mStoredName :: Maybe StoredName
     , _mStoredUUID :: UUID
@@ -71,6 +73,10 @@ p0nameConvertor = getP0Out
 p0cpsNameConvertor :: Monad tm => Walk.CPSNameConvertor (Pass0LoadNames tm)
 p0cpsNameConvertor uuid =
     CPS $ \k -> (,) <$> getP0Out uuid <*> k
+
+------------------------------
+---------- Pass 1 ------------
+------------------------------
 
 -- | Info about a single instance of use of a name:
 data NameInstance = NameInstance
@@ -116,7 +122,6 @@ instance Monoid StoredNamesWithin where
     mempty = def_mempty
     mappend = def_mappend
 
--- pass 1:
 data P1Out = P1Out
     { p1StoredName :: Maybe StoredName
     , _p1StoredUUID :: UUID
@@ -194,7 +199,10 @@ p1cpsNameConvertor nameType mNameSrc =
         (res, storedNamesBelow) <- p1ListenStoredNames k
         pure (result storedNamesBelow, res)
 
--- pass 2:
+------------------------------
+---------- Pass 2 ------------
+------------------------------
+
 data P2Env = P2Env
     { _p2NameGen :: NameGen UUID
     , _p2StoredNameSuffixes :: Map UUID Int
