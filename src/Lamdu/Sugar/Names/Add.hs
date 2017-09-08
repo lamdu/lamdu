@@ -125,7 +125,10 @@ instance Monoid NamesWithin where
 data P1Out = P1Out
     { p1StoredName :: Maybe StoredName
     , p1StoredUUID :: UUID
-    , p1NamesWithin :: NamesWithin
+    , -- | We keep the names underneath each node so we can check if
+      -- an auto-generated name (in pass2) conflicts with any name in
+      -- inner scopes (below)
+      p1NamesWithin :: NamesWithin
     }
 newtype Pass1PropagateUp (tm :: * -> *) a = Pass1PropagateUp (Writer NamesWithin a)
     deriving (Functor, Applicative, Monad)
@@ -203,7 +206,9 @@ p1cpsNameConvertor = pass1Result Nothing
 data P2Env = P2Env
     { _p2NameGen :: NameGen UUID
     , _p2NameSuffixes :: Map UUID Int
-    , _p2Names :: Set Text
+    , -- | Names used in containing scopes (above) -- used to avoid
+      -- generating an automatic name that conflicts with a name above
+      _p2Names :: Set Text
     }
 Lens.makeLenses ''P2Env
 
