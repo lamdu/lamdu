@@ -19,6 +19,7 @@ module Lamdu.GUI.ExpressionGui
     , EvalAnnotationOptions(..), maybeAddAnnotationWith
     , WideAnnotationBehavior(..), wideAnnotationBehaviorFromSelected
     , evaluationResult
+    , addAnnotationBackground -- used for open holes
     -- Expression wrapping
 
     , Precedence.MyPrecedence(..)

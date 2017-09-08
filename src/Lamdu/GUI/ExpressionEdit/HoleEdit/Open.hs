@@ -406,7 +406,8 @@ makeUnderCursorAssignment shownResultsLists hasHiddenResults holeInfo =
         -- ExpressionGui.stdWrap, because we want to synchronize the
         -- active BG width with the inferred type width
         typeView <-
-            TypeView.make (hiInferredType holeInfo) (Widget.toAnimId (hidHole hids))
+            ExpressionGui.addAnnotationBackground holeAnimId
+            <*> TypeView.make (hiInferredType holeInfo) holeAnimId
             <&> (^. Align.tValue)
 
         searchTermEventMap <- EventMap.makeOpenEventMap holeInfo <&> disallowFirstOperatorChar
@@ -429,6 +430,7 @@ makeUnderCursorAssignment shownResultsLists hasHiddenResults holeInfo =
                 (mkOptions placement addAnnotation resultsWidgets
                     (searchTermWidget ^. Align.tValue))
     where
+        holeAnimId = hidHole hids & Widget.toAnimId
         hids = hiIds holeInfo
         disallowFirstOperatorChar
             | Text.null searchTerm = E.filterChars (`notElem` operatorChars)
