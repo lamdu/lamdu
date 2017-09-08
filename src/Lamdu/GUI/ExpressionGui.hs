@@ -67,7 +67,7 @@ import           Lamdu.Calc.Type (Type)
 import qualified Lamdu.Calc.Type as T
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
-import           Lamdu.Config.Theme (Theme)
+import           Lamdu.Config.Theme (Theme, HasTheme(..))
 import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.Eval.Results as ER
 import qualified Lamdu.GUI.CodeEdit.Settings as CESettings
@@ -90,18 +90,19 @@ import           Lamdu.Prelude
 type T = Transaction
 
 addAnnotationBackgroundH ::
-    Element a =>
-    (Theme.ValAnnotation -> Draw.Color) -> Theme.ValAnnotation -> AnimId -> a -> a
-addAnnotationBackgroundH getColor theme animId =
-    Draw.backgroundColor bgAnimId bgColor
+    (MonadReader env m, Theme.HasTheme env, Element a) =>
+    (Theme.ValAnnotation -> Draw.Color) -> AnimId -> m (a -> a)
+addAnnotationBackgroundH getColor animId =
+    Lens.view theme <&>
+    \t ->
+    Draw.backgroundColor bgAnimId (getColor (Theme.valAnnotation t))
     where
         bgAnimId = animId ++ ["annotation background"]
-        bgColor = getColor theme
 
-addAnnotationBackground :: Element a => Theme.ValAnnotation -> AnimId -> a -> a
+addAnnotationBackground :: (MonadReader env m, Theme.HasTheme env, Element a) => AnimId -> m (a -> a)
 addAnnotationBackground = addAnnotationBackgroundH Theme.valAnnotationBGColor
 
-addAnnotationHoverBackground :: Element a => Theme.ValAnnotation -> AnimId -> a -> a
+addAnnotationHoverBackground :: (MonadReader env m, Theme.HasTheme env, Element a) => AnimId -> m (a -> a)
 addAnnotationHoverBackground = addAnnotationBackgroundH Theme.valAnnotationHoverBGColor
 
 data WideAnnotationBehavior
@@ -120,22 +121,19 @@ applyWideAnnotationBehavior ::
     AnimId -> WideAnnotationBehavior ->
     ExprGuiM m (Vector2 Widget.R -> View -> View)
 applyWideAnnotationBehavior animId KeepWideAnnotation =
-    do
-        theme <- Lens.view Theme.theme <&> Theme.valAnnotation
-        addAnnotationBackground theme animId & const & return
+    addAnnotationBackground animId <&> const
 applyWideAnnotationBehavior animId ShrinkWideAnnotation =
-    Lens.view Theme.theme <&> Theme.valAnnotation
+    addAnnotationBackground animId
     <&>
-    \theme shrinkRatio layout ->
-    Element.scale shrinkRatio layout
-    & addAnnotationBackground theme animId
+    \addBg shrinkRatio layout ->
+    Element.scale shrinkRatio layout & addBg
 applyWideAnnotationBehavior animId HoverWideAnnotation =
     do
-        theme <- Lens.view Theme.theme <&> Theme.valAnnotation
         shrinker <- applyWideAnnotationBehavior animId ShrinkWideAnnotation
+        addBg <- addAnnotationHoverBackground animId
         return $
             \shrinkRatio layout ->
-                addAnnotationHoverBackground theme animId layout
+                addBg layout
                 -- TODO: This is a buggy hover that ignores
                 -- Surrounding (and exits screen).
                 & (`View.hoverInPlaceOf` shrinker shrinkRatio layout)
@@ -146,25 +144,25 @@ processAnnotationGui ::
     ExprGuiM m (Widget.R -> View -> View)
 processAnnotationGui animId wideAnnotationBehavior =
     f
-    <$> (Lens.view Theme.theme <&> Theme.valAnnotation)
+    <$> (Lens.view theme <&> Theme.valAnnotation)
+    <*> addAnnotationBackground animId
     <*> Spacer.getSpaceSize
     <*> applyWideAnnotationBehavior animId wideAnnotationBehavior
     where
-        f theme stdSpacing applyWide minWidth annotation
+        f th addBg stdSpacing applyWide minWidth annotation
             | annotationWidth > minWidth + max shrinkAtLeast expansionLimit
             || heightShrinkRatio < 1 =
                 applyWide shrinkRatio annotation
             | otherwise =
-                maybeTooNarrow annotation
-                & addAnnotationBackground theme animId
+                maybeTooNarrow annotation & addBg
             where
                 annotationWidth = annotation ^. Element.width
                 expansionLimit =
-                    Theme.valAnnotationWidthExpansionLimit theme & realToFrac
+                    Theme.valAnnotationWidthExpansionLimit th & realToFrac
                 maxWidth = minWidth + expansionLimit
-                shrinkAtLeast = Theme.valAnnotationShrinkAtLeast theme & realToFrac
+                shrinkAtLeast = Theme.valAnnotationShrinkAtLeast th & realToFrac
                 heightShrinkRatio =
-                    Theme.valAnnotationMaxHeight theme * stdSpacing ^. _2
+                    Theme.valAnnotationMaxHeight th * stdSpacing ^. _2
                     / annotation ^. Element.height
                 shrinkRatio =
                     annotationWidth - shrinkAtLeast & min maxWidth & max minWidth
@@ -183,12 +181,12 @@ makeEvaluationResultView ::
     Monad m => AnimId -> EvalResDisplay -> ExprGuiM m (WithTextPos View)
 makeEvaluationResultView animId res =
     do
-        theme <- Lens.view Theme.theme
+        th <- Lens.view theme
         EvalView.make animId (erdVal res)
             <&>
             case erdSource res of
             Current -> id
-            Prev -> Element.tint (Theme.staleResultTint (Theme.eval theme))
+            Prev -> Element.tint (Theme.staleResultTint (Theme.eval th))
 
 data NeighborVals a = NeighborVals
     { prevNeighbor :: a
@@ -201,8 +199,8 @@ makeEvalView ::
     AnimId -> ExprGuiM m (WithTextPos View)
 makeEvalView mNeighbours evalRes animId =
     do
-        theme <- Lens.view Theme.theme
-        let Theme.Eval{..} = Theme.eval theme
+        th <- Lens.view theme
+        let Theme.Eval{..} = Theme.eval th
         let mkAnimId res =
                 -- When we can scroll between eval view results we
                 -- must encode the scope into the anim ID for smooth
@@ -213,8 +211,8 @@ makeEvalView mNeighbours evalRes animId =
                 Nothing -> animId ++ ["eval-view"]
                 Just _ -> animId ++ [encodeS (erdScope res)]
         let makeEvaluationResultViewBG res =
-                makeEvaluationResultView (mkAnimId res) res
-                <&> addAnnotationBackground (Theme.valAnnotation theme) (mkAnimId res)
+                addAnnotationBackground (mkAnimId res)
+                <*> makeEvaluationResultView (mkAnimId res) res
                 <&> (^. Align.tValue)
         let neighbourView n =
                 Lens._Just makeEvaluationResultViewBG n
@@ -434,9 +432,9 @@ grammarLabel ::
     ) => Text -> m (WithTextPos View)
 grammarLabel text =
     do
-        theme <- Lens.view Theme.theme
+        th <- Lens.view theme
         TextView.makeLabel text
-            & Reader.local (TextView.color .~ Theme.grammarColor theme)
+            & Reader.local (TextView.color .~ Theme.grammarColor th)
 
 addValBG :: (Monad m, Element a) => ExprGuiM m (a -> a)
 addValBG = addValBGWithColor Theme.valFrameBGColor
@@ -477,8 +475,8 @@ makeCollisionSuffixLabel :: Monad m => Name.Collision -> ExprGuiM m (Maybe View)
 makeCollisionSuffixLabel Name.NoCollision = return Nothing
 makeCollisionSuffixLabel (Name.Collision suffix) =
     do
-        theme <- Lens.view Theme.theme
-        let Theme.Name{..} = Theme.name theme
+        th <- Lens.view theme
+        let Theme.Name{..} = Theme.name th
         (Draw.backgroundColor ?? collisionSuffixBGColor)
             <*>
             (TextView.makeLabel (Text.pack (show suffix))
