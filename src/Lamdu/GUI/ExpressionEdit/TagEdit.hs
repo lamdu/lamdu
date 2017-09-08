@@ -43,9 +43,9 @@ tagViewId = (`Widget.joinId` ["view"])
 
 makeTagNameEdit ::
     Monad m =>
-    NearestHoles -> Widget.Id ->
-    Sugar.Tag (Name m) m -> ExprGuiM m (WithTextPos (Widget (T m Widget.EventResult)))
-makeTagNameEdit nearestHoles myId tag =
+    NearestHoles -> Sugar.Tag (Name m) m ->
+    ExprGuiM m (WithTextPos (Widget (T m Widget.EventResult)))
+makeTagNameEdit nearestHoles tag =
     do
         config <- Lens.view Config.config <&> Config.hole
         let keys = Config.holePickAndMoveToNextHoleKeys config
@@ -62,6 +62,7 @@ makeTagNameEdit nearestHoles myId tag =
             <&> Align.tValue %~ E.weakerEvents jumpNextEventMap
             <&> Align.tValue %~ E.weakerEvents stopEditingEventMap
     where
+        myId = WidgetIds.fromEntityId (tag ^. Sugar.tagInfo . Sugar.tagInstance)
         stopEditingEventMap =
             Widget.keysEventMapMovesCursor
             [ MetaKey noMods MetaKey.Key'Escape
@@ -87,9 +88,10 @@ makeTagEdit tagColor nearestHoles tag =
             <&> Lens.mapped %~ E.weakerEvents startRenaming
         widget <-
             if isRenaming
-            then ( Hover.hoverBeside Align.tValue ?? nameView )
-                 <*>
-                 ( makeTagNameEdit nearestHoles myId tag <&> (^. Align.tValue) )
+            then
+                (Hover.hoverBeside Align.tValue ?? nameView)
+                <*>
+                (makeTagNameEdit nearestHoles tag <&> (^. Align.tValue))
             else pure nameView
         widget
             <&> E.weakerEvents jumpHolesEventMap
