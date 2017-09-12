@@ -5,6 +5,7 @@ module Lamdu.Sugar.Convert.Composite
     ) where
 
 import qualified Data.Set as Set
+import           Data.Store.Property (Property)
 import qualified Data.Store.Property as Property
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
@@ -24,10 +25,12 @@ import           Lamdu.Sugar.Types
 
 import           Lamdu.Prelude
 
+type T = Transaction
+
 deleteItem ::
     Monad m =>
     ExprIRef.ValIProperty m -> ExprIRef.ValI m ->
-    ConvertM m (Transaction m EntityId)
+    ConvertM m (T m EntityId)
 deleteItem stored restI =
     do
         protectedSetToVal <- ConvertM.typeProtectedSetToVal
@@ -37,9 +40,9 @@ convertCompositeItem ::
     (Monad m, Monoid a) =>
     ExprIRef.ValIProperty m ->
     ExprIRef.ValI m ->
-    EntityId -> T.Tag -> Val (Input.Payload m a) ->
+    EntityId -> Property (T m) T.Tag -> Val (Input.Payload m a) ->
     ConvertM m (CompositeItem UUID m (ExpressionU m a))
-convertCompositeItem stored restI inst tag expr =
+convertCompositeItem stored restI inst tagProperty expr =
     do
         exprS <- ConvertM.convertSubexpression expr
         delItem <- deleteItem stored restI
@@ -51,7 +54,7 @@ convertCompositeItem stored restI inst tag expr =
                 , _tagName = UniqueId.toUUID tag
                 , _tagActions =
                     TagActions
-                    { _taChangeTag = error "TODO: taChangeTag"
+                    { _taChangeTag = tagProperty ^. Property.pSet
                     , _taOptions =
                         sugarContext ^. ConvertM.scCodeAnchors
                         & Anchors.tags & Transaction.getP
@@ -64,17 +67,18 @@ convertCompositeItem stored restI inst tag expr =
             }
     where
         toOption x = (UniqueId.toUUID x, x)
+        tag = tagProperty ^. Property.pVal
 
-setTagOrder :: Monad m => Int -> CompositeAddItemResult -> Transaction m CompositeAddItemResult
+setTagOrder :: Monad m => Int -> CompositeAddItemResult -> T m CompositeAddItemResult
 setTagOrder i r =
     do
         Transaction.setP (Anchors.assocTagOrder (r ^. cairNewTag . tagVal)) i
         return r
 
 makeAddItem :: Monad m =>
-    (ExprIRef.ValI m -> Transaction m (DataOps.CompositeExtendResult m)) ->
+    (ExprIRef.ValI m -> T m (DataOps.CompositeExtendResult m)) ->
     ExprIRef.ValIProperty m ->
-    ConvertM m (Transaction m CompositeAddItemResult)
+    ConvertM m (T m CompositeAddItemResult)
 makeAddItem addItem stored =
     do
         protectedSetToVal <- ConvertM.typeProtectedSetToVal

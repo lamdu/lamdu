@@ -4,6 +4,7 @@ module Lamdu.Sugar.Convert.Record
     ) where
 
 import qualified Control.Lens as Lens
+import           Data.Store.Property (Property(..))
 import qualified Data.Store.Property as Property
 import qualified Lamdu.Calc.Val as V
 import qualified Lamdu.Calc.Val.Annotated as Val
@@ -51,10 +52,20 @@ convertExtend (V.RecExtend tag val rest) exprPl = do
             do
                 addField <- rest ^. Val.payload . Input.stored & makeAddItem DataOps.recExtend
                 Composite [] (CompositeExtending restS) addField & return
+    protectedSetToVal <- ConvertM.typeProtectedSetToVal
+    let setTag newTag =
+            do
+                V.RecExtend newTag val rest
+                    <&> (^. Val.payload . Input.stored . Property.pVal)
+                    & V.BRecExtend & ExprIRef.writeValBody valI
+                protectedSetToVal (exprPl ^. Input.stored) valI & void
+            where
+                valI = exprPl ^. Input.stored . Property.pVal
+    let tagProp = Property tag setTag
     fieldS <-
         convertCompositeItem
         (exprPl ^. Input.stored) (rest ^. Val.payload . plValI)
-        (EntityId.ofRecExtendTag (exprPl ^. Input.entityId)) tag val
+        (EntityId.ofRecExtendTag (exprPl ^. Input.entityId)) tagProp val
     restRecord
         & cItems %~ (fieldS:)
         & cAddItem %~ (>>= setTagOrder (1 + length (restRecord ^. cItems)))
