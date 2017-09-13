@@ -129,7 +129,7 @@ data P1Name = P1Name
     { p1StoredName :: Maybe StoredName
     , p1StoredUUID :: UUID
     , -- | We keep the names underneath each node so we can check if
-      -- an auto-generated name (in pass2) conflicts with any name in
+      -- an auto-generated name (in pass2) collides with any name in
       -- inner scopes (below)
       p1NamesWithin :: NamesWithin
     }
@@ -223,7 +223,7 @@ data P2Env = P2Env
     { _p2NameGen :: NameGen UUID
     , _p2NameSuffixes :: Map UUID Int
     , -- | Names used in containing scopes (above) -- used to avoid
-      -- generating an automatic name that conflicts with a name above
+      -- generating an automatic name that collides with a name above
       _p2Names :: Set Text
     }
 Lens.makeLenses ''P2Env
