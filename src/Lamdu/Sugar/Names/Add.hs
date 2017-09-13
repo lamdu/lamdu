@@ -78,12 +78,14 @@ p0cpsNameConvertor uuid =
 ---------- Pass 1 ------------
 ------------------------------
 
+type Disambiguator = Walk.FunctionSignature
+
 -- | Info about a single instance of use of a name:
 data NameInstance = NameInstance
     { _niUUID :: !UUID
     , -- | Is the name used in a function application context? We consider
       -- the application as a disambiguator
-      _niMApplied :: !(Maybe Walk.FunctionSignature)
+      _niDisambiguator :: !(Maybe Disambiguator)
     , _niNameType :: !Walk.NameType
     } deriving (Eq, Ord, Show)
 Lens.makeLenses ''NameInstance
@@ -169,7 +171,7 @@ unnamedStr :: Text
 unnamedStr = "Unnamed"
 
 pass1Result ::
-    Maybe Walk.FunctionSignature -> Walk.NameType -> P0Name ->
+    Maybe Disambiguator -> Walk.NameType -> P0Name ->
     CPS (Pass1PropagateUp tm) P1Name
 pass1Result mApplied nameType (P0Name mName uuid) =
     CPS $ \inner ->
@@ -197,7 +199,7 @@ pass1Result mApplied nameType (P0Name mName uuid) =
             nameUUIDMapSingleton nameText
             NameInstance
             { _niUUID = uuid
-            , _niMApplied = mApplied
+            , _niDisambiguator = mApplied
             , _niNameType = nameType
             }
         createNamesWithin m =
@@ -206,7 +208,7 @@ pass1Result mApplied nameType (P0Name mName uuid) =
             Local ->  (allNames .~ m) . (localNames .~ m)
             Global ->  allNames .~ m
 
-p1nameConvertor :: Maybe Walk.FunctionSignature -> Walk.NameType -> Walk.NameConvertor (Pass1PropagateUp tm)
+p1nameConvertor :: Maybe Disambiguator -> Walk.NameType -> Walk.NameConvertor (Pass1PropagateUp tm)
 p1nameConvertor mApplied nameType mStoredName =
     runCPS (pass1Result mApplied nameType mStoredName) (pure ()) <&> fst
 
@@ -271,8 +273,8 @@ namesClash nameInstances =
     )
     where
         uuids = nameInstances ^.. Lens.folded . niUUID & Set.fromList
-        nameRefs = nameInstances ^.. Lens.folded . niMApplied . Lens._Nothing
-        nameApps = nameInstances ^.. Lens.folded . niMApplied . Lens._Just
+        nameRefs = nameInstances ^.. Lens.folded . niDisambiguator . Lens._Nothing
+        nameApps = nameInstances ^.. Lens.folded . niDisambiguator . Lens._Just
         -- | Same textual name used both as an application and as a
         -- normal name:
         hasBothTypes = not (null nameRefs) && not (null nameApps)
