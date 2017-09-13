@@ -11,6 +11,7 @@ import qualified Control.Monad.Trans.Reader as Reader
 import           Control.Monad.Trans.State (runState, evalState)
 import           Data.List (partition)
 import qualified Data.Map as Map
+import           Data.Map.Utils (unionWithM)
 import           Data.Monoid.Generic (def_mempty, def_mappend)
 import qualified Data.Set as Set
 import           Data.Set.Ordered (OrderedSet)
@@ -84,7 +85,7 @@ data NameInstance = NameInstance
     { _niUUID :: !UUID
     , -- | Is the name used in a function application context? We consider
       -- the application as a disambiguator
-      _niDisambiguator :: !(Maybe Disambiguator)
+      niDisambiguator :: !(Maybe Disambiguator)
     , _niNameType :: !Walk.NameType
     } deriving (Eq, Ord, Show)
 Lens.makeLenses ''NameInstance
@@ -148,29 +149,23 @@ p1Listen (Pass1PropagateUp act) = Pass1PropagateUp $ Writer.listen act
 runPass1PropagateUp :: Pass1PropagateUp tm a -> (a, P1Out)
 runPass1PropagateUp (Pass1PropagateUp act) = runWriter act & _2 %~ p1PostProcess
 
-collisionGroups :: [[Walk.NameType]]
+type CollisionGroup = [Walk.NameType]
+
+collisionGroups :: [CollisionGroup]
 collisionGroups =
     [ [ Walk.DefName, Walk.ParamName, Walk.FieldParamName ]
     , [ Walk.TagName, Walk.FieldParamName ]
     , [ Walk.NominalName ]
     ]
 
-byCollisionGroup :: OrderedSet NameInstance -> [[NameInstance]]
-byCollisionGroup names =
-    collisionGroups <&> concatMap filterType
-    where
-        filterType key =
-            names ^.. Lens.folded
-            & filter ((key ==) . (^. niNameType))
+data GroupNameContext = Ambiguous UUID | Disambiguated (Map Disambiguator UUID)
 
 -- A valid (non-clashing) context for a single name where multiple
 -- UUIDs may coexist
-data NameContext = Ambiguous UUID | Disambiguated (Map Disambiguator UUID)
-nameContextEmpty :: NameContext
-nameContextEmpty = Disambiguated mempty
+type NameContext = Map CollisionGroup GroupNameContext
 
-nameContextCombine :: NameContext -> NameContext -> Maybe NameContext
-nameContextCombine a b =
+groupNameContextCombine :: GroupNameContext -> GroupNameContext -> Maybe GroupNameContext
+groupNameContextCombine a b =
     case (a, b) of
     (Ambiguous uuid, Disambiguated m) -> combineAD uuid m
     (Disambiguated m, Ambiguous uuid) -> combineAD uuid m
@@ -185,9 +180,20 @@ nameContextCombine a b =
             | m ^.. Lens.folded & filter (/= uuid) & null = Just (Ambiguous uuid)
             | otherwise = Nothing
 
+nameContextCombine :: NameContext -> NameContext -> Maybe NameContext
+nameContextCombine = unionWithM groupNameContextCombine
+
+groupNameContextOf :: NameInstance -> GroupNameContext
+groupNameContextOf (NameInstance uuid Nothing _) = Ambiguous uuid
+groupNameContextOf (NameInstance uuid (Just d) _) = Map.singleton d uuid & Disambiguated
+
 nameContextOf :: NameInstance -> NameContext
-nameContextOf (NameInstance uuid Nothing _) = Ambiguous uuid
-nameContextOf (NameInstance uuid (Just d) _) = Map.singleton d uuid & Disambiguated
+nameContextOf inst =
+    filter (inst ^. niNameType `elem`) collisionGroups
+    <&> ((,) ?? ctx)
+    & Map.fromList
+    where
+        ctx = groupNameContextOf inst
 
 data IsClash = Clash | NoClash NameContext
 isClash :: IsClash -> Bool
@@ -195,7 +201,7 @@ isClash Clash = True
 isClash NoClash {} = False
 
 instance Monoid IsClash where
-    mempty = NoClash nameContextEmpty
+    mempty = NoClash mempty
     mappend (NoClash x) (NoClash y) =
         case nameContextCombine x y of
         Nothing -> Clash
@@ -205,20 +211,18 @@ instance Monoid IsClash where
 checkClash :: [NameInstance] -> IsClash
 checkClash ns = ns <&> nameContextOf <&> NoClash & mconcat
 
--- | Given a list of UUIDs that are being referred to via the same
--- textual name, generate a suffix map
-namesClash :: [NameInstance] -> Bool
-namesClash ns =
-    case checkClash globals of
-    Clash -> True
-    noClash -> any (isClash . (noClash <>) . NoClash . nameContextOf) locals
-    where
-        isLocal = (== Walk.ParamName) . (^. niNameType)
-        (locals, globals) = partition isLocal ns
-
 globalCollisions :: NameUUIDMap -> Set Text
 globalCollisions (NameUUIDMap names) =
-    names <&> byCollisionGroup & Map.filter (any namesClash) & Map.keysSet
+    Map.filter (namesClash . (^.. Lens.folded)) names & Map.keysSet
+    where
+        namesClash ns =
+            case checkClash globals of
+            Clash -> True
+            noClash -> any (isClash . (noClash <>) . NoClash . nameContextOf) locals
+            where
+                isLocal = (== Walk.ParamName) . (^. niNameType)
+                (locals, globals) = partition isLocal ns
+
 
 -- | Compute the global collisions to form ALL collisions and yield
 -- the global names only
@@ -254,25 +258,6 @@ instance Monad tm => MonadNaming (Pass1PropagateUp tm) where
 unnamedStr :: Text
 unnamedStr = "Unnamed"
 
-isDisambiguated :: Maybe Disambiguator -> Maybe Disambiguator -> Bool
-isDisambiguated (Just d0) (Just d1) = d0 == d1
-isDisambiguated _ _ = False
-
--- | The given list does not have internal collisions
-checkCollision :: NameInstance -> [NameInstance] -> Bool
-checkCollision name =
-    any isCollision
-    where
-        filterGroups inst = filter (inst ^. niNameType `elem`)
-        nCollisionGroups = filterGroups name collisionGroups
-        isCollision inst =
-            not (null (filterGroups inst nCollisionGroups))
-            &&
-            not
-            (isSameUUID inst
-             || isDisambiguated (name ^. niDisambiguator) (inst ^. niDisambiguator))
-        isSameUUID inst = inst ^. niUUID == name ^. niUUID
-
 pass1Result ::
     Maybe Disambiguator -> Walk.NameType -> P0Name ->
     CPS (Pass1PropagateUp tm) P1Name
@@ -282,7 +267,7 @@ pass1Result mApplied nameType (P0Name mName uuid) =
         (r, namesBelow) <- p1ListenNames inner
         let checkLocalCollision name =
                 localNames namesBelow ^.. Lens.ix name . Lens.folded
-                & checkCollision nameInstance
+                & checkClash & isClash
         let localCollisions =
                 case (scope, mName) of
                 (Local, Just name)
@@ -308,7 +293,7 @@ pass1Result mApplied nameType (P0Name mName uuid) =
         nameInstance =
             NameInstance
             { _niUUID = uuid
-            , _niDisambiguator = mApplied
+            , niDisambiguator = mApplied
             , _niNameType = nameType
             }
         singleton nameText = nameUUIDMapSingleton nameText nameInstance
@@ -346,9 +331,9 @@ Lens.makeLenses ''P2Env
 -- can collide with param names.
 --
 -- Hence, we check collisions in three groups:
--- * Nominals
--- * Tags+Params
--- * Defs+Params
+-- * NominalIds
+-- * Tags+FieldParams
+-- * Defs+FieldParams+Vars
 --
 -- Defs+Params can also be disambiguated if used exclusively in
 -- labeled apply contexts, and with differing signatures.
