@@ -46,7 +46,10 @@ convertCompositeItem stored restI inst tagProperty expr =
     do
         exprS <- ConvertM.convertSubexpression expr
         delItem <- deleteItem stored restI
-        sugarContext <- ConvertM.readContext
+        publishedTags <-
+            ConvertM.readContext
+            <&> (^. ConvertM.scCodeAnchors)
+            <&> Anchors.tags
         return CompositeItem
             { _ciTag =
                 Tag
@@ -56,10 +59,14 @@ convertCompositeItem stored restI inst tagProperty expr =
                     TagActions
                     { _taChangeTag = tagProperty ^. Property.pSet
                     , _taOptions =
-                        sugarContext ^. ConvertM.scCodeAnchors
-                        & Anchors.tags & Transaction.getP
+                        Transaction.getP publishedTags
                         <&> Set.toList
                         <&> map toOption
+                    , _taSetPublished =
+                        \isPublished ->
+                        Transaction.modP
+                        publishedTags
+                        ((if isPublished then Set.insert else Set.delete) tag)
                     }
                 }
             , _ciExpr = exprS

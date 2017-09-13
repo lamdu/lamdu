@@ -6,7 +6,7 @@ module Lamdu.Sugar.Types.Binder
     -- Tags
     , Tag(..), tagName, tagInfo, tagActions
     , TagInfo(..), tagVal, tagInstance
-    , TagActions(..), taOptions, taChangeTag
+    , TagActions(..), taOptions, taChangeTag, taSetPublished
     -- Let
     , LetFloatResult(..)
     , LetActions(..)
@@ -122,6 +122,7 @@ data TagInfo = TagInfo
 data TagActions name m = TagActions
     { _taOptions :: T m [(name, T.Tag)]
     , _taChangeTag :: T.Tag -> T m ()
+    , _taSetPublished :: Bool -> T m ()
     }
 
 data Tag name m = Tag
