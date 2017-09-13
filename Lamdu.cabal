@@ -108,6 +108,7 @@ Executable lamdu
                   , GUI.Momentu.Align
                   , GUI.Momentu.Animation
                   , GUI.Momentu.Animation.Id
+                  , GUI.Momentu.CursorState
                   , GUI.Momentu.Direction
                   , GUI.Momentu.Draw
                   , GUI.Momentu.Element
