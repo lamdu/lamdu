@@ -5,13 +5,13 @@ module Lamdu.Sugar.Convert.Composite
     ) where
 
 import qualified Data.Set as Set
-import           Data.Store.Property (Property)
 import qualified Data.Store.Property as Property
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
 import           Data.UUID.Types (UUID)
 import qualified Lamdu.Calc.Type as T
 import           Lamdu.Calc.Val.Annotated (Val(..))
+import qualified Lamdu.Calc.Val.Annotated as Val
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Expr.IRef as ExprIRef
@@ -38,11 +38,12 @@ deleteItem stored restI =
 
 convertCompositeItem ::
     (Monad m, Monoid a) =>
+    (T.Tag -> ExprIRef.ValI m -> ExprIRef.ValI m -> ExprIRef.ValBody m) ->
     ExprIRef.ValIProperty m ->
     ExprIRef.ValI m ->
-    EntityId -> Property (T m) T.Tag -> Val (Input.Payload m a) ->
+    EntityId -> T.Tag -> Val (Input.Payload m a) ->
     ConvertM m (CompositeItem UUID m (ExpressionU m a))
-convertCompositeItem stored restI inst tagProperty expr =
+convertCompositeItem cons stored restI inst tag expr =
     do
         exprS <- ConvertM.convertSubexpression expr
         delItem <- deleteItem stored restI
@@ -50,6 +51,14 @@ convertCompositeItem stored restI inst tagProperty expr =
             ConvertM.readContext
             <&> (^. ConvertM.scCodeAnchors)
             <&> Anchors.tags
+        protectedSetToVal <- ConvertM.typeProtectedSetToVal
+        let setTag newTag =
+                do
+                    cons newTag (expr ^. Val.payload . Input.stored . Property.pVal) restI
+                        & ExprIRef.writeValBody valI
+                    protectedSetToVal stored valI & void
+                where
+                    valI = (stored ^. Property.pVal)
         return CompositeItem
             { _ciTag =
                 Tag
@@ -57,7 +66,7 @@ convertCompositeItem stored restI inst tagProperty expr =
                 , _tagName = UniqueId.toUUID tag
                 , _tagActions =
                     TagActions
-                    { _taChangeTag = tagProperty ^. Property.pSet
+                    { _taChangeTag = setTag
                     , _taOptions =
                         Transaction.getP publishedTags
                         <&> Set.toList
@@ -74,7 +83,6 @@ convertCompositeItem stored restI inst tagProperty expr =
             }
     where
         toOption x = (UniqueId.toUUID x, x)
-        tag = tagProperty ^. Property.pVal
 
 setTagOrder :: Monad m => Int -> CompositeAddItemResult -> T m CompositeAddItemResult
 setTagOrder i r =

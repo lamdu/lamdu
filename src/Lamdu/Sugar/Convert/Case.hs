@@ -8,7 +8,6 @@ module Lamdu.Sugar.Convert.Case
 import qualified Control.Lens as Lens
 import           Control.Monad.Trans.Maybe (MaybeT(..))
 import           Data.Maybe.Utils (maybeToMPlus)
-import           Data.Store.Property (Property(..))
 import qualified Data.Store.Property as Property
 import qualified Lamdu.Calc.Val as V
 import           Lamdu.Calc.Val.Annotated (Val(..))
@@ -72,13 +71,11 @@ convert (V.Case tag val rest) exprPl = do
                         , _cAddItem = addAlt
                         }
                     }
-    let tagProp =
-            error "TODO: set tag"
-            & Property tag
     altS <-
         convertCompositeItem
+        (V.Case <&> Lens.mapped . Lens.mapped %~ V.BCase)
         (exprPl ^. Input.stored) (rest ^. Val.payload . plValI)
-        (EntityId.ofCaseTag (exprPl ^. Input.entityId)) tagProp val
+        (EntityId.ofCaseTag (exprPl ^. Input.entityId)) tag val
     restCase
         & cBody . cItems %~ (altS:)
         & cBody . cAddItem %~ (>>= setTagOrder (1 + length (restCase ^. cBody . cItems)))
