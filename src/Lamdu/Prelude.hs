@@ -2,6 +2,7 @@
 module Lamdu.Prelude
     ( module X
     , traceId, trace
+    , todo
     ) where
 
 -- .@~ is missing in Control.Lens.Operators in lens-4.15.3
@@ -29,3 +30,7 @@ traceId prefix x = Trace.trace (prefix ++ show x) x
 {-# DEPRECATED trace "Leaving traces in the code" #-}
 trace :: String -> a -> a
 trace = Trace.trace
+
+{-# DEPRECATED todo "Leaving todos in the code" #-}
+todo :: String -> a
+todo = error . ("TODO: " ++)
