@@ -41,7 +41,7 @@ makeCommon tag mDelInject nearestHoles valEdits =
                     & Widget.keysEventMapMovesCursor (Config.delKeys config) (E.Doc ["Edit", "Delete"])
         (Options.boxSpaced ?? Options.disambiguationNone)
             <*>
-            ( TagEdit.makeCaseTag nearestHoles tag
+            ( TagEdit.makeCaseTag TagEdit.WithoutTagHoles nearestHoles tag
                 <&> Lens.mapped %~ E.weakerEvents delEventMap
                 <&> Responsive.fromWithTextPos <&> (: valEdits)
             )

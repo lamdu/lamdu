@@ -54,7 +54,7 @@ convertGetFieldNonParam (V.GetField recExpr tag) exprPl =
             , _tagVal = tag
             }
         , _tagName = UniqueId.toUUID tag
-        , _tagActions = error "TODO: tagActions"
+        , _tagActions = error "TODO: tagActions. need to think of UI if this should be exposed here.."
         }
     }
     & traverse ConvertM.convertSubexpression

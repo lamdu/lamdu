@@ -39,7 +39,7 @@ make (Sugar.GetField recExpr tag) pl =
                     del <&> WidgetIds.fromEntityId
                     & Widget.keysEventMapMovesCursor (Config.delKeys config) (E.Doc ["Edit", "Delete"])
         tagEdit <-
-            TagEdit.makeRecordTag
+            TagEdit.makeRecordTag TagEdit.WithoutTagHoles
             (pl ^. Sugar.plData . ExprGuiT.plNearestHoles) tag
             <&> Lens.mapped %~ E.weakerEvents delEventMap
         Options.box Options.disambiguationNone

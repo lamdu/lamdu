@@ -113,7 +113,7 @@ makeAltRow mActiveTag (Sugar.CompositeItem delete tag altExpr) =
         addBg <- ExpressionGui.addValBGWithColor Theme.evaluatedPathBGColor
         let itemEventMap = caseDelEventMap config delete
         tagLabel <-
-            TagEdit.makeCaseTag (ExprGuiT.nextHolesBefore altExpr) tag
+            TagEdit.makeCaseTag TagEdit.WithTagHoles (ExprGuiT.nextHolesBefore altExpr) tag
             <&> Align.tValue %~ E.weakerEvents itemEventMap
             <&> if mActiveTag == Just (tag ^. Sugar.tagInfo . Sugar.tagVal)
                 then addBg
