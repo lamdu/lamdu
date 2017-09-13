@@ -3,13 +3,19 @@ module Lamdu.Sugar.Names.Add
     ( addToWorkArea
     ) where
 
+-- TODOs:
+-- 1) Mystery: Why do local vars and local field params collide according to the code?
+--
+--    We want them to collide, but the code assigns Walk.TagName to
+--    field params which makes them "global"
+
 import qualified Control.Lens as Lens
 import           Control.Monad.Trans.FastWriter (Writer, runWriter)
 import qualified Control.Monad.Trans.FastWriter as Writer
 import           Control.Monad.Trans.Reader (Reader, runReader)
 import qualified Control.Monad.Trans.Reader as Reader
 import           Control.Monad.Trans.State (runState, evalState)
-import           Data.List (nub, partition)
+import           Data.List (partition)
 import qualified Data.Map as Map
 import           Data.Monoid.Generic (def_mempty, def_mappend)
 import qualified Data.Set as Set
@@ -374,27 +380,10 @@ runPass2MakeNamesInitial = runPass2MakeNames . initialP2Env
 setUuidName :: Monad tm => UUID -> StoredName -> T tm ()
 setUuidName = Transaction.setP . assocNameRef
 
-getCollision :: Text -> NamesWithin -> UUID -> P2Env -> (Collision, P2Env)
-getCollision name namesWithin uuid env =
-    (collision, newEnv)
-    where
-        (collision, newEnv) =
-            case (mSuffixFromAbove, collidingUUIDs) of
-                (Just suffix, _) -> (Collision suffix, env)
-                (Nothing, []) -> (NoCollision, envWithName [])
-                (Nothing, otherUUIDs) -> (Collision 0, envWithName (uuid:otherUUIDs))
-        envWithName uuids =
-            env
-            & p2Names %~ Set.insert name
-            -- This name is first occurence, so we get suffix 0
-            & p2NameSuffixes <>~ Map.fromList (uuids & Lens.itraversed %@~ flip (,))
-        mSuffixFromAbove =
-            Map.lookup uuid $ env ^. p2NameSuffixes
-        collidingUUIDs =
-            namesWithin
-            ^.. localNames . Lens.at name . Lens._Just .
-                Lens.folded . niUUID . Lens.filtered (/= uuid)
-            & nub
+getCollision :: UUID -> P2Env -> Collision
+getCollision uuid env =
+    env ^. p2NameSuffixes . Lens.at uuid
+    & maybe NoCollision Collision
 
 -- makeFinalForm ::
 --     Monad tm => Form -> Text -> NamesWithin -> UUID -> P2Env -> Name tm
@@ -409,13 +398,12 @@ instance Monad tm => MonadNaming (Pass2MakeNames tm) where
     opWithTagName = p2cpsNameConvertorGlobal
     opWithParamName = p2cpsNameConvertorLocal
     opWithLetName = p2cpsNameConvertorLocal
-    opGetName Walk.ParamName (P1Name mStoredName uuid namesUnder) =
+    opGetName Walk.ParamName (P1Name mStoredName uuid _) =
         case mStoredName of
             Just storedName ->
                 do
                     env <- p2GetEnv
-                    let collision = getCollision storedName namesUnder uuid env & fst
-                    Stored storedName collision & pure
+                    Stored storedName (getCollision uuid env) & pure
             Nothing ->
                 do
                     nameGen <- p2GetEnv <&> (^. p2NameGen)
@@ -431,15 +419,16 @@ p2cpsNameConvertor ::
     P1Name ->
     (P2Env -> (Form, P2Env)) ->
     CPS (Pass2MakeNames tm) (Name tm)
-p2cpsNameConvertor (P1Name mStoredName uuid namesWithin) nameMaker =
+p2cpsNameConvertor (P1Name mStoredName uuid _) nameMaker =
     CPS $ \k ->
     do
         oldEnv <- p2GetEnv
         let (newName, newEnv) =
                 case mStoredName of
                 Just storedName ->
-                    getCollision storedName namesWithin uuid oldEnv
-                    & _1 %~ Stored storedName
+                    ( Stored storedName (getCollision uuid oldEnv)
+                    , oldEnv & p2Names %~ Set.insert storedName
+                    )
                 Nothing -> nameMaker oldEnv
                 & _1 %~ (`Name` setUuidName uuid)
         res <- p2WithEnv (const newEnv) k
@@ -449,10 +438,9 @@ p2cpsNameConvertorGlobal :: Monad tm => Walk.CPSNameConvertor (Pass2MakeNames tm
 p2cpsNameConvertorGlobal p1out =
     p2cpsNameConvertor p1out $
     \env ->
-        let (collision, newEnv) =
-                getCollision unnamedStr
-                (p1NamesWithin p1out) (p1StoredUUID p1out) env
-        in  (Unnamed collision, newEnv)
+        ( Unnamed (getCollision (p1StoredUUID p1out) env)
+        , env & p2Names %~ Set.insert unnamedStr
+        )
 
 p2cpsNameConvertorLocal ::
     Monad tm => NameGen.VarInfo -> Walk.CPSNameConvertor (Pass2MakeNames tm)
@@ -469,17 +457,13 @@ p2cpsNameConvertorLocal isFunction p1out =
         P1Name _ uuid namesWithin = p1out
 
 p2nameConvertorGlobal :: Monad tm => Walk.NameConvertor (Pass2MakeNames tm)
-p2nameConvertorGlobal (P1Name mStoredName uuid namesWithin) =
+p2nameConvertorGlobal (P1Name mStoredName uuid _) =
     p2GetEnv
-    <&> getCollision name namesWithin uuid
-    <&> fst
+    <&> getCollision uuid
     <&> mk
     <&> (`Name` setUuidName uuid)
     where
-        (mk, name) =
-            case mStoredName of
-            Nothing -> (Unnamed, unnamedStr)
-            Just storedName -> (Stored storedName, storedName)
+        mk = maybe Unnamed Stored mStoredName
 
 fixVarToTags :: Monad m => VarToTags -> T m ()
 fixVarToTags VarToTags {..} =
