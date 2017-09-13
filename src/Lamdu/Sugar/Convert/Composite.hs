@@ -76,6 +76,7 @@ convertCompositeItem cons stored restI inst tag expr =
                         Transaction.modP
                         publishedTags
                         ((if isPublished then Set.insert else Set.delete) tag)
+                    , _taReplaceWithNew = DataOps.genNewTag >>= setTag
                     }
                 }
             , _ciExpr = exprS
