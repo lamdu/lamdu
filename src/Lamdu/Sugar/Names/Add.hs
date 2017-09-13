@@ -134,10 +134,10 @@ instance Monoid P1Out where
 data P1Name = P1Name
     { p1StoredName :: Maybe StoredName
     , p1StoredUUID :: UUID
-    , -- | We keep the names underneath each node so we can check if
-      -- an auto-generated name (in pass2) collides with any name in
+    , -- | We keep the names below each node so we can check if an
+      -- auto-generated name (in pass2) collides with any name in
       -- inner scopes (below)
-      p1NameUUIDMap :: NameUUIDMap
+      p1NamesBelow :: NameUUIDMap
     }
 newtype Pass1PropagateUp (tm :: * -> *) a = Pass1PropagateUp (Writer P1Out a)
     deriving (Functor, Applicative, Monad)
@@ -261,9 +261,9 @@ pass1Result ::
 pass1Result mApplied nameType (P0Name mName uuid) =
     CPS $ \inner ->
     do
-        (r, namesUnder) <- p1ListenNames inner
+        (r, namesBelow) <- p1ListenNames inner
         let checkLocalCollision name =
-                localNames namesUnder ^.. Lens.ix name . Lens.folded
+                localNames namesBelow ^.. Lens.ix name . Lens.folded
                 & checkCollision nameInstance
         let localCollisions =
                 case (scope, mName) of
@@ -275,7 +275,7 @@ pass1Result mApplied nameType (P0Name mName uuid) =
             ( P1Name
                 { p1StoredName = mName
                 , p1StoredUUID = uuid
-                , p1NameUUIDMap = myNameUUIDMap `mappend` namesUnder
+                , p1NamesBelow = myNameUUIDMap `mappend` namesBelow
                 }
             , r
             )
