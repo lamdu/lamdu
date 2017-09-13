@@ -9,10 +9,8 @@ import qualified Control.Monad.Trans.FastWriter as Writer
 import           Control.Monad.Trans.Reader (Reader, runReader)
 import qualified Control.Monad.Trans.Reader as Reader
 import           Control.Monad.Trans.State (runState, evalState)
-import           Data.List (nub)
-import qualified Data.List.Utils as ListUtils
+import           Data.List (nub, partition)
 import qualified Data.Map as Map
-import qualified Data.Map.Utils as MapUtils
 import           Data.Monoid.Generic (def_mempty, def_mappend)
 import qualified Data.Set as Set
 import           Data.Set.Ordered (OrderedSet)
@@ -20,6 +18,7 @@ import qualified Data.Set.Ordered as OrderedSet
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
 import qualified Data.Text as Text
+import           Data.Tuple (swap)
 import           Data.UUID.Types (UUID)
 import           GHC.Generics (Generic)
 import           Lamdu.Data.Anchors (assocNameRef)
@@ -122,8 +121,13 @@ instance Monoid NamesWithin where
     mempty = def_mempty
     mappend = def_mappend
 
-newtype P1Out = P1Out { _p1Names :: NamesWithin }
-    deriving (Monoid)
+data P1Out = P1Out
+    { _p1Names :: NamesWithin
+    , _p1Collisions :: Set Text
+    } deriving (Generic)
+instance Monoid P1Out where
+    mempty = def_mempty
+    mappend = def_mappend
 
 data P1Name = P1Name
     { p1StoredName :: Maybe StoredName
@@ -139,16 +143,74 @@ p1Tell :: P1Out -> Pass1PropagateUp tm ()
 p1Tell = Pass1PropagateUp . Writer.tell
 p1Listen :: Pass1PropagateUp tm a -> Pass1PropagateUp tm (a, P1Out)
 p1Listen (Pass1PropagateUp act) = Pass1PropagateUp $ Writer.listen act
-runPass1PropagateUp :: Pass1PropagateUp tm a -> (a, P1Out)
-runPass1PropagateUp (Pass1PropagateUp act) = runWriter act
+runPass1PropagateUp :: Pass1PropagateUp tm a -> (a, (NameUUIDMap, Set Text))
+runPass1PropagateUp (Pass1PropagateUp act) = runWriter act & _2 %~ p1FinalCollisions
 
-p1TellNames :: NamesWithin -> Pass1PropagateUp tm ()
-p1TellNames names = p1Tell mempty { _p1Names = names }
+collisionGroups :: [[Walk.NameType]]
+collisionGroups =
+    [ [ Walk.DefName, Walk.ParamName {- TODO: , FieldParam -} ]
+    , [ Walk.TagName {- TODO: , FieldParam -} ]
+    , [ Walk.NominalName ]
+    ]
+
+byCollisionGroup :: OrderedSet NameInstance -> [[NameInstance]]
+byCollisionGroup names =
+    collisionGroups <&> concatMap filterType
+    where
+        filterType key =
+            names ^.. Lens.folded
+            & filter ((key ==) . (^. niNameType))
+
+data DisambiguationState = Ambiguous | Disambiguated (Map Disambiguator UUID)
+
+data IsClash = Clash | NoClash (Set UUID) DisambiguationState
+
+-- | Given a list of UUIDs that are being referred to via the same
+-- textual name, generate a suffix map
+namesClash :: [NameInstance] -> Bool
+namesClash ns =
+    case loop initialState globals of
+    Clash -> True
+    NoClash uuids ds -> any (isClash . check (uuids, ds)) locals
+    where
+        isClash Clash = True
+        isClash _ = False
+
+        isLocal = (== Walk.ParamName) . (^. niNameType)
+        (locals, globals) = partition isLocal ns
+
+        initialState = (Set.empty, Disambiguated mempty)
+        loop s [] = uncurry NoClash s
+        loop s (name:names) =
+            case check s name of
+            Clash -> Clash
+            NoClash uuids ds -> loop (uuids, ds) names
+
+        check (uuids, Disambiguated disambiguators) (NameInstance uuid (Just d) _) =
+            case disambiguators ^. Lens.at d of
+            Just otherUuid | otherUuid /= uuid -> Clash
+            _ -> NoClash (Set.insert uuid uuids) (Disambiguated (Map.insert d uuid disambiguators))
+        check (uuids, _) (NameInstance uuid _ _)
+            -- We hit an ambiguous use of the name (no disambiguators)
+            -- so ANY other UUID is bad:
+            | not (Set.null (Set.delete uuid uuids)) = Clash
+            | otherwise = NoClash (Set.insert uuid uuids) Ambiguous
+
+globalCollisions :: NameUUIDMap -> Set Text
+globalCollisions (NameUUIDMap names) =
+    names <&> byCollisionGroup & Map.filter (any namesClash) & Map.keysSet
+
+p1FinalCollisions :: P1Out -> (NameUUIDMap, Set Text)
+p1FinalCollisions (P1Out names localCollisions) =
+    (ns, localCollisions <> globalCollisions ns)
+    where
+        ns = names ^. allNames
 
 p1ListenNames :: Pass1PropagateUp tm a -> Pass1PropagateUp tm (a, NamesWithin)
 p1ListenNames act = p1Listen act <&> _2 %~ _p1Names
 
 data NameScope = Local | Global
+    deriving Eq
 
 nameTypeScope :: Walk.NameType -> NameScope
 nameTypeScope Walk.ParamName = Local
@@ -170,14 +232,41 @@ instance Monad tm => MonadNaming (Pass1PropagateUp tm) where
 unnamedStr :: Text
 unnamedStr = "Unnamed"
 
+isDisambiguated :: Maybe Disambiguator -> Maybe Disambiguator -> Bool
+isDisambiguated (Just d0) (Just d1) = d0 == d1
+isDisambiguated _ _ = False
+
+-- | The given list does not have internal collisions
+checkCollision :: NameInstance -> [NameInstance] -> Bool
+checkCollision name =
+    any isCollision
+    where
+        filterGroups inst = filter (inst ^. niNameType `elem`)
+        nCollisionGroups = filterGroups name collisionGroups
+        isCollision inst =
+            not (null (filterGroups inst nCollisionGroups))
+            &&
+            not
+            (isSameUUID inst
+             || isDisambiguated (name ^. niDisambiguator) (inst ^. niDisambiguator))
+        isSameUUID inst = inst ^. niUUID == name ^. niUUID
+
 pass1Result ::
     Maybe Disambiguator -> Walk.NameType -> P0Name ->
     CPS (Pass1PropagateUp tm) P1Name
 pass1Result mApplied nameType (P0Name mName uuid) =
     CPS $ \inner ->
     do
-        p1TellNames myNamesWithin
         (r, namesUnder) <- p1ListenNames inner
+        let checkLocalCollision name =
+                namesUnder ^.. localNames . Lens.ix name . Lens.folded
+                & checkCollision nameInstance
+        let localCollisions =
+                case (scope, mName) of
+                (Local, Just name)
+                    | checkLocalCollision name -> Set.singleton name
+                _ -> mempty
+        p1Tell P1Out { _p1Names = myNamesWithin, _p1Collisions = localCollisions }
         pure
             ( P1Name
                 { p1StoredName = mName
@@ -195,18 +284,17 @@ pass1Result mApplied nameType (P0Name mName uuid) =
             (Global, Nothing) -> Just unnamedStr
             & maybe mempty singleton
             & createNamesWithin
-        singleton nameText =
-            nameUUIDMapSingleton nameText
+        nameInstance =
             NameInstance
             { _niUUID = uuid
             , _niDisambiguator = mApplied
             , _niNameType = nameType
             }
-        createNamesWithin m =
-            mempty
-            & case scope of
-            Local ->  (allNames .~ m) . (localNames .~ m)
-            Global ->  allNames .~ m
+        singleton nameText = nameUUIDMapSingleton nameText nameInstance
+        createNamesWithin =
+            case scope of
+            Local -> join NamesWithin
+            Global -> NamesWithin mempty
 
 p1nameConvertor :: Maybe Disambiguator -> Walk.NameType -> Walk.NameConvertor (Pass1PropagateUp tm)
 p1nameConvertor mApplied nameType mStoredName =
@@ -249,47 +337,23 @@ Lens.makeLenses ''P2Env
 -- labeled apply contexts, and with differing signatures.
 
 uuidSuffixes :: OrderedSet NameInstance -> Map UUID Int
-uuidSuffixes nameInstances
-    | namesClash (getNames Walk.NominalName)
-    || namesClash (getNames Walk.TagName ++ getNames Walk.ParamName)
-    || namesClash (getNames Walk.DefName ++ getNames Walk.ParamName)
-    = zip uuids [0..] & Map.fromList
-    | otherwise = mempty
-    where
-        getNames nameType = byType ^. Lens.ix nameType
-        byType =
-            nameInstances ^.. Lens.folded & MapUtils.partition (^. niNameType)
-        uuids = nameInstances ^.. Lens.folded . niUUID & nub
+uuidSuffixes nameInstances =
+    nameInstances ^@.. Lens.folded <. niUUID <&> swap & Map.fromList
 
--- | Given a list of UUIDs that are being referred to via the same
--- textual name, generate a suffix map
-namesClash :: [NameInstance] -> Bool
-namesClash nameInstances =
-    Set.size uuids >= 2
-    &&
-    ( ListUtils.isLengthAtLeast 2 nameRefs
-      || hasBothTypes
-      || hasSameCallType
-    )
-    where
-        uuids = nameInstances ^.. Lens.folded . niUUID & Set.fromList
-        nameRefs = nameInstances ^.. Lens.folded . niDisambiguator . Lens._Nothing
-        nameApps = nameInstances ^.. Lens.folded . niDisambiguator . Lens._Just
-        -- | Same textual name used both as an application and as a
-        -- normal name:
-        hasBothTypes = not (null nameRefs) && not (null nameApps)
-        -- | Multiple applications have same signature for differing
-        -- UUIDs, still ambiguous:
-        hasSameCallType = uniqueCount nameApps < length nameApps
-        uniqueCount = Set.size . Set.fromList
-
-initialP2Env :: NameUUIDMap -> P2Env
-initialP2Env (NameUUIDMap allNamesMap) =
+initialP2Env :: (NameUUIDMap, Set Text) -> P2Env
+initialP2Env (NameUUIDMap names, collisions) =
     P2Env
     { _p2NameGen = NameGen.initial
     , _p2Names = mempty
-    , _p2NameSuffixes = allNamesMap ^.. traverse <&> uuidSuffixes & mconcat
+    , _p2NameSuffixes =
+        names ^@.. Lens.ifolded
+        <&> f
+        & mconcat
     }
+    where
+        f (name, insts)
+            | name `Set.member` collisions = uuidSuffixes insts
+            | otherwise = mempty
 
 newtype Pass2MakeNames (tm :: * -> *) a = Pass2MakeNames (Reader P2Env a)
     deriving (Functor, Applicative, Monad)
@@ -300,9 +364,8 @@ p2GetEnv = Pass2MakeNames Reader.ask
 p2WithEnv :: (P2Env -> P2Env) -> Pass2MakeNames tm a -> Pass2MakeNames tm a
 p2WithEnv f (Pass2MakeNames act) = Pass2MakeNames $ Reader.local f act
 
-runPass2MakeNamesInitial :: P1Out -> Pass2MakeNames tm a -> a
-runPass2MakeNamesInitial (P1Out namesWithin) =
-    runPass2MakeNames (initialP2Env (namesWithin ^. allNames))
+runPass2MakeNamesInitial :: (NameUUIDMap, Set Text) -> Pass2MakeNames tm a -> a
+runPass2MakeNamesInitial = runPass2MakeNames . initialP2Env
 
 setUuidName :: Monad tm => UUID -> StoredName -> T tm ()
 setUuidName = Transaction.setP . assocNameRef
