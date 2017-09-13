@@ -113,7 +113,7 @@ instance Lens.At NameUUIDMap where
 instance Monoid NameUUIDMap where
     mempty = NameUUIDMap Map.empty
     NameUUIDMap x `mappend` NameUUIDMap y =
-        NameUUIDMap $ Map.unionWith mappend x y
+        NameUUIDMap $ Map.unionWith (flip mappend) x y
 
 nameUUIDMapSingleton :: Text -> NameInstance -> NameUUIDMap
 nameUUIDMapSingleton name nameInstance =
