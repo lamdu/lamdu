@@ -40,7 +40,7 @@ type StoredName = Text
 ------------------------------
 ---------- Pass 0 ------------
 ------------------------------
-data P0Out = P0Out
+data P0Name = P0Name
     { _mStoredName :: Maybe StoredName
     , _mStoredUUID :: UUID
     }
@@ -50,7 +50,7 @@ newtype Pass0LoadNames tm a = Pass0LoadNames { runPass0LoadNames :: T tm a }
 
 instance Monad tm => MonadNaming (Pass0LoadNames tm) where
     type OldName (Pass0LoadNames tm) = UUID
-    type NewName (Pass0LoadNames tm) = P0Out
+    type NewName (Pass0LoadNames tm) = P0Name
     type TM (Pass0LoadNames tm) = tm
     opRun = pure runPass0LoadNames
     opWithParamName _ = p0cpsNameConvertor
@@ -58,21 +58,21 @@ instance Monad tm => MonadNaming (Pass0LoadNames tm) where
     opWithTagName = p0cpsNameConvertor
     opGetName _ = p0nameConvertor
 
-getP0Out :: Monad tm => UUID -> Pass0LoadNames tm P0Out
-getP0Out uuid =
+getP0Name :: Monad tm => UUID -> Pass0LoadNames tm P0Name
+getP0Name uuid =
     Pass0LoadNames $ do
         nameStr <- Transaction.getP $ assocNameRef uuid
-        pure P0Out
+        pure P0Name
             { _mStoredName = if Text.null nameStr then Nothing else Just nameStr
             , _mStoredUUID = uuid
             }
 
 p0nameConvertor :: Monad tm => Walk.NameConvertor (Pass0LoadNames tm)
-p0nameConvertor = getP0Out
+p0nameConvertor = getP0Name
 
 p0cpsNameConvertor :: Monad tm => Walk.CPSNameConvertor (Pass0LoadNames tm)
 p0cpsNameConvertor uuid =
-    CPS $ \k -> (,) <$> getP0Out uuid <*> k
+    CPS $ \k -> (,) <$> getP0Name uuid <*> k
 
 ------------------------------
 ---------- Pass 1 ------------
@@ -122,7 +122,7 @@ instance Monoid NamesWithin where
     mempty = def_mempty
     mappend = def_mappend
 
-data P1Out = P1Out
+data P1Name = P1Name
     { p1StoredName :: Maybe StoredName
     , p1StoredUUID :: UUID
     , -- | We keep the names underneath each node so we can check if
@@ -148,8 +148,8 @@ nameTypeScope Walk.NominalName = Global
 nameTypeScope Walk.DefName = Global
 
 instance Monad tm => MonadNaming (Pass1PropagateUp tm) where
-    type OldName (Pass1PropagateUp tm) = P0Out
-    type NewName (Pass1PropagateUp tm) = P1Out
+    type OldName (Pass1PropagateUp tm) = P0Name
+    type NewName (Pass1PropagateUp tm) = P1Name
     type TM (Pass1PropagateUp tm) = tm
     opRun = pure (return . fst . runPass1PropagateUp)
     opWithParamName _ = p1cpsNameConvertor Walk.ParamName
@@ -162,15 +162,15 @@ unnamedStr :: Text
 unnamedStr = "Unnamed"
 
 pass1Result ::
-    Maybe Walk.FunctionSignature -> Walk.NameType -> P0Out ->
-    CPS (Pass1PropagateUp tm) P1Out
-pass1Result mApplied nameType (P0Out mName uuid) =
+    Maybe Walk.FunctionSignature -> Walk.NameType -> P0Name ->
+    CPS (Pass1PropagateUp tm) P1Name
+pass1Result mApplied nameType (P0Name mName uuid) =
     CPS $ \inner ->
     do
         p1TellNames myNamesWithin
         (r, namesUnder) <- p1ListenNames inner
         pure
-            ( P1Out
+            ( P1Name
                 { p1StoredName = mName
                 , p1StoredUUID = uuid
                 , p1NamesWithin = myNamesWithin `mappend` namesUnder
@@ -318,14 +318,14 @@ getCollision name namesWithin uuid env =
 --     fst $ makeFinalFormEnv src storedName namesWithin uuid env
 
 instance Monad tm => MonadNaming (Pass2MakeNames tm) where
-    type OldName (Pass2MakeNames tm) = P1Out
+    type OldName (Pass2MakeNames tm) = P1Name
     type NewName (Pass2MakeNames tm) = Name tm
     type TM (Pass2MakeNames tm) = tm
     opRun = p2GetEnv <&> runPass2MakeNames <&> (return .)
     opWithTagName = p2cpsNameConvertorGlobal
     opWithParamName = p2cpsNameConvertorLocal
     opWithLetName = p2cpsNameConvertorLocal
-    opGetName Walk.ParamName (P1Out mStoredName uuid namesUnder) =
+    opGetName Walk.ParamName (P1Name mStoredName uuid namesUnder) =
         case mStoredName of
             Just storedName ->
                 do
@@ -344,10 +344,10 @@ instance Monad tm => MonadNaming (Pass2MakeNames tm) where
 
 p2cpsNameConvertor ::
     Monad tm =>
-    P1Out ->
+    P1Name ->
     (P2Env -> (Form, P2Env)) ->
     CPS (Pass2MakeNames tm) (Name tm)
-p2cpsNameConvertor (P1Out mStoredName uuid namesWithin) nameMaker =
+p2cpsNameConvertor (P1Name mStoredName uuid namesWithin) nameMaker =
     CPS $ \k ->
     do
         oldEnv <- p2GetEnv
@@ -382,10 +382,10 @@ p2cpsNameConvertorLocal isFunction p1out =
         & Lens.zoom p2NameGen
         & (`runState` p2env)
     where
-        P1Out _ uuid namesWithin = p1out
+        P1Name _ uuid namesWithin = p1out
 
 p2nameConvertorGlobal :: Monad tm => Walk.NameConvertor (Pass2MakeNames tm)
-p2nameConvertorGlobal (P1Out mStoredName uuid namesWithin) =
+p2nameConvertorGlobal (P1Name mStoredName uuid namesWithin) =
     p2GetEnv
     <&> getCollision name namesWithin uuid
     <&> fst
