@@ -1,0 +1,44 @@
+Colliding names are:
+
+Each field param is viewed as 2 entities:
+
+* FieldParam: as a local variable (colliding with other local variables)
+
+* as a tag (colliding with tags of the same name globally but not with
+  variables in distinct scopes)
+
+Defs, Tags and NominalIds are considered to scope over everything.
+
+Collision groups (items in same group with differing UUIDs and same
+Text and no successful disambiguation are considered collisions).
+
+* Var, FieldParam, Def
+* FieldParam, Tag
+* NominalId
+
+* Vars that are defined via "Let" and Defs can be disambiguated via
+  the "FunctionSignature" they're applied in.
+
+* When a name is used in any context except a LabeledApply it has no disambiguation.
+
+* An unnamed local does not collide with anything
+
+* An unnamed global is considered to be named "Unnamed" for collision purposes
+
+* A collision is when:
+
+  * Two different UUIDs
+  * Use the same textual name
+  * They're not ALL using different disambiguators
+
+* Local/local collisions must be checked in the relevant scopes
+
+* Global/global collisions must be checked in the top-level
+  combination (for sibling scopes that are jonied together)
+
+* Global/local can be checked either way - so it's cheaper to check
+  them once with the global/global
+
+Thus:
+* Local/local: single name vs. rest of locals during Pass1
+* Global/Global, Global/Local: all names vs. all names in post-process after Pass1
