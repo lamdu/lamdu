@@ -163,40 +163,58 @@ byCollisionGroup names =
             names ^.. Lens.folded
             & filter ((key ==) . (^. niNameType))
 
-data DisambiguationState = Ambiguous | Disambiguated (Map Disambiguator UUID)
+-- A valid (non-clashing) context for a single name where multiple
+-- UUIDs may coexist
+data NameContext = Ambiguous UUID | Disambiguated (Map Disambiguator UUID)
+nameContextEmpty :: NameContext
+nameContextEmpty = Disambiguated mempty
 
-data IsClash = Clash | NoClash (Set UUID) DisambiguationState
+nameContextCombine :: NameContext -> NameContext -> Maybe NameContext
+nameContextCombine a b =
+    case (a, b) of
+    (Ambiguous uuid, Disambiguated m) -> combineAD uuid m
+    (Disambiguated m, Ambiguous uuid) -> combineAD uuid m
+    (Ambiguous x, Ambiguous y)
+        | x == y -> Just (Ambiguous x)
+        | otherwise -> Nothing
+    (Disambiguated x, Disambiguated y)
+        | Map.intersectionWith (/=) x y & or -> Nothing
+        | otherwise -> x <> y & Disambiguated & Just
+    where
+        combineAD uuid m
+            | m ^.. Lens.folded & filter (/= uuid) & null = Just (Ambiguous uuid)
+            | otherwise = Nothing
+
+nameContextOf :: NameInstance -> NameContext
+nameContextOf (NameInstance uuid Nothing _) = Ambiguous uuid
+nameContextOf (NameInstance uuid (Just d) _) = Map.singleton d uuid & Disambiguated
+
+data IsClash = Clash | NoClash NameContext
+isClash :: IsClash -> Bool
+isClash Clash = True
+isClash NoClash {} = False
+
+instance Monoid IsClash where
+    mempty = NoClash nameContextEmpty
+    mappend (NoClash x) (NoClash y) =
+        case nameContextCombine x y of
+        Nothing -> Clash
+        Just ctx -> NoClash ctx
+    mappend _ _ = Clash
+
+checkClash :: [NameInstance] -> IsClash
+checkClash ns = ns <&> nameContextOf <&> NoClash & mconcat
 
 -- | Given a list of UUIDs that are being referred to via the same
 -- textual name, generate a suffix map
 namesClash :: [NameInstance] -> Bool
 namesClash ns =
-    case loop initialState globals of
+    case checkClash globals of
     Clash -> True
-    NoClash uuids ds -> any (isClash . check (uuids, ds)) locals
+    noClash -> any (isClash . (noClash <>) . NoClash . nameContextOf) locals
     where
-        isClash Clash = True
-        isClash _ = False
-
         isLocal = (== Walk.ParamName) . (^. niNameType)
         (locals, globals) = partition isLocal ns
-
-        initialState = (Set.empty, Disambiguated mempty)
-        loop s [] = uncurry NoClash s
-        loop s (name:names) =
-            case check s name of
-            Clash -> Clash
-            NoClash uuids ds -> loop (uuids, ds) names
-
-        check (uuids, Disambiguated disambiguators) (NameInstance uuid (Just d) _) =
-            case disambiguators ^. Lens.at d of
-            Just otherUuid | otherUuid /= uuid -> Clash
-            _ -> NoClash (Set.insert uuid uuids) (Disambiguated (Map.insert d uuid disambiguators))
-        check (uuids, _) (NameInstance uuid _ _)
-            -- We hit an ambiguous use of the name (no disambiguators)
-            -- so ANY other UUID is bad:
-            | not (Set.null (Set.delete uuid uuids)) = Clash
-            | otherwise = NoClash (Set.insert uuid uuids) Ambiguous
 
 globalCollisions :: NameUUIDMap -> Set Text
 globalCollisions (NameUUIDMap names) =
