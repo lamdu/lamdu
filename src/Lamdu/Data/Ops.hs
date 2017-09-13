@@ -6,6 +6,7 @@ module Lamdu.Data.Ops
     , CompositeExtendResult(..)
     , recExtend
     , case_
+    , genNewTag
     , newPublicDefinitionWithPane
     , newPublicDefinitionToIRef
     , savePreJumpPosition, jumpBack
@@ -106,10 +107,13 @@ data CompositeExtendResult m = CompositeExtendResult
     , cerResult :: ValI m
     }
 
+genNewTag :: Monad m => T m T.Tag
+genNewTag = Transaction.newKey <&> fst . GenIds.randomTag . RandomUtils.genFromHashable
+
 recExtend :: Monad m => ValI m -> T m (CompositeExtendResult m)
 recExtend valI =
     do
-        tag <- fst . GenIds.randomTag . RandomUtils.genFromHashable <$> Transaction.newKey
+        tag <- genNewTag
         newValueI <- newHole
         V.RecExtend tag newValueI valI & V.BRecExtend & ExprIRef.newValBody
             <&> CompositeExtendResult tag newValueI
@@ -117,7 +121,7 @@ recExtend valI =
 case_ :: Monad m => ValI m -> T m (CompositeExtendResult m)
 case_ tailI =
     do
-        tag <- fst . GenIds.randomTag . RandomUtils.genFromHashable <$> Transaction.newKey
+        tag <- genNewTag
         newValueI <- newHole
         V.Case tag newValueI tailI & V.BCase & ExprIRef.newValBody
             <&> CompositeExtendResult tag newValueI
