@@ -90,7 +90,7 @@ data NameInstance = NameInstance
 Lens.makeLenses ''NameInstance
 
 -- Wrap the Map for a more sensible (recursive) Monoid instance
-newtype NameUUIDMap = NameUUIDMap (Map Text (OrderedSet NameInstance))
+newtype NameUUIDMap = NameUUIDMap { nameUUIDMap :: Map Text (OrderedSet NameInstance) }
     deriving Show
 
 type instance Lens.Index NameUUIDMap = Text
@@ -114,12 +114,16 @@ nameUUIDMapSingleton name nameInstance =
 
 data NamesWithin = NamesWithin
     { _localNames :: NameUUIDMap
-    , _allNames :: NameUUIDMap
+    , _globalNames :: NameUUIDMap
     } deriving (Generic)
 Lens.makeLenses ''NamesWithin
 instance Monoid NamesWithin where
     mempty = def_mempty
     mappend = def_mappend
+
+allNames :: NamesWithin -> NameUUIDMap
+allNames names = names ^. localNames <> names ^. globalNames
+
 
 data P1Out = P1Out
     { _p1Names :: NamesWithin
@@ -143,8 +147,8 @@ p1Tell :: P1Out -> Pass1PropagateUp tm ()
 p1Tell = Pass1PropagateUp . Writer.tell
 p1Listen :: Pass1PropagateUp tm a -> Pass1PropagateUp tm (a, P1Out)
 p1Listen (Pass1PropagateUp act) = Pass1PropagateUp $ Writer.listen act
-runPass1PropagateUp :: Pass1PropagateUp tm a -> (a, (NameUUIDMap, Set Text))
-runPass1PropagateUp (Pass1PropagateUp act) = runWriter act & _2 %~ p1FinalCollisions
+runPass1PropagateUp :: Pass1PropagateUp tm a -> (a, P1Out)
+runPass1PropagateUp (Pass1PropagateUp act) = runWriter act & _2 %~ p1PostProcess
 
 collisionGroups :: [[Walk.NameType]]
 collisionGroups =
@@ -200,11 +204,11 @@ globalCollisions :: NameUUIDMap -> Set Text
 globalCollisions (NameUUIDMap names) =
     names <&> byCollisionGroup & Map.filter (any namesClash) & Map.keysSet
 
-p1FinalCollisions :: P1Out -> (NameUUIDMap, Set Text)
-p1FinalCollisions (P1Out names localCollisions) =
-    (ns, localCollisions <> globalCollisions ns)
-    where
-        ns = names ^. allNames
+-- | Compute the global collisions to form ALL collisions and yield
+-- the global names only
+p1PostProcess :: P1Out -> P1Out
+p1PostProcess (P1Out names localCollisions) =
+    P1Out names (localCollisions <> globalCollisions (allNames names))
 
 p1ListenNames :: Pass1PropagateUp tm a -> Pass1PropagateUp tm (a, NamesWithin)
 p1ListenNames act = p1Listen act <&> _2 %~ _p1Names
@@ -293,7 +297,7 @@ pass1Result mApplied nameType (P0Name mName uuid) =
         singleton nameText = nameUUIDMapSingleton nameText nameInstance
         createNamesWithin =
             case scope of
-            Local -> join NamesWithin
+            Local -> NamesWithin ?? mempty
             Global -> NamesWithin mempty
 
 p1nameConvertor :: Maybe Disambiguator -> Walk.NameType -> Walk.NameConvertor (Pass1PropagateUp tm)
@@ -340,13 +344,13 @@ uuidSuffixes :: OrderedSet NameInstance -> Map UUID Int
 uuidSuffixes nameInstances =
     nameInstances ^@.. Lens.folded <. niUUID <&> swap & Map.fromList
 
-initialP2Env :: (NameUUIDMap, Set Text) -> P2Env
-initialP2Env (NameUUIDMap names, collisions) =
+initialP2Env :: P1Out -> P2Env
+initialP2Env (P1Out names collisions) =
     P2Env
     { _p2NameGen = NameGen.initial
-    , _p2Names = mempty
+    , _p2Names = names ^. globalNames & nameUUIDMap & Map.keysSet
     , _p2NameSuffixes =
-        names ^@.. Lens.ifolded
+        nameUUIDMap (allNames names) ^@.. Lens.ifolded
         <&> f
         & mconcat
     }
@@ -364,7 +368,7 @@ p2GetEnv = Pass2MakeNames Reader.ask
 p2WithEnv :: (P2Env -> P2Env) -> Pass2MakeNames tm a -> Pass2MakeNames tm a
 p2WithEnv f (Pass2MakeNames act) = Pass2MakeNames $ Reader.local f act
 
-runPass2MakeNamesInitial :: (NameUUIDMap, Set Text) -> Pass2MakeNames tm a -> a
+runPass2MakeNamesInitial :: P1Out -> Pass2MakeNames tm a -> a
 runPass2MakeNamesInitial = runPass2MakeNames . initialP2Env
 
 setUuidName :: Monad tm => UUID -> StoredName -> T tm ()
