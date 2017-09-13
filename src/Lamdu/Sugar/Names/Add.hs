@@ -3,12 +3,6 @@ module Lamdu.Sugar.Names.Add
     ( addToWorkArea
     ) where
 
--- TODOs:
--- 1) Mystery: Why do local vars and local field params collide according to the code?
---
---    We want them to collide, but the code assigns Walk.TagName to
---    field params which makes them "global"
-
 import qualified Control.Lens as Lens
 import           Control.Monad.Trans.FastWriter (Writer, runWriter)
 import qualified Control.Monad.Trans.FastWriter as Writer
