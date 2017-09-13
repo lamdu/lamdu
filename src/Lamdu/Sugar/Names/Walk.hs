@@ -22,7 +22,7 @@ type T = Transaction
 type CPSNameConvertor m = OldName m -> CPS m (NewName m)
 type NameConvertor m = OldName m -> m (NewName m)
 
-data NameType = DefName | TagName | NominalName | ParamName
+data NameType = DefName | TagName | NominalName | ParamName | FieldParamName
     deriving (Eq, Ord, Show)
 
 data FunctionSignature = FunctionSignature
@@ -37,7 +37,7 @@ class (Monad m, Monad (TM m)) => MonadNaming m where
     type TM m :: * -> *
     opRun :: m (m a -> T (TM m) a)
 
-    opWithParamName :: NameGen.VarInfo -> CPSNameConvertor m
+    opWithParamName :: ParameterForm -> NameGen.VarInfo -> CPSNameConvertor m
     opWithLetName :: NameGen.VarInfo -> CPSNameConvertor m
     opWithTagName :: CPSNameConvertor m
     opGetName :: NameType -> NameConvertor m
@@ -92,7 +92,7 @@ toParam param =
     where
         f = case param ^. pForm of
             GetParameter      -> ParamName
-            GetFieldParameter -> TagName
+            GetFieldParameter -> FieldParamName
             & opGetName
 
 binderVarType :: BinderVarForm t -> NameType
@@ -239,15 +239,20 @@ funcSignature apply =
 toExpression :: MonadNaming m => OldExpression m a -> m (NewExpression m a)
 toExpression = rBody (toBody toExpression)
 
-withTag :: MonadNaming m => Tag (OldName m) (TM m) -> CPS m (Tag (NewName m) (TM m))
-withTag (Tag info name actions) =
+withFieldParam ::
+    MonadNaming m => FuncParam (FieldParamInfo (OldName m) (TM m)) ->
+    CPS m (FuncParam (FieldParamInfo (NewName m) (TM m)))
+withFieldParam (FuncParam ann (FieldParamInfo (Tag info name tActions) fpActions)) =
     Tag info
-    <$> opWithTagName name
+    <$> opWithParamName GetFieldParameter varInfo name
     <*> newActions
+    <&> FieldParamInfo ?? fpActions
+    <&> FuncParam ann
     where
+        varInfo = ann ^. aInferredType & isFunctionType
         newActions =
             liftCPS opRun <&>
-            \run -> actions & taOptions %~ (>>= run . (traverse . _1) (opGetName TagName))
+            \run -> tActions & taOptions %~ (>>= run . (traverse . _1) (opGetName TagName))
 
 withBinderParams ::
     MonadNaming m =>
@@ -256,11 +261,11 @@ withBinderParams ::
 withBinderParams BinderWithoutParams = pure BinderWithoutParams
 withBinderParams (NullParam a) = pure (NullParam a)
 withBinderParams (VarParam fp) =
-    opWithParamName (isFunctionType (fp ^. fpAnnotation . aInferredType))
+    opWithParamName GetParameter (isFunctionType (fp ^. fpAnnotation . aInferredType))
     (fp ^. fpInfo . vpiName)
     <&> VarParam . \newName -> fp & fpInfo . vpiName .~ newName
 withBinderParams (FieldParams xs) =
-    (traverse . fpInfo . fpiTag) withTag xs <&> FieldParams
+    traverse withFieldParam xs <&> FieldParams
 
 toDefinitionBody ::
     MonadNaming m => (a -> m b) ->
