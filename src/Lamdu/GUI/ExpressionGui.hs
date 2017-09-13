@@ -473,18 +473,23 @@ makeNameView name animId =
 
 -- TODO: This doesn't belong here
 makeCollisionSuffixLabel :: Monad m => Name.Collision -> ExprGuiM m (Maybe View)
-makeCollisionSuffixLabel Name.NoCollision = return Nothing
-makeCollisionSuffixLabel (Name.Collision suffix) =
-    do
-        th <- Lens.view theme
-        let Theme.Name{..} = Theme.name th
-        (Draw.backgroundColor ?? collisionSuffixBGColor)
-            <*>
-            (TextView.makeLabel (Text.pack (show suffix))
-            & Reader.local (TextView.color .~ collisionSuffixTextColor)
-            <&> Element.scale (realToFrac <$> collisionSuffixScaleFactor))
-    <&> (^. Align.tValue)
-    <&> Just
+makeCollisionSuffixLabel mCollision =
+    case mCollision of
+    Name.NoCollision -> return Nothing
+    Name.Collision suffix -> mk (Text.pack (show suffix))
+    Name.UnknownCollision -> mk "?"
+    where
+        mk text =
+            do
+                th <- Lens.view theme
+                let Theme.Name{..} = Theme.name th
+                (Draw.backgroundColor ?? collisionSuffixBGColor)
+                    <*>
+                    (TextView.makeLabel text
+                     & Reader.local (TextView.color .~ collisionSuffixTextColor)
+                     <&> Element.scale (realToFrac <$> collisionSuffixScaleFactor))
+            <&> (^. Align.tValue)
+            <&> Just
 
 maybeAddAnnotationPl ::
     (Functor f, Monad m) =>

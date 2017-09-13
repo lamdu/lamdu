@@ -375,14 +375,22 @@ runPass2MakeNamesInitial = runPass2MakeNames . initialP2Env
 setUuidName :: Monad tm => UUID -> StoredName -> T tm ()
 setUuidName = Transaction.setP . assocNameRef
 
-getCollision :: NameInstance -> P2Env -> Collision
-getCollision inst env =
-    env ^. p2NameSuffixes . Lens.at (inst ^. niUUID)
-    & maybe NoCollision Collision
+getCollision :: Text -> NameInstance -> P2Env -> Collision
+getCollision name inst env =
+    case env ^. p2NameSuffixes . Lens.at (inst ^. niUUID) of
+    Just suffix -> Collision suffix
+    Nothing ->
+        case env ^. p2NamesAbove . Lens.at name of
+        Nothing -> NoCollision
+        Just Clash -> UnknownCollision
+        Just noClash ->
+            case noClash <> isClashOf inst of
+            NoClash _ -> NoCollision
+            Clash -> UnknownCollision -- Alternatively "Collision 1"?
 
 getCollisionEnv :: Text -> NameInstance -> P2Env -> (Collision, P2Env)
 getCollisionEnv name inst env =
-    ( getCollision inst env
+    ( getCollision name inst env
     , env & p2NamesAbove %~ Map.insertWith mappend name (isClashOf inst)
     )
 
@@ -410,7 +418,7 @@ p2nameConvertorLocal (P1Name mStoredName inst _) =
         Just storedName ->
             do
                 env <- p2GetEnv
-                Stored storedName (getCollision inst env) & pure
+                Stored storedName (getCollision storedName inst env) & pure
         Nothing ->
             do
                 nameGen <- p2GetEnv <&> (^. p2NameGen)
@@ -463,7 +471,7 @@ p2cpsNameConvertorLocal isFunction p1name =
 p2nameConvertorGlobal :: Monad tm => Walk.NameConvertor (Pass2MakeNames tm)
 p2nameConvertorGlobal (P1Name mStoredName inst _) =
     p2GetEnv
-    <&> getCollision inst
+    <&> getCollision (fromMaybe unnamedStr mStoredName) inst
     <&> mk
     <&> (`Name` setUuidName (inst ^. niUUID))
     where

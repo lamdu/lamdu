@@ -18,7 +18,10 @@ import           Lamdu.Prelude
 type T = Transaction
 type Stored = Text
 
-data Collision = NoCollision | Collision {-Disambiguator:-} Int
+data Collision
+    = NoCollision
+    | Collision {-Disambiguator:-} Int
+    | UnknownCollision -- we have a collision but unknown suffix (inside hole result)
     deriving (Show)
 
 data Form
