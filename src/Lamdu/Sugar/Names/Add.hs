@@ -369,10 +369,16 @@ runPass2MakeNamesInitial = runPass2MakeNames . initialP2Env
 setUuidName :: Monad tm => UUID -> StoredName -> T tm ()
 setUuidName = Transaction.setP . assocNameRef
 
-getCollision :: UUID -> P2Env -> Collision
-getCollision uuid env =
-    env ^. p2NameSuffixes . Lens.at uuid
+getCollision :: NameInstance -> P2Env -> Collision
+getCollision inst env =
+    env ^. p2NameSuffixes . Lens.at (inst ^. niUUID)
     & maybe NoCollision Collision
+
+getCollisionEnv :: Text -> NameInstance -> P2Env -> (Collision, P2Env)
+getCollisionEnv name inst env =
+    ( getCollision inst env
+    , env & p2NamesAbove %~ Set.insert name
+    )
 
 -- makeFinalForm ::
 --     Monad tm => Form -> Text -> NameUUIDMap -> UUID -> P2Env -> Name tm
@@ -398,7 +404,7 @@ p2nameConvertorLocal (P1Name mStoredName inst _) =
         Just storedName ->
             do
                 env <- p2GetEnv
-                Stored storedName (getCollision uuid env) & pure
+                Stored storedName (getCollision inst env) & pure
         Nothing ->
             do
                 nameGen <- p2GetEnv <&> (^. p2NameGen)
@@ -420,23 +426,19 @@ p2cpsNameConvertor (P1Name mStoredName inst _) nameMaker =
         let (newName, newEnv) =
                 case mStoredName of
                 Just storedName ->
-                    ( Stored storedName (getCollision uuid oldEnv)
-                    , oldEnv & p2NamesAbove %~ Set.insert storedName
-                    )
+                    getCollisionEnv storedName inst oldEnv
+                    & _1 %~ Stored storedName
                 Nothing -> nameMaker oldEnv
-                & _1 %~ (`Name` setUuidName uuid)
+                & _1 %~ (`Name` setUuidName (inst ^. niUUID))
         res <- p2WithEnv (const newEnv) k
         return (newName, res)
-    where
-        uuid = inst ^. niUUID
 
 p2cpsNameConvertorGlobal :: Monad tm => Walk.CPSNameConvertor (Pass2MakeNames tm)
 p2cpsNameConvertorGlobal p1name =
     p2cpsNameConvertor p1name $
     \env ->
-        ( Unnamed (getCollision (p1Instance p1name ^. niUUID) env)
-        , env & p2NamesAbove %~ Set.insert unnamedStr
-        )
+    getCollisionEnv unnamedStr (p1Instance p1name) env
+    & _1 %~ Unnamed
 
 p2cpsNameConvertorLocal ::
     Monad tm => NameGen.VarInfo -> Walk.CPSNameConvertor (Pass2MakeNames tm)
@@ -455,11 +457,10 @@ p2cpsNameConvertorLocal isFunction p1name =
 p2nameConvertorGlobal :: Monad tm => Walk.NameConvertor (Pass2MakeNames tm)
 p2nameConvertorGlobal (P1Name mStoredName inst _) =
     p2GetEnv
-    <&> getCollision uuid
+    <&> getCollision inst
     <&> mk
-    <&> (`Name` setUuidName uuid)
+    <&> (`Name` setUuidName (inst ^. niUUID))
     where
-        uuid = inst ^. niUUID
         mk = maybe Unnamed Stored mStoredName
 
 fixVarToTags :: Monad m => VarToTags -> T m ()
