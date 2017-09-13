@@ -96,8 +96,9 @@ data NameInstance = NameInstance
 Lens.makeLenses ''NameInstance
 
 -- Wrap the Map for a more sensible (recursive) Monoid instance
-newtype NameUUIDMap = NameUUIDMap { nameUUIDMap :: Map Text (OrderedSet NameInstance) }
+newtype NameUUIDMap = NameUUIDMap { _nameUUIDMap :: Map Text (OrderedSet NameInstance) }
     deriving Show
+Lens.makeLenses ''NameUUIDMap
 
 type instance Lens.Index NameUUIDMap = Text
 type instance Lens.IxValue NameUUIDMap = OrderedSet NameInstance
@@ -118,21 +119,18 @@ nameUUIDMapSingleton :: Text -> NameInstance -> NameUUIDMap
 nameUUIDMapSingleton name nameInstance =
     OrderedSet.singleton nameInstance & Map.singleton name & NameUUIDMap
 
-data NamesWithin = NamesWithin
-    { _localNames :: NameUUIDMap
-    , _globalNames :: NameUUIDMap
-    } deriving (Generic)
-Lens.makeLenses ''NamesWithin
-instance Monoid NamesWithin where
-    mempty = def_mempty
-    mappend = def_mappend
+isGlobal :: NameInstance -> Bool
+isGlobal = (/= Walk.ParamName) . (^. niNameType)
 
-allNames :: NamesWithin -> NameUUIDMap
-allNames names = names ^. localNames <> names ^. globalNames
+localNames :: NameUUIDMap -> NameUUIDMap
+localNames = nameUUIDMap . Lens.mapped %~ OrderedSet.filter (not . isGlobal)
+
+globalNames :: NameUUIDMap -> NameUUIDMap
+globalNames = nameUUIDMap . Lens.mapped %~ OrderedSet.filter isGlobal
 
 
 data P1Out = P1Out
-    { _p1Names :: NamesWithin
+    { _p1Names :: NameUUIDMap
     , _p1Collisions :: Set Text
     } deriving (Generic)
 instance Monoid P1Out where
@@ -145,7 +143,7 @@ data P1Name = P1Name
     , -- | We keep the names underneath each node so we can check if
       -- an auto-generated name (in pass2) collides with any name in
       -- inner scopes (below)
-      p1NamesWithin :: NamesWithin
+      p1NameUUIDMap :: NameUUIDMap
     }
 newtype Pass1PropagateUp (tm :: * -> *) a = Pass1PropagateUp (Writer P1Out a)
     deriving (Functor, Applicative, Monad)
@@ -214,9 +212,9 @@ globalCollisions (NameUUIDMap names) =
 -- the global names only
 p1PostProcess :: P1Out -> P1Out
 p1PostProcess (P1Out names localCollisions) =
-    P1Out names (localCollisions <> globalCollisions (allNames names))
+    P1Out names (localCollisions <> globalCollisions names)
 
-p1ListenNames :: Pass1PropagateUp tm a -> Pass1PropagateUp tm (a, NamesWithin)
+p1ListenNames :: Pass1PropagateUp tm a -> Pass1PropagateUp tm (a, NameUUIDMap)
 p1ListenNames act = p1Listen act <&> _2 %~ _p1Names
 
 data NameScope = Local | Global
@@ -269,31 +267,30 @@ pass1Result mApplied nameType (P0Name mName uuid) =
     do
         (r, namesUnder) <- p1ListenNames inner
         let checkLocalCollision name =
-                namesUnder ^.. localNames . Lens.ix name . Lens.folded
+                localNames namesUnder ^.. Lens.ix name . Lens.folded
                 & checkCollision nameInstance
         let localCollisions =
                 case (scope, mName) of
                 (Local, Just name)
                     | checkLocalCollision name -> Set.singleton name
                 _ -> mempty
-        p1Tell P1Out { _p1Names = myNamesWithin, _p1Collisions = localCollisions }
+        p1Tell P1Out { _p1Names = myNameUUIDMap, _p1Collisions = localCollisions }
         pure
             ( P1Name
                 { p1StoredName = mName
                 , p1StoredUUID = uuid
-                , p1NamesWithin = myNamesWithin `mappend` namesUnder
+                , p1NameUUIDMap = myNameUUIDMap `mappend` namesUnder
                 }
             , r
             )
     where
         scope = nameTypeScope nameType
-        myNamesWithin =
+        myNameUUIDMap =
             case (scope, mName) of
             (_, Just name) -> Just name
             (Local, Nothing) -> mempty
             (Global, Nothing) -> Just unnamedStr
             & maybe mempty singleton
-            & createNamesWithin
         nameInstance =
             NameInstance
             { _niUUID = uuid
@@ -301,10 +298,6 @@ pass1Result mApplied nameType (P0Name mName uuid) =
             , _niNameType = nameType
             }
         singleton nameText = nameUUIDMapSingleton nameText nameInstance
-        createNamesWithin =
-            case scope of
-            Local -> NamesWithin ?? mempty
-            Global -> NamesWithin mempty
 
 p1nameConvertor :: Maybe Disambiguator -> Walk.NameType -> Walk.NameConvertor (Pass1PropagateUp tm)
 p1nameConvertor mApplied nameType mStoredName =
@@ -354,11 +347,8 @@ initialP2Env :: P1Out -> P2Env
 initialP2Env (P1Out names collisions) =
     P2Env
     { _p2NameGen = NameGen.initial
-    , _p2Names = names ^. globalNames & nameUUIDMap & Map.keysSet
-    , _p2NameSuffixes =
-        nameUUIDMap (allNames names) ^@.. Lens.ifolded
-        <&> f
-        & mconcat
+    , _p2Names = globalNames names ^. nameUUIDMap & Map.keysSet
+    , _p2NameSuffixes = names ^@.. nameUUIDMap . Lens.ifolded <&> f & mconcat
     }
     where
         f (name, insts)
@@ -386,7 +376,7 @@ getCollision uuid env =
     & maybe NoCollision Collision
 
 -- makeFinalForm ::
---     Monad tm => Form -> Text -> NamesWithin -> UUID -> P2Env -> Name tm
+--     Monad tm => Form -> Text -> NameUUIDMap -> UUID -> P2Env -> Name tm
 -- makeFinalForm form storedName namesWithin uuid env =
 --     fst $ makeFinalFormEnv src storedName namesWithin uuid env
 
@@ -447,7 +437,7 @@ p2cpsNameConvertorLocal ::
 p2cpsNameConvertorLocal isFunction p1out =
     p2cpsNameConvertor p1out $ \p2env ->
     let accept name =
-            Lens.hasn't (localNames . Lens.at name . Lens._Just) namesWithin
+            Lens.hasn't (Lens.at name . Lens._Just) (localNames namesWithin)
             && not (p2env ^. p2Names . Lens.contains name)
     in  NameGen.newName accept isFunction uuid
         <&> AutoGenerated
