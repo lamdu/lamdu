@@ -122,6 +122,9 @@ instance Monoid NamesWithin where
     mempty = def_mempty
     mappend = def_mappend
 
+newtype P1Out = P1Out { _p1Names :: NamesWithin }
+    deriving (Monoid)
+
 data P1Name = P1Name
     { p1StoredName :: Maybe StoredName
     , p1StoredUUID :: UUID
@@ -130,14 +133,20 @@ data P1Name = P1Name
       -- inner scopes (below)
       p1NamesWithin :: NamesWithin
     }
-newtype Pass1PropagateUp (tm :: * -> *) a = Pass1PropagateUp (Writer NamesWithin a)
+newtype Pass1PropagateUp (tm :: * -> *) a = Pass1PropagateUp (Writer P1Out a)
     deriving (Functor, Applicative, Monad)
-p1TellNames :: NamesWithin -> Pass1PropagateUp tm ()
-p1TellNames = Pass1PropagateUp . Writer.tell
-p1ListenNames :: Pass1PropagateUp tm a -> Pass1PropagateUp tm (a, NamesWithin)
-p1ListenNames (Pass1PropagateUp act) = Pass1PropagateUp $ Writer.listen act
-runPass1PropagateUp :: Pass1PropagateUp tm a -> (a, NamesWithin)
+p1Tell :: P1Out -> Pass1PropagateUp tm ()
+p1Tell = Pass1PropagateUp . Writer.tell
+p1Listen :: Pass1PropagateUp tm a -> Pass1PropagateUp tm (a, P1Out)
+p1Listen (Pass1PropagateUp act) = Pass1PropagateUp $ Writer.listen act
+runPass1PropagateUp :: Pass1PropagateUp tm a -> (a, P1Out)
 runPass1PropagateUp (Pass1PropagateUp act) = runWriter act
+
+p1TellNames :: NamesWithin -> Pass1PropagateUp tm ()
+p1TellNames names = p1Tell mempty { _p1Names = names }
+
+p1ListenNames :: Pass1PropagateUp tm a -> Pass1PropagateUp tm (a, NamesWithin)
+p1ListenNames act = p1Listen act <&> _2 %~ _p1Names
 
 data NameScope = Local | Global
 
@@ -284,8 +293,9 @@ p2GetEnv = Pass2MakeNames Reader.ask
 p2WithEnv :: (P2Env -> P2Env) -> Pass2MakeNames tm a -> Pass2MakeNames tm a
 p2WithEnv f (Pass2MakeNames act) = Pass2MakeNames $ Reader.local f act
 
-runPass2MakeNamesInitial :: NamesWithin -> Pass2MakeNames tm a -> a
-runPass2MakeNamesInitial namesWithin = runPass2MakeNames (initialP2Env (namesWithin ^. snwGlobalNames))
+runPass2MakeNamesInitial :: P1Out -> Pass2MakeNames tm a -> a
+runPass2MakeNamesInitial (P1Out namesWithin) =
+    runPass2MakeNames (initialP2Env (namesWithin ^. snwGlobalNames))
 
 setUuidName :: Monad tm => UUID -> StoredName -> T tm ()
 setUuidName = Transaction.setP . assocNameRef
@@ -454,8 +464,8 @@ runPasses f0 f1 f2 =
     where
         pass0 = runPass0LoadNames . f0
         pass1 = runPass1PropagateUp . f1
-        pass2 (x, namesWithin) =
-            f2 x & runPass2MakeNamesInitial namesWithin
+        pass2 (x, p1out) =
+            f2 x & runPass2MakeNamesInitial p1out
 
 fixDef ::
     Monad tm =>
