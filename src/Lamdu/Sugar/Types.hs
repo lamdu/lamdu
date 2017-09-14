@@ -2,6 +2,7 @@
 module Lamdu.Sugar.Types
     ( module Lamdu.Sugar.Types.Binder
     , module Lamdu.Sugar.Types.Expression
+    , module Lamdu.Sugar.Types.GetVar
     , module Lamdu.Sugar.Types.Hole
     , EntityId
     , Pane(..), paneDefinition, paneClose, paneMoveDown, paneMoveUp
@@ -24,6 +25,7 @@ import qualified Lamdu.Data.Definition as Definition
 import           Lamdu.Sugar.Internal.EntityId (EntityId)
 import           Lamdu.Sugar.Types.Binder
 import           Lamdu.Sugar.Types.Expression
+import           Lamdu.Sugar.Types.GetVar
 import           Lamdu.Sugar.Types.Hole
 import           Lamdu.Expr.IRef (DefI)
 

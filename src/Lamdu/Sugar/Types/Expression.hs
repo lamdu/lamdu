@@ -27,16 +27,6 @@ module Lamdu.Sugar.Types.Expression
     --
     , GetField(..), gfRecord, gfTag
     , Inject(..), iTag, iMVal
-    , ParameterForm(..), _GetFieldParameter, _GetParameter
-    , NameRef(..), nrName, nrGotoDefinition
-    , Param(..), pNameRef, pForm, pBinderMode
-    , BinderVarForm(..), _GetDefinition, _GetLet
-    , DefinitionForm(..), _DefUpToDate, _DefDeleted, _DefTypeChanged
-    , DefinitionOutdatedType(..), defTypeWhenUsed, defTypeCurrent, defTypeUseCurrent
-    , BinderVarInline(..), _InlineVar, _CannotInlineDueToUses, _CannotInline
-    , BinderVar(..), bvNameRef, bvForm, bvInline
-    , GetVar(..), _GetParam, _GetParamsRecord, _GetBinder
-    , ParamsRecordVar(..), prvFieldNames
     , SpecialArgs(..), _NoSpecialArgs, _ObjectArg, _InfixArgs
     , AnnotatedArg(..), aaTag, aaExpr, aaName
     , RelayedArg(..), raValue, raId, raActions
@@ -50,10 +40,10 @@ import qualified Control.Lens as Lens
 import           Data.Store.Transaction (Transaction, Property)
 import           Data.UUID.Types (UUID)
 import qualified Lamdu.Calc.Type as T
-import           Lamdu.Calc.Type.Scheme (Scheme)
 import qualified Lamdu.Calc.Val as V
 import           Lamdu.Sugar.Internal.EntityId (EntityId)
 import           Lamdu.Sugar.Types.Binder
+import           Lamdu.Sugar.Types.GetVar (GetVar, BinderVar, Param)
 import           Lamdu.Sugar.Types.Hole (Hole, Literal)
 
 import           Lamdu.Prelude
@@ -167,52 +157,6 @@ data Inject name m expr = Inject
     , _iMVal :: Maybe expr
     } deriving (Functor, Foldable, Traversable)
 
-data ParameterForm = GetFieldParameter | GetParameter
-    deriving (Eq, Ord)
-
-data NameRef name m = NameRef
-    { _nrName :: name
-    , _nrGotoDefinition :: T m EntityId
-    }
-
-data Param name m = Param
-    { _pNameRef :: NameRef name m
-    , _pForm :: ParameterForm
-    , _pBinderMode :: BinderMode
-    }
-
-data DefinitionOutdatedType m = DefinitionOutdatedType
-    { _defTypeWhenUsed :: Scheme
-    , _defTypeCurrent :: Scheme
-    , _defTypeUseCurrent :: T m ()
-    }
-
-data DefinitionForm m =
-    DefUpToDate | DefDeleted | DefTypeChanged (DefinitionOutdatedType m)
-
-data BinderVarForm m = GetDefinition (DefinitionForm m) | GetLet
-
-data BinderVarInline m
-    = InlineVar (T m EntityId)
-    | CannotInlineDueToUses [EntityId]
-    | CannotInline
-
-data BinderVar name m = BinderVar
-    { _bvNameRef :: NameRef name m
-    , _bvForm :: BinderVarForm m
-    , -- Just means it is stored and inlinable:
-      _bvInline :: BinderVarInline m
-    }
-
-newtype ParamsRecordVar name = ParamsRecordVar
-    { _prvFieldNames :: [name]
-    } deriving (Eq, Ord, Functor, Foldable, Traversable)
-
-data GetVar name m
-    = GetParam (Param name m)
-    | GetParamsRecord (ParamsRecordVar name)
-    | GetBinder (BinderVar name m)
-
 data SpecialArgs expr
     = NoSpecialArgs
     | ObjectArg expr
@@ -283,14 +227,12 @@ instance Show (Body name m expr) where
 
 Lens.makeLenses ''Actions
 Lens.makeLenses ''AnnotatedArg
-Lens.makeLenses ''BinderVar
 Lens.makeLenses ''Body
 Lens.makeLenses ''Case
 Lens.makeLenses ''CaseArg
 Lens.makeLenses ''Composite
 Lens.makeLenses ''CompositeAddItemResult
 Lens.makeLenses ''CompositeItem
-Lens.makeLenses ''DefinitionOutdatedType
 Lens.makeLenses ''Expression
 Lens.makeLenses ''GetField
 Lens.makeLenses ''Guard
@@ -298,22 +240,14 @@ Lens.makeLenses ''GuardElseIf
 Lens.makeLenses ''Inject
 Lens.makeLenses ''LabeledApply
 Lens.makeLenses ''Lambda
-Lens.makeLenses ''NameRef
 Lens.makeLenses ''Nominal
-Lens.makeLenses ''Param
-Lens.makeLenses ''ParamsRecordVar
 Lens.makeLenses ''Payload
 Lens.makeLenses ''RelayedArg
 Lens.makeLenses ''TId
-Lens.makePrisms ''BinderVarForm
-Lens.makePrisms ''BinderVarInline
 Lens.makePrisms ''Body
 Lens.makePrisms ''CaseKind
 Lens.makePrisms ''CompositeTail
-Lens.makePrisms ''DefinitionForm
-Lens.makePrisms ''GetVar
 Lens.makePrisms ''Literal
-Lens.makePrisms ''ParameterForm
 Lens.makePrisms ''SetToHole
 Lens.makePrisms ''SpecialArgs
 Lens.makePrisms ''WrapAction
