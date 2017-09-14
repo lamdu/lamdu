@@ -486,32 +486,28 @@ makeBinderContentEdit (Sugar.BinderLet l) =
 
 namedParamEditInfo ::
     Monad m =>
-    Sugar.EntityId -> Sugar.FuncParamActions m ->
-    (Widget.Id -> ExprGuiM m (WithTextPos (Widget (T m Widget.EventResult)))) ->
+    Widget.Id -> Sugar.FuncParamActions m ->
+    WithTextPos (Widget (T m Widget.EventResult)) ->
     ParamEdit.Info m
-namedParamEditInfo entityId actions nameEdit =
+namedParamEditInfo widgetId actions nameEdit =
     ParamEdit.Info
-    { ParamEdit.iMakeNameEdit = nameEdit <&> Lens.mapped %~ Responsive.fromWithTextPos
+    { ParamEdit.iNameEdit = nameEdit
     , ParamEdit.iMAddNext = actions ^. Sugar.fpAddNext & Just
     , ParamEdit.iMOrderBefore = actions ^. Sugar.fpMOrderBefore
     , ParamEdit.iMOrderAfter = actions ^. Sugar.fpMOrderAfter
     , ParamEdit.iDel = actions ^. Sugar.fpDelete
-    , ParamEdit.iId = WidgetIds.fromEntityId entityId
+    , ParamEdit.iId = widgetId
     }
 
-nullParamEditInfo :: Monad m => Widget.Id -> Sugar.NullParamActions m -> ParamEdit.Info m
-nullParamEditInfo widgetId mActions =
+nullParamEditInfo :: Monad m => Widget.Id -> WithTextPos (Widget (T m Widget.EventResult)) -> Sugar.NullParamActions m -> ParamEdit.Info m
+nullParamEditInfo widgetId nameEdit mActions =
     ParamEdit.Info
-    { ParamEdit.iMakeNameEdit =
-      \myId ->
-      (Widget.makeFocusableView ?? myId <&> (Align.tValue %~))
-      <*> ExpressionGui.grammarLabel "|"
-      <&> Responsive.fromWithTextPos
+    { ParamEdit.iNameEdit = nameEdit
     , ParamEdit.iMAddNext = Nothing
     , ParamEdit.iMOrderBefore = Nothing
     , ParamEdit.iMOrderAfter = Nothing
     , ParamEdit.iDel = Sugar.ParamDelResultDelVar <$ mActions ^. Sugar.npDeleteLambda
-    , ParamEdit.iId = Widget.joinId widgetId ["param"]
+    , ParamEdit.iId = widgetId
     }
 
 makeParamsEdit ::
@@ -526,24 +522,35 @@ makeParamsEdit annotationOpts nearestHoles delVarBackwardsId lhsId rhsId params 
         case params of
             Sugar.BinderWithoutParams -> return []
             Sugar.NullParam p ->
-                fromParamList ExprGuiT.showAnnotationWhenVerbose delVarBackwardsId rhsId
-                [p & Sugar.fpInfo %~ nullParamEditInfo lhsId]
+                do
+                    nullParamGui <-
+                        (Widget.makeFocusableView ?? nullParamId <&> (Align.tValue %~))
+                        <*> ExpressionGui.grammarLabel "|"
+                    fromParamList ExprGuiT.showAnnotationWhenVerbose delVarBackwardsId rhsId
+                        [p & Sugar.fpInfo %~ nullParamEditInfo lhsId nullParamGui]
+                where
+                    nullParamId = Widget.joinId lhsId ["param"]
             Sugar.VarParam p ->
-                fromParamList ExprGuiT.alwaysShowAnnotations delVarBackwardsId rhsId
-                [p & Sugar.fpInfo %~
-                    \x ->
-                    ExpressionGui.makeNameOriginEdit (x ^. Sugar.vpiName) paramColor
-                    & namedParamEditInfo (x ^. Sugar.vpiId) (x ^. Sugar.vpiActions)
-                ]
+                p & Sugar.fpInfo %%~ onFpInfo
+                <&> (:[])
+                >>= fromParamList ExprGuiT.alwaysShowAnnotations delVarBackwardsId rhsId
+                where
+                    onFpInfo x =
+                        ExpressionGui.makeNameOriginEdit (x ^. Sugar.vpiName) paramColor widgetId
+                        <&> namedParamEditInfo widgetId (x ^. Sugar.vpiActions)
+                        where
+                            widgetId = x ^. Sugar.vpiId & WidgetIds.fromEntityId
             Sugar.FieldParams ps ->
                 ps
-                & traverse . Sugar.fpInfo %~
-                    (\x ->
-                        ExpressionGui.makeNameOriginEdit (x ^. Sugar.fpiTag . Sugar.tagName) paramColor
-                        & namedParamEditInfo
-                            (x ^. Sugar.fpiTag . Sugar.tagInfo . Sugar.tagInstance)
-                            (x ^. Sugar.fpiActions))
-                & fromParamList ExprGuiT.alwaysShowAnnotations lhsId rhsId
+                & traverse . Sugar.fpInfo %%~ onFpInfo
+                >>= fromParamList ExprGuiT.alwaysShowAnnotations lhsId rhsId
+                where
+                    onFpInfo x =
+                        ExpressionGui.makeNameOriginEdit (x ^. Sugar.fpiTag . Sugar.tagName) paramColor widgetId
+                        <&> namedParamEditInfo widgetId (x ^. Sugar.fpiActions)
+                        where
+                            widgetId =
+                                x ^. Sugar.fpiTag . Sugar.tagInfo . Sugar.tagInstance & WidgetIds.fromEntityId
     where
         fromParamList showParamAnnotation delDestFirst delDestLast paramList =
             do

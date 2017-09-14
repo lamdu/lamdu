@@ -7,8 +7,11 @@ module Lamdu.GUI.ParamEdit
 import qualified Control.Lens as Lens
 import qualified Data.Map as Map
 import           Data.Store.Transaction (Transaction)
+import           GUI.Momentu.Align (WithTextPos)
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.MetaKey (MetaKey, toModKey)
+import qualified GUI.Momentu.Responsive as Responsive
+import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
@@ -93,7 +96,7 @@ eventParamDelEventMap fpDel keys docSuffix dstPosId =
         (E.Doc ["Edit", "Delete parameter" <> docSuffix])
 
 data Info m = Info
-    { iMakeNameEdit :: Widget.Id -> ExprGuiM m (ExpressionGui m)
+    { iNameEdit :: WithTextPos (Widget (T m Widget.EventResult))
     , iDel :: T m Sugar.ParamDelResult
     , iMAddNext :: Maybe (T m Sugar.ParamAddResult)
     , iMOrderBefore :: Maybe (T m ())
@@ -124,12 +127,8 @@ make annotationOpts showAnnotation prevId nextId param =
             wideAnnotationBehavior showAnnotation
             (param ^. Sugar.fpAnnotation)
             (Widget.toAnimId myId)
-            <*>
-            ( iMakeNameEdit info myId
-              <&> E.weakerEvents paramEventMap
-              -- TODO (ALIGN):
-              -- <&> Responsive.alignment . _1 .~ 0.5
-            )
+            ?? Responsive.fromWithTextPos (iNameEdit info)
+            <&> E.weakerEvents paramEventMap
     where
         myId = iId info
         info = param ^. Sugar.fpInfo
