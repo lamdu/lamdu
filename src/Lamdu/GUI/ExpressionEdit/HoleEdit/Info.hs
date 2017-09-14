@@ -24,7 +24,7 @@ data HoleInfo m = HoleInfo
     { hiEntityId :: Sugar.EntityId
     , hiInferredType :: Type
     , hiIds :: WidgetIds
-    , hiHole :: Sugar.Hole (Name m) m (ExprGuiT.SugarExpr m)
+    , hiHole :: Sugar.Hole m (Sugar.Expression (Name m) m ()) (ExprGuiT.SugarExpr m)
     , hiNearestHoles :: NearestHoles
     , hiState :: Property (T m) HoleState
     }

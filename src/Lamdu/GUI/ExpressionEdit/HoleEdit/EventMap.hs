@@ -119,7 +119,7 @@ listTHead nil l =
 -- have a canonical result?
 toLiteralTextEventMap ::
     Monad m =>
-    Sugar.LeafHoleActions name m -> E.EventMap (T m Widget.EventResult)
+    Sugar.LeafHoleActions m (Sugar.Expression name m ()) -> E.EventMap (T m Widget.EventResult)
 toLiteralTextEventMap actions =
     Widget.keysEventMapMovesCursor toLiteralTextKeys
     (E.Doc ["Edit", "Create Text Literal"]) $

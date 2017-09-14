@@ -45,7 +45,7 @@ mkAppliedHoleOptions ::
     Expression name m a ->
     Input.Payload m a ->
     ExprIRef.ValIProperty m ->
-    [HoleOption UUID m]
+    [HoleOption m (Expression UUID m ())]
 mkAppliedHoleOptions sugarContext argI argS exprPl stored =
     [ P.app P.hole P.hole | Lens.nullOf (rBody . _BodyLam) argS ]
     <&> ConvertHole.SeedExpr
@@ -57,7 +57,7 @@ mkAppliedHoleSuggesteds ::
     Val (Input.Payload m a) ->
     Input.Payload m a ->
     ExprIRef.ValIProperty m ->
-    T m [HoleOption UUID m]
+    T m [HoleOption m (Expression UUID m ())]
 mkAppliedHoleSuggesteds sugarContext argI exprPl stored =
     Suggest.valueConversion Load.nominal Nothing (argI <&> onPl)
     <&> (`runStateT` (sugarContext ^. ConvertM.scInferContext))

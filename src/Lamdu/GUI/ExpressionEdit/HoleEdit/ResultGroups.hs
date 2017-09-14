@@ -38,7 +38,10 @@ data Group m = Group
     { _groupSearchTerms :: [Text]
     , _groupId :: WidgetId.Id
     , _groupResults ::
-        ListT (T m) (Sugar.HoleResultScore, T m (Sugar.HoleResult (Name m) m))
+        ListT (T m)
+        ( Sugar.HoleResultScore
+        , T m (Sugar.HoleResult m (Sugar.Expression (Name m) m ()))
+        )
     }
 
 Lens.makeLenses ''Group
@@ -46,8 +49,8 @@ Lens.makeLenses ''Group
 data Result m = Result
     { rScore :: Sugar.HoleResultScore
     , -- Warning: This transaction should be ran at most once!
-        -- Running it more than once will cause inconsistencies.
-        rHoleResult :: T m (Sugar.HoleResult (Name m) m)
+      -- Running it more than once will cause inconsistencies.
+      rHoleResult :: T m (Sugar.HoleResult m (Sugar.Expression (Name m) m ()))
     , rId :: WidgetId.Id
     }
 
@@ -67,7 +70,7 @@ prefixId = HoleWidgetIds.hidResultsPrefix . hiIds
 
 mResultsListOf ::
     HoleInfo m -> WidgetId.Id ->
-    [(Sugar.HoleResultScore, T m (Sugar.HoleResult (Name m) m))] ->
+    [(Sugar.HoleResultScore, T m (Sugar.HoleResult m (Sugar.Expression (Name m) m ())))] ->
     Maybe (ResultsList m)
 mResultsListOf _ _ [] = Nothing
 mResultsListOf holeInfo baseId (x:xs) = Just
@@ -151,7 +154,7 @@ mkGroupId option =
     & ExprLens.valLeafs . V._LLiteral . V.primData .~ mempty
     & WidgetIds.hash
 
-mkGroup :: Monad m => Sugar.HoleOption (Name m) m -> T m (Group m)
+mkGroup :: Monad m => Sugar.HoleOption m (Sugar.Expression (Name m) m ()) -> T m (Group m)
 mkGroup option =
     do
         sugaredBaseExpr <- option ^. Sugar.hoSugaredBaseExpr
@@ -163,7 +166,7 @@ mkGroup option =
 
 tryBuildLiteral ::
     (Format a, Monad m) => (Identity a -> Sugar.Literal Identity) -> HoleInfo m ->
-    Maybe (T m (Sugar.HoleOption (Name m) m))
+    Maybe (T m (Sugar.HoleOption m (Sugar.Expression (Name m) m ())))
 tryBuildLiteral mkLiteral holeInfo =
     mkHoleOption <*> literal
     where
@@ -176,7 +179,7 @@ tryBuildLiteral mkLiteral holeInfo =
             hiHole holeInfo ^? Sugar.holeKind . Sugar._LeafHole .
             Sugar.holeOptionLiteral
 
-literalGroups :: Monad m => HoleInfo m -> [T m (Sugar.HoleOption (Name m) m)]
+literalGroups :: Monad m => HoleInfo m -> [T m (Sugar.HoleOption m (Sugar.Expression (Name m) m ()))]
 literalGroups holeInfo =
     [ tryBuildLiteral Sugar.LiteralNum holeInfo
     , tryBuildLiteral Sugar.LiteralBytes holeInfo

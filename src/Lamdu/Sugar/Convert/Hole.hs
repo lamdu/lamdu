@@ -91,7 +91,7 @@ mkHoleOptionFromInjected ::
     Monad m =>
     ConvertM.Context m ->
     Input.Payload m a -> ValIProperty m ->
-    Val (Type, Maybe (Input.Payload m a)) -> HoleOption UUID m
+    Val (Type, Maybe (Input.Payload m a)) -> HoleOption m (Expression UUID m ())
 mkHoleOptionFromInjected sugarContext exprPl stored val =
     HoleOption
     { _hoVal = baseExpr
@@ -131,7 +131,7 @@ mkHoleOption ::
     Monad m => ConvertM.Context m ->
     Maybe (Val (Input.Payload m a)) ->
     Input.Payload m a -> ValIProperty m ->
-    BaseExpr -> HoleOption UUID m
+    BaseExpr -> HoleOption m (Expression UUID m ())
 mkHoleOption sugarContext mInjectedArg exprPl stored val =
     HoleOption
     { _hoVal = v
@@ -144,7 +144,7 @@ mkHoleOption sugarContext mInjectedArg exprPl stored val =
 mkHoleSuggesteds ::
     Monad m =>
     ConvertM.Context m -> Maybe (Val (Input.Payload m a)) ->
-    Input.Payload m a -> ValIProperty m -> [HoleOption UUID m]
+    Input.Payload m a -> ValIProperty m -> [HoleOption m (Expression UUID m ())]
 mkHoleSuggesteds sugarContext mInjectedArg exprPl stored =
     exprPl ^. Input.inferred
     & Suggest.value
@@ -152,7 +152,7 @@ mkHoleSuggesteds sugarContext mInjectedArg exprPl stored =
     <&> mkHoleOption sugarContext mInjectedArg exprPl stored
 
 addSuggestedOptions ::
-    [HoleOption UUID m] -> [HoleOption UUID m] -> [HoleOption UUID m]
+    [HoleOption m (Expression UUID m ())] -> [HoleOption m (Expression UUID m ())] -> [HoleOption m (Expression UUID m ())]
 addSuggestedOptions suggesteds options
     | null nonTrivial = options
     | otherwise = nonTrivial ++ filter (not . equivalentToSuggested) options
@@ -236,7 +236,7 @@ mkOptions ::
     Monad m => ConvertM.Context m ->
     Maybe (Val (Input.Payload m a)) ->
     Input.Payload m a -> ValIProperty m ->
-    T m [HoleOption UUID m]
+    T m [HoleOption m (Expression UUID m ())]
 mkOptions sugarContext mInjectedArg exprPl stored =
     do
         nominalOptions <- getNominals sugarContext <&> mkNominalOptions
@@ -263,7 +263,7 @@ mkWritableHoleActions ::
     Monad m =>
     Maybe (Val (Input.Payload m a)) ->
     Input.Payload m a -> ValIProperty m ->
-    ConvertM m (HoleActions UUID m)
+    ConvertM m (HoleActions m (Expression UUID m ()))
 mkWritableHoleActions mInjectedArg exprPl stored =
     do
         sugarContext <- ConvertM.readContext
@@ -353,7 +353,7 @@ sugar sugarContext exprPl val =
 mkLeafActions ::
     Monad m =>
     Maybe (Val (Input.Payload m a)) -> Input.Payload m a -> ValIProperty m ->
-    ConvertM m (LeafHoleActions UUID m)
+    ConvertM m (LeafHoleActions m (Expression UUID m ()))
 mkLeafActions mInjectedArg exprPl stored =
     do
         sugarContext <- ConvertM.readContext
@@ -378,7 +378,7 @@ mkLeafActions mInjectedArg exprPl stored =
 mkHole ::
     Monad m =>
     Maybe (Val (Input.Payload m a)) ->
-    Input.Payload m a -> ConvertM m (Hole UUID m (ExpressionU m a))
+    Input.Payload m a -> ConvertM m (Hole m (Expression UUID m ()) (ExpressionU m a))
 mkHole mInjectedArg exprPl =
     do
         actions <- mkWritableHoleActions mInjectedArg exprPl (exprPl ^. Input.stored)
@@ -750,7 +750,7 @@ mkHoleResult ::
     Monad m =>
     ConvertM.Context m -> Transaction m () -> EntityId ->
     ValIProperty m -> HoleResultVal m IsInjected ->
-    T m (HoleResult UUID m)
+    T m (HoleResult m (Expression UUID m ()))
 mkHoleResult sugarContext updateDeps entityId stored val =
     do
         ((fConverted, fConsistentExpr, fWrittenExpr), forkedChanges) <-
@@ -786,7 +786,7 @@ mkHoleResults ::
     ConvertM.Context m ->
     Input.Payload m dummy -> ValIProperty m ->
     BaseExpr ->
-    ListT (T m) (HoleResultScore, T m (HoleResult UUID m))
+    ListT (T m) (HoleResultScore, T m (HoleResult m (Expression UUID m ())))
 mkHoleResults mInjectedArg sugarContext exprPl stored base =
     do
         ((newDeps, val), inferContext) <-

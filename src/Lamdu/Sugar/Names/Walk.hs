@@ -54,14 +54,14 @@ isFunctionType _ = NameGen.NormalVar
 
 toHoleResult ::
     MonadNaming m =>
-    HoleResult (OldName m) (TM m) ->
-    m (HoleResult (NewName m) (TM m))
+    HoleResult (TM m) (Expression (OldName m) (TM m) ()) ->
+    m (HoleResult (TM m) (Expression (NewName m) (TM m) ()))
 toHoleResult = holeResultConverted toExpression
 
 toHoleOption ::
     MonadNaming m =>
-    HoleOption (OldName m) (TM m) ->
-    m (HoleOption (NewName m) (TM m))
+    HoleOption (TM m) (Expression (OldName m) (TM m) ()) ->
+    m (HoleOption (TM m) (Expression (NewName m) (TM m) ()))
 toHoleOption option@HoleOption{..} =
     do
         run0 <- opRun
@@ -76,8 +76,8 @@ toHoleOption option@HoleOption{..} =
 
 toHoleActions ::
     MonadNaming m =>
-    HoleActions (OldName m) (TM m) ->
-    m (HoleActions (NewName m) (TM m))
+    HoleActions (TM m) (Expression (OldName m) (TM m) ()) ->
+    m (HoleActions (TM m) (Expression (NewName m) (TM m) ()))
 toHoleActions ha@HoleActions {..} =
     do
         run <- opRun
@@ -187,7 +187,8 @@ toLabeledApply expr app@LabeledApply{..} =
 
 toLeafHoleActions ::
     MonadNaming m =>
-    LeafHoleActions (OldName m) (TM m) -> m (LeafHoleActions (NewName m) (TM m))
+    LeafHoleActions (TM m) (Expression (OldName m) (TM m) ()) ->
+    m (LeafHoleActions (TM m) (Expression (NewName m) (TM m) ()))
 toLeafHoleActions ha@LeafHoleActions {..} =
     do
         run <- opRun
@@ -195,13 +196,17 @@ toLeafHoleActions ha@LeafHoleActions {..} =
 
 toHoleKind ::
     MonadNaming m =>
-    (a -> m b) -> HoleKind (OldName m) (TM m) a -> m (HoleKind (NewName m) (TM m) b)
+    (a -> m b) ->
+    HoleKind (TM m) (Expression (OldName m) (TM m) ()) a ->
+    m (HoleKind (TM m) (Expression (NewName m) (TM m) ()) b)
 toHoleKind expr (WrapperHole holeArg) = traverse expr holeArg <&> WrapperHole
 toHoleKind _ (LeafHole actions) = toLeafHoleActions actions <&> LeafHole
 
 toHole ::
     MonadNaming m =>
-    (a -> m b) -> Hole (OldName m) (TM m) a -> m (Hole (NewName m) (TM m) b)
+    (a -> m b) ->
+    Hole (TM m) (Expression (OldName m) (TM m) ()) a ->
+    m (Hole (TM m) (Expression (NewName m) (TM m) ()) b)
 toHole expr Hole{..} =
     Hole
     <$> toHoleActions _holeActions

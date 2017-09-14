@@ -58,10 +58,10 @@ orderRecord = Sugar.cItems %%~ orderByTag (^. Sugar.ciTag . Sugar.tagInfo . Suga
 orderLabeledApply :: Monad m => Order m (Sugar.LabeledApply name binderVar a)
 orderLabeledApply = Sugar.aAnnotatedArgs %%~ orderByTag (^. Sugar.aaTag . Sugar.tagVal)
 
-orderHoleResult :: Monad m => Order m (Sugar.HoleResult name m)
+orderHoleResult :: Monad m => Order m (Sugar.HoleResult m (Sugar.Expression name m ()))
 orderHoleResult = Sugar.holeResultConverted %%~ orderExpr
 
-orderHole :: Monad m => Sugar.Hole name m a -> Sugar.Hole name m a
+orderHole :: Monad m => Sugar.Hole m (Sugar.Expression name m ()) a -> Sugar.Hole m (Sugar.Expression name m ()) a
 orderHole =
     Sugar.holeActions . Sugar.holeOptions . Lens.mapped . Lens.mapped .
     Sugar.hoResults . Lens.mapped . Lens._2 %~ (>>= orderHoleResult)

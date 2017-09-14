@@ -201,7 +201,7 @@ removeUnwanted =
 
 fixNumWithDotEventMap ::
     Monad m =>
-    HoleInfo m -> Sugar.HoleResult name m ->
+    HoleInfo m -> Sugar.HoleResult m (Sugar.Expression name m ()) ->
     Widget.EventMap (T m Widget.EventResult)
 fixNumWithDotEventMap holeInfo res
     | endsWithDot
@@ -232,7 +232,7 @@ fixNumWithDotEventMap holeInfo res
 
 makeHoleResultWidget ::
     Monad m =>
-    HoleInfo m -> Widget.Id -> Sugar.HoleResult (Name m) m ->
+    HoleInfo m -> Widget.Id -> Sugar.HoleResult m (Sugar.Expression (Name m) m ()) ->
     ExprGuiM m (Widget.EventMap (T m Widget.EventResult), WithTextPos (Widget (T m Widget.EventResult)))
 makeHoleResultWidget holeInfo resultId holeResult =
     do

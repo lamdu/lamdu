@@ -60,10 +60,14 @@ addToLabeledApply a =
             & fromMaybe (Left arg)
 
 addToHoleResult ::
-    Monad m => Sugar.HoleResult UUID m -> T m (Sugar.HoleResult UUID m)
+    Monad m =>
+    Sugar.HoleResult m (Sugar.Expression UUID m ()) ->
+    T m (Sugar.HoleResult m (Sugar.Expression UUID m ()))
 addToHoleResult = Sugar.holeResultConverted %%~ addToExpr
 
-addToHole :: Monad m => Sugar.Hole UUID m a -> Sugar.Hole UUID m a
+addToHole ::
+    Monad m =>
+    Sugar.Hole m (Sugar.Expression UUID m ()) a -> Sugar.Hole m (Sugar.Expression UUID m ()) a
 addToHole =
     Sugar.holeActions . Sugar.holeOptions .
     Lens.mapped . Lens.mapped . Sugar.hoResults . Lens.mapped .

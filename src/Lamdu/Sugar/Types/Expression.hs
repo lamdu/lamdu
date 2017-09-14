@@ -116,39 +116,39 @@ newtype PickedResult = PickedResult
 
 type HoleResultScore = [Int]
 
-data HoleResult name m = HoleResult
-    { _holeResultConverted :: Expression name m ()
+data HoleResult m resultExpr = HoleResult
+    { _holeResultConverted :: resultExpr
     , _holeResultPick :: T m PickedResult
-    }
+    } deriving (Functor, Foldable, Traversable)
 
 data TId name = TId
     { _tidName :: name
     , _tidTId :: T.NominalId
     }
 
-data HoleOption name m = HoleOption
+data HoleOption m resultExpr = HoleOption
     { _hoVal :: Val ()
-    , _hoSugaredBaseExpr :: T m (Expression name m ())
+    , _hoSugaredBaseExpr :: T m resultExpr
     , -- A group in the hole results based on this option
-      _hoResults :: ListT (T m) (HoleResultScore, T m (HoleResult name m))
-    }
+      _hoResults :: ListT (T m) (HoleResultScore, T m (HoleResult m resultExpr))
+    } deriving Functor
 
 data Literal f
     = LiteralNum (f Double)
     | LiteralBytes (f SBS.ByteString)
     | LiteralText (f Text)
 
-data HoleActions name m = HoleActions
+data HoleActions m resultExpr = HoleActions
     { _holeUUID :: UUID -- TODO: Replace this with a way to associate data?
-    , _holeOptions :: T m [HoleOption name m]
+    , _holeOptions :: T m [HoleOption m resultExpr]
     , -- Changes the structure around the hole to remove the hole.
       -- For example (f _) becomes (f) or (2 + _) becomes 2
       _holeMDelete :: Maybe (T m EntityId)
-    }
+    } deriving Functor
 
-newtype LeafHoleActions name m = LeafHoleActions
-    { _holeOptionLiteral :: Literal Identity -> T m (HoleOption name m)
-    }
+newtype LeafHoleActions m resultExpr = LeafHoleActions
+    { _holeOptionLiteral :: Literal Identity -> T m (HoleOption m resultExpr)
+    } deriving Functor
 
 data Unwrap m
     = UnwrapAction (T m EntityId)
@@ -159,14 +159,14 @@ data HoleArg m expr = HoleArg
     , _haUnwrap :: Unwrap m
     } deriving (Functor, Foldable, Traversable)
 
-data HoleKind name m expr
-    = LeafHole (LeafHoleActions name m)
+data HoleKind m resultExpr expr
+    = LeafHole (LeafHoleActions m resultExpr)
     | WrapperHole (HoleArg m expr)
     deriving (Functor, Foldable, Traversable)
 
-data Hole name m expr = Hole
-    { _holeActions :: HoleActions name m
-    , _holeKind :: HoleKind name m expr
+data Hole m resultExpr expr = Hole
+    { _holeActions :: HoleActions m resultExpr
+    , _holeKind :: HoleKind m resultExpr expr
     } deriving (Functor, Foldable, Traversable)
 
 {- Composites start -}
@@ -322,7 +322,7 @@ data Body name m expr
     = BodyLam (Lambda name m expr)
     | BodySimpleApply (V.Apply expr)
     | BodyLabeledApply (LabeledApply name m expr)
-    | BodyHole (Hole name m expr)
+    | BodyHole (Hole m (Expression name m ()) expr)
     | BodyLiteral (Literal (Property m))
     | BodyRecord (Composite name m expr)
     | BodyGetField (GetField name m expr)

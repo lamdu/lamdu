@@ -237,9 +237,7 @@ markLightParams paramUUIDs (Expression body pl) =
             & GetParam & BodyGetVar
     BodyHole h ->
         h
-        & holeActions . holeOptions . Lens.mapped . Lens.traversed . hoResults
-        . Lens.mapped . _2 . Lens.mapped . holeResultConverted
-            %~ markLightParams paramUUIDs
+        & holeActions . Lens.mapped %~ markLightParams paramUUIDs
         & BodyHole
     _ -> body <&> markLightParams paramUUIDs
     & (`Expression` pl)
