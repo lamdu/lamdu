@@ -156,7 +156,7 @@ reservedWords =
     [ "if", "elif", "else"
     , "case", "of"
     , "let"
-    , "λ", "«", "»", "Ø", "|"
+    , "λ", "«", "»", "Ø", "|", ".", "→", "➾"
     ]
 
 -- | Compute the global collisions to form ALL collisions and yield
