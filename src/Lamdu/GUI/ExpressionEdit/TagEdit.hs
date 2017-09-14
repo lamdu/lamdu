@@ -184,7 +184,9 @@ makeTagEdit mode tagColor nearestHoles tag =
                 WithTagHoles ->
                     Widget.keysEventMapMovesCursor (Config.delKeys config)
                     (E.Doc ["Edit", "Tag", "Choose"])
-                    (tagHoleId myId <$ tag ^. Sugar.tagActions . Sugar.taReplaceWithNew)
+                    (tag ^. Sugar.tagActions . Sugar.taReplaceWithNew
+                        <&> (^. Sugar.tagInstance)
+                        <&> tagHoleId . WidgetIds.fromEntityId)
                 WithoutTagHoles -> mempty
         nameView <-
             (Widget.makeFocusableView ?? viewId <&> fmap) <*>

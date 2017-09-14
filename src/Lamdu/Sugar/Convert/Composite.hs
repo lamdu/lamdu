@@ -51,6 +51,7 @@ convertCompositeItem cons stored restI inst tag expr =
                     cons newTag (expr ^. Val.payload . Input.stored . Property.pVal) restI
                         & ExprIRef.writeValBody valI
                     protectedSetToVal stored valI & void
+                    TagInfo inst newTag & return
                 where
                     valI = stored ^. Property.pVal
         tagS <- convertTag (TagInfo inst tag) setTag
