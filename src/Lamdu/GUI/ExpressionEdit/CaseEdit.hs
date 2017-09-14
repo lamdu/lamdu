@@ -108,7 +108,7 @@ make (Sugar.Case mArg (Sugar.Composite alts caseTail addAlt)) pl =
                 addAlt
                 <&> (^. Sugar.cairNewTag . Sugar.tagInstance)
                 <&> WidgetIds.fromEntityId
-                <&> TagEdit.diveToCaseTag
+                <&> TagEdit.tagHoleId
                 & Widget.keysEventMapMovesCursor (Config.caseAddAltKeys config)
                   (doc "Add Alt")
                 & ExprGuiM.withHolePicker resultPicker

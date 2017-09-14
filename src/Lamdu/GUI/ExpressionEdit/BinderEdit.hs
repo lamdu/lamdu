@@ -38,6 +38,7 @@ import qualified Lamdu.Config as Config
 import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.GUI.CodeEdit.Settings as CESettings
 import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
+import qualified Lamdu.GUI.ExpressionEdit.TagEdit as TagEdit
 import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
@@ -552,7 +553,7 @@ makeParamsEdit annotationOpts nearestHoles delVarBackwardsId lhsId rhsId params 
                 >>= fromParamList ExprGuiT.alwaysShowAnnotations lhsId rhsId
                 where
                     onFpInfo x =
-                        NameEdit.makeAtBinder (x ^. Sugar.fpiTag . Sugar.tagName) paramColor widgetId
+                        TagEdit.makeParamTag (x ^. Sugar.fpiTag)
                         <&> namedParamEditInfo widgetId (x ^. Sugar.fpiActions)
                         where
                             widgetId =

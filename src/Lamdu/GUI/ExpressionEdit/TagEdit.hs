@@ -1,8 +1,9 @@
 {-# LANGUAGE NoImplicitPrelude, OverloadedStrings #-}
 module Lamdu.GUI.ExpressionEdit.TagEdit
     ( makeRecordTag, makeCaseTag, Mode(..)
+    , makeParamTag
     , makeArgTag
-    , diveToRecordTag, diveToCaseTag
+    , tagHoleId
     ) where
 
 import qualified Control.Lens as Lens
@@ -270,6 +271,18 @@ makeCaseTag mode nearestHoles tag =
         theme <- Lens.view Theme.theme <&> Theme.name
         makeTagEdit mode (Theme.caseTagColor theme) nearestHoles tag
 
+makeParamTag ::
+    ( MonadReader env f, HasTheme env, HasConfig env, Hover.HasStyle env, Menu.HasStyle env
+    , Widget.HasCursor env, Element.HasAnimIdPrefix env, TextEdit.HasStyle env
+    , MonadTransaction m f
+    ) =>
+    Sugar.Tag (Name m) m ->
+    f (WithTextPos (Widget (T m Widget.EventResult)))
+makeParamTag tag =
+    do
+        paramColor <- Lens.view Theme.theme <&> Theme.name <&> Theme.parameterColor
+        makeTagEdit WithTagHoles paramColor NearestHoles.none tag
+
 -- | Unfocusable tag view (e.g: in apply args)
 makeArgTag ::
     ( MonadReader env f, HasTheme env, TextView.HasStyle env
@@ -282,9 +295,3 @@ makeArgTag name entityId =
             & Reader.local (TextView.color .~ Theme.paramTagColor theme)
     where
         animId = WidgetIds.fromEntityId entityId & Widget.toAnimId
-
-diveToRecordTag :: Widget.Id -> Widget.Id
-diveToRecordTag = tagHoleId
-
-diveToCaseTag :: Widget.Id -> Widget.Id
-diveToCaseTag = tagHoleId

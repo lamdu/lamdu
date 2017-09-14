@@ -15,6 +15,7 @@ import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
+import qualified Lamdu.GUI.ExpressionEdit.TagEdit as TagEdit
 import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
@@ -34,22 +35,17 @@ singletonIdMap key val =
 
 chooseAddResultEntityId :: Sugar.ParamAddResult -> Widget.EventResult
 chooseAddResultEntityId (Sugar.ParamAddResultVarToTags Sugar.VarToTags {..}) =
-    eventResultFromEntityId (vttNewTag ^. Sugar.tagInstance)
+    vttNewTag ^. Sugar.tagInstance
+    & WidgetIds.fromEntityId & TagEdit.tagHoleId & Widget.eventResultFromCursor
     & Widget.applyIdMapping widgetIdMap
     where
         widgetIdMap =
             singletonIdMap vttReplacedVarEntityId
             (vttReplacedByTag ^. Sugar.tagInstance)
 chooseAddResultEntityId (Sugar.ParamAddResultNewVar entityId _) =
-    eventResultFromEntityId entityId
+    WidgetIds.fromEntityId entityId & WidgetIds.nameEditOf & Widget.eventResultFromCursor
 chooseAddResultEntityId (Sugar.ParamAddResultNewTag newParamTag) =
-    eventResultFromEntityId $ newParamTag ^. Sugar.tagInstance
-
-eventResultFromEntityId :: Sugar.EntityId -> Widget.EventResult
-eventResultFromEntityId = Widget.eventResultFromCursor . cursorFromEntityId
-
-cursorFromEntityId :: Sugar.EntityId -> Widget.Id
-cursorFromEntityId = WidgetIds.nameEditOf . WidgetIds.fromEntityId
+    newParamTag ^. Sugar.tagInstance & WidgetIds.fromEntityId & TagEdit.tagHoleId & Widget.eventResultFromCursor
 
 eventMapAddFirstParam ::
     Functor m => Config -> T m Sugar.ParamAddResult ->

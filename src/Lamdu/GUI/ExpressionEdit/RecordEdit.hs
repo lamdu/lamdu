@@ -66,7 +66,7 @@ make record@(Sugar.Composite fields recordTail addField) pl =
                 addField
                 <&> (^. Sugar.cairNewTag . Sugar.tagInstance)
                 <&> WidgetIds.fromEntityId
-                <&> TagEdit.diveToRecordTag
+                <&> TagEdit.tagHoleId
                 & Widget.keysEventMapMovesCursor (Config.recordAddFieldKeys config)
                   (doc "Add Field")
                 & ExprGuiM.withHolePicker resultPicker
