@@ -5,7 +5,6 @@ module Lamdu.Sugar.Convert.Composite
     ) where
 
 import qualified Control.Lens as Lens
-import qualified Data.Set as Set
 import qualified Data.Store.Property as Property
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
@@ -16,10 +15,10 @@ import qualified Lamdu.Calc.Val.Annotated as Val
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Expr.IRef as ExprIRef
-import qualified Lamdu.Expr.UniqueId as UniqueId
 import qualified Lamdu.Sugar.Convert.Input as Input
 import           Lamdu.Sugar.Convert.Monad (ConvertM)
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
+import           Lamdu.Sugar.Convert.Tag (convertTag)
 import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import           Lamdu.Sugar.Types
@@ -46,10 +45,6 @@ convertCompositeItem cons stored restI inst tag expr =
     do
         exprS <- ConvertM.convertSubexpression expr
         delItem <- deleteItem stored restI
-        publishedTags <-
-            ConvertM.readContext
-            <&> (^. ConvertM.scCodeAnchors)
-            <&> Anchors.tags
         protectedSetToVal <- ConvertM.typeProtectedSetToVal
         let setTag newTag =
                 do
@@ -58,31 +53,12 @@ convertCompositeItem cons stored restI inst tag expr =
                     protectedSetToVal stored valI & void
                 where
                     valI = stored ^. Property.pVal
+        tagS <- convertTag (TagInfo inst tag) setTag
         return CompositeItem
-            { _ciTag =
-                Tag
-                { _tagInfo = TagInfo inst tag
-                , _tagName = UniqueId.toUUID tag
-                , _tagActions =
-                    TagActions
-                    { _taChangeTag = setTag
-                    , _taOptions =
-                        Transaction.getP publishedTags
-                        <&> Set.toList
-                        <&> map toOption
-                    , _taSetPublished =
-                        \isPublished ->
-                        Transaction.modP
-                        publishedTags
-                        ((if isPublished then Set.insert else Set.delete) tag)
-                    , _taReplaceWithNew = DataOps.genNewTag >>= setTag
-                    }
-                }
+            { _ciTag = tagS
             , _ciExpr = exprS
             , _ciDelete = delItem
             }
-    where
-        toOption x = (UniqueId.toUUID x, x)
 
 setTagOrder :: Monad m => Int -> CompositeAddItemResult -> T m CompositeAddItemResult
 setTagOrder i r =
