@@ -9,7 +9,7 @@ module Lamdu.Sugar.Types.Hole
     , HoleActions(..), holeUUID, holeOptions, holeMDelete
     , HoleKind(..), _LeafHole, _WrapperHole
     , Hole(..), holeActions, holeKind
-    , HoleResultScore
+    , HoleResultScore(..), hrsTypeChecks, hrsScore
     , HoleResult(..)
         , holeResultConverted
         , holeResultPick
@@ -33,7 +33,10 @@ newtype PickedResult = PickedResult
     { _prIdTranslation :: [(EntityId, EntityId)]
     }
 
-type HoleResultScore = [Int]
+data HoleResultScore = HoleResultScore
+    { _hrsTypeChecks :: !Bool
+    , _hrsScore :: ![Int]
+    } deriving (Eq, Ord)
 
 data HoleResult m resultExpr = HoleResult
     { _holeResultConverted :: resultExpr
@@ -88,6 +91,7 @@ Lens.makeLenses ''HoleActions
 Lens.makeLenses ''HoleArg
 Lens.makeLenses ''HoleOption
 Lens.makeLenses ''HoleResult
+Lens.makeLenses ''HoleResultScore
 Lens.makeLenses ''LeafHoleActions
 Lens.makeLenses ''PickedResult
 Lens.makePrisms ''HoleKind

@@ -47,12 +47,13 @@ data Group m = Group
 Lens.makeLenses ''Group
 
 data Result m = Result
-    { rScore :: Sugar.HoleResultScore
+    { _rScore :: Sugar.HoleResultScore
     , -- Warning: This transaction should be ran at most once!
       -- Running it more than once will cause inconsistencies.
       rHoleResult :: T m (Sugar.HoleResult m (Sugar.Expression (Name m) m ()))
     , rId :: WidgetId.Id
     }
+Lens.makeLenses ''Result
 
 data IsPreferred = Preferred | NotPreferred
     deriving (Eq, Ord)
@@ -86,7 +87,7 @@ mResultsListOf holeInfo baseId (x:xs) = Just
         extraResultsPrefixId = prefixId holeInfo <> WidgetId.Id ["extra results"] <> baseId
         mkResult resultId (score, holeResult) =
             Result
-            { rScore = score
+            { _rScore = score
             , rHoleResult = holeResult
             , rId = resultId
             }
@@ -97,7 +98,7 @@ makeResultsList ::
 makeResultsList holeInfo group =
     group ^. groupResults
     & ListClass.toList
-    <&> sortOn (^. _1)
+    <&> sortOn fst
     <&> mResultsListOf holeInfo (group ^. groupId)
     <&> Lens.mapped %~ rlPreferred .~ toPreferred
     where
@@ -125,14 +126,13 @@ collectResults Config.Hole{holeResultCount} resultsM =
     where
         haveHiddenResults [] = Menu.NoMoreOptions
         haveHiddenResults _ = Menu.MoreOptionsAvailable
-        resultsListScore x = (x ^. rlPreferred, rScore (x ^. rlMain))
+        resultsListScore x = (x ^. rlPreferred, x ^. rlMain . rScore . Sugar.hrsTypeChecks)
         step results x =
             results
-            & case (x ^. rlPreferred, isGoodResult (rScore (x ^. rlMain))) of
+            & case (x ^. rlPreferred, x ^. rlMain . rScore . Sugar.hrsTypeChecks) of
                 (NotPreferred, False) -> _2
                 _ -> _1
                 %~ (x :)
-        isGoodResult = (< [5])
 
 makeAll ::
     (Monad n, MonadTransaction n m, MonadReader env m, Config.HasConfig env) =>
