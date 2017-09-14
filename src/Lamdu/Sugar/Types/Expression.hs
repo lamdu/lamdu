@@ -5,7 +5,6 @@ module Lamdu.Sugar.Types.Expression
     , ExtractToDestination(..)
     , Actions(..)
         , wrap, setToHole, extract, mReplaceParent
-    , Literal(..), _LiteralNum, _LiteralBytes, _LiteralText
     , Body(..)
         , _BodyLam, _BodyLabeledApply, _BodySimpleApply
         , _BodyGetVar, _BodyGetField, _BodyInject, _BodyHole
@@ -42,35 +41,20 @@ module Lamdu.Sugar.Types.Expression
     , AnnotatedArg(..), aaTag, aaExpr, aaName
     , RelayedArg(..), raValue, raId, raActions
     , LabeledApply(..), aFunc, aSpecialArgs, aAnnotatedArgs, aRelayedArgs
-    , Unwrap(..), _UnwrapAction, _UnwrapTypeMismatch
-    , HoleArg(..), haExpr, haUnwrap
-    , HoleOption(..), hoVal, hoSugaredBaseExpr, hoResults
-    , LeafHoleActions(..), holeOptionLiteral
-    , HoleActions(..), holeUUID, holeOptions, holeMDelete
-    , HoleKind(..), _LeafHole, _WrapperHole
-    , Hole(..), holeActions, holeKind
     , TId(..), tidName, tidTId
-    , HoleResultScore
-    , HoleResult(..)
-        , holeResultConverted
-        , holeResultPick
-    , PickedResult(..), prIdTranslation
     , Lambda(..), lamBinder, lamMode
     , V.Apply(..), V.applyFunc, V.applyArg
     ) where
 
 import qualified Control.Lens as Lens
-import           Control.Monad.ListT (ListT)
-import qualified Data.ByteString as SBS
-import           Data.Functor.Identity (Identity(..))
 import           Data.Store.Transaction (Transaction, Property)
 import           Data.UUID.Types (UUID)
 import qualified Lamdu.Calc.Type as T
 import           Lamdu.Calc.Type.Scheme (Scheme)
 import qualified Lamdu.Calc.Val as V
-import           Lamdu.Calc.Val.Annotated (Val)
 import           Lamdu.Sugar.Internal.EntityId (EntityId)
 import           Lamdu.Sugar.Types.Binder
+import           Lamdu.Sugar.Types.Hole (Hole, Literal)
 
 import           Lamdu.Prelude
 
@@ -110,64 +94,10 @@ data Expression name m a = Expression
     , _rPayload :: Payload m a
     } deriving (Functor, Foldable, Traversable)
 
-newtype PickedResult = PickedResult
-    { _prIdTranslation :: [(EntityId, EntityId)]
-    }
-
-type HoleResultScore = [Int]
-
-data HoleResult m resultExpr = HoleResult
-    { _holeResultConverted :: resultExpr
-    , _holeResultPick :: T m PickedResult
-    } deriving (Functor, Foldable, Traversable)
-
 data TId name = TId
     { _tidName :: name
     , _tidTId :: T.NominalId
     }
-
-data HoleOption m resultExpr = HoleOption
-    { _hoVal :: Val ()
-    , _hoSugaredBaseExpr :: T m resultExpr
-    , -- A group in the hole results based on this option
-      _hoResults :: ListT (T m) (HoleResultScore, T m (HoleResult m resultExpr))
-    } deriving Functor
-
-data Literal f
-    = LiteralNum (f Double)
-    | LiteralBytes (f SBS.ByteString)
-    | LiteralText (f Text)
-
-data HoleActions m resultExpr = HoleActions
-    { _holeUUID :: UUID -- TODO: Replace this with a way to associate data?
-    , _holeOptions :: T m [HoleOption m resultExpr]
-    , -- Changes the structure around the hole to remove the hole.
-      -- For example (f _) becomes (f) or (2 + _) becomes 2
-      _holeMDelete :: Maybe (T m EntityId)
-    } deriving Functor
-
-newtype LeafHoleActions m resultExpr = LeafHoleActions
-    { _holeOptionLiteral :: Literal Identity -> T m (HoleOption m resultExpr)
-    } deriving Functor
-
-data Unwrap m
-    = UnwrapAction (T m EntityId)
-    | UnwrapTypeMismatch
-
-data HoleArg m expr = HoleArg
-    { _haExpr :: expr
-    , _haUnwrap :: Unwrap m
-    } deriving (Functor, Foldable, Traversable)
-
-data HoleKind m resultExpr expr
-    = LeafHole (LeafHoleActions m resultExpr)
-    | WrapperHole (HoleArg m expr)
-    deriving (Functor, Foldable, Traversable)
-
-data Hole m resultExpr expr = Hole
-    { _holeActions :: HoleActions m resultExpr
-    , _holeKind :: HoleKind m resultExpr expr
-    } deriving (Functor, Foldable, Traversable)
 
 {- Composites start -}
 data CompositeItem name m expr = CompositeItem
@@ -365,21 +295,14 @@ Lens.makeLenses ''Expression
 Lens.makeLenses ''GetField
 Lens.makeLenses ''Guard
 Lens.makeLenses ''GuardElseIf
-Lens.makeLenses ''Hole
-Lens.makeLenses ''HoleActions
-Lens.makeLenses ''HoleArg
-Lens.makeLenses ''HoleOption
-Lens.makeLenses ''HoleResult
 Lens.makeLenses ''Inject
 Lens.makeLenses ''LabeledApply
 Lens.makeLenses ''Lambda
-Lens.makeLenses ''LeafHoleActions
 Lens.makeLenses ''NameRef
 Lens.makeLenses ''Nominal
 Lens.makeLenses ''Param
 Lens.makeLenses ''ParamsRecordVar
 Lens.makeLenses ''Payload
-Lens.makeLenses ''PickedResult
 Lens.makeLenses ''RelayedArg
 Lens.makeLenses ''TId
 Lens.makePrisms ''BinderVarForm
@@ -389,10 +312,8 @@ Lens.makePrisms ''CaseKind
 Lens.makePrisms ''CompositeTail
 Lens.makePrisms ''DefinitionForm
 Lens.makePrisms ''GetVar
-Lens.makePrisms ''HoleKind
 Lens.makePrisms ''Literal
 Lens.makePrisms ''ParameterForm
 Lens.makePrisms ''SetToHole
 Lens.makePrisms ''SpecialArgs
-Lens.makePrisms ''Unwrap
 Lens.makePrisms ''WrapAction
