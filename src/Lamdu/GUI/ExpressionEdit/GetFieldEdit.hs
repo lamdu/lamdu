@@ -33,7 +33,7 @@ make (Sugar.GetField recExpr tag) pl =
         dotLabel <- ExpressionGui.grammarLabel "."
         config <- Lens.view Config.config
         let delEventMap =
-                case (recExpr ^. Sugar.rPayload . Sugar.plActions . Sugar.mReplaceParent) of
+                case recExpr ^. Sugar.rPayload . Sugar.plActions . Sugar.mReplaceParent of
                 Nothing -> mempty
                 Just del ->
                     del <&> WidgetIds.fromEntityId

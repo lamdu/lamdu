@@ -4,6 +4,7 @@ module Lamdu.Sugar.Convert.Composite
     ( convertCompositeItem, setTagOrder, makeAddItem
     ) where
 
+import qualified Control.Lens as Lens
 import qualified Data.Set as Set
 import qualified Data.Store.Property as Property
 import           Data.Store.Transaction (Transaction)
@@ -32,9 +33,7 @@ deleteItem ::
     ExprIRef.ValIProperty m -> ExprIRef.ValI m ->
     ConvertM m (T m EntityId)
 deleteItem stored restI =
-    do
-        protectedSetToVal <- ConvertM.typeProtectedSetToVal
-        protectedSetToVal stored restI <&> EntityId.ofValI & return
+    ConvertM.typeProtectedSetToVal ?? stored ?? restI <&> Lens.mapped %~ EntityId.ofValI
 
 convertCompositeItem ::
     (Monad m, Monoid a) =>
@@ -58,7 +57,7 @@ convertCompositeItem cons stored restI inst tag expr =
                         & ExprIRef.writeValBody valI
                     protectedSetToVal stored valI & void
                 where
-                    valI = (stored ^. Property.pVal)
+                    valI = stored ^. Property.pVal
         return CompositeItem
             { _ciTag =
                 Tag
