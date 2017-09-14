@@ -259,6 +259,7 @@ Executable lamdu
                   , Lamdu.Sugar.Internal.EntityId
                   , Lamdu.Sugar.Lens
                   , Lamdu.Sugar.Names.Add
+                  , Lamdu.Sugar.Names.Clash
                   , Lamdu.Sugar.Names.CPS
                   , Lamdu.Sugar.Names.Get
                   , Lamdu.Sugar.Names.NameGen

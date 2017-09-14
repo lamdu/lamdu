@@ -11,7 +11,6 @@ import qualified Control.Monad.Trans.Reader as Reader
 import           Control.Monad.Trans.State (runState, evalState)
 import           Data.List (partition)
 import qualified Data.Map as Map
-import           Data.Map.Utils (unionWithM)
 import           Data.Monoid.Generic (def_mempty, def_mappend)
 import qualified Data.Set as Set
 import           Data.Set.Ordered (OrderedSet)
@@ -25,6 +24,8 @@ import           GHC.Generics (Generic)
 import           Lamdu.Data.Anchors (assocNameRef)
 import qualified Lamdu.Sugar.Lens as SugarLens
 import           Lamdu.Sugar.Names.CPS (CPS(..))
+import           Lamdu.Sugar.Names.Clash (IsClash(..))
+import qualified Lamdu.Sugar.Names.Clash as Clash
 import           Lamdu.Sugar.Names.NameGen (NameGen)
 import qualified Lamdu.Sugar.Names.NameGen as NameGen
 import           Lamdu.Sugar.Names.Types
@@ -78,25 +79,13 @@ p0cpsNameConvertor uuid =
 ---------- Pass 1 ------------
 ------------------------------
 
-type Disambiguator = Walk.FunctionSignature
-
--- | Info about a single instance of use of a name:
-data NameInstance = NameInstance
-    { _niUUID :: !UUID
-    , -- | Is the name used in a function application context? We consider
-      -- the application as a disambiguator
-      niDisambiguator :: !(Maybe Disambiguator)
-    , _niNameType :: !Walk.NameType
-    } deriving (Eq, Ord, Show)
-Lens.makeLenses ''NameInstance
-
 -- Wrap the Map for a more sensible (recursive) Monoid instance
-newtype NameUUIDMap = NameUUIDMap { _nameUUIDMap :: Map Text (OrderedSet NameInstance) }
+newtype NameUUIDMap = NameUUIDMap { _nameUUIDMap :: Map Text (OrderedSet Clash.NameInstance) }
     deriving Show
 Lens.makeLenses ''NameUUIDMap
 
 type instance Lens.Index NameUUIDMap = Text
-type instance Lens.IxValue NameUUIDMap = OrderedSet NameInstance
+type instance Lens.IxValue NameUUIDMap = OrderedSet Clash.NameInstance
 
 instance Lens.Ixed NameUUIDMap where
     ix k f (NameUUIDMap m) = NameUUIDMap <$> Lens.ix k f m
@@ -110,12 +99,12 @@ instance Monoid NameUUIDMap where
     NameUUIDMap x `mappend` NameUUIDMap y =
         NameUUIDMap $ Map.unionWith (flip mappend) x y
 
-nameUUIDMapSingleton :: Text -> NameInstance -> NameUUIDMap
+nameUUIDMapSingleton :: Text -> Clash.NameInstance -> NameUUIDMap
 nameUUIDMapSingleton name nameInstance =
     OrderedSet.singleton nameInstance & Map.singleton name & NameUUIDMap
 
-isGlobal :: NameInstance -> Bool
-isGlobal = (/= Walk.ParamName) . (^. niNameType)
+isGlobal :: Clash.NameInstance -> Bool
+isGlobal = (/= Walk.ParamName) . (^. Clash.niNameType)
 
 localNames :: NameUUIDMap -> NameUUIDMap
 localNames = nameUUIDMap . Lens.mapped %~ OrderedSet.filter (not . isGlobal)
@@ -134,7 +123,7 @@ instance Monoid P1Out where
 
 data P1Name = P1Name
     { p1StoredName :: Maybe StoredName
-    , p1Instance :: NameInstance
+    , p1Instance :: Clash.NameInstance
     , -- | We keep the names below each node so we can check if an
       -- auto-generated name (in pass2) collides with any name in
       -- inner scopes (below)
@@ -149,83 +138,17 @@ p1Listen (Pass1PropagateUp act) = Pass1PropagateUp $ Writer.listen act
 runPass1PropagateUp :: Pass1PropagateUp tm a -> (a, P1Out)
 runPass1PropagateUp (Pass1PropagateUp act) = runWriter act & _2 %~ p1PostProcess
 
-type CollisionGroup = [Walk.NameType]
-
-collisionGroups :: [CollisionGroup]
-collisionGroups =
-    [ [ Walk.DefName, Walk.ParamName, Walk.FieldParamName ]
-    , [ Walk.TagName, Walk.FieldParamName ]
-    , [ Walk.NominalName ]
-    ]
-
-data GroupNameContext = Ambiguous UUID | Disambiguated (Map Disambiguator UUID)
-
--- A valid (non-clashing) context for a single name where multiple
--- UUIDs may coexist
-type NameContext = Map CollisionGroup GroupNameContext
-
-groupNameContextCombine :: GroupNameContext -> GroupNameContext -> Maybe GroupNameContext
-groupNameContextCombine a b =
-    case (a, b) of
-    (Ambiguous uuid, Disambiguated m) -> combineAD uuid m
-    (Disambiguated m, Ambiguous uuid) -> combineAD uuid m
-    (Ambiguous x, Ambiguous y)
-        | x == y -> Just (Ambiguous x)
-        | otherwise -> Nothing
-    (Disambiguated x, Disambiguated y)
-        | Map.intersectionWith (/=) x y & or -> Nothing
-        | otherwise -> x <> y & Disambiguated & Just
-    where
-        combineAD uuid m
-            | m ^.. Lens.folded & filter (/= uuid) & null = Just (Ambiguous uuid)
-            | otherwise = Nothing
-
-nameContextCombine :: NameContext -> NameContext -> Maybe NameContext
-nameContextCombine = unionWithM groupNameContextCombine
-
-groupNameContextOf :: NameInstance -> GroupNameContext
-groupNameContextOf (NameInstance uuid Nothing _) = Ambiguous uuid
-groupNameContextOf (NameInstance uuid (Just d) _) = Map.singleton d uuid & Disambiguated
-
-nameContextOf :: NameInstance -> NameContext
-nameContextOf inst =
-    filter (inst ^. niNameType `elem`) collisionGroups
-    <&> ((,) ?? ctx)
-    & Map.fromList
-    where
-        ctx = groupNameContextOf inst
-
-data IsClash = Clash | NoClash NameContext
-isClash :: IsClash -> Bool
-isClash Clash = True
-isClash NoClash {} = False
-
-isClashOf :: NameInstance -> IsClash
-isClashOf = NoClash . nameContextOf
-
-instance Monoid IsClash where
-    mempty = NoClash mempty
-    mappend (NoClash x) (NoClash y) =
-        case nameContextCombine x y of
-        Nothing -> Clash
-        Just ctx -> NoClash ctx
-    mappend _ _ = Clash
-
-checkClash :: [NameInstance] -> IsClash
-checkClash ns = ns <&> isClashOf & mconcat
-
 globalCollisions :: NameUUIDMap -> Set Text
 globalCollisions (NameUUIDMap names) =
     Map.filter (namesClash . (^.. Lens.folded)) names & Map.keysSet
     where
         namesClash ns =
-            case checkClash globals of
+            case Clash.check globals of
             Clash -> True
-            noClash -> any (isClash . (noClash <>) . isClashOf) locals
+            noClash -> any (Clash.isClash . (noClash <>) . Clash.isClashOf) locals
             where
-                isLocal = (== Walk.ParamName) . (^. niNameType)
+                isLocal = (== Walk.ParamName) . (^. Clash.niNameType)
                 (locals, globals) = partition isLocal ns
-
 
 -- | Compute the global collisions to form ALL collisions and yield
 -- the global names only
@@ -262,15 +185,15 @@ unnamedStr :: Text
 unnamedStr = "Unnamed"
 
 pass1Result ::
-    Maybe Disambiguator -> Walk.NameType -> P0Name ->
+    Maybe Clash.Disambiguator -> Walk.NameType -> P0Name ->
     CPS (Pass1PropagateUp tm) P1Name
-pass1Result mApplied nameType (P0Name mName uuid) =
+pass1Result mDisambiguator nameType (P0Name mName uuid) =
     CPS $ \inner ->
     do
         (r, namesBelow) <- p1ListenNames inner
         let checkLocalCollision name =
                 localNames namesBelow ^.. Lens.ix name . Lens.folded
-                & checkClash & isClash
+                & Clash.check & Clash.isClash
         let localCollisions =
                 case (scope, mName) of
                 (Local, Just name)
@@ -294,16 +217,16 @@ pass1Result mApplied nameType (P0Name mName uuid) =
             (Global, Nothing) -> Just unnamedStr
             & maybe mempty singleton
         nameInstance =
-            NameInstance
+            Clash.NameInstance
             { _niUUID = uuid
-            , niDisambiguator = mApplied
+            , _niDisambiguator = mDisambiguator
             , _niNameType = nameType
             }
         singleton nameText = nameUUIDMapSingleton nameText nameInstance
 
-p1nameConvertor :: Maybe Disambiguator -> Walk.NameType -> Walk.NameConvertor (Pass1PropagateUp tm)
-p1nameConvertor mApplied nameType mStoredName =
-    runCPS (pass1Result mApplied nameType mStoredName) (pure ()) <&> fst
+p1nameConvertor :: Maybe Clash.Disambiguator -> Walk.NameType -> Walk.NameConvertor (Pass1PropagateUp tm)
+p1nameConvertor mDisambiguator nameType mStoredName =
+    runCPS (pass1Result mDisambiguator nameType mStoredName) (pure ()) <&> fst
 
 p1cpsNameConvertor :: Walk.NameType -> Walk.CPSNameConvertor (Pass1PropagateUp tm)
 p1cpsNameConvertor = pass1Result Nothing
@@ -342,9 +265,9 @@ Lens.makeLenses ''P2Env
 -- Defs+Params can also be disambiguated if used exclusively in
 -- labeled apply contexts, and with differing signatures.
 
-uuidSuffixes :: OrderedSet NameInstance -> Map UUID Int
+uuidSuffixes :: OrderedSet Clash.NameInstance -> Map UUID Int
 uuidSuffixes nameInstances =
-    nameInstances ^@.. Lens.folded <. niUUID <&> swap & Map.fromList
+    nameInstances ^@.. Lens.folded <. Clash.niUUID <&> swap & Map.fromList
 
 initialP2Env :: P1Out -> P2Env
 initialP2Env (P1Out names collisions) =
@@ -352,7 +275,7 @@ initialP2Env (P1Out names collisions) =
     { _p2NameGen = NameGen.initial
     , _p2NamesAbove =
         globalNames names ^. nameUUIDMap <&> (^.. Lens.folded)
-        <&> checkClash
+        <&> Clash.check
     , _p2NameSuffixes = names ^@.. nameUUIDMap . Lens.ifolded <&> f & mconcat
     }
     where
@@ -375,23 +298,23 @@ runPass2MakeNamesInitial = runPass2MakeNames . initialP2Env
 setUuidName :: Monad tm => UUID -> StoredName -> T tm ()
 setUuidName = Transaction.setP . assocNameRef
 
-getCollision :: Text -> NameInstance -> P2Env -> Collision
+getCollision :: Text -> Clash.NameInstance -> P2Env -> Collision
 getCollision name inst env =
-    case env ^. p2NameSuffixes . Lens.at (inst ^. niUUID) of
+    case env ^. p2NameSuffixes . Lens.at (inst ^. Clash.niUUID) of
     Just suffix -> Collision suffix
     Nothing ->
         case env ^. p2NamesAbove . Lens.at name of
         Nothing -> NoCollision
         Just Clash -> UnknownCollision
         Just noClash ->
-            case noClash <> isClashOf inst of
+            case noClash <> Clash.isClashOf inst of
             NoClash _ -> NoCollision
             Clash -> UnknownCollision -- Alternatively "Collision 1"?
 
-getCollisionEnv :: Text -> NameInstance -> P2Env -> (Collision, P2Env)
+getCollisionEnv :: Text -> Clash.NameInstance -> P2Env -> (Collision, P2Env)
 getCollisionEnv name inst env =
     ( getCollision name inst env
-    , env & p2NamesAbove %~ Map.insertWith mappend name (isClashOf inst)
+    , env & p2NamesAbove %~ Map.insertWith mappend name (Clash.isClashOf inst)
     )
 
 -- makeFinalForm ::
@@ -426,7 +349,7 @@ p2nameConvertorLocal (P1Name mStoredName inst _) =
                 AutoGenerated name & pure
     <&> (`Name` setUuidName uuid)
     where
-        uuid = inst ^. niUUID
+        uuid = inst ^. Clash.niUUID
 
 p2cpsNameConvertor ::
     Monad tm =>
@@ -443,7 +366,7 @@ p2cpsNameConvertor (P1Name mStoredName inst _) nameMaker =
                     getCollisionEnv storedName inst oldEnv
                     & _1 %~ Stored storedName
                 Nothing -> nameMaker oldEnv
-                & _1 %~ (`Name` setUuidName (inst ^. niUUID))
+                & _1 %~ (`Name` setUuidName (inst ^. Clash.niUUID))
         res <- p2WithEnv (const newEnv) k
         return (newName, res)
 
@@ -461,7 +384,7 @@ p2cpsNameConvertorLocal isFunction p1name =
     let accept name =
             Lens.hasn't (Lens.ix name) (localNames namesWithin)
             && Lens.hasn't (p2NamesAbove . Lens.ix name) p2env
-    in  NameGen.newName accept isFunction (inst ^. niUUID)
+    in  NameGen.newName accept isFunction (inst ^. Clash.niUUID)
         <&> AutoGenerated
         & Lens.zoom p2NameGen
         & (`runState` p2env)
@@ -473,7 +396,7 @@ p2nameConvertorGlobal (P1Name mStoredName inst _) =
     p2GetEnv
     <&> getCollision (fromMaybe unnamedStr mStoredName) inst
     <&> mk
-    <&> (`Name` setUuidName (inst ^. niUUID))
+    <&> (`Name` setUuidName (inst ^. Clash.niUUID))
     where
         mk = maybe Unnamed Stored mStoredName
 
