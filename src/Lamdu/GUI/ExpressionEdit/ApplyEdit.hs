@@ -186,10 +186,10 @@ makeArgRow ::
     ExprGuiM m (WithTextPos View, ExpressionGui m)
 makeArgRow arg =
     do
-        paramTag <- TagEdit.makeParamTag (arg ^. Sugar.aaName) (arg ^. Sugar.aaTag . Sugar.tagInstance)
+        argTag <- TagEdit.makeArgTag (arg ^. Sugar.aaName) (arg ^. Sugar.aaTag . Sugar.tagInstance)
         space <- Spacer.stdHSpace
         expr <- ExprGuiM.makeSubexpression (arg ^. Sugar.aaExpr)
-        return (paramTag /|/ space, expr)
+        return (argTag /|/ space, expr)
 
 mkRelayedArgs :: Monad m => NearestHoles -> [Sugar.RelayedArg (Name m) m] -> ExprGuiM m (ExpressionGui m)
 mkRelayedArgs nearestHoles args =

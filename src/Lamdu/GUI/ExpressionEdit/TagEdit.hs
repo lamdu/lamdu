@@ -1,7 +1,7 @@
 {-# LANGUAGE NoImplicitPrelude, OverloadedStrings, DeriveFunctor #-}
 module Lamdu.GUI.ExpressionEdit.TagEdit
     ( makeRecordTag, makeCaseTag, Mode(..)
-    , makeParamTag
+    , makeArgTag
     , diveToRecordTag, diveToCaseTag
     ) where
 
@@ -226,9 +226,9 @@ makeCaseTag mode nearestHoles tag =
         theme <- Lens.view Theme.theme <&> Theme.name
         makeTagEdit mode (Theme.caseTagColor theme) nearestHoles tag
 
--- | Unfocusable tag view (e.g: in apply params)
-makeParamTag :: Monad m => Name m -> Sugar.EntityId -> ExprGuiM m (WithTextPos View)
-makeParamTag name entityId =
+-- | Unfocusable tag view (e.g: in apply args)
+makeArgTag :: Monad m => Name m -> Sugar.EntityId -> ExprGuiM m (WithTextPos View)
+makeArgTag name entityId =
     do
         theme <- Lens.view Theme.theme <&> Theme.name
         ExpressionGui.makeNameView (name ^. Name.form) animId
