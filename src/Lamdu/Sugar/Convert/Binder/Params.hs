@@ -43,6 +43,7 @@ import qualified Lamdu.Sugar.Convert.Input as Input
 import           Lamdu.Sugar.Convert.Monad (ConvertM)
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
 import           Lamdu.Sugar.Convert.ParamList (ParamList)
+import           Lamdu.Sugar.Convert.Tag (convertTag)
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import           Lamdu.Sugar.Lens as SugarLens
 import           Lamdu.Sugar.OrderTags (orderType, orderedClosedFlatComposite)
@@ -287,12 +288,15 @@ convertRecordParams ::
     Monad m =>
     BinderKind m -> [FieldParam] ->
     V.Lam (Val (Input.Payload m a)) -> Input.Payload m a ->
-    ConventionalParams m
+    ConvertM m (ConventionalParams m)
 convertRecordParams binderKind fieldParams lam@(V.Lam param _) pl =
+    mapM mkParam fieldParams
+    <&>
+    \params ->
     ConventionalParams
     { cpTags = Set.fromList tags
     , _cpParamInfos = fieldParams <&> mkFieldParamInfo & mconcat
-    , _cpParams = FieldParams (fieldParams <&> mkParam)
+    , _cpParams = FieldParams params
     , _cpAddFirstParam =
         addFieldParam DataOps.newHole binderKind (:tags) storedLam
         <&> ParamAddResultNewTag
@@ -304,20 +308,14 @@ convertRecordParams binderKind fieldParams lam@(V.Lam param _) pl =
         mkFieldParamInfo fp = mkParamInfo param fp <&> ConvertM.TagFieldParam
         storedLam = mkStoredLam lam pl
         mkParam fp =
+            convertTag (TagInfo (fpIdEntityId param fp) (fpTag fp)) (error "TODO: setTag")
+            <&>
+            \tagS ->
             FuncParam
             { _fpInfo =
                 FieldParamInfo
                 { _fpiActions = fieldParamActions binderKind tags fp storedLam
-                , _fpiTag =
-                    Tag
-                    { _tagInfo =
-                        TagInfo
-                        { _tagInstance = fpIdEntityId param fp
-                        , _tagVal = fpTag fp
-                        }
-                    , _tagName = UniqueId.toUUID $ fpTag fp
-                    , _tagActions = error "TODO: tagActions"
-                    }
+                , _fpiTag = tagS
                 }
             , _fpAnnotation =
                 Annotation
@@ -578,7 +576,7 @@ convertNonEmptyParams binderKind lambda lambdaPl =
                 , let fieldParams = map makeFieldParam fields
                 -> if Set.null (tagsInOuterScope `Set.intersection` myTags)
                       && Set.null (tagsInInnerScope `Set.intersection` myTags)
-                   then convertRecordParams binderKind fieldParams lambda lambdaPl & return
+                   then convertRecordParams binderKind fieldParams lambda lambdaPl
                    else
                        convertNonRecordParam binderKind lambda lambdaPl
                        <&> cpParamInfos <>~ (fieldParams & map mkCollidingInfo & mconcat)
