@@ -284,6 +284,52 @@ mkParamInfo param fp =
     & ConvertM.TagParamInfo param
     & Map.singleton (fpTag fp)
 
+changeGetFieldTags ::
+    Monad m => V.Var -> T.Tag -> T.Tag -> Val (ValIProperty m) -> T m ()
+changeGetFieldTags param prevTag chosenTag val =
+    case val ^. Val.body of
+    V.BGetField (V.GetField getVar@(Val _ (V.BLeaf (V.LVar v))) t)
+        | v == param && t == prevTag ->
+            V.GetField (getVar ^. Val.payload . Property.pVal) chosenTag & V.BGetField
+            & ExprIRef.writeValBody (val ^. Val.payload . Property.pVal)
+        | otherwise -> return ()
+    V.BLeaf (V.LVar v)
+        | v == param -> DataOps.wrap (val ^. Val.payload) & void
+    b -> traverse_ (changeGetFieldTags param prevTag chosenTag) b
+
+setFieldParamTag ::
+    Monad m => BinderKind m -> StoredLam m -> T.Tag -> ConvertM m (T.Tag -> T m TagInfo)
+setFieldParamTag binderKind storedLam prevTag =
+    ConvertM.postProcess
+    <&>
+    \postProcess chosenTag ->
+    do
+        let updateParamList Nothing = error "setFieldParamTag expected a paramlist"
+            updateParamList (Just tagList) =
+                tagsBefore ++ chosenTag : tagsAfter & Just
+                where
+                    (tagsBefore, (_:tagsAfter)) = break (== prevTag) tagList
+        Transaction.modP (slParamList storedLam) updateParamList
+        let fixArg argI (V.BRecExtend recExtend)
+                | recExtend ^. V.recTag == prevTag =
+                    argI <$ ExprIRef.writeValBody argI (V.BRecExtend (recExtend & V.recTag .~ chosenTag))
+                | otherwise =
+                    argI <$
+                    ( changeFieldToCall (recExtend ^. V.recRest)
+                        <&> (\x -> recExtend & V.recRest .~ x)
+                        <&> V.BRecExtend
+                        >>= ExprIRef.writeValBody argI
+                    )
+            fixArg argI _ =
+                DataOps.newHole
+                <&> (`V.Apply` argI) <&> V.BApp
+                >>= ExprIRef.newValBody
+            changeFieldToCall argI = ExprIRef.readValBody argI >>= fixArg argI
+        fixUsagesOfLamBinder changeFieldToCall binderKind storedLam
+        changeGetFieldTags (storedLam ^. slLam . V.lamParamId) prevTag chosenTag (storedLam ^. slLam . V.lamResult)
+        postProcess
+        TagInfo (EntityId.ofLambdaTagParam (storedLam ^. slLam . V.lamParamId) chosenTag) chosenTag & pure
+
 convertRecordParams ::
     Monad m =>
     BinderKind m -> [FieldParam] ->
@@ -308,7 +354,8 @@ convertRecordParams binderKind fieldParams lam@(V.Lam param _) pl =
         mkFieldParamInfo fp = mkParamInfo param fp <&> ConvertM.TagFieldParam
         storedLam = mkStoredLam lam pl
         mkParam fp =
-            convertTag (TagInfo (fpIdEntityId param fp) (fpTag fp)) (error "TODO: setTag")
+            setFieldParamTag binderKind storedLam (fpTag fp)
+            >>= convertTag (TagInfo (fpIdEntityId param fp) (fpTag fp))
             <&>
             \tagS ->
             FuncParam
