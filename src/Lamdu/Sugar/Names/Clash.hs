@@ -1,6 +1,5 @@
 -- | Name clash logic
-
-{-# LANGUAGE NoImplicitPrelude, TemplateHaskell, OverloadedStrings #-}
+{-# LANGUAGE NoImplicitPrelude, TemplateHaskell #-}
 module Lamdu.Sugar.Names.Clash
     ( NameInstance(..), niUUID, niDisambiguator, niNameType
     , NameContext

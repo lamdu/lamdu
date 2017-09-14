@@ -150,11 +150,20 @@ globalCollisions (NameUUIDMap names) =
                 isLocal = (== Walk.ParamName) . (^. Clash.niNameType)
                 (locals, globals) = partition isLocal ns
 
+reservedWords :: Set Text
+reservedWords =
+    Set.fromList
+    [ "if", "elif", "else"
+    , "case", "of"
+    , "let"
+    , "λ", "«", "»", "Ø", "|"
+    ]
+
 -- | Compute the global collisions to form ALL collisions and yield
 -- the global names only
 p1PostProcess :: P1Out -> P1Out
 p1PostProcess (P1Out names localCollisions) =
-    P1Out names (localCollisions <> globalCollisions names)
+    P1Out names (localCollisions <> globalCollisions names <> reservedWords)
 
 p1ListenNames :: Pass1PropagateUp tm a -> Pass1PropagateUp tm (a, NameUUIDMap)
 p1ListenNames act = p1Listen act <&> _2 %~ _p1Names
