@@ -250,10 +250,9 @@ mkOptions sugarContext mInjectedArg exprPl stored =
             , do
                 tag <- recordTags
                 [ P.recExtend tag P.hole P.hole ]
-            , [ P.abs "NewLambda" P.hole
-              , P.recEmpty
-              , P.absurd
-              ]
+            , [ P.abs "NewLambda" P.hole ]
+            , [ P.recEmpty ]
+            , [ P.absurd ]
             ]
             <&> SeedExpr
             <&> mkHoleOption sugarContext mInjectedArg exprPl stored
