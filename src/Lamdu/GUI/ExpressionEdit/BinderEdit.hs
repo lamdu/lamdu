@@ -486,12 +486,12 @@ makeBinderContentEdit (Sugar.BinderLet l) =
 
 namedParamEditInfo ::
     Monad m =>
-    Draw.Color -> Sugar.EntityId -> Name m -> Sugar.FuncParamActions m -> ParamEdit.Info m
-namedParamEditInfo color entityId name actions =
+    Sugar.EntityId -> Sugar.FuncParamActions m ->
+    (Widget.Id -> ExprGuiM m (WithTextPos (Widget (T m Widget.EventResult)))) ->
+    ParamEdit.Info m
+namedParamEditInfo entityId actions nameEdit =
     ParamEdit.Info
-    { ParamEdit.iMakeNameEdit =
-        ExpressionGui.makeNameOriginEdit name color
-        <&> Lens.mapped %~ Responsive.fromWithTextPos
+    { ParamEdit.iMakeNameEdit = nameEdit <&> Lens.mapped %~ Responsive.fromWithTextPos
     , ParamEdit.iMAddNext = actions ^. Sugar.fpAddNext & Just
     , ParamEdit.iMOrderBefore = actions ^. Sugar.fpMOrderBefore
     , ParamEdit.iMOrderAfter = actions ^. Sugar.fpMOrderAfter
@@ -531,13 +531,18 @@ makeParamsEdit annotationOpts nearestHoles delVarBackwardsId lhsId rhsId params 
             Sugar.VarParam p ->
                 fromParamList ExprGuiT.alwaysShowAnnotations delVarBackwardsId rhsId
                 [p & Sugar.fpInfo %~
-                    \x -> namedParamEditInfo paramColor (x ^. Sugar.vpiId) (x ^. Sugar.vpiName) (x ^. Sugar.vpiActions)]
+                    \x ->
+                    ExpressionGui.makeNameOriginEdit (x ^. Sugar.vpiName) paramColor
+                    & namedParamEditInfo (x ^. Sugar.vpiId) (x ^. Sugar.vpiActions)
+                ]
             Sugar.FieldParams ps ->
                 ps
                 & traverse . Sugar.fpInfo %~
-                    (\x -> namedParamEditInfo paramColor
-                        (x ^. Sugar.fpiTag . Sugar.tagInfo . Sugar.tagInstance)
-                        (x ^. Sugar.fpiTag . Sugar.tagName) (x ^. Sugar.fpiActions))
+                    (\x ->
+                        ExpressionGui.makeNameOriginEdit (x ^. Sugar.fpiTag . Sugar.tagName) paramColor
+                        & namedParamEditInfo
+                            (x ^. Sugar.fpiTag . Sugar.tagInfo . Sugar.tagInstance)
+                            (x ^. Sugar.fpiActions))
                 & fromParamList ExprGuiT.alwaysShowAnnotations lhsId rhsId
     where
         fromParamList showParamAnnotation delDestFirst delDestLast paramList =
