@@ -1,6 +1,6 @@
 {-# LANGUAGE NoImplicitPrelude, DeriveFunctor, TemplateHaskell, GeneralizedNewtypeDeriving, DeriveGeneric, OverloadedStrings, NamedFieldPuns, LambdaCase, FlexibleInstances, MultiParamTypeClasses, TypeFamilies, FlexibleContexts #-}
 module GUI.Momentu.Widget
-    ( Id(..), subId, Id.joinId, isSubCursor
+    ( Id(..), subId, Id.joinId, isSubCursor, makeSubId
     , HasCursor(..)
 
     -- Types:
@@ -573,6 +573,9 @@ assignCursorPrefix srcFolder dest =
             case Id.subId srcFolder c of
             Nothing -> c
             Just suffix -> dest suffix
+
+makeSubId :: (MonadReader env m, Element.HasAnimIdPrefix env) => AnimId -> m Id
+makeSubId suffix = Lens.view Element.animIdPrefix <&> (++ suffix) <&> Id
 
 makeFocusableView ::
     (MonadReader env m, HasCursor env, Applicative f) =>

@@ -15,6 +15,7 @@ import           GUI.Momentu.Align (WithTextPos)
 import qualified GUI.Momentu.Align as Align
 import           GUI.Momentu.CursorState (cursorState)
 import qualified GUI.Momentu.Draw as Draw
+import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Glue ((/|/))
 import qualified GUI.Momentu.Glue as Glue
@@ -24,7 +25,6 @@ import qualified GUI.Momentu.MetaKey as MetaKey
 import           GUI.Momentu.View (View)
 import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
-import qualified GUI.Momentu.Widget.Id as WidgetId
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
 import qualified GUI.Momentu.Widgets.TextView as TextView
 import qualified Lamdu.Config as Config
@@ -90,6 +90,52 @@ makeTagNameEdit nearestHoles tag =
 insensitiveInfixOf :: Text -> Text -> Bool
 insensitiveInfixOf = Text.isInfixOf `on` Text.toLower
 
+tagId :: Sugar.Tag name m -> Widget.Id
+tagId tag = tag ^. Sugar.tagInfo . Sugar.tagInstance & WidgetIds.fromEntityId
+
+makePickEventMap ::
+    (Functor f, Config.HasConfig env, MonadReader env m) =>
+    NearestHoles -> Sugar.Tag name n -> E.Doc -> f b ->
+    m (Widget.EventMap (f Widget.EventResult))
+makePickEventMap nearestHoles tag doc action =
+    Lens.view Config.config <&> Config.hole <&>
+    \config ->
+    let pickKeys = Config.holePickResultKeys config
+        jumpNextKeys = Config.holePickAndMoveToNextHoleKeys config
+        actionAndClose = tagId tag <$ action
+    in
+    case nearestHoles ^. NearestHoles.next of
+    Nothing -> Widget.keysEventMapMovesCursor (pickKeys <> jumpNextKeys) doc actionAndClose
+    Just nextHole ->
+        Widget.keysEventMapMovesCursor pickKeys doc actionAndClose
+        <> Widget.keysEventMapMovesCursor jumpNextKeys
+            (doc & E.docStrs . Lens.reversed . Lens.ix 0 %~ (<> " and jump to next hole"))
+            (WidgetIds.fromEntityId nextHole <$ action)
+
+makeOptions ::
+    Monad m =>
+    (Widget.EventResult -> a) -> NearestHoles -> Sugar.Tag (Name n) m -> Text ->
+    ExprGuiM m [WithTextPos (Widget (T m a))]
+makeOptions fixCursor nearestHoles tag searchTerm
+    | Text.null searchTerm = pure []
+    | otherwise =
+        tag ^. Sugar.tagActions . Sugar.taOptions & transaction
+        <&> filter (Lens.anyOf (_1 . Name.form . Name._Stored . _1) (insensitiveInfixOf searchTerm))
+        <&> take 4
+        >>= mapM makeOptionGui
+    where
+        makeOptionGui (name, t) =
+            do
+                eventMap <-
+                    (tag ^. Sugar.tagActions . Sugar.taChangeTag) t
+                    & makePickEventMap nearestHoles tag (E.Doc ["Edit", "Tag", "Select"])
+                (Widget.makeFocusableView <*> Widget.makeSubId optionId <&> fmap)
+                    <*> ExpressionGui.makeNameView (name ^. Name.form) optionId
+                    <&> Align.tValue %~ E.weakerEvents eventMap
+            <&> Align.tValue . Lens.mapped . Lens.mapped %~ fixCursor
+            where
+                optionId = Widget.toAnimId (WidgetIds.hash t)
+
 makeTagHoleEditH ::
     Monad m =>
     NearestHoles -> Sugar.Tag (Name m) m ->
@@ -97,14 +143,16 @@ makeTagHoleEditH ::
     ExprGuiM m (WithTextPos (Widget (T m Widget.EventResult)))
 makeTagHoleEditH nearestHoles tag searchTerm updateState fixCursor =
     do
-        setNameEventMap <- setTagName tag searchTerm & makeEventMap (E.Doc ["Edit", "Tag", "Set name"])
+        setNameEventMap <-
+            setTagName tag searchTerm
+            & makePickEventMap nearestHoles tag (E.Doc ["Edit", "Tag", "Set name"])
         term <-
             TextEdit.make ?? textEditNoEmpty ?? searchTerm ?? searchTermId
             <&> Align.tValue . Lens.mapped %~ pure . uncurry updateState
             <&> Align.tValue %~ E.strongerEvents setNameEventMap
-        label <- TextView.make ?? labelText ?? WidgetId.toAnimId holeId <> ["label"]
+        label <- (TextView.make ?? labelText) <*> Element.subAnimId ["label"]
         let topLine = term /|/ label
-        options <- makeOptions
+        options <- makeOptions fixCursor nearestHoles tag searchTerm
         case options of
             [] -> return topLine
             _ ->
@@ -116,46 +164,14 @@ makeTagHoleEditH nearestHoles tag searchTerm updateState fixCursor =
                 anchored
                 <&> Hover.hoverInPlaceOf (Hover.hoverBesideOptions optionsBox (anchored ^. Align.tValue))
     & Widget.assignCursor holeId searchTermId
+    & Reader.local (Element.animIdPrefix .~ Widget.toAnimId holeId)
     where
-        makeEventMap doc action =
-            Lens.view Config.config <&> Config.hole <&>
-            \config ->
-            let pickKeys = Config.holePickResultKeys config
-                jumpNextKeys = Config.holePickAndMoveToNextHoleKeys config
-                actionAndClose = tagId <$ action
-            in
-            case nearestHoles ^. NearestHoles.next of
-            Nothing -> Widget.keysEventMapMovesCursor (pickKeys <> jumpNextKeys) doc actionAndClose
-            Just nextHole ->
-                Widget.keysEventMapMovesCursor pickKeys doc actionAndClose
-                <> Widget.keysEventMapMovesCursor jumpNextKeys
-                    (doc & E.docStrs . Lens.reversed . Lens.ix 0 %~ (<> " and jump to next hole"))
-                    (WidgetIds.fromEntityId nextHole <$ action)
         labelText
             | Text.null searchTerm = "(pick tag)"
             | otherwise = " (new tag)"
-        makeOptions
-            | Text.null searchTerm = pure []
-            | otherwise =
-                tag ^. Sugar.tagActions . Sugar.taOptions & transaction
-                <&> filter (Lens.anyOf (_1 . Name.form . Name._Stored . _1) (insensitiveInfixOf searchTerm))
-                <&> take 4
-                >>= mapM makeOptionGui
-        tagId = tag ^. Sugar.tagInfo . Sugar.tagInstance & WidgetIds.fromEntityId
-        holeId = tagHoleId tagId
+        holeId = tagHoleId (tagId tag)
         searchTermId = holeId <> Widget.Id ["term"]
         textEditNoEmpty = TextEdit.EmptyStrings "" ""
-        makeOptionGui (name, t) =
-            do
-                eventMap <-
-                    (tag ^. Sugar.tagActions . Sugar.taChangeTag) t
-                    & makeEventMap (E.Doc ["Edit", "Tag", "Select"])
-                (Widget.makeFocusableView ?? optionId <&> fmap)
-                    <*> ExpressionGui.makeNameView (name ^. Name.form) (WidgetId.toAnimId optionId)
-                    <&> Align.tValue %~ E.weakerEvents eventMap
-            <&> Align.tValue . Lens.mapped . Lens.mapped %~ fixCursor
-            where
-                optionId = holeId <> WidgetIds.hash t
 
 makeTagHoleEdit ::
     Monad m => NearestHoles -> Sugar.Tag (Name m) m -> ExprGuiM m (WithTextPos (Widget (T m Widget.EventResult)))
