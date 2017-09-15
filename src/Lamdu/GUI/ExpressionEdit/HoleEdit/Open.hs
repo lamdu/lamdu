@@ -360,39 +360,40 @@ resultsHoverOptions =
             results ^. Menu.optionsFromBottom & hover & Aligned alignment
         annotatedTerm alignment =
             searchTerm & Widget.widget %~ addAnnotation & Aligned alignment
-        above = resultsAbove 0 /-/ annotatedTerm 0
+        aboveRight = resultsAbove 0 /-/ annotatedTerm 0
         aboveLeft =
             resultsAbove 1
             /-/ annotatedTerm 1
-        resultsBelow = results ^. Menu.optionsFromTop & addAnnotation & hover
-        below =
+        annotatedResultsBelow = results ^. Menu.optionsFromTop & addAnnotation & hover
+        resultsBelow = results ^. Menu.optionsFromTop & hover
+        belowRight =
             Aligned 0 searchTerm
             /-/
-            Aligned 0 resultsBelow
+            Aligned 0 annotatedResultsBelow
         belowLeft =
             Aligned 1 searchTerm
             /-/
-            Aligned 1 resultsBelow
-        atRight =
-            annotatedTerm 0.5
-            /|/
-            Aligned 0.5 (hover (results ^. Menu.optionsFromTop))
+            Aligned 1 annotatedResultsBelow
+        centerRight = annotatedTerm 0.5 /|/ Aligned 0.5 resultsBelow
+        rightAbove = annotatedTerm 1 /|/ resultsAbove 1
+        leftAbove = resultsAbove 1 /|/ annotatedTerm 1
     in  case pos of
-        Menu.Above -> [ above, aboveLeft ]
+        Menu.Above ->
+            [ aboveRight
+            , aboveLeft
+            ]
         Menu.AnyPlace ->
-            [ below
-            , above
+            [ belowRight
+            , aboveRight
             , belowLeft
             , aboveLeft
-            , atRight
+            , centerRight
             ]
         Menu.Below ->
-            [ below
+            [ belowRight
             , belowLeft
-            , annotatedTerm 1
-                /|/ resultsAbove 1
-            , resultsAbove 1
-                /|/ annotatedTerm 1
+            , rightAbove
+            , leftAbove
             ]
         <&> (^. Align.value)
 
