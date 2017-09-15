@@ -311,7 +311,7 @@ emptyPickEventMap =
 makeResultsWidget ::
     Monad m =>
     Widget.R -> HoleInfo m -> [ResultsList m] -> Menu.HasMoreOptions ->
-    ExprGuiM m (Widget.EventMap (T m Widget.EventResult), Menu.OrderedOptions (Widget (T m Widget.EventResult)))
+    ExprGuiM m (Widget.EventMap (T m Widget.EventResult), Menu.Ordered (Widget (T m Widget.EventResult)))
 makeResultsWidget minWidth holeInfo shownResultsLists hiddenResults =
     do
         groupsWidgets <- traverse (makeResultGroup holeInfo) shownResultsLists
@@ -351,21 +351,21 @@ resultsHoverOptions ::
     m
     (Menu.Placement ->
      (Widget (f EventResult) -> Widget (f EventResult)) ->
-     Menu.OrderedOptions (Widget (f EventResult)) ->
+     Menu.Ordered (Widget (f EventResult)) ->
      Hover.AnchoredWidget (f EventResult) ->
      [Hover.AnchoredWidget (f EventResult)])
 resultsHoverOptions =
     Hover.hover <&> \hover pos addAnnotation results searchTerm ->
     let resultsAbove alignment =
-            results ^. Menu.optionsFromBottom & hover & Aligned alignment
+            results ^. Menu.fromBottom & hover & Aligned alignment
         annotatedTerm alignment =
             searchTerm & Widget.widget %~ addAnnotation & Aligned alignment
         aboveRight = resultsAbove 0 /-/ annotatedTerm 0
         aboveLeft =
             resultsAbove 1
             /-/ annotatedTerm 1
-        annotatedResultsBelow = results ^. Menu.optionsFromTop & addAnnotation & hover
-        resultsBelow = results ^. Menu.optionsFromTop & hover
+        annotatedResultsBelow = results ^. Menu.fromTop & addAnnotation & hover
+        resultsBelow = results ^. Menu.fromTop & hover
         belowRight =
             Aligned 0 searchTerm
             /-/

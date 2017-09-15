@@ -4,7 +4,7 @@ module GUI.Momentu.Widgets.Menu
     ( Style(..), HasStyle(..)
     , Submenu(..)
     , Option(..), oId, oWidget, oSubmenuWidgets
-    , OrderedOptions(..), optionsFromTop, optionsFromBottom
+    , Ordered(..), fromTop, fromBottom
     , Placement(..), HasMoreOptions(..)
     , layout
     ) where
@@ -57,16 +57,16 @@ data Option f a = Option
     }
 Lens.makeLenses ''Option
 
-data OrderedOptions a = OrderedOptions
-    { _optionsFromTop :: a
-    , _optionsFromBottom :: a
+data Ordered a = Ordered
+    { _fromTop :: a
+    , _fromBottom :: a
     } deriving (Functor, Foldable, Traversable)
-Lens.makeLenses ''OrderedOptions
+Lens.makeLenses ''Ordered
 
-instance Applicative OrderedOptions where
-    pure = join OrderedOptions
-    OrderedOptions fa fb <*> OrderedOptions xa xb =
-        OrderedOptions (fa xa) (fb xb)
+instance Applicative Ordered where
+    pure = join Ordered
+    Ordered fa fb <*> Ordered xa xb =
+        Ordered (fa xa) (fb xb)
 
 -- | You may want to limit the placement of hovering pop-up menus,
 -- so that they don't cover other ui elements.
@@ -87,11 +87,11 @@ makeMoreOptionsView MoreOptionsAvailable = TextView.makeLabel "..."
 
 blockEvents ::
     Applicative f =>
-    OrderedOptions (Widget (f Widget.EventResult) -> Widget (f Widget.EventResult))
+    Ordered (Widget (f Widget.EventResult) -> Widget (f Widget.EventResult))
 blockEvents =
-    OrderedOptions
-    { _optionsFromTop = blockDirection MetaKey.Key'Down "down"
-    , _optionsFromBottom = blockDirection MetaKey.Key'Up "up"
+    Ordered
+    { _fromTop = blockDirection MetaKey.Key'Down "down"
+    , _fromBottom = blockDirection MetaKey.Key'Up "up"
     }
     where
         blockDirection key keyName =
@@ -163,7 +163,7 @@ layout ::
     , Applicative f
     ) =>
     Widget.R -> [Option m (f Widget.EventResult)] -> HasMoreOptions ->
-    m (OrderedOptions (Widget (f Widget.EventResult)))
+    m (Ordered (Widget (f Widget.EventResult)))
 layout minWidth options hiddenResults =
     case options of
     [] -> makeNoResults <&> (^. Align.tValue) <&> Widget.fromView <&> pure
@@ -185,9 +185,9 @@ layout minWidth options hiddenResults =
                 traverse (layoutOption maxOptionWidth) options
                 <&> map (^. Align.tValue)
             blockEvents <*>
-                ( OrderedOptions
-                    { _optionsFromTop = id
-                    , _optionsFromBottom = reverse
+                ( Ordered
+                    { _fromTop = id
+                    , _fromBottom = reverse
                     } ?? (laidOutOptions ++ [hiddenOptionsWidget])
                     <&> Glue.vbox
                 ) & pure
