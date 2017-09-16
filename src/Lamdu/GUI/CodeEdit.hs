@@ -157,7 +157,7 @@ makeReplEdit theExportActions replExpr =
         exprId = replExpr ^. Sugar.rPayload . Sugar.plEntityId & WidgetIds.fromEntityId
 
 make ::
-    ( Monad m, MonadTransaction m n, MonadReader env n, Config.HasConfig env
+    ( MonadTransaction m n, MonadReader env n, Config.HasConfig env
     , Theme.HasTheme env, Widget.HasCursor env, TextEdit.HasStyle env
     , Spacer.HasStdSpacing env, HasEvalResults env m, HasExportActions env m
     , HasSettings env, HasStyle env

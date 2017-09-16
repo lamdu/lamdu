@@ -135,7 +135,7 @@ collectResults Config.Hole{holeResultCount} resultsM =
                 %~ (x :)
 
 makeAll ::
-    (Monad n, MonadTransaction n m, MonadReader env m, Config.HasConfig env) =>
+    (MonadTransaction n m, MonadReader env m, Config.HasConfig env) =>
     HoleInfo n ->
     m ([ResultsList n], Menu.HasMoreOptions)
 makeAll holeInfo =

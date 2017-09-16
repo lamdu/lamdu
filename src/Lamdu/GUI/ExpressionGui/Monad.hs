@@ -196,7 +196,7 @@ advanceDepth f animId action =
         mkErrorWidget = TextView.make ?? "..." ?? animId
 
 run ::
-    ( Functor m, MonadTransaction m n, MonadReader env n
+    ( MonadTransaction m n, MonadReader env n
     , Widget.HasCursor env, Spacer.HasStdSpacing env
     , Config.HasConfig env, Theme.HasTheme env
     , HasSettings env, HasStyle env
