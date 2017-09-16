@@ -124,10 +124,14 @@ makeOptions ::
 makeOptions fixCursor nearestHoles tag searchTerm
     | Text.null searchTerm = pure []
     | otherwise =
-        tag ^. Sugar.tagActions . Sugar.taOptions & transaction
-        <&> filter (Lens.anyOf (_1 . Name.form . Name._Stored . _1) (insensitiveInfixOf searchTerm))
-        <&> take 4
-        >>= mapM makeOptionGui
+        do
+            resultCount <-
+                Lens.view Config.config
+                <&> Config.hole <&> Config.holeResultCount
+            tag ^. Sugar.tagActions . Sugar.taOptions & transaction
+                <&> filter (Lens.anyOf (_1 . Name.form . Name._Stored . _1) (insensitiveInfixOf searchTerm))
+                <&> take resultCount
+                >>= mapM makeOptionGui
     where
         makeOptionGui (name, t) =
             do
