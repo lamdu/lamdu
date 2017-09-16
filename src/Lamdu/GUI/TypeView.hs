@@ -5,6 +5,7 @@ module Lamdu.GUI.TypeView
     ) where
 
 import qualified Control.Lens as Lens
+import           Control.Monad.Trans.Class (MonadTrans(..))
 import           Control.Monad.Trans.State (StateT, state, evalStateT)
 import           Control.Monad.Transaction (MonadTransaction(..))
 import qualified Data.Map as Map
@@ -29,10 +30,9 @@ import qualified GUI.Momentu.Widgets.TextView as TextView
 import           Lamdu.Calc.Identifier (Identifier(..))
 import           Lamdu.Calc.Type (Type)
 import qualified Lamdu.Calc.Type as T
+import           Lamdu.Config.Theme (HasTheme)
 import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.Data.Anchors as Anchors
-import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
-import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import           Lamdu.GUI.Precedence (ParentPrecedence(..), MyPrecedence(..), needParens)
 import qualified Lamdu.GUI.Precedence as Precedence
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
@@ -43,14 +43,12 @@ import qualified System.Random as Random
 import           Lamdu.Prelude
 
 newtype M m a = M
-    { runM :: StateT Random.StdGen (ExprGuiM m) a
-    } deriving (Functor, Applicative, Monad, MonadReader (ExprGuiM.Askable m))
-egui :: Monad m => ExprGuiM m a -> M m a
-egui = M . lift
+    { runM :: StateT Random.StdGen m a
+    } deriving
+    (Functor, Applicative, Monad, MonadTrans, MonadTransaction n, MonadReader r)
+
 rand :: (Random r, Monad m) => M m r
 rand = M $ state random
-
-instance Monad m => MonadTransaction m (M m) where transaction = egui . transaction
 
 split :: Monad m => M m a -> M m a
 split (M act) =
@@ -61,16 +59,20 @@ split (M act) =
 randAnimId :: Monad m => M m AnimId
 randAnimId = WidgetId.toAnimId . WidgetIds.fromUUID <$> rand
 
-text :: Monad m => Text -> M m (WithTextPos View)
+text :: (MonadReader env m, TextView.HasStyle env) => Text -> M m (WithTextPos View)
 text str =
     do
         animId <- randAnimId
         TextView.make ?? Text.replace "\0" "" str ?? animId
 
-showIdentifier :: Monad m => Identifier -> M m (WithTextPos View)
+showIdentifier ::
+    (MonadReader env m, TextView.HasStyle env) =>
+    Identifier -> M m (WithTextPos View)
 showIdentifier (Identifier bs) = text (decodeUtf8 bs)
 
-parensAround :: Monad m => WithTextPos View -> M m (WithTextPos View)
+parensAround ::
+    (MonadReader env m, TextView.HasStyle env) =>
+    WithTextPos View -> M m (WithTextPos View)
 parensAround view =
     do
         openParenView <- text "("
@@ -78,16 +80,23 @@ parensAround view =
         return $ hbox [openParenView, view, closeParenView]
 
 parens ::
-    Monad m => ParentPrecedence -> MyPrecedence ->
+    (MonadReader env m, TextView.HasStyle env) =>
+    ParentPrecedence -> MyPrecedence ->
     WithTextPos View -> M m (WithTextPos View)
 parens parent my view
     | needParens parent my = parensAround view
     | otherwise = return view
 
-makeTVar :: Monad m => T.Var p -> M m (WithTextPos View)
+makeTVar ::
+    (MonadReader env m, TextView.HasStyle env) =>
+    T.Var p -> M m (WithTextPos View)
 makeTVar (T.Var name) = showIdentifier name
 
-makeTFun :: Monad m => ParentPrecedence -> Type -> Type -> M m (WithTextPos View)
+makeTFun ::
+    ( MonadReader env m, TextView.HasStyle env, HasTheme env
+    , Spacer.HasStdSpacing env, MonadTransaction n m
+    ) =>
+    ParentPrecedence -> Type -> Type -> M m (WithTextPos View)
 makeTFun parentPrecedence a b =
     case a of
     T.TRecord T.CEmpty -> [text "| "]
@@ -101,7 +110,9 @@ makeTFun parentPrecedence a b =
     >>= parens parentPrecedence (Precedence.my 0)
 
 makeTInst ::
-    Monad m => ParentPrecedence -> T.NominalId -> Map T.ParamId Type ->
+    ( MonadReader env m, TextView.HasStyle env, Spacer.HasStdSpacing env
+    , HasTheme env, MonadTransaction n m
+    ) => ParentPrecedence -> T.NominalId -> Map T.ParamId Type ->
     M m (WithTextPos View)
 makeTInst parentPrecedence tid typeParams =
     do
@@ -135,13 +146,13 @@ toAligned :: SizedElement a => R -> WithTextPos a -> Aligned a
 toAligned x (WithTextPos y w) =
     Aligned (Vector2 x (y / w ^. Element.height)) w
 
-addValPadding :: (Element a, Monad m) => a -> M m a
+addValPadding :: (Element a, MonadReader env m, HasTheme env) => a -> M m a
 addValPadding view =
     do
         padding <- Lens.view Theme.theme <&> Theme.valFramePadding <&> fmap realToFrac
         Element.pad padding view & return
 
-addBGColor :: (Element a, Monad m) => a -> M m a
+addBGColor :: (Element a, MonadReader env m, HasTheme env) => a -> M m a
 addBGColor view =
     do
         color <- Lens.view Theme.theme <&> Theme.typeFrameBGColor
@@ -150,15 +161,20 @@ addBGColor view =
             & MDraw.backgroundColor bgId color
             & return
 
-makeEmptyRecord :: Monad m => M m (WithTextPos View)
+makeEmptyRecord :: (MonadReader env m, TextView.HasStyle env) => M m (WithTextPos View)
 makeEmptyRecord = text "Ø"
 
-makeTag :: Monad m => T.Tag -> M m (WithTextPos View)
+makeTag ::
+    (MonadTransaction n m, MonadReader env m, TextView.HasStyle env) =>
+    T.Tag -> M m (WithTextPos View)
 makeTag tag =
     Anchors.assocNameRef tag & Transaction.getP & transaction
     >>= text
 
-makeField :: Monad m => (T.Tag, Type) -> M m [Aligned View]
+makeField ::
+    ( MonadTransaction n m, MonadReader env m, TextView.HasStyle env
+    , HasTheme env, Spacer.HasStdSpacing env
+    ) => (T.Tag, Type) -> M m [Aligned View]
 makeField (tag, fieldType) =
     sequence
     [ makeTag tag <&> toAligned 1
@@ -166,13 +182,16 @@ makeField (tag, fieldType) =
     , splitMake (Precedence.parent 0) fieldType <&> toAligned 0
     ]
 
-makeSumField :: Monad m => (T.Tag, Type) -> M m [Aligned View]
+makeSumField ::
+    ( MonadReader env m, TextView.HasStyle env, Spacer.HasStdSpacing env
+    , MonadTransaction n m, HasTheme env
+    ) => (T.Tag, Type) -> M m [Aligned View]
 makeSumField (tag, T.TRecord T.CEmpty) =
     makeTag tag <&> toAligned 1 <&> (:[])
 makeSumField (tag, fieldType) = makeField (tag, fieldType)
 
 makeComposite ::
-    Monad m =>
+    (MonadReader env m, TextView.HasStyle env, HasTheme env) =>
     ((T.Tag, Type) -> M m [Aligned View]) -> T.Composite t -> M m (WithTextPos View)
 makeComposite _ T.CEmpty = makeEmptyRecord
 makeComposite mkField composite =
@@ -198,10 +217,16 @@ makeComposite mkField composite =
     where
         (fields, extension) = composite ^. orderedFlatComposite
 
-splitMake :: Monad m => ParentPrecedence -> Type -> M m (WithTextPos View)
+splitMake ::
+    ( MonadReader env m, TextView.HasStyle env, HasTheme env
+    , Spacer.HasStdSpacing env, MonadTransaction n m
+    ) => ParentPrecedence -> Type -> M m (WithTextPos View)
 splitMake parentPrecedence typ = split $ makeInternal parentPrecedence typ
 
-makeInternal :: Monad m => ParentPrecedence -> Type -> M m (WithTextPos View)
+makeInternal ::
+    ( MonadReader env m, TextView.HasStyle env, Spacer.HasStdSpacing env
+    , HasTheme env, MonadTransaction n m
+    ) =>  ParentPrecedence -> Type -> M m (WithTextPos View)
 makeInternal parentPrecedence typ =
     case typ of
     T.TVar var -> makeTVar var
@@ -214,7 +239,11 @@ makeInternal parentPrecedence typ =
         ] & sequenceA
         <&> hbox
 
-make :: Monad m => Type -> AnimId -> ExprGuiM m (WithTextPos View)
+make ::
+    ( MonadReader env m, HasTheme env, Spacer.HasStdSpacing env
+    , MonadTransaction n m
+    ) =>
+    Type -> AnimId -> m (WithTextPos View)
 make t prefix =
     do
         typeTint <- Lens.view Theme.theme <&> Theme.typeTint

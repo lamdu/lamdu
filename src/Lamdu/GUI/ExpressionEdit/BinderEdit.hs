@@ -216,8 +216,8 @@ makeScopeNavEdit binder myId curCursor =
                     Just _ -> Theme.grammarColor theme
                 )
         Config.Eval{..} <- Lens.view Config.config <&> Config.eval
-        settings <- ExprGuiM.readSettings
-        case settings ^. CESettings.sInfoMode of
+        Lens.view (CESettings.settings . CESettings.sInfoMode)
+            >>= \case
             CESettings.Evaluation ->
                 (Widget.makeFocusableView ?? myId)
                 <*> (mapM mkArrow scopes <&> Glue.hbox)

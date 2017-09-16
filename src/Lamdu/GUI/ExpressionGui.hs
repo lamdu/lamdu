@@ -35,6 +35,7 @@ module Lamdu.GUI.ExpressionGui
 
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
+import           Control.Monad.Transaction (MonadTransaction)
 import           Data.Binary.Utils (encodeS)
 import           Data.CurAndPrev (CurAndPrev(..), CurPrevTag(..), curPrevTag, fallbackToPrev)
 import qualified Data.List.Utils as ListUtils
@@ -91,7 +92,7 @@ import           Lamdu.Prelude
 type T = Transaction
 
 addAnnotationBackgroundH ::
-    (MonadReader env m, Theme.HasTheme env, Element a) =>
+    (MonadReader env m, HasTheme env, Element a) =>
     (Theme.ValAnnotation -> Draw.Color) -> AnimId -> m (a -> a)
 addAnnotationBackgroundH getColor animId =
     Lens.view theme <&>
@@ -100,10 +101,10 @@ addAnnotationBackgroundH getColor animId =
     where
         bgAnimId = animId ++ ["annotation background"]
 
-addAnnotationBackground :: (MonadReader env m, Theme.HasTheme env, Element a) => AnimId -> m (a -> a)
+addAnnotationBackground :: (MonadReader env m, HasTheme env, Element a) => AnimId -> m (a -> a)
 addAnnotationBackground = addAnnotationBackgroundH Theme.valAnnotationBGColor
 
-addAnnotationHoverBackground :: (MonadReader env m, Theme.HasTheme env, Element a) => AnimId -> m (a -> a)
+addAnnotationHoverBackground :: (MonadReader env m, HasTheme env, Element a) => AnimId -> m (a -> a)
 addAnnotationHoverBackground = addAnnotationBackgroundH Theme.valAnnotationHoverBGColor
 
 data WideAnnotationBehavior
@@ -118,9 +119,9 @@ wideAnnotationBehaviorFromSelected True = HoverWideAnnotation
 -- NOTE: Also adds the background color, because it differs based on
 -- whether we're hovering
 applyWideAnnotationBehavior ::
-    Monad m =>
+    (MonadReader env m, HasTheme env) =>
     AnimId -> WideAnnotationBehavior ->
-    ExprGuiM m (Vector2 Widget.R -> View -> View)
+    m (Vector2 Widget.R -> View -> View)
 applyWideAnnotationBehavior animId KeepWideAnnotation =
     addAnnotationBackground animId <&> const
 applyWideAnnotationBehavior animId ShrinkWideAnnotation =
@@ -140,9 +141,9 @@ applyWideAnnotationBehavior animId HoverWideAnnotation =
                 & (`View.hoverInPlaceOf` shrinker shrinkRatio layout)
 
 processAnnotationGui ::
-    Monad m =>
+    (MonadReader env m, HasTheme env, Spacer.HasStdSpacing env) =>
     AnimId -> WideAnnotationBehavior ->
-    ExprGuiM m (Widget.R -> View -> View)
+    m (Widget.R -> View -> View)
 processAnnotationGui animId wideAnnotationBehavior =
     f
     <$> (Lens.view theme <&> Theme.valAnnotation)
@@ -235,15 +236,22 @@ makeEvalView mNeighbours evalRes animId =
             & Element.setLayers <>~ Element.translateLayers nextPos (next ^. View.vAnimLayers)
             & return
 
-annotationSpacer :: Monad m => ExprGuiM m View
-annotationSpacer = ExprGuiM.vspacer (Theme.valAnnotationSpacing . Theme.valAnnotation)
+annotationSpacer ::
+    (MonadReader env m, HasTheme env, TextView.HasStyle env) => m View
+annotationSpacer =
+    Lens.view Theme.theme
+    <&> Theme.valAnnotation
+    <&> Theme.valAnnotationSpacing
+    >>= Spacer.vspaceLines
 
 addAnnotationH ::
-    (Functor f, Monad m) =>
+    ( Functor f, MonadReader env m, HasTheme env
+    , TextView.HasStyle env, Spacer.HasStdSpacing env
+    ) =>
     Widget.R ->
-    (AnimId -> ExprGuiM m (WithTextPos View)) ->
+    (AnimId -> m (WithTextPos View)) ->
     WideAnnotationBehavior -> AnimId ->
-    ExprGuiM m
+    m
     (Responsive (f Widget.EventResult) ->
      Responsive (f Widget.EventResult))
 addAnnotationH minWidth f wideBehavior animId =
@@ -259,9 +267,11 @@ addAnnotationH minWidth f wideBehavior animId =
         return $ Responsive.alignedWidget %~ onAlignedWidget
 
 addInferredType ::
-    (Functor f, Monad m) =>
+    ( Functor f, MonadReader env m, Spacer.HasStdSpacing env, HasTheme env
+    , MonadTransaction n m
+    ) =>
     Type -> WideAnnotationBehavior -> AnimId ->
-    ExprGuiM m (Responsive (f Widget.EventResult) -> Responsive (f Widget.EventResult))
+    m (Responsive (f Widget.EventResult) -> Responsive (f Widget.EventResult))
 addInferredType typ = addAnnotationH 0 (TypeView.make typ)
 
 addEvaluationResult ::
@@ -322,14 +332,17 @@ addDiagonal =
     & Anim.scale sz
     & flip mappend
 
-addDeletionDiagonal :: (Monad m, Element a) => ExprGuiM m (Widget.R -> a -> a)
+addDeletionDiagonal ::
+    (MonadReader env m, Element a, Element.HasAnimIdPrefix env, HasTheme env) =>
+    m (Widget.R -> a -> a)
 addDeletionDiagonal =
     addDiagonal <*> (Lens.view Theme.theme <&> Theme.typeIndicatorErrorColor)
 
 makeNameOriginEdit ::
-    Monad m =>
-    Name m -> Draw.Color -> Widget.Id ->
-    ExprGuiM m (WithTextPos (Widget (T m Widget.EventResult)))
+    (Monad m, MonadReader env f, Widget.HasCursor env, HasTheme env
+    , Element.HasAnimIdPrefix env, Style.HasStyle env
+    ) => Name m -> Draw.Color -> Widget.Id ->
+    f (WithTextPos (Widget (T m Widget.EventResult)))
 makeNameOriginEdit name color myId =
     ( FocusDelegator.make ?? nameEditFDConfig
       ?? FocusDelegator.FocusEntryParent ?? myId
@@ -337,10 +350,13 @@ makeNameOriginEdit name color myId =
     ) <*> makeNameEdit name (WidgetIds.nameEditOf myId)
     & styleNameOrigin name color
 
-styleNameOrigin :: Monad m => Name n -> Draw.Color -> ExprGuiM m b -> ExprGuiM m b
+styleNameOrigin ::
+    ( MonadReader env m
+    , Style.HasStyle env
+    ) => Name n -> Draw.Color -> m b -> m b
 styleNameOrigin name color act =
     do
-        style <- ExprGuiM.readStyle
+        style <- Lens.view Style.style
         let textEditStyle =
                 style
                 ^. case name ^. Name.form of
@@ -352,9 +368,9 @@ styleNameOrigin name color act =
 
 -- | A name edit without the collision suffixes
 makeBareNameEdit ::
-    Monad m =>
+    (Monad m, TextEdit.HasStyle env, Widget.HasCursor env, MonadReader env f) =>
     Name m -> Widget.Id ->
-    ExprGuiM m (WithTextPos (Widget (T m Widget.EventResult)))
+    f (WithTextPos (Widget (T m Widget.EventResult)))
 makeBareNameEdit (Name form setName) myId =
     TextEdits.makeWordEdit
     ?? TextEdit.EmptyStrings visibleName ""
@@ -366,9 +382,11 @@ makeBareNameEdit (Name form setName) myId =
         storedName = form ^. Name._Stored . _1
 
 makeNameEdit ::
-    Monad m =>
-    Name m -> Widget.Id ->
-    ExprGuiM m (WithTextPos (Widget (T m Widget.EventResult)))
+    ( Monad m
+    , MonadReader env f, TextEdit.HasStyle env, Element.HasAnimIdPrefix env
+    , HasTheme env, Widget.HasCursor env
+    ) => Name m -> Widget.Id ->
+    f (WithTextPos (Widget (T m Widget.EventResult)))
 makeNameEdit name myId =
     do
         mCollisionSuffix <- makeCollisionSuffixLabel mCollision
@@ -403,8 +421,9 @@ stdWrap pl act =
             | otherwise = E.weakerEvents
 
 parentDelegator ::
-    (MonadReader env m, Config.HasConfig env, Widget.HasCursor env, Applicative f) =>
-    Widget.Id -> m (Responsive (f Widget.EventResult) -> Responsive (f Widget.EventResult))
+    ( MonadReader env m, Config.HasConfig env, Widget.HasCursor env, Applicative f
+    ) => Widget.Id ->
+    m (Responsive (f Widget.EventResult) -> Responsive (f Widget.EventResult))
 parentDelegator myId =
     FocusDelegator.make <*> (Lens.view Config.config <&> parentExprFDConfig)
     ?? FocusDelegator.FocusEntryChild ?? WidgetIds.notDelegatingId myId
@@ -427,7 +446,7 @@ stdWrapParentExpr pl delegateTo mkGui =
 
 grammarLabel ::
     ( MonadReader env m
-    , Theme.HasTheme env
+    , HasTheme env
     , TextView.HasStyle env
     , Element.HasAnimIdPrefix env
     ) => Text -> m (WithTextPos View)
@@ -437,20 +456,27 @@ grammarLabel text =
         TextView.makeLabel text
             & Reader.local (TextView.color .~ Theme.grammarColor th)
 
-addValBG :: (Monad m, Element a) => ExprGuiM m (a -> a)
+addValBG ::
+    ( MonadReader env m, Element a
+    , Element.HasAnimIdPrefix env, HasTheme env
+    ) => m (a -> a)
 addValBG = addValBGWithColor Theme.valFrameBGColor
 
 addValBGWithColor ::
-    (Monad m, Element a) =>
-    (Theme -> Draw.Color) -> ExprGuiM m (a -> a)
-addValBGWithColor color = Draw.backgroundColor <*> (Lens.view Theme.theme <&> color)
+    ( MonadReader env m, Element a
+    , Element.HasAnimIdPrefix env, HasTheme env
+    ) => (Theme -> Draw.Color) -> m (a -> a)
+addValBGWithColor color =
+    Draw.backgroundColor <*> (Lens.view Theme.theme <&> color)
 
-addValPadding :: (Monad m, Element a) => ExprGuiM m (a -> a)
+addValPadding :: (MonadReader env m, Element a, HasTheme env) => m (a -> a)
 addValPadding =
     Lens.view Theme.theme <&> Theme.valFramePadding <&> fmap realToFrac
     <&> Element.pad
 
-addValFrame :: (Monad m, Element a) => ExprGuiM m (a -> a)
+addValFrame ::
+    ( MonadReader env m, Element a, Element.HasAnimIdPrefix env, HasTheme env
+    ) => m (a -> a)
 addValFrame =
     (.)
     <$> addValBG
@@ -458,7 +484,10 @@ addValFrame =
     & Reader.local (Element.animIdPrefix <>~ ["val"])
 
 -- TODO: This doesn't belong here
-makeNameView :: Monad m => Name.Form -> AnimId -> ExprGuiM m (WithTextPos View)
+makeNameView ::
+    ( HasTheme r, Element.HasAnimIdPrefix r
+    , TextView.HasStyle r, MonadReader r m
+    ) => Name.Form -> AnimId -> m (WithTextPos View)
 makeNameView name animId =
     do
         mSuffixLabel <-
@@ -472,7 +501,10 @@ makeNameView name animId =
         (visibleName, mCollision) = Name.visible name
 
 -- TODO: This doesn't belong here
-makeCollisionSuffixLabel :: Monad m => Name.Collision -> ExprGuiM m (Maybe View)
+makeCollisionSuffixLabel ::
+    ( TextView.HasStyle r, Element.HasAnimIdPrefix r, HasTheme r
+    , MonadReader r m
+    ) => Name.Collision -> m (Maybe View)
 makeCollisionSuffixLabel mCollision =
     case mCollision of
     Name.NoCollision -> return Nothing
@@ -533,14 +565,13 @@ data AnnotationMode
 
 getAnnotationMode :: Monad m => EvalAnnotationOptions -> Sugar.Annotation -> ExprGuiM m AnnotationMode
 getAnnotationMode opt annotation =
-    do
-        settings <- ExprGuiM.readSettings
-        case settings ^. CESettings.sInfoMode of
-            CESettings.None -> return AnnotationModeNone
-            CESettings.Types -> return AnnotationModeTypes
-            CESettings.Evaluation ->
-                ExprGuiM.readMScopeId <&> valOfScope annotation
-                <&> maybe AnnotationModeNone (AnnotationModeEvaluation neighbourVals)
+    Lens.view (CESettings.settings . CESettings.sInfoMode)
+    >>= \case
+    CESettings.None -> return AnnotationModeNone
+    CESettings.Types -> return AnnotationModeTypes
+    CESettings.Evaluation ->
+        ExprGuiM.readMScopeId <&> valOfScope annotation
+        <&> maybe AnnotationModeNone (AnnotationModeEvaluation neighbourVals)
     where
         neighbourVals =
             case opt of

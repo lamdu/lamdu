@@ -1,6 +1,6 @@
 {-# LANGUAGE NoImplicitPrelude, GeneralizedNewtypeDeriving, TemplateHaskell, OverloadedStrings, MultiParamTypeClasses, FlexibleInstances, FlexibleContexts #-}
 module Lamdu.GUI.ExpressionGui.Monad
-    ( ExprGuiM, Askable
+    ( ExprGuiM
     , StoredEntityIds(..)
     , withLocalUnderline
     --
@@ -8,9 +8,8 @@ module Lamdu.GUI.ExpressionGui.Monad
     , makeSubexpressionWith
     , advanceDepth, resetDepth
     --
-    , readMinOpPrec, readSettings, readStyle
+    , readMinOpPrec
     , readCodeAnchors, mkPrejumpPosSaver
-    , vspacer
     --
     , readMScopeId, withLocalMScopeId
     , isExprSelected
@@ -51,7 +50,7 @@ import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
 import qualified GUI.Momentu.Widgets.TextView as TextView
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
-import           Lamdu.Config.Theme (Theme)
+import           Lamdu.Config.Theme (Theme, HasTheme)
 import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Ops as DataOps
@@ -136,19 +135,16 @@ instance TextEdit.HasStyle (Askable m) where style = aTextEditStyle
 instance Spacer.HasStdSpacing (Askable m) where stdSpacing = aStdSpacing
 instance Element.HasAnimIdPrefix (Askable m) where animIdPrefix = aAnimIdPrefix
 instance Config.HasConfig (Askable m) where config = aConfig
-instance Theme.HasTheme (Askable m) where theme = aTheme
+instance HasTheme (Askable m) where theme = aTheme
 instance ResponsiveExpr.HasStyle (Askable m) where style = aTheme . ResponsiveExpr.style
 instance Menu.HasStyle (Askable m) where style = aTheme . Menu.style
 instance Hover.HasStyle (Askable m) where style = aTheme . Hover.style
+instance HasStyle (Askable m) where style = aStyle
+instance HasSettings (Askable m) where settings = aSettings
 
-withLocalUnderline :: Monad m => TextView.Underline -> ExprGuiM m a -> ExprGuiM m a
+withLocalUnderline ::
+    (MonadReader env m, TextView.HasStyle env) => TextView.Underline -> m a -> m a
 withLocalUnderline underline = Reader.local (TextView.underline ?~ underline)
-
-readStyle :: Monad m => ExprGuiM m Style
-readStyle = Lens.view aStyle
-
-readSettings :: Monad m => ExprGuiM m Settings
-readSettings = Lens.view aSettings
 
 readMinOpPrec :: Monad m => ExprGuiM m Int
 readMinOpPrec = Lens.view aMinOpPrecedence
@@ -159,10 +155,6 @@ readCodeAnchors = Lens.view aCodeAnchors
 mkPrejumpPosSaver :: Monad m => ExprGuiM m (T m ())
 mkPrejumpPosSaver =
     DataOps.savePreJumpPosition <$> readCodeAnchors <*> Lens.view Widget.cursor
-
--- | Vertical spacer as ratio of line height
-vspacer :: Monad m => (Theme -> Double) -> ExprGuiM m View
-vspacer themeGetter = Lens.view Theme.theme <&> themeGetter >>= Spacer.vspaceLines
 
 makeSubexpression ::
     Monad m =>
@@ -198,7 +190,7 @@ advanceDepth f animId action =
 run ::
     ( MonadTransaction m n, MonadReader env n
     , Widget.HasCursor env, Spacer.HasStdSpacing env
-    , Config.HasConfig env, Theme.HasTheme env
+    , Config.HasConfig env, HasTheme env
     , HasSettings env, HasStyle env
     ) =>
     (ExprGuiT.SugarExpr m -> ExprGuiM m (ExpressionGui m)) ->

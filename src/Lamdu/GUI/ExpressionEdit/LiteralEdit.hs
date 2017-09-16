@@ -3,6 +3,7 @@ module Lamdu.GUI.ExpressionEdit.LiteralEdit
     ( make
     ) where
 
+import           Control.Lens (LensLike')
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
 import qualified Data.Store.Property as Property
@@ -28,7 +29,6 @@ import           Lamdu.GUI.ExpressionEdit.HoleEdit.State (HoleState(..), setHole
 import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
-import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Style (Style)
@@ -52,11 +52,12 @@ mkEditEventMap valText setToHole =
 
 genericEdit ::
     (Monad m, Format a) =>
-    (Style -> TextEdit.Style) -> Transaction.Property m a ->
+    LensLike' (Lens.Const TextEdit.Style) Style TextEdit.Style ->
+    Transaction.Property m a ->
     Sugar.Payload m ExprGuiT.Payload -> ExprGuiM m (ExpressionGui m)
-genericEdit getStyle prop pl =
+genericEdit whichStyle prop pl =
     do
-        style <- ExprGuiM.readStyle <&> getStyle
+        style <- Lens.view Style.style <&> (^. whichStyle)
         TextView.makeFocusable ?? valText ?? myId
             & Reader.local (TextEdit.style .~ style)
             <&> Align.tValue %~ E.weakerEvents editEventMap
@@ -85,7 +86,7 @@ textEdit ::
 textEdit prop pl =
     do
         config <- Lens.view Config.config <&> Config.literalText
-        style <- ExprGuiM.readStyle <&> (^. Style.styleText)
+        style <- Lens.view (Style.style . Style.styleText)
         do
             left <- TextView.makeLabel "“"
             text <- TextEdits.make ?? empty ?? prop ?? innerId
@@ -110,7 +111,7 @@ make ::
     ExprGuiM m (ExpressionGui m)
 make lit pl =
     case lit of
-    Sugar.LiteralNum x -> genericEdit (^. Style.styleNum) x pl
-    Sugar.LiteralBytes x -> genericEdit (^. Style.styleBytes) x pl
+    Sugar.LiteralNum x -> genericEdit Style.styleNum x pl
+    Sugar.LiteralBytes x -> genericEdit Style.styleBytes x pl
     Sugar.LiteralText x -> textEdit x pl <&> Responsive.fromWithTextPos
     & ExpressionGui.stdWrap pl
