@@ -43,6 +43,7 @@ import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
+import qualified Lamdu.GUI.NameEdit as NameEdit
 import qualified Lamdu.GUI.ParamEdit as ParamEdit
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.Sugar.Lens as SugarLens
@@ -69,7 +70,7 @@ makeBinderNameEdit ::
 makeBinderNameEdit binderActions rhsJumperEquals name color myId =
     do
         config <- Lens.view Config.config
-        ExpressionGui.makeNameOriginEdit name color myId
+        NameEdit.makeAtBinder name color myId
             <&> jumpToRHSViaEquals
             <&> Align.tValue %~ E.weakerEvents
                 (ParamEdit.eventMapAddFirstParam config
@@ -536,7 +537,7 @@ makeParamsEdit annotationOpts nearestHoles delVarBackwardsId lhsId rhsId params 
                 >>= fromParamList ExprGuiT.alwaysShowAnnotations delVarBackwardsId rhsId
                 where
                     onFpInfo x =
-                        ExpressionGui.makeNameOriginEdit (x ^. Sugar.vpiName) paramColor widgetId
+                        NameEdit.makeAtBinder (x ^. Sugar.vpiName) paramColor widgetId
                         <&> namedParamEditInfo widgetId (x ^. Sugar.vpiActions)
                         where
                             widgetId = x ^. Sugar.vpiId & WidgetIds.fromEntityId
@@ -546,7 +547,7 @@ makeParamsEdit annotationOpts nearestHoles delVarBackwardsId lhsId rhsId params 
                 >>= fromParamList ExprGuiT.alwaysShowAnnotations lhsId rhsId
                 where
                     onFpInfo x =
-                        ExpressionGui.makeNameOriginEdit (x ^. Sugar.fpiTag . Sugar.tagName) paramColor widgetId
+                        NameEdit.makeAtBinder (x ^. Sugar.fpiTag . Sugar.tagName) paramColor widgetId
                         <&> namedParamEditInfo widgetId (x ^. Sugar.fpiActions)
                         where
                             widgetId =

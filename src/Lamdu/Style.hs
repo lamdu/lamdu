@@ -5,7 +5,7 @@ module Lamdu.Style
     , HasStyle(..)
     , mainLoopConfig
 
-    , styleBase, styleAutoNameOrigin, styleNameOrigin
+    , styleBase, styleAutoNameOrigin, styleNameAtBinder
     , styleBytes, styleText, styleNum
     ) where
 
@@ -30,7 +30,7 @@ import           Lamdu.Prelude
 data Style = Style
     { _styleBase :: TextEdit.Style
     , _styleAutoNameOrigin :: TextEdit.Style
-    , _styleNameOrigin :: TextEdit.Style
+    , _styleNameAtBinder :: TextEdit.Style
     , _styleBytes :: TextEdit.Style
     , _styleText :: TextEdit.Style
     , _styleNum :: TextEdit.Style
@@ -72,7 +72,7 @@ makeStyle config fonts =
       textEdit (Theme.baseColor config) (Fonts.fontDefault fonts)
     , _styleAutoNameOrigin =
       textEdit (Theme.baseColor config) (Fonts.fontAutoName fonts)
-    , _styleNameOrigin =
+    , _styleNameAtBinder =
       textEdit (Theme.baseColor config) (Fonts.fontBinders fonts)
     , _styleBytes =
       textEdit (Theme.literalColor config) (Fonts.fontLiteralBytes fonts)

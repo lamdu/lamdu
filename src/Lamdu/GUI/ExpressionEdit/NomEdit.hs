@@ -21,6 +21,7 @@ import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
+import qualified Lamdu.GUI.NameEdit as NameEdit
 import qualified Lamdu.GUI.Precedence as Prec
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.Sugar.Lens as SugarLens
@@ -91,7 +92,7 @@ mkNomGui ordering nomStr str mDel valId pl (Sugar.Nominal tid val) =
                 do
                     label <- ExpressionGui.grammarLabel str
                     nameGui <-
-                        ExpressionGui.makeNameView
+                        NameEdit.makeView
                         (tid ^. Sugar.tidName . Name.form)
                         (Widget.toAnimId nameId)
                     Widget.makeFocusableView ?? nameId

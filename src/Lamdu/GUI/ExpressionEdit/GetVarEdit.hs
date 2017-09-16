@@ -30,6 +30,7 @@ import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
 import qualified Lamdu.GUI.LightLambda as LightLambda
+import qualified Lamdu.GUI.NameEdit as NameEdit
 import qualified Lamdu.GUI.TypeView as TypeView
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Sugar.Names.Types (Name(..))
@@ -45,7 +46,7 @@ makeSimpleView ::
     ExprGuiM m (WithTextPos (Widget (f Widget.EventResult)))
 makeSimpleView (Name name _) myId =
     (Widget.makeFocusableView ?? myId <&> (Align.tValue %~))
-    <*> ExpressionGui.makeNameView name (Widget.toAnimId myId)
+    <*> NameEdit.makeView name (Widget.toAnimId myId)
 
 makeParamsRecord ::
     Monad m => Widget.Id -> Sugar.ParamsRecordVar (Name m) ->
@@ -197,7 +198,7 @@ makeGetParam param myId =
             Sugar.LightLambda ->
                 makeSimpleView
                 <&> Lens.mapped %~ LightLambda.withUnderline theme
-                <&> Lens.mapped %~ ExpressionGui.styleNameOrigin name paramColor
+                <&> Lens.mapped %~ NameEdit.styleNameAtBinder name paramColor
             _ ->
                 makeSimpleView
                 <&> Lens.mapped %~ Reader.local (TextView.color .~ paramColor)

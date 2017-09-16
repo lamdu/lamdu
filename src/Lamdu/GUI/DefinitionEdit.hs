@@ -30,6 +30,7 @@ import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import           Lamdu.GUI.ExpressionGui.Types (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
+import qualified Lamdu.GUI.NameEdit as NameEdit
 import qualified Lamdu.GUI.TypeView as TypeView
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Sugar.Names.Types (Name(..), DefinitionN)
@@ -73,7 +74,7 @@ makeBuiltinDefinition ::
 makeBuiltinDefinition def builtin =
     do
         defColor <- Lens.view Theme.theme <&> Theme.name <&> Theme.definitionColor
-        nameEdit <- ExpressionGui.makeNameOriginEdit name defColor (Widget.joinId myId ["name"])
+        nameEdit <- NameEdit.makeAtBinder name defColor (Widget.joinId myId ["name"])
         equals <- TextView.makeLabel " = "
         builtinEdit <- BuiltinEdit.make builtin myId
         typeView <- topLevelSchemeTypeView (builtin ^. Sugar.biType) entityId ["builtinType"]

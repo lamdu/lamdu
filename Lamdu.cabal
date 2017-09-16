@@ -212,6 +212,7 @@ Executable lamdu
                   , Lamdu.GUI.ExpressionGui.Types
                   , Lamdu.GUI.LightLambda
                   , Lamdu.GUI.Main
+                  , Lamdu.GUI.NameEdit
                   , Lamdu.GUI.ParamEdit
                   , Lamdu.GUI.Precedence
                   , Lamdu.GUI.RedundantAnnotations

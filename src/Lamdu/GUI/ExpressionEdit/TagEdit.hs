@@ -32,7 +32,7 @@ import qualified Lamdu.Config as Config
 import           Lamdu.Config.Theme (HasTheme)
 import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
-import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
+import qualified Lamdu.GUI.NameEdit as NameEdit
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Sugar.Names.Types (Name(..))
 import qualified Lamdu.Sugar.Names.Types as Name
@@ -75,7 +75,7 @@ makeTagNameEdit nearestHoles tag =
                   (Widget.keysEventMapMovesCursor keys
                    (E.Doc ["Navigation", "Jump to next hole"]) .
                    return . WidgetIds.fromEntityId)
-        ExpressionGui.makeBareNameEdit
+        NameEdit.makeBareEdit
             (tag ^. Sugar.tagName & Name.setName .~ setTagName tag)
             (tagRenameId myId)
             <&> Align.tValue . E.eventMap %~ E.filterChars (/= ',')
@@ -139,7 +139,7 @@ makeOptions fixCursor nearestHoles tag searchTerm
                     (tag ^. Sugar.tagActions . Sugar.taChangeTag) t
                     & makePickEventMap nearestHoles tag (E.Doc ["Edit", "Tag", "Select"])
                 (Widget.makeFocusableView <*> Widget.makeSubId optionId <&> fmap)
-                    <*> ExpressionGui.makeNameView (name ^. Name.form) optionId
+                    <*> NameEdit.makeView (name ^. Name.form) optionId
                     <&> Align.tValue %~ E.weakerEvents eventMap
             <&> Align.tValue . Lens.mapped . Lens.mapped %~ fixCursor
             where
@@ -225,7 +225,7 @@ makeTagEdit mode tagColor nearestHoles tag =
                 WithoutTagHoles -> mempty
         nameView <-
             (Widget.makeFocusableView ?? viewId <&> fmap) <*>
-            ExpressionGui.makeNameView (tag ^. Sugar.tagName . Name.form) (Widget.toAnimId myId)
+            NameEdit.makeView (tag ^. Sugar.tagName . Name.form) (Widget.toAnimId myId)
             <&> Lens.mapped %~ E.weakerEvents eventMap
         let hover = Hover.hoverBeside Align.tValue ?? nameView
         widget <-
@@ -277,7 +277,7 @@ makeArgTag ::
 makeArgTag name entityId =
     do
         theme <- Lens.view Theme.theme <&> Theme.name
-        ExpressionGui.makeNameView (name ^. Name.form) animId
+        NameEdit.makeView (name ^. Name.form) animId
             & Reader.local (TextView.color .~ Theme.paramTagColor theme)
     where
         animId = WidgetIds.fromEntityId entityId & Widget.toAnimId
