@@ -98,19 +98,18 @@ tagId tag = tag ^. Sugar.tagInfo . Sugar.tagInstance & WidgetIds.fromEntityId
 
 makePickEventMap ::
     (Functor f, Config.HasConfig env, MonadReader env m) =>
-    NearestHoles -> Sugar.Tag name n -> E.Doc -> f b ->
+    NearestHoles -> E.Doc -> f Widget.Id ->
     m (Widget.EventMap (f Widget.EventResult))
-makePickEventMap nearestHoles tag doc action =
+makePickEventMap nearestHoles doc action =
     Lens.view Config.config <&> Config.hole <&>
     \config ->
     let pickKeys = Config.holePickResultKeys config
         jumpNextKeys = Config.holePickAndMoveToNextHoleKeys config
-        actionAndClose = tagId tag <$ action
     in
     case nearestHoles ^. NearestHoles.next of
-    Nothing -> Widget.keysEventMapMovesCursor (pickKeys <> jumpNextKeys) doc actionAndClose
+    Nothing -> Widget.keysEventMapMovesCursor (pickKeys <> jumpNextKeys) doc action
     Just nextHole ->
-        Widget.keysEventMapMovesCursor pickKeys doc actionAndClose
+        Widget.keysEventMapMovesCursor pickKeys doc action
         <> Widget.keysEventMapMovesCursor jumpNextKeys
             (doc & E.docStrs . Lens.reversed . Lens.ix 0 %~ (<> " and jump to next hole"))
             (WidgetIds.fromEntityId nextHole <$ action)
@@ -137,7 +136,9 @@ makeOptions fixCursor nearestHoles tag searchTerm
             do
                 eventMap <-
                     (tag ^. Sugar.tagActions . Sugar.taChangeTag) t
-                    & makePickEventMap nearestHoles tag (E.Doc ["Edit", "Tag", "Select"])
+                    <&> (^. Sugar.tagInstance)
+                    <&> WidgetIds.fromEntityId
+                    & makePickEventMap nearestHoles (E.Doc ["Edit", "Tag", "Select"])
                 (Widget.makeFocusableView <*> Widget.makeSubId optionId <&> fmap)
                     <*> NameEdit.makeView (name ^. Name.form) optionId
                     <&> Align.tValue %~ E.weakerEvents eventMap
@@ -156,8 +157,8 @@ makeTagHoleEditH ::
 makeTagHoleEditH nearestHoles tag searchTerm updateState fixCursor =
     do
         setNameEventMap <-
-            setTagName tag searchTerm
-            & makePickEventMap nearestHoles tag (E.Doc ["Edit", "Tag", "Set name"])
+            tagId tag <$ setTagName tag searchTerm
+            & makePickEventMap nearestHoles (E.Doc ["Edit", "Tag", "Set name"])
         term <-
             TextEdit.make ?? textEditNoEmpty ?? searchTerm ?? searchTermId
             <&> Align.tValue . Lens.mapped %~ pure . uncurry updateState
