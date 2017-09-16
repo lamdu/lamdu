@@ -27,11 +27,12 @@ import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
 import qualified GUI.Momentu.Widgets.TextView as TextView
+import           Lamdu.Config (HasConfig)
 import qualified Lamdu.Config as Config
+import           Lamdu.Config.Theme (HasTheme)
 import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
-import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Sugar.Names.Types (Name(..))
 import qualified Lamdu.Sugar.Names.Types as Name
@@ -59,9 +60,11 @@ setTagName tag name =
         (tag ^. Sugar.tagActions . Sugar.taSetPublished) (not (Text.null name))
 
 makeTagNameEdit ::
-    Monad m =>
+    ( Monad m, MonadReader env f, HasConfig env, TextEdit.HasStyle env
+    , Widget.HasCursor env
+    ) =>
     NearestHoles -> Sugar.Tag (Name m) m ->
-    ExprGuiM m (WithTextPos (Widget (T m Widget.EventResult)))
+    f (WithTextPos (Widget (T m Widget.EventResult)))
 makeTagNameEdit nearestHoles tag =
     do
         config <- Lens.view Config.config <&> Config.hole
@@ -113,9 +116,11 @@ makePickEventMap nearestHoles tag doc action =
             (WidgetIds.fromEntityId nextHole <$ action)
 
 makeOptions ::
-    Monad m =>
+    ( Monad m, MonadTransaction m f, MonadReader env f, Widget.HasCursor env
+    , HasConfig env, HasTheme env, Element.HasAnimIdPrefix env, TextView.HasStyle env
+    ) =>
     (Widget.EventResult -> a) -> NearestHoles -> Sugar.Tag (Name n) m -> Text ->
-    ExprGuiM m [WithTextPos (Widget (T m a))]
+    f [WithTextPos (Widget (T m a))]
 makeOptions fixCursor nearestHoles tag searchTerm
     | Text.null searchTerm = pure []
     | otherwise =
@@ -137,10 +142,13 @@ makeOptions fixCursor nearestHoles tag searchTerm
                 optionId = Widget.toAnimId (WidgetIds.hash t)
 
 makeTagHoleEditH ::
-    Monad m =>
+    ( Monad m, MonadTransaction m f, MonadReader env f, HasConfig env
+    , TextEdit.HasStyle env, Widget.HasCursor env, Element.HasAnimIdPrefix env
+    , HasTheme env, Hover.HasStyle env
+    ) =>
     NearestHoles -> Sugar.Tag (Name m) m ->
     Text -> (Text -> Widget.EventResult -> Widget.EventResult) -> (Widget.EventResult -> Widget.EventResult) ->
-    ExprGuiM m (WithTextPos (Widget (T m Widget.EventResult)))
+    f (WithTextPos (Widget (T m Widget.EventResult)))
 makeTagHoleEditH nearestHoles tag searchTerm updateState fixCursor =
     do
         setNameEventMap <-
@@ -174,7 +182,11 @@ makeTagHoleEditH nearestHoles tag searchTerm updateState fixCursor =
         textEditNoEmpty = TextEdit.EmptyStrings "" ""
 
 makeTagHoleEdit ::
-    Monad m => NearestHoles -> Sugar.Tag (Name m) m -> ExprGuiM m (WithTextPos (Widget (T m Widget.EventResult)))
+    ( Monad m, MonadReader env f, MonadTransaction m f, Widget.HasCursor env
+    , HasConfig env, TextEdit.HasStyle env, Element.HasAnimIdPrefix env
+    , HasTheme env, Hover.HasStyle env
+    ) => NearestHoles -> Sugar.Tag (Name m) m ->
+    f (WithTextPos (Widget (T m Widget.EventResult)))
 makeTagHoleEdit nearestHoles tag =
     cursorState myId "" (makeTagHoleEditH nearestHoles tag)
     where
@@ -183,9 +195,12 @@ makeTagHoleEdit nearestHoles tag =
 data Mode = WithTagHoles | WithoutTagHoles
 
 makeTagEdit ::
-    Monad m =>
+    ( Monad m, MonadReader env f, MonadTransaction m f, HasConfig env
+    , Widget.HasCursor env, HasTheme env, Element.HasAnimIdPrefix env
+    , TextEdit.HasStyle env, Hover.HasStyle env
+    ) =>
     Mode -> Draw.Color -> NearestHoles -> Sugar.Tag (Name m) m ->
-    ExprGuiM m (WithTextPos (Widget (T m Widget.EventResult)))
+    f (WithTextPos (Widget (T m Widget.EventResult)))
 makeTagEdit mode tagColor nearestHoles tag =
     do
         jumpHolesEventMap <- ExprEventMap.jumpHolesEventMap nearestHoles
@@ -227,25 +242,34 @@ makeTagEdit mode tagColor nearestHoles tag =
         viewId = tagViewId myId
 
 makeRecordTag ::
-    Monad m =>
+    ( Monad m, MonadReader env f, MonadTransaction m f, HasTheme env
+    , HasConfig env, Widget.HasCursor env, Element.HasAnimIdPrefix env
+    , TextEdit.HasStyle env, Hover.HasStyle env, HasTheme env
+    ) =>
     Mode -> NearestHoles -> Sugar.Tag (Name m) m ->
-    ExprGuiM m (WithTextPos (Widget (T m Widget.EventResult)))
+    f (WithTextPos (Widget (T m Widget.EventResult)))
 makeRecordTag mode nearestHoles tag =
     do
         theme <- Lens.view Theme.theme <&> Theme.name
         makeTagEdit mode (Theme.recordTagColor theme) nearestHoles tag
 
 makeCaseTag ::
-    Monad m =>
+    ( Monad m, MonadReader env f, MonadTransaction m f, HasTheme env
+    , HasConfig env, Widget.HasCursor env, Element.HasAnimIdPrefix env
+    , TextEdit.HasStyle env, Hover.HasStyle env, HasTheme env
+    ) =>
     Mode -> NearestHoles -> Sugar.Tag (Name m) m ->
-    ExprGuiM m (WithTextPos (Widget (T m Widget.EventResult)))
+    f (WithTextPos (Widget (T m Widget.EventResult)))
 makeCaseTag mode nearestHoles tag =
     do
         theme <- Lens.view Theme.theme <&> Theme.name
         makeTagEdit mode (Theme.caseTagColor theme) nearestHoles tag
 
 -- | Unfocusable tag view (e.g: in apply args)
-makeArgTag :: Monad m => Name m -> Sugar.EntityId -> ExprGuiM m (WithTextPos View)
+makeArgTag ::
+    ( MonadReader env f, HasTheme env, TextView.HasStyle env
+    , Element.HasAnimIdPrefix env
+    ) => Name m -> Sugar.EntityId -> f (WithTextPos View)
 makeArgTag name entityId =
     do
         theme <- Lens.view Theme.theme <&> Theme.name
