@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, TemplateHaskell, FlexibleContexts, OverloadedStrings, NamedFieldPuns, DisambiguateRecordFields #-}
+{-# LANGUAGE NoImplicitPrelude, TemplateHaskell, FlexibleContexts, OverloadedStrings, NamedFieldPuns, DisambiguateRecordFields, DeriveTraversable #-}
 module Lamdu.GUI.ExpressionEdit.HoleEdit.ResultGroups
     ( makeAll
     , Result(..)
@@ -107,31 +107,36 @@ makeResultsList holeInfo group =
             | otherwise = NotPreferred
         searchTerm = hiSearchTerm holeInfo
 
+data GoodAndBad a = GoodAndBad { _good :: a, _bad :: a }
+    deriving (Functor, Foldable, Traversable)
+Lens.makeLenses ''GoodAndBad
+
 collectResults :: Monad m => Config.Hole -> ListT m (ResultsList f) -> m ([ResultsList f], Menu.HasMoreOptions)
 collectResults Config.Hole{holeResultCount} resultsM =
     do
         (collectedResults, remainingResultsM) <-
-            ListClass.splitWhenM (return . (>= holeResultCount) . length . fst) $
-            ListClass.scanl step ([], []) resultsM
+            ListClass.scanl step (GoodAndBad [] []) resultsM
+            & ListClass.splitWhenM (return . (>= holeResultCount) . length . _good)
         remainingResults <- ListClass.toList $ ListClass.take 2 remainingResultsM
         let results =
                 last (collectedResults ++ remainingResults)
-                & Lens.both %~ reverse
+                & traverse %~ reverse
         results
-            & _1 %~ sortOn resultsListScore
-            & uncurry (++)
+            & good %~ sortOn resultsListScore
+            & concatBothGoodAndBad
             & splitAt holeResultCount
             & _2 %~ haveHiddenResults
             & return
     where
+        concatBothGoodAndBad goodAndBad = goodAndBad ^. Lens.folded
         haveHiddenResults [] = Menu.NoMoreOptions
         haveHiddenResults _ = Menu.MoreOptionsAvailable
         resultsListScore x = (x ^. rlPreferred, x ^. rlMain . rScore . Sugar.hrsTypeChecks)
         step results x =
             results
             & case (x ^. rlPreferred, x ^. rlMain . rScore . Sugar.hrsTypeChecks) of
-                (NotPreferred, False) -> _2
-                _ -> _1
+                (NotPreferred, False) -> bad
+                _ -> good
                 %~ (x :)
 
 makeAll ::
