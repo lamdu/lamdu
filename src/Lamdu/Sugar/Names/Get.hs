@@ -25,7 +25,6 @@ instance Monad m => MonadNaming (Collect name m) where
     opRun = pure (return . fst . runCollect)
     opWithParamName _ _ = cpsTellName
     opWithLetName _ = cpsTellName
-    opWithTagName = cpsTellName
     opGetName _ = tellName
 
 tellName :: Walk.NameConvertor (Collect name m)

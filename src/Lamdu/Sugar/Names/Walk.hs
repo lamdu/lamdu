@@ -39,7 +39,6 @@ class (Monad m, Monad (TM m)) => MonadNaming m where
 
     opWithParamName :: ParameterForm -> NameGen.VarInfo -> CPSNameConvertor m
     opWithLetName :: NameGen.VarInfo -> CPSNameConvertor m
-    opWithTagName :: CPSNameConvertor m
     opGetName :: NameType -> NameConvertor m
 
     opGetAppliedFuncName :: FunctionSignature -> NameType -> NameConvertor m

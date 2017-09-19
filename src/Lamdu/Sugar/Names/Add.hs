@@ -56,7 +56,6 @@ instance Monad tm => MonadNaming (Pass0LoadNames tm) where
     opRun = pure runPass0LoadNames
     opWithParamName _ _ = p0cpsNameConvertor
     opWithLetName _ = p0cpsNameConvertor
-    opWithTagName = p0cpsNameConvertor
     opGetName _ = p0nameConvertor
 
 getP0Name :: Monad tm => UUID -> Pass0LoadNames tm P0Name
@@ -186,7 +185,6 @@ instance Monad tm => MonadNaming (Pass1PropagateUp tm) where
     opWithParamName GetFieldParameter _ = p1cpsNameConvertor Walk.FieldParamName
     opWithParamName GetParameter _ = p1cpsNameConvertor Walk.ParamName
     opWithLetName _ = p1cpsNameConvertor Walk.ParamName
-    opWithTagName = p1cpsNameConvertor Walk.TagName
     opGetName = p1nameConvertor Nothing
     opGetAppliedFuncName = p1nameConvertor . Just
 
@@ -220,10 +218,10 @@ pass1Result mDisambiguator nameType (P0Name mName uuid) =
     where
         scope = nameTypeScope nameType
         myNameUUIDMap =
-            case (scope, mName) of
+            case (nameType, mName) of
             (_, Just name) -> Just name
-            (Local, Nothing) -> mempty
-            (Global, Nothing) -> Just unnamedStr
+            (Walk.ParamName, Nothing) -> mempty
+            (_, Nothing) -> Just unnamedStr
             & maybe mempty singleton
         nameInstance =
             Clash.NameInstance
@@ -336,8 +334,8 @@ instance Monad tm => MonadNaming (Pass2MakeNames tm) where
     type NewName (Pass2MakeNames tm) = Name tm
     type TM (Pass2MakeNames tm) = tm
     opRun = p2GetEnv <&> runPass2MakeNames <&> (return .)
-    opWithTagName = p2cpsNameConvertorGlobal
-    opWithParamName _ = p2cpsNameConvertorLocal
+    opWithParamName GetParameter varInfo = p2cpsNameConvertorLocal varInfo
+    opWithParamName GetFieldParameter _ = p2cpsNameConvertorGlobal
     opWithLetName = p2cpsNameConvertorLocal
     opGetName nameType =
         case nameTypeScope nameType of
