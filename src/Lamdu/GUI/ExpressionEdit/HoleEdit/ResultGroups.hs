@@ -114,16 +114,25 @@ Lens.makeLenses ''GoodAndBad
 collectResults :: Monad m => Config.Hole -> ListT m (ResultsList f) -> m ([ResultsList f], Menu.HasMoreOptions)
 collectResults Config.Hole{holeResultCount} resultsM =
     do
-        (collectedResults, remainingResultsM) <-
-            ListClass.scanl step (GoodAndBad [] []) resultsM
+        (tooFewGoodResults, moreResultsM) <-
+            ListClass.scanl prependResult (GoodAndBad [] []) resultsM
             & ListClass.splitWhenM (return . (>= holeResultCount) . length . _good)
-        remainingResults <- ListClass.toList $ ListClass.take 2 remainingResultsM
+
+        -- We need 2 of the moreResultsM:
+        -- A. First is needed because it would be the first to have the correct
+        --    number of good results
+        -- B. Second is needed just to determine if there are any
+        --    remaining results beyond it
+        moreResults <- ListClass.toList $ ListClass.take 2 moreResultsM
+
         let results =
-                last (collectedResults ++ remainingResults)
-                & traverse %~ reverse
+                last (tooFewGoodResults ++ moreResults)
         results
+            & bad %~ reverse -- to reverse the prepended order
             & good %~ sortOn resultsListScore
             & concatBothGoodAndBad
+            -- Re-split because now that we've added all the
+            -- accumulated bad results we may have too many
             & splitAt holeResultCount
             & _2 %~ haveHiddenResults
             & return
@@ -132,7 +141,7 @@ collectResults Config.Hole{holeResultCount} resultsM =
         haveHiddenResults [] = Menu.NoMoreOptions
         haveHiddenResults _ = Menu.MoreOptionsAvailable
         resultsListScore x = (x ^. rlPreferred, x ^. rlMain . rScore . Sugar.hrsTypeChecks)
-        step results x =
+        prependResult results x =
             results
             & case (x ^. rlPreferred, x ^. rlMain . rScore . Sugar.hrsTypeChecks) of
                 (NotPreferred, False) -> bad
