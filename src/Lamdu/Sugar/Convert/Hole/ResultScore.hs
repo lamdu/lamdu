@@ -11,7 +11,7 @@ import           Lamdu.Calc.Val.Annotated (Val(..))
 import qualified Lamdu.Calc.Val.Annotated as Val
 import qualified Lamdu.Expr.Lens as ExprLens
 import qualified Lamdu.Infer as Infer
-import           Lamdu.Sugar.Types.Hole (HoleResultScore(..))
+import           Lamdu.Sugar.Types.Hole (HoleResultScore(..), IsGoodResult(..))
 
 import           Lamdu.Prelude
 
@@ -44,7 +44,7 @@ score val@(Val pl body) =
 resultScore :: Val Infer.Payload -> HoleResultScore
 resultScore val =
     HoleResultScore
-    { _hrsTypeChecks = Lens.hasn't appliedHole val
+    { _hrsGoodResult = if Lens.has appliedHole val then BadResult else GoodResult
     , _hrsScore = score val
     }
 
