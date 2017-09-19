@@ -140,7 +140,7 @@ collectResults Config.Hole{holeResultCount} resultsM =
         concatBothGoodAndBad goodAndBad = goodAndBad ^. Lens.folded
         haveHiddenResults [] = Menu.NoMoreOptions
         haveHiddenResults _ = Menu.MoreOptionsAvailable
-        resultsListScore x = (x ^. rlPreferred, x ^. rlMain . rScore . Sugar.hrsGoodResult)
+        resultsListScore x = (x ^. rlPreferred, x ^. rlMain . rScore)
         prependResult results x =
             results
             & case (x ^. rlPreferred, x ^. rlMain . rScore . Sugar.hrsGoodResult) of
