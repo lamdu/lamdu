@@ -18,13 +18,13 @@ import qualified GUI.Momentu.Draw as Draw
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Glue ((/|/))
-import qualified GUI.Momentu.Glue as Glue
 import qualified GUI.Momentu.Hover as Hover
 import           GUI.Momentu.MetaKey (MetaKey(..), noMods)
 import qualified GUI.Momentu.MetaKey as MetaKey
 import           GUI.Momentu.View (View)
 import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
+import qualified GUI.Momentu.Widgets.Menu as Menu
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
 import qualified GUI.Momentu.Widgets.TextView as TextView
 import           Lamdu.Config (HasConfig)
@@ -119,9 +119,9 @@ makeOptions ::
     , HasConfig env, HasTheme env, Element.HasAnimIdPrefix env, TextView.HasStyle env
     ) =>
     (Widget.EventResult -> a) -> NearestHoles -> Sugar.Tag (Name n) m -> Text ->
-    f [WithTextPos (Widget (T m a))]
+    f ([Menu.Option f (T m a)], Menu.HasMoreOptions)
 makeOptions fixCursor nearestHoles tag searchTerm
-    | Text.null searchTerm = pure []
+    | Text.null searchTerm = pure ([], Menu.NoMoreOptions)
     | otherwise =
         do
             resultCount <-
@@ -129,10 +129,13 @@ makeOptions fixCursor nearestHoles tag searchTerm
                 <&> Config.hole <&> Config.holeResultCount
             tag ^. Sugar.tagActions . Sugar.taOptions & transaction
                 <&> filter (Lens.anyOf (_1 . Name.form . Name._Stored . _1) (insensitiveInfixOf searchTerm))
-                <&> take resultCount
-                >>= mapM makeOptionGui
+                <&> splitAt resultCount
+                <&> _2 %~ checkHasMoreResult
+                >>= _1 . traverse %%~ makeOption
     where
-        makeOptionGui (name, t) =
+        checkHasMoreResult [] = Menu.NoMoreOptions
+        checkHasMoreResult (_:_) = Menu.MoreOptionsAvailable
+        makeOption (name, t) =
             do
                 eventMap <-
                     (tag ^. Sugar.tagActions . Sugar.taChangeTag) t
@@ -143,13 +146,15 @@ makeOptions fixCursor nearestHoles tag searchTerm
                     <*> NameEdit.makeView (name ^. Name.form) optionId
                     <&> Align.tValue %~ E.weakerEvents eventMap
             <&> Align.tValue . Lens.mapped . Lens.mapped %~ fixCursor
+            <&> Menu.Option optionWId ?? Menu.SubmenuEmpty
             where
-                optionId = Widget.toAnimId (WidgetIds.hash t)
+                optionWId = WidgetIds.hash t
+                optionId = Widget.toAnimId optionWId
 
 makeTagHoleEditH ::
     ( Monad m, MonadTransaction m f, MonadReader env f, HasConfig env
     , TextEdit.HasStyle env, Widget.HasCursor env, Element.HasAnimIdPrefix env
-    , HasTheme env, Hover.HasStyle env
+    , HasTheme env, Hover.HasStyle env, Menu.HasStyle env
     ) =>
     NearestHoles -> Sugar.Tag (Name m) m ->
     Text -> (Text -> Widget.EventResult -> Widget.EventResult) -> (Widget.EventResult -> Widget.EventResult) ->
@@ -165,17 +170,10 @@ makeTagHoleEditH nearestHoles tag searchTerm updateState fixCursor =
             <&> Align.tValue %~ E.strongerEvents setNameEventMap
         label <- (TextView.make ?? labelText) <*> Element.subAnimId ["label"]
         let topLine = term /|/ label
-        options <- makeOptions fixCursor nearestHoles tag searchTerm
-        case options of
-            [] -> return topLine
-            _ ->
-                Hover.hover ?? Glue.vbox (options <&> (^. Align.tValue))
-                <&>
-                \optionsBox ->
-                let anchored = topLine <&> Hover.anchor
-                in
-                anchored
-                <&> Hover.hoverInPlaceOf (Hover.hoverBesideOptions optionsBox (anchored ^. Align.tValue))
+        (options, hasMore) <- makeOptions fixCursor nearestHoles tag searchTerm
+        hoverMenu <- Menu.hoverMenu
+        menu <- Menu.layout 0 options hasMore
+        topLine <&> hoverMenu ?? menu & pure
     & Widget.assignCursor holeId searchTermId
     & Reader.local (Element.animIdPrefix .~ Widget.toAnimId holeId)
     where
@@ -189,7 +187,7 @@ makeTagHoleEditH nearestHoles tag searchTerm updateState fixCursor =
 makeTagHoleEdit ::
     ( Monad m, MonadReader env f, MonadTransaction m f, Widget.HasCursor env
     , HasConfig env, TextEdit.HasStyle env, Element.HasAnimIdPrefix env
-    , HasTheme env, Hover.HasStyle env
+    , HasTheme env, Hover.HasStyle env, Menu.HasStyle env
     ) => NearestHoles -> Sugar.Tag (Name m) m ->
     f (WithTextPos (Widget (T m Widget.EventResult)))
 makeTagHoleEdit nearestHoles tag =
@@ -202,7 +200,7 @@ data Mode = WithTagHoles | WithoutTagHoles
 makeTagEdit ::
     ( Monad m, MonadReader env f, MonadTransaction m f, HasConfig env
     , Widget.HasCursor env, HasTheme env, Element.HasAnimIdPrefix env
-    , TextEdit.HasStyle env, Hover.HasStyle env
+    , TextEdit.HasStyle env, Hover.HasStyle env, Menu.HasStyle env
     ) =>
     Mode -> Draw.Color -> NearestHoles -> Sugar.Tag (Name m) m ->
     f (WithTextPos (Widget (T m Widget.EventResult)))
@@ -249,7 +247,7 @@ makeTagEdit mode tagColor nearestHoles tag =
 makeRecordTag ::
     ( Monad m, MonadReader env f, MonadTransaction m f, HasTheme env
     , HasConfig env, Widget.HasCursor env, Element.HasAnimIdPrefix env
-    , TextEdit.HasStyle env, Hover.HasStyle env, HasTheme env
+    , TextEdit.HasStyle env, Hover.HasStyle env, HasTheme env, Menu.HasStyle env
     ) =>
     Mode -> NearestHoles -> Sugar.Tag (Name m) m ->
     f (WithTextPos (Widget (T m Widget.EventResult)))
@@ -261,7 +259,7 @@ makeRecordTag mode nearestHoles tag =
 makeCaseTag ::
     ( Monad m, MonadReader env f, MonadTransaction m f, HasTheme env
     , HasConfig env, Widget.HasCursor env, Element.HasAnimIdPrefix env
-    , TextEdit.HasStyle env, Hover.HasStyle env, HasTheme env
+    , TextEdit.HasStyle env, Hover.HasStyle env, HasTheme env, Menu.HasStyle env
     ) =>
     Mode -> NearestHoles -> Sugar.Tag (Name m) m ->
     f (WithTextPos (Widget (T m Widget.EventResult)))

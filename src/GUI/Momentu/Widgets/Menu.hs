@@ -5,7 +5,7 @@ module GUI.Momentu.Widgets.Menu
     , Submenu(..)
     , Option(..), oId, oWidget, oSubmenuWidgets
     , Placement(..), HasMoreOptions(..)
-    , layout
+    , layout, hoverMenu
     ) where
 
 import qualified Control.Lens as Lens
@@ -181,3 +181,18 @@ layout minWidth options hiddenResults =
                     } ?? (laidOutOptions ++ [hiddenOptionsWidget])
                     <&> Glue.vbox
                 ) & pure
+
+hoverMenu ::
+    ( Functor f, MonadReader env m, Hover.HasStyle env
+    , Element.HasAnimIdPrefix env) =>
+    m (Widget (f Widget.EventResult) ->
+       Hover.Ordered (Widget (f Widget.EventResult)) ->
+       Widget (f Widget.EventResult))
+hoverMenu =
+    do
+        hover <- Hover.hover
+        pure $ \base menu ->
+            Hover.anchor base
+            & Hover.hoverInPlaceOf
+            (Hover.anchor base
+             & Hover.hoverBesideOptionsAxis Glue.Vertical (menu <&> hover))
