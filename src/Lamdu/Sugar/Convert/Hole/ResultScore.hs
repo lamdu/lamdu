@@ -56,4 +56,4 @@ numWrappers val =
     else 0
 
 appliedHole :: Lens.Traversal' (Val a) ()
-appliedHole = (ExprLens.valApply . V.applyFunc . ExprLens.valHole)
+appliedHole = ExprLens.valApply . V.applyFunc . ExprLens.valHole
