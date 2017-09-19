@@ -1,7 +1,7 @@
 {-# LANGUAGE NoImplicitPrelude #-}
 module Lamdu.Prelude
     ( module X
-    , traceId, trace
+    , traceId, trace, traceShowM
     , todo
     ) where
 
@@ -23,14 +23,18 @@ import qualified Debug.Trace as Trace
 
 import           Prelude.Compat as X
 
-{-# DEPRECATED traceId "Leaving traces in the code" #-}
+{-# WARNING traceId "Leaving traces in the code" #-}
 traceId :: Show a => String -> a -> a
 traceId prefix x = Trace.trace (prefix ++ show x) x
 
-{-# DEPRECATED trace "Leaving traces in the code" #-}
+{-# WARNING trace "Leaving traces in the code" #-}
 trace :: String -> a -> a
 trace = Trace.trace
 
-{-# DEPRECATED todo "Leaving todos in the code" #-}
+{-# WARNING traceShowM "Leaving traces in the code" #-}
+traceShowM :: (Show a, Applicative f) => a -> f ()
+traceShowM = Trace.traceShowM
+
+{-# WARNING todo "Leaving todos in the code" #-}
 todo :: String -> a
 todo = error . ("TODO: " ++)
