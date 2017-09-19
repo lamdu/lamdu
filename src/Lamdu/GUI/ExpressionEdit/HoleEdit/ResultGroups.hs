@@ -114,25 +114,29 @@ Lens.makeLenses ''GoodAndBad
 collectResults :: Monad m => Config.Hole -> ListT m (ResultsList f) -> m ([ResultsList f], Menu.HasMoreOptions)
 collectResults Config.Hole{holeResultCount} resultsM =
     do
-        (collectedResults, remainingResultsM) <-
-            ListClass.scanl step (GoodAndBad [] []) resultsM
+        (tooFewGoodResultss, enoughResultsM) <-
+            ListClass.scanl prepend (GoodAndBad [] []) resultsM
             & ListClass.splitWhenM (return . (>= holeResultCount) . length . _good)
-        remainingResults <- ListClass.toList $ ListClass.take 2 remainingResultsM
-        let results =
-                last (collectedResults ++ remainingResults)
-                & traverse %~ reverse
-        results
-            & good %~ sortOn resultsListScore
-            & concatBothGoodAndBad
-            & splitAt holeResultCount
-            & _2 %~ haveHiddenResults
-            & return
+
+        -- We need 2 of the enoughResultsM:
+        -- A. First is needed because it would be the first to have the correct
+        --    number of good results
+        -- B. Second is needed just to determine if there are any
+        --    remaining results beyond it
+        enoughResults <- ListClass.toList $ ListClass.take 2 enoughResultsM
+
+        case (last tooFewGoodResultss, enoughResults) of
+            (tooFewGoodResults, []) -> (tooFewGoodResults, Menu.NoMoreOptions)
+            (_, [enoughGoodResults]) -> (enoughGoodResults, Menu.NoMoreOptions)
+            (_, enoughGoodResults:_) -> (enoughGoodResults, Menu.MoreOptionsAvailable)
+            & _1 . good %~ sortOn resultsListScore
+            & _1 . bad %~ reverse -- reverse because we prepended
+            & _1 %~ concatBothGoodAndBad
+            & pure
     where
         concatBothGoodAndBad goodAndBad = goodAndBad ^. Lens.folded
-        haveHiddenResults [] = Menu.NoMoreOptions
-        haveHiddenResults _ = Menu.MoreOptionsAvailable
         resultsListScore x = (x ^. rlPreferred, x ^. rlMain . rScore . Sugar.hrsTypeChecks)
-        step results x =
+        prepend results x =
             results
             & case (x ^. rlPreferred, x ^. rlMain . rScore . Sugar.hrsTypeChecks) of
                 (NotPreferred, False) -> bad
