@@ -21,7 +21,6 @@ import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
-import           Lamdu.Config.Theme (Theme)
 import qualified Lamdu.Config.Theme as Theme
 import           Lamdu.GUI.ExpressionEdit.Composite (destCursorId)
 import qualified Lamdu.GUI.ExpressionEdit.TagEdit as TagEdit
@@ -102,7 +101,7 @@ makeFieldsWidget [] myId =
 makeFieldsWidget fields _ =
     Responsive.taggedList <*> mapM makeFieldRow fields
 
-separationBar :: Theme -> Widget.R -> Anim.AnimId -> View
+separationBar :: Theme.CodeForegroundColors -> Widget.R -> Anim.AnimId -> View
 separationBar theme width animId =
     View.unitSquare (animId <> ["tailsep"])
     & Element.tint (Theme.recordTailColor theme)
@@ -127,7 +126,7 @@ makeOpenRecord fieldsGui rest animId =
             in
             fields
             /-/
-            separationBar theme (max minWidth targetWidth) animId
+            separationBar (Theme.codeForegroundColors theme) (max minWidth targetWidth) animId
             /-/
             vspace
             /-/

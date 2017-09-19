@@ -79,7 +79,7 @@ mkNomGui ordering nomStr str mDel valId pl (Sugar.Nominal tid val) =
                 | Prec.needParens parentPrec (Prec.my nomPrecedence) =
                     Widget.toAnimId nomId & Just
                 | otherwise = Nothing
-        nomColor <- Lens.view Theme.theme <&> Theme.nomColor
+        nomColor <- Lens.view Theme.theme <&> Theme.codeForegroundColors <&> Theme.nomColor
         config <- Lens.view Config.config
         let mkEventMap action =
                 action <&> WidgetIds.fromEntityId

@@ -14,6 +14,6 @@ import           Lamdu.Prelude
 withUnderline :: Monad m => Theme -> ExprGuiM m a -> ExprGuiM m a
 withUnderline theme =
     Underline
-    { _underlineColor = Theme.lightLambdaUnderlineColor theme
+    { _underlineColor = Theme.lightLambdaUnderlineColor (Theme.codeForegroundColors theme)
     , _underlineWidth = realToFrac (Theme.underlineWidth theme)
     } & ExprGuiM.withLocalUnderline

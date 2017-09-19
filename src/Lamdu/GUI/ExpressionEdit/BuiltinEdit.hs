@@ -64,12 +64,12 @@ make ::
     ExprGuiM m (WithTextPos (Widget (T m Widget.EventResult)))
 make def myId =
     do
-        theme <- Lens.view Theme.theme
+        colors <- Lens.view Theme.theme <&> Theme.codeForegroundColors
         moduleName <-
-            makeNamePartEditor (Theme.foreignModuleColor theme)
+            makeNamePartEditor (Theme.foreignModuleColor colors)
             modulePathStr modulePathSetter (builtinFFIPath myId)
         varName <-
-            makeNamePartEditor (Theme.foreignVarColor theme) name nameSetter
+            makeNamePartEditor (Theme.foreignVarColor colors) name nameSetter
             (builtinFFIName myId)
         dot <- TextView.makeLabel "."
         moduleName /|/ dot /|/ varName & return

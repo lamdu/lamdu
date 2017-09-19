@@ -1,7 +1,10 @@
 {-# LANGUAGE NoImplicitPrelude, DeriveGeneric #-}
 -- | The themes/ config format
 module Lamdu.Config.Theme
-    ( Help(..), Hole(..), Name(..), Eval(..), ValAnnotation(..)
+    ( module Lamdu.Config.Theme.CodeForegroundColors
+    , module Lamdu.Config.Theme.Name
+    , module Lamdu.Config.Theme.ValAnnotation
+    , Help(..), Hole(..), Eval(..)
     , Theme(..), themeStdSpacing
     , HasTheme(..)
     ) where
@@ -13,6 +16,9 @@ import qualified GUI.Momentu.Draw as Draw
 import qualified GUI.Momentu.Hover as Hover
 import qualified GUI.Momentu.Responsive.Expression as Expression
 import qualified GUI.Momentu.Widgets.Menu as Menu
+import           Lamdu.Config.Theme.CodeForegroundColors (CodeForegroundColors(..))
+import           Lamdu.Config.Theme.Name (Name(..))
+import           Lamdu.Config.Theme.ValAnnotation (ValAnnotation(..))
 import           Lamdu.Font (FontSize, Fonts)
 import qualified Lamdu.GUI.VersionControl.Config as VersionControl
 
@@ -38,21 +44,6 @@ instance Aeson.ToJSON Hole where
     toJSON = Aeson.genericToJSON Aeson.defaultOptions
 instance Aeson.FromJSON Hole
 
-data Name = Name
-    { collisionSuffixTextColor :: Draw.Color
-    , collisionSuffixBGColor :: Draw.Color
-    , collisionSuffixScaleFactor :: Vector2 Double
-    , definitionColor :: Draw.Color
-    , parameterColor :: Draw.Color
-    , letColor :: Draw.Color
-    , recordTagColor :: Draw.Color
-    , caseTagColor :: Draw.Color
-    , paramTagColor :: Draw.Color
-    } deriving (Eq, Generic, Show)
-instance Aeson.ToJSON Name where
-    toJSON = Aeson.genericToJSON Aeson.defaultOptions
-instance Aeson.FromJSON Name
-
 data Eval = Eval
     { neighborsScaleFactor :: Vector2 Double
     , neighborsPadding :: Vector2 Double
@@ -61,18 +52,6 @@ data Eval = Eval
 instance Aeson.ToJSON Eval where
     toJSON = Aeson.genericToJSON Aeson.defaultOptions
 instance Aeson.FromJSON Eval
-
-data ValAnnotation = ValAnnotation
-    { valAnnotationBGColor :: Draw.Color
-    , valAnnotationHoverBGColor :: Draw.Color
-    , valAnnotationSpacing :: Double -- as ratio of line height
-    , valAnnotationWidthExpansionLimit :: Double
-    , valAnnotationShrinkAtLeast :: Double
-    , valAnnotationMaxHeight :: Double
-    } deriving (Eq, Generic, Show)
-instance Aeson.ToJSON ValAnnotation where
-    toJSON = Aeson.genericToJSON Aeson.defaultOptions
-instance Aeson.FromJSON ValAnnotation
 
 data Theme = Theme
     { fonts :: Fonts FilePath
@@ -85,6 +64,7 @@ data Theme = Theme
     , name :: Name
     , eval :: Eval
     , hover :: Hover.Style
+    , codeForegroundColors :: CodeForegroundColors
     , newDefinitionActionColor :: Draw.Color
     , topPadding :: Draw.R
     , maxEvalViewSize :: Int
@@ -92,15 +72,10 @@ data Theme = Theme
     , valAnnotation :: ValAnnotation
     , indent :: Expression.Style
     , backgroundColor :: Draw.Color
-    , baseColor :: Draw.Color
     , invalidCursorBGColor :: Draw.Color
-    , nomColor :: Draw.Color
-    , literalColor :: Draw.Color
     , typeIndicatorErrorColor :: Draw.Color
     , typeIndicatorMatchColor :: Draw.Color
     , typeIndicatorFrameWidth :: Vector2 Double
-    , foreignModuleColor :: Draw.Color
-    , foreignVarColor :: Draw.Color
     , letItemPadding :: Vector2 Double
     , underlineWidth :: Double
     , typeTint :: Draw.Color
@@ -109,14 +84,9 @@ data Theme = Theme
     , typeFrameBGColor :: Draw.Color
     , stdSpacing :: Vector2 Double -- as ratio of space character size
     , cursorBGColor :: Draw.Color
-    , grammarColor :: Draw.Color
     , disabledColor :: Draw.Color
-    , lightLambdaUnderlineColor :: Draw.Color
     , presentationChoiceScaleFactor :: Vector2 Double
     , evaluatedPathBGColor :: Draw.Color
-    , presentationChoiceColor :: Draw.Color
-    , caseTailColor :: Draw.Color
-    , recordTailColor :: Draw.Color
     } deriving (Eq, Generic, Show)
 instance Aeson.ToJSON Theme where
     toJSON = Aeson.genericToJSON Aeson.defaultOptions

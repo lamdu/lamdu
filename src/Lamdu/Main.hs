@@ -173,7 +173,7 @@ makeRootWidget fonts db settingsRef evaluator config theme mainLoopEnv =
                 , _envConfig = config
                 , _envTheme = theme
                 , _envSettings = settings
-                , _envStyle = Style.makeStyle theme fonts
+                , _envStyle = Style.makeStyle (Theme.codeForegroundColors theme) fonts
                 , _envMainLoop = mainLoopEnv
                 }
         let dbToIO action =

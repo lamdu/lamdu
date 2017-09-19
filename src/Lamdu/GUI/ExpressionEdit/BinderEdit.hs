@@ -109,7 +109,7 @@ mkPresentationModeEdit myId prop = do
     pairs <-
         traverse mkPair [Sugar.OO, Sugar.Verbose, Sugar.Infix]
         & Reader.local
-            (TextView.style . TextView.styleColor .~ Theme.presentationChoiceColor theme)
+            (TextView.style . TextView.styleColor .~ Theme.presentationChoiceColor (Theme.codeForegroundColors theme))
     Choice.make ?? Transaction.setP prop ?? pairs ?? cur
         ?? presentationModeChoiceConfig ?? myId
         <&> Element.scale (realToFrac <$> Theme.presentationChoiceScaleFactor theme)
@@ -214,7 +214,7 @@ makeScopeNavEdit binder myId curCursor =
                 ( TextView.color .~
                     case mScopeId of
                     Nothing -> Theme.disabledColor theme
-                    Just _ -> Theme.grammarColor theme
+                    Just _ -> Theme.grammarColor (Theme.codeForegroundColors theme)
                 )
         Config.Eval{..} <- Lens.view Config.config <&> Config.eval
         Lens.view (CESettings.settings . CESettings.sInfoMode)

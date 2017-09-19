@@ -362,7 +362,7 @@ grammarLabel ::
     ) => Text -> m (WithTextPos View)
 grammarLabel text =
     do
-        th <- Lens.view theme
+        th <- Lens.view theme <&> Theme.codeForegroundColors
         TextView.makeLabel text
             & Reader.local (TextView.color .~ Theme.grammarColor th)
 

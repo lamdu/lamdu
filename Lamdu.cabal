@@ -152,6 +152,9 @@ Executable lamdu
                   , Lamdu.Config
                   , Lamdu.Config.Sampler
                   , Lamdu.Config.Theme
+                  , Lamdu.Config.Theme.CodeForegroundColors
+                  , Lamdu.Config.Theme.Name
+                  , Lamdu.Config.Theme.ValAnnotation
                   , Lamdu.Data.Anchors
                   , Lamdu.Data.DbInit
                   , Lamdu.Data.DbLayout

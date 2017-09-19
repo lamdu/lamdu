@@ -65,7 +65,7 @@ textEdit color font =
     , TextView._styleUnderline = Nothing
     }
 
-makeStyle :: Theme -> Fonts Draw.Font -> Style
+makeStyle :: Theme.CodeForegroundColors -> Fonts Draw.Font -> Style
 makeStyle config fonts =
     Style
     { _styleBase =

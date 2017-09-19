@@ -50,6 +50,18 @@
         "caseTagColor": [0.5, 0.75, 0.5, 1.0],
         "paramTagColor": [0.65, 0.65, 0.65, 1.0]
     },
+    "codeForegroundColors": {
+        "baseColor": [1.0, 1.0, 1.0, 1.0],
+        "grammarColor": [0.8, 0.8, 0.9, 1.0],
+        "literalColor": [0.5, 1.0, 0.5, 1.0],
+        "nomColor": [1.0, 1.0, 1.0, 0.4],
+        "recordTailColor": [0.4, 0.4, 0.4, 1.0],
+        "caseTailColor": [0.4, 0.8, 0.4, 1.0],
+        "lightLambdaUnderlineColor": [1.0, 1.0, 1.0, 0.3],
+        "foreignModuleColor": [1.0, 0.3, 0.35, 1.0],
+        "foreignVarColor": [1.0, 0.65, 0.25, 1.0],
+        "presentationChoiceColor": [0.4, 0.4, 0.4, 1.0]
+    },
     "lightLambdaUnderlineColor": [1.0, 1.0, 1.0, 0.3],
     "underlineWidth": 0.15,
     "eval": {
@@ -64,16 +76,12 @@
     },
     "typeTint": [1.0, 1.0, 1.0, 0.6],
     "cursorBGColor": [1.0, 1.0, 0.5, 0.5],
-    "recordTailColor": [0.4, 0.4, 0.4, 1.0],
-    "caseTailColor": [0.4, 0.8, 0.4, 1.0],
     "evaluatedPathBGColor" : [0.2, 1.0, 0.2, 0.2],
     "valFrameBGColor": [1.0, 1.0, 1.0, 0.05],
     "typeFrameBGColor": [0.2, 0.6, 0.8, 0.16],
     "typeIndicatorFrameWidth": [6.0, 6.0],
     "typeIndicatorErrorColor": [1.0, 0.2, 0.2, 1.0],
     "typeIndicatorMatchColor": [0.25, 0.5, 0.25, 1.0],
-    "foreignVarColor": [1.0, 0.65, 0.25, 1.0],
-    "grammarColor": [0.8, 0.8, 0.9, 1.0],
     "disabledColor": [0.4, 0.4, 0.45, 0.5],
     "valAnnotation": {
         "valAnnotationSpacing": 0.0,
@@ -85,12 +93,7 @@
     },
     "valFramePadding": [0, 0],
     "letItemPadding": [0, 0],
-    "literalColor": [0.5, 1.0, 0.5, 1.0],
-    "nomColor": [1.0, 1.0, 1.0, 0.4],
-    "presentationChoiceColor": [0.4, 0.4, 0.4, 1.0],
     "backgroundColor": [0.95, 0.98, 1.0, 0.18],
-    "baseColor": [1.0, 1.0, 1.0, 1.0],
     "presentationChoiceScaleFactor": [1.0, 1.0],
-    "invalidCursorBGColor": [0.4, 0.0, 0.0, 1.0],
-    "foreignModuleColor": [1.0, 0.3, 0.35, 1.0]
+    "invalidCursorBGColor": [0.4, 0.0, 0.0, 1.0]
 }

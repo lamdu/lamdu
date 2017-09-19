@@ -24,7 +24,6 @@ import           Lamdu.Calc.Type (Tag)
 import qualified Lamdu.Calc.Val as V
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
-import           Lamdu.Config.Theme (Theme)
 import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.Eval.Results as ER
 import           Lamdu.GUI.ExpressionEdit.Composite (destCursorId)
@@ -135,7 +134,7 @@ makeAltsWidget _ [] myId =
 makeAltsWidget mActiveTag alts _myId =
     Responsive.taggedList <*> mapM (makeAltRow mActiveTag) alts
 
-separationBar :: Theme -> Widget.R -> Anim.AnimId -> View
+separationBar :: Theme.CodeForegroundColors -> Widget.R -> Anim.AnimId -> View
 separationBar theme width animId =
     View.unitSquare (animId <> ["tailsep"])
     & Element.tint (Theme.caseTailColor theme)
@@ -160,7 +159,7 @@ makeOpenCase rest animId altsGui =
             in
             alts
             /-/
-            separationBar theme (max minWidth targetWidth) animId
+            separationBar (Theme.codeForegroundColors theme) (max minWidth targetWidth) animId
             /-/
             vspace
             /-/
