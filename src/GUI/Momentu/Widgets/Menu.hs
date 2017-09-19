@@ -1,10 +1,9 @@
-{-# LANGUAGE NoImplicitPrelude, TemplateHaskell, DeriveGeneric, OverloadedStrings, DeriveTraversable, FlexibleContexts #-}
+{-# LANGUAGE NoImplicitPrelude, TemplateHaskell, DeriveGeneric, OverloadedStrings, DeriveTraversable, FlexibleContexts, DisambiguateRecordFields #-}
 
 module GUI.Momentu.Widgets.Menu
     ( Style(..), HasStyle(..)
     , Submenu(..)
     , Option(..), oId, oWidget, oSubmenuWidgets
-    , Ordered(..), fromTop, fromBottom
     , Placement(..), HasMoreOptions(..)
     , layout
     ) where
@@ -57,17 +56,6 @@ data Option f a = Option
     }
 Lens.makeLenses ''Option
 
-data Ordered a = Ordered
-    { _fromTop :: a
-    , _fromBottom :: a
-    } deriving (Functor, Foldable, Traversable)
-Lens.makeLenses ''Ordered
-
-instance Applicative Ordered where
-    pure = join Ordered
-    Ordered fa fb <*> Ordered xa xb =
-        Ordered (fa xa) (fb xb)
-
 -- | You may want to limit the placement of hovering pop-up menus,
 -- so that they don't cover other ui elements.
 data Placement = Above | Below | AnyPlace
@@ -87,11 +75,11 @@ makeMoreOptionsView MoreOptionsAvailable = TextView.makeLabel "..."
 
 blockEvents ::
     Applicative f =>
-    Ordered (Widget (f Widget.EventResult) -> Widget (f Widget.EventResult))
+    Hover.Ordered (Widget (f Widget.EventResult) -> Widget (f Widget.EventResult))
 blockEvents =
-    Ordered
-    { _fromTop = blockDirection MetaKey.Key'Down "down"
-    , _fromBottom = blockDirection MetaKey.Key'Up "up"
+    Hover.Ordered
+    { _forward = blockDirection MetaKey.Key'Down "down"
+    , _backward = blockDirection MetaKey.Key'Up "up"
     }
     where
         blockDirection key keyName =
@@ -147,8 +135,10 @@ layoutOption maxOptionWidth option =
                         & Align.tValue %~
                         Hover.hoverInPlaceOf
                         (Hover.hoverBesideOptionsAxis Glue.Horizontal
-                         (Glue.vbox submenus <&> hover) anchored
-                         <&> (^. Align.tValue))
+                         Hover.Ordered
+                         { _forward = Glue.vbox submenus <&> hover
+                         , _backward = Glue.vbox submenus <&> hover
+                         } anchored <&> (^. Align.tValue))
                         & pure
                 else pure base
     & Reader.local (Element.animIdPrefix .~ animId)
@@ -163,7 +153,7 @@ layout ::
     , Applicative f
     ) =>
     Widget.R -> [Option m (f Widget.EventResult)] -> HasMoreOptions ->
-    m (Ordered (Widget (f Widget.EventResult)))
+    m (Hover.Ordered (Widget (f Widget.EventResult)))
 layout minWidth options hiddenResults =
     case options of
     [] -> makeNoResults <&> (^. Align.tValue) <&> Widget.fromView <&> pure
@@ -185,9 +175,9 @@ layout minWidth options hiddenResults =
                 traverse (layoutOption maxOptionWidth) options
                 <&> map (^. Align.tValue)
             blockEvents <*>
-                ( Ordered
-                    { _fromTop = id
-                    , _fromBottom = reverse
+                ( Hover.Ordered
+                    { _forward = id
+                    , _backward = reverse
                     } ?? (laidOutOptions ++ [hiddenOptionsWidget])
                     <&> Glue.vbox
                 ) & pure

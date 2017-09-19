@@ -1,10 +1,12 @@
-{-# LANGUAGE NoImplicitPrelude, DeriveGeneric, TemplateHaskell, DeriveFunctor, FlexibleInstances, MultiParamTypeClasses, TypeFamilies, FlexibleContexts, OverloadedStrings, RankNTypes #-}
+{-# LANGUAGE NoImplicitPrelude, DeriveGeneric, TemplateHaskell, DeriveTraversable, FlexibleInstances, MultiParamTypeClasses, TypeFamilies, FlexibleContexts, OverloadedStrings, RankNTypes #-}
 module GUI.Momentu.Hover
     ( Style(..)
     , Hover, hover
     , HasStyle(..)
     , AnchoredWidget, anchor
-    , hoverInPlaceOf, hoverBesideOptions, hoverBesideOptionsAxis
+    , hoverInPlaceOf, hoverBesideOptions
+    , Ordered(..), forward, backward
+    , hoverBesideOptionsAxis
     , Orientation(..)
     , hoverBeside
     ) where
@@ -60,14 +62,6 @@ instance Element a => Element (Hover a) where
 instance SizedElement a => SizedElement (Hover a) where
     size = unHover . Element.size
 
-hover ::
-    (MonadReader env m, Element a, HasStyle env, Element.HasAnimIdPrefix env) =>
-    m (a -> Hover a)
-hover =
-    do
-        frame <- addFrame
-        pure (Hover . Element.hoverLayers . frame)
-
 instance Widget.HasWidget AnchoredWidget where widget = anchored
 
 instance Functor f => Element (AnchoredWidget (f EventResult)) where
@@ -118,6 +112,29 @@ instance Functor f => Glue (Hover (Widget (f EventResult))) (AnchoredWidget (f E
             f w0 (AnchoredWidget pos w1) =
                 AnchoredWidget pos (Widget.glueStates orientation w0 w1)
 
+data Ordered a = Ordered
+    { _forward :: a
+    , _backward :: a
+    } deriving (Functor, Foldable, Traversable)
+Lens.makeLenses ''Ordered
+
+instance Applicative Ordered where
+    pure = join Ordered
+    Ordered fa fb <*> Ordered xa xb =
+        Ordered (fa xa) (fb xb)
+
+hoverBesideOptionsAxis ::
+    ( Glue a b, Glue b a
+    , SizedElement a, SizedElement b, SizedElement (Glued a b)
+    ) =>
+    Orientation -> Ordered a -> b -> [Glued a b]
+hoverBesideOptionsAxis o (Ordered fwd bwd) src =
+    do
+        x <- [0, 1]
+        let aSrc = Aligned x src
+        [glue o aSrc (Aligned x fwd), glue o (Aligned x bwd) aSrc]
+            <&> (^. value)
+
 anchor :: Widget a -> AnchoredWidget a
 anchor = AnchoredWidget 0
 
@@ -129,7 +146,7 @@ hoverBesideOptions ::
 hoverBesideOptions h src =
     do
         o <- [Glue.Vertical, Glue.Horizontal]
-        hoverBesideOptionsAxis o h src
+        hoverBesideOptionsAxis o (Ordered h h) src
 
 addFrame ::
     (MonadReader env m, HasStyle env, Element a, Element.HasAnimIdPrefix env) =>
@@ -145,17 +162,13 @@ addFrame =
             & Element.pad (framePadding s <&> realToFrac)
             & Draw.backgroundColor (animId <> ["hover frame"]) (frameColor s)
 
-hoverBesideOptionsAxis ::
-    ( Glue a b, Glue b a
-    , SizedElement a, SizedElement b, SizedElement (Glued a b)
-    ) =>
-    Orientation -> a -> b -> [Glued a b]
-hoverBesideOptionsAxis o h src =
+hover ::
+    (MonadReader env m, Element a, HasStyle env, Element.HasAnimIdPrefix env) =>
+    m (a -> Hover a)
+hover =
     do
-        x <- [0, 1]
-        let aSrc = Aligned x src
-        let aHover = Aligned x h
-        [glue o aSrc aHover, glue o aHover aSrc] <&> (^. value)
+        frame <- addFrame
+        pure (Hover . Element.hoverLayers . frame)
 
 hoverInPlaceOf ::
     Functor f =>
