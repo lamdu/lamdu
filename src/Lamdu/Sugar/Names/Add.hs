@@ -105,12 +105,20 @@ nameUUIDMapSingleton name nameInstance =
 isLocal :: Clash.NameInstance -> Bool
 isLocal = (`elem` [Walk.FieldParamName, Walk.ParamName]) . (^. Clash.niNameType)
 
+removeEmpty :: NameUUIDMap -> NameUUIDMap
+removeEmpty = nameUUIDMap %~ Map.filter (not . OrderedSet.null)
+
 localNames :: NameUUIDMap -> NameUUIDMap
-localNames = nameUUIDMap . Lens.mapped %~ OrderedSet.filter isLocal
+localNames nameMap =
+    nameMap
+    & nameUUIDMap . Lens.mapped %~ OrderedSet.filter isLocal
+    & removeEmpty
 
 globalNames :: NameUUIDMap -> NameUUIDMap
-globalNames = nameUUIDMap . Lens.mapped %~ OrderedSet.filter (not . isLocal)
-
+globalNames nameMap =
+    nameMap
+    & nameUUIDMap . Lens.mapped %~ OrderedSet.filter (not . isLocal)
+    & removeEmpty
 
 data P1Out = P1Out
     { _p1Names :: NameUUIDMap

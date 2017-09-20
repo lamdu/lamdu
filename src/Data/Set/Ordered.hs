@@ -3,11 +3,12 @@ module Data.Set.Ordered
     ( OrderedSet
     , singleton
     , filter
+    , null
     ) where
 
 import qualified Control.Lens as Lens
 import qualified Lamdu.Prelude as Prelude
-import           Lamdu.Prelude hiding (filter)
+import           Lamdu.Prelude hiding (filter, null)
 
 newtype OrderedSet a = OrderedSet { _orderedSet :: [a] }
     deriving (Show, Eq, Ord, Functor, Foldable, Traversable)
@@ -23,3 +24,6 @@ singleton = OrderedSet . (:[])
 
 filter :: (a -> Bool) -> OrderedSet a -> OrderedSet a
 filter p = orderedSet %~ Prelude.filter p
+
+null :: OrderedSet a -> Bool
+null = Prelude.null . _orderedSet
