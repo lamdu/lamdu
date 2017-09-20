@@ -1,7 +1,8 @@
 {-# LANGUAGE NoImplicitPrelude #-}
 
 module Lamdu.CharClassification
-    ( operatorChars, bracketChars, digitChars, hexDigitChars, charPrecedence
+    ( operator, bracket, digit, hexDigit, charPrecedence
+    , disallowedInHole
     ) where
 
 import qualified Control.Lens as Lens
@@ -9,24 +10,27 @@ import qualified Data.Map as Map
 
 import Lamdu.Prelude
 
-operatorChars :: String
-operatorChars = "\\+-*/^=><&|%$:.!;#?@~≥≤≠⋲"
+disallowedInHole :: String
+disallowedInHole = ",`\"\n "
 
-bracketChars :: String
-bracketChars = "()[]{}"
+operator :: String
+operator = "\\+-*/^=><&|%$:.!;#?@~≥≤≠⋲"
 
-digitChars :: String
-digitChars = ['0'..'9']
+bracket :: String
+bracket = "()[]{}"
 
-hexDigitChars :: String
-hexDigitChars = ['a'..'f'] ++ ['A' .. 'F'] ++ digitChars
+digit :: String
+digit = ['0'..'9']
+
+hexDigit :: String
+hexDigit = ['a'..'f'] ++ ['A' .. 'F'] ++ digit
 
 charPrecedence :: Char -> Int
 charPrecedence c =
     case precedenceMap ^. Lens.at c of
     Just p -> p
     Nothing
-        | c `elem` operatorChars -> 5
+        | c `elem` operator -> 5
         | otherwise -> 20
 
 -- Based on Table 2 in https://www.haskell.org/onlinereport/decls.html

@@ -30,7 +30,7 @@ import qualified GUI.Momentu.Widget.Id as WidgetId
 import qualified GUI.Momentu.Widgets.Grid as Grid
 import qualified GUI.Momentu.Widgets.Menu as Menu
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
-import           Lamdu.CharClassification (charPrecedence, operatorChars)
+import qualified Lamdu.CharClassification as Chars
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.EventMap as EventMap
@@ -193,8 +193,8 @@ removeUnwanted =
                 <&> MetaKey.toModKey
         let disallowedOperator '.' = False
             disallowedOperator char
-                | char `notElem` operatorChars = False
-                | otherwise = charPrecedence char < minOpPrec
+                | char `notElem` Chars.operator = False
+                | otherwise = Chars.charPrecedence char < minOpPrec
         return (E.filterChars (not . disallowedOperator) . deleteKeys unwantedKeys)
     where
         deleteKeys = E.deleteKeys . map (E.KeyEvent MetaKey.KeyState'Pressed)
@@ -213,7 +213,7 @@ fixNumWithDotEventMap holeInfo res
     | otherwise = mempty
     where
         mkAction toHole =
-            E.charGroup "Operator" doc operatorChars $
+            E.charGroup "Operator" doc Chars.operator $
             \c ->
             do
                 (uuid, entityId) <- toHole
@@ -434,7 +434,7 @@ makeUnderCursorAssignment shownResultsLists hasHiddenResults holeInfo =
         holeAnimId = hidHole hids & Widget.toAnimId
         hids = hiIds holeInfo
         disallowFirstOperatorChar
-            | Text.null searchTerm = E.filterChars (`notElem` operatorChars)
+            | Text.null searchTerm = E.filterChars (`notElem` Chars.operator)
             | otherwise = id
         searchTerm = hiSearchTermProperty holeInfo ^. Property.pVal
 

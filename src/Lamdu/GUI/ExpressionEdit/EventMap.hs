@@ -12,7 +12,7 @@ import qualified Data.Store.Transaction as Transaction
 import qualified Data.Text as Text
 import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.Widget as Widget
-import           Lamdu.CharClassification (operatorChars, charPrecedence)
+import qualified Lamdu.CharClassification as Chars
 import qualified Lamdu.Config as Config
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.State (HoleState(..))
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.State as HoleEditState
@@ -160,9 +160,9 @@ applyOperatorEventMap exprInfo holePicker =
         isSelected <- exprInfoIsSelected exprInfo
         minOpPrec <- ExprGuiM.readMinOpPrec
         let acceptableOperatorChars
-                | isSelected = operatorChars
+                | isSelected = Chars.operator
                 | otherwise =
-                      filter ((>= minOpPrec) . charPrecedence) operatorChars
+                      filter ((>= minOpPrec) . Chars.charPrecedence) Chars.operator
         let action wrap =
                 E.charGroup "Operator" doc acceptableOperatorChars $ \c ->
                     do

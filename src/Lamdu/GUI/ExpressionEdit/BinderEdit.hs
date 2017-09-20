@@ -33,7 +33,7 @@ import qualified GUI.Momentu.Widgets.Choice as Choice
 import qualified GUI.Momentu.Widgets.FocusDelegator as FocusDelegator
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified GUI.Momentu.Widgets.TextView as TextView
-import           Lamdu.CharClassification (operatorChars)
+import qualified Lamdu.CharClassification as Chars
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.GUI.CodeEdit.Settings as CESettings
@@ -58,7 +58,7 @@ type T = Transaction
 
 nonOperatorName :: Name.Form -> Bool
 nonOperatorName (Name.Stored x _) =
-    nonEmptyAll (`notElem` operatorChars) (Text.unpack x)
+    nonEmptyAll (`notElem` Chars.operator) (Text.unpack x)
 nonOperatorName _ = False
 
 makeBinderNameEdit ::

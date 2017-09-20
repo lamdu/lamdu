@@ -23,7 +23,7 @@ import qualified Data.Text as Text
 import qualified GUI.Momentu.Widget.Id as WidgetId
 import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Calc.Val as V
-import           Lamdu.CharClassification (operatorChars)
+import qualified Lamdu.CharClassification as Chars
 import           Lamdu.Data.Anchors (PresentationMode(..))
 import qualified Lamdu.Data.Anchors as Anchors
 import           Lamdu.Data.Definition (Definition(..))
@@ -150,7 +150,7 @@ jumpBack codeAnchors =
                     return j
 
 isInfix :: Text -> Bool
-isInfix x = not (Text.null x) && Text.all (`elem` operatorChars) x
+isInfix x = not (Text.null x) && Text.all (`elem` Chars.operator) x
 
 presentationModeOfName :: Text -> PresentationMode
 presentationModeOfName x

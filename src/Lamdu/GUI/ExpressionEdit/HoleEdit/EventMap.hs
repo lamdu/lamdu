@@ -17,7 +17,7 @@ import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.MetaKey as MetaKey
 import           GUI.Momentu.ModKey (ModKey(..))
 import qualified GUI.Momentu.Widget as Widget
-import           Lamdu.CharClassification (operatorChars, bracketChars, digitChars, hexDigitChars)
+import qualified Lamdu.CharClassification as Chars
 import           Lamdu.Config (HasConfig)
 import qualified Lamdu.Config as Config
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.Info (HoleInfo(..))
@@ -49,9 +49,6 @@ adHocTextEditEventMap holeInfo =
         searchTerm = Property.value searchTermProp
         changeText f = mempty <$ Property.pureModify searchTermProp f
 
-disallowedHoleChars :: String
-disallowedHoleChars = ",`\"\n "
-
 toLiteralTextKeys :: [MetaKey]
 toLiteralTextKeys =
     [ MetaKey.shift MetaKey.Key'Apostrophe
@@ -64,26 +61,26 @@ allowedCharsFromSearchTerm holeInfo mPos =
     case Text.unpack searchTerm of
     "" -> allowAll
     '"':_ -> allowAll
-    "." -> disallow bracketChars
+    "." -> disallow Chars.bracket
     '.':x:_
-        | x `elem` operatorChars -> allowOnly operatorChars
-        | otherwise -> disallow (operatorChars ++ bracketChars)
-    "-" | isLeafHole -> allowOnly (operatorChars ++ digitChars)
+        | x `elem` Chars.operator -> allowOnly Chars.operator
+        | otherwise -> disallow (Chars.operator ++ Chars.bracket)
+    "-" | isLeafHole -> allowOnly (Chars.operator ++ Chars.digit)
     '-':x:xs
-        | x `elem` digitChars ->
-            digitChars ++ ['.' | not ("." `isInfixOf` xs)] & allowOnly
+        | x `elem` Chars.digit ->
+            Chars.digit ++ ['.' | not ("." `isInfixOf` xs)] & allowOnly
     x:_
-        | (x `elem` digitChars) && Just 0 == mPos ->
-            '-':digitChars & allowOnly
-    "#" | isLeafHole -> allowOnly (operatorChars ++ hexDigitChars)
+        | (x `elem` Chars.digit) && Just 0 == mPos ->
+            '-':Chars.digit & allowOnly
+    "#" | isLeafHole -> allowOnly (Chars.operator ++ Chars.hexDigit)
     '#':x:_
-        | x `elem` hexDigitChars -> allowOnly hexDigitChars
+        | x `elem` Chars.hexDigit -> allowOnly Chars.hexDigit
     x:xs
-        | x `elem` operatorChars -> allowOnly operatorChars
-        | x `elem` bracketChars -> allowOnly bracketChars
-        | "." `isInfixOf` xs -> allowOnly digitChars
-        | Text.all (`elem` digitChars) searchTerm -> allowOnly ('.':digitChars)
-        | Text.all (`notElem` operatorChars) searchTerm -> disallow operatorChars
+        | x `elem` Chars.operator -> allowOnly Chars.operator
+        | x `elem` Chars.bracket -> allowOnly Chars.bracket
+        | "." `isInfixOf` xs -> allowOnly Chars.digit
+        | Text.all (`elem` Chars.digit) searchTerm -> allowOnly ('.':Chars.digit)
+        | Text.all (`notElem` Chars.operator) searchTerm -> disallow Chars.operator
         | otherwise ->
           -- Mix of operator/non-operator chars happened in search term
           -- This can happen when editing a literal text, allow everything
@@ -104,7 +101,7 @@ disallowCharsFromSearchTerm =
      holeInfo mPos eventMap ->
     eventMap
     & E.filterChars (allowedCharsFromSearchTerm holeInfo mPos)
-    & E.filterChars (`notElem` disallowedHoleChars)
+    & E.filterChars (`notElem` Chars.disallowedInHole)
     & deleteKeys (holePickAndMoveToNextHoleKeys ++ holePickResultKeys <&> MetaKey.toModKey)
 
 deleteKeys :: E.HasEventMap f => [ModKey] -> f a -> f a
