@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, RecordWildCards, OverloadedStrings, RankNTypes, TypeFamilies, LambdaCase, DeriveTraversable , FlexibleContexts #-}
+{-# LANGUAGE NoImplicitPrelude, OverloadedStrings, RankNTypes, TypeFamilies, LambdaCase, DeriveTraversable , FlexibleContexts, DisambiguateRecordFields #-}
 module Lamdu.GUI.ExpressionGui
     ( ExpressionGui
     , render
@@ -185,8 +185,7 @@ makeEvalView ::
     AnimId -> ExprGuiM m (WithTextPos View)
 makeEvalView mNeighbours evalRes animId =
     do
-        th <- Lens.view theme
-        let Theme.Eval{..} = Theme.eval th
+        evalTheme <- Lens.view theme <&> Theme.eval
         let mkAnimId res =
                 -- When we can scroll between eval view results we
                 -- must encode the scope into the anim ID for smooth
@@ -202,8 +201,8 @@ makeEvalView mNeighbours evalRes animId =
                 <&> (^. Align.tValue)
         let neighbourView n =
                 Lens._Just makeEvaluationResultViewBG n
-                <&> Lens.mapped %~ Element.scale (neighborsScaleFactor <&> realToFrac)
-                <&> Lens.mapped %~ Element.pad (neighborsPadding <&> realToFrac)
+                <&> Lens.mapped %~ Element.scale (Theme.neighborsScaleFactor evalTheme <&> realToFrac)
+                <&> Lens.mapped %~ Element.pad (Theme.neighborsPadding evalTheme <&> realToFrac)
                 <&> fromMaybe Element.empty
         (prev, next) <-
             case mNeighbours of
@@ -455,19 +454,19 @@ maybeAddAnnotationWith ::
     EvalAnnotationOptions -> WideAnnotationBehavior -> ShowAnnotation ->
     Sugar.Annotation -> AnimId ->
     ExprGuiM m (ExpressionGui f -> ExpressionGui f)
-maybeAddAnnotationWith opt wideAnnotationBehavior ShowAnnotation{..} annotation animId =
+maybeAddAnnotationWith opt wideAnnotationBehavior showAnnotation annotation animId =
     getAnnotationMode opt annotation
     >>= \case
     AnnotationModeNone
-        | _showExpanded -> withType
+        | _showExpanded showAnnotation -> withType
         | otherwise -> noAnnotation
     AnnotationModeEvaluation n v ->
-        case _showInEvalMode of
+        case _showInEvalMode showAnnotation of
         EvalModeShowNothing -> noAnnotation
         EvalModeShowType -> withType
         EvalModeShowEval -> withVal n v
     AnnotationModeTypes
-        | _showInTypeMode -> withType
+        | _showInTypeMode showAnnotation -> withType
         | otherwise -> noAnnotation
     where
         noAnnotation = pure id

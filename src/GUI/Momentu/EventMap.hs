@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, TemplateHaskell, DeriveFunctor, DeriveGeneric, FlexibleContexts, RecordWildCards, LambdaCase, PatternGuards, OverloadedStrings #-}
+{-# LANGUAGE NoImplicitPrelude, TemplateHaskell, DeriveFunctor, DeriveGeneric, FlexibleContexts, LambdaCase, PatternGuards, OverloadedStrings #-}
 module GUI.Momentu.EventMap
     ( KeyEvent(..)
     , InputDoc, Subtitle, Doc(..), docStrs
@@ -53,39 +53,39 @@ type InputDoc = Text
 
 -- AllCharsHandler always conflict with each other
 data AllCharsHandler a = AllCharsHandler
-    { chInputDoc :: InputDoc
+    { __chInputDoc :: InputDoc
     , _chDocHandler :: DocHandler (Char -> Maybe a)
     } deriving (Generic, Functor)
 Lens.makeLenses ''AllCharsHandler
 
 chDocs :: Lens.IndexedTraversal' InputDoc (AllCharsHandler a) Doc
-chDocs f AllCharsHandler{..} =
-    AllCharsHandler chInputDoc
-    <$> dhDoc (Lens.indexed f chInputDoc) _chDocHandler
+chDocs f (AllCharsHandler inputDoc docHandler) =
+    AllCharsHandler inputDoc
+    <$> dhDoc (Lens.indexed f inputDoc) docHandler
 
 data CharGroupHandler a = CharGroupHandler
-    { cgInputDoc :: InputDoc
+    { __cgInputDoc :: InputDoc
     , _cgChars :: Set Char
-    , cgDocHandler :: DocHandler (Char -> a)
+    , __cgDocHandler :: DocHandler (Char -> a)
     } deriving (Generic, Functor)
 Lens.makeLenses ''CharGroupHandler
 
 cgDocs :: Lens.IndexedTraversal' InputDoc (CharGroupHandler a) Doc
-cgDocs f CharGroupHandler{..} =
-    CharGroupHandler cgInputDoc _cgChars
-    <$> dhDoc (Lens.indexed f cgInputDoc) cgDocHandler
+cgDocs f (CharGroupHandler inputDoc chars docHandler) =
+    CharGroupHandler inputDoc chars
+    <$> dhDoc (Lens.indexed f inputDoc) docHandler
 
 -- File path (drag&)drop handler
 data DropHandler a = DropHandler
-    { dropHandlerInputDoc :: InputDoc
+    { __dropHandlerInputDoc :: InputDoc
     , _dropDocHandler :: DocHandler ([FilePath] -> Maybe a)
     } deriving (Generic, Functor)
 Lens.makeLenses ''DropHandler
 
 dropHandlerDocs :: Lens.IndexedTraversal' InputDoc (DropHandler a) Doc
-dropHandlerDocs f DropHandler{..} =
-    DropHandler dropHandlerInputDoc
-    <$> dhDoc (Lens.indexed f dropHandlerInputDoc) _dropDocHandler
+dropHandlerDocs f (DropHandler inputDoc docHandler) =
+    DropHandler inputDoc
+    <$> dhDoc (Lens.indexed f inputDoc) docHandler
 
 data MaybeWantsClipboard a
     = Doesn'tWantClipboard a
@@ -108,13 +108,13 @@ prettyKeyEvent (KeyEvent ModKey.KeyState'Repeating modKey) = "Repeat " <> ModKey
 prettyKeyEvent (KeyEvent ModKey.KeyState'Released modKey) = "Depress " <> ModKey.pretty modKey
 
 emDocs :: Lens.IndexedTraversal' InputDoc (EventMap a) Doc
-emDocs f EventMap{..} =
+emDocs f e =
     EventMap
-    <$> (Lens.reindexed prettyKeyEvent Lens.itraversed <. dhDoc) f _emKeyMap
-    <*> (Lens.traverse .> dropHandlerDocs) f _emDropHandlers
-    <*> (Lens.traverse .> cgDocs) f _emCharGroupHandlers
-    <*> pure _emCharGroupChars
-    <*> (Lens.traverse .> chDocs) f _emAllCharsHandler
+    <$> (Lens.reindexed prettyKeyEvent Lens.itraversed <. dhDoc) f (_emKeyMap e)
+    <*> (Lens.traverse .> dropHandlerDocs) f (_emDropHandlers e)
+    <*> (Lens.traverse .> cgDocs) f (_emCharGroupHandlers e)
+    <*> pure (_emCharGroupChars e)
+    <*> (Lens.traverse .> chDocs) f (_emAllCharsHandler e)
 
 Lens.makeLenses ''EventMap
 

@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell, RecordWildCards #-}
+{-# LANGUAGE TemplateHaskell #-}
 -- | A font attached to its size
 
 module GUI.Momentu.Font

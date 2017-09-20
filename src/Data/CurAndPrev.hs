@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, RecordWildCards, DeriveTraversable #-}
+{-# LANGUAGE NoImplicitPrelude, DeriveTraversable, TemplateHaskell #-}
 
 module Data.CurAndPrev
     ( CurAndPrev(..), current, prev
@@ -7,6 +7,7 @@ module Data.CurAndPrev
     ) where
 
 import           Control.Applicative (Alternative(..))
+import qualified Control.Lens as Lens
 
 import           Lamdu.Prelude
 
@@ -14,6 +15,7 @@ data CurAndPrev a = CurAndPrev
     { _current :: a
     , _prev :: a
     } deriving (Functor, Foldable, Traversable, Show, Eq, Ord)
+Lens.makeLenses ''CurAndPrev
 
 instance Monoid a => Monoid (CurAndPrev a) where
     mempty = CurAndPrev mempty mempty
@@ -23,12 +25,6 @@ instance Monoid a => Monoid (CurAndPrev a) where
 instance Applicative CurAndPrev where
     pure x = CurAndPrev x x
     CurAndPrev f0 f1 <*> CurAndPrev a0 a1 = CurAndPrev (f0 a0) (f1 a1)
-
-current :: Lens' (CurAndPrev a) a
-current f CurAndPrev{..} = f _current <&> \_current -> CurAndPrev{..}
-
-prev :: Lens' (CurAndPrev a) a
-prev f CurAndPrev{..} = f _prev <&> \_prev -> CurAndPrev{..}
 
 fallbackToPrev :: Alternative f => CurAndPrev (f a) -> f a
 fallbackToPrev cp = cp ^. current <|> cp ^. prev

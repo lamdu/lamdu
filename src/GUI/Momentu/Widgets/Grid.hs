@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, OverloadedStrings, RecordWildCards, DeriveTraversable, FlexibleContexts, RankNTypes #-}
+{-# LANGUAGE NoImplicitPrelude, OverloadedStrings, DeriveTraversable, FlexibleContexts, RankNTypes, DisambiguateRecordFields #-}
 module GUI.Momentu.Widgets.Grid
     ( make, makeWithKeys
     , Keys(..), stdKeys
@@ -109,22 +109,23 @@ stdKeys = Keys
 
 addNavEventmap ::
     Keys ModKey -> NavDests a -> Widget.EventMap a -> Widget.EventMap a
-addNavEventmap Keys{..} navDests eMap =
+addNavEventmap keys navDests eMap =
     strongMap <> eMap <> weakMap
     where
+        dir = keysDir keys
         weakMap =
-            [ movement "left"       (keysLeft  keysDir) leftOfCursor
-            , movement "right"      (keysRight keysDir) rightOfCursor
-            , movement "up"         (keysUp    keysDir) aboveCursor
-            , movement "down"       (keysDown  keysDir) belowCursor
-            , movement "more left"  keysMoreLeft        leftMostCursor
-            , movement "more right" keysMoreRight       rightMostCursor
+            [ movement "left"       (keysLeft  dir)      leftOfCursor
+            , movement "right"      (keysRight dir)      rightOfCursor
+            , movement "up"         (keysUp    dir)      aboveCursor
+            , movement "down"       (keysDown  dir)      belowCursor
+            , movement "more left"  (keysMoreLeft keys)  leftMostCursor
+            , movement "more right" (keysMoreRight keys) rightMostCursor
             ] ^. Lens.traverse . Lens._Just
         strongMap =
-            [ movement "top"       keysTop       topCursor
-            , movement "bottom"    keysBottom    bottomCursor
-            , movement "leftmost"  keysLeftMost  leftMostCursor
-            , movement "rightmost" keysRightMost rightMostCursor
+            [ movement "top"       (keysTop keys)       topCursor
+            , movement "bottom"    (keysBottom keys)    bottomCursor
+            , movement "leftmost"  (keysLeftMost keys)  leftMostCursor
+            , movement "rightmost" (keysRightMost keys) rightMostCursor
             ] ^. Lens.traverse . Lens._Just
         movement dirName events f =
             (EventMap.keyPresses

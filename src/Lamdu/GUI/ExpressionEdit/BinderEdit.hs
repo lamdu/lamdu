@@ -1,4 +1,4 @@
-{-# LANGUAGE NamedFieldPuns, RecordWildCards, NoImplicitPrelude, OverloadedStrings, LambdaCase #-}
+{-# LANGUAGE NamedFieldPuns, NoImplicitPrelude, OverloadedStrings, LambdaCase #-}
 module Lamdu.GUI.ExpressionEdit.BinderEdit
     ( make
     , makeBinderBodyEdit
@@ -216,7 +216,7 @@ makeScopeNavEdit binder myId curCursor =
                     Nothing -> Theme.disabledColor theme
                     Just _ -> Theme.grammarColor (Theme.codeForegroundColors theme)
                 )
-        Config.Eval{..} <- Lens.view Config.config <&> Config.eval
+        evalConfig <- Lens.view Config.config <&> Config.eval
         Lens.view (CESettings.settings . CESettings.sInfoMode)
             >>= \case
             CESettings.Evaluation ->
@@ -224,7 +224,9 @@ makeScopeNavEdit binder myId curCursor =
                 <*> (mapM mkArrow scopes <&> Glue.hbox)
                 <&> E.weakerEvents (mkScopeEventMap leftKeys rightKeys `mappend` blockEventMap)
                 <&> Just
-                <&> (,) (mkScopeEventMap prevScopeKeys nextScopeKeys)
+                <&> (,) (mkScopeEventMap
+                         (Config.prevScopeKeys evalConfig)
+                         (Config.nextScopeKeys evalConfig))
             _ -> return (mempty, Nothing)
     where
         mkScopeEventMap l r = makeScopeEventMap l r curCursor setScope

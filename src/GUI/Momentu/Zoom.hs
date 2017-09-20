@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, RecordWildCards, OverloadedStrings, TemplateHaskell #-}
+{-# LANGUAGE NoImplicitPrelude, OverloadedStrings, TemplateHaskell #-}
 module GUI.Momentu.Zoom
     ( Zoom, make, eventMap, getZoomFactor
     , Config(..), defaultConfig
@@ -38,14 +38,14 @@ newtype Zoom = Zoom
     }
 
 eventMap :: Zoom -> Config -> Widget.EventMap (IO Widget.EventResult)
-eventMap (Zoom ref) Config{..} =
+eventMap (Zoom ref) config =
     mconcat
-    [ Widget.keysEventMap enlargeKeys
+    [ Widget.keysEventMap (enlargeKeys config)
         (EventMap.Doc ["View", "Zoom", "Enlarge"]) $
-        modifyIORef ref (* realToFrac enlargeFactor)
-    , Widget.keysEventMap shrinkKeys
+        modifyIORef ref (* realToFrac (enlargeFactor config))
+    , Widget.keysEventMap (shrinkKeys config)
         (EventMap.Doc ["View", "Zoom", "Shrink"]) $
-        modifyIORef ref (/ realToFrac shrinkFactor)
+        modifyIORef ref (/ realToFrac (shrinkFactor config))
     ]
 
 getZoomFactor :: Fractional a => Zoom -> IO a

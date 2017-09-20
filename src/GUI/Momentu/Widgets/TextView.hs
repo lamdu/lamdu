@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, BangPatterns, RecordWildCards, TemplateHaskell, OverloadedStrings #-}
+{-# LANGUAGE NoImplicitPrelude, BangPatterns, TemplateHaskell, OverloadedStrings #-}
 module GUI.Momentu.Widgets.TextView
     ( Font.Underline(..), Font.underlineColor, Font.underlineWidth
     , Style(..), styleColor, styleFont, styleUnderline, whiteText
@@ -62,10 +62,11 @@ whiteText f =
     }
 
 lineHeight :: Style -> Widget.R
-lineHeight Style{..} = Font.height _styleFont
+lineHeight s = s ^. styleFont & Font.height
 
 fontRender :: Style -> Text -> RenderedText (Draw.Image ())
-fontRender Style{..} = Font.render _styleFont _styleColor _styleUnderline
+fontRender s =
+    Font.render (s ^. styleFont) (s ^. styleColor) (s ^. styleUnderline)
 
 nestedFrame ::
     Show a =>
@@ -79,13 +80,13 @@ nestedFrame s (i, RenderedText size img) =
 
 -- | Returns at least one rect
 letterRects :: Style -> Text -> [[Rect]]
-letterRects Style{..} text =
+letterRects s text =
     zipWith locateLineHeight (iterate (+ height) 0) textLines
     where
         -- splitOn returns at least one string:
         textLines = map makeLine $ Text.splitOn "\n" text
         locateLineHeight y = Lens.mapped . Rect.top +~ y
-        height = Font.height _styleFont
+        height = lineHeight s
         makeLine textLine =
             sizes
             <&> fmap (^. _1)
@@ -95,7 +96,7 @@ letterRects Style{..} text =
             where
                 sizes =
                     Text.unpack textLine
-                    <&> Font.textSize _styleFont . Text.singleton
+                    <&> Font.textSize (s ^. styleFont) . Text.singleton
                 makeLetterRect size xpos =
                     Rect (Vector2 (xpos ^. advance) 0) (size ^. bounding)
 

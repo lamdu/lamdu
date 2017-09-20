@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, OverloadedStrings, RecordWildCards #-}
+{-# LANGUAGE NoImplicitPrelude, OverloadedStrings #-}
 module Lamdu.GUI.NameEdit
     ( makeView
     , makeBareEdit
@@ -61,13 +61,12 @@ makeCollisionSuffixLabel mCollision =
     where
         mk text =
             do
-                th <- Lens.view theme
-                let Theme.Name{..} = Theme.name th
-                (Draw.backgroundColor ?? collisionSuffixBGColor)
+                nameTheme <- Lens.view theme <&> Theme.name
+                (Draw.backgroundColor ?? Theme.collisionSuffixBGColor nameTheme)
                     <*>
                     (TextView.makeLabel text
-                     & Reader.local (TextView.color .~ collisionSuffixTextColor)
-                     <&> Element.scale (realToFrac <$> collisionSuffixScaleFactor))
+                     & Reader.local (TextView.color .~ Theme.collisionSuffixTextColor nameTheme)
+                     <&> Element.scale (realToFrac <$> Theme.collisionSuffixScaleFactor nameTheme))
             <&> (^. Align.tValue)
             <&> Just
 

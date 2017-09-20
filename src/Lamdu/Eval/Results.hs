@@ -1,11 +1,10 @@
-{-# LANGUAGE DeriveTraversable, TemplateHaskell, NoImplicitPrelude, RecordWildCards, GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE DeriveTraversable, TemplateHaskell, NoImplicitPrelude, GeneralizedNewtypeDeriving #-}
 module Lamdu.Eval.Results
     ( Body(..), _RRecExtend, _RInject, _RFunc, _RRecEmpty, _RPrimVal, _RError, _RArray
     , Val(..), payload, body
     , ScopeId(..), topLevelScopeId
     , EvalError(..)
     , EvalResults(..), erExprValues, erAppliesOfLam, erCache, empty
-
     , extractField
     ) where
 

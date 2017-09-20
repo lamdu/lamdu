@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, RecordWildCards, OverloadedStrings #-}
+{-# LANGUAGE NoImplicitPrelude, OverloadedStrings #-}
 module Lamdu.GUI.ExpressionEdit.GetVarEdit
     ( make, makeGetBinder, makeGetParam
     ) where
@@ -61,8 +61,7 @@ makeParamsRecord ::
     Widget.Id -> Sugar.ParamsRecordVar (Name m) -> f (ExpressionGui m)
 makeParamsRecord myId paramsRecordVar =
     do
-        theme <- Lens.view Theme.theme
-        let Theme.Name{..} = Theme.name theme
+        nameTheme <- Lens.view Theme.theme <&> Theme.name
         respondToCursor <- Widget.respondToCursorPrefix ?? myId
         sequence
             [ TextView.makeLabel "Params {" <&> Responsive.fromTextView
@@ -73,7 +72,7 @@ makeParamsRecord myId paramsRecordVar =
                 (\i fieldName ->
                     Widget.joinId myId ["params", SBS8.pack (show (i::Int))]
                     & makeSimpleView fieldName <&> Responsive.fromWithTextPos
-                    & Reader.local (TextView.color .~ parameterColor)
+                    & Reader.local (TextView.color .~ Theme.parameterColor nameTheme)
                 )
               )
             , TextView.makeLabel "}" <&> Responsive.fromTextView
@@ -185,13 +184,12 @@ makeGetBinder ::
 makeGetBinder binderVar myId =
     do
         config <- Lens.view Config.config
-        theme <- Lens.view Theme.theme
-        let Theme.Name{..} = Theme.name theme
+        nameTheme <- Lens.view Theme.theme <&> Theme.name
         let (color, processDef) =
                 case binderVar ^. Sugar.bvForm of
-                Sugar.GetLet -> (letColor, id)
+                Sugar.GetLet -> (Theme.letColor nameTheme, id)
                 Sugar.GetDefinition defForm ->
-                    ( definitionColor
+                    ( Theme.definitionColor nameTheme
                     , processDefinitionWidget defForm myId
                     )
         makeSimpleView

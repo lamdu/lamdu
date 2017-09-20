@@ -1,4 +1,4 @@
-{-# LANGUAGE RecordWildCards, NoImplicitPrelude, OverloadedStrings #-}
+{-# LANGUAGE NoImplicitPrelude, OverloadedStrings #-}
 module Lamdu.GUI.ExpressionEdit.LiteralEdit
     ( make
     ) where
@@ -74,10 +74,10 @@ genericEdit whichStyle prop pl =
         valText = prop ^. Property.pVal & format
 
 fdConfig :: Config.LiteralText -> FocusDelegator.Config
-fdConfig Config.LiteralText{..} = FocusDelegator.Config
-    { FocusDelegator.focusChildKeys = literalTextStartEditingKeys
+fdConfig conf = FocusDelegator.Config
+    { FocusDelegator.focusChildKeys = Config.literalTextStartEditingKeys conf
     , FocusDelegator.focusChildDoc = E.Doc ["Edit", "Literal Text", "Start editing"]
-    , FocusDelegator.focusParentKeys = literalTextStopEditingKeys
+    , FocusDelegator.focusParentKeys = Config.literalTextStopEditingKeys conf
     , FocusDelegator.focusParentDoc = E.Doc ["Edit", "Literal Text", "Stop editing"]
     }
 

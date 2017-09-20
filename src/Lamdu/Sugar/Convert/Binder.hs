@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, FlexibleContexts, TypeFamilies, RankNTypes, RecordWildCards #-}
+{-# LANGUAGE NoImplicitPrelude, FlexibleContexts, TypeFamilies, RankNTypes, DisambiguateRecordFields #-}
 module Lamdu.Sugar.Convert.Binder
     ( convertDefinitionBinder, convertLam, convertBinderBody
     ) where
@@ -154,25 +154,25 @@ makeBinder :: (Monad m, Monoid a) =>
     Maybe (MkProperty m PresentationMode) ->
     ConventionalParams m -> Val (Input.Payload m a) ->
     ConvertM m (Binder UUID m (ExpressionU m a))
-makeBinder chosenScopeProp mPresentationModeProp ConventionalParams{..} funcBody =
+makeBinder chosenScopeProp mPresentationModeProp params funcBody =
     do
         binderBody <- convertBinderBody funcBody
         return Binder
-            { _bParams = _cpParams
+            { _bParams = _cpParams params
             , _bMPresentationModeProp = mPresentationModeProp
             , _bChosenScopeProp = chosenScopeProp
             , _bBody = binderBody
-            , _bBodyScopes = cpScopes
-            , _bActions = BinderActions _cpAddFirstParam
+            , _bBodyScopes = cpScopes params
+            , _bActions = BinderActions (_cpAddFirstParam params)
             }
     & ConvertM.local (ConvertM.scScopeInfo %~ addParams)
     where
         addParams ctx =
             ctx
-            & ConvertM.siTagParamInfos <>~ _cpParamInfos
+            & ConvertM.siTagParamInfos <>~ _cpParamInfos params
             & ConvertM.siNullParams <>~
-            case _cpParams of
-            NullParam {} -> Set.fromList (cpMLamParam ^.. Lens._Just)
+            case _cpParams params of
+            NullParam {} -> Set.fromList (cpMLamParam params ^.. Lens._Just)
             _ -> Set.empty
 
 convertLam ::
