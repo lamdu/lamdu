@@ -156,12 +156,12 @@ isCharConflict x char =
     (($ char) . (^. chDocHandler . dhHandler) <$>
       x ^. emAllCharsHandler)
 
-filterChars
-    :: (Char -> Bool) -> EventMap a -> EventMap a
-filterChars p =
-    (emCharGroupHandlers %~ filterCharGroups p) .
-    (emCharGroupChars %~ Set.filter p) .
-    (emAllCharsHandler . Lens.traversed . chDocHandler . dhHandler %~ f)
+filterChars :: HasEventMap f => (Char -> Bool) -> f a -> f a
+filterChars p val =
+    val
+    & eventMap . emAllCharsHandler . Lens.traversed . chDocHandler . dhHandler %~ f
+    & eventMap . emCharGroupChars %~ Set.filter p
+    & eventMap . emCharGroupHandlers %~ filterCharGroups p
     where
         f handler c = do
             guard $ p c
@@ -182,10 +182,10 @@ mkModKey = ModKey
 filterByKey :: (k -> Bool) -> Map k v -> Map k v
 filterByKey p = Map.filterWithKey (const . p)
 
-deleteKey :: KeyEvent -> EventMap a -> EventMap a
-deleteKey key = emKeyMap %~ Map.delete key
+deleteKey :: HasEventMap f => KeyEvent -> f a -> f a
+deleteKey key = eventMap . emKeyMap %~ Map.delete key
 
-deleteKeys :: [KeyEvent] -> EventMap a -> EventMap a
+deleteKeys :: HasEventMap f => [KeyEvent] -> f a -> f a
 deleteKeys = foldr ((.) . deleteKey) id
 
 lookup :: Applicative f => f (Maybe Clipboard) -> Events.Event -> EventMap a -> f (Maybe a)

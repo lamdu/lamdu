@@ -96,8 +96,8 @@ allowedCharsFromSearchTerm holeInfo mPos =
         isLeafHole = hiHole holeInfo & Lens.has (Sugar.holeKind . Sugar._LeafHole)
 
 disallowCharsFromSearchTerm ::
-    (MonadReader env m, HasConfig env) =>
-    m (HoleInfo f -> Maybe Int -> E.EventMap a -> E.EventMap a)
+    (MonadReader env m, HasConfig env, E.HasEventMap w) =>
+    m (HoleInfo f -> Maybe Int -> w a -> w a)
 disallowCharsFromSearchTerm =
     Lens.view Config.config <&> Config.hole <&>
     \Config.Hole{holePickAndMoveToNextHoleKeys, holePickResultKeys}
@@ -107,8 +107,11 @@ disallowCharsFromSearchTerm =
     & E.filterChars (`notElem` disallowedHoleChars)
     & deleteKeys (holePickAndMoveToNextHoleKeys ++ holePickResultKeys <&> MetaKey.toModKey)
 
-deleteKeys :: [ModKey] -> E.EventMap a -> E.EventMap a
-deleteKeys = E.deleteKeys . map (E.KeyEvent MetaKey.KeyState'Pressed)
+deleteKeys :: E.HasEventMap f => [ModKey] -> f a -> f a
+deleteKeys keys =
+    E.eventMap %~ E.deleteKeys pressedKeys
+    where
+        pressedKeys = keys <&> E.KeyEvent MetaKey.KeyState'Pressed
 
 listTHead :: List t => b -> t b -> List.ItemM t b
 listTHead nil l =
