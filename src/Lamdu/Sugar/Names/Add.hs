@@ -324,11 +324,6 @@ getCollisionEnv name inst env =
     , env & p2NamesAbove %~ Map.insertWith mappend name (Clash.isClashOf inst)
     )
 
--- makeFinalForm ::
---     Monad tm => Form -> Text -> NameUUIDMap -> UUID -> P2Env -> Name tm
--- makeFinalForm form storedName namesWithin uuid env =
---     fst $ makeFinalFormEnv src storedName namesWithin uuid env
-
 instance Monad tm => MonadNaming (Pass2MakeNames tm) where
     type OldName (Pass2MakeNames tm) = P1Name
     type NewName (Pass2MakeNames tm) = Name tm
