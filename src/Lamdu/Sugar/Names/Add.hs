@@ -102,8 +102,13 @@ nameUUIDMapSingleton :: Text -> Clash.NameInstance -> NameUUIDMap
 nameUUIDMapSingleton name nameInstance =
     OrderedSet.singleton nameInstance & Map.singleton name & NameUUIDMap
 
-isLocal :: Clash.NameInstance -> Bool
-isLocal = (`elem` [Walk.FieldParamName, Walk.ParamName]) . (^. Clash.niNameType)
+isLocal :: Walk.NameType -> Bool
+isLocal Walk.FieldParamName = True
+isLocal Walk.ParamName = True
+isLocal _ = False
+
+isLocalName :: Clash.NameInstance -> Bool
+isLocalName = isLocal . (^. Clash.niNameType)
 
 removeEmpty :: NameUUIDMap -> NameUUIDMap
 removeEmpty = nameUUIDMap %~ Map.filter (not . OrderedSet.null)
@@ -111,13 +116,13 @@ removeEmpty = nameUUIDMap %~ Map.filter (not . OrderedSet.null)
 localNames :: NameUUIDMap -> NameUUIDMap
 localNames nameMap =
     nameMap
-    & nameUUIDMap . Lens.mapped %~ OrderedSet.filter isLocal
+    & nameUUIDMap . Lens.mapped %~ OrderedSet.filter isLocalName
     & removeEmpty
 
 globalNames :: NameUUIDMap -> NameUUIDMap
 globalNames nameMap =
     nameMap
-    & nameUUIDMap . Lens.mapped %~ OrderedSet.filter (not . isLocal)
+    & nameUUIDMap . Lens.mapped %~ OrderedSet.filter (not . isLocalName)
     & removeEmpty
 
 data P1Out = P1Out
@@ -154,7 +159,7 @@ globalCollisions (NameUUIDMap names) =
             Clash -> True
             noClash -> any (Clash.isClash . (noClash <>) . Clash.isClashOf) locals
             where
-                (locals, globals) = partition isLocal ns
+                (locals, globals) = partition isLocalName ns
 
 reservedWords :: Set Text
 reservedWords =
@@ -173,16 +178,6 @@ p1PostProcess (P1Out names localCollisions) =
 
 p1ListenNames :: Pass1PropagateUp tm a -> Pass1PropagateUp tm (a, NameUUIDMap)
 p1ListenNames act = p1Listen act <&> _2 %~ _p1Names
-
-data NameScope = Local | Global
-    deriving Eq
-
-nameTypeScope :: Walk.NameType -> NameScope
-nameTypeScope Walk.ParamName = Local
-nameTypeScope Walk.FieldParamName = Local
-nameTypeScope Walk.TagName = Global
-nameTypeScope Walk.NominalName = Global
-nameTypeScope Walk.DefName = Global
 
 instance Monad tm => MonadNaming (Pass1PropagateUp tm) where
     type OldName (Pass1PropagateUp tm) = P0Name
@@ -205,25 +200,30 @@ pass1Result mDisambiguator nameType (P0Name mName uuid) =
     CPS $ \inner ->
     do
         (r, namesBelow) <- p1ListenNames inner
+        let newNamesBelow = myNameUUIDMap `mappend` namesBelow
         let checkLocalCollision name =
-                localNames namesBelow ^.. Lens.ix name . Lens.folded
+                localNames newNamesBelow ^.. Lens.ix name . Lens.folded
                 & Clash.check & Clash.isClash
+        let mGivenName =
+                case (nameType, mName) of
+                (Walk.ParamName, Nothing) -> Nothing
+                (_, Just name) -> Just name
+                (_, _) -> Just unnamedStr
         let localCollisions =
-                case (scope, mName) of
-                (Local, Just name)
-                    | checkLocalCollision name -> Set.singleton name
+                case mGivenName of
+                Just name
+                    | isLocal nameType && checkLocalCollision name -> Set.singleton name
                 _ -> mempty
         p1Tell P1Out { _p1Names = myNameUUIDMap, _p1Collisions = localCollisions }
         pure
             ( P1Name
                 { p1StoredName = mName
                 , p1Instance = nameInstance
-                , p1NamesBelow = myNameUUIDMap `mappend` namesBelow
+                , p1NamesBelow = newNamesBelow
                 }
             , r
             )
     where
-        scope = nameTypeScope nameType
         myNameUUIDMap =
             case (nameType, mName) of
             (_, Just name) -> Just name
@@ -344,9 +344,9 @@ instance Monad tm => MonadNaming (Pass2MakeNames tm) where
     opWithParamName GetFieldParameter _ = p2cpsNameConvertorGlobal
     opWithLetName = p2cpsNameConvertorLocal
     opGetName nameType =
-        case nameTypeScope nameType of
-        Local -> p2nameConvertorLocal
-        Global -> p2nameConvertorGlobal
+        case nameType of
+        Walk.ParamName -> p2nameConvertorLocal
+        _ -> p2nameConvertorGlobal
 
 p2nameConvertorLocal :: Monad m => P1Name -> Pass2MakeNames tm (Name m)
 p2nameConvertorLocal (P1Name mStoredName inst _) =
