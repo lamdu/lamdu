@@ -24,6 +24,7 @@ import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
 import qualified GUI.Momentu.Widgets.TextEdit.Property as TextEdits
 import qualified GUI.Momentu.Widgets.TextView as TextView
 import qualified Lamdu.Config as Config
+import           Lamdu.Config (HasConfig)
 import           Lamdu.Formatting (Format(..))
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.State (HoleState(..), setHoleStateAndJump)
 import           Lamdu.GUI.ExpressionGui (ExpressionGui)
@@ -31,7 +32,7 @@ import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
-import           Lamdu.Style (Style)
+import           Lamdu.Style (Style, HasStyle)
 import qualified Lamdu.Style as Style
 import qualified Lamdu.Sugar.Types as Sugar
 
@@ -51,10 +52,11 @@ mkEditEventMap valText setToHole =
         setHoleStateAndJump uuid (HoleState valText) entityId
 
 genericEdit ::
-    (Monad m, Format a) =>
+    ( Monad m, Format a, MonadReader env f, HasStyle env, Widget.HasCursor env
+    ) =>
     LensLike' (Lens.Const TextEdit.Style) Style TextEdit.Style ->
     Transaction.Property m a ->
-    Sugar.Payload m ExprGuiT.Payload -> ExprGuiM m (ExpressionGui m)
+    Sugar.Payload m ExprGuiT.Payload -> f (ExpressionGui m)
 genericEdit whichStyle prop pl =
     do
         style <- Lens.view Style.style <&> (^. whichStyle)
@@ -80,9 +82,12 @@ fdConfig Config.LiteralText{..} = FocusDelegator.Config
     }
 
 textEdit ::
-    Monad m => Transaction.Property m Text ->
+    ( Monad m, MonadReader env f, HasConfig env, HasStyle env
+    , Element.HasAnimIdPrefix env, Widget.HasCursor env
+    ) =>
+    Transaction.Property m Text ->
     Sugar.Payload m ExprGuiT.Payload ->
-    ExprGuiM m (WithTextPos (Widget (T m Widget.EventResult)))
+    f (WithTextPos (Widget (T m Widget.EventResult)))
 textEdit prop pl =
     do
         config <- Lens.view Config.config <&> Config.literalText
