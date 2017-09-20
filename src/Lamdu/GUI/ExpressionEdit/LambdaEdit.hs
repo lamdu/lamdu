@@ -5,8 +5,8 @@ module Lamdu.GUI.ExpressionEdit.LambdaEdit
 
 import qualified Control.Lens as Lens
 import           Data.Store.Transaction (Transaction)
-import qualified GUI.Momentu.Align as Align
 import           GUI.Momentu.Align (WithTextPos(..))
+import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Glue ((/-/))
@@ -17,7 +17,10 @@ import qualified GUI.Momentu.Responsive.Expression as ResponsiveExpr
 import qualified GUI.Momentu.Responsive.Options as Options
 import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
+import qualified GUI.Momentu.Widgets.TextView as TextView
+import           Lamdu.Config (HasConfig)
 import qualified Lamdu.Config as Config
+import           Lamdu.Config.Theme (HasTheme)
 import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.GUI.ExpressionEdit.BinderEdit as BinderEdit
 import           Lamdu.GUI.ExpressionGui (ExpressionGui)
@@ -50,9 +53,10 @@ mkLhsEdits mParamsEdit mScopeEdit =
     mParamsEdit <&> addScopeEdit mScopeEdit & (^.. Lens._Just)
 
 mkExpanded ::
-    Monad m =>
-    ExprGuiM m
-    (Maybe (ExpressionGui m) -> Maybe (Widget (T m Widget.EventResult)) ->
+    ( Monad m, MonadReader env f, HasTheme env, TextView.HasStyle env
+    , Element.HasAnimIdPrefix env
+    ) =>
+    f (Maybe (ExpressionGui m) -> Maybe (Widget (T m Widget.EventResult)) ->
      [ExpressionGui m])
 mkExpanded =
     do
@@ -64,8 +68,10 @@ lamId :: Widget.Id -> Widget.Id
 lamId = (`Widget.joinId` ["lam"])
 
 mkShrunk ::
-    Monad m => [Sugar.EntityId] -> Widget.Id ->
-    ExprGuiM m (Maybe (Widget (T m Widget.EventResult)) -> [ExpressionGui m])
+    ( Monad m, MonadReader env f, HasConfig env, HasTheme env
+    , Widget.HasCursor env, Element.HasAnimIdPrefix env, TextView.HasStyle env
+    ) => [Sugar.EntityId] -> Widget.Id ->
+    f (Maybe (Widget (T m Widget.EventResult)) -> [ExpressionGui m])
 mkShrunk paramIds myId =
     do
         jumpKeys <- Lens.view Config.config <&> Config.jumpToDefinitionKeys
@@ -87,9 +93,12 @@ mkShrunk paramIds myId =
             ]
 
 mkLightLambda ::
-    Monad n =>
+    ( Monad n, MonadReader env f, Widget.HasCursor env
+    , Element.HasAnimIdPrefix env, TextView.HasStyle env, HasTheme env
+    , HasConfig env
+    ) =>
     Sugar.BinderParams a m -> Widget.Id ->
-    ExprGuiM n
+    f
     (Maybe (ExpressionGui n) -> Maybe (Widget (T n Widget.EventResult)) ->
      [ExpressionGui n])
 mkLightLambda params myId =
