@@ -4,12 +4,20 @@ module Lamdu.GUI.ExpressionEdit.InjectEdit
     ) where
 
 import qualified Control.Lens as Lens
+import           Control.Monad.Transaction (MonadTransaction)
 import           Data.Store.Transaction (Transaction)
+import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.EventMap as E
+import qualified GUI.Momentu.Hover as Hover
 import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.Responsive.Options as Options
 import qualified GUI.Momentu.Widget as Widget
+import qualified GUI.Momentu.Widgets.Menu as Menu
+import qualified GUI.Momentu.Widgets.Spacer as Spacer
+import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
+import           Lamdu.Config (HasConfig)
 import qualified Lamdu.Config as Config
+import           Lamdu.Config.Theme (HasTheme)
 import qualified Lamdu.GUI.ExpressionEdit.ApplyEdit as ApplyEdit
 import qualified Lamdu.GUI.ExpressionEdit.TagEdit as TagEdit
 import           Lamdu.GUI.ExpressionGui (ExpressionGui)
@@ -25,11 +33,15 @@ import qualified Lamdu.Sugar.Types as Sugar
 import           Lamdu.Prelude
 
 makeCommon ::
-    Monad m =>
+    ( Monad m, MonadReader env f, MonadTransaction m f
+    , HasConfig env, HasTheme env, Widget.HasCursor env, TextEdit.HasStyle env
+    , Spacer.HasStdSpacing env, Element.HasAnimIdPrefix env, Menu.HasStyle env
+    , Hover.HasStyle env
+    ) =>
     Sugar.Tag (Name m) m ->
     Maybe (Transaction m Sugar.EntityId) ->
     NearestHoles -> [ExpressionGui m] ->
-    ExprGuiM m (ExpressionGui m)
+    f (ExpressionGui m)
 makeCommon tag mDelInject nearestHoles valEdits =
     do
         config <- Lens.view Config.config
