@@ -24,10 +24,11 @@ RUN pacman --noconfirm --sync glew
 # Install NodeJS to save time (so that it isn't built by stack build)
 RUN pacman --noconfirm --sync nodejs
 
-RUN git clone https://github.com/lamdu/lamdu
-
-WORKDIR "/lamdu"
 # Running `stack setup` and `stack build` seperately enables making
 # better use of Docker's build cache when maintaining the Dockerfile
-RUN stack setup
+RUN stack setup --resolver ghc-8.2.1
+
+RUN git clone --depth 1 https://github.com/lamdu/lamdu
+
+WORKDIR "/lamdu"
 RUN stack build -j1
