@@ -1,5 +1,5 @@
-{-# OPTIONS_GHC -O0 #-}
-{-# LANGUAGE NoImplicitPrelude, TemplateHaskell #-}
+{-# OPTIONS -O0 #-}
+{-# LANGUAGE NoImplicitPrelude, TemplateHaskell, CPP #-}
 -- | The themes/ config format
 module Lamdu.Config.Theme
     ( module Lamdu.Config.Theme.CodeForegroundColors
@@ -10,9 +10,11 @@ module Lamdu.Config.Theme
     , HasTheme(..)
     ) where
 
+#ifndef NO_CODE
 import           Data.Aeson.Utils (decapitalize, removePrefix)
+#endif
 import           Data.Aeson.TH (deriveJSON)
-import           Data.Aeson.Types (defaultOptions, fieldLabelModifier)
+import qualified Data.Aeson.Types as Aeson
 import           Data.Vector.Vector2 (Vector2)
 import qualified GUI.Momentu.Draw as Draw
 import qualified GUI.Momentu.Hover as Hover
@@ -33,21 +35,29 @@ data Help = Help
     , helpBGColor :: Draw.Color
     , helpTint :: Draw.Color
     } deriving (Eq, Show)
-deriveJSON defaultOptions{fieldLabelModifier = decapitalize . removePrefix "help"} ''Help
+deriveJSON Aeson.defaultOptions
+#ifndef NO_CODE
+    {Aeson.fieldLabelModifier = decapitalize . removePrefix "help"}
+#endif
+    ''Help
 
 data Hole = Hole
     { holeResultPadding :: Vector2 Double
     , holeSearchTermBGColor :: Draw.Color
     , holeActiveSearchTermBGColor :: Draw.Color
     } deriving (Eq, Show)
-deriveJSON defaultOptions{fieldLabelModifier = decapitalize . removePrefix "hole"} ''Hole
+deriveJSON Aeson.defaultOptions
+#ifndef NO_CODE
+    {Aeson.fieldLabelModifier = decapitalize . removePrefix "hole"}
+#endif
+    ''Hole
 
 data Eval = Eval
     { neighborsScaleFactor :: Vector2 Double
     , neighborsPadding :: Vector2 Double
     , staleResultTint :: Draw.Color
     } deriving (Eq, Show)
-deriveJSON defaultOptions ''Eval
+deriveJSON Aeson.defaultOptions ''Eval
 
 data Theme = Theme
     { fonts :: Fonts FilePath
@@ -84,7 +94,7 @@ data Theme = Theme
     , presentationChoiceScaleFactor :: Vector2 Double
     , evaluatedPathBGColor :: Draw.Color
     } deriving (Eq, Show)
-deriveJSON defaultOptions ''Theme
+deriveJSON Aeson.defaultOptions ''Theme
 
 class HasTheme env where theme :: Lens' env Theme
 instance HasTheme Theme where theme = id

@@ -1,14 +1,18 @@
-{-# LANGUAGE NoImplicitPrelude, TemplateHaskell #-}
+{-# LANGUAGE NoImplicitPrelude, TemplateHaskell, CPP #-}
 -- | The themes/ config format
 module Lamdu.Config.Theme.ValAnnotation
     ( ValAnnotation(..)
     ) where
 
+#ifndef NO_CODE
 import qualified Control.Lens as Lens
+#endif
 import           Data.Aeson.TH (deriveJSON)
-import           Data.Aeson.Types (defaultOptions, fieldLabelModifier)
+import qualified Data.Aeson.Types as Aeson
+#ifndef NO_CODE
 import           Data.Aeson.Utils (removePrefix)
 import qualified Data.Char as Char
+#endif
 import qualified GUI.Momentu.Draw as Draw
 
 import           Lamdu.Prelude
@@ -21,10 +25,12 @@ data ValAnnotation = ValAnnotation
     , valAnnotationShrinkAtLeast :: Double
     , valAnnotationMaxHeight :: Double
     } deriving (Eq, Show)
-deriveJSON defaultOptions
-    { fieldLabelModifier = \name ->
+deriveJSON Aeson.defaultOptions
+#ifndef NO_CODE
+    { Aeson.fieldLabelModifier = \name ->
         name
         & removePrefix "valAnnotation"
         & Lens.taking 2 traverse %~ Char.toLower
     }
+#endif
     ''ValAnnotation

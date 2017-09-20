@@ -1,3 +1,8 @@
+{-# LANGUAGE CPP #-}
+
+#ifdef NO_CODE
+module Data.Aeson.Utils () where
+#else
 module Data.Aeson.Utils
     ( removePrefix
     , decapitalize
@@ -14,3 +19,4 @@ removePrefix :: (Show a, Eq a) => [a] -> [a] -> [a]
 removePrefix prefix str
     | prefix `isPrefixOf` str = drop (length prefix) str
     | otherwise = error ("removePrefix " ++ show prefix ++ " on " ++ show str)
+#endif
