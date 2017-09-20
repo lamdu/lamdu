@@ -27,6 +27,7 @@ import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Menu as Menu
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
 import qualified GUI.Momentu.Widgets.TextView as TextView
+import qualified Lamdu.CharClassification as Chars
 import           Lamdu.Config (HasConfig)
 import qualified Lamdu.Config as Config
 import           Lamdu.Config.Theme (HasTheme)
@@ -168,6 +169,7 @@ makeTagHoleEditH nearestHoles tag searchTerm updateState fixCursor =
             TextEdit.make ?? textEditNoEmpty ?? searchTerm ?? searchTermId
             <&> Align.tValue . Lens.mapped %~ pure . uncurry updateState
             <&> Align.tValue %~ E.strongerEvents setNameEventMap
+            <&> Align.tValue %~ E.filterChars (`notElem` Chars.disallowedInHole)
         label <- (TextView.make ?? labelText) <*> Element.subAnimId ["label"]
         let topLine = term /|/ label
         (options, hasMore) <- makeOptions fixCursor nearestHoles tag searchTerm
