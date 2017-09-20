@@ -1,12 +1,12 @@
-{-# LANGUAGE NoImplicitPrelude, DeriveGeneric, RecordWildCards, OverloadedStrings #-}
+{-# LANGUAGE NoImplicitPrelude, RecordWildCards, OverloadedStrings, TemplateHaskell #-}
 module GUI.Momentu.Zoom
     ( Zoom, make, eventMap, getZoomFactor
     , Config(..), defaultConfig
     ) where
 
-import qualified Data.Aeson.Types as Aeson
+import           Data.Aeson.TH (deriveJSON)
+import           Data.Aeson.Types (defaultOptions)
 import           Data.IORef
-import           GHC.Generics (Generic)
 import qualified GUI.Momentu.EventMap as EventMap
 import           GUI.Momentu.MetaKey (MetaKey)
 import qualified GUI.Momentu.MetaKey as MetaKey
@@ -21,10 +21,8 @@ data Config = Config
     , enlargeKeys :: [MetaKey]
     , enlargeFactor :: Double
     , shrinkFactor :: Double
-    } deriving (Eq, Generic, Show)
-instance Aeson.ToJSON Config where
-    toJSON = Aeson.genericToJSON Aeson.defaultOptions
-instance Aeson.FromJSON Config
+    } deriving (Eq, Show)
+deriveJSON defaultOptions ''Config
 
 defaultConfig :: Config
 defaultConfig =

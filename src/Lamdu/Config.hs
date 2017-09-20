@@ -1,5 +1,5 @@
 {-# OPTIONS -O0 #-}
-{-# LANGUAGE DeriveGeneric, NoImplicitPrelude #-}
+{-# LANGUAGE NoImplicitPrelude, TemplateHaskell #-}
 module Lamdu.Config
     ( Export(..), Pane(..), Hole(..)
     , Eval(..)
@@ -10,8 +10,8 @@ module Lamdu.Config
     ) where
 
 import qualified Control.Lens as Lens
-import qualified Data.Aeson.Types as Aeson
-import           GHC.Generics (Generic)
+import           Data.Aeson.TH (deriveJSON)
+import           Data.Aeson.Types (defaultOptions)
 import           GUI.Momentu.MetaKey (MetaKey)
 import qualified GUI.Momentu.Zoom as Zoom
 import qualified Lamdu.GUI.VersionControl.Config as VersionControl
@@ -24,10 +24,8 @@ data Export = Export
     , exportFancyKeys :: [MetaKey]
     , exportAllKeys :: [MetaKey]
     , importKeys :: [MetaKey]
-    } deriving (Eq, Generic, Show)
-instance Aeson.ToJSON Export where
-    toJSON = Aeson.genericToJSON Aeson.defaultOptions
-instance Aeson.FromJSON Export
+    } deriving (Eq, Show)
+deriveJSON defaultOptions ''Export
 
 data Pane = Pane
     { paneCloseKeys :: [MetaKey]
@@ -35,10 +33,8 @@ data Pane = Pane
     , paneMoveUpKeys :: [MetaKey]
     , newDefinitionKeys :: [MetaKey]
     , newDefinitionButtonPressKeys :: [MetaKey]
-    } deriving (Eq, Generic, Show)
-instance Aeson.ToJSON Pane where
-    toJSON = Aeson.genericToJSON Aeson.defaultOptions
-instance Aeson.FromJSON Pane
+    } deriving (Eq, Show)
+deriveJSON defaultOptions ''Pane
 
 data Hole = Hole
     { holePickAndMoveToNextHoleKeys :: [MetaKey]
@@ -49,26 +45,20 @@ data Hole = Hole
     , holeUnwrapKeys :: [MetaKey]
     , holeOpenKeys :: [MetaKey]
     , holeCloseKeys :: [MetaKey]
-    } deriving (Eq, Generic, Show)
-instance Aeson.ToJSON Hole where
-    toJSON = Aeson.genericToJSON Aeson.defaultOptions
-instance Aeson.FromJSON Hole
+    } deriving (Eq, Show)
+deriveJSON defaultOptions ''Hole
 
 data Eval = Eval
     { prevScopeKeys :: [MetaKey]
     , nextScopeKeys :: [MetaKey]
-    } deriving (Eq, Generic, Show)
-instance Aeson.ToJSON Eval where
-    toJSON = Aeson.genericToJSON Aeson.defaultOptions
-instance Aeson.FromJSON Eval
+    } deriving (Eq, Show)
+deriveJSON defaultOptions ''Eval
 
 data LiteralText = LiteralText
     { literalTextStartEditingKeys :: [MetaKey]
     , literalTextStopEditingKeys :: [MetaKey]
-    } deriving (Eq, Generic, Show)
-instance Aeson.ToJSON LiteralText where
-    toJSON = Aeson.genericToJSON Aeson.defaultOptions
-instance Aeson.FromJSON LiteralText
+    } deriving (Eq, Show)
+deriveJSON defaultOptions ''LiteralText
 
 data Config = Config
     { zoom :: Zoom.Config
@@ -110,10 +100,8 @@ data Config = Config
 
     , caseOpenKeys :: [MetaKey]
     , caseAddAltKeys :: [MetaKey]
-    } deriving (Eq, Generic, Show)
-instance Aeson.ToJSON Config where
-    toJSON = Aeson.genericToJSON Aeson.defaultOptions
-instance Aeson.FromJSON Config
+    } deriving (Eq, Show)
+deriveJSON defaultOptions ''Config
 
 class HasConfig env where config :: Lens' env Config
 instance HasConfig Config where config = id

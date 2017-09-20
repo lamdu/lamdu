@@ -1,7 +1,7 @@
 -- | Responsive layout for expressions express the hierarchy using parentheses and indentation,
 -- as is customary in many programming languages and in mathematics.
 
-{-# LANGUAGE NoImplicitPrelude, DeriveGeneric, OverloadedStrings #-}
+{-# LANGUAGE NoImplicitPrelude, TemplateHaskell, OverloadedStrings #-}
 
 module GUI.Momentu.Responsive.Expression
     ( Style(..), HasStyle(..)
@@ -9,12 +9,12 @@ module GUI.Momentu.Responsive.Expression
     ) where
 
 import qualified Control.Lens as Lens
-import qualified Data.Aeson.Types as Aeson
+import           Data.Aeson.TH (deriveJSON)
+import           Data.Aeson.Types (defaultOptions)
 import           Data.Text.Encoding (encodeUtf8)
 import           Data.Vector.Vector2 (Vector2(..))
-import           GHC.Generics (Generic)
-import           GUI.Momentu.Animation (AnimId)
 import           GUI.Momentu.Align (WithTextPos)
+import           GUI.Momentu.Animation (AnimId)
 import qualified GUI.Momentu.Draw as Draw
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.Glue ((/|/))
@@ -33,10 +33,8 @@ data Style = Style
     { indentBarWidth :: Double
     , indentBarGap :: Double
     , indentBarColor :: Draw.Color
-    } deriving (Eq, Generic, Show)
-instance Aeson.ToJSON Style where
-    toJSON = Aeson.genericToJSON Aeson.defaultOptions
-instance Aeson.FromJSON Style
+    } deriving (Eq, Show)
+deriveJSON defaultOptions ''Style
 
 class HasStyle env where style :: Lens' env Style
 instance HasStyle Style where style = id

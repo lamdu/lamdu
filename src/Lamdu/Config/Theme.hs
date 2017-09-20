@@ -1,5 +1,5 @@
 {-# OPTIONS_GHC -O0 #-}
-{-# LANGUAGE NoImplicitPrelude, DeriveGeneric #-}
+{-# LANGUAGE NoImplicitPrelude, TemplateHaskell #-}
 -- | The themes/ config format
 module Lamdu.Config.Theme
     ( module Lamdu.Config.Theme.CodeForegroundColors
@@ -10,9 +10,10 @@ module Lamdu.Config.Theme
     , HasTheme(..)
     ) where
 
-import qualified Data.Aeson.Types as Aeson
+import           Data.Aeson.Utils (decapitalize, removePrefix)
+import           Data.Aeson.TH (deriveJSON)
+import           Data.Aeson.Types (defaultOptions, fieldLabelModifier)
 import           Data.Vector.Vector2 (Vector2)
-import           GHC.Generics (Generic)
 import qualified GUI.Momentu.Draw as Draw
 import qualified GUI.Momentu.Hover as Hover
 import qualified GUI.Momentu.Responsive.Expression as Expression
@@ -31,28 +32,22 @@ data Help = Help
     , helpInputDocColor :: Draw.Color
     , helpBGColor :: Draw.Color
     , helpTint :: Draw.Color
-    } deriving (Eq, Generic, Show)
-instance Aeson.ToJSON Help where
-    toJSON = Aeson.genericToJSON Aeson.defaultOptions
-instance Aeson.FromJSON Help
+    } deriving (Eq, Show)
+deriveJSON defaultOptions{fieldLabelModifier = decapitalize . removePrefix "help"} ''Help
 
 data Hole = Hole
     { holeResultPadding :: Vector2 Double
     , holeSearchTermBGColor :: Draw.Color
     , holeActiveSearchTermBGColor :: Draw.Color
-    } deriving (Eq, Generic, Show)
-instance Aeson.ToJSON Hole where
-    toJSON = Aeson.genericToJSON Aeson.defaultOptions
-instance Aeson.FromJSON Hole
+    } deriving (Eq, Show)
+deriveJSON defaultOptions{fieldLabelModifier = decapitalize . removePrefix "hole"} ''Hole
 
 data Eval = Eval
     { neighborsScaleFactor :: Vector2 Double
     , neighborsPadding :: Vector2 Double
     , staleResultTint :: Draw.Color
-    } deriving (Eq, Generic, Show)
-instance Aeson.ToJSON Eval where
-    toJSON = Aeson.genericToJSON Aeson.defaultOptions
-instance Aeson.FromJSON Eval
+    } deriving (Eq, Show)
+deriveJSON defaultOptions ''Eval
 
 data Theme = Theme
     { fonts :: Fonts FilePath
@@ -88,10 +83,8 @@ data Theme = Theme
     , disabledColor :: Draw.Color
     , presentationChoiceScaleFactor :: Vector2 Double
     , evaluatedPathBGColor :: Draw.Color
-    } deriving (Eq, Generic, Show)
-instance Aeson.ToJSON Theme where
-    toJSON = Aeson.genericToJSON Aeson.defaultOptions
-instance Aeson.FromJSON Theme
+    } deriving (Eq, Show)
+deriveJSON defaultOptions ''Theme
 
 class HasTheme env where theme :: Lens' env Theme
 instance HasTheme Theme where theme = id

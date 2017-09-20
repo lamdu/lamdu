@@ -1,12 +1,12 @@
-{-# LANGUAGE NoImplicitPrelude, DeriveGeneric #-}
+{-# LANGUAGE NoImplicitPrelude, TemplateHaskell #-}
 -- | The themes/ config format
 module Lamdu.Config.Theme.Name
     ( Name(..)
     ) where
 
-import qualified Data.Aeson.Types as Aeson
+import           Data.Aeson.TH (deriveJSON)
+import           Data.Aeson.Types (defaultOptions)
 import           Data.Vector.Vector2 (Vector2)
-import           GHC.Generics (Generic)
 import qualified GUI.Momentu.Draw as Draw
 
 import           Lamdu.Prelude
@@ -21,7 +21,5 @@ data Name = Name
     , recordTagColor :: Draw.Color
     , caseTagColor :: Draw.Color
     , paramTagColor :: Draw.Color
-    } deriving (Eq, Generic, Show)
-instance Aeson.ToJSON Name where
-    toJSON = Aeson.genericToJSON Aeson.defaultOptions
-instance Aeson.FromJSON Name
+    } deriving (Eq, Show)
+deriveJSON defaultOptions ''Name

@@ -1,11 +1,11 @@
-{-# LANGUAGE NoImplicitPrelude, DeriveGeneric #-}
+{-# LANGUAGE NoImplicitPrelude, TemplateHaskell #-}
 -- | The themes/ config format
 module Lamdu.Config.Theme.CodeForegroundColors
     ( CodeForegroundColors(..)
     ) where
 
-import qualified Data.Aeson.Types as Aeson
-import           GHC.Generics (Generic)
+import           Data.Aeson.Types (defaultOptions)
+import           Data.Aeson.TH (deriveJSON)
 import qualified GUI.Momentu.Draw as Draw
 
 import           Lamdu.Prelude
@@ -21,7 +21,5 @@ data CodeForegroundColors = CodeForegroundColors
     , foreignModuleColor :: Draw.Color
     , foreignVarColor :: Draw.Color
     , presentationChoiceColor :: Draw.Color
-    } deriving (Eq, Generic, Show)
-instance Aeson.ToJSON CodeForegroundColors where
-    toJSON = Aeson.genericToJSON Aeson.defaultOptions
-instance Aeson.FromJSON CodeForegroundColors
+    } deriving (Eq, Show)
+deriveJSON defaultOptions ''CodeForegroundColors

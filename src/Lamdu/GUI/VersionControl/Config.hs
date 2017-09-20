@@ -1,10 +1,10 @@
-{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE TemplateHaskell #-}
 module Lamdu.GUI.VersionControl.Config
     ( Config(..), Theme(..)
     ) where
 
-import qualified Data.Aeson.Types as Aeson
-import           GHC.Generics (Generic)
+import           Data.Aeson.Types (defaultOptions)
+import           Data.Aeson.TH (deriveJSON)
 import qualified GUI.Momentu.Draw as Draw
 import           GUI.Momentu.MetaKey (MetaKey)
 
@@ -14,15 +14,10 @@ data Config = Config
     , makeBranchKeys :: [MetaKey]
     , jumpToBranchesKeys :: [MetaKey]
     , delBranchKeys :: [MetaKey]
-    } deriving (Eq, Generic, Show)
-
-instance Aeson.ToJSON Config where
-    toJSON = Aeson.genericToJSON Aeson.defaultOptions
-instance Aeson.FromJSON Config
+    } deriving (Eq, Show)
+deriveJSON defaultOptions ''Config
 
 newtype Theme = Theme
     { selectedBranchColor :: Draw.Color
-    } deriving (Eq, Generic, Show)
-instance Aeson.ToJSON Theme where
-    toJSON = Aeson.genericToJSON Aeson.defaultOptions
-instance Aeson.FromJSON Theme
+    } deriving (Eq, Show)
+deriveJSON defaultOptions ''Theme

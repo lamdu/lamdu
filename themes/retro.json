@@ -20,11 +20,11 @@
         "bgColor": [0.05, 0.25, 0.3, 0.9]
     },
     "help": {
-        "helpInputDocColor": [0.1, 0.7, 0.7, 1.0],
-        "helpTextSize": 16,
-        "helpTextColor": [1.0, 1.0, 1.0, 1.0],
-        "helpBGColor": [0.2, 0.15, 0.1, 1.0],
-        "helpTint": [1.0, 1.0, 1.0, 1.0]
+        "inputDocColor": [0.1, 0.7, 0.7, 1.0],
+        "textSize": 16,
+        "textColor": [1.0, 1.0, 1.0, 1.0],
+        "bGColor": [0.2, 0.15, 0.1, 1.0],
+        "tint": [1.0, 1.0, 1.0, 1.0]
     },
     "newDefinitionActionColor": [0.3, 1.0, 0.3, 1.0],
     "versionControl": {
@@ -35,9 +35,9 @@
         "submenuSymbolColorSelected": [1.0, 1.0, 1.0, 1.0]
     },
     "hole": {
-        "holeResultPadding": [0.0, 1.0],
-        "holeSearchTermBGColor": [0.2, 0.3, 0.5, 1.0],
-        "holeActiveSearchTermBGColor": [0.3, 0.5, 0.2, 1.0]
+        "resultPadding": [0.0, 1.0],
+        "searchTermBGColor": [0.2, 0.3, 0.5, 1.0],
+        "activeSearchTermBGColor": [0.3, 0.5, 0.2, 1.0]
     },
     "name": {
         "parameterColor": [0.5, 0.9, 1.0, 1.0],
@@ -84,12 +84,12 @@
     "typeIndicatorMatchColor": [0.25, 0.5, 0.25, 1.0],
     "disabledColor": [0.4, 0.4, 0.45, 0.5],
     "valAnnotation": {
-        "valAnnotationSpacing": 0.0,
-        "valAnnotationWidthExpansionLimit": 34,
-        "valAnnotationShrinkAtLeast": 80,
-        "valAnnotationMaxHeight": 20,
-        "valAnnotationBGColor": [0.0, 0.0, 0.0, 0.2],
-        "valAnnotationHoverBGColor": [0.0, 0.0, 0.0, 0.9]
+        "spacing": 0.0,
+        "widthExpansionLimit": 34,
+        "shrinkAtLeast": 80,
+        "maxHeight": 20,
+        "bgColor": [0.0, 0.0, 0.0, 0.2],
+        "hoverBGColor": [0.0, 0.0, 0.0, 0.9]
     },
     "valFramePadding": [0, 0],
     "letItemPadding": [0, 0],

@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, TemplateHaskell, DeriveGeneric, OverloadedStrings, DeriveTraversable, FlexibleContexts, DisambiguateRecordFields #-}
+{-# LANGUAGE NoImplicitPrelude, TemplateHaskell, OverloadedStrings, DeriveTraversable, FlexibleContexts, DisambiguateRecordFields #-}
 
 module GUI.Momentu.Widgets.Menu
     ( Style(..), HasStyle(..)
@@ -10,8 +10,8 @@ module GUI.Momentu.Widgets.Menu
 
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
-import qualified Data.Aeson.Types as Aeson
-import           GHC.Generics (Generic)
+import           Data.Aeson.TH (deriveJSON)
+import           Data.Aeson.Types (defaultOptions)
 import           GUI.Momentu.Align (WithTextPos)
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Draw as Draw
@@ -32,10 +32,8 @@ import           Lamdu.Prelude
 data Style = Style
     { submenuSymbolColorUnselected :: Draw.Color
     , submenuSymbolColorSelected :: Draw.Color
-    } deriving (Eq, Generic, Show)
-instance Aeson.ToJSON Style where
-    toJSON = Aeson.genericToJSON Aeson.defaultOptions
-instance Aeson.FromJSON Style
+    } deriving (Eq, Show)
+deriveJSON defaultOptions ''Style
 
 class HasStyle env where style :: Lens' env Style
 instance HasStyle Style where style = id

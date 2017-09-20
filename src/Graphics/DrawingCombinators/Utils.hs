@@ -13,7 +13,8 @@ module Graphics.DrawingCombinators.Utils
 
 import           Control.Applicative (liftA2)
 import qualified Control.Lens as Lens
-import qualified Data.Aeson.Types as Aeson
+import           Data.Aeson.TH (deriveJSON)
+import           Data.Aeson.Types (defaultOptions)
 import qualified Data.Text as Text
 import           Data.Vector.Vector2 (Vector2(..))
 import           Foreign.C.Types.Instances ()
@@ -27,10 +28,7 @@ type Image = Draw.Image ()
 
 deriving instance Read Draw.Color
 deriving instance Generic Draw.Color
-
-instance Aeson.ToJSON Draw.Color where
-    toJSON = Aeson.genericToJSON Aeson.defaultOptions
-instance Aeson.FromJSON Draw.Color
+deriveJSON defaultOptions ''Draw.Color
 
 scale :: Vector2 Draw.R -> Draw.Affine
 scale (Vector2 x y) = Draw.scale x y

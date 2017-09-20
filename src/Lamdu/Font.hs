@@ -7,7 +7,8 @@ module Lamdu.Font
 
 import qualified Control.Exception as E
 import qualified Control.Lens as Lens
-import qualified Data.Aeson.Types as Aeson
+import           Data.Aeson.TH (deriveJSON)
+import           Data.Aeson.Types (defaultOptions)
 import           Data.Typeable (Typeable)
 import           GHC.Generics (Generic)
 import qualified GUI.Momentu.Draw as Draw
@@ -26,9 +27,7 @@ data Fonts a = Fonts
     , fontAutoName :: a
     , fontBinders :: a
     } deriving (Eq, Generic, Show, Functor, Foldable, Traversable)
-instance Aeson.ToJSON a => Aeson.ToJSON (Fonts a) where
-    toJSON = Aeson.genericToJSON Aeson.defaultOptions
-instance Aeson.FromJSON a => Aeson.FromJSON (Fonts a)
+deriveJSON defaultOptions ''Fonts
 
 Lens.makeLensesFor
     [ ("fontDefault"     , "lfontDefault"     )

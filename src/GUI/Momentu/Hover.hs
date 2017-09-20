@@ -12,7 +12,8 @@ module GUI.Momentu.Hover
     ) where
 
 import qualified Control.Lens as Lens
-import qualified Data.Aeson.Types as Aeson
+import           Data.Aeson.Types (defaultOptions)
+import           Data.Aeson.TH (deriveJSON)
 import           Data.List.Utils (minimumOn)
 import           Data.Vector.Vector2 (Vector2(..))
 import           GHC.Generics (Generic)
@@ -36,9 +37,7 @@ data Style = Style
     , bgColor :: Draw.Color
     , bgPadding :: Vector2 R
     } deriving (Eq, Generic, Show)
-instance Aeson.ToJSON Style where
-    toJSON = Aeson.genericToJSON Aeson.defaultOptions
-instance Aeson.FromJSON Style
+deriveJSON defaultOptions ''Style
 
 class HasStyle env where style :: Lens' env Style
 instance HasStyle Style where style = id

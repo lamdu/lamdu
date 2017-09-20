@@ -48,11 +48,11 @@
         "fontLiteralBytes": "fonts/DejaVuSansMono.ttf"
     },
     "help": {
-        "helpInputDocColor": [0.1, 0.7, 0.7, 1.0],
-        "helpTextSize": 9,
-        "helpTextColor": [1.0, 1.0, 1.0, 1.0],
-        "helpBGColor": [0.2, 0.15, 0.1, 0.85],
-        "helpTint": [1.0, 1.0, 1.0, 1.0]
+        "inputDocColor": [0.1, 0.7, 0.7, 1.0],
+        "textSize": 9,
+        "textColor": [1.0, 1.0, 1.0, 1.0],
+        "bGColor": [0.2, 0.15, 0.1, 0.85],
+        "tint": [1.0, 1.0, 1.0, 1.0]
     },
     "versionControl": {
         "selectedBranchColor": [0.25, 0.5, 0.25, 1.0]
@@ -62,9 +62,9 @@
         "submenuSymbolColorSelected": [1.0, 1.0, 1.0, 1.0]
     },
     "hole": {
-        "holeResultPadding": [1.0, 0.5],
-        "holeSearchTermBGColor": [0.2, 0.3, 0.5, 1.0],
-        "holeActiveSearchTermBGColor": [0.3, 0.5, 0.2, 1.0]
+        "resultPadding": [1.0, 0.5],
+        "searchTermBGColor": [0.2, 0.3, 0.5, 1.0],
+        "activeSearchTermBGColor": [0.3, 0.5, 0.2, 1.0]
     },
     "name": {
         "parameterColor": [0.5, 0.9, 1.0, 1.0],
@@ -88,11 +88,11 @@
         "indentBarColor": [0.8, 0.8, 1.0, 0.1]
     },
     "valAnnotation": {
-        "valAnnotationSpacing": 0.1,
-        "valAnnotationWidthExpansionLimit": 34,
-        "valAnnotationShrinkAtLeast": 80,
-        "valAnnotationMaxHeight": 20,
-        "valAnnotationBGColor": [0.0, 0.0, 0.0, 0.2],
-        "valAnnotationHoverBGColor": [0.0, 0.0, 0.0, 0.9]
+        "spacing": 0.1,
+        "widthExpansionLimit": 34,
+        "shrinkAtLeast": 80,
+        "maxHeight": 20,
+        "bgColor": [0.0, 0.0, 0.0, 0.2],
+        "hoverBGColor": [0.0, 0.0, 0.0, 0.9]
     }
 }

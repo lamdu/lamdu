@@ -81,6 +81,7 @@ Executable lamdu
                   , Control.Monad.Trans.FastRWS
                   , Control.Monad.Trans.FastWriter
                   , Control.Monad.Transaction
+                  , Data.Aeson.Utils
                   , Data.Binary.Utils
                   , Data.ByteString.Utils
                   , Data.CurAndPrev
