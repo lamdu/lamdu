@@ -5,10 +5,12 @@ module Lamdu.GUI.ExpressionEdit.GetVarEdit
 
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
+import           Control.Monad.Transaction (MonadTransaction)
 import qualified Data.ByteString.Char8 as SBS8
 import           Data.Store.Transaction (Transaction)
 import           GUI.Momentu.Align (WithTextPos)
 import qualified GUI.Momentu.Align as Align
+import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Font (Underline(..))
 import           GUI.Momentu.Glue ((/-/))
@@ -20,8 +22,9 @@ import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified GUI.Momentu.Widgets.TextView as TextView
 import           Lamdu.Calc.Type.Scheme (schemeType)
-import           Lamdu.Config (Config)
+import           Lamdu.Config (Config, HasConfig)
 import qualified Lamdu.Config as Config
+import           Lamdu.Config.Theme (HasTheme)
 import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.Data.Ops as DataOps
 import           Lamdu.GUI.ExpressionGui (ExpressionGui)
@@ -41,16 +44,21 @@ import           Lamdu.Prelude
 type T = Transaction
 
 makeSimpleView ::
-    (Applicative f, Monad m) =>
-    Name m -> Widget.Id ->
-    ExprGuiM m (WithTextPos (Widget (f Widget.EventResult)))
+    ( MonadReader env m, Widget.HasCursor env, HasTheme env
+    , Applicative f, Element.HasAnimIdPrefix env, TextView.HasStyle env
+    ) =>
+    Name x -> Widget.Id ->
+    m (WithTextPos (Widget (f Widget.EventResult)))
 makeSimpleView (Name name _) myId =
     (Widget.makeFocusableView ?? myId <&> (Align.tValue %~))
     <*> NameEdit.makeView name (Widget.toAnimId myId)
 
 makeParamsRecord ::
-    Monad m => Widget.Id -> Sugar.ParamsRecordVar (Name m) ->
-    ExprGuiM m (ExpressionGui m)
+    ( Monad m, MonadReader env f, HasTheme env, Widget.HasCursor env
+    , TextView.HasStyle env, Element.HasAnimIdPrefix env
+    , Spacer.HasStdSpacing env
+    ) =>
+    Widget.Id -> Sugar.ParamsRecordVar (Name m) -> f (ExpressionGui m)
 makeParamsRecord myId paramsRecordVar =
     do
         theme <- Lens.view Theme.theme
@@ -110,9 +118,13 @@ makeInlineEventMap config (Sugar.CannotInlineDueToUses (x:_)) =
 makeInlineEventMap _ _ = mempty
 
 definitionTypeChangeBox ::
-    Monad m =>
+    ( Monad m, MonadReader env f, MonadTransaction n f
+    , Element.HasAnimIdPrefix env, TextView.HasStyle env
+    , Spacer.HasStdSpacing env, HasTheme env, Widget.HasCursor env
+    , HasConfig env
+    ) =>
     Sugar.DefinitionOutdatedType m -> Widget.Id ->
-    ExprGuiM m (WithTextPos (Widget (T m Widget.EventResult)))
+    f (WithTextPos (Widget (T m Widget.EventResult)))
 definitionTypeChangeBox info getVarId =
     do
         headerLabel <- TextView.makeLabel "Type was:"
@@ -138,10 +150,13 @@ definitionTypeChangeBox info getVarId =
         animId = Widget.toAnimId myId
 
 processDefinitionWidget ::
-    Monad m =>
+    ( Monad m, MonadReader env f, MonadTransaction n f, Spacer.HasStdSpacing env
+    , HasTheme env, Element.HasAnimIdPrefix env, HasConfig env
+    , TextView.HasStyle env, Widget.HasCursor env, Hover.HasStyle env
+    ) =>
     Sugar.DefinitionForm m -> Widget.Id ->
-    ExprGuiM m (WithTextPos (Widget (T m Widget.EventResult))) ->
-    ExprGuiM m (WithTextPos (Widget (T m Widget.EventResult)))
+    f (WithTextPos (Widget (T m Widget.EventResult))) ->
+    f (WithTextPos (Widget (T m Widget.EventResult)))
 processDefinitionWidget Sugar.DefUpToDate _myId mkLayout = mkLayout
 processDefinitionWidget Sugar.DefDeleted _myId mkLayout =
     (ExpressionGui.addDeletionDiagonal ?? 0.1)
