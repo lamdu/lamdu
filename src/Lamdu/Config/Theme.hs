@@ -1,3 +1,4 @@
+{-# OPTIONS_GHC -O0 #-}
 {-# LANGUAGE NoImplicitPrelude, DeriveGeneric #-}
 -- | The themes/ config format
 module Lamdu.Config.Theme
