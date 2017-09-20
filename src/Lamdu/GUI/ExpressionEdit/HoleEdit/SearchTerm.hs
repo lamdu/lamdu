@@ -17,7 +17,6 @@ import qualified GUI.Momentu.Draw as Draw
 import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
-import qualified Lamdu.Config as Config
 import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.EventMap as EventMap
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.Info (HoleInfo(..))
@@ -57,18 +56,16 @@ makeSearchTermPropEdit widgetIds searchTermProp =
 make :: Monad m => HoleInfo m -> ExprGuiM m (WithTextPos (Widget (Transaction m Widget.EventResult)))
 make holeInfo =
     do
-        config <- Lens.view Config.config
         theme <- Lens.view Theme.theme
-        let holeConfig = Config.hole config
         let holeTheme = Theme.hole theme
         textCursor <- TextEdit.getCursor ?? searchTerm ?? hidOpenSearchTerm widgetIds
         isActive <- WidgetIds.isActive widgetIds
         let bgColor
                 | isActive = Theme.holeActiveSearchTermBGColor
                 | otherwise = Theme.holeSearchTermBGColor
+        disallowChars <- EventMap.disallowCharsFromSearchTerm
         makeSearchTermPropEdit widgetIds (HoleInfo.hiSearchTermProperty holeInfo)
-            <&> Align.tValue . E.eventMap
-                %~ EventMap.disallowCharsFromSearchTerm holeConfig holeInfo textCursor
+            <&> Align.tValue . E.eventMap %~ disallowChars holeInfo textCursor
             <&> Draw.backgroundColor bgAnimId (bgColor holeTheme)
     where
         bgAnimId =

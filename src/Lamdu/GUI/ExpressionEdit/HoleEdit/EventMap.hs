@@ -18,6 +18,7 @@ import qualified GUI.Momentu.MetaKey as MetaKey
 import           GUI.Momentu.ModKey (ModKey(..))
 import qualified GUI.Momentu.Widget as Widget
 import           Lamdu.CharClassification (operatorChars, bracketChars, digitChars, hexDigitChars)
+import           Lamdu.Config (HasConfig)
 import qualified Lamdu.Config as Config
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.Info (HoleInfo(..))
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.Info as HoleInfo
@@ -95,14 +96,16 @@ allowedCharsFromSearchTerm holeInfo mPos =
         isLeafHole = hiHole holeInfo & Lens.has (Sugar.holeKind . Sugar._LeafHole)
 
 disallowCharsFromSearchTerm ::
-    Config.Hole -> HoleInfo m -> Maybe Int -> E.EventMap a -> E.EventMap a
-disallowCharsFromSearchTerm hole holeInfo mPos =
-    E.filterChars (`notElem` disallowedHoleChars) .
-    deleteKeys
-    (holePickAndMoveToNextHoleKeys ++ holePickResultKeys <&> MetaKey.toModKey) .
-    E.filterChars (allowedCharsFromSearchTerm holeInfo mPos)
-    where
-        Config.Hole{holePickAndMoveToNextHoleKeys, holePickResultKeys} = hole
+    (MonadReader env m, HasConfig env) =>
+    m (HoleInfo f -> Maybe Int -> E.EventMap a -> E.EventMap a)
+disallowCharsFromSearchTerm =
+    Lens.view Config.config <&> Config.hole <&>
+    \Config.Hole{holePickAndMoveToNextHoleKeys, holePickResultKeys}
+     holeInfo mPos eventMap ->
+    eventMap
+    & E.filterChars (allowedCharsFromSearchTerm holeInfo mPos)
+    & E.filterChars (`notElem` disallowedHoleChars)
+    & deleteKeys (holePickAndMoveToNextHoleKeys ++ holePickResultKeys <&> MetaKey.toModKey)
 
 deleteKeys :: [ModKey] -> E.EventMap a -> E.EventMap a
 deleteKeys = E.deleteKeys . map (E.KeyEvent MetaKey.KeyState'Pressed)
@@ -149,12 +152,9 @@ makeOpenEventMap ::
     HoleInfo m ->
     ExprGuiM m (E.EventMap (T m Widget.EventResult))
 makeOpenEventMap holeInfo =
-    do
-        holeConfig <- Lens.view Config.config <&> Config.hole
-        adHocTextEditEventMap holeInfo
-            & disallowCharsFromSearchTerm holeConfig holeInfo Nothing
-            & mappend maybeLiteralTextEventMap
-            & pure
+    disallowCharsFromSearchTerm ?? holeInfo ?? Nothing
+    ?? adHocTextEditEventMap holeInfo
+    <&> mappend maybeLiteralTextEventMap
     where
         maybeLiteralTextEventMap
             | Text.null searchTerm =
