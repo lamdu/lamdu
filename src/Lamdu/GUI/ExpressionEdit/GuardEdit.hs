@@ -15,12 +15,15 @@ import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Glue ((/|/))
 import qualified GUI.Momentu.Responsive as Responsive
-import qualified GUI.Momentu.Responsive.Options as Options
 import qualified GUI.Momentu.Responsive.Expression as ResponsiveExpr
+import qualified GUI.Momentu.Responsive.Options as Options
 import           GUI.Momentu.View (View)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
+import qualified GUI.Momentu.Widgets.TextView as TextView
+import           Lamdu.Config (HasConfig)
 import qualified Lamdu.Config as Config
+import           Lamdu.Config.Theme (HasTheme)
 import           Lamdu.GUI.ExpressionEdit.BinderEdit (addLetEventMap)
 import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
@@ -41,9 +44,11 @@ data Row a = Row
 Lens.makeLenses ''Row
 
 makeGuardRow ::
-    Monad m =>
+    ( Monad m, MonadReader env f, HasTheme env, HasConfig env
+    , TextView.HasStyle env, Element.HasAnimIdPrefix env
+    ) =>
     Transaction m Sugar.EntityId -> WithTextPos View -> Sugar.EntityId ->
-    ExprGuiM m (ExpressionGui m -> ExpressionGui m -> Row (ExpressionGui m))
+    f (ExpressionGui m -> ExpressionGui m -> Row (ExpressionGui m))
 makeGuardRow delete prefixLabel entityId =
     do
         label <- ExpressionGui.grammarLabel "if "
@@ -93,7 +98,10 @@ makeElse guards =
         elseAnimId = Widget.toAnimId elseId
         elseId = WidgetIds.fromExprPayload (guards ^. Sugar.gElse . Sugar.rPayload)
 
-verticalRowRender :: Monad m => ExprGuiM m (Row (ExpressionGui m) -> ExpressionGui m)
+verticalRowRender ::
+    ( Monad m, MonadReader env f, Spacer.HasStdSpacing env
+    , ResponsiveExpr.HasStyle env
+    ) => f (Row (ExpressionGui m) -> ExpressionGui m)
 verticalRowRender =
     do
         indent <- ResponsiveExpr.indent
@@ -105,7 +113,10 @@ verticalRowRender =
             , indent (row ^. rIndentId) (row ^. rResult)
             ]
 
-renderRows :: Monad m => ExprGuiM m ([Row (ExpressionGui m)] -> ExpressionGui m)
+renderRows ::
+    ( Monad m, MonadReader env f, Spacer.HasStdSpacing env
+    , ResponsiveExpr.HasStyle env
+    ) => f ([Row (ExpressionGui m)] -> ExpressionGui m)
 renderRows =
     do
         vspace <- Spacer.getSpaceSize <&> (^._2)
