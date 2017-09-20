@@ -102,14 +102,14 @@ nameUUIDMapSingleton :: Text -> Clash.NameInstance -> NameUUIDMap
 nameUUIDMapSingleton name nameInstance =
     OrderedSet.singleton nameInstance & Map.singleton name & NameUUIDMap
 
-isGlobal :: Clash.NameInstance -> Bool
-isGlobal = (/= Walk.ParamName) . (^. Clash.niNameType)
+isLocal :: Clash.NameInstance -> Bool
+isLocal = (`elem` [Walk.FieldParamName, Walk.ParamName]) . (^. Clash.niNameType)
 
 localNames :: NameUUIDMap -> NameUUIDMap
-localNames = nameUUIDMap . Lens.mapped %~ OrderedSet.filter (not . isGlobal)
+localNames = nameUUIDMap . Lens.mapped %~ OrderedSet.filter isLocal
 
 globalNames :: NameUUIDMap -> NameUUIDMap
-globalNames = nameUUIDMap . Lens.mapped %~ OrderedSet.filter isGlobal
+globalNames = nameUUIDMap . Lens.mapped %~ OrderedSet.filter (not . isLocal)
 
 
 data P1Out = P1Out
@@ -146,7 +146,6 @@ globalCollisions (NameUUIDMap names) =
             Clash -> True
             noClash -> any (Clash.isClash . (noClash <>) . Clash.isClashOf) locals
             where
-                isLocal = (== Walk.ParamName) . (^. Clash.niNameType)
                 (locals, globals) = partition isLocal ns
 
 reservedWords :: Set Text
