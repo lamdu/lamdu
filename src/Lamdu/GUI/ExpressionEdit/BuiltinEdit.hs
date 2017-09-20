@@ -11,6 +11,7 @@ import qualified Data.Text as Text
 import           GUI.Momentu.Align (WithTextPos)
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Draw as MDraw
+import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Glue ((/|/))
 import           GUI.Momentu.MetaKey (MetaKey(..), noMods)
@@ -21,9 +22,9 @@ import qualified GUI.Momentu.Widgets.FocusDelegator as FocusDelegator
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
 import qualified GUI.Momentu.Widgets.TextEdit.Property as TextEdits
 import qualified GUI.Momentu.Widgets.TextView as TextView
+import           Lamdu.Config.Theme (HasTheme)
 import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.Data.Definition as Definition
-import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
@@ -45,9 +46,11 @@ builtinFFIName :: Widget.Id -> Widget.Id
 builtinFFIName = flip Widget.joinId ["FFIName"]
 
 makeNamePartEditor ::
-    (Monad f, Monad m) =>
+    ( Applicative f, MonadReader env m, Widget.HasCursor env
+    , TextEdit.HasStyle env
+    ) =>
     MDraw.Color -> Text -> (Text -> f ()) -> Widget.Id ->
-    ExprGuiM m (WithTextPos (Widget (f Widget.EventResult)))
+    m (WithTextPos (Widget (f Widget.EventResult)))
 makeNamePartEditor color namePartStr setter myId =
     (FocusDelegator.make ?? builtinFDConfig ?? FocusDelegator.FocusEntryParent
      ?? myId <&> (Align.tValue %~))
@@ -59,9 +62,11 @@ makeNamePartEditor color namePartStr setter myId =
         empty = TextEdit.EmptyStrings "unnamed builtin" ""
 
 make ::
-    Monad m =>
+    ( MonadReader env f, HasTheme env, Widget.HasCursor env
+    , TextEdit.HasStyle env, Element.HasAnimIdPrefix env, Monad m
+    ) =>
     Sugar.DefinitionBuiltin m -> Widget.Id ->
-    ExprGuiM m (WithTextPos (Widget (T m Widget.EventResult)))
+    f (WithTextPos (Widget (T m Widget.EventResult)))
 make def myId =
     do
         colors <- Lens.view Theme.theme <&> Theme.codeForegroundColors
