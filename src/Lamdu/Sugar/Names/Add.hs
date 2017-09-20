@@ -315,7 +315,11 @@ getCollision name inst env =
         Just noClash ->
             case noClash <> Clash.isClashOf inst of
             NoClash _ -> NoCollision
-            Clash -> UnknownCollision -- Alternatively "Collision 1"?
+            Clash ->
+                -- Once a collision, other non-colliding instances
+                -- also get a suffix, so we have no idea what suffix
+                -- we'll get:
+                UnknownCollision
 
 getCollisionEnv :: Text -> Clash.NameInstance -> P2Env -> (Collision, P2Env)
 getCollisionEnv name inst env =
