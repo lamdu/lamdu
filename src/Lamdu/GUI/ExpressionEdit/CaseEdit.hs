@@ -61,6 +61,8 @@ make (Sugar.Case mArg (Sugar.Composite alts caseTail addAlt)) pl =
             mExprAfterHeader <&> ExprGuiT.nextHolesBefore
             & Lens._Just ExprEventMap.jumpHolesEventMap
             <&> fromMaybe mempty
+        let responsiveLabel text =
+                ExpressionGui.grammarLabel text <&> Responsive.fromTextView
         let headerLabel text =
                 (Widget.makeFocusableView ?? headerId <&> (Align.tValue %~))
                 <*> ExpressionGui.grammarLabel text
@@ -68,17 +70,29 @@ make (Sugar.Case mArg (Sugar.Composite alts caseTail addAlt)) pl =
                 <&> E.weakerEvents labelJumpHoleEventMap
         (mActiveTag, header) <-
             case mArg of
-            Sugar.LambdaCase -> headerLabel "λ:" <&> (,) Nothing
+            Sugar.LambdaCase ->
+                do
+                    caseLabel <- headerLabel "case"
+                    lambdaLabel <- responsiveLabel "λ"
+                    ofLabel <- responsiveLabel "of"
+                    Options.boxSpaced
+                        ?? Options.disambiguationNone
+                        ?? [caseLabel, lambdaLabel, ofLabel]
+                        <&> (,) Nothing
             Sugar.CaseWithArg (Sugar.CaseArg arg toLambdaCase) ->
                 do
+                    caseLabel <- headerLabel "case"
                     argEdit <-
                         ExprGuiM.makeSubexpression arg
                         <&> E.weakerEvents (toLambdaCaseEventMap config toLambdaCase)
-                    caseLabel <- headerLabel ":"
+                    ofLabel <- responsiveLabel "of"
                     mTag <-
                         ExpressionGui.evaluationResult (arg ^. Sugar.rPayload)
                         <&> (>>= (^? ER.body . ER._RInject . V.injectTag))
-                    return (mTag, Options.box Options.disambiguationNone [argEdit, caseLabel])
+                    Options.boxSpaced
+                        ?? Options.disambiguationNone
+                        ?? [caseLabel, argEdit, ofLabel]
+                        <&> (,) mTag
         (altsGui, resultPicker) <-
             ExprGuiM.listenResultPicker $
             do
