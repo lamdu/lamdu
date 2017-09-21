@@ -6,11 +6,14 @@ module Lamdu.GUI.ExpressionEdit.InjectEdit
 import qualified Control.Lens as Lens
 import           Control.Monad.Transaction (MonadTransaction)
 import           Data.Store.Transaction (Transaction)
+import           GUI.Momentu.Align (WithTextPos)
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.EventMap as E
+import           GUI.Momentu.Glue ((/|/))
 import qualified GUI.Momentu.Hover as Hover
 import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.Responsive.Options as Options
+import           GUI.Momentu.View (View)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Menu as Menu
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
@@ -40,9 +43,9 @@ makeCommon ::
     ) =>
     Sugar.Tag (Name m) m ->
     Maybe (Transaction m Sugar.EntityId) ->
-    NearestHoles -> [ExpressionGui m] ->
+    NearestHoles -> WithTextPos View -> [ExpressionGui m] ->
     f (ExpressionGui m)
-makeCommon tag mDelInject nearestHoles valEdits =
+makeCommon tag mDelInject nearestHoles colonLabel valEdits =
     do
         config <- Lens.view Config.config
         let delEventMap =
@@ -54,6 +57,7 @@ makeCommon tag mDelInject nearestHoles valEdits =
         (Options.boxSpaced ?? Options.disambiguationNone)
             <*>
             ( TagEdit.makeCaseTag TagEdit.WithoutTagHoles nearestHoles tag
+                <&> (/|/ colonLabel)
                 <&> Lens.mapped %~ E.weakerEvents delEventMap
                 <&> Responsive.fromWithTextPos <&> (: valEdits)
             )
@@ -69,11 +73,16 @@ make (Sugar.Inject tag mVal) pl =
         makeCommon
         -- Give the tag widget the identity of the whole inject
         (tag & Sugar.tagInfo . Sugar.tagInstance .~ (pl ^. Sugar.plEntityId))
-        Nothing
-        (pl ^. Sugar.plData . ExprGuiT.plNearestHoles) []
+        Nothing (pl ^. Sugar.plData . ExprGuiT.plNearestHoles) Element.empty []
         & ExpressionGui.stdWrap pl
     Just val ->
-        ExprGuiM.makeSubexpressionWith ApplyEdit.prefixPrecedence
-        (ExpressionGui.before .~ ApplyEdit.prefixPrecedence) val <&> (:[])
-        >>= makeCommon tag (val ^. Sugar.rPayload . Sugar.plActions . Sugar.mReplaceParent) (ExprGuiT.nextHolesBefore val)
-        & ExpressionGui.stdWrapParentExpr pl (tag ^. Sugar.tagInfo . Sugar.tagInstance)
+        do
+            arg <-
+                ExprGuiM.makeSubexpressionWith ApplyEdit.prefixPrecedence
+                (ExpressionGui.before .~ ApplyEdit.prefixPrecedence) val <&> (:[])
+            colon <- ExpressionGui.grammarLabel ":"
+            makeCommon tag replaceParent (ExprGuiT.nextHolesBefore val) colon arg
+                & ExpressionGui.stdWrapParentExpr pl tagInstance
+        where
+            tagInstance = tag ^. Sugar.tagInfo . Sugar.tagInstance
+            replaceParent = val ^. Sugar.rPayload . Sugar.plActions . Sugar.mReplaceParent
