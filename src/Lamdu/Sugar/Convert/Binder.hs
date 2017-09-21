@@ -161,6 +161,7 @@ makeBinder chosenScopeProp mPresentationModeProp params funcBody =
             { _bParams = _cpParams params
             , _bMPresentationModeProp = mPresentationModeProp
             , _bChosenScopeProp = chosenScopeProp
+            , _bLamId = cpMLamParam params ^? Lens._Just . _1
             , _bBody = binderBody
             , _bBodyScopes = cpScopes params
             , _bActions = BinderActions (_cpAddFirstParam params)
@@ -172,7 +173,7 @@ makeBinder chosenScopeProp mPresentationModeProp params funcBody =
             & ConvertM.siTagParamInfos <>~ _cpParamInfos params
             & ConvertM.siNullParams <>~
             case _cpParams params of
-            NullParam {} -> Set.fromList (cpMLamParam params ^.. Lens._Just)
+            NullParam {} -> Set.fromList (cpMLamParam params ^.. Lens._Just . _2)
             _ -> Set.empty
 
 convertLam ::

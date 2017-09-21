@@ -341,7 +341,7 @@ make name color binder myId =
     do
         Parts mParamsEdit mScopeEdit bodyEdit eventMap <-
             makeParts ExprGuiT.UnlimitedFuncApply binder myId myId
-        rhsJumperEquals <- jumpToRHS (body ^. SugarLens.binderContentEntityId)
+        rhsJumperEquals <- jumpToRHS bodyId
         mPresentationEdit <-
             binder ^. Sugar.bMPresentationModeProp
             & Lens._Just (mkPresentationModeEdit presentationChoiceId)
@@ -371,9 +371,14 @@ make name color binder myId =
             ] )
             <&> E.weakerEvents eventMap
     & Reader.local (Element.animIdPrefix .~ Widget.toAnimId myId)
+    & case binder ^. Sugar.bLamId of
+        Nothing -> id
+        Just lamId ->
+            Widget.assignCursorPrefix (WidgetIds.fromEntityId lamId) (const bodyId)
     where
         presentationChoiceId = Widget.joinId myId ["presentation"]
         body = binder ^. Sugar.bBody . Sugar.bbContent
+        bodyId = body ^. SugarLens.binderContentEntityId & WidgetIds.fromEntityId
 
 makeLetEdit ::
     Monad m =>
@@ -418,12 +423,10 @@ makeLetEdit item =
         binder = item ^. Sugar.lValue
 
 jumpToRHS ::
-    Monad f =>
-    Sugar.EntityId ->
-    ExprGuiM f (Widget.EventMap (T f Widget.EventResult))
+    Monad f => Widget.Id -> ExprGuiM f (Widget.EventMap (T f Widget.EventResult))
 jumpToRHS rhsId =
     ExprGuiM.mkPrejumpPosSaver
-    <&> Lens.mapped .~ WidgetIds.fromEntityId rhsId
+    <&> Lens.mapped .~ rhsId
     <&> Widget.keysEventMapMovesCursor [MetaKey noMods MetaKey.Key'Equal]
         (E.Doc ["Navigation", "Jump to Def Body"])
 

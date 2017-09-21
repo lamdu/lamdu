@@ -35,7 +35,7 @@ module Lamdu.Sugar.Types.Binder
     , BinderBodyScope(..)
     , Binder(..)
         , bMPresentationModeProp, bChosenScopeProp, bParams, bBody
-        , bActions, bBodyScopes
+        , bLamId, bActions, bBodyScopes
     ) where
 
 import qualified Control.Lens as Lens
@@ -206,6 +206,7 @@ data Binder name m expr = Binder
     { _bMPresentationModeProp :: Maybe (MkProperty m Anchors.PresentationMode)
     , _bChosenScopeProp :: MkProperty m (Maybe BinderParamScopeId)
     , _bParams :: BinderParams name m
+    , _bLamId :: Maybe EntityId
     , _bBody :: BinderBody name m expr
     , _bActions :: BinderActions m
     , -- The scope inside a lambda (if exists)

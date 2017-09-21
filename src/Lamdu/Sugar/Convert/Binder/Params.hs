@@ -59,7 +59,7 @@ data ConventionalParams m = ConventionalParams
     , _cpParams :: BinderParams UUID m
     , _cpAddFirstParam :: T m ParamAddResult
     , cpScopes :: BinderBodyScope
-    , cpMLamParam :: Maybe V.Var
+    , cpMLamParam :: Maybe ({- lambda's -}EntityId, V.Var)
     }
 Lens.makeLenses ''ConventionalParams
 
@@ -347,7 +347,7 @@ convertRecordParams binderKind fieldParams lam@(V.Lam param _) pl =
         addFieldParam DataOps.newHole binderKind (:tags) storedLam
         <&> ParamAddResultNewTag
     , cpScopes = BinderBodyScope $ mkCpScopesOfLam pl
-    , cpMLamParam = Just param
+    , cpMLamParam = Just (pl ^. Input.entityId, param)
     }
     where
         tags = fieldParams <&> fpTag
@@ -545,7 +545,7 @@ convertNonRecordParam binderKind lam@(V.Lam param _) lamExprPl =
                 binderKind storedLam NewParamBefore
                 <&> ParamAddResultVarToTags
             , cpScopes = BinderBodyScope $ mkCpScopesOfLam lamExprPl
-            , cpMLamParam = Just param
+            , cpMLamParam = Just (lamExprPl ^. Input.entityId, param)
             }
     where
         storedLam = mkStoredLam lam lamExprPl
