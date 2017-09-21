@@ -14,6 +14,7 @@ module Lamdu.Sugar.Types.Expression
     , Expression(..), rBody, rPayload
     -- record:
     , CompositeItem(..), ciDelete, ciTag, ciExpr
+    , ClosedCompositeActions(..), closedCompositeOpen
     , CompositeTail(..), _CompositeExtending, _ClosedComposite
     , CompositeAddItemResult(..), cairNewTag, cairNewVal, cairItem
     , Composite(..), cItems, cAddItem, cTail
@@ -96,9 +97,13 @@ data CompositeItem name m expr = CompositeItem
     , _ciExpr :: expr
     } deriving (Functor, Foldable, Traversable)
 
+newtype ClosedCompositeActions m = ClosedCompositeActions
+    { _closedCompositeOpen :: T m EntityId
+    }
+
 data CompositeTail m expr
     = CompositeExtending expr
-    | ClosedComposite (T m EntityId) -- delete action
+    | ClosedComposite (ClosedCompositeActions m)
     deriving (Functor, Foldable, Traversable)
 
 data CompositeAddItemResult = CompositeAddItemResult
@@ -230,6 +235,7 @@ Lens.makeLenses ''AnnotatedArg
 Lens.makeLenses ''Body
 Lens.makeLenses ''Case
 Lens.makeLenses ''CaseArg
+Lens.makeLenses ''ClosedCompositeActions
 Lens.makeLenses ''Composite
 Lens.makeLenses ''CompositeAddItemResult
 Lens.makeLenses ''CompositeItem

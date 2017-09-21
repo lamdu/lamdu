@@ -35,6 +35,8 @@ import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
 
+type T = Transaction
+
 shouldAddBg :: Sugar.Composite name m a -> Bool
 shouldAddBg (Sugar.Composite [] Sugar.ClosedComposite{} _) = False
 shouldAddBg _ = True
@@ -52,8 +54,8 @@ make record@(Sugar.Composite fields recordTail addField) pl =
             do
                 fieldsGui <- makeFieldsWidget fields myId
                 case recordTail of
-                    Sugar.ClosedComposite deleteTail ->
-                        E.weakerEvents (recordOpenEventMap config deleteTail) fieldsGui
+                    Sugar.ClosedComposite actions ->
+                        E.weakerEvents (closedRecordEventMap config actions) fieldsGui
                         & return
                     Sugar.CompositeExtending rest ->
                         makeOpenRecord fieldsGui rest (Widget.toAnimId myId)
@@ -76,7 +78,7 @@ makeFieldRow ::
     Monad m =>
     Sugar.CompositeItem (Name m) m (Sugar.Expression (Name m) m ExprGuiT.Payload) ->
     ExprGuiM m
-    ( WithTextPos (Widget (Transaction m Widget.EventResult))
+    ( WithTextPos (Widget (T m Widget.EventResult))
     , ExpressionGui m
     )
 makeFieldRow (Sugar.CompositeItem delete tag fieldExpr) =
@@ -132,10 +134,11 @@ makeOpenRecord fieldsGui rest animId =
             /-/
             restW
 
-recordOpenEventMap ::
+closedRecordEventMap ::
     Monad m =>
-    Config -> m Sugar.EntityId -> Widget.EventMap (m Widget.EventResult)
-recordOpenEventMap config open =
+    Config -> Sugar.ClosedCompositeActions m ->
+    Widget.EventMap (T m Widget.EventResult)
+closedRecordEventMap config (Sugar.ClosedCompositeActions open) =
     Widget.keysEventMapMovesCursor (Config.recordOpenKeys config)
     (E.Doc ["Edit", "Record", "Open"]) $ WidgetIds.fromEntityId <$> open
 

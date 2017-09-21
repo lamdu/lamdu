@@ -28,13 +28,16 @@ convertEmpty :: Monad m => Input.Payload m a -> ConvertM m (ExpressionU m a)
 convertEmpty exprPl = do
     addItem <- exprPl ^. Input.stored & makeAddItem DataOps.recExtend
     postProcess <- ConvertM.postProcess
-    BodyRecord Composite
-        { _cItems = []
-        , _cTail =
+    let actions =
+            ClosedCompositeActions
+            { _closedCompositeOpen =
                 DataOps.replaceWithHole (exprPl ^. Input.stored)
                 <* postProcess
                 <&> EntityId.ofValI
-                & ClosedComposite
+            }
+    BodyRecord Composite
+        { _cItems = []
+        , _cTail = ClosedComposite actions
         , _cAddItem = addItem
         }
         & addActions exprPl

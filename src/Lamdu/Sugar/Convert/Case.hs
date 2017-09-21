@@ -37,15 +37,18 @@ convertAbsurd exprPl =
     do
         addAlt <- exprPl ^. Input.stored & makeAddItem DataOps.case_
         postProcess <- ConvertM.postProcess
+        let actions =
+                ClosedCompositeActions
+                { _closedCompositeOpen =
+                    DataOps.replaceWithHole (exprPl ^. Input.stored)
+                    <* postProcess
+                    <&> EntityId.ofValI
+                }
         BodyCase Case
             { _cKind = LambdaCase
             , _cBody = Composite
                 { _cItems = []
-                , _cTail =
-                        DataOps.replaceWithHole (exprPl ^. Input.stored)
-                        <* postProcess
-                        <&> EntityId.ofValI
-                        & ClosedComposite
+                , _cTail = ClosedComposite actions
                 , _cAddItem = addAlt
                 }
             }

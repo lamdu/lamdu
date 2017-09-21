@@ -40,6 +40,8 @@ import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
 
+type T = Transaction
+
 make ::
     Monad m =>
     Sugar.Case (Name m) m (ExprGuiT.SugarExpr m) ->
@@ -79,8 +81,8 @@ make (Sugar.Case mArg (Sugar.Composite alts caseTail addAlt)) pl =
             do
                 altsGui <- makeAltsWidget mActiveTag alts myId
                 case caseTail of
-                    Sugar.ClosedComposite deleteTail ->
-                        E.weakerEvents (caseOpenEventMap config deleteTail) altsGui
+                    Sugar.ClosedComposite actions ->
+                        E.weakerEvents (closedCaseEventMap config actions) altsGui
                         & return
                     Sugar.CompositeExtending rest ->
                         makeOpenCase rest (Widget.toAnimId myId) altsGui
@@ -105,7 +107,7 @@ makeAltRow ::
     Monad m =>
     Maybe Tag ->
     Sugar.CompositeItem (Name m) m (Sugar.Expression (Name m) m ExprGuiT.Payload) ->
-    ExprGuiM m (WithTextPos (Widget (Transaction m Widget.EventResult)), ExpressionGui m)
+    ExprGuiM m (WithTextPos (Widget (T m Widget.EventResult)), ExpressionGui m)
 makeAltRow mActiveTag (Sugar.CompositeItem delete tag altExpr) =
     do
         config <- Lens.view Config.config
@@ -165,10 +167,11 @@ makeOpenCase rest animId altsGui =
             /-/
             restLayout
 
-caseOpenEventMap ::
+closedCaseEventMap ::
     Monad m =>
-    Config -> m Sugar.EntityId -> Widget.EventMap (m Widget.EventResult)
-caseOpenEventMap config open =
+    Config -> Sugar.ClosedCompositeActions m ->
+    Widget.EventMap (T m Widget.EventResult)
+closedCaseEventMap config (Sugar.ClosedCompositeActions open) =
     Widget.keysEventMapMovesCursor (Config.caseOpenKeys config)
     (E.Doc ["Edit", "Case", "Open"]) $ WidgetIds.fromEntityId <$> open
 
