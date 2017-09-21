@@ -53,7 +53,7 @@ convertExtend (V.RecExtend tag val rest) exprPl = do
         _ ->
             do
                 addField <- rest ^. Val.payload . Input.stored & makeAddItem DataOps.recExtend
-                Composite [] (CompositeExtending restS) addField & return
+                Composite [] (OpenComposite restS) addField & return
     fieldS <-
         convertCompositeItem
         (V.RecExtend <&> Lens.mapped . Lens.mapped %~ V.BRecExtend)

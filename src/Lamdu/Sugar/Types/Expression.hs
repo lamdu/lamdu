@@ -15,7 +15,7 @@ module Lamdu.Sugar.Types.Expression
     -- record:
     , CompositeItem(..), ciDelete, ciTag, ciExpr
     , ClosedCompositeActions(..), closedCompositeOpen
-    , CompositeTail(..), _CompositeExtending, _ClosedComposite
+    , CompositeTail(..), _OpenComposite, _ClosedComposite
     , CompositeAddItemResult(..), cairNewTag, cairNewVal, cairItem
     , Composite(..), cItems, cAddItem, cTail
     -- case
@@ -102,7 +102,7 @@ newtype ClosedCompositeActions m = ClosedCompositeActions
     }
 
 data CompositeTail m expr
-    = CompositeExtending expr
+    = OpenComposite expr
     | ClosedComposite (ClosedCompositeActions m)
     deriving (Functor, Foldable, Traversable)
 

@@ -70,7 +70,7 @@ convert (V.Case tag val rest) exprPl = do
                     { _cKind = LambdaCase
                     , _cBody = Composite
                         { _cItems = []
-                        , _cTail = CompositeExtending restS
+                        , _cTail = OpenComposite restS
                         , _cAddItem = addAlt
                         }
                     }
