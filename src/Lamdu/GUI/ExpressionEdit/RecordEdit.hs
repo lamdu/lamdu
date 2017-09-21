@@ -57,7 +57,7 @@ make record@(Sugar.Composite fields recordTail addField) pl =
                     Sugar.ClosedComposite actions ->
                         E.weakerEvents (closedRecordEventMap config actions) fieldsGui
                         & return
-                    Sugar.OpenComposite rest ->
+                    Sugar.OpenComposite _actions rest ->
                         makeOpenRecord fieldsGui rest (Widget.toAnimId myId)
         let addFieldEventMap =
                 addField

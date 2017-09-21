@@ -52,8 +52,16 @@ convertExtend (V.RecExtend tag val rest) exprPl = do
         BodyRecord r -> return r
         _ ->
             do
-                addField <- rest ^. Val.payload . Input.stored & makeAddItem DataOps.recExtend
-                Composite [] (OpenComposite restS) addField & return
+                addField <- makeAddItem DataOps.recExtend restStored
+                protectedSetToVal <- ConvertM.typeProtectedSetToVal
+                let actions =
+                        OpenCompositeActions
+                        { _openCompositeClose =
+                            ExprIRef.newValBody (V.BLeaf V.LRecEmpty)
+                            >>= protectedSetToVal restStored
+                            <&> EntityId.ofValI
+                        }
+                Composite [] (OpenComposite actions restS) addField & return
     fieldS <-
         convertCompositeItem
         (V.RecExtend <&> Lens.mapped . Lens.mapped %~ V.BRecExtend)
@@ -64,3 +72,5 @@ convertExtend (V.RecExtend tag val rest) exprPl = do
         & cAddItem %~ (>>= setTagOrder (1 + length (restRecord ^. cItems)))
         & BodyRecord
         & addActions exprPl
+    where
+        restStored = rest ^. Val.payload . Input.stored

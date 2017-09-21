@@ -65,12 +65,20 @@ convert (V.Case tag val rest) exprPl = do
             return r
         _ ->
             do
-                addAlt <- rest ^. Val.payload . Input.stored & makeAddItem DataOps.case_
+                addAlt <- makeAddItem DataOps.case_ restStored
+                protectedSetToVal <- ConvertM.typeProtectedSetToVal
+                let actions =
+                        OpenCompositeActions
+                        { _openCompositeClose =
+                            ExprIRef.newValBody (V.BLeaf V.LAbsurd)
+                            >>= protectedSetToVal restStored
+                            <&> EntityId.ofValI
+                        }
                 return Case
                     { _cKind = LambdaCase
                     , _cBody = Composite
                         { _cItems = []
-                        , _cTail = OpenComposite restS
+                        , _cTail = OpenComposite actions restS
                         , _cAddItem = addAlt
                         }
                     }
@@ -84,6 +92,8 @@ convert (V.Case tag val rest) exprPl = do
         & cBody . cAddItem %~ (>>= setTagOrder (1 + length (restCase ^. cBody . cItems)))
         & BodyCase
         & addActions exprPl
+    where
+        restStored = rest ^. Val.payload . Input.stored
 
 convertAppliedCase ::
     (Monad m, Monoid a) =>

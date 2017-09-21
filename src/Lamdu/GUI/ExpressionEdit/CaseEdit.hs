@@ -84,7 +84,7 @@ make (Sugar.Case mArg (Sugar.Composite alts caseTail addAlt)) pl =
                     Sugar.ClosedComposite actions ->
                         E.weakerEvents (closedCaseEventMap config actions) altsGui
                         & return
-                    Sugar.OpenComposite rest ->
+                    Sugar.OpenComposite _actions rest ->
                         makeOpenCase rest (Widget.toAnimId myId) altsGui
         let addAltEventMap =
                 addAlt
