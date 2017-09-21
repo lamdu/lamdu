@@ -1,8 +1,8 @@
 {-# LANGUAGE NoImplicitPrelude, RankNTypes, DisambiguateRecordFields, NamedFieldPuns, OverloadedStrings, FlexibleContexts #-}
 module Lamdu.GUI.Main
     ( make
+    , defaultCursor
     , CodeEdit.ExportActions(..)
-    , CodeEdit.IOTrans(..), CodeEdit.ioTrans, defaultCursor
     , CodeEdit.HasEvalResults(..)
     , CodeEdit.HasExportActions(..)
     , EvalResults
@@ -28,9 +28,10 @@ import           Lamdu.Data.DbLayout (DbM, ViewM)
 import qualified Lamdu.Data.DbLayout as DbLayout
 import qualified Lamdu.Eval.Results as Results
 import qualified Lamdu.Expr.IRef as ExprIRef
-import           Lamdu.GUI.CodeEdit (IOTrans)
 import qualified Lamdu.GUI.CodeEdit as CodeEdit
 import qualified Lamdu.GUI.CodeEdit.Settings as Settings
+import           Lamdu.GUI.IOTrans (IOTrans, ioTrans)
+import qualified Lamdu.GUI.IOTrans as IOTrans
 import qualified Lamdu.GUI.VersionControl as VersionControlGUI
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.Style as Style
@@ -67,7 +68,7 @@ makeInnerGui branchSelector =
         codeEdit <-
             CodeEdit.make DbLayout.codeAnchors (codeSize ^. _1)
             & Reader.mapReaderT VersionControl.runAction
-            <&> Widget.events . CodeEdit.ioTrans . Lens.mapped %~
+            <&> Widget.events . ioTrans . Lens.mapped %~
                 VersionControl.runEvent theCursor
         theTheme <- Lens.view Theme.theme
         topPadding <- Spacer.vspaceLines (Theme.topPadding theTheme)
@@ -93,13 +94,13 @@ make env =
     do
         actions <-
             VersionControl.makeActions
-            <&> VersionControl.Actions.hoist CodeEdit.ioTransLift
+            <&> VersionControl.Actions.hoist IOTrans.liftTrans
         let versionControlCfg = Config.versionControl (env ^. Config.config)
         let versionControlThm = Theme.versionControl (env ^. Theme.theme)
         do
             branchGui <-
                 VersionControlGUI.make versionControlCfg versionControlThm
-                CodeEdit.ioTransLift lift actions makeInnerGui
+                IOTrans.liftTrans lift actions makeInnerGui
                 & (`runReaderT` env)
             let quitEventMap =
                     Widget.keysEventMap (Config.quitKeys (env ^. Config.config))

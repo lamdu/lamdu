@@ -214,6 +214,7 @@ Executable lamdu
                   , Lamdu.GUI.ExpressionGui
                   , Lamdu.GUI.ExpressionGui.Monad
                   , Lamdu.GUI.ExpressionGui.Types
+                  , Lamdu.GUI.IOTrans
                   , Lamdu.GUI.LightLambda
                   , Lamdu.GUI.Main
                   , Lamdu.GUI.NameEdit

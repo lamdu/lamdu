@@ -37,6 +37,7 @@ import           Lamdu.Font (FontSize, Fonts(..))
 import qualified Lamdu.Font as Font
 import           Lamdu.GUI.CodeEdit.Settings (Settings(..))
 import qualified Lamdu.GUI.CodeEdit.Settings as Settings
+import           Lamdu.GUI.IOTrans (ioTrans)
 import qualified Lamdu.GUI.Main as GUIMain
 import qualified Lamdu.Opts as Opts
 import qualified Lamdu.Style as Style
@@ -154,9 +155,9 @@ exportActions config evalResults =
     }
     where
         Config.Export{exportPath} = Config.export config
-        export x = x <&> (`MainLoop.EventResult` ()) & return & GUIMain.IOTrans
+        export x = ioTrans # (x <&> (`MainLoop.EventResult` ()) & return)
         fileExport exporter = exporter exportPath & export
-        importAll path = Export.fileImportAll path <&> fmap pure & GUIMain.IOTrans
+        importAll path = ioTrans # (Export.fileImportAll path <&> fmap pure)
 
 makeRootWidget ::
     Fonts M.Font -> Db -> IORef Settings -> EvalManager.Evaluator ->
@@ -354,7 +355,7 @@ makeMainGui ::
 makeMainGui dbToIO env =
     GUIMain.make env
     <&> Lens.mapped %~ \act ->
-    act ^. GUIMain.ioTrans
+    act ^. ioTrans
     <&> dbToIO
     & join
     & MainLoop.M
