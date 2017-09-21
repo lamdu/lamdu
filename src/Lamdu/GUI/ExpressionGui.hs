@@ -234,7 +234,7 @@ addAnnotationH ::
     (AnimId -> m (WithTextPos View)) ->
     WideAnnotationBehavior -> AnimId ->
     m
-    (Widget.R ->
+    ((Widget.R -> Widget.R) ->
      Responsive (f Widget.EventResult) ->
      Responsive (f Widget.EventResult))
 addAnnotationH f wideBehavior animId =
@@ -244,7 +244,8 @@ addAnnotationH f wideBehavior animId =
         processAnn <- processAnnotationGui animId wideBehavior
         let onAlignedWidget minWidth w =
                 w /-/ vspace /-/
-                (processAnn (w ^. Element.width) annotationLayout & Element.width %~ max minWidth)
+                (processAnn (w ^. Element.width) annotationLayout
+                    & Element.width %~ max (minWidth (w ^. Element.width)))
         pure $ \minWidth ->
             Responsive.alignedWidget %~ onAlignedWidget minWidth
 
@@ -256,22 +257,22 @@ addInferredType ::
     m (Responsive (f Widget.EventResult) ->
        Responsive (f Widget.EventResult))
 addInferredType typ wideBehavior animId =
-    addAnnotationH (TypeView.make typ) wideBehavior animId ?? 0
+    addAnnotationH (TypeView.make typ) wideBehavior animId ?? const 0
 
 addEvaluationResult ::
     (Functor f, Monad m) =>
     Maybe (NeighborVals (Maybe EvalResDisplay)) -> EvalResDisplay ->
     WideAnnotationBehavior -> AnimId ->
     ExprGuiM m
-    (Widget.R ->
+    ((Widget.R -> Widget.R) ->
      Responsive (f Widget.EventResult) ->
      Responsive (f Widget.EventResult))
-addEvaluationResult mNeigh resDisp wideBehavior entityId =
+addEvaluationResult mNeigh resDisp wideBehavior animId =
     case (erdVal resDisp ^. ER.payload, erdVal resDisp ^. ER.body) of
     (T.TRecord T.CEmpty, _) ->
         addValBGWithColor Theme.evaluatedPathBGColor <&> const
     (_, ER.RFunc{}) -> return (flip const)
-    _ -> addAnnotationH (makeEvalView mNeigh resDisp) wideBehavior entityId
+    _ -> addAnnotationH (makeEvalView mNeigh resDisp) wideBehavior animId
 
 parentExprFDConfig :: Config -> FocusDelegator.Config
 parentExprFDConfig config = FocusDelegator.Config
@@ -469,10 +470,10 @@ maybeAddAnnotationWith opt wideAnnotationBehavior showAnnotation annotation anim
         withType = addInferredType inferredType wideAnnotationBehavior animId
         withVal mNeighborVals scopeAndVal =
             do
-                typeWidth <-
-                    TypeView.make inferredType animId
-                    <&> (^. Element.width)
-                addEvaluationResult mNeighborVals scopeAndVal wideAnnotationBehavior animId ?? typeWidth
+                typeView <- TypeView.make inferredType animId <&> (^. Align.tValue)
+                process <- processAnnotationGui mempty wideAnnotationBehavior
+                addEvaluationResult mNeighborVals scopeAndVal wideAnnotationBehavior animId
+                    <&> \add -> add $ \width -> process width typeView ^. Element.width
 
 maybeAddAnnotation ::
     (Functor f, Monad m) =>
