@@ -20,8 +20,7 @@ type CollisionGroup = [Walk.NameType]
 
 collisionGroups :: [CollisionGroup]
 collisionGroups =
-    [ [ Walk.DefName, Walk.ParamName, Walk.FieldParamName ]
-    , [ Walk.TagName, Walk.FieldParamName ]
+    [ [ Walk.DefName, Walk.ParamName, Walk.FieldParamName, Walk.TagName ]
     , [ Walk.NominalName ]
     ]
 
