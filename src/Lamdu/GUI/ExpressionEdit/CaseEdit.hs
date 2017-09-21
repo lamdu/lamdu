@@ -42,6 +42,9 @@ import           Lamdu.Prelude
 
 type T = Transaction
 
+doc :: E.Subtitle -> E.Doc
+doc text = E.Doc ["Edit", "Case", text]
+
 make ::
     Monad m =>
     Sugar.Case (Name m) m (ExprGuiT.SugarExpr m) ->
@@ -84,15 +87,15 @@ make (Sugar.Case mArg (Sugar.Composite alts caseTail addAlt)) pl =
                     Sugar.ClosedComposite actions ->
                         E.weakerEvents (closedCaseEventMap config actions) altsGui
                         & return
-                    Sugar.OpenComposite _actions rest ->
-                        makeOpenCase rest (Widget.toAnimId myId) altsGui
+                    Sugar.OpenComposite actions rest ->
+                        makeOpenCase actions rest (Widget.toAnimId myId) altsGui
         let addAltEventMap =
                 addAlt
                 <&> (^. Sugar.cairNewTag . Sugar.tagInstance)
                 <&> WidgetIds.fromEntityId
                 <&> TagEdit.diveToCaseTag
                 & Widget.keysEventMapMovesCursor (Config.caseAddAltKeys config)
-                  (E.Doc ["Edit", "Case", "Add Alt"])
+                  (doc "Add Alt")
                 & ExprGuiM.withHolePicker resultPicker
         ExpressionGui.addValFrame
             <*> (Responsive.vboxSpaced ?? [header, altsGui])
@@ -144,18 +147,21 @@ separationBar theme width animId =
 
 makeOpenCase ::
     Monad m =>
-    ExprGuiT.SugarExpr m -> AnimId -> ExpressionGui m ->
-    ExprGuiM m (ExpressionGui m)
-makeOpenCase rest animId altsGui =
+    Sugar.OpenCompositeActions m -> ExprGuiT.SugarExpr m ->
+    AnimId -> ExpressionGui m -> ExprGuiM m (ExpressionGui m)
+makeOpenCase actions rest animId altsGui =
     do
         theme <- Lens.view Theme.theme
         vspace <- Spacer.stdVSpace
         restExpr <-
             ExpressionGui.addValPadding
             <*> ExprGuiM.makeSubexpression rest
+        config <- Lens.view Config.config
         return $ altsGui & Responsive.render . Lens.imapped %@~
             \layoutMode alts ->
-            let restLayout = layoutMode & restExpr ^. Responsive.render
+            let restLayout =
+                    layoutMode & restExpr ^. Responsive.render
+                    <&> E.weakerEvents (openCaseEventMap config actions)
                 minWidth = restLayout ^. Element.width
                 targetWidth = alts ^. Element.width
             in
@@ -167,25 +173,32 @@ makeOpenCase rest animId altsGui =
             /-/
             restLayout
 
+openCaseEventMap ::
+    Monad m =>
+    Config -> Sugar.OpenCompositeActions m ->
+    Widget.EventMap (T m Widget.EventResult)
+openCaseEventMap config (Sugar.OpenCompositeActions close) =
+    close <&> WidgetIds.fromEntityId
+    & Widget.keysEventMapMovesCursor (Config.delKeys config) (doc "Close")
+
 closedCaseEventMap ::
     Monad m =>
     Config -> Sugar.ClosedCompositeActions m ->
     Widget.EventMap (T m Widget.EventResult)
 closedCaseEventMap config (Sugar.ClosedCompositeActions open) =
-    Widget.keysEventMapMovesCursor (Config.caseOpenKeys config)
-    (E.Doc ["Edit", "Case", "Open"]) $ WidgetIds.fromEntityId <$> open
+    open <&> WidgetIds.fromEntityId
+    & Widget.keysEventMapMovesCursor (Config.caseOpenKeys config) (doc "Open")
 
 caseDelEventMap ::
     Monad m =>
     Config -> m Sugar.EntityId -> Widget.EventMap (m Widget.EventResult)
 caseDelEventMap config delete =
-    Widget.keysEventMapMovesCursor (Config.delKeys config)
-    (E.Doc ["Edit", "Case", "Delete Alt"]) $ WidgetIds.fromEntityId <$> delete
+    delete <&> WidgetIds.fromEntityId
+    & Widget.keysEventMapMovesCursor (Config.delKeys config) (doc "Delete Alt")
 
 toLambdaCaseEventMap ::
     Monad m =>
     Config -> m Sugar.EntityId -> Widget.EventMap (m Widget.EventResult)
 toLambdaCaseEventMap config toLamCase =
-    Widget.keysEventMapMovesCursor (Config.delKeys config)
-    (E.Doc ["Edit", "Case", "Turn to Lambda-Case"]) $
-    WidgetIds.fromEntityId <$> toLamCase
+    toLamCase <&> WidgetIds.fromEntityId
+    & Widget.keysEventMapMovesCursor (Config.delKeys config) (doc "Turn to Lambda-Case")

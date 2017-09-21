@@ -41,6 +41,9 @@ shouldAddBg :: Sugar.Composite name m a -> Bool
 shouldAddBg (Sugar.Composite [] Sugar.ClosedComposite{} _) = False
 shouldAddBg _ = True
 
+doc :: E.Subtitle -> E.Doc
+doc text = E.Doc ["Edit", "Record", text]
+
 make ::
     Monad m =>
     Sugar.Composite (Name m) m (ExprGuiT.SugarExpr m) ->
@@ -57,15 +60,15 @@ make record@(Sugar.Composite fields recordTail addField) pl =
                     Sugar.ClosedComposite actions ->
                         E.weakerEvents (closedRecordEventMap config actions) fieldsGui
                         & return
-                    Sugar.OpenComposite _actions rest ->
-                        makeOpenRecord fieldsGui rest (Widget.toAnimId myId)
+                    Sugar.OpenComposite actions rest ->
+                        makeOpenRecord fieldsGui actions rest (Widget.toAnimId myId)
         let addFieldEventMap =
                 addField
                 <&> (^. Sugar.cairNewTag . Sugar.tagInstance)
                 <&> WidgetIds.fromEntityId
                 <&> TagEdit.diveToRecordTag
                 & Widget.keysEventMapMovesCursor (Config.recordAddFieldKeys config)
-                  (E.Doc ["Edit", "Record", "Add Field"])
+                  (doc "Add Field")
                 & ExprGuiM.withHolePicker resultPicker
         (if addBg then ExpressionGui.addValFrame else return id)
             ?? E.weakerEvents addFieldEventMap gui
@@ -111,18 +114,21 @@ separationBar theme width animId =
 
 makeOpenRecord ::
     Monad m =>
-    ExpressionGui m -> ExprGuiT.SugarExpr m -> AnimId ->
-    ExprGuiM m (ExpressionGui m)
-makeOpenRecord fieldsGui rest animId =
+    ExpressionGui m -> Sugar.OpenCompositeActions m -> ExprGuiT.SugarExpr m ->
+    AnimId -> ExprGuiM m (ExpressionGui m)
+makeOpenRecord fieldsGui actions rest animId =
     do
         theme <- Lens.view Theme.theme
         vspace <- Spacer.stdVSpace
         restExpr <-
             ExpressionGui.addValPadding
             <*> ExprGuiM.makeSubexpression rest
+        config <- Lens.view Config.config
         return $ fieldsGui & Responsive.render . Lens.imapped %@~
             \layoutMode fields ->
-            let restW = (restExpr ^. Responsive.render) layoutMode
+            let restW =
+                    (restExpr ^. Responsive.render) layoutMode
+                    <&> E.weakerEvents (openRecordEventMap config actions)
                 minWidth = restW ^. Element.width
                 targetWidth = fields ^. Element.width
             in
@@ -134,17 +140,24 @@ makeOpenRecord fieldsGui rest animId =
             /-/
             restW
 
+openRecordEventMap ::
+    Functor m => Config -> Sugar.OpenCompositeActions m ->
+    Widget.EventMap (T m Widget.EventResult)
+openRecordEventMap config (Sugar.OpenCompositeActions close) =
+    close <&> WidgetIds.fromEntityId
+    & Widget.keysEventMapMovesCursor (Config.delKeys config) (doc "Close")
+
 closedRecordEventMap ::
-    Monad m =>
+    Functor m =>
     Config -> Sugar.ClosedCompositeActions m ->
     Widget.EventMap (T m Widget.EventResult)
 closedRecordEventMap config (Sugar.ClosedCompositeActions open) =
-    Widget.keysEventMapMovesCursor (Config.recordOpenKeys config)
-    (E.Doc ["Edit", "Record", "Open"]) $ WidgetIds.fromEntityId <$> open
+    open <&> WidgetIds.fromEntityId
+    & Widget.keysEventMapMovesCursor (Config.recordOpenKeys config) (doc "Open")
 
 recordDelEventMap ::
-    Monad m =>
+    Functor m =>
     Config -> m Sugar.EntityId -> Widget.EventMap (m Widget.EventResult)
 recordDelEventMap config delete =
-    Widget.keysEventMapMovesCursor (Config.delKeys config)
-    (E.Doc ["Edit", "Record", "Delete Field"]) $ WidgetIds.fromEntityId <$> delete
+    delete <&> WidgetIds.fromEntityId
+    & Widget.keysEventMapMovesCursor (Config.delKeys config) (doc "Delete Field")
