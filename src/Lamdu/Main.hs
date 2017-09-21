@@ -147,9 +147,12 @@ exportActions ::
     Config -> EvalResults (ValI DbLayout.ViewM) -> GUIMain.ExportActions DbLayout.ViewM
 exportActions config evalResults =
     GUIMain.ExportActions
-    { GUIMain.exportRepl = fileExport Export.fileExportRepl
+    { GUIMain.exportReplActions =
+        GUIMain.ExportRepl
+        { GUIMain.exportRepl = fileExport Export.fileExportRepl
+        , GUIMain.exportFancy = export (exportFancy evalResults)
+        }
     , GUIMain.exportAll = fileExport Export.fileExportAll
-    , GUIMain.exportFancy = export (exportFancy evalResults)
     , GUIMain.exportDef = fileExport . Export.fileExportDef
     , GUIMain.importAll = importAll
     }

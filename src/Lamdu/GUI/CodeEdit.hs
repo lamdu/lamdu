@@ -2,9 +2,8 @@
 module Lamdu.GUI.CodeEdit
     ( make
     , HasEvalResults(..)
-    , ExportActions(..), HasExportActions(..)
+    , ReplEdit.ExportRepl(..), ExportActions(..), HasExportActions(..)
     ) where
-
 
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
@@ -19,14 +18,13 @@ import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.MetaKey (MetaKey)
 import           GUI.Momentu.Responsive (Responsive)
 import qualified GUI.Momentu.Responsive as Responsive
-import qualified GUI.Momentu.Responsive.Options as Options
 import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
 import qualified GUI.Momentu.Widgets.TextView as TextView
 import qualified Lamdu.Calc.Type.Scheme as Scheme
-import           Lamdu.Config (Config, config)
+import           Lamdu.Config (config)
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.Data.Anchors as Anchors
@@ -38,7 +36,6 @@ import           Lamdu.Expr.IRef (DefI, ValI)
 import           Lamdu.GUI.CodeEdit.Settings (HasSettings)
 import qualified Lamdu.GUI.DefinitionEdit as DefinitionEdit
 import qualified Lamdu.GUI.ExpressionEdit as ExpressionEdit
-import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
@@ -46,6 +43,7 @@ import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
 import           Lamdu.GUI.IOTrans (IOTrans)
 import qualified Lamdu.GUI.IOTrans as IOTrans
 import qualified Lamdu.GUI.RedundantAnnotations as RedundantAnnotations
+import qualified Lamdu.GUI.ReplEdit as ReplEdit
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Style (HasStyle)
 import qualified Lamdu.Sugar.Convert as SugarConvert
@@ -60,15 +58,8 @@ import           Lamdu.Prelude
 type T = Transaction
 
 data ExportActions m = ExportActions
-    { exportRepl :: IOTrans m ()
-    , exportAll :: IOTrans m ()
-    , -- Fancy export is intended for sending code to someone who doesn't have
-      -- Lamdu installed. It bundles together in a zipfile a screenshot,
-      -- a README, the repl export, and compiled JS  (that requires a new
-      -- version of nodejs supporting TCO).  It is intended to enable Lamdu
-      -- to be used in competitions such as Google codejam which require
-      -- [readable] code upload.
-      exportFancy :: IOTrans m ()
+    { exportAll :: IOTrans m ()
+    , exportReplActions :: ReplEdit.ExportRepl m
     , exportDef :: DefI m -> IOTrans m ()
     , importAll :: FilePath -> IOTrans m ()
     }
@@ -124,27 +115,6 @@ loadWorkArea theEvalResults theCodeAnchors =
             (_waRepl & exprAddNearestHoles & postProcessExpr)
             & pure
 
-makeReplEdit ::
-    Monad m =>
-    ExportActions m ->
-    ExprGuiT.SugarExpr m ->
-    ExprGuiM m (Responsive (IOTrans m Widget.EventResult))
-makeReplEdit theExportActions replExpr =
-    do
-        theConfig <- Lens.view config
-        (Options.boxSpaced ?? Options.disambiguationNone)
-            <*> sequence
-            [ (Widget.makeFocusableView ?? Widget.joinId WidgetIds.replId ["symbol"] <&> (Align.tValue %~))
-              <*> TextView.makeLabel "⋙"
-              <&> Responsive.fromWithTextPos
-            , ExprGuiM.makeSubexpressionWith 0 id replExpr
-            ]
-            <&> Lens.mapped %~ IOTrans.liftTrans
-            <&> E.weakerEvents (replEventMap theConfig theExportActions replExpr)
-            & Widget.assignCursor WidgetIds.replId exprId
-    where
-        exprId = replExpr ^. Sugar.rPayload . Sugar.plEntityId & WidgetIds.fromEntityId
-
 make ::
     ( MonadTransaction m n, MonadReader env n, Config.HasConfig env
     , Theme.HasTheme env, Widget.HasCursor env, TextEdit.HasStyle env
@@ -159,7 +129,9 @@ make theCodeAnchors width =
         theExportActions <- Lens.view exportActions
         do
             workArea <- loadWorkArea theEvalResults theCodeAnchors
-            replGui <- makeReplEdit theExportActions (workArea ^. Sugar.waRepl)
+            replGui <-
+                ReplEdit.make (exportReplActions theExportActions)
+                (workArea ^. Sugar.waRepl)
             panesEdits <-
                 workArea ^. Sugar.waPanes
                 & traverse (makePaneEdit theExportActions)
@@ -246,26 +218,6 @@ makeNewDefinitionButton =
             & Reader.local (TextView.color .~ color)
             <&> (^. Align.tValue)
             <&> E.weakerEvents (newDefinitionEventMap newDefinitionButtonPressKeys)
-
-replEventMap ::
-    Monad m =>
-    Config -> ExportActions m ->
-    Sugar.Expression name m a -> Widget.EventMap (IOTrans m Widget.EventResult)
-replEventMap theConfig theExportActions replExpr =
-    mconcat
-    [ replExpr ^. Sugar.rPayload . Sugar.plActions . Sugar.extract
-      <&> ExprEventMap.extractCursor & IOTrans.liftTrans
-      & Widget.keysEventMapMovesCursor
-        (Config.newDefinitionButtonPressKeys (Config.pane theConfig))
-        (E.Doc ["Edit", "Extract to definition"])
-    , Widget.keysEventMap exportKeys
-      (E.Doc ["Collaboration", "Export repl to JSON file"]) exportRepl
-    , Widget.keysEventMap exportFancyKeys
-      (E.Doc ["Collaboration", "Export repl for Codejam"]) exportFancy
-    ]
-    where
-        ExportActions{exportRepl, exportFancy} = theExportActions
-        Config.Export{exportKeys, exportFancyKeys} = Config.export theConfig
 
 panesEventMap ::
     Monad m =>

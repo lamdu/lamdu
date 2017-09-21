@@ -221,6 +221,7 @@ Executable lamdu
                   , Lamdu.GUI.ParamEdit
                   , Lamdu.GUI.Precedence
                   , Lamdu.GUI.RedundantAnnotations
+                  , Lamdu.GUI.ReplEdit
                   , Lamdu.GUI.TypeView
                   , Lamdu.GUI.VersionControl
                   , Lamdu.GUI.VersionControl.Config

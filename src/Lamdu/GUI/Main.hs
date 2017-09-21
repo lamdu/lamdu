@@ -2,6 +2,7 @@
 module Lamdu.GUI.Main
     ( make
     , defaultCursor
+    , CodeEdit.ExportRepl(..)
     , CodeEdit.ExportActions(..)
     , CodeEdit.HasEvalResults(..)
     , CodeEdit.HasExportActions(..)
