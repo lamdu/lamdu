@@ -8,6 +8,7 @@ import qualified Control.Lens as Lens
 import           Data.Orphans () -- Imported for Monoid (IO ()) instance
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.EventMap as E
+import           GUI.Momentu.MetaKey (MetaKey)
 import           GUI.Momentu.Responsive (Responsive)
 import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.Responsive.Options as Options
@@ -37,17 +38,21 @@ data ExportRepl m = ExportRepl
       exportFancy :: IOTrans m ()
     }
 
+extractEventMap ::
+    Functor m => Sugar.Expression name m a -> [MetaKey] ->
+    Widget.EventMap (IOTrans m Widget.EventResult)
+extractEventMap replExpr keys =
+  replExpr ^. Sugar.rPayload . Sugar.plActions . Sugar.extract
+  <&> ExprEventMap.extractCursor & IOTrans.liftTrans
+  & Widget.keysEventMapMovesCursor keys (E.Doc ["Edit", "Extract to definition"])
+
 replEventMap ::
     Monad m =>
     Config -> ExportRepl m ->
     Sugar.Expression name m a -> Widget.EventMap (IOTrans m Widget.EventResult)
 replEventMap theConfig (ExportRepl exportRepl exportFancy) replExpr =
     mconcat
-    [ replExpr ^. Sugar.rPayload . Sugar.plActions . Sugar.extract
-      <&> ExprEventMap.extractCursor & IOTrans.liftTrans
-      & Widget.keysEventMapMovesCursor
-        (Config.newDefinitionButtonPressKeys (Config.pane theConfig))
-        (E.Doc ["Edit", "Extract to definition"])
+    [ extractEventMap replExpr (Config.extractKeys theConfig)
     , Widget.keysEventMap exportKeys
       (E.Doc ["Collaboration", "Export repl to JSON file"]) exportRepl
     , Widget.keysEventMap exportFancyKeys
@@ -64,14 +69,16 @@ make ::
 make exportRepl replExpr =
     do
         theConfig <- Lens.view config
+        let buttonExtractKeys = Config.newDefinitionButtonPressKeys (Config.pane theConfig)
         (Options.boxSpaced ?? Options.disambiguationNone)
             <*> sequence
             [ (Widget.makeFocusableView ?? Widget.joinId WidgetIds.replId ["symbol"] <&> (Align.tValue %~))
               <*> TextView.makeLabel "⋙"
+              <&> Lens.mapped %~ E.weakerEvents (extractEventMap replExpr buttonExtractKeys)
               <&> Responsive.fromWithTextPos
             , ExprGuiM.makeSubexpressionWith 0 id replExpr
+              <&> Lens.mapped %~ IOTrans.liftTrans
             ]
-            <&> Lens.mapped %~ IOTrans.liftTrans
             <&> E.weakerEvents (replEventMap theConfig exportRepl replExpr)
             & Widget.assignCursor WidgetIds.replId exprId
     where
