@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, OverloadedStrings, DeriveFunctor, TemplateHaskell, NamedFieldPuns, DisambiguateRecordFields, MultiParamTypeClasses #-}
+{-# LANGUAGE NoImplicitPrelude, OverloadedStrings, NamedFieldPuns, DisambiguateRecordFields, MultiParamTypeClasses #-}
 module Lamdu.GUI.CodeEdit
     ( make
     , HasEvalResults(..)

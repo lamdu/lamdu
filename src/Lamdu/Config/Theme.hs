@@ -2,9 +2,7 @@
 {-# LANGUAGE NoImplicitPrelude, TemplateHaskell, CPP #-}
 -- | The themes/ config format
 module Lamdu.Config.Theme
-    ( module Lamdu.Config.Theme.CodeForegroundColors
-    , module Lamdu.Config.Theme.Name
-    , module Lamdu.Config.Theme.ValAnnotation
+    ( module Exported
     , Help(..), Hole(..), Eval(..)
     , Theme(..), themeStdSpacing
     , HasTheme(..)
@@ -20,9 +18,9 @@ import qualified GUI.Momentu.Draw as Draw
 import qualified GUI.Momentu.Hover as Hover
 import qualified GUI.Momentu.Responsive.Expression as Expression
 import qualified GUI.Momentu.Widgets.Menu as Menu
-import           Lamdu.Config.Theme.CodeForegroundColors (CodeForegroundColors(..))
-import           Lamdu.Config.Theme.Name (Name(..))
-import           Lamdu.Config.Theme.ValAnnotation (ValAnnotation(..))
+import           Lamdu.Config.Theme.CodeForegroundColors as Exported (CodeForegroundColors(..))
+import           Lamdu.Config.Theme.Name as Exported (Name(..))
+import           Lamdu.Config.Theme.ValAnnotation as Exported (ValAnnotation(..))
 import           Lamdu.Font (FontSize, Fonts)
 import qualified Lamdu.GUI.VersionControl.Config as VersionControl
 

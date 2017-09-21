@@ -308,7 +308,7 @@ setFieldParamTag binderKind storedLam prevTag =
             updateParamList (Just tagList) =
                 tagsBefore ++ chosenTag : tagsAfter & Just
                 where
-                    (tagsBefore, (_:tagsAfter)) = break (== prevTag) tagList
+                    (tagsBefore, _:tagsAfter) = break (== prevTag) tagList
         Transaction.modP (slParamList storedLam) updateParamList
         let fixArg argI (V.BRecExtend recExtend)
                 | recExtend ^. V.recTag == prevTag =
