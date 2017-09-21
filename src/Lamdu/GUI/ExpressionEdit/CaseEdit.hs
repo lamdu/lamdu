@@ -4,6 +4,7 @@ module Lamdu.GUI.ExpressionEdit.CaseEdit
     ) where
 
 import qualified Control.Lens as Lens
+import qualified Control.Monad.Reader as Reader
 import           Data.Store.Transaction (Transaction)
 import           Data.Vector.Vector2 (Vector2(..))
 import           GUI.Momentu.Align (WithTextPos)
@@ -139,7 +140,11 @@ makeAltRow mActiveTag (Sugar.CompositeItem delete tag altExpr) =
         hspace <- Spacer.stdHSpace
         altExprGui <-
             ExprGuiM.makeSubexpression altExpr <&> E.weakerEvents itemEventMap
-        return (tagLabel /|/ hspace, altExprGui)
+        colonLabel <- ExpressionGui.grammarLabel ":"
+        return (tagLabel /|/ colonLabel /|/ hspace, altExprGui)
+    & Reader.local (Element.animIdPrefix .~ Widget.toAnimId altId)
+    where
+        altId = tag ^. Sugar.tagInfo . Sugar.tagInstance & WidgetIds.fromEntityId
 
 makeAltsWidget ::
     Monad m =>
