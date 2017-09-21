@@ -467,29 +467,29 @@ writeConvertTypeChecked holeEntityId sugarContext holeStored inferredVal =
             , consistentExpr <&> void
             , writtenExpr <&> snd <&> _2 %~ void
             )
-        where
-            intoStorePoint (inferred, (mStorePoint, a)) =
-                (mStorePoint, (inferred, Lens.has Lens._Just mStorePoint, a))
-            toPayload (stored, (inferred, wasStored, a)) =
-                -- TODO: Evaluate hole results instead of Map.empty's?
-                ( eId
-                , \varRefs ->
-                  ( wasStored
-                  , ( stored
-                    , Input.Payload
-                      { Input._varRefsOfLambda = varRefs
-                      , Input._userData = a
-                      , Input._inferred = inferred
-                      , Input._evalResults = CurAndPrev noEval noEval
-                      , Input._stored = stored
-                      , Input._entityId = eId
-                      }
-                    )
-                  )
+    where
+        intoStorePoint (inferred, (mStorePoint, a)) =
+            (mStorePoint, (inferred, Lens.has Lens._Just mStorePoint, a))
+        toPayload (stored, (inferred, wasStored, a)) =
+            -- TODO: Evaluate hole results instead of Map.empty's?
+            ( eId
+            , \varRefs ->
+              ( wasStored
+              , ( stored
+                , Input.Payload
+                  { Input._varRefsOfLambda = varRefs
+                  , Input._userData = a
+                  , Input._inferred = inferred
+                  , Input._evalResults = CurAndPrev noEval noEval
+                  , Input._stored = stored
+                  , Input._entityId = eId
+                  }
                 )
-                where
-                    eId = Property.value stored & EntityId.ofValI
-            noEval = Input.EvalResultsForExpr Map.empty Map.empty
+              )
+            )
+            where
+                eId = Property.value stored & EntityId.ofValI
+        noEval = Input.EvalResultsForExpr Map.empty Map.empty
 
 idTranslations ::
     Val (EntityId, Type) ->
