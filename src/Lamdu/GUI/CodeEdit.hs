@@ -3,7 +3,7 @@ module Lamdu.GUI.CodeEdit
     ( make
     , HasEvalResults(..)
     , ExportActions(..), HasExportActions(..)
-    , M(..), m, mLiftTrans
+    , IOTrans(..), ioTrans, ioTransLift
     ) where
 
 import           Control.Applicative (liftA2)
@@ -59,29 +59,33 @@ import           Lamdu.Prelude
 
 type T = Transaction
 
-newtype M m a = M { _m :: IO (T m (Main.EventResult a)) }
+-- | IOTrans is an applicative that allows 3 phases of execution:
+-- A. IO action (e.g: to read a JSON file)
+-- B. A transaction (allowed to depend on A)
+-- C. A final IO action (allowed to depend on B) (e.g: to write a JSON file)
+newtype IOTrans m a = IOTrans { _ioTrans :: IO (T m (Main.EventResult a)) }
     deriving (Functor)
-Lens.makeLenses ''M
+Lens.makeLenses ''IOTrans
 
-instance Monad m => Applicative (M m) where
-    pure = M . pure . pure . pure
-    M f <*> M x = (liftA2 . liftA2 . liftA2) ($) f x & M
+instance Monad m => Applicative (IOTrans m) where
+    pure = IOTrans . pure . pure . pure
+    IOTrans f <*> IOTrans x = (liftA2 . liftA2 . liftA2) ($) f x & IOTrans
 
-mLiftTrans :: Functor m => T m a -> M m a
-mLiftTrans = M . pure . fmap pure
+ioTransLift :: Functor m => T m a -> IOTrans m a
+ioTransLift = IOTrans . pure . fmap pure
 
 data ExportActions m = ExportActions
-    { exportRepl :: M m ()
-    , exportAll :: M m ()
+    { exportRepl :: IOTrans m ()
+    , exportAll :: IOTrans m ()
     , -- Fancy export is intended for sending code to someone who doesn't have
       -- Lamdu installed. It bundles together in a zipfile a screenshot,
       -- a README, the repl export, and compiled JS  (that requires a new
       -- version of nodejs supporting TCO).  It is intended to enable Lamdu
       -- to be used in competitions such as Google codejam which require
       -- [readable] code upload.
-      exportFancy :: M m ()
-    , exportDef :: DefI m -> M m ()
-    , importAll :: FilePath -> M m ()
+      exportFancy :: IOTrans m ()
+    , exportDef :: DefI m -> IOTrans m ()
+    , importAll :: FilePath -> IOTrans m ()
     }
 
 class HasEvalResults env m where
@@ -139,7 +143,7 @@ makeReplEdit ::
     Monad m =>
     ExportActions m ->
     ExprGuiT.SugarExpr m ->
-    ExprGuiM m (Responsive (M m Widget.EventResult))
+    ExprGuiM m (Responsive (IOTrans m Widget.EventResult))
 makeReplEdit theExportActions replExpr =
     do
         theConfig <- Lens.view config
@@ -150,7 +154,7 @@ makeReplEdit theExportActions replExpr =
               <&> Responsive.fromWithTextPos
             , ExprGuiM.makeSubexpressionWith 0 id replExpr
             ]
-            <&> Lens.mapped %~ mLiftTrans
+            <&> Lens.mapped %~ ioTransLift
             <&> E.weakerEvents (replEventMap theConfig theExportActions replExpr)
             & Widget.assignCursor WidgetIds.replId exprId
     where
@@ -163,7 +167,7 @@ make ::
     , HasSettings env, HasStyle env
     ) =>
     Anchors.CodeAnchors m -> Widget.R ->
-    n (Widget (M m Widget.EventResult))
+    n (Widget (IOTrans m Widget.EventResult))
 make theCodeAnchors width =
     do
         theEvalResults <- Lens.view evalResults
@@ -174,7 +178,7 @@ make theCodeAnchors width =
             panesEdits <-
                 workArea ^. Sugar.waPanes
                 & traverse (makePaneEdit theExportActions)
-            newDefinitionButton <- makeNewDefinitionButton <&> fmap mLiftTrans <&> Responsive.fromWidget
+            newDefinitionButton <- makeNewDefinitionButton <&> fmap ioTransLift <&> Responsive.fromWidget
             eventMap <- panesEventMap theExportActions theCodeAnchors
             Responsive.vboxSpaced
                 ?? (replGui : panesEdits ++ [newDefinitionButton])
@@ -187,12 +191,12 @@ makePaneEdit ::
     Monad m =>
     ExportActions m ->
     Sugar.Pane (Name m) m ExprGuiT.Payload ->
-    ExprGuiM m (Responsive (M m Widget.EventResult))
+    ExprGuiM m (Responsive (IOTrans m Widget.EventResult))
 makePaneEdit theExportActions pane =
     do
         theConfig <- Lens.view config
         let paneEventMap =
-                [ pane ^. Sugar.paneClose & mLiftTrans
+                [ pane ^. Sugar.paneClose & ioTransLift
                   <&> WidgetIds.fromEntityId
                   & Widget.keysEventMapMovesCursor paneCloseKeys
                     (E.Doc ["View", "Pane", "Close"])
@@ -200,15 +204,15 @@ makePaneEdit theExportActions pane =
                       Transaction.setP (pane ^. Sugar.paneDefinition . Sugar.drDefinitionState)
                           Sugar.DeletedDefinition
                       pane ^. Sugar.paneClose
-                  & mLiftTrans
+                  & ioTransLift
                   <&> WidgetIds.fromEntityId
                   & Widget.keysEventMapMovesCursor (Config.delKeys theConfig)
                     (E.Doc ["Edit", "Definition", "Delete"])
-                , pane ^. Sugar.paneMoveDown <&> mLiftTrans
+                , pane ^. Sugar.paneMoveDown <&> ioTransLift
                   & maybe mempty
                     (Widget.keysEventMap paneMoveDownKeys
                     (E.Doc ["View", "Pane", "Move down"]))
-                , pane ^. Sugar.paneMoveUp <&> mLiftTrans
+                , pane ^. Sugar.paneMoveUp <&> ioTransLift
                   & maybe mempty
                     (Widget.keysEventMap paneMoveUpKeys
                     (E.Doc ["View", "Pane", "Move up"]))
@@ -219,7 +223,7 @@ makePaneEdit theExportActions pane =
             Config.Pane{paneCloseKeys, paneMoveDownKeys, paneMoveUpKeys} = Config.pane theConfig
             exportKeys = Config.exportKeys (Config.export theConfig)
         DefinitionEdit.make (pane ^. Sugar.paneDefinition)
-            <&> Lens.mapped %~ mLiftTrans
+            <&> Lens.mapped %~ ioTransLift
             <&> E.weakerEvents paneEventMap
 
 makeNewDefinitionEventMap ::
@@ -261,11 +265,11 @@ makeNewDefinitionButton =
 replEventMap ::
     Monad m =>
     Config -> ExportActions m ->
-    Sugar.Expression name m a -> Widget.EventMap (M m Widget.EventResult)
+    Sugar.Expression name m a -> Widget.EventMap (IOTrans m Widget.EventResult)
 replEventMap theConfig theExportActions replExpr =
     mconcat
     [ replExpr ^. Sugar.rPayload . Sugar.plActions . Sugar.extract
-      <&> ExprEventMap.extractCursor & mLiftTrans
+      <&> ExprEventMap.extractCursor & ioTransLift
       & Widget.keysEventMapMovesCursor
         (Config.newDefinitionButtonPressKeys (Config.pane theConfig))
         (E.Doc ["Edit", "Extract to definition"])
@@ -281,17 +285,17 @@ replEventMap theConfig theExportActions replExpr =
 panesEventMap ::
     Monad m =>
     ExportActions m -> Anchors.CodeAnchors m ->
-    ExprGuiM m (Widget.EventMap (M m Widget.EventResult))
+    ExprGuiM m (Widget.EventMap (IOTrans m Widget.EventResult))
 panesEventMap theExportActions theCodeAnchors =
     do
         theConfig <- Lens.view config
         let Config.Export{exportPath,importKeys,exportAllKeys} = Config.export theConfig
         mJumpBack <-
-            DataOps.jumpBack theCodeAnchors & transaction <&> fmap mLiftTrans
+            DataOps.jumpBack theCodeAnchors & transaction <&> fmap ioTransLift
         newDefinitionEventMap <- makeNewDefinitionEventMap theCodeAnchors
         return $ mconcat
             [ newDefinitionEventMap (Config.newDefinitionKeys (Config.pane theConfig))
-              <&> mLiftTrans
+              <&> ioTransLift
             , E.dropEventMap "Drag&drop JSON files"
               (E.Doc ["Collaboration", "Import JSON file"]) (Just . traverse_ importAll)
               <&> fmap (\() -> mempty)

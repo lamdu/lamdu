@@ -2,7 +2,7 @@
 module Lamdu.GUI.Main
     ( make
     , CodeEdit.ExportActions(..)
-    , CodeEdit.M(..), CodeEdit.m, defaultCursor
+    , CodeEdit.IOTrans(..), CodeEdit.ioTrans, defaultCursor
     , CodeEdit.HasEvalResults(..)
     , CodeEdit.HasExportActions(..)
     , EvalResults
@@ -28,7 +28,7 @@ import           Lamdu.Data.DbLayout (DbM, ViewM)
 import qualified Lamdu.Data.DbLayout as DbLayout
 import qualified Lamdu.Eval.Results as Results
 import qualified Lamdu.Expr.IRef as ExprIRef
-import           Lamdu.GUI.CodeEdit (M)
+import           Lamdu.GUI.CodeEdit (IOTrans)
 import qualified Lamdu.GUI.CodeEdit as CodeEdit
 import qualified Lamdu.GUI.CodeEdit.Settings as Settings
 import qualified Lamdu.GUI.VersionControl as VersionControlGUI
@@ -57,8 +57,8 @@ makeInnerGui ::
     , CodeEdit.HasEvalResults env ViewM
     , CodeEdit.HasExportActions env ViewM
     ) =>
-    Widget (M DbM Widget.EventResult) ->
-    ReaderT env (T DbM) (Widget (M DbM Widget.EventResult))
+    Widget (IOTrans DbM Widget.EventResult) ->
+    ReaderT env (T DbM) (Widget (IOTrans DbM Widget.EventResult))
 makeInnerGui branchSelector =
     do
         fullSize <- Lens.view (MainLoop.mainLoopEnv . MainLoop.eWindowSize)
@@ -67,7 +67,7 @@ makeInnerGui branchSelector =
         codeEdit <-
             CodeEdit.make DbLayout.codeAnchors (codeSize ^. _1)
             & Reader.mapReaderT VersionControl.runAction
-            <&> Widget.events . CodeEdit.m . Lens.mapped %~
+            <&> Widget.events . CodeEdit.ioTrans . Lens.mapped %~
                 VersionControl.runEvent theCursor
         theTheme <- Lens.view Theme.theme
         topPadding <- Spacer.vspaceLines (Theme.topPadding theTheme)
@@ -88,18 +88,18 @@ make ::
     , CodeEdit.HasEvalResults env ViewM
     , CodeEdit.HasExportActions env ViewM
     ) =>
-    env -> T DbM (Widget (M DbM Widget.EventResult))
+    env -> T DbM (Widget (IOTrans DbM Widget.EventResult))
 make env =
     do
         actions <-
             VersionControl.makeActions
-            <&> VersionControl.Actions.hoist CodeEdit.mLiftTrans
+            <&> VersionControl.Actions.hoist CodeEdit.ioTransLift
         let versionControlCfg = Config.versionControl (env ^. Config.config)
         let versionControlThm = Theme.versionControl (env ^. Theme.theme)
         do
             branchGui <-
                 VersionControlGUI.make versionControlCfg versionControlThm
-                CodeEdit.mLiftTrans lift actions makeInnerGui
+                CodeEdit.ioTransLift lift actions makeInnerGui
                 & (`runReaderT` env)
             let quitEventMap =
                     Widget.keysEventMap (Config.quitKeys (env ^. Config.config))

@@ -154,9 +154,9 @@ exportActions config evalResults =
     }
     where
         Config.Export{exportPath} = Config.export config
-        export x = x <&> (`MainLoop.EventResult` ()) & return & GUIMain.M
+        export x = x <&> (`MainLoop.EventResult` ()) & return & GUIMain.IOTrans
         fileExport exporter = exporter exportPath & export
-        importAll path = Export.fileImportAll path <&> fmap pure & GUIMain.M
+        importAll path = Export.fileImportAll path <&> fmap pure & GUIMain.IOTrans
 
 makeRootWidget ::
     Fonts M.Font -> Db -> IORef Settings -> EvalManager.Evaluator ->
@@ -354,7 +354,7 @@ makeMainGui ::
 makeMainGui dbToIO env =
     GUIMain.make env
     <&> Lens.mapped %~ \act ->
-    act ^. GUIMain.m
+    act ^. GUIMain.ioTrans
     <&> dbToIO
     & join
     & MainLoop.M
