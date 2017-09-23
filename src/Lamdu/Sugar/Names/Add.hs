@@ -10,6 +10,7 @@ import           Control.Monad.Trans.Reader (Reader, runReader)
 import qualified Control.Monad.Trans.Reader as Reader
 import           Control.Monad.Trans.State (runState, evalState)
 import           Data.List (partition)
+import qualified Data.List as List
 import qualified Data.Map as Map
 import           Data.Monoid.Generic (def_mempty, def_mappend)
 import qualified Data.Set as Set
@@ -18,7 +19,6 @@ import qualified Data.Set.Ordered as OrderedSet
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
 import qualified Data.Text as Text
-import           Data.Tuple (swap)
 import           Data.UUID.Types (UUID)
 import           GHC.Generics (Generic)
 import           Lamdu.Data.Anchors (assocNameRef)
@@ -281,7 +281,8 @@ Lens.makeLenses ''P2Env
 
 uuidSuffixes :: OrderedSet Clash.NameInstance -> Map UUID Int
 uuidSuffixes nameInstances =
-    nameInstances ^@.. Lens.folded <. Clash.niUUID <&> swap & Map.fromList
+    nameInstances ^.. Lens.folded . Clash.niUUID & List.nub <&> (,) ?? ()
+    & Map.fromList & Lens.traversed %@~ \idx () -> idx
 
 initialP2Env :: P1Out -> P2Env
 initialP2Env (P1Out names collisions) =
