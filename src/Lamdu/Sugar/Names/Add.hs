@@ -281,8 +281,10 @@ Lens.makeLenses ''P2Env
 
 uuidSuffixes :: OrderedSet Clash.NameInstance -> Map UUID Int
 uuidSuffixes nameInstances =
-    nameInstances ^.. Lens.folded . Clash.niUUID & List.nub <&> (,) ?? ()
-    & Map.fromList & Lens.traversed %@~ \idx () -> idx
+    nameInstances ^.. Lens.folded . Clash.niUUID
+    & List.nub
+    & (zip ?? [0..])
+    & Map.fromList
 
 initialP2Env :: P1Out -> P2Env
 initialP2Env (P1Out names collisions) =
