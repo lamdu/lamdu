@@ -107,11 +107,7 @@ indentBar =
 boxSpacedDisambiguated ::
     (MonadReader env m, HasStyle env, Spacer.HasStdSpacing env, Functor f) =>
     m (AnimId -> [Responsive (f EventResult)] -> Responsive (f EventResult))
-boxSpacedDisambiguated =
-    do
-        disamb <- disambiguators
-        b <- Options.boxSpaced
-        return (b . disamb)
+boxSpacedDisambiguated = boxSpacedMDisamb <&> Lens.argument %~ Just
 
 boxSpacedMDisamb ::
     (MonadReader env m, HasStyle env, Spacer.HasStdSpacing env, Functor f) =>
