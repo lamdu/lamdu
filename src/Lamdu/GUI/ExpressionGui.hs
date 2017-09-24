@@ -4,7 +4,7 @@ module Lamdu.GUI.ExpressionGui
     , render
     -- General:
     , listWithDelDests
-    , grammarLabel
+    , grammarLabel, grammarText
     , addValFrame, addValPadding
     , addValBGWithColor
     -- Lifted widgets:
@@ -364,6 +364,17 @@ grammarLabel text =
     do
         th <- Lens.view theme <&> Theme.codeForegroundColors
         TextView.makeLabel text
+            & Reader.local (TextView.color .~ Theme.grammarColor th)
+
+grammarText ::
+    ( MonadReader env m
+    , HasTheme env
+    , TextView.HasStyle env
+    ) => m (Text -> AnimId -> WithTextPos View)
+grammarText =
+    do
+        th <- Lens.view theme <&> Theme.codeForegroundColors
+        TextView.make
             & Reader.local (TextView.color .~ Theme.grammarColor th)
 
 addValBG ::

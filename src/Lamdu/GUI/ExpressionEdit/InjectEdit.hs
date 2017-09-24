@@ -18,6 +18,7 @@ import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Menu as Menu
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
+import qualified GUI.Momentu.Widgets.TextView as TextView
 import           Lamdu.Config (HasConfig)
 import qualified Lamdu.Config as Config
 import           Lamdu.Config.Theme (HasTheme)
@@ -62,6 +63,13 @@ makeCommon tag mDelInject nearestHoles colonLabel valEdits =
                 <&> Responsive.fromWithTextPos <&> (: valEdits)
             )
 
+injectIndicator ::
+    ( MonadReader env f, TextView.HasStyle env, HasTheme env
+    , Element.HasAnimIdPrefix env
+    ) => Text -> f (WithTextPos View)
+injectIndicator text =
+    (ExpressionGui.grammarText ?? text) <*> Element.subAnimId ["injectIndicator"]
+
 make ::
     Monad m =>
     Sugar.Inject (Name m) m (ExprGuiT.SugarExpr m) ->
@@ -70,17 +78,19 @@ make ::
 make (Sugar.Inject tag mVal) pl =
     case mVal of
     Nothing ->
-        makeCommon
-        -- Give the tag widget the identity of the whole inject
-        (tag & Sugar.tagInfo . Sugar.tagInstance .~ (pl ^. Sugar.plEntityId))
-        Nothing (pl ^. Sugar.plData . ExprGuiT.plNearestHoles) Element.empty []
-        & ExpressionGui.stdWrap pl
+        do
+            dot <- injectIndicator "."
+            makeCommon
+                -- Give the tag widget the identity of the whole inject
+                (tag & Sugar.tagInfo . Sugar.tagInstance .~ (pl ^. Sugar.plEntityId))
+                Nothing (pl ^. Sugar.plData . ExprGuiT.plNearestHoles) dot []
+                & ExpressionGui.stdWrap pl
     Just val ->
         do
             arg <-
                 ExprGuiM.makeSubexpressionWith ApplyEdit.prefixPrecedence
                 (ExpressionGui.before .~ ApplyEdit.prefixPrecedence) val <&> (:[])
-            colon <- ExpressionGui.grammarLabel ":"
+            colon <- injectIndicator ":"
             makeCommon tag replaceParent (ExprGuiT.nextHolesBefore val) colon arg
                 & ExpressionGui.stdWrapParentExpr pl tagInstance
         where
