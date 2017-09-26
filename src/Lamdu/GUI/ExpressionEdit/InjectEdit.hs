@@ -12,6 +12,7 @@ import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Glue ((/|/))
 import qualified GUI.Momentu.Hover as Hover
 import qualified GUI.Momentu.Responsive as Responsive
+import qualified GUI.Momentu.Responsive.Expression as ResponsiveExpr
 import qualified GUI.Momentu.Responsive.Options as Options
 import           GUI.Momentu.View (View)
 import qualified GUI.Momentu.Widget as Widget
@@ -22,7 +23,7 @@ import qualified GUI.Momentu.Widgets.TextView as TextView
 import           Lamdu.Config (HasConfig)
 import qualified Lamdu.Config as Config
 import           Lamdu.Config.Theme (HasTheme)
-import qualified Lamdu.GUI.ExpressionEdit.ApplyEdit as ApplyEdit
+import qualified Lamdu.GUI.Precedence as Prec
 import qualified Lamdu.GUI.ExpressionEdit.TagEdit as TagEdit
 import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
@@ -42,11 +43,12 @@ makeCommon ::
     , Spacer.HasStdSpacing env, Element.HasAnimIdPrefix env, Menu.HasStyle env
     , Hover.HasStyle env
     ) =>
+    Options.Disambiguators (Transaction m Widget.EventResult) ->
     Sugar.Tag (Name m) m ->
     Maybe (Transaction m Sugar.EntityId) ->
     NearestHoles -> WithTextPos View -> [ExpressionGui m] ->
     f (ExpressionGui m)
-makeCommon tag mDelInject nearestHoles colonLabel valEdits =
+makeCommon disamb tag mDelInject nearestHoles colonLabel valEdits =
     do
         config <- Lens.view Config.config
         let delEventMap =
@@ -55,7 +57,7 @@ makeCommon tag mDelInject nearestHoles colonLabel valEdits =
                 Just del ->
                     del <&> WidgetIds.fromEntityId
                     & Widget.keysEventMapMovesCursor (Config.delKeys config) (E.Doc ["Edit", "Delete"])
-        (Options.boxSpaced ?? Options.disambiguationNone)
+        (Options.boxSpaced ?? disamb)
             <*>
             ( TagEdit.makeCaseTag TagEdit.WithoutTagHoles nearestHoles tag
                 <&> (/|/ colonLabel)
@@ -82,17 +84,27 @@ make (Sugar.Inject tag mVal) pl =
             dot <- injectIndicator "."
             makeCommon
                 -- Give the tag widget the identity of the whole inject
+                Options.disambiguationNone
                 (tag & Sugar.tagInfo . Sugar.tagInstance .~ (pl ^. Sugar.plEntityId))
                 Nothing (pl ^. Sugar.plData . ExprGuiT.plNearestHoles) dot []
                 & ExpressionGui.stdWrap pl
     Just val ->
         do
+            parentPrec <- ExprGuiM.outerPrecedence <&> Prec.ParentPrecedence
+            let mParensId
+                    | Prec.needParens parentPrec (Prec.my 0) = Just animId
+                    | otherwise = Nothing
+            disamb <-
+                case mParensId of
+                Nothing -> pure Options.disambiguationNone
+                Just parensId -> ResponsiveExpr.disambiguators ?? parensId
             arg <-
-                ExprGuiM.makeSubexpressionWith ApplyEdit.prefixPrecedence
-                (ExpressionGui.before .~ ApplyEdit.prefixPrecedence) val <&> (:[])
+                ExprGuiM.makeSubexpression val <&> (:[])
             colon <- injectIndicator ":"
-            makeCommon tag replaceParent (ExprGuiT.nextHolesBefore val) colon arg
+            makeCommon disamb tag replaceParent (ExprGuiT.nextHolesBefore val) colon arg
                 & ExpressionGui.stdWrapParentExpr pl tagInstance
+        & ExprGuiM.withLocalPrecedence 0 (ExpressionGui.before .~ 0)
         where
             tagInstance = tag ^. Sugar.tagInfo . Sugar.tagInstance
             replaceParent = val ^. Sugar.rPayload . Sugar.plActions . Sugar.mReplaceParent
+            animId = WidgetIds.fromExprPayload pl & Widget.toAnimId
