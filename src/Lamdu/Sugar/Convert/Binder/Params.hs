@@ -298,18 +298,13 @@ changeGetFieldTags param prevTag chosenTag val =
     b -> traverse_ (changeGetFieldTags param prevTag chosenTag) b
 
 setFieldParamTag ::
-    Monad m => BinderKind m -> StoredLam m -> T.Tag -> ConvertM m (T.Tag -> T m TagInfo)
-setFieldParamTag binderKind storedLam prevTag =
+    Monad m => BinderKind m -> StoredLam m -> [T.Tag] -> T.Tag -> ConvertM m (T.Tag -> T m TagInfo)
+setFieldParamTag binderKind storedLam prevTagList prevTag =
     ConvertM.postProcess
     <&>
     \postProcess chosenTag ->
     do
-        let updateParamList Nothing = error "setFieldParamTag expected a paramlist"
-            updateParamList (Just tagList) =
-                tagsBefore ++ chosenTag : tagsAfter & Just
-                where
-                    (tagsBefore, _:tagsAfter) = break (== prevTag) tagList
-        Transaction.modP (slParamList storedLam) updateParamList
+        tagsBefore ++ chosenTag : tagsAfter & setParamList (slParamList storedLam)
         let fixArg argI (V.BRecExtend recExtend)
                 | recExtend ^. V.recTag == prevTag =
                     argI <$ ExprIRef.writeValBody argI (V.BRecExtend (recExtend & V.recTag .~ chosenTag))
@@ -329,6 +324,8 @@ setFieldParamTag binderKind storedLam prevTag =
         changeGetFieldTags (storedLam ^. slLam . V.lamParamId) prevTag chosenTag (storedLam ^. slLam . V.lamResult)
         postProcess
         TagInfo (EntityId.ofLambdaTagParam (storedLam ^. slLam . V.lamParamId) chosenTag) chosenTag & pure
+    where
+        (tagsBefore, _:tagsAfter) = break (== prevTag) prevTagList
 
 convertRecordParams ::
     Monad m =>
@@ -354,7 +351,7 @@ convertRecordParams binderKind fieldParams lam@(V.Lam param _) pl =
         mkFieldParamInfo fp = mkParamInfo param fp <&> ConvertM.TagFieldParam
         storedLam = mkStoredLam lam pl
         mkParam fp =
-            setFieldParamTag binderKind storedLam (fpTag fp)
+            setFieldParamTag binderKind storedLam (fieldParams <&> fpTag) (fpTag fp)
             >>= convertTag (TagInfo (fpIdEntityId param fp) (fpTag fp))
             <&>
             \tagS ->
