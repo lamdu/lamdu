@@ -12,7 +12,7 @@ import qualified Control.Lens as Lens
 data Precedence = Precedence
     { _before :: {-# UNPACK #-}!Int
     , _after  :: {-# UNPACK #-}!Int
-    }
+    } deriving Show
 
 Lens.makeLenses ''Precedence
 
@@ -27,8 +27,8 @@ make p = Precedence p p
 --     abs = error "instance Num Precedence.abs"
 --     signum = error "instance Num Precedence.signum"
 
-newtype MyPrecedence = MyPrecedence Precedence
-newtype ParentPrecedence = ParentPrecedence Precedence
+newtype MyPrecedence = MyPrecedence Precedence deriving Show
+newtype ParentPrecedence = ParentPrecedence Precedence deriving Show
 
 parent :: Int -> ParentPrecedence
 parent = ParentPrecedence . make
