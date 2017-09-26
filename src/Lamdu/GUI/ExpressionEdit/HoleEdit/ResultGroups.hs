@@ -127,8 +127,8 @@ collectResults Config.Hole{holeResultCount} resultsM =
 
         let results =
                 last (tooFewGoodResults ++ moreResults)
+                & traverse %~ reverse
         results
-            & bad %~ reverse -- to reverse the prepended order
             & good %~ sortOn resultsListScore
             & concatBothGoodAndBad
             -- Re-split because now that we've added all the
