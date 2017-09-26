@@ -18,6 +18,7 @@ import qualified Lamdu.Infer as Infer
 import qualified Lamdu.Sugar.Convert.Input as Input
 import           Lamdu.Sugar.Convert.Monad (ConvertM)
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
+import           Lamdu.Sugar.Convert.PostProcess (PostProcessResult(..), postProcessDef)
 import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import           Lamdu.Sugar.Types
@@ -42,15 +43,11 @@ mkExtractToDef ::
     Monad m => ConvertM.Context m -> Input.Payload m a -> T m EntityId
 mkExtractToDef ctx exprPl =
     do
-        val <- ExprIRef.readVal valI
-        let deps =
-                ctx ^. ConvertM.scFrozenDeps . Property.pVal
-                & Definition.Expr val
-                & Definition.pruneDefExprDeps
         newDefI <-
             Definition.Definition
             (Definition.BodyExpr (Definition.Expr valI deps)) scheme ()
             & DataOps.newPublicDefinitionWithPane "" cp
+        GoodExpr <- postProcessDef newDefI
         let param = ExprIRef.globalId newDefI
         getVarI <- V.LVar param & V.BLeaf & ExprIRef.newValBody
         Property.set (exprPl ^. Input.stored) getVarI
@@ -61,6 +58,7 @@ mkExtractToDef ctx exprPl =
         EntityId.ofIRef newDefI & return
     where
         valI = exprPl ^. Input.stored . Property.pVal
+        deps = ctx ^. ConvertM.scFrozenDeps . Property.pVal
         cp = ctx ^. ConvertM.scCodeAnchors
         scheme =
             Infer.makeScheme (ctx ^. ConvertM.scInferContext)
