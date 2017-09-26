@@ -29,6 +29,7 @@ import qualified Lamdu.Sugar.Convert.Input as Input
 import qualified Lamdu.Sugar.Convert.Load as Load
 import           Lamdu.Sugar.Convert.Monad (ConvertM)
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
+import qualified Lamdu.Sugar.Convert.PostProcess as PostProcess
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import           Lamdu.Sugar.OrderTags (orderedClosedFlatComposite)
 import           Lamdu.Sugar.Types
@@ -61,7 +62,7 @@ moveToGlobalScope ctx param defExpr =
         -- Prune outer def's deps (some used only in inner) and update
         -- our type which may become generalized due to
         -- extraction/generalization of the inner type
-        ConvertM.GoodExpr <- ctx ^. ConvertM.scPostProcessRoot
+        PostProcess.GoodExpr <- ctx ^. ConvertM.scPostProcessRoot
         return ()
 
 data NewLet m = NewLet

@@ -258,6 +258,7 @@ Executable lamdu
                   , Lamdu.Sugar.Convert.Monad
                   , Lamdu.Sugar.Convert.Nominal
                   , Lamdu.Sugar.Convert.ParamList
+                  , Lamdu.Sugar.Convert.PostProcess
                   , Lamdu.Sugar.Convert.Record
                   , Lamdu.Sugar.Convert.TId
                   , Lamdu.Sugar.Convert.Tag

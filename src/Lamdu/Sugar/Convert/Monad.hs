@@ -6,7 +6,6 @@ module Lamdu.Sugar.Convert.Monad
     , RecursiveRef(..), rrDefI, rrDefType
     , ScopeInfo(..), siTagParamInfos, siNullParams, siLetItems, siMOuter
 
-    , PostProcessResult(..)
     , Context(..)
     , scInferContext, scPostProcessRoot, siRecursiveRef
     , scCodeAnchors, scScopeInfo, scNominalsMap
@@ -33,7 +32,7 @@ import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Infer as Infer
-import qualified Lamdu.Infer.Error as Infer
+import           Lamdu.Sugar.Convert.PostProcess (PostProcessResult(..))
 import qualified Lamdu.Sugar.Convert.Input as Input
 import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Types as Sugar
@@ -84,8 +83,6 @@ newtype ConvertM m a = ConvertM (ReaderT (Context m) (T m) a)
 
 instance Monad m => MonadTransaction m (ConvertM m) where
     transaction = ConvertM . lift
-
-data PostProcessResult = GoodExpr | BadExpr Infer.Error
 
 data Context m = Context
     { _scInferContext :: Infer.Context

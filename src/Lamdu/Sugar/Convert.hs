@@ -5,7 +5,6 @@ module Lamdu.Sugar.Convert
 
 import           Control.Applicative ((<|>))
 import qualified Control.Lens as Lens
-import           Control.Monad.Trans.State (StateT(..))
 import qualified Control.Monad.Trans.State as State
 import           Data.CurAndPrev (CurAndPrev)
 import qualified Data.List as List
@@ -21,7 +20,6 @@ import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Calc.Type.Nominal as N
 import           Lamdu.Calc.Type.Scheme (Scheme, schemeType)
 import           Lamdu.Calc.Val.Annotated (Val(..))
-import qualified Lamdu.Calc.Val.Annotated as Val
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Definition as Definition
 import           Lamdu.Eval.Results (EvalResults)
@@ -37,6 +35,7 @@ import qualified Lamdu.Sugar.Convert.DefExpr.OutdatedDefs as OutdatedDefs
 import qualified Lamdu.Sugar.Convert.Expression as ConvertExpr
 import qualified Lamdu.Sugar.Convert.Input as Input
 import qualified Lamdu.Sugar.Convert.Load as Load
+import           Lamdu.Sugar.Convert.PostProcess (postProcessDef, postProcessExpr)
 import           Lamdu.Sugar.Convert.Monad (Context(..), ScopeInfo(..), RecursiveRef(..))
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
 import           Lamdu.Sugar.Internal
@@ -66,54 +65,6 @@ convertDefIBuiltin scheme name defI =
             , Definition._defType = scheme
             , Definition._defPayload = ()
             }
-
-postProcessDef :: Monad m => DefI m -> T m ConvertM.PostProcessResult
-postProcessDef defI =
-    do
-        def <- Transaction.readIRef defI
-        case def ^. Definition.defBody of
-            Definition.BodyBuiltin {} -> return ConvertM.GoodExpr
-            Definition.BodyExpr defExpr ->
-                do
-                    loaded <- Definition.expr ExprIRef.readVal defExpr
-                    checked <- Load.inferCheckDef loaded (ExprIRef.globalId defI)
-                    case checked of
-                        Left err -> ConvertM.BadExpr err & return
-                        Right (inferredVal, inferContext) ->
-                            do
-                                def
-                                    & Definition.defType .~
-                                        Infer.makeScheme inferContext inferredType
-                                    & Definition.defBody . Definition._BodyExpr .
-                                        Definition.exprFrozenDeps .~
-                                        Definition.pruneDefExprDeps loaded
-                                    & Transaction.writeIRef defI
-                                return ConvertM.GoodExpr
-                            where
-                                inferredType = inferredVal ^. Val.payload . _1 . Infer.plType
-
-postProcessExpr ::
-    Monad m =>
-    Transaction.MkProperty m (Definition.Expr (ValI m)) ->
-    T m ConvertM.PostProcessResult
-postProcessExpr mkProp =
-    do
-        prop <- mkProp ^. Transaction.mkProperty
-        -- TODO: This is code duplication with the above Load.inferDef
-        -- & functions inside Load itself
-        defExpr <- Definition.expr ExprIRef.readVal (prop ^. Property.pVal)
-        let inferred =
-                Load.inferDefExpr Infer.emptyScope defExpr
-                & Infer.run
-                & (`runStateT` Infer.initialContext)
-        case inferred of
-            Left err -> ConvertM.BadExpr err & return
-            Right _ ->
-                do
-                    Definition.exprFrozenDeps .~
-                        Definition.pruneDefExprDeps defExpr
-                        & Property.pureModify prop
-                    return ConvertM.GoodExpr
 
 emptyScopeInfo :: Maybe (RecursiveRef m) -> ScopeInfo m
 emptyScopeInfo recursiveRef =

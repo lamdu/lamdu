@@ -26,7 +26,7 @@ import           Lamdu.Expr.IRef (ValI, ValIProperty)
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Lens as ExprLens
 import qualified Lamdu.Infer as Infer
-import           Lamdu.Sugar.Convert.Monad (PostProcessResult(..))
+import           Lamdu.Sugar.Convert.PostProcess (PostProcessResult(..))
 import           Lamdu.Sugar.Types (DefinitionOutdatedType(..))
 
 import           Lamdu.Prelude
