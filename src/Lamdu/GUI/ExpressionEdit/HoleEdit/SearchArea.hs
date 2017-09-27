@@ -68,8 +68,8 @@ makeStdWrapped pl holeInfo =
         let fixEventMapCursor
                 | isActive = id
                 | otherwise =
-                    Lens.mapped . Lens.mapped . Widget.eCursor .~
-                    Monoid.Last (Just (hidOpen (hiIds holeInfo)))
+                    Lens.mapped . Lens.mapped . Widget.eCursor %~
+                    mappend (Monoid.Last (Just (hidOpen (hiIds holeInfo))))
         eventMap <-
             sequence
             [ HoleEventMap.makeOpenEventMap holeInfo <&> fixEventMapCursor
