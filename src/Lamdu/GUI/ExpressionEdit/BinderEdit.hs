@@ -99,21 +99,23 @@ mkPresentationModeEdit ::
     Monad m => Widget.Id ->
     Transaction.MkProperty m Sugar.PresentationMode ->
     ExprGuiM m (Widget (T m Widget.EventResult))
-mkPresentationModeEdit myId prop = do
-    cur <- Transaction.getP prop
-    theme <- Lens.view Theme.theme
-    let mkPair presentationMode =
+mkPresentationModeEdit myId prop =
+    do
+        cur <- Transaction.getP prop
+        theme <- Lens.view Theme.theme
+        pairs <-
+            traverse mkPair [Sugar.OO, Sugar.Verbose, Sugar.Infix]
+            & Reader.local
+                (TextView.style . TextView.styleColor .~ Theme.presentationChoiceColor (Theme.codeForegroundColors theme))
+        Choice.make ?? Transaction.setP prop ?? pairs ?? cur
+            ?? presentationModeChoiceConfig ?? myId
+            <&> Element.scale (realToFrac <$> Theme.presentationChoiceScaleFactor theme)
+    where
+        mkPair presentationMode =
             TextView.makeFocusableLabel text <&> (^. Align.tValue)
             <&> (,) presentationMode
             where
                 text = show presentationMode & Text.pack
-    pairs <-
-        traverse mkPair [Sugar.OO, Sugar.Verbose, Sugar.Infix]
-        & Reader.local
-            (TextView.style . TextView.styleColor .~ Theme.presentationChoiceColor (Theme.codeForegroundColors theme))
-    Choice.make ?? Transaction.setP prop ?? pairs ?? cur
-        ?? presentationModeChoiceConfig ?? myId
-        <&> Element.scale (realToFrac <$> Theme.presentationChoiceScaleFactor theme)
 
 data Parts m = Parts
     { pMParamsEdit :: Maybe (ExpressionGui m)
