@@ -7,7 +7,6 @@ module Lamdu.GUI.ExpressionEdit.HoleEdit.SearchTerm
 
 import qualified Control.Lens as Lens
 import qualified Data.Monoid as Monoid
-import           Data.Store.Property (Property)
 import qualified Data.Store.Property as Property
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Text as Text
@@ -31,29 +30,6 @@ import           Lamdu.Prelude
 textEditNoEmpty :: TextEdit.EmptyStrings
 textEditNoEmpty = TextEdit.EmptyStrings "  " "  "
 
-makeSearchTermPropEdit ::
-    (MonadReader env m, Widget.HasCursor env, TextEdit.HasStyle env, Monad f) =>
-    WidgetIds -> Property f Text ->
-    m (WithTextPos (Widget (f Widget.EventResult)))
-makeSearchTermPropEdit widgetIds searchTermProp =
-    TextEdit.make ?? textEditNoEmpty ?? searchTerm ?? hidOpenSearchTerm widgetIds
-    <&> Align.tValue . Widget.events %~ \(newSearchTerm, eventRes) ->
-        do
-            when (newSearchTerm /= searchTerm) $
-                Property.set searchTermProp newSearchTerm
-            eventRes
-                -- When first letter is typed in search term, jump to the
-                -- results, which will go to first result:
-                & ( if Text.null searchTerm && (not . Text.null) newSearchTerm
-                    then
-                        Widget.eCursor .~
-                        Monoid.Last (Just (hidResultsPrefix widgetIds))
-                    else id
-                  )
-                & return
-    where
-        searchTerm = Property.value searchTermProp
-
 make ::
     ( Monad m, MonadReader env f, HasTheme env, Widget.HasCursor env
     , HasConfig env, TextEdit.HasStyle env
@@ -68,11 +44,27 @@ make holeInfo =
                 | isActive = Theme.holeActiveSearchTermBGColor
                 | otherwise = Theme.holeSearchTermBGColor
         disallowChars <- EventMap.disallowCharsFromSearchTerm
-        makeSearchTermPropEdit widgetIds (HoleInfo.hiSearchTermProperty holeInfo)
+        TextEdit.make ?? textEditNoEmpty ?? searchTerm ?? hidOpenSearchTerm widgetIds
+            <&> Align.tValue . Widget.events %~ onEvents
             <&> Align.tValue . E.eventMap %~ disallowChars holeInfo textCursor
             <&> Draw.backgroundColor bgAnimId (bgColor holeTheme)
     where
+        onEvents (newSearchTerm, eventRes) =
+            do
+                when (newSearchTerm /= searchTerm) $
+                    Property.set searchTermProp newSearchTerm
+                eventRes
+                    -- When first letter is typed in search term, jump to the
+                    -- results, which will go to first result:
+                    & ( if Text.null searchTerm && (not . Text.null) newSearchTerm
+                        then
+                            Widget.eCursor .~
+                            Monoid.Last (Just (hidResultsPrefix widgetIds))
+                        else id
+                      )
+                    & return
         bgAnimId =
             Widget.toAnimId (hidOpenSearchTerm widgetIds) <> ["hover background"]
         widgetIds = hiIds holeInfo
-        searchTerm = HoleInfo.hiSearchTerm holeInfo
+        searchTerm = Property.value searchTermProp
+        searchTermProp = HoleInfo.hiSearchTermProperty holeInfo
