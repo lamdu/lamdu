@@ -1,5 +1,5 @@
 {-# LANGUAGE NoImplicitPrelude, RankNTypes, ScopedTypeVariables #-}
-module Lamdu.GUI.RedundantAnnotations
+module Lamdu.GUI.AnnotationsPass
     ( markAnnotationsToDisplay
     ) where
 

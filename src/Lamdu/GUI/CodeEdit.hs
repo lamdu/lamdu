@@ -42,7 +42,7 @@ import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
 import           Lamdu.GUI.IOTrans (IOTrans)
 import qualified Lamdu.GUI.IOTrans as IOTrans
-import qualified Lamdu.GUI.RedundantAnnotations as RedundantAnnotations
+import qualified Lamdu.GUI.AnnotationsPass as AnnotationsPass
 import qualified Lamdu.GUI.ReplEdit as ReplEdit
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Style (HasStyle)
@@ -96,7 +96,7 @@ postProcessExpr ::
     Sugar.Expression name m ([Sugar.EntityId], NearestHoles) ->
     Sugar.Expression name m ExprGuiT.Payload
 postProcessExpr =
-    fmap toExprGuiMPayload . RedundantAnnotations.markAnnotationsToDisplay
+    fmap toExprGuiMPayload . AnnotationsPass.markAnnotationsToDisplay
 
 loadWorkArea ::
     Monad m =>

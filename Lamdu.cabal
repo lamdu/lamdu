@@ -180,6 +180,7 @@ Executable lamdu
                   , Lamdu.Expr.UniqueId
                   , Lamdu.Font
                   , Lamdu.Formatting
+                  , Lamdu.GUI.AnnotationsPass
                   , Lamdu.GUI.CodeEdit
                   , Lamdu.GUI.CodeEdit.Settings
                   , Lamdu.GUI.DefinitionEdit
@@ -219,7 +220,6 @@ Executable lamdu
                   , Lamdu.GUI.Main
                   , Lamdu.GUI.NameEdit
                   , Lamdu.GUI.ParamEdit
-                  , Lamdu.GUI.RedundantAnnotations
                   , Lamdu.GUI.ReplEdit
                   , Lamdu.GUI.TypeView
                   , Lamdu.GUI.VersionControl
