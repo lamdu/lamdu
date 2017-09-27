@@ -219,7 +219,6 @@ Executable lamdu
                   , Lamdu.GUI.Main
                   , Lamdu.GUI.NameEdit
                   , Lamdu.GUI.ParamEdit
-                  , Lamdu.Precedence
                   , Lamdu.GUI.RedundantAnnotations
                   , Lamdu.GUI.ReplEdit
                   , Lamdu.GUI.TypeView
@@ -229,6 +228,7 @@ Executable lamdu
                   , Lamdu.GUI.WidgetIds
                   , Lamdu.Infer.Trans
                   , Lamdu.Opts
+                  , Lamdu.Precedence
                   , Lamdu.Prelude
                   , Lamdu.Style
                   , Lamdu.Sugar.Convert
@@ -268,8 +268,8 @@ Executable lamdu
                   , Lamdu.Sugar.Internal.EntityId
                   , Lamdu.Sugar.Lens
                   , Lamdu.Sugar.Names.Add
-                  , Lamdu.Sugar.Names.Clash
                   , Lamdu.Sugar.Names.CPS
+                  , Lamdu.Sugar.Names.Clash
                   , Lamdu.Sugar.Names.Get
                   , Lamdu.Sugar.Names.NameGen
                   , Lamdu.Sugar.Names.Types
