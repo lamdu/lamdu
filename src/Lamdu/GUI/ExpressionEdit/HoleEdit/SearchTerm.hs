@@ -17,13 +17,14 @@ import qualified GUI.Momentu.Draw as Draw
 import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
+import           Lamdu.Config (HasConfig)
+import           Lamdu.Config.Theme (HasTheme)
 import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.EventMap as EventMap
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.Info (HoleInfo(..))
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.Info as HoleInfo
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds (WidgetIds(..))
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds as WidgetIds
-import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 
 import           Lamdu.Prelude
 
@@ -53,7 +54,10 @@ makeSearchTermPropEdit widgetIds searchTermProp =
     where
         searchTerm = Property.value searchTermProp
 
-make :: Monad m => HoleInfo m -> ExprGuiM m (WithTextPos (Widget (Transaction m Widget.EventResult)))
+make ::
+    ( Monad m, MonadReader env f, HasTheme env, Widget.HasCursor env
+    , HasConfig env, TextEdit.HasStyle env
+    ) => HoleInfo m -> f (WithTextPos (Widget (Transaction m Widget.EventResult)))
 make holeInfo =
     do
         theme <- Lens.view Theme.theme
