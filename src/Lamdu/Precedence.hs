@@ -1,5 +1,5 @@
 {-# LANGUAGE TemplateHaskell #-}
-module Lamdu.GUI.Precedence
+module Lamdu.Precedence
     ( Precedence(..), make
     , MyPrecedence(..), my
     , ParentPrecedence(..), parent

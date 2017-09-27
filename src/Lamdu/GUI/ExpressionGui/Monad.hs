@@ -58,8 +58,8 @@ import           Lamdu.Eval.Results (ScopeId, topLevelScopeId)
 import           Lamdu.GUI.CodeEdit.Settings (Settings, HasSettings(..))
 import           Lamdu.GUI.ExpressionGui.Types (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
-import           Lamdu.GUI.Precedence (Precedence)
-import qualified Lamdu.GUI.Precedence as Precedence
+import           Lamdu.Precedence (Precedence)
+import qualified Lamdu.Precedence as Precedence
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Style (Style, HasStyle(..))
 import qualified Lamdu.Sugar.Types as Sugar

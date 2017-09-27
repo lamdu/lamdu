@@ -33,8 +33,8 @@ import qualified Lamdu.Calc.Type as T
 import           Lamdu.Config.Theme (HasTheme)
 import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.Data.Anchors as Anchors
-import           Lamdu.GUI.Precedence (ParentPrecedence(..), MyPrecedence(..), needParens)
-import qualified Lamdu.GUI.Precedence as Precedence
+import           Lamdu.Precedence (ParentPrecedence(..), MyPrecedence(..), needParens)
+import qualified Lamdu.Precedence as Precedence
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Sugar.OrderTags (orderedFlatComposite)
 import           System.Random (Random, random)

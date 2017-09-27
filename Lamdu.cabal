@@ -219,7 +219,7 @@ Executable lamdu
                   , Lamdu.GUI.Main
                   , Lamdu.GUI.NameEdit
                   , Lamdu.GUI.ParamEdit
-                  , Lamdu.GUI.Precedence
+                  , Lamdu.Precedence
                   , Lamdu.GUI.RedundantAnnotations
                   , Lamdu.GUI.ReplEdit
                   , Lamdu.GUI.TypeView
