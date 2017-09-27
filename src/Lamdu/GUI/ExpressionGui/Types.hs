@@ -4,7 +4,6 @@ module Lamdu.GUI.ExpressionGui.Types
     , SugarExpr
     , Payload(..)
         , plStoredEntityIds, plNearestHoles, plShowAnnotation
-    , emptyPayload
     , EvalModeShow(..)
     , FuncApplyLimit(..)
     , ShowAnnotation(..), showExpanded, showInTypeMode, showInEvalMode
@@ -76,13 +75,6 @@ isHoleResult =
     Lens.nullOf (Sugar.plData . plStoredEntityIds . Lens.traversed)
 
 type SugarExpr m = ExpressionN m Payload
-
-emptyPayload :: NearestHoles -> Payload
-emptyPayload nearestHoles = Payload
-    { _plStoredEntityIds = []
-    , _plNearestHoles = nearestHoles
-    , _plShowAnnotation = showAnnotationWhenVerbose
-    }
 
 nextHolesBefore :: Sugar.Expression name m Payload -> NearestHoles
 nextHolesBefore val =

@@ -73,7 +73,7 @@ class HasExportActions env m where exportActions :: Lens' env (ExportActions m)
 
 toExprGuiMPayload :: ([Sugar.EntityId], NearestHoles) -> ExprGuiT.Payload
 toExprGuiMPayload (entityIds, nearestHoles) =
-    ExprGuiT.emptyPayload nearestHoles & ExprGuiT.plStoredEntityIds .~ entityIds
+    ExprGuiT.Payload entityIds nearestHoles ExprGuiT.showAnnotationWhenVerbose
 
 traverseAddNearestHoles ::
     Traversable t =>

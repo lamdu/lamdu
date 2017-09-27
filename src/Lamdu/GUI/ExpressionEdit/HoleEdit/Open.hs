@@ -296,8 +296,11 @@ postProcessSugar expr =
     .~ ExprGuiT.alwaysShowAnnotations
     where
         pl =
-            ExprGuiT.emptyPayload NearestHoles.none
-            & ExprGuiT.plShowAnnotation .~ ExprGuiT.neverShowAnnotations
+            ExprGuiT.Payload
+            { ExprGuiT._plStoredEntityIds = []
+            , ExprGuiT._plNearestHoles = NearestHoles.none
+            , ExprGuiT._plShowAnnotation = ExprGuiT.neverShowAnnotations
+            }
 
 emptyPickEventMap ::
     (Monad m, Applicative f) => ExprGuiM m (Widget.EventMap (f Widget.EventResult))
