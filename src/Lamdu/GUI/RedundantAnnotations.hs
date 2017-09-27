@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, RankNTypes #-}
+{-# LANGUAGE NoImplicitPrelude, RankNTypes, ScopedTypeVariables #-}
 module Lamdu.GUI.RedundantAnnotations
     ( markAnnotationsToDisplay
     ) where
@@ -10,99 +10,94 @@ import           Lamdu.Sugar.Types
 
 import           Lamdu.Prelude
 
-showAnn :: Lens' (Payload m0 T.Payload) T.ShowAnnotation
-showAnn = plData . T.plShowAnnotation
+dontShowEval :: T.ShowAnnotation
+dontShowEval =
+    T.showAnnotationWhenVerbose & T.showInEvalMode .~ T.EvalModeShowNothing
 
-dontShowEval :: Expression name m T.Payload -> Expression name m T.Payload
-dontShowEval = rPayload . showAnn . T.showInEvalMode .~ T.EvalModeShowNothing
-
-dontShowAnnotation :: Expression name m T.Payload -> Expression name m T.Payload
-dontShowAnnotation expr =
-    case expr ^. rBody of
-    BodyHole{} -> expr
-    _ -> expr & rPayload . showAnn .~ T.neverShowAnnotations
-
-forceShowType :: Expression name m T.Payload -> Expression name m T.Payload
+forceShowType :: T.ShowAnnotation
 forceShowType =
-    rPayload . showAnn %~
-    (T.showExpanded .~ True) .
-    (T.showInEvalMode .~ T.EvalModeShowType) .
-    (T.showInTypeMode .~ True)
+    T.showAnnotationWhenVerbose
+    & T.showExpanded .~ True
+    & T.showInEvalMode .~ T.EvalModeShowType
+    & T.showInTypeMode .~ True
 
-forceShowTypeOrEval :: Expression name m T.Payload -> Expression name m T.Payload
+forceShowTypeOrEval :: T.ShowAnnotation
 forceShowTypeOrEval =
-    rPayload . showAnn %~
-    (T.showExpanded .~ True) .
-    (T.showInEvalMode .~ T.EvalModeShowEval) .
-    (T.showInTypeMode .~ True)
+    T.showAnnotationWhenVerbose
+    & T.showExpanded .~ True
+    & T.showInEvalMode .~ T.EvalModeShowEval
+    & T.showInTypeMode .~ True
+
+topLevelAnn :: Lens' (Expression name m (T.ShowAnnotation, a)) T.ShowAnnotation
+topLevelAnn = rPayload . plData . _1
 
 markAnnotationsToDisplay ::
-    Expression name m T.Payload ->
-    Expression name m T.Payload
+    forall name m a.
+    Expression name m a ->
+    Expression name m (T.ShowAnnotation, a)
 markAnnotationsToDisplay (Expression oldBody pl) =
     case newBody of
-    BodyInjectedExpression ->
-        Expression newBody pl & dontShowAnnotation
-    BodyLiteral LiteralNum {} ->
-        Expression newBody pl & dontShowAnnotation
-    BodyLiteral LiteralText {}->
-        Expression newBody pl & dontShowAnnotation
-    BodyLiteral LiteralBytes {} ->
-        Expression newBody pl & dontShowEval
-    BodyRecord _ ->
-        Expression newBody pl & dontShowAnnotation
-    BodyLam _ ->
-        Expression newBody pl & dontShowAnnotation
+    BodyInjectedExpression -> set T.neverShowAnnotations
+    BodyLiteral LiteralNum {} -> set T.neverShowAnnotations
+    BodyLiteral LiteralText {}-> set T.neverShowAnnotations
+    BodyLiteral LiteralBytes {} -> set dontShowEval
+    BodyRecord _ -> set T.neverShowAnnotations
+    BodyLam _ -> set T.neverShowAnnotations
     BodyGetVar (GetParam Param { _pBinderMode = LightLambda }) ->
-        Expression newBody pl
+        set T.showAnnotationWhenVerbose
     BodyGetVar (GetParam Param { _pBinderMode = NormalBinder }) ->
-        Expression newBody pl & dontShowAnnotation
+        set T.neverShowAnnotations
     BodyGetVar (GetBinder BinderVar { _bvForm = GetDefinition _ }) ->
-        Expression newBody pl
+        set T.showAnnotationWhenVerbose
     BodyGetVar (GetBinder BinderVar { _bvForm = GetLet }) ->
-        Expression newBody pl & dontShowAnnotation
-    BodyFromNom _ ->
-        Expression (newBody <&> dontShowEval) pl
+        set T.neverShowAnnotations
+    BodyFromNom _ -> Expression (newBodyWith dontShowEval) defPl
     BodyToNom (Nominal _ binder) ->
-        pl
-        & showAnn . T.showInEvalMode .~
-            binder ^. bbContent . SugarLens.binderContentExpr . rPayload . showAnn . T.showInEvalMode
-        & Expression (newBody <&> dontShowEval)
-    BodyInject _ ->
-        Expression newBody pl & dontShowEval
-    BodyGetVar (GetParamsRecord _) ->
-        Expression newBody pl
-    BodyGetField _ ->
-        Expression newBody pl
+        defPl
+        & plData . _1 . T.showInEvalMode .~
+        binder ^. bbContent . SugarLens.binderContentExpr .
+        topLevelAnn . T.showInEvalMode
+        & Expression (newBodyWith dontShowEval)
+    BodyInject _ -> set dontShowEval
+    BodyGetVar (GetParamsRecord _) -> set T.showAnnotationWhenVerbose
+    BodyGetField _ -> set T.showAnnotationWhenVerbose
     BodySimpleApply app ->
-        Expression (BodySimpleApply (app & applyFunc %~ dontShowAnnotation)) pl
-    BodyLabeledApply _ ->
-        Expression newBody pl
+        app
+        & applyFunc . nonHoleAnn .~ T.neverShowAnnotations
+        & BodySimpleApply
+        & (`Expression` defPl)
+    BodyLabeledApply _ -> set T.showAnnotationWhenVerbose
     BodyGuard g ->
-        Expression (BodyGuard g') pl
-        where
-            g' =
-                g
-                & gThen %~ onCaseAlt
-                & gElseIfs . traverse . geThen %~ onCaseAlt
-                & gElse %~ onCaseAlt
+        g
+        & gThen %~ onCaseAlt
+        & gElseIfs . Lens.mapped . geThen %~ onCaseAlt
+        & gElse %~ onCaseAlt
+        & BodyGuard
+        & (`Expression` defPl)
     BodyHole hole ->
-        Expression (BodyHole hole') pl & forceShowType
-        where
-            hole' = hole & holeKind . _WrapperHole . haExpr %~ forceShowTypeOrEval
+        hole
+        & holeKind . _WrapperHole . haExpr . topLevelAnn .~ forceShowTypeOrEval
+        & BodyHole
+        & (`Expression` plWith forceShowType)
     BodyCase cas ->
-        Expression (BodyCase cas') pl
-        where
-            cas' =
-                cas
-                -- cKind contains the scrutinee which is not always
-                -- visible (for case alts that aren't lambdas), so
-                -- maybe we do want to show the annotation
-                & cKind . Lens.mapped %~ dontShowAnnotation
-                & cBody . cItems . Lens.mapped . Lens.mapped %~ onCaseAlt
+        cas
+        -- cKind contains the scrutinee which is not always
+        -- visible (for case alts that aren't lambdas), so
+        -- maybe we do want to show the annotation
+        & cKind . Lens.mapped . topLevelAnn .~ T.neverShowAnnotations
+        & cBody . cItems . Lens.mapped . Lens.mapped %~ onCaseAlt
+        & BodyCase
+        & (`Expression` defPl)
     where
+        newBodyWith f = newBody <&> topLevelAnn .~ f
+        plWith ann = pl & plData %~ (,) ann
+        defPl = plWith T.showAnnotationWhenVerbose
+        set ann = Expression newBody (plWith ann)
         newBody = oldBody <&> markAnnotationsToDisplay
+        nonHoleAnn =
+            Lens.filtered (Lens.nullOf (rBody . _BodyHole)) . topLevelAnn
         onCaseAlt a =
             a
-            & rBody . _BodyLam . lamBinder . bBody . bbContent . SugarLens.binderContentExpr %~ dontShowAnnotation
-            & rPayload . showAnn . T.funcApplyLimit .~ T.AtMostOneFuncApply
+            & rBody . _BodyLam . lamBinder . bBody . bbContent .
+              SugarLens.binderContentExpr . nonHoleAnn .~ T.neverShowAnnotations
+            & topLevelAnn . T.funcApplyLimit .~ T.AtMostOneFuncApply

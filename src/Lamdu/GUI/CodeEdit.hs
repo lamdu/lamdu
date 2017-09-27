@@ -71,9 +71,9 @@ class HasEvalResults env m where
 class HasExportActions env m where exportActions :: Lens' env (ExportActions m)
 
 
-toExprGuiMPayload :: ([Sugar.EntityId], NearestHoles) -> ExprGuiT.Payload
-toExprGuiMPayload (entityIds, nearestHoles) =
-    ExprGuiT.Payload entityIds nearestHoles ExprGuiT.showAnnotationWhenVerbose
+toExprGuiMPayload :: (ExprGuiT.ShowAnnotation, ([Sugar.EntityId], NearestHoles)) -> ExprGuiT.Payload
+toExprGuiMPayload (showAnn, (entityIds, nearestHoles)) =
+    ExprGuiT.Payload entityIds nearestHoles showAnn
 
 traverseAddNearestHoles ::
     Traversable t =>
@@ -95,10 +95,8 @@ exprAddNearestHoles expr =
 postProcessExpr ::
     Sugar.Expression name m ([Sugar.EntityId], NearestHoles) ->
     Sugar.Expression name m ExprGuiT.Payload
-postProcessExpr expr =
-    expr
-    <&> toExprGuiMPayload
-    & RedundantAnnotations.markAnnotationsToDisplay
+postProcessExpr =
+    fmap toExprGuiMPayload . RedundantAnnotations.markAnnotationsToDisplay
 
 loadWorkArea ::
     Monad m =>
