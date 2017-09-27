@@ -19,11 +19,9 @@ import           Data.Store.Property (Property(..))
 import qualified Data.Store.Property as Property
 import           Data.Store.Transaction (Transaction, getP, setP, modP)
 import qualified Data.Store.Transaction as Transaction
-import qualified Data.Text as Text
 import qualified GUI.Momentu.Widget.Id as WidgetId
 import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Calc.Val as V
-import qualified Lamdu.CharClassification as Chars
 import           Lamdu.Data.Anchors (PresentationMode(..))
 import qualified Lamdu.Data.Anchors as Anchors
 import           Lamdu.Data.Definition (Definition(..))
@@ -149,14 +147,6 @@ jumpBack codeAnchors =
                     setP (Anchors.preJumps codeAnchors) js
                     return j
 
-isInfix :: Text -> Bool
-isInfix x = not (Text.null x) && Text.all (`elem` Chars.operator) x
-
-presentationModeOfName :: Text -> PresentationMode
-presentationModeOfName x
-    | isInfix x = Infix
-    | otherwise = Verbose
-
 newDefinition ::
     Monad m => Text -> PresentationMode -> Definition (ValI m) () -> T m (DefI m)
 newDefinition name presentationMode def =
@@ -173,9 +163,6 @@ newPublicDefinitionToIRef ::
 newPublicDefinitionToIRef codeAnchors def defI =
     do
         Transaction.writeIRef defI def
-        getP (Anchors.assocNameRef defI)
-            <&> presentationModeOfName
-            >>= setP (Anchors.assocPresentationMode defI)
         modP (Anchors.globals codeAnchors) (Set.insert defI)
         newPane codeAnchors defI
 
