@@ -97,5 +97,20 @@ get :: IO Parsed
 get =
     P.info
     (P.helper <*> parser)
-    (P.progDesc "lamdu - the next generation IDE")
+    (
+        P.progDesc "Lamdu - The Next Generation IDE"
+
+{-
+   Here, I use "<>" to insert a header. It goes on top of the help text
+   displayed when someone types "lamdu --help".
+   We're using the "Options.Applicative" module for command-line parameters and
+   help text. Unfortunately, it strips out any newlines or leading space I try
+   to give this header. So it doesn't print out too pretty. I tried
+   chaining multiple headers with "<>", but it only keeps the last one.
+ -}
+     <> P.header "Pressing F1 while in the Lamdu environment gives help in the\
+                 \ lower-right of the environment's screen. This help changes\
+                 \ based on what's selected.\
+                 \ For tutorials, please see the README."
+    )
     & P.execParser

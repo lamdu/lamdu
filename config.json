@@ -25,7 +25,7 @@
         "redoKeys"           : [ "Cmd+Y" ],
         "makeBranchKeys"     : [ "Cmd+S" ],
         "delBranchKeys"      : [ "Alt+O" ],
-        "jumpToBranchesKeys" : [ "Cmd+F10" ]
+        "jumpToBranchesKeys" : [ "Cmd+F11" ]
     },
     "hole": {
         "holeJumpToNextKeys"            : [ "Tab" ],
