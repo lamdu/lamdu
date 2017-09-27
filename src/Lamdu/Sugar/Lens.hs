@@ -11,6 +11,7 @@ module Lamdu.Sugar.Lens
     , binderContentExpr
     , binderContentEntityId
     , leftMostLeaf
+    , workAreaExpressions
     ) where
 
 import qualified Control.Lens as Lens
@@ -139,3 +140,12 @@ leftMostLeaf val =
     case val ^.. rBody . Lens.traversed of
     [] -> val
     (x:_) -> leftMostLeaf x
+
+workAreaExpressions ::
+    Lens.Traversal
+    (WorkArea name m a) (WorkArea name m b)
+    (Expression name m a) (Expression name m b)
+workAreaExpressions f (WorkArea panes repl) =
+    WorkArea
+    <$> (traverse . paneDefinition . traverse) f panes
+    <*> f repl

@@ -47,6 +47,7 @@ import qualified Lamdu.GUI.ReplEdit as ReplEdit
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Style (HasStyle)
 import qualified Lamdu.Sugar.Convert as SugarConvert
+import qualified Lamdu.Sugar.Lens as SugarLens
 import qualified Lamdu.Sugar.Names.Add as AddNames
 import           Lamdu.Sugar.Names.Types (Name)
 import           Lamdu.Sugar.NearestHoles (NearestHoles)
@@ -111,8 +112,9 @@ loadWorkArea theEvalResults theCodeAnchors =
             >>= AddNames.addToWorkArea
             & transaction
         Sugar.WorkArea
-            (_waPanes <&> Sugar.paneDefinition %~ fmap postProcessExpr . traverseAddNearestHoles)
-            (_waRepl & exprAddNearestHoles & postProcessExpr)
+            (_waPanes <&> Sugar.paneDefinition %~ traverseAddNearestHoles)
+            (_waRepl & exprAddNearestHoles)
+            & SugarLens.workAreaExpressions %~ postProcessExpr
             & pure
 
 make ::
