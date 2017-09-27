@@ -125,12 +125,11 @@ collectResults Config.Hole{holeResultCount} resultsM =
         --    remaining results beyond it
         moreResults <- ListClass.take 2 moreResultsM & ListClass.toList
 
-        let results =
-                last (tooFewGoodResults ++ moreResults)
-                & traverse %~ reverse
-        results
-            & good %~ sortOn resultsListScore
+        tooFewGoodResults ++ moreResults
+            & last
+            & traverse %~ reverse
             & concatBothGoodAndBad
+            & sortOn resultsListScore
             -- Re-split because now that we've added all the
             -- accumulated bad results we may have too many
             & splitAt holeResultCount
