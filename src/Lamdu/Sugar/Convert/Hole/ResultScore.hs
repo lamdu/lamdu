@@ -11,7 +11,7 @@ import           Lamdu.Calc.Val.Annotated (Val(..))
 import qualified Lamdu.Calc.Val.Annotated as Val
 import qualified Lamdu.Expr.Lens as ExprLens
 import qualified Lamdu.Infer as Infer
-import           Lamdu.Sugar.Types.Hole (HoleResultScore(..), IsGoodResult(..))
+import           Lamdu.Sugar.Types.Hole (HoleResultScore(..))
 
 import           Lamdu.Prelude
 
@@ -29,8 +29,7 @@ compositeTypeScore (CExtend _ t r) =
     max (resultTypeScore t) (compositeTypeScore r)
 
 score :: Val Infer.Payload -> [Int]
-score val@(Val pl body) =
-    numWrappers val :
+score (Val pl body) =
     (if Lens.has ExprLens.valBodyHole body then 1 else 0) :
     resultScopeScore :
     resultTypeScore (pl ^. Infer.plType) ++
@@ -44,7 +43,7 @@ score val@(Val pl body) =
 resultScore :: Val Infer.Payload -> HoleResultScore
 resultScore val =
     HoleResultScore
-    { _hrsGoodResult = if Lens.has appliedHole val then BadResult else GoodResult
+    { _hrsNumHoleWrappers = numWrappers val
     , _hrsScore = score val
     }
 

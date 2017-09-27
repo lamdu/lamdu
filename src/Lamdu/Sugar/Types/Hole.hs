@@ -9,8 +9,7 @@ module Lamdu.Sugar.Types.Hole
     , HoleActions(..), holeUUID, holeOptions, holeMDelete
     , HoleKind(..), _LeafHole, _WrapperHole
     , Hole(..), holeActions, holeKind
-    , IsGoodResult(..)
-    , HoleResultScore(..), hrsGoodResult, hrsScore
+    , HoleResultScore(..), hrsNumHoleWrappers, hrsScore
     , HoleResult(..)
         , holeResultConverted
         , holeResultPick
@@ -34,12 +33,8 @@ newtype PickedResult = PickedResult
     { _prIdTranslation :: [(EntityId, EntityId)]
     }
 
--- Ord relationship should prefer lower - so GoodResult must be first:
-data IsGoodResult = GoodResult | BadResult
-    deriving (Eq, Ord)
-
 data HoleResultScore = HoleResultScore
-    { _hrsGoodResult :: !IsGoodResult
+    { _hrsNumHoleWrappers :: !Int
     , _hrsScore :: ![Int]
     } deriving (Eq, Ord)
 

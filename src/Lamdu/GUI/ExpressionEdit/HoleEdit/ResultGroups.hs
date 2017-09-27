@@ -123,7 +123,7 @@ collectResults Config.Hole{holeResultCount} resultsM =
         --    number of good results
         -- B. Second is needed just to determine if there are any
         --    remaining results beyond it
-        moreResults <- ListClass.toList $ ListClass.take 2 moreResultsM
+        moreResults <- ListClass.take 2 moreResultsM & ListClass.toList
 
         let results =
                 last (tooFewGoodResults ++ moreResults)
@@ -143,10 +143,13 @@ collectResults Config.Hole{holeResultCount} resultsM =
         resultsListScore x = (x ^. rlPreferred, x ^. rlMain . rScore)
         prependResult results x =
             results
-            & case (x ^. rlPreferred, x ^. rlMain . rScore . Sugar.hrsGoodResult) of
-                (NotPreferred, Sugar.BadResult) -> bad
+            & case (x ^. rlPreferred, x ^. rlMain . rScore & isGoodResult) of
+                (NotPreferred, False) -> bad
                 _ -> good
                 %~ (x :)
+
+isGoodResult :: Sugar.HoleResultScore -> Bool
+isGoodResult hrs = hrs ^. Sugar.hrsNumHoleWrappers == 0
 
 makeAll ::
     (MonadTransaction n m, MonadReader env m, Config.HasConfig env) =>
