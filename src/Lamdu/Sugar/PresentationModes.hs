@@ -5,6 +5,7 @@ module Lamdu.Sugar.PresentationModes
 
 import qualified Control.Lens as Lens
 import           Data.Either (partitionEithers)
+import qualified Data.Map as Map
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
 import           Data.UUID.Types (UUID)
@@ -21,21 +22,28 @@ addToLabeledApply ::
     T m (Sugar.LabeledApply UUID f (Sugar.Expression UUID f a))
 addToLabeledApply a =
     case a ^. Sugar.aSpecialArgs of
-    Sugar.NoSpecialArgs ->
+    Sugar.Verbose ->
         do
             presentationMode <-
                 a ^. Sugar.aFunc . Sugar.bvNameRef . Sugar.nrName
                 & Anchors.assocPresentationMode & Transaction.getP
             let (specialArgs, otherArgs) =
-                    case (presentationMode, a ^. Sugar.aAnnotatedArgs) of
-                    (Sugar.Infix, a0:a1:as) ->
-                        ( Sugar.InfixArgs
-                          (mkInfixArg a0 a1) (mkInfixArg a1 a0)
-                        , as
+                    case presentationMode of
+                    Sugar.Infix l r ->
+                        ( Sugar.Infix (mkInfixArg la ra) (mkInfixArg ra la)
+                        , argsMap
+                            & Map.delete l
+                            & Map.delete r
+                            & Map.elems
                         )
-                    (Sugar.OO, a0:as) ->
-                        (Sugar.ObjectArg (a0 ^. Sugar.aaExpr), as)
-                    (_, args) -> (Sugar.NoSpecialArgs, args)
+                        where
+                            la = argExpr l
+                            ra = argExpr r
+                    Sugar.Object o ->
+                        ( Sugar.Object (argExpr o)
+                        , Map.delete o argsMap & Map.elems
+                        )
+                    _ -> (Sugar.Verbose, a ^. Sugar.aAnnotatedArgs)
             let (annotatedArgs, relayedArgs) = otherArgs <&> processArg & partitionEithers
             a
                 & Sugar.aSpecialArgs .~ specialArgs
@@ -44,10 +52,15 @@ addToLabeledApply a =
                 & return
     _ -> return a
     where
+        argsMap =
+            a ^. Sugar.aAnnotatedArgs
+            <&> (\x -> (x ^. Sugar.aaTag . Sugar.tagVal, x))
+            & Map.fromList
+        argExpr t = argsMap Map.! t ^. Sugar.aaExpr
         mkInfixArg arg other =
-            arg ^. Sugar.aaExpr
+            arg
             & Sugar.rBody . Sugar._BodyHole . Sugar.holeActions . Sugar.holeMDelete .~
-                other ^. Sugar.aaExpr . Sugar.rPayload . Sugar.plActions . Sugar.mReplaceParent
+                other ^. Sugar.rPayload . Sugar.plActions . Sugar.mReplaceParent
         processArg arg =
             do
                 param <- arg ^? Sugar.aaExpr . Sugar.rBody . Sugar._BodyGetVar . Sugar._GetParam

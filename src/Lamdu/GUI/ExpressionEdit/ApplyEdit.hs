@@ -101,7 +101,7 @@ makeFuncRow ::
     ExprGuiM m (ExpressionGui m)
 makeFuncRow mParensId apply applyNearestHoles myId =
     case apply ^. Sugar.aSpecialArgs of
-    Sugar.NoSpecialArgs ->
+    Sugar.Verbose ->
         makeFuncVar nextHoles funcVar
         myId <&> Responsive.fromWithTextPos
         where
@@ -109,14 +109,14 @@ makeFuncRow mParensId apply applyNearestHoles myId =
                 case apply ^. Sugar.aAnnotatedArgs of
                 [] -> applyNearestHoles -- all args are relayed args
                 (x:_) -> x ^. Sugar.aaExpr & ExprGuiT.nextHolesBefore
-    Sugar.ObjectArg arg ->
+    Sugar.Object arg ->
         (ResponsiveExpr.boxSpacedMDisamb ?? mParensId)
         <*> sequenceA
         [ makeFuncVar (ExprGuiT.nextHolesBefore arg) funcVar myId
             <&> Responsive.fromWithTextPos
         , ExprGuiM.makeSubexpression arg
         ]
-    Sugar.InfixArgs l r ->
+    Sugar.Infix l r ->
         (ResponsiveExpr.boxSpacedMDisamb ?? mParensId)
         <*> sequenceA
         [ (Options.boxSpaced ?? Options.disambiguationNone)

@@ -25,7 +25,7 @@ import           GHC.Generics (Generic)
 import qualified GUI.Momentu.Widget.Id as WidgetId
 import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Data.Definition as Definition
-import           Lamdu.Data.Meta (DefinitionState(..), PresentationMode(..), ParamList)
+import           Lamdu.Data.Meta (DefinitionState(..), SpecialArgs(..), PresentationMode, ParamList)
 import           Lamdu.Eval.Results (ScopeId)
 import           Lamdu.Expr.IRef (DefI, ValI)
 import qualified Lamdu.Expr.UniqueId as UniqueId

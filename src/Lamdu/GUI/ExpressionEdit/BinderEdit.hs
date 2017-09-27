@@ -49,9 +49,9 @@ import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
 import qualified Lamdu.GUI.NameEdit as NameEdit
 import qualified Lamdu.GUI.ParamEdit as ParamEdit
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
-import qualified Lamdu.Sugar.Lens as SugarLens
 import           Lamdu.Name (Name(..))
 import qualified Lamdu.Name as Name
+import qualified Lamdu.Sugar.Lens as SugarLens
 import           Lamdu.Sugar.NearestHoles (NearestHoles)
 import qualified Lamdu.Sugar.Types as Sugar
 
@@ -97,27 +97,40 @@ presentationModeChoiceConfig = Choice.Config
     , Choice.cwcExpandMode = Choice.ExplicitEntry
     }
 
+{-# ANN mkPresentationModeEdit ("HLint: ignore Use head"::String) #-}
+
 mkPresentationModeEdit ::
-    Monad m => Widget.Id ->
+    Monad m =>
+    Widget.Id ->
+    Sugar.BinderParams name (T m) ->
     Transaction.MkProperty m Sugar.PresentationMode ->
     ExprGuiM m (Widget (T m Widget.EventResult))
-mkPresentationModeEdit myId prop =
+mkPresentationModeEdit myId (Sugar.FieldParams params) prop =
     do
         cur <- Transaction.getP prop
         theme <- Lens.view Theme.theme
         pairs <-
-            traverse mkPair [Sugar.OO, Sugar.Verbose, Sugar.Infix]
+            traverse mkPair [Sugar.Object (paramTags !! 0), Sugar.Verbose, Sugar.Infix (paramTags !! 0) (paramTags !! 1)]
             & Reader.local
                 (TextView.style . TextView.styleColor .~ Theme.presentationChoiceColor (Theme.codeForegroundColors theme))
         Choice.make ?? Transaction.setP prop ?? pairs ?? cur
             ?? presentationModeChoiceConfig ?? myId
             <&> Element.scale (realToFrac <$> Theme.presentationChoiceScaleFactor theme)
     where
+        paramTags = params ^.. traverse . Sugar.fpInfo . Sugar.fpiTag . Sugar.tagInfo . Sugar.tagVal
         mkPair presentationMode =
             TextView.makeFocusableLabel text <&> (^. Align.tValue)
             <&> (,) presentationMode
             where
-                text = show presentationMode & Text.pack
+                text =
+                    case presentationMode of
+                    Sugar.Verbose -> "Verbose"
+                    Sugar.Object{} -> "OO"
+                    Sugar.Infix{} -> "Infix"
+                    & Text.pack
+mkPresentationModeEdit _ _ _ =
+    -- This shouldn't happen?
+    return Element.empty
 
 data Parts m = Parts
     { pMParamsEdit :: Maybe (ExpressionGui m)
@@ -350,7 +363,7 @@ make name color binder myId =
         mPresentationEdit <-
             binder ^. Sugar.bMPresentationModeProp
             <&> MkProperty
-            & Lens._Just (mkPresentationModeEdit presentationChoiceId)
+            & Lens._Just (mkPresentationModeEdit presentationChoiceId (binder ^. Sugar.bParams))
         jumpHolesEventMap <-
             ExprEventMap.jumpHolesEventMap (binderContentNearestHoles body)
         defNameEdit <-

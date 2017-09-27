@@ -101,7 +101,7 @@ convertLabeled funcS argS exprPl =
         unless (noRepetitions tags) $ error "Repetitions should not type-check"
         BodyLabeledApply LabeledApply
             { _aFunc = sBinderVar
-            , _aSpecialArgs = NoSpecialArgs
+            , _aSpecialArgs = Verbose
             , _aAnnotatedArgs = args
             , _aRelayedArgs =
                 -- Hidden args must be determined along with the special args.

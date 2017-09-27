@@ -99,17 +99,11 @@ orderExpr e =
     >>= Sugar.rBody %%~ orderBody
     >>= Sugar.rBody . Lens.traversed %%~ orderExpr
 
-orderParams :: Monad m => Order m [Sugar.FuncParam (Sugar.FieldParamInfo name (T m))]
-orderParams xs =
-    xs
-    & Lens.traversed . Sugar.fpAnnotation . Sugar.aInferredType %%~ orderType
-    >>= orderByTag (^. Sugar.fpInfo . Sugar.fpiTag . Sugar.tagInfo . Sugar.tagVal)
-
-orderBinder ::
-    Monad m => Order m (Sugar.Binder name (T m) a)
-orderBinder b =
-    b
-    & Sugar.bParams . Sugar._FieldParams %%~ orderParams
+orderBinder :: Monad m => Order m (Sugar.Binder name (T m) a)
+orderBinder =
+    -- The ordering for binder params already occurs at the Binder's conversion,
+    -- because it needs to be consistent with the presentation mode.
+    return
 
 orderDef ::
     Monad m => Order m (Sugar.Definition name (T m) (Sugar.Expression name (T m) a))

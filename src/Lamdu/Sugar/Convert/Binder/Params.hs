@@ -89,11 +89,23 @@ mkStoredLam lam pl =
 newTag :: Monad m => T m T.Tag
 newTag = GenIds.transaction GenIds.randomTag
 
-setParamList :: Monad m => MkProperty m (Maybe [T.Tag]) -> [T.Tag] -> T m ()
-setParamList paramListProp newParamList =
+setParamList ::
+    Monad m =>
+    Maybe (MkProperty m PresentationMode) ->
+    MkProperty m (Maybe [T.Tag]) -> [T.Tag] -> T m ()
+setParamList mPresMode paramListProp newParamList =
     do
         zip newParamList [0..] & mapM_ (uncurry setParamOrder)
         Just newParamList & Transaction.setP paramListProp
+        case mPresMode of
+            Nothing -> return ()
+            Just presModeProp ->
+                do
+                    presMode <- Transaction.getP presModeProp
+                    case presMode of
+                        Object f | [f] /= take 1 newParamList -> Transaction.setP presModeProp Verbose
+                        Infix f0 f1 | [f0, f1] /= take 2 newParamList -> Transaction.setP presModeProp Verbose
+                        _ -> return ()
     where
         setParamOrder = Transaction.setP . Anchors.assocTagOrder
 
@@ -143,9 +155,10 @@ fixUsagesOfLamBinder fixOp binderKind storedLam =
 
 addFieldParam ::
     Monad m =>
+    Maybe (MkProperty m PresentationMode) ->
     T m (ValI m) -> BinderKind m -> (T.Tag -> ParamList) -> StoredLam m ->
     T m TagInfo
-addFieldParam mkArg binderKind mkNewTags storedLam =
+addFieldParam mPresMode mkArg binderKind mkNewTags storedLam =
     do
         tag <- newTag
         let tagS =
@@ -155,7 +168,7 @@ addFieldParam mkArg binderKind mkNewTags storedLam =
                     (storedLam ^. slLam . V.lamParamId) tag
                 , _tagVal = tag
                 }
-        mkNewTags tag & setParamList (slParamList storedLam)
+        mkNewTags tag & setParamList mPresMode (slParamList storedLam)
         let addFieldToCall argI =
                 do
                     newArg <- mkArg
@@ -251,11 +264,12 @@ delFieldParamAndFixCalls binderKind tags fp storedLam =
 
 fieldParamActions ::
     Monad m =>
+    Maybe (MkProperty m PresentationMode) ->
     BinderKind m -> [T.Tag] -> FieldParam -> StoredLam m -> FuncParamActions (T m)
-fieldParamActions binderKind tags fp storedLam =
+fieldParamActions mPresMode binderKind tags fp storedLam =
     FuncParamActions
     { _fpAddNext =
-        addFieldParam DataOps.newHole binderKind mkNewTags storedLam
+        addFieldParam mPresMode DataOps.newHole binderKind mkNewTags storedLam
         <&> ParamAddResultNewTag
     , _fpDelete = delFieldParamAndFixCalls binderKind tags fp storedLam
     , _fpMOrderBefore =
@@ -263,13 +277,13 @@ fieldParamActions binderKind tags fp storedLam =
         [] -> Nothing
         b ->
             init b ++ (fpTag fp : last b : tagsAfter)
-            & setParamList (slParamList storedLam) & Just
+            & setParamList mPresMode (slParamList storedLam) & Just
     , _fpMOrderAfter =
         case tagsAfter of
         [] -> Nothing
         (x:xs) ->
             tagsBefore ++ (x : fpTag fp : xs)
-            & setParamList (slParamList storedLam) & Just
+            & setParamList mPresMode (slParamList storedLam) & Just
     }
     where
         (tagsBefore, _:tagsAfter) = break (== fpTag fp) tags
@@ -298,13 +312,15 @@ changeGetFieldTags param prevTag chosenTag val =
     b -> traverse_ (changeGetFieldTags param prevTag chosenTag) b
 
 setFieldParamTag ::
-    Monad m => BinderKind m -> StoredLam m -> [T.Tag] -> T.Tag -> ConvertM m (T.Tag -> T m TagInfo)
-setFieldParamTag binderKind storedLam prevTagList prevTag =
+    Monad m =>
+    Maybe (MkProperty m PresentationMode) -> BinderKind m ->
+    StoredLam m -> [T.Tag] -> T.Tag -> ConvertM m (T.Tag -> T m TagInfo)
+setFieldParamTag mPresMode binderKind storedLam prevTagList prevTag =
     ConvertM.postProcess
     <&>
     \postProcess chosenTag ->
     do
-        tagsBefore ++ chosenTag : tagsAfter & setParamList (slParamList storedLam)
+        tagsBefore ++ chosenTag : tagsAfter & setParamList mPresMode (slParamList storedLam)
         let fixArg argI (V.BRecExtend recExtend)
                 | recExtend ^. V.recTag == prevTag =
                     argI <$ ExprIRef.writeValBody argI (V.BRecExtend (recExtend & V.recTag .~ chosenTag))
@@ -329,10 +345,11 @@ setFieldParamTag binderKind storedLam prevTagList prevTag =
 
 convertRecordParams ::
     Monad m =>
+    Maybe (MkProperty m PresentationMode) ->
     BinderKind m -> [FieldParam] ->
     V.Lam (Val (Input.Payload m a)) -> Input.Payload m a ->
     ConvertM m (ConventionalParams m)
-convertRecordParams binderKind fieldParams lam@(V.Lam param _) pl =
+convertRecordParams mPresMode binderKind fieldParams lam@(V.Lam param _) pl =
     mapM mkParam fieldParams
     <&>
     \params ->
@@ -341,7 +358,7 @@ convertRecordParams binderKind fieldParams lam@(V.Lam param _) pl =
     , _cpParamInfos = fieldParams <&> mkFieldParamInfo & mconcat
     , _cpParams = FieldParams params
     , _cpAddFirstParam =
-        addFieldParam DataOps.newHole binderKind (:tags) storedLam
+        addFieldParam mPresMode DataOps.newHole binderKind (:tags) storedLam
         <&> ParamAddResultNewTag
     , cpScopes = BinderBodyScope $ mkCpScopesOfLam pl
     , cpMLamParam = Just (pl ^. Input.entityId, param)
@@ -351,14 +368,14 @@ convertRecordParams binderKind fieldParams lam@(V.Lam param _) pl =
         mkFieldParamInfo fp = mkParamInfo param fp <&> ConvertM.TagFieldParam
         storedLam = mkStoredLam lam pl
         mkParam fp =
-            setFieldParamTag binderKind storedLam tagList tag
+            setFieldParamTag mPresMode binderKind storedLam tagList tag
             >>= convertTag (TagInfo (fpIdEntityId param fp) tag) (Set.delete tag (Set.fromList tagList))
             <&>
             \tagS ->
             FuncParam
             { _fpInfo =
                 FieldParamInfo
-                { _fpiActions = fieldParamActions binderKind tags fp storedLam
+                { _fpiActions = fieldParamActions mPresMode binderKind tags fp storedLam
                 , _fpiTag = tagS
                 }
             , _fpAnnotation =
@@ -456,7 +473,7 @@ convertToRecordParams mkNewArg binderKind storedLam newParamPosition =
         case newParamPosition of
             NewParamBefore -> [tagForNewVar, tagForVar]
             NewParamAfter -> [tagForVar, tagForNewVar]
-            & setParamList paramList
+            & setParamList Nothing paramList
         convertVarToGetField tagForVar paramVar
             (storedLam ^. slLam . V.lamResult)
         fixUsagesOfLamBinder (wrapArgWithRecord mkNewArg varToTags)
@@ -583,16 +600,17 @@ convertLamParams lambda lambdaPl =
     do
         protectedSetToVal <- ConvertM.typeProtectedSetToVal
         let maybeWrap = protectedSetToVal lambdaProp (Property.value lambdaProp)
-        convertNonEmptyParams BinderKindLambda lambda lambdaPl
+        convertNonEmptyParams Nothing BinderKindLambda lambda lambdaPl
             <&> postProcessActions (void maybeWrap)
     where
         lambdaProp = lambdaPl ^. Input.stored
 
 convertNonEmptyParams ::
     Monad m =>
+    Maybe (MkProperty m PresentationMode) ->
     BinderKind m -> V.Lam (Val (Input.Payload m a)) -> Input.Payload m a ->
     ConvertM m (ConventionalParams m)
-convertNonEmptyParams binderKind lambda lambdaPl =
+convertNonEmptyParams mPresMode binderKind lambda lambdaPl =
     do
         ctx <- ConvertM.readContext
         let tagsInOuterScope =
@@ -614,16 +632,18 @@ convertNonEmptyParams binderKind lambda lambdaPl =
                 }
         orderedType <-
             lambdaPl ^. Input.inferredType & orderType & transaction
+        presModeTags <- Lens._Just Transaction.getP mPresMode & transaction <&> mPresModeToTags
+        let presModeOrder tag = takeWhile (/= tag) presModeTags & length
         case orderedType of
             T.TFun (T.TRecord composite) _
-                | Just fields <- composite ^? orderedClosedFlatComposite
+                | Just fields <- composite ^? orderedClosedFlatComposite <&> List.sortOn (presModeOrder . fst)
                 , ListUtils.isLengthAtLeast 2 fields
                 , isParamAlwaysUsedWithGetField lambda
                 , let myTags = fields <&> fst & Set.fromList
                 , let fieldParams = map makeFieldParam fields
                 -> if Set.null (tagsInOuterScope `Set.intersection` myTags)
                       && Set.null (tagsInInnerScope `Set.intersection` myTags)
-                   then convertRecordParams binderKind fieldParams lambda lambdaPl
+                   then convertRecordParams mPresMode binderKind fieldParams lambda lambdaPl
                    else
                        convertNonRecordParam binderKind lambda lambdaPl
                        <&> cpParamInfos <>~ (fieldParams & map mkCollidingInfo & mconcat)
@@ -639,6 +659,11 @@ convertNonEmptyParams binderKind lambda lambdaPl =
     where
         param = lambda ^. V.lamParamId
         mkCollidingInfo fp = mkParamInfo param fp <&> ConvertM.CollidingFieldParam
+        mPresModeToTags p =
+            case p of
+            Just (Object t) -> [t]
+            Just (Infix t0 t1) -> [t0, t1]
+            _ -> []
 
 convertVarToCalls ::
     Monad m => T m (ValI m) -> V.Var -> Val (ValIProperty m) -> T m ()
@@ -697,12 +722,11 @@ convertParams binderKind defUUID expr =
         postProcess <- ConvertM.postProcess
         case expr ^. Val.body of
             V.BLam lambda ->
-                convertNonEmptyParams binderKind lambda (expr ^. Val.payload)
+                convertNonEmptyParams (Just presMode) binderKind lambda (expr ^. Val.payload)
                 <&> f
                 where
                     f convParams = (mPresMode convParams, convParams, lambda ^. V.lamResult)
-                    mPresMode convParams =
-                        Anchors.assocPresentationMode defUUID <$
-                        convParams ^? cpParams . _FieldParams
+                    mPresMode convParams = presMode <$ convParams ^? cpParams . _FieldParams
+                    presMode = Anchors.assocPresentationMode defUUID
             _ -> return (Nothing, convertEmptyParams binderKind expr, expr)
             <&> _2 %~ postProcessActions postProcess

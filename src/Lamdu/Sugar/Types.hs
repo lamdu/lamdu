@@ -7,7 +7,7 @@ module Lamdu.Sugar.Types
     , Definition(..), drDefinitionState, drEntityId, drName, drBody, drDefI
     , DefinitionBody(..), _DefinitionBodyExpression, _DefinitionBodyBuiltin
     , DefinitionExpression(..), deContent, deType
-    , Meta.PresentationMode(..)
+    , Meta.SpecialArgs(..), Meta.PresentationMode
     , Meta.DefinitionState(..)
     , DefinitionBuiltin(..), biType, biName, biSetName
     , DefinitionU

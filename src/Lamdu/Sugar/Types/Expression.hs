@@ -29,7 +29,7 @@ module Lamdu.Sugar.Types.Expression
     --
     , GetField(..), gfRecord, gfTag
     , Inject(..), iTag, iMVal
-    , SpecialArgs(..), _NoSpecialArgs, _ObjectArg, _InfixArgs
+    , SpecialArgs(..)
     , AnnotatedArg(..), aaTag, aaExpr, aaName
     , RelayedArg(..), raValue, raId, raActions
     , LabeledApply(..), aFunc, aSpecialArgs, aAnnotatedArgs, aRelayedArgs
@@ -165,12 +165,6 @@ data Inject name m expr = Inject
     , _iMVal :: Maybe expr
     } deriving (Functor, Foldable, Traversable)
 
-data SpecialArgs expr
-    = NoSpecialArgs
-    | ObjectArg expr
-    | InfixArgs expr expr
-    deriving (Functor, Foldable, Traversable, Eq, Ord, Show)
-
 data AnnotatedArg name expr = AnnotatedArg
     { _aaTag :: TagInfo
     , _aaName :: name
@@ -259,5 +253,4 @@ Lens.makePrisms ''CaseKind
 Lens.makePrisms ''CompositeTail
 Lens.makePrisms ''Literal
 Lens.makePrisms ''SetToHole
-Lens.makePrisms ''SpecialArgs
 Lens.makePrisms ''WrapAction

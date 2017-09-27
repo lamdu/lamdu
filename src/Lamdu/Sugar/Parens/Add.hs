@@ -75,10 +75,10 @@ precedenceOfLabeledApply ::
     (Classifier, LabeledApply name m a)
 precedenceOfLabeledApply apply@(LabeledApply func specialArgs annotatedArgs relayedArgs) =
     case specialArgs of
-    InfixArgs l r ->
+    Infix l r ->
         ( ParenIf (IfGreaterOrEqual prec) (IfGreater prec)
         , LabeledApply func
-            (InfixArgs
+            (Infix
              (l (Just 0) (Precedence Nothing (Just prec)))
              (r (Just appendOpPrec) (Precedence (Just prec) Nothing)))
             newAnnotatedArgs relayedArgs
@@ -88,9 +88,9 @@ precedenceOfLabeledApply apply@(LabeledApply func specialArgs annotatedArgs rela
                 | notBoxed = prec+1
                 | otherwise = 0
             prec = func ^. binderName & precedence
-    ObjectArg arg | notBoxed ->
+    Object arg | notBoxed ->
         ( ParenIf (IfGreater 10) (IfGreaterOrEqual 10)
-        , LabeledApply func (ObjectArg (arg (Just 10) (Precedence (Just 10) Nothing)))
+        , LabeledApply func (Object (arg (Just 10) (Precedence (Just 10) Nothing)))
             newAnnotatedArgs relayedArgs
         )
     _ -> (NeverParen, apply ?? Just 0 ?? unambiguous)

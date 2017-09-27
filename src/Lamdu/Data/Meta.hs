@@ -1,10 +1,11 @@
-{-# LANGUAGE NoImplicitPrelude, DeriveGeneric #-}
+{-# LANGUAGE NoImplicitPrelude, DeriveGeneric, DeriveTraversable, TemplateHaskell #-}
 module Lamdu.Data.Meta
-    ( PresentationMode(..)
-    , DefinitionState(..)
+    ( DefinitionState(..)
+    , SpecialArgs(..), PresentationMode
     , ParamList
     ) where
 
+import qualified Control.Lens as Lens
 import           Data.Binary (Binary)
 import           GHC.Generics (Generic)
 import qualified Lamdu.Calc.Type as T
@@ -15,8 +16,15 @@ data DefinitionState = DeletedDefinition | LiveDefinition
     deriving (Eq, Ord, Show, Generic)
 instance Binary DefinitionState
 
-data PresentationMode = OO | Verbose | Infix
-    deriving (Eq, Ord, Show, Generic)
-instance Binary PresentationMode
+data SpecialArgs a
+    = Verbose
+    | Object a
+    | Infix a a
+    deriving (Eq, Ord, Show, Generic, Functor, Foldable, Traversable)
+instance Binary a => Binary (SpecialArgs a)
+
+type PresentationMode = SpecialArgs T.Tag
 
 type ParamList = [T.Tag]
+
+Lens.makePrisms ''SpecialArgs

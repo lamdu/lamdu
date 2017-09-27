@@ -195,8 +195,8 @@ loadRepl ::
 loadRepl evalRes cp =
     convertExpr evalRes cp (Anchors.repl cp)
     <&> Lens.mapped %~ (^. pUserData)
-    >>= OrderTags.orderExpr
     >>= PresentationModes.addToExpr
+    >>= OrderTags.orderExpr
 
 loadAnnotatedDef ::
     Monad m =>
@@ -243,7 +243,7 @@ loadPanes evalRes cp replEntityId =
                         <&> Lens.mapped . Lens.mapped %~ (^. pUserData)
                     let defI = def ^. Definition.defPayload & Anchors.paneDef
                     defS <-
-                        OrderTags.orderDef Definition
+                        PresentationModes.addToDef Definition
                         { _drEntityId = EntityId.ofIRef defI
                         , _drName = UniqueId.toUUID defI
                         , _drBody = bodyS
@@ -251,7 +251,7 @@ loadPanes evalRes cp replEntityId =
                             Anchors.assocDefinitionState defI ^. mkProperty
                         , _drDefI = ExprIRef.globalId defI
                         }
-                        >>= PresentationModes.addToDef
+                        >>= OrderTags.orderDef
                     return Pane
                         { _paneDefinition = defS
                         , _paneClose = mkDelPane i

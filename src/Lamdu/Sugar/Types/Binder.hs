@@ -23,7 +23,7 @@ module Lamdu.Sugar.Types.Binder
     , VarParamInfo(..), vpiName, vpiActions, vpiId
     , FieldParamInfo(..), fpiActions, fpiTag
     , FuncParam(..), fpInfo, fpAnnotation
-    , Meta.PresentationMode(..)
+    , Meta.SpecialArgs(..)
     , Meta.DefinitionState(..)
     , BinderActions(..), baAddFirstParam
     , NullParamActions(..), npDeleteLambda

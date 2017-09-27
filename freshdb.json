@@ -1,6 +1,6 @@
 [
     {
-        "schemaVersion": 2
+        "schemaVersion": 3
     },
     {
         "tagOrder": 1,
@@ -2075,7 +2075,9 @@
         }
     },
     {
-        "defPresentationMode": "OO",
+        "defPresentationMode": {
+            "Object": "1b6990743fcc77560fdb139d1ac01a2c"
+        },
         "name": "map",
         "def": "03eb545fa78c48a7947fef4d3e496e99",
         "typ": {
@@ -2313,7 +2315,7 @@
         }
     },
     {
-        "defPresentationMode": "OO",
+        "defPresentationMode": "Verbose",
         "builtin": [
             "Prelude",
             "negate"
@@ -2760,7 +2762,12 @@
         }
     },
     {
-        "defPresentationMode": "Infix",
+        "defPresentationMode": {
+            "Infix": [
+                "1b6990743fcc77560fdb139d1ac01a2c",
+                "f5f4a4909a4091dbb5b3f9524b71fd18"
+            ]
+        },
         "name": "contains",
         "def": "075c51ffab154a67a12beddd9138be18",
         "typ": {
@@ -2916,7 +2923,7 @@
         }
     },
     {
-        "defPresentationMode": "OO",
+        "defPresentationMode": "Verbose",
         "builtin": [
             "Mut",
             "run"
@@ -3278,7 +3285,12 @@
         }
     },
     {
-        "defPresentationMode": "Infix",
+        "defPresentationMode": {
+            "Infix": [
+                "42493a696e6669786c00000000000000",
+                "42493a696e6669787200000000000000"
+            ]
+        },
         "builtin": [
             "Prelude",
             "=="
@@ -3309,7 +3321,7 @@
         }
     },
     {
-        "defPresentationMode": "OO",
+        "defPresentationMode": "Verbose",
         "builtin": [
             "Mut",
             "Array",
@@ -3351,7 +3363,12 @@
         }
     },
     {
-        "defPresentationMode": "Infix",
+        "defPresentationMode": {
+            "Infix": [
+                "42493a696e6669786c00000000000000",
+                "42493a696e6669787200000000000000"
+            ]
+        },
         "builtin": [
             "Prelude",
             "-"
@@ -3377,7 +3394,12 @@
         }
     },
     {
-        "defPresentationMode": "Infix",
+        "defPresentationMode": {
+            "Infix": [
+                "42493a73746172740000000000000000",
+                "42493a73746f70000000000000000000"
+            ]
+        },
         "name": "..",
         "def": "193690a42fe14ab78610b96346c4b244",
         "typ": {
@@ -3481,7 +3503,12 @@
         }
     },
     {
-        "defPresentationMode": "Infix",
+        "defPresentationMode": {
+            "Infix": [
+                "42493a696e6669786c00000000000000",
+                "42493a696e6669787200000000000000"
+            ]
+        },
         "builtin": [
             "Prelude",
             ">="
@@ -3512,7 +3539,12 @@
         }
     },
     {
-        "defPresentationMode": "Infix",
+        "defPresentationMode": {
+            "Infix": [
+                "a386d980d96f732451f7b7b7ebab441c",
+                "3cb3e183ba35da7e0cf25510f81231dd"
+            ]
+        },
         "name": "max",
         "def": "19e923b820b04266a9811a6b34fe7b37",
         "typ": {
@@ -4035,7 +4067,12 @@
         }
     },
     {
-        "defPresentationMode": "Infix",
+        "defPresentationMode": {
+            "Infix": [
+                "42493a696e6669786c00000000000000",
+                "42493a696e6669787200000000000000"
+            ]
+        },
         "name": "++",
         "def": "38928f0eef7e4a84bbc6cc4c5019c0ed",
         "typ": {
@@ -4258,7 +4295,7 @@
         }
     },
     {
-        "defPresentationMode": "OO",
+        "defPresentationMode": "Verbose",
         "builtin": [
             "Mut",
             "return"
@@ -4291,7 +4328,9 @@
         }
     },
     {
-        "defPresentationMode": "OO",
+        "defPresentationMode": {
+            "Object": "42493a6f626a65637400000000000000"
+        },
         "builtin": [
             "Bytes",
             "byteAt"
@@ -4317,7 +4356,12 @@
         }
     },
     {
-        "defPresentationMode": "Infix",
+        "defPresentationMode": {
+            "Infix": [
+                "42493a696e6669786c00000000000000",
+                "42493a696e6669787200000000000000"
+            ]
+        },
         "name": ";",
         "def": "3ae235b4fade4f6e8fd7b9d4987f5229",
         "typ": {
@@ -4838,7 +4882,12 @@
         }
     },
     {
-        "defPresentationMode": "Infix",
+        "defPresentationMode": {
+            "Infix": [
+                "42493a696e6669786c00000000000000",
+                "42493a696e6669787200000000000000"
+            ]
+        },
         "builtin": [
             "Prelude",
             ">"
@@ -4869,7 +4918,9 @@
         }
     },
     {
-        "defPresentationMode": "OO",
+        "defPresentationMode": {
+            "Object": "c83ab838d04bf8fc6e77cced7e17a0e1"
+        },
         "name": "join",
         "def": "54543ca89f854da58bd69e1bccd00fdc",
         "typ": {
@@ -4993,7 +5044,12 @@
         }
     },
     {
-        "defPresentationMode": "Infix",
+        "defPresentationMode": {
+            "Infix": [
+                "42493a696e6669786c00000000000000",
+                "42493a696e6669787200000000000000"
+            ]
+        },
         "builtin": [
             "Prelude",
             "<"
@@ -5024,7 +5080,9 @@
         }
     },
     {
-        "defPresentationMode": "OO",
+        "defPresentationMode": {
+            "Object": "1b6990743fcc77560fdb139d1ac01a2c"
+        },
         "name": "intersperse",
         "def": "579c35851cfc4b5aa7495fd3f68d64f9",
         "typ": {
@@ -5365,7 +5423,9 @@
         }
     },
     {
-        "defPresentationMode": "OO",
+        "defPresentationMode": {
+            "Object": "1b6990743fcc77560fdb139d1ac01a2c"
+        },
         "name": "drop",
         "def": "589a2be4fad24d32b8895e517deef952",
         "typ": {
@@ -5645,7 +5705,12 @@
         }
     },
     {
-        "defPresentationMode": "Infix",
+        "defPresentationMode": {
+            "Infix": [
+                "42493a696e6669786c00000000000000",
+                "42493a696e6669787200000000000000"
+            ]
+        },
         "builtin": [
             "Prelude",
             "*"
@@ -5718,7 +5783,12 @@
         }
     },
     {
-        "defPresentationMode": "Infix",
+        "defPresentationMode": {
+            "Infix": [
+                "42493a696e6669786c00000000000000",
+                "42493a696e6669787200000000000000"
+            ]
+        },
         "builtin": [
             "Prelude",
             "div"
@@ -5744,7 +5814,7 @@
         }
     },
     {
-        "defPresentationMode": "OO",
+        "defPresentationMode": "Verbose",
         "builtin": [
             "Mut",
             "run"
@@ -5895,7 +5965,12 @@
         }
     },
     {
-        "defPresentationMode": "Infix",
+        "defPresentationMode": {
+            "Infix": [
+                "42493a696e6669786c00000000000000",
+                "42493a696e6669787200000000000000"
+            ]
+        },
         "name": "⋲",
         "def": "64cdc69ce19b48b2b6cf94c336a7421e",
         "typ": {
@@ -6004,7 +6079,7 @@
         }
     },
     {
-        "defPresentationMode": "OO",
+        "defPresentationMode": "Verbose",
         "builtin": [
             "Mut",
             "Array",
@@ -6039,7 +6114,7 @@
         }
     },
     {
-        "defPresentationMode": "OO",
+        "defPresentationMode": "Verbose",
         "builtin": [
             "Mut",
             "Ref",
@@ -6672,7 +6747,12 @@
         }
     },
     {
-        "defPresentationMode": "Infix",
+        "defPresentationMode": {
+            "Infix": [
+                "64077ff41e0a8ee59e103f93023ad302",
+                "fa4970527c82ac935af48b0693d96cd9"
+            ]
+        },
         "name": "++",
         "def": "70037a0a32e84ee4a5e1b76133f970b5",
         "typ": {
@@ -7783,7 +7863,12 @@
         }
     },
     {
-        "defPresentationMode": "Infix",
+        "defPresentationMode": {
+            "Infix": [
+                "a386d980d96f732451f7b7b7ebab441c",
+                "3cb3e183ba35da7e0cf25510f81231dd"
+            ]
+        },
         "name": "min",
         "def": "7ec7afa641254cf886a0bb8653d79bd6",
         "typ": {
@@ -7934,7 +8019,7 @@
         }
     },
     {
-        "defPresentationMode": "OO",
+        "defPresentationMode": "Verbose",
         "builtin": [
             "Mut",
             "Array",
@@ -7971,7 +8056,7 @@
         }
     },
     {
-        "defPresentationMode": "OO",
+        "defPresentationMode": "Verbose",
         "builtin": [
             "Mut",
             "Ref",
@@ -8237,7 +8322,7 @@
         }
     },
     {
-        "defPresentationMode": "OO",
+        "defPresentationMode": "Verbose",
         "builtin": [
             "Bytes",
             "fromArray"
@@ -8261,7 +8346,9 @@
         }
     },
     {
-        "defPresentationMode": "OO",
+        "defPresentationMode": {
+            "Object": "1b6990743fcc77560fdb139d1ac01a2c"
+        },
         "name": "first",
         "def": "8a1642b8d2ef4d669df333f01821017e",
         "typ": {
@@ -8768,7 +8855,9 @@
         }
     },
     {
-        "defPresentationMode": "OO",
+        "defPresentationMode": {
+            "Object": "42493a6f626a65637400000000000000"
+        },
         "builtin": [
             "Mut",
             "Array",
@@ -9401,7 +9490,7 @@
         }
     },
     {
-        "defPresentationMode": "OO",
+        "defPresentationMode": "Verbose",
         "builtin": [
             "Prelude",
             "sqrt"
@@ -9420,7 +9509,12 @@
         }
     },
     {
-        "defPresentationMode": "Infix",
+        "defPresentationMode": {
+            "Infix": [
+                "42493a73746172740000000000000000",
+                "42493a73746f70000000000000000000"
+            ]
+        },
         "name": "..",
         "def": "976e4af994d74546b61bfcdc6bf2c950",
         "typ": {
@@ -9814,7 +9908,7 @@
         }
     },
     {
-        "defPresentationMode": "OO",
+        "defPresentationMode": "Verbose",
         "builtin": [
             "Bytes",
             "unshare"
@@ -10119,7 +10213,12 @@
         }
     },
     {
-        "defPresentationMode": "Infix",
+        "defPresentationMode": {
+            "Infix": [
+                "42493a696e6669786c00000000000000",
+                "42493a696e6669787200000000000000"
+            ]
+        },
         "builtin": [
             "Prelude",
             "<="
@@ -10228,7 +10327,12 @@
         }
     },
     {
-        "defPresentationMode": "Infix",
+        "defPresentationMode": {
+            "Infix": [
+                "42493a696e6669786c00000000000000",
+                "42493a696e6669787200000000000000"
+            ]
+        },
         "builtin": [
             "Prelude",
             "/"
@@ -10491,7 +10595,9 @@
         }
     },
     {
-        "defPresentationMode": "OO",
+        "defPresentationMode": {
+            "Object": "1b6990743fcc77560fdb139d1ac01a2c"
+        },
         "name": "take",
         "def": "aaf1be5fa8584fe191bf0caa3a7ce75e",
         "typ": {
@@ -10838,7 +10944,7 @@
         }
     },
     {
-        "defPresentationMode": "OO",
+        "defPresentationMode": "Verbose",
         "builtin": [
             "IO",
             "file",
@@ -10878,7 +10984,12 @@
         }
     },
     {
-        "defPresentationMode": "Infix",
+        "defPresentationMode": {
+            "Infix": [
+                "42493a696e6669786c00000000000000",
+                "42493a696e6669787200000000000000"
+            ]
+        },
         "builtin": [
             "Prelude",
             "+"
@@ -11087,7 +11198,9 @@
         }
     },
     {
-        "defPresentationMode": "OO",
+        "defPresentationMode": {
+            "Object": "42493a6f626a65637400000000000000"
+        },
         "builtin": [
             "Mut",
             "Array",
@@ -11408,7 +11521,12 @@
         }
     },
     {
-        "defPresentationMode": "Infix",
+        "defPresentationMode": {
+            "Infix": [
+                "64077ff41e0a8ee59e103f93023ad302",
+                "fa4970527c82ac935af48b0693d96cd9"
+            ]
+        },
         "name": "++",
         "def": "b56469ead34c4de993403a6babb63af9",
         "typ": {
@@ -11511,7 +11629,12 @@
         }
     },
     {
-        "defPresentationMode": "Infix",
+        "defPresentationMode": {
+            "Infix": [
+                "42493a696e6669786c00000000000000",
+                "42493a696e6669787200000000000000"
+            ]
+        },
         "builtin": [
             "Prelude",
             "^"
@@ -11764,7 +11887,7 @@
         }
     },
     {
-        "defPresentationMode": "OO",
+        "defPresentationMode": "Verbose",
         "builtin": [
             "Array",
             "length"
@@ -11793,7 +11916,9 @@
         }
     },
     {
-        "defPresentationMode": "OO",
+        "defPresentationMode": {
+            "Object": "42493a6f626a65637400000000000000"
+        },
         "builtin": [
             "Mut",
             "Ref",
@@ -12188,7 +12313,12 @@
         }
     },
     {
-        "defPresentationMode": "Infix",
+        "defPresentationMode": {
+            "Infix": [
+                "42493a696e6669786c00000000000000",
+                "42493a696e6669787200000000000000"
+            ]
+        },
         "builtin": [
             "Prelude",
             "mod"
@@ -12214,7 +12344,9 @@
         }
     },
     {
-        "defPresentationMode": "OO",
+        "defPresentationMode": {
+            "Object": "42493a6f626a65637400000000000000"
+        },
         "builtin": [
             "Array",
             "item"
@@ -12250,7 +12382,9 @@
         }
     },
     {
-        "defPresentationMode": "OO",
+        "defPresentationMode": {
+            "Object": "1b6990743fcc77560fdb139d1ac01a2c"
+        },
         "name": "anyOf",
         "def": "d44babde039046059782170790e3cdd1",
         "typ": {
@@ -12483,7 +12617,12 @@
         }
     },
     {
-        "defPresentationMode": "Infix",
+        "defPresentationMode": {
+            "Infix": [
+                "42493a696e6669786c00000000000000",
+                "42493a696e6669787200000000000000"
+            ]
+        },
         "name": "::",
         "def": "d711f82f8a4d4e199ece3fc4536329ea",
         "typ": {
@@ -13071,7 +13210,9 @@
         }
     },
     {
-        "defPresentationMode": "OO",
+        "defPresentationMode": {
+            "Object": "1b6990743fcc77560fdb139d1ac01a2c"
+        },
         "name": "filter",
         "def": "d7dafdd0c4c14e81beb071e1181c6356",
         "typ": {
@@ -13449,7 +13590,12 @@
         }
     },
     {
-        "defPresentationMode": "Infix",
+        "defPresentationMode": {
+            "Infix": [
+                "42493a696e6669786c00000000000000",
+                "42493a696e6669787200000000000000"
+            ]
+        },
         "builtin": [
             "Mut",
             "bind"
@@ -13511,7 +13657,9 @@
         }
     },
     {
-        "defPresentationMode": "OO",
+        "defPresentationMode": {
+            "Object": "42493a6f626a65637400000000000000"
+        },
         "builtin": [
             "Mut",
             "Array",
@@ -13722,7 +13870,12 @@
         }
     },
     {
-        "defPresentationMode": "Infix",
+        "defPresentationMode": {
+            "Infix": [
+                "42493a696e6669786c00000000000000",
+                "42493a696e6669787200000000000000"
+            ]
+        },
         "name": "||",
         "def": "dff4e86e63c54fab8b58ab3fe7e440ad",
         "typ": {
@@ -14413,7 +14566,9 @@
         }
     },
     {
-        "defPresentationMode": "OO",
+        "defPresentationMode": {
+            "Object": "42493a6f626a65637400000000000000"
+        },
         "builtin": [
             "Bytes",
             "slice"
@@ -14442,7 +14597,12 @@
         }
     },
     {
-        "defPresentationMode": "Infix",
+        "defPresentationMode": {
+            "Infix": [
+                "42493a696e6669786c00000000000000",
+                "42493a696e6669787200000000000000"
+            ]
+        },
         "name": "&&",
         "def": "e75aed3cb68c4fd395ce0c5c287eadba",
         "typ": {
@@ -14542,7 +14702,12 @@
         }
     },
     {
-        "defPresentationMode": "Infix",
+        "defPresentationMode": {
+            "Infix": [
+                "42493a696e6669786c00000000000000",
+                "42493a696e6669787200000000000000"
+            ]
+        },
         "builtin": [
             "Prelude",
             "/="
@@ -15376,7 +15541,7 @@
         }
     },
     {
-        "defPresentationMode": "OO",
+        "defPresentationMode": "Verbose",
         "builtin": [
             "IO",
             "file",
@@ -15416,7 +15581,9 @@
         }
     },
     {
-        "defPresentationMode": "OO",
+        "defPresentationMode": {
+            "Object": "1b6990743fcc77560fdb139d1ac01a2c"
+        },
         "name": "take",
         "def": "ef15e9ece99a44fc9a41740a570f3fc9",
         "typ": {
@@ -15685,7 +15852,9 @@
         }
     },
     {
-        "defPresentationMode": "OO",
+        "defPresentationMode": {
+            "Object": "1b6990743fcc77560fdb139d1ac01a2c"
+        },
         "name": "drop",
         "def": "efdcd00625534eb5b480c13776995953",
         "typ": {
@@ -16046,7 +16215,12 @@
         }
     },
     {
-        "defPresentationMode": "Infix",
+        "defPresentationMode": {
+            "Infix": [
+                "631cec914a6a1383bb287e7ac490f95f",
+                "69b9a1d0263f75cb50e2a06aceaa0a20"
+            ]
+        },
         "name": "<&>",
         "def": "f84d288519584812b5561ceccec2baf0",
         "typ": {
@@ -16234,7 +16408,7 @@
         }
     },
     {
-        "defPresentationMode": "OO",
+        "defPresentationMode": "Verbose",
         "builtin": [
             "Bytes",
             "length"
@@ -16253,7 +16427,9 @@
         }
     },
     {
-        "defPresentationMode": "OO",
+        "defPresentationMode": {
+            "Object": "1b6990743fcc77560fdb139d1ac01a2c"
+        },
         "name": "allOf",
         "def": "ffeef606bcec4865907d3c690decc36c",
         "typ": {
