@@ -351,8 +351,8 @@ convertRecordParams binderKind fieldParams lam@(V.Lam param _) pl =
         mkFieldParamInfo fp = mkParamInfo param fp <&> ConvertM.TagFieldParam
         storedLam = mkStoredLam lam pl
         mkParam fp =
-            setFieldParamTag binderKind storedLam (fieldParams <&> fpTag) (fpTag fp)
-            >>= convertTag (TagInfo (fpIdEntityId param fp) (fpTag fp))
+            setFieldParamTag binderKind storedLam tagList tag
+            >>= convertTag (TagInfo (fpIdEntityId param fp) tag) (Set.delete tag (Set.fromList tagList))
             <&>
             \tagS ->
             FuncParam
@@ -373,6 +373,9 @@ convertRecordParams binderKind fieldParams lam@(V.Lam param _) pl =
                             & Map.fromList & Just
                 }
             }
+            where
+                tag = fpTag fp
+                tagList = fieldParams <&> fpTag
 
 removeCallsToVar :: Monad m => V.Var -> Val (ValIProperty m) -> T m ()
 removeCallsToVar funcVar val =

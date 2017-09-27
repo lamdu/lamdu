@@ -18,8 +18,8 @@ import           Lamdu.Sugar.Types
 
 import           Lamdu.Prelude
 
-convertTag :: Monad m => TagInfo -> (T.Tag -> Transaction m TagInfo) -> ConvertM m (Tag UUID m)
-convertTag info@(TagInfo _ tag) setTag =
+convertTag :: Monad m => TagInfo -> Set T.Tag -> (T.Tag -> Transaction m TagInfo) -> ConvertM m (Tag UUID m)
+convertTag info@(TagInfo _ tag) forbiddenTags setTag =
     ConvertM.readContext <&> (^. ConvertM.scCodeAnchors) <&> Anchors.tags
     <&>
     \publishedTags ->
@@ -31,6 +31,7 @@ convertTag info@(TagInfo _ tag) setTag =
         { _taChangeTag = setTag
         , _taOptions =
             Transaction.getP publishedTags
+            <&> (`Set.difference` forbiddenTags)
             <&> Set.toList
             <&> map toOption
         , _taSetPublished =

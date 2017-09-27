@@ -54,7 +54,7 @@ convertCompositeItem cons stored restI inst tag expr =
                     TagInfo inst newTag & return
                 where
                     valI = stored ^. Property.pVal
-        tagS <- convertTag (TagInfo inst tag) setTag
+        tagS <- convertTag (TagInfo inst tag) mempty setTag
         return CompositeItem
             { _ciTag = tagS
             , _ciExpr = exprS
