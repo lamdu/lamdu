@@ -197,7 +197,7 @@ makeNewDefinitionEventMap cp =
                         Definition
                         (Definition.BodyExpr (Definition.Expr holeI mempty))
                         Scheme.any ()
-                        & DataOps.newPublicDefinitionWithPane "" cp
+                        & DataOps.newPublicDefinitionWithPane cp
                     DataOps.savePreJumpPosition cp curCursor
                     return newDefI
                 <&> WidgetIds.nameEditOf . WidgetIds.fromIRef

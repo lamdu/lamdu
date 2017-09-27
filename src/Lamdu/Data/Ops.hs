@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude #-}
+{-# LANGUAGE NoImplicitPrelude, OverloadedStrings #-}
 module Lamdu.Data.Ops
     ( newHole, wrap, setToWrapper
     , replace, replaceWithHole, setToHole, lambdaWrap, redexWrap
@@ -181,10 +181,10 @@ newPublicDefinitionToIRef codeAnchors def defI =
 
 newPublicDefinitionWithPane ::
     Monad m =>
-    Text -> Anchors.CodeAnchors m -> Definition (ValI m) () -> T m (DefI m)
-newPublicDefinitionWithPane name codeAnchors def =
+    Anchors.CodeAnchors m -> Definition (ValI m) () -> T m (DefI m)
+newPublicDefinitionWithPane codeAnchors def =
     do
-        defI <- newDefinition name (presentationModeOfName name) def
+        defI <- newDefinition "" Verbose def
         modP (Anchors.globals codeAnchors) (Set.insert defI)
         newPane codeAnchors defI
         return defI

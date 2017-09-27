@@ -46,7 +46,7 @@ mkExtractToDef ctx exprPl =
         newDefI <-
             Definition.Definition
             (Definition.BodyExpr (Definition.Expr valI deps)) scheme ()
-            & DataOps.newPublicDefinitionWithPane "" cp
+            & DataOps.newPublicDefinitionWithPane cp
         GoodExpr <- postProcessDef newDefI
         let param = ExprIRef.globalId newDefI
         getVarI <- V.LVar param & V.BLeaf & ExprIRef.newValBody
