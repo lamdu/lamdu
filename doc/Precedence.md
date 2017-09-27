@@ -6,6 +6,17 @@ In Lamdu, things work in opposite direction. The AST is known (that's how the co
 
 In traditional languages a programmer may over-parenthesize, and a linter tool may warn about it. In Lamdu, the same AST is always displayed in the same way.
 
+## On multiple choices for parenthesizing
+
+Consider the following examples:
+
+    f (x → 1 + 2) + 3
+    (f x → 1 + 2) + 3
+
+They both express the same expression tree, and the parentheses are necessary in both, but are around different subtrees!
+
+When there's choice, it is generally preferred to place the parentheses closer together, because it is easier for readers to visually match them this way. So in Lamdu the parentheses appear around the smaller subtree when there are several options.
+
 ## Precedence in Lamdu
 
 ### How layout affects precedence
