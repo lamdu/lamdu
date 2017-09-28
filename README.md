@@ -152,8 +152,8 @@ or to the `5`, and press **shift+left**.
 We have just expressed the golden ratio.
 To save it and give it a name, select the entire expression from the prompt
 by repeatedly pressing **shift+left**.
-Press 'x' to extract the code into a new definition.
-Notice the "x" took us away from the prompt and put us below it.
+Press Ctrl-X to extract the code into a new definition.
+Notice the Ctrl-X took us away from the prompt and put us below it.
 Type "**`golden`**" and **escape**.
 The escape takes you out of "name editing" mode
 and puts you back into "selection" mode.
@@ -194,19 +194,6 @@ Notice that Lamdu replaced the second `=` with `==`.
 * Type "**`1`**" and press **space** for the `True` branch.
 * Type "**`x*f x  -1 `**" and press **space**.
   Again, Lamdu auto-completes: `f` becomes `fac`.
-* If need be, tell Lamdu that we are through defining the function.
-  If any portion of the definition is in a colored perimeter,
-  this means that the function is still open for editing,
-  in which case Lamdu will not allow the function to run.
-  In such a case, navigate to each colored box with the cursor keys and press **space**.
-  The space takes the selected portion of the definition out of "editing mode".
-  You may also need a combination of
-  1) leaving the selection and coming back in,
-  2) **escape** and
-  3) **space**.
-  Fiddle until it's happy.
-  If you hit a wrong button in the process, recall that Ctrl-Z is an option.
-  *Note that this step will be removed soon due to new design choices.*
 
 We've now written the function. Let's use it.
 
@@ -222,10 +209,6 @@ on the active pattern match path (`False`).
 This function is recursive and invoked additional calls to itself.
 To navigate between these calls,
 go to the arrows under its parameter `x` and press **right** or **left**.
-If your arrows are grayed-out, this means that
-the function definition is still open for editing and
-therefore Lamdu is not allowing it to be ran:
-see the last bullet point under *"To create the function..."*.
 
 To rename any symbol, navigate to it, press **return** twice and edit the name.
 Note that all references are displayed with the updated name correctly.
