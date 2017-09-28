@@ -21,7 +21,7 @@ import qualified Lamdu.Expr.UniqueId as UniqueId
 import qualified Lamdu.Infer as Infer
 import           Lamdu.Sugar.Convert.Binder.Float (makeFloatLetToOuterScope)
 import           Lamdu.Sugar.Convert.Binder.Inline (inlineLet)
-import           Lamdu.Sugar.Convert.Binder.Params (ConventionalParams(..), cpParams, convertParams, convertLamParams)
+import           Lamdu.Sugar.Convert.Binder.Params (ConventionalParams(..), convertParams, convertLamParams)
 import           Lamdu.Sugar.Convert.Binder.Redex (Redex(..))
 import qualified Lamdu.Sugar.Convert.Binder.Redex as Redex
 import           Lamdu.Sugar.Convert.Binder.Types (BinderKind(..))
@@ -245,17 +245,13 @@ markLightParams paramUUIDs (Expression body pl) =
 
 -- Let-item or definition (form of <name> [params] = <body>)
 convertBinder ::
-    (Monad m, Monoid a) => BinderKind m -> UUID ->
-    Val (Input.Payload m a) -> ConvertM m (Binder UUID m (ExpressionU m a))
+    (Monad m, Monoid a) =>
+    BinderKind m -> UUID -> Val (Input.Payload m a) ->
+    ConvertM m (Binder UUID m (ExpressionU m a))
 convertBinder binderKind defUUID expr =
     do
-        (convParams, funcBody) <- convertParams binderKind expr
-        let mPresentationModeProp
-                | Lens.has (cpParams . _FieldParams) convParams =
-                    Just $ Anchors.assocPresentationMode defUUID
-                | otherwise = Nothing
-        makeBinder (Anchors.assocScopeRef defUUID) mPresentationModeProp
-            convParams funcBody
+        (mPresentationModeProp, convParams, funcBody) <- convertParams binderKind defUUID expr
+        makeBinder (Anchors.assocScopeRef defUUID) mPresentationModeProp convParams funcBody
 
 convertDefinitionBinder ::
     (Monad m, Monoid a) =>

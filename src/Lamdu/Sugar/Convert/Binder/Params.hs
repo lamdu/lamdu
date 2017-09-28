@@ -686,17 +686,23 @@ convertEmptyParams binderKind val =
 
 convertParams ::
     Monad m =>
-    BinderKind m -> Val (Input.Payload m a) ->
+    BinderKind m -> UUID -> Val (Input.Payload m a) ->
     ConvertM m
-    ( ConventionalParams m
+    ( Maybe (MkProperty m PresentationMode)
+    , ConventionalParams m
     , Val (Input.Payload m a)
     )
-convertParams binderKind expr =
+convertParams binderKind defUUID expr =
     do
         postProcess <- ConvertM.postProcess
         case expr ^. Val.body of
             V.BLam lambda ->
                 convertNonEmptyParams binderKind lambda (expr ^. Val.payload)
-                <&> flip (,) (lambda ^. V.lamResult)
-            _ -> return (convertEmptyParams binderKind expr, expr)
-            <&> _1 %~ postProcessActions postProcess
+                <&> f
+                where
+                    f convParams = (mPresMode convParams, convParams, lambda ^. V.lamResult)
+                    mPresMode convParams =
+                        Anchors.assocPresentationMode defUUID <$
+                        convParams ^? cpParams . _FieldParams
+            _ -> return (Nothing, convertEmptyParams binderKind expr, expr)
+            <&> _2 %~ postProcessActions postProcess
