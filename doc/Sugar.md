@@ -178,17 +178,21 @@ else:
 
 This is useful to avoid over-indentation.
 
-### Lazy expressions
+### Suspended computations
 
 Unlike Haskell, Lamdu is a strict/eager evaluation language.
-Easy opt-in lazyness is supported via lambdas which get "unit" (the empty record),
+Lazy style of programming is supported via suspended computations -
+these are lambdas which get a "unit" (the empty record) parameter,
 and rather than being displayed like normal lambdas:
 
     <arg> → <computation>
 
-They are displayed with a lightweight line denoted lazyness:
+They are displayed with a lightweight line denoting the suspension:
 
     | <computation>
+
+These can be used for [call-by-name](https://en.wikipedia.org/wiki/Evaluation_strategy#Call_by_name)
+evaluation.
 
 ### Light lambdas
 
@@ -244,6 +248,3 @@ Theses include:
 
 While it may be exciting to add many wonderful syntax-sugars,
 having too many of them means the user needs to learn more syntax forms.
-
-Therefore we try to add them only when we feel strongly that they add significant value.
-We've even held out on adding "if" syntax for a long time.
