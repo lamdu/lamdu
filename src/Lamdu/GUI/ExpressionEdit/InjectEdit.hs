@@ -23,7 +23,6 @@ import qualified GUI.Momentu.Widgets.TextView as TextView
 import           Lamdu.Config (HasConfig)
 import qualified Lamdu.Config as Config
 import           Lamdu.Config.Theme (HasTheme)
-import qualified Lamdu.Precedence as Prec
 import qualified Lamdu.GUI.ExpressionEdit.TagEdit as TagEdit
 import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
@@ -90,10 +89,6 @@ make (Sugar.Inject tag mVal) pl =
         & ExpressionGui.stdWrap pl
     Just val ->
         do
-            parentPrec <- ExprGuiM.outerPrecedence <&> Prec.ParentPrecedence
-            let mParensId
-                    | Prec.needParens parentPrec (Prec.my 0) = Just animId
-                    | otherwise = Nothing
             disamb <-
                 case mParensId of
                 Nothing -> pure Options.disambiguationNone
@@ -103,8 +98,12 @@ make (Sugar.Inject tag mVal) pl =
             colon <- injectIndicator ":"
             makeCommon disamb tag replaceParent (ExprGuiT.nextHolesBefore val) colon arg
         & ExpressionGui.stdWrapParentExpr pl tagInstance
-        & ExprGuiM.withLocalPrecedence 0 (ExpressionGui.before .~ 0)
+        & ExprGuiM.withLocalPrecedence 0
         where
+            mParensId
+                | pl ^. Sugar.plData . ExprGuiT.plNeedParens =
+                  Just animId
+                | otherwise = Nothing
             tagInstance = tag ^. Sugar.tagInfo . Sugar.tagInstance
             replaceParent = val ^. Sugar.rPayload . Sugar.plActions . Sugar.mReplaceParent
             animId = WidgetIds.fromExprPayload pl & Widget.toAnimId

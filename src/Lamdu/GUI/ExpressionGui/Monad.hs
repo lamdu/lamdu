@@ -14,7 +14,6 @@ module Lamdu.GUI.ExpressionGui.Monad
     , readMScopeId, withLocalMScopeId
     , isExprSelected
     --
-    , outerPrecedence
     , withLocalPrecedence
     --
     , HolePicker(..), withHolePicker
@@ -58,8 +57,6 @@ import           Lamdu.Eval.Results (ScopeId, topLevelScopeId)
 import           Lamdu.GUI.CodeEdit.Settings (Settings, HasSettings(..))
 import           Lamdu.GUI.ExpressionGui.Types (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
-import           Lamdu.Precedence (Precedence)
-import qualified Lamdu.Precedence as Precedence
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Style (Style, HasStyle(..))
 import qualified Lamdu.Sugar.Types as Sugar
@@ -109,7 +106,6 @@ data Askable m = Askable
     , _aCodeAnchors :: Anchors.CodeAnchors m
     , _aDepthLeft :: Int
     , _aMScopeId :: CurAndPrev (Maybe ScopeId)
-    , _aOuterPrecedence :: Precedence
     , _aMinOpPrecedence :: Int
       -- ^ The minimum precedence that operators must have to be
       -- applicable inside leaf holes. This allows "text-like"
@@ -156,18 +152,15 @@ mkPrejumpPosSaver :: Monad m => ExprGuiM m (T m ())
 mkPrejumpPosSaver =
     DataOps.savePreJumpPosition <$> readCodeAnchors <*> Lens.view Widget.cursor
 
-makeSubexpression ::
-    Monad m =>
-    ExprGuiT.SugarExpr m -> ExprGuiM m (ExpressionGui m)
-makeSubexpression = makeSubexpressionWith 0 (const (Precedence.make 0))
+makeSubexpression :: Monad m => ExprGuiT.SugarExpr m -> ExprGuiM m (ExpressionGui m)
+makeSubexpression = makeSubexpressionWith 0
 
 makeSubexpressionWith ::
-    Monad m =>
-    Int -> (Precedence -> Precedence) -> ExprGuiT.SugarExpr m -> ExprGuiM m (ExpressionGui m)
-makeSubexpressionWith minOpPrec onPrecedence expr =
+    Monad m => Int -> ExprGuiT.SugarExpr m -> ExprGuiM m (ExpressionGui m)
+makeSubexpressionWith minOpPrec expr =
     do
         maker <- Lens.view aMakeSubexpression & ExprGuiM
-        maker expr & withLocalPrecedence minOpPrec onPrecedence
+        maker expr & withLocalPrecedence minOpPrec
     & advanceDepth (return . Responsive.fromTextView) animId
     where
         animId = toAnimId $ WidgetIds.fromExprPayload $ expr ^. Sugar.rPayload
@@ -219,7 +212,6 @@ run makeSubexpr theCodeAnchors (ExprGuiM action) =
             , _aCodeAnchors = theCodeAnchors
             , _aDepthLeft = Config.maxExprDepth theConfig
             , _aMScopeId = Just topLevelScopeId & pure
-            , _aOuterPrecedence = Precedence.make 0
             , _aMinOpPrecedence = 0
             , _aStyle = theStyle
             }
@@ -252,13 +244,5 @@ isExprSelected ::
     Sugar.Payload f a -> m Bool
 isExprSelected pl = Widget.isSubCursor ?? WidgetIds.fromExprPayload pl
 
-outerPrecedence :: Monad m => ExprGuiM m Precedence
-outerPrecedence = Lens.view aOuterPrecedence
-
-withLocalPrecedence :: Int -> (Precedence -> Precedence) -> ExprGuiM m a -> ExprGuiM m a
-withLocalPrecedence minOpPrec f =
-    exprGuiM %~
-    RWS.local
-    ( (aOuterPrecedence %~ f)
-    . (aMinOpPrecedence .~ minOpPrec)
-    )
+withLocalPrecedence :: Monad m => Int -> ExprGuiM m a -> ExprGuiM m a
+withLocalPrecedence minOpPrec = Reader.local (aMinOpPrecedence .~ minOpPrec)

@@ -228,7 +228,6 @@ Executable lamdu
                   , Lamdu.GUI.WidgetIds
                   , Lamdu.Infer.Trans
                   , Lamdu.Opts
-                  , Lamdu.Precedence
                   , Lamdu.Prelude
                   , Lamdu.Style
                   , Lamdu.Sugar.Convert
@@ -266,6 +265,7 @@ Executable lamdu
                   , Lamdu.Sugar.EntityId
                   , Lamdu.Sugar.Internal
                   , Lamdu.Sugar.Internal.EntityId
+                  , Lamdu.Sugar.Parens.Add
                   , Lamdu.Sugar.Lens
                   , Lamdu.Sugar.Names.Add
                   , Lamdu.Sugar.Names.CPS

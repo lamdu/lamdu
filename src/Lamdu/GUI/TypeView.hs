@@ -33,14 +33,14 @@ import qualified Lamdu.Calc.Type as T
 import           Lamdu.Config.Theme (HasTheme)
 import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.Data.Anchors as Anchors
-import           Lamdu.Precedence (ParentPrecedence(..), MyPrecedence(..), needParens)
-import qualified Lamdu.Precedence as Precedence
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Sugar.OrderTags (orderedFlatComposite)
 import           System.Random (Random, random)
 import qualified System.Random as Random
 
 import           Lamdu.Prelude
+
+newtype Prec = Prec Int deriving (Eq, Ord, Show)
 
 newtype M m a = M
     { runM :: StateT Random.StdGen m a
@@ -81,10 +81,9 @@ parensAround view =
 
 parens ::
     (MonadReader env m, TextView.HasStyle env) =>
-    ParentPrecedence -> MyPrecedence ->
-    WithTextPos View -> M m (WithTextPos View)
+    Prec -> Prec -> WithTextPos View -> M m (WithTextPos View)
 parens parent my view
-    | needParens parent my = parensAround view
+    | parent > my = parensAround view
     | otherwise = return view
 
 makeTVar ::
@@ -96,23 +95,23 @@ makeTFun ::
     ( MonadReader env m, TextView.HasStyle env, HasTheme env
     , Spacer.HasStdSpacing env, MonadTransaction n m
     ) =>
-    ParentPrecedence -> Type -> Type -> M m (WithTextPos View)
+    Prec -> Type -> Type -> M m (WithTextPos View)
 makeTFun parentPrecedence a b =
     case a of
     T.TRecord T.CEmpty -> [text "| "]
     _ ->
-        [ splitMake (Precedence.parent 1) a
+        [ splitMake (Prec 1) a
         , text " → "
         ]
-    ++ [splitMake (Precedence.parent 0) b]
+    ++ [splitMake (Prec 0) b]
     & sequence
     <&> hbox
-    >>= parens parentPrecedence (Precedence.my 0)
+    >>= parens parentPrecedence (Prec 0)
 
 makeTInst ::
     ( MonadReader env m, TextView.HasStyle env, Spacer.HasStdSpacing env
     , HasTheme env, MonadTransaction n m
-    ) => ParentPrecedence -> T.NominalId -> Map T.ParamId Type ->
+    ) => Prec -> T.NominalId -> Map T.ParamId Type ->
     M m (WithTextPos View)
 makeTInst parentPrecedence tid typeParams =
     do
@@ -123,7 +122,7 @@ makeTInst parentPrecedence tid typeParams =
         let makeTypeParam (T.ParamId tParamId, arg) =
                 do
                     paramIdView <- showIdentifier tParamId
-                    typeView <- splitMake (Precedence.parent 0) arg
+                    typeView <- splitMake (Prec 0) arg
                     return
                         [ toAligned 1 paramIdView
                         , Aligned 0.5 hspace
@@ -132,9 +131,9 @@ makeTInst parentPrecedence tid typeParams =
         case Map.toList typeParams of
             [] -> pure nameView
             [(_, arg)] ->
-                splitMake (Precedence.parent 0) arg
+                splitMake (Prec 0) arg
                 <&> afterName
-                >>= parens parentPrecedence (Precedence.my 0)
+                >>= parens parentPrecedence (Prec 0)
             params ->
                 mapM makeTypeParam params
                 <&> GridView.make
@@ -179,7 +178,7 @@ makeField (tag, fieldType) =
     sequence
     [ makeTag tag <&> toAligned 1
     , Spacer.stdHSpace <&> Aligned 0.5
-    , splitMake (Precedence.parent 0) fieldType <&> toAligned 0
+    , splitMake (Prec 0) fieldType <&> toAligned 0
     ]
 
 makeSumField ::
@@ -220,13 +219,13 @@ makeComposite mkField composite =
 splitMake ::
     ( MonadReader env m, TextView.HasStyle env, HasTheme env
     , Spacer.HasStdSpacing env, MonadTransaction n m
-    ) => ParentPrecedence -> Type -> M m (WithTextPos View)
+    ) => Prec -> Type -> M m (WithTextPos View)
 splitMake parentPrecedence typ = split $ makeInternal parentPrecedence typ
 
 makeInternal ::
     ( MonadReader env m, TextView.HasStyle env, Spacer.HasStdSpacing env
     , HasTheme env, MonadTransaction n m
-    ) =>  ParentPrecedence -> Type -> M m (WithTextPos View)
+    ) => Prec -> Type -> M m (WithTextPos View)
 makeInternal parentPrecedence typ =
     case typ of
     T.TVar var -> makeTVar var
@@ -247,7 +246,7 @@ make ::
 make t prefix =
     do
         typeTint <- Lens.view Theme.theme <&> Theme.typeTint
-        makeInternal (Precedence.parent 0) t
+        makeInternal (Prec 0) t
             & runM
             & (`evalStateT` Random.mkStdGen 0)
             <&> Element.setLayers . Element.layers . Lens.mapped %~ Anim.mapIdentities (mappend prefix)

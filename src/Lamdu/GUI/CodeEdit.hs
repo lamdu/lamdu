@@ -52,6 +52,7 @@ import qualified Lamdu.Sugar.Names.Add as AddNames
 import           Lamdu.Sugar.Names.Types (Name)
 import           Lamdu.Sugar.NearestHoles (NearestHoles)
 import qualified Lamdu.Sugar.NearestHoles as NearestHoles
+import qualified Lamdu.Sugar.Parens.Add as AddParens
 import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
@@ -71,9 +72,15 @@ class HasEvalResults env m where
 class HasExportActions env m where exportActions :: Lens' env (ExportActions m)
 
 
-toExprGuiMPayload :: (ExprGuiT.ShowAnnotation, ([Sugar.EntityId], NearestHoles)) -> ExprGuiT.Payload
-toExprGuiMPayload (showAnn, (entityIds, nearestHoles)) =
+toExprGuiMPayload ::
+    ( AddParens.NeedsParens
+    , ( ExprGuiT.ShowAnnotation
+      , ([Sugar.EntityId], NearestHoles)
+      )
+    ) -> ExprGuiT.Payload
+toExprGuiMPayload (needParens, (showAnn, (entityIds, nearestHoles))) =
     ExprGuiT.Payload entityIds nearestHoles showAnn
+    (needParens == AddParens.NeedsParens)
 
 traverseAddNearestHoles ::
     Traversable t =>
@@ -93,10 +100,10 @@ exprAddNearestHoles expr =
     & runIdentity
 
 postProcessExpr ::
-    Sugar.Expression name m ([Sugar.EntityId], NearestHoles) ->
-    Sugar.Expression name m ExprGuiT.Payload
+    Sugar.Expression (Name n) m ([Sugar.EntityId], NearestHoles) ->
+    Sugar.Expression (Name n) m ExprGuiT.Payload
 postProcessExpr =
-    fmap toExprGuiMPayload . AnnotationsPass.markAnnotationsToDisplay
+    fmap toExprGuiMPayload . AddParens.add . AnnotationsPass.markAnnotationsToDisplay
 
 loadWorkArea ::
     Monad m =>

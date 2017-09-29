@@ -29,7 +29,6 @@ import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
 import qualified Lamdu.GUI.LightLambda as LightLambda
-import qualified Lamdu.Precedence as Prec
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.Sugar.Lens as SugarLens
 import           Lamdu.Sugar.Names.Types (Name(..))
@@ -135,23 +134,22 @@ make lam pl =
     do
         BinderEdit.Parts mParamsEdit mScopeEdit bodyEdit eventMap <-
             BinderEdit.makeParts funcApplyLimit binder (WidgetIds.fromEntityId bodyId) myId
-        let animId = Widget.toAnimId myId
         paramsAndLabelEdits <-
             case (lam ^. Sugar.lamMode, params) of
             (_, Sugar.NullParam{}) -> mkLhsEdits mParamsEdit mScopeEdit & return
             (Sugar.LightLambda, _) -> mkLightLambda params myId ?? mParamsEdit ?? mScopeEdit
             _ -> mkExpanded ?? mParamsEdit ?? mScopeEdit
-        parentPrec <- ExprGuiM.outerPrecedence <&> Prec.ParentPrecedence
-        let mParensId
-                | Prec.needParens parentPrec (Prec.my 0) = Just animId
-                | otherwise = Nothing
         (ResponsiveExpr.boxSpacedMDisamb ?? mParensId)
             <*> (Options.boxSpaced ?? Options.disambiguationNone ?? paramsAndLabelEdits
                 <&> (: [bodyEdit]))
             <&> E.weakerEvents eventMap
     & ExpressionGui.stdWrapParentExpr pl bodyId
-    & ExprGuiM.withLocalPrecedence 0 (ExpressionGui.before .~ 0)
+    & ExprGuiM.withLocalPrecedence 0
     where
+        animId = Widget.toAnimId myId
+        mParensId
+            | pl ^. Sugar.plData . ExprGuiT.plNeedParens = Just animId
+            | otherwise = Nothing
         myId = WidgetIds.fromExprPayload pl
         funcApplyLimit = pl ^. Sugar.plData . ExprGuiT.plShowAnnotation . ExprGuiT.funcApplyLimit
         params = binder ^. Sugar.bParams

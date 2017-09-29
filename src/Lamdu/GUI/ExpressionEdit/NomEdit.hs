@@ -16,13 +16,12 @@ import qualified GUI.Momentu.Widgets.TextView as TextView
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.GUI.ExpressionEdit.BinderEdit as BinderEdit
-import           Lamdu.GUI.ExpressionGui (ExpressionGui, before, after)
+import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
 import qualified Lamdu.GUI.NameEdit as NameEdit
-import qualified Lamdu.Precedence as Prec
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.Sugar.Lens as SugarLens
 import           Lamdu.Sugar.Names.Types (Name(..))
@@ -56,14 +55,11 @@ makeFromNom ::
     Sugar.Payload m ExprGuiT.Payload ->
     ExprGuiM m (ExpressionGui m)
 makeFromNom nom pl =
-    nom <&> ExprGuiM.makeSubexpressionWith 0 (after .~ nomPrecedence+1)
+    nom <&> ExprGuiM.makeSubexpressionWith 0
     & mkNomGui reverse "FromNominal" "»" mDel valId pl
     where
         mDel = nom ^? Sugar.nVal . mReplaceParent
         valId = nom ^. Sugar.nVal . Sugar.rPayload . Sugar.plEntityId
-
-nomPrecedence :: Int
-nomPrecedence = 9
 
 mkNomGui ::
     Monad m =>
@@ -74,11 +70,6 @@ mkNomGui ::
     ExprGuiM m (ExpressionGui m)
 mkNomGui ordering nomStr str mDel valId pl (Sugar.Nominal tid val) =
     do
-        parentPrec <- ExprGuiM.outerPrecedence <&> Prec.ParentPrecedence
-        let mParenInfo
-                | Prec.needParens parentPrec (Prec.my nomPrecedence) =
-                    Widget.toAnimId nomId & Just
-                | otherwise = Nothing
         nomColor <- Lens.view Theme.theme <&> Theme.codeForegroundColors <&> Theme.nomColor
         config <- Lens.view Config.config
         let mkEventMap action =
@@ -104,8 +95,12 @@ mkNomGui ordering nomStr str mDel valId pl (Sugar.Nominal tid val) =
               ] & sequence
             )
     & ExpressionGui.stdWrapParentExpr pl valId
-    & ExprGuiM.withLocalPrecedence 0 (before .~ 0)
+    & ExprGuiM.withLocalPrecedence 0
     where
+        mParenInfo
+            | pl ^. Sugar.plData . ExprGuiT.plNeedParens =
+                Widget.toAnimId nomId & Just
+            | otherwise = Nothing
         myId = WidgetIds.fromExprPayload pl
         nomId = Widget.joinId myId ["nom"]
         nameId = Widget.joinId nomId ["name"]

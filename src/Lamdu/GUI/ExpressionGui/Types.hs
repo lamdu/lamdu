@@ -3,7 +3,7 @@ module Lamdu.GUI.ExpressionGui.Types
     ( ExpressionGui
     , SugarExpr
     , Payload(..)
-        , plStoredEntityIds, plNearestHoles, plShowAnnotation
+        , plStoredEntityIds, plNearestHoles, plShowAnnotation, plNeedParens
     , EvalModeShow(..)
     , FuncApplyLimit(..)
     , ShowAnnotation(..), showExpanded, showInTypeMode, showInEvalMode
@@ -16,8 +16,8 @@ module Lamdu.GUI.ExpressionGui.Types
 
 import qualified Control.Lens as Lens
 import           Data.Store.Transaction (Transaction)
-import qualified GUI.Momentu.Widget as Widget
 import           GUI.Momentu.Responsive (Responsive(..))
+import qualified GUI.Momentu.Widget as Widget
 import qualified Lamdu.Sugar.Lens as SugarLens
 import           Lamdu.Sugar.Names.Types (ExpressionN)
 import           Lamdu.Sugar.NearestHoles (NearestHoles)
@@ -67,6 +67,7 @@ data Payload = Payload
     { _plStoredEntityIds :: [Sugar.EntityId]
     , _plNearestHoles :: NearestHoles
     , _plShowAnnotation :: ShowAnnotation
+    , _plNeedParens :: Bool
     }
 Lens.makeLenses ''Payload
 

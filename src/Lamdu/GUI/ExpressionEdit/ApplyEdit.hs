@@ -33,7 +33,6 @@ import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
-import qualified Lamdu.Precedence as Prec
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Sugar.Names.Types (Name(..))
 import qualified Lamdu.Sugar.Names.Types as Name
@@ -134,20 +133,18 @@ makeFuncRow mParensId prec apply applyNearestHoles myId =
         <*> sequenceA
         [ makeFuncVar (ExprGuiT.nextHolesBefore arg) funcVar myId
             <&> Responsive.fromWithTextPos
-        , ExprGuiM.makeSubexpressionWith
-          (if isBoxed apply then 0 else prec)
-          (ExpressionGui.before .~ prec) arg
+        , ExprGuiM.makeSubexpressionWith (if isBoxed apply then 0 else prec) arg
         ]
     Sugar.InfixArgs l r ->
         (ResponsiveExpr.boxSpacedMDisamb ?? mParensId)
         <*> sequenceA
         [ (Options.boxSpaced ?? Options.disambiguationNone)
             <*> sequenceA
-            [ ExprGuiM.makeSubexpressionWith 0 (ExpressionGui.after .~ prec) l
+            [ ExprGuiM.makeSubexpressionWith 0 l
             , makeInfixFuncName (ExprGuiT.nextHolesBefore r) funcVar myId
                 <&> Responsive.fromWithTextPos
             ]
-        , ExprGuiM.makeSubexpressionWith (prec+1) (ExpressionGui.before .~ prec+1) r
+        , ExprGuiM.makeSubexpressionWith (prec+1) r
         ]
     where
         funcVar = apply ^. Sugar.aFunc
@@ -158,27 +155,24 @@ makeLabeled ::
     Sugar.Payload m ExprGuiT.Payload ->
     ExprGuiM m (ExpressionGui m)
 makeLabeled apply pl =
-    do
-        parentPrec <- ExprGuiM.outerPrecedence <&> Prec.ParentPrecedence
-        let needParens =
-                not (isBoxed apply)
-                && Prec.needParens parentPrec (Prec.my prec)
-        let fixPrec
-                | needParens = ExprGuiM.withLocalPrecedence 0 (const (Prec.make 0))
-                | otherwise = id
-        let mParensId
-                | needParens = Just (Widget.toAnimId myId)
-                | otherwise = Nothing
-        let addBox
-                | isBoxed apply = mkBoxed apply (pl ^. Sugar.plData . ExprGuiT.plNearestHoles)
-                | otherwise = id
-        makeFuncRow mParensId prec apply (pl ^. Sugar.plData . ExprGuiT.plNearestHoles) myId
-            & addBox
-            & ExpressionGui.stdWrapParentExpr pl (pl ^. Sugar.plEntityId)
-            & fixPrec
+    makeFuncRow mParensId prec apply
+    (pl ^. Sugar.plData . ExprGuiT.plNearestHoles) myId
+    & addBox
+    & ExpressionGui.stdWrapParentExpr pl (pl ^. Sugar.plEntityId)
+    & fixPrec
     where
+        addBox
+            | isBoxed apply = mkBoxed apply (pl ^. Sugar.plData . ExprGuiT.plNearestHoles)
+            | otherwise = id
+        mParensId
+            | needParens = Just (Widget.toAnimId myId)
+            | otherwise = Nothing
+        needParens = pl ^. Sugar.plData . ExprGuiT.plNeedParens
         prec = mkPrecedence apply
         myId = WidgetIds.fromExprPayload pl
+        fixPrec
+            | needParens = ExprGuiM.withLocalPrecedence 0
+            | otherwise = id
 
 makeArgRow ::
     Monad m =>
@@ -225,7 +219,7 @@ mkBoxed apply nearestHoles mkFuncRow =
             xs ->
                 Responsive.taggedList
                 <*> (traverse makeArgRow xs <&> Lens.mapped . _1 . Align.tValue %~ Widget.fromView) <&> (:[])
-        funcRow <- ExprGuiM.withLocalPrecedence 0 (const (Prec.make 0)) mkFuncRow
+        funcRow <- ExprGuiM.withLocalPrecedence 0 mkFuncRow
         relayedArgs <-
             case apply ^. Sugar.aRelayedArgs of
             [] -> return []
@@ -239,19 +233,14 @@ makeSimple ::
     Sugar.Payload m ExprGuiT.Payload ->
     ExprGuiM m (ExpressionGui m)
 makeSimple (Sugar.Apply func arg) pl =
-    do
-        parentPrec <- ExprGuiM.outerPrecedence <&> Prec.ParentPrecedence
-        let mParensId
-                | Prec.needParens parentPrec (Prec.my prefixPrecedence) =
-                    Just (Widget.toAnimId myId)
-                | otherwise = Nothing
-        (ResponsiveExpr.boxSpacedMDisamb ?? mParensId)
-            <*> sequenceA
-            [ ExprGuiM.makeSubexpressionWith
-              0 (ExpressionGui.after .~ prefixPrecedence+1) func
-            , ExprGuiM.makeSubexpressionWith
-              prefixPrecedence (ExpressionGui.before .~ prefixPrecedence) arg
-            ]
+    (ResponsiveExpr.boxSpacedMDisamb ?? mParensId)
+    <*> sequenceA
+    [ ExprGuiM.makeSubexpressionWith 0 func
+    , ExprGuiM.makeSubexpressionWith prefixPrecedence arg
+    ]
     & ExpressionGui.stdWrapParentExpr pl (func ^. Sugar.rPayload . Sugar.plEntityId)
     where
+        mParensId
+            | pl ^. Sugar.plData . ExprGuiT.plNeedParens = Just (Widget.toAnimId myId)
+            | otherwise = Nothing
         myId = WidgetIds.fromExprPayload pl

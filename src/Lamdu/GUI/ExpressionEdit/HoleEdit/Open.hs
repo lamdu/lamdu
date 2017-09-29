@@ -51,6 +51,7 @@ import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.Sugar.Lens as SugarLens
 import           Lamdu.Sugar.Names.Types (Name(..), ExpressionN)
 import qualified Lamdu.Sugar.NearestHoles as NearestHoles
+import qualified Lamdu.Sugar.Parens.Add as AddParens
 import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
@@ -291,15 +292,17 @@ makeHoleResultWidget holeInfo resultId holeResult =
 postProcessSugar :: ExpressionN m () -> ExpressionN m ExprGuiT.Payload
 postProcessSugar expr =
     expr
-    & Lens.mapped .~ pl
+    & AddParens.add
+    <&> pl
     & SugarLens.holeArgs . Sugar.plData . ExprGuiT.plShowAnnotation
     .~ ExprGuiT.alwaysShowAnnotations
     where
-        pl =
+        pl (needParens, ()) =
             ExprGuiT.Payload
             { ExprGuiT._plStoredEntityIds = []
             , ExprGuiT._plNearestHoles = NearestHoles.none
             , ExprGuiT._plShowAnnotation = ExprGuiT.neverShowAnnotations
+            , ExprGuiT._plNeedParens = needParens == AddParens.NeedsParens
             }
 
 emptyPickEventMap ::
