@@ -1,5 +1,5 @@
 -- | A pass on the sugared AST to decide where to put parenthesis
-{-# LANGUAGE NoImplicitPrelude, LambdaCase, TemplateHaskell #-}
+{-# LANGUAGE NoImplicitPrelude, LambdaCase, DeriveFunctor #-}
 module Lamdu.Sugar.Parens.Add
     ( NeedsParens(..)
     , add
@@ -14,11 +14,13 @@ import           Lamdu.Sugar.Types
 
 import           Lamdu.Prelude
 
-data Precedence = Precedence
-    { _before :: {-# UNPACK #-}!Int
-    , _after  :: {-# UNPACK #-}!Int
-    } deriving Show
-Lens.makeLenses ''Precedence
+data Precedence a = Precedence
+    { _before :: a
+    , _after  :: a
+    } deriving (Show, Functor)
+instance Applicative Precedence where
+    pure = join Precedence
+    Precedence af bf <*> Precedence ax bx = Precedence (af ax) (bf bx)
 
 -- | Do we need parenthesis (OR any other visual disambiguation?)
 data NeedsParens = NeedsParens | NoNeedForParens
@@ -35,38 +37,39 @@ data Classifier
     = NeverParen
     | ParenIf PrecCheck PrecCheck
 
--- First "line" gets specified l/r precedence overrides.
+unambiguous :: Precedence (Maybe Int)
+unambiguous = Precedence (Just 0) (Just 0)
+
+-- First "line" gets specified precedence override.
 -- Rest of "lines" get 0/0 (unambiguous) override
 binderBodyFirstLine ::
-    Maybe Int -> Maybe Int -> BinderBody name m (Maybe Int -> Maybe Int -> a) ->
+    Precedence (Maybe Int) -> BinderBody name m (Precedence (Maybe Int) -> a) ->
     BinderBody name m a
-binderBodyFirstLine l r =
+binderBodyFirstLine override =
     bbContent %~ f
     where
         f (BinderLet let_) =
             BinderLet let_
-            { _lValue = _lValue let_ & bBody %~ binderBodyFirstLine l r
-            , _lBody = _lBody let_ <&> (\expr -> expr (Just 0) (Just 0))
+            { _lValue = _lValue let_ & bBody %~ binderBodyFirstLine override
+            , _lBody = _lBody let_ <&> (\expr -> expr unambiguous)
             }
-        f (BinderExpr expr) =
-            expr l r
-            & BinderExpr
+        f (BinderExpr expr) = expr override & BinderExpr
 
 mkUnambiguous ::
     Functor sugar =>
-    (sugar a -> b) -> sugar (Maybe Int -> Maybe Int -> a) -> (Classifier, b)
+    (sugar a -> b) -> sugar (Precedence (Maybe Int) -> a) -> (Classifier, b)
 mkUnambiguous cons x =
-    (NeverParen, cons (x ?? Just 0 ?? Just 0))
+    (NeverParen, cons (x ?? unambiguous))
 
 precedenceOfGuard ::
-    Guard m (Maybe Int -> Maybe Int -> a) -> (Classifier, Guard m a)
+    Guard m (Precedence (Maybe Int) -> a) -> (Classifier, Guard m a)
 precedenceOfGuard (Guard if_ then_ elseIfs else_ _del) =
     ( ParenIf Never (IfGreater 1)
     , Guard
-        (if_ (Just 0) (Just 0))
-        (then_ (Just 0) Nothing) -- then appears in end of first line
-        (elseIfs <&> (\expr -> expr ?? Just 0 ?? Just 0))
-        (else_ (Just 0) (Just 0))
+        (if_ unambiguous)
+        (then_ (Precedence (Just 0) Nothing)) -- then appears in end of first line
+        (elseIfs <&> (\expr -> expr ?? unambiguous))
+        (else_ unambiguous)
         _del
     )
 
@@ -74,20 +77,22 @@ visibleFuncName :: Lens.Getter (BinderVar (Name n) m) Text
 visibleFuncName = bvNameRef . nrName . Name.form . Lens.to Name.visible . Lens._1
 
 precedenceOfLabeledApply ::
-    LabeledApply (Name n) m (Maybe Int -> Maybe Int -> a) ->
+    LabeledApply (Name n) m (Precedence (Maybe Int) -> a) ->
     (Classifier, LabeledApply (Name n) m a)
 precedenceOfLabeledApply apply@(LabeledApply func specialArgs annotatedArgs relayedArgs) =
     case specialArgs of
-    NoSpecialArgs -> (NeverParen, apply ?? Just 0 ?? Just 0)
+    NoSpecialArgs -> (NeverParen, apply ?? unambiguous)
     ObjectArg arg ->
         ( ParenIf (IfGreater 10) (IfGreaterOrEqual 10)
-        , LabeledApply func (ObjectArg (arg (Just 10) Nothing))
+        , LabeledApply func (ObjectArg (arg (Precedence (Just 10) Nothing)))
             newAnnotatedArgs relayedArgs
         )
     InfixArgs l r ->
         ( ParenIf (IfGreaterOrEqual prec) (IfGreater prec)
         , LabeledApply func
-            (InfixArgs (l Nothing (Just prec)) (r (Just prec) Nothing))
+            (InfixArgs
+             (l (Precedence Nothing (Just prec)))
+             (r (Precedence (Just prec) Nothing)))
             newAnnotatedArgs relayedArgs
         )
         where
@@ -95,19 +100,20 @@ precedenceOfLabeledApply apply@(LabeledApply func specialArgs annotatedArgs rela
                 func ^? visibleFuncName . Lens.ix 0
                 & maybe 20 Chars.precedence
     where
-        markUnambiguous expr = expr (Just 0) (Just 0)
-        newAnnotatedArgs = annotatedArgs <&> fmap markUnambiguous
+        newAnnotatedArgs = annotatedArgs <&> (?? unambiguous)
 
 precedenceOfPrefixApply ::
-    Apply (Maybe Int -> Maybe Int -> expr) -> (Classifier, Body name m expr)
+    Apply (Precedence (Maybe Int) -> expr) -> (Classifier, Body name m expr)
 precedenceOfPrefixApply (V.Apply f arg) =
     ( ParenIf (IfGreater 10) (IfGreaterOrEqual 10)
-    , V.Apply (f Nothing (Just 10)) (arg (Just 10) Nothing)
+    , V.Apply
+        (f (Precedence Nothing (Just 10)))
+        (arg (Precedence (Just 10) Nothing))
         & BodySimpleApply
     )
 
 precedenceOf ::
-    Body (Name n) m (Maybe Int -> Maybe Int -> a) -> (Classifier, Body (Name n) m a)
+    Body (Name n) m (Precedence (Maybe Int) -> a) -> (Classifier, Body (Name n) m a)
 precedenceOf =
     \case
     BodyInjectedExpression -> (NeverParen, BodyInjectedExpression)
@@ -118,12 +124,13 @@ precedenceOf =
     BodyCase x             -> mkUnambiguous BodyCase x
     BodyLam x              ->
         ( ParenIf Never (IfGreaterOrEqual 1)
-        , x & lamBinder . bBody %~ binderBodyFirstLine (Just 1) Nothing & BodyLam
+        , x & lamBinder . bBody %~
+          binderBodyFirstLine (Precedence (Just 1) Nothing) & BodyLam
         )
     BodyFromNom x          -> rightSymbol 1 BodyFromNom x
     BodyToNom x            ->
         ( ParenIf Never (IfGreaterOrEqual 1)
-        , x <&> binderBodyFirstLine (Just 1) Nothing & BodyToNom
+        , x <&> binderBodyFirstLine (Precedence (Just 1) Nothing) & BodyToNom
         )
     BodyInject x           -> leftSymbol 1 BodyInject x
     BodyGetField x         -> rightSymbol 11 BodyGetField x
@@ -133,27 +140,24 @@ precedenceOf =
     where
         leftSymbol prec cons x =
             ( ParenIf Never (IfGreaterOrEqual prec)
-            , cons (x ?? Just 0 ?? Nothing)
+            , cons (x ?? Precedence (Just 0) Nothing)
             )
         rightSymbol prec cons x =
             ( ParenIf (IfGreaterOrEqual prec) Never
-            , cons (x ?? Nothing ?? Just 0)
+            , cons (x ?? Precedence Nothing (Just 0))
             )
 
 add :: Expression (Name n) m a -> Expression (Name n) m (NeedsParens, a)
 add = loop (Precedence 0 0)
 
 loop ::
-    Precedence -> Expression (Name n) m a ->
+    Precedence Int -> Expression (Name n) m a ->
     Expression (Name n) m (NeedsParens, a)
 loop parentPrec (Expression body pl) =
     Expression finalBody (pl & plData %~ (,) needsParens)
     where
-        f expr lOverride rOverride newParentPrec =
-            newParentPrec
-            & maybe id (before .~) lOverride
-            & maybe id (after  .~) rOverride
-            & (loop ?? expr)
+        f expr override newParentPrec =
+            loop (fromMaybe <$> newParentPrec <*> override) expr
         Precedence parentBefore parentAfter = parentPrec
         needsParens
             | haveParens = NeedsParens
