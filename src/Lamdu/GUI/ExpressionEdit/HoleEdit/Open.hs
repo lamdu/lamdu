@@ -180,11 +180,10 @@ afterPick holeInfo resultId mFirstHoleInside pr =
                 | otherwise -> "obliterated" : animId
 
 -- | Remove unwanted event handlers from a hole result
-removeUnwanted :: Monad m => ExprGuiM m (Widget.EventMap a -> Widget.EventMap a)
-removeUnwanted =
+removeUnwanted :: Monad m => Int -> ExprGuiM m (Widget.EventMap a -> Widget.EventMap a)
+removeUnwanted minOpPrec =
     do
         config <- Lens.view Config.config
-        minOpPrec <- ExprGuiM.readMinOpPrec
         let unwantedKeys =
                 concat
                 [ Config.delKeys config
@@ -237,7 +236,7 @@ makeHoleResultWidget ::
     ExprGuiM m (Widget.EventMap (T m Widget.EventResult), WithTextPos (Widget (T m Widget.EventResult)))
 makeHoleResultWidget holeInfo resultId holeResult =
     do
-        remUnwanted <- removeUnwanted
+        remUnwanted <- removeUnwanted (hiMinOpPrec holeInfo)
         holeConfig <- Lens.view Config.config <&> Config.hole
         let pickAndMoveToNextHole =
                 Widget.keysEventMapMovesCursor (Config.holePickAndMoveToNextHoleKeys holeConfig)
@@ -297,12 +296,13 @@ postProcessSugar expr =
     & SugarLens.holeArgs . Sugar.plData . ExprGuiT.plShowAnnotation
     .~ ExprGuiT.alwaysShowAnnotations
     where
-        pl (needParens, ()) =
+        pl (minOpPrec, needParens, ()) =
             ExprGuiT.Payload
             { ExprGuiT._plStoredEntityIds = []
             , ExprGuiT._plNearestHoles = NearestHoles.none
             , ExprGuiT._plShowAnnotation = ExprGuiT.neverShowAnnotations
             , ExprGuiT._plNeedParens = needParens == AddParens.NeedsParens
+            , ExprGuiT._plMinOpPrec = minOpPrec
             }
 
 emptyPickEventMap ::

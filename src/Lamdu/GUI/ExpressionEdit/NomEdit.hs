@@ -55,7 +55,7 @@ makeFromNom ::
     Sugar.Payload m ExprGuiT.Payload ->
     ExprGuiM m (ExpressionGui m)
 makeFromNom nom pl =
-    nom <&> ExprGuiM.makeSubexpressionWith 0
+    nom <&> ExprGuiM.makeSubexpression
     & mkNomGui reverse "FromNominal" "»" mDel valId pl
     where
         mDel = nom ^? Sugar.nVal . mReplaceParent
@@ -95,7 +95,6 @@ mkNomGui ordering nomStr str mDel valId pl (Sugar.Nominal tid val) =
               ] & sequence
             )
     & ExpressionGui.stdWrapParentExpr pl valId
-    & ExprGuiM.withLocalPrecedence 0
     where
         mParenInfo
             | pl ^. Sugar.plData . ExprGuiT.plNeedParens =

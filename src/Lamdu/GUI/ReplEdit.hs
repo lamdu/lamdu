@@ -76,7 +76,7 @@ make exportRepl replExpr =
               <*> TextView.makeLabel "⋙"
               <&> Lens.mapped %~ E.weakerEvents (extractEventMap replExpr buttonExtractKeys)
               <&> Responsive.fromWithTextPos
-            , ExprGuiM.makeSubexpressionWith 0 replExpr
+            , ExprGuiM.makeSubexpression replExpr
               <&> Lens.mapped %~ IOTrans.liftTrans
             ]
             <&> E.weakerEvents (replEventMap theConfig exportRepl replExpr)

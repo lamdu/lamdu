@@ -28,7 +28,7 @@ make ::
     ExprGuiM m (ExpressionGui m)
 make (Sugar.GetField recExpr tag) pl =
     do
-        recExprEdit <- ExprGuiM.makeSubexpressionWith 0 recExpr
+        recExprEdit <- ExprGuiM.makeSubexpression recExpr
         dotLabel <- ExpressionGui.grammarLabel "."
         config <- Lens.view Config.config
         let delEventMap =

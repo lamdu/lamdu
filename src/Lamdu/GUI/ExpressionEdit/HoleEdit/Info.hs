@@ -27,6 +27,7 @@ data HoleInfo m = HoleInfo
     , hiHole :: Sugar.Hole m (Sugar.Expression (Name m) m ()) (ExprGuiT.SugarExpr m)
     , hiNearestHoles :: NearestHoles
     , hiState :: Property (T m) HoleState
+    , hiMinOpPrec :: Int
     }
 
 hiSearchTermProperty :: HoleInfo m -> Property (T m) Text

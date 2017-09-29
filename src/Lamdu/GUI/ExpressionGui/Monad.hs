@@ -5,16 +5,12 @@ module Lamdu.GUI.ExpressionGui.Monad
     , withLocalUnderline
     --
     , makeSubexpression
-    , makeSubexpressionWith
     , advanceDepth, resetDepth
     --
-    , readMinOpPrec
     , readCodeAnchors, mkPrejumpPosSaver
     --
     , readMScopeId, withLocalMScopeId
     , isExprSelected
-    --
-    , withLocalPrecedence
     --
     , HolePicker(..), withHolePicker
     , setResultPicker, listenResultPicker
@@ -106,13 +102,6 @@ data Askable m = Askable
     , _aCodeAnchors :: Anchors.CodeAnchors m
     , _aDepthLeft :: Int
     , _aMScopeId :: CurAndPrev (Maybe ScopeId)
-    , _aMinOpPrecedence :: Int
-      -- ^ The minimum precedence that operators must have to be
-      -- applicable inside leaf holes. This allows "text-like"
-      -- appending of operators at the right parent level according to
-      --
-      -- precedence (e.g: in "x % 3 == 0 || ..." the hole for "3" does
-      -- not allow operators, making the == apply at the parent expr)
     , _aStyle :: Style
     }
 newtype ExprGuiM m a = ExprGuiM
@@ -142,9 +131,6 @@ withLocalUnderline ::
     (MonadReader env m, TextView.HasStyle env) => TextView.Underline -> m a -> m a
 withLocalUnderline underline = Reader.local (TextView.underline ?~ underline)
 
-readMinOpPrec :: Monad m => ExprGuiM m Int
-readMinOpPrec = Lens.view aMinOpPrecedence
-
 readCodeAnchors :: Monad m => ExprGuiM m (Anchors.CodeAnchors m)
 readCodeAnchors = Lens.view aCodeAnchors
 
@@ -153,14 +139,10 @@ mkPrejumpPosSaver =
     DataOps.savePreJumpPosition <$> readCodeAnchors <*> Lens.view Widget.cursor
 
 makeSubexpression :: Monad m => ExprGuiT.SugarExpr m -> ExprGuiM m (ExpressionGui m)
-makeSubexpression = makeSubexpressionWith 0
-
-makeSubexpressionWith ::
-    Monad m => Int -> ExprGuiT.SugarExpr m -> ExprGuiM m (ExpressionGui m)
-makeSubexpressionWith minOpPrec expr =
+makeSubexpression expr =
     do
         maker <- Lens.view aMakeSubexpression & ExprGuiM
-        maker expr & withLocalPrecedence minOpPrec
+        maker expr
     & advanceDepth (return . Responsive.fromTextView) animId
     where
         animId = toAnimId $ WidgetIds.fromExprPayload $ expr ^. Sugar.rPayload
@@ -212,7 +194,6 @@ run makeSubexpr theCodeAnchors (ExprGuiM action) =
             , _aCodeAnchors = theCodeAnchors
             , _aDepthLeft = Config.maxExprDepth theConfig
             , _aMScopeId = Just topLevelScopeId & pure
-            , _aMinOpPrecedence = 0
             , _aStyle = theStyle
             }
             ()
@@ -243,6 +224,3 @@ isExprSelected ::
     (MonadReader env m, Widget.HasCursor env) =>
     Sugar.Payload f a -> m Bool
 isExprSelected pl = Widget.isSubCursor ?? WidgetIds.fromExprPayload pl
-
-withLocalPrecedence :: Monad m => Int -> ExprGuiM m a -> ExprGuiM m a
-withLocalPrecedence minOpPrec = Reader.local (aMinOpPrecedence .~ minOpPrec)

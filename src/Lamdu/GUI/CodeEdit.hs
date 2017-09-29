@@ -73,14 +73,15 @@ class HasExportActions env m where exportActions :: Lens' env (ExportActions m)
 
 
 toExprGuiMPayload ::
-    ( AddParens.NeedsParens
+    ( AddParens.MinOpPrec, AddParens.NeedsParens
     , ( ExprGuiT.ShowAnnotation
       , ([Sugar.EntityId], NearestHoles)
       )
     ) -> ExprGuiT.Payload
-toExprGuiMPayload (needParens, (showAnn, (entityIds, nearestHoles))) =
+toExprGuiMPayload (minOpPrec, needParens, (showAnn, (entityIds, nearestHoles))) =
     ExprGuiT.Payload entityIds nearestHoles showAnn
     (needParens == AddParens.NeedsParens)
+    minOpPrec
 
 traverseAddNearestHoles ::
     Traversable t =>

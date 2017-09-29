@@ -34,6 +34,7 @@ data ExprInfo m = ExprInfo
     , exprInfoEntityId :: Sugar.EntityId
     , exprInfoNearestHoles :: NearestHoles
     , exprInfoActions :: Sugar.Actions m
+    , exprInfoMinOpPrec :: Int
     }
 
 exprInfoFromPl :: Sugar.Payload f ExprGuiT.Payload -> ExprInfo f
@@ -43,6 +44,7 @@ exprInfoFromPl pl =
     , exprInfoEntityId = pl ^. Sugar.plEntityId
     , exprInfoNearestHoles = pl ^. Sugar.plData . ExprGuiT.plNearestHoles
     , exprInfoActions = pl ^. Sugar.plActions
+    , exprInfoMinOpPrec = pl ^. Sugar.plData . ExprGuiT.plMinOpPrec
     }
 
 make ::
@@ -158,11 +160,10 @@ applyOperatorEventMap ::
 applyOperatorEventMap exprInfo holePicker =
     do
         isSelected <- exprInfoIsSelected exprInfo
-        minOpPrec <- ExprGuiM.readMinOpPrec
         let acceptableOperatorChars
                 | isSelected = Chars.operator
                 | otherwise =
-                      filter ((>= minOpPrec) . Chars.precedence) Chars.operator
+                      filter ((>= exprInfoMinOpPrec exprInfo) . Chars.precedence) Chars.operator
         let action wrap =
                 E.charGroup "Operator" doc acceptableOperatorChars $ \c ->
                     do

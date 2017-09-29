@@ -4,6 +4,7 @@ module Lamdu.GUI.ExpressionGui.Types
     , SugarExpr
     , Payload(..)
         , plStoredEntityIds, plNearestHoles, plShowAnnotation, plNeedParens
+        , plMinOpPrec
     , EvalModeShow(..)
     , FuncApplyLimit(..)
     , ShowAnnotation(..), showExpanded, showInTypeMode, showInEvalMode
@@ -68,6 +69,7 @@ data Payload = Payload
     , _plNearestHoles :: NearestHoles
     , _plShowAnnotation :: ShowAnnotation
     , _plNeedParens :: Bool
+    , _plMinOpPrec :: Int
     }
 Lens.makeLenses ''Payload
 

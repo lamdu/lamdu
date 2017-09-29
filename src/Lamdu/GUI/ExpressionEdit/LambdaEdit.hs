@@ -26,7 +26,6 @@ import qualified Lamdu.GUI.ExpressionEdit.BinderEdit as BinderEdit
 import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
-import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
 import qualified Lamdu.GUI.LightLambda as LightLambda
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
@@ -144,7 +143,6 @@ make lam pl =
                 <&> (: [bodyEdit]))
             <&> E.weakerEvents eventMap
     & ExpressionGui.stdWrapParentExpr pl bodyId
-    & ExprGuiM.withLocalPrecedence 0
     where
         animId = Widget.toAnimId myId
         mParensId

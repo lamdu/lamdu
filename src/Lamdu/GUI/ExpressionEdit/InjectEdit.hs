@@ -98,7 +98,6 @@ make (Sugar.Inject tag mVal) pl =
             colon <- injectIndicator ":"
             makeCommon disamb tag replaceParent (ExprGuiT.nextHolesBefore val) colon arg
         & ExpressionGui.stdWrapParentExpr pl tagInstance
-        & ExprGuiM.withLocalPrecedence 0
         where
             mParensId
                 | pl ^. Sugar.plData . ExprGuiT.plNeedParens =

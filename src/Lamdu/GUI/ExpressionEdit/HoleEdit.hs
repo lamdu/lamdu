@@ -113,6 +113,7 @@ make hole pl =
                 , hiHole = hole
                 , hiIds = widgetIds
                 , hiNearestHoles = pl ^. Sugar.plData . ExprGuiT.plNearestHoles
+                , hiMinOpPrec = pl ^. Sugar.plData . ExprGuiT.plMinOpPrec
                 }
 
         searchAreaGui <- SearchArea.makeStdWrapped pl holeInfo
