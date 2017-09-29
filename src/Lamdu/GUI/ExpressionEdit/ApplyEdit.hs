@@ -52,7 +52,7 @@ mkPrecedence apply =
     Sugar.ObjectArg{} -> prefixPrecedence
     Sugar.InfixArgs _ _ ->
         case funcName of
-        x:_ -> CharClassification.charPrecedence x
+        x:_ -> CharClassification.precedence x
         _ -> 20
     where
         (visibleName, _mCollision) =

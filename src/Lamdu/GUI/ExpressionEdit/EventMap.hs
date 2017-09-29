@@ -162,7 +162,7 @@ applyOperatorEventMap exprInfo holePicker =
         let acceptableOperatorChars
                 | isSelected = Chars.operator
                 | otherwise =
-                      filter ((>= minOpPrec) . Chars.charPrecedence) Chars.operator
+                      filter ((>= minOpPrec) . Chars.precedence) Chars.operator
         let action wrap =
                 E.charGroup "Operator" doc acceptableOperatorChars $ \c ->
                     do

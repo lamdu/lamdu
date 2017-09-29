@@ -194,7 +194,7 @@ removeUnwanted =
         let disallowedOperator '.' = False
             disallowedOperator char
                 | char `notElem` Chars.operator = False
-                | otherwise = Chars.charPrecedence char < minOpPrec
+                | otherwise = Chars.precedence char < minOpPrec
         return (E.filterChars (not . disallowedOperator) . deleteKeys unwantedKeys)
     where
         deleteKeys = E.deleteKeys . map (E.KeyEvent MetaKey.KeyState'Pressed)

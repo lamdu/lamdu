@@ -1,7 +1,7 @@
 {-# LANGUAGE NoImplicitPrelude #-}
 
 module Lamdu.CharClassification
-    ( operator, bracket, digit, hexDigit, charPrecedence
+    ( operator, bracket, digit, hexDigit, precedence
     , disallowedInHole
     ) where
 
@@ -25,8 +25,8 @@ digit = ['0'..'9']
 hexDigit :: String
 hexDigit = ['a'..'f'] ++ ['A' .. 'F'] ++ digit
 
-charPrecedence :: Char -> Int
-charPrecedence c =
+precedence :: Char -> Int
+precedence c =
     case precedenceMap ^. Lens.at c of
     Just p -> p
     Nothing
