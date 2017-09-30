@@ -46,8 +46,8 @@ doc text = E.Doc ["Edit", "Record", text]
 
 make ::
     Monad m =>
-    Sugar.Composite (Name m) m (ExprGuiT.SugarExpr m) ->
-    Sugar.Payload m ExprGuiT.Payload ->
+    Sugar.Composite (Name m) (T m) (ExprGuiT.SugarExpr m) ->
+    Sugar.Payload (T m) ExprGuiT.Payload ->
     ExprGuiM m (ExpressionGui m)
 make record@(Sugar.Composite fields recordTail addField) pl =
     do
@@ -79,7 +79,7 @@ make record@(Sugar.Composite fields recordTail addField) pl =
 
 makeFieldRow ::
     Monad m =>
-    Sugar.CompositeItem (Name m) m (Sugar.Expression (Name m) m ExprGuiT.Payload) ->
+    Sugar.CompositeItem (Name m) (T m) (Sugar.Expression (Name m) (T m) ExprGuiT.Payload) ->
     ExprGuiM m
     ( WithTextPos (Widget (T m Widget.EventResult))
     , ExpressionGui m
@@ -97,7 +97,7 @@ makeFieldRow (Sugar.CompositeItem delete tag fieldExpr) =
 
 makeFieldsWidget ::
     Monad m =>
-    [Sugar.CompositeItem (Name m) m (Sugar.Expression (Name m) m ExprGuiT.Payload)] ->
+    [Sugar.CompositeItem (Name m) (T m) (Sugar.Expression (Name m) (T m) ExprGuiT.Payload)] ->
     Widget.Id -> ExprGuiM m (ExpressionGui m)
 makeFieldsWidget [] myId =
     (Widget.makeFocusableView ?? myId <&> (Align.tValue %~))
@@ -114,7 +114,7 @@ separationBar theme width animId =
 
 makeOpenRecord ::
     Monad m =>
-    ExpressionGui m -> Sugar.OpenCompositeActions m -> ExprGuiT.SugarExpr m ->
+    ExpressionGui m -> Sugar.OpenCompositeActions (T m) -> ExprGuiT.SugarExpr m ->
     AnimId -> ExprGuiM m (ExpressionGui m)
 makeOpenRecord fieldsGui actions rest animId =
     do
@@ -141,7 +141,7 @@ makeOpenRecord fieldsGui actions rest animId =
             restW
 
 openRecordEventMap ::
-    Functor m => Config -> Sugar.OpenCompositeActions m ->
+    Functor m => Config -> Sugar.OpenCompositeActions (T m) ->
     Widget.EventMap (T m Widget.EventResult)
 openRecordEventMap config (Sugar.OpenCompositeActions close) =
     close <&> WidgetIds.fromEntityId
@@ -149,7 +149,7 @@ openRecordEventMap config (Sugar.OpenCompositeActions close) =
 
 closedRecordEventMap ::
     Functor m =>
-    Config -> Sugar.ClosedCompositeActions m ->
+    Config -> Sugar.ClosedCompositeActions (T m) ->
     Widget.EventMap (T m Widget.EventResult)
 closedRecordEventMap config (Sugar.ClosedCompositeActions open) =
     open <&> WidgetIds.fromEntityId

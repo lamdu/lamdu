@@ -15,7 +15,6 @@ module Lamdu.Sugar.Lens
     ) where
 
 import qualified Control.Lens as Lens
-import           Data.Store.Transaction (Transaction)
 import           Lamdu.Calc.Type.Scheme (Scheme)
 import           Lamdu.Sugar.Types
 
@@ -112,7 +111,7 @@ binderLetActions = bBody . bbContent . _BinderLet . lActions
 binderFuncParamAdds ::
     Lens.Traversal'
     (Binder name m (Expression name m a))
-    (Transaction m ParamAddResult)
+    (m ParamAddResult)
 binderFuncParamAdds f Binder{..} =
     (\_bParams _bActions -> Binder{..})
     <$> (_bParams & binderFuncParamActions . fpAddNext %%~ f)
@@ -121,7 +120,7 @@ binderFuncParamAdds f Binder{..} =
 binderFuncParamDeletes ::
     Lens.Traversal'
     (Binder name m (Expression name m a))
-    (Transaction m ParamDelResult)
+    (m ParamDelResult)
 binderFuncParamDeletes = bParams . binderFuncParamActions . fpDelete
 
 binderContentExpr :: Lens' (BinderContent name m a) a

@@ -82,7 +82,7 @@ makeParamsRecord myId paramsRecordVar =
 
 makeNameRef ::
     Monad m =>
-    Widget.Id -> Sugar.NameRef name m ->
+    Widget.Id -> Sugar.NameRef name (T m) ->
     (name -> Widget.Id -> ExprGuiM m (WithTextPos (Widget (T m Widget.EventResult)))) ->
     ExprGuiM m (WithTextPos (Widget (T m Widget.EventResult)))
 makeNameRef myId nameRef maker =
@@ -104,7 +104,7 @@ makeNameRef myId nameRef maker =
 
 makeInlineEventMap ::
     Monad m =>
-    Config -> Sugar.BinderVarInline m ->
+    Config -> Sugar.BinderVarInline (T m) ->
     Widget.EventMap (T m Widget.EventResult)
 makeInlineEventMap config (Sugar.InlineVar inline) =
     inline <&> WidgetIds.fromEntityId
@@ -122,7 +122,7 @@ definitionTypeChangeBox ::
     , Spacer.HasStdSpacing env, HasTheme env, Widget.HasCursor env
     , HasConfig env
     ) =>
-    Sugar.DefinitionOutdatedType m -> Widget.Id ->
+    Sugar.DefinitionOutdatedType (T m) -> Widget.Id ->
     f (WithTextPos (Widget (T m Widget.EventResult)))
 definitionTypeChangeBox info getVarId =
     do
@@ -153,7 +153,7 @@ processDefinitionWidget ::
     , HasTheme env, Element.HasAnimIdPrefix env, HasConfig env
     , TextView.HasStyle env, Widget.HasCursor env, Hover.HasStyle env
     ) =>
-    Sugar.DefinitionForm m -> Widget.Id ->
+    Sugar.DefinitionForm (T m) -> Widget.Id ->
     f (WithTextPos (Widget (T m Widget.EventResult))) ->
     f (WithTextPos (Widget (T m Widget.EventResult)))
 processDefinitionWidget Sugar.DefUpToDate _myId mkLayout = mkLayout
@@ -179,7 +179,7 @@ processDefinitionWidget (Sugar.DefTypeChanged info) myId mkLayout =
 
 makeGetBinder ::
     Monad m =>
-    Sugar.BinderVar (Name m) m -> Widget.Id ->
+    Sugar.BinderVar (Name m) (T m) -> Widget.Id ->
     ExprGuiM m (WithTextPos (Widget (T m Widget.EventResult)))
 makeGetBinder binderVar myId =
     do
@@ -201,7 +201,7 @@ makeGetBinder binderVar myId =
 
 makeGetParam ::
     Monad m =>
-    Sugar.Param (Name m) m -> Widget.Id ->
+    Sugar.Param (Name m) (T m) -> Widget.Id ->
     ExprGuiM m (WithTextPos (Widget (T m Widget.EventResult)))
 makeGetParam param myId =
     do
@@ -221,8 +221,8 @@ makeGetParam param myId =
 
 make ::
     Monad m =>
-    Sugar.GetVar (Name m) m ->
-    Sugar.Payload m ExprGuiT.Payload ->
+    Sugar.GetVar (Name m) (T m) ->
+    Sugar.Payload (T m) ExprGuiT.Payload ->
     ExprGuiM m (ExpressionGui m)
 make getVar pl =
     case getVar of

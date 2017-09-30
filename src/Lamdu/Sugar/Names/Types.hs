@@ -50,6 +50,6 @@ Lens.makePrisms ''Form
 instance Show (Name m) where
     show name = concat [ "(Name ", show (name ^. form), " ", ")" ]
 
-type ExpressionN m a = Expression (Name m) m a
-type BodyN m a = Body (Name m) m (ExpressionN m a)
-type DefinitionN m a = Definition (Name m) m (Expression (Name m) m a)
+type ExpressionN m a = Expression (Name m) (T m) a
+type BodyN m a = Body (Name m) (T m) (ExpressionN m a)
+type DefinitionN m a = Definition (Name m) (T m) (ExpressionN m a)

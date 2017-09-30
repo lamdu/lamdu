@@ -16,9 +16,13 @@ import           Lamdu.Sugar.Types
 
 import           Lamdu.Prelude
 
+type T = Transaction
+
 convertGuard ::
     Functor m =>
-    (ValI m -> Transaction m (ValI m)) -> Case UUID m (ExpressionU m a) -> Maybe (Guard m (ExpressionU m a))
+    (ValI m -> T m (ValI m)) ->
+    Case UUID (T m) (ExpressionU m a) ->
+    Maybe (Guard (T m) (ExpressionU m a))
 convertGuard setToVal caseBody =
     do
         arg <- caseBody ^? cKind . _CaseWithArg . caVal

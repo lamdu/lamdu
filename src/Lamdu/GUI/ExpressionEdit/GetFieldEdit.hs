@@ -4,6 +4,7 @@ module Lamdu.GUI.ExpressionEdit.GetFieldEdit
     ) where
 
 import qualified Control.Lens as Lens
+import           Data.Store.Transaction (Transaction)
 import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.Responsive.Options as Options
@@ -21,10 +22,12 @@ import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
 
+type T = Transaction
+
 make ::
     Monad m =>
-    Sugar.GetField (Name m) m (ExprGuiT.SugarExpr m) ->
-    Sugar.Payload m ExprGuiT.Payload ->
+    Sugar.GetField (Name m) (T m) (ExprGuiT.SugarExpr m) ->
+    Sugar.Payload (T m) ExprGuiT.Payload ->
     ExprGuiM m (ExpressionGui m)
 make (Sugar.GetField recExpr tag) pl =
     do

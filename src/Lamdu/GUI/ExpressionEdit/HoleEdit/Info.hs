@@ -12,7 +12,7 @@ import           Lamdu.Calc.Type (Type)
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.State (HoleState, hsSearchTerm)
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds (WidgetIds)
 import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
-import           Lamdu.Sugar.Names.Types (Name)
+import           Lamdu.Sugar.Names.Types (ExpressionN)
 import           Lamdu.Sugar.NearestHoles (NearestHoles)
 import qualified Lamdu.Sugar.Types as Sugar
 
@@ -24,7 +24,7 @@ data HoleInfo m = HoleInfo
     { hiEntityId :: Sugar.EntityId
     , hiInferredType :: Type
     , hiIds :: WidgetIds
-    , hiHole :: Sugar.Hole m (Sugar.Expression (Name m) m ()) (ExprGuiT.SugarExpr m)
+    , hiHole :: Sugar.Hole (T m) (ExpressionN m ()) (ExprGuiT.SugarExpr m)
     , hiNearestHoles :: NearestHoles
     , hiState :: Property (T m) HoleState
     , hiMinOpPrec :: Int

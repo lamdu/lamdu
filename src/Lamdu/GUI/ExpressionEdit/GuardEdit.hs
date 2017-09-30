@@ -35,6 +35,8 @@ import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
 
+type T = Transaction
+
 data Row a = Row
     { _rIndentId :: AnimId
     , _rKeyword :: a
@@ -47,7 +49,7 @@ makeGuardRow ::
     ( Monad m, MonadReader env f, HasTheme env, HasConfig env
     , TextView.HasStyle env, Element.HasAnimIdPrefix env
     ) =>
-    Transaction m Sugar.EntityId -> WithTextPos View -> Sugar.EntityId ->
+    T m Sugar.EntityId -> WithTextPos View -> Sugar.EntityId ->
     f (ExpressionGui m -> ExpressionGui m -> Row (ExpressionGui m))
 makeGuardRow delete prefixLabel entityId =
     do
@@ -66,7 +68,7 @@ makeGuardRow delete prefixLabel entityId =
 
 makeElseIf ::
     Monad m =>
-    Sugar.GuardElseIf m (ExprGuiT.SugarExpr m) ->
+    Sugar.GuardElseIf (T m) (ExprGuiT.SugarExpr m) ->
     ExprGuiM m [Row (ExpressionGui m)] -> ExprGuiM m [Row (ExpressionGui m)]
 makeElseIf (Sugar.GuardElseIf scopes entityId cond res delete addLet) makeRest =
     do
@@ -88,7 +90,7 @@ makeElseIf (Sugar.GuardElseIf scopes entityId cond res delete addLet) makeRest =
         -- TODO: cleaner way to write this?
         lookupMKey k m = k >>= (`Map.lookup` m)
 
-makeElse :: Monad m => Sugar.Guard m (ExprGuiT.SugarExpr m) -> ExprGuiM m (Row (ExpressionGui m))
+makeElse :: Monad m => Sugar.Guard (T m) (ExprGuiT.SugarExpr m) -> ExprGuiM m (Row (ExpressionGui m))
 makeElse guards =
     ( Row elseAnimId
         <$> (ExpressionGui.grammarLabel "else" <&> Responsive.fromTextView)
@@ -141,8 +143,8 @@ renderRows =
 
 make ::
     Monad m =>
-    Sugar.Guard m (ExprGuiT.SugarExpr m) ->
-    Sugar.Payload m ExprGuiT.Payload ->
+    Sugar.Guard (T m) (ExprGuiT.SugarExpr m) ->
+    Sugar.Payload (T m) ExprGuiT.Payload ->
     ExprGuiM m (ExpressionGui m)
 make guards pl =
     renderRows

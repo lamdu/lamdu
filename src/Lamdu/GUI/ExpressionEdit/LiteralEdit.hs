@@ -56,7 +56,7 @@ genericEdit ::
     ) =>
     LensLike' (Lens.Const TextEdit.Style) Style TextEdit.Style ->
     Transaction.Property m a ->
-    Sugar.Payload m ExprGuiT.Payload -> f (ExpressionGui m)
+    Sugar.Payload (T m) ExprGuiT.Payload -> f (ExpressionGui m)
 genericEdit whichStyle prop pl =
     do
         style <- Lens.view Style.style <&> (^. whichStyle)
@@ -86,7 +86,7 @@ textEdit ::
     , Element.HasAnimIdPrefix env, Widget.HasCursor env
     ) =>
     Transaction.Property m Text ->
-    Sugar.Payload m ExprGuiT.Payload ->
+    Sugar.Payload (T m) ExprGuiT.Payload ->
     f (WithTextPos (Widget (T m Widget.EventResult)))
 textEdit prop pl =
     do
@@ -112,7 +112,7 @@ textEdit prop pl =
 
 make ::
     Monad m =>
-    Sugar.Literal (Transaction.Property m) -> Sugar.Payload m ExprGuiT.Payload ->
+    Sugar.Literal (Transaction.Property m) -> Sugar.Payload (T m) ExprGuiT.Payload ->
     ExprGuiM m (ExpressionGui m)
 make lit pl =
     case lit of

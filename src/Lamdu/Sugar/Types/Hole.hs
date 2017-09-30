@@ -20,14 +20,11 @@ import qualified Control.Lens as Lens
 import           Control.Monad.ListT (ListT)
 import qualified Data.ByteString as SBS
 import           Data.Functor.Identity (Identity(..))
-import           Data.Store.Transaction (Transaction)
 import           Data.UUID.Types (UUID)
 import           Lamdu.Calc.Val.Annotated (Val)
 import           Lamdu.Sugar.Internal.EntityId (EntityId)
 
 import           Lamdu.Prelude
-
-type T = Transaction
 
 newtype PickedResult = PickedResult
     { _prIdTranslation :: [(EntityId, EntityId)]
@@ -40,14 +37,14 @@ data HoleResultScore = HoleResultScore
 
 data HoleResult m resultExpr = HoleResult
     { _holeResultConverted :: resultExpr
-    , _holeResultPick :: T m PickedResult
+    , _holeResultPick :: m PickedResult
     } deriving (Functor, Foldable, Traversable)
 
 data HoleOption m resultExpr = HoleOption
     { _hoVal :: Val ()
-    , _hoSugaredBaseExpr :: T m resultExpr
+    , _hoSugaredBaseExpr :: m resultExpr
     , -- A group in the hole results based on this option
-      _hoResults :: ListT (T m) (HoleResultScore, T m (HoleResult m resultExpr))
+      _hoResults :: ListT (m) (HoleResultScore, m (HoleResult m resultExpr))
     } deriving Functor
 
 data Literal f
@@ -57,18 +54,18 @@ data Literal f
 
 data HoleActions m resultExpr = HoleActions
     { _holeUUID :: UUID -- TODO: Replace this with a way to associate data?
-    , _holeOptions :: T m [HoleOption m resultExpr]
+    , _holeOptions :: m [HoleOption m resultExpr]
     , -- Changes the structure around the hole to remove the hole.
       -- For example (f _) becomes (f) or (2 + _) becomes 2
-      _holeMDelete :: Maybe (T m EntityId)
+      _holeMDelete :: Maybe (m EntityId)
     } deriving Functor
 
 newtype LeafHoleActions m resultExpr = LeafHoleActions
-    { _holeOptionLiteral :: Literal Identity -> T m (HoleOption m resultExpr)
+    { _holeOptionLiteral :: Literal Identity -> m (HoleOption m resultExpr)
     } deriving Functor
 
 data Unwrap m
-    = UnwrapAction (T m EntityId)
+    = UnwrapAction (m EntityId)
     | UnwrapTypeMismatch
 
 data HoleArg m expr = HoleArg

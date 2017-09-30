@@ -26,7 +26,7 @@ data ConvertPayload m a = ConvertPayload
 
 Lens.makeLenses ''ConvertPayload
 
-type ExpressionU m a = Expression UUID m (ConvertPayload m a)
+type ExpressionU m a = Expression UUID (T m) (ConvertPayload m a)
 
 replaceWith ::
     Monad m => ExprIRef.ValIProperty m -> ExprIRef.ValIProperty m ->

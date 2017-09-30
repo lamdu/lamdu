@@ -73,7 +73,7 @@ data Payload = Payload
     }
 Lens.makeLenses ''Payload
 
-isHoleResult :: Sugar.Payload m Payload -> Bool
+isHoleResult :: Sugar.Payload f Payload -> Bool
 isHoleResult =
     Lens.nullOf (Sugar.plData . plStoredEntityIds . Lens.traversed)
 

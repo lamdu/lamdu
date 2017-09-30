@@ -31,11 +31,11 @@ data FunctionSignature = FunctionSignature
     } deriving (Eq, Ord, Show)
 
 -- TODO: Rename MonadNameWalk
-class (Monad m, Monad (TM m)) => MonadNaming m where
+class (Monad m, Monad (SM m)) => MonadNaming m where
     type OldName m
     type NewName m
-    type TM m :: * -> *
-    opRun :: m (m a -> T (TM m) a)
+    type SM m :: * -> *
+    opRun :: m (m a -> T (SM m) a)
 
     opWithParamName :: ParameterForm -> NameGen.VarInfo -> CPSNameConvertor m
     opWithLetName :: NameGen.VarInfo -> CPSNameConvertor m
@@ -43,6 +43,8 @@ class (Monad m, Monad (TM m)) => MonadNaming m where
 
     opGetAppliedFuncName :: FunctionSignature -> NameType -> NameConvertor m
     opGetAppliedFuncName _ = opGetName
+
+type TM m = T (SM m)
 
 type OldExpression m a = Expression (OldName m) (TM m) a
 type NewExpression m a = Expression (NewName m) (TM m) a

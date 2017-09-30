@@ -5,6 +5,7 @@ module Lamdu.GUI.ExpressionEdit.HoleEdit.ValTerms
 
 import           Data.Store.Property (Property)
 import qualified Data.Store.Property as Property
+import           Data.Store.Transaction (Transaction)
 import qualified Data.Text as Text
 import qualified Lamdu.Builtins.Anchors as Builtins
 import           Lamdu.Formatting (Format(..))
@@ -15,6 +16,8 @@ import qualified Lamdu.Sugar.Names.Types as Name
 import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
+
+type T = Transaction
 
 collisionText :: Name.Collision -> Text
 collisionText NoCollision = ""
@@ -34,7 +37,7 @@ formatLiteral (Sugar.LiteralNum i) = formatProp i
 formatLiteral (Sugar.LiteralText i) = formatProp i
 formatLiteral (Sugar.LiteralBytes i) = formatProp i
 
-bodyShape :: Sugar.Body (Name m) m expr -> [Text]
+bodyShape :: Sugar.Body (Name m) (T m) expr -> [Text]
 bodyShape = \case
     Sugar.BodyLam {} -> ["lambda", "\\", "Λ", "λ", "->", "→"]
     Sugar.BodySimpleApply {} -> ["Apply"]
@@ -63,7 +66,7 @@ bodyShape = \case
     Sugar.BodyHole {} -> []
     Sugar.BodyInjectedExpression {} -> []
 
-bodyNames :: Monad m => Sugar.Body (Name m) m expr -> [Text]
+bodyNames :: Monad m => Sugar.Body (Name m) (T m) expr -> [Text]
 bodyNames = \case
     Sugar.BodyGetVar Sugar.GetParamsRecord {} -> []
     Sugar.BodyLam {} -> []

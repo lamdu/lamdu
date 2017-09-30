@@ -14,7 +14,7 @@ module Lamdu.Sugar.Types
     ) where
 
 import qualified Control.Lens as Lens
-import           Data.Store.Transaction (Transaction, MkProperty)
+import           Data.Store.Property (Property)
 import           Data.UUID.Types (UUID)
 import           Lamdu.Calc.Type.Scheme (Scheme)
 import qualified Lamdu.Calc.Val as V
@@ -28,8 +28,6 @@ import           Lamdu.Sugar.Types.Hole as Exported
 
 import           Lamdu.Prelude
 
-type T = Transaction
-
 data DefinitionExpression name m expr = DefinitionExpression
     { _deType :: Scheme
     , _deContent :: Binder name m expr
@@ -37,7 +35,7 @@ data DefinitionExpression name m expr = DefinitionExpression
 
 data DefinitionBuiltin m = DefinitionBuiltin
     { _biName :: Definition.FFIName
-    , _biSetName :: Definition.FFIName -> T m ()
+    , _biSetName :: Definition.FFIName -> m ()
     , _biType :: Scheme
     }
 
@@ -49,7 +47,7 @@ data DefinitionBody name m expr
 data Definition name m expr = Definition
     { _drName :: name
     , _drDefI :: V.Var
-    , _drDefinitionState :: MkProperty m Anchors.DefinitionState
+    , _drDefinitionState :: m (Property m Anchors.DefinitionState)
     , _drEntityId :: EntityId
     , _drBody :: DefinitionBody name m expr
     } deriving (Functor, Foldable, Traversable)
@@ -58,9 +56,9 @@ type DefinitionU m a = Definition UUID m (Expression UUID m a)
 
 data Pane name m a = Pane
     { _paneDefinition :: Definition name m (Expression name m a)
-    , _paneClose :: T m EntityId
-    , _paneMoveDown :: Maybe (T m ())
-    , _paneMoveUp :: Maybe (T m ())
+    , _paneClose :: m EntityId
+    , _paneMoveDown :: Maybe (m ())
+    , _paneMoveUp :: Maybe (m ())
     } deriving (Functor, Foldable, Traversable)
 
 data WorkArea name m a = WorkArea

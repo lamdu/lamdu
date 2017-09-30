@@ -48,8 +48,8 @@ doc text = E.Doc ["Edit", "Case", text]
 
 make ::
     Monad m =>
-    Sugar.Case (Name m) m (ExprGuiT.SugarExpr m) ->
-    Sugar.Payload m ExprGuiT.Payload ->
+    Sugar.Case (Name m) (T m) (ExprGuiT.SugarExpr m) ->
+    Sugar.Payload (T m) ExprGuiT.Payload ->
     ExprGuiM m (ExpressionGui m)
 make (Sugar.Case mArg (Sugar.Composite alts caseTail addAlt)) pl =
     do
@@ -124,7 +124,7 @@ make (Sugar.Case mArg (Sugar.Composite alts caseTail addAlt)) pl =
 makeAltRow ::
     Monad m =>
     Maybe Tag ->
-    Sugar.CompositeItem (Name m) m (Sugar.Expression (Name m) m ExprGuiT.Payload) ->
+    Sugar.CompositeItem (Name m) (T m) (Sugar.Expression (Name m) (T m) ExprGuiT.Payload) ->
     ExprGuiM m (WithTextPos (Widget (T m Widget.EventResult)), ExpressionGui m)
 makeAltRow mActiveTag (Sugar.CompositeItem delete tag altExpr) =
     do
@@ -149,7 +149,7 @@ makeAltRow mActiveTag (Sugar.CompositeItem delete tag altExpr) =
 makeAltsWidget ::
     Monad m =>
     Maybe Tag ->
-    [Sugar.CompositeItem (Name m) m (Sugar.Expression (Name m) m ExprGuiT.Payload)] ->
+    [Sugar.CompositeItem (Name m) (T m) (Sugar.Expression (Name m) (T m) ExprGuiT.Payload)] ->
     Widget.Id -> ExprGuiM m (ExpressionGui m)
 makeAltsWidget _ [] myId =
     (Widget.makeFocusableView ?? Widget.joinId myId ["Ø"] <&> (Align.tValue %~))
@@ -166,7 +166,7 @@ separationBar theme width animId =
 
 makeOpenCase ::
     Monad m =>
-    Sugar.OpenCompositeActions m -> ExprGuiT.SugarExpr m ->
+    Sugar.OpenCompositeActions (T m) -> ExprGuiT.SugarExpr m ->
     AnimId -> ExpressionGui m -> ExprGuiM m (ExpressionGui m)
 makeOpenCase actions rest animId altsGui =
     do
@@ -194,7 +194,7 @@ makeOpenCase actions rest animId altsGui =
 
 openCaseEventMap ::
     Monad m =>
-    Config -> Sugar.OpenCompositeActions m ->
+    Config -> Sugar.OpenCompositeActions (T m) ->
     Widget.EventMap (T m Widget.EventResult)
 openCaseEventMap config (Sugar.OpenCompositeActions close) =
     close <&> WidgetIds.fromEntityId
@@ -202,7 +202,7 @@ openCaseEventMap config (Sugar.OpenCompositeActions close) =
 
 closedCaseEventMap ::
     Monad m =>
-    Config -> Sugar.ClosedCompositeActions m ->
+    Config -> Sugar.ClosedCompositeActions (T m) ->
     Widget.EventMap (T m Widget.EventResult)
 closedCaseEventMap config (Sugar.ClosedCompositeActions open) =
     open <&> WidgetIds.fromEntityId

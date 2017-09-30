@@ -39,6 +39,8 @@ import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
 
+type T = Transaction
+
 data TagParamInfo = TagParamInfo
     { tpiFromParameters :: V.Var -- TODO: Rename "From" to something else
     , tpiJumpTo :: Sugar.EntityId
@@ -66,7 +68,7 @@ data ScopeInfo m = ScopeInfo
     { _siTagParamInfos :: Map T.Tag TagFieldParam -- tag uuids
     , _siNullParams :: Set V.Var
     , -- Each let item potentially has an inline action
-      _siLetItems :: Map V.Var (Sugar.BinderVarInline m)
+      _siLetItems :: Map V.Var (Sugar.BinderVarInline (T m))
       -- TODO: siTagParamInfos needs a reverse-lookup map too
     , -- Where "extract to let" goes:
       _siMOuter :: Maybe (OuterScopeInfo m)
@@ -75,8 +77,6 @@ data ScopeInfo m = ScopeInfo
       _siRecursiveRef :: Maybe (RecursiveRef m)
     }
 Lens.makeLenses ''ScopeInfo
-
-type T = Transaction
 
 newtype ConvertM m a = ConvertM (ReaderT (Context m) (T m) a)
     deriving (Functor, Applicative, Monad)
@@ -93,7 +93,7 @@ data Context m = Context
       _scPostProcessRoot :: T m PostProcessResult
     , -- The nominal types appearing in the converted expr and its subexpression
       _scNominalsMap :: Map T.NominalId Nominal
-    , _scOutdatedDefinitions :: Map V.Var (Sugar.DefinitionOutdatedType m)
+    , _scOutdatedDefinitions :: Map V.Var (Sugar.DefinitionOutdatedType (T m))
     , _scInlineableDefinitions :: Set V.Var
     , _scFrozenDeps :: Transaction.Property m Infer.Dependencies
     , scConvertSubexpression ::

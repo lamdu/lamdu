@@ -55,7 +55,7 @@ tagHoleId = (`Widget.joinId` ["hole"])
 tagViewId :: Widget.Id -> Widget.Id
 tagViewId = (`Widget.joinId` ["view"])
 
-setTagName :: Monad m => Sugar.Tag (Name m) m -> Text -> T m ()
+setTagName :: Monad m => Sugar.Tag (Name m) (T m) -> Text -> T m ()
 setTagName tag name =
     do
         (tag ^. Sugar.tagName . Name.setName) name
@@ -65,7 +65,7 @@ makeTagNameEdit ::
     ( Monad m, MonadReader env f, HasConfig env, TextEdit.HasStyle env
     , Widget.HasCursor env
     ) =>
-    NearestHoles -> Sugar.Tag (Name m) m ->
+    NearestHoles -> Sugar.Tag (Name m) (T m) ->
     f (WithTextPos (Widget (T m Widget.EventResult)))
 makeTagNameEdit nearestHoles tag =
     do
@@ -120,7 +120,7 @@ makeOptions ::
     ( Monad m, MonadTransaction m f, MonadReader env f, Widget.HasCursor env
     , HasConfig env, HasTheme env, Element.HasAnimIdPrefix env, TextView.HasStyle env
     ) =>
-    (Widget.EventResult -> a) -> NearestHoles -> Sugar.Tag (Name n) m -> Text ->
+    (Widget.EventResult -> a) -> NearestHoles -> Sugar.Tag (Name n) (T m) -> Text ->
     f ([Menu.Option f (T m a)], Menu.HasMoreOptions)
 makeOptions fixCursor nearestHoles tag searchTerm
     | Text.null searchTerm = pure ([], Menu.NoMoreOptions)
@@ -158,7 +158,7 @@ makeTagHoleEditH ::
     , TextEdit.HasStyle env, Widget.HasCursor env, Element.HasAnimIdPrefix env
     , HasTheme env, Hover.HasStyle env, Menu.HasStyle env
     ) =>
-    NearestHoles -> Sugar.Tag (Name m) m ->
+    NearestHoles -> Sugar.Tag (Name m) (T m) ->
     Text -> (Text -> Widget.EventResult -> Widget.EventResult) -> (Widget.EventResult -> Widget.EventResult) ->
     f (WithTextPos (Widget (T m Widget.EventResult)))
 makeTagHoleEditH nearestHoles tag searchTerm updateState fixCursor =
@@ -191,7 +191,7 @@ makeTagHoleEdit ::
     ( Monad m, MonadReader env f, MonadTransaction m f, Widget.HasCursor env
     , HasConfig env, TextEdit.HasStyle env, Element.HasAnimIdPrefix env
     , HasTheme env, Hover.HasStyle env, Menu.HasStyle env
-    ) => NearestHoles -> Sugar.Tag (Name m) m ->
+    ) => NearestHoles -> Sugar.Tag (Name m) (T m) ->
     f (WithTextPos (Widget (T m Widget.EventResult)))
 makeTagHoleEdit nearestHoles tag =
     cursorState myId "" (makeTagHoleEditH nearestHoles tag)
@@ -205,7 +205,7 @@ makeTagEdit ::
     , Widget.HasCursor env, HasTheme env, Element.HasAnimIdPrefix env
     , TextEdit.HasStyle env, Hover.HasStyle env, Menu.HasStyle env
     ) =>
-    Mode -> Draw.Color -> NearestHoles -> Sugar.Tag (Name m) m ->
+    Mode -> Draw.Color -> NearestHoles -> Sugar.Tag (Name m) (T m) ->
     f (WithTextPos (Widget (T m Widget.EventResult)))
 makeTagEdit mode tagColor nearestHoles tag =
     do
@@ -252,7 +252,7 @@ makeRecordTag ::
     , HasConfig env, Widget.HasCursor env, Element.HasAnimIdPrefix env
     , TextEdit.HasStyle env, Hover.HasStyle env, HasTheme env, Menu.HasStyle env
     ) =>
-    Mode -> NearestHoles -> Sugar.Tag (Name m) m ->
+    Mode -> NearestHoles -> Sugar.Tag (Name m) (T m) ->
     f (WithTextPos (Widget (T m Widget.EventResult)))
 makeRecordTag mode nearestHoles tag =
     do
@@ -264,7 +264,7 @@ makeCaseTag ::
     , HasConfig env, Widget.HasCursor env, Element.HasAnimIdPrefix env
     , TextEdit.HasStyle env, Hover.HasStyle env, HasTheme env, Menu.HasStyle env
     ) =>
-    Mode -> NearestHoles -> Sugar.Tag (Name m) m ->
+    Mode -> NearestHoles -> Sugar.Tag (Name m) (T m) ->
     f (WithTextPos (Widget (T m Widget.EventResult)))
 makeCaseTag mode nearestHoles tag =
     do
@@ -276,7 +276,7 @@ makeParamTag ::
     , Widget.HasCursor env, Element.HasAnimIdPrefix env, TextEdit.HasStyle env
     , MonadTransaction m f
     ) =>
-    Sugar.Tag (Name m) m ->
+    Sugar.Tag (Name m) (T m) ->
     f (WithTextPos (Widget (T m Widget.EventResult)))
 makeParamTag tag =
     do

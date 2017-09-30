@@ -13,7 +13,7 @@ import qualified Data.Map as Map
 import qualified Data.Set as Set
 import           Data.Store.Property (Property(..))
 import qualified Data.Store.Property as Property
-import           Data.Store.Transaction (Transaction)
+import           Data.Store.Transaction (Transaction, mkProperty)
 import qualified Data.Store.Transaction as Transaction
 import           Data.UUID.Types (UUID)
 import qualified Lamdu.Calc.Type as T
@@ -43,14 +43,14 @@ import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import qualified Lamdu.Sugar.OrderTags as OrderTags
 import qualified Lamdu.Sugar.PresentationModes as PresentationModes
 import           Lamdu.Sugar.Types
-
+    
 import           Lamdu.Prelude
 
 type T = Transaction
 
 convertDefIBuiltin ::
     Monad m => Scheme -> Definition.FFIName -> DefI m ->
-    DefinitionBody UUID m (ExpressionU m [EntityId])
+    DefinitionBody UUID (T m) (ExpressionU m [EntityId])
 convertDefIBuiltin scheme name defI =
     DefinitionBodyBuiltin DefinitionBuiltin
     { _biName = name
@@ -99,7 +99,7 @@ convertInferDefExpr ::
     Monad m =>
     CurAndPrev (EvalResults (ValI m)) -> Anchors.CodeAnchors m ->
     Scheme -> Definition.Expr (Val (ValIProperty m)) -> DefI m ->
-    T m (DefinitionBody UUID m (ExpressionU m [EntityId]))
+    T m (DefinitionBody UUID (T m) (ExpressionU m [EntityId]))
 convertInferDefExpr evalRes cp defType defExpr defI =
     do
         (valInferred, newInferContext) <-
@@ -146,7 +146,7 @@ convertDefBody ::
     Monad m =>
     CurAndPrev (EvalResults (ValI m)) -> Anchors.CodeAnchors m ->
     Definition.Definition (Val (ValIProperty m)) (DefI m) ->
-    T m (DefinitionBody UUID m (ExpressionU m [EntityId]))
+    T m (DefinitionBody UUID (T m) (ExpressionU m [EntityId]))
 convertDefBody evalRes cp (Definition.Definition body defType defI) =
     case body of
     Definition.BodyExpr defExpr -> convertInferDefExpr evalRes cp defType defExpr defI
@@ -191,7 +191,7 @@ convertExpr evalRes cp prop =
 loadRepl ::
     Monad m =>
     CurAndPrev (EvalResults (ValI m)) -> Anchors.CodeAnchors m ->
-    T m (Expression UUID m [EntityId])
+    T m (Expression UUID (T m) [EntityId])
 loadRepl evalRes cp =
     convertExpr evalRes cp (Anchors.repl cp)
     <&> Lens.mapped %~ (^. pUserData)
@@ -208,7 +208,7 @@ loadAnnotatedDef getDefI annotation =
 loadPanes ::
     Monad m =>
     CurAndPrev (EvalResults (ValI m)) -> Anchors.CodeAnchors m -> EntityId ->
-    T m [Pane UUID m [EntityId]]
+    T m [Pane UUID (T m) [EntityId]]
 loadPanes evalRes cp replEntityId =
     do
         Property panes setPanes <- Anchors.panes cp ^. Transaction.mkProperty
@@ -247,7 +247,8 @@ loadPanes evalRes cp replEntityId =
                         { _drEntityId = EntityId.ofIRef defI
                         , _drName = UniqueId.toUUID defI
                         , _drBody = bodyS
-                        , _drDefinitionState = Anchors.assocDefinitionState defI
+                        , _drDefinitionState =
+                            Anchors.assocDefinitionState defI ^. mkProperty
                         , _drDefI = ExprIRef.globalId defI
                         }
                         >>= PresentationModes.addToDef
@@ -261,7 +262,7 @@ loadPanes evalRes cp replEntityId =
 
 loadWorkArea ::
     Monad m => CurAndPrev (EvalResults (ValI m)) -> Anchors.CodeAnchors m ->
-    T m (WorkArea UUID m [EntityId])
+    T m (WorkArea UUID (T m) [EntityId])
 loadWorkArea evalRes cp =
     do
         repl <- loadRepl evalRes cp

@@ -13,21 +13,18 @@ module Lamdu.Sugar.Types.GetVar
     ) where
 
 import qualified Control.Lens as Lens
-import           Data.Store.Transaction (Transaction)
 import           Lamdu.Calc.Type.Scheme (Scheme)
 import           Lamdu.Sugar.Internal.EntityId (EntityId)
 import           Lamdu.Sugar.Types.Binder
 
 import           Lamdu.Prelude
 
-type T = Transaction
-
 data ParameterForm = GetFieldParameter | GetParameter
     deriving (Eq, Ord)
 
 data NameRef name m = NameRef
     { _nrName :: name
-    , _nrGotoDefinition :: T m EntityId
+    , _nrGotoDefinition :: m EntityId
     }
 
 data Param name m = Param
@@ -39,7 +36,7 @@ data Param name m = Param
 data DefinitionOutdatedType m = DefinitionOutdatedType
     { _defTypeWhenUsed :: Scheme
     , _defTypeCurrent :: Scheme
-    , _defTypeUseCurrent :: T m ()
+    , _defTypeUseCurrent :: m ()
     }
 
 data DefinitionForm m =
@@ -48,7 +45,7 @@ data DefinitionForm m =
 data BinderVarForm m = GetDefinition (DefinitionForm m) | GetLet
 
 data BinderVarInline m
-    = InlineVar (T m EntityId)
+    = InlineVar (m EntityId)
     | CannotInlineDueToUses [EntityId]
     | CannotInline
 

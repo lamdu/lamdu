@@ -56,7 +56,7 @@ type T = Transaction
 data ConventionalParams m = ConventionalParams
     { cpTags :: Set T.Tag
     , _cpParamInfos :: Map T.Tag ConvertM.TagFieldParam
-    , _cpParams :: BinderParams UUID m
+    , _cpParams :: BinderParams UUID (T m)
     , _cpAddFirstParam :: T m ParamAddResult
     , cpScopes :: BinderBodyScope
     , cpMLamParam :: Maybe ({- lambda's -}EntityId, V.Var)
@@ -251,7 +251,7 @@ delFieldParamAndFixCalls binderKind tags fp storedLam =
 
 fieldParamActions ::
     Monad m =>
-    BinderKind m -> [T.Tag] -> FieldParam -> StoredLam m -> FuncParamActions m
+    BinderKind m -> [T.Tag] -> FieldParam -> StoredLam m -> FuncParamActions (T m)
 fieldParamActions binderKind tags fp storedLam =
     FuncParamActions
     { _fpAddNext =
@@ -474,7 +474,7 @@ lamParamType lamExprPl =
     lamExprPl ^? Input.inferredType . T._TFun . _1
 
 makeNonRecordParamActions ::
-    Monad m => BinderKind m -> StoredLam m -> ConvertM m (FuncParamActions m)
+    Monad m => BinderKind m -> StoredLam m -> ConvertM m (FuncParamActions (T m))
 makeNonRecordParamActions binderKind storedLam =
     do
         delete <- makeDeleteLambda binderKind storedLam

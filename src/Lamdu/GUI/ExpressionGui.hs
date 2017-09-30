@@ -30,6 +30,7 @@ import           Control.Monad.Transaction (MonadTransaction)
 import           Data.Binary.Utils (encodeS)
 import           Data.CurAndPrev (CurAndPrev(..), CurPrevTag(..), curPrevTag, fallbackToPrev)
 import qualified Data.List.Utils as ListUtils
+import           Data.Store.Transaction (Transaction)
 import           Data.Vector.Vector2 (Vector2(..))
 import           GUI.Momentu.Align (WithTextPos(..))
 import qualified GUI.Momentu.Align as Align
@@ -68,6 +69,8 @@ import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
+
+type T = Transaction
 
 addAnnotationBackgroundH ::
     (MonadReader env m, HasTheme env, Element a) =>
@@ -307,7 +310,7 @@ addDeletionDiagonal =
 
 stdWrap ::
     Monad m =>
-    Sugar.Payload m ExprGuiT.Payload ->
+    Sugar.Payload (T m) ExprGuiT.Payload ->
     ExprGuiM m (ExpressionGui m) ->
     ExprGuiM m (ExpressionGui m)
 stdWrap pl act =
@@ -334,7 +337,7 @@ parentDelegator myId =
 
 stdWrapParentExpr ::
     Monad m =>
-    Sugar.Payload m ExprGuiT.Payload ->
+    Sugar.Payload (T m) ExprGuiT.Payload ->
     Sugar.EntityId ->
     ExprGuiM m (ExpressionGui m) ->
     ExprGuiM m (ExpressionGui m)
@@ -417,7 +420,7 @@ maybeAddAnnotationPl pl =
 
 evaluationResult ::
     Monad m =>
-    Sugar.Payload m ExprGuiT.Payload -> ExprGuiM m (Maybe (ER.Val Type))
+    Sugar.Payload (T m) ExprGuiT.Payload -> ExprGuiM m (Maybe (ER.Val Type))
 evaluationResult pl =
     ExprGuiM.readMScopeId
     <&> valOfScope (pl ^. Sugar.plAnnotation)

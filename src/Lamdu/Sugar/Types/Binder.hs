@@ -40,7 +40,7 @@ module Lamdu.Sugar.Types.Binder
 
 import qualified Control.Lens as Lens
 import           Data.CurAndPrev (CurAndPrev)
-import           Data.Store.Transaction (Transaction, MkProperty)
+import           Data.Store.Property (Property)
 import           Data.UUID.Types (UUID)
 import           Lamdu.Calc.Type (Type)
 import qualified Lamdu.Calc.Type as T
@@ -51,8 +51,6 @@ import qualified Lamdu.Eval.Results as ER
 import           Lamdu.Sugar.Internal.EntityId (EntityId)
 
 import           Lamdu.Prelude
-
-type T = Transaction
 
 type EvaluationResult = Map ER.ScopeId (ER.Val Type)
 
@@ -88,14 +86,14 @@ data ParamDelResult
 
 data FuncParamActions m =
     FuncParamActions
-    { _fpAddNext :: T m ParamAddResult
-    , _fpDelete :: T m ParamDelResult
-    , _fpMOrderBefore :: Maybe (T m ())
-    , _fpMOrderAfter :: Maybe (T m ())
+    { _fpAddNext :: m ParamAddResult
+    , _fpDelete :: m ParamDelResult
+    , _fpMOrderBefore :: Maybe (m ())
+    , _fpMOrderAfter :: Maybe (m ())
     }
 
 newtype NullParamActions m = NullParamActions
-    { _npDeleteLambda :: T m ()
+    { _npDeleteLambda :: m ()
     }
 
 data VarParamInfo name m = VarParamInfo
@@ -120,10 +118,10 @@ data TagInfo = TagInfo
     } deriving (Eq, Ord, Show)
 
 data TagActions name m = TagActions
-    { _taOptions :: T m [(name, T.Tag)]
-    , _taChangeTag :: T.Tag -> T m TagInfo
-    , _taSetPublished :: Bool -> T m ()
-    , _taReplaceWithNew :: T m TagInfo
+    { _taOptions :: m [(name, T.Tag)]
+    , _taChangeTag :: T.Tag -> m TagInfo
+    , _taSetPublished :: Bool -> m ()
+    , _taReplaceWithNew :: m TagInfo
     }
 
 data Tag name m = Tag
@@ -150,10 +148,10 @@ data LetFloatResult = LetFloatResult
     }
 
 data LetActions m = LetActions
-    { _laSetToInner :: T m ()
-    , _laSetToHole :: T m EntityId
-    , _laFloat :: T m LetFloatResult
-    , _laWrap :: T m (UUID, EntityId)
+    { _laSetToInner :: m ()
+    , _laSetToHole :: m EntityId
+    , _laFloat :: m LetFloatResult
+    , _laWrap :: m (UUID, EntityId)
     }
 
 -- This is a mapping from a parent scope to the inner scope in:
@@ -173,7 +171,7 @@ data Let name m expr = Let
     }
 
 newtype BinderActions m = BinderActions
-    { _baAddFirstParam :: T m ParamAddResult
+    { _baAddFirstParam :: m ParamAddResult
     }
 
 data BinderParams name m
@@ -191,7 +189,7 @@ data BinderContent name m expr
     | BinderExpr expr
 
 data BinderBody name m expr = BinderBody
-    { _bbAddOuterLet :: T m EntityId
+    { _bbAddOuterLet :: m EntityId
     , _bbContent :: BinderContent name m expr
     }
 
@@ -203,8 +201,8 @@ data BinderBodyScope
       -- scopes
 
 data Binder name m expr = Binder
-    { _bMPresentationModeProp :: Maybe (MkProperty m Anchors.PresentationMode)
-    , _bChosenScopeProp :: MkProperty m (Maybe BinderParamScopeId)
+    { _bMPresentationModeProp :: Maybe (m (Property m Anchors.PresentationMode))
+    , _bChosenScopeProp :: m (Property m (Maybe BinderParamScopeId))
     , _bParams :: BinderParams name m
     , _bLamId :: Maybe EntityId
     , _bBody :: BinderBody name m expr

@@ -18,7 +18,9 @@ import           Lamdu.Sugar.Types
 
 import           Lamdu.Prelude
 
-convertTag :: Monad m => TagInfo -> Set T.Tag -> (T.Tag -> Transaction m TagInfo) -> ConvertM m (Tag UUID m)
+type T = Transaction
+
+convertTag :: Monad m => TagInfo -> Set T.Tag -> (T.Tag -> T m TagInfo) -> ConvertM m (Tag UUID (T m))
 convertTag info@(TagInfo _ tag) forbiddenTags setTag =
     ConvertM.readContext <&> (^. ConvertM.scCodeAnchors) <&> Anchors.tags
     <&>

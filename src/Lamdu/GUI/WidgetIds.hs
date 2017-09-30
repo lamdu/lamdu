@@ -22,7 +22,7 @@ fromBS = Id . (: [])
 fromEntityId :: Sugar.EntityId -> Id
 fromEntityId = fromBS . EntityId.bs
 
-fromExprPayload :: Sugar.Payload m a -> Id
+fromExprPayload :: Sugar.Payload f a -> Id
 fromExprPayload pl = fromEntityId (pl ^. Sugar.plEntityId)
 
 nameEditOf :: Id -> Id

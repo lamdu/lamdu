@@ -52,7 +52,7 @@ newtype Pass0LoadNames tm a = Pass0LoadNames { runPass0LoadNames :: T tm a }
 instance Monad tm => MonadNaming (Pass0LoadNames tm) where
     type OldName (Pass0LoadNames tm) = UUID
     type NewName (Pass0LoadNames tm) = P0Name
-    type TM (Pass0LoadNames tm) = tm
+    type SM (Pass0LoadNames tm) = tm
     opRun = pure runPass0LoadNames
     opWithParamName _ _ = p0cpsNameConvertor
     opWithLetName _ = p0cpsNameConvertor
@@ -182,7 +182,7 @@ p1ListenNames act = p1Listen act <&> _2 %~ _p1Names
 instance Monad tm => MonadNaming (Pass1PropagateUp tm) where
     type OldName (Pass1PropagateUp tm) = P0Name
     type NewName (Pass1PropagateUp tm) = P1Name
-    type TM (Pass1PropagateUp tm) = tm
+    type SM (Pass1PropagateUp tm) = tm
     opRun = pure (return . fst . runPass1PropagateUp)
     opWithParamName GetFieldParameter _ = p1cpsNameConvertor Walk.FieldParamName
     opWithParamName GetParameter _ = p1cpsNameConvertor Walk.ParamName
@@ -341,7 +341,7 @@ getCollisionEnv name inst env =
 instance Monad tm => MonadNaming (Pass2MakeNames tm) where
     type OldName (Pass2MakeNames tm) = P1Name
     type NewName (Pass2MakeNames tm) = Name tm
-    type TM (Pass2MakeNames tm) = tm
+    type SM (Pass2MakeNames tm) = tm
     opRun = p2GetEnv <&> runPass2MakeNames <&> (return .)
     opWithParamName GetParameter varInfo = p2cpsNameConvertorLocal varInfo
     opWithParamName GetFieldParameter _ = p2cpsNameConvertorGlobal
@@ -438,8 +438,8 @@ fixLetFloatResult = traverse_ fixVarToTags . lfrMVarToTags
 
 fixBinder ::
     Monad m =>
-    Binder name m (Expression name m a) ->
-    Binder name m (Expression name m a)
+    Binder name (T m) (Expression name (T m) a) ->
+    Binder name (T m) (Expression name (T m) a)
 fixBinder binder =
     binder
     & SugarLens.binderFuncParamAdds %~ postProcess fixParamAddResult
@@ -458,7 +458,7 @@ fixBinder binder =
                 () <- f res
                 return res
 
-fixExpr :: Monad m => Expression name m a -> Expression name m a
+fixExpr :: Monad m => Expression name (T m) a -> Expression name (T m) a
 fixExpr expr =
     expr & rBody %~ \case
     BodyLam lam -> lam & lamBinder %~ fixBinder & BodyLam
@@ -478,11 +478,13 @@ runPasses f0 f1 f2 =
 
 fixDef ::
     Monad tm =>
-    Definition name tm (Expression name tm a) ->
-    Definition name tm (Expression name tm a)
+    Definition name (T tm) (Expression name (T tm) a) ->
+    Definition name (T tm) (Expression name (T tm) a)
 fixDef = drBody . _DefinitionBodyExpression . deContent %~ fixBinder
 
-addToWorkArea :: Monad tm => WorkArea UUID tm a -> T tm (WorkArea (Name tm) tm a)
+addToWorkArea ::
+    Monad tm =>
+    WorkArea UUID (T tm) a -> T tm (WorkArea (Name tm) (T tm) a)
 addToWorkArea workArea =
     workArea
     & waPanes . traverse . paneDefinition %~ fixDef

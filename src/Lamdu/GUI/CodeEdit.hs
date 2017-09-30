@@ -11,7 +11,7 @@ import           Control.Monad.Transaction (MonadTransaction(..))
 import           Data.CurAndPrev (CurAndPrev(..))
 import           Data.Functor.Identity (Identity(..))
 import           Data.Orphans () -- Imported for Monoid (IO ()) instance
-import           Data.Store.Transaction (Transaction)
+import           Data.Store.Transaction (Transaction, MkProperty(..))
 import qualified Data.Store.Transaction as Transaction
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.EventMap as E
@@ -111,7 +111,7 @@ loadWorkArea ::
     Monad m =>
     CurAndPrev (EvalResults (ValI m)) ->
     Anchors.CodeAnchors m ->
-    ExprGuiM m (Sugar.WorkArea (Name m) m ExprGuiT.Payload)
+    ExprGuiM m (Sugar.WorkArea (Name m) (T m) ExprGuiT.Payload)
 loadWorkArea theEvalResults theCodeAnchors =
     do
         Sugar.WorkArea { _waPanes, _waRepl } <-
@@ -156,7 +156,7 @@ make theCodeAnchors width =
 makePaneEdit ::
     Monad m =>
     ExportActions m ->
-    Sugar.Pane (Name m) m ExprGuiT.Payload ->
+    Sugar.Pane (Name m) (T m) ExprGuiT.Payload ->
     ExprGuiM m (Responsive (IOTrans m Widget.EventResult))
 makePaneEdit theExportActions pane =
     do
@@ -167,7 +167,7 @@ makePaneEdit theExportActions pane =
                   & Widget.keysEventMapMovesCursor paneCloseKeys
                     (E.Doc ["View", "Pane", "Close"])
                 , do
-                      Transaction.setP (pane ^. Sugar.paneDefinition . Sugar.drDefinitionState)
+                      Transaction.setP (pane ^. Sugar.paneDefinition . Sugar.drDefinitionState & MkProperty)
                           Sugar.DeletedDefinition
                       pane ^. Sugar.paneClose
                   & IOTrans.liftTrans

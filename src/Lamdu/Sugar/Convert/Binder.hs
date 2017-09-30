@@ -8,7 +8,7 @@ import qualified Data.Map as Map
 import qualified Data.Set as Set
 import qualified Data.Store.IRef as IRef
 import qualified Data.Store.Property as Property
-import           Data.Store.Transaction (Transaction, MkProperty)
+import           Data.Store.Transaction (Transaction, MkProperty, mkProperty)
 import           Data.UUID.Types (UUID)
 import qualified Lamdu.Calc.Val as V
 import           Lamdu.Calc.Val.Annotated (Val(..))
@@ -36,16 +36,18 @@ import           Lamdu.Sugar.Types
 
 import           Lamdu.Prelude
 
+type T = Transaction
+
 lamParamToHole ::
     Monad m =>
-    V.Lam (Val (Input.Payload m a)) -> Transaction m ()
+    V.Lam (Val (Input.Payload m a)) -> T m ()
 lamParamToHole (V.Lam param body) =
     SubExprs.getVarsToHole param (body <&> (^. Input.stored))
 
 mkLetItemActions ::
     Monad m =>
     ValIProperty m -> Redex (Input.Payload m a) ->
-    ConvertM m (LetActions m)
+    ConvertM m (LetActions (T m))
 mkLetItemActions topLevelProp redex =
     do
         float <- makeFloatLetToOuterScope (Property.set topLevelProp) redex
@@ -78,7 +80,7 @@ localNewExtractDestPos val =
     }
     & ConvertM.local
 
-makeInline :: Monad m => ValIProperty m -> Redex (Input.Payload m a) -> BinderVarInline m
+makeInline :: Monad m => ValIProperty m -> Redex (Input.Payload m a) -> BinderVarInline (T m)
 makeInline stored redex =
     case redex ^. Redex.paramRefs of
     [_singleUsage] ->
@@ -91,7 +93,7 @@ convertRedex ::
     (Monad m, Monoid a) =>
     Val (Input.Payload m a) ->
     Redex (Input.Payload m a) ->
-    ConvertM m (Let UUID m (ExpressionU m a))
+    ConvertM m (Let UUID (T m) (ExpressionU m a))
 convertRedex expr redex =
     do
         value <-
@@ -127,7 +129,7 @@ convertRedex expr redex =
 makeBinderContent ::
     (Monad m, Monoid a) =>
     Val (Input.Payload m a) ->
-    ConvertM m (BinderContent UUID m (ExpressionU m a))
+    ConvertM m (BinderContent UUID (T m) (ExpressionU m a))
 makeBinderContent expr =
     case Redex.check expr of
     Nothing ->
@@ -138,7 +140,7 @@ makeBinderContent expr =
 convertBinderBody ::
     (Monad m, Monoid a) =>
     Val (Input.Payload m a) ->
-    ConvertM m (BinderBody UUID m (ExpressionU m a))
+    ConvertM m (BinderBody UUID (T m) (ExpressionU m a))
 convertBinderBody expr =
     do
         content <- makeBinderContent expr
@@ -149,18 +151,19 @@ convertBinderBody expr =
             , _bbContent = content
             } & return
 
-makeBinder :: (Monad m, Monoid a) =>
+makeBinder ::
+    (Monad m, Monoid a) =>
     MkProperty m (Maybe BinderParamScopeId) ->
     Maybe (MkProperty m PresentationMode) ->
     ConventionalParams m -> Val (Input.Payload m a) ->
-    ConvertM m (Binder UUID m (ExpressionU m a))
+    ConvertM m (Binder UUID (T m) (ExpressionU m a))
 makeBinder chosenScopeProp mPresentationModeProp params funcBody =
     do
         binderBody <- convertBinderBody funcBody
         return Binder
             { _bParams = _cpParams params
-            , _bMPresentationModeProp = mPresentationModeProp
-            , _bChosenScopeProp = chosenScopeProp
+            , _bMPresentationModeProp = mPresentationModeProp <&> (^. mkProperty)
+            , _bChosenScopeProp = chosenScopeProp ^. mkProperty
             , _bLamId = cpMLamParam params ^? Lens._Just . _1
             , _bBody = binderBody
             , _bBodyScopes = cpScopes params
@@ -201,7 +204,7 @@ convertLam lam exprPl =
             & addActions exprPl
             <&> rBody . Lens.mapped . rPayload . plActions . mReplaceParent . Lens._Just %~ (lamParamToHole lam >>)
 
-useNormalLambda :: Set UUID -> Binder UUID m (Expression UUID m a) -> Bool
+useNormalLambda :: Set UUID -> Binder UUID (T m) (Expression UUID (T m) a) -> Bool
 useNormalLambda paramUUIDs binder =
     any (binder &)
     [ Lens.hasn't (bParams . _FieldParams)
@@ -218,7 +221,7 @@ useNormalLambda paramUUIDs binder =
         namedParams :: Lens.Traversal' (BinderParams name m) ()
         namedParams = Lens.failing (_VarParam . Lens.united) (_FieldParams . Lens.united)
 
-allParamsUsed :: Set UUID -> Binder UUID m (Expression UUID m a) -> Bool
+allParamsUsed :: Set UUID -> Binder UUID (T m) (Expression UUID (T m) a) -> Bool
 allParamsUsed paramUUIDs binder =
     Set.null (paramUUIDs `Set.difference` usedParams)
     where
@@ -228,7 +231,7 @@ allParamsUsed paramUUIDs binder =
             & Set.fromList
 
 markLightParams ::
-    Monad m => Set UUID -> Expression UUID m a -> Expression UUID m a
+    Monad m => Set UUID -> Expression UUID (T m) a -> Expression UUID (T m) a
 markLightParams paramUUIDs (Expression body pl) =
     case body of
     BodyGetVar (GetParam n)
@@ -247,7 +250,7 @@ markLightParams paramUUIDs (Expression body pl) =
 convertBinder ::
     (Monad m, Monoid a) =>
     BinderKind m -> UUID -> Val (Input.Payload m a) ->
-    ConvertM m (Binder UUID m (ExpressionU m a))
+    ConvertM m (Binder UUID (T m) (ExpressionU m a))
 convertBinder binderKind defUUID expr =
     do
         (mPresentationModeProp, convParams, funcBody) <- convertParams binderKind defUUID expr
@@ -256,6 +259,6 @@ convertBinder binderKind defUUID expr =
 convertDefinitionBinder ::
     (Monad m, Monoid a) =>
     DefI m -> Val (Input.Payload m a) ->
-    ConvertM m (Binder UUID m (ExpressionU m a))
+    ConvertM m (Binder UUID (T m) (ExpressionU m a))
 convertDefinitionBinder defI =
     convertBinder (BinderKindDef defI) (IRef.uuid defI)

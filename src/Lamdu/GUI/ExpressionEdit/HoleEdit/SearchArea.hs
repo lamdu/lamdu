@@ -11,6 +11,7 @@ module Lamdu.GUI.ExpressionEdit.HoleEdit.SearchArea
 import qualified Control.Lens as Lens
 import qualified Data.Monoid as Monoid
 import qualified Data.Store.Property as Property
+import           Data.Store.Transaction (Transaction)
 import qualified Data.Text as Text
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.EventMap as E
@@ -36,6 +37,8 @@ import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
 
+type T = Transaction
+
 fdConfig :: Config.Hole -> FocusDelegator.Config
 fdConfig Config.Hole{holeOpenKeys, holeCloseKeys} = FocusDelegator.Config
     { FocusDelegator.focusChildKeys = holeOpenKeys
@@ -47,7 +50,7 @@ fdConfig Config.Hole{holeOpenKeys, holeCloseKeys} = FocusDelegator.Config
 -- Has an ExpressionGui.stdWrap/typeView under the search term
 makeStdWrapped ::
     Monad m =>
-    Sugar.Payload m ExprGuiT.Payload -> HoleInfo m ->
+    Sugar.Payload (T m) ExprGuiT.Payload -> HoleInfo m ->
     ExprGuiM m (Menu.Placement -> ExpressionGui m)
 makeStdWrapped pl holeInfo =
     do

@@ -6,6 +6,7 @@ module Lamdu.GUI.ReplEdit
 
 import qualified Control.Lens as Lens
 import           Data.Orphans () -- Imported for Monoid (IO ()) instance
+import           Data.Store.Transaction (Transaction)
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.MetaKey (MetaKey)
@@ -27,6 +28,8 @@ import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
 
+type T = Transaction
+
 data ExportRepl m = ExportRepl
     { exportRepl :: IOTrans m ()
     , -- Fancy export is intended for sending code to someone who doesn't have
@@ -39,7 +42,7 @@ data ExportRepl m = ExportRepl
     }
 
 extractEventMap ::
-    Functor m => Sugar.Expression name m a -> [MetaKey] ->
+    Functor m => Sugar.Expression name (T m) a -> [MetaKey] ->
     Widget.EventMap (IOTrans m Widget.EventResult)
 extractEventMap replExpr keys =
   replExpr ^. Sugar.rPayload . Sugar.plActions . Sugar.extract
@@ -49,7 +52,7 @@ extractEventMap replExpr keys =
 replEventMap ::
     Monad m =>
     Config -> ExportRepl m ->
-    Sugar.Expression name m a -> Widget.EventMap (IOTrans m Widget.EventResult)
+    Sugar.Expression name (T m) a -> Widget.EventMap (IOTrans m Widget.EventResult)
 replEventMap theConfig (ExportRepl exportRepl exportFancy) replExpr =
     mconcat
     [ extractEventMap replExpr (Config.extractKeys theConfig)

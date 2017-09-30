@@ -36,15 +36,17 @@ import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
 
+type T = Transaction
+
 makeCommon ::
     ( Monad m, MonadReader env f, MonadTransaction m f
     , HasConfig env, HasTheme env, Widget.HasCursor env, TextEdit.HasStyle env
     , Spacer.HasStdSpacing env, Element.HasAnimIdPrefix env, Menu.HasStyle env
     , Hover.HasStyle env
     ) =>
-    Options.Disambiguators (Transaction m Widget.EventResult) ->
-    Sugar.Tag (Name m) m ->
-    Maybe (Transaction m Sugar.EntityId) ->
+    Options.Disambiguators (T m Widget.EventResult) ->
+    Sugar.Tag (Name m) (T m) ->
+    Maybe (T m Sugar.EntityId) ->
     NearestHoles -> WithTextPos View -> [ExpressionGui m] ->
     f (ExpressionGui m)
 makeCommon disamb tag mDelInject nearestHoles colonLabel valEdits =
@@ -73,8 +75,8 @@ injectIndicator text =
 
 make ::
     Monad m =>
-    Sugar.Inject (Name m) m (ExprGuiT.SugarExpr m) ->
-    Sugar.Payload m ExprGuiT.Payload ->
+    Sugar.Inject (Name m) (T m) (ExprGuiT.SugarExpr m) ->
+    Sugar.Payload (T m) ExprGuiT.Payload ->
     ExprGuiM m (ExpressionGui m)
 make (Sugar.Inject tag mVal) pl =
     case mVal of

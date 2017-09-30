@@ -40,7 +40,7 @@ convertCompositeItem ::
     ExprIRef.ValIProperty m ->
     ExprIRef.ValI m ->
     EntityId -> T.Tag -> Val (Input.Payload m a) ->
-    ConvertM m (CompositeItem UUID m (ExpressionU m a))
+    ConvertM m (CompositeItem UUID (T m) (ExpressionU m a))
 convertCompositeItem cons stored restI inst tag expr =
     do
         exprS <- ConvertM.convertSubexpression expr

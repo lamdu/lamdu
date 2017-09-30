@@ -8,7 +8,6 @@ import qualified Control.Monad.Reader as Reader
 import           Control.Monad.Transaction (transaction)
 import qualified Data.Store.Property as Property
 import           Data.Store.Transaction (Transaction)
-import qualified Data.Store.Transaction as Transaction
 import           GUI.Momentu.Align (WithTextPos)
 import qualified GUI.Momentu.Align as Align
 import           GUI.Momentu.Animation (AnimId)
@@ -53,8 +52,8 @@ undeleteButton undelete =
 
 makeExprDefinition ::
     Monad m =>
-    Sugar.Definition (Name m) m (ExprGuiT.SugarExpr m) ->
-    Sugar.DefinitionExpression (Name m) m (ExprGuiT.SugarExpr m) ->
+    Sugar.Definition (Name m) (T m) (ExprGuiT.SugarExpr m) ->
+    Sugar.DefinitionExpression (Name m) (T m) (ExprGuiT.SugarExpr m) ->
     ExprGuiM m (ExpressionGui m)
 makeExprDefinition def bodyExpr =
     do
@@ -68,8 +67,8 @@ makeExprDefinition def bodyExpr =
 
 makeBuiltinDefinition ::
     Monad m =>
-    Sugar.Definition (Name m) m (ExprGuiT.SugarExpr m) ->
-    Sugar.DefinitionBuiltin m ->
+    Sugar.Definition (Name m) (T m) (ExprGuiT.SugarExpr m) ->
+    Sugar.DefinitionBuiltin (T m) ->
     ExprGuiM m (WithTextPos (Widget (T m Widget.EventResult)))
 makeBuiltinDefinition def builtin =
     do
@@ -90,9 +89,7 @@ makeBuiltinDefinition def builtin =
 make :: Monad m => DefinitionN m ExprGuiT.Payload -> ExprGuiM m (ExpressionGui m)
 make def =
     do
-        defStateProp <-
-            def ^. Sugar.drDefinitionState . Transaction.mkProperty
-            & transaction
+        defStateProp <- def ^. Sugar.drDefinitionState & transaction
         let defState = Property.value defStateProp
         addDeletionDiagonal <-
             case defState of

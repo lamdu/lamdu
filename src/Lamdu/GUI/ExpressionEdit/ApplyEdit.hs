@@ -39,6 +39,8 @@ import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
 
+type T = Transaction
+
 infixMarker :: Vector2 Anim.R -> Draw.Image
 infixMarker (Vector2 w h) =
     mconcat
@@ -64,8 +66,8 @@ addInfixMarker widgetId =
 
 makeFuncVar ::
     Monad m =>
-    NearestHoles -> Sugar.BinderVar (Name m) m -> Widget.Id ->
-    ExprGuiM m (WithTextPos (Widget (Transaction m Widget.EventResult)))
+    NearestHoles -> Sugar.BinderVar (Name m) (T m) -> Widget.Id ->
+    ExprGuiM m (WithTextPos (Widget (T m Widget.EventResult)))
 makeFuncVar nearestHoles funcVar myId =
     do
         jump <- ExprEventMap.jumpHolesEventMap nearestHoles
@@ -74,8 +76,8 @@ makeFuncVar nearestHoles funcVar myId =
 
 makeInfixFuncName ::
     Monad m =>
-    NearestHoles -> Sugar.BinderVar (Name m) m -> Widget.Id ->
-    ExprGuiM m (WithTextPos (Widget (Transaction m Widget.EventResult)))
+    NearestHoles -> Sugar.BinderVar (Name m) (T m) -> Widget.Id ->
+    ExprGuiM m (WithTextPos (Widget (T m Widget.EventResult)))
 makeInfixFuncName nearestHoles funcVar myId =
     makeFuncVar nearestHoles funcVar myId <&> mAddMarker
     where
@@ -93,7 +95,7 @@ isBoxed apply =
 makeFuncRow ::
     Monad m =>
     Maybe AnimId ->
-    Sugar.LabeledApply (Name m) m (ExprGuiT.SugarExpr m) ->
+    Sugar.LabeledApply (Name m) (T m) (ExprGuiT.SugarExpr m) ->
     NearestHoles ->
     Widget.Id ->
     ExprGuiM m (ExpressionGui m)
@@ -130,8 +132,8 @@ makeFuncRow mParensId apply applyNearestHoles myId =
 
 makeLabeled ::
     Monad m =>
-    Sugar.LabeledApply (Name m) m (ExprGuiT.SugarExpr m) ->
-    Sugar.Payload m ExprGuiT.Payload ->
+    Sugar.LabeledApply (Name m) (T m) (ExprGuiT.SugarExpr m) ->
+    Sugar.Payload (T m) ExprGuiT.Payload ->
     ExprGuiM m (ExpressionGui m)
 makeLabeled apply pl =
     makeFuncRow mParensId apply
@@ -159,7 +161,7 @@ makeArgRow arg =
         expr <- ExprGuiM.makeSubexpression (arg ^. Sugar.aaExpr)
         return (argTag /|/ space, expr)
 
-mkRelayedArgs :: Monad m => NearestHoles -> [Sugar.RelayedArg (Name m) m] -> ExprGuiM m (ExpressionGui m)
+mkRelayedArgs :: Monad m => NearestHoles -> [Sugar.RelayedArg (Name m) (T m)] -> ExprGuiM m (ExpressionGui m)
 mkRelayedArgs nearestHoles args =
     do
         argEdits <- mapM makeArgEdit args
@@ -182,7 +184,7 @@ mkRelayedArgs nearestHoles args =
 
 mkBoxed ::
     Monad m =>
-    Sugar.LabeledApply (Name m) m (ExprGuiT.SugarExpr m) ->
+    Sugar.LabeledApply (Name m) (T m) (ExprGuiT.SugarExpr m) ->
     NearestHoles ->
     ExprGuiM m (ExpressionGui m) ->
     ExprGuiM m (ExpressionGui m)
@@ -205,7 +207,7 @@ mkBoxed apply nearestHoles mkFuncRow =
 makeSimple ::
     Monad m =>
     Sugar.Apply (ExprGuiT.SugarExpr m) ->
-    Sugar.Payload m ExprGuiT.Payload ->
+    Sugar.Payload (T m) ExprGuiT.Payload ->
     ExprGuiM m (ExpressionGui m)
 makeSimple (Sugar.Apply func arg) pl =
     (ResponsiveExpr.boxSpacedMDisamb ?? mParensId)

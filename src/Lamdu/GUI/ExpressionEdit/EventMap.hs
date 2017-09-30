@@ -33,11 +33,11 @@ data ExprInfo m = ExprInfo
     { exprInfoIsHoleResult :: Bool
     , exprInfoEntityId :: Sugar.EntityId
     , exprInfoNearestHoles :: NearestHoles
-    , exprInfoActions :: Sugar.Actions m
+    , exprInfoActions :: Sugar.Actions (T m)
     , exprInfoMinOpPrec :: Int
     }
 
-exprInfoFromPl :: Sugar.Payload f ExprGuiT.Payload -> ExprInfo f
+exprInfoFromPl :: Sugar.Payload (T f) ExprGuiT.Payload -> ExprInfo f
 exprInfoFromPl pl =
     ExprInfo
     { exprInfoIsHoleResult = ExprGuiT.isHoleResult pl
@@ -49,7 +49,7 @@ exprInfoFromPl pl =
 
 make ::
     (Monad m, Monad f) =>
-    Sugar.Payload f ExprGuiT.Payload -> ExprGuiM.HolePicker f ->
+    Sugar.Payload (T f) ExprGuiT.Payload -> ExprGuiM.HolePicker f ->
     ExprGuiM m (Widget.EventMap (T f Widget.EventResult))
 make = makeWith . exprInfoFromPl
 
@@ -106,7 +106,7 @@ extractCursor (Sugar.ExtractToDef defId) =
 
 extractEventMap ::
     (MonadReader env m, Config.HasConfig env, Functor f) =>
-    Sugar.Actions f -> m (Widget.EventMap (T f Widget.EventResult))
+    Sugar.Actions (T f) -> m (Widget.EventMap (T f Widget.EventResult))
 extractEventMap actions =
     Lens.view Config.config <&> Config.extractKeys
     <&>
@@ -193,7 +193,7 @@ wrapEventMap wrap =
 
 replaceEventMap ::
     (MonadReader env m, Config.HasConfig env, Widget.HasCursor env, Monad f) =>
-    Sugar.Actions f -> m (Widget.EventMap (T f Widget.EventResult))
+    Sugar.Actions (T f) -> m (Widget.EventMap (T f Widget.EventResult))
 replaceEventMap actions =
     do
         config <- Lens.view Config.config

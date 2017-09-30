@@ -3,6 +3,7 @@ module Lamdu.Sugar.Convert.DefExpr
     ( convert
     ) where
 
+import           Data.Store.Transaction (Transaction)
 import           Data.UUID.Types (UUID)
 import           Lamdu.Calc.Type.Scheme (Scheme)
 import qualified Lamdu.Calc.Type.Scheme as Scheme
@@ -20,10 +21,12 @@ import           Lamdu.Sugar.Types
 
 import           Lamdu.Prelude
 
+type T = Transaction
+
 convert ::
     (Monoid a, Monad m) =>
     Scheme -> Definition.Expr (Val (Input.Payload m a)) -> DefI m ->
-    ConvertM m (DefinitionBody UUID m (ExpressionU m a))
+    ConvertM m (DefinitionBody UUID (T m) (ExpressionU m a))
 convert defType defExpr defI =
     do
         content <-

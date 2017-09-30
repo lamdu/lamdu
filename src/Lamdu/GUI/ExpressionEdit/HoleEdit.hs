@@ -6,6 +6,7 @@ module Lamdu.GUI.ExpressionEdit.HoleEdit
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
 import           Control.Monad.Transaction (transaction)
+import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Element as Element
@@ -34,9 +35,11 @@ import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
 
+type T = Transaction
+
 makeWrapper ::
     Monad m =>
-    Sugar.Payload m ExprGuiT.Payload -> HoleInfo m ->
+    Sugar.Payload (T m) ExprGuiT.Payload -> HoleInfo m ->
     ExprGuiM m (Maybe (ExpressionGui m))
 makeWrapper pl holeInfo =
     hiHole holeInfo ^? Sugar.holeKind . Sugar._WrapperHole
@@ -59,7 +62,7 @@ assignHoleCursor widgetIds =
 
 makeHoleWithWrapper ::
     (Functor f, Monad m) =>
-    ExpressionGui f -> (Menu.Placement -> ExpressionGui f) -> Sugar.Payload m ExprGuiT.Payload ->
+    ExpressionGui f -> (Menu.Placement -> ExpressionGui f) -> Sugar.Payload (T m) ExprGuiT.Payload ->
     ExprGuiM m (ExpressionGui f)
 makeHoleWithWrapper wrapperGui searchAreaGui pl =
     do
@@ -97,8 +100,8 @@ makeHoleWithWrapper wrapperGui searchAreaGui pl =
 
 make ::
     Monad m =>
-    Sugar.Hole m (Sugar.Expression (Name m) m ()) (ExprGuiT.SugarExpr m) ->
-    Sugar.Payload m ExprGuiT.Payload ->
+    Sugar.Hole (T m) (Sugar.Expression (Name m) (T m) ()) (ExprGuiT.SugarExpr m) ->
+    Sugar.Payload (T m) ExprGuiT.Payload ->
     ExprGuiM m (ExpressionGui m)
 make hole pl =
     do

@@ -93,7 +93,7 @@ mkExtractToLet outerScope stored =
         extractPosI = Property.value outerScope
         oldStored = Property.value stored
 
-mkActions :: Monad m => Input.Payload m a -> ConvertM m (Actions m)
+mkActions :: Monad m => Input.Payload m a -> ConvertM m (Actions (T m))
 mkActions exprPl =
     do
         ext <- mkExtract exprPl
@@ -110,7 +110,7 @@ mkActions exprPl =
 
 addActions ::
     Monad m =>
-    Input.Payload m a -> Body UUID m (ExpressionU m a) ->
+    Input.Payload m a -> Body UUID (T m) (ExpressionU m a) ->
     ConvertM m (ExpressionU m a)
 addActions exprPl body =
     do

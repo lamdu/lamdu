@@ -21,10 +21,12 @@ import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
 
+type T = Transaction
+
 makeUnwrapEventMap ::
     (MonadReader env m, Config.HasConfig env, Monad f) =>
-    Sugar.HoleArg f (ExpressionN f a) -> WidgetIds ->
-    m (Widget.EventMap (Transaction f Widget.EventResult))
+    Sugar.HoleArg (T f) (ExpressionN f a) -> WidgetIds ->
+    m (Widget.EventMap (T f Widget.EventResult))
 makeUnwrapEventMap arg widgetIds =
     Lens.view Config.config
     <&>
@@ -43,7 +45,7 @@ makeUnwrapEventMap arg widgetIds =
 
 make ::
     Monad m => WidgetIds ->
-    Sugar.HoleArg m (ExpressionN m ExprGuiT.Payload) ->
+    Sugar.HoleArg (T m) (ExpressionN m ExprGuiT.Payload) ->
     ExprGuiM m (ExpressionGui m)
 make widgetIds arg =
     do

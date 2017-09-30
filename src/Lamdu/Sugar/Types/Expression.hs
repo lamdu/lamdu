@@ -39,7 +39,7 @@ module Lamdu.Sugar.Types.Expression
     ) where
 
 import qualified Control.Lens as Lens
-import           Data.Store.Transaction (Transaction, Property)
+import           Data.Store.Property (Property)
 import           Data.UUID.Types (UUID)
 import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Calc.Val as V
@@ -50,17 +50,15 @@ import           Lamdu.Sugar.Types.Hole (Hole, Literal)
 
 import           Lamdu.Prelude
 
-type T = Transaction
-
 data WrapAction m
     = WrapperAlready (UUID, EntityId) -- I'm an apply-of-hole, (UUID,EntityId of hole), no need to wrap
     | WrappedAlready (UUID, EntityId) -- I'm an arg of apply-of-hole (UUID,EntityId of hole), no need to wrap
     | WrapNotAllowed -- I'm a hole
-    | WrapAction (T m (UUID, EntityId)) -- Wrap me!
+    | WrapAction (m (UUID, EntityId)) -- Wrap me!
 
 data SetToHole m
-    = SetToHole (T m (UUID, EntityId))
-    | SetWrapperToHole (T m (UUID, EntityId))
+    = SetToHole (m (UUID, EntityId))
+    | SetWrapperToHole (m (UUID, EntityId))
     | AlreadyAHole
 
 data ExtractToDestination
@@ -70,8 +68,8 @@ data ExtractToDestination
 data Actions m = Actions
     { _wrap :: WrapAction m
     , _setToHole :: SetToHole m
-    , _extract :: T m ExtractToDestination
-    , _mReplaceParent :: Maybe (T m EntityId)
+    , _extract :: m ExtractToDestination
+    , _mReplaceParent :: Maybe (m EntityId)
     }
 
 data Payload m a = Payload
@@ -93,17 +91,17 @@ data TId name = TId
 
 {- Composites start -}
 data CompositeItem name m expr = CompositeItem
-    { _ciDelete :: T m EntityId
+    { _ciDelete :: m EntityId
     , _ciTag :: Tag name m
     , _ciExpr :: expr
     } deriving (Functor, Foldable, Traversable)
 
 newtype ClosedCompositeActions m = ClosedCompositeActions
-    { _closedCompositeOpen :: T m EntityId
+    { _closedCompositeOpen :: m EntityId
     }
 
 newtype OpenCompositeActions m = OpenCompositeActions
-    { _openCompositeClose :: T m EntityId
+    { _openCompositeClose :: m EntityId
     }
 
 data CompositeTail m expr
@@ -120,12 +118,12 @@ data CompositeAddItemResult = CompositeAddItemResult
 data Composite name m expr = Composite
     { _cItems :: [CompositeItem name m expr]
     , _cTail :: CompositeTail m expr
-    , _cAddItem :: T m CompositeAddItemResult
+    , _cAddItem :: m CompositeAddItemResult
     } deriving (Functor, Foldable, Traversable)
 
 data CaseArg m expr = CaseArg
     { _caVal :: expr
-    , _caToLambdaCase :: T m EntityId
+    , _caToLambdaCase :: m EntityId
     } deriving (Functor, Foldable, Traversable)
 
 data CaseKind m expr
@@ -144,8 +142,8 @@ data GuardElseIf m expr = GuardElseIf
     , _geEntityId :: EntityId
     , _geCond :: expr
     , _geThen :: expr
-    , _geDelete :: T m EntityId
-    , _geCondAddLet :: T m EntityId
+    , _geDelete :: m EntityId
+    , _geCondAddLet :: m EntityId
     } deriving (Functor, Foldable, Traversable)
 
 data Guard m expr = Guard
@@ -154,7 +152,7 @@ data Guard m expr = Guard
     , _gThen :: expr
     , _gElseIfs :: [GuardElseIf m expr]
     , _gElse :: expr
-    , _gDeleteIf :: T m EntityId
+    , _gDeleteIf :: m EntityId
     } deriving (Functor, Foldable, Traversable)
 
 data GetField name m expr = GetField

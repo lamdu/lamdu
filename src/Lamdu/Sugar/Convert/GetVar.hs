@@ -33,12 +33,14 @@ import           Lamdu.Sugar.Types
 
 import           Lamdu.Prelude
 
+type T = Transaction
+
 jumpToDefI ::
-    Monad m => Anchors.CodeAnchors m -> DefI m -> Transaction m EntityId
+    Monad m => Anchors.CodeAnchors m -> DefI m -> T m EntityId
 jumpToDefI cp defI = EntityId.ofIRef defI <$ DataOps.newPane cp defI
 
 inlineDef ::
-    Monad m => ConvertM.Context m -> V.Var -> ValIProperty m -> Transaction m EntityId
+    Monad m => ConvertM.Context m -> V.Var -> ValIProperty m -> T m EntityId
 inlineDef ctx globalId dest =
     do
         def <- Transaction.readIRef defI
@@ -71,7 +73,7 @@ inlineDef ctx globalId dest =
                 defExpr ^. Def.expr & EntityId.ofValI & return
 
 convertGlobal ::
-    Monad m => V.Var -> Input.Payload m a -> MaybeT (ConvertM m) (GetVar UUID m)
+    Monad m => V.Var -> Input.Payload m a -> MaybeT (ConvertM m) (GetVar UUID (T m))
 convertGlobal param exprPl =
     do
         ctx <- lift ConvertM.readContext
@@ -116,7 +118,7 @@ usesAround x xs =
     where
         (before, after) = break (== x) xs
 
-paramNameRef :: Monad m => V.Var -> NameRef UUID m
+paramNameRef :: Monad m => V.Var -> NameRef UUID (T m)
 paramNameRef param =
     NameRef
     { _nrName = UniqueId.toUUID param
@@ -124,7 +126,7 @@ paramNameRef param =
     }
 
 convertGetLet ::
-    Monad m => V.Var -> Input.Payload m a -> MaybeT (ConvertM m) (GetVar UUID m)
+    Monad m => V.Var -> Input.Payload m a -> MaybeT (ConvertM m) (GetVar UUID (T m))
 convertGetLet param exprPl =
     do
         inline <-
@@ -140,7 +142,7 @@ convertGetLet param exprPl =
             } & return
 
 convertParamsRecord ::
-    Monad m => V.Var -> Input.Payload m a -> MaybeT (ConvertM m) (GetVar UUID m)
+    Monad m => V.Var -> Input.Payload m a -> MaybeT (ConvertM m) (GetVar UUID (T m))
 convertParamsRecord param exprPl =
     do
         lift ConvertM.readContext
