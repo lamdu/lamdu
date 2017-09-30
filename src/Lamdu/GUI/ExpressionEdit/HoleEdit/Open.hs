@@ -233,7 +233,7 @@ fixNumWithDotEventMap holeInfo res
 makeHoleResultWidget ::
     Monad m =>
     HoleInfo m -> Widget.Id ->
-    Sugar.HoleResult (T m) (Sugar.Expression (Name m) (T m) ()) ->
+    Sugar.HoleResult (T m) (Sugar.Expression (Name (T m)) (T m) ()) ->
     ExprGuiM m
     ( Widget.EventMap (T m Widget.EventResult)
     , WithTextPos (Widget (T m Widget.EventResult))

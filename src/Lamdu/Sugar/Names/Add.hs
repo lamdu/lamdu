@@ -340,7 +340,7 @@ getCollisionEnv name inst env =
 
 instance Monad tm => MonadNaming (Pass2MakeNames tm) where
     type OldName (Pass2MakeNames tm) = P1Name
-    type NewName (Pass2MakeNames tm) = Name tm
+    type NewName (Pass2MakeNames tm) = Name (T tm)
     type SM (Pass2MakeNames tm) = tm
     opRun = p2GetEnv <&> runPass2MakeNames <&> (return .)
     opWithParamName GetParameter varInfo = p2cpsNameConvertorLocal varInfo
@@ -351,7 +351,7 @@ instance Monad tm => MonadNaming (Pass2MakeNames tm) where
         Walk.ParamName -> p2nameConvertorLocal
         _ -> p2nameConvertorGlobal
 
-p2nameConvertorLocal :: Monad m => P1Name -> Pass2MakeNames tm (Name m)
+p2nameConvertorLocal :: Monad m => P1Name -> Pass2MakeNames tm (Name (T m))
 p2nameConvertorLocal (P1Name mStoredName inst _) =
     case mStoredName of
         Just storedName ->
@@ -371,7 +371,7 @@ p2cpsNameConvertor ::
     Monad tm =>
     P1Name ->
     (P2Env -> (Form, P2Env)) ->
-    CPS (Pass2MakeNames tm) (Name tm)
+    CPS (Pass2MakeNames tm) (Name (T tm))
 p2cpsNameConvertor (P1Name mStoredName inst _) nameMaker =
     CPS $ \k ->
     do
@@ -484,7 +484,7 @@ fixDef = drBody . _DefinitionBodyExpression . deContent %~ fixBinder
 
 addToWorkArea ::
     Monad tm =>
-    WorkArea UUID (T tm) a -> T tm (WorkArea (Name tm) (T tm) a)
+    WorkArea UUID (T tm) a -> T tm (WorkArea (Name (T tm)) (T tm) a)
 addToWorkArea workArea =
     workArea
     & waPanes . traverse . paneDefinition %~ fixDef

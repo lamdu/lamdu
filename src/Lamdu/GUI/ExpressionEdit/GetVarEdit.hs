@@ -58,7 +58,7 @@ makeParamsRecord ::
     , TextView.HasStyle env, Element.HasAnimIdPrefix env
     , Spacer.HasStdSpacing env
     ) =>
-    Widget.Id -> Sugar.ParamsRecordVar (Name m) -> f (ExpressionGui m)
+    Widget.Id -> Sugar.ParamsRecordVar (Name (T m)) -> f (ExpressionGui m)
 makeParamsRecord myId paramsRecordVar =
     do
         nameTheme <- Lens.view Theme.theme <&> Theme.name
@@ -179,7 +179,7 @@ processDefinitionWidget (Sugar.DefTypeChanged info) myId mkLayout =
 
 makeGetBinder ::
     Monad m =>
-    Sugar.BinderVar (Name m) (T m) -> Widget.Id ->
+    Sugar.BinderVar (Name (T m)) (T m) -> Widget.Id ->
     ExprGuiM m (WithTextPos (Widget (T m Widget.EventResult)))
 makeGetBinder binderVar myId =
     do
@@ -201,7 +201,7 @@ makeGetBinder binderVar myId =
 
 makeGetParam ::
     Monad m =>
-    Sugar.Param (Name m) (T m) -> Widget.Id ->
+    Sugar.Param (Name (T m)) (T m) -> Widget.Id ->
     ExprGuiM m (WithTextPos (Widget (T m Widget.EventResult)))
 makeGetParam param myId =
     do
@@ -221,7 +221,7 @@ makeGetParam param myId =
 
 make ::
     Monad m =>
-    Sugar.GetVar (Name m) (T m) ->
+    Sugar.GetVar (Name (T m)) (T m) ->
     Sugar.Payload (T m) ExprGuiT.Payload ->
     ExprGuiM m (ExpressionGui m)
 make getVar pl =

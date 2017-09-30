@@ -46,7 +46,7 @@ doc text = E.Doc ["Edit", "Record", text]
 
 make ::
     Monad m =>
-    Sugar.Composite (Name m) (T m) (ExprGuiT.SugarExpr m) ->
+    Sugar.Composite (Name (T m)) (T m) (ExprGuiT.SugarExpr m) ->
     Sugar.Payload (T m) ExprGuiT.Payload ->
     ExprGuiM m (ExpressionGui m)
 make record@(Sugar.Composite fields recordTail addField) pl =
@@ -79,7 +79,7 @@ make record@(Sugar.Composite fields recordTail addField) pl =
 
 makeFieldRow ::
     Monad m =>
-    Sugar.CompositeItem (Name m) (T m) (Sugar.Expression (Name m) (T m) ExprGuiT.Payload) ->
+    Sugar.CompositeItem (Name (T m)) (T m) (Sugar.Expression (Name (T m)) (T m) ExprGuiT.Payload) ->
     ExprGuiM m
     ( WithTextPos (Widget (T m Widget.EventResult))
     , ExpressionGui m
@@ -97,7 +97,7 @@ makeFieldRow (Sugar.CompositeItem delete tag fieldExpr) =
 
 makeFieldsWidget ::
     Monad m =>
-    [Sugar.CompositeItem (Name m) (T m) (Sugar.Expression (Name m) (T m) ExprGuiT.Payload)] ->
+    [Sugar.CompositeItem (Name (T m)) (T m) (Sugar.Expression (Name (T m)) (T m) ExprGuiT.Payload)] ->
     Widget.Id -> ExprGuiM m (ExpressionGui m)
 makeFieldsWidget [] myId =
     (Widget.makeFocusableView ?? myId <&> (Align.tValue %~))

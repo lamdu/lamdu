@@ -45,7 +45,7 @@ makeCommon ::
     , Hover.HasStyle env
     ) =>
     Options.Disambiguators (T m Widget.EventResult) ->
-    Sugar.Tag (Name m) (T m) ->
+    Sugar.Tag (Name (T m)) (T m) ->
     Maybe (T m Sugar.EntityId) ->
     NearestHoles -> WithTextPos View -> [ExpressionGui m] ->
     f (ExpressionGui m)
@@ -75,7 +75,7 @@ injectIndicator text =
 
 make ::
     Monad m =>
-    Sugar.Inject (Name m) (T m) (ExprGuiT.SugarExpr m) ->
+    Sugar.Inject (Name (T m)) (T m) (ExprGuiT.SugarExpr m) ->
     Sugar.Payload (T m) ExprGuiT.Payload ->
     ExprGuiM m (ExpressionGui m)
 make (Sugar.Inject tag mVal) pl =

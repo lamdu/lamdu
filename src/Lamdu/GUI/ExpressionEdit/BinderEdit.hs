@@ -68,7 +68,7 @@ makeBinderNameEdit ::
     Monad m =>
     Sugar.BinderActions (T m) ->
     Widget.EventMap (T m Widget.EventResult) ->
-    Name m -> Draw.Color -> Widget.Id ->
+    Name (T m) -> Draw.Color -> Widget.Id ->
     ExprGuiM m (WithTextPos (Widget (T m Widget.EventResult)))
 makeBinderNameEdit binderActions rhsJumperEquals name color myId =
     do
@@ -165,7 +165,7 @@ readBinderChosenScope binder =
 
 mkChosenScopeCursor ::
     Monad m =>
-    Sugar.Binder (Name m) (T m) (ExprGuiT.SugarExpr m) ->
+    Sugar.Binder (Name (T m)) (T m) (ExprGuiT.SugarExpr m) ->
     ExprGuiM m (CurAndPrev (Maybe ScopeCursor))
 mkChosenScopeCursor binder =
     do
@@ -252,7 +252,7 @@ makeMParamsEdit ::
     Monad m =>
     CurAndPrev (Maybe ScopeCursor) -> IsScopeNavFocused ->
     Widget.Id -> Widget.Id ->
-    NearestHoles -> Widget.Id -> Sugar.BinderParams (Name m) (T m) ->
+    NearestHoles -> Widget.Id -> Sugar.BinderParams (Name (T m)) (T m) ->
     ExprGuiM m (Maybe (ExpressionGui m))
 makeMParamsEdit mScopeCursor isScopeNavFocused delVarBackwardsId myId nearestHoles bodyId params =
     params
@@ -292,7 +292,7 @@ binderContentNearestHoles body =
 makeParts ::
     Monad m =>
     ExprGuiT.FuncApplyLimit ->
-    Sugar.Binder (Name m) (T m) (ExprGuiT.SugarExpr m) ->
+    Sugar.Binder (Name (T m)) (T m) (ExprGuiT.SugarExpr m) ->
     Widget.Id -> Widget.Id ->
     ExprGuiM m (Parts m)
 makeParts funcApplyLimit binder delVarBackwardsId myId =
@@ -338,8 +338,8 @@ makeParts funcApplyLimit binder delVarBackwardsId myId =
 
 make ::
     Monad m =>
-    Name m -> Draw.Color ->
-    Sugar.Binder (Name m) (T m) (ExprGuiT.SugarExpr m) ->
+    Name (T m) -> Draw.Color ->
+    Sugar.Binder (Name (T m)) (T m) (ExprGuiT.SugarExpr m) ->
     Widget.Id ->
     ExprGuiM m (ExpressionGui m)
 make name color binder myId =
@@ -388,7 +388,7 @@ make name color binder myId =
 
 makeLetEdit ::
     Monad m =>
-    Sugar.Let (Name m) (T m) (ExprGuiT.SugarExpr m) ->
+    Sugar.Let (Name (T m)) (T m) (ExprGuiT.SugarExpr m) ->
     ExprGuiM m (ExpressionGui m)
 makeLetEdit item =
     do
@@ -449,7 +449,7 @@ addLetEventMap addLet =
 
 makeBinderBodyEdit ::
     Monad m =>
-    Sugar.BinderBody (Name m) (T m) (ExprGuiT.SugarExpr m) ->
+    Sugar.BinderBody (Name (T m)) (T m) (ExprGuiT.SugarExpr m) ->
     ExprGuiM m (ExpressionGui m)
 makeBinderBodyEdit (Sugar.BinderBody addOuterLet content) =
     do
@@ -458,7 +458,7 @@ makeBinderBodyEdit (Sugar.BinderBody addOuterLet content) =
 
 makeBinderContentEdit ::
     Monad m =>
-    Sugar.BinderContent (Name m) (T m) (ExprGuiT.SugarExpr m) ->
+    Sugar.BinderContent (Name (T m)) (T m) (ExprGuiT.SugarExpr m) ->
     ExprGuiM m (ExpressionGui m)
 makeBinderContentEdit (Sugar.BinderExpr binderBody) =
     ExprGuiM.makeSubexpression binderBody
@@ -526,7 +526,7 @@ makeParamsEdit ::
     Monad m =>
     ExpressionGui.EvalAnnotationOptions -> NearestHoles ->
     Widget.Id -> Widget.Id -> Widget.Id ->
-    Sugar.BinderParams (Name m) (T m) ->
+    Sugar.BinderParams (Name (T m)) (T m) ->
     ExprGuiM m [ExpressionGui m]
 makeParamsEdit annotationOpts nearestHoles delVarBackwardsId lhsId rhsId params =
     do

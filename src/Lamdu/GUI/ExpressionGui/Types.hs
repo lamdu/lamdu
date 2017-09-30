@@ -27,7 +27,9 @@ import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
 
-type ExpressionGui m = Responsive (Transaction m Widget.EventResult)
+type T = Transaction
+
+type ExpressionGui m = Responsive (T m Widget.EventResult)
 
 data EvalModeShow = EvalModeShowNothing | EvalModeShowType | EvalModeShowEval
     deriving (Eq, Ord, Show)

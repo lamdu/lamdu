@@ -111,7 +111,7 @@ loadWorkArea ::
     Monad m =>
     CurAndPrev (EvalResults (ValI m)) ->
     Anchors.CodeAnchors m ->
-    ExprGuiM m (Sugar.WorkArea (Name m) (T m) ExprGuiT.Payload)
+    ExprGuiM m (Sugar.WorkArea (Name (T m)) (T m) ExprGuiT.Payload)
 loadWorkArea theEvalResults theCodeAnchors =
     do
         Sugar.WorkArea { _waPanes, _waRepl } <-
@@ -156,7 +156,7 @@ make theCodeAnchors width =
 makePaneEdit ::
     Monad m =>
     ExportActions m ->
-    Sugar.Pane (Name m) (T m) ExprGuiT.Payload ->
+    Sugar.Pane (Name (T m)) (T m) ExprGuiT.Payload ->
     ExprGuiM m (Responsive (IOTrans m Widget.EventResult))
 makePaneEdit theExportActions pane =
     do

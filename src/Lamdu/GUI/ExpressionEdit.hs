@@ -50,7 +50,7 @@ injectedExpr pl =
 
 makeEditor ::
     Monad m =>
-    Sugar.Body (Name m) (T m) (ExprGuiT.SugarExpr m) ->
+    Sugar.Body (Name (T m)) (T m) (ExprGuiT.SugarExpr m) ->
     Sugar.Payload (T m) ExprGuiT.Payload ->
     ExprGuiM m (ExpressionGui m)
 makeEditor body =

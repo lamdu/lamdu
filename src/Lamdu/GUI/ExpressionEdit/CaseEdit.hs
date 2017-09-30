@@ -48,7 +48,7 @@ doc text = E.Doc ["Edit", "Case", text]
 
 make ::
     Monad m =>
-    Sugar.Case (Name m) (T m) (ExprGuiT.SugarExpr m) ->
+    Sugar.Case (Name (T m)) (T m) (ExprGuiT.SugarExpr m) ->
     Sugar.Payload (T m) ExprGuiT.Payload ->
     ExprGuiM m (ExpressionGui m)
 make (Sugar.Case mArg (Sugar.Composite alts caseTail addAlt)) pl =
@@ -124,7 +124,7 @@ make (Sugar.Case mArg (Sugar.Composite alts caseTail addAlt)) pl =
 makeAltRow ::
     Monad m =>
     Maybe Tag ->
-    Sugar.CompositeItem (Name m) (T m) (Sugar.Expression (Name m) (T m) ExprGuiT.Payload) ->
+    Sugar.CompositeItem (Name (T m)) (T m) (Sugar.Expression (Name (T m)) (T m) ExprGuiT.Payload) ->
     ExprGuiM m (WithTextPos (Widget (T m Widget.EventResult)), ExpressionGui m)
 makeAltRow mActiveTag (Sugar.CompositeItem delete tag altExpr) =
     do
@@ -149,7 +149,7 @@ makeAltRow mActiveTag (Sugar.CompositeItem delete tag altExpr) =
 makeAltsWidget ::
     Monad m =>
     Maybe Tag ->
-    [Sugar.CompositeItem (Name m) (T m) (Sugar.Expression (Name m) (T m) ExprGuiT.Payload)] ->
+    [Sugar.CompositeItem (Name (T m)) (T m) (Sugar.Expression (Name (T m)) (T m) ExprGuiT.Payload)] ->
     Widget.Id -> ExprGuiM m (ExpressionGui m)
 makeAltsWidget _ [] myId =
     (Widget.makeFocusableView ?? Widget.joinId myId ["Ø"] <&> (Align.tValue %~))

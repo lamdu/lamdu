@@ -26,7 +26,7 @@ type T = Transaction
 
 make ::
     Monad m =>
-    Sugar.GetField (Name m) (T m) (ExprGuiT.SugarExpr m) ->
+    Sugar.GetField (Name (T m)) (T m) (ExprGuiT.SugarExpr m) ->
     Sugar.Payload (T m) ExprGuiT.Payload ->
     ExprGuiM m (ExpressionGui m)
 make (Sugar.GetField recExpr tag) pl =

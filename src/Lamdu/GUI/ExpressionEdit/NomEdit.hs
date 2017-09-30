@@ -38,7 +38,7 @@ mReplaceParent = Sugar.rPayload . Sugar.plActions . Sugar.mReplaceParent . Lens.
 makeToNom ::
     forall m.
     Monad m =>
-    Sugar.Nominal (Name m) (Sugar.BinderBody (Name m) (T m) (ExprGuiT.SugarExpr m)) ->
+    Sugar.Nominal (Name (T m)) (Sugar.BinderBody (Name (T m)) (T m) (ExprGuiT.SugarExpr m)) ->
     Sugar.Payload (T m) ExprGuiT.Payload ->
     ExprGuiM m (ExpressionGui m)
 makeToNom nom pl =
@@ -51,7 +51,7 @@ makeToNom nom pl =
 
 makeFromNom ::
     Monad m =>
-    Sugar.Nominal (Name m) (ExprGuiT.SugarExpr m) ->
+    Sugar.Nominal (Name (T m)) (ExprGuiT.SugarExpr m) ->
     Sugar.Payload (T m) ExprGuiT.Payload ->
     ExprGuiM m (ExpressionGui m)
 makeFromNom nom pl =
@@ -66,7 +66,7 @@ mkNomGui ::
     (forall a. [a] -> [a]) ->
     Text -> Text -> Maybe (T m Sugar.EntityId) -> Sugar.EntityId ->
     Sugar.Payload (T m) ExprGuiT.Payload ->
-    Sugar.Nominal (Name m) (ExprGuiM m (ExpressionGui m)) ->
+    Sugar.Nominal (Name (T m)) (ExprGuiM m (ExpressionGui m)) ->
     ExprGuiM m (ExpressionGui m)
 mkNomGui ordering nomStr str mDel valId pl (Sugar.Nominal tid val) =
     do

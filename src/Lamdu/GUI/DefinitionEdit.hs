@@ -52,8 +52,8 @@ undeleteButton undelete =
 
 makeExprDefinition ::
     Monad m =>
-    Sugar.Definition (Name m) (T m) (ExprGuiT.SugarExpr m) ->
-    Sugar.DefinitionExpression (Name m) (T m) (ExprGuiT.SugarExpr m) ->
+    Sugar.Definition (Name (T m)) (T m) (ExprGuiT.SugarExpr m) ->
+    Sugar.DefinitionExpression (Name (T m)) (T m) (ExprGuiT.SugarExpr m) ->
     ExprGuiM m (ExpressionGui m)
 makeExprDefinition def bodyExpr =
     do
@@ -67,7 +67,7 @@ makeExprDefinition def bodyExpr =
 
 makeBuiltinDefinition ::
     Monad m =>
-    Sugar.Definition (Name m) (T m) (ExprGuiT.SugarExpr m) ->
+    Sugar.Definition (Name (T m)) (T m) (ExprGuiT.SugarExpr m) ->
     Sugar.DefinitionBuiltin (T m) ->
     ExprGuiM m (WithTextPos (Widget (T m Widget.EventResult)))
 makeBuiltinDefinition def builtin =

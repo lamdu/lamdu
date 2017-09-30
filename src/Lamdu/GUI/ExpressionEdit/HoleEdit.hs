@@ -100,7 +100,7 @@ makeHoleWithWrapper wrapperGui searchAreaGui pl =
 
 make ::
     Monad m =>
-    Sugar.Hole (T m) (Sugar.Expression (Name m) (T m) ()) (ExprGuiT.SugarExpr m) ->
+    Sugar.Hole (T m) (Sugar.Expression (Name (T m)) (T m) ()) (ExprGuiT.SugarExpr m) ->
     Sugar.Payload (T m) ExprGuiT.Payload ->
     ExprGuiM m (ExpressionGui m)
 make hole pl =

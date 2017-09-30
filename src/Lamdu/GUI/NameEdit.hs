@@ -90,7 +90,7 @@ makeView name animId =
 -- | A name edit without the collision suffixes
 makeBareEdit ::
     (Monad m, TextEdit.HasStyle env, Widget.HasCursor env, MonadReader env f) =>
-    Name m -> Widget.Id ->
+    Name (T m) -> Widget.Id ->
     f (WithTextPos (Widget (T m Widget.EventResult)))
 makeBareEdit (Name form setName) myId =
     TextEdits.makeWordEdit
@@ -106,7 +106,7 @@ make ::
     ( Monad m
     , MonadReader env f, TextEdit.HasStyle env, Element.HasAnimIdPrefix env
     , HasTheme env, Widget.HasCursor env
-    ) => Name m -> Widget.Id ->
+    ) => Name (T m) -> Widget.Id ->
     f (WithTextPos (Widget (T m Widget.EventResult)))
 make name myId =
     do
@@ -141,7 +141,7 @@ styleNameAtBinder name color act =
 makeAtBinder ::
     (Monad m, MonadReader env f, Widget.HasCursor env, HasTheme env
     , Element.HasAnimIdPrefix env, Style.HasStyle env
-    ) => Name m -> Draw.Color -> Widget.Id ->
+    ) => Name (T m) -> Draw.Color -> Widget.Id ->
     f (WithTextPos (Widget (T m Widget.EventResult)))
 makeAtBinder name color myId =
     ( FocusDelegator.make ?? nameEditFDConfig
