@@ -32,7 +32,7 @@ import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
 import qualified Lamdu.GUI.NameEdit as NameEdit
 import qualified Lamdu.GUI.TypeView as TypeView
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
-import           Lamdu.Sugar.Names.Types (Name(..), DefinitionN)
+import           Lamdu.Sugar.Names.Types (Name(..))
 import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
@@ -86,7 +86,10 @@ makeBuiltinDefinition def builtin =
         entityId = def ^. Sugar.drEntityId
         myId = WidgetIds.fromEntityId entityId
 
-make :: Monad m => DefinitionN m ExprGuiT.Payload -> ExprGuiM m (ExpressionGui m)
+make ::
+    Monad m =>
+    Sugar.Definition (Name (T m)) (T m) (ExprGuiT.SugarExpr m) ->
+    ExprGuiM m (ExpressionGui m)
 make def =
     do
         defStateProp <- def ^. Sugar.drDefinitionState & transaction

@@ -13,6 +13,7 @@ module Lamdu.GUI.ExpressionGui.Types
       , neverShowAnnotations, alwaysShowAnnotations
     , nextHolesBefore
     , isHoleResult
+    , ExpressionN
     ) where
 
 import qualified Control.Lens as Lens
@@ -20,7 +21,7 @@ import           Data.Store.Transaction (Transaction)
 import           GUI.Momentu.Responsive (Responsive(..))
 import qualified GUI.Momentu.Widget as Widget
 import qualified Lamdu.Sugar.Lens as SugarLens
-import           Lamdu.Sugar.Names.Types (ExpressionN)
+import           Lamdu.Sugar.Names.Types (Name)
 import           Lamdu.Sugar.NearestHoles (NearestHoles)
 import qualified Lamdu.Sugar.NearestHoles as NearestHoles
 import qualified Lamdu.Sugar.Types as Sugar
@@ -79,6 +80,7 @@ isHoleResult :: Sugar.Payload f Payload -> Bool
 isHoleResult =
     Lens.nullOf (Sugar.plData . plStoredEntityIds . Lens.traversed)
 
+type ExpressionN m a = Sugar.Expression (Name (T m)) (T m) a
 type SugarExpr m = ExpressionN m Payload
 
 nextHolesBefore :: Sugar.Expression name m Payload -> NearestHoles

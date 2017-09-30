@@ -9,9 +9,10 @@ import           Data.Store.Transaction (Transaction)
 import qualified Data.Text as Text
 import qualified Lamdu.Builtins.Anchors as Builtins
 import           Lamdu.Formatting (Format(..))
+import           Lamdu.GUI.ExpressionGui.Types (ExpressionN)
 import qualified Lamdu.Sugar.Lens as SugarLens
 import qualified Lamdu.Sugar.Names.Get as NamesGet
-import           Lamdu.Sugar.Names.Types (Name(..), Collision(..), ExpressionN)
+import           Lamdu.Sugar.Names.Types (Name(..), Collision(..))
 import qualified Lamdu.Sugar.Names.Types as Name
 import qualified Lamdu.Sugar.Types as Sugar
 
