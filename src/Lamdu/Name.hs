@@ -9,6 +9,8 @@ module Lamdu.Name
     ) where
 
 import qualified Control.Lens as Lens
+import qualified Lamdu.CharClassification as Chars
+import           Lamdu.Precedence (HasPrecedence(..))
 
 import           Lamdu.Prelude
 
@@ -45,3 +47,9 @@ Lens.makePrisms ''Form
 
 instance Show (Name m) where
     show name = concat [ "(Name ", show (name ^. form), " ", ")" ]
+
+instance HasPrecedence Form where
+    precedence name =
+        visible name ^? _1 . Lens.ix 0 . Lens.to Chars.precedence & fromMaybe 20
+
+instance HasPrecedence (Name m) where precedence = precedence . _form

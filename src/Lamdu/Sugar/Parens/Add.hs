@@ -6,22 +6,11 @@ module Lamdu.Sugar.Parens.Add
     , add
     ) where
 
-import qualified Control.Lens as Lens
 import qualified Lamdu.Calc.Val as V
-import qualified Lamdu.CharClassification as Chars
-import           Lamdu.Name (Name)
-import qualified Lamdu.Name as Name
+import           Lamdu.Precedence (Precedence(..), HasPrecedence(..))
 import           Lamdu.Sugar.Types
 
 import           Lamdu.Prelude
-
-data Precedence a = Precedence
-    { _before :: a
-    , _after  :: a
-    } deriving (Show, Functor)
-instance Applicative Precedence where
-    pure = join Precedence
-    Precedence af bf <*> Precedence ax bx = Precedence (af ax) (bf bx)
 
 -- | Do we need parenthesis (OR any other visual disambiguation?)
 data NeedsParens = NeedsParens | NoNeedForParens
@@ -77,12 +66,13 @@ precedenceOfGuard (Guard if_ then_ elseIfs else_ _del) =
         _del
     )
 
-visibleFuncName :: Lens.Getter (BinderVar (Name n) m) Text
-visibleFuncName = bvNameRef . nrName . Name.form . Lens.to Name.visible . Lens._1
+binderName :: Lens (BinderVar namea m) (BinderVar nameb m) namea nameb
+binderName = bvNameRef . nrName
 
 precedenceOfLabeledApply ::
-    LabeledApply (Name n) m (Maybe MinOpPrec -> Precedence (Maybe Int) -> a) ->
-    (Classifier, LabeledApply (Name n) m a)
+    HasPrecedence name =>
+    LabeledApply name m (Maybe MinOpPrec -> Precedence (Maybe Int) -> a) ->
+    (Classifier, LabeledApply name m a)
 precedenceOfLabeledApply apply@(LabeledApply func specialArgs annotatedArgs relayedArgs) =
     case specialArgs of
     NoSpecialArgs -> (NeverParen, apply ?? Just 0 ?? unambiguous)
@@ -100,9 +90,7 @@ precedenceOfLabeledApply apply@(LabeledApply func specialArgs annotatedArgs rela
             newAnnotatedArgs relayedArgs
         )
         where
-            prec =
-                func ^? visibleFuncName . Lens.ix 0
-                & maybe 20 Chars.precedence
+            prec = func ^. binderName & precedence
     where
         newAnnotatedArgs = annotatedArgs <&> (?? Just 0) <&> (?? unambiguous)
 
@@ -117,8 +105,9 @@ precedenceOfPrefixApply (V.Apply f arg) =
     )
 
 precedenceOf ::
-    Body (Name n) m (Maybe MinOpPrec -> Precedence (Maybe Int) -> a) ->
-    (Classifier, Body (Name n) m a)
+    HasPrecedence name =>
+    Body name m (Maybe MinOpPrec -> Precedence (Maybe Int) -> a) ->
+    (Classifier, Body name m a)
 precedenceOf =
     \case
     BodyInjectedExpression -> (NeverParen, BodyInjectedExpression)
@@ -152,12 +141,15 @@ precedenceOf =
             , cons (x ?? Just 0 ?? Precedence Nothing (Just 0))
             )
 
-add :: Expression (Name n) m a -> Expression (Name n) m (MinOpPrec, NeedsParens, a)
+add ::
+    HasPrecedence name =>
+    Expression name m a -> Expression name m (MinOpPrec, NeedsParens, a)
 add = loop 0 (Precedence 0 0)
 
 loop ::
-    MinOpPrec -> Precedence Int -> Expression (Name n) m a ->
-    Expression (Name n) m (MinOpPrec, NeedsParens, a)
+    HasPrecedence name =>
+    MinOpPrec -> Precedence Int -> Expression name m a ->
+    Expression name m (MinOpPrec, NeedsParens, a)
 loop minOpPrec parentPrec (Expression body pl) =
     Expression finalBody (pl & plData %~ (,,) minOpPrec needsParens)
     where
