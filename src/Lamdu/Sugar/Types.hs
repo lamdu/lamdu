@@ -17,6 +17,7 @@ import qualified Control.Lens as Lens
 import           Data.Store.Transaction (Transaction, MkProperty)
 import           Data.UUID.Types (UUID)
 import           Lamdu.Calc.Type.Scheme (Scheme)
+import qualified Lamdu.Calc.Val as V
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Definition as Definition
 import           Lamdu.Sugar.Internal.EntityId (EntityId)
@@ -24,7 +25,6 @@ import           Lamdu.Sugar.Types.Binder as Exported
 import           Lamdu.Sugar.Types.Expression as Exported
 import           Lamdu.Sugar.Types.GetVar as Exported
 import           Lamdu.Sugar.Types.Hole as Exported
-import           Lamdu.Expr.IRef (DefI)
 
 import           Lamdu.Prelude
 
@@ -48,7 +48,7 @@ data DefinitionBody name m expr
 
 data Definition name m expr = Definition
     { _drName :: name
-    , _drDefI :: DefI m
+    , _drDefI :: V.Var
     , _drDefinitionState :: MkProperty m Anchors.DefinitionState
     , _drEntityId :: EntityId
     , _drBody :: DefinitionBody name m expr

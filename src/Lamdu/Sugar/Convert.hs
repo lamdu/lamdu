@@ -248,7 +248,7 @@ loadPanes evalRes cp replEntityId =
                         , _drName = UniqueId.toUUID defI
                         , _drBody = bodyS
                         , _drDefinitionState = Anchors.assocDefinitionState defI
-                        , _drDefI = defI
+                        , _drDefI = ExprIRef.globalId defI
                         }
                         >>= PresentationModes.addToDef
                     return Pane

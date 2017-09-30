@@ -24,6 +24,7 @@ import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
 import qualified GUI.Momentu.Widgets.TextView as TextView
 import qualified Lamdu.Calc.Type.Scheme as Scheme
+import qualified Lamdu.Calc.Val as V
 import           Lamdu.Config (config)
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Config.Theme as Theme
@@ -32,7 +33,8 @@ import           Lamdu.Data.Definition (Definition(..))
 import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Data.Ops as DataOps
 import           Lamdu.Eval.Results (EvalResults)
-import           Lamdu.Expr.IRef (DefI, ValI)
+import           Lamdu.Expr.IRef (ValI)
+import qualified Lamdu.GUI.AnnotationsPass as AnnotationsPass
 import           Lamdu.GUI.CodeEdit.Settings (HasSettings)
 import qualified Lamdu.GUI.DefinitionEdit as DefinitionEdit
 import qualified Lamdu.GUI.ExpressionEdit as ExpressionEdit
@@ -42,7 +44,6 @@ import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
 import           Lamdu.GUI.IOTrans (IOTrans)
 import qualified Lamdu.GUI.IOTrans as IOTrans
-import qualified Lamdu.GUI.AnnotationsPass as AnnotationsPass
 import qualified Lamdu.GUI.ReplEdit as ReplEdit
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Style (HasStyle)
@@ -62,7 +63,7 @@ type T = Transaction
 data ExportActions m = ExportActions
     { exportAll :: IOTrans m ()
     , exportReplActions :: ReplEdit.ExportRepl m
-    , exportDef :: DefI m -> IOTrans m ()
+    , exportDef :: V.Var -> IOTrans m ()
     , importAll :: FilePath -> IOTrans m ()
     }
 

@@ -127,7 +127,7 @@ exportSubexpr _ = return ()
 exportVal :: Val (ValI ViewM) -> Export ()
 exportVal val =
     do
-        val ^.. ExprLens.valGlobals mempty & traverse_ (exportDef . ExprIRef.defI)
+        val ^.. ExprLens.valGlobals mempty & traverse_ exportDef
         val ^.. ExprLens.valTags & traverse_ exportTag
         val ^.. ExprLens.valNominals & traverse_ exportNominal
         val ^.. ExprLens.subExprs & traverse_ exportSubexpr
@@ -135,8 +135,8 @@ exportVal val =
 valIToUUID :: ValI m -> UUID
 valIToUUID = IRef.uuid . ExprIRef.unValI
 
-exportDef :: ExprIRef.DefI ViewM -> Export ()
-exportDef defI =
+exportDef :: V.Var -> Export ()
+exportDef globalId =
     do
         presentationMode <- Transaction.getP (Anchors.assocPresentationMode globalId) & trans
         mName <- readAssocName globalId & trans
@@ -148,7 +148,7 @@ exportDef defI =
         (presentationMode, mName, globalId) <$ def' & Codec.EntityDef & tell
     & withVisited visitedDefs globalId
     where
-        globalId = ExprIRef.globalId defI
+        defI = ExprIRef.defI globalId
 
 exportRepl :: Export ()
 exportRepl =
@@ -166,14 +166,14 @@ jsonExportRepl = runExport exportRepl <&> snd
 fileExportRepl :: FilePath -> T ViewM (IO ())
 fileExportRepl = export "repl" exportRepl
 
-fileExportDef :: ExprIRef.DefI ViewM -> FilePath -> T ViewM (IO ())
-fileExportDef defI =
-    export ("def: " ++ show defI) (exportDef defI)
+fileExportDef :: V.Var -> FilePath -> T ViewM (IO ())
+fileExportDef globalId =
+    export ("def: " ++ show globalId) (exportDef globalId)
 
 fileExportAll :: FilePath -> T ViewM (IO ())
 fileExportAll =
     do
-        exportSet DbLayout.globals exportDef
+        exportSet DbLayout.globals (exportDef . ExprIRef.globalId)
         exportSet DbLayout.tags exportTag
         exportSet DbLayout.tids exportNominal
         exportRepl
