@@ -50,8 +50,8 @@ import qualified Lamdu.GUI.NameEdit as NameEdit
 import qualified Lamdu.GUI.ParamEdit as ParamEdit
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.Sugar.Lens as SugarLens
-import           Lamdu.Sugar.Names.Types (Name(..))
-import qualified Lamdu.Sugar.Names.Types as Name
+import           Lamdu.Name (Name(..))
+import qualified Lamdu.Name as Name
 import           Lamdu.Sugar.NearestHoles (NearestHoles)
 import qualified Lamdu.Sugar.Types as Sugar
 

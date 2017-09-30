@@ -21,7 +21,7 @@ import           Data.Store.Transaction (Transaction)
 import           GUI.Momentu.Responsive (Responsive(..))
 import qualified GUI.Momentu.Widget as Widget
 import qualified Lamdu.Sugar.Lens as SugarLens
-import           Lamdu.Sugar.Names.Types (Name)
+import           Lamdu.Name (Name)
 import           Lamdu.Sugar.NearestHoles (NearestHoles)
 import qualified Lamdu.Sugar.NearestHoles as NearestHoles
 import qualified Lamdu.Sugar.Types as Sugar

@@ -272,7 +272,7 @@ Executable lamdu
                   , Lamdu.Sugar.Names.Clash
                   , Lamdu.Sugar.Names.Get
                   , Lamdu.Sugar.Names.NameGen
-                  , Lamdu.Sugar.Names.Types
+                  , Lamdu.Name
                   , Lamdu.Sugar.Names.Walk
                   , Lamdu.Sugar.NearestHoles
                   , Lamdu.Sugar.OrderTags

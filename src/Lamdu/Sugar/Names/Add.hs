@@ -28,7 +28,7 @@ import           Lamdu.Sugar.Names.Clash (IsClash(..))
 import qualified Lamdu.Sugar.Names.Clash as Clash
 import           Lamdu.Sugar.Names.NameGen (NameGen)
 import qualified Lamdu.Sugar.Names.NameGen as NameGen
-import           Lamdu.Sugar.Names.Types
+import           Lamdu.Name
 import           Lamdu.Sugar.Names.Walk (MonadNaming)
 import qualified Lamdu.Sugar.Names.Walk as Walk
 import           Lamdu.Sugar.Types

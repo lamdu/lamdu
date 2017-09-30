@@ -30,8 +30,8 @@ import           Lamdu.Config.Theme (HasTheme(..))
 import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.Style as Style
-import           Lamdu.Sugar.Names.Types (Name(..))
-import qualified Lamdu.Sugar.Names.Types as Name
+import           Lamdu.Name (Name(..))
+import qualified Lamdu.Name as Name
 
 import           Lamdu.Prelude
 

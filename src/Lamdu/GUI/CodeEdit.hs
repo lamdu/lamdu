@@ -46,11 +46,11 @@ import           Lamdu.GUI.IOTrans (IOTrans)
 import qualified Lamdu.GUI.IOTrans as IOTrans
 import qualified Lamdu.GUI.ReplEdit as ReplEdit
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
+import           Lamdu.Name (Name)
 import           Lamdu.Style (HasStyle)
 import qualified Lamdu.Sugar.Convert as SugarConvert
 import qualified Lamdu.Sugar.Lens as SugarLens
 import qualified Lamdu.Sugar.Names.Add as AddNames
-import           Lamdu.Sugar.Names.Types (Name)
 import           Lamdu.Sugar.NearestHoles (NearestHoles)
 import qualified Lamdu.Sugar.NearestHoles as NearestHoles
 import qualified Lamdu.Sugar.Parens.Add as AddParens

@@ -36,8 +36,8 @@ import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
 import qualified Lamdu.GUI.NameEdit as NameEdit
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
-import           Lamdu.Sugar.Names.Types (Name(..))
-import qualified Lamdu.Sugar.Names.Types as Name
+import           Lamdu.Name (Name(..))
+import qualified Lamdu.Name as Name
 import           Lamdu.Sugar.NearestHoles (NearestHoles)
 import qualified Lamdu.Sugar.NearestHoles as NearestHoles
 import qualified Lamdu.Sugar.Types as Sugar

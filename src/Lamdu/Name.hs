@@ -1,5 +1,5 @@
 {-# LANGUAGE NoImplicitPrelude, TemplateHaskell, OverloadedStrings #-}
-module Lamdu.Sugar.Names.Types
+module Lamdu.Name
     ( Stored
     , Collision(..), _NoCollision, _Collision
     , visible

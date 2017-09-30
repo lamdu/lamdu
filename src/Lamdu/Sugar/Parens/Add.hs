@@ -9,8 +9,8 @@ module Lamdu.Sugar.Parens.Add
 import qualified Control.Lens as Lens
 import qualified Lamdu.Calc.Val as V
 import qualified Lamdu.CharClassification as Chars
-import           Lamdu.Sugar.Names.Types (Name)
-import qualified Lamdu.Sugar.Names.Types as Name
+import           Lamdu.Name (Name)
+import qualified Lamdu.Name as Name
 import           Lamdu.Sugar.Types
 
 import           Lamdu.Prelude

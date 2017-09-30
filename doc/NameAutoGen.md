@@ -64,7 +64,7 @@ Type (and tags) are not limited to a specific scope so when two types have the s
 
 The name auto-generation and disambiguation is done for the "LamduSugar" language (Lamdu's language with "syntax sugars"), and the relevant code for it is under `Lamdu.Sugar.Names`.
 
-* `Lamdu.Sugar.Names.Types` defines the `Name` data type for the names specifying their disambiguation numbers and whether they are given by the user or are auto-generated. This type is used as the "name" type-parameter for the sugar's expression types under `Lamdu.Sugar.Types`.
+* `Lamdu.Name` defines the `Name` data type for the names specifying their disambiguation numbers and whether they are given by the user or are auto-generated. This type is used as the "name" type-parameter for the sugar's expression types under `Lamdu.Sugar.Types`.
 * `Lamdu.Sugar.Names.Add` is given expressions with `UUID`s for names and does the naming process to output `Name`s for names.
 
 To find which names clash with which, and auto-generating non-clashing names, `Add` needs to do three passes on the expression tree.
