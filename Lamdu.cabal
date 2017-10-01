@@ -228,6 +228,7 @@ Executable lamdu
                   , Lamdu.GUI.WidgetIds
                   , Lamdu.Infer.Trans
                   , Lamdu.Opts
+                  , Lamdu.Precedence
                   , Lamdu.Prelude
                   , Lamdu.Style
                   , Lamdu.Sugar.Convert

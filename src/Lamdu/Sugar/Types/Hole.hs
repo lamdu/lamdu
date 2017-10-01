@@ -44,7 +44,7 @@ data HoleOption m resultExpr = HoleOption
     { _hoVal :: Val ()
     , _hoSugaredBaseExpr :: m resultExpr
     , -- A group in the hole results based on this option
-      _hoResults :: ListT (m) (HoleResultScore, m (HoleResult m resultExpr))
+      _hoResults :: ListT m (HoleResultScore, m (HoleResult m resultExpr))
     } deriving Functor
 
 data Literal f

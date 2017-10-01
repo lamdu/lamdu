@@ -43,7 +43,7 @@ import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import qualified Lamdu.Sugar.OrderTags as OrderTags
 import qualified Lamdu.Sugar.PresentationModes as PresentationModes
 import           Lamdu.Sugar.Types
-    
+
 import           Lamdu.Prelude
 
 type T = Transaction

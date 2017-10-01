@@ -1,5 +1,5 @@
 -- | A pass on the sugared AST to decide where to put parenthesis
-{-# LANGUAGE NoImplicitPrelude, LambdaCase, DeriveFunctor #-}
+{-# LANGUAGE NoImplicitPrelude, LambdaCase #-}
 module Lamdu.Sugar.Parens.Add
     ( NeedsParens(..)
     , MinOpPrec
