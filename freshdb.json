@@ -65,7 +65,7 @@
     {
         "tagOrder": 1,
         "tag": "42493a636f6e73000000000000000000",
-        "name": "NonEmpty"
+        "name": "nonEmpty"
     },
     {
         "tagOrder": 1,
@@ -80,7 +80,7 @@
     {
         "tagOrder": 1,
         "tag": "42493a66616c73650000000000000000",
-        "name": "False"
+        "name": "false"
     },
     {
         "tagOrder": 0,
@@ -120,7 +120,7 @@
     {
         "tagOrder": 1,
         "tag": "42493a6a757374000000000000000000",
-        "name": "Just"
+        "name": "just"
     },
     {
         "tagOrder": 1,
@@ -135,12 +135,12 @@
     {
         "tagOrder": 0,
         "tag": "42493a6e696c00000000000000000000",
-        "name": "Empty"
+        "name": "empty"
     },
     {
         "tagOrder": 0,
         "tag": "42493a6e6f7468696e67000000000000",
-        "name": "Nothing"
+        "name": "nothing"
     },
     {
         "tagOrder": 0,
@@ -195,7 +195,7 @@
     {
         "tagOrder": 0,
         "tag": "42493a74727565000000000000000000",
-        "name": "True"
+        "name": "true"
     },
     {
         "tagOrder": 2,
@@ -285,7 +285,7 @@
     {
         "tagOrder": 0,
         "tag": "bb501e4dcd4bd09f2945125de01947b7",
-        "name": "Continue"
+        "name": "continue"
     },
     {
         "tagOrder": 0,
