@@ -167,6 +167,7 @@ Executable lamdu
                   , Lamdu.Data.Export.JSON.Migration.ToVersion1
                   , Lamdu.Data.Export.JSON.Migration.ToVersion2
                   , Lamdu.Data.Export.JSON.Process
+                  , Lamdu.Data.Meta
                   , Lamdu.Data.Ops
                   , Lamdu.Data.Ops.Subexprs
                   , Lamdu.Eval.JS

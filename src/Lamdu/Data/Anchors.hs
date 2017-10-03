@@ -6,10 +6,9 @@ module Lamdu.Data.Anchors
     , CodeAnchors, RevisionProps
     , assocNameRef
     , assocScopeRef
-    , PresentationMode(..), assocPresentationMode
-    , DefinitionState(..), assocDefinitionState
+    , assocPresentationMode
+    , assocDefinitionState
     , assocTagOrder
-    , ParamList
     , assocFieldParamList
     , BinderParamScopeId(..), bParamScopeId
     ) where
@@ -26,6 +25,7 @@ import           GHC.Generics (Generic)
 import qualified GUI.Momentu.Widget.Id as WidgetId
 import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Data.Definition as Definition
+import           Lamdu.Data.Meta (DefinitionState(..), PresentationMode(..), ParamList)
 import           Lamdu.Eval.Results (ScopeId)
 import           Lamdu.Expr.IRef (DefI, ValI)
 import qualified Lamdu.Expr.UniqueId as UniqueId
@@ -78,26 +78,16 @@ assocScopeRef = Transaction.assocDataRef "ScopeId" . UniqueId.toUUID
 assocTagOrder :: Monad m => T.Tag -> MkProperty m Int
 assocTagOrder = Transaction.assocDataRefDef 0 "Order" . UniqueId.toUUID
 
-type ParamList = [T.Tag]
-
 assocFieldParamList ::
     Monad m => ValI m -> Transaction.MkProperty m (Maybe ParamList)
 assocFieldParamList lambdaI =
     Transaction.assocDataRef "field param list" $ UniqueId.toUUID lambdaI
-
-data PresentationMode = OO | Verbose | Infix
-    deriving (Eq, Ord, Show, Generic)
-instance Binary PresentationMode
 
 assocPresentationMode ::
     (UniqueId.ToUUID a, Monad m) =>
     a -> Transaction.MkProperty m PresentationMode
 assocPresentationMode =
     Transaction.assocDataRefDef Verbose "PresentationMode" . UniqueId.toUUID
-
-data DefinitionState = DeletedDefinition | LiveDefinition
-    deriving (Eq, Ord, Show, Generic)
-instance Binary DefinitionState
 
 assocDefinitionState :: Monad m => DefI m -> Transaction.MkProperty m DefinitionState
 assocDefinitionState =

@@ -22,9 +22,9 @@ import qualified Data.Store.Transaction as Transaction
 import qualified GUI.Momentu.Widget.Id as WidgetId
 import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Calc.Val as V
-import           Lamdu.Data.Anchors (PresentationMode(..))
 import qualified Lamdu.Data.Anchors as Anchors
 import           Lamdu.Data.Definition (Definition(..))
+import           Lamdu.Data.Meta (PresentationMode(..))
 import qualified Lamdu.Expr.GenIds as GenIds
 import           Lamdu.Expr.IRef (DefI, ValIProperty, ValI)
 import qualified Lamdu.Expr.IRef as ExprIRef

@@ -7,8 +7,8 @@ module Lamdu.Sugar.Types
     , Definition(..), drDefinitionState, drEntityId, drName, drBody, drDefI
     , DefinitionBody(..), _DefinitionBodyExpression, _DefinitionBodyBuiltin
     , DefinitionExpression(..), deContent, deType
-    , Anchors.PresentationMode(..)
-    , Anchors.DefinitionState(..)
+    , Meta.PresentationMode(..)
+    , Meta.DefinitionState(..)
     , DefinitionBuiltin(..), biType, biName, biSetName
     , DefinitionU
     ) where
@@ -18,7 +18,7 @@ import           Data.Store.Property (Property)
 import           Data.UUID.Types (UUID)
 import           Lamdu.Calc.Type.Scheme (Scheme)
 import qualified Lamdu.Calc.Val as V
-import qualified Lamdu.Data.Anchors as Anchors
+import qualified Lamdu.Data.Meta as Meta
 import qualified Lamdu.Data.Definition as Definition
 import           Lamdu.Sugar.Internal.EntityId (EntityId)
 import           Lamdu.Sugar.Types.Binder as Exported
@@ -47,7 +47,7 @@ data DefinitionBody name m expr
 data Definition name m expr = Definition
     { _drName :: name
     , _drDefI :: V.Var
-    , _drDefinitionState :: m (Property m Anchors.DefinitionState)
+    , _drDefinitionState :: m (Property m Meta.DefinitionState)
     , _drEntityId :: EntityId
     , _drBody :: DefinitionBody name m expr
     } deriving (Functor, Foldable, Traversable)

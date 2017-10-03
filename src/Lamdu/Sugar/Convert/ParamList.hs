@@ -13,7 +13,8 @@ import           Lamdu.Calc.Type (Type)
 import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Calc.Val as V
 import           Lamdu.Calc.Val.Annotated (Val(..))
-import           Lamdu.Data.Anchors (ParamList, assocFieldParamList)
+import           Lamdu.Data.Anchors (assocFieldParamList)
+import           Lamdu.Data.Meta (ParamList)
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Infer.Trans as InferT
 import qualified Lamdu.Expr.Lens as ExprLens

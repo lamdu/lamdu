@@ -23,8 +23,8 @@ module Lamdu.Sugar.Types.Binder
     , VarParamInfo(..), vpiName, vpiActions, vpiId
     , FieldParamInfo(..), fpiActions, fpiTag
     , FuncParam(..), fpInfo, fpAnnotation
-    , Anchors.PresentationMode(..)
-    , Anchors.DefinitionState(..)
+    , Meta.PresentationMode(..)
+    , Meta.DefinitionState(..)
     , BinderActions(..), baAddFirstParam
     , NullParamActions(..), npDeleteLambda
     , BinderParams(..)
@@ -46,7 +46,7 @@ import           Lamdu.Calc.Type (Type)
 import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Calc.Val as V
 import           Lamdu.Data.Anchors (BinderParamScopeId(..), bParamScopeId)
-import qualified Lamdu.Data.Anchors as Anchors
+import qualified Lamdu.Data.Meta as Meta
 import qualified Lamdu.Eval.Results as ER
 import           Lamdu.Sugar.Internal.EntityId (EntityId)
 
@@ -201,7 +201,7 @@ data BinderBodyScope
       -- scopes
 
 data Binder name m expr = Binder
-    { _bMPresentationModeProp :: Maybe (m (Property m Anchors.PresentationMode))
+    { _bMPresentationModeProp :: Maybe (m (Property m Meta.PresentationMode))
     , _bChosenScopeProp :: m (Property m (Maybe BinderParamScopeId))
     , _bParams :: BinderParams name m
     , _bLamId :: Maybe EntityId

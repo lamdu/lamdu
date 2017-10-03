@@ -32,9 +32,9 @@ import           Lamdu.Calc.Type.Scheme (Scheme(..))
 import           Lamdu.Calc.Type.Vars (TypeVars(..))
 import qualified Lamdu.Calc.Val as V
 import           Lamdu.Calc.Val.Annotated (Val(..))
-import qualified Lamdu.Data.Anchors as Anchors
 import           Lamdu.Data.Definition (Definition(..))
 import qualified Lamdu.Data.Definition as Definition
+import qualified Lamdu.Data.Meta as Meta
 import qualified Lamdu.Infer as Infer
 
 import           Lamdu.Prelude hiding ((.=))
@@ -49,10 +49,10 @@ type TagOrder = Int
 data Entity
     = EntitySchemaVersion Int
     | EntityRepl (Definition.Expr (Val UUID))
-    | EntityDef (Definition (Val UUID) (Anchors.PresentationMode, Maybe Text, V.Var))
+    | EntityDef (Definition (Val UUID) (Meta.PresentationMode, Maybe Text, V.Var))
     | EntityTag TagOrder (Maybe Text) T.Tag
     | EntityNominal (Maybe Text) T.NominalId Nominal
-    | EntityLamVar (Maybe Anchors.ParamList) (Maybe Text) UUID V.Var
+    | EntityLamVar (Maybe Meta.ParamList) (Maybe Text) UUID V.Var
 
 instance AesonTypes.ToJSON Entity where
     toJSON (EntitySchemaVersion ver) = encodeSchemaVersion ver
@@ -80,15 +80,15 @@ uncurry3 f (x0, x1, x2) = f x0 x1 x2
 uncurry4 :: (a -> b -> c -> d -> e) -> (a, b, c, d) -> e
 uncurry4 f (x0, x1, x2, x3) = f x0 x1 x2 x3
 
-encodePresentationMode :: Encoder Anchors.PresentationMode
-encodePresentationMode Anchors.OO = Aeson.String "OO"
-encodePresentationMode Anchors.Verbose = Aeson.String "Verbose"
-encodePresentationMode Anchors.Infix = Aeson.String "Infix"
+encodePresentationMode :: Encoder Meta.PresentationMode
+encodePresentationMode Meta.OO = Aeson.String "OO"
+encodePresentationMode Meta.Verbose = Aeson.String "Verbose"
+encodePresentationMode Meta.Infix = Aeson.String "Infix"
 
-decodePresentationMode :: Decoder Anchors.PresentationMode
-decodePresentationMode (Aeson.String "OO") = pure Anchors.OO
-decodePresentationMode (Aeson.String "Verbose") = pure Anchors.Verbose
-decodePresentationMode (Aeson.String "Infix") = pure Anchors.Infix
+decodePresentationMode :: Decoder Meta.PresentationMode
+decodePresentationMode (Aeson.String "OO") = pure Meta.OO
+decodePresentationMode (Aeson.String "Verbose") = pure Meta.Verbose
+decodePresentationMode (Aeson.String "Infix") = pure Meta.Infix
 decodePresentationMode other = fail $ "Unexpected presentation mode: " ++ show other
 
 encodeFFIName :: Encoder Definition.FFIName
@@ -498,7 +498,7 @@ decodeNamed idAttrName decoder obj =
     <*> decoder obj
 
 encodeDef ::
-    Encoder (Definition (Val UUID) (Anchors.PresentationMode, Maybe Text, V.Var))
+    Encoder (Definition (Val UUID) (Meta.PresentationMode, Maybe Text, V.Var))
 encodeDef (Definition body scheme (presentationMode, mName, V.Var globalId)) =
     encodeNamed "def" encodeDefBody ((mName, globalId), body)
     & insertField "typ" (encodeScheme scheme)
@@ -508,7 +508,7 @@ encodeDef (Definition body scheme (presentationMode, mName, V.Var globalId)) =
 decodeDef ::
     Decoder
     (Definition (Val UUID)
-     (Anchors.PresentationMode, Maybe Text, V.Var))
+     (Meta.PresentationMode, Maybe Text, V.Var))
 decodeDef =
     withObject "def" $ \obj ->
     do
@@ -535,10 +535,10 @@ decodeNamedTag json =
             withObject "tag" ?? json $ decodeNamed "tag" decodeTagOrder
         return (tagOrder, mName, T.Tag tag)
 
-encodeParamList :: Encoder Anchors.ParamList
+encodeParamList :: Encoder Meta.ParamList
 encodeParamList = Aeson.toJSON . map encodeTagId
 
-decodeParamList :: Decoder Anchors.ParamList
+decodeParamList :: Decoder Meta.ParamList
 decodeParamList json = Aeson.parseJSON json >>= traverse decodeTagId
 
 encodeMaybe :: Encoder a -> Encoder (Maybe a)
@@ -547,14 +547,14 @@ encodeMaybe encoder mVal = mVal <&> encoder & Aeson.toJSON
 decodeMaybe :: Decoder a -> Decoder (Maybe a)
 decodeMaybe decoder json = Aeson.parseJSON json >>= traverse decoder
 
-encodeLam :: (UUID, Maybe Anchors.ParamList) -> Aeson.Object
+encodeLam :: (UUID, Maybe Meta.ParamList) -> Aeson.Object
 encodeLam (lamI, mParamList) =
     HashMap.fromList
     [ "lamId" .= lamI
     , "lamFieldParams" .= encodeMaybe encodeParamList mParamList
     ]
 
-decodeLam :: ExhaustiveDecoder (UUID, Maybe Anchors.ParamList)
+decodeLam :: ExhaustiveDecoder (UUID, Maybe Meta.ParamList)
 decodeLam obj =
     do
         lamI <- obj .: "lamId"
@@ -562,12 +562,12 @@ decodeLam obj =
         return (lamI, mParamList)
 
 encodeNamedLamVar ::
-    Encoder (Maybe Anchors.ParamList, Maybe Text, UUID, V.Var)
+    Encoder (Maybe Meta.ParamList, Maybe Text, UUID, V.Var)
 encodeNamedLamVar (mParamList, mName, lamI, V.Var ident) =
     encodeNamed "lamVar" encodeLam ((mName, ident), (lamI, mParamList)) & Aeson.Object
 
 decodeNamedLamVar ::
-    Decoder (Maybe Anchors.ParamList, Maybe Text, UUID, V.Var)
+    Decoder (Maybe Meta.ParamList, Maybe Text, UUID, V.Var)
 decodeNamedLamVar json =
     do
         ((mName, ident), (lamI, mParamList)) <-

@@ -37,6 +37,7 @@ import           Lamdu.Data.Definition (Definition(..))
 import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Data.Export.JSON.Codec as Codec
 import qualified Lamdu.Data.Export.JSON.Migration as Migration
+import qualified Lamdu.Data.Meta as Meta
 import           Lamdu.Expr.IRef (ValI)
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Lens as ExprLens
@@ -214,7 +215,7 @@ insertTo item setIRef =
     where
         iref = setIRef DbLayout.codeIRefs
 
-importDef :: Definition (Val UUID) (Anchors.PresentationMode, Maybe Text, V.Var) -> T ViewM ()
+importDef :: Definition (Val UUID) (Meta.PresentationMode, Maybe Text, V.Var) -> T ViewM ()
 importDef (Definition defBody defScheme (presentationMode, mName, globalId)) =
     do
         Transaction.setP (Anchors.assocPresentationMode globalId) presentationMode
@@ -237,7 +238,7 @@ importTag tagOrder mName tag =
         traverse_ (setName tag) mName
         tag `insertTo` DbLayout.tags
 
-importLamVar :: Maybe Anchors.ParamList -> Maybe Text -> UUID -> V.Var -> T ViewM ()
+importLamVar :: Maybe Meta.ParamList -> Maybe Text -> UUID -> V.Var -> T ViewM ()
 importLamVar paramList mName lamUUID var =
     do
         Transaction.setP (Anchors.assocFieldParamList lamI) paramList
