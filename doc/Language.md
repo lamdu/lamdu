@@ -1,37 +1,120 @@
-# Syntactic Sugar
+# The Lamdu Language
+
+In traditional programming,
+the code that you see in your text editor is exactly the same thing that is stored on disk.
+
+In Lamdu, what you see in the editor and the data structure stored on disk are different.
+For example, the name of each variable is only stored once,
+and all references to it are done by its unique identifier (which isn't visible to the user).
+
+Lamdu's code is stored in the "Lamdu Calculus" language, a low-level and very small language.
+In addition to the low level calculus, Lamdu stores meta-data, such as names,
+which is required to present it.
+
+Lamdu displays the code with additional "Projectional Syntactic Sugars",
+which aren't part of the Lamdu Calculus,
+and this displayed language is simply called the "Lamdu Language".
+
+## How Lamdu's syntactic sugar is different from traditional syntactic sugar
 
 In traditional programming, "syntactic sugar" lets the user write things in clear and concise ways that expand to a lower level syntax.
-
-Examples:
 
 * In C `a->x` expands to `(*a).x`
 * In Python `f'My name is {name}'` expands to `'My name is {name}'.format(name=name)`
 * In Haskell `[1,2,3]` expands to `1:2:3:[]` which further expands to `(:) 1 ((:) 2 ((:) 3 []))`
 * In Scala `{_ * 2 + _}` expands to `{(x,y) => x * 2 + y}`
 
+In traditional programming languages one may choose to use syntactic sugars.
+For example these two Python functions are the functionaly the same,
+but syntactically different:
+
+```Python
+def sweet(n):
+  if n % 3 == 0 and n % 5 == 0:
+    return 'FizzBuzz'
+  elif n % 3 == 0:
+    return 'Fizz'
+  elif n % 5 == 0:
+    return 'Buzz'
+  else:
+    return str(n)
+
+def sour(n):
+  if n % 3 == 0 and n % 5 == 0:
+    return 'FizzBuzz'
+  else:
+    if n % 3 == 0:
+      return 'Fizz'
+    else:
+      if n % 5 == 0:
+        return 'Buzz'
+      else:
+        return str(n)
+```
+
 There’s benefit in having short and simple ways to write code. But there are also downsides:
 
 * More choices to make (which syntax to use?)
 * In some cases, small edits require rewrites. `{_ * 2 + _}` can't be changed to `{(x,y) => x * 2 + y*y}` (`y` changed to `y*y`) without "breaking the sugar".
 
-Lamdu's "Projectional Syntactic Sugar" works in the opposite direction.
-The code is stored in the lower level [Lamdu-Calculus](https://github.com/lamdu/lamdu-calculus/) language,
-which is converted to the "Sugared" Lamdu language before being displayed to the user.
+So Lamdu's "Projectional Syntactic Sugar" works in the opposite direction -
+the code is always presented in "sugared form" when applicable,
+and the user's edits on the sugared form are translated to edits on the underlying calculus.
 
-The user's edits on the sugared language are translated to edits on the underlying calculus.
+## Lamdu Calculus's value language
 
-The sugared language and its editing actions are defined in `Lamdu.Sugar.Types`.
-The conversion process is implemented in `Lamdu.Sugar.Convert`.
+Lamdu Calculus is an extention of the [Lambda Calculus](https://en.wikipedia.org/wiki/Lambda_calculus).
+
+The calculus is decribed below in a human readable "pseudo-syntax".
+(The code is actually stored as an AST, so the pseudo-syntax purposes is for documentation only)
+
+These are the terms of the language:
+
+* `?` - Holes (Used to store incomplete code)
+* `5` - Literals
+* Lambda Calculus terms
+  * `a` - Variable references
+  * `a → b` - Anonymous functions ("lambdas")
+  * `a b` - Function application with a single argument
+* Records
+  * `()` - Unit (Empty record)
+  * `{ field : value, rest }` - "Record Extention". Adds a field to a record
+  * `record.field` - Get field from a record
+* Sum types
+  * `alt: injected` - Inject a value to a sum-type
+  * `case value of { alt: handler, rest }` - Pattern match a single sum-type constuctor
+  * `Ø` - The void sum type handler (used as "rest" in pattern match when no more cases remain to match)
+* Nominal types
+  * `«Nom value` - Wrap a value in a nominal type
+  * `value »Nom` - Unwrap a value from a nominal type
+
+(defined in [`Lamdu.Calc.Val`](https://github.com/lamdu/lamdu-calculus/blob/master/src/Lamdu/Calc/Val.hs))
+
+### Structural types and Nominal types
+
+Most statically typed languages have both anonymous tuples and nominal types which one needs to declare:
+
+```Haskell
+data Maybe a = Nothing | Just a
+```
+
+Anonymous tuples are structural types - they don't have names and what matters is their structure.
+In Lamdu we have structural records instead of anonymous tuples - each field is named.
+But unlike nominal types, you don't need to ceremoniously declare the data type - it is simply inferred.
+
+Nominal types are also provided, and are useful to use in many cases
+(this is elaborated in more detail in Lamdu Calculus's
+[documentation](https://github.com/lamdu/lamdu-calculus/#nominal-types))
+
+## Lamdu's type language
+
+Lamdu's type language is currently identical to Lamdu Calculus's type language.
+
+TODO: Describe
+
+(defined in [`Lamdu.Calc.Type`](https://github.com/lamdu/lamdu-calculus/blob/master/src/Lamdu/Calc/Type.hs))
 
 ## Lamdu's syntax sugars
-
-### Names as metadata
-
-The underlying Lamdu-Calculus does not have human readable variable names,
-only machine-readable identifiers.
-The Lamdu Sugar language stores the human readable given names as "out-of-band metadata".
-By "out-of-band" we mean that this data isn't stored in the Lamdu-Calculus program,
-so things that process it, like the type inference and compiler, do not see it.
 
 ### Labeled Apply and definition presentation modes
 
@@ -151,21 +234,16 @@ While the underlying Lamdu-Calculus expresses conditionals as pattern matches of
 ```
 
 Lamdu sugars it to the "if" expression
-familiar to programmers from traditional programming languages.
-
-Nested "if" expressions, i.e:
+familiar to programmers from traditional programming languages:
 
 ```Python
 if <cond0>:
-  <then0>
+  <handle0>
 else:
-  if <cond1>:
-    <then1>
-  else:
-    <else>
+  <handle1>
 ```
 
-Get sugared as "elif" like so:
+When the else clause is itself an if-expression, it gets sugar as "elif" like so:
 
 ```Python
 if <cond0>:
@@ -175,8 +253,6 @@ elif <cond1>:
 else:
   <else>
 ```
-
-This is useful to avoid over-indentation.
 
 ### Suspended computations
 
@@ -226,25 +302,10 @@ Lamdu sugars such expressions to string literals, i.e
 
     "Hello"
 
-### Underlying Lamdu-Calculus
+## Missing Features (TODOs)
 
-Anything which doesn't fit the syntactic sugar forms gets
-shown as the underlying Lamdu-Calculus syntax, defined in
-[`Lamdu.Calc.Val`](https://github.com/lamdu/lamdu-calculus/blob/master/src/Lamdu/Calc/Val.hs)
+TODO: elaborate more on these -
 
-Theses include:
-
-* `f x` - Function application with a single argument.
-* `x → <body>` - Lambdas of a single argument.
-* `record.field` - Get a field from a record.
-* `<constructor>: <value>` - Inject a value into a sum type.
-* `«Nominal value`, `value Nominal»` - wrap and extract values from Nominal types.
-* `x` - Reference a variable.
-* `3.14`, `#48656c6c6f` - Literals.
-* `()` - Empty record / unit.
-* `absurd` - The base case for pattern matches (handler for the void sum type).
-
-## Design principles
-
-While it may be exciting to add many wonderful syntax-sugars,
-having too many of them means the user needs to learn more syntax forms.
+* Higher order type-parameters
+* Type-classes
+* UI to edit nominal types
