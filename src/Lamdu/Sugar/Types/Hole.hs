@@ -6,7 +6,7 @@ module Lamdu.Sugar.Types.Hole
     , HoleOption(..), hoVal, hoSugaredBaseExpr, hoResults
     , LeafHoleActions(..), holeOptionLiteral
     , Literal(..), _LiteralNum, _LiteralBytes, _LiteralText
-    , HoleActions(..), holeUUID, holeOptions, holeMDelete
+    , HoleActions(..), holeUUID, holeOptions
     , HoleKind(..), _LeafHole, _WrapperHole
     , Hole(..), holeActions, holeKind
     , HoleResultScore(..), hrsNumHoleWrappers, hrsScore
@@ -55,9 +55,6 @@ data Literal f
 data HoleActions m resultExpr = HoleActions
     { _holeUUID :: UUID -- TODO: Replace this with a way to associate data?
     , _holeOptions :: m [HoleOption m resultExpr]
-    , -- Changes the structure around the hole to remove the hole.
-      -- For example (f _) becomes (f) or (2 + _) becomes 2
-      _holeMDelete :: Maybe (m EntityId)
     } deriving Functor
 
 newtype LeafHoleActions m resultExpr = LeafHoleActions

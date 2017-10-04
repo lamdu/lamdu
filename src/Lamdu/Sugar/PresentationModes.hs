@@ -59,8 +59,12 @@ addToLabeledApply a =
         argExpr t = argsMap Map.! t ^. Sugar.aaExpr
         mkInfixArg arg other =
             arg
-            & Sugar.rBody . Sugar._BodyHole . Sugar.holeActions . Sugar.holeMDelete .~
-                other ^. Sugar.rPayload . Sugar.plActions . Sugar.mReplaceParent
+            & Sugar.rPayload . Sugar.plActions . Sugar.delete %~ addDel
+            where
+                addDel Sugar.CannotDelete =
+                    other ^. Sugar.rPayload . Sugar.plActions . Sugar.mReplaceParent &
+                    maybe Sugar.CannotDelete Sugar.Delete
+                addDel x = x
         processArg arg =
             do
                 param <- arg ^? Sugar.aaExpr . Sugar.rBody . Sugar._BodyGetVar . Sugar._GetParam

@@ -16,7 +16,6 @@ import qualified GUI.Momentu.Hover as Hover
 import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Menu as Menu
-import qualified Lamdu.Config as Config
 import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.Argument as Wrapper
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.Info (HoleInfo(..))
@@ -100,13 +99,13 @@ make ::
     ExprGuiM m (ExpressionGui m)
 make hole pl =
     do
-        stateProp <-
-            HoleState.assocStateRef (hole ^. Sugar.holeActions . Sugar.holeUUID)
-            ^. Transaction.mkProperty & transaction
-
         mWrapperGui  <-
             hole ^? Sugar.holeKind . Sugar._WrapperHole
             & Lens._Just %%~ makeWrapper pl (hidOpenSearchTerm widgetIds)
+
+        stateProp <-
+            HoleState.assocStateRef (hole ^. Sugar.holeActions . Sugar.holeUUID)
+            ^. Transaction.mkProperty & transaction
 
         let holeInfo = HoleInfo
                 { hiEntityId = pl ^. Sugar.plEntityId
@@ -120,18 +119,9 @@ make hole pl =
 
         searchAreaGui <- SearchArea.makeStdWrapped pl holeInfo
 
-        delKeys <- Config.delKeys
-        let deleteEventMap =
-                hole ^. Sugar.holeActions . Sugar.holeMDelete
-                & maybe mempty
-                    ( Widget.keysEventMapMovesCursor delKeys
-                        (E.Doc ["Edit", "Delete hole"])
-                        . fmap WidgetIds.fromEntityId)
-
         case mWrapperGui of
             Just wrapperGui -> makeHoleWithWrapper wrapperGui searchAreaGui pl
             Nothing -> return (searchAreaGui Menu.AnyPlace)
-            <&> E.weakerEvents deleteEventMap
     & assignHoleCursor widgetIds
     & Reader.local (Element.animIdPrefix .~ Widget.toAnimId (hidHole widgetIds))
     where

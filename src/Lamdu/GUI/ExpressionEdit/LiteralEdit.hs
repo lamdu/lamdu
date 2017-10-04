@@ -69,7 +69,7 @@ genericEdit whichStyle prop pl =
         editEventMap =
             case pl ^. Sugar.plActions . Sugar.delete of
             Sugar.SetToHole action -> mkEditEventMap valText action
-            Sugar.CannotDelete -> error "Cannot delete literal?!"
+            _ -> error "Cannot set literal to hole?!"
         valText = prop ^. Property.pVal & format
 
 fdConfig :: Config.LiteralText -> FocusDelegator.Config

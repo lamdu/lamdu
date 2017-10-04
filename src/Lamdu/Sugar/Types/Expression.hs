@@ -1,7 +1,7 @@
 {-# LANGUAGE NoImplicitPrelude, TemplateHaskell, DeriveTraversable #-}
 module Lamdu.Sugar.Types.Expression
     ( WrapAction(..), _WrapperAlready, _WrappedAlready, _WrapNotAllowed, _WrapAction
-    , Delete(..), _SetToHole, _CannotDelete
+    , Delete(..), _SetToHole, _Delete, _CannotDelete
     , ExtractToDestination(..)
     , Actions(..)
         , wrap, delete, extract, mReplaceParent
@@ -58,6 +58,9 @@ data WrapAction m
 
 data Delete m
     = SetToHole (m (UUID, EntityId))
+    | -- Changes the structure around the hole to remove the hole.
+      -- For example (f _) becomes (f) or (2 + _) becomes 2
+      Delete (m EntityId)
     | CannotDelete
 
 data ExtractToDestination

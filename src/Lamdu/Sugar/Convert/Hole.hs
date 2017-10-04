@@ -274,7 +274,6 @@ mkWritableHoleActions mInjectedArg exprPl stored =
                 <&> addSuggestedOptions
                     (mkHoleSuggesteds sugarContext mInjectedArg exprPl stored)
             , _holeUUID = UniqueId.toUUID $ ExprIRef.unValI $ Property.value stored
-            , _holeMDelete = Nothing
             }
 
 -- Ignoring alpha-renames:

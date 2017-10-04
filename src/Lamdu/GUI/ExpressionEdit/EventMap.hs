@@ -197,10 +197,11 @@ replaceEventMap ::
 replaceEventMap actions =
     do
         config <- Lens.view Config.config
-        let mk doc action =
-                action <&> snd <&> WidgetIds.fromEntityId
-                & Widget.keysEventMapMovesCursor (Config.delKeys config) (E.Doc ["Edit", doc])
+        let mk action =
+                action <&> WidgetIds.fromEntityId
+                & Widget.keysEventMapMovesCursor (Config.delKeys config) (E.Doc ["Edit", "Delete expression"])
         case actions ^. Sugar.delete of
-            Sugar.SetToHole action -> mk "Delete expression" action
+            Sugar.SetToHole action -> mk (action <&> snd)
+            Sugar.Delete action -> mk action
             Sugar.CannotDelete -> mempty
             & return

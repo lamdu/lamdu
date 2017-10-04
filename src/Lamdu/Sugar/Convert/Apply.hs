@@ -117,13 +117,14 @@ convertPrefix ::
 convertPrefix funcS argS applyPl =
     do
         protectedSetToVal <- ConvertM.typeProtectedSetToVal
-        let setToFunc =
+        let addDel CannotDelete =
                 protectedSetToVal (applyPl ^. Input.stored)
                 (funcS ^. rPayload . plData . pStored & Property.value)
                 <&> EntityId.ofValI
+                & Delete
+            addDel x = x
         BodySimpleApply Apply
             { _applyFunc = funcS
-            , _applyArg =
-                argS & rBody . _BodyHole . holeActions . holeMDelete .~ Just setToFunc
+            , _applyArg = argS & rPayload . plActions . delete %~ addDel
             }
             & addActions applyPl
