@@ -4,7 +4,6 @@ module Lamdu.GUI.ExpressionEdit.HoleEdit
     ) where
 
 import qualified Control.Lens as Lens
-import qualified Control.Monad.Reader as Reader
 import           Control.Monad.Transaction (transaction)
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
@@ -121,6 +120,5 @@ make hole pl =
                 >>= makeHoleWithWrapper searchAreaGui pl
             Sugar.LeafHole{} -> return (searchAreaGui Menu.AnyPlace)
     & assignHoleCursor widgetIds
-    & Reader.local (Element.animIdPrefix .~ Widget.toAnimId (hidHole widgetIds))
     where
         widgetIds = HoleWidgetIds.make (pl ^. Sugar.plEntityId)

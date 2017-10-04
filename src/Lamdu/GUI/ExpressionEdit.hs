@@ -3,8 +3,10 @@ module Lamdu.GUI.ExpressionEdit
     ( make
     ) where
 
+import qualified Control.Monad.Reader as Reader
 import qualified Data.List as List
 import           Data.Store.Transaction (Transaction)
+import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.TextView as TextView
@@ -53,7 +55,9 @@ makeEditor ::
     Sugar.Body (Name (T m)) (T m) (ExprGuiT.SugarExpr m) ->
     Sugar.Payload (T m) ExprGuiT.Payload ->
     ExprGuiM m (ExpressionGui m)
-makeEditor body =
+makeEditor body pl =
+    pl
+    &
     case body of
     Sugar.BodyHole         x -> x & HoleEdit.make
     Sugar.BodyLabeledApply x -> x & ApplyEdit.makeLabeled
@@ -69,3 +73,4 @@ makeEditor body =
     Sugar.BodyToNom        x -> x & NomEdit.makeToNom
     Sugar.BodyFromNom      x -> x & NomEdit.makeFromNom
     Sugar.BodyInjectedExpression -> injectedExpr
+    & Reader.local (Element.animIdPrefix .~ Widget.toAnimId (WidgetIds.fromExprPayload pl))

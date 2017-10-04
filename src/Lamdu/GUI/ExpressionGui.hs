@@ -315,14 +315,11 @@ stdWrap ::
     ExprGuiM m (ExpressionGui m)
 stdWrap pl act =
     do
-        (res, holePicker) <-
-            Reader.local (Element.animIdPrefix .~ animId) act
-            & ExprGuiM.listenResultPicker
+        (res, holePicker) <- ExprGuiM.listenResultPicker act
         exprEventMap <- ExprEventMap.make pl holePicker
         maybeAddAnnotationPl pl ?? res
             <&> addEvents exprEventMap
     where
-        animId = Widget.toAnimId (WidgetIds.fromExprPayload pl)
         addEvents
             | ExprGuiT.isHoleResult pl = E.strongerEvents
             | otherwise = E.weakerEvents
