@@ -4,6 +4,7 @@ module Lamdu.Data.DbInit
     ( withDB
     ) where
 
+import           Control.Exception (onException)
 import           Data.Store.Db (Db)
 import qualified Data.Store.Db as Db
 import           Data.Store.Rev.Branch (Branch)
@@ -68,17 +69,18 @@ withDB :: FilePath -> (Db -> IO a) -> IO a
 withDB lamduDir body =
     do
         Directory.createDirectoryIfMissing False lamduDir
-        e <- Directory.doesDirectoryExist dbPath
-        Db.withDB dbPath (options (not e)) $ \db ->
+        alreadyExist <- Directory.doesDirectoryExist dbPath
+        let options =
+                Db.defaultOptions
+                { Db.createIfMissing = not alreadyExist
+                , Db.errorIfExists = not alreadyExist
+                }
+        Db.withDB dbPath options $ \db ->
             do
-                unless e $
-                    Paths.get Paths_Lamdu.getDataFileName "freshdb.json"
+                Paths.get Paths_Lamdu.getDataFileName "freshdb.json"
                     >>= fileImportAll >>= initDb db
+                    & (`onException` Directory.removeDirectoryRecursive dbPath)
+                    & unless alreadyExist
                 body db
     where
-        options create =
-            Db.defaultOptions
-            { Db.createIfMissing = create
-            , Db.errorIfExists = create
-            }
         dbPath = lamduDir </> "codeedit.db"
