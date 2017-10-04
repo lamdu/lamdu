@@ -200,7 +200,7 @@ replaceEventMap actions =
         let mk doc action =
                 action <&> snd <&> WidgetIds.fromEntityId
                 & Widget.keysEventMapMovesCursor (Config.delKeys config) (E.Doc ["Edit", doc])
-        case actions ^. Sugar.setToHole of
+        case actions ^. Sugar.delete of
             Sugar.SetToHole action -> mk "Delete expression" action
-            Sugar.AlreadyAHole -> mempty
+            Sugar.CannotDelete -> mempty
             & return

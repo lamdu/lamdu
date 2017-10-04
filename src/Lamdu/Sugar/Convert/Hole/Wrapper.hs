@@ -114,7 +114,7 @@ convertAppliedHole (V.Apply funcI argI) argS exprPl =
                 { _haExpr =
                       argS
                       & rPayload . plActions . wrap .~ WrappedAlready storedEntityId
-                      & rPayload . plActions . setToHole .~
+                      & rPayload . plActions . delete .~
                         SetToHole
                         ( exprPl ^. Input.stored & DataOps.setToHole <&> uuidEntityId )
                 , _haUnwrap =

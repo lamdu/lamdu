@@ -1,10 +1,10 @@
 {-# LANGUAGE NoImplicitPrelude, TemplateHaskell, DeriveTraversable #-}
 module Lamdu.Sugar.Types.Expression
     ( WrapAction(..), _WrapperAlready, _WrappedAlready, _WrapNotAllowed, _WrapAction
-    , SetToHole(..), _SetToHole, _AlreadyAHole
+    , Delete(..), _SetToHole, _CannotDelete
     , ExtractToDestination(..)
     , Actions(..)
-        , wrap, setToHole, extract, mReplaceParent
+        , wrap, delete, extract, mReplaceParent
     , Body(..)
         , _BodyLam, _BodyLabeledApply, _BodySimpleApply
         , _BodyGetVar, _BodyGetField, _BodyInject, _BodyHole
@@ -56,9 +56,9 @@ data WrapAction m
     | WrapNotAllowed -- I'm a hole
     | WrapAction (m (UUID, EntityId)) -- Wrap me!
 
-data SetToHole m
+data Delete m
     = SetToHole (m (UUID, EntityId))
-    | AlreadyAHole
+    | CannotDelete
 
 data ExtractToDestination
     = ExtractToLet EntityId
@@ -66,7 +66,7 @@ data ExtractToDestination
 
 data Actions m = Actions
     { _wrap :: WrapAction m
-    , _setToHole :: SetToHole m
+    , _delete :: Delete m
     , _extract :: m ExtractToDestination
     , _mReplaceParent :: Maybe (m EntityId)
     }
@@ -250,6 +250,6 @@ Lens.makeLenses ''TId
 Lens.makePrisms ''Body
 Lens.makePrisms ''CaseKind
 Lens.makePrisms ''CompositeTail
+Lens.makePrisms ''Delete
 Lens.makePrisms ''Literal
-Lens.makePrisms ''SetToHole
 Lens.makePrisms ''WrapAction

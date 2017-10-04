@@ -76,7 +76,7 @@ type ExprStorePoint m a = Val (Maybe (ValI m), a)
 convert :: Monad m => Input.Payload m a -> ConvertM m (ExpressionU m a)
 convert exprPl =
     convertCommon Nothing exprPl
-    <&> rPayload . plActions . setToHole .~ AlreadyAHole
+    <&> rPayload . plActions . delete .~ CannotDelete
 
 convertCommon ::
     Monad m =>

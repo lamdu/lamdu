@@ -52,7 +52,7 @@ convert app@(V.Apply funcI argI) exprPl =
                                 (exprPl ^. Input.stored)
                                 dst
                         funcS
-                            & rPayload . plActions . setToHole .~ SetToHole deleteAction
+                            & rPayload . plActions . delete .~ SetToHole deleteAction
                             & return
                         & fromMaybe funcS
                     , argS

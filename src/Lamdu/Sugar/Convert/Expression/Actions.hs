@@ -100,7 +100,7 @@ mkActions exprPl =
         postProcess <- ConvertM.postProcess
         Actions
             { _wrap = DataOps.wrap stored <* postProcess <&> addEntityId & WrapAction
-            , _setToHole = DataOps.setToHole stored <* postProcess <&> addEntityId & SetToHole
+            , _delete = DataOps.setToHole stored <* postProcess <&> addEntityId & SetToHole
             , _extract = ext
             , _mReplaceParent = Nothing
             } & return

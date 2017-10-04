@@ -493,18 +493,18 @@ lamParamType lamExprPl =
 makeNonRecordParamActions ::
     Monad m => BinderKind m -> StoredLam m -> ConvertM m (FuncParamActions (T m))
 makeNonRecordParamActions binderKind storedLam =
-    do
-        delete <- makeDeleteLambda binderKind storedLam
-        return
-            FuncParamActions
-            { _fpAddNext =
-                convertToRecordParams DataOps.newHole
-                binderKind storedLam NewParamAfter
-                <&> ParamAddResultVarToTags
-            , _fpDelete = delete
-            , _fpMOrderBefore = Nothing
-            , _fpMOrderAfter = Nothing
-            }
+    makeDeleteLambda binderKind storedLam
+    <&>
+    \del ->
+    FuncParamActions
+    { _fpAddNext =
+        convertToRecordParams DataOps.newHole
+        binderKind storedLam NewParamAfter
+        <&> ParamAddResultVarToTags
+    , _fpDelete = del
+    , _fpMOrderBefore = Nothing
+    , _fpMOrderAfter = Nothing
+    }
 
 mkFuncParam :: Monad m => Input.Payload m a -> info -> ConvertM m (FuncParam info)
 mkFuncParam lamExprPl info =
