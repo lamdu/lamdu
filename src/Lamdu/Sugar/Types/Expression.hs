@@ -1,7 +1,7 @@
 {-# LANGUAGE NoImplicitPrelude, TemplateHaskell, DeriveTraversable #-}
 module Lamdu.Sugar.Types.Expression
     ( WrapAction(..), _WrapperAlready, _WrappedAlready, _WrapNotAllowed, _WrapAction
-    , SetToHole(..), _SetToHole, _SetWrapperToHole, _AlreadyAHole
+    , SetToHole(..), _SetToHole, _AlreadyAHole
     , ExtractToDestination(..)
     , Actions(..)
         , wrap, setToHole, extract, mReplaceParent
@@ -58,7 +58,6 @@ data WrapAction m
 
 data SetToHole m
     = SetToHole (m (UUID, EntityId))
-    | SetWrapperToHole (m (UUID, EntityId))
     | AlreadyAHole
 
 data ExtractToDestination

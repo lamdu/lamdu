@@ -202,6 +202,5 @@ replaceEventMap actions =
                 & Widget.keysEventMapMovesCursor (Config.delKeys config) (E.Doc ["Edit", doc])
         case actions ^. Sugar.setToHole of
             Sugar.SetToHole action -> mk "Delete expression" action
-            Sugar.SetWrapperToHole action -> mk "Delete outer hole" action
             Sugar.AlreadyAHole -> mempty
             & return

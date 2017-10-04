@@ -69,7 +69,6 @@ genericEdit whichStyle prop pl =
         editEventMap =
             case pl ^. Sugar.plActions . Sugar.setToHole of
             Sugar.SetToHole action -> mkEditEventMap valText action
-            Sugar.SetWrapperToHole action -> mkEditEventMap valText action
             Sugar.AlreadyAHole -> error "Literal val is a hole?!"
         valText = prop ^. Property.pVal & format
 
