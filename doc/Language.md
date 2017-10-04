@@ -1,30 +1,38 @@
 # The Lamdu Language
 
-In traditional programming,
-the code that you see in your text editor is exactly the same thing that is stored on disk.
+Lamdu is a statically typed, purely functional language and an IDE.
 
-In Lamdu, what you see in the editor and the data structure stored on disk are different.
-For example, the name of each variable is only stored once,
-and all references to it are done by its unique identifier (which isn't visible to the user).
+The Lamdu language is different from traditional programming languages:
 
-Lamdu's code is stored in the "Lamdu Calculus" language, a low-level and very small language.
-In addition to the low level calculus, Lamdu stores meta-data, such as names,
-which is required to present it.
+In traditional languages, the code that you see in your text editor is
+the data is stored on disk.
 
-Lamdu displays the code with additional "Projectional Syntactic Sugars",
-which aren't part of the Lamdu Calculus,
-and this displayed language is simply called the "Lamdu Language".
+In Lamdu, what you see in the editor and the data structure stored on
+disk are different.  For example, the name of each variable is only
+stored once, and all references to it use a unique identifier that
+isn't visible to the user.
 
-## How Lamdu's syntactic sugar is different from traditional syntactic sugar
+Lamdu's code is stored in the "Lamdu Calculus" language, a very small
+lower level language.  In addition to this lower level calculus, Lamdu
+stores associated meta-data, such as names, which is required to
+present it.
 
-In traditional programming, "syntactic sugar" lets the user write things in clear and concise ways that expand to a lower level syntax.
+Lamdu displays the code with additional "Projectional Syntactic
+Sugars", which aren't part of the underlying Lamdu Calculus. The user
+views and edits the code in this language, which is simply called the
+"Lamdu Language".
+
+## Syntactic sugar
+
+In traditional programming, "syntactic sugar" lets the user write
+things in clear and concise ways that expand to a lower level syntax.
 
 * In C `a->x` expands to `(*a).x`
 * In Python `f'My name is {name}'` expands to `'My name is {name}'.format(name=name)`
 * In Haskell `[1,2,3]` expands to `1:2:3:[]` which further expands to `(:) 1 ((:) 2 ((:) 3 []))`
 * In Scala `{_ * 2 + _}` expands to `{(x,y) => x * 2 + y}`
 
-In traditional programming languages one may choose to use syntactic sugars.
+Traditionally, one may choose which syntactic sugars to use.
 For example these two Python functions are the functionaly the same,
 but syntactically different:
 
@@ -52,23 +60,30 @@ def sour(n):
         return str(n)
 ```
 
-There’s benefit in having short and simple ways to write code. But there are also downsides:
+There’s benefit in having short and simple ways to write code. But
+there are also downsides:
 
-* More choices to make (which syntax to use?)
-* In some cases, small edits require rewrites. `{_ * 2 + _}` can't be changed to `{(x,y) => x * 2 + y*y}` (`y` changed to `y*y`) without "breaking the sugar".
+* More choices to make (which syntax to use?) and less uniformity
+* In some cases, small edits require rewrites. `{_ * 2 + _}` can't be
+  changed to `{(x,y) => x * 2 + y*y}` (`y` changed to `y*y`) without
+  "breaking the sugar".
 
-So Lamdu's "Projectional Syntactic Sugar" works in the opposite direction -
-the code is always presented in "sugared form" when applicable,
-and the user's edits on the sugared form are translated to edits on the underlying calculus.
+## Lamdu's Projectional Syntactic Sugar
 
-## Lamdu Calculus's value language
+The Lamdu language works in the opposite direction - the code is
+always presented in "sugared form", and the user's edits on the
+sugared form are translated to edits on the underlying calculus.
 
-Lamdu Calculus is an extention of the [Lambda Calculus](https://en.wikipedia.org/wiki/Lambda_calculus).
+## Underlying Lamdu Calculus language
+
+[Lamdu Calculus](https://github.com/lamdu/lamdu-calculus) is an
+extention of the [Lambda Calculus](https://en.wikipedia.org/wiki/Lambda_calculus).
 
 The calculus is decribed below in a human readable "pseudo-syntax".
-(The code is actually stored as an AST, so the pseudo-syntax purposes is for documentation only)
+Lamdu does not store code this way, but as an AST.
 
-These are the terms of the language:
+These are the terms of the language
+(defined by [`Lamdu.Calc.Val`](https://github.com/lamdu/lamdu-calculus/blob/master/src/Lamdu/Calc/Val.hs):
 
 * `?` - Holes (Used to store incomplete code)
 * `5` - Literals
@@ -82,73 +97,129 @@ These are the terms of the language:
   * `record.field` - Get field from a record
 * Sum types
   * `alt: injected` - Inject a value to a sum-type
-  * `case value of { alt: handler, rest }` - Pattern match a single sum-type constuctor
-  * `Ø` - The void sum type handler (used as "rest" in pattern match when no more cases remain to match)
+  * `case λ of { alt: handler, rest }` - Pattern match a single sum-type constructor, "peeling off" the sum type
+  * `Ø` - The "absurd" (empty sum type) handler (used as "rest" in pattern match when no more cases remain to match)
 * Nominal types
   * `«Nom value` - Wrap a value in a nominal type
   * `value »Nom` - Unwrap a value from a nominal type
 
-(defined in [`Lamdu.Calc.Val`](https://github.com/lamdu/lamdu-calculus/blob/master/src/Lamdu/Calc/Val.hs))
-
 ### Structural types and Nominal types
 
-Most statically typed languages have both anonymous tuples and nominal types which one needs to declare:
+Most statically typed languages have nominal types. These are types that:
+
+* Are declared explicitly
+* Have an explicit name/identity
+* Two nominal types are considered "the same" if their given name/identity is the same
+
+For example, `Maybe` is a nominal type in Haskell:
 
 ```Haskell
 data Maybe a = Nothing | Just a
 ```
 
-Anonymous tuples are structural types - they don't have names and what matters is their structure.
-In Lamdu we have structural records instead of anonymous tuples - each field is named.
-But unlike nominal types, you don't need to ceremoniously declare the data type - it is simply inferred.
+Some languages also have `structural types`. These are types that are
+defined by their underlying structure.
 
-Nominal types are also provided, and are useful to use in many cases
-(this is elaborated in more detail in Lamdu Calculus's
-[documentation](https://github.com/lamdu/lamdu-calculus/#nominal-types))
+In contrast, anonymous tuples are structural types - they don't have
+names and are defined by their structure.
+
+Unlike nominal types, you don't need to ceremoniously declare the data
+type - it is inferred from use.
+
+#### Lamdu's structural types
+
+Instead of anonymous tuples, Lamdu has structural records where each
+field is named but the type is not.
+One can create records "on the spot" anywhere without declarations.
+
+Instead of explicitly declared sum types (also called "variant types"
+or "tagged unions") Lamdu has structural sum types where each data
+constructor is named but the type is not. These are also inferred from
+use.
+
+One can inject into a sum type "on the spot" or case-analyze a value
+with no declarations.
+
+#### Lamdu's nominal types
+
+In addition to structural types, Lamdu also has explicitly declared
+nominal types.
+
+Nominal types may be parameterized by other types. Unlike traditional
+"generics" and "templates", Lamdu's nominal types take keyword type
+parameters.
+
+These exist to serve several purposes:
+
+* Facilitate recursive data types
+* Safely distinguishing between similarly structured data of different meanings
+* [Rank-N types](https://wiki.haskell.org/Rank-N_types)
+
+More information can be found in the
+[Lamdu Calculus](https://github.com/lamdu/lamdu-calculus#nominal-types) document.
 
 ## Lamdu's type language
 
-Lamdu's type language is currently identical to Lamdu Calculus's type language.
+Lamdu Calculus's type language is defined in [`Lamdu.Calc.Type`](https://github.com/lamdu/lamdu-calculus/blob/master/src/Lamdu/Calc/Type.hs).
 
-TODO: Describe
+The Lamdu Language uses the underlying type language directly without sugaring.
 
-(defined in [`Lamdu.Calc.Type`](https://github.com/lamdu/lamdu-calculus/blob/master/src/Lamdu/Calc/Type.hs))
+**TODO: Describe**
 
 ## Lamdu's syntax sugars
 
-### Labeled Apply and definition presentation modes
+In addition to the Lamdu Calculus constructs which are all embedded in
+the Lamdu Language, these syntactic sugars are also part of the Lamdu
+Language:
 
-While Lamdu-Calculus only has functions which accept a single argument,
-Lamdu uses an arguments record to denote multiple arguments to a function.
+### Labeled Apply and presentation modes
 
-A call may be displayed as an infix operator application, like `1 + 2`,
-if the applied function's presentation mode is set to "infix".
-A function whose presentation mode is set to infix will always be displayed as infix,
-unlike Haskell where one could use both `1 + 2` and `(+) 1 2`.
+While Lamdu-Calculus only has unary functions (functions of a single argument),
+Lamdu supports multiple arguments via an underlying record of parameters.
 
-Like names, presentation modes are metadata which isn't part of the underlying calculus.
+A call may be displayed as an infix operator application (`1 + 2`),
+if the applied function's presentation mode is set to infix.
 
-Another presentation mode option is "OO",
-where one of the arguments appears after the function name and does not have a label
-describing it because it is considered obvious.
-This is similar to calling conventions in some other languages like Objective-C and Swift.
+A function applied to multiple arguments whose presentation mode is
+set to infix will always be displayed as infix, unlike Haskell where
+one could use both `1 + 2` and `(+) 1 2`.
+
+Like names, presentation modes are metadata which isn't part of the
+underlying calculus.
+
+Another presentation mode option is "OO", where one of the arguments
+appears after the function name and does not have a label describing
+it because it is the grammatic
+[object](https://en.wikipedia.org/wiki/Object_\(grammar\)) of the verb.
+
+This is similar to some other languages like Objective-C and
+[Swift](https://developer.apple.com/library/content/documentation/Swift/Conceptual/Swift_Programming_Language/Functions.html#//apple_ref/doc/uid/TP40014097-CH10-ID526).
 
 #### Field parameters
 
-To define the list of parameters, which usually can't be inferred from the incomplete code,
-the argument list is stored in out-of-band metadata.
+Multiple parameters of a function are passed as a record in the underlying
+calculus but are multiple different parameters in the Lamdu Language.
 
-In the body of the function the parameters are also displayed as different parameters.
-When used, instead of showing as `paramRecord.field` it simply gets displayed as `field`.
+Before parameters are used, type inference which acts on the
+underlying language cannot infer the record type (and its list of fields).
+Therefore parameter lists are stored in out-of-band metadata which is
+used to hint type inference about the appropriate record type and proper sugaring.
 
-When the record of parameters is used directly, the multiple parameters sugaring isn't used.
+In the underlying language, each use of the parameter is a get-field
+expression (`paramRecord.field`) and is sugared to a simple variable
+access (`field`).
 
 #### Relayed arguments
 
-When passing a field parameter as a field argument in a labeled application,
-using the exact same field tag, instead of showing `bound: bound`,
-"relayed" arguments sugar is used and all the relayed args are listed as the last arguments
-after a `➾` symbol, and appears as `➾ bound`.
+When passing a field parameter as a field argument (i.e: both the
+caller and callee are multi-parameter functions) of the same field, a
+"relayed arguments" sugar is used.
+
+Instead of showing `bound: bound`, "relayed arguments" are listed non-redundantly as
+the last arguments after a `➾` symbol, and appears as `➾ bound`.
+
+This is especially useful in recursive code where some of parameters
+do not change in recursive calls.
 
 ### Binder Left-Hand-Side
 
@@ -158,7 +229,7 @@ This:
 <var> = <param> → <body>
 ```
 
-Gets sugared to
+Gets sugared to:
 
 ```Haskell
 <var> <param> = <body>
@@ -169,9 +240,9 @@ Gets sugared to
 Let bindings are expressed in the underlying calculus as
 [redexes](https://en.wikipedia.org/wiki/Lambda_calculus#Reduction).
 
-Redexes which occur at the top-level of a binder body are sugared to let bindings.
+Redexes which occur at the top-level of a "binder body" are sugared to let bindings.
 
-So this:
+For example:
 
 ```Haskell
 <arg> →
@@ -188,14 +259,16 @@ let <var> = <value>
 
 ### Flattened records and pattern match functions
 
-The Lamdu-Calculus constructs records by adding fields to the empty record.
-Lamdu displays these as a flat record,
-and re-orders the fields according to field order out-of-band metadata.
-Each field has an ordering priority which is used to sort the field.
+The Lamdu-Calculus constructs records by adding fields to the empty
+record.  Lamdu displays these as a flat record, and re-orders the
+fields according to field order out-of-band metadata.  Each field has
+an ordering priority which is used as a sorting key.
 
 The same is done for pattern matches / case-statements,
 which in the underlying calculus are similarly constructed by adding
 one sum-type handler at a time for each constructor.
+
+TODO: Open records, Open cases
 
 ### Pattern matches / case-statements
 
@@ -224,7 +297,8 @@ Just: <handler1>
 
 ### If/elif/else
 
-While the underlying Lamdu-Calculus expresses conditionals as pattern matches of booleans, i.e:
+While the underlying Lamdu-Calculus expresses conditionals as pattern
+matches on booleans, i.e:
 
 ```Haskell
 ( \case
@@ -233,8 +307,7 @@ While the underlying Lamdu-Calculus expresses conditionals as pattern matches of
 ) (condition Bool»)
 ```
 
-Lamdu sugars it to the "if" expression
-familiar to programmers from traditional programming languages:
+Lamdu sugars it to an ordinary "if" expression:
 
 ```Python
 if <cond0>:
@@ -243,7 +316,7 @@ else:
   <handle1>
 ```
 
-When the else clause is itself an if-expression, it gets sugar as "elif" like so:
+When the else clause is itself an if-expression, it gets sugared via "elif":
 
 ```Python
 if <cond0>:
@@ -256,14 +329,14 @@ else:
 
 ### Suspended computations
 
-Unlike Haskell, Lamdu is a strict/eager evaluation language.
+Unlike Haskell, Lamdu is strict/eager.
 Lazy style of programming is supported via suspended computations -
 these are lambdas which get a "unit" (the empty record) parameter,
 and rather than being displayed like normal lambdas:
 
     <arg> → <computation>
 
-They are displayed with a lightweight line denoting the suspension:
+They are displayed with a lightweight vertical line:
 
     | <computation>
 
@@ -283,16 +356,15 @@ They are used for:
 
 * Lambdas with multiple parameters
 * Whose parameters are all used
-* And don't contain in their bodies any:
-  * Let bindings
+* And are "simple". i.e: Whose bodies don't contain:
+  * Variable bindings (Let bindings, lambdas)
   * Holes
-  * Lambdas (except for lazy expressions which are allowed)
 
 (see `Lamdu.Sugar.Convert.Binder.useNormalLambda`)
 
 ### String Literals
 
-The `Text` nominal type just wraps UTF-8 encoded `Bytes` values.
+The `Text` nominal type contains UTF-8 encoded `Bytes` values.
 
 Instead of showing string literals as
 
@@ -306,6 +378,6 @@ Lamdu sugars such expressions to string literals, i.e
 
 TODO: elaborate more on these -
 
-* Higher order type-parameters
+* Higher kinded type-parameters
 * Type-classes
 * UI to edit nominal types
