@@ -27,3 +27,4 @@
 /.vscode
 /ghcid.txt
 /autogen/
+/ghci-out/
