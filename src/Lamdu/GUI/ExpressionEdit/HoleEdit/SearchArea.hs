@@ -9,9 +9,11 @@ module Lamdu.GUI.ExpressionEdit.HoleEdit.SearchArea
     ) where
 
 import qualified Control.Lens as Lens
+import           Control.Monad.Transaction (MonadTransaction(..))
 import qualified Data.Monoid as Monoid
 import qualified Data.Store.Property as Property
 import           Data.Store.Transaction (Transaction)
+import qualified Data.Store.Transaction as Transaction
 import qualified Data.Text as Text
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.EventMap as E
@@ -26,6 +28,7 @@ import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.EventMap as HoleEventMap
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.Info (HoleInfo(..), hiSearchTermProperty)
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.Open (makeOpenSearchAreaGui)
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.SearchTerm as SearchTerm
+import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.State as HoleState
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds (WidgetIds(..))
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds as WidgetIds
 import           Lamdu.GUI.ExpressionGui (ExpressionGui)
@@ -33,6 +36,7 @@ import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
+import           Lamdu.Name (Name)
 import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
@@ -50,10 +54,26 @@ fdConfig Config.Hole{holeOpenKeys, holeCloseKeys} = FocusDelegator.Config
 -- Has an ExpressionGui.stdWrap/typeView under the search term
 makeStdWrapped ::
     Monad m =>
-    Sugar.Payload (T m) ExprGuiT.Payload -> HoleInfo m ->
+    Sugar.Hole (T m) (Sugar.Expression (Name (T m)) (T m) ()) (ExprGuiT.SugarExpr m) ->
+    Sugar.Payload (T m) ExprGuiT.Payload ->
+    WidgetIds ->
     ExprGuiM m (Menu.Placement -> ExpressionGui m)
-makeStdWrapped pl holeInfo =
+makeStdWrapped hole pl widgetIds =
     do
+        stateProp <-
+            HoleState.assocStateRef (hole ^. Sugar.holeActions . Sugar.holeUUID)
+            ^. Transaction.mkProperty & transaction
+        let holeInfo =
+                HoleInfo
+                { hiEntityId = pl ^. Sugar.plEntityId
+                , hiState = stateProp
+                , hiInferredType = pl ^. Sugar.plAnnotation . Sugar.aInferredType
+                , hiHole = hole
+                , hiIds = widgetIds
+                , hiNearestHoles = pl ^. Sugar.plData . ExprGuiT.plNearestHoles
+                , hiMinOpPrec = pl ^. Sugar.plData . ExprGuiT.plMinOpPrec
+                }
+        let searchTerm = hiSearchTermProperty holeInfo ^. Property.pVal
         config <- Lens.view Config.config
         let fdMode
                 | Text.null searchTerm = FocusDelegator.FocusEntryParent
@@ -96,4 +116,3 @@ makeStdWrapped pl holeInfo =
             <&> Lens.mapped %~ E.weakerEvents eventMap
     where
         isAHoleInHole = ExprGuiT.isHoleResult pl
-        searchTerm = hiSearchTermProperty holeInfo ^. Property.pVal

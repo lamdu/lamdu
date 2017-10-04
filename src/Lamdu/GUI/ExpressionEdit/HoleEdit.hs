@@ -4,9 +4,7 @@ module Lamdu.GUI.ExpressionEdit.HoleEdit
     ) where
 
 import qualified Control.Lens as Lens
-import           Control.Monad.Transaction (transaction)
 import           Data.Store.Transaction (Transaction)
-import qualified Data.Store.Transaction as Transaction
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.EventMap as E
@@ -17,9 +15,7 @@ import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Menu as Menu
 import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.Argument as Wrapper
-import           Lamdu.GUI.ExpressionEdit.HoleEdit.Info (HoleInfo(..))
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.SearchArea as SearchArea
-import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.State as HoleState
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds (WidgetIds(..))
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds as HoleWidgetIds
 import           Lamdu.GUI.ExpressionGui (ExpressionGui)
@@ -28,7 +24,7 @@ import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
-import           Lamdu.Name (Name(..))
+import           Lamdu.Name (Name)
 import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
@@ -98,22 +94,7 @@ make ::
     ExprGuiM m (ExpressionGui m)
 make hole pl =
     do
-        stateProp <-
-            HoleState.assocStateRef (hole ^. Sugar.holeActions . Sugar.holeUUID)
-            ^. Transaction.mkProperty & transaction
-
-        searchAreaGui <-
-            SearchArea.makeStdWrapped pl
-            HoleInfo
-            { hiEntityId = pl ^. Sugar.plEntityId
-            , hiState = stateProp
-            , hiInferredType = pl ^. Sugar.plAnnotation . Sugar.aInferredType
-            , hiHole = hole
-            , hiIds = widgetIds
-            , hiNearestHoles = pl ^. Sugar.plData . ExprGuiT.plNearestHoles
-            , hiMinOpPrec = pl ^. Sugar.plData . ExprGuiT.plMinOpPrec
-            }
-
+        searchAreaGui <- SearchArea.makeStdWrapped hole pl widgetIds
         case hole ^. Sugar.holeKind of
             Sugar.WrapperHole arg ->
                 makeWrapper pl (hidOpenSearchTerm widgetIds) arg
