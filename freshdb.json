@@ -773,11 +773,6 @@
         "lamFieldParams": null
     },
     {
-        "lamId": "724d56c8-9a9b-4e3f-b645-81cebdd3bea8",
-        "lamVar": "2a8f490bc2804029d9ef9be6f7ee1b38",
-        "lamFieldParams": null
-    },
-    {
         "lamId": "bcac4615-4199-4626-86ff-7fbe7dff84f6",
         "lamVar": "2af466db54a74523f8eec07f2a21ef12",
         "lamFieldParams": null
@@ -1219,11 +1214,6 @@
         "lamFieldParams": null
     },
     {
-        "lamId": "942bd353-2c3c-4052-9445-c9b2266b1db2",
-        "lamVar": "9d57ed528592d374c5ce876b97bc01fe",
-        "lamFieldParams": null
-    },
-    {
         "lamId": "138b20fd-2c1b-4772-bbcd-4e509139ebe8",
         "lamVar": "9dd26fbdd72d40ad816af73727752b85",
         "lamFieldParams": [
@@ -1253,12 +1243,6 @@
         "lamId": "29f60cf0-8e73-4c53-9b6d-ea1a2051a194",
         "name": "stream",
         "lamVar": "a255e1d1f81b4c9d9ef0f8bd3f5ac538",
-        "lamFieldParams": null
-    },
-    {
-        "lamId": "f9b429fc-9a9b-4107-bfba-f16a091008bb",
-        "name": "dummy",
-        "lamVar": "a2768e7187ae401892b2a4a53c0f9793",
         "lamFieldParams": null
     },
     {
@@ -1482,12 +1466,6 @@
         "lamFieldParams": null
     },
     {
-        "lamId": "6c75527f-d91c-461c-afbc-60a12e357a07",
-        "name": "dummy",
-        "lamVar": "c8efda99b7a04a34b2af28d56ee9f98d",
-        "lamFieldParams": null
-    },
-    {
         "lamId": "1b6091bd-e315-4f4c-9609-5d99e8cc2a06",
         "lamVar": "cb1f5da3a4ac3c06934d8254d041caa6",
         "lamFieldParams": null
@@ -1577,14 +1555,6 @@
         ]
     },
     {
-        "lamId": "29e30205-b4e7-4db9-96a6-1e229a9dd5b2",
-        "lamVar": "d770c9469f654f9799fc1d8a6bff6b0b",
-        "lamFieldParams": [
-            "2cd566b597f3104ca7cdaafba234e97e",
-            "39a1b2e147ca8085ca6078182775f99f"
-        ]
-    },
-    {
         "lamId": "6b0dae3b-248b-459d-b5be-132b853c77e9",
         "name": "x",
         "lamVar": "d852a0789d16442590005ba054341671",
@@ -1625,11 +1595,6 @@
         "lamId": "657022ff-c221-433a-aea5-1e8a3f574699",
         "name": "stream",
         "lamVar": "e2cd859991764a8bb4ee00c98ad2d9cd",
-        "lamFieldParams": null
-    },
-    {
-        "lamId": "b870af28-df2b-4609-8276-20398353ae66",
-        "lamVar": "e39aab7547973fd8b1ffa327beb780d6",
         "lamFieldParams": null
     },
     {
