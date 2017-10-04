@@ -56,9 +56,9 @@ assignHoleCursor widgetIds =
 
 makeHoleWithWrapper ::
     (Functor f, Monad m) =>
-    ExpressionGui f -> (Menu.Placement -> ExpressionGui f) -> Sugar.Payload (T m) ExprGuiT.Payload ->
+    (Menu.Placement -> ExpressionGui f) -> Sugar.Payload (T m) ExprGuiT.Payload -> ExpressionGui f ->
     ExprGuiM m (ExpressionGui f)
-makeHoleWithWrapper wrapperGui searchAreaGui pl =
+makeHoleWithWrapper searchAreaGui pl wrapperGui =
     do
         unfocusedWrapperGui <-
             ExpressionGui.maybeAddAnnotationPl pl ?? wrapperGui
@@ -99,29 +99,27 @@ make ::
     ExprGuiM m (ExpressionGui m)
 make hole pl =
     do
-        mWrapperGui  <-
-            hole ^? Sugar.holeKind . Sugar._WrapperHole
-            & Lens._Just %%~ makeWrapper pl (hidOpenSearchTerm widgetIds)
-
         stateProp <-
             HoleState.assocStateRef (hole ^. Sugar.holeActions . Sugar.holeUUID)
             ^. Transaction.mkProperty & transaction
 
-        let holeInfo = HoleInfo
-                { hiEntityId = pl ^. Sugar.plEntityId
-                , hiState = stateProp
-                , hiInferredType = pl ^. Sugar.plAnnotation . Sugar.aInferredType
-                , hiHole = hole
-                , hiIds = widgetIds
-                , hiNearestHoles = pl ^. Sugar.plData . ExprGuiT.plNearestHoles
-                , hiMinOpPrec = pl ^. Sugar.plData . ExprGuiT.plMinOpPrec
-                }
+        searchAreaGui <-
+            SearchArea.makeStdWrapped pl
+            HoleInfo
+            { hiEntityId = pl ^. Sugar.plEntityId
+            , hiState = stateProp
+            , hiInferredType = pl ^. Sugar.plAnnotation . Sugar.aInferredType
+            , hiHole = hole
+            , hiIds = widgetIds
+            , hiNearestHoles = pl ^. Sugar.plData . ExprGuiT.plNearestHoles
+            , hiMinOpPrec = pl ^. Sugar.plData . ExprGuiT.plMinOpPrec
+            }
 
-        searchAreaGui <- SearchArea.makeStdWrapped pl holeInfo
-
-        case mWrapperGui of
-            Just wrapperGui -> makeHoleWithWrapper wrapperGui searchAreaGui pl
-            Nothing -> return (searchAreaGui Menu.AnyPlace)
+        case hole ^. Sugar.holeKind of
+            Sugar.WrapperHole arg ->
+                makeWrapper pl (hidOpenSearchTerm widgetIds) arg
+                >>= makeHoleWithWrapper searchAreaGui pl
+            Sugar.LeafHole{} -> return (searchAreaGui Menu.AnyPlace)
     & assignHoleCursor widgetIds
     & Reader.local (Element.animIdPrefix .~ Widget.toAnimId (hidHole widgetIds))
     where
