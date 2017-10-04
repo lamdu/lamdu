@@ -39,18 +39,13 @@ type T = Transaction
 
 makeWrapper ::
     Monad m =>
-    Sugar.Payload (T m) ExprGuiT.Payload -> HoleInfo m ->
-    ExprGuiM m (Maybe (ExpressionGui m))
-makeWrapper pl holeInfo =
-    hiHole holeInfo ^? Sugar.holeKind . Sugar._WrapperHole
-    & Lens._Just %%~
-        \holeArg ->
-        do
-            (wrapper, holePicker) <-
-                Wrapper.make (hiIds holeInfo) holeArg
-                & ExprGuiM.listenResultPicker
-            exprEventMap <- ExprEventMap.make pl holePicker
-            E.weakerEvents exprEventMap wrapper & return
+    Sugar.Payload (T m) ExprGuiT.Payload -> Widget.Id -> Sugar.HoleArg (T m) (ExprGuiT.SugarExpr m) ->
+    ExprGuiM m (ExpressionGui m)
+makeWrapper pl openHoleId holeArg =
+    do
+        (wrapper, holePicker) <- Wrapper.make openHoleId holeArg & ExprGuiM.listenResultPicker
+        exprEventMap <- ExprEventMap.make pl holePicker
+        E.weakerEvents exprEventMap wrapper & return
 
 assignHoleCursor ::
     Monad m => WidgetIds -> ExprGuiM m a -> ExprGuiM m a
@@ -109,6 +104,10 @@ make hole pl =
             HoleState.assocStateRef (hole ^. Sugar.holeActions . Sugar.holeUUID)
             ^. Transaction.mkProperty & transaction
 
+        mWrapperGui  <-
+            hole ^? Sugar.holeKind . Sugar._WrapperHole
+            & Lens._Just %%~ makeWrapper pl (hidOpenSearchTerm widgetIds)
+
         let holeInfo = HoleInfo
                 { hiEntityId = pl ^. Sugar.plEntityId
                 , hiState = stateProp
@@ -120,7 +119,6 @@ make hole pl =
                 }
 
         searchAreaGui <- SearchArea.makeStdWrapped pl holeInfo
-        mWrapperGui <- makeWrapper pl holeInfo
 
         delKeys <- Config.delKeys
         let deleteEventMap =
