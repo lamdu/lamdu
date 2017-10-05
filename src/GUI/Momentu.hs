@@ -37,7 +37,8 @@ module GUI.Momentu
     , Align.WithTextPos(..), Align.textTop, Align.tValue
 
     -- | Drawing
-    , MDraw.Font, MDraw.openFont, MDraw.Color(..)
+    , Font.Font, Font.openFont
+    , MDraw.Color(..)
     , MDraw.backgroundColor
     , MDraw.addInnerFrame
 
@@ -70,6 +71,7 @@ import qualified GUI.Momentu.Draw as MDraw
 import           GUI.Momentu.Element (Element(..))
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.EventMap as EventMap
+import qualified GUI.Momentu.Font as Font
 import           GUI.Momentu.Glue ((/-/), (/|/), Glued, Glue)
 import qualified GUI.Momentu.Main as MainLoop
 import           GUI.Momentu.MetaKey (MetaKey(..))

@@ -11,6 +11,7 @@ module Lamdu.Style
 
 import qualified Control.Lens as Lens
 import qualified GUI.Momentu.Draw as Draw
+import           GUI.Momentu.Font (Font)
 import qualified GUI.Momentu.Main as MainLoop
 import           GUI.Momentu.Main.Animation (AnimConfig(..))
 import           GUI.Momentu.MetaKey (MetaKey)
@@ -39,7 +40,7 @@ Lens.makeLenses ''Style
 
 class TextEdit.HasStyle env => HasStyle env where style :: Lens' env Style
 
-help :: Draw.Font -> [MetaKey] -> Theme.Help -> EventMapHelp.Config
+help :: Font -> [MetaKey] -> Theme.Help -> EventMapHelp.Config
 help font helpKeys theme =
     EventMapHelp.Config
     { EventMapHelp._configStyle =
@@ -56,7 +57,7 @@ help font helpKeys theme =
     where
         Theme.Help{helpTextColor, helpInputDocColor, helpBGColor, helpTint} = theme
 
-textEdit :: Draw.Color -> Draw.Font -> TextEdit.Style
+textEdit :: Draw.Color -> Font -> TextEdit.Style
 textEdit color font =
     TextEdit.defaultStyle
     TextView.Style
@@ -65,7 +66,7 @@ textEdit color font =
     , TextView._styleUnderline = Nothing
     }
 
-makeStyle :: Theme.CodeForegroundColors -> Fonts Draw.Font -> Style
+makeStyle :: Theme.CodeForegroundColors -> Fonts Font -> Style
 makeStyle config fonts =
     Style
     { _styleBase =

@@ -11,7 +11,8 @@ import           Data.Aeson.TH (deriveJSON)
 import           Data.Aeson.Types (defaultOptions)
 import           Data.Typeable (Typeable)
 import           GHC.Generics (Generic)
-import qualified GUI.Momentu.Draw as Draw
+import           GUI.Momentu.Font (Font)
+import qualified GUI.Momentu.Font as Font
 import qualified System.Directory as Directory
 
 import           Lamdu.Prelude
@@ -43,18 +44,18 @@ type FontSize = Float
 
 data LCDSubPixelEnabled = LCDSubPixelEnabled | LCDSubPixelDisabled
 
-load :: LCDSubPixelEnabled -> Float -> FilePath -> IO Draw.Font
-load LCDSubPixelEnabled = Draw.openFont
-load LCDSubPixelDisabled = Draw.openFontNoLCD
+load :: LCDSubPixelEnabled -> Float -> FilePath -> IO Font
+load LCDSubPixelEnabled = Font.openFont
+load LCDSubPixelDisabled = Font.openFontNoLCD
 
-openFont :: LCDSubPixelEnabled -> FontSize -> FilePath -> IO Draw.Font
+openFont :: LCDSubPixelEnabled -> FontSize -> FilePath -> IO Font
 openFont subpixel size path =
     do
         exists <- Directory.doesFileExist path
         unless exists $ E.throwIO $ MissingFont $ path ++ " does not exist!"
         load subpixel size path
 
-new :: LCDSubPixelEnabled -> FilePath -> Fonts (FontSize, FilePath) -> IO (Fonts Draw.Font)
+new :: LCDSubPixelEnabled -> FilePath -> Fonts (FontSize, FilePath) -> IO (Fonts Font)
 new subpixel fallbackFontPath =
     traverse openEach
     where

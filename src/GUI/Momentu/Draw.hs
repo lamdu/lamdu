@@ -3,7 +3,6 @@
 
 module GUI.Momentu.Draw
     ( addInnerFrame, backgroundColor
-    , Draw.Font, Draw.openFont, Draw.openFontNoLCD
     , Draw.line, Draw.convexPoly, Draw.sprite
     , Draw.tint
     , Draw.Color(..), Draw.R, Image

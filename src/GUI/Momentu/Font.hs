@@ -6,6 +6,7 @@ module GUI.Momentu.Font
     , render
     , RenderedText(..), renderedTextSize, renderedText
     , TextSize(..), bounding, advance
+    , Draw.Font, Draw.openFont, Draw.openFontNoLCD
     , height
     , textSize
     , renderText
