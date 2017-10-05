@@ -11,10 +11,8 @@ module Lamdu.GUI.ExpressionEdit.HoleEdit.SearchArea
 import qualified Control.Lens as Lens
 import           Control.Monad.Transaction (MonadTransaction(..))
 import qualified Data.Monoid as Monoid
-import qualified Data.Store.Property as Property
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
-import qualified Data.Text as Text
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.Hover as Hover
@@ -25,7 +23,7 @@ import qualified GUI.Momentu.Widgets.Menu as Menu
 import qualified Lamdu.Config as Config
 import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.EventMap as HoleEventMap
-import           Lamdu.GUI.ExpressionEdit.HoleEdit.Info (HoleInfo(..), hiSearchTermProperty)
+import           Lamdu.GUI.ExpressionEdit.HoleEdit.Info (HoleInfo(..))
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.Open (makeOpenSearchAreaGui)
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.SearchTerm as SearchTerm
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.State as HoleState
@@ -60,6 +58,19 @@ makeStdWrapped ::
     ExprGuiM m (Menu.Placement -> ExpressionGui m)
 makeStdWrapped hole pl widgetIds =
     do
+        config <- Lens.view Config.config
+        let fdWrap
+                | isAHoleInHole = return id
+                | otherwise =
+                    FocusDelegator.make ?? fdConfig (Config.hole config)
+                    ?? FocusDelegator.FocusEntryParent ?? hidClosedSearchArea widgetIds
+                    <&> (Align.tValue %~)
+        isActive <- WidgetIds.isActive widgetIds
+        let fixEventMapCursor
+                | isActive = id
+                | otherwise =
+                    Lens.mapped . Lens.mapped . Widget.eCursor %~
+                    mappend (Monoid.Last (Just (hidOpen widgetIds)))
         stateProp <-
             HoleState.assocStateRef (hole ^. Sugar.holeActions . Sugar.holeUUID)
             ^. Transaction.mkProperty & transaction
@@ -73,26 +84,9 @@ makeStdWrapped hole pl widgetIds =
                 , hiNearestHoles = pl ^. Sugar.plData . ExprGuiT.plNearestHoles
                 , hiMinOpPrec = pl ^. Sugar.plData . ExprGuiT.plMinOpPrec
                 }
-        let searchTerm = hiSearchTermProperty holeInfo ^. Property.pVal
-        config <- Lens.view Config.config
-        let fdMode
-                | Text.null searchTerm = FocusDelegator.FocusEntryParent
-                | otherwise = FocusDelegator.FocusEntryChild
-        let fdWrap
-                | isAHoleInHole = return id
-                | otherwise =
-                    FocusDelegator.make ?? fdConfig (Config.hole config)
-                    ?? fdMode ?? hidClosedSearchArea (hiIds holeInfo)
-                    <&> (Align.tValue %~)
         closedSearchTermGui <-
             fdWrap <*> SearchTerm.make holeInfo <&> Responsive.fromWithTextPos
             & ExpressionGui.stdWrap pl
-        isActive <- WidgetIds.isActive (hiIds holeInfo)
-        let fixEventMapCursor
-                | isActive = id
-                | otherwise =
-                    Lens.mapped . Lens.mapped . Widget.eCursor %~
-                    mappend (Monoid.Last (Just (hidOpen (hiIds holeInfo))))
         eventMap <-
             sequence
             [ HoleEventMap.makeOpenEventMap holeInfo <&> fixEventMapCursor
