@@ -67,6 +67,7 @@ instance MonadIO M where
 
 data Options = Options
     { tickHandler :: IO Bool
+    , fpsFont :: Zoom -> IO (Maybe Draw.Font)
     , getConfig :: IO Config
     , getHelpStyle :: Zoom -> IO EventMapHelp.Config
     , cursorStartPos :: Widget.Id
@@ -79,7 +80,8 @@ defaultOptions helpFontPath =
     do
         loadHelpFont <- memoIO $ \size -> Draw.openFont size helpFontPath
         return Options
-            { tickHandler = return False
+            { tickHandler = pure False
+            , fpsFont = const (pure Nothing)
             , getConfig =
                 return Config
                 { cAnim =
@@ -188,7 +190,7 @@ mainLoopWidget win mkWidgetUnmemod options =
                 Widget.renderWithCursor
                 <$> (getConfig <&> cCursor)
                 <*> (readIORef mkWidgetRef >>= (size &))
-        MainAnim.mainLoop win (getConfig <&> cAnim) $ \size -> MainAnim.Handlers
+        MainAnim.mainLoop win (fpsFont zoom) (getConfig <&> cAnim) $ \size -> MainAnim.Handlers
             { MainAnim.tickHandler =
                 do
                     anyUpdate <- tickHandler
@@ -221,4 +223,4 @@ mainLoopWidget win mkWidgetUnmemod options =
             }
     where
         getClipboard = GLFW.getClipboardString win <&> fmap Text.pack
-        Options{tickHandler, getConfig, getHelpStyle} = options
+        Options{tickHandler, fpsFont, getConfig, getHelpStyle} = options

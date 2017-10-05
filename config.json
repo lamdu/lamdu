@@ -1,5 +1,8 @@
 {
     "maxExprDepth": 40,
+    "debug": {
+        "debugShowFPS": false
+    },
     "zoom": {
         "shrinkKeys"    : [ "Cmd+Minus" ],
         "enlargeKeys"   : [ "Cmd+Equal" ],

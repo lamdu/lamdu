@@ -303,9 +303,8 @@ mainLoop subpixel win refreshScheduler configSampler iteration =
                         & return
             , tickHandler =
                 do
-                    curVersionNum <-
-                        ConfigSampler.getSample configSampler
-                        <&> ConfigSampler.sVersion
+                    sample <- ConfigSampler.getSample configSampler
+                    let curVersionNum = ConfigSampler.sVersion sample
                     configChanged <- atomicModifyIORef lastVersionNumRef $
                         \lastVersionNum ->
                         (curVersionNum, lastVersionNum /= curVersionNum)
@@ -321,6 +320,13 @@ mainLoop subpixel win refreshScheduler configSampler iteration =
                     let helpTheme = sample ^. sTheme & Theme.help
                     Style.help (Font.fontHelp fonts) helpKeys helpTheme
                         & return
+            , fpsFont =
+                \zoom ->
+                do
+                    sample <- ConfigSampler.getSample configSampler
+                    if sample ^. sConfig & Config.debug & Config.debugShowFPS
+                        then getFonts zoom sample <&> fontDefault <&> Just
+                        else pure Nothing
             , cursorStartPos = GUIMain.defaultCursor
             }
 

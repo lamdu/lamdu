@@ -2,6 +2,7 @@
 {-# LANGUAGE NoImplicitPrelude, TemplateHaskell #-}
 module Lamdu.Config
     ( Export(..), Pane(..), Hole(..)
+    , Debug(..)
     , Eval(..)
     , LiteralText(..)
     , Config(..)
@@ -60,6 +61,11 @@ data LiteralText = LiteralText
     } deriving (Eq, Show)
 deriveJSON defaultOptions ''LiteralText
 
+data Debug = Debug
+    { debugShowFPS :: Bool
+    } deriving (Eq, Show)
+deriveJSON defaultOptions ''Debug
+
 data Config = Config
     { zoom :: Zoom.Config
     , export :: Export
@@ -68,6 +74,7 @@ data Config = Config
     , hole :: Hole
     , literalText :: LiteralText
     , eval :: Eval
+    , debug :: Debug
 
     , maxExprDepth :: Int
 

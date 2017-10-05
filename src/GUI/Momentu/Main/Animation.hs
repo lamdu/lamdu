@@ -7,8 +7,8 @@ module GUI.Momentu.Main.Animation
 import           Control.Concurrent (rtsSupportsBoundThreads)
 import           Control.Concurrent.STM.TVar (TVar, newTVarIO, readTVar, writeTVar, modifyTVar, swapTVar)
 import           Control.Concurrent.Utils (forwardSynchronuousExceptions, withForkedIO)
-import qualified Control.Lens as Lens
 import           Control.Exception (evaluate, onException)
+import qualified Control.Lens as Lens
 import           Control.Monad (mplus)
 import qualified Control.Monad.STM as STM
 import           Data.IORef (IORef, newIORef, readIORef, writeIORef)
@@ -17,6 +17,7 @@ import           Data.Time.Clock (NominalDiffTime, UTCTime, getCurrentTime, addU
 import           GUI.Momentu.Animation (AnimId)
 import qualified GUI.Momentu.Animation as Anim
 import qualified GUI.Momentu.Main.Image as MainImage
+import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.GLFW as GLFW
 import           Graphics.UI.GLFW.Events (Event)
 
@@ -145,8 +146,10 @@ eventHandlerThread tvars animHandlers =
         -- a tick result), wake it up
         when (Lens.has Lens._Just mNewFrame) GLFW.postEmptyEvent
 
-animThread :: ThreadVars -> IORef AnimState -> IO AnimConfig -> GLFW.Window -> IO ()
-animThread tvars animStateRef getAnimationConfig win =
+animThread ::
+    IO (Maybe Draw.Font) ->
+    ThreadVars -> IORef AnimState -> IO AnimConfig -> GLFW.Window -> IO ()
+animThread getFpsFont tvars animStateRef getAnimationConfig win =
     MainImage.mainLoop win $ \size ->
     MainImage.Handlers
     { MainImage.eventHandler = \event -> (edReversedEvents %~ (event :)) & updateTVar
@@ -156,6 +159,7 @@ animThread tvars animStateRef getAnimationConfig win =
             _ <- updateFrameState size
             readIORef animStateRef <&> draw
     , MainImage.update = updateFrameState size <&> fmap draw
+    , MainImage.fpsFont = getFpsFont
     }
     where
         draw = Anim.draw . Anim.currentFrame . _asState
@@ -200,8 +204,8 @@ animThread tvars animStateRef getAnimationConfig win =
                 _ <- Lens._Just (writeIORef animStateRef) mNewState
                 return mNewState
 
-mainLoop :: GLFW.Window -> IO AnimConfig -> (Anim.Size -> Handlers) -> IO ()
-mainLoop win getAnimationConfig animHandlers =
+mainLoop :: GLFW.Window -> IO (Maybe Draw.Font) -> IO AnimConfig -> (Anim.Size -> Handlers) -> IO ()
+mainLoop win getFpsFont getAnimationConfig animHandlers =
     do
         unless rtsSupportsBoundThreads (error "mainLoop requires threaded runtime")
         animStateRef <- initialAnimState >>= newIORef
@@ -218,4 +222,4 @@ mainLoop win getAnimationConfig animHandlers =
         eventsThread <- forwardSynchronuousExceptions (eventHandlerThread tvars animHandlers)
         withForkedIO
             (eventsThread `onException` GLFW.postEmptyEvent)
-            (animThread tvars animStateRef getAnimationConfig win)
+            (animThread getFpsFont tvars animStateRef getAnimationConfig win)
