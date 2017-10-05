@@ -144,76 +144,58 @@ For example, the evaluation of `(1 + sqrt 5) / 2`
 appears below that of its child expression, `(1 + sqrt 5)`.
 The former is `1.61...` and the latter is `3.23...`.
 
-To keep the expression's font size consistent, some annotations are shrunk,
+To keep the expression size from bloating, some annotations are shrunk,
 like that of the `sqrt 5` above, which is `2.23...`.
 To see this in normal size, navigate to the expression by going to the `sqrt`,
 or to the `5`, and press **shift+left**.
 
 We have just expressed the golden ratio.
-To save it and give it a name, select the entire expression from the prompt
-by repeatedly pressing **shift+left**.
+To save it and give it a name, navigate to the `⋙` sign and press **return**.
 Press Ctrl-X to extract the code into a new definition.
 Notice the Ctrl-X took us away from the prompt and put us below it.
-Type "**`golden`**" and **escape**.
-The escape takes you out of "name editing" mode
-and puts you back into "selection" mode.
-Lamdu will automatically save "golden" because it is below the prompt, not at it,
-whereas prompt-work is temporary.
-There is no need to say where on your file-system you want this definition kept.
-With Lamdu, disk directory structure is no longer a part of your programming project:
-your project's structure is in Lamdu.
+Type "**`golden`**" and **escape** to stop renaming.
+You do not need to explicitly save - as Lamdu always saves the entire state.
 
 ### Creating a function
 
-Again, we will be working underneath the prompt,
-rather than at it. So our work will be saved.
-
 *Note:* Ctrl-Z is undo.
 
-![Factorial function](http://i.imgur.com/BVcLBLX.png)
+![Factorial function](https://i.imgur.com/9a5M5Jt.png)
 
 To create the function above:
 
 * Navigate to the "New..." button and press **space**.
-* Remember: Lamdu does spacing automatically.
-  If you type a space after the first "x" below,
-  Lamdu will think you want to specify a second argument to the function.
-  So don't type that space.
-  Further, you'll notice that the first equals sign after "fac"
-  gets onto your screen without you typing it.
-  After "fac x", type the equals sign anyways,
-  or skip over it with the right cursor key.
-  Either moves you from the left side of the equals sign to the right.
-  Neither will create an extra `=`.
+* Lamdu spaces your code automatically.
+  If you type a space after the first "x" below, Lamdu will think you want to specify a second argument to the function.
 
-Type "**`fac x=x=0`**" and press **space**.
+  The first equals sign after "fac" gets onto your screen without you typing it.
+  However, after "fac x", you may type the equals sign anyways, or skip over it with the right cursor key.
+
+Type "**`fac x=if x=0 1 x*f x`**" and **return**.
 Notice that Lamdu replaced the second `=` with `==`.
-
-* Select `x == 0` by pressing **shift+left**.
-* Press "**`:`**" and press **space** to create a pattern-match on this boolean expression.
-* Type "**`1`**" and press **space** for the `True` branch.
-* Type "**`x*f x  -1 `**" and press **space**.
-  Again, Lamdu auto-completes: `f` becomes `fac`.
+Now that the cursor is on the selected `x`, press **`-1`**.
 
 We've now written the function. Let's use it.
 
-* Go back up to the interactive shell, just right of the ⋙ symbol.
+* Go back up to the REPL, just right of the `⋙` symbol.
   Like with calculators, we want to clear anything in there before using it.
-  If there is, press **shift+left** until all is selected, then hit **delete**.
+  If there is an expression there, press **shift+left** until all is selected, then hit **delete**.
 * Type "**`fac 5`**" and press **space**.
 
 Lamdu should now display the evaluation of the whole function, as well as its subexpresssions.
-The evaluation of `x == 0` is displayed by a highlight
-on the active pattern match path (`False`).
+The active `if` branch (the `else`) is highlighted via a green background on the `|` symbol.
+The `|` represents a [suspended computation](https://github.com/lamdu/lamdu/blob/master/doc/Language.md#suspended-computations).
 
-This function is recursive and invoked additional calls to itself.
-To navigate between these calls,
-go to the arrows under its parameter `x` and press **right** or **left**.
+This function is recursive and invoked additional applications of itself.
+To navigate between these function applications,
+navigate to the arrows under the `x` parameter and press **right** or **left**.
 
 To rename any symbol, navigate to it, press **return** twice and edit the name.
 Note that all references are displayed with the updated name correctly.
 
 ## Further Exploration / Help Documentation
 
-In the lower-right of Lamdu's screen, you'll see that F1 brings up help.
-It changes based on what you have selected in the environment.
+In the lower-right of Lamdu's screen, you'll see that F1 brings up contextual help.
+
+It shows all the key bindings currently active, which changes
+according to the current context.
