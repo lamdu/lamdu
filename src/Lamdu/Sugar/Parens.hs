@@ -18,6 +18,12 @@ data NeedsParens = NeedsParens | NoNeedForParens
 
 data PrecCheck = Never | IfGreater !Int | IfGreaterOrEqual !Int
 
+-- | Take the 0..10 precedence given from HasPrecedence and lift it
+-- above the unambiguous precednce (0) and low grammatic precedence
+-- (lambda, nominals) (1) to 2..12 (inclusive/inclusive)
+toPrecedenceRange :: Int -> Int
+toPrecedenceRange = (+2)
+
 check :: PrecCheck -> Int -> Bool
 check Never = const False
 check (IfGreater x) = (> x)
@@ -87,10 +93,10 @@ precedenceOfLabeledApply apply@(LabeledApply func specialArgs annotatedArgs rela
             appendOpPrec
                 | notBoxed = prec+1
                 | otherwise = 0
-            prec = func ^. binderName & precedence
+            prec = func ^. binderName & precedence & toPrecedenceRange
     Object arg | notBoxed ->
-        ( ParenIf (IfGreater 10) (IfGreaterOrEqual 10)
-        , LabeledApply func (Object (arg (Just 10) (Precedence (Just 10) Nothing)))
+        ( ParenIf (IfGreater 13) (IfGreaterOrEqual 13)
+        , LabeledApply func (Object (arg (Just 13) (Precedence (Just 13) Nothing)))
             newAnnotatedArgs relayedArgs
         )
     _ -> (NeverParen, apply ?? Just 0 ?? unambiguous)
@@ -101,10 +107,10 @@ precedenceOfLabeledApply apply@(LabeledApply func specialArgs annotatedArgs rela
 precedenceOfPrefixApply ::
     Apply (Maybe MinOpPrec -> Precedence (Maybe Int) -> expr) -> (Classifier, Body name m expr)
 precedenceOfPrefixApply (V.Apply f arg) =
-    ( ParenIf (IfGreater 10) (IfGreaterOrEqual 10)
+    ( ParenIf (IfGreater 13) (IfGreaterOrEqual 13)
     , V.Apply
-        (f (Just 0) (Precedence Nothing (Just 10)))
-        (arg (Just 10) (Precedence (Just 10) Nothing))
+        (f (Just 0) (Precedence Nothing (Just 13)))
+        (arg (Just 13) (Precedence (Just 13) Nothing))
         & BodySimpleApply
     )
 
@@ -131,7 +137,7 @@ precedenceOf =
         , x <&> binderBodyFirstLine (Just 0) (Precedence (Just 1) Nothing) & BodyToNom
         )
     BodyInject x           -> leftSymbol 1 BodyInject x
-    BodyGetField x         -> rightSymbol 11 BodyGetField x
+    BodyGetField x         -> rightSymbol 14 BodyGetField x
     BodySimpleApply x      -> precedenceOfPrefixApply x
     BodyLabeledApply x     -> precedenceOfLabeledApply x & _2 %~ BodyLabeledApply
     BodyGuard x            -> precedenceOfGuard x & _2 %~ BodyGuard
