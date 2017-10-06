@@ -15,4 +15,5 @@ instance Applicative Precedence where
     Precedence af bf <*> Precedence ax bx = Precedence (af ax) (bf bx)
 
 class HasPrecedence a where
+    -- | Returns a precedence between 0..10
     precedence :: a -> Int

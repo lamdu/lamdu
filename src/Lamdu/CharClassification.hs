@@ -25,29 +25,23 @@ digit = ['0'..'9']
 hexDigit :: String
 hexDigit = ['a'..'f'] ++ ['A' .. 'F'] ++ digit
 
+-- | Returns a precedence between 0..10
 precedence :: Char -> Int
-precedence c =
-    case precedenceMap ^. Lens.at c of
-    Just p -> p
-    Nothing
-        | c `elem` operator -> 5
-        | otherwise -> 20
+precedence c = precedenceMap ^. Lens.at c & fromMaybe 10
 
+-- | Returns a precedence between 0..10
 -- Based on Table 2 in https://www.haskell.org/onlinereport/decls.html
 precedenceMap :: Map Char Int
 precedenceMap =
-    zipWith zip
-    [ "$" -- 0
-    , ";" -- 1 ";" stands for monadic bind (">>=" in Haskell)
-    , "|" -- 2
-    , "&" -- 3
-    , "=><≠≥≤" -- 4
-    , "." -- 5
-    , "+-" -- 6
-    , "*/%" -- 7
-    , "^" -- 8
-    , "!" -- 9
-    ]
-    ([0..] <&> repeat)
-    & concat
+    [ ('$', 0)
+    , (';', 1)
+    , ('|', 2)
+    , ('&', 3)
+    ] ++
+    [ (c  , 4) | c <- "=><≠≥≤" ] ++
+    [ ('.', 5) ] ++
+    [ (c  , 6) | c <- "+-" ] ++
+    [ (c  , 7) | c <- "*/%" ] ++
+    [ ('^', 8)
+    , ('!', 9) ]
     & Map.fromList
