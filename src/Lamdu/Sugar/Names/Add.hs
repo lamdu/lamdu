@@ -9,6 +9,7 @@ import qualified Control.Monad.Trans.FastWriter as Writer
 import           Control.Monad.Trans.Reader (Reader, runReader)
 import qualified Control.Monad.Trans.Reader as Reader
 import           Control.Monad.Trans.State (runState, evalState)
+import qualified Data.Char as Char
 import           Data.List (partition)
 import qualified Data.List as List
 import qualified Data.Map as Map
@@ -22,13 +23,13 @@ import qualified Data.Text as Text
 import           Data.UUID.Types (UUID)
 import           GHC.Generics (Generic)
 import           Lamdu.Data.Anchors (assocNameRef)
+import           Lamdu.Name
 import qualified Lamdu.Sugar.Lens as SugarLens
 import           Lamdu.Sugar.Names.CPS (CPS(..))
 import           Lamdu.Sugar.Names.Clash (IsClash(..))
 import qualified Lamdu.Sugar.Names.Clash as Clash
 import           Lamdu.Sugar.Names.NameGen (NameGen)
 import qualified Lamdu.Sugar.Names.NameGen as NameGen
-import           Lamdu.Name
 import           Lamdu.Sugar.Names.Walk (MonadNaming)
 import qualified Lamdu.Sugar.Names.Walk as Walk
 import           Lamdu.Sugar.Types
@@ -146,7 +147,7 @@ newtype Pass1PropagateUp (tm :: * -> *) a = Pass1PropagateUp (Writer P1Out a)
 p1Tell :: P1Out -> Pass1PropagateUp tm ()
 p1Tell = Pass1PropagateUp . Writer.tell
 p1Listen :: Pass1PropagateUp tm a -> Pass1PropagateUp tm (a, P1Out)
-p1Listen (Pass1PropagateUp act) = Pass1PropagateUp $ Writer.listen act
+p1Listen (Pass1PropagateUp act) = Pass1PropagateUp (Writer.listen act)
 runPass1PropagateUp :: Pass1PropagateUp tm a -> (a, P1Out)
 runPass1PropagateUp (Pass1PropagateUp act) = runWriter act & _2 %~ p1PostProcess
 
@@ -161,20 +162,11 @@ globalCollisions (NameUUIDMap names) =
             where
                 (locals, globals) = partition isLocalName ns
 
-reservedWords :: Set Text
-reservedWords =
-    Set.fromList
-    [ "if", "elif", "else"
-    , "case", "of"
-    , "let"
-    , "λ", "«", "»", "Ø", "|", ".", "→", "➾"
-    ]
-
 -- | Compute the global collisions to form ALL collisions and yield
 -- the global names only
 p1PostProcess :: P1Out -> P1Out
 p1PostProcess (P1Out names localCollisions) =
-    P1Out names (localCollisions <> globalCollisions names <> reservedWords)
+    P1Out names (localCollisions <> globalCollisions names)
 
 p1ListenNames :: Pass1PropagateUp tm a -> Pass1PropagateUp tm (a, NameUUIDMap)
 p1ListenNames act = p1Listen act <&> _2 %~ _p1Names
@@ -286,6 +278,20 @@ uuidSuffixes nameInstances =
     & (zip ?? [0..])
     & Map.fromList
 
+isReserved :: Text -> Bool
+isReserved name =
+    name `Set.member` reservedWords
+    || (name ^? Lens.ix 0 <&> Char.isDigit & fromMaybe False)
+    where
+        reservedWords =
+            Set.fromList
+            [ "if", "elif", "else"
+            , "case", "of"
+            , "let"
+            , "λ", "«", "»", "Ø", "|", ".", "→", "➾"
+            ]
+
+
 initialP2Env :: P1Out -> P2Env
 initialP2Env (P1Out names collisions) =
     P2Env
@@ -297,7 +303,8 @@ initialP2Env (P1Out names collisions) =
     }
     where
         f (name, insts)
-            | name `Set.member` collisions = uuidSuffixes insts
+            | name `Set.member` collisions
+            || isReserved name = uuidSuffixes insts
             | otherwise = mempty
 
 newtype Pass2MakeNames (tm :: * -> *) a = Pass2MakeNames (Reader P2Env a)
