@@ -20,6 +20,7 @@ formatTextContents =
     Text.concatMap escape
     where
         escape '\n' = "\n"
+        escape '\\' = "\\\\"
         escape c
             | Char.isControl c = Text.pack (Char.showLitChar c "")
             | otherwise = Text.singleton c
