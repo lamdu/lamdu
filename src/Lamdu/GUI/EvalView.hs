@@ -274,16 +274,14 @@ makeInner animId (Val typ val) =
     RPrimVal primVal
         | typ == T.TInst Builtins.textTid mempty ->
           case pv of
-          PrimVal.Bytes x -> decodeUtf8 x & toText
+          PrimVal.Bytes x -> decodeUtf8 x & toText animId
           _ -> error "text not made of bytes"
         | otherwise ->
           case pv of
-          PrimVal.Bytes x -> toText x
-          PrimVal.Float x -> toText x
+          PrimVal.Bytes x -> toText animId x
+          PrimVal.Float x -> toText animId x
         where
             pv = PrimVal.toKnown primVal
-            toText :: (Format r, Monad m) => r -> ExprGuiM m (WithTextPos View)
-            toText = asText . format
     RArray items -> makeArray animId items
     & advanceDepth
     where
@@ -291,22 +289,27 @@ makeInner animId (Val typ val) =
         advanceDepth
             | Lens.has traverse val = ExprGuiM.advanceDepth return animId
             | otherwise = id
-        asText text =
-            TextView.make ?? cut ?? animId
+
+toText ::
+    ( Format r, MonadReader env m, TextView.HasStyle env
+    ) => AnimId -> r -> m (WithTextPos View)
+toText animId val =
+    TextView.make ?? cut ?? animId
+    where
+        text = format val
+        cut =
+            map limLine start ++
+            ( case rest of
+              [] -> []
+              _ -> ["..."]
+            ) & Text.intercalate "\n"
             where
-                cut =
-                    map limLine start ++
-                    ( case rest of
-                      [] -> []
-                      _ -> ["..."]
-                    ) & Text.intercalate "\n"
-                    where
-                        (start, rest) = splitAt 10 (Text.lines text)
-                limLine :: Text -> Text
-                limLine ln =
-                    start <>
-                    if Text.null rest
-                    then ""
-                    else "..."
-                    where
-                        (start, rest) = Text.splitAt 100 ln
+                (start, rest) = splitAt 10 (Text.lines text)
+        limLine :: Text -> Text
+        limLine ln =
+            start <>
+            if Text.null rest
+            then ""
+            else "..."
+            where
+                (start, rest) = Text.splitAt 100 ln
