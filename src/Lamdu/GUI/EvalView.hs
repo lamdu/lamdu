@@ -58,18 +58,15 @@ extractFields (V.RecExtend tag val (Val _ rest)) =
           & EvalTypeError & RecordExtendsError
         )
 
--- TODO: Remove
-textView :: Monad m => Text -> AnimId -> ExprGuiM m (WithTextPos View)
-textView x animId = TextView.make ?? x ?? animId
-
 label :: Monad m => Text -> AnimId -> ExprGuiM m (WithTextPos View)
 label x animId =
     TextView.make ?? x ?? Anim.augmentId animId x
 
 makeTag :: Monad m => AnimId -> T.Tag -> ExprGuiM m (WithTextPos View)
 makeTag animId tag =
-    Anchors.assocNameRef tag & Transaction.getP
-    >>= (`textView` animId)
+    do
+        name <- Anchors.assocNameRef tag & Transaction.getP
+        TextView.make ?? name ?? animId
 
 makeField ::
     Monad m =>
@@ -91,7 +88,7 @@ makeField parentAnimId tag val =
 
 makeError :: Monad m => EvalError -> AnimId -> ExprGuiM m (WithTextPos View)
 makeError err animId =
-    textView msg $ animId ++ ["error"]
+    TextView.make ?? msg ?? animId ++ ["error"]
     where
         msg =
             case err of
@@ -270,8 +267,8 @@ makeInner :: Monad m => AnimId -> Val Type -> ExprGuiM m (WithTextPos View)
 makeInner animId (Val typ val) =
     case val of
     RError err -> makeError err animId
-    RFunc{} -> textView "Fn" animId
-    RRecEmpty -> textView "()" animId
+    RFunc{} -> TextView.make ?? "Fn" ?? animId
+    RRecEmpty -> TextView.make ?? "()" ?? animId
     RInject inject -> makeInject animId typ inject
     RRecExtend recExtend -> makeRecExtend animId typ recExtend
     RPrimVal primVal
