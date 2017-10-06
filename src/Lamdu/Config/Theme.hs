@@ -3,7 +3,7 @@
 -- | The themes/ config format
 module Lamdu.Config.Theme
     ( module Exported
-    , Help(..), Hole(..), Eval(..)
+    , Help(..), Hole(..), Eval(..), ToolTip(..)
     , Theme(..), themeStdSpacing
     , HasTheme(..)
     ) where
@@ -57,6 +57,16 @@ data Eval = Eval
     } deriving (Eq, Show)
 deriveJSON Aeson.defaultOptions ''Eval
 
+data ToolTip = ToolTip
+    { tooltipFgColor :: Draw.Color
+    , tooltipBgColor :: Draw.Color
+    } deriving (Eq, Show)
+deriveJSON Aeson.defaultOptions
+#ifndef NO_CODE
+    {Aeson.fieldLabelModifier = decapitalize . removePrefix "tooltip"}
+#endif
+    ''ToolTip
+
 data Theme = Theme
     { fonts :: Fonts FilePath
     , baseTextSize :: FontSize
@@ -68,6 +78,7 @@ data Theme = Theme
     , name :: Name
     , eval :: Eval
     , hover :: Hover.Style
+    , tooltip :: ToolTip
     , codeForegroundColors :: CodeForegroundColors
     , newDefinitionActionColor :: Draw.Color
     , topPadding :: Draw.R

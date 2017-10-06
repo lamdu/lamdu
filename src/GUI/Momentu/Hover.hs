@@ -1,7 +1,8 @@
 {-# LANGUAGE NoImplicitPrelude, DeriveGeneric, TemplateHaskell, DeriveTraversable, FlexibleInstances, MultiParamTypeClasses, TypeFamilies, FlexibleContexts, OverloadedStrings, RankNTypes #-}
 module GUI.Momentu.Hover
     ( Style(..)
-    , Hover, hover
+    , Hover, hover, sequenceHover
+    , backgroundColor
     , HasStyle(..)
     , AnchoredWidget, anchor
     , hoverInPlaceOf, hoverBesideOptions
@@ -39,8 +40,13 @@ data Style = Style
     } deriving (Eq, Generic, Show)
 deriveJSON defaultOptions ''Style
 
+Lens.makeLensesFor [("bgColor", "bgColorL")] ''Style
+
 class HasStyle env where style :: Lens' env Style
 instance HasStyle Style where style = id
+
+backgroundColor :: HasStyle env => Lens' env Draw.Color
+backgroundColor = style . bgColorL
 
 data AnchoredWidget a = AnchoredWidget
     { _anchorPoint :: Vector2 R
@@ -168,6 +174,9 @@ hover =
     do
         frame <- addFrame
         pure (Hover . Element.hoverLayers . frame)
+
+sequenceHover :: Functor f => Hover (f a) -> f (Hover a)
+sequenceHover (Hover x) = x <&> Hover
 
 hoverInPlaceOf ::
     Functor f =>

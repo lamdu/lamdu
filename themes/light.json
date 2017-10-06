@@ -33,6 +33,10 @@
         "lightLambdaUnderlineColor"     : [0.0, 0.0, 0.0, 0.6],
         "presentationChoiceColor"       : [0.4, 0.4, 0.4, 1.0]
     },
+    "tooltip": {
+        "fgColor": [0.0, 0.0, 0.0, 1.0],
+        "bgColor": [1.0, 1.0, 0.8, 0.9]
+    },
     "hover": {
         "frameColor"                : [0.5, 0.5, 0.5, 0.85],
         "framePadding"              : [1.0, 1.0],

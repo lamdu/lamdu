@@ -19,6 +19,10 @@
         "bgPadding": [0, 0],
         "bgColor": [0.05, 0.25, 0.3, 0.9]
     },
+    "tooltip": {
+        "fgColor": [0.0, 0.0, 0.0, 1.0],
+        "bgColor": [1.0, 1.0, 0.8, 0.9]
+    },
     "help": {
         "inputDocColor": [0.1, 0.7, 0.7, 1.0],
         "textSize": 16,

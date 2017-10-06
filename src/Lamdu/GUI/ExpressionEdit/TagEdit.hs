@@ -26,12 +26,14 @@ import           GUI.Momentu.View (View)
 import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Menu as Menu
+import qualified GUI.Momentu.Widgets.Spacer as Spacer
+import           GUI.Momentu.Widgets.Spacer (HasStdSpacing)
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
 import qualified GUI.Momentu.Widgets.TextView as TextView
 import qualified Lamdu.CharClassification as Chars
 import           Lamdu.Config (HasConfig)
 import qualified Lamdu.Config as Config
-import           Lamdu.Config.Theme (HasTheme)
+import           Lamdu.Config.Theme (HasTheme(..))
 import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
 import qualified Lamdu.GUI.NameEdit as NameEdit
@@ -157,6 +159,7 @@ makeTagHoleEditH ::
     ( Monad m, MonadTransaction m f, MonadReader env f, HasConfig env
     , TextEdit.HasStyle env, Widget.HasCursor env, Element.HasAnimIdPrefix env
     , HasTheme env, Hover.HasStyle env, Menu.HasStyle env
+    , HasStdSpacing env
     ) =>
     NearestHoles -> Sugar.Tag (Name (T m)) (T m) ->
     Text -> (Text -> Widget.EventResult -> Widget.EventResult) -> (Widget.EventResult -> Widget.EventResult) ->
@@ -171,8 +174,26 @@ makeTagHoleEditH nearestHoles tag searchTerm updateState fixCursor =
             <&> Align.tValue . Lens.mapped %~ pure . uncurry updateState
             <&> Align.tValue %~ E.strongerEvents setNameEventMap
             <&> Align.tValue %~ E.filterChars (`notElem` Chars.disallowedInHole)
-        label <- (TextView.make ?? labelText) <*> Element.subAnimId ["label"]
-        let topLine = term /|/ label
+        tooltip <- Lens.view theme <&> Theme.tooltip
+        topLine <-
+            if not (Text.null searchTerm) && Widget.isFocused (term ^. Align.tValue)
+            then do
+                label <- (TextView.make ?? "(new tag)") <*> Element.subAnimId ["label"]
+                space <- Spacer.stdHSpace
+                hover <- Hover.hover
+                let anchor = fmap Hover.anchor
+                let hLabel = hover label & Hover.sequenceHover
+                let hoverOptions =
+                        [ anchor (term /|/ space) /|/ hLabel
+                        , hLabel /|/ anchor (space /|/ term)
+                        ] <&> (^. Align.tValue)
+                anchor term
+                    <&> Hover.hoverInPlaceOf hoverOptions
+                    & pure
+                & Reader.local (Hover.backgroundColor .~ Theme.tooltipBgColor tooltip)
+                & Reader.local (TextView.color .~ Theme.tooltipFgColor tooltip)
+                & Reader.local (Element.animIdPrefix <>~ ["label"])
+            else pure term
         (options, hasMore) <- makeOptions fixCursor nearestHoles tag searchTerm
         hoverMenu <- Menu.hoverMenu
         menu <- Menu.layout 0 options hasMore
@@ -180,9 +201,6 @@ makeTagHoleEditH nearestHoles tag searchTerm updateState fixCursor =
     & Widget.assignCursor holeId searchTermId
     & Reader.local (Element.animIdPrefix .~ Widget.toAnimId holeId)
     where
-        labelText
-            | Text.null searchTerm = "(pick tag)"
-            | otherwise = " (new tag)"
         holeId = tagHoleId (tagId tag)
         searchTermId = holeId <> Widget.Id ["term"]
         textEditNoEmpty = TextEdit.EmptyStrings "" ""
@@ -190,7 +208,7 @@ makeTagHoleEditH nearestHoles tag searchTerm updateState fixCursor =
 makeTagHoleEdit ::
     ( Monad m, MonadReader env f, MonadTransaction m f, Widget.HasCursor env
     , HasConfig env, TextEdit.HasStyle env, Element.HasAnimIdPrefix env
-    , HasTheme env, Hover.HasStyle env, Menu.HasStyle env
+    , HasTheme env, Hover.HasStyle env, Menu.HasStyle env, HasStdSpacing env
     ) => NearestHoles -> Sugar.Tag (Name (T m)) (T m) ->
     f (WithTextPos (Widget (T m Widget.EventResult)))
 makeTagHoleEdit nearestHoles tag =
@@ -204,6 +222,7 @@ makeTagEdit ::
     ( Monad m, MonadReader env f, MonadTransaction m f, HasConfig env
     , Widget.HasCursor env, HasTheme env, Element.HasAnimIdPrefix env
     , TextEdit.HasStyle env, Hover.HasStyle env, Menu.HasStyle env
+    , HasStdSpacing env
     ) =>
     Mode -> Draw.Color -> NearestHoles -> Sugar.Tag (Name (T m)) (T m) ->
     f (WithTextPos (Widget (T m Widget.EventResult)))
@@ -251,29 +270,32 @@ makeRecordTag ::
     ( Monad m, MonadReader env f, MonadTransaction m f, HasTheme env
     , HasConfig env, Widget.HasCursor env, Element.HasAnimIdPrefix env
     , TextEdit.HasStyle env, Hover.HasStyle env, HasTheme env, Menu.HasStyle env
+    , HasStdSpacing env
     ) =>
     Mode -> NearestHoles -> Sugar.Tag (Name (T m)) (T m) ->
     f (WithTextPos (Widget (T m Widget.EventResult)))
 makeRecordTag mode nearestHoles tag =
     do
-        theme <- Lens.view Theme.theme <&> Theme.name
-        makeTagEdit mode (Theme.recordTagColor theme) nearestHoles tag
+        nameTheme <- Lens.view Theme.theme <&> Theme.name
+        makeTagEdit mode (Theme.recordTagColor nameTheme) nearestHoles tag
 
 makeCaseTag ::
     ( Monad m, MonadReader env f, MonadTransaction m f, HasTheme env
     , HasConfig env, Widget.HasCursor env, Element.HasAnimIdPrefix env
     , TextEdit.HasStyle env, Hover.HasStyle env, HasTheme env, Menu.HasStyle env
+    , HasStdSpacing env
     ) =>
     Mode -> NearestHoles -> Sugar.Tag (Name (T m)) (T m) ->
     f (WithTextPos (Widget (T m Widget.EventResult)))
 makeCaseTag mode nearestHoles tag =
     do
-        theme <- Lens.view Theme.theme <&> Theme.name
-        makeTagEdit mode (Theme.caseTagColor theme) nearestHoles tag
+        nameTheme <- Lens.view Theme.theme <&> Theme.name
+        makeTagEdit mode (Theme.caseTagColor nameTheme) nearestHoles tag
 
 makeParamTag ::
     ( MonadReader env f, HasTheme env, HasConfig env, Hover.HasStyle env, Menu.HasStyle env
     , Widget.HasCursor env, Element.HasAnimIdPrefix env, TextEdit.HasStyle env
+    , HasStdSpacing env
     , MonadTransaction m f
     ) =>
     Sugar.Tag (Name (T m)) (T m) ->
@@ -290,8 +312,8 @@ makeArgTag ::
     ) => Name (T m) -> Sugar.EntityId -> f (WithTextPos View)
 makeArgTag name entityId =
     do
-        theme <- Lens.view Theme.theme <&> Theme.name
+        nameTheme <- Lens.view Theme.theme <&> Theme.name
         NameEdit.makeView (name ^. Name.form) animId
-            & Reader.local (TextView.color .~ Theme.paramTagColor theme)
+            & Reader.local (TextView.color .~ Theme.paramTagColor nameTheme)
     where
         animId = WidgetIds.fromEntityId entityId & Widget.toAnimId
