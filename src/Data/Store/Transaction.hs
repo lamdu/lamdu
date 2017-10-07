@@ -19,7 +19,7 @@ module Data.Store.Transaction
     )
 where
 
-import           Control.Applicative ((<|>))
+import           Control.Applicative ((<|>), liftA2)
 import qualified Control.Lens as Lens
 import           Control.Monad.Trans.Reader (ReaderT, runReaderT)
 import qualified Control.Monad.Trans.Reader as Reader
@@ -71,6 +71,10 @@ liftChangesMap :: Monad m => StateT ChangesMap m a -> Transaction m a
 liftChangesMap = liftAskable . lift
 liftInner :: Monad m => m a -> Transaction m a
 liftInner = Transaction . lift . lift
+
+instance (Monad m, Monoid a) => Monoid (Transaction m a) where
+    mempty = pure mempty
+    mappend = liftA2 mappend
 
 getStore :: Monad m => Transaction m (Store m)
 getStore = liftAskable $ Reader.asks (Lens.view aStore)
