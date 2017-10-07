@@ -444,10 +444,10 @@ makeUnderCursorAssignment shownResultsLists hasHiddenResults holeInfo =
             <&> E.weakerEvents blockOperatorEvents
     where
         blockOperatorEvents
-            | null shownResultsLists =
+            | Text.null searchTerm || Text.all (`elem` Chars.operator) searchTerm = mempty
+            | otherwise =
                 E.charGroup "Operator" (E.Doc ["Edit", "Apply operator (blocked)"])
                 Chars.operator mempty
-            | otherwise = mempty
         holeAnimId = hidHole hids & Widget.toAnimId
         hids = hiIds holeInfo
         disallowFirstOperatorChar
