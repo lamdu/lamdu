@@ -138,7 +138,7 @@ actionsEventMap exprInfo holePicker =
     [ case exprInfoActions exprInfo ^. Sugar.wrap of
       Sugar.WrapAction act -> wrapEventMap (act <&> snd)
       _ -> return mempty
-    , applyOperatorEventMap exprInfo holePicker
+    , applyOperatorEventMap exprInfo holePicker & pure
     , if exprInfoIsHoleResult exprInfo
         then return mempty
         else
@@ -156,30 +156,25 @@ actionsEventMap exprInfo holePicker =
     <&> mconcat
 
 applyOperatorEventMap ::
-    (Monad m, Monad f) =>
+    Monad f =>
     ExprInfo f -> ExprGuiM.HolePicker f ->
-    ExprGuiM m (Widget.EventMap (T f Widget.EventResult))
+    Widget.EventMap (T f Widget.EventResult)
 applyOperatorEventMap exprInfo holePicker =
-    do
-        isSelected <- exprInfoIsSelected exprInfo
-        let acceptableOperatorChars
-                | isSelected = Chars.operator
-                | otherwise =
-                      filter ((>= exprInfoMinOpPrec exprInfo) . precedence) Chars.operator
-        let action wrap =
-                E.charGroup "Operator" doc acceptableOperatorChars $ \c ->
-                    do
-                        (uuid, entityId) <- wrap
-                        cursor <- HoleEditState.setHoleStateAndJump uuid (HoleState (Text.singleton c)) entityId
-                        return $ Widget.eventResultFromCursor cursor
-        case exprInfoActions exprInfo ^. Sugar.wrap of
-            Sugar.WrapAction wrap -> action wrap
-            Sugar.WrapperAlready holeId -> action $ return holeId
-            Sugar.WrappedAlready holeId -> action $ return holeId
-            Sugar.WrapNotAllowed -> mempty
-            & return
-    <&> ExprGuiM.withHolePicker holePicker
+    case exprInfoActions exprInfo ^. Sugar.wrap of
+    Sugar.WrapAction wrap -> action wrap
+    Sugar.WrapperAlready holeId -> action $ return holeId
+    Sugar.WrappedAlready holeId -> action $ return holeId
+    Sugar.WrapNotAllowed -> mempty
+    & ExprGuiM.withHolePicker holePicker
     where
+        acceptableOperatorChars = filter ((>= exprInfoMinOpPrec exprInfo) . precedence) Chars.operator
+        action wrap =
+            E.charGroup "Operator" doc acceptableOperatorChars $
+            \c ->
+            do
+                (uuid, entityId) <- wrap
+                cursor <- HoleEditState.setHoleStateAndJump uuid (HoleState (Text.singleton c)) entityId
+                return $ Widget.eventResultFromCursor cursor
         doc = E.Doc ["Edit", "Apply operator"]
 
 wrapEventMap ::
