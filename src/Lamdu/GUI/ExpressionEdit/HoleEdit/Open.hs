@@ -432,7 +432,7 @@ makeUnderCursorAssignment shownResultsLists hasHiddenResults holeInfo =
         let addAnnotation x = x /-/ vspace /-/ typeView
         searchTermWidget <-
             SearchTerm.make holeInfo
-            <&> Align.tValue %~ Hover.anchor . E.weakerEvents pickFirstResult
+            <&> Align.tValue %~ Hover.anchor . E.weakerEvents (pickFirstResult <> blockOperatorEvents)
         mkOptions <- resultsHoverOptions & Reader.local (Element.animIdPrefix .~ WidgetId.toAnimId (hidOpen hids))
         return $
             \placement ->
@@ -441,7 +441,6 @@ makeUnderCursorAssignment shownResultsLists hasHiddenResults holeInfo =
                 Hover.hoverInPlaceOf
                 (mkOptions placement addAnnotation resultsWidgets
                     (searchTermWidget ^. Align.tValue))
-            <&> E.weakerEvents blockOperatorEvents
     where
         blockOperatorEvents
             | Text.null searchTerm || Text.all (`elem` Chars.operator) searchTerm = mempty
