@@ -441,7 +441,13 @@ makeUnderCursorAssignment shownResultsLists hasHiddenResults holeInfo =
                 Hover.hoverInPlaceOf
                 (mkOptions placement addAnnotation resultsWidgets
                     (searchTermWidget ^. Align.tValue))
+            <&> E.weakerEvents blockOperatorEvents
     where
+        blockOperatorEvents
+            | null shownResultsLists =
+                E.charGroup "Operator" (E.Doc ["Edit", "Apply operator (blocked)"])
+                Chars.operator mempty
+            | otherwise = mempty
         holeAnimId = hidHole hids & Widget.toAnimId
         hids = hiIds holeInfo
         disallowFirstOperatorChar
