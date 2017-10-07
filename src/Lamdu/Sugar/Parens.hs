@@ -18,12 +18,6 @@ data NeedsParens = NeedsParens | NoNeedForParens
 
 data PrecCheck = Never | IfGreater !Int | IfGreaterOrEqual !Int
 
--- | Take the 0..10 precedence given from HasPrecedence and lift it
--- above the unambiguous precednce (0) and low grammatic precedence
--- (lambda, nominals) (1) to 2..12 (inclusive/inclusive)
-toPrecedenceRange :: Int -> Int
-toPrecedenceRange = (+2)
-
 check :: PrecCheck -> Int -> Bool
 check Never = const False
 check (IfGreater x) = (> x)
@@ -93,7 +87,7 @@ precedenceOfLabeledApply apply@(LabeledApply func specialArgs annotatedArgs rela
             appendOpPrec
                 | notBoxed = prec+1
                 | otherwise = 0
-            prec = func ^. binderName & precedence & toPrecedenceRange
+            prec = func ^. binderName & precedence
     Object arg | notBoxed ->
         ( ParenIf (IfGreater 13) (IfGreaterOrEqual 13)
         , LabeledApply func (Object (arg (Just 13) (Precedence (Just 13) Nothing)))

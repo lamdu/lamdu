@@ -27,7 +27,7 @@ hexDigit = ['a'..'f'] ++ ['A' .. 'F'] ++ digit
 
 -- | Returns a precedence between 0..10
 precedence :: Char -> Int
-precedence c = precedenceMap ^. Lens.at c & fromMaybe 10
+precedence c = precedenceMap ^. Lens.at c & fromMaybe 12
 
 -- | Returns a precedence between 0..10
 -- Based on Table 2 in https://www.haskell.org/onlinereport/decls.html
@@ -45,3 +45,4 @@ precedenceMap =
     [ ('^', 8)
     , ('!', 9) ]
     & Map.fromList
+    <&> (+ 2)

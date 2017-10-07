@@ -49,8 +49,7 @@ instance Show (Name m) where
     show name = concat [ "(Name ", show (name ^. form), " ", ")" ]
 
 instance HasPrecedence Form where
-    -- | Returns a precedence between 0..10
     precedence name =
-        visible name ^? _1 . Lens.ix 0 . Lens.to Chars.precedence & fromMaybe 10
+        visible name ^? _1 . Lens.ix 0 . Lens.to Chars.precedence & fromMaybe 12
 
 instance HasPrecedence (Name m) where precedence = precedence . _form
