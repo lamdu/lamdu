@@ -44,7 +44,7 @@ bodyShape = \case
     Sugar.BodySimpleApply {} -> ["Apply"]
     Sugar.BodyLabeledApply {} -> ["Apply"]
     Sugar.BodyRecord r ->
-        ["record", "{}", "()"] ++
+        ["record", "{}", "()", "[]"] ++
         case r of
         Sugar.Composite [] Sugar.ClosedComposite{} _ -> ["empty"]
         _ -> []
@@ -56,7 +56,7 @@ bodyShape = \case
             Sugar.Case Sugar.LambdaCase (Sugar.Composite [] Sugar.ClosedComposite{} _) -> ["absurd"]
             _ -> []
     Sugar.BodyGuard {} -> ["if", ":"]
-    Sugar.BodyInject {} -> ["[]"]
+    Sugar.BodyInject {} -> [":"]
     Sugar.BodyLiteral i -> [formatLiteral i]
     Sugar.BodyGetVar Sugar.GetParamsRecord {} -> ["Params"]
     Sugar.BodyGetVar {} -> []
