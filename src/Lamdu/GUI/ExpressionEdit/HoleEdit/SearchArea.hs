@@ -87,11 +87,8 @@ makeStdWrapped hole pl widgetIds =
         closedSearchTermGui <-
             fdWrap <*> SearchTerm.make holeInfo <&> Responsive.fromWithTextPos
             & ExpressionGui.stdWrap pl
-        eventMap <-
-            sequence
-            [ HoleEventMap.makeOpenEventMap holeInfo <&> fixEventMapCursor
-            , ExprEventMap.make pl ExprGuiM.NoHolePick
-            ] <&> mconcat
+        searchTermEventMap <- HoleEventMap.makeOpenEventMap holeInfo <&> fixEventMapCursor
+        exprEventMap <- ExprEventMap.make pl ExprGuiM.NoHolePick
         case (isActive, isAHoleInHole) of
             (True, False) ->
                 -- ideally the fdWrap would be "inside" the
@@ -105,8 +102,14 @@ makeStdWrapped hole pl widgetIds =
                 \open ->
                 closedSearchTermGui & Responsive.alignedWidget . Align.tValue %~
                 Hover.hoverInPlaceOf [Hover.anchor (open ^. Align.tValue)] . Hover.anchor
-            (True, True) -> Widget.setFocused closedSearchTermGui & const & pure
-            (False, _) -> const closedSearchTermGui & pure
-            <&> Lens.mapped %~ E.weakerEvents eventMap
+            (True, True) ->
+                Widget.setFocused closedSearchTermGui
+                & E.weakerEvents searchTermEventMap
+                & const & pure
+            (False, _) ->
+                closedSearchTermGui
+                & E.weakerEvents searchTermEventMap
+                & const & pure
+            <&> Lens.mapped %~ E.weakerEvents exprEventMap
     where
         isAHoleInHole = ExprGuiT.isHoleResult pl
