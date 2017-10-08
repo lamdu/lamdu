@@ -50,6 +50,7 @@ import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
 import qualified Lamdu.GUI.TypeView as TypeView
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Name (Name(..))
+import           Lamdu.Precedence (precedence)
 import qualified Lamdu.Sugar.Lens as SugarLens
 import qualified Lamdu.Sugar.NearestHoles as NearestHoles
 import qualified Lamdu.Sugar.Parens as AddParens
@@ -195,7 +196,7 @@ removeUnwanted minOpPrec =
         let disallowedOperator '.' = False
             disallowedOperator char
                 | char `notElem` Chars.operator = False
-                | otherwise = Chars.precedence char < minOpPrec
+                | otherwise = precedence char < minOpPrec
         return (E.filterChars (not . disallowedOperator) . deleteKeys unwantedKeys)
     where
         deleteKeys = E.deleteKeys . map (E.KeyEvent MetaKey.KeyState'Pressed)

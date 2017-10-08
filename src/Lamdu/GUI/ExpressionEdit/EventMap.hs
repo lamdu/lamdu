@@ -21,8 +21,10 @@ import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
+import           Lamdu.Precedence (precedence)
 import           Lamdu.Sugar.NearestHoles (NearestHoles)
 import qualified Lamdu.Sugar.NearestHoles as NearestHoles
+import           Lamdu.Sugar.Parens (MinOpPrec)
 import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
@@ -34,7 +36,7 @@ data ExprInfo m = ExprInfo
     , exprInfoEntityId :: Sugar.EntityId
     , exprInfoNearestHoles :: NearestHoles
     , exprInfoActions :: Sugar.Actions (T m)
-    , exprInfoMinOpPrec :: Int
+    , exprInfoMinOpPrec :: MinOpPrec
     }
 
 exprInfoFromPl :: Sugar.Payload (T f) ExprGuiT.Payload -> ExprInfo f
@@ -163,7 +165,7 @@ applyOperatorEventMap exprInfo holePicker =
         let acceptableOperatorChars
                 | isSelected = Chars.operator
                 | otherwise =
-                      filter ((>= exprInfoMinOpPrec exprInfo) . Chars.precedence) Chars.operator
+                      filter ((>= exprInfoMinOpPrec exprInfo) . precedence) Chars.operator
         let action wrap =
                 E.charGroup "Operator" doc acceptableOperatorChars $ \c ->
                     do

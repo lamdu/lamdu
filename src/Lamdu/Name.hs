@@ -9,7 +9,6 @@ module Lamdu.Name
     ) where
 
 import qualified Control.Lens as Lens
-import qualified Lamdu.CharClassification as Chars
 import           Lamdu.Precedence (HasPrecedence(..))
 
 import           Lamdu.Prelude
@@ -50,6 +49,6 @@ instance Show (Name m) where
 
 instance HasPrecedence Form where
     precedence name =
-        visible name ^? _1 . Lens.ix 0 . Lens.to Chars.precedence & fromMaybe 12
+        visible name ^? _1 . Lens.ix 0 . Lens.to precedence & fromMaybe 12
 
 instance HasPrecedence (Name m) where precedence = precedence . _form
