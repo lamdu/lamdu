@@ -7,14 +7,17 @@ module Lamdu.GUI.WidgetIds
 import           Data.UUID.Types (UUID)
 import qualified Data.UUID.Utils as UUIDUtils
 import           GUI.Momentu.Animation (AnimId)
-import qualified GUI.Momentu.Widget as Widget
 import           GUI.Momentu.Widget.Id (Id(..))
+import qualified GUI.Momentu.Widget.Id as WidgetId
 import           Lamdu.GUI.WidgetIdIRef
 import qualified Lamdu.Sugar.EntityId as EntityId
 import qualified Lamdu.Sugar.Types as Sugar
 import           System.Random.Utils (randFunc)
 
 import           Lamdu.Prelude
+
+defaultCursor :: Id
+defaultCursor = replId
 
 fromBS :: ByteString -> Id
 fromBS = Id . (: [])
@@ -41,10 +44,10 @@ activePaneBackground :: AnimId
 activePaneBackground = ["active def bg"]
 
 delegatingId :: Id -> Id
-delegatingId = flip Widget.joinId ["delegating"]
+delegatingId = flip WidgetId.joinId ["delegating"]
 
 notDelegatingId :: Id -> Id
-notDelegatingId = flip Widget.joinId ["non-delegating"]
+notDelegatingId = flip WidgetId.joinId ["non-delegating"]
 
 replId :: Id
 replId = Id ["repl"]

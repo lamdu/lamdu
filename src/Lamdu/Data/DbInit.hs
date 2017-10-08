@@ -18,6 +18,7 @@ import qualified Lamdu.Data.DbLayout as DbLayout
 import           Lamdu.Data.Export.JSON (fileImportAll)
 import qualified Lamdu.Expr.UniqueId as UniqueId
 import qualified Lamdu.GUI.WidgetIdIRef as WidgetIdIRef
+import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Paths.Utils as Paths
 import qualified Paths_Lamdu
 import qualified System.Directory as Directory
@@ -44,6 +45,7 @@ initDb db importAct =
         emptyVersion <- Version.makeInitialVersion []
         master <- newBranch "master" emptyVersion
         view <- View.new master
+        Transaction.writeIRef DbLayout.cursor WidgetIds.defaultCursor
         let writeRevAnchor f = Transaction.writeIRef (f DbLayout.revisionIRefs)
         writeRevAnchor DbLayout.view view
         writeRevAnchor DbLayout.branches [master]

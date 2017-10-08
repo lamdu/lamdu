@@ -1,7 +1,6 @@
 {-# LANGUAGE NoImplicitPrelude, RankNTypes, DisambiguateRecordFields, NamedFieldPuns, OverloadedStrings, FlexibleContexts #-}
 module Lamdu.GUI.Main
     ( make
-    , defaultCursor
     , CodeEdit.ExportRepl(..)
     , CodeEdit.ExportActions(..)
     , CodeEdit.HasEvalResults(..)
@@ -34,7 +33,6 @@ import qualified Lamdu.GUI.CodeEdit.Settings as Settings
 import           Lamdu.GUI.IOTrans (IOTrans, ioTrans)
 import qualified Lamdu.GUI.IOTrans as IOTrans
 import qualified Lamdu.GUI.VersionControl as VersionControlGUI
-import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.Style as Style
 import qualified Lamdu.VersionControl as VersionControl
 import qualified Lamdu.VersionControl.Actions as VersionControl.Actions
@@ -42,9 +40,6 @@ import qualified Lamdu.VersionControl.Actions as VersionControl.Actions
 import           Lamdu.Prelude
 
 type T = Transaction
-
-defaultCursor :: Widget.Id
-defaultCursor = WidgetIds.replId
 
 type EvalResults = CurAndPrev (Results.EvalResults (ExprIRef.ValI ViewM))
 

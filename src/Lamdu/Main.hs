@@ -12,7 +12,9 @@ import           Data.CurAndPrev (current)
 import           Data.IORef
 import           Data.MRUMemo (memoIO)
 import           Data.Store.Db (Db)
+import           Data.Store.IRef (IRef)
 import           Data.Store.Transaction (Transaction)
+import qualified Data.Store.Transaction as Transaction
 import           GHC.Conc (setNumCapabilities, getNumProcessors)
 import           GHC.Stack (whoCreated)
 import qualified GUI.Momentu as M
@@ -39,6 +41,7 @@ import           Lamdu.GUI.CodeEdit.Settings (Settings(..))
 import qualified Lamdu.GUI.CodeEdit.Settings as Settings
 import           Lamdu.GUI.IOTrans (ioTrans)
 import qualified Lamdu.GUI.Main as GUIMain
+import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.Opts as Opts
 import qualified Lamdu.Style as Style
 import           Lamdu.Themes (defaultTheme, themeSwitchEventMap)
@@ -198,6 +201,13 @@ printGLVersion =
         ver <- GL.get GL.glVersion
         putStrLn $ "Using GL version: " ++ show ver
 
+cursorStorageInIRef :: Db -> IRef DbLayout.DbM M.WidgetId -> MainLoop.CursorStorage
+cursorStorageInIRef db cursorIRef =
+    MainLoop.CursorStorage
+    { readCursor = DbLayout.runDbTransaction db (Transaction.readIRef cursorIRef)
+    , writeCursor = DbLayout.runDbTransaction db . Transaction.writeIRef cursorIRef
+    }
+
 runEditor :: Opts.EditorOpts -> Db -> IO ()
 runEditor opts db =
     do
@@ -223,7 +233,7 @@ runEditor opts db =
                     let initialSettings = Settings Settings.defaultInfoMode
                     settingsRef <- newIORef initialSettings
                     settingsChangeHandler evaluator initialSettings
-                    mainLoop subpixel win refreshScheduler configSampler $
+                    mainLoop cursorStorage subpixel win refreshScheduler configSampler $
                         \fonts config theme env ->
                         let themeEvents =
                                 themeSwitchEventMap (Config.changeThemeKeys config) configSampler themeRef
@@ -232,6 +242,7 @@ runEditor opts db =
                             config theme env
                             <&> M.weakerEvents themeEvents
     where
+        cursorStorage = cursorStorageInIRef db DbLayout.cursor
         subpixel
             | opts ^. Opts.eoSubpixelEnabled = Font.LCDSubPixelEnabled
             | otherwise = Font.LCDSubPixelDisabled
@@ -282,11 +293,11 @@ makeGetFonts subpixel =
                     )
 
 mainLoop ::
-    Font.LCDSubPixelEnabled ->
+    MainLoop.CursorStorage -> Font.LCDSubPixelEnabled ->
     M.Window -> RefreshScheduler -> Sampler ->
     (Fonts M.Font -> Config -> Theme -> MainLoop.Env ->
     IO (M.Widget (MainLoop.M M.EventResult))) -> IO ()
-mainLoop subpixel win refreshScheduler configSampler iteration =
+mainLoop cursorStorage subpixel win refreshScheduler configSampler iteration =
     do
         getFonts <- makeGetFonts subpixel
         lastVersionNumRef <- newIORef []
@@ -320,7 +331,7 @@ mainLoop subpixel win refreshScheduler configSampler iteration =
                     let helpTheme = sample ^. sTheme & Theme.help
                     Style.help (Font.fontHelp fonts) helpKeys helpTheme
                         & return
-            , cursorStartPos = GUIMain.defaultCursor
+            , cursorStorage = cursorStorage
             , debug = MainLoop.DebugOptions
                 { fpsFont =
                   \zoom ->
@@ -353,7 +364,7 @@ mkWidgetWithFallback dbToIO env =
                     if M.isFocused candidateWidget
                     then return (True, candidateWidget)
                     else
-                        env & M.cursor .~ GUIMain.defaultCursor
+                        env & M.cursor .~ WidgetIds.defaultCursor
                         & makeMainGui dbToIO
                         <&> (,) False
                 unless (M.isFocused widget) $

@@ -5,6 +5,7 @@ module GUI.Momentu.Main
     , Env(..), eWindowSize, eZoom
     , HasMainLoopEnv(..)
     , DebugOptions(..), defaultDebugOptions
+    , CursorStorage(..)
     , Options(..), defaultOptions
     , quitEventMap
     ) where
