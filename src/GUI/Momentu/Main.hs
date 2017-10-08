@@ -137,17 +137,11 @@ instance Widget.HasCursor Env where cursor = eCursor
 class Widget.HasCursor env => HasMainLoopEnv env where mainLoopEnv :: Lens' env Env
 instance HasMainLoopEnv Env where mainLoopEnv = id
 
-data Cursor = Cursor
-    { _cursorId :: !Widget.Id
-    , _cursorVirtual :: !(Maybe Widget.VirtualCursor)
-    }
-Lens.makeLenses ''Cursor
-
 lookupEvent ::
-    IO (Maybe E.Clipboard) -> IORef Cursor ->
+    IO (Maybe E.Clipboard) -> IORef (Maybe Widget.VirtualCursor) ->
     Maybe (Direction -> Widget.EnterResult a) ->
     Maybe (Rect, VirtualCursor -> Widget.EventMap a) -> Event -> IO (Maybe a)
-lookupEvent getClipboard cursorRef mEnter mFocus event =
+lookupEvent getClipboard virtCursorRef mEnter mFocus event =
     case (mEnter, mFocus, event) of
     (Just enter, _
         , GLFWE.EventMouseButton
@@ -157,12 +151,12 @@ lookupEvent getClipboard cursorRef mEnter mFocus event =
         ^. Widget.enterResultEvent & Just & pure
     (_, Just (focalArea, mkEventMap), _) ->
         do
-            virtCursorState <- readIORef cursorRef <&> (^. cursorVirtual)
+            virtCursorState <- readIORef virtCursorRef
             virtCursor <-
                 case virtCursorState of
                 Just x -> return x
                 Nothing ->
-                    res <$ modifyIORef cursorRef (cursorVirtual ?~ res)
+                    res <$ writeIORef virtCursorRef (Just res)
                     where
                         res = VirtualCursor focalArea
             E.lookup getClipboard event (mkEventMap virtCursor)
@@ -191,11 +185,8 @@ mainLoopWidget win mkWidgetUnmemod options =
                 do
                     zoomConfig <- getConfig <&> cZoom
                     Zoom.eventMap zoom zoomConfig <&> liftIO & return
-        cursorRef <-
-            newIORef Cursor
-            { _cursorId = cursorStartPos options
-            , _cursorVirtual = Nothing -- Will update when have a focal area
-            }
+        virtCursorRef <- newIORef Nothing
+        cursorRef <- newIORef (cursorStartPos options)
         let mkW =
                 memoIO $ \size ->
                 do
@@ -206,7 +197,7 @@ mainLoopWidget win mkWidgetUnmemod options =
                         Env
                         { _eZoom = zoom
                         , _eWindowSize = size
-                        , _eCursor = cursor ^. cursorId
+                        , _eCursor = cursor
                         }
                         <&> E.strongerEvents zoomEventMap
                         >>= addHelp helpStyle size
@@ -214,8 +205,8 @@ mainLoopWidget win mkWidgetUnmemod options =
         let newWidget = mkW >>= writeIORef mkWidgetRef
         let renderWidget size =
                 do
-                    cursor <- readIORef cursorRef
-                    vcursorimg <- virtualCursorImage (cursor ^. cursorVirtual) debug
+                    virtCursor <- readIORef virtCursorRef
+                    vcursorimg <- virtualCursorImage virtCursor debug
                     Widget.renderWithCursor
                         <$> (getConfig <&> cCursor)
                         <*> (readIORef mkWidgetRef >>= (size &))
@@ -235,15 +226,14 @@ mainLoopWidget win mkWidgetUnmemod options =
             , MainAnim.eventHandler = \event ->
                 do
                     (_, mEnter, mFocus) <- renderWidget size
-                    mWidgetRes <- lookupEvent getClipboard cursorRef mEnter mFocus event
+                    mWidgetRes <- lookupEvent getClipboard virtCursorRef mEnter mFocus event
                     EventResult runInMainThread mRes <- sequenceA mWidgetRes ^. m
                     case mRes of
                         Nothing -> return ()
                         Just res ->
                             do
-                                traverse_ (modifyIORef cursorRef . (cursorId .~)) (res ^. Widget.eCursor)
-                                cursorVirtual .~ res ^. Widget.eVirtualCursor . Lens._Wrapped
-                                    & modifyIORef cursorRef
+                                traverse_ (writeIORef cursorRef) (res ^. Widget.eCursor)
+                                writeIORef virtCursorRef (res ^. Widget.eVirtualCursor . Lens._Wrapped)
                                 newWidget
                     return MainAnim.EventResult
                         { MainAnim.erAnimIdMapping = mRes <&> (^. Widget.eAnimIdMapping)
