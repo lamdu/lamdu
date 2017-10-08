@@ -74,11 +74,25 @@ data DebugOptions = DebugOptions
     , virtualCursorColor :: IO (Maybe Draw.Color)
     }
 
+data CursorStorage = CursorStorage
+    { readCursor :: IO Widget.Id
+    , writeCursor :: Widget.Id -> IO ()
+    }
+
+iorefCursorStorage :: Widget.Id -> IO CursorStorage
+iorefCursorStorage initialCursor =
+    newIORef initialCursor
+    <&> \ref ->
+    CursorStorage
+    { readCursor = readIORef ref
+    , writeCursor = writeIORef ref
+    }
+
 data Options = Options
     { tickHandler :: IO Bool
     , getConfig :: IO Config
     , getHelpStyle :: Zoom -> IO EventMapHelp.Config
-    , cursorStartPos :: Widget.Id
+    , cursorStorage :: CursorStorage
     , debug :: DebugOptions
     }
 
@@ -95,6 +109,9 @@ defaultOptions :: FilePath -> IO Options
 defaultOptions helpFontPath =
     do
         loadHelpFont <- memoIO $ \size -> openFont size helpFontPath
+        -- Note that not every app is necessarily interactive and even uses a cursor,
+        -- so an empty value might be fitting.
+        cursorStorage_ <- iorefCursorStorage (Widget.Id [])
         return Options
             { tickHandler = pure False
             , getConfig =
@@ -115,10 +132,7 @@ defaultOptions helpFontPath =
                     zoomFactor <- Zoom.getZoomFactor zoom
                     helpFont <- loadHelpFont (9 * zoomFactor)
                     EventMapHelp.defaultConfig helpFont & return
-            , cursorStartPos =
-                -- Note that not every app is necessarily interactive and even uses a cursor,
-                -- so an empty value might be fitting.
-                Widget.Id []
+            , cursorStorage = cursorStorage_
             , debug = defaultDebugOptions
             }
 
@@ -186,13 +200,12 @@ mainLoopWidget win mkWidgetUnmemod options =
                     zoomConfig <- getConfig <&> cZoom
                     Zoom.eventMap zoom zoomConfig <&> liftIO & return
         virtCursorRef <- newIORef Nothing
-        cursorRef <- newIORef (cursorStartPos options)
         let mkW =
                 memoIO $ \size ->
                 do
                     zoomEventMap <- mkZoomEventMap
                     helpStyle <- getHelpStyle zoom
-                    cursor <- readIORef cursorRef
+                    cursor <- readCursor cursorStorage_
                     mkWidgetUnmemod
                         Env
                         { _eZoom = zoom
@@ -232,7 +245,7 @@ mainLoopWidget win mkWidgetUnmemod options =
                         Nothing -> return ()
                         Just res ->
                             do
-                                traverse_ (writeIORef cursorRef) (res ^. Widget.eCursor)
+                                traverse_ (writeCursor cursorStorage_) (res ^. Widget.eCursor)
                                 writeIORef virtCursorRef (res ^. Widget.eVirtualCursor . Lens._Wrapped)
                                 newWidget
                     return MainAnim.EventResult
@@ -242,6 +255,7 @@ mainLoopWidget win mkWidgetUnmemod options =
             , MainAnim.makeFrame = renderWidget size <&> (^. _1)
             }
     where
+        cursorStorage_ = cursorStorage options
         getClipboard = GLFW.getClipboardString win <&> fmap Text.pack
         Options{tickHandler, debug, getConfig, getHelpStyle} = options
         DebugOptions{fpsFont} = debug
