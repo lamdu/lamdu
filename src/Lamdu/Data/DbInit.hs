@@ -67,6 +67,15 @@ initDb db importAct =
         newVer <- Branch.curVersion master
         Version.preventUndo newVer
 
+-- | In commit 567ae4620f9222889a76a84936b9b09432a29698, the cursor
+-- became a DB field. Easy to migrate from pre-cursor DB so do so:
+updateMissingCursor :: T DbLayout.DbM ()
+updateMissingCursor =
+    do
+        exists <- Transaction.irefExists DbLayout.cursor
+        Transaction.writeIRef DbLayout.cursor WidgetIds.defaultCursor
+            & unless exists
+
 withDB :: FilePath -> (Db -> IO a) -> IO a
 withDB lamduDir body =
     do
@@ -79,6 +88,7 @@ withDB lamduDir body =
                 }
         Db.withDB dbPath options $ \db ->
             do
+                DbLayout.runDbTransaction db updateMissingCursor
                 Paths.get Paths_Lamdu.getDataFileName "freshdb.json"
                     >>= fileImportAll >>= initDb db
                     & (`onException` Directory.removeDirectoryRecursive dbPath)
