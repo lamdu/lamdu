@@ -3,7 +3,7 @@
 module Lamdu.Sugar.Parens
     ( NeedsParens(..)
     , MinOpPrec
-    , add
+    , add, addWith
     ) where
 
 import qualified Lamdu.Calc.Val as V
@@ -148,7 +148,12 @@ precedenceOf =
 add ::
     HasPrecedence name =>
     Expression name m a -> Expression name m (MinOpPrec, NeedsParens, a)
-add = loop 0 (Precedence 0 0)
+add = addWith 0
+
+addWith ::
+    HasPrecedence name =>
+    Int -> Expression name m a -> Expression name m (MinOpPrec, NeedsParens, a)
+addWith minOpPrec = loop minOpPrec (Precedence 0 0)
 
 loop ::
     HasPrecedence name =>
