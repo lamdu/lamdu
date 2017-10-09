@@ -178,6 +178,8 @@ hover =
 sequenceHover :: Functor f => Hover (f a) -> f (Hover a)
 sequenceHover (Hover x) = x <&> Hover
 
+-- TODO: Second argument here is really only (anchorPoint,size), take
+-- it as such?
 hoverInPlaceOf ::
     Functor f =>
     [AnchoredWidget (f EventResult)] ->
