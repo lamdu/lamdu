@@ -43,9 +43,11 @@ branchSelection = Id ["selected branch"]
 activePaneBackground :: AnimId
 activePaneBackground = ["active def bg"]
 
--- TODO: Remove this - each widget type should declare its own children ids
 delegatingId :: Id -> Id
 delegatingId = flip WidgetId.joinId ["delegating"]
+
+notDelegatingId :: Id -> Id
+notDelegatingId = flip WidgetId.joinId ["non-delegating"]
 
 replId :: Id
 replId = Id ["repl"]

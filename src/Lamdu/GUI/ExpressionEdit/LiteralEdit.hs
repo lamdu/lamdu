@@ -102,7 +102,8 @@ textEdit prop pl =
             >>= Align.tValue %%~
                 (FocusDelegator.make ?? fdConfig config
                 ?? FocusDelegator.FocusEntryParent
-                ?? myId ??)
+                ?? WidgetIds.notDelegatingId myId ??)
+    & Widget.assignCursor myId (WidgetIds.notDelegatingId myId)
     where
         empty = TextEdit.EmptyStrings "" ""
         innerId = WidgetIds.delegatingId myId

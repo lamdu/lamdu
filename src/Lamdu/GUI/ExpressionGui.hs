@@ -330,7 +330,7 @@ parentDelegator ::
     m (Responsive (f Widget.EventResult) -> Responsive (f Widget.EventResult))
 parentDelegator myId =
     FocusDelegator.make <*> (Lens.view Config.config <&> parentExprFDConfig)
-    ?? FocusDelegator.FocusEntryChild ?? myId
+    ?? FocusDelegator.FocusEntryChild ?? WidgetIds.notDelegatingId myId
 
 stdWrapParentExpr ::
     Monad m =>
