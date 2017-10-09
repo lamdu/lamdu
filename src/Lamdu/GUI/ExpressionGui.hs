@@ -318,11 +318,7 @@ stdWrap pl act =
         (res, holePicker) <- ExprGuiM.listenResultPicker act
         exprEventMap <- ExprEventMap.make pl holePicker
         maybeAddAnnotationPl pl ?? res
-            <&> addEvents exprEventMap
-    where
-        addEvents
-            | ExprGuiT.isHoleResult pl = E.strongerEvents
-            | otherwise = E.weakerEvents
+            <&> E.weakerEvents exprEventMap
 
 parentDelegator ::
     ( MonadReader env m, Config.HasConfig env, Widget.HasCursor env, Applicative f
