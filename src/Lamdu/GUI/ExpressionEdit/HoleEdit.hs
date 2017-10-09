@@ -23,7 +23,6 @@ import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
-import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Name (Name)
 import qualified Lamdu.Sugar.Types as Sugar
 
@@ -44,10 +43,7 @@ makeWrapper pl openHoleId holeArg =
 assignHoleCursor ::
     Monad m => WidgetIds -> ExprGuiM m a -> ExprGuiM m a
 assignHoleCursor widgetIds =
-    Widget.assignCursor hidHole hidOpen .
-    Widget.assignCursor (WidgetIds.notDelegatingId hidHole) hidClosedSearchArea
-    where
-        WidgetIds{hidHole,hidOpen,hidClosedSearchArea} = widgetIds
+    Widget.assignCursor (hidHole widgetIds) (hidOpen widgetIds)
 
 makeHoleWithWrapper ::
     (Functor f, Monad m) =>
