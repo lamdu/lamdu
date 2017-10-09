@@ -99,12 +99,19 @@ makeFieldsWidget ::
     Monad m =>
     [Sugar.CompositeItem (Name (T m)) (T m) (Sugar.Expression (Name (T m)) (T m) ExprGuiT.Payload)] ->
     Widget.Id -> ExprGuiM m (ExpressionGui m)
-makeFieldsWidget [] myId =
-    (Widget.makeFocusableView ?? myId <&> (Align.tValue %~))
-    <*> ExpressionGui.grammarLabel "()"
-    <&> Responsive.fromWithTextPos
-makeFieldsWidget fields _ =
-    Responsive.taggedList <*> mapM makeFieldRow fields
+makeFieldsWidget fields myId =
+    do
+        opener <- ExpressionGui.grammarLabel "{"
+        closer <- ExpressionGui.grammarLabel "}"
+        case fields of
+            [] ->
+                (Widget.makeFocusableView ?? myId <&> (Align.tValue %~))
+                ?? (opener /|/ closer)
+                <&> Responsive.fromWithTextPos
+            _ ->
+                do
+                    xs <- Responsive.taggedList <*> mapM makeFieldRow fields
+                    opener /|/ xs /|/ closer & return
 
 separationBar :: Theme.CodeForegroundColors -> Widget.R -> Anim.AnimId -> View
 separationBar theme width animId =
