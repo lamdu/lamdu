@@ -26,6 +26,8 @@ data NameRef name m = NameRef
     { _nrName :: name
     , _nrGotoDefinition :: m EntityId
     }
+instance Show name => Show (NameRef name m) where
+    show (NameRef name _) = show name
 
 data Param name m = Param
     { _pNameRef :: NameRef name m
@@ -38,11 +40,15 @@ data DefinitionOutdatedType m = DefinitionOutdatedType
     , _defTypeCurrent :: Scheme
     , _defTypeUseCurrent :: m ()
     }
+instance Show (DefinitionOutdatedType m) where
+    show (DefinitionOutdatedType usedType newType _) =
+        "(Used @type: " ++ show usedType ++ " now type: " ++ show newType ++ ")"
 
 data DefinitionForm m =
     DefUpToDate | DefDeleted | DefTypeChanged (DefinitionOutdatedType m)
+    deriving Show
 
-data BinderVarForm m = GetDefinition (DefinitionForm m) | GetLet
+data BinderVarForm m = GetDefinition (DefinitionForm m) | GetLet deriving Show
 
 data BinderVarInline m
     = InlineVar (m EntityId)
@@ -55,6 +61,8 @@ data BinderVar name m = BinderVar
     , -- Just means it is stored and inlinable:
       _bvInline :: BinderVarInline m
     }
+instance Show name => Show (BinderVar name m) where
+    show (BinderVar nameRef form _) = "(BinderVar " ++ show nameRef ++ " (form=" ++ show form ++ "))"
 
 newtype ParamsRecordVar name = ParamsRecordVar
     { _prvFieldNames :: [name]

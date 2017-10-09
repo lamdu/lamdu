@@ -78,11 +78,15 @@ data Payload m a = Payload
     , _plEntityId :: EntityId
     , _plData :: a
     } deriving (Functor, Foldable, Traversable)
+instance Show a => Show (Payload m a) where
+    show (Payload _ann _actions _entityId data_) = show data_
 
 data Expression name m a = Expression
     { _rBody :: Body name m (Expression name m a)
     , _rPayload :: Payload m a
     } deriving (Functor, Foldable, Traversable)
+instance (Show name, Show a) => Show (Expression name m a) where
+    show (Expression body pl) = show body ++ "{" ++ show pl ++ "}"
 
 data TId name = TId
     { _tidName :: name
@@ -211,12 +215,16 @@ data Body name m expr
     | BodyInjectedExpression -- Used for hole results
     deriving (Functor, Foldable, Traversable)
 
-instance Show (Body name m expr) where
+instance (Show name, Show expr) => Show (LabeledApply name m expr) where
+    show (LabeledApply func specialArgs _annArgs _relayedArgs) =
+        unwords ["LabeledApply of", show func, "with", show specialArgs, "..."]
+
+instance (Show name, Show expr) => Show (Body name m expr) where
     show (BodyLam _) = "TODO show lam"
     show BodyHole {} = "Hole"
     show BodyLiteral {} = "Literal"
     show BodySimpleApply {} = "SimpleApply:TODO"
-    show BodyLabeledApply {} = "LabelledApply:TODO"
+    show (BodyLabeledApply x) = show x
     show BodyRecord {} = "Record:TODO"
     show BodyGetField {} = "GetField:TODO"
     show BodyCase {} = "Case:TODO"
