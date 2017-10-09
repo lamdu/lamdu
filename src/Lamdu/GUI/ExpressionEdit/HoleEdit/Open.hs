@@ -155,7 +155,7 @@ eventResultOfPickedResult pr =
 
 afterPick ::
     Monad m =>
-    HoleInfo m -> Widget.Id -> Maybe Sugar.EntityId ->
+    HoleInfo m -> Widget.Id -> Maybe Widget.Id ->
     Sugar.PickedResult -> T m PickedResult
 afterPick holeInfo resultId mFirstHoleInside pr =
     do
@@ -168,7 +168,7 @@ afterPick holeInfo resultId mFirstHoleInside pr =
     where
         result = eventResultOfPickedResult pr
         cursorId =
-            mFirstHoleInside <&> WidgetIds.fromEntityId
+            mFirstHoleInside
             & fromMaybe myHoleId
             & result ^. pickedIdTranslations
         myHoleId =
@@ -272,9 +272,14 @@ makeHoleResultWidget holeInfo resultId holeResult =
         fixFocalArea =
             Align.tValue . Widget.sizedState <. Widget._StateFocused . Lens.mapped . Widget.fFocalAreas .@~
             (:[]) . Rect 0
-        holeResultEntityId = holeResultConverted ^. Sugar.rPayload . Sugar.plEntityId
-        mFirstHoleInside = holeResult ^? Sugar.holeResultConverted . SugarLens.holePayloads . Sugar.plEntityId
-        idWithinResultWidget = fromMaybe holeResultEntityId mFirstHoleInside & WidgetIds.fromEntityId
+        holeResultId =
+            holeResultConverted ^. Sugar.rPayload . Sugar.plEntityId
+            & WidgetIds.fromEntityId
+        mFirstHoleInside =
+            holeResult ^?
+            Sugar.holeResultConverted . SugarLens.holePayloads . Sugar.plEntityId
+            <&> WidgetIds.fromEntityId
+        idWithinResultWidget = fromMaybe holeResultId mFirstHoleInside
         holeResultConverted = holeResult ^. Sugar.holeResultConverted
         pickBefore action =
             do
@@ -428,7 +433,9 @@ makeUnderCursorAssignment shownResultsLists hasHiddenResults holeInfo =
         searchTermWidget <-
             SearchTerm.make holeInfo
             <&> Align.tValue %~ Hover.anchor . E.weakerEvents (pickFirstResult <> blockOperatorEvents)
-        mkOptions <- resultsHoverOptions & Reader.local (Element.animIdPrefix .~ WidgetId.toAnimId (hidOpen hids))
+        mkOptions <-
+            resultsHoverOptions
+            & Reader.local (Element.animIdPrefix .~ WidgetId.toAnimId (hidOpen hids))
         return $
             \placement ->
             searchTermWidget
