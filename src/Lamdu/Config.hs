@@ -93,6 +93,7 @@ data Config = Config
     , delBackwardKeys :: [MetaKey]
     , replaceParentKeys :: [MetaKey]
     , wrapKeys :: [MetaKey]
+    , parenWrapKeys :: [MetaKey]
 
     , letAddItemKeys :: [MetaKey]
 

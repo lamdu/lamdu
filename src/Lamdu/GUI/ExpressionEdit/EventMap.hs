@@ -163,8 +163,6 @@ applyOperatorEventMap exprInfo holePicker =
     case exprInfoActions exprInfo ^. Sugar.wrap of
     Sugar.WrapAction wrap -> action wrap
     Sugar.WrapperAlready holeId -> action $ return holeId
-    Sugar.WrappedAlready holeId -> action $ return holeId
-    Sugar.WrapNotAllowed -> mempty
     & ExprGuiM.withHolePicker holePicker
     where
         acceptableOperatorChars = filter ((>= exprInfoMinOpPrec exprInfo) . precedence) Chars.operator
@@ -181,12 +179,16 @@ wrapEventMap ::
     (MonadReader env m, Config.HasConfig env, Monad f) =>
     T f Sugar.EntityId -> m (Widget.EventMap (T f Widget.EventResult))
 wrapEventMap wrap =
-    Lens.view Config.config <&> Config.wrapKeys
+    Lens.view Config.config
     <&>
-    \k ->
-    Widget.keysEventMapMovesCursor k
-    (E.Doc ["Edit", "Wrap"])
+    \config ->
+    Widget.keysEventMapMovesCursor (Config.wrapKeys config)
+    (E.Doc ["Edit", "Modify"])
     (wrap <&> HoleWidgetIds.make <&> HoleWidgetIds.hidOpen)
+    <>
+    Widget.keysEventMap (Config.parenWrapKeys config)
+    (E.Doc ["Edit", "Wrap with hole"])
+    (void wrap)
 
 replaceEventMap ::
     (MonadReader env m, Config.HasConfig env, Widget.HasCursor env, Monad f) =>

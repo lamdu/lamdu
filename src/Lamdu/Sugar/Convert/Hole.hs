@@ -86,7 +86,6 @@ convertCommon mInjectedArg exprPl =
     mkHole mInjectedArg exprPl
     <&> BodyHole
     >>= addActions exprPl
-    <&> rPayload . plActions . wrap .~ WrapNotAllowed
 
 mkHoleOptionFromInjected ::
     Monad m =>
