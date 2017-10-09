@@ -23,7 +23,6 @@ import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
 import qualified Lamdu.GUI.NameEdit as NameEdit
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
-import qualified Lamdu.Sugar.Lens as SugarLens
 import           Lamdu.Name (Name(..))
 import qualified Lamdu.Name as Name
 import qualified Lamdu.Sugar.Types as Sugar
@@ -43,11 +42,10 @@ makeToNom ::
     ExprGuiM m (ExpressionGui m)
 makeToNom nom pl =
     nom <&> BinderEdit.makeBinderBodyEdit
-    & mkNomGui id "ToNominal" "«" mDel valId pl
+    & mkNomGui id "ToNominal" "«" mDel pl
     where
         bbContent = nom ^. Sugar.nVal . Sugar.bbContent
         mDel = bbContent ^? Sugar._BinderExpr . mReplaceParent
-        valId = bbContent ^. SugarLens.binderContentExpr . Sugar.rPayload . Sugar.plEntityId
 
 makeFromNom ::
     Monad m =>
@@ -56,19 +54,18 @@ makeFromNom ::
     ExprGuiM m (ExpressionGui m)
 makeFromNom nom pl =
     nom <&> ExprGuiM.makeSubexpression
-    & mkNomGui reverse "FromNominal" "»" mDel valId pl
+    & mkNomGui reverse "FromNominal" "»" mDel pl
     where
         mDel = nom ^? Sugar.nVal . mReplaceParent
-        valId = nom ^. Sugar.nVal . Sugar.rPayload . Sugar.plEntityId
 
 mkNomGui ::
     Monad m =>
     (forall a. [a] -> [a]) ->
-    Text -> Text -> Maybe (T m Sugar.EntityId) -> Sugar.EntityId ->
+    Text -> Text -> Maybe (T m Sugar.EntityId) ->
     Sugar.Payload (T m) ExprGuiT.Payload ->
     Sugar.Nominal (Name (T m)) (ExprGuiM m (ExpressionGui m)) ->
     ExprGuiM m (ExpressionGui m)
-mkNomGui ordering nomStr str mDel valId pl (Sugar.Nominal tid val) =
+mkNomGui ordering nomStr str mDel pl (Sugar.Nominal tid val) =
     do
         nomColor <- Lens.view Theme.theme <&> Theme.codeForegroundColors <&> Theme.nomColor
         config <- Lens.view Config.config
@@ -94,7 +91,7 @@ mkNomGui ordering nomStr str mDel valId pl (Sugar.Nominal tid val) =
               , val
               ] & sequence
             )
-    & ExpressionGui.stdWrapParentExpr pl valId
+    & ExpressionGui.stdWrapParentExpr pl
     where
         mParenInfo
             | pl ^. Sugar.plData . ExprGuiT.plNeedParens =

@@ -99,12 +99,11 @@ make (Sugar.Inject tag mVal) pl =
                 ExprGuiM.makeSubexpression val <&> (:[])
             colon <- injectIndicator ":"
             makeCommon disamb tag replaceParent (ExprGuiT.nextHolesBefore val) colon arg
-        & ExpressionGui.stdWrapParentExpr pl tagInstance
+        & ExpressionGui.stdWrapParentExpr pl
         where
             mParensId
                 | pl ^. Sugar.plData . ExprGuiT.plNeedParens =
                   Just animId
                 | otherwise = Nothing
-            tagInstance = tag ^. Sugar.tagInfo . Sugar.tagInstance
             replaceParent = val ^. Sugar.rPayload . Sugar.plActions . Sugar.mReplaceParent
             animId = WidgetIds.fromExprPayload pl & Widget.toAnimId

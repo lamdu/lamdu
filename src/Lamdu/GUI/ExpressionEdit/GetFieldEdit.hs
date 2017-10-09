@@ -50,4 +50,4 @@ make (Sugar.GetField recExpr tag) pl =
             , Responsive.fromWithTextPos tagEdit
             ]
             & return
-    & ExpressionGui.stdWrapParentExpr pl (tag ^. Sugar.tagInfo . Sugar.tagInstance)
+    & ExpressionGui.stdWrapParentExpr pl

@@ -153,7 +153,7 @@ make guards pl =
         <$> makeIf
         <*> foldr makeElseIf (makeElse guards <&> (:[])) (guards ^. Sugar.gElseIfs)
     )
-    & ExpressionGui.stdWrapParentExpr pl (guards ^. Sugar.gIf . Sugar.rPayload . Sugar.plEntityId)
+    & ExpressionGui.stdWrapParentExpr pl
     where
         makeIf =
             makeGuardRow (guards ^. Sugar.gDeleteIf) Element.empty (pl ^. Sugar.plEntityId)

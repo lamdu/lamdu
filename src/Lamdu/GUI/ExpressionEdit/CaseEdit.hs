@@ -25,7 +25,6 @@ import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.Eval.Results as ER
-import           Lamdu.GUI.ExpressionEdit.Composite (destCursorId)
 import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
 import qualified Lamdu.GUI.ExpressionEdit.TagEdit as TagEdit
 import           Lamdu.GUI.ExpressionGui (ExpressionGui)
@@ -111,8 +110,7 @@ make (Sugar.Case mArg (Sugar.Composite alts caseTail addAlt)) pl =
         ExpressionGui.addValFrame
             <*> (Responsive.vboxSpaced ?? [header, altsGui])
             <&> E.weakerEvents addAltEventMap
-    & Widget.assignCursor myId headerId
-    & ExpressionGui.stdWrapParentExpr pl (destCursorId alts (pl ^. Sugar.plEntityId))
+    & ExpressionGui.stdWrapParentExpr pl
     where
         myId = WidgetIds.fromExprPayload pl
         headerId = Widget.joinId myId ["header"]

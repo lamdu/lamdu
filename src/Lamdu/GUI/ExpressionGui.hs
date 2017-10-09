@@ -335,12 +335,10 @@ parentDelegator myId =
 stdWrapParentExpr ::
     Monad m =>
     Sugar.Payload (T m) ExprGuiT.Payload ->
-    Sugar.EntityId ->
     ExprGuiM m (ExpressionGui m) ->
     ExprGuiM m (ExpressionGui m)
-stdWrapParentExpr pl delegateTo mkGui =
+stdWrapParentExpr pl mkGui =
     mkGui
-    & Widget.assignCursor (WidgetIds.fromExprPayload pl) (WidgetIds.fromEntityId delegateTo)
     & delegator
     & stdWrap pl
     where

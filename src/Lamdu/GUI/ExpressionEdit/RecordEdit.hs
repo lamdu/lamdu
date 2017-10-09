@@ -21,7 +21,6 @@ import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Config.Theme as Theme
-import           Lamdu.GUI.ExpressionEdit.Composite (destCursorId)
 import qualified Lamdu.GUI.ExpressionEdit.TagEdit as TagEdit
 import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
@@ -87,10 +86,9 @@ make (Sugar.Composite fields recordTail addField) pl =
                     openRecordEventMap config actions restExpr
         let addFieldEventMap = mkAddFieldEventMap config addField
         makeRecord fields addFieldEventMap postProcess
-            & ExpressionGui.stdWrapParentExpr pl defaultDestCursor
+            & ExpressionGui.stdWrapParentExpr pl
             <&> E.weakerEvents (eventMap <> addFieldEventMap)
     where
-        defaultDestCursor = destCursorId fields (pl ^. Sugar.plEntityId)
         animId = WidgetIds.fromExprPayload pl & Widget.toAnimId
         postProcess =
             case recordTail of
