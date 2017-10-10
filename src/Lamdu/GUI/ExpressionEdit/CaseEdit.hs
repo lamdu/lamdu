@@ -69,24 +69,22 @@ make (Sugar.Case mArg (Sugar.Composite alts caseTail addAlt)) pl =
                 <*> ExpressionGui.grammarLabel text
                 <&> Responsive.fromWithTextPos
                 <&> E.weakerEvents labelJumpHoleEventMap
+        caseLabel <- headerLabel "case"
+        ofLabel <- responsiveLabel "of"
         (mActiveTag, header) <-
             case mArg of
             Sugar.LambdaCase ->
                 do
-                    caseLabel <- headerLabel "case"
                     lambdaLabel <- responsiveLabel "λ"
-                    ofLabel <- responsiveLabel "of"
                     Options.boxSpaced
                         ?? Options.disambiguationNone
                         ?? [caseLabel, lambdaLabel, ofLabel]
                         <&> (,) Nothing
             Sugar.CaseWithArg (Sugar.CaseArg arg toLambdaCase) ->
                 do
-                    caseLabel <- headerLabel "case"
                     argEdit <-
                         ExprGuiM.makeSubexpression arg
                         <&> E.weakerEvents (toLambdaCaseEventMap config toLambdaCase)
-                    ofLabel <- responsiveLabel "of"
                     mTag <-
                         ExpressionGui.evaluationResult (arg ^. Sugar.rPayload)
                         <&> (>>= (^? ER.body . ER._RInject . V.injectTag))
