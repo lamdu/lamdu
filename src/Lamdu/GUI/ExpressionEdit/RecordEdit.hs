@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, OverloadedStrings #-}
+{-# LANGUAGE NoImplicitPrelude, OverloadedStrings, FlexibleContexts #-}
 module Lamdu.GUI.ExpressionEdit.RecordEdit
     ( make
     ) where
@@ -52,28 +52,39 @@ make ::
 make record@(Sugar.Composite fields recordTail addField) pl =
     do
         config <- Lens.view Config.config
-        (gui, resultPicker) <-
-            ExprGuiM.listenResultPicker $
-            do
-                fieldsGui <- makeFieldsWidget fields myId
+        let eventMap =
                 case recordTail of
-                    Sugar.ClosedComposite actions ->
-                        E.weakerEvents (closedRecordEventMap config actions) fieldsGui
-                        & return
-                    Sugar.OpenComposite actions rest ->
-                        makeOpenRecord fieldsGui actions rest (Widget.toAnimId myId)
-        let addFieldEventMap =
-                addField
-                <&> (^. Sugar.cairNewTag . Sugar.tagInstance)
-                <&> WidgetIds.fromEntityId
-                <&> TagEdit.tagHoleId
-                & Widget.keysEventMapMovesCursor (Config.recordAddFieldKeys config)
-                  (doc "Add Field")
-                & ExprGuiM.withHolePicker resultPicker
-        (if addBg then ExpressionGui.addValFrame else return id)
-            ?? E.weakerEvents addFieldEventMap gui
-    & ExpressionGui.stdWrapParentExpr pl (destCursorId fields (pl ^. Sugar.plEntityId))
+                Sugar.ClosedComposite actions ->
+                    closedRecordEventMap config actions
+                Sugar.OpenComposite actions restExpr ->
+                    openRecordEventMap config actions restExpr
+        do
+            (gui, resultPicker) <-
+                ExprGuiM.listenResultPicker $
+                do
+                    fieldsGui <- makeFieldsWidget fields myId
+                    case recordTail of
+                        Sugar.ClosedComposite _ -> pure fieldsGui
+                        Sugar.OpenComposite actions rest ->
+                            makeOpenRecord fieldsGui actions rest (Widget.toAnimId myId)
+            let addFieldEventMap =
+                    addField
+                    <&> (^. Sugar.cairNewTag . Sugar.tagInstance)
+                    <&> WidgetIds.fromEntityId
+                    <&> TagEdit.tagHoleId
+                    & Widget.keysEventMapMovesCursor (Config.recordAddFieldKeys config)
+                      (doc "Add Field")
+                    & ExprGuiM.withHolePicker resultPicker
+            (if addBg then ExpressionGui.addValFrame else return id)
+                ?? E.weakerEvents addFieldEventMap gui
+            & wrap
+            <&> E.weakerEvents eventMap
     where
+        haveChildren = Lens.has Lens.folded record
+        defaultDestCursor = destCursorId fields (pl ^. Sugar.plEntityId)
+        wrap
+            | haveChildren = ExpressionGui.stdWrapParentExpr pl defaultDestCursor
+            | otherwise = ExpressionGui.stdWrap pl
         myId = WidgetIds.fromExprPayload pl
         addBg = shouldAddBg record
 
@@ -123,36 +134,43 @@ makeOpenRecord ::
     Monad m =>
     ExpressionGui m -> Sugar.OpenCompositeActions (T m) -> ExprGuiT.SugarExpr m ->
     AnimId -> ExprGuiM m (ExpressionGui m)
-makeOpenRecord fieldsGui actions rest animId =
+makeOpenRecord fieldsGui (Sugar.OpenCompositeActions close) rest animId =
     do
         theme <- Lens.view Theme.theme
         vspace <- Spacer.stdVSpace
-        restExpr <-
-            ExpressionGui.addValPadding
-            <*> ExprGuiM.makeSubexpression rest
+        restExpr <- ExpressionGui.addValPadding <*> ExprGuiM.makeSubexpression rest
         config <- Lens.view Config.config
-        return $ fieldsGui & Responsive.render . Lens.imapped %@~
-            \layoutMode fields ->
-            let restW =
-                    (restExpr ^. Responsive.render) layoutMode
-                    <&> E.weakerEvents (openRecordEventMap config actions)
-                minWidth = restW ^. Element.width
-                targetWidth = fields ^. Element.width
-            in
-            fields
-            /-/
-            separationBar (Theme.codeForegroundColors theme) (max minWidth targetWidth) animId
-            /-/
-            vspace
-            /-/
-            restW
+        let restEventMap =
+                close <&> WidgetIds.fromEntityId
+                & Widget.keysEventMapMovesCursor (Config.delKeys config) (doc "Close")
+        let layout layoutMode fields =
+                fields
+                /-/
+                separationBar (Theme.codeForegroundColors theme) (max minWidth targetWidth) animId
+                /-/
+                vspace
+                /-/
+                restW
+                where
+                    restW =
+                        (restExpr ^. Responsive.render) layoutMode
+                        <&> E.weakerEvents restEventMap
+                    minWidth = restW ^. Element.width
+                    targetWidth = fields ^. Element.width
+        fieldsGui & Responsive.render . Lens.imapped %@~ layout & pure
 
 openRecordEventMap ::
-    Functor m => Config -> Sugar.OpenCompositeActions (T m) ->
+    Functor m =>
+    Config -> Sugar.OpenCompositeActions (T m) ->
+    Sugar.Expression name (T m) a ->
     Widget.EventMap (T m Widget.EventResult)
-openRecordEventMap config (Sugar.OpenCompositeActions close) =
-    close <&> WidgetIds.fromEntityId
-    & Widget.keysEventMapMovesCursor (Config.delKeys config) (doc "Close")
+openRecordEventMap config (Sugar.OpenCompositeActions close) restExpr
+    | isHole restExpr =
+        close <&> WidgetIds.fromEntityId
+        & Widget.keysEventMapMovesCursor (Config.recordCloseKeys config) (doc "Close")
+    | otherwise = mempty
+    where
+        isHole = Lens.has (Sugar.rBody . Sugar._BodyHole)
 
 closedRecordEventMap ::
     Functor m =>

@@ -105,6 +105,7 @@ data Config = Config
     , leaveSubexpressionKeys :: [MetaKey]
 
     , recordOpenKeys :: [MetaKey]
+    , recordCloseKeys :: [MetaKey]
     , recordAddFieldKeys :: [MetaKey]
 
     , caseOpenKeys :: [MetaKey]

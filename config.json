@@ -61,6 +61,7 @@
     "wrapKeys"                 : [ "Space" ],
     "parenWrapKeys"            : [ "Shift+9", "LeftBracket" ],
     "recordOpenKeys"           : [ "Alt+O" ],
+    "recordCloseKeys"          : [ "Alt+O" ],
     "caseOpenKeys"             : [ "Alt+O" ],
     "extractKeys"              : [ "Cmd+X", "Alt+Up" ],
     "moveLetInwardKeys"        : [ "Alt+Down" ],
