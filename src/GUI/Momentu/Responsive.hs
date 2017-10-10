@@ -204,7 +204,7 @@ taggedList =
             , post
             )
         renderedItems = items <&> renderItem
-        itemWidth = renderedItems ^.. traverse . _2 . Element.width & maximum
+        itemWidth = renderedItems ^.. traverse . _1 . Element.width & maximum
         renderRow (item, post) =
             item /|/ Element.assymetricPad (Vector2 (itemWidth - item ^. Element.width) 0) 0 post
     in

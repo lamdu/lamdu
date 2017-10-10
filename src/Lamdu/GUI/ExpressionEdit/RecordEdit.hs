@@ -109,12 +109,17 @@ makeRecord fields addFieldEventMap postProcess =
     do
         opener <- ExpressionGui.grammarLabel "{"
         closer <- ExpressionGui.grammarLabel "}"
-        innerGui <-
-            Responsive.taggedList <*> mapM makeFieldRow fields
-            >>= postProcess
-            & ExprGuiM.listenResultPicker
-            <&> addEvents
-        opener /|/ innerGui /|/ closer & pure
+        case fields of
+            [] -> Responsive.fromTextView closer & pure
+            _ ->
+                Responsive.taggedList
+                <*> ( mapM makeFieldRow fields
+                    <&> Lens.reversed . Lens.ix 0 . Responsive.tagPost .~ (closer <&> Widget.fromView)
+                    )
+                >>= postProcess
+                & ExprGuiM.listenResultPicker
+                <&> addEvents
+            <&> (opener /|/)
     where
         addEvents (innerGui, resultPicker) =
             E.weakerEvents (ExprGuiM.withHolePicker resultPicker addFieldEventMap) innerGui
