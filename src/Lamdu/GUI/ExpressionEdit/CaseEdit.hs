@@ -92,7 +92,7 @@ make (Sugar.Case mArg (Sugar.Composite alts caseTail addAlt)) pl =
         (altsGui, resultPicker) <-
             ExprGuiM.listenResultPicker $
             do
-                altsGui <- makeAltsWidget mActiveTag alts myId
+                altsGui <- makeAltsWidget mActiveTag alts altsId
                 case caseTail of
                     Sugar.ClosedComposite actions ->
                         E.weakerEvents (closedCaseEventMap config actions) altsGui
@@ -114,6 +114,7 @@ make (Sugar.Case mArg (Sugar.Composite alts caseTail addAlt)) pl =
     where
         myId = WidgetIds.fromExprPayload pl
         headerId = Widget.joinId myId ["header"]
+        altsId = Widget.joinId myId ["alts"]
 
 makeAltRow ::
     Monad m =>
@@ -149,11 +150,11 @@ makeAltsWidget ::
     Maybe Tag ->
     [Sugar.CompositeItem (Name (T m)) (T m) (Sugar.Expression (Name (T m)) (T m) ExprGuiT.Payload)] ->
     Widget.Id -> ExprGuiM m (ExpressionGui m)
-makeAltsWidget _ [] myId =
-    (Widget.makeFocusableView ?? Widget.joinId myId ["Ø"] <&> (Align.tValue %~))
+makeAltsWidget _ [] altsId =
+    (Widget.makeFocusableView ?? Widget.joinId altsId ["Ø"] <&> (Align.tValue %~))
     <*> ExpressionGui.grammarLabel "Ø"
     <&> Responsive.fromWithTextPos
-makeAltsWidget mActiveTag alts _myId =
+makeAltsWidget mActiveTag alts _altsId =
     Responsive.taggedList <*> mapM (makeAltRow mActiveTag) alts
 
 separationBar :: Theme.CodeForegroundColors -> Widget.R -> Anim.AnimId -> View
