@@ -36,8 +36,11 @@ module GUI.Momentu.Responsive
     , fromAlignedWidget, fromWithTextPos, fromWidget, fromView, fromTextView, empty
 
     -- * Combinators
-    , vbox, vboxSpaced, taggedList
+    , vbox, vboxSpaced
     , vertLayoutMaybeDisambiguate
+
+    , TaggedItem(..), tagPre, taggedItem
+    , taggedList
     ) where
 
 import qualified Control.Lens as Lens
@@ -180,18 +183,25 @@ vboxSpaced =
     <&> List.intersperse
     <&> Lens.mapped %~ vbox
 
+data TaggedItem a = TaggedItem
+    { _tagPre :: WithTextPos (Widget a)
+    , _taggedItem :: Responsive a
+    } deriving Functor
+
+Lens.makeLenses ''TaggedItem
+
 taggedList ::
     (MonadReader env m, Spacer.HasStdSpacing env, Functor f) =>
-    m ([(WithTextPos (Widget (f Widget.EventResult)), Responsive (f Widget.EventResult))] -> Responsive (f Widget.EventResult))
+    m ([TaggedItem (f Widget.EventResult)] -> Responsive (f Widget.EventResult))
 taggedList =
     vboxSpaced <&>
-    \box pairs ->
-    let headerWidth = pairs ^.. traverse . _1 . Element.width & maximum
-        renderPair (header, treeLayout) =
-            Element.assymetricPad (Vector2 (headerWidth - header ^. Element.width) 0) 0 header
-            /|/ treeLayout
+    \box items ->
+    let preWidth = items ^.. traverse . tagPre . Element.width & maximum
+        renderItem (TaggedItem pre item) =
+            Element.assymetricPad (Vector2 (preWidth - pre ^. Element.width) 0) 0 pre
+            /|/ item
     in
-    pairs <&> renderPair & box
+    items <&> renderItem & box
 
 -- | Apply a given vertical disambiguator (such as indentation) when necessary,
 -- according to the layout context.

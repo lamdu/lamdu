@@ -7,7 +7,6 @@ import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
 import           Data.Store.Transaction (Transaction)
 import           Data.Vector.Vector2 (Vector2(..))
-import           GUI.Momentu.Align (WithTextPos)
 import qualified GUI.Momentu.Align as Align
 import           GUI.Momentu.Animation (AnimId)
 import qualified GUI.Momentu.Animation as Anim
@@ -18,7 +17,6 @@ import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.Responsive.Options as Options
 import           GUI.Momentu.View (View)
 import qualified GUI.Momentu.View as View
-import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import           Lamdu.Calc.Type (Tag)
@@ -123,7 +121,7 @@ makeAltRow ::
     Monad m =>
     Maybe Tag ->
     Sugar.CompositeItem (Name (T m)) (T m) (Sugar.Expression (Name (T m)) (T m) ExprGuiT.Payload) ->
-    ExprGuiM m (WithTextPos (Widget (T m Widget.EventResult)), ExpressionGui m)
+    ExprGuiM m (Responsive.TaggedItem (T m Widget.EventResult))
 makeAltRow mActiveTag (Sugar.CompositeItem delete tag altExpr) =
     do
         config <- Lens.view Config.config
@@ -139,7 +137,10 @@ makeAltRow mActiveTag (Sugar.CompositeItem delete tag altExpr) =
         altExprGui <-
             ExprGuiM.makeSubexpression altExpr <&> E.weakerEvents itemEventMap
         colonLabel <- ExpressionGui.grammarLabel ":"
-        return (tagLabel /|/ colonLabel /|/ hspace, altExprGui)
+        pure Responsive.TaggedItem
+            { Responsive._tagPre = tagLabel /|/ colonLabel /|/ hspace
+            , Responsive._taggedItem = altExprGui
+            }
     & Reader.local (Element.animIdPrefix .~ Widget.toAnimId altId)
     where
         altId = tag ^. Sugar.tagInfo . Sugar.tagInstance & WidgetIds.fromEntityId

@@ -18,7 +18,6 @@ import           GUI.Momentu.Glue ((/|/))
 import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.Responsive.Expression as ResponsiveExpr
 import qualified GUI.Momentu.Responsive.Options as Options
-import           GUI.Momentu.View (View)
 import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
@@ -153,13 +152,16 @@ makeLabeled apply pl =
 makeArgRow ::
     Monad m =>
     Sugar.AnnotatedArg (Name (T m)) (ExprGuiT.SugarExpr m) ->
-    ExprGuiM m (WithTextPos View, ExpressionGui m)
+    ExprGuiM m (Responsive.TaggedItem (T m Widget.EventResult))
 makeArgRow arg =
     do
         argTag <- TagEdit.makeArgTag (arg ^. Sugar.aaName) (arg ^. Sugar.aaTag . Sugar.tagInstance)
         space <- Spacer.stdHSpace
         expr <- ExprGuiM.makeSubexpression (arg ^. Sugar.aaExpr)
-        return (argTag /|/ space, expr)
+        pure Responsive.TaggedItem
+            { Responsive._tagPre = argTag /|/ space <&> Widget.fromView
+            , Responsive._taggedItem = expr
+            }
 
 mkRelayedArgs :: Monad m => NearestHoles -> [Sugar.RelayedArg (Name (T m)) (T m)] -> ExprGuiM m (ExpressionGui m)
 mkRelayedArgs nearestHoles args =
@@ -195,7 +197,8 @@ mkBoxed apply nearestHoles mkFuncRow =
             [] -> return []
             xs ->
                 Responsive.taggedList
-                <*> (traverse makeArgRow xs <&> Lens.mapped . _1 . Align.tValue %~ Widget.fromView) <&> (:[])
+                <*> traverse makeArgRow xs
+                <&> (:[])
         funcRow <- mkFuncRow
         relayedArgs <-
             case apply ^. Sugar.aRelayedArgs of

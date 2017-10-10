@@ -7,7 +7,7 @@ import           Control.Applicative (liftA2)
 import qualified Control.Lens as Lens
 import           Data.Store.Transaction (Transaction)
 import           Data.Vector.Vector2 (Vector2(..))
-import           GUI.Momentu.Align (WithTextPos, Aligned(Aligned))
+import           GUI.Momentu.Align (Aligned(Aligned))
 import qualified GUI.Momentu.Align as Align
 import           GUI.Momentu.Animation (AnimId)
 import qualified GUI.Momentu.Animation as Anim
@@ -17,7 +17,6 @@ import           GUI.Momentu.Glue ((/-/), (/|/))
 import qualified GUI.Momentu.Responsive as Responsive
 import           GUI.Momentu.View (View)
 import qualified GUI.Momentu.View as View
-import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import           Lamdu.Config (Config)
@@ -125,10 +124,7 @@ makeRecord fields addFieldEventMap postProcess =
 makeFieldRow ::
     Monad m =>
     Sugar.CompositeItem (Name (T m)) (T m) (ExprGuiT.SugarExpr m) ->
-    ExprGuiM m
-    ( WithTextPos (Widget (T m Widget.EventResult))
-    , ExpressionGui m
-    )
+    ExprGuiM m (Responsive.TaggedItem (T m Widget.EventResult))
 makeFieldRow (Sugar.CompositeItem delete tag fieldExpr) =
     do
         config <- Lens.view Config.config
@@ -138,7 +134,10 @@ makeFieldRow (Sugar.CompositeItem delete tag fieldExpr) =
             <&> Align.tValue %~ E.weakerEvents itemEventMap
         hspace <- Spacer.stdHSpace
         fieldGui <- ExprGuiM.makeSubexpression fieldExpr
-        return (tagLabel /|/ hspace, E.weakerEvents itemEventMap fieldGui)
+        pure Responsive.TaggedItem
+            { Responsive._tagPre = tagLabel /|/ hspace
+            , Responsive._taggedItem = E.weakerEvents itemEventMap fieldGui
+            }
 
 separationBar :: Theme.CodeForegroundColors -> Widget.R -> Anim.AnimId -> View
 separationBar theme width animId =
