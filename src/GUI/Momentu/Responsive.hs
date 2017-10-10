@@ -161,17 +161,10 @@ empty = fromView Element.empty
 vbox ::
     Functor f =>
     [Responsive (f Widget.EventResult)] -> Responsive (f Widget.EventResult)
-vbox [] = empty
-vbox (gui:guis) =
+vbox guis =
     Responsive $
     \layoutParams ->
-    let cp =
-            LayoutParams
-            { _layoutMode = layoutParams ^. layoutMode
-            , _layoutContext = LayoutVertical
-            }
-    in
-    (gui ^. render) cp : (guis ^.. traverse . render ?? cp)
+    guis ^.. traverse . render ?? (layoutParams & layoutContext .~ LayoutVertical)
     & Glue.vbox
 
 vboxSpaced ::
