@@ -192,7 +192,6 @@ Executable lamdu
                   , Lamdu.GUI.ExpressionEdit.BinderEdit
                   , Lamdu.GUI.ExpressionEdit.BuiltinEdit
                   , Lamdu.GUI.ExpressionEdit.CaseEdit
-                  , Lamdu.GUI.ExpressionEdit.Composite
                   , Lamdu.GUI.ExpressionEdit.EventMap
                   , Lamdu.GUI.ExpressionEdit.GetFieldEdit
                   , Lamdu.GUI.ExpressionEdit.GetVarEdit
