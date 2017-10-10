@@ -102,7 +102,8 @@ jumpHolesEventMapIfSelected exprInfo =
             else pure mempty
 
 extractCursor :: Sugar.ExtractToDestination -> Widget.Id
-extractCursor (Sugar.ExtractToLet letId) = WidgetIds.fromEntityId letId
+extractCursor (Sugar.ExtractToLet letId) =
+    WidgetIds.fromEntityId letId & WidgetIds.diveIntoLet
 extractCursor (Sugar.ExtractToDef defId) =
     WidgetIds.nameEditOf (WidgetIds.fromEntityId defId)
 

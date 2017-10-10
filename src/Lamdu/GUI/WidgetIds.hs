@@ -47,5 +47,8 @@ activePaneBackground = ["active def bg"]
 delegatingId :: Id -> Id
 delegatingId = flip WidgetId.joinId ["delegating"]
 
+diveIntoLet :: Id -> Id
+diveIntoLet = (`WidgetId.joinId` ["letId"])
+
 replId :: Id
 replId = Id ["repl"]

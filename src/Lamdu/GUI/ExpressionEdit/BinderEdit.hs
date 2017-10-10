@@ -429,18 +429,18 @@ makeLetEdit item =
         letLabel <- ExpressionGui.grammarLabel "let"
         space <- Spacer.stdHSpace
         letEquation <-
-            make (item ^. Sugar.lName) letColor binder myId
+            make (item ^. Sugar.lName) letColor binder letId
             <&> E.weakerEvents eventMap
             <&> Element.pad (Theme.letItemPadding theme <&> realToFrac)
         letLabel /|/ space /|/ letEquation & return
-    & Reader.local (Element.animIdPrefix .~ Widget.toAnimId myId)
+    & Reader.local (Element.animIdPrefix .~ Widget.toAnimId letId)
     where
         bodyId =
             item ^. Sugar.lBody . Sugar.bbContent . SugarLens.binderContentEntityId
             & WidgetIds.fromEntityId
-        myId =
-            WidgetIds.fromEntityId (item ^. Sugar.lEntityId)
-            `Widget.joinId` ["letId"]
+        letId =
+            item ^. Sugar.lEntityId & WidgetIds.fromEntityId
+            & WidgetIds.diveIntoLet
         binder = item ^. Sugar.lValue
 
 jumpToRHS ::
