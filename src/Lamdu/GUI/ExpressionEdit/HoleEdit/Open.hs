@@ -189,7 +189,9 @@ removeUnwanted config =
         unwantedKeyEvents =
             concat
             [ Config.delKeys config
-            , Grid.stdKeys ^.. traverse
+            , Config.enterSubexpressionKeys config
+            , Config.leaveSubexpressionKeys config
+            , Grid.stdKeys ^.. Lens.folded
             , Config.letAddItemKeys config
             ]
             <&> MetaKey.toModKey

@@ -338,13 +338,8 @@ stdWrapParentExpr ::
     ExprGuiM m (ExpressionGui m) ->
     ExprGuiM m (ExpressionGui m)
 stdWrapParentExpr pl mkGui =
-    mkGui
-    & delegator
+    parentDelegator (WidgetIds.fromExprPayload pl) <*> mkGui
     & stdWrap pl
-    where
-        delegator
-            | ExprGuiT.isHoleResult pl = id
-            | otherwise = (parentDelegator (WidgetIds.fromExprPayload pl) <*>)
 
 grammarLabel ::
     ( MonadReader env m
