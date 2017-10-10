@@ -7,7 +7,6 @@ import           Control.Applicative (liftA2)
 import qualified Control.Lens as Lens
 import           Data.Store.Transaction (Transaction)
 import           Data.Vector.Vector2 (Vector2(..))
-import           GUI.Momentu.Align (Aligned(Aligned))
 import qualified GUI.Momentu.Align as Align
 import           GUI.Momentu.Animation (AnimId)
 import qualified GUI.Momentu.Animation as Anim
@@ -107,17 +106,13 @@ makeRecord ::
     ExprGuiM m (ExpressionGui m)
 makeRecord fields addFieldEventMap postProcess =
     do
+        opener <- ExpressionGui.grammarLabel "{"
+        closer <- ExpressionGui.grammarLabel "}"
         (innerGui, resultPicker) <-
             Responsive.taggedList <*> mapM makeFieldRow fields
             >>= postProcess
             & ExprGuiM.listenResultPicker
-        opener <- ExpressionGui.grammarLabel "{"
-        closer <- ExpressionGui.grammarLabel "}" <&> (^. Align.tValue)
-        let withCloser w = (Aligned 1 w /|/ Aligned 1 closer) ^. Align.value
-        opener /|/ innerGui
-            & Responsive.render . Lens.argument .
-              Responsive.layoutMode . Responsive.modeWidths -~ closer ^. Element.size . _1
-            & Responsive.render . Lens.mapped %~ withCloser
+        opener /|/ innerGui /|/ closer
             & E.weakerEvents (ExprGuiM.withHolePicker resultPicker addFieldEventMap)
             & (ExpressionGui.addValFrame ??)
 
