@@ -457,7 +457,7 @@ addLetEventMap addLet =
         config <- Lens.view Config.config
         savePos <- ExprGuiM.mkPrejumpPosSaver
         savePos >> addLet
-            <&> WidgetIds.fromEntityId <&> WidgetIds.nameEditOf
+            <&> WidgetIds.fromEntityId <&> WidgetIds.diveIntoLet
             & Widget.keysEventMapMovesCursor (Config.letAddItemKeys config)
                 (E.Doc ["Edit", "Let clause", "Add"])
             & pure
