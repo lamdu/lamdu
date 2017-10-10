@@ -3,6 +3,7 @@ module Lamdu.GUI.ExpressionEdit.RecordEdit
     ( make
     ) where
 
+import           Control.Applicative (liftA2)
 import qualified Control.Lens as Lens
 import           Data.Store.Transaction (Transaction)
 import           Data.Vector.Vector2 (Vector2(..))
@@ -37,19 +38,47 @@ import           Lamdu.Prelude
 
 type T = Transaction
 
-shouldAddBg :: Sugar.Composite name m a -> Bool
-shouldAddBg (Sugar.Composite [] Sugar.ClosedComposite{} _) = False
-shouldAddBg _ = True
-
 doc :: E.Subtitle -> E.Doc
 doc text = E.Doc ["Edit", "Record", text]
+
+mkAddFieldEventMap ::
+    Functor f =>
+    Config -> f Sugar.CompositeAddItemResult -> E.EventMap (f Widget.EventResult)
+mkAddFieldEventMap config addField =
+    addField
+    <&> (^. Sugar.cairNewTag . Sugar.tagInstance)
+    <&> WidgetIds.fromEntityId
+    <&> TagEdit.tagHoleId
+    & Widget.keysEventMapMovesCursor (Config.recordAddFieldKeys config)
+      (doc "Add Field")
+
+makeUnit ::
+    Monad m =>
+    Sugar.ClosedCompositeActions (T m) -> T m Sugar.CompositeAddItemResult ->
+    Sugar.Payload (T m) ExprGuiT.Payload -> ExprGuiM m (ExpressionGui m)
+makeUnit _actions addField pl =
+    do
+        config <- Lens.view Config.config
+        makeFocusable <- Widget.makeFocusableView ?? myId <&> (Align.tValue %~)
+        view <- liftA2 (/|/) (ExpressionGui.grammarLabel "{") (ExpressionGui.grammarLabel "}")
+        makeFocusable view
+            & Responsive.fromWithTextPos
+            & E.weakerEvents (mkAddFieldEventMap config addField)
+            & pure
+    -- Don't add the closedRecordEventMap (_actions) - it only adds the open
+    -- action which is equivalent ot deletion on the unit record
+    & ExpressionGui.stdWrap pl
+    where
+        myId = WidgetIds.fromExprPayload pl
 
 make ::
     Monad m =>
     Sugar.Composite (Name (T m)) (T m) (ExprGuiT.SugarExpr m) ->
     Sugar.Payload (T m) ExprGuiT.Payload ->
     ExprGuiM m (ExpressionGui m)
-make record@(Sugar.Composite fields recordTail addField) pl =
+make (Sugar.Composite [] (Sugar.ClosedComposite actions) addField) pl =
+    makeUnit actions addField pl
+make (Sugar.Composite fields recordTail addField) pl =
     do
         config <- Lens.view Config.config
         let eventMap =
@@ -58,39 +87,40 @@ make record@(Sugar.Composite fields recordTail addField) pl =
                     closedRecordEventMap config actions
                 Sugar.OpenComposite actions restExpr ->
                     openRecordEventMap config actions restExpr
-        do
-            (gui, resultPicker) <-
-                ExprGuiM.listenResultPicker $
-                do
-                    fieldsGui <- makeFieldsWidget fields myId
-                    case recordTail of
-                        Sugar.ClosedComposite _ -> pure fieldsGui
-                        Sugar.OpenComposite actions rest ->
-                            makeOpenRecord fieldsGui actions rest (Widget.toAnimId myId)
-            let addFieldEventMap =
-                    addField
-                    <&> (^. Sugar.cairNewTag . Sugar.tagInstance)
-                    <&> WidgetIds.fromEntityId
-                    <&> TagEdit.tagHoleId
-                    & Widget.keysEventMapMovesCursor (Config.recordAddFieldKeys config)
-                      (doc "Add Field")
-                    & ExprGuiM.withHolePicker resultPicker
-            (if addBg then ExpressionGui.addValFrame else return id)
-                ?? E.weakerEvents addFieldEventMap gui
-            & wrap
-            <&> E.weakerEvents eventMap
+        let addFieldEventMap = mkAddFieldEventMap config addField
+        makeRecord fields addFieldEventMap postProcess
+            & ExpressionGui.stdWrapParentExpr pl defaultDestCursor
+            <&> E.weakerEvents (eventMap <> addFieldEventMap)
     where
-        haveChildren = Lens.has Lens.folded record
         defaultDestCursor = destCursorId fields (pl ^. Sugar.plEntityId)
-        wrap
-            | haveChildren = ExpressionGui.stdWrapParentExpr pl defaultDestCursor
-            | otherwise = ExpressionGui.stdWrap pl
-        myId = WidgetIds.fromExprPayload pl
-        addBg = shouldAddBg record
+        animId = WidgetIds.fromExprPayload pl & Widget.toAnimId
+        postProcess =
+            case recordTail of
+            Sugar.OpenComposite actions restExpr ->
+                makeOpenRecord actions restExpr animId
+            _ -> pure
+
+makeRecord ::
+    Monad m =>
+    [Sugar.CompositeItem (Name (T m)) (T m) (ExprGuiT.SugarExpr m)] ->
+    E.EventMap (T m Widget.EventResult) ->
+    (ExpressionGui m -> ExprGuiM m (ExpressionGui m)) ->
+    ExprGuiM m (ExpressionGui m)
+makeRecord fields addFieldEventMap postProcess =
+    do
+        opener <- ExpressionGui.grammarLabel "{"
+        closer <- ExpressionGui.grammarLabel "}"
+        (innerGui, resultPicker) <-
+            Responsive.taggedList <*> mapM makeFieldRow fields
+            >>= postProcess
+            & ExprGuiM.listenResultPicker
+        opener /|/ innerGui /|/ closer
+            & E.weakerEvents (ExprGuiM.withHolePicker resultPicker addFieldEventMap)
+            & (ExpressionGui.addValFrame ??)
 
 makeFieldRow ::
     Monad m =>
-    Sugar.CompositeItem (Name (T m)) (T m) (Sugar.Expression (Name (T m)) (T m) ExprGuiT.Payload) ->
+    Sugar.CompositeItem (Name (T m)) (T m) (ExprGuiT.SugarExpr m) ->
     ExprGuiM m
     ( WithTextPos (Widget (T m Widget.EventResult))
     , ExpressionGui m
@@ -106,24 +136,6 @@ makeFieldRow (Sugar.CompositeItem delete tag fieldExpr) =
         fieldGui <- ExprGuiM.makeSubexpression fieldExpr
         return (tagLabel /|/ hspace, E.weakerEvents itemEventMap fieldGui)
 
-makeFieldsWidget ::
-    Monad m =>
-    [Sugar.CompositeItem (Name (T m)) (T m) (Sugar.Expression (Name (T m)) (T m) ExprGuiT.Payload)] ->
-    Widget.Id -> ExprGuiM m (ExpressionGui m)
-makeFieldsWidget fields myId =
-    do
-        opener <- ExpressionGui.grammarLabel "{"
-        closer <- ExpressionGui.grammarLabel "}"
-        case fields of
-            [] ->
-                (Widget.makeFocusableView ?? myId <&> (Align.tValue %~))
-                ?? (opener /|/ closer)
-                <&> Responsive.fromWithTextPos
-            _ ->
-                do
-                    xs <- Responsive.taggedList <*> mapM makeFieldRow fields
-                    opener /|/ xs /|/ closer & return
-
 separationBar :: Theme.CodeForegroundColors -> Widget.R -> Anim.AnimId -> View
 separationBar theme width animId =
     View.unitSquare (animId <> ["tailsep"])
@@ -132,9 +144,9 @@ separationBar theme width animId =
 
 makeOpenRecord ::
     Monad m =>
-    ExpressionGui m -> Sugar.OpenCompositeActions (T m) -> ExprGuiT.SugarExpr m ->
-    AnimId -> ExprGuiM m (ExpressionGui m)
-makeOpenRecord fieldsGui (Sugar.OpenCompositeActions close) rest animId =
+    Sugar.OpenCompositeActions (T m) -> ExprGuiT.SugarExpr m ->
+    AnimId -> ExpressionGui m -> ExprGuiM m (ExpressionGui m)
+makeOpenRecord (Sugar.OpenCompositeActions close) rest animId fieldsGui =
     do
         theme <- Lens.view Theme.theme
         vspace <- Spacer.stdVSpace
