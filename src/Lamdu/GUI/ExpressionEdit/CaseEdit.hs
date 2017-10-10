@@ -140,6 +140,7 @@ makeAltRow mActiveTag (Sugar.CompositeItem delete tag altExpr) =
         pure Responsive.TaggedItem
             { Responsive._tagPre = tagLabel /|/ colonLabel /|/ hspace
             , Responsive._taggedItem = altExprGui
+            , Responsive._tagPost = Element.empty
             }
     & Reader.local (Element.animIdPrefix .~ Widget.toAnimId altId)
     where

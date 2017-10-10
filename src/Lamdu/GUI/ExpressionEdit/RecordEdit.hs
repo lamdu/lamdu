@@ -137,6 +137,7 @@ makeFieldRow (Sugar.CompositeItem delete tag fieldExpr) =
         pure Responsive.TaggedItem
             { Responsive._tagPre = tagLabel /|/ hspace
             , Responsive._taggedItem = E.weakerEvents itemEventMap fieldGui
+            , Responsive._tagPost = Element.empty
             }
 
 separationBar :: Theme.CodeForegroundColors -> Widget.R -> Anim.AnimId -> View

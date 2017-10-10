@@ -161,6 +161,7 @@ makeArgRow arg =
         pure Responsive.TaggedItem
             { Responsive._tagPre = argTag /|/ space <&> Widget.fromView
             , Responsive._taggedItem = expr
+            , Responsive._tagPost = Element.empty
             }
 
 mkRelayedArgs :: Monad m => NearestHoles -> [Sugar.RelayedArg (Name (T m)) (T m)] -> ExprGuiM m (ExpressionGui m)

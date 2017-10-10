@@ -39,7 +39,7 @@ module GUI.Momentu.Responsive
     , vbox, vboxSpaced
     , vertLayoutMaybeDisambiguate
 
-    , TaggedItem(..), tagPre, taggedItem
+    , TaggedItem(..), tagPre, taggedItem, tagPost
     , taggedList
     ) where
 
@@ -179,6 +179,7 @@ vboxSpaced =
 data TaggedItem a = TaggedItem
     { _tagPre :: WithTextPos (Widget a)
     , _taggedItem :: Responsive a
+    , _tagPost :: WithTextPos (Widget a)
     } deriving Functor
 
 Lens.makeLenses ''TaggedItem
@@ -187,14 +188,29 @@ taggedList ::
     (MonadReader env m, Spacer.HasStdSpacing env, Functor f) =>
     m ([TaggedItem (f Widget.EventResult)] -> Responsive (f Widget.EventResult))
 taggedList =
-    vboxSpaced <&>
-    \box items ->
+    Spacer.stdVSpace <&>
+    \vspace items ->
+    Responsive $
+    \layoutParams ->
     let preWidth = items ^.. traverse . tagPre . Element.width & maximum
-        renderItem (TaggedItem pre item) =
-            Element.assymetricPad (Vector2 (preWidth - pre ^. Element.width) 0) 0 pre
-            /|/ item
+        postWidth = items ^.. traverse . tagPost . Element.width & maximum
+        itemLayoutParams =
+            layoutParams
+            & layoutMode . modeWidths -~ preWidth + postWidth
+            & layoutContext .~ LayoutVertical
+        renderItem (TaggedItem pre item post) =
+            ( Element.assymetricPad (Vector2 (preWidth - pre ^. Element.width) 0) 0 pre
+                /|/ (item ^. render) itemLayoutParams
+            , post
+            )
+        renderedItems = items <&> renderItem
+        itemWidth = renderedItems ^.. traverse . _2 . Element.width & maximum
+        renderRow (item, post) =
+            item /|/ Element.assymetricPad (Vector2 (itemWidth - item ^. Element.width) 0) 0 post
     in
-    items <&> renderItem & box
+    renderedItems <&> renderRow
+    & List.intersperse (Widget.fromView vspace & WithTextPos 0)
+    & Glue.vbox
 
 -- | Apply a given vertical disambiguator (such as indentation) when necessary,
 -- according to the layout context.
