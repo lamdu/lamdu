@@ -438,7 +438,9 @@ makeLetEdit item =
         bodyId =
             item ^. Sugar.lBody . Sugar.bbContent . SugarLens.binderContentEntityId
             & WidgetIds.fromEntityId
-        myId = item ^. Sugar.lEntityId & WidgetIds.fromEntityId
+        myId =
+            WidgetIds.fromEntityId (item ^. Sugar.lEntityId)
+            `Widget.joinId` ["letId"]
         binder = item ^. Sugar.lValue
 
 jumpToRHS ::
