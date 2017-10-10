@@ -163,6 +163,7 @@ applyOperatorEventMap exprInfo holePicker =
     case exprInfoActions exprInfo ^. Sugar.wrap of
     Sugar.WrapAction wrap -> action wrap
     Sugar.WrapperAlready holeId -> action $ return holeId
+    Sugar.WrappedAlready holeId -> action $ return holeId
     & ExprGuiM.withHolePicker holePicker
     where
         acceptableOperatorChars = filter ((>= exprInfoMinOpPrec exprInfo) . precedence) Chars.operator

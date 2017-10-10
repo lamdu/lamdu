@@ -1,6 +1,6 @@
 {-# LANGUAGE NoImplicitPrelude, TemplateHaskell, DeriveTraversable #-}
 module Lamdu.Sugar.Types.Expression
-    ( WrapAction(..), _WrapperAlready, _WrapAction
+    ( WrapAction(..), _WrapperAlready, _WrappedAlready, _WrapAction
     , Delete(..), _SetToHole, _Delete, _CannotDelete
     , ExtractToDestination(..)
     , Actions(..)
@@ -52,6 +52,7 @@ import           Lamdu.Prelude
 
 data WrapAction m
     = WrapperAlready (UUID, EntityId) -- I'm an apply-of-hole, (UUID,EntityId of hole), no need to wrap
+    | WrappedAlready (UUID, EntityId) -- I'm an arg of apply-of-hole (UUID,EntityId of hole), no need to wrap
     | WrapAction (m (UUID, EntityId)) -- Wrap me!
 
 data Delete m

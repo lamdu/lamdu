@@ -113,6 +113,7 @@ convertAppliedHole (V.Apply funcI argI) argS exprPl =
         let holeArg = HoleArg
                 { _haExpr =
                       argS
+                      & rPayload . plActions . wrap .~ WrappedAlready storedEntityId
                       & rPayload . plActions . delete .~
                         SetToHole
                         ( exprPl ^. Input.stored & DataOps.setToHole <&> uuidEntityId )

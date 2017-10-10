@@ -30,16 +30,16 @@ makeUnwrapEventMap arg openHoleId =
     Lens.view Config.config
     <&>
     \config ->
+    let unwrapKeys = Config.hole config & Config.holeUnwrapKeys
+    in
     case arg ^? Sugar.haUnwrap . Sugar._UnwrapAction of
     Just unwrap ->
-        unwrap <&> WidgetIds.fromEntityId
-        & Widget.keysEventMapMovesCursor
-            (Config.holeUnwrapKeys (Config.hole config) <> Config.replaceParentKeys config)
-            (Momentu.Doc ["Edit", "Unwrap"])
+        Widget.keysEventMapMovesCursor (unwrapKeys ++ Config.replaceParentKeys config)
+        (Momentu.Doc ["Edit", "Unwrap"]) $ WidgetIds.fromEntityId <$> unwrap
     Nothing ->
         -- When pressing "space" in a wrapper hole, open its hole.
         pure openHoleId
-        & Widget.keysEventMapMovesCursor (Config.wrapKeys config) doc
+        & Widget.keysEventMapMovesCursor unwrapKeys doc
         where
             doc = Momentu.Doc ["Navigation", "Hole", "Open"]
 
