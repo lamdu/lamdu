@@ -105,16 +105,19 @@ makeRecord ::
     (ExpressionGui m -> ExprGuiM m (ExpressionGui m)) ->
     ExprGuiM m (ExpressionGui m)
 makeRecord fields addFieldEventMap postProcess =
+    ExpressionGui.addValFrame <*>
     do
         opener <- ExpressionGui.grammarLabel "{"
         closer <- ExpressionGui.grammarLabel "}"
-        (innerGui, resultPicker) <-
+        innerGui <-
             Responsive.taggedList <*> mapM makeFieldRow fields
             >>= postProcess
             & ExprGuiM.listenResultPicker
-        opener /|/ innerGui /|/ closer
-            & E.weakerEvents (ExprGuiM.withHolePicker resultPicker addFieldEventMap)
-            & (ExpressionGui.addValFrame ??)
+            <&> addEvents
+        opener /|/ innerGui /|/ closer & pure
+    where
+        addEvents (innerGui, resultPicker) =
+            E.weakerEvents (ExprGuiM.withHolePicker resultPicker addFieldEventMap) innerGui
 
 makeFieldRow ::
     Monad m =>
