@@ -9,7 +9,6 @@ import qualified Control.Lens as Lens
 import           Control.Monad.Trans.Maybe (MaybeT(..))
 import           Control.Monad.Trans.State (evalStateT, runStateT)
 import           Control.Monad.Transaction (transaction)
-import qualified Data.Foldable as Foldable
 import qualified Data.Store.Property as Property
 import           Data.Store.Transaction (Transaction)
 import           Data.UUID.Types (UUID)
@@ -70,29 +69,11 @@ mkAppliedHoleSuggesteds sugarContext argI exprPl stored =
             exprPl stored
             (sugg <&> _1 %~ (^. Infer.plType))
 
-orderedInnerHoles :: Val a -> [Val a]
-orderedInnerHoles e =
-    case e ^. Val.body of
-    V.BLeaf V.LHole -> [e]
-    V.BApp (V.Apply func@(Val _ (V.BLeaf V.LHole)) arg) ->
-        orderedInnerHoles arg ++ [func]
-    body -> Foldable.concatMap orderedInnerHoles body
-
 checkTypeMatch :: Monad m => Type -> Type -> ConvertM m Bool
 checkTypeMatch x y =
     do
         inferContext <- (^. ConvertM.scInferContext) <$> ConvertM.readContext
         return $ Lens.has Lens._Right $ evalStateT (Infer.run (unify x y)) inferContext
-
-unwrap ::
-    Monad m =>
-    ExprIRef.ValIProperty m ->
-    ExprIRef.ValIProperty m ->
-    Val (Input.Payload n a) ->
-    T m EntityId
-unwrap outerP argP argExpr =
-    DataOps.replace outerP (Property.value argP)
-    <&> EntityId.ofValI
 
 convertAppliedHole ::
     (Monad m, Monoid a) =>
@@ -115,9 +96,10 @@ convertAppliedHole (V.Apply funcI argI) argS exprPl =
                         ( exprPl ^. Input.stored & DataOps.setToHole <&> uuidEntityId )
                 , _haUnwrap =
                       if isTypeMatch
-                      then unwrap (exprPl ^. Input.stored)
-                           (argI ^. Val.payload . Input.stored) argI
+                      then DataOps.replace (exprPl ^. Input.stored)
+                           (argI ^. Val.payload . Input.stored . Property.pVal)
                            <* postProcess
+                           <&> EntityId.ofValI
                            & UnwrapAction
                       else UnwrapTypeMismatch
                 }
