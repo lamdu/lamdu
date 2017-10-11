@@ -171,9 +171,7 @@ To create the function above:
   The first equals sign after "fac" gets onto your screen without you typing it.
   However, after "fac x", you may type the equals sign anyways, or skip over it with the right cursor key.
 
-Type "**`fac x=if x=0 1 x*f x`**" and **return**.
-Notice that Lamdu replaced the second `=` with `==`.
-Now that the cursor is on the selected `x`, press **`-1`**.
+Type "**`fac x=if x=0 1 x*f(x-1)`**"
 
 We've now written the function. Let's use it.
 
