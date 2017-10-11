@@ -91,12 +91,8 @@ unwrap ::
     Val (Input.Payload n a) ->
     T m EntityId
 unwrap outerP argP argExpr =
-    do
-        res <- DataOps.replace outerP (Property.value argP)
-        return $
-            case orderedInnerHoles argExpr of
-            (x:_) -> x ^. Val.payload . Input.entityId
-            _ -> EntityId.ofValI res
+    DataOps.replace outerP (Property.value argP)
+    <&> EntityId.ofValI
 
 convertAppliedHole ::
     (Monad m, Monoid a) =>
