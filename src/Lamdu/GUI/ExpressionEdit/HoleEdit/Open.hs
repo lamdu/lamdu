@@ -174,9 +174,8 @@ afterPick holeInfo resultId mFirstHoleInside pr =
         myHoleId =
             WidgetIds.fromEntityId $ hiEntityId holeInfo
         obliterateOtherResults animId =
-            case animId ^? resultSuffix . suffixed (Widget.toAnimId resultId) of
-            Nothing -> animId
-            Just prefix -> prefix
+            animId ^? resultSuffix . suffixed (Widget.toAnimId resultId)
+            & fromMaybe animId
 
 -- | Remove unwanted event handlers from a hole result
 removeUnwanted :: Config -> Widget.EventMap a -> Widget.EventMap a

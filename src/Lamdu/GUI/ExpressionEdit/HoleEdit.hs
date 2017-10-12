@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, NamedFieldPuns #-}
+{-# LANGUAGE NoImplicitPrelude #-}
 module Lamdu.GUI.ExpressionEdit.HoleEdit
     ( make
     ) where
