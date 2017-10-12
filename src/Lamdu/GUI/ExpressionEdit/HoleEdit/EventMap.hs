@@ -60,7 +60,6 @@ allowedCharsFromSearchTerm ::
 allowedCharsFromSearchTerm holeInfo mPos =
     case Text.unpack searchTerm of
     "" -> allowAll
-    '"':_ -> allowAll
     "." -> disallow Chars.bracket
     '.':x:_
         | x `elem` Chars.operator -> allowOnly Chars.operator
@@ -82,9 +81,7 @@ allowedCharsFromSearchTerm holeInfo mPos =
         | Text.all (`elem` Chars.digit) searchTerm -> allowOnly ('.':Chars.digit)
         | Text.all (`notElem` Chars.operator) searchTerm -> disallow Chars.operator
         | otherwise ->
-          -- Mix of operator/non-operator chars happened in search term
-          -- This can happen when editing a literal text, allow everything
-          allowAll
+          error "Mix of operator/non-operator chars happened in search term?"
     where
         searchTerm = HoleInfo.hiSearchTerm holeInfo
         allowAll = const True
