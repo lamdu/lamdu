@@ -3,7 +3,6 @@ module Lamdu.GUI.ExpressionEdit.HoleEdit.ResultGroups
     ( makeAll
     , Result(..)
     , ResultsList(..), rlExtraResultsPrefixId, rlMain, rlExtra
-    , prefixId
     ) where
 
 import qualified Control.Lens as Lens
