@@ -70,15 +70,14 @@ makeStdWrapped hole pl widgetIds =
                 | otherwise =
                     Lens.mapped . Lens.mapped . Widget.eCursor %~
                     mappend (Monoid.Last (Just (hidOpen widgetIds)))
+        exprEventMap <- ExprEventMap.make pl ExprGuiM.NoHolePick
         stateProp <-
             HoleState.assocStateRef (hole ^. Sugar.holeActions . Sugar.holeUUID)
             ^. Transaction.mkProperty & transaction
-        let holeKind = hole ^. Sugar.holeKind
         closedSearchTermGui <-
             fdWrap <*> SearchTerm.make widgetIds holeKind stateProp <&> Responsive.fromWithTextPos
             & ExpressionGui.stdWrap pl
         searchTermEventMap <- HoleEventMap.makeOpenEventMap holeKind stateProp <&> fixEventMapCursor
-        exprEventMap <- ExprEventMap.make pl ExprGuiM.NoHolePick
         case (isActive, isAHoleInHole) of
             (True, False) ->
                 -- ideally the fdWrap would be "inside" the
@@ -103,3 +102,4 @@ makeStdWrapped hole pl widgetIds =
             <&> Lens.mapped %~ E.weakerEvents exprEventMap
     where
         isAHoleInHole = ExprGuiT.isHoleResult pl
+        holeKind = hole ^. Sugar.holeKind
