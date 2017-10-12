@@ -8,6 +8,7 @@ module Lamdu.Eval.JS
     , getResults
     ) where
 
+import           Control.Applicative ((<|>))
 import           Control.Concurrent (forkIO, killThread)
 import           Control.Concurrent.MVar
 import qualified Control.Exception as E
@@ -172,7 +173,7 @@ parseObj obj =
     , obj .? "bytes" <&> parseBytes <&> return
     , obj .? "number" <&> read <&> fromDouble <&> return
     , obj .? "tag" <&> (`parseInject` (obj .? "data"))
-    , obj .? "func" <&> (\(Json.Object _) -> ER.Val () ER.RFunc) <&> return
+    , obj .? "func" <&> (\(Json.Number x) -> round x & ER.RFunc & ER.Val ()) <&> return
     ] & fromMaybe (parseRecord obj)
 
 parseResult :: Json.Value -> Parse (ER.Val ())
@@ -183,7 +184,7 @@ parseResult (Json.Object obj) =
     Nothing ->
         do
             val <- parseObj obj
-            case obj .? "cacheId" of
+            case (obj .? "cacheId" <|> obj .? "func") of
                 Nothing -> return ()
                 Just cacheId -> Lens.at cacheId ?= val
             return val

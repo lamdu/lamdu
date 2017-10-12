@@ -55,19 +55,20 @@ var encode = function() {
             if (value == null) { // or undefined due to auto-coercion
                 return {};
             }
-            if (Function.prototype.isPrototypeOf(value)) {
-                return { func: {} };
-            }
             if (typeof value == "number" && !isFinite(value)) {
                 return { "number": String(value) }
             }
-            if (typeof value != "object" || key === "array" || key === "bytes") {
+            if ((typeof value != "object" && typeof value != "function")
+                || key === "array" || key === "bytes") {
                 return value;
             }
             if (value.hasOwnProperty("cacheId")) {
                 return { cachedVal: value.cacheId };
             }
             value.cacheId = cacheId++;
+            if (Function.prototype.isPrototypeOf(value)) {
+                return { func: value.cacheId };
+            }
             if (Array.prototype.isPrototypeOf(value)) {
                 return {
                     array: value,

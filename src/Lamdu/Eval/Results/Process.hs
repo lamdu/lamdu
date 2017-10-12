@@ -88,7 +88,7 @@ addTypes nomsMap typ (Val () b) =
     RRecExtend recExtend -> recurse (addTypesRecExtend recExtend)
     RInject inject -> recurse (addTypesInject inject)
     RArray items -> recurse (addTypesArray items)
-    RFunc -> RFunc
+    RFunc x -> RFunc x
     RRecEmpty -> RRecEmpty
     RPrimVal l -> RPrimVal l
     RError e -> RError e

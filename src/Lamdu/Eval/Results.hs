@@ -32,7 +32,7 @@ topLevelScopeId = ScopeId 0
 data Body val
     = RRecExtend (V.RecExtend val)
     | RInject (V.Inject val)
-    | RFunc
+    | RFunc Int -- Identifier for function instance
     | RRecEmpty
     | RPrimVal V.PrimVal
     | RArray [val]

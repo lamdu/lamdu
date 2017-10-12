@@ -211,7 +211,7 @@ makeInject animId typ inject =
         , lookup Builtins.tailTag fields <&> (^. ER.body)
         ) of
     (_, RRecEmpty, _, _, _) -> makeTagView
-    (T.TInst tid _, _, Just RecordComputed, Just head_, Just RFunc)
+    (T.TInst tid _, _, Just RecordComputed, Just head_, Just RFunc{})
         | tid == Builtins.streamTid ->
         [ label "[" animId
         , makeInner (animId ++ ["head"]) head_
