@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, OverloadedStrings, TemplateHaskell, DeriveGeneric #-}
+{-# LANGUAGE NoImplicitPrelude, OverloadedStrings, TemplateHaskell, GeneralizedNewtypeDeriving #-}
 module Lamdu.GUI.ExpressionEdit.HoleEdit.State
     ( HoleState(..), hsSearchTerm
     , emptyState, setHoleStateAndJump, assocStateRef
@@ -8,7 +8,6 @@ import qualified Control.Lens as Lens
 import           Data.Binary (Binary)
 import           Data.UUID.Types (UUID)
 import qualified Data.Store.Transaction as Transaction
-import           GHC.Generics (Generic)
 import qualified GUI.Momentu.Widget as Widget
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds (WidgetIds(..))
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds as WidgetIds
@@ -20,9 +19,8 @@ type T = Transaction.Transaction
 
 newtype HoleState = HoleState
     { _hsSearchTerm :: Text
-    } deriving (Eq, Generic)
+    } deriving (Eq, Binary)
 Lens.makeLenses ''HoleState
-instance Binary HoleState
 
 emptyState :: HoleState
 emptyState =
