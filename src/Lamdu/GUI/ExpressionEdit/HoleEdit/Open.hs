@@ -333,10 +333,10 @@ makeResultsWidget minWidth holeInfo shownResultsLists hiddenResults =
 
 assignHoleEditCursor ::
     Monad m =>
-    HoleInfo m -> [Widget.Id] -> [Widget.Id] -> Widget.Id ->
+    HoleInfo m -> [Widget.Id] -> [Widget.Id] ->
     ExprGuiM m a ->
     ExprGuiM m a
-assignHoleEditCursor holeInfo shownMainResultsIds allShownResultIds searchTermId action =
+assignHoleEditCursor holeInfo shownMainResultsIds allShownResultIds action =
     do
         let sub x = Widget.isSubCursor ?? x
         shouldBeOnResult <- sub (hidResultsPrefix hids)
@@ -349,6 +349,7 @@ assignHoleEditCursor holeInfo shownMainResultsIds allShownResultIds searchTermId
         assignSource action
     where
         hids = hiIds holeInfo
+        searchTermId = hidOpenSearchTerm hids
         destId
             | Text.null (hiSearchTerm holeInfo) = searchTermId
             | otherwise = head (shownMainResultsIds ++ [searchTermId])
@@ -476,6 +477,5 @@ makeOpenSearchAreaGui holeInfo =
                     )
         makeUnderCursorAssignment shownResultsLists
             hasHiddenResults holeInfo
-            & assignHoleEditCursor holeInfo shownMainResultsIds
-              allShownResultIds (holeInfo & hiIds & hidOpenSearchTerm)
+            & assignHoleEditCursor holeInfo shownMainResultsIds allShownResultIds
             <&> Lens.mapped . Align.tValue %~ E.weakerEvents unwrapAsDelEventMap
