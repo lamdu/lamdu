@@ -58,36 +58,33 @@ toLiteralTextKeys =
 allowedCharsFromSearchTerm ::
     HoleInfo m -> Maybe Int -> Char -> Bool
 allowedCharsFromSearchTerm holeInfo mPos =
-    case Text.unpack searchTerm of
+    case searchTerm of
     "" -> allowAll
     "." -> disallow Chars.bracket
     '.':x:_
         | x `elem` Chars.operator -> allowOnly Chars.operator
         | otherwise -> disallow (Chars.operator ++ Chars.bracket)
     "-" | isLeafHole -> allowOnly (Chars.operator ++ Chars.digit)
-    '-':x:xs
-        | x `elem` Chars.digit ->
-            Chars.digit ++ ['.' | not ("." `isInfixOf` xs)] & allowOnly
-    x:_
-        | (x `elem` Chars.digit) && Just 0 == mPos ->
-            '-':Chars.digit & allowOnly
+    '-':x:_
+        | x `elem` Chars.digit -> allowOnly positiveNumberChars
     "#" | isLeafHole -> allowOnly (Chars.operator ++ Chars.hexDigit)
     '#':x:_
         | x `elem` Chars.hexDigit -> allowOnly Chars.hexDigit
-    x:xs
+    x:_
+        | x `elem` Chars.digit -> ['-' | Just 0 == mPos] ++ positiveNumberChars & allowOnly
         | x `elem` Chars.operator -> allowOnly Chars.operator
         | x `elem` Chars.bracket -> allowOnly Chars.bracket
-        | "." `isInfixOf` xs -> allowOnly Chars.digit
-        | Text.all (`elem` Chars.digit) searchTerm -> allowOnly ('.':Chars.digit)
-        | Text.all (`notElem` Chars.operator) searchTerm -> disallow Chars.operator
+        | all (`notElem` nonAlpha) searchTerm -> disallow nonAlpha
         | otherwise ->
           error "Mix of operator/non-operator chars happened in search term?"
     where
-        searchTerm = HoleInfo.hiSearchTerm holeInfo
+        searchTerm = HoleInfo.hiSearchTerm holeInfo & Text.unpack
         allowAll = const True
         allowOnly = flip elem
         disallow = flip notElem
         isLeafHole = hiHole holeInfo & Lens.has (Sugar.holeKind . Sugar._LeafHole)
+        positiveNumberChars = Chars.digit ++ ['.' | not ("." `isInfixOf` searchTerm)]
+        nonAlpha = Chars.digit ++ Chars.operator ++ Chars.bracket
 
 disallowCharsFromSearchTerm ::
     (MonadReader env m, HasConfig env, E.HasEventMap w) =>
