@@ -53,7 +53,7 @@ addTypesRecExtend (V.RecExtend tag val rest) go typ =
         T.TInst{} ->
             -- Work around for MutRefs: todo better presentation which shows their current value?
             RRecEmpty
-        _ -> "addTypes got " ++ show typ ++ " for RRecExtend" & ER.EvalTypeError & RError
+        _ -> "addTypesRecExtend got " ++ show typ & ER.EvalTypeError & RError
     Just (valType, restType) ->
         V.RecExtend tag
         (go valType val)
@@ -68,7 +68,7 @@ addTypesInject (V.Inject tag val) go typ =
         -- we currently don't know types for eval results of polymorphic values
         case typ of
         T.TVar{} -> go typ val & V.Inject tag & RInject
-        _ -> "addTypes got " ++ show typ ++ " for RInject" & ER.EvalTypeError & RError
+        _ -> "addTypesInject got " ++ show typ & ER.EvalTypeError & RError
     Just valType -> go valType val & V.Inject tag & RInject
 
 addTypesArray :: [val] -> AddTypes val res
