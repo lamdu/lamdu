@@ -22,9 +22,8 @@ import           Lamdu.Calc.Val.Annotated (Val)
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Expr.Lens as ExprLens
 import           Lamdu.Formatting (Format(..))
-import           Lamdu.GUI.ExpressionEdit.HoleEdit.Info (HoleInfo(..), hiSearchTerm)
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.ValTerms as ValTerms
-import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds as HoleWidgetIds
+import           Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds (WidgetIds(..))
 import           Lamdu.GUI.ExpressionGui.Types (ExpressionN)
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.Sugar.Types as Sugar
@@ -65,27 +64,25 @@ data ResultsList m = ResultsList
     }
 Lens.makeLenses ''ResultsList
 
-prefixId :: HoleInfo m -> WidgetId.Id
-prefixId = HoleWidgetIds.hidResultsPrefix . hiIds
-
 mResultsListOf ::
-    HoleInfo m -> WidgetId.Id ->
+    WidgetIds -> WidgetId.Id ->
     [ ( Sugar.HoleResultScore
       , T m (Sugar.HoleResult (T m) (ExpressionN m ()))
       )
     ] -> Maybe (ResultsList m)
 mResultsListOf _ _ [] = Nothing
-mResultsListOf holeInfo baseId (x:xs) = Just
+mResultsListOf widgetIds baseId (x:xs) = Just
     ResultsList
     { _rlPreferred = NotPreferred
     , _rlExtraResultsPrefixId = extraResultsPrefixId
-    , _rlMain = mkResult (prefixId holeInfo <> baseId) x
+    , _rlMain = mkResult (prefixId <> baseId) x
     , _rlExtra = zipWith mkExtra [(0::Int)..] xs
     }
     where
+        prefixId = hidResultsPrefix widgetIds
         mkExtra = mkResult . extraResultId
         extraResultId i = WidgetId.joinId extraResultsPrefixId [BS8.pack (show i)]
-        extraResultsPrefixId = prefixId holeInfo <> WidgetId.Id ["extra results"] <> baseId
+        extraResultsPrefixId = prefixId <> WidgetId.Id ["extra results"] <> baseId
         mkResult resultId (score, holeResult) =
             Result
             { _rScore = score
@@ -94,19 +91,19 @@ mResultsListOf holeInfo baseId (x:xs) = Just
             }
 
 makeResultsList ::
-    Monad m => HoleInfo m -> Group m ->
+    Monad m =>
+    WidgetIds -> Text -> Group m ->
     T m (Maybe (ResultsList m))
-makeResultsList holeInfo group =
+makeResultsList widgetIds searchTerm group =
     group ^. groupResults
     & ListClass.toList
     <&> sortOn fst
-    <&> mResultsListOf holeInfo (group ^. groupId)
+    <&> mResultsListOf widgetIds (group ^. groupId)
     <&> Lens.mapped %~ rlPreferred .~ toPreferred
     where
         toPreferred
             | [searchTerm] == group ^. groupSearchTerms = Preferred
             | otherwise = NotPreferred
-        searchTerm = hiSearchTerm holeInfo
 
 data GoodAndBad a = GoodAndBad { _good :: a, _bad :: a }
     deriving (Functor, Foldable, Traversable)
@@ -153,14 +150,14 @@ isGoodResult hrs = hrs ^. Sugar.hrsNumHoleWrappers == 0
 
 makeAll ::
     (MonadTransaction n m, MonadReader env m, Config.HasConfig env) =>
-    HoleInfo n ->
+    Sugar.Hole (T n) (ExpressionN n ()) e -> Text -> WidgetIds ->
     m ([ResultsList n], Menu.HasMoreOptions)
-makeAll holeInfo =
+makeAll hole searchTerm widgetIds =
     do
         config <- Lens.view Config.config <&> Config.hole
-        makeAllGroups holeInfo
+        makeAllGroups hole searchTerm
             <&> ListClass.fromList
-            <&> ListClass.mapL (makeResultsList holeInfo)
+            <&> ListClass.mapL (makeResultsList widgetIds searchTerm)
             <&> ListClass.catMaybes
             >>= collectResults config
             & transaction
@@ -185,25 +182,25 @@ mkGroup option =
             }
 
 tryBuildLiteral ::
-    (Format a, Monad m) => (Identity a -> Sugar.Literal Identity) -> HoleInfo m ->
+    (Format a, Monad m) => (Identity a -> Sugar.Literal Identity) ->
+    Sugar.HoleKind (T m) (ExpressionN m ()) e -> Text ->
     Maybe (T m (Sugar.HoleOption (T m) (ExpressionN m ())))
-tryBuildLiteral mkLiteral holeInfo =
-    mkHoleOption <*> literal
+tryBuildLiteral mkLiteral holeKind searchTerm =
+    holeKind ^? Sugar._LeafHole . Sugar.holeOptionLiteral <*> literal
     where
         literal =
-            hiSearchTerm holeInfo
-            & tryParse
+            tryParse searchTerm
             <&> Identity
             <&> mkLiteral
-        mkHoleOption =
-            hiHole holeInfo ^? Sugar.holeKind . Sugar._LeafHole .
-            Sugar.holeOptionLiteral
 
-literalGroups :: Monad m => HoleInfo m -> [T m (Sugar.HoleOption (T m) (ExpressionN m ()))]
-literalGroups holeInfo =
-    [ tryBuildLiteral Sugar.LiteralNum holeInfo
-    , tryBuildLiteral Sugar.LiteralBytes holeInfo
-    , tryBuildLiteral Sugar.LiteralText holeInfo
+literalGroups ::
+    Monad m =>
+    Sugar.HoleKind (T m) (ExpressionN m ()) e -> Text ->
+    [T m (Sugar.HoleOption (T m) (ExpressionN m ()))]
+literalGroups holeKind searchTerm =
+    [ tryBuildLiteral Sugar.LiteralNum holeKind searchTerm
+    , tryBuildLiteral Sugar.LiteralBytes holeKind searchTerm
+    , tryBuildLiteral Sugar.LiteralText holeKind searchTerm
     ] ^.. Lens.traverse . Lens._Just
 
 insensitivePrefixOf :: Text -> Text -> Bool
@@ -228,13 +225,16 @@ infixAltOf needle haystack =
 insensitiveInfixAltOf :: Text -> Text -> Bool
 insensitiveInfixAltOf = infixAltOf `on` Text.toLower
 
-makeAllGroups :: Monad m => HoleInfo m -> T m [Group m]
-makeAllGroups holeInfo =
+makeAllGroups ::
+    Monad m =>
+    Sugar.Hole (T m) (ExpressionN m ()) e -> Text ->
+    T m [Group m]
+makeAllGroups hole searchTerm =
     (++)
-    <$> (literalGroups holeInfo & sequenceA >>= mapM mkGroup)
-    <*> (hiHole holeInfo ^. Sugar.holeActions . Sugar.holeOptions
+    <$> (literalGroups (hole ^. Sugar.holeKind) searchTerm & sequenceA >>= mapM mkGroup)
+    <*> (hole ^. Sugar.holeActions . Sugar.holeOptions
          >>= mapM mkGroup
-         <&> holeMatches (hiSearchTerm holeInfo))
+         <&> holeMatches searchTerm)
 
 groupOrdering :: Text -> Group m -> [Bool]
 groupOrdering searchTerm group =

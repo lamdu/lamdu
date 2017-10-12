@@ -11,6 +11,7 @@ module Lamdu.GUI.ExpressionEdit.HoleEdit.SearchArea
 import qualified Control.Lens as Lens
 import           Control.Monad.Transaction (MonadTransaction(..))
 import qualified Data.Monoid as Monoid
+import qualified Data.Store.Property as Property
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
 import qualified GUI.Momentu.Align as Align
@@ -23,7 +24,6 @@ import qualified GUI.Momentu.Widgets.Menu as Menu
 import qualified Lamdu.Config as Config
 import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.EventMap as HoleEventMap
-import           Lamdu.GUI.ExpressionEdit.HoleEdit.Info (HoleInfo(..))
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.Open (makeOpenSearchAreaGui)
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.SearchTerm as SearchTerm
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.State as HoleState
@@ -74,20 +74,12 @@ makeStdWrapped hole pl widgetIds =
         stateProp <-
             HoleState.assocStateRef (hole ^. Sugar.holeActions . Sugar.holeUUID)
             ^. Transaction.mkProperty & transaction
-        let holeInfo =
-                HoleInfo
-                { hiEntityId = pl ^. Sugar.plEntityId
-                , hiState = stateProp
-                , hiInferredType = pl ^. Sugar.plAnnotation . Sugar.aInferredType
-                , hiHole = hole
-                , hiIds = widgetIds
-                , hiNearestHoles = pl ^. Sugar.plData . ExprGuiT.plNearestHoles
-                , hiMinOpPrec = pl ^. Sugar.plData . ExprGuiT.plMinOpPrec
-                }
+        let holeKind = hole ^. Sugar.holeKind
+        let searchTermProp = Property.composeLens HoleState.hsSearchTerm stateProp
         closedSearchTermGui <-
-            fdWrap <*> SearchTerm.make holeInfo <&> Responsive.fromWithTextPos
+            fdWrap <*> SearchTerm.make widgetIds holeKind searchTermProp <&> Responsive.fromWithTextPos
             & ExpressionGui.stdWrap pl
-        searchTermEventMap <- HoleEventMap.makeOpenEventMap holeInfo <&> fixEventMapCursor
+        searchTermEventMap <- HoleEventMap.makeOpenEventMap holeKind searchTermProp <&> fixEventMapCursor
         exprEventMap <- ExprEventMap.make pl ExprGuiM.NoHolePick
         case (isActive, isAHoleInHole) of
             (True, False) ->
@@ -97,7 +89,7 @@ makeStdWrapped hole pl widgetIds =
                 -- it is harder to implement, so just wrap it
                 -- here
                 (fdWrap <&> (Lens.mapped %~))
-                <*> makeOpenSearchAreaGui holeInfo
+                <*> makeOpenSearchAreaGui hole pl stateProp widgetIds
                 <&> Lens.mapped %~
                 \open ->
                 closedSearchTermGui & Responsive.alignedWidget . Align.tValue %~
