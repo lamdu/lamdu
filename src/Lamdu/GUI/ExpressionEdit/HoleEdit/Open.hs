@@ -174,12 +174,9 @@ afterPick holeInfo resultId mFirstHoleInside pr =
         myHoleId =
             WidgetIds.fromEntityId $ hiEntityId holeInfo
         obliterateOtherResults animId =
-            case animId ^? resultSuffix of
+            case animId ^? resultSuffix . suffixed (Widget.toAnimId resultId) of
             Nothing -> animId
-            Just unsuffixed
-                | Lens.has (suffixed (Widget.toAnimId resultId)) unsuffixed ->
-                        animId
-                | otherwise -> "obliterated" : animId
+            Just prefix -> prefix
 
 -- | Remove unwanted event handlers from a hole result
 removeUnwanted :: Config -> Widget.EventMap a -> Widget.EventMap a
