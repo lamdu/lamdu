@@ -12,7 +12,7 @@ import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
 import           Control.Monad.Transaction (transaction)
 import qualified Control.Monad.Transaction as Transaction
-import           Data.CurAndPrev (CurAndPrev, current)
+import           Data.CurAndPrev (CurAndPrev, current, fallbackToPrev)
 import           Data.List.Utils (nonEmptyAll, withPrevNext)
 import qualified Data.Map as Map
 import qualified Data.Store.Property as Property
@@ -315,11 +315,11 @@ makeParts funcApplyLimit binder delVarBackwardsId myId =
         (scopeEventMap, mScopeNavEdit) <-
             do
                 guard (funcApplyLimit == ExprGuiT.UnlimitedFuncApply)
-                currentScope <- mScopeCursor ^. current
+                scope <- fallbackToPrev mScopeCursor
                 guard $
                     Lens.nullOf (Sugar.bParams . Sugar._NullParam) binder ||
-                    Lens.has (Lens.traversed . Lens._Just) [sMPrevParamScope currentScope, sMNextParamScope currentScope]
-                Just currentScope
+                    Lens.has (Lens.traversed . Lens._Just) [sMPrevParamScope scope, sMNextParamScope scope]
+                Just scope
             & maybe (return (mempty, Nothing)) (makeScopeNavEdit binder scopesNavId)
         let isScopeNavFocused =
                 case mScopeNavEdit of
