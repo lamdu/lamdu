@@ -16,6 +16,7 @@ import qualified Data.Monoid as Monoid
 import           Data.Time.Clock (NominalDiffTime, UTCTime, getCurrentTime, addUTCTime, diffUTCTime)
 import           GUI.Momentu.Animation (AnimId)
 import qualified GUI.Momentu.Animation as Anim
+import qualified GUI.Momentu.Animation.Engine as Anim
 import qualified GUI.Momentu.Main.Image as MainImage
 import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.GLFW as GLFW
