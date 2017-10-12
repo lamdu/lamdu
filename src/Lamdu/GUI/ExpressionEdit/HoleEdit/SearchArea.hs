@@ -11,7 +11,6 @@ module Lamdu.GUI.ExpressionEdit.HoleEdit.SearchArea
 import qualified Control.Lens as Lens
 import           Control.Monad.Transaction (MonadTransaction(..))
 import qualified Data.Monoid as Monoid
-import qualified Data.Store.Property as Property
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
 import qualified GUI.Momentu.Align as Align
@@ -75,11 +74,10 @@ makeStdWrapped hole pl widgetIds =
             HoleState.assocStateRef (hole ^. Sugar.holeActions . Sugar.holeUUID)
             ^. Transaction.mkProperty & transaction
         let holeKind = hole ^. Sugar.holeKind
-        let searchTermProp = Property.composeLens HoleState.hsSearchTerm stateProp
         closedSearchTermGui <-
-            fdWrap <*> SearchTerm.make widgetIds holeKind searchTermProp <&> Responsive.fromWithTextPos
+            fdWrap <*> SearchTerm.make widgetIds holeKind stateProp <&> Responsive.fromWithTextPos
             & ExpressionGui.stdWrap pl
-        searchTermEventMap <- HoleEventMap.makeOpenEventMap holeKind searchTermProp <&> fixEventMapCursor
+        searchTermEventMap <- HoleEventMap.makeOpenEventMap holeKind stateProp <&> fixEventMapCursor
         exprEventMap <- ExprEventMap.make pl ExprGuiM.NoHolePick
         case (isActive, isAHoleInHole) of
             (True, False) ->

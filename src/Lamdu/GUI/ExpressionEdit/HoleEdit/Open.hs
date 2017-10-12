@@ -39,7 +39,6 @@ import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.EventMap as EventMap
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.ResultGroups (ResultsList(..), Result(..))
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.ResultGroups as HoleResults
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.SearchTerm as SearchTerm
-import           Lamdu.GUI.ExpressionEdit.HoleEdit.State (HoleState(..))
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.State as HoleState
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds (WidgetIds(..))
 import           Lamdu.GUI.ExpressionGui (ExpressionGui)
@@ -77,7 +76,7 @@ Lens.makeLenses ''ResultGroup
 
 makeShownResult ::
     Monad m =>
-    Sugar.Payload f ExprGuiT.Payload -> Property (T m) HoleState -> Result m ->
+    Sugar.Payload f ExprGuiT.Payload -> Property (T m) Text -> Result m ->
     ExprGuiM m
     ( Widget.EventMap (T m Widget.EventResult)
     , WithTextPos (Widget (T m Widget.EventResult))
@@ -94,7 +93,7 @@ makeShownResult pl stateProp result =
 
 makeResultGroup ::
     Monad m =>
-    Sugar.Payload f ExprGuiT.Payload -> Property (T m) HoleState ->
+    Sugar.Payload f ExprGuiT.Payload -> Property (T m) Text ->
     ResultsList m ->
     ExprGuiM m (ResultGroup m)
 makeResultGroup pl stateProp results =
@@ -155,12 +154,12 @@ eventResultOfPickedResult pr =
 
 afterPick ::
     Monad m =>
-    Property (T m) HoleState -> Sugar.EntityId ->
+    Property (T m) Text -> Sugar.EntityId ->
     Widget.Id -> Maybe Widget.Id ->
     Sugar.PickedResult -> T m PickedResult
 afterPick stateProp holeId resultId mFirstHoleInside pr =
     do
-        Property.set stateProp HoleState.emptyState
+        Property.set stateProp mempty
         result
             & pickedEventResult . Widget.eCursor .~ Monoid.Last (Just cursorId)
             & pickedEventResult . Widget.eAnimIdMapping %~
@@ -213,7 +212,7 @@ fixNumWithDotEventMap searchTerm res
                 (uuid, entityId) <- toHole
                 cursor <-
                     HoleState.setHoleStateAndJump uuid
-                    (HoleState ("." <> Text.singleton c)) entityId
+                    ("." <> Text.singleton c) entityId
                 return $ Widget.eventResultFromCursor cursor
         endsWithDot = "." `Text.isSuffixOf` searchTerm
         doc = E.Doc ["Edit", "Apply Operator"]
@@ -226,7 +225,7 @@ fixNumWithDotEventMap searchTerm res
 
 makeHoleResultWidget ::
     Monad m =>
-    Sugar.Payload f ExprGuiT.Payload -> Property (T m) HoleState ->
+    Sugar.Payload f ExprGuiT.Payload -> Property (T m) Text ->
     Widget.Id ->
     Sugar.HoleResult (T m) (Sugar.Expression (Name (T m)) (T m) ()) ->
     ExprGuiM m
@@ -268,7 +267,7 @@ makeHoleResultWidget pl stateProp resultId holeResult =
                 Anim.mapIdentities (<> (resultSuffix # Widget.toAnimId resultId))
             <&> (,) pickEventMap
     where
-        searchTerm = stateProp ^. Property.pVal . HoleState.hsSearchTerm
+        searchTerm = stateProp ^. Property.pVal
         fixFocalArea =
             Align.tValue . Widget.sizedState <. Widget._StateFocused . Lens.mapped . Widget.fFocalAreas .@~
             (:[]) . Rect 0
@@ -321,7 +320,7 @@ emptyPickEventMap =
 
 makeResultsWidget ::
     Monad m =>
-    Widget.R -> Sugar.Payload f ExprGuiT.Payload -> Property (T m) HoleState ->
+    Widget.R -> Sugar.Payload f ExprGuiT.Payload -> Property (T m) Text ->
     [ResultsList m] -> Menu.HasMoreOptions ->
     ExprGuiM m (Widget.EventMap (T m Widget.EventResult), Hover.Ordered (Widget (T m Widget.EventResult)))
 makeResultsWidget minWidth pl stateProp shownResultsLists hiddenResults =
@@ -414,7 +413,7 @@ makeUnderCursorAssignment ::
     [ResultsList m] -> Menu.HasMoreOptions ->
     Sugar.Hole (T m) (ExpressionN m ()) (ExprGuiT.SugarExpr m) ->
     Sugar.Payload (T m) ExprGuiT.Payload ->
-    Property (T m) HoleState ->
+    Property (T m) Text ->
     WidgetIds ->
     ExprGuiM m (Menu.Placement -> WithTextPos (Widget (T m Widget.EventResult)))
 makeUnderCursorAssignment shownResultsLists hasHiddenResults hole pl stateProp widgetIds =
@@ -428,7 +427,7 @@ makeUnderCursorAssignment shownResultsLists hasHiddenResults hole pl stateProp w
             <&> (^. Align.tValue)
 
         searchTermEventMap <-
-            EventMap.makeOpenEventMap holeKind searchTermProp <&> disallowFirstOperatorChar
+            EventMap.makeOpenEventMap holeKind stateProp <&> disallowFirstOperatorChar
 
         (pickFirstResult, resultsWidgets) <-
             makeResultsWidget (typeView ^. Element.width) pl stateProp
@@ -438,7 +437,7 @@ makeUnderCursorAssignment shownResultsLists hasHiddenResults hole pl stateProp w
         vspace <- ExpressionGui.annotationSpacer
         let addAnnotation x = x /-/ vspace /-/ typeView
         searchTermWidget <-
-            SearchTerm.make widgetIds holeKind searchTermProp
+            SearchTerm.make widgetIds holeKind stateProp
             <&> Align.tValue %~ Hover.anchor . E.weakerEvents (pickFirstResult <> blockOperatorEvents)
         mkOptions <-
             resultsHoverOptions
@@ -461,14 +460,13 @@ makeUnderCursorAssignment shownResultsLists hasHiddenResults hole pl stateProp w
         disallowFirstOperatorChar
             | Text.null searchTerm = E.filterChars (`notElem` Chars.operator)
             | otherwise = id
-        searchTermProp = Property.composeLens HoleState.hsSearchTerm stateProp
-        searchTerm = searchTermProp ^. Property.pVal
+        searchTerm = stateProp ^. Property.pVal
 
 makeOpenSearchAreaGui ::
     Monad m =>
     Sugar.Hole (T m) (ExpressionN m ()) (ExprGuiT.SugarExpr m) ->
     Sugar.Payload (T m) ExprGuiT.Payload ->
-    Property (T m) HoleState ->
+    Property (T m) Text ->
     WidgetIds ->
     ExprGuiM m (Menu.Placement -> WithTextPos (Widget (T m Widget.EventResult)))
 makeOpenSearchAreaGui hole pl stateProp widgetIds =
@@ -492,4 +490,4 @@ makeOpenSearchAreaGui hole pl stateProp widgetIds =
             & assignHoleEditCursor widgetIds searchTerm shownMainResultsIds allShownResultIds
             <&> Lens.mapped . Align.tValue %~ E.weakerEvents unwrapAsDelEventMap
     where
-        searchTerm = stateProp ^. Property.pVal . HoleState.hsSearchTerm
+        searchTerm = stateProp ^. Property.pVal

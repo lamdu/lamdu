@@ -14,7 +14,6 @@ import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.Widget as Widget
 import qualified Lamdu.CharClassification as Chars
 import qualified Lamdu.Config as Config
-import           Lamdu.GUI.ExpressionEdit.HoleEdit.State (HoleState(..))
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.State as HoleEditState
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds as HoleWidgetIds
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
@@ -173,7 +172,7 @@ applyOperatorEventMap exprInfo holePicker =
             \c ->
             do
                 (uuid, entityId) <- wrap
-                cursor <- HoleEditState.setHoleStateAndJump uuid (HoleState (Text.singleton c)) entityId
+                cursor <- HoleEditState.setHoleStateAndJump uuid (Text.singleton c) entityId
                 return $ Widget.eventResultFromCursor cursor
         doc = E.Doc ["Edit", "Apply operator"]
 

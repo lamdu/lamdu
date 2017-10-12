@@ -26,7 +26,7 @@ import qualified GUI.Momentu.Widgets.TextView as TextView
 import qualified Lamdu.Config as Config
 import           Lamdu.Config (HasConfig)
 import           Lamdu.Formatting (Format(..))
-import           Lamdu.GUI.ExpressionEdit.HoleEdit.State (HoleState(..), setHoleStateAndJump)
+import           Lamdu.GUI.ExpressionEdit.HoleEdit.State (setHoleStateAndJump)
 import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
@@ -49,7 +49,7 @@ mkEditEventMap valText setToHole =
     (E.Doc ["Edit", "Value"]) $
     do
         (uuid, entityId) <- setToHole
-        setHoleStateAndJump uuid (HoleState valText) entityId
+        setHoleStateAndJump uuid valText entityId
 
 genericEdit ::
     ( Monad m, Format a, MonadReader env f, HasStyle env, Widget.HasCursor env
