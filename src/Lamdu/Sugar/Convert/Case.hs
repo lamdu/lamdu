@@ -59,10 +59,10 @@ convert ::
     Input.Payload m a -> ConvertM m (ExpressionU m a)
 convert (V.Case tag val rest) exprPl = do
     restS <- ConvertM.convertSubexpression rest
-    restCase <-
+    (restCase, modifyEntityId) <-
         case restS ^. rBody of
         BodyCase r | Lens.has (cKind . _LambdaCase) r ->
-            return r
+            return (r, const (restS ^. rPayload . plEntityId))
         _ ->
             do
                 addAlt <- makeAddItem DataOps.case_ restStored
@@ -74,14 +74,16 @@ convert (V.Case tag val rest) exprPl = do
                             >>= protectedSetToVal restStored
                             <&> EntityId.ofValI
                         }
-                return Case
-                    { _cKind = LambdaCase
-                    , _cBody = Composite
-                        { _cItems = []
-                        , _cTail = OpenComposite actions restS
-                        , _cAddItem = addAlt
+                return
+                    ( Case
+                        { _cKind = LambdaCase
+                        , _cBody = Composite
+                            { _cItems = []
+                            , _cTail = OpenComposite actions restS
+                            , _cAddItem = addAlt
+                            }
                         }
-                    }
+                    , id)
     altS <-
         convertCompositeItem
         (V.Case <&> Lens.mapped . Lens.mapped %~ V.BCase)
@@ -92,6 +94,7 @@ convert (V.Case tag val rest) exprPl = do
         & cBody . cAddItem %~ (>>= setTagOrder (1 + length (restCase ^. cBody . cItems)))
         & BodyCase
         & addActions exprPl
+        <&> rPayload . plEntityId %~ modifyEntityId
     where
         restStored = rest ^. Val.payload . Input.stored
 
@@ -117,6 +120,7 @@ convertAppliedCase funcS argS exprPl =
         convertGuard setTo appliedCaseB
             & maybe (BodyCase appliedCaseB) BodyGuard
             & addActions exprPl & lift
+            <&> rPayload . plEntityId .~ funcS ^. rPayload . plEntityId
 
 simplifyCaseArg :: Monoid a => ExpressionU m a -> ExpressionU m a
 simplifyCaseArg argS =

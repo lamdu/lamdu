@@ -47,9 +47,10 @@ convertExtend ::
     Input.Payload m a -> ConvertM m (ExpressionU m a)
 convertExtend (V.RecExtend tag val rest) exprPl = do
     restS <- ConvertM.convertSubexpression rest
-    restRecord <-
+    (restRecord, modifyEntityId) <-
         case restS ^. rBody of
-        BodyRecord r -> return r
+        BodyRecord r ->
+            return (r, const (restS ^. rPayload . plEntityId))
         _ ->
             do
                 addField <- makeAddItem DataOps.recExtend restStored
@@ -61,7 +62,7 @@ convertExtend (V.RecExtend tag val rest) exprPl = do
                             >>= protectedSetToVal restStored
                             <&> EntityId.ofValI
                         }
-                Composite [] (OpenComposite actions restS) addField & return
+                return (Composite [] (OpenComposite actions restS) addField, id)
     fieldS <-
         convertCompositeItem
         (V.RecExtend <&> Lens.mapped . Lens.mapped %~ V.BRecExtend)
@@ -72,5 +73,6 @@ convertExtend (V.RecExtend tag val rest) exprPl = do
         & cAddItem %~ (>>= setTagOrder (1 + length (restRecord ^. cItems)))
         & BodyRecord
         & addActions exprPl
+        <&> rPayload . plEntityId %~ modifyEntityId
     where
         restStored = rest ^. Val.payload . Input.stored
