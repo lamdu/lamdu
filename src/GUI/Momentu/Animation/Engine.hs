@@ -8,9 +8,7 @@ module GUI.Momentu.Animation.Engine
 import           Control.Applicative (liftA2)
 import qualified Control.Lens as Lens
 import qualified Data.List as List
-import           Data.List.Utils (groupOn)
-import           Data.Map ((!))
-import qualified Data.Map.Strict as Map
+import qualified Data.Map as Map
 import           Data.Maybe (mapMaybe)
 import qualified Data.Set as Set
 import qualified Data.Vector.Vector2 as Vector2
@@ -95,10 +93,8 @@ setNewDest destFrame state =
                 Deleting c : go cs ds
         go [] ds = map goDest ds
         goDest d =
-            case findPrefix (d ^. iAnimId) curPrefixMap of
-            Nothing -> Rect (d ^. iRect . Rect.center) 0
-            Just (prefix, curRect) ->
-                relocateSubRect (d ^. iRect) (destPrefixMap ! prefix) curRect
+            curRects ^. Lens.at (d ^. iAnimId)
+            & fromMaybe (Rect (d ^. iRect . Rect.center) 0)
             & modifying d
         modifying destImage prevRect =
             Modifying (rImg & iRect .~ prevRect) (destImage ^. iRect)
@@ -109,12 +105,15 @@ setNewDest destFrame state =
                     | otherwise = destImage
                 redX = Draw.tint red unitX
         curFrame = currentFrame state
+        curRects =
+            do
+                img <- curFrame ^. frameImages
+                [(img ^. iAnimId, img ^. iRect)]
+            & Map.fromList
         sortedDestIds = destFrame ^.. images . iAnimId & List.sort
         duplicateDestIds =
             List.group sortedDestIds <&> tail & concat & Set.fromAscList
         destIds = Set.fromAscList sortedDestIds
-        curPrefixMap = prefixRects curFrame
-        destPrefixMap = prefixRects destFrame
 
 stateMapIdentities :: (AnimId -> AnimId) -> State -> State
 stateMapIdentities mapping =
@@ -127,27 +126,6 @@ nextState movement Nothing state
 nextState movement (Just dest) state =
     setNewDest dest state & advanceState movement & Just
 
-findPrefix :: Ord a => [a] -> Map [a] b -> Maybe ([a], b)
-findPrefix key dict =
-    (List.inits key & reverse <&> f) ^? traverse . Lens._Just
-    where
-        f prefix = Map.lookup prefix dict <&> (,) prefix
-
-relocateSubRect :: Rect -> Rect -> Rect -> Rect
-relocateSubRect srcSubRect srcSuperRect dstSuperRect =
-    Rect
-    { Rect._topLeft =
-              dstSuperRect ^. Rect.topLeft +
-              sizeRatio *
-              (srcSubRect ^. Rect.topLeft -
-                srcSuperRect ^. Rect.topLeft)
-    , Rect._size = sizeRatio * srcSubRect ^. Rect.size
-    }
-    where
-        sizeRatio =
-            dstSuperRect ^. Rect.size /
-            fmap (max 1) (srcSuperRect ^. Rect.size)
-
 unitX :: Draw.Image ()
 unitX =
     Draw.line (0, 0) (1, 1)
@@ -156,26 +134,3 @@ unitX =
 
 red :: Draw.Color
 red = Draw.Color 1 0 0 1
-
-prefixRects :: Frame -> Map AnimId Rect
-prefixRects srcFrame =
-    do
-        img <- srcFrame ^. frameImages
-        prefix <- List.inits (img ^. iAnimId)
-        return (prefix, img ^. iRect)
-    & List.sortOn fst
-    & groupOn fst
-    <&> perGroup
-    & filter (not . null . fst)
-    & Map.fromList
-    where
-        perGroup xs =
-            (fst (head xs), List.foldl1' unionRects (map snd xs))
-        unionRects a b =
-            Rect
-            { Rect._topLeft = tl
-            , Rect._size = br - tl
-            }
-            where
-                tl = liftA2 min (a ^. Rect.topLeft) (b ^. Rect.topLeft)
-                br = liftA2 max (a ^. Rect.bottomRight) (b ^. Rect.bottomRight)
