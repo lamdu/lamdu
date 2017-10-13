@@ -45,7 +45,7 @@ mkAddFieldEventMap config addField =
     addField
     <&> (^. Sugar.cairNewTag . Sugar.tagInstance)
     <&> WidgetIds.fromEntityId
-    <&> TagEdit.tagHoleId
+    <&> WidgetIds.tagHoleId
     & Widget.keysEventMapMovesCursor (Config.recordAddFieldKeys config)
       (doc "Add Field")
 

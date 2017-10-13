@@ -3,7 +3,6 @@ module Lamdu.GUI.ExpressionEdit.TagEdit
     ( makeRecordTag, makeCaseTag, Mode(..)
     , makeParamTag
     , makeArgTag
-    , tagHoleId
     ) where
 
 import qualified Control.Lens as Lens
@@ -50,9 +49,6 @@ type T = Transaction
 
 tagRenameId :: Widget.Id -> Widget.Id
 tagRenameId = (`Widget.joinId` ["rename"])
-
-tagHoleId :: Widget.Id -> Widget.Id
-tagHoleId = (`Widget.joinId` ["hole"])
 
 tagViewId :: Widget.Id -> Widget.Id
 tagViewId = (`Widget.joinId` ["view"])
@@ -201,7 +197,7 @@ makeTagHoleEditH nearestHoles tag searchTerm updateState fixCursor =
     & Widget.assignCursor holeId searchTermId
     & Reader.local (Element.animIdPrefix .~ Widget.toAnimId holeId)
     where
-        holeId = tagHoleId (tagId tag)
+        holeId = WidgetIds.tagHoleId (tagId tag)
         searchTermId = holeId <> Widget.Id ["term"]
         textEditNoEmpty = TextEdit.EmptyStrings "" ""
 
@@ -214,7 +210,10 @@ makeTagHoleEdit ::
 makeTagHoleEdit nearestHoles tag =
     cursorState myId "" (makeTagHoleEditH nearestHoles tag)
     where
-        myId = tag ^. Sugar.tagInfo . Sugar.tagInstance & WidgetIds.fromEntityId & tagHoleId
+        myId =
+            tag ^. Sugar.tagInfo . Sugar.tagInstance
+            & WidgetIds.fromEntityId
+            & WidgetIds.tagHoleId
 
 data Mode = WithTagHoles | WithoutTagHoles
 
@@ -230,7 +229,7 @@ makeTagEdit mode tagColor nearestHoles tag =
     do
         jumpHolesEventMap <- ExprEventMap.jumpHolesEventMap nearestHoles
         isRenaming <- Widget.isSubCursor ?? tagRenameId myId
-        isHole <- Widget.isSubCursor ?? tagHoleId myId
+        isHole <- Widget.isSubCursor ?? WidgetIds.tagHoleId myId
         config <- Lens.view Config.config
         let eventMap =
                 Widget.keysEventMapMovesCursor (Config.jumpToDefinitionKeys config)
@@ -242,7 +241,8 @@ makeTagEdit mode tagColor nearestHoles tag =
                     (E.Doc ["Edit", "Tag", "Choose"])
                     (tag ^. Sugar.tagActions . Sugar.taReplaceWithNew
                         <&> (^. Sugar.tagInstance)
-                        <&> tagHoleId . WidgetIds.fromEntityId)
+                        <&> WidgetIds.fromEntityId
+                        <&> WidgetIds.tagHoleId)
                 WithoutTagHoles -> mempty
         nameView <-
             (Widget.makeFocusableView ?? viewId <&> fmap) <*>

@@ -51,3 +51,6 @@ letBinderId = (`WidgetId.joinId` ["letId"])
 
 replId :: Id
 replId = Id ["repl"]
+
+tagHoleId :: Id -> Id
+tagHoleId = (`WidgetId.joinId` ["hole"])
