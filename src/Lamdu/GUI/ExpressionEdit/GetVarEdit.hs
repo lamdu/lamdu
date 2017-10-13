@@ -95,7 +95,7 @@ makeNameRef myId nameRef maker =
                 (E.Doc ["Navigation", "Jump to definition"]) $
                 do
                     DataOps.savePreJumpPosition cp myId
-                    WidgetIds.fromEntityId <$> nameRef ^. Sugar.nrGotoDefinition
+                    nameRef ^. Sugar.nrGotoDefinition <&> WidgetIds.fromEntityId
         maker (nameRef ^. Sugar.nrName) nameId
             <&> Align.tValue %~ E.weakerEvents jumpToDefinitionEventMap
     & Widget.assignCursor myId nameId
