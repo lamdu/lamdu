@@ -91,7 +91,7 @@ convertGlobal param exprPl =
                 LiveDefinition ->
                     ctx ^. ConvertM.scOutdatedDefinitions . Lens.at param
                     & maybe DefUpToDate DefTypeChanged
-        GetBinder BinderVar
+        GetBinder BinderVarRef
             { _bvNameRef = NameRef
               { _nrName = UniqueId.toUUID defI
               , _nrGotoDefinition = jumpToDefI (ctx ^. ConvertM.scCodeAnchors) defI
@@ -133,7 +133,7 @@ convertGetLet param exprPl =
             lift ConvertM.readContext
             <&> (^. ConvertM.scScopeInfo . ConvertM.siLetItems . Lens.at param)
             >>= maybeToMPlus
-        GetBinder BinderVar
+        GetBinder BinderVarRef
             { _bvNameRef = paramNameRef param
             , _bvForm = GetLet
             , _bvInline =
@@ -151,7 +151,7 @@ convertParamsRecord param exprPl =
             <&> map tpiFromParameters
             <&> elem param
             >>= guard
-        GetParamsRecord ParamsRecordVar
+        GetParamsRecord ParamsRecordVarRef
             { _prvFieldNames =
                 exprPl
                 ^.. Input.inferredType . T._TRecord . ExprLens.compositeFieldTags
@@ -169,7 +169,7 @@ convert param exprPl
             convertGlobal param exprPl & justToLeft
             convertGetLet param exprPl & justToLeft
             convertParamsRecord param exprPl & justToLeft
-            GetParam (Param (paramNameRef param) GetParameter NormalBinder) & return
+            GetParam (ParamRef (paramNameRef param) GetParameter NormalBinder) & return
         & runMatcherT
         <&> BodyGetVar
         >>= addActions exprPl

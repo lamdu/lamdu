@@ -58,7 +58,7 @@ makeParamsRecord ::
     , TextView.HasStyle env, Element.HasAnimIdPrefix env
     , Spacer.HasStdSpacing env
     ) =>
-    Widget.Id -> Sugar.ParamsRecordVar (Name (T m)) -> f (ExpressionGui m)
+    Widget.Id -> Sugar.ParamsRecordVarRef (Name (T m)) -> f (ExpressionGui m)
 makeParamsRecord myId paramsRecordVar =
     do
         nameTheme <- Lens.view Theme.theme <&> Theme.name
@@ -78,7 +78,7 @@ makeParamsRecord myId paramsRecordVar =
             , TextView.makeLabel "}" <&> Responsive.fromTextView
             ] <&> Options.box Options.disambiguationNone <&> respondToCursor
     where
-        Sugar.ParamsRecordVar fieldNames = paramsRecordVar
+        Sugar.ParamsRecordVarRef fieldNames = paramsRecordVar
 
 makeNameRef ::
     Monad m =>
@@ -179,7 +179,7 @@ processDefinitionWidget (Sugar.DefTypeChanged info) myId mkLayout =
 
 makeGetBinder ::
     Monad m =>
-    Sugar.BinderVar (Name (T m)) (T m) -> Widget.Id ->
+    Sugar.BinderVarRef (Name (T m)) (T m) -> Widget.Id ->
     ExprGuiM m (WithTextPos (Widget (T m Widget.EventResult)))
 makeGetBinder binderVar myId =
     do
@@ -201,7 +201,7 @@ makeGetBinder binderVar myId =
 
 makeGetParam ::
     Monad m =>
-    Sugar.Param (Name (T m)) (T m) -> Widget.Id ->
+    Sugar.ParamRef (Name (T m)) (T m) -> Widget.Id ->
     ExprGuiM m (WithTextPos (Widget (T m Widget.EventResult)))
 makeGetParam param myId =
     do

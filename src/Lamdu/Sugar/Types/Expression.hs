@@ -45,7 +45,7 @@ import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Calc.Val as V
 import           Lamdu.Sugar.Internal.EntityId (EntityId)
 import           Lamdu.Sugar.Types.Binder
-import           Lamdu.Sugar.Types.GetVar (GetVar, BinderVar, Param)
+import           Lamdu.Sugar.Types.GetVar (GetVar, BinderVarRef, ParamRef)
 import           Lamdu.Sugar.Types.Hole (Hole, Literal)
 
 import           Lamdu.Prelude
@@ -177,13 +177,13 @@ data AnnotatedArg name expr = AnnotatedArg
     } deriving (Functor, Foldable, Traversable)
 
 data RelayedArg name m = RelayedArg
-    { _raValue :: Param name m
+    { _raValue :: ParamRef name m
     , _raId :: EntityId
     , _raActions :: Actions m
     }
 
 data LabeledApply name m expr = LabeledApply
-    { _aFunc :: BinderVar name m
+    { _aFunc :: BinderVarRef name m
     , _aSpecialArgs :: SpecialArgs expr
     , _aAnnotatedArgs :: [AnnotatedArg name expr]
     , _aRelayedArgs :: [RelayedArg name m]

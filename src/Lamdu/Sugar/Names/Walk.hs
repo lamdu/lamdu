@@ -84,11 +84,11 @@ toHoleActions ha@HoleActions {..} =
         run <- opRun
         pure ha { _holeOptions = _holeOptions >>= run . traverse toHoleOption }
 
-toParam ::
+toParamRef ::
     MonadNaming m =>
-    Param (OldName m) p ->
-    m (Param (NewName m) p)
-toParam param =
+    ParamRef (OldName m) p ->
+    m (ParamRef (NewName m) p)
+toParamRef param =
     (pNameRef . nrName) f param
     where
         f = case param ^. pForm of
@@ -100,19 +100,19 @@ binderVarType :: BinderVarForm t -> NameType
 binderVarType GetLet = ParamName
 binderVarType (GetDefinition _) = DefName
 
-toBinderVar ::
+toBinderVarRef ::
     MonadNaming m =>
-    BinderVar (OldName m) p ->
-    m (BinderVar (NewName m) p)
-toBinderVar binderVar =
+    BinderVarRef (OldName m) p ->
+    m (BinderVarRef (NewName m) p)
+toBinderVarRef binderVar =
     (bvNameRef . nrName) (opGetName (binderVarType (binderVar ^. bvForm))) binderVar
 
 toGetVar ::
     MonadNaming m =>
     GetVar (OldName m) p ->
     m (GetVar (NewName m) p)
-toGetVar (GetParam x) = toParam x <&> GetParam
-toGetVar (GetBinder x) = toBinderVar x <&> GetBinder
+toGetVar (GetParam x) = toParamRef x <&> GetParam
+toGetVar (GetBinder x) = toBinderVarRef x <&> GetBinder
 toGetVar (GetParamsRecord x) = traverse (opGetName TagName) x <&> GetParamsRecord
 
 toLet ::
@@ -183,7 +183,7 @@ toLabeledApply expr app@LabeledApply{..} =
     )
     <*> pure _aSpecialArgs
     <*> (traverse . aaName) (opGetName TagName) _aAnnotatedArgs
-    <*> (traverse . raValue) toParam _aRelayedArgs
+    <*> (traverse . raValue) toParamRef _aRelayedArgs
     >>= traverse expr
 
 toLeafHoleActions ::

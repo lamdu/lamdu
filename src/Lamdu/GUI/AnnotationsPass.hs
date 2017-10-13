@@ -43,13 +43,13 @@ markAnnotationsToDisplay (Expression oldBody pl) =
     BodyLiteral LiteralBytes {} -> set dontShowEval
     BodyRecord _ -> set T.neverShowAnnotations
     BodyLam _ -> set T.neverShowAnnotations
-    BodyGetVar (GetParam Param { _pBinderMode = LightLambda }) ->
+    BodyGetVar (GetParam ParamRef { _pBinderMode = LightLambda }) ->
         set T.showAnnotationWhenVerbose
-    BodyGetVar (GetParam Param { _pBinderMode = NormalBinder }) ->
+    BodyGetVar (GetParam ParamRef { _pBinderMode = NormalBinder }) ->
         set T.neverShowAnnotations
-    BodyGetVar (GetBinder BinderVar { _bvForm = GetDefinition _ }) ->
+    BodyGetVar (GetBinder BinderVarRef { _bvForm = GetDefinition _ }) ->
         set T.showAnnotationWhenVerbose
-    BodyGetVar (GetBinder BinderVar { _bvForm = GetLet }) ->
+    BodyGetVar (GetBinder BinderVarRef { _bvForm = GetLet }) ->
         set T.neverShowAnnotations
     BodyFromNom _ -> Expression (newBodyWith dontShowEval) defPl
     BodyToNom (Nominal _ binder) ->

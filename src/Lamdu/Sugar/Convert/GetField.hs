@@ -29,7 +29,7 @@ convertGetFieldParam (V.GetField recExpr tag) exprPl =
             paramInfo <- tagParamInfos ^? Lens.ix tag . ConvertM._TagFieldParam
             param <- recExpr ^? ExprLens.valVar
             guard $ param == ConvertM.tpiFromParameters paramInfo
-            GetParam Param
+            GetParam ParamRef
                 { _pNameRef = NameRef
                   { _nrName = UniqueId.toUUID tag
                   , _nrGotoDefinition = return (ConvertM.tpiJumpTo paramInfo)

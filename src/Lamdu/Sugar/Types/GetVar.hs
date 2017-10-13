@@ -2,14 +2,14 @@
 module Lamdu.Sugar.Types.GetVar
     ( ParameterForm(..), _GetFieldParameter, _GetParameter
     , NameRef(..), nrName, nrGotoDefinition
-    , Param(..), pNameRef, pForm, pBinderMode
+    , ParamRef(..), pNameRef, pForm, pBinderMode
     , BinderVarForm(..), _GetDefinition, _GetLet
     , DefinitionForm(..), _DefUpToDate, _DefDeleted, _DefTypeChanged
     , DefinitionOutdatedType(..), defTypeWhenUsed, defTypeCurrent, defTypeUseCurrent
     , BinderVarInline(..), _InlineVar, _CannotInlineDueToUses, _CannotInline
-    , BinderVar(..), bvNameRef, bvForm, bvInline
+    , BinderVarRef(..), bvNameRef, bvForm, bvInline
     , GetVar(..), _GetParam, _GetParamsRecord, _GetBinder
-    , ParamsRecordVar(..), prvFieldNames
+    , ParamsRecordVarRef(..), prvFieldNames
     ) where
 
 import qualified Control.Lens as Lens
@@ -29,7 +29,7 @@ data NameRef name m = NameRef
 instance Show name => Show (NameRef name m) where
     show (NameRef name _) = show name
 
-data Param name m = Param
+data ParamRef name m = ParamRef
     { _pNameRef :: NameRef name m
     , _pForm :: ParameterForm
     , _pBinderMode :: BinderMode
@@ -55,29 +55,29 @@ data BinderVarInline m
     | CannotInlineDueToUses [EntityId]
     | CannotInline
 
-data BinderVar name m = BinderVar
+data BinderVarRef name m = BinderVarRef
     { _bvNameRef :: NameRef name m
     , _bvForm :: BinderVarForm m
     , -- Just means it is stored and inlinable:
       _bvInline :: BinderVarInline m
     }
-instance Show name => Show (BinderVar name m) where
-    show (BinderVar nameRef form _) = "(BinderVar " ++ show nameRef ++ " (form=" ++ show form ++ "))"
+instance Show name => Show (BinderVarRef name m) where
+    show (BinderVarRef nameRef form _) = "(BinderVar " ++ show nameRef ++ " (form=" ++ show form ++ "))"
 
-newtype ParamsRecordVar name = ParamsRecordVar
+newtype ParamsRecordVarRef name = ParamsRecordVarRef
     { _prvFieldNames :: [name]
     } deriving (Eq, Ord, Functor, Foldable, Traversable)
 
 data GetVar name m
-    = GetParam (Param name m)
-    | GetParamsRecord (ParamsRecordVar name)
-    | GetBinder (BinderVar name m)
+    = GetParam (ParamRef name m)
+    | GetParamsRecord (ParamsRecordVarRef name)
+    | GetBinder (BinderVarRef name m)
 
-Lens.makeLenses ''BinderVar
+Lens.makeLenses ''BinderVarRef
 Lens.makeLenses ''DefinitionOutdatedType
 Lens.makeLenses ''NameRef
-Lens.makeLenses ''Param
-Lens.makeLenses ''ParamsRecordVar
+Lens.makeLenses ''ParamRef
+Lens.makeLenses ''ParamsRecordVarRef
 Lens.makePrisms ''BinderVarForm
 Lens.makePrisms ''BinderVarInline
 Lens.makePrisms ''DefinitionForm

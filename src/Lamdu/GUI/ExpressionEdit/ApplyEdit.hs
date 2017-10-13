@@ -65,7 +65,7 @@ addInfixMarker widgetId =
 
 makeFuncVar ::
     Monad m =>
-    NearestHoles -> Sugar.BinderVar (Name (T m)) (T m) -> Widget.Id ->
+    NearestHoles -> Sugar.BinderVarRef (Name (T m)) (T m) -> Widget.Id ->
     ExprGuiM m (WithTextPos (Widget (T m Widget.EventResult)))
 makeFuncVar nearestHoles funcVar myId =
     do
@@ -75,7 +75,7 @@ makeFuncVar nearestHoles funcVar myId =
 
 makeInfixFuncName ::
     Monad m =>
-    NearestHoles -> Sugar.BinderVar (Name (T m)) (T m) -> Widget.Id ->
+    NearestHoles -> Sugar.BinderVarRef (Name (T m)) (T m) -> Widget.Id ->
     ExprGuiM m (WithTextPos (Widget (T m Widget.EventResult)))
 makeInfixFuncName nearestHoles funcVar myId =
     makeFuncVar nearestHoles funcVar myId <&> mAddMarker

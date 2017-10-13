@@ -66,7 +66,7 @@ precedenceOfGuard (Guard if_ then_ elseIfs else_ _del) =
         _del
     )
 
-binderName :: Lens (BinderVar namea m) (BinderVar nameb m) namea nameb
+binderName :: Lens (BinderVarRef namea m) (BinderVarRef nameb m) namea nameb
 binderName = bvNameRef . nrName
 
 precedenceOfLabeledApply ::
