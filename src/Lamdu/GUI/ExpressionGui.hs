@@ -3,7 +3,6 @@ module Lamdu.GUI.ExpressionGui
     ( ExpressionGui
     , render
     -- General:
-    , listWithDelDests
     , grammarLabel, grammarText
     , addValFrame, addValPadding
     , addValBGWithColor
@@ -29,7 +28,6 @@ import qualified Control.Monad.Reader as Reader
 import           Control.Monad.Transaction (MonadTransaction)
 import           Data.Binary.Utils (encodeS)
 import           Data.CurAndPrev (CurAndPrev(..), CurPrevTag(..), curPrevTag, fallbackToPrev)
-import qualified Data.List.Utils as ListUtils
 import           Data.Store.Transaction (Transaction)
 import           Data.Vector.Vector2 (Vector2(..))
 import           GUI.Momentu.Align (WithTextPos(..))
@@ -490,9 +488,6 @@ valOfScope annotation mScopeIds =
 
 valOfScopePreferCur :: Sugar.Annotation -> ER.ScopeId -> Maybe EvalResDisplay
 valOfScopePreferCur annotation = valOfScope annotation . pure . Just
-
-listWithDelDests :: k -> k -> (a -> k) -> [a] -> [(k, k, a)]
-listWithDelDests = ListUtils.withPrevNext
 
 render :: Widget.R -> Responsive a -> WithTextPos (Widget a)
 render width gui =

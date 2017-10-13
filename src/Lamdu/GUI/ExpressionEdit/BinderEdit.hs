@@ -13,7 +13,7 @@ import qualified Control.Monad.Reader as Reader
 import           Control.Monad.Transaction (transaction)
 import qualified Control.Monad.Transaction as Transaction
 import           Data.CurAndPrev (CurAndPrev, current)
-import           Data.List.Utils (nonEmptyAll)
+import           Data.List.Utils (nonEmptyAll, withPrevNext)
 import qualified Data.Map as Map
 import qualified Data.Store.Property as Property
 import           Data.Store.Transaction (Transaction, MkProperty(..))
@@ -586,6 +586,6 @@ makeParamsEdit annotationOpts nearestHoles delVarBackwardsId lhsId rhsId params 
                 let mkParam (prevId, nextId, param) =
                         ParamEdit.make annotationOpts showParamAnnotation prevId nextId param
                         <&> E.weakerEvents jumpHolesEventMap
-                ExpressionGui.listWithDelDests delDestFirst delDestLast
+                withPrevNext delDestFirst delDestLast
                     (ParamEdit.iId . (^. Sugar.fpInfo)) paramList
                     & traverse mkParam
