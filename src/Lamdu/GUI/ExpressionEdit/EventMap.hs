@@ -103,7 +103,7 @@ jumpHolesEventMapIfSelected exprInfo =
 
 extractCursor :: Sugar.ExtractToDestination -> Widget.Id
 extractCursor (Sugar.ExtractToLet letId) =
-    WidgetIds.fromEntityId letId & WidgetIds.diveIntoLet
+    WidgetIds.fromEntityId letId & WidgetIds.letBinderId
 extractCursor (Sugar.ExtractToDef defId) =
     WidgetIds.nameEditOf (WidgetIds.fromEntityId defId)
 

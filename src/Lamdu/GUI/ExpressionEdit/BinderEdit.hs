@@ -441,7 +441,7 @@ makeLetEdit item =
             & WidgetIds.fromEntityId
         letId =
             item ^. Sugar.lEntityId & WidgetIds.fromEntityId
-            & WidgetIds.diveIntoLet
+            & WidgetIds.letBinderId
         binder = item ^. Sugar.lValue
 
 jumpToRHS ::
@@ -458,7 +458,7 @@ addLetEventMap addLet =
         config <- Lens.view Config.config
         savePos <- ExprGuiM.mkPrejumpPosSaver
         savePos >> addLet
-            <&> WidgetIds.fromEntityId <&> WidgetIds.diveIntoLet
+            <&> WidgetIds.fromEntityId <&> WidgetIds.letBinderId
             & Widget.keysEventMapMovesCursor (Config.letAddItemKeys config)
                 (E.Doc ["Edit", "Let clause", "Add"])
             & pure

@@ -46,8 +46,8 @@ branchSelection = Id ["selected branch"]
 activePaneBackground :: AnimId
 activePaneBackground = ["active def bg"]
 
-diveIntoLet :: Id -> Id
-diveIntoLet = (`WidgetId.joinId` ["letId"])
+letBinderId :: Id -> Id
+letBinderId = (`WidgetId.joinId` ["letId"])
 
 replId :: Id
 replId = Id ["repl"]
