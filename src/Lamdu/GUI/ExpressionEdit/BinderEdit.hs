@@ -410,13 +410,14 @@ makeLetEdit item =
         let letColor = Theme.letColor (Theme.name theme)
         let actionsEventMap =
                 mconcat
-                [ Widget.keysEventMapMovesCursor (Config.delKeys config)
-                  (E.Doc ["Edit", "Let clause", "Delete"]) $
-                  bodyId <$ item ^. Sugar.lActions . Sugar.laSetToInner
-                , Widget.keysEventMapMovesCursor (Config.extractKeys config)
-                  (E.Doc ["Edit", "Let clause", "Extract to outer scope"]) $
-                  WidgetIds.fromEntityId . Sugar.lfrNewEntity <$>
-                  item ^. Sugar.lActions . Sugar.laFloat
+                [ bodyId <$ item ^. Sugar.lActions . Sugar.laSetToInner
+                    & Widget.keysEventMapMovesCursor (Config.delKeys config)
+                    (E.Doc ["Edit", "Let clause", "Delete"])
+                , item ^. Sugar.lActions . Sugar.laFloat
+                    <&> Sugar.lfrNewEntity
+                    <&> WidgetIds.fromEntityId
+                    & Widget.keysEventMapMovesCursor (Config.extractKeys config)
+                    (E.Doc ["Edit", "Let clause", "Extract to outer scope"])
                 ]
         let usageEventMap =
                 mconcat
