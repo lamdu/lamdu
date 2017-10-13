@@ -6,7 +6,7 @@ module Lamdu.GUI.WidgetIds
 
 import           Data.UUID.Types (UUID)
 import qualified Data.UUID.Utils as UUIDUtils
-import           GUI.Momentu.Animation (AnimId)
+import           GUI.Momentu.Animation.Id (AnimId)
 import           GUI.Momentu.Widget.Id (Id(..))
 import qualified GUI.Momentu.Widget.Id as WidgetId
 import           Lamdu.GUI.WidgetIdIRef
