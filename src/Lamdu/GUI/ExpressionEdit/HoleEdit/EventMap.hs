@@ -145,7 +145,7 @@ toLiteralTextEventMap actions =
             & (`lookup` (pickedResult ^. Sugar.prIdTranslation))
             & fromMaybe (error "PickedResult missing translation for expr")
             & WidgetIds.fromEntityId
-            & WidgetIds.delegatingId
+            & WidgetIds.literalTextEditOf
             & pure
 
 makeOpenEventMap ::

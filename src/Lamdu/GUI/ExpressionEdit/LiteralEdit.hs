@@ -105,7 +105,7 @@ textEdit prop pl =
                 ?? myId ??)
     where
         empty = TextEdit.EmptyStrings "" ""
-        innerId = WidgetIds.delegatingId myId
+        innerId = WidgetIds.literalTextEditOf myId
         myId = WidgetIds.fromExprPayload pl
 
 make ::

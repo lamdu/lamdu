@@ -29,7 +29,10 @@ fromExprPayload :: Sugar.Payload f a -> Id
 fromExprPayload pl = fromEntityId (pl ^. Sugar.plEntityId)
 
 nameEditOf :: Id -> Id
-nameEditOf = delegatingId
+nameEditOf = flip WidgetId.joinId ["name edit"]
+
+literalTextEditOf :: Id -> Id
+literalTextEditOf = flip WidgetId.joinId ["literal text edit"]
 
 fromUUID :: UUID -> Id
 fromUUID = fromBS . UUIDUtils.toSBS16
@@ -42,10 +45,6 @@ branchSelection = Id ["selected branch"]
 
 activePaneBackground :: AnimId
 activePaneBackground = ["active def bg"]
-
--- TODO: Remove this - each widget type should declare its own children ids
-delegatingId :: Id -> Id
-delegatingId = flip WidgetId.joinId ["delegating"]
 
 diveIntoLet :: Id -> Id
 diveIntoLet = (`WidgetId.joinId` ["letId"])
