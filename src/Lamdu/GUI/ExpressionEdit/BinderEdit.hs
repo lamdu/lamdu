@@ -15,6 +15,7 @@ import qualified Control.Monad.Transaction as Transaction
 import           Data.CurAndPrev (CurAndPrev, current, fallbackToPrev)
 import           Data.List.Utils (nonEmptyAll, withPrevNext)
 import qualified Data.Map as Map
+import           Data.Store.Property (Property)
 import qualified Data.Store.Property as Property
 import           Data.Store.Transaction (Transaction, MkProperty(..))
 import qualified Data.Text as Text
@@ -37,6 +38,7 @@ import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified GUI.Momentu.Widgets.TextView as TextView
 import qualified Lamdu.CharClassification as Chars
 import qualified Lamdu.Config as Config
+import           Lamdu.Config.Theme (HasTheme)
 import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.GUI.CodeEdit.Settings as CESettings
 import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
@@ -101,23 +103,25 @@ presentationModeChoiceConfig = Choice.Config
 {-# ANN mkPresentationModeEdit ("HLint: ignore Use head"::String) #-}
 
 mkPresentationModeEdit ::
-    Monad m =>
+    ( Monad m, MonadReader env n, HasTheme env
+    , Element.HasAnimIdPrefix env, TextView.HasStyle env, Widget.HasCursor env
+    ) =>
     Widget.Id ->
-    Sugar.BinderParams name (T m) ->
-    Transaction.MkProperty m Sugar.PresentationMode ->
-    ExprGuiM m (Widget (T m Widget.EventResult))
+    Sugar.BinderParams name m ->
+    Property m Sugar.PresentationMode ->
+    n (Widget (m Widget.EventResult))
 mkPresentationModeEdit myId (Sugar.FieldParams params) prop =
     do
-        cur <- Transaction.getP prop
         theme <- Lens.view Theme.theme
         pairs <-
             traverse mkPair [Sugar.Object (paramTags !! 0), Sugar.Verbose, Sugar.Infix (paramTags !! 0) (paramTags !! 1)]
             & Reader.local
                 (TextView.style . TextView.styleColor .~ Theme.presentationChoiceColor (Theme.codeForegroundColors theme))
-        Choice.make ?? Transaction.setP prop ?? pairs ?? cur
+        Choice.make ?? Property.set prop ?? pairs ?? cur
             ?? presentationModeChoiceConfig ?? myId
             <&> Element.scale (realToFrac <$> Theme.presentationChoiceScaleFactor theme)
     where
+        cur = Property.value prop
         paramTags = params ^.. traverse . Sugar.fpInfo . Sugar.fpiTag . Sugar.tagInfo . Sugar.tagVal
         mkPair presentationMode =
             TextView.makeFocusableLabel text <&> (^. Align.tValue)
@@ -363,9 +367,9 @@ make lhsEventMap name color binder myId =
             makeParts ExprGuiT.UnlimitedFuncApply binder myId myId
         rhsJumperEquals <- jumpToRHS bodyId
         mPresentationEdit <-
-            binder ^. Sugar.bMPresentationModeProp
-            <&> MkProperty
-            & Lens._Just (mkPresentationModeEdit presentationChoiceId (binder ^. Sugar.bParams))
+            binder ^. Sugar.bMPresentationModeProp & sequenceA & transaction
+            >>= traverse
+                (mkPresentationModeEdit presentationChoiceId (binder ^. Sugar.bParams))
         jumpHolesEventMap <-
             ExprEventMap.jumpHolesEventMap (binderContentNearestHoles body)
         defNameEdit <-
