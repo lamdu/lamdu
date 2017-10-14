@@ -351,11 +351,12 @@ makeParts funcApplyLimit binder delVarBackwardsId myId =
 
 make ::
     Monad m =>
+    Widget.EventMap (T m Widget.EventResult) ->
     Name (T m) -> Draw.Color ->
     Sugar.Binder (Name (T m)) (T m) (ExprGuiT.SugarExpr m) ->
     Widget.Id ->
     ExprGuiM m (ExpressionGui m)
-make name color binder myId =
+make lhsEventMap name color binder myId =
     do
         Parts mParamsEdit mScopeEdit bodyEdit eventMap <-
             makeParts ExprGuiT.UnlimitedFuncApply binder myId myId
@@ -372,7 +373,7 @@ make name color binder myId =
             <&> (/-/ fromMaybe Element.empty mPresentationEdit)
             <&> Responsive.fromWithTextPos
             <&> E.weakerEvents jumpHolesEventMap
-        mLhsEdit <-
+        mParamEdit <-
             case mParamsEdit of
             Nothing -> return Nothing
             Just paramsEdit ->
@@ -385,7 +386,8 @@ make name color binder myId =
             <&>
             (\hbox ->
             hbox
-            [ hbox (defNameEdit : (mLhsEdit ^.. Lens._Just) ++ [Responsive.fromTextView equals])
+            [ hbox (defNameEdit : (mParamEdit ^.. Lens._Just) ++ [Responsive.fromTextView equals])
+                & E.weakerEvents lhsEventMap
             , bodyEdit
             ] )
             <&> E.weakerEvents eventMap
@@ -430,7 +432,7 @@ makeLetEdit item =
         letLabel <- ExpressionGui.grammarLabel "let"
         space <- Spacer.stdHSpace
         letEquation <-
-            make (item ^. Sugar.lName) letColor binder letId
+            make mempty (item ^. Sugar.lName) letColor binder letId
             <&> E.weakerEvents eventMap
             <&> Element.pad (Theme.letItemPadding theme <&> realToFrac)
         letLabel /|/ space /|/ letEquation & return

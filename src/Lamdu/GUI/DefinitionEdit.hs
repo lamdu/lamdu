@@ -18,7 +18,7 @@ import           GUI.Momentu.MetaKey (MetaKey(..), noMods)
 import qualified GUI.Momentu.MetaKey as MetaKey
 import qualified GUI.Momentu.Responsive as Responsive
 import           GUI.Momentu.View (View)
-import           GUI.Momentu.Widget (Widget)
+import           GUI.Momentu.Widget (Widget, EventResult)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.TextView as TextView
 import           Lamdu.Calc.Type.Scheme (Scheme(..), schemeType)
@@ -52,14 +52,15 @@ undeleteButton undelete =
 
 makeExprDefinition ::
     Monad m =>
+    Widget.EventMap (T m EventResult) ->
     Sugar.Definition (Name (T m)) (T m) (ExprGuiT.SugarExpr m) ->
     Sugar.DefinitionExpression (Name (T m)) (T m) (ExprGuiT.SugarExpr m) ->
     ExprGuiM m (ExpressionGui m)
-makeExprDefinition def bodyExpr =
+makeExprDefinition lhsEventMap def bodyExpr =
     do
         theme <- Lens.view Theme.theme
         let defColor = Theme.definitionColor (Theme.name theme)
-        BinderEdit.make (def ^. Sugar.drName) defColor
+        BinderEdit.make lhsEventMap (def ^. Sugar.drName) defColor
             (bodyExpr ^. Sugar.deContent) myId
     where
         entityId = def ^. Sugar.drEntityId
@@ -88,9 +89,10 @@ makeBuiltinDefinition def builtin =
 
 make ::
     Monad m =>
+    Widget.EventMap (T m EventResult) ->
     Sugar.Definition (Name (T m)) (T m) (ExprGuiT.SugarExpr m) ->
     ExprGuiM m (ExpressionGui m)
-make def =
+make lhsEventMap def =
     do
         defStateProp <- def ^. Sugar.drDefinitionState & transaction
         let defState = Property.value defStateProp
@@ -101,9 +103,10 @@ make def =
         defGui <-
             case def ^. Sugar.drBody of
             Sugar.DefinitionBodyExpression bodyExpr ->
-                makeExprDefinition def bodyExpr
+                makeExprDefinition lhsEventMap def bodyExpr
             Sugar.DefinitionBodyBuiltin builtin ->
                 makeBuiltinDefinition def builtin <&> Responsive.fromWithTextPos
+                <&> E.weakerEvents lhsEventMap
             <&> addDeletionDiagonal
         case defState of
             Sugar.LiveDefinition -> return defGui

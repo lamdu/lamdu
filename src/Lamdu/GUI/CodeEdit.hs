@@ -166,14 +166,6 @@ makePaneEdit theExportActions pane =
                   <&> WidgetIds.fromEntityId
                   & Widget.keysEventMapMovesCursor paneCloseKeys
                     (E.Doc ["View", "Pane", "Close"])
-                , do
-                      Transaction.setP (pane ^. Sugar.paneDefinition . Sugar.drDefinitionState & MkProperty)
-                          Sugar.DeletedDefinition
-                      pane ^. Sugar.paneClose
-                  & IOTrans.liftTrans
-                  <&> WidgetIds.fromEntityId
-                  & Widget.keysEventMapMovesCursor (Config.delKeys theConfig)
-                    (E.Doc ["Edit", "Definition", "Delete"])
                 , pane ^. Sugar.paneMoveDown <&> IOTrans.liftTrans
                   & maybe mempty
                     (Widget.keysEventMap paneMoveDownKeys
@@ -186,9 +178,17 @@ makePaneEdit theExportActions pane =
                   & Widget.keysEventMap exportKeys
                     (E.Doc ["Collaboration", "Export definition to JSON file"])
                 ] & mconcat
+            lhsEventMap =
+                do
+                    Transaction.setP (pane ^. Sugar.paneDefinition . Sugar.drDefinitionState & MkProperty)
+                        Sugar.DeletedDefinition
+                    pane ^. Sugar.paneClose
+                <&> WidgetIds.fromEntityId
+                & Widget.keysEventMapMovesCursor (Config.delKeys theConfig)
+                    (E.Doc ["Edit", "Definition", "Delete"])
             Config.Pane{paneCloseKeys, paneMoveDownKeys, paneMoveUpKeys} = Config.pane theConfig
             exportKeys = Config.exportKeys (Config.export theConfig)
-        DefinitionEdit.make (pane ^. Sugar.paneDefinition)
+        DefinitionEdit.make lhsEventMap (pane ^. Sugar.paneDefinition)
             <&> Lens.mapped %~ IOTrans.liftTrans
             <&> E.weakerEvents paneEventMap
 
