@@ -19,6 +19,7 @@ import           Lamdu.Prelude
 
 data ValAnnotation = ValAnnotation
     { valAnnotationBGColor :: Draw.Color
+    , valAnnotationHoverBGColor :: Draw.Color
     , valAnnotationSpacing :: Double -- as ratio of line height
     , valAnnotationWidthExpansionLimit :: Double
     , valAnnotationShrinkAtLeast :: Double
