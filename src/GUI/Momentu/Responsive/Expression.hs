@@ -1,7 +1,7 @@
 -- | Responsive layout for expressions express the hierarchy using parentheses and indentation,
 -- as is customary in many programming languages and in mathematics.
 
-{-# LANGUAGE NoImplicitPrelude, TemplateHaskell, OverloadedStrings #-}
+{-# LANGUAGE NoImplicitPrelude, TemplateHaskell, OverloadedStrings, FlexibleContexts #-}
 
 module GUI.Momentu.Responsive.Expression
     ( Style(..), HasStyle(..)
@@ -54,10 +54,7 @@ addParens ::
 addParens =
     do
         textStyle <- Lens.view TextView.style
-        let f ::
-                Functor f =>
-                AnimId -> WithTextPos (Widget (f Widget.EventResult)) -> WithTextPos (Widget (f Widget.EventResult))
-            f myId w =
+        let f myId w =
                 paren "(" /|/ w /|/ paren ")"
                 where
                     paren t = TextView.make textStyle t (myId ++ [encodeUtf8 t])
@@ -74,8 +71,7 @@ indent =
                 Responsive.layoutMode . Responsive.modeWidths
                 -~ bWidth
         makeBar <- indentBar
-        let f :: Functor f => AnimId -> WithTextPos (Widget (f EventResult)) -> WithTextPos (Widget (f EventResult))
-            f myId w = makeBar (w ^. Element.height) myId /|/ w
+        let f myId w = makeBar (w ^. Element.height) myId /|/ w
         return (\myId -> (Responsive.alignedWidget %~ f myId) . reduceWidth)
 
 totalBarWidth :: (MonadReader env m, HasStyle env, Spacer.HasStdSpacing env) => m Double
@@ -92,8 +88,7 @@ indentBar =
     do
         s <- Lens.view style
         stdSpace <- Spacer.getSpaceSize <&> (^. _1)
-        let f :: Widget.R -> AnimId -> View
-            f height myId =
+        let f height myId =
                 bar /|/ Spacer.make (Vector2 gapWidth 0)
                 where
                     bar =
