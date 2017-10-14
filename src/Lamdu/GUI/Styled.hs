@@ -3,7 +3,7 @@
 {-# LANGUAGE NoImplicitPrelude, OverloadedStrings #-}
 module Lamdu.GUI.Styled
     ( grammarLabel, grammarText
-    , addValBG, addValBGWithColor
+    , addValBG, addBgColor
     , addValPadding, addValFrame
     , addDeletionDiagonal
     ) where
@@ -51,14 +51,14 @@ addValBG ::
     ( MonadReader env m, Element a
     , Element.HasAnimIdPrefix env, HasTheme env
     ) => m (a -> a)
-addValBG = addValBGWithColor Theme.valFrameBGColor
+addValBG = addBgColor Theme.valFrameBGColor
 
-addValBGWithColor ::
+addBgColor ::
     ( MonadReader env m, Element a
     , Element.HasAnimIdPrefix env, HasTheme env
     ) => (Theme -> Draw.Color) -> m (a -> a)
-addValBGWithColor color =
-    Draw.backgroundColor <*> (Lens.view Theme.theme <&> color)
+addBgColor getColor =
+    Draw.backgroundColor <*> (Lens.view Theme.theme <&> getColor)
 
 addValPadding :: (MonadReader env m, Element a, HasTheme env) => m (a -> a)
 addValPadding =

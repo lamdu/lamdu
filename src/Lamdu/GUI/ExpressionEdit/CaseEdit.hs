@@ -125,7 +125,7 @@ makeAltRow ::
 makeAltRow mActiveTag (Sugar.CompositeItem delete tag altExpr) =
     do
         config <- Lens.view Config.config
-        addBg <- Styled.addValBGWithColor Theme.evaluatedPathBGColor
+        addBg <- Styled.addBgColor Theme.evaluatedPathBGColor
         let itemEventMap = caseDelEventMap config delete
         tagLabel <-
             TagEdit.makeCaseTag TagEdit.WithTagHoles (ExprGuiT.nextHolesBefore altExpr) tag

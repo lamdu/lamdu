@@ -258,7 +258,7 @@ addEvaluationResult ::
 addEvaluationResult mNeigh resDisp wideBehavior animId =
     case (erdVal resDisp ^. ER.payload, erdVal resDisp ^. ER.body) of
     (T.TRecord T.CEmpty, _) ->
-        Styled.addValBGWithColor Theme.evaluatedPathBGColor <&> const
+        Styled.addBgColor Theme.evaluatedPathBGColor <&> const
     (_, ER.RFunc{}) -> return (flip const)
     _ -> addAnnotationH (makeEvalView mNeigh resDisp) wideBehavior animId
 

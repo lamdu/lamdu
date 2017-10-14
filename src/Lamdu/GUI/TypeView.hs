@@ -6,7 +6,7 @@ module Lamdu.GUI.TypeView
 
 import qualified Control.Lens as Lens
 import           Control.Monad.Trans.Class (MonadTrans(..))
-import           Control.Monad.Trans.State (StateT, state, evalStateT)
+import           Control.Monad.State (StateT, state, evalStateT)
 import           Control.Monad.Transaction (MonadTransaction(..))
 import qualified Data.Map as Map
 import qualified Data.Store.Transaction as Transaction
@@ -33,6 +33,7 @@ import qualified Lamdu.Calc.Type as T
 import           Lamdu.Config.Theme (HasTheme)
 import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.Data.Anchors as Anchors
+import qualified Lamdu.GUI.Styled as Styled
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Sugar.OrderTags (orderedFlatComposite)
 import           System.Random (Random, random)
@@ -137,22 +138,16 @@ makeTInst parentPrecedence tid typeParams =
             params ->
                 mapM makeTypeParam params
                 <&> GridView.make
-                >>= addValPadding
-                >>= addBGColor
+                >>= (Styled.addValPadding ??)
+                >>= addTypeBG
                 <&> afterName
 
 toAligned :: SizedElement a => R -> WithTextPos a -> Aligned a
 toAligned x (WithTextPos y w) =
     Aligned (Vector2 x (y / w ^. Element.height)) w
 
-addValPadding :: (Element a, MonadReader env m, HasTheme env) => a -> M m a
-addValPadding view =
-    do
-        padding <- Lens.view Theme.theme <&> Theme.valFramePadding <&> fmap realToFrac
-        Element.pad padding view & pure
-
-addBGColor :: (Element a, MonadReader env m, HasTheme env) => a -> M m a
-addBGColor view =
+addTypeBG :: (Element a, MonadReader env m, HasTheme env) => a -> M m a
+addTypeBG view =
     do
         color <- Lens.view Theme.theme <&> Theme.typeFrameBGColor
         bgId <- randAnimId
@@ -211,8 +206,8 @@ makeComposite mkField composite =
                             & Aligned 0.5
                     makeTVar var <&> (^. Align.tValue) <&> Aligned 0.5 <&> (sqr /-/)
         (Aligned 0.5 fieldsView /-/ varView) ^. Align.value & Align.WithTextPos 0
-            & addValPadding
-            >>= addBGColor
+            & (Styled.addValPadding ??)
+            >>= addTypeBG
     where
         (fields, extension) = composite ^. orderedFlatComposite
 
