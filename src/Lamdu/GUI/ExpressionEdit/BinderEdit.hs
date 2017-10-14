@@ -15,7 +15,6 @@ import qualified Control.Monad.Transaction as Transaction
 import           Data.CurAndPrev (CurAndPrev, current, fallbackToPrev)
 import           Data.List.Utils (nonEmptyAll, withPrevNext)
 import qualified Data.Map as Map
-import           Data.Store.Property (Property)
 import qualified Data.Store.Property as Property
 import           Data.Store.Transaction (Transaction, MkProperty(..))
 import qualified Data.Text as Text
@@ -32,13 +31,10 @@ import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.Responsive.Options as Options
 import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
-import qualified GUI.Momentu.Widgets.Choice as Choice
-import qualified GUI.Momentu.Widgets.FocusDelegator as FocusDelegator
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified GUI.Momentu.Widgets.TextView as TextView
 import qualified Lamdu.CharClassification as Chars
 import qualified Lamdu.Config as Config
-import           Lamdu.Config.Theme (HasTheme)
 import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.GUI.CodeEdit.Settings as CESettings
 import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
@@ -50,6 +46,7 @@ import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
 import qualified Lamdu.GUI.NameEdit as NameEdit
 import qualified Lamdu.GUI.ParamEdit as ParamEdit
+import qualified Lamdu.GUI.PresentationModeEdit as PresentationModeEdit
 import qualified Lamdu.GUI.Styled as Styled
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Name (Name(..))
@@ -86,56 +83,6 @@ makeBinderNameEdit binderActions rhsJumperEquals name color myId =
             | nonOperatorName (name ^. Name.form) =
                 Align.tValue %~ E.strongerEvents rhsJumperEquals
             | otherwise = id
-
-presentationModeChoiceConfig :: Choice.Config
-presentationModeChoiceConfig = Choice.Config
-    { Choice.cwcFDConfig =
-        FocusDelegator.Config
-        { FocusDelegator.focusChildKeys = [MetaKey noMods MetaKey.Key'Enter]
-        , FocusDelegator.focusChildDoc = E.Doc ["Presentation Mode", "Select"]
-        , FocusDelegator.focusParentKeys = [MetaKey noMods MetaKey.Key'Enter]
-        , FocusDelegator.focusParentDoc = E.Doc ["Presentation Mode", "Choose selected"]
-        }
-    , Choice.cwcOrientation = Choice.Vertical
-    , Choice.cwcExpandMode = Choice.ExplicitEntry
-    }
-
-{-# ANN mkPresentationModeEdit ("HLint: ignore Use head"::String) #-}
-
-mkPresentationModeEdit ::
-    ( Monad m, MonadReader env n, HasTheme env
-    , Element.HasAnimIdPrefix env, TextView.HasStyle env, Widget.HasCursor env
-    ) =>
-    Widget.Id ->
-    Sugar.BinderParams name m ->
-    Property m Sugar.PresentationMode ->
-    n (Widget (m Widget.EventResult))
-mkPresentationModeEdit myId (Sugar.FieldParams params) prop =
-    do
-        theme <- Lens.view Theme.theme
-        pairs <-
-            traverse mkPair [Sugar.Object (paramTags !! 0), Sugar.Verbose, Sugar.Infix (paramTags !! 0) (paramTags !! 1)]
-            & Reader.local
-                (TextView.style . TextView.styleColor .~ Theme.presentationChoiceColor (Theme.codeForegroundColors theme))
-        Choice.make ?? Property.set prop ?? pairs ?? cur
-            ?? presentationModeChoiceConfig ?? myId
-            <&> Element.scale (realToFrac <$> Theme.presentationChoiceScaleFactor theme)
-    where
-        cur = Property.value prop
-        paramTags = params ^.. traverse . Sugar.fpInfo . Sugar.fpiTag . Sugar.tagInfo . Sugar.tagVal
-        mkPair presentationMode =
-            TextView.makeFocusableLabel text <&> (^. Align.tValue)
-            <&> (,) presentationMode
-            where
-                text =
-                    case presentationMode of
-                    Sugar.Verbose -> "Verbose"
-                    Sugar.Object{} -> "OO"
-                    Sugar.Infix{} -> "Infix"
-                    & Text.pack
-mkPresentationModeEdit _ _ _ =
-    -- This shouldn't happen?
-    return Element.empty
 
 data Parts m = Parts
     { pMParamsEdit :: Maybe (ExpressionGui m)
@@ -369,7 +316,7 @@ make lhsEventMap name color binder myId =
         mPresentationEdit <-
             binder ^. Sugar.bMPresentationModeProp & sequenceA & transaction
             >>= traverse
-                (mkPresentationModeEdit presentationChoiceId (binder ^. Sugar.bParams))
+                (PresentationModeEdit.make presentationChoiceId (binder ^. Sugar.bParams))
         jumpHolesEventMap <-
             ExprEventMap.jumpHolesEventMap (binderContentNearestHoles body)
         defNameEdit <-

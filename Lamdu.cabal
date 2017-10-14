@@ -221,6 +221,7 @@ Executable lamdu
                   , Lamdu.GUI.Main
                   , Lamdu.GUI.NameEdit
                   , Lamdu.GUI.ParamEdit
+                  , Lamdu.GUI.PresentationModeEdit
                   , Lamdu.GUI.ReplEdit
                   , Lamdu.GUI.Styled
                   , Lamdu.GUI.TypeView
