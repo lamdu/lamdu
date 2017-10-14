@@ -198,12 +198,13 @@ makeSumField (tag, fieldType) = makeField (tag, fieldType)
 
 makeComposite ::
     (MonadReader env m, TextView.HasStyle env, HasTheme env) =>
+    Text -> Text ->
     M m (Aligned View) -> ((T.Tag, Type) -> M m [Aligned View]) -> T.Composite t -> M m (WithTextPos View)
-makeComposite _ _ T.CEmpty = makeEmptyComposite
-makeComposite sepView mkField composite =
+makeComposite _ _ _ _ T.CEmpty = makeEmptyComposite
+makeComposite o c sepView mkField composite =
     do
-        opener <- grammar "{" <&> (^. Align.tValue)
-        closer <- grammar "}" <&> (^. Align.tValue)
+        opener <- grammar o <&> (^. Align.tValue)
+        closer <- grammar c <&> (^. Align.tValue)
         rawFieldsView <-
             traverse mkField fields
             >>= zipWithM prepend (pure Element.empty : repeat sepView)
@@ -251,10 +252,9 @@ makeInternal parentPrecedence typ =
     T.TVar var -> makeTVar var
     T.TFun a b -> makeTFun parentPrecedence a b
     T.TInst typeId typeParams -> makeTInst parentPrecedence typeId typeParams
-    T.TRecord composite -> makeComposite (pure Element.empty) makeField composite
+    T.TRecord composite -> makeComposite "{" "}" (pure Element.empty) makeField composite
     T.TSum composite ->
-        [ grammar "+"
-        , makeComposite (grammar "or: " <&> toAligned 0) makeSumField composite
+        [ makeComposite "+{" "}" (grammar "or: " <&> toAligned 0) makeSumField composite
         ] & sequenceA
         <&> hbox
 
