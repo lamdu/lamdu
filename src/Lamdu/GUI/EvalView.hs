@@ -117,7 +117,7 @@ makeArray animId items =
             remainView <-
                 if null (drop tableCutoff pairs)
                 then pure Element.empty
-                else label "..." animId
+                else label "…" animId
             Aligned 0.5 table /-/ Aligned 0.5 remainView ^. Align.value & pure
         where
             tags = x ^.. _1 . traverse . _1
@@ -142,7 +142,7 @@ makeArray animId items =
             [ [ label ", " itemId | idx > 0 ]
             , [ makeInner (Anim.augmentId itemId ("val" :: Text)) val
                 | idx < arrayCutoff ]
-            , [ label "..." itemId | idx == arrayCutoff ]
+            , [ label "…" itemId | idx == arrayCutoff ]
             ] & concat
             & sequence
             <&> hbox
@@ -170,7 +170,7 @@ makeRecExtend animId typ recExtend =
                 [ [ label "* " itemId ]
                 , [ makeInner (Anim.augmentId itemId ("val" :: Text)) val
                     | idx < cutoff ]
-                , [ label "..." itemId | idx == cutoff ]
+                , [ label "…" itemId | idx == cutoff ]
                 ] & concat
                 & sequence
                 <&> hbox
@@ -301,7 +301,7 @@ toText animId val =
             map limLine start ++
             ( case rest of
               [] -> []
-              _ -> ["..."]
+              _ -> ["…"]
             ) & Text.intercalate "\n"
             where
                 (start, rest) = splitAt 10 (Text.lines text)
@@ -310,6 +310,6 @@ toText animId val =
             start <>
             if Text.null rest
             then ""
-            else "..."
+            else "…"
             where
                 (start, rest) = Text.splitAt 100 ln
