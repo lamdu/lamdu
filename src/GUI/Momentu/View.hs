@@ -3,7 +3,6 @@ module GUI.Momentu.View
     ( View(..), vSize, vAnimLayers, make
     , animFrames
     , Size, R
-    , hoverInPlaceOf
     , unitSquare
     ) where
 
@@ -47,11 +46,6 @@ make sz frame = View sz (Element.Layers [frame])
 
 animFrames :: Lens.Traversal' View Anim.Frame
 animFrames = vAnimLayers . Element.layers . traverse
-
--- TODO: Remove this
-hoverInPlaceOf :: Element a => View -> a -> a
-hoverInPlaceOf onTop =
-    Element.setLayers . Element.layers .~ mempty : onTop ^. vAnimLayers . Element.layers
 
 unitSquare :: AnimId -> View
 unitSquare = make 1 . Anim.unitSquare

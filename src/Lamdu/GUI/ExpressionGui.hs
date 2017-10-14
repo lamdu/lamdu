@@ -107,10 +107,11 @@ applyWideAnnotationBehavior animId HoverWideAnnotation =
         addBg <- addAnnotationHoverBackground animId
         return $
             \shrinkRatio layout ->
-                addBg layout
                 -- TODO: This is a buggy hover that ignores
                 -- Surrounding (and exits screen).
-                & (`View.hoverInPlaceOf` shrinker shrinkRatio layout)
+                shrinker shrinkRatio layout
+                & Element.setLayers . Element.layers .~ addBg layout ^. View.vAnimLayers . Element.layers
+                & Element.hoverLayers
 
 processAnnotationGui ::
     (MonadReader env m, HasTheme env, Spacer.HasStdSpacing env) =>
