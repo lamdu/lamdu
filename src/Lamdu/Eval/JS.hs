@@ -184,7 +184,7 @@ parseResult (Json.Object obj) =
     Nothing ->
         do
             val <- parseObj obj
-            case (obj .? "cacheId" <|> obj .? "func") of
+            case obj .? "cacheId" <|> obj .? "func" of
                 Nothing -> return ()
                 Just cacheId -> Lens.at cacheId ?= val
             return val

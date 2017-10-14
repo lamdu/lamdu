@@ -227,7 +227,7 @@ addAnnotationH ::
     , TextView.HasStyle env, Spacer.HasStdSpacing env
     , Element.HasAnimIdPrefix env
     ) =>
-    (m (WithTextPos View)) ->
+    m (WithTextPos View) ->
     WideAnnotationBehavior ->
     m
     ((Widget.R -> Widget.R) ->
