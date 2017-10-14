@@ -288,6 +288,7 @@ isReserved name =
             [ "if", "elif", "else"
             , "case", "of"
             , "let"
+            , "or"
             , "λ", "«", "»", "Ø", "|", ".", "→", "➾"
             ]
 

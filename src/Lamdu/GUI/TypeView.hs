@@ -5,6 +5,7 @@ module Lamdu.GUI.TypeView
     ) where
 
 import qualified Control.Lens as Lens
+import           Control.Monad (zipWithM)
 import           Control.Monad.Trans.Class (MonadTrans(..))
 import           Control.Monad.State (StateT, state, evalStateT)
 import           Control.Monad.Transaction (MonadTransaction(..))
@@ -192,19 +193,23 @@ makeSumField ::
     ) => (T.Tag, Type) -> M m [Aligned View]
 makeSumField (tag, T.TRecord T.CEmpty) =
     makeTag tag <&> toAligned 1 <&> (:[])
+    -- ^ Nullary data constructor
 makeSumField (tag, fieldType) = makeField (tag, fieldType)
 
 makeComposite ::
     (MonadReader env m, TextView.HasStyle env, HasTheme env) =>
-    ((T.Tag, Type) -> M m [Aligned View]) -> T.Composite t -> M m (WithTextPos View)
-makeComposite _ T.CEmpty = makeEmptyRecord
-makeComposite mkField composite =
+    M m (Aligned View) -> ((T.Tag, Type) -> M m [Aligned View]) -> T.Composite t -> M m (WithTextPos View)
+makeComposite _ _ T.CEmpty = makeEmptyRecord
+makeComposite sepView mkField composite =
     do
-        fieldsView <- GridView.make <$> mapM mkField fields
+        fieldsView <-
+            traverse mkField fields
+            >>= zipWithM prepend (pure Element.empty : repeat sepView)
+            <&> GridView.make
         let barWidth
                 | null fields = 150
                 | otherwise = fieldsView ^. Element.width
-        varView <-
+        extView <-
             case extension of
             Nothing -> pure Element.empty
             Just var ->
@@ -213,12 +218,15 @@ makeComposite mkField composite =
                     let sqr =
                             View.unitSquare sqrId
                             & Element.scale (Vector2 barWidth 10)
-                            & Aligned 0.5
-                    makeTVar var <&> (^. Align.tValue) <&> Aligned 0.5 <&> (sqr /-/)
-        (Aligned 0.5 fieldsView /-/ varView) ^. Align.value & Align.WithTextPos 0
+                    sep <- sepView
+                    varView <- makeTVar var <&> toAligned 0
+                    let lastLine = (sep /|/ varView) ^. Align.value
+                    pure (Aligned 0.5 sqr /-/ Aligned 0.5 lastLine)
+        (Aligned 0.5 fieldsView /-/ extView) ^. Align.value & Align.WithTextPos 0
             & (Styled.addValPadding ??)
             >>= addTypeBG
     where
+        prepend sep field = (:) <$> sep ?? field
         (fields, extension) = composite ^. orderedFlatComposite
 
 splitMake ::
@@ -236,10 +244,10 @@ makeInternal parentPrecedence typ =
     T.TVar var -> makeTVar var
     T.TFun a b -> makeTFun parentPrecedence a b
     T.TInst typeId typeParams -> makeTInst parentPrecedence typeId typeParams
-    T.TRecord composite -> makeComposite makeField composite
+    T.TRecord composite -> makeComposite (pure Element.empty) makeField composite
     T.TSum composite ->
         [ grammar "+"
-        , makeComposite makeSumField composite
+        , makeComposite (grammar "or: " <&> toAligned 0) makeSumField composite
         ] & sequenceA
         <&> hbox
 
