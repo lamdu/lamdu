@@ -145,7 +145,9 @@ definitionTypeChangeBox info getVarId =
                 (E.Doc ["Edit", "Update definition type"]) update)
             & pure
     where
-        mkTypeView idSuffix scheme = TypeView.make (scheme ^. schemeType) (animId ++ [idSuffix])
+        mkTypeView idSuffix scheme =
+            TypeView.make (scheme ^. schemeType)
+            & Reader.local (Element.animIdPrefix .~ animId ++ [idSuffix])
         myId = Widget.joinId getVarId ["type change"]
         animId = Widget.toAnimId myId
 

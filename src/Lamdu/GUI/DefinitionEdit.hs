@@ -10,7 +10,6 @@ import qualified Data.Store.Property as Property
 import           Data.Store.Transaction (Transaction)
 import           GUI.Momentu.Align (WithTextPos)
 import qualified GUI.Momentu.Align as Align
-import           GUI.Momentu.Animation (AnimId)
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Glue ((/-/), (/|/))
@@ -77,15 +76,17 @@ makeBuiltinDefinition def builtin =
         nameEdit <- NameEdit.makeAtBinder name defColor (Widget.joinId myId ["name"])
         equals <- TextView.makeLabel " = "
         builtinEdit <- BuiltinEdit.make builtin myId
-        typeView <- topLevelSchemeTypeView (builtin ^. Sugar.biType) entityId ["builtinType"]
+        typeView <-
+            topLevelSchemeTypeView (builtin ^. Sugar.biType)
+            & Reader.local (Element.animIdPrefix .~ animId ++ ["builtinType"])
         (nameEdit /|/ equals /|/ builtinEdit)
             /-/
             typeView
             & return
     where
         name = def ^. Sugar.drName
-        entityId = def ^. Sugar.drEntityId
-        myId = WidgetIds.fromEntityId entityId
+        animId = myId & Widget.toAnimId
+        myId = def ^. Sugar.drEntityId & WidgetIds.fromEntityId
 
 make ::
     Monad m =>
@@ -121,11 +122,8 @@ make lhsEventMap def =
         myId = def ^. Sugar.drEntityId & WidgetIds.fromEntityId
 
 topLevelSchemeTypeView ::
-    Monad m => Scheme -> Sugar.EntityId -> AnimId -> ExprGuiM m (WithTextPos View)
-topLevelSchemeTypeView scheme entityId suffix =
+    Monad m => Scheme -> ExprGuiM m (WithTextPos View)
+topLevelSchemeTypeView scheme =
     -- At the definition-level, Schemes can be shown as ordinary
     -- types to avoid confusing forall's:
-    WidgetIds.fromEntityId entityId
-    & (`Widget.joinId` suffix)
-    & Widget.toAnimId
-    & TypeView.make (scheme ^. schemeType)
+    TypeView.make (scheme ^. schemeType)

@@ -18,6 +18,7 @@ module Lamdu.GUI.ExpressionGui
     ) where
 
 import qualified Control.Lens as Lens
+import qualified Control.Monad.Reader as Reader
 import           Control.Monad.Transaction (MonadTransaction)
 import           Data.Binary.Utils (encodeS)
 import           Data.CurAndPrev (CurAndPrev(..), CurPrevTag(..), curPrevTag, fallbackToPrev)
@@ -25,7 +26,6 @@ import           Data.Store.Transaction (Transaction)
 import           Data.Vector.Vector2 (Vector2(..))
 import           GUI.Momentu.Align (WithTextPos(..))
 import qualified GUI.Momentu.Align as Align
-import           GUI.Momentu.Animation (AnimId)
 import qualified GUI.Momentu.Draw as Draw
 import           GUI.Momentu.Element (Element)
 import qualified GUI.Momentu.Element as Element
@@ -64,19 +64,21 @@ import           Lamdu.Prelude
 type T = Transaction
 
 addAnnotationBackgroundH ::
-    (MonadReader env m, HasTheme env, Element a) =>
-    (Theme.ValAnnotation -> Draw.Color) -> AnimId -> m (a -> a)
-addAnnotationBackgroundH getColor animId =
-    Lens.view theme <&>
-    \t ->
-    Draw.backgroundColor bgAnimId (getColor (Theme.valAnnotation t))
-    where
-        bgAnimId = animId ++ ["annotation background"]
+    (MonadReader env m, HasTheme env, Element a, Element.HasAnimIdPrefix env) =>
+    (Theme.ValAnnotation -> Draw.Color) -> m (a -> a)
+addAnnotationBackgroundH getColor =
+    do
+        t <- Lens.view theme
+        bgAnimId <- Element.subAnimId ["annotation background"]
+        Draw.backgroundColor bgAnimId (getColor (Theme.valAnnotation t)) & pure
 
-addAnnotationBackground :: (MonadReader env m, HasTheme env, Element a) => AnimId -> m (a -> a)
+addAnnotationBackground ::
+    (MonadReader env m, HasTheme env, Element a, Element.HasAnimIdPrefix env) =>
+    m (a -> a)
 addAnnotationBackground = addAnnotationBackgroundH Theme.valAnnotationBGColor
 
-addAnnotationHoverBackground :: (MonadReader env m, HasTheme env, Element a) => AnimId -> m (a -> a)
+addAnnotationHoverBackground ::
+    (MonadReader env m, HasTheme env, Element a, Element.HasAnimIdPrefix env) => m (a -> a)
 addAnnotationHoverBackground = addAnnotationBackgroundH Theme.valAnnotationHoverBGColor
 
 data WideAnnotationBehavior
@@ -91,20 +93,20 @@ wideAnnotationBehaviorFromSelected True = HoverWideAnnotation
 -- NOTE: Also adds the background color, because it differs based on
 -- whether we're hovering
 applyWideAnnotationBehavior ::
-    (MonadReader env m, HasTheme env) =>
-    AnimId -> WideAnnotationBehavior ->
+    (MonadReader env m, HasTheme env, Element.HasAnimIdPrefix env) =>
+    WideAnnotationBehavior ->
     m (Vector2 Widget.R -> View -> View)
-applyWideAnnotationBehavior animId KeepWideAnnotation =
-    addAnnotationBackground animId <&> const
-applyWideAnnotationBehavior animId ShrinkWideAnnotation =
-    addAnnotationBackground animId
+applyWideAnnotationBehavior KeepWideAnnotation =
+    addAnnotationBackground <&> const
+applyWideAnnotationBehavior ShrinkWideAnnotation =
+    addAnnotationBackground
     <&>
     \addBg shrinkRatio layout ->
     Element.scale shrinkRatio layout & addBg
-applyWideAnnotationBehavior animId HoverWideAnnotation =
+applyWideAnnotationBehavior HoverWideAnnotation =
     do
-        shrinker <- applyWideAnnotationBehavior animId ShrinkWideAnnotation
-        addBg <- addAnnotationHoverBackground animId
+        shrinker <- applyWideAnnotationBehavior ShrinkWideAnnotation
+        addBg <- addAnnotationHoverBackground
         return $
             \shrinkRatio layout ->
                 -- TODO: This is a buggy hover that ignores
@@ -114,15 +116,17 @@ applyWideAnnotationBehavior animId HoverWideAnnotation =
                 & Element.hoverLayers
 
 processAnnotationGui ::
-    (MonadReader env m, HasTheme env, Spacer.HasStdSpacing env) =>
-    AnimId -> WideAnnotationBehavior ->
+    ( MonadReader env m, HasTheme env, Spacer.HasStdSpacing env
+    , Element.HasAnimIdPrefix env
+    ) =>
+    WideAnnotationBehavior ->
     m (Widget.R -> View -> View)
-processAnnotationGui animId wideAnnotationBehavior =
+processAnnotationGui wideAnnotationBehavior =
     f
     <$> (Lens.view theme <&> Theme.valAnnotation)
-    <*> addAnnotationBackground animId
+    <*> addAnnotationBackground
     <*> Spacer.getSpaceSize
-    <*> applyWideAnnotationBehavior animId wideAnnotationBehavior
+    <*> applyWideAnnotationBehavior wideAnnotationBehavior
     where
         f th addBg stdSpacing applyWide minWidth annotation
             | annotationWidth > minWidth + max shrinkAtLeast expansionLimit
@@ -152,12 +156,11 @@ data EvalResDisplay = EvalResDisplay
     , erdVal :: ER.Val Type
     }
 
-makeEvaluationResultView ::
-    Monad m => AnimId -> EvalResDisplay -> ExprGuiM m (WithTextPos View)
-makeEvaluationResultView animId res =
+makeEvaluationResultView :: Monad m => EvalResDisplay -> ExprGuiM m (WithTextPos View)
+makeEvaluationResultView res =
     do
         th <- Lens.view theme
-        EvalView.make animId (erdVal res)
+        EvalView.make (erdVal res)
             <&>
             case erdSource res of
             Current -> id
@@ -171,23 +174,24 @@ data NeighborVals a = NeighborVals
 makeEvalView ::
     Monad m =>
     Maybe (NeighborVals (Maybe EvalResDisplay)) -> EvalResDisplay ->
-    AnimId -> ExprGuiM m (WithTextPos View)
-makeEvalView mNeighbours evalRes animId =
+    ExprGuiM m (WithTextPos View)
+makeEvalView mNeighbours evalRes =
     do
         evalTheme <- Lens.view theme <&> Theme.eval
-        let mkAnimId res =
+        let animIdSuffix res =
                 -- When we can scroll between eval view results we
                 -- must encode the scope into the anim ID for smooth
                 -- scroll to work.
                 -- When we cannot, we'd rather not animate changes
                 -- within a scrolled scope (use same animId).
                 case mNeighbours of
-                Nothing -> animId ++ ["eval-view"]
-                Just _ -> animId ++ [encodeS (erdScope res)]
+                Nothing -> ["eval-view"]
+                Just _ -> [encodeS (erdScope res)]
         let makeEvaluationResultViewBG res =
-                addAnnotationBackground (mkAnimId res)
-                <*> makeEvaluationResultView (mkAnimId res) res
+                addAnnotationBackground
+                <*> makeEvaluationResultView res
                 <&> (^. Align.tValue)
+                & Reader.local (Element.animIdPrefix <>~ animIdSuffix res)
         let neighbourView n =
                 Lens._Just makeEvaluationResultViewBG n
                 <&> Lens.mapped %~ Element.scale (Theme.neighborsScaleFactor evalTheme <&> realToFrac)
@@ -200,7 +204,9 @@ makeEvalView mNeighbours evalRes animId =
                 (,)
                 <$> neighbourView mPrev
                 <*> neighbourView mNext
-        evalView <- makeEvaluationResultView (mkAnimId evalRes) evalRes
+        evalView <-
+            makeEvaluationResultView evalRes
+            & Reader.local (Element.animIdPrefix <>~ animIdSuffix evalRes)
         let prevPos = Vector2 0 0.5 * evalView ^. Element.size - prev ^. Element.size
         let nextPos = Vector2 1 0.5 * evalView ^. Element.size
         evalView
@@ -219,18 +225,19 @@ annotationSpacer =
 addAnnotationH ::
     ( Functor f, MonadReader env m, HasTheme env
     , TextView.HasStyle env, Spacer.HasStdSpacing env
+    , Element.HasAnimIdPrefix env
     ) =>
-    (AnimId -> m (WithTextPos View)) ->
-    WideAnnotationBehavior -> AnimId ->
+    (m (WithTextPos View)) ->
+    WideAnnotationBehavior ->
     m
     ((Widget.R -> Widget.R) ->
      Responsive (f Widget.EventResult) ->
      Responsive (f Widget.EventResult))
-addAnnotationH f wideBehavior animId =
+addAnnotationH f wideBehavior =
     do
         vspace <- annotationSpacer
-        annotationLayout <- f animId <&> (^. Align.tValue)
-        processAnn <- processAnnotationGui animId wideBehavior
+        annotationLayout <- f <&> (^. Align.tValue)
+        processAnn <- processAnnotationGui wideBehavior
         let onAlignedWidget minWidth w =
                 w /-/ vspace /-/
                 (processAnn (w ^. Element.width) annotationLayout
@@ -240,28 +247,28 @@ addAnnotationH f wideBehavior animId =
 
 addInferredType ::
     ( Functor f, MonadReader env m, Spacer.HasStdSpacing env, HasTheme env
-    , MonadTransaction n m
+    , MonadTransaction n m, Element.HasAnimIdPrefix env
     ) =>
-    Type -> WideAnnotationBehavior -> AnimId ->
+    Type -> WideAnnotationBehavior ->
     m (Responsive (f Widget.EventResult) ->
        Responsive (f Widget.EventResult))
-addInferredType typ wideBehavior animId =
-    addAnnotationH (TypeView.make typ) wideBehavior animId ?? const 0
+addInferredType typ wideBehavior =
+    addAnnotationH (TypeView.make typ) wideBehavior ?? const 0
 
 addEvaluationResult ::
     (Functor f, Monad m) =>
     Maybe (NeighborVals (Maybe EvalResDisplay)) -> EvalResDisplay ->
-    WideAnnotationBehavior -> AnimId ->
+    WideAnnotationBehavior ->
     ExprGuiM m
     ((Widget.R -> Widget.R) ->
      Responsive (f Widget.EventResult) ->
      Responsive (f Widget.EventResult))
-addEvaluationResult mNeigh resDisp wideBehavior animId =
+addEvaluationResult mNeigh resDisp wideBehavior =
     case (erdVal resDisp ^. ER.payload, erdVal resDisp ^. ER.body) of
     (T.TRecord T.CEmpty, _) ->
         Styled.addBgColor Theme.evaluatedPathBGColor <&> const
     (_, ER.RFunc{}) -> return (flip const)
-    _ -> addAnnotationH (makeEvalView mNeigh resDisp) wideBehavior animId
+    _ -> addAnnotationH (makeEvalView mNeigh resDisp) wideBehavior
 
 parentExprFDConfig :: Config -> FocusDelegator.Config
 parentExprFDConfig config = FocusDelegator.Config
@@ -313,8 +320,9 @@ maybeAddAnnotationPl pl =
         maybeAddAnnotation wideAnnotationBehavior
             showAnnotation
             (pl ^. Sugar.plAnnotation)
-            (Widget.toAnimId (WidgetIds.fromEntityId (pl ^. Sugar.plEntityId)))
+            & Reader.local (Element.animIdPrefix .~ animId)
     where
+        animId = WidgetIds.fromExprPayload pl & Widget.toAnimId
         showAnnotation = pl ^. Sugar.plData . ExprGuiT.plShowAnnotation
 
 evaluationResult ::
@@ -354,9 +362,9 @@ getAnnotationMode opt annotation =
 maybeAddAnnotationWith ::
     (Functor f, Monad m) =>
     EvalAnnotationOptions -> WideAnnotationBehavior -> ShowAnnotation ->
-    Sugar.Annotation -> AnimId ->
+    Sugar.Annotation ->
     ExprGuiM m (ExpressionGui f -> ExpressionGui f)
-maybeAddAnnotationWith opt wideAnnotationBehavior showAnnotation annotation animId =
+maybeAddAnnotationWith opt wideAnnotationBehavior showAnnotation annotation =
     getAnnotationMode opt annotation
     >>= \case
     AnnotationModeNone
@@ -374,17 +382,17 @@ maybeAddAnnotationWith opt wideAnnotationBehavior showAnnotation annotation anim
         noAnnotation = pure id
         -- concise mode and eval mode with no result
         inferredType = annotation ^. Sugar.aInferredType
-        withType = addInferredType inferredType wideAnnotationBehavior animId
+        withType = addInferredType inferredType wideAnnotationBehavior
         withVal mNeighborVals scopeAndVal =
             do
-                typeView <- TypeView.make inferredType animId <&> (^. Align.tValue)
-                process <- processAnnotationGui mempty wideAnnotationBehavior
-                addEvaluationResult mNeighborVals scopeAndVal wideAnnotationBehavior animId
+                typeView <- TypeView.make inferredType <&> (^. Align.tValue)
+                process <- processAnnotationGui wideAnnotationBehavior
+                addEvaluationResult mNeighborVals scopeAndVal wideAnnotationBehavior
                     <&> \add -> add $ \width -> process width typeView ^. Element.width
 
 maybeAddAnnotation ::
     (Functor f, Monad m) =>
-    WideAnnotationBehavior -> ShowAnnotation -> Sugar.Annotation -> AnimId ->
+    WideAnnotationBehavior -> ShowAnnotation -> Sugar.Annotation ->
     ExprGuiM m (ExpressionGui f -> ExpressionGui f)
 maybeAddAnnotation = maybeAddAnnotationWith NormalEvalAnnotation
 

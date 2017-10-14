@@ -5,15 +5,15 @@ module Lamdu.GUI.EvalView
     ) where
 
 import qualified Control.Lens as Lens
+import qualified Control.Monad.Reader as Reader
 import qualified Control.Monad.Transaction as Transaction
 import qualified Data.Binary.Utils as BinUtils
 import qualified Data.List as List
 import qualified Data.Text as Text
-import           Data.Text.Encoding (decodeUtf8)
+import           Data.Text.Encoding (decodeUtf8, encodeUtf8)
 import           Data.Vector.Vector2 (Vector2(..))
 import           GUI.Momentu.Align (Aligned(..), WithTextPos(..))
 import qualified GUI.Momentu.Align as Align
-import           GUI.Momentu.Animation (AnimId)
 import qualified GUI.Momentu.Animation as Anim
 import qualified GUI.Momentu.Animation.Id as AnimId
 import qualified GUI.Momentu.Element as Element
@@ -58,37 +58,39 @@ extractFields (V.RecExtend tag val (Val _ rest)) =
           & EvalTypeError & RecordExtendsError
         )
 
-label :: Monad m => Text -> AnimId -> ExprGuiM m (WithTextPos View)
-label x animId =
-    TextView.make ?? x ?? Anim.augmentId animId x
+textView ::
+    ( MonadReader env m, Element.HasAnimIdPrefix env, TextView.HasStyle env
+    ) => Text -> m (WithTextPos View)
+textView text = (TextView.make ?? text) <*> Lens.view Element.animIdPrefix
 
-makeTag :: Monad m => AnimId -> T.Tag -> ExprGuiM m (WithTextPos View)
-makeTag animId tag =
-    do
-        name <- Anchors.assocNameRef tag & Transaction.getP
-        TextView.make ?? name ?? animId
+label ::
+    ( MonadReader env m, Element.HasAnimIdPrefix env, TextView.HasStyle env
+    ) => Text -> m (WithTextPos View)
+label text =
+    textView text & Reader.local (Element.animIdPrefix <>~ [encodeUtf8 text])
 
-makeField ::
-    Monad m =>
-    AnimId -> T.Tag -> Val Type -> ExprGuiM m [Aligned View]
-makeField parentAnimId tag val =
+makeTag :: Monad m => T.Tag -> ExprGuiM m (WithTextPos View)
+makeTag tag = Anchors.assocNameRef tag & Transaction.getP >>= textView
+
+makeField :: Monad m => T.Tag -> Val Type -> ExprGuiM m [Aligned View]
+makeField tag val =
     do
-        tagView <- makeTag (baseId ++ ["tag"]) tag
+        tagView <- makeTag tag & Reader.local (Element.animIdPrefix <>~ ["tag"])
         space <- Spacer.stdHSpace
-        valView <- makeInner (baseId ++ ["val"]) val
+        valView <- makeInner val & Reader.local (Element.animIdPrefix <>~ ["val"])
         pure
             [ toAligned 1 tagView
             , Aligned 0.5 space
             , toAligned 0 valView
             ]
+        & Reader.local (Element.animIdPrefix <>~ [BinUtils.encodeS tag])
     where
         toAligned x (WithTextPos y w) =
             Aligned (Vector2 x (y / w ^. Element.height)) w
-        baseId = parentAnimId ++ [BinUtils.encodeS tag]
 
-makeError :: Monad m => EvalError -> AnimId -> ExprGuiM m (WithTextPos View)
-makeError err animId =
-    TextView.make ?? msg ?? animId ++ ["error"]
+makeError :: Monad m => EvalError -> ExprGuiM m (WithTextPos View)
+makeError err =
+    textView msg & Reader.local (Element.animIdPrefix <>~ ["error"])
     where
         msg =
             case err of
@@ -101,8 +103,8 @@ arrayCutoff = 10
 tableCutoff :: Int
 tableCutoff = 6
 
-makeArray :: Monad m => AnimId -> [Val Type] -> ExprGuiM m (WithTextPos View)
-makeArray animId items =
+makeArray :: Monad m => [Val Type] -> ExprGuiM m (WithTextPos View)
+makeArray items =
     case sequence (items <&> (^? ER.body . ER._RRecExtend)) <&> Lens.mapped %~ extractFields of
     Just pairs@(x:_:_) | all (== RecordComputed) (pairs ^.. traverse . _2) ->
         do
@@ -117,42 +119,43 @@ makeArray animId items =
             remainView <-
                 if null (drop tableCutoff pairs)
                 then pure Element.empty
-                else label "…" animId
+                else label "…"
             Aligned 0.5 table /-/ Aligned 0.5 remainView ^. Align.value & pure
         where
             tags = x ^.. _1 . traverse . _1
-            makeHeader tag = makeTag (AnimId.augmentId animId tag) tag
+            makeHeader tag =
+                makeTag tag
+                & Reader.local (Element.animIdPrefix <>~ [BinUtils.encodeS tag, "tag"])
             row (rowI, tagVals)
                 | length tagVals /= length tags = error "makeArray: tags mismatch"
                 | otherwise =
                     tags <&> (`lookup` tagVals) & sequence & fromMaybe (error "makeArray: tags mismatch")
                     & zip [(0::Int)..]
-                    & mapM makeCell
+                    & traverse makeCell
+                    & Reader.local (Element.animIdPrefix %~ (AnimId.augmentId ?? rowI))
                 where
-                    rowId = AnimId.augmentId animId rowI
-                    makeCell (colI, v) = makeInner (AnimId.augmentId rowId colI) v
+                    makeCell (colI, v) =
+                        makeInner v
+                        & Reader.local (Element.animIdPrefix %~ (AnimId.augmentId ?? colI))
     _ ->
         do
             itemViews <- zipWith makeItem [0..arrayCutoff] items & sequence
-            opener <- label "[" animId
-            closer <- label "]" animId
+            opener <- label "["
+            closer <- label "]"
             opener : itemViews ++ [closer] & hbox & pure
     where
         makeItem idx val =
-            [ [ label ", " itemId | idx > 0 ]
-            , [ makeInner (Anim.augmentId itemId ("val" :: Text)) val
+            [ [ label ", " | idx > 0 ]
+            , [ makeInner val & Reader.local (Element.animIdPrefix <>~ ["val"])
                 | idx < arrayCutoff ]
-            , [ label "…" itemId | idx == arrayCutoff ]
+            , [ label "…" | idx == arrayCutoff ]
             ] & concat
             & sequence
             <&> hbox
-            where
-                itemId = Anim.augmentId animId (idx :: Int)
+            & Reader.local (Element.animIdPrefix %~ (Anim.augmentId ?? (idx :: Int)))
 
-makeRecExtend ::
-    Monad m =>
-    AnimId -> Type -> V.RecExtend (Val Type) -> ExprGuiM m (WithTextPos View)
-makeRecExtend animId typ recExtend =
+makeRecExtend :: Monad m => Type -> V.RecExtend (Val Type) -> ExprGuiM m (WithTextPos View)
+makeRecExtend typ recExtend =
     case
         ( typ, recStatus
         , lookup Builtins.rootTag fields, lookup Builtins.subtreesTag fields
@@ -160,26 +163,27 @@ makeRecExtend animId typ recExtend =
     (T.TInst tid _, RecordComputed, Just root, Just subtrees)
         | tid == Builtins.treeTid ->
         do
-            rootView <- makeInner (animId ++ ["root"]) root
+            rootView <-
+                makeInner root & Reader.local (Element.animIdPrefix <>~ ["root"])
             subtreeViews <-
                 subtrees ^.. ER.body . ER._RArray . Lens.traverse
                 & zipWith makeItem [0..cutoff] & sequence
             rootView : subtreeViews & vbox & pure
         where
             makeItem idx val =
-                [ [ label "* " itemId ]
-                , [ makeInner (Anim.augmentId itemId ("val" :: Text)) val
+                [ [ label "* " ]
+                , [ makeInner val
+                    & Reader.local (Element.animIdPrefix <>~ ["val"])
                     | idx < cutoff ]
-                , [ label "…" itemId | idx == cutoff ]
+                , [ label "…" | idx == cutoff ]
                 ] & concat
                 & sequence
                 <&> hbox
-                where
-                    itemId = Anim.augmentId animId (idx :: Int)
+                & Reader.local (Element.animIdPrefix %~ (Anim.augmentId ?? (idx :: Int)))
             cutoff = 4
     _ ->
         do
-            fieldsView <- mapM (uncurry (makeField animId)) fields <&> GridView.make
+            fieldsView <- mapM (uncurry makeField) fields <&> GridView.make
             let barWidth
                     | null fields = 150
                     | otherwise = fieldsView ^. Element.width
@@ -187,22 +191,21 @@ makeRecExtend animId typ recExtend =
                 case recStatus of
                 RecordComputed -> pure Element.empty
                 RecordExtendsError err ->
-                    makeError err animId
-                    <&> (^. Align.tValue)
-                    <&> Aligned 0.5
-                    <&> (sqr /-/)
-                    where
-                        sqr =
-                            View.unitSquare (animId ++ ["line"])
-                            & Element.scale (Vector2 barWidth 1)
-                            & Aligned 0.5
-            (Aligned 0.5 fieldsView /-/ restView) ^. Align.value & Align.WithTextPos 0 & pure
+                    do
+                        errView <- makeError err <&> (^. Align.tValue) <&> Aligned 0.5
+                        sqr <-
+                            View.unitSquare
+                            & Reader.local (Element.animIdPrefix <>~ ["line"])
+                            <&> Element.scale (Vector2 barWidth 1)
+                            <&> Aligned 0.5
+                        sqr /-/ errView & pure
+            (Aligned 0.5 fieldsView /-/ restView) ^. Align.value
+                & Align.WithTextPos 0 & pure
     where
         (fields, recStatus) = extractFields recExtend
 
-makeInject ::
-    Monad m => AnimId -> Type -> V.Inject (Val Type) -> ExprGuiM m (WithTextPos View)
-makeInject animId typ inject =
+makeInject :: Monad m => Type -> V.Inject (Val Type) -> ExprGuiM m (WithTextPos View)
+makeInject typ inject =
     case
         ( typ
         , inject ^. V.injectVal . ER.body
@@ -213,19 +216,23 @@ makeInject animId typ inject =
     (_, RRecEmpty, _, _, _) -> makeTagView
     (T.TInst tid _, _, Just RecordComputed, Just head_, Just RFunc{})
         | tid == Builtins.streamTid ->
-        [ label "[" animId
-        , makeInner (animId ++ ["head"]) head_
-        , label ", …]" animId
+        [ label "["
+        , makeInner head_ & Reader.local (Element.animIdPrefix <>~ ["head"])
+        , label ", …]"
         ]
         & sequence <&> hbox
     _ ->
         do
             tag <- makeTagView
             s <- Spacer.stdHSpace
-            i <- inject ^. V.injectVal & makeInner (animId ++ ["val"])
+            i <-
+                inject ^. V.injectVal & makeInner
+                & Reader.local (Element.animIdPrefix <>~ ["val"])
             tag /|/ s /|/ i & pure
     where
-        makeTagView = inject ^. V.injectTag & makeTag (animId ++ ["tag"])
+        makeTagView =
+            inject ^. V.injectTag & makeTag
+            & Reader.local (Element.animIdPrefix <>~ ["tag"])
         (fields, mRecStatus) =
             case inject ^. V.injectVal . ER.body of
             RRecExtend recExtend -> extractFields recExtend & _2 %~ Just
@@ -240,14 +247,14 @@ depthCounts v =
     <&> sum
     & (1 :)
 
-make :: Monad m => AnimId -> Val Type -> ExprGuiM m (WithTextPos View)
-make animId v =
+make :: Monad m => Val Type -> ExprGuiM m (WithTextPos View)
+make v =
     do
         maxEvalViewSize <- Lens.view Theme.theme <&> Theme.maxEvalViewSize
         let depthLimit =
                 depthCounts v & scanl (+) 0 & tail
                 & takeWhile (< maxEvalViewSize) & length
-        makeInner animId v
+        makeInner v
             & ExprGuiM.resetDepth depthLimit
     <&> fixSize
 
@@ -263,38 +270,41 @@ fixSize view =
             & Anim.iUnitImage %~
             (DrawUtils.scale (image ^. Anim.iRect . Rect.size / view ^. Element.size) %%)
 
-makeInner :: Monad m => AnimId -> Val Type -> ExprGuiM m (WithTextPos View)
-makeInner animId (Val typ val) =
-    case val of
-    RError err -> makeError err animId
-    RFunc{} -> TextView.make ?? "Fn" ?? animId
-    RRecEmpty -> TextView.make ?? "()" ?? animId
-    RInject inject -> makeInject animId typ inject
-    RRecExtend recExtend -> makeRecExtend animId typ recExtend
-    RPrimVal primVal
-        | typ == T.TInst Builtins.textTid mempty ->
-          case pv of
-          PrimVal.Bytes x -> decodeUtf8 x & toText animId
-          _ -> error "text not made of bytes"
-        | otherwise ->
-          case pv of
-          PrimVal.Bytes x -> toText animId x
-          PrimVal.Float x -> toText animId x
-        where
-            pv = PrimVal.toKnown primVal
-    RArray items -> makeArray animId items
-    & advanceDepth
+makeInner :: Monad m => Val Type -> ExprGuiM m (WithTextPos View)
+makeInner (Val typ val) =
+    do
+        animId <- Lens.view Element.animIdPrefix
+        case val of
+            RError err -> makeError err
+            RFunc{} -> textView "Fn"
+            RRecEmpty -> textView "()"
+            RInject inject -> makeInject typ inject
+            RRecExtend recExtend -> makeRecExtend typ recExtend
+            RPrimVal primVal
+                | typ == T.TInst Builtins.textTid mempty ->
+                  case pv of
+                  PrimVal.Bytes x -> decodeUtf8 x & toText
+                  _ -> error "text not made of bytes"
+                | otherwise ->
+                  case pv of
+                  PrimVal.Bytes x -> toText x
+                  PrimVal.Float x -> toText x
+                where
+                    pv = PrimVal.toKnown primVal
+            RArray items -> makeArray items
+            & advanceDepth animId
     where
         -- Only cut non-leaf expressions due to depth limits
-        advanceDepth
+        advanceDepth animId
             | Lens.has traverse val = ExprGuiM.advanceDepth pure animId
             | otherwise = id
 
 toText ::
     ( Format r, MonadReader env m, TextView.HasStyle env
-    ) => AnimId -> r -> m (WithTextPos View)
-toText animId val =
-    TextView.make ?? cut ?? animId
+    , Element.HasAnimIdPrefix env
+    ) => r -> m (WithTextPos View)
+toText val =
+    textView cut
     where
         text = format val
         cut =

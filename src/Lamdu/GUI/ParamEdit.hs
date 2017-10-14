@@ -5,9 +5,11 @@ module Lamdu.GUI.ParamEdit
     ) where
 
 import qualified Control.Lens as Lens
+import qualified Control.Monad.Reader as Reader
 import qualified Data.Map as Map
 import           Data.Store.Transaction (Transaction)
 import           GUI.Momentu.Align (WithTextPos)
+import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.MetaKey (MetaKey, toModKey)
 import qualified GUI.Momentu.Responsive as Responsive
@@ -125,9 +127,9 @@ make annotationOpts showAnnotation prevId nextId param =
         ExpressionGui.maybeAddAnnotationWith annotationOpts
             wideAnnotationBehavior showAnnotation
             (param ^. Sugar.fpAnnotation)
-            (Widget.toAnimId myId)
             ?? Responsive.fromWithTextPos (iNameEdit info)
             <&> E.weakerEvents paramEventMap
+            & Reader.local (Element.animIdPrefix .~ Widget.toAnimId myId)
     where
         myId = iId info
         info = param ^. Sugar.fpInfo

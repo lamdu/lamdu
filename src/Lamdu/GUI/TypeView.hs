@@ -245,11 +245,13 @@ makeInternal parentPrecedence typ =
 
 make ::
     ( MonadReader env m, HasTheme env, Spacer.HasStdSpacing env
-    , MonadTransaction n m
+    , Element.HasAnimIdPrefix env, MonadTransaction n m
     ) =>
-    Type -> AnimId -> m (WithTextPos View)
-make t prefix =
-    makeInternal (Prec 0) t
-    & runM
-    & (`evalStateT` Random.mkStdGen 0)
-    <&> Element.setLayers . Element.layers . Lens.mapped %~ Anim.mapIdentities (mappend prefix)
+    Type -> m (WithTextPos View)
+make t =
+    do
+        prefix <- Lens.view Element.animIdPrefix
+        makeInternal (Prec 0) t
+            & runM
+            & (`evalStateT` Random.mkStdGen 0)
+            <&> Element.setLayers . Element.layers . Lens.mapped %~ Anim.mapIdentities (mappend prefix)

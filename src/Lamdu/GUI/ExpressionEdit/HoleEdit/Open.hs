@@ -422,9 +422,10 @@ makeUnderCursorAssignment shownResultsLists hasHiddenResults hole pl stateProp w
         -- ExpressionGui.stdWrap, because we want to synchronize the
         -- active BG width with the inferred type width
         typeView <-
-            ExpressionGui.addAnnotationBackground holeAnimId
-            <*> TypeView.make (pl ^. Sugar.plAnnotation . Sugar.aInferredType) holeAnimId
+            ExpressionGui.addAnnotationBackground
+            <*> TypeView.make (pl ^. Sugar.plAnnotation . Sugar.aInferredType)
             <&> (^. Align.tValue)
+            & Reader.local (Element.animIdPrefix .~ holeAnimId)
 
         searchTermEventMap <-
             EventMap.makeOpenEventMap holeKind stateProp <&> disallowFirstOperatorChar
