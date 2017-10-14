@@ -10,7 +10,7 @@ import qualified Control.Monad.Transaction as Transaction
 import qualified Data.Binary.Utils as BinUtils
 import qualified Data.List as List
 import qualified Data.Text as Text
-import           Data.Text.Encoding (decodeUtf8, encodeUtf8)
+import           Data.Text.Encoding (decodeUtf8', encodeUtf8)
 import           Data.Vector.Vector2 (Vector2(..))
 import           GUI.Momentu.Align (Aligned(..), WithTextPos(..))
 import qualified GUI.Momentu.Align as Align
@@ -283,7 +283,10 @@ makeInner (Val typ val) =
             RPrimVal primVal
                 | typ == T.TInst Builtins.textTid mempty ->
                   case pv of
-                  PrimVal.Bytes x -> decodeUtf8 x & toText
+                  PrimVal.Bytes x ->
+                    case decodeUtf8' x of
+                    Right txt -> toText txt
+                    Left{} -> toText x
                   _ -> error "text not made of bytes"
                 | otherwise ->
                   case pv of

@@ -7,7 +7,7 @@ module Lamdu.Sugar.Convert.Text
 import           Control.Monad (mzero)
 import           Control.Monad.Trans.Maybe (MaybeT(..))
 import           Data.Maybe.Utils (maybeToMPlus)
-import           Data.Text.Encoding (decodeUtf8, encodeUtf8)
+import           Data.Text.Encoding (decodeUtf8', encodeUtf8)
 import           Data.Store.Property (Property(..))
 import qualified Data.Store.Property as Property
 import qualified Lamdu.Builtins.Anchors as Builtins
@@ -32,12 +32,15 @@ text (V.Nom tid (Val litPl body)) toNomPl =
     do
         guard $ tid == Builtins.textTid
         lit <- body ^? ExprLens.valBodyLiteral & maybeToMPlus
-        utf8Bytes <-
+        txt <-
             case PrimVal.toKnown lit of
-            PrimVal.Bytes utf8Bytes -> return utf8Bytes
+            PrimVal.Bytes utf8Bytes ->
+                case decodeUtf8' utf8Bytes of
+                Right txt -> return txt
+                Left{} -> mzero
             _ -> mzero
         Property
-            { _pVal = decodeUtf8 utf8Bytes
+            { _pVal = txt
             , _pSet =
                 ExprIRef.writeValBody litIRef . V.BLeaf . V.LLiteral .
                 PrimVal.fromKnown . PrimVal.Bytes . encodeUtf8
