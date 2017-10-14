@@ -37,7 +37,7 @@
         "bgColor": [1.0, 1.0, 0.8, 0.9]
     },
     "hover": {
-        "frameColor"                : [0.5, 0.5, 0.5, 0.85],
+        "frameColor"                : [1.0, 1.0, 1.0, 1.0],
         "framePadding"              : [1.0, 1.0],
         "bgColor"                   : [0.8, 0.9, 0.95, 1.0],
         "bgPadding"                 : [7.0, 7.0]
@@ -96,6 +96,6 @@
         "shrinkAtLeast"       : 80,
         "maxHeight"           : 20,
         "bgColor"             : [0.0, 0.0, 0.0, 0.15],
-        "hoverBGColor"        : [0.7, 0.7, 0.7, 0.9]
+        "hoverBGColor"        : [0.95, 0.95, 0.95, 1.0]
     }
 }
