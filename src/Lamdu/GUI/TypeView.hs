@@ -66,22 +66,30 @@ text str =
         animId <- randAnimId
         TextView.make ?? Text.replace "\0" "" str ?? animId
 
+grammar ::
+    (MonadReader env m, TextView.HasStyle env, HasTheme env) =>
+    Text -> M m (WithTextPos View)
+grammar str =
+    do
+        animId <- randAnimId
+        Styled.grammarText ?? Text.replace "\0" "" str ?? animId
+
 showIdentifier ::
     (MonadReader env m, TextView.HasStyle env) =>
     Identifier -> M m (WithTextPos View)
 showIdentifier (Identifier bs) = text (decodeUtf8 bs)
 
 parensAround ::
-    (MonadReader env m, TextView.HasStyle env) =>
+    (MonadReader env m, TextView.HasStyle env, HasTheme env) =>
     WithTextPos View -> M m (WithTextPos View)
 parensAround view =
     do
-        openParenView <- text "("
-        closeParenView <- text ")"
-        pure $ hbox [openParenView, view, closeParenView]
+        openParenView <- grammar "("
+        closeParenView <- grammar ")"
+        hbox [openParenView, view, closeParenView] & pure
 
 parens ::
-    (MonadReader env m, TextView.HasStyle env) =>
+    (MonadReader env m, TextView.HasStyle env, HasTheme env) =>
     Prec -> Prec -> WithTextPos View -> M m (WithTextPos View)
 parens parent my view
     | parent > my = parensAround view
@@ -99,10 +107,10 @@ makeTFun ::
     Prec -> Type -> Type -> M m (WithTextPos View)
 makeTFun parentPrecedence a b =
     case a of
-    T.TRecord T.CEmpty -> [text "| "]
+    T.TRecord T.CEmpty -> [grammar "| "]
     _ ->
         [ splitMake (Prec 1) a
-        , text " → "
+        , grammar " → "
         ]
     ++ [splitMake (Prec 0) b]
     & sequence
@@ -155,8 +163,10 @@ addTypeBG view =
             & MDraw.backgroundColor bgId color
             & pure
 
-makeEmptyRecord :: (MonadReader env m, TextView.HasStyle env) => M m (WithTextPos View)
-makeEmptyRecord = text "Ø"
+makeEmptyRecord ::
+    (MonadReader env m, TextView.HasStyle env, HasTheme env) =>
+    M m (WithTextPos View)
+makeEmptyRecord = grammar "Ø"
 
 makeTag ::
     (MonadTransaction n m, MonadReader env m, TextView.HasStyle env) =>
@@ -228,7 +238,7 @@ makeInternal parentPrecedence typ =
     T.TInst typeId typeParams -> makeTInst parentPrecedence typeId typeParams
     T.TRecord composite -> makeComposite makeField composite
     T.TSum composite ->
-        [ text "+"
+        [ grammar "+"
         , makeComposite makeSumField composite
         ] & sequenceA
         <&> hbox
