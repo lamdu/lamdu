@@ -93,18 +93,13 @@ make (Sugar.Inject tag mVal) pl =
     Just val ->
         do
             disamb <-
-                case mParensId of
-                Nothing -> pure Options.disambiguationNone
-                Just parensId -> ResponsiveExpr.disambiguators ?? parensId
+                if pl ^. Sugar.plData . ExprGuiT.plNeedParens
+                then ResponsiveExpr.disambiguators <*> Lens.view Element.animIdPrefix
+                else pure Options.disambiguationNone
             arg <-
                 ExprGuiM.makeSubexpression val <&> (:[])
             colon <- injectIndicator ":"
             makeCommon disamb tag replaceParent (ExprGuiT.nextHolesBefore val) colon arg
         & ExpressionGui.stdWrapParentExpr pl
         where
-            mParensId
-                | pl ^. Sugar.plData . ExprGuiT.plNeedParens =
-                  Just animId
-                | otherwise = Nothing
             replaceParent = val ^. Sugar.rPayload . Sugar.plActions . Sugar.mReplaceParent
-            animId = WidgetIds.fromExprPayload pl & Widget.toAnimId
