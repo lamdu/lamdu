@@ -77,14 +77,14 @@ parensAround view =
     do
         openParenView <- text "("
         closeParenView <- text ")"
-        return $ hbox [openParenView, view, closeParenView]
+        pure $ hbox [openParenView, view, closeParenView]
 
 parens ::
     (MonadReader env m, TextView.HasStyle env) =>
     Prec -> Prec -> WithTextPos View -> M m (WithTextPos View)
 parens parent my view
     | parent > my = parensAround view
-    | otherwise = return view
+    | otherwise = pure view
 
 makeTVar ::
     (MonadReader env m, TextView.HasStyle env) =>
@@ -123,7 +123,7 @@ makeTInst parentPrecedence tid typeParams =
                 do
                     paramIdView <- showIdentifier tParamId
                     typeView <- splitMake (Prec 0) arg
-                    return
+                    pure
                         [ toAligned 1 paramIdView
                         , Aligned 0.5 hspace
                         , toAligned 0 typeView
@@ -149,7 +149,7 @@ addValPadding :: (Element a, MonadReader env m, HasTheme env) => a -> M m a
 addValPadding view =
     do
         padding <- Lens.view Theme.theme <&> Theme.valFramePadding <&> fmap realToFrac
-        Element.pad padding view & return
+        Element.pad padding view & pure
 
 addBGColor :: (Element a, MonadReader env m, HasTheme env) => a -> M m a
 addBGColor view =
@@ -158,7 +158,7 @@ addBGColor view =
         bgId <- randAnimId
         view
             & MDraw.backgroundColor bgId color
-            & return
+            & pure
 
 makeEmptyRecord :: (MonadReader env m, TextView.HasStyle env) => M m (WithTextPos View)
 makeEmptyRecord = text "Ø"
