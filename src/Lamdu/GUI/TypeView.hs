@@ -202,10 +202,17 @@ makeComposite ::
 makeComposite _ _ T.CEmpty = makeEmptyComposite
 makeComposite sepView mkField composite =
     do
-        fieldsView <-
+        opener <- grammar "{" <&> (^. Align.tValue)
+        closer <- grammar "}" <&> (^. Align.tValue)
+        rawFieldsView <-
             traverse mkField fields
             >>= zipWithM prepend (pure Element.empty : repeat sepView)
             <&> GridView.make
+        let openedFieldsView :: View
+            openedFieldsView =
+                (Aligned 0 opener /|/ Aligned 0 rawFieldsView) ^. Align.value
+        let fieldsView =
+                (Aligned 1 openedFieldsView /|/ Aligned 1 closer) ^. Align.value
         let barWidth
                 | null fields = 150
                 | otherwise = fieldsView ^. Element.width
