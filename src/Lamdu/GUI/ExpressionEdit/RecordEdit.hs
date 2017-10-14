@@ -87,7 +87,7 @@ make (Sugar.Composite fields recordTail addField) pl =
         let addFieldEventMap = mkAddFieldEventMap config addField
         makeRecord fields addFieldEventMap postProcess
             & ExpressionGui.stdWrapParentExpr pl
-            <&> E.weakerEvents (eventMap <> addFieldEventMap)
+            <&> E.weakerEvents eventMap
     where
         animId = WidgetIds.fromExprPayload pl & Widget.toAnimId
         postProcess =
