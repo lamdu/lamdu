@@ -76,7 +76,7 @@ makeField parentAnimId tag val =
         tagView <- makeTag (baseId ++ ["tag"]) tag
         space <- Spacer.stdHSpace
         valView <- makeInner (baseId ++ ["val"]) val
-        return
+        pure
             [ toAligned 1 tagView
             , Aligned 0.5 space
             , toAligned 0 valView
@@ -116,9 +116,9 @@ makeArray animId items =
                     & GridView.make & Align.WithTextPos 0
             remainView <-
                 if null (drop tableCutoff pairs)
-                then return Element.empty
+                then pure Element.empty
                 else label "..." animId
-            Aligned 0.5 table /-/ Aligned 0.5 remainView ^. Align.value & return
+            Aligned 0.5 table /-/ Aligned 0.5 remainView ^. Align.value & pure
         where
             tags = x ^.. _1 . traverse . _1
             makeHeader tag = makeTag (AnimId.augmentId animId tag) tag
@@ -136,7 +136,7 @@ makeArray animId items =
             itemViews <- zipWith makeItem [0..arrayCutoff] items & sequence
             opener <- label "[" animId
             closer <- label "]" animId
-            opener : itemViews ++ [closer] & hbox & return
+            opener : itemViews ++ [closer] & hbox & pure
     where
         makeItem idx val =
             [ [ label ", " itemId | idx > 0 ]
@@ -164,7 +164,7 @@ makeRecExtend animId typ recExtend =
             subtreeViews <-
                 subtrees ^.. ER.body . ER._RArray . Lens.traverse
                 & zipWith makeItem [0..cutoff] & sequence
-            rootView : subtreeViews & vbox & return
+            rootView : subtreeViews & vbox & pure
         where
             makeItem idx val =
                 [ [ label "* " itemId ]
@@ -185,7 +185,7 @@ makeRecExtend animId typ recExtend =
                     | otherwise = fieldsView ^. Element.width
             restView <-
                 case recStatus of
-                RecordComputed -> return Element.empty
+                RecordComputed -> pure Element.empty
                 RecordExtendsError err ->
                     makeError err animId
                     <&> (^. Align.tValue)
@@ -196,7 +196,7 @@ makeRecExtend animId typ recExtend =
                             View.unitSquare (animId ++ ["line"])
                             & Element.scale (Vector2 barWidth 1)
                             & Aligned 0.5
-            (Aligned 0.5 fieldsView /-/ restView) ^. Align.value & Align.WithTextPos 0 & return
+            (Aligned 0.5 fieldsView /-/ restView) ^. Align.value & Align.WithTextPos 0 & pure
     where
         (fields, recStatus) = extractFields recExtend
 
@@ -287,7 +287,7 @@ makeInner animId (Val typ val) =
     where
         -- Only cut non-leaf expressions due to depth limits
         advanceDepth
-            | Lens.has traverse val = ExprGuiM.advanceDepth return animId
+            | Lens.has traverse val = ExprGuiM.advanceDepth pure animId
             | otherwise = id
 
 toText ::
