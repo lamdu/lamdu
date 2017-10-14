@@ -15,6 +15,7 @@ import qualified Control.Monad.Transaction as Transaction
 import           Data.CurAndPrev (CurAndPrev, current, fallbackToPrev)
 import           Data.List.Utils (nonEmptyAll, withPrevNext)
 import qualified Data.Map as Map
+import           Data.Store.Property (Property)
 import qualified Data.Store.Property as Property
 import           Data.Store.Transaction (Transaction, MkProperty(..))
 import qualified Data.Text as Text
@@ -36,6 +37,7 @@ import qualified GUI.Momentu.Widgets.TextView as TextView
 import qualified Lamdu.CharClassification as Chars
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Config.Theme as Theme
+import qualified Lamdu.Data.Meta as Meta
 import qualified Lamdu.GUI.CodeEdit.Settings as CESettings
 import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
 import qualified Lamdu.GUI.ExpressionEdit.TagEdit as TagEdit
@@ -303,18 +305,19 @@ makeParts funcApplyLimit binder delVarBackwardsId myId =
 
 make ::
     Monad m =>
+    Maybe (T m (Property (T m) Meta.PresentationMode)) ->
     Widget.EventMap (T m Widget.EventResult) ->
     Name (T m) -> Draw.Color ->
     Sugar.Binder (Name (T m)) (T m) (ExprGuiT.SugarExpr m) ->
     Widget.Id ->
     ExprGuiM m (ExpressionGui m)
-make lhsEventMap name color binder myId =
+make pMode lhsEventMap name color binder myId =
     do
         Parts mParamsEdit mScopeEdit bodyEdit eventMap <-
             makeParts ExprGuiT.UnlimitedFuncApply binder myId myId
         rhsJumperEquals <- jumpToRHS bodyId
         mPresentationEdit <-
-            binder ^. Sugar.bMPresentationModeProp & sequenceA & transaction
+            pMode & sequenceA & transaction
             >>= traverse
                 (PresentationModeEdit.make presentationChoiceId (binder ^. Sugar.bParams))
         jumpHolesEventMap <-
@@ -384,7 +387,7 @@ makeLetEdit item =
         letLabel <- Styled.grammarLabel "let"
         space <- Spacer.stdHSpace
         letEquation <-
-            make mempty (item ^. Sugar.lName) letColor binder letId
+            make Nothing mempty (item ^. Sugar.lName) letColor binder letId
             <&> E.weakerEvents eventMap
             <&> Element.pad (Theme.letItemPadding theme <&> realToFrac)
         letLabel /|/ space /|/ letEquation & return

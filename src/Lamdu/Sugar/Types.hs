@@ -6,7 +6,7 @@ module Lamdu.Sugar.Types
     , WorkArea(..), waPanes, waRepl
     , Definition(..), drDefinitionState, drEntityId, drName, drBody, drDefI
     , DefinitionBody(..), _DefinitionBodyExpression, _DefinitionBodyBuiltin
-    , DefinitionExpression(..), deContent, deType
+    , DefinitionExpression(..), deContent, dePresentationMode, deType
     , Meta.SpecialArgs(..), Meta.PresentationMode
     , Meta.DefinitionState(..)
     , DefinitionBuiltin(..), biType, biName, biSetName
@@ -30,6 +30,7 @@ import           Lamdu.Prelude
 
 data DefinitionExpression name m expr = DefinitionExpression
     { _deType :: Scheme
+    , _dePresentationMode :: Maybe (m (Property m Meta.PresentationMode))
     , _deContent :: Binder name m expr
     } deriving (Functor, Foldable, Traversable)
 

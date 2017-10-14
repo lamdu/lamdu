@@ -278,9 +278,9 @@ toDefinitionBody ::
     DefinitionBody (OldName m) (TM m) a ->
     m (DefinitionBody (NewName m) (TM m) b)
 toDefinitionBody _ (DefinitionBodyBuiltin bi) = pure (DefinitionBodyBuiltin bi)
-toDefinitionBody f (DefinitionBodyExpression (DefinitionExpression typeInfo content)) =
+toDefinitionBody f (DefinitionBodyExpression (DefinitionExpression typeInfo presMode content)) =
      toBinder f content
-     <&> DefinitionExpression typeInfo
+     <&> DefinitionExpression typeInfo presMode
      <&> DefinitionBodyExpression
 
 toDef ::

@@ -59,8 +59,8 @@ makeExprDefinition lhsEventMap def bodyExpr =
     do
         theme <- Lens.view Theme.theme
         let defColor = Theme.definitionColor (Theme.name theme)
-        BinderEdit.make lhsEventMap (def ^. Sugar.drName) defColor
-            (bodyExpr ^. Sugar.deContent) myId
+        BinderEdit.make (bodyExpr ^. Sugar.dePresentationMode) lhsEventMap
+            (def ^. Sugar.drName) defColor (bodyExpr ^. Sugar.deContent) myId
     where
         entityId = def ^. Sugar.drEntityId
         myId = WidgetIds.fromEntityId entityId

@@ -103,8 +103,8 @@ convertLabeled funcS argS exprPl =
         -- If it is a def (not in payload scope), make sure the def
         -- (frozen) type is inferred to have closed record of same
         -- parameters
+        guard (var `Map.notMember` scope)
         validateDefParamsMatchArgs var record ctx
-            & unless (var `Map.member` scope)
         let getArg field =
                 AnnotatedArg
                     { _aaTag = field ^. ciTag . tagInfo

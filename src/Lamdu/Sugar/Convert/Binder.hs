@@ -96,7 +96,7 @@ convertRedex ::
     ConvertM m (Let UUID (T m) (ExpressionU m a))
 convertRedex expr redex =
     do
-        value <-
+        (_pMode, value) <-
             convertBinder binderKind defUUID (redex ^. Redex.arg)
             & localNewExtractDestPos expr
         actions <- mkLetItemActions (expr ^. Val.payload . Input.stored) redex
@@ -154,15 +154,13 @@ convertBinderBody expr =
 makeBinder ::
     (Monad m, Monoid a) =>
     MkProperty m (Maybe BinderParamScopeId) ->
-    Maybe (MkProperty m PresentationMode) ->
     ConventionalParams m -> Val (Input.Payload m a) ->
     ConvertM m (Binder UUID (T m) (ExpressionU m a))
-makeBinder chosenScopeProp mPresentationModeProp params funcBody =
+makeBinder chosenScopeProp params funcBody =
     do
         binderBody <- convertBinderBody funcBody
         return Binder
             { _bParams = _cpParams params
-            , _bMPresentationModeProp = mPresentationModeProp <&> (^. mkProperty)
             , _bChosenScopeProp = chosenScopeProp ^. mkProperty
             , _bLamId = cpMLamParam params ^? Lens._Just . _1
             , _bBody = binderBody
@@ -189,7 +187,7 @@ convertLam lam exprPl =
         binder <-
             makeBinder
             (exprPl ^. Input.stored & Property.value & Anchors.assocScopeRef)
-            Nothing convParams (lam ^. V.lamResult)
+            convParams (lam ^. V.lamResult)
         let paramUUIDs =
                 binder ^.. bParams . _FieldParams . traverse . fpInfo . fpiTag . tagName
                 & Set.fromList
@@ -250,15 +248,22 @@ markLightParams paramUUIDs (Expression body pl) =
 convertBinder ::
     (Monad m, Monoid a) =>
     BinderKind m -> UUID -> Val (Input.Payload m a) ->
-    ConvertM m (Binder UUID (T m) (ExpressionU m a))
+    ConvertM m
+    ( Maybe (MkProperty m PresentationMode)
+    , Binder UUID (T m) (ExpressionU m a)
+    )
 convertBinder binderKind defUUID expr =
     do
         (mPresentationModeProp, convParams, funcBody) <- convertParams binderKind defUUID expr
-        makeBinder (Anchors.assocScopeRef defUUID) mPresentationModeProp convParams funcBody
+        makeBinder (Anchors.assocScopeRef defUUID) convParams funcBody
+            <&> (,) mPresentationModeProp
 
 convertDefinitionBinder ::
     (Monad m, Monoid a) =>
     DefI m -> Val (Input.Payload m a) ->
-    ConvertM m (Binder UUID (T m) (ExpressionU m a))
+    ConvertM m
+    ( Maybe (MkProperty m PresentationMode)
+    , Binder UUID (T m) (ExpressionU m a)
+    )
 convertDefinitionBinder defI =
     convertBinder (BinderKindDef defI) (IRef.uuid defI)

@@ -34,7 +34,7 @@ module Lamdu.Sugar.Types.Binder
     , BinderContent(..), _BinderLet, _BinderExpr
     , BinderBodyScope(..)
     , Binder(..)
-        , bMPresentationModeProp, bChosenScopeProp, bParams, bBody
+        , bChosenScopeProp, bParams, bBody
         , bLamId, bActions, bBodyScopes
     ) where
 
@@ -201,8 +201,7 @@ data BinderBodyScope
       -- scopes
 
 data Binder name m expr = Binder
-    { _bMPresentationModeProp :: Maybe (m (Property m Meta.PresentationMode))
-    , _bChosenScopeProp :: m (Property m (Maybe BinderParamScopeId))
+    { _bChosenScopeProp :: m (Property m (Maybe BinderParamScopeId))
     , _bParams :: BinderParams name m
     , _bLamId :: Maybe EntityId
     , _bBody :: BinderBody name m expr

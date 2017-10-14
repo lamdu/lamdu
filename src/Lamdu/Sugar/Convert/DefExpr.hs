@@ -3,7 +3,7 @@ module Lamdu.Sugar.Convert.DefExpr
     ( convert
     ) where
 
-import           Data.Store.Transaction (Transaction)
+import           Data.Store.Transaction (Transaction, mkProperty)
 import           Data.UUID.Types (UUID)
 import           Lamdu.Calc.Type.Scheme (Scheme)
 import qualified Lamdu.Calc.Type.Scheme as Scheme
@@ -29,7 +29,7 @@ convert ::
     ConvertM m (DefinitionBody UUID (T m) (ExpressionU m a))
 convert defType defExpr defI =
     do
-        content <-
+        (presMode, content) <-
             ConvertBinder.convertDefinitionBinder defI (defExpr ^. Definition.expr)
         sugarContext <- ConvertM.readContext
         let inferContext = sugarContext ^. ConvertM.scInferContext
@@ -38,7 +38,8 @@ convert defType defExpr defI =
                 & Infer.makeScheme inferContext
         unless (Scheme.alphaEq defType inferredType) $
             fail "Def type mismatches its inferred type!"
-        return $ DefinitionBodyExpression DefinitionExpression
-            { _deContent = content
-            , _deType = defType
-            }
+        DefinitionBodyExpression DefinitionExpression
+            { _deType = defType
+            , _dePresentationMode = presMode <&> (^. mkProperty)
+            , _deContent = content
+            } & pure
