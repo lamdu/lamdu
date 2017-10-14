@@ -93,7 +93,7 @@ convertAppliedHole (V.Apply funcI argI) argS exprPl =
                       & rPayload . plActions . wrap .~ WrappedAlready storedEntityId
                       & rPayload . plActions . delete .~
                         SetToHole
-                        ( exprPl ^. Input.stored & DataOps.setToHole <&> uuidEntityId )
+                        ( DataOps.setToHole (exprPl ^. Input.stored) <* postProcess <&> uuidEntityId )
                 , _haUnwrap =
                       if isTypeMatch
                       then DataOps.replace (exprPl ^. Input.stored)
