@@ -224,6 +224,7 @@ floatLetToOuterScope setTopLevel redex ctx =
             Nothing ->
                 EntityId.ofIRef (ExprIRef.defI param) <$
                 moveToGlobalScope ctx param innerDefExpr
+                <&> ExtractToDef
                 where
                     innerDefExpr = Definition.Expr (nlIRef newLet) innerDeps
                     innerDeps =
@@ -235,6 +236,7 @@ floatLetToOuterScope setTopLevel redex ctx =
             Just outerScopeInfo ->
                 EntityId.ofLambdaParam param <$
                 DataOps.redexWrapWithGivenParam param (nlIRef newLet) (outerScopeInfo ^. ConvertM.osiPos)
+                <&> ExtractToLet
         return LetFloatResult
             { lfrNewEntity = resultEntity
             , lfrMVarToTags = nlMVarToTags newLet

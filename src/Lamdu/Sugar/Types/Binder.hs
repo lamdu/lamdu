@@ -8,7 +8,7 @@ module Lamdu.Sugar.Types.Binder
     , TagInfo(..), tagVal, tagInstance
     , TagActions(..), taOptions, taChangeTag, taSetPublished, taReplaceWithNew
     -- Let
-    , LetFloatResult(..)
+    , LetFloatResult(..), ExtractDestination(..)
     , LetActions(..)
         , laSetToInner, laSetToHole, laFloat, laWrap
     , Let(..)
@@ -141,9 +141,12 @@ instance Show info => Show (FuncParam info) where
         "(FuncParam " ++ show _fpInfo ++
         " " ++ show _fpAnnotation ++ " )"
 
+data ExtractDestination
+    = ExtractToLet EntityId
+    | ExtractToDef EntityId
 
 data LetFloatResult = LetFloatResult
-    { lfrNewEntity :: EntityId
+    { lfrNewEntity :: ExtractDestination
     , lfrMVarToTags :: Maybe VarToTags
     }
 

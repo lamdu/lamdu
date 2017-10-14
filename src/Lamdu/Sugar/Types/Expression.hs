@@ -2,7 +2,6 @@
 module Lamdu.Sugar.Types.Expression
     ( WrapAction(..), _WrapperAlready, _WrappedAlready, _WrapAction
     , Delete(..), _SetToHole, _Delete, _CannotDelete
-    , ExtractToDestination(..)
     , Actions(..)
         , wrap, delete, extract, mReplaceParent
     , Body(..)
@@ -62,14 +61,10 @@ data Delete m
       Delete (m EntityId)
     | CannotDelete
 
-data ExtractToDestination
-    = ExtractToLet EntityId
-    | ExtractToDef EntityId
-
 data Actions m = Actions
     { _wrap :: WrapAction m
     , _delete :: Delete m
-    , _extract :: m ExtractToDestination
+    , _extract :: m ExtractDestination
     , _mReplaceParent :: Maybe (m EntityId)
     }
 

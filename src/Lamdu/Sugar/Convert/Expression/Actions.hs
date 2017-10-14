@@ -28,7 +28,7 @@ import           Lamdu.Prelude
 type T = Transaction
 
 mkExtract ::
-    Monad m => Input.Payload m a -> ConvertM m (T m ExtractToDestination)
+    Monad m => Input.Payload m a -> ConvertM m (T m ExtractDestination)
 mkExtract exprPl =
     do
         ctx <- ConvertM.readContext

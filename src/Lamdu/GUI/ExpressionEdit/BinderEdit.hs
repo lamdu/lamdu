@@ -372,7 +372,7 @@ makeLetEdit item =
                     (E.Doc ["Edit", "Let clause", "Delete"])
                 , item ^. Sugar.lActions . Sugar.laFloat
                     <&> Sugar.lfrNewEntity
-                    <&> WidgetIds.fromEntityId
+                    <&> ExprEventMap.extractCursor
                     & Widget.keysEventMapMovesCursor (Config.extractKeys config)
                     (E.Doc ["Edit", "Let clause", "Extract to outer scope"])
                 ]
