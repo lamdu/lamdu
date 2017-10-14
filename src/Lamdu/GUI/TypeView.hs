@@ -164,10 +164,10 @@ addTypeBG view =
             & MDraw.backgroundColor bgId color
             & pure
 
-makeEmptyRecord ::
+makeEmptyComposite ::
     (MonadReader env m, TextView.HasStyle env, HasTheme env) =>
     M m (WithTextPos View)
-makeEmptyRecord = grammar "Ø"
+makeEmptyComposite = grammar "Ø"
 
 makeTag ::
     (MonadTransaction n m, MonadReader env m, TextView.HasStyle env) =>
@@ -199,7 +199,7 @@ makeSumField (tag, fieldType) = makeField (tag, fieldType)
 makeComposite ::
     (MonadReader env m, TextView.HasStyle env, HasTheme env) =>
     M m (Aligned View) -> ((T.Tag, Type) -> M m [Aligned View]) -> T.Composite t -> M m (WithTextPos View)
-makeComposite _ _ T.CEmpty = makeEmptyRecord
+makeComposite _ _ T.CEmpty = makeEmptyComposite
 makeComposite sepView mkField composite =
     do
         fieldsView <-
