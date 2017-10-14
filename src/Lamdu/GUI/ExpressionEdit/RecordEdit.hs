@@ -8,7 +8,6 @@ import qualified Control.Lens as Lens
 import           Data.Store.Transaction (Transaction)
 import           Data.Vector.Vector2 (Vector2(..))
 import qualified GUI.Momentu.Align as Align
-import           GUI.Momentu.Animation (AnimId)
 import qualified GUI.Momentu.Animation as Anim
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.EventMap as E
@@ -90,11 +89,10 @@ make (Sugar.Composite fields recordTail addField) pl =
             & ExpressionGui.stdWrapParentExpr pl
             <&> E.weakerEvents eventMap
     where
-        animId = WidgetIds.fromExprPayload pl & Widget.toAnimId
         postProcess =
             case recordTail of
             Sugar.OpenComposite actions restExpr ->
-                makeOpenRecord actions restExpr animId
+                makeOpenRecord actions restExpr
             _ -> pure
 
 makeRecord ::
@@ -151,8 +149,8 @@ separationBar theme width animId =
 makeOpenRecord ::
     Monad m =>
     Sugar.OpenCompositeActions (T m) -> ExprGuiT.SugarExpr m ->
-    AnimId -> ExpressionGui m -> ExprGuiM m (ExpressionGui m)
-makeOpenRecord (Sugar.OpenCompositeActions close) rest animId fieldsGui =
+    ExpressionGui m -> ExprGuiM m (ExpressionGui m)
+makeOpenRecord (Sugar.OpenCompositeActions close) rest fieldsGui =
     do
         theme <- Lens.view Theme.theme
         vspace <- Spacer.stdVSpace
@@ -161,6 +159,7 @@ makeOpenRecord (Sugar.OpenCompositeActions close) rest animId fieldsGui =
         let restEventMap =
                 close <&> WidgetIds.fromEntityId
                 & Widget.keysEventMapMovesCursor (Config.delKeys config) (doc "Close")
+        animId <- Lens.view Element.animIdPrefix
         let layout layoutMode fields =
                 fields
                 /-/

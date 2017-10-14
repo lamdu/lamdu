@@ -145,7 +145,7 @@ makeSubexpression expr =
         maker expr
     & advanceDepth (return . Responsive.fromTextView) animId
     where
-        animId = toAnimId $ WidgetIds.fromExprPayload $ expr ^. Sugar.rPayload
+        animId = expr ^. Sugar.rPayload & WidgetIds.fromExprPayload & toAnimId
 
 resetDepth :: Int -> ExprGuiM m r -> ExprGuiM m r
 resetDepth depth = exprGuiM %~ RWS.local (aDepthLeft .~ depth)
