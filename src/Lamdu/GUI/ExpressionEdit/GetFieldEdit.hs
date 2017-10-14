@@ -16,6 +16,7 @@ import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
+import qualified Lamdu.GUI.Styled as Styled
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Name (Name(..))
 import qualified Lamdu.Sugar.Types as Sugar
@@ -32,7 +33,7 @@ make ::
 make (Sugar.GetField recExpr tag) pl =
     do
         recExprEdit <- ExprGuiM.makeSubexpression recExpr
-        dotLabel <- ExpressionGui.grammarLabel "."
+        dotLabel <- Styled.grammarLabel "."
         config <- Lens.view Config.config
         let delEventMap =
                 case recExpr ^. Sugar.rPayload . Sugar.plActions . Sugar.mReplaceParent of

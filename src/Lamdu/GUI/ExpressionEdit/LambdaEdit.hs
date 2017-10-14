@@ -28,9 +28,10 @@ import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
 import qualified Lamdu.GUI.LightLambda as LightLambda
+import qualified Lamdu.GUI.Styled as Styled
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
-import qualified Lamdu.Sugar.Lens as SugarLens
 import           Lamdu.Name (Name(..))
+import qualified Lamdu.Sugar.Lens as SugarLens
 import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
@@ -58,7 +59,7 @@ mkExpanded ::
      [ExpressionGui m])
 mkExpanded =
     do
-        labelEdit <- ExpressionGui.grammarLabel "→" <&> Responsive.fromTextView
+        labelEdit <- Styled.grammarLabel "→" <&> Responsive.fromTextView
         return $ \mParamsEdit mScopeEdit ->
             mkLhsEdits mParamsEdit mScopeEdit ++ [labelEdit]
 
@@ -82,7 +83,7 @@ mkShrunk paramIds myId =
         theme <- Lens.view Theme.theme
         lamLabel <-
             (Widget.makeFocusableView ?? lamId myId <&> (Align.tValue %~))
-            <*> ExpressionGui.grammarLabel "λ"
+            <*> Styled.grammarLabel "λ"
             <&> Responsive.fromWithTextPos
             & LightLambda.withUnderline theme
         return $ \mScopeEdit ->

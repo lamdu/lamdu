@@ -32,6 +32,7 @@ import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
+import qualified Lamdu.GUI.Styled as Styled
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Name (Name(..))
 import qualified Lamdu.Sugar.Types as Sugar
@@ -60,10 +61,10 @@ make (Sugar.Case mArg (Sugar.Composite alts caseTail addAlt)) pl =
             & Lens._Just ExprEventMap.jumpHolesEventMap
             <&> fromMaybe mempty
         let responsiveLabel text =
-                ExpressionGui.grammarLabel text <&> Responsive.fromTextView
+                Styled.grammarLabel text <&> Responsive.fromTextView
         let headerLabel text =
                 (Widget.makeFocusableView ?? headerId <&> (Align.tValue %~))
-                <*> ExpressionGui.grammarLabel text
+                <*> Styled.grammarLabel text
                 <&> Responsive.fromWithTextPos
                 <&> E.weakerEvents labelJumpHoleEventMap
         caseLabel <- headerLabel "case"
@@ -107,7 +108,7 @@ make (Sugar.Case mArg (Sugar.Composite alts caseTail addAlt)) pl =
                 & Widget.keysEventMapMovesCursor (Config.caseAddAltKeys config)
                   (doc "Add Alt")
                 & ExprGuiM.withHolePicker resultPicker
-        ExpressionGui.addValFrame
+        Styled.addValFrame
             <*> (Responsive.vboxSpaced ?? [header, altsGui])
             <&> E.weakerEvents addAltEventMap
     & ExpressionGui.stdWrapParentExpr pl
@@ -124,7 +125,7 @@ makeAltRow ::
 makeAltRow mActiveTag (Sugar.CompositeItem delete tag altExpr) =
     do
         config <- Lens.view Config.config
-        addBg <- ExpressionGui.addValBGWithColor Theme.evaluatedPathBGColor
+        addBg <- Styled.addValBGWithColor Theme.evaluatedPathBGColor
         let itemEventMap = caseDelEventMap config delete
         tagLabel <-
             TagEdit.makeCaseTag TagEdit.WithTagHoles (ExprGuiT.nextHolesBefore altExpr) tag
@@ -135,7 +136,7 @@ makeAltRow mActiveTag (Sugar.CompositeItem delete tag altExpr) =
         hspace <- Spacer.stdHSpace
         altExprGui <-
             ExprGuiM.makeSubexpression altExpr <&> E.weakerEvents itemEventMap
-        colonLabel <- ExpressionGui.grammarLabel ":"
+        colonLabel <- Styled.grammarLabel ":"
         pure Responsive.TaggedItem
             { Responsive._tagPre = tagLabel /|/ colonLabel /|/ hspace
             , Responsive._taggedItem = altExprGui
@@ -152,7 +153,7 @@ makeAltsWidget ::
     Widget.Id -> ExprGuiM m (ExpressionGui m)
 makeAltsWidget _ [] altsId =
     (Widget.makeFocusableView ?? Widget.joinId altsId ["Ø"] <&> (Align.tValue %~))
-    <*> ExpressionGui.grammarLabel "Ø"
+    <*> Styled.grammarLabel "Ø"
     <&> Responsive.fromWithTextPos
 makeAltsWidget mActiveTag alts _altsId =
     Responsive.taggedList <*> mapM (makeAltRow mActiveTag) alts
@@ -172,7 +173,7 @@ makeOpenCase actions rest animId altsGui =
         theme <- Lens.view Theme.theme
         vspace <- Spacer.stdVSpace
         restExpr <-
-            ExpressionGui.addValPadding
+            Styled.addValPadding
             <*> ExprGuiM.makeSubexpression rest
         config <- Lens.view Config.config
         return $ altsGui & Responsive.render . Lens.imapped %@~

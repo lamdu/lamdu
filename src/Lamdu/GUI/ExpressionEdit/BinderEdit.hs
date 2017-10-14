@@ -48,6 +48,7 @@ import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
 import qualified Lamdu.GUI.NameEdit as NameEdit
 import qualified Lamdu.GUI.ParamEdit as ParamEdit
+import qualified Lamdu.GUI.Styled as Styled
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Name (Name(..))
 import qualified Lamdu.Name as Name
@@ -284,7 +285,7 @@ makeMParamsEdit mScopeCursor isScopeNavFocused delVarBackwardsId myId nearestHol
     where
         frame =
             case params of
-            Sugar.FieldParams{} -> ExpressionGui.addValFrame
+            Sugar.FieldParams{} -> Styled.addValFrame
             _ -> return id
         mCurCursor =
             do
@@ -429,7 +430,7 @@ makeLetEdit item =
                 | usage <- take 1 (item ^. Sugar.lUsages)
                 ]
         let eventMap = mappend actionsEventMap usageEventMap
-        letLabel <- ExpressionGui.grammarLabel "let"
+        letLabel <- Styled.grammarLabel "let"
         space <- Spacer.stdHSpace
         letEquation <-
             make mempty (item ^. Sugar.lName) letColor binder letId
@@ -555,7 +556,7 @@ makeParamsEdit annotationOpts nearestHoles delVarBackwardsId lhsId rhsId params 
                 do
                     nullParamGui <-
                         (Widget.makeFocusableView ?? nullParamId <&> (Align.tValue %~))
-                        <*> ExpressionGui.grammarLabel "|"
+                        <*> Styled.grammarLabel "|"
                     fromParamList ExprGuiT.showAnnotationWhenVerbose delVarBackwardsId rhsId
                         [p & Sugar.fpInfo %~ nullParamEditInfo lhsId nullParamGui]
                 where

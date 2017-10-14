@@ -2,12 +2,6 @@
 module Lamdu.GUI.ExpressionGui
     ( ExpressionGui
     , render
-    -- General:
-    , grammarLabel, grammarText
-    , addValFrame, addValPadding
-    , addValBGWithColor
-    -- Lifted widgets:
-    , addDeletionDiagonal
     -- Info adding
     , annotationSpacer
     , NeighborVals(..)
@@ -24,7 +18,6 @@ module Lamdu.GUI.ExpressionGui
     ) where
 
 import qualified Control.Lens as Lens
-import qualified Control.Monad.Reader as Reader
 import           Control.Monad.Transaction (MonadTransaction)
 import           Data.Binary.Utils (encodeS)
 import           Data.CurAndPrev (CurAndPrev(..), CurPrevTag(..), curPrevTag, fallbackToPrev)
@@ -33,7 +26,6 @@ import           Data.Vector.Vector2 (Vector2(..))
 import           GUI.Momentu.Align (WithTextPos(..))
 import qualified GUI.Momentu.Align as Align
 import           GUI.Momentu.Animation (AnimId)
-import qualified GUI.Momentu.Animation as Anim
 import qualified GUI.Momentu.Draw as Draw
 import           GUI.Momentu.Element (Element)
 import qualified GUI.Momentu.Element as Element
@@ -52,7 +44,7 @@ import           Lamdu.Calc.Type (Type)
 import qualified Lamdu.Calc.Type as T
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
-import           Lamdu.Config.Theme (Theme, HasTheme(..))
+import           Lamdu.Config.Theme (HasTheme(..))
 import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.Eval.Results as ER
 import qualified Lamdu.GUI.CodeEdit.Settings as CESettings
@@ -62,6 +54,7 @@ import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import           Lamdu.GUI.ExpressionGui.Types (ExpressionGui, ShowAnnotation(..), EvalModeShow(..))
 import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
+import qualified Lamdu.GUI.Styled as Styled
 import qualified Lamdu.GUI.TypeView as TypeView
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.Sugar.Types as Sugar
@@ -265,7 +258,7 @@ addEvaluationResult ::
 addEvaluationResult mNeigh resDisp wideBehavior animId =
     case (erdVal resDisp ^. ER.payload, erdVal resDisp ^. ER.body) of
     (T.TRecord T.CEmpty, _) ->
-        addValBGWithColor Theme.evaluatedPathBGColor <&> const
+        Styled.addValBGWithColor Theme.evaluatedPathBGColor <&> const
     (_, ER.RFunc{}) -> return (flip const)
     _ -> addAnnotationH (makeEvalView mNeigh resDisp) wideBehavior animId
 
@@ -276,35 +269,6 @@ parentExprFDConfig config = FocusDelegator.Config
     , FocusDelegator.focusParentKeys = Config.leaveSubexpressionKeys config
     , FocusDelegator.focusParentDoc = E.Doc ["Navigation", "Leave subexpression"]
     }
-
--- | Add a diagonal line (top-left to right-bottom). Useful as a
--- "deletion" GUI annotation
-addDiagonal ::
-    (MonadReader env m, Element.HasAnimIdPrefix env, Element a) =>
-    m (Draw.Color -> Draw.R -> a -> a)
-addDiagonal =
-    Element.subAnimId ["diagonal"] <&>
-    \animId color thickness -> Element.topLayer %@~
-    \sz ->
-    Draw.convexPoly
-    [ (0, thickness)
-    , (0, 0)
-    , (thickness, 0)
-    , (1, 1-thickness)
-    , (1, 1)
-    , (1-thickness, 1)
-    ]
-    & Draw.tint color
-    & void
-    & Anim.singletonFrame 1 (animId ++ ["diagonal"])
-    & Anim.scale sz
-    & flip mappend
-
-addDeletionDiagonal ::
-    (MonadReader env m, Element a, Element.HasAnimIdPrefix env, HasTheme env) =>
-    m (Widget.R -> a -> a)
-addDeletionDiagonal =
-    addDiagonal <*> (Lens.view Theme.theme <&> Theme.typeIndicatorErrorColor)
 
 stdWrap ::
     Monad m =>
@@ -334,56 +298,6 @@ stdWrapParentExpr ::
 stdWrapParentExpr pl mkGui =
     parentDelegator (WidgetIds.fromExprPayload pl) <*> mkGui
     & stdWrap pl
-
-grammarLabel ::
-    ( MonadReader env m
-    , HasTheme env
-    , TextView.HasStyle env
-    , Element.HasAnimIdPrefix env
-    ) => Text -> m (WithTextPos View)
-grammarLabel text =
-    do
-        th <- Lens.view theme <&> Theme.codeForegroundColors
-        TextView.makeLabel text
-            & Reader.local (TextView.color .~ Theme.grammarColor th)
-
-grammarText ::
-    ( MonadReader env m
-    , HasTheme env
-    , TextView.HasStyle env
-    ) => m (Text -> AnimId -> WithTextPos View)
-grammarText =
-    do
-        th <- Lens.view theme <&> Theme.codeForegroundColors
-        TextView.make
-            & Reader.local (TextView.color .~ Theme.grammarColor th)
-
-addValBG ::
-    ( MonadReader env m, Element a
-    , Element.HasAnimIdPrefix env, HasTheme env
-    ) => m (a -> a)
-addValBG = addValBGWithColor Theme.valFrameBGColor
-
-addValBGWithColor ::
-    ( MonadReader env m, Element a
-    , Element.HasAnimIdPrefix env, HasTheme env
-    ) => (Theme -> Draw.Color) -> m (a -> a)
-addValBGWithColor color =
-    Draw.backgroundColor <*> (Lens.view Theme.theme <&> color)
-
-addValPadding :: (MonadReader env m, Element a, HasTheme env) => m (a -> a)
-addValPadding =
-    Lens.view Theme.theme <&> Theme.valFramePadding <&> fmap realToFrac
-    <&> Element.pad
-
-addValFrame ::
-    ( MonadReader env m, Element a, Element.HasAnimIdPrefix env, HasTheme env
-    ) => m (a -> a)
-addValFrame =
-    (.)
-    <$> addValBG
-    <*> addValPadding
-    & Reader.local (Element.animIdPrefix <>~ ["val"])
 
 maybeAddAnnotationPl ::
     (Functor f, Monad m) =>

@@ -30,6 +30,7 @@ import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
+import qualified Lamdu.GUI.Styled as Styled
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.Sugar.Types as Sugar
 
@@ -53,8 +54,8 @@ makeGuardRow ::
     f (ExpressionGui m -> ExpressionGui m -> Row (ExpressionGui m))
 makeGuardRow delete prefixLabel entityId =
     do
-        label <- ExpressionGui.grammarLabel "if "
-        colon <- ExpressionGui.grammarLabel ": "
+        label <- Styled.grammarLabel "if "
+        colon <- Styled.grammarLabel ": "
         let keyword = prefixLabel /|/ label & Responsive.fromTextView
         config <- Lens.view Config.config
         let eventMap =
@@ -75,7 +76,7 @@ makeElseIf (Sugar.GuardElseIf scopes entityId cond res delete addLet) makeRest =
         mOuterScopeId <- ExprGuiM.readMScopeId
         let mInnerScope = lookupMKey <$> mOuterScopeId <*> scopes
         -- TODO: green evaluation backgrounds, "◗"?
-        elseLabel <- ExpressionGui.grammarLabel "el"
+        elseLabel <- Styled.grammarLabel "el"
         letEventMap <- addLetEventMap addLet
         (:)
             <$>
@@ -93,8 +94,8 @@ makeElseIf (Sugar.GuardElseIf scopes entityId cond res delete addLet) makeRest =
 makeElse :: Monad m => Sugar.Guard (T m) (ExprGuiT.SugarExpr m) -> ExprGuiM m (Row (ExpressionGui m))
 makeElse guards =
     ( Row elseAnimId
-        <$> (ExpressionGui.grammarLabel "else" <&> Responsive.fromTextView)
-        <*> (ExpressionGui.grammarLabel ": " & Reader.local (Element.animIdPrefix .~ elseAnimId) <&> Responsive.fromTextView)
+        <$> (Styled.grammarLabel "else" <&> Responsive.fromTextView)
+        <*> (Styled.grammarLabel ": " & Reader.local (Element.animIdPrefix .~ elseAnimId) <&> Responsive.fromTextView)
     ) <*> ExprGuiM.makeSubexpression (guards ^. Sugar.gElse)
     where
         elseAnimId = Widget.toAnimId elseId

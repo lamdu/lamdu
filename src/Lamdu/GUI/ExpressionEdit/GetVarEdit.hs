@@ -34,6 +34,7 @@ import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
 import qualified Lamdu.GUI.LightLambda as LightLambda
 import qualified Lamdu.GUI.NameEdit as NameEdit
+import qualified Lamdu.GUI.Styled as Styled
 import qualified Lamdu.GUI.TypeView as TypeView
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Name (Name(..))
@@ -158,7 +159,7 @@ processDefinitionWidget ::
     f (WithTextPos (Widget (T m Widget.EventResult)))
 processDefinitionWidget Sugar.DefUpToDate _myId mkLayout = mkLayout
 processDefinitionWidget Sugar.DefDeleted _myId mkLayout =
-    (ExpressionGui.addDeletionDiagonal ?? 0.1)
+    (Styled.addDeletionDiagonal ?? 0.1)
     <*> mkLayout
 processDefinitionWidget (Sugar.DefTypeChanged info) myId mkLayout =
     do

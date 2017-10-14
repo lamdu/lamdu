@@ -27,6 +27,7 @@ import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
+import qualified Lamdu.GUI.Styled as Styled
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Name (Name(..))
 import qualified Lamdu.Sugar.Types as Sugar
@@ -57,7 +58,7 @@ makeUnit _actions addField pl =
     do
         config <- Lens.view Config.config
         makeFocusable <- Widget.makeFocusableView ?? myId <&> (Align.tValue %~)
-        view <- liftA2 (/|/) (ExpressionGui.grammarLabel "{") (ExpressionGui.grammarLabel "}")
+        view <- liftA2 (/|/) (Styled.grammarLabel "{") (Styled.grammarLabel "}")
         makeFocusable view
             & Responsive.fromWithTextPos
             & E.weakerEvents (mkAddFieldEventMap config addField)
@@ -103,10 +104,10 @@ makeRecord ::
     (ExpressionGui m -> ExprGuiM m (ExpressionGui m)) ->
     ExprGuiM m (ExpressionGui m)
 makeRecord fields addFieldEventMap postProcess =
-    ExpressionGui.addValFrame <*>
+    Styled.addValFrame <*>
     do
-        opener <- ExpressionGui.grammarLabel "{"
-        closer <- ExpressionGui.grammarLabel "}"
+        opener <- Styled.grammarLabel "{"
+        closer <- Styled.grammarLabel "}"
         case fields of
             [] -> Responsive.fromTextView closer & pure
             _ ->
@@ -155,7 +156,7 @@ makeOpenRecord (Sugar.OpenCompositeActions close) rest animId fieldsGui =
     do
         theme <- Lens.view Theme.theme
         vspace <- Spacer.stdVSpace
-        restExpr <- ExpressionGui.addValPadding <*> ExprGuiM.makeSubexpression rest
+        restExpr <- Styled.addValPadding <*> ExprGuiM.makeSubexpression rest
         config <- Lens.view Config.config
         let restEventMap =
                 close <&> WidgetIds.fromEntityId

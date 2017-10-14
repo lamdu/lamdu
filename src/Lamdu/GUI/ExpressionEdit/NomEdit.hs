@@ -26,6 +26,7 @@ import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Name (Name(..))
 import qualified Lamdu.Name as Name
 import qualified Lamdu.Sugar.Types as Sugar
+import qualified Lamdu.GUI.Styled as Styled
 
 import           Lamdu.Prelude
 
@@ -78,7 +79,7 @@ mkNomGui ordering nomStr str mDel pl (Sugar.Nominal tid val) =
             ( ordering
                 [
                 do
-                    label <- ExpressionGui.grammarLabel str
+                    label <- Styled.grammarLabel str
                     nameGui <-
                         NameEdit.makeView
                         (tid ^. Sugar.tidName . Name.form)

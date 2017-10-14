@@ -30,6 +30,7 @@ import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
+import qualified Lamdu.GUI.Styled as Styled
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Name (Name(..))
 import qualified Lamdu.Name as Name
@@ -168,7 +169,7 @@ mkRelayedArgs :: Monad m => NearestHoles -> [Sugar.RelayedArg (Name (T m)) (T m)
 mkRelayedArgs nearestHoles args =
     do
         argEdits <- mapM makeArgEdit args
-        collapsed <- ExpressionGui.grammarLabel "➾" <&> Responsive.fromTextView
+        collapsed <- Styled.grammarLabel "➾" <&> Responsive.fromTextView
         Options.boxSpaced ?? Options.disambiguationNone ?? collapsed : argEdits
     where
         makeArgEdit arg =
@@ -205,7 +206,7 @@ mkBoxed apply nearestHoles mkFuncRow =
             case apply ^. Sugar.aRelayedArgs of
             [] -> return []
             args -> mkRelayedArgs nearestHoles args <&> (:[])
-        ExpressionGui.addValFrame
+        Styled.addValFrame
             <*> (Responsive.vboxSpaced ?? (funcRow : argRows ++ relayedArgs))
 
 makeSimple ::

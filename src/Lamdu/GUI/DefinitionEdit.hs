@@ -25,11 +25,11 @@ import           Lamdu.Calc.Type.Scheme (Scheme(..), schemeType)
 import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.GUI.ExpressionEdit.BinderEdit as BinderEdit
 import qualified Lamdu.GUI.ExpressionEdit.BuiltinEdit as BuiltinEdit
-import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import           Lamdu.GUI.ExpressionGui.Types (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
 import qualified Lamdu.GUI.NameEdit as NameEdit
+import qualified Lamdu.GUI.Styled as Styled
 import qualified Lamdu.GUI.TypeView as TypeView
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Name (Name(..))
@@ -98,7 +98,7 @@ make lhsEventMap def =
         let defState = Property.value defStateProp
         addDeletionDiagonal <-
             case defState of
-            Sugar.DeletedDefinition -> ExpressionGui.addDeletionDiagonal ?? 0.02
+            Sugar.DeletedDefinition -> Styled.addDeletionDiagonal ?? 0.02
             Sugar.LiveDefinition -> return id
         defGui <-
             case def ^. Sugar.drBody of

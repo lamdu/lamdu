@@ -29,6 +29,7 @@ import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
+import qualified Lamdu.GUI.Styled as Styled
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Name (Name(..))
 import           Lamdu.Sugar.NearestHoles (NearestHoles)
@@ -71,7 +72,7 @@ injectIndicator ::
     , Element.HasAnimIdPrefix env
     ) => Text -> f (WithTextPos View)
 injectIndicator text =
-    (ExpressionGui.grammarText ?? text) <*> Element.subAnimId ["injectIndicator"]
+    (Styled.grammarText ?? text) <*> Element.subAnimId ["injectIndicator"]
 
 make ::
     Monad m =>
