@@ -41,7 +41,7 @@ convertGuard setToVal caseBody =
         convGuard cond altTrue altFalse =
             case mAltFalseBinder of
             Just binder ->
-                case mAltFalseBinderExpr of
+                case binder ^? bBody . bbContent . _BinderExpr of
                 Just altFalseBinderExpr ->
                     case altFalseBinderExpr ^. rBody of
                     BodyGuard innerGuard ->
@@ -67,18 +67,25 @@ convertGuard setToVal caseBody =
             & Just
             where
                 mAltFalseBinder = altFalse ^? ciExpr . rBody . _BodyLam . lamBinder
-                mAltFalseBinderExpr = mAltFalseBinder ^? Lens._Just . bBody . bbContent . _BinderExpr
-                simpleIfElse = makeRes (altFalse ^. ciExpr) []
+                simpleIfElse =
+                    altFalse ^. ciExpr
+                    & rPayload . plActions . delete %~ mkElseDel
+                    & rBody . _BodyLam . lamBinder . bBody . bbContent . _BinderExpr
+                        . rPayload . plActions . delete %~ mkElseDel
+                    & (`makeRes` [])
+                mkElseDel CannotDelete =
+                    delTarget altTrue & setToVal <&> EntityId.ofValI & Delete
+                mkElseDel x = x
+                delTarget alt =
+                    alt ^? ciExpr . rBody . _BodyLam . lamBinder . bBody . bbContent . _BinderExpr
+                    & fromMaybe (alt ^. ciExpr)
+                    & (^. rPayload . plData . pStored . Property.pVal)
                 makeRes els elseIfs =
                     Guard
                     { _gIf = cond
                     , _gThen = altTrue ^. ciExpr
                     , _gElseIfs = elseIfs
                     , _gElse = els
-                    , _gDeleteIf =
-                        fromMaybe (altFalse ^. ciExpr) mAltFalseBinderExpr
-                        ^. rPayload . plData . pStored . Property.pVal
-                        & setToVal
-                        <&> EntityId.ofValI
+                    , _gDeleteIf = delTarget altFalse & setToVal <&> EntityId.ofValI
                     }
 
