@@ -15,7 +15,7 @@
     "topPadding": 1,
     "hover": {
         "framePadding": [1, 1],
-        "frameColor": [0.05, 0.05, 0.05, 0.85],
+        "frameColor": [0.17, 0.18, 0.18, 1.0],
         "bgPadding": [0, 0],
         "bgColor": [0.05, 0.25, 0.3, 0.9]
     },
@@ -96,7 +96,7 @@
     },
     "valFramePadding": [0, 0],
     "letItemPadding": [0, 0],
-    "backgroundColor": [0.95, 0.98, 1.0, 0.18],
+    "backgroundColor": [0.17, 0.18, 0.18, 1.0],
     "presentationChoiceScaleFactor": [1.0, 1.0],
     "invalidCursorBGColor": [0.4, 0.0, 0.0, 1.0]
 }

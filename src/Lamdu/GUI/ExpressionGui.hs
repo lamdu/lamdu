@@ -31,6 +31,7 @@ import           GUI.Momentu.Element (Element)
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Glue ((/-/))
+import qualified GUI.Momentu.Hover as Hover
 import           GUI.Momentu.Responsive (Responsive(..))
 import qualified GUI.Momentu.Responsive as Responsive
 import           GUI.Momentu.View (View)
@@ -44,7 +45,7 @@ import           Lamdu.Calc.Type (Type)
 import qualified Lamdu.Calc.Type as T
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
-import           Lamdu.Config.Theme (HasTheme(..))
+import           Lamdu.Config.Theme (Theme, HasTheme)
 import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.Eval.Results as ER
 import qualified Lamdu.GUI.CodeEdit.Settings as CESettings
@@ -63,23 +64,17 @@ import           Lamdu.Prelude
 
 type T = Transaction
 
-addAnnotationBackgroundH ::
-    (MonadReader env m, HasTheme env, Element a, Element.HasAnimIdPrefix env) =>
-    (Theme.ValAnnotation -> Draw.Color) -> m (a -> a)
-addAnnotationBackgroundH getColor =
-    do
-        t <- Lens.view theme
-        bgAnimId <- Element.subAnimId ["annotation background"]
-        Draw.backgroundColor bgAnimId (getColor (Theme.valAnnotation t)) & pure
+bgColor :: Theme -> Draw.Color
+bgColor = Theme.valAnnotationBGColor . Theme.valAnnotation
 
 addAnnotationBackground ::
     (MonadReader env m, HasTheme env, Element a, Element.HasAnimIdPrefix env) =>
     m (a -> a)
-addAnnotationBackground = addAnnotationBackgroundH Theme.valAnnotationBGColor
-
-addAnnotationHoverBackground ::
-    (MonadReader env m, HasTheme env, Element a, Element.HasAnimIdPrefix env) => m (a -> a)
-addAnnotationHoverBackground = addAnnotationBackgroundH Theme.valAnnotationHoverBGColor
+addAnnotationBackground =
+    do
+        color <- Lens.view Theme.theme <&> bgColor
+        bgAnimId <- Element.subAnimId ["annotation background"]
+        Draw.backgroundColor bgAnimId color & pure
 
 data WideAnnotationBehavior
     = ShrinkWideAnnotation
@@ -93,7 +88,9 @@ wideAnnotationBehaviorFromSelected True = HoverWideAnnotation
 -- NOTE: Also adds the background color, because it differs based on
 -- whether we're hovering
 applyWideAnnotationBehavior ::
-    (MonadReader env m, HasTheme env, Element.HasAnimIdPrefix env) =>
+    ( MonadReader env m, HasTheme env, Hover.HasStyle env
+    , Element.HasAnimIdPrefix env
+    ) =>
     WideAnnotationBehavior ->
     m (Vector2 Widget.R -> View -> View)
 applyWideAnnotationBehavior KeepWideAnnotation =
@@ -106,24 +103,23 @@ applyWideAnnotationBehavior ShrinkWideAnnotation =
 applyWideAnnotationBehavior HoverWideAnnotation =
     do
         shrinker <- applyWideAnnotationBehavior ShrinkWideAnnotation
-        addBg <- addAnnotationHoverBackground
-        return $
-            \shrinkRatio layout ->
-                -- TODO: This is a buggy hover that ignores
-                -- Surrounding (and exits screen).
-                shrinker shrinkRatio layout
-                & Element.setLayers . Element.layers .~ addBg layout ^. View.vAnimLayers . Element.layers
-                & Element.hoverLayers
+        color <- Lens.view Theme.theme <&> bgColor
+        hover <- Hover.hover & Reader.local (Hover.backgroundColor .~ color)
+        pure $ \shrinkRatio layout ->
+            -- TODO: This is a buggy hover that ignores
+            -- Surrounding (and exits screen).
+            shrinker shrinkRatio layout
+            & Hover.hoverViewInPlaceOf (hover layout)
 
 processAnnotationGui ::
     ( MonadReader env m, HasTheme env, Spacer.HasStdSpacing env
-    , Element.HasAnimIdPrefix env
+    , Element.HasAnimIdPrefix env, Hover.HasStyle env
     ) =>
     WideAnnotationBehavior ->
     m (Widget.R -> View -> View)
 processAnnotationGui wideAnnotationBehavior =
     f
-    <$> (Lens.view theme <&> Theme.valAnnotation)
+    <$> (Lens.view Theme.theme <&> Theme.valAnnotation)
     <*> addAnnotationBackground
     <*> Spacer.getSpaceSize
     <*> applyWideAnnotationBehavior wideAnnotationBehavior
@@ -159,7 +155,7 @@ data EvalResDisplay = EvalResDisplay
 makeEvaluationResultView :: Monad m => EvalResDisplay -> ExprGuiM m (WithTextPos View)
 makeEvaluationResultView res =
     do
-        th <- Lens.view theme
+        th <- Lens.view Theme.theme
         EvalView.make (erdVal res)
             <&>
             case erdSource res of
@@ -177,7 +173,7 @@ makeEvalView ::
     ExprGuiM m (WithTextPos View)
 makeEvalView mNeighbours evalRes =
     do
-        evalTheme <- Lens.view theme <&> Theme.eval
+        evalTheme <- Lens.view Theme.theme <&> Theme.eval
         let animIdSuffix res =
                 -- When we can scroll between eval view results we
                 -- must encode the scope into the anim ID for smooth
@@ -225,7 +221,7 @@ annotationSpacer =
 addAnnotationH ::
     ( Functor f, MonadReader env m, HasTheme env
     , TextView.HasStyle env, Spacer.HasStdSpacing env
-    , Element.HasAnimIdPrefix env
+    , Element.HasAnimIdPrefix env, Hover.HasStyle env
     ) =>
     (m (WithTextPos View)) ->
     WideAnnotationBehavior ->
@@ -247,7 +243,7 @@ addAnnotationH f wideBehavior =
 
 addInferredType ::
     ( Functor f, MonadReader env m, Spacer.HasStdSpacing env, HasTheme env
-    , MonadTransaction n m, Element.HasAnimIdPrefix env
+    , MonadTransaction n m, Element.HasAnimIdPrefix env, Hover.HasStyle env
     ) =>
     Type -> WideAnnotationBehavior ->
     m (Responsive (f Widget.EventResult) ->

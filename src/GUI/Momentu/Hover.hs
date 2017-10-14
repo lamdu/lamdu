@@ -10,6 +10,7 @@ module GUI.Momentu.Hover
     , hoverBesideOptionsAxis
     , Orientation(..)
     , hoverBeside
+    , hoverViewInPlaceOf
     ) where
 
 import qualified Control.Lens as Lens
@@ -243,3 +244,11 @@ hoverBeside lens =
             in  a & lens %~
                 hoverInPlaceOf
                 (hoverBesideOptions (mkHover h) (a ^. lens))
+
+hoverViewInPlaceOf :: Element a => Hover View -> a -> a
+hoverViewInPlaceOf (Hover view) e =
+    e
+    & Element.setLayers . Element.layers .~ layers
+    & Element.hoverLayers
+    where
+        layers = view ^. View.vAnimLayers . Element.layers
