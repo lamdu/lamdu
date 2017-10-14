@@ -1,6 +1,6 @@
 {-# LANGUAGE NoImplicitPrelude #-}
 module Lamdu.Expr.UniqueId
-    ( ToUUID(..), UniqueId(..), identifierOfUUID
+    ( ToUUID(..), UniqueId(..), identifierOfUUID, varOfUUID
     ) where
 
 import           Data.Store.IRef (IRef)
@@ -22,6 +22,9 @@ uuidOfIdentifier (Identifier bs) = UUIDUtils.fromSBS16 bs
 
 identifierOfUUID :: UUID -> Identifier
 identifierOfUUID = Identifier . UUIDUtils.toSBS16
+
+varOfUUID :: UUID -> V.Var
+varOfUUID = V.Var . identifierOfUUID
 
 class    ToUUID a           where toUUID :: a -> UUID
 instance ToUUID V.Var       where toUUID = uuidOfIdentifier . V.vvName

@@ -4,8 +4,10 @@ module Lamdu.Sugar.Convert.Apply
     ) where
 
 import qualified Control.Lens as Lens
+import           Control.Monad (MonadPlus)
 import           Control.Monad.Trans.Either.Utils (runMatcherT, justToLeft)
 import           Control.Monad.Trans.Maybe (MaybeT(..))
+import           Data.List.Utils (isLengthAtLeast)
 import qualified Data.Map as Map
 import           Data.Maybe.Utils (maybeToMPlus)
 import qualified Data.Set as Set
@@ -61,8 +63,25 @@ convert app@(V.Apply funcI argI) exprPl =
         justToLeft $ convertLabeled funcS argS exprPl
         lift $ convertPrefix funcS argS exprPl
 
-noRepetitions :: Ord a => [a] -> Bool
-noRepetitions x = length x == Set.size (Set.fromList x)
+noDuplicates :: Ord a => [a] -> Bool
+noDuplicates x = length x == Set.size (Set.fromList x)
+
+validateDefParamsMatchArgs ::
+    MonadPlus m =>
+    V.Var -> Composite name f1 expr -> ConvertM.Context f2 -> m ()
+validateDefParamsMatchArgs var record ctx =
+    do
+        defArgs <-
+            ctx ^? ConvertM.scFrozenDeps . Property.pVal
+                . Infer.depsGlobalTypes . Lens.at var . Lens._Just
+                . schemeType . T._TFun . _1 . T._TRecord
+            & maybeToMPlus
+        let flatArgs = FlatComposite.fromComposite defArgs
+        flatArgs ^? FlatComposite.extension . Lens._Nothing & maybeToMPlus
+        let sFields =
+                record ^.. cItems . traverse . ciTag . tagInfo . tagVal
+                & Set.fromList
+        guard (sFields == Map.keysSet (flatArgs ^. FlatComposite.fields))
 
 convertLabeled ::
     (Monad m, Monoid a) =>
@@ -70,35 +89,31 @@ convertLabeled ::
     MaybeT (ConvertM m) (ExpressionU m a)
 convertLabeled funcS argS exprPl =
     do
-        sBinderVar <-
-            funcS ^? rBody . _BodyGetVar . _GetBinder & maybeToMPlus
+        -- Make sure it's a let/def and not a param, get the var
+        sBinderVar <- funcS ^? rBody . _BodyGetVar . _GetBinder & maybeToMPlus
+        -- Make sure the argument is a record
         record <- argS ^? rBody . _BodyRecord & maybeToMPlus
+        -- that is closed
         Lens.has (cTail . _ClosedComposite) record & guard
-        guard $ length (record ^. cItems) >= 2
+        -- with at least 2 fields
+        isLengthAtLeast 2 (record ^. cItems) & guard
         ctx <- lift ConvertM.readContext
-        let var = sBinderVar ^. bvNameRef . nrName & UniqueId.identifierOfUUID & V.Var
-        unless (Lens.has (Lens.at var . Lens._Just)
-            (Infer.scopeToTypeMap (exprPl ^. Input.inferred . Infer.plScope))) $
-            do
-                defArgs <-
-                    ctx ^? ConvertM.scFrozenDeps . Property.pVal
-                        . Infer.depsGlobalTypes . Lens.at var . Lens._Just
-                        . schemeType . T._TFun . _1 . T._TRecord
-                    & maybeToMPlus
-                let flatArgs = FlatComposite.fromComposite defArgs
-                flatArgs ^? FlatComposite.extension . Lens._Nothing & maybeToMPlus
-                let sFields =
-                        record ^.. cItems . traverse . ciTag . tagInfo . tagVal & Set.fromList
-                guard $ Map.keysSet (flatArgs ^. FlatComposite.fields) == sFields
+        let var = sBinderVar ^. bvNameRef . nrName & UniqueId.varOfUUID
+        let scope = exprPl ^. Input.inferred . Infer.plScope & Infer.scopeToTypeMap
+        -- If it is a def (not in payload scope), make sure the def
+        -- (frozen) type is inferred to have closed record of same
+        -- parameters
+        validateDefParamsMatchArgs var record ctx
+            & unless (var `Map.member` scope)
         let getArg field =
                 AnnotatedArg
                     { _aaTag = field ^. ciTag . tagInfo
                     , _aaName = field ^. ciTag . tagName
                     , _aaExpr = field ^. ciExpr
                     }
-        let args = map getArg $ record ^. cItems
+        let args = record ^. cItems <&> getArg
         let tags = args ^.. Lens.traversed . aaTag . tagVal
-        unless (noRepetitions tags) $ error "Repetitions should not type-check"
+        unless (noDuplicates tags) $ lift $ fail "Duplicate tags shouldn't type-check"
         BodyLabeledApply LabeledApply
             { _aFunc = sBinderVar
             , _aSpecialArgs = Verbose
@@ -107,8 +122,7 @@ convertLabeled funcS argS exprPl =
                 -- Hidden args must be determined along with the special args.
                 -- One never wants to hide an infix operator's args.
                 []
-            }
-            & lift . addActions exprPl
+            } & lift . addActions exprPl
 
 convertPrefix ::
     Monad m =>
