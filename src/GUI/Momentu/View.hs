@@ -7,12 +7,12 @@ module GUI.Momentu.View
     ) where
 
 import qualified Control.Lens as Lens
-import           GUI.Momentu.Animation (R, Size, AnimId)
+import           GUI.Momentu.Animation (R, Size)
 import qualified GUI.Momentu.Animation as Anim
 import           GUI.Momentu.Element (Element, SizedElement)
 import qualified GUI.Momentu.Element as Element
-import qualified GUI.Momentu.Glue as Glue
 import           GUI.Momentu.Glue (Glue)
+import qualified GUI.Momentu.Glue as Glue
 
 import           Lamdu.Prelude
 
@@ -47,5 +47,8 @@ make sz frame = View sz (Element.Layers [frame])
 animFrames :: Lens.Traversal' View Anim.Frame
 animFrames = vAnimLayers . Element.layers . traverse
 
-unitSquare :: AnimId -> View
-unitSquare = make 1 . Anim.unitSquare
+unitSquare :: (MonadReader env m, Element.HasAnimIdPrefix env) => m View
+unitSquare =
+    Lens.view Element.animIdPrefix
+    <&> Anim.unitSquare
+    <&> make 1
