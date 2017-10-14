@@ -5,7 +5,6 @@
     "baseTextSize": 16,
     "maxEvalViewSize": 32,
     "underlineWidth": 0.15,
-    "typeTint": [1.0, 1.0, 1.0, 0.6],
     "cursorBGColor": [0.5, 0.5, 1.0, 0.5],
     "evaluatedPathBGColor" : [0.2, 1.0, 0.2, 0.2],
     "valFrameBGColor": [1.0, 1.0, 1.0, 0.05],

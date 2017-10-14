@@ -93,7 +93,6 @@ data Theme = Theme
     , typeIndicatorFrameWidth :: Vector2 Double
     , letItemPadding :: Vector2 Double
     , underlineWidth :: Double
-    , typeTint :: Draw.Color
     , valFrameBGColor :: Draw.Color
     , valFramePadding :: Vector2 Double
     , typeFrameBGColor :: Draw.Color

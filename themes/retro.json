@@ -78,7 +78,6 @@
         "indentBarGap": 1.0,
         "indentBarColor": [0.8, 0.8, 1.0, 0.1]
     },
-    "typeTint": [1.0, 1.0, 1.0, 0.6],
     "cursorBGColor": [1.0, 1.0, 0.5, 0.5],
     "evaluatedPathBGColor" : [0.2, 1.0, 0.2, 0.2],
     "valFrameBGColor": [1.0, 1.0, 1.0, 0.05],

@@ -249,10 +249,7 @@ make ::
     ) =>
     Type -> AnimId -> m (WithTextPos View)
 make t prefix =
-    do
-        typeTint <- Lens.view Theme.theme <&> Theme.typeTint
-        makeInternal (Prec 0) t
-            & runM
-            & (`evalStateT` Random.mkStdGen 0)
-            <&> Element.setLayers . Element.layers . Lens.mapped %~ Anim.mapIdentities (mappend prefix)
-            <&> Element.tint typeTint
+    makeInternal (Prec 0) t
+    & runM
+    & (`evalStateT` Random.mkStdGen 0)
+    <&> Element.setLayers . Element.layers . Lens.mapped %~ Anim.mapIdentities (mappend prefix)
