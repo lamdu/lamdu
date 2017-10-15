@@ -108,10 +108,10 @@ make (Sugar.Case mArg (Sugar.Composite alts caseTail addAlt)) pl =
                 & Widget.keysEventMapMovesCursor (Config.caseAddAltKeys config)
                   (doc "Add Alt")
                 & ExprGuiM.withHolePicker resultPicker
-        Styled.addValFrame
-            <*> (Responsive.vboxSpaced ?? [header, altsGui])
+        ExpressionGui.parentDelegator (WidgetIds.fromExprPayload pl)
+            <*> (Styled.addValFrame <*> (Responsive.vboxSpaced ?? [header, altsGui]))
             <&> E.weakerEvents addAltEventMap
-    & ExpressionGui.stdWrapParentExpr pl
+    & ExpressionGui.stdWrap pl
     where
         myId = WidgetIds.fromExprPayload pl
         headerId = Widget.joinId myId ["header"]
