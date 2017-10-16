@@ -89,8 +89,10 @@ convertLabeled ::
     MaybeT (ConvertM m) (ExpressionU m a)
 convertLabeled funcS argS exprPl =
     do
-        -- Make sure it's a let/def and not a param, get the var
+        -- Make sure it's a not a param, get the var
         sBinderVar <- funcS ^? rBody . _BodyGetVar . _GetBinder & maybeToMPlus
+        -- Make sure it is not a "let" but a "def" (recursive or external)
+        _ <- sBinderVar ^? bvForm . _GetDefinition & maybeToMPlus
         -- Make sure the argument is a record
         record <- argS ^? rBody . _BodyRecord & maybeToMPlus
         -- that is closed
@@ -100,11 +102,11 @@ convertLabeled funcS argS exprPl =
         ctx <- lift ConvertM.readContext
         let var = sBinderVar ^. bvNameRef . nrName & UniqueId.varOfUUID
         let scope = exprPl ^. Input.inferred . Infer.plScope & Infer.scopeToTypeMap
-        -- If it is a def (not in payload scope), make sure the def
-        -- (frozen) type is inferred to have closed record of same
-        -- parameters
-        guard (var `Map.notMember` scope)
+        -- If it is an external (non-recursive) def (i.e: not in
+        -- scope), make sure the def (frozen) type is inferred to have
+        -- closed record of same parameters
         validateDefParamsMatchArgs var record ctx
+            & unless (var `Map.member` scope)
         let getArg field =
                 AnnotatedArg
                     { _aaTag = field ^. ciTag . tagInfo
