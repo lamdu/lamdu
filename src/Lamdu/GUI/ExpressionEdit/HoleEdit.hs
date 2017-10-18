@@ -15,7 +15,7 @@ import qualified GUI.Momentu.State as GuiState
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Menu as Menu
 import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
-import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.Argument as Wrapper
+import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.Argument as Argument
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.SearchArea as SearchArea
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds (WidgetIds(..))
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds as HoleWidgetIds
@@ -31,13 +31,13 @@ import           Lamdu.Prelude
 
 type T = Transaction
 
-makeWrapper ::
+makeArgument ::
     Monad m =>
     Sugar.Payload (T m) ExprGuiT.Payload -> Widget.Id -> Sugar.HoleArg (T m) (ExprGuiT.SugarExpr m) ->
     ExprGuiM m (ExpressionGui m)
-makeWrapper pl openHoleId holeArg =
+makeArgument pl openHoleId holeArg =
     do
-        (wrapper, holePicker) <- Wrapper.make openHoleId holeArg & ExprGuiM.listenResultPicker
+        (wrapper, holePicker) <- Argument.make openHoleId holeArg & ExprGuiM.listenResultPicker
         exprEventMap <- ExprEventMap.make pl holePicker
         E.weakerEvents exprEventMap wrapper & return
 
@@ -46,13 +46,13 @@ assignHoleCursor ::
 assignHoleCursor widgetIds =
     GuiState.assignCursor (hidHole widgetIds) (hidOpen widgetIds)
 
-makeHoleWithWrapper ::
+makeHoleWithArgument ::
     (Functor f, Monad m) =>
     (Menu.Placement -> ExpressionGui f) -> Sugar.Payload (T m) ExprGuiT.Payload -> ExpressionGui f ->
     ExprGuiM m (ExpressionGui f)
-makeHoleWithWrapper searchAreaGui pl wrapperGui =
+makeHoleWithArgument searchAreaGui pl wrapperGui =
     do
-        unfocusedWrapperGui <-
+        unfocusedArgumentGui <-
             ExpressionGui.maybeAddAnnotationPl pl ?? wrapperGui
         isSelected <- GuiState.isSubCursor ?? hidHole widgetIds
         hover <- Hover.hover
@@ -62,17 +62,17 @@ makeHoleWithWrapper searchAreaGui pl wrapperGui =
                     wrapper & Align.tValue %~ Hover.hoverInPlaceOf options . Hover.anchor
                     where
                         options =
-                            [ hoverWrapper /-/ (searchArea Menu.Below <&> hover)
-                            , (searchArea Menu.Above <&> hover) /-/ hoverWrapper
+                            [ hoverArgument /-/ (searchArea Menu.Below <&> hover)
+                            , (searchArea Menu.Above <&> hover) /-/ hoverArgument
                             ]
                             <&> (^. Align.tValue)
-                        hoverWrapper = render wrapperGui & Align.tValue %~ Hover.anchor
+                        hoverArgument = render wrapperGui & Align.tValue %~ Hover.anchor
                         searchArea p =
                             render (searchAreaGui p)
                             & hideIfInHole
                         render x = (x ^. Responsive.render) layoutMode
                 False -> wrapper
-        unfocusedWrapperGui
+        unfocusedArgumentGui
             & Responsive.render . Lens.imapped %@~ f
             & pure
     where
@@ -94,8 +94,8 @@ make hole pl =
         searchAreaGui <- SearchArea.makeStdWrapped hole pl widgetIds
         case hole ^. Sugar.holeKind of
             Sugar.WrapperHole arg ->
-                makeWrapper pl (hidOpenSearchTerm widgetIds) arg
-                >>= makeHoleWithWrapper searchAreaGui pl
+                makeArgument pl (hidOpenSearchTerm widgetIds) arg
+                >>= makeHoleWithArgument searchAreaGui pl
             Sugar.LeafHole{} -> return (searchAreaGui Menu.AnyPlace)
     & assignHoleCursor widgetIds
     where
