@@ -15,7 +15,6 @@ module GUI.Momentu.Animation
 
 import qualified Control.Lens as Lens
 import           Data.Vector.Vector2 (Vector2(..))
-import           GHC.Generics (Generic)
 import           Graphics.DrawingCombinators (R, (%%))
 import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.DrawingCombinators.Utils as DrawUtils

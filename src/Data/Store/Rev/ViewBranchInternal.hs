@@ -24,7 +24,6 @@ import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
 import           Data.UUID.Types (UUID)
 import qualified Data.UUID.Utils as UUIDUtils
-import           GHC.Generics (Generic)
 
 import           Lamdu.Prelude
 

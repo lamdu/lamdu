@@ -11,7 +11,6 @@ import           Data.Aeson.TH (deriveJSON)
 import           Data.Aeson.Types (defaultOptions)
 import           Data.Vector.Vector2 (Vector2(..))
 import           Foreign.C.Types.Instances ()
-import           GHC.Generics (Generic)
 import qualified Graphics.DrawingCombinators as Draw
 
 import           Lamdu.Prelude

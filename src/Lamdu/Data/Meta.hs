@@ -7,7 +7,6 @@ module Lamdu.Data.Meta
 
 import qualified Control.Lens as Lens
 import           Data.Binary (Binary)
-import           GHC.Generics (Generic)
 import qualified Lamdu.Calc.Type as T
 
 import           Lamdu.Prelude

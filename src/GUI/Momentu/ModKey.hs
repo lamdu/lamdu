@@ -12,7 +12,6 @@ module GUI.Momentu.ModKey
 import           Data.Aeson (ToJSON(..), FromJSON(..))
 import           Data.List (isPrefixOf)
 import qualified Data.Text as Text
-import           GHC.Generics (Generic)
 import qualified Graphics.UI.GLFW as GLFW
 import           Graphics.UI.GLFW.Instances ()
 import qualified System.Info as SysInfo

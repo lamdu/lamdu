@@ -1,7 +1,7 @@
 {-# LANGUAGE NoImplicitPrelude, MultiParamTypeClasses, FlexibleInstances, TypeFamilies, DeriveGeneric #-}
 module Data.Vector.Vector2
     ( Vector2(Vector2)
-    , curry,uncurry,sqrNorm
+    , curry, uncurry, sqrNorm
     )
 where
 
@@ -13,7 +13,6 @@ import qualified Data.Aeson.Types as Aeson
 import           Data.Binary (Binary(..))
 import           Data.Monoid.Generic (def_mempty, def_mappend)
 import qualified Data.Tuple as Tuple
-import           GHC.Generics (Generic)
 
 import           Lamdu.Prelude hiding (curry, uncurry, zip)
 

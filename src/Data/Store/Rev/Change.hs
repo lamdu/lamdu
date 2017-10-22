@@ -4,7 +4,6 @@ where
 
 import Data.Binary (Binary)
 import Data.UUID.Types (UUID)
-import GHC.Generics (Generic)
 
 import Lamdu.Prelude
 

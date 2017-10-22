@@ -12,7 +12,6 @@ import           Data.Binary (Binary(..))
 import           Data.Map.Utils (setMapIntersection)
 import qualified Data.Set as Set
 import qualified Data.Text as Text
-import           GHC.Generics (Generic)
 import           Lamdu.Calc.Type (Tag)
 import           Lamdu.Calc.Type.Scheme (Scheme)
 import           Lamdu.Calc.Val.Annotated (Val)

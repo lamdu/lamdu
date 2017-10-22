@@ -3,7 +3,7 @@ module Data.Monoid.Generic (GMonoid, def_mempty, def_mappend) where
 
 -- | Use Generic class for creating Monoid instances
 
-import GHC.Generics (Generic, M1(..), U1(..), K1(..), (:*:)(..), Rep, from, to)
+import GHC.Generics (M1(..), U1(..), K1(..), (:*:)(..), Rep, from, to)
 
 import Lamdu.Prelude
 

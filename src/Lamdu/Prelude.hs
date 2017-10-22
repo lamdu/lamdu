@@ -20,6 +20,7 @@ import           Data.Map as X (Map)
 import           Data.Set as X (Set)
 import           Data.Text as X (Text)
 import qualified Debug.Trace as Trace
+import           GHC.Generics as X (Generic)
 
 import           Prelude.Compat as X
 

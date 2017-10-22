@@ -10,7 +10,6 @@ import qualified Control.Lens as Lens
 import           Data.Aeson.TH (deriveJSON)
 import           Data.Aeson.Types (defaultOptions)
 import           Data.Typeable (Typeable)
-import           GHC.Generics (Generic)
 import           GUI.Momentu.Font (Font)
 import qualified GUI.Momentu.Font as Font
 import qualified System.Directory as Directory

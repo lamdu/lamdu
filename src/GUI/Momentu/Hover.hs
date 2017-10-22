@@ -17,7 +17,6 @@ import           Data.Aeson.Types (defaultOptions)
 import           Data.Aeson.TH (deriveJSON)
 import           Data.List.Utils (minimumOn)
 import           Data.Vector.Vector2 (Vector2(..))
-import           GHC.Generics (Generic)
 import           GUI.Momentu.Align (Aligned(..), value)
 import qualified GUI.Momentu.Draw as Draw
 import           GUI.Momentu.Element (Element, SizedElement)

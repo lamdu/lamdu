@@ -20,7 +20,6 @@ import           Data.Foldable (asum)
 import qualified Data.Map as Map
 import           Data.Maybe (catMaybes, listToMaybe)
 import qualified Data.Set as Set
-import           GHC.Generics (Generic)
 import           GUI.Momentu.ModKey (ModKey(..))
 import qualified GUI.Momentu.ModKey as ModKey
 import qualified Graphics.UI.GLFW as GLFW

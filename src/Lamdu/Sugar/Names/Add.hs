@@ -21,7 +21,6 @@ import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
 import qualified Data.Text as Text
 import           Data.UUID.Types (UUID)
-import           GHC.Generics (Generic)
 import           Lamdu.Data.Anchors (assocNameRef)
 import           Lamdu.Name
 import qualified Lamdu.Sugar.Lens as SugarLens

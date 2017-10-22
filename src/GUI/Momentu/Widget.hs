@@ -66,7 +66,6 @@ import qualified Data.Monoid as Monoid
 import           Data.Monoid.Generic (def_mempty, def_mappend)
 import           Data.Vector.Vector2 (Vector2(..))
 import qualified Data.Vector.Vector2 as Vector2
-import           GHC.Generics (Generic)
 import           GUI.Momentu.Animation (AnimId, R, Size)
 import qualified GUI.Momentu.Animation as Anim
 import           GUI.Momentu.Direction (Direction)

@@ -12,7 +12,6 @@ import           Data.Store.IRef (IRef)
 import           Data.Store.Rev.Change (Change(..), Key, Value)
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
-import           GHC.Generics (Generic)
 
 import           Lamdu.Prelude
 
