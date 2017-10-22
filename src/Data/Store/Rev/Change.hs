@@ -1,11 +1,12 @@
-{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE NoImplicitPrelude, DeriveGeneric #-}
 module Data.Store.Rev.Change (Key, Value, Change(..))
 where
 
 import Data.Binary (Binary)
-import Data.ByteString (ByteString)
 import Data.UUID.Types (UUID)
 import GHC.Generics (Generic)
+
+import Lamdu.Prelude
 
 type Key = UUID
 type Value = ByteString

@@ -1,4 +1,4 @@
-{-# LANGUAGE GeneralizedNewtypeDeriving, DeriveGeneric, TemplateHaskell #-}
+{-# LANGUAGE NoImplicitPrelude, GeneralizedNewtypeDeriving, DeriveGeneric, TemplateHaskell #-}
 
 -- | View and Branch have a cyclic dependency. This module
 -- | contains the parts of both that both may depend on, to avoid the
@@ -14,7 +14,6 @@ where
 
 import qualified Control.Lens as Lens
 import           Data.Binary (Binary(..))
-import           Data.Foldable (traverse_)
 import           Data.Store.IRef (IRef)
 import qualified Data.Store.IRef as IRef
 import           Data.Store.Rev.Change (Change)
@@ -26,6 +25,8 @@ import qualified Data.Store.Transaction as Transaction
 import           Data.UUID.Types (UUID)
 import qualified Data.UUID.Utils as UUIDUtils
 import           GHC.Generics (Generic)
+
+import           Lamdu.Prelude
 
 -- This key is XOR'd with object keys to yield the IRef to each
 -- object's current version ref:
