@@ -131,6 +131,8 @@ Executable lamdu
                   , GUI.Momentu.View
                   , GUI.Momentu.Widget
                   , GUI.Momentu.Widget.Id
+                  , GUI.Momentu.Widget.Instances
+                  , GUI.Momentu.Widget.Types
                   , GUI.Momentu.Widgets.Choice
                   , GUI.Momentu.Widgets.Cursor
                   , GUI.Momentu.Widgets.EventMapHelp
