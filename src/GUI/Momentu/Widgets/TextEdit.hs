@@ -162,7 +162,7 @@ makeFocused cursor empty s str myId =
         displayStr = makeDisplayStr (empty ^. emptyFocusedString) str
         cursorRect@(Rect origin size) = mkCursorRect s cursor str
         cursorFrame =
-            Anim.unitSquare (Widget.cursorAnimId ++ ["text"])
+            Anim.unitSquare ["text-cursor"]
             & Anim.unitImages %~ Draw.tint (s ^. sCursorColor)
             & unitIntoCursorRect
         unitIntoCursorRect img =

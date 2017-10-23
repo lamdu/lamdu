@@ -33,7 +33,7 @@ module GUI.Momentu.Widget
     , isFocused
 
     , CursorConfig(..)
-    , renderWithCursor, cursorAnimId
+    , renderWithCursor
 
     -- Construct widgets:
     , fromView
