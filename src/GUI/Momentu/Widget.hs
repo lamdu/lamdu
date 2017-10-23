@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, DeriveFunctor, TemplateHaskell, GeneralizedNewtypeDeriving, DeriveGeneric, OverloadedStrings, NamedFieldPuns, LambdaCase, FlexibleInstances, MultiParamTypeClasses, TypeFamilies, FlexibleContexts #-}
+{-# LANGUAGE NoImplicitPrelude, DeriveFunctor, TemplateHaskell, GeneralizedNewtypeDeriving, DeriveGeneric, OverloadedStrings, LambdaCase, FlexibleInstances, MultiParamTypeClasses, TypeFamilies, FlexibleContexts #-}
 module GUI.Momentu.Widget
     ( Id(..), subId, Id.joinId, isSubCursor, makeSubId
     , HasCursor(..)
@@ -31,9 +31,6 @@ module GUI.Momentu.Widget
     , HasWidget(..)
 
     , isFocused
-
-    , CursorConfig(..)
-    , renderWithCursor
 
     -- Construct widgets:
     , fromView
@@ -86,7 +83,6 @@ import qualified GUI.Momentu.View as View
 import           GUI.Momentu.Widget.Id (Id(..))
 import qualified GUI.Momentu.Widget.Id as Id
 import           GUI.Momentu.Widgets.StdKeys (DirKeys(..), stdDirKeys)
-import qualified Graphics.DrawingCombinators as Draw
 
 import           Lamdu.Prelude
 
@@ -585,27 +581,3 @@ makeFocusableView =
     fromView view
     & respond myIdPrefix
     & takesFocus (const (pure myIdPrefix))
-
-cursorAnimId :: AnimId
-cursorAnimId = ["background"]
-
-newtype CursorConfig = CursorConfig
-    { cursorColor :: Draw.Color
-    }
-
-renderWithCursor ::
-    CursorConfig -> Widget a ->
-    (Anim.Frame, Maybe (Direction -> EnterResult a), Maybe (Rect, VirtualCursor -> EventMap a))
-renderWithCursor CursorConfig{cursorColor} w =
-    case w ^. wState of
-    StateUnfocused u ->
-        -- Unfocused top level widget! TODO: Is this some sort of error?
-        (Element.render (u ^. uLayers), u ^. uMEnter, Nothing)
-    StateFocused f ->
-        (cursorFrame <> Element.render (r ^. fLayers), r ^. fMEnter, Just (area, r ^. fEventMap))
-        where
-            r = f (Surrounding 0 0 0 0)
-            area = last (r ^. fFocalAreas)
-            cursorFrame =
-                Anim.backgroundColor cursorAnimId cursorColor (area ^. Rect.size)
-                & Anim.translate (area ^. Rect.topLeft)

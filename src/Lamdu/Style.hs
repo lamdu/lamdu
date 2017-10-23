@@ -15,7 +15,7 @@ import           GUI.Momentu.Font (Font)
 import qualified GUI.Momentu.Main as MainLoop
 import           GUI.Momentu.Main.Animation (AnimConfig(..))
 import           GUI.Momentu.MetaKey (MetaKey)
-import           GUI.Momentu.Widget (CursorConfig(..))
+import qualified GUI.Momentu.Widgets.Cursor as Cursor
 import qualified GUI.Momentu.Widgets.EventMapHelp as EventMapHelp
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
 import qualified GUI.Momentu.Widgets.TextView as TextView
@@ -92,7 +92,7 @@ mainLoopConfig config theme =
         , acRemainingRatioInPeriod = realToFrac (Theme.animationRemainInPeriod theme)
         }
     , cCursor =
-        CursorConfig
+        Cursor.Config
         { cursorColor = Theme.cursorBGColor theme
         }
     , cZoom = Config.zoom config

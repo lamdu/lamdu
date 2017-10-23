@@ -132,6 +132,7 @@ Executable lamdu
                   , GUI.Momentu.Widget
                   , GUI.Momentu.Widget.Id
                   , GUI.Momentu.Widgets.Choice
+                  , GUI.Momentu.Widgets.Cursor
                   , GUI.Momentu.Widgets.EventMapHelp
                   , GUI.Momentu.Widgets.FocusDelegator
                   , GUI.Momentu.Widgets.Grid

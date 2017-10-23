@@ -28,6 +28,7 @@ import           GUI.Momentu.Rect (Rect)
 import qualified GUI.Momentu.Rect as Rect
 import           GUI.Momentu.Widget (Widget, VirtualCursor(..))
 import qualified GUI.Momentu.Widget as Widget
+import qualified GUI.Momentu.Widgets.Cursor as Cursor
 import qualified GUI.Momentu.Widgets.EventMapHelp as EventMapHelp
 import           GUI.Momentu.Zoom (Zoom)
 import qualified GUI.Momentu.Zoom as Zoom
@@ -38,7 +39,7 @@ import           Lamdu.Prelude
 
 data Config = Config
     { cAnim :: MainAnim.AnimConfig
-    , cCursor :: Widget.CursorConfig
+    , cCursor :: Cursor.Config
     , cZoom :: Zoom.Config
     }
 
@@ -123,8 +124,8 @@ defaultOptions helpFontPath =
                     , MainAnim.acRemainingRatioInPeriod = 0.2
                     }
                 , cCursor =
-                    Widget.CursorConfig
-                    { Widget.cursorColor = Draw.Color 0.5 0.5 1 0.5
+                    Cursor.Config
+                    { Cursor.cursorColor = Draw.Color 0.5 0.5 1 0.5
                     }
                 , cZoom = Zoom.defaultConfig
                 }
@@ -221,7 +222,7 @@ mainLoopWidget win mkWidgetUnmemod options =
                 do
                     virtCursor <- readIORef virtCursorRef
                     vcursorimg <- virtualCursorImage virtCursor debug
-                    Widget.renderWithCursor
+                    Cursor.render
                         <$> (getConfig <&> cCursor)
                         <*> (readIORef mkWidgetRef >>= (size &))
                         <&> _1 <>~ vcursorimg
