@@ -1,24 +1,20 @@
-{-# LANGUAGE NoImplicitPrelude, GeneralizedNewtypeDeriving, TemplateHaskell, DeriveGeneric, DeriveFunctor #-}
+{-# LANGUAGE NoImplicitPrelude, TemplateHaskell, DeriveFunctor #-}
 module GUI.Momentu.Widget.Types
-    ( Id(..)
-    , EnterResult(..), enterResultEvent, enterResultRect, enterResultLayer
-    , EventResult(..), eCursor, eVirtualCursor, eAnimIdMapping
+    ( Widget(..), wState, wSize
     , State(..), _StateFocused, _StateUnfocused
-    , Widget(..), wState, wSize
-    , VirtualCursor(..), virtualCursor
     , Unfocused(..), uMEnter, uLayers
-    , Focused(..), fFocalAreas, fEventMap, fMEnter, fLayers
+    , EnterResult(..), enterResultEvent, enterResultRect, enterResultLayer
     , Surrounding(..), sLeft, sTop, sRight, sBottom
+    , Focused(..), fFocalAreas, fEventMap, fMEnter, fLayers
     ) where
 
 import qualified Control.Lens as Lens
-import           Data.Binary (Binary)
-import qualified Data.Monoid as Monoid
-import           GUI.Momentu.Animation (AnimId, R, Size)
+import           GUI.Momentu.Animation (R, Size)
 import           GUI.Momentu.Direction (Direction)
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
 import           GUI.Momentu.Rect (Rect)
+import           GUI.Momentu.State (VirtualCursor)
 
 import           Lamdu.Prelude
 
@@ -68,23 +64,7 @@ data Focused a = Focused
     , _fLayers :: Element.Layers
     } deriving Functor
 
--- The virtual cursor is the focal area that would ideally match the
--- direction of user movements
-newtype VirtualCursor = VirtualCursor { _virtualCursor :: Rect }
-Lens.makeLenses ''VirtualCursor
-
-data EventResult = EventResult
-    { _eCursor :: Monoid.Last Id
-    , _eVirtualCursor :: Monoid.Last VirtualCursor
-    , _eAnimIdMapping :: Monoid.Endo AnimId
-    } deriving (Generic)
-
-newtype Id = Id
-    { toAnimId :: AnimId
-    } deriving (Eq, Ord, Read, Binary, Monoid)
-
 Lens.makeLenses ''EnterResult
-Lens.makeLenses ''EventResult
 Lens.makeLenses ''Focused
 Lens.makeLenses ''Surrounding
 Lens.makeLenses ''Unfocused

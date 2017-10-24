@@ -1,6 +1,7 @@
 {-# LANGUAGE NoImplicitPrelude #-}
 module GUI.Momentu.Widget
     ( module Types
+    , module State
     , subId, Id.joinId, isSubCursor, makeSubId
     , HasCursor(..)
 
@@ -8,7 +9,6 @@ module GUI.Momentu.Widget
     , R, Size
 
     -- Event Result:
-    , eventResultFromCursor
     , applyIdMapping
 
     -- Events:
@@ -60,6 +60,7 @@ import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as EventMap
 import           GUI.Momentu.MetaKey (MetaKey, toModKey)
+import           GUI.Momentu.State as State
 import           GUI.Momentu.Rect (Rect(..))
 import qualified GUI.Momentu.Rect as Rect
 import           GUI.Momentu.View (View(..))
@@ -75,13 +76,6 @@ instance HasWidget Widget where widget = id
 
 isFocused :: Widget a -> Bool
 isFocused = Lens.has (wState . _StateFocused)
-
-eventResultFromCursor :: Id -> EventResult
-eventResultFromCursor c = EventResult
-    { _eCursor = Just c & Monoid.Last
-    , _eVirtualCursor = mempty
-    , _eAnimIdMapping = mempty
-    }
 
 {-# ANN module ("HLint: ignore Eta reduce"::String) #-}
 

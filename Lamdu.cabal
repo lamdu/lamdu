@@ -128,6 +128,7 @@ Executable lamdu
                   , GUI.Momentu.Responsive.Expression
                   , GUI.Momentu.Responsive.Options
                   , GUI.Momentu.Scroll
+                  , GUI.Momentu.State
                   , GUI.Momentu.View
                   , GUI.Momentu.Widget
                   , GUI.Momentu.Widget.Id

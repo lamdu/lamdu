@@ -9,8 +9,6 @@ module GUI.Momentu.Widget.Instances
 
 import           Control.Lens (LensLike)
 import qualified Control.Lens as Lens
-import           Data.List (intercalate)
-import           Data.Monoid.Generic (def_mempty, def_mappend)
 import           Data.Vector.Vector2 (Vector2(..))
 import qualified Data.Vector.Vector2 as Vector2
 import           GUI.Momentu.Animation (R, Size)
@@ -27,23 +25,14 @@ import           GUI.Momentu.ModKey (ModKey(..))
 import qualified GUI.Momentu.ModKey as ModKey
 import           GUI.Momentu.Rect (Rect(..))
 import qualified GUI.Momentu.Rect as Rect
+import           GUI.Momentu.State (EventResult, VirtualCursor)
+import qualified GUI.Momentu.State as State
 import           GUI.Momentu.View (View(..))
 import qualified GUI.Momentu.View as View
 import           GUI.Momentu.Widget.Types
 import           GUI.Momentu.Widgets.StdKeys (DirKeys(..), stdDirKeys)
-import           Numeric.Utils (encodeHex)
 
 import           Lamdu.Prelude
-
-instance Show Id where
-    show (Id animId) =
-        "W:" ++ intercalate ":" (map each animId)
-        where
-            each bs = encodeHex bs ++ "(" ++ show bs ++ ")"
-
-instance Monoid EventResult where
-    mempty = def_mempty
-    mappend = def_mappend
 
 sizedState :: Lens.IndexedLens' Size (Widget a) (State a)
 sizedState f (Widget sz state) = Lens.indexed f sz state <&> Widget sz
@@ -64,11 +53,11 @@ instance Functor f => Element (Widget (f EventResult)) where
         & Element.setLayers . Element.layers . Lens.mapped %~ Anim.scale mult
         & Element.size *~ mult
         & wState . _StateFocused . Lens.mapped . fFocalAreas . traverse . Rect.topLeftAndSize *~ mult
-        & wState . _StateFocused . Lens.mapped . fEventMap . Lens.argument . virtualCursor . Rect.topLeftAndSize //~ mult
+        & wState . _StateFocused . Lens.mapped . fEventMap . Lens.argument . State.virtualCursor . Rect.topLeftAndSize //~ mult
         & mEnter . Lens._Just . Lens.mapped . enterResultRect . Rect.topLeftAndSize *~ mult
         & mEnter . Lens._Just . Lens.argument %~ Direction.scale (1 / mult)
-        & Lens.mapped . Lens.mapped . eVirtualCursor . Lens.mapped .
-          virtualCursor . Rect.topLeftAndSize *~ mult
+        & Lens.mapped . Lens.mapped . State.eVirtualCursor . Lens.mapped .
+          State.virtualCursor . Rect.topLeftAndSize *~ mult
 
 instance Functor f => SizedElement (Widget (f EventResult)) where
     size f w =
@@ -142,7 +131,7 @@ combineStates orientation _ nextDir sz (StateFocused f) (StateUnfocused u) =
             case u ^. uMEnter of
             Nothing -> mempty
             Just enter ->
-                enter (dirCons nextDir (virtCursor ^. virtualCursor . chooseRange))
+                enter (dirCons nextDir (virtCursor ^. State.virtualCursor . chooseRange))
                 ^. enterResultEvent
                 & EventMap.keyPresses (dirKeys nextDir <&> ModKey mempty) (EventMap.Doc ["Navigation", "Move", dirName nextDir])
             & EventMap.weakerEvents
@@ -233,7 +222,7 @@ translate pos = translateGeneric (fmap (translateEventResult pos)) pos
 
 translateEventResult :: Vector2 R -> EventResult -> EventResult
 translateEventResult pos =
-    eVirtualCursor . Lens.mapped . virtualCursor . Rect.topLeft +~ pos
+    State.eVirtualCursor . Lens.mapped . State.virtualCursor . Rect.topLeft +~ pos
 
 translateGeneric :: (a -> b) -> Vector2 R -> Widget a -> State b
 translateGeneric f pos w =
@@ -266,7 +255,7 @@ translateFocusedGeneric f pos x =
             focused
             & fMEnter %~ translateMEnter pos
             & fFocalAreas . traverse . Rect.topLeft +~ pos
-            & fEventMap . Lens.argument . virtualCursor . Rect.topLeft -~ pos
+            & fEventMap . Lens.argument . State.virtualCursor . Rect.topLeft -~ pos
             & fLayers %~ Element.translateLayers pos
             <&> f
 

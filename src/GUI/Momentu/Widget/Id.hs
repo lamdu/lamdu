@@ -6,8 +6,8 @@ module GUI.Momentu.Widget.Id
 
 import Data.List.Lens (prefixed)
 import GUI.Momentu.Animation.Id (AnimId)
+import GUI.Momentu.State (Id(..))
 import GUI.Momentu.Widget.Instances ()
-import GUI.Momentu.Widget.Types (Id(..))
 
 import Lamdu.Prelude
 
