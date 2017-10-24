@@ -15,6 +15,7 @@ import           GUI.Momentu (Widget, WithTextPos)
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Draw as Draw
 import qualified GUI.Momentu.EventMap as E
+import qualified GUI.Momentu.State as GuiState
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
 import           Lamdu.Config (HasConfig)
@@ -37,7 +38,7 @@ make ::
     , HasConfig env, TextEdit.HasStyle env
     ) =>
     WidgetIds -> Sugar.HoleKind g e0 e1 -> Property (T m) Text ->
-    f (WithTextPos (Widget (T m Widget.EventResult)))
+    f (WithTextPos (Widget (T m GuiState.Update)))
 make widgetIds holeKind searchTermProp =
     do
         theme <- Lens.view Theme.theme
@@ -62,7 +63,7 @@ make widgetIds holeKind searchTermProp =
                     -- results, which will go to first result:
                     & ( if Text.null searchTerm && (not . Text.null) newSearchTerm
                         then
-                            Widget.eCursor .~
+                            GuiState.uCursor .~
                             Monoid.Last (Just (hidResultsPrefix widgetIds))
                         else id
                       )

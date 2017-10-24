@@ -15,6 +15,7 @@ import qualified GUI.Momentu.MetaKey as MetaKey
 import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.Responsive.Expression as ResponsiveExpr
 import qualified GUI.Momentu.Responsive.Options as Options
+import qualified GUI.Momentu.State as GuiState
 import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.TextView as TextView
@@ -40,14 +41,14 @@ type T = Transaction
 
 addScopeEdit ::
     Functor m =>
-    Maybe (Widget (T m Widget.EventResult)) -> ExpressionGui m ->
+    Maybe (Widget (T m GuiState.Update)) -> ExpressionGui m ->
     ExpressionGui m
 addScopeEdit mScopeEdit = (/-/ maybe Element.empty (WithTextPos 0) mScopeEdit)
 
 mkLhsEdits ::
     Functor m =>
     Maybe (ExpressionGui m) ->
-    Maybe (Widget (T m Widget.EventResult)) -> [ExpressionGui m]
+    Maybe (Widget (T m GuiState.Update)) -> [ExpressionGui m]
 mkLhsEdits mParamsEdit mScopeEdit =
     mParamsEdit <&> addScopeEdit mScopeEdit & (^.. Lens._Just)
 
@@ -55,7 +56,7 @@ mkExpanded ::
     ( Monad m, MonadReader env f, HasTheme env, TextView.HasStyle env
     , Element.HasAnimIdPrefix env
     ) =>
-    f (Maybe (ExpressionGui m) -> Maybe (Widget (T m Widget.EventResult)) ->
+    f (Maybe (ExpressionGui m) -> Maybe (Widget (T m GuiState.Update)) ->
      [ExpressionGui m])
 mkExpanded =
     do
@@ -70,7 +71,7 @@ mkShrunk ::
     ( Monad m, MonadReader env f, HasConfig env, HasTheme env
     , Widget.HasCursor env, Element.HasAnimIdPrefix env, TextView.HasStyle env
     ) => [Sugar.EntityId] -> Widget.Id ->
-    f (Maybe (Widget (T m Widget.EventResult)) -> [ExpressionGui m])
+    f (Maybe (Widget (T m GuiState.Update)) -> [ExpressionGui m])
 mkShrunk paramIds myId =
     do
         jumpKeys <- Lens.view Config.config <&> Config.jumpToDefinitionKeys
@@ -98,7 +99,7 @@ mkLightLambda ::
     ) =>
     Sugar.BinderParams a m -> Widget.Id ->
     f
-    (Maybe (ExpressionGui n) -> Maybe (Widget (T n Widget.EventResult)) ->
+    (Maybe (ExpressionGui n) -> Maybe (Widget (T n GuiState.Update)) ->
      [ExpressionGui n])
 mkLightLambda params myId =
     do

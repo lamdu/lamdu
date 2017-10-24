@@ -17,6 +17,7 @@ import           GUI.Momentu.Glue ((/|/))
 import           GUI.Momentu.MetaKey (MetaKey(..), noMods)
 import qualified GUI.Momentu.MetaKey as MetaKey
 import qualified GUI.Momentu.Responsive as Responsive
+import qualified GUI.Momentu.State as GuiState
 import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.FocusDelegator as FocusDelegator
@@ -43,7 +44,7 @@ type T = Transaction.Transaction
 mkEditEventMap ::
     Monad m =>
     Text -> T m (UUID, Sugar.EntityId) ->
-    Widget.EventMap (T m Widget.EventResult)
+    Widget.EventMap (T m GuiState.Update)
 mkEditEventMap valText setToHole =
     Widget.keysEventMapMovesCursor [MetaKey noMods MetaKey.Key'Enter]
     (E.Doc ["Edit", "Value"]) $
@@ -86,7 +87,7 @@ textEdit ::
     ) =>
     Transaction.Property m Text ->
     Sugar.Payload (T m) ExprGuiT.Payload ->
-    f (WithTextPos (Widget (T m Widget.EventResult)))
+    f (WithTextPos (Widget (T m GuiState.Update)))
 textEdit prop pl =
     do
         config <- Lens.view Config.config <&> Config.literalText

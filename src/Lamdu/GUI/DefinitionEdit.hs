@@ -16,8 +16,9 @@ import           GUI.Momentu.Glue ((/-/), (/|/))
 import           GUI.Momentu.MetaKey (MetaKey(..), noMods)
 import qualified GUI.Momentu.MetaKey as MetaKey
 import qualified GUI.Momentu.Responsive as Responsive
+import qualified GUI.Momentu.State as GuiState
 import           GUI.Momentu.View (View)
-import           GUI.Momentu.Widget (Widget, EventResult)
+import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.TextView as TextView
 import           Lamdu.Calc.Type.Scheme (Scheme(..), schemeType)
@@ -40,7 +41,7 @@ type T = Transaction
 
 undeleteButton ::
     Monad m =>
-    T m Widget.Id -> ExprGuiM m (WithTextPos (Widget (T m Widget.EventResult)))
+    T m Widget.Id -> ExprGuiM m (WithTextPos (Widget (T m GuiState.Update)))
 undeleteButton undelete =
     TextView.makeFocusableLabel "Undelete..."
     <&> Align.tValue %~ E.weakerEvents eventMap
@@ -51,7 +52,7 @@ undeleteButton undelete =
 
 makeExprDefinition ::
     Monad m =>
-    Widget.EventMap (T m EventResult) ->
+    Widget.EventMap (T m GuiState.Update) ->
     Sugar.Definition (Name (T m)) (T m) (ExprGuiT.SugarExpr m) ->
     Sugar.DefinitionExpression (Name (T m)) (T m) (ExprGuiT.SugarExpr m) ->
     ExprGuiM m (ExpressionGui m)
@@ -69,7 +70,7 @@ makeBuiltinDefinition ::
     Monad m =>
     Sugar.Definition (Name (T m)) (T m) (ExprGuiT.SugarExpr m) ->
     Sugar.DefinitionBuiltin (T m) ->
-    ExprGuiM m (WithTextPos (Widget (T m Widget.EventResult)))
+    ExprGuiM m (WithTextPos (Widget (T m GuiState.Update)))
 makeBuiltinDefinition def builtin =
     do
         defColor <- Lens.view Theme.theme <&> Theme.name <&> Theme.definitionColor
@@ -90,7 +91,7 @@ makeBuiltinDefinition def builtin =
 
 make ::
     Monad m =>
-    Widget.EventMap (T m EventResult) ->
+    Widget.EventMap (T m GuiState.Update) ->
     Sugar.Definition (Name (T m)) (T m) (ExprGuiT.SugarExpr m) ->
     ExprGuiM m (ExpressionGui m)
 make lhsEventMap def =

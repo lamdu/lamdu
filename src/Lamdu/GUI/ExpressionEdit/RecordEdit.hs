@@ -13,6 +13,7 @@ import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Glue ((/-/), (/|/))
 import qualified GUI.Momentu.Responsive as Responsive
+import qualified GUI.Momentu.State as GuiState
 import           GUI.Momentu.View (View)
 import qualified GUI.Momentu.View as View
 import qualified GUI.Momentu.Widget as Widget
@@ -40,7 +41,7 @@ doc text = E.Doc ["Edit", "Record", text]
 
 mkAddFieldEventMap ::
     Functor f =>
-    Config -> f Sugar.CompositeAddItemResult -> E.EventMap (f Widget.EventResult)
+    Config -> f Sugar.CompositeAddItemResult -> E.EventMap (f GuiState.Update)
 mkAddFieldEventMap config addField =
     addField
     <&> (^. Sugar.cairNewTag . Sugar.tagInstance)
@@ -98,7 +99,7 @@ make (Sugar.Composite fields recordTail addField) pl =
 makeRecord ::
     Monad m =>
     [Sugar.CompositeItem (Name (T m)) (T m) (ExprGuiT.SugarExpr m)] ->
-    E.EventMap (T m Widget.EventResult) ->
+    E.EventMap (T m GuiState.Update) ->
     (ExpressionGui m -> ExprGuiM m (ExpressionGui m)) ->
     ExprGuiM m (ExpressionGui m)
 makeRecord fields addFieldEventMap postProcess =
@@ -124,7 +125,7 @@ makeRecord fields addFieldEventMap postProcess =
 makeFieldRow ::
     Monad m =>
     Sugar.CompositeItem (Name (T m)) (T m) (ExprGuiT.SugarExpr m) ->
-    ExprGuiM m (Responsive.TaggedItem (T m Widget.EventResult))
+    ExprGuiM m (Responsive.TaggedItem (T m GuiState.Update))
 makeFieldRow (Sugar.CompositeItem delete tag fieldExpr) =
     do
         config <- Lens.view Config.config
@@ -180,7 +181,7 @@ openRecordEventMap ::
     Functor m =>
     Config -> Sugar.OpenCompositeActions (T m) ->
     Sugar.Expression name (T m) a ->
-    Widget.EventMap (T m Widget.EventResult)
+    Widget.EventMap (T m GuiState.Update)
 openRecordEventMap config (Sugar.OpenCompositeActions close) restExpr
     | isHole restExpr =
         close <&> WidgetIds.fromEntityId
@@ -192,14 +193,14 @@ openRecordEventMap config (Sugar.OpenCompositeActions close) restExpr
 closedRecordEventMap ::
     Functor m =>
     Config -> Sugar.ClosedCompositeActions (T m) ->
-    Widget.EventMap (T m Widget.EventResult)
+    Widget.EventMap (T m GuiState.Update)
 closedRecordEventMap config (Sugar.ClosedCompositeActions open) =
     open <&> WidgetIds.fromEntityId
     & Widget.keysEventMapMovesCursor (Config.recordOpenKeys config) (doc "Open")
 
 recordDelEventMap ::
     Functor m =>
-    Config -> m Sugar.EntityId -> Widget.EventMap (m Widget.EventResult)
+    Config -> m Sugar.EntityId -> Widget.EventMap (m GuiState.Update)
 recordDelEventMap config delete =
     delete <&> WidgetIds.fromEntityId
     & Widget.keysEventMapMovesCursor (Config.delKeys config) (doc "Delete Field")

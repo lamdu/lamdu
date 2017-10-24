@@ -30,6 +30,7 @@ import           GUI.Momentu.MetaKey (MetaKey(..), noMods, toModKey)
 import qualified GUI.Momentu.MetaKey as MetaKey
 import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.Responsive.Options as Options
+import qualified GUI.Momentu.State as GuiState
 import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
@@ -69,9 +70,9 @@ nonOperatorName _ = False
 makeBinderNameEdit ::
     Monad m =>
     Sugar.BinderActions (T m) ->
-    Widget.EventMap (T m Widget.EventResult) ->
+    Widget.EventMap (T m GuiState.Update) ->
     Name (T m) -> Draw.Color -> Widget.Id ->
-    ExprGuiM m (WithTextPos (Widget (T m Widget.EventResult)))
+    ExprGuiM m (WithTextPos (Widget (T m GuiState.Update)))
 makeBinderNameEdit binderActions rhsJumperEquals name color myId =
     do
         config <- Lens.view Config.config
@@ -88,9 +89,9 @@ makeBinderNameEdit binderActions rhsJumperEquals name color myId =
 
 data Parts m = Parts
     { pMParamsEdit :: Maybe (ExpressionGui m)
-    , pMScopesEdit :: Maybe (Widget (T m Widget.EventResult))
+    , pMScopesEdit :: Maybe (Widget (T m GuiState.Update))
     , pBodyEdit :: ExpressionGui m
-    , pEventMap :: Widget.EventMap (T m Widget.EventResult)
+    , pEventMap :: Widget.EventMap (T m GuiState.Update)
     }
 
 data ScopeCursor = ScopeCursor
@@ -149,7 +150,7 @@ mkChosenScopeCursor binder =
 makeScopeEventMap ::
     Monad m =>
     [MetaKey] -> [MetaKey] -> ScopeCursor -> (Sugar.BinderParamScopeId -> m ()) ->
-    Widget.EventMap (m Widget.EventResult)
+    Widget.EventMap (m GuiState.Update)
 makeScopeEventMap prevKey nextKey cursor setter =
     do
         (key, doc, scope) <-
@@ -161,7 +162,7 @@ makeScopeEventMap prevKey nextKey cursor setter =
         prevDoc = E.Doc ["Evaluation", "Scope", "Previous"]
         nextDoc = E.Doc ["Evaluation", "Scope", "Next"]
 
-blockEventMap :: Monad m => Widget.EventMap (m Widget.EventResult)
+blockEventMap :: Monad m => Widget.EventMap (m GuiState.Update)
 blockEventMap =
     return mempty
     & E.keyPresses (dirKeys <&> toModKey)
@@ -173,8 +174,8 @@ makeScopeNavEdit ::
     Monad m =>
     Sugar.Binder name (T m) expr -> Widget.Id -> ScopeCursor ->
     ExprGuiM m
-    ( Widget.EventMap (T m Widget.EventResult)
-    , Maybe (Widget (T m Widget.EventResult))
+    ( Widget.EventMap (T m GuiState.Update)
+    , Maybe (Widget (T m GuiState.Update))
     )
 makeScopeNavEdit binder myId curCursor =
     do
@@ -306,7 +307,7 @@ makeParts funcApplyLimit binder delVarBackwardsId myId =
 make ::
     Monad m =>
     Maybe (T m (Property (T m) Meta.PresentationMode)) ->
-    Widget.EventMap (T m Widget.EventResult) ->
+    Widget.EventMap (T m GuiState.Update) ->
     Name (T m) -> Draw.Color ->
     Sugar.Binder (Name (T m)) (T m) (ExprGuiT.SugarExpr m) ->
     Widget.Id ->
@@ -402,14 +403,14 @@ makeLetEdit item =
         binder = item ^. Sugar.lValue
 
 jumpToRHS ::
-    Monad f => Widget.Id -> ExprGuiM f (Widget.EventMap (T f Widget.EventResult))
+    Monad f => Widget.Id -> ExprGuiM f (Widget.EventMap (T f GuiState.Update))
 jumpToRHS rhsId =
     ExprGuiM.mkPrejumpPosSaver
     <&> Lens.mapped .~ rhsId
     <&> Widget.keysEventMapMovesCursor [MetaKey noMods MetaKey.Key'Equal]
         (E.Doc ["Navigation", "Jump to Def Body"])
 
-addLetEventMap :: Monad m => T m Sugar.EntityId -> ExprGuiM m (Widget.EventMap (T m Widget.EventResult))
+addLetEventMap :: Monad m => T m Sugar.EntityId -> ExprGuiM m (Widget.EventMap (T m GuiState.Update))
 addLetEventMap addLet =
     do
         config <- Lens.view Config.config
@@ -472,7 +473,7 @@ makeBinderContentEdit (Sugar.BinderLet l) =
 namedParamEditInfo ::
     Monad m =>
     Widget.Id -> Sugar.FuncParamActions (T m) ->
-    WithTextPos (Widget (T m Widget.EventResult)) ->
+    WithTextPos (Widget (T m GuiState.Update)) ->
     ParamEdit.Info m
 namedParamEditInfo widgetId actions nameEdit =
     ParamEdit.Info
@@ -484,7 +485,7 @@ namedParamEditInfo widgetId actions nameEdit =
     , ParamEdit.iId = widgetId
     }
 
-nullParamEditInfo :: Monad m => Widget.Id -> WithTextPos (Widget (T m Widget.EventResult)) -> Sugar.NullParamActions (T m) -> ParamEdit.Info m
+nullParamEditInfo :: Monad m => Widget.Id -> WithTextPos (Widget (T m GuiState.Update)) -> Sugar.NullParamActions (T m) -> ParamEdit.Info m
 nullParamEditInfo widgetId nameEdit mActions =
     ParamEdit.Info
     { ParamEdit.iNameEdit = nameEdit

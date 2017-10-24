@@ -15,7 +15,7 @@ import           Data.Store.Property (Property)
 import qualified Data.Store.Property as Property
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Text as Text
-import           GUI.Momentu (Widget, EventResult, AnimId)
+import           GUI.Momentu (Widget, AnimId)
 import           GUI.Momentu.Align (Aligned(..), WithTextPos(..))
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Animation as Anim
@@ -26,6 +26,7 @@ import qualified GUI.Momentu.Hover as Hover
 import qualified GUI.Momentu.MetaKey as MetaKey
 import           GUI.Momentu.Rect (Rect(..))
 import qualified GUI.Momentu.Responsive as Responsive
+import qualified GUI.Momentu.State as GuiState
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widget.Id as WidgetId
 import qualified GUI.Momentu.Widgets.Grid as Grid
@@ -60,7 +61,7 @@ import           Lamdu.Prelude
 type T = Transaction
 
 data PickedResult = PickedResult
-    { _pickedEventResult :: Widget.EventResult
+    { _pickedUpdate :: GuiState.Update
     , _pickedIdTranslations :: Widget.Id -> Widget.Id
     }
 Lens.makeLenses ''PickedResult
@@ -69,8 +70,8 @@ resultSuffix :: Lens.Prism' AnimId AnimId
 resultSuffix = suffixed ["result suffix"]
 
 data ResultGroup m = ResultGroup
-    { _rgOption :: !(Menu.Option (ExprGuiM m) (T m Widget.EventResult))
-    , _rgPickEventMap :: !(Widget.EventMap (T m Widget.EventResult))
+    { _rgOption :: !(Menu.Option (ExprGuiM m) (T m GuiState.Update))
+    , _rgPickEventMap :: !(Widget.EventMap (T m GuiState.Update))
     }
 Lens.makeLenses ''ResultGroup
 
@@ -78,8 +79,8 @@ makeShownResult ::
     Monad m =>
     Sugar.Payload f ExprGuiT.Payload -> Property (T m) Text -> Result m ->
     ExprGuiM m
-    ( Widget.EventMap (T m Widget.EventResult)
-    , WithTextPos (Widget (T m Widget.EventResult))
+    ( Widget.EventMap (T m GuiState.Update)
+    , WithTextPos (Widget (T m GuiState.Update))
     )
 makeShownResult pl stateProp result =
     do
@@ -115,7 +116,7 @@ makeResultGroup pl stateProp results =
         mainResult = results ^. HoleResults.rlMain
 
 applyResultLayout ::
-    Functor f => f (ExpressionGui m) -> f (WithTextPos (Widget (T m Widget.EventResult)))
+    Functor f => f (ExpressionGui m) -> f (WithTextPos (Widget (T m GuiState.Update)))
 applyResultLayout fGui =
     fGui <&> (^. Responsive.render)
     ?? Responsive.LayoutParams
@@ -126,12 +127,14 @@ applyResultLayout fGui =
 eventResultOfPickedResult :: Sugar.PickedResult -> PickedResult
 eventResultOfPickedResult pr =
     PickedResult
-    { _pickedEventResult =
-        Widget.EventResult
-        { Widget._eCursor = Monoid.Last Nothing
-        , Widget._eAnimIdMapping =
-            Monoid.Endo $ pickedResultAnimIdTranslation $ pr ^. Sugar.prIdTranslation
-        , Widget._eVirtualCursor = Monoid.Last Nothing
+    { _pickedUpdate =
+        GuiState.Update
+        { GuiState._uCursor = Monoid.Last Nothing
+        , GuiState._uAnimIdMapping =
+            pr ^. Sugar.prIdTranslation
+            & pickedResultAnimIdTranslation
+            & Monoid.Endo
+        , GuiState._uVirtualCursor = Monoid.Last Nothing
         }
     , _pickedIdTranslations =
         pr ^. Sugar.prIdTranslation
@@ -161,8 +164,8 @@ afterPick stateProp holeId resultId mFirstHoleInside pr =
     do
         Property.set stateProp mempty
         result
-            & pickedEventResult . Widget.eCursor .~ Monoid.Last (Just cursorId)
-            & pickedEventResult . Widget.eAnimIdMapping %~
+            & pickedUpdate . GuiState.uCursor .~ Monoid.Last (Just cursorId)
+            & pickedUpdate . GuiState.uAnimIdMapping %~
                 mappend (Monoid.Endo obliterateOtherResults)
             & return
     where
@@ -195,7 +198,7 @@ removeUnwanted config =
 fixNumWithDotEventMap ::
     Monad m =>
     Text -> Sugar.HoleResult (T m) (Sugar.Expression name (T m) ()) ->
-    Widget.EventMap (T m Widget.EventResult)
+    Widget.EventMap (T m GuiState.Update)
 fixNumWithDotEventMap searchTerm res
     | endsWithDot
     , Lens.has literalNum conv
@@ -210,10 +213,8 @@ fixNumWithDotEventMap searchTerm res
             \c ->
             do
                 (uuid, entityId) <- toHole
-                cursor <-
-                    HoleState.setHoleStateAndJump uuid
-                    ("." <> Text.singleton c) entityId
-                return $ Widget.eventResultFromCursor cursor
+                HoleState.setHoleStateAndJump uuid ("." <> Text.singleton c) entityId
+            <&> GuiState.updateCursor
         endsWithDot = "." `Text.isSuffixOf` searchTerm
         doc = E.Doc ["Edit", "Apply Operator"]
         conv = res ^. Sugar.holeResultConverted
@@ -229,8 +230,8 @@ makeHoleResultWidget ::
     Widget.Id ->
     Sugar.HoleResult (T m) (Sugar.Expression (Name (T m)) (T m) ()) ->
     ExprGuiM m
-    ( Widget.EventMap (T m Widget.EventResult)
-    , WithTextPos (Widget (T m Widget.EventResult))
+    ( Widget.EventMap (T m GuiState.Update)
+    , WithTextPos (Widget (T m GuiState.Update))
     )
 makeHoleResultWidget pl stateProp resultId holeResult =
     do
@@ -286,9 +287,9 @@ makeHoleResultWidget pl stateProp resultId holeResult =
                     holeResult ^. Sugar.holeResultPick
                     >>= afterPick stateProp (pl ^. Sugar.plEntityId) resultId mFirstHoleInside
                 action
-                    <&> Widget.eCursor . Lens._Wrapped' . Lens.mapped %~
+                    <&> GuiState.uCursor . Lens._Wrapped' . Lens.mapped %~
                         pickedResult ^. pickedIdTranslations
-                    <&> mappend (pickedResult ^. pickedEventResult)
+                    <&> mappend (pickedResult ^. pickedUpdate)
         simplePickRes keys =
             Widget.keysEventMap keys (E.Doc ["Edit", "Result", "Pick"]) (return ())
 
@@ -310,7 +311,7 @@ postProcessSugar minOpPrec expr =
             }
 
 emptyPickEventMap ::
-    (Monad m, Applicative f) => ExprGuiM m (Widget.EventMap (f Widget.EventResult))
+    (Monad m, Applicative f) => ExprGuiM m (Widget.EventMap (f GuiState.Update))
 emptyPickEventMap =
     Lens.view Config.config <&> Config.hole <&> keys <&> mkEventMap
     where
@@ -322,7 +323,7 @@ makeResultsWidget ::
     Monad m =>
     Widget.R -> Sugar.Payload f ExprGuiT.Payload -> Property (T m) Text ->
     [ResultsList m] -> Menu.HasMoreOptions ->
-    ExprGuiM m (Widget.EventMap (T m Widget.EventResult), Hover.Ordered (Widget (T m Widget.EventResult)))
+    ExprGuiM m (Widget.EventMap (T m GuiState.Update), Hover.Ordered (Widget (T m GuiState.Update)))
 makeResultsWidget minWidth pl stateProp shownResultsLists hiddenResults =
     do
         groupsWidgets <- traverse (makeResultGroup pl stateProp) shownResultsLists
@@ -361,10 +362,10 @@ resultsHoverOptions ::
     ) =>
     m
     (Menu.Placement ->
-     (Widget (f EventResult) -> Widget (f EventResult)) ->
-     Hover.Ordered (Widget (f EventResult)) ->
-     Hover.AnchoredWidget (f EventResult) ->
-     [Hover.AnchoredWidget (f EventResult)])
+     (Widget (f GuiState.Update) -> Widget (f GuiState.Update)) ->
+     Hover.Ordered (Widget (f GuiState.Update)) ->
+     Hover.AnchoredWidget (f GuiState.Update) ->
+     [Hover.AnchoredWidget (f GuiState.Update)])
 resultsHoverOptions =
     Hover.hover <&> \hover pos addAnnotation results searchTerm ->
     let resultsAbove alignment =
@@ -415,7 +416,7 @@ makeUnderCursorAssignment ::
     Sugar.Payload (T m) ExprGuiT.Payload ->
     Property (T m) Text ->
     WidgetIds ->
-    ExprGuiM m (Menu.Placement -> WithTextPos (Widget (T m Widget.EventResult)))
+    ExprGuiM m (Menu.Placement -> WithTextPos (Widget (T m GuiState.Update)))
 makeUnderCursorAssignment shownResultsLists hasHiddenResults hole pl stateProp widgetIds =
     do
         -- We make our own type view here instead of
@@ -469,7 +470,7 @@ makeOpenSearchAreaGui ::
     Sugar.Payload (T m) ExprGuiT.Payload ->
     Property (T m) Text ->
     WidgetIds ->
-    ExprGuiM m (Menu.Placement -> WithTextPos (Widget (T m Widget.EventResult)))
+    ExprGuiM m (Menu.Placement -> WithTextPos (Widget (T m GuiState.Update)))
 makeOpenSearchAreaGui hole pl stateProp widgetIds =
     do
         (shownResultsLists, hasHiddenResults) <- HoleResults.makeAll hole searchTerm widgetIds

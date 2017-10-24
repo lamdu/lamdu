@@ -7,6 +7,7 @@ module Lamdu.GUI.ExpressionEdit.HoleEdit.Argument
 import qualified Control.Lens as Lens
 import           Data.Store.Transaction (Transaction)
 import qualified GUI.Momentu as Momentu
+import qualified GUI.Momentu.State as GuiState
 import qualified GUI.Momentu.Widget as Widget
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Config.Theme as Theme
@@ -25,7 +26,7 @@ type T = Transaction
 makeUnwrapEventMap ::
     (MonadReader env m, Config.HasConfig env, Monad f) =>
     Sugar.HoleArg (T f) (ExpressionN f a) -> Widget.Id ->
-    m (Widget.EventMap (T f Widget.EventResult))
+    m (Widget.EventMap (T f GuiState.Update))
 makeUnwrapEventMap arg openHoleId =
     Lens.view Config.config
     <&>

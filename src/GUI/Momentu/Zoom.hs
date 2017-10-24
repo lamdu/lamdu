@@ -10,6 +10,7 @@ import           Data.IORef
 import qualified GUI.Momentu.EventMap as EventMap
 import           GUI.Momentu.MetaKey (MetaKey)
 import qualified GUI.Momentu.MetaKey as MetaKey
+import qualified GUI.Momentu.State as State
 import qualified GUI.Momentu.Widget as Widget
 import qualified Graphics.UI.GLFW as GLFW
 import qualified Graphics.UI.GLFW.Utils as GLFWUtils
@@ -37,7 +38,7 @@ newtype Zoom = Zoom
     { _scaleFactorRef :: IORef Widget.R
     }
 
-eventMap :: Zoom -> Config -> Widget.EventMap (IO Widget.EventResult)
+eventMap :: Zoom -> Config -> Widget.EventMap (IO State.Update)
 eventMap (Zoom ref) config =
     mconcat
     [ Widget.keysEventMap (enlargeKeys config)

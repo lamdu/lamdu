@@ -17,6 +17,7 @@ import           GUI.Momentu.Glue ((/-/))
 import qualified GUI.Momentu.Hover as Hover
 import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.Responsive.Options as Options
+import qualified GUI.Momentu.State as GuiState
 import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
@@ -49,7 +50,7 @@ makeSimpleView ::
     , Applicative f, Element.HasAnimIdPrefix env, TextView.HasStyle env
     ) =>
     Name x -> Widget.Id ->
-    m (WithTextPos (Widget (f Widget.EventResult)))
+    m (WithTextPos (Widget (f GuiState.Update)))
 makeSimpleView (Name name _) myId =
     (Widget.makeFocusableView ?? myId <&> (Align.tValue %~))
     <*> NameEdit.makeView name (Widget.toAnimId myId)
@@ -84,8 +85,8 @@ makeParamsRecord myId paramsRecordVar =
 makeNameRef ::
     Monad m =>
     Widget.Id -> Sugar.NameRef name (T m) ->
-    (name -> Widget.Id -> ExprGuiM m (WithTextPos (Widget (T m Widget.EventResult)))) ->
-    ExprGuiM m (WithTextPos (Widget (T m Widget.EventResult)))
+    (name -> Widget.Id -> ExprGuiM m (WithTextPos (Widget (T m GuiState.Update)))) ->
+    ExprGuiM m (WithTextPos (Widget (T m GuiState.Update)))
 makeNameRef myId nameRef maker =
     do
         cp <- ExprGuiM.readCodeAnchors
@@ -106,7 +107,7 @@ makeNameRef myId nameRef maker =
 makeInlineEventMap ::
     Monad m =>
     Config -> Sugar.BinderVarInline (T m) ->
-    Widget.EventMap (T m Widget.EventResult)
+    Widget.EventMap (T m GuiState.Update)
 makeInlineEventMap config (Sugar.InlineVar inline) =
     inline <&> WidgetIds.fromEntityId
     & Widget.keysEventMapMovesCursor (Config.inlineKeys config)
@@ -124,7 +125,7 @@ definitionTypeChangeBox ::
     , HasConfig env
     ) =>
     Sugar.DefinitionOutdatedType (T m) -> Widget.Id ->
-    f (WithTextPos (Widget (T m Widget.EventResult)))
+    f (WithTextPos (Widget (T m GuiState.Update)))
 definitionTypeChangeBox info getVarId =
     do
         headerLabel <- TextView.makeLabel "Type was:"
@@ -157,8 +158,8 @@ processDefinitionWidget ::
     , TextView.HasStyle env, Widget.HasCursor env, Hover.HasStyle env
     ) =>
     Sugar.DefinitionForm (T m) -> Widget.Id ->
-    f (WithTextPos (Widget (T m Widget.EventResult))) ->
-    f (WithTextPos (Widget (T m Widget.EventResult)))
+    f (WithTextPos (Widget (T m GuiState.Update))) ->
+    f (WithTextPos (Widget (T m GuiState.Update)))
 processDefinitionWidget Sugar.DefUpToDate _myId mkLayout = mkLayout
 processDefinitionWidget Sugar.DefDeleted _myId mkLayout =
     (Styled.addDeletionDiagonal ?? 0.1)
@@ -183,7 +184,7 @@ processDefinitionWidget (Sugar.DefTypeChanged info) myId mkLayout =
 makeGetBinder ::
     Monad m =>
     Sugar.BinderVarRef (Name (T m)) (T m) -> Widget.Id ->
-    ExprGuiM m (WithTextPos (Widget (T m Widget.EventResult)))
+    ExprGuiM m (WithTextPos (Widget (T m GuiState.Update)))
 makeGetBinder binderVar myId =
     do
         config <- Lens.view Config.config
@@ -205,7 +206,7 @@ makeGetBinder binderVar myId =
 makeGetParam ::
     Monad m =>
     Sugar.ParamRef (Name (T m)) (T m) -> Widget.Id ->
-    ExprGuiM m (WithTextPos (Widget (T m Widget.EventResult)))
+    ExprGuiM m (WithTextPos (Widget (T m GuiState.Update)))
 makeGetParam param myId =
     do
         theme <- Lens.view Theme.theme

@@ -24,9 +24,10 @@ import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.Glue (Glue(..), Orientation, GluesTo)
 import qualified GUI.Momentu.Glue as Glue
 import           GUI.Momentu.Rect (Rect(..))
+import qualified GUI.Momentu.State as State
 import           GUI.Momentu.View (View)
 import qualified GUI.Momentu.View as View
-import           GUI.Momentu.Widget (Widget(..), R, EventResult)
+import           GUI.Momentu.Widget (Widget(..), R)
 import qualified GUI.Momentu.Widget as Widget
 
 import           Lamdu.Prelude
@@ -68,7 +69,7 @@ instance SizedElement a => SizedElement (Hover a) where
 
 instance Widget.HasWidget AnchoredWidget where widget = anchored
 
-instance Functor f => Element (AnchoredWidget (f EventResult)) where
+instance Functor f => Element (AnchoredWidget (f State.Update)) where
     setLayers = anchored . Element.setLayers
     hoverLayers = anchored %~ Element.hoverLayers
     empty = AnchoredWidget 0 Element.empty
@@ -83,33 +84,33 @@ instance Functor f => Element (AnchoredWidget (f EventResult)) where
         , _anchored = Element.scale ratio w
         }
 
-instance Functor f => SizedElement (AnchoredWidget (f EventResult)) where
+instance Functor f => SizedElement (AnchoredWidget (f State.Update)) where
     size = anchored . Element.size
 
-instance Functor f => Glue (AnchoredWidget (f EventResult)) (Hover View) where
-    type Glued (AnchoredWidget (f EventResult)) (Hover View) = AnchoredWidget (f EventResult)
+instance Functor f => Glue (AnchoredWidget (f State.Update)) (Hover View) where
+    type Glued (AnchoredWidget (f State.Update)) (Hover View) = AnchoredWidget (f State.Update)
     glue o ow (Hover ov) =
         Glue.glueH f o ow ov
         where
             f w v = w & Element.setLayers <>~ v ^. View.vAnimLayers
 
-instance Functor f => Glue (Hover View) (AnchoredWidget (f EventResult)) where
-    type Glued (Hover View) (AnchoredWidget (f EventResult)) = AnchoredWidget (f EventResult)
+instance Functor f => Glue (Hover View) (AnchoredWidget (f State.Update)) where
+    type Glued (Hover View) (AnchoredWidget (f State.Update)) = AnchoredWidget (f State.Update)
     glue o (Hover ov) =
         Glue.glueH f o ov
         where
             f v w = w & Element.setLayers <>~ v ^. View.vAnimLayers
 
-instance Functor f => Glue (AnchoredWidget (f EventResult)) (Hover (Widget (f EventResult))) where
-    type Glued (AnchoredWidget (f EventResult)) (Hover (Widget (f EventResult))) = AnchoredWidget (f EventResult)
+instance Functor f => Glue (AnchoredWidget (f State.Update)) (Hover (Widget (f State.Update))) where
+    type Glued (AnchoredWidget (f State.Update)) (Hover (Widget (f State.Update))) = AnchoredWidget (f State.Update)
     glue orientation ow0 (Hover ow1) =
         Glue.glueH f orientation ow0 ow1
         where
             f (AnchoredWidget pos w0) w1 =
                 AnchoredWidget pos (Widget.glueStates orientation w0 w1)
 
-instance Functor f => Glue (Hover (Widget (f EventResult))) (AnchoredWidget (f EventResult)) where
-    type Glued (Hover (Widget (f EventResult))) (AnchoredWidget (f EventResult)) = AnchoredWidget (f EventResult)
+instance Functor f => Glue (Hover (Widget (f State.Update))) (AnchoredWidget (f State.Update)) where
+    type Glued (Hover (Widget (f State.Update))) (AnchoredWidget (f State.Update)) = AnchoredWidget (f State.Update)
     glue orientation (Hover ow0) =
         Glue.glueH f orientation ow0
         where
@@ -181,8 +182,8 @@ sequenceHover (Hover x) = x <&> Hover
 -- it as such?
 hoverInPlaceOf ::
     Functor f =>
-    [AnchoredWidget (f EventResult)] ->
-    AnchoredWidget (f EventResult) -> Widget (f EventResult)
+    [AnchoredWidget (f State.Update)] ->
+    AnchoredWidget (f State.Update) -> Widget (f State.Update)
 hoverInPlaceOf [] _ = error "no hover options!"
 hoverInPlaceOf hoverOptions@(defaultOption:_) place
     | null focusedOptions =
@@ -224,15 +225,15 @@ hoverInPlaceOf hoverOptions@(defaultOption:_) place
                 br = h ^. Element.size - place ^. Element.size - tl
 
 hoverBeside ::
-    ( GluesTo (Hover w) (AnchoredWidget (f EventResult)) (AnchoredWidget (f EventResult))
+    ( GluesTo (Hover w) (AnchoredWidget (f State.Update)) (AnchoredWidget (f State.Update))
     , SizedElement w
     , Element.HasAnimIdPrefix env, HasStyle env, MonadReader env m
     , Functor f
     ) =>
     (forall a b. Lens (t a) (t b) a b) ->
     m
-    ( t (Widget (f EventResult)) ->
-      w -> t (Widget (f EventResult))
+    ( t (Widget (f State.Update)) ->
+      w -> t (Widget (f State.Update))
     )
 hoverBeside lens =
     do

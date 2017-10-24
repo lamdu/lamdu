@@ -9,7 +9,9 @@ module Lamdu.GUI.CodeEdit.Settings
 import qualified Control.Lens as Lens
 import           Data.IORef
 import qualified Data.Text as Text
+import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as EventMap
+import qualified GUI.Momentu.State as GuiState
 import qualified GUI.Momentu.Widget as Widget
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
@@ -39,7 +41,7 @@ nextInfoMode = cyclicSucc
 
 mkEventMap ::
     (Settings -> IO ()) -> Config -> IORef Settings ->
-    IO (Widget.EventMap (IO Widget.EventResult))
+    IO (EventMap (IO GuiState.Update))
 mkEventMap onSettingsChange config settingsRef =
     do
         theSettings <- readIORef settingsRef

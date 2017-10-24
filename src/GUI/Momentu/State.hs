@@ -2,8 +2,8 @@
 
 module GUI.Momentu.State
     ( VirtualCursor(..), virtualCursor
-    , EventResult(..), eCursor, eVirtualCursor, eAnimIdMapping
-    , eventResultFromCursor
+    , Update(..), uCursor, uVirtualCursor, uAnimIdMapping
+    , updateCursor
     ) where
 
 import qualified Control.Lens as Lens
@@ -20,21 +20,21 @@ import           Lamdu.Prelude
 newtype VirtualCursor = VirtualCursor { _virtualCursor :: Rect }
 Lens.makeLenses ''VirtualCursor
 
-data EventResult = EventResult
-    { _eCursor :: Monoid.Last Id
-    , _eVirtualCursor :: Monoid.Last VirtualCursor
-    , _eAnimIdMapping :: Monoid.Endo AnimId
+data Update = Update
+    { _uCursor :: Monoid.Last Id
+    , _uVirtualCursor :: Monoid.Last VirtualCursor
+    , _uAnimIdMapping :: Monoid.Endo AnimId
     } deriving (Generic)
-Lens.makeLenses ''EventResult
+Lens.makeLenses ''Update
 
-instance Monoid EventResult where
+instance Monoid Update where
     mempty = def_mempty
     mappend = def_mappend
 
-eventResultFromCursor :: Id -> EventResult
-eventResultFromCursor c =
-    EventResult
-    { _eCursor = Just c & Monoid.Last
-    , _eVirtualCursor = mempty
-    , _eAnimIdMapping = mempty
+updateCursor :: Id -> Update
+updateCursor c =
+    Update
+    { _uCursor = Just c & Monoid.Last
+    , _uVirtualCursor = mempty
+    , _uAnimIdMapping = mempty
     }

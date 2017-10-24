@@ -21,8 +21,9 @@ import           GUI.Momentu.Glue ((/|/))
 import           GUI.Momentu.Responsive (Responsive)
 import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.Responsive.Options as Options
+import qualified GUI.Momentu.State as State
 import           GUI.Momentu.View (View)
-import           GUI.Momentu.Widget (Widget, EventResult)
+import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified GUI.Momentu.Widgets.TextView as TextView
@@ -41,7 +42,7 @@ instance HasStyle Style where style = id
 
 disambiguators ::
     (MonadReader env m, HasStyle env, Spacer.HasStdSpacing env, Functor f) =>
-    m (AnimId -> Options.Disambiguators (f EventResult))
+    m (AnimId -> Options.Disambiguators (f State.Update))
 disambiguators =
     do
         h <- addParens
@@ -50,7 +51,7 @@ disambiguators =
 
 addParens ::
     (MonadReader env m, TextView.HasStyle env, Functor f) =>
-    m (AnimId -> WithTextPos (Widget (f Widget.EventResult)) -> WithTextPos (Widget (f Widget.EventResult)))
+    m (AnimId -> WithTextPos (Widget (f State.Update)) -> WithTextPos (Widget (f State.Update)))
 addParens =
     do
         textStyle <- Lens.view TextView.style
@@ -62,7 +63,7 @@ addParens =
 
 indent ::
     (MonadReader env m, HasStyle env, Spacer.HasStdSpacing env, Functor f) =>
-    m (AnimId -> Responsive (f EventResult) -> Responsive (f EventResult))
+    m (AnimId -> Responsive (f State.Update) -> Responsive (f State.Update))
 indent =
     do
         bWidth <- totalBarWidth
@@ -101,12 +102,12 @@ indentBar =
 
 boxSpacedDisambiguated ::
     (MonadReader env m, HasStyle env, Spacer.HasStdSpacing env, Functor f) =>
-    m (AnimId -> [Responsive (f EventResult)] -> Responsive (f EventResult))
+    m (AnimId -> [Responsive (f State.Update)] -> Responsive (f State.Update))
 boxSpacedDisambiguated = boxSpacedMDisamb <&> Lens.argument %~ Just
 
 boxSpacedMDisamb ::
     (MonadReader env m, HasStyle env, Spacer.HasStdSpacing env, Functor f) =>
-    m (Maybe AnimId -> [Responsive (f Widget.EventResult)] -> Responsive (f Widget.EventResult))
+    m (Maybe AnimId -> [Responsive (f State.Update)] -> Responsive (f State.Update))
 boxSpacedMDisamb =
     do
         disamb <- disambiguators

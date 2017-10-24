@@ -15,6 +15,7 @@ import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.MetaKey (MetaKey(..), noMods)
 import qualified GUI.Momentu.MetaKey as MetaKey
+import qualified GUI.Momentu.State as State
 import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Choice as Choice
@@ -48,7 +49,7 @@ make ::
     Widget.Id ->
     Sugar.BinderParams name m ->
     Property m Sugar.PresentationMode ->
-    n (Widget (m Widget.EventResult))
+    n (Widget (m State.Update))
 make myId (Sugar.FieldParams params) prop =
     do
         theme <- Lens.view Theme.theme

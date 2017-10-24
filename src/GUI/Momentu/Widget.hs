@@ -1,7 +1,6 @@
 {-# LANGUAGE NoImplicitPrelude #-}
 module GUI.Momentu.Widget
     ( module Types
-    , module State
     , subId, Id(..), Id.joinId, isSubCursor, makeSubId
     , HasCursor(..)
 
@@ -60,7 +59,8 @@ import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as EventMap
 import           GUI.Momentu.MetaKey (MetaKey, toModKey)
-import           GUI.Momentu.State as State
+import           GUI.Momentu.State (VirtualCursor(..), Update)
+import qualified GUI.Momentu.State as State
 import           GUI.Momentu.Rect (Rect(..))
 import qualified GUI.Momentu.Rect as Rect
 import           GUI.Momentu.View (View(..))
@@ -90,30 +90,30 @@ events =
             , _fEventMap = focused ^. fEventMap <&> Lens.mapped %~ f
             }
 
-enterResultCursor :: (HasWidget w, Functor f) => Lens.Setter' (w (f EventResult)) Id
+enterResultCursor :: (HasWidget w, Functor f) => Lens.Setter' (w (f Update)) Id
 enterResultCursor =
     widget . mEnter . Lens._Just . Lens.mapped .
-    enterResultEvent . Lens.mapped . eCursor . Lens.mapped
+    enterResultEvent . Lens.mapped . State.uCursor . Lens.mapped
 
 takesFocus ::
     (HasWidget w, Functor f) =>
-    (Direction -> f Id) -> w (f EventResult) -> w (f EventResult)
+    (Direction -> f Id) -> w (f Update) -> w (f Update)
 takesFocus enterFunc =
     widget %~
     \w ->
         let rect = Rect 0 (w ^. Element.size)
         in  w & mEnter ?~
             ( enterFunc
-                <&> Lens.mapped %~ eventResultFromCursor
+                <&> Lens.mapped %~ State.updateCursor
                 <&> EnterResult rect 0
                 & enterFuncAddVirtualCursor rect
             )
 
 enterFuncAddVirtualCursor ::
     Functor f =>
-    Rect -> (Direction -> EnterResult (f EventResult)) -> (Direction -> EnterResult (f EventResult))
+    Rect -> (Direction -> EnterResult (f Update)) -> (Direction -> EnterResult (f Update))
 enterFuncAddVirtualCursor destRect =
-    Lens.imapped <. (enterResultEvent . Lens.mapped . eVirtualCursor . Lens._Wrapped) .@~ mkVirtCursor
+    Lens.imapped <. (enterResultEvent . Lens.mapped . State.uVirtualCursor . Lens._Wrapped) .@~ mkVirtCursor
     where
         mkVirtCursor dir =
             case dir of
@@ -125,11 +125,11 @@ enterFuncAddVirtualCursor destRect =
             Direction.Point p     -> Rect p 0 & Just
             <&> VirtualCursor
 
-applyIdMapping :: Map Id Id -> EventResult -> EventResult
+applyIdMapping :: Map Id Id -> Update -> Update
 applyIdMapping widgetIdMap eventResult =
     eventResult
-    & eAnimIdMapping <>~ Monoid.Endo (Anim.mappingFromPrefixMap animIdMap)
-    & eCursor . Lens._Wrapped' . Lens._Just %~ mapCursor
+    & State.uAnimIdMapping <>~ Monoid.Endo (Anim.mappingFromPrefixMap animIdMap)
+    & State.uCursor . Lens._Wrapped' . Lens._Just %~ mapCursor
     where
         animIdMap =
             widgetIdMap
@@ -139,26 +139,26 @@ applyIdMapping widgetIdMap eventResult =
 
 keysEventMap ::
     Functor f => [MetaKey] -> EventMap.Doc ->
-    f () -> EventMap (f EventResult)
+    f () -> EventMap (f Update)
 keysEventMap keys doc act =
     (fmap . const) mempty <$>
     EventMap.keyPresses (keys <&> toModKey) doc act
 
 keysEventMapMovesCursor ::
     Functor f => [MetaKey] -> EventMap.Doc ->
-    f Id -> EventMap (f EventResult)
+    f Id -> EventMap (f Update)
 keysEventMapMovesCursor keys doc act =
-    fmap eventResultFromCursor <$>
+    fmap State.updateCursor <$>
     EventMap.keyPresses (keys <&> toModKey) doc act
 
 translateFocused ::
     Functor f =>
-    Vector2 R -> (Surrounding -> Focused (f EventResult)) ->
-    Surrounding -> Focused (f EventResult)
-translateFocused pos = translateFocusedGeneric (fmap (translateEventResult pos)) pos
+    Vector2 R -> (Surrounding -> Focused (f Update)) ->
+    Surrounding -> Focused (f Update)
+translateFocused pos = translateFocusedGeneric (fmap (translateUpdate pos)) pos
 
 padToSizeAlign ::
-    Functor f => Size -> Vector2 R -> Widget (f EventResult) -> Widget (f EventResult)
+    Functor f => Size -> Vector2 R -> Widget (f Update) -> Widget (f Update)
 padToSizeAlign newSize alignment w =
     w
     & wState .~ translate (sizeDiff * alignment) w
@@ -236,7 +236,7 @@ makeSubId suffix = Lens.view Element.animIdPrefix <&> (++ suffix) <&> Id
 
 makeFocusableView ::
     (MonadReader env m, HasCursor env, Applicative f) =>
-    m (Id -> View -> Widget (f EventResult))
+    m (Id -> View -> Widget (f Update))
 makeFocusableView =
     respondToCursorPrefix
     <&> \respond myIdPrefix view ->

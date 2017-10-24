@@ -20,13 +20,15 @@ import qualified GUI.Momentu.Animation as Anim
 import           GUI.Momentu.Direction (Direction)
 import qualified GUI.Momentu.Direction as Direction
 import qualified GUI.Momentu.Draw as Draw
+import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Font (Font, openFont)
 import qualified GUI.Momentu.Main.Animation as MainAnim
 import qualified GUI.Momentu.MetaKey as MetaKey
 import           GUI.Momentu.Rect (Rect)
 import qualified GUI.Momentu.Rect as Rect
-import           GUI.Momentu.Widget (Widget, VirtualCursor(..))
+import qualified GUI.Momentu.State as State
+import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Cursor as Cursor
 import qualified GUI.Momentu.Widgets.EventMapHelp as EventMapHelp
@@ -138,7 +140,7 @@ defaultOptions helpFontPath =
             , debug = defaultDebugOptions
             }
 
-quitEventMap :: Functor f => Widget.EventMap (f Widget.EventResult)
+quitEventMap :: Functor f => EventMap (f State.Update)
 quitEventMap =
     Widget.keysEventMap [MetaKey.cmd MetaKey.Key'Q] (E.Doc ["Quit"]) (error "Quit")
 
@@ -154,9 +156,9 @@ class Widget.HasCursor env => HasMainLoopEnv env where mainLoopEnv :: Lens' env 
 instance HasMainLoopEnv Env where mainLoopEnv = id
 
 lookupEvent ::
-    IO (Maybe E.Clipboard) -> IORef (Maybe Widget.VirtualCursor) ->
+    IO (Maybe E.Clipboard) -> IORef (Maybe State.VirtualCursor) ->
     Maybe (Direction -> Widget.EnterResult a) ->
-    Maybe (Rect, VirtualCursor -> Widget.EventMap a) -> Event -> IO (Maybe a)
+    Maybe (Rect, State.VirtualCursor -> EventMap a) -> Event -> IO (Maybe a)
 lookupEvent getClipboard virtCursorRef mEnter mFocus event =
     case (mEnter, mFocus, event) of
     (Just enter, _
@@ -174,13 +176,13 @@ lookupEvent getClipboard virtCursorRef mEnter mFocus event =
                 Nothing ->
                     res <$ writeIORef virtCursorRef (Just res)
                     where
-                        res = VirtualCursor focalArea
+                        res = State.VirtualCursor focalArea
             E.lookup getClipboard event (mkEventMap virtCursor)
     _ -> pure Nothing
 
-virtualCursorImage :: Maybe VirtualCursor -> DebugOptions -> IO Anim.Frame
+virtualCursorImage :: Maybe State.VirtualCursor -> DebugOptions -> IO Anim.Frame
 virtualCursorImage Nothing _ = pure mempty
-virtualCursorImage (Just (VirtualCursor r)) debug =
+virtualCursorImage (Just (State.VirtualCursor r)) debug =
     virtualCursorColor debug
     <&> \case
     Nothing -> mempty
@@ -190,7 +192,7 @@ virtualCursorImage (Just (VirtualCursor r)) debug =
 
 mainLoopWidget ::
     GLFW.Window ->
-    (Env -> IO (Widget (M Widget.EventResult))) ->
+    (Env -> IO (Widget (M State.Update))) ->
     Options ->
     IO ()
 mainLoopWidget win mkWidgetUnmemod options =
@@ -247,11 +249,11 @@ mainLoopWidget win mkWidgetUnmemod options =
                         Nothing -> return ()
                         Just res ->
                             do
-                                traverse_ (writeCursor cursorStorage_) (res ^. Widget.eCursor)
-                                writeIORef virtCursorRef (res ^. Widget.eVirtualCursor . Lens._Wrapped)
+                                traverse_ (writeCursor cursorStorage_) (res ^. State.uCursor)
+                                writeIORef virtCursorRef (res ^. State.uVirtualCursor . Lens._Wrapped)
                                 newWidget
                     return MainAnim.EventResult
-                        { MainAnim.erAnimIdMapping = mRes <&> (^. Widget.eAnimIdMapping)
+                        { MainAnim.erAnimIdMapping = mRes <&> (^. State.uAnimIdMapping)
                         , MainAnim.erExecuteInMainThread = runInMainThread
                         }
             , MainAnim.makeFrame = renderWidget size <&> (^. _1)

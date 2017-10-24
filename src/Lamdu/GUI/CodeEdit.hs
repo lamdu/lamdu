@@ -18,6 +18,7 @@ import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.MetaKey (MetaKey)
 import           GUI.Momentu.Responsive (Responsive)
 import qualified GUI.Momentu.Responsive as Responsive
+import qualified GUI.Momentu.State as GuiState
 import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
@@ -131,7 +132,7 @@ make ::
     , HasSettings env, HasStyle env
     ) =>
     Anchors.CodeAnchors m -> Widget.R ->
-    n (Widget (IOTrans m Widget.EventResult))
+    n (Widget (IOTrans m GuiState.Update))
 make theCodeAnchors width =
     do
         theEvalResults <- Lens.view evalResults
@@ -157,7 +158,7 @@ makePaneEdit ::
     Monad m =>
     ExportActions m ->
     Sugar.Pane (Name (T m)) (T m) ExprGuiT.Payload ->
-    ExprGuiM m (Responsive (IOTrans m Widget.EventResult))
+    ExprGuiM m (Responsive (IOTrans m GuiState.Update))
 makePaneEdit theExportActions pane =
     do
         theConfig <- Lens.view config
@@ -195,7 +196,7 @@ makePaneEdit theExportActions pane =
 makeNewDefinitionEventMap ::
     (Monad m, MonadReader env n, Widget.HasCursor env) =>
     Anchors.CodeAnchors m ->
-    n ([MetaKey] -> Widget.EventMap (T m Widget.EventResult))
+    n ([MetaKey] -> Widget.EventMap (T m GuiState.Update))
 makeNewDefinitionEventMap cp =
     do
         curCursor <- Lens.view Widget.cursor
@@ -214,7 +215,7 @@ makeNewDefinitionEventMap cp =
             Widget.keysEventMapMovesCursor newDefinitionKeys
             (E.Doc ["Edit", "New definition"]) newDefinition
 
-makeNewDefinitionButton :: Monad m => ExprGuiM m (Widget (T m Widget.EventResult))
+makeNewDefinitionButton :: Monad m => ExprGuiM m (Widget (T m GuiState.Update))
 makeNewDefinitionButton =
     do
         anchors <- ExprGuiM.readCodeAnchors
@@ -231,7 +232,7 @@ makeNewDefinitionButton =
 panesEventMap ::
     Monad m =>
     ExportActions m -> Anchors.CodeAnchors m ->
-    ExprGuiM m (Widget.EventMap (IOTrans m Widget.EventResult))
+    ExprGuiM m (Widget.EventMap (IOTrans m GuiState.Update))
 panesEventMap theExportActions theCodeAnchors =
     do
         theConfig <- Lens.view config

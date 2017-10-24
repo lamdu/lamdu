@@ -167,7 +167,7 @@ exportActions config evalResults =
 
 makeRootWidget ::
     Fonts M.Font -> Db -> IORef Settings -> EvalManager.Evaluator ->
-    Config -> Theme -> MainLoop.Env -> IO (M.Widget (MainLoop.M M.EventResult))
+    Config -> Theme -> MainLoop.Env -> IO (M.Widget (MainLoop.M M.Update))
 makeRootWidget fonts db settingsRef evaluator config theme mainLoopEnv =
     do
         eventMap <- Settings.mkEventMap (settingsChangeHandler evaluator) config settingsRef
@@ -296,7 +296,7 @@ mainLoop ::
     MainLoop.CursorStorage -> Font.LCDSubPixelEnabled ->
     M.Window -> RefreshScheduler -> Sampler ->
     (Fonts M.Font -> Config -> Theme -> MainLoop.Env ->
-    IO (M.Widget (MainLoop.M M.EventResult))) -> IO ()
+    IO (M.Widget (MainLoop.M M.Update))) -> IO ()
 mainLoop cursorStorage subpixel win refreshScheduler configSampler iteration =
     do
         getFonts <- makeGetFonts subpixel
@@ -353,7 +353,7 @@ mainLoop cursorStorage subpixel win refreshScheduler configSampler iteration =
 
 mkWidgetWithFallback ::
     (forall a. T DbLayout.DbM a -> IO a) ->
-    Env -> IO (M.Widget (MainLoop.M M.EventResult))
+    Env -> IO (M.Widget (MainLoop.M M.Update))
 mkWidgetWithFallback dbToIO env =
     do
         (isValid, widget) <-
@@ -381,7 +381,7 @@ mkWidgetWithFallback dbToIO env =
 
 makeMainGui ::
     (forall a. T DbLayout.DbM a -> IO a) ->
-    Env -> T DbLayout.DbM (M.Widget (MainLoop.M M.EventResult))
+    Env -> T DbLayout.DbM (M.Widget (MainLoop.M M.Update))
 makeMainGui dbToIO env =
     GUIMain.make env
     <&> Lens.mapped %~ \act ->

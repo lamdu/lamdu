@@ -19,9 +19,10 @@ module GUI.Momentu
     , Element(..), Element.tint, Element.width, Element.height
 
     -- | Widget
-    , Widget, Widget.EventResult
+    , Widget
     , Widget.isFocused
     , WidgetId, pattern WidgetId
+    , State.Update
 
     -- | View
     , View
@@ -76,6 +77,7 @@ import           GUI.Momentu.Glue ((/-/), (/|/), Glued, Glue)
 import qualified GUI.Momentu.Main as MainLoop
 import           GUI.Momentu.MetaKey (MetaKey(..))
 import qualified GUI.Momentu.MetaKey as MetaKey
+import qualified GUI.Momentu.State as State
 import           GUI.Momentu.View (View)
 import qualified GUI.Momentu.View as View
 import           GUI.Momentu.Widget (Widget)

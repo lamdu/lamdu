@@ -16,6 +16,7 @@ import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Glue ((/|/))
 import           GUI.Momentu.MetaKey (MetaKey(..), noMods)
 import qualified GUI.Momentu.MetaKey as MetaKey
+import qualified GUI.Momentu.State as GuiState
 import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.FocusDelegator as FocusDelegator
@@ -50,7 +51,7 @@ makeNamePartEditor ::
     , TextEdit.HasStyle env
     ) =>
     MDraw.Color -> Text -> (Text -> f ()) -> Widget.Id ->
-    m (WithTextPos (Widget (f Widget.EventResult)))
+    m (WithTextPos (Widget (f GuiState.Update)))
 makeNamePartEditor color namePartStr setter myId =
     (FocusDelegator.make ?? builtinFDConfig ?? FocusDelegator.FocusEntryParent
      ?? myId <&> (Align.tValue %~))
@@ -66,7 +67,7 @@ make ::
     , TextEdit.HasStyle env, Element.HasAnimIdPrefix env, Monad m
     ) =>
     Sugar.DefinitionBuiltin (T m) -> Widget.Id ->
-    f (WithTextPos (Widget (T m Widget.EventResult)))
+    f (WithTextPos (Widget (T m GuiState.Update)))
 make def myId =
     do
         colors <- Lens.view Theme.theme <&> Theme.codeForegroundColors

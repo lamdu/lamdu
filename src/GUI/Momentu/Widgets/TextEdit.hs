@@ -27,6 +27,7 @@ import           GUI.Momentu.ModKey (ModKey(..))
 import qualified GUI.Momentu.ModKey as ModKey
 import           GUI.Momentu.Rect (Rect(..))
 import qualified GUI.Momentu.Rect as Rect
+import qualified GUI.Momentu.State as State
 import           GUI.Momentu.Widget (Widget(..))
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.TextView as TextView
@@ -98,7 +99,7 @@ cursorRects s str =
 
 makeInternal ::
     Style -> Text -> Text -> Widget.Id ->
-    WithTextPos (Widget (Text, Widget.EventResult))
+    WithTextPos (Widget (Text, State.Update))
 makeInternal s str displayStr myId =
     v
     & Align.tValue %~ Widget.fromView
@@ -108,7 +109,7 @@ makeInternal s str displayStr myId =
             & Element.pad (Vector2 (s ^. sCursorWidth / 2) 0)
         animId = Widget.toAnimId myId
 
-makeUnfocused :: EmptyStrings -> Style -> Text -> Widget.Id -> WithTextPos (Widget (Text, Widget.EventResult))
+makeUnfocused :: EmptyStrings -> Style -> Text -> Widget.Id -> WithTextPos (Widget (Text, State.Update))
 makeUnfocused empty s str =
     makeInternal s str displayStr
     where
@@ -125,11 +126,12 @@ cursorNearRect s str fromRect =
 
 enterFromDirection ::
     Widget.Size -> Style -> Text -> Widget.Id ->
-    Direction.Direction -> Widget.EnterResult (Text, Widget.EventResult)
+    Direction.Direction -> Widget.EnterResult (Text, State.Update)
 enterFromDirection sz sty str myId dir =
-    Widget.EnterResult cursorRect 0 .
-    (,) str . Widget.eventResultFromCursor $
     encodeCursor myId cursor
+    & State.updateCursor
+    & (,) str
+    & Widget.EnterResult cursorRect 0
     where
         cursor =
             case dir of
@@ -143,17 +145,17 @@ enterFromDirection sz sty str myId dir =
         cursorRect = mkCursorRect sty cursor str
         fromRect = cursorNearRect (sty ^. sTextViewStyle) str
 
-eventResult :: Widget.Id -> Text -> Cursor -> (Text, Widget.EventResult)
+eventResult :: Widget.Id -> Text -> Cursor -> (Text, State.Update)
 eventResult myId newText newCursor =
     ( newText
-    , encodeCursor myId newCursor & Widget.eventResultFromCursor
+    , encodeCursor myId newCursor & State.updateCursor
     )
 
 -- | Note: maxLines prevents the *user* from exceeding it, not the
 -- | given text...
 makeFocused ::
     Cursor -> EmptyStrings -> Style -> Text -> Widget.Id ->
-    WithTextPos (Widget (Text, Widget.EventResult))
+    WithTextPos (Widget (Text, State.Update))
 makeFocused cursor empty s str myId =
     makeInternal s str displayStr myId
     & Element.bottomLayer <>~ cursorFrame
@@ -185,8 +187,8 @@ mkCursorRect s cursor str =
 
 -- TODO: Implement intra-TextEdit virtual cursor
 eventMap ::
-    Cursor -> Text -> Widget.Id -> Widget.VirtualCursor ->
-    Widget.EventMap (Text, Widget.EventResult)
+    Cursor -> Text -> Widget.Id -> State.VirtualCursor ->
+    Widget.EventMap (Text, State.Update)
 eventMap cursor str myId _virtualCursor =
     mconcat . concat $ [
         [ E.keyPressOrRepeat (noMods MetaKey.Key'Left) (moveDoc ["left"]) $
@@ -346,7 +348,7 @@ getCursor =
 make ::
     (MonadReader env m, Widget.HasCursor env, HasStyle env) =>
     m ( EmptyStrings -> Text -> Widget.Id ->
-        WithTextPos (Widget (Text, Widget.EventResult))
+        WithTextPos (Widget (Text, State.Update))
       )
 make =
     do

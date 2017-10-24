@@ -36,6 +36,7 @@ import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.Hover as Hover
 import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.Responsive.Expression as ResponsiveExpr
+import qualified GUI.Momentu.State as GuiState
 import           GUI.Momentu.View (View)
 import qualified GUI.Momentu.Widget as Widget
 import           GUI.Momentu.Widget.Id (toAnimId)
@@ -63,7 +64,7 @@ type T = Transaction
 
 data HolePicker m
     = NoHolePick
-    | HolePick (T m Widget.EventResult)
+    | HolePick (T m GuiState.Update)
 
 instance Monoid (HolePicker m) where
     mempty = NoHolePick
@@ -210,7 +211,7 @@ listener f =
 listenResultPicker :: Monad m => ExprGuiM m a -> ExprGuiM m (a, HolePicker m)
 listenResultPicker = listener oHolePicker
 
-setResultPicker :: Monad m => T m Widget.EventResult -> ExprGuiM m ()
+setResultPicker :: Monad m => T m GuiState.Update -> ExprGuiM m ()
 setResultPicker picker =
     Writer.tell mempty { oHolePicker = HolePick picker }
 

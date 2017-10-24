@@ -8,11 +8,13 @@ import qualified Control.Lens as Lens
 import           Data.Orphans () -- Imported for Monoid (IO ()) instance
 import           Data.Store.Transaction (Transaction)
 import qualified GUI.Momentu.Align as Align
+import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.MetaKey (MetaKey)
 import           GUI.Momentu.Responsive (Responsive)
 import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.Responsive.Options as Options
+import qualified GUI.Momentu.State as GuiState
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.TextView as TextView
 import           Lamdu.Config (Config, config)
@@ -43,7 +45,7 @@ data ExportRepl m = ExportRepl
 
 extractEventMap ::
     Functor m => Sugar.Expression name (T m) a -> [MetaKey] ->
-    Widget.EventMap (IOTrans m Widget.EventResult)
+    EventMap (IOTrans m GuiState.Update)
 extractEventMap replExpr keys =
   replExpr ^. Sugar.rPayload . Sugar.plActions . Sugar.extract
   <&> ExprEventMap.extractCursor & IOTrans.liftTrans
@@ -52,7 +54,7 @@ extractEventMap replExpr keys =
 replEventMap ::
     Monad m =>
     Config -> ExportRepl m ->
-    Sugar.Expression name (T m) a -> Widget.EventMap (IOTrans m Widget.EventResult)
+    Sugar.Expression name (T m) a -> EventMap (IOTrans m GuiState.Update)
 replEventMap theConfig (ExportRepl exportRepl exportFancy) replExpr =
     mconcat
     [ extractEventMap replExpr (Config.extractKeys theConfig)
@@ -68,7 +70,7 @@ make ::
     Monad m =>
     ExportRepl m ->
     ExprGuiT.SugarExpr m ->
-    ExprGuiM m (Responsive (IOTrans m Widget.EventResult))
+    ExprGuiM m (Responsive (IOTrans m GuiState.Update))
 make exportRepl replExpr =
     do
         theConfig <- Lens.view config

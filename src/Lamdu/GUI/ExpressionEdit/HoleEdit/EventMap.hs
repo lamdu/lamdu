@@ -17,6 +17,7 @@ import           GUI.Momentu (MetaKey(..))
 import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.MetaKey as MetaKey
 import           GUI.Momentu.ModKey (ModKey(..))
+import qualified GUI.Momentu.State as GuiState
 import qualified GUI.Momentu.Widget as Widget
 import qualified Lamdu.CharClassification as Chars
 import           Lamdu.Config (HasConfig)
@@ -30,7 +31,7 @@ import           Lamdu.Prelude
 type T = Transaction.Transaction
 
 adHocTextEditEventMap ::
-    Monad m => Property (T m) Text -> E.EventMap (T m Widget.EventResult)
+    Monad m => Property (T m) Text -> E.EventMap (T m GuiState.Update)
 adHocTextEditEventMap searchTermProp =
     appendCharEventMap <> deleteCharEventMap
     where
@@ -115,7 +116,7 @@ listTHead nil l =
 toLiteralTextEventMap ::
     Monad m =>
     Sugar.LeafHoleActions (T m) (Sugar.Expression name (T m) ()) ->
-    E.EventMap (T m Widget.EventResult)
+    E.EventMap (T m GuiState.Update)
 toLiteralTextEventMap actions =
     Widget.keysEventMapMovesCursor toLiteralTextKeys
     (E.Doc ["Edit", "Create Text Literal"]) $
@@ -143,7 +144,7 @@ toLiteralTextEventMap actions =
 makeOpenEventMap ::
     Monad m =>
     Sugar.HoleKind (T m) (Sugar.Expression n (T m) ()) e -> Property (T m) Text ->
-    ExprGuiM m (E.EventMap (T m Widget.EventResult))
+    ExprGuiM m (E.EventMap (T m GuiState.Update))
 makeOpenEventMap holeKind searchTermProp =
     disallowCharsFromSearchTerm ?? holeKind ?? searchTerm ?? Nothing
     ?? adHocTextEditEventMap searchTermProp

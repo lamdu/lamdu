@@ -17,6 +17,7 @@ import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.Hover as Hover
 import qualified GUI.Momentu.Responsive as Responsive
+import qualified GUI.Momentu.State as GuiState
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.FocusDelegator as FocusDelegator
 import qualified GUI.Momentu.Widgets.Menu as Menu
@@ -68,7 +69,7 @@ makeStdWrapped hole pl widgetIds =
         let fixEventMapCursor
                 | isActive = id
                 | otherwise =
-                    Lens.mapped . Lens.mapped . Widget.eCursor %~
+                    Lens.mapped . Lens.mapped . GuiState.uCursor %~
                     mappend (Monoid.Last (Just (hidOpen widgetIds)))
         exprEventMap <- ExprEventMap.make pl ExprGuiM.NoHolePick
         stateProp <-

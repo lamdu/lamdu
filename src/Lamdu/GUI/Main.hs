@@ -19,6 +19,7 @@ import qualified GUI.Momentu.EventMap as EventMap
 import           GUI.Momentu.Glue ((/-/))
 import qualified GUI.Momentu.Main as MainLoop
 import qualified GUI.Momentu.Scroll as Scroll
+import qualified GUI.Momentu.State as GuiState
 import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
@@ -54,8 +55,8 @@ makeInnerGui ::
     , CodeEdit.HasEvalResults env ViewM
     , CodeEdit.HasExportActions env ViewM
     ) =>
-    Widget (IOTrans DbM Widget.EventResult) ->
-    ReaderT env (T DbM) (Widget (IOTrans DbM Widget.EventResult))
+    Widget (IOTrans DbM GuiState.Update) ->
+    ReaderT env (T DbM) (Widget (IOTrans DbM GuiState.Update))
 makeInnerGui branchSelector =
     do
         fullSize <- Lens.view (MainLoop.mainLoopEnv . MainLoop.eWindowSize)
@@ -85,7 +86,7 @@ make ::
     , CodeEdit.HasEvalResults env ViewM
     , CodeEdit.HasExportActions env ViewM
     ) =>
-    env -> T DbM (Widget (IOTrans DbM Widget.EventResult))
+    env -> T DbM (Widget (IOTrans DbM GuiState.Update))
 make env =
     do
         actions <-

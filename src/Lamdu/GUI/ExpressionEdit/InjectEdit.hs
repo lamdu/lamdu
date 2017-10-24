@@ -14,6 +14,7 @@ import qualified GUI.Momentu.Hover as Hover
 import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.Responsive.Expression as ResponsiveExpr
 import qualified GUI.Momentu.Responsive.Options as Options
+import qualified GUI.Momentu.State as GuiState
 import           GUI.Momentu.View (View)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Menu as Menu
@@ -45,7 +46,7 @@ makeCommon ::
     , Spacer.HasStdSpacing env, Element.HasAnimIdPrefix env, Menu.HasStyle env
     , Hover.HasStyle env
     ) =>
-    Options.Disambiguators (T m Widget.EventResult) ->
+    Options.Disambiguators (T m GuiState.Update) ->
     Sugar.Tag (Name (T m)) (T m) ->
     Maybe (T m Sugar.EntityId) ->
     NearestHoles -> WithTextPos View -> [ExpressionGui m] ->

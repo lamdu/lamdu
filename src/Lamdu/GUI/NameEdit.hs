@@ -19,6 +19,7 @@ import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Glue ((/|/))
 import           GUI.Momentu.MetaKey (MetaKey(..), noMods)
 import qualified GUI.Momentu.MetaKey as MetaKey
+import qualified GUI.Momentu.State as GuiState
 import           GUI.Momentu.View (View)
 import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
@@ -91,7 +92,7 @@ makeView name animId =
 makeBareEdit ::
     (Monad m, TextEdit.HasStyle env, Widget.HasCursor env, MonadReader env f) =>
     Name (T m) -> Widget.Id ->
-    f (WithTextPos (Widget (T m Widget.EventResult)))
+    f (WithTextPos (Widget (T m GuiState.Update)))
 makeBareEdit (Name form setName) myId =
     TextEdits.makeWordEdit
     ?? TextEdit.EmptyStrings visibleName ""
@@ -107,7 +108,7 @@ make ::
     , MonadReader env f, TextEdit.HasStyle env, Element.HasAnimIdPrefix env
     , HasTheme env, Widget.HasCursor env
     ) => Name (T m) -> Widget.Id ->
-    f (WithTextPos (Widget (T m Widget.EventResult)))
+    f (WithTextPos (Widget (T m GuiState.Update)))
 make name myId =
     do
         mCollisionSuffix <- makeCollisionSuffixLabel mCollision
@@ -142,7 +143,7 @@ makeAtBinder ::
     (Monad m, MonadReader env f, Widget.HasCursor env, HasTheme env
     , Element.HasAnimIdPrefix env, Style.HasStyle env
     ) => Name (T m) -> Draw.Color -> Widget.Id ->
-    f (WithTextPos (Widget (T m Widget.EventResult)))
+    f (WithTextPos (Widget (T m GuiState.Update)))
 makeAtBinder name color myId =
     ( FocusDelegator.make ?? nameEditFDConfig
       ?? FocusDelegator.FocusEntryParent ?? myId

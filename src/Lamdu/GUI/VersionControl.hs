@@ -11,9 +11,11 @@ import qualified Data.Store.Rev.Branch as Branch
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
 import qualified GUI.Momentu.Align as Align
+import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.MetaKey (MetaKey(..), noMods)
 import qualified GUI.Momentu.MetaKey as MetaKey
+import qualified GUI.Momentu.State as GuiState
 import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Choice as Choice
@@ -38,7 +40,7 @@ branchNameFDConfig = FocusDelegator.Config
 undoEventMap ::
     Functor m =>
     VersionControl.Config -> Maybe (m Widget.Id) ->
-    Widget.EventMap (m Widget.EventResult)
+    EventMap (m GuiState.Update)
 undoEventMap VersionControl.Config{..} =
     maybe mempty .
     Widget.keysEventMapMovesCursor undoKeys $ E.Doc ["Edit", "Undo"]
@@ -46,7 +48,7 @@ undoEventMap VersionControl.Config{..} =
 redoEventMap ::
     Functor m =>
     VersionControl.Config -> Maybe (m Widget.Id) ->
-    Widget.EventMap (m Widget.EventResult)
+    EventMap (m GuiState.Update)
 redoEventMap VersionControl.Config{..} =
     maybe mempty .
     Widget.keysEventMapMovesCursor redoKeys $ E.Doc ["Edit", "Redo"]
@@ -54,7 +56,7 @@ redoEventMap VersionControl.Config{..} =
 globalEventMap ::
     Applicative f =>
     VersionControl.Config -> Actions t f ->
-    Widget.EventMap (f Widget.EventResult)
+    EventMap (f GuiState.Update)
 globalEventMap VersionControl.Config{..} actions = mconcat
     [ Widget.keysEventMapMovesCursor makeBranchKeys
       (E.Doc ["Branches", "New"]) $ branchTextEditId <$> makeBranch actions
@@ -92,8 +94,8 @@ make ::
     (forall a. Transaction n a -> mw a) ->
     (forall a. Transaction n a -> mr a) ->
     Actions n mw ->
-    (Widget (mw Widget.EventResult) -> mr (Widget (mw Widget.EventResult))) ->
-    mr (Widget (mw Widget.EventResult))
+    (Widget (mw GuiState.Update) -> mr (Widget (mw GuiState.Update))) ->
+    mr (Widget (mw GuiState.Update))
 make VersionControl.Config{..} VersionControl.Theme{..} rwtransaction rtransaction actions mkWidget =
     do
         branchNameEdits <- branches actions & traverse makeBranchNameEdit

@@ -21,6 +21,7 @@ import           GUI.Momentu.Glue ((/|/))
 import qualified GUI.Momentu.Hover as Hover
 import           GUI.Momentu.MetaKey (MetaKey(..), noMods)
 import qualified GUI.Momentu.MetaKey as MetaKey
+import qualified GUI.Momentu.State as GuiState
 import           GUI.Momentu.View (View)
 import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
@@ -64,7 +65,7 @@ makeTagNameEdit ::
     , Widget.HasCursor env
     ) =>
     NearestHoles -> Sugar.Tag (Name (T m)) (T m) ->
-    f (WithTextPos (Widget (T m Widget.EventResult)))
+    f (WithTextPos (Widget (T m GuiState.Update)))
 makeTagNameEdit nearestHoles tag =
     do
         config <- Lens.view Config.config <&> Config.hole
@@ -99,7 +100,7 @@ tagId tag = tag ^. Sugar.tagInfo . Sugar.tagInstance & WidgetIds.fromEntityId
 makePickEventMap ::
     (Functor f, Config.HasConfig env, MonadReader env m) =>
     NearestHoles -> E.Doc -> f Widget.Id ->
-    m (Widget.EventMap (f Widget.EventResult))
+    m (Widget.EventMap (f GuiState.Update))
 makePickEventMap nearestHoles doc action =
     Lens.view Config.config <&> Config.hole <&>
     \config ->
@@ -118,7 +119,7 @@ makeOptions ::
     ( Monad m, MonadTransaction m f, MonadReader env f, Widget.HasCursor env
     , HasConfig env, HasTheme env, Element.HasAnimIdPrefix env, TextView.HasStyle env
     ) =>
-    (Widget.EventResult -> a) -> NearestHoles -> Sugar.Tag (Name n) (T m) -> Text ->
+    (GuiState.Update -> a) -> NearestHoles -> Sugar.Tag (Name n) (T m) -> Text ->
     f ([Menu.Option f (T m a)], Menu.HasMoreOptions)
 makeOptions fixCursor nearestHoles tag searchTerm
     | Text.null searchTerm = pure ([], Menu.NoMoreOptions)
@@ -158,8 +159,8 @@ makeTagHoleEditH ::
     , HasStdSpacing env
     ) =>
     NearestHoles -> Sugar.Tag (Name (T m)) (T m) ->
-    Text -> (Text -> Widget.EventResult -> Widget.EventResult) -> (Widget.EventResult -> Widget.EventResult) ->
-    f (WithTextPos (Widget (T m Widget.EventResult)))
+    Text -> (Text -> GuiState.Update -> GuiState.Update) -> (GuiState.Update -> GuiState.Update) ->
+    f (WithTextPos (Widget (T m GuiState.Update)))
 makeTagHoleEditH nearestHoles tag searchTerm updateState fixCursor =
     do
         setNameEventMap <-
@@ -206,7 +207,7 @@ makeTagHoleEdit ::
     , HasConfig env, TextEdit.HasStyle env, Element.HasAnimIdPrefix env
     , HasTheme env, Hover.HasStyle env, Menu.HasStyle env, HasStdSpacing env
     ) => NearestHoles -> Sugar.Tag (Name (T m)) (T m) ->
-    f (WithTextPos (Widget (T m Widget.EventResult)))
+    f (WithTextPos (Widget (T m GuiState.Update)))
 makeTagHoleEdit nearestHoles tag =
     cursorState myId "" (makeTagHoleEditH nearestHoles tag)
     where
@@ -224,7 +225,7 @@ makeTagEdit ::
     , HasStdSpacing env
     ) =>
     Mode -> Draw.Color -> NearestHoles -> Sugar.Tag (Name (T m)) (T m) ->
-    f (WithTextPos (Widget (T m Widget.EventResult)))
+    f (WithTextPos (Widget (T m GuiState.Update)))
 makeTagEdit mode tagColor nearestHoles tag =
     do
         jumpHolesEventMap <- ExprEventMap.jumpHolesEventMap nearestHoles
@@ -273,7 +274,7 @@ makeRecordTag ::
     , HasStdSpacing env
     ) =>
     Mode -> NearestHoles -> Sugar.Tag (Name (T m)) (T m) ->
-    f (WithTextPos (Widget (T m Widget.EventResult)))
+    f (WithTextPos (Widget (T m GuiState.Update)))
 makeRecordTag mode nearestHoles tag =
     do
         nameTheme <- Lens.view Theme.theme <&> Theme.name
@@ -286,7 +287,7 @@ makeCaseTag ::
     , HasStdSpacing env
     ) =>
     Mode -> NearestHoles -> Sugar.Tag (Name (T m)) (T m) ->
-    f (WithTextPos (Widget (T m Widget.EventResult)))
+    f (WithTextPos (Widget (T m GuiState.Update)))
 makeCaseTag mode nearestHoles tag =
     do
         nameTheme <- Lens.view Theme.theme <&> Theme.name
@@ -299,7 +300,7 @@ makeParamTag ::
     , MonadTransaction m f
     ) =>
     Sugar.Tag (Name (T m)) (T m) ->
-    f (WithTextPos (Widget (T m Widget.EventResult)))
+    f (WithTextPos (Widget (T m GuiState.Update)))
 makeParamTag tag =
     do
         paramColor <- Lens.view Theme.theme <&> Theme.name <&> Theme.parameterColor

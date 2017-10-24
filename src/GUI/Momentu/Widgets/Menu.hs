@@ -22,6 +22,7 @@ import qualified GUI.Momentu.Glue as Glue
 import qualified GUI.Momentu.Hover as Hover
 import qualified GUI.Momentu.MetaKey as MetaKey
 import           GUI.Momentu.ModKey (ModKey(..))
+import qualified GUI.Momentu.State as State
 import           GUI.Momentu.View (View)
 import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
@@ -73,7 +74,7 @@ makeMoreOptionsView MoreOptionsAvailable = TextView.makeLabel "..."
 
 blockEvents ::
     Applicative f =>
-    Hover.Ordered (Widget (f Widget.EventResult) -> Widget (f Widget.EventResult))
+    Hover.Ordered (Widget (f State.Update) -> Widget (f State.Update))
 blockEvents =
     Hover.Ordered
     { _forward = blockDirection MetaKey.Key'Down "down"
@@ -110,7 +111,7 @@ layoutOption ::
     ( MonadReader env m, Element.HasAnimIdPrefix env, TextView.HasStyle env
     , Widget.HasCursor env, Hover.HasStyle env, HasStyle env, Functor f
     ) =>
-    Widget.R -> Option m (f Widget.EventResult) -> m (WithTextPos (Widget (f Widget.EventResult)))
+    Widget.R -> Option m (f State.Update) -> m (WithTextPos (Widget (f State.Update)))
 layoutOption maxOptionWidth option =
     case option ^. oSubmenuWidgets of
     SubmenuEmpty -> singular
@@ -150,8 +151,8 @@ layout ::
     , Element.HasAnimIdPrefix env, HasStyle env, Widget.HasCursor env
     , Applicative f
     ) =>
-    Widget.R -> [Option m (f Widget.EventResult)] -> HasMoreOptions ->
-    m (Hover.Ordered (Widget (f Widget.EventResult)))
+    Widget.R -> [Option m (f State.Update)] -> HasMoreOptions ->
+    m (Hover.Ordered (Widget (f State.Update)))
 layout minWidth options hiddenResults =
     case options of
     [] -> makeNoResults <&> (^. Align.tValue) <&> Widget.fromView <&> pure
@@ -183,9 +184,9 @@ layout minWidth options hiddenResults =
 hoverMenu ::
     ( Functor f, MonadReader env m, Hover.HasStyle env
     , Element.HasAnimIdPrefix env) =>
-    m (Widget (f Widget.EventResult) ->
-       Hover.Ordered (Widget (f Widget.EventResult)) ->
-       Widget (f Widget.EventResult))
+    m (Widget (f State.Update) ->
+       Hover.Ordered (Widget (f State.Update)) ->
+       Widget (f State.Update))
 hoverMenu =
     do
         hover <- Hover.hover

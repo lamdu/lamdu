@@ -10,9 +10,11 @@ import qualified Data.Map as Map
 import           Data.Store.Transaction (Transaction)
 import           GUI.Momentu.Align (WithTextPos)
 import qualified GUI.Momentu.Element as Element
+import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.MetaKey (MetaKey, toModKey)
 import qualified GUI.Momentu.Responsive as Responsive
+import qualified GUI.Momentu.State as GuiState
 import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
 import           Lamdu.Config (Config)
@@ -34,27 +36,27 @@ singletonIdMap ::
 singletonIdMap key val =
     Map.singleton (WidgetIds.fromEntityId key) (WidgetIds.fromEntityId val)
 
-chooseAddResultEntityId :: Sugar.ParamAddResult -> Widget.EventResult
+chooseAddResultEntityId :: Sugar.ParamAddResult -> GuiState.Update
 chooseAddResultEntityId (Sugar.ParamAddResultVarToTags Sugar.VarToTags {..}) =
     vttNewTag ^. Sugar.tagInstance
     & WidgetIds.fromEntityId
     & WidgetIds.tagHoleId
-    & Widget.eventResultFromCursor
+    & GuiState.updateCursor
     & Widget.applyIdMapping widgetIdMap
     where
         widgetIdMap =
             singletonIdMap vttReplacedVarEntityId
             (vttReplacedByTag ^. Sugar.tagInstance)
 chooseAddResultEntityId (Sugar.ParamAddResultNewVar entityId _) =
-    WidgetIds.fromEntityId entityId & WidgetIds.nameEditOf & Widget.eventResultFromCursor
+    WidgetIds.fromEntityId entityId & WidgetIds.nameEditOf & GuiState.updateCursor
 chooseAddResultEntityId (Sugar.ParamAddResultNewTag newParamTag) =
     newParamTag ^. Sugar.tagInstance
     & WidgetIds.fromEntityId
-    & WidgetIds.tagHoleId & Widget.eventResultFromCursor
+    & WidgetIds.tagHoleId & GuiState.updateCursor
 
 eventMapAddFirstParam ::
     Functor m => Config -> T m Sugar.ParamAddResult ->
-    Widget.EventMap (T m Widget.EventResult)
+    EventMap (T m GuiState.Update)
 eventMapAddFirstParam config addFirstParam =
     addFirstParam
     <&> chooseAddResultEntityId
@@ -64,7 +66,7 @@ eventMapAddFirstParam config addFirstParam =
 eventMapAddNextParam ::
     Functor m =>
     Config -> T m Sugar.ParamAddResult ->
-    Widget.EventMap (T m Widget.EventResult)
+    EventMap (T m GuiState.Update)
 eventMapAddNextParam config fpAdd =
     fpAdd
     <&> chooseAddResultEntityId
@@ -73,14 +75,14 @@ eventMapAddNextParam config fpAdd =
 
 eventMapOrderParam ::
     Monad m =>
-    [MetaKey] -> Text -> m () -> Widget.EventMap (m Widget.EventResult)
+    [MetaKey] -> Text -> m () -> EventMap (m GuiState.Update)
 eventMapOrderParam keys docSuffix =
     Widget.keysEventMap keys (E.Doc ["Edit", "Parameter", "Move " <> docSuffix])
 
 eventParamDelEventMap ::
     Monad m =>
     m Sugar.ParamDelResult -> [MetaKey] -> Text -> Widget.Id ->
-    Widget.EventMap (m Widget.EventResult)
+    EventMap (m GuiState.Update)
 eventParamDelEventMap fpDel keys docSuffix dstPosId =
     do
         res <- fpDel
@@ -90,14 +92,14 @@ eventParamDelEventMap fpDel keys docSuffix dstPosId =
                     singletonIdMap (ttvReplacedTag ^. Sugar.tagInstance)
                     ttvReplacedByVarEntityId
                 _ -> Map.empty
-        Widget.eventResultFromCursor dstPosId
+        GuiState.updateCursor dstPosId
             & Widget.applyIdMapping widgetIdMap
             & return
     & E.keyPresses (keys <&> toModKey)
         (E.Doc ["Edit", "Delete parameter" <> docSuffix])
 
 data Info m = Info
-    { iNameEdit :: WithTextPos (Widget (T m Widget.EventResult))
+    { iNameEdit :: WithTextPos (Widget (T m GuiState.Update))
     , iDel :: T m Sugar.ParamDelResult
     , iMAddNext :: Maybe (T m Sugar.ParamAddResult)
     , iMOrderBefore :: Maybe (T m ())

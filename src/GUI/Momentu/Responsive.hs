@@ -53,6 +53,7 @@ import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Glue (Glue(..), GluesTo, (/|/), Orientation(..))
 import qualified GUI.Momentu.Glue as Glue
+import qualified GUI.Momentu.State as State
 import           GUI.Momentu.View (View)
 import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
@@ -109,7 +110,7 @@ instance ( GluesTo (WithTextPos a) (WithTextPos (Widget b)) (WithTextPos (Widget
         & adjustWidth orientation v
         & render . Lens.mapped %~ glue orientation v
 
-instance Functor f => Element (Responsive (f Widget.EventResult)) where
+instance Functor f => Element (Responsive (f State.Update)) where
     setLayers = Widget.widget . Element.setLayers
     hoverLayers = Widget.widget %~ Element.hoverLayers
     empty = Responsive (const Element.empty)
@@ -132,7 +133,7 @@ alignedWidget = render . Lens.mapped
 -- | Lifts a Widget into a 'Responsive'
 fromAlignedWidget ::
     Functor f =>
-    Aligned (Widget (f Widget.EventResult)) -> Responsive (f Widget.EventResult)
+    Aligned (Widget (f State.Update)) -> Responsive (f State.Update)
 fromAlignedWidget (Aligned a w) =
     WithTextPos (a ^. _2 * w ^. Element.height) w
     & const
@@ -142,11 +143,11 @@ fromWithTextPos :: WithTextPos (Widget a) -> Responsive a
 fromWithTextPos = Responsive . const
 
 -- | Lifts a Widget into a 'Responsive' with an alignment point at the top left
-fromWidget :: Functor f => Widget (f Widget.EventResult) -> Responsive (f Widget.EventResult)
+fromWidget :: Functor f => Widget (f State.Update) -> Responsive (f State.Update)
 fromWidget = fromAlignedWidget . Aligned 0
 
 -- | Lifts a View into a 'Responsive' with an alignment point at the top left
-fromView :: Functor f => View -> Responsive (f Widget.EventResult)
+fromView :: Functor f => View -> Responsive (f State.Update)
 fromView = fromWidget . Widget.fromView
 
 -- | Lifts a View into a 'Responsive' with an alignment point at the top left
@@ -154,13 +155,13 @@ fromTextView :: WithTextPos View -> Responsive a
 fromTextView tv = tv & Align.tValue %~ Widget.fromView & fromWithTextPos
 
 -- | The empty 'Responsive'
-empty :: Functor f => Responsive (f Widget.EventResult)
+empty :: Functor f => Responsive (f State.Update)
 empty = fromView Element.empty
 
 -- | Vertical box with the alignment point from the top widget
 vbox ::
     Functor f =>
-    [Responsive (f Widget.EventResult)] -> Responsive (f Widget.EventResult)
+    [Responsive (f State.Update)] -> Responsive (f State.Update)
 vbox guis =
     Responsive $
     \layoutParams ->
@@ -169,7 +170,7 @@ vbox guis =
 
 vboxSpaced ::
     (MonadReader env m, Spacer.HasStdSpacing env, Functor f) =>
-    m ([Responsive (f Widget.EventResult)] -> Responsive (f Widget.EventResult))
+    m ([Responsive (f State.Update)] -> Responsive (f State.Update))
 vboxSpaced =
     Spacer.stdVSpace
     <&> fromView
@@ -186,7 +187,7 @@ Lens.makeLenses ''TaggedItem
 
 taggedList ::
     (MonadReader env m, Spacer.HasStdSpacing env, Functor f) =>
-    m ([TaggedItem (f Widget.EventResult)] -> Responsive (f Widget.EventResult))
+    m ([TaggedItem (f State.Update)] -> Responsive (f State.Update))
 taggedList =
     Spacer.stdVSpace <&>
     \vspace items ->

@@ -18,6 +18,7 @@ import           GUI.Momentu.Glue ((/|/))
 import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.Responsive.Expression as ResponsiveExpr
 import qualified GUI.Momentu.Responsive.Options as Options
+import qualified GUI.Momentu.State as GuiState
 import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
@@ -67,7 +68,7 @@ addInfixMarker widgetId =
 makeFuncVar ::
     Monad m =>
     NearestHoles -> Sugar.BinderVarRef (Name (T m)) (T m) -> Widget.Id ->
-    ExprGuiM m (WithTextPos (Widget (T m Widget.EventResult)))
+    ExprGuiM m (WithTextPos (Widget (T m GuiState.Update)))
 makeFuncVar nearestHoles funcVar myId =
     do
         jump <- ExprEventMap.jumpHolesEventMap nearestHoles
@@ -77,7 +78,7 @@ makeFuncVar nearestHoles funcVar myId =
 makeInfixFuncName ::
     Monad m =>
     NearestHoles -> Sugar.BinderVarRef (Name (T m)) (T m) -> Widget.Id ->
-    ExprGuiM m (WithTextPos (Widget (T m Widget.EventResult)))
+    ExprGuiM m (WithTextPos (Widget (T m GuiState.Update)))
 makeInfixFuncName nearestHoles funcVar myId =
     makeFuncVar nearestHoles funcVar myId <&> mAddMarker
     where
@@ -153,7 +154,7 @@ makeLabeled apply pl =
 makeArgRow ::
     Monad m =>
     Sugar.AnnotatedArg (Name (T m)) (ExprGuiT.SugarExpr m) ->
-    ExprGuiM m (Responsive.TaggedItem (T m Widget.EventResult))
+    ExprGuiM m (Responsive.TaggedItem (T m GuiState.Update))
 makeArgRow arg =
     do
         argTag <- TagEdit.makeArgTag (arg ^. Sugar.aaName) (arg ^. Sugar.aaTag . Sugar.tagInstance)

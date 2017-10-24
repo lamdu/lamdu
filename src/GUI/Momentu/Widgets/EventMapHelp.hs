@@ -28,6 +28,7 @@ import           GUI.Momentu.MetaKey (MetaKey(..), toModKey, noMods)
 import qualified GUI.Momentu.MetaKey as MetaKey
 import           GUI.Momentu.ModKey (ModKey(..))
 import qualified GUI.Momentu.ModKey as ModKey
+import qualified GUI.Momentu.State as State
 import           GUI.Momentu.View (View(..))
 import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
@@ -221,8 +222,8 @@ makeToggledHelpAdder ::
     IsHelpShown ->
     IO
     (Config -> Widget.Size ->
-     Widget (m Widget.EventResult) ->
-     IO (Widget (m Widget.EventResult)))
+     Widget (m State.Update) ->
+     IO (Widget (m State.Update)))
 makeToggledHelpAdder startValue =
     newIORef startValue
     <&>
@@ -245,7 +246,7 @@ makeToggledHelpAdder startValue =
                             )
                         HelpShown ->
                             ( make size
-                                ((focus ^. Widget.fEventMap) (Widget.VirtualCursor (last (focus ^. Widget.fFocalAreas))))
+                                ((focus ^. Widget.fEventMap) (State.VirtualCursor (last (focus ^. Widget.fFocalAreas))))
                                 env
                             , "Hide"
                             )

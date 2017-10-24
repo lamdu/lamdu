@@ -3,7 +3,7 @@
 module GUI.Momentu.Widget.Instances
     ( sizedState, stateLayers, stateLens, mEnter
     , glueStates
-    , translateFocusedGeneric, translateEventResult
+    , translateFocusedGeneric, translateUpdate
     , translate, fromView
     ) where
 
@@ -25,7 +25,7 @@ import           GUI.Momentu.ModKey (ModKey(..))
 import qualified GUI.Momentu.ModKey as ModKey
 import           GUI.Momentu.Rect (Rect(..))
 import qualified GUI.Momentu.Rect as Rect
-import           GUI.Momentu.State (EventResult, VirtualCursor)
+import           GUI.Momentu.State (Update, VirtualCursor)
 import qualified GUI.Momentu.State as State
 import           GUI.Momentu.View (View(..))
 import qualified GUI.Momentu.View as View
@@ -37,7 +37,7 @@ import           Lamdu.Prelude
 sizedState :: Lens.IndexedLens' Size (Widget a) (State a)
 sizedState f (Widget sz state) = Lens.indexed f sz state <&> Widget sz
 
-instance Functor f => Element (Widget (f EventResult)) where
+instance Functor f => Element (Widget (f Update)) where
     setLayers = sizedState <. stateLayers
     hoverLayers w =
         w
@@ -56,10 +56,10 @@ instance Functor f => Element (Widget (f EventResult)) where
         & wState . _StateFocused . Lens.mapped . fEventMap . Lens.argument . State.virtualCursor . Rect.topLeftAndSize //~ mult
         & mEnter . Lens._Just . Lens.mapped . enterResultRect . Rect.topLeftAndSize *~ mult
         & mEnter . Lens._Just . Lens.argument %~ Direction.scale (1 / mult)
-        & Lens.mapped . Lens.mapped . State.eVirtualCursor . Lens.mapped .
+        & Lens.mapped . Lens.mapped . State.uVirtualCursor . Lens.mapped .
           State.virtualCursor . Rect.topLeftAndSize *~ mult
 
-instance Functor f => SizedElement (Widget (f EventResult)) where
+instance Functor f => SizedElement (Widget (f Update)) where
     size f w =
         w
         & wSize f
@@ -72,16 +72,16 @@ instance Functor f => SizedElement (Widget (f EventResult)) where
             Vector2 ow oh = w ^. wSize
 instance EventMap.HasEventMap Widget where eventMap = eventMapMaker . Lens.mapped
 
-instance Functor f => Glue (Widget (f EventResult)) View where
-    type Glued (Widget (f EventResult)) View = Widget (f EventResult)
+instance Functor f => Glue (Widget (f Update)) View where
+    type Glued (Widget (f Update)) View = Widget (f Update)
     glue = Glue.glueH $ \w v -> w & Element.setLayers <>~ v ^. View.vAnimLayers
 
-instance Functor f => Glue View (Widget (f EventResult)) where
-    type Glued View (Widget (f EventResult)) = Widget (f EventResult)
+instance Functor f => Glue View (Widget (f Update)) where
+    type Glued View (Widget (f Update)) = Widget (f Update)
     glue = Glue.glueH $ \v w -> w & Element.setLayers <>~ v ^. View.vAnimLayers
 
-instance Functor f => Glue (Widget (f EventResult)) (Widget (f EventResult)) where
-    type Glued (Widget (f EventResult)) (Widget (f EventResult)) = Widget (f EventResult)
+instance Functor f => Glue (Widget (f Update)) (Widget (f Update)) where
+    type Glued (Widget (f Update)) (Widget (f Update)) = Widget (f Update)
     glue orientation = Glue.glueH (glueStates orientation) orientation
 
 data NavDir = NavDir
@@ -92,7 +92,7 @@ data NavDir = NavDir
 
 glueStates ::
     Functor f =>
-    Orientation -> Widget (f EventResult) -> Widget (f EventResult) -> Widget (f EventResult)
+    Orientation -> Widget (f Update) -> Widget (f Update) -> Widget (f Update)
 glueStates orientation w0 w1 =
     w0
     & wState .~ combineStates orientation dirPrev dirNext (w0 ^. wSize) (w0 ^. wState) (w1 ^. wState)
@@ -111,7 +111,7 @@ glueStates orientation w0 w1 =
 combineStates ::
     Functor f =>
     Orientation -> NavDir -> NavDir -> Size ->
-    State (f EventResult) -> State (f EventResult) -> State (f EventResult)
+    State (f Update) -> State (f Update) -> State (f Update)
 combineStates _ _ _ _ StateFocused{} StateFocused{} = error "joining two focused widgets!!"
 combineStates o _ _ sz (StateUnfocused u0) (StateUnfocused u1) =
     Unfocused (combineMEnters o sz (u0 ^. uMEnter) (u1 ^. uMEnter)) (u0 ^. uLayers <> u1 ^. uLayers)
@@ -217,12 +217,12 @@ onState _   onFocused (StateFocused   x) = onFocused   x <&> StateFocused
 -- TODO: This actually makes an incorrect widget because its size
 -- remains same, but it is now translated away from 0..size
 -- Should expose higher-level combinators instead?
-translate :: Functor f => Vector2 R -> Widget (f EventResult) -> State (f EventResult)
-translate pos = translateGeneric (fmap (translateEventResult pos)) pos
+translate :: Functor f => Vector2 R -> Widget (f Update) -> State (f Update)
+translate pos = translateGeneric (fmap (translateUpdate pos)) pos
 
-translateEventResult :: Vector2 R -> EventResult -> EventResult
-translateEventResult pos =
-    State.eVirtualCursor . Lens.mapped . State.virtualCursor . Rect.topLeft +~ pos
+translateUpdate :: Vector2 R -> Update -> Update
+translateUpdate pos =
+    State.uVirtualCursor . Lens.mapped . State.virtualCursor . Rect.topLeft +~ pos
 
 translateGeneric :: (a -> b) -> Vector2 R -> Widget a -> State b
 translateGeneric f pos w =

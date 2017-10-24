@@ -11,8 +11,10 @@ module GUI.Momentu.Widgets.Cursor
 import qualified GUI.Momentu.Animation as Anim
 import           GUI.Momentu.Direction (Direction)
 import qualified GUI.Momentu.Element as Element
+import           GUI.Momentu.EventMap (EventMap)
 import           GUI.Momentu.Rect (Rect)
 import qualified GUI.Momentu.Rect as Rect
+import qualified GUI.Momentu.State as State
 import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
 import qualified Graphics.DrawingCombinators as Draw
@@ -27,7 +29,7 @@ render ::
     Config -> Widget a ->
     ( Anim.Frame
     , Maybe (Direction -> Widget.EnterResult a)
-    , Maybe (Rect, Widget.VirtualCursor -> Widget.EventMap a)
+    , Maybe (Rect, State.VirtualCursor -> EventMap a)
     )
 render Config{cursorColor} w =
     case w ^. Widget.wState of

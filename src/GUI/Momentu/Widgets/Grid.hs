@@ -22,6 +22,7 @@ import qualified GUI.Momentu.MetaKey as MetaKey
 import           GUI.Momentu.ModKey (ModKey)
 import           GUI.Momentu.Rect (Rect(..))
 import qualified GUI.Momentu.Rect as Rect
+import qualified GUI.Momentu.State as State
 import           GUI.Momentu.Widget (R, Widget(Widget))
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.GridView as GridView
@@ -50,9 +51,9 @@ data NavDests a = NavDests
 
 mkNavDests ::
     Functor f =>
-    Cursor -> Widget.VirtualCursor ->
-    [[Maybe (Direction -> Widget.EnterResult (f Widget.EventResult))]] ->
-    NavDests (f Widget.EventResult)
+    Cursor -> State.VirtualCursor ->
+    [[Maybe (Direction -> Widget.EnterResult (f State.Update))]] ->
+    NavDests (f State.Update)
 mkNavDests cursor@(Vector2 cursorX cursorY) virtCursor mEnterss =
     NavDests
     { leftOfCursor    = take cursorX curRow    & reverse & enterHoriz FromRight
@@ -72,16 +73,16 @@ mkNavDests cursor@(Vector2 cursorX cursorY) virtCursor mEnterss =
         setVVirt = setVirt Rect.horizontalRange
         setVirt axis enterResult =
             enterResult
-            & Widget.enterResultEvent . Lens.mapped . Widget.eVirtualCursor . Lens._Wrapped ?~
+            & Widget.enterResultEvent . Lens.mapped . State.uVirtualCursor . Lens._Wrapped ?~
             ( enterResult ^. Widget.enterResultRect
                 & Lens.cloneLens axis .~ prevArea ^. Lens.cloneLens axis
-                & Widget.VirtualCursor
+                & State.VirtualCursor
             )
         curRow = fromMaybe [] $ mEnterss ^? Lens.ix cappedY
         curColumn = fromMaybe [] $ transpose mEnterss ^? Lens.ix cappedX
         Vector2 cappedX cappedY = capCursor size cursor
         size = length2d mEnterss
-        prevArea = virtCursor ^. Widget.virtualCursor
+        prevArea = virtCursor ^. State.virtualCursor
         enterFrom dir mEnters = mEnters & msum ?? dir
 
 data Keys key = Keys
@@ -136,15 +137,15 @@ addNavEventmap keys navDests eMap =
 
 make ::
     (Traversable vert, Traversable horiz, Functor f) =>
-    vert (horiz (Aligned (Widget (f Widget.EventResult)))) ->
-    (vert (horiz (Aligned ())), Widget (f Widget.EventResult))
+    vert (horiz (Aligned (Widget (f State.Update)))) ->
+    (vert (horiz (Aligned ())), Widget (f State.Update))
 make = makeWithKeys (stdKeys <&> MetaKey.toModKey)
 
 makeWithKeys ::
     (Traversable vert, Traversable horiz, Functor f) =>
     Keys ModKey ->
-    vert (horiz (Aligned (Widget (f Widget.EventResult)))) ->
-    (vert (horiz (Aligned ())), Widget (f Widget.EventResult))
+    vert (horiz (Aligned (Widget (f State.Update)))) ->
+    (vert (horiz (Aligned ())), Widget (f State.Update))
 makeWithKeys keys children =
     ( content & each2d %~ void
     , toList content <&> toList
@@ -162,8 +163,8 @@ each2d = Lens.traversed <.> Lens.traversed & Lens.reindexed (uncurry (flip Vecto
 toWidgetWithKeys ::
     Functor f =>
     Keys ModKey -> Widget.Size ->
-    [[(Rect, Widget (f Widget.EventResult))]] ->
-    Widget (f Widget.EventResult)
+    [[(Rect, Widget (f State.Update))]] ->
+    Widget (f State.Update)
 toWidgetWithKeys keys size sChildren =
     Widget
     { _wSize = size

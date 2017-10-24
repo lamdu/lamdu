@@ -16,6 +16,7 @@ import           Data.Store.Rev.View (View)
 import qualified Data.Store.Rev.View as View
 import           Data.Store.Transaction (Transaction, setP, getP, modP)
 import qualified Data.Store.Transaction as Transaction
+import qualified GUI.Momentu.State as GuiState
 import qualified GUI.Momentu.Widget as Widget
 import           Lamdu.Data.DbLayout (DbM)
 import qualified Lamdu.Data.DbLayout as DbLayout
@@ -69,7 +70,7 @@ getVersion =
         currentBranch <- getP $ revProp DbLayout.currentBranch
         Branch.curVersion currentBranch
 
-runEvent :: Traversable t => Widget.Id -> TV (t Widget.EventResult) -> TDB (t Widget.EventResult)
+runEvent :: Traversable t => Widget.Id -> TV (t GuiState.Update) -> TDB (t GuiState.Update)
 runEvent preCursor eventHandler = do
     (eventResult, isEmpty) <- runAction $ do
         eventResult <- eventHandler
@@ -78,7 +79,7 @@ runEvent preCursor eventHandler = do
             setP (codeProp DbLayout.preCursor) preCursor
             setP (codeProp DbLayout.postCursor) .
                 fromMaybe preCursor . Monoid.getLast $
-                eventResult ^. Lens.traversed . Widget.eCursor
+                eventResult ^. Lens.traversed . GuiState.uCursor
         return (eventResult, isEmpty)
     unless isEmpty $ setP (revProp DbLayout.redos) []
     return eventResult

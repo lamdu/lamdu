@@ -33,6 +33,7 @@ import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Glue ((/-/))
 import           GUI.Momentu.Responsive (Responsive(..))
 import qualified GUI.Momentu.Responsive as Responsive
+import qualified GUI.Momentu.State as GuiState
 import           GUI.Momentu.View (View)
 import qualified GUI.Momentu.View as View
 import           GUI.Momentu.Widget (Widget)
@@ -231,8 +232,8 @@ addAnnotationH ::
     WideAnnotationBehavior ->
     m
     ((Widget.R -> Widget.R) ->
-     Responsive (f Widget.EventResult) ->
-     Responsive (f Widget.EventResult))
+     Responsive (f GuiState.Update) ->
+     Responsive (f GuiState.Update))
 addAnnotationH f wideBehavior =
     do
         vspace <- annotationSpacer
@@ -250,8 +251,8 @@ addInferredType ::
     , MonadTransaction n m, Element.HasAnimIdPrefix env
     ) =>
     Type -> WideAnnotationBehavior ->
-    m (Responsive (f Widget.EventResult) ->
-       Responsive (f Widget.EventResult))
+    m (Responsive (f GuiState.Update) ->
+       Responsive (f GuiState.Update))
 addInferredType typ wideBehavior =
     addAnnotationH (TypeView.make typ) wideBehavior ?? const 0
 
@@ -261,8 +262,8 @@ addEvaluationResult ::
     WideAnnotationBehavior ->
     ExprGuiM m
     ((Widget.R -> Widget.R) ->
-     Responsive (f Widget.EventResult) ->
-     Responsive (f Widget.EventResult))
+     Responsive (f GuiState.Update) ->
+     Responsive (f GuiState.Update))
 addEvaluationResult mNeigh resDisp wideBehavior =
     case (erdVal resDisp ^. ER.payload, erdVal resDisp ^. ER.body) of
     (T.TRecord T.CEmpty, _) ->
@@ -293,7 +294,7 @@ stdWrap pl act =
 parentDelegator ::
     ( MonadReader env m, Config.HasConfig env, Widget.HasCursor env, Applicative f
     ) => Widget.Id ->
-    m (Responsive (f Widget.EventResult) -> Responsive (f Widget.EventResult))
+    m (Responsive (f GuiState.Update) -> Responsive (f GuiState.Update))
 parentDelegator myId =
     FocusDelegator.make <*> (Lens.view Config.config <&> parentExprFDConfig)
     ?? FocusDelegator.FocusEntryChild ?? myId

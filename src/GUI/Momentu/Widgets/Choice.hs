@@ -12,6 +12,7 @@ import qualified Control.Lens as Lens
 import qualified GUI.Momentu.Draw as MDraw
 import           GUI.Momentu.Glue (Orientation(..))
 import qualified GUI.Momentu.Glue as Glue
+import qualified GUI.Momentu.State as State
 import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.FocusDelegator as FocusDelegator
@@ -37,8 +38,8 @@ data IsSelected = Selected | NotSelected
 
 toBox ::
     Applicative f => Config -> Bool ->
-    Widget.Id -> [(IsSelected, f (), Widget (f Widget.EventResult))] ->
-    Widget (f Widget.EventResult)
+    Widget.Id -> [(IsSelected, f (), Widget (f State.Update))] ->
+    Widget (f State.Update)
 toBox config selfFocused myId childrenRecords =
     childrenRecords
     <&> applyAction
@@ -71,8 +72,8 @@ toBox config selfFocused myId childrenRecords =
 
 makeInternal ::
     (MonadReader env m, Widget.HasCursor env, Applicative f) =>
-    m (Config -> [(IsSelected, f (), Widget (f Widget.EventResult))] ->
-       Widget.Id -> Widget (f Widget.EventResult))
+    m (Config -> [(IsSelected, f (), Widget (f State.Update))] ->
+       Widget.Id -> Widget (f State.Update))
 makeInternal =
     do
         sub <- Widget.subId
@@ -85,8 +86,8 @@ makeInternal =
 make ::
     (Eq a, MonadReader env m, Applicative f, Widget.HasCursor env) =>
     m
-    ((a -> f ()) -> [(a, Widget (f Widget.EventResult))] -> a ->
-     Config -> Widget.Id -> Widget (f Widget.EventResult))
+    ((a -> f ()) -> [(a, Widget (f State.Update))] -> a ->
+     Config -> Widget.Id -> Widget (f State.Update))
 make =
     makeInternal <&> f
     where

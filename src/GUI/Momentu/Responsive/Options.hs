@@ -22,7 +22,8 @@ import           GUI.Momentu.Responsive
     ( Responsive(..), LayoutParams(..), LayoutMode(..), LayoutDisambiguationContext(..)
     , render, vbox, fromView
     )
-import           GUI.Momentu.Widget (Widget, EventResult)
+import qualified GUI.Momentu.State as State
+import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Grid as Grid
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
@@ -63,9 +64,9 @@ tryWideLayout layoutOption elements fallback =
 
 hbox ::
     Functor f =>
-    HorizDisambiguator (f EventResult) ->
-    ([WithTextPos (Widget (f EventResult))] -> [WithTextPos (Widget (f EventResult))]) ->
-    WideLayoutOption [] (f EventResult)
+    HorizDisambiguator (f State.Update) ->
+    ([WithTextPos (Widget (f State.Update))] -> [WithTextPos (Widget (f State.Update))]) ->
+    WideLayoutOption [] (f State.Update)
 hbox disamb spacer =
     WideLayoutOption
     { _wContexts = Lens.reindexed (const LayoutHorizontal) Lens.traversed
@@ -78,7 +79,7 @@ hbox disamb spacer =
 
 table ::
     (Traversable t0, Traversable t1, Functor f) =>
-    WideLayoutOption (Compose t0 t1) (f EventResult)
+    WideLayoutOption (Compose t0 t1) (f State.Update)
 table =
     WideLayoutOption
     { _wContexts = Lens.reindexed (const LayoutClear) (Lens._Wrapped . Lens.traversed . Lens.traversed)
@@ -110,25 +111,25 @@ disambiguationNone = Disambiguators id id
 
 boxH ::
     Functor f =>
-    ([WithTextPos (Widget (f EventResult))] -> [WithTextPos (Widget (f EventResult))]) ->
-    ([Responsive (f EventResult)] -> [Responsive (f EventResult)]) ->
-    Disambiguators (f EventResult) ->
-    [Responsive (f EventResult)] ->
-    Responsive (f EventResult)
+    ([WithTextPos (Widget (f State.Update))] -> [WithTextPos (Widget (f State.Update))]) ->
+    ([Responsive (f State.Update)] -> [Responsive (f State.Update)]) ->
+    Disambiguators (f State.Update) ->
+    [Responsive (f State.Update)] ->
+    Responsive (f State.Update)
 boxH onHGuis onVGuis disamb guis =
     vbox (onVGuis guis)
     & tryWideLayout (hbox (disamb ^. disambHoriz) onHGuis) guis
 
 box ::
     Functor f =>
-    Disambiguators (f EventResult) ->
-    [Responsive (f EventResult)] ->
-    Responsive (f EventResult)
+    Disambiguators (f State.Update) ->
+    [Responsive (f State.Update)] ->
+    Responsive (f State.Update)
 box = boxH id id
 
 boxSpaced ::
     (MonadReader env m, Spacer.HasStdSpacing env, Functor f) =>
-    m (Disambiguators (f Widget.EventResult) -> [Responsive (f Widget.EventResult)] -> Responsive (f Widget.EventResult))
+    m (Disambiguators (f State.Update) -> [Responsive (f State.Update)] -> Responsive (f State.Update))
 boxSpaced =
     do
         hSpace <- Spacer.stdHSpace <&> Widget.fromView <&> WithTextPos 0

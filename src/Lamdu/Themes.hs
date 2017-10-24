@@ -8,6 +8,7 @@ import           Data.IORef
 import qualified Data.Text as Text
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.MetaKey (MetaKey)
+import qualified GUI.Momentu.State as GuiState
 import qualified GUI.Momentu.Widget as Widget
 import           Lamdu.Config.Sampler (Sampler)
 import qualified Lamdu.Config.Sampler as ConfigSampler
@@ -30,7 +31,7 @@ getThemeFiles =
             <&> map (themesDir </>)
 
 themeSwitchEventMap ::
-    [MetaKey] -> Sampler -> IORef Text -> Widget.EventMap (IO Widget.EventResult)
+    [MetaKey] -> Sampler -> IORef Text -> Widget.EventMap (IO GuiState.Update)
 themeSwitchEventMap keys configSampler themeRef =
     do
         curTheme <- readIORef themeRef

@@ -10,6 +10,7 @@ module GUI.Momentu.CursorState
 import qualified Control.Lens as Lens
 import           Data.Binary (Binary)
 import           Data.Binary.Utils (decodeS, encodeS)
+import qualified GUI.Momentu.State as State
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widget.Id as WidgetId
 
@@ -25,7 +26,7 @@ cursorState ::
     (MonadReader env m, Widget.HasCursor env, Binary s) =>
     Widget.Id ->
     s ->
-    (s -> (s -> Widget.EventResult -> Widget.EventResult) -> (Widget.EventResult -> Widget.EventResult) -> m r) ->
+    (s -> (s -> State.Update -> State.Update) -> (State.Update -> State.Update) -> m r) ->
     m r
 cursorState myId defaultState make =
     do
@@ -38,7 +39,7 @@ cursorState myId defaultState make =
                     case decodeState sub of
                     Nothing -> curId <> Widget.Id sub
                     Just _ -> cursor
-        make state updateState (Widget.eCursor . Lens.mapped %~ processDest)
+        make state updateState (State.uCursor . Lens.mapped %~ processDest)
             & Widget.assignCursorPrefix curId ((myId <>) . Widget.Id)
     & Widget.assignCursor myId (cursorStateWidgetId myId defaultState)
     where
@@ -47,7 +48,7 @@ cursorState myId defaultState make =
             | take 1 subId == [cursorStatePrefix] = decodeS (subId !! 1) & Just
             | otherwise = Nothing
         updateState newState eventResult =
-            eventResult & Widget.eCursor . Lens.mapped %~ cursorUpdateState newState
+            eventResult & State.uCursor . Lens.mapped %~ cursorUpdateState newState
         cursorUpdateState newState cursor =
             case WidgetId.subId myId cursor of
             Nothing -> cursor
