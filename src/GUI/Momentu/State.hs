@@ -1,20 +1,17 @@
-{-# LANGUAGE NoImplicitPrelude, GeneralizedNewtypeDeriving, TemplateHaskell, DeriveGeneric #-}
+{-# LANGUAGE NoImplicitPrelude, TemplateHaskell, DeriveGeneric #-}
 
 module GUI.Momentu.State
-    ( Id(..)
-    , VirtualCursor(..), virtualCursor
+    ( VirtualCursor(..), virtualCursor
     , EventResult(..), eCursor, eVirtualCursor, eAnimIdMapping
     , eventResultFromCursor
     ) where
 
 import qualified Control.Lens as Lens
-import           Data.Binary (Binary)
-import           Data.List (intercalate)
 import qualified Data.Monoid as Monoid
 import           Data.Monoid.Generic (def_mempty, def_mappend)
 import           GUI.Momentu.Animation (AnimId)
 import           GUI.Momentu.Rect (Rect)
-import           Numeric.Utils (encodeHex)
+import           GUI.Momentu.Widget.Id (Id)
 
 import           Lamdu.Prelude
 
@@ -22,16 +19,6 @@ import           Lamdu.Prelude
 -- direction of user movements
 newtype VirtualCursor = VirtualCursor { _virtualCursor :: Rect }
 Lens.makeLenses ''VirtualCursor
-
-newtype Id = Id
-    { toAnimId :: AnimId
-    } deriving (Eq, Ord, Read, Binary, Monoid)
-
-instance Show Id where
-    show (Id animId) =
-        "W:" ++ intercalate ":" (map each animId)
-        where
-            each bs = encodeHex bs ++ "(" ++ show bs ++ ")"
 
 data EventResult = EventResult
     { _eCursor :: Monoid.Last Id

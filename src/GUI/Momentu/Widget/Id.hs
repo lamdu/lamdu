@@ -1,15 +1,26 @@
-{-# LANGUAGE NoImplicitPrelude #-}
+{-# LANGUAGE NoImplicitPrelude, GeneralizedNewtypeDeriving #-}
 module GUI.Momentu.Widget.Id
     ( Id(..)
     , joinId, subId
     ) where
 
-import Data.List.Lens (prefixed)
-import GUI.Momentu.Animation.Id (AnimId)
-import GUI.Momentu.State (Id(..))
-import GUI.Momentu.Widget.Instances ()
+import           Data.Binary (Binary)
+import           Data.List (intercalate)
+import           Data.List.Lens (prefixed)
+import           GUI.Momentu.Animation (AnimId)
+import           Numeric.Utils (encodeHex)
 
-import Lamdu.Prelude
+import           Lamdu.Prelude
+
+newtype Id = Id
+    { toAnimId :: AnimId
+    } deriving (Eq, Ord, Read, Binary, Monoid)
+
+instance Show Id where
+    show (Id animId) =
+        "W:" ++ intercalate ":" (map each animId)
+        where
+            each bs = encodeHex bs ++ "(" ++ show bs ++ ")"
 
 joinId :: Id -> AnimId -> Id
 joinId (Id x) y = x ++ y & Id

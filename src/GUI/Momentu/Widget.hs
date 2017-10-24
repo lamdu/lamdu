@@ -2,7 +2,7 @@
 module GUI.Momentu.Widget
     ( module Types
     , module State
-    , subId, Id.joinId, isSubCursor, makeSubId
+    , subId, Id(..), Id.joinId, isSubCursor, makeSubId
     , HasCursor(..)
 
     -- Types:
