@@ -10,6 +10,7 @@ module Lamdu.GUI.ExpressionEdit.EventMap
 import qualified Control.Lens as Lens
 import qualified Data.Store.Transaction as Transaction
 import qualified Data.Text as Text
+import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.State as GuiState
 import qualified GUI.Momentu.Widget as Widget
@@ -52,13 +53,13 @@ exprInfoFromPl pl =
 make ::
     (Monad m, Monad f) =>
     Sugar.Payload (T f) ExprGuiT.Payload -> ExprGuiM.HolePicker f ->
-    ExprGuiM m (Widget.EventMap (T f GuiState.Update))
+    ExprGuiM m (EventMap (T f GuiState.Update))
 make = makeWith . exprInfoFromPl
 
 makeWith ::
     (Monad m, Monad f) =>
     ExprInfo f -> ExprGuiM.HolePicker f ->
-    ExprGuiM m (Widget.EventMap (T f GuiState.Update))
+    ExprGuiM m (EventMap (T f GuiState.Update))
 makeWith exprInfo holePicker =
     mconcat <$> sequenceA
     [ actionsEventMap exprInfo holePicker
@@ -68,7 +69,7 @@ makeWith exprInfo holePicker =
 
 jumpHolesEventMap ::
     (MonadReader env m, Config.HasConfig env, Monad f) =>
-    NearestHoles -> m (Widget.EventMap (T f GuiState.Update))
+    NearestHoles -> m (EventMap (T f GuiState.Update))
 jumpHolesEventMap hg =
     do
         config <- Lens.view Config.config <&> Config.hole
@@ -86,14 +87,14 @@ jumpHolesEventMap hg =
         jumpDoc dirStr = "Jump to " <> dirStr <> " hole"
 
 exprInfoIsSelected ::
-    (Widget.HasCursor env, MonadReader env m) => ExprInfo f -> m Bool
+    (GuiState.HasCursor env, MonadReader env m) => ExprInfo f -> m Bool
 exprInfoIsSelected exprInfo =
-    Widget.isSubCursor ?? WidgetIds.fromEntityId (exprInfoEntityId exprInfo)
+    GuiState.isSubCursor ?? WidgetIds.fromEntityId (exprInfoEntityId exprInfo)
 
 jumpHolesEventMapIfSelected ::
-    (MonadReader env m, Config.HasConfig env, Widget.HasCursor env, Monad f) =>
+    (MonadReader env m, Config.HasConfig env, GuiState.HasCursor env, Monad f) =>
     ExprInfo dummy ->
-    m (Widget.EventMap (T f GuiState.Update))
+    m (EventMap (T f GuiState.Update))
 jumpHolesEventMapIfSelected exprInfo =
     do
         isSelected <- exprInfoIsSelected exprInfo
@@ -109,7 +110,7 @@ extractCursor (Sugar.ExtractToDef defId) =
 
 extractEventMap ::
     (MonadReader env m, Config.HasConfig env, Functor f) =>
-    Sugar.Actions (T f) -> m (Widget.EventMap (T f GuiState.Update))
+    Sugar.Actions (T f) -> m (EventMap (T f GuiState.Update))
 extractEventMap actions =
     Lens.view Config.config <&> Config.extractKeys
     <&>
@@ -120,9 +121,9 @@ extractEventMap actions =
         doc = E.Doc ["Edit", "Extract"]
 
 maybeReplaceEventMap ::
-    (MonadReader env m, Config.HasConfig env, Widget.HasCursor env, Monad f) =>
+    (MonadReader env m, Config.HasConfig env, GuiState.HasCursor env, Monad f) =>
     ExprInfo f ->
-    m (Widget.EventMap (T f GuiState.Update))
+    m (EventMap (T f GuiState.Update))
 maybeReplaceEventMap exprInfo =
     do
         isSelected <- exprInfoIsSelected exprInfo
@@ -133,7 +134,7 @@ maybeReplaceEventMap exprInfo =
 actionsEventMap ::
     (Monad m, Monad f) =>
     ExprInfo f -> ExprGuiM.HolePicker f ->
-    ExprGuiM m (Widget.EventMap (T f GuiState.Update))
+    ExprGuiM m (EventMap (T f GuiState.Update))
 actionsEventMap exprInfo holePicker =
     sequence
     [ case exprInfoActions exprInfo ^. Sugar.wrap of
@@ -159,7 +160,7 @@ actionsEventMap exprInfo holePicker =
 applyOperatorEventMap ::
     Monad f =>
     ExprInfo f -> ExprGuiM.HolePicker f ->
-    Widget.EventMap (T f GuiState.Update)
+    EventMap (T f GuiState.Update)
 applyOperatorEventMap exprInfo holePicker =
     case exprInfoActions exprInfo ^. Sugar.wrap of
     Sugar.WrapAction wrap -> action wrap
@@ -179,7 +180,7 @@ applyOperatorEventMap exprInfo holePicker =
 
 wrapEventMap ::
     (MonadReader env m, Config.HasConfig env, Monad f) =>
-    T f Sugar.EntityId -> m (Widget.EventMap (T f GuiState.Update))
+    T f Sugar.EntityId -> m (EventMap (T f GuiState.Update))
 wrapEventMap wrap =
     Lens.view Config.config
     <&>
@@ -193,8 +194,8 @@ wrapEventMap wrap =
     (void wrap)
 
 replaceEventMap ::
-    (MonadReader env m, Config.HasConfig env, Widget.HasCursor env, Monad f) =>
-    Sugar.Actions (T f) -> m (Widget.EventMap (T f GuiState.Update))
+    (MonadReader env m, Config.HasConfig env, GuiState.HasCursor env, Monad f) =>
+    Sugar.Actions (T f) -> m (EventMap (T f GuiState.Update))
 replaceEventMap actions =
     do
         config <- Lens.view Config.config

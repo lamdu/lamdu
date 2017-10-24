@@ -88,7 +88,7 @@ branchTextEditId :: Branch t -> Widget.Id
 branchTextEditId = (`Widget.joinId` ["textedit"]) . branchDelegatorId
 
 make ::
-    (MonadReader env mr, Widget.HasCursor env, TextEdit.HasStyle env,
+    (MonadReader env mr, GuiState.HasCursor env, TextEdit.HasStyle env,
      Applicative mw, Monad n) =>
     VersionControl.Config -> VersionControl.Theme ->
     (forall a. Transaction n a -> mw a) ->

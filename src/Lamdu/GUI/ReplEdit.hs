@@ -85,6 +85,6 @@ make exportRepl replExpr =
               <&> Lens.mapped %~ IOTrans.liftTrans
             ]
             <&> E.weakerEvents (replEventMap theConfig exportRepl replExpr)
-            & Widget.assignCursor WidgetIds.replId exprId
+            & GuiState.assignCursor WidgetIds.replId exprId
     where
         exprId = replExpr ^. Sugar.rPayload . Sugar.plEntityId & WidgetIds.fromEntityId

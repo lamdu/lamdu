@@ -5,6 +5,7 @@ module Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds
     , isActive
     ) where
 
+import qualified GUI.Momentu.State as GuiState
 import qualified GUI.Momentu.Widget as Widget
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Sugar.EntityId (EntityId)
@@ -30,5 +31,5 @@ make entityId = WidgetIds
     where
         holeId = WidgetIds.fromEntityId entityId
 
-isActive :: (MonadReader env m, Widget.HasCursor env) => WidgetIds -> m Bool
-isActive widgetIds = Widget.isSubCursor ?? hidOpen widgetIds
+isActive :: (MonadReader env m, GuiState.HasCursor env) => WidgetIds -> m Bool
+isActive widgetIds = GuiState.isSubCursor ?? hidOpen widgetIds

@@ -8,6 +8,7 @@ import qualified Data.List as List
 import           Data.Store.Transaction (Transaction)
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.Responsive as Responsive
+import qualified GUI.Momentu.State as GuiState
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.TextView as TextView
 import qualified Lamdu.GUI.ExpressionEdit.ApplyEdit as ApplyEdit
@@ -42,7 +43,7 @@ make (Sugar.Expression body pl) =
         myId = WidgetIds.fromExprPayload pl
         assignCursor x =
             exprHiddenEntityIds <&> WidgetIds.fromEntityId
-            & foldr (`Widget.assignCursorPrefix` const myId) x
+            & foldr (`GuiState.assignCursorPrefix` const myId) x
 
 injectedExpr :: Monad m => Sugar.Payload (T m) ExprGuiT.Payload -> ExprGuiM m (ExpressionGui m)
 injectedExpr pl =

@@ -128,7 +128,7 @@ makeLabel ::
 makeLabel text = (make ?? text) <*> Element.subAnimId [encodeUtf8 text]
 
 makeFocusable ::
-    (MonadReader env m, Applicative f, Widget.HasCursor env, HasStyle env) =>
+    (MonadReader env m, Applicative f, State.HasCursor env, HasStyle env) =>
     m (Text -> Widget.Id -> WithTextPos (Widget (f State.Update)))
 makeFocusable =
     do
@@ -139,7 +139,7 @@ makeFocusable =
             & Align.tValue %~ toFocusable myId
 
 makeFocusableLabel ::
-    (MonadReader env m, Applicative f, Widget.HasCursor env, HasStyle env, Element.HasAnimIdPrefix env) =>
+    (MonadReader env m, Applicative f, State.HasCursor env, HasStyle env, Element.HasAnimIdPrefix env) =>
     Text -> m (WithTextPos (Widget (f State.Update)))
 makeFocusableLabel text =
     do

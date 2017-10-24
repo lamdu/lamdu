@@ -49,7 +49,7 @@ makeInnerGui ::
     , Style.HasStyle env
     , Settings.HasSettings env
     , Spacer.HasStdSpacing env
-    , Widget.HasCursor env
+    , GuiState.HasCursor env
     , Theme.HasTheme env
     , Config.HasConfig env
     , CodeEdit.HasEvalResults env ViewM
@@ -61,7 +61,7 @@ makeInnerGui branchSelector =
     do
         fullSize <- Lens.view (MainLoop.mainLoopEnv . MainLoop.eWindowSize)
         let codeSize = fullSize - Vector2 0 (branchSelector ^. Element.height)
-        theCursor <- Lens.view Widget.cursor
+        theCursor <- Lens.view GuiState.cursor
         codeEdit <-
             CodeEdit.make DbLayout.codeAnchors (codeSize ^. _1)
             & Reader.mapReaderT VersionControl.runAction

@@ -123,7 +123,7 @@ make annotationOpts showAnnotation prevId nextId param =
                 , maybe mempty (eventMapOrderParam (Config.paramOrderBeforeKeys config) "before") (iMOrderBefore info)
                 , maybe mempty (eventMapOrderParam (Config.paramOrderAfterKeys config) "after") (iMOrderAfter info)
                 ]
-        fpIsSelected <- Widget.isSubCursor ?? myId
+        fpIsSelected <- GuiState.isSubCursor ?? myId
         let wideAnnotationBehavior =
                 ExpressionGui.wideAnnotationBehaviorFromSelected fpIsSelected
         ExpressionGui.maybeAddAnnotationWith annotationOpts

@@ -62,7 +62,7 @@ setTagName tag name =
 
 makeTagNameEdit ::
     ( Monad m, MonadReader env f, HasConfig env, TextEdit.HasStyle env
-    , Widget.HasCursor env
+    , GuiState.HasCursor env
     ) =>
     NearestHoles -> Sugar.Tag (Name (T m)) (T m) ->
     f (WithTextPos (Widget (T m GuiState.Update)))
@@ -116,7 +116,7 @@ makePickEventMap nearestHoles doc action =
             (WidgetIds.fromEntityId nextHole <$ action)
 
 makeOptions ::
-    ( Monad m, MonadTransaction m f, MonadReader env f, Widget.HasCursor env
+    ( Monad m, MonadTransaction m f, MonadReader env f, GuiState.HasCursor env
     , HasConfig env, HasTheme env, Element.HasAnimIdPrefix env, TextView.HasStyle env
     ) =>
     (GuiState.Update -> a) -> NearestHoles -> Sugar.Tag (Name n) (T m) -> Text ->
@@ -154,7 +154,7 @@ makeOptions fixCursor nearestHoles tag searchTerm
 
 makeTagHoleEditH ::
     ( Monad m, MonadTransaction m f, MonadReader env f, HasConfig env
-    , TextEdit.HasStyle env, Widget.HasCursor env, Element.HasAnimIdPrefix env
+    , TextEdit.HasStyle env, GuiState.HasCursor env, Element.HasAnimIdPrefix env
     , HasTheme env, Hover.HasStyle env, Menu.HasStyle env
     , HasStdSpacing env
     ) =>
@@ -195,7 +195,7 @@ makeTagHoleEditH nearestHoles tag searchTerm updateState fixCursor =
         hoverMenu <- Menu.hoverMenu
         menu <- Menu.layout 0 options hasMore
         topLine <&> hoverMenu ?? menu & pure
-    & Widget.assignCursor holeId searchTermId
+    & GuiState.assignCursor holeId searchTermId
     & Reader.local (Element.animIdPrefix .~ Widget.toAnimId holeId)
     where
         holeId = WidgetIds.tagHoleId (tagId tag)
@@ -203,7 +203,7 @@ makeTagHoleEditH nearestHoles tag searchTerm updateState fixCursor =
         textEditNoEmpty = TextEdit.EmptyStrings "" ""
 
 makeTagHoleEdit ::
-    ( Monad m, MonadReader env f, MonadTransaction m f, Widget.HasCursor env
+    ( Monad m, MonadReader env f, MonadTransaction m f, GuiState.HasCursor env
     , HasConfig env, TextEdit.HasStyle env, Element.HasAnimIdPrefix env
     , HasTheme env, Hover.HasStyle env, Menu.HasStyle env, HasStdSpacing env
     ) => NearestHoles -> Sugar.Tag (Name (T m)) (T m) ->
@@ -220,7 +220,7 @@ data Mode = WithTagHoles | WithoutTagHoles
 
 makeTagEdit ::
     ( Monad m, MonadReader env f, MonadTransaction m f, HasConfig env
-    , Widget.HasCursor env, HasTheme env, Element.HasAnimIdPrefix env
+    , GuiState.HasCursor env, HasTheme env, Element.HasAnimIdPrefix env
     , TextEdit.HasStyle env, Hover.HasStyle env, Menu.HasStyle env
     , HasStdSpacing env
     ) =>
@@ -229,8 +229,8 @@ makeTagEdit ::
 makeTagEdit mode tagColor nearestHoles tag =
     do
         jumpHolesEventMap <- ExprEventMap.jumpHolesEventMap nearestHoles
-        isRenaming <- Widget.isSubCursor ?? tagRenameId myId
-        isHole <- Widget.isSubCursor ?? WidgetIds.tagHoleId myId
+        isRenaming <- GuiState.isSubCursor ?? tagRenameId myId
+        isHole <- GuiState.isSubCursor ?? WidgetIds.tagHoleId myId
         config <- Lens.view Config.config
         let eventMap =
                 Widget.keysEventMapMovesCursor (Config.jumpToDefinitionKeys config)
@@ -262,14 +262,14 @@ makeTagEdit mode tagColor nearestHoles tag =
             <&> E.weakerEvents jumpHolesEventMap
             & pure
     & Reader.local (TextView.color .~ tagColor)
-    & Widget.assignCursor myId viewId
+    & GuiState.assignCursor myId viewId
     where
         myId = WidgetIds.fromEntityId (tag ^. Sugar.tagInfo . Sugar.tagInstance)
         viewId = tagViewId myId
 
 makeRecordTag ::
     ( Monad m, MonadReader env f, MonadTransaction m f, HasTheme env
-    , HasConfig env, Widget.HasCursor env, Element.HasAnimIdPrefix env
+    , HasConfig env, GuiState.HasCursor env, Element.HasAnimIdPrefix env
     , TextEdit.HasStyle env, Hover.HasStyle env, HasTheme env, Menu.HasStyle env
     , HasStdSpacing env
     ) =>
@@ -282,7 +282,7 @@ makeRecordTag mode nearestHoles tag =
 
 makeCaseTag ::
     ( Monad m, MonadReader env f, MonadTransaction m f, HasTheme env
-    , HasConfig env, Widget.HasCursor env, Element.HasAnimIdPrefix env
+    , HasConfig env, GuiState.HasCursor env, Element.HasAnimIdPrefix env
     , TextEdit.HasStyle env, Hover.HasStyle env, HasTheme env, Menu.HasStyle env
     , HasStdSpacing env
     ) =>
@@ -295,7 +295,7 @@ makeCaseTag mode nearestHoles tag =
 
 makeParamTag ::
     ( MonadReader env f, HasTheme env, HasConfig env, Hover.HasStyle env, Menu.HasStyle env
-    , Widget.HasCursor env, Element.HasAnimIdPrefix env, TextEdit.HasStyle env
+    , GuiState.HasCursor env, Element.HasAnimIdPrefix env, TextEdit.HasStyle env
     , HasStdSpacing env
     , MonadTransaction m f
     ) =>

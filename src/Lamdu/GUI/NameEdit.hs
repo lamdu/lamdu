@@ -90,7 +90,7 @@ makeView name animId =
 
 -- | A name edit without the collision suffixes
 makeBareEdit ::
-    (Monad m, TextEdit.HasStyle env, Widget.HasCursor env, MonadReader env f) =>
+    (Monad m, TextEdit.HasStyle env, GuiState.HasCursor env, MonadReader env f) =>
     Name (T m) -> Widget.Id ->
     f (WithTextPos (Widget (T m GuiState.Update)))
 makeBareEdit (Name form setName) myId =
@@ -106,7 +106,7 @@ makeBareEdit (Name form setName) myId =
 make ::
     ( Monad m
     , MonadReader env f, TextEdit.HasStyle env, Element.HasAnimIdPrefix env
-    , HasTheme env, Widget.HasCursor env
+    , HasTheme env, GuiState.HasCursor env
     ) => Name (T m) -> Widget.Id ->
     f (WithTextPos (Widget (T m GuiState.Update)))
 make name myId =
@@ -140,7 +140,7 @@ styleNameAtBinder name color act =
         act & Reader.local (TextEdit.style .~ textEditStyle)
 
 makeAtBinder ::
-    (Monad m, MonadReader env f, Widget.HasCursor env, HasTheme env
+    (Monad m, MonadReader env f, GuiState.HasCursor env, HasTheme env
     , Element.HasAnimIdPrefix env, Style.HasStyle env
     ) => Name (T m) -> Draw.Color -> Widget.Id ->
     f (WithTextPos (Widget (T m GuiState.Update)))

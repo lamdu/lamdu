@@ -109,7 +109,7 @@ makeSubmenuSymbol isSelected =
 
 layoutOption ::
     ( MonadReader env m, Element.HasAnimIdPrefix env, TextView.HasStyle env
-    , Widget.HasCursor env, Hover.HasStyle env, HasStyle env, Functor f
+    , State.HasCursor env, Hover.HasStyle env, HasStyle env, Functor f
     ) =>
     Widget.R -> Option m (f State.Update) -> m (WithTextPos (Widget (f State.Update)))
 layoutOption maxOptionWidth option =
@@ -117,7 +117,7 @@ layoutOption maxOptionWidth option =
     SubmenuEmpty -> singular
     SubmenuItems action ->
         do
-            isOnSubmenu <- Widget.isSubCursor ?? option ^. oId
+            isOnSubmenu <- State.isSubCursor ?? option ^. oId
             let isSelected = isOnSubmenu || isOnOption
             submenuSymbol <-
                 makeSubmenuSymbol isSelected
@@ -148,7 +148,7 @@ layoutOption maxOptionWidth option =
 
 layout ::
     ( MonadReader env m, TextView.HasStyle env, Hover.HasStyle env
-    , Element.HasAnimIdPrefix env, HasStyle env, Widget.HasCursor env
+    , Element.HasAnimIdPrefix env, HasStyle env, State.HasCursor env
     , Applicative f
     ) =>
     Widget.R -> [Option m (f State.Update)] -> HasMoreOptions ->

@@ -21,7 +21,7 @@ import           Lamdu.Prelude
 
 make ::
     (MonadReader env m, Applicative f,
-     Widget.HasCursor env, TextEdit.HasStyle env) =>
+     State.HasCursor env, TextEdit.HasStyle env) =>
     m
     (TextEdit.EmptyStrings -> Property f Text -> Widget.Id ->
      WithTextPos (Widget (f State.Update)))
@@ -41,7 +41,7 @@ deleteKeyEventHandler key =
     E.eventMap %~ E.deleteKey (E.KeyEvent ModKey.KeyState'Pressed key)
 
 makeLineEdit ::
-    (MonadReader env m, Applicative f, Widget.HasCursor env, TextEdit.HasStyle env) =>
+    (MonadReader env m, Applicative f, State.HasCursor env, TextEdit.HasStyle env) =>
     m
     (TextEdit.EmptyStrings -> Property f Text -> Widget.Id ->
      WithTextPos (Widget (f State.Update)))
@@ -52,7 +52,7 @@ makeLineEdit =
     & Align.tValue %~ deleteKeyEventHandler (ModKey mempty ModKey.Key'Enter)
 
 makeWordEdit ::
-    (MonadReader env m, Applicative f, Widget.HasCursor env, TextEdit.HasStyle env) =>
+    (MonadReader env m, Applicative f, State.HasCursor env, TextEdit.HasStyle env) =>
     m
     (TextEdit.EmptyStrings -> Property f Text -> Widget.Id ->
      WithTextPos (Widget (f State.Update)))

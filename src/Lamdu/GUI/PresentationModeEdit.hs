@@ -15,7 +15,7 @@ import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.MetaKey (MetaKey(..), noMods)
 import qualified GUI.Momentu.MetaKey as MetaKey
-import qualified GUI.Momentu.State as State
+import qualified GUI.Momentu.State as GuiState
 import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Choice as Choice
@@ -44,12 +44,12 @@ presentationModeChoiceConfig = Choice.Config
 
 make ::
     ( Monad m, MonadReader env n, HasTheme env
-    , Element.HasAnimIdPrefix env, TextView.HasStyle env, Widget.HasCursor env
+    , Element.HasAnimIdPrefix env, TextView.HasStyle env, GuiState.HasCursor env
     ) =>
     Widget.Id ->
     Sugar.BinderParams name m ->
     Property m Sugar.PresentationMode ->
-    n (Widget (m State.Update))
+    n (Widget (m GuiState.Update))
 make myId (Sugar.FieldParams params) prop =
     do
         theme <- Lens.view Theme.theme

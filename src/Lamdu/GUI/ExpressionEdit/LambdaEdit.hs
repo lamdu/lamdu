@@ -69,7 +69,7 @@ lamId = (`Widget.joinId` ["lam"])
 
 mkShrunk ::
     ( Monad m, MonadReader env f, HasConfig env, HasTheme env
-    , Widget.HasCursor env, Element.HasAnimIdPrefix env, TextView.HasStyle env
+    , GuiState.HasCursor env, Element.HasAnimIdPrefix env, TextView.HasStyle env
     ) => [Sugar.EntityId] -> Widget.Id ->
     f (Maybe (Widget (T m GuiState.Update)) -> [ExpressionGui m])
 mkShrunk paramIds myId =
@@ -93,7 +93,7 @@ mkShrunk paramIds myId =
             ]
 
 mkLightLambda ::
-    ( Monad n, MonadReader env f, Widget.HasCursor env
+    ( Monad n, MonadReader env f, GuiState.HasCursor env
     , Element.HasAnimIdPrefix env, TextView.HasStyle env, HasTheme env
     , HasConfig env
     ) =>
@@ -105,7 +105,7 @@ mkLightLambda params myId =
     do
         isSelected <-
             paramIds <&> WidgetIds.fromEntityId
-            & traverse (Widget.isSubCursor ??)
+            & traverse (GuiState.isSubCursor ??)
             <&> or
         let shrinkKeys = [MetaKey noMods MetaKey.Key'Escape]
         let shrinkEventMap =

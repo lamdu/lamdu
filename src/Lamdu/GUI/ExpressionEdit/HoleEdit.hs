@@ -11,6 +11,7 @@ import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Glue ((/-/))
 import qualified GUI.Momentu.Hover as Hover
 import qualified GUI.Momentu.Responsive as Responsive
+import qualified GUI.Momentu.State as GuiState
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Menu as Menu
 import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
@@ -43,7 +44,7 @@ makeWrapper pl openHoleId holeArg =
 assignHoleCursor ::
     Monad m => WidgetIds -> ExprGuiM m a -> ExprGuiM m a
 assignHoleCursor widgetIds =
-    Widget.assignCursor (hidHole widgetIds) (hidOpen widgetIds)
+    GuiState.assignCursor (hidHole widgetIds) (hidOpen widgetIds)
 
 makeHoleWithWrapper ::
     (Functor f, Monad m) =>
@@ -53,7 +54,7 @@ makeHoleWithWrapper searchAreaGui pl wrapperGui =
     do
         unfocusedWrapperGui <-
             ExpressionGui.maybeAddAnnotationPl pl ?? wrapperGui
-        isSelected <- Widget.isSubCursor ?? hidHole widgetIds
+        isSelected <- GuiState.isSubCursor ?? hidHole widgetIds
         hover <- Hover.hover
         let f layoutMode wrapper =
                 case isSelected || Widget.isFocused (wrapper ^. Align.tValue) of

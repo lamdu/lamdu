@@ -45,7 +45,7 @@ module GUI.Momentu
 
     -- | Environments
     , Element.HasAnimIdPrefix(..)
-    , Widget.HasCursor(..)
+    , State.HasCursor(..)
     , Widget.HasWidget(..)
     , Spacer.HasStdSpacing(..)
 

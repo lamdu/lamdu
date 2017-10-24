@@ -47,7 +47,7 @@ builtinFFIName :: Widget.Id -> Widget.Id
 builtinFFIName = flip Widget.joinId ["FFIName"]
 
 makeNamePartEditor ::
-    ( Applicative f, MonadReader env m, Widget.HasCursor env
+    ( Applicative f, MonadReader env m, GuiState.HasCursor env
     , TextEdit.HasStyle env
     ) =>
     MDraw.Color -> Text -> (Text -> f ()) -> Widget.Id ->
@@ -63,7 +63,7 @@ makeNamePartEditor color namePartStr setter myId =
         empty = TextEdit.EmptyStrings "unnamed builtin" ""
 
 make ::
-    ( MonadReader env f, HasTheme env, Widget.HasCursor env
+    ( MonadReader env f, HasTheme env, GuiState.HasCursor env
     , TextEdit.HasStyle env, Element.HasAnimIdPrefix env, Monad m
     ) =>
     Sugar.DefinitionBuiltin (T m) -> Widget.Id ->
@@ -79,7 +79,7 @@ make def myId =
             (builtinFFIName myId)
         dot <- TextView.makeLabel "."
         moduleName /|/ dot /|/ varName & return
-    & Widget.assignCursor myId (builtinFFIName myId)
+    & GuiState.assignCursor myId (builtinFFIName myId)
     where
         Sugar.DefinitionBuiltin
             (Definition.FFIName modulePath name) setFFIName _ = def

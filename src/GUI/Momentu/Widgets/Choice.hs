@@ -71,12 +71,12 @@ toBox config selfFocused myId childrenRecords =
             & Lens.orOf (Lens.traversed . _3 . Lens.to Widget.isFocused)
 
 makeInternal ::
-    (MonadReader env m, Widget.HasCursor env, Applicative f) =>
+    (MonadReader env m, State.HasCursor env, Applicative f) =>
     m (Config -> [(IsSelected, f (), Widget (f State.Update))] ->
        Widget.Id -> Widget (f State.Update))
 makeInternal =
     do
-        sub <- Widget.subId
+        sub <- State.subId
         fd <- FocusDelegator.make
         pure $ \config children myId ->
             let selfFocused = sub myId & Lens.has Lens._Just
@@ -84,7 +84,7 @@ makeInternal =
             in  fd (cwcFDConfig config) FocusDelegator.FocusEntryParent myId childrenBox
 
 make ::
-    (Eq a, MonadReader env m, Applicative f, Widget.HasCursor env) =>
+    (Eq a, MonadReader env m, Applicative f, State.HasCursor env) =>
     m
     ((a -> f ()) -> [(a, Widget (f State.Update))] -> a ->
      Config -> Widget.Id -> Widget (f State.Update))

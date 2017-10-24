@@ -127,7 +127,7 @@ loadWorkArea theEvalResults theCodeAnchors =
 
 make ::
     ( MonadTransaction m n, MonadReader env n, Config.HasConfig env
-    , Theme.HasTheme env, Widget.HasCursor env, TextEdit.HasStyle env
+    , Theme.HasTheme env, GuiState.HasCursor env, TextEdit.HasStyle env
     , Spacer.HasStdSpacing env, HasEvalResults env m, HasExportActions env m
     , HasSettings env, HasStyle env
     ) =>
@@ -194,12 +194,12 @@ makePaneEdit theExportActions pane =
             <&> E.weakerEvents paneEventMap
 
 makeNewDefinitionEventMap ::
-    (Monad m, MonadReader env n, Widget.HasCursor env) =>
+    (Monad m, MonadReader env n, GuiState.HasCursor env) =>
     Anchors.CodeAnchors m ->
     n ([MetaKey] -> Widget.EventMap (T m GuiState.Update))
 makeNewDefinitionEventMap cp =
     do
-        curCursor <- Lens.view Widget.cursor
+        curCursor <- Lens.view GuiState.cursor
         let newDefinition =
                 do
                     holeI <- DataOps.newHole

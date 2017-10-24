@@ -1,8 +1,7 @@
 {-# LANGUAGE NoImplicitPrelude #-}
 module GUI.Momentu.Widget
     ( module Types
-    , subId, Id(..), Id.joinId, isSubCursor, makeSubId
-    , HasCursor(..)
+    , Id(..), Id.joinId, makeSubId
 
     -- Types:
     , R, Size
@@ -40,14 +39,10 @@ module GUI.Momentu.Widget
     , respondToCursorBy
     , setFocused, setFocusedWith
 
-    , assignCursor
-    , assignCursorPrefix
-
     , glueStates
     ) where
 
 import qualified Control.Lens as Lens
-import qualified Control.Monad.Reader as Reader
 import qualified Data.Map as Map
 import qualified Data.Monoid as Monoid
 import           Data.Vector.Vector2 (Vector2(..))
@@ -59,7 +54,7 @@ import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as EventMap
 import           GUI.Momentu.MetaKey (MetaKey, toModKey)
-import           GUI.Momentu.State (VirtualCursor(..), Update)
+import           GUI.Momentu.State (VirtualCursor(..), Update, HasCursor(..))
 import qualified GUI.Momentu.State as State
 import           GUI.Momentu.Rect (Rect(..))
 import qualified GUI.Momentu.Rect as Rect
@@ -166,14 +161,6 @@ padToSizeAlign newSize alignment w =
     where
         sizeDiff = max <$> 0 <*> newSize - w ^. Element.size
 
-class HasCursor env where cursor :: Lens' env Id
-
-subId :: (MonadReader env m, HasCursor env) => m (Id -> Maybe AnimId)
-subId = Lens.view cursor <&> flip Id.subId
-
-isSubCursor :: (MonadReader env m, HasCursor env) => m (Id -> Bool)
-isSubCursor = subId <&> \sub prefix -> sub prefix & Lens.has Lens._Just
-
 setFocused :: HasWidget w => w a -> w a
 setFocused = widget %~ \w -> setFocusedWith (Rect 0 (w ^. wSize)) mempty w
 
@@ -209,27 +196,6 @@ respondToCursorPrefix ::
 respondToCursorPrefix =
     respondToCursorBy
     <&> \respond myIdPrefix -> respond (Lens.has Lens._Just . Id.subId myIdPrefix)
-
-assignCursor ::
-    (HasCursor env, MonadReader env m) =>
-    Id -> Id -> m a -> m a
-assignCursor src dest =
-    Reader.local (cursor %~ replace)
-    where
-        replace c
-            | c == src = dest
-            | otherwise = c
-
-assignCursorPrefix ::
-    (HasCursor env, MonadReader env m) =>
-    Id -> (AnimId -> Id) -> m a -> m a
-assignCursorPrefix srcFolder dest =
-    Reader.local (cursor %~ replace)
-    where
-        replace c =
-            case Id.subId srcFolder c of
-            Nothing -> c
-            Just suffix -> dest suffix
 
 makeSubId :: (MonadReader env m, Element.HasAnimIdPrefix env) => AnimId -> m Id
 makeSubId suffix = Lens.view Element.animIdPrefix <&> (++ suffix) <&> Id

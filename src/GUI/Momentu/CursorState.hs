@@ -23,14 +23,14 @@ cursorStateWidgetId :: Binary s => Widget.Id -> s -> Widget.Id
 cursorStateWidgetId prefix state = prefix <> Widget.Id [cursorStatePrefix, encodeS state]
 
 cursorState ::
-    (MonadReader env m, Widget.HasCursor env, Binary s) =>
+    (MonadReader env m, State.HasCursor env, Binary s) =>
     Widget.Id ->
     s ->
     (s -> (s -> State.Update -> State.Update) -> (State.Update -> State.Update) -> m r) ->
     m r
 cursorState myId defaultState make =
     do
-        state <- Widget.subId ?? myId <&> (>>= decodeState) <&> fromMaybe defaultState
+        state <- State.subId ?? myId <&> (>>= decodeState) <&> fromMaybe defaultState
         let curId = cursorStateWidgetId myId state
         let processDest cursor =
                 case WidgetId.subId myId cursor of
@@ -40,8 +40,8 @@ cursorState myId defaultState make =
                     Nothing -> curId <> Widget.Id sub
                     Just _ -> cursor
         make state updateState (State.uCursor . Lens.mapped %~ processDest)
-            & Widget.assignCursorPrefix curId ((myId <>) . Widget.Id)
-    & Widget.assignCursor myId (cursorStateWidgetId myId defaultState)
+            & State.assignCursorPrefix curId ((myId <>) . Widget.Id)
+    & State.assignCursor myId (cursorStateWidgetId myId defaultState)
     where
         decodeState = decodeState' -- for monomorphism
         decodeState' subId

@@ -42,7 +42,7 @@ type T = Transaction
 
 makeCommon ::
     ( Monad m, MonadReader env f, MonadTransaction m f
-    , HasConfig env, HasTheme env, Widget.HasCursor env, TextEdit.HasStyle env
+    , HasConfig env, HasTheme env, GuiState.HasCursor env, TextEdit.HasStyle env
     , Spacer.HasStdSpacing env, Element.HasAnimIdPrefix env, Menu.HasStyle env
     , Hover.HasStyle env
     ) =>

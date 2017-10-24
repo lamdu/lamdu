@@ -53,7 +53,7 @@ mkEditEventMap valText setToHole =
         setHoleStateAndJump uuid valText entityId
 
 genericEdit ::
-    ( Monad m, Format a, MonadReader env f, HasStyle env, Widget.HasCursor env
+    ( Monad m, Format a, MonadReader env f, HasStyle env, GuiState.HasCursor env
     ) =>
     LensLike' (Lens.Const TextEdit.Style) Style TextEdit.Style ->
     Transaction.Property m a ->
@@ -83,7 +83,7 @@ fdConfig conf = FocusDelegator.Config
 
 textEdit ::
     ( Monad m, MonadReader env f, HasConfig env, HasStyle env
-    , Element.HasAnimIdPrefix env, Widget.HasCursor env
+    , Element.HasAnimIdPrefix env, GuiState.HasCursor env
     ) =>
     Transaction.Property m Text ->
     Sugar.Payload (T m) ExprGuiT.Payload ->

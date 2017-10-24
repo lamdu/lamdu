@@ -287,7 +287,7 @@ makeParts funcApplyLimit binder delVarBackwardsId myId =
             rhs <- makeBinderBodyEdit body
             Parts mParamsEdit mScopeNavEdit rhs scopeEventMap & return
             & case mScopeNavEdit of
-              Nothing -> Widget.assignCursorPrefix scopesNavId (const destId)
+              Nothing -> GuiState.assignCursorPrefix scopesNavId (const destId)
               Just _ -> id
             & ExprGuiM.withLocalMScopeId binderScopeId
     where
@@ -351,7 +351,7 @@ make pMode lhsEventMap name color binder myId =
     & case binder ^. Sugar.bLamId of
         Nothing -> id
         Just lamId ->
-            Widget.assignCursorPrefix (WidgetIds.fromEntityId lamId) (const bodyId)
+            GuiState.assignCursorPrefix (WidgetIds.fromEntityId lamId) (const bodyId)
     where
         presentationChoiceId = Widget.joinId myId ["presentation"]
         body = binder ^. Sugar.bBody . Sugar.bbContent

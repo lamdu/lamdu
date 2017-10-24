@@ -334,10 +334,10 @@ eventMap cursor str myId _virtualCursor =
         (before, after) = Text.splitAt cursor str
 
 getCursor ::
-    (MonadReader env m, Widget.HasCursor env) =>
+    (MonadReader env m, State.HasCursor env) =>
     m (Text -> Widget.Id -> Maybe Int)
 getCursor =
-    Widget.subId <&> f
+    State.subId <&> f
     where
         f sub str myId =
             sub myId <&> decodeCursor
@@ -346,7 +346,7 @@ getCursor =
                 decodeCursor _ = Text.length str
 
 make ::
-    (MonadReader env m, Widget.HasCursor env, HasStyle env) =>
+    (MonadReader env m, State.HasCursor env, HasStyle env) =>
     m ( EmptyStrings -> Text -> Widget.Id ->
         WithTextPos (Widget (Text, State.Update))
       )

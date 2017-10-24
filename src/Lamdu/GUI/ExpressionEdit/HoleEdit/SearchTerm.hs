@@ -34,7 +34,7 @@ textEditNoEmpty :: TextEdit.EmptyStrings
 textEditNoEmpty = TextEdit.EmptyStrings "  " "  "
 
 make ::
-    ( Monad m, MonadReader env f, HasTheme env, Widget.HasCursor env
+    ( Monad m, MonadReader env f, HasTheme env, GuiState.HasCursor env
     , HasConfig env, TextEdit.HasStyle env
     ) =>
     WidgetIds -> Sugar.HoleKind g e0 e1 -> Property (T m) Text ->

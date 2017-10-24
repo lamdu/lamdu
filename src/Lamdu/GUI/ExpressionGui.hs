@@ -292,7 +292,7 @@ stdWrap pl act =
             <&> E.weakerEvents exprEventMap
 
 parentDelegator ::
-    ( MonadReader env m, Config.HasConfig env, Widget.HasCursor env, Applicative f
+    ( MonadReader env m, Config.HasConfig env, GuiState.HasCursor env, Applicative f
     ) => Widget.Id ->
     m (Responsive (f GuiState.Update) -> Responsive (f GuiState.Update))
 parentDelegator myId =

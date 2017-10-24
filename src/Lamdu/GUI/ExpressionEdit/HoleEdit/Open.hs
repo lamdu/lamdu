@@ -250,7 +250,7 @@ makeHoleResultWidget pl stateProp resultId holeResult =
                 _ ->
                     simplePickRes (mappend Config.holePickResultKeys Config.holePickAndMoveToNextHoleKeys holeConfig)
                 <&> pickBefore
-        isSelected <- Widget.isSubCursor ?? resultId
+        isSelected <- GuiState.isSubCursor ?? resultId
         when isSelected (ExprGuiM.setResultPicker (pickBefore (pure mempty)))
         holeResultConverted
             & postProcessSugar (pl ^. Sugar.plData . ExprGuiT.plMinOpPrec)
@@ -261,7 +261,7 @@ makeHoleResultWidget pl stateProp resultId holeResult =
             <&> E.eventMap . E.emDocs . E.docStrs . Lens._last %~ (<> " (On picked result)")
             <&> E.eventMap . Lens.mapped %~ pickBefore
             <&> E.eventMap %~ mappend pickEventMap
-            & Widget.assignCursor resultId idWithinResultWidget
+            & GuiState.assignCursor resultId idWithinResultWidget
             & applyResultLayout
             <&> fixFocalArea
             <&> Element.setLayers . Element.layers . Lens.traverse %~
@@ -345,13 +345,13 @@ assignHoleEditCursor widgetIds searchTerm shownMainResultsIds allShownResultIds 
         isOnResult <- traverse sub allShownResultIds <&> or
         let assignSource
                 | shouldBeOnResult && not isOnResult =
-                      Reader.local (Widget.cursor .~ destId)
+                    Reader.local (GuiState.cursor .~ destId)
                 | otherwise =
-                      Widget.assignCursor (hidOpen widgetIds) destId
+                    GuiState.assignCursor (hidOpen widgetIds) destId
         assignSource action
     where
         searchTermId = hidOpenSearchTerm widgetIds
-        sub x = Widget.isSubCursor ?? x
+        sub x = GuiState.isSubCursor ?? x
         destId
             | Text.null searchTerm = searchTermId
             | otherwise = head (shownMainResultsIds ++ [searchTermId])

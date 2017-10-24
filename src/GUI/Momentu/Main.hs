@@ -150,9 +150,9 @@ data Env = Env
     , _eCursor :: Widget.Id
     }
 Lens.makeLenses ''Env
-instance Widget.HasCursor Env where cursor = eCursor
+instance State.HasCursor Env where cursor = eCursor
 
-class Widget.HasCursor env => HasMainLoopEnv env where mainLoopEnv :: Lens' env Env
+class State.HasCursor env => HasMainLoopEnv env where mainLoopEnv :: Lens' env Env
 instance HasMainLoopEnv Env where mainLoopEnv = id
 
 lookupEvent ::

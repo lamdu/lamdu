@@ -115,7 +115,7 @@ Lens.makeLenses ''ExprGuiM
 
 instance Monad m => MonadTransaction m (ExprGuiM m) where transaction = ExprGuiM . lift
 
-instance Widget.HasCursor (Askable m) where cursor = aCursor
+instance GuiState.HasCursor (Askable m) where cursor = aCursor
 instance TextView.HasStyle (Askable m) where style = aTextEditStyle . TextView.style
 instance TextEdit.HasStyle (Askable m) where style = aTextEditStyle
 instance Spacer.HasStdSpacing (Askable m) where stdSpacing = aStdSpacing
@@ -137,7 +137,7 @@ readCodeAnchors = Lens.view aCodeAnchors
 
 mkPrejumpPosSaver :: Monad m => ExprGuiM m (T m ())
 mkPrejumpPosSaver =
-    DataOps.savePreJumpPosition <$> readCodeAnchors <*> Lens.view Widget.cursor
+    DataOps.savePreJumpPosition <$> readCodeAnchors <*> Lens.view GuiState.cursor
 
 makeSubexpression :: Monad m => ExprGuiT.SugarExpr m -> ExprGuiM m (ExpressionGui m)
 makeSubexpression expr =
@@ -165,7 +165,7 @@ advanceDepth f animId action =
 
 run ::
     ( MonadTransaction m n, MonadReader env n
-    , Widget.HasCursor env, Spacer.HasStdSpacing env
+    , GuiState.HasCursor env, Spacer.HasStdSpacing env
     , Config.HasConfig env, HasTheme env
     , HasSettings env, HasStyle env
     ) =>
@@ -177,7 +177,7 @@ run makeSubexpr theCodeAnchors (ExprGuiM action) =
     do
         theSettings <- Lens.view settings
         theStyle <- Lens.view style
-        theCursor <- Lens.view Widget.cursor
+        theCursor <- Lens.view GuiState.cursor
         theTextEditStyle <- Lens.view TextEdit.style
         theStdSpacing <- Lens.view Spacer.stdSpacing
         theConfig <- Lens.view Config.config
@@ -222,6 +222,6 @@ withLocalMScopeId :: CurAndPrev (Maybe ScopeId) -> ExprGuiM m a -> ExprGuiM m a
 withLocalMScopeId mScopeId = exprGuiM %~ RWS.local (aMScopeId .~ mScopeId)
 
 isExprSelected ::
-    (MonadReader env m, Widget.HasCursor env) =>
+    (MonadReader env m, GuiState.HasCursor env) =>
     Sugar.Payload f a -> m Bool
-isExprSelected pl = Widget.isSubCursor ?? WidgetIds.fromExprPayload pl
+isExprSelected pl = GuiState.isSubCursor ?? WidgetIds.fromExprPayload pl

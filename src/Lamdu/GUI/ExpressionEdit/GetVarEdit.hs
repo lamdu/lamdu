@@ -46,7 +46,7 @@ import           Lamdu.Prelude
 type T = Transaction
 
 makeSimpleView ::
-    ( MonadReader env m, Widget.HasCursor env, HasTheme env
+    ( MonadReader env m, GuiState.HasCursor env, HasTheme env
     , Applicative f, Element.HasAnimIdPrefix env, TextView.HasStyle env
     ) =>
     Name x -> Widget.Id ->
@@ -56,7 +56,7 @@ makeSimpleView (Name name _) myId =
     <*> NameEdit.makeView name (Widget.toAnimId myId)
 
 makeParamsRecord ::
-    ( Monad m, MonadReader env f, HasTheme env, Widget.HasCursor env
+    ( Monad m, MonadReader env f, HasTheme env, GuiState.HasCursor env
     , TextView.HasStyle env, Element.HasAnimIdPrefix env
     , Spacer.HasStdSpacing env
     ) =>
@@ -100,7 +100,7 @@ makeNameRef myId nameRef maker =
                     nameRef ^. Sugar.nrGotoDefinition <&> WidgetIds.fromEntityId
         maker (nameRef ^. Sugar.nrName) nameId
             <&> Align.tValue %~ E.weakerEvents jumpToDefinitionEventMap
-    & Widget.assignCursor myId nameId
+    & GuiState.assignCursor myId nameId
     where
         nameId = Widget.joinId myId ["name"]
 
@@ -121,7 +121,7 @@ makeInlineEventMap _ _ = mempty
 definitionTypeChangeBox ::
     ( Monad m, MonadReader env f, MonadTransaction n f
     , Element.HasAnimIdPrefix env, TextView.HasStyle env
-    , Spacer.HasStdSpacing env, HasTheme env, Widget.HasCursor env
+    , Spacer.HasStdSpacing env, HasTheme env, GuiState.HasCursor env
     , HasConfig env
     ) =>
     Sugar.DefinitionOutdatedType (T m) -> Widget.Id ->
@@ -155,7 +155,7 @@ definitionTypeChangeBox info getVarId =
 processDefinitionWidget ::
     ( Monad m, MonadReader env f, MonadTransaction n f, Spacer.HasStdSpacing env
     , HasTheme env, Element.HasAnimIdPrefix env, HasConfig env
-    , TextView.HasStyle env, Widget.HasCursor env, Hover.HasStyle env
+    , TextView.HasStyle env, GuiState.HasCursor env, Hover.HasStyle env
     ) =>
     Sugar.DefinitionForm (T m) -> Widget.Id ->
     f (WithTextPos (Widget (T m GuiState.Update))) ->
@@ -173,7 +173,7 @@ processDefinitionWidget (Sugar.DefTypeChanged info) myId mkLayout =
                 , _underlineWidth = Theme.underlineWidth theme
                 }
             mkLayout
-        isSelected <- Widget.isSubCursor ?? myId
+        isSelected <- GuiState.isSubCursor ?? myId
         if isSelected
             then
                 ( Hover.hoverBeside Align.tValue ?? layout )
