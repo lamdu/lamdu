@@ -36,9 +36,9 @@ import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.Hover as Hover
 import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.Responsive.Expression as ResponsiveExpr
+import           GUI.Momentu.State (GUIState(..))
 import qualified GUI.Momentu.State as GuiState
 import           GUI.Momentu.View (View)
-import qualified GUI.Momentu.Widget as Widget
 import           GUI.Momentu.Widget.Id (toAnimId)
 import qualified GUI.Momentu.Widgets.Menu as Menu
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
@@ -92,7 +92,7 @@ newtype StoredEntityIds = StoredEntityIds [Sugar.EntityId]
     deriving (Monoid)
 
 data Askable m = Askable
-    { _aCursor :: Widget.Id
+    { _aState :: GUIState
     , _aTextEditStyle :: TextEdit.Style
     , _aStdSpacing :: Vector2 Double
     , _aAnimIdPrefix :: AnimId
@@ -115,7 +115,8 @@ Lens.makeLenses ''ExprGuiM
 
 instance Monad m => MonadTransaction m (ExprGuiM m) where transaction = ExprGuiM . lift
 
-instance GuiState.HasCursor (Askable m) where cursor = aCursor
+instance GuiState.HasCursor (Askable m) where cursor = aState . GuiState.sCursor
+instance GuiState.HasWidgetState (Askable m) where widgetState = aState . GuiState.sWidgetStates
 instance TextView.HasStyle (Askable m) where style = aTextEditStyle . TextView.style
 instance TextEdit.HasStyle (Askable m) where style = aTextEditStyle
 instance Spacer.HasStdSpacing (Askable m) where stdSpacing = aStdSpacing
@@ -165,7 +166,7 @@ advanceDepth f animId action =
 
 run ::
     ( MonadTransaction m n, MonadReader env n
-    , GuiState.HasCursor env, Spacer.HasStdSpacing env
+    , GuiState.HasCursor env, GuiState.HasWidgetState env, Spacer.HasStdSpacing env
     , Config.HasConfig env, HasTheme env
     , HasSettings env, HasStyle env
     ) =>
@@ -178,13 +179,14 @@ run makeSubexpr theCodeAnchors (ExprGuiM action) =
         theSettings <- Lens.view settings
         theStyle <- Lens.view style
         theCursor <- Lens.view GuiState.cursor
+        theState <- Lens.view GuiState.widgetState
         theTextEditStyle <- Lens.view TextEdit.style
         theStdSpacing <- Lens.view Spacer.stdSpacing
         theConfig <- Lens.view Config.config
         theTheme <- Lens.view Theme.theme
         runRWST action
             Askable
-            { _aCursor = theCursor
+            { _aState = GUIState theCursor theState
             , _aTextEditStyle = theTextEditStyle
             , _aStdSpacing = theStdSpacing
             , _aAnimIdPrefix = ["outermost"]

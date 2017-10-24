@@ -74,6 +74,7 @@ instance Style.HasStyle Env where style = envStyle
 instance MainLoop.HasMainLoopEnv Env where mainLoopEnv = envMainLoop
 instance M.HasStdSpacing Env where stdSpacing = Theme.theme . Theme.themeStdSpacing
 instance M.HasCursor Env where cursor = envMainLoop . M.cursor
+instance M.HasWidgetState Env where widgetState = envMainLoop . M.widgetState
 instance TextEdit.HasStyle Env where style = envStyle . Style.styleBase
 instance TextView.HasStyle Env where style = TextEdit.style . TextView.style
 instance Theme.HasTheme Env where theme = envTheme
@@ -201,11 +202,11 @@ printGLVersion =
         ver <- GL.get GL.glVersion
         putStrLn $ "Using GL version: " ++ show ver
 
-cursorStorageInIRef :: Db -> IRef DbLayout.DbM M.WidgetId -> MainLoop.CursorStorage
-cursorStorageInIRef db cursorIRef =
-    MainLoop.CursorStorage
-    { readCursor = DbLayout.runDbTransaction db (Transaction.readIRef cursorIRef)
-    , writeCursor = DbLayout.runDbTransaction db . Transaction.writeIRef cursorIRef
+stateStorageInIRef :: Db -> IRef DbLayout.DbM M.GUIState -> MainLoop.StateStorage
+stateStorageInIRef db stateIRef =
+    MainLoop.StateStorage
+    { readState = DbLayout.runDbTransaction db (Transaction.readIRef stateIRef)
+    , writeState = DbLayout.runDbTransaction db . Transaction.writeIRef stateIRef
     }
 
 runEditor :: Opts.EditorOpts -> Db -> IO ()
@@ -233,7 +234,7 @@ runEditor opts db =
                     let initialSettings = Settings Settings.defaultInfoMode
                     settingsRef <- newIORef initialSettings
                     settingsChangeHandler evaluator initialSettings
-                    mainLoop cursorStorage subpixel win refreshScheduler configSampler $
+                    mainLoop stateStorage subpixel win refreshScheduler configSampler $
                         \fonts config theme env ->
                         let themeEvents =
                                 themeSwitchEventMap (Config.changeThemeKeys config) configSampler themeRef
@@ -242,7 +243,7 @@ runEditor opts db =
                             config theme env
                             <&> M.weakerEvents themeEvents
     where
-        cursorStorage = cursorStorageInIRef db DbLayout.cursor
+        stateStorage = stateStorageInIRef db DbLayout.guiState
         subpixel
             | opts ^. Opts.eoSubpixelEnabled = Font.LCDSubPixelEnabled
             | otherwise = Font.LCDSubPixelDisabled
@@ -293,11 +294,11 @@ makeGetFonts subpixel =
                     )
 
 mainLoop ::
-    MainLoop.CursorStorage -> Font.LCDSubPixelEnabled ->
+    MainLoop.StateStorage -> Font.LCDSubPixelEnabled ->
     M.Window -> RefreshScheduler -> Sampler ->
     (Fonts M.Font -> Config -> Theme -> MainLoop.Env ->
     IO (M.Widget (MainLoop.M M.Update))) -> IO ()
-mainLoop cursorStorage subpixel win refreshScheduler configSampler iteration =
+mainLoop stateStorage subpixel win refreshScheduler configSampler iteration =
     do
         getFonts <- makeGetFonts subpixel
         lastVersionNumRef <- newIORef []
@@ -331,7 +332,7 @@ mainLoop cursorStorage subpixel win refreshScheduler configSampler iteration =
                     let helpTheme = sample ^. sTheme & Theme.help
                     Style.help (Font.fontHelp fonts) helpKeys helpTheme
                         & return
-            , cursorStorage = cursorStorage
+            , stateStorage = stateStorage
             , debug = MainLoop.DebugOptions
                 { fpsFont =
                   \zoom ->

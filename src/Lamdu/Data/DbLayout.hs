@@ -4,7 +4,7 @@ module Lamdu.Data.DbLayout
     , ViewM, runViewTransaction
     , CodeAnchors, codeAnchors, codeIRefs
     , RevisionProps, revisionProps, revisionIRefs
-    , cursor
+    , guiState
     , module Lamdu.Data.Anchors
     ) where
 
@@ -20,7 +20,7 @@ import           Data.Store.Rev.View (View)
 import qualified Data.Store.Rev.View as View
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
-import qualified GUI.Momentu.Widget.Id as WidgetId
+import           GUI.Momentu (GUIState)
 import           Lamdu.Data.Anchors (Code(..), Revision(..), assocNameRef)
 import qualified Lamdu.Data.Anchors as Anchors
 
@@ -67,5 +67,5 @@ codeAnchors = Anchors.onCode Transaction.mkPropertyFromIRef codeIRefs
 revisionProps :: RevisionProps
 revisionProps = Anchors.onRevision Transaction.mkPropertyFromIRef revisionIRefs
 
-cursor :: IRef DbM WidgetId.Id
-cursor = IRef.anchor "cursor"
+guiState :: IRef DbM GUIState
+guiState = IRef.anchor "guiState"

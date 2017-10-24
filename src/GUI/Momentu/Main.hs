@@ -2,10 +2,10 @@
 module GUI.Momentu.Main
     ( mainLoopWidget
     , Config(..), EventResult(..), M(..), m
-    , Env(..), eWindowSize, eZoom
+    , Env(..), eWindowSize, eZoom, eState
     , HasMainLoopEnv(..)
     , DebugOptions(..), defaultDebugOptions
-    , CursorStorage(..)
+    , StateStorage(..)
     , Options(..), defaultOptions
     , quitEventMap
     ) where
@@ -26,6 +26,7 @@ import qualified GUI.Momentu.Main.Animation as MainAnim
 import qualified GUI.Momentu.MetaKey as MetaKey
 import           GUI.Momentu.Rect (Rect)
 import qualified GUI.Momentu.Rect as Rect
+import           GUI.Momentu.State (GUIState(..))
 import qualified GUI.Momentu.State as State
 import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
@@ -77,25 +78,25 @@ data DebugOptions = DebugOptions
     , virtualCursorColor :: IO (Maybe Draw.Color)
     }
 
-data CursorStorage = CursorStorage
-    { readCursor :: IO Widget.Id
-    , writeCursor :: Widget.Id -> IO ()
+data StateStorage = StateStorage
+    { readState :: IO GUIState
+    , writeState :: GUIState -> IO ()
     }
 
-iorefCursorStorage :: Widget.Id -> IO CursorStorage
-iorefCursorStorage initialCursor =
-    newIORef initialCursor
+iorefStateStorage :: Widget.Id -> IO StateStorage
+iorefStateStorage initialCursor =
+    newIORef (GUIState initialCursor mempty)
     <&> \ref ->
-    CursorStorage
-    { readCursor = readIORef ref
-    , writeCursor = writeIORef ref
+    StateStorage
+    { readState = readIORef ref
+    , writeState = writeIORef ref
     }
 
 data Options = Options
     { tickHandler :: IO Bool
     , getConfig :: IO Config
     , getHelpStyle :: Zoom -> IO EventMapHelp.Config
-    , cursorStorage :: CursorStorage
+    , stateStorage :: StateStorage
     , debug :: DebugOptions
     }
 
@@ -114,7 +115,7 @@ defaultOptions helpFontPath =
         loadHelpFont <- memoIO $ \size -> openFont size helpFontPath
         -- Note that not every app is necessarily interactive and even uses a cursor,
         -- so an empty value might be fitting.
-        cursorStorage_ <- iorefCursorStorage (Widget.Id [])
+        stateStorage_ <- iorefStateStorage (Widget.Id [])
         return Options
             { tickHandler = pure False
             , getConfig =
@@ -135,7 +136,7 @@ defaultOptions helpFontPath =
                     zoomFactor <- Zoom.getZoomFactor zoom
                     helpFont <- loadHelpFont (9 * zoomFactor)
                     EventMapHelp.defaultConfig helpFont & return
-            , cursorStorage = cursorStorage_
+            , stateStorage = stateStorage_
             , debug = defaultDebugOptions
             }
 
@@ -146,10 +147,11 @@ quitEventMap =
 data Env = Env
     { _eZoom :: Zoom
     , _eWindowSize :: Widget.Size
-    , _eCursor :: Widget.Id
+    , _eState :: GUIState
     }
 Lens.makeLenses ''Env
-instance State.HasCursor Env where cursor = eCursor
+instance State.HasCursor Env where cursor = eState . State.sCursor
+instance State.HasWidgetState Env where widgetState = eState . State.sWidgetStates
 
 class State.HasCursor env => HasMainLoopEnv env where mainLoopEnv :: Lens' env Env
 instance HasMainLoopEnv Env where mainLoopEnv = id
@@ -208,12 +210,12 @@ mainLoopWidget win mkWidgetUnmemod options =
                 do
                     zoomEventMap <- mkZoomEventMap
                     helpStyle <- getHelpStyle zoom
-                    cursor <- readCursor cursorStorage_
+                    s <- readState stateStorage_
                     mkWidgetUnmemod
                         Env
                         { _eZoom = zoom
                         , _eWindowSize = size
-                        , _eCursor = cursor
+                        , _eState = s
                         }
                         <&> E.strongerEvents zoomEventMap
                         >>= addHelp helpStyle size
@@ -248,7 +250,9 @@ mainLoopWidget win mkWidgetUnmemod options =
                         Nothing -> return ()
                         Just res ->
                             do
-                                traverse_ (writeCursor cursorStorage_) (res ^. State.uCursor)
+                                readState stateStorage_
+                                    <&> State.guiStateUpdate res
+                                    >>= writeState stateStorage_
                                 writeIORef virtCursorRef (res ^. State.uVirtualCursor . Lens._Wrapped)
                                 newWidget
                     return MainAnim.EventResult
@@ -258,7 +262,7 @@ mainLoopWidget win mkWidgetUnmemod options =
             , MainAnim.makeFrame = renderWidget size <&> (^. _1)
             }
     where
-        cursorStorage_ = cursorStorage options
+        stateStorage_ = stateStorage options
         getClipboard = GLFW.getClipboardString win <&> fmap Text.pack
         Options{tickHandler, debug, getConfig, getHelpStyle} = options
         DebugOptions{fpsFont} = debug

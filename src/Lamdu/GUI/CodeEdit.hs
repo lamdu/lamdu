@@ -127,9 +127,9 @@ loadWorkArea theEvalResults theCodeAnchors =
 
 make ::
     ( MonadTransaction m n, MonadReader env n, Config.HasConfig env
-    , Theme.HasTheme env, GuiState.HasCursor env, TextEdit.HasStyle env
+    , Theme.HasTheme env, GuiState.HasCursor env, GuiState.HasWidgetState env
     , Spacer.HasStdSpacing env, HasEvalResults env m, HasExportActions env m
-    , HasSettings env, HasStyle env
+    , HasSettings env, HasStyle env, TextEdit.HasStyle env
     ) =>
     Anchors.CodeAnchors m -> Widget.R ->
     n (Widget (IOTrans m GuiState.Update))

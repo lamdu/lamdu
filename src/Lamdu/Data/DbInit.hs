@@ -19,6 +19,7 @@ import           Lamdu.Data.Export.JSON (fileImportAll)
 import qualified Lamdu.Expr.UniqueId as UniqueId
 import qualified Lamdu.GUI.WidgetIdIRef as WidgetIdIRef
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
+import qualified GUI.Momentu as M
 import qualified Paths.Utils as Paths
 import qualified Paths_Lamdu
 import qualified System.Directory as Directory
@@ -45,7 +46,7 @@ initDb db importAct =
         emptyVersion <- Version.makeInitialVersion []
         master <- newBranch "master" emptyVersion
         view <- View.new master
-        Transaction.writeIRef DbLayout.cursor WidgetIds.defaultCursor
+        Transaction.writeIRef DbLayout.guiState (M.GUIState WidgetIds.defaultCursor mempty)
         let writeRevAnchor f = Transaction.writeIRef (f DbLayout.revisionIRefs)
         writeRevAnchor DbLayout.view view
         writeRevAnchor DbLayout.branches [master]
@@ -72,8 +73,8 @@ initDb db importAct =
 updateMissingCursor :: T DbLayout.DbM ()
 updateMissingCursor =
     do
-        exists <- Transaction.irefExists DbLayout.cursor
-        Transaction.writeIRef DbLayout.cursor WidgetIds.defaultCursor
+        exists <- Transaction.irefExists DbLayout.guiState
+        Transaction.writeIRef DbLayout.guiState (M.GUIState WidgetIds.defaultCursor mempty)
             & unless exists
 
 withDB :: FilePath -> (Db -> IO a) -> IO a
