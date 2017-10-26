@@ -103,7 +103,8 @@ makeInternal ::
 makeInternal s str displayStr myId =
     v
     & Align.tValue %~ Widget.fromView
-    & Align.tValue %~ Widget.mEnter ?~ enterFromDirection (v ^. Element.size) s str myId
+    & Align.tValue . Widget.wState . Widget._StateUnfocused . Widget.uMEnter
+        ?~ enterFromDirection (v ^. Element.size) s str myId
     where
         v = TextView.make (s ^. sTextViewStyle) displayStr animId
             & Element.pad (Vector2 (s ^. sCursorWidth / 2) 0)

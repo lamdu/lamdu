@@ -16,9 +16,8 @@ import           Control.Monad.IO.Class (MonadIO(..))
 import           Data.IORef
 import           Data.MRUMemo (memoIO)
 import qualified Data.Text as Text
+import           Data.Vector.Vector2 (Vector2)
 import qualified GUI.Momentu.Animation as Anim
-import           GUI.Momentu.Direction (Direction)
-import qualified GUI.Momentu.Direction as Direction
 import qualified GUI.Momentu.Draw as Draw
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
@@ -157,7 +156,7 @@ instance HasMainLoopEnv Env where mainLoopEnv = id
 
 lookupEvent ::
     IO (Maybe E.Clipboard) -> IORef (Maybe State.VirtualCursor) ->
-    Maybe (Direction -> Widget.EnterResult a) ->
+    Maybe (Vector2 Widget.R -> Widget.EnterResult a) ->
     Maybe (Rect, State.VirtualCursor -> EventMap a) -> Event -> IO (Maybe a)
 lookupEvent getClipboard virtCursorRef mEnter mFocus event =
     case (mEnter, mFocus, event) of
@@ -165,7 +164,7 @@ lookupEvent getClipboard virtCursorRef mEnter mFocus event =
         , GLFWE.EventMouseButton
           (GLFWE.MouseButtonEvent GLFW.MouseButton'1
            GLFW.MouseButtonState'Released _ mousePosF _)) ->
-        enter (Direction.Point mousePosF)
+        enter mousePosF
         ^. Widget.enterResultEvent & Just & pure
     (_, Just (focalArea, mkEventMap), _) ->
         do

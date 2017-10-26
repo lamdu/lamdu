@@ -5,10 +5,11 @@ module GUI.Momentu.Widget.Types
     , Unfocused(..), uMEnter, uLayers
     , EnterResult(..), enterResultEvent, enterResultRect, enterResultLayer
     , Surrounding(..), sLeft, sTop, sRight, sBottom
-    , Focused(..), fFocalAreas, fEventMap, fMEnter, fLayers
+    , Focused(..), fFocalAreas, fEventMap, fMEnterPoint, fLayers
     ) where
 
 import qualified Control.Lens as Lens
+import           Data.Vector.Vector2 (Vector2)
 import           GUI.Momentu.Animation (R, Size)
 import           GUI.Momentu.Direction (Direction)
 import qualified GUI.Momentu.Element as Element
@@ -56,10 +57,7 @@ data Focused a = Focused
       -- however Zoom should care about the first focal area
       _fFocalAreas :: [Rect]
     , _fEventMap :: VirtualCursor -> EventMap a
-    , -- When focused, mEnter may still be relevant, e.g: Mouse click in an
-      -- active textedit, to move to a different text-edit position.
-      -- TODO: Replace with fMEnterPoint that is for Point direction only
-      _fMEnter :: Maybe (Direction -> EnterResult a)
+    , _fMEnterPoint :: Maybe (Vector2 R -> EnterResult a)
     , _fLayers :: Element.Layers
     } deriving Functor
 

@@ -8,8 +8,9 @@ module GUI.Momentu.Widgets.Cursor
     , render
     ) where
 
+import           Data.Vector.Vector2 (Vector2)
 import qualified GUI.Momentu.Animation as Anim
-import           GUI.Momentu.Direction (Direction)
+import           GUI.Momentu.Direction (Direction(..))
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
 import           GUI.Momentu.Rect (Rect)
@@ -28,7 +29,7 @@ newtype Config = Config
 render ::
     Config -> Widget a ->
     ( Anim.Frame
-    , Maybe (Direction -> Widget.EnterResult a)
+    , Maybe (Vector2 Widget.R -> Widget.EnterResult a)
     , Maybe (Rect, State.VirtualCursor -> EventMap a)
     )
 render Config{cursorColor} w =
@@ -36,12 +37,12 @@ render Config{cursorColor} w =
     Widget.StateUnfocused u ->
         -- Unfocused top level widget! TODO: Is this some sort of error?
         ( Element.render (u ^. Widget.uLayers)
-        , u ^. Widget.uMEnter
+        , u ^. Widget.uMEnter <&> (. Point)
         , Nothing
         )
     Widget.StateFocused f ->
         ( cursorFrame <> Element.render (r ^. Widget.fLayers)
-        , r ^. Widget.fMEnter
+        , r ^. Widget.fMEnterPoint
         , Just (area, r ^. Widget.fEventMap)
         )
         where

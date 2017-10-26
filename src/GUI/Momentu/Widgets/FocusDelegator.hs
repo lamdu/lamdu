@@ -9,6 +9,7 @@ import qualified Control.Lens as Lens
 import           GUI.Momentu.Direction (Direction)
 import qualified GUI.Momentu.Direction as Direction
 import qualified GUI.Momentu.Element as Element
+import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.MetaKey (MetaKey, toModKey)
 import           GUI.Momentu.Rect (Rect(..))
@@ -26,31 +27,29 @@ data Config = Config
     , focusParentDoc :: E.Doc
     }
 
-setFocusChildEventMap :: Config -> Widget.Focused a -> Widget.Focused a
-setFocusChildEventMap config f =
+focusChildEventMap :: Config -> Maybe (Direction -> Widget.EnterResult a) -> EventMap a
+focusChildEventMap config mEnter =
     -- We're not delegating, so replace the child eventmap with an
     -- event map to either delegate to it (if it is enterable) or to
     -- nothing (if it is not):
-    f & Widget.fEventMap . Lens.mapped .~ neeventMap
-    where
-        neeventMap =
-            case f ^. Widget.fMEnter of
-            Nothing -> mempty
-            Just childEnter ->
-                E.keyPresses (focusChildKeys config <&> toModKey)
-                (focusChildDoc config) $
-                childEnter Direction.Outside ^. Widget.enterResultEvent
+    case mEnter of
+    Nothing -> mempty
+    Just childEnter ->
+        E.keyPresses (focusChildKeys config <&> toModKey)
+        (focusChildDoc config) $
+        childEnter Direction.Outside ^. Widget.enterResultEvent
 
 modifyEntry ::
     Applicative f =>
     Widget.Id -> Rect -> FocusEntryTarget ->
     Maybe (Direction -> Widget.EnterResult (f State.Update)) ->
     Maybe (Direction -> Widget.EnterResult (f State.Update))
-modifyEntry myId fullChildRect = f
+modifyEntry myId fullChildRect target mChildEnter =
+    case target of
+    FocusEntryParent -> parentEnter
+    FocusEntryChild -> maybe parentEnter wrapEnter mChildEnter
+    & Just
     where
-        f FocusEntryParent _ = Just parentEnter
-        f FocusEntryChild Nothing = Just parentEnter
-        f FocusEntryChild (Just childEnter) = Just $ wrapEnter childEnter
         wrapEnter _          Direction.Outside = parentEnterResult
         wrapEnter enterChild dir               = enterChild dir
 
@@ -73,14 +72,17 @@ make =
     ()
         | selfIsFocused ->
             Widget.setFocused childWidget
-            & Widget.wState . Widget._StateFocused . Lens.mapped %~ setFocusChildEventMap config
+            & Widget.wState . Widget._StateFocused . Lens.mapped . Widget.fEventMap . Lens.mapped
+            .~ focusChildEventMap config
+                (childWidget ^? Widget.wState . Widget._StateUnfocused . Widget.uMEnter . Lens._Just)
 
         | childIsFocused ->
             E.weakerEvents focusParentEventMap childWidget
 
         | otherwise ->
             childWidget
-            & Widget.mEnter %~ modifyEntry myId fullChildRect focusEntryTarget
+            & Widget.wState . Widget._StateUnfocused . Widget.uMEnter %~
+                modifyEntry myId fullChildRect focusEntryTarget
         where
             fullChildRect = Rect 0 (childWidget ^. Element.size)
             childIsFocused = Widget.isFocused childWidget

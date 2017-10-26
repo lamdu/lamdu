@@ -10,6 +10,7 @@ import           Control.Monad (msum)
 import           Data.Foldable (toList)
 import           Data.List (foldl', transpose, sortOn)
 import           Data.List.Utils (groupOn, minimumOn)
+import           Data.Maybe.Utils (unionMaybeWith)
 import           Data.MRUMemo (memo)
 import           Data.Vector.Vector2 (Vector2(..))
 import qualified Data.Vector.Vector2 as Vector2
@@ -179,15 +180,16 @@ toWidgetWithKeys keys size sChildren =
             Widget.StateFocused $
             \surrounding ->
             let focusedChild = makeFocusedChild surrounding
-                mEnters =
-                    unfocusedMEnters
-                    & Lens.ix (cursor ^. _2) . Lens.ix (cursor ^. _1) .~ focusedChild ^. Widget.fMEnter
-                addNavDests virtCursor = mkNavDests cursor virtCursor mEnters & addNavEventmap keys
+                addNavDests virtCursor =
+                    mkNavDests cursor virtCursor unfocusedMEnters
+                    & addNavEventmap keys
             in
             Widget.Focused
             { Widget._fLayers = focusedChild ^. Widget.fLayers <> unfocusedLayers
             , Widget._fFocalAreas = focusedChild ^. Widget.fFocalAreas
-            , Widget._fMEnter = combineMEnters mEnters
+            , Widget._fMEnterPoint =
+                focusedChild ^. Widget.fMEnterPoint
+                & unionMaybeWith Widget.combineEnterPoints (combineMEnters unfocusedMEnters <&> (. Point))
             , Widget._fEventMap = focusedChild ^. Widget.fEventMap & Lens.imapped %@~ addNavDests
             }
     }

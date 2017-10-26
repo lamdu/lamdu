@@ -63,8 +63,9 @@ toBox config selfFocused myId childrenRecords =
         applyAction (isSelected, action, widget) =
             ( isSelected
             , widget
-                & Widget.mEnter . Lens._Just . Lens.mapped .
-                    Widget.enterResultEvent %~ (action *>)
+                & Widget.wState . Widget._StateUnfocused . Widget.uMEnter
+                    . Lens._Just . Lens.mapped . Widget.enterResultEvent
+                    %~ (action *>)
             )
         anyChildFocused =
             childrenRecords

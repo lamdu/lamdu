@@ -15,7 +15,7 @@ module GUI.Momentu.Widget
     , keysEventMapMovesCursor
 
     -- Widget lenses:
-    , mEnter, enterResultCursor, sizedState
+    , enterResultCursor, sizedState
 
     , HasWidget(..)
 
@@ -30,7 +30,7 @@ module GUI.Momentu.Widget
 
     -- Operations:
     , translate
-    , translateFocused
+    , translateFocused, combineEnterPoints
     , padToSizeAlign
 
     , makeFocusableView
@@ -74,8 +74,7 @@ isFocused = Lens.has (wState . _StateFocused)
 
 enterResultCursor :: (HasWidget w, Functor f) => Lens.Setter' (w (f Update)) Id
 enterResultCursor =
-    widget . mEnter . Lens._Just . Lens.mapped .
-    enterResultEvent . Lens.mapped . State.uCursor . Lens.mapped
+    widget . enterResult . enterResultEvent . Lens.mapped . State.uCursor . Lens.mapped
 
 takesFocus ::
     (HasWidget w, Functor f) =>
@@ -84,12 +83,14 @@ takesFocus enterFunc =
     widget %~
     \w ->
         let rect = Rect 0 (w ^. Element.size)
-        in  w & mEnter ?~
-            ( enterFunc
-                <&> Lens.mapped %~ State.updateCursor
-                <&> EnterResult rect 0
-                & enterFuncAddVirtualCursor rect
-            )
+        in
+        w
+        & wState . _StateUnfocused . uMEnter ?~
+        ( enterFunc
+            <&> Lens.mapped %~ State.updateCursor
+            <&> EnterResult rect 0
+            & enterFuncAddVirtualCursor rect
+        )
 
 enterFuncAddVirtualCursor ::
     Functor f =>
@@ -160,7 +161,7 @@ setFocusedWith rect eventMap =
         const Focused
         { _fFocalAreas = [rect]
         , _fEventMap = eventMap
-        , _fMEnter = u ^. uMEnter
+        , _fMEnterPoint = u ^. uMEnter <&> (. Direction.Point)
         , _fLayers = u ^. uLayers
         }
     StateFocused makeFocus ->

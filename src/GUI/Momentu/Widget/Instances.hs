@@ -1,14 +1,16 @@
 {-# OPTIONS -fno-warn-orphans #-}
 {-# LANGUAGE NoImplicitPrelude, FlexibleInstances, MultiParamTypeClasses, TypeFamilies, FlexibleContexts, OverloadedStrings #-}
 module GUI.Momentu.Widget.Instances
-    ( sizedState, stateLayers, stateLens, mEnter
+    ( sizedState, stateLayers, stateLens, enterResult
     , glueStates
     , translateFocusedGeneric, translateUpdate
     , translate, fromView
+    , combineEnterPoints
     ) where
 
 import           Control.Lens (LensLike)
 import qualified Control.Lens as Lens
+import           Data.Maybe.Utils (unionMaybeWith)
 import           Data.Vector.Vector2 (Vector2(..))
 import qualified Data.Vector.Vector2 as Vector2
 import           GUI.Momentu.Animation (R, Size)
@@ -42,7 +44,7 @@ instance Functor f => Element (Widget (f Update)) where
     hoverLayers w =
         w
         & Element.setLayers . Element.layers %~ (mempty :)
-        & mEnter . Lens._Just . Lens.mapped . enterResultLayer +~ 1
+        & enterResult . enterResultLayer +~ 1
     empty = fromView Element.empty
     assymetricPad leftAndTop rightAndBottom w =
         w
@@ -54,8 +56,9 @@ instance Functor f => Element (Widget (f Update)) where
         & Element.size *~ mult
         & wState . _StateFocused . Lens.mapped . fFocalAreas . traverse . Rect.topLeftAndSize *~ mult
         & wState . _StateFocused . Lens.mapped . fEventMap . Lens.argument . State.virtualCursor . Rect.topLeftAndSize //~ mult
-        & mEnter . Lens._Just . Lens.mapped . enterResultRect . Rect.topLeftAndSize *~ mult
-        & mEnter . Lens._Just . Lens.argument %~ Direction.scale (1 / mult)
+        & enterResult . enterResultRect . Rect.topLeftAndSize *~ mult
+        & wState . _StateUnfocused . uMEnter . Lens._Just . Lens.argument %~ Direction.scale (1 / mult)
+        & wState . _StateFocused . Lens.mapped . fMEnterPoint . Lens._Just . Lens.argument //~ mult
         & Lens.mapped . Lens.mapped . State.uVirtualCursor . Lens.mapped .
           State.virtualCursor . Rect.topLeftAndSize *~ mult
 
@@ -114,11 +117,12 @@ combineStates ::
     State (f Update) -> State (f Update) -> State (f Update)
 combineStates _ _ _ _ StateFocused{} StateFocused{} = error "joining two focused widgets!!"
 combineStates o _ _ sz (StateUnfocused u0) (StateUnfocused u1) =
-    Unfocused (combineMEnters o sz (u0 ^. uMEnter) (u1 ^. uMEnter)) (u0 ^. uLayers <> u1 ^. uLayers)
-    & StateUnfocused
-combineStates orientation _ nextDir sz (StateFocused f) (StateUnfocused u) =
+    Unfocused e (u0 ^. uLayers <> u1 ^. uLayers) & StateUnfocused
+    where
+        e = unionMaybeWith (combineEnters o sz) (u0 ^. uMEnter) (u1 ^. uMEnter)
+combineStates orientation _ nextDir _ (StateFocused f) (StateUnfocused u) =
     f
-    <&> fMEnter %~ combineMEnters orientation sz (u ^. uMEnter)
+    <&> fMEnterPoint %~ unionMaybeWith combineEnterPoints (u ^. uMEnter <&> (. Direction.Point))
     <&> fEventMap . Lens.imapped %@~ addEvents
     <&> fLayers <>~ u ^. uLayers
     & StateFocused
@@ -138,20 +142,16 @@ combineStates orientation _ nextDir sz (StateFocused f) (StateUnfocused u) =
 combineStates orientation dirPrev dirNext sz (StateUnfocused u) (StateFocused f) =
     combineStates orientation dirNext dirPrev sz (StateFocused f) (StateUnfocused u)
 
-combineMEnters ::
-    Orientation -> Size ->
-    Maybe (Direction -> EnterResult a) ->
-    Maybe (Direction -> EnterResult a) ->
-    Maybe (Direction -> EnterResult a)
-combineMEnters _ _ Nothing x = x
-combineMEnters _ _ (Just x) Nothing = Just x
-combineMEnters o sz (Just x) (Just y) = Just (combineEnters o sz x y)
-
 combineEnters ::
     Orientation -> Size ->
     (Direction -> EnterResult a) -> (Direction -> EnterResult a) ->
     Direction -> EnterResult a
 combineEnters o sz e0 e1 dir = chooseEnter o sz dir (e0 dir) (e1 dir)
+
+combineEnterPoints ::
+    (Vector2 R -> EnterResult a) -> (Vector2 R -> EnterResult a) ->
+    Vector2 R -> EnterResult a
+combineEnterPoints e0 e1 p = closer Vector2.sqrNorm (Rect p 0) (e0 p) (e1 p)
 
 closer ::
     (Vector2 R -> R) -> Rect -> EnterResult a -> EnterResult a -> EnterResult a
@@ -190,8 +190,8 @@ chooseEnter Vertical sz (Direction.FromRight r) r0 r1 =
 stateLayers :: Lens.Setter' (State a) Element.Layers
 stateLayers = stateLens uLayers (Lens.mapped . fLayers)
 
-mEnter :: Lens.Setter' (Widget a) (Maybe (Direction -> EnterResult a))
-mEnter = wState . stateMEnter
+enterResult :: Lens.Setter' (Widget a) (EnterResult a)
+enterResult = wState . stateEnterResult
 
 eventMapMaker :: Lens.Setter' (Widget a) (VirtualCursor -> EventMap a)
 eventMapMaker = wState . _StateFocused . Lens.mapped . fEventMap
@@ -203,8 +203,11 @@ stateLens ::
     LensLike f (State s) (State t) a b
 stateLens uLens fLens f = onState (uLens f) (fLens f)
 
-stateMEnter :: Lens.Setter' (State a) (Maybe (Direction -> EnterResult a))
-stateMEnter = stateLens uMEnter (Lens.mapped . fMEnter)
+stateEnterResult :: Lens.Setter' (State a) (EnterResult a)
+stateEnterResult =
+    stateLens
+    (uMEnter . Lens._Just . Lens.mapped)
+    (Lens.mapped . fMEnterPoint . Lens._Just . Lens.mapped)
 
 onState ::
     Functor f =>
@@ -226,15 +229,20 @@ translateUpdate pos =
 
 translateGeneric :: (a -> b) -> Vector2 R -> Widget a -> State b
 translateGeneric f pos w =
-    w ^. wState & onStatePure translateUnfocused (translateFocusedGeneric f pos)
+    w ^. wState
+    & onStatePure translateUnfocused (translateFocusedGeneric f pos)
     where
         onStatePure onU onF =
             Lens.runIdentity . onState (Lens.Identity . onU) (Lens.Identity . onF)
         translateUnfocused u =
             u
-            & uMEnter %~ translateMEnter pos
+            & uMEnter . Lens._Just %~ translateEnter
             & uLayers %~ Element.translateLayers pos
             <&> f
+        translateEnter enter =
+            enter
+            & Lens.argument %~ Direction.translate (negate pos)
+            & Lens.mapped . enterResultRect . Rect.topLeft +~ pos
 
 translateFocusedGeneric ::
     (a -> b) -> Vector2 R ->
@@ -253,23 +261,12 @@ translateFocusedGeneric f pos x =
             & sBottom -~ pos ^. _2
         onFocused focused =
             focused
-            & fMEnter %~ translateMEnter pos
+            & fMEnterPoint . Lens._Just . Lens.argument -~ pos
+            & fMEnterPoint . Lens._Just . Lens.mapped . enterResultRect . Rect.topLeft +~ pos
             & fFocalAreas . traverse . Rect.topLeft +~ pos
             & fEventMap . Lens.argument . State.virtualCursor . Rect.topLeft -~ pos
             & fLayers %~ Element.translateLayers pos
             <&> f
-
-translateMEnter ::
-    Vector2 R ->
-    Maybe (Direction -> EnterResult a) ->
-    Maybe (Direction -> EnterResult a)
-translateMEnter pos =
-    Lens._Just %~ translateEnter
-    where
-        translateEnter enter =
-            enter
-            & Lens.argument %~ Direction.translate (negate pos)
-            & Lens.mapped . enterResultRect . Rect.topLeft +~ pos
 
 fromView :: View -> Widget a
 fromView (View size mkLayers) =
