@@ -15,7 +15,7 @@ module GUI.Momentu.Widget
     , keysEventMapMovesCursor
 
     -- Widget lenses:
-    , mEnter, events, enterResultCursor, sizedState
+    , mEnter, enterResultCursor, sizedState
 
     , HasWidget(..)
 
@@ -71,19 +71,6 @@ instance HasWidget Widget where widget = id
 
 isFocused :: Widget a -> Bool
 isFocused = Lens.has (wState . _StateFocused)
-
-{-# ANN module ("HLint: ignore Eta reduce"::String) #-}
-
-events :: HasWidget w => Lens.Setter (w a) (w b) a b
-events =
-    widget . wState . stateLens (uMEnter . atMEnter) (Lens.mapped . Lens.sets atFocus)
-    where
-        atMEnter f = (Lens._Just . Lens.mapped . enterResultEvent) f
-        atFocus f focused =
-            focused
-            { _fMEnter = focused ^. fMEnter & atMEnter %~ f
-            , _fEventMap = focused ^. fEventMap <&> Lens.mapped %~ f
-            }
 
 enterResultCursor :: (HasWidget w, Functor f) => Lens.Setter' (w (f Update)) Id
 enterResultCursor =

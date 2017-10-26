@@ -65,7 +65,7 @@ makeInnerGui branchSelector =
         codeEdit <-
             CodeEdit.make DbLayout.codeAnchors (codeSize ^. _1)
             & Reader.mapReaderT VersionControl.runAction
-            <&> Widget.events . ioTrans . Lens.mapped %~
+            <&> Lens.mapped . ioTrans . Lens.mapped %~
                 VersionControl.runEvent theCursor
         theTheme <- Lens.view Theme.theme
         topPadding <- Spacer.vspaceLines (Theme.topPadding theTheme)

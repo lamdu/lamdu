@@ -50,7 +50,7 @@ make widgetIds holeKind searchTermProp =
                 | otherwise = Theme.holeSearchTermBGColor
         disallowChars <- EventMap.disallowCharsFromSearchTerm
         TextEdit.make ?? textEditNoEmpty ?? searchTerm ?? hidOpenSearchTerm widgetIds
-            <&> Align.tValue . Widget.events %~ onEvents
+            <&> Align.tValue . Lens.mapped %~ onEvents
             <&> Align.tValue . E.eventMap %~ disallowChars holeKind searchTerm textCursor
             <&> Draw.backgroundColor bgAnimId (bgColor holeTheme)
     where

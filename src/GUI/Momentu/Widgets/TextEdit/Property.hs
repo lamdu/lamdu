@@ -5,6 +5,7 @@ module GUI.Momentu.Widgets.TextEdit.Property
     ( make, makeLineEdit, makeWordEdit
     ) where
 
+import qualified Control.Lens as Lens
 import           Data.Store.Property (Property)
 import qualified Data.Store.Property as Property
 import           GUI.Momentu.Align (WithTextPos)
@@ -30,7 +31,7 @@ make =
     where
         f mk empty textRef myId =
             mk empty (Property.value textRef) myId
-            & Align.tValue . Widget.events %~ setter
+            & Align.tValue . Lens.mapped %~ setter
             where
                 setter (newText, eventRes) =
                     eventRes <$
