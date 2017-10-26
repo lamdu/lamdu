@@ -50,16 +50,15 @@ data Surrounding = Surrounding
     , _sBottom :: !R
     } deriving (Eq, Ord, Show)
 
--- When focused, mEnter may still be relevant, e.g: Mouse click in an
--- active textedit, to move to a different text-edit position.
-
 data Focused a = Focused
     { -- When browsing sub-menus each selected menu is considered focal.
       -- The last focal area is where the cursor is,
       -- however Zoom should care about the first focal area
       _fFocalAreas :: [Rect]
     , _fEventMap :: VirtualCursor -> EventMap a
-    , -- TODO: Replace with fMEnterPoint that is for Point direction only
+    , -- When focused, mEnter may still be relevant, e.g: Mouse click in an
+      -- active textedit, to move to a different text-edit position.
+      -- TODO: Replace with fMEnterPoint that is for Point direction only
       _fMEnter :: Maybe (Direction -> EnterResult a)
     , _fLayers :: Element.Layers
     } deriving Functor
