@@ -120,5 +120,5 @@ convertAppliedHole (V.Apply funcI argI) argS exprPl =
             <&> rBody . _BodyHole . holeKind .~ WrapperHole holeArg
             <&> rPayload . plActions . wrap .~ WrapperAlready storedEntityId
     where
-        storedEntityId = exprPl ^. Input.stored & Property.value & uuidEntityId
+        storedEntityId = exprPl ^. Input.stored & Property.value & EntityId.ofValI
         uuidEntityId valI = (UniqueId.toUUID valI, EntityId.ofValI valI)

@@ -14,8 +14,8 @@ import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Glue ((/|/))
-import           GUI.Momentu.MetaKey (MetaKey(..), noMods)
 import qualified GUI.Momentu.MetaKey as MetaKey
+import           GUI.Momentu.ModKey (ModKey(..))
 import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.State as GuiState
 import           GUI.Momentu.Widget (Widget)
@@ -46,11 +46,8 @@ mkEditEventMap ::
     Text -> T m (UUID, Sugar.EntityId) ->
     Widget.EventMap (T m GuiState.Update)
 mkEditEventMap valText setToHole =
-    Widget.keysEventMapMovesCursor [MetaKey noMods MetaKey.Key'Enter]
-    (E.Doc ["Edit", "Value"]) $
-    do
-        (uuid, entityId) <- setToHole
-        setHoleStateAndJump uuid valText entityId
+    setToHole <&> snd <&> setHoleStateAndJump valText
+    & E.keyPresses [ModKey mempty MetaKey.Key'Enter] (E.Doc ["Edit", "Value"])
 
 genericEdit ::
     ( Monad m, Format a, MonadReader env f, HasStyle env, GuiState.HasCursor env

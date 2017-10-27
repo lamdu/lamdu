@@ -9,8 +9,6 @@ import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
 import           Control.Monad.Transaction (MonadTransaction(..))
 import qualified Data.Monoid as Monoid
-import           Data.Store.Property (Property)
-import qualified Data.Store.Property as Property
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Text as Text
 import           GUI.Momentu (Widget)
@@ -39,6 +37,7 @@ import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.ResultGroups as HoleResults
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.SearchTerm as SearchTerm
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.State as HoleState
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds (WidgetIds(..))
+import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds as HoleWidgetIds
 import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
@@ -65,12 +64,12 @@ Lens.makeLenses ''ResultGroup
 
 makeShownResult ::
     Monad m =>
-    Sugar.Payload f ExprGuiT.Payload -> Property (T m) Text -> Result m ->
+    Sugar.Payload f ExprGuiT.Payload -> Result m ->
     ExprGuiM m
     ( Widget.EventMap (T m GuiState.Update)
     , WithTextPos (Widget (T m GuiState.Update))
     )
-makeShownResult pl stateProp result =
+makeShownResult pl result =
     do
         -- Warning: rHoleResult should be ran at most once!
         -- Running it more than once caused a horrible bug (bugfix: 848b6c4407)
@@ -78,16 +77,16 @@ makeShownResult pl stateProp result =
         theme <- Theme.hole <$> Lens.view Theme.theme
         stdSpacing <- Spacer.getSpaceSize
         let padding = Theme.holeResultPadding theme <&> realToFrac & (* stdSpacing)
-        makeHoleResultWidget pl stateProp (rId result) res <&> _2 %~ Element.pad padding
+        makeHoleResultWidget pl (rId result) res <&> _2 %~ Element.pad padding
 
 makeResultGroup ::
     Monad m =>
-    Sugar.Payload f ExprGuiT.Payload -> Property (T m) Text ->
+    Sugar.Payload f ExprGuiT.Payload ->
     ResultsList m ->
     ExprGuiM m (ResultGroup m)
-makeResultGroup pl stateProp results =
+makeResultGroup pl results =
     do
-        (pickMain, mainResultWidget) <- makeShownResult pl stateProp mainResult
+        (pickMain, mainResultWidget) <- makeShownResult pl mainResult
         return ResultGroup
             { _rgOption = Menu.Option
                 { Menu._oId = results ^. HoleResults.rlExtraResultsPrefixId
@@ -95,7 +94,7 @@ makeResultGroup pl stateProp results =
                 , Menu._oSubmenuWidgets =
                     if null extras
                     then Menu.SubmenuEmpty
-                    else Menu.SubmenuItems (traverse (makeShownResult pl stateProp) extras <&> map snd)
+                    else Menu.SubmenuItems (traverse (makeShownResult pl) extras <&> map snd)
                 }
             , _rgPickEventMap = pickMain
             }
@@ -112,13 +111,12 @@ applyResultLayout fGui =
         , Responsive._layoutContext = Responsive.LayoutClear
         }
 
-afterPick :: Monad m => Property (T m) Text -> Widget.Id -> T m GuiState.Update
-afterPick stateProp idWithinResultWidget =
+afterPick :: Widget.Id -> GuiState.Update
+afterPick idWithinResultWidget =
     mempty
     { GuiState._uCursor = Monoid.Last (Just idWithinResultWidget)
     , GuiState._uAnimIdMapping = mempty
     }
-    <$ Property.set stateProp mempty
 
 -- | Remove unwanted event handlers from a hole result
 removeUnwanted :: Config -> Widget.EventMap a -> Widget.EventMap a
@@ -152,10 +150,7 @@ fixNumWithDotEventMap searchTerm res
         mkAction toHole =
             E.charGroup "Operator" doc Chars.operator $
             \c ->
-            do
-                (uuid, entityId) <- toHole
-                HoleState.setHoleStateAndJump uuid ("." <> Text.singleton c) entityId
-            <&> GuiState.updateCursor
+            toHole <&> HoleState.setHoleStateAndJump ("." <> Text.singleton c)
         endsWithDot = "." `Text.isSuffixOf` searchTerm
         doc = E.Doc ["Edit", "Apply Operator"]
         conv = res ^. Sugar.holeResultConverted
@@ -167,14 +162,14 @@ fixNumWithDotEventMap searchTerm res
 
 makeHoleResultWidget ::
     Monad m =>
-    Sugar.Payload f ExprGuiT.Payload -> Property (T m) Text ->
+    Sugar.Payload f ExprGuiT.Payload ->
     Widget.Id ->
     Sugar.HoleResult (T m) (Sugar.Expression (Name (T m)) (T m) ()) ->
     ExprGuiM m
     ( Widget.EventMap (T m GuiState.Update)
     , WithTextPos (Widget (T m GuiState.Update))
     )
-makeHoleResultWidget pl stateProp resultId holeResult =
+makeHoleResultWidget pl resultId holeResult =
     do
         config <- Lens.view Config.config
         let holeConfig = Config.hole config
@@ -193,6 +188,7 @@ makeHoleResultWidget pl stateProp resultId holeResult =
                 <&> pickBefore
         isSelected <- GuiState.isSubCursor ?? resultId
         when isSelected (ExprGuiM.setResultPicker (pickBefore (pure mempty)))
+        searchTerm <- HoleState.readSearchTerm (HoleWidgetIds.make (pl ^. Sugar.plEntityId))
         holeResultConverted
             & postProcessSugar (pl ^. Sugar.plData . ExprGuiT.plMinOpPrec)
             & ExprGuiM.makeSubexpression
@@ -207,7 +203,6 @@ makeHoleResultWidget pl stateProp resultId holeResult =
             <&> fixFocalArea
             <&> (,) pickEventMap
     where
-        searchTerm = stateProp ^. Property.pVal
         fixFocalArea =
             Align.tValue . Widget.sizedState <. Widget._StateFocused . Lens.mapped . Widget.fFocalAreas .@~
             (:[]) . Rect 0
@@ -223,8 +218,8 @@ makeHoleResultWidget pl stateProp resultId holeResult =
         pickBefore action =
             do
                 holeResult ^. Sugar.holeResultPick
-                pickedResult <- afterPick stateProp idWithinResultWidget
                 action <&> mappend pickedResult
+        pickedResult = afterPick idWithinResultWidget
         simplePickRes keys =
             Widget.keysEventMap keys (E.Doc ["Edit", "Result", "Pick"]) (return ())
 
@@ -256,12 +251,12 @@ emptyPickEventMap =
 
 makeResultsWidget ::
     Monad m =>
-    Widget.R -> Sugar.Payload f ExprGuiT.Payload -> Property (T m) Text ->
+    Widget.R -> Sugar.Payload f ExprGuiT.Payload ->
     [ResultsList m] -> Menu.HasMoreOptions ->
     ExprGuiM m (Widget.EventMap (T m GuiState.Update), Hover.Ordered (Widget (T m GuiState.Update)))
-makeResultsWidget minWidth pl stateProp shownResultsLists hiddenResults =
+makeResultsWidget minWidth pl shownResultsLists hiddenResults =
     do
-        groupsWidgets <- traverse (makeResultGroup pl stateProp) shownResultsLists
+        groupsWidgets <- traverse (makeResultGroup pl) shownResultsLists
         pickResultEventMap <-
             case groupsWidgets of
             [] -> emptyPickEventMap
@@ -349,10 +344,9 @@ makeUnderCursorAssignment ::
     [ResultsList m] -> Menu.HasMoreOptions ->
     Sugar.Hole (T m) (ExpressionN m ()) (ExprGuiT.SugarExpr m) ->
     Sugar.Payload (T m) ExprGuiT.Payload ->
-    Property (T m) Text ->
     WidgetIds ->
     ExprGuiM m (Menu.Placement -> WithTextPos (Widget (T m GuiState.Update)))
-makeUnderCursorAssignment shownResultsLists hasHiddenResults hole pl stateProp widgetIds =
+makeUnderCursorAssignment shownResultsLists hasHiddenResults hole pl widgetIds =
     do
         -- We make our own type view here instead of
         -- ExpressionGui.stdWrap, because we want to synchronize the
@@ -363,18 +357,27 @@ makeUnderCursorAssignment shownResultsLists hasHiddenResults hole pl stateProp w
             <&> (^. Align.tValue)
             & Reader.local (Element.animIdPrefix .~ holeAnimId)
 
-        searchTermEventMap <-
-            EventMap.makeOpenEventMap holeKind stateProp <&> disallowFirstOperatorChar
+        searchTerm <- HoleState.readSearchTerm widgetIds
+        let disallowFirstOperatorChar
+                | Text.null searchTerm = E.filterChars (`notElem` Chars.operator)
+                | otherwise = id
+
+        searchTermEventMap <- EventMap.makeOpenEventMap holeKind widgetIds <&> disallowFirstOperatorChar
 
         (pickFirstResult, resultsWidgets) <-
-            makeResultsWidget (typeView ^. Element.width) pl stateProp
+            makeResultsWidget (typeView ^. Element.width) pl
             shownResultsLists hasHiddenResults
             <&> _2 . Lens.mapped %~ E.strongerEvents searchTermEventMap
 
         vspace <- ExpressionGui.annotationSpacer
         let addAnnotation x = x /-/ vspace /-/ typeView
+        let blockOperatorEvents
+                | Text.null searchTerm || Text.all (`elem` Chars.operator) searchTerm = mempty
+                | otherwise =
+                    E.charGroup "Operator" (E.Doc ["Edit", "Apply operator (blocked)"])
+                    Chars.operator mempty
         searchTermWidget <-
-            SearchTerm.make widgetIds holeKind stateProp
+            SearchTerm.make widgetIds holeKind
             <&> Align.tValue %~ Hover.anchor . E.weakerEvents (pickFirstResult <> blockOperatorEvents)
         mkOptions <-
             resultsHoverOptions
@@ -388,26 +391,17 @@ makeUnderCursorAssignment shownResultsLists hasHiddenResults hole pl stateProp w
                     (searchTermWidget ^. Align.tValue))
     where
         holeKind = hole ^. Sugar.holeKind
-        blockOperatorEvents
-            | Text.null searchTerm || Text.all (`elem` Chars.operator) searchTerm = mempty
-            | otherwise =
-                E.charGroup "Operator" (E.Doc ["Edit", "Apply operator (blocked)"])
-                Chars.operator mempty
         holeAnimId = hidHole widgetIds & Widget.toAnimId
-        disallowFirstOperatorChar
-            | Text.null searchTerm = E.filterChars (`notElem` Chars.operator)
-            | otherwise = id
-        searchTerm = stateProp ^. Property.pVal
 
 makeOpenSearchAreaGui ::
     Monad m =>
     Sugar.Hole (T m) (ExpressionN m ()) (ExprGuiT.SugarExpr m) ->
     Sugar.Payload (T m) ExprGuiT.Payload ->
-    Property (T m) Text ->
     WidgetIds ->
     ExprGuiM m (Menu.Placement -> WithTextPos (Widget (T m GuiState.Update)))
-makeOpenSearchAreaGui hole pl stateProp widgetIds =
+makeOpenSearchAreaGui hole pl widgetIds =
     do
+        searchTerm <- HoleState.readSearchTerm widgetIds
         (shownResultsLists, hasHiddenResults) <- HoleResults.makeAll hole searchTerm widgetIds
         let shownMainResultsIds = shownResultsLists <&> rId . (^. HoleResults.rlMain)
         let allShownResultIds =
@@ -423,8 +417,6 @@ makeOpenSearchAreaGui hole pl stateProp widgetIds =
                         . fmap WidgetIds.fromEntityId
                     )
         makeUnderCursorAssignment shownResultsLists
-            hasHiddenResults hole pl stateProp widgetIds
+            hasHiddenResults hole pl widgetIds
             & assignHoleEditCursor widgetIds searchTerm shownMainResultsIds allShownResultIds
             <&> Lens.mapped . Align.tValue %~ E.weakerEvents unwrapAsDelEventMap
-    where
-        searchTerm = stateProp ^. Property.pVal

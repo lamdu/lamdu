@@ -1,23 +1,24 @@
 {-# LANGUAGE NoImplicitPrelude, OverloadedStrings #-}
 module Lamdu.GUI.ExpressionEdit.HoleEdit.State
-    ( setHoleStateAndJump, assocStateRef
+    ( setHoleStateAndJump, readSearchTerm
     ) where
 
-import           Data.UUID.Types (UUID)
-import qualified Data.Store.Transaction as Transaction
-import qualified GUI.Momentu.Widget as Widget
-import           Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds (WidgetIds(..))
+import qualified GUI.Momentu.State as GuiState
+import           Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds (WidgetIds)
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds as WidgetIds
-import qualified Lamdu.Sugar.Types as Sugar
+import           Lamdu.Sugar.Types (EntityId)
 
 import           Lamdu.Prelude
 
-type T = Transaction.Transaction
+setHoleStateAndJump :: Text -> EntityId -> GuiState.Update
+setHoleStateAndJump state entityId =
+    GuiState.updateCursor holeId
+    <> GuiState.updateWidgetState holeId state
+    where
+        holeId = WidgetIds.make entityId & WidgetIds.hidOpen
 
-setHoleStateAndJump :: Monad m => UUID -> Text -> Sugar.EntityId -> T m Widget.Id
-setHoleStateAndJump uuid state entityId = do
-    Transaction.setP (assocStateRef uuid) state
-    WidgetIds.make entityId & hidOpen & return
-
-assocStateRef :: Monad m => UUID -> Transaction.MkProperty m Text
-assocStateRef = Transaction.assocDataRefDef mempty "searchTerm"
+readSearchTerm ::
+    (MonadReader env m, GuiState.HasWidgetState env) => WidgetIds -> m Text
+readSearchTerm widgetIds =
+    WidgetIds.hidOpen widgetIds & GuiState.readWidgetState
+    <&> fromMaybe ""

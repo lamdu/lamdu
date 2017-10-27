@@ -9,8 +9,6 @@ import           Data.Functor.Identity (Identity(..))
 import           Data.List (isInfixOf)
 import           Data.List.Class (List)
 import qualified Data.List.Class as List
-import           Data.Store.Property (Property)
-import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
 import qualified Data.Text as Text
 import           GUI.Momentu (MetaKey(..))
@@ -22,6 +20,8 @@ import qualified GUI.Momentu.Widget as Widget
 import qualified Lamdu.CharClassification as Chars
 import           Lamdu.Config (HasConfig)
 import qualified Lamdu.Config as Config
+import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.State as HoleState
+import           Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds (WidgetIds(..))
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.Sugar.Types as Sugar
@@ -31,10 +31,12 @@ import           Lamdu.Prelude
 type T = Transaction.Transaction
 
 adHocTextEditEventMap ::
-    Monad m => Property (T m) Text -> E.EventMap (T m GuiState.Update)
-adHocTextEditEventMap searchTermProp =
-    appendCharEventMap <> deleteCharEventMap
-    where
+    (MonadReader env m, GuiState.HasWidgetState env, Applicative f) =>
+    WidgetIds -> m (E.EventMap (f GuiState.Update))
+adHocTextEditEventMap widgetIds =
+    HoleState.readSearchTerm widgetIds <&>
+    \searchTerm ->
+    let
         appendCharEventMap =
             E.allChars "Character"
             (E.Doc ["Edit", "Search Term", "Append character"])
@@ -45,8 +47,11 @@ adHocTextEditEventMap searchTermProp =
                   E.keyPress (ModKey mempty MetaKey.Key'Backspace)
                   (E.Doc ["Edit", "Search Term", "Delete backwards"]) $
                   changeText Text.init
-        searchTerm = Property.value searchTermProp
-        changeText f = mempty <$ Property.pureModify searchTermProp f
+        changeText f =
+            GuiState.updateWidgetState (hidOpen widgetIds) (f searchTerm)
+            & pure
+    in
+    appendCharEventMap <> deleteCharEventMap
 
 toLiteralTextKeys :: [MetaKey]
 toLiteralTextKeys =
@@ -141,14 +146,14 @@ toLiteralTextEventMap actions =
 
 makeOpenEventMap ::
     Monad m =>
-    Sugar.HoleKind (T m) (Sugar.Expression n (T m) ()) e -> Property (T m) Text ->
+    Sugar.HoleKind (T m) (Sugar.Expression n (T m) ()) e -> WidgetIds ->
     ExprGuiM m (E.EventMap (T m GuiState.Update))
-makeOpenEventMap holeKind searchTermProp =
-    disallowCharsFromSearchTerm ?? holeKind ?? searchTerm ?? Nothing
-    ?? adHocTextEditEventMap searchTermProp
-    <&> mappend maybeLiteralTextEventMap
-    where
-        maybeLiteralTextEventMap
-            | Text.null searchTerm = holeKind ^. Sugar._LeafHole . Lens.to toLiteralTextEventMap
-            | otherwise = mempty
-        searchTerm = searchTermProp ^. Property.pVal
+makeOpenEventMap holeKind widgetIds =
+    do
+        searchTerm <- HoleState.readSearchTerm widgetIds
+        let maybeLiteralTextEventMap
+                | Text.null searchTerm = holeKind ^. Sugar._LeafHole . Lens.to toLiteralTextEventMap
+                | otherwise = mempty
+        (disallowCharsFromSearchTerm ?? holeKind ?? searchTerm ?? Nothing)
+            <*> adHocTextEditEventMap widgetIds
+            <&> mappend maybeLiteralTextEventMap

@@ -138,7 +138,7 @@ actionsEventMap ::
 actionsEventMap exprInfo holePicker =
     sequence
     [ case exprInfoActions exprInfo ^. Sugar.wrap of
-      Sugar.WrapAction act -> wrapEventMap (act <&> snd)
+      Sugar.WrapAction act -> wrapEventMap act
       _ -> return mempty
     , applyOperatorEventMap exprInfo holePicker & pure
     , if exprInfoIsHoleResult exprInfo
@@ -164,18 +164,15 @@ applyOperatorEventMap ::
 applyOperatorEventMap exprInfo holePicker =
     case exprInfoActions exprInfo ^. Sugar.wrap of
     Sugar.WrapAction wrap -> action wrap
-    Sugar.WrapperAlready holeId -> action $ return holeId
-    Sugar.WrappedAlready holeId -> action $ return holeId
+    Sugar.WrapperAlready holeId -> action (return holeId)
+    Sugar.WrappedAlready holeId -> action (return holeId)
     & ExprGuiM.withHolePicker holePicker
     where
         acceptableOperatorChars = filter ((>= exprInfoMinOpPrec exprInfo) . precedence) Chars.operator
         action wrap =
             E.charGroup "Operator" doc acceptableOperatorChars $
             \c ->
-            do
-                (uuid, entityId) <- wrap
-                HoleEditState.setHoleStateAndJump uuid (Text.singleton c) entityId
-            <&> GuiState.updateCursor
+            wrap <&> HoleEditState.setHoleStateAndJump (Text.singleton c)
         doc = E.Doc ["Edit", "Apply operator"]
 
 wrapEventMap ::
