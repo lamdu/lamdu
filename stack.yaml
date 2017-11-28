@@ -25,16 +25,13 @@ packages:
     commit: 286b75894e51b08b7c63f8845f045f66d27e9849
   extra-dep: True
 - location:
-    git: https://github.com/lamdu/language-ecmascript
-    commit: 1c75cfd064faec8c564c205702227bb44822e296
-  extra-dep: True
-- location:
     git: https://github.com/lamdu/nodejs-exec
     commit: 614cfa868899f2dde5801e1b95d4bc43815e9851
   extra-dep: True
 extra-deps:
 - bitmap-0.0.2
 - bitmap-opengl-0.0.1.5
+- language-ecmascript-0.17.2.0
 - stb-image-0.2.1
 - GLFW-b-1.4.8.1
 - testing-feat-0.4.0.3
