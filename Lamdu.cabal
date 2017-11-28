@@ -42,7 +42,6 @@ Executable lamdu
                   , deepseq
                   , deepseq-generics >= 0.1
                   , directory >= 1.0.1.1
-                  , distributive
                   , either
                   , filepath >= 1.1
                   , GLFW-b >= 1.4.8.0
@@ -64,7 +63,6 @@ Executable lamdu
                   , safe-exceptions >= 0.1.4
                   , StateVar
                   , stm
-                  , template-haskell
                   , text
                   , time >= 1.2
                   , transformers >= 0.4.3
@@ -171,7 +169,6 @@ Executable lamdu
                   , Lamdu.Data.Export.JSON.Migration.ToVersion1
                   , Lamdu.Data.Export.JSON.Migration.ToVersion2
                   , Lamdu.Data.Export.JSON.Migration.ToVersion3
-                  , Lamdu.Data.Export.JSON.Process
                   , Lamdu.Data.Meta
                   , Lamdu.Data.Ops
                   , Lamdu.Data.Ops.Subexprs

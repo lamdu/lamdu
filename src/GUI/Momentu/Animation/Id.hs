@@ -1,6 +1,6 @@
 module GUI.Momentu.Animation.Id
     ( AnimId
-    , joinId, subId, augmentId
+    , augmentId
     , mappingFromPrefixMap
     ) where
 
@@ -14,13 +14,7 @@ import           Lamdu.Prelude
 type AnimId = [SBS.ByteString]
 
 augmentId :: Show a => AnimId -> a -> AnimId
-augmentId animId = joinId animId . (:[]) . SBS8.pack . show
-
-joinId :: AnimId -> AnimId -> AnimId
-joinId = (++)
-
-subId :: AnimId -> AnimId -> Maybe AnimId
-subId folder path = path ^? prefixed folder
+augmentId animId = (animId ++) . (:[]) . SBS8.pack . show
 
 mappingFromPrefixMap :: Map AnimId AnimId -> AnimId -> AnimId
 mappingFromPrefixMap m animId =
