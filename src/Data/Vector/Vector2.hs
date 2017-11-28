@@ -14,7 +14,7 @@ import           Data.Binary (Binary(..))
 import           Data.Monoid.Generic (def_mempty, def_mappend)
 import qualified Data.Tuple as Tuple
 
-import           Lamdu.Prelude hiding (curry, uncurry, zip)
+import           Lamdu.Prelude hiding (curry, uncurry)
 
 data Vector2 a = Vector2
     { _first :: !a

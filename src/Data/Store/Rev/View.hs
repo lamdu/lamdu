@@ -18,7 +18,7 @@ import           Data.Store.Rev.ViewBranchInternal (BranchData, ViewData(..), Vi
 import           Data.Store.Transaction (Transaction, Store(..))
 import qualified Data.Store.Transaction as Transaction
 
-import           Lamdu.Prelude hiding (lookup)
+import           Lamdu.Prelude
 
 -- | A Version Map is a large mapping of ObjectKeys to their
 -- | "current-version" values. This serves as a "cache" which is
