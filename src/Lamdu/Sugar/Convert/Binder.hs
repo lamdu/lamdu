@@ -117,14 +117,14 @@ convertRedex expr redex =
             , _lBody = letBody
             , _lUsages = redex ^. Redex.paramRefs
             }
-  where
-      binderKind =
-          redex ^. Redex.lam
-          <&> Lens.mapped %~ (^. Input.stored)
-          & BinderKindLet
-      V.Lam param body = redex ^. Redex.lam
-      defUUID = UniqueId.toUUID param
-      defEntityId = EntityId.ofLambdaParam param
+    where
+        binderKind =
+            redex ^. Redex.lam
+            <&> Lens.mapped %~ (^. Input.stored)
+            & BinderKindLet
+        V.Lam param body = redex ^. Redex.lam
+        defUUID = UniqueId.toUUID param
+        defEntityId = EntityId.ofLambdaParam param
 
 makeBinderContent ::
     (Monad m, Monoid a) =>
