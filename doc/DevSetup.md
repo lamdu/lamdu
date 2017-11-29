@@ -24,5 +24,4 @@ To have errors show up in VS Code's problems pane:
 
 * First build the project using `stack build`.
 * Now `mkdir autogen` and copy the `Paths_Lamdu.hs` file from where it was created in `.stack` to this folder.
-* In VS Code's terminal - run `ghcid -o ghcid.txt -c "stack ghci --test --ghci-options=\"-fno-code -iautogen -ferror-spans -DNO_CODE\""`
-* Open `ghcid.txt` and on its tab "Watch Ghcid Output" from the command palette. VS Code now reports the compilation errors quickly following file changes!
+* Now you're ready to use `ghcid`. Simply start it with the "Start Ghcid" from VS code's command pallete.

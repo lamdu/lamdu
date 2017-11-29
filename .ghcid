@@ -1,0 +1,1 @@
+-c "stack ghci --test --ghci-options=\"-fno-code -iautogen -ferror-spans -DNO_CODE\""
