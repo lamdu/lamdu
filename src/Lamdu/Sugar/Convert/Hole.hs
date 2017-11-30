@@ -112,7 +112,7 @@ mkHoleOptionFromInjected sugarContext exprPl stored val =
                     & ConvertM.scFrozenDeps . Property.pVal .~ newDeps
             let updateDeps = Property.set depsProp newDeps
             return
-                ( resultScore (fst <$> result)
+                ( resultScore (result <&> fst)
                 , mkHoleResult newSugarContext updateDeps (exprPl ^. Input.entityId) stored result
                 )
         <&> return & ListClass.joinL
@@ -802,7 +802,7 @@ mkHoleResults mInjectedArg sugarContext exprPl stored base =
                 & ConvertM.scFrozenDeps . Property.pVal .~ newDeps
         let updateDeps = newDeps & sugarContext ^. ConvertM.scFrozenDeps . Property.pSet
         return
-            ( resultScore (fst <$> val)
+            ( resultScore (val <&> fst)
             , mkHoleResult newSugarContext updateDeps (exprPl ^. Input.entityId) stored val
             )
 
