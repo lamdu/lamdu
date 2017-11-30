@@ -41,7 +41,6 @@ data Group m = Group
         , T m (Sugar.HoleResult (T m) (ExpressionN m ()))
         )
     }
-
 Lens.makeLenses ''Group
 
 data Result m = Result
