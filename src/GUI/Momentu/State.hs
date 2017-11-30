@@ -14,7 +14,6 @@ import qualified Control.Monad.Reader as Reader
 import           Data.Binary (Binary, decodeOrFail)
 import           Data.Binary.Utils (encodeS)
 import           Data.ByteString.Utils (lazifyBS)
-import           Data.List (isPrefixOf)
 import qualified Data.Map as Map
 import qualified Data.Monoid as Monoid
 import           Data.Monoid.Generic (def_mempty, def_mappend)
@@ -67,7 +66,7 @@ guiStateUpdate u s =
         & sCursor .~ c
         & sWidgetStates %~ Map.filterWithKey f
         where
-            f (Id k) _v = k `isPrefixOf` toAnimId c
+            f k _v = Id.subId k c & Lens.has Lens._Just
     & sWidgetStates %~ mappend (u ^. uWidgetStateUpdates)
 
 class HasCursor env where cursor :: Lens' env Id
