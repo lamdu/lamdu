@@ -1,7 +1,7 @@
 {-# LANGUAGE NoImplicitPrelude #-}
 module Lamdu.Prelude
     ( module X
-    , traceId, trace, traceShowM
+    , traceId, trace, traceShowM, traceM
     , todo
     ) where
 
@@ -35,6 +35,10 @@ trace = Trace.trace
 {-# WARNING traceShowM "Leaving traces in the code" #-}
 traceShowM :: (Show a, Applicative f) => a -> f ()
 traceShowM = Trace.traceShowM
+
+{-# WARNING traceM "Leaving traces in the code" #-}
+traceM :: Applicative f => String -> f ()
+traceM = Trace.traceM
 
 {-# WARNING todo "Leaving todos in the code" #-}
 todo :: String -> a
