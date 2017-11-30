@@ -112,18 +112,16 @@ loadWorkArea ::
     Monad m =>
     CurAndPrev (EvalResults (ValI m)) ->
     Anchors.CodeAnchors m ->
-    ExprGuiM m (Sugar.WorkArea (Name (T m)) (T m) ExprGuiT.Payload)
+    T m (Sugar.WorkArea (Name (T m)) (T m) ExprGuiT.Payload)
 loadWorkArea theEvalResults theCodeAnchors =
-    do
-        Sugar.WorkArea { _waPanes, _waRepl } <-
-            SugarConvert.loadWorkArea theEvalResults theCodeAnchors
-            >>= AddNames.addToWorkArea
-            & transaction
-        Sugar.WorkArea
-            (_waPanes <&> Sugar.paneDefinition %~ traverseAddNearestHoles)
-            (_waRepl & exprAddNearestHoles)
-            & SugarLens.workAreaExpressions %~ postProcessExpr
-            & pure
+    SugarConvert.loadWorkArea theEvalResults theCodeAnchors
+    >>= AddNames.addToWorkArea
+    <&>
+    \Sugar.WorkArea { _waPanes, _waRepl } ->
+    Sugar.WorkArea
+    (_waPanes <&> Sugar.paneDefinition %~ traverseAddNearestHoles)
+    (_waRepl & exprAddNearestHoles)
+    & SugarLens.workAreaExpressions %~ postProcessExpr
 
 make ::
     ( MonadTransaction m n, MonadReader env n, Config.HasConfig env
@@ -137,8 +135,10 @@ make theCodeAnchors width =
     do
         theEvalResults <- Lens.view evalResults
         theExportActions <- Lens.view exportActions
+        workArea <-
+            loadWorkArea theEvalResults theCodeAnchors
+            & transaction
         do
-            workArea <- loadWorkArea theEvalResults theCodeAnchors
             replGui <-
                 ReplEdit.make (exportReplActions theExportActions)
                 (workArea ^. Sugar.waRepl)
