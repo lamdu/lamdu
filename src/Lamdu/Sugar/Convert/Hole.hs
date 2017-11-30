@@ -452,7 +452,8 @@ writeConvertTypeChecked holeEntityId sugarContext holeStored inferredVal =
             -- animations and cursor navigation. The uuids are kept as
             -- metadata anchors.
 
-            makeConsistentPayload (False, (_, pl)) entityId = pl
+            makeConsistentPayload (False, (_, pl)) entityId =
+                pl
                 & Input.entityId .~ entityId
             makeConsistentPayload (True, (_, pl)) _ = pl
             consistentExpr =
