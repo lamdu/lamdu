@@ -128,14 +128,11 @@ eventResultOfPickedResult :: Sugar.PickedResult -> PickedResult
 eventResultOfPickedResult pr =
     PickedResult
     { _pickedUpdate =
-        GuiState.Update
-        { GuiState._uCursor = Monoid.Last Nothing
-        , GuiState._uWidgetStateUpdates = mempty
-        , GuiState._uAnimIdMapping =
+        mempty
+        { GuiState._uAnimIdMapping =
             pr ^. Sugar.prIdTranslation
             & pickedResultAnimIdTranslation
             & Monoid.Endo
-        , GuiState._uVirtualCursor = Monoid.Last Nothing
         }
     , _pickedIdTranslations =
         pr ^. Sugar.prIdTranslation
