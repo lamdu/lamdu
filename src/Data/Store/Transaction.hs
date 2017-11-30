@@ -57,7 +57,12 @@ onStoreM f x = x
 
 data Askable m = Askable
     { _aStore :: Store m
-    , _aBase :: ChangesMap
+    , -- | The base is the set of changes we inherited from a parent
+      -- transaction (in a fork) that we do NOT apply when merging the
+      -- forked transaction.
+      -- This in contrast to the Stateful ChangesMap that starts empty
+      -- in the fork and is applied when the fork is merged.
+      _aBase :: ChangesMap
     }
 Lens.makeLenses ''Askable
 
@@ -77,10 +82,10 @@ instance (Monad m, Monoid a) => Monoid (Transaction m a) where
     mappend = liftA2 mappend
 
 getStore :: Monad m => Transaction m (Store m)
-getStore = liftAskable $ Reader.asks (Lens.view aStore)
+getStore = Lens.view aStore & liftAskable
 
 getBase :: Monad m => Transaction m ChangesMap
-getBase = liftAskable $ Reader.asks (Lens.view aBase)
+getBase = Lens.view aBase & liftAskable
 
 run :: Monad m => Store m -> Transaction m a -> m a
 run store (Transaction transaction) = do
