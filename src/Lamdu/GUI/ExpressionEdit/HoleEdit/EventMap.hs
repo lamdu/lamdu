@@ -127,7 +127,7 @@ toLiteralTextEventMap actions =
             <&> (^. Sugar.hoResults)
             >>= listTHead (error "Literal hole option has no results?!")
         result <- mkResult
-        pickedResult <- result ^. Sugar.holeResultPick
+        result ^. Sugar.holeResultPick
         let argExpr =
                 Sugar.holeResultConverted . Sugar.rBody . Sugar._BodyHole .
                 Sugar.holeKind . Sugar._WrapperHole . Sugar.haExpr
@@ -135,8 +135,6 @@ toLiteralTextEventMap actions =
             Just arg -> arg
             _ -> result ^. Sugar.holeResultConverted
             ^. Sugar.rPayload . Sugar.plEntityId
-            & (`lookup` (pickedResult ^. Sugar.prIdTranslation))
-            & fromMaybe (error "PickedResult missing translation for expr")
             & WidgetIds.fromEntityId
             & WidgetIds.literalTextEditOf
             & pure

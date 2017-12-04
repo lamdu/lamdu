@@ -9,7 +9,6 @@ import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
 import           Control.Monad.Transaction (MonadTransaction(..))
 import           Data.List.Lens (suffixed)
-import qualified Data.Map as Map
 import qualified Data.Monoid as Monoid
 import           Data.Store.Property (Property)
 import qualified Data.Store.Property as Property
@@ -59,12 +58,6 @@ import qualified Lamdu.Sugar.Types as Sugar
 import           Lamdu.Prelude
 
 type T = Transaction
-
-data PickedResult = PickedResult
-    { _pickedUpdate :: GuiState.Update
-    , _pickedIdTranslations :: Widget.Id -> Widget.Id
-    }
-Lens.makeLenses ''PickedResult
 
 resultSuffix :: Lens.Prism' AnimId AnimId
 resultSuffix = suffixed ["result suffix"]
@@ -124,54 +117,19 @@ applyResultLayout fGui =
         , Responsive._layoutContext = Responsive.LayoutClear
         }
 
-eventResultOfPickedResult :: Sugar.PickedResult -> PickedResult
-eventResultOfPickedResult pr =
-    PickedResult
-    { _pickedUpdate =
-        mempty
-        { GuiState._uAnimIdMapping =
-            pr ^. Sugar.prIdTranslation
-            & pickedResultAnimIdTranslation
-            & Monoid.Endo
-        }
-    , _pickedIdTranslations =
-        pr ^. Sugar.prIdTranslation
-        & Lens.mapped . Lens.both %~ WidgetIds.fromEntityId
-        & mapPrefix
-    }
-    where
-        mapPrefix = foldr ((.) . reprefix) id
-        reprefix (old, new) ident =
-            WidgetId.subId old ident & maybe ident (WidgetId.joinId new)
-        pickedResultAnimIdTranslation idTranslations =
-            -- Map only the first anim id component
-            Lens.ix 0 %~ \x -> fromMaybe x $ Map.lookup x idMap
-            where
-                idMap =
-                    idTranslations
-                    & Lens.traversed . Lens.both %~
-                      head . Widget.toAnimId . WidgetIds.fromEntityId
-                    & Map.fromList
-
 afterPick ::
     Monad m =>
     Property (T m) Text -> Sugar.EntityId ->
     Widget.Id -> Maybe Widget.Id ->
-    Sugar.PickedResult -> T m PickedResult
-afterPick stateProp holeId resultId mFirstHoleInside pr =
-    do
-        Property.set stateProp mempty
-        result
-            & pickedUpdate . GuiState.uCursor .~ Monoid.Last (Just cursorId)
-            & pickedUpdate . GuiState.uAnimIdMapping %~
-                mappend (Monoid.Endo obliterateOtherResults)
-            & return
+    T m GuiState.Update
+afterPick stateProp holeId resultId mFirstHoleInside =
+    mempty
+    { GuiState._uCursor = Monoid.Last (Just cursorId)
+    , GuiState._uAnimIdMapping = Monoid.Endo obliterateOtherResults
+    }
+    <$ Property.set stateProp mempty
     where
-        result = eventResultOfPickedResult pr
-        cursorId =
-            mFirstHoleInside
-            & fromMaybe myHoleId
-            & result ^. pickedIdTranslations
+        cursorId = mFirstHoleInside & fromMaybe myHoleId
         myHoleId = WidgetIds.fromEntityId holeId
         obliterateOtherResults animId =
             animId ^? resultSuffix . suffixed (Widget.toAnimId resultId)
@@ -281,13 +239,9 @@ makeHoleResultWidget pl stateProp resultId holeResult =
         holeResultConverted = holeResult ^. Sugar.holeResultConverted
         pickBefore action =
             do
-                pickedResult <-
-                    holeResult ^. Sugar.holeResultPick
-                    >>= afterPick stateProp (pl ^. Sugar.plEntityId) resultId mFirstHoleInside
-                action
-                    <&> GuiState.uCursor . Lens._Wrapped' . Lens.mapped %~
-                        pickedResult ^. pickedIdTranslations
-                    <&> mappend (pickedResult ^. pickedUpdate)
+                holeResult ^. Sugar.holeResultPick
+                pickedResult <- afterPick stateProp (pl ^. Sugar.plEntityId) resultId mFirstHoleInside
+                action <&> mappend pickedResult
         simplePickRes keys =
             Widget.keysEventMap keys (E.Doc ["Edit", "Result", "Pick"]) (return ())
 

@@ -13,7 +13,6 @@ module Lamdu.Sugar.Types.Hole
     , HoleResult(..)
         , holeResultConverted
         , holeResultPick
-    , PickedResult(..), prIdTranslation
     ) where
 
 import qualified Control.Lens as Lens
@@ -26,10 +25,6 @@ import           Lamdu.Sugar.Internal.EntityId (EntityId)
 
 import           Lamdu.Prelude
 
-newtype PickedResult = PickedResult
-    { _prIdTranslation :: [(EntityId, EntityId)]
-    }
-
 data HoleResultScore = HoleResultScore
     { _hrsNumHoleWrappers :: !Int
     , _hrsScore :: ![Int]
@@ -37,7 +32,7 @@ data HoleResultScore = HoleResultScore
 
 data HoleResult m resultExpr = HoleResult
     { _holeResultConverted :: resultExpr
-    , _holeResultPick :: m PickedResult
+    , _holeResultPick :: m ()
     } deriving (Functor, Foldable, Traversable)
 
 data HoleOption m resultExpr = HoleOption
@@ -87,7 +82,6 @@ Lens.makeLenses ''HoleOption
 Lens.makeLenses ''HoleResult
 Lens.makeLenses ''HoleResultScore
 Lens.makeLenses ''LeafHoleActions
-Lens.makeLenses ''PickedResult
 Lens.makePrisms ''HoleKind
 Lens.makePrisms ''Literal
 Lens.makePrisms ''Unwrap

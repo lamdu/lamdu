@@ -113,7 +113,7 @@ mkHoleOptionFromInjected sugarContext exprPl stored val =
             let updateDeps = Property.set depsProp newDeps
             return
                 ( resultScore (result <&> fst)
-                , mkHoleResult newSugarContext updateDeps (exprPl ^. Input.entityId) stored result
+                , mkHoleResult newSugarContext updateDeps stored result
                 )
         <&> return & ListClass.joinL
     }
@@ -275,10 +275,6 @@ mkWritableHoleActions mInjectedArg exprPl stored =
             , _holeUUID = UniqueId.toUUID $ ExprIRef.unValI $ Property.value stored
             }
 
--- Ignoring alpha-renames:
-consistentExprIds :: EntityId -> Val (EntityId -> a) -> Val a
-consistentExprIds = EntityId.randomizeExprAndParams . genFromHashable
-
 loadDeps :: Monad m => [V.Var] -> [T.NominalId] -> T m Infer.Dependencies
 loadDeps vars noms =
     Infer.Deps
@@ -422,53 +418,20 @@ replaceInjected (Val pl body) =
 
 writeConvertTypeChecked ::
     Monad m =>
-    EntityId -> ConvertM.Context m -> ValIProperty m ->
+    ConvertM.Context m -> ValIProperty m ->
     HoleResultVal m IsInjected ->
-    T m
-    ( ExpressionU m ()
-    , Val (Input.Payload m ())
-    , Val (ValIProperty m, Input.Payload m ())
-    )
-writeConvertTypeChecked holeEntityId sugarContext holeStored inferredVal =
+    T m (ExpressionU m ())
+writeConvertTypeChecked sugarContext holeStored inferredVal =
     do
-        -- With the real stored uuids:
         writtenExpr <-
             inferredVal
             <&> intoStorePoint
             & writeExprMStored (Property.value holeStored)
             <&> ExprIRef.addProperties (Property.set holeStored)
-            <&> Input.preparePayloads . fmap toPayload
-        let -- Replace the entity ids with consistent ones:
-
-            -- The sugar convert must apply *inside* the forked transaction
-            -- upon the *written* expr because we actually make use of the
-            -- resulting actions (e.g: press ',' on a list hole result).
-            -- However, the written expr goes crazy with new uuids every time.
-            --
-            -- So, we do something a bit odd: Take the written expr with
-            -- its in-tact stored allowing actions to be built correctly
-            -- but replace the Input.entityId with determinstic/consistent
-            -- pseudo-random generated ones that preserve proper
-            -- animations and cursor navigation. The uuids are kept as
-            -- metadata anchors.
-
-            makeConsistentPayload (False, (_, pl)) entityId =
-                pl
-                & Input.entityId .~ entityId
-            makeConsistentPayload (True, (_, pl)) _ = pl
-            consistentExpr =
-                writtenExpr
-                <&> makeConsistentPayload
-                & consistentExprIds holeEntityId
-        converted <-
-            replaceInjected consistentExpr
+            <&> fmap snd . Input.preparePayloads . fmap toPayload
+        replaceInjected (writtenExpr <&> snd)
             & ConvertM.convertSubexpression
             & ConvertM.run sugarContext
-        return
-            ( converted
-            , consistentExpr <&> void
-            , writtenExpr <&> snd <&> _2 %~ void
-            )
     where
         intoStorePoint (inferred, (mStorePoint, a)) =
             (mStorePoint, (inferred, Lens.has Lens._Just mStorePoint, a))
@@ -492,54 +455,6 @@ writeConvertTypeChecked holeEntityId sugarContext holeStored inferredVal =
             where
                 eId = Property.value stored & EntityId.ofValI
         noEval = Input.EvalResultsForExpr Map.empty Map.empty
-
-idTranslations ::
-    Val (EntityId, Type) ->
-    Val EntityId ->
-    [(EntityId, EntityId)]
-idTranslations consistentExpr dest
-    | Val.alphaEq (void src) (void dest)
-        = concat
-            [ pairUp Val.payload
-            , pairUp params
-            , pairUpTags V._BRecExtend EntityId.ofRecExtendTag
-            , pairUpTags V._BGetField EntityId.ofGetFieldTag
-            , pairUpTags V._BCase EntityId.ofCaseTag
-            , pairUpTags V._BInject EntityId.ofInjectTag
-            , pairUpLambdaRecordParams (consistentExpr <&> snd) dest
-            ]
-    | otherwise =
-          error $ "Hole.idTranslations of mismatching expressions: " ++
-          show (void src) ++ " " ++ show (void dest)
-    where
-        pairUpLambdaRecordParams aVal bVal =
-            case (aVal, bVal) of
-            (Val srcType (V.BLam (V.Lam avar _)),
-              Val _ (V.BLam (V.Lam bvar _)))
-                -- TODO: Use a _TRecord prism alternative that verifies the
-                -- record is closed
-                -> [ ( EntityId.ofLambdaTagParam avar tag
-                          , EntityId.ofLambdaTagParam bvar tag
-                          )
-                      | tag <-
-                              srcType ^..
-                              T._TFun . _1 . T._TRecord . ExprLens.compositeFieldTags
-                      ] ++ recurse
-            _ -> recurse
-            where
-                recurse =
-                    zipWith pairUpLambdaRecordParams
-                    (aVal ^.. Val.body . Lens.folded)
-                    (bVal ^.. Val.body . Lens.folded)
-                    & concat
-        src = consistentExpr <&> fst
-        pairUp l = zip (src ^.. ExprLens.subExprs . l) (dest ^.. ExprLens.subExprs . l)
-        pairUpTags prism toEntityId =
-            pairUp $
-            Lens.filtered (Lens.has (Val.body . prism)) . Val.payload . Lens.to toEntityId
-        params =
-            Val.body . V._BLam . V.lamParamId .
-            Lens.to EntityId.ofLambdaParam
 
 eitherTtoListT :: Monad m => EitherT err m a -> ListT m a
 eitherTtoListT = ListClass.joinL . fmap (ListClass.fromList . (^.. Lens._Right)) . runEitherT
@@ -749,36 +664,23 @@ mkHoleResultVals frozenDeps mInjectedArg exprPl base =
 
 mkHoleResult ::
     Monad m =>
-    ConvertM.Context m -> Transaction m () -> EntityId ->
+    ConvertM.Context m -> Transaction m () ->
     ValIProperty m -> HoleResultVal m IsInjected ->
     T m (HoleResult (T m) (Expression UUID (T m) ()))
-mkHoleResult sugarContext updateDeps entityId stored val =
+mkHoleResult sugarContext updateDeps stored val =
     do
-        ((fConverted, fConsistentExpr, fWrittenExpr), forkedChanges) <-
+        (fConverted, forkedChanges) <-
             Transaction.fork $
             do
                 updateDeps
-                writeConvertTypeChecked entityId sugarContext stored val
+                writeConvertTypeChecked sugarContext stored val
         return
             HoleResult
             { _holeResultConverted = fConverted <&> (^. pUserData)
             , _holeResultPick =
-                mkPickedResult fConsistentExpr fWrittenExpr <$
                 do
                     Transaction.merge forkedChanges
-                    sugarContext ^. ConvertM.scPostProcessRoot
-            }
-    where
-        mkPickedResult consistentExpr writtenExpr =
-            PickedResult
-            { _prIdTranslation =
-                idTranslations
-                ( consistentExpr <&>
-                    \input ->
-                    ( input ^. Input.entityId
-                    , input ^. Input.inferredType
-                    ) )
-                (writtenExpr <&> EntityId.ofValI . Property.value . fst)
+                    sugarContext ^. ConvertM.scPostProcessRoot & void
             }
 
 mkHoleResults ::
@@ -804,7 +706,7 @@ mkHoleResults mInjectedArg sugarContext exprPl stored base =
         let updateDeps = newDeps & sugarContext ^. ConvertM.scFrozenDeps . Property.pSet
         return
             ( resultScore (val <&> fst)
-            , mkHoleResult newSugarContext updateDeps (exprPl ^. Input.entityId) stored val
+            , mkHoleResult newSugarContext updateDeps stored val
             )
 
 randomizeNonStoredParamIds ::
