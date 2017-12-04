@@ -8,16 +8,14 @@ module Lamdu.GUI.ExpressionEdit.HoleEdit.Open
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
 import           Control.Monad.Transaction (MonadTransaction(..))
-import           Data.List.Lens (suffixed)
 import qualified Data.Monoid as Monoid
 import           Data.Store.Property (Property)
 import qualified Data.Store.Property as Property
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Text as Text
-import           GUI.Momentu (Widget, AnimId)
+import           GUI.Momentu (Widget)
 import           GUI.Momentu.Align (Aligned(..), WithTextPos(..))
 import qualified GUI.Momentu.Align as Align
-import qualified GUI.Momentu.Animation as Anim
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Glue ((/-/), (/|/))
@@ -58,9 +56,6 @@ import qualified Lamdu.Sugar.Types as Sugar
 import           Lamdu.Prelude
 
 type T = Transaction
-
-resultSuffix :: Lens.Prism' AnimId AnimId
-resultSuffix = suffixed ["result suffix"]
 
 data ResultGroup m = ResultGroup
     { _rgOption :: !(Menu.Option (ExprGuiM m) (T m GuiState.Update))
@@ -117,17 +112,13 @@ applyResultLayout fGui =
         , Responsive._layoutContext = Responsive.LayoutClear
         }
 
-afterPick :: Monad m => Property (T m) Text -> Widget.Id -> Widget.Id -> T m GuiState.Update
-afterPick stateProp resultId idWithinResultWidget =
+afterPick :: Monad m => Property (T m) Text -> Widget.Id -> T m GuiState.Update
+afterPick stateProp idWithinResultWidget =
     mempty
     { GuiState._uCursor = Monoid.Last (Just idWithinResultWidget)
-    , GuiState._uAnimIdMapping = Monoid.Endo obliterateOtherResults
+    , GuiState._uAnimIdMapping = mempty
     }
     <$ Property.set stateProp mempty
-    where
-        obliterateOtherResults animId =
-            animId ^? resultSuffix . suffixed (Widget.toAnimId resultId)
-            & fromMaybe animId
 
 -- | Remove unwanted event handlers from a hole result
 removeUnwanted :: Config -> Widget.EventMap a -> Widget.EventMap a
@@ -214,8 +205,6 @@ makeHoleResultWidget pl stateProp resultId holeResult =
             & GuiState.assignCursor resultId idWithinResultWidget
             & applyResultLayout
             <&> fixFocalArea
-            <&> Element.setLayers . Element.layers . Lens.traverse %~
-                Anim.mapIdentities (<> (resultSuffix # Widget.toAnimId resultId))
             <&> (,) pickEventMap
     where
         searchTerm = stateProp ^. Property.pVal
@@ -234,7 +223,7 @@ makeHoleResultWidget pl stateProp resultId holeResult =
         pickBefore action =
             do
                 holeResult ^. Sugar.holeResultPick
-                pickedResult <- afterPick stateProp resultId idWithinResultWidget
+                pickedResult <- afterPick stateProp idWithinResultWidget
                 action <&> mappend pickedResult
         simplePickRes keys =
             Widget.keysEventMap keys (E.Doc ["Edit", "Result", "Pick"]) (return ())

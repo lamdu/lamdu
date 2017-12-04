@@ -31,18 +31,13 @@ when the function is transformed to a multi-parameter function (based on the lam
 
 ### Hole results
 
-Hole results are currently regenerated on every cursor movement etc.
-In order for no animations to occur their anim-ids are normalized.
-When a hole result is chosen we apply a translation between the normalized ids and the final written ids.
+Hole results used to regenerate on every cursor movement etc with random written ids
+which were normalized for display purposes.
+When a hole result is chosen we applied a translation between the normalized ids and the written ids.
 
-**Planned change**:
+**What changed**:
 
-Options:
-
-* Don't recreate the hole results but cache them.
-* Create each hol result with consistent ids in the first place.
-  The id could be based on a hash of the current version hash and the hole base expression etc..
-  This is probably the easier option in the short-term.
+We create each hole result with consistent ids in the first place.
 
 ### TextEdit
 

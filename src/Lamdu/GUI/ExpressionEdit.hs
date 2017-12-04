@@ -57,21 +57,20 @@ makeEditor ::
     Sugar.Payload (T m) ExprGuiT.Payload ->
     ExprGuiM m (ExpressionGui m)
 makeEditor body pl =
-    pl
-    &
     case body of
-    Sugar.BodyHole         x -> x & HoleEdit.make
-    Sugar.BodyLabeledApply x -> x & ApplyEdit.makeLabeled
-    Sugar.BodySimpleApply  x -> x & ApplyEdit.makeSimple
-    Sugar.BodyLam          x -> x & LambdaEdit.make
-    Sugar.BodyLiteral      x -> x & LiteralEdit.make
-    Sugar.BodyRecord       x -> x & RecordEdit.make
-    Sugar.BodyCase         x -> x & CaseEdit.make
-    Sugar.BodyGuard        x -> x & GuardEdit.make
-    Sugar.BodyGetField     x -> x & GetFieldEdit.make
-    Sugar.BodyInject       x -> x & InjectEdit.make
-    Sugar.BodyGetVar       x -> x & GetVarEdit.make
-    Sugar.BodyToNom        x -> x & NomEdit.makeToNom
-    Sugar.BodyFromNom      x -> x & NomEdit.makeFromNom
-    Sugar.BodyInjectedExpression -> injectedExpr
-    & Reader.local (Element.animIdPrefix .~ Widget.toAnimId (WidgetIds.fromExprPayload pl))
+    Sugar.BodyInjectedExpression -> injectedExpr pl
+    Sugar.BodyHole         x -> HoleEdit.make         x pl & r
+    Sugar.BodyLabeledApply x -> ApplyEdit.makeLabeled x pl & r
+    Sugar.BodySimpleApply  x -> ApplyEdit.makeSimple  x pl & r
+    Sugar.BodyLam          x -> LambdaEdit.make       x pl & r
+    Sugar.BodyLiteral      x -> LiteralEdit.make      x pl & r
+    Sugar.BodyRecord       x -> RecordEdit.make       x pl & r
+    Sugar.BodyCase         x -> CaseEdit.make         x pl & r
+    Sugar.BodyGuard        x -> GuardEdit.make        x pl & r
+    Sugar.BodyGetField     x -> GetFieldEdit.make     x pl & r
+    Sugar.BodyInject       x -> InjectEdit.make       x pl & r
+    Sugar.BodyGetVar       x -> GetVarEdit.make       x pl & r
+    Sugar.BodyToNom        x -> NomEdit.makeToNom     x pl & r
+    Sugar.BodyFromNom      x -> NomEdit.makeFromNom   x pl & r
+    where
+        r = Reader.local (Element.animIdPrefix .~ Widget.toAnimId (WidgetIds.fromExprPayload pl))
