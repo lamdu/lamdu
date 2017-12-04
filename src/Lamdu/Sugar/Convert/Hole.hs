@@ -15,13 +15,14 @@ import qualified Control.Lens as Lens
 import           Control.Monad (filterM)
 import           Control.Monad.ListT (ListT)
 import           Control.Monad.Trans.Either (EitherT(..))
-import           Control.Monad.Trans.State (StateT(..), mapStateT)
+import           Control.Monad.Trans.State (StateT(..), mapStateT, evalState, state)
 import qualified Control.Monad.Trans.State as State
 import           Data.CurAndPrev (CurAndPrev(..))
 import           Data.Functor.Identity (Identity(..))
 import qualified Data.List.Class as ListClass
 import qualified Data.Map as Map
 import qualified Data.Set as Set
+import qualified Data.Store.IRef as IRef
 import qualified Data.Store.Property as Property
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
@@ -41,7 +42,7 @@ import qualified Lamdu.Calc.Val.Annotated as Val
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Definition as Def
 import qualified Lamdu.Expr.GenIds as GenIds
-import           Lamdu.Expr.IRef (ValIProperty, ValI, DefI)
+import           Lamdu.Expr.IRef (ValIProperty, ValI(..), DefI)
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Lens as ExprLens
 import qualified Lamdu.Expr.Load as Load
@@ -63,6 +64,7 @@ import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import           Lamdu.Sugar.OrderTags (orderType)
 import           Lamdu.Sugar.Types
+import           System.Random (random)
 import qualified System.Random as Random
 import           System.Random.Utils (genFromHashable)
 import           Text.PrettyPrint.HughesPJClass (prettyShow)
@@ -429,6 +431,7 @@ writeConvertTypeChecked sugarContext holeStored inferredVal =
             & writeExprMStored (Property.value holeStored)
             <&> ExprIRef.addProperties (Property.set holeStored)
             <&> fmap snd . Input.preparePayloads . fmap toPayload
+        Property.set holeStored (writtenExpr ^. Val.payload . _1 . Property.pVal)
         replaceInjected (writtenExpr <&> snd)
             & ConvertM.convertSubexpression
             & ConvertM.run sugarContext
@@ -718,15 +721,29 @@ randomizeNonStoredParamIds gen =
         f n _        prevEntityId (Just _, _) = (prevEntityId, n)
         f _ prevFunc prevEntityId pl@(Nothing, _) = prevFunc prevEntityId pl
 
+randomizeNonStoredRefs :: Random.StdGen -> ExprStorePoint m a -> ExprStorePoint m a
+randomizeNonStoredRefs gen val =
+    evalState ((traverse . _1) f val) gen
+    where
+        f Nothing = state random <&> IRef.unsafeFromUUID <&> ValI <&> Just
+        f (Just x) = Just x & pure
+
 writeExprMStored ::
     Monad m =>
     ValI m ->
     ExprStorePoint m a ->
     T m (Val (ValI m, a))
 writeExprMStored exprIRef exprMStorePoint =
-    do
-        key <- Transaction.newKey
-        exprMStorePoint
-            & randomizeNonStoredParamIds (genFromHashable key)
-            & Val.payload . _1 .~ Just exprIRef
-            & ExprIRef.writeValWithStoredSubexpressions
+    exprMStorePoint
+    & randomizeNonStoredParamIds genParamIds
+    & randomizeNonStoredRefs genRefs
+    & ExprIRef.writeValWithStoredSubexpressions
+    where
+        (genParamIds, genRefs) =
+            genFromHashable
+            ( exprMStorePoint
+                <&> fst
+                <&> Lens._Just %~ EntityId.ofValI
+            , EntityId.ofValI exprIRef
+            )
+            & Random.split

@@ -117,20 +117,14 @@ applyResultLayout fGui =
         , Responsive._layoutContext = Responsive.LayoutClear
         }
 
-afterPick ::
-    Monad m =>
-    Property (T m) Text -> Sugar.EntityId ->
-    Widget.Id -> Maybe Widget.Id ->
-    T m GuiState.Update
-afterPick stateProp holeId resultId mFirstHoleInside =
+afterPick :: Monad m => Property (T m) Text -> Widget.Id -> Widget.Id -> T m GuiState.Update
+afterPick stateProp resultId idWithinResultWidget =
     mempty
-    { GuiState._uCursor = Monoid.Last (Just cursorId)
+    { GuiState._uCursor = Monoid.Last (Just idWithinResultWidget)
     , GuiState._uAnimIdMapping = Monoid.Endo obliterateOtherResults
     }
     <$ Property.set stateProp mempty
     where
-        cursorId = mFirstHoleInside & fromMaybe myHoleId
-        myHoleId = WidgetIds.fromEntityId holeId
         obliterateOtherResults animId =
             animId ^? resultSuffix . suffixed (Widget.toAnimId resultId)
             & fromMaybe animId
@@ -240,7 +234,7 @@ makeHoleResultWidget pl stateProp resultId holeResult =
         pickBefore action =
             do
                 holeResult ^. Sugar.holeResultPick
-                pickedResult <- afterPick stateProp (pl ^. Sugar.plEntityId) resultId mFirstHoleInside
+                pickedResult <- afterPick stateProp resultId idWithinResultWidget
                 action <&> mappend pickedResult
         simplePickRes keys =
             Widget.keysEventMap keys (E.Doc ["Edit", "Result", "Pick"]) (return ())
