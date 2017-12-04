@@ -17,6 +17,11 @@ import           Control.Monad.ListT (ListT)
 import           Control.Monad.Trans.Either (EitherT(..))
 import           Control.Monad.Trans.State (StateT(..), mapStateT, evalState, state)
 import qualified Control.Monad.Trans.State as State
+import qualified Crypto.Hash.SHA256 as SHA256
+import qualified Data.Binary as Binary
+import           Data.Bits (xor)
+import qualified Data.ByteString as SBS
+import           Data.ByteString.Utils (lazifyBS, strictifyBS)
 import           Data.CurAndPrev (CurAndPrev(..))
 import           Data.Functor.Identity (Identity(..))
 import qualified Data.List.Class as ListClass
@@ -27,6 +32,7 @@ import qualified Data.Store.Property as Property
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
 import           Data.Text.Encoding (encodeUtf8)
+import qualified Data.UUID as UUID
 import           Data.UUID.Types (UUID)
 import qualified Lamdu.Builtins.Anchors as Builtins
 import qualified Lamdu.Builtins.PrimVal as PrimVal
@@ -712,6 +718,9 @@ mkHoleResults mInjectedArg sugarContext exprPl stored base =
             , mkHoleResult newSugarContext updateDeps stored val
             )
 
+xorBS :: ByteString -> ByteString -> ByteString
+xorBS x y = SBS.pack $ SBS.zipWith xor x y
+
 randomizeNonStoredParamIds ::
     Random.StdGen -> ExprStorePoint m a -> ExprStorePoint m a
 randomizeNonStoredParamIds gen =
@@ -721,11 +730,17 @@ randomizeNonStoredParamIds gen =
         f n _        prevEntityId (Just _, _) = (prevEntityId, n)
         f _ prevFunc prevEntityId pl@(Nothing, _) = prevFunc prevEntityId pl
 
-randomizeNonStoredRefs :: Random.StdGen -> ExprStorePoint m a -> ExprStorePoint m a
-randomizeNonStoredRefs gen val =
+randomizeNonStoredRefs :: ByteString -> Random.StdGen -> ExprStorePoint m a -> ExprStorePoint m a
+randomizeNonStoredRefs uniqueIdent gen val =
     evalState ((traverse . _1) f val) gen
     where
-        f Nothing = state random <&> IRef.unsafeFromUUID <&> ValI <&> Just
+        f Nothing =
+            state random
+            <&> UUID.toByteString <&> strictifyBS
+            <&> xorBS uniqueIdent
+            <&> lazifyBS <&> UUID.fromByteString
+            <&> fromMaybe (error "cant parse UUID")
+            <&> IRef.unsafeFromUUID <&> ValI <&> Just
         f (Just x) = Just x & pure
 
 writeExprMStored ::
@@ -736,14 +751,13 @@ writeExprMStored ::
 writeExprMStored exprIRef exprMStorePoint =
     exprMStorePoint
     & randomizeNonStoredParamIds genParamIds
-    & randomizeNonStoredRefs genRefs
+    & randomizeNonStoredRefs uniqueIdent genRefs
     & ExprIRef.writeValWithStoredSubexpressions
     where
-        (genParamIds, genRefs) =
-            genFromHashable
-            ( exprMStorePoint
-                <&> fst
-                <&> Lens._Just %~ EntityId.ofValI
-            , EntityId.ofValI exprIRef
+        uniqueIdent =
+            Binary.encode
+            ( exprMStorePoint <&> fst
+            , exprIRef
             )
-            & Random.split
+            & SHA256.hashlazy
+        (genParamIds, genRefs) = genFromHashable uniqueIdent & Random.split
