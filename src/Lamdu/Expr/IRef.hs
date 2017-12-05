@@ -111,7 +111,6 @@ addProperties setIRef (Val (iref, a) body) =
     where
         f index =
             addProperties $ \newIRef ->
-            body
-            <&> (^. Val.payload . _1) -- convert to body of IRefs
-            & Lens.element index .~ newIRef
-            & writeValBody iref
+            readValBody iref
+            <&> Lens.element index .~ newIRef
+            >>= writeValBody iref
