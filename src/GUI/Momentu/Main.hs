@@ -235,10 +235,7 @@ mainLoopWidget win mkWidgetUnmemod options =
                     anyUpdate <- tickHandler
                     when anyUpdate newWidget
                     return MainAnim.EventResult
-                        { MainAnim.erAnimIdMapping =
-                            -- TODO: nicer way to communicate whether widget
-                            -- requires updating?
-                            if anyUpdate then Just mempty else Nothing
+                        { MainAnim.erUpdate = anyUpdate ^. Lens._Unwrapped
                         , MainAnim.erExecuteInMainThread = return ()
                         }
             , MainAnim.eventHandler = \event ->
@@ -256,7 +253,7 @@ mainLoopWidget win mkWidgetUnmemod options =
                                 writeIORef virtCursorRef (res ^. State.uVirtualCursor . Lens._Wrapped)
                                 newWidget
                     return MainAnim.EventResult
-                        { MainAnim.erAnimIdMapping = mRes <&> (^. State.uAnimIdMapping)
+                        { MainAnim.erUpdate = Lens.has Lens._Just mRes ^. Lens._Unwrapped
                         , MainAnim.erExecuteInMainThread = runInMainThread
                         }
             , MainAnim.makeFrame = renderWidget size <&> (^. _1)

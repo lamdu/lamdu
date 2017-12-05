@@ -115,7 +115,6 @@ afterPick :: Widget.Id -> GuiState.Update
 afterPick idWithinResultWidget =
     mempty
     { GuiState._uCursor = Monoid.Last (Just idWithinResultWidget)
-    , GuiState._uAnimIdMapping = mempty
     }
 
 -- | Remove unwanted event handlers from a hole result

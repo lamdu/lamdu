@@ -14,7 +14,6 @@ import qualified Control.Monad.STM as STM
 import           Data.IORef (IORef, newIORef, readIORef, writeIORef)
 import qualified Data.Monoid as Monoid
 import           Data.Time.Clock (NominalDiffTime, UTCTime, getCurrentTime, addUTCTime, diffUTCTime)
-import           GUI.Momentu.Animation (AnimId)
 import qualified GUI.Momentu.Animation as Anim
 import qualified GUI.Momentu.Animation.Engine as Anim
 import qualified GUI.Momentu.Main.Image as MainImage
@@ -69,7 +68,7 @@ data AnimConfig = AnimConfig
     }
 
 data EventResult = EventResult
-    { erAnimIdMapping :: Maybe (Monoid.Endo AnimId)
+    { erUpdate :: Monoid.Any
     , erExecuteInMainThread :: IO ()
     }
 
@@ -128,7 +127,7 @@ eventHandlerThread tvars animHandlers =
             else return mempty
         let result = mconcat (tickResult : eventResults)
         mNewFrame <-
-            if ed ^. edRefreshRequested || Lens.has Lens._Just (erAnimIdMapping result)
+            if ed ^. edRefreshRequested || erUpdate result ^. Lens._Wrapped
             then
                 makeFrame handlers
                 -- Force destFrame so that we don't get unknown computations
@@ -185,10 +184,6 @@ animThread getFpsFont tvars animStateRef getAnimationConfig win =
                     Just (userEventTime, newDestFrame) ->
                         animState
                         & asCurSpeedHalfLife .~ timeRemaining / realToFrac (logBase 0.5 ratio)
-                        & asState %~
-                            case erAnimIdMapping (taEventResult fromEvents) of
-                            Nothing -> id
-                            Just mapping -> Anim.stateMapIdentities (Monoid.appEndo mapping)
                         & advanceAnimation elapsed (Just newDestFrame)
                         where
                             -- Retroactively pretend animation started a little bit

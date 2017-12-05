@@ -2,7 +2,7 @@
 
 module GUI.Momentu.Animation.Engine
     ( initialState, nextState, currentFrame
-    , State, stateMapIdentities
+    , State
     ) where
 
 import           Control.Applicative (liftA2)
@@ -13,7 +13,7 @@ import           Data.Maybe (mapMaybe)
 import qualified Data.Set as Set
 import qualified Data.Vector.Vector2 as Vector2
 import qualified Graphics.DrawingCombinators as Draw
-import           GUI.Momentu.Animation (Image, iRect, iAnimId, iUnitImage, Frame(..), frameImages, images, R, AnimId)
+import           GUI.Momentu.Animation (Image, iRect, iAnimId, iUnitImage, Frame(..), frameImages, images, R)
 import           GUI.Momentu.Rect (Rect(Rect))
 import qualified GUI.Momentu.Rect as Rect
 
@@ -114,10 +114,6 @@ setNewDest destFrame state =
         duplicateDestIds =
             List.group sortedDestIds <&> tail & concat & Set.fromAscList
         destIds = Set.fromAscList sortedDestIds
-
-stateMapIdentities :: (AnimId -> AnimId) -> State -> State
-stateMapIdentities mapping =
-    stateInterpolations . traverse . interpolationImage . iAnimId %~ mapping
 
 nextState :: R -> Maybe Frame -> State -> Maybe State
 nextState movement Nothing state

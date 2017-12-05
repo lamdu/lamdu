@@ -61,7 +61,6 @@ data Annotation = Annotation
 
 data VarToTags = VarToTags
     { vttReplacedVar :: V.Var
-    , vttReplacedVarEntityId :: EntityId
       -- Since this is just a result of a transaction, no name is
       -- actually needed in the Tags below
     , vttReplacedByTag :: TagInfo
@@ -76,7 +75,6 @@ data ParamAddResult
 data TagsToVar = TagsToVar
     { ttvReplacedTag :: TagInfo
     , ttvReplacedByVar :: V.Var
-    , ttvReplacedByVarEntityId :: EntityId
     }
 
 data ParamDelResult

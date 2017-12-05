@@ -257,7 +257,6 @@ delFieldParamAndFixCalls binderKind tags fp storedLam =
                 , ParamDelResultTagsToVar TagsToVar
                     { ttvReplacedTag = tagForLambdaTagParam paramVar x
                     , ttvReplacedByVar = paramVar
-                    , ttvReplacedByVarEntityId = EntityId.ofLambdaParam paramVar
                     }
                 )
             xs -> (Just xs, Nothing, ParamDelResultDelTag)
@@ -466,7 +465,6 @@ convertToRecordParams mkNewArg binderKind storedLam newParamPosition =
             varToTags =
                 VarToTags
                 { vttReplacedVar = paramVar
-                , vttReplacedVarEntityId = EntityId.ofLambdaParam paramVar
                 , vttReplacedByTag = tagForLambdaTagParam paramVar tagForVar
                 , vttNewTag = tagForLambdaTagParam paramVar tagForNewVar
                 }

@@ -6,9 +6,6 @@ module GUI.Momentu.Widget
     -- Types:
     , R, Size
 
-    -- Event Result:
-    , applyIdMapping
-
     -- Events:
     , EventMap
     , keysEventMap
@@ -43,11 +40,8 @@ module GUI.Momentu.Widget
     ) where
 
 import qualified Control.Lens as Lens
-import qualified Data.Map as Map
-import qualified Data.Monoid as Monoid
 import           Data.Vector.Vector2 (Vector2(..))
 import           GUI.Momentu.Animation (AnimId, R, Size)
-import qualified GUI.Momentu.Animation as Anim
 import           GUI.Momentu.Direction (Direction)
 import qualified GUI.Momentu.Direction as Direction
 import qualified GUI.Momentu.Element as Element
@@ -107,18 +101,6 @@ enterFuncAddVirtualCursor destRect =
             Direction.Outside     -> Nothing
             Direction.Point p     -> Rect p 0 & Just
             <&> VirtualCursor
-
-applyIdMapping :: Map Id Id -> Update -> Update
-applyIdMapping widgetIdMap eventResult =
-    eventResult
-    & State.uAnimIdMapping <>~ Monoid.Endo (Anim.mappingFromPrefixMap animIdMap)
-    & State.uCursor . Lens._Wrapped' . Lens._Just %~ mapCursor
-    where
-        animIdMap =
-            widgetIdMap
-            & Map.mapKeys toAnimId & Map.map toAnimId
-        mapCursor (Id oldCursor) =
-            Id $ Anim.mappingFromPrefixMap animIdMap oldCursor
 
 keysEventMap ::
     Functor f => [MetaKey] -> EventMap.Doc ->

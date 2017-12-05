@@ -3,7 +3,7 @@
 module GUI.Momentu.State
     ( VirtualCursor(..), virtualCursor
     , GUIState(..), sCursor, sWidgetStates
-    , Update(..), uCursor, uWidgetStateUpdates, uVirtualCursor, uAnimIdMapping
+    , Update(..), uCursor, uWidgetStateUpdates, uVirtualCursor
     , updateCursor, guiStateUpdate
     , HasCursor(..), subId, isSubCursor, assignCursor, assignCursorPrefix
     , HasWidgetState(..), readWidgetState, updateWidgetState
@@ -40,7 +40,6 @@ data Update = Update
     { _uCursor :: Monoid.Last Id
     , _uWidgetStateUpdates :: Map Id ByteString
     , _uVirtualCursor :: Monoid.Last VirtualCursor
-    , _uAnimIdMapping :: Monoid.Endo AnimId
     } deriving Generic
 Lens.makeLenses ''Update
 
@@ -54,7 +53,6 @@ updateCursor c =
     { _uCursor = Just c & Monoid.Last
     , _uWidgetStateUpdates = mempty
     , _uVirtualCursor = mempty
-    , _uAnimIdMapping = mempty
     }
 
 guiStateUpdate :: Update -> GUIState -> GUIState

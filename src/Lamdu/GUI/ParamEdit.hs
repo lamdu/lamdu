@@ -6,7 +6,6 @@ module Lamdu.GUI.ParamEdit
 
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
-import qualified Data.Map as Map
 import           Data.Store.Transaction (Transaction)
 import           GUI.Momentu.Align (WithTextPos)
 import qualified GUI.Momentu.Element as Element
@@ -30,23 +29,12 @@ import           Lamdu.Prelude
 
 type T = Transaction
 
-singletonIdMap ::
-    Sugar.EntityId -> Sugar.EntityId ->
-    Map.Map Widget.Id Widget.Id
-singletonIdMap key val =
-    Map.singleton (WidgetIds.fromEntityId key) (WidgetIds.fromEntityId val)
-
 chooseAddResultEntityId :: Sugar.ParamAddResult -> GuiState.Update
 chooseAddResultEntityId (Sugar.ParamAddResultVarToTags Sugar.VarToTags {..}) =
     vttNewTag ^. Sugar.tagInstance
     & WidgetIds.fromEntityId
     & WidgetIds.tagHoleId
     & GuiState.updateCursor
-    & Widget.applyIdMapping widgetIdMap
-    where
-        widgetIdMap =
-            singletonIdMap vttReplacedVarEntityId
-            (vttReplacedByTag ^. Sugar.tagInstance)
 chooseAddResultEntityId (Sugar.ParamAddResultNewVar entityId _) =
     WidgetIds.fromEntityId entityId & WidgetIds.nameEditOf & GuiState.updateCursor
 chooseAddResultEntityId (Sugar.ParamAddResultNewTag newParamTag) =
@@ -85,16 +73,8 @@ eventParamDelEventMap ::
     EventMap (m GuiState.Update)
 eventParamDelEventMap fpDel keys docSuffix dstPosId =
     do
-        res <- fpDel
-        let widgetIdMap =
-                case res of
-                Sugar.ParamDelResultTagsToVar Sugar.TagsToVar {..} ->
-                    singletonIdMap (ttvReplacedTag ^. Sugar.tagInstance)
-                    ttvReplacedByVarEntityId
-                _ -> Map.empty
-        GuiState.updateCursor dstPosId
-            & Widget.applyIdMapping widgetIdMap
-            & return
+        _ <- fpDel
+        GuiState.updateCursor dstPosId & return
     & E.keyPresses (keys <&> toModKey)
         (E.Doc ["Edit", "Delete parameter" <> docSuffix])
 
