@@ -94,7 +94,7 @@ compile val =
                 <&> (^. Def.defType)
             }
 
-formatResult :: EV.Val a -> SBS.ByteString
+formatResult :: EV.Val a -> ByteString
 formatResult (EV.Val _ b) =
     case b of
     EV.RPrimVal prim ->

@@ -106,14 +106,14 @@ withProcess createProc =
               _ <- [mStdout, mStderr] & Lens.traverse . Lens.traverse %%~ hClose
               Proc.terminateProcess handle
 
-parseHexBs :: Text -> SBS.ByteString
+parseHexBs :: Text -> ByteString
 parseHexBs =
     SBS.pack . map (fst . sHead . readHex . Text.unpack) . Text.chunksOf 2
     where
         sHead [] = error "parseHexBs got bad input"
         sHead (x:_) = x
 
-parseHexNameBs :: Text -> SBS.ByteString
+parseHexNameBs :: Text -> ByteString
 parseHexNameBs t =
     case Text.uncons t of
     Just ('_', n) -> parseHexBs n

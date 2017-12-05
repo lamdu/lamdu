@@ -1,3 +1,5 @@
+{-# LANGUAGE NoImplicitPrelude #-}
+
 module Data.Store.Db
     ( Db, DB.withDB, DB.defaultOptions, DB.Options(..)
     , lookup
@@ -5,15 +7,15 @@ module Data.Store.Db
     , store
     ) where
 
-import           Data.ByteString (ByteString)
 import           Data.ByteString.Utils (strictifyBS)
 import           Data.Store.Transaction (Store(..))
 import           Data.UUID.Types (UUID)
 import qualified Data.UUID.Types as UUID
 import           Database.LevelDB.Base (DB)
 import qualified Database.LevelDB.Base as DB
-import           Prelude hiding (lookup)
 import           System.Random (randomIO)
+
+import           Lamdu.Prelude hiding (lookup)
 
 -- TODO: Remove this
 type Db = DB

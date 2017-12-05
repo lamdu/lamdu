@@ -4,14 +4,13 @@ module GUI.Momentu.Animation.Id
     , mappingFromPrefixMap
     ) where
 
-import qualified Data.ByteString as SBS
 import qualified Data.ByteString.Char8 as SBS8
 import           Data.List.Lens (prefixed)
 import qualified Data.Map as Map
 
 import           Lamdu.Prelude
 
-type AnimId = [SBS.ByteString]
+type AnimId = [ByteString]
 
 augmentId :: Show a => AnimId -> a -> AnimId
 augmentId animId = (animId ++) . (:[]) . SBS8.pack . show

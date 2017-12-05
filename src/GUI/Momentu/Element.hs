@@ -11,7 +11,6 @@ module GUI.Momentu.Element
 
 import           Control.Applicative (liftA2)
 import qualified Control.Lens as Lens
-import qualified Data.ByteString as SBS
 import           Data.Vector.Vector2 (Vector2(..))
 import           GUI.Momentu.Animation (AnimId, R, Size)
 import qualified GUI.Momentu.Animation as Anim
@@ -73,7 +72,7 @@ height :: SizedElement a => Lens' a R
 height = size . _2
 
 class HasAnimIdPrefix env where animIdPrefix :: Lens' env AnimId
-instance HasAnimIdPrefix [SBS.ByteString] where animIdPrefix = id
+instance HasAnimIdPrefix [ByteString] where animIdPrefix = id
 
 subAnimId :: (MonadReader env m, HasAnimIdPrefix env) => AnimId -> m AnimId
 subAnimId suffix = Lens.view animIdPrefix <&> (++ suffix)

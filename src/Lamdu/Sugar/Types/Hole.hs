@@ -17,7 +17,6 @@ module Lamdu.Sugar.Types.Hole
 
 import qualified Control.Lens as Lens
 import           Control.Monad.ListT (ListT)
-import qualified Data.ByteString as SBS
 import           Data.Functor.Identity (Identity(..))
 import           Data.UUID.Types (UUID)
 import           Lamdu.Calc.Val.Annotated (Val)
@@ -44,7 +43,7 @@ data HoleOption m resultExpr = HoleOption
 
 data Literal f
     = LiteralNum (f Double)
-    | LiteralBytes (f SBS.ByteString)
+    | LiteralBytes (f ByteString)
     | LiteralText (f Text)
 
 data HoleActions m resultExpr = HoleActions

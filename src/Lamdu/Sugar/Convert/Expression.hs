@@ -3,7 +3,6 @@ module Lamdu.Sugar.Convert.Expression
     ( convert
     ) where
 
-import qualified Data.ByteString as SBS
 import qualified Data.Set as Set
 import           Data.Store.Property (Property(..))
 import qualified Data.Store.Property as Property
@@ -51,7 +50,7 @@ convertLiteralFloat ::
 convertLiteralFloat = convertLiteralCommon LiteralNum PrimVal.Float
 
 convertLiteralBytes ::
-    Monad m => SBS.ByteString -> Input.Payload m a -> ConvertM m (ExpressionU m a)
+    Monad m => ByteString -> Input.Payload m a -> ConvertM m (ExpressionU m a)
 convertLiteralBytes = convertLiteralCommon LiteralBytes PrimVal.Bytes
 
 addHiddenEntities :: Monoid a => Val (Input.Payload m a) -> ExpressionU m a -> ExpressionU m a
