@@ -62,7 +62,7 @@ makeCommon disamb tag mDelInject nearestHoles colonLabel valEdits =
                     & Widget.keysEventMapMovesCursor (Config.delKeys config) (E.Doc ["Edit", "Delete"])
         (Options.boxSpaced ?? disamb)
             <*>
-            ( TagEdit.makeCaseTag TagEdit.WithoutTagHoles nearestHoles tag
+            ( TagEdit.makeCaseTag nearestHoles tag
                 <&> (/|/ colonLabel)
                 <&> Lens.mapped %~ E.weakerEvents delEventMap
                 <&> Responsive.fromWithTextPos <&> (: valEdits)

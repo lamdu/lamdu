@@ -272,12 +272,12 @@ makeCaseTag ::
     , TextEdit.HasStyle env, Hover.HasStyle env, HasTheme env, Menu.HasStyle env
     , HasStdSpacing env, Element.HasAnimIdPrefix env
     ) =>
-    Mode -> NearestHoles -> Sugar.Tag (Name (T m)) (T m) ->
+    NearestHoles -> Sugar.Tag (Name (T m)) (T m) ->
     f (WithTextPos (Widget (T m GuiState.Update)))
-makeCaseTag mode nearestHoles tag =
+makeCaseTag nearestHoles tag =
     do
         nameTheme <- Lens.view Theme.theme <&> Theme.name
-        makeTagEdit mode (Theme.caseTagColor nameTheme) nearestHoles tag
+        makeTagEdit WithTagHoles (Theme.caseTagColor nameTheme) nearestHoles tag
 
 makeParamTag ::
     ( MonadReader env f, HasTheme env, HasConfig env, Hover.HasStyle env, Menu.HasStyle env
