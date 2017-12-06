@@ -131,7 +131,7 @@ makeFieldRow (Sugar.CompositeItem delete tag fieldExpr) =
         config <- Lens.view Config.config
         let itemEventMap = recordDelEventMap config delete
         tagLabel <-
-            TagEdit.makeRecordTag TagEdit.WithTagHoles (ExprGuiT.nextHolesBefore fieldExpr) tag
+            TagEdit.makeRecordTag (ExprGuiT.nextHolesBefore fieldExpr) tag
             <&> Align.tValue %~ E.weakerEvents itemEventMap
         hspace <- Spacer.stdHSpace
         fieldGui <- ExprGuiM.makeSubexpression fieldExpr

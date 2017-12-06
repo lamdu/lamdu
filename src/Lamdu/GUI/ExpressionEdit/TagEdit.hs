@@ -1,6 +1,6 @@
 {-# LANGUAGE NoImplicitPrelude, OverloadedStrings #-}
 module Lamdu.GUI.ExpressionEdit.TagEdit
-    ( makeRecordTag, makeCaseTag, Mode(..)
+    ( makeRecordTag, makeCaseTag
     , makeParamTag
     , makeArgTag
     ) where
@@ -201,8 +201,6 @@ makeTagHoleEdit nearestHoles tag =
         updateState (newSearchTerm, update) =
             update <> GuiState.updateWidgetState holeId newSearchTerm
 
-data Mode = WithTagHoles | WithoutTagHoles
-
 makeTagEdit ::
     ( Monad m, MonadReader env f, MonadTransaction m f, HasConfig env
     , GuiState.HasCursor env, GuiState.HasWidgetState env
@@ -210,9 +208,9 @@ makeTagEdit ::
     , TextEdit.HasStyle env, Hover.HasStyle env, Menu.HasStyle env
     , HasStdSpacing env
     ) =>
-    Mode -> Draw.Color -> NearestHoles -> Sugar.Tag (Name (T m)) (T m) ->
+    Draw.Color -> NearestHoles -> Sugar.Tag (Name (T m)) (T m) ->
     f (WithTextPos (Widget (T m GuiState.Update)))
-makeTagEdit mode tagColor nearestHoles tag =
+makeTagEdit tagColor nearestHoles tag =
     do
         jumpHolesEventMap <- ExprEventMap.jumpHolesEventMap nearestHoles
         isRenaming <- GuiState.isSubCursor ?? tagRenameId myId
@@ -222,15 +220,12 @@ makeTagEdit mode tagColor nearestHoles tag =
                 Widget.keysEventMapMovesCursor (Config.jumpToDefinitionKeys config)
                 (E.Doc ["Edit", "Tag", "Open"]) (pure (tagRenameId myId))
                 <>
-                case mode of
-                WithTagHoles ->
-                    Widget.keysEventMapMovesCursor (Config.delKeys config)
-                    (E.Doc ["Edit", "Tag", "Choose"])
-                    (tag ^. Sugar.tagActions . Sugar.taReplaceWithNew
-                        <&> (^. Sugar.tagInstance)
-                        <&> WidgetIds.fromEntityId
-                        <&> WidgetIds.tagHoleId)
-                WithoutTagHoles -> mempty
+                Widget.keysEventMapMovesCursor (Config.delKeys config)
+                (E.Doc ["Edit", "Tag", "Choose"])
+                (tag ^. Sugar.tagActions . Sugar.taReplaceWithNew
+                    <&> (^. Sugar.tagInstance)
+                    <&> WidgetIds.fromEntityId
+                    <&> WidgetIds.tagHoleId)
         nameView <-
             (Widget.makeFocusableView ?? viewId <&> fmap) <*>
             NameEdit.makeView (tag ^. Sugar.tagName . Name.form) (Widget.toAnimId myId)
@@ -259,12 +254,12 @@ makeRecordTag ::
     , Element.HasAnimIdPrefix env, HasStdSpacing env
     , TextEdit.HasStyle env, Hover.HasStyle env, HasTheme env, Menu.HasStyle env
     ) =>
-    Mode -> NearestHoles -> Sugar.Tag (Name (T m)) (T m) ->
+    NearestHoles -> Sugar.Tag (Name (T m)) (T m) ->
     f (WithTextPos (Widget (T m GuiState.Update)))
-makeRecordTag mode nearestHoles tag =
+makeRecordTag nearestHoles tag =
     do
         nameTheme <- Lens.view Theme.theme <&> Theme.name
-        makeTagEdit mode (Theme.recordTagColor nameTheme) nearestHoles tag
+        makeTagEdit (Theme.recordTagColor nameTheme) nearestHoles tag
 
 makeCaseTag ::
     ( Monad m, MonadReader env f, MonadTransaction m f, HasTheme env
@@ -277,7 +272,7 @@ makeCaseTag ::
 makeCaseTag nearestHoles tag =
     do
         nameTheme <- Lens.view Theme.theme <&> Theme.name
-        makeTagEdit WithTagHoles (Theme.caseTagColor nameTheme) nearestHoles tag
+        makeTagEdit (Theme.caseTagColor nameTheme) nearestHoles tag
 
 makeParamTag ::
     ( MonadReader env f, HasTheme env, HasConfig env, Hover.HasStyle env, Menu.HasStyle env
@@ -289,7 +284,7 @@ makeParamTag ::
 makeParamTag tag =
     do
         paramColor <- Lens.view Theme.theme <&> Theme.name <&> Theme.parameterColor
-        makeTagEdit WithTagHoles paramColor NearestHoles.none tag
+        makeTagEdit paramColor NearestHoles.none tag
 
 -- | Unfocusable tag view (e.g: in apply args)
 makeArgTag ::
