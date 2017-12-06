@@ -51,7 +51,7 @@ bodyShape = \case
     Sugar.BodyGetField gf ->
         [".", "field", "." <> ofName (gf ^. Sugar.gfTag . Sugar.tagName . Name.form)]
     Sugar.BodyCase cas ->
-        ["case"] ++
+        ["case", "of"] ++
         case cas of
             Sugar.Case Sugar.LambdaCase (Sugar.Composite [] Sugar.ClosedComposite{} _) -> ["absurd"]
             _ -> []
