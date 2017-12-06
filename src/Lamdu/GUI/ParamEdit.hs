@@ -91,9 +91,9 @@ data Info m = Info
 make ::
     Monad m =>
     ExpressionGui.EvalAnnotationOptions ->
-    ExprGuiT.ShowAnnotation -> Widget.Id -> Widget.Id ->
+    Widget.Id -> Widget.Id ->
     Sugar.FuncParam (Info m) -> ExprGuiM m (ExpressionGui m)
-make annotationOpts showAnnotation prevId nextId param =
+make annotationOpts prevId nextId param =
     do
         config <- Lens.view Config.config
         let paramEventMap = mconcat
@@ -107,7 +107,7 @@ make annotationOpts showAnnotation prevId nextId param =
         let wideAnnotationBehavior =
                 ExpressionGui.wideAnnotationBehaviorFromSelected fpIsSelected
         ExpressionGui.maybeAddAnnotationWith annotationOpts
-            wideAnnotationBehavior showAnnotation
+            wideAnnotationBehavior ExprGuiT.showAnnotationWhenVerbose
             (param ^. Sugar.fpAnnotation)
             ?? Responsive.fromWithTextPos (iNameEdit info)
             <&> E.weakerEvents paramEventMap

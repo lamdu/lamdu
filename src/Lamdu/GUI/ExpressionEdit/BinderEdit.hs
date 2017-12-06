@@ -512,14 +512,14 @@ makeParamsEdit annotationOpts nearestHoles delVarBackwardsId lhsId rhsId params 
                     nullParamGui <-
                         (Widget.makeFocusableView ?? nullParamId <&> (Align.tValue %~))
                         <*> Styled.grammarLabel "|"
-                    fromParamList ExprGuiT.showAnnotationWhenVerbose delVarBackwardsId rhsId
+                    fromParamList delVarBackwardsId rhsId
                         [p & Sugar.fpInfo %~ nullParamEditInfo lhsId nullParamGui]
                 where
                     nullParamId = Widget.joinId lhsId ["param"]
             Sugar.VarParam p ->
                 p & Sugar.fpInfo %%~ onFpInfo
                 <&> (:[])
-                >>= fromParamList ExprGuiT.alwaysShowAnnotations delVarBackwardsId rhsId
+                >>= fromParamList delVarBackwardsId rhsId
                 where
                     onFpInfo x =
                         NameEdit.makeAtBinder (x ^. Sugar.vpiName) paramColor widgetId
@@ -529,7 +529,7 @@ makeParamsEdit annotationOpts nearestHoles delVarBackwardsId lhsId rhsId params 
             Sugar.FieldParams ps ->
                 ps
                 & traverse . Sugar.fpInfo %%~ onFpInfo
-                >>= fromParamList ExprGuiT.alwaysShowAnnotations lhsId rhsId
+                >>= fromParamList lhsId rhsId
                 where
                     onFpInfo x =
                         TagEdit.makeParamTag (x ^. Sugar.fpiTag)
@@ -538,11 +538,11 @@ makeParamsEdit annotationOpts nearestHoles delVarBackwardsId lhsId rhsId params 
                             widgetId =
                                 x ^. Sugar.fpiTag . Sugar.tagInfo . Sugar.tagInstance & WidgetIds.fromEntityId
     where
-        fromParamList showParamAnnotation delDestFirst delDestLast paramList =
+        fromParamList delDestFirst delDestLast paramList =
             do
                 jumpHolesEventMap <- ExprEventMap.jumpHolesEventMap nearestHoles
                 let mkParam (prevId, nextId, param) =
-                        ParamEdit.make annotationOpts showParamAnnotation prevId nextId param
+                        ParamEdit.make annotationOpts prevId nextId param
                         <&> E.weakerEvents jumpHolesEventMap
                 withPrevNext delDestFirst delDestLast
                     (ParamEdit.iId . (^. Sugar.fpInfo)) paramList
