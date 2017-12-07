@@ -97,7 +97,6 @@ data EventMap a = EventMap
     { _emKeyMap :: KeyMap a
     , _emDropHandlers :: [DropHandler a]
     , _emCharGroupHandlers :: [CharGroupHandler a]
-    , _emCharGroupChars :: Set Char
     , _emAllCharsHandler :: [AllCharsHandler a]
     } deriving (Generic, Functor)
 
@@ -112,24 +111,22 @@ emDocs f e =
     <$> (Lens.reindexed prettyKeyEvent Lens.itraversed <. dhDoc) f (_emKeyMap e)
     <*> (Lens.traverse .> dropHandlerDocs) f (_emDropHandlers e)
     <*> (Lens.traverse .> cgDocs) f (_emCharGroupHandlers e)
-    <*> pure (_emCharGroupChars e)
     <*> (Lens.traverse .> chDocs) f (_emAllCharsHandler e)
 
 Lens.makeLenses ''EventMap
 
 instance Monoid (EventMap a) where
-    mempty = EventMap mempty mempty mempty mempty mempty
+    mempty = EventMap mempty mempty mempty mempty
     mappend = overrides
 
 overrides :: EventMap a -> EventMap a -> EventMap a
 overrides
-    x@(EventMap xMap xDropHandlers xCharGroups xChars xMAllChars)
-    (EventMap yMap yDropHandlers yCharGroups yChars yMAllChars) =
+    x@(EventMap xMap xDropHandlers xCharGroups xMAllChars)
+    (EventMap yMap yDropHandlers yCharGroups yMAllChars) =
     EventMap
     (xMap `mappend` filteredYMap)
     (xDropHandlers ++ yDropHandlers)
     (xCharGroups ++ filteredYCharGroups)
-    (xChars `mappend` yChars)
     (xMAllChars ++ yMAllChars)
     where
         filteredYMap = filterByKey (not . isKeyConflict) yMap
@@ -150,7 +147,7 @@ filterCharGroups f =
 
 isCharConflict :: EventMap a -> Char -> Bool
 isCharConflict x char =
-    char `Set.member` (x ^. emCharGroupChars) ||
+    char `Set.member` (x ^. emCharGroupHandlers . traverse . cgChars) ||
     (not . null . catMaybes)
     (($ char) . (^. chDocHandler . dhHandler) <$>
       x ^. emAllCharsHandler)
@@ -159,7 +156,6 @@ filterChars :: HasEventMap f => (Char -> Bool) -> f a -> f a
 filterChars p val =
     val
     & eventMap . emAllCharsHandler . Lens.traversed . chDocHandler . dhHandler %~ f
-    & eventMap . emCharGroupChars %~ Set.filter p
     & eventMap . emCharGroupHandlers %~ filterCharGroups p
     where
         f handler c = do
@@ -198,7 +194,7 @@ lookup getClipboard (Events.EventKey event) x
     | Just res <- lookupAllCharHandler allCharHandlers event = pure (Just res)
     | otherwise = pure Nothing
     where
-        EventMap dict _dropHandlers charGroups _ allCharHandlers = x
+        EventMap dict _dropHandlers charGroups allCharHandlers = x
 lookup _ _ _ = pure Nothing
 
 lookupKeyMap ::
@@ -237,7 +233,6 @@ charGroup iDoc oDoc chars handler =
     mempty
     { _emCharGroupHandlers =
             [CharGroupHandler iDoc s (DocHandler oDoc handler)]
-    , _emCharGroupChars = s
     }
     where
         s = Set.fromList chars
