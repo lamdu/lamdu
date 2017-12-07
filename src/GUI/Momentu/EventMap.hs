@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, TemplateHaskell, DeriveFunctor, DeriveGeneric, FlexibleContexts, LambdaCase, PatternGuards, OverloadedStrings #-}
+{-# LANGUAGE NoImplicitPrelude, TemplateHaskell, DeriveFunctor, DeriveGeneric, FlexibleContexts, LambdaCase, PatternGuards, OverloadedStrings, NoMonomorphismRestriction #-}
 module GUI.Momentu.EventMap
     ( KeyEvent(..)
     , InputDoc, Subtitle, Doc(..), docStrs
@@ -11,7 +11,7 @@ module GUI.Momentu.EventMap
     , pasteOnKey
     , dropEventMap
     , deleteKey, deleteKeys
-    , filterChars
+    , filterChars, filter, mapMaybe
     , HasEventMap(..), weakerEvents, strongerEvents
     ) where
 
@@ -26,8 +26,9 @@ import qualified GUI.Momentu.ModKey as ModKey
 import qualified Graphics.UI.GLFW as GLFW
 import qualified Graphics.UI.GLFW.Events as Events
 import qualified Graphics.UI.GLFW.Utils as GLFWUtils
+import qualified Lamdu.Prelude as Prelude
 
-import           Lamdu.Prelude hiding (lookup)
+import           Lamdu.Prelude hiding (lookup, filter)
 
 {-# ANN module ("HLint: ignore Use camelCase"::String) #-}
 
@@ -88,7 +89,7 @@ dropHandlerDocs f (DropHandler inputDoc docHandler) =
 
 data MaybeWantsClipboard a
     = Doesn'tWantClipboard a
-    | WantsClipboard (Clipboard -> a)
+    | WantsClipboard (Clipboard -> Maybe a)
     deriving (Functor)
 
 type KeyMap a = Map KeyEvent (DocHandler (MaybeWantsClipboard a))
@@ -144,7 +145,7 @@ filterCharGroups ::
 filterCharGroups f groups =
     groups
     <&> cgDocHandler . dhHandler %~ filterByKey f
-    & filter (not . Map.null . (^. cgDocHandler . dhHandler))
+    & Prelude.filter (not . Map.null . (^. cgDocHandler . dhHandler))
 
 isCharConflict :: EventMap a -> Char -> Bool
 isCharConflict x char =
@@ -153,6 +154,29 @@ isCharConflict x char =
     & Maybe.mapMaybe (($ char) . (^. chDocHandler . dhHandler))
     & not . null
     )
+
+-- mapMaybe is a safer primitive to implement than filter because we
+-- cannot forget to map any subcomponent.
+mapMaybe :: (a -> Maybe b) -> EventMap a -> EventMap b
+mapMaybe p (EventMap m dropHandlers charGroups mAllChars) =
+    EventMap
+    (m & Map.mapMaybe (dhHandler %%~ f))
+    (dropHandlers <&> dropDocHandler %~ t)
+    (charGroups <&> cgDocHandler . dhHandler %~ Map.mapMaybe p
+        & Prelude.filter (Lens.has (cgDocHandler . dhHandler . traverse)))
+    (mAllChars <&> chDocHandler %~ t)
+    where
+        t = dhHandler . Lens.mapped %~ (>>= p)
+        f (Doesn'tWantClipboard val) = p val <&> Doesn'tWantClipboard
+        f (WantsClipboard func) = (>>= p) . func & WantsClipboard & Just
+
+filter :: (a -> Bool) -> EventMap a -> EventMap a
+filter p =
+    mapMaybe f
+    where
+        f x
+            | p x = Just x
+            | otherwise = Nothing
 
 filterChars :: HasEventMap f => (Char -> Bool) -> f a -> f a
 filterChars p val =
@@ -207,7 +231,7 @@ lookupKeyMap getClipboard dict (Events.KeyEvent k _scanCode keyState modKeys _) 
       <&> (^. dhHandler)
       <&> \case
           Doesn'tWantClipboard x -> pure (Just x)
-          WantsClipboard f -> getClipboard <&> fmap f
+          WantsClipboard f -> getClipboard <&> (>>= f)
     where
         modKey = mkModKey modKeys k
 
@@ -277,7 +301,8 @@ dropEventMap iDoc oDoc handler =
 
 pasteOnKey :: ModKey -> Doc -> (Clipboard -> a) -> EventMap a
 pasteOnKey key doc handler =
-    keyEventMapH (KeyEvent ModKey.KeyState'Pressed key) doc (WantsClipboard handler)
+    WantsClipboard (Just . handler)
+    & keyEventMapH (KeyEvent ModKey.KeyState'Pressed key) doc
 
 class HasEventMap f where eventMap :: Lens.Setter' (f a) (EventMap a)
 instance HasEventMap EventMap where eventMap = id
