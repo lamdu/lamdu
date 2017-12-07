@@ -64,7 +64,8 @@ make openHoleId arg =
             & ExprGuiM.listenResultPicker
         unwrapEventMap <-
             makeUnwrapEventMap arg openHoleId
-            <&> withHolePicker resultPicker
+            <&> const
+            >>= withHolePicker resultPicker
         Momentu.addInnerFrame
             ?? frameColor ?? frameWidth
             ?? Momentu.pad (frameWidth & _2 .~ 0) argGui

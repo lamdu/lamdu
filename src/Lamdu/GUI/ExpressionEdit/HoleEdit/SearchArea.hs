@@ -68,7 +68,7 @@ makeStdWrapped hole pl widgetIds =
                 | otherwise =
                     Lens.mapped . Lens.mapped . GuiState.uCursor %~
                     mappend (Monoid.Last (Just (hidOpen widgetIds)))
-        exprEventMap <- ExprEventMap.make pl NoHolePick
+        exprEventMap <- ExprEventMap.make (pl & Sugar.plData . ExprGuiT.plMinOpPrec .~ 100) NoHolePick
         closedSearchTermGui <-
             fdWrap <*> SearchTerm.make widgetIds holeKind <&> Responsive.fromWithTextPos
             & ExpressionGui.stdWrap pl

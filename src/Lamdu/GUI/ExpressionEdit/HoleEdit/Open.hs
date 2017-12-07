@@ -134,32 +134,6 @@ removeUnwanted config =
             <&> MetaKey.toModKey
             <&> E.KeyEvent MetaKey.KeyState'Pressed
 
-fixNumWithDotEventMap ::
-    Monad m =>
-    Text -> Sugar.HoleResult (T m) (Sugar.Expression name (T m) ()) ->
-    Widget.EventMap (T m GuiState.Update)
-fixNumWithDotEventMap searchTerm res
-    | endsWithDot
-    , Lens.has literalNum conv
-    , Sugar.WrapAction wrap <- conv ^. hrWrapAction = mkAction wrap
-    | endsWithDot
-    , Lens.has (wrappedExpr . literalNum) conv
-    , Sugar.WrapperAlready t <- conv ^. hrWrapAction = mkAction (return t)
-    | otherwise = mempty
-    where
-        mkAction toHole =
-            E.charGroup Nothing doc Chars.operator $
-            \c ->
-            toHole <&> HoleState.setHoleStateAndJump ("." <> Text.singleton c)
-        endsWithDot = "." `Text.isSuffixOf` searchTerm
-        doc = E.Doc ["Edit", "Apply Operator"]
-        conv = res ^. Sugar.holeResultConverted
-        literalNum = Sugar.rBody . Sugar._BodyLiteral . Sugar._LiteralNum
-        wrappedExpr =
-            Sugar.rBody . Sugar._BodyHole .
-            Sugar.holeKind . Sugar._WrapperHole . Sugar.haExpr
-        hrWrapAction = Sugar.rPayload . Sugar.plActions . Sugar.wrap
-
 makeHoleResultWidget ::
     Monad m =>
     Sugar.Payload f ExprGuiT.Payload ->
@@ -186,15 +160,20 @@ makeHoleResultWidget pl resultId holeResult =
                 _ ->
                     simplePickRes (mappend Config.holePickResultKeys Config.holePickAndMoveToNextHoleKeys holeConfig)
                 <&> pickBefore
+        extraChars <-
+            if Lens.has literalNum holeResultConverted || Lens.has (wrappedExpr . literalNum) holeResultConverted
+            then
+                HoleState.readSearchTerm (HoleWidgetIds.make (pl ^. Sugar.plEntityId))
+                <&> \x -> if "." `Text.isSuffixOf` x then "." else ""
+            else return mempty
         isSelected <- GuiState.isSubCursor ?? resultId
-        when isSelected (HolePicker.setResultPicker (pickBefore (pure mempty)))
-        searchTerm <- HoleState.readSearchTerm (HoleWidgetIds.make (pl ^. Sugar.plEntityId))
+        when isSelected (HolePicker.setResultPicker extraChars (pickBefore (pure mempty)))
         holeResultConverted
             & postProcessSugar (pl ^. Sugar.plData . ExprGuiT.plMinOpPrec)
             & ExprGuiM.makeSubexpression
+            & Reader.local (HolePicker.searchStringRemainder .~ extraChars)
             <&> Widget.enterResultCursor .~ resultId
             <&> E.eventMap %~ removeUnwanted config
-            <&> E.eventMap %~ mappend (fixNumWithDotEventMap searchTerm holeResult)
             <&> E.eventMap . E.emDocs . E.docStrs . Lens._last %~ (<> " (On picked result)")
             <&> E.eventMap . Lens.mapped %~ pickBefore
             <&> E.eventMap %~ mappend pickEventMap
@@ -203,6 +182,8 @@ makeHoleResultWidget pl resultId holeResult =
             <&> fixFocalArea
             <&> (,) pickEventMap
     where
+        literalNum = Sugar.rBody . Sugar._BodyLiteral . Sugar._LiteralNum
+        wrappedExpr = Sugar.rBody . Sugar._BodyHole . Sugar.holeKind . Sugar._WrapperHole . Sugar.haExpr
         fixFocalArea =
             Align.tValue . Widget.sizedState <. Widget._StateFocused . Lens.mapped . Widget.fFocalAreas .@~
             (:[]) . Rect 0

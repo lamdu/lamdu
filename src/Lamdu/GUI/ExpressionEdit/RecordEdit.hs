@@ -111,17 +111,17 @@ makeRecord fields addFieldEventMap postProcess =
         case fields of
             [] -> Responsive.fromTextView closer & pure
             _ ->
-                Responsive.taggedList
-                <*> ( mapM makeFieldRow fields
-                    <&> Lens.reversed . Lens.ix 0 . Responsive.tagPost .~ (closer <&> Widget.fromView)
-                    )
-                >>= postProcess
-                & ExprGuiM.listenResultPicker
-                <&> addEvents
+                do
+                    (innerGui, resultPicker) <-
+                        Responsive.taggedList
+                        <*> ( mapM makeFieldRow fields
+                            <&> Lens.reversed . Lens.ix 0 . Responsive.tagPost .~ (closer <&> Widget.fromView)
+                            )
+                        >>= postProcess
+                        & ExprGuiM.listenResultPicker
+                    eventMap <- withHolePicker resultPicker (const addFieldEventMap)
+                    E.weakerEvents eventMap innerGui & pure
             <&> (opener /|/)
-    where
-        addEvents (innerGui, resultPicker) =
-            E.weakerEvents (withHolePicker resultPicker addFieldEventMap) innerGui
 
 makeFieldRow ::
     Monad m =>

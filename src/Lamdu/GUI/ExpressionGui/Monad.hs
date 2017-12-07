@@ -47,7 +47,7 @@ import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Ops as DataOps
 import           Lamdu.Eval.Results (ScopeId, topLevelScopeId)
 import           Lamdu.GUI.CodeEdit.Settings (Settings, HasSettings(..))
-import           Lamdu.GUI.ExpressionGui.HolePicker (HolePicker)
+import           Lamdu.GUI.ExpressionGui.HolePicker (HolePicker, HasSearchStringRemainder(..))
 import           Lamdu.GUI.ExpressionGui.Types (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
@@ -74,6 +74,8 @@ data Askable m = Askable
     , _aDepthLeft :: Int
     , _aMScopeId :: CurAndPrev (Maybe ScopeId)
     , _aStyle :: Style
+    , -- Used for expressions in hole results
+      _aSearchStringRemainder :: Text
     }
 newtype ExprGuiM m a = ExprGuiM
     { _exprGuiM :: RWST (Askable m) (HolePicker m) () (T m) a
@@ -98,6 +100,7 @@ instance Menu.HasStyle (Askable m) where style = aTheme . Menu.style
 instance Hover.HasStyle (Askable m) where style = aTheme . Hover.style
 instance HasStyle (Askable m) where style = aStyle
 instance HasSettings (Askable m) where settings = aSettings
+instance HasSearchStringRemainder (Askable m) where searchStringRemainder = aSearchStringRemainder
 
 withLocalUnderline ::
     (MonadReader env m, TextView.HasStyle env) => TextView.Underline -> m a -> m a
@@ -167,6 +170,7 @@ run makeSubexpr theCodeAnchors (ExprGuiM action) =
             , _aDepthLeft = Config.maxExprDepth theConfig
             , _aMScopeId = Just topLevelScopeId & pure
             , _aStyle = theStyle
+            , _aSearchStringRemainder = ""
             }
             ()
             <&> (\(x, (), _output) -> x)
