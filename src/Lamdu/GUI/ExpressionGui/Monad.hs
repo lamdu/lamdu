@@ -199,8 +199,6 @@ run makeSubexpr theCodeAnchors (ExprGuiM action) =
             <&> (\(x, (), _output) -> x)
             & transaction
 
--- Used vars:
-
 listenResultPicker :: Monad m => ExprGuiM m a -> ExprGuiM m (a, HolePicker m)
 listenResultPicker = exprGuiM %~ RWS.listen
 
