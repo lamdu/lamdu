@@ -248,7 +248,7 @@ mainLoopWidget win mkWidgetUnmemod options =
                         Just res ->
                             do
                                 readState stateStorage_
-                                    <&> State.guiStateUpdate res
+                                    <&> State.update res
                                     >>= writeState stateStorage_
                                 writeIORef virtCursorRef (res ^. State.uVirtualCursor . Lens._Wrapped)
                                 newWidget

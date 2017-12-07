@@ -4,7 +4,7 @@ module GUI.Momentu.State
     ( VirtualCursor(..), virtualCursor
     , GUIState(..), sCursor, sWidgetStates
     , Update(..), uCursor, uWidgetStateUpdates, uVirtualCursor
-    , updateCursor, guiStateUpdate
+    , updateCursor, update
     , HasCursor(..), subId, isSubCursor, assignCursor, assignCursorPrefix
     , HasWidgetState(..), readWidgetState, updateWidgetState
     ) where
@@ -55,8 +55,8 @@ updateCursor c =
     , _uVirtualCursor = mempty
     }
 
-guiStateUpdate :: Update -> GUIState -> GUIState
-guiStateUpdate u s =
+update :: Update -> GUIState -> GUIState
+update u s =
     case u ^. uCursor . Lens._Wrapped of
     Nothing -> s
     Just c ->
