@@ -17,9 +17,6 @@ import qualified Lamdu.Expr.IRef as ExprIRef
 
 import           Lamdu.Prelude
 
-uuidOfIdentifier :: Identifier -> UUID
-uuidOfIdentifier (Identifier bs) = UUIDUtils.fromSBS16 bs
-
 identifierOfUUID :: UUID -> Identifier
 identifierOfUUID = Identifier . UUIDUtils.toSBS16
 
@@ -27,10 +24,11 @@ varOfUUID :: UUID -> V.Var
 varOfUUID = V.Var . identifierOfUUID
 
 class    ToUUID a           where toUUID :: a -> UUID
-instance ToUUID V.Var       where toUUID = uuidOfIdentifier . V.vvName
-instance ToUUID T.Tag       where toUUID = uuidOfIdentifier . T.tagName
-instance ToUUID T.NominalId where toUUID = uuidOfIdentifier . T.nomId
-instance ToUUID T.ParamId   where toUUID = uuidOfIdentifier . T.typeParamId
+instance ToUUID Identifier  where toUUID (Identifier bs) = UUIDUtils.fromSBS16 bs
+instance ToUUID V.Var       where toUUID = toUUID . V.vvName
+instance ToUUID T.Tag       where toUUID = toUUID . T.tagName
+instance ToUUID T.NominalId where toUUID = toUUID . T.nomId
+instance ToUUID T.ParamId   where toUUID = toUUID . T.typeParamId
 instance ToUUID (IRef m a)  where toUUID = IRef.uuid
 instance ToUUID (ValI m)    where toUUID = toUUID . ExprIRef.unValI
 
