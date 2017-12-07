@@ -18,13 +18,14 @@ module GUI.Momentu.EventMap
 import qualified Control.Lens as Lens
 import           Data.Foldable (asum)
 import qualified Data.Map as Map
-import           Data.Maybe (catMaybes, listToMaybe)
+import           Data.Maybe (listToMaybe)
+import qualified Data.Maybe as Maybe
 import qualified Data.Set as Set
 import           GUI.Momentu.ModKey (ModKey(..))
 import qualified GUI.Momentu.ModKey as ModKey
 import qualified Graphics.UI.GLFW as GLFW
-import qualified Graphics.UI.GLFW.Utils as GLFWUtils
 import qualified Graphics.UI.GLFW.Events as Events
+import qualified Graphics.UI.GLFW.Utils as GLFWUtils
 
 import           Lamdu.Prelude hiding (lookup)
 
@@ -64,15 +65,14 @@ chDocs f (AllCharsHandler inputDoc docHandler) =
 
 data CharGroupHandler a = CharGroupHandler
     { __cgInputDoc :: InputDoc
-    , _cgChars :: Set Char
-    , __cgDocHandler :: DocHandler (Char -> a)
+    , _cgDocHandler :: DocHandler (Map Char a)
     } deriving (Generic, Functor)
 Lens.makeLenses ''CharGroupHandler
 
 cgDocs :: Lens.IndexedTraversal' InputDoc (CharGroupHandler a) Doc
-cgDocs f (CharGroupHandler inputDoc chars docHandler) =
-    CharGroupHandler inputDoc chars
-    <$> dhDoc (Lens.indexed f inputDoc) docHandler
+cgDocs f (CharGroupHandler inputDoc docHandler) =
+    dhDoc (Lens.indexed f inputDoc) docHandler
+    <&> CharGroupHandler inputDoc
 
 -- File path (drag&)drop handler
 data DropHandler a = DropHandler
@@ -141,16 +141,18 @@ filterCharGroups ::
     (Char -> Bool) ->
     [CharGroupHandler a] ->
     [CharGroupHandler a]
-filterCharGroups f =
-    filter (not . Set.null . (^. cgChars)) .
-    (Lens.traversed . cgChars %~ Set.filter f)
+filterCharGroups f groups =
+    groups
+    <&> cgDocHandler . dhHandler %~ filterByKey f
+    & filter (not . Map.null . (^. cgDocHandler . dhHandler))
 
 isCharConflict :: EventMap a -> Char -> Bool
 isCharConflict x char =
-    char `Set.member` (x ^. emCharGroupHandlers . traverse . cgChars) ||
-    (not . null . catMaybes)
-    (($ char) . (^. chDocHandler . dhHandler) <$>
-      x ^. emAllCharsHandler)
+    char `Map.member` (x ^. emCharGroupHandlers . traverse . cgDocHandler . dhHandler) ||
+    ( x ^. emAllCharsHandler
+    & Maybe.mapMaybe (($ char) . (^. chDocHandler . dhHandler))
+    & not . null
+    )
 
 filterChars :: HasEventMap f => (Char -> Bool) -> f a -> f a
 filterChars p val =
@@ -215,9 +217,8 @@ lookupCharGroup charGroups (Events.KeyEvent _k _scanCode keyState _modKeys mchar
     do
         ModKey.KeyState'Pressed <- return keyState
         char <- mchar ^.. Lens._Just
-        CharGroupHandler _ chars handler <- charGroups
-        guard $ Set.member char chars
-        [(handler ^. dhHandler) char]
+        charGroups ^.. Lens.traverse . cgDocHandler . dhHandler .
+            Lens.at char . Lens._Just
 
 lookupAllCharHandler :: [AllCharsHandler t] -> Events.KeyEvent -> Maybe t
 lookupAllCharHandler allCharHandlers (Events.KeyEvent _k _scanCode keyState _modKeys mchar) =
@@ -229,13 +230,12 @@ lookupAllCharHandler allCharHandlers (Events.KeyEvent _k _scanCode keyState _mod
         (handler ^. dhHandler) char ^.. Lens._Just
 
 charGroup :: InputDoc -> Doc -> String -> (Char -> a) -> EventMap a
-charGroup iDoc oDoc chars handler =
+charGroup iDoc oDoc chars func =
     mempty
-    { _emCharGroupHandlers =
-            [CharGroupHandler iDoc s (DocHandler oDoc handler)]
+    { _emCharGroupHandlers = [CharGroupHandler iDoc (DocHandler oDoc handler)]
     }
     where
-        s = Set.fromList chars
+        handler = Set.fromList chars & Map.fromSet func
 
 -- low-level "smart constructor" in case we need to enforce
 -- invariants:
