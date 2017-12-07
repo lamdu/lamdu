@@ -28,6 +28,7 @@ import qualified Lamdu.GUI.ExpressionEdit.GetVarEdit as GetVarEdit
 import qualified Lamdu.GUI.ExpressionEdit.TagEdit as TagEdit
 import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
+import           Lamdu.GUI.ExpressionGui.HolePicker (HolePicker(..))
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
@@ -182,7 +183,7 @@ mkRelayedArgs nearestHoles args =
                     , exprInfoNearestHoles = nearestHoles
                     , exprInfoIsHoleResult = False
                     , exprInfoMinOpPrec = 0
-                    } ExprGuiM.NoHolePick
+                    } NoHolePick
                 GetVarEdit.makeGetParam (arg ^. Sugar.raValue) (WidgetIds.fromEntityId (arg ^. Sugar.raId))
                     <&> Responsive.fromWithTextPos
                     <&> E.weakerEvents eventMap

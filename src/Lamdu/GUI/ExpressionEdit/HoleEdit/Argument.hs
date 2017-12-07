@@ -12,6 +12,7 @@ import qualified GUI.Momentu.Widget as Widget
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Config.Theme as Theme
 import           Lamdu.GUI.ExpressionGui (ExpressionGui)
+import           Lamdu.GUI.ExpressionGui.HolePicker (withHolePicker)
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
@@ -63,7 +64,7 @@ make openHoleId arg =
             & ExprGuiM.listenResultPicker
         unwrapEventMap <-
             makeUnwrapEventMap arg openHoleId
-            <&> ExprGuiM.withHolePicker resultPicker
+            <&> withHolePicker resultPicker
         Momentu.addInnerFrame
             ?? frameColor ?? frameWidth
             ?? Momentu.pad (frameWidth & _2 .~ 0) argGui

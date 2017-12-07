@@ -30,6 +30,7 @@ import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
 import qualified Lamdu.GUI.ExpressionEdit.TagEdit as TagEdit
 import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
+import           Lamdu.GUI.ExpressionGui.HolePicker (withHolePicker)
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
@@ -108,7 +109,7 @@ make (Sugar.Case mArg (Sugar.Composite alts caseTail addAlt)) pl =
                 <&> WidgetIds.tagHoleId
                 & Widget.keysEventMapMovesCursor (Config.caseAddAltKeys config)
                   (doc "Add Alt")
-                & ExprGuiM.withHolePicker resultPicker
+                & withHolePicker resultPicker
         ExpressionGui.parentDelegator (WidgetIds.fromExprPayload pl)
             <*> (Styled.addValFrame <*> (Responsive.vboxSpaced ?? [header, altsGui]))
             <&> E.weakerEvents addAltEventMap

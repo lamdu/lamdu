@@ -18,8 +18,8 @@ import qualified Lamdu.CharClassification as Chars
 import qualified Lamdu.Config as Config
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.State as HoleEditState
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds as HoleWidgetIds
+import           Lamdu.GUI.ExpressionGui.HolePicker (HolePicker, withHolePicker)
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
-import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Precedence (precedence)
@@ -52,13 +52,13 @@ exprInfoFromPl pl =
 
 make ::
     (Monad m, Monad f) =>
-    Sugar.Payload (T f) ExprGuiT.Payload -> ExprGuiM.HolePicker f ->
+    Sugar.Payload (T f) ExprGuiT.Payload -> HolePicker f ->
     ExprGuiM m (EventMap (T f GuiState.Update))
 make = makeWith . exprInfoFromPl
 
 makeWith ::
     (Monad m, Monad f) =>
-    ExprInfo f -> ExprGuiM.HolePicker f ->
+    ExprInfo f -> HolePicker f ->
     ExprGuiM m (EventMap (T f GuiState.Update))
 makeWith exprInfo holePicker =
     mconcat <$> sequenceA
@@ -133,7 +133,7 @@ maybeReplaceEventMap exprInfo =
 
 actionsEventMap ::
     (Monad m, Monad f) =>
-    ExprInfo f -> ExprGuiM.HolePicker f ->
+    ExprInfo f -> HolePicker f ->
     ExprGuiM m (EventMap (T f GuiState.Update))
 actionsEventMap exprInfo holePicker =
     sequence
@@ -159,14 +159,14 @@ actionsEventMap exprInfo holePicker =
 
 applyOperatorEventMap ::
     Monad f =>
-    ExprInfo f -> ExprGuiM.HolePicker f ->
+    ExprInfo f -> HolePicker f ->
     EventMap (T f GuiState.Update)
 applyOperatorEventMap exprInfo holePicker =
     case exprInfoActions exprInfo ^. Sugar.wrap of
     Sugar.WrapAction wrap -> action wrap
     Sugar.WrapperAlready holeId -> action (return holeId)
     Sugar.WrappedAlready holeId -> action (return holeId)
-    & ExprGuiM.withHolePicker holePicker
+    & withHolePicker holePicker
     where
         acceptableOperatorChars = filter ((>= exprInfoMinOpPrec exprInfo) . precedence) Chars.operator
         action wrap =

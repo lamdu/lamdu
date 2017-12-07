@@ -12,8 +12,7 @@ module Lamdu.GUI.ExpressionGui.Monad
     , readMScopeId, withLocalMScopeId
     , isExprSelected
     --
-    , HolePicker(..), withHolePicker
-    , setResultPicker, listenResultPicker
+    , listenResultPicker
     , run
     ) where
 
@@ -23,16 +22,12 @@ import           Control.Monad.Trans.FastRWS (RWST, runRWST)
 import qualified Control.Monad.Trans.FastRWS as RWS
 import           Control.Monad.Transaction (MonadTransaction(..))
 import           Control.Monad.Writer (MonadWriter)
-import qualified Control.Monad.Writer as Writer
-import qualified Data.Char as Char
 import           Data.CurAndPrev (CurAndPrev)
 import           Data.Store.Transaction (Transaction)
-import qualified Data.Text.Lens as TextLens
 import           Data.Vector.Vector2 (Vector2)
 import           GUI.Momentu.Align (WithTextPos)
 import           GUI.Momentu.Animation.Id (AnimId)
 import qualified GUI.Momentu.Element as Element
-import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.Hover as Hover
 import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.Responsive.Expression as ResponsiveExpr
@@ -52,6 +47,7 @@ import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Ops as DataOps
 import           Lamdu.Eval.Results (ScopeId, topLevelScopeId)
 import           Lamdu.GUI.CodeEdit.Settings (Settings, HasSettings(..))
+import           Lamdu.GUI.ExpressionGui.HolePicker (HolePicker)
 import           Lamdu.GUI.ExpressionGui.Types (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
@@ -61,28 +57,6 @@ import qualified Lamdu.Sugar.Types as Sugar
 import           Lamdu.Prelude
 
 type T = Transaction
-
-data HolePicker m
-    = NoHolePick
-    | HolePick (T m GuiState.Update)
-
-instance Monoid (HolePicker m) where
-    mempty = NoHolePick
-    mappend NoHolePick x = x
-    mappend x NoHolePick = x
-    mappend _ _ = error "Two HolePick's told, are we inside 2 holes simultaneously?"
-
-withHolePicker :: Monad m => HolePicker m -> E.EventMap (T m a) -> E.EventMap (T m a)
-withHolePicker NoHolePick e = e
-withHolePicker (HolePick action) e =
-    e
-    & E.emDocs . E.docStrs . Lens.reversed . Lens.element 0 %~ f
-    <&> (action >>)
-    where
-        f x =
-            x
-            & TextLens._Text . Lens.element 0 %~ Char.toLower
-            & ("Pick result and " <>)
 
 newtype StoredEntityIds = StoredEntityIds [Sugar.EntityId]
     deriving (Monoid)
@@ -201,9 +175,6 @@ run makeSubexpr theCodeAnchors (ExprGuiM action) =
 
 listenResultPicker :: Monad m => ExprGuiM m a -> ExprGuiM m (a, HolePicker m)
 listenResultPicker = exprGuiM %~ RWS.listen
-
-setResultPicker :: Monad m => T m GuiState.Update -> ExprGuiM m ()
-setResultPicker = Writer.tell . HolePick
 
 readMScopeId :: Monad m => ExprGuiM m (CurAndPrev (Maybe ScopeId))
 readMScopeId = Lens.view aMScopeId

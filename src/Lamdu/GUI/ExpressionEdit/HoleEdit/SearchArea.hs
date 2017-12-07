@@ -28,8 +28,8 @@ import           Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds (WidgetIds(..))
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds as WidgetIds
 import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
+import           Lamdu.GUI.ExpressionGui.HolePicker (HolePicker(..))
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
-import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
 import           Lamdu.Name (Name)
 import qualified Lamdu.Sugar.Types as Sugar
@@ -68,7 +68,7 @@ makeStdWrapped hole pl widgetIds =
                 | otherwise =
                     Lens.mapped . Lens.mapped . GuiState.uCursor %~
                     mappend (Monoid.Last (Just (hidOpen widgetIds)))
-        exprEventMap <- ExprEventMap.make pl ExprGuiM.NoHolePick
+        exprEventMap <- ExprEventMap.make pl NoHolePick
         closedSearchTermGui <-
             fdWrap <*> SearchTerm.make widgetIds holeKind <&> Responsive.fromWithTextPos
             & ExpressionGui.stdWrap pl

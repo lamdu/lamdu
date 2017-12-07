@@ -40,6 +40,7 @@ import           Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds (WidgetIds(..))
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds as HoleWidgetIds
 import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
+import qualified Lamdu.GUI.ExpressionGui.HolePicker as HolePicker
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import           Lamdu.GUI.ExpressionGui.Types (ExpressionN)
@@ -186,7 +187,7 @@ makeHoleResultWidget pl resultId holeResult =
                     simplePickRes (mappend Config.holePickResultKeys Config.holePickAndMoveToNextHoleKeys holeConfig)
                 <&> pickBefore
         isSelected <- GuiState.isSubCursor ?? resultId
-        when isSelected (ExprGuiM.setResultPicker (pickBefore (pure mempty)))
+        when isSelected (HolePicker.setResultPicker (pickBefore (pure mempty)))
         searchTerm <- HoleState.readSearchTerm (HoleWidgetIds.make (pl ^. Sugar.plEntityId))
         holeResultConverted
             & postProcessSugar (pl ^. Sugar.plData . ExprGuiT.plMinOpPrec)

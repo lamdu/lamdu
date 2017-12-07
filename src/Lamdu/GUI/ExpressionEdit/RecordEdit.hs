@@ -24,6 +24,7 @@ import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.GUI.ExpressionEdit.TagEdit as TagEdit
 import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
+import           Lamdu.GUI.ExpressionGui.HolePicker (withHolePicker)
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
@@ -120,7 +121,7 @@ makeRecord fields addFieldEventMap postProcess =
             <&> (opener /|/)
     where
         addEvents (innerGui, resultPicker) =
-            E.weakerEvents (ExprGuiM.withHolePicker resultPicker addFieldEventMap) innerGui
+            E.weakerEvents (withHolePicker resultPicker addFieldEventMap) innerGui
 
 makeFieldRow ::
     Monad m =>
