@@ -84,10 +84,6 @@ withHolePicker (HolePick action) e =
             & TextLens._Text . Lens.element 0 %~ Char.toLower
             & ("Pick result and " <>)
 
-newtype Output m = Output
-    { oHolePicker :: HolePicker m
-    } deriving (Monoid)
-
 newtype StoredEntityIds = StoredEntityIds [Sugar.EntityId]
     deriving (Monoid)
 
@@ -106,9 +102,9 @@ data Askable m = Askable
     , _aStyle :: Style
     }
 newtype ExprGuiM m a = ExprGuiM
-    { _exprGuiM :: RWST (Askable m) (Output m) () (T m) a
+    { _exprGuiM :: RWST (Askable m) (HolePicker m) () (T m) a
     } deriving (Functor, Applicative, Monad,
-                MonadReader (Askable m), MonadWriter (Output m))
+                MonadReader (Askable m), MonadWriter (HolePicker m))
 
 Lens.makeLenses ''Askable
 Lens.makeLenses ''ExprGuiM
@@ -205,17 +201,11 @@ run makeSubexpr theCodeAnchors (ExprGuiM action) =
 
 -- Used vars:
 
-listener :: Monad m => (Output m -> b) -> ExprGuiM m a -> ExprGuiM m (a, b)
-listener f =
-    exprGuiM %~ RWS.listen
-    & Lens.mapped . Lens.mapped . _2 %~ f
-
 listenResultPicker :: Monad m => ExprGuiM m a -> ExprGuiM m (a, HolePicker m)
-listenResultPicker = listener oHolePicker
+listenResultPicker = exprGuiM %~ RWS.listen
 
 setResultPicker :: Monad m => T m GuiState.Update -> ExprGuiM m ()
-setResultPicker picker =
-    Writer.tell mempty { oHolePicker = HolePick picker }
+setResultPicker = Writer.tell . HolePick
 
 readMScopeId :: Monad m => ExprGuiM m (CurAndPrev (Maybe ScopeId))
 readMScopeId = Lens.view aMScopeId
