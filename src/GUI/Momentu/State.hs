@@ -4,7 +4,8 @@ module GUI.Momentu.State
     ( VirtualCursor(..), virtualCursor
     , GUIState(..), sCursor, sWidgetStates
     , Update(..), uCursor, uWidgetStateUpdates, uVirtualCursor
-    , updateCursor, update
+    , update
+    , updateCursor, fullUpdate
     , HasCursor(..), subId, isSubCursor, assignCursor, assignCursorPrefix
     , HasState(..), readWidgetState, updateWidgetState
     ) where
@@ -48,12 +49,10 @@ instance Monoid Update where
     mappend = def_mappend
 
 updateCursor :: Id -> Update
-updateCursor c =
-    Update
-    { _uCursor = Just c & Monoid.Last
-    , _uWidgetStateUpdates = mempty
-    , _uVirtualCursor = mempty
-    }
+updateCursor c = mempty { _uCursor = Just c & Monoid.Last }
+
+fullUpdate :: GUIState -> Update
+fullUpdate (GUIState c s) = Update (Monoid.Last (Just c)) s mempty
 
 update :: Update -> GUIState -> GUIState
 update u s =

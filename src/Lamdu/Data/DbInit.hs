@@ -53,14 +53,15 @@ initDb db importAct =
         writeRevAnchor DbLayout.currentBranch master
         writeRevAnchor DbLayout.redos []
         let paneWId = WidgetIdIRef.fromIRef $ DbLayout.panes DbLayout.codeIRefs
+        let initGuiState = M.GUIState paneWId mempty
         DbLayout.runViewTransaction view $
             do
                 let writeCodeAnchor f = Transaction.writeIRef (f DbLayout.codeIRefs)
                 writeCodeAnchor DbLayout.globals mempty
                 writeCodeAnchor DbLayout.panes mempty
                 writeCodeAnchor DbLayout.preJumps []
-                writeCodeAnchor DbLayout.preCursor paneWId
-                writeCodeAnchor DbLayout.postCursor paneWId
+                writeCodeAnchor DbLayout.preGuiState initGuiState
+                writeCodeAnchor DbLayout.postGuiState initGuiState
                 writeCodeAnchor DbLayout.tids mempty
                 writeCodeAnchor DbLayout.tags mempty
                 importAct

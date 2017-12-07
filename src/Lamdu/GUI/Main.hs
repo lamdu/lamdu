@@ -61,12 +61,12 @@ makeInnerGui branchSelector =
     do
         fullSize <- Lens.view (MainLoop.mainLoopEnv . MainLoop.eWindowSize)
         let codeSize = fullSize - Vector2 0 (branchSelector ^. Element.height)
-        theCursor <- Lens.view GuiState.cursor
+        state <- Lens.view GuiState.state
         codeEdit <-
             CodeEdit.make DbLayout.codeAnchors (codeSize ^. _1)
             & Reader.mapReaderT VersionControl.runAction
             <&> Lens.mapped . ioTrans . Lens.mapped %~
-                VersionControl.runEvent theCursor
+                VersionControl.runEvent state
         theTheme <- Lens.view Theme.theme
         topPadding <- Spacer.vspaceLines (Theme.topPadding theTheme)
         let scrollBox =

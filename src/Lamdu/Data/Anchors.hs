@@ -21,6 +21,7 @@ import           Data.Store.Rev.Version (Version)
 import           Data.Store.Rev.View (View)
 import           Data.Store.Transaction (MkProperty(..))
 import qualified Data.Store.Transaction as Transaction
+import           GUI.Momentu.State (GUIState)
 import qualified GUI.Momentu.Widget.Id as WidgetId
 import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Data.Definition as Definition
@@ -41,8 +42,8 @@ data Code f m = Code
     , panes :: f [Pane m]
     , globals :: f (Set (DefI m))
     , preJumps :: f [WidgetId.Id]
-    , preCursor :: f WidgetId.Id
-    , postCursor :: f WidgetId.Id
+    , preGuiState :: f GUIState
+    , postGuiState :: f GUIState
     , tags :: f (Set T.Tag)
     , tids :: f (Set T.NominalId)
     }

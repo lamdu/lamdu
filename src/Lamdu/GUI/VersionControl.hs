@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude ,RecordWildCards, TypeOperators, OverloadedStrings, RankNTypes #-}
+{-# LANGUAGE NoImplicitPrelude, TypeOperators, OverloadedStrings, RankNTypes #-}
 module Lamdu.GUI.VersionControl
     ( make
     ) where
@@ -13,7 +13,7 @@ import qualified Data.Store.Transaction as Transaction
 import qualified GUI.Momentu.Align as Align
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
-import           GUI.Momentu.MetaKey (MetaKey(..), noMods)
+import           GUI.Momentu.MetaKey (MetaKey(..), noMods, toModKey)
 import qualified GUI.Momentu.MetaKey as MetaKey
 import qualified GUI.Momentu.State as GuiState
 import           GUI.Momentu.Widget (Widget)
@@ -39,36 +39,36 @@ branchNameFDConfig = FocusDelegator.Config
 
 undoEventMap ::
     Functor m =>
-    VersionControl.Config -> Maybe (m Widget.Id) ->
+    VersionControl.Config -> Maybe (m GuiState.Update) ->
     EventMap (m GuiState.Update)
-undoEventMap VersionControl.Config{..} =
-    maybe mempty .
-    Widget.keysEventMapMovesCursor undoKeys $ E.Doc ["Edit", "Undo"]
+undoEventMap config =
+    E.keyPresses (VersionControl.undoKeys config <&> toModKey) (E.Doc ["Edit", "Undo"])
+    & maybe mempty
 
 redoEventMap ::
     Functor m =>
-    VersionControl.Config -> Maybe (m Widget.Id) ->
+    VersionControl.Config -> Maybe (m GuiState.Update) ->
     EventMap (m GuiState.Update)
-redoEventMap VersionControl.Config{..} =
-    maybe mempty .
-    Widget.keysEventMapMovesCursor redoKeys $ E.Doc ["Edit", "Redo"]
+redoEventMap config =
+    E.keyPresses (VersionControl.redoKeys config <&> toModKey) (E.Doc ["Edit", "Redo"])
+    & maybe mempty
 
 globalEventMap ::
     Applicative f =>
     VersionControl.Config -> Actions t f ->
     EventMap (f GuiState.Update)
-globalEventMap VersionControl.Config{..} actions = mconcat
-    [ Widget.keysEventMapMovesCursor makeBranchKeys
+globalEventMap config actions = mconcat
+    [ Widget.keysEventMapMovesCursor (VersionControl.makeBranchKeys config)
       (E.Doc ["Branches", "New"]) $ branchTextEditId <$> makeBranch actions
-    , Widget.keysEventMapMovesCursor jumpToBranchesKeys
+    , Widget.keysEventMapMovesCursor (VersionControl.jumpToBranchesKeys config)
       (E.Doc ["Branches", "Select"]) $
       (pure . branchDelegatorId . currentBranch) actions
-    , undoEventMap VersionControl.Config{..} $ mUndo actions
-    , redoEventMap VersionControl.Config{..} $ mRedo actions
+    , mUndo actions <&> fmap GuiState.fullUpdate & undoEventMap config
+    , mRedo actions <&> fmap GuiState.fullUpdate & redoEventMap config
     ]
 
-choiceWidgetConfig :: VersionControl.Config -> VersionControl.Theme -> Choice.Config
-choiceWidgetConfig VersionControl.Config{..} VersionControl.Theme{..} =
+choiceWidgetConfig :: VersionControl.Theme -> Choice.Config
+choiceWidgetConfig theme =
     Choice.Config
     { Choice.cwcFDConfig =
         FocusDelegator.Config
@@ -77,7 +77,7 @@ choiceWidgetConfig VersionControl.Config{..} VersionControl.Theme{..} =
         , FocusDelegator.focusParentKeys = [MetaKey noMods MetaKey.Key'Enter]
         , FocusDelegator.focusParentDoc = E.Doc ["Branches", "Choose selected"]
         }
-    , Choice.cwcExpandMode = Choice.AutoExpand selectedBranchColor
+    , Choice.cwcExpandMode = VersionControl.selectedBranchColor theme & Choice.AutoExpand
     , Choice.cwcOrientation = Choice.Vertical
     }
 
@@ -96,16 +96,16 @@ make ::
     Actions n mw ->
     (Widget (mw GuiState.Update) -> mr (Widget (mw GuiState.Update))) ->
     mr (Widget (mw GuiState.Update))
-make VersionControl.Config{..} VersionControl.Theme{..} rwtransaction rtransaction actions mkWidget =
+make config theme rwtransaction rtransaction actions mkWidget =
     do
         branchNameEdits <- branches actions & traverse makeBranchNameEdit
         branchSelector <-
             Choice.make ?? setCurrentBranch actions
             ?? branchNameEdits ?? currentBranch actions
-            ?? choiceWidgetConfig VersionControl.Config{..} VersionControl.Theme{..}
+            ?? choiceWidgetConfig theme
             ?? WidgetIds.branchSelection
         mkWidget branchSelector
-            <&> E.strongerEvents (globalEventMap VersionControl.Config{..} actions)
+            <&> E.strongerEvents (globalEventMap config actions)
     where
         empty = TextEdit.EmptyStrings "unnamed branch" ""
         makeBranchNameEdit branch =
@@ -123,7 +123,8 @@ make VersionControl.Config{..} VersionControl.Theme{..} rwtransaction rtransacti
                 let delEventMap
                         | ListUtils.isLengthAtLeast 2 (branches actions) =
                             Widget.keysEventMapMovesCursor
-                            delBranchKeys (E.Doc ["Branches", "Delete"])
+                            (VersionControl.delBranchKeys config)
+                            (E.Doc ["Branches", "Delete"])
                             (branchDelegatorId <$> deleteBranch actions branch)
                         | otherwise = mempty
                 return (branch, E.weakerEvents delEventMap branchNameEdit)

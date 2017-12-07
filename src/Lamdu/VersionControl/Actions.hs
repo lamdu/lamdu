@@ -5,7 +5,7 @@ module Lamdu.VersionControl.Actions
 
 import           Control.Lens
 import           Data.Store.Rev.Branch (Branch)
-import qualified GUI.Momentu.Widget as Widget
+import           GUI.Momentu.State (GUIState)
 
 data Actions t m = Actions
     { branches :: [Branch t]
@@ -13,8 +13,8 @@ data Actions t m = Actions
     , setCurrentBranch :: Branch t -> m ()
     , deleteBranch :: Branch t -> m (Branch t)
     , makeBranch :: m (Branch t)
-    , mUndo :: Maybe (m Widget.Id)
-    , mRedo :: Maybe (m Widget.Id)
+    , mUndo :: Maybe (m GUIState)
+    , mRedo :: Maybe (m GUIState)
     }
 
 hoist :: (forall a. m a -> n a) -> Actions t m -> Actions t n

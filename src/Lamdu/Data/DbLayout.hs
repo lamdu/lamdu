@@ -44,8 +44,8 @@ codeIRefs = Code
     , panes = IRef.anchor "panes"
     , globals = IRef.anchor "globals"
     , preJumps = IRef.anchor "prejumps"
-    , preCursor = IRef.anchor "precursor"
-    , postCursor = IRef.anchor "postcursor"
+    , preGuiState = IRef.anchor "preguistate"
+    , postGuiState = IRef.anchor "postguistate"
     , tags = IRef.anchor "tags"
     , tids = IRef.anchor "tids"
     }

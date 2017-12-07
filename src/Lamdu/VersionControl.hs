@@ -7,7 +7,6 @@ import qualified Control.Lens as Lens
 import           Data.List (elemIndex)
 import           Data.List.Utils (removeAt)
 import           Data.Maybe.Utils (unsafeUnjust)
-import qualified Data.Monoid as Monoid
 import           Data.Store.Rev.Branch (Branch)
 import qualified Data.Store.Rev.Branch as Branch
 import           Data.Store.Rev.Version (Version)
@@ -16,8 +15,8 @@ import           Data.Store.Rev.View (View)
 import qualified Data.Store.Rev.View as View
 import           Data.Store.Transaction (Transaction, setP, getP, modP)
 import qualified Data.Store.Transaction as Transaction
+import           GUI.Momentu.State (GUIState)
 import qualified GUI.Momentu.State as GuiState
-import qualified GUI.Momentu.Widget as Widget
 import           Lamdu.Data.DbLayout (DbM)
 import qualified Lamdu.Data.DbLayout as DbLayout
 import           Lamdu.VersionControl.Actions (Actions(Actions))
@@ -70,16 +69,16 @@ getVersion =
         currentBranch <- getP $ revProp DbLayout.currentBranch
         Branch.curVersion currentBranch
 
-runEvent :: Traversable t => Widget.Id -> TV (t GuiState.Update) -> TDB (t GuiState.Update)
-runEvent preCursor eventHandler = do
+runEvent :: Traversable t => GUIState -> TV (t GuiState.Update) -> TDB (t GuiState.Update)
+runEvent preGuiState eventHandler = do
     (eventResult, isEmpty) <- runAction $ do
         eventResult <- eventHandler
         isEmpty <- Transaction.isEmpty
         unless isEmpty $ do
-            setP (codeProp DbLayout.preCursor) preCursor
-            setP (codeProp DbLayout.postCursor) .
-                fromMaybe preCursor . Monoid.getLast $
-                eventResult ^. Lens.traversed . GuiState.uCursor
+            setP (codeProp DbLayout.preGuiState) preGuiState
+            preGuiState
+                & GuiState.update (eventResult ^. Lens.traversed)
+                & setP (codeProp DbLayout.postGuiState)
         return (eventResult, isEmpty)
     unless isEmpty $ setP (revProp DbLayout.redos) []
     return eventResult
@@ -94,15 +93,15 @@ makeActions = do
     allRedos <- getP $ revProp DbLayout.redos
     let toDb = DbLayout.runViewTransaction view
         undo parentVersion = do
-            preCursor <- toDb . getP $ codeProp DbLayout.preCursor
+            preGuiState <- toDb . getP $ codeProp DbLayout.preGuiState
             View.move view parentVersion
             modP (revProp DbLayout.redos) (curVersion :)
-            return preCursor
+            return preGuiState
         mkRedo [] = Nothing
         mkRedo (redo : redos) = Just $ do
             setP (revProp DbLayout.redos) redos
             View.move view redo
-            toDb . getP $ codeProp DbLayout.postCursor
+            toDb . getP $ codeProp DbLayout.postGuiState
     return Actions
         { Actions.branches = branches
         , Actions.currentBranch = currentBranch
