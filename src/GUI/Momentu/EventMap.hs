@@ -170,9 +170,9 @@ mapMaybe p (EventMap m dropHandlers charGroups mAllChars) =
         f (Doesn'tWantClipboard val) = p val <&> Doesn'tWantClipboard
         f (WantsClipboard func) = (>>= p) . func & WantsClipboard & Just
 
-filter :: (a -> Bool) -> EventMap a -> EventMap a
+filter :: HasEventMap f => (a -> Bool) -> f a -> f a
 filter p =
-    mapMaybe f
+    eventMap %~ mapMaybe f
     where
         f x
             | p x = Just x
