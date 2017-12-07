@@ -49,8 +49,7 @@ makeInnerGui ::
     , Style.HasStyle env
     , Settings.HasSettings env
     , Spacer.HasStdSpacing env
-    , GuiState.HasCursor env
-    , GuiState.HasWidgetState env
+    , GuiState.HasState env
     , Theme.HasTheme env
     , Config.HasConfig env
     , CodeEdit.HasEvalResults env ViewM
@@ -84,7 +83,7 @@ make ::
     , Spacer.HasStdSpacing env
     , Theme.HasTheme env
     , Settings.HasSettings env
-    , GuiState.HasWidgetState env
+    , GuiState.HasState env
     , CodeEdit.HasEvalResults env ViewM
     , CodeEdit.HasExportActions env ViewM
     ) =>

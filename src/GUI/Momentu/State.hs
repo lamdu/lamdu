@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, TemplateHaskell, DeriveGeneric #-}
+{-# LANGUAGE NoImplicitPrelude, TemplateHaskell, DeriveGeneric, DefaultSignatures #-}
 
 module GUI.Momentu.State
     ( VirtualCursor(..), virtualCursor
@@ -6,7 +6,7 @@ module GUI.Momentu.State
     , Update(..), uCursor, uWidgetStateUpdates, uVirtualCursor
     , updateCursor, update
     , HasCursor(..), subId, isSubCursor, assignCursor, assignCursorPrefix
-    , HasWidgetState(..), readWidgetState, updateWidgetState
+    , HasState(..), readWidgetState, updateWidgetState
     ) where
 
 import qualified Control.Lens as Lens
@@ -67,7 +67,11 @@ update u s =
             f k _v = Id.subId k c & Lens.has Lens._Just
     & sWidgetStates %~ mappend (u ^. uWidgetStateUpdates)
 
-class HasCursor env where cursor :: Lens' env Id
+class HasCursor env where
+    cursor :: Lens' env Id
+    default cursor :: HasState env => Lens' env Id
+    cursor = state . sCursor
+
 
 subId :: (MonadReader env m, HasCursor env) => m (Id -> Maybe AnimId)
 subId = Lens.view cursor <&> flip Id.subId
@@ -99,14 +103,14 @@ assignCursorPrefix srcFolder dest =
 -- TODO: Currently widget state is cleaned for widgets whose id isn't prefix of the cursor.
 -- Consider allowing all widgets to store state which are cleaned when not access while generating root widget.
 -- That would put more restrictions on the root widget monad.
-class HasWidgetState env where
-    widgetState :: Lens' env (Map Id ByteString)
+class HasCursor env => HasState env where
+    state :: Lens' env GUIState
 
 readWidgetState ::
-    (HasWidgetState env, MonadReader env m, Binary a) =>
+    (HasState env, MonadReader env m, Binary a) =>
     Id -> m (Maybe a)
 readWidgetState wid =
-    Lens.view widgetState <&> (^. Lens.at wid) <&> (>>= f)
+    Lens.view (state . sWidgetStates . Lens.at wid) <&> (>>= f)
     where
         f x = decodeOrFail (lazifyBS x) ^? Lens._Right . _3
 

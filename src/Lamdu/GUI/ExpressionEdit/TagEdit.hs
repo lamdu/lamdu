@@ -152,7 +152,7 @@ makeOptions nearestHoles tag searchTerm
 
 makeTagHoleEdit ::
     ( Monad m, MonadReader env f, MonadTransaction m f
-    , GuiState.HasCursor env, GuiState.HasWidgetState env
+    , GuiState.HasState env
     , HasConfig env, TextEdit.HasStyle env, Element.HasAnimIdPrefix env
     , HasTheme env, Hover.HasStyle env, Menu.HasStyle env, HasStdSpacing env
     ) => NearestHoles -> Sugar.Tag (Name (T m)) (T m) ->
@@ -203,8 +203,7 @@ makeTagHoleEdit nearestHoles tag =
 
 makeTagEdit ::
     ( Monad m, MonadReader env f, MonadTransaction m f, HasConfig env
-    , GuiState.HasCursor env, GuiState.HasWidgetState env
-    , HasTheme env, Element.HasAnimIdPrefix env
+    , GuiState.HasState env, HasTheme env, Element.HasAnimIdPrefix env
     , TextEdit.HasStyle env, Hover.HasStyle env, Menu.HasStyle env
     , HasStdSpacing env
     ) =>
@@ -250,7 +249,7 @@ makeTagEdit tagColor nearestHoles tag =
 
 makeRecordTag ::
     ( Monad m, MonadReader env f, MonadTransaction m f, HasTheme env
-    , HasConfig env, GuiState.HasCursor env, GuiState.HasWidgetState env
+    , HasConfig env, GuiState.HasState env
     , Element.HasAnimIdPrefix env, HasStdSpacing env
     , TextEdit.HasStyle env, Hover.HasStyle env, HasTheme env, Menu.HasStyle env
     ) =>
@@ -263,7 +262,7 @@ makeRecordTag nearestHoles tag =
 
 makeCaseTag ::
     ( Monad m, MonadReader env f, MonadTransaction m f, HasTheme env
-    , HasConfig env, GuiState.HasCursor env, GuiState.HasWidgetState env
+    , HasConfig env, GuiState.HasState env
     , TextEdit.HasStyle env, Hover.HasStyle env, HasTheme env, Menu.HasStyle env
     , HasStdSpacing env, Element.HasAnimIdPrefix env
     ) =>
@@ -276,7 +275,7 @@ makeCaseTag nearestHoles tag =
 
 makeParamTag ::
     ( MonadReader env f, HasTheme env, HasConfig env, Hover.HasStyle env, Menu.HasStyle env
-    , GuiState.HasCursor env, GuiState.HasWidgetState env, Element.HasAnimIdPrefix env
+    , GuiState.HasState env, Element.HasAnimIdPrefix env
     , TextEdit.HasStyle env, HasStdSpacing env, MonadTransaction m f
     ) =>
     Sugar.Tag (Name (T m)) (T m) ->

@@ -18,7 +18,7 @@ setHoleStateAndJump state entityId =
         holeId = WidgetIds.make entityId & WidgetIds.hidOpen
 
 readSearchTerm ::
-    (MonadReader env m, GuiState.HasWidgetState env) => WidgetIds -> m Text
+    (MonadReader env m, GuiState.HasState env) => WidgetIds -> m Text
 readSearchTerm widgetIds =
     WidgetIds.hidOpen widgetIds & GuiState.readWidgetState
     <&> fromMaybe ""

@@ -85,8 +85,8 @@ Lens.makeLenses ''ExprGuiM
 
 instance Monad m => MonadTransaction m (ExprGuiM m) where transaction = ExprGuiM . lift
 
-instance GuiState.HasCursor (Askable m) where cursor = aState . GuiState.sCursor
-instance GuiState.HasWidgetState (Askable m) where widgetState = aState . GuiState.sWidgetStates
+instance GuiState.HasCursor (Askable m)
+instance GuiState.HasState (Askable m) where state = aState
 instance TextView.HasStyle (Askable m) where style = aTextEditStyle . TextView.style
 instance TextEdit.HasStyle (Askable m) where style = aTextEditStyle
 instance Spacer.HasStdSpacing (Askable m) where stdSpacing = aStdSpacing
@@ -136,7 +136,7 @@ advanceDepth f animId action =
 
 run ::
     ( MonadTransaction m n, MonadReader env n
-    , GuiState.HasCursor env, GuiState.HasWidgetState env, Spacer.HasStdSpacing env
+    , GuiState.HasState env, Spacer.HasStdSpacing env
     , Config.HasConfig env, HasTheme env
     , HasSettings env, HasStyle env
     ) =>
@@ -148,15 +148,14 @@ run makeSubexpr theCodeAnchors (ExprGuiM action) =
     do
         theSettings <- Lens.view settings
         theStyle <- Lens.view style
-        theCursor <- Lens.view GuiState.cursor
-        theState <- Lens.view GuiState.widgetState
+        theState <- Lens.view GuiState.state
         theTextEditStyle <- Lens.view TextEdit.style
         theStdSpacing <- Lens.view Spacer.stdSpacing
         theConfig <- Lens.view Config.config
         theTheme <- Lens.view Theme.theme
         runRWST action
             Askable
-            { _aState = GUIState theCursor theState
+            { _aState = theState
             , _aTextEditStyle = theTextEditStyle
             , _aStdSpacing = theStdSpacing
             , _aAnimIdPrefix = ["outermost"]

@@ -125,7 +125,7 @@ loadWorkArea theEvalResults theCodeAnchors =
 
 make ::
     ( MonadTransaction m n, MonadReader env n, Config.HasConfig env
-    , Theme.HasTheme env, GuiState.HasCursor env, GuiState.HasWidgetState env
+    , Theme.HasTheme env, GuiState.HasState env
     , Spacer.HasStdSpacing env, HasEvalResults env m, HasExportActions env m
     , HasSettings env, HasStyle env, TextEdit.HasStyle env
     ) =>

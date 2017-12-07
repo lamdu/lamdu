@@ -47,7 +47,7 @@ module GUI.Momentu
     , Element.HasAnimIdPrefix(..)
     , State.HasCursor(..)
     , State.GUIState(..)
-    , State.HasWidgetState(..), State.readWidgetState
+    , State.HasState(..), State.readWidgetState
     , Widget.HasWidget(..)
     , Spacer.HasStdSpacing(..)
 

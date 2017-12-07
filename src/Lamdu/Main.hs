@@ -73,8 +73,8 @@ instance Settings.HasSettings Env where settings = envSettings
 instance Style.HasStyle Env where style = envStyle
 instance MainLoop.HasMainLoopEnv Env where mainLoopEnv = envMainLoop
 instance M.HasStdSpacing Env where stdSpacing = Theme.theme . Theme.themeStdSpacing
-instance M.HasCursor Env where cursor = envMainLoop . M.cursor
-instance M.HasWidgetState Env where widgetState = envMainLoop . M.widgetState
+instance M.HasCursor Env
+instance M.HasState Env where state = envMainLoop . M.state
 instance TextEdit.HasStyle Env where style = envStyle . Style.styleBase
 instance TextView.HasStyle Env where style = TextEdit.style . TextView.style
 instance Theme.HasTheme Env where theme = envTheme

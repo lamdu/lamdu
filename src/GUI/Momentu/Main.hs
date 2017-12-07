@@ -150,8 +150,8 @@ data Env = Env
     , _eState :: GUIState
     }
 Lens.makeLenses ''Env
-instance State.HasCursor Env where cursor = eState . State.sCursor
-instance State.HasWidgetState Env where widgetState = eState . State.sWidgetStates
+instance State.HasCursor Env
+instance State.HasState Env where state = eState
 
 class State.HasCursor env => HasMainLoopEnv env where mainLoopEnv :: Lens' env Env
 instance HasMainLoopEnv Env where mainLoopEnv = id

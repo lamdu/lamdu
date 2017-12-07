@@ -31,7 +31,7 @@ import           Lamdu.Prelude
 type T = Transaction.Transaction
 
 adHocTextEditEventMap ::
-    (MonadReader env m, GuiState.HasWidgetState env, HasConfig env) =>
+    (MonadReader env m, GuiState.HasState env, HasConfig env) =>
     WidgetIds -> m (Sugar.HoleKind f e0 e1 -> E.EventMap GuiState.Update)
 adHocTextEditEventMap widgetIds =
     do
