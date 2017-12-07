@@ -44,7 +44,6 @@ make widgetIds holeKind =
         searchTerm <- readSearchTerm widgetIds
         theme <- Lens.view Theme.theme
         let holeTheme = Theme.hole theme
-        textCursor <- TextEdit.getCursor ?? searchTerm ?? hidOpenSearchTerm widgetIds
         isActive <- WidgetIds.isActive widgetIds
         let bgColor
                 | isActive = Theme.holeActiveSearchTermBGColor
@@ -65,8 +64,8 @@ make widgetIds holeKind =
                         else id
                     )
         TextEdit.make ?? textEditNoEmpty ?? searchTerm ?? hidOpenSearchTerm widgetIds
+            <&> Align.tValue . E.eventMap %~ disallowChars holeKind fst
             <&> Align.tValue . Lens.mapped %~ pure . onEvents
-            <&> Align.tValue . E.eventMap %~ disallowChars holeKind searchTerm textCursor
             <&> Draw.backgroundColor bgAnimId (bgColor holeTheme)
     where
         bgAnimId = Widget.toAnimId (hidOpenSearchTerm widgetIds) <> ["hover background"]

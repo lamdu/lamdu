@@ -5,8 +5,8 @@ module Lamdu.GUI.ExpressionEdit.HoleEdit.EventMap
     ) where
 
 import qualified Control.Lens as Lens
+import qualified Data.Char as Char
 import           Data.Functor.Identity (Identity(..))
-import           Data.List (isInfixOf)
 import           Data.List.Class (List)
 import qualified Data.List.Class as List
 import qualified Data.Store.Transaction as Transaction
@@ -31,27 +31,26 @@ import           Lamdu.Prelude
 type T = Transaction.Transaction
 
 adHocTextEditEventMap ::
-    (MonadReader env m, GuiState.HasWidgetState env, Applicative f) =>
-    WidgetIds -> m (E.EventMap (f GuiState.Update))
+    (MonadReader env m, GuiState.HasWidgetState env, HasConfig env) =>
+    WidgetIds -> m (Sugar.HoleKind f e0 e1 -> E.EventMap GuiState.Update)
 adHocTextEditEventMap widgetIds =
-    HoleState.readSearchTerm widgetIds <&>
-    \searchTerm ->
-    let
-        appendCharEventMap =
-            E.allChars "Character"
-            (E.Doc ["Edit", "Search Term", "Append character"])
-            (changeText . flip Text.snoc)
-        deleteCharEventMap
-            | Text.null searchTerm = mempty
-            | otherwise =
-                  E.keyPress (ModKey mempty MetaKey.Key'Backspace)
-                  (E.Doc ["Edit", "Search Term", "Delete backwards"]) $
-                  changeText Text.init
-        changeText f =
-            GuiState.updateWidgetState (hidOpen widgetIds) (f searchTerm)
-            & pure
-    in
-    appendCharEventMap <> deleteCharEventMap
+    do
+        searchTerm <- HoleState.readSearchTerm widgetIds
+        let appendCharEventMap =
+                Text.snoc searchTerm
+                & E.allChars "Character"
+                (E.Doc ["Edit", "Search Term", "Append character"])
+        let deleteCharEventMap
+                | Text.null searchTerm = mempty
+                | otherwise =
+                      Text.init searchTerm
+                      & E.keyPress (ModKey mempty MetaKey.Key'Backspace)
+                      (E.Doc ["Edit", "Search Term", "Delete backwards"])
+        disallow <- disallowCharsFromSearchTerm
+        pure $ \holeKind ->
+            appendCharEventMap <> deleteCharEventMap
+            & disallow holeKind id
+            <&> GuiState.updateWidgetState (hidOpen widgetIds)
 
 toLiteralTextKeys :: [MetaKey]
 toLiteralTextKeys =
@@ -59,46 +58,38 @@ toLiteralTextKeys =
     , MetaKey MetaKey.noMods MetaKey.Key'Apostrophe
     ]
 
-allowedCharsFromSearchTerm ::
-    Sugar.HoleKind f a b -> Text -> Maybe Int -> Char -> Bool
-allowedCharsFromSearchTerm holeKind searchTerm mPos =
-    case searchTermStr of
-    "" -> allowAll
-    "." -> disallow Chars.bracket
-    '.':x:_
-        | x `elem` Chars.operator -> allowOnly Chars.operator
-        | otherwise -> disallow (Chars.operator ++ Chars.bracket)
-    "-" | isLeafHole -> allowOnly (Chars.operator ++ Chars.digit)
-    '-':x:_
-        | x `elem` Chars.digit -> allowOnly positiveNumberChars
-    "#" | isLeafHole -> allowOnly (Chars.operator ++ Chars.hexDigit)
-    '#':x:_
-        | x `elem` Chars.hexDigit -> allowOnly Chars.hexDigit
-    x:_
-        | x `elem` Chars.digit -> ['-' | Just 0 == mPos] ++ positiveNumberChars & allowOnly
-        | x `elem` Chars.operator -> allowOnly Chars.operator
-        | x `elem` Chars.bracket -> allowOnly Chars.bracket
-        | all (`notElem` nonAlpha) searchTermStr -> disallow nonAlpha
-        | otherwise ->
-          error "Mix of operator/non-operator chars happened in search term?"
+allowedSearchTerm :: Sugar.HoleKind f e0 e1 -> Text -> Bool
+allowedSearchTerm holeKind searchTerm =
+    [ Text.all (`elem` Chars.operator)
+    , Text.all Char.isAlphaNum
+    ] ++ ( if Lens.has Sugar._LeafHole holeKind
+            then [isPositiveNumber, isNegativeNumber, isLiteralBytes]
+            else []
+         )
+    & any (searchTerm &)
     where
-        searchTermStr = Text.unpack searchTerm
-        allowAll = const True
-        allowOnly = flip elem
-        disallow = flip notElem
-        isLeafHole = Lens.has Sugar._LeafHole holeKind
-        positiveNumberChars = Chars.digit ++ ['.' | not ("." `isInfixOf` searchTermStr)]
-        nonAlpha = Chars.digit ++ Chars.operator ++ Chars.bracket
+        isLiteralBytes :: Text -> Bool
+        isLiteralBytes = prefixed '#' (Text.all Char.isHexDigit)
+        isNegativeNumber = prefixed '-' isPositiveNumber
+        prefixed char restPred t =
+            case Text.uncons t of
+            Just (c, rest) -> c == char && restPred rest
+            _ -> False
+        isPositiveNumber t =
+            case Text.splitOn "." t of
+            [digits]             -> Text.all Char.isDigit digits
+            [digits, moreDigits] -> Text.all Char.isDigit (digits <> moreDigits)
+            _ -> False
 
 disallowCharsFromSearchTerm ::
     (MonadReader env m, HasConfig env, E.HasEventMap w) =>
-    m (Sugar.HoleKind f e0 e1 -> Text -> Maybe Int -> w a -> w a)
+    m (Sugar.HoleKind f e0 e1 -> (a -> Text) -> w a -> w a)
 disallowCharsFromSearchTerm =
     Lens.view Config.config <&> Config.hole <&>
     \Config.Hole{holePickAndMoveToNextHoleKeys, holePickResultKeys}
-     holeKind searchTerm mPos eventMap ->
+     holeKind getSearchTerm eventMap ->
     eventMap
-    & E.filterChars (allowedCharsFromSearchTerm holeKind searchTerm mPos)
+    & E.filter (allowedSearchTerm holeKind . getSearchTerm)
     & E.filterChars (`notElem` Chars.disallowedInHole)
     & deleteKeys (holePickAndMoveToNextHoleKeys ++ holePickResultKeys <&> MetaKey.toModKey)
 
@@ -154,6 +145,6 @@ makeOpenEventMap holeKind widgetIds =
         let maybeLiteralTextEventMap
                 | Text.null searchTerm = holeKind ^. Sugar._LeafHole . Lens.to toLiteralTextEventMap
                 | otherwise = mempty
-        (disallowCharsFromSearchTerm ?? holeKind ?? searchTerm ?? Nothing)
-            <*> adHocTextEditEventMap widgetIds
+        adHocTextEditEventMap widgetIds ?? holeKind
+            <&> fmap pure
             <&> mappend maybeLiteralTextEventMap
