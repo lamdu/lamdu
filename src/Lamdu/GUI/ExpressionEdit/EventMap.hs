@@ -170,7 +170,7 @@ applyOperatorEventMap exprInfo holePicker =
     where
         acceptableOperatorChars = filter ((>= exprInfoMinOpPrec exprInfo) . precedence) Chars.operator
         action wrap =
-            E.charGroup "Operator" doc acceptableOperatorChars $
+            E.charGroup Nothing doc acceptableOperatorChars $
             \c ->
             wrap <&> HoleEditState.setHoleStateAndJump (Text.singleton c)
         doc = E.Doc ["Edit", "Apply operator"]

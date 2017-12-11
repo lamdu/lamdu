@@ -148,7 +148,7 @@ fixNumWithDotEventMap searchTerm res
     | otherwise = mempty
     where
         mkAction toHole =
-            E.charGroup "Operator" doc Chars.operator $
+            E.charGroup Nothing doc Chars.operator $
             \c ->
             toHole <&> HoleState.setHoleStateAndJump ("." <> Text.singleton c)
         endsWithDot = "." `Text.isSuffixOf` searchTerm
@@ -374,7 +374,7 @@ makeUnderCursorAssignment shownResultsLists hasHiddenResults hole pl widgetIds =
         let blockOperatorEvents
                 | Text.null searchTerm || Text.all (`elem` Chars.operator) searchTerm = mempty
                 | otherwise =
-                    E.charGroup "Operator" (E.Doc ["Edit", "Apply operator (blocked)"])
+                    E.charGroup (Just "Operator") (E.Doc ["Edit", "Apply operator (blocked)"])
                     Chars.operator mempty
         searchTermWidget <-
             SearchTerm.make widgetIds holeKind

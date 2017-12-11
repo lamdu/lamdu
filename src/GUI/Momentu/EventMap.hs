@@ -16,11 +16,13 @@ module GUI.Momentu.EventMap
     ) where
 
 import qualified Control.Lens as Lens
+import           Data.Char (isAscii)
 import           Data.Foldable (asum)
 import qualified Data.Map as Map
 import           Data.Maybe (listToMaybe)
 import qualified Data.Maybe as Maybe
 import qualified Data.Set as Set
+import           Data.String (IsString(..))
 import           GUI.Momentu.ModKey (ModKey(..))
 import qualified GUI.Momentu.ModKey as ModKey
 import qualified Graphics.UI.GLFW as GLFW
@@ -65,15 +67,23 @@ chDocs f (AllCharsHandler inputDoc docHandler) =
     <$> dhDoc (Lens.indexed f inputDoc) docHandler
 
 data CharGroupHandler a = CharGroupHandler
-    { __cgInputDoc :: InputDoc
+    { __cgMInputDoc :: Maybe InputDoc
     , _cgDocHandler :: DocHandler (Map Char a)
     } deriving (Generic, Functor)
 Lens.makeLenses ''CharGroupHandler
 
 cgDocs :: Lens.IndexedTraversal' InputDoc (CharGroupHandler a) Doc
-cgDocs f (CharGroupHandler inputDoc docHandler) =
+cgDocs f (CharGroupHandler mInputDoc docHandler) =
     dhDoc (Lens.indexed f inputDoc) docHandler
-    <&> CharGroupHandler inputDoc
+    <&> CharGroupHandler mInputDoc
+    where
+        inputDoc =
+            case mInputDoc of
+            Just x -> x
+            Nothing ->
+                docHandler ^.. dhHandler . Lens.ifolded . Lens.asIndex . Lens.filtered isAscii
+                & show
+                & fromString
 
 -- File path (drag&)drop handler
 data DropHandler a = DropHandler
@@ -253,10 +263,10 @@ lookupAllCharHandler allCharHandlers (Events.KeyEvent _k _scanCode keyState _mod
         AllCharsHandler _ handler <- allCharHandlers
         (handler ^. dhHandler) char ^.. Lens._Just
 
-charGroup :: InputDoc -> Doc -> String -> (Char -> a) -> EventMap a
-charGroup iDoc oDoc chars func =
+charGroup :: (Maybe InputDoc) -> Doc -> String -> (Char -> a) -> EventMap a
+charGroup miDoc oDoc chars func =
     mempty
-    { _emCharGroupHandlers = [CharGroupHandler iDoc (DocHandler oDoc handler)]
+    { _emCharGroupHandlers = [CharGroupHandler miDoc (DocHandler oDoc handler)]
     }
     where
         handler = Set.fromList chars & Map.fromSet func
