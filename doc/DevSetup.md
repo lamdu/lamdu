@@ -2,7 +2,7 @@
 
 Lamdu is developed in Haskell and is reproducibly built using haskell-stack.
 
-You can use any text-editor to edit its code. @Peaker uses Emacs and @yairchu uses Visual Studio Code. Below are some useful tips for the setup of these editors to develop Lamdu.
+You can use any text-editor to edit its code. @Peaker uses Emacs on Linux and @yairchu uses Visual Studio Code on macOS. Below are some useful tips for the setup of these editors to develop Lamdu.
 
 ## Visual Studio Code
 
@@ -25,3 +25,9 @@ To have errors show up in VS Code's problems pane:
 * First build the project using `stack build`.
 * Now `mkdir autogen` and copy the `Paths_Lamdu.hs` file from where it was created in `.stack` to this folder.
 * Now you're ready to use `ghcid`. Simply start it with the "Start Ghcid" from VS code's command pallete.
+
+## macOS
+
+When running a full build, this command shows a notification when it is done:
+
+    osascript -e 'display notification "'`stack build && echo Success || echo Failure`'" with title "Stack build"'
