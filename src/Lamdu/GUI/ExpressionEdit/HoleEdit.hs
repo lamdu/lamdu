@@ -20,7 +20,7 @@ import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.SearchArea as SearchArea
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds (WidgetIds(..))
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds as HoleWidgetIds
 import           Lamdu.GUI.ExpressionGui (ExpressionGui)
-import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
+import           Lamdu.GUI.ExpressionGui.Annotation (maybeAddAnnotationPl)
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
@@ -52,8 +52,7 @@ makeHoleWithArgument ::
     ExprGuiM m (ExpressionGui f)
 makeHoleWithArgument searchAreaGui pl wrapperGui =
     do
-        unfocusedArgumentGui <-
-            ExpressionGui.maybeAddAnnotationPl pl ?? wrapperGui
+        unfocusedArgumentGui <- maybeAddAnnotationPl pl ?? wrapperGui
         isSelected <- GuiState.isSubCursor ?? hidHole widgetIds
         hover <- Hover.hover
         let f layoutMode wrapper =

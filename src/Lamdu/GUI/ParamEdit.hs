@@ -19,7 +19,7 @@ import qualified GUI.Momentu.Widget as Widget
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
 import           Lamdu.GUI.ExpressionGui (ExpressionGui)
-import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
+import qualified Lamdu.GUI.ExpressionGui.Annotation as Annotation
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
@@ -90,7 +90,7 @@ data Info m = Info
 -- exported for use in definition sugaring.
 make ::
     Monad m =>
-    ExpressionGui.EvalAnnotationOptions ->
+    Annotation.EvalAnnotationOptions ->
     Widget.Id -> Widget.Id ->
     Sugar.FuncParam (Info m) -> ExprGuiM m (ExpressionGui m)
 make annotationOpts prevId nextId param =
@@ -103,10 +103,10 @@ make annotationOpts prevId nextId param =
                 , maybe mempty (eventMapOrderParam (Config.paramOrderBeforeKeys config) "before") (iMOrderBefore info)
                 , maybe mempty (eventMapOrderParam (Config.paramOrderAfterKeys config) "after") (iMOrderAfter info)
                 ]
-        fpIsSelected <- GuiState.isSubCursor ?? myId
-        let wideAnnotationBehavior =
-                ExpressionGui.wideAnnotationBehaviorFromSelected fpIsSelected
-        ExpressionGui.maybeAddAnnotationWith annotationOpts
+        wideAnnotationBehavior <-
+            GuiState.isSubCursor ?? myId
+            <&> Annotation.wideAnnotationBehaviorFromSelected
+        Annotation.maybeAddAnnotationWith annotationOpts
             wideAnnotationBehavior ExprGuiT.showAnnotationWhenVerbose
             (param ^. Sugar.fpAnnotation)
             ?? Responsive.fromWithTextPos (iNameEdit info)

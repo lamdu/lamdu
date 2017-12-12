@@ -44,6 +44,7 @@ import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
 import qualified Lamdu.GUI.ExpressionEdit.TagEdit as TagEdit
 import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
+import qualified Lamdu.GUI.ExpressionGui.Annotation as Annotation
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
@@ -246,10 +247,10 @@ makeMParamsEdit mScopeCursor isScopeNavFocused delVarBackwardsId myId nearestHol
                 ScopeNavIsFocused == isScopeNavFocused & guard
                 mScopeCursor ^. current
         annotationMode =
-            ExpressionGui.NeighborVals
+            Annotation.NeighborVals
             (mCurCursor >>= sMPrevParamScope)
             (mCurCursor >>= sMNextParamScope)
-            & ExpressionGui.WithNeighbouringEvalAnnotations
+            & Annotation.WithNeighbouringEvalAnnotations
 
 binderContentNearestHoles :: Sugar.BinderContent name (T m) (ExprGuiT.SugarExpr m) -> NearestHoles
 binderContentNearestHoles body =
@@ -498,7 +499,7 @@ nullParamEditInfo widgetId nameEdit mActions =
 
 makeParamsEdit ::
     Monad m =>
-    ExpressionGui.EvalAnnotationOptions -> NearestHoles ->
+    Annotation.EvalAnnotationOptions -> NearestHoles ->
     Widget.Id -> Widget.Id -> Widget.Id ->
     Sugar.BinderParams (Name (T m)) (T m) ->
     ExprGuiM m [ExpressionGui m]

@@ -39,7 +39,7 @@ import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.State as HoleState
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds (WidgetIds(..))
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds as HoleWidgetIds
 import           Lamdu.GUI.ExpressionGui (ExpressionGui)
-import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
+import qualified Lamdu.GUI.ExpressionGui.Annotation as Annotation
 import qualified Lamdu.GUI.ExpressionGui.HolePicker as HolePicker
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
@@ -333,7 +333,7 @@ makeUnderCursorAssignment shownResultsLists hasHiddenResults hole pl widgetIds =
         -- ExpressionGui.stdWrap, because we want to synchronize the
         -- active BG width with the inferred type width
         typeView <-
-            ExpressionGui.addAnnotationBackground
+            Annotation.addAnnotationBackground
             <*> TypeView.make (pl ^. Sugar.plAnnotation . Sugar.aInferredType)
             <&> (^. Align.tValue)
             & Reader.local (Element.animIdPrefix .~ holeAnimId)
@@ -350,7 +350,7 @@ makeUnderCursorAssignment shownResultsLists hasHiddenResults hole pl widgetIds =
             shownResultsLists hasHiddenResults
             <&> _2 . Lens.mapped %~ E.strongerEvents searchTermEventMap
 
-        vspace <- ExpressionGui.annotationSpacer
+        vspace <- Annotation.annotationSpacer
         let addAnnotation x = x /-/ vspace /-/ typeView
         let blockOperatorEvents
                 | Text.null searchTerm || Text.all (`elem` Chars.operator) searchTerm = mempty
