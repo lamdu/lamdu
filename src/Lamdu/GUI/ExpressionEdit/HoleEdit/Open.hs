@@ -357,9 +357,10 @@ makeUnderCursorAssignment shownResultsLists hasHiddenResults hole pl widgetIds =
                 | otherwise =
                     E.charGroup (Just "Operator") (E.Doc ["Edit", "Apply operator (blocked)"])
                     Chars.operator mempty
+        literalEventMap <- EventMap.makeLiteralEventMap holeKind widgetIds
         searchTermWidget <-
             SearchTerm.make widgetIds holeKind
-            <&> Align.tValue %~ Hover.anchor . E.weakerEvents (pickFirstResult <> blockOperatorEvents)
+            <&> Align.tValue %~ Hover.anchor . E.weakerEvents (pickFirstResult <> blockOperatorEvents <> literalEventMap)
         mkOptions <-
             resultsHoverOptions
             & Reader.local (Element.animIdPrefix .~ WidgetId.toAnimId (hidOpen widgetIds))
