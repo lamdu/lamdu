@@ -72,7 +72,7 @@ makeStdWrapped hole pl widgetIds =
         closedSearchTermGui <-
             fdWrap <*> SearchTerm.make widgetIds holeKind <&> Responsive.fromWithTextPos
             & ExpressionGui.stdWrap pl
-        searchTermEventMap <- HoleEventMap.makeOpenEventMap holeKind widgetIds <&> fixEventMapCursor
+        searchTermEventMap <- HoleEventMap.makeSearchTermEditEventMap holeKind widgetIds <&> fixEventMapCursor
         case (isActive, isAHoleInHole) of
             (True, False) ->
                 -- ideally the fdWrap would be "inside" the

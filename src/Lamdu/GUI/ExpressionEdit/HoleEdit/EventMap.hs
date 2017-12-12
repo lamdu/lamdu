@@ -1,7 +1,7 @@
 {-# LANGUAGE LambdaCase, NoImplicitPrelude, OverloadedStrings, NamedFieldPuns, DisambiguateRecordFields #-}
 module Lamdu.GUI.ExpressionEdit.HoleEdit.EventMap
     ( disallowCharsFromSearchTerm
-    , makeOpenEventMap
+    , makeSearchTermEditEventMap
     ) where
 
 import qualified Control.Lens as Lens
@@ -135,11 +135,11 @@ toLiteralTextEventMap actions =
             & WidgetIds.literalTextEditOf
             & pure
 
-makeOpenEventMap ::
+makeSearchTermEditEventMap ::
     Monad m =>
     Sugar.HoleKind (T m) (Sugar.Expression n (T m) ()) e -> WidgetIds ->
     ExprGuiM m (E.EventMap (T m GuiState.Update))
-makeOpenEventMap holeKind widgetIds =
+makeSearchTermEditEventMap holeKind widgetIds =
     do
         searchTerm <- HoleState.readSearchTerm widgetIds
         let maybeLiteralTextEventMap

@@ -343,7 +343,7 @@ makeUnderCursorAssignment shownResultsLists hasHiddenResults hole pl widgetIds =
                 | Text.null searchTerm = E.filterChars (`notElem` Chars.operator)
                 | otherwise = id
 
-        searchTermEventMap <- EventMap.makeOpenEventMap holeKind widgetIds <&> disallowFirstOperatorChar
+        searchTermEventMap <- EventMap.makeSearchTermEditEventMap holeKind widgetIds <&> disallowFirstOperatorChar
 
         (pickFirstResult, resultsWidgets) <-
             makeResultsWidget (typeView ^. Element.width) pl
