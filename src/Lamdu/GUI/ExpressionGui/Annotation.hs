@@ -255,7 +255,11 @@ addEvaluationResult mNeigh resDisp wideBehavior =
     (T.TRecord T.CEmpty, _) ->
         Styled.addBgColor Theme.evaluatedPathBGColor <&> const
     (_, ER.RFunc{}) -> return (flip const)
-    _ -> addAnnotationH (makeEvalView mNeigh resDisp) wideBehavior
+    _ ->
+        case wideBehavior of
+        KeepWideAnnotation -> ShrinkWideAnnotation
+        _ -> wideBehavior
+        & addAnnotationH (makeEvalView mNeigh resDisp)
 
 maybeAddAnnotationPl ::
     (Functor f, Monad m) =>
