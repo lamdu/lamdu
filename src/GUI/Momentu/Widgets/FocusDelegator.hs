@@ -70,6 +70,9 @@ make =
     \cursor config focusEntryTarget myId -> Widget.widget %~ \childWidget ->
     case () of
     ()
+        | selfIsFocused && childIsFocused ->
+            error "FocusDelegator both itself and child focused"
+
         | selfIsFocused ->
             Widget.setFocused childWidget
             & Widget.wState . Widget._StateFocused . Lens.mapped . Widget.fEventMap . Lens.mapped
