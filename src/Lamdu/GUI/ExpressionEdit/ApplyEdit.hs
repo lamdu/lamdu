@@ -73,8 +73,10 @@ makeFuncVar ::
 makeFuncVar nearestHoles funcVar myId =
     do
         jump <- ExprEventMap.jumpHolesEventMap nearestHoles
-        GetVarEdit.makeGetBinder funcVar myId
+        GetVarEdit.makeGetBinder funcVar funcId
             <&> Align.tValue %~ E.weakerEvents jump
+    where
+        funcId = Widget.joinId myId ["Func"]
 
 makeInfixFuncName ::
     Monad m =>
