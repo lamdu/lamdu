@@ -31,6 +31,7 @@ import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
 import           Lamdu.GUI.ExpressionGui.HolePicker (HolePicker(..))
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
+import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Name (Name)
 import qualified Lamdu.Sugar.Types as Sugar
 
@@ -69,8 +70,17 @@ makeStdWrapped hole pl widgetIds =
                     Lens.mapped . Lens.mapped . GuiState.uCursor %~
                     mappend (Monoid.Last (Just (hidOpen widgetIds)))
         exprEventMap <- ExprEventMap.make (pl & Sugar.plData . ExprGuiT.plMinOpPrec .~ 100) NoHolePick
+        delKeys <- Config.delKeys
+        let unwrapAsDelEventMap =
+                hole ^? Sugar.holeKind . Sugar._WrapperHole . Sugar.haUnwrap . Sugar._UnwrapAction
+                & maybe mempty
+                    ( Widget.keysEventMapMovesCursor delKeys
+                        (E.Doc ["Edit", "Unwrap"])
+                        . fmap WidgetIds.fromEntityId
+                    )
         closedSearchTermGui <-
             fdWrap <*> SearchTerm.make widgetIds holeKind <&> Responsive.fromWithTextPos
+            <&> E.weakerEvents unwrapAsDelEventMap
             & ExpressionGui.stdWrap pl
         searchTermEventMap <- HoleEventMap.makeSearchTermEditEventMap holeKind widgetIds <&> fixEventMapCursor
         case (isActive, isAHoleInHole) of
@@ -82,6 +92,7 @@ makeStdWrapped hole pl widgetIds =
                 -- here
                 (fdWrap <&> (Lens.mapped %~))
                 <*> makeOpenSearchAreaGui hole pl widgetIds
+                <&> Lens.mapped . Align.tValue %~ E.weakerEvents unwrapAsDelEventMap
                 <&> Lens.mapped %~
                 \open ->
                 closedSearchTermGui & Responsive.alignedWidget . Align.tValue %~

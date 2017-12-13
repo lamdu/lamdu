@@ -390,15 +390,6 @@ makeOpenSearchAreaGui hole pl widgetIds =
                 [ rId . (^. HoleResults.rlMain)
                 , (^. HoleResults.rlExtraResultsPrefixId)
                 ] <*> shownResultsLists
-        delKeys <- Config.delKeys
-        let unwrapAsDelEventMap =
-                hole ^? Sugar.holeKind . Sugar._WrapperHole . Sugar.haUnwrap . Sugar._UnwrapAction
-                & maybe mempty
-                    ( Widget.keysEventMapMovesCursor delKeys
-                        (E.Doc ["Edit", "Unwrap"])
-                        . fmap WidgetIds.fromEntityId
-                    )
         makeUnderCursorAssignment shownResultsLists
             hasHiddenResults hole pl widgetIds
             & assignHoleEditCursor widgetIds searchTerm shownMainResultsIds allShownResultIds
-            <&> Lens.mapped . Align.tValue %~ E.weakerEvents unwrapAsDelEventMap
