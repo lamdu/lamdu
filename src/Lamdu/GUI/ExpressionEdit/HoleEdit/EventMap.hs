@@ -63,6 +63,7 @@ allowedSearchTerm :: Sugar.HoleKind f e0 e1 -> Text -> Bool
 allowedSearchTerm holeKind searchTerm =
     [ Text.all (`elem` Chars.operator)
     , Text.all Char.isAlphaNum
+    , (`Text.isPrefixOf` "{}")
     ] ++ ( if Lens.has Sugar._LeafHole holeKind
             then [isPositiveNumber, isNegativeNumber, isLiteralBytes]
             else []
