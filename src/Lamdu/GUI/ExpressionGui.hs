@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, OverloadedStrings, RankNTypes, TypeFamilies, LambdaCase, DeriveTraversable , FlexibleContexts, DisambiguateRecordFields #-}
+{-# LANGUAGE NoImplicitPrelude, OverloadedStrings, DisambiguateRecordFields #-}
 module Lamdu.GUI.ExpressionGui
     ( ExpressionGui
     , render

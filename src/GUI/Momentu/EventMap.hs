@@ -77,13 +77,11 @@ cgDocs f (CharGroupHandler mInputDoc docHandler) =
     dhDoc (Lens.indexed f inputDoc) docHandler
     <&> CharGroupHandler mInputDoc
     where
-        inputDoc =
-            case mInputDoc of
-            Just x -> x
-            Nothing ->
-                docHandler ^.. dhHandler . Lens.ifolded . Lens.asIndex . Lens.filtered isAscii
-                & show
-                & fromString
+        inputDoc = fromMaybe autoDoc mInputDoc
+        autoDoc =
+            docHandler ^.. dhHandler . Lens.ifolded . Lens.asIndex . Lens.filtered isAscii
+            & show
+            & fromString
 
 -- File path (drag&)drop handler
 data DropHandler a = DropHandler
@@ -263,7 +261,7 @@ lookupAllCharHandler allCharHandlers (Events.KeyEvent _k _scanCode keyState _mod
         AllCharsHandler _ handler <- allCharHandlers
         (handler ^. dhHandler) char ^.. Lens._Just
 
-charGroup :: (Maybe InputDoc) -> Doc -> String -> (Char -> a) -> EventMap a
+charGroup :: Maybe InputDoc -> Doc -> String -> (Char -> a) -> EventMap a
 charGroup miDoc oDoc chars func =
     mempty
     { _emCharGroupHandlers = [CharGroupHandler miDoc (DocHandler oDoc handler)]

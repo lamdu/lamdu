@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, OverloadedStrings, RankNTypes, TypeFamilies, LambdaCase, DeriveTraversable , FlexibleContexts, DisambiguateRecordFields #-}
+{-# LANGUAGE NoImplicitPrelude, OverloadedStrings, TypeFamilies, LambdaCase, DeriveTraversable, FlexibleContexts #-}
 module Lamdu.GUI.ExpressionGui.Annotation
     ( annotationSpacer
     , NeighborVals(..)
