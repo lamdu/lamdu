@@ -20,6 +20,9 @@ import           Lamdu.Prelude
 
 type T = Transaction
 
+-- forbiddenTags are sibling tags in the same record/funcParams/etc,
+-- NOT type-level constraints on tags. Violation of constraints is
+-- allowed, generating ordinary type errors
 convertTag :: Monad m => TagInfo -> Set T.Tag -> (T.Tag -> T m TagInfo) -> ConvertM m (Tag UUID (T m))
 convertTag info@(TagInfo _ tag) forbiddenTags setTag =
     ConvertM.readContext <&> (^. ConvertM.scCodeAnchors) <&> Anchors.tags
