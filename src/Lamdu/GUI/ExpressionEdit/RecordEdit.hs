@@ -22,7 +22,7 @@ import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.GUI.ExpressionEdit.TagEdit as TagEdit
-import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
+import           Lamdu.GUI.ExpressionGui.Wrap (stdWrap, stdWrapParentExpr)
 import           Lamdu.GUI.ExpressionGui.HolePicker (withHolePicker)
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
@@ -66,7 +66,7 @@ makeUnit _actions addField pl =
             & pure
     -- Don't add the closedRecordEventMap (_actions) - it only adds the open
     -- action which is equivalent ot deletion on the unit record
-    & ExpressionGui.stdWrap pl
+    & stdWrap pl
     where
         myId = WidgetIds.fromExprPayload pl
 
@@ -88,7 +88,7 @@ make (Sugar.Composite fields recordTail addField) pl =
                     openRecordEventMap config actions restExpr
         let addFieldEventMap = mkAddFieldEventMap config addField
         makeRecord fields addFieldEventMap postProcess
-            & ExpressionGui.stdWrapParentExpr pl
+            & stdWrapParentExpr pl
             <&> E.weakerEvents eventMap
     where
         postProcess =

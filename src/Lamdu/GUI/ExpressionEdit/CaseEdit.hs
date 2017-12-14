@@ -28,13 +28,13 @@ import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.Eval.Results as ER
 import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
 import qualified Lamdu.GUI.ExpressionEdit.TagEdit as TagEdit
-import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
 import qualified Lamdu.GUI.ExpressionGui.Annotation as Annotation
 import           Lamdu.GUI.ExpressionGui.HolePicker (withHolePicker)
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import           Lamdu.GUI.ExpressionGui.Types (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
+import           Lamdu.GUI.ExpressionGui.Wrap (stdWrap, parentDelegator)
 import qualified Lamdu.GUI.Styled as Styled
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Name (Name(..))
@@ -111,10 +111,10 @@ make (Sugar.Case mArg (Sugar.Composite alts caseTail addAlt)) pl =
             & Widget.keysEventMapMovesCursor (Config.caseAddAltKeys config)
                 (doc "Add Alt")
             & const & withHolePicker resultPicker
-        ExpressionGui.parentDelegator (WidgetIds.fromExprPayload pl)
+        parentDelegator (WidgetIds.fromExprPayload pl)
             <*> (Styled.addValFrame <*> (Responsive.vboxSpaced ?? [header, altsGui]))
             <&> E.weakerEvents addAltEventMap
-    & ExpressionGui.stdWrap pl
+    & stdWrap pl
     where
         myId = WidgetIds.fromExprPayload pl
         headerId = Widget.joinId myId ["header"]

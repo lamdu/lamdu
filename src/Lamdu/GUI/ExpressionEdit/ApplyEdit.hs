@@ -26,12 +26,12 @@ import qualified Lamdu.GUI.ExpressionEdit.BinderEdit as BinderEdit
 import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
 import qualified Lamdu.GUI.ExpressionEdit.GetVarEdit as GetVarEdit
 import qualified Lamdu.GUI.ExpressionEdit.TagEdit as TagEdit
-import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
 import           Lamdu.GUI.ExpressionGui.HolePicker (HolePicker(..))
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import           Lamdu.GUI.ExpressionGui.Types (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
+import           Lamdu.GUI.ExpressionGui.Wrap (stdWrapParentExpr)
 import qualified Lamdu.GUI.Styled as Styled
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Name (Name(..))
@@ -143,7 +143,7 @@ makeLabeled apply pl =
     makeFuncRow mParensId apply
     (pl ^. Sugar.plData . ExprGuiT.plNearestHoles) myId
     & addBox
-    & ExpressionGui.stdWrapParentExpr pl
+    & stdWrapParentExpr pl
     where
         addBox
             | isBoxed apply = mkBoxed apply (pl ^. Sugar.plData . ExprGuiT.plNearestHoles)
@@ -224,7 +224,7 @@ makeSimple (Sugar.Apply func arg) pl =
     [ ExprGuiM.makeSubexpression func
     , ExprGuiM.makeSubexpression arg
     ]
-    & ExpressionGui.stdWrapParentExpr pl
+    & stdWrapParentExpr pl
     where
         mParensId
             | pl ^. Sugar.plData . ExprGuiT.plNeedParens = Just (Widget.toAnimId myId)

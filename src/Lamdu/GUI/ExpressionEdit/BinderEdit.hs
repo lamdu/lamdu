@@ -42,12 +42,12 @@ import qualified Lamdu.Data.Meta as Meta
 import qualified Lamdu.GUI.CodeEdit.Settings as CESettings
 import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
 import qualified Lamdu.GUI.ExpressionEdit.TagEdit as TagEdit
-import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
 import qualified Lamdu.GUI.ExpressionGui.Annotation as Annotation
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import           Lamdu.GUI.ExpressionGui.Types (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
+import           Lamdu.GUI.ExpressionGui.Wrap (parentDelegator)
 import qualified Lamdu.GUI.NameEdit as NameEdit
 import qualified Lamdu.GUI.ParamEdit as ParamEdit
 import qualified Lamdu.GUI.PresentationModeEdit as PresentationModeEdit
@@ -457,7 +457,7 @@ makeBinderContentEdit (Sugar.BinderLet l) =
                 (E.Doc ["Edit", "Let clause", "Move inwards"]) . void)
         mOuterScopeId <- ExprGuiM.readMScopeId
         let letBodyScope = liftA2 lookupMKey mOuterScopeId (l ^. Sugar.lBodyScope)
-        ExpressionGui.parentDelegator letEntityId
+        parentDelegator letEntityId
             <*> ( Responsive.vboxSpaced
                   <*>
                   sequence

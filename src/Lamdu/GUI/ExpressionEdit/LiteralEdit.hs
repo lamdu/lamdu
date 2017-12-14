@@ -28,10 +28,10 @@ import           Lamdu.Config (HasConfig)
 import qualified Lamdu.Config as Config
 import           Lamdu.Formatting (Format(..))
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.State (setHoleStateAndJump)
-import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import           Lamdu.GUI.ExpressionGui.Types (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
+import           Lamdu.GUI.ExpressionGui.Wrap (stdWrap)
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Style (Style, HasStyle)
 import qualified Lamdu.Style as Style
@@ -115,4 +115,4 @@ make lit pl =
     Sugar.LiteralNum x -> genericEdit Style.styleNum x pl
     Sugar.LiteralBytes x -> genericEdit Style.styleBytes x pl
     Sugar.LiteralText x -> textEdit x pl <&> Responsive.fromWithTextPos
-    & ExpressionGui.stdWrap pl
+    & stdWrap pl

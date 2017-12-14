@@ -26,11 +26,11 @@ import           Lamdu.GUI.ExpressionEdit.HoleEdit.Open (makeOpenSearchAreaGui)
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.SearchTerm as SearchTerm
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds (WidgetIds(..))
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds as WidgetIds
-import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
 import           Lamdu.GUI.ExpressionGui.HolePicker (HolePicker(..))
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import           Lamdu.GUI.ExpressionGui.Types (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
+import           Lamdu.GUI.ExpressionGui.Wrap (stdWrap)
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Name (Name)
 import qualified Lamdu.Sugar.Types as Sugar
@@ -47,7 +47,7 @@ fdConfig Config.Hole{holeOpenKeys, holeCloseKeys} = FocusDelegator.Config
     , FocusDelegator.focusParentDoc = E.Doc ["Navigation", "Hole", "Close"]
     }
 
--- Has an ExpressionGui.stdWrap/typeView under the search term
+-- Has an stdWrap/typeView under the search term
 makeStdWrapped ::
     Monad m =>
     Sugar.Hole (T m) (Sugar.Expression (Name (T m)) (T m) ()) (ExprGuiT.SugarExpr m) ->
@@ -81,7 +81,7 @@ makeStdWrapped hole pl widgetIds =
         closedSearchTermGui <-
             fdWrap <*> SearchTerm.make widgetIds holeKind <&> Responsive.fromWithTextPos
             <&> E.weakerEvents unwrapAsDelEventMap
-            & ExpressionGui.stdWrap pl
+            & stdWrap pl
         searchTermEventMap <- HoleEventMap.makeSearchTermEditEventMap holeKind widgetIds <&> fixEventMapCursor
         case (isActive, isAHoleInHole) of
             (True, False) ->

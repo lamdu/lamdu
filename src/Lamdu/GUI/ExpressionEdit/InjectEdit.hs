@@ -25,11 +25,11 @@ import           Lamdu.Config (HasConfig)
 import qualified Lamdu.Config as Config
 import           Lamdu.Config.Theme (HasTheme)
 import qualified Lamdu.GUI.ExpressionEdit.TagEdit as TagEdit
-import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import           Lamdu.GUI.ExpressionGui.Types (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
+import           Lamdu.GUI.ExpressionGui.Wrap (stdWrap, stdWrapParentExpr)
 import qualified Lamdu.GUI.Styled as Styled
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Name (Name(..))
@@ -90,7 +90,7 @@ make (Sugar.Inject tag mVal) pl =
                 Options.disambiguationNone
                 (tag & Sugar.tagInfo . Sugar.tagInstance .~ (pl ^. Sugar.plEntityId))
                 Nothing (pl ^. Sugar.plData . ExprGuiT.plNearestHoles) dot []
-        & ExpressionGui.stdWrap pl
+        & stdWrap pl
     Just val ->
         do
             disamb <-
@@ -101,6 +101,6 @@ make (Sugar.Inject tag mVal) pl =
                 ExprGuiM.makeSubexpression val <&> (:[])
             colon <- injectIndicator ":"
             makeCommon disamb tag replaceParent (ExprGuiT.nextHolesBefore val) colon arg
-        & ExpressionGui.stdWrapParentExpr pl
+        & stdWrapParentExpr pl
         where
             replaceParent = val ^. Sugar.rPayload . Sugar.plActions . Sugar.mReplaceParent

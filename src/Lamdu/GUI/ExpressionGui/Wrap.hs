@@ -1,5 +1,5 @@
 {-# LANGUAGE NoImplicitPrelude, OverloadedStrings, DisambiguateRecordFields #-}
-module Lamdu.GUI.ExpressionGui
+module Lamdu.GUI.ExpressionGui.Wrap
     ( stdWrap
     , parentDelegator
     , stdWrapParentExpr

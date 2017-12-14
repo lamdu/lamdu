@@ -28,11 +28,11 @@ import qualified Lamdu.Config as Config
 import           Lamdu.Config.Theme (HasTheme)
 import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.Data.Ops as DataOps
-import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import           Lamdu.GUI.ExpressionGui.Types (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
+import           Lamdu.GUI.ExpressionGui.Wrap (stdWrap)
 import qualified Lamdu.GUI.LightLambda as LightLambda
 import qualified Lamdu.GUI.NameEdit as NameEdit
 import qualified Lamdu.GUI.Styled as Styled
@@ -236,6 +236,6 @@ make getVar pl =
         makeParamsRecord myId paramsRecordVar
     Sugar.GetParam param ->
         makeGetParam param myId <&> Responsive.fromWithTextPos
-    & ExpressionGui.stdWrap pl
+    & stdWrap pl
     where
         myId = WidgetIds.fromExprPayload pl

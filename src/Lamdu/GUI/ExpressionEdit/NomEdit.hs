@@ -16,7 +16,7 @@ import qualified GUI.Momentu.Widgets.TextView as TextView
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.GUI.ExpressionEdit.BinderEdit as BinderEdit
-import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
+import           Lamdu.GUI.ExpressionGui.Wrap (stdWrapParentExpr)
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import           Lamdu.GUI.ExpressionGui.Types (ExpressionGui)
@@ -92,7 +92,7 @@ mkNomGui ordering nomStr str mDel pl (Sugar.Nominal tid val) =
               , val
               ] & sequence
             )
-    & ExpressionGui.stdWrapParentExpr pl
+    & stdWrapParentExpr pl
     where
         mParenInfo
             | pl ^. Sugar.plData . ExprGuiT.plNeedParens =

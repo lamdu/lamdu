@@ -24,10 +24,10 @@ import qualified Lamdu.Config as Config
 import           Lamdu.Config.Theme (HasTheme)
 import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.GUI.ExpressionEdit.BinderEdit as BinderEdit
-import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import           Lamdu.GUI.ExpressionGui.Types (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
+import           Lamdu.GUI.ExpressionGui.Wrap (stdWrapParentExpr)
 import qualified Lamdu.GUI.LightLambda as LightLambda
 import qualified Lamdu.GUI.Styled as Styled
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
@@ -144,7 +144,7 @@ make lam pl =
             <*> (Options.boxSpaced ?? Options.disambiguationNone ?? paramsAndLabelEdits
                 <&> (: [bodyEdit]))
             <&> E.weakerEvents eventMap
-    & ExpressionGui.stdWrapParentExpr pl
+    & stdWrapParentExpr pl
     where
         animId = Widget.toAnimId myId
         mParensId

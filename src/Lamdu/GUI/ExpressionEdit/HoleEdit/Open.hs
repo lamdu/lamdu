@@ -328,9 +328,9 @@ makeUnderCursorAssignment ::
     ExprGuiM m (Menu.Placement -> WithTextPos (Widget (T m GuiState.Update)))
 makeUnderCursorAssignment shownResultsLists hasHiddenResults hole pl widgetIds =
     do
-        -- We make our own type view here instead of
-        -- ExpressionGui.stdWrap, because we want to synchronize the
-        -- active BG width with the inferred type width
+        -- We make our own type view here instead of stdWrap, because
+        -- we want to synchronize the active BG width with the
+        -- inferred type width
         typeView <-
             Annotation.addAnnotationBackground
             <*> TypeView.make (pl ^. Sugar.plAnnotation . Sugar.aInferredType)

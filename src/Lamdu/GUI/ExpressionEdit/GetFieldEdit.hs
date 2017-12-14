@@ -11,7 +11,7 @@ import qualified GUI.Momentu.Responsive.Options as Options
 import qualified GUI.Momentu.Widget as Widget
 import qualified Lamdu.Config as Config
 import qualified Lamdu.GUI.ExpressionEdit.TagEdit as TagEdit
-import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
+import           Lamdu.GUI.ExpressionGui.Wrap (stdWrapParentExpr)
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import           Lamdu.GUI.ExpressionGui.Types (ExpressionGui)
@@ -50,4 +50,4 @@ make (Sugar.GetField recExpr tag) pl =
             , Responsive.fromWithTextPos tagEdit
             ]
             & return
-    & ExpressionGui.stdWrapParentExpr pl
+    & stdWrapParentExpr pl
