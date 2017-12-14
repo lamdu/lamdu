@@ -4,7 +4,7 @@
 ".",":" -- operators on arg
 "foo:"  -- all results are injects with "foo" as tag selector
 
-# non-arg hole
+# leaf-hole
 
 "1." -- literal
 
