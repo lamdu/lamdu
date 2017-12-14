@@ -64,14 +64,13 @@ allowedSearchTerm holeKind searchTerm =
     [ Text.all (`elem` Chars.operator)
     , Text.all Char.isAlphaNum
     , (`Text.isPrefixOf` "{}")
-    , isGetField
-    ] ++ ( if Lens.has Sugar._LeafHole holeKind
-            then [isPositiveNumber, isNegativeNumber, isLiteralBytes]
-            else []
-         )
+    ] ++ kindOptions
     & any (searchTerm &)
     where
-        isLiteralBytes :: Text -> Bool
+        kindOptions =
+            case holeKind of
+            Sugar.LeafHole{} -> [isPositiveNumber, isNegativeNumber, isLiteralBytes]
+            Sugar.WrapperHole{} -> [isGetField]
         isLiteralBytes = prefixed '#' (Text.all Char.isHexDigit)
         isNegativeNumber = prefixed '-' isPositiveNumber
         prefixed char restPred t =
