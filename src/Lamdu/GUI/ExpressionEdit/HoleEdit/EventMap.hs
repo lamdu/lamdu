@@ -96,7 +96,6 @@ disallowCharsFromSearchTerm =
      holeKind getSearchTerm eventMap ->
     eventMap
     & E.filter (allowedSearchTerm holeKind . getSearchTerm)
-    & E.filterChars (`notElem` Chars.disallowedInHole)
     & deleteKeys (holePickAndMoveToNextHoleKeys ++ holePickResultKeys <&> MetaKey.toModKey)
 
 deleteKeys :: E.HasEventMap f => [ModKey] -> f a -> f a
