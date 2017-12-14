@@ -113,7 +113,7 @@ listTHead nil l =
 -- have a canonical result?
 toLiteralTextEventMap ::
     Monad m =>
-    Sugar.LeafHoleActions (T m) (Sugar.Expression name (T m) ()) ->
+    Sugar.LeafHoleActions (T m) (Sugar.Expression name n a) ->
     E.EventMap (T m GuiState.Update)
 toLiteralTextEventMap actions =
     Widget.keysEventMapMovesCursor toLiteralTextKeys
@@ -139,7 +139,7 @@ toLiteralTextEventMap actions =
 
 makeLiteralEventMap ::
     Monad m =>
-    Sugar.HoleKind (T m) (Sugar.Expression n (T m) ()) e -> WidgetIds ->
+    Sugar.HoleKind (T m) (Sugar.Expression n p a) e -> WidgetIds ->
     ExprGuiM m (E.EventMap (T m GuiState.Update))
 makeLiteralEventMap holeKind widgetIds =
     HoleState.readSearchTerm widgetIds <&> f
@@ -150,7 +150,7 @@ makeLiteralEventMap holeKind widgetIds =
 
 makeSearchTermEditEventMap ::
     Monad m =>
-    Sugar.HoleKind (T m) (Sugar.Expression n (T m) ()) e -> WidgetIds ->
+    Sugar.HoleKind (T m) (Sugar.Expression n p a) e -> WidgetIds ->
     ExprGuiM m (E.EventMap (T m GuiState.Update))
 makeSearchTermEditEventMap holeKind widgetIds =
     do
