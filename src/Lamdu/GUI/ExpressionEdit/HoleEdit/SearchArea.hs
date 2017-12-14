@@ -70,17 +70,16 @@ makeStdWrapped hole pl widgetIds =
                     Lens.mapped . Lens.mapped . GuiState.uCursor %~
                     mappend (Monoid.Last (Just (hidOpen widgetIds)))
         exprEventMap <- ExprEventMap.make (pl & Sugar.plData . ExprGui.plMinOpPrec .~ 100) NoHolePick
-        delKeys <- Config.delKeys
-        let unwrapAsDelEventMap =
+        let unwrapAsEventMap =
                 hole ^? Sugar.holeKind . Sugar._WrapperHole . Sugar.haUnwrap . Sugar._UnwrapAction
                 & maybe mempty
-                    ( Widget.keysEventMapMovesCursor delKeys
+                    ( Widget.keysEventMapMovesCursor (Config.delKeys config <> Config.holeUnwrapKeys (Config.hole config))
                         (E.Doc ["Edit", "Unwrap"])
                         . fmap WidgetIds.fromEntityId
                     )
         closedSearchTermGui <-
             fdWrap <*> SearchTerm.make widgetIds holeKind <&> Responsive.fromWithTextPos
-            <&> E.weakerEvents unwrapAsDelEventMap
+            <&> E.weakerEvents unwrapAsEventMap
             & stdWrap pl
         searchTermEventMap <- HoleEventMap.makeSearchTermEditEventMap holeKind widgetIds <&> fixEventMapCursor
         case (isActive, isAHoleInHole) of
@@ -92,7 +91,7 @@ makeStdWrapped hole pl widgetIds =
                 -- here
                 (fdWrap <&> (Lens.mapped %~))
                 <*> makeOpenSearchAreaGui hole pl widgetIds
-                <&> Lens.mapped . Align.tValue %~ E.weakerEvents unwrapAsDelEventMap
+                <&> Lens.mapped . Align.tValue %~ E.weakerEvents unwrapAsEventMap
                 <&> Lens.mapped %~
                 \open ->
                 closedSearchTermGui & Responsive.alignedWidget . Align.tValue %~
