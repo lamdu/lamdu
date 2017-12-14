@@ -263,7 +263,15 @@ assignHoleEditCursor widgetIds searchTerm shownMainResultsIds allShownResultIds 
         searchTermId = hidOpenSearchTerm widgetIds
         sub x = GuiState.isSubCursor ?? x
         destId
-            | Text.null searchTerm = searchTermId
+            | Text.null searchTerm =
+                  -- When selecting a result like "fac HOLE", the
+                  -- cursor moves sto the hidOpen of the selected
+                  -- HOLE, which has a null search term. We want to
+                  -- move the cursor to the search term in this case,
+                  -- otherwise further actions surprisingly apply to a
+                  -- random first result. (e.g: "fac (" will apply
+                  -- open-paren to the first result)
+                  searchTermId
             | otherwise = head (shownMainResultsIds ++ [searchTermId])
 
 resultsHoverOptions ::
