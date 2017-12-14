@@ -38,10 +38,8 @@ import qualified Lamdu.Builtins.Anchors as Builtins
 import qualified Lamdu.Builtins.PrimVal as PrimVal
 import           Lamdu.Calc.Type (Type(..))
 import qualified Lamdu.Calc.Type as T
-import           Lamdu.Calc.Type.Constraints (getProductVarConstraints)
-import qualified Lamdu.Calc.Type.FlatComposite as FlatComposite
 import qualified Lamdu.Calc.Type.Nominal as N
-import           Lamdu.Calc.Type.Scheme (schemeConstraints, schemeType)
+import           Lamdu.Calc.Type.Scheme (schemeType)
 import qualified Lamdu.Calc.Val as V
 import           Lamdu.Calc.Val.Annotated (Val(..))
 import qualified Lamdu.Calc.Val.Annotated as Val
@@ -176,27 +174,6 @@ isLiveGlobal defI =
     & Transaction.getP
     <&> (== LiveDefinition)
 
-getRecordTags ::
-    Monad m => ConvertM.Context m -> Input.Payload f a -> T m [T.Tag]
-getRecordTags sugarContext exprPl =
-    case mForbiddenRecordTags of
-    Nothing -> return mempty
-    Just tags ->
-        sugarContext ^. ConvertM.scCodeAnchors
-        & Anchors.tags & Transaction.getP
-        <&> (`Set.difference` tags) <&> Set.toList
-    where
-        mForbiddenRecordTags =
-            exprPl ^? Input.inferred . Infer.plType . T._TRecord
-            <&> FlatComposite.fromComposite
-            >>= (^. FlatComposite.extension)
-            <&> recordTypeVarConstraints
-        recordTypeVarConstraints tv =
-            Infer.makeScheme (sugarContext ^. ConvertM.scInferContext)
-            (T.TRecord (T.CVar tv))
-            ^. schemeConstraints
-            & getProductVarConstraints tv
-
 getNominals :: Monad m => ConvertM.Context m -> T m [(T.NominalId, N.Nominal)]
 getNominals sugarContext =
     sugarContext ^. ConvertM.scCodeAnchors
@@ -250,15 +227,11 @@ mkOptions sugarContext mInjectedArg exprPl stored =
     do
         nominalOptions <- getNominals sugarContext <&> mkNominalOptions
         globals <- getGlobals sugarContext
-        recordTags <- getRecordTags sugarContext exprPl
         concat
             [ locals sugarContext exprPl
                 & concatMap (getLocalScopeGetVars sugarContext)
             , globals <&> P.var . ExprIRef.globalId
             , nominalOptions
-            , do
-                tag <- recordTags
-                [ P.recExtend tag P.hole P.hole ]
             , [ P.abs "NewLambda" P.hole ]
             , [ P.recEmpty ]
             , [ P.absurd ]
