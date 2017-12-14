@@ -1,7 +1,6 @@
 {-# LANGUAGE NoImplicitPrelude, OverloadedStrings, DisambiguateRecordFields #-}
 module Lamdu.GUI.ExpressionGui
     ( ExpressionGui
-    , render
 
     , stdWrap
     , parentDelegator
@@ -10,12 +9,9 @@ module Lamdu.GUI.ExpressionGui
 
 import qualified Control.Lens as Lens
 import           Data.Store.Transaction (Transaction)
-import           GUI.Momentu.Align (WithTextPos(..))
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Responsive (Responsive(..))
-import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.State as GuiState
-import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.FocusDelegator as FocusDelegator
 import           Lamdu.Config (Config)
@@ -69,11 +65,3 @@ stdWrapParentExpr ::
 stdWrapParentExpr pl mkGui =
     parentDelegator (WidgetIds.fromExprPayload pl) <*> mkGui
     & stdWrap pl
-
-render :: Widget.R -> Responsive a -> WithTextPos (Widget a)
-render width gui =
-    (gui ^. Responsive.render)
-    Responsive.LayoutParams
-    { _layoutMode = Responsive.LayoutNarrow width
-    , _layoutContext = Responsive.LayoutClear
-    }

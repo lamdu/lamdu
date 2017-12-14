@@ -39,7 +39,6 @@ import qualified Lamdu.GUI.AnnotationsPass as AnnotationsPass
 import           Lamdu.GUI.CodeEdit.Settings (HasSettings)
 import qualified Lamdu.GUI.DefinitionEdit as DefinitionEdit
 import qualified Lamdu.GUI.ExpressionEdit as ExpressionEdit
-import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
@@ -151,8 +150,14 @@ make theCodeAnchors width =
                 ?? (replGui : panesEdits ++ [newDefinitionButton])
                 <&> E.weakerEvents eventMap
             & ExprGuiM.run ExpressionEdit.make theCodeAnchors
-            <&> ExpressionGui.render width
+            <&> render
             <&> (^. Align.tValue)
+    where
+        render gui =
+            Responsive.LayoutParams
+            { _layoutMode = Responsive.LayoutNarrow width
+            , _layoutContext = Responsive.LayoutClear
+            } & gui ^. Responsive.render
 
 makePaneEdit ::
     Monad m =>
