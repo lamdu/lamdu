@@ -2,13 +2,9 @@
 
 module Lamdu.CharClassification
     ( operator, bracket, digit, hexDigit
-    , disallowedInHole
     ) where
 
 import Lamdu.Prelude
-
-disallowedInHole :: String
-disallowedInHole = ",`\"\n "
 
 operator :: String
 operator = "\\+-*/^=><&|%$:.!;#?@~≥≤≠⋲"

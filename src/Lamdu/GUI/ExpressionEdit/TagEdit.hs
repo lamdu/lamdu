@@ -8,6 +8,7 @@ module Lamdu.GUI.ExpressionEdit.TagEdit
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
 import           Control.Monad.Transaction (MonadTransaction(..))
+import qualified Data.Char as Char
 import           Data.Function (on)
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Text as Text
@@ -25,11 +26,10 @@ import           GUI.Momentu.View (View)
 import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Menu as Menu
-import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import           GUI.Momentu.Widgets.Spacer (HasStdSpacing)
+import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
 import qualified GUI.Momentu.Widgets.TextView as TextView
-import qualified Lamdu.CharClassification as Chars
 import           Lamdu.Config (HasConfig)
 import qualified Lamdu.Config as Config
 import           Lamdu.Config.Theme (HasTheme(..))
@@ -150,6 +150,9 @@ makeOptions nearestHoles tag searchTerm
                 optionWId = WidgetIds.hash t
                 optionId = Widget.toAnimId optionWId
 
+allowedSearchTerm :: Text -> Bool
+allowedSearchTerm = Text.all Char.isAlphaNum
+
 makeTagHoleEdit ::
     ( Monad m, MonadReader env f, MonadTransaction m f
     , GuiState.HasState env
@@ -165,9 +168,9 @@ makeTagHoleEdit nearestHoles tag =
             & makePickEventMap nearestHoles (E.Doc ["Edit", "Tag", "Set name"])
         term <-
             TextEdit.make ?? textEditNoEmpty ?? searchTerm ?? searchTermId
+            <&> Align.tValue %~ E.filter (allowedSearchTerm . fst)
             <&> Align.tValue . Lens.mapped %~ pure . updateState
             <&> Align.tValue %~ E.strongerEvents setNameEventMap
-            <&> Align.tValue %~ E.filterChars (`notElem` Chars.disallowedInHole)
         tooltip <- Lens.view theme <&> Theme.tooltip
         topLine <-
             if not (Text.null searchTerm) && Widget.isFocused (term ^. Align.tValue)
