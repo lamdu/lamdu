@@ -25,8 +25,8 @@ import           Lamdu.Config.Theme (HasTheme)
 import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.GUI.ExpressionEdit.BinderEdit as BinderEdit
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
-import           Lamdu.GUI.ExpressionGui.Types (ExpressionGui)
-import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
+import           Lamdu.GUI.ExpressionGui (ExpressionGui)
+import qualified Lamdu.GUI.ExpressionGui as ExprGui
 import           Lamdu.GUI.ExpressionGui.Wrap (stdWrapParentExpr)
 import qualified Lamdu.GUI.LightLambda as LightLambda
 import qualified Lamdu.GUI.Styled as Styled
@@ -128,8 +128,8 @@ mkLightLambda params myId =
 
 make ::
     Monad m =>
-    Sugar.Lambda (Name (T m)) (T m) (ExprGuiT.SugarExpr m) ->
-    Sugar.Payload (T m) ExprGuiT.Payload ->
+    Sugar.Lambda (Name (T m)) (T m) (ExprGui.SugarExpr m) ->
+    Sugar.Payload (T m) ExprGui.Payload ->
     ExprGuiM m (ExpressionGui m)
 make lam pl =
     do
@@ -148,10 +148,10 @@ make lam pl =
     where
         animId = Widget.toAnimId myId
         mParensId
-            | pl ^. Sugar.plData . ExprGuiT.plNeedParens = Just animId
+            | pl ^. Sugar.plData . ExprGui.plNeedParens = Just animId
             | otherwise = Nothing
         myId = WidgetIds.fromExprPayload pl
-        funcApplyLimit = pl ^. Sugar.plData . ExprGuiT.plShowAnnotation . ExprGuiT.funcApplyLimit
+        funcApplyLimit = pl ^. Sugar.plData . ExprGui.plShowAnnotation . ExprGui.funcApplyLimit
         params = binder ^. Sugar.bParams
         binder = lam ^. Sugar.lamBinder
         bodyId = binder ^. Sugar.bBody . Sugar.bbContent . SugarLens.binderContentEntityId

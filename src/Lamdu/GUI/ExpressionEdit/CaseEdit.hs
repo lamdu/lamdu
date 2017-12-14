@@ -32,8 +32,8 @@ import qualified Lamdu.GUI.ExpressionGui.Annotation as Annotation
 import           Lamdu.GUI.ExpressionGui.HolePicker (withHolePicker)
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
-import           Lamdu.GUI.ExpressionGui.Types (ExpressionGui)
-import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
+import           Lamdu.GUI.ExpressionGui (ExpressionGui)
+import qualified Lamdu.GUI.ExpressionGui as ExprGui
 import           Lamdu.GUI.ExpressionGui.Wrap (stdWrap, parentDelegator)
 import qualified Lamdu.GUI.Styled as Styled
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
@@ -49,8 +49,8 @@ doc text = E.Doc ["Edit", "Case", text]
 
 make ::
     Monad m =>
-    Sugar.Case (Name (T m)) (T m) (ExprGuiT.SugarExpr m) ->
-    Sugar.Payload (T m) ExprGuiT.Payload ->
+    Sugar.Case (Name (T m)) (T m) (ExprGui.SugarExpr m) ->
+    Sugar.Payload (T m) ExprGui.Payload ->
     ExprGuiM m (ExpressionGui m)
 make (Sugar.Case mArg (Sugar.Composite alts caseTail addAlt)) pl =
     do
@@ -60,7 +60,7 @@ make (Sugar.Case mArg (Sugar.Composite alts caseTail addAlt)) pl =
                 ++ caseTail ^.. Lens.traversed
                 ) ^? Lens.traversed
         labelJumpHoleEventMap <-
-            mExprAfterHeader <&> ExprGuiT.nextHolesBefore
+            mExprAfterHeader <&> ExprGui.nextHolesBefore
             & Lens._Just ExprEventMap.jumpHolesEventMap
             <&> fromMaybe mempty
         let responsiveLabel text =
@@ -123,7 +123,7 @@ make (Sugar.Case mArg (Sugar.Composite alts caseTail addAlt)) pl =
 makeAltRow ::
     Monad m =>
     Maybe Tag ->
-    Sugar.CompositeItem (Name (T m)) (T m) (Sugar.Expression (Name (T m)) (T m) ExprGuiT.Payload) ->
+    Sugar.CompositeItem (Name (T m)) (T m) (Sugar.Expression (Name (T m)) (T m) ExprGui.Payload) ->
     ExprGuiM m (Responsive.TaggedItem (T m GuiState.Update))
 makeAltRow mActiveTag (Sugar.CompositeItem delete tag altExpr) =
     do
@@ -131,7 +131,7 @@ makeAltRow mActiveTag (Sugar.CompositeItem delete tag altExpr) =
         addBg <- Styled.addBgColor Theme.evaluatedPathBGColor
         let itemEventMap = caseDelEventMap config delete
         tagLabel <-
-            TagEdit.makeCaseTag (ExprGuiT.nextHolesBefore altExpr) tag
+            TagEdit.makeCaseTag (ExprGui.nextHolesBefore altExpr) tag
             <&> Align.tValue %~ E.weakerEvents itemEventMap
             <&> if mActiveTag == Just (tag ^. Sugar.tagInfo . Sugar.tagVal)
                 then addBg
@@ -152,7 +152,7 @@ makeAltRow mActiveTag (Sugar.CompositeItem delete tag altExpr) =
 makeAltsWidget ::
     Monad m =>
     Maybe Tag ->
-    [Sugar.CompositeItem (Name (T m)) (T m) (Sugar.Expression (Name (T m)) (T m) ExprGuiT.Payload)] ->
+    [Sugar.CompositeItem (Name (T m)) (T m) (Sugar.Expression (Name (T m)) (T m) ExprGui.Payload)] ->
     Widget.Id -> ExprGuiM m (ExpressionGui m)
 makeAltsWidget _ [] altsId =
     (Widget.makeFocusableView ?? Widget.joinId altsId ["Ø"] <&> (Align.tValue %~))
@@ -169,7 +169,7 @@ separationBar theme width animId =
 
 makeOpenCase ::
     Monad m =>
-    Sugar.OpenCompositeActions (T m) -> ExprGuiT.SugarExpr m ->
+    Sugar.OpenCompositeActions (T m) -> ExprGui.SugarExpr m ->
     AnimId -> ExpressionGui m -> ExprGuiM m (ExpressionGui m)
 makeOpenCase actions rest animId altsGui =
     do

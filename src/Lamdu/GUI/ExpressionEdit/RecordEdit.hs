@@ -26,8 +26,8 @@ import           Lamdu.GUI.ExpressionGui.Wrap (stdWrap, stdWrapParentExpr)
 import           Lamdu.GUI.ExpressionGui.HolePicker (withHolePicker)
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
-import           Lamdu.GUI.ExpressionGui.Types (ExpressionGui)
-import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
+import           Lamdu.GUI.ExpressionGui (ExpressionGui)
+import qualified Lamdu.GUI.ExpressionGui as ExprGui
 import qualified Lamdu.GUI.Styled as Styled
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Name (Name(..))
@@ -54,7 +54,7 @@ mkAddFieldEventMap config addField =
 makeUnit ::
     Monad m =>
     Sugar.ClosedCompositeActions (T m) -> T m Sugar.CompositeAddItemResult ->
-    Sugar.Payload (T m) ExprGuiT.Payload -> ExprGuiM m (ExpressionGui m)
+    Sugar.Payload (T m) ExprGui.Payload -> ExprGuiM m (ExpressionGui m)
 makeUnit _actions addField pl =
     do
         config <- Lens.view Config.config
@@ -72,8 +72,8 @@ makeUnit _actions addField pl =
 
 make ::
     Monad m =>
-    Sugar.Composite (Name (T m)) (T m) (ExprGuiT.SugarExpr m) ->
-    Sugar.Payload (T m) ExprGuiT.Payload ->
+    Sugar.Composite (Name (T m)) (T m) (ExprGui.SugarExpr m) ->
+    Sugar.Payload (T m) ExprGui.Payload ->
     ExprGuiM m (ExpressionGui m)
 make (Sugar.Composite [] (Sugar.ClosedComposite actions) addField) pl =
     makeUnit actions addField pl
@@ -99,7 +99,7 @@ make (Sugar.Composite fields recordTail addField) pl =
 
 makeRecord ::
     Monad m =>
-    [Sugar.CompositeItem (Name (T m)) (T m) (ExprGuiT.SugarExpr m)] ->
+    [Sugar.CompositeItem (Name (T m)) (T m) (ExprGui.SugarExpr m)] ->
     E.EventMap (T m GuiState.Update) ->
     (ExpressionGui m -> ExprGuiM m (ExpressionGui m)) ->
     ExprGuiM m (ExpressionGui m)
@@ -125,14 +125,14 @@ makeRecord fields addFieldEventMap postProcess =
 
 makeFieldRow ::
     Monad m =>
-    Sugar.CompositeItem (Name (T m)) (T m) (ExprGuiT.SugarExpr m) ->
+    Sugar.CompositeItem (Name (T m)) (T m) (ExprGui.SugarExpr m) ->
     ExprGuiM m (Responsive.TaggedItem (T m GuiState.Update))
 makeFieldRow (Sugar.CompositeItem delete tag fieldExpr) =
     do
         config <- Lens.view Config.config
         let itemEventMap = recordDelEventMap config delete
         tagLabel <-
-            TagEdit.makeRecordTag (ExprGuiT.nextHolesBefore fieldExpr) tag
+            TagEdit.makeRecordTag (ExprGui.nextHolesBefore fieldExpr) tag
             <&> Align.tValue %~ E.weakerEvents itemEventMap
         hspace <- Spacer.stdHSpace
         fieldGui <- ExprGuiM.makeSubexpression fieldExpr
@@ -150,7 +150,7 @@ separationBar theme width animId =
 
 makeOpenRecord ::
     Monad m =>
-    Sugar.OpenCompositeActions (T m) -> ExprGuiT.SugarExpr m ->
+    Sugar.OpenCompositeActions (T m) -> ExprGui.SugarExpr m ->
     ExpressionGui m -> ExprGuiM m (ExpressionGui m)
 makeOpenRecord (Sugar.OpenCompositeActions close) rest fieldsGui =
     do

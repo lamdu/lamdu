@@ -41,7 +41,7 @@ import qualified Lamdu.GUI.DefinitionEdit as DefinitionEdit
 import qualified Lamdu.GUI.ExpressionEdit as ExpressionEdit
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
-import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
+import qualified Lamdu.GUI.ExpressionGui as ExprGui
 import           Lamdu.GUI.IOTrans (IOTrans)
 import qualified Lamdu.GUI.IOTrans as IOTrans
 import qualified Lamdu.GUI.ReplEdit as ReplEdit
@@ -75,12 +75,12 @@ class HasExportActions env m where exportActions :: Lens' env (ExportActions m)
 
 toExprGuiMPayload ::
     ( AddParens.MinOpPrec, AddParens.NeedsParens
-    , ( ExprGuiT.ShowAnnotation
+    , ( ExprGui.ShowAnnotation
       , ([Sugar.EntityId], NearestHoles)
       )
-    ) -> ExprGuiT.Payload
+    ) -> ExprGui.Payload
 toExprGuiMPayload (minOpPrec, needParens, (showAnn, (entityIds, nearestHoles))) =
-    ExprGuiT.Payload entityIds nearestHoles showAnn
+    ExprGui.Payload entityIds nearestHoles showAnn
     (needParens == AddParens.NeedsParens)
     minOpPrec
 
@@ -103,7 +103,7 @@ exprAddNearestHoles expr =
 
 postProcessExpr ::
     Sugar.Expression (Name n) m ([Sugar.EntityId], NearestHoles) ->
-    Sugar.Expression (Name n) m ExprGuiT.Payload
+    Sugar.Expression (Name n) m ExprGui.Payload
 postProcessExpr =
     fmap toExprGuiMPayload . AddParens.add . AnnotationsPass.markAnnotationsToDisplay
 
@@ -111,7 +111,7 @@ loadWorkArea ::
     Monad m =>
     CurAndPrev (EvalResults (ValI m)) ->
     Anchors.CodeAnchors m ->
-    T m (Sugar.WorkArea (Name (T m)) (T m) ExprGuiT.Payload)
+    T m (Sugar.WorkArea (Name (T m)) (T m) ExprGui.Payload)
 loadWorkArea theEvalResults theCodeAnchors =
     SugarConvert.loadWorkArea theEvalResults theCodeAnchors
     >>= AddNames.addToWorkArea
@@ -162,7 +162,7 @@ make theCodeAnchors width =
 makePaneEdit ::
     Monad m =>
     ExportActions m ->
-    Sugar.Pane (Name (T m)) (T m) ExprGuiT.Payload ->
+    Sugar.Pane (Name (T m)) (T m) ExprGui.Payload ->
     ExprGuiM m (Responsive (IOTrans m GuiState.Update))
 makePaneEdit theExportActions pane =
     do

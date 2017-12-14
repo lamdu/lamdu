@@ -42,8 +42,8 @@ import qualified Lamdu.GUI.ExpressionGui.Annotation as Annotation
 import qualified Lamdu.GUI.ExpressionGui.HolePicker as HolePicker
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
-import           Lamdu.GUI.ExpressionGui.Types (ExpressionGui, ExpressionN)
-import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
+import           Lamdu.GUI.ExpressionGui (ExpressionGui, ExpressionN)
+import qualified Lamdu.GUI.ExpressionGui as ExprGui
 import qualified Lamdu.GUI.TypeView as TypeView
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Name (Name(..))
@@ -64,7 +64,7 @@ Lens.makeLenses ''ResultGroup
 
 makeShownResult ::
     Monad m =>
-    Sugar.Payload f ExprGuiT.Payload -> Result m ->
+    Sugar.Payload f ExprGui.Payload -> Result m ->
     ExprGuiM m
     ( Widget.EventMap (T m GuiState.Update)
     , WithTextPos (Widget (T m GuiState.Update))
@@ -81,7 +81,7 @@ makeShownResult pl result =
 
 makeResultGroup ::
     Monad m =>
-    Sugar.Payload f ExprGuiT.Payload ->
+    Sugar.Payload f ExprGui.Payload ->
     ResultsList m ->
     ExprGuiM m (ResultGroup m)
 makeResultGroup pl results =
@@ -135,7 +135,7 @@ removeUnwanted config =
 
 makeHoleResultWidget ::
     Monad m =>
-    Sugar.Payload f ExprGuiT.Payload ->
+    Sugar.Payload f ExprGui.Payload ->
     Widget.Id ->
     Sugar.HoleResult (T m) (Sugar.Expression (Name (T m)) (T m) ()) ->
     ExprGuiM m
@@ -152,7 +152,7 @@ makeHoleResultWidget pl resultId holeResult =
                 pure . WidgetIds.fromEntityId
         let pickEventMap =
                 -- TODO: Does this entityId business make sense?
-                case pl ^. Sugar.plData . ExprGuiT.plNearestHoles . NearestHoles.next of
+                case pl ^. Sugar.plData . ExprGui.plNearestHoles . NearestHoles.next of
                 Just nextHoleEntityId | Lens.has Lens._Nothing mFirstHoleInside ->
                     simplePickRes (Config.holePickResultKeys holeConfig) <>
                     pickAndMoveToNextHole nextHoleEntityId
@@ -168,7 +168,7 @@ makeHoleResultWidget pl resultId holeResult =
         isSelected <- GuiState.isSubCursor ?? resultId
         when isSelected (HolePicker.setResultPicker extraChars (pickBefore (pure mempty)))
         holeResultConverted
-            & postProcessSugar (pl ^. Sugar.plData . ExprGuiT.plMinOpPrec)
+            & postProcessSugar (pl ^. Sugar.plData . ExprGui.plMinOpPrec)
             & ExprGuiM.makeSubexpression
             & Reader.local (HolePicker.searchStringRemainder .~ extraChars)
             <&> Widget.enterResultCursor .~ resultId
@@ -203,21 +203,21 @@ makeHoleResultWidget pl resultId holeResult =
         simplePickRes keys =
             Widget.keysEventMap keys (E.Doc ["Edit", "Result", "Pick"]) (return ())
 
-postProcessSugar :: Int -> ExpressionN m () -> ExpressionN m ExprGuiT.Payload
+postProcessSugar :: Int -> ExpressionN m () -> ExpressionN m ExprGui.Payload
 postProcessSugar minOpPrec expr =
     expr
     & AddParens.addWith minOpPrec
     <&> pl
-    & SugarLens.holeArgs . Sugar.plData . ExprGuiT.plShowAnnotation
-    .~ ExprGuiT.alwaysShowAnnotations
+    & SugarLens.holeArgs . Sugar.plData . ExprGui.plShowAnnotation
+    .~ ExprGui.alwaysShowAnnotations
     where
         pl (x, needParens, ()) =
-            ExprGuiT.Payload
-            { ExprGuiT._plStoredEntityIds = []
-            , ExprGuiT._plNearestHoles = NearestHoles.none
-            , ExprGuiT._plShowAnnotation = ExprGuiT.neverShowAnnotations
-            , ExprGuiT._plNeedParens = needParens == AddParens.NeedsParens
-            , ExprGuiT._plMinOpPrec = x
+            ExprGui.Payload
+            { ExprGui._plStoredEntityIds = []
+            , ExprGui._plNearestHoles = NearestHoles.none
+            , ExprGui._plShowAnnotation = ExprGui.neverShowAnnotations
+            , ExprGui._plNeedParens = needParens == AddParens.NeedsParens
+            , ExprGui._plMinOpPrec = x
             }
 
 emptyPickEventMap ::
@@ -231,7 +231,7 @@ emptyPickEventMap =
 
 makeResultsWidget ::
     Monad m =>
-    Widget.R -> Sugar.Payload f ExprGuiT.Payload ->
+    Widget.R -> Sugar.Payload f ExprGui.Payload ->
     [ResultsList m] -> Menu.HasMoreOptions ->
     ExprGuiM m (Widget.EventMap (T m GuiState.Update), Hover.Ordered (Widget (T m GuiState.Update)))
 makeResultsWidget minWidth pl shownResultsLists hiddenResults =
@@ -322,8 +322,8 @@ resultsHoverOptions =
 makeUnderCursorAssignment ::
     Monad m =>
     [ResultsList m] -> Menu.HasMoreOptions ->
-    Sugar.Hole (T m) (ExpressionN m ()) (ExprGuiT.SugarExpr m) ->
-    Sugar.Payload (T m) ExprGuiT.Payload ->
+    Sugar.Hole (T m) (ExpressionN m ()) (ExprGui.SugarExpr m) ->
+    Sugar.Payload (T m) ExprGui.Payload ->
     WidgetIds ->
     ExprGuiM m (Menu.Placement -> WithTextPos (Widget (T m GuiState.Update)))
 makeUnderCursorAssignment shownResultsLists hasHiddenResults hole pl widgetIds =
@@ -376,8 +376,8 @@ makeUnderCursorAssignment shownResultsLists hasHiddenResults hole pl widgetIds =
 
 makeOpenSearchAreaGui ::
     Monad m =>
-    Sugar.Hole (T m) (ExpressionN m ()) (ExprGuiT.SugarExpr m) ->
-    Sugar.Payload (T m) ExprGuiT.Payload ->
+    Sugar.Hole (T m) (ExpressionN m ()) (ExprGui.SugarExpr m) ->
+    Sugar.Payload (T m) ExprGui.Payload ->
     WidgetIds ->
     ExprGuiM m (Menu.Placement -> WithTextPos (Widget (T m GuiState.Update)))
 makeOpenSearchAreaGui hole pl widgetIds =

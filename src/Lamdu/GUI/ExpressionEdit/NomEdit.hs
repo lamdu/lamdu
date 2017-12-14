@@ -19,8 +19,8 @@ import qualified Lamdu.GUI.ExpressionEdit.BinderEdit as BinderEdit
 import           Lamdu.GUI.ExpressionGui.Wrap (stdWrapParentExpr)
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
-import           Lamdu.GUI.ExpressionGui.Types (ExpressionGui)
-import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
+import           Lamdu.GUI.ExpressionGui (ExpressionGui)
+import qualified Lamdu.GUI.ExpressionGui as ExprGui
 import qualified Lamdu.GUI.NameEdit as NameEdit
 import qualified Lamdu.GUI.Styled as Styled
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
@@ -38,8 +38,8 @@ mReplaceParent = Sugar.rPayload . Sugar.plActions . Sugar.mReplaceParent . Lens.
 makeToNom ::
     forall m.
     Monad m =>
-    Sugar.Nominal (Name (T m)) (Sugar.BinderBody (Name (T m)) (T m) (ExprGuiT.SugarExpr m)) ->
-    Sugar.Payload (T m) ExprGuiT.Payload ->
+    Sugar.Nominal (Name (T m)) (Sugar.BinderBody (Name (T m)) (T m) (ExprGui.SugarExpr m)) ->
+    Sugar.Payload (T m) ExprGui.Payload ->
     ExprGuiM m (ExpressionGui m)
 makeToNom nom pl =
     nom <&> BinderEdit.makeBinderBodyEdit
@@ -50,8 +50,8 @@ makeToNom nom pl =
 
 makeFromNom ::
     Monad m =>
-    Sugar.Nominal (Name (T m)) (ExprGuiT.SugarExpr m) ->
-    Sugar.Payload (T m) ExprGuiT.Payload ->
+    Sugar.Nominal (Name (T m)) (ExprGui.SugarExpr m) ->
+    Sugar.Payload (T m) ExprGui.Payload ->
     ExprGuiM m (ExpressionGui m)
 makeFromNom nom pl =
     nom <&> ExprGuiM.makeSubexpression
@@ -63,7 +63,7 @@ mkNomGui ::
     Monad m =>
     (forall a. [a] -> [a]) ->
     Text -> Text -> Maybe (T m Sugar.EntityId) ->
-    Sugar.Payload (T m) ExprGuiT.Payload ->
+    Sugar.Payload (T m) ExprGui.Payload ->
     Sugar.Nominal (Name (T m)) (ExprGuiM m (ExpressionGui m)) ->
     ExprGuiM m (ExpressionGui m)
 mkNomGui ordering nomStr str mDel pl (Sugar.Nominal tid val) =
@@ -95,7 +95,7 @@ mkNomGui ordering nomStr str mDel pl (Sugar.Nominal tid val) =
     & stdWrapParentExpr pl
     where
         mParenInfo
-            | pl ^. Sugar.plData . ExprGuiT.plNeedParens =
+            | pl ^. Sugar.plData . ExprGui.plNeedParens =
                 Widget.toAnimId nomId & Just
             | otherwise = Nothing
         myId = WidgetIds.fromExprPayload pl

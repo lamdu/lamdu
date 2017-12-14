@@ -39,8 +39,8 @@ import qualified Lamdu.GUI.CodeEdit.Settings as CESettings
 import qualified Lamdu.GUI.EvalView as EvalView
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
-import           Lamdu.GUI.ExpressionGui.Types (ExpressionGui, ShowAnnotation(..), EvalModeShow(..))
-import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
+import           Lamdu.GUI.ExpressionGui (ExpressionGui, ShowAnnotation(..), EvalModeShow(..))
+import qualified Lamdu.GUI.ExpressionGui as ExprGui
 import qualified Lamdu.GUI.Styled as Styled
 import qualified Lamdu.GUI.TypeView as TypeView
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
@@ -263,12 +263,12 @@ addEvaluationResult mNeigh resDisp wideBehavior =
 
 maybeAddAnnotationPl ::
     (Functor f, Monad m) =>
-    Sugar.Payload x ExprGuiT.Payload ->
+    Sugar.Payload x ExprGui.Payload ->
     ExprGuiM m (ExpressionGui f -> ExpressionGui f)
 maybeAddAnnotationPl pl =
     do
         wideAnnotationBehavior <-
-            if showAnnotation ^. ExprGuiT.showExpanded
+            if showAnnotation ^. ExprGui.showExpanded
             then return KeepWideAnnotation
             else ExprGuiM.isExprSelected pl <&> wideAnnotationBehaviorFromSelected
         maybeAddAnnotation wideAnnotationBehavior
@@ -277,11 +277,11 @@ maybeAddAnnotationPl pl =
             & Reader.local (Element.animIdPrefix .~ animId)
     where
         animId = WidgetIds.fromExprPayload pl & Widget.toAnimId
-        showAnnotation = pl ^. Sugar.plData . ExprGuiT.plShowAnnotation
+        showAnnotation = pl ^. Sugar.plData . ExprGui.plShowAnnotation
 
 evaluationResult ::
     Monad m =>
-    Sugar.Payload (T m) ExprGuiT.Payload -> ExprGuiM m (Maybe (ER.Val Type))
+    Sugar.Payload (T m) ExprGui.Payload -> ExprGuiM m (Maybe (ER.Val Type))
 evaluationResult pl =
     ExprGuiM.readMScopeId
     <&> valOfScope (pl ^. Sugar.plAnnotation)

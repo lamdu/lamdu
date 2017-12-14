@@ -29,8 +29,8 @@ import qualified Lamdu.GUI.ExpressionEdit.TagEdit as TagEdit
 import           Lamdu.GUI.ExpressionGui.HolePicker (HolePicker(..))
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
-import           Lamdu.GUI.ExpressionGui.Types (ExpressionGui)
-import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
+import           Lamdu.GUI.ExpressionGui (ExpressionGui)
+import qualified Lamdu.GUI.ExpressionGui as ExprGui
 import           Lamdu.GUI.ExpressionGui.Wrap (stdWrapParentExpr)
 import qualified Lamdu.GUI.Styled as Styled
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
@@ -99,7 +99,7 @@ isBoxed apply =
 makeFuncRow ::
     Monad m =>
     Maybe AnimId ->
-    Sugar.LabeledApply (Name (T m)) (T m) (ExprGuiT.SugarExpr m) ->
+    Sugar.LabeledApply (Name (T m)) (T m) (ExprGui.SugarExpr m) ->
     NearestHoles ->
     Widget.Id ->
     ExprGuiM m (ExpressionGui m)
@@ -112,11 +112,11 @@ makeFuncRow mParensId apply applyNearestHoles myId =
             nextHoles =
                 case apply ^. Sugar.aAnnotatedArgs of
                 [] -> applyNearestHoles -- all args are relayed args
-                (x:_) -> x ^. Sugar.aaExpr & ExprGuiT.nextHolesBefore
+                (x:_) -> x ^. Sugar.aaExpr & ExprGui.nextHolesBefore
     Sugar.Object arg ->
         (ResponsiveExpr.boxSpacedMDisamb ?? mParensId)
         <*> sequenceA
-        [ makeFuncVar (ExprGuiT.nextHolesBefore arg) funcVar myId
+        [ makeFuncVar (ExprGui.nextHolesBefore arg) funcVar myId
             <&> Responsive.fromWithTextPos
         , ExprGuiM.makeSubexpression arg
         ]
@@ -126,7 +126,7 @@ makeFuncRow mParensId apply applyNearestHoles myId =
         [ (Options.boxSpaced ?? Options.disambiguationNone)
             <*> sequenceA
             [ ExprGuiM.makeSubexpression l
-            , makeInfixFuncName (ExprGuiT.nextHolesBefore r) funcVar myId
+            , makeInfixFuncName (ExprGui.nextHolesBefore r) funcVar myId
                 <&> Responsive.fromWithTextPos
             ]
         , ExprGuiM.makeSubexpression r
@@ -136,27 +136,27 @@ makeFuncRow mParensId apply applyNearestHoles myId =
 
 makeLabeled ::
     Monad m =>
-    Sugar.LabeledApply (Name (T m)) (T m) (ExprGuiT.SugarExpr m) ->
-    Sugar.Payload (T m) ExprGuiT.Payload ->
+    Sugar.LabeledApply (Name (T m)) (T m) (ExprGui.SugarExpr m) ->
+    Sugar.Payload (T m) ExprGui.Payload ->
     ExprGuiM m (ExpressionGui m)
 makeLabeled apply pl =
     makeFuncRow mParensId apply
-    (pl ^. Sugar.plData . ExprGuiT.plNearestHoles) myId
+    (pl ^. Sugar.plData . ExprGui.plNearestHoles) myId
     & addBox
     & stdWrapParentExpr pl
     where
         addBox
-            | isBoxed apply = mkBoxed apply (pl ^. Sugar.plData . ExprGuiT.plNearestHoles)
+            | isBoxed apply = mkBoxed apply (pl ^. Sugar.plData . ExprGui.plNearestHoles)
             | otherwise = id
         mParensId
             | needParens = Just (Widget.toAnimId myId)
             | otherwise = Nothing
-        needParens = pl ^. Sugar.plData . ExprGuiT.plNeedParens
+        needParens = pl ^. Sugar.plData . ExprGui.plNeedParens
         myId = WidgetIds.fromExprPayload pl
 
 makeArgRow ::
     Monad m =>
-    Sugar.AnnotatedArg (Name (T m)) (ExprGuiT.SugarExpr m) ->
+    Sugar.AnnotatedArg (Name (T m)) (ExprGui.SugarExpr m) ->
     ExprGuiM m (Responsive.TaggedItem (T m GuiState.Update))
 makeArgRow arg =
     do
@@ -192,7 +192,7 @@ mkRelayedArgs nearestHoles args =
 
 mkBoxed ::
     Monad m =>
-    Sugar.LabeledApply (Name (T m)) (T m) (ExprGuiT.SugarExpr m) ->
+    Sugar.LabeledApply (Name (T m)) (T m) (ExprGui.SugarExpr m) ->
     NearestHoles ->
     ExprGuiM m (ExpressionGui m) ->
     ExprGuiM m (ExpressionGui m)
@@ -215,8 +215,8 @@ mkBoxed apply nearestHoles mkFuncRow =
 
 makeSimple ::
     Monad m =>
-    Sugar.Apply (ExprGuiT.SugarExpr m) ->
-    Sugar.Payload (T m) ExprGuiT.Payload ->
+    Sugar.Apply (ExprGui.SugarExpr m) ->
+    Sugar.Payload (T m) ExprGui.Payload ->
     ExprGuiM m (ExpressionGui m)
 makeSimple (Sugar.Apply func arg) pl =
     (ResponsiveExpr.boxSpacedMDisamb ?? mParensId)
@@ -227,6 +227,6 @@ makeSimple (Sugar.Apply func arg) pl =
     & stdWrapParentExpr pl
     where
         mParensId
-            | pl ^. Sugar.plData . ExprGuiT.plNeedParens = Just (Widget.toAnimId myId)
+            | pl ^. Sugar.plData . ExprGui.plNeedParens = Just (Widget.toAnimId myId)
             | otherwise = Nothing
         myId = WidgetIds.fromExprPayload pl

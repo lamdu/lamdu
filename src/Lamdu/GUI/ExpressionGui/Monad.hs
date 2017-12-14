@@ -48,8 +48,8 @@ import qualified Lamdu.Data.Ops as DataOps
 import           Lamdu.Eval.Results (ScopeId, topLevelScopeId)
 import           Lamdu.GUI.CodeEdit.Settings (Settings, HasSettings(..))
 import           Lamdu.GUI.ExpressionGui.HolePicker (HolePicker, HasSearchStringRemainder(..))
-import           Lamdu.GUI.ExpressionGui.Types (ExpressionGui)
-import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
+import           Lamdu.GUI.ExpressionGui (ExpressionGui)
+import qualified Lamdu.GUI.ExpressionGui as ExprGui
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Style (Style, HasStyle(..))
 import qualified Lamdu.Sugar.Types as Sugar
@@ -69,7 +69,7 @@ data Askable m = Askable
     , _aSettings :: Settings
     , _aConfig :: Config
     , _aTheme :: Theme
-    , _aMakeSubexpression :: ExprGuiT.SugarExpr m -> ExprGuiM m (ExpressionGui m)
+    , _aMakeSubexpression :: ExprGui.SugarExpr m -> ExprGuiM m (ExpressionGui m)
     , _aCodeAnchors :: Anchors.CodeAnchors m
     , _aDepthLeft :: Int
     , _aMScopeId :: CurAndPrev (Maybe ScopeId)
@@ -113,7 +113,7 @@ mkPrejumpPosSaver :: Monad m => ExprGuiM m (T m ())
 mkPrejumpPosSaver =
     DataOps.savePreJumpPosition <$> readCodeAnchors <*> Lens.view GuiState.cursor
 
-makeSubexpression :: Monad m => ExprGuiT.SugarExpr m -> ExprGuiM m (ExpressionGui m)
+makeSubexpression :: Monad m => ExprGui.SugarExpr m -> ExprGuiM m (ExpressionGui m)
 makeSubexpression expr =
     do
         maker <- Lens.view aMakeSubexpression & ExprGuiM
@@ -143,7 +143,7 @@ run ::
     , Config.HasConfig env, HasTheme env
     , HasSettings env, HasStyle env
     ) =>
-    (ExprGuiT.SugarExpr m -> ExprGuiM m (ExpressionGui m)) ->
+    (ExprGui.SugarExpr m -> ExprGuiM m (ExpressionGui m)) ->
     Anchors.CodeAnchors m ->
     ExprGuiM m a ->
     n a

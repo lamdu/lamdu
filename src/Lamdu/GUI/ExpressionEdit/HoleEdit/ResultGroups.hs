@@ -24,7 +24,7 @@ import qualified Lamdu.Expr.Lens as ExprLens
 import           Lamdu.Formatting (Format(..))
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.ValTerms as ValTerms
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds (WidgetIds(..))
-import           Lamdu.GUI.ExpressionGui.Types (ExpressionN)
+import           Lamdu.GUI.ExpressionGui (ExpressionN)
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.Sugar.Types as Sugar
 

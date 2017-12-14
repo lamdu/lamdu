@@ -14,8 +14,8 @@ import qualified Lamdu.GUI.ExpressionEdit.TagEdit as TagEdit
 import           Lamdu.GUI.ExpressionGui.Wrap (stdWrapParentExpr)
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
-import           Lamdu.GUI.ExpressionGui.Types (ExpressionGui)
-import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
+import           Lamdu.GUI.ExpressionGui (ExpressionGui)
+import qualified Lamdu.GUI.ExpressionGui as ExprGui
 import qualified Lamdu.GUI.Styled as Styled
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Name (Name(..))
@@ -27,8 +27,8 @@ type T = Transaction
 
 make ::
     Monad m =>
-    Sugar.GetField (Name (T m)) (T m) (ExprGuiT.SugarExpr m) ->
-    Sugar.Payload (T m) ExprGuiT.Payload ->
+    Sugar.GetField (Name (T m)) (T m) (ExprGui.SugarExpr m) ->
+    Sugar.Payload (T m) ExprGui.Payload ->
     ExprGuiM m (ExpressionGui m)
 make (Sugar.GetField recExpr tag) pl =
     do
@@ -42,7 +42,7 @@ make (Sugar.GetField recExpr tag) pl =
                     del <&> WidgetIds.fromEntityId
                     & Widget.keysEventMapMovesCursor (Config.delKeys config) (E.Doc ["Edit", "Delete"])
         tagEdit <-
-            TagEdit.makeRecordTag (pl ^. Sugar.plData . ExprGuiT.plNearestHoles) tag
+            TagEdit.makeRecordTag (pl ^. Sugar.plData . ExprGui.plNearestHoles) tag
             <&> Lens.mapped %~ E.weakerEvents delEventMap
         Options.box Options.disambiguationNone
             [ recExprEdit

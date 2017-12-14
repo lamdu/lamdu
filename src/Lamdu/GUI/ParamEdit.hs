@@ -20,8 +20,8 @@ import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
 import qualified Lamdu.GUI.ExpressionGui.Annotation as Annotation
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
-import           Lamdu.GUI.ExpressionGui.Types (ExpressionGui)
-import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
+import           Lamdu.GUI.ExpressionGui (ExpressionGui)
+import qualified Lamdu.GUI.ExpressionGui as ExprGui
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.Sugar.Types as Sugar
 
@@ -107,7 +107,7 @@ make annotationOpts prevId nextId param =
             GuiState.isSubCursor ?? myId
             <&> Annotation.wideAnnotationBehaviorFromSelected
         Annotation.maybeAddAnnotationWith annotationOpts
-            wideAnnotationBehavior ExprGuiT.showAnnotationWhenVerbose
+            wideAnnotationBehavior ExprGui.showAnnotationWhenVerbose
             (param ^. Sugar.fpAnnotation)
             ?? Responsive.fromWithTextPos (iNameEdit info)
             <&> E.weakerEvents paramEventMap

@@ -29,8 +29,8 @@ import qualified Lamdu.Config as Config
 import           Lamdu.Formatting (Format(..))
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.State (setHoleStateAndJump)
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
-import           Lamdu.GUI.ExpressionGui.Types (ExpressionGui)
-import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
+import           Lamdu.GUI.ExpressionGui (ExpressionGui)
+import qualified Lamdu.GUI.ExpressionGui as ExprGui
 import           Lamdu.GUI.ExpressionGui.Wrap (stdWrap)
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Style (Style, HasStyle)
@@ -54,7 +54,7 @@ genericEdit ::
     ) =>
     LensLike' (Lens.Const TextEdit.Style) Style TextEdit.Style ->
     Transaction.Property m a ->
-    Sugar.Payload (T m) ExprGuiT.Payload -> f (ExpressionGui m)
+    Sugar.Payload (T m) ExprGui.Payload -> f (ExpressionGui m)
 genericEdit whichStyle prop pl =
     do
         style <- Lens.view Style.style <&> (^. whichStyle)
@@ -83,7 +83,7 @@ textEdit ::
     , Element.HasAnimIdPrefix env, GuiState.HasCursor env
     ) =>
     Transaction.Property m Text ->
-    Sugar.Payload (T m) ExprGuiT.Payload ->
+    Sugar.Payload (T m) ExprGui.Payload ->
     f (WithTextPos (Widget (T m GuiState.Update)))
 textEdit prop pl =
     do
@@ -108,7 +108,7 @@ textEdit prop pl =
 
 make ::
     Monad m =>
-    Sugar.Literal (Transaction.Property m) -> Sugar.Payload (T m) ExprGuiT.Payload ->
+    Sugar.Literal (Transaction.Property m) -> Sugar.Payload (T m) ExprGui.Payload ->
     ExprGuiM m (ExpressionGui m)
 make lit pl =
     case lit of

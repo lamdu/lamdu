@@ -45,8 +45,8 @@ import qualified Lamdu.GUI.ExpressionEdit.TagEdit as TagEdit
 import qualified Lamdu.GUI.ExpressionGui.Annotation as Annotation
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
-import           Lamdu.GUI.ExpressionGui.Types (ExpressionGui)
-import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
+import           Lamdu.GUI.ExpressionGui (ExpressionGui)
+import qualified Lamdu.GUI.ExpressionGui as ExprGui
 import           Lamdu.GUI.ExpressionGui.Wrap (parentDelegator)
 import qualified Lamdu.GUI.NameEdit as NameEdit
 import qualified Lamdu.GUI.ParamEdit as ParamEdit
@@ -134,7 +134,7 @@ readBinderChosenScope binder =
 
 mkChosenScopeCursor ::
     Monad m =>
-    Sugar.Binder (Name (T m)) (T m) (ExprGuiT.SugarExpr m) ->
+    Sugar.Binder (Name (T m)) (T m) (ExprGui.SugarExpr m) ->
     ExprGuiM m (CurAndPrev (Maybe ScopeCursor))
 mkChosenScopeCursor binder =
     do
@@ -252,16 +252,16 @@ makeMParamsEdit mScopeCursor isScopeNavFocused delVarBackwardsId myId nearestHol
             (mCurCursor >>= sMNextParamScope)
             & Annotation.WithNeighbouringEvalAnnotations
 
-binderContentNearestHoles :: Sugar.BinderContent name (T m) (ExprGuiT.SugarExpr m) -> NearestHoles
+binderContentNearestHoles :: Sugar.BinderContent name (T m) (ExprGui.SugarExpr m) -> NearestHoles
 binderContentNearestHoles body =
     body ^? Lens.traverse
     & fromMaybe (error "We have at least a body expression inside the binder")
-    & ExprGuiT.nextHolesBefore
+    & ExprGui.nextHolesBefore
 
 makeParts ::
     Monad m =>
-    ExprGuiT.FuncApplyLimit ->
-    Sugar.Binder (Name (T m)) (T m) (ExprGuiT.SugarExpr m) ->
+    ExprGui.FuncApplyLimit ->
+    Sugar.Binder (Name (T m)) (T m) (ExprGui.SugarExpr m) ->
     Widget.Id -> Widget.Id ->
     ExprGuiM m (Parts m)
 makeParts funcApplyLimit binder delVarBackwardsId myId =
@@ -270,7 +270,7 @@ makeParts funcApplyLimit binder delVarBackwardsId myId =
         let binderScopeId = mScopeCursor <&> Lens.mapped %~ (^. Sugar.bParamScopeId) . sBinderScope
         (scopeEventMap, mScopeNavEdit) <-
             do
-                guard (funcApplyLimit == ExprGuiT.UnlimitedFuncApply)
+                guard (funcApplyLimit == ExprGui.UnlimitedFuncApply)
                 scope <- fallbackToPrev mScopeCursor
                 guard $
                     Lens.nullOf (Sugar.bParams . Sugar._NullParam) binder ||
@@ -310,13 +310,13 @@ make ::
     Maybe (T m (Property (T m) Meta.PresentationMode)) ->
     Widget.EventMap (T m GuiState.Update) ->
     Name (T m) -> Draw.Color ->
-    Sugar.Binder (Name (T m)) (T m) (ExprGuiT.SugarExpr m) ->
+    Sugar.Binder (Name (T m)) (T m) (ExprGui.SugarExpr m) ->
     Widget.Id ->
     ExprGuiM m (ExpressionGui m)
 make pMode lhsEventMap name color binder myId =
     do
         Parts mParamsEdit mScopeEdit bodyEdit eventMap <-
-            makeParts ExprGuiT.UnlimitedFuncApply binder myId myId
+            makeParts ExprGui.UnlimitedFuncApply binder myId myId
         rhsJumperEquals <- jumpToRHS bodyId
         mPresentationEdit <-
             pMode & sequenceA & transaction
@@ -360,7 +360,7 @@ make pMode lhsEventMap name color binder myId =
 
 makeLetEdit ::
     Monad m =>
-    Sugar.Let (Name (T m)) (T m) (ExprGuiT.SugarExpr m) ->
+    Sugar.Let (Name (T m)) (T m) (ExprGui.SugarExpr m) ->
     ExprGuiM m (ExpressionGui m)
 makeLetEdit item =
     do
@@ -424,7 +424,7 @@ addLetEventMap addLet =
 
 makeBinderBodyEdit ::
     Monad m =>
-    Sugar.BinderBody (Name (T m)) (T m) (ExprGuiT.SugarExpr m) ->
+    Sugar.BinderBody (Name (T m)) (T m) (ExprGui.SugarExpr m) ->
     ExprGuiM m (ExpressionGui m)
 makeBinderBodyEdit (Sugar.BinderBody addOuterLet content) =
     do
@@ -433,7 +433,7 @@ makeBinderBodyEdit (Sugar.BinderBody addOuterLet content) =
 
 makeBinderContentEdit ::
     Monad m =>
-    Sugar.BinderContent (Name (T m)) (T m) (ExprGuiT.SugarExpr m) ->
+    Sugar.BinderContent (Name (T m)) (T m) (ExprGui.SugarExpr m) ->
     ExprGuiM m (ExpressionGui m)
 makeBinderContentEdit (Sugar.BinderExpr binderBody) =
     ExprGuiM.makeSubexpression binderBody

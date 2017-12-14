@@ -1,5 +1,5 @@
 {-# LANGUAGE NoImplicitPrelude, TemplateHaskell #-}
-module Lamdu.GUI.ExpressionGui.Types
+module Lamdu.GUI.ExpressionGui
     ( ExpressionGui
     , SugarExpr
     , Payload(..)

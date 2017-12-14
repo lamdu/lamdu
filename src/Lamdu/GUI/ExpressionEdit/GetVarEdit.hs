@@ -30,8 +30,8 @@ import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.Data.Ops as DataOps
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
-import           Lamdu.GUI.ExpressionGui.Types (ExpressionGui)
-import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
+import           Lamdu.GUI.ExpressionGui (ExpressionGui)
+import qualified Lamdu.GUI.ExpressionGui as ExprGui
 import           Lamdu.GUI.ExpressionGui.Wrap (stdWrap)
 import qualified Lamdu.GUI.LightLambda as LightLambda
 import qualified Lamdu.GUI.NameEdit as NameEdit
@@ -226,7 +226,7 @@ makeGetParam param myId =
 make ::
     Monad m =>
     Sugar.GetVar (Name (T m)) (T m) ->
-    Sugar.Payload (T m) ExprGuiT.Payload ->
+    Sugar.Payload (T m) ExprGui.Payload ->
     ExprGuiM m (ExpressionGui m)
 make getVar pl =
     case getVar of

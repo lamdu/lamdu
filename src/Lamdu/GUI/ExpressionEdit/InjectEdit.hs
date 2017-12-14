@@ -27,8 +27,8 @@ import           Lamdu.Config.Theme (HasTheme)
 import qualified Lamdu.GUI.ExpressionEdit.TagEdit as TagEdit
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
-import           Lamdu.GUI.ExpressionGui.Types (ExpressionGui)
-import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
+import           Lamdu.GUI.ExpressionGui (ExpressionGui)
+import qualified Lamdu.GUI.ExpressionGui as ExprGui
 import           Lamdu.GUI.ExpressionGui.Wrap (stdWrap, stdWrapParentExpr)
 import qualified Lamdu.GUI.Styled as Styled
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
@@ -77,8 +77,8 @@ injectIndicator text =
 
 make ::
     Monad m =>
-    Sugar.Inject (Name (T m)) (T m) (ExprGuiT.SugarExpr m) ->
-    Sugar.Payload (T m) ExprGuiT.Payload ->
+    Sugar.Inject (Name (T m)) (T m) (ExprGui.SugarExpr m) ->
+    Sugar.Payload (T m) ExprGui.Payload ->
     ExprGuiM m (ExpressionGui m)
 make (Sugar.Inject tag mVal) pl =
     case mVal of
@@ -89,18 +89,18 @@ make (Sugar.Inject tag mVal) pl =
                 -- Give the tag widget the identity of the whole inject
                 Options.disambiguationNone
                 (tag & Sugar.tagInfo . Sugar.tagInstance .~ (pl ^. Sugar.plEntityId))
-                Nothing (pl ^. Sugar.plData . ExprGuiT.plNearestHoles) dot []
+                Nothing (pl ^. Sugar.plData . ExprGui.plNearestHoles) dot []
         & stdWrap pl
     Just val ->
         do
             disamb <-
-                if pl ^. Sugar.plData . ExprGuiT.plNeedParens
+                if pl ^. Sugar.plData . ExprGui.plNeedParens
                 then ResponsiveExpr.disambiguators <*> Lens.view Element.animIdPrefix
                 else pure Options.disambiguationNone
             arg <-
                 ExprGuiM.makeSubexpression val <&> (:[])
             colon <- injectIndicator ":"
-            makeCommon disamb tag replaceParent (ExprGuiT.nextHolesBefore val) colon arg
+            makeCommon disamb tag replaceParent (ExprGui.nextHolesBefore val) colon arg
         & stdWrapParentExpr pl
         where
             replaceParent = val ^. Sugar.rPayload . Sugar.plActions . Sugar.mReplaceParent

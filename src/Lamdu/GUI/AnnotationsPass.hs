@@ -4,7 +4,7 @@ module Lamdu.GUI.AnnotationsPass
     ) where
 
 import qualified Control.Lens as Lens
-import qualified Lamdu.GUI.ExpressionGui.Types as T
+import qualified Lamdu.GUI.ExpressionGui as T
 import qualified Lamdu.Sugar.Lens as SugarLens
 import           Lamdu.Sugar.Types
 

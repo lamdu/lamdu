@@ -22,7 +22,7 @@ import qualified Lamdu.Config as Config
 import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
-import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
+import qualified Lamdu.GUI.ExpressionGui as ExprGui
 import           Lamdu.GUI.IOTrans (IOTrans)
 import qualified Lamdu.GUI.IOTrans as IOTrans
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
@@ -69,7 +69,7 @@ replEventMap theConfig (ExportRepl exportRepl exportFancy) replExpr =
 make ::
     Monad m =>
     ExportRepl m ->
-    ExprGuiT.SugarExpr m ->
+    ExprGui.SugarExpr m ->
     ExprGuiM m (Responsive (IOTrans m GuiState.Update))
 make exportRepl replExpr =
     do

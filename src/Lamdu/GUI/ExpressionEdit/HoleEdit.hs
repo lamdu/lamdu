@@ -22,8 +22,8 @@ import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds as HoleWidgetIds
 import           Lamdu.GUI.ExpressionGui.Annotation (maybeAddAnnotationPl)
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
-import           Lamdu.GUI.ExpressionGui.Types (ExpressionGui)
-import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
+import           Lamdu.GUI.ExpressionGui (ExpressionGui)
+import qualified Lamdu.GUI.ExpressionGui as ExprGui
 import           Lamdu.Name (Name)
 import qualified Lamdu.Sugar.Types as Sugar
 
@@ -33,7 +33,7 @@ type T = Transaction
 
 makeArgument ::
     Monad m =>
-    Sugar.Payload (T m) ExprGuiT.Payload -> Widget.Id -> Sugar.HoleArg (T m) (ExprGuiT.SugarExpr m) ->
+    Sugar.Payload (T m) ExprGui.Payload -> Widget.Id -> Sugar.HoleArg (T m) (ExprGui.SugarExpr m) ->
     ExprGuiM m (ExpressionGui m)
 makeArgument pl openHoleId holeArg =
     do
@@ -48,7 +48,7 @@ assignHoleCursor widgetIds =
 
 makeHoleWithArgument ::
     (Functor f, Monad m) =>
-    (Menu.Placement -> ExpressionGui f) -> Sugar.Payload (T m) ExprGuiT.Payload -> ExpressionGui f ->
+    (Menu.Placement -> ExpressionGui f) -> Sugar.Payload (T m) ExprGui.Payload -> ExpressionGui f ->
     ExprGuiM m (ExpressionGui f)
 makeHoleWithArgument searchAreaGui pl wrapperGui =
     do
@@ -77,7 +77,7 @@ makeHoleWithArgument searchAreaGui pl wrapperGui =
     where
         widgetIds = HoleWidgetIds.make (pl ^. Sugar.plEntityId)
         hideIfInHole x
-            | ExprGuiT.isHoleResult pl =
+            | ExprGui.isHoleResult pl =
                 x
                 & Element.setLayers .~ mempty
                 & Element.size .~ 0
@@ -85,8 +85,8 @@ makeHoleWithArgument searchAreaGui pl wrapperGui =
 
 make ::
     Monad m =>
-    Sugar.Hole (T m) (Sugar.Expression (Name (T m)) (T m) ()) (ExprGuiT.SugarExpr m) ->
-    Sugar.Payload (T m) ExprGuiT.Payload ->
+    Sugar.Hole (T m) (Sugar.Expression (Name (T m)) (T m) ()) (ExprGui.SugarExpr m) ->
+    Sugar.Payload (T m) ExprGui.Payload ->
     ExprGuiM m (ExpressionGui m)
 make hole pl =
     do

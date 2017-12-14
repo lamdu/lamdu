@@ -20,7 +20,7 @@ import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.State as HoleEditState
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds as HoleWidgetIds
 import           Lamdu.GUI.ExpressionGui.HolePicker (HolePicker, withHolePicker, HasSearchStringRemainder(..))
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
-import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
+import qualified Lamdu.GUI.ExpressionGui as ExprGui
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Precedence (precedence)
 import           Lamdu.Sugar.NearestHoles (NearestHoles)
@@ -40,19 +40,19 @@ data ExprInfo m = ExprInfo
     , exprInfoMinOpPrec :: MinOpPrec
     }
 
-exprInfoFromPl :: Sugar.Payload (T f) ExprGuiT.Payload -> ExprInfo f
+exprInfoFromPl :: Sugar.Payload (T f) ExprGui.Payload -> ExprInfo f
 exprInfoFromPl pl =
     ExprInfo
-    { exprInfoIsHoleResult = ExprGuiT.isHoleResult pl
+    { exprInfoIsHoleResult = ExprGui.isHoleResult pl
     , exprInfoEntityId = pl ^. Sugar.plEntityId
-    , exprInfoNearestHoles = pl ^. Sugar.plData . ExprGuiT.plNearestHoles
+    , exprInfoNearestHoles = pl ^. Sugar.plData . ExprGui.plNearestHoles
     , exprInfoActions = pl ^. Sugar.plActions
-    , exprInfoMinOpPrec = pl ^. Sugar.plData . ExprGuiT.plMinOpPrec
+    , exprInfoMinOpPrec = pl ^. Sugar.plData . ExprGui.plMinOpPrec
     }
 
 make ::
     (Monad m, Monad f) =>
-    Sugar.Payload (T f) ExprGuiT.Payload -> HolePicker f ->
+    Sugar.Payload (T f) ExprGui.Payload -> HolePicker f ->
     ExprGuiM m (EventMap (T f GuiState.Update))
 make = makeWith . exprInfoFromPl
 

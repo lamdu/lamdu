@@ -28,8 +28,8 @@ import           Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds (WidgetIds(..))
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds as WidgetIds
 import           Lamdu.GUI.ExpressionGui.HolePicker (HolePicker(..))
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
-import           Lamdu.GUI.ExpressionGui.Types (ExpressionGui)
-import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
+import           Lamdu.GUI.ExpressionGui (ExpressionGui)
+import qualified Lamdu.GUI.ExpressionGui as ExprGui
 import           Lamdu.GUI.ExpressionGui.Wrap (stdWrap)
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Name (Name)
@@ -50,8 +50,8 @@ fdConfig Config.Hole{holeOpenKeys, holeCloseKeys} = FocusDelegator.Config
 -- Has an stdWrap/typeView under the search term
 makeStdWrapped ::
     Monad m =>
-    Sugar.Hole (T m) (Sugar.Expression (Name (T m)) (T m) ()) (ExprGuiT.SugarExpr m) ->
-    Sugar.Payload (T m) ExprGuiT.Payload ->
+    Sugar.Hole (T m) (Sugar.Expression (Name (T m)) (T m) ()) (ExprGui.SugarExpr m) ->
+    Sugar.Payload (T m) ExprGui.Payload ->
     WidgetIds ->
     ExprGuiM m (Menu.Placement -> ExpressionGui m)
 makeStdWrapped hole pl widgetIds =
@@ -69,7 +69,7 @@ makeStdWrapped hole pl widgetIds =
                 | otherwise =
                     Lens.mapped . Lens.mapped . GuiState.uCursor %~
                     mappend (Monoid.Last (Just (hidOpen widgetIds)))
-        exprEventMap <- ExprEventMap.make (pl & Sugar.plData . ExprGuiT.plMinOpPrec .~ 100) NoHolePick
+        exprEventMap <- ExprEventMap.make (pl & Sugar.plData . ExprGui.plMinOpPrec .~ 100) NoHolePick
         delKeys <- Config.delKeys
         let unwrapAsDelEventMap =
                 hole ^? Sugar.holeKind . Sugar._WrapperHole . Sugar.haUnwrap . Sugar._UnwrapAction
@@ -107,5 +107,5 @@ makeStdWrapped hole pl widgetIds =
                 & const & pure
             <&> Lens.mapped %~ E.weakerEvents exprEventMap
     where
-        isAHoleInHole = ExprGuiT.isHoleResult pl
+        isAHoleInHole = ExprGui.isHoleResult pl
         holeKind = hole ^. Sugar.holeKind

@@ -26,8 +26,8 @@ import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.GUI.ExpressionEdit.BinderEdit as BinderEdit
 import qualified Lamdu.GUI.ExpressionEdit.BuiltinEdit as BuiltinEdit
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
-import           Lamdu.GUI.ExpressionGui.Types (ExpressionGui)
-import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
+import           Lamdu.GUI.ExpressionGui (ExpressionGui)
+import qualified Lamdu.GUI.ExpressionGui as ExprGui
 import qualified Lamdu.GUI.NameEdit as NameEdit
 import qualified Lamdu.GUI.Styled as Styled
 import qualified Lamdu.GUI.TypeView as TypeView
@@ -53,8 +53,8 @@ undeleteButton undelete =
 makeExprDefinition ::
     Monad m =>
     Widget.EventMap (T m GuiState.Update) ->
-    Sugar.Definition (Name (T m)) (T m) (ExprGuiT.SugarExpr m) ->
-    Sugar.DefinitionExpression (Name (T m)) (T m) (ExprGuiT.SugarExpr m) ->
+    Sugar.Definition (Name (T m)) (T m) (ExprGui.SugarExpr m) ->
+    Sugar.DefinitionExpression (Name (T m)) (T m) (ExprGui.SugarExpr m) ->
     ExprGuiM m (ExpressionGui m)
 makeExprDefinition lhsEventMap def bodyExpr =
     do
@@ -68,7 +68,7 @@ makeExprDefinition lhsEventMap def bodyExpr =
 
 makeBuiltinDefinition ::
     Monad m =>
-    Sugar.Definition (Name (T m)) (T m) (ExprGuiT.SugarExpr m) ->
+    Sugar.Definition (Name (T m)) (T m) (ExprGui.SugarExpr m) ->
     Sugar.DefinitionBuiltin (T m) ->
     ExprGuiM m (WithTextPos (Widget (T m GuiState.Update)))
 makeBuiltinDefinition def builtin =
@@ -92,7 +92,7 @@ makeBuiltinDefinition def builtin =
 make ::
     Monad m =>
     Widget.EventMap (T m GuiState.Update) ->
-    Sugar.Definition (Name (T m)) (T m) (ExprGuiT.SugarExpr m) ->
+    Sugar.Definition (Name (T m)) (T m) (ExprGui.SugarExpr m) ->
     ExprGuiM m (ExpressionGui m)
 make lhsEventMap def =
     do
