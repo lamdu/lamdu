@@ -38,12 +38,11 @@ import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.SearchTerm as SearchTerm
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.State as HoleState
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds (WidgetIds(..))
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds as HoleWidgetIds
-import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui.Annotation as Annotation
 import qualified Lamdu.GUI.ExpressionGui.HolePicker as HolePicker
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
-import           Lamdu.GUI.ExpressionGui.Types (ExpressionN)
+import           Lamdu.GUI.ExpressionGui.Types (ExpressionGui, ExpressionN)
 import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
 import qualified Lamdu.GUI.TypeView as TypeView
 import qualified Lamdu.GUI.WidgetIds as WidgetIds

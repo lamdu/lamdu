@@ -42,11 +42,11 @@ import qualified Lamdu.Data.Meta as Meta
 import qualified Lamdu.GUI.CodeEdit.Settings as CESettings
 import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
 import qualified Lamdu.GUI.ExpressionEdit.TagEdit as TagEdit
-import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
 import qualified Lamdu.GUI.ExpressionGui.Annotation as Annotation
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
+import           Lamdu.GUI.ExpressionGui.Types (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
 import qualified Lamdu.GUI.NameEdit as NameEdit
 import qualified Lamdu.GUI.ParamEdit as ParamEdit

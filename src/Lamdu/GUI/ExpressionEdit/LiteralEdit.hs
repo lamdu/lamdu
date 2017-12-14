@@ -24,13 +24,13 @@ import qualified GUI.Momentu.Widgets.FocusDelegator as FocusDelegator
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
 import qualified GUI.Momentu.Widgets.TextEdit.Property as TextEdits
 import qualified GUI.Momentu.Widgets.TextView as TextView
-import qualified Lamdu.Config as Config
 import           Lamdu.Config (HasConfig)
+import qualified Lamdu.Config as Config
 import           Lamdu.Formatting (Format(..))
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.State (setHoleStateAndJump)
-import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
+import           Lamdu.GUI.ExpressionGui.Types (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Style (Style, HasStyle)

@@ -18,9 +18,9 @@ import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
-import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui.Annotation as Annotation
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
+import           Lamdu.GUI.ExpressionGui.Types (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.Sugar.Types as Sugar

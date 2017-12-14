@@ -1,8 +1,6 @@
 {-# LANGUAGE NoImplicitPrelude, OverloadedStrings, DisambiguateRecordFields #-}
 module Lamdu.GUI.ExpressionGui
-    ( ExpressionGui
-
-    , stdWrap
+    ( stdWrap
     , parentDelegator
     , stdWrapParentExpr
     ) where

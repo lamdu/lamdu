@@ -22,8 +22,8 @@ import qualified Lamdu.GUI.ExpressionEdit.LambdaEdit as LambdaEdit
 import qualified Lamdu.GUI.ExpressionEdit.LiteralEdit as LiteralEdit
 import qualified Lamdu.GUI.ExpressionEdit.NomEdit as NomEdit
 import qualified Lamdu.GUI.ExpressionEdit.RecordEdit as RecordEdit
-import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
+import           Lamdu.GUI.ExpressionGui.Types (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Name (Name(..))

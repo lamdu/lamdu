@@ -11,10 +11,10 @@ import qualified GUI.Momentu.Responsive.Options as Options
 import qualified GUI.Momentu.Widget as Widget
 import qualified Lamdu.Config as Config
 import qualified Lamdu.GUI.ExpressionEdit.TagEdit as TagEdit
-import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
+import           Lamdu.GUI.ExpressionGui.Types (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
 import qualified Lamdu.GUI.Styled as Styled
 import qualified Lamdu.GUI.WidgetIds as WidgetIds

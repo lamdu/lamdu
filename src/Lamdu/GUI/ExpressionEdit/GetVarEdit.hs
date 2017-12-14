@@ -28,10 +28,10 @@ import qualified Lamdu.Config as Config
 import           Lamdu.Config.Theme (HasTheme)
 import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.Data.Ops as DataOps
-import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
+import           Lamdu.GUI.ExpressionGui.Types (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
 import qualified Lamdu.GUI.LightLambda as LightLambda
 import qualified Lamdu.GUI.NameEdit as NameEdit
