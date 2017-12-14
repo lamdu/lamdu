@@ -64,6 +64,7 @@ allowedSearchTerm holeKind searchTerm =
     [ Text.all (`elem` Chars.operator)
     , Text.all Char.isAlphaNum
     , (`Text.isPrefixOf` "{}")
+    , isGetField
     ] ++ ( if Lens.has Sugar._LeafHole holeKind
             then [isPositiveNumber, isNegativeNumber, isLiteralBytes]
             else []
@@ -82,6 +83,10 @@ allowedSearchTerm holeKind searchTerm =
             [digits]             -> Text.all Char.isDigit digits
             [digits, moreDigits] -> Text.all Char.isDigit (digits <> moreDigits)
             _ -> False
+        isGetField t =
+            case Text.uncons t of
+            Just (c, rest) -> c == '.' && Text.all Char.isAlphaNum rest
+            Nothing -> False
 
 disallowCharsFromSearchTerm ::
     (MonadReader env m, HasConfig env, E.HasEventMap w) =>
