@@ -172,14 +172,14 @@ makeTagHoleEdit nearestHoles tag =
         topLine <-
             if not (Text.null searchTerm) && Widget.isFocused (term ^. Align.tValue)
             then do
-                label <- (TextView.make ?? "(new tag)") <*> Element.subAnimId ["label"]
+                newTagLabel <- (TextView.make ?? "(new tag)") <*> Element.subAnimId ["label"]
                 space <- Spacer.stdHSpace
                 hover <- Hover.hover
                 let anchor = fmap Hover.anchor
-                let hLabel = hover label & Hover.sequenceHover
+                let hNewTagLabel = hover newTagLabel & Hover.sequenceHover
                 let hoverOptions =
-                        [ anchor (term /|/ space) /|/ hLabel
-                        , hLabel /|/ anchor (space /|/ term)
+                        [ anchor (term /|/ space) /|/ hNewTagLabel
+                        , hNewTagLabel /|/ anchor (space /|/ term)
                         ] <&> (^. Align.tValue)
                 anchor term
                     <&> Hover.hoverInPlaceOf hoverOptions
