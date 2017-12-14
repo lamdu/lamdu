@@ -1,10 +1,11 @@
-{-# LANGUAGE NoImplicitPrelude, OverloadedStrings #-}
+{-# LANGUAGE NoImplicitPrelude, OverloadedStrings, FlexibleContexts #-}
 module Lamdu.GUI.ExpressionEdit.InjectEdit
     ( make
     ) where
 
 import qualified Control.Lens as Lens
 import           Control.Monad.Transaction (MonadTransaction)
+import           Control.Monad.Writer (MonadWriter)
 import           Data.Store.Transaction (Transaction)
 import           GUI.Momentu.Align (WithTextPos)
 import qualified GUI.Momentu.Element as Element
@@ -25,10 +26,11 @@ import           Lamdu.Config (HasConfig)
 import qualified Lamdu.Config as Config
 import           Lamdu.Config.Theme (HasTheme)
 import qualified Lamdu.GUI.ExpressionEdit.TagEdit as TagEdit
-import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
-import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExprGui
+import           Lamdu.GUI.ExpressionGui.HolePicker (HolePicker)
+import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
+import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import           Lamdu.GUI.ExpressionGui.Wrap (stdWrap, stdWrapParentExpr)
 import qualified Lamdu.GUI.Styled as Styled
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
@@ -42,6 +44,7 @@ type T = Transaction
 
 makeCommon ::
     ( Monad m, MonadReader env f, MonadTransaction m f
+    , MonadWriter (HolePicker m) f
     , HasConfig env, HasTheme env, GuiState.HasState env
     , Spacer.HasStdSpacing env, Element.HasAnimIdPrefix env, Menu.HasStyle env
     , Hover.HasStyle env, TextEdit.HasStyle env

@@ -1,4 +1,4 @@
-{-# LANGUAGE NamedFieldPuns, NoImplicitPrelude, OverloadedStrings, LambdaCase #-}
+{-# LANGUAGE NamedFieldPuns, NoImplicitPrelude, OverloadedStrings, LambdaCase, FlexibleContexts #-}
 module Lamdu.GUI.ExpressionEdit.BinderEdit
     ( make
     , makeBinderBodyEdit
