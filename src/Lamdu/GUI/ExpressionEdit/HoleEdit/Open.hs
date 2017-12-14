@@ -166,7 +166,7 @@ makeHoleResultWidget pl resultId holeResult =
                 <&> \x -> if "." `Text.isSuffixOf` x then "." else ""
             else return mempty
         isSelected <- GuiState.isSubCursor ?? resultId
-        when isSelected (HolePicker.setResultPicker extraChars (pickBefore (pure mempty)))
+        when isSelected (HolePicker.setResultPicker extraChars (holeResult ^. Sugar.holeResultPick))
         holeResultConverted
             & postProcessSugar (pl ^. Sugar.plData . ExprGui.plMinOpPrec)
             & ExprGuiM.makeSubexpression

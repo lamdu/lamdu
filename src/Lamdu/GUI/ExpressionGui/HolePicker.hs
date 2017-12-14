@@ -11,7 +11,6 @@ import qualified Data.Char as Char
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Text.Lens as TextLens
 import qualified GUI.Momentu.EventMap as E
-import qualified GUI.Momentu.State as GuiState
 
 import           Lamdu.Prelude
 
@@ -22,7 +21,7 @@ type T = Transaction
 class HasSearchStringRemainder env where searchStringRemainder :: Lens' env Text
 
 data Info m = Info
-    { iAction :: T m GuiState.Update
+    { iAction :: T m ()
     , iSearchStringRemainder :: Text
     }
 
@@ -51,7 +50,7 @@ withHolePicker (HolePick h) mk =
             & TextLens._Text . Lens.element 0 %~ Char.toLower
             & ("Pick result and " <>)
 
-setResultPicker :: MonadWriter (HolePicker n) m => Text -> T n GuiState.Update -> m ()
+setResultPicker :: MonadWriter (HolePicker n) m => Text -> T n () -> m ()
 setResultPicker remainder act =
     HolePick Info
     { iAction = act
