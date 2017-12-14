@@ -11,17 +11,17 @@ In October 2014, before Lamdu executed the code written in it, and when it looke
 It presented, in order of appearance:
 
 * The user interface and the language demonstrated with a code example.
- * Benefit: Renaming a variable is easy
- * Benefit: No syntax errors
- * Verbose typing mode option can help understand the code.
+  * Benefit: Renaming a variable is easy
+  * Benefit: No syntax errors
+  * Verbose typing mode option can help understand the code.
 * Demonstrating writing some new code.
- * Introducing holes. Holes are the key for editing valid programs.
- * Notes that holes have their inferred types shown.
- * Show that holes de-prioritize type errors.
- * Demonstrate that transformation-holes choose to put the argument where appropriate.
- * Show creation of lambdas, automatic naming and how it's useful.
- * Demonstrate how type errors work in Lamdu.
- * Show how sometimes the definition's inferred type help us understand what is left to implement.
+  * Introducing holes. Holes are the key for editing valid programs.
+  * Notes that holes have their inferred types shown.
+  * Show that holes de-prioritize type errors.
+  * Demonstrate that transformation-holes choose to put the argument where appropriate.
+  * Show creation of lambdas, automatic naming and how it's useful.
+  * Demonstrate how type errors work in Lamdu.
+  * Show how sometimes the definition's inferred type help us understand what is left to implement.
 * Fibonacci coding example, demonstrating structural types and how Lamdu writes the record's boiler-plate for us. *Note that this will be nicer in the current version due to the addition "light lambdas" and updated visual design.*
 
 Last slide, titled "Summary", reads (*and says*):
@@ -42,25 +42,25 @@ There were a lot of minor improvements.
 These are the major visible stuff that changed:
 
 * Lamdu evaluates the code!
-* Lamdu is somewhat useful! At least we can use it for Project Euler and Google Code Jam problems :) Though are still important stuff missing like creating new nominal types.
+* Lamdu is somewhat useful! At least we can use it for Project Euler and Google Code Jam problems :) Though there are still important stuff missing like creating new nominal types.
 * Automatic code layouting, which dynamically adapts according the window size and zoom level to avoid horizontal scroll!
-* The language and standard library are more mature due to use using it. Instead of lists we have `Stream`. We also have `Array`s, `Text`, `Bytes`, `Tree`, and the `Mut` monad.
+* The language and standard library are more mature due to using it. Instead of lists we have `Stream`. We also have `Array`s, `Text`, `Bytes`, `Tree`, and the `Mut` monad.
 * Solved the "blame-assignment" problem when a definition's type changes.
 
 **TODO: What else?**
 
-## What goals do we want to achieve with a video? ##
+## What goals do we want to achieve with a video
 
 * The best thing would be to get someone excited enough to join us and contribute to the project!
 * Get feedback.
-* As Lamdu is already somewhat useful, make people aware of it, so that they could use it. The ultimate goal of course is for Lamdu to be very useful :) This will also get us some user feedback on things that we need to improve, and possibly provide some motivation.
+* As Lamdu is already somewhat useful, make people aware of it, so that they could use it. The ultimate goal of course is for Lamdu to be very useful :) This will also get us some user feedback on things that we need to improve.
 * Improve's people's knowledge about Lamdu / show that the project is still doing steady progress. Otherwise, similar minded folks, who could had joined us, will keep starting new projects with similar goals instead of joining forces and tackling the hard problems together.
-* Internet points / motivation / etc
+* Get motivation.
 * Who knows - someone seeing this or using Lamdu after this might even get us grants (money) to develop Lamdu? Then maybe we could work on it a lot more rather than just on our own free time.
 
-## Video Script ##
+## Video Script
 
-### Introduce Lamdu ###
+### Introduce Lamdu
 
 * A fancy calculator / REPL. Show with a simple calculation like (1+sqrt 5)/2
   * Explain a bit about our annotations
@@ -93,26 +93,25 @@ These are the major visible stuff that changed:
 
 **TODO**: Demonstrate structural types. We did this in the previous demo with a fibonacci example, but it is a bit embarassing that if we call the field "next" then we get disambiguation tags. We should probably solve this in some way - tag holes or less spurious disambiguations..
 
-### Present cool mockups ###
+### Present cool mockups
 
 Things that aren't yet implemented in Lamdu but that will be in the future:
 
 * Switching languages. Can mock it up by switching branches to a branch where things are in Spanish.
 * Rich customizable value annotations. Show a function that calculates the possible moves for a chess horse with chess boards as annotations. ("Photoshop"ed)
 
-### A bit about Lamdu's vision ###
+### A bit about Lamdu's vision
 
 Additional things we plan on integrating into the environment:
 
 * Version control. As it happens, existing tools like git were designed for text files and we may need to create new source control tools for non-textual code.
 * Testing being integrated. It just makes sense when the IDE already runs your code.
 
-### And a little bit about us ###
+### And a little bit about us
 
 * Eyal and Yair. Been working on Lamdu on our free time since 2011.
   * Been programming for a really long while in BASIC, C, C++, Python, Haskell, D, and more.
   * We think that many accumulating small frustrustions faced by programmers, like us, can be solved and this is what we are trying to do with Lamdu.
-  * Yair left Google so that he could have enough time to work on this.
 * Lamdu is free and open-source.
   * There's no institution or company behind us - But if anyone wants to give us grants, by all means do :) We would love to be able to spend more of our time developing Lamdu.
 * We would really like other people to join our effort to bring forth a brighter future for programming.
