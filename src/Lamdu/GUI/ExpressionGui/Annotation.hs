@@ -71,7 +71,7 @@ addAnnotationHoverBackground = addAnnotationBackgroundH Theme.valAnnotationHover
 data WideAnnotationBehavior
     = ShrinkWideAnnotation
     | HoverWideAnnotation
-    | KeepWideAnnotation
+    | KeepWideTypeAnnotation
 
 wideAnnotationBehaviorFromSelected :: Bool -> WideAnnotationBehavior
 wideAnnotationBehaviorFromSelected False = ShrinkWideAnnotation
@@ -83,7 +83,7 @@ applyWideAnnotationBehavior ::
     (MonadReader env m, HasTheme env, Element.HasAnimIdPrefix env) =>
     WideAnnotationBehavior ->
     m (Vector2 Widget.R -> View -> View)
-applyWideAnnotationBehavior KeepWideAnnotation =
+applyWideAnnotationBehavior KeepWideTypeAnnotation =
     addAnnotationBackground <&> const
 applyWideAnnotationBehavior ShrinkWideAnnotation =
     addAnnotationBackground
@@ -257,7 +257,7 @@ addEvaluationResult mNeigh resDisp wideBehavior =
     (_, ER.RFunc{}) -> return (flip const)
     _ ->
         case wideBehavior of
-        KeepWideAnnotation -> ShrinkWideAnnotation
+        KeepWideTypeAnnotation -> ShrinkWideAnnotation
         _ -> wideBehavior
         & addAnnotationH (makeEvalView mNeigh resDisp)
 
@@ -269,7 +269,7 @@ maybeAddAnnotationPl pl =
     do
         wideAnnotationBehavior <-
             if showAnnotation ^. ExprGui.showExpanded
-            then return KeepWideAnnotation
+            then return KeepWideTypeAnnotation
             else ExprGuiM.isExprSelected pl <&> wideAnnotationBehaviorFromSelected
         maybeAddAnnotation wideAnnotationBehavior
             showAnnotation
