@@ -81,8 +81,11 @@ makeStdWrapped hole pl widgetIds =
                 Lens.mapped . Lens.mapped . GuiState.uCursor %~
                 mappend (Monoid.Last (Just (hidOpen widgetIds)))
         exprEventMap <- ExprEventMap.make (pl & Sugar.plData . ExprGui.plMinOpPrec .~ 100) NoHolePick
-        case (isActive, isAHoleInHole) of
-            (True, False) ->
+        let inPlaceOfClosed open =
+                closedSearchTermGui & M.widget %~
+                Hover.hoverInPlaceOf [Hover.anchor open] . Hover.anchor
+        if isActive && not isAHoleInHole
+            then
                 -- ideally the fdWrap would be "inside" the
                 -- type-view addition and stdWrap, but it's not
                 -- important in the case the FD is selected, and
@@ -91,15 +94,8 @@ makeStdWrapped hole pl widgetIds =
                 (fdWrap <&> (Lens.mapped %~))
                 <*> makeOpenSearchAreaGui hole pl widgetIds
                 <&> Lens.mapped %~ inPlaceOfClosed . M.weakerEvents unwrapAsEventMap . (^. M.tValue)
-                where
-                    inPlaceOfClosed open =
-                        closedSearchTermGui & M.widget %~
-                        Hover.hoverInPlaceOf [Hover.anchor open] . Hover.anchor
-            (True, True) ->
-                Widget.setFocused closedSearchTermGui
-                & M.weakerEvents searchTermEventMap
-                & const & pure
-            (False, _) ->
+            else
+                (if isActive then Widget.setFocused else id)
                 closedSearchTermGui
                 & M.weakerEvents searchTermEventMap
                 & const & pure
