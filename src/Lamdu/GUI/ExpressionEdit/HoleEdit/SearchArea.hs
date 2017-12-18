@@ -57,19 +57,6 @@ makeStdWrapped ::
 makeStdWrapped hole pl widgetIds =
     do
         config <- Lens.view Config.config
-        let fdWrap
-                | isAHoleInHole = return id
-                | otherwise =
-                    FocusDelegator.make ?? fdConfig (Config.hole config)
-                    ?? FocusDelegator.FocusEntryParent ?? hidClosedSearchArea widgetIds
-                    <&> (Align.tValue %~)
-        isActive <- WidgetIds.isActive widgetIds
-        let fixEventMapCursor
-                | isActive = id
-                | otherwise =
-                    Lens.mapped . Lens.mapped . GuiState.uCursor %~
-                    mappend (Monoid.Last (Just (hidOpen widgetIds)))
-        exprEventMap <- ExprEventMap.make (pl & Sugar.plData . ExprGui.plMinOpPrec .~ 100) NoHolePick
         let unwrapAsEventMap =
                 hole ^? Sugar.holeKind . Sugar._WrapperHole . Sugar.haUnwrap . Sugar._UnwrapAction
                 & maybe mempty
@@ -77,11 +64,24 @@ makeStdWrapped hole pl widgetIds =
                         (E.Doc ["Edit", "Unwrap"])
                         . fmap WidgetIds.fromEntityId
                     )
+        let fdWrap =
+                FocusDelegator.make ?? fdConfig (Config.hole config)
+                ?? FocusDelegator.FocusEntryParent ?? hidClosedSearchArea widgetIds
+                <&> (Align.tValue %~)
         closedSearchTermGui <-
-            fdWrap <*> SearchTerm.make widgetIds holeKind <&> Responsive.fromWithTextPos
+            (if isAHoleInHole then return id else fdWrap)
+            <*> SearchTerm.make widgetIds holeKind <&> Responsive.fromWithTextPos
             <&> E.weakerEvents unwrapAsEventMap
             & stdWrap pl
-        searchTermEventMap <- HoleEventMap.makeSearchTermEditEventMap holeKind widgetIds <&> fixEventMapCursor
+        isActive <- WidgetIds.isActive widgetIds
+        searchTermEventMap <-
+            HoleEventMap.makeSearchTermEditEventMap holeKind widgetIds <&>
+            if isActive
+            then id
+            else
+                Lens.mapped . Lens.mapped . GuiState.uCursor %~
+                mappend (Monoid.Last (Just (hidOpen widgetIds)))
+        exprEventMap <- ExprEventMap.make (pl & Sugar.plData . ExprGui.plMinOpPrec .~ 100) NoHolePick
         case (isActive, isAHoleInHole) of
             (True, False) ->
                 -- ideally the fdWrap would be "inside" the
