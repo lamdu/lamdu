@@ -1,8 +1,5 @@
 import "hint" HLint.HLint
 
-ignore "Use const"
-ignore "Avoid lambda" = Lamdu.Sugar.Names
-
 infixr 4 %%@~, <%@~, %%~, <+~, <*~, <-~, <//~, <^~, <^^~, <**~
 infix 4 %%@=, <%@=, %%=, <+=, <*=, <-=, <//=, <^=, <^^=, <**=
 infixr 2 <<~
