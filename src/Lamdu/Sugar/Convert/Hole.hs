@@ -14,7 +14,7 @@ import           Control.Applicative ((<|>))
 import qualified Control.Lens as Lens
 import           Control.Monad (filterM)
 import           Control.Monad.ListT (ListT)
-import           Control.Monad.Trans.Either (EitherT(..))
+import           Control.Monad.Trans.Except (ExceptT(..), runExceptT)
 import           Control.Monad.Trans.State (StateT(..), mapStateT, evalState, state)
 import qualified Control.Monad.Trans.State as State
 import qualified Crypto.Hash.SHA256 as SHA256
@@ -438,8 +438,8 @@ writeConvertTypeChecked sugarContext holeStored inferredVal =
                 eId = Property.value stored & EntityId.ofValI
         noEval = Input.EvalResultsForExpr Map.empty Map.empty
 
-eitherTtoListT :: Monad m => EitherT err m a -> ListT m a
-eitherTtoListT = ListClass.joinL . fmap (ListClass.fromList . (^.. Lens._Right)) . runEitherT
+eitherTtoListT :: Monad m => ExceptT err m a -> ListT m a
+eitherTtoListT = ListClass.joinL . fmap (ListClass.fromList . (^.. Lens._Right)) . runExceptT
 
 eitherToListT :: Monad m => Either t a -> ListT m a
 eitherToListT (Left _) = mempty
