@@ -1,6 +1,7 @@
 {-# LANGUAGE NoImplicitPrelude, OverloadedStrings, DisambiguateRecordFields #-}
 module Lamdu.GUI.ExpressionGui.Wrap
     ( stdWrap
+    , addActions
     , parentDelegator
     , stdWrapParentExpr
     ) where
@@ -35,17 +36,23 @@ parentExprFDConfig config = FocusDelegator.Config
     , FocusDelegator.focusParentDoc = E.Doc ["Navigation", "Leave subexpression"]
     }
 
+addActions ::
+    Monad m =>
+    Sugar.Payload (T m) ExprGui.Payload ->
+    ExprGuiM m (ExpressionGui m) ->
+    ExprGuiM m (ExpressionGui m)
+addActions pl act =
+    do
+        (res, holePicker) <- ExprGuiM.listenResultPicker act
+        exprEventMap <- ExprEventMap.make pl holePicker
+        E.weakerEvents exprEventMap res & pure
+
 stdWrap ::
     Monad m =>
     Sugar.Payload (T m) ExprGui.Payload ->
     ExprGuiM m (ExpressionGui m) ->
     ExprGuiM m (ExpressionGui m)
-stdWrap pl act =
-    do
-        (res, holePicker) <- ExprGuiM.listenResultPicker act
-        exprEventMap <- ExprEventMap.make pl holePicker
-        maybeAddAnnotationPl pl ?? res
-            <&> E.weakerEvents exprEventMap
+stdWrap pl act = maybeAddAnnotationPl pl <*> addActions pl act
 
 parentDelegator ::
     ( MonadReader env m, Config.HasConfig env, GuiState.HasCursor env, Applicative f
