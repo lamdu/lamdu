@@ -41,6 +41,7 @@ adHocTextEditEventMap widgetIds =
                 Text.snoc searchTerm
                 & E.allChars "Character"
                 (E.Doc ["Edit", "Search Term", "Append character"])
+                & if Text.null searchTerm then E.filter notOp else id
         let deleteCharEventMap
                 | Text.null searchTerm = mempty
                 | otherwise =
@@ -52,6 +53,8 @@ adHocTextEditEventMap widgetIds =
             appendCharEventMap <> deleteCharEventMap
             & disallow holeKind id
             <&> GuiState.updateWidgetState (hidOpen widgetIds)
+    where
+        notOp t = Text.all (`elem` Chars.operator) t & not
 
 toLiteralTextKeys :: [MetaKey]
 toLiteralTextKeys =

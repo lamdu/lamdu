@@ -359,15 +359,10 @@ makeUnderCursorAssignment shownResultsLists hasHiddenResults hole pl widgetIds =
 
         vspace <- Annotation.annotationSpacer
         let addAnnotation x = x /-/ vspace /-/ typeView
-        let blockOperatorEvents
-                | Text.null searchTerm || Text.all (`elem` Chars.operator) searchTerm = mempty
-                | otherwise =
-                    E.charGroup (Just "Operator") (E.Doc ["Edit", "Apply operator (blocked)"])
-                    Chars.operator mempty
         literalEventMap <- EventMap.makeLiteralEventMap holeKind widgetIds
         searchTermWidget <-
             SearchTerm.make widgetIds holeKind
-            <&> Align.tValue %~ Hover.anchor . E.weakerEvents (pickFirstResult <> blockOperatorEvents <> literalEventMap)
+            <&> Align.tValue %~ Hover.anchor . E.weakerEvents (pickFirstResult <> literalEventMap)
         mkOptions <-
             resultsHoverOptions
             & Reader.local (Element.animIdPrefix .~ WidgetId.toAnimId (hidOpen widgetIds))

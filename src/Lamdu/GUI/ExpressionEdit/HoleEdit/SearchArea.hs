@@ -19,17 +19,15 @@ import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.FocusDelegator as FocusDelegator
 import qualified GUI.Momentu.Widgets.Menu as Menu
 import qualified Lamdu.Config as Config
-import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.EventMap as HoleEventMap
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.Open (makeOpenSearchAreaGui)
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.SearchTerm as SearchTerm
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds (WidgetIds(..))
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds as WidgetIds
-import           Lamdu.GUI.ExpressionGui.HolePicker (HolePicker(..))
+import           Lamdu.GUI.ExpressionGui.Annotation (maybeAddAnnotationPl)
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExprGui
-import           Lamdu.GUI.ExpressionGui.Wrap (stdWrap)
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Name (Name)
 import qualified Lamdu.Sugar.Types as Sugar
@@ -68,10 +66,12 @@ makeStdWrapped hole pl widgetIds =
                 ?? FocusDelegator.FocusEntryParent ?? hidClosedSearchArea widgetIds
                 <&> (M.tValue %~)
         closedSearchTermGui <-
-            (if isAHoleInHole then return id else fdWrap)
-            <*> SearchTerm.make widgetIds holeKind <&> Responsive.fromWithTextPos
+            maybeAddAnnotationPl pl
+            <*>
+            ( (if isAHoleInHole then return id else fdWrap)
+                <*> SearchTerm.make widgetIds holeKind <&> Responsive.fromWithTextPos
+            )
             <&> M.weakerEvents unwrapAsEventMap
-            & stdWrap pl
         isActive <- WidgetIds.isActive widgetIds
         searchTermEventMap <-
             HoleEventMap.makeSearchTermEditEventMap holeKind widgetIds <&>
@@ -80,7 +80,6 @@ makeStdWrapped hole pl widgetIds =
             else
                 Lens.mapped . Lens.mapped . GuiState.uCursor %~
                 mappend (Monoid.Last (Just (hidOpen widgetIds)))
-        exprEventMap <- ExprEventMap.make (pl & Sugar.plData . ExprGui.plMinOpPrec .~ 100) NoHolePick
         let inPlaceOfClosed open =
                 closedSearchTermGui & M.widget %~
                 Hover.hoverInPlaceOf [Hover.anchor open] . Hover.anchor
@@ -99,7 +98,6 @@ makeStdWrapped hole pl widgetIds =
                 closedSearchTermGui
                 & M.weakerEvents searchTermEventMap
                 & const & pure
-            <&> Lens.mapped %~ M.weakerEvents exprEventMap
     where
         isAHoleInHole = ExprGui.isHoleResult pl
         holeKind = hole ^. Sugar.holeKind

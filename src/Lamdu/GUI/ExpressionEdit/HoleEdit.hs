@@ -7,39 +7,27 @@ import qualified Control.Lens as Lens
 import           Data.Store.Transaction (Transaction)
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Element as Element
-import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Glue ((/-/))
 import qualified GUI.Momentu.Hover as Hover
 import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.State as GuiState
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Menu as Menu
-import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.Argument as Argument
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.SearchArea as SearchArea
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds (WidgetIds(..))
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds as HoleWidgetIds
-import           Lamdu.GUI.ExpressionGui.Annotation (maybeAddAnnotationPl)
-import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
-import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExprGui
+import           Lamdu.GUI.ExpressionGui.Annotation (maybeAddAnnotationPl)
+import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
+import           Lamdu.GUI.ExpressionGui.Wrap (addActions)
 import           Lamdu.Name (Name)
 import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
 
 type T = Transaction
-
-makeArgument ::
-    Monad m =>
-    Sugar.Payload (T m) ExprGui.Payload -> Widget.Id -> Sugar.HoleArg (T m) (ExprGui.SugarExpr m) ->
-    ExprGuiM m (ExpressionGui m)
-makeArgument pl openHoleId holeArg =
-    do
-        (wrapper, holePicker) <- Argument.make openHoleId holeArg & ExprGuiM.listenResultPicker
-        exprEventMap <- ExprEventMap.make pl holePicker
-        E.weakerEvents exprEventMap wrapper & return
 
 assignHoleCursor ::
     Monad m => WidgetIds -> ExprGuiM m a -> ExprGuiM m a
@@ -93,9 +81,10 @@ make hole pl =
         searchAreaGui <- SearchArea.makeStdWrapped hole pl widgetIds
         case hole ^. Sugar.holeKind of
             Sugar.WrapperHole arg ->
-                makeArgument pl (hidOpenSearchTerm widgetIds) arg
+                Argument.make (hidOpenSearchTerm widgetIds) arg
                 >>= makeHoleWithArgument searchAreaGui pl
             Sugar.LeafHole{} -> return (searchAreaGui Menu.AnyPlace)
     & assignHoleCursor widgetIds
+    & addActions pl
     where
         widgetIds = HoleWidgetIds.make (pl ^. Sugar.plEntityId)
