@@ -56,6 +56,54 @@ setFocalAreaToFullSize =
     Align.tValue . Widget.sizedState <. Widget._StateFocused . Lens.mapped . Widget.fFocalAreas .@~
     (:[]) . Rect 0
 
+postProcessSugar :: Int -> ExpressionN m () -> ExpressionN m ExprGui.Payload
+postProcessSugar minOpPrec expr =
+    expr
+    & AddParens.addWith minOpPrec
+    <&> pl
+    & SugarLens.holeArgs . Sugar.plData . ExprGui.plShowAnnotation
+    .~ ExprGui.alwaysShowAnnotations
+    where
+        pl (x, needParens, ()) =
+            ExprGui.Payload
+            { ExprGui._plStoredEntityIds = []
+            , ExprGui._plNearestHoles = NearestHoles.none
+            , ExprGui._plShowAnnotation = ExprGui.neverShowAnnotations
+            , ExprGui._plNeedParens = needParens == AddParens.NeedsParens
+            , ExprGui._plMinOpPrec = x
+            }
+
+-- | Remove unwanted event handlers from a hole result
+removeUnwanted :: Config -> EventMap a -> EventMap a
+removeUnwanted config =
+    E.deleteKeys unwantedKeyEvents
+    where
+        unwantedKeyEvents =
+            concat
+            [ Config.delKeys config
+            , Config.enterSubexpressionKeys config
+            , Config.leaveSubexpressionKeys config
+            , Grid.stdKeys ^.. Lens.folded
+            , Config.letAddItemKeys config
+            ]
+            <&> MetaKey.toModKey
+            <&> E.KeyEvent MetaKey.KeyState'Pressed
+
+applyResultLayout ::
+    Functor f => f (ExpressionGui m) -> f (WithTextPos (Widget (T m GuiState.Update)))
+applyResultLayout fGui =
+    fGui <&> (^. Responsive.render)
+    ?? Responsive.LayoutParams
+        { Responsive._layoutMode = Responsive.LayoutWide
+        , Responsive._layoutContext = Responsive.LayoutClear
+        }
+
+afterPick :: Widget.Id -> GuiState.Update
+afterPick idWithinResultWidget =
+    mempty
+    { GuiState._uCursor = Monoid.Last (Just idWithinResultWidget)
+    }
+
 make ::
     Monad m =>
     Sugar.Payload f ExprGui.Payload ->
@@ -116,51 +164,3 @@ make pl resultId holeResult =
         pickedResult = afterPick idWithinResultWidget
         simplePickRes keys =
             E.keysEventMap keys (E.Doc ["Edit", "Result", "Pick"]) (return ())
-
-postProcessSugar :: Int -> ExpressionN m () -> ExpressionN m ExprGui.Payload
-postProcessSugar minOpPrec expr =
-    expr
-    & AddParens.addWith minOpPrec
-    <&> pl
-    & SugarLens.holeArgs . Sugar.plData . ExprGui.plShowAnnotation
-    .~ ExprGui.alwaysShowAnnotations
-    where
-        pl (x, needParens, ()) =
-            ExprGui.Payload
-            { ExprGui._plStoredEntityIds = []
-            , ExprGui._plNearestHoles = NearestHoles.none
-            , ExprGui._plShowAnnotation = ExprGui.neverShowAnnotations
-            , ExprGui._plNeedParens = needParens == AddParens.NeedsParens
-            , ExprGui._plMinOpPrec = x
-            }
-
--- | Remove unwanted event handlers from a hole result
-removeUnwanted :: Config -> EventMap a -> EventMap a
-removeUnwanted config =
-    E.deleteKeys unwantedKeyEvents
-    where
-        unwantedKeyEvents =
-            concat
-            [ Config.delKeys config
-            , Config.enterSubexpressionKeys config
-            , Config.leaveSubexpressionKeys config
-            , Grid.stdKeys ^.. Lens.folded
-            , Config.letAddItemKeys config
-            ]
-            <&> MetaKey.toModKey
-            <&> E.KeyEvent MetaKey.KeyState'Pressed
-
-applyResultLayout ::
-    Functor f => f (ExpressionGui m) -> f (WithTextPos (Widget (T m GuiState.Update)))
-applyResultLayout fGui =
-    fGui <&> (^. Responsive.render)
-    ?? Responsive.LayoutParams
-        { Responsive._layoutMode = Responsive.LayoutWide
-        , Responsive._layoutContext = Responsive.LayoutClear
-        }
-
-afterPick :: Widget.Id -> GuiState.Update
-afterPick idWithinResultWidget =
-    mempty
-    { GuiState._uCursor = Monoid.Last (Just idWithinResultWidget)
-    }
