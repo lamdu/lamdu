@@ -11,6 +11,7 @@ import qualified GUI.Momentu.Align as Align
 import           GUI.Momentu.Animation (AnimId)
 import qualified GUI.Momentu.Animation as Anim
 import qualified GUI.Momentu.Element as Element
+import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Glue ((/-/), (/|/))
 import qualified GUI.Momentu.Responsive as Responsive
@@ -28,12 +29,12 @@ import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.Eval.Results as ER
 import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
 import qualified Lamdu.GUI.ExpressionEdit.TagEdit as TagEdit
+import           Lamdu.GUI.ExpressionGui (ExpressionGui)
+import qualified Lamdu.GUI.ExpressionGui as ExprGui
 import qualified Lamdu.GUI.ExpressionGui.Annotation as Annotation
 import           Lamdu.GUI.ExpressionGui.HolePicker (withHolePicker)
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
-import           Lamdu.GUI.ExpressionGui (ExpressionGui)
-import qualified Lamdu.GUI.ExpressionGui as ExprGui
 import           Lamdu.GUI.ExpressionGui.Wrap (stdWrap, parentDelegator)
 import qualified Lamdu.GUI.Styled as Styled
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
@@ -108,7 +109,7 @@ make (Sugar.Case mArg (Sugar.Composite alts caseTail addAlt)) pl =
             <&> (^. Sugar.cairNewTag . Sugar.tagInstance)
             <&> WidgetIds.fromEntityId
             <&> WidgetIds.tagHoleId
-            & Widget.keysEventMapMovesCursor (Config.caseAddAltKeys config)
+            & E.keysEventMapMovesCursor (Config.caseAddAltKeys config)
                 (doc "Add Alt")
             & const & withHolePicker resultPicker
         parentDelegator (WidgetIds.fromExprPayload pl)
@@ -198,29 +199,29 @@ makeOpenCase actions rest animId altsGui =
 openCaseEventMap ::
     Monad m =>
     Config -> Sugar.OpenCompositeActions (T m) ->
-    Widget.EventMap (T m GuiState.Update)
+    EventMap (T m GuiState.Update)
 openCaseEventMap config (Sugar.OpenCompositeActions close) =
     close <&> WidgetIds.fromEntityId
-    & Widget.keysEventMapMovesCursor (Config.delKeys config) (doc "Close")
+    & E.keysEventMapMovesCursor (Config.delKeys config) (doc "Close")
 
 closedCaseEventMap ::
     Monad m =>
     Config -> Sugar.ClosedCompositeActions (T m) ->
-    Widget.EventMap (T m GuiState.Update)
+    EventMap (T m GuiState.Update)
 closedCaseEventMap config (Sugar.ClosedCompositeActions open) =
     open <&> WidgetIds.fromEntityId
-    & Widget.keysEventMapMovesCursor (Config.caseOpenKeys config) (doc "Open")
+    & E.keysEventMapMovesCursor (Config.caseOpenKeys config) (doc "Open")
 
 caseDelEventMap ::
     Monad m =>
-    Config -> m Sugar.EntityId -> Widget.EventMap (m GuiState.Update)
+    Config -> m Sugar.EntityId -> EventMap (m GuiState.Update)
 caseDelEventMap config delete =
     delete <&> WidgetIds.fromEntityId
-    & Widget.keysEventMapMovesCursor (Config.delKeys config) (doc "Delete Alt")
+    & E.keysEventMapMovesCursor (Config.delKeys config) (doc "Delete Alt")
 
 toLambdaCaseEventMap ::
     Monad m =>
-    Config -> m Sugar.EntityId -> Widget.EventMap (m GuiState.Update)
+    Config -> m Sugar.EntityId -> EventMap (m GuiState.Update)
 toLambdaCaseEventMap config toLamCase =
     toLamCase <&> WidgetIds.fromEntityId
-    & Widget.keysEventMapMovesCursor (Config.delKeys config) (doc "Turn to Lambda-Case")
+    & E.keysEventMapMovesCursor (Config.delKeys config) (doc "Turn to Lambda-Case")

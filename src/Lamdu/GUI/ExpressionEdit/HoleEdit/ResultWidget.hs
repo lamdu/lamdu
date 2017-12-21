@@ -11,6 +11,7 @@ import           Data.Store.Transaction (Transaction)
 import qualified Data.Text as Text
 import           GUI.Momentu (Widget, WithTextPos(..))
 import qualified GUI.Momentu.Align as Align
+import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.MetaKey as MetaKey
 import           GUI.Momentu.Rect (Rect(..))
@@ -22,11 +23,11 @@ import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.State as HoleState
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds as HoleWidgetIds
+import           Lamdu.GUI.ExpressionGui (ExpressionGui, ExpressionN)
+import qualified Lamdu.GUI.ExpressionGui as ExprGui
 import qualified Lamdu.GUI.ExpressionGui.HolePicker as HolePicker
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
-import           Lamdu.GUI.ExpressionGui (ExpressionGui, ExpressionN)
-import qualified Lamdu.GUI.ExpressionGui as ExprGui
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Name (Name(..))
 import qualified Lamdu.Sugar.Lens as SugarLens
@@ -44,7 +45,7 @@ makeHoleResultWidget ::
     Widget.Id ->
     Sugar.HoleResult (T m) (Sugar.Expression (Name (T m)) (T m) ()) ->
     ExprGuiM m
-    ( Widget.EventMap (T m GuiState.Update)
+    ( EventMap (T m GuiState.Update)
     , WithTextPos (Widget (T m GuiState.Update))
     )
 makeHoleResultWidget pl resultId holeResult =
@@ -52,7 +53,7 @@ makeHoleResultWidget pl resultId holeResult =
         config <- Lens.view Config.config
         let holeConfig = Config.hole config
         let pickAndMoveToNextHole =
-                Widget.keysEventMapMovesCursor (Config.holePickAndMoveToNextHoleKeys holeConfig)
+                E.keysEventMapMovesCursor (Config.holePickAndMoveToNextHoleKeys holeConfig)
                     (E.Doc ["Edit", "Result", "Pick and move to next hole"]) .
                 pure . WidgetIds.fromEntityId
         let pickEventMap =
@@ -106,7 +107,7 @@ makeHoleResultWidget pl resultId holeResult =
                 action <&> mappend pickedResult
         pickedResult = afterPick idWithinResultWidget
         simplePickRes keys =
-            Widget.keysEventMap keys (E.Doc ["Edit", "Result", "Pick"]) (return ())
+            E.keysEventMap keys (E.Doc ["Edit", "Result", "Pick"]) (return ())
 
 postProcessSugar :: Int -> ExpressionN m () -> ExpressionN m ExprGui.Payload
 postProcessSugar minOpPrec expr =
@@ -126,7 +127,7 @@ postProcessSugar minOpPrec expr =
             }
 
 -- | Remove unwanted event handlers from a hole result
-removeUnwanted :: Config -> Widget.EventMap a -> Widget.EventMap a
+removeUnwanted :: Config -> EventMap a -> EventMap a
 removeUnwanted config =
     E.deleteKeys unwantedKeyEvents
     where

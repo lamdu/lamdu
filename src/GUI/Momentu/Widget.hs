@@ -6,11 +6,6 @@ module GUI.Momentu.Widget
     -- Types:
     , R, Size
 
-    -- Events:
-    , EventMap
-    , keysEventMap
-    , keysEventMapMovesCursor
-
     -- Widget lenses:
     , enterResultCursor, sizedState
 
@@ -46,8 +41,6 @@ import           GUI.Momentu.Direction (Direction)
 import qualified GUI.Momentu.Direction as Direction
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
-import qualified GUI.Momentu.EventMap as EventMap
-import           GUI.Momentu.MetaKey (MetaKey, toModKey)
 import           GUI.Momentu.State (VirtualCursor(..), Update, HasCursor(..))
 import qualified GUI.Momentu.State as State
 import           GUI.Momentu.Rect (Rect(..))
@@ -101,20 +94,6 @@ enterFuncAddVirtualCursor destRect =
             Direction.Outside     -> Nothing
             Direction.Point p     -> Rect p 0 & Just
             <&> VirtualCursor
-
-keysEventMap ::
-    Functor f => [MetaKey] -> EventMap.Doc ->
-    f () -> EventMap (f Update)
-keysEventMap keys doc act =
-    (fmap . const) mempty <$>
-    EventMap.keyPresses (keys <&> toModKey) doc act
-
-keysEventMapMovesCursor ::
-    Functor f => [MetaKey] -> EventMap.Doc ->
-    f Id -> EventMap (f Update)
-keysEventMapMovesCursor keys doc act =
-    fmap State.updateCursor <$>
-    EventMap.keyPresses (keys <&> toModKey) doc act
 
 translateFocused ::
     Functor f =>

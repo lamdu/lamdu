@@ -6,10 +6,10 @@ module Lamdu.Themes
 
 import           Data.IORef
 import qualified Data.Text as Text
+import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.MetaKey (MetaKey)
 import qualified GUI.Momentu.State as GuiState
-import qualified GUI.Momentu.Widget as Widget
 import           Lamdu.Config.Sampler (Sampler)
 import qualified Lamdu.Config.Sampler as ConfigSampler
 import qualified Paths.Utils as Paths
@@ -31,7 +31,7 @@ getThemeFiles =
             <&> map (themesDir </>)
 
 themeSwitchEventMap ::
-    [MetaKey] -> Sampler -> IORef Text -> Widget.EventMap (IO GuiState.Update)
+    [MetaKey] -> Sampler -> IORef Text -> EventMap (IO GuiState.Update)
 themeSwitchEventMap keys configSampler themeRef =
     do
         curTheme <- readIORef themeRef
@@ -41,7 +41,7 @@ themeSwitchEventMap keys configSampler themeRef =
         let newTheme = dropWhile (/= curTheme) themeFiles ++ themeFiles & tail & head
         writeIORef themeRef newTheme
         ConfigSampler.setTheme configSampler newTheme
-    & Widget.keysEventMap keys (E.Doc ["Theme", "Switch"])
+    & E.keysEventMap keys (E.Doc ["Theme", "Switch"])
 
 defaultTheme :: Text
 defaultTheme = "default"

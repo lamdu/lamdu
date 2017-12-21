@@ -13,6 +13,7 @@ import qualified Data.Text as Text
 import           GUI.Momentu (Widget, Aligned(..), WithTextPos(..))
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Element as Element
+import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Glue ((/-/), (/|/))
 import qualified GUI.Momentu.Hover as Hover
@@ -30,10 +31,10 @@ import           Lamdu.GUI.ExpressionEdit.HoleEdit.ResultWidget (makeHoleResultW
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.SearchTerm as SearchTerm
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.State as HoleState
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds (WidgetIds(..))
-import qualified Lamdu.GUI.ExpressionGui.Annotation as Annotation
-import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import           Lamdu.GUI.ExpressionGui (ExpressionN)
 import qualified Lamdu.GUI.ExpressionGui as ExprGui
+import qualified Lamdu.GUI.ExpressionGui.Annotation as Annotation
+import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.TypeView as TypeView
 import qualified Lamdu.Sugar.Types as Sugar
 
@@ -43,14 +44,14 @@ type T = Transaction
 
 data ResultGroup m = ResultGroup
     { rgOption :: !(Menu.Option (ExprGuiM m) (T m GuiState.Update))
-    , rgPickMainEventMap :: !(Widget.EventMap (T m GuiState.Update))
+    , rgPickMainEventMap :: !(EventMap (T m GuiState.Update))
     }
 
 makeShownResult ::
     Monad m =>
     Sugar.Payload f ExprGui.Payload -> Result m ->
     ExprGuiM m
-    ( Widget.EventMap (T m GuiState.Update)
+    ( EventMap (T m GuiState.Update)
     , WithTextPos (Widget (T m GuiState.Update))
     )
 makeShownResult pl result =
@@ -86,19 +87,19 @@ makeResultGroup pl results =
     }
 
 emptyPickEventMap ::
-    (Monad m, Applicative f) => ExprGuiM m (Widget.EventMap (f GuiState.Update))
+    (Monad m, Applicative f) => ExprGuiM m (EventMap (f GuiState.Update))
 emptyPickEventMap =
     Lens.view Config.config <&> Config.hole <&> keys <&> mkEventMap
     where
         keys c = Config.holePickResultKeys c ++ Config.holePickAndMoveToNextHoleKeys c
         mkEventMap k =
-            Widget.keysEventMap k (E.Doc ["Edit", "Result", "Pick (N/A)"]) (pure ())
+            E.keysEventMap k (E.Doc ["Edit", "Result", "Pick (N/A)"]) (pure ())
 
 makeResultsWidget ::
     Monad m =>
     Widget.R -> Sugar.Payload f ExprGui.Payload ->
     [ResultsList m] -> Menu.HasMoreOptions ->
-    ExprGuiM m (Widget.EventMap (T m GuiState.Update), Hover.Ordered (Widget (T m GuiState.Update)))
+    ExprGuiM m (EventMap (T m GuiState.Update), Hover.Ordered (Widget (T m GuiState.Update)))
 makeResultsWidget minWidth pl shownResultsLists hiddenResults =
     do
         groupsWidgets <- traverse (makeResultGroup pl) shownResultsLists

@@ -10,6 +10,7 @@ import           Data.Vector.Vector2 (Vector2(..))
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Animation as Anim
 import qualified GUI.Momentu.Element as Element
+import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Glue ((/-/), (/|/))
 import qualified GUI.Momentu.Responsive as Responsive
@@ -22,12 +23,12 @@ import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.GUI.ExpressionEdit.TagEdit as TagEdit
-import           Lamdu.GUI.ExpressionGui.Wrap (stdWrap, stdWrapParentExpr)
+import           Lamdu.GUI.ExpressionGui (ExpressionGui)
+import qualified Lamdu.GUI.ExpressionGui as ExprGui
 import           Lamdu.GUI.ExpressionGui.HolePicker (withHolePicker)
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
-import           Lamdu.GUI.ExpressionGui (ExpressionGui)
-import qualified Lamdu.GUI.ExpressionGui as ExprGui
+import           Lamdu.GUI.ExpressionGui.Wrap (stdWrap, stdWrapParentExpr)
 import qualified Lamdu.GUI.Styled as Styled
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Name (Name(..))
@@ -48,7 +49,7 @@ mkAddFieldEventMap config addField =
     <&> (^. Sugar.cairNewTag . Sugar.tagInstance)
     <&> WidgetIds.fromEntityId
     <&> WidgetIds.tagHoleId
-    & Widget.keysEventMapMovesCursor (Config.recordAddFieldKeys config)
+    & E.keysEventMapMovesCursor (Config.recordAddFieldKeys config)
       (doc "Add Field")
 
 makeUnit ::
@@ -160,7 +161,7 @@ makeOpenRecord (Sugar.OpenCompositeActions close) rest fieldsGui =
         config <- Lens.view Config.config
         let restEventMap =
                 close <&> WidgetIds.fromEntityId
-                & Widget.keysEventMapMovesCursor (Config.delKeys config) (doc "Close")
+                & E.keysEventMapMovesCursor (Config.delKeys config) (doc "Close")
         animId <- Lens.view Element.animIdPrefix
         let layout layoutMode fields =
                 fields
@@ -182,11 +183,11 @@ openRecordEventMap ::
     Functor m =>
     Config -> Sugar.OpenCompositeActions (T m) ->
     Sugar.Expression name (T m) a ->
-    Widget.EventMap (T m GuiState.Update)
+    EventMap (T m GuiState.Update)
 openRecordEventMap config (Sugar.OpenCompositeActions close) restExpr
     | isHole restExpr =
         close <&> WidgetIds.fromEntityId
-        & Widget.keysEventMapMovesCursor (Config.recordCloseKeys config) (doc "Close")
+        & E.keysEventMapMovesCursor (Config.recordCloseKeys config) (doc "Close")
     | otherwise = mempty
     where
         isHole = Lens.has (Sugar.rBody . Sugar._BodyHole)
@@ -194,14 +195,14 @@ openRecordEventMap config (Sugar.OpenCompositeActions close) restExpr
 closedRecordEventMap ::
     Functor m =>
     Config -> Sugar.ClosedCompositeActions (T m) ->
-    Widget.EventMap (T m GuiState.Update)
+    EventMap (T m GuiState.Update)
 closedRecordEventMap config (Sugar.ClosedCompositeActions open) =
     open <&> WidgetIds.fromEntityId
-    & Widget.keysEventMapMovesCursor (Config.recordOpenKeys config) (doc "Open")
+    & E.keysEventMapMovesCursor (Config.recordOpenKeys config) (doc "Open")
 
 recordDelEventMap ::
     Functor m =>
-    Config -> m Sugar.EntityId -> Widget.EventMap (m GuiState.Update)
+    Config -> m Sugar.EntityId -> EventMap (m GuiState.Update)
 recordDelEventMap config delete =
     delete <&> WidgetIds.fromEntityId
-    & Widget.keysEventMapMovesCursor (Config.delKeys config) (doc "Delete Field")
+    & E.keysEventMapMovesCursor (Config.delKeys config) (doc "Delete Field")

@@ -20,6 +20,7 @@ import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Animation as Anim
 import qualified GUI.Momentu.Direction as Direction
 import qualified GUI.Momentu.Element as Element
+import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.Font as Font
 import qualified GUI.Momentu.MetaKey as MetaKey
@@ -189,7 +190,7 @@ mkCursorRect s cursor str =
 -- TODO: Implement intra-TextEdit virtual cursor
 eventMap ::
     Cursor -> Text -> Widget.Id -> State.VirtualCursor ->
-    Widget.EventMap (Text, State.Update)
+    EventMap (Text, State.Update)
 eventMap cursor str myId _virtualCursor =
     mconcat . concat $ [
         [ E.keyPressOrRepeat (noMods MetaKey.Key'Left) (moveDoc ["left"]) $

@@ -14,6 +14,7 @@ import           Data.Orphans () -- Imported for Monoid (IO ()) instance
 import           Data.Store.Transaction (Transaction, MkProperty(..))
 import qualified Data.Store.Transaction as Transaction
 import qualified GUI.Momentu.Align as Align
+import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.MetaKey (MetaKey)
 import           GUI.Momentu.Responsive (Responsive)
@@ -39,9 +40,9 @@ import qualified Lamdu.GUI.AnnotationsPass as AnnotationsPass
 import           Lamdu.GUI.CodeEdit.Settings (HasSettings)
 import qualified Lamdu.GUI.DefinitionEdit as DefinitionEdit
 import qualified Lamdu.GUI.ExpressionEdit as ExpressionEdit
+import qualified Lamdu.GUI.ExpressionGui as ExprGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
-import qualified Lamdu.GUI.ExpressionGui as ExprGui
 import           Lamdu.GUI.IOTrans (IOTrans)
 import qualified Lamdu.GUI.IOTrans as IOTrans
 import qualified Lamdu.GUI.ReplEdit as ReplEdit
@@ -170,18 +171,18 @@ makePaneEdit theExportActions pane =
         let paneEventMap =
                 [ pane ^. Sugar.paneClose & IOTrans.liftTrans
                   <&> WidgetIds.fromEntityId
-                  & Widget.keysEventMapMovesCursor paneCloseKeys
+                  & E.keysEventMapMovesCursor paneCloseKeys
                     (E.Doc ["View", "Pane", "Close"])
                 , pane ^. Sugar.paneMoveDown <&> IOTrans.liftTrans
                   & maybe mempty
-                    (Widget.keysEventMap paneMoveDownKeys
+                    (E.keysEventMap paneMoveDownKeys
                     (E.Doc ["View", "Pane", "Move down"]))
                 , pane ^. Sugar.paneMoveUp <&> IOTrans.liftTrans
                   & maybe mempty
-                    (Widget.keysEventMap paneMoveUpKeys
+                    (E.keysEventMap paneMoveUpKeys
                     (E.Doc ["View", "Pane", "Move up"]))
                 , exportDef theExportActions (pane ^. Sugar.paneDefinition . Sugar.drDefI)
-                  & Widget.keysEventMap exportKeys
+                  & E.keysEventMap exportKeys
                     (E.Doc ["Collaboration", "Export definition to JSON file"])
                 ] & mconcat
             lhsEventMap =
@@ -190,7 +191,7 @@ makePaneEdit theExportActions pane =
                         Sugar.DeletedDefinition
                     pane ^. Sugar.paneClose
                 <&> WidgetIds.fromEntityId
-                & Widget.keysEventMapMovesCursor (Config.delKeys theConfig)
+                & E.keysEventMapMovesCursor (Config.delKeys theConfig)
                     (E.Doc ["Edit", "Definition", "Delete"])
             Config.Pane{paneCloseKeys, paneMoveDownKeys, paneMoveUpKeys} = Config.pane theConfig
             exportKeys = Config.exportKeys (Config.export theConfig)
@@ -201,7 +202,7 @@ makePaneEdit theExportActions pane =
 makeNewDefinitionEventMap ::
     (Monad m, MonadReader env n, GuiState.HasCursor env) =>
     Anchors.CodeAnchors m ->
-    n ([MetaKey] -> Widget.EventMap (T m GuiState.Update))
+    n ([MetaKey] -> EventMap (T m GuiState.Update))
 makeNewDefinitionEventMap cp =
     do
         curCursor <- Lens.view GuiState.cursor
@@ -217,7 +218,7 @@ makeNewDefinitionEventMap cp =
                     return newDefI
                 <&> WidgetIds.nameEditOf . WidgetIds.fromIRef
         return $ \newDefinitionKeys ->
-            Widget.keysEventMapMovesCursor newDefinitionKeys
+            E.keysEventMapMovesCursor newDefinitionKeys
             (E.Doc ["Edit", "New definition"]) newDefinition
 
 makeNewDefinitionButton :: Monad m => ExprGuiM m (Widget (T m GuiState.Update))
@@ -237,7 +238,7 @@ makeNewDefinitionButton =
 panesEventMap ::
     Monad m =>
     ExportActions m -> Anchors.CodeAnchors m ->
-    ExprGuiM m (Widget.EventMap (IOTrans m GuiState.Update))
+    ExprGuiM m (EventMap (IOTrans m GuiState.Update))
 panesEventMap theExportActions theCodeAnchors =
     do
         theConfig <- Lens.view config
@@ -252,12 +253,12 @@ panesEventMap theExportActions theCodeAnchors =
               (E.Doc ["Collaboration", "Import JSON file"]) (Just . traverse_ importAll)
               <&> fmap (\() -> mempty)
             , maybe mempty
-              (Widget.keysEventMapMovesCursor (Config.previousCursorKeys theConfig)
+              (E.keysEventMapMovesCursor (Config.previousCursorKeys theConfig)
                (E.Doc ["Navigation", "Go back"])) mJumpBack
-            , Widget.keysEventMap exportAllKeys
+            , E.keysEventMap exportAllKeys
               (E.Doc ["Collaboration", "Export everything to JSON file"]) exportAll
             , importAll exportPath
-              & Widget.keysEventMap importKeys
+              & E.keysEventMap importKeys
                 (E.Doc ["Collaboration", "Import repl from JSON file"])
             ]
     where

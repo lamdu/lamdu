@@ -251,7 +251,7 @@ makeToggledHelpAdder startValue =
                             , "Hide"
                             )
                     toggleEventMap =
-                        Widget.keysEventMap (config ^. configOverlayDocKeys)
+                        E.keysEventMap (config ^. configOverlayDocKeys)
                         (E.Doc ["Help", "Key Bindings", docStr]) $
                         liftIO $ modifyIORef showingHelpVar toggle
                     bgHelpView =

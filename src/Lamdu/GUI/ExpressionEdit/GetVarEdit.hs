@@ -11,6 +11,7 @@ import           Data.Store.Transaction (Transaction)
 import           GUI.Momentu.Align (WithTextPos)
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Element as Element
+import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Font (Underline(..))
 import           GUI.Momentu.Glue ((/-/))
@@ -28,10 +29,10 @@ import qualified Lamdu.Config as Config
 import           Lamdu.Config.Theme (HasTheme)
 import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.Data.Ops as DataOps
-import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
-import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExprGui
+import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
+import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import           Lamdu.GUI.ExpressionGui.Wrap (stdWrap)
 import qualified Lamdu.GUI.LightLambda as LightLambda
 import qualified Lamdu.GUI.NameEdit as NameEdit
@@ -92,7 +93,7 @@ makeNameRef myId nameRef maker =
         cp <- ExprGuiM.readCodeAnchors
         config <- Lens.view Config.config
         let jumpToDefinitionEventMap =
-                Widget.keysEventMapMovesCursor
+                E.keysEventMapMovesCursor
                 (Config.jumpToDefinitionKeys config ++ Config.extractKeys config)
                 (E.Doc ["Navigation", "Jump to definition"]) $
                 do
@@ -107,14 +108,14 @@ makeNameRef myId nameRef maker =
 makeInlineEventMap ::
     Monad m =>
     Config -> Sugar.BinderVarInline (T m) ->
-    Widget.EventMap (T m GuiState.Update)
+    EventMap (T m GuiState.Update)
 makeInlineEventMap config (Sugar.InlineVar inline) =
     inline <&> WidgetIds.fromEntityId
-    & Widget.keysEventMapMovesCursor (Config.inlineKeys config)
+    & E.keysEventMapMovesCursor (Config.inlineKeys config)
       (E.Doc ["Edit", "Inline"])
 makeInlineEventMap config (Sugar.CannotInlineDueToUses (x:_)) =
     WidgetIds.fromEntityId x & return
-    & Widget.keysEventMapMovesCursor (Config.inlineKeys config)
+    & E.keysEventMapMovesCursor (Config.inlineKeys config)
       (E.Doc ["Navigation", "Jump to next use"])
 makeInlineEventMap _ _ = mempty
 
@@ -142,7 +143,7 @@ definitionTypeChangeBox info getVarId =
         let update = (info ^. Sugar.defTypeUseCurrent) >> return getVarId
         headerLabel /-/ typeWhenUsed /-/ spacing /-/ sepLabel /-/ typeCurrent
             & Align.tValue %~ E.weakerEvents
-            (Widget.keysEventMapMovesCursor keys
+            (E.keysEventMapMovesCursor keys
                 (E.Doc ["Edit", "Update definition type"]) update)
             & pure
     where

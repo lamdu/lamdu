@@ -17,7 +17,6 @@ import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.MetaKey as MetaKey
 import           GUI.Momentu.ModKey (ModKey(..))
 import qualified GUI.Momentu.State as GuiState
-import qualified GUI.Momentu.Widget as Widget
 import qualified Lamdu.CharClassification as Chars
 import           Lamdu.Config (HasConfig)
 import qualified Lamdu.Config as Config
@@ -129,7 +128,7 @@ toLiteralTextEventMap ::
     Sugar.LeafHoleActions (T m) (Sugar.Expression name n a) ->
     E.EventMap (T m GuiState.Update)
 toLiteralTextEventMap actions =
-    Widget.keysEventMapMovesCursor toLiteralTextKeys
+    E.keysEventMapMovesCursor toLiteralTextKeys
     (E.Doc ["Edit", "Create Text Literal"]) $
     do
         (_score, mkResult) <-

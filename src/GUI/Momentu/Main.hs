@@ -142,7 +142,7 @@ defaultOptions helpFontPath =
 
 quitEventMap :: Functor f => EventMap (f State.Update)
 quitEventMap =
-    Widget.keysEventMap [MetaKey.cmd MetaKey.Key'Q] (E.Doc ["Quit"]) (error "Quit")
+    E.keysEventMap [MetaKey.cmd MetaKey.Key'Q] (E.Doc ["Quit"]) (error "Quit")
 
 data Env = Env
     { _eZoom :: Zoom

@@ -15,13 +15,12 @@ import           Data.CurAndPrev (CurAndPrev)
 import           Data.Store.Transaction (Transaction)
 import           Data.Vector.Vector2 (Vector2(..))
 import qualified GUI.Momentu.Element as Element
-import qualified GUI.Momentu.EventMap as EventMap
+import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Glue ((/-/))
 import qualified GUI.Momentu.Main as MainLoop
 import qualified GUI.Momentu.Scroll as Scroll
 import qualified GUI.Momentu.State as GuiState
 import           GUI.Momentu.Widget (Widget)
-import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Config.Theme as Theme
@@ -101,6 +100,6 @@ make env =
                 IOTrans.liftTrans lift actions makeInnerGui
                 & (`runReaderT` env)
             let quitEventMap =
-                    Widget.keysEventMap (Config.quitKeys (env ^. Config.config))
-                    (EventMap.Doc ["Quit"]) (error "Quit")
-            EventMap.strongerEvents quitEventMap branchGui & return
+                    E.keysEventMap (Config.quitKeys (env ^. Config.config))
+                    (E.Doc ["Quit"]) (error "Quit")
+            E.strongerEvents quitEventMap branchGui & return

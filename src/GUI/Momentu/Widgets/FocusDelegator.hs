@@ -91,7 +91,7 @@ make =
             childIsFocused = Widget.isFocused childWidget
             selfIsFocused = myId == cursor
             focusParentEventMap =
-                Widget.keysEventMapMovesCursor
+                E.keysEventMapMovesCursor
                 (focusParentKeys config)
                 (focusParentDoc config)
                 (pure myId)

@@ -17,7 +17,6 @@ import qualified GUI.Momentu.Responsive.Expression as ResponsiveExpr
 import qualified GUI.Momentu.Responsive.Options as Options
 import qualified GUI.Momentu.State as GuiState
 import           GUI.Momentu.View (View)
-import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Menu as Menu
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
@@ -62,7 +61,7 @@ makeCommon disamb tag mDelInject nearestHoles colonLabel valEdits =
                 Nothing -> mempty
                 Just del ->
                     del <&> WidgetIds.fromEntityId
-                    & Widget.keysEventMapMovesCursor (Config.delKeys config) (E.Doc ["Edit", "Delete"])
+                    & E.keysEventMapMovesCursor (Config.delKeys config) (E.Doc ["Edit", "Delete"])
         (Options.boxSpaced ?? disamb)
             <*>
             ( TagEdit.makeCaseTag nearestHoles tag

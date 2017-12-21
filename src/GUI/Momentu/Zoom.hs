@@ -7,7 +7,8 @@ module GUI.Momentu.Zoom
 import           Data.Aeson.TH (deriveJSON)
 import           Data.Aeson.Types (defaultOptions)
 import           Data.IORef
-import qualified GUI.Momentu.EventMap as EventMap
+import           GUI.Momentu.EventMap (EventMap)
+import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.MetaKey (MetaKey)
 import qualified GUI.Momentu.MetaKey as MetaKey
 import qualified GUI.Momentu.State as State
@@ -38,14 +39,14 @@ newtype Zoom = Zoom
     { _scaleFactorRef :: IORef Widget.R
     }
 
-eventMap :: Zoom -> Config -> Widget.EventMap (IO State.Update)
+eventMap :: Zoom -> Config -> EventMap (IO State.Update)
 eventMap (Zoom ref) config =
     mconcat
-    [ Widget.keysEventMap (enlargeKeys config)
-        (EventMap.Doc ["View", "Zoom", "Enlarge"]) $
+    [ E.keysEventMap (enlargeKeys config)
+        (E.Doc ["View", "Zoom", "Enlarge"]) $
         modifyIORef ref (* realToFrac (enlargeFactor config))
-    , Widget.keysEventMap (shrinkKeys config)
-        (EventMap.Doc ["View", "Zoom", "Shrink"]) $
+    , E.keysEventMap (shrinkKeys config)
+        (E.Doc ["View", "Zoom", "Shrink"]) $
         modifyIORef ref (/ realToFrac (shrinkFactor config))
     ]
 

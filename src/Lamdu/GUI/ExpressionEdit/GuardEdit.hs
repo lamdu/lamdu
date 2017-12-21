@@ -60,7 +60,7 @@ makeGuardRow delete prefixLabel entityId =
         config <- Lens.view Config.config
         let eventMap =
                 delete <&> WidgetIds.fromEntityId
-                & Widget.keysEventMapMovesCursor (Config.delKeys config) (E.Doc ["Edit", "Guard", "Delete"])
+                & E.keysEventMapMovesCursor (Config.delKeys config) (E.Doc ["Edit", "Guard", "Delete"])
         return $
             \cond result ->
             Row indentAnimId keyword (E.weakerEvents eventMap (cond /|/ colon)) (E.weakerEvents eventMap result)

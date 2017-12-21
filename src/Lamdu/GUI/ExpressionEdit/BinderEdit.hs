@@ -23,6 +23,7 @@ import           GUI.Momentu.Align (WithTextPos)
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Draw as Draw
 import qualified GUI.Momentu.Element as Element
+import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Glue ((/-/), (/|/))
 import qualified GUI.Momentu.Glue as Glue
@@ -42,11 +43,11 @@ import qualified Lamdu.Data.Meta as Meta
 import qualified Lamdu.GUI.CodeEdit.Settings as CESettings
 import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
 import qualified Lamdu.GUI.ExpressionEdit.TagEdit as TagEdit
+import           Lamdu.GUI.ExpressionGui (ExpressionGui)
+import qualified Lamdu.GUI.ExpressionGui as ExprGui
 import qualified Lamdu.GUI.ExpressionGui.Annotation as Annotation
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
-import           Lamdu.GUI.ExpressionGui (ExpressionGui)
-import qualified Lamdu.GUI.ExpressionGui as ExprGui
 import           Lamdu.GUI.ExpressionGui.Wrap (parentDelegator)
 import qualified Lamdu.GUI.NameEdit as NameEdit
 import qualified Lamdu.GUI.ParamEdit as ParamEdit
@@ -71,7 +72,7 @@ nonOperatorName _ = False
 makeBinderNameEdit ::
     Monad m =>
     Sugar.BinderActions (T m) ->
-    Widget.EventMap (T m GuiState.Update) ->
+    EventMap (T m GuiState.Update) ->
     Name (T m) -> Draw.Color -> Widget.Id ->
     ExprGuiM m (WithTextPos (Widget (T m GuiState.Update)))
 makeBinderNameEdit binderActions rhsJumperEquals name color myId =
@@ -92,7 +93,7 @@ data Parts m = Parts
     { pMParamsEdit :: Maybe (ExpressionGui m)
     , pMScopesEdit :: Maybe (Widget (T m GuiState.Update))
     , pBodyEdit :: ExpressionGui m
-    , pEventMap :: Widget.EventMap (T m GuiState.Update)
+    , pEventMap :: EventMap (T m GuiState.Update)
     }
 
 data ScopeCursor = ScopeCursor
@@ -151,19 +152,19 @@ mkChosenScopeCursor binder =
 makeScopeEventMap ::
     Monad m =>
     [MetaKey] -> [MetaKey] -> ScopeCursor -> (Sugar.BinderParamScopeId -> m ()) ->
-    Widget.EventMap (m GuiState.Update)
+    EventMap (m GuiState.Update)
 makeScopeEventMap prevKey nextKey cursor setter =
     do
         (key, doc, scope) <-
             (sMPrevParamScope cursor ^.. Lens._Just <&> (,,) prevKey prevDoc) ++
             (sMNextParamScope cursor ^.. Lens._Just <&> (,,) nextKey nextDoc)
-        [setter scope & Widget.keysEventMap key doc]
+        [setter scope & E.keysEventMap key doc]
     & mconcat
     where
         prevDoc = E.Doc ["Evaluation", "Scope", "Previous"]
         nextDoc = E.Doc ["Evaluation", "Scope", "Next"]
 
-blockEventMap :: Monad m => Widget.EventMap (m GuiState.Update)
+blockEventMap :: Monad m => EventMap (m GuiState.Update)
 blockEventMap =
     return mempty
     & E.keyPresses (dirKeys <&> toModKey)
@@ -175,7 +176,7 @@ makeScopeNavEdit ::
     Monad m =>
     Sugar.Binder name (T m) expr -> Widget.Id -> ScopeCursor ->
     ExprGuiM m
-    ( Widget.EventMap (T m GuiState.Update)
+    ( EventMap (T m GuiState.Update)
     , Maybe (Widget (T m GuiState.Update))
     )
 makeScopeNavEdit binder myId curCursor =
@@ -308,7 +309,7 @@ makeParts funcApplyLimit binder delVarBackwardsId myId =
 make ::
     Monad m =>
     Maybe (T m (Property (T m) Meta.PresentationMode)) ->
-    Widget.EventMap (T m GuiState.Update) ->
+    EventMap (T m GuiState.Update) ->
     Name (T m) -> Draw.Color ->
     Sugar.Binder (Name (T m)) (T m) (ExprGui.SugarExpr m) ->
     Widget.Id ->
@@ -370,17 +371,17 @@ makeLetEdit item =
         let actionsEventMap =
                 mconcat
                 [ bodyId <$ item ^. Sugar.lActions . Sugar.laSetToInner
-                    & Widget.keysEventMapMovesCursor (Config.delKeys config)
+                    & E.keysEventMapMovesCursor (Config.delKeys config)
                     (E.Doc ["Edit", "Let clause", "Delete"])
                 , item ^. Sugar.lActions . Sugar.laFloat
                     <&> Sugar.lfrNewEntity
                     <&> ExprEventMap.extractCursor
-                    & Widget.keysEventMapMovesCursor (Config.extractKeys config)
+                    & E.keysEventMapMovesCursor (Config.extractKeys config)
                     (E.Doc ["Edit", "Let clause", "Extract to outer scope"])
                 ]
         let usageEventMap =
                 mconcat
-                [ Widget.keysEventMapMovesCursor (Config.inlineKeys config)
+                [ E.keysEventMapMovesCursor (Config.inlineKeys config)
                   (E.Doc ["Navigation", "Jump to first use"])
                   (return (WidgetIds.fromEntityId usage))
                 | usage <- take 1 (item ^. Sugar.lUsages)
@@ -404,21 +405,21 @@ makeLetEdit item =
         binder = item ^. Sugar.lValue
 
 jumpToRHS ::
-    Monad f => Widget.Id -> ExprGuiM f (Widget.EventMap (T f GuiState.Update))
+    Monad f => Widget.Id -> ExprGuiM f (EventMap (T f GuiState.Update))
 jumpToRHS rhsId =
     ExprGuiM.mkPrejumpPosSaver
     <&> Lens.mapped .~ rhsId
-    <&> Widget.keysEventMapMovesCursor [MetaKey noMods MetaKey.Key'Equal]
+    <&> E.keysEventMapMovesCursor [MetaKey noMods MetaKey.Key'Equal]
         (E.Doc ["Navigation", "Jump to Def Body"])
 
-addLetEventMap :: Monad m => T m Sugar.EntityId -> ExprGuiM m (Widget.EventMap (T m GuiState.Update))
+addLetEventMap :: Monad m => T m Sugar.EntityId -> ExprGuiM m (EventMap (T m GuiState.Update))
 addLetEventMap addLet =
     do
         config <- Lens.view Config.config
         savePos <- ExprGuiM.mkPrejumpPosSaver
         savePos >> addLet
             <&> WidgetIds.fromEntityId <&> WidgetIds.letBinderId
-            & Widget.keysEventMapMovesCursor (Config.letAddItemKeys config)
+            & E.keysEventMapMovesCursor (Config.letAddItemKeys config)
                 (E.Doc ["Edit", "Let clause", "Add"])
             & pure
 
@@ -444,7 +445,7 @@ makeBinderContentEdit (Sugar.BinderLet l) =
                 mconcat
                 [ l ^. Sugar.lActions . Sugar.laSetToHole
                     <&> WidgetIds.fromEntityId
-                    & Widget.keysEventMapMovesCursor (Config.delKeys config)
+                    & E.keysEventMapMovesCursor (Config.delKeys config)
                     (E.Doc ["Edit", "Delete let expression"])
                 , ExprEventMap.wrapEventMap (l ^. Sugar.lActions . Sugar.laWrap <&> snd) config
                 ]
@@ -453,7 +454,7 @@ makeBinderContentEdit (Sugar.BinderLet l) =
                 ^? Sugar.bbContent . Sugar._BinderLet
                 . Sugar.lActions . Sugar.laFloat
                 & maybe mempty
-                (Widget.keysEventMap (Config.moveLetInwardKeys config)
+                (E.keysEventMap (Config.moveLetInwardKeys config)
                 (E.Doc ["Edit", "Let clause", "Move inwards"]) . void)
         mOuterScopeId <- ExprGuiM.readMScopeId
         let letBodyScope = liftA2 lookupMKey mOuterScopeId (l ^. Sugar.lBodyScope)

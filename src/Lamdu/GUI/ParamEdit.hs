@@ -65,7 +65,7 @@ eventMapOrderParam ::
     Monad m =>
     [MetaKey] -> Text -> m () -> EventMap (m GuiState.Update)
 eventMapOrderParam keys docSuffix =
-    Widget.keysEventMap keys (E.Doc ["Edit", "Parameter", "Move " <> docSuffix])
+    E.keysEventMap keys (E.Doc ["Edit", "Parameter", "Move " <> docSuffix])
 
 eventParamDelEventMap ::
     Monad m =>

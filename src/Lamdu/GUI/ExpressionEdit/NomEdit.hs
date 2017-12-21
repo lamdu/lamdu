@@ -72,7 +72,7 @@ mkNomGui ordering nomStr str mDel pl (Sugar.Nominal tid val) =
         config <- Lens.view Config.config
         let mkEventMap action =
                 action <&> WidgetIds.fromEntityId
-                & Widget.keysEventMapMovesCursor (Config.delKeys config)
+                & E.keysEventMapMovesCursor (Config.delKeys config)
                 (E.Doc ["Edit", "Nominal", "Delete " <> nomStr])
         let eventMap = mDel ^. Lens._Just . Lens.to mkEventMap
         (ResponsiveExpr.boxSpacedMDisamb ?? mParenInfo) <*>

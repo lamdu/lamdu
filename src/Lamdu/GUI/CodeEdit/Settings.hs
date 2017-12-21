@@ -10,9 +10,8 @@ import qualified Control.Lens as Lens
 import           Data.IORef
 import qualified Data.Text as Text
 import           GUI.Momentu.EventMap (EventMap)
-import qualified GUI.Momentu.EventMap as EventMap
+import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.State as GuiState
-import qualified GUI.Momentu.Widget as Widget
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
 
@@ -47,10 +46,10 @@ mkEventMap onSettingsChange config settingsRef =
         theSettings <- readIORef settingsRef
         let next = theSettings ^. sInfoMode & nextInfoMode
         let nextDoc =
-                EventMap.Doc ["View", "Subtext", "Show " <> Text.pack (show next)]
+                E.Doc ["View", "Subtext", "Show " <> Text.pack (show next)]
         let nextSettings = theSettings & sInfoMode .~ next
         do
             writeIORef settingsRef nextSettings
             onSettingsChange nextSettings
-            & Widget.keysEventMap (Config.nextInfoModeKeys config) nextDoc
+            & E.keysEventMap (Config.nextInfoModeKeys config) nextDoc
             & return

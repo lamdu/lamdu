@@ -11,6 +11,7 @@ import           Data.Store.Transaction (Transaction)
 import           GUI.Momentu.Align (WithTextPos)
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Element as Element
+import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Glue ((/-/), (/|/))
 import           GUI.Momentu.MetaKey (MetaKey(..), noMods)
@@ -25,9 +26,9 @@ import           Lamdu.Calc.Type.Scheme (Scheme(..), schemeType)
 import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.GUI.ExpressionEdit.BinderEdit as BinderEdit
 import qualified Lamdu.GUI.ExpressionEdit.BuiltinEdit as BuiltinEdit
-import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExprGui
+import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.NameEdit as NameEdit
 import qualified Lamdu.GUI.Styled as Styled
 import qualified Lamdu.GUI.TypeView as TypeView
@@ -47,12 +48,12 @@ undeleteButton undelete =
     <&> Align.tValue %~ E.weakerEvents eventMap
     where
         eventMap =
-            Widget.keysEventMapMovesCursor [MetaKey noMods MetaKey.Key'Enter]
+            E.keysEventMapMovesCursor [MetaKey noMods MetaKey.Key'Enter]
             (E.Doc ["Edit", "Undelete definition"]) undelete
 
 makeExprDefinition ::
     Monad m =>
-    Widget.EventMap (T m GuiState.Update) ->
+    EventMap (T m GuiState.Update) ->
     Sugar.Definition (Name (T m)) (T m) (ExprGui.SugarExpr m) ->
     Sugar.DefinitionExpression (Name (T m)) (T m) (ExprGui.SugarExpr m) ->
     ExprGuiM m (ExpressionGui m)
@@ -91,7 +92,7 @@ makeBuiltinDefinition def builtin =
 
 make ::
     Monad m =>
-    Widget.EventMap (T m GuiState.Update) ->
+    EventMap (T m GuiState.Update) ->
     Sugar.Definition (Name (T m)) (T m) (ExprGui.SugarExpr m) ->
     ExprGuiM m (ExpressionGui m)
 make lhsEventMap def =

@@ -58,9 +58,9 @@ globalEventMap ::
     VersionControl.Config -> Actions t f ->
     EventMap (f GuiState.Update)
 globalEventMap config actions = mconcat
-    [ Widget.keysEventMapMovesCursor (VersionControl.makeBranchKeys config)
+    [ E.keysEventMapMovesCursor (VersionControl.makeBranchKeys config)
       (E.Doc ["Branches", "New"]) $ branchTextEditId <$> makeBranch actions
-    , Widget.keysEventMapMovesCursor (VersionControl.jumpToBranchesKeys config)
+    , E.keysEventMapMovesCursor (VersionControl.jumpToBranchesKeys config)
       (E.Doc ["Branches", "Select"]) $
       (pure . branchDelegatorId . currentBranch) actions
     , mUndo actions <&> fmap GuiState.fullUpdate & undoEventMap config
@@ -122,7 +122,7 @@ make config theme rwtransaction rtransaction actions mkWidget =
                       <&> (^. Align.tValue) )
                 let delEventMap
                         | ListUtils.isLengthAtLeast 2 (branches actions) =
-                            Widget.keysEventMapMovesCursor
+                            E.keysEventMapMovesCursor
                             (VersionControl.delBranchKeys config)
                             (E.Doc ["Branches", "Delete"])
                             (branchDelegatorId <$> deleteBranch actions branch)

@@ -17,6 +17,7 @@ import           GUI.Momentu.Align (WithTextPos)
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Draw as Draw
 import qualified GUI.Momentu.Element as Element
+import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Glue ((/|/))
 import qualified GUI.Momentu.Hover as Hover
@@ -75,7 +76,7 @@ makeTagNameEdit nearestHoles tag =
         let jumpNextEventMap =
                 nearestHoles ^. NearestHoles.next
                 & maybe mempty
-                  (Widget.keysEventMapMovesCursor keys
+                  (E.keysEventMapMovesCursor keys
                    (E.Doc ["Navigation", "Jump to next hole"]) .
                    return . WidgetIds.fromEntityId)
         NameEdit.makeBareEdit
@@ -87,7 +88,7 @@ makeTagNameEdit nearestHoles tag =
     where
         myId = WidgetIds.fromEntityId (tag ^. Sugar.tagInfo . Sugar.tagInstance)
         stopEditingEventMap =
-            Widget.keysEventMapMovesCursor
+            E.keysEventMapMovesCursor
             [ MetaKey noMods MetaKey.Key'Escape
             , MetaKey noMods MetaKey.Key'Enter
             ]
@@ -102,7 +103,7 @@ tagId tag = tag ^. Sugar.tagInfo . Sugar.tagInstance & WidgetIds.fromEntityId
 makePickEventMap ::
     (Functor f, Config.HasConfig env, MonadReader env m) =>
     NearestHoles -> E.Doc -> f Widget.Id ->
-    m (Widget.EventMap (f GuiState.Update))
+    m (EventMap (f GuiState.Update))
 makePickEventMap nearestHoles doc action =
     Lens.view Config.config <&> Config.hole <&>
     \config ->
@@ -110,10 +111,10 @@ makePickEventMap nearestHoles doc action =
         jumpNextKeys = Config.holePickAndMoveToNextHoleKeys config
     in
     case nearestHoles ^. NearestHoles.next of
-    Nothing -> Widget.keysEventMapMovesCursor (pickKeys <> jumpNextKeys) doc action
+    Nothing -> E.keysEventMapMovesCursor (pickKeys <> jumpNextKeys) doc action
     Just nextHole ->
-        Widget.keysEventMapMovesCursor pickKeys doc action
-        <> Widget.keysEventMapMovesCursor jumpNextKeys
+        E.keysEventMapMovesCursor pickKeys doc action
+        <> E.keysEventMapMovesCursor jumpNextKeys
             (doc & E.docStrs . Lens.reversed . Lens.ix 0 %~ (<> " and jump to next hole"))
             (WidgetIds.fromEntityId nextHole <$ action)
 
@@ -231,10 +232,10 @@ makeTagEdit tagColor nearestHoles tag =
         isHole <- GuiState.isSubCursor ?? WidgetIds.tagHoleId myId
         config <- Lens.view Config.config
         let eventMap =
-                Widget.keysEventMapMovesCursor (Config.jumpToDefinitionKeys config)
+                E.keysEventMapMovesCursor (Config.jumpToDefinitionKeys config)
                 (E.Doc ["Edit", "Tag", "Open"]) (pure (tagRenameId myId))
                 <>
-                Widget.keysEventMapMovesCursor (Config.delKeys config)
+                E.keysEventMapMovesCursor (Config.delKeys config)
                 (E.Doc ["Edit", "Tag", "Choose"])
                 (tag ^. Sugar.tagActions . Sugar.taReplaceWithNew
                     <&> (^. Sugar.tagInstance)

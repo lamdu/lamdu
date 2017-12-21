@@ -78,7 +78,7 @@ mkShrunk paramIds myId =
         let expandEventMap =
                 paramIds ^? Lens.traverse
                 & maybe mempty
-                  (Widget.keysEventMapMovesCursor jumpKeys
+                  (E.keysEventMapMovesCursor jumpKeys
                    (E.Doc ["View", "Expand Lambda Params"]) . return .
                    WidgetIds.fromEntityId)
         theme <- Lens.view Theme.theme
@@ -109,7 +109,7 @@ mkLightLambda params myId =
             <&> or
         let shrinkKeys = [MetaKey noMods MetaKey.Key'Escape]
         let shrinkEventMap =
-                Widget.keysEventMapMovesCursor shrinkKeys
+                E.keysEventMapMovesCursor shrinkKeys
                 (E.Doc ["View", "Shrink Lambda Params"]) (return (lamId myId))
         if isSelected
             then

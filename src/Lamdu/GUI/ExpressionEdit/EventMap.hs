@@ -76,7 +76,7 @@ jumpHolesEventMap hg =
         config <- Lens.view Config.config <&> Config.hole
         let jumpEventMap keys dirStr lens =
                 maybe mempty
-                (Widget.keysEventMapMovesCursor (keys config)
+                (E.keysEventMapMovesCursor (keys config)
                   (E.Doc ["Navigation", jumpDoc dirStr]) . pure . WidgetIds.fromEntityId) $
                 hg ^. lens
         mconcat
@@ -117,7 +117,7 @@ extractEventMap actions =
     <&>
     \k ->
     actions ^. Sugar.extract <&> extractCursor
-    & Widget.keysEventMapMovesCursor k doc
+    & E.keysEventMapMovesCursor k doc
     where
         doc = E.Doc ["Edit", "Extract"]
 
@@ -151,7 +151,7 @@ actionsEventMap exprInfo holePicker =
     where
         mkReplaceParent replaceKeys =
             exprInfoActions exprInfo ^. Sugar.mReplaceParent <&> void
-            & maybe mempty (Widget.keysEventMap replaceKeys (E.Doc ["Edit", "Replace parent"]))
+            & maybe mempty (E.keysEventMap replaceKeys (E.Doc ["Edit", "Replace parent"]))
 
 -- | Create the hole search term for new apply operators,
 -- given the extra search term chars from another hole.
@@ -191,11 +191,11 @@ wrapEventMap wrap =
     Lens.view Config.config
     <&>
     \config ->
-    Widget.keysEventMapMovesCursor (Config.wrapKeys config)
+    E.keysEventMapMovesCursor (Config.wrapKeys config)
     (E.Doc ["Edit", "Modify"])
     (wrap <&> HoleWidgetIds.make <&> HoleWidgetIds.hidOpen)
     <>
-    Widget.keysEventMap (Config.parenWrapKeys config)
+    E.keysEventMap (Config.parenWrapKeys config)
     (E.Doc ["Edit", "Wrap with hole"])
     (void wrap)
 
@@ -207,7 +207,7 @@ replaceEventMap actions =
         config <- Lens.view Config.config
         let mk action =
                 action <&> WidgetIds.fromEntityId
-                & Widget.keysEventMapMovesCursor (Config.delKeys config) (E.Doc ["Edit", "Delete expression"])
+                & E.keysEventMapMovesCursor (Config.delKeys config) (E.Doc ["Edit", "Delete expression"])
         case actions ^. Sugar.delete of
             Sugar.SetToHole action -> mk (action <&> snd)
             Sugar.Delete action -> mk action

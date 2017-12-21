@@ -49,7 +49,7 @@ extractEventMap ::
 extractEventMap replExpr keys =
   replExpr ^. Sugar.rPayload . Sugar.plActions . Sugar.extract
   <&> ExprEventMap.extractCursor & IOTrans.liftTrans
-  & Widget.keysEventMapMovesCursor keys (E.Doc ["Edit", "Extract to definition"])
+  & E.keysEventMapMovesCursor keys (E.Doc ["Edit", "Extract to definition"])
 
 replEventMap ::
     Monad m =>
@@ -58,9 +58,9 @@ replEventMap ::
 replEventMap theConfig (ExportRepl exportRepl exportFancy) replExpr =
     mconcat
     [ extractEventMap replExpr (Config.extractKeys theConfig)
-    , Widget.keysEventMap exportKeys
+    , E.keysEventMap exportKeys
       (E.Doc ["Collaboration", "Export repl to JSON file"]) exportRepl
-    , Widget.keysEventMap exportFancyKeys
+    , E.keysEventMap exportFancyKeys
       (E.Doc ["Collaboration", "Export repl for Codejam"]) exportFancy
     ]
     where

@@ -10,13 +10,14 @@ import           Control.Monad (msum)
 import           Data.Foldable (toList)
 import           Data.List (foldl', transpose, sortOn)
 import           Data.List.Utils (groupOn, minimumOn)
-import           Data.Maybe.Utils (unionMaybeWith)
 import           Data.MRUMemo (memo)
+import           Data.Maybe.Utils (unionMaybeWith)
 import           Data.Vector.Vector2 (Vector2(..))
 import qualified Data.Vector.Vector2 as Vector2
 import           GUI.Momentu.Align (Aligned(..))
 import           GUI.Momentu.Direction (Direction(..))
 import qualified GUI.Momentu.Element as Element
+import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as EventMap
 import           GUI.Momentu.MetaKey (MetaKey(..), noMods)
 import qualified GUI.Momentu.MetaKey as MetaKey
@@ -109,8 +110,7 @@ stdKeys = Keys
     where
         k = MetaKey noMods
 
-addNavEventmap ::
-    Keys ModKey -> NavDests a -> Widget.EventMap a -> Widget.EventMap a
+addNavEventmap :: Keys ModKey -> NavDests a -> EventMap a -> EventMap a
 addNavEventmap keys navDests eMap =
     strongMap <> eMap <> weakMap
     where

@@ -8,6 +8,8 @@ module GUI.Momentu.EventMap
     , charEventMap, allChars
     , charGroup
     , keyEventMap, keyPress, keyPresses, keyPressOrRepeat
+    , keysEventMap
+    , keysEventMapMovesCursor
     , pasteOnKey
     , dropEventMap
     , deleteKey, deleteKeys
@@ -23,8 +25,11 @@ import           Data.Maybe (listToMaybe)
 import qualified Data.Maybe as Maybe
 import qualified Data.Set as Set
 import           Data.String (IsString(..))
+import           GUI.Momentu.MetaKey (MetaKey, toModKey)
 import           GUI.Momentu.ModKey (ModKey(..))
 import qualified GUI.Momentu.ModKey as ModKey
+import qualified GUI.Momentu.State as State
+import           GUI.Momentu.Widget.Id (Id)
 import qualified Graphics.UI.GLFW as GLFW
 import qualified Graphics.UI.GLFW.Events as Events
 import qualified Graphics.UI.GLFW.Utils as GLFWUtils
@@ -291,6 +296,14 @@ keyEventMapH eventType doc handler =
 
 keyEventMap :: KeyEvent -> Doc -> a -> EventMap a
 keyEventMap eventType doc handler = keyEventMapH eventType doc (Doesn'tWantClipboard handler)
+
+keysEventMap :: (Monoid a, Functor f) => [MetaKey] -> Doc -> f () -> EventMap (f a)
+keysEventMap keys doc act = keyPresses (keys <&> toModKey) doc (mempty <$ act)
+
+-- | Convenience method to just set the cursor
+keysEventMapMovesCursor ::
+    Functor f => [MetaKey] -> Doc -> f Id -> EventMap (f State.Update)
+keysEventMapMovesCursor keys doc act = keyPresses (keys <&> toModKey) doc (act <&> State.updateCursor)
 
 keyPress :: ModKey -> Doc -> a -> EventMap a
 keyPress key = keyEventMap (KeyEvent ModKey.KeyState'Pressed key)
