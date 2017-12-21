@@ -154,16 +154,17 @@ makeUnderCursorAssignment searchTermEventMap shownResultsLists hasHiddenResults 
         searchTermWidget <-
             SearchTerm.make widgetIds holeKind
             <&> Align.tValue %~ Hover.anchor . E.weakerEvents (pickFirstResult <> literalEventMap)
-        mkOptions <- Menu.hoverOptions
-        resultsMenu <-
-            Menu.make (typeView ^. Element.width) (groupsWidgets <&> rgOption) hasHiddenResults
-            <&> Lens.mapped %~ E.strongerEvents searchTermEventMap
+        mkHoverOptions <- Menu.hoverOptions
+        let options =
+                groupsWidgets <&> rgOption
+                <&> Menu.optionWidgets . Lens.mapped %~ E.strongerEvents searchTermEventMap
+        resultsMenu <- Menu.make (typeView ^. Element.width) options hasHiddenResults
         return $
             \placement ->
             searchTermWidget
             & Align.tValue %~
                 Hover.hoverInPlaceOf
-                (mkOptions placement (vspace /-/ typeView) resultsMenu
+                (mkHoverOptions placement (vspace /-/ typeView) resultsMenu
                     (searchTermWidget ^. Align.tValue))
     & Reader.local (Element.animIdPrefix .~ WidgetId.toAnimId (hidOpen widgetIds))
     where
