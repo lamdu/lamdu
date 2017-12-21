@@ -76,7 +76,7 @@ make ::
     ExprGuiM m (ExpressionGui m)
 make hole pl =
     do
-        searchAreaGui <- SearchArea.make hole pl widgetIds
+        searchAreaGui <- SearchArea.make hole pl
         case hole ^. Sugar.holeKind of
             Sugar.WrapperHole arg ->
                 Argument.make (hidOpenSearchTerm widgetIds) arg

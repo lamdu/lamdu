@@ -50,9 +50,8 @@ make ::
     Monad m =>
     Sugar.Hole (T m) (Sugar.Expression (Name (T m)) (T m) ()) (ExprGui.SugarExpr m) ->
     Sugar.Payload (T m) ExprGui.Payload ->
-    WidgetIds ->
     ExprGuiM m (Menu.Placement -> ExpressionGui m)
-make hole pl widgetIds =
+make hole pl =
     do
         config <- Lens.view Config.config
         let unwrapAsEventMap =
@@ -89,7 +88,7 @@ make hole pl widgetIds =
                 -- it is harder to implement, so just wrap it
                 -- here
                 (fdWrap <&> (Lens.mapped %~))
-                <*> makeOpenSearchAreaGui searchTermEventMap hole pl widgetIds
+                <*> makeOpenSearchAreaGui searchTermEventMap hole pl
                 <&> Lens.mapped %~ inPlaceOfClosed . M.weakerEvents unwrapAsEventMap . (^. M.tValue)
             else
                 (if isActive then Widget.setFocused else id)
@@ -101,6 +100,7 @@ make hole pl widgetIds =
                   )
                 & const & pure
     where
+        widgetIds = pl ^. Sugar.plEntityId & HoleWidgetIds.make
         minOpPrec = pl ^. Sugar.plData . ExprGui.plMinOpPrec
         isAHoleInHole = ExprGui.isHoleResult pl
         holeKind = hole ^. Sugar.holeKind

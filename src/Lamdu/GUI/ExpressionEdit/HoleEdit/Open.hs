@@ -32,6 +32,7 @@ import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.ResultWidget as ResultWidget
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.SearchTerm as SearchTerm
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.State as HoleState
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds (WidgetIds(..))
+import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds as HoleWidgetIds
 import           Lamdu.GUI.ExpressionGui (ExpressionN)
 import qualified Lamdu.GUI.ExpressionGui as ExprGui
 import qualified Lamdu.GUI.ExpressionGui.Annotation as Annotation
@@ -129,9 +130,8 @@ makeUnderCursorAssignment ::
     EventMap (T m GuiState.Update) -> [ResultsList m] -> Menu.HasMoreOptions ->
     Sugar.Hole (T m) (ExpressionN m ()) (ExprGui.SugarExpr m) ->
     Sugar.Payload (T m) ExprGui.Payload ->
-    WidgetIds ->
     ExprGuiM m (Menu.Placement -> WithTextPos (Widget (T m GuiState.Update)))
-makeUnderCursorAssignment searchTermEventMap shownResultsLists hasHiddenResults hole pl widgetIds =
+makeUnderCursorAssignment searchTermEventMap shownResultsLists hasHiddenResults hole pl =
     do
         -- We make our own type view here instead of stdWrap, because
         -- we want to synchronize the active BG width with the
@@ -155,6 +155,7 @@ makeUnderCursorAssignment searchTermEventMap shownResultsLists hasHiddenResults 
                 searchTermWidget <&> hoverMenu placement
     & Reader.local (Element.animIdPrefix .~ WidgetId.toAnimId (hidOpen widgetIds))
     where
+        widgetIds = pl ^. Sugar.plEntityId & HoleWidgetIds.make
         holeKind = hole ^. Sugar.holeKind
         holeAnimId = hidHole widgetIds & Widget.toAnimId
 
@@ -163,9 +164,8 @@ makeOpenSearchAreaGui ::
     EventMap (T m GuiState.Update) ->
     Sugar.Hole (T m) (ExpressionN m ()) (ExprGui.SugarExpr m) ->
     Sugar.Payload (T m) ExprGui.Payload ->
-    WidgetIds ->
     ExprGuiM m (Menu.Placement -> WithTextPos (Widget (T m GuiState.Update)))
-makeOpenSearchAreaGui searchTermEventMap hole pl widgetIds =
+makeOpenSearchAreaGui searchTermEventMap hole pl =
     do
         (shownResultsLists, hasHiddenResults) <- HoleResults.makeAll hole widgetIds
         let shownMainResultsIds = shownResultsLists <&> rId . (^. HoleResults.rlMain)
@@ -174,5 +174,7 @@ makeOpenSearchAreaGui searchTermEventMap hole pl widgetIds =
                 , (^. HoleResults.rlExtraResultsPrefixId)
                 ] <*> shownResultsLists
         makeUnderCursorAssignment searchTermEventMap shownResultsLists
-            hasHiddenResults hole pl widgetIds
+            hasHiddenResults hole pl
             & assignHoleEditCursor widgetIds shownMainResultsIds allShownResultIds
+    where
+        widgetIds = pl ^. Sugar.plEntityId & HoleWidgetIds.make
