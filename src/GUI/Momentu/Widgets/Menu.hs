@@ -6,8 +6,7 @@ module GUI.Momentu.Widgets.Menu
     , Option(..), oId, oWidget, oSubmenuWidgets
     , optionWidgets
     , Placement(..), HasMoreOptions(..)
-    , make, makeHoverBeside
-    , makeHovered
+    , make, makeHovered
     ) where
 
 import qualified Control.Lens as Lens
@@ -183,18 +182,6 @@ make minWidth options hiddenResults =
                     } ?? (laidOutOptions ++ [hiddenOptionsWidget])
                     <&> Glue.vbox
                 ) & pure
-
-makeHoverBeside ::
-    ( MonadReader env m, TextView.HasStyle env, Hover.HasStyle env
-    , Element.HasAnimIdPrefix env, HasStyle env, State.HasCursor env
-    , Applicative f
-    ) =>
-    Widget.R -> [Option m (f State.Update)] -> HasMoreOptions ->
-    Widget (f State.Update) ->
-    m (Widget (f State.Update))
-makeHoverBeside minWidth options hiddenResults baseWidget =
-    (Hover.hoverBesideAxis ?? Hover.Vertical ?? baseWidget)
-    <*> make minWidth options hiddenResults
 
 -- | You may want to limit the placement of hovering pop-up menus,
 -- so that they don't cover other ui elements.
