@@ -1,7 +1,7 @@
 {-# LANGUAGE NoImplicitPrelude, OverloadedStrings #-}
 
 module Lamdu.GUI.ExpressionEdit.HoleEdit.ResultWidget
-    ( makeHoleResultWidget
+    ( make
     ) where
 
 import qualified Control.Lens as Lens
@@ -39,7 +39,7 @@ import           Lamdu.Prelude
 
 type T = Transaction
 
-makeHoleResultWidget ::
+make ::
     Monad m =>
     Sugar.Payload f ExprGui.Payload ->
     Widget.Id ->
@@ -48,7 +48,7 @@ makeHoleResultWidget ::
     ( EventMap (T m GuiState.Update)
     , WithTextPos (Widget (T m GuiState.Update))
     )
-makeHoleResultWidget pl resultId holeResult =
+make pl resultId holeResult =
     do
         config <- Lens.view Config.config
         let holeConfig = Config.hole config
