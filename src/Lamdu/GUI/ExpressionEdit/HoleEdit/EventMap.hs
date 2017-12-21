@@ -34,10 +34,10 @@ import           Lamdu.Prelude
 
 type T = Transaction.Transaction
 
-adHocTextEditEventMap ::
+searchTermEditEventMap ::
     (MonadReader env m, GuiState.HasState env, HasSearchStringRemainder env, HasConfig env) =>
     Prec -> WidgetIds -> m (Sugar.HoleKind f e0 e1 -> E.EventMap GuiState.Update)
-adHocTextEditEventMap minOpPrec widgetIds =
+searchTermEditEventMap minOpPrec widgetIds =
     do
         searchTerm <- HoleState.readSearchTerm widgetIds
         let appendCharEventMap =
@@ -166,8 +166,5 @@ makeSearchTermEditEventMap ::
     Sugar.HoleKind (T m) (Sugar.Expression n p a) e -> Prec -> WidgetIds ->
     ExprGuiM m (E.EventMap (T m GuiState.Update))
 makeSearchTermEditEventMap holeKind minOpPrec widgetIds =
-    do
-        literalEventMap <- makeLiteralEventMap holeKind widgetIds
-        adHocTextEditEventMap minOpPrec widgetIds ?? holeKind
-            <&> fmap pure
-            <&> mappend literalEventMap
+    makeLiteralEventMap holeKind widgetIds
+    <> (searchTermEditEventMap minOpPrec widgetIds ?? holeKind <&> fmap pure)

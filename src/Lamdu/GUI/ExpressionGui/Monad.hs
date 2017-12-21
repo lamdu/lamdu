@@ -16,6 +16,7 @@ module Lamdu.GUI.ExpressionGui.Monad
     , run
     ) where
 
+import           Control.Applicative (liftA2)
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
 import           Control.Monad.Trans.FastRWS (RWST, runRWST)
@@ -47,9 +48,9 @@ import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Ops as DataOps
 import           Lamdu.Eval.Results (ScopeId, topLevelScopeId)
 import           Lamdu.GUI.CodeEdit.Settings (Settings, HasSettings(..))
-import           Lamdu.GUI.ExpressionGui.HolePicker (HolePicker, HasSearchStringRemainder(..))
 import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExprGui
+import           Lamdu.GUI.ExpressionGui.HolePicker (HolePicker, HasSearchStringRemainder(..))
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Style (Style, HasStyle(..))
 import qualified Lamdu.Sugar.Types as Sugar
@@ -81,6 +82,10 @@ newtype ExprGuiM m a = ExprGuiM
     { _exprGuiM :: RWST (Askable m) (HolePicker m) () (T m) a
     } deriving (Functor, Applicative, Monad,
                 MonadReader (Askable m), MonadWriter (HolePicker m))
+
+instance (Monad m, Monoid a) => Monoid (ExprGuiM m a) where
+    mempty = pure mempty
+    mappend = liftA2 mappend
 
 Lens.makeLenses ''Askable
 Lens.makeLenses ''ExprGuiM
