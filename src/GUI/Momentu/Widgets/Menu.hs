@@ -5,7 +5,7 @@ module GUI.Momentu.Widgets.Menu
     , Submenu(..)
     , Option(..), oId, oWidget, oSubmenuWidgets
     , Placement(..), HasMoreOptions(..)
-    , layout, hoverMenu
+    , make, hoverMenu
     ) where
 
 import qualified Control.Lens as Lens
@@ -146,14 +146,14 @@ layoutOption maxOptionWidth option =
         singular = option ^. oWidget & Element.width .~ maxOptionWidth & pure
         animId = option ^. oId & Widget.toAnimId
 
-layout ::
+make ::
     ( MonadReader env m, TextView.HasStyle env, Hover.HasStyle env
     , Element.HasAnimIdPrefix env, HasStyle env, State.HasCursor env
     , Applicative f
     ) =>
     Widget.R -> [Option m (f State.Update)] -> HasMoreOptions ->
     m (Hover.Ordered (Widget (f State.Update)))
-layout minWidth options hiddenResults =
+make minWidth options hiddenResults =
     case options of
     [] -> makeNoResults <&> (^. Align.tValue) <&> Widget.fromView <&> pure
     _:_ ->

@@ -107,7 +107,7 @@ makeResultsWidget minWidth pl shownResultsLists hiddenResults =
             case groupsWidgets of
             [] -> emptyPickEventMap
             (x:_) -> rgPickMainEventMap x & return
-        Menu.layout minWidth (groupsWidgets <&> rgOption) hiddenResults
+        Menu.make minWidth (groupsWidgets <&> rgOption) hiddenResults
             <&> (,) pickResultEventMap
 
 assignHoleEditCursor ::
