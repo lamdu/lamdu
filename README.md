@@ -51,7 +51,7 @@ curl -sL https://deb.nodesource.com/setup_6.x | sudo -E bash -
 sudo apt-get install -y nodejs
 ```
 
-requires [stack](https://github.com/commercialhaskell/stack/releases)
+requires [stack](https://github.com/commercialhaskell/stack/releases) (version 1.6.1 or above)
 
 ```shell
 sudo apt-get update -qq
@@ -62,15 +62,23 @@ cd lamdu
 stack setup
 stack install
 ~/.local/bin/lamdu
-
 ```
+
+If the above fails at `stack setup` or `stack install`, it may because stack is older than 1.6.1. To upgrade stack, run the following commands:
+
+```shell
+stack upgrade
+hash -r
+```
+
+NOTE: `~/.local/bin` should be in your `$PATH` for the upgraded `stack` to take effect.
 
 #### fedora
 
 Optional: Install NodeJS with `sudo dnf insall nodjs`.
 Please see the starred note under "NodeJS & Build Time".
 
-requires [stack](https://github.com/commercialhaskell/stack/releases)
+requires [stack](https://github.com/commercialhaskell/stack/releases) (1.6.1 or above)
 
 ```shell
 sudo dnf install -y gcc gcc-c++ gmp-devel libXrandr-devel libXi-devel
@@ -83,9 +91,18 @@ stack install
 ~/.local/bin/lamdu
 ```
 
+If the above fails at `stack setup` or `stack install`, it may because stack is older than 1.6.1. To upgrade stack, run the following commands:
+
+```shell
+stack upgrade
+hash -r
+```
+
+NOTE: `~/.local/bin` should be in your `$PATH` for the upgraded `stack` to take effect.
+
 #### arch linux
 
-requires [stack](https://github.com/commercialhaskell/stack/releases)
+requires [stack](https://github.com/commercialhaskell/stack/releases) (1.6.1 or above)
 
 ```shell
 sudo pacman -S leveldb glfw libxrandr libxi libxcursor libxinerama
