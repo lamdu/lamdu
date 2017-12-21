@@ -39,6 +39,18 @@ import           Lamdu.Prelude
 
 type T = Transaction
 
+getSearchStringRemainder ::
+    (MonadReader env f, GuiState.HasState env) =>
+    HoleWidgetIds.WidgetIds -> Sugar.Expression name m a -> f Text
+getSearchStringRemainder widgetIds holeResultConverted
+    | (`Lens.has` holeResultConverted) `any` [literalNum, wrappedExpr . literalNum] =
+        HoleState.readSearchTerm widgetIds
+        <&> \x -> if "." `Text.isSuffixOf` x then "." else ""
+    | otherwise = pure mempty
+    where
+        literalNum = Sugar.rBody . Sugar._BodyLiteral . Sugar._LiteralNum
+        wrappedExpr = Sugar.rBody . Sugar._BodyHole . Sugar.holeKind . Sugar._WrapperHole . Sugar.haExpr
+
 make ::
     Monad m =>
     Sugar.Payload f ExprGui.Payload ->
@@ -65,12 +77,7 @@ make pl resultId holeResult =
                 _ ->
                     simplePickRes (mappend Config.holePickResultKeys Config.holePickAndMoveToNextHoleKeys holeConfig)
                 <&> pickBefore
-        searchStringRemainder <-
-            if Lens.has literalNum holeResultConverted || Lens.has (wrappedExpr . literalNum) holeResultConverted
-            then
-                HoleState.readSearchTerm (HoleWidgetIds.make (pl ^. Sugar.plEntityId))
-                <&> \x -> if "." `Text.isSuffixOf` x then "." else ""
-            else return mempty
+        searchStringRemainder <- getSearchStringRemainder widgetIds holeResultConverted
         isSelected <- GuiState.isSubCursor ?? resultId
         when isSelected (HolePicker.tellResultPicker searchStringRemainder (holeResult ^. Sugar.holeResultPick))
         holeResultConverted
@@ -87,8 +94,7 @@ make pl resultId holeResult =
             <&> fixFocalArea
             <&> (,) pickEventMap
     where
-        literalNum = Sugar.rBody . Sugar._BodyLiteral . Sugar._LiteralNum
-        wrappedExpr = Sugar.rBody . Sugar._BodyHole . Sugar.holeKind . Sugar._WrapperHole . Sugar.haExpr
+        widgetIds = pl ^. Sugar.plEntityId & HoleWidgetIds.make
         fixFocalArea =
             Align.tValue . Widget.sizedState <. Widget._StateFocused . Lens.mapped . Widget.fFocalAreas .@~
             (:[]) . Rect 0
