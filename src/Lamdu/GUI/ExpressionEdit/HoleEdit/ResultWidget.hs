@@ -6,7 +6,6 @@ module Lamdu.GUI.ExpressionEdit.HoleEdit.ResultWidget
 
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
-import qualified Data.Monoid as Monoid
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Text as Text
 import           GUI.Momentu (Widget, WithTextPos(..))
@@ -98,12 +97,6 @@ applyResultLayout fGui =
         , Responsive._layoutContext = Responsive.LayoutClear
         }
 
-afterPick :: Widget.Id -> GuiState.Update
-afterPick idWithinResultWidget =
-    mempty
-    { GuiState._uCursor = Monoid.Last (Just idWithinResultWidget)
-    }
-
 make ::
     Monad m =>
     Sugar.Payload f ExprGui.Payload ->
@@ -161,6 +154,6 @@ make pl resultId holeResult =
             do
                 holeResult ^. Sugar.holeResultPick
                 action <&> mappend pickedResult
-        pickedResult = afterPick idWithinResultWidget
+        pickedResult = GuiState.updateCursor idWithinResultWidget
         simplePickRes keys =
             E.keysEventMap keys (E.Doc ["Edit", "Result", "Pick"]) (return ())
