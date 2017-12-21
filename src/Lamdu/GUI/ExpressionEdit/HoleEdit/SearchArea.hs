@@ -24,7 +24,7 @@ import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.EventMap as HoleEventMap
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.Open (makeOpenSearchAreaGui)
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.SearchTerm as SearchTerm
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds (WidgetIds(..))
-import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds as WidgetIds
+import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds as HoleWidgetIds
 import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExprGui
 import           Lamdu.GUI.ExpressionGui.Annotation (maybeAddAnnotationPl)
@@ -73,7 +73,7 @@ make hole pl widgetIds =
                 <*> SearchTerm.make widgetIds holeKind <&> Responsive.fromWithTextPos
             )
             <&> M.weakerEvents unwrapAsEventMap
-        isActive <- WidgetIds.isActive widgetIds
+        isActive <- HoleWidgetIds.isActive widgetIds
         searchTermEventMap <-
             HoleEventMap.makeLiteralEventMap holeKind widgetIds
             <> (HoleEventMap.searchTermEditEventMap minOpPrec widgetIds

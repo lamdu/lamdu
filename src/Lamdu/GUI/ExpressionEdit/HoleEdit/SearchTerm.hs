@@ -21,7 +21,7 @@ import           Lamdu.Config.Theme (HasTheme)
 import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.EventMap as EventMap
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds (WidgetIds(..))
-import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds as WidgetIds
+import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds as HoleWidgetIds
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.State (readSearchTerm)
 import qualified Lamdu.Sugar.Types as Sugar
 
@@ -44,7 +44,7 @@ make widgetIds holeKind =
         searchTerm <- readSearchTerm widgetIds
         theme <- Lens.view Theme.theme
         let holeTheme = Theme.hole theme
-        isActive <- WidgetIds.isActive widgetIds
+        isActive <- HoleWidgetIds.isActive widgetIds
         let bgColor
                 | isActive = Theme.holeActiveSearchTermBGColor
                 | otherwise = Theme.holeSearchTermBGColor
@@ -54,7 +54,7 @@ make widgetIds holeKind =
                 | newSearchTerm == searchTerm = eventRes
                 | otherwise =
                     eventRes
-                    <> GuiState.updateWidgetState (WidgetIds.hidOpen widgetIds) newSearchTerm
+                    <> GuiState.updateWidgetState (HoleWidgetIds.hidOpen widgetIds) newSearchTerm
                     -- When first letter is typed in search term, jump to the
                     -- results, which will go to first result:
                     & ( if Text.null searchTerm
