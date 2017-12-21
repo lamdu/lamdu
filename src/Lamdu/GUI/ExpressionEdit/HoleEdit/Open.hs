@@ -21,7 +21,6 @@ import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widget.Id as WidgetId
 import qualified GUI.Momentu.Widgets.Menu as Menu
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
-import qualified Lamdu.CharClassification as Chars
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.EventMap as EventMap
@@ -211,12 +210,7 @@ makeUnderCursorAssignment shownResultsLists hasHiddenResults hole pl widgetIds =
             <&> (^. Align.tValue)
             & Reader.local (Element.animIdPrefix .~ holeAnimId)
 
-        searchTerm <- HoleState.readSearchTerm widgetIds
-        let disallowFirstOperatorChar
-                | Text.null searchTerm = E.filterChars (`notElem` Chars.operator)
-                | otherwise = id
-
-        searchTermEventMap <- EventMap.makeSearchTermEditEventMap holeKind widgetIds <&> disallowFirstOperatorChar
+        searchTermEventMap <- EventMap.makeSearchTermEditEventMap holeKind widgetIds
 
         (pickFirstResult, resultsWidgets) <-
             makeResultsWidget (typeView ^. Element.width) pl
