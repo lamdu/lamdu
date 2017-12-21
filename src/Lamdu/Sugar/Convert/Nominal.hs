@@ -3,7 +3,7 @@ module Lamdu.Sugar.Convert.Nominal
     ( convertFromNom, convertToNom
     ) where
 
-import           Control.Monad.Trans.Either.Utils (runMatcherT, justToLeft)
+import           Control.Monad.Trans.Except.Utils (runMatcherT, justToLeft)
 import           Data.UUID.Types (UUID)
 import qualified Lamdu.Calc.Val as V
 import           Lamdu.Calc.Val.Annotated (Val(..))

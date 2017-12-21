@@ -5,7 +5,7 @@ module Lamdu.Sugar.Convert.Apply
 
 import qualified Control.Lens as Lens
 import           Control.Monad (MonadPlus)
-import           Control.Monad.Trans.Either.Utils (runMatcherT, justToLeft)
+import           Control.Monad.Trans.Except.Utils (runMatcherT, justToLeft)
 import           Control.Monad.Trans.Maybe (MaybeT(..))
 import           Data.List.Utils (isLengthAtLeast)
 import qualified Data.Map as Map

@@ -1,4 +1,4 @@
-module Control.Monad.Trans.Either.Utils
+module Control.Monad.Trans.Except.Utils
     ( justToLeft
     , MatcherT, runMatcherT
     ) where

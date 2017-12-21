@@ -4,7 +4,7 @@ module Lamdu.Sugar.Convert.GetVar
     ) where
 
 import qualified Control.Lens as Lens
-import           Control.Monad.Trans.Either.Utils (runMatcherT, justToLeft)
+import           Control.Monad.Trans.Except.Utils (runMatcherT, justToLeft)
 import           Control.Monad.Trans.Maybe (MaybeT)
 import           Data.Maybe.Utils (maybeToMPlus)
 import qualified Data.Store.Property as Property

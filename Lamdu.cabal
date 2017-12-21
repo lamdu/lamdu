@@ -76,7 +76,7 @@ Executable lamdu
 
   Other-modules:    Control.Concurrent.Utils
                   , Control.Lens.Utils
-                  , Control.Monad.Trans.Either.Utils
+                  , Control.Monad.Trans.Except.Utils
                   , Control.Monad.Trans.FastRWS
                   , Control.Monad.Trans.FastWriter
                   , Control.Monad.Transaction

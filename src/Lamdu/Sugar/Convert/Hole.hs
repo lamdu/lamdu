@@ -438,12 +438,12 @@ writeConvertTypeChecked sugarContext holeStored inferredVal =
                 eId = Property.value stored & EntityId.ofValI
         noEval = Input.EvalResultsForExpr Map.empty Map.empty
 
-eitherTtoListT :: Monad m => ExceptT err m a -> ListT m a
-eitherTtoListT = ListClass.joinL . fmap (ListClass.fromList . (^.. Lens._Right)) . runExceptT
+exceptTtoListT :: Monad m => ExceptT err m a -> ListT m a
+exceptTtoListT = ListClass.joinL . fmap (ListClass.fromList . (^.. Lens._Right)) . runExceptT
 
-eitherToListT :: Monad m => Either t a -> ListT m a
-eitherToListT (Left _) = mempty
-eitherToListT (Right x) = return x
+exceptToListT :: Monad m => Either t a -> ListT m a
+exceptToListT (Left _) = mempty
+exceptToListT (Right x) = return x
 
 applyForms ::
     Monad m =>
@@ -570,7 +570,7 @@ holeResultsInject injectedArg val =
             [ do
                 unify injectedType (fst pl ^. Infer.plType)
                     & Infer.run
-                    & mapStateT eitherToListT
+                    & mapStateT exceptToListT
                 return injected
             , V.Apply
                 (Val (fst pl & Infer.plType %~ (`T.TFun` injectedType), (Nothing, NotInjected)) (V.BLeaf V.LHole))
@@ -624,13 +624,13 @@ mkHoleResultVals frozenDeps mInjectedArg exprPl base =
                         Infer.infer seedDeps scope seed & InferT.liftInfer
                         <&> Lens.traversed . _2 %~ (,) Nothing
                     return (seedDeps, inferResult)
-                & mapStateT eitherTtoListT
+                & mapStateT exceptTtoListT
             form <- applyForms (Nothing, ()) inferResult
             newDeps <- loadNewDeps seedDeps scope form & lift & lift
             return (newDeps, form)
     SuggestedExpr sugg ->
         (,)
-        <$> mapStateT eitherTtoListT (loadTheNewDeps sugg)
+        <$> mapStateT exceptTtoListT (loadTheNewDeps sugg)
         ?? (sugg & Lens.traversed %~ flip (,) (Nothing, ()))
     >>= _2 %%~ post
     where
