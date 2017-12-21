@@ -1,6 +1,6 @@
 {-# LANGUAGE NoImplicitPrelude, OverloadedStrings, FlexibleContexts #-}
 module Lamdu.GUI.ExpressionGui.HolePicker
-    ( HolePicker(..), withHolePicker, setResultPicker
+    ( HolePicker(..), withHolePicker, tellResultPicker
     , HasSearchStringRemainder(..)
     ) where
 
@@ -51,8 +51,8 @@ withHolePicker (HolePick h) mk =
             & TextLens._Text . Lens.element 0 %~ Char.toLower
             & ("Pick result and " <>)
 
-setResultPicker :: MonadWriter (HolePicker n) m => Text -> T n () -> m ()
-setResultPicker remainder act =
+tellResultPicker :: MonadWriter (HolePicker n) m => Text -> T n () -> m ()
+tellResultPicker remainder act =
     HolePick Info
     { iAction = act
     , iSearchStringRemainder = remainder

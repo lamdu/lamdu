@@ -153,7 +153,7 @@ makeOptions nearestHoles tag searchTerm
                     <*> NameEdit.makeView (name ^. Name.form) optionId
                     <&> Align.tValue %~ E.weakerEvents eventMap
                 when (Widget.isFocused (result ^. Align.tValue))
-                    (HolePicker.setResultPicker "" (void pick))
+                    (HolePicker.tellResultPicker "" (void pick))
                 pure result
             <&> Menu.Option optionWId ?? Menu.SubmenuEmpty
             where
