@@ -51,6 +51,11 @@ getSearchStringRemainder widgetIds holeResultConverted
         literalNum = Sugar.rBody . Sugar._BodyLiteral . Sugar._LiteralNum
         wrappedExpr = Sugar.rBody . Sugar._BodyHole . Sugar.holeKind . Sugar._WrapperHole . Sugar.haExpr
 
+setFocalAreaToFullSize :: WithTextPos (Widget a) -> WithTextPos (Widget a)
+setFocalAreaToFullSize =
+    Align.tValue . Widget.sizedState <. Widget._StateFocused . Lens.mapped . Widget.fFocalAreas .@~
+    (:[]) . Rect 0
+
 make ::
     Monad m =>
     Sugar.Payload f ExprGui.Payload ->
@@ -91,13 +96,10 @@ make pl resultId holeResult =
             <&> E.eventMap %~ mappend pickEventMap
             & GuiState.assignCursor resultId idWithinResultWidget
             & applyResultLayout
-            <&> fixFocalArea
+            <&> setFocalAreaToFullSize
             <&> (,) pickEventMap
     where
         widgetIds = pl ^. Sugar.plEntityId & HoleWidgetIds.make
-        fixFocalArea =
-            Align.tValue . Widget.sizedState <. Widget._StateFocused . Lens.mapped . Widget.fFocalAreas .@~
-            (:[]) . Rect 0
         holeResultId =
             holeResultConverted ^. Sugar.rPayload . Sugar.plEntityId
             & WidgetIds.fromEntityId
