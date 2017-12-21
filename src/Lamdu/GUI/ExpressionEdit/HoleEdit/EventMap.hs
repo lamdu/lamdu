@@ -61,7 +61,7 @@ searchTermEditEventMap minOpPrec widgetIds =
             & disallow holeKind id
             <&> GuiState.updateWidgetState (hidOpen widgetIds)
     where
-        notOp t = Text.any (`notElem` Chars.operator) t
+        notOp = Text.any (`notElem` Chars.operator)
 
 toLiteralTextKeys :: [MetaKey]
 toLiteralTextKeys =
