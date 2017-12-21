@@ -10,6 +10,7 @@ module GUI.Momentu.Hover
     , hoverBesideOptionsAxis
     , Orientation(..)
     , hoverBeside
+    , hoverBesideAxis
     ) where
 
 import qualified Control.Lens as Lens
@@ -236,10 +237,21 @@ hoverBeside ::
       w -> t (Widget (f State.Update))
     )
 hoverBeside lens =
-    do
-        mkHover <- hover
-        pure $ \layout h ->
-            let a = layout & lens %~ anchor
-            in  a & lens %~
-                hoverInPlaceOf
-                (hoverBesideOptions (mkHover h) (a ^. lens))
+    hover <&>
+    \mkHover layout h ->
+    let a = layout & lens %~ anchor
+    in  a & lens %~
+        hoverInPlaceOf
+        (hoverBesideOptions (mkHover h) (a ^. lens))
+
+hoverBesideAxis ::
+    ( Functor f, MonadReader env m, HasStyle env
+    , Element.HasAnimIdPrefix env) =>
+    m (Orientation -> Widget (f State.Update) ->
+       Ordered (Widget (f State.Update)) ->
+       Widget (f State.Update))
+hoverBesideAxis =
+    hover <&>
+    \mkHover axis base widget ->
+    let a = anchor base
+    in  a & hoverInPlaceOf (a & hoverBesideOptionsAxis axis (widget <&> mkHover))
