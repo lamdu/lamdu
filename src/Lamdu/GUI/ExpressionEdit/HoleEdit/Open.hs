@@ -220,9 +220,7 @@ makeUnderCursorAssignment searchTermEventMap shownResultsLists hasHiddenResults 
         searchTermWidget <-
             SearchTerm.make widgetIds holeKind
             <&> Align.tValue %~ Hover.anchor . E.weakerEvents (pickFirstResult <> literalEventMap)
-        mkOptions <-
-            resultsHoverOptions
-            & Reader.local (Element.animIdPrefix .~ WidgetId.toAnimId (hidOpen widgetIds))
+        mkOptions <- resultsHoverOptions
         return $
             \placement ->
             searchTermWidget
@@ -230,6 +228,7 @@ makeUnderCursorAssignment searchTermEventMap shownResultsLists hasHiddenResults 
                 Hover.hoverInPlaceOf
                 (mkOptions placement (vspace /-/ typeView) resultsWidgets
                     (searchTermWidget ^. Align.tValue))
+    & Reader.local (Element.animIdPrefix .~ WidgetId.toAnimId (hidOpen widgetIds))
     where
         holeKind = hole ^. Sugar.holeKind
         holeAnimId = hidHole widgetIds & Widget.toAnimId
