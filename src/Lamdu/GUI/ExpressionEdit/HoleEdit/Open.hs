@@ -10,7 +10,7 @@ import qualified Control.Monad.Reader as Reader
 import           Control.Monad.Transaction (MonadTransaction(..))
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Text as Text
-import           GUI.Momentu (Widget, Aligned(..), WithTextPos(..))
+import           GUI.Momentu (Widget, View, Aligned(..), WithTextPos(..))
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
@@ -146,21 +146,20 @@ resultsHoverOptions ::
     ) =>
     m
     (Menu.Placement ->
-     (Widget (f GuiState.Update) -> Widget (f GuiState.Update)) ->
+     View ->
      Hover.Ordered (Widget (f GuiState.Update)) ->
      Hover.AnchoredWidget (f GuiState.Update) ->
      [Hover.AnchoredWidget (f GuiState.Update)])
 resultsHoverOptions =
-    Hover.hover <&> \hover pos addAnnotation results searchTerm ->
+    Hover.hover <&> \hover pos annotation results searchTerm ->
     let resultsAbove alignment =
             results ^. Hover.backward & hover & Aligned alignment
-        annotatedTerm alignment =
-            searchTerm & Widget.widget %~ addAnnotation & Aligned alignment
+        annotatedTerm alignment = searchTerm & Widget.widget %~ (/-/ annotation) & Aligned alignment
         aboveRight = resultsAbove 0 /-/ annotatedTerm 0
         aboveLeft =
             resultsAbove 1
             /-/ annotatedTerm 1
-        annotatedResultsBelow = results ^. Hover.forward & addAnnotation & hover
+        annotatedResultsBelow = (results ^. Hover.forward) /-/ annotation & hover
         resultsBelow = results ^. Hover.forward & hover
         belowRight =
             Aligned 0 searchTerm
@@ -217,7 +216,6 @@ makeUnderCursorAssignment searchTermEventMap shownResultsLists hasHiddenResults 
             <&> _2 . Lens.mapped %~ E.strongerEvents searchTermEventMap
 
         vspace <- Annotation.annotationSpacer
-        let addAnnotation x = x /-/ vspace /-/ typeView
         literalEventMap <- EventMap.makeLiteralEventMap holeKind widgetIds
         searchTermWidget <-
             SearchTerm.make widgetIds holeKind
@@ -230,7 +228,7 @@ makeUnderCursorAssignment searchTermEventMap shownResultsLists hasHiddenResults 
             searchTermWidget
             & Align.tValue %~
                 Hover.hoverInPlaceOf
-                (mkOptions placement addAnnotation resultsWidgets
+                (mkOptions placement (vspace /-/ typeView) resultsWidgets
                     (searchTermWidget ^. Align.tValue))
     where
         holeKind = hole ^. Sugar.holeKind
