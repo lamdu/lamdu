@@ -95,21 +95,6 @@ emptyPickEventMap =
         mkEventMap k =
             E.keysEventMap k (E.Doc ["Edit", "Result", "Pick (N/A)"]) (pure ())
 
-makeResultsWidget ::
-    Monad m =>
-    Widget.R -> Sugar.Payload f ExprGui.Payload ->
-    [ResultsList m] -> Menu.HasMoreOptions ->
-    ExprGuiM m (EventMap (T m GuiState.Update), Hover.Ordered (Widget (T m GuiState.Update)))
-makeResultsWidget minWidth pl shownResultsLists hiddenResults =
-    do
-        groupsWidgets <- traverse (makeResultGroup pl) shownResultsLists
-        pickResultEventMap <-
-            case groupsWidgets of
-            [] -> emptyPickEventMap
-            (x:_) -> rgPickMainEventMap x & return
-        Menu.make minWidth (groupsWidgets <&> rgOption) hiddenResults
-            <&> (,) pickResultEventMap
-
 assignHoleEditCursor ::
     Monad m =>
     WidgetIds -> Text -> [Widget.Id] -> [Widget.Id] ->
@@ -158,23 +143,27 @@ makeUnderCursorAssignment searchTermEventMap shownResultsLists hasHiddenResults 
             <&> (^. Align.tValue)
             & Reader.local (Element.animIdPrefix .~ holeAnimId)
 
-        (pickFirstResult, resultsWidgets) <-
-            makeResultsWidget (typeView ^. Element.width) pl
-            shownResultsLists hasHiddenResults
-            <&> _2 . Lens.mapped %~ E.strongerEvents searchTermEventMap
+        groupsWidgets <- traverse (makeResultGroup pl) shownResultsLists
 
         vspace <- Annotation.annotationSpacer
         literalEventMap <- EventMap.makeLiteralEventMap holeKind widgetIds
+        pickFirstResult <-
+            case groupsWidgets of
+            [] -> emptyPickEventMap
+            (x:_) -> rgPickMainEventMap x & return
         searchTermWidget <-
             SearchTerm.make widgetIds holeKind
             <&> Align.tValue %~ Hover.anchor . E.weakerEvents (pickFirstResult <> literalEventMap)
         mkOptions <- Menu.hoverOptions
+        resultsMenu <-
+            Menu.make (typeView ^. Element.width) (groupsWidgets <&> rgOption) hasHiddenResults
+            <&> Lens.mapped %~ E.strongerEvents searchTermEventMap
         return $
             \placement ->
             searchTermWidget
             & Align.tValue %~
                 Hover.hoverInPlaceOf
-                (mkOptions placement (vspace /-/ typeView) resultsWidgets
+                (mkOptions placement (vspace /-/ typeView) resultsMenu
                     (searchTermWidget ^. Align.tValue))
     & Reader.local (Element.animIdPrefix .~ WidgetId.toAnimId (hidOpen widgetIds))
     where
