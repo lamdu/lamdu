@@ -21,10 +21,13 @@ import qualified GUI.Momentu.Widget as Widget
 import qualified Lamdu.CharClassification as Chars
 import           Lamdu.Config (HasConfig)
 import qualified Lamdu.Config as Config
+import           Lamdu.GUI.ExpressionEdit.EventMap (applyOperatorSearchTerm)
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.State as HoleState
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds (WidgetIds(..))
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
+import           Lamdu.GUI.ExpressionGui.HolePicker (HasSearchStringRemainder(..))
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
+import           Lamdu.Precedence (Prec)
 import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
@@ -32,9 +35,9 @@ import           Lamdu.Prelude
 type T = Transaction.Transaction
 
 adHocTextEditEventMap ::
-    (MonadReader env m, GuiState.HasState env, HasConfig env) =>
-    WidgetIds -> m (Sugar.HoleKind f e0 e1 -> E.EventMap GuiState.Update)
-adHocTextEditEventMap widgetIds =
+    (MonadReader env m, GuiState.HasState env, HasSearchStringRemainder env, HasConfig env) =>
+    Prec -> WidgetIds -> m (Sugar.HoleKind f e0 e1 -> E.EventMap GuiState.Update)
+adHocTextEditEventMap minOpPrec widgetIds =
     do
         searchTerm <- HoleState.readSearchTerm widgetIds
         let appendCharEventMap =
@@ -48,13 +51,17 @@ adHocTextEditEventMap widgetIds =
                       Text.init searchTerm
                       & E.keyPress (ModKey mempty MetaKey.Key'Backspace)
                       (E.Doc ["Edit", "Search Term", "Delete backwards"])
+        remainder <- Lens.view searchStringRemainder
+        let initialOpEventMap
+                | Text.null searchTerm = applyOperatorSearchTerm minOpPrec remainder
+                | otherwise = mempty
         disallow <- disallowCharsFromSearchTerm
         pure $ \holeKind ->
-            appendCharEventMap <> deleteCharEventMap
+            appendCharEventMap <> deleteCharEventMap <> initialOpEventMap
             & disallow holeKind id
             <&> GuiState.updateWidgetState (hidOpen widgetIds)
     where
-        notOp t = Text.all (`elem` Chars.operator) t & not
+        notOp t = Text.any (`notElem` Chars.operator) t
 
 toLiteralTextKeys :: [MetaKey]
 toLiteralTextKeys =
@@ -156,11 +163,11 @@ makeLiteralEventMap holeKind widgetIds =
 
 makeSearchTermEditEventMap ::
     Monad m =>
-    Sugar.HoleKind (T m) (Sugar.Expression n p a) e -> WidgetIds ->
+    Sugar.HoleKind (T m) (Sugar.Expression n p a) e -> Prec -> WidgetIds ->
     ExprGuiM m (E.EventMap (T m GuiState.Update))
-makeSearchTermEditEventMap holeKind widgetIds =
+makeSearchTermEditEventMap holeKind minOpPrec widgetIds =
     do
         literalEventMap <- makeLiteralEventMap holeKind widgetIds
-        adHocTextEditEventMap widgetIds ?? holeKind
+        adHocTextEditEventMap minOpPrec widgetIds ?? holeKind
             <&> fmap pure
             <&> mappend literalEventMap

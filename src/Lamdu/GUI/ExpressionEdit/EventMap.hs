@@ -5,6 +5,7 @@ module Lamdu.GUI.ExpressionEdit.EventMap
     , jumpHolesEventMap
     , extractCursor
     , wrapEventMap
+    , applyOperatorSearchTerm
     ) where
 
 import qualified Control.Lens as Lens

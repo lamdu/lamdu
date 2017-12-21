@@ -210,7 +210,10 @@ makeUnderCursorAssignment shownResultsLists hasHiddenResults hole pl widgetIds =
             <&> (^. Align.tValue)
             & Reader.local (Element.animIdPrefix .~ holeAnimId)
 
-        searchTermEventMap <- EventMap.makeSearchTermEditEventMap holeKind widgetIds
+        searchTermEventMap <-
+            EventMap.makeSearchTermEditEventMap holeKind
+            (pl ^. Sugar.plData . ExprGui.plMinOpPrec)
+            widgetIds
 
         (pickFirstResult, resultsWidgets) <-
             makeResultsWidget (typeView ^. Element.width) pl

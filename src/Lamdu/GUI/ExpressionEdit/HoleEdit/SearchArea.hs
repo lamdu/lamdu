@@ -74,7 +74,9 @@ make hole pl widgetIds =
             <&> M.weakerEvents unwrapAsEventMap
         isActive <- WidgetIds.isActive widgetIds
         searchTermEventMap <-
-            HoleEventMap.makeSearchTermEditEventMap holeKind widgetIds <&>
+            HoleEventMap.makeSearchTermEditEventMap holeKind
+            (pl ^. Sugar.plData . ExprGui.plMinOpPrec) widgetIds
+            <&>
             if isActive
             then id
             else
