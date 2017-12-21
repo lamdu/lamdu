@@ -22,7 +22,7 @@ import           Lamdu.GUI.ExpressionGui.HolePicker (HolePicker, withHolePicker,
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui as ExprGui
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
-import           Lamdu.Precedence (precedence)
+import           Lamdu.Precedence (Prec, precedence)
 import           Lamdu.Sugar.NearestHoles (NearestHoles)
 import qualified Lamdu.Sugar.NearestHoles as NearestHoles
 import           Lamdu.Sugar.Parens (MinOpPrec)
@@ -157,28 +157,36 @@ actionsEventMap exprInfo holePicker =
     ]
     <&> mconcat
 
+-- | Create the hole search term for new apply operators,
+-- given the extra search term chars from another hole.
+applyOperatorSearchTerm :: Prec -> Text -> EventMap Text
+applyOperatorSearchTerm minOpPrec extraChars =
+    E.charGroup Nothing (E.Doc ["Edit", "Apply operator"])
+    ops (Text.singleton <&> (extraChars <>))
+    where
+        ops =
+            case Text.uncons extraChars of
+            Nothing -> filter acceptOp Chars.operator
+            Just (firstOp, _)
+                | acceptOp firstOp -> Chars.operator
+                | otherwise -> mempty
+        acceptOp = (>= minOpPrec) . precedence
+
 applyOperatorEventMap ::
     (MonadReader env m, HasSearchStringRemainder env, Monad f) =>
     ExprInfo f -> HolePicker f -> m (EventMap (T f GuiState.Update))
 applyOperatorEventMap exprInfo holePicker =
     case exprInfoActions exprInfo ^. Sugar.wrap of
-    Sugar.WrapAction wrap -> action wrap
-    Sugar.WrapperAlready holeId -> action (return holeId)
-    Sugar.WrappedAlready holeId -> action (return holeId)
+    Sugar.WrapAction wrap -> wrap
+    Sugar.WrapperAlready holeId -> return holeId
+    Sugar.WrappedAlready holeId -> return holeId
+    & action
     & withHolePicker holePicker
     where
-        acceptableOperatorChars = filter ((>= exprInfoMinOpPrec exprInfo) . precedence) Chars.operator
         action wrap extraChars =
-            case Text.uncons extraChars of
-            Nothing ->
-                E.charGroup Nothing doc acceptableOperatorChars
-                (\c -> wrap <&> HoleEditState.setHoleStateAndJump (Text.singleton c))
-            Just (firstOp, _)
-                | precedence firstOp >= exprInfoMinOpPrec exprInfo ->
-                    E.charGroup Nothing doc Chars.operator
-                    (\c -> wrap <&> HoleEditState.setHoleStateAndJump (extraChars <> Text.singleton c))
-                | otherwise -> mempty
-        doc = E.Doc ["Edit", "Apply operator"]
+            applyOperatorSearchTerm (exprInfoMinOpPrec exprInfo) extraChars
+            <&> HoleEditState.setHoleStateAndJump
+            <&> (wrap <&>)
 
 wrapEventMap ::
     (MonadReader env m, Config.HasConfig env, Monad f) =>
