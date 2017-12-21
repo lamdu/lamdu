@@ -96,33 +96,30 @@ emptyPickEventMap =
 
 assignHoleEditCursor ::
     Monad m =>
-    WidgetIds -> Text -> [Widget.Id] -> [Widget.Id] ->
-    ExprGuiM m a ->
-    ExprGuiM m a
-assignHoleEditCursor widgetIds searchTerm shownMainResultsIds allShownResultIds action =
+    WidgetIds -> [Widget.Id] -> [Widget.Id] -> ExprGuiM m a -> ExprGuiM m a
+assignHoleEditCursor widgetIds shownMainResultsIds allShownResultIds action =
     do
+        searchTerm <- HoleState.readSearchTerm widgetIds
+        let destId
+                | Text.null searchTerm =
+                      -- When selecting a result like "fac HOLE", the
+                      -- cursor moves sto the hidOpen of the selected
+                      -- HOLE, which has a null search term. We want to
+                      -- move the cursor to the search term in this case,
+                      -- otherwise further actions surprisingly apply to a
+                      -- random first result. (e.g: "fac (" will apply
+                      -- open-paren to the first result)
+                      searchTermId
+                | otherwise = head (shownMainResultsIds ++ [searchTermId])
         shouldBeOnResult <- sub (hidResultsPrefix widgetIds)
         isOnResult <- traverse sub allShownResultIds <&> or
-        let assignSource
-                | shouldBeOnResult && not isOnResult =
-                    Reader.local (GuiState.cursor .~ destId)
-                | otherwise =
-                    GuiState.assignCursor (hidOpen widgetIds) destId
-        assignSource action
+        action
+            & if shouldBeOnResult && not isOnResult
+            then Reader.local (GuiState.cursor .~ destId)
+            else GuiState.assignCursor (hidOpen widgetIds) destId
     where
         searchTermId = hidOpenSearchTerm widgetIds
         sub x = GuiState.isSubCursor ?? x
-        destId
-            | Text.null searchTerm =
-                  -- When selecting a result like "fac HOLE", the
-                  -- cursor moves sto the hidOpen of the selected
-                  -- HOLE, which has a null search term. We want to
-                  -- move the cursor to the search term in this case,
-                  -- otherwise further actions surprisingly apply to a
-                  -- random first result. (e.g: "fac (" will apply
-                  -- open-paren to the first result)
-                  searchTermId
-            | otherwise = head (shownMainResultsIds ++ [searchTermId])
 
 makeUnderCursorAssignment ::
     Monad m =>
@@ -172,8 +169,7 @@ makeOpenSearchAreaGui ::
     ExprGuiM m (Menu.Placement -> WithTextPos (Widget (T m GuiState.Update)))
 makeOpenSearchAreaGui searchTermEventMap hole pl widgetIds =
     do
-        searchTerm <- HoleState.readSearchTerm widgetIds
-        (shownResultsLists, hasHiddenResults) <- HoleResults.makeAll hole searchTerm widgetIds
+        (shownResultsLists, hasHiddenResults) <- HoleResults.makeAll hole widgetIds
         let shownMainResultsIds = shownResultsLists <&> rId . (^. HoleResults.rlMain)
         let allShownResultIds =
                 [ rId . (^. HoleResults.rlMain)
@@ -181,4 +177,4 @@ makeOpenSearchAreaGui searchTermEventMap hole pl widgetIds =
                 ] <*> shownResultsLists
         makeUnderCursorAssignment searchTermEventMap shownResultsLists
             hasHiddenResults hole pl widgetIds
-            & assignHoleEditCursor widgetIds searchTerm shownMainResultsIds allShownResultIds
+            & assignHoleEditCursor widgetIds shownMainResultsIds allShownResultIds

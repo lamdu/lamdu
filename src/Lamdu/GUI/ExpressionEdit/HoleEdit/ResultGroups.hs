@@ -15,6 +15,7 @@ import           Data.List (sortOn)
 import qualified Data.List.Class as ListClass
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Text as Text
+import qualified GUI.Momentu.State as GuiState
 import qualified GUI.Momentu.Widget.Id as WidgetId
 import qualified GUI.Momentu.Widgets.Menu as Menu
 import qualified Lamdu.Calc.Val as V
@@ -22,6 +23,7 @@ import           Lamdu.Calc.Val.Annotated (Val)
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Expr.Lens as ExprLens
 import           Lamdu.Formatting (Format(..))
+import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.State as HoleState
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.ValTerms as ValTerms
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds (WidgetIds(..))
 import           Lamdu.GUI.ExpressionGui (ExpressionN)
@@ -148,11 +150,12 @@ isGoodResult :: Sugar.HoleResultScore -> Bool
 isGoodResult hrs = hrs ^. Sugar.hrsNumHoleWrappers == 0
 
 makeAll ::
-    (MonadTransaction n m, MonadReader env m, Config.HasConfig env) =>
-    Sugar.Hole (T n) (ExpressionN n ()) e -> Text -> WidgetIds ->
+    (MonadTransaction n m, MonadReader env m, Config.HasConfig env, GuiState.HasState env) =>
+    Sugar.Hole (T n) (ExpressionN n ()) e -> WidgetIds ->
     m ([ResultsList n], Menu.HasMoreOptions)
-makeAll hole searchTerm widgetIds =
+makeAll hole widgetIds =
     do
+        searchTerm <- HoleState.readSearchTerm widgetIds
         config <- Lens.view Config.config <&> Config.hole
         makeAllGroups hole searchTerm
             <&> ListClass.fromList
