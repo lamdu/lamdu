@@ -10,6 +10,7 @@ import qualified Control.Monad.Writer as Writer
 import qualified Data.Char as Char
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Text.Lens as TextLens
+import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
 
 import           Lamdu.Prelude
@@ -37,7 +38,7 @@ instance Monoid (HolePicker m) where
 
 withHolePicker ::
     (MonadReader env m, HasSearchStringRemainder env, Monad f) =>
-    HolePicker f -> (Text -> E.EventMap (T f a)) -> m (E.EventMap (T f a))
+    HolePicker f -> (Text -> EventMap (T f a)) -> m (EventMap (T f a))
 withHolePicker NoHolePick mk = Lens.view searchStringRemainder <&> mk
 withHolePicker (HolePick h) mk =
     mk (iSearchStringRemainder h)

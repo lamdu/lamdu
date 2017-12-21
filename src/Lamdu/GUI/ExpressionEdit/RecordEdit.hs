@@ -43,7 +43,7 @@ doc text = E.Doc ["Edit", "Record", text]
 
 mkAddFieldEventMap ::
     Functor f =>
-    Config -> f Sugar.CompositeAddItemResult -> E.EventMap (f GuiState.Update)
+    Config -> f Sugar.CompositeAddItemResult -> EventMap (f GuiState.Update)
 mkAddFieldEventMap config addField =
     addField
     <&> (^. Sugar.cairNewTag . Sugar.tagInstance)
@@ -101,7 +101,7 @@ make (Sugar.Composite fields recordTail addField) pl =
 makeRecord ::
     Monad m =>
     [Sugar.CompositeItem (Name (T m)) (T m) (ExprGui.SugarExpr m)] ->
-    E.EventMap (T m GuiState.Update) ->
+    EventMap (T m GuiState.Update) ->
     (ExpressionGui m -> ExprGuiM m (ExpressionGui m)) ->
     ExprGuiM m (ExpressionGui m)
 makeRecord fields addFieldEventMap postProcess =
