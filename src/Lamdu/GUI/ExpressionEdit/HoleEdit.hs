@@ -40,13 +40,13 @@ makeHoleWithArgument ::
     ExprGuiM m (ExpressionGui f)
 makeHoleWithArgument searchAreaGui pl wrapperGui =
     do
-        unfocusedArgumentGui <- maybeAddAnnotationPl pl ?? wrapperGui
         isSelected <- GuiState.isSubCursor ?? hidHole widgetIds
         hover <- Hover.hover
-        let f layoutMode wrapper =
-                case isSelected || Widget.isFocused (wrapper ^. Align.tValue) of
-                True ->
+        let f layoutMode wrapper
+                | isSelected
+                || Widget.isFocused (wrapper ^. Align.tValue) =
                     wrapper & Align.tValue %~ Hover.hoverInPlaceOf options . Hover.anchor
+                | otherwise = wrapper
                     where
                         options =
                             [ hoverArgument /-/ (searchArea Menu.Below <&> hover)
@@ -58,10 +58,8 @@ makeHoleWithArgument searchAreaGui pl wrapperGui =
                             render (searchAreaGui p)
                             & hideIfInHole
                         render x = (x ^. Responsive.render) layoutMode
-                False -> wrapper
-        unfocusedArgumentGui
-            & Responsive.render . Lens.imapped %@~ f
-            & pure
+        maybeAddAnnotationPl pl ?? wrapperGui
+            <&> Responsive.render . Lens.imapped %@~ f
     where
         widgetIds = HoleWidgetIds.make (pl ^. Sugar.plEntityId)
         hideIfInHole x
