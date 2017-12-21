@@ -204,9 +204,7 @@ makeTagHoleEdit nearestHoles tag =
                 & Reader.local (Element.animIdPrefix <>~ ["label"])
             else pure term
         (options, hasMore) <- makeOptions nearestHoles tag searchTerm
-        hoverMenu <- Hover.hoverBesideAxis ?? Hover.Vertical
-        menu <- Menu.make 0 options hasMore
-        topLine <&> hoverMenu ?? menu & pure
+        topLine & Align.tValue %%~ Menu.makeHoverBeside 0 options hasMore
     & GuiState.assignCursor holeId searchTermId
     & Reader.local (Element.animIdPrefix .~ Widget.toAnimId holeId)
     where

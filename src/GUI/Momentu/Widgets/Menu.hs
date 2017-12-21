@@ -5,7 +5,7 @@ module GUI.Momentu.Widgets.Menu
     , Submenu(..)
     , Option(..), oId, oWidget, oSubmenuWidgets
     , Placement(..), HasMoreOptions(..)
-    , make
+    , make, makeHoverBeside
     ) where
 
 import qualified Control.Lens as Lens
@@ -180,3 +180,15 @@ make minWidth options hiddenResults =
                     } ?? (laidOutOptions ++ [hiddenOptionsWidget])
                     <&> Glue.vbox
                 ) & pure
+
+makeHoverBeside ::
+    ( MonadReader env m, TextView.HasStyle env, Hover.HasStyle env
+    , Element.HasAnimIdPrefix env, HasStyle env, State.HasCursor env
+    , Applicative f
+    ) =>
+    Widget.R -> [Option m (f State.Update)] -> HasMoreOptions ->
+    Widget (f State.Update) ->
+    m (Widget (f State.Update))
+makeHoverBeside minWidth options hiddenResults baseWidget =
+    (Hover.hoverBesideAxis ?? Hover.Vertical ?? baseWidget)
+    <*> make minWidth options hiddenResults
