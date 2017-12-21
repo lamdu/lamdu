@@ -69,7 +69,7 @@ make hole pl widgetIds =
         closedSearchTermGui <-
             maybeAddAnnotationPl pl
             <*>
-            ( (if isAHoleInHole then return id else fdWrap)
+            ( fdWrap
                 <*> SearchTerm.make widgetIds holeKind <&> Responsive.fromWithTextPos
             )
             <&> M.weakerEvents unwrapAsEventMap
