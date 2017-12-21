@@ -2,8 +2,9 @@
 
 module GUI.Momentu.Widgets.Menu
     ( Style(..), HasStyle(..)
-    , Submenu(..)
+    , Submenu(..), _SubmenuEmpty, _SubmenuItems
     , Option(..), oId, oWidget, oSubmenuWidgets
+    , optionWidgets
     , Placement(..), HasMoreOptions(..)
     , make, makeHoverBeside
     , hoverOptions
@@ -44,6 +45,7 @@ data Submenu f a
     = SubmenuEmpty
     | SubmenuItems (f [WithTextPos (Widget a)])
     deriving (Functor)
+Lens.makePrisms ''Submenu
 
 data Option f a = Option
     { -- | Must be the prefix of all submenu options, also used to
@@ -55,6 +57,10 @@ data Option f a = Option
       _oSubmenuWidgets :: !(Submenu f a)
     }
 Lens.makeLenses ''Option
+
+optionWidgets :: Functor f => Lens.Setter (Option f a) (Option f b) (WithTextPos (Widget a)) (WithTextPos (Widget b))
+optionWidgets f (Option i w s) =
+    Option i <$> f w <*> (_SubmenuItems . Lens.mapped . Lens.mapped) f s
 
 data HasMoreOptions = MoreOptionsAvailable | NoMoreOptions
 
