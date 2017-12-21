@@ -5,7 +5,7 @@
 -- For non-wrapper holes this is the whole hole.
 
 module Lamdu.GUI.ExpressionEdit.HoleEdit.SearchArea
-    ( makeStdWrapped
+    ( make
     ) where
 
 import qualified Control.Lens as Lens
@@ -44,14 +44,14 @@ fdConfig Config.Hole{holeOpenKeys, holeCloseKeys} = FocusDelegator.Config
     , FocusDelegator.focusParentDoc = M.Doc ["Navigation", "Hole", "Close"]
     }
 
--- Has an stdWrap/typeView under the search term
-makeStdWrapped ::
+-- Has a typeView under the search term
+make ::
     Monad m =>
     Sugar.Hole (T m) (Sugar.Expression (Name (T m)) (T m) ()) (ExprGui.SugarExpr m) ->
     Sugar.Payload (T m) ExprGui.Payload ->
     WidgetIds ->
     ExprGuiM m (Menu.Placement -> ExpressionGui m)
-makeStdWrapped hole pl widgetIds =
+make hole pl widgetIds =
     do
         config <- Lens.view Config.config
         let unwrapAsEventMap =
