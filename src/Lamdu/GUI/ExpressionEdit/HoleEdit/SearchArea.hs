@@ -9,12 +9,10 @@ module Lamdu.GUI.ExpressionEdit.HoleEdit.SearchArea
     ) where
 
 import qualified Control.Lens as Lens
-import qualified Data.Monoid as Monoid
 import           Data.Store.Transaction (Transaction)
 import qualified GUI.Momentu as M
 import qualified GUI.Momentu.Hover as Hover
 import qualified GUI.Momentu.Responsive as Responsive
-import qualified GUI.Momentu.State as GuiState
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.FocusDelegator as FocusDelegator
 import qualified GUI.Momentu.Widgets.Menu as Menu
@@ -76,12 +74,6 @@ make hole pl widgetIds =
         searchTermEventMap <-
             HoleEventMap.makeSearchTermEditEventMap holeKind
             (pl ^. Sugar.plData . ExprGui.plMinOpPrec) widgetIds
-            <&>
-            if isActive
-            then id
-            else
-                Lens.mapped . Lens.mapped . GuiState.uCursor %~
-                mappend (Monoid.Last (Just (hidOpen widgetIds)))
         let inPlaceOfClosed open =
                 closedSearchTermGui & M.widget %~
                 Hover.hoverInPlaceOf [Hover.anchor open] . Hover.anchor
