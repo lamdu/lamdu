@@ -73,8 +73,9 @@ make hole pl widgetIds =
             <&> M.weakerEvents unwrapAsEventMap
         isActive <- WidgetIds.isActive widgetIds
         searchTermEventMap <-
-            HoleEventMap.makeSearchTermEditEventMap holeKind
-            (pl ^. Sugar.plData . ExprGui.plMinOpPrec) widgetIds
+            HoleEventMap.makeLiteralEventMap holeKind widgetIds
+            <> (HoleEventMap.searchTermEditEventMap minOpPrec widgetIds
+                ?? holeKind <&> fmap pure)
         let inPlaceOfClosed open =
                 closedSearchTermGui & M.widget %~
                 Hover.hoverInPlaceOf [Hover.anchor open] . Hover.anchor
@@ -86,7 +87,7 @@ make hole pl widgetIds =
                 -- it is harder to implement, so just wrap it
                 -- here
                 (fdWrap <&> (Lens.mapped %~))
-                <*> makeOpenSearchAreaGui hole pl widgetIds
+                <*> makeOpenSearchAreaGui searchTermEventMap hole pl widgetIds
                 <&> Lens.mapped %~ inPlaceOfClosed . M.weakerEvents unwrapAsEventMap . (^. M.tValue)
             else
                 (if isActive then Widget.setFocused else id)
@@ -94,5 +95,6 @@ make hole pl widgetIds =
                 & M.weakerEvents searchTermEventMap
                 & const & pure
     where
+        minOpPrec = pl ^. Sugar.plData . ExprGui.plMinOpPrec
         isAHoleInHole = ExprGui.isHoleResult pl
         holeKind = hole ^. Sugar.holeKind

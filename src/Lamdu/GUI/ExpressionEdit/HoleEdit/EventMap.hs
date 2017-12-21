@@ -1,7 +1,7 @@
 {-# LANGUAGE LambdaCase, NoImplicitPrelude, OverloadedStrings, NamedFieldPuns, DisambiguateRecordFields #-}
 module Lamdu.GUI.ExpressionEdit.HoleEdit.EventMap
     ( disallowCharsFromSearchTerm
-    , makeSearchTermEditEventMap
+    , searchTermEditEventMap
     , makeLiteralEventMap
     ) where
 
@@ -160,11 +160,3 @@ makeLiteralEventMap holeKind widgetIds =
         f searchTerm
             | Text.null searchTerm = holeKind ^. Sugar._LeafHole . Lens.to toLiteralTextEventMap
             | otherwise = mempty
-
-makeSearchTermEditEventMap ::
-    Monad m =>
-    Sugar.HoleKind (T m) (Sugar.Expression n p a) e -> Prec -> WidgetIds ->
-    ExprGuiM m (EventMap (T m GuiState.Update))
-makeSearchTermEditEventMap holeKind minOpPrec widgetIds =
-    makeLiteralEventMap holeKind widgetIds
-    <> (searchTermEditEventMap minOpPrec widgetIds ?? holeKind <&> fmap pure)

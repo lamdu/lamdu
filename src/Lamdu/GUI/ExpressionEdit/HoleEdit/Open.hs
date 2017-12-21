@@ -195,12 +195,12 @@ resultsHoverOptions =
 
 makeUnderCursorAssignment ::
     Monad m =>
-    [ResultsList m] -> Menu.HasMoreOptions ->
+    EventMap (T m GuiState.Update) -> [ResultsList m] -> Menu.HasMoreOptions ->
     Sugar.Hole (T m) (ExpressionN m ()) (ExprGui.SugarExpr m) ->
     Sugar.Payload (T m) ExprGui.Payload ->
     WidgetIds ->
     ExprGuiM m (Menu.Placement -> WithTextPos (Widget (T m GuiState.Update)))
-makeUnderCursorAssignment shownResultsLists hasHiddenResults hole pl widgetIds =
+makeUnderCursorAssignment searchTermEventMap shownResultsLists hasHiddenResults hole pl widgetIds =
     do
         -- We make our own type view here instead of stdWrap, because
         -- we want to synchronize the active BG width with the
@@ -210,11 +210,6 @@ makeUnderCursorAssignment shownResultsLists hasHiddenResults hole pl widgetIds =
             <*> TypeView.make (pl ^. Sugar.plAnnotation . Sugar.aInferredType)
             <&> (^. Align.tValue)
             & Reader.local (Element.animIdPrefix .~ holeAnimId)
-
-        searchTermEventMap <-
-            EventMap.makeSearchTermEditEventMap holeKind
-            (pl ^. Sugar.plData . ExprGui.plMinOpPrec)
-            widgetIds
 
         (pickFirstResult, resultsWidgets) <-
             makeResultsWidget (typeView ^. Element.width) pl
@@ -243,11 +238,12 @@ makeUnderCursorAssignment shownResultsLists hasHiddenResults hole pl widgetIds =
 
 makeOpenSearchAreaGui ::
     Monad m =>
+    EventMap (T m GuiState.Update) ->
     Sugar.Hole (T m) (ExpressionN m ()) (ExprGui.SugarExpr m) ->
     Sugar.Payload (T m) ExprGui.Payload ->
     WidgetIds ->
     ExprGuiM m (Menu.Placement -> WithTextPos (Widget (T m GuiState.Update)))
-makeOpenSearchAreaGui hole pl widgetIds =
+makeOpenSearchAreaGui searchTermEventMap hole pl widgetIds =
     do
         searchTerm <- HoleState.readSearchTerm widgetIds
         (shownResultsLists, hasHiddenResults) <- HoleResults.makeAll hole searchTerm widgetIds
@@ -256,6 +252,6 @@ makeOpenSearchAreaGui hole pl widgetIds =
                 [ rId . (^. HoleResults.rlMain)
                 , (^. HoleResults.rlExtraResultsPrefixId)
                 ] <*> shownResultsLists
-        makeUnderCursorAssignment shownResultsLists
+        makeUnderCursorAssignment searchTermEventMap shownResultsLists
             hasHiddenResults hole pl widgetIds
             & assignHoleEditCursor widgetIds searchTerm shownMainResultsIds allShownResultIds
