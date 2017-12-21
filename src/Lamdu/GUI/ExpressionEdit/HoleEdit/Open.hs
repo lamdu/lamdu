@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell, NoImplicitPrelude, FlexibleContexts, OverloadedStrings #-}
+{-# LANGUAGE NoImplicitPrelude, FlexibleContexts, OverloadedStrings #-}
 -- | The search area (search term + results) of an open/active hole.
 
 module Lamdu.GUI.ExpressionEdit.HoleEdit.Open
@@ -43,10 +43,9 @@ import           Lamdu.Prelude
 type T = Transaction
 
 data ResultGroup m = ResultGroup
-    { _rgOption :: !(Menu.Option (ExprGuiM m) (T m GuiState.Update))
-    , _rgPickMainEventMap :: !(Widget.EventMap (T m GuiState.Update))
+    { rgOption :: !(Menu.Option (ExprGuiM m) (T m GuiState.Update))
+    , rgPickMainEventMap :: !(Widget.EventMap (T m GuiState.Update))
     }
-Lens.makeLenses ''ResultGroup
 
 makeShownResult ::
     Monad m =>
@@ -71,22 +70,21 @@ makeResultGroup ::
     ResultsList m ->
     ExprGuiM m (ResultGroup m)
 makeResultGroup pl results =
-    do
-        (pickMain, mainResultWidget) <- makeShownResult pl mainResult
-        return ResultGroup
-            { _rgOption = Menu.Option
-                { Menu._oId = results ^. HoleResults.rlExtraResultsPrefixId
-                , Menu._oWidget = mainResultWidget
-                , Menu._oSubmenuWidgets =
-                    if null extras
-                    then Menu.SubmenuEmpty
-                    else Menu.SubmenuItems (traverse (makeShownResult pl) extras <&> map snd)
-                }
-            , _rgPickMainEventMap = pickMain
-            }
-    where
-        extras = results ^. HoleResults.rlExtra
-        mainResult = results ^. HoleResults.rlMain
+    makeShownResult pl (results ^. HoleResults.rlMain)
+    <&>
+    \(pickMain, mainResultWidget) ->
+    ResultGroup
+    { rgOption =
+        Menu.Option
+        { Menu._oId = results ^. HoleResults.rlExtraResultsPrefixId
+        , Menu._oWidget = mainResultWidget
+        , Menu._oSubmenuWidgets =
+            case results ^. HoleResults.rlExtra of
+            [] -> Menu.SubmenuEmpty
+            extras -> Menu.SubmenuItems (traverse (makeShownResult pl) extras <&> map snd)
+        }
+    , rgPickMainEventMap = pickMain
+    }
 
 emptyPickEventMap ::
     (Monad m, Applicative f) => ExprGuiM m (Widget.EventMap (f GuiState.Update))
@@ -108,8 +106,8 @@ makeResultsWidget minWidth pl shownResultsLists hiddenResults =
         pickResultEventMap <-
             case groupsWidgets of
             [] -> emptyPickEventMap
-            (x:_) -> x ^. rgPickMainEventMap & return
-        Menu.layout minWidth (groupsWidgets <&> (^. rgOption)) hiddenResults
+            (x:_) -> rgPickMainEventMap x & return
+        Menu.layout minWidth (groupsWidgets <&> rgOption) hiddenResults
             <&> (,) pickResultEventMap
 
 assignHoleEditCursor ::
