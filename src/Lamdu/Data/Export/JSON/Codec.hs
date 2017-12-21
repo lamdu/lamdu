@@ -15,7 +15,6 @@ import qualified Data.Aeson.Types as AesonTypes
 import qualified Data.ByteString.Base16 as Hex
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.ByteString.Lazy.Char8 as LBS8
-import           Data.Either.Combinators (swapEither)
 import qualified Data.HashMap.Strict as HashMap
 import qualified Data.Map as Map
 import qualified Data.Set as Set
@@ -162,6 +161,8 @@ jsum parsers =
     parsers <&> toEither
     <&> swapEither & sequence <&> unlines & swapEither
     & fromEither
+    where
+        swapEither = either Right Left
 
 jsum' :: [Exhaustive a] -> Exhaustive a
 jsum' = writerT . jsum . map runWriterT
