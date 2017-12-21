@@ -19,7 +19,7 @@ import qualified Lamdu.CharClassification as Chars
 import qualified Lamdu.Config as Config
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.State as HoleEditState
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds as HoleWidgetIds
-import           Lamdu.GUI.ExpressionGui.HolePicker (HolePicker, withHolePicker, HasSearchStringRemainder(..))
+import           Lamdu.GUI.ExpressionGui.HolePicker (HolePicker, withHolePicker, HasSearchStringRemainder)
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui as ExprGui
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
@@ -156,12 +156,12 @@ actionsEventMap exprInfo holePicker =
 -- | Create the hole search term for new apply operators,
 -- given the extra search term chars from another hole.
 applyOperatorSearchTerm :: Prec -> Text -> EventMap Text
-applyOperatorSearchTerm minOpPrec extraChars =
+applyOperatorSearchTerm minOpPrec searchStrRemainder =
     E.charGroup Nothing (E.Doc ["Edit", "Apply operator"])
-    ops (Text.singleton <&> (extraChars <>))
+    ops (Text.singleton <&> (searchStrRemainder <>))
     where
         ops =
-            case Text.uncons extraChars of
+            case Text.uncons searchStrRemainder of
             Nothing -> filter acceptOp Chars.operator
             Just (firstOp, _)
                 | acceptOp firstOp -> Chars.operator
@@ -179,8 +179,8 @@ applyOperatorEventMap exprInfo holePicker =
     & action
     & withHolePicker holePicker
     where
-        action wrap extraChars =
-            applyOperatorSearchTerm (exprInfoMinOpPrec exprInfo) extraChars
+        action wrap searchStrRemainder =
+            applyOperatorSearchTerm (exprInfoMinOpPrec exprInfo) searchStrRemainder
             <&> HoleEditState.setHoleStateAndJump
             <&> (wrap <&>)
 

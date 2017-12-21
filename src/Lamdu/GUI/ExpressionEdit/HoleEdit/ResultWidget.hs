@@ -65,18 +65,18 @@ makeHoleResultWidget pl resultId holeResult =
                 _ ->
                     simplePickRes (mappend Config.holePickResultKeys Config.holePickAndMoveToNextHoleKeys holeConfig)
                 <&> pickBefore
-        extraChars <-
+        searchStringRemainder <-
             if Lens.has literalNum holeResultConverted || Lens.has (wrappedExpr . literalNum) holeResultConverted
             then
                 HoleState.readSearchTerm (HoleWidgetIds.make (pl ^. Sugar.plEntityId))
                 <&> \x -> if "." `Text.isSuffixOf` x then "." else ""
             else return mempty
         isSelected <- GuiState.isSubCursor ?? resultId
-        when isSelected (HolePicker.setResultPicker extraChars (holeResult ^. Sugar.holeResultPick))
+        when isSelected (HolePicker.setResultPicker searchStringRemainder (holeResult ^. Sugar.holeResultPick))
         holeResultConverted
             & postProcessSugar (pl ^. Sugar.plData . ExprGui.plMinOpPrec)
             & ExprGuiM.makeSubexpression
-            & Reader.local (HolePicker.searchStringRemainder .~ extraChars)
+            & Reader.local (HolePicker.searchStringRemainder .~ searchStringRemainder)
             <&> Widget.enterResultCursor .~ resultId
             <&> E.eventMap %~ removeUnwanted config
             <&> E.eventMap . E.emDocs . E.docStrs . Lens._last %~ (<> " (On picked result)")
