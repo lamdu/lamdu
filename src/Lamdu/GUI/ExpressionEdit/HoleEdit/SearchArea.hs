@@ -95,10 +95,7 @@ make hole pl widgetIds =
                 (if isActive then Widget.setFocused else id)
                 closedSearchTermGui
                 & M.weakerEvents
-                  ( if isActive
-                    then searchTermEventMap
-                    else
-                      -- Editing search term of a closed hole opens it:
+                  (-- Editing search term of a closed hole opens it:
                       searchTermEventMap <&> Lens.mapped . GuiState.uCursor %~
                       mappend (Monoid.Last (Just (hidOpen widgetIds)))
                   )
