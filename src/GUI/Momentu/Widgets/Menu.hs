@@ -7,7 +7,7 @@ module GUI.Momentu.Widgets.Menu
     , optionWidgets
     , Placement(..), HasMoreOptions(..)
     , make, makeHoverBeside
-    , hoverOptions
+    , makeHovered
     ) where
 
 import qualified Control.Lens as Lens
@@ -253,3 +253,20 @@ hoverOptions =
         , leftAbove
         ]
     <&> (^. Align.value)
+
+makeHovered ::
+    ( Applicative f, State.HasCursor env, HasStyle env
+    , TextView.HasStyle env, Element.HasAnimIdPrefix env
+    , Hover.HasStyle env, MonadReader env m
+    ) =>
+    View -> [Option m (f State.Update)] -> HasMoreOptions ->
+    m (Placement -> Widget (f State.Update) -> Widget (f State.Update))
+makeHovered annotation options hasHiddenResults =
+    do
+        mkHoverOptions <- hoverOptions
+        menu <- make (annotation ^. Element.width) options hasHiddenResults
+        pure $
+            \placement term ->
+            let a = Hover.anchor term
+            in  a
+                & Hover.hoverInPlaceOf (mkHoverOptions placement annotation menu a)
