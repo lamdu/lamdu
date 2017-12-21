@@ -10,13 +10,16 @@ import qualified Control.Monad.Reader as Reader
 import           Control.Monad.Transaction (MonadTransaction(..))
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Text as Text
-import           GUI.Momentu (Widget, WithTextPos(..))
+import           GUI.Momentu.Align (WithTextPos)
 import qualified GUI.Momentu.Align as Align
+import           GUI.Momentu.Animation.Id (AnimId)
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Glue ((/-/))
 import qualified GUI.Momentu.State as GuiState
+import           GUI.Momentu.View (View)
+import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widget.Id as WidgetId
 import qualified GUI.Momentu.Widgets.Menu as Menu
@@ -111,6 +114,16 @@ assignHoleEditCursor widgetIds shownMainResultsIds allShownResultIds action =
         searchTermId = hidOpenSearchTerm widgetIds
         sub x = GuiState.isSubCursor ?? x
 
+makeInferredTypeAnnotation ::
+    ( MonadReader env m, Theme.HasTheme env, Element.HasAnimIdPrefix env
+    , MonadTransaction n0 m, Spacer.HasStdSpacing env
+    ) => Sugar.Payload m0 a0 -> AnimId -> m View
+makeInferredTypeAnnotation pl animId =
+    Annotation.addAnnotationBackground
+    <*> TypeView.make (pl ^. Sugar.plAnnotation . Sugar.aInferredType)
+    <&> (^. Align.tValue)
+    & Reader.local (Element.animIdPrefix .~ animId)
+
 makeUnderCursorAssignment ::
     Monad m =>
     EventMap (T m GuiState.Update) -> [ResultsList m] -> Menu.HasMoreOptions ->
@@ -123,12 +136,7 @@ makeUnderCursorAssignment searchTermEventMap shownResultsLists hasHiddenResults 
         -- We make our own type view here instead of stdWrap, because
         -- we want to synchronize the active BG width with the
         -- inferred type width
-        typeView <-
-            Annotation.addAnnotationBackground
-            <*> TypeView.make (pl ^. Sugar.plAnnotation . Sugar.aInferredType)
-            <&> (^. Align.tValue)
-            & Reader.local (Element.animIdPrefix .~ holeAnimId)
-
+        typeView <- makeInferredTypeAnnotation pl holeAnimId
         groupsWidgets <- traverse (makeResultGroup pl) shownResultsLists
 
         vspace <- Annotation.annotationSpacer
