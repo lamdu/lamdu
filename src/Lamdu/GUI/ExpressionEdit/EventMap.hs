@@ -137,7 +137,7 @@ actionsEventMap ::
     ExprInfo f -> HolePicker f ->
     ExprGuiM m (EventMap (T f GuiState.Update))
 actionsEventMap exprInfo holePicker =
-    sequence
+    mconcat
     [ case exprInfoActions exprInfo ^. Sugar.wrap of
       Sugar.WrapAction act -> wrapEventMap act
       _ -> return mempty
@@ -145,18 +145,13 @@ actionsEventMap exprInfo holePicker =
     , if exprInfoIsHoleResult exprInfo
         then return mempty
         else
-            sequence
-            [ extractEventMap (exprInfoActions exprInfo)
-            , do
-                replaceKeys <- Lens.view Config.config <&> Config.replaceParentKeys
-                exprInfoActions exprInfo ^. Sugar.mReplaceParent
-                    <&> void
-                    & maybe mempty
-                        (Widget.keysEventMap replaceKeys (E.Doc ["Edit", "Replace parent"]))
-                    & return
-            ] <&> mconcat
+            extractEventMap (exprInfoActions exprInfo)
+            <> (Lens.view Config.config <&> Config.replaceParentKeys <&> mkReplaceParent)
     ]
-    <&> mconcat
+    where
+        mkReplaceParent replaceKeys =
+            exprInfoActions exprInfo ^. Sugar.mReplaceParent <&> void
+            & maybe mempty (Widget.keysEventMap replaceKeys (E.Doc ["Edit", "Replace parent"]))
 
 -- | Create the hole search term for new apply operators,
 -- given the extra search term chars from another hole.
