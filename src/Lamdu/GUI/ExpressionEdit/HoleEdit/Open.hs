@@ -21,7 +21,6 @@ import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widget.Id as WidgetId
 import qualified GUI.Momentu.Widgets.Menu as Menu
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
-import qualified Lamdu.Config as Config
 import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.EventMap as EventMap
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.ResultGroups (ResultsList(..), Result(..))
@@ -85,15 +84,6 @@ makeResultGroup pl results =
     , rgPickMainEventMap = pickMain
     }
 
-emptyPickEventMap ::
-    (Monad m, Applicative f) => ExprGuiM m (EventMap (f GuiState.Update))
-emptyPickEventMap =
-    Lens.view Config.config <&> Config.hole <&> keys <&> mkEventMap
-    where
-        keys c = Config.holePickResultKeys c ++ Config.holePickAndMoveToNextHoleKeys c
-        mkEventMap k =
-            E.keysEventMap k (E.Doc ["Edit", "Result", "Pick (N/A)"]) (pure ())
-
 assignHoleEditCursor ::
     Monad m =>
     WidgetIds -> [Widget.Id] -> [Widget.Id] -> ExprGuiM m a -> ExprGuiM m a
@@ -145,7 +135,7 @@ makeUnderCursorAssignment searchTermEventMap shownResultsLists hasHiddenResults 
         literalEventMap <- EventMap.makeLiteralEventMap holeKind widgetIds
         pickFirstResult <-
             case groupsWidgets of
-            [] -> emptyPickEventMap
+            [] -> ResultWidget.emptyPickEventMap
             (x:_) -> rgPickMainEventMap x & return
         let options =
                 groupsWidgets <&> rgOption

@@ -2,6 +2,7 @@
 
 module Lamdu.GUI.ExpressionEdit.HoleEdit.ResultWidget
     ( make
+    , emptyPickEventMap
     ) where
 
 import qualified Control.Lens as Lens
@@ -96,6 +97,15 @@ applyResultLayout fGui =
         { Responsive._layoutMode = Responsive.LayoutWide
         , Responsive._layoutContext = Responsive.LayoutClear
         }
+
+emptyPickEventMap ::
+    (Monad m, Applicative f) => ExprGuiM m (EventMap (f GuiState.Update))
+emptyPickEventMap =
+    Lens.view Config.config <&> Config.hole <&> keys <&> mkEventMap
+    where
+        keys c = Config.holePickResultKeys c ++ Config.holePickAndMoveToNextHoleKeys c
+        mkEventMap k =
+            E.keysEventMap k (E.Doc ["Edit", "Result", "Pick (N/A)"]) (pure ())
 
 make ::
     Monad m =>
