@@ -6,18 +6,19 @@ module GUI.Momentu.Widgets.Menu
     , Option(..), oId, oWidget, oSubmenuWidgets
     , Placement(..), HasMoreOptions(..)
     , make, makeHoverBeside
+    , hoverOptions
     ) where
 
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
 import           Data.Aeson.TH (deriveJSON)
 import           Data.Aeson.Types (defaultOptions)
-import           GUI.Momentu.Align (WithTextPos)
+import           GUI.Momentu.Align (WithTextPos, Aligned(..))
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Draw as Draw
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.EventMap as E
-import           GUI.Momentu.Glue ((/|/))
+import           GUI.Momentu.Glue ((/|/), (/-/))
 import qualified GUI.Momentu.Glue as Glue
 import qualified GUI.Momentu.Hover as Hover
 import qualified GUI.Momentu.MetaKey as MetaKey
@@ -54,10 +55,6 @@ data Option f a = Option
       _oSubmenuWidgets :: !(Submenu f a)
     }
 Lens.makeLenses ''Option
-
--- | You may want to limit the placement of hovering pop-up menus,
--- so that they don't cover other ui elements.
-data Placement = Above | Below | AnyPlace
 
 data HasMoreOptions = MoreOptionsAvailable | NoMoreOptions
 
@@ -192,3 +189,61 @@ makeHoverBeside ::
 makeHoverBeside minWidth options hiddenResults baseWidget =
     (Hover.hoverBesideAxis ?? Hover.Vertical ?? baseWidget)
     <*> make minWidth options hiddenResults
+
+-- | You may want to limit the placement of hovering pop-up menus,
+-- so that they don't cover other ui elements.
+data Placement = Above | Below | AnyPlace
+
+hoverOptions ::
+    ( MonadReader env m, Hover.HasStyle env, Element.HasAnimIdPrefix env
+    , Functor f
+    ) =>
+    m ( Placement ->
+        View ->
+        Hover.Ordered (Widget (f State.Update)) ->
+        Hover.AnchoredWidget (f State.Update) ->
+        [Hover.AnchoredWidget (f State.Update)]
+      )
+hoverOptions =
+    Hover.hover <&>
+    \hover pos annotation results searchTerm ->
+    let resultsAbove alignment =
+            results ^. Hover.backward & hover & Aligned alignment
+        annotatedTerm alignment = searchTerm & Widget.widget %~ (/-/ annotation) & Aligned alignment
+        aboveRight = resultsAbove 0 /-/ annotatedTerm 0
+        aboveLeft =
+            resultsAbove 1
+            /-/ annotatedTerm 1
+        annotatedResultsBelow = (results ^. Hover.forward) /-/ annotation & hover
+        resultsBelow = results ^. Hover.forward & hover
+        belowRight =
+            Aligned 0 searchTerm
+            /-/
+            Aligned 0 annotatedResultsBelow
+        belowLeft =
+            Aligned 1 searchTerm
+            /-/
+            Aligned 1 annotatedResultsBelow
+        centerRight = annotatedTerm 0.5 /|/ Aligned 0.5 resultsBelow
+        rightAbove = annotatedTerm 1 /|/ resultsAbove 1
+        leftAbove = resultsAbove 1 /|/ annotatedTerm 1
+    in
+    case pos of
+    Above ->
+        [ aboveRight
+        , aboveLeft
+        ]
+    AnyPlace ->
+        [ belowRight
+        , aboveRight
+        , belowLeft
+        , aboveLeft
+        , centerRight
+        ]
+    Below ->
+        [ belowRight
+        , belowLeft
+        , rightAbove
+        , leftAbove
+        ]
+    <&> (^. Align.value)

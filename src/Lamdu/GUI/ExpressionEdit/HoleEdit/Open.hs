@@ -10,12 +10,12 @@ import qualified Control.Monad.Reader as Reader
 import           Control.Monad.Transaction (MonadTransaction(..))
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Text as Text
-import           GUI.Momentu (Widget, View, Aligned(..), WithTextPos(..))
+import           GUI.Momentu (Widget, WithTextPos(..))
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
-import           GUI.Momentu.Glue ((/-/), (/|/))
+import           GUI.Momentu.Glue ((/-/))
 import qualified GUI.Momentu.Hover as Hover
 import qualified GUI.Momentu.State as GuiState
 import qualified GUI.Momentu.Widget as Widget
@@ -140,58 +140,6 @@ assignHoleEditCursor widgetIds searchTerm shownMainResultsIds allShownResultIds 
                   searchTermId
             | otherwise = head (shownMainResultsIds ++ [searchTermId])
 
-resultsHoverOptions ::
-    ( MonadReader env m, Hover.HasStyle env, Element.HasAnimIdPrefix env
-    , Functor f
-    ) =>
-    m
-    (Menu.Placement ->
-     View ->
-     Hover.Ordered (Widget (f GuiState.Update)) ->
-     Hover.AnchoredWidget (f GuiState.Update) ->
-     [Hover.AnchoredWidget (f GuiState.Update)])
-resultsHoverOptions =
-    Hover.hover <&> \hover pos annotation results searchTerm ->
-    let resultsAbove alignment =
-            results ^. Hover.backward & hover & Aligned alignment
-        annotatedTerm alignment = searchTerm & Widget.widget %~ (/-/ annotation) & Aligned alignment
-        aboveRight = resultsAbove 0 /-/ annotatedTerm 0
-        aboveLeft =
-            resultsAbove 1
-            /-/ annotatedTerm 1
-        annotatedResultsBelow = (results ^. Hover.forward) /-/ annotation & hover
-        resultsBelow = results ^. Hover.forward & hover
-        belowRight =
-            Aligned 0 searchTerm
-            /-/
-            Aligned 0 annotatedResultsBelow
-        belowLeft =
-            Aligned 1 searchTerm
-            /-/
-            Aligned 1 annotatedResultsBelow
-        centerRight = annotatedTerm 0.5 /|/ Aligned 0.5 resultsBelow
-        rightAbove = annotatedTerm 1 /|/ resultsAbove 1
-        leftAbove = resultsAbove 1 /|/ annotatedTerm 1
-    in  case pos of
-        Menu.Above ->
-            [ aboveRight
-            , aboveLeft
-            ]
-        Menu.AnyPlace ->
-            [ belowRight
-            , aboveRight
-            , belowLeft
-            , aboveLeft
-            , centerRight
-            ]
-        Menu.Below ->
-            [ belowRight
-            , belowLeft
-            , rightAbove
-            , leftAbove
-            ]
-        <&> (^. Align.value)
-
 makeUnderCursorAssignment ::
     Monad m =>
     EventMap (T m GuiState.Update) -> [ResultsList m] -> Menu.HasMoreOptions ->
@@ -220,7 +168,7 @@ makeUnderCursorAssignment searchTermEventMap shownResultsLists hasHiddenResults 
         searchTermWidget <-
             SearchTerm.make widgetIds holeKind
             <&> Align.tValue %~ Hover.anchor . E.weakerEvents (pickFirstResult <> literalEventMap)
-        mkOptions <- resultsHoverOptions
+        mkOptions <- Menu.hoverOptions
         return $
             \placement ->
             searchTermWidget
