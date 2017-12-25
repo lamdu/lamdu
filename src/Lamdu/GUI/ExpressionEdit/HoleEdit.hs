@@ -30,11 +30,6 @@ import           Lamdu.Prelude
 
 type T = Transaction
 
-assignHoleCursor ::
-    Monad m => WidgetIds -> ExprGuiM m a -> ExprGuiM m a
-assignHoleCursor widgetIds =
-    GuiState.assignCursor (hidHole widgetIds) (hidOpen widgetIds)
-
 makeHoleWithArgument ::
     (Functor f, Monad m) =>
     (Menu.Placement -> ExpressionGui f) -> Sugar.Payload (T m) ExprGui.Payload -> ExpressionGui f ->
@@ -83,7 +78,7 @@ make hole pl =
                 Argument.make (hidOpenSearchTerm widgetIds) arg
                 >>= makeHoleWithArgument searchAreaGui pl
             Sugar.LeafHole{} -> return (searchAreaGui Menu.AnyPlace)
-    & assignHoleCursor widgetIds
+    & GuiState.assignCursor (hidHole widgetIds) (hidOpen widgetIds)
     & addActions options pl
     where
         widgetIds = HoleWidgetIds.make (pl ^. Sugar.plEntityId)
