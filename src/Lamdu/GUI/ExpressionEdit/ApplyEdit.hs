@@ -21,7 +21,6 @@ import qualified GUI.Momentu.Responsive.Options as Options
 import qualified GUI.Momentu.State as GuiState
 import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
-import           GUI.Momentu.Widgets.Menu.Picker (Picker(..))
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified Lamdu.GUI.ExpressionEdit.BinderEdit as BinderEdit
 import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
@@ -186,7 +185,7 @@ mkRelayedArgs nearestHoles args =
                     , exprInfoNearestHoles = nearestHoles
                     , exprInfoIsHoleResult = False
                     , exprInfoMinOpPrec = 0
-                    } NoPick
+                    } mempty
                 GetVarEdit.makeGetParam (arg ^. Sugar.raValue) (WidgetIds.fromEntityId (arg ^. Sugar.raId))
                     <&> Responsive.fromWithTextPos
                     <&> E.weakerEvents eventMap

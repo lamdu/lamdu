@@ -3,6 +3,7 @@ module Lamdu.GUI.ExpressionGui.Monad
     ( ExprGuiM
     , StoredEntityIds(..)
     , withLocalUnderline
+    , withLocalSearchStringRemainer
     --
     , makeSubexpression
     , advanceDepth, resetDepth
@@ -36,7 +37,7 @@ import qualified GUI.Momentu.State as GuiState
 import           GUI.Momentu.View (View)
 import           GUI.Momentu.Widget.Id (toAnimId)
 import qualified GUI.Momentu.Widgets.Menu as Menu
-import           GUI.Momentu.Widgets.Menu.Picker (Picker, HasSearchStringRemainder(..), HasPickers(..))
+import           GUI.Momentu.Widgets.Menu.Picker (Picker(..), HasPickers(..))
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
 import qualified GUI.Momentu.Widgets.TextView as TextView
@@ -104,7 +105,9 @@ instance Menu.HasStyle (Askable m) where style = aTheme . Menu.style
 instance Hover.HasStyle (Askable m) where style = aTheme . Hover.style
 instance HasStyle (Askable m) where style = aStyle
 instance HasSettings (Askable m) where settings = aSettings
-instance HasSearchStringRemainder (Askable m) where searchStringRemainder = aSearchStringRemainder
+
+withLocalSearchStringRemainer :: Monad m => Text -> ExprGuiM m a -> ExprGuiM m a
+withLocalSearchStringRemainer = Reader.local . (aSearchStringRemainder .~)
 
 withLocalUnderline ::
     (MonadReader env m, TextView.HasStyle env) => TextView.Underline -> m a -> m a
@@ -182,7 +185,11 @@ run makeSubexpr theCodeAnchors (ExprGuiM action) =
 
 instance Monad m => HasPickers (ExprGuiM m) where
     type PickerM (ExprGuiM m) = T m
-    listenPicker = exprGuiM %~ RWS.listen
+    listenPicker action =
+        do
+            (result, picker) <- action & exprGuiM %~ RWS.listen
+            remainder <- Lens.view aSearchStringRemainder
+            pure (result, picker <> NoPick remainder)
 
 readMScopeId :: Monad m => ExprGuiM m (CurAndPrev (Maybe ScopeId))
 readMScopeId = Lens.view aMScopeId

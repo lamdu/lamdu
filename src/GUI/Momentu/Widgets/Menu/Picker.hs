@@ -11,20 +11,18 @@
 module GUI.Momentu.Widgets.Menu.Picker
     ( Picker(..), withPicker, tellPicker
     , HasPickers(..)
-    , HasSearchStringRemainder(..)
     ) where
 
 import qualified Control.Lens as Lens
 import           Control.Monad.Writer (MonadWriter)
 import qualified Control.Monad.Writer as Writer
 import qualified Data.Char as Char
+import qualified Data.Text as Text
 import qualified Data.Text.Lens as TextLens
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
 
 import           Lamdu.Prelude
-
-class HasSearchStringRemainder env where searchStringRemainder :: Lens' env Text
 
 class HasPickers m where
     type PickerM m :: * -> *
@@ -36,24 +34,34 @@ data Info m = Info
     }
 
 data Picker m
-    = NoPick
+    = -- Search string remainder,
+      -- For when in a result
+      NoPick Text
     | Pick (Info m)
 
 instance Monoid (Picker m) where
-    mempty = NoPick
-    mappend NoPick x = x
-    mappend x NoPick = x
-    mappend _ _ = error "Two Pick's told, are we inside 2 holes simultaneously?"
+    mempty = NoPick ""
+    mappend (NoPick x) (NoPick y)
+        | Text.null x = NoPick y
+        | Text.null y = NoPick x
+        | otherwise = error "Two picks!"
+    mappend (NoPick x) (Pick y)
+        | Text.null x = Pick y
+        | otherwise = error "Two Picks"
+    mappend (Pick x) (NoPick y)
+        | Text.null y = Pick x
+        | otherwise = error "Two Picks"
+    mappend Pick{} Pick{} = error "Two Pick's told, are we inside 2 holes simultaneously?"
 
-withPicker ::
-    (MonadReader env m, HasSearchStringRemainder env, Monad f) =>
-    Picker f -> (Text -> EventMap (f a)) -> m (EventMap (f a))
-withPicker NoPick mk = Lens.view searchStringRemainder <&> mk
+actionText :: Lens.Traversal' (EventMap a) E.Subtitle
+actionText = E.emDocs . E.docStrs . Lens.reversed . Lens.element 0
+
+withPicker :: Monad f => Picker f -> (Text -> EventMap (f a)) -> EventMap (f a)
+withPicker (NoPick x) mk = mk x
 withPicker (Pick h) mk =
     mk (iSearchStringRemainder h)
-    & E.emDocs . E.docStrs . Lens.reversed . Lens.element 0 %~ f
+    & actionText %~ f
     <&> (iAction h >>)
-    & pure
     where
         f x =
             x

@@ -6,7 +6,6 @@ module Lamdu.GUI.ExpressionEdit.HoleEdit.ResultWidget
     ) where
 
 import qualified Control.Lens as Lens
-import qualified Control.Monad.Reader as Reader
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Text as Text
 import           GUI.Momentu (Widget, WithTextPos(..))
@@ -139,7 +138,7 @@ make pl resultId holeResult =
         holeResultConverted
             & postProcessSugar (pl ^. Sugar.plData . ExprGui.plMinOpPrec)
             & ExprGuiM.makeSubexpression
-            & Reader.local (Picker.searchStringRemainder .~ searchStringRemainder)
+            & ExprGuiM.withLocalSearchStringRemainer searchStringRemainder
             <&> Widget.enterResultCursor .~ resultId
             <&> E.eventMap %~ removeUnwanted config
             <&> E.eventMap . E.emDocs . E.docStrs . Lens._last %~ (<> " (On picked result)")

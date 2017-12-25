@@ -104,14 +104,14 @@ make (Sugar.Case mArg (Sugar.Composite alts caseTail addAlt)) pl =
                     Sugar.OpenComposite actions rest ->
                         makeOpenCase actions rest (Widget.toAnimId myId) altsGui
             & listenPicker
-        addAltEventMap <-
-            addAlt
-            <&> (^. Sugar.cairNewTag . Sugar.tagInstance)
-            <&> WidgetIds.fromEntityId
-            <&> WidgetIds.tagHoleId
-            & E.keysEventMapMovesCursor (Config.caseAddAltKeys config)
-                (doc "Add Alt")
-            & const & withPicker resultPicker
+        let addAltEventMap =
+                addAlt
+                <&> (^. Sugar.cairNewTag . Sugar.tagInstance)
+                <&> WidgetIds.fromEntityId
+                <&> WidgetIds.tagHoleId
+                & E.keysEventMapMovesCursor (Config.caseAddAltKeys config)
+                    (doc "Add Alt")
+                & const & withPicker resultPicker
         parentDelegator (WidgetIds.fromExprPayload pl)
             <*> (Styled.addValFrame <*> (Responsive.vboxSpaced ?? [header, altsGui]))
             <&> E.weakerEvents addAltEventMap

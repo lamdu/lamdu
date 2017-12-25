@@ -15,7 +15,7 @@ import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.State as GuiState
 import qualified GUI.Momentu.Widget as Widget
-import           GUI.Momentu.Widgets.Menu.Picker (Picker, withPicker, HasSearchStringRemainder)
+import           GUI.Momentu.Widgets.Menu.Picker (Picker, withPicker)
 import qualified Lamdu.CharClassification as Chars
 import qualified Lamdu.Config as Config
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.State as HoleEditState
@@ -61,15 +61,13 @@ exprInfoFromPl pl =
     }
 
 make ::
-    ( MonadReader env m, Monad f, Config.HasConfig env, HasSearchStringRemainder env, GuiState.HasCursor env
-    ) =>
+    (MonadReader env m, Monad f, Config.HasConfig env, GuiState.HasCursor env) =>
     Options -> Sugar.Payload (T f) ExprGui.Payload -> Picker (T f) ->
     m (EventMap (T f GuiState.Update))
 make options = makeWith options . exprInfoFromPl
 
 makeWith ::
-    ( MonadReader env m, Monad f, Config.HasConfig env, HasSearchStringRemainder env, GuiState.HasCursor env
-    ) =>
+    (MonadReader env m, Monad f, Config.HasConfig env, GuiState.HasCursor env) =>
     Options -> ExprInfo f -> Picker (T f) ->
     m (EventMap (T f GuiState.Update))
 makeWith options exprInfo picker =
@@ -144,8 +142,7 @@ maybeReplaceEventMap exprInfo =
             else return mempty
 
 actionsEventMap ::
-    ( MonadReader env m, Monad f, Config.HasConfig env, HasSearchStringRemainder env
-    ) =>
+    (MonadReader env m, Monad f, Config.HasConfig env) =>
     Options -> ExprInfo f -> Picker (T f) ->
     m (EventMap (T f GuiState.Update))
 actionsEventMap options exprInfo picker =
@@ -153,13 +150,13 @@ actionsEventMap options exprInfo picker =
     [ case exprInfoActions exprInfo ^. Sugar.wrap of
       Sugar.WrapAction act -> wrapEventMap act
       _ -> return mempty
-    , applyOperatorEventMap options exprInfo picker
+    , applyOperatorEventMap options exprInfo picker & pure
     , if exprInfoIsHoleResult exprInfo
         then return mempty
         else
             sequence
             [ extractEventMap (exprInfoActions exprInfo)
-            , (Lens.view Config.config <&> Config.replaceParentKeys <&> mkReplaceParent)
+            , Lens.view Config.config <&> Config.replaceParentKeys <&> mkReplaceParent
             ] <&> mconcat
     ] <&> mconcat
     where
@@ -183,8 +180,7 @@ applyOperatorSearchTerm minOpPrec searchStrRemainder =
         acceptOp = (>= minOpPrec) . precedence
 
 applyOperatorEventMap ::
-    (MonadReader env m, HasSearchStringRemainder env, Monad f) =>
-    Options -> ExprInfo f -> Picker (T f) -> m (EventMap (T f GuiState.Update))
+    Monad f => Options -> ExprInfo f -> Picker (T f) -> EventMap (T f GuiState.Update)
 applyOperatorEventMap options exprInfo picker =
     case exprInfoActions exprInfo ^. Sugar.wrap of
     Sugar.WrapAction wrap ->

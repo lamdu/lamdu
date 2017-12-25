@@ -323,7 +323,7 @@ make pMode lhsEventMap name color binder myId =
         rhsJumperEquals <-
             jumpToRHS bodyId
             <&> const
-            >>= withPicker picker
+            <&> withPicker picker
         mPresentationEdit <-
             pMode & sequenceA & transaction
             >>= traverse
