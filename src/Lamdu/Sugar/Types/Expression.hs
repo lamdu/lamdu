@@ -50,8 +50,8 @@ import           Lamdu.Sugar.Types.Hole (Hole, Literal)
 import           Lamdu.Prelude
 
 data WrapAction m
-    = WrapperAlready EntityId -- I'm an apply-of-hole, (UUID,EntityId of hole), no need to wrap
-    | WrappedAlready EntityId -- I'm an arg of apply-of-hole (UUID,EntityId of hole), no need to wrap
+    = WrapperAlready EntityId -- I'm an apply-of-hole, no need to wrap
+    | WrappedAlready EntityId -- I'm an arg of apply-of-hole, no need to wrap
     | WrapAction (m EntityId) -- Wrap me!
 
 data Delete m
