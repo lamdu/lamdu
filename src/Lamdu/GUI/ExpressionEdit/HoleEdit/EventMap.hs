@@ -21,13 +21,10 @@ import qualified GUI.Momentu.State as GuiState
 import qualified Lamdu.CharClassification as Chars
 import           Lamdu.Config (HasConfig)
 import qualified Lamdu.Config as Config
-import           Lamdu.GUI.ExpressionEdit.EventMap (applyOperatorSearchTerm)
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.State as HoleState
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds (WidgetIds(..))
-import           Lamdu.GUI.ExpressionGui.HolePicker (HasSearchStringRemainder(..))
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
-import           Lamdu.Precedence (Prec)
 import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
@@ -35,9 +32,9 @@ import           Lamdu.Prelude
 type T = Transaction.Transaction
 
 searchTermEditEventMap ::
-    (MonadReader env m, GuiState.HasState env, HasSearchStringRemainder env, HasConfig env) =>
-    Prec -> WidgetIds -> m (Sugar.HoleKind f e0 e1 -> EventMap GuiState.Update)
-searchTermEditEventMap minOpPrec widgetIds =
+    (MonadReader env m, GuiState.HasState env, HasConfig env) =>
+    WidgetIds -> m (Sugar.HoleKind f e0 e1 -> EventMap GuiState.Update)
+searchTermEditEventMap widgetIds =
     do
         searchTerm <- HoleState.readSearchTerm widgetIds
         let appendCharEventMap =
@@ -51,13 +48,9 @@ searchTermEditEventMap minOpPrec widgetIds =
                       Text.init searchTerm
                       & E.keyPress (ModKey mempty MetaKey.Key'Backspace)
                       (E.Doc ["Edit", "Search Term", "Delete backwards"])
-        remainder <- Lens.view searchStringRemainder
-        let initialOpEventMap
-                | Text.null searchTerm = applyOperatorSearchTerm minOpPrec remainder
-                | otherwise = mempty
         disallow <- disallowCharsFromSearchTerm
         pure $ \holeKind ->
-            appendCharEventMap <> deleteCharEventMap <> initialOpEventMap
+            appendCharEventMap <> deleteCharEventMap
             & disallow holeKind id
             <&> GuiState.updateWidgetState (hidOpen widgetIds)
     where

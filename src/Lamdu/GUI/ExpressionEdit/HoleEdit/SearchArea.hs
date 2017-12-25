@@ -75,7 +75,7 @@ make hole pl =
         isActive <- HoleWidgetIds.isActive widgetIds
         searchTermEventMap <-
             HoleEventMap.makeLiteralEventMap holeKind widgetIds
-            <> (HoleEventMap.searchTermEditEventMap minOpPrec widgetIds
+            <> (HoleEventMap.searchTermEditEventMap widgetIds
                 ?? holeKind <&> fmap pure)
         let inPlaceOfClosed open =
                 closedSearchTermGui & M.widget %~
@@ -101,6 +101,5 @@ make hole pl =
                 & const & pure
     where
         widgetIds = pl ^. Sugar.plEntityId & HoleWidgetIds.make
-        minOpPrec = pl ^. Sugar.plData . ExprGui.plMinOpPrec
         isAHoleInHole = ExprGui.isHoleResult pl
         holeKind = hole ^. Sugar.holeKind
