@@ -20,7 +20,6 @@ import qualified Lamdu.CharClassification as Chars
 import qualified Lamdu.Config as Config
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.State as HoleEditState
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds as HoleWidgetIds
-import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui as ExprGui
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Precedence (Prec, precedence)
@@ -62,15 +61,17 @@ exprInfoFromPl pl =
     }
 
 make ::
-    (Monad m, Monad f) =>
+    ( MonadReader env m, Monad f, Config.HasConfig env, HasSearchStringRemainder env, GuiState.HasCursor env
+    ) =>
     Options -> Sugar.Payload (T f) ExprGui.Payload -> Picker (T f) ->
-    ExprGuiM m (EventMap (T f GuiState.Update))
+    m (EventMap (T f GuiState.Update))
 make options = makeWith options . exprInfoFromPl
 
 makeWith ::
-    (Monad m, Monad f) =>
+    ( MonadReader env m, Monad f, Config.HasConfig env, HasSearchStringRemainder env, GuiState.HasCursor env
+    ) =>
     Options -> ExprInfo f -> Picker (T f) ->
-    ExprGuiM m (EventMap (T f GuiState.Update))
+    m (EventMap (T f GuiState.Update))
 makeWith options exprInfo picker =
     mconcat <$> sequenceA
     [ actionsEventMap options exprInfo picker
@@ -143,11 +144,12 @@ maybeReplaceEventMap exprInfo =
             else return mempty
 
 actionsEventMap ::
-    (Monad m, Monad f) =>
+    ( MonadReader env m, Monad f, Config.HasConfig env, HasSearchStringRemainder env
+    ) =>
     Options -> ExprInfo f -> Picker (T f) ->
-    ExprGuiM m (EventMap (T f GuiState.Update))
+    m (EventMap (T f GuiState.Update))
 actionsEventMap options exprInfo picker =
-    mconcat
+    sequence
     [ case exprInfoActions exprInfo ^. Sugar.wrap of
       Sugar.WrapAction act -> wrapEventMap act
       _ -> return mempty
@@ -155,9 +157,11 @@ actionsEventMap options exprInfo picker =
     , if exprInfoIsHoleResult exprInfo
         then return mempty
         else
-            extractEventMap (exprInfoActions exprInfo)
-            <> (Lens.view Config.config <&> Config.replaceParentKeys <&> mkReplaceParent)
-    ]
+            sequence
+            [ extractEventMap (exprInfoActions exprInfo)
+            , (Lens.view Config.config <&> Config.replaceParentKeys <&> mkReplaceParent)
+            ] <&> mconcat
+    ] <&> mconcat
     where
         mkReplaceParent replaceKeys =
             exprInfoActions exprInfo ^. Sugar.mReplaceParent <&> void
