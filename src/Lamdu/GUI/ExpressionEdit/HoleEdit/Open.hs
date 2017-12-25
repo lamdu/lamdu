@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, FlexibleContexts, OverloadedStrings #-}
+{-# LANGUAGE NoImplicitPrelude, FlexibleContexts #-}
 -- | The search area (search term + results) of an open/active hole.
 
 module Lamdu.GUI.ExpressionEdit.HoleEdit.Open
