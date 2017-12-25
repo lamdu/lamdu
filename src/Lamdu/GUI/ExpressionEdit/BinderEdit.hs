@@ -46,6 +46,7 @@ import qualified Lamdu.GUI.ExpressionEdit.TagEdit as TagEdit
 import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExprGui
 import qualified Lamdu.GUI.ExpressionGui.Annotation as Annotation
+import           Lamdu.GUI.ExpressionGui.HolePicker (withHolePicker)
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import           Lamdu.GUI.ExpressionGui.Wrap (parentDelegator)
@@ -316,9 +317,13 @@ make ::
     ExprGuiM m (ExpressionGui m)
 make pMode lhsEventMap name color binder myId =
     do
-        Parts mParamsEdit mScopeEdit bodyEdit eventMap <-
+        (Parts mParamsEdit mScopeEdit bodyEdit eventMap, holePicker) <-
             makeParts ExprGui.UnlimitedFuncApply binder myId myId
-        rhsJumperEquals <- jumpToRHS bodyId
+            & ExprGuiM.listenResultPicker
+        rhsJumperEquals <-
+            jumpToRHS bodyId
+            <&> const
+            >>= withHolePicker holePicker
         mPresentationEdit <-
             pMode & sequenceA & transaction
             >>= traverse
