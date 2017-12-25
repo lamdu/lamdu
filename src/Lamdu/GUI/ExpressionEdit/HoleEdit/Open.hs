@@ -97,7 +97,7 @@ assignHoleEditCursor widgetIds shownMainResultsIds allShownResultIds action =
         let destId
                 | Text.null searchTerm =
                       -- When selecting a result like "fac HOLE", the
-                      -- cursor moves sto the hidOpen of the selected
+                      -- cursor moves to the hidOpen of the selected
                       -- HOLE, which has a null search term. We want to
                       -- move the cursor to the search term in this case,
                       -- otherwise further actions surprisingly apply to a
@@ -105,8 +105,14 @@ assignHoleEditCursor widgetIds shownMainResultsIds allShownResultIds action =
                       -- open-paren to the first result)
                       searchTermId
                 | otherwise = head (shownMainResultsIds ++ [searchTermId])
+
+        -- Results appear and disappear when the search-string changes,
+        -- but the cursor prefix signifies whether we should be on a result.
+        -- When that is the case but is not currently on any of the existing results
+        -- the cursor will be sent to the default one.
         shouldBeOnResult <- sub (hidResultsPrefix widgetIds)
         isOnResult <- traverse sub allShownResultIds <&> or
+
         action
             & if shouldBeOnResult && not isOnResult
             then Reader.local (GuiState.cursor .~ destId)
