@@ -13,6 +13,7 @@ import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.State as GuiState
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Menu as Menu
+import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.Argument as Argument
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.SearchArea as SearchArea
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds (WidgetIds(..))
@@ -83,6 +84,7 @@ make hole pl =
                 >>= makeHoleWithArgument searchAreaGui pl
             Sugar.LeafHole{} -> return (searchAreaGui Menu.AnyPlace)
     & assignHoleCursor widgetIds
-    & addActions pl
+    & addActions options pl
     where
         widgetIds = HoleWidgetIds.make (pl ^. Sugar.plEntityId)
+        options = ExprEventMap.defaultOptions { ExprEventMap.addOperatorDontWrap = True }

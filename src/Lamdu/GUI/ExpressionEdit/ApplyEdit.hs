@@ -179,7 +179,8 @@ mkRelayedArgs nearestHoles args =
         makeArgEdit arg =
             do
                 eventMap <-
-                    ExprEventMap.makeWith ExprEventMap.ExprInfo
+                    ExprEventMap.makeWith ExprEventMap.defaultOptions
+                    ExprEventMap.ExprInfo
                     { exprInfoActions = arg ^. Sugar.raActions
                     , exprInfoEntityId = arg ^. Sugar.raId
                     , exprInfoNearestHoles = nearestHoles

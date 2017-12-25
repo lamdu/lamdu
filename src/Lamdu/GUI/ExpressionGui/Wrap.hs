@@ -38,13 +38,14 @@ parentExprFDConfig config = FocusDelegator.Config
 
 addActions ::
     Monad m =>
+    ExprEventMap.Options ->
     Sugar.Payload (T m) ExprGui.Payload ->
     ExprGuiM m (ExpressionGui m) ->
     ExprGuiM m (ExpressionGui m)
-addActions pl act =
+addActions options pl act =
     do
         (res, holePicker) <- ExprGuiM.listenResultPicker act
-        exprEventMap <- ExprEventMap.make pl holePicker
+        exprEventMap <- ExprEventMap.make options pl holePicker
         E.weakerEvents exprEventMap res & pure
 
 stdWrap ::
@@ -52,7 +53,7 @@ stdWrap ::
     Sugar.Payload (T m) ExprGui.Payload ->
     ExprGuiM m (ExpressionGui m) ->
     ExprGuiM m (ExpressionGui m)
-stdWrap pl act = maybeAddAnnotationPl pl <*> addActions pl act
+stdWrap pl act = maybeAddAnnotationPl pl <*> addActions ExprEventMap.defaultOptions pl act
 
 parentDelegator ::
     ( MonadReader env m, Config.HasConfig env, GuiState.HasCursor env, Applicative f
