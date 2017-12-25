@@ -28,6 +28,7 @@ import           GUI.Momentu.View (View)
 import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Menu as Menu
+import           GUI.Momentu.Widgets.Menu.Picker (Picker, tellPicker)
 import           GUI.Momentu.Widgets.Spacer (HasStdSpacing)
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
@@ -37,8 +38,6 @@ import qualified Lamdu.Config as Config
 import           Lamdu.Config.Theme (HasTheme(..))
 import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
-import           Lamdu.GUI.ExpressionGui.HolePicker (HolePicker)
-import qualified Lamdu.GUI.ExpressionGui.HolePicker as HolePicker
 import qualified Lamdu.GUI.NameEdit as NameEdit
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Name (Name(..))
@@ -120,7 +119,7 @@ makePickEventMap nearestHoles doc action =
 
 makeOptions ::
     ( Monad m, MonadTransaction m f, MonadReader env f, GuiState.HasCursor env
-    , MonadWriter (HolePicker (T m)) f
+    , MonadWriter (Picker (T m)) f
     , HasConfig env, HasTheme env, Element.HasAnimIdPrefix env, TextView.HasStyle env
     ) =>
     NearestHoles -> Sugar.Tag (Name n) (T m) -> Text ->
@@ -152,8 +151,7 @@ makeOptions nearestHoles tag searchTerm
                         <&> fmap )
                     <*> NameEdit.makeView (name ^. Name.form) optionId
                     <&> Align.tValue %~ E.weakerEvents eventMap
-                when (Widget.isFocused (result ^. Align.tValue))
-                    (HolePicker.tellResultPicker "" (void pick))
+                when (Widget.isFocused (result ^. Align.tValue)) (tellPicker "" (void pick))
                 pure result
             <&> Menu.Option optionWId ?? Menu.SubmenuEmpty
             where
@@ -166,7 +164,7 @@ allowedSearchTerm = Text.all Char.isAlphaNum
 
 makeTagHoleEdit ::
     ( Monad m, MonadReader env f, MonadTransaction m f
-    , MonadWriter (HolePicker (T m)) f
+    , MonadWriter (Picker (T m)) f
     , GuiState.HasState env
     , HasConfig env, TextEdit.HasStyle env, Element.HasAnimIdPrefix env
     , HasTheme env, Hover.HasStyle env, Menu.HasStyle env, HasStdSpacing env
@@ -217,7 +215,7 @@ makeTagHoleEdit nearestHoles tag =
 
 makeTagEdit ::
     ( Monad m, MonadReader env f, MonadTransaction m f, HasConfig env
-    , MonadWriter (HolePicker (T m)) f
+    , MonadWriter (Picker (T m)) f
     , GuiState.HasState env, HasTheme env, Element.HasAnimIdPrefix env
     , TextEdit.HasStyle env, Hover.HasStyle env, Menu.HasStyle env
     , HasStdSpacing env
@@ -264,7 +262,7 @@ makeTagEdit tagColor nearestHoles tag =
 
 makeRecordTag ::
     ( Monad m, MonadReader env f, MonadTransaction m f, HasTheme env
-    , MonadWriter (HolePicker (T m)) f
+    , MonadWriter (Picker (T m)) f
     , HasConfig env, GuiState.HasState env
     , Element.HasAnimIdPrefix env, HasStdSpacing env
     , TextEdit.HasStyle env, Hover.HasStyle env, HasTheme env, Menu.HasStyle env
@@ -278,7 +276,7 @@ makeRecordTag nearestHoles tag =
 
 makeCaseTag ::
     ( Monad m, MonadReader env f, MonadTransaction m f, HasTheme env
-    , MonadWriter (HolePicker (T m)) f
+    , MonadWriter (Picker (T m)) f
     , HasConfig env, GuiState.HasState env
     , TextEdit.HasStyle env, Hover.HasStyle env, HasTheme env, Menu.HasStyle env
     , HasStdSpacing env, Element.HasAnimIdPrefix env
@@ -292,7 +290,7 @@ makeCaseTag nearestHoles tag =
 
 makeParamTag ::
     ( MonadReader env f, HasTheme env, HasConfig env, Hover.HasStyle env, Menu.HasStyle env
-    , MonadWriter (HolePicker (T m)) f
+    , MonadWriter (Picker (T m)) f
     , GuiState.HasState env, Element.HasAnimIdPrefix env
     , TextEdit.HasStyle env, HasStdSpacing env, MonadTransaction m f
     ) =>

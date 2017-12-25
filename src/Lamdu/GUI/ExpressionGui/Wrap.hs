@@ -44,8 +44,8 @@ addActions ::
     ExprGuiM m (ExpressionGui m)
 addActions options pl act =
     do
-        (res, holePicker) <- ExprGuiM.listenResultPicker act
-        exprEventMap <- ExprEventMap.make options pl holePicker
+        (res, picker) <- ExprGuiM.listenResultPicker act
+        exprEventMap <- ExprEventMap.make options pl picker
         E.weakerEvents exprEventMap res & pure
 
 stdWrap ::

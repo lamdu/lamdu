@@ -1,6 +1,15 @@
+-- | When shortcut keys are pressed to perform results,
+-- Such as adding an element to a list, they often should implicitly
+-- perform the selection of the currently chosen menu item.
+--
+-- When the menu is a search-menu, they may also work differently
+-- depending on ambigiuous remainders of a search term which
+-- become unambigious given the new key pressed.
+
 {-# LANGUAGE NoImplicitPrelude, OverloadedStrings, FlexibleContexts #-}
-module Lamdu.GUI.ExpressionGui.HolePicker
-    ( HolePicker(..), withHolePicker, tellResultPicker
+
+module GUI.Momentu.Widgets.Menu.Picker
+    ( Picker(..), withPicker, tellPicker
     , HasSearchStringRemainder(..)
     ) where
 
@@ -14,8 +23,6 @@ import qualified GUI.Momentu.EventMap as E
 
 import           Lamdu.Prelude
 
--- When search string is "42.", and picking the "42" result,
--- the "." is the search string remainder.
 class HasSearchStringRemainder env where searchStringRemainder :: Lens' env Text
 
 data Info m = Info
@@ -23,21 +30,21 @@ data Info m = Info
     , iSearchStringRemainder :: Text
     }
 
-data HolePicker m
-    = NoHolePick
-    | HolePick (Info m)
+data Picker m
+    = NoPick
+    | Pick (Info m)
 
-instance Monoid (HolePicker m) where
-    mempty = NoHolePick
-    mappend NoHolePick x = x
-    mappend x NoHolePick = x
-    mappend _ _ = error "Two HolePick's told, are we inside 2 holes simultaneously?"
+instance Monoid (Picker m) where
+    mempty = NoPick
+    mappend NoPick x = x
+    mappend x NoPick = x
+    mappend _ _ = error "Two Pick's told, are we inside 2 holes simultaneously?"
 
-withHolePicker ::
+withPicker ::
     (MonadReader env m, HasSearchStringRemainder env, Monad f) =>
-    HolePicker f -> (Text -> EventMap (f a)) -> m (EventMap (f a))
-withHolePicker NoHolePick mk = Lens.view searchStringRemainder <&> mk
-withHolePicker (HolePick h) mk =
+    Picker f -> (Text -> EventMap (f a)) -> m (EventMap (f a))
+withPicker NoPick mk = Lens.view searchStringRemainder <&> mk
+withPicker (Pick h) mk =
     mk (iSearchStringRemainder h)
     & E.emDocs . E.docStrs . Lens.reversed . Lens.element 0 %~ f
     <&> (iAction h >>)
@@ -48,9 +55,9 @@ withHolePicker (HolePick h) mk =
             & TextLens._Text . Lens.element 0 %~ Char.toLower
             & ("Pick result and " <>)
 
-tellResultPicker :: MonadWriter (HolePicker n) m => Text -> n () -> m ()
-tellResultPicker remainder act =
-    HolePick Info
+tellPicker :: MonadWriter (Picker n) m => Text -> n () -> m ()
+tellPicker remainder act =
+    Pick Info
     { iAction = act
     , iSearchStringRemainder = remainder
     }

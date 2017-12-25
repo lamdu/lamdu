@@ -138,6 +138,7 @@ Executable lamdu
                   , GUI.Momentu.Widgets.Grid
                   , GUI.Momentu.Widgets.GridView
                   , GUI.Momentu.Widgets.Menu
+                  , GUI.Momentu.Widgets.Menu.Picker
                   , GUI.Momentu.Widgets.Spacer
                   , GUI.Momentu.Widgets.StdKeys
                   , GUI.Momentu.Widgets.TextEdit
@@ -216,7 +217,6 @@ Executable lamdu
                   , Lamdu.GUI.ExpressionEdit.TagEdit
                   , Lamdu.GUI.ExpressionGui
                   , Lamdu.GUI.ExpressionGui.Annotation
-                  , Lamdu.GUI.ExpressionGui.HolePicker
                   , Lamdu.GUI.ExpressionGui.Monad
                   , Lamdu.GUI.ExpressionGui.Wrap
                   , Lamdu.GUI.IOTrans

@@ -18,6 +18,7 @@ import qualified GUI.Momentu.State as GuiState
 import           GUI.Momentu.View (View)
 import qualified GUI.Momentu.View as View
 import qualified GUI.Momentu.Widget as Widget
+import           GUI.Momentu.Widgets.Menu.Picker (withPicker)
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
@@ -25,7 +26,6 @@ import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.GUI.ExpressionEdit.TagEdit as TagEdit
 import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExprGui
-import           Lamdu.GUI.ExpressionGui.HolePicker (withHolePicker)
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import           Lamdu.GUI.ExpressionGui.Wrap (stdWrap, stdWrapParentExpr)
@@ -120,7 +120,7 @@ makeRecord fields addFieldEventMap postProcess =
                             )
                         >>= postProcess
                         & ExprGuiM.listenResultPicker
-                    eventMap <- withHolePicker resultPicker (const addFieldEventMap)
+                    eventMap <- withPicker resultPicker (const addFieldEventMap)
                     E.weakerEvents eventMap innerGui & pure
             <&> (opener /|/)
 

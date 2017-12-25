@@ -34,6 +34,7 @@ import qualified GUI.Momentu.Responsive.Options as Options
 import qualified GUI.Momentu.State as GuiState
 import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
+import           GUI.Momentu.Widgets.Menu.Picker (withPicker)
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified GUI.Momentu.Widgets.TextView as TextView
 import qualified Lamdu.CharClassification as Chars
@@ -46,7 +47,6 @@ import qualified Lamdu.GUI.ExpressionEdit.TagEdit as TagEdit
 import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExprGui
 import qualified Lamdu.GUI.ExpressionGui.Annotation as Annotation
-import           Lamdu.GUI.ExpressionGui.HolePicker (withHolePicker)
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import           Lamdu.GUI.ExpressionGui.Wrap (parentDelegator)
@@ -317,13 +317,13 @@ make ::
     ExprGuiM m (ExpressionGui m)
 make pMode lhsEventMap name color binder myId =
     do
-        (Parts mParamsEdit mScopeEdit bodyEdit eventMap, holePicker) <-
+        (Parts mParamsEdit mScopeEdit bodyEdit eventMap, picker) <-
             makeParts ExprGui.UnlimitedFuncApply binder myId myId
             & ExprGuiM.listenResultPicker
         rhsJumperEquals <-
             jumpToRHS bodyId
             <&> const
-            >>= withHolePicker holePicker
+            >>= withPicker picker
         mPresentationEdit <-
             pMode & sequenceA & transaction
             >>= traverse

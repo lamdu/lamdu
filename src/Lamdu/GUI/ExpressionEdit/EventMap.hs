@@ -15,11 +15,11 @@ import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.State as GuiState
 import qualified GUI.Momentu.Widget as Widget
+import           GUI.Momentu.Widgets.Menu.Picker (Picker, withPicker, HasSearchStringRemainder)
 import qualified Lamdu.CharClassification as Chars
 import qualified Lamdu.Config as Config
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.State as HoleEditState
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds as HoleWidgetIds
-import           Lamdu.GUI.ExpressionGui.HolePicker (HolePicker, withHolePicker, HasSearchStringRemainder)
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui as ExprGui
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
@@ -63,17 +63,17 @@ exprInfoFromPl pl =
 
 make ::
     (Monad m, Monad f) =>
-    Options -> Sugar.Payload (T f) ExprGui.Payload -> HolePicker (T f) ->
+    Options -> Sugar.Payload (T f) ExprGui.Payload -> Picker (T f) ->
     ExprGuiM m (EventMap (T f GuiState.Update))
 make options = makeWith options . exprInfoFromPl
 
 makeWith ::
     (Monad m, Monad f) =>
-    Options -> ExprInfo f -> HolePicker (T f) ->
+    Options -> ExprInfo f -> Picker (T f) ->
     ExprGuiM m (EventMap (T f GuiState.Update))
-makeWith options exprInfo holePicker =
+makeWith options exprInfo picker =
     mconcat <$> sequenceA
-    [ actionsEventMap options exprInfo holePicker
+    [ actionsEventMap options exprInfo picker
     , jumpHolesEventMapIfSelected exprInfo
     , maybeReplaceEventMap exprInfo
     ]
@@ -144,14 +144,14 @@ maybeReplaceEventMap exprInfo =
 
 actionsEventMap ::
     (Monad m, Monad f) =>
-    Options -> ExprInfo f -> HolePicker (T f) ->
+    Options -> ExprInfo f -> Picker (T f) ->
     ExprGuiM m (EventMap (T f GuiState.Update))
-actionsEventMap options exprInfo holePicker =
+actionsEventMap options exprInfo picker =
     mconcat
     [ case exprInfoActions exprInfo ^. Sugar.wrap of
       Sugar.WrapAction act -> wrapEventMap act
       _ -> return mempty
-    , applyOperatorEventMap options exprInfo holePicker
+    , applyOperatorEventMap options exprInfo picker
     , if exprInfoIsHoleResult exprInfo
         then return mempty
         else
@@ -180,8 +180,8 @@ applyOperatorSearchTerm minOpPrec searchStrRemainder =
 
 applyOperatorEventMap ::
     (MonadReader env m, HasSearchStringRemainder env, Monad f) =>
-    Options -> ExprInfo f -> HolePicker (T f) -> m (EventMap (T f GuiState.Update))
-applyOperatorEventMap options exprInfo holePicker =
+    Options -> ExprInfo f -> Picker (T f) -> m (EventMap (T f GuiState.Update))
+applyOperatorEventMap options exprInfo picker =
     case exprInfoActions exprInfo ^. Sugar.wrap of
     Sugar.WrapAction wrap ->
         if addOperatorDontWrap options
@@ -190,7 +190,7 @@ applyOperatorEventMap options exprInfo holePicker =
     Sugar.WrapperAlready holeId -> return holeId
     Sugar.WrappedAlready holeId -> return holeId
     & action
-    & withHolePicker holePicker
+    & withPicker picker
     where
         action wrap searchStrRemainder =
             applyOperatorSearchTerm (exprInfoMinOpPrec exprInfo) searchStrRemainder

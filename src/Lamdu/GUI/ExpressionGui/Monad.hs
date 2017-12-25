@@ -37,6 +37,7 @@ import qualified GUI.Momentu.State as GuiState
 import           GUI.Momentu.View (View)
 import           GUI.Momentu.Widget.Id (toAnimId)
 import qualified GUI.Momentu.Widgets.Menu as Menu
+import           GUI.Momentu.Widgets.Menu.Picker (Picker, HasSearchStringRemainder(..))
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
 import qualified GUI.Momentu.Widgets.TextView as TextView
@@ -50,7 +51,6 @@ import           Lamdu.Eval.Results (ScopeId, topLevelScopeId)
 import           Lamdu.GUI.CodeEdit.Settings (Settings, HasSettings(..))
 import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExprGui
-import           Lamdu.GUI.ExpressionGui.HolePicker (HolePicker, HasSearchStringRemainder(..))
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Style (Style, HasStyle(..))
 import qualified Lamdu.Sugar.Types as Sugar
@@ -79,9 +79,9 @@ data Askable m = Askable
       _aSearchStringRemainder :: Text
     }
 newtype ExprGuiM m a = ExprGuiM
-    { _exprGuiM :: RWST (Askable m) (HolePicker (T m)) () (T m) a
+    { _exprGuiM :: RWST (Askable m) (Picker (T m)) () (T m) a
     } deriving (Functor, Applicative, Monad,
-                MonadReader (Askable m), MonadWriter (HolePicker (T m)))
+                MonadReader (Askable m), MonadWriter (Picker (T m)))
 
 instance (Monad m, Monoid a) => Monoid (ExprGuiM m a) where
     mempty = pure mempty
@@ -181,7 +181,7 @@ run makeSubexpr theCodeAnchors (ExprGuiM action) =
             <&> (\(x, (), _output) -> x)
             & transaction
 
-listenResultPicker :: Monad m => ExprGuiM m a -> ExprGuiM m (a, HolePicker (T m))
+listenResultPicker :: Monad m => ExprGuiM m a -> ExprGuiM m (a, Picker (T m))
 listenResultPicker = exprGuiM %~ RWS.listen
 
 readMScopeId :: Monad m => ExprGuiM m (CurAndPrev (Maybe ScopeId))
