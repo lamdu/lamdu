@@ -79,9 +79,9 @@ data Askable m = Askable
       _aSearchStringRemainder :: Text
     }
 newtype ExprGuiM m a = ExprGuiM
-    { _exprGuiM :: RWST (Askable m) (HolePicker m) () (T m) a
+    { _exprGuiM :: RWST (Askable m) (HolePicker (T m)) () (T m) a
     } deriving (Functor, Applicative, Monad,
-                MonadReader (Askable m), MonadWriter (HolePicker m))
+                MonadReader (Askable m), MonadWriter (HolePicker (T m)))
 
 instance (Monad m, Monoid a) => Monoid (ExprGuiM m a) where
     mempty = pure mempty
@@ -181,7 +181,7 @@ run makeSubexpr theCodeAnchors (ExprGuiM action) =
             <&> (\(x, (), _output) -> x)
             & transaction
 
-listenResultPicker :: Monad m => ExprGuiM m a -> ExprGuiM m (a, HolePicker m)
+listenResultPicker :: Monad m => ExprGuiM m a -> ExprGuiM m (a, HolePicker (T m))
 listenResultPicker = exprGuiM %~ RWS.listen
 
 readMScopeId :: Monad m => ExprGuiM m (CurAndPrev (Maybe ScopeId))

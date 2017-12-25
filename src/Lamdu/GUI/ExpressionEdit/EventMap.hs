@@ -63,13 +63,13 @@ exprInfoFromPl pl =
 
 make ::
     (Monad m, Monad f) =>
-    Options -> Sugar.Payload (T f) ExprGui.Payload -> HolePicker f ->
+    Options -> Sugar.Payload (T f) ExprGui.Payload -> HolePicker (T f) ->
     ExprGuiM m (EventMap (T f GuiState.Update))
 make options = makeWith options . exprInfoFromPl
 
 makeWith ::
     (Monad m, Monad f) =>
-    Options -> ExprInfo f -> HolePicker f ->
+    Options -> ExprInfo f -> HolePicker (T f) ->
     ExprGuiM m (EventMap (T f GuiState.Update))
 makeWith options exprInfo holePicker =
     mconcat <$> sequenceA
@@ -144,7 +144,7 @@ maybeReplaceEventMap exprInfo =
 
 actionsEventMap ::
     (Monad m, Monad f) =>
-    Options -> ExprInfo f -> HolePicker f ->
+    Options -> ExprInfo f -> HolePicker (T f) ->
     ExprGuiM m (EventMap (T f GuiState.Update))
 actionsEventMap options exprInfo holePicker =
     mconcat
@@ -180,7 +180,7 @@ applyOperatorSearchTerm minOpPrec searchStrRemainder =
 
 applyOperatorEventMap ::
     (MonadReader env m, HasSearchStringRemainder env, Monad f) =>
-    Options -> ExprInfo f -> HolePicker f -> m (EventMap (T f GuiState.Update))
+    Options -> ExprInfo f -> HolePicker (T f) -> m (EventMap (T f GuiState.Update))
 applyOperatorEventMap options exprInfo holePicker =
     case exprInfoActions exprInfo ^. Sugar.wrap of
     Sugar.WrapAction wrap ->

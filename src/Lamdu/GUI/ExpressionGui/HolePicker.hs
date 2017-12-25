@@ -8,21 +8,18 @@ import qualified Control.Lens as Lens
 import           Control.Monad.Writer (MonadWriter)
 import qualified Control.Monad.Writer as Writer
 import qualified Data.Char as Char
-import           Data.Store.Transaction (Transaction)
 import qualified Data.Text.Lens as TextLens
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
 
 import           Lamdu.Prelude
 
-type T = Transaction
-
 -- When search string is "42.", and picking the "42" result,
 -- the "." is the search string remainder.
 class HasSearchStringRemainder env where searchStringRemainder :: Lens' env Text
 
 data Info m = Info
-    { iAction :: T m ()
+    { iAction :: m ()
     , iSearchStringRemainder :: Text
     }
 
@@ -38,7 +35,7 @@ instance Monoid (HolePicker m) where
 
 withHolePicker ::
     (MonadReader env m, HasSearchStringRemainder env, Monad f) =>
-    HolePicker f -> (Text -> EventMap (T f a)) -> m (EventMap (T f a))
+    HolePicker f -> (Text -> EventMap (f a)) -> m (EventMap (f a))
 withHolePicker NoHolePick mk = Lens.view searchStringRemainder <&> mk
 withHolePicker (HolePick h) mk =
     mk (iSearchStringRemainder h)
@@ -51,7 +48,7 @@ withHolePicker (HolePick h) mk =
             & TextLens._Text . Lens.element 0 %~ Char.toLower
             & ("Pick result and " <>)
 
-tellResultPicker :: MonadWriter (HolePicker n) m => Text -> T n () -> m ()
+tellResultPicker :: MonadWriter (HolePicker n) m => Text -> n () -> m ()
 tellResultPicker remainder act =
     HolePick Info
     { iAction = act
