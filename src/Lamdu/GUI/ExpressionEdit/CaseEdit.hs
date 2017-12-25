@@ -20,7 +20,7 @@ import qualified GUI.Momentu.State as GuiState
 import           GUI.Momentu.View (View)
 import qualified GUI.Momentu.View as View
 import qualified GUI.Momentu.Widget as Widget
-import           GUI.Momentu.Widgets.Menu.Picker (withPicker)
+import           GUI.Momentu.Widgets.Menu.Picker (HasPickers(..), withPicker)
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import           Lamdu.Calc.Type (Tag)
 import qualified Lamdu.Calc.Val as V
@@ -95,7 +95,6 @@ make (Sugar.Case mArg (Sugar.Composite alts caseTail addAlt)) pl =
                         ?? [caseLabel, argEdit, ofLabel]
                         <&> (,) mTag
         (altsGui, resultPicker) <-
-            ExprGuiM.listenResultPicker $
             do
                 altsGui <- makeAltsWidget mActiveTag alts altsId
                 case caseTail of
@@ -104,6 +103,7 @@ make (Sugar.Case mArg (Sugar.Composite alts caseTail addAlt)) pl =
                         & return
                     Sugar.OpenComposite actions rest ->
                         makeOpenCase actions rest (Widget.toAnimId myId) altsGui
+            & listenPicker
         addAltEventMap <-
             addAlt
             <&> (^. Sugar.cairNewTag . Sugar.tagInstance)

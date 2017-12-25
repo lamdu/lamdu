@@ -18,7 +18,7 @@ import qualified GUI.Momentu.State as GuiState
 import           GUI.Momentu.View (View)
 import qualified GUI.Momentu.View as View
 import qualified GUI.Momentu.Widget as Widget
-import           GUI.Momentu.Widgets.Menu.Picker (withPicker)
+import           GUI.Momentu.Widgets.Menu.Picker (HasPickers(..), withPicker)
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
@@ -119,7 +119,7 @@ makeRecord fields addFieldEventMap postProcess =
                             <&> Lens.reversed . Lens.ix 0 . Responsive.tagPost .~ (closer <&> Widget.fromView)
                             )
                         >>= postProcess
-                        & ExprGuiM.listenResultPicker
+                        & listenPicker
                     eventMap <- withPicker resultPicker (const addFieldEventMap)
                     E.weakerEvents eventMap innerGui & pure
             <&> (opener /|/)

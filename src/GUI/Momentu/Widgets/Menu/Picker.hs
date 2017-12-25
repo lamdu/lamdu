@@ -6,10 +6,11 @@
 -- depending on ambigiuous remainders of a search term which
 -- become unambigious given the new key pressed.
 
-{-# LANGUAGE NoImplicitPrelude, OverloadedStrings, FlexibleContexts #-}
+{-# LANGUAGE NoImplicitPrelude, OverloadedStrings, FlexibleContexts, TypeFamilies #-}
 
 module GUI.Momentu.Widgets.Menu.Picker
     ( Picker(..), withPicker, tellPicker
+    , HasPickers(..)
     , HasSearchStringRemainder(..)
     ) where
 
@@ -24,6 +25,10 @@ import qualified GUI.Momentu.EventMap as E
 import           Lamdu.Prelude
 
 class HasSearchStringRemainder env where searchStringRemainder :: Lens' env Text
+
+class HasPickers m where
+    type PickerM m :: * -> *
+    listenPicker :: m a -> m (a, Picker (PickerM m))
 
 data Info m = Info
     { iAction :: m ()

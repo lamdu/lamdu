@@ -34,7 +34,7 @@ import qualified GUI.Momentu.Responsive.Options as Options
 import qualified GUI.Momentu.State as GuiState
 import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
-import           GUI.Momentu.Widgets.Menu.Picker (withPicker)
+import           GUI.Momentu.Widgets.Menu.Picker (HasPickers(..), withPicker)
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified GUI.Momentu.Widgets.TextView as TextView
 import qualified Lamdu.CharClassification as Chars
@@ -319,7 +319,7 @@ make pMode lhsEventMap name color binder myId =
     do
         (Parts mParamsEdit mScopeEdit bodyEdit eventMap, picker) <-
             makeParts ExprGui.UnlimitedFuncApply binder myId myId
-            & ExprGuiM.listenResultPicker
+            & listenPicker
         rhsJumperEquals <-
             jumpToRHS bodyId
             <&> const

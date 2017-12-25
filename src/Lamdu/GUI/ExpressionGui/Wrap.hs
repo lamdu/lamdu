@@ -13,12 +13,12 @@ import           GUI.Momentu.Responsive (Responsive(..))
 import qualified GUI.Momentu.State as GuiState
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.FocusDelegator as FocusDelegator
+import           GUI.Momentu.Widgets.Menu.Picker (HasPickers(..))
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
 import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
 import           Lamdu.GUI.ExpressionGui.Annotation (maybeAddAnnotationPl)
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
-import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExprGui
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
@@ -44,7 +44,7 @@ addActions ::
     ExprGuiM m (ExpressionGui m)
 addActions options pl act =
     do
-        (res, picker) <- ExprGuiM.listenResultPicker act
+        (res, picker) <- listenPicker act
         exprEventMap <- ExprEventMap.make options pl picker
         E.weakerEvents exprEventMap res & pure
 

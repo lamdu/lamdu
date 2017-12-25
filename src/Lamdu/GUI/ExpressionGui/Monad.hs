@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, GeneralizedNewtypeDeriving, TemplateHaskell, OverloadedStrings, MultiParamTypeClasses, FlexibleInstances #-}
+{-# LANGUAGE NoImplicitPrelude, GeneralizedNewtypeDeriving, TemplateHaskell, OverloadedStrings, MultiParamTypeClasses, FlexibleInstances, TypeFamilies #-}
 module Lamdu.GUI.ExpressionGui.Monad
     ( ExprGuiM
     , StoredEntityIds(..)
@@ -12,7 +12,6 @@ module Lamdu.GUI.ExpressionGui.Monad
     , readMScopeId, withLocalMScopeId
     , isExprSelected
     --
-    , listenResultPicker
     , run
     ) where
 
@@ -37,7 +36,7 @@ import qualified GUI.Momentu.State as GuiState
 import           GUI.Momentu.View (View)
 import           GUI.Momentu.Widget.Id (toAnimId)
 import qualified GUI.Momentu.Widgets.Menu as Menu
-import           GUI.Momentu.Widgets.Menu.Picker (Picker, HasSearchStringRemainder(..))
+import           GUI.Momentu.Widgets.Menu.Picker (Picker, HasSearchStringRemainder(..), HasPickers(..))
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
 import qualified GUI.Momentu.Widgets.TextView as TextView
@@ -181,8 +180,9 @@ run makeSubexpr theCodeAnchors (ExprGuiM action) =
             <&> (\(x, (), _output) -> x)
             & transaction
 
-listenResultPicker :: Monad m => ExprGuiM m a -> ExprGuiM m (a, Picker (T m))
-listenResultPicker = exprGuiM %~ RWS.listen
+instance Monad m => HasPickers (ExprGuiM m) where
+    type PickerM (ExprGuiM m) = T m
+    listenPicker = exprGuiM %~ RWS.listen
 
 readMScopeId :: Monad m => ExprGuiM m (CurAndPrev (Maybe ScopeId))
 readMScopeId = Lens.view aMScopeId
