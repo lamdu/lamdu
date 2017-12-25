@@ -12,7 +12,7 @@ import           Lamdu.Prelude
 
 import           Control.Monad.IO.Class (MonadIO)
 import           Data.ByteString.Char8 ()
-import           Data.Store.Db (Db)
+import           Data.Store.Db (DB)
 import qualified Data.Store.Db as Db
 import           Data.Store.IRef (IRef)
 import qualified Data.Store.IRef as IRef
@@ -32,7 +32,7 @@ newtype DbM a = DbM { dbM :: IO a }
 newtype ViewM a = ViewM { viewM :: T DbM a }
     deriving (Functor, Applicative, Monad)
 
-runDbTransaction :: Db -> T DbM a -> IO a
+runDbTransaction :: DB -> T DbM a -> IO a
 runDbTransaction db = dbM . Transaction.run (Transaction.onStoreM DbM (Db.store db))
 
 runViewTransaction :: View DbM -> T ViewM a -> T DbM a

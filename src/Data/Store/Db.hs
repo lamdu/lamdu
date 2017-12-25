@@ -1,7 +1,7 @@
 {-# LANGUAGE NoImplicitPrelude #-}
 
 module Data.Store.Db
-    ( Db, DB.withDB, DB.defaultOptions, DB.Options(..)
+    ( DB, DB.withDB, DB.defaultOptions, DB.Options(..)
     , lookup
     , transaction
     , store
@@ -17,20 +17,17 @@ import           System.Random (randomIO)
 
 import           Lamdu.Prelude hiding (lookup)
 
--- TODO: Remove this
-type Db = DB
-
-lookup :: Db -> UUID -> IO (Maybe ByteString)
+lookup :: DB -> UUID -> IO (Maybe ByteString)
 lookup db = DB.get db DB.defaultReadOptions . strictifyBS . UUID.toByteString
 
-transaction :: Db -> [(UUID, Maybe ByteString)] -> IO ()
+transaction :: DB -> [(UUID, Maybe ByteString)] -> IO ()
 transaction db =
     DB.write db DB.defaultWriteOptions . map batchOp
     where
         batchOp (key, Nothing) = (DB.Del . strictifyBS . UUID.toByteString) key
         batchOp (key, Just value) = (DB.Put . strictifyBS . UUID.toByteString) key value
 
-store :: Db -> Store IO
+store :: DB -> Store IO
 store db =
     Store
     { storeNewKey = randomIO

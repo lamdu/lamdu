@@ -11,7 +11,7 @@ import           Control.Monad.IO.Class (MonadIO(..))
 import           Data.CurAndPrev (current)
 import           Data.IORef
 import           Data.MRUMemo (memoIO)
-import           Data.Store.Db (Db)
+import           Data.Store.Db (DB)
 import           Data.Store.IRef (IRef)
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
@@ -112,7 +112,7 @@ deleteDB lamduDir =
         putStrLn "Deleting DB..."
         Directory.removeDirectoryRecursive lamduDir
 
-undoN :: Int -> Db -> IO ()
+undoN :: Int -> DB -> IO ()
 undoN n db =
     do
         putStrLn $ "Undoing " ++ show n ++ " times"
@@ -123,7 +123,7 @@ undoN n db =
                 actions <- VersionControl.makeActions
                 fromMaybe (fail "Cannot undo any further") $ mUndo actions
 
-importPath :: FilePath -> Db -> IO ()
+importPath :: FilePath -> DB -> IO ()
 importPath path db =
     Export.fileImportAll path
     <&> VersionControl.runAction
@@ -167,7 +167,7 @@ exportActions config evalResults =
         importAll path = ioTrans # (Export.fileImportAll path <&> fmap pure)
 
 makeRootWidget ::
-    Fonts M.Font -> Db -> IORef Settings -> EvalManager.Evaluator ->
+    Fonts M.Font -> DB -> IORef Settings -> EvalManager.Evaluator ->
     Config -> Theme -> MainLoop.Env -> IO (M.Widget (MainLoop.M M.Update))
 makeRootWidget fonts db settingsRef evaluator config theme mainLoopEnv =
     do
@@ -202,14 +202,14 @@ printGLVersion =
         ver <- GL.get GL.glVersion
         putStrLn $ "Using GL version: " ++ show ver
 
-stateStorageInIRef :: Db -> IRef DbLayout.DbM M.GUIState -> MainLoop.StateStorage
+stateStorageInIRef :: DB -> IRef DbLayout.DbM M.GUIState -> MainLoop.StateStorage
 stateStorageInIRef db stateIRef =
     MainLoop.StateStorage
     { readState = DbLayout.runDbTransaction db (Transaction.readIRef stateIRef)
     , writeState = DbLayout.runDbTransaction db . Transaction.writeIRef stateIRef
     }
 
-runEditor :: Opts.EditorOpts -> Db -> IO ()
+runEditor :: Opts.EditorOpts -> DB -> IO ()
 runEditor opts db =
     do
         -- Load config as early as possible, before we open any windows/etc

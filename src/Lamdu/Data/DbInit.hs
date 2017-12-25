@@ -5,7 +5,7 @@ module Lamdu.Data.DbInit
     ) where
 
 import           Control.Exception (onException)
-import           Data.Store.Db (Db)
+import           Data.Store.Db (DB)
 import qualified Data.Store.Db as Db
 import           Data.Store.Rev.Branch (Branch)
 import qualified Data.Store.Rev.Branch as Branch
@@ -39,7 +39,7 @@ newBranch name ver =
         setName (Branch.uuid branch) name
         return branch
 
-initDb :: Db -> T DbLayout.ViewM () -> IO ()
+initDb :: DB -> T DbLayout.ViewM () -> IO ()
 initDb db importAct =
     DbLayout.runDbTransaction db $
     do
@@ -78,7 +78,7 @@ updateMissingCursor =
         Transaction.writeIRef DbLayout.guiState (M.GUIState WidgetIds.defaultCursor mempty)
             & unless exists
 
-withDB :: FilePath -> (Db -> IO a) -> IO a
+withDB :: FilePath -> (DB -> IO a) -> IO a
 withDB lamduDir body =
     do
         Directory.createDirectoryIfMissing False lamduDir

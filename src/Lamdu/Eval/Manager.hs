@@ -16,7 +16,7 @@ import           Data.IORef
 import           Data.IORef.Utils (atomicModifyIORef_)
 import qualified Data.Monoid as Monoid
 import qualified Data.Set as Set
-import           Data.Store.Db (Db)
+import           Data.Store.Db (DB)
 import           Data.Store.IRef (IRef)
 import qualified Data.Store.IRef as IRef
 import qualified Data.Store.Property as Property
@@ -52,7 +52,7 @@ startedEvaluator (Started eval) = Just eval
 data NewParams = NewParams
     { resultsUpdated :: IO ()
     -- ^ Callback for notifying that new evaluation results are available.
-    , dbMVar :: MVar (Maybe Db)
+    , dbMVar :: MVar (Maybe DB)
     , copyJSOutputPath :: Maybe FilePath
     }
 
@@ -76,13 +76,13 @@ new params =
             , eCancelTimerRef = cancelRef
             }
 
-withDb :: MVar (Maybe Db) -> (Db -> IO a) -> IO a
+withDb :: MVar (Maybe DB) -> (DB -> IO a) -> IO a
 withDb mvar action =
     withMVar mvar $ \case
     Nothing -> error "Trying to use DB when it is already gone"
     Just db -> action db
 
-runViewTransactionInIO :: MVar (Maybe Db) -> T ViewM a -> IO a
+runViewTransactionInIO :: MVar (Maybe DB) -> T ViewM a -> IO a
 runViewTransactionInIO dbM trans =
     withDb dbM $ \db ->
     DbLayout.runDbTransaction db (VersionControl.runAction trans)
@@ -99,7 +99,7 @@ getResults evaluator =
         prevResults <- readIORef (eResultsRef evaluator)
         return CurAndPrev { _prev = prevResults, _current = res }
 
-eDb :: Evaluator -> MVar (Maybe Db)
+eDb :: Evaluator -> MVar (Maybe DB)
 eDb = dbMVar . eParams
 
 loadDef ::
