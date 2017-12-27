@@ -94,7 +94,7 @@ make (Sugar.Case mArg (Sugar.Composite alts caseTail addAlt)) pl =
                         ?? Options.disambiguationNone
                         ?? [caseLabel, argEdit, ofLabel]
                         <&> (,) mTag
-        (altsGui, resultPicker) <-
+        (altsGui, preEvents) <-
             do
                 altsGui <- makeAltsWidget mActiveTag alts altsId
                 case caseTail of
@@ -111,7 +111,7 @@ make (Sugar.Case mArg (Sugar.Composite alts caseTail addAlt)) pl =
                 <&> WidgetIds.tagHoleId
                 & E.keysEventMapMovesCursor (Config.caseAddAltKeys config)
                     (doc "Add Alt")
-                & const & withPreEvents resultPicker
+                & const & withPreEvents preEvents
         parentDelegator (WidgetIds.fromExprPayload pl)
             <*> (Styled.addValFrame <*> (Responsive.vboxSpaced ?? [header, altsGui]))
             <&> E.weakerEvents addAltEventMap

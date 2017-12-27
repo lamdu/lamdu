@@ -187,9 +187,9 @@ instance Monad m => HasPreEvents (ExprGuiM m) where
     type EventM (ExprGuiM m) = T m
     listenPreEvents action =
         do
-            (result, picker) <- action & exprGuiM %~ RWS.listen
+            (result, preEvents) <- action & exprGuiM %~ RWS.listen
             remainder <- Lens.view aSearchStringRemainder
-            pure (result, picker <> PreText remainder)
+            pure (result, preEvents <> PreText remainder)
 
 readMScopeId :: Monad m => ExprGuiM m (CurAndPrev (Maybe ScopeId))
 readMScopeId = Lens.view aMScopeId

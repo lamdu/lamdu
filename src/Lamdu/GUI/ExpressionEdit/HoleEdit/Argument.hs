@@ -60,13 +60,13 @@ make openHoleId arg =
                 Sugar.UnwrapAction {} -> Theme.typeIndicatorMatchColor
                 Sugar.UnwrapTypeMismatch {} -> Theme.typeIndicatorErrorColor
         let frameWidth = Theme.typeIndicatorFrameWidth theme <&> realToFrac
-        (argGui, resultPicker) <-
+        (argGui, preEvents) <-
             ExprGuiM.makeSubexpression (arg ^. Sugar.haExpr)
             & listenPreEvents
         unwrapEventMap <-
             makeUnwrapEventMap arg openHoleId
             <&> const
-            <&> withPreEvents resultPicker
+            <&> withPreEvents preEvents
         Momentu.addInnerFrame
             ?? frameColor ?? frameWidth
             ?? Momentu.pad (frameWidth & _2 .~ 0) argGui

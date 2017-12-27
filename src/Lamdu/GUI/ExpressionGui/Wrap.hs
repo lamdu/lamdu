@@ -44,8 +44,8 @@ addActions ::
     ExprGuiM m (ExpressionGui m)
 addActions options pl act =
     do
-        (res, picker) <- listenPreEvents act
-        exprEventMap <- ExprEventMap.make options pl picker
+        (res, preEvents) <- listenPreEvents act
+        exprEventMap <- ExprEventMap.make options pl preEvents
         E.weakerEvents exprEventMap res & pure
 
 stdWrap ::

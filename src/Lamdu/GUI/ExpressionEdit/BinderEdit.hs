@@ -317,13 +317,13 @@ make ::
     ExprGuiM m (ExpressionGui m)
 make pMode lhsEventMap name color binder myId =
     do
-        (Parts mParamsEdit mScopeEdit bodyEdit eventMap, picker) <-
+        (Parts mParamsEdit mScopeEdit bodyEdit eventMap, preEvents) <-
             makeParts ExprGui.UnlimitedFuncApply binder myId myId
             & listenPreEvents
         rhsJumperEquals <-
             jumpToRHS bodyId
             <&> const
-            <&> withPreEvents picker
+            <&> withPreEvents preEvents
         mPresentationEdit <-
             pMode & sequenceA & transaction
             >>= traverse

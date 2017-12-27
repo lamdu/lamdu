@@ -70,9 +70,9 @@ makeWith ::
     (MonadReader env m, Monad f, Config.HasConfig env, GuiState.HasCursor env) =>
     Options -> ExprInfo f -> PreEvents (T f) ->
     m (EventMap (T f GuiState.Update))
-makeWith options exprInfo picker =
+makeWith options exprInfo preEvents =
     mconcat <$> sequenceA
-    [ actionsEventMap options exprInfo picker
+    [ actionsEventMap options exprInfo preEvents
     , jumpHolesEventMapIfSelected exprInfo
     , maybeReplaceEventMap exprInfo
     ]
@@ -145,12 +145,12 @@ actionsEventMap ::
     (MonadReader env m, Monad f, Config.HasConfig env) =>
     Options -> ExprInfo f -> PreEvents (T f) ->
     m (EventMap (T f GuiState.Update))
-actionsEventMap options exprInfo picker =
+actionsEventMap options exprInfo preEvents =
     sequence
     [ case exprInfoActions exprInfo ^. Sugar.wrap of
       Sugar.WrapAction act -> wrapEventMap act
       _ -> return mempty
-    , applyOperatorEventMap options exprInfo picker & pure
+    , applyOperatorEventMap options exprInfo preEvents & pure
     , if exprInfoIsHoleResult exprInfo
         then return mempty
         else
@@ -181,7 +181,7 @@ applyOperatorSearchTerm minOpPrec searchStrRemainder =
 
 applyOperatorEventMap ::
     Monad f => Options -> ExprInfo f -> PreEvents (T f) -> EventMap (T f GuiState.Update)
-applyOperatorEventMap options exprInfo picker =
+applyOperatorEventMap options exprInfo preEvents =
     case exprInfoActions exprInfo ^. Sugar.wrap of
     Sugar.WrapAction wrap ->
         if addOperatorDontWrap options
@@ -190,7 +190,7 @@ applyOperatorEventMap options exprInfo picker =
     Sugar.WrapperAlready holeId -> return holeId
     Sugar.WrappedAlready holeId -> return holeId
     & action
-    & withPreEvents picker
+    & withPreEvents preEvents
     where
         action wrap searchStrRemainder =
             applyOperatorSearchTerm (exprInfoMinOpPrec exprInfo) searchStrRemainder
