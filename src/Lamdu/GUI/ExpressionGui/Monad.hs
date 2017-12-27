@@ -30,7 +30,7 @@ import           GUI.Momentu.Align (WithTextPos)
 import           GUI.Momentu.Animation.Id (AnimId)
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.Hover as Hover
-import           GUI.Momentu.PreEvent (PreEvents(..), HasPreEvents(..))
+import           GUI.Momentu.PreEvent (PreEvents, PreEvent(..), HasPreEvents(..))
 import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.Responsive.Expression as ResponsiveExpr
 import           GUI.Momentu.State (GUIState(..))
@@ -188,8 +188,14 @@ instance Monad m => HasPreEvents (ExprGuiM m) where
     listenPreEvents action =
         do
             (result, preEvents) <- action & exprGuiM %~ RWS.listen
-            remainder <- Lens.view aSearchStringRemainder
-            pure (result, preEvents <> PreText remainder)
+            remainderText <- Lens.view aSearchStringRemainder
+            let remainder =
+                    PreEvent
+                    { pDesc = ""
+                    , pAction = return ()
+                    , pTextRemainder = remainderText
+                    }
+            pure (result, preEvents ++ [remainder])
 
 readMScopeId :: Monad m => ExprGuiM m (CurAndPrev (Maybe ScopeId))
 readMScopeId = Lens.view aMScopeId

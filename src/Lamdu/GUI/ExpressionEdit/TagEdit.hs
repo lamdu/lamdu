@@ -23,7 +23,7 @@ import           GUI.Momentu.Glue ((/|/))
 import qualified GUI.Momentu.Hover as Hover
 import           GUI.Momentu.MetaKey (MetaKey(..), noMods)
 import qualified GUI.Momentu.MetaKey as MetaKey
-import           GUI.Momentu.PreEvent (PreEvents, tellPreEvent)
+import           GUI.Momentu.PreEvent (PreEvents, PreEvent(..), tellPreEvent)
 import qualified GUI.Momentu.State as GuiState
 import           GUI.Momentu.View (View)
 import           GUI.Momentu.Widget (Widget)
@@ -151,7 +151,14 @@ makeOptions nearestHoles tag searchTerm
                         <&> fmap )
                     <*> NameEdit.makeView (name ^. Name.form) optionId
                     <&> Align.tValue %~ E.weakerEvents eventMap
-                when (Widget.isFocused (result ^. Align.tValue)) (tellPreEvent "" (void pick))
+                when (Widget.isFocused (result ^. Align.tValue))
+                    ( tellPreEvent
+                        PreEvent
+                        { pDesc = "Pick"
+                        , pAction = void pick
+                        , pTextRemainder = ""
+                        }
+                    )
                 pure result
             <&> Menu.Option optionWId ?? Menu.SubmenuEmpty
             where

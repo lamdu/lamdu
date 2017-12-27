@@ -13,7 +13,7 @@ import qualified GUI.Momentu.Align as Align
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.MetaKey as MetaKey
-import           GUI.Momentu.PreEvent (tellPreEvent)
+import           GUI.Momentu.PreEvent (PreEvent(..), tellPreEvent)
 import           GUI.Momentu.Rect (Rect(..))
 import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.State as GuiState
@@ -134,7 +134,14 @@ make pl resultId holeResult =
                 <&> pickBefore
         searchStringRemainder <- getSearchStringRemainder widgetIds holeResultConverted
         isSelected <- GuiState.isSubCursor ?? resultId
-        when isSelected (tellPreEvent searchStringRemainder (holeResult ^. Sugar.holeResultPick))
+        when isSelected
+            ( tellPreEvent
+                PreEvent
+                { pDesc = "Pick"
+                , pAction = (holeResult ^. Sugar.holeResultPick)
+                , pTextRemainder = searchStringRemainder
+                }
+            )
         holeResultConverted
             & postProcessSugar (pl ^. Sugar.plData . ExprGui.plMinOpPrec)
             & ExprGuiM.makeSubexpression

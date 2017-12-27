@@ -9,16 +9,13 @@
 {-# LANGUAGE NoImplicitPrelude, OverloadedStrings, FlexibleContexts, TypeFamilies #-}
 
 module GUI.Momentu.PreEvent
-    ( PreEvents(..), withPreEvents, tellPreEvent
+    ( PreEvents, PreEvent(..), withPreEvents, tellPreEvent
     , HasPreEvents(..)
     ) where
 
 import qualified Control.Lens as Lens
-import           Control.Monad.Writer (MonadWriter)
-import qualified Control.Monad.Writer as Writer
-import qualified Data.Char as Char
+import           Control.Monad.Writer (MonadWriter, tell)
 import qualified Data.Text as Text
-import qualified Data.Text.Lens as TextLens
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
 
@@ -26,52 +23,26 @@ import           Lamdu.Prelude
 
 class HasPreEvents m where
     type EventM m :: * -> *
-    listenPreEvents :: m a -> m (a, PreEvents (EventM m))
+    listenPreEvents :: m a -> m (a, [PreEvent (EventM m)])
 
-data Info m = Info
-    { iAction :: m ()
-    , iSearchStringRemainder :: Text
+data PreEvent m = PreEvent
+    { pDesc :: Text
+    , pAction :: m ()
+    , pTextRemainder :: Text
     }
 
-data PreEvents m
-    = -- Search string remainder,
-      -- For when in a result
-      PreText Text
-    | Events (Info m)
-
-instance Monoid (PreEvents m) where
-    mempty = PreText ""
-    mappend (PreText x) (PreText y)
-        | Text.null x = PreText y
-        | Text.null y = PreText x
-        | otherwise = error "Two picks!"
-    mappend (PreText x) (Events y)
-        | Text.null x = Events y
-        | otherwise = error "Two Picks"
-    mappend (Events x) (PreText y)
-        | Text.null y = Events x
-        | otherwise = error "Two Picks"
-    mappend Events{} Events{} = error "Two Pick's told, are we inside 2 holes simultaneously?"
+type PreEvents m = [PreEvent m]
 
 actionText :: Lens.Traversal' (EventMap a) E.Subtitle
 actionText = E.emDocs . E.docStrs . Lens.reversed . Lens.element 0
 
-withPreEvents :: Monad f => PreEvents f -> (Text -> EventMap (f a)) -> EventMap (f a)
-withPreEvents (PreText x) mk = mk x
-withPreEvents (Events h) mk =
-    mk (iSearchStringRemainder h)
+withPreEvents :: Monad f => [PreEvent f] -> (Text -> EventMap (f a)) -> EventMap (f a)
+withPreEvents pres mk =
+    mk (mconcat (pres <&> pTextRemainder))
     & actionText %~ f
-    <&> (iAction h >>)
+    <&> (mapM_ pAction pres >>)
     where
-        f x =
-            x
-            & TextLens._Text . Lens.element 0 %~ Char.toLower
-            & ("Pick result and " <>)
+        f x = (pres <&> pDesc) ++ [x] & filter (not . Text.null) & Text.intercalate ", "
 
-tellPreEvent :: MonadWriter (PreEvents n) m => Text -> n () -> m ()
-tellPreEvent remainder act =
-    Events Info
-    { iAction = act
-    , iSearchStringRemainder = remainder
-    }
-    & Writer.tell
+tellPreEvent :: MonadWriter (PreEvents n) m => PreEvent n -> m ()
+tellPreEvent = tell . (:[])
