@@ -84,7 +84,7 @@ mkNavDests cursor@(Vector2 cursorX cursorY) virtCursor mEnterss =
         curColumn = fromMaybe [] $ transpose mEnterss ^? Lens.ix cappedX
         Vector2 cappedX cappedY = capCursor size cursor
         size = length2d mEnterss
-        prevArea = virtCursor ^. State.virtualCursor
+        prevArea = virtCursor ^. State.vcRect
         enterFrom dir mEnters = mEnters & msum ?? dir
 
 data Keys key = Keys

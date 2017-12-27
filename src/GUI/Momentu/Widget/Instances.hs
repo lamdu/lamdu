@@ -55,12 +55,11 @@ instance Functor f => Element (Widget (f Update)) where
         & Element.setLayers . Element.layers . Lens.mapped %~ Anim.scale mult
         & Element.size *~ mult
         & wState . _StateFocused . Lens.mapped . fFocalAreas . traverse . Rect.topLeftAndSize *~ mult
-        & wState . _StateFocused . Lens.mapped . fEventMap . Lens.argument . eVirtualCursor . State.virtualCursor . Rect.topLeftAndSize //~ mult
+        & wState . _StateFocused . Lens.mapped . fEventMap . Lens.argument . eVirtualCursor . State.vcRect . Rect.topLeftAndSize //~ mult
         & enterResult . enterResultRect . Rect.topLeftAndSize *~ mult
         & wState . _StateUnfocused . uMEnter . Lens._Just . Lens.argument %~ Direction.scale (1 / mult)
         & wState . _StateFocused . Lens.mapped . fMEnterPoint . Lens._Just . Lens.argument //~ mult
-        & Lens.mapped . Lens.mapped . State.uVirtualCursor . Lens.mapped .
-          State.virtualCursor . Rect.topLeftAndSize *~ mult
+        & Lens.mapped . Lens.mapped . State.uVirtualCursor . Lens.mapped . State.vcRect . Rect.topLeftAndSize *~ mult
 
 instance Functor f => SizedElement (Widget (f Update)) where
     size f w =
@@ -135,7 +134,7 @@ combineStates orientation _ nextDir _ (StateFocused f) (StateUnfocused u) =
             case u ^. uMEnter of
             Nothing -> mempty
             Just enter ->
-                enter (dirCons nextDir (eventContext ^. eVirtualCursor . State.virtualCursor . chooseRange))
+                enter (dirCons nextDir (eventContext ^. eVirtualCursor . State.vcRect . chooseRange))
                 ^. enterResultEvent
                 & EventMap.keyPresses (dirKeys nextDir <&> ModKey mempty) (EventMap.Doc ["Navigation", "Move", dirName nextDir])
             & EventMap.weakerEvents
@@ -224,8 +223,7 @@ translate :: Functor f => Vector2 R -> Widget (f Update) -> State (f Update)
 translate pos = translateGeneric (fmap (translateUpdate pos)) pos
 
 translateUpdate :: Vector2 R -> Update -> Update
-translateUpdate pos =
-    State.uVirtualCursor . Lens.mapped . State.virtualCursor . Rect.topLeft +~ pos
+translateUpdate = (State.uVirtualCursor . Lens.mapped . State.vcRect . Rect.topLeft +~)
 
 translateGeneric :: (a -> b) -> Vector2 R -> Widget a -> State b
 translateGeneric f pos w =
@@ -264,7 +262,7 @@ translateFocusedGeneric f pos x =
             & fMEnterPoint . Lens._Just . Lens.argument -~ pos
             & fMEnterPoint . Lens._Just . Lens.mapped . enterResultRect . Rect.topLeft +~ pos
             & fFocalAreas . traverse . Rect.topLeft +~ pos
-            & fEventMap . Lens.argument . eVirtualCursor . State.virtualCursor . Rect.topLeft -~ pos
+            & fEventMap . Lens.argument . eVirtualCursor . State.vcRect . Rect.topLeft -~ pos
             & fLayers %~ Element.translateLayers pos
             <&> f
 

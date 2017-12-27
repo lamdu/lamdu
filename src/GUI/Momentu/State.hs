@@ -1,7 +1,7 @@
 {-# LANGUAGE NoImplicitPrelude, TemplateHaskell, DeriveGeneric, DefaultSignatures #-}
 
 module GUI.Momentu.State
-    ( VirtualCursor(..), virtualCursor
+    ( VirtualCursor(..), vcRect
     , GUIState(..), sCursor, sWidgetStates
     , Update(..), uCursor, uWidgetStateUpdates, uVirtualCursor
     , update
@@ -27,7 +27,7 @@ import           Lamdu.Prelude
 
 -- The virtual cursor is the focal area that would ideally match the
 -- direction of user movements
-newtype VirtualCursor = VirtualCursor { _virtualCursor :: Rect }
+newtype VirtualCursor = VirtualCursor { _vcRect :: Rect }
 Lens.makeLenses ''VirtualCursor
 
 data GUIState = GUIState
