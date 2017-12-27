@@ -27,7 +27,7 @@ import           GUI.Momentu.ModKey (ModKey(..))
 import qualified GUI.Momentu.ModKey as ModKey
 import           GUI.Momentu.Rect (Rect(..))
 import qualified GUI.Momentu.Rect as Rect
-import           GUI.Momentu.State (Update, VirtualCursor)
+import           GUI.Momentu.State (Update)
 import qualified GUI.Momentu.State as State
 import           GUI.Momentu.View (View(..))
 import qualified GUI.Momentu.View as View
@@ -55,7 +55,7 @@ instance Functor f => Element (Widget (f Update)) where
         & Element.setLayers . Element.layers . Lens.mapped %~ Anim.scale mult
         & Element.size *~ mult
         & wState . _StateFocused . Lens.mapped . fFocalAreas . traverse . Rect.topLeftAndSize *~ mult
-        & wState . _StateFocused . Lens.mapped . fEventMap . Lens.argument . State.virtualCursor . Rect.topLeftAndSize //~ mult
+        & wState . _StateFocused . Lens.mapped . fEventMap . Lens.argument . eVirtualCursor . State.virtualCursor . Rect.topLeftAndSize //~ mult
         & enterResult . enterResultRect . Rect.topLeftAndSize *~ mult
         & wState . _StateUnfocused . uMEnter . Lens._Just . Lens.argument %~ Direction.scale (1 / mult)
         & wState . _StateFocused . Lens.mapped . fMEnterPoint . Lens._Just . Lens.argument //~ mult
@@ -131,11 +131,11 @@ combineStates orientation _ nextDir _ (StateFocused f) (StateUnfocused u) =
             case orientation of
             Horizontal -> Rect.verticalRange
             Vertical   -> Rect.horizontalRange
-        addEvents virtCursor =
+        addEvents eventContext =
             case u ^. uMEnter of
             Nothing -> mempty
             Just enter ->
-                enter (dirCons nextDir (virtCursor ^. State.virtualCursor . chooseRange))
+                enter (dirCons nextDir (eventContext ^. eVirtualCursor . State.virtualCursor . chooseRange))
                 ^. enterResultEvent
                 & EventMap.keyPresses (dirKeys nextDir <&> ModKey mempty) (EventMap.Doc ["Navigation", "Move", dirName nextDir])
             & EventMap.weakerEvents
@@ -193,7 +193,7 @@ stateLayers = stateLens uLayers (Lens.mapped . fLayers)
 enterResult :: Lens.Setter' (Widget a) (EnterResult a)
 enterResult = wState . stateEnterResult
 
-eventMapMaker :: Lens.Setter' (Widget a) (VirtualCursor -> EventMap a)
+eventMapMaker :: Lens.Setter' (Widget a) (EventContext -> EventMap a)
 eventMapMaker = wState . _StateFocused . Lens.mapped . fEventMap
 
 stateLens ::
@@ -264,7 +264,7 @@ translateFocusedGeneric f pos x =
             & fMEnterPoint . Lens._Just . Lens.argument -~ pos
             & fMEnterPoint . Lens._Just . Lens.mapped . enterResultRect . Rect.topLeft +~ pos
             & fFocalAreas . traverse . Rect.topLeft +~ pos
-            & fEventMap . Lens.argument . State.virtualCursor . Rect.topLeft -~ pos
+            & fEventMap . Lens.argument . eVirtualCursor . State.virtualCursor . Rect.topLeft -~ pos
             & fLayers %~ Element.translateLayers pos
             <&> f
 

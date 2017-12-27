@@ -6,6 +6,7 @@ module GUI.Momentu.Widget.Types
     , EnterResult(..), enterResultEvent, enterResultRect, enterResultLayer
     , Surrounding(..), sLeft, sTop, sRight, sBottom
     , Focused(..), fFocalAreas, fEventMap, fMEnterPoint, fLayers
+    , EventContext(..), eVirtualCursor
     ) where
 
 import qualified Control.Lens as Lens
@@ -56,12 +57,17 @@ data Focused a = Focused
       -- The last focal area is where the cursor is,
       -- however Zoom should care about the first focal area
       _fFocalAreas :: [Rect]
-    , _fEventMap :: VirtualCursor -> EventMap a
+    , _fEventMap :: EventContext -> EventMap a
     , _fMEnterPoint :: Maybe (Vector2 R -> EnterResult a)
     , _fLayers :: Element.Layers
     } deriving Functor
 
+newtype EventContext = EventContext
+    { _eVirtualCursor :: VirtualCursor
+    }
+
 Lens.makeLenses ''EnterResult
+Lens.makeLenses ''EventContext
 Lens.makeLenses ''Focused
 Lens.makeLenses ''Surrounding
 Lens.makeLenses ''Unfocused

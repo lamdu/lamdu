@@ -180,8 +180,8 @@ toWidgetWithKeys keys size sChildren =
             Widget.StateFocused $
             \surrounding ->
             let focusedChild = makeFocusedChild surrounding
-                addNavDests virtCursor =
-                    mkNavDests cursor virtCursor unfocusedMEnters
+                addNavDests eventContext =
+                    mkNavDests cursor (eventContext ^. Widget.eVirtualCursor) unfocusedMEnters
                     & addNavEventmap keys
             in
             Widget.Focused

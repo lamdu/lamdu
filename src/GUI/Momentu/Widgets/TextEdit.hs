@@ -189,9 +189,9 @@ mkCursorRect s cursor str =
 
 -- TODO: Implement intra-TextEdit virtual cursor
 eventMap ::
-    Cursor -> Text -> Widget.Id -> State.VirtualCursor ->
+    Cursor -> Text -> Widget.Id -> Widget.EventContext ->
     EventMap (Text, State.Update)
-eventMap cursor str myId _virtualCursor =
+eventMap cursor str myId _eventContext =
     mconcat . concat $ [
         [ E.keyPressOrRepeat (noMods MetaKey.Key'Left) (moveDoc ["left"]) $
             moveRelative (-1)

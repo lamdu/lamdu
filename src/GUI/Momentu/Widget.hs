@@ -113,7 +113,7 @@ padToSizeAlign newSize alignment w =
 setFocused :: HasWidget w => w a -> w a
 setFocused = widget %~ \w -> setFocusedWith (Rect 0 (w ^. wSize)) mempty w
 
-setFocusedWith :: Rect -> (VirtualCursor -> EventMap a) -> Widget a -> Widget a
+setFocusedWith :: Rect -> (EventContext -> EventMap a) -> Widget a -> Widget a
 setFocusedWith rect eventMap =
     wState %~
     \s ->

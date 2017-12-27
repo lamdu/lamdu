@@ -43,10 +43,15 @@ render Config{cursorColor} w =
     Widget.StateFocused f ->
         ( cursorFrame <> Element.render (r ^. Widget.fLayers)
         , r ^. Widget.fMEnterPoint
-        , Just (area, r ^. Widget.fEventMap)
+        , Just (area, mkEventMap)
         )
         where
             r = f (Widget.Surrounding 0 0 0 0)
+            mkEventMap x =
+                (r ^. Widget.fEventMap)
+                Widget.EventContext
+                { Widget._eVirtualCursor = x
+                }
             area = last (r ^. Widget.fFocalAreas)
             cursorFrame =
                 Anim.backgroundColor ["cursor-background"] cursorColor (area ^. Rect.size)
