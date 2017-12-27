@@ -44,12 +44,12 @@ data ExportRepl m = ExportRepl
     }
 
 extractEventMap ::
-    Functor m => Sugar.Expression name (T m) a -> [MetaKey] ->
-    EventMap (IOTrans m GuiState.Update)
+    Functor m =>
+    Sugar.Expression name (T m) a -> [MetaKey] -> EventMap (T m GuiState.Update)
 extractEventMap replExpr keys =
-  replExpr ^. Sugar.rPayload . Sugar.plActions . Sugar.extract
-  <&> ExprEventMap.extractCursor & IOTrans.liftTrans
-  & E.keysEventMapMovesCursor keys (E.Doc ["Edit", "Extract to definition"])
+    replExpr ^. Sugar.rPayload . Sugar.plActions . Sugar.extract
+    <&> ExprEventMap.extractCursor
+    & E.keysEventMapMovesCursor keys (E.Doc ["Edit", "Extract to definition"])
 
 replEventMap ::
     Monad m =>
@@ -57,7 +57,7 @@ replEventMap ::
     Sugar.Expression name (T m) a -> EventMap (IOTrans m GuiState.Update)
 replEventMap theConfig (ExportRepl exportRepl exportFancy) replExpr =
     mconcat
-    [ extractEventMap replExpr (Config.extractKeys theConfig)
+    [ extractEventMap replExpr (Config.extractKeys theConfig) <&> IOTrans.liftTrans
     , E.keysEventMap exportKeys
       (E.Doc ["Collaboration", "Export repl to JSON file"]) exportRepl
     , E.keysEventMap exportFancyKeys
@@ -76,14 +76,15 @@ make exportRepl replExpr =
         theConfig <- Lens.view config
         let buttonExtractKeys = Config.newDefinitionButtonPressKeys (Config.pane theConfig)
         (Options.boxSpaced ?? Options.disambiguationNone)
-            <*> sequence
+            <*>
+            sequence
             [ (Widget.makeFocusableView ?? Widget.joinId WidgetIds.replId ["symbol"] <&> (Align.tValue %~))
               <*> TextView.makeLabel "⋙"
               <&> Lens.mapped %~ E.weakerEvents (extractEventMap replExpr buttonExtractKeys)
               <&> Responsive.fromWithTextPos
             , ExprGuiM.makeSubexpression replExpr
-              <&> Lens.mapped %~ IOTrans.liftTrans
             ]
+            <&> Lens.mapped %~ IOTrans.liftTrans
             <&> E.weakerEvents (replEventMap theConfig exportRepl replExpr)
             & GuiState.assignCursor WidgetIds.replId exprId
     where
