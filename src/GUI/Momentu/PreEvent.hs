@@ -36,13 +36,17 @@ type PreEvents m = [PreEvent m]
 actionText :: Lens.Traversal' (EventMap a) E.Subtitle
 actionText = E.emDocs . E.docStrs . Lens.reversed . Lens.element 0
 
-withPreEvents :: Monad f => [PreEvent f] -> (Text -> EventMap (f a)) -> EventMap (f a)
-withPreEvents pres mk =
-    mk (mconcat (pres <&> pTextRemainder))
-    & actionText %~ f
-    <&> (mapM_ pAction pres >>)
+withPreEvents :: Monad f => [PreEvent f] -> (Text, EventMap (f a) -> EventMap (f a))
+withPreEvents pres =
+    ( mconcat (pres <&> pTextRemainder)
+    , onEventMap
+    )
     where
-        f x = (pres <&> pDesc) ++ [x] & filter (not . Text.null) & Text.intercalate ", "
+        onEventMap eventMap =
+            eventMap
+            & actionText %~ onActionText
+            <&> (mapM_ pAction pres >>)
+        onActionText x = (pres <&> pDesc) ++ [x] & filter (not . Text.null) & Text.intercalate ", "
 
 tellPreEvent :: MonadWriter (PreEvents n) m => PreEvent n -> m ()
 tellPreEvent = tell . (:[])

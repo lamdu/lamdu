@@ -320,10 +320,8 @@ make pMode lhsEventMap name color binder myId =
         (Parts mParamsEdit mScopeEdit bodyEdit eventMap, preEvents) <-
             makeParts ExprGui.UnlimitedFuncApply binder myId myId
             & listenPreEvents
-        rhsJumperEquals <-
-            jumpToRHS bodyId
-            <&> const
-            <&> withPreEvents preEvents
+        let (_textRemainder, onEvents) = withPreEvents preEvents
+        rhsJumperEquals <- jumpToRHS bodyId <&> onEvents
         mPresentationEdit <-
             pMode & sequenceA & transaction
             >>= traverse

@@ -118,9 +118,10 @@ makeRecord fields addFieldEventMap postProcess =
                     )
                 >>= postProcess
                 & listenPreEvents
+                <&> _2 %~ withPreEvents
                 <&>
-                \(innerGui, preEvents) ->
-                E.weakerEvents (withPreEvents preEvents (const addFieldEventMap)) innerGui
+                \(innerGui, (_textRemainder, onEvents)) ->
+                E.weakerEvents (onEvents addFieldEventMap) innerGui
             <&> (opener /|/)
 
 makeFieldRow ::

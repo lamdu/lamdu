@@ -63,10 +63,8 @@ make openHoleId arg =
         (argGui, preEvents) <-
             ExprGuiM.makeSubexpression (arg ^. Sugar.haExpr)
             & listenPreEvents
-        unwrapEventMap <-
-            makeUnwrapEventMap arg openHoleId
-            <&> const
-            <&> withPreEvents preEvents
+        let (_textRemainder, onEvents) = withPreEvents preEvents
+        unwrapEventMap <- makeUnwrapEventMap arg openHoleId <&> onEvents
         Momentu.addInnerFrame
             ?? frameColor ?? frameWidth
             ?? Momentu.pad (frameWidth & _2 .~ 0) argGui

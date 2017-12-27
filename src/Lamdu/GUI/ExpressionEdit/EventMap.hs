@@ -190,12 +190,13 @@ applyOperatorEventMap options exprInfo preEvents =
     Sugar.WrapperAlready holeId -> return holeId
     Sugar.WrappedAlready holeId -> return holeId
     & action
-    & withPreEvents preEvents
     where
-        action wrap searchStrRemainder =
+        (searchStrRemainder, onEvents) = withPreEvents preEvents
+        action wrap =
             applyOperatorSearchTerm (exprInfoMinOpPrec exprInfo) searchStrRemainder
             <&> HoleEditState.setHoleStateAndJump
             <&> (wrap <&>)
+            & onEvents
 
 wrapEventMap ::
     (MonadReader env m, Config.HasConfig env, Monad f) =>

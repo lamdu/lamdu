@@ -104,6 +104,7 @@ make (Sugar.Case mArg (Sugar.Composite alts caseTail addAlt)) pl =
                     Sugar.OpenComposite actions rest ->
                         makeOpenCase actions rest (Widget.toAnimId myId) altsGui
             & listenPreEvents
+        let (_textRemainder, onEvents) = withPreEvents preEvents
         let addAltEventMap =
                 addAlt
                 <&> (^. Sugar.cairNewTag . Sugar.tagInstance)
@@ -111,7 +112,7 @@ make (Sugar.Case mArg (Sugar.Composite alts caseTail addAlt)) pl =
                 <&> WidgetIds.tagHoleId
                 & E.keysEventMapMovesCursor (Config.caseAddAltKeys config)
                     (doc "Add Alt")
-                & const & withPreEvents preEvents
+                & onEvents
         parentDelegator (WidgetIds.fromExprPayload pl)
             <*> (Styled.addValFrame <*> (Responsive.vboxSpaced ?? [header, altsGui]))
             <&> E.weakerEvents addAltEventMap
