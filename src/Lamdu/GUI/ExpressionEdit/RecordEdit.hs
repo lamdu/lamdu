@@ -13,12 +13,12 @@ import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Glue ((/-/), (/|/))
+import           GUI.Momentu.PreEvent (HasPreEvents(..), withPreEvents)
 import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.State as GuiState
 import           GUI.Momentu.View (View)
 import qualified GUI.Momentu.View as View
 import qualified GUI.Momentu.Widget as Widget
-import           GUI.Momentu.Widgets.Menu.Picker (HasPickers(..), withPicker)
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
@@ -117,10 +117,10 @@ makeRecord fields addFieldEventMap postProcess =
                     <&> Lens.reversed . Lens.ix 0 . Responsive.tagPost .~ (closer <&> Widget.fromView)
                     )
                 >>= postProcess
-                & listenPicker
+                & listenPreEvents
                 <&>
                 \(innerGui, resultPicker) ->
-                E.weakerEvents (withPicker resultPicker (const addFieldEventMap)) innerGui
+                E.weakerEvents (withPreEvents resultPicker (const addFieldEventMap)) innerGui
             <&> (opener /|/)
 
 makeFieldRow ::

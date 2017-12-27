@@ -30,6 +30,7 @@ import           GUI.Momentu.Align (WithTextPos)
 import           GUI.Momentu.Animation.Id (AnimId)
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.Hover as Hover
+import           GUI.Momentu.PreEvent (PreEvents(..), HasPreEvents(..))
 import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.Responsive.Expression as ResponsiveExpr
 import           GUI.Momentu.State (GUIState(..))
@@ -37,7 +38,6 @@ import qualified GUI.Momentu.State as GuiState
 import           GUI.Momentu.View (View)
 import           GUI.Momentu.Widget.Id (toAnimId)
 import qualified GUI.Momentu.Widgets.Menu as Menu
-import           GUI.Momentu.Widgets.Menu.Picker (Picker(..), HasPickers(..))
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
 import qualified GUI.Momentu.Widgets.TextView as TextView
@@ -79,9 +79,9 @@ data Askable m = Askable
       _aSearchStringRemainder :: Text
     }
 newtype ExprGuiM m a = ExprGuiM
-    { _exprGuiM :: RWST (Askable m) (Picker (T m)) () (T m) a
+    { _exprGuiM :: RWST (Askable m) (PreEvents (T m)) () (T m) a
     } deriving (Functor, Applicative, Monad,
-                MonadReader (Askable m), MonadWriter (Picker (T m)))
+                MonadReader (Askable m), MonadWriter (PreEvents (T m)))
 
 instance (Monad m, Monoid a) => Monoid (ExprGuiM m a) where
     mempty = pure mempty
@@ -183,13 +183,13 @@ run makeSubexpr theCodeAnchors (ExprGuiM action) =
             <&> (\(x, (), _output) -> x)
             & transaction
 
-instance Monad m => HasPickers (ExprGuiM m) where
-    type PickerM (ExprGuiM m) = T m
-    listenPicker action =
+instance Monad m => HasPreEvents (ExprGuiM m) where
+    type EventM (ExprGuiM m) = T m
+    listenPreEvents action =
         do
             (result, picker) <- action & exprGuiM %~ RWS.listen
             remainder <- Lens.view aSearchStringRemainder
-            pure (result, picker <> NoPick remainder)
+            pure (result, picker <> PreText remainder)
 
 readMScopeId :: Monad m => ExprGuiM m (CurAndPrev (Maybe ScopeId))
 readMScopeId = Lens.view aMScopeId

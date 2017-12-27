@@ -14,13 +14,13 @@ import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Glue ((/-/), (/|/))
+import           GUI.Momentu.PreEvent (HasPreEvents(..), withPreEvents)
 import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.Responsive.Options as Options
 import qualified GUI.Momentu.State as GuiState
 import           GUI.Momentu.View (View)
 import qualified GUI.Momentu.View as View
 import qualified GUI.Momentu.Widget as Widget
-import           GUI.Momentu.Widgets.Menu.Picker (HasPickers(..), withPicker)
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import           Lamdu.Calc.Type (Tag)
 import qualified Lamdu.Calc.Val as V
@@ -103,7 +103,7 @@ make (Sugar.Case mArg (Sugar.Composite alts caseTail addAlt)) pl =
                         & return
                     Sugar.OpenComposite actions rest ->
                         makeOpenCase actions rest (Widget.toAnimId myId) altsGui
-            & listenPicker
+            & listenPreEvents
         let addAltEventMap =
                 addAlt
                 <&> (^. Sugar.cairNewTag . Sugar.tagInstance)
@@ -111,7 +111,7 @@ make (Sugar.Case mArg (Sugar.Composite alts caseTail addAlt)) pl =
                 <&> WidgetIds.tagHoleId
                 & E.keysEventMapMovesCursor (Config.caseAddAltKeys config)
                     (doc "Add Alt")
-                & const & withPicker resultPicker
+                & const & withPreEvents resultPicker
         parentDelegator (WidgetIds.fromExprPayload pl)
             <*> (Styled.addValFrame <*> (Responsive.vboxSpaced ?? [header, altsGui]))
             <&> E.weakerEvents addAltEventMap

@@ -13,9 +13,9 @@ import qualified Data.Store.Transaction as Transaction
 import qualified Data.Text as Text
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
+import           GUI.Momentu.PreEvent (PreEvents, withPreEvents)
 import qualified GUI.Momentu.State as GuiState
 import qualified GUI.Momentu.Widget as Widget
-import           GUI.Momentu.Widgets.Menu.Picker (Picker, withPicker)
 import qualified Lamdu.CharClassification as Chars
 import qualified Lamdu.Config as Config
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.State as HoleEditState
@@ -62,13 +62,13 @@ exprInfoFromPl pl =
 
 make ::
     (MonadReader env m, Monad f, Config.HasConfig env, GuiState.HasCursor env) =>
-    Options -> Sugar.Payload (T f) ExprGui.Payload -> Picker (T f) ->
+    Options -> Sugar.Payload (T f) ExprGui.Payload -> PreEvents (T f) ->
     m (EventMap (T f GuiState.Update))
 make options = makeWith options . exprInfoFromPl
 
 makeWith ::
     (MonadReader env m, Monad f, Config.HasConfig env, GuiState.HasCursor env) =>
-    Options -> ExprInfo f -> Picker (T f) ->
+    Options -> ExprInfo f -> PreEvents (T f) ->
     m (EventMap (T f GuiState.Update))
 makeWith options exprInfo picker =
     mconcat <$> sequenceA
@@ -143,7 +143,7 @@ maybeReplaceEventMap exprInfo =
 
 actionsEventMap ::
     (MonadReader env m, Monad f, Config.HasConfig env) =>
-    Options -> ExprInfo f -> Picker (T f) ->
+    Options -> ExprInfo f -> PreEvents (T f) ->
     m (EventMap (T f GuiState.Update))
 actionsEventMap options exprInfo picker =
     sequence
@@ -180,7 +180,7 @@ applyOperatorSearchTerm minOpPrec searchStrRemainder =
         acceptOp = (>= minOpPrec) . precedence
 
 applyOperatorEventMap ::
-    Monad f => Options -> ExprInfo f -> Picker (T f) -> EventMap (T f GuiState.Update)
+    Monad f => Options -> ExprInfo f -> PreEvents (T f) -> EventMap (T f GuiState.Update)
 applyOperatorEventMap options exprInfo picker =
     case exprInfoActions exprInfo ^. Sugar.wrap of
     Sugar.WrapAction wrap ->
@@ -190,7 +190,7 @@ applyOperatorEventMap options exprInfo picker =
     Sugar.WrapperAlready holeId -> return holeId
     Sugar.WrappedAlready holeId -> return holeId
     & action
-    & withPicker picker
+    & withPreEvents picker
     where
         action wrap searchStrRemainder =
             applyOperatorSearchTerm (exprInfoMinOpPrec exprInfo) searchStrRemainder

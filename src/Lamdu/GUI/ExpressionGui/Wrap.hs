@@ -9,11 +9,11 @@ module Lamdu.GUI.ExpressionGui.Wrap
 import qualified Control.Lens as Lens
 import           Data.Store.Transaction (Transaction)
 import qualified GUI.Momentu.EventMap as E
+import           GUI.Momentu.PreEvent (HasPreEvents(..))
 import           GUI.Momentu.Responsive (Responsive(..))
 import qualified GUI.Momentu.State as GuiState
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.FocusDelegator as FocusDelegator
-import           GUI.Momentu.Widgets.Menu.Picker (HasPickers(..))
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
 import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
@@ -44,7 +44,7 @@ addActions ::
     ExprGuiM m (ExpressionGui m)
 addActions options pl act =
     do
-        (res, picker) <- listenPicker act
+        (res, picker) <- listenPreEvents act
         exprEventMap <- ExprEventMap.make options pl picker
         E.weakerEvents exprEventMap res & pure
 

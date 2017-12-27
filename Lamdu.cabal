@@ -120,6 +120,7 @@ Executable lamdu
                   , GUI.Momentu.Main.Image
                   , GUI.Momentu.MetaKey
                   , GUI.Momentu.ModKey
+                  , GUI.Momentu.PreEvent
                   , GUI.Momentu.Rect
                   , GUI.Momentu.Responsive
                   , GUI.Momentu.Responsive.Expression
@@ -138,7 +139,6 @@ Executable lamdu
                   , GUI.Momentu.Widgets.Grid
                   , GUI.Momentu.Widgets.GridView
                   , GUI.Momentu.Widgets.Menu
-                  , GUI.Momentu.Widgets.Menu.Picker
                   , GUI.Momentu.Widgets.Spacer
                   , GUI.Momentu.Widgets.StdKeys
                   , GUI.Momentu.Widgets.TextEdit

@@ -13,12 +13,12 @@ import qualified GUI.Momentu.Align as Align
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.MetaKey as MetaKey
+import           GUI.Momentu.PreEvent (tellPreEvent)
 import           GUI.Momentu.Rect (Rect(..))
 import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.State as GuiState
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Grid as Grid
-import qualified GUI.Momentu.Widgets.Menu.Picker as Picker
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.State as HoleState
@@ -134,7 +134,7 @@ make pl resultId holeResult =
                 <&> pickBefore
         searchStringRemainder <- getSearchStringRemainder widgetIds holeResultConverted
         isSelected <- GuiState.isSubCursor ?? resultId
-        when isSelected (Picker.tellPicker searchStringRemainder (holeResult ^. Sugar.holeResultPick))
+        when isSelected (tellPreEvent searchStringRemainder (holeResult ^. Sugar.holeResultPick))
         holeResultConverted
             & postProcessSugar (pl ^. Sugar.plData . ExprGui.plMinOpPrec)
             & ExprGuiM.makeSubexpression

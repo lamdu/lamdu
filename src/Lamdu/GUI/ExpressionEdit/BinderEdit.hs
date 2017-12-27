@@ -29,12 +29,12 @@ import           GUI.Momentu.Glue ((/-/), (/|/))
 import qualified GUI.Momentu.Glue as Glue
 import           GUI.Momentu.MetaKey (MetaKey(..), noMods, toModKey)
 import qualified GUI.Momentu.MetaKey as MetaKey
+import           GUI.Momentu.PreEvent (HasPreEvents(..), withPreEvents)
 import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.Responsive.Options as Options
 import qualified GUI.Momentu.State as GuiState
 import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
-import           GUI.Momentu.Widgets.Menu.Picker (HasPickers(..), withPicker)
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified GUI.Momentu.Widgets.TextView as TextView
 import qualified Lamdu.CharClassification as Chars
@@ -319,11 +319,11 @@ make pMode lhsEventMap name color binder myId =
     do
         (Parts mParamsEdit mScopeEdit bodyEdit eventMap, picker) <-
             makeParts ExprGui.UnlimitedFuncApply binder myId myId
-            & listenPicker
+            & listenPreEvents
         rhsJumperEquals <-
             jumpToRHS bodyId
             <&> const
-            <&> withPicker picker
+            <&> withPreEvents picker
         mPresentationEdit <-
             pMode & sequenceA & transaction
             >>= traverse

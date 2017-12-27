@@ -12,13 +12,13 @@ import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Glue ((/|/))
 import qualified GUI.Momentu.Hover as Hover
+import           GUI.Momentu.PreEvent (PreEvents)
 import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.Responsive.Expression as ResponsiveExpr
 import qualified GUI.Momentu.Responsive.Options as Options
 import qualified GUI.Momentu.State as GuiState
 import           GUI.Momentu.View (View)
 import qualified GUI.Momentu.Widgets.Menu as Menu
-import           GUI.Momentu.Widgets.Menu.Picker (Picker)
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
 import qualified GUI.Momentu.Widgets.TextView as TextView
@@ -43,7 +43,7 @@ type T = Transaction
 
 makeCommon ::
     ( Monad m, MonadReader env f, MonadTransaction m f
-    , MonadWriter (Picker (T m)) f
+    , MonadWriter (PreEvents (T m)) f
     , HasConfig env, HasTheme env, GuiState.HasState env
     , Spacer.HasStdSpacing env, Element.HasAnimIdPrefix env, Menu.HasStyle env
     , Hover.HasStyle env, TextEdit.HasStyle env

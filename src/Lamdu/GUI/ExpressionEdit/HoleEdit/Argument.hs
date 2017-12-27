@@ -9,9 +9,9 @@ import           Data.Store.Transaction (Transaction)
 import qualified GUI.Momentu as Momentu
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
+import           GUI.Momentu.PreEvent (HasPreEvents(..), withPreEvents)
 import qualified GUI.Momentu.State as GuiState
 import qualified GUI.Momentu.Widget as Widget
-import           GUI.Momentu.Widgets.Menu.Picker (HasPickers(..), withPicker)
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Config.Theme as Theme
 import           Lamdu.GUI.ExpressionGui (ExpressionGui, ExpressionN)
@@ -62,11 +62,11 @@ make openHoleId arg =
         let frameWidth = Theme.typeIndicatorFrameWidth theme <&> realToFrac
         (argGui, resultPicker) <-
             ExprGuiM.makeSubexpression (arg ^. Sugar.haExpr)
-            & listenPicker
+            & listenPreEvents
         unwrapEventMap <-
             makeUnwrapEventMap arg openHoleId
             <&> const
-            <&> withPicker resultPicker
+            <&> withPreEvents resultPicker
         Momentu.addInnerFrame
             ?? frameColor ?? frameWidth
             ?? Momentu.pad (frameWidth & _2 .~ 0) argGui
