@@ -218,11 +218,13 @@ mkNominalOptions nominals =
                 [ inject & V.Nom tid & V.BToNom & Val () ]
 
 mkOptions ::
-    Monad m => ConvertM.Context m ->
-    Maybe (Val (Input.Payload m a)) ->
-    Input.Payload m a -> ValIProperty m ->
-    T m [HoleOption (T m) (Expression UUID (T m) ())]
-mkOptions sugarContext mInjectedArg exprPl stored =
+    Monad m =>
+    Maybe (Val (Input.Payload m a)) -> Input.Payload m a -> ValIProperty m ->
+    ConvertM m (T m [HoleOption (T m) (Expression UUID (T m) ())])
+mkOptions mInjectedArg exprPl stored =
+    ConvertM.readContext
+    <&>
+    \sugarContext ->
     do
         nominalOptions <- getNominals sugarContext <&> mkNominalOptions
         globals <- getGlobals sugarContext
@@ -247,11 +249,7 @@ mkWritableHoleActions ::
     Input.Payload m a -> ValIProperty m ->
     ConvertM m (HoleActions (T m) (Expression UUID (T m) ()))
 mkWritableHoleActions mInjectedArg exprPl stored =
-    do
-        sugarContext <- ConvertM.readContext
-        pure HoleActions
-            { _holeOptions = mkOptions sugarContext mInjectedArg exprPl stored
-            }
+    mkOptions mInjectedArg exprPl stored <&> HoleActions
 
 loadDeps :: Monad m => [V.Var] -> [T.NominalId] -> T m Infer.Dependencies
 loadDeps vars noms =
