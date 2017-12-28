@@ -138,10 +138,6 @@ makeUnderCursorAssignment ::
     ExprGuiM m (Menu.Placement -> WithTextPos (Widget (T m GuiState.Update)))
 makeUnderCursorAssignment searchTermEventMap shownResultsLists hasHiddenResults hole pl =
     do
-        -- We make our own type view here instead of stdWrap, because
-        -- we want to synchronize the active BG width with the
-        -- inferred type width
-        typeView <- makeInferredTypeAnnotation pl holeAnimId
         groupsWidgets <- traverse (makeResultGroup pl) shownResultsLists
 
         vspace <- Annotation.annotationSpacer
@@ -154,6 +150,7 @@ makeUnderCursorAssignment searchTermEventMap shownResultsLists hasHiddenResults 
                 groupsWidgets <&> rgOption
                 <&> Menu.optionWidgets . Lens.mapped .
                     Widget.eventMapMaker . Lens.mapped %~ (searchTermEventMap <>)
+        typeView <- makeInferredTypeAnnotation pl holeAnimId
         hoverMenu <- Menu.makeHovered (vspace /-/ typeView) options hasHiddenResults
         SearchTerm.make widgetIds holeKind
             <&> Align.tValue %~ Widget.weakerEvents (pickFirstResult <> literalEventMap)
