@@ -89,14 +89,13 @@ removeUnwanted config =
             <&> MetaKey.toModKey
             <&> E.KeyEvent MetaKey.KeyState'Pressed
 
-applyResultLayout ::
-    Functor f => f (ExpressionGui m) -> f (WithTextPos (Widget (T m GuiState.Update)))
+applyResultLayout :: ExpressionGui m -> WithTextPos (Widget (T m GuiState.Update))
 applyResultLayout fGui =
-    fGui <&> (^. Responsive.render)
-    ?? Responsive.LayoutParams
-        { Responsive._layoutMode = Responsive.LayoutWide
-        , Responsive._layoutContext = Responsive.LayoutClear
-        }
+    (fGui ^. Responsive.render)
+    Responsive.LayoutParams
+    { Responsive._layoutMode = Responsive.LayoutWide
+    , Responsive._layoutContext = Responsive.LayoutClear
+    }
 
 emptyPickEventMap ::
     (Monad m, Applicative f) => ExprGuiM m (EventMap (f GuiState.Update))
@@ -152,7 +151,7 @@ make pl resultId holeResult =
             <&> E.eventMap . Lens.mapped %~ pickBefore
             <&> E.eventMap %~ mappend pickEventMap
             & GuiState.assignCursor resultId idWithinResultWidget
-            & applyResultLayout
+            <&> applyResultLayout
             <&> setFocalAreaToFullSize
             <&> (,) pickEventMap
     where
