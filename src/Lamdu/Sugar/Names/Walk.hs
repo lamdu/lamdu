@@ -69,11 +69,8 @@ toHoleOption option@HoleOption{..} =
         run1 <- opRun
         pure option
             { _hoSugaredBaseExpr = _hoSugaredBaseExpr >>= run0 . toExpression
-            , _hoResults = _hoResults <&> second (>>= run1 . toHoleResult)
+            , _hoResults = _hoResults <&> _2 %~ (>>= run1 . toHoleResult)
             }
-    where
-        {-# INLINE second #-}
-        second f (x, y) = (x, f y)
 
 toParamRef ::
     MonadNaming m =>
