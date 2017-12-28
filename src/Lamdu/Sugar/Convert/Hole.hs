@@ -237,7 +237,9 @@ mkOptions sugarContext mInjectedArg exprPl stored =
             ]
             <&> SeedExpr
             <&> mkHoleOption sugarContext mInjectedArg exprPl stored
-            & return
+            & addSuggestedOptions
+              (mkHoleSuggesteds sugarContext mInjectedArg exprPl stored)
+            & pure
 
 mkWritableHoleActions ::
     Monad m =>
@@ -248,10 +250,7 @@ mkWritableHoleActions mInjectedArg exprPl stored =
     do
         sugarContext <- ConvertM.readContext
         pure HoleActions
-            { _holeOptions =
-                mkOptions sugarContext mInjectedArg exprPl stored
-                <&> addSuggestedOptions
-                    (mkHoleSuggesteds sugarContext mInjectedArg exprPl stored)
+            { _holeOptions = mkOptions sugarContext mInjectedArg exprPl stored
             }
 
 loadDeps :: Monad m => [V.Var] -> [T.NominalId] -> T m Infer.Dependencies
