@@ -87,9 +87,8 @@ addToHole ::
     Sugar.Hole (T m) (Sugar.Expression UUID (T m) ()) a ->
     Sugar.Hole (T m) (Sugar.Expression UUID (T m) ()) a
 addToHole =
-    Sugar.holeActions . Sugar.holeOptions .
-    Lens.mapped . Lens.mapped . Sugar.hoResults . Lens.mapped .
-    _2 %~ (>>= addToHoleResult)
+    Sugar.holeOptions . Lens.mapped . Lens.mapped . Sugar.hoResults .
+    Lens.mapped . _2 %~ (>>= addToHoleResult)
 
 addToBody ::
     Monad m =>

@@ -234,9 +234,7 @@ makeAllGroups ::
 makeAllGroups hole searchTerm =
     (++)
     <$> (literalGroups (hole ^. Sugar.holeKind) searchTerm & sequenceA >>= mapM mkGroup)
-    <*> (hole ^. Sugar.holeActions . Sugar.holeOptions
-         >>= mapM mkGroup
-         <&> holeMatches searchTerm)
+    <*> (hole ^. Sugar.holeOptions >>= mapM mkGroup <&> holeMatches searchTerm)
 
 groupOrdering :: Text -> Group m -> [Bool]
 groupOrdering searchTerm group =

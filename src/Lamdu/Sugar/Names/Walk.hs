@@ -75,15 +75,6 @@ toHoleOption option@HoleOption{..} =
         {-# INLINE second #-}
         second f (x, y) = (x, f y)
 
-toHoleActions ::
-    MonadNaming m =>
-    HoleActions (TM m) (Expression (OldName m) (TM m) ()) ->
-    m (HoleActions (TM m) (Expression (NewName m) (TM m) ()))
-toHoleActions ha@HoleActions {..} =
-    do
-        run <- opRun
-        pure ha { _holeOptions = _holeOptions >>= run . traverse toHoleOption }
-
 toParamRef ::
     MonadNaming m =>
     ParamRef (OldName m) p ->
@@ -209,9 +200,13 @@ toHole ::
     Hole (TM m) (Expression (OldName m) (TM m) ()) a ->
     m (Hole (TM m) (Expression (NewName m) (TM m) ()) b)
 toHole expr Hole{..} =
-    Hole
-    <$> toHoleActions _holeActions
-    <*> toHoleKind expr _holeKind
+    do
+        kind <- toHoleKind expr _holeKind
+        run <- opRun
+        pure Hole
+            { _holeOptions = _holeOptions >>= run . traverse toHoleOption
+            , _holeKind = kind
+            }
 
 toBody ::
     MonadNaming m => (a -> m b) ->

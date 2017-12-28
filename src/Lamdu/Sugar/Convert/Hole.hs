@@ -243,14 +243,6 @@ mkOptions mInjectedArg exprPl stored =
               (mkHoleSuggesteds sugarContext mInjectedArg exprPl stored)
             & pure
 
-mkWritableHoleActions ::
-    Monad m =>
-    Maybe (Val (Input.Payload m a)) ->
-    Input.Payload m a -> ValIProperty m ->
-    ConvertM m (HoleActions (T m) (Expression UUID (T m) ()))
-mkWritableHoleActions mInjectedArg exprPl stored =
-    mkOptions mInjectedArg exprPl stored <&> HoleActions
-
 loadDeps :: Monad m => [V.Var] -> [T.NominalId] -> T m Infer.Dependencies
 loadDeps vars noms =
     Infer.Deps
@@ -353,10 +345,10 @@ mkHole ::
     ConvertM m (Hole (T m) (Expression UUID (T m) ()) (ExpressionU m a))
 mkHole mInjectedArg exprPl =
     do
-        actions <- mkWritableHoleActions mInjectedArg exprPl (exprPl ^. Input.stored)
+        options <- mkOptions mInjectedArg exprPl (exprPl ^. Input.stored)
         leafActions <- mkLeafActions mInjectedArg exprPl (exprPl ^. Input.stored)
         pure Hole
-            { _holeActions = actions
+            { _holeOptions = options
             , _holeKind = LeafHole leafActions
             }
 

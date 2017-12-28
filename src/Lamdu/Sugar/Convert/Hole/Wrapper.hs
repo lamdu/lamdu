@@ -111,7 +111,7 @@ convertAppliedHole (V.Apply funcI argI) argS exprPl =
                 argI exprPl (exprPl ^. Input.stored)
                 & transaction
             hole
-                & rBody . _BodyHole . holeActions . holeOptions . Lens.mapped
+                & rBody . _BodyHole . holeOptions . Lens.mapped
                     %~  ConvertHole.addSuggestedOptions suggesteds
                     .   mappend (mkAppliedHoleOptions sugarContext
                         argI (argS <&> (^. pUserData)) exprPl (exprPl ^. Input.stored))

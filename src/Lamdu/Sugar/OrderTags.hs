@@ -67,8 +67,8 @@ orderHole ::
     Sugar.Hole (T m) (Sugar.Expression name (T m) ()) a ->
     Sugar.Hole (T m) (Sugar.Expression name (T m) ()) a
 orderHole =
-    Sugar.holeActions . Sugar.holeOptions . Lens.mapped . Lens.mapped .
-    Sugar.hoResults . Lens.mapped . Lens._2 %~ (>>= orderHoleResult)
+    Sugar.holeOptions . Lens.mapped . Lens.mapped . Sugar.hoResults .
+    Lens.mapped . Lens._2 %~ (>>= orderHoleResult)
 
 orderCase :: Monad m => Order m (Sugar.Case name (T m) a)
 orderCase = Sugar.cBody %%~ orderRecord

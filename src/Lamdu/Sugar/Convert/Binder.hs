@@ -237,10 +237,7 @@ markLightParams paramUUIDs (Expression body pl) =
             n
             & pBinderMode .~ LightLambda
             & GetParam & BodyGetVar
-    BodyHole h ->
-        h
-        & holeActions . Lens.mapped %~ markLightParams paramUUIDs
-        & BodyHole
+    BodyHole h -> h <&> markLightParams paramUUIDs & BodyHole
     _ -> body <&> markLightParams paramUUIDs
     & (`Expression` pl)
 

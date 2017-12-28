@@ -6,9 +6,8 @@ module Lamdu.Sugar.Types.Hole
     , HoleOption(..), hoVal, hoSugaredBaseExpr, hoResults
     , LeafHoleActions(..), holeOptionLiteral
     , Literal(..), _LiteralNum, _LiteralBytes, _LiteralText
-    , HoleActions(..), holeOptions
     , HoleKind(..), _LeafHole, _WrapperHole
-    , Hole(..), holeActions, holeKind
+    , Hole(..), holeOptions, holeKind
     , HoleResultScore(..), hrsNumHoleWrappers, hrsScore
     , HoleResult(..)
         , holeResultConverted
@@ -45,10 +44,6 @@ data Literal f
     | LiteralBytes (f ByteString)
     | LiteralText (f Text)
 
-newtype HoleActions m resultExpr = HoleActions
-    { _holeOptions :: m [HoleOption m resultExpr]
-    } deriving Functor
-
 newtype LeafHoleActions m resultExpr = LeafHoleActions
     { _holeOptionLiteral :: Literal Identity -> m (HoleOption m resultExpr)
     } deriving Functor
@@ -68,12 +63,11 @@ data HoleKind m resultExpr expr
     deriving (Functor, Foldable, Traversable)
 
 data Hole m resultExpr expr = Hole
-    { _holeActions :: HoleActions m resultExpr
+    { _holeOptions :: m [HoleOption m resultExpr]
     , _holeKind :: HoleKind m resultExpr expr
     } deriving (Functor, Foldable, Traversable)
 
 Lens.makeLenses ''Hole
-Lens.makeLenses ''HoleActions
 Lens.makeLenses ''HoleArg
 Lens.makeLenses ''HoleOption
 Lens.makeLenses ''HoleResult
