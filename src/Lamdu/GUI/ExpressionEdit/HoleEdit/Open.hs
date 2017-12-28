@@ -88,10 +88,10 @@ makeResultGroup pl results =
     , rgPickMainEventMap = pickMain
     }
 
-assignHoleEditCursor ::
+assignCursor ::
     Monad m =>
     WidgetIds -> [Widget.Id] -> [Widget.Id] -> ExprGuiM m a -> ExprGuiM m a
-assignHoleEditCursor widgetIds shownMainResultsIds allShownResultIds action =
+assignCursor widgetIds shownMainResultsIds allShownResultIds action =
     do
         searchTerm <- HoleState.readSearchTerm widgetIds
         let destId
@@ -181,6 +181,6 @@ makeOpenSearchAreaGui searchTermEventMap hole pl =
                 ] <*> shownResultsLists
         makeUnderCursorAssignment searchTermEventMap shownResultsLists
             hasHiddenResults hole pl
-            & assignHoleEditCursor widgetIds shownMainResultsIds allShownResultIds
+            & assignCursor widgetIds shownMainResultsIds allShownResultIds
     where
         widgetIds = pl ^. Sugar.plEntityId & HoleWidgetIds.make
