@@ -17,7 +17,6 @@ import qualified Lamdu.Calc.Val as V
 import           Lamdu.Calc.Val.Annotated (Val(..))
 import qualified Lamdu.Calc.Val.Annotated as Val
 import qualified Lamdu.Data.Ops as DataOps
-import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Lens as ExprLens
 import qualified Lamdu.Expr.Load as Load
 import qualified Lamdu.Expr.Pure as P
@@ -43,21 +42,19 @@ mkAppliedHoleOptions ::
     Val (Input.Payload m a) ->
     Expression name f a ->
     Input.Payload m a ->
-    ExprIRef.ValIProperty m ->
     [HoleOption (T m) (Expression UUID (T m) ())]
-mkAppliedHoleOptions sugarContext argI argS exprPl stored =
+mkAppliedHoleOptions sugarContext argI argS exprPl =
     [ P.app P.hole P.hole | Lens.nullOf (rBody . _BodyLam) argS ]
     <&> ConvertHole.SeedExpr
-    <&> ConvertHole.mkHoleOption sugarContext (Just argI) exprPl stored
+    <&> ConvertHole.mkHoleOption sugarContext (Just argI) exprPl
 
 mkAppliedHoleSuggesteds ::
     Monad m =>
     ConvertM.Context m ->
     Val (Input.Payload m a) ->
     Input.Payload m a ->
-    ExprIRef.ValIProperty m ->
     T m [HoleOption (T m) (Expression UUID (T m) ())]
-mkAppliedHoleSuggesteds sugarContext argI exprPl stored =
+mkAppliedHoleSuggesteds sugarContext argI exprPl =
     Suggest.valueConversion Load.nominal Nothing (argI <&> onPl)
     <&> (`runStateT` (sugarContext ^. ConvertM.scInferContext))
     <&> Lens.mapped %~ onSuggestion
@@ -66,8 +63,7 @@ mkAppliedHoleSuggesteds sugarContext argI exprPl stored =
         onSuggestion (sugg, newInferCtx) =
             ConvertHole.mkHoleOptionFromInjected
             (sugarContext & ConvertM.scInferContext .~ newInferCtx)
-            exprPl stored
-            (sugg <&> _1 %~ (^. Infer.plType))
+            exprPl (sugg <&> _1 %~ (^. Infer.plType))
 
 checkTypeMatch :: Monad m => Type -> Type -> ConvertM m Bool
 checkTypeMatch x y =
@@ -107,14 +103,12 @@ convertAppliedHole (V.Apply funcI argI) argS exprPl =
             sugarContext <- ConvertM.readContext
             hole <- ConvertHole.convertCommon (Just argI) exprPl
             suggesteds <-
-                mkAppliedHoleSuggesteds sugarContext
-                argI exprPl (exprPl ^. Input.stored)
+                mkAppliedHoleSuggesteds sugarContext argI exprPl
                 & transaction
             hole
                 & rBody . _BodyHole . holeOptions . Lens.mapped
                     %~  ConvertHole.addSuggestedOptions suggesteds
-                    .   mappend (mkAppliedHoleOptions sugarContext
-                        argI (argS <&> (^. pUserData)) exprPl (exprPl ^. Input.stored))
+                    .   mappend (mkAppliedHoleOptions sugarContext argI (argS <&> (^. pUserData)) exprPl)
                 & return
             & lift
             <&> rBody . _BodyHole . holeKind .~ WrapperHole holeArg
