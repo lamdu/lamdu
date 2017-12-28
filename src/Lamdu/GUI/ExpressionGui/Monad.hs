@@ -79,9 +79,9 @@ data Askable m = Askable
       _aSearchStringRemainder :: Text
     }
 newtype ExprGuiM m a = ExprGuiM
-    { _exprGuiM :: RWST (Askable m) (PreEvents (T m)) () (T m) a
+    { _exprGuiM :: RWST (Askable m) (PreEvents (T m ())) () (T m) a
     } deriving (Functor, Applicative, Monad,
-                MonadReader (Askable m), MonadWriter (PreEvents (T m)))
+                MonadReader (Askable m), MonadWriter (PreEvents (T m ())))
 
 instance (Monad m, Monoid a) => Monoid (ExprGuiM m a) where
     mempty = pure mempty
@@ -184,7 +184,7 @@ run makeSubexpr theCodeAnchors (ExprGuiM action) =
             & transaction
 
 instance Monad m => HasPreEvents (ExprGuiM m) where
-    type EventM (ExprGuiM m) = T m
+    type Event (ExprGuiM m) = T m ()
     listenPreEvents action =
         do
             (result, preEvents) <- action & exprGuiM %~ RWS.listen

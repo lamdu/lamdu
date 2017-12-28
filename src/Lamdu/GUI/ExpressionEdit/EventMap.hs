@@ -62,13 +62,13 @@ exprInfoFromPl pl =
 
 make ::
     (MonadReader env m, Monad f, Config.HasConfig env, GuiState.HasCursor env) =>
-    Options -> Sugar.Payload (T f) ExprGui.Payload -> PreEvents (T f) ->
+    Options -> Sugar.Payload (T f) ExprGui.Payload -> PreEvents (T f ()) ->
     m (EventMap (T f GuiState.Update))
 make options = makeWith options . exprInfoFromPl
 
 makeWith ::
     (MonadReader env m, Monad f, Config.HasConfig env, GuiState.HasCursor env) =>
-    Options -> ExprInfo f -> PreEvents (T f) ->
+    Options -> ExprInfo f -> PreEvents (T f ()) ->
     m (EventMap (T f GuiState.Update))
 makeWith options exprInfo preEvents =
     mconcat <$> sequenceA
@@ -143,7 +143,7 @@ maybeReplaceEventMap exprInfo =
 
 actionsEventMap ::
     (MonadReader env m, Monad f, Config.HasConfig env) =>
-    Options -> ExprInfo f -> PreEvents (T f) ->
+    Options -> ExprInfo f -> PreEvents (T f ()) ->
     m (EventMap (T f GuiState.Update))
 actionsEventMap options exprInfo preEvents =
     sequence
@@ -180,7 +180,7 @@ applyOperatorSearchTerm minOpPrec searchStrRemainder =
         acceptOp = (>= minOpPrec) . precedence
 
 applyOperatorEventMap ::
-    Monad f => Options -> ExprInfo f -> PreEvents (T f) -> EventMap (T f GuiState.Update)
+    Monad f => Options -> ExprInfo f -> PreEvents (T f ()) -> EventMap (T f GuiState.Update)
 applyOperatorEventMap options exprInfo preEvents =
     case exprInfoActions exprInfo ^. Sugar.wrap of
     Sugar.WrapAction wrap ->
