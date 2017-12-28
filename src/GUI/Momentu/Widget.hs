@@ -1,7 +1,7 @@
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE NoImplicitPrelude #-}
 module GUI.Momentu.Widget
     ( module Types
-    , eventMapMaker
 
     , Id(..), Id.joinId, makeSubId
 
@@ -22,6 +22,13 @@ module GUI.Momentu.Widget
     , takesFocus
     , enterFuncAddVirtualCursor
 
+    -- Event maps:
+    , strongerEvents
+    , weakerEvents
+    , weakerEventsWithContext
+    , addPreEvent
+    , eventMapMaker
+
     -- Operations:
     , translate
     , translateFocused, combineEnterPoints
@@ -36,17 +43,20 @@ module GUI.Momentu.Widget
     , glueStates
     ) where
 
+import           Control.Applicative (liftA2)
 import qualified Control.Lens as Lens
+import qualified Data.Text as Text
 import           Data.Vector.Vector2 (Vector2(..))
 import           GUI.Momentu.Animation (AnimId, R, Size)
 import           GUI.Momentu.Direction (Direction)
 import qualified GUI.Momentu.Direction as Direction
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
-import           GUI.Momentu.State (VirtualCursor(..), Update, HasCursor(..))
-import qualified GUI.Momentu.State as State
+import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Rect (Rect(..))
 import qualified GUI.Momentu.Rect as Rect
+import           GUI.Momentu.State (VirtualCursor(..), Update, HasCursor(..))
+import qualified GUI.Momentu.State as State
 import           GUI.Momentu.View (View(..))
 import           GUI.Momentu.Widget.Id (Id(..))
 import qualified GUI.Momentu.Widget.Id as Id
@@ -97,6 +107,65 @@ enterFuncAddVirtualCursor destRect =
             Direction.Point p     -> Rect p 0 & Just
             <&> VirtualCursor
 
+-- | Take a manual `mappend` function to avoid needing "Monoid (f a)"
+-- constraint in callers, who can give the Applicative-Monoid instance
+-- for a generic Applicative without requiring a cumbersome
+-- "Applicative (f a)" constraint
+addPreEventToEventMap :: (a -> a -> a) -> PreEvent a -> EventMap a -> EventMap a
+addPreEventToEventMap append preEvent e =
+    e
+    & actionText %~ concatDescs (preEvent ^. pDesc)
+    <&> append (preEvent ^. pAction)
+    where
+        actionText = E.emDocs . E.docStrs . Lens.reversed . Lens.element 0
+        concatDescs x y = filter (not . Text.null) [x, y] & Text.intercalate ", "
+
+addPreEvent :: Monoid a => PreEvent a -> Widget a -> Widget a
+addPreEvent preEvent =
+    wState . _StateFocused . Lens.mapped %~ onFocused
+    where
+        onFocused f =
+            f
+            & fPreEvents %~ (preEvent:)
+            & fEventMap %~ onMkEventMap
+        onMkEventMap mk ctx =
+            ctx
+            & ePrevTextRemainder %~ (preEvent ^. pTextRemainder <>)
+            & mk
+            & addPreEventToEventMap mappend preEvent
+
+addEvents ::
+    (Applicative f, Monoid a, HasWidget w) =>
+    (EventMap (f a) -> EventMap (f a) -> EventMap (f a)) ->
+    EventMap (f a) -> w (f a) -> w (f a)
+addEvents append e =
+    widget . wState . _StateFocused . Lens.mapped %~ onFocused
+    where
+        onFocused f =
+            f & fEventMap . Lens.mapped %~ append e'
+            where
+                e' = foldr (addPreEventToEventMap (liftA2 mappend)) e (f ^. fPreEvents)
+
+strongerEvents ::
+    (Applicative f, Monoid a, HasWidget w) => EventMap (f a) -> w (f a) -> w (f a)
+strongerEvents = addEvents mappend
+
+weakerEvents ::
+    (Applicative f, Monoid a, HasWidget w) => EventMap (f a) -> w (f a) -> w (f a)
+weakerEvents = addEvents (flip mappend)
+
+weakerEventsWithContext ::
+    (Applicative f, Monoid a, HasWidget w) =>
+    (EventContext -> EventMap (f a)) -> w (f a) -> w (f a)
+weakerEventsWithContext mkEvents =
+    widget . wState . _StateFocused . Lens.mapped %~ onFocused
+    where
+        onFocused f =
+            f & fEventMap . Lens.imapped %@~ add
+            where
+                add ctx =
+                    (<> foldr (addPreEventToEventMap (liftA2 mappend)) (mkEvents ctx) (f ^. fPreEvents))
+
 translateFocused ::
     Functor f =>
     Vector2 R -> (Surrounding -> Focused (f Update)) ->
@@ -115,7 +184,8 @@ padToSizeAlign newSize alignment w =
 setFocused :: HasWidget w => w a -> w a
 setFocused = widget %~ \w -> setFocusedWith (Rect 0 (w ^. wSize)) mempty w
 
-setFocusedWith :: Rect -> (EventContext -> EventMap a) -> Widget a -> Widget a
+setFocusedWith ::
+    Rect -> (EventContext -> EventMap a) -> Widget a -> Widget a
 setFocusedWith rect eventMap =
     wState %~
     \s ->
@@ -124,6 +194,7 @@ setFocusedWith rect eventMap =
         const Focused
         { _fFocalAreas = [rect]
         , _fEventMap = eventMap
+        , _fPreEvents = mempty
         , _fMEnterPoint = u ^. uMEnter <&> (. Direction.Point)
         , _fLayers = u ^. uLayers
         }

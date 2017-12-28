@@ -9,7 +9,6 @@ import           Data.Store.Transaction (Transaction)
 import qualified GUI.Momentu as Momentu
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
-import           GUI.Momentu.PreEvent (HasPreEvents(..), withPreEvents)
 import qualified GUI.Momentu.State as GuiState
 import qualified GUI.Momentu.Widget as Widget
 import qualified Lamdu.Config as Config
@@ -60,11 +59,8 @@ make openHoleId arg =
                 Sugar.UnwrapAction {} -> Theme.typeIndicatorMatchColor
                 Sugar.UnwrapTypeMismatch {} -> Theme.typeIndicatorErrorColor
         let frameWidth = Theme.typeIndicatorFrameWidth theme <&> realToFrac
-        (argGui, preEvents) <-
-            ExprGuiM.makeSubexpression (arg ^. Sugar.haExpr)
-            & listenPreEvents
-        let (_textRemainder, onEvents) = withPreEvents preEvents
-        unwrapEventMap <- makeUnwrapEventMap arg openHoleId <&> onEvents
+        argGui <- ExprGuiM.makeSubexpression (arg ^. Sugar.haExpr)
+        unwrapEventMap <- makeUnwrapEventMap arg openHoleId
         Momentu.addInnerFrame
             ?? frameColor ?? frameWidth
             ?? Momentu.pad (frameWidth & _2 .~ 0) argGui

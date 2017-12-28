@@ -33,5 +33,5 @@ hello getFont env =
             ^. M.tValue
             & Widget.fromView
             & Widget.setFocused
-            & M.strongerEvents M.quitEventMap
+            & M.weakerEvents M.quitEventMap
             & return

@@ -29,7 +29,6 @@ import           GUI.Momentu.Glue ((/-/), (/|/))
 import qualified GUI.Momentu.Glue as Glue
 import           GUI.Momentu.MetaKey (MetaKey(..), noMods, toModKey)
 import qualified GUI.Momentu.MetaKey as MetaKey
-import           GUI.Momentu.PreEvent (HasPreEvents(..), withPreEvents)
 import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.Responsive.Options as Options
 import qualified GUI.Momentu.State as GuiState
@@ -81,13 +80,13 @@ makeBinderNameEdit binderActions rhsJumperEquals name color myId =
         config <- Lens.view Config.config
         NameEdit.makeAtBinder name color myId
             <&> jumpToRHSViaEquals
-            <&> Align.tValue %~ E.weakerEvents
+            <&> Align.tValue %~ Widget.weakerEvents
                 (ParamEdit.eventMapAddFirstParam config
                  (binderActions ^. Sugar.baAddFirstParam))
     where
         jumpToRHSViaEquals
             | nonOperatorName (name ^. Name.form) =
-                Align.tValue %~ E.strongerEvents rhsJumperEquals
+                Align.tValue %~ Widget.strongerEvents rhsJumperEquals
             | otherwise = id
 
 data Parts m = Parts
@@ -198,7 +197,7 @@ makeScopeNavEdit binder myId curCursor =
             CESettings.Evaluation ->
                 (Widget.makeFocusableView ?? myId)
                 <*> (mapM mkArrow scopes <&> Glue.hbox)
-                <&> E.weakerEvents (mkScopeEventMap leftKeys rightKeys `mappend` blockEventMap)
+                <&> Widget.weakerEvents (mkScopeEventMap leftKeys rightKeys `mappend` blockEventMap)
                 <&> Just
                 <&> (,) (mkScopeEventMap
                          (Config.prevScopeKeys evalConfig)
@@ -317,11 +316,9 @@ make ::
     ExprGuiM m (ExpressionGui m)
 make pMode lhsEventMap name color binder myId =
     do
-        (Parts mParamsEdit mScopeEdit bodyEdit eventMap, preEvents) <-
+        Parts mParamsEdit mScopeEdit bodyEdit eventMap <-
             makeParts ExprGui.UnlimitedFuncApply binder myId myId
-            & listenPreEvents
-        let (_textRemainder, onEvents) = withPreEvents preEvents
-        rhsJumperEquals <- jumpToRHS bodyId <&> onEvents
+        rhsJumperEquals <- jumpToRHS bodyId
         mPresentationEdit <-
             pMode & sequenceA & transaction
             >>= traverse
@@ -333,14 +330,14 @@ make pMode lhsEventMap name color binder myId =
             name color myId
             <&> (/-/ fromMaybe Element.empty mPresentationEdit)
             <&> Responsive.fromWithTextPos
-            <&> E.weakerEvents jumpHolesEventMap
+            <&> Widget.weakerEvents jumpHolesEventMap
         mParamEdit <-
             case mParamsEdit of
             Nothing -> return Nothing
             Just paramsEdit ->
                 Responsive.vboxSpaced
                 ?? (paramsEdit : fmap Responsive.fromWidget mScopeEdit ^.. Lens._Just)
-                <&> E.strongerEvents rhsJumperEquals
+                <&> Widget.strongerEvents rhsJumperEquals
                 <&> Just
         equals <- TextView.makeLabel "="
         Options.boxSpaced ?? Options.disambiguationNone
@@ -348,10 +345,10 @@ make pMode lhsEventMap name color binder myId =
             (\hbox ->
             hbox
             [ hbox (defNameEdit : (mParamEdit ^.. Lens._Just) ++ [Responsive.fromTextView equals])
-                & E.weakerEvents lhsEventMap
+                & Widget.weakerEvents lhsEventMap
             , bodyEdit
             ] )
-            <&> E.weakerEvents eventMap
+            <&> Widget.weakerEvents eventMap
     & Reader.local (Element.animIdPrefix .~ Widget.toAnimId myId)
     & case binder ^. Sugar.bLamId of
         Nothing -> id
@@ -394,7 +391,7 @@ makeLetEdit item =
         space <- Spacer.stdHSpace
         letEquation <-
             make Nothing mempty (item ^. Sugar.lName) letColor binder letId
-            <&> E.weakerEvents eventMap
+            <&> Widget.weakerEvents eventMap
             <&> Element.pad (Theme.letItemPadding theme <&> realToFrac)
         letLabel /|/ space /|/ letEquation & return
     & Reader.local (Element.animIdPrefix .~ Widget.toAnimId letId)
@@ -433,7 +430,7 @@ makeBinderBodyEdit ::
 makeBinderBodyEdit (Sugar.BinderBody addOuterLet content) =
     do
         newLetEventMap <- addLetEventMap addOuterLet
-        makeBinderContentEdit content <&> E.weakerEvents newLetEventMap
+        makeBinderContentEdit content <&> Widget.weakerEvents newLetEventMap
 
 makeBinderContentEdit ::
     Monad m =>
@@ -465,12 +462,12 @@ makeBinderContentEdit (Sugar.BinderLet l) =
             <*> ( Responsive.vboxSpaced
                   <*>
                   sequence
-                  [ makeLetEdit l <&> E.weakerEvents moveToInnerEventMap
+                  [ makeLetEdit l <&> Widget.weakerEvents moveToInnerEventMap
                   , makeBinderBodyEdit body
                     & ExprGuiM.withLocalMScopeId letBodyScope
                   ]
                 )
-            <&> E.weakerEvents eventMap
+            <&> Widget.weakerEvents eventMap
     where
         letEntityId = l ^. Sugar.lEntityId & WidgetIds.fromEntityId
         body = l ^. Sugar.lBody
@@ -548,7 +545,7 @@ makeParamsEdit annotationOpts nearestHoles delVarBackwardsId lhsId rhsId params 
                 jumpHolesEventMap <- ExprEventMap.jumpHolesEventMap nearestHoles
                 let mkParam (prevId, nextId, param) =
                         ParamEdit.make annotationOpts prevId nextId param
-                        <&> E.weakerEvents jumpHolesEventMap
+                        <&> Widget.widget . Widget.eventMapMaker . Lens.mapped <>~ jumpHolesEventMap
                 withPrevNext delDestFirst delDestLast
                     (ParamEdit.iId . (^. Sugar.fpInfo)) paramList
                     & traverse mkParam

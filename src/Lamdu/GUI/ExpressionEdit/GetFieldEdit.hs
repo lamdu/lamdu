@@ -6,6 +6,7 @@ module Lamdu.GUI.ExpressionEdit.GetFieldEdit
 import qualified Control.Lens as Lens
 import           Data.Store.Transaction (Transaction)
 import qualified GUI.Momentu.EventMap as E
+import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.Responsive.Options as Options
 import qualified Lamdu.Config as Config
@@ -42,7 +43,7 @@ make (Sugar.GetField recExpr tag) pl =
                     & E.keysEventMapMovesCursor (Config.delKeys config) (E.Doc ["Edit", "Delete"])
         tagEdit <-
             TagEdit.makeRecordTag (pl ^. Sugar.plData . ExprGui.plNearestHoles) tag
-            <&> Lens.mapped %~ E.weakerEvents delEventMap
+            <&> Lens.mapped %~ Widget.weakerEvents delEventMap
         Options.box Options.disambiguationNone
             [ recExprEdit
             , Responsive.fromTextView dotLabel

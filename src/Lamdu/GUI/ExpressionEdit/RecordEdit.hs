@@ -3,7 +3,6 @@ module Lamdu.GUI.ExpressionEdit.RecordEdit
     ( make
     ) where
 
-import           Control.Applicative (liftA2)
 import qualified Control.Lens as Lens
 import           Data.Store.Transaction (Transaction)
 import           Data.Vector.Vector2 (Vector2(..))
@@ -13,7 +12,6 @@ import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Glue ((/-/), (/|/))
-import           GUI.Momentu.PreEvent (HasPreEvents(..), withPreEvents)
 import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.State as GuiState
 import           GUI.Momentu.View (View)
@@ -60,11 +58,10 @@ makeUnit _actions addField pl =
     do
         config <- Lens.view Config.config
         makeFocusable <- Widget.makeFocusableView ?? myId <&> (Align.tValue %~)
-        view <- liftA2 (/|/) (Styled.grammarLabel "{") (Styled.grammarLabel "}")
-        makeFocusable view
-            & Responsive.fromWithTextPos
-            & E.weakerEvents (mkAddFieldEventMap config addField)
-            & pure
+        (/|/) <$> Styled.grammarLabel "{" <*> Styled.grammarLabel "}"
+            <&> makeFocusable
+            <&> Align.tValue %~ Widget.weakerEvents (mkAddFieldEventMap config addField)
+            <&> Responsive.fromWithTextPos
     -- Don't add the closedRecordEventMap (_actions) - it only adds the open
     -- action which is equivalent ot deletion on the unit record
     & stdWrap pl
@@ -90,7 +87,7 @@ make (Sugar.Composite fields recordTail addField) pl =
         let addFieldEventMap = mkAddFieldEventMap config addField
         makeRecord fields addFieldEventMap postProcess
             & stdWrapParentExpr pl
-            <&> E.weakerEvents eventMap
+            <&> Widget.weakerEvents eventMap
     where
         postProcess =
             case recordTail of
@@ -117,11 +114,7 @@ makeRecord fields addFieldEventMap postProcess =
                     <&> Lens.reversed . Lens.ix 0 . Responsive.tagPost .~ (closer <&> Widget.fromView)
                     )
                 >>= postProcess
-                & listenPreEvents
-                <&> _2 %~ withPreEvents
-                <&>
-                \(innerGui, (_textRemainder, onEvents)) ->
-                E.weakerEvents (onEvents addFieldEventMap) innerGui
+                <&> Widget.weakerEvents addFieldEventMap
             <&> (opener /|/)
 
 makeFieldRow ::
@@ -134,12 +127,12 @@ makeFieldRow (Sugar.CompositeItem delete tag fieldExpr) =
         let itemEventMap = recordDelEventMap config delete
         tagLabel <-
             TagEdit.makeRecordTag (ExprGui.nextHolesBefore fieldExpr) tag
-            <&> Align.tValue %~ E.weakerEvents itemEventMap
+            <&> Align.tValue %~ Widget.weakerEvents itemEventMap
         hspace <- Spacer.stdHSpace
         fieldGui <- ExprGuiM.makeSubexpression fieldExpr
         pure Responsive.TaggedItem
             { Responsive._tagPre = tagLabel /|/ hspace
-            , Responsive._taggedItem = E.weakerEvents itemEventMap fieldGui
+            , Responsive._taggedItem = Widget.weakerEvents itemEventMap fieldGui
             , Responsive._tagPost = Element.empty
             }
 
@@ -174,7 +167,7 @@ makeOpenRecord (Sugar.OpenCompositeActions close) rest fieldsGui =
                 where
                     restW =
                         (restExpr ^. Responsive.render) layoutMode
-                        <&> E.weakerEvents restEventMap
+                        <&> Widget.weakerEvents restEventMap
                     minWidth = restW ^. Element.width
                     targetWidth = fields ^. Element.width
         fieldsGui & Responsive.render . Lens.imapped %@~ layout & pure

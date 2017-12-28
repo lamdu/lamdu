@@ -78,7 +78,7 @@ makeWidget choiceRef getFont mainEnv =
                 & M.tint color
                 & M.scale 100
         box `M.above` choiceWidget
-            & M.strongerEvents M.quitEventMap
+            & M.weakerEvents M.quitEventMap
             & return
 
 choiceConfig :: Choice.Config

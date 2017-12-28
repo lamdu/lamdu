@@ -3,7 +3,6 @@ module Lamdu.GUI.ExpressionGui.Monad
     ( ExprGuiM
     , StoredEntityIds(..)
     , withLocalUnderline
-    , withLocalSearchStringRemainer
     --
     , makeSubexpression
     , advanceDepth, resetDepth
@@ -18,11 +17,10 @@ module Lamdu.GUI.ExpressionGui.Monad
 
 import           Control.Applicative (liftA2)
 import qualified Control.Lens as Lens
+import           Control.Monad.Reader (ReaderT(..))
 import qualified Control.Monad.Reader as Reader
-import           Control.Monad.Trans.FastRWS (RWST, runRWST)
-import qualified Control.Monad.Trans.FastRWS as RWS
+import qualified Control.Monad.Trans.Reader as ReaderT
 import           Control.Monad.Transaction (MonadTransaction(..))
-import           Control.Monad.Writer (MonadWriter)
 import           Data.CurAndPrev (CurAndPrev)
 import           Data.Store.Transaction (Transaction)
 import           Data.Vector.Vector2 (Vector2)
@@ -30,7 +28,6 @@ import           GUI.Momentu.Align (WithTextPos)
 import           GUI.Momentu.Animation.Id (AnimId)
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.Hover as Hover
-import           GUI.Momentu.PreEvent (PreEvents, PreEvents(..), HasPreEvents(..))
 import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.Responsive.Expression as ResponsiveExpr
 import           GUI.Momentu.State (GUIState(..))
@@ -75,13 +72,10 @@ data Askable m = Askable
     , _aDepthLeft :: Int
     , _aMScopeId :: CurAndPrev (Maybe ScopeId)
     , _aStyle :: Style
-    , -- Used for expressions in hole results
-      _aSearchStringRemainder :: Text
     }
 newtype ExprGuiM m a = ExprGuiM
-    { _exprGuiM :: RWST (Askable m) (PreEvents (T m ())) () (T m) a
-    } deriving (Functor, Applicative, Monad,
-                MonadReader (Askable m), MonadWriter (PreEvents (T m ())))
+    { _exprGuiM :: ReaderT (Askable m) (T m) a
+    } deriving (Functor, Applicative, Monad, MonadReader (Askable m))
 
 instance (Monad m, Monoid a) => Monoid (ExprGuiM m a) where
     mempty = pure mempty
@@ -106,9 +100,6 @@ instance Hover.HasStyle (Askable m) where style = aTheme . Hover.style
 instance HasStyle (Askable m) where style = aStyle
 instance HasSettings (Askable m) where settings = aSettings
 
-withLocalSearchStringRemainer :: Monad m => Text -> ExprGuiM m a -> ExprGuiM m a
-withLocalSearchStringRemainer = Reader.local . (aSearchStringRemainder .~)
-
 withLocalUnderline ::
     (MonadReader env m, TextView.HasStyle env) => TextView.Underline -> m a -> m a
 withLocalUnderline underline = Reader.local (TextView.underline ?~ underline)
@@ -130,17 +121,17 @@ makeSubexpression expr =
         animId = expr ^. Sugar.rPayload & WidgetIds.fromExprPayload & toAnimId
 
 resetDepth :: Int -> ExprGuiM m r -> ExprGuiM m r
-resetDepth depth = exprGuiM %~ RWS.local (aDepthLeft .~ depth)
+resetDepth depth = exprGuiM %~ ReaderT.local (aDepthLeft .~ depth)
 
 advanceDepth ::
-    Monad m => (WithTextPos View -> ExprGuiM m r) ->
-    AnimId -> ExprGuiM m r -> ExprGuiM m r
+    Monad m =>
+    (WithTextPos View -> ExprGuiM m r) -> AnimId -> ExprGuiM m r -> ExprGuiM m r
 advanceDepth f animId action =
     do
         depth <- Lens.view aDepthLeft
         if depth <= 0
             then mkErrorWidget >>= f
-            else action & exprGuiM %~ RWS.local (aDepthLeft -~ 1)
+            else action & exprGuiM %~ ReaderT.local (aDepthLeft -~ 1)
     where
         mkErrorWidget = TextView.make ?? "..." ?? animId
 
@@ -163,7 +154,7 @@ run makeSubexpr theCodeAnchors (ExprGuiM action) =
         theStdSpacing <- Lens.view Spacer.stdSpacing
         theConfig <- Lens.view Config.config
         theTheme <- Lens.view Theme.theme
-        runRWST action
+        runReaderT action
             Askable
             { _aState = theState
             , _aTextEditStyle = theTextEditStyle
@@ -177,31 +168,13 @@ run makeSubexpr theCodeAnchors (ExprGuiM action) =
             , _aDepthLeft = Config.maxExprDepth theConfig
             , _aMScopeId = Just topLevelScopeId & pure
             , _aStyle = theStyle
-            , _aSearchStringRemainder = ""
-            }
-            ()
-            <&> (\(x, (), _output) -> x)
-            & transaction
-
-instance Monad m => HasPreEvents (ExprGuiM m) where
-    type Event (ExprGuiM m) = T m ()
-    listenPreEvents action =
-        do
-            (result, preEvents) <- action & exprGuiM %~ RWS.listen
-            remainderText <- Lens.view aSearchStringRemainder
-            let remainder =
-                    PreEvents
-                    { pDesc = ""
-                    , pAction = return ()
-                    , pTextRemainder = remainderText
-                    }
-            pure (result, preEvents <> remainder)
+            } & transaction
 
 readMScopeId :: Monad m => ExprGuiM m (CurAndPrev (Maybe ScopeId))
 readMScopeId = Lens.view aMScopeId
 
 withLocalMScopeId :: CurAndPrev (Maybe ScopeId) -> ExprGuiM m a -> ExprGuiM m a
-withLocalMScopeId mScopeId = exprGuiM %~ RWS.local (aMScopeId .~ mScopeId)
+withLocalMScopeId mScopeId = exprGuiM %~ ReaderT.local (aMScopeId .~ mScopeId)
 
 isExprSelected ::
     (MonadReader env m, GuiState.HasCursor env) =>

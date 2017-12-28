@@ -51,6 +51,7 @@ render Config{cursorColor} w =
                 (r ^. Widget.fEventMap)
                 Widget.EventContext
                 { Widget._eVirtualCursor = x
+                , Widget._ePrevTextRemainder = mempty
                 }
             area = last (r ^. Widget.fFocalAreas)
             cursorFrame =

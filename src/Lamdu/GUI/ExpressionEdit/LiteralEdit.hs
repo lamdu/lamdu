@@ -20,6 +20,7 @@ import           GUI.Momentu.ModKey (ModKey(..))
 import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.State as GuiState
 import           GUI.Momentu.Widget (Widget)
+import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.FocusDelegator as FocusDelegator
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
 import qualified GUI.Momentu.Widgets.TextEdit.Property as TextEdits
@@ -60,7 +61,7 @@ genericEdit whichStyle prop pl =
         style <- Lens.view Style.style <&> (^. whichStyle)
         TextView.makeFocusable ?? valText ?? myId
             & Reader.local (TextEdit.style .~ style)
-            <&> Align.tValue %~ E.weakerEvents editEventMap
+            <&> Align.tValue %~ Widget.weakerEvents editEventMap
             <&> Responsive.fromWithTextPos
     where
         myId = WidgetIds.fromExprPayload pl

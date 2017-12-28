@@ -5,8 +5,9 @@ module GUI.Momentu.Widget.Types
     , Unfocused(..), uMEnter, uLayers
     , EnterResult(..), enterResultEvent, enterResultRect, enterResultLayer
     , Surrounding(..), sLeft, sTop, sRight, sBottom
-    , Focused(..), fFocalAreas, fEventMap, fMEnterPoint, fLayers
-    , EventContext(..), eVirtualCursor
+    , Focused(..), fFocalAreas, fEventMap, fMEnterPoint, fLayers, fPreEvents
+    , PreEvent(..), pDesc, pAction, pTextRemainder
+    , EventContext(..), eVirtualCursor, ePrevTextRemainder
     ) where
 
 import qualified Control.Lens as Lens
@@ -14,7 +15,7 @@ import           Data.Vector.Vector2 (Vector2)
 import           GUI.Momentu.Animation (R, Size)
 import           GUI.Momentu.Direction (Direction)
 import qualified GUI.Momentu.Element as Element
-import           GUI.Momentu.EventMap (EventMap)
+import           GUI.Momentu.EventMap (EventMap, Subtitle)
 import           GUI.Momentu.Rect (Rect)
 import           GUI.Momentu.State (VirtualCursor)
 
@@ -58,17 +59,32 @@ data Focused a = Focused
       -- however Zoom should care about the first focal area
       _fFocalAreas :: [Rect]
     , _fEventMap :: EventContext -> EventMap a
+    , _fPreEvents :: [PreEvent a]
     , _fMEnterPoint :: Maybe (Vector2 R -> EnterResult a)
     , _fLayers :: Element.Layers
     } deriving Functor
 
-newtype EventContext = EventContext
+data PreEvent a = PreEvent
+    { _pDesc :: Subtitle
+    , _pAction :: a
+    , _pTextRemainder :: Text
+    } deriving Functor
+
+data EventContext = EventContext
     { _eVirtualCursor :: VirtualCursor
+    , -- | Remainder text from previous ambigious entry.
+      -- For example, when typing expressions: the partial text "42."
+      -- can end up as "42..50" (a range) or "42.1" (a number).
+      -- When typing the second dot in "42..50" the first dot is the
+      -- "text remainder".  Used when creating widgets using
+      -- `PreEvent`s.
+      _ePrevTextRemainder :: Text
     }
 
 Lens.makeLenses ''EnterResult
 Lens.makeLenses ''EventContext
 Lens.makeLenses ''Focused
+Lens.makeLenses ''PreEvent
 Lens.makeLenses ''Surrounding
 Lens.makeLenses ''Unfocused
 Lens.makeLenses ''Widget

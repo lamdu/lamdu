@@ -10,7 +10,7 @@ module GUI.Momentu
 
     -- | Events
     , EventMap.Doc(..)
-    , EventMap.weakerEvents, EventMap.strongerEvents
+    , Widget.weakerEvents
 
     -- | Animations
     , AnimId

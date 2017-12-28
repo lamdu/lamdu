@@ -89,7 +89,7 @@ mkShrunk paramIds myId =
             & LightLambda.withUnderline theme
         return $ \mScopeEdit ->
             [ addScopeEdit mScopeEdit lamLabel
-              & E.weakerEvents expandEventMap
+              & Widget.weakerEvents expandEventMap
             ]
 
 mkLightLambda ::
@@ -115,7 +115,7 @@ mkLightLambda params myId =
             then
                  mkExpanded
                  <&> Lens.mapped . Lens.mapped . Lens.mapped %~
-                     E.weakerEvents shrinkEventMap
+                     Widget.weakerEvents shrinkEventMap
             else mkShrunk paramIds myId
                  <&> \mk _mParamsEdit mScopeEdit -> mk mScopeEdit
     where
@@ -143,7 +143,7 @@ make lam pl =
         (ResponsiveExpr.boxSpacedMDisamb ?? mParensId)
             <*> (Options.boxSpaced ?? Options.disambiguationNone ?? paramsAndLabelEdits
                 <&> (: [bodyEdit]))
-            <&> E.weakerEvents eventMap
+            <&> Widget.weakerEvents eventMap
     & stdWrapParentExpr pl
     where
         animId = Widget.toAnimId myId

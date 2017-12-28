@@ -88,7 +88,7 @@ mkNomGui ordering nomStr str mDel pl (Sugar.Nominal tid val) =
                         <&> (Align.tValue %~) ?? label /|/ nameGui
                 <&> Responsive.fromWithTextPos
                 & Reader.local (TextView.color .~ nomColor)
-                <&> E.weakerEvents eventMap
+                <&> Widget.weakerEvents eventMap
               , val
               ] & sequence
             )

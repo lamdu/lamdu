@@ -63,7 +63,7 @@ makeGuardRow delete prefixLabel entityId =
                 & E.keysEventMapMovesCursor (Config.delKeys config) (E.Doc ["Edit", "Guard", "Delete"])
         return $
             \cond result ->
-            Row indentAnimId keyword (E.weakerEvents eventMap (cond /|/ colon)) (E.weakerEvents eventMap result)
+            Row indentAnimId keyword (Widget.weakerEvents eventMap (cond /|/ colon)) (Widget.weakerEvents eventMap result)
     where
         indentAnimId = WidgetIds.fromEntityId entityId & Widget.toAnimId
 
@@ -81,7 +81,7 @@ makeElseIf (Sugar.GuardElseIf scopes entityId cond res delete addLet) makeRest =
         (:)
             <$>
             ( makeGuardRow delete elseLabel entityId
-                <*> (ExprGuiM.makeSubexpression cond <&> E.weakerEvents letEventMap)
+                <*> (ExprGuiM.makeSubexpression cond <&> Widget.weakerEvents letEventMap)
                 <*> ExprGuiM.makeSubexpression res
             )
             <*>  makeRest

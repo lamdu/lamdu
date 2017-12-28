@@ -120,7 +120,6 @@ Executable lamdu
                   , GUI.Momentu.Main.Image
                   , GUI.Momentu.MetaKey
                   , GUI.Momentu.ModKey
-                  , GUI.Momentu.PreEvent
                   , GUI.Momentu.Rect
                   , GUI.Momentu.Responsive
                   , GUI.Momentu.Responsive.Expression

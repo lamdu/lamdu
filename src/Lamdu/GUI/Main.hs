@@ -21,6 +21,7 @@ import qualified GUI.Momentu.Main as MainLoop
 import qualified GUI.Momentu.Scroll as Scroll
 import qualified GUI.Momentu.State as GuiState
 import           GUI.Momentu.Widget (Widget)
+import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Config.Theme as Theme
@@ -95,7 +96,7 @@ make env =
         VersionControlGUI.make versionControlCfg versionControlThm
             IOTrans.liftTrans lift actions makeInnerGui
             & (`runReaderT` env)
-            <&> E.strongerEvents quitEventMap
+            <&> Widget.eventMapMaker . Lens.mapped %~ (quitEventMap <>)
     where
         versionControlCfg = Config.versionControl (env ^. Config.config)
         versionControlThm = Theme.versionControl (env ^. Theme.theme)

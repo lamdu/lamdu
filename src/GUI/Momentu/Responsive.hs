@@ -50,7 +50,6 @@ import           GUI.Momentu.Align (Aligned(..), WithTextPos(..))
 import qualified GUI.Momentu.Align as Align
 import           GUI.Momentu.Element (Element, SizedElement)
 import qualified GUI.Momentu.Element as Element
-import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Glue (Glue(..), GluesTo, (/|/), Orientation(..))
 import qualified GUI.Momentu.Glue as Glue
 import qualified GUI.Momentu.State as State
@@ -119,8 +118,6 @@ instance Functor f => Element (Responsive (f State.Update)) where
         w
         & render . Lens.argument . layoutMode . modeWidths -~ topLeft ^. _1 + bottomRight ^. _1
         & render . Lens.mapped %~ Element.assymetricPad topLeft bottomRight
-
-instance E.HasEventMap Responsive where eventMap = Widget.widget . E.eventMap
 
 instance Widget.HasWidget Responsive where widget = alignedWidget . Align.tValue
 

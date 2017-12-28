@@ -1,8 +1,8 @@
 {-# LANGUAGE NoImplicitPrelude, OverloadedStrings #-}
 module Lamdu.GUI.ExpressionEdit.EventMap
-    ( make
+    ( add
     , Options(..), defaultOptions
-    , ExprInfo(..), makeWith
+    , ExprInfo(..), addWith
     , jumpHolesEventMap
     , extractCursor
     , wrapEventMap
@@ -13,8 +13,8 @@ import qualified Data.Store.Transaction as Transaction
 import qualified Data.Text as Text
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
-import           GUI.Momentu.PreEvent (PreEvents, withPreEvents)
 import qualified GUI.Momentu.State as GuiState
+import           GUI.Momentu.Widget (Widget, EventContext)
 import qualified GUI.Momentu.Widget as Widget
 import qualified Lamdu.CharClassification as Chars
 import qualified Lamdu.Config as Config
@@ -60,21 +60,22 @@ exprInfoFromPl pl =
     , exprInfoMinOpPrec = pl ^. Sugar.plData . ExprGui.plMinOpPrec
     }
 
-make ::
+add ::
     (MonadReader env m, Monad f, Config.HasConfig env, GuiState.HasCursor env) =>
-    Options -> Sugar.Payload (T f) ExprGui.Payload -> PreEvents (T f ()) ->
-    m (EventMap (T f GuiState.Update))
-make options = makeWith options . exprInfoFromPl
+    Options -> Sugar.Payload (T f) ExprGui.Payload ->
+    m (Widget (T f GuiState.Update) -> Widget (T f GuiState.Update))
+add options = addWith options . exprInfoFromPl
 
-makeWith ::
+addWith ::
     (MonadReader env m, Monad f, Config.HasConfig env, GuiState.HasCursor env) =>
-    Options -> ExprInfo f -> PreEvents (T f ()) ->
-    m (EventMap (T f GuiState.Update))
-makeWith options exprInfo preEvents =
-    mconcat <$> sequenceA
-    [ actionsEventMap options exprInfo preEvents
-    , jumpHolesEventMapIfSelected exprInfo
-    ]
+    Options -> ExprInfo f -> m (Widget (T f GuiState.Update) -> Widget (T f GuiState.Update))
+addWith options exprInfo =
+    do
+        actions <- actionsEventMap options exprInfo
+        nav <- jumpHolesEventMapIfSelected exprInfo
+        (Widget.eventMapMaker . Lens.mapped <>~ nav)
+            . Widget.weakerEventsWithContext actions
+            & pure
 
 jumpHolesEventMap ::
     (MonadReader env m, Config.HasConfig env, Monad f) =>
@@ -142,14 +143,13 @@ maybeReplaceEventMap exprInfo =
 
 actionsEventMap ::
     (MonadReader env m, Monad f, Config.HasConfig env, GuiState.HasCursor env) =>
-    Options -> ExprInfo f -> PreEvents (T f ()) ->
-    m (EventMap (T f GuiState.Update))
-actionsEventMap options exprInfo preEvents =
+    Options -> ExprInfo f ->
+    m (EventContext -> EventMap (T f GuiState.Update))
+actionsEventMap options exprInfo =
     sequence
     [ case exprInfoActions exprInfo ^. Sugar.wrap of
       Sugar.WrapAction act -> wrapEventMap act
       _ -> return mempty
-    , applyOperatorEventMap options exprInfo preEvents & pure
     , if exprInfoIsHoleResult exprInfo
         then return mempty
         else
@@ -158,7 +158,8 @@ actionsEventMap options exprInfo preEvents =
             , Lens.view Config.config <&> Config.replaceParentKeys <&> mkReplaceParent
             ] <&> mconcat
     , maybeReplaceEventMap exprInfo
-    ] <&> mconcat
+    ] <&> mconcat <&> const
+    <&> mappend (applyOperatorEventMap options exprInfo)
     where
         mkReplaceParent replaceKeys =
             exprInfoActions exprInfo ^. Sugar.mReplaceParent <&> void
@@ -166,11 +167,12 @@ actionsEventMap options exprInfo preEvents =
 
 -- | Create the hole search term for new apply operators,
 -- given the extra search term chars from another hole.
-applyOperatorSearchTerm :: Prec -> Text -> EventMap Text
-applyOperatorSearchTerm minOpPrec searchStrRemainder =
+applyOperatorSearchTerm :: Prec -> EventContext -> EventMap Text
+applyOperatorSearchTerm minOpPrec eventCtx =
     E.charGroup Nothing (E.Doc ["Edit", "Apply operator"])
     ops (Text.singleton <&> (searchStrRemainder <>))
     where
+        searchStrRemainder = eventCtx ^. Widget.ePrevTextRemainder
         ops =
             case Text.uncons searchStrRemainder of
             Nothing -> filter acceptOp Chars.operator
@@ -180,8 +182,8 @@ applyOperatorSearchTerm minOpPrec searchStrRemainder =
         acceptOp = (>= minOpPrec) . precedence
 
 applyOperatorEventMap ::
-    Monad f => Options -> ExprInfo f -> PreEvents (T f ()) -> EventMap (T f GuiState.Update)
-applyOperatorEventMap options exprInfo preEvents =
+    Monad f => Options -> ExprInfo f -> EventContext -> EventMap (T f GuiState.Update)
+applyOperatorEventMap options exprInfo eventCtx =
     case exprInfoActions exprInfo ^. Sugar.wrap of
     Sugar.WrapAction wrap ->
         if addOperatorDontWrap options
@@ -191,12 +193,10 @@ applyOperatorEventMap options exprInfo preEvents =
     Sugar.WrappedAlready holeId -> return holeId
     & action
     where
-        (searchStrRemainder, onEvents) = withPreEvents preEvents
         action wrap =
-            applyOperatorSearchTerm (exprInfoMinOpPrec exprInfo) searchStrRemainder
+            applyOperatorSearchTerm (exprInfoMinOpPrec exprInfo) eventCtx
             <&> HoleEditState.setHoleStateAndJump
             <&> (wrap <&>)
-            & onEvents
 
 wrapEventMap ::
     (MonadReader env m, Config.HasConfig env, Monad f) =>

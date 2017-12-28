@@ -11,6 +11,7 @@ import qualified Data.Store.Property as Property
 import           GUI.Momentu.Align (WithTextPos)
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.EventMap as E
+import           GUI.Momentu.EventMap (EventMap)
 import           GUI.Momentu.ModKey (ModKey(..))
 import qualified GUI.Momentu.ModKey as ModKey
 import qualified GUI.Momentu.State as State
@@ -37,9 +38,8 @@ make =
                     eventRes <$
                     when (newText /= Property.value textRef) (Property.set textRef newText)
 
-deleteKeyEventHandler :: E.HasEventMap f => ModKey -> f a -> f a
-deleteKeyEventHandler key =
-    E.eventMap %~ E.deleteKey (E.KeyEvent ModKey.KeyState'Pressed key)
+deleteKeyEventHandler :: ModKey -> EventMap a -> EventMap a
+deleteKeyEventHandler = E.deleteKey . E.KeyEvent ModKey.KeyState'Pressed
 
 makeLineEdit ::
     (MonadReader env m, Applicative f, State.HasCursor env, TextEdit.HasStyle env) =>
@@ -50,7 +50,8 @@ makeLineEdit =
     make
     <&> \mk empty textRef myId ->
     mk empty textRef myId
-    & Align.tValue %~ deleteKeyEventHandler (ModKey mempty ModKey.Key'Enter)
+    & Align.tValue . Widget.eventMapMaker . Lens.mapped %~
+    deleteKeyEventHandler (ModKey mempty ModKey.Key'Enter)
 
 makeWordEdit ::
     (MonadReader env m, Applicative f, State.HasCursor env, TextEdit.HasStyle env) =>
@@ -60,4 +61,5 @@ makeWordEdit ::
 makeWordEdit =
     makeLineEdit
     <&> \mk empty textRef myId -> mk empty textRef myId
-    & Align.tValue %~ deleteKeyEventHandler (ModKey mempty ModKey.Key'Space)
+    & Align.tValue . Widget.eventMapMaker . Lens.mapped %~
+    deleteKeyEventHandler (ModKey mempty ModKey.Key'Space)

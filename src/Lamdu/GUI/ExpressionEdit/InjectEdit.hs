@@ -5,19 +5,18 @@ module Lamdu.GUI.ExpressionEdit.InjectEdit
 
 import qualified Control.Lens as Lens
 import           Control.Monad.Transaction (MonadTransaction)
-import           Control.Monad.Writer (MonadWriter)
 import           Data.Store.Transaction (Transaction)
 import           GUI.Momentu.Align (WithTextPos)
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Glue ((/|/))
 import qualified GUI.Momentu.Hover as Hover
-import           GUI.Momentu.PreEvent (PreEvents)
 import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.Responsive.Expression as ResponsiveExpr
 import qualified GUI.Momentu.Responsive.Options as Options
 import qualified GUI.Momentu.State as GuiState
 import           GUI.Momentu.View (View)
+import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Menu as Menu
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
@@ -43,7 +42,6 @@ type T = Transaction
 
 makeCommon ::
     ( Monad m, MonadReader env f, MonadTransaction m f
-    , MonadWriter (PreEvents (T m ())) f
     , HasConfig env, HasTheme env, GuiState.HasState env
     , Spacer.HasStdSpacing env, Element.HasAnimIdPrefix env, Menu.HasStyle env
     , Hover.HasStyle env, TextEdit.HasStyle env
@@ -66,7 +64,7 @@ makeCommon disamb tag mDelInject nearestHoles colonLabel valEdits =
             <*>
             ( TagEdit.makeCaseTag nearestHoles tag
                 <&> (/|/ colonLabel)
-                <&> Lens.mapped %~ E.weakerEvents delEventMap
+                <&> Lens.mapped %~ Widget.weakerEvents delEventMap
                 <&> Responsive.fromWithTextPos <&> (: valEdits)
             )
 

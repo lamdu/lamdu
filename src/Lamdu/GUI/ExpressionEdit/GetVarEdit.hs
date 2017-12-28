@@ -100,7 +100,7 @@ makeNameRef myId nameRef maker =
                     DataOps.savePreJumpPosition cp myId
                     nameRef ^. Sugar.nrGotoDefinition <&> WidgetIds.fromEntityId
         maker (nameRef ^. Sugar.nrName) nameId
-            <&> Align.tValue %~ E.weakerEvents jumpToDefinitionEventMap
+            <&> Align.tValue %~ Widget.weakerEvents jumpToDefinitionEventMap
     & GuiState.assignCursor myId nameId
     where
         nameId = Widget.joinId myId ["name"]
@@ -142,7 +142,7 @@ definitionTypeChangeBox info getVarId =
         let keys = Config.newDefinitionButtonPressKeys (Config.pane config)
         let update = (info ^. Sugar.defTypeUseCurrent) >> return getVarId
         headerLabel /-/ typeWhenUsed /-/ spacing /-/ sepLabel /-/ typeCurrent
-            & Align.tValue %~ E.weakerEvents
+            & Align.tValue %~ Widget.weakerEvents
             (E.keysEventMapMovesCursor keys
                 (E.Doc ["Edit", "Update definition type"]) update)
             & pure
@@ -200,7 +200,7 @@ makeGetBinder binderVar myId =
         makeSimpleView
             <&> Lens.mapped %~ Reader.local (TextView.color .~ color)
             & makeNameRef myId (binderVar ^. Sugar.bvNameRef)
-            <&> Align.tValue %~ E.weakerEvents
+            <&> Align.tValue %~ Widget.weakerEvents
                 (makeInlineEventMap config (binderVar ^. Sugar.bvInline))
             & processDef
 

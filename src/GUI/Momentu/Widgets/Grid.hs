@@ -187,6 +187,7 @@ toWidgetWithKeys keys size sChildren =
             Widget.Focused
             { Widget._fLayers = focusedChild ^. Widget.fLayers <> unfocusedLayers
             , Widget._fFocalAreas = focusedChild ^. Widget.fFocalAreas
+            , Widget._fPreEvents = focusedChild ^. Widget.fPreEvents
             , Widget._fMEnterPoint =
                 focusedChild ^. Widget.fMEnterPoint
                 & unionMaybeWith Widget.combineEnterPoints (combineMEnters unfocusedMEnters <&> (. Point))

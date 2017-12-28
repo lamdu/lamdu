@@ -98,7 +98,7 @@ makeBareEdit (Name form setName) myId =
     ?? TextEdit.EmptyStrings visibleName ""
     ?? Property storedName setName
     ?? myId
-    <&> Align.tValue . E.eventMap %~ E.filterChars (`notElem` disallowedNameChars)
+    <&> Align.tValue . Widget.eventMapMaker . Lens.mapped %~ E.filterChars (`notElem` disallowedNameChars)
     where
         (visibleName, _mCollision) = Name.visible form
         storedName = form ^. Name._Stored . _1

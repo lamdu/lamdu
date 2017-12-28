@@ -83,13 +83,10 @@ blockEvents =
     , _backward = blockDirection MetaKey.Key'Up "up"
     }
     where
+        doc keyName = E.Doc ["Navigation", "Move", keyName <> " (blocked)"]
         blockDirection key keyName =
-            pure mempty
-            & E.keyPresses
-                [ModKey mempty key]
-                (E.Doc ["Navigation", "Move", keyName <> " (blocked)"])
-            & E.weakerEvents
-
+            Widget.eventMapMaker . Lens.mapped <>~
+            E.keyPresses [ModKey mempty key] (doc keyName) (pure mempty)
 
 submenuSymbolText :: Text
 submenuSymbolText = " ▷"

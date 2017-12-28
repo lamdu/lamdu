@@ -249,6 +249,7 @@ makeToggledHelpAdder startValue =
                                 ( (focus ^. Widget.fEventMap)
                                     Widget.EventContext
                                     { Widget._eVirtualCursor = focus ^. Widget.fFocalAreas & last & State.VirtualCursor
+                                    , Widget._ePrevTextRemainder = mempty
                                     }
                                 )
                                 env
@@ -265,5 +266,5 @@ makeToggledHelpAdder startValue =
                 in
                 focus
                 & Widget.fLayers %~ addToBottomRight bgHelpView size
-                & Widget.fEventMap . Lens.mapped %~ E.strongerEvents toggleEventMap
+                & Widget.fEventMap . Lens.mapped %~ (toggleEventMap <>)
         <&> Widget.StateFocused

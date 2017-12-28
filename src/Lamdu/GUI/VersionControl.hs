@@ -105,7 +105,7 @@ make config theme rwtransaction rtransaction actions mkWidget =
             ?? choiceWidgetConfig theme
             ?? WidgetIds.branchSelection
         mkWidget branchSelector
-            <&> E.strongerEvents (globalEventMap config actions)
+            <&> Widget.eventMapMaker . Lens.mapped %~ (globalEventMap config actions <>)
     where
         empty = TextEdit.EmptyStrings "unnamed branch" ""
         makeBranchNameEdit branch =
@@ -127,4 +127,4 @@ make config theme rwtransaction rtransaction actions mkWidget =
                             (E.Doc ["Branches", "Delete"])
                             (branchDelegatorId <$> deleteBranch actions branch)
                         | otherwise = mempty
-                return (branch, E.weakerEvents delEventMap branchNameEdit)
+                return (branch, Widget.weakerEvents delEventMap branchNameEdit)

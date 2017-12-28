@@ -14,7 +14,6 @@ module GUI.Momentu.EventMap
     , dropEventMap
     , deleteKey, deleteKeys
     , filterChars, filter, mapMaybe
-    , HasEventMap(..), weakerEvents, strongerEvents
     ) where
 
 import qualified Control.Lens as Lens
@@ -183,19 +182,19 @@ mapMaybe p (EventMap m dropHandlers charGroups mAllChars) =
         f (Doesn'tWantClipboard val) = p val <&> Doesn'tWantClipboard
         f (WantsClipboard func) = (>>= p) . func & WantsClipboard & Just
 
-filter :: HasEventMap f => (a -> Bool) -> f a -> f a
+filter :: (a -> Bool) -> EventMap a -> EventMap a
 filter p =
-    eventMap %~ mapMaybe f
+    mapMaybe f
     where
         f x
             | p x = Just x
             | otherwise = Nothing
 
-filterChars :: HasEventMap f => (Char -> Bool) -> f a -> f a
+filterChars :: (Char -> Bool) -> EventMap a -> EventMap a
 filterChars p val =
     val
-    & eventMap . emAllCharsHandler . Lens.traversed . chDocHandler . dhHandler %~ f
-    & eventMap . emCharGroupHandlers %~ filterCharGroups p
+    & emAllCharsHandler . Lens.traversed . chDocHandler . dhHandler %~ f
+    & emCharGroupHandlers %~ filterCharGroups p
     where
         f handler c = do
             guard $ p c
@@ -216,10 +215,10 @@ mkModKey = ModKey
 filterByKey :: (k -> Bool) -> Map k v -> Map k v
 filterByKey p = Map.filterWithKey (const . p)
 
-deleteKey :: HasEventMap f => KeyEvent -> f a -> f a
-deleteKey key = eventMap . emKeyMap %~ Map.delete key
+deleteKey :: KeyEvent -> EventMap a -> EventMap a
+deleteKey key = emKeyMap %~ Map.delete key
 
-deleteKeys :: HasEventMap f => [KeyEvent] -> f a -> f a
+deleteKeys :: [KeyEvent] -> EventMap a -> EventMap a
 deleteKeys = foldr ((.) . deleteKey) id
 
 lookup :: Applicative f => f (Maybe Clipboard) -> Events.Event -> EventMap a -> f (Maybe a)
@@ -324,12 +323,3 @@ pasteOnKey :: ModKey -> Doc -> (Clipboard -> a) -> EventMap a
 pasteOnKey key doc handler =
     WantsClipboard (Just . handler)
     & keyEventMapH (KeyEvent ModKey.KeyState'Pressed key) doc
-
-class HasEventMap f where eventMap :: Lens.Setter' (f a) (EventMap a)
-instance HasEventMap EventMap where eventMap = id
-
-strongerEvents :: HasEventMap f => EventMap a -> f a -> f a
-strongerEvents eMap = eventMap %~ (eMap `mappend`)
-
-weakerEvents :: HasEventMap f => EventMap a -> f a -> f a
-weakerEvents eMap = eventMap %~ (`mappend` eMap)

@@ -45,7 +45,7 @@ undeleteButton ::
     T m Widget.Id -> ExprGuiM m (WithTextPos (Widget (T m GuiState.Update)))
 undeleteButton undelete =
     TextView.makeFocusableLabel "Undelete..."
-    <&> Align.tValue %~ E.weakerEvents eventMap
+    <&> Align.tValue %~ Widget.weakerEvents eventMap
     where
         eventMap =
             E.keysEventMapMovesCursor [MetaKey noMods MetaKey.Key'Enter]
@@ -109,7 +109,7 @@ make lhsEventMap def =
                 makeExprDefinition lhsEventMap def bodyExpr
             Sugar.DefinitionBodyBuiltin builtin ->
                 makeBuiltinDefinition def builtin <&> Responsive.fromWithTextPos
-                <&> E.weakerEvents lhsEventMap
+                <&> Widget.weakerEvents lhsEventMap
             <&> addDeletionDiagonal
         case defState of
             Sugar.LiveDefinition -> return defGui

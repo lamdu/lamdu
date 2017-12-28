@@ -149,7 +149,7 @@ make theCodeAnchors width =
             eventMap <- panesEventMap theExportActions theCodeAnchors
             Responsive.vboxSpaced
                 ?? (replGui : panesEdits ++ [newDefinitionButton])
-                <&> E.weakerEvents eventMap
+                <&> Widget.weakerEvents eventMap
             & ExprGuiM.run ExpressionEdit.make theCodeAnchors
             <&> render
             <&> (^. Align.tValue)
@@ -197,7 +197,7 @@ makePaneEdit theExportActions pane =
             exportKeys = Config.exportKeys (Config.export theConfig)
         DefinitionEdit.make lhsEventMap (pane ^. Sugar.paneDefinition)
             <&> Lens.mapped %~ IOTrans.liftTrans
-            <&> E.weakerEvents paneEventMap
+            <&> Widget.weakerEvents paneEventMap
 
 makeNewDefinitionEventMap ::
     (Monad m, MonadReader env n, GuiState.HasCursor env) =>
@@ -233,7 +233,7 @@ makeNewDefinitionButton =
         TextView.makeFocusableLabel "New..."
             & Reader.local (TextView.color .~ color)
             <&> (^. Align.tValue)
-            <&> E.weakerEvents (newDefinitionEventMap newDefinitionButtonPressKeys)
+            <&> Widget.weakerEvents (newDefinitionEventMap newDefinitionButtonPressKeys)
 
 panesEventMap ::
     Monad m =>

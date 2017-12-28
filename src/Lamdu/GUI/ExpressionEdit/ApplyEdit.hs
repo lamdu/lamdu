@@ -13,7 +13,6 @@ import qualified GUI.Momentu.Animation as Anim
 import qualified GUI.Momentu.Draw as Draw
 import           GUI.Momentu.Element (Element)
 import qualified GUI.Momentu.Element as Element
-import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Glue ((/|/))
 import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.Responsive.Expression as ResponsiveExpr
@@ -26,10 +25,10 @@ import qualified Lamdu.GUI.ExpressionEdit.BinderEdit as BinderEdit
 import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
 import qualified Lamdu.GUI.ExpressionEdit.GetVarEdit as GetVarEdit
 import qualified Lamdu.GUI.ExpressionEdit.TagEdit as TagEdit
-import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
-import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExprGui
+import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
+import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import           Lamdu.GUI.ExpressionGui.Wrap (stdWrapParentExpr)
 import qualified Lamdu.GUI.Styled as Styled
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
@@ -73,7 +72,7 @@ makeFuncVar nearestHoles funcVar myId =
     do
         jump <- ExprEventMap.jumpHolesEventMap nearestHoles
         GetVarEdit.makeGetBinder funcVar funcId
-            <&> Align.tValue %~ E.weakerEvents jump
+            <&> Align.tValue %~ Widget.weakerEvents jump
     where
         funcId = Widget.joinId myId ["Func"]
 
@@ -176,19 +175,16 @@ mkRelayedArgs nearestHoles args =
         Options.boxSpaced ?? Options.disambiguationNone ?? collapsed : argEdits
     where
         makeArgEdit arg =
-            do
-                eventMap <-
-                    ExprEventMap.makeWith ExprEventMap.defaultOptions
-                    ExprEventMap.ExprInfo
-                    { exprInfoActions = arg ^. Sugar.raActions
-                    , exprInfoEntityId = arg ^. Sugar.raId
-                    , exprInfoNearestHoles = nearestHoles
-                    , exprInfoIsHoleResult = False
-                    , exprInfoMinOpPrec = 0
-                    } mempty
-                GetVarEdit.makeGetParam (arg ^. Sugar.raValue) (WidgetIds.fromEntityId (arg ^. Sugar.raId))
-                    <&> Responsive.fromWithTextPos
-                    <&> E.weakerEvents eventMap
+            ( ExprEventMap.addWith ExprEventMap.defaultOptions
+                ExprEventMap.ExprInfo
+                { exprInfoActions = arg ^. Sugar.raActions
+                , exprInfoEntityId = arg ^. Sugar.raId
+                , exprInfoNearestHoles = nearestHoles
+                , exprInfoIsHoleResult = False
+                , exprInfoMinOpPrec = 0
+                } <&> (Align.tValue %~))
+            <*> GetVarEdit.makeGetParam (arg ^. Sugar.raValue) (WidgetIds.fromEntityId (arg ^. Sugar.raId))
+            <&> Responsive.fromWithTextPos
 
 mkBoxed ::
     Monad m =>

@@ -217,7 +217,7 @@ mainLoopWidget win mkWidgetUnmemod options =
                         , _eWindowSize = size
                         , _eState = s
                         }
-                        <&> E.strongerEvents zoomEventMap
+                        <&> Widget.eventMapMaker . Lens.mapped %~ (zoomEventMap <>)
                         >>= addHelp helpStyle size
         mkWidgetRef <- mkW >>= newIORef
         let newWidget = mkW >>= writeIORef mkWidgetRef

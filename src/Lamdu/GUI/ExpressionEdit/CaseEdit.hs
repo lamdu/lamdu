@@ -14,7 +14,6 @@ import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Glue ((/-/), (/|/))
-import           GUI.Momentu.PreEvent (HasPreEvents(..), withPreEvents)
 import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.Responsive.Options as Options
 import qualified GUI.Momentu.State as GuiState
@@ -70,7 +69,7 @@ make (Sugar.Case mArg (Sugar.Composite alts caseTail addAlt)) pl =
                 (Widget.makeFocusableView ?? headerId <&> (Align.tValue %~))
                 <*> Styled.grammarLabel text
                 <&> Responsive.fromWithTextPos
-                <&> E.weakerEvents labelJumpHoleEventMap
+                <&> Widget.weakerEvents labelJumpHoleEventMap
         caseLabel <- headerLabel "case"
         ofLabel <- responsiveLabel "of"
         (mActiveTag, header) <-
@@ -86,7 +85,7 @@ make (Sugar.Case mArg (Sugar.Composite alts caseTail addAlt)) pl =
                 do
                     argEdit <-
                         ExprGuiM.makeSubexpression arg
-                        <&> E.weakerEvents (toLambdaCaseEventMap config toLambdaCase)
+                        <&> Widget.weakerEvents (toLambdaCaseEventMap config toLambdaCase)
                     mTag <-
                         Annotation.evaluationResult (arg ^. Sugar.rPayload)
                         <&> (>>= (^? ER.body . ER._RInject . V.injectTag))
@@ -94,17 +93,15 @@ make (Sugar.Case mArg (Sugar.Composite alts caseTail addAlt)) pl =
                         ?? Options.disambiguationNone
                         ?? [caseLabel, argEdit, ofLabel]
                         <&> (,) mTag
-        (altsGui, preEvents) <-
+        altsGui <-
             do
                 altsGui <- makeAltsWidget mActiveTag alts altsId
                 case caseTail of
                     Sugar.ClosedComposite actions ->
-                        E.weakerEvents (closedCaseEventMap config actions) altsGui
+                        Widget.weakerEvents (closedCaseEventMap config actions) altsGui
                         & return
                     Sugar.OpenComposite actions rest ->
                         makeOpenCase actions rest (Widget.toAnimId myId) altsGui
-            & listenPreEvents
-        let (_textRemainder, onEvents) = withPreEvents preEvents
         let addAltEventMap =
                 addAlt
                 <&> (^. Sugar.cairNewTag . Sugar.tagInstance)
@@ -112,10 +109,9 @@ make (Sugar.Case mArg (Sugar.Composite alts caseTail addAlt)) pl =
                 <&> WidgetIds.tagHoleId
                 & E.keysEventMapMovesCursor (Config.caseAddAltKeys config)
                     (doc "Add Alt")
-                & onEvents
         parentDelegator (WidgetIds.fromExprPayload pl)
             <*> (Styled.addValFrame <*> (Responsive.vboxSpaced ?? [header, altsGui]))
-            <&> E.weakerEvents addAltEventMap
+            <&> Widget.weakerEvents addAltEventMap
     & stdWrap pl
     where
         myId = WidgetIds.fromExprPayload pl
@@ -134,13 +130,13 @@ makeAltRow mActiveTag (Sugar.CompositeItem delete tag altExpr) =
         let itemEventMap = caseDelEventMap config delete
         tagLabel <-
             TagEdit.makeCaseTag (ExprGui.nextHolesBefore altExpr) tag
-            <&> Align.tValue %~ E.weakerEvents itemEventMap
+            <&> Align.tValue %~ Widget.weakerEvents itemEventMap
             <&> if mActiveTag == Just (tag ^. Sugar.tagInfo . Sugar.tagVal)
                 then addBg
                 else id
         hspace <- Spacer.stdHSpace
         altExprGui <-
-            ExprGuiM.makeSubexpression altExpr <&> E.weakerEvents itemEventMap
+            ExprGuiM.makeSubexpression altExpr <&> Widget.weakerEvents itemEventMap
         colonLabel <- Styled.grammarLabel ":"
         pure Responsive.TaggedItem
             { Responsive._tagPre = tagLabel /|/ colonLabel /|/ hspace
@@ -185,7 +181,7 @@ makeOpenCase actions rest animId altsGui =
             \layoutMode alts ->
             let restLayout =
                     layoutMode & restExpr ^. Responsive.render
-                    <&> E.weakerEvents (openCaseEventMap config actions)
+                    <&> Widget.weakerEvents (openCaseEventMap config actions)
                 minWidth = restLayout ^. Element.width
                 targetWidth = alts ^. Element.width
             in

@@ -6,7 +6,6 @@ module Lamdu.GUI.ExpressionEdit.HoleEdit.ResultWidget
     ) where
 
 import qualified Control.Lens as Lens
-import qualified Control.Monad.Writer as Writer
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Text as Text
 import           GUI.Momentu (Widget, WithTextPos(..))
@@ -14,7 +13,6 @@ import qualified GUI.Momentu.Align as Align
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.MetaKey as MetaKey
-import           GUI.Momentu.PreEvent (PreEvents(..))
 import           GUI.Momentu.Rect (Rect(..))
 import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.State as GuiState
@@ -124,39 +122,34 @@ make pl resultId holeResult =
                 Just nextHoleEntityId | Lens.has Lens._Nothing mFirstHoleInside ->
                     E.keysEventMapMovesCursor
                     (Config.holePickAndMoveToNextHoleKeys holeConfig)
-                    (E.Doc ["Edit", "Result", "Pick and move to next hole"])
-                    (pure (WidgetIds.fromEntityId nextHoleEntityId))
+                    (E.Doc ["Edit", "Result", "Pick, Move to next hole"])
+                    (WidgetIds.fromEntityId nextHoleEntityId <$ pick)
                 _ -> mempty
         let simplePickEventMap =
-                E.keysEventMap
+                E.keysEventMapMovesCursor
                 (mappend Config.holePickResultKeys Config.holePickAndMoveToNextHoleKeys holeConfig)
-                (E.Doc ["Edit", "Result", "Pick"]) (return ())
-        let pickEventMap =
-                E.weakerEvents simplePickEventMap pickAndMoveToNextHole
-                <&> pickBefore
+                (E.Doc ["Edit", "Result", "Pick"]) pick
+        let pickEventMap = pickAndMoveToNextHole <> simplePickEventMap
         searchStringRemainder <- getSearchStringRemainder widgetIds holeResultConverted
-        isSelected <- GuiState.isSubCursor ?? resultId
-        when isSelected
-            ( Writer.tell PreEvents
-                { pDesc = "Pick"
-                , pAction = (holeResult ^. Sugar.holeResultPick)
-                , pTextRemainder = searchStringRemainder
+        let preEvent =
+                Widget.PreEvent
+                { Widget._pDesc = "Pick"
+                , Widget._pAction = pick <&> GuiState.updateCursor
+                , Widget._pTextRemainder = searchStringRemainder
                 }
-            )
         holeResultConverted
             & postProcessSugar (pl ^. Sugar.plData . ExprGui.plMinOpPrec)
             & ExprGuiM.makeSubexpression
-            & ExprGuiM.withLocalSearchStringRemainer searchStringRemainder
             <&> Widget.enterResultCursor .~ resultId
-            <&> E.eventMap %~ removeUnwanted config
-            <&> E.eventMap . E.emDocs . E.docStrs . Lens._last %~ (<> " (On picked result)")
-            <&> E.eventMap . Lens.mapped %~ pickBefore
-            <&> E.eventMap %~ mappend pickEventMap
+            <&> Widget.widget . Widget.eventMapMaker . Lens.mapped %~ removeUnwanted config
             & GuiState.assignCursor resultId idWithinResultWidget
             <&> applyResultLayout
             <&> setFocalAreaToFullSize
+            <&> Align.tValue %~ Widget.addPreEvent preEvent
+            <&> Align.tValue . Widget.eventMapMaker . Lens.mapped %~ mappend pickEventMap
             <&> (,) pickEventMap
     where
+        pick = idWithinResultWidget <$ holeResult ^. Sugar.holeResultPick
         widgetIds = pl ^. Sugar.plEntityId & HoleWidgetIds.make
         holeResultId =
             holeResultConverted ^. Sugar.rPayload . Sugar.plEntityId
@@ -167,8 +160,3 @@ make pl resultId holeResult =
             <&> WidgetIds.fromEntityId
         idWithinResultWidget = fromMaybe holeResultId mFirstHoleInside
         holeResultConverted = holeResult ^. Sugar.holeResultConverted
-        pickBefore action =
-            do
-                holeResult ^. Sugar.holeResultPick
-                action <&> mappend pickedResult
-        pickedResult = GuiState.updateCursor idWithinResultWidget

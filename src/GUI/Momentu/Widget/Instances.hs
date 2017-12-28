@@ -73,7 +73,6 @@ instance Functor f => SizedElement (Widget (f Update)) where
                 & sRight +~ nw - ow
                 & sBottom +~ nh - oh
             Vector2 ow oh = w ^. wSize
-instance EventMap.HasEventMap Widget where eventMap = eventMapMaker . Lens.mapped
 
 instance Functor f => Glue (Widget (f Update)) View where
     type Glued (Widget (f Update)) View = Widget (f Update)
@@ -138,7 +137,7 @@ combineStates orientation _ nextDir _ (StateFocused f) (StateUnfocused u) =
                 enter (dirCons nextDir (eventContext ^. eVirtualCursor . State.vcRect . chooseRange))
                 ^. enterResultEvent
                 & EventMap.keyPresses (dirKeys nextDir <&> ModKey mempty) (EventMap.Doc ["Navigation", "Move", dirName nextDir])
-            & EventMap.weakerEvents
+            & flip mappend
 combineStates orientation dirPrev dirNext sz (StateUnfocused u) (StateFocused f) =
     combineStates orientation dirNext dirPrev sz (StateFocused f) (StateUnfocused u)
 

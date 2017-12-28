@@ -15,7 +15,6 @@ import qualified GUI.Momentu.Align as Align
 import           GUI.Momentu.Animation.Id (AnimId)
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
-import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Glue ((/-/))
 import qualified GUI.Momentu.State as GuiState
 import           GUI.Momentu.View (View)
@@ -153,10 +152,11 @@ makeUnderCursorAssignment searchTermEventMap shownResultsLists hasHiddenResults 
             (x:_) -> rgPickMainEventMap x & return
         let options =
                 groupsWidgets <&> rgOption
-                <&> Menu.optionWidgets . Lens.mapped %~ E.strongerEvents searchTermEventMap
+                <&> Menu.optionWidgets . Lens.mapped .
+                    Widget.eventMapMaker . Lens.mapped %~ (searchTermEventMap <>)
         hoverMenu <- Menu.makeHovered (vspace /-/ typeView) options hasHiddenResults
         SearchTerm.make widgetIds holeKind
-            <&> Align.tValue %~ E.weakerEvents (pickFirstResult <> literalEventMap)
+            <&> Align.tValue %~ Widget.weakerEvents (pickFirstResult <> literalEventMap)
             <&> \searchTermWidget placement ->
                 searchTermWidget <&> hoverMenu placement
     & Reader.local (Element.animIdPrefix .~ WidgetId.toAnimId (hidOpen widgetIds))

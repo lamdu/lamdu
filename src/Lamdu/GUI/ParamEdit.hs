@@ -110,7 +110,7 @@ make annotationOpts prevId nextId param =
             wideAnnotationBehavior ExprGui.showAnnotationWhenVerbose
             (param ^. Sugar.fpAnnotation)
             ?? Responsive.fromWithTextPos (iNameEdit info)
-            <&> E.weakerEvents paramEventMap
+            <&> Widget.weakerEvents paramEventMap
             & Reader.local (Element.animIdPrefix .~ Widget.toAnimId myId)
     where
         myId = iId info
