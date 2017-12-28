@@ -187,7 +187,7 @@ makeTagHoleEdit nearestHoles tag =
             TextEdit.make ?? textEditNoEmpty ?? searchTerm ?? searchTermId
             <&> Align.tValue %~ E.filter (allowedSearchTerm . fst)
             <&> Align.tValue . Lens.mapped %~ pure . updateState
-            <&> Align.tValue %~ E.strongerEvents setNameEventMap
+            <&> Align.tValue %~ E.weakerEvents setNameEventMap
         tooltip <- Lens.view theme <&> Theme.tooltip
         topLine <-
             if not (Text.null searchTerm) && Widget.isFocused (term ^. Align.tValue)
