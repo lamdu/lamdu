@@ -11,7 +11,7 @@ module Lamdu.GUI.ExpressionEdit.HoleEdit.SearchArea
 import qualified Control.Lens as Lens
 import qualified Data.Monoid as Monoid
 import           Data.Store.Transaction (Transaction)
-import qualified GUI.Momentu as M
+import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.Hover as Hover
 import qualified GUI.Momentu.Responsive as Responsive
@@ -40,9 +40,9 @@ type T = Transaction
 fdConfig :: Config.Hole -> FocusDelegator.Config
 fdConfig Config.Hole{holeOpenKeys, holeCloseKeys} = FocusDelegator.Config
     { FocusDelegator.focusChildKeys = holeOpenKeys
-    , FocusDelegator.focusChildDoc = M.Doc ["Navigation", "Hole", "Open"]
+    , FocusDelegator.focusChildDoc = E.Doc ["Navigation", "Hole", "Open"]
     , FocusDelegator.focusParentKeys = holeCloseKeys
-    , FocusDelegator.focusParentDoc = M.Doc ["Navigation", "Hole", "Close"]
+    , FocusDelegator.focusParentDoc = E.Doc ["Navigation", "Hole", "Close"]
     }
 
 -- Has a typeView under the search term
@@ -58,27 +58,27 @@ make hole pl =
                 hole ^? Sugar.holeKind . Sugar._WrapperHole . Sugar.haUnwrap . Sugar._UnwrapAction
                 & maybe mempty
                     ( E.keysEventMapMovesCursor (Config.delKeys config <> Config.holeUnwrapKeys (Config.hole config))
-                        (M.Doc ["Edit", "Unwrap"])
+                        (E.Doc ["Edit", "Unwrap"])
                         . fmap WidgetIds.fromEntityId
                     )
         let fdWrap =
                 FocusDelegator.make ?? fdConfig (Config.hole config)
                 ?? FocusDelegator.FocusEntryParent ?? hidClosedSearchArea widgetIds
-                <&> (M.tValue %~)
+                <&> (Align.tValue %~)
         closedSearchTermGui <-
             maybeAddAnnotationPl pl
             <*>
             ( fdWrap
                 <*> SearchTerm.make widgetIds holeKind <&> Responsive.fromWithTextPos
             )
-            <&> M.weakerEvents unwrapAsEventMap
+            <&> Widget.weakerEvents unwrapAsEventMap
         isActive <- HoleWidgetIds.isActive widgetIds
         searchTermEventMap <-
             HoleEventMap.makeLiteralEventMap holeKind widgetIds
             <> (HoleEventMap.searchTermEditEventMap widgetIds
                 ?? holeKind <&> fmap pure)
         let inPlaceOfClosed open =
-                closedSearchTermGui & M.widget %~
+                closedSearchTermGui & Widget.widget %~
                 Hover.hoverInPlaceOf [Hover.anchor open] . Hover.anchor
         if isActive && not isAHoleInHole
             then
@@ -89,11 +89,13 @@ make hole pl =
                 -- here
                 (fdWrap <&> (Lens.mapped %~))
                 <*> makeOpenSearchAreaGui searchTermEventMap hole pl
-                <&> Lens.mapped %~ inPlaceOfClosed . M.weakerEvents unwrapAsEventMap . (^. M.tValue)
+                <&> Lens.mapped %~
+                inPlaceOfClosed . Widget.weakerEvents unwrapAsEventMap .
+                (^. Align.tValue)
             else
                 (if isActive then Widget.setFocused else id)
                 closedSearchTermGui
-                & M.weakerEvents
+                & Widget.weakerEvents
                   (-- Editing search term of a closed hole opens it:
                       searchTermEventMap <&> Lens.mapped . GuiState.uCursor %~
                       mappend (Monoid.Last (Just (hidOpen widgetIds)))
