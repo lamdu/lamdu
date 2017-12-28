@@ -184,25 +184,34 @@ mkGroup option =
             }
 
 tryBuildLiteral ::
-    (Format a, Monad m) => (Identity a -> Sugar.Literal Identity) ->
+    (Format a, Monad m) =>
+    Text ->
+    (Identity a -> Sugar.Literal Identity) ->
     Sugar.HoleKind (T m) (ExpressionN m ()) e -> Text ->
-    Maybe (T m (Sugar.HoleOption (T m) (ExpressionN m ())))
-tryBuildLiteral mkLiteral holeKind searchTerm =
+    Maybe (T m (Group m))
+tryBuildLiteral identText mkLiteral holeKind searchTerm =
     holeKind ^? Sugar._LeafHole . Sugar.holeOptionLiteral <*> literal
+    <&> Lens.mapped %~ f
     where
         literal =
             tryParse searchTerm
             <&> Identity
             <&> mkLiteral
+        f x =
+            Group
+            { _groupSearchTerms = [searchTerm]
+            , _groupResults = pure x
+            , _groupId = WidgetIds.hash identText
+            }
 
 literalGroups ::
     Monad m =>
     Sugar.HoleKind (T m) (ExpressionN m ()) e -> Text ->
-    [T m (Sugar.HoleOption (T m) (ExpressionN m ()))]
+    [T m (Group m)]
 literalGroups holeKind searchTerm =
-    [ tryBuildLiteral Sugar.LiteralNum holeKind searchTerm
-    , tryBuildLiteral Sugar.LiteralBytes holeKind searchTerm
-    , tryBuildLiteral Sugar.LiteralText holeKind searchTerm
+    [ tryBuildLiteral "Num"   Sugar.LiteralNum holeKind searchTerm
+    , tryBuildLiteral "Bytes" Sugar.LiteralBytes holeKind searchTerm
+    , tryBuildLiteral "Text"  Sugar.LiteralText holeKind searchTerm
     ] ^.. Lens.traverse . Lens._Just
 
 insensitivePrefixOf :: Text -> Text -> Bool
@@ -233,7 +242,7 @@ makeAllGroups ::
     T m [Group m]
 makeAllGroups hole searchTerm =
     (++)
-    <$> (literalGroups (hole ^. Sugar.holeKind) searchTerm & sequenceA >>= mapM mkGroup)
+    <$> (literalGroups (hole ^. Sugar.holeKind) searchTerm & sequenceA)
     <*> (hole ^. Sugar.holeOptions >>= mapM mkGroup <&> holeMatches searchTerm)
 
 groupOrdering :: Text -> Group m -> [Bool]

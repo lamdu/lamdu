@@ -8,8 +8,6 @@ module Lamdu.GUI.ExpressionEdit.HoleEdit.EventMap
 import qualified Control.Lens as Lens
 import qualified Data.Char as Char
 import           Data.Functor.Identity (Identity(..))
-import           Data.List.Class (List)
-import qualified Data.List.Class as List
 import qualified Data.Store.Transaction as Transaction
 import qualified Data.Text as Text
 import           GUI.Momentu (MetaKey(..))
@@ -93,14 +91,6 @@ disallowCharsFromSearchTerm ::
 disallowCharsFromSearchTerm holeKind getSearchTerm =
     E.filter (allowedSearchTerm holeKind . getSearchTerm)
 
-listTHead :: List t => b -> t b -> List.ItemM t b
-listTHead nil l =
-    l
-    & List.runList
-    <&> \case
-        List.Nil -> nil
-        List.Cons item _ -> item
-
 -- TODO: This is ugly, maybe Sugar.HoleOption should
 -- have a canonical result?
 toLiteralTextEventMap ::
@@ -111,11 +101,7 @@ toLiteralTextEventMap actions =
     E.keysEventMapMovesCursor toLiteralTextKeys
     (E.Doc ["Edit", "Create Text Literal"]) $
     do
-        (_score, mkResult) <-
-            Sugar.LiteralText (Identity "")
-            & actions ^. Sugar.holeOptionLiteral
-            <&> (^. Sugar.hoResults)
-            >>= listTHead (error "Literal hole option has no results?!")
+        (_score, mkResult) <- Sugar.LiteralText (Identity "") & actions ^. Sugar.holeOptionLiteral
         result <- mkResult
         result ^. Sugar.holeResultPick
         let argExpr =

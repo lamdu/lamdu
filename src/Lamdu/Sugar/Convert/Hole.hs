@@ -50,7 +50,6 @@ import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Lens as ExprLens
 import qualified Lamdu.Expr.Load as Load
 import qualified Lamdu.Expr.Pure as P
-import qualified Lamdu.Expr.Pure as Pure
 import qualified Lamdu.Infer as Infer
 import qualified Lamdu.Infer.Trans as InferT
 import           Lamdu.Infer.Unify (unify)
@@ -318,23 +317,41 @@ mkLeafActions ::
 mkLeafActions exprPl =
     do
         sugarContext <- ConvertM.readContext
-        let mkOption =
-                pure . mkHoleOption sugarContext Nothing exprPl . SeedExpr
-        let mkLiteralOption =
-                mkOption . Val () . V.BLeaf . V.LLiteral . PrimVal.fromKnown
+        let mkOption val =
+                pure
+                ( HoleResultScore 0 []
+                , fixedVal <&> convPl
+                    & mkHoleResult sugarContext (pure ()) (exprPl ^. Input.stored)
+                )
+                where
+                    typ = val ^. Val.payload
+                    fixedVal
+                        | inferredType == typ || Lens.has T._TVar inferredType = val
+                        | otherwise =
+                            V.Apply (Val (T.TFun typ inferredType) (V.BLeaf V.LHole)) val
+                            & V.BApp
+                            & Val inferredType
         pure LeafHoleActions
             { _holeOptionLiteral =
                 \case
-                LiteralNum (Identity x) -> PrimVal.Float x & mkLiteralOption
-                LiteralBytes (Identity x) -> PrimVal.Bytes x & mkLiteralOption
+                LiteralNum (Identity x) -> PrimVal.Float x & literalExpr & mkOption
+                LiteralBytes (Identity x) -> PrimVal.Bytes x & literalExpr & mkOption
                 LiteralText (Identity x) ->
                     encodeUtf8 x
                     & PrimVal.Bytes
-                    & PrimVal.fromKnown
-                    & V.LLiteral & Pure.leaf
-                    & Pure.toNom Builtins.textTid
+                    & literalExpr
+                    & V.Nom Builtins.textTid
+                    & V.BToNom
+                    & Val (T.TInst Builtins.textTid mempty)
                     & mkOption
             }
+    where
+        literalExpr v =
+            V.LLiteral prim & V.BLeaf & Val (T.TInst (prim ^. V.primType) mempty)
+            where
+                prim = PrimVal.fromKnown v
+        convPl t = (Infer.Payload t Infer.emptyScope, (Nothing, NotInjected))
+        inferredType = exprPl ^. Input.inferred . Infer.plType
 
 getLocalScopeGetVars :: ConvertM.Context m -> V.Var -> [Val ()]
 getLocalScopeGetVars sugarContext par

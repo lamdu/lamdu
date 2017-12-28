@@ -45,7 +45,7 @@ data Literal f
     | LiteralText (f Text)
 
 newtype LeafHoleActions m resultExpr = LeafHoleActions
-    { _holeOptionLiteral :: Literal Identity -> m (HoleOption m resultExpr)
+    { _holeOptionLiteral :: Literal Identity -> m (HoleResultScore, m (HoleResult m resultExpr))
     } deriving Functor
 
 data Unwrap m

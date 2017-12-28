@@ -7,6 +7,7 @@ module Lamdu.Sugar.Names.Walk
     , toWorkArea, toDef, toExpression, toBody
     ) where
 
+import qualified Control.Lens as Lens
 import qualified Data.Set as Set
 import           Data.Store.Transaction (Transaction)
 import           Lamdu.Calc.Type (Type)
@@ -181,7 +182,7 @@ toLeafHoleActions ::
 toLeafHoleActions ha@LeafHoleActions {..} =
     do
         run <- opRun
-        pure ha { _holeOptionLiteral = _holeOptionLiteral <&> (>>= run . toHoleOption) }
+        pure ha { _holeOptionLiteral = _holeOptionLiteral <&> Lens.mapped . _2 %~ (>>= run . toHoleResult) }
 
 toHoleKind ::
     MonadNaming m =>
