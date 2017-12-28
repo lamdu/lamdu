@@ -6,7 +6,7 @@ module Lamdu.Sugar.Types.Hole
     , HoleOption(..), hoVal, hoSugaredBaseExpr, hoResults
     , LeafHoleActions(..), holeOptionLiteral
     , Literal(..), _LiteralNum, _LiteralBytes, _LiteralText
-    , HoleActions(..), holeUUID, holeOptions
+    , HoleActions(..), holeOptions
     , HoleKind(..), _LeafHole, _WrapperHole
     , Hole(..), holeActions, holeKind
     , HoleResultScore(..), hrsNumHoleWrappers, hrsScore
@@ -18,7 +18,6 @@ module Lamdu.Sugar.Types.Hole
 import qualified Control.Lens as Lens
 import           Control.Monad.ListT (ListT)
 import           Data.Functor.Identity (Identity(..))
-import           Data.UUID.Types (UUID)
 import           Lamdu.Calc.Val.Annotated (Val)
 import           Lamdu.Sugar.Internal.EntityId (EntityId)
 
@@ -46,9 +45,8 @@ data Literal f
     | LiteralBytes (f ByteString)
     | LiteralText (f Text)
 
-data HoleActions m resultExpr = HoleActions
-    { _holeUUID :: UUID -- TODO: Replace this with a way to associate data?
-    , _holeOptions :: m [HoleOption m resultExpr]
+newtype HoleActions m resultExpr = HoleActions
+    { _holeOptions :: m [HoleOption m resultExpr]
     } deriving Functor
 
 newtype LeafHoleActions m resultExpr = LeafHoleActions

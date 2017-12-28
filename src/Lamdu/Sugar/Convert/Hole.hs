@@ -52,7 +52,6 @@ import qualified Lamdu.Expr.Lens as ExprLens
 import qualified Lamdu.Expr.Load as Load
 import qualified Lamdu.Expr.Pure as P
 import qualified Lamdu.Expr.Pure as Pure
-import qualified Lamdu.Expr.UniqueId as UniqueId
 import qualified Lamdu.Infer as Infer
 import qualified Lamdu.Infer.Trans as InferT
 import           Lamdu.Infer.Unify (unify)
@@ -253,7 +252,6 @@ mkWritableHoleActions mInjectedArg exprPl stored =
                 mkOptions sugarContext mInjectedArg exprPl stored
                 <&> addSuggestedOptions
                     (mkHoleSuggesteds sugarContext mInjectedArg exprPl stored)
-            , _holeUUID = UniqueId.toUUID $ ExprIRef.unValI $ Property.value stored
             }
 
 loadDeps :: Monad m => [V.Var] -> [T.NominalId] -> T m Infer.Dependencies
