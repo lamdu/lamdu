@@ -92,14 +92,13 @@ make env =
         actions <-
             VersionControl.makeActions
             <&> VersionControl.Actions.hoist IOTrans.liftTrans
-        let versionControlCfg = Config.versionControl (env ^. Config.config)
-        let versionControlThm = Theme.versionControl (env ^. Theme.theme)
-        do
-            branchGui <-
-                VersionControlGUI.make versionControlCfg versionControlThm
-                IOTrans.liftTrans lift actions makeInnerGui
-                & (`runReaderT` env)
-            let quitEventMap =
-                    E.keysEventMap (Config.quitKeys (env ^. Config.config))
-                    (E.Doc ["Quit"]) (error "Quit")
-            E.strongerEvents quitEventMap branchGui & return
+        VersionControlGUI.make versionControlCfg versionControlThm
+            IOTrans.liftTrans lift actions makeInnerGui
+            & (`runReaderT` env)
+            <&> E.strongerEvents quitEventMap
+    where
+        versionControlCfg = Config.versionControl (env ^. Config.config)
+        versionControlThm = Theme.versionControl (env ^. Theme.theme)
+        quitEventMap =
+            E.keysEventMap (Config.quitKeys (env ^. Config.config))
+            (E.Doc ["Quit"]) (error "Quit")
