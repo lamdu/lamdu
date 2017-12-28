@@ -120,17 +120,19 @@ make pl resultId holeResult =
         config <- Lens.view Config.config
         let holeConfig = Config.hole config
         let pickAndMoveToNextHole =
-                E.keysEventMapMovesCursor (Config.holePickAndMoveToNextHoleKeys holeConfig)
-                    (E.Doc ["Edit", "Result", "Pick and move to next hole"]) .
-                pure . WidgetIds.fromEntityId
-        let pickEventMap =
-                -- TODO: Does this entityId business make sense?
                 case pl ^. Sugar.plData . ExprGui.plNearestHoles . NearestHoles.next of
                 Just nextHoleEntityId | Lens.has Lens._Nothing mFirstHoleInside ->
-                    simplePickRes (Config.holePickResultKeys holeConfig) <>
-                    pickAndMoveToNextHole nextHoleEntityId
-                _ ->
-                    simplePickRes (mappend Config.holePickResultKeys Config.holePickAndMoveToNextHoleKeys holeConfig)
+                    E.keysEventMapMovesCursor
+                    (Config.holePickAndMoveToNextHoleKeys holeConfig)
+                    (E.Doc ["Edit", "Result", "Pick and move to next hole"])
+                    (pure (WidgetIds.fromEntityId nextHoleEntityId))
+                _ -> mempty
+        let simplePickEventMap =
+                E.keysEventMap
+                (mappend Config.holePickResultKeys Config.holePickAndMoveToNextHoleKeys holeConfig)
+                (E.Doc ["Edit", "Result", "Pick"]) (return ())
+        let pickEventMap =
+                E.weakerEvents simplePickEventMap pickAndMoveToNextHole
                 <&> pickBefore
         searchStringRemainder <- getSearchStringRemainder widgetIds holeResultConverted
         isSelected <- GuiState.isSubCursor ?? resultId
@@ -170,5 +172,3 @@ make pl resultId holeResult =
                 holeResult ^. Sugar.holeResultPick
                 action <&> mappend pickedResult
         pickedResult = GuiState.updateCursor idWithinResultWidget
-        simplePickRes keys =
-            E.keysEventMap keys (E.Doc ["Edit", "Result", "Pick"]) (return ())
