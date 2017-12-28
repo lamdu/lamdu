@@ -20,7 +20,6 @@ import           GUI.Momentu.ModKey (ModKey(..))
 import qualified GUI.Momentu.State as GuiState
 import qualified Lamdu.CharClassification as Chars
 import           Lamdu.Config (HasConfig)
-import qualified Lamdu.Config as Config
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.State as HoleState
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds (WidgetIds(..))
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
@@ -48,10 +47,9 @@ searchTermEditEventMap widgetIds =
                       Text.init searchTerm
                       & E.keyPress (ModKey mempty MetaKey.Key'Backspace)
                       (E.Doc ["Edit", "Search Term", "Delete backwards"])
-        disallow <- disallowCharsFromSearchTerm
         pure $ \holeKind ->
             appendCharEventMap <> deleteCharEventMap
-            & disallow holeKind id
+            & disallowCharsFromSearchTerm holeKind id
             <&> GuiState.updateWidgetState (hidOpen widgetIds)
     where
         notOp = Text.any (`notElem` Chars.operator)
@@ -91,21 +89,9 @@ allowedSearchTerm holeKind searchTerm =
             Nothing -> False
 
 disallowCharsFromSearchTerm ::
-    (MonadReader env m, HasConfig env) =>
-    m (Sugar.HoleKind f e0 e1 -> (a -> Text) -> EventMap a -> EventMap a)
-disallowCharsFromSearchTerm =
-    Lens.view Config.config <&> Config.hole <&>
-    \Config.Hole{holePickAndMoveToNextHoleKeys, holePickResultKeys}
-     holeKind getSearchTerm eventMap ->
-    eventMap
-    & E.filter (allowedSearchTerm holeKind . getSearchTerm)
-    & deleteKeys (holePickAndMoveToNextHoleKeys ++ holePickResultKeys <&> MetaKey.toModKey)
-
-deleteKeys :: [ModKey] -> EventMap a -> EventMap a
-deleteKeys keys =
-    E.deleteKeys pressedKeys
-    where
-        pressedKeys = keys <&> E.KeyEvent MetaKey.KeyState'Pressed
+    Sugar.HoleKind f e0 e1 -> (a -> Text) -> EventMap a -> EventMap a
+disallowCharsFromSearchTerm holeKind getSearchTerm =
+    E.filter (allowedSearchTerm holeKind . getSearchTerm)
 
 listTHead :: List t => b -> t b -> List.ItemM t b
 listTHead nil l =
