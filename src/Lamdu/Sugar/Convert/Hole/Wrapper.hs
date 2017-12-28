@@ -23,6 +23,7 @@ import qualified Lamdu.Expr.Pure as P
 import qualified Lamdu.Expr.UniqueId as UniqueId
 import qualified Lamdu.Infer as Infer
 import           Lamdu.Infer.Unify (unify)
+import           Lamdu.Sugar.Convert.Expression.Actions (addActions)
 import qualified Lamdu.Sugar.Convert.Hole as ConvertHole
 import qualified Lamdu.Sugar.Convert.Hole.Suggest as Suggest
 import qualified Lamdu.Sugar.Convert.Input as Input
@@ -101,17 +102,19 @@ convertAppliedHole (V.Apply funcI argI) argS exprPl =
                 }
         do
             sugarContext <- ConvertM.readContext
-            hole <- ConvertHole.convertCommon (Just argI) exprPl
             suggesteds <-
                 mkAppliedHoleSuggesteds sugarContext argI exprPl
                 & transaction
-            hole
-                & rBody . _BodyHole . holeOptions . Lens.mapped
-                    %~  ConvertHole.addSuggestedOptions suggesteds
-                    .   mappend (mkAppliedHoleOptions sugarContext argI (argS <&> (^. pUserData)) exprPl)
-                & return
+            options <-
+                ConvertHole.mkOptions (Just argI) exprPl
+                <&> Lens.mapped %~ mappend (mkAppliedHoleOptions sugarContext argI (argS <&> (^. pUserData)) exprPl)
+                <&> Lens.mapped %~ ConvertHole.addSuggestedOptions suggesteds
+            BodyHole Hole
+                { _holeOptions = options
+                , _holeKind = WrapperHole holeArg
+                } & pure
+            >>= addActions exprPl
             & lift
-            <&> rBody . _BodyHole . holeKind .~ WrapperHole holeArg
             <&> rPayload . plActions . wrap .~ WrapperAlready storedEntityId
     where
         storedEntityId = exprPl ^. Input.stored & Property.value & EntityId.ofValI

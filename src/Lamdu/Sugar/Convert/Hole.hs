@@ -1,11 +1,10 @@
 {-# LANGUAGE LambdaCase, NoImplicitPrelude, ConstraintKinds, OverloadedStrings, RankNTypes #-}
 module Lamdu.Sugar.Convert.Hole
     ( convert
-
       -- Used by Convert.GetVar:
     , injectVar
       -- Used by Convert.Apply(wrapper hole):
-    , convertCommon
+    , mkOptions
     , mkHoleOption, mkHoleOptionFromInjected, addSuggestedOptions
     , BaseExpr(..)
     ) where
@@ -80,17 +79,15 @@ type ExprStorePoint m a = Val (Maybe (ValI m), a)
 
 convert :: Monad m => Input.Payload m a -> ConvertM m (ExpressionU m a)
 convert exprPl =
-    convertCommon Nothing exprPl
-    <&> rPayload . plActions . delete .~ CannotDelete
-
-convertCommon ::
-    Monad m =>
-    Maybe (Val (Input.Payload m a)) -> Input.Payload m a ->
-    ConvertM m (ExpressionU m a)
-convertCommon mInjectedArg exprPl =
-    mkHole mInjectedArg exprPl
-    <&> BodyHole
+    do
+        options <- mkOptions Nothing exprPl
+        leafActions <- mkLeafActions exprPl
+        BodyHole Hole
+            { _holeOptions = options
+            , _holeKind = LeafHole leafActions
+            } & pure
     >>= addActions exprPl
+    <&> rPayload . plActions . delete .~ CannotDelete
 
 mkHoleOptionFromInjected ::
     Monad m =>
@@ -316,13 +313,13 @@ sugar sugarContext exprPl val =
 
 mkLeafActions ::
     Monad m =>
-    Maybe (Val (Input.Payload m a)) -> Input.Payload m a ->
+    Input.Payload m a ->
     ConvertM m (LeafHoleActions (T m) (Expression UUID (T m) ()))
-mkLeafActions mInjectedArg exprPl =
+mkLeafActions exprPl =
     do
         sugarContext <- ConvertM.readContext
         let mkOption =
-                pure . mkHoleOption sugarContext mInjectedArg exprPl . SeedExpr
+                pure . mkHoleOption sugarContext Nothing exprPl . SeedExpr
         let mkLiteralOption =
                 mkOption . Val () . V.BLeaf . V.LLiteral . PrimVal.fromKnown
         pure LeafHoleActions
@@ -337,20 +334,6 @@ mkLeafActions mInjectedArg exprPl =
                     & V.LLiteral & Pure.leaf
                     & Pure.toNom Builtins.textTid
                     & mkOption
-            }
-
-mkHole ::
-    Monad m =>
-    Maybe (Val (Input.Payload m a)) ->
-    Input.Payload m a ->
-    ConvertM m (Hole (T m) (Expression UUID (T m) ()) (ExpressionU m a))
-mkHole mInjectedArg exprPl =
-    do
-        options <- mkOptions mInjectedArg exprPl
-        leafActions <- mkLeafActions mInjectedArg exprPl
-        pure Hole
-            { _holeOptions = options
-            , _holeKind = LeafHole leafActions
             }
 
 getLocalScopeGetVars :: ConvertM.Context m -> V.Var -> [Val ()]
