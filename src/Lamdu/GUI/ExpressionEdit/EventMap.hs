@@ -74,7 +74,6 @@ makeWith options exprInfo preEvents =
     mconcat <$> sequenceA
     [ actionsEventMap options exprInfo preEvents
     , jumpHolesEventMapIfSelected exprInfo
-    , maybeReplaceEventMap exprInfo
     ]
 
 jumpHolesEventMap ::
@@ -142,7 +141,7 @@ maybeReplaceEventMap exprInfo =
             else return mempty
 
 actionsEventMap ::
-    (MonadReader env m, Monad f, Config.HasConfig env) =>
+    (MonadReader env m, Monad f, Config.HasConfig env, GuiState.HasCursor env) =>
     Options -> ExprInfo f -> PreEvents (T f ()) ->
     m (EventMap (T f GuiState.Update))
 actionsEventMap options exprInfo preEvents =
@@ -158,6 +157,7 @@ actionsEventMap options exprInfo preEvents =
             [ extractEventMap (exprInfoActions exprInfo)
             , Lens.view Config.config <&> Config.replaceParentKeys <&> mkReplaceParent
             ] <&> mconcat
+    , maybeReplaceEventMap exprInfo
     ] <&> mconcat
     where
         mkReplaceParent replaceKeys =
