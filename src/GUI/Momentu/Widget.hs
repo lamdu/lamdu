@@ -1,6 +1,8 @@
 {-# LANGUAGE NoImplicitPrelude #-}
 module GUI.Momentu.Widget
     ( module Types
+    , eventMapMaker
+
     , Id(..), Id.joinId, makeSubId
 
     -- Types:
@@ -48,7 +50,7 @@ import qualified GUI.Momentu.Rect as Rect
 import           GUI.Momentu.View (View(..))
 import           GUI.Momentu.Widget.Id (Id(..))
 import qualified GUI.Momentu.Widget.Id as Id
-import           GUI.Momentu.Widget.Instances as Instances
+import           GUI.Momentu.Widget.Instances
 import           GUI.Momentu.Widget.Types as Types
 
 import           Lamdu.Prelude

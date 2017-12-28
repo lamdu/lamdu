@@ -6,6 +6,7 @@ module GUI.Momentu.Widget.Instances
     , translateFocusedGeneric, translateUpdate
     , translate, fromView
     , combineEnterPoints
+    , eventMapMaker
     ) where
 
 import           Control.Lens (LensLike)
@@ -55,7 +56,7 @@ instance Functor f => Element (Widget (f Update)) where
         & Element.setLayers . Element.layers . Lens.mapped %~ Anim.scale mult
         & Element.size *~ mult
         & wState . _StateFocused . Lens.mapped . fFocalAreas . traverse . Rect.topLeftAndSize *~ mult
-        & wState . _StateFocused . Lens.mapped . fEventMap . Lens.argument . eVirtualCursor . State.vcRect . Rect.topLeftAndSize //~ mult
+        & eventMapMaker . Lens.argument . eVirtualCursor . State.vcRect . Rect.topLeftAndSize //~ mult
         & enterResult . enterResultRect . Rect.topLeftAndSize *~ mult
         & wState . _StateUnfocused . uMEnter . Lens._Just . Lens.argument %~ Direction.scale (1 / mult)
         & wState . _StateFocused . Lens.mapped . fMEnterPoint . Lens._Just . Lens.argument //~ mult
