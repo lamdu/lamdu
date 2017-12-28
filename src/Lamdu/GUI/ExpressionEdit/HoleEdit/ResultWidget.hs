@@ -6,6 +6,7 @@ module Lamdu.GUI.ExpressionEdit.HoleEdit.ResultWidget
     ) where
 
 import qualified Control.Lens as Lens
+import qualified Control.Monad.Writer as Writer
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Text as Text
 import           GUI.Momentu (Widget, WithTextPos(..))
@@ -13,7 +14,7 @@ import qualified GUI.Momentu.Align as Align
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.MetaKey as MetaKey
-import           GUI.Momentu.PreEvent (PreEvent(..), tellPreEvent)
+import           GUI.Momentu.PreEvent (PreEvents(..))
 import           GUI.Momentu.Rect (Rect(..))
 import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.State as GuiState
@@ -135,8 +136,7 @@ make pl resultId holeResult =
         searchStringRemainder <- getSearchStringRemainder widgetIds holeResultConverted
         isSelected <- GuiState.isSubCursor ?? resultId
         when isSelected
-            ( tellPreEvent
-                PreEvent
+            ( Writer.tell PreEvents
                 { pDesc = "Pick"
                 , pAction = (holeResult ^. Sugar.holeResultPick)
                 , pTextRemainder = searchStringRemainder

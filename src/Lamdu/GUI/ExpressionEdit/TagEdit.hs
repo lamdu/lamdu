@@ -9,6 +9,7 @@ import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
 import           Control.Monad.Transaction (MonadTransaction(..))
 import           Control.Monad.Writer (MonadWriter)
+import qualified Control.Monad.Writer as Writer
 import qualified Data.Char as Char
 import           Data.Function (on)
 import           Data.Store.Transaction (Transaction)
@@ -23,7 +24,7 @@ import           GUI.Momentu.Glue ((/|/))
 import qualified GUI.Momentu.Hover as Hover
 import           GUI.Momentu.MetaKey (MetaKey(..), noMods)
 import qualified GUI.Momentu.MetaKey as MetaKey
-import           GUI.Momentu.PreEvent (PreEvents, PreEvent(..), tellPreEvent)
+import           GUI.Momentu.PreEvent (PreEvents, PreEvents(..))
 import qualified GUI.Momentu.State as GuiState
 import           GUI.Momentu.View (View)
 import           GUI.Momentu.Widget (Widget)
@@ -152,8 +153,7 @@ makeOptions nearestHoles tag searchTerm
                     <*> NameEdit.makeView (name ^. Name.form) optionId
                     <&> Align.tValue %~ E.weakerEvents eventMap
                 when (Widget.isFocused (result ^. Align.tValue))
-                    ( tellPreEvent
-                        PreEvent
+                    ( Writer.tell PreEvents
                         { pDesc = "Pick"
                         , pAction = void pick
                         , pTextRemainder = ""
