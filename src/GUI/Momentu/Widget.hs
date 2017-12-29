@@ -167,7 +167,7 @@ weakerEventsWithContext mkEvents =
                     ctx
                     & ePrevTextRemainder <>~ (f ^. fPreEvents . traverse . pTextRemainder)
                     & mkEvents
-                    & (foldr (addPreEventToEventMap (liftA2 mappend)) ?? (f ^. fPreEvents))
+                    & (foldr (addPreEventToEventMap (liftA2 mappend)) ?? f ^. fPreEvents)
                     & flip mappend
 
 translateFocused ::
