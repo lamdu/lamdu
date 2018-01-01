@@ -12,6 +12,7 @@ import qualified Data.Text as Text
 import           GUI.Momentu (Widget, WithTextPos)
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Draw as Draw
+import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.State as GuiState
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
@@ -62,7 +63,7 @@ make widgetIds holeKind =
                     )
         TextEdit.make ?? textEditNoEmpty ?? searchTerm ?? hidOpenSearchTerm widgetIds
             <&> Align.tValue . Widget.eventMapMaker . Lens.mapped %~
-                EventMap.disallowCharsFromSearchTerm holeKind fst
+                E.filter (EventMap.allowedSearchTerm holeKind . fst)
             <&> Align.tValue . Lens.mapped %~ pure . onEvents
             <&> Draw.backgroundColor bgAnimId (bgColor holeTheme)
     where

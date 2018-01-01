@@ -1,8 +1,8 @@
 {-# LANGUAGE LambdaCase, NoImplicitPrelude, OverloadedStrings, NamedFieldPuns, DisambiguateRecordFields #-}
 module Lamdu.GUI.ExpressionEdit.HoleEdit.EventMap
-    ( disallowCharsFromSearchTerm
-    , searchTermEditEventMap
+    ( searchTermEditEventMap
     , makeLiteralEventMap
+    , allowedSearchTerm
     ) where
 
 import qualified Control.Lens as Lens
@@ -47,7 +47,7 @@ searchTermEditEventMap widgetIds =
                       (E.Doc ["Edit", "Search Term", "Delete backwards"])
         pure $ \holeKind ->
             appendCharEventMap <> deleteCharEventMap
-            & disallowCharsFromSearchTerm holeKind id
+            & E.filter (allowedSearchTerm holeKind)
             <&> GuiState.updateWidgetState (hidOpen widgetIds)
     where
         notOp = Text.any (`notElem` Chars.operator)
@@ -85,11 +85,6 @@ allowedSearchTerm holeKind searchTerm =
             case Text.uncons t of
             Just (c, rest) -> c == '.' && Text.all Char.isAlphaNum rest
             Nothing -> False
-
-disallowCharsFromSearchTerm ::
-    Sugar.HoleKind f e0 e1 -> (a -> Text) -> EventMap a -> EventMap a
-disallowCharsFromSearchTerm holeKind getSearchTerm =
-    E.filter (allowedSearchTerm holeKind . getSearchTerm)
 
 -- TODO: This is ugly, maybe Sugar.HoleOption should
 -- have a canonical result?
