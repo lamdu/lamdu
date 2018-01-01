@@ -1,7 +1,7 @@
 {-# LANGUAGE LambdaCase, NoImplicitPrelude, OverloadedStrings, NamedFieldPuns, DisambiguateRecordFields #-}
 module Lamdu.GUI.ExpressionEdit.HoleEdit.EventMap
     ( searchTermEditEventMap
-    , makeLiteralEventMap
+    , makeLiteralTextEventMap
     , allowedSearchTerm
     ) where
 
@@ -110,11 +110,11 @@ toLiteralTextEventMap actions =
             & WidgetIds.literalTextEditOf
             & pure
 
-makeLiteralEventMap ::
+makeLiteralTextEventMap ::
     Monad m =>
     Sugar.HoleKind (T m) (Sugar.Expression n p a) e -> WidgetIds ->
     ExprGuiM m (EventMap (T m GuiState.Update))
-makeLiteralEventMap holeKind widgetIds =
+makeLiteralTextEventMap holeKind widgetIds =
     HoleState.readSearchTerm widgetIds <&> f
     where
         f searchTerm

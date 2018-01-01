@@ -141,7 +141,7 @@ makeUnderCursorAssignment searchTermEventMap shownResultsLists hasHiddenResults 
         groupsWidgets <- traverse (makeResultGroup pl) shownResultsLists
 
         vspace <- Annotation.annotationSpacer
-        literalEventMap <- EventMap.makeLiteralEventMap holeKind widgetIds
+        literalEventMap <- EventMap.makeLiteralTextEventMap holeKind widgetIds
         pickFirstResult <-
             case groupsWidgets of
             [] -> ResultWidget.emptyPickEventMap

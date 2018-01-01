@@ -74,7 +74,7 @@ make hole pl =
             <&> Widget.weakerEvents unwrapAsEventMap
         isActive <- HoleWidgetIds.isActive widgetIds
         searchTermEventMap <-
-            HoleEventMap.makeLiteralEventMap holeKind widgetIds
+            HoleEventMap.makeLiteralTextEventMap holeKind widgetIds
             <> (HoleEventMap.searchTermEditEventMap widgetIds
                 ?? holeKind <&> fmap pure)
         let inPlaceOfClosed open =
