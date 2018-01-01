@@ -90,7 +90,7 @@ make hole pl =
         searchAreaGui <- SearchArea.make hole pl
         case hole ^. Sugar.holeKind of
             Sugar.WrapperHole arg ->
-                Argument.make (hidOpenSearchTerm widgetIds) arg
+                Argument.make arg
                 >>= makeHoleWithArgument searchAreaGui arg pl
             Sugar.LeafHole{} -> return (searchAreaGui Menu.AnyPlace)
     & GuiState.assignCursor (hidHole widgetIds) (hidOpen widgetIds)
