@@ -1,4 +1,4 @@
-{-# LANGUAGE LambdaCase, NoImplicitPrelude, OverloadedStrings, NamedFieldPuns, DisambiguateRecordFields #-}
+{-# LANGUAGE NoImplicitPrelude, OverloadedStrings, NamedFieldPuns, DisambiguateRecordFields #-}
 module Lamdu.GUI.ExpressionEdit.HoleEdit.EventMap
     ( searchTermEditEventMap
     , makeLiteralTextEventMap
