@@ -38,7 +38,7 @@ import qualified Lamdu.Builtins.PrimVal as PrimVal
 import           Lamdu.Calc.Type (Type(..))
 import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Calc.Type.Nominal as N
-import           Lamdu.Calc.Type.Scheme (schemeType)
+import           Lamdu.Calc.Type.Scheme (schemeType, mono)
 import qualified Lamdu.Calc.Val as V
 import           Lamdu.Calc.Val.Annotated (Val(..))
 import qualified Lamdu.Calc.Val.Annotated as Val
@@ -317,11 +317,11 @@ mkLeafActions ::
 mkLeafActions exprPl =
     do
         sugarContext <- ConvertM.readContext
-        let mkOption val =
+        let mkOption updateDeps val =
                 pure
                 ( HoleResultScore 0 []
                 , fixedVal <&> convPl
-                    & mkHoleResult sugarContext (pure ()) (exprPl ^. Input.stored)
+                    & mkHoleResult sugarContext updateDeps (exprPl ^. Input.stored)
                 )
                 where
                     typ = val ^. Val.payload
@@ -331,11 +331,12 @@ mkLeafActions exprPl =
                             V.Apply (Val (T.TFun typ inferredType) (V.BLeaf V.LHole)) val
                             & V.BApp
                             & Val inferredType
+        let addTextDep = Property.pureModify (sugarContext ^. ConvertM.scFrozenDeps) (<> textDep)
         pure LeafHoleActions
             { _holeOptionLiteral =
                 \case
-                LiteralNum (Identity x) -> PrimVal.Float x & literalExpr & mkOption
-                LiteralBytes (Identity x) -> PrimVal.Bytes x & literalExpr & mkOption
+                LiteralNum (Identity x) -> PrimVal.Float x & literalExpr & mkOption (pure ())
+                LiteralBytes (Identity x) -> PrimVal.Bytes x & literalExpr & mkOption (pure ())
                 LiteralText (Identity x) ->
                     encodeUtf8 x
                     & PrimVal.Bytes
@@ -343,7 +344,7 @@ mkLeafActions exprPl =
                     & V.Nom Builtins.textTid
                     & V.BToNom
                     & Val (T.TInst Builtins.textTid mempty)
-                    & mkOption
+                    & mkOption addTextDep
             }
     where
         literalExpr v =
@@ -352,6 +353,15 @@ mkLeafActions exprPl =
                 prim = PrimVal.fromKnown v
         convPl t = (Infer.Payload t Infer.emptyScope, (Nothing, NotInjected))
         inferredType = exprPl ^. Input.inferred . Infer.plType
+        textDep =
+            mempty
+            { Infer._depsNominals =
+                Map.singleton Builtins.textTid
+                N.Nominal
+                { N._nomType = T.TInst Builtins.bytesTid mempty & mono & N.NominalType
+                , N._nomParams = mempty
+                }
+            }
 
 getLocalScopeGetVars :: ConvertM.Context m -> V.Var -> [Val ()]
 getLocalScopeGetVars sugarContext par
