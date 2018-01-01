@@ -29,7 +29,6 @@ import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExprGui
 import           Lamdu.GUI.ExpressionGui.Annotation (maybeAddAnnotationPl)
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
-import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Name (Name)
 import qualified Lamdu.Sugar.Types as Sugar
 
@@ -54,13 +53,6 @@ make ::
 make hole pl =
     do
         config <- Lens.view Config.config
-        let unwrapAsEventMap =
-                hole ^? Sugar.holeKind . Sugar._WrapperHole . Sugar.haUnwrap . Sugar._UnwrapAction
-                & maybe mempty
-                    ( E.keysEventMapMovesCursor (Config.delKeys config <> Config.holeUnwrapKeys (Config.hole config))
-                        (E.Doc ["Edit", "Unwrap"])
-                        . fmap WidgetIds.fromEntityId
-                    )
         let fdWrap =
                 FocusDelegator.make ?? fdConfig (Config.hole config)
                 ?? FocusDelegator.FocusEntryParent ?? hidClosedSearchArea widgetIds
@@ -71,7 +63,6 @@ make hole pl =
             ( fdWrap
                 <*> SearchTerm.make widgetIds holeKind <&> Responsive.fromWithTextPos
             )
-            <&> Widget.weakerEvents unwrapAsEventMap
         isActive <- HoleWidgetIds.isActive widgetIds
         searchTermEventMap <-
             HoleEventMap.makeLiteralTextEventMap holeKind widgetIds
@@ -89,9 +80,7 @@ make hole pl =
                 -- here
                 (fdWrap <&> (Lens.mapped %~))
                 <*> makeOpenSearchAreaGui searchTermEventMap hole pl
-                <&> Lens.mapped %~
-                inPlaceOfClosed . Widget.weakerEvents unwrapAsEventMap .
-                (^. Align.tValue)
+                <&> Lens.mapped %~ inPlaceOfClosed . (^. Align.tValue)
             else
                 (if isActive then Widget.setFocused else id)
                 closedSearchTermGui

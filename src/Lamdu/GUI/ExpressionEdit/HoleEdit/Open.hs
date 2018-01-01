@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, FlexibleContexts #-}
+{-# LANGUAGE NoImplicitPrelude, FlexibleContexts, OverloadedStrings #-}
 -- | The search area (search term + results) of an open/active hole.
 
 module Lamdu.GUI.ExpressionEdit.HoleEdit.Open
@@ -15,6 +15,7 @@ import qualified GUI.Momentu.Align as Align
 import           GUI.Momentu.Animation.Id (AnimId)
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
+import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Glue ((/-/))
 import qualified GUI.Momentu.State as GuiState
 import           GUI.Momentu.View (View)
@@ -23,6 +24,7 @@ import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widget.Id as WidgetId
 import qualified GUI.Momentu.Widgets.Menu as Menu
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
+import qualified Lamdu.Config as Config
 import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.EventMap as EventMap
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.ResultGroups (ResultsList(..), Result(..))
@@ -36,6 +38,7 @@ import           Lamdu.GUI.ExpressionGui (ExpressionN)
 import qualified Lamdu.GUI.ExpressionGui as ExprGui
 import qualified Lamdu.GUI.ExpressionGui.Annotation as Annotation
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
+import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.GUI.TypeView as TypeView
 import qualified Lamdu.Sugar.Types as Sugar
 
@@ -176,8 +179,18 @@ makeOpenSearchAreaGui searchTermEventMap hole pl =
                 [ rId . (^. HoleResults.rlMain)
                 , (^. HoleResults.rlExtraResultsPrefixId)
                 ] <*> shownResultsLists
+        config <- Lens.view Config.config
+        let unwrapEventMap =
+                hole ^? Sugar.holeKind . Sugar._WrapperHole . Sugar.haUnwrap . Sugar._UnwrapAction
+                & maybe mempty
+                    ( E.keysEventMapMovesCursor
+                        (Config.delKeys config <> Config.holeUnwrapKeys (Config.hole config))
+                        (E.Doc ["Edit", "Unwrap"])
+                        . fmap WidgetIds.fromEntityId
+                    )
         makeUnderCursorAssignment searchTermEventMap shownResultsLists
             hasHiddenResults hole pl
             & assignCursor widgetIds shownMainResultsIds allShownResultIds
+            <&> Lens.mapped . Align.tValue %~ Widget.weakerEvents unwrapEventMap
     where
         widgetIds = pl ^. Sugar.plEntityId & HoleWidgetIds.make
