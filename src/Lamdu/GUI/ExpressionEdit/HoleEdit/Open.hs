@@ -24,7 +24,6 @@ import qualified GUI.Momentu.Widget.Id as WidgetId
 import qualified GUI.Momentu.Widgets.Menu as Menu
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified Lamdu.Config.Theme as Theme
-import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.EventMap as EventMap
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.ResultGroups (ResultsList(..), Result(..))
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.ResultGroups as HoleResults
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.ResultWidget as ResultWidget
@@ -141,7 +140,6 @@ makeUnderCursorAssignment searchTermEventMap shownResultsLists hasHiddenResults 
         groupsWidgets <- traverse (makeResultGroup pl) shownResultsLists
 
         vspace <- Annotation.annotationSpacer
-        literalEventMap <- EventMap.makeLiteralTextEventMap holeKind widgetIds
         pickFirstResult <-
             case groupsWidgets of
             [] -> ResultWidget.emptyPickEventMap
@@ -153,7 +151,7 @@ makeUnderCursorAssignment searchTermEventMap shownResultsLists hasHiddenResults 
         typeView <- makeInferredTypeAnnotation pl holeAnimId
         hoverMenu <- Menu.makeHovered (vspace /-/ typeView) options hasHiddenResults
         SearchTerm.make widgetIds holeKind
-            <&> Align.tValue %~ Widget.weakerEvents (pickFirstResult <> literalEventMap)
+            <&> Align.tValue %~ Widget.weakerEvents pickFirstResult
             <&> \searchTermWidget placement ->
                 searchTermWidget <&> hoverMenu placement
     & Reader.local (Element.animIdPrefix .~ WidgetId.toAnimId (hidOpen widgetIds))

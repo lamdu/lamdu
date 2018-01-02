@@ -64,10 +64,7 @@ make hole pl =
                 <*> SearchTerm.make widgetIds holeKind <&> Responsive.fromWithTextPos
             )
         isActive <- HoleWidgetIds.isActive widgetIds
-        searchTermEventMap <-
-            HoleEventMap.makeLiteralTextEventMap holeKind widgetIds
-            <> (HoleEventMap.searchTermEditEventMap widgetIds
-                ?? holeKind <&> fmap pure)
+        searchTermEventMap <- HoleEventMap.searchTermEditEventMap widgetIds ?? holeKind <&> fmap pure
         let inPlaceOfClosed open =
                 closedSearchTermGui & Widget.widget %~
                 Hover.hoverInPlaceOf [Hover.anchor open] . Hover.anchor

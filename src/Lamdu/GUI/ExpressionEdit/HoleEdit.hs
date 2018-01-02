@@ -17,6 +17,7 @@ import qualified GUI.Momentu.Widgets.Menu as Menu
 import qualified Lamdu.Config as Config
 import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.Argument as Argument
+import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.EventMap as HoleEventMap
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.SearchArea as SearchArea
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds (WidgetIds(..))
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds as HoleWidgetIds
@@ -92,7 +93,11 @@ make hole pl =
             Sugar.WrapperHole arg ->
                 Argument.make arg
                 >>= makeHoleWithArgument searchAreaGui arg pl
-            Sugar.LeafHole{} -> return (searchAreaGui Menu.AnyPlace)
+            Sugar.LeafHole{} ->
+                HoleEventMap.makeLiteralTextEventMap (hole ^. Sugar.holeKind) widgetIds
+                <&>
+                \txtEventMap ->
+                searchAreaGui Menu.AnyPlace & Widget.weakerEvents txtEventMap
     & GuiState.assignCursor (hidHole widgetIds) (hidOpen widgetIds)
     & addActions options pl
     where
