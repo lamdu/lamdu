@@ -201,6 +201,7 @@ Executable lamdu
                   , Lamdu.GUI.ExpressionEdit.HoleEdit.Argument
                   , Lamdu.GUI.ExpressionEdit.HoleEdit.EventMap
                   , Lamdu.GUI.ExpressionEdit.HoleEdit.Open
+                  , Lamdu.GUI.ExpressionEdit.HoleEdit.LiteralText
                   , Lamdu.GUI.ExpressionEdit.HoleEdit.ResultGroups
                   , Lamdu.GUI.ExpressionEdit.HoleEdit.ResultWidget
                   , Lamdu.GUI.ExpressionEdit.HoleEdit.SearchArea
