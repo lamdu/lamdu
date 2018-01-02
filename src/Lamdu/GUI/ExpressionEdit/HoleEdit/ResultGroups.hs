@@ -211,7 +211,6 @@ literalGroups ::
 literalGroups holeKind searchTerm =
     [ tryBuildLiteral "Num"   Sugar.LiteralNum holeKind searchTerm
     , tryBuildLiteral "Bytes" Sugar.LiteralBytes holeKind searchTerm
-    , tryBuildLiteral "Text"  Sugar.LiteralText holeKind searchTerm
     ] ^.. Lens.traverse . Lens._Just
 
 insensitivePrefixOf :: Text -> Text -> Bool
