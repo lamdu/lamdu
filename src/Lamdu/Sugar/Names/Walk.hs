@@ -175,35 +175,32 @@ toLabeledApply expr app@LabeledApply{..} =
     <*> (traverse . raValue) toParamRef _aRelayedArgs
     >>= traverse expr
 
-toLeafHoleActions ::
-    MonadNaming m =>
-    LeafHoleActions (TM m) (Expression (OldName m) (TM m) ()) ->
-    m (LeafHoleActions (TM m) (Expression (NewName m) (TM m) ()))
-toLeafHoleActions ha@LeafHoleActions {..} =
-    do
-        run <- opRun
-        pure ha { _holeOptionLiteral = _holeOptionLiteral <&> Lens.mapped . _2 %~ (>>= run . toHoleResult) }
-
-toHoleKind ::
-    MonadNaming m =>
-    (a -> m b) ->
-    HoleKind (TM m) (Expression (OldName m) (TM m) ()) a ->
-    m (HoleKind (TM m) (Expression (NewName m) (TM m) ()) b)
-toHoleKind expr (WrapperHole holeArg) = traverse expr holeArg <&> WrapperHole
-toHoleKind _ (LeafHole actions) = toLeafHoleActions actions <&> LeafHole
-
 toHole ::
     MonadNaming m =>
-    (a -> m b) ->
-    Hole (TM m) (Expression (OldName m) (TM m) ()) a ->
-    m (Hole (TM m) (Expression (NewName m) (TM m) ()) b)
-toHole expr Hole{..} =
+    Hole (TM m) (Expression (OldName m) (TM m) ()) ->
+    m (Hole (TM m) (Expression (NewName m) (TM m) ()))
+toHole Hole{..} =
     do
-        kind <- toHoleKind expr _holeKind
-        run <- opRun
+        run0 <- opRun
+        run1 <- opRun
         pure Hole
-            { _holeOptions = _holeOptions >>= run . traverse toHoleOption
-            , _holeKind = kind
+            { _holeOptions = _holeOptions >>= run0 . traverse toHoleOption
+            , _holeOptionLiteral = _holeOptionLiteral <&> Lens.mapped . _2 %~ (>>= run1 . toHoleResult)
+            }
+
+toWrapper ::
+    MonadNaming m =>
+    (a -> m b) ->
+    Wrapper (OldName m) (TM m) a ->
+    m (Wrapper (NewName m) (TM m) b)
+toWrapper expr Wrapper{..} =
+    do
+        run <- opRun
+        newExpr <- expr _wExpr
+        pure Wrapper
+            { _wExpr = newExpr
+            , _wUnwrap = _wUnwrap
+            , _wOptions = _wOptions >>= run . traverse toHoleOption
             }
 
 toBody ::
@@ -218,12 +215,13 @@ toBody expr = \case
     BodyGuard        x -> x & traverse expr <&> BodyGuard
     BodySimpleApply  x -> x & traverse expr <&> BodySimpleApply
     BodyLabeledApply x -> x & toLabeledApply expr <&> BodyLabeledApply
-    BodyHole         x -> x & toHole expr <&> BodyHole
+    BodyHole         x -> x & toHole <&> BodyHole
     BodyFromNom      x -> x & traverse expr >>= nTId toTId <&> BodyFromNom
     BodyToNom        x -> x & traverse (toBinderBody expr) >>= nTId toTId <&> BodyToNom
     BodyGetVar       x -> x & toGetVar <&> BodyGetVar
     BodyLiteral      x -> x & BodyLiteral & pure
     BodyLam          x -> x & toLam expr <&> BodyLam
+    BodyWrapper      x -> x & toWrapper expr <&> BodyWrapper
     BodyInjectedExpression -> return BodyInjectedExpression
     where
         toTId = tidName %%~ opGetName NominalName

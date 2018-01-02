@@ -7,7 +7,7 @@ module Lamdu.Sugar.Types.Expression
     , Body(..)
         , _BodyLam, _BodyLabeledApply, _BodySimpleApply
         , _BodyGetVar, _BodyGetField, _BodyInject, _BodyHole
-        , _BodyLiteral, _BodyCase, _BodyRecord
+        , _BodyLiteral, _BodyCase, _BodyRecord, _BodyWrapper
         , _BodyFromNom, _BodyToNom, _BodyGuard
     , Payload(..), plEntityId, plAnnotation, plActions, plData
     , Expression(..), rBody, rPayload
@@ -32,6 +32,8 @@ module Lamdu.Sugar.Types.Expression
     , AnnotatedArg(..), aaTag, aaExpr, aaName
     , RelayedArg(..), raValue, raId, raActions
     , LabeledApply(..), aFunc, aSpecialArgs, aAnnotatedArgs, aRelayedArgs
+    , Wrapper(..), wExpr, wUnwrap, wOptions
+    , Unwrap(..), _UnwrapAction, _UnwrapTypeMismatch
     , TId(..), tidName, tidTId
     , Lambda(..), lamBinder, lamMode
     , V.Apply(..), V.applyFunc, V.applyArg
@@ -45,7 +47,7 @@ import qualified Lamdu.Calc.Val as V
 import           Lamdu.Sugar.Internal.EntityId (EntityId)
 import           Lamdu.Sugar.Types.Binder
 import           Lamdu.Sugar.Types.GetVar (GetVar, BinderVarRef, ParamRef)
-import           Lamdu.Sugar.Types.Hole (Hole, Literal)
+import           Lamdu.Sugar.Types.Hole (Hole, HoleOption, Literal)
 
 import           Lamdu.Prelude
 
@@ -194,11 +196,23 @@ data Lambda name m expr = Lambda
     , _lamBinder :: Binder name m expr
     } deriving (Functor, Foldable, Traversable)
 
+data Unwrap m
+    = UnwrapAction (m EntityId)
+    | UnwrapTypeMismatch
+
+-- | An expression marked for transformation.
+-- Holds an expression to be transformed but acts like a hole.
+data Wrapper name m expr = Wrapper
+    { _wExpr :: expr
+    , _wUnwrap :: Unwrap m
+    , _wOptions :: m [HoleOption m (Expression name m ())]
+    } deriving (Functor, Foldable, Traversable)
+
 data Body name m expr
     = BodyLam (Lambda name m expr)
     | BodySimpleApply (V.Apply expr)
     | BodyLabeledApply (LabeledApply name m expr)
-    | BodyHole (Hole m (Expression name m ()) expr)
+    | BodyHole (Hole m (Expression name m ()))
     | BodyLiteral (Literal (Property m))
     | BodyRecord (Composite name m expr)
     | BodyGetField (GetField name m expr)
@@ -208,6 +222,7 @@ data Body name m expr
     | BodyGetVar (GetVar name m)
     | BodyToNom (Nominal name (BinderBody name m expr))
     | BodyFromNom (Nominal name expr)
+    | BodyWrapper (Wrapper name m expr)
     | BodyInjectedExpression -- Used for hole results
     deriving (Functor, Foldable, Traversable)
 
@@ -230,6 +245,7 @@ instance (Show name, Show expr) => Show (Body name m expr) where
     show BodyFromNom {} = "FromNom:TODO"
     show BodyToNom {} = "ToNom:TODO"
     show BodyInjectedExpression {} = "InjectedExpression"
+    show BodyWrapper {} = "Wrapper:TODO"
 
 Lens.makeLenses ''Actions
 Lens.makeLenses ''AnnotatedArg
@@ -252,9 +268,11 @@ Lens.makeLenses ''OpenCompositeActions
 Lens.makeLenses ''Payload
 Lens.makeLenses ''RelayedArg
 Lens.makeLenses ''TId
+Lens.makeLenses ''Wrapper
 Lens.makePrisms ''Body
 Lens.makePrisms ''CaseKind
 Lens.makePrisms ''CompositeTail
 Lens.makePrisms ''Delete
 Lens.makePrisms ''Literal
+Lens.makePrisms ''Unwrap
 Lens.makePrisms ''WrapAction

@@ -25,11 +25,10 @@ import           Lamdu.GUI.ExpressionEdit.HoleEdit.Open (makeOpenSearchAreaGui)
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.SearchTerm as SearchTerm
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds (WidgetIds(..))
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds as HoleWidgetIds
-import           Lamdu.GUI.ExpressionGui (ExpressionGui)
+import           Lamdu.GUI.ExpressionGui (ExpressionGui, ExpressionN)
 import qualified Lamdu.GUI.ExpressionGui as ExprGui
 import           Lamdu.GUI.ExpressionGui.Annotation (maybeAddAnnotationPl)
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
-import           Lamdu.Name (Name)
 import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
@@ -47,10 +46,12 @@ fdConfig Config.Hole{holeOpenKeys, holeCloseKeys} = FocusDelegator.Config
 -- Has a typeView under the search term
 make ::
     Monad m =>
-    Sugar.Hole (T m) (Sugar.Expression (Name (T m)) (T m) ()) (ExprGui.SugarExpr m) ->
+    T m [Sugar.HoleOption (T m) (ExpressionN m ())] ->
+    Maybe (Sugar.OptionLiteral (T m) (ExpressionN m ())) ->
     Sugar.Payload (T m) ExprGui.Payload ->
+    (Text -> Bool) ->
     ExprGuiM m (Menu.Placement -> ExpressionGui m)
-make hole pl =
+make options mOptionLiteral pl allowedTerms =
     do
         config <- Lens.view Config.config
         let fdWrap =
@@ -61,10 +62,10 @@ make hole pl =
             maybeAddAnnotationPl pl
             <*>
             ( fdWrap
-                <*> SearchTerm.make widgetIds holeKind <&> Responsive.fromWithTextPos
+                <*> SearchTerm.make widgetIds allowedTerms <&> Responsive.fromWithTextPos
             )
         isActive <- HoleWidgetIds.isActive widgetIds
-        searchTermEventMap <- HoleEventMap.searchTermEditEventMap widgetIds ?? holeKind <&> fmap pure
+        searchTermEventMap <- HoleEventMap.searchTermEditEventMap widgetIds allowedTerms <&> fmap pure
         let inPlaceOfClosed open =
                 closedSearchTermGui & Widget.widget %~
                 Hover.hoverInPlaceOf [Hover.anchor open] . Hover.anchor
@@ -76,7 +77,7 @@ make hole pl =
                 -- it is harder to implement, so just wrap it
                 -- here
                 (fdWrap <&> (Lens.mapped %~))
-                <*> makeOpenSearchAreaGui searchTermEventMap hole pl
+                <*> makeOpenSearchAreaGui searchTermEventMap options mOptionLiteral allowedTerms pl
                 <&> Lens.mapped %~ inPlaceOfClosed . (^. Align.tValue)
             else
                 (if isActive then Widget.setFocused else id)
@@ -90,4 +91,3 @@ make hole pl =
     where
         widgetIds = pl ^. Sugar.plEntityId & HoleWidgetIds.make
         isAHoleInHole = ExprGui.isHoleResult pl
-        holeKind = hole ^. Sugar.holeKind

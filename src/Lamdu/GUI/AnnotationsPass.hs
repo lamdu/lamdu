@@ -76,8 +76,12 @@ markAnnotationsToDisplay (Expression oldBody pl) =
         & (`Expression` defPl)
     BodyHole hole ->
         hole
-        & holeKind . _WrapperHole . haExpr . topLevelAnn .~ forceShowTypeOrEval
         & BodyHole
+        & (`Expression` plWith forceShowType)
+    BodyWrapper wrapper ->
+        wrapper
+        & wExpr . topLevelAnn .~ forceShowTypeOrEval
+        & BodyWrapper
         & (`Expression` plWith forceShowType)
     BodyCase cas ->
         cas

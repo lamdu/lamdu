@@ -47,7 +47,7 @@ getSearchStringRemainder widgetIds holeResultConverted
     | otherwise = pure mempty
     where
         literalNum = Sugar.rBody . Sugar._BodyLiteral . Sugar._LiteralNum
-        wrappedExpr = Sugar.rBody . Sugar._BodyHole . Sugar.holeKind . Sugar._WrapperHole . Sugar.haExpr
+        wrappedExpr = Sugar.rBody . Sugar._BodyWrapper . Sugar.wExpr
 
 setFocalAreaToFullSize :: WithTextPos (Widget a) -> WithTextPos (Widget a)
 setFocalAreaToFullSize =

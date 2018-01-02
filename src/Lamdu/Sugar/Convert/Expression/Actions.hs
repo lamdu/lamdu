@@ -125,17 +125,16 @@ addActions exprPl body =
                     (srcPl ^. plData . pStored . Property.pVal)
                     <&> EntityId.ofValI)
         let addReplaceParent innerPl = setToExpr innerPl innerPl
-        let fixHoleReplaceParent child =
+        let fixWrapperReplaceParent child =
                 case child ^. rBody of
-                BodyHole (Hole _ (WrapperHole arg)) ->
-                    -- Hole's replaces parent rather than the hole.
-                    child & rPayload %~ setToExpr (arg ^. haExpr . rPayload)
+                BodyWrapper wrapper ->
+                    child & rPayload %~ setToExpr (wrapper ^. wExpr . rPayload)
                 _ -> child
         return Expression
             { _rBody =
                 body
                 <&> rPayload %~ addReplaceParent
-                <&> fixHoleReplaceParent
+                <&> fixWrapperReplaceParent
             , _rPayload =
                 Payload
                 { _plEntityId = exprPl ^. Input.entityId

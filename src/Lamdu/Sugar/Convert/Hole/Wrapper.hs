@@ -84,22 +84,6 @@ convertAppliedHole (V.Apply funcI argI) argS exprPl =
             checkTypeMatch (argI ^. Val.payload . Input.inferredType)
             (exprPl ^. Input.inferredType) & lift
         postProcess <- lift ConvertM.postProcess
-        let holeArg = HoleArg
-                { _haExpr =
-                      argS
-                      & rPayload . plActions . wrap .~ WrappedAlready storedEntityId
-                      & rPayload . plActions . delete .~
-                        SetToHole
-                        ( DataOps.setToHole (exprPl ^. Input.stored) <* postProcess <&> uuidEntityId )
-                , _haUnwrap =
-                      if isTypeMatch
-                      then DataOps.replace (exprPl ^. Input.stored)
-                           (argI ^. Val.payload . Input.stored . Property.pVal)
-                           <* postProcess
-                           <&> EntityId.ofValI
-                           & UnwrapAction
-                      else UnwrapTypeMismatch
-                }
         do
             sugarContext <- ConvertM.readContext
             suggesteds <-
@@ -109,9 +93,22 @@ convertAppliedHole (V.Apply funcI argI) argS exprPl =
                 ConvertHole.mkOptions (Just argI) exprPl
                 <&> Lens.mapped %~ mappend (mkAppliedHoleOptions sugarContext argI (argS <&> (^. pUserData)) exprPl)
                 <&> Lens.mapped %~ ConvertHole.addSuggestedOptions suggesteds
-            BodyHole Hole
-                { _holeOptions = options
-                , _holeKind = WrapperHole holeArg
+            BodyWrapper Wrapper
+                { _wExpr =
+                      argS
+                      & rPayload . plActions . wrap .~ WrappedAlready storedEntityId
+                      & rPayload . plActions . delete .~
+                        SetToHole
+                        ( DataOps.setToHole (exprPl ^. Input.stored) <* postProcess <&> uuidEntityId )
+                , _wUnwrap =
+                      if isTypeMatch
+                      then DataOps.replace (exprPl ^. Input.stored)
+                           (argI ^. Val.payload . Input.stored . Property.pVal)
+                           <* postProcess
+                           <&> EntityId.ofValI
+                           & UnwrapAction
+                      else UnwrapTypeMismatch
+                , _wOptions = options
                 } & pure
             >>= addActions exprPl
             & lift

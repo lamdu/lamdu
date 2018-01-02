@@ -22,6 +22,7 @@ import qualified Lamdu.GUI.ExpressionEdit.LambdaEdit as LambdaEdit
 import qualified Lamdu.GUI.ExpressionEdit.LiteralEdit as LiteralEdit
 import qualified Lamdu.GUI.ExpressionEdit.NomEdit as NomEdit
 import qualified Lamdu.GUI.ExpressionEdit.RecordEdit as RecordEdit
+import qualified Lamdu.GUI.ExpressionEdit.WrapperEdit as WrapperEdit
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExprGui
@@ -72,5 +73,6 @@ makeEditor body pl =
     Sugar.BodyGetVar       x -> GetVarEdit.make       x pl & r
     Sugar.BodyToNom        x -> NomEdit.makeToNom     x pl & r
     Sugar.BodyFromNom      x -> NomEdit.makeFromNom   x pl & r
+    Sugar.BodyWrapper      x -> WrapperEdit.make      x pl & r
     where
         r = Reader.local (Element.animIdPrefix .~ Widget.toAnimId (WidgetIds.fromExprPayload pl))

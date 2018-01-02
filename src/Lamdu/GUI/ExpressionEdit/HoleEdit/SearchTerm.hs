@@ -19,11 +19,9 @@ import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
 import           Lamdu.Config (HasConfig)
 import           Lamdu.Config.Theme (HasTheme)
 import qualified Lamdu.Config.Theme as Theme
-import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.EventMap as EventMap
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds (WidgetIds(..))
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds as HoleWidgetIds
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.State (readSearchTerm)
-import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
 
@@ -37,9 +35,9 @@ make ::
     , HasConfig env, TextEdit.HasStyle env
     , GuiState.HasState env
     ) =>
-    WidgetIds -> Sugar.HoleKind g e0 e1 ->
+    WidgetIds -> (Text -> Bool) ->
     f (WithTextPos (Widget (T m GuiState.Update)))
-make widgetIds holeKind =
+make widgetIds allowedSearchTerm =
     do
         searchTerm <- readSearchTerm widgetIds
         theme <- Lens.view Theme.theme
@@ -63,7 +61,7 @@ make widgetIds holeKind =
                     )
         TextEdit.make ?? textEditNoEmpty ?? searchTerm ?? hidOpenSearchTerm widgetIds
             <&> Align.tValue . Widget.eventMapMaker . Lens.mapped %~
-                E.filter (EventMap.allowedSearchTerm holeKind . fst)
+                E.filter (allowedSearchTerm . fst)
             <&> Align.tValue . Lens.mapped %~ pure . onEvents
             <&> Draw.backgroundColor bgAnimId (bgColor holeTheme)
     where

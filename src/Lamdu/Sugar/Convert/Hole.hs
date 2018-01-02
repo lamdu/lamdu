@@ -78,13 +78,10 @@ type ExprStorePoint m a = Val (Maybe (ValI m), a)
 
 convert :: Monad m => Input.Payload m a -> ConvertM m (ExpressionU m a)
 convert exprPl =
-    do
-        options <- mkOptions Nothing exprPl
-        leafActions <- mkLeafActions exprPl
-        BodyHole Hole
-            { _holeOptions = options
-            , _holeKind = LeafHole leafActions
-            } & pure
+    Hole
+    <$> mkOptions Nothing exprPl
+    <*> mkLiteralOptions exprPl
+    <&> BodyHole
     >>= addActions exprPl
     <&> rPayload . plActions . delete .~ CannotDelete
 
@@ -310,42 +307,41 @@ sugar sugarContext exprPl val =
             , Infer._plScope = exprPl ^. Input.inferred . Infer.plScope
             }
 
-mkLeafActions ::
+mkLiteralOptions ::
     Monad m =>
     Input.Payload m a ->
-    ConvertM m (LeafHoleActions (T m) (Expression UUID (T m) ()))
-mkLeafActions exprPl =
-    do
-        sugarContext <- ConvertM.readContext
-        let mkOption updateDeps val =
-                pure
-                ( HoleResultScore 0 []
-                , fixedVal <&> convPl
-                    & mkHoleResult sugarContext updateDeps (exprPl ^. Input.stored)
-                )
-                where
-                    typ = val ^. Val.payload
-                    fixedVal
-                        | inferredType == typ || Lens.has T._TVar inferredType = val
-                        | otherwise =
-                            V.Apply (Val (T.TFun typ inferredType) (V.BLeaf V.LHole)) val
-                            & V.BApp
-                            & Val inferredType
-        let addTextDep = Property.pureModify (sugarContext ^. ConvertM.scFrozenDeps) (<> textDep)
-        pure LeafHoleActions
-            { _holeOptionLiteral =
-                \case
-                LiteralNum (Identity x) -> PrimVal.Float x & literalExpr & mkOption (pure ())
-                LiteralBytes (Identity x) -> PrimVal.Bytes x & literalExpr & mkOption (pure ())
-                LiteralText (Identity x) ->
-                    encodeUtf8 x
-                    & PrimVal.Bytes
-                    & literalExpr
-                    & V.Nom Builtins.textTid
-                    & V.BToNom
-                    & Val (T.TInst Builtins.textTid mempty)
-                    & mkOption addTextDep
-            }
+    ConvertM m (Literal Identity -> T m (HoleResultScore, T m (HoleResult (T m) (Expression UUID (T m) ()))))
+mkLiteralOptions exprPl =
+    ConvertM.readContext
+    <&>
+    \sugarContext ->
+    let mkOption updateDeps val =
+            pure
+            ( HoleResultScore 0 []
+            , fixedVal <&> convPl
+                & mkHoleResult sugarContext updateDeps (exprPl ^. Input.stored)
+            )
+            where
+                typ = val ^. Val.payload
+                fixedVal
+                    | inferredType == typ || Lens.has T._TVar inferredType = val
+                    | otherwise =
+                        V.Apply (Val (T.TFun typ inferredType) (V.BLeaf V.LHole)) val
+                        & V.BApp
+                        & Val inferredType
+        addTextDep = Property.pureModify (sugarContext ^. ConvertM.scFrozenDeps) (<> textDep)
+    in
+    \case
+    LiteralNum (Identity x) -> PrimVal.Float x & literalExpr & mkOption (pure ())
+    LiteralBytes (Identity x) -> PrimVal.Bytes x & literalExpr & mkOption (pure ())
+    LiteralText (Identity x) ->
+        encodeUtf8 x
+        & PrimVal.Bytes
+        & literalExpr
+        & V.Nom Builtins.textTid
+        & V.BToNom
+        & Val (T.TInst Builtins.textTid mempty)
+        & mkOption addTextDep
     where
         literalExpr v =
             V.LLiteral prim & V.BLeaf & Val (T.TInst (prim ^. V.primType) mempty)

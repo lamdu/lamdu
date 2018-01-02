@@ -237,7 +237,7 @@ markLightParams paramUUIDs (Expression body pl) =
             n
             & pBinderMode .~ LightLambda
             & GetParam & BodyGetVar
-    BodyHole h -> h <&> markLightParams paramUUIDs & BodyHole
+    BodyWrapper w -> w <&> markLightParams paramUUIDs & BodyWrapper
     _ -> body <&> markLightParams paramUUIDs
     & (`Expression` pl)
 

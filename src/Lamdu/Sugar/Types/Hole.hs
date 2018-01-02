@@ -1,13 +1,10 @@
 {-# LANGUAGE NoImplicitPrelude, TemplateHaskell, DeriveTraversable #-}
 
 module Lamdu.Sugar.Types.Hole
-    ( Unwrap(..), _UnwrapAction, _UnwrapTypeMismatch
-    , HoleArg(..), haExpr, haUnwrap
-    , HoleOption(..), hoVal, hoSugaredBaseExpr, hoResults
-    , LeafHoleActions(..), holeOptionLiteral
+    ( HoleOption(..), hoVal, hoSugaredBaseExpr, hoResults
     , Literal(..), _LiteralNum, _LiteralBytes, _LiteralText
-    , HoleKind(..), _LeafHole, _WrapperHole
-    , Hole(..), holeOptions, holeKind
+    , OptionLiteral
+    , Hole(..), holeOptions, holeOptionLiteral
     , HoleResultScore(..), hrsNumHoleWrappers, hrsScore
     , HoleResult(..)
         , holeResultConverted
@@ -18,7 +15,6 @@ import qualified Control.Lens as Lens
 import           Control.Monad.ListT (ListT)
 import           Data.Functor.Identity (Identity(..))
 import           Lamdu.Calc.Val.Annotated (Val)
-import           Lamdu.Sugar.Internal.EntityId (EntityId)
 
 import           Lamdu.Prelude
 
@@ -44,35 +40,15 @@ data Literal f
     | LiteralBytes (f ByteString)
     | LiteralText (f Text)
 
-newtype LeafHoleActions m resultExpr = LeafHoleActions
-    { _holeOptionLiteral :: Literal Identity -> m (HoleResultScore, m (HoleResult m resultExpr))
-    } deriving Functor
+type OptionLiteral m resultExpr = Literal Identity -> m (HoleResultScore, m (HoleResult m resultExpr))
 
-data Unwrap m
-    = UnwrapAction (m EntityId)
-    | UnwrapTypeMismatch
-
-data HoleArg m expr = HoleArg
-    { _haExpr :: expr
-    , _haUnwrap :: Unwrap m
-    } deriving (Functor, Foldable, Traversable)
-
-data HoleKind m resultExpr expr
-    = LeafHole (LeafHoleActions m resultExpr)
-    | WrapperHole (HoleArg m expr)
-    deriving (Functor, Foldable, Traversable)
-
-data Hole m resultExpr expr = Hole
+data Hole m resultExpr = Hole
     { _holeOptions :: m [HoleOption m resultExpr]
-    , _holeKind :: HoleKind m resultExpr expr
-    } deriving (Functor, Foldable, Traversable)
+    , _holeOptionLiteral :: OptionLiteral m resultExpr
+    }
 
 Lens.makeLenses ''Hole
-Lens.makeLenses ''HoleArg
 Lens.makeLenses ''HoleOption
 Lens.makeLenses ''HoleResult
 Lens.makeLenses ''HoleResultScore
-Lens.makeLenses ''LeafHoleActions
-Lens.makePrisms ''HoleKind
 Lens.makePrisms ''Literal
-Lens.makePrisms ''Unwrap

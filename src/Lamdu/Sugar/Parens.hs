@@ -117,7 +117,8 @@ precedenceOf =
     BodyInjectedExpression -> (NeverParen, BodyInjectedExpression)
     BodyLiteral x          -> (NeverParen, BodyLiteral x)
     BodyGetVar x           -> (NeverParen, BodyGetVar x)
-    BodyHole x             -> mkUnambiguous BodyHole x
+    BodyHole x             -> (NeverParen, BodyHole x)
+    BodyWrapper x          -> mkUnambiguous BodyWrapper x
     BodyRecord x           -> mkUnambiguous BodyRecord x
     BodyCase x             -> mkUnambiguous BodyCase x
     BodyLam x              ->

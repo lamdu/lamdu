@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, FlexibleContexts #-}
+{-# LANGUAGE NoImplicitPrelude #-}
 -- | The search area (search term + results) of an open/active hole.
 
 module Lamdu.GUI.ExpressionEdit.HoleEdit.Open
@@ -132,10 +132,9 @@ makeInferredTypeAnnotation pl animId =
 makeUnderCursorAssignment ::
     Monad m =>
     EventMap (T m GuiState.Update) -> [ResultsList (T m)] -> Menu.HasMoreOptions ->
-    Sugar.Hole (T m) (ExpressionN m ()) (ExprGui.SugarExpr m) ->
-    Sugar.Payload (T m) ExprGui.Payload ->
+    (Text -> Bool) -> Sugar.Payload (T m) ExprGui.Payload ->
     ExprGuiM m (Menu.Placement -> WithTextPos (Widget (T m GuiState.Update)))
-makeUnderCursorAssignment searchTermEventMap shownResultsLists hasHiddenResults hole pl =
+makeUnderCursorAssignment searchTermEventMap shownResultsLists hasHiddenResults allowedTerms pl =
     do
         groupsWidgets <- traverse (makeResultGroup pl) shownResultsLists
 
@@ -150,32 +149,33 @@ makeUnderCursorAssignment searchTermEventMap shownResultsLists hasHiddenResults 
                     Widget.eventMapMaker . Lens.mapped %~ (searchTermEventMap <>)
         typeView <- makeInferredTypeAnnotation pl holeAnimId
         hoverMenu <- Menu.makeHovered (vspace /-/ typeView) options hasHiddenResults
-        SearchTerm.make widgetIds holeKind
+        SearchTerm.make widgetIds allowedTerms
             <&> Align.tValue %~ Widget.weakerEvents pickFirstResult
             <&> \searchTermWidget placement ->
                 searchTermWidget <&> hoverMenu placement
     & Reader.local (Element.animIdPrefix .~ WidgetId.toAnimId (hidOpen widgetIds))
     where
         widgetIds = pl ^. Sugar.plEntityId & HoleWidgetIds.make
-        holeKind = hole ^. Sugar.holeKind
         holeAnimId = hidHole widgetIds & Widget.toAnimId
 
 makeOpenSearchAreaGui ::
     Monad m =>
     EventMap (T m GuiState.Update) ->
-    Sugar.Hole (T m) (ExpressionN m ()) (ExprGui.SugarExpr m) ->
+    T m [Sugar.HoleOption (T m) (ExpressionN m ())] ->
+    Maybe (Sugar.OptionLiteral (T m) (ExpressionN m ())) ->
+    (Text -> Bool) ->
     Sugar.Payload (T m) ExprGui.Payload ->
     ExprGuiM m (Menu.Placement -> WithTextPos (Widget (T m GuiState.Update)))
-makeOpenSearchAreaGui searchTermEventMap hole pl =
+makeOpenSearchAreaGui searchTermEventMap options mOptionLiteral allowedTerms pl =
     do
-        (shownResultsLists, hasHiddenResults) <- HoleResults.makeAll hole widgetIds
+        (shownResultsLists, hasHiddenResults) <- HoleResults.makeAll options mOptionLiteral widgetIds
         let shownMainResultsIds = shownResultsLists <&> rId . (^. HoleResults.rlMain)
         let allShownResultIds =
                 [ rId . (^. HoleResults.rlMain)
                 , (^. HoleResults.rlExtraResultsPrefixId)
                 ] <*> shownResultsLists
         makeUnderCursorAssignment searchTermEventMap shownResultsLists
-            hasHiddenResults hole pl
+            hasHiddenResults allowedTerms pl
             & assignCursor widgetIds shownMainResultsIds allShownResultIds
     where
         widgetIds = pl ^. Sugar.plEntityId & HoleWidgetIds.make
