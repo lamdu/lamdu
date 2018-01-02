@@ -49,7 +49,7 @@ data ResultGroup m = ResultGroup
 
 makeShownResult ::
     Monad m =>
-    Sugar.Payload f ExprGui.Payload -> Result m ->
+    Sugar.Payload f ExprGui.Payload -> Result (T m) ->
     ExprGuiM m
     ( EventMap (T m GuiState.Update)
     , WithTextPos (Widget (T m GuiState.Update))
@@ -67,7 +67,7 @@ makeShownResult pl result =
 makeResultGroup ::
     Monad m =>
     Sugar.Payload f ExprGui.Payload ->
-    ResultsList m ->
+    ResultsList (T m) ->
     ExprGuiM m (ResultGroup m)
 makeResultGroup pl results =
     makeShownResult pl (results ^. HoleResults.rlMain)
@@ -131,7 +131,7 @@ makeInferredTypeAnnotation pl animId =
 
 makeUnderCursorAssignment ::
     Monad m =>
-    EventMap (T m GuiState.Update) -> [ResultsList m] -> Menu.HasMoreOptions ->
+    EventMap (T m GuiState.Update) -> [ResultsList (T m)] -> Menu.HasMoreOptions ->
     Sugar.Hole (T m) (ExpressionN m ()) (ExprGui.SugarExpr m) ->
     Sugar.Payload (T m) ExprGui.Payload ->
     ExprGuiM m (Menu.Placement -> WithTextPos (Widget (T m GuiState.Update)))

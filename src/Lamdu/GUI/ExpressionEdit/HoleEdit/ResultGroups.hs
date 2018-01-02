@@ -23,6 +23,7 @@ import           Lamdu.Calc.Val.Annotated (Val)
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Expr.Lens as ExprLens
 import           Lamdu.Formatting (Format(..))
+import           Lamdu.Name (Name)
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.State as HoleState
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.ValTerms as ValTerms
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds (WidgetIds(..))
@@ -38,9 +39,9 @@ data Group m = Group
     { _groupSearchTerms :: [Text]
     , _groupId :: WidgetId.Id
     , _groupResults ::
-        ListT (T m)
+        ListT m
         ( Sugar.HoleResultScore
-        , T m (Sugar.HoleResult (T m) (ExpressionN m ()))
+        , m (Sugar.HoleResult m (Sugar.Expression (Name m) m ()))
         )
     }
 Lens.makeLenses ''Group
@@ -49,7 +50,7 @@ data Result m = Result
     { _rScore :: Sugar.HoleResultScore
     , -- Warning: This transaction should be ran at most once!
       -- Running it more than once will cause inconsistencies.
-      rHoleResult :: T m (Sugar.HoleResult (T m) (ExpressionN m ()))
+      rHoleResult :: m (Sugar.HoleResult m (Sugar.Expression (Name m) m ()))
     , rId :: WidgetId.Id
     }
 Lens.makeLenses ''Result
@@ -68,9 +69,10 @@ Lens.makeLenses ''ResultsList
 mResultsListOf ::
     WidgetIds -> WidgetId.Id ->
     [ ( Sugar.HoleResultScore
-      , T m (Sugar.HoleResult (T m) (ExpressionN m ()))
+      , m (Sugar.HoleResult m (Sugar.Expression (Name m) m ()))
       )
-    ] -> Maybe (ResultsList m)
+    ] ->
+    Maybe (ResultsList m)
 mResultsListOf _ _ [] = Nothing
 mResultsListOf widgetIds baseId (x:xs) = Just
     ResultsList
@@ -94,7 +96,7 @@ mResultsListOf widgetIds baseId (x:xs) = Just
 makeResultsList ::
     Monad m =>
     WidgetIds -> Text -> Group m ->
-    T m (Maybe (ResultsList m))
+    m (Maybe (ResultsList m))
 makeResultsList widgetIds searchTerm group =
     group ^. groupResults
     & ListClass.toList
@@ -152,7 +154,7 @@ isGoodResult hrs = hrs ^. Sugar.hrsNumHoleWrappers == 0
 makeAll ::
     (MonadTransaction n m, MonadReader env m, Config.HasConfig env, GuiState.HasState env) =>
     Sugar.Hole (T n) (ExpressionN n ()) e -> WidgetIds ->
-    m ([ResultsList n], Menu.HasMoreOptions)
+    m ([ResultsList (T n)], Menu.HasMoreOptions)
 makeAll hole widgetIds =
     do
         searchTerm <- HoleState.readSearchTerm widgetIds
@@ -173,22 +175,23 @@ mkGroupId option =
 mkGroup ::
     Monad m =>
     Sugar.HoleOption (T m) (ExpressionN m ()) ->
-    T m (Group m)
+    T m (Group (T m))
 mkGroup option =
-    do
-        sugaredBaseExpr <- option ^. Sugar.hoSugaredBaseExpr
-        pure Group
-            { _groupSearchTerms = sugaredBaseExpr & ValTerms.expr
-            , _groupResults = option ^. Sugar.hoResults
-            , _groupId = mkGroupId (option ^. Sugar.hoVal)
-            }
+    option ^. Sugar.hoSugaredBaseExpr
+    <&>
+    \sugaredBaseExpr ->
+    Group
+    { _groupSearchTerms = sugaredBaseExpr & ValTerms.expr
+    , _groupResults = option ^. Sugar.hoResults
+    , _groupId = mkGroupId (option ^. Sugar.hoVal)
+    }
 
 tryBuildLiteral ::
     (Format a, Monad m) =>
     Text ->
     (Identity a -> Sugar.Literal Identity) ->
     Sugar.HoleKind (T m) (ExpressionN m ()) e -> Text ->
-    Maybe (T m (Group m))
+    Maybe (T m (Group (T m)))
 tryBuildLiteral identText mkLiteral holeKind searchTerm =
     holeKind ^? Sugar._LeafHole . Sugar.holeOptionLiteral <*> literal
     <&> Lens.mapped %~ f
@@ -207,7 +210,7 @@ tryBuildLiteral identText mkLiteral holeKind searchTerm =
 literalGroups ::
     Monad m =>
     Sugar.HoleKind (T m) (ExpressionN m ()) e -> Text ->
-    [T m (Group m)]
+    [T m (Group (T m))]
 literalGroups holeKind searchTerm =
     [ tryBuildLiteral "Num"   Sugar.LiteralNum holeKind searchTerm
     , tryBuildLiteral "Bytes" Sugar.LiteralBytes holeKind searchTerm
@@ -238,7 +241,7 @@ insensitiveInfixAltOf = infixAltOf `on` Text.toLower
 makeAllGroups ::
     Monad m =>
     Sugar.Hole (T m) (ExpressionN m ()) e -> Text ->
-    T m [Group m]
+    T m [Group (T m)]
 makeAllGroups hole searchTerm =
     (++)
     <$> (literalGroups (hole ^. Sugar.holeKind) searchTerm & sequenceA)
