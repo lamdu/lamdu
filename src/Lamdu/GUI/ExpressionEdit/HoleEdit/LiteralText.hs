@@ -6,7 +6,7 @@ module Lamdu.GUI.ExpressionEdit.HoleEdit.LiteralText
 
 import qualified Control.Lens as Lens
 import           Data.Functor.Identity (Identity(..))
-import qualified Data.Store.Transaction as Transaction
+import           Data.Store.Transaction (Transaction)
 import qualified Data.Text as Text
 import           GUI.Momentu (MetaKey(..))
 import           GUI.Momentu.EventMap (EventMap)
@@ -21,7 +21,7 @@ import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
 
-type T = Transaction.Transaction
+type T = Transaction
 
 toLiteralTextKeys :: [MetaKey]
 toLiteralTextKeys =

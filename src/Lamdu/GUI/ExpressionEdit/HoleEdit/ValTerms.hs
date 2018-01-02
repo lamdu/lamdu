@@ -38,7 +38,7 @@ formatLiteral (Sugar.LiteralNum i) = formatProp i
 formatLiteral (Sugar.LiteralText i) = formatProp i
 formatLiteral (Sugar.LiteralBytes i) = formatProp i
 
-bodyShape :: Sugar.Body (Name (T m)) (T m) expr -> [Text]
+bodyShape :: Sugar.Body (Name m) m expr -> [Text]
 bodyShape = \case
     Sugar.BodyLam {} -> ["lambda", "\\", "Λ", "λ", "->", "→"]
     Sugar.BodySimpleApply {} -> ["Apply"]
@@ -68,7 +68,8 @@ bodyShape = \case
     Sugar.BodyInjectedExpression {} -> []
 
 bodyNames :: Monad m => Sugar.Body (Name (T m)) (T m) expr -> [Text]
-bodyNames = \case
+bodyNames =
+    \case
     Sugar.BodyGetVar Sugar.GetParamsRecord {} -> []
     Sugar.BodyLam {} -> []
     b -> NamesGet.fromBody b <&> (^. Name.form) <&> ofName
