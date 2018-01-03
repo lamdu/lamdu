@@ -5,7 +5,7 @@
 -- For non-wrapper holes this is the whole hole.
 
 module Lamdu.GUI.ExpressionEdit.HoleEdit.SearchArea
-    ( make
+    ( make, allowedSearchTermCommon
     ) where
 
 import           Data.Store.Transaction (Transaction)
@@ -18,6 +18,7 @@ import           Lamdu.GUI.ExpressionGui (ExpressionGui, ExpressionN)
 import           Lamdu.GUI.ExpressionGui.Annotation (maybeAddAnnotationPl)
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Control.Lens as Lens
+import qualified Data.Char as Char
 import qualified Data.Monoid as Monoid
 import qualified Data.Text as Text
 import qualified GUI.Momentu.Align as Align
@@ -122,3 +123,11 @@ make options mOptionLiteral pl allowedTerms =
     where
         widgetIds = pl ^. Sugar.plEntityId & HoleWidgetIds.make
         isAHoleInHole = ExprGui.isHoleResult pl
+
+allowedSearchTermCommon :: Text -> Bool
+allowedSearchTermCommon searchTerm =
+    any (searchTerm &)
+    [ Text.all (`elem` Chars.operator)
+    , Text.all Char.isAlphaNum
+    , (`Text.isPrefixOf` "{}")
+    ]

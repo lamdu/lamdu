@@ -11,7 +11,6 @@ import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Menu as Menu
 import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.LiteralText (makeLiteralTextEventMap)
-import           Lamdu.GUI.ExpressionEdit.HoleEdit.EventMap (allowedSearchTermCommon)
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.SearchArea as SearchArea
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds (WidgetIds(..))
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds as HoleWidgetIds
@@ -28,7 +27,7 @@ type T = Transaction
 allowedHoleSearchTerm :: Text -> Bool
 allowedHoleSearchTerm searchTerm =
     any (searchTerm &)
-    [allowedSearchTermCommon, isPositiveNumber, isNegativeNumber, isLiteralBytes]
+    [SearchArea.allowedSearchTermCommon, isPositiveNumber, isNegativeNumber, isLiteralBytes]
     where
         isPositiveNumber t =
             case Text.splitOn "." t of

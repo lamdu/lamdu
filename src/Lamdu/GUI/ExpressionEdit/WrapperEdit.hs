@@ -23,7 +23,6 @@ import qualified GUI.Momentu.Widgets.Menu as Menu
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
-import           Lamdu.GUI.ExpressionEdit.HoleEdit.EventMap (allowedSearchTermCommon)
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.SearchArea as SearchArea
 import qualified Lamdu.GUI.ExpressionGui as ExprGui
 import           Lamdu.GUI.ExpressionGui.Annotation (maybeAddAnnotationPl)
@@ -107,7 +106,7 @@ makeArgEdit wrapper =
 
 allowedWrapperSearchTerm :: Text -> Bool
 allowedWrapperSearchTerm searchTerm =
-    allowedSearchTermCommon searchTerm || isGetField searchTerm
+    SearchArea.allowedSearchTermCommon searchTerm || isGetField searchTerm
     where
         isGetField t =
             case Text.uncons t of
