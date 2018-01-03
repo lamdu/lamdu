@@ -14,15 +14,16 @@ import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.MetaKey as MetaKey
 import           GUI.Momentu.Rect (Rect(..))
+import           GUI.Momentu.Responsive (Responsive)
 import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.State as GuiState
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Grid as Grid
-import           Lamdu.Config (Config)
+import           Lamdu.Config (HasConfig(..))
 import qualified Lamdu.Config as Config
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.State as HoleState
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds as HoleWidgetIds
-import           Lamdu.GUI.ExpressionGui (ExpressionGui, ExpressionN)
+import           Lamdu.GUI.ExpressionGui (ExpressionN)
 import qualified Lamdu.GUI.ExpressionGui as ExprGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
@@ -72,22 +73,23 @@ postProcessSugar minOpPrec expr =
             }
 
 -- | Remove unwanted event handlers from a hole result
-removeUnwanted :: Config -> EventMap a -> EventMap a
-removeUnwanted config =
-    E.deleteKeys unwantedKeyEvents
-    where
-        unwantedKeyEvents =
-            concat
-            [ Config.delKeys config
-            , Config.enterSubexpressionKeys config
-            , Config.leaveSubexpressionKeys config
-            , Grid.stdKeys ^.. Lens.folded
-            , Config.letAddItemKeys config
-            ]
-            <&> MetaKey.toModKey
-            <&> E.KeyEvent MetaKey.KeyState'Pressed
+removeUnwanted :: (MonadReader env m, HasConfig env) => m (EventMap a -> EventMap a)
+removeUnwanted =
+    Lens.view config
+    <&>
+    \c ->
+    concat
+    [ Config.delKeys c
+    , Config.enterSubexpressionKeys c
+    , Config.leaveSubexpressionKeys c
+    , Grid.stdKeys ^.. Lens.folded
+    , Config.letAddItemKeys c
+    ]
+    <&> MetaKey.toModKey
+    <&> E.KeyEvent MetaKey.KeyState'Pressed
+    & E.deleteKeys
 
-applyResultLayout :: ExpressionGui m -> WithTextPos (Widget (T m GuiState.Update))
+applyResultLayout :: Responsive a -> WithTextPos (Widget a)
 applyResultLayout fGui =
     (fGui ^. Responsive.render)
     Responsive.LayoutParams
@@ -96,7 +98,8 @@ applyResultLayout fGui =
     }
 
 emptyPickEventMap ::
-    (Monad m, Applicative f) => ExprGuiM m (EventMap (f GuiState.Update))
+    (MonadReader env m, HasConfig env, Applicative f) =>
+    m (EventMap (f GuiState.Update))
 emptyPickEventMap =
     Lens.view Config.config <&> Config.hole <&> keys <&> mkEventMap
     where
@@ -115,8 +118,8 @@ make ::
     )
 make pl resultId holeResult =
     do
-        config <- Lens.view Config.config
-        let holeConfig = Config.hole config
+        c <- Lens.view Config.config
+        let holeConfig = Config.hole c
         let pickAndMoveToNextHole =
                 case pl ^. Sugar.plData . ExprGui.plNearestHoles . NearestHoles.next of
                 Just nextHoleEntityId | Lens.has Lens._Nothing mFirstHoleInside ->
@@ -137,11 +140,11 @@ make pl resultId holeResult =
                 , Widget._pAction = pick <&> GuiState.updateCursor
                 , Widget._pTextRemainder = searchStringRemainder
                 }
-        holeResultConverted
-            & postProcessSugar (pl ^. Sugar.plData . ExprGui.plMinOpPrec)
+        remUnwanted <- removeUnwanted
+        postProcessSugar (pl ^. Sugar.plData . ExprGui.plMinOpPrec) holeResultConverted
             & ExprGuiM.makeSubexpression
             <&> Widget.enterResultCursor .~ resultId
-            <&> Widget.widget . Widget.eventMapMaker . Lens.mapped %~ removeUnwanted config
+            <&> Widget.widget . Widget.eventMapMaker . Lens.mapped %~ remUnwanted
             & GuiState.assignCursor resultId idWithinResultWidget
             <&> applyResultLayout
             <&> setFocalAreaToFullSize
