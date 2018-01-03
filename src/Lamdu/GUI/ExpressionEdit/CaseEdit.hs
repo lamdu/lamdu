@@ -34,7 +34,7 @@ import qualified Lamdu.GUI.ExpressionGui as ExprGui
 import qualified Lamdu.GUI.ExpressionGui.Annotation as Annotation
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
-import           Lamdu.GUI.ExpressionGui.Wrap (stdWrap, parentDelegator)
+import           Lamdu.GUI.ExpressionGui.Wrap (stdWrapParentExpr)
 import qualified Lamdu.GUI.Styled as Styled
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Name (Name(..))
@@ -109,10 +109,8 @@ make (Sugar.Case mArg (Sugar.Composite alts caseTail addAlt)) pl =
                 <&> WidgetIds.tagHoleId
                 & E.keysEventMapMovesCursor (Config.caseAddAltKeys config)
                     (doc "Add Alt")
-        stdWrap pl
-            <*> ( parentDelegator (WidgetIds.fromExprPayload pl)
-                    <*> (Styled.addValFrame <*> (Responsive.vboxSpaced ?? [header, altsGui]))
-                )
+        stdWrapParentExpr pl
+            <*> (Styled.addValFrame <*> (Responsive.vboxSpaced ?? [header, altsGui]))
             <&> Widget.weakerEvents addAltEventMap
     where
         myId = WidgetIds.fromExprPayload pl
