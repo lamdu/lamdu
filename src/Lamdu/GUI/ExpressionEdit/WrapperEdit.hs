@@ -22,11 +22,13 @@ import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Menu as Menu
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Config.Theme as Theme
+import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.EventMap (allowedSearchTermCommon)
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.SearchArea as SearchArea
 import qualified Lamdu.GUI.ExpressionGui as ExprGui
 import           Lamdu.GUI.ExpressionGui.Annotation (maybeAddAnnotationPl)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
+import           Lamdu.GUI.ExpressionGui.Wrap (parentDelegator, addActions)
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.Sugar.Types as Sugar
 
@@ -71,9 +73,10 @@ make wrapper pl =
                     & E.keysEventMapMovesCursor
                         (Config.delKeys config <> Config.holeUnwrapKeys (Config.hole config))
                         (E.Doc ["Edit", "Unwrap"])
-        maybeAddAnnotationPl pl ?? argGui
-            <&> Responsive.render . Lens.imapped %@~ f
+        parentDelegator myId
+            <*> (maybeAddAnnotationPl pl ?? argGui <&> Responsive.render . Lens.imapped %@~ f)
             <&> Widget.widget %~ Widget.weakerEvents unwrapEventMap
+            & addActions ExprEventMap.defaultOptions pl
     where
         myId = WidgetIds.fromExprPayload pl
         hideIfInHole x
