@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude #-}
+{-# LANGUAGE NoImplicitPrelude, OverloadedStrings #-}
 -- | The search area (search term + results) of an open/active hole.
 
 module Lamdu.GUI.ExpressionEdit.HoleEdit.Open
@@ -15,6 +15,7 @@ import qualified GUI.Momentu.Align as Align
 import           GUI.Momentu.Animation.Id (AnimId)
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
+import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Glue ((/-/))
 import qualified GUI.Momentu.State as GuiState
 import           GUI.Momentu.View (View)
@@ -23,6 +24,8 @@ import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widget.Id as WidgetId
 import qualified GUI.Momentu.Widgets.Menu as Menu
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
+import           Lamdu.Config (HasConfig)
+import qualified Lamdu.Config as Config
 import qualified Lamdu.Config.Theme as Theme
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.ResultGroups (ResultsList(..), Result(..))
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.ResultGroups as HoleResults
@@ -129,6 +132,16 @@ makeInferredTypeAnnotation pl animId =
     <&> (^. Align.tValue)
     & Reader.local (Element.animIdPrefix .~ animId)
 
+emptyPickEventMap ::
+    (MonadReader env m, HasConfig env, Applicative f) =>
+    m (EventMap (f GuiState.Update))
+emptyPickEventMap =
+    Lens.view Config.config <&> Config.hole <&> keys <&> mkEventMap
+    where
+        keys c = Config.holePickResultKeys c ++ Config.holePickAndMoveToNextHoleKeys c
+        mkEventMap k =
+            E.keysEventMap k (E.Doc ["Edit", "Result", "Pick (N/A)"]) (pure ())
+
 makeUnderCursorAssignment ::
     Monad m =>
     EventMap (T m GuiState.Update) -> [ResultsList (T m)] -> Menu.HasMoreOptions ->
@@ -141,7 +154,7 @@ makeUnderCursorAssignment searchTermEventMap shownResultsLists hasHiddenResults 
         vspace <- Annotation.annotationSpacer
         pickFirstResult <-
             case groupsWidgets of
-            [] -> ResultWidget.emptyPickEventMap
+            [] -> emptyPickEventMap
             (x:_) -> rgPickMainEventMap x & return
         let options =
                 groupsWidgets <&> rgOption
