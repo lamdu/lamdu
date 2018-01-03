@@ -14,7 +14,7 @@ import qualified Data.Text as Text
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.State as GuiState
-import           GUI.Momentu.Widget (Widget, EventContext)
+import           GUI.Momentu.Widget (HasWidget(..), EventContext)
 import qualified GUI.Momentu.Widget as Widget
 import qualified Lamdu.CharClassification as Chars
 import qualified Lamdu.Config as Config
@@ -61,19 +61,19 @@ exprInfoFromPl pl =
     }
 
 add ::
-    (MonadReader env m, Monad f, Config.HasConfig env, GuiState.HasCursor env) =>
+    (MonadReader env m, Monad f, Config.HasConfig env, GuiState.HasCursor env, HasWidget w) =>
     Options -> Sugar.Payload (T f) ExprGui.Payload ->
-    m (Widget (T f GuiState.Update) -> Widget (T f GuiState.Update))
+    m (w (T f GuiState.Update) -> w (T f GuiState.Update))
 add options = addWith options . exprInfoFromPl
 
 addWith ::
-    (MonadReader env m, Monad f, Config.HasConfig env, GuiState.HasCursor env) =>
-    Options -> ExprInfo f -> m (Widget (T f GuiState.Update) -> Widget (T f GuiState.Update))
+    (MonadReader env m, Monad f, Config.HasConfig env, GuiState.HasCursor env, HasWidget w) =>
+    Options -> ExprInfo f -> m (w (T f GuiState.Update) -> w (T f GuiState.Update))
 addWith options exprInfo =
     do
         actions <- actionsEventMap options exprInfo
         nav <- jumpHolesEventMapIfSelected exprInfo
-        (Widget.eventMapMaker . Lens.mapped <>~ nav)
+        (widget . Widget.eventMapMaker . Lens.mapped <>~ nav)
             . Widget.weakerEventsWithContext actions
             & pure
 

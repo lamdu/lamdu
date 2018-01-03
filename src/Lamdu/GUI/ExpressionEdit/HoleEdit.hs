@@ -18,7 +18,6 @@ import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds as HoleWidgetIds
 import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExprGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
-import           Lamdu.GUI.ExpressionGui.Wrap (addActions)
 import           Lamdu.Name (Name)
 import qualified Lamdu.Sugar.Types as Sugar
 
@@ -49,10 +48,12 @@ make ::
     Sugar.Payload (T m) ExprGui.Payload ->
     ExprGuiM m (ExpressionGui m)
 make hole pl =
-    SearchArea.make (hole ^. Sugar.holeOptions) (Just (hole ^. Sugar.holeOptionLiteral)) pl allowedHoleSearchTerm ?? Menu.AnyPlace
+    ExprEventMap.add options pl
+    <*> ( SearchArea.make (hole ^. Sugar.holeOptions)
+            (Just (hole ^. Sugar.holeOptionLiteral)) pl allowedHoleSearchTerm ?? Menu.AnyPlace
+        )
     <&> Widget.weakerEvents txtEventMap
     & GuiState.assignCursor (hidHole widgetIds) (hidOpen widgetIds)
-    & addActions options pl
     where
         txtEventMap = makeLiteralTextEventMap hole
         widgetIds = HoleWidgetIds.make (pl ^. Sugar.plEntityId)

@@ -1,7 +1,6 @@
 {-# LANGUAGE NoImplicitPrelude, OverloadedStrings, DisambiguateRecordFields #-}
 module Lamdu.GUI.ExpressionGui.Wrap
     ( stdWrap
-    , addActions
     , parentDelegator
     , stdWrapParentExpr
     ) where
@@ -35,22 +34,12 @@ parentExprFDConfig config = FocusDelegator.Config
     , FocusDelegator.focusParentDoc = E.Doc ["Navigation", "Leave subexpression"]
     }
 
--- TODO: Bind 'act' outside
-addActions ::
-    Monad m =>
-    ExprEventMap.Options ->
-    Sugar.Payload (T m) ExprGui.Payload ->
-    ExprGuiM m (ExpressionGui m) ->
-    ExprGuiM m (ExpressionGui m)
-addActions options pl act =
-    (ExprEventMap.add options pl <&> (Widget.widget %~)) <*> act
-
 stdWrap ::
     Monad m =>
     Sugar.Payload (T m) ExprGui.Payload ->
     ExprGuiM m (ExpressionGui m) ->
     ExprGuiM m (ExpressionGui m)
-stdWrap pl act = maybeAddAnnotationPl pl <*> addActions ExprEventMap.defaultOptions pl act
+stdWrap pl act = maybeAddAnnotationPl pl <*> (ExprEventMap.add ExprEventMap.defaultOptions pl <*> act)
 
 parentDelegator ::
     ( MonadReader env m, Config.HasConfig env, GuiState.HasCursor env, Applicative f
