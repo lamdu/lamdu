@@ -59,7 +59,7 @@ postProcessSugar minOpPrec expr =
     expr
     & AddParens.addWith minOpPrec
     <&> pl
-    & SugarLens.holeArgs . Sugar.plData . ExprGui.plShowAnnotation
+    & SugarLens.wrappedExprs . Sugar.plData . ExprGui.plShowAnnotation
     .~ ExprGui.alwaysShowAnnotations
     where
         pl (x, needParens, ()) =

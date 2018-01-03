@@ -2,7 +2,7 @@
 module Lamdu.Sugar.Lens
     ( subExprPayloads, payloadsIndexedByPath
     , payloadsOf
-    , holePayloads, holeArgs
+    , holePayloads, wrappedExprs
     , defSchemes
     , binderFuncParamActions
     , binderFuncParamAdds
@@ -77,12 +77,12 @@ subExprsOf f =
         predicate (_:parent:_) _ = Lens.has (rBody . f) parent
         predicate _ _ = False
 
-holeArgs ::
+wrappedExprs ::
     Lens.IndexedTraversal'
     [Expression name m ()]
     (Expression name m a)
     (Payload m a)
-holeArgs = subExprsOf _BodyHole
+wrappedExprs = subExprsOf _BodyWrapper
 
 defBodySchemes :: Lens.Traversal' (DefinitionBody name m expr) Scheme
 defBodySchemes f (DefinitionBodyBuiltin b) =
