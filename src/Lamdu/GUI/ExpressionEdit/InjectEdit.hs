@@ -85,12 +85,13 @@ make (Sugar.Inject tag mVal) pl =
     Nothing ->
         do
             dot <- injectIndicator "."
-            makeCommon
+            stdWrap pl
+                <*>
+                makeCommon
                 -- Give the tag widget the identity of the whole inject
                 Options.disambiguationNone
                 (tag & Sugar.tagInfo . Sugar.tagInstance .~ (pl ^. Sugar.plEntityId))
                 Nothing (pl ^. Sugar.plData . ExprGui.plNearestHoles) dot []
-        & stdWrap pl
     Just val ->
         do
             disamb <-

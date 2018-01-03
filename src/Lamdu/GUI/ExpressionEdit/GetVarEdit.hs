@@ -230,6 +230,8 @@ make ::
     Sugar.Payload (T m) ExprGui.Payload ->
     ExprGuiM m (ExpressionGui m)
 make getVar pl =
+    stdWrap pl
+    <*>
     case getVar of
     Sugar.GetBinder binderVar ->
         makeGetBinder binderVar myId <&> Responsive.fromWithTextPos
@@ -237,6 +239,5 @@ make getVar pl =
         makeParamsRecord myId paramsRecordVar
     Sugar.GetParam param ->
         makeGetParam param myId <&> Responsive.fromWithTextPos
-    & stdWrap pl
     where
         myId = WidgetIds.fromExprPayload pl

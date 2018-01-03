@@ -37,9 +37,11 @@ parentExprFDConfig config = FocusDelegator.Config
 stdWrap ::
     Monad m =>
     Sugar.Payload (T m) ExprGui.Payload ->
-    ExprGuiM m (ExpressionGui m) ->
-    ExprGuiM m (ExpressionGui m)
-stdWrap pl act = maybeAddAnnotationPl pl <*> (ExprEventMap.add ExprEventMap.defaultOptions pl <*> act)
+    ExprGuiM m (ExpressionGui m -> ExpressionGui m)
+stdWrap pl =
+    (.)
+    <$> maybeAddAnnotationPl pl
+    <*> ExprEventMap.add ExprEventMap.defaultOptions pl
 
 parentDelegator ::
     ( MonadReader env m, Config.HasConfig env, GuiState.HasCursor env, Applicative f
@@ -55,5 +57,4 @@ stdWrapParentExpr ::
     ExprGuiM m (ExpressionGui m) ->
     ExprGuiM m (ExpressionGui m)
 stdWrapParentExpr pl mkGui =
-    parentDelegator (WidgetIds.fromExprPayload pl) <*> mkGui
-    & stdWrap pl
+    stdWrap pl <*> (parentDelegator (WidgetIds.fromExprPayload pl) <*> mkGui)

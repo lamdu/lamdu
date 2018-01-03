@@ -112,8 +112,9 @@ make ::
     Sugar.Literal (Transaction.Property m) -> Sugar.Payload (T m) ExprGui.Payload ->
     ExprGuiM m (ExpressionGui m)
 make lit pl =
+    stdWrap pl
+    <*>
     case lit of
     Sugar.LiteralNum x -> genericEdit Style.styleNum x pl
     Sugar.LiteralBytes x -> genericEdit Style.styleBytes x pl
     Sugar.LiteralText x -> textEdit x pl <&> Responsive.fromWithTextPos
-    & stdWrap pl

@@ -58,13 +58,14 @@ makeUnit _actions addField pl =
     do
         config <- Lens.view Config.config
         makeFocusable <- Widget.makeFocusableView ?? myId <&> (Align.tValue %~)
-        (/|/) <$> Styled.grammarLabel "{" <*> Styled.grammarLabel "}"
-            <&> makeFocusable
-            <&> Align.tValue %~ Widget.weakerEvents (mkAddFieldEventMap config addField)
-            <&> Responsive.fromWithTextPos
+        stdWrap pl
+            <*> ( (/|/) <$> Styled.grammarLabel "{" <*> Styled.grammarLabel "}"
+                    <&> makeFocusable
+                    <&> Align.tValue %~ Widget.weakerEvents (mkAddFieldEventMap config addField)
+                    <&> Responsive.fromWithTextPos
+                )
     -- Don't add the closedRecordEventMap (_actions) - it only adds the open
     -- action which is equivalent ot deletion on the unit record
-    & stdWrap pl
     where
         myId = WidgetIds.fromExprPayload pl
 
