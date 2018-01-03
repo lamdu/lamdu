@@ -89,10 +89,8 @@ makeResultGroup pl results =
     , rgPickMainEventMap = pickMain
     }
 
-assignCursor ::
-    Monad m =>
-    WidgetIds -> [Widget.Id] -> [Widget.Id] -> ExprGuiM m a -> ExprGuiM m a
-assignCursor widgetIds shownMainResultsIds allShownResultIds action =
+assignCursor :: Monad m => WidgetIds -> [Widget.Id] -> ExprGuiM m a -> ExprGuiM m a
+assignCursor widgetIds resultIds action =
     do
         searchTerm <- HoleState.readSearchTerm widgetIds
         let destId
@@ -105,14 +103,14 @@ assignCursor widgetIds shownMainResultsIds allShownResultIds action =
                       -- random first result. (e.g: "fac (" will apply
                       -- open-paren to the first result)
                       searchTermId
-                | otherwise = head (shownMainResultsIds ++ [searchTermId])
+                | otherwise = head (resultIds ++ [searchTermId])
 
         -- Results appear and disappear when the search-string changes,
         -- but the cursor prefix signifies whether we should be on a result.
         -- When that is the case but is not currently on any of the existing results
         -- the cursor will be sent to the default one.
         shouldBeOnResult <- sub (hidResultsPrefix widgetIds)
-        isOnResult <- traverse sub allShownResultIds <&> or
+        isOnResult <- traverse sub resultIds <&> or
 
         action
             & if shouldBeOnResult && not isOnResult
@@ -180,13 +178,8 @@ makeOpenSearchAreaGui ::
 makeOpenSearchAreaGui searchTermEventMap options mOptionLiteral allowedTerms pl =
     do
         (shownResultsLists, hasHiddenResults) <- HoleResults.makeAll options mOptionLiteral widgetIds
-        let shownMainResultsIds = shownResultsLists <&> rId . (^. HoleResults.rlMain)
-        let allShownResultIds =
-                [ rId . (^. HoleResults.rlMain)
-                , (^. HoleResults.rlExtraResultsPrefixId)
-                ] <*> shownResultsLists
         traverse (makeResultGroup pl) shownResultsLists
             >>= makeUnderCursorAssignment searchTermEventMap hasHiddenResults allowedTerms pl
-            & assignCursor widgetIds shownMainResultsIds allShownResultIds
+            & assignCursor widgetIds (shownResultsLists <&> rId . (^. HoleResults.rlMain))
     where
         widgetIds = pl ^. Sugar.plEntityId & HoleWidgetIds.make

@@ -85,7 +85,7 @@ mResultsListOf widgetIds baseId (x:xs) = Just
         prefixId = hidResultsPrefix widgetIds
         mkExtra = mkResult . extraResultId
         extraResultId i = WidgetId.joinId extraResultsPrefixId [BS8.pack (show i)]
-        extraResultsPrefixId = prefixId <> WidgetId.Id ["extra results"] <> baseId
+        extraResultsPrefixId = prefixId <> baseId <> WidgetId.Id ["extra results"]
         mkResult resultId (score, holeResult) =
             Result
             { _rScore = score
