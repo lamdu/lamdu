@@ -156,7 +156,7 @@ make pl resultId holeResult =
             & WidgetIds.fromEntityId
         mFirstHoleInside =
             holeResult ^?
-            Sugar.holeResultConverted . SugarLens.holePayloads . Sugar.plEntityId
+            Sugar.holeResultConverted . SugarLens.holeAndWrapperPayloads . Sugar.plEntityId
             <&> WidgetIds.fromEntityId
         idWithinResultWidget = fromMaybe holeResultId mFirstHoleInside
         holeResultConverted = holeResult ^. Sugar.holeResultConverted

@@ -2,7 +2,7 @@
 module Lamdu.Sugar.Lens
     ( subExprPayloads, payloadsIndexedByPath
     , payloadsOf
-    , holePayloads, wrappedExprs
+    , holeAndWrapperPayloads, wrappedExprs
     , defSchemes
     , binderFuncParamActions
     , binderFuncParamAdds
@@ -58,12 +58,12 @@ payloadsOf body =
     where
         predicate idx _ = Lens.has (rBody . body) idx
 
-holePayloads ::
+holeAndWrapperPayloads ::
     Lens.IndexedTraversal'
     (Expression name m ())
     (Expression name m a)
     (Payload m a)
-holePayloads = payloadsOf _BodyHole
+holeAndWrapperPayloads = payloadsOf (Lens.failing (_BodyHole . Lens.united) (_BodyWrapper . Lens.united))
 
 subExprsOf ::
     Lens.Traversal' (Body name m (Expression name m ())) b ->
