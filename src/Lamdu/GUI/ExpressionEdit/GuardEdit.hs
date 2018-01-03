@@ -148,13 +148,14 @@ make ::
     Sugar.Payload (T m) ExprGui.Payload ->
     ExprGuiM m (ExpressionGui m)
 make guards pl =
-    renderRows
-    <*>
-    ( (:)
-        <$> makeIf
-        <*> foldr makeElseIf (makeElse guards <&> (:[])) (guards ^. Sugar.gElseIfs)
-    )
-    & stdWrapParentExpr pl
+    stdWrapParentExpr pl
+    <*> ( renderRows
+            <*>
+            ( (:)
+                <$> makeIf
+                <*> foldr makeElseIf (makeElse guards <&> (:[])) (guards ^. Sugar.gElseIfs)
+            )
+        )
     where
         makeIf =
             makeGuardRow (guards ^. Sugar.gDeleteIf) Element.empty (pl ^. Sugar.plEntityId)

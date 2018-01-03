@@ -75,24 +75,26 @@ mkNomGui ordering nomStr str mDel pl (Sugar.Nominal tid val) =
                 & E.keysEventMapMovesCursor (Config.delKeys config)
                 (E.Doc ["Edit", "Nominal", "Delete " <> nomStr])
         let eventMap = mDel ^. Lens._Just . Lens.to mkEventMap
-        (ResponsiveExpr.boxSpacedMDisamb ?? mParenInfo) <*>
-            ( ordering
-                [
-                do
-                    label <- Styled.grammarLabel str
-                    nameGui <-
-                        NameEdit.makeView
-                        (tid ^. Sugar.tidName . Name.form)
-                        (Widget.toAnimId nameId)
-                    Widget.makeFocusableView ?? nameId
-                        <&> (Align.tValue %~) ?? label /|/ nameGui
-                <&> Responsive.fromWithTextPos
-                & Reader.local (TextView.color .~ nomColor)
-                <&> Widget.weakerEvents eventMap
-              , val
-              ] & sequence
-            )
-    & stdWrapParentExpr pl
+        stdWrapParentExpr pl
+            <*> ( (ResponsiveExpr.boxSpacedMDisamb ?? mParenInfo)
+                    <*>
+                    ( ordering
+                        [
+                        do
+                            label <- Styled.grammarLabel str
+                            nameGui <-
+                                NameEdit.makeView
+                                (tid ^. Sugar.tidName . Name.form)
+                                (Widget.toAnimId nameId)
+                            Widget.makeFocusableView ?? nameId
+                                <&> (Align.tValue %~) ?? label /|/ nameGui
+                        <&> Responsive.fromWithTextPos
+                        & Reader.local (TextView.color .~ nomColor)
+                        <&> Widget.weakerEvents eventMap
+                    , val
+                    ] & sequence
+                    )
+                )
     where
         mParenInfo
             | pl ^. Sugar.plData . ExprGui.plNeedParens =

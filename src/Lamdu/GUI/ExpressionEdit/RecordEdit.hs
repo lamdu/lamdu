@@ -86,8 +86,8 @@ make (Sugar.Composite fields recordTail addField) pl =
                 Sugar.OpenComposite actions restExpr ->
                     openRecordEventMap config actions restExpr
         let addFieldEventMap = mkAddFieldEventMap config addField
-        makeRecord fields addFieldEventMap postProcess
-            & stdWrapParentExpr pl
+        stdWrapParentExpr pl
+            <*> makeRecord fields addFieldEventMap postProcess
             <&> Widget.weakerEvents eventMap
     where
         postProcess =

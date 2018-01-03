@@ -140,11 +140,12 @@ make lam pl =
             (_, Sugar.NullParam{}) -> mkLhsEdits mParamsEdit mScopeEdit & return
             (Sugar.LightLambda, _) -> mkLightLambda params myId ?? mParamsEdit ?? mScopeEdit
             _ -> mkExpanded ?? mParamsEdit ?? mScopeEdit
-        (ResponsiveExpr.boxSpacedMDisamb ?? mParensId)
-            <*> (Options.boxSpaced ?? Options.disambiguationNone ?? paramsAndLabelEdits
-                <&> (: [bodyEdit]))
+        stdWrapParentExpr pl
+            <*> ( (ResponsiveExpr.boxSpacedMDisamb ?? mParensId)
+                    <*> (Options.boxSpaced ?? Options.disambiguationNone ?? paramsAndLabelEdits
+                        <&> (: [bodyEdit]))
+                )
             <&> Widget.weakerEvents eventMap
-    & stdWrapParentExpr pl
     where
         animId = Widget.toAnimId myId
         mParensId

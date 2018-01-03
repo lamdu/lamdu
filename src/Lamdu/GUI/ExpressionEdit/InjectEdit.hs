@@ -101,7 +101,7 @@ make (Sugar.Inject tag mVal) pl =
             arg <-
                 ExprGuiM.makeSubexpression val <&> (:[])
             colon <- injectIndicator ":"
-            makeCommon disamb tag replaceParent (ExprGui.nextHolesBefore val) colon arg
-        & stdWrapParentExpr pl
+            stdWrapParentExpr pl
+                <*> makeCommon disamb tag replaceParent (ExprGui.nextHolesBefore val) colon arg
         where
             replaceParent = val ^. Sugar.rPayload . Sugar.plActions . Sugar.mReplaceParent

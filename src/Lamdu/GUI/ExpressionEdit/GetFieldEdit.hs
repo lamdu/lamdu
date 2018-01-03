@@ -44,10 +44,9 @@ make (Sugar.GetField recExpr tag) pl =
         tagEdit <-
             TagEdit.makeRecordTag (pl ^. Sugar.plData . ExprGui.plNearestHoles) tag
             <&> Lens.mapped %~ Widget.weakerEvents delEventMap
-        Options.box Options.disambiguationNone
-            [ recExprEdit
-            , Responsive.fromTextView dotLabel
-            , Responsive.fromWithTextPos tagEdit
-            ]
-            & return
-    & stdWrapParentExpr pl
+        stdWrapParentExpr pl
+            ?? Options.box Options.disambiguationNone
+                [ recExprEdit
+                , Responsive.fromTextView dotLabel
+                , Responsive.fromWithTextPos tagEdit
+                ]
