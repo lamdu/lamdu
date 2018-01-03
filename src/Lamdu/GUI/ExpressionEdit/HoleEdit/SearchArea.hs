@@ -8,27 +8,33 @@ module Lamdu.GUI.ExpressionEdit.HoleEdit.SearchArea
     ( make
     ) where
 
+import           Data.Store.Transaction (Transaction)
+import           GUI.Momentu.EventMap (EventMap)
+import           GUI.Momentu.ModKey (ModKey(..))
+import           Lamdu.Config (HasConfig)
+import           Lamdu.GUI.ExpressionEdit.HoleEdit.Open (makeOpenSearchAreaGui)
+import           Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds (WidgetIds(..))
+import           Lamdu.GUI.ExpressionGui (ExpressionGui, ExpressionN)
+import           Lamdu.GUI.ExpressionGui.Annotation (maybeAddAnnotationPl)
+import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Control.Lens as Lens
 import qualified Data.Monoid as Monoid
-import           Data.Store.Transaction (Transaction)
+import qualified Data.Text as Text
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.Hover as Hover
+import qualified GUI.Momentu.MetaKey as MetaKey
 import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.State as GuiState
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.FocusDelegator as FocusDelegator
 import qualified GUI.Momentu.Widgets.Menu as Menu
+import qualified Lamdu.CharClassification as Chars
 import qualified Lamdu.Config as Config
-import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.EventMap as HoleEventMap
-import           Lamdu.GUI.ExpressionEdit.HoleEdit.Open (makeOpenSearchAreaGui)
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.SearchTerm as SearchTerm
-import           Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds (WidgetIds(..))
+import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.State as HoleState
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds as HoleWidgetIds
-import           Lamdu.GUI.ExpressionGui (ExpressionGui, ExpressionN)
 import qualified Lamdu.GUI.ExpressionGui as ExprGui
-import           Lamdu.GUI.ExpressionGui.Annotation (maybeAddAnnotationPl)
-import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
@@ -42,6 +48,31 @@ fdConfig Config.Hole{holeOpenKeys, holeCloseKeys} = FocusDelegator.Config
     , FocusDelegator.focusParentKeys = holeCloseKeys
     , FocusDelegator.focusParentDoc = E.Doc ["Navigation", "Hole", "Close"]
     }
+
+searchTermEditEventMap ::
+    (MonadReader env m, GuiState.HasState env, HasConfig env) =>
+    WidgetIds -> (Text -> Bool) -> m (EventMap GuiState.Update)
+searchTermEditEventMap widgetIds allowedTerms =
+    HoleState.readSearchTerm widgetIds
+    <&>
+    \searchTerm ->
+    let appendCharEventMap =
+            Text.snoc searchTerm
+            & E.allChars "Character"
+            (E.Doc ["Edit", "Search Term", "Append character"])
+            & if Text.null searchTerm then E.filter notOp else id
+        deleteCharEventMap
+            | Text.null searchTerm = mempty
+            | otherwise =
+                    Text.init searchTerm
+                    & E.keyPress (ModKey mempty MetaKey.Key'Backspace)
+                    (E.Doc ["Edit", "Search Term", "Delete backwards"])
+    in
+    appendCharEventMap <> deleteCharEventMap
+    & E.filter allowedTerms
+    <&> GuiState.updateWidgetState (hidOpen widgetIds)
+    where
+        notOp = Text.any (`notElem` Chars.operator)
 
 -- Has a typeView under the search term
 make ::
@@ -65,7 +96,7 @@ make options mOptionLiteral pl allowedTerms =
                 <*> SearchTerm.make widgetIds allowedTerms <&> Responsive.fromWithTextPos
             )
         isActive <- HoleWidgetIds.isActive widgetIds
-        searchTermEventMap <- HoleEventMap.searchTermEditEventMap widgetIds allowedTerms <&> fmap pure
+        searchTermEventMap <- searchTermEditEventMap widgetIds allowedTerms <&> fmap pure
         let inPlaceOfClosed open =
                 closedSearchTermGui & Widget.widget %~
                 Hover.hoverInPlaceOf [Hover.anchor open] . Hover.anchor
