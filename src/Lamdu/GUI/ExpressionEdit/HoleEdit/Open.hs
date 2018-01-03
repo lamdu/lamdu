@@ -144,13 +144,11 @@ emptyPickEventMap =
 
 makeUnderCursorAssignment ::
     Monad m =>
-    EventMap (T m GuiState.Update) -> [ResultsList (T m)] -> Menu.HasMoreOptions ->
-    (Text -> Bool) -> Sugar.Payload (T m) ExprGui.Payload ->
+    EventMap (T m GuiState.Update) -> Menu.HasMoreOptions ->
+    (Text -> Bool) -> Sugar.Payload (T m) ExprGui.Payload -> [ResultGroup m] ->
     ExprGuiM m (Menu.Placement -> WithTextPos (Widget (T m GuiState.Update)))
-makeUnderCursorAssignment searchTermEventMap shownResultsLists hasHiddenResults allowedTerms pl =
+makeUnderCursorAssignment searchTermEventMap hasHiddenResults allowedTerms pl groupsWidgets =
     do
-        groupsWidgets <- traverse (makeResultGroup pl) shownResultsLists
-
         vspace <- Annotation.annotationSpacer
         pickFirstResult <-
             case groupsWidgets of
@@ -187,8 +185,8 @@ makeOpenSearchAreaGui searchTermEventMap options mOptionLiteral allowedTerms pl 
                 [ rId . (^. HoleResults.rlMain)
                 , (^. HoleResults.rlExtraResultsPrefixId)
                 ] <*> shownResultsLists
-        makeUnderCursorAssignment searchTermEventMap shownResultsLists
-            hasHiddenResults allowedTerms pl
+        traverse (makeResultGroup pl) shownResultsLists
+            >>= makeUnderCursorAssignment searchTermEventMap hasHiddenResults allowedTerms pl
             & assignCursor widgetIds shownMainResultsIds allShownResultIds
     where
         widgetIds = pl ^. Sugar.plEntityId & HoleWidgetIds.make
