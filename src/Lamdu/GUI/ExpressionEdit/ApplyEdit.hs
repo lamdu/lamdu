@@ -140,12 +140,12 @@ makeLabeled ::
 makeLabeled apply pl =
     makeFuncRow mParensId apply
     (pl ^. Sugar.plData . ExprGui.plNearestHoles) myId
-    & addBox
+    >>= addBox
     & stdWrapParentExpr pl
     where
         addBox
             | isBoxed apply = mkBoxed apply (pl ^. Sugar.plData . ExprGui.plNearestHoles)
-            | otherwise = id
+            | otherwise = return
         mParensId
             | needParens = Just (Widget.toAnimId myId)
             | otherwise = Nothing
@@ -190,9 +190,9 @@ mkBoxed ::
     Monad m =>
     Sugar.LabeledApply (Name (T m)) (T m) (ExprGui.SugarExpr m) ->
     NearestHoles ->
-    ExprGuiM m (ExpressionGui m) ->
+    ExpressionGui m ->
     ExprGuiM m (ExpressionGui m)
-mkBoxed apply nearestHoles mkFuncRow =
+mkBoxed apply nearestHoles funcRow =
     do
         argRows <-
             case apply ^. Sugar.aAnnotatedArgs of
@@ -201,7 +201,6 @@ mkBoxed apply nearestHoles mkFuncRow =
                 Responsive.taggedList
                 <*> traverse makeArgRow xs
                 <&> (:[])
-        funcRow <- mkFuncRow
         relayedArgs <-
             case apply ^. Sugar.aRelayedArgs of
             [] -> return []
