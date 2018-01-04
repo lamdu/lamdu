@@ -37,7 +37,7 @@ import           Lamdu.Prelude
 type T = Transaction
 
 data ResultOption m = ResultOption
-    { _roOption :: !(Menu.Option (ExprGuiM m) (T m GuiState.Update))
+    { _roOption :: !(Menu.Option (ExprGuiM m) (T m))
     , _roPickMainEventMap :: !(EventMap (T m GuiState.Update))
     }
 Lens.makeLenses ''ResultOption

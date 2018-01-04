@@ -120,7 +120,7 @@ makeOptions ::
     , HasConfig env, HasTheme env, Element.HasAnimIdPrefix env, TextView.HasStyle env
     ) =>
     NearestHoles -> Sugar.Tag (Name n) (T m) -> Text ->
-    f (Menu.OptionList (Menu.Option f (T m GuiState.Update)))
+    f (Menu.OptionList (Menu.Option f (T m)))
 makeOptions nearestHoles tag searchTerm
     | Text.null searchTerm = pure mempty
     | otherwise =

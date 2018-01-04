@@ -41,10 +41,9 @@ deriveJSON defaultOptions ''Style
 class HasStyle env where style :: Lens' env Style
 instance HasStyle Style where style = id
 
-data Submenu m a
+data Submenu m f
     = SubmenuEmpty
-    | SubmenuItems (m [Option m a])
-    deriving (Functor)
+    | SubmenuItems (m [Option m f])
 
 -- | Option record and cursor behavior
 --
@@ -77,20 +76,24 @@ data Submenu m a
 -- *generate* an option widget, that depends on a cursor computed by
 -- looking at all of the option ids.
 
-data Option m a = Option
+data Option m f = Option
     { -- | Must be the prefix of all both the menu option and its submenu options,
       --  also used to create this option's submenu arrow frame:
       _oId :: !Widget.Id
     , -- A widget that represents this option
-      _oWidget :: m (WithTextPos (Widget a))
+      _oWidget :: m (WithTextPos (Widget (f State.Update)))
     , -- An optionally empty submenu
-      _oSubmenuWidgets :: !(Submenu m a)
-    } deriving Functor
+      _oSubmenuWidgets :: !(Submenu m f)
+    }
 
 Lens.makePrisms ''Submenu
 Lens.makeLenses ''Option
 
-optionWidgets :: Functor m => Lens.Setter (Option m a) (Option m b) (WithTextPos (Widget a)) (WithTextPos (Widget b))
+optionWidgets ::
+    Functor m =>
+    Lens.Setter (Option m f) (Option m g)
+    (WithTextPos (Widget (f State.Update)))
+    (WithTextPos (Widget (g State.Update)))
 optionWidgets f (Option i w s) =
     Option i <$> Lens.mapped f w <*> (_SubmenuItems . Lens.mapped . Lens.mapped . optionWidgets) f s
 
@@ -142,7 +145,8 @@ layoutOption ::
     ( MonadReader env m, Element.HasAnimIdPrefix env, TextView.HasStyle env
     , State.HasCursor env, Hover.HasStyle env, HasStyle env, Applicative f
     ) =>
-    Widget.R -> (Widget.Id, WithTextPos (Widget (f State.Update)), Submenu m (f State.Update)) ->
+    Widget.R ->
+    (Widget.Id, WithTextPos (Widget (f State.Update)), Submenu m f) ->
     m (WithTextPos (Widget (f State.Update)))
 layoutOption maxOptionWidth (optionId, rendered, submenu) =
     case submenu of
@@ -178,7 +182,7 @@ make ::
     , Element.HasAnimIdPrefix env, HasStyle env, State.HasCursor env
     , Applicative f
     ) =>
-    Widget.R -> OptionList (Option m (f State.Update)) ->
+    Widget.R -> OptionList (Option m f) ->
     m (Hover.Ordered (Widget (f State.Update)))
 make minWidth options =
     case options ^. olOptions of
@@ -276,7 +280,7 @@ makeHovered ::
     , TextView.HasStyle env, Element.HasAnimIdPrefix env
     , Hover.HasStyle env, MonadReader env m
     ) =>
-    View -> OptionList (Option m (f State.Update)) ->
+    View -> OptionList (Option m f) ->
     m (Placement -> Widget (f State.Update) -> Widget (f State.Update))
 makeHovered annotation options =
     do
