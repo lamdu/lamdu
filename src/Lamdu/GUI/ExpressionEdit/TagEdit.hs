@@ -133,20 +133,23 @@ makeOptions nearestHoles tag searchTerm
                 <&> splitAt resultCount
                 <&> _2 %~ not . null
                 <&> uncurry Menu.OptionList
-                >>= traverse makeOption
+                <&> fmap makeOption
     where
         makeOption (name, t) =
-            do
-                eventMap <-
-                    makePickEventMap nearestHoles
-                    (E.Doc ["Edit", "Tag", "Select"]) pick
-                ( Widget.makeFocusableView <*> Widget.makeSubId optionId
-                    <&> fmap
-                    ) <*> NameEdit.makeView (name ^. Name.form) optionId
-                    <&> Align.tValue %~ Widget.addPreEvent preEvent
-                    <&> Align.tValue . Widget.eventMapMaker . Lens.mapped <>~ eventMap
-            <&> pure
-            <&> Menu.Option optionWId ?? Menu.SubmenuEmpty
+            Menu.Option
+            { Menu._oId = optionWId
+            , Menu._oWidget =
+                do
+                    eventMap <-
+                        makePickEventMap nearestHoles
+                        (E.Doc ["Edit", "Tag", "Select"]) pick
+                    ( Widget.makeFocusableView <*> Widget.makeSubId optionId
+                        <&> fmap
+                        ) <*> NameEdit.makeView (name ^. Name.form) optionId
+                        <&> Align.tValue %~ Widget.addPreEvent preEvent
+                        <&> Align.tValue . Widget.eventMapMaker . Lens.mapped <>~ eventMap
+            , Menu._oSubmenuWidgets = Menu.SubmenuEmpty
+            }
             where
                 preEvent =
                     Widget.PreEvent
