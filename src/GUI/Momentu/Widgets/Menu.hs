@@ -1,7 +1,7 @@
 {-# LANGUAGE NoImplicitPrelude, TemplateHaskell, OverloadedStrings, DeriveTraversable, FlexibleContexts, DisambiguateRecordFields #-}
 
 module GUI.Momentu.Widgets.Menu
-    ( Style(..), Config(..), HasConfig(..)
+    ( Style(..), Keys(..), Config(..), HasConfig(..)
     , Submenu(..), _SubmenuEmpty, _SubmenuItems
     , OptionList(..), olOptions, olIsTruncated
     , RenderedOption(..), rWidget
@@ -23,6 +23,7 @@ import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Glue ((/|/), (/-/))
 import qualified GUI.Momentu.Glue as Glue
 import qualified GUI.Momentu.Hover as Hover
+import           GUI.Momentu.MetaKey (MetaKey)
 import qualified GUI.Momentu.MetaKey as MetaKey
 import           GUI.Momentu.ModKey (ModKey(..))
 import qualified GUI.Momentu.State as State
@@ -39,11 +40,20 @@ data Style = Style
     } deriving (Eq, Show)
 deriveJSON defaultOptions ''Style
 
+data Keys = Keys
+    { keysPickOption :: [MetaKey]
+        -- ^ Pick option and stay on its dest
+    , keysPickOptionAndGotoNext :: [MetaKey]
+        -- ^ Pick option and goto the next "entry point" (see below)
+    } deriving (Eq, Show)
+deriveJSON defaultOptions ''Keys
+
 class HasConfig env where config :: Lens' env Config
 instance HasConfig Config where config = id
 
-newtype Config = Config
+data Config = Config
     { configStyle :: Style
+    , configKeys :: Keys
     } deriving (Eq, Show)
 deriveJSON defaultOptions ''Config
 

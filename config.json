@@ -49,6 +49,10 @@
         "prevScopeKeys": [ "Cmd+Up" ],
         "nextScopeKeys": [ "Cmd+Down" ]
     },
+    "menu" : {
+        "keysPickOption": [ "Enter" ],
+        "keysPickOptionAndGotoNext": [ "Space" ]
+    },
     "helpKeys": [ "F1", "Alt+H" ],
     "previousCursorKeys"       : [ "Alt+Left" ],
     "enterSubexpressionKeys"   : [ "Shift+Right" ],

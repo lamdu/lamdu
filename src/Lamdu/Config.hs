@@ -8,12 +8,14 @@ module Lamdu.Config
     , Config(..)
     , HasConfig(..)
     , delKeys
+    , configMenu
     ) where
 
 import qualified Control.Lens as Lens
 import           Data.Aeson.TH (deriveJSON)
 import           Data.Aeson.Types (defaultOptions)
 import           GUI.Momentu.MetaKey (MetaKey)
+import qualified GUI.Momentu.Widgets.Menu as Menu
 import qualified GUI.Momentu.Zoom as Zoom
 import qualified Lamdu.GUI.VersionControl.Config as VersionControl
 
@@ -76,6 +78,7 @@ data Config = Config
     , literalText :: LiteralText
     , eval :: Eval
     , debug :: Debug
+    , menu :: Menu.Keys
 
     , maxExprDepth :: Int
 
@@ -118,3 +121,6 @@ instance HasConfig Config where config = id
 
 delKeys :: (MonadReader env m, HasConfig env) => m [MetaKey]
 delKeys = sequence [Lens.view config <&> delForwardKeys, Lens.view config <&> delBackwardKeys] <&> mconcat
+
+configMenu :: Lens' Config Menu.Keys
+configMenu f c = menu c & f <&> \menu' -> c { menu = menu' }
