@@ -112,7 +112,7 @@ data GoodAndBad a = GoodAndBad { _good :: a, _bad :: a }
     deriving (Functor, Foldable, Traversable)
 Lens.makeLenses ''GoodAndBad
 
-collectResults :: Monad m => Config.Hole -> ListT m (ResultGroup f) -> m ([ResultGroup f], Menu.HasMoreOptions)
+collectResults :: Monad m => Config.Hole -> ListT m (ResultGroup f) -> m (Menu.OptionList (ResultGroup f))
 collectResults Config.Hole{holeResultCount} resultsM =
     do
         (tooFewGoodResults, moreResultsM) <-
@@ -134,12 +134,11 @@ collectResults Config.Hole{holeResultCount} resultsM =
             -- Re-split because now that we've added all the
             -- accumulated bad results we may have too many
             & splitAt holeResultCount
-            & _2 %~ haveHiddenResults
+            & _2 %~ not . null
+            & uncurry Menu.OptionList
             & return
     where
         concatBothGoodAndBad goodAndBad = goodAndBad ^. Lens.folded
-        haveHiddenResults [] = Menu.NoMoreOptions
-        haveHiddenResults _ = Menu.MoreOptionsAvailable
         resultsListScore x = (x ^. rgPreferred, x ^. rgMain . rScore & isGoodResult & not)
         prependResult results x =
             results
@@ -156,7 +155,7 @@ makeAll ::
     T n [Sugar.HoleOption (T n) (ExpressionN n ())] ->
     Maybe (Sugar.OptionLiteral (T n) (ExpressionN n ())) ->
     WidgetIds ->
-    m ([ResultGroup (T n)], Menu.HasMoreOptions)
+    m (Menu.OptionList (ResultGroup (T n)))
 makeAll options mOptionLiteral widgetIds =
     do
         searchTerm <- HoleState.readSearchTerm widgetIds

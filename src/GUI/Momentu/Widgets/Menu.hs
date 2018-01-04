@@ -3,9 +3,10 @@
 module GUI.Momentu.Widgets.Menu
     ( Style(..), HasStyle(..)
     , Submenu(..), _SubmenuEmpty, _SubmenuItems
+    , OptionList(..), olOptions, olIsTruncated
     , Option(..), oId, oWidget, oSubmenuWidgets
     , optionWidgets
-    , Placement(..), HasMoreOptions(..)
+    , Placement(..)
     , make, makeHovered
     ) where
 
@@ -61,18 +62,10 @@ optionWidgets :: Functor f => Lens.Setter (Option f a) (Option f b) (WithTextPos
 optionWidgets f (Option i w s) =
     Option i <$> f w <*> (_SubmenuItems . Lens.mapped . Lens.mapped) f s
 
-data HasMoreOptions = MoreOptionsAvailable | NoMoreOptions
-
 makeNoResults ::
     (MonadReader env m, TextView.HasStyle env, Element.HasAnimIdPrefix env) =>
     m (WithTextPos View)
 makeNoResults = TextView.makeLabel "(No results)"
-
-makeMoreOptionsView ::
-    (MonadReader env m, TextView.HasStyle env, Element.HasAnimIdPrefix env) =>
-    HasMoreOptions -> m (WithTextPos View)
-makeMoreOptionsView NoMoreOptions = pure Element.empty
-makeMoreOptionsView MoreOptionsAvailable = TextView.makeLabel "..."
 
 blockEvents ::
     Applicative f =>
@@ -145,17 +138,29 @@ layoutOption maxOptionWidth option =
         singular = option ^. oWidget & Element.width .~ maxOptionWidth & pure
         animId = option ^. oId & Widget.toAnimId
 
+data OptionList a = OptionList
+    { _olOptions :: [a]
+    , _olIsTruncated :: Bool
+        -- ^ more hidden options exist (relevant for search menus)
+    } deriving (Functor, Foldable, Traversable)
+Lens.makeLenses ''OptionList
+
+instance Monoid (OptionList a) where
+    mempty = OptionList [] False
+    OptionList o0 t0 `mappend` OptionList o1 t1 =
+        OptionList (o0 <> o1) (t0 || t1)
+
 make ::
     ( MonadReader env m, TextView.HasStyle env, Hover.HasStyle env
     , Element.HasAnimIdPrefix env, HasStyle env, State.HasCursor env
     , Applicative f
     ) =>
-    Widget.R -> [Option m (f State.Update)] -> HasMoreOptions ->
+    Widget.R -> OptionList (Option m (f State.Update)) ->
     m (Hover.Ordered (Widget (f State.Update)))
-make minWidth options hiddenResults =
-    case options of
+make minWidth options =
+    case options ^. olOptions of
     [] -> makeNoResults <&> (^. Align.tValue) <&> Widget.fromView <&> pure
-    _:_ ->
+    opts@(_:_) ->
         do
             submenuSymbolWidth <-
                 TextView.drawText ?? submenuSymbolText
@@ -167,10 +172,11 @@ make minWidth options hiddenResults =
                     SubmenuItems {} -> submenuSymbolWidth
             let maxOptionWidth = options <&> optionMinWidth & maximum & max minWidth
             hiddenOptionsWidget <-
-                makeMoreOptionsView hiddenResults
-                <&> (^. Align.tValue) <&> Widget.fromView
+                if options ^. olIsTruncated
+                then TextView.makeLabel "..." <&> (^. Align.tValue) <&> Widget.fromView
+                else pure Element.empty
             laidOutOptions <-
-                traverse (layoutOption maxOptionWidth) options
+                traverse (layoutOption maxOptionWidth) opts
                 <&> map (^. Align.tValue)
             blockEvents <*>
                 ( Hover.Ordered
@@ -243,12 +249,12 @@ makeHovered ::
     , TextView.HasStyle env, Element.HasAnimIdPrefix env
     , Hover.HasStyle env, MonadReader env m
     ) =>
-    View -> [Option m (f State.Update)] -> HasMoreOptions ->
+    View -> OptionList (Option m (f State.Update)) ->
     m (Placement -> Widget (f State.Update) -> Widget (f State.Update))
-makeHovered annotation options hasHiddenResults =
+makeHovered annotation options =
     do
         mkHoverOptions <- hoverOptions
-        menu <- make (annotation ^. Element.width) options hasHiddenResults
+        menu <- make (annotation ^. Element.width) options
         pure $
             \placement term ->
             let a = Hover.anchor term

@@ -142,22 +142,23 @@ emptyPickEventMap =
 
 makeUnderCursorAssignment ::
     Monad m =>
-    EventMap (T m GuiState.Update) -> Menu.HasMoreOptions ->
-    (Text -> Bool) -> Sugar.Payload (T m) ExprGui.Payload -> [ResultOption m] ->
+    EventMap (T m GuiState.Update) ->
+    (Text -> Bool) -> Sugar.Payload (T m) ExprGui.Payload ->
+    Menu.OptionList (ResultOption m) ->
     ExprGuiM m (Menu.Placement -> WithTextPos (Widget (T m GuiState.Update)))
-makeUnderCursorAssignment searchTermEventMap hasHiddenResults allowedTerms pl groupsWidgets =
+makeUnderCursorAssignment searchTermEventMap allowedTerms pl optList =
     do
         vspace <- Annotation.annotationSpacer
         pickFirstResult <-
-            case groupsWidgets of
+            case optList ^. Menu.olOptions of
             [] -> emptyPickEventMap
             (x:_) -> roPickMainEventMap x & return
         let options =
-                groupsWidgets <&> roOption
+                optList <&> roOption
                 <&> Menu.optionWidgets . Lens.mapped .
                     Widget.eventMapMaker . Lens.mapped %~ (searchTermEventMap <>)
         typeView <- makeInferredTypeAnnotation pl holeAnimId
-        hoverMenu <- Menu.makeHovered (vspace /-/ typeView) options hasHiddenResults
+        hoverMenu <- Menu.makeHovered (vspace /-/ typeView) options
         SearchTerm.make widgetIds allowedTerms
             <&> Align.tValue %~ Widget.weakerEvents pickFirstResult
             <&> \searchTermWidget placement ->
@@ -177,9 +178,9 @@ makeOpenSearchAreaGui ::
     ExprGuiM m (Menu.Placement -> WithTextPos (Widget (T m GuiState.Update)))
 makeOpenSearchAreaGui searchTermEventMap options mOptionLiteral allowedTerms pl =
     do
-        (shownResultGroups, hasHiddenResults) <- ResultGroups.makeAll options mOptionLiteral widgetIds
-        traverse (makeResultOption pl) shownResultGroups
-            >>= makeUnderCursorAssignment searchTermEventMap hasHiddenResults allowedTerms pl
-            & assignCursor widgetIds (shownResultGroups <&> rId . (^. ResultGroups.rgMain))
+        optList <- ResultGroups.makeAll options mOptionLiteral widgetIds
+        traverse (makeResultOption pl) optList
+            >>= makeUnderCursorAssignment searchTermEventMap allowedTerms pl
+            & assignCursor widgetIds (optList ^. Menu.olOptions <&> rId . (^. ResultGroups.rgMain))
     where
         widgetIds = pl ^. Sugar.plEntityId & HoleWidgetIds.make

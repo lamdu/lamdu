@@ -120,9 +120,9 @@ makeOptions ::
     , HasConfig env, HasTheme env, Element.HasAnimIdPrefix env, TextView.HasStyle env
     ) =>
     NearestHoles -> Sugar.Tag (Name n) (T m) -> Text ->
-    f ([Menu.Option f (T m GuiState.Update)], Menu.HasMoreOptions)
+    f (Menu.OptionList (Menu.Option f (T m GuiState.Update)))
 makeOptions nearestHoles tag searchTerm
-    | Text.null searchTerm = pure ([], Menu.NoMoreOptions)
+    | Text.null searchTerm = pure mempty
     | otherwise =
         do
             resultCount <-
@@ -131,11 +131,10 @@ makeOptions nearestHoles tag searchTerm
             tag ^. Sugar.tagActions . Sugar.taOptions & transaction
                 <&> filter (Lens.anyOf (_1 . Name.form . Name._Stored . _1) (insensitiveInfixOf searchTerm))
                 <&> splitAt resultCount
-                <&> _2 %~ checkHasMoreResult
-                >>= _1 . traverse %%~ makeOption
+                <&> _2 %~ not . null
+                <&> uncurry Menu.OptionList
+                >>= traverse makeOption
     where
-        checkHasMoreResult [] = Menu.NoMoreOptions
-        checkHasMoreResult (_:_) = Menu.MoreOptionsAvailable
         makeOption (name, t) =
             do
                 eventMap <-
@@ -202,8 +201,9 @@ makeTagHoleEdit nearestHoles tag =
                 & Reader.local (TextView.color .~ Theme.tooltipFgColor tooltip)
                 & Reader.local (Element.animIdPrefix <>~ ["label"])
             else pure term
-        (options, hasMore) <- makeOptions nearestHoles tag searchTerm
-        makeMenu <- Menu.makeHovered Element.empty options hasMore
+        makeMenu <-
+            makeOptions nearestHoles tag searchTerm
+            >>= Menu.makeHovered Element.empty
         topLine <&> makeMenu Menu.AnyPlace & pure
     & GuiState.assignCursor holeId searchTermId
     & Reader.local (Element.animIdPrefix .~ Widget.toAnimId holeId)
