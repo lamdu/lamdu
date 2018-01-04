@@ -12,7 +12,6 @@ import           Data.Store.Transaction (Transaction)
 import qualified Data.Text as Text
 import           GUI.Momentu.Align (WithTextPos)
 import qualified GUI.Momentu.Align as Align
-import           GUI.Momentu.Animation.Id (AnimId)
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
@@ -81,12 +80,16 @@ assignCursor widgetIds resultIds action =
 makeInferredTypeAnnotation ::
     ( MonadReader env m, Theme.HasTheme env, Element.HasAnimIdPrefix env
     , MonadTransaction n0 m, Spacer.HasStdSpacing env
-    ) => Sugar.Payload m0 a0 -> AnimId -> m View
-makeInferredTypeAnnotation pl animId =
+    ) =>
+    Sugar.Payload m0 a0 -> m View
+makeInferredTypeAnnotation pl =
     Annotation.addAnnotationBackground
     <*> TypeView.make (pl ^. Sugar.plAnnotation . Sugar.aInferredType)
     <&> (^. Align.tValue)
     & Reader.local (Element.animIdPrefix .~ animId)
+    where
+        animId =
+            pl ^. Sugar.plEntityId & HoleWidgetIds.make & hidHole & Widget.toAnimId
 
 emptyPickEventMap ::
     (MonadReader env m, HasConfig env, Applicative f) =>
@@ -116,7 +119,7 @@ makeOpenSearchAreaGui searchTermEventMap allowedTerms pl opts =
                 opts <&> (^. roOption)
                 <&> Menu.optionWidgets . Lens.mapped .
                     Widget.eventMapMaker . Lens.mapped %~ (searchTermEventMap <>)
-        typeView <- makeInferredTypeAnnotation pl holeAnimId
+        typeView <- makeInferredTypeAnnotation pl
         hoverMenu <- Menu.makeHovered (vspace /-/ typeView) options
         SearchTerm.make widgetIds allowedTerms
             <&> Align.tValue %~ Widget.weakerEvents pickFirstResult
@@ -126,4 +129,3 @@ makeOpenSearchAreaGui searchTermEventMap allowedTerms pl opts =
     & assignCursor widgetIds (opts ^.. traverse . roOption . Menu.oId)
     where
         widgetIds = pl ^. Sugar.plEntityId & HoleWidgetIds.make
-        holeAnimId = hidHole widgetIds & Widget.toAnimId
