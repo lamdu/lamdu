@@ -1,7 +1,7 @@
 {-# LANGUAGE NoImplicitPrelude, TemplateHaskell, OverloadedStrings, DeriveTraversable, FlexibleContexts, DisambiguateRecordFields #-}
 
 module GUI.Momentu.Widgets.Menu
-    ( Style(..), HasStyle(..)
+    ( Style(..), Config(..), HasConfig(..)
     , Submenu(..), _SubmenuEmpty, _SubmenuItems
     , OptionList(..), olOptions, olIsTruncated
     , RenderedOption(..), rWidget
@@ -39,8 +39,13 @@ data Style = Style
     } deriving (Eq, Show)
 deriveJSON defaultOptions ''Style
 
-class HasStyle env where style :: Lens' env Style
-instance HasStyle Style where style = id
+class HasConfig env where config :: Lens' env Config
+instance HasConfig Config where config = id
+
+newtype Config = Config
+    { configStyle :: Style
+    } deriving (Eq, Show)
+deriveJSON defaultOptions ''Config
 
 newtype RenderedOption f = RenderedOption
     { _rWidget :: WithTextPos (Widget (f State.Update))
@@ -126,13 +131,13 @@ submenuSymbolText :: Text
 submenuSymbolText = " ▷"
 
 makeSubmenuSymbol ::
-    ( MonadReader env m, HasStyle env, Element.HasAnimIdPrefix env
+    ( MonadReader env m, HasConfig env, Element.HasAnimIdPrefix env
     , TextView.HasStyle env
     ) =>
     Bool -> m (WithTextPos View)
 makeSubmenuSymbol isSelected =
     do
-        color <- Lens.view style <&> submenuSymbolColor
+        color <- Lens.view config <&> configStyle <&> submenuSymbolColor
         TextView.makeLabel submenuSymbolText
             & Reader.local (TextView.color .~ color)
     where
@@ -149,7 +154,7 @@ Lens.makeLenses ''OptionList
 
 layoutOption ::
     ( MonadReader env m, Element.HasAnimIdPrefix env, TextView.HasStyle env
-    , State.HasCursor env, Hover.HasStyle env, HasStyle env, Applicative f
+    , State.HasCursor env, Hover.HasStyle env, HasConfig env, Applicative f
     ) =>
     Widget.R ->
     (Widget.Id, WithTextPos (Widget (f State.Update)), Submenu m f) ->
@@ -185,7 +190,7 @@ instance Monoid (OptionList a) where
 
 make ::
     ( MonadReader env m, TextView.HasStyle env, Hover.HasStyle env
-    , Element.HasAnimIdPrefix env, HasStyle env, State.HasCursor env
+    , Element.HasAnimIdPrefix env, HasConfig env, State.HasCursor env
     , Applicative f
     ) =>
     Widget.R -> OptionList (Option m f) ->
@@ -282,7 +287,7 @@ hoverOptions =
     <&> (^. Align.value)
 
 makeHovered ::
-    ( Applicative f, State.HasCursor env, HasStyle env
+    ( Applicative f, State.HasCursor env, HasConfig env
     , TextView.HasStyle env, Element.HasAnimIdPrefix env
     , Hover.HasStyle env, MonadReader env m
     ) =>

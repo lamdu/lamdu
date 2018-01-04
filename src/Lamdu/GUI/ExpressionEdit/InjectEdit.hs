@@ -43,7 +43,7 @@ type T = Transaction
 makeCommon ::
     ( Monad m, MonadReader env f, MonadTransaction m f
     , HasConfig env, HasTheme env, GuiState.HasState env
-    , Spacer.HasStdSpacing env, Element.HasAnimIdPrefix env, Menu.HasStyle env
+    , Spacer.HasStdSpacing env, Element.HasAnimIdPrefix env, Menu.HasConfig env
     , Hover.HasStyle env, TextEdit.HasStyle env
     ) =>
     Options.Disambiguators (T m GuiState.Update) ->

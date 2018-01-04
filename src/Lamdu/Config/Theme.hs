@@ -4,7 +4,7 @@
 module Lamdu.Config.Theme
     ( module Exported
     , Help(..), Hole(..), Eval(..), ToolTip(..)
-    , Theme(..), themeStdSpacing
+    , Theme(..), themeStdSpacing, themeMenu
     , HasTheme(..)
     ) where
 
@@ -111,5 +111,7 @@ themeStdSpacing :: Lens' Theme (Vector2 Double)
 themeStdSpacing f t = stdSpacing t & f <&> \new -> t { stdSpacing = new }
 
 instance Expression.HasStyle Theme where style f t = f (indent t) <&> \x -> t { indent = x }
-instance Menu.HasStyle Theme where style f t = f (menu t) <&> \x -> t { menu = x }
 instance Hover.HasStyle Theme where style f t = f (hover t) <&> \x -> t { hover = x }
+
+themeMenu :: Lens' Theme Menu.Style
+themeMenu f t = f (menu t) <&> \x -> t { menu = x }

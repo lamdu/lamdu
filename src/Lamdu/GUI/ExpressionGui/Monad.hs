@@ -95,7 +95,8 @@ instance Element.HasAnimIdPrefix (Askable m) where animIdPrefix = aAnimIdPrefix
 instance Config.HasConfig (Askable m) where config = aConfig
 instance HasTheme (Askable m) where theme = aTheme
 instance ResponsiveExpr.HasStyle (Askable m) where style = aTheme . ResponsiveExpr.style
-instance Menu.HasStyle (Askable m) where style = aTheme . Menu.style
+instance Menu.HasConfig (Askable m) where
+    config = aTheme . Theme.themeMenu . Lens.iso Menu.Config Menu.configStyle
 instance Hover.HasStyle (Askable m) where style = aTheme . Hover.style
 instance HasStyle (Askable m) where style = aStyle
 instance HasSettings (Askable m) where settings = aSettings

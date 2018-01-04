@@ -175,7 +175,7 @@ makeTagHoleEdit ::
     ( Monad m, MonadReader env f, MonadTransaction m f
     , GuiState.HasState env
     , HasConfig env, TextEdit.HasStyle env, Element.HasAnimIdPrefix env
-    , HasTheme env, Hover.HasStyle env, Menu.HasStyle env, HasStdSpacing env
+    , HasTheme env, Hover.HasStyle env, Menu.HasConfig env, HasStdSpacing env
     ) => NearestHoles -> Sugar.Tag (Name (T m)) (T m) ->
     f (WithTextPos (Widget (T m GuiState.Update)))
 makeTagHoleEdit nearestHoles tag =
@@ -225,7 +225,7 @@ makeTagHoleEdit nearestHoles tag =
 makeTagEdit ::
     ( Monad m, MonadReader env f, MonadTransaction m f, HasConfig env
     , GuiState.HasState env, HasTheme env, Element.HasAnimIdPrefix env
-    , TextEdit.HasStyle env, Hover.HasStyle env, Menu.HasStyle env
+    , TextEdit.HasStyle env, Hover.HasStyle env, Menu.HasConfig env
     , HasStdSpacing env
     ) =>
     Draw.Color -> NearestHoles -> Sugar.Tag (Name (T m)) (T m) ->
@@ -272,7 +272,7 @@ makeRecordTag ::
     ( Monad m, MonadReader env f, MonadTransaction m f, HasTheme env
     , HasConfig env, GuiState.HasState env
     , Element.HasAnimIdPrefix env, HasStdSpacing env
-    , TextEdit.HasStyle env, Hover.HasStyle env, HasTheme env, Menu.HasStyle env
+    , TextEdit.HasStyle env, Hover.HasStyle env, HasTheme env, Menu.HasConfig env
     ) =>
     NearestHoles -> Sugar.Tag (Name (T m)) (T m) ->
     f (WithTextPos (Widget (T m GuiState.Update)))
@@ -284,7 +284,7 @@ makeRecordTag nearestHoles tag =
 makeCaseTag ::
     ( Monad m, MonadReader env f, MonadTransaction m f, HasTheme env
     , HasConfig env, GuiState.HasState env
-    , TextEdit.HasStyle env, Hover.HasStyle env, HasTheme env, Menu.HasStyle env
+    , TextEdit.HasStyle env, Hover.HasStyle env, HasTheme env, Menu.HasConfig env
     , HasStdSpacing env, Element.HasAnimIdPrefix env
     ) =>
     NearestHoles -> Sugar.Tag (Name (T m)) (T m) ->
@@ -295,7 +295,7 @@ makeCaseTag nearestHoles tag =
         makeTagEdit (Theme.caseTagColor nameTheme) nearestHoles tag
 
 makeParamTag ::
-    ( MonadReader env f, HasTheme env, HasConfig env, Hover.HasStyle env, Menu.HasStyle env
+    ( MonadReader env f, HasTheme env, HasConfig env, Hover.HasStyle env, Menu.HasConfig env
     , GuiState.HasState env, Element.HasAnimIdPrefix env
     , TextEdit.HasStyle env, HasStdSpacing env, MonadTransaction m f
     ) =>
