@@ -32,6 +32,7 @@ import qualified GUI.Momentu.Widgets.FocusDelegator as FocusDelegator
 import qualified GUI.Momentu.Widgets.Menu as Menu
 import qualified Lamdu.CharClassification as Chars
 import qualified Lamdu.Config as Config
+import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.ResultGroups as ResultGroups
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.SearchTerm as SearchTerm
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.State as HoleState
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds as HoleWidgetIds
@@ -109,7 +110,8 @@ make options mOptionLiteral pl allowedTerms =
                 -- it is harder to implement, so just wrap it
                 -- here
                 (fdWrap <&> (Lens.mapped %~))
-                <*> makeOpenSearchAreaGui searchTermEventMap options mOptionLiteral allowedTerms pl
+                <*> ( ResultGroups.makeAll options mOptionLiteral widgetIds
+                        >>= makeOpenSearchAreaGui searchTermEventMap allowedTerms pl)
                 <&> Lens.mapped %~ inPlaceOfClosed . (^. Align.tValue)
             else
                 (if isActive then Widget.setFocused else id)

@@ -34,7 +34,6 @@ import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.SearchTerm as SearchTerm
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.State as HoleState
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds (WidgetIds(..))
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds as HoleWidgetIds
-import           Lamdu.GUI.ExpressionGui (ExpressionN)
 import qualified Lamdu.GUI.ExpressionGui as ExprGui
 import qualified Lamdu.GUI.ExpressionGui.Annotation as Annotation
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
@@ -140,21 +139,23 @@ emptyPickEventMap =
         mkEventMap k =
             E.keysEventMap k (E.Doc ["Edit", "Result", "Pick (N/A)"]) (pure ())
 
-makeUnderCursorAssignment ::
+makeOpenSearchAreaGui ::
     Monad m =>
     EventMap (T m GuiState.Update) ->
-    (Text -> Bool) -> Sugar.Payload (T m) ExprGui.Payload ->
-    Menu.OptionList (ResultOption m) ->
+    (Text -> Bool) ->
+    Sugar.Payload (T m) ExprGui.Payload ->
+    Menu.OptionList (ResultGroup (T m)) ->
     ExprGuiM m (Menu.Placement -> WithTextPos (Widget (T m GuiState.Update)))
-makeUnderCursorAssignment searchTermEventMap allowedTerms pl optList =
+makeOpenSearchAreaGui searchTermEventMap allowedTerms pl optList =
     do
+        opts <- traverse (makeResultOption pl) optList
         vspace <- Annotation.annotationSpacer
         pickFirstResult <-
-            case optList ^. Menu.olOptions of
+            case opts ^. Menu.olOptions of
             [] -> emptyPickEventMap
             (x:_) -> roPickMainEventMap x & return
         let options =
-                optList <&> roOption
+                opts <&> roOption
                 <&> Menu.optionWidgets . Lens.mapped .
                     Widget.eventMapMaker . Lens.mapped %~ (searchTermEventMap <>)
         typeView <- makeInferredTypeAnnotation pl holeAnimId
@@ -164,23 +165,7 @@ makeUnderCursorAssignment searchTermEventMap allowedTerms pl optList =
             <&> \searchTermWidget placement ->
                 searchTermWidget <&> hoverMenu placement
     & Reader.local (Element.animIdPrefix .~ WidgetId.toAnimId (hidOpen widgetIds))
+    & assignCursor widgetIds (optList ^. Menu.olOptions <&> rId . (^. ResultGroups.rgMain))
     where
         widgetIds = pl ^. Sugar.plEntityId & HoleWidgetIds.make
         holeAnimId = hidHole widgetIds & Widget.toAnimId
-
-makeOpenSearchAreaGui ::
-    Monad m =>
-    EventMap (T m GuiState.Update) ->
-    T m [Sugar.HoleOption (T m) (ExpressionN m ())] ->
-    Maybe (Sugar.OptionLiteral (T m) (ExpressionN m ())) ->
-    (Text -> Bool) ->
-    Sugar.Payload (T m) ExprGui.Payload ->
-    ExprGuiM m (Menu.Placement -> WithTextPos (Widget (T m GuiState.Update)))
-makeOpenSearchAreaGui searchTermEventMap options mOptionLiteral allowedTerms pl =
-    do
-        optList <- ResultGroups.makeAll options mOptionLiteral widgetIds
-        traverse (makeResultOption pl) optList
-            >>= makeUnderCursorAssignment searchTermEventMap allowedTerms pl
-            & assignCursor widgetIds (optList ^. Menu.olOptions <&> rId . (^. ResultGroups.rgMain))
-    where
-        widgetIds = pl ^. Sugar.plEntityId & HoleWidgetIds.make
