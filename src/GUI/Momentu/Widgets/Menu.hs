@@ -48,8 +48,8 @@ data Submenu f a
 Lens.makePrisms ''Submenu
 
 data Option f a = Option
-    { -- | Must be the prefix of all submenu options, also used to
-      -- create this option's submenu arrow frame:
+    { -- | Must be the prefix of all both the menu option and its submenu options,
+      --  also used to create this option's submenu arrow frame:
       _oId :: !Widget.Id
     , -- A widget that represents this option
       _oWidget :: !(WithTextPos (Widget a))
@@ -109,10 +109,8 @@ layoutOption maxOptionWidth option =
     SubmenuEmpty -> singular
     SubmenuItems action ->
         do
-            isOnSubmenu <- State.isSubCursor ?? option ^. oId
-            let isSelected = isOnSubmenu || isOnOption
-            submenuSymbol <-
-                makeSubmenuSymbol isSelected
+            isSelected <- State.isSubCursor ?? option ^. oId
+            submenuSymbol <- makeSubmenuSymbol isSelected
             let base =
                     (option ^. oWidget
                      & Element.width .~ maxOptionWidth - submenuSymbol ^. Element.width)
@@ -134,7 +132,6 @@ layoutOption maxOptionWidth option =
                 else pure base
     & Reader.local (Element.animIdPrefix .~ animId)
     where
-        isOnOption = Widget.isFocused (option ^. oWidget . Align.tValue)
         singular = option ^. oWidget & Element.width .~ maxOptionWidth & pure
         animId = option ^. oId & Widget.toAnimId
 

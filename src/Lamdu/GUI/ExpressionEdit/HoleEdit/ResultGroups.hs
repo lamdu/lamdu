@@ -2,7 +2,7 @@
 module Lamdu.GUI.ExpressionEdit.HoleEdit.ResultGroups
     ( makeAll
     , Result(..)
-    , ResultGroup(..), rgExtraResultsPrefixId, rgMain, rgExtra
+    , ResultGroup(..), rgPrefixId, rgMain, rgExtra
     ) where
 
 import qualified Control.Lens as Lens
@@ -60,7 +60,7 @@ data IsPreferred = Preferred | NotPreferred
 
 data ResultGroup m = ResultGroup
     { _rgPreferred :: IsPreferred -- Move to top of result list
-    , _rgExtraResultsPrefixId :: WidgetId.Id
+    , _rgPrefixId :: WidgetId.Id
     , _rgMain :: Result m
     , _rgExtra :: [Result m]
     }
@@ -77,15 +77,15 @@ mResultGroupOf _ _ [] = Nothing
 mResultGroupOf widgetIds baseId (x:xs) = Just
     ResultGroup
     { _rgPreferred = NotPreferred
-    , _rgExtraResultsPrefixId = extraResultsPrefixId
-    , _rgMain = mkResult (prefixId <> baseId) x
+    , _rgPrefixId = prefixId
+    , _rgMain = mkResult prefixId x
     , _rgExtra = zipWith mkExtra [(0::Int)..] xs
     }
     where
-        prefixId = hidResultsPrefix widgetIds
+        prefixId = hidResultsPrefix widgetIds <> baseId
         mkExtra = mkResult . extraResultId
         extraResultId i = WidgetId.joinId extraResultsPrefixId [BS8.pack (show i)]
-        extraResultsPrefixId = prefixId <> baseId <> WidgetId.Id ["extra results"]
+        extraResultsPrefixId = prefixId <> WidgetId.Id ["extra results"]
         mkResult resultId (score, holeResult) =
             Result
             { _rScore = score

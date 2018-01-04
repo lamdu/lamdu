@@ -78,7 +78,7 @@ makeResultOption pl results =
     ResultOption
     { roOption =
         Menu.Option
-        { Menu._oId = results ^. ResultGroups.rgExtraResultsPrefixId
+        { Menu._oId = results ^. ResultGroups.rgPrefixId
         , Menu._oWidget = mainResultWidget
         , Menu._oSubmenuWidgets =
             case results ^. ResultGroups.rgExtra of
