@@ -41,9 +41,9 @@ deriveJSON defaultOptions ''Style
 class HasStyle env where style :: Lens' env Style
 instance HasStyle Style where style = id
 
-data Submenu f a
+data Submenu m a
     = SubmenuEmpty
-    | SubmenuItems (f [Option f a])
+    | SubmenuItems (m [Option m a])
     deriving (Functor)
 
 -- | Option record and cursor behavior
@@ -77,20 +77,20 @@ data Submenu f a
 -- *generate* an option widget, that depends on a cursor computed by
 -- looking at all of the option ids.
 
-data Option f a = Option
+data Option m a = Option
     { -- | Must be the prefix of all both the menu option and its submenu options,
       --  also used to create this option's submenu arrow frame:
       _oId :: !Widget.Id
     , -- A widget that represents this option
-      _oWidget :: f (WithTextPos (Widget a))
+      _oWidget :: m (WithTextPos (Widget a))
     , -- An optionally empty submenu
-      _oSubmenuWidgets :: !(Submenu f a)
+      _oSubmenuWidgets :: !(Submenu m a)
     } deriving Functor
 
 Lens.makePrisms ''Submenu
 Lens.makeLenses ''Option
 
-optionWidgets :: Functor f => Lens.Setter (Option f a) (Option f b) (WithTextPos (Widget a)) (WithTextPos (Widget b))
+optionWidgets :: Functor m => Lens.Setter (Option m a) (Option m b) (WithTextPos (Widget a)) (WithTextPos (Widget b))
 optionWidgets f (Option i w s) =
     Option i <$> Lens.mapped f w <*> (_SubmenuItems . Lens.mapped . Lens.mapped . optionWidgets) f s
 
