@@ -126,15 +126,26 @@ addActions exprPl body =
                     <&> EntityId.ofValI)
         let addReplaceParent innerPl = setToExpr innerPl innerPl
         let fixWrapperReplaceParent child =
+                -- Replace-parent with wrapper sets directly to wrapped expression
                 case child ^. rBody of
                 BodyWrapper wrapper ->
-                    child & rPayload %~ setToExpr (wrapper ^. wExpr . rPayload)
+                    child
+                    & rPayload %~ setToExpr (wrapper ^. wExpr . rPayload)
                 _ -> child
+        let fixWrappedReplaceParent wrapper =
+                -- Replace-parent of wrapped expr without unwrap available -
+                -- replaces parent of wrapper rather than unwrapped.
+                case wrapper ^. wUnwrap of
+                UnwrapAction{} -> wrapper
+                UnwrapTypeMismatch ->
+                    wrapper
+                    & wExpr . rPayload %~ setToExpr (wrapper ^. wExpr . rPayload)
         return Expression
             { _rBody =
                 body
                 <&> rPayload %~ addReplaceParent
                 <&> fixWrapperReplaceParent
+                <&> rBody . _BodyWrapper %~ fixWrappedReplaceParent
             , _rPayload =
                 Payload
                 { _plEntityId = exprPl ^. Input.entityId
