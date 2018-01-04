@@ -144,5 +144,5 @@ makeFocusableLabel ::
 makeFocusableLabel text =
     do
         toFocusable <- Widget.makeFocusableView
-        animId <- Element.subAnimId [encodeUtf8 text] <&> Widget.Id
-        makeLabel text <&> Align.tValue %~ toFocusable animId
+        widgetId <- Element.subAnimId [encodeUtf8 text] <&> Widget.Id
+        makeLabel text <&> Align.tValue %~ toFocusable widgetId
