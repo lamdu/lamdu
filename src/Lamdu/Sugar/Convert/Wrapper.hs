@@ -1,7 +1,7 @@
 {-# LANGUAGE NoImplicitPrelude #-}
 -- | Convert wrapper holes
 
-module Lamdu.Sugar.Convert.Hole.Wrapper
+module Lamdu.Sugar.Convert.Wrapper
     ( convertAppliedHole
     ) where
 

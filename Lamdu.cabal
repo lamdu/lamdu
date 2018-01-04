@@ -256,7 +256,6 @@ Executable lamdu
                   , Lamdu.Sugar.Convert.Hole
                   , Lamdu.Sugar.Convert.Hole.ResultScore
                   , Lamdu.Sugar.Convert.Hole.Suggest
-                  , Lamdu.Sugar.Convert.Hole.Wrapper
                   , Lamdu.Sugar.Convert.Inject
                   , Lamdu.Sugar.Convert.Input
                   , Lamdu.Sugar.Convert.Load
@@ -268,6 +267,7 @@ Executable lamdu
                   , Lamdu.Sugar.Convert.TId
                   , Lamdu.Sugar.Convert.Tag
                   , Lamdu.Sugar.Convert.Text
+                  , Lamdu.Sugar.Convert.Wrapper
                   , Lamdu.Sugar.EntityId
                   , Lamdu.Sugar.Internal
                   , Lamdu.Sugar.Internal.EntityId
