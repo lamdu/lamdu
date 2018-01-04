@@ -2,7 +2,7 @@
 module Lamdu.GUI.ExpressionEdit.HoleEdit.ResultGroups
     ( makeAll
     , Result(..)
-    , ResultsList(..), rlExtraResultsPrefixId, rlMain, rlExtra
+    , ResultGroup(..), rgExtraResultsPrefixId, rgMain, rgExtra
     ) where
 
 import qualified Control.Lens as Lens
@@ -58,28 +58,28 @@ Lens.makeLenses ''Result
 data IsPreferred = Preferred | NotPreferred
     deriving (Eq, Ord)
 
-data ResultsList m = ResultsList
-    { _rlPreferred :: IsPreferred -- Move to top of result list
-    , _rlExtraResultsPrefixId :: WidgetId.Id
-    , _rlMain :: Result m
-    , _rlExtra :: [Result m]
+data ResultGroup m = ResultGroup
+    { _rgPreferred :: IsPreferred -- Move to top of result list
+    , _rgExtraResultsPrefixId :: WidgetId.Id
+    , _rgMain :: Result m
+    , _rgExtra :: [Result m]
     }
-Lens.makeLenses ''ResultsList
+Lens.makeLenses ''ResultGroup
 
-mResultsListOf ::
+mResultGroupOf ::
     WidgetIds -> WidgetId.Id ->
     [ ( Sugar.HoleResultScore
       , m (Sugar.HoleResult m (Sugar.Expression (Name m) m ()))
       )
     ] ->
-    Maybe (ResultsList m)
-mResultsListOf _ _ [] = Nothing
-mResultsListOf widgetIds baseId (x:xs) = Just
-    ResultsList
-    { _rlPreferred = NotPreferred
-    , _rlExtraResultsPrefixId = extraResultsPrefixId
-    , _rlMain = mkResult (prefixId <> baseId) x
-    , _rlExtra = zipWith mkExtra [(0::Int)..] xs
+    Maybe (ResultGroup m)
+mResultGroupOf _ _ [] = Nothing
+mResultGroupOf widgetIds baseId (x:xs) = Just
+    ResultGroup
+    { _rgPreferred = NotPreferred
+    , _rgExtraResultsPrefixId = extraResultsPrefixId
+    , _rgMain = mkResult (prefixId <> baseId) x
+    , _rgExtra = zipWith mkExtra [(0::Int)..] xs
     }
     where
         prefixId = hidResultsPrefix widgetIds
@@ -93,16 +93,16 @@ mResultsListOf widgetIds baseId (x:xs) = Just
             , rId = resultId
             }
 
-makeResultsList ::
+makeResultGroup ::
     Monad m =>
     WidgetIds -> Text -> Group m ->
-    m (Maybe (ResultsList m))
-makeResultsList widgetIds searchTerm group =
+    m (Maybe (ResultGroup m))
+makeResultGroup widgetIds searchTerm group =
     group ^. groupResults
     & ListClass.toList
     <&> sortOn fst
-    <&> mResultsListOf widgetIds (group ^. groupId)
-    <&> Lens.mapped %~ rlPreferred .~ toPreferred
+    <&> mResultGroupOf widgetIds (group ^. groupId)
+    <&> Lens.mapped %~ rgPreferred .~ toPreferred
     where
         toPreferred
             | [searchTerm] == group ^. groupSearchTerms = Preferred
@@ -112,7 +112,7 @@ data GoodAndBad a = GoodAndBad { _good :: a, _bad :: a }
     deriving (Functor, Foldable, Traversable)
 Lens.makeLenses ''GoodAndBad
 
-collectResults :: Monad m => Config.Hole -> ListT m (ResultsList f) -> m ([ResultsList f], Menu.HasMoreOptions)
+collectResults :: Monad m => Config.Hole -> ListT m (ResultGroup f) -> m ([ResultGroup f], Menu.HasMoreOptions)
 collectResults Config.Hole{holeResultCount} resultsM =
     do
         (tooFewGoodResults, moreResultsM) <-
@@ -140,10 +140,10 @@ collectResults Config.Hole{holeResultCount} resultsM =
         concatBothGoodAndBad goodAndBad = goodAndBad ^. Lens.folded
         haveHiddenResults [] = Menu.NoMoreOptions
         haveHiddenResults _ = Menu.MoreOptionsAvailable
-        resultsListScore x = (x ^. rlPreferred, x ^. rlMain . rScore & isGoodResult & not)
+        resultsListScore x = (x ^. rgPreferred, x ^. rgMain . rScore & isGoodResult & not)
         prependResult results x =
             results
-            & case (x ^. rlPreferred, x ^. rlMain . rScore & isGoodResult) of
+            & case (x ^. rgPreferred, x ^. rgMain . rScore & isGoodResult) of
                 (NotPreferred, False) -> bad
                 _ -> good
                 %~ (x :)
@@ -156,7 +156,7 @@ makeAll ::
     T n [Sugar.HoleOption (T n) (ExpressionN n ())] ->
     Maybe (Sugar.OptionLiteral (T n) (ExpressionN n ())) ->
     WidgetIds ->
-    m ([ResultsList (T n)], Menu.HasMoreOptions)
+    m ([ResultGroup (T n)], Menu.HasMoreOptions)
 makeAll options mOptionLiteral widgetIds =
     do
         searchTerm <- HoleState.readSearchTerm widgetIds
@@ -168,7 +168,7 @@ makeAll options mOptionLiteral widgetIds =
         (options >>= mapM mkGroup <&> holeMatches searchTerm)
             <&> (literalGroups <>)
             <&> ListClass.fromList
-            <&> ListClass.mapL (makeResultsList widgetIds searchTerm)
+            <&> ListClass.mapL (makeResultGroup widgetIds searchTerm)
             <&> ListClass.catMaybes
             >>= collectResults config
             & transaction

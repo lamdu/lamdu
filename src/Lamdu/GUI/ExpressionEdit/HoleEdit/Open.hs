@@ -27,8 +27,8 @@ import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import           Lamdu.Config (HasConfig)
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Config.Theme as Theme
-import           Lamdu.GUI.ExpressionEdit.HoleEdit.ResultGroups (ResultsList(..), Result(..))
-import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.ResultGroups as HoleResults
+import           Lamdu.GUI.ExpressionEdit.HoleEdit.ResultGroups (ResultGroup(..), Result(..))
+import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.ResultGroups as ResultGroups
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.ResultWidget as ResultWidget
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.SearchTerm as SearchTerm
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.State as HoleState
@@ -70,19 +70,19 @@ makeShownResult pl result =
 makeResultOption ::
     Monad m =>
     Sugar.Payload f ExprGui.Payload ->
-    ResultsList (T m) ->
+    ResultGroup (T m) ->
     ExprGuiM m (ResultOption m)
 makeResultOption pl results =
-    makeShownResult pl (results ^. HoleResults.rlMain)
+    makeShownResult pl (results ^. ResultGroups.rgMain)
     <&>
     \(pickMain, mainResultWidget) ->
     ResultOption
     { roOption =
         Menu.Option
-        { Menu._oId = results ^. HoleResults.rlExtraResultsPrefixId
+        { Menu._oId = results ^. ResultGroups.rgExtraResultsPrefixId
         , Menu._oWidget = mainResultWidget
         , Menu._oSubmenuWidgets =
-            case results ^. HoleResults.rlExtra of
+            case results ^. ResultGroups.rgExtra of
             [] -> Menu.SubmenuEmpty
             extras -> Menu.SubmenuItems (traverse (makeShownResult pl) extras <&> map snd)
         }
@@ -177,9 +177,9 @@ makeOpenSearchAreaGui ::
     ExprGuiM m (Menu.Placement -> WithTextPos (Widget (T m GuiState.Update)))
 makeOpenSearchAreaGui searchTermEventMap options mOptionLiteral allowedTerms pl =
     do
-        (shownResultsLists, hasHiddenResults) <- HoleResults.makeAll options mOptionLiteral widgetIds
-        traverse (makeResultOption pl) shownResultsLists
+        (shownResultGroups, hasHiddenResults) <- ResultGroups.makeAll options mOptionLiteral widgetIds
+        traverse (makeResultOption pl) shownResultGroups
             >>= makeUnderCursorAssignment searchTermEventMap hasHiddenResults allowedTerms pl
-            & assignCursor widgetIds (shownResultsLists <&> rId . (^. HoleResults.rlMain))
+            & assignCursor widgetIds (shownResultGroups <&> rId . (^. ResultGroups.rgMain))
     where
         widgetIds = pl ^. Sugar.plEntityId & HoleWidgetIds.make
