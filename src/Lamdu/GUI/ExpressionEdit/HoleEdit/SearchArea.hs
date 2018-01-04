@@ -15,7 +15,6 @@ import qualified Data.Char as Char
 import qualified Data.Monoid as Monoid
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Text as Text
-import           GUI.Momentu.Align (WithTextPos)
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
@@ -26,7 +25,6 @@ import           GUI.Momentu.ModKey (ModKey(..))
 import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.State as GuiState
 import           GUI.Momentu.View (View)
-import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.FocusDelegator as FocusDelegator
 import qualified GUI.Momentu.Widgets.Menu as Menu
@@ -88,14 +86,14 @@ searchTermEditEventMap widgetIds allowedTerms =
     where
         notOp = Text.any (`notElem` Chars.operator)
 
-makeShownResult ::
+makeRenderedResult ::
     Monad m =>
     Sugar.Payload f ExprGui.Payload -> Result (T m) ->
     ExprGuiM m
     ( EventMap (T m GuiState.Update)
-    , ExprGuiM m (WithTextPos (Widget (T m GuiState.Update)))
+    , ExprGuiM m (Menu.RenderedOption (T m))
     )
-makeShownResult pl result =
+makeRenderedResult pl result =
     do
         -- Warning: rHoleResult should be ran at most once!
         -- Running it more than once caused a horrible bug (bugfix: 848b6c4407)
@@ -103,7 +101,8 @@ makeShownResult pl result =
         theme <- Theme.hole <$> Lens.view Theme.theme
         stdSpacing <- Spacer.getSpaceSize
         let padding = Theme.holeResultPadding theme <&> realToFrac & (* stdSpacing)
-        ResultWidget.make pl (rId result) res <&> _2 . Lens.mapped %~ Element.pad padding
+        ResultWidget.make pl (rId result) res
+            <&> _2 . Lens.mapped %~ Menu.RenderedOption . Element.pad padding
 
 makeResultOption ::
     Monad m =>
@@ -111,18 +110,18 @@ makeResultOption ::
     ResultGroup (T m) ->
     ExprGuiM m (ResultOption m)
 makeResultOption pl results =
-    makeShownResult pl (results ^. ResultGroups.rgMain)
+    makeRenderedResult pl (results ^. ResultGroups.rgMain)
     <&>
-    \(pickMain, mkMainResultWidget) ->
+    \(pickMain, renderMainResultWidget) ->
     ResultOption
     { _roOption =
         Menu.Option
         { Menu._oId = results ^. ResultGroups.rgPrefixId
-        , Menu._oWidget = mkMainResultWidget
+        , Menu._oRender = renderMainResultWidget
         , Menu._oSubmenuWidgets =
             case results ^. ResultGroups.rgExtra of
             [] -> Menu.SubmenuEmpty
-            extras -> Menu.SubmenuItems (traverse (makeShownResult pl) extras >>= traverse snd <&> map makeSubMenu)
+            extras -> Menu.SubmenuItems (traverse (makeRenderedResult pl) extras >>= traverse snd <&> map makeSubMenu)
         }
     , _roPickMainEventMap = pickMain
     }
@@ -130,7 +129,7 @@ makeResultOption pl results =
         makeSubMenu extraResultWidget =
             Menu.Option
             { Menu._oId = results ^. ResultGroups.rgPrefixId -- UGLY HACK
-            , Menu._oWidget = pure extraResultWidget
+            , Menu._oRender = pure extraResultWidget
             , Menu._oSubmenuWidgets = Menu.SubmenuEmpty
             }
 

@@ -138,16 +138,20 @@ makeOptions nearestHoles tag searchTerm
         makeOption (name, t) =
             Menu.Option
             { Menu._oId = optionWId
-            , Menu._oWidget =
+            , Menu._oRender =
                 do
                     eventMap <-
                         makePickEventMap nearestHoles
                         (E.Doc ["Edit", "Tag", "Select"]) pick
-                    ( Widget.makeFocusableView <*> Widget.makeSubId optionId
-                        <&> fmap
+                    widget <-
+                        ( Widget.makeFocusableView <*> Widget.makeSubId optionId
+                            <&> fmap
                         ) <*> NameEdit.makeView (name ^. Name.form) optionId
                         <&> Align.tValue %~ Widget.addPreEvent preEvent
                         <&> Align.tValue . Widget.eventMapMaker . Lens.mapped <>~ eventMap
+                    pure Menu.RenderedOption
+                        { Menu._rWidget = widget
+                        }
             , Menu._oSubmenuWidgets = Menu.SubmenuEmpty
             }
             where

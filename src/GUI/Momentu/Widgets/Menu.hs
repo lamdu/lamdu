@@ -4,7 +4,8 @@ module GUI.Momentu.Widgets.Menu
     ( Style(..), HasStyle(..)
     , Submenu(..), _SubmenuEmpty, _SubmenuItems
     , OptionList(..), olOptions, olIsTruncated
-    , Option(..), oId, oWidget, oSubmenuWidgets
+    , RenderedOption(..), rWidget
+    , Option(..), oId, oRender, oSubmenuWidgets
     , optionWidgets
     , Placement(..)
     , make, makeHovered
@@ -40,6 +41,11 @@ deriveJSON defaultOptions ''Style
 
 class HasStyle env where style :: Lens' env Style
 instance HasStyle Style where style = id
+
+newtype RenderedOption f = RenderedOption
+    { _rWidget :: WithTextPos (Widget (f State.Update))
+    }
+Lens.makeLenses ''RenderedOption
 
 data Submenu m f
     = SubmenuEmpty
@@ -81,7 +87,7 @@ data Option m f = Option
       --  also used to create this option's submenu arrow frame:
       _oId :: !Widget.Id
     , -- A widget that represents this option
-      _oWidget :: m (WithTextPos (Widget (f State.Update)))
+      _oRender :: m (RenderedOption f)
     , -- An optionally empty submenu
       _oSubmenuWidgets :: !(Submenu m f)
     }
@@ -95,7 +101,7 @@ optionWidgets ::
     (WithTextPos (Widget (f State.Update)))
     (WithTextPos (Widget (g State.Update)))
 optionWidgets f (Option i w s) =
-    Option i <$> Lens.mapped f w <*> (_SubmenuItems . Lens.mapped . Lens.mapped . optionWidgets) f s
+    Option i <$> (Lens.mapped . rWidget) f w <*> (_SubmenuItems . Lens.mapped . Lens.mapped . optionWidgets) f s
 
 makeNoResults ::
     (MonadReader env m, TextView.HasStyle env, Element.HasAnimIdPrefix env) =>
@@ -215,7 +221,7 @@ make minWidth options =
                 ) & pure
     where
         render (Option optionId mkWidget submenu) =
-            mkWidget <&> ((,,) optionId ?? submenu)
+            mkWidget <&> (^. rWidget) <&> ((,,) optionId ?? submenu)
 
 -- | You may want to limit the placement of hovering pop-up menus,
 -- so that they don't cover other ui elements.
