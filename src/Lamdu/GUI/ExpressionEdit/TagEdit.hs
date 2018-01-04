@@ -145,6 +145,7 @@ makeOptions nearestHoles tag searchTerm
                     ) <*> NameEdit.makeView (name ^. Name.form) optionId
                     <&> Align.tValue %~ Widget.addPreEvent preEvent
                     <&> Align.tValue . Widget.eventMapMaker . Lens.mapped <>~ eventMap
+            <&> pure
             <&> Menu.Option optionWId ?? Menu.SubmenuEmpty
             where
                 preEvent =

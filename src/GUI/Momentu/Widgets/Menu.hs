@@ -52,7 +52,7 @@ data Option f a = Option
       --  also used to create this option's submenu arrow frame:
       _oId :: !Widget.Id
     , -- A widget that represents this option
-      _oWidget :: !(WithTextPos (Widget a))
+      _oWidget :: f (WithTextPos (Widget a))
     , -- An optionally empty submenu
       _oSubmenuWidgets :: !(Submenu f a)
     }
@@ -60,7 +60,7 @@ Lens.makeLenses ''Option
 
 optionWidgets :: Functor f => Lens.Setter (Option f a) (Option f b) (WithTextPos (Widget a)) (WithTextPos (Widget b))
 optionWidgets f (Option i w s) =
-    Option i <$> f w <*> (_SubmenuItems . Lens.mapped . Lens.mapped) f s
+    Option i <$> Lens.mapped f w <*> (_SubmenuItems . Lens.mapped . Lens.mapped) f s
 
 makeNoResults ::
     (MonadReader env m, TextView.HasStyle env, Element.HasAnimIdPrefix env) =>
@@ -103,17 +103,17 @@ layoutOption ::
     ( MonadReader env m, Element.HasAnimIdPrefix env, TextView.HasStyle env
     , State.HasCursor env, Hover.HasStyle env, HasStyle env, Functor f
     ) =>
-    Widget.R -> Option m (f State.Update) -> m (WithTextPos (Widget (f State.Update)))
-layoutOption maxOptionWidth option =
-    case option ^. oSubmenuWidgets of
-    SubmenuEmpty -> singular
+    Widget.R -> (Widget.Id, WithTextPos (Widget (f State.Update)), Submenu m (f State.Update)) ->
+    m (WithTextPos (Widget (f State.Update)))
+layoutOption maxOptionWidth (optionId, rendered, submenu) =
+    case submenu of
+    SubmenuEmpty -> rendered & Element.width .~ maxOptionWidth & pure
     SubmenuItems action ->
         do
-            isSelected <- State.isSubCursor ?? option ^. oId
+            isSelected <- State.isSubCursor ?? optionId
             submenuSymbol <- makeSubmenuSymbol isSelected
             let base =
-                    (option ^. oWidget
-                     & Element.width .~ maxOptionWidth - submenuSymbol ^. Element.width)
+                    (rendered & Element.width .~ maxOptionWidth - submenuSymbol ^. Element.width)
                     /|/ submenuSymbol
             if isSelected
                 then do
@@ -130,10 +130,7 @@ layoutOption maxOptionWidth option =
                          } anchored <&> (^. Align.tValue))
                         & pure
                 else pure base
-    & Reader.local (Element.animIdPrefix .~ animId)
-    where
-        singular = option ^. oWidget & Element.width .~ maxOptionWidth & pure
-        animId = option ^. oId & Widget.toAnimId
+    & Reader.local (Element.animIdPrefix .~ Widget.toAnimId optionId)
 
 data OptionList a = OptionList
     { _olOptions :: [a]
@@ -162,19 +159,20 @@ make minWidth options =
             submenuSymbolWidth <-
                 TextView.drawText ?? submenuSymbolText
                 <&> (^. TextView.renderedTextSize . TextView.bounding . _1)
-            let optionMinWidth option =
-                    option ^. oWidget . Element.width +
-                    case option ^. oSubmenuWidgets of
+            let optionMinWidth (_, w, submenu) =
+                    w ^. Element.width +
+                    case submenu of
                     SubmenuEmpty -> 0
                     SubmenuItems {} -> submenuSymbolWidth
-            let maxOptionWidth = options <&> optionMinWidth & maximum & max minWidth
+            rendered <- traverse render opts
+            let maxOptionWidth = rendered <&> optionMinWidth & maximum & max minWidth
+            laidOutOptions <-
+                traverse (layoutOption maxOptionWidth) rendered
+                <&> map (^. Align.tValue)
             hiddenOptionsWidget <-
                 if options ^. olIsTruncated
                 then TextView.makeLabel "..." <&> (^. Align.tValue) <&> Widget.fromView
                 else pure Element.empty
-            laidOutOptions <-
-                traverse (layoutOption maxOptionWidth) opts
-                <&> map (^. Align.tValue)
             blockEvents <*>
                 ( Hover.Ordered
                     { _forward = id
@@ -182,6 +180,9 @@ make minWidth options =
                     } ?? (laidOutOptions ++ [hiddenOptionsWidget])
                     <&> Glue.vbox
                 ) & pure
+    where
+        render (Option optionId mkWidget submenu) =
+            mkWidget <&> ((,,) optionId ?? submenu)
 
 -- | You may want to limit the placement of hovering pop-up menus,
 -- so that they don't cover other ui elements.
