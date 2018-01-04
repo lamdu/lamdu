@@ -47,6 +47,37 @@ data Submenu f a
     deriving (Functor)
 Lens.makePrisms ''Submenu
 
+-- | Option record and cursor behavior
+--
+-- The search menu is expected to keep the cursor on the search results,
+-- even as those "disappear".
+--
+-- To do this, the search menu must:
+--
+-- * Check if the cursor is on any of the menu options.
+--
+--   This requires knowing all the option widget ids
+--
+-- * Check if the cursor WAS on any menu option (that no longer exists)
+--
+--   This requires all options to have a common widget prefix that can be
+--   identified even as options disappear
+--
+-- * If the cursor was on a result, but is not on a currently existing
+--   result, we need to assign the cursor to any result (e.g: the first
+--   one).
+--
+--   This requires the user's generated widgets, which *depend* on the
+--   cursor, to be created AFTER we've made the above decision.
+--
+-- From all of the above, we can deduce that we must know all of the menu
+-- options ids before generating any of the option widgets. Then we can
+-- decide where the cursor is, then we can generate the widgets.
+--
+-- This is why each Option must expose the widget id and a function to
+-- *generate* an option widget, that depends on a cursor computed by
+-- looking at all of the option ids.
+
 data Option f a = Option
     { -- | Must be the prefix of all both the menu option and its submenu options,
       --  also used to create this option's submenu arrow frame:
