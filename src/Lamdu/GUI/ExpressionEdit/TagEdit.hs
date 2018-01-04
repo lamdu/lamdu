@@ -119,9 +119,9 @@ makeOptions ::
     ( Monad m, MonadTransaction m f, MonadReader env f, GuiState.HasCursor env
     , HasConfig env, HasTheme env, Element.HasAnimIdPrefix env, TextView.HasStyle env
     ) =>
-    NearestHoles -> Sugar.Tag (Name n) (T m) -> Text ->
+    Sugar.Tag (Name n) (T m) -> Text ->
     f (Menu.OptionList (Menu.Option f (T m)))
-makeOptions nearestHoles tag searchTerm
+makeOptions tag searchTerm
     | Text.null searchTerm = pure mempty
     | otherwise =
         do
@@ -139,32 +139,30 @@ makeOptions nearestHoles tag searchTerm
             Menu.Option
             { Menu._oId = optionWId
             , Menu._oRender =
-                do
-                    eventMap <-
-                        makePickEventMap nearestHoles
-                        (E.Doc ["Edit", "Tag", "Select"]) pick
-                    widget <-
-                        ( Widget.makeFocusableView <*> Widget.makeSubId optionId
-                            <&> fmap
-                        ) <*> NameEdit.makeView (name ^. Name.form) optionId
-                        <&> Align.tValue %~ Widget.addPreEvent preEvent
-                        <&> Align.tValue . Widget.eventMapMaker . Lens.mapped <>~ eventMap
-                    pure Menu.RenderedOption
-                        { Menu._rWidget = widget
-                        }
+                ( Widget.makeFocusableView <*> Widget.makeSubId optionId
+                    <&> fmap
+                ) <*> NameEdit.makeView (name ^. Name.form) optionId
+                <&>
+                \widget ->
+                Menu.RenderedOption
+                { Menu._rWidget = widget
+                , Menu._rPick = Widget.PreEvent
+                    { Widget._pDesc = "Pick"
+                    , Widget._pAction =
+                        (tag ^. Sugar.tagActions . Sugar.taChangeTag) t
+                        <&> pickResult
+                    , Widget._pTextRemainder = ""
+                    }
+                }
             , Menu._oSubmenuWidgets = Menu.SubmenuEmpty
             }
             where
-                preEvent =
-                    Widget.PreEvent
-                    { Widget._pDesc = "Pick"
-                    , Widget._pAction = pick <&> GuiState.updateCursor
-                    , Widget._pTextRemainder = ""
+                pickResult tagInfo =
+                    Menu.PickResult
+                    { Menu._pickDest =
+                        tagInfo ^. Sugar.tagInstance & WidgetIds.fromEntityId
+                    , Menu._pickDestIsEntryPoint = False
                     }
-                pick =
-                    (tag ^. Sugar.tagActions . Sugar.taChangeTag) t
-                    <&> (^. Sugar.tagInstance)
-                    <&> WidgetIds.fromEntityId
                 optionWId = WidgetIds.hash t
                 optionId = Widget.toAnimId optionWId
 
@@ -176,7 +174,8 @@ makeTagHoleEdit ::
     , GuiState.HasState env
     , HasConfig env, TextEdit.HasStyle env, Element.HasAnimIdPrefix env
     , HasTheme env, Hover.HasStyle env, Menu.HasConfig env, HasStdSpacing env
-    ) => NearestHoles -> Sugar.Tag (Name (T m)) (T m) ->
+    ) =>
+    NearestHoles -> Sugar.Tag (Name (T m)) (T m) ->
     f (WithTextPos (Widget (T m GuiState.Update)))
 makeTagHoleEdit nearestHoles tag =
     do
@@ -210,8 +209,9 @@ makeTagHoleEdit nearestHoles tag =
                 & Reader.local (Element.animIdPrefix <>~ ["label"])
             else pure term
         makeMenu <-
-            makeOptions nearestHoles tag searchTerm
+            makeOptions tag searchTerm
             >>= Menu.makeHovered Element.empty
+                (nearestHoles ^. NearestHoles.next <&> WidgetIds.fromEntityId)
         topLine <&> makeMenu Menu.AnyPlace & pure
     & GuiState.assignCursor holeId searchTermId
     & Reader.local (Element.animIdPrefix .~ Widget.toAnimId holeId)

@@ -1,8 +1,8 @@
-{-# LANGUAGE NoImplicitPrelude, OverloadedStrings, TemplateHaskell #-}
+{-# LANGUAGE NoImplicitPrelude, OverloadedStrings #-}
 -- | The search area (search term + results) of an open/active hole.
 
 module Lamdu.GUI.ExpressionEdit.HoleEdit.Open
-    ( makeOpenSearchAreaGui, ResultOption(..), roOption, roPickMainEventMap
+    ( makeOpenSearchAreaGui
     ) where
 
 import qualified Control.Lens as Lens
@@ -15,6 +15,7 @@ import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Glue ((/-/))
+import qualified GUI.Momentu.Hover as Hover
 import qualified GUI.Momentu.State as GuiState
 import           GUI.Momentu.View (View)
 import           GUI.Momentu.Widget (Widget)
@@ -30,17 +31,13 @@ import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds as HoleWidgetIds
 import qualified Lamdu.GUI.ExpressionGui as ExprGui
 import qualified Lamdu.GUI.ExpressionGui.Annotation as Annotation
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
+import qualified Lamdu.GUI.WidgetIds as WidgetIds
+import qualified Lamdu.Sugar.NearestHoles as NearestHoles
 import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
 
 type T = Transaction
-
-data ResultOption m = ResultOption
-    { _roOption :: !(Menu.Option (ExprGuiM m) (T m))
-    , _roPickMainEventMap :: !(EventMap (T m GuiState.Update))
-    }
-Lens.makeLenses ''ResultOption
 
 assignCursor :: Monad m => WidgetIds -> [Widget.Id] -> ExprGuiM m a -> ExprGuiM m a
 assignCursor widgetIds resultIds action =
@@ -88,25 +85,30 @@ makeOpenSearchAreaGui ::
     EventMap (T m GuiState.Update) ->
     (Text -> Bool) -> View ->
     Sugar.Payload (T m) ExprGui.Payload ->
-    Menu.OptionList (ResultOption m) ->
+    Menu.OptionList (Menu.Option (ExprGuiM m) (T m)) ->
     ExprGuiM m (Menu.Placement -> WithTextPos (Widget (T m GuiState.Update)))
-makeOpenSearchAreaGui searchTermEventMap allowedTerms typeView pl opts =
+makeOpenSearchAreaGui searchTermEventMap allowedTerms typeView pl options =
     do
         vspace <- Annotation.annotationSpacer
-        pickFirstResult <-
-            case opts ^. Menu.olOptions of
-            [] -> emptyPickEventMap
-            (x:_) -> x ^. roPickMainEventMap & pure
-        let options =
-                opts <&> (^. roOption)
-                <&> Menu.optionWidgets . Lens.mapped .
-                    Widget.eventMapMaker . Lens.mapped %~ (searchTermEventMap <>)
-        hoverMenu <- Menu.makeHovered (vspace /-/ typeView) options
+        let annotation = vspace /-/ typeView
+        (mPickMain, menu) <-
+            Menu.make (annotation ^. Element.width) mNextEntry options
+            <&> _2 . Lens.mapped . Widget.eventMapMaker . Lens.mapped %~ (searchTermEventMap <>)
+        pickEventMap <-
+            case mPickMain of
+            Nothing -> emptyPickEventMap
+            Just pickMain -> Menu.makePickEventMap mNextEntry ?? pickMain
+        mkHoverOptions <- Menu.hoverOptions
+        let hoverMenu placement term =
+                Hover.hoverInPlaceOf (mkHoverOptions placement annotation menu a) a
+                where
+                    a = Hover.anchor term
         SearchTerm.make widgetIds allowedTerms
-            <&> Align.tValue %~ Widget.weakerEvents pickFirstResult
+            <&> Align.tValue %~ Widget.weakerEvents pickEventMap
             <&> \searchTermWidget placement ->
                 searchTermWidget <&> hoverMenu placement
     & Reader.local (Element.animIdPrefix .~ WidgetId.toAnimId (hidOpen widgetIds))
-    & assignCursor widgetIds (opts ^.. traverse . roOption . Menu.oId)
+    & assignCursor widgetIds (options ^.. traverse . Menu.oId)
     where
         widgetIds = pl ^. Sugar.plEntityId & HoleWidgetIds.make
+        mNextEntry = pl ^. Sugar.plData . ExprGui.plNearestHoles . NearestHoles.next <&> WidgetIds.fromEntityId

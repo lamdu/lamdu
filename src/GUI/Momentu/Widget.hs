@@ -26,7 +26,7 @@ module GUI.Momentu.Widget
     , strongerEvents
     , weakerEvents
     , weakerEventsWithContext
-    , addPreEvent
+    , addPreEvent, addPreEventWith
     , eventMapMaker
 
     -- Operations:
@@ -120,8 +120,8 @@ addPreEventToEventMap append preEvent e =
         actionText = E.emDocs . E.docStrs . Lens.reversed . Lens.element 0
         concatDescs x y = filter (not . Text.null) [x, y] & Text.intercalate ", "
 
-addPreEvent :: Monoid a => PreEvent a -> Widget a -> Widget a
-addPreEvent preEvent =
+addPreEventWith :: (a -> a -> a) -> PreEvent a -> Widget a -> Widget a
+addPreEventWith append preEvent =
     wState . _StateFocused . Lens.mapped %~ onFocused
     where
         onFocused f =
@@ -132,7 +132,10 @@ addPreEvent preEvent =
             ctx
             & ePrevTextRemainder %~ (preEvent ^. pTextRemainder <>)
             & mk
-            & addPreEventToEventMap mappend preEvent
+            & addPreEventToEventMap append preEvent
+
+addPreEvent :: Monoid a => PreEvent a -> Widget a -> Widget a
+addPreEvent = addPreEventWith mappend
 
 addEvents ::
     (Applicative f, Monoid a, HasWidget w) =>

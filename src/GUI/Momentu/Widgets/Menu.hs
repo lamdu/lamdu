@@ -4,13 +4,15 @@ module GUI.Momentu.Widgets.Menu
     ( Style(..), Keys(..), Config(..), HasConfig(..)
     , Submenu(..), _SubmenuEmpty, _SubmenuItems
     , OptionList(..), olOptions, olIsTruncated
-    , RenderedOption(..), rWidget
+    , PickResult(..), pickDest, pickDestIsEntryPoint
+    , RenderedOption(..), rWidget, rPick
     , Option(..), oId, oRender, oSubmenuWidgets
     , optionWidgets
     , Placement(..)
-    , make, makeHovered
+    , make, makeHovered, hoverOptions, makePickEventMap
     ) where
 
+import           Control.Applicative (liftA2)
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
 import           Data.Aeson.TH (deriveJSON)
@@ -19,6 +21,7 @@ import           GUI.Momentu.Align (WithTextPos, Aligned(..))
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Draw as Draw
 import qualified GUI.Momentu.Element as Element
+import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Glue ((/|/), (/-/))
 import qualified GUI.Momentu.Glue as Glue
@@ -57,8 +60,24 @@ data Config = Config
     } deriving (Eq, Show)
 deriveJSON defaultOptions ''Config
 
-newtype RenderedOption f = RenderedOption
+-- | Menu supports picking results and setting cursor directly to it
+-- (return), or picking and going to the next "entry point" (space).
+--
+-- When going to the next entry point, we want to go to an entry point
+-- inside the picked result if it exists, or to an "outer" entry point
+-- if it doesn't (and the "outer" entry point exists).
+--
+-- Thus, a PickedResult signifies whether the destination is an entry
+-- point.
+data PickResult = PickResult
+    { _pickDest :: Widget.Id
+    , _pickDestIsEntryPoint :: Bool
+    }
+Lens.makeLenses ''PickResult
+
+data RenderedOption f = RenderedOption
     { _rWidget :: WithTextPos (Widget (f State.Update))
+    , _rPick :: Widget.PreEvent (f PickResult)
     }
 Lens.makeLenses ''RenderedOption
 
@@ -111,10 +130,7 @@ Lens.makePrisms ''Submenu
 Lens.makeLenses ''Option
 
 optionWidgets ::
-    Functor m =>
-    Lens.Setter (Option m f) (Option m g)
-    (WithTextPos (Widget (f State.Update)))
-    (WithTextPos (Widget (g State.Update)))
+    Functor m => Lens.Setter' (Option m f) (WithTextPos (Widget (f State.Update)))
 optionWidgets f (Option i w s) =
     Option i <$> (Lens.mapped . rWidget) f w <*> (_SubmenuItems . Lens.mapped . Lens.mapped . optionWidgets) f s
 
@@ -167,9 +183,10 @@ layoutOption ::
     , State.HasCursor env, Hover.HasStyle env, HasConfig env, Applicative f
     ) =>
     Widget.R ->
+    Maybe Widget.Id ->
     (Widget.Id, WithTextPos (Widget (f State.Update)), Submenu m f) ->
     m (WithTextPos (Widget (f State.Update)))
-layoutOption maxOptionWidth (optionId, rendered, submenu) =
+layoutOption maxOptionWidth mNextEntry (optionId, rendered, submenu) =
     case submenu of
     SubmenuEmpty -> rendered & Element.width .~ maxOptionWidth & pure
     SubmenuItems action ->
@@ -182,7 +199,7 @@ layoutOption maxOptionWidth (optionId, rendered, submenu) =
             if isSelected
                 then do
                     hover <- Hover.hover
-                    submenus <- action <&> (`OptionList` False) >>= make 0
+                    (_, submenus) <- action <&> (`OptionList` False) >>= make 0 mNextEntry
                     let anchored = base & Align.tValue %~ Hover.anchor
                     anchored
                         & Align.tValue %~
@@ -198,45 +215,92 @@ instance Monoid (OptionList a) where
     OptionList o0 t0 `mappend` OptionList o1 t1 =
         OptionList (o0 <> o1) (t0 || t1)
 
+makePickEventMap ::
+    (MonadReader env m, HasConfig env, Applicative f) =>
+    Maybe Widget.Id ->
+    m (Widget.PreEvent (f PickResult) -> EventMap (f State.Update))
+makePickEventMap mNextEntry =
+    Lens.view config <&> configKeys
+    <&>
+    \keys pick ->
+    let pickAndJumpEventMap =
+            case mNextEntry of
+            Nothing -> mempty
+            Just nextEntry ->
+                E.keysEventMapMovesCursor (keysPickOptionAndGotoNext keys)
+                (E.Doc [pick ^. Widget.pDesc <> ", Next entry"]) (nextEntry <$ pick ^. Widget.pAction)
+    in
+    pickAndJumpEventMap
+    <>
+    E.keysEventMapMovesCursor (mappend keysPickOption keysPickOptionAndGotoNext keys)
+    (E.Doc [pick ^. Widget.pDesc]) (pick ^. Widget.pAction <&> (^. pickDest))
+
+addPickers ::
+    (MonadReader env m, HasConfig env, Applicative f) =>
+    Maybe Widget.Id ->
+    m ( Widget.PreEvent (f PickResult) ->
+        Widget (f State.Update) ->
+        Widget (f State.Update)
+      )
+addPickers mNextEntry =
+    makePickEventMap mNextEntry
+    <&>
+    \pickEventMap pick w ->
+    let preEvent =
+            pick
+            <&> fmap (^. pickDest)
+            <&> fmap State.updateCursor
+    in
+    w
+    & Widget.addPreEventWith (liftA2 mappend) preEvent
+    & Widget.eventMapMaker . Lens.mapped %~ mappend (pickEventMap pick)
+
 make ::
     ( MonadReader env m, TextView.HasStyle env, Hover.HasStyle env
     , Element.HasAnimIdPrefix env, HasConfig env, State.HasCursor env
     , Applicative f
     ) =>
-    Widget.R -> OptionList (Option m f) ->
-    m (Hover.Ordered (Widget (f State.Update)))
-make minWidth options =
+    Widget.R -> Maybe (Widget.Id) -> OptionList (Option m f) ->
+    m (Maybe (Widget.PreEvent (f PickResult)), Hover.Ordered (Widget (f State.Update)))
+make minWidth mNextEntry options =
     case options ^. olOptions of
-    [] -> makeNoResults <&> (^. Align.tValue) <&> Widget.fromView <&> pure
+    [] -> makeNoResults <&> (^. Align.tValue) <&> Widget.fromView <&> pure <&> (,) Nothing
     opts@(_:_) ->
         do
             submenuSymbolWidth <-
                 TextView.drawText ?? submenuSymbolText
                 <&> (^. TextView.renderedTextSize . TextView.bounding . _1)
-            let optionMinWidth (_, w, submenu) =
+            let optionMinWidth (_, (_, w, submenu)) =
                     w ^. Element.width +
                     case submenu of
                     SubmenuEmpty -> 0
                     SubmenuItems {} -> submenuSymbolWidth
+            addPick <- addPickers mNextEntry
+            let render (Option optionId optRender submenu) =
+                    optRender <&>
+                    \r -> (r ^. rPick, (optionId, r ^. rWidget <&> addPick (r ^. rPick), submenu))
             rendered <- traverse render opts
+            let mPickFirstResult = rendered ^? Lens.ix 0 . _1
             let maxOptionWidth = rendered <&> optionMinWidth & maximum & max minWidth
             laidOutOptions <-
-                traverse (layoutOption maxOptionWidth) rendered
+                rendered
+                <&> snd
+                & traverse (layoutOption maxOptionWidth mNextEntry)
                 <&> map (^. Align.tValue)
             hiddenOptionsWidget <-
                 if options ^. olIsTruncated
                 then TextView.makeLabel "..." <&> (^. Align.tValue) <&> Widget.fromView
                 else pure Element.empty
-            blockEvents <*>
-                ( Hover.Ordered
-                    { _forward = id
-                    , _backward = reverse
-                    } ?? (laidOutOptions ++ [hiddenOptionsWidget])
-                    <&> Glue.vbox
-                ) & pure
-    where
-        render (Option optionId mkWidget submenu) =
-            mkWidget <&> (^. rWidget) <&> ((,,) optionId ?? submenu)
+            pure
+                ( mPickFirstResult
+                , blockEvents <*>
+                    ( Hover.Ordered
+                        { _forward = id
+                        , _backward = reverse
+                        } ?? (laidOutOptions ++ [hiddenOptionsWidget])
+                        <&> Glue.vbox
+                    )
+                )
 
 -- | You may want to limit the placement of hovering pop-up menus,
 -- so that they don't cover other ui elements.
@@ -301,12 +365,14 @@ makeHovered ::
     , TextView.HasStyle env, Element.HasAnimIdPrefix env
     , Hover.HasStyle env, MonadReader env m
     ) =>
-    View -> OptionList (Option m f) ->
+    View ->
+    Maybe Widget.Id ->
+    OptionList (Option m f) ->
     m (Placement -> Widget (f State.Update) -> Widget (f State.Update))
-makeHovered annotation options =
+makeHovered annotation mNextEntry options =
     do
         mkHoverOptions <- hoverOptions
-        menu <- make (annotation ^. Element.width) options
+        (_, menu) <- make (annotation ^. Element.width) mNextEntry options
         pure $
             \placement term ->
             let a = Hover.anchor term

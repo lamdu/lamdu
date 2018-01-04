@@ -18,6 +18,7 @@ import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.State as GuiState
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Grid as Grid
+import qualified GUI.Momentu.Widgets.Menu as Menu
 import           Lamdu.Config (HasConfig(..))
 import qualified Lamdu.Config as Config
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.State as HoleState
@@ -101,49 +102,29 @@ make ::
     Sugar.Payload f ExprGui.Payload ->
     Widget.Id ->
     Sugar.HoleResult (T m) (Sugar.Expression (Name (T m)) (T m) ()) ->
-    ExprGuiM m
-    ( EventMap (T m GuiState.Update)
-    , ExprGuiM m (WithTextPos (Widget (T m GuiState.Update)))
-    )
+    ExprGuiM m (Menu.RenderedOption (T m))
 make pl resultId holeResult =
     do
-        c <- Lens.view Config.config
-        let holeConfig = Config.hole c
-        let pickAndMoveToNextHole =
-                case pl ^. Sugar.plData . ExprGui.plNearestHoles . NearestHoles.next of
-                Just nextHoleEntityId | Lens.has Lens._Nothing mFirstHoleInside ->
-                    E.keysEventMapMovesCursor
-                    (Config.holePickAndMoveToNextHoleKeys holeConfig)
-                    (E.Doc ["Edit", "Result", "Pick, Move to next hole"])
-                    (WidgetIds.fromEntityId nextHoleEntityId <$ pick)
-                _ -> mempty
-        let simplePickEventMap =
-                E.keysEventMapMovesCursor
-                (mappend Config.holePickResultKeys Config.holePickAndMoveToNextHoleKeys holeConfig)
-                (E.Doc ["Edit", "Result", "Pick"]) pick
-        let pickEventMap = pickAndMoveToNextHole <> simplePickEventMap
         searchStringRemainder <- getSearchStringRemainder widgetIds holeResultConverted
-        let preEvent =
+        remUnwanted <- removeUnwanted
+        widget <-
+            postProcessSugar (pl ^. Sugar.plData . ExprGui.plMinOpPrec) holeResultConverted
+            & ExprGuiM.makeSubexpression
+            <&> Widget.enterResultCursor .~ resultId
+            <&> Widget.widget . Widget.eventMapMaker . Lens.mapped %~ remUnwanted
+            & GuiState.assignCursor resultId (pickResult ^. Menu.pickDest)
+            <&> applyResultLayout
+            <&> setFocalAreaToFullSize
+        pure Menu.RenderedOption
+            { Menu._rPick =
                 Widget.PreEvent
                 { Widget._pDesc = "Pick"
-                , Widget._pAction = pick <&> GuiState.updateCursor
+                , Widget._pAction = pickResult <$ holeResult ^. Sugar.holeResultPick
                 , Widget._pTextRemainder = searchStringRemainder
                 }
-        remUnwanted <- removeUnwanted
-        pure
-            ( pickEventMap
-            , postProcessSugar (pl ^. Sugar.plData . ExprGui.plMinOpPrec) holeResultConverted
-                & ExprGuiM.makeSubexpression
-                <&> Widget.enterResultCursor .~ resultId
-                <&> Widget.widget . Widget.eventMapMaker . Lens.mapped %~ remUnwanted
-                & GuiState.assignCursor resultId idWithinResultWidget
-                <&> applyResultLayout
-                <&> setFocalAreaToFullSize
-                <&> Align.tValue %~ Widget.addPreEvent preEvent
-                <&> Align.tValue . Widget.eventMapMaker . Lens.mapped %~ mappend pickEventMap
-            )
+            , Menu._rWidget = widget
+            }
     where
-        pick = idWithinResultWidget <$ holeResult ^. Sugar.holeResultPick
         widgetIds = pl ^. Sugar.plEntityId & HoleWidgetIds.make
         holeResultId =
             holeResultConverted ^. Sugar.rPayload . Sugar.plEntityId
@@ -152,5 +133,16 @@ make pl resultId holeResult =
             holeResult ^?
             Sugar.holeResultConverted . SugarLens.holeAndWrapperPayloads . Sugar.plEntityId
             <&> WidgetIds.fromEntityId
-        idWithinResultWidget = fromMaybe holeResultId mFirstHoleInside
+        pickResult =
+            case mFirstHoleInside of
+            Nothing ->
+                Menu.PickResult
+                { Menu._pickDest = holeResultId
+                , Menu._pickDestIsEntryPoint = False
+                }
+            Just innerEntryPoint ->
+                Menu.PickResult
+                { Menu._pickDest = innerEntryPoint
+                , Menu._pickDestIsEntryPoint = True
+                }
         holeResultConverted = holeResult ^. Sugar.holeResultConverted

@@ -33,7 +33,7 @@ import qualified Lamdu.CharClassification as Chars
 import           Lamdu.Config (HasConfig)
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Config.Theme as Theme
-import           Lamdu.GUI.ExpressionEdit.HoleEdit.Open (makeOpenSearchAreaGui, ResultOption(..))
+import           Lamdu.GUI.ExpressionEdit.HoleEdit.Open (makeOpenSearchAreaGui)
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.ResultGroups (ResultGroup(..), Result(..))
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.ResultGroups as ResultGroups
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.ResultWidget as ResultWidget
@@ -89,10 +89,7 @@ searchTermEditEventMap widgetIds allowedTerms =
 makeRenderedResult ::
     Monad m =>
     Sugar.Payload f ExprGui.Payload -> Result (T m) ->
-    ExprGuiM m
-    ( EventMap (T m GuiState.Update)
-    , ExprGuiM m (Menu.RenderedOption (T m))
-    )
+    ExprGuiM m (Menu.RenderedOption (T m))
 makeRenderedResult pl result =
     do
         -- Warning: rHoleResult should be ran at most once!
@@ -102,28 +99,24 @@ makeRenderedResult pl result =
         stdSpacing <- Spacer.getSpaceSize
         let padding = Theme.holeResultPadding theme <&> realToFrac & (* stdSpacing)
         ResultWidget.make pl (rId result) res
-            <&> _2 . Lens.mapped %~ Menu.RenderedOption . Element.pad padding
+            <&> Menu.rWidget %~ Element.pad padding
 
 makeResultOption ::
     Monad m =>
     Sugar.Payload f ExprGui.Payload ->
     ResultGroup (T m) ->
-    ExprGuiM m (ResultOption m)
+    Menu.Option (ExprGuiM m) (T m)
 makeResultOption pl results =
-    makeRenderedResult pl (results ^. ResultGroups.rgMain)
-    <&>
-    \(pickMain, renderMainResultWidget) ->
-    ResultOption
-    { _roOption =
-        Menu.Option
-        { Menu._oId = results ^. ResultGroups.rgPrefixId
-        , Menu._oRender = renderMainResultWidget
-        , Menu._oSubmenuWidgets =
-            case results ^. ResultGroups.rgExtra of
-            [] -> Menu.SubmenuEmpty
-            extras -> Menu.SubmenuItems (traverse (makeRenderedResult pl) extras >>= traverse snd <&> map makeSubMenu)
-        }
-    , _roPickMainEventMap = pickMain
+    Menu.Option
+    { Menu._oId = results ^. ResultGroups.rgPrefixId
+    , Menu._oRender = makeRenderedResult pl (results ^. ResultGroups.rgMain)
+    , Menu._oSubmenuWidgets =
+        case results ^. ResultGroups.rgExtra of
+        [] -> Menu.SubmenuEmpty
+        extras ->
+            traverse (makeRenderedResult pl) extras
+            <&> map makeSubMenu
+            & Menu.SubmenuItems
     }
     where
         makeSubMenu extraResultWidget =
@@ -184,7 +177,7 @@ make options mOptionLiteral pl allowedTerms =
                     -- here
                     (fdWrap <&> (Lens.mapped %~))
                         <*> ( ResultGroups.makeAll options mOptionLiteral widgetIds
-                                >>= traverse (makeResultOption pl)
+                                <&> fmap (makeResultOption pl)
                                 >>= makeOpenSearchAreaGui searchTermEventMap
                                     allowedTerms typeView pl)
                         <&> Lens.mapped %~ inPlaceOfClosed . (^. Align.tValue)
