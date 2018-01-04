@@ -93,7 +93,7 @@ makeShownResult ::
     Sugar.Payload f ExprGui.Payload -> Result (T m) ->
     ExprGuiM m
     ( EventMap (T m GuiState.Update)
-    , WithTextPos (Widget (T m GuiState.Update))
+    , ExprGuiM m (WithTextPos (Widget (T m GuiState.Update)))
     )
 makeShownResult pl result =
     do
@@ -103,7 +103,7 @@ makeShownResult pl result =
         theme <- Theme.hole <$> Lens.view Theme.theme
         stdSpacing <- Spacer.getSpaceSize
         let padding = Theme.holeResultPadding theme <&> realToFrac & (* stdSpacing)
-        ResultWidget.make pl (rId result) res <&> _2 %~ Element.pad padding
+        ResultWidget.make pl (rId result) res <&> _2 . Lens.mapped %~ Element.pad padding
 
 makeResultOption ::
     Monad m =>
@@ -113,16 +113,16 @@ makeResultOption ::
 makeResultOption pl results =
     makeShownResult pl (results ^. ResultGroups.rgMain)
     <&>
-    \(pickMain, mainResultWidget) ->
+    \(pickMain, mkMainResultWidget) ->
     ResultOption
     { _roOption =
         Menu.Option
         { Menu._oId = results ^. ResultGroups.rgPrefixId
-        , Menu._oWidget = pure mainResultWidget
+        , Menu._oWidget = mkMainResultWidget
         , Menu._oSubmenuWidgets =
             case results ^. ResultGroups.rgExtra of
             [] -> Menu.SubmenuEmpty
-            extras -> Menu.SubmenuItems (traverse (makeShownResult pl) extras <&> map snd)
+            extras -> Menu.SubmenuItems (traverse (makeShownResult pl) extras >>= traverse snd)
         }
     , _roPickMainEventMap = pickMain
     }

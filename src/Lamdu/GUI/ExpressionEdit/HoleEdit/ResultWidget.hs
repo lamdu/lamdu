@@ -103,7 +103,7 @@ make ::
     Sugar.HoleResult (T m) (Sugar.Expression (Name (T m)) (T m) ()) ->
     ExprGuiM m
     ( EventMap (T m GuiState.Update)
-    , WithTextPos (Widget (T m GuiState.Update))
+    , ExprGuiM m (WithTextPos (Widget (T m GuiState.Update)))
     )
 make pl resultId holeResult =
     do
@@ -130,16 +130,18 @@ make pl resultId holeResult =
                 , Widget._pTextRemainder = searchStringRemainder
                 }
         remUnwanted <- removeUnwanted
-        postProcessSugar (pl ^. Sugar.plData . ExprGui.plMinOpPrec) holeResultConverted
-            & ExprGuiM.makeSubexpression
-            <&> Widget.enterResultCursor .~ resultId
-            <&> Widget.widget . Widget.eventMapMaker . Lens.mapped %~ remUnwanted
-            & GuiState.assignCursor resultId idWithinResultWidget
-            <&> applyResultLayout
-            <&> setFocalAreaToFullSize
-            <&> Align.tValue %~ Widget.addPreEvent preEvent
-            <&> Align.tValue . Widget.eventMapMaker . Lens.mapped %~ mappend pickEventMap
-            <&> (,) pickEventMap
+        pure
+            ( pickEventMap
+            , postProcessSugar (pl ^. Sugar.plData . ExprGui.plMinOpPrec) holeResultConverted
+                & ExprGuiM.makeSubexpression
+                <&> Widget.enterResultCursor .~ resultId
+                <&> Widget.widget . Widget.eventMapMaker . Lens.mapped %~ remUnwanted
+                & GuiState.assignCursor resultId idWithinResultWidget
+                <&> applyResultLayout
+                <&> setFocalAreaToFullSize
+                <&> Align.tValue %~ Widget.addPreEvent preEvent
+                <&> Align.tValue . Widget.eventMapMaker . Lens.mapped %~ mappend pickEventMap
+            )
     where
         pick = idWithinResultWidget <$ holeResult ^. Sugar.holeResultPick
         widgetIds = pl ^. Sugar.plEntityId & HoleWidgetIds.make
