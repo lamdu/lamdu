@@ -1,8 +1,8 @@
-{-# LANGUAGE NoImplicitPrelude, OverloadedStrings #-}
+{-# LANGUAGE NoImplicitPrelude, OverloadedStrings, TemplateHaskell #-}
 -- | The search area (search term + results) of an open/active hole.
 
 module Lamdu.GUI.ExpressionEdit.HoleEdit.Open
-    ( makeOpenSearchAreaGui
+    ( makeOpenSearchAreaGui, ResultOption(..), roOption, roPickMainEventMap
     ) where
 
 import qualified Control.Lens as Lens
@@ -27,9 +27,6 @@ import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import           Lamdu.Config (HasConfig)
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Config.Theme as Theme
-import           Lamdu.GUI.ExpressionEdit.HoleEdit.ResultGroups (ResultGroup(..), Result(..))
-import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.ResultGroups as ResultGroups
-import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.ResultWidget as ResultWidget
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.SearchTerm as SearchTerm
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.State as HoleState
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds (WidgetIds(..))
@@ -45,48 +42,10 @@ import           Lamdu.Prelude
 type T = Transaction
 
 data ResultOption m = ResultOption
-    { roOption :: !(Menu.Option (ExprGuiM m) (T m GuiState.Update))
-    , roPickMainEventMap :: !(EventMap (T m GuiState.Update))
+    { _roOption :: !(Menu.Option (ExprGuiM m) (T m GuiState.Update))
+    , _roPickMainEventMap :: !(EventMap (T m GuiState.Update))
     }
-
-makeShownResult ::
-    Monad m =>
-    Sugar.Payload f ExprGui.Payload -> Result (T m) ->
-    ExprGuiM m
-    ( EventMap (T m GuiState.Update)
-    , WithTextPos (Widget (T m GuiState.Update))
-    )
-makeShownResult pl result =
-    do
-        -- Warning: rHoleResult should be ran at most once!
-        -- Running it more than once caused a horrible bug (bugfix: 848b6c4407)
-        res <- rHoleResult result & transaction
-        theme <- Theme.hole <$> Lens.view Theme.theme
-        stdSpacing <- Spacer.getSpaceSize
-        let padding = Theme.holeResultPadding theme <&> realToFrac & (* stdSpacing)
-        ResultWidget.make pl (rId result) res <&> _2 %~ Element.pad padding
-
-makeResultOption ::
-    Monad m =>
-    Sugar.Payload f ExprGui.Payload ->
-    ResultGroup (T m) ->
-    ExprGuiM m (ResultOption m)
-makeResultOption pl results =
-    makeShownResult pl (results ^. ResultGroups.rgMain)
-    <&>
-    \(pickMain, mainResultWidget) ->
-    ResultOption
-    { roOption =
-        Menu.Option
-        { Menu._oId = results ^. ResultGroups.rgPrefixId
-        , Menu._oWidget = pure mainResultWidget
-        , Menu._oSubmenuWidgets =
-            case results ^. ResultGroups.rgExtra of
-            [] -> Menu.SubmenuEmpty
-            extras -> Menu.SubmenuItems (traverse (makeShownResult pl) extras <&> map snd)
-        }
-    , roPickMainEventMap = pickMain
-    }
+Lens.makeLenses ''ResultOption
 
 assignCursor :: Monad m => WidgetIds -> [Widget.Id] -> ExprGuiM m a -> ExprGuiM m a
 assignCursor widgetIds resultIds action =
@@ -144,18 +103,17 @@ makeOpenSearchAreaGui ::
     EventMap (T m GuiState.Update) ->
     (Text -> Bool) ->
     Sugar.Payload (T m) ExprGui.Payload ->
-    Menu.OptionList (ResultGroup (T m)) ->
+    Menu.OptionList (ResultOption m) ->
     ExprGuiM m (Menu.Placement -> WithTextPos (Widget (T m GuiState.Update)))
-makeOpenSearchAreaGui searchTermEventMap allowedTerms pl optList =
+makeOpenSearchAreaGui searchTermEventMap allowedTerms pl opts =
     do
-        opts <- traverse (makeResultOption pl) optList
         vspace <- Annotation.annotationSpacer
         pickFirstResult <-
             case opts ^. Menu.olOptions of
             [] -> emptyPickEventMap
-            (x:_) -> roPickMainEventMap x & return
+            (x:_) -> x ^. roPickMainEventMap & pure
         let options =
-                opts <&> roOption
+                opts <&> (^. roOption)
                 <&> Menu.optionWidgets . Lens.mapped .
                     Widget.eventMapMaker . Lens.mapped %~ (searchTermEventMap <>)
         typeView <- makeInferredTypeAnnotation pl holeAnimId
@@ -165,7 +123,7 @@ makeOpenSearchAreaGui searchTermEventMap allowedTerms pl optList =
             <&> \searchTermWidget placement ->
                 searchTermWidget <&> hoverMenu placement
     & Reader.local (Element.animIdPrefix .~ WidgetId.toAnimId (hidOpen widgetIds))
-    & assignCursor widgetIds (optList ^. Menu.olOptions <&> rId . (^. ResultGroups.rgMain))
+    & assignCursor widgetIds (opts ^.. traverse . roOption . Menu.oId)
     where
         widgetIds = pl ^. Sugar.plEntityId & HoleWidgetIds.make
         holeAnimId = hidHole widgetIds & Widget.toAnimId

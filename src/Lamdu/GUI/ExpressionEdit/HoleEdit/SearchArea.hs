@@ -8,35 +8,43 @@ module Lamdu.GUI.ExpressionEdit.HoleEdit.SearchArea
     ( make, allowedSearchTermCommon
     ) where
 
-import           Data.Store.Transaction (Transaction)
-import           GUI.Momentu.EventMap (EventMap)
-import           GUI.Momentu.ModKey (ModKey(..))
-import           Lamdu.Config (HasConfig)
-import           Lamdu.GUI.ExpressionEdit.HoleEdit.Open (makeOpenSearchAreaGui)
-import           Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds (WidgetIds(..))
-import           Lamdu.GUI.ExpressionGui (ExpressionGui, ExpressionN)
-import           Lamdu.GUI.ExpressionGui.Annotation (maybeAddAnnotationPl)
-import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Control.Lens as Lens
+import           Control.Monad.Transaction (transaction)
 import qualified Data.Char as Char
 import qualified Data.Monoid as Monoid
+import           Data.Store.Transaction (Transaction)
 import qualified Data.Text as Text
+import           GUI.Momentu.Align (WithTextPos)
 import qualified GUI.Momentu.Align as Align
+import qualified GUI.Momentu.Element as Element
+import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.Hover as Hover
 import qualified GUI.Momentu.MetaKey as MetaKey
+import           GUI.Momentu.ModKey (ModKey(..))
 import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.State as GuiState
+import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.FocusDelegator as FocusDelegator
 import qualified GUI.Momentu.Widgets.Menu as Menu
+import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified Lamdu.CharClassification as Chars
+import           Lamdu.Config (HasConfig)
 import qualified Lamdu.Config as Config
+import qualified Lamdu.Config.Theme as Theme
+import           Lamdu.GUI.ExpressionEdit.HoleEdit.Open (makeOpenSearchAreaGui, ResultOption(..))
+import           Lamdu.GUI.ExpressionEdit.HoleEdit.ResultGroups (ResultGroup(..), Result(..))
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.ResultGroups as ResultGroups
+import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.ResultWidget as ResultWidget
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.SearchTerm as SearchTerm
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.State as HoleState
+import           Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds (WidgetIds(..))
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds as HoleWidgetIds
+import           Lamdu.GUI.ExpressionGui (ExpressionGui, ExpressionN)
 import qualified Lamdu.GUI.ExpressionGui as ExprGui
+import           Lamdu.GUI.ExpressionGui.Annotation (maybeAddAnnotationPl)
+import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
@@ -76,6 +84,45 @@ searchTermEditEventMap widgetIds allowedTerms =
     where
         notOp = Text.any (`notElem` Chars.operator)
 
+makeShownResult ::
+    Monad m =>
+    Sugar.Payload f ExprGui.Payload -> Result (T m) ->
+    ExprGuiM m
+    ( EventMap (T m GuiState.Update)
+    , WithTextPos (Widget (T m GuiState.Update))
+    )
+makeShownResult pl result =
+    do
+        -- Warning: rHoleResult should be ran at most once!
+        -- Running it more than once caused a horrible bug (bugfix: 848b6c4407)
+        res <- rHoleResult result & transaction
+        theme <- Theme.hole <$> Lens.view Theme.theme
+        stdSpacing <- Spacer.getSpaceSize
+        let padding = Theme.holeResultPadding theme <&> realToFrac & (* stdSpacing)
+        ResultWidget.make pl (rId result) res <&> _2 %~ Element.pad padding
+
+makeResultOption ::
+    Monad m =>
+    Sugar.Payload f ExprGui.Payload ->
+    ResultGroup (T m) ->
+    ExprGuiM m (ResultOption m)
+makeResultOption pl results =
+    makeShownResult pl (results ^. ResultGroups.rgMain)
+    <&>
+    \(pickMain, mainResultWidget) ->
+    ResultOption
+    { _roOption =
+        Menu.Option
+        { Menu._oId = results ^. ResultGroups.rgPrefixId
+        , Menu._oWidget = pure mainResultWidget
+        , Menu._oSubmenuWidgets =
+            case results ^. ResultGroups.rgExtra of
+            [] -> Menu.SubmenuEmpty
+            extras -> Menu.SubmenuItems (traverse (makeShownResult pl) extras <&> map snd)
+        }
+    , _roPickMainEventMap = pickMain
+    }
+
 -- Has a typeView under the search term
 make ::
     Monad m =>
@@ -111,6 +158,7 @@ make options mOptionLiteral pl allowedTerms =
                 -- here
                 (fdWrap <&> (Lens.mapped %~))
                 <*> ( ResultGroups.makeAll options mOptionLiteral widgetIds
+                        >>= traverse (makeResultOption pl)
                         >>= makeOpenSearchAreaGui searchTermEventMap allowedTerms pl)
                 <&> Lens.mapped %~ inPlaceOfClosed . (^. Align.tValue)
             else
