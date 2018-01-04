@@ -43,9 +43,8 @@ instance HasStyle Style where style = id
 
 data Submenu f a
     = SubmenuEmpty
-    | SubmenuItems (f [WithTextPos (Widget a)])
+    | SubmenuItems (f [Option f a])
     deriving (Functor)
-Lens.makePrisms ''Submenu
 
 -- | Option record and cursor behavior
 --
@@ -86,12 +85,14 @@ data Option f a = Option
       _oWidget :: f (WithTextPos (Widget a))
     , -- An optionally empty submenu
       _oSubmenuWidgets :: !(Submenu f a)
-    }
+    } deriving Functor
+
+Lens.makePrisms ''Submenu
 Lens.makeLenses ''Option
 
 optionWidgets :: Functor f => Lens.Setter (Option f a) (Option f b) (WithTextPos (Widget a)) (WithTextPos (Widget b))
 optionWidgets f (Option i w s) =
-    Option i <$> Lens.mapped f w <*> (_SubmenuItems . Lens.mapped . Lens.mapped) f s
+    Option i <$> Lens.mapped f w <*> (_SubmenuItems . Lens.mapped . Lens.mapped . optionWidgets) f s
 
 makeNoResults ::
     (MonadReader env m, TextView.HasStyle env, Element.HasAnimIdPrefix env) =>
@@ -130,9 +131,16 @@ makeSubmenuSymbol isSelected =
             | isSelected = submenuSymbolColorSelected
             | otherwise = submenuSymbolColorUnselected
 
+data OptionList a = OptionList
+    { _olOptions :: [a]
+    , _olIsTruncated :: Bool
+        -- ^ more hidden options exist (relevant for search menus)
+    } deriving (Functor, Foldable, Traversable)
+Lens.makeLenses ''OptionList
+
 layoutOption ::
     ( MonadReader env m, Element.HasAnimIdPrefix env, TextView.HasStyle env
-    , State.HasCursor env, Hover.HasStyle env, HasStyle env, Functor f
+    , State.HasCursor env, Hover.HasStyle env, HasStyle env, Applicative f
     ) =>
     Widget.R -> (Widget.Id, WithTextPos (Widget (f State.Update)), Submenu m (f State.Update)) ->
     m (WithTextPos (Widget (f State.Update)))
@@ -149,26 +157,16 @@ layoutOption maxOptionWidth (optionId, rendered, submenu) =
             if isSelected
                 then do
                     hover <- Hover.hover
-                    submenus <- action
+                    submenus <- action <&> (`OptionList` False) >>= make 0
                     let anchored = base & Align.tValue %~ Hover.anchor
                     anchored
                         & Align.tValue %~
                         Hover.hoverInPlaceOf
                         (Hover.hoverBesideOptionsAxis Glue.Horizontal
-                         Hover.Ordered
-                         { _forward = Glue.vbox submenus <&> hover
-                         , _backward = Glue.vbox submenus <&> hover
-                         } anchored <&> (^. Align.tValue))
+                         (submenus <&> hover <&> Align.WithTextPos 0) anchored <&> (^. Align.tValue))
                         & pure
                 else pure base
     & Reader.local (Element.animIdPrefix .~ Widget.toAnimId optionId)
-
-data OptionList a = OptionList
-    { _olOptions :: [a]
-    , _olIsTruncated :: Bool
-        -- ^ more hidden options exist (relevant for search menus)
-    } deriving (Functor, Foldable, Traversable)
-Lens.makeLenses ''OptionList
 
 instance Monoid (OptionList a) where
     mempty = OptionList [] False

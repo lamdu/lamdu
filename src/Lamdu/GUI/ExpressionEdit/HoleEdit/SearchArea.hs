@@ -122,10 +122,17 @@ makeResultOption pl results =
         , Menu._oSubmenuWidgets =
             case results ^. ResultGroups.rgExtra of
             [] -> Menu.SubmenuEmpty
-            extras -> Menu.SubmenuItems (traverse (makeShownResult pl) extras >>= traverse snd)
+            extras -> Menu.SubmenuItems (traverse (makeShownResult pl) extras >>= traverse snd <&> map makeSubMenu)
         }
     , _roPickMainEventMap = pickMain
     }
+    where
+        makeSubMenu extraResultWidget =
+            Menu.Option
+            { Menu._oId = results ^. ResultGroups.rgPrefixId -- UGLY HACK
+            , Menu._oWidget = pure extraResultWidget
+            , Menu._oSubmenuWidgets = Menu.SubmenuEmpty
+            }
 
 makeInferredTypeAnnotation ::
     ( MonadReader env m, Theme.HasTheme env, Element.HasAnimIdPrefix env
