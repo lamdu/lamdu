@@ -74,9 +74,9 @@ emptyPickEventMap ::
     (MonadReader env m, HasConfig env, Applicative f) =>
     m (EventMap (f GuiState.Update))
 emptyPickEventMap =
-    Lens.view Config.config <&> Config.hole <&> keys <&> mkEventMap
+    Lens.view Config.config <&> Config.menu <&> keys <&> mkEventMap
     where
-        keys c = Config.holePickResultKeys c ++ Config.holePickAndMoveToNextHoleKeys c
+        keys = Menu.keysPickOption <> Menu.keysPickOptionAndGotoNext
         mkEventMap k =
             E.keysEventMap k (E.Doc ["Edit", "Result", "Pick (N/A)"]) (pure ())
 

@@ -68,8 +68,7 @@ makeTagNameEdit ::
     f (WithTextPos (Widget (T m GuiState.Update)))
 makeTagNameEdit nearestHoles tag =
     do
-        config <- Lens.view Config.config <&> Config.hole
-        let keys = Config.holePickAndMoveToNextHoleKeys config
+        keys <- Lens.view Config.config <&> Config.menu <&> Menu.keysPickOptionAndGotoNext
         let jumpNextEventMap =
                 nearestHoles ^. NearestHoles.next
                 & maybe mempty
@@ -102,10 +101,10 @@ makePickEventMap ::
     NearestHoles -> E.Doc -> f Widget.Id ->
     m (EventMap (f GuiState.Update))
 makePickEventMap nearestHoles doc action =
-    Lens.view Config.config <&> Config.hole <&>
+    Lens.view Config.config <&> Config.menu <&>
     \config ->
-    let pickKeys = Config.holePickResultKeys config
-        jumpNextKeys = Config.holePickAndMoveToNextHoleKeys config
+    let pickKeys = Menu.keysPickOption config
+        jumpNextKeys = Menu.keysPickOptionAndGotoNext config
     in
     case nearestHoles ^. NearestHoles.next of
     Nothing -> E.keysEventMapMovesCursor (pickKeys <> jumpNextKeys) doc action

@@ -40,11 +40,9 @@ data Pane = Pane
 deriveJSON defaultOptions ''Pane
 
 data Hole = Hole
-    { holePickAndMoveToNextHoleKeys :: [MetaKey]
-    , holeJumpToNextKeys :: [MetaKey]
+    { holeJumpToNextKeys :: [MetaKey]
     , holeJumpToPrevKeys :: [MetaKey]
     , holeResultCount :: Int
-    , holePickResultKeys :: [MetaKey]
     , holeUnwrapKeys :: [MetaKey]
     , holeOpenKeys :: [MetaKey]
     , holeCloseKeys :: [MetaKey]
