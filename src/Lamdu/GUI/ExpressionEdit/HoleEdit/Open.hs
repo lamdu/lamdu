@@ -45,9 +45,9 @@ import           Lamdu.Prelude
 
 type T = Transaction
 
-data ResultGroup m = ResultGroup
-    { rgOption :: !(Menu.Option (ExprGuiM m) (T m GuiState.Update))
-    , rgPickMainEventMap :: !(EventMap (T m GuiState.Update))
+data ResultOption m = ResultOption
+    { roOption :: !(Menu.Option (ExprGuiM m) (T m GuiState.Update))
+    , roPickMainEventMap :: !(EventMap (T m GuiState.Update))
     }
 
 makeShownResult ::
@@ -67,17 +67,17 @@ makeShownResult pl result =
         let padding = Theme.holeResultPadding theme <&> realToFrac & (* stdSpacing)
         ResultWidget.make pl (rId result) res <&> _2 %~ Element.pad padding
 
-makeResultGroup ::
+makeResultOption ::
     Monad m =>
     Sugar.Payload f ExprGui.Payload ->
     ResultsList (T m) ->
-    ExprGuiM m (ResultGroup m)
-makeResultGroup pl results =
+    ExprGuiM m (ResultOption m)
+makeResultOption pl results =
     makeShownResult pl (results ^. HoleResults.rlMain)
     <&>
     \(pickMain, mainResultWidget) ->
-    ResultGroup
-    { rgOption =
+    ResultOption
+    { roOption =
         Menu.Option
         { Menu._oId = results ^. HoleResults.rlExtraResultsPrefixId
         , Menu._oWidget = mainResultWidget
@@ -86,7 +86,7 @@ makeResultGroup pl results =
             [] -> Menu.SubmenuEmpty
             extras -> Menu.SubmenuItems (traverse (makeShownResult pl) extras <&> map snd)
         }
-    , rgPickMainEventMap = pickMain
+    , roPickMainEventMap = pickMain
     }
 
 assignCursor :: Monad m => WidgetIds -> [Widget.Id] -> ExprGuiM m a -> ExprGuiM m a
@@ -143,7 +143,7 @@ emptyPickEventMap =
 makeUnderCursorAssignment ::
     Monad m =>
     EventMap (T m GuiState.Update) -> Menu.HasMoreOptions ->
-    (Text -> Bool) -> Sugar.Payload (T m) ExprGui.Payload -> [ResultGroup m] ->
+    (Text -> Bool) -> Sugar.Payload (T m) ExprGui.Payload -> [ResultOption m] ->
     ExprGuiM m (Menu.Placement -> WithTextPos (Widget (T m GuiState.Update)))
 makeUnderCursorAssignment searchTermEventMap hasHiddenResults allowedTerms pl groupsWidgets =
     do
@@ -151,9 +151,9 @@ makeUnderCursorAssignment searchTermEventMap hasHiddenResults allowedTerms pl gr
         pickFirstResult <-
             case groupsWidgets of
             [] -> emptyPickEventMap
-            (x:_) -> rgPickMainEventMap x & return
+            (x:_) -> roPickMainEventMap x & return
         let options =
-                groupsWidgets <&> rgOption
+                groupsWidgets <&> roOption
                 <&> Menu.optionWidgets . Lens.mapped .
                     Widget.eventMapMaker . Lens.mapped %~ (searchTermEventMap <>)
         typeView <- makeInferredTypeAnnotation pl holeAnimId
@@ -178,7 +178,7 @@ makeOpenSearchAreaGui ::
 makeOpenSearchAreaGui searchTermEventMap options mOptionLiteral allowedTerms pl =
     do
         (shownResultsLists, hasHiddenResults) <- HoleResults.makeAll options mOptionLiteral widgetIds
-        traverse (makeResultGroup pl) shownResultsLists
+        traverse (makeResultOption pl) shownResultsLists
             >>= makeUnderCursorAssignment searchTermEventMap hasHiddenResults allowedTerms pl
             & assignCursor widgetIds (shownResultsLists <&> rId . (^. HoleResults.rlMain))
     where
