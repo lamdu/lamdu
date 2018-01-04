@@ -7,7 +7,6 @@ module Lamdu.GUI.ExpressionEdit.HoleEdit.Open
 
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
-import           Control.Monad.Transaction (MonadTransaction(..))
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Text as Text
 import           GUI.Momentu.Align (WithTextPos)
@@ -22,10 +21,8 @@ import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widget.Id as WidgetId
 import qualified GUI.Momentu.Widgets.Menu as Menu
-import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import           Lamdu.Config (HasConfig)
 import qualified Lamdu.Config as Config
-import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.SearchTerm as SearchTerm
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.State as HoleState
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds (WidgetIds(..))
@@ -33,7 +30,6 @@ import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds as HoleWidgetIds
 import qualified Lamdu.GUI.ExpressionGui as ExprGui
 import qualified Lamdu.GUI.ExpressionGui.Annotation as Annotation
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
-import qualified Lamdu.GUI.TypeView as TypeView
 import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
@@ -77,20 +73,6 @@ assignCursor widgetIds resultIds action =
         searchTermId = hidOpenSearchTerm widgetIds
         sub x = GuiState.isSubCursor ?? x
 
-makeInferredTypeAnnotation ::
-    ( MonadReader env m, Theme.HasTheme env, Element.HasAnimIdPrefix env
-    , MonadTransaction n0 m, Spacer.HasStdSpacing env
-    ) =>
-    Sugar.Payload m0 a0 -> m View
-makeInferredTypeAnnotation pl =
-    Annotation.addAnnotationBackground
-    <*> TypeView.make (pl ^. Sugar.plAnnotation . Sugar.aInferredType)
-    <&> (^. Align.tValue)
-    & Reader.local (Element.animIdPrefix .~ animId)
-    where
-        animId =
-            pl ^. Sugar.plEntityId & HoleWidgetIds.make & hidHole & Widget.toAnimId
-
 emptyPickEventMap ::
     (MonadReader env m, HasConfig env, Applicative f) =>
     m (EventMap (f GuiState.Update))
@@ -104,11 +86,11 @@ emptyPickEventMap =
 makeOpenSearchAreaGui ::
     Monad m =>
     EventMap (T m GuiState.Update) ->
-    (Text -> Bool) ->
+    (Text -> Bool) -> View ->
     Sugar.Payload (T m) ExprGui.Payload ->
     Menu.OptionList (ResultOption m) ->
     ExprGuiM m (Menu.Placement -> WithTextPos (Widget (T m GuiState.Update)))
-makeOpenSearchAreaGui searchTermEventMap allowedTerms pl opts =
+makeOpenSearchAreaGui searchTermEventMap allowedTerms typeView pl opts =
     do
         vspace <- Annotation.annotationSpacer
         pickFirstResult <-
@@ -119,7 +101,6 @@ makeOpenSearchAreaGui searchTermEventMap allowedTerms pl opts =
                 opts <&> (^. roOption)
                 <&> Menu.optionWidgets . Lens.mapped .
                     Widget.eventMapMaker . Lens.mapped %~ (searchTermEventMap <>)
-        typeView <- makeInferredTypeAnnotation pl
         hoverMenu <- Menu.makeHovered (vspace /-/ typeView) options
         SearchTerm.make widgetIds allowedTerms
             <&> Align.tValue %~ Widget.weakerEvents pickFirstResult

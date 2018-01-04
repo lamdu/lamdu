@@ -9,7 +9,8 @@ module Lamdu.GUI.ExpressionEdit.HoleEdit.SearchArea
     ) where
 
 import qualified Control.Lens as Lens
-import           Control.Monad.Transaction (transaction)
+import qualified Control.Monad.Reader as Reader
+import           Control.Monad.Transaction (MonadTransaction(..))
 import qualified Data.Char as Char
 import qualified Data.Monoid as Monoid
 import           Data.Store.Transaction (Transaction)
@@ -24,6 +25,7 @@ import qualified GUI.Momentu.MetaKey as MetaKey
 import           GUI.Momentu.ModKey (ModKey(..))
 import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.State as GuiState
+import           GUI.Momentu.View (View)
 import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.FocusDelegator as FocusDelegator
@@ -44,7 +46,9 @@ import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds as HoleWidgetIds
 import           Lamdu.GUI.ExpressionGui (ExpressionGui, ExpressionN)
 import qualified Lamdu.GUI.ExpressionGui as ExprGui
 import           Lamdu.GUI.ExpressionGui.Annotation (maybeAddAnnotationPl)
+import qualified Lamdu.GUI.ExpressionGui.Annotation as Annotation
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
+import qualified Lamdu.GUI.TypeView as TypeView
 import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
@@ -123,6 +127,20 @@ makeResultOption pl results =
     , _roPickMainEventMap = pickMain
     }
 
+makeInferredTypeAnnotation ::
+    ( MonadReader env m, Theme.HasTheme env, Element.HasAnimIdPrefix env
+    , MonadTransaction n0 m, Spacer.HasStdSpacing env
+    ) =>
+    Sugar.Payload m0 a0 -> m View
+makeInferredTypeAnnotation pl =
+    Annotation.addAnnotationBackground
+    <*> TypeView.make (pl ^. Sugar.plAnnotation . Sugar.aInferredType)
+    <&> (^. Align.tValue)
+    & Reader.local (Element.animIdPrefix .~ animId)
+    where
+        animId =
+            pl ^. Sugar.plEntityId & HoleWidgetIds.make & hidHole & Widget.toAnimId
+
 -- Has a typeView under the search term
 make ::
     Monad m =>
@@ -151,16 +169,19 @@ make options mOptionLiteral pl allowedTerms =
                 Hover.hoverInPlaceOf [Hover.anchor open] . Hover.anchor
         if isActive && not isAHoleInHole
             then
-                -- ideally the fdWrap would be "inside" the
-                -- type-view addition and stdWrap, but it's not
-                -- important in the case the FD is selected, and
-                -- it is harder to implement, so just wrap it
-                -- here
-                (fdWrap <&> (Lens.mapped %~))
-                <*> ( ResultGroups.makeAll options mOptionLiteral widgetIds
-                        >>= traverse (makeResultOption pl)
-                        >>= makeOpenSearchAreaGui searchTermEventMap allowedTerms pl)
-                <&> Lens.mapped %~ inPlaceOfClosed . (^. Align.tValue)
+                do
+                    typeView <- makeInferredTypeAnnotation pl
+                    -- ideally the fdWrap would be "inside" the
+                    -- type-view addition and stdWrap, but it's not
+                    -- important in the case the FD is selected, and
+                    -- it is harder to implement, so just wrap it
+                    -- here
+                    (fdWrap <&> (Lens.mapped %~))
+                        <*> ( ResultGroups.makeAll options mOptionLiteral widgetIds
+                                >>= traverse (makeResultOption pl)
+                                >>= makeOpenSearchAreaGui searchTermEventMap
+                                    allowedTerms typeView pl)
+                        <&> Lens.mapped %~ inPlaceOfClosed . (^. Align.tValue)
             else
                 (if isActive then Widget.setFocused else id)
                 closedSearchTermGui
