@@ -15,7 +15,6 @@ import           Data.List (sortOn)
 import qualified Data.List.Class as ListClass
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Text as Text
-import qualified GUI.Momentu.State as GuiState
 import qualified GUI.Momentu.Widget.Id as WidgetId
 import qualified GUI.Momentu.Widgets.Menu as Menu
 import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
@@ -25,9 +24,7 @@ import qualified Lamdu.Config as Config
 import qualified Lamdu.Expr.Lens as ExprLens
 import           Lamdu.Formatting (Format(..))
 import           Lamdu.Name (Name)
-import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.State as HoleState
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.ValTerms as ValTerms
-import           Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds (WidgetIds(..))
 import           Lamdu.GUI.ExpressionGui (ExpressionN)
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.Sugar.Types as Sugar
@@ -95,17 +92,17 @@ mResultGroupOf prefixId (x:xs) = Just
 
 makeResultGroup ::
     Monad m =>
-    WidgetId.Id ->Text -> Group m ->
+    SearchMenu.ResultsContext -> Group m ->
     m (Maybe (ResultGroup m))
-makeResultGroup resultsPrefix searchTerm group =
+makeResultGroup ctx group =
     group ^. groupResults
     & ListClass.toList
     <&> sortOn fst
-    <&> mResultGroupOf (resultsPrefix <> (group ^. groupId))
+    <&> mResultGroupOf (ctx ^. SearchMenu.rResultIdPrefix <> (group ^. groupId))
     <&> Lens.mapped %~ rgPreferred .~ toPreferred
     where
         toPreferred
-            | [searchTerm] == group ^. groupSearchTerms = Preferred
+            | [ctx ^. SearchMenu.rSearchTerm] == group ^. groupSearchTerms = Preferred
             | otherwise = NotPreferred
 
 data GoodAndBad a = GoodAndBad { _good :: a, _bad :: a }
@@ -151,14 +148,13 @@ isGoodResult :: Sugar.HoleResultScore -> Bool
 isGoodResult hrs = hrs ^. Sugar.hrsNumHoleWrappers == 0
 
 makeAll ::
-    (MonadTransaction n m, MonadReader env m, Config.HasConfig env, GuiState.HasState env) =>
+    (MonadTransaction n m, MonadReader env m, Config.HasConfig env) =>
     T n [Sugar.HoleOption (T n) (ExpressionN n ())] ->
     Maybe (Sugar.OptionLiteral (T n) (ExpressionN n ())) ->
-    WidgetIds ->
+    SearchMenu.ResultsContext ->
     m (Menu.OptionList (ResultGroup (T n)))
-makeAll options mOptionLiteral widgetIds =
+makeAll options mOptionLiteral ctx =
     do
-        searchTerm <- HoleState.readSearchTerm widgetIds
         config <- Lens.view Config.config <&> Config.hole
         literalGroups <-
             (mOptionLiteral <&> makeLiteralGroups searchTerm) ^.. (Lens._Just . traverse)
@@ -167,10 +163,12 @@ makeAll options mOptionLiteral widgetIds =
         (options >>= mapM mkGroup <&> holeMatches searchTerm)
             <&> (literalGroups <>)
             <&> ListClass.fromList
-            <&> ListClass.mapL (makeResultGroup (SearchMenu.resultsIdPrefix (hidOpen widgetIds)) searchTerm)
+            <&> ListClass.mapL (makeResultGroup ctx)
             <&> ListClass.catMaybes
             >>= collectResults config
             & transaction
+    where
+        searchTerm = ctx ^. SearchMenu.rSearchTerm
 
 mkGroupId :: Show a => Val a -> WidgetId.Id
 mkGroupId option =

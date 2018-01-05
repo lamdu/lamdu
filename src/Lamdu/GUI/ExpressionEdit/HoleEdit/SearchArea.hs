@@ -28,6 +28,7 @@ import           GUI.Momentu.View (View)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.FocusDelegator as FocusDelegator
 import qualified GUI.Momentu.Widgets.Menu as Menu
+import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified Lamdu.CharClassification as Chars
 import           Lamdu.Config (HasConfig)
@@ -170,13 +171,19 @@ make options mOptionLiteral pl allowedTerms =
             then
                 do
                     typeView <- makeInferredTypeAnnotation pl
+                    searchTerm <- HoleState.readSearchTerm widgetIds
+                    let ctx =
+                            SearchMenu.ResultsContext
+                            { SearchMenu._rSearchTerm = searchTerm
+                            , SearchMenu._rResultIdPrefix = SearchMenu.resultsIdPrefix (hidOpen widgetIds)
+                            }
                     -- ideally the fdWrap would be "inside" the
                     -- type-view addition and stdWrap, but it's not
                     -- important in the case the FD is selected, and
                     -- it is harder to implement, so just wrap it
                     -- here
                     (fdWrap <&> (Lens.mapped %~))
-                        <*> ( ResultGroups.makeAll options mOptionLiteral widgetIds
+                        <*> ( ResultGroups.makeAll options mOptionLiteral ctx
                                 <&> fmap (makeResultOption pl)
                                 >>= makeOpenSearchAreaGui searchTermEventMap
                                     allowedTerms typeView pl)

@@ -1,8 +1,9 @@
-{-# LANGUAGE NoImplicitPrelude, OverloadedStrings #-}
+{-# LANGUAGE NoImplicitPrelude, OverloadedStrings, TemplateHaskell #-}
 
 module GUI.Momentu.Widgets.Menu.Search
     ( emptyPickEventMap
     , resultsIdPrefix
+    , ResultsContext(..), rSearchTerm, rResultIdPrefix
     ) where
 
 import qualified Control.Lens as Lens
@@ -13,6 +14,13 @@ import           GUI.Momentu.Widget.Id (Id, joinId)
 import qualified GUI.Momentu.Widgets.Menu as Menu
 
 import           Lamdu.Prelude
+
+-- | Context necessary for creation of menu items for a search.
+data ResultsContext = ResultsContext
+    { _rSearchTerm :: Text
+    , _rResultIdPrefix :: Id
+    } deriving (Eq, Show, Ord)
+Lens.makeLenses ''ResultsContext
 
 emptyPickEventMap ::
     (MonadReader env m, Menu.HasConfig env, Applicative f) =>
