@@ -37,7 +37,9 @@ import           Lamdu.Prelude
 
 type T = Transaction
 
-assignCursor :: Monad m => WidgetIds -> [Widget.Id] -> ExprGuiM m a -> ExprGuiM m a
+assignCursor ::
+    (MonadReader env m, GuiState.HasState env) =>
+    WidgetIds -> [Widget.Id] -> m a -> m a
 assignCursor widgetIds resultIds action =
     do
         searchTerm <- HoleState.readSearchTerm widgetIds
