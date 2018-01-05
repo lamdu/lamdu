@@ -8,10 +8,11 @@ module GUI.Momentu.Widgets.Menu.Search
 
     -- temporary exports that will be removed when transition of HoleEdit
     -- to Menu.Search is complete
-    , searchTermEditId, readSearchTerm
+    , readSearchTerm, assignCursor
     ) where
 
 import qualified Control.Lens as Lens
+import qualified Control.Monad.Reader as Reader
 import qualified Data.Text as Text
 import           GUI.Momentu (Widget, WithTextPos)
 import qualified GUI.Momentu.Align as Align
@@ -79,3 +80,33 @@ basicSearchTermEdit searchMenuId allowedSearchTerm =
             <&> Align.tValue . Lens.mapped %~ onEvents
     where
         textEditNoEmpty = TextEdit.EmptyStrings "  " "  "
+
+assignCursor ::
+    (MonadReader env m, HasState env) =>
+    Widget.Id -> [Widget.Id] -> m a -> m a
+assignCursor searchMenuId resultIds action =
+    do
+        searchTerm <- readSearchTerm searchMenuId
+        let destId
+                | Text.null searchTerm =
+                    -- When entering a hole with an empty search string
+                    -- (Like after typing "factorial x="),
+                    -- cursor should be on the search-string and not on a result
+                    -- so that operators pressed will set the search string
+                    -- rather than apply on the first result.
+                    searchTermEditId searchMenuId
+                | otherwise = head (resultIds ++ [searchTermEditId searchMenuId])
+
+        -- Results appear and disappear when the search-string changes,
+        -- but the cursor prefix signifies whether we should be on a result.
+        -- When that is the case but is not currently on any of the existing results
+        -- the cursor will be sent to the default one.
+        shouldBeOnResult <- sub (resultsIdPrefix searchMenuId)
+        isOnResult <- traverse sub resultIds <&> or
+
+        action
+            & if shouldBeOnResult && not isOnResult
+            then Reader.local (State.cursor .~ destId)
+            else State.assignCursor searchMenuId destId
+    where
+        sub x = State.isSubCursor ?? x

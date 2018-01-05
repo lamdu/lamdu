@@ -8,7 +8,6 @@ module Lamdu.GUI.ExpressionEdit.HoleEdit.Open
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
 import           Data.Store.Transaction (Transaction)
-import qualified Data.Text as Text
 import           GUI.Momentu.Align (WithTextPos)
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Element as Element
@@ -23,7 +22,6 @@ import qualified GUI.Momentu.Widget.Id as WidgetId
 import qualified GUI.Momentu.Widgets.Menu as Menu
 import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.SearchTerm as SearchTerm
-import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.State as HoleState
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds (WidgetIds(..))
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds as HoleWidgetIds
 import qualified Lamdu.GUI.ExpressionGui as ExprGui
@@ -36,37 +34,6 @@ import qualified Lamdu.Sugar.Types as Sugar
 import           Lamdu.Prelude
 
 type T = Transaction
-
-assignCursor ::
-    (MonadReader env m, GuiState.HasState env) =>
-    WidgetIds -> [Widget.Id] -> m a -> m a
-assignCursor widgetIds resultIds action =
-    do
-        searchTerm <- HoleState.readSearchTerm widgetIds
-        let destId
-                | Text.null searchTerm =
-                    -- When entering a hole with an empty search string
-                    -- (Like after typing "factorial x="),
-                    -- cursor should be on the search-string and not on a result
-                    -- so that operators pressed will set the search string
-                    -- rather than apply on the first result.
-                    searchTermId
-                | otherwise = head (resultIds ++ [searchTermId])
-
-        -- Results appear and disappear when the search-string changes,
-        -- but the cursor prefix signifies whether we should be on a result.
-        -- When that is the case but is not currently on any of the existing results
-        -- the cursor will be sent to the default one.
-        shouldBeOnResult <- sub (SearchMenu.resultsIdPrefix (hidOpen widgetIds))
-        isOnResult <- traverse sub resultIds <&> or
-
-        action
-            & if shouldBeOnResult && not isOnResult
-            then Reader.local (GuiState.cursor .~ destId)
-            else GuiState.assignCursor (hidOpen widgetIds) destId
-    where
-        searchTermId = SearchMenu.searchTermEditId (hidOpen widgetIds)
-        sub x = GuiState.isSubCursor ?? x
 
 makeOpenSearchAreaGui ::
     Monad m =>
@@ -96,7 +63,7 @@ makeOpenSearchAreaGui searchTermEventMap allowedTerms typeView pl options =
             <&> \searchTermWidget placement ->
                 searchTermWidget <&> hoverMenu placement
     & Reader.local (Element.animIdPrefix .~ WidgetId.toAnimId (hidOpen widgetIds))
-    & assignCursor widgetIds (options ^.. traverse . Menu.oId)
+    & SearchMenu.assignCursor (hidOpen widgetIds) (options ^.. traverse . Menu.oId)
     where
         widgetIds = pl ^. Sugar.plEntityId & HoleWidgetIds.make
         mNextEntry = pl ^. Sugar.plData . ExprGui.plNearestHoles . NearestHoles.next <&> WidgetIds.fromEntityId
