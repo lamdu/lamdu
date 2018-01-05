@@ -6,13 +6,9 @@ module Lamdu.GUI.ExpressionEdit.HoleEdit.SearchTerm
     ) where
 
 import qualified Control.Lens as Lens
-import qualified Data.Monoid as Monoid
-import           Data.Store.Transaction (Transaction)
-import qualified Data.Text as Text
 import           GUI.Momentu (Widget, WithTextPos)
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Draw as Draw
-import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.State as GuiState
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
@@ -20,51 +16,23 @@ import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
 import           Lamdu.Config (HasConfig)
 import           Lamdu.Config.Theme (HasTheme)
 import qualified Lamdu.Config.Theme as Theme
-import           Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds (WidgetIds(..))
-import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds as HoleWidgetIds
-import           Lamdu.GUI.ExpressionEdit.HoleEdit.State (readSearchTerm)
 
 import           Lamdu.Prelude
 
-type T = Transaction
-
-textEditNoEmpty :: TextEdit.EmptyStrings
-textEditNoEmpty = TextEdit.EmptyStrings "  " "  "
-
 make ::
-    ( Monad m, MonadReader env f, HasTheme env
-    , HasConfig env, TextEdit.HasStyle env
-    , GuiState.HasState env
+    ( MonadReader env m, HasTheme env , HasConfig env, TextEdit.HasStyle env, GuiState.HasState env
+    , Applicative f
     ) =>
-    WidgetIds -> (Text -> Bool) ->
-    f (WithTextPos (Widget (T m GuiState.Update)))
-make widgetIds allowedSearchTerm =
+    Widget.Id -> (Text -> Bool) -> m (WithTextPos (Widget (f GuiState.Update)))
+make searchMenuId allowedSearchTerm =
     do
-        searchTerm <- readSearchTerm widgetIds
-        theme <- Lens.view Theme.theme
-        let holeTheme = Theme.hole theme
-        isActive <- HoleWidgetIds.isActive widgetIds
+        isActive <- GuiState.isSubCursor ?? searchMenuId
         let bgColor
                 | isActive = Theme.holeActiveSearchTermBGColor
                 | otherwise = Theme.holeSearchTermBGColor
-        let onEvents (newSearchTerm, eventRes)
-                | newSearchTerm == searchTerm = eventRes
-                | otherwise =
-                    eventRes
-                    <> GuiState.updateWidgetState (HoleWidgetIds.hidOpen widgetIds) newSearchTerm
-                    -- When first letter is typed in search term, jump to the
-                    -- results, which will go to first result:
-                    & ( if Text.null searchTerm
-                        then
-                            GuiState.uCursor .~
-                            Monoid.Last (Just (SearchMenu.resultsIdPrefix (hidOpen widgetIds)))
-                        else id
-                    )
-        TextEdit.make ?? textEditNoEmpty ?? searchTerm ?? searchTermId
-            <&> Align.tValue . Widget.eventMapMaker . Lens.mapped %~
-                E.filter (allowedSearchTerm . fst)
-            <&> Align.tValue . Lens.mapped %~ pure . onEvents
-            <&> Draw.backgroundColor bgAnimId (bgColor holeTheme)
-    where
-        bgAnimId = Widget.toAnimId searchTermId <> ["hover background"]
-        searchTermId = SearchMenu.searchTermEditId (hidOpen widgetIds)
+        theme <- Lens.view Theme.theme <&> Theme.hole
+        SearchMenu.basicSearchTermEdit searchMenuId allowedSearchTerm
+            <&> Align.tValue . Lens.mapped %~ pure
+            <&> Draw.backgroundColor
+                (Widget.toAnimId searchMenuId <> ["hover background"])
+                (bgColor theme)

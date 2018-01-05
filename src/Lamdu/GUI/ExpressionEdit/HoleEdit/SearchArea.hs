@@ -160,7 +160,7 @@ make options mOptionLiteral pl allowedTerms =
             maybeAddAnnotationPl pl
             <*>
             ( fdWrap
-                <*> SearchTerm.make widgetIds allowedTerms <&> Responsive.fromWithTextPos
+                <*> SearchTerm.make (hidOpen widgetIds) allowedTerms <&> Responsive.fromWithTextPos
             )
         isActive <- HoleWidgetIds.isActive widgetIds
         searchTermEventMap <- searchTermEditEventMap widgetIds allowedTerms <&> fmap pure

@@ -91,7 +91,7 @@ makeOpenSearchAreaGui searchTermEventMap allowedTerms typeView pl options =
                 Hover.hoverInPlaceOf (mkHoverOptions placement annotation menu a) a
                 where
                     a = Hover.anchor term
-        SearchTerm.make widgetIds allowedTerms
+        SearchTerm.make (hidOpen widgetIds) allowedTerms
             <&> Align.tValue %~ Widget.weakerEvents pickEventMap
             <&> \searchTermWidget placement ->
                 searchTermWidget <&> hoverMenu placement
