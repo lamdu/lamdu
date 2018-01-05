@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, OverloadedStrings #-}
+{-# LANGUAGE NoImplicitPrelude #-}
 -- | The search area (search term + results) of an open/active hole.
 
 module Lamdu.GUI.ExpressionEdit.HoleEdit.Open
@@ -13,7 +13,6 @@ import           GUI.Momentu.Align (WithTextPos)
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
-import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Glue ((/-/))
 import qualified GUI.Momentu.Hover as Hover
 import qualified GUI.Momentu.State as GuiState
@@ -22,8 +21,7 @@ import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widget.Id as WidgetId
 import qualified GUI.Momentu.Widgets.Menu as Menu
-import           Lamdu.Config (HasConfig)
-import qualified Lamdu.Config as Config
+import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.SearchTerm as SearchTerm
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.State as HoleState
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds (WidgetIds(..))
@@ -70,16 +68,6 @@ assignCursor widgetIds resultIds action =
         searchTermId = hidOpenSearchTerm widgetIds
         sub x = GuiState.isSubCursor ?? x
 
-emptyPickEventMap ::
-    (MonadReader env m, HasConfig env, Applicative f) =>
-    m (EventMap (f GuiState.Update))
-emptyPickEventMap =
-    Lens.view Config.config <&> Config.menu <&> keys <&> mkEventMap
-    where
-        keys = Menu.keysPickOption <> Menu.keysPickOptionAndGotoNext
-        mkEventMap k =
-            E.keysEventMap k (E.Doc ["Edit", "Result", "Pick (N/A)"]) (pure ())
-
 makeOpenSearchAreaGui ::
     Monad m =>
     EventMap (T m GuiState.Update) ->
@@ -96,7 +84,7 @@ makeOpenSearchAreaGui searchTermEventMap allowedTerms typeView pl options =
             <&> _2 . Lens.mapped . Widget.eventMapMaker . Lens.mapped %~ (searchTermEventMap <>)
         pickEventMap <-
             case mPickMain of
-            Nothing -> emptyPickEventMap
+            Nothing -> SearchMenu.emptyPickEventMap
             Just pickMain -> Menu.makePickEventMap mNextEntry ?? pickMain
         mkHoverOptions <- Menu.hoverOptions
         let hoverMenu placement term =
