@@ -65,7 +65,7 @@ assignCursor widgetIds resultIds action =
             then Reader.local (GuiState.cursor .~ destId)
             else GuiState.assignCursor (hidOpen widgetIds) destId
     where
-        searchTermId = hidOpenSearchTerm widgetIds
+        searchTermId = SearchMenu.searchTermEditId (hidOpen widgetIds)
         sub x = GuiState.isSubCursor ?? x
 
 makeOpenSearchAreaGui ::

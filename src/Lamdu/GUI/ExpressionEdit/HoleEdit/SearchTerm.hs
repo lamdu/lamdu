@@ -60,10 +60,11 @@ make widgetIds allowedSearchTerm =
                             Monoid.Last (Just (SearchMenu.resultsIdPrefix (hidOpen widgetIds)))
                         else id
                     )
-        TextEdit.make ?? textEditNoEmpty ?? searchTerm ?? hidOpenSearchTerm widgetIds
+        TextEdit.make ?? textEditNoEmpty ?? searchTerm ?? searchTermId
             <&> Align.tValue . Widget.eventMapMaker . Lens.mapped %~
                 E.filter (allowedSearchTerm . fst)
             <&> Align.tValue . Lens.mapped %~ pure . onEvents
             <&> Draw.backgroundColor bgAnimId (bgColor holeTheme)
     where
-        bgAnimId = Widget.toAnimId (hidOpenSearchTerm widgetIds) <> ["hover background"]
+        bgAnimId = Widget.toAnimId searchTermId <> ["hover background"]
+        searchTermId = SearchMenu.searchTermEditId (hidOpen widgetIds)

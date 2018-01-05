@@ -4,6 +4,10 @@ module GUI.Momentu.Widgets.Menu.Search
     ( emptyPickEventMap
     , resultsIdPrefix
     , ResultsContext(..), rSearchTerm, rResultIdPrefix
+
+    -- temporary exports that will be removed when transition of HoleEdit
+    -- to Menu.Search is complete
+    , searchTermEditId
     ) where
 
 import qualified Control.Lens as Lens
@@ -36,3 +40,6 @@ emptyPickEventMap =
 -- when the search term changed in order to redirect it to a result.
 resultsIdPrefix :: Id -> Id
 resultsIdPrefix = (`joinId` ["Results"])
+
+searchTermEditId :: Id -> Id
+searchTermEditId = (`joinId` ["SearchTerm"])
