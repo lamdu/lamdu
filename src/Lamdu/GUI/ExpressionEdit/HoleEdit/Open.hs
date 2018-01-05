@@ -45,14 +45,12 @@ assignCursor widgetIds resultIds action =
         searchTerm <- HoleState.readSearchTerm widgetIds
         let destId
                 | Text.null searchTerm =
-                      -- When selecting a result like "fac HOLE", the
-                      -- cursor moves to the hidOpen of the selected
-                      -- HOLE, which has a null search term. We want to
-                      -- move the cursor to the search term in this case,
-                      -- otherwise further actions surprisingly apply to a
-                      -- random first result. (e.g: "fac (" will apply
-                      -- open-paren to the first result)
-                      searchTermId
+                    -- When entering a hole with an empty search string
+                    -- (Like after typing "factorial x="),
+                    -- cursor should be on the search-string and not on a result
+                    -- so that operators pressed will set the search string
+                    -- rather than apply on the first result.
+                    searchTermId
                 | otherwise = head (resultIds ++ [searchTermId])
 
         -- Results appear and disappear when the search-string changes,
