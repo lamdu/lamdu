@@ -17,7 +17,6 @@ data WidgetIds = WidgetIds
     , hidClosedSearchArea :: Widget.Id
     , hidOpen :: Widget.Id
     , hidOpenSearchTerm :: Widget.Id
-    , hidResultsPrefix :: Widget.Id
     } deriving Show
 
 make :: EntityId -> WidgetIds
@@ -26,7 +25,6 @@ make entityId = WidgetIds
     , hidClosedSearchArea = Widget.joinId holeId ["SearchArea", "SearchTerm"]
     , hidOpen             = Widget.joinId holeId ["SearchArea", "Open"]
     , hidOpenSearchTerm   = Widget.joinId holeId ["SearchArea", "Open", "SearchTerm"]
-    , hidResultsPrefix    = Widget.joinId holeId ["SearchArea", "Open", "Results"]
     }
     where
         holeId = WidgetIds.fromEntityId entityId

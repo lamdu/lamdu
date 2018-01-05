@@ -18,6 +18,7 @@ import qualified Data.Text as Text
 import qualified GUI.Momentu.State as GuiState
 import qualified GUI.Momentu.Widget.Id as WidgetId
 import qualified GUI.Momentu.Widgets.Menu as Menu
+import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
 import qualified Lamdu.Calc.Val as V
 import           Lamdu.Calc.Val.Annotated (Val)
 import qualified Lamdu.Config as Config
@@ -82,7 +83,7 @@ mResultGroupOf widgetIds baseId (x:xs) = Just
     , _rgExtra = zipWith mkExtra [(0::Int)..] xs
     }
     where
-        prefixId = hidResultsPrefix widgetIds <> baseId
+        prefixId = SearchMenu.resultsIdPrefix (hidOpen widgetIds) <> baseId
         mkExtra = mkResult . extraResultId
         extraResultId i = WidgetId.joinId extraResultsPrefixId [BS8.pack (show i)]
         extraResultsPrefixId = prefixId <> WidgetId.Id ["extra results"]

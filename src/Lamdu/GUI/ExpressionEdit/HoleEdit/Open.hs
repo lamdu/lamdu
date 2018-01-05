@@ -57,7 +57,7 @@ assignCursor widgetIds resultIds action =
         -- but the cursor prefix signifies whether we should be on a result.
         -- When that is the case but is not currently on any of the existing results
         -- the cursor will be sent to the default one.
-        shouldBeOnResult <- sub (hidResultsPrefix widgetIds)
+        shouldBeOnResult <- sub (SearchMenu.resultsIdPrefix (hidOpen widgetIds))
         isOnResult <- traverse sub resultIds <&> or
 
         action

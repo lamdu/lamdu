@@ -16,6 +16,7 @@ import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.State as GuiState
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
+import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
 import           Lamdu.Config (HasConfig)
 import           Lamdu.Config.Theme (HasTheme)
 import qualified Lamdu.Config.Theme as Theme
@@ -56,7 +57,7 @@ make widgetIds allowedSearchTerm =
                     & ( if Text.null searchTerm
                         then
                             GuiState.uCursor .~
-                            Monoid.Last (Just (hidResultsPrefix widgetIds))
+                            Monoid.Last (Just (SearchMenu.resultsIdPrefix (hidOpen widgetIds)))
                         else id
                     )
         TextEdit.make ?? textEditNoEmpty ?? searchTerm ?? hidOpenSearchTerm widgetIds
