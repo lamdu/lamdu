@@ -13,16 +13,16 @@ import           Lamdu.Sugar.EntityId (EntityId)
 import           Lamdu.Prelude
 
 data WidgetIds = WidgetIds
-    { hidHole :: Widget.Id
-    , hidClosedSearchArea :: Widget.Id
-    , hidOpen :: Widget.Id
+    { hidHole   :: Widget.Id
+    , hidClosed :: Widget.Id
+    , hidOpen   :: Widget.Id
     } deriving Show
 
 make :: EntityId -> WidgetIds
 make entityId = WidgetIds
-    { hidHole = holeId
-    , hidClosedSearchArea = Widget.joinId holeId ["SearchArea", "SearchTerm"]
-    , hidOpen             = Widget.joinId holeId ["SearchArea", "Open"]
+    { hidHole   = holeId
+    , hidClosed = Widget.joinId holeId ["Closed"]
+    , hidOpen   = Widget.joinId holeId ["Open"]
     }
     where
         holeId = WidgetIds.fromEntityId entityId

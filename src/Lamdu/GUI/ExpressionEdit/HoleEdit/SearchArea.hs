@@ -154,7 +154,7 @@ make options mOptionLiteral pl allowedTerms =
         config <- Lens.view Config.config
         let fdWrap =
                 FocusDelegator.make ?? fdConfig (Config.hole config)
-                ?? FocusDelegator.FocusEntryParent ?? hidClosedSearchArea widgetIds
+                ?? FocusDelegator.FocusEntryParent ?? hidClosed widgetIds
                 <&> (Align.tValue %~)
         closedSearchTermGui <-
             maybeAddAnnotationPl pl
