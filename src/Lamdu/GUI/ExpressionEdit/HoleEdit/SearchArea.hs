@@ -92,15 +92,9 @@ makeRenderedResult ::
     Sugar.Payload f ExprGui.Payload -> Result (T m) ->
     ExprGuiM m (Menu.RenderedOption (T m))
 makeRenderedResult pl result =
-    do
-        -- Warning: rHoleResult should be ran at most once!
-        -- Running it more than once caused a horrible bug (bugfix: 848b6c4407)
-        res <- rHoleResult result & transaction
-        theme <- Theme.hole <$> Lens.view Theme.theme
-        stdSpacing <- Spacer.getSpaceSize
-        let padding = Theme.holeResultPadding theme <&> realToFrac & (* stdSpacing)
-        ResultWidget.make pl (rId result) res
-            <&> Menu.rWidget %~ Element.pad padding
+    -- Warning: rHoleResult should be ran at most once!
+    -- Running it more than once caused a horrible bug (bugfix: 848b6c4407)
+    rHoleResult result & transaction >>= ResultWidget.make pl (rId result)
 
 makeResultOption ::
     Monad m =>

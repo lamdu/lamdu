@@ -9,6 +9,7 @@ import           Data.Store.Transaction (Transaction)
 import qualified Data.Text as Text
 import           GUI.Momentu (Widget, WithTextPos(..))
 import qualified GUI.Momentu.Align as Align
+import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.MetaKey as MetaKey
@@ -19,8 +20,10 @@ import qualified GUI.Momentu.State as GuiState
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Grid as Grid
 import qualified GUI.Momentu.Widgets.Menu as Menu
+import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import           Lamdu.Config (HasConfig(..))
 import qualified Lamdu.Config as Config
+import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.State as HoleState
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds as HoleWidgetIds
 import           Lamdu.GUI.ExpressionGui (ExpressionN)
@@ -107,6 +110,9 @@ make pl resultId holeResult =
     do
         searchStringRemainder <- getSearchStringRemainder widgetIds holeResultConverted
         remUnwanted <- removeUnwanted
+        theme <- Theme.hole <$> Lens.view Theme.theme
+        stdSpacing <- Spacer.getSpaceSize
+        let padding = Theme.holeResultPadding theme <&> realToFrac & (* stdSpacing)
         widget <-
             postProcessSugar (pl ^. Sugar.plData . ExprGui.plMinOpPrec) holeResultConverted
             & ExprGuiM.makeSubexpression
@@ -115,6 +121,7 @@ make pl resultId holeResult =
             & GuiState.assignCursor resultId (pickResult ^. Menu.pickDest)
             <&> applyResultLayout
             <&> setFocalAreaToFullSize
+            <&> Element.pad padding
         pure Menu.RenderedOption
             { Menu._rPick =
                 Widget.PreEvent
