@@ -260,7 +260,7 @@ make ::
     , Element.HasAnimIdPrefix env, HasConfig env, State.HasCursor env
     , Applicative f
     ) =>
-    Widget.R -> Maybe (Widget.Id) -> OptionList (Option m f) ->
+    Widget.R -> Maybe Widget.Id -> OptionList (Option m f) ->
     m (Maybe (Widget.PreEvent (f PickResult)), Hover.Ordered (Widget (f State.Update)))
 make minWidth mNextEntry options =
     case options ^. olOptions of

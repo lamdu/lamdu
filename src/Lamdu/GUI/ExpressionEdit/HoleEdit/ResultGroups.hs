@@ -68,14 +68,14 @@ data ResultGroup m = ResultGroup
 Lens.makeLenses ''ResultGroup
 
 mResultGroupOf ::
-    WidgetIds -> WidgetId.Id ->
+    WidgetId.Id ->
     [ ( Sugar.HoleResultScore
       , m (Sugar.HoleResult m (Sugar.Expression (Name m) m ()))
       )
     ] ->
     Maybe (ResultGroup m)
-mResultGroupOf _ _ [] = Nothing
-mResultGroupOf widgetIds baseId (x:xs) = Just
+mResultGroupOf _ [] = Nothing
+mResultGroupOf prefixId (x:xs) = Just
     ResultGroup
     { _rgPreferred = NotPreferred
     , _rgPrefixId = prefixId
@@ -83,7 +83,6 @@ mResultGroupOf widgetIds baseId (x:xs) = Just
     , _rgExtra = zipWith mkExtra [(0::Int)..] xs
     }
     where
-        prefixId = SearchMenu.resultsIdPrefix (hidOpen widgetIds) <> baseId
         mkExtra = mkResult . extraResultId
         extraResultId i = WidgetId.joinId extraResultsPrefixId [BS8.pack (show i)]
         extraResultsPrefixId = prefixId <> WidgetId.Id ["extra results"]
@@ -96,13 +95,13 @@ mResultGroupOf widgetIds baseId (x:xs) = Just
 
 makeResultGroup ::
     Monad m =>
-    WidgetIds -> Text -> Group m ->
+    WidgetId.Id ->Text -> Group m ->
     m (Maybe (ResultGroup m))
-makeResultGroup widgetIds searchTerm group =
+makeResultGroup resultsPrefix searchTerm group =
     group ^. groupResults
     & ListClass.toList
     <&> sortOn fst
-    <&> mResultGroupOf widgetIds (group ^. groupId)
+    <&> mResultGroupOf (resultsPrefix <> (group ^. groupId))
     <&> Lens.mapped %~ rgPreferred .~ toPreferred
     where
         toPreferred
@@ -168,7 +167,7 @@ makeAll options mOptionLiteral widgetIds =
         (options >>= mapM mkGroup <&> holeMatches searchTerm)
             <&> (literalGroups <>)
             <&> ListClass.fromList
-            <&> ListClass.mapL (makeResultGroup widgetIds searchTerm)
+            <&> ListClass.mapL (makeResultGroup (SearchMenu.resultsIdPrefix (hidOpen widgetIds)) searchTerm)
             <&> ListClass.catMaybes
             >>= collectResults config
             & transaction
