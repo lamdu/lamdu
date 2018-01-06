@@ -82,21 +82,20 @@ addToHoleResult ::
     T m (Sugar.HoleResult (T m) (Sugar.Expression UUID (T m) ()))
 addToHoleResult = Sugar.holeResultConverted %%~ addToExpr
 
-addToHole ::
+addToOptions ::
     Monad m =>
-    Sugar.Hole (T m) (Sugar.Expression UUID (T m) ()) ->
-    Sugar.Hole (T m) (Sugar.Expression UUID (T m) ())
-addToHole =
-    Sugar.holeOptions . Lens.mapped . Lens.mapped . Sugar.hoResults .
-    Lens.mapped . _2 %~ (>>= addToHoleResult)
+    T m [Sugar.HoleOption (T m) (Sugar.Expression UUID (T m) ())] ->
+    T m [Sugar.HoleOption (T m) (Sugar.Expression UUID (T m) ())]
+addToOptions = Lens.mapped . Lens.mapped . Sugar.hoResults . Lens.mapped . _2 %~ (>>= addToHoleResult)
 
 addToBody ::
     Monad m =>
     Sugar.Body UUID (T m) (Sugar.Expression UUID (T m) a) ->
     T m (Sugar.Body UUID (T m) (Sugar.Expression UUID (T m) a))
 addToBody (Sugar.BodyLabeledApply a) = addToLabeledApply a <&> Sugar.BodyLabeledApply
-addToBody (Sugar.BodyHole a) = addToHole a & Sugar.BodyHole & return
-addToBody b = return b
+addToBody (Sugar.BodyHole h) = h & Sugar.holeOptions %~ addToOptions & Sugar.BodyHole & pure
+addToBody (Sugar.BodyWrapper w) = w & Sugar.wOptions %~ addToOptions & Sugar.BodyWrapper & pure
+addToBody b = pure b
 
 addToExpr ::
     Monad m => Sugar.Expression UUID (T m) pl ->
