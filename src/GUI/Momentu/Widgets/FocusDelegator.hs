@@ -80,7 +80,7 @@ make =
                 (childWidget ^? Widget.wState . Widget._StateUnfocused . Widget.uMEnter . Lens._Just)
 
         | childIsFocused ->
-            Widget.weakerEvents focusParentEventMap childWidget
+            childWidget & Widget.eventMapMaker . Lens.mapped %~ mappend focusParentEventMap
 
         | otherwise ->
             childWidget
