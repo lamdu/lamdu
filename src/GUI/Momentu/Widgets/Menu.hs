@@ -228,7 +228,11 @@ makePickEventMap mNextEntry =
             Nothing -> mempty
             Just nextEntry ->
                 E.keysEventMapMovesCursor (keysPickOptionAndGotoNext keys)
-                (E.Doc [pick ^. Widget.pDesc <> ", Next entry"]) (nextEntry <$ pick ^. Widget.pAction)
+                (E.Doc [pick ^. Widget.pDesc <> ", Next entry"]) (pick ^. Widget.pAction <&> pickEntry)
+                where
+                    pickEntry pickResult
+                        | pickResult ^. pickDestIsEntryPoint = pickResult ^. pickDest
+                        | otherwise = nextEntry
     in
     pickAndJumpEventMap
     <>
