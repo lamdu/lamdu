@@ -130,19 +130,8 @@ extractEventMap actions =
     where
         doc = E.Doc ["Edit", "Extract"]
 
-maybeReplaceEventMap ::
-    (MonadReader env m, Config.HasConfig env, GuiState.HasCursor env, Monad f) =>
-    ExprInfo f ->
-    m (EventMap (T f GuiState.Update))
-maybeReplaceEventMap exprInfo =
-    do
-        isSelected <- exprInfoIsSelected exprInfo
-        if isSelected
-            then replaceEventMap (exprInfoActions exprInfo)
-            else return mempty
-
 actionsEventMap ::
-    (MonadReader env m, Monad f, Config.HasConfig env, GuiState.HasCursor env) =>
+    (MonadReader env m, Monad f, Config.HasConfig env) =>
     Options -> ExprInfo f ->
     m (EventContext -> EventMap (T f GuiState.Update))
 actionsEventMap options exprInfo =
@@ -157,7 +146,7 @@ actionsEventMap options exprInfo =
             [ extractEventMap (exprInfoActions exprInfo)
             , Lens.view Config.config <&> Config.replaceParentKeys <&> mkReplaceParent
             ] <&> mconcat
-    , maybeReplaceEventMap exprInfo
+    , replaceEventMap (exprInfoActions exprInfo)
     ] <&> mconcat <&> const
     <&> mappend (applyOperatorEventMap options exprInfo)
     where
@@ -214,16 +203,17 @@ wrapEventMap wrap =
     (void wrap)
 
 replaceEventMap ::
-    (MonadReader env m, Config.HasConfig env, GuiState.HasCursor env, Monad f) =>
+    (MonadReader env m, Config.HasConfig env, Monad f) =>
     Sugar.Actions (T f) -> m (EventMap (T f GuiState.Update))
 replaceEventMap actions =
-    do
-        config <- Lens.view Config.config
-        let mk action =
-                action <&> WidgetIds.fromEntityId
-                & E.keysEventMapMovesCursor (Config.delKeys config) (E.Doc ["Edit", "Delete expression"])
-        case actions ^. Sugar.delete of
-            Sugar.SetToHole action -> mk (action <&> snd)
-            Sugar.Delete action -> mk action
-            Sugar.CannotDelete -> mempty
-            & return
+    Lens.view Config.config
+    <&>
+    \config ->
+    let mk action =
+            action <&> WidgetIds.fromEntityId
+            & E.keysEventMapMovesCursor (Config.delKeys config) (E.Doc ["Edit", "Delete expression"])
+    in
+    case actions ^. Sugar.delete of
+    Sugar.SetToHole action -> mk (action <&> snd)
+    Sugar.Delete action -> mk action
+    Sugar.CannotDelete -> mempty
