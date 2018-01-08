@@ -45,7 +45,7 @@ var isEqual = function (a, b) {
 }
 
 var bytes = function (list) {
-    return new Uint8Array(list);;
+    return new Uint8Array(list);
 }
 
 var encode = function() {
@@ -251,10 +251,10 @@ module.exports = {
                     return function() { return bytes(require('fs').readlinkSync(path, 'buffer')); };
                 },
                 appendFile: function(x) {
-                    return function() { require('fs').appendFileSync(x[filePathTag], x[dataTag]); };
+                    return function() { require('fs').appendFileSync(x[filePathTag], Buffer.from(x[dataTag])); };
                 },
                 writeFile: function(x) {
-                    return function() { require('fs').writeFileSync(x[filePathTag], x[dataTag]); };
+                    return function() { require('fs').writeFileSync(x[filePathTag], Buffer.from(x[dataTag])); };
                 },
             }
         }
