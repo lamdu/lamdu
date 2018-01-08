@@ -100,6 +100,26 @@ applyResultLayout fGui =
     , Responsive._layoutContext = Responsive.LayoutClear
     }
 
+makeWidget ::
+    Monad m =>
+    Sugar.Payload f ExprGui.Payload ->
+    Widget.Id ->
+    Sugar.Expression (Name (T m)) (T m) () ->
+    ExprGuiM m (WithTextPos (Widget (T m GuiState.Update)))
+makeWidget pl resultId holeResultConverted =
+    do
+        remUnwanted <- removeUnwanted
+        theme <- Theme.hole <$> Lens.view Theme.theme
+        stdSpacing <- Spacer.getSpaceSize
+        let padding = Theme.holeResultPadding theme <&> realToFrac & (* stdSpacing)
+        postProcessSugar (pl ^. Sugar.plData . ExprGui.plMinOpPrec) holeResultConverted
+            & ExprGuiM.makeSubexpression
+            <&> Widget.enterResultCursor .~ resultId
+            <&> Widget.widget . Widget.eventMapMaker . Lens.mapped %~ remUnwanted
+            <&> applyResultLayout
+            <&> setFocalAreaToFullSize
+            <&> Element.pad padding
+
 make ::
     Monad m =>
     Sugar.Payload f ExprGui.Payload ->
@@ -108,20 +128,8 @@ make ::
     ExprGuiM m (Menu.RenderedOption (T m))
 make pl resultId holeResult =
     do
+        widget <- makeWidget pl resultId holeResultConverted
         searchStringRemainder <- getSearchStringRemainder widgetIds holeResultConverted
-        remUnwanted <- removeUnwanted
-        theme <- Theme.hole <$> Lens.view Theme.theme
-        stdSpacing <- Spacer.getSpaceSize
-        let padding = Theme.holeResultPadding theme <&> realToFrac & (* stdSpacing)
-        widget <-
-            postProcessSugar (pl ^. Sugar.plData . ExprGui.plMinOpPrec) holeResultConverted
-            & ExprGuiM.makeSubexpression
-            <&> Widget.enterResultCursor .~ resultId
-            <&> Widget.widget . Widget.eventMapMaker . Lens.mapped %~ remUnwanted
-            & GuiState.assignCursor resultId (pickResult ^. Menu.pickDest)
-            <&> applyResultLayout
-            <&> setFocalAreaToFullSize
-            <&> Element.pad padding
         pure Menu.RenderedOption
             { Menu._rPick =
                 Widget.PreEvent
@@ -131,6 +139,7 @@ make pl resultId holeResult =
                 }
             , Menu._rWidget = widget
             }
+    & GuiState.assignCursor resultId (pickResult ^. Menu.pickDest)
     where
         widgetIds = pl ^. Sugar.plEntityId & HoleWidgetIds.make
         holeResultId =
