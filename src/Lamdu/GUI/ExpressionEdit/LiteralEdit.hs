@@ -22,13 +22,14 @@ import qualified GUI.Momentu.State as GuiState
 import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.FocusDelegator as FocusDelegator
+import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
 import qualified GUI.Momentu.Widgets.TextEdit.Property as TextEdits
 import qualified GUI.Momentu.Widgets.TextView as TextView
 import           Lamdu.Config (HasConfig)
 import qualified Lamdu.Config as Config
 import           Lamdu.Formatting (Format(..))
-import           Lamdu.GUI.ExpressionEdit.HoleEdit.State (setHoleStateAndJump)
+import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds as HoleWidgetIds
 import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExprGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
@@ -47,7 +48,9 @@ mkEditEventMap ::
     Text -> T m (UUID, Sugar.EntityId) ->
     EventMap (T m GuiState.Update)
 mkEditEventMap valText setToHole =
-    setToHole <&> snd <&> setHoleStateAndJump valText
+    -- TODO: literal edits rather than opening a hole..
+    setToHole <&> snd <&> HoleWidgetIds.make <&> HoleWidgetIds.hidOpen
+    <&> SearchMenu.enterWithSearchTerm valText
     & E.keyPresses [ModKey mempty MetaKey.Key'Enter] (E.Doc ["Edit", "Value"])
 
 genericEdit ::

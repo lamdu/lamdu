@@ -5,6 +5,7 @@ module GUI.Momentu.Widgets.Menu.Search
     , resultsIdPrefix
     , ResultsContext(..), rSearchTerm, rResultIdPrefix
     , basicSearchTermEdit
+    , enterWithSearchTerm
 
     -- temporary exports that will be removed when transition of HoleEdit
     -- to Menu.Search is complete
@@ -110,3 +111,8 @@ assignCursor searchMenuId resultIds action =
             else State.assignCursor searchMenuId destId
     where
         sub x = State.isSubCursor ?? x
+
+enterWithSearchTerm :: Text -> Widget.Id -> State.Update
+enterWithSearchTerm searchTerm searchMenuId =
+    State.updateCursor searchMenuId
+    <> State.updateWidgetState searchMenuId searchTerm

@@ -16,9 +16,9 @@ import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.State as GuiState
 import           GUI.Momentu.Widget (HasWidget(..), EventContext)
 import qualified GUI.Momentu.Widget as Widget
+import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
 import qualified Lamdu.CharClassification as Chars
 import qualified Lamdu.Config as Config
-import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.State as HoleEditState
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds as HoleWidgetIds
 import qualified Lamdu.GUI.ExpressionGui as ExprGui
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
@@ -162,11 +162,12 @@ applyOperatorEventMap options exprInfo eventCtx =
         Nothing -> wrap
     Sugar.WrapperAlready holeId -> return holeId
     Sugar.WrappedAlready holeId -> return holeId
+    <&> HoleWidgetIds.make <&> HoleWidgetIds.hidOpen
     & action
     where
         action wrap =
             applyOperatorSearchTerm (exprInfoMinOpPrec exprInfo) eventCtx
-            <&> HoleEditState.setHoleStateAndJump
+            <&> SearchMenu.enterWithSearchTerm
             <&> (wrap <&>)
 
 wrapEventMap ::
