@@ -31,7 +31,6 @@ import qualified GUI.Momentu.Widgets.Menu as Menu
 import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified Lamdu.CharClassification as Chars
-import           Lamdu.Config (HasConfig)
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Config.Theme as Theme
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.Open (makeOpenSearchAreaGui)
@@ -63,7 +62,7 @@ fdConfig Config.Hole{holeOpenKeys, holeCloseKeys} = FocusDelegator.Config
     }
 
 searchTermEditEventMap ::
-    (MonadReader env m, GuiState.HasState env, HasConfig env) =>
+    (MonadReader env m, GuiState.HasState env) =>
     WidgetIds -> (Text -> Bool) -> m (EventMap GuiState.Update)
 searchTermEditEventMap widgetIds allowedTerms =
     HoleState.readSearchTerm widgetIds
