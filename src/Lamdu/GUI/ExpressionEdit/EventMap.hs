@@ -61,18 +61,18 @@ exprInfoFromPl pl =
     }
 
 add ::
-    (MonadReader env m, Monad f, Config.HasConfig env, GuiState.HasCursor env, HasWidget w) =>
+    (MonadReader env m, Monad f, Config.HasConfig env, HasWidget w) =>
     Options -> Sugar.Payload (T f) ExprGui.Payload ->
     m (w (T f GuiState.Update) -> w (T f GuiState.Update))
 add options = addWith options . exprInfoFromPl
 
 addWith ::
-    (MonadReader env m, Monad f, Config.HasConfig env, GuiState.HasCursor env, HasWidget w) =>
+    (MonadReader env m, Monad f, Config.HasConfig env, HasWidget w) =>
     Options -> ExprInfo f -> m (w (T f GuiState.Update) -> w (T f GuiState.Update))
 addWith options exprInfo =
     do
         actions <- actionsEventMap options exprInfo
-        nav <- jumpHolesEventMapIfSelected exprInfo
+        nav <- jumpHolesEventMap (exprInfoNearestHoles exprInfo)
         (widget . Widget.eventMapMaker . Lens.mapped <>~ nav)
             . Widget.weakerEventsWithContext actions
             & pure
@@ -95,22 +95,6 @@ jumpHolesEventMap hg =
     where
         jumpDoc :: Text -> Text
         jumpDoc dirStr = "Jump to " <> dirStr <> " hole"
-
-exprInfoIsSelected ::
-    (GuiState.HasCursor env, MonadReader env m) => ExprInfo f -> m Bool
-exprInfoIsSelected exprInfo =
-    GuiState.isSubCursor ?? WidgetIds.fromEntityId (exprInfoEntityId exprInfo)
-
-jumpHolesEventMapIfSelected ::
-    (MonadReader env m, Config.HasConfig env, GuiState.HasCursor env, Monad f) =>
-    ExprInfo dummy ->
-    m (EventMap (T f GuiState.Update))
-jumpHolesEventMapIfSelected exprInfo =
-    do
-        isSelected <- exprInfoIsSelected exprInfo
-        if isSelected
-            then exprInfoNearestHoles exprInfo & jumpHolesEventMap
-            else pure mempty
 
 extractCursor :: Sugar.ExtractDestination -> Widget.Id
 extractCursor (Sugar.ExtractToLet letId) =
