@@ -58,12 +58,12 @@ makeOpenSearchAreaGui searchTermEventMap allowedTerms typeView pl options =
                 Hover.hoverInPlaceOf (mkHoverOptions placement annotation menu a) a
                 where
                     a = Hover.anchor term
-        SearchTerm.make (hidOpen widgetIds) allowedTerms
+        SearchTerm.make searchMenuId allowedTerms
             <&> Align.tValue %~ Widget.weakerEvents pickEventMap
             <&> \searchTermWidget placement ->
                 searchTermWidget <&> hoverMenu placement
-    & Reader.local (Element.animIdPrefix .~ WidgetId.toAnimId (hidOpen widgetIds))
-    & SearchMenu.assignCursor (hidOpen widgetIds) (options ^.. traverse . Menu.oId)
+    & Reader.local (Element.animIdPrefix .~ WidgetId.toAnimId searchMenuId)
+    & SearchMenu.assignCursor searchMenuId (options ^.. traverse . Menu.oId)
     where
-        widgetIds = pl ^. Sugar.plEntityId & HoleWidgetIds.make
+        searchMenuId = pl ^. Sugar.plEntityId & HoleWidgetIds.make & hidOpen
         mNextEntry = pl ^. Sugar.plData . ExprGui.plNearestHoles . NearestHoles.next <&> WidgetIds.fromEntityId

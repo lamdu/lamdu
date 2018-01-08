@@ -38,7 +38,6 @@ import           Lamdu.GUI.ExpressionEdit.HoleEdit.ResultGroups (ResultGroup(..)
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.ResultGroups as ResultGroups
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.ResultWidget as ResultWidget
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.SearchTerm as SearchTerm
-import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.State as HoleState
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds (WidgetIds(..))
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds as HoleWidgetIds
 import           Lamdu.GUI.ExpressionGui (ExpressionGui, ExpressionN)
@@ -63,9 +62,9 @@ fdConfig Config.Hole{holeOpenKeys, holeCloseKeys} = FocusDelegator.Config
 
 searchTermEditEventMap ::
     (MonadReader env m, GuiState.HasState env) =>
-    WidgetIds -> (Text -> Bool) -> m (EventMap GuiState.Update)
-searchTermEditEventMap widgetIds allowedTerms =
-    HoleState.readSearchTerm widgetIds
+    Widget.Id -> (Text -> Bool) -> m (EventMap GuiState.Update)
+searchTermEditEventMap searchMenuId allowedTerms =
+    SearchMenu.readSearchTerm searchMenuId
     <&>
     \searchTerm ->
     let appendCharEventMap =
@@ -82,7 +81,7 @@ searchTermEditEventMap widgetIds allowedTerms =
     in
     appendCharEventMap <> deleteCharEventMap
     & E.filter allowedTerms
-    <&> GuiState.updateWidgetState (hidOpen widgetIds)
+    <&> GuiState.updateWidgetState searchMenuId
     where
         notOp = Text.any (`notElem` Chars.operator)
 
@@ -153,10 +152,10 @@ make options mOptionLiteral pl allowedTerms =
             maybeAddAnnotationPl pl
             <*>
             ( fdWrap
-                <*> SearchTerm.make (hidOpen widgetIds) allowedTerms <&> Responsive.fromWithTextPos
+                <*> SearchTerm.make searchMenuId allowedTerms <&> Responsive.fromWithTextPos
             )
         isActive <- HoleWidgetIds.isActive widgetIds
-        searchTermEventMap <- searchTermEditEventMap widgetIds allowedTerms <&> fmap pure
+        searchTermEventMap <- searchTermEditEventMap searchMenuId allowedTerms <&> fmap pure
         let inPlaceOfClosed open =
                 closedSearchTermGui & Widget.widget %~
                 Hover.hoverInPlaceOf [Hover.anchor open] . Hover.anchor
@@ -164,11 +163,11 @@ make options mOptionLiteral pl allowedTerms =
             then
                 do
                     typeView <- makeInferredTypeAnnotation pl
-                    searchTerm <- HoleState.readSearchTerm widgetIds
+                    searchTerm <- SearchMenu.readSearchTerm searchMenuId
                     let ctx =
                             SearchMenu.ResultsContext
                             { SearchMenu._rSearchTerm = searchTerm
-                            , SearchMenu._rResultIdPrefix = SearchMenu.resultsIdPrefix (hidOpen widgetIds)
+                            , SearchMenu._rResultIdPrefix = SearchMenu.resultsIdPrefix searchMenuId
                             }
                     -- ideally the fdWrap would be "inside" the
                     -- type-view addition and stdWrap, but it's not
@@ -187,11 +186,12 @@ make options mOptionLiteral pl allowedTerms =
                 & Widget.weakerEvents
                   (-- Editing search term of a closed hole opens it:
                       searchTermEventMap <&> Lens.mapped . GuiState.uCursor %~
-                      mappend (Monoid.Last (Just (hidOpen widgetIds)))
+                      mappend (Monoid.Last (Just searchMenuId))
                   )
                 & const & pure
     where
         widgetIds = pl ^. Sugar.plEntityId & HoleWidgetIds.make
+        searchMenuId = hidOpen widgetIds
         isAHoleInHole = ExprGui.isHoleResult pl
 
 allowedSearchTermCommon :: Text -> Bool

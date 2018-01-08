@@ -40,7 +40,7 @@ data ExprInfo m = ExprInfo
     }
 
 newtype Options = Options
-    { addOperatorSetHoleState :: (Maybe Sugar.EntityId)
+    { addOperatorSetHoleState :: Maybe Sugar.EntityId
     }
 
 defaultOptions :: Options
