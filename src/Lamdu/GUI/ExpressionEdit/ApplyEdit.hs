@@ -179,7 +179,6 @@ mkRelayedArgs nearestHoles args =
             ( ExprEventMap.addWith ExprEventMap.defaultOptions
                 ExprEventMap.ExprInfo
                 { exprInfoActions = arg ^. Sugar.raActions
-                , exprInfoEntityId = arg ^. Sugar.raId
                 , exprInfoNearestHoles = nearestHoles
                 , exprInfoIsHoleResult = False
                 , exprInfoMinOpPrec = 0

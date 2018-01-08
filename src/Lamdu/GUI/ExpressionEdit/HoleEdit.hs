@@ -56,4 +56,7 @@ make hole pl =
     where
         txtEventMap = makeLiteralTextEventMap hole
         widgetIds = HoleWidgetIds.make (pl ^. Sugar.plEntityId)
-        options = ExprEventMap.defaultOptions { ExprEventMap.addOperatorDontWrap = True }
+        options =
+            ExprEventMap.defaultOptions
+            { ExprEventMap.addOperatorSetHoleState = Just (pl ^. Sugar.plEntityId)
+            }

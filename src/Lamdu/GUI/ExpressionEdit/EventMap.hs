@@ -34,27 +34,25 @@ type T = Transaction.Transaction
 
 data ExprInfo m = ExprInfo
     { exprInfoIsHoleResult :: Bool
-    , exprInfoEntityId :: Sugar.EntityId
     , exprInfoNearestHoles :: NearestHoles
     , exprInfoActions :: Sugar.Actions (T m)
     , exprInfoMinOpPrec :: MinOpPrec
     }
 
 newtype Options = Options
-    { addOperatorDontWrap :: Bool
+    { addOperatorSetHoleState :: (Maybe Sugar.EntityId)
     }
 
 defaultOptions :: Options
 defaultOptions =
     Options
-    { addOperatorDontWrap = False
+    { addOperatorSetHoleState = Nothing
     }
 
 exprInfoFromPl :: Sugar.Payload (T f) ExprGui.Payload -> ExprInfo f
 exprInfoFromPl pl =
     ExprInfo
     { exprInfoIsHoleResult = ExprGui.isHoleResult pl
-    , exprInfoEntityId = pl ^. Sugar.plEntityId
     , exprInfoNearestHoles = pl ^. Sugar.plData . ExprGui.plNearestHoles
     , exprInfoActions = pl ^. Sugar.plActions
     , exprInfoMinOpPrec = pl ^. Sugar.plData . ExprGui.plMinOpPrec
@@ -81,20 +79,20 @@ jumpHolesEventMap ::
     (MonadReader env m, Config.HasConfig env, Monad f) =>
     NearestHoles -> m (EventMap (T f GuiState.Update))
 jumpHolesEventMap hg =
-    do
-        config <- Lens.view Config.config <&> Config.hole
-        let jumpEventMap keys dirStr lens =
-                maybe mempty
-                (E.keysEventMapMovesCursor (keys config)
-                  (E.Doc ["Navigation", jumpDoc dirStr]) . pure . WidgetIds.fromEntityId) $
-                hg ^. lens
-        mconcat
-            [ jumpEventMap Config.holeJumpToNextKeys "next" NearestHoles.next
-            , jumpEventMap Config.holeJumpToPrevKeys "previous" NearestHoles.prev
-            ] & return
-    where
-        jumpDoc :: Text -> Text
-        jumpDoc dirStr = "Jump to " <> dirStr <> " hole"
+    Lens.view Config.config <&> Config.hole
+    <&>
+    \config ->
+    let jumpEventMap keys dirStr lens =
+            case hg ^. lens of
+            Nothing -> mempty
+            Just dest ->
+                WidgetIds.fromEntityId dest & pure
+                & E.keysEventMapMovesCursor (keys config)
+                    (E.Doc ["Navigation", "Jump to " <> dirStr <> " hole"])
+    in
+    jumpEventMap Config.holeJumpToNextKeys "next" NearestHoles.next
+    <>
+    jumpEventMap Config.holeJumpToPrevKeys "previous" NearestHoles.prev
 
 extractCursor :: Sugar.ExtractDestination -> Widget.Id
 extractCursor (Sugar.ExtractToLet letId) =
@@ -159,9 +157,9 @@ applyOperatorEventMap ::
 applyOperatorEventMap options exprInfo eventCtx =
     case exprInfoActions exprInfo ^. Sugar.wrap of
     Sugar.WrapAction wrap ->
-        if addOperatorDontWrap options
-        then exprInfoEntityId exprInfo & pure
-        else wrap
+        case addOperatorSetHoleState options of
+        Just holeId -> pure holeId
+        Nothing -> wrap
     Sugar.WrapperAlready holeId -> return holeId
     Sugar.WrappedAlready holeId -> return holeId
     & action
