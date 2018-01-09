@@ -25,15 +25,12 @@ import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import           Lamdu.Config (HasConfig(..))
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Config.Theme as Theme
-import           Lamdu.GUI.ExpressionGui (ExpressionN)
 import qualified Lamdu.GUI.ExpressionGui as ExprGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Name (Name(..))
 import qualified Lamdu.Sugar.Lens as SugarLens
-import qualified Lamdu.Sugar.NearestHoles as NearestHoles
-import qualified Lamdu.Sugar.Parens as AddParens
 import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
@@ -54,23 +51,6 @@ setFocalAreaToFullSize :: WithTextPos (Widget a) -> WithTextPos (Widget a)
 setFocalAreaToFullSize =
     Align.tValue . Widget.sizedState <. Widget._StateFocused . Lens.mapped . Widget.fFocalAreas .@~
     (:[]) . Rect 0
-
-postProcessSugar :: Int -> ExpressionN m () -> ExpressionN m ExprGui.Payload
-postProcessSugar minOpPrec expr =
-    expr
-    & AddParens.addWith minOpPrec
-    <&> pl
-    & SugarLens.wrappedExprs . Sugar.plData . ExprGui.plShowAnnotation
-    .~ ExprGui.alwaysShowAnnotations
-    where
-        pl (x, needParens, ()) =
-            ExprGui.Payload
-            { ExprGui._plStoredEntityIds = []
-            , ExprGui._plNearestHoles = NearestHoles.none
-            , ExprGui._plShowAnnotation = ExprGui.neverShowAnnotations
-            , ExprGui._plNeedParens = needParens == AddParens.NeedsParens
-            , ExprGui._plMinOpPrec = x
-            }
 
 -- | Remove unwanted event handlers from a hole result
 removeUnwanted :: (MonadReader env m, HasConfig env) => m (EventMap a -> EventMap a)
@@ -99,18 +79,16 @@ applyResultLayout fGui =
 
 makeWidget ::
     Monad m =>
-    Sugar.Payload f ExprGui.Payload ->
     Widget.Id ->
-    Sugar.Expression (Name (T m)) (T m) () ->
+    Sugar.Expression (Name (T m)) (T m) ExprGui.Payload ->
     ExprGuiM m (WithTextPos (Widget (T m GuiState.Update)))
-makeWidget pl resultId holeResultConverted =
+makeWidget resultId holeResultConverted =
     do
         remUnwanted <- removeUnwanted
         theme <- Theme.hole <$> Lens.view Theme.theme
         stdSpacing <- Spacer.getSpaceSize
         let padding = Theme.holeResultPadding theme <&> realToFrac & (* stdSpacing)
-        postProcessSugar (pl ^. Sugar.plData . ExprGui.plMinOpPrec) holeResultConverted
-            & ExprGuiM.makeSubexpression
+        ExprGuiM.makeSubexpression holeResultConverted
             <&> Widget.enterResultCursor .~ resultId
             <&> Widget.widget . Widget.eventMapMaker . Lens.mapped %~ remUnwanted
             <&> applyResultLayout
@@ -119,13 +97,12 @@ makeWidget pl resultId holeResultConverted =
 
 make ::
     Monad m =>
-    Sugar.Payload f ExprGui.Payload ->
     SearchMenu.ResultsContext ->
     Widget.Id ->
-    Sugar.HoleResult (T m) (Sugar.Expression (Name (T m)) (T m) ()) ->
+    Sugar.HoleResult (T m) (Sugar.Expression (Name (T m)) (T m) ExprGui.Payload) ->
     ExprGuiM m (Menu.RenderedOption (T m))
-make pl ctx resultId holeResult =
-    makeWidget pl resultId holeResultConverted
+make ctx resultId holeResult =
+    makeWidget resultId holeResultConverted
     & GuiState.assignCursor resultId (pickResult ^. Menu.pickDest)
     <&>
     \widget ->
