@@ -15,6 +15,7 @@ import qualified Data.Char as Char
 import qualified Data.Monoid as Monoid
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Text as Text
+import           GUI.Momentu (View, (/-/))
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
@@ -24,7 +25,6 @@ import qualified GUI.Momentu.MetaKey as MetaKey
 import           GUI.Momentu.ModKey (ModKey(..))
 import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.State as GuiState
-import           GUI.Momentu.View (View)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.FocusDelegator as FocusDelegator
 import qualified GUI.Momentu.Widgets.Menu as Menu
@@ -33,7 +33,6 @@ import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified Lamdu.CharClassification as Chars
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Config.Theme as Theme
-import           Lamdu.GUI.ExpressionEdit.HoleEdit.Open (makeOpenSearchAreaGui)
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.ResultGroups (ResultGroup(..), Result(..))
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.ResultGroups as ResultGroups
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.ResultWidget as ResultWidget
@@ -46,6 +45,8 @@ import           Lamdu.GUI.ExpressionGui.Annotation (maybeAddAnnotationPl)
 import qualified Lamdu.GUI.ExpressionGui.Annotation as Annotation
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.TypeView as TypeView
+import qualified Lamdu.GUI.WidgetIds as WidgetIds
+import qualified Lamdu.Sugar.NearestHoles as NearestHoles
 import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
@@ -166,24 +167,18 @@ make options mOptionLiteral pl allowedTerms =
         if isActive && not isAHoleInHole
             then
                 do
-                    typeView <- makeInferredTypeAnnotation pl
-                    searchTerm <- SearchMenu.readSearchTerm searchMenuId
-                    let ctx =
-                            SearchMenu.ResultsContext
-                            { SearchMenu._rSearchTerm = searchTerm
-                            , SearchMenu._rResultIdPrefix = SearchMenu.resultsIdPrefix searchMenuId
-                            }
+                    annotation <-
+                        (/-/)
+                        <$> Annotation.annotationSpacer
+                        <*> makeInferredTypeAnnotation pl
                     -- ideally the fdWrap would be "inside" the
                     -- type-view addition and stdWrap, but it's not
                     -- important in the case the FD is selected, and
                     -- it is harder to implement, so just wrap it
                     -- here
                     (fdWrap <&> (Lens.mapped %~))
-                        <*> ( ResultGroups.makeAll options mOptionLiteral ctx
-                                <&> Lens.mapped %~ makeResultOption pl
-                                <&> Lens.mapped . Menu.optionWidgets . Align.tValue . Widget.eventMapMaker . Lens.mapped %~
-                                    blockSearchTermEvents allowedTerms (ctx ^. SearchMenu.rSearchTerm)
-                                >>= makeOpenSearchAreaGui allowedTerms typeView pl)
+                        <*> SearchMenu.make (SearchTerm.make searchMenuId allowedTerms)
+                            makeOptions annotation mNextEntry searchMenuId
                         <&> Lens.mapped . Align.tValue . Widget.eventMapMaker . Lens.mapped %~ (<> searchTermEventMap)
                         <&> Lens.mapped %~ inPlaceOfClosed . (^. Align.tValue)
             else
@@ -199,6 +194,12 @@ make options mOptionLiteral pl allowedTerms =
         widgetIds = pl ^. Sugar.plEntityId & HoleWidgetIds.make
         searchMenuId = hidOpen widgetIds
         isAHoleInHole = ExprGui.isHoleResult pl
+        mNextEntry = pl ^. Sugar.plData . ExprGui.plNearestHoles . NearestHoles.next <&> WidgetIds.fromEntityId
+        makeOptions ctx =
+            ResultGroups.makeAll options mOptionLiteral ctx
+            <&> Lens.mapped %~ makeResultOption pl
+            <&> Lens.mapped . Menu.optionWidgets . Align.tValue . Widget.eventMapMaker . Lens.mapped %~
+                blockSearchTermEvents allowedTerms (ctx ^. SearchMenu.rSearchTerm)
 
 allowedSearchTermCommon :: Text -> Bool
 allowedSearchTermCommon searchTerm =

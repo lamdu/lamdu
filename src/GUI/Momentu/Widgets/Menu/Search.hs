@@ -6,25 +6,29 @@ module GUI.Momentu.Widgets.Menu.Search
     , ResultsContext(..), rSearchTerm, rResultIdPrefix
     , basicSearchTermEdit
     , enterWithSearchTerm
+    , make
 
     -- temporary exports that will be removed when transition of HoleEdit
     -- to Menu.Search is complete
-    , readSearchTerm, assignCursor
+    , readSearchTerm
     ) where
 
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
 import qualified Data.Text as Text
-import           GUI.Momentu (Widget, WithTextPos)
+import           GUI.Momentu (Widget, WithTextPos, View)
 import qualified GUI.Momentu.Align as Align
+import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
+import qualified GUI.Momentu.Hover as Hover
 import qualified GUI.Momentu.State as State
 import           GUI.Momentu.State (HasState(..))
 import qualified GUI.Momentu.Widget as Widget
-import           GUI.Momentu.Widget.Id (Id, joinId)
+import           GUI.Momentu.Widget.Id (Id(..), joinId)
 import qualified GUI.Momentu.Widgets.Menu as Menu
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
+import qualified GUI.Momentu.Widgets.TextView as TextView
 
 import           Lamdu.Prelude
 
@@ -116,3 +120,35 @@ enterWithSearchTerm :: Text -> Widget.Id -> State.Update
 enterWithSearchTerm searchTerm searchMenuId =
     State.updateCursor searchMenuId
     <> State.updateWidgetState searchMenuId searchTerm
+
+make ::
+    ( MonadReader env m, HasState env, Menu.HasConfig env
+    , TextView.HasStyle env, Hover.HasStyle env, Element.HasAnimIdPrefix env
+    , Applicative f
+    ) =>
+    m (WithTextPos (Widget (f State.Update))) ->
+    (ResultsContext -> m (Menu.OptionList (Menu.Option m f))) ->
+    View -> Maybe Id -> Id ->
+    m (Menu.Placement -> WithTextPos (Widget (f State.Update)))
+make makeSearchTerm makeOptions annotation mNextEntry searchMenuId =
+    readSearchTerm searchMenuId <&> (`ResultsContext` resultsIdPrefix searchMenuId)
+    >>= makeOptions
+    >>=
+    \options ->
+    do
+        (mPickMain, menu) <- Menu.make (annotation ^. Element.width) mNextEntry options
+        pickEventMap <-
+            case mPickMain of
+            Nothing -> emptyPickEventMap
+            Just pickMain -> Menu.makePickEventMap mNextEntry ?? pickMain
+        mkHoverOptions <- Menu.hoverOptions
+        let hoverMenu placement term =
+                Hover.hoverInPlaceOf (mkHoverOptions placement annotation menu a) a
+                where
+                    a = Hover.anchor term
+        makeSearchTerm
+            <&> Align.tValue %~ Widget.weakerEvents pickEventMap
+            <&> \searchTermWidget placement ->
+                searchTermWidget <&> hoverMenu placement
+    & Reader.local (Element.animIdPrefix .~ toAnimId searchMenuId)
+    & assignCursor searchMenuId (options ^.. traverse . Menu.oId)
