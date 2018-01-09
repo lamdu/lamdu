@@ -74,6 +74,9 @@ searchTermEditEventMap searchMenuId allowedTerms =
             Text.snoc searchTerm
             & E.allChars "Character"
             (E.Doc ["Edit", "Search Term", "Append character"])
+            -- Don't add first operator char,
+            -- we let ExprressionEdit.EventMap do that
+            -- because it knows how to work with precedend and prefix chars.
             & if Text.null searchTerm then E.filter notOp else id
         deleteCharEventMap
             | Text.null searchTerm = mempty
@@ -155,8 +158,9 @@ makeInferredTypeAnnotation pl =
         animId =
             pl ^. Sugar.plEntityId & HoleWidgetIds.make & hidHole & Widget.toAnimId
 
-blockSearchTermEvents :: (Text -> Bool) -> Text -> EventMap a -> EventMap a
-blockSearchTermEvents allowedTerms searchTerm =
+-- Filter out events which should be taken by search term event map instead.
+filterSearchTermEvents :: (Text -> Bool) -> Text -> EventMap a -> EventMap a
+filterSearchTermEvents allowedTerms searchTerm =
     E.filterChars (not . allowedTerms . (searchTerm <>) . Text.singleton)
 
 -- Has a typeView under the search term
@@ -220,7 +224,7 @@ make options mOptionLiteral pl allowedTerms =
             ResultGroups.makeAll options mOptionLiteral ctx
             <&> Lens.mapped %~ makeResultOption pl ctx
             <&> Lens.mapped . Menu.optionWidgets . Align.tValue . Widget.eventMapMaker . Lens.mapped %~
-                blockSearchTermEvents allowedTerms (ctx ^. SearchMenu.rSearchTerm)
+                filterSearchTermEvents allowedTerms (ctx ^. SearchMenu.rSearchTerm)
 
 allowedSearchTermCommon :: Text -> Bool
 allowedSearchTermCommon searchTerm =
