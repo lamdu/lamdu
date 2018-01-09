@@ -5,13 +5,11 @@ module Lamdu.GUI.ExpressionEdit.HoleEdit.Open
     ( makeOpenSearchAreaGui
     ) where
 
-import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
 import           Data.Store.Transaction (Transaction)
 import           GUI.Momentu.Align (WithTextPos)
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Element as Element
-import           GUI.Momentu.EventMap (EventMap)
 import           GUI.Momentu.Glue ((/-/))
 import qualified GUI.Momentu.Hover as Hover
 import qualified GUI.Momentu.State as GuiState
@@ -37,18 +35,15 @@ type T = Transaction
 
 makeOpenSearchAreaGui ::
     Monad m =>
-    EventMap (T m GuiState.Update) ->
     (Text -> Bool) -> View ->
     Sugar.Payload (T m) ExprGui.Payload ->
     Menu.OptionList (Menu.Option (ExprGuiM m) (T m)) ->
     ExprGuiM m (Menu.Placement -> WithTextPos (Widget (T m GuiState.Update)))
-makeOpenSearchAreaGui searchTermEventMap allowedTerms typeView pl options =
+makeOpenSearchAreaGui allowedTerms typeView pl options =
     do
         vspace <- Annotation.annotationSpacer
         let annotation = vspace /-/ typeView
-        (mPickMain, menu) <-
-            Menu.make (annotation ^. Element.width) mNextEntry options
-            <&> _2 . Lens.mapped . Widget.eventMapMaker . Lens.mapped %~ (searchTermEventMap <>)
+        (mPickMain, menu) <- Menu.make (annotation ^. Element.width) mNextEntry options
         pickEventMap <-
             case mPickMain of
             Nothing -> SearchMenu.emptyPickEventMap

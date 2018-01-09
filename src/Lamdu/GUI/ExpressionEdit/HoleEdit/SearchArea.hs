@@ -133,6 +133,10 @@ makeInferredTypeAnnotation pl =
         animId =
             pl ^. Sugar.plEntityId & HoleWidgetIds.make & hidHole & Widget.toAnimId
 
+blockSearchTermEvents :: (Text -> Bool) -> Text -> EventMap a -> EventMap a
+blockSearchTermEvents allowedTerms searchTerm =
+    E.filterChars (not . allowedTerms . (searchTerm <>) . Text.singleton)
+
 -- Has a typeView under the search term
 make ::
     Monad m =>
@@ -176,9 +180,11 @@ make options mOptionLiteral pl allowedTerms =
                     -- here
                     (fdWrap <&> (Lens.mapped %~))
                         <*> ( ResultGroups.makeAll options mOptionLiteral ctx
-                                <&> fmap (makeResultOption pl)
-                                >>= makeOpenSearchAreaGui searchTermEventMap
-                                    allowedTerms typeView pl)
+                                <&> Lens.mapped %~ makeResultOption pl
+                                <&> Lens.mapped . Menu.optionWidgets . Align.tValue . Widget.eventMapMaker . Lens.mapped %~
+                                    blockSearchTermEvents allowedTerms (ctx ^. SearchMenu.rSearchTerm)
+                                >>= makeOpenSearchAreaGui allowedTerms typeView pl)
+                        <&> Lens.mapped . Align.tValue . Widget.eventMapMaker . Lens.mapped %~ (<> searchTermEventMap)
                         <&> Lens.mapped %~ inPlaceOfClosed . (^. Align.tValue)
             else
                 (if isActive then Widget.setFocused else id)
