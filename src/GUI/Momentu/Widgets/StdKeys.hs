@@ -11,8 +11,8 @@ data DirKeys key = DirKeys
 
 stdDirKeys :: DirKeys MetaKey.Key
 stdDirKeys = DirKeys
-    { keysLeft  = [MetaKey.Key'Left,  MetaKey.Key'H]
-    , keysRight = [MetaKey.Key'Right, MetaKey.Key'L]
-    , keysUp    = [MetaKey.Key'Up,    MetaKey.Key'K]
-    , keysDown  = [MetaKey.Key'Down,  MetaKey.Key'J]
+    { keysLeft  = [MetaKey.Key'Left]
+    , keysRight = [MetaKey.Key'Right]
+    , keysUp    = [MetaKey.Key'Up]
+    , keysDown  = [MetaKey.Key'Down]
     }
