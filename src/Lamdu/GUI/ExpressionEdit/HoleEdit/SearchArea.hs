@@ -88,27 +88,26 @@ searchTermEditEventMap searchMenuId allowedTerms =
 
 makeRenderedResult ::
     Monad m =>
-    Sugar.Payload f ExprGui.Payload -> Result (T m) ->
+    Sugar.Payload f ExprGui.Payload -> SearchMenu.ResultsContext -> Result (T m) ->
     ExprGuiM m (Menu.RenderedOption (T m))
-makeRenderedResult pl result =
+makeRenderedResult pl ctx result =
     -- Warning: rHoleResult should be ran at most once!
     -- Running it more than once caused a horrible bug (bugfix: 848b6c4407)
-    rHoleResult result & transaction >>= ResultWidget.make pl (rId result)
+    rHoleResult result & transaction >>= ResultWidget.make pl ctx (rId result)
 
 makeResultOption ::
     Monad m =>
-    Sugar.Payload f ExprGui.Payload ->
-    ResultGroup (T m) ->
+    Sugar.Payload f ExprGui.Payload -> SearchMenu.ResultsContext -> ResultGroup (T m) ->
     Menu.Option (ExprGuiM m) (T m)
-makeResultOption pl results =
+makeResultOption pl ctx results =
     Menu.Option
     { Menu._oId = results ^. ResultGroups.rgPrefixId
-    , Menu._oRender = makeRenderedResult pl (results ^. ResultGroups.rgMain)
+    , Menu._oRender = makeRenderedResult pl ctx (results ^. ResultGroups.rgMain)
     , Menu._oSubmenuWidgets =
         case results ^. ResultGroups.rgExtra of
         [] -> Menu.SubmenuEmpty
         extras ->
-            traverse (makeRenderedResult pl) extras
+            traverse (makeRenderedResult pl ctx) extras
             <&> map makeSubMenu
             & Menu.SubmenuItems
     }
@@ -197,7 +196,7 @@ make options mOptionLiteral pl allowedTerms =
         mNextEntry = pl ^. Sugar.plData . ExprGui.plNearestHoles . NearestHoles.next <&> WidgetIds.fromEntityId
         makeOptions ctx =
             ResultGroups.makeAll options mOptionLiteral ctx
-            <&> Lens.mapped %~ makeResultOption pl
+            <&> Lens.mapped %~ makeResultOption pl ctx
             <&> Lens.mapped . Menu.optionWidgets . Align.tValue . Widget.eventMapMaker . Lens.mapped %~
                 blockSearchTermEvents allowedTerms (ctx ^. SearchMenu.rSearchTerm)
 

@@ -25,7 +25,6 @@ import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import           Lamdu.Config (HasConfig(..))
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Config.Theme as Theme
-import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds as HoleWidgetIds
 import           Lamdu.GUI.ExpressionGui (ExpressionN)
 import qualified Lamdu.GUI.ExpressionGui as ExprGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
@@ -41,14 +40,12 @@ import           Lamdu.Prelude
 
 type T = Transaction
 
-getSearchStringRemainder ::
-    (MonadReader env f, GuiState.HasState env) =>
-    Widget.Id -> Sugar.Expression name m a -> f Text
-getSearchStringRemainder searchMenuId holeResultConverted
-    | (`Lens.has` holeResultConverted) `any` [literalNum, wrappedExpr . literalNum] =
-        SearchMenu.readSearchTerm searchMenuId
-        <&> \x -> if "." `Text.isSuffixOf` x then "." else ""
-    | otherwise = pure mempty
+getSearchStringRemainder :: SearchMenu.ResultsContext -> Sugar.Expression name m a -> Text
+getSearchStringRemainder ctx holeResultConverted
+    | any (`Lens.has` holeResultConverted) [literalNum, wrappedExpr . literalNum]
+        && Text.isSuffixOf "." (ctx ^. SearchMenu.rSearchTerm)
+        = "."
+    | otherwise = ""
     where
         literalNum = Sugar.rBody . Sugar._BodyLiteral . Sugar._LiteralNum
         wrappedExpr = Sugar.rBody . Sugar._BodyWrapper . Sugar.wExpr
@@ -123,26 +120,24 @@ makeWidget pl resultId holeResultConverted =
 make ::
     Monad m =>
     Sugar.Payload f ExprGui.Payload ->
+    SearchMenu.ResultsContext ->
     Widget.Id ->
     Sugar.HoleResult (T m) (Sugar.Expression (Name (T m)) (T m) ()) ->
     ExprGuiM m (Menu.RenderedOption (T m))
-make pl resultId holeResult =
-    do
-        widget <- makeWidget pl resultId holeResultConverted
-        searchStringRemainder <-
-            getSearchStringRemainder
-            (HoleWidgetIds.hidOpen (HoleWidgetIds.make (pl ^. Sugar.plEntityId)))
-            holeResultConverted
-        pure Menu.RenderedOption
-            { Menu._rPick =
-                Widget.PreEvent
-                { Widget._pDesc = "Pick"
-                , Widget._pAction = pickResult <$ holeResult ^. Sugar.holeResultPick
-                , Widget._pTextRemainder = searchStringRemainder
-                }
-            , Menu._rWidget = widget
-            }
+make pl ctx resultId holeResult =
+    makeWidget pl resultId holeResultConverted
     & GuiState.assignCursor resultId (pickResult ^. Menu.pickDest)
+    <&>
+    \widget ->
+    Menu.RenderedOption
+    { Menu._rPick =
+        Widget.PreEvent
+        { Widget._pDesc = "Pick"
+        , Widget._pAction = pickResult <$ holeResult ^. Sugar.holeResultPick
+        , Widget._pTextRemainder = getSearchStringRemainder ctx holeResultConverted
+        }
+    , Menu._rWidget = widget
+    }
     where
         holeResultId =
             holeResultConverted ^. Sugar.rPayload . Sugar.plEntityId
