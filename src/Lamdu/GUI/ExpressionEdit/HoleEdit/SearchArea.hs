@@ -21,8 +21,6 @@ import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.Hover as Hover
-import qualified GUI.Momentu.MetaKey as MetaKey
-import           GUI.Momentu.ModKey (ModKey(..))
 import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.State as GuiState
 import qualified GUI.Momentu.Widget as Widget
@@ -62,34 +60,6 @@ fdConfig Config.Hole{holeOpenKeys, holeCloseKeys} = FocusDelegator.Config
     , FocusDelegator.focusParentKeys = holeCloseKeys
     , FocusDelegator.focusParentDoc = E.Doc ["Navigation", "Hole", "Close"]
     }
-
-searchTermEditEventMap ::
-    (MonadReader env m, GuiState.HasState env) =>
-    Widget.Id -> (Text -> Bool) -> m (EventMap GuiState.Update)
-searchTermEditEventMap searchMenuId allowedTerms =
-    SearchMenu.readSearchTerm searchMenuId
-    <&>
-    \searchTerm ->
-    let appendCharEventMap =
-            Text.snoc searchTerm
-            & E.allChars "Character"
-            (E.Doc ["Edit", "Search Term", "Append character"])
-            -- Don't add first operator char,
-            -- we let ExprressionEdit.EventMap do that
-            -- because it knows how to work with precedend and prefix chars.
-            & if Text.null searchTerm then E.filter notOp else id
-        deleteCharEventMap
-            | Text.null searchTerm = mempty
-            | otherwise =
-                    Text.init searchTerm
-                    & E.keyPress (ModKey mempty MetaKey.Key'Backspace)
-                    (E.Doc ["Edit", "Search Term", "Delete backwards"])
-    in
-    appendCharEventMap <> deleteCharEventMap
-    & E.filter allowedTerms
-    <&> GuiState.updateWidgetState searchMenuId
-    where
-        notOp = Text.any (`notElem` Chars.operator)
 
 makeRenderedResult ::
     Monad m =>
@@ -185,7 +155,7 @@ make options mOptionLiteral pl allowedTerms =
                 <*> SearchTerm.make searchMenuId allowedTerms <&> Responsive.fromWithTextPos
             )
         isActive <- HoleWidgetIds.isActive widgetIds
-        searchTermEventMap <- searchTermEditEventMap searchMenuId allowedTerms <&> fmap pure
+        searchTermEventMap <- SearchMenu.searchTermEditEventMap searchMenuId adhocAllowedTerms <&> fmap pure
         let inPlaceOfClosed open =
                 closedSearchTermGui & Widget.widget %~
                 Hover.hoverInPlaceOf [Hover.anchor open] . Hover.anchor
@@ -220,6 +190,13 @@ make options mOptionLiteral pl allowedTerms =
         searchMenuId = hidOpen widgetIds
         isAHoleInHole = ExprGui.isHoleResult pl
         mNextEntry = pl ^. Sugar.plData . ExprGui.plNearestHoles . NearestHoles.next <&> WidgetIds.fromEntityId
+        adhocAllowedTerms txt
+            | Text.length txt == 1 && Text.all (`elem` Chars.operator) txt =
+                -- Don't add first operator char,
+                -- we let ExprressionEdit.EventMap do that
+                -- because it knows how to work with precedend and prefix chars.
+                False
+            | otherwise = allowedTerms txt
         makeOptions ctx =
             ResultGroups.makeAll options mOptionLiteral ctx
             <&> Lens.mapped %~ makeResultOption pl ctx

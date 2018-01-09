@@ -4,7 +4,7 @@ module GUI.Momentu.Widgets.Menu.Search
     ( emptyPickEventMap
     , resultsIdPrefix
     , ResultsContext(..), rSearchTerm, rResultIdPrefix
-    , basicSearchTermEdit
+    , basicSearchTermEdit, searchTermEditEventMap
     , enterWithSearchTerm
     , make
 
@@ -22,6 +22,8 @@ import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.Hover as Hover
+import qualified GUI.Momentu.MetaKey as MetaKey
+import           GUI.Momentu.ModKey (ModKey(..))
 import qualified GUI.Momentu.State as State
 import           GUI.Momentu.State (HasState(..))
 import qualified GUI.Momentu.Widget as Widget
@@ -152,3 +154,24 @@ make makeSearchTerm makeOptions annotation mNextEntry searchMenuId =
                 searchTermWidget <&> hoverMenu placement
     & Reader.local (Element.animIdPrefix .~ toAnimId searchMenuId)
     & assignCursor searchMenuId (options ^.. traverse . Menu.oId)
+
+searchTermEditEventMap ::
+    (MonadReader env m, HasState env) =>
+    Widget.Id -> (Text -> Bool) -> m (EventMap State.Update)
+searchTermEditEventMap searchMenuId allowedTerms =
+    readSearchTerm searchMenuId
+    <&>
+    \searchTerm ->
+    let appendCharEventMap =
+            Text.snoc searchTerm
+            & E.allChars "Character"
+            (E.Doc ["Edit", "Search Term", "Append character"])
+        deleteCharEventMap
+            | Text.null searchTerm = mempty
+            | otherwise =
+                    Text.init searchTerm
+                    & E.keyPress (ModKey mempty MetaKey.Key'Backspace)
+                    (E.Doc ["Edit", "Search Term", "Delete backwards"])
+    in
+    E.filter allowedTerms appendCharEventMap <> deleteCharEventMap
+    <&> State.updateWidgetState searchMenuId
