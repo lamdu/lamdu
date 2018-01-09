@@ -26,6 +26,7 @@ import           GUI.Momentu.View (View)
 import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Menu as Menu
+import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
 import           GUI.Momentu.Widgets.Spacer (HasStdSpacing)
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
@@ -117,9 +118,9 @@ makeOptions ::
     ( Monad m, MonadTransaction m f, MonadReader env f, GuiState.HasCursor env
     , HasConfig env, HasTheme env, Element.HasAnimIdPrefix env, TextView.HasStyle env
     ) =>
-    Sugar.Tag (Name n) (T m) -> Text ->
+    Sugar.Tag (Name n) (T m) -> SearchMenu.ResultsContext ->
     f (Menu.OptionList (Menu.Option f (T m)))
-makeOptions tag searchTerm
+makeOptions tag ctx
     | Text.null searchTerm = pure mempty
     | otherwise =
         do
@@ -133,13 +134,13 @@ makeOptions tag searchTerm
                 <&> uncurry Menu.OptionList
                 <&> fmap makeOption
     where
+        searchTerm = ctx ^. SearchMenu.rSearchTerm
         makeOption (name, t) =
             Menu.Option
             { Menu._oId = optionWId
             , Menu._oRender =
-                ( Widget.makeFocusableView <*> Widget.makeSubId optionId
-                    <&> fmap
-                ) <*> NameEdit.makeView (name ^. Name.form) optionId
+                (Widget.makeFocusableView ?? optionWId <&> fmap)
+                <*> NameEdit.makeView (name ^. Name.form) optionId
                 <&>
                 \widget ->
                 Menu.RenderedOption
@@ -161,11 +162,58 @@ makeOptions tag searchTerm
                         tagInfo ^. Sugar.tagInstance & WidgetIds.fromEntityId
                     , Menu._pickDestIsEntryPoint = False
                     }
-                optionWId = WidgetIds.hash t
+                optionWId = ctx ^. SearchMenu.rResultIdPrefix <> WidgetIds.hash t
                 optionId = Widget.toAnimId optionWId
 
 allowedSearchTerm :: Text -> Bool
 allowedSearchTerm = Text.all Char.isAlphaNum
+
+makeHoleSearchTerm ::
+    ( MonadReader env m, GuiState.HasState env, HasConfig env, TextEdit.HasStyle env
+    , HasTheme env, Element.HasAnimIdPrefix env, HasStdSpacing env, Hover.HasStyle env
+    , Monad f
+    ) =>
+    NearestHoles -> Sugar.Tag (Name (T f)) (T f) -> m (WithTextPos (Widget (T f GuiState.Update)))
+makeHoleSearchTerm nearestHoles tag =
+    do
+        searchTerm <- SearchMenu.readSearchTerm holeId
+        setNameEventMap <-
+            tagId tag <$ setTagName tag searchTerm
+            & makePickEventMap nearestHoles (E.Doc ["Edit", "Tag", "New"])
+        let pickPreEvent =
+                Widget.PreEvent
+                { Widget._pDesc = "New tag"
+                , Widget._pAction = mempty <$ setTagName tag searchTerm
+                , Widget._pTextRemainder = ""
+                }
+        term <-
+            SearchMenu.basicSearchTermEdit holeId allowedSearchTerm
+            <&> Align.tValue . Lens.mapped %~ pure
+            <&> Align.tValue %~ Widget.weakerEvents setNameEventMap
+            <&> Align.tValue . Widget.wState . Widget._StateFocused .
+                Lens.mapped . Widget.fPreEvents %~ (pickPreEvent :)
+        tooltip <- Lens.view theme <&> Theme.tooltip
+        if not (Text.null searchTerm) && Widget.isFocused (term ^. Align.tValue)
+            then
+                do
+                    newTagLabel <- (TextView.make ?? "(new tag)") <*> Element.subAnimId ["label"]
+                    space <- Spacer.stdHSpace
+                    hover <- Hover.hover
+                    let anchor = fmap Hover.anchor
+                    let hNewTagLabel = hover newTagLabel & Hover.sequenceHover
+                    let hoverOptions =
+                            [ anchor (term /|/ space) /|/ hNewTagLabel
+                            , hNewTagLabel /|/ anchor (space /|/ term)
+                            ] <&> (^. Align.tValue)
+                    anchor term
+                        <&> Hover.hoverInPlaceOf hoverOptions
+                        & pure
+                    & Reader.local (Hover.backgroundColor .~ Theme.tooltipBgColor tooltip)
+                    & Reader.local (TextView.color .~ Theme.tooltipFgColor tooltip)
+                    & Reader.local (Element.animIdPrefix <>~ ["label"])
+            else pure term
+    where
+        holeId = WidgetIds.tagHoleId (tagId tag)
 
 makeTagHoleEdit ::
     ( Monad m, MonadReader env f, MonadTransaction m f
@@ -177,48 +225,13 @@ makeTagHoleEdit ::
     f (WithTextPos (Widget (T m GuiState.Update)))
 makeTagHoleEdit nearestHoles tag =
     do
-        searchTerm <- GuiState.readWidgetState holeId <&> fromMaybe ""
-        setNameEventMap <-
-            tagId tag <$ setTagName tag searchTerm
-            & makePickEventMap nearestHoles (E.Doc ["Edit", "Tag", "Set name"])
-        term <-
-            TextEdit.make ?? textEditNoEmpty ?? searchTerm ?? searchTermId
-            <&> Align.tValue . Widget.eventMapMaker . Lens.mapped %~ E.filter (allowedSearchTerm . fst)
-            <&> Align.tValue . Lens.mapped %~ pure . updateState
-            <&> Align.tValue %~ Widget.weakerEvents setNameEventMap
-        tooltip <- Lens.view theme <&> Theme.tooltip
-        topLine <-
-            if not (Text.null searchTerm) && Widget.isFocused (term ^. Align.tValue)
-            then do
-                newTagLabel <- (TextView.make ?? "(new tag)") <*> Element.subAnimId ["label"]
-                space <- Spacer.stdHSpace
-                hover <- Hover.hover
-                let anchor = fmap Hover.anchor
-                let hNewTagLabel = hover newTagLabel & Hover.sequenceHover
-                let hoverOptions =
-                        [ anchor (term /|/ space) /|/ hNewTagLabel
-                        , hNewTagLabel /|/ anchor (space /|/ term)
-                        ] <&> (^. Align.tValue)
-                anchor term
-                    <&> Hover.hoverInPlaceOf hoverOptions
-                    & pure
-                & Reader.local (Hover.backgroundColor .~ Theme.tooltipBgColor tooltip)
-                & Reader.local (TextView.color .~ Theme.tooltipFgColor tooltip)
-                & Reader.local (Element.animIdPrefix <>~ ["label"])
-            else pure term
-        makeMenu <-
-            makeOptions tag searchTerm
-            >>= Menu.makeHovered Element.empty
-                (nearestHoles ^. NearestHoles.next <&> WidgetIds.fromEntityId)
-        topLine <&> makeMenu Menu.AnyPlace & pure
-    & GuiState.assignCursor holeId searchTermId
-    & Reader.local (Element.animIdPrefix .~ Widget.toAnimId holeId)
+        searchTermEventMap <- SearchMenu.searchTermEditEventMap holeId allowedSearchTerm <&> fmap pure
+        SearchMenu.make (makeHoleSearchTerm nearestHoles tag) (makeOptions tag) Element.empty
+            (nearestHoles ^. NearestHoles.next <&> WidgetIds.fromEntityId) holeId
+            ?? Menu.AnyPlace
+            <&> Align.tValue . Widget.eventMapMaker . Lens.mapped %~ (<> searchTermEventMap)
     where
         holeId = WidgetIds.tagHoleId (tagId tag)
-        searchTermId = holeId <> Widget.Id ["term"]
-        textEditNoEmpty = TextEdit.EmptyStrings "" ""
-        updateState (newSearchTerm, update) =
-            update <> GuiState.updateWidgetState holeId newSearchTerm
 
 makeTagEdit ::
     ( Monad m, MonadReader env f, MonadTransaction m f, HasConfig env
@@ -305,6 +318,16 @@ makeParamTag tag =
         color <- Lens.view Theme.theme <&> Theme.name <&> Theme.parameterColor
         makeTagEdit NearestHoles.none tag
             & Reader.local (TextView.color .~ color)
+    & Reader.local (Menu.config %~ removeGoNextKeys)
+    where
+        removeGoNextKeys c =
+            -- Would be nicer with lens but that would make the JSON format ugly..
+            c
+            { Menu.configKeys =
+                (Menu.configKeys c)
+                { Menu.keysPickOptionAndGotoNext = []
+                }
+            }
 
 -- | Unfocusable tag view (e.g: in apply args)
 makeArgTag ::

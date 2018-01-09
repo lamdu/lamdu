@@ -156,9 +156,9 @@ fixUsagesOfLamBinder fixOp binderKind storedLam =
 addFieldParam ::
     Monad m =>
     Maybe (MkProperty m PresentationMode) ->
-    T m (ValI m) -> BinderKind m -> (T.Tag -> ParamList) -> StoredLam m ->
+    T m (ValI m) -> BinderKind m -> StoredLam m -> (T.Tag -> ParamList) ->
     T m TagInfo
-addFieldParam mPresMode mkArg binderKind mkNewTags storedLam =
+addFieldParam mPresMode mkArg binderKind storedLam mkNewTags =
     do
         tag <- newTag
         let tagS =
@@ -268,7 +268,10 @@ fieldParamActions ::
 fieldParamActions mPresMode binderKind tags fp storedLam =
     FuncParamActions
     { _fpAddNext =
-        addFieldParam mPresMode DataOps.newHole binderKind mkNewTags storedLam
+        Transaction.getP (slParamList storedLam)
+        <&> fromMaybe (error "no param list?")
+        <&> addTag
+        >>= addFieldParam mPresMode DataOps.newHole binderKind storedLam
         <&> ParamAddResultNewTag
     , _fpDelete = delFieldParamAndFixCalls binderKind tags fp storedLam
     , _fpMOrderBefore =
@@ -286,7 +289,10 @@ fieldParamActions mPresMode binderKind tags fp storedLam =
     }
     where
         (tagsBefore, _:tagsAfter) = break (== fpTag fp) tags
-        mkNewTags tag = tagsBefore ++ [fpTag fp, tag] ++ tagsAfter
+        addTag readTags tag =
+            pre ++ tag : post
+            where
+                (pre, post) = splitAt (length tagsBefore + 1) readTags
 
 fpIdEntityId :: V.Var -> FieldParam -> EntityId
 fpIdEntityId param = EntityId.ofLambdaTagParam param . fpTag
@@ -357,7 +363,10 @@ convertRecordParams mPresMode binderKind fieldParams lam@(V.Lam param _) pl =
     , _cpParamInfos = fieldParams <&> mkFieldParamInfo & mconcat
     , _cpParams = FieldParams params
     , _cpAddFirstParam =
-        addFieldParam mPresMode DataOps.newHole binderKind (:tags) storedLam
+        Transaction.getP (slParamList storedLam)
+        <&> fromMaybe (error "no params?")
+        <&> flip (:)
+        >>= addFieldParam mPresMode DataOps.newHole binderKind storedLam
         <&> ParamAddResultNewTag
     , cpScopes = BinderBodyScope $ mkCpScopesOfLam pl
     , cpMLamParam = Just (pl ^. Input.entityId, param)
