@@ -48,10 +48,21 @@ make wrapper pl =
         let mRemoveNextHoles
                 | isSelected = ExprGui.plNearestHoles .~ NearestHoles.none
                 | otherwise = id
+        config <- Lens.view Config.config
+        let enterEventMap =
+                E.keysEventMapMovesCursor (Config.enterSubexpressionKeys config)
+                (E.Doc ["Navigation", "Enter wrapper"]) (pure innerId)
+        let leaveEventMap =
+                E.keysEventMapMovesCursor (Config.leaveSubexpressionKeys config)
+                (E.Doc ["Navigation", "Go out to wrapper"]) (pure myId)
+        let addFocusEvents
+                | isSelected = (enterEventMap <>) . E.filterChars (`notElem` Chars.operator)
+                | otherwise = (<> leaveEventMap)
         argGui <-
             wrapper
             & Sugar.wExpr . Sugar.rPayload . Sugar.plData %~ mRemoveNextHoles
             & makeArgEdit & GuiState.assignCursor myId innerId
+            <&> Widget.widget . Widget.eventMapMaker . Lens.mapped %~ addFocusEvents
         hover <- Hover.hover
         searchAreaGui <- SearchArea.make (wrapper ^. Sugar.wOptions) Nothing pl allowedWrapperSearchTerm
         let f layoutMode arg
@@ -80,16 +91,6 @@ make wrapper pl =
                                 & Widget.wState . Widget._StateFocused . Lens.mapped . Widget.fFocalAreas .~
                                     [Rect 0 (w ^. Widget.wSize)]
                             | otherwise = w
-        config <- Lens.view Config.config
-        let enterEventMap =
-                E.keysEventMapMovesCursor (Config.enterSubexpressionKeys config)
-                (E.Doc ["Navigation", "Enter wrapper"]) (pure innerId)
-        let leaveEventMap =
-                E.keysEventMapMovesCursor (Config.leaveSubexpressionKeys config)
-                (E.Doc ["Navigation", "Go out to wrapper"]) (pure myId)
-        let addFocusEvents
-                | isSelected = (enterEventMap <>) . E.filterChars (`notElem` Chars.operator)
-                | otherwise = (<> leaveEventMap)
         let unwrapEventMap =
                 case wrapper ^. Sugar.wUnwrap of
                 Sugar.UnwrapTypeMismatch -> mempty
@@ -100,7 +101,6 @@ make wrapper pl =
                         (E.Doc ["Edit", "Unwrap"])
         ExprEventMap.add ExprEventMap.defaultOptions pl
             <*> (maybeAddAnnotationPl pl ?? argGui <&> Responsive.render . Lens.imapped %@~ f)
-            <&> Widget.widget . Widget.eventMapMaker . Lens.mapped %~ addFocusEvents
             <&> Widget.widget %~ Widget.weakerEvents unwrapEventMap
     where
         innerId = wrapper ^. Sugar.wExpr . Sugar.rPayload & WidgetIds.fromExprPayload
