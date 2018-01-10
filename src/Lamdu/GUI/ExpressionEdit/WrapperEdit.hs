@@ -16,10 +16,12 @@ import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Glue ((/-/))
 import qualified GUI.Momentu.Hover as Hover
+import           GUI.Momentu.Rect (Rect(..))
 import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.State as GuiState
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Menu as Menu
+import qualified Lamdu.CharClassification as Chars
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
@@ -27,8 +29,8 @@ import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.SearchArea as SearchArea
 import qualified Lamdu.GUI.ExpressionGui as ExprGui
 import           Lamdu.GUI.ExpressionGui.Annotation (maybeAddAnnotationPl)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
-import           Lamdu.GUI.ExpressionGui.Wrap (parentDelegator)
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
+import qualified Lamdu.Sugar.NearestHoles as NearestHoles
 import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
@@ -42,8 +44,14 @@ make ::
     ExprGuiM m (ExpressionGui m)
 make wrapper pl =
     do
-        argGui <- makeArgEdit wrapper
         isSelected <- GuiState.isSubCursor ?? myId
+        let mRemoveNextHoles
+                | isSelected = ExprGui.plNearestHoles .~ NearestHoles.none
+                | otherwise = id
+        argGui <-
+            wrapper
+            & Sugar.wExpr . Sugar.rPayload . Sugar.plData %~ mRemoveNextHoles
+            & makeArgEdit & GuiState.assignCursor myId innerId
         hover <- Hover.hover
         searchAreaGui <- SearchArea.make (wrapper ^. Sugar.wOptions) Nothing pl allowedWrapperSearchTerm
         let f layoutMode arg
@@ -58,12 +66,30 @@ make wrapper pl =
                             , (searchArea Menu.Above <&> hover) /-/ hoverArgument
                             ]
                             <&> (^. Align.tValue)
-                        hoverArgument = render argGui & Align.tValue %~ Hover.anchor
+                        hoverArgument =
+                            render argGui
+                            & Align.tValue %~ setFocalArea
+                            & Align.tValue %~ Hover.anchor
                         searchArea p =
                             render (searchAreaGui p)
                             & hideIfInHole
                         render x = (x ^. Responsive.render) layoutMode
+                        setFocalArea w
+                            | isSelected =
+                                w
+                                & Widget.wState . Widget._StateFocused . Lens.mapped . Widget.fFocalAreas .~
+                                    [Rect 0 (w ^. Widget.wSize)]
+                            | otherwise = w
         config <- Lens.view Config.config
+        let enterEventMap =
+                E.keysEventMapMovesCursor (Config.enterSubexpressionKeys config)
+                (E.Doc ["Navigation", "Enter wrapper"]) (pure innerId)
+        let leaveEventMap =
+                E.keysEventMapMovesCursor (Config.leaveSubexpressionKeys config)
+                (E.Doc ["Navigation", "Go out to wrapper"]) (pure myId)
+        let addFocusEvents
+                | isSelected = (enterEventMap <>) . E.filterChars (`notElem` Chars.operator)
+                | otherwise = (<> leaveEventMap)
         let unwrapEventMap =
                 case wrapper ^. Sugar.wUnwrap of
                 Sugar.UnwrapTypeMismatch -> mempty
@@ -73,11 +99,11 @@ make wrapper pl =
                         (Config.delKeys config <> Config.holeUnwrapKeys (Config.hole config))
                         (E.Doc ["Edit", "Unwrap"])
         ExprEventMap.add ExprEventMap.defaultOptions pl
-            <*> ( parentDelegator myId
-                    <*> (maybeAddAnnotationPl pl ?? argGui <&> Responsive.render . Lens.imapped %@~ f)
-                )
+            <*> (maybeAddAnnotationPl pl ?? argGui <&> Responsive.render . Lens.imapped %@~ f)
+            <&> Widget.widget . Widget.eventMapMaker . Lens.mapped %~ addFocusEvents
             <&> Widget.widget %~ Widget.weakerEvents unwrapEventMap
     where
+        innerId = wrapper ^. Sugar.wExpr . Sugar.rPayload & WidgetIds.fromExprPayload
         myId = WidgetIds.fromExprPayload pl
         hideIfInHole x
             | ExprGui.isHoleResult pl =
