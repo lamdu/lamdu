@@ -149,7 +149,7 @@ make theCodeAnchors width =
             eventMap <- panesEventMap theExportActions theCodeAnchors
             Responsive.vboxSpaced
                 ?? (replGui : panesEdits ++ [newDefinitionButton])
-                <&> Widget.weakerEvents eventMap
+                <&> Widget.widget . Widget.eventMapMaker . Lens.mapped %~ (<> eventMap)
             & ExprGuiM.run ExpressionEdit.make theCodeAnchors
             <&> render
             <&> (^. Align.tValue)
