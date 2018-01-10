@@ -14,7 +14,6 @@ import           Data.Store.Transaction (Transaction)
 import qualified Data.Text as Text
 import           GUI.Momentu.Align (WithTextPos)
 import qualified GUI.Momentu.Align as Align
-import qualified GUI.Momentu.Draw as Draw
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
@@ -227,9 +226,9 @@ makeTagEdit ::
     , TextEdit.HasStyle env, Hover.HasStyle env, Menu.HasConfig env
     , HasStdSpacing env
     ) =>
-    Draw.Color -> NearestHoles -> Sugar.Tag (Name (T m)) (T m) ->
+    NearestHoles -> Sugar.Tag (Name (T m)) (T m) ->
     f (WithTextPos (Widget (T m GuiState.Update)))
-makeTagEdit tagColor nearestHoles tag =
+makeTagEdit nearestHoles tag =
     do
         jumpHolesEventMap <- ExprEventMap.jumpHolesEventMap nearestHoles
         isRenaming <- GuiState.isSubCursor ?? tagRenameId myId
@@ -261,7 +260,6 @@ makeTagEdit tagColor nearestHoles tag =
         widget
             <&> Widget.weakerEvents jumpHolesEventMap
             & pure
-    & Reader.local (TextView.color .~ tagColor)
     & GuiState.assignCursor myId viewId
     where
         myId = WidgetIds.fromEntityId (tag ^. Sugar.tagInfo . Sugar.tagInstance)
@@ -277,8 +275,9 @@ makeRecordTag ::
     f (WithTextPos (Widget (T m GuiState.Update)))
 makeRecordTag nearestHoles tag =
     do
-        nameTheme <- Lens.view Theme.theme <&> Theme.name
-        makeTagEdit (Theme.recordTagColor nameTheme) nearestHoles tag
+        color <- Lens.view Theme.theme <&> Theme.name <&> Theme.recordTagColor
+        makeTagEdit nearestHoles tag
+            & Reader.local (TextView.color .~ color)
 
 makeCaseTag ::
     ( Monad m, MonadReader env f, MonadTransaction m f, HasTheme env
@@ -290,8 +289,9 @@ makeCaseTag ::
     f (WithTextPos (Widget (T m GuiState.Update)))
 makeCaseTag nearestHoles tag =
     do
-        nameTheme <- Lens.view Theme.theme <&> Theme.name
-        makeTagEdit (Theme.caseTagColor nameTheme) nearestHoles tag
+        color <- Lens.view Theme.theme <&> Theme.name <&> Theme.caseTagColor
+        makeTagEdit nearestHoles tag
+            & Reader.local (TextView.color .~ color)
 
 makeParamTag ::
     ( MonadReader env f, HasTheme env, HasConfig env, Hover.HasStyle env, Menu.HasConfig env
@@ -302,8 +302,9 @@ makeParamTag ::
     f (WithTextPos (Widget (T m GuiState.Update)))
 makeParamTag tag =
     do
-        paramColor <- Lens.view Theme.theme <&> Theme.name <&> Theme.parameterColor
-        makeTagEdit paramColor NearestHoles.none tag
+        color <- Lens.view Theme.theme <&> Theme.name <&> Theme.parameterColor
+        makeTagEdit NearestHoles.none tag
+            & Reader.local (TextView.color .~ color)
 
 -- | Unfocusable tag view (e.g: in apply args)
 makeArgTag ::
