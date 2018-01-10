@@ -79,13 +79,14 @@ make (Sugar.Composite [] (Sugar.ClosedComposite actions) addField) pl =
 make (Sugar.Composite fields recordTail addField) pl =
     do
         config <- Lens.view Config.config
+        let addFieldEventMap = mkAddFieldEventMap config addField
         let eventMap =
+                addFieldEventMap <>
                 case recordTail of
                 Sugar.ClosedComposite actions ->
                     closedRecordEventMap config actions
                 Sugar.OpenComposite actions restExpr ->
                     openRecordEventMap config actions restExpr
-        let addFieldEventMap = mkAddFieldEventMap config addField
         stdWrapParentExpr pl
             <*> makeRecord fields addFieldEventMap postProcess
             <&> Widget.weakerEvents eventMap
