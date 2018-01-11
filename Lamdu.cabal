@@ -203,7 +203,6 @@ Executable lamdu
                   , Lamdu.GUI.ExpressionEdit.HoleEdit.ResultGroups
                   , Lamdu.GUI.ExpressionEdit.HoleEdit.ResultWidget
                   , Lamdu.GUI.ExpressionEdit.HoleEdit.SearchArea
-                  , Lamdu.GUI.ExpressionEdit.HoleEdit.SearchTerm
                   , Lamdu.GUI.ExpressionEdit.HoleEdit.ValTerms
                   , Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds
                   , Lamdu.GUI.ExpressionEdit.InjectEdit
