@@ -55,8 +55,8 @@ markAnnotationsToDisplay (Expression oldBody pl) =
     BodyToNom (Nominal _ binder) ->
         defPl
         & plData . _1 . T.showInEvalMode .~
-        binder ^. bbContent . SugarLens.binderContentExpr .
-        topLevelAnn . T.showInEvalMode
+            binder ^. bbContent . SugarLens.binderContentExpr .
+            topLevelAnn . T.showInEvalMode
         & Expression (newBodyWith dontShowEval)
     BodyInject _ -> set dontShowEval
     BodyGetVar (GetParamsRecord _) -> set T.showAnnotationWhenVerbose
@@ -80,7 +80,7 @@ markAnnotationsToDisplay (Expression oldBody pl) =
         & (`Expression` plWith forceShowType)
     BodyWrapper wrapper ->
         wrapper
-        & wExpr . topLevelAnn .~ forceShowTypeOrEval
+        & wExpr . nonHoleAnn .~ forceShowTypeOrEval
         & BodyWrapper
         & (`Expression` plWith forceShowType)
     BodyCase cas ->
@@ -88,18 +88,17 @@ markAnnotationsToDisplay (Expression oldBody pl) =
         -- cKind contains the scrutinee which is not always
         -- visible (for case alts that aren't lambdas), so
         -- maybe we do want to show the annotation
-        & cKind . Lens.mapped . topLevelAnn .~ T.neverShowAnnotations
+        & cKind . Lens.mapped . nonHoleAnn .~ T.neverShowAnnotations
         & cBody . cItems . Lens.mapped . Lens.mapped %~ onCaseAlt
         & BodyCase
         & (`Expression` defPl)
     where
-        newBodyWith f = newBody <&> topLevelAnn .~ f
+        newBodyWith f = newBody <&> nonHoleAnn .~ f
         plWith ann = pl & plData %~ (,) ann
         defPl = plWith T.showAnnotationWhenVerbose
         set ann = Expression newBody (plWith ann)
         newBody = oldBody <&> markAnnotationsToDisplay
-        nonHoleAnn =
-            Lens.filtered (Lens.nullOf (rBody . _BodyHole)) . topLevelAnn
+        nonHoleAnn = Lens.filtered (Lens.nullOf (rBody . SugarLens.bodyHoleOrWrapper)) . topLevelAnn
         onCaseAlt a =
             a
             & rBody . _BodyLam . lamBinder . bBody . bbContent .
