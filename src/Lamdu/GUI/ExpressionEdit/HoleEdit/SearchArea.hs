@@ -194,7 +194,7 @@ make options mOptionLiteral pl allowedTerms =
             | Text.length txt == 1 && Text.all (`elem` Chars.operator) txt =
                 -- Don't add first operator char,
                 -- we let ExprressionEdit.EventMap do that
-                -- because it knows how to work with precedend and prefix chars.
+                -- because it knows how to work with precedence and prefix chars
                 False
             | otherwise = allowedTerms txt
         makeOptions ctx =
