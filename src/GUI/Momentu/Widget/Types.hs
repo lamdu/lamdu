@@ -6,6 +6,7 @@ module GUI.Momentu.Widget.Types
     , EnterResult(..), enterResultEvent, enterResultRect, enterResultLayer
     , Surrounding(..), sLeft, sTop, sRight, sBottom
     , Focused(..), fFocalAreas, fEventMap, fMEnterPoint, fLayers, fPreEvents
+    , PreEvents(..), _BlockEvents, _PreEvents
     , PreEvent(..), pDesc, pAction, pTextRemainder
     , EventContext(..), eVirtualCursor, ePrevTextRemainder
     ) where
@@ -53,13 +54,24 @@ data Surrounding = Surrounding
     , _sBottom :: !R
     } deriving (Eq, Ord, Show)
 
+data PreEvents a
+    = PreEvents [PreEvent a]
+    | BlockEvents
+    deriving Functor
+
+instance Monoid (PreEvents a) where
+    mempty = PreEvents []
+    mappend BlockEvents _ = BlockEvents
+    mappend _ BlockEvents = BlockEvents
+    mappend (PreEvents xs) (PreEvents ys) = PreEvents (xs ++ ys)
+
 data Focused a = Focused
     { -- When browsing sub-menus each selected menu is considered focal.
       -- The last focal area is where the cursor is,
       -- however Zoom should care about the first focal area
       _fFocalAreas :: [Rect]
     , _fEventMap :: EventContext -> EventMap a
-    , _fPreEvents :: [PreEvent a]
+    , _fPreEvents :: PreEvents a
     , _fMEnterPoint :: Maybe (Vector2 R -> EnterResult a)
     , _fLayers :: Element.Layers
     } deriving Functor
@@ -88,4 +100,5 @@ Lens.makeLenses ''PreEvent
 Lens.makeLenses ''Surrounding
 Lens.makeLenses ''Unfocused
 Lens.makeLenses ''Widget
+Lens.makePrisms ''PreEvents
 Lens.makePrisms ''State

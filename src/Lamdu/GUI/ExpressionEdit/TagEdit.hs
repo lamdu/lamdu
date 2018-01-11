@@ -192,7 +192,7 @@ makeHoleSearchTerm nearestHoles tag =
             <&> Align.tValue . Lens.mapped %~ pure
             <&> Align.tValue %~ Widget.weakerEvents setNameEventMap
             <&> Align.tValue . Widget.wState . Widget._StateFocused .
-                Lens.mapped . Widget.fPreEvents %~ (pickPreEvent :)
+                Lens.mapped . Widget.fPreEvents %~ (Widget.PreEvents [pickPreEvent] <>)
         tooltip <- Lens.view theme <&> Theme.tooltip
         if not (Text.null searchTerm) && Widget.isFocused (term ^. Align.tValue)
             then

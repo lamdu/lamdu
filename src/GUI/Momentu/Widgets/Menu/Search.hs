@@ -166,10 +166,11 @@ addPickFirstResultEvent mNextEntry mPickFirst =
     where
         addPre =
             case mPickFirst of
-            Nothing -> id
+            Nothing -> id -- TODO: BlockEvents
             Just pickFirst ->
-                Widget.wState . Widget._StateFocused . Lens.mapped . Widget.fPreEvents %~
-                ((pickFirst <&> Lens.mapped .~ mempty) :)
+                Widget.wState . Widget._StateFocused . Lens.mapped .
+                Widget.fPreEvents %~
+                (Widget.PreEvents [pickFirst <&> Lens.mapped .~ mempty] <>)
 
 searchTermEditEventMap ::
     (MonadReader env m, HasState env) =>

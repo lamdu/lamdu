@@ -126,7 +126,7 @@ addPreEventWith append preEvent =
     where
         onFocused f =
             f
-            & fPreEvents %~ (preEvent:)
+            & fPreEvents %~ (\(PreEvents events) -> PreEvents (preEvent:events))
             & fEventMap %~ onMkEventMap
         onMkEventMap mk ctx =
             ctx
@@ -145,14 +145,17 @@ addEventsWithContext append mkEvents =
     widget . wState . _StateFocused . Lens.mapped %~ onFocused
     where
         onFocused f =
-            f & fEventMap . Lens.imapped %@~ add
-            where
-                add ctx =
-                    ctx
-                    & ePrevTextRemainder <>~ (f ^. fPreEvents . traverse . pTextRemainder)
-                    & mkEvents
-                    & (foldr (addPreEventToEventMap (liftA2 mappend)) ?? f ^. fPreEvents)
-                    & append
+            case f ^. fPreEvents of
+            BlockEvents -> f
+            PreEvents es ->
+                f & fEventMap . Lens.imapped %@~ add
+                where
+                    add ctx =
+                        ctx
+                        & ePrevTextRemainder <>~ (es ^. traverse . pTextRemainder)
+                        & mkEvents
+                        & (foldr (addPreEventToEventMap (liftA2 mappend)) ?? es)
+                        & append
 
 addEvents ::
     (Applicative f, Monoid a, HasWidget w) =>
