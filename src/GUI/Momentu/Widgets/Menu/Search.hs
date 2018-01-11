@@ -161,8 +161,15 @@ addPickFirstResultEvent mNextEntry mPickFirst =
     case mPickFirst of
     Nothing -> emptyPickEventMap
     Just pickFirst -> Menu.makePickEventMap mNextEntry ?? pickFirst
-    <&>
-    Widget.weakerEvents
+    <&> Widget.weakerEvents
+    <&> (addPre .)
+    where
+        addPre =
+            case mPickFirst of
+            Nothing -> id
+            Just pickFirst ->
+                Widget.wState . Widget._StateFocused . Lens.mapped . Widget.fPreEvents %~
+                ((pickFirst <&> Lens.mapped .~ mempty) :)
 
 searchTermEditEventMap ::
     (MonadReader env m, HasState env) =>
