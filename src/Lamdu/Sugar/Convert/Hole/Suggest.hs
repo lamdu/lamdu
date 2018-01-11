@@ -188,4 +188,7 @@ fillHoles empty (Val pl (V.BLeaf V.LHole)) =
 fillHoles empty (Val pl (V.BApp (V.Apply func arg))) =
     -- Dont fill in holes inside apply funcs. This may create redexes..
     fillHoles empty arg & V.Apply func & V.BApp & Val pl
+fillHoles _ v@(Val _ (V.BGetField (V.GetField (Val _ (V.BLeaf V.LHole)) _))) =
+    -- Dont fill in holes inside get-field.
+    v
 fillHoles empty val = val & Val.body . Lens.traversed %~ fillHoles empty
