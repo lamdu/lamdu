@@ -237,4 +237,8 @@ allowedSearchTermCommon searchTerm =
     [ Text.all (`elem` Chars.operator)
     , Text.all Char.isAlphaNum
     , (`Text.isPrefixOf` "{}")
+    , Lens.has (Lens.reversed . Lens._Cons . Lens.filtered inj)
     ]
+    where
+        inj (lastChar, revInit) =
+            lastChar == ':' && Text.all Char.isAlphaNum revInit

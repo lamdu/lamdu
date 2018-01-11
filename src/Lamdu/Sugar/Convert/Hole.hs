@@ -185,6 +185,9 @@ getGlobals :: Monad m => ConvertM.Context m -> T m [DefI m]
 getGlobals sugarContext =
     getListing Anchors.globals sugarContext >>= filterM isLiveGlobal
 
+getTags :: Monad m => ConvertM.Context m -> T m [T.Tag]
+getTags = getListing Anchors.tags
+
 locals :: ConvertM.Context m -> Input.Payload f a -> [V.Var]
 locals sugarContext exprPl =
     exprPl ^. Input.inferredScope
@@ -228,14 +231,18 @@ mkOptions mInjectedArg exprPl =
     do
         nominalOptions <- getNominals sugarContext <&> mkNominalOptions
         globals <- getGlobals sugarContext
+        tags <- getTags sugarContext
         concat
             [ locals sugarContext exprPl
                 & concatMap (getLocalScopeGetVars sugarContext)
             , globals <&> P.var . ExprIRef.globalId
+            , tags <&> (`P.inject` P.hole)
+            , tags <&> P.getField P.hole
             , nominalOptions
-            , [ P.abs "NewLambda" P.hole ]
-            , [ P.recEmpty ]
-            , [ P.absurd ]
+            , [ P.abs "NewLambda" P.hole
+              , P.recEmpty
+              , P.absurd
+              ]
             ]
             <&> SeedExpr
             <&> mkHoleOption sugarContext mInjectedArg exprPl

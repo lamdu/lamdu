@@ -38,25 +38,24 @@ formatLiteral (Sugar.LiteralNum i) = formatProp i
 formatLiteral (Sugar.LiteralText i) = formatProp i
 formatLiteral (Sugar.LiteralBytes i) = formatProp i
 
+nameText :: Name m -> Text
+nameText name = name ^. Name.form & ofName
+
 bodyShape :: Sugar.Body (Name m) m expr -> [Text]
 bodyShape = \case
     Sugar.BodyLam {} -> ["lambda", "\\", "Λ", "λ", "->", "→"]
     Sugar.BodySimpleApply {} -> ["Apply"]
     Sugar.BodyLabeledApply {} -> ["Apply"]
-    Sugar.BodyRecord r ->
-        ["record", "{}", "()", "[]"] ++
-        case r of
-        Sugar.Composite [] Sugar.ClosedComposite{} _ -> ["empty"]
-        _ -> []
-    Sugar.BodyGetField gf ->
-        [".", "field", "." <> ofName (gf ^. Sugar.gfTag . Sugar.tagName . Name.form)]
+    Sugar.BodyRecord {} -> ["{}", "()", "[]"]
+    Sugar.BodyGetField gf -> ["." <> nameText (gf ^. Sugar.gfTag . Sugar.tagName)]
     Sugar.BodyCase cas ->
         ["case", "of"] ++
         case cas of
             Sugar.Case Sugar.LambdaCase (Sugar.Composite [] Sugar.ClosedComposite{} _) -> ["absurd"]
             _ -> []
     Sugar.BodyGuard {} -> ["if", ":"]
-    Sugar.BodyInject {} -> [":"]
+    Sugar.BodyInject (Sugar.Inject tag _) ->
+        [nameText (tag ^. Sugar.tagName) <> ":"]
     Sugar.BodyLiteral i -> [formatLiteral i]
     Sugar.BodyGetVar Sugar.GetParamsRecord {} -> ["Params"]
     Sugar.BodyGetVar {} -> []
@@ -77,7 +76,8 @@ bodyNames =
 
 expr :: Monad m => ExpressionN m a -> [Text]
 expr (Sugar.Expression body _) =
-    bodyShape body <> bodyNames body <>
+    bodyShape body <>
+    bodyNames body <>
     case body of
     Sugar.BodyToNom (Sugar.Nominal _ binder) ->
         expr (binder ^. Sugar.bbContent . SugarLens.binderContentExpr)
