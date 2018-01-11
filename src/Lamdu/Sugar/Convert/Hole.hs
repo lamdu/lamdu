@@ -168,17 +168,22 @@ isLiveGlobal defI =
     & Transaction.getP
     <&> (== LiveDefinition)
 
+getListing ::
+    Monad m =>
+    (Anchors.CodeAnchors f -> Transaction.MkProperty m (Set a)) ->
+    ConvertM.Context f -> Transaction m [a]
+getListing anchor sugarContext =
+    sugarContext ^. ConvertM.scCodeAnchors
+    & anchor & Transaction.getP <&> Set.toList
+
 getNominals :: Monad m => ConvertM.Context m -> T m [(T.NominalId, N.Nominal)]
 getNominals sugarContext =
-    sugarContext ^. ConvertM.scCodeAnchors
-    & Anchors.tids & Transaction.getP <&> Set.toList
+    getListing Anchors.tids sugarContext
     >>= traverse (\nomId -> (,) nomId <$> Load.nominal nomId)
 
 getGlobals :: Monad m => ConvertM.Context m -> T m [DefI m]
 getGlobals sugarContext =
-    sugarContext ^. ConvertM.scCodeAnchors
-    & Anchors.globals & Transaction.getP <&> Set.toList
-    >>= filterM isLiveGlobal
+    getListing Anchors.globals sugarContext >>= filterM isLiveGlobal
 
 locals :: ConvertM.Context m -> Input.Payload f a -> [V.Var]
 locals sugarContext exprPl =
