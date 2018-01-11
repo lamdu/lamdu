@@ -138,19 +138,25 @@ filterSearchTermEvents allowedTerms searchTerm =
     E.filterChars (not . allowedTerms . (searchTerm <>) . Text.singleton)
 
 makeSearchTerm ::
-    ( MonadReader env m, HasTheme env, TextEdit.HasStyle env, GuiState.HasState env
+    ( MonadReader env m, HasTheme env, TextEdit.HasStyle env, GuiState.HasState env, Menu.HasConfig env
     , Applicative f
     ) =>
-    Widget.Id -> (Text -> Bool) -> m (WithTextPos (Widget (f GuiState.Update)))
-makeSearchTerm searchMenuId allowedSearchTerm =
+    Maybe Widget.Id ->
+    Widget.Id ->
+    (Text -> Bool) ->
+    Maybe (Widget.PreEvent (f Menu.PickResult)) ->
+    m (WithTextPos (Widget (f GuiState.Update)))
+makeSearchTerm mNextEntry searchMenuId allowedSearchTerm mPickFirst =
     do
         isActive <- GuiState.isSubCursor ?? searchMenuId
         let bgColor
                 | isActive = Theme.holeActiveSearchTermBGColor
                 | otherwise = Theme.holeSearchTermBGColor
         theme <- Lens.view Theme.theme <&> Theme.hole
-        SearchMenu.basicSearchTermEdit searchMenuId allowedSearchTerm
-            <&> Align.tValue . Lens.mapped %~ pure
+        (SearchMenu.addPickFirstResultEvent mNextEntry mPickFirst <&> (Align.tValue %~))
+            <*> ( SearchMenu.basicSearchTermEdit searchMenuId allowedSearchTerm
+                    <&> Align.tValue . Lens.mapped %~ pure
+                )
             <&> Draw.backgroundColor
                 (Widget.toAnimId searchMenuId <> ["hover background"])
                 (bgColor theme)
@@ -174,7 +180,7 @@ make options mOptionLiteral pl allowedTerms =
             maybeAddAnnotationPl pl
             <*>
             ( fdWrap
-                <*> makeSearchTerm searchMenuId allowedTerms <&> Responsive.fromWithTextPos
+                <*> makeSearchTerm Nothing searchMenuId allowedTerms Nothing <&> Responsive.fromWithTextPos
             )
         isActive <- HoleWidgetIds.isActive widgetIds
         searchTermEventMap <- SearchMenu.searchTermEditEventMap searchMenuId adhocAllowedTerms <&> fmap pure
@@ -194,7 +200,7 @@ make options mOptionLiteral pl allowedTerms =
                     -- it is harder to implement, so just wrap it
                     -- here
                     (fdWrap <&> (Lens.mapped %~))
-                        <*> SearchMenu.make (makeSearchTerm searchMenuId allowedTerms)
+                        <*> SearchMenu.make (makeSearchTerm mNextEntry searchMenuId allowedTerms)
                             makeOptions annotation mNextEntry searchMenuId
                         <&> Lens.mapped . Align.tValue . Widget.eventMapMaker . Lens.mapped %~ (<> searchTermEventMap)
                         <&> Lens.mapped %~ inPlaceOfClosed . (^. Align.tValue)

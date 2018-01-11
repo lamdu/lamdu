@@ -4,7 +4,7 @@ module GUI.Momentu.Widgets.Menu.Search
     ( emptyPickEventMap
     , resultsIdPrefix
     , ResultsContext(..), rSearchTerm, rResultIdPrefix
-    , basicSearchTermEdit, searchTermEditEventMap
+    , basicSearchTermEdit, searchTermEditEventMap, addPickFirstResultEvent
     , enterWithSearchTerm
     , make
 
@@ -24,8 +24,8 @@ import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.Hover as Hover
 import qualified GUI.Momentu.MetaKey as MetaKey
 import           GUI.Momentu.ModKey (ModKey(..))
-import qualified GUI.Momentu.State as State
 import           GUI.Momentu.State (HasState(..))
+import qualified GUI.Momentu.State as State
 import qualified GUI.Momentu.Widget as Widget
 import           GUI.Momentu.Widget.Id (Id(..), joinId)
 import qualified GUI.Momentu.Widgets.Menu as Menu
@@ -128,7 +128,8 @@ make ::
     , TextView.HasStyle env, Hover.HasStyle env, Element.HasAnimIdPrefix env
     , Applicative f
     ) =>
-    m (WithTextPos (Widget (f State.Update))) ->
+    (Maybe (Widget.PreEvent (f Menu.PickResult)) ->
+     m (WithTextPos (Widget (f State.Update)))) ->
     (ResultsContext -> m (Menu.OptionList (Menu.Option m f))) ->
     View -> Maybe Id -> Id ->
     m (Menu.Placement -> WithTextPos (Widget (f State.Update)))
@@ -138,22 +139,30 @@ make makeSearchTerm makeOptions annotation mNextEntry searchMenuId =
     >>=
     \options ->
     do
-        (mPickMain, menu) <- Menu.make (annotation ^. Element.width) mNextEntry options
-        pickEventMap <-
-            case mPickMain of
-            Nothing -> emptyPickEventMap
-            Just pickMain -> Menu.makePickEventMap mNextEntry ?? pickMain
+        (mPickFirst, menu) <- Menu.make (annotation ^. Element.width) mNextEntry options
         mkHoverOptions <- Menu.hoverOptions
         let hoverMenu placement term =
                 Hover.hoverInPlaceOf (mkHoverOptions placement annotation menu a) a
                 where
                     a = Hover.anchor term
-        makeSearchTerm
-            <&> Align.tValue %~ Widget.weakerEvents pickEventMap
+        makeSearchTerm mPickFirst
             <&> \searchTermWidget placement ->
                 searchTermWidget <&> hoverMenu placement
     & Reader.local (Element.animIdPrefix .~ toAnimId searchMenuId)
     & assignCursor searchMenuId (options ^.. traverse . Menu.oId)
+
+-- Add events on search term to pick the first result.
+addPickFirstResultEvent ::
+    (MonadReader env m, Menu.HasConfig env, Applicative f) =>
+    Maybe Id ->
+    Maybe (Widget.PreEvent (f Menu.PickResult))->
+    m (Widget (f State.Update) -> Widget (f State.Update))
+addPickFirstResultEvent mNextEntry mPickFirst =
+    case mPickFirst of
+    Nothing -> emptyPickEventMap
+    Just pickFirst -> Menu.makePickEventMap mNextEntry ?? pickFirst
+    <&>
+    Widget.weakerEvents
 
 searchTermEditEventMap ::
     (MonadReader env m, HasState env) =>

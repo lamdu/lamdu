@@ -173,7 +173,8 @@ makeHoleSearchTerm ::
     , HasTheme env, Element.HasAnimIdPrefix env, HasStdSpacing env, Hover.HasStyle env
     , Monad f
     ) =>
-    NearestHoles -> Sugar.Tag (Name (T f)) (T f) -> m (WithTextPos (Widget (T f GuiState.Update)))
+    NearestHoles -> Sugar.Tag (Name (T f)) (T f) ->
+    m (WithTextPos (Widget (T f GuiState.Update)))
 makeHoleSearchTerm nearestHoles tag =
     do
         searchTerm <- SearchMenu.readSearchTerm holeId
@@ -226,7 +227,7 @@ makeTagHoleEdit ::
 makeTagHoleEdit nearestHoles tag =
     do
         searchTermEventMap <- SearchMenu.searchTermEditEventMap holeId allowedSearchTerm <&> fmap pure
-        SearchMenu.make (makeHoleSearchTerm nearestHoles tag) (makeOptions tag) Element.empty
+        SearchMenu.make (const (makeHoleSearchTerm nearestHoles tag)) (makeOptions tag) Element.empty
             (nearestHoles ^. NearestHoles.next <&> WidgetIds.fromEntityId) holeId
             ?? Menu.AnyPlace
             <&> Align.tValue . Widget.eventMapMaker . Lens.mapped %~ (<> searchTermEventMap)
