@@ -137,17 +137,28 @@ addPreEventWith append preEvent =
 addPreEvent :: Monoid a => PreEvent a -> Widget a -> Widget a
 addPreEvent = addPreEventWith mappend
 
+addEventsWithContext ::
+    (Applicative f, Monoid a, HasWidget w) =>
+    (EventMap (f a) -> EventMap (f a) -> EventMap (f a)) ->
+    (EventContext -> EventMap (f a)) -> w (f a) -> w (f a)
+addEventsWithContext append mkEvents =
+    widget . wState . _StateFocused . Lens.mapped %~ onFocused
+    where
+        onFocused f =
+            f & fEventMap . Lens.imapped %@~ add
+            where
+                add ctx =
+                    ctx
+                    & ePrevTextRemainder <>~ (f ^. fPreEvents . traverse . pTextRemainder)
+                    & mkEvents
+                    & (foldr (addPreEventToEventMap (liftA2 mappend)) ?? f ^. fPreEvents)
+                    & append
+
 addEvents ::
     (Applicative f, Monoid a, HasWidget w) =>
     (EventMap (f a) -> EventMap (f a) -> EventMap (f a)) ->
     EventMap (f a) -> w (f a) -> w (f a)
-addEvents append e =
-    widget . wState . _StateFocused . Lens.mapped %~ onFocused
-    where
-        onFocused f =
-            f & fEventMap . Lens.mapped %~ append e'
-            where
-                e' = foldr (addPreEventToEventMap (liftA2 mappend)) e (f ^. fPreEvents)
+addEvents append = addEventsWithContext append . const
 
 strongerEvents ::
     (Applicative f, Monoid a, HasWidget w) => EventMap (f a) -> w (f a) -> w (f a)
@@ -160,18 +171,7 @@ weakerEvents = addEvents (flip mappend)
 weakerEventsWithContext ::
     (Applicative f, Monoid a, HasWidget w) =>
     (EventContext -> EventMap (f a)) -> w (f a) -> w (f a)
-weakerEventsWithContext mkEvents =
-    widget . wState . _StateFocused . Lens.mapped %~ onFocused
-    where
-        onFocused f =
-            f & fEventMap . Lens.imapped %@~ add
-            where
-                add ctx =
-                    ctx
-                    & ePrevTextRemainder <>~ (f ^. fPreEvents . traverse . pTextRemainder)
-                    & mkEvents
-                    & (foldr (addPreEventToEventMap (liftA2 mappend)) ?? f ^. fPreEvents)
-                    & flip mappend
+weakerEventsWithContext = addEventsWithContext (flip mappend)
 
 translateFocused ::
     Functor f =>
