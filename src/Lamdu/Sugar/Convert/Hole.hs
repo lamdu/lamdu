@@ -237,7 +237,6 @@ mkOptions mInjectedArg exprPl =
                 & concatMap (getLocalScopeGetVars sugarContext)
             , globals <&> P.var . ExprIRef.globalId
             , tags <&> (`P.inject` P.hole)
-            , tags <&> P.getField P.hole
             , nominalOptions
             , [ P.abs "NewLambda" P.hole
               , P.recEmpty
