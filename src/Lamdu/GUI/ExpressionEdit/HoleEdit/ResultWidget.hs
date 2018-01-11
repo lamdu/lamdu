@@ -39,13 +39,15 @@ type T = Transaction
 
 getSearchStringRemainder :: SearchMenu.ResultsContext -> Sugar.Expression name m a -> Text
 getSearchStringRemainder ctx holeResultConverted
-    | any (`Lens.has` holeResultConverted) [literalNum, wrappedExpr . literalNum]
-        && Text.isSuffixOf "." (ctx ^. SearchMenu.rSearchTerm)
-        = "."
-    | otherwise = ""
+    | isA (Sugar._BodyLiteral . Sugar._LiteralNum) = ambigSuffix "."
+    | isA Sugar._BodyInject = ""
+    | otherwise = ambigSuffix ":"
     where
-        literalNum = Sugar.rBody . Sugar._BodyLiteral . Sugar._LiteralNum
         wrappedExpr = Sugar.rBody . Sugar._BodyWrapper . Sugar.wExpr
+        isA x = any (`Lens.has` holeResultConverted) [Sugar.rBody . x, wrappedExpr . Sugar.rBody . x]
+        ambigSuffix suffix
+            | Text.isSuffixOf suffix (ctx ^. SearchMenu.rSearchTerm) = suffix
+            | otherwise = ""
 
 setFocalAreaToFullSize :: WithTextPos (Widget a) -> WithTextPos (Widget a)
 setFocalAreaToFullSize =

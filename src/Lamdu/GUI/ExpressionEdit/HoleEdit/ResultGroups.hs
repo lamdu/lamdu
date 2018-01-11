@@ -259,9 +259,13 @@ holeMatches :: Text -> [Group m] -> [Group m]
 holeMatches searchTerm groups =
     groups
     & filterBySearchTerm
-    & sortOn (groupOrdering searchTerm)
+    & sortOn (groupOrdering definitePart)
     where
         filterBySearchTerm
             | Text.null searchTerm = id
             | otherwise = filter nameMatch
-        nameMatch group = any (insensitiveInfixAltOf searchTerm) (group ^. groupSearchTerms)
+        nameMatch group =
+            any (insensitiveInfixAltOf definitePart) (group ^. groupSearchTerms)
+        definitePart
+            | ":" `Text.isSuffixOf` searchTerm = Text.init searchTerm
+            | otherwise = searchTerm
