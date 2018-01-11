@@ -22,6 +22,7 @@ import           Lamdu.Sugar.Convert.Monad (ConvertM)
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
 import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
+import qualified Lamdu.Sugar.Lens as SugarLens
 import           Lamdu.Sugar.Types
 
 import           Lamdu.Prelude
@@ -125,5 +126,5 @@ convertAppliedCase funcS argS exprPl =
 simplifyCaseArg :: Monoid a => ExpressionU m a -> ExpressionU m a
 simplifyCaseArg argS =
     case argS ^. rBody of
-    BodyFromNom nom | Lens.nullOf (nVal . rBody . _BodyHole) nom -> nom ^. nVal
+    BodyFromNom nom | Lens.nullOf (nVal . rBody . SugarLens.bodyHoleOrWrapper) nom -> nom ^. nVal
     _ -> argS
