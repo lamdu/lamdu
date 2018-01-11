@@ -164,14 +164,20 @@ searchTermEditEventMap searchMenuId allowedTerms =
     \searchTerm ->
     let appendCharEventMap =
             Text.snoc searchTerm
-            & E.allChars "Character"
-            (E.Doc ["Edit", "Search Term", "Append character"])
+            & E.allChars "Character" (doc "Append character")
+            -- We only filter when appending last char, not when
+            -- deleting last char, because after appending deletion
+            -- necessarily preserves any invariant we enforce in
+            -- allowedTerms
+            & E.filter allowedTerms
         deleteCharEventMap
             | Text.null searchTerm = mempty
             | otherwise =
-                    Text.init searchTerm
-                    & E.keyPress (ModKey mempty MetaKey.Key'Backspace)
-                    (E.Doc ["Edit", "Search Term", "Delete backwards"])
+                Text.init searchTerm
+                & E.keyPress (ModKey mempty MetaKey.Key'Backspace)
+                    (doc "Delete backwards")
     in
-    E.filter allowedTerms appendCharEventMap <> deleteCharEventMap
+    appendCharEventMap <> deleteCharEventMap
     <&> State.updateWidgetState searchMenuId
+    where
+        doc subtitle = E.Doc ["Edit", "Search Term", subtitle]
