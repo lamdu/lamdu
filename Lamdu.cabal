@@ -6,6 +6,7 @@ License:             GPL
 License-file:        LICENSE
 Author:              Eyal Lotem, Yair Chuchem
 Maintainer:          eyal.lotem@gmail.com, yairchu@gmail.com
+Homepage:            http://www.lamdu.org
 Category:            Graphics
 Build-type:          Simple
 Extra-source-files:  tools/VerifyConfig.hs, tools/TestConfig.hs
