@@ -13,7 +13,6 @@ import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Eval.Results.Process as ResultsProcess
 import qualified Lamdu.Expr.IRef as ExprIRef
-import qualified Lamdu.Expr.UniqueId as UniqueId
 import qualified Lamdu.Infer as Infer
 import qualified Lamdu.Sugar.Convert.Input as Input
 import           Lamdu.Sugar.Convert.Monad (ConvertM)
@@ -100,12 +99,11 @@ mkActions exprPl =
         postProcess <- ConvertM.postProcess
         Actions
             { _wrap = DataOps.wrap stored <* postProcess <&> EntityId.ofValI & WrapAction
-            , _delete = DataOps.setToHole stored <* postProcess <&> addEntityId & SetToHole
+            , _delete = DataOps.setToHole stored <* postProcess <&> EntityId.ofValI & SetToHole
             , _extract = ext
             , _mReplaceParent = Nothing
             } & return
     where
-        addEntityId valI = (UniqueId.toUUID valI, EntityId.ofValI valI)
         stored = exprPl ^. Input.stored
 
 addActions ::

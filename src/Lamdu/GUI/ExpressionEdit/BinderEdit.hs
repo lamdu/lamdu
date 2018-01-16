@@ -447,7 +447,7 @@ makeBinderContentEdit (Sugar.BinderLet l) =
                     <&> WidgetIds.fromEntityId
                     & E.keysEventMapMovesCursor (Config.delKeys config)
                     (E.Doc ["Edit", "Delete let expression"])
-                , ExprEventMap.wrapEventMap (l ^. Sugar.lActions . Sugar.laWrap <&> snd) config
+                , ExprEventMap.wrapEventMap (l ^. Sugar.lActions . Sugar.laWrap) config
                 ]
         let moveToInnerEventMap =
                 body

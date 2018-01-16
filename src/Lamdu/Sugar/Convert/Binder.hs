@@ -65,10 +65,8 @@ mkLetItemActions topLevelProp redex =
                 <* postProcess
                 <&> EntityId.ofValI
             , _laFloat = float
-            , _laWrap = DataOps.wrap topLevelProp <* postProcess <&> addEntityId
+            , _laWrap = DataOps.wrap topLevelProp <* postProcess <&> EntityId.ofValI
             }
-    where
-        addEntityId valI = (UniqueId.toUUID valI, EntityId.ofValI valI)
 
 localNewExtractDestPos ::
     Val (Input.Payload m x) -> ConvertM m a -> ConvertM m a

@@ -41,7 +41,6 @@ module Lamdu.Sugar.Types.Expression
 
 import qualified Control.Lens as Lens
 import           Data.Store.Property (Property)
-import           Data.UUID.Types (UUID)
 import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Calc.Val as V
 import           Lamdu.Sugar.Internal.EntityId (EntityId)
@@ -57,7 +56,7 @@ data WrapAction m
     | WrapAction (m EntityId) -- Wrap me!
 
 data Delete m
-    = SetToHole (m (UUID, EntityId))
+    = SetToHole (m EntityId)
     | -- Changes the structure around the hole to remove the hole.
       -- For example (f _) becomes (f) or (2 + _) becomes 2
       Delete (m EntityId)

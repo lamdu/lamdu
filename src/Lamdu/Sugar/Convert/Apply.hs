@@ -49,10 +49,8 @@ convert app@(V.Apply funcI argI) exprPl =
                         Lens.has (rBody . _BodyHole) argS & guard
                         let dst = argI ^. Val.payload . Input.stored . Property.pVal
                         let deleteAction =
-                                (UniqueId.toUUID dst, EntityId.ofValI dst) <$
-                                protectedSetToVal
-                                (exprPl ^. Input.stored)
-                                dst
+                                EntityId.ofValI dst <$
+                                protectedSetToVal (exprPl ^. Input.stored) dst
                         funcS
                             & rPayload . plActions . delete .~ SetToHole deleteAction
                             & return

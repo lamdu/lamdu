@@ -197,6 +197,6 @@ replaceEventMap actions =
             & E.keysEventMapMovesCursor (Config.delKeys config) (E.Doc ["Edit", "Delete expression"])
     in
     case actions ^. Sugar.delete of
-    Sugar.SetToHole action -> mk (action <&> snd)
+    Sugar.SetToHole action -> mk action
     Sugar.Delete action -> mk action
     Sugar.CannotDelete -> mempty

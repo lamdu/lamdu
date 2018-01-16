@@ -41,7 +41,6 @@ module Lamdu.Sugar.Types.Binder
 import qualified Control.Lens as Lens
 import           Data.CurAndPrev (CurAndPrev)
 import           Data.Store.Property (Property)
-import           Data.UUID.Types (UUID)
 import           Lamdu.Calc.Type (Type)
 import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Calc.Val as V
@@ -152,7 +151,7 @@ data LetActions m = LetActions
     { _laSetToInner :: m ()
     , _laSetToHole :: m EntityId
     , _laFloat :: m LetFloatResult
-    , _laWrap :: m (UUID, EntityId)
+    , _laWrap :: m EntityId
     }
 
 -- This is a mapping from a parent scope to the inner scope in:

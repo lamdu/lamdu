@@ -8,7 +8,6 @@ import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
 import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
-import           Data.UUID.Types (UUID)
 import           GUI.Momentu.Align (WithTextPos)
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Element as Element
@@ -45,11 +44,11 @@ type T = Transaction.Transaction
 
 mkEditEventMap ::
     Monad m =>
-    Text -> T m (UUID, Sugar.EntityId) ->
+    Text -> T m Sugar.EntityId ->
     EventMap (T m GuiState.Update)
 mkEditEventMap valText setToHole =
     -- TODO: literal edits rather than opening a hole..
-    setToHole <&> snd <&> HoleWidgetIds.make <&> HoleWidgetIds.hidOpen
+    setToHole <&> HoleWidgetIds.make <&> HoleWidgetIds.hidOpen
     <&> SearchMenu.enterWithSearchTerm valText
     & E.keyPresses [ModKey mempty MetaKey.Key'Enter] (E.Doc ["Edit", "Value"])
 

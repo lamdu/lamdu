@@ -20,7 +20,6 @@ import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Expr.Lens as ExprLens
 import qualified Lamdu.Expr.Load as Load
 import qualified Lamdu.Expr.Pure as P
-import qualified Lamdu.Expr.UniqueId as UniqueId
 import qualified Lamdu.Infer as Infer
 import           Lamdu.Infer.Unify (unify)
 import           Lamdu.Sugar.Convert.Expression.Actions (addActions)
@@ -99,7 +98,7 @@ convertAppliedHole (V.Apply funcI argI) argS exprPl =
                       & rPayload . plActions . wrap .~ WrappedAlready storedEntityId
                       & rPayload . plActions . delete .~
                         SetToHole
-                        ( DataOps.setToHole (exprPl ^. Input.stored) <* postProcess <&> uuidEntityId )
+                        ( DataOps.setToHole (exprPl ^. Input.stored) <* postProcess <&> EntityId.ofValI )
                 , _wUnwrap =
                       if isTypeMatch
                       then DataOps.replace (exprPl ^. Input.stored)
@@ -115,4 +114,3 @@ convertAppliedHole (V.Apply funcI argI) argS exprPl =
             <&> rPayload . plActions . wrap .~ WrapperAlready storedEntityId
     where
         storedEntityId = exprPl ^. Input.stored & Property.value & EntityId.ofValI
-        uuidEntityId valI = (UniqueId.toUUID valI, EntityId.ofValI valI)
