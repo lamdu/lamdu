@@ -6,6 +6,8 @@
 *.i_o
 *.dyn_hi
 *.dyn_o
+.DS_Store
+/lamdu
 /.tm_properties
 /TAGS
 /tags
