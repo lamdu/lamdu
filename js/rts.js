@@ -266,7 +266,8 @@ module.exports = {
                 openTcpServer: function(x) {
                     return function() {
                         var server = require('net').Server((socket) => {
-                            x[connectionHandlerTag](socket)();
+                            var dataHandler = x[connectionHandlerTag](socket)();
+                            socket.on('data', (data) => { dataHandler(data)(); } );
                         });
                         server.listen({
                             host: String.fromCharCode.apply(null, x[hostTag]),
