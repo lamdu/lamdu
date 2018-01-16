@@ -130,7 +130,7 @@ actionsEventMap options exprInfo =
             ] <&> mconcat
     , replaceEventMap (exprInfoActions exprInfo)
     ] <&> mconcat <&> const
-    <&> mappend (applyOperatorEventMap options exprInfo)
+    <&> mappend (transformEventMap options exprInfo)
     where
         mkReplaceParent replaceKeys =
             exprInfoActions exprInfo ^. Sugar.mReplaceParent <&> void
@@ -138,11 +138,15 @@ actionsEventMap options exprInfo =
 
 -- | Create the hole search term for new apply operators,
 -- given the extra search term chars from another hole.
-applyOperatorSearchTerm :: Prec -> EventContext -> EventMap Text
-applyOperatorSearchTerm minOpPrec eventCtx =
-    E.charGroup Nothing (E.Doc ["Edit", "Apply operator"])
-    ops (Text.singleton <&> (searchStrRemainder <>))
+transformSearchTerm :: Prec -> EventContext -> EventMap Text
+transformSearchTerm minOpPrec eventCtx =
+    group "Apply Operator" ops <>
+    group "Transform" alpha
     where
+        alpha = ['a' .. 'z'] <> ['A' .. 'Z']
+        group doc chars =
+            E.charGroup Nothing (E.Doc ["Edit", doc])
+            chars (Text.singleton <&> (searchStrRemainder <>))
         searchStrRemainder = eventCtx ^. Widget.ePrevTextRemainder
         ops =
             case Text.uncons searchStrRemainder of
@@ -152,9 +156,9 @@ applyOperatorSearchTerm minOpPrec eventCtx =
                 | otherwise -> mempty
         acceptOp = (>= minOpPrec) . precedence
 
-applyOperatorEventMap ::
+transformEventMap ::
     Monad f => Options -> ExprInfo f -> EventContext -> EventMap (T f GuiState.Update)
-applyOperatorEventMap options exprInfo eventCtx =
+transformEventMap options exprInfo eventCtx =
     case exprInfoActions exprInfo ^. Sugar.wrap of
     Sugar.WrapAction wrap ->
         case addOperatorSetHoleState options of
@@ -166,7 +170,7 @@ applyOperatorEventMap options exprInfo eventCtx =
     & action
     where
         action wrap =
-            applyOperatorSearchTerm (exprInfoMinOpPrec exprInfo) eventCtx
+            transformSearchTerm (exprInfoMinOpPrec exprInfo) eventCtx
             <&> SearchMenu.enterWithSearchTerm
             <&> (wrap <&>)
 
