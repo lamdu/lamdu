@@ -1,9 +1,6 @@
 "use strict";
 
 var nameMap = {
-    true: 'True',
-    false: 'False',
-    cons: 'NonEmpty',
     data: '__data'
 }
 
