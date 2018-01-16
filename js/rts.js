@@ -92,6 +92,12 @@ var encode = function() {
     };
 }();
 
+var toString = function (bytes) {
+    // This is a nodejs only method to convert a UInt8Array to a string.
+    // For the browser we'll need to augment this.
+    return Buffer(bytes).toString();
+}
+
 module.exports = {
     logRepl: conf.logRepl,
     logResult: function (scope, exprId, result) {
@@ -199,13 +205,13 @@ module.exports = {
         IO: {
             file: {
                 unlink: function(path) {
-                    return function() { require('fs').unlinkSync(path); };
+                    return function() { require('fs').unlinkSync(toString(path)); };
                 },
                 rename: function(x) {
-                    return function() { require('fs').renameSync(x[oldPathTag], x[newPathTag]); };
+                    return function() { require('fs').renameSync(toString(x[oldPathTag]), toString(x[newPathTag])); };
                 },
                 chmod: function(x) {
-                    return function() { require('fs').chmodSync(x[filePathTag], x[modeTag]); };
+                    return function() { require('fs').chmodSync(toString(x[filePathTag]), x[modeTag]); };
                 },
                 close: function(fd) {
                     return function() { require('fs').closeSync(fd); };
@@ -237,29 +243,29 @@ module.exports = {
                     return function() { require('fs').ftruncateSync(x[fileDescTag], x[sizeTag]); };
                 },
                 link: function(x) {
-                    return function() { require('fs').linkSync(x[srcPathTag], x[dstPathTag]); };
+                    return function() { require('fs').linkSync(toString(x[srcPathTag]), toString(x[dstPathTag])); };
                 },
                 lstat: function(path) {
                     // see fstat for result example
-                    return function() { return require('fs').lstatSync(path); };
+                    return function() { return require('fs').lstatSync(toString(path)); };
                 },
                 mkdir: function(path) {
-                    return function() { require('fs').mkdirSync(path); };
+                    return function() { require('fs').mkdirSync(toString(path)); };
                 },
                 open: function(x) {
-                    return function() { return require('fs').openSync(x[filePathTag], x[flagsTag], x[modeTag]); };
+                    return function() { return require('fs').openSync(toString(x[filePathTag]), x[flagsTag], x[modeTag]); };
                 },
                 readFile: function(path) {
-                    return function() { return bytes(require('fs').readFileSync(path)); };
+                    return function() { return bytes(require('fs').readFileSync(toString(path))); };
                 },
                 readLink: function(path) {
-                    return function() { return bytes(require('fs').readlinkSync(path, 'buffer')); };
+                    return function() { return bytes(require('fs').readlinkSync(toString(path), 'buffer')); };
                 },
                 appendFile: function(x) {
-                    return function() { require('fs').appendFileSync(x[filePathTag], Buffer.from(x[dataTag])); };
+                    return function() { require('fs').appendFileSync(toString(x[filePathTag]), Buffer.from(x[dataTag])); };
                 },
                 writeFile: function(x) {
-                    return function() { require('fs').writeFileSync(x[filePathTag], Buffer.from(x[dataTag])); };
+                    return function() { require('fs').writeFileSync(toString(x[filePathTag]), Buffer.from(x[dataTag])); };
                 },
             },
             network: {
@@ -270,7 +276,7 @@ module.exports = {
                             socket.on('data', (data) => { dataHandler(data)(); } );
                         });
                         server.listen({
-                            host: String.fromCharCode.apply(null, x[hostTag]),
+                            host: toString(x[hostTag]),
                             port: x[portTag],
                             exclusive: bool(x[exclusiveTag])
                         });
