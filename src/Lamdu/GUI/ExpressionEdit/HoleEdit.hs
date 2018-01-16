@@ -3,6 +3,7 @@ module Lamdu.GUI.ExpressionEdit.HoleEdit
     ( make
     ) where
 
+import qualified Control.Lens as Lens
 import qualified Data.Char as Char
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Text as Text
@@ -51,7 +52,7 @@ make hole pl =
     <*> ( SearchArea.make (hole ^. Sugar.holeOptions)
             (Just (hole ^. Sugar.holeOptionLiteral)) pl allowedHoleSearchTerm ?? Menu.AnyPlace
         )
-    <&> Widget.weakerEvents txtEventMap
+    <&> Widget.widget . Widget.eventMapMaker . Lens.mapped %~ (<> txtEventMap)
     & GuiState.assignCursor (hidHole widgetIds) (hidOpen widgetIds)
     where
         txtEventMap = makeLiteralTextEventMap hole
