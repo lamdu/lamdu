@@ -1,0 +1,17 @@
+digraph {
+    Tag                      [style=filled, fillcolor=yellow];
+    Def                      [style=filled, fillcolor=yellow, label="Definition"];
+    Var                      [style=filled, fillcolor=yellow, label="Variable"];
+    RecordField              [style=filled, fillcolor=yellow, label="Record field"];
+    English, Hebrew, Spanish [style=filled, fillcolor=green];
+    Tag -> English, Spanish, Hebrew;
+    {
+        rank = same; RecordField; Tag;
+    }
+    RecordField -> Tag [arrowhead=none, penwidth=7];
+    Def, Var -> Tag;
+
+    GetDef -> Def;
+    GetVar -> Var;
+    GetDef, GetVar -> Tag [style=dashed];
+}
