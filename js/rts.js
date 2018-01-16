@@ -24,6 +24,11 @@ var sizeTag = conf.builtinTagName('size');
 var srcPathTag = conf.builtinTagName('srcPath');
 var dstPathTag = conf.builtinTagName('dstPath');
 var flagsTag = conf.builtinTagName('flags');
+var hostTag = conf.builtinTagName('host');
+var portTag = conf.builtinTagName('port');
+var exclusiveTag = conf.builtinTagName('exclusive');
+var connectionHandlerTag = conf.builtinTagName('connectionHandler');
+var socketTag = conf.builtinTagName('socket');
 
 var bool = function (x) {
     return {tag: x ? trueTag : falseTag, data: {}};
@@ -256,6 +261,25 @@ module.exports = {
                 writeFile: function(x) {
                     return function() { require('fs').writeFileSync(x[filePathTag], Buffer.from(x[dataTag])); };
                 },
+            },
+            network: {
+                openTcpServer: function(x) {
+                    return function() {
+                        var server = require('net').Server((socket) => {
+                            x[connectionHandlerTag](socket)();
+                        });
+                        server.listen({
+                            host: String.fromCharCode.apply(null, x[hostTag]),
+                            port: x[portTag],
+                            exclusive: bool(x[exclusiveTag])
+                        });
+                        return server;
+                    }
+                },
+                closeTcpServer: function(server) { return function() { server.close(); } },
+                socketSend: function(x) {
+                    return function() { x[socketTag].write(Buffer.from(x[dataTag])); }
+                }
             }
         }
     },

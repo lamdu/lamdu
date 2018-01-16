@@ -2,7 +2,7 @@
 
 module.exports = {
     builtinTagName: function (x) {
-        var raw = "BI:" + x;
+        var raw = ("BI:" + x).substring(0, 16);
         raw += "\0".repeat(16 - raw.length);
         var encoded = "";
         if (raw.charCodeAt(0) < 10 * 16) {
