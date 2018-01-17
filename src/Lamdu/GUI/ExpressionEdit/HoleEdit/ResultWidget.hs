@@ -37,9 +37,17 @@ import           Lamdu.Prelude
 
 type T = Transaction
 
+-- | Given a hole result sugared expression, determine which part of
+-- the search term is a remainder and which belongs inside the hole
+-- result expr
 getSearchStringRemainder :: SearchMenu.ResultsContext -> Sugar.Expression name m a -> Text
 getSearchStringRemainder ctx holeResultConverted
+    -- A literal number dot suffix is its ambiguous remainder. if
+    -- another digit is input, the dot will become part of the number
     | isA (Sugar._BodyLiteral . Sugar._LiteralNum) = ambigSuffix "."
+    -- Inject has a colon suffix (in expr) but one may want to type an
+    -- operator which starts with a colon, therefore the colon is part
+    -- of inject results but is a remainder for other results.
     | isA Sugar._BodyInject = ""
     | otherwise = ambigSuffix ":"
     where
