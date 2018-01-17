@@ -1,6 +1,6 @@
 {-# LANGUAGE NoImplicitPrelude, OverloadedStrings, FlexibleContexts #-}
 module Lamdu.GUI.ExpressionEdit.TagEdit
-    ( makeRecordTag, makeCaseTag
+    ( makeRecordTag, makeCaseTag, makeCaseTagView
     , makeParamTag
     , makeArgTag
     ) where
@@ -236,6 +236,20 @@ makeTagHoleEdit nearestHoles tag =
     where
         holeId = WidgetIds.tagHoleId (tagId tag)
 
+makeTagView ::
+    ( MonadReader env m
+    , TextView.HasStyle env, Element.HasAnimIdPrefix env, HasTheme env
+    ) =>
+    Sugar.Tag (Name f) g -> m (WithTextPos View)
+makeTagView tag =
+    NameEdit.makeView (tag ^. Sugar.tagName . Name.form)
+    & Reader.local (Element.animIdPrefix .~ animId)
+    where
+        animId =
+            tag ^. Sugar.tagInfo . Sugar.tagInstance
+            & WidgetIds.fromEntityId
+            & Widget.toAnimId
+
 makeTagEdit ::
     ( Monad m, MonadReader env f, MonadTransaction m f, HasConfig env
     , GuiState.HasState env, HasTheme env, Element.HasAnimIdPrefix env
@@ -262,8 +276,7 @@ makeTagEdit nearestHoles tag =
                     <&> WidgetIds.tagHoleId)
         nameView <-
             (Widget.makeFocusableView ?? viewId <&> fmap) <*>
-            NameEdit.makeView (tag ^. Sugar.tagName . Name.form)
-            & Reader.local (Element.animIdPrefix .~ Widget.toAnimId myId)
+            makeTagView tag
             <&> Lens.mapped %~ Widget.weakerEvents eventMap
         let hover = Hover.hoverBeside Align.tValue ?? nameView
         widget <-
@@ -313,6 +326,13 @@ makeCaseTag ::
 makeCaseTag nearestHoles tag =
     makeTagEdit nearestHoles tag
     & withNameColor Theme.caseTagColor
+
+makeCaseTagView ::
+    ( MonadReader env f
+    , TextView.HasStyle env, Element.HasAnimIdPrefix env, HasTheme env
+    ) =>
+    Sugar.Tag (Name g) h -> f (WithTextPos View)
+makeCaseTagView = withNameColor Theme.caseTagColor . makeTagView
 
 makeParamTag ::
     ( MonadReader env f, HasTheme env, HasConfig env, Hover.HasStyle env, Menu.HasConfig env

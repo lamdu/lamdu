@@ -6,13 +6,13 @@ module Lamdu.GUI.ExpressionEdit.InjectEdit
 import qualified Control.Lens as Lens
 import           Data.Store.Transaction (Transaction)
 import           GUI.Momentu.Align (WithTextPos)
+import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Glue ((/|/))
 import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.Responsive.Expression as ResponsiveExpr
 import qualified GUI.Momentu.Responsive.Options as Options
-import qualified GUI.Momentu.State as GuiState
 import           GUI.Momentu.View (View)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.TextView as TextView
@@ -48,15 +48,11 @@ makeNullaryInject tag pl =
     stdWrap pl <*>
     do
         dot <- injectIndicator "."
-        TagEdit.makeCaseTag nearestHoles tag
-            <&> (/|/ dot)
+        (Widget.makeFocusableView ?? myId <&> (Align.tValue %~))
+            <*> (TagEdit.makeCaseTagView tag <&> (/|/ dot))
             <&> Responsive.fromWithTextPos
-    & GuiState.assignCursor myId tagInstanceId
     where
         myId = WidgetIds.fromExprPayload pl
-        tagInstanceId =
-            tag ^. Sugar.tagInfo . Sugar.tagInstance & WidgetIds.fromEntityId
-        nearestHoles = pl ^. Sugar.plData . ExprGui.plNearestHoles
 
 makeInject ::
     Monad m =>
