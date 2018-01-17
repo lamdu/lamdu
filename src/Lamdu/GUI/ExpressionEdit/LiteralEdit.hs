@@ -197,11 +197,10 @@ numEdit prop pl =
     & withStyle Style.styleNum
     where
         delEvent =
-            case pl ^. Sugar.plActions . Sugar.delete of
+            case pl ^? Sugar.plActions . Sugar.delete . Lens.failing Sugar._SetToHole Sugar._Delete of
             -- Allow to delete when number is zero.
-            Sugar.SetToHole action | curVal == 0 ->
-                action <&> HoleWidgetIds.make <&> HoleWidgetIds.hidOpen
-                <&> GuiState.updateCursor
+            Just action | curVal == 0 ->
+                action <&> WidgetIds.fromEntityId <&> GuiState.updateCursor
                 & E.keyPresses [ModKey mempty MetaKey.Key'Backspace] (E.Doc ["Edit", "Value"])
             _ -> mempty
         expandedText = expandedNumText curVal

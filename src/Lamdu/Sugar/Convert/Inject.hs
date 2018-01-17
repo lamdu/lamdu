@@ -24,15 +24,32 @@ import           Lamdu.Prelude
 convert :: (Monad m, Monoid a) => V.Inject (Val (Input.Payload m a)) -> Input.Payload m a -> ConvertM m (ExpressionU m a)
 convert (V.Inject tag injected) exprPl =
     do
+        protectedSetToVal <- ConvertM.typeProtectedSetToVal
+        let typeProtect = protectedSetToVal (exprPl ^. Input.stored) valI
+        let toNullary =
+                do
+                    V.BLeaf V.LRecEmpty & ExprIRef.newValBody
+                        <&> V.Inject tag <&> V.BInject
+                        >>= ExprIRef.writeValBody valI
+                    typeProtect
+                <&> EntityId.ofValI
+        let maybeToNullary expr
+                | Lens.has (rBody . _BodyLiteral . _LiteralBytes) expr =
+                    -- HACK: Work around LiteralEdit relying on SetToHole action.
+                    expr
+                | otherwise = expr & rPayload . plActions . delete .~ Delete toNullary
         mInjectedS <-
             if Lens.has ExprLens.valRecEmpty injected
-            then pure Nothing
-            else ConvertM.convertSubexpression injected <&> Just
-        protectedSetToVal <- ConvertM.typeProtectedSetToVal
+            then
+                pure Nothing
+            else
+                ConvertM.convertSubexpression injected
+                <&> maybeToNullary
+                <&> Just
         let setTag newTag =
                 do
                     V.Inject newTag injectedI & V.BInject & ExprIRef.writeValBody valI
-                    _ <- protectedSetToVal (exprPl ^. Input.stored) valI
+                    void typeProtect
                     TagInfo inst newTag & pure
         convertTag (TagInfo inst tag) mempty setTag
             <&> (`Inject` mInjectedS) <&> BodyInject
