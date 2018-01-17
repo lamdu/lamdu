@@ -175,10 +175,11 @@ makeOpenRecord (Sugar.OpenCompositeActions close) rest fieldsGui =
         fieldsGui & Responsive.render . Lens.imapped %@~ layout & pure
 
 openRecordEventMap ::
-    Functor m =>
-    Config -> Sugar.OpenCompositeActions (T m) ->
-    Sugar.Expression name (T m) a ->
-    EventMap (T m GuiState.Update)
+    Functor f =>
+    Config ->
+    Sugar.OpenCompositeActions f ->
+    Sugar.Expression name f a ->
+    EventMap (f GuiState.Update)
 openRecordEventMap config (Sugar.OpenCompositeActions close) restExpr
     | isHole restExpr =
         close <&> WidgetIds.fromEntityId
@@ -188,16 +189,15 @@ openRecordEventMap config (Sugar.OpenCompositeActions close) restExpr
         isHole = Lens.has (Sugar.rBody . Sugar._BodyHole)
 
 closedRecordEventMap ::
-    Functor m =>
-    Config -> Sugar.ClosedCompositeActions (T m) ->
-    EventMap (T m GuiState.Update)
+    Functor f =>
+    Config -> Sugar.ClosedCompositeActions f -> EventMap (f GuiState.Update)
 closedRecordEventMap config (Sugar.ClosedCompositeActions open) =
     open <&> WidgetIds.fromEntityId
     & E.keysEventMapMovesCursor (Config.recordOpenKeys config) (doc "Open")
 
 recordDelEventMap ::
-    Functor m =>
-    Config -> m Sugar.EntityId -> EventMap (m GuiState.Update)
+    Functor f =>
+    Config -> f Sugar.EntityId -> EventMap (f GuiState.Update)
 recordDelEventMap config delete =
     delete <&> WidgetIds.fromEntityId
     & E.keysEventMapMovesCursor (Config.delKeys config) (doc "Delete Field")
