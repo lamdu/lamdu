@@ -47,7 +47,8 @@ makeNullaryInject tag pl =
     stdWrap pl <*>
     do
         dot <- injectIndicator "."
-        TagEdit.makeCaseTag nearestHoles tag
+        tag & Sugar.tagInfo . Sugar.tagInstance .~ pl ^. Sugar.plEntityId
+            & TagEdit.makeCaseTag nearestHoles
             <&> (/|/ dot)
             <&> Responsive.fromWithTextPos
     where
