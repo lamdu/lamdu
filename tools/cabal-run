@@ -1,5 +1,6 @@
 #!/bin/bash
+set -eu
 dir=$(dirname $0)
 cd ${dir}/..
 git-cached-exec git-cache-cabal.spec
-dist/build/lamdu/lamdu
+dist/build/lamdu/lamdu $@
