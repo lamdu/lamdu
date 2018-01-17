@@ -98,8 +98,7 @@ mkNomGui ordering nomStr str mDel pl (Sugar.Nominal tid val) =
     where
         mParenInfo
             | pl ^. Sugar.plData . ExprGui.plNeedParens =
-                Widget.toAnimId nomId & Just
+                Widget.toAnimId myId & Just
             | otherwise = Nothing
         myId = WidgetIds.fromExprPayload pl
-        nomId = Widget.joinId myId ["nom"]
-        nameId = Widget.joinId nomId ["name"]
+        nameId = Widget.joinId myId ["name"]
