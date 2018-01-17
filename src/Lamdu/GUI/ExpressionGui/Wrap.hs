@@ -5,6 +5,7 @@ module Lamdu.GUI.ExpressionGui.Wrap
     , stdWrapParentExpr
     ) where
 
+import           Control.Applicative (liftA2)
 import qualified Control.Lens as Lens
 import           Data.Store.Transaction (Transaction)
 import qualified GUI.Momentu.EventMap as E
@@ -14,6 +15,7 @@ import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.FocusDelegator as FocusDelegator
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
+import qualified Lamdu.GUI.ExpressionEdit.Dotter as Dotter
 import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
 import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExprGui
@@ -39,9 +41,11 @@ stdWrap ::
     Sugar.Payload f ExprGui.Payload ->
     ExprGuiM m (Responsive (f GuiState.Update) -> Responsive (f GuiState.Update))
 stdWrap pl =
-    (.)
-    <$> maybeAddAnnotationPl pl
-    <*> ExprEventMap.add ExprEventMap.defaultOptions pl
+    maybeAddAnnotationPl pl
+    <<< Dotter.with pl
+    <<< ExprEventMap.add ExprEventMap.defaultOptions pl
+    where
+        (<<<) = liftA2 (.)
 
 parentDelegator ::
     ( MonadReader env m, Config.HasConfig env, GuiState.HasCursor env, Applicative f

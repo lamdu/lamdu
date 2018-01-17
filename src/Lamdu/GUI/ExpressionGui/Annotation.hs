@@ -276,7 +276,12 @@ maybeAddAnnotationPl pl =
             (pl ^. Sugar.plAnnotation)
             & Reader.local (Element.animIdPrefix .~ animId)
     where
-        isExprSelected = GuiState.isSubCursor ?? WidgetIds.fromExprPayload pl
+        myId = WidgetIds.fromExprPayload pl
+        isExprSelected =
+            do
+                isOnExpr <- GuiState.isSubCursor ?? myId
+                isOnDotter <- GuiState.isSubCursor ?? WidgetIds.dotterId myId
+                pure (isOnExpr && not isOnDotter)
         animId = WidgetIds.fromExprPayload pl & Widget.toAnimId
         showAnnotation = pl ^. Sugar.plData . ExprGui.plShowAnnotation
 

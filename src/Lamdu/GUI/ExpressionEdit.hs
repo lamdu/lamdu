@@ -13,6 +13,7 @@ import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.TextView as TextView
 import qualified Lamdu.GUI.ExpressionEdit.ApplyEdit as ApplyEdit
 import qualified Lamdu.GUI.ExpressionEdit.CaseEdit as CaseEdit
+import qualified Lamdu.GUI.ExpressionEdit.Dotter as Dotter
 import qualified Lamdu.GUI.ExpressionEdit.FragmentEdit as FragmentEdit
 import qualified Lamdu.GUI.ExpressionEdit.GetFieldEdit as GetFieldEdit
 import qualified Lamdu.GUI.ExpressionEdit.GetVarEdit as GetVarEdit
@@ -61,18 +62,20 @@ makeEditor body pl =
     case body of
     Sugar.BodyPlaceHolder    -> placeHolder pl
     Sugar.BodyHole         x -> HoleEdit.make         x pl & r
-    Sugar.BodyLabeledApply x -> ApplyEdit.makeLabeled x pl & r
-    Sugar.BodySimpleApply  x -> ApplyEdit.makeSimple  x pl & r
+    Sugar.BodyLabeledApply x -> ApplyEdit.makeLabeled x pl & r <&> d
+    Sugar.BodySimpleApply  x -> ApplyEdit.makeSimple  x pl & r <&> d
     Sugar.BodyLam          x -> LambdaEdit.make       x pl & r
     Sugar.BodyLiteral      x -> LiteralEdit.make      x pl & r
     Sugar.BodyRecord       x -> RecordEdit.make       x pl & r
-    Sugar.BodyCase         x -> CaseEdit.make         x pl & r
-    Sugar.BodyGuard        x -> GuardEdit.make        x pl & r
-    Sugar.BodyGetField     x -> GetFieldEdit.make     x pl & r
+    Sugar.BodyCase         x -> CaseEdit.make         x pl & r <&> d
+    Sugar.BodyGuard        x -> GuardEdit.make        x pl & r <&> d
+    Sugar.BodyGetField     x -> GetFieldEdit.make     x pl & r <&> d
     Sugar.BodyInject       x -> InjectEdit.make       x pl & r
-    Sugar.BodyGetVar       x -> GetVarEdit.make       x pl & r
+    Sugar.BodyGetVar       x -> GetVarEdit.make       x pl & r <&> d
     Sugar.BodyToNom        x -> NomEdit.makeToNom     x pl & r
-    Sugar.BodyFromNom      x -> NomEdit.makeFromNom   x pl & r
+    Sugar.BodyFromNom      x -> NomEdit.makeFromNom   x pl & r <&> d
     Sugar.BodyFragment     x -> FragmentEdit.make     x pl & r
     where
-        r = Reader.local (Element.animIdPrefix .~ Widget.toAnimId (WidgetIds.fromExprPayload pl))
+        d = Dotter.addEventMap myId
+        myId = WidgetIds.fromExprPayload pl
+        r = Reader.local (Element.animIdPrefix .~ Widget.toAnimId myId)
