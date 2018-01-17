@@ -12,7 +12,6 @@ import           Data.Store.Transaction (Transaction)
 import qualified Data.Text as Text
 import           GUI.Momentu.Align (Aligned(..), WithTextPos(..))
 import qualified GUI.Momentu.Align as Align
-import           GUI.Momentu.Animation (AnimId)
 import qualified GUI.Momentu.Draw as Draw
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.EventMap as E
@@ -73,18 +72,17 @@ makeCollisionSuffixLabel mCollision =
 
 -- TODO: This doesn't belong here
 makeView ::
-    ( HasTheme r, Element.HasAnimIdPrefix r
-    , TextView.HasStyle r, MonadReader r m
-    ) => Name.Form -> AnimId -> m (WithTextPos View)
-makeView name animId =
+    (HasTheme r, Element.HasAnimIdPrefix r, TextView.HasStyle r, MonadReader r m) =>
+    Name.Form -> m (WithTextPos View)
+makeView name =
     do
         mSuffixLabel <-
             makeCollisionSuffixLabel mCollision <&> Lens._Just %~ Aligned 0.5
+        animId <- Element.subAnimId ["name"]
         TextView.make ?? visibleName ?? animId
             <&> Aligned 0.5
             <&> maybe id (flip (/|/)) mSuffixLabel
             <&> (^. Align.value)
-    & Reader.local (Element.animIdPrefix .~ animId)
     where
         (visibleName, mCollision) = Name.visible name
 

@@ -85,7 +85,6 @@ mkNomGui ordering nomStr str mDel pl (Sugar.Nominal tid val) =
                             nameGui <-
                                 NameEdit.makeView
                                 (tid ^. Sugar.tidName . Name.form)
-                                (Widget.toAnimId nameId)
                             Widget.makeFocusableView ?? nameId
                                 <&> (Align.tValue %~) ?? label /|/ nameGui
                         <&> Responsive.fromWithTextPos

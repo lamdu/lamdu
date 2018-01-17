@@ -54,7 +54,7 @@ makeSimpleView ::
     m (WithTextPos (Widget (f GuiState.Update)))
 makeSimpleView (Name name _) myId =
     (Widget.makeFocusableView ?? myId <&> (Align.tValue %~))
-    <*> NameEdit.makeView name (Widget.toAnimId myId)
+    <*> NameEdit.makeView name
 
 makeParamsRecord ::
     ( Monad m, MonadReader env f, HasTheme env, GuiState.HasCursor env

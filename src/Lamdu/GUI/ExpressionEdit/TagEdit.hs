@@ -141,7 +141,8 @@ makeOptions tag ctx
             { Menu._oId = optionWId
             , Menu._oRender =
                 (Widget.makeFocusableView ?? optionWId <&> fmap)
-                <*> NameEdit.makeView (name ^. Name.form) optionId
+                <*> NameEdit.makeView (name ^. Name.form)
+                & Reader.local (Element.animIdPrefix .~ optionId)
                 <&>
                 \widget ->
                 Menu.RenderedOption
@@ -261,7 +262,8 @@ makeTagEdit nearestHoles tag =
                     <&> WidgetIds.tagHoleId)
         nameView <-
             (Widget.makeFocusableView ?? viewId <&> fmap) <*>
-            NameEdit.makeView (tag ^. Sugar.tagName . Name.form) (Widget.toAnimId myId)
+            NameEdit.makeView (tag ^. Sugar.tagName . Name.form)
+            & Reader.local (Element.animIdPrefix .~ Widget.toAnimId myId)
             <&> Lens.mapped %~ Widget.weakerEvents eventMap
         let hover = Hover.hoverBeside Align.tValue ?? nameView
         widget <-
@@ -338,10 +340,11 @@ makeArgTag ::
     ( MonadReader env f, HasTheme env, TextView.HasStyle env
     , Element.HasAnimIdPrefix env
     ) => Name (T m) -> Sugar.EntityId -> f (WithTextPos View)
-makeArgTag name entityId =
+makeArgTag name tagInstance =
     do
         nameTheme <- Lens.view Theme.theme <&> Theme.name
-        NameEdit.makeView (name ^. Name.form) animId
+        NameEdit.makeView (name ^. Name.form)
+            & Reader.local (Element.animIdPrefix .~ animId)
             & Reader.local (TextView.color .~ Theme.paramTagColor nameTheme)
     where
-        animId = WidgetIds.fromEntityId entityId & Widget.toAnimId
+        animId = WidgetIds.fromEntityId tagInstance & Widget.toAnimId
