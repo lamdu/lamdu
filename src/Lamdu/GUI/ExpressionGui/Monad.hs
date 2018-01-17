@@ -10,7 +10,6 @@ module Lamdu.GUI.ExpressionGui.Monad
     , readCodeAnchors, mkPrejumpPosSaver
     --
     , readMScopeId, withLocalMScopeId
-    , isExprSelected
     --
     , run
     ) where
@@ -185,8 +184,3 @@ readMScopeId = Lens.view aMScopeId
 
 withLocalMScopeId :: CurAndPrev (Maybe ScopeId) -> ExprGuiM m a -> ExprGuiM m a
 withLocalMScopeId mScopeId = exprGuiM %~ ReaderT.local (aMScopeId .~ mScopeId)
-
-isExprSelected ::
-    (MonadReader env m, GuiState.HasCursor env) =>
-    Sugar.Payload f a -> m Bool
-isExprSelected pl = GuiState.isSubCursor ?? WidgetIds.fromExprPayload pl

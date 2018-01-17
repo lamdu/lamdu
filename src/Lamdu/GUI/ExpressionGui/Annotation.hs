@@ -270,12 +270,13 @@ maybeAddAnnotationPl pl =
         wideAnnotationBehavior <-
             if showAnnotation ^. ExprGui.showExpanded
             then return KeepWideTypeAnnotation
-            else ExprGuiM.isExprSelected pl <&> wideAnnotationBehaviorFromSelected
+            else isExprSelected <&> wideAnnotationBehaviorFromSelected
         maybeAddAnnotation wideAnnotationBehavior
             showAnnotation
             (pl ^. Sugar.plAnnotation)
             & Reader.local (Element.animIdPrefix .~ animId)
     where
+        isExprSelected = GuiState.isSubCursor ?? WidgetIds.fromExprPayload pl
         animId = WidgetIds.fromExprPayload pl & Widget.toAnimId
         showAnnotation = pl ^. Sugar.plData . ExprGui.plShowAnnotation
 
