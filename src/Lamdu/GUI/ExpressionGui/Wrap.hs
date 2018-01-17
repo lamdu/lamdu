@@ -35,9 +35,9 @@ parentExprFDConfig config = FocusDelegator.Config
     }
 
 stdWrap ::
-    Monad m =>
-    Sugar.Payload (T m) ExprGui.Payload ->
-    ExprGuiM m (ExpressionGui m -> ExpressionGui m)
+    (Monad m, Applicative f) =>
+    Sugar.Payload f ExprGui.Payload ->
+    ExprGuiM m (Responsive (f GuiState.Update) -> Responsive (f GuiState.Update))
 stdWrap pl =
     (.)
     <$> maybeAddAnnotationPl pl
