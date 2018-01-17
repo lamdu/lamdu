@@ -4,6 +4,8 @@ module Lamdu.GUI.ExpressionEdit.RecordEdit
     ) where
 
 import qualified Control.Lens as Lens
+import qualified Data.Char as Char
+import qualified Data.Text as Text
 import           Data.Store.Transaction (Transaction)
 import           Data.Vector.Vector2 (Vector2(..))
 import qualified GUI.Momentu.Align as Align
@@ -18,6 +20,7 @@ import qualified GUI.Momentu.State as GuiState
 import           GUI.Momentu.View (View)
 import qualified GUI.Momentu.View as View
 import qualified GUI.Momentu.Widget as Widget
+import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import           Lamdu.Config (HasConfig)
 import qualified Lamdu.Config as Config
@@ -53,6 +56,21 @@ mkAddFieldEventMap addField =
     <&> WidgetIds.tagHoleId
     & E.keysEventMapMovesCursor keys (doc "Add Field")
 
+addFieldWithSearchTermEventMap ::
+    Functor f => f Sugar.CompositeAddItemResult -> EventMap (f GuiState.Update)
+addFieldWithSearchTermEventMap addField =
+    E.charEventMap "Character" (doc "Add Field") f
+    where
+        f c
+            | Char.isAlpha c =
+                addField
+                <&> (^. Sugar.cairNewTag . Sugar.tagInstance)
+                <&> WidgetIds.fromEntityId
+                <&> WidgetIds.tagHoleId
+                <&> SearchMenu.enterWithSearchTerm (Text.singleton c)
+                & Just
+            | otherwise = Nothing
+
 makeUnit ::
     (Monad m, Applicative f) =>
     f Sugar.CompositeAddItemResult ->
@@ -65,7 +83,8 @@ makeUnit addField pl =
         stdWrap pl
             <*> ( (/|/) <$> Styled.grammarLabel "{" <*> Styled.grammarLabel "}"
                     <&> makeFocusable
-                    <&> Align.tValue %~ Widget.weakerEvents addFieldEventMap
+                    <&> Align.tValue %~ Widget.weakerEvents
+                        (addFieldEventMap <> addFieldWithSearchTermEventMap addField)
                     <&> Responsive.fromWithTextPos
                 )
     where
