@@ -97,7 +97,7 @@ make fragment pl =
                 Sugar.AttachAction attach ->
                     attach <&> WidgetIds.fromEntityId
                     & E.keysEventMapMovesCursor
-                        (Config.delKeys config <> Config.holeUnwrapKeys (Config.hole config))
+                        (Config.delKeys config <> Config.attachKeys config)
                         (E.Doc ["Edit", "Attach"])
         ExprEventMap.add ExprEventMap.defaultOptions pl
             <*> (maybeAddAnnotationPl pl ?? fragmentExprGui <&> Responsive.render . Lens.imapped %@~ f)

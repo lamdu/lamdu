@@ -32,12 +32,11 @@
         "jumpToBranchesKeys" : [ "Cmd+F11" ]
     },
     "hole": {
-        "holeJumpToNextKeys"            : [ "Tab" ],
-        "holeResultCount"               : 5,
-        "holeJumpToPrevKeys"            : [ "Shift+Tab" ],
-        "holeOpenKeys"                  : [ "Space", "Enter" ],
-        "holeCloseKeys"                 : [ "Escape", "Cmd+LeftBracket" ],
-        "holeUnwrapKeys"                : [ "Space", "Enter", "Shift+0", "RightBracket" ]
+        "holeJumpToNextKeys"  : [ "Tab" ],
+        "holeResultCount"     : 5,
+        "holeJumpToPrevKeys"  : [ "Shift+Tab" ],
+        "holeOpenKeys"        : [ "Space", "Enter" ],
+        "holeCloseKeys"       : [ "Escape", "Cmd+LeftBracket" ]
     },
     "literalText": {
         "literalTextStartEditingKeys" : [ "Enter", "Shift+Right" ],
@@ -60,8 +59,9 @@
     "addNextParamKeys"         : [ "Space" ],
     "paramOrderBeforeKeys"     : [ "Alt+Up" ],
     "paramOrderAfterKeys"      : [ "Alt+Down" ],
-    "wrapKeys"                 : [ "Space" ],
-    "parenWrapKeys"            : [ "Shift+9", "LeftBracket" ],
+    "attachKeys"               : [ "Space", "Enter", "Shift+0", "RightBracket" ],
+    "detachKeys"               : [ "Space" ],
+    "parenDetachKeys"          : [ "Shift+9", "LeftBracket" ],
     "recordOpenKeys"           : [ "Alt+O" ],
     "recordCloseKeys"          : [ "Alt+O" ],
     "caseOpenKeys"             : [ "Alt+O" ],

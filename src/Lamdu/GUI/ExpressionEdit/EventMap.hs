@@ -180,11 +180,11 @@ detachEventMap detach =
     Lens.view Config.config
     <&>
     \config ->
-    E.keysEventMapMovesCursor (Config.wrapKeys config)
+    E.keysEventMapMovesCursor (Config.detachKeys config)
     (E.Doc ["Edit", "Modify"])
     (detach <&> HoleWidgetIds.make <&> HoleWidgetIds.hidOpen)
     <>
-    E.keysEventMap (Config.parenWrapKeys config)
+    E.keysEventMap (Config.parenDetachKeys config)
     (E.Doc ["Edit", "Detach"])
     (void detach)
 

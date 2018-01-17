@@ -43,8 +43,6 @@ data Hole = Hole
     { holeJumpToNextKeys :: [MetaKey]
     , holeJumpToPrevKeys :: [MetaKey]
     , holeResultCount :: Int
-    , -- TODO: Attach keys
-      holeUnwrapKeys :: [MetaKey]
     , holeOpenKeys :: [MetaKey]
     , holeCloseKeys :: [MetaKey]
     } deriving (Eq, Show)
@@ -94,10 +92,9 @@ data Config = Config
     , delForwardKeys :: [MetaKey]
     , delBackwardKeys :: [MetaKey]
     , replaceParentKeys :: [MetaKey]
-    , -- TODO: detachKeys
-      wrapKeys :: [MetaKey]
-    , -- TODO: detachKeys
-      parenWrapKeys :: [MetaKey]
+    , attachKeys :: [MetaKey]
+    , detachKeys :: [MetaKey]
+    , parenDetachKeys :: [MetaKey]
 
     , letAddItemKeys :: [MetaKey]
 
