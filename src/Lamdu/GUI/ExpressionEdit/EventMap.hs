@@ -9,7 +9,6 @@ module Lamdu.GUI.ExpressionEdit.EventMap
     ) where
 
 import qualified Control.Lens as Lens
-import qualified Data.Store.Transaction as Transaction
 import qualified Data.Text as Text
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
@@ -30,12 +29,10 @@ import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
 
-type T = Transaction.Transaction
-
-data ExprInfo m = ExprInfo
+data ExprInfo f = ExprInfo
     { exprInfoIsHoleResult :: Bool
     , exprInfoNearestHoles :: NearestHoles
-    , exprInfoActions :: Sugar.Actions (T m)
+    , exprInfoActions :: Sugar.Actions f
     , exprInfoMinOpPrec :: MinOpPrec
     }
 
@@ -49,7 +46,7 @@ defaultOptions =
     { addOperatorSetHoleState = Nothing
     }
 
-exprInfoFromPl :: Sugar.Payload (T f) ExprGui.Payload -> ExprInfo f
+exprInfoFromPl :: Sugar.Payload f ExprGui.Payload -> ExprInfo f
 exprInfoFromPl pl =
     ExprInfo
     { exprInfoIsHoleResult = ExprGui.isHoleResult pl
@@ -59,14 +56,14 @@ exprInfoFromPl pl =
     }
 
 add ::
-    (MonadReader env m, Monad f, Config.HasConfig env, HasWidget w) =>
-    Options -> Sugar.Payload (T f) ExprGui.Payload ->
-    m (w (T f GuiState.Update) -> w (T f GuiState.Update))
+    (MonadReader env m, Config.HasConfig env, HasWidget w, Applicative f) =>
+    Options -> Sugar.Payload f ExprGui.Payload ->
+    m (w (f GuiState.Update) -> w (f GuiState.Update))
 add options = addWith options . exprInfoFromPl
 
 addWith ::
-    (MonadReader env m, Monad f, Config.HasConfig env, HasWidget w) =>
-    Options -> ExprInfo f -> m (w (T f GuiState.Update) -> w (T f GuiState.Update))
+    (MonadReader env m, Config.HasConfig env, HasWidget w, Applicative f) =>
+    Options -> ExprInfo f -> m (w (f GuiState.Update) -> w (f GuiState.Update))
 addWith options exprInfo =
     do
         actions <- actionsEventMap options exprInfo
@@ -76,8 +73,8 @@ addWith options exprInfo =
             & pure
 
 jumpHolesEventMap ::
-    (MonadReader env m, Config.HasConfig env, Monad f) =>
-    NearestHoles -> m (EventMap (T f GuiState.Update))
+    (MonadReader env m, Config.HasConfig env, Applicative f) =>
+    NearestHoles -> m (EventMap (f GuiState.Update))
 jumpHolesEventMap hg =
     Lens.view Config.config <&> Config.hole
     <&>
@@ -102,7 +99,7 @@ extractCursor (Sugar.ExtractToDef defId) =
 
 extractEventMap ::
     (MonadReader env m, Config.HasConfig env, Functor f) =>
-    Sugar.Actions (T f) -> m (EventMap (T f GuiState.Update))
+    Sugar.Actions f -> m (EventMap (f GuiState.Update))
 extractEventMap actions =
     Lens.view Config.config <&> Config.extractKeys
     <&>
@@ -113,9 +110,9 @@ extractEventMap actions =
         doc = E.Doc ["Edit", "Extract"]
 
 actionsEventMap ::
-    (MonadReader env m, Monad f, Config.HasConfig env) =>
+    (MonadReader env m, Config.HasConfig env, Applicative f) =>
     Options -> ExprInfo f ->
-    m (EventContext -> EventMap (T f GuiState.Update))
+    m (EventContext -> EventMap (f GuiState.Update))
 actionsEventMap options exprInfo =
     sequence
     [ case exprInfoActions exprInfo ^. Sugar.wrap of
@@ -157,15 +154,16 @@ transformSearchTerm minOpPrec eventCtx =
         acceptOp = (>= minOpPrec) . precedence
 
 transformEventMap ::
-    Monad f => Options -> ExprInfo f -> EventContext -> EventMap (T f GuiState.Update)
+    Applicative f =>
+    Options -> ExprInfo f -> EventContext -> EventMap (f GuiState.Update)
 transformEventMap options exprInfo eventCtx =
     case exprInfoActions exprInfo ^. Sugar.wrap of
     Sugar.WrapAction wrap ->
         case addOperatorSetHoleState options of
         Just holeId -> pure holeId
         Nothing -> wrap
-    Sugar.WrapperAlready holeId -> return holeId
-    Sugar.WrappedAlready holeId -> return holeId
+    Sugar.WrapperAlready holeId -> pure holeId
+    Sugar.WrappedAlready holeId -> pure holeId
     <&> HoleWidgetIds.make <&> HoleWidgetIds.hidOpen
     & action
     where
@@ -175,8 +173,8 @@ transformEventMap options exprInfo eventCtx =
             <&> (wrap <&>)
 
 wrapEventMap ::
-    (MonadReader env m, Config.HasConfig env, Monad f) =>
-    T f Sugar.EntityId -> m (EventMap (T f GuiState.Update))
+    (MonadReader env m, Config.HasConfig env, Functor f) =>
+    f Sugar.EntityId -> m (EventMap (f GuiState.Update))
 wrapEventMap wrap =
     Lens.view Config.config
     <&>
@@ -190,8 +188,8 @@ wrapEventMap wrap =
     (void wrap)
 
 replaceEventMap ::
-    (MonadReader env m, Config.HasConfig env, Monad f) =>
-    Sugar.Actions (T f) -> m (EventMap (T f GuiState.Update))
+    (MonadReader env m, Config.HasConfig env, Functor f) =>
+    Sugar.Actions f -> m (EventMap (f GuiState.Update))
 replaceEventMap actions =
     Lens.view Config.config
     <&>
