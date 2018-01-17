@@ -14,6 +14,7 @@ import           Data.Store.Transaction (Transaction)
 import qualified Data.Text as Text
 import           GUI.Momentu.Align (WithTextPos)
 import qualified GUI.Momentu.Align as Align
+import qualified GUI.Momentu.Draw as Draw
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
@@ -279,6 +280,14 @@ makeTagEdit nearestHoles tag =
         myId = WidgetIds.fromEntityId (tag ^. Sugar.tagInfo . Sugar.tagInstance)
         viewId = tagViewId myId
 
+withNameColor ::
+    (MonadReader env m, HasTheme env, TextView.HasStyle env) =>
+    (Theme.Name -> Draw.Color) -> m a -> m a
+withNameColor nameColor act =
+    do
+        color <- Lens.view Theme.theme <&> Theme.name <&> nameColor
+        Reader.local (TextView.color .~ color) act
+
 makeRecordTag ::
     ( Monad m, MonadReader env f, MonadTransaction m f, HasTheme env
     , HasConfig env, GuiState.HasState env
@@ -288,10 +297,8 @@ makeRecordTag ::
     NearestHoles -> Sugar.Tag (Name (T m)) (T m) ->
     f (WithTextPos (Widget (T m GuiState.Update)))
 makeRecordTag nearestHoles tag =
-    do
-        color <- Lens.view Theme.theme <&> Theme.name <&> Theme.recordTagColor
-        makeTagEdit nearestHoles tag
-            & Reader.local (TextView.color .~ color)
+    makeTagEdit nearestHoles tag
+    & withNameColor Theme.recordTagColor
 
 makeCaseTag ::
     ( Monad m, MonadReader env f, MonadTransaction m f, HasTheme env
@@ -302,10 +309,8 @@ makeCaseTag ::
     NearestHoles -> Sugar.Tag (Name (T m)) (T m) ->
     f (WithTextPos (Widget (T m GuiState.Update)))
 makeCaseTag nearestHoles tag =
-    do
-        color <- Lens.view Theme.theme <&> Theme.name <&> Theme.caseTagColor
-        makeTagEdit nearestHoles tag
-            & Reader.local (TextView.color .~ color)
+    makeTagEdit nearestHoles tag
+    & withNameColor Theme.caseTagColor
 
 makeParamTag ::
     ( MonadReader env f, HasTheme env, HasConfig env, Hover.HasStyle env, Menu.HasConfig env
@@ -315,10 +320,8 @@ makeParamTag ::
     Sugar.Tag (Name (T m)) (T m) ->
     f (WithTextPos (Widget (T m GuiState.Update)))
 makeParamTag tag =
-    do
-        color <- Lens.view Theme.theme <&> Theme.name <&> Theme.parameterColor
-        makeTagEdit NearestHoles.none tag
-            & Reader.local (TextView.color .~ color)
+    makeTagEdit NearestHoles.none tag
+    & withNameColor Theme.parameterColor
     & Reader.local (Menu.config %~ removeGoNextKeys)
     where
         removeGoNextKeys c =
