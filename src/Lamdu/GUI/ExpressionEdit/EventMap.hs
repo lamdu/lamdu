@@ -9,6 +9,7 @@ module Lamdu.GUI.ExpressionEdit.EventMap
     ) where
 
 import qualified Control.Lens as Lens
+import qualified Data.Char as Char
 import qualified Data.Text as Text
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
@@ -137,13 +138,13 @@ actionsEventMap options exprInfo =
 -- given the extra search term chars from another hole.
 transformSearchTerm :: Prec -> EventContext -> EventMap Text
 transformSearchTerm minOpPrec eventCtx =
-    group "Apply Operator" ops <>
-    group "Transform" alpha
+    E.charGroup Nothing (E.Doc ["Edit", "Apply Operator"]) ops Text.singleton
+    <> E.charEventMap "Character" (E.Doc ["Edit", "Transform"]) transform
+    <&> (searchStrRemainder <>)
     where
-        alpha = ['a' .. 'z'] <> ['A' .. 'Z']
-        group doc chars =
-            E.charGroup Nothing (E.Doc ["Edit", doc])
-            chars (Text.singleton <&> (searchStrRemainder <>))
+        transform c
+            | Char.isAlpha c = Text.singleton c & Just
+            | otherwise = Nothing
         searchStrRemainder = eventCtx ^. Widget.ePrevTextRemainder
         ops =
             case Text.uncons searchStrRemainder of
