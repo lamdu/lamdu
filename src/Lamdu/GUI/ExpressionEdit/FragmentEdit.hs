@@ -132,7 +132,7 @@ makeFragmentExprEdit fragment =
 
 allowedFragmentSearchTerm :: Text -> Bool
 allowedFragmentSearchTerm searchTerm =
-    SearchArea.allowedSearchTermCommon searchTerm || isGetField searchTerm
+    SearchArea.allowedSearchTermCommon ":" searchTerm || isGetField searchTerm
     where
         isGetField t =
             case Text.uncons t of

@@ -28,7 +28,11 @@ type T = Transaction
 allowedHoleSearchTerm :: Text -> Bool
 allowedHoleSearchTerm searchTerm =
     any (searchTerm &)
-    [SearchArea.allowedSearchTermCommon, isPositiveNumber, isNegativeNumber, isLiteralBytes]
+    [ SearchArea.allowedSearchTermCommon ":."
+    , isPositiveNumber
+    , isNegativeNumber
+    , isLiteralBytes
+    ]
     where
         isPositiveNumber t =
             case Text.splitOn "." t of

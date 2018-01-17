@@ -255,17 +255,25 @@ groupOrdering searchTerm group =
     where
         match f = any (f searchTerm) (group ^. groupSearchTerms)
 
-holeMatches :: Text -> [Group m] -> [Group m]
+holeMatches :: Monad m => Text -> [Group m] -> [Group m]
 holeMatches searchTerm groups =
     groups
     & filterBySearchTerm
     & sortOn (groupOrdering definitePart)
+    <&> groupResults %~ ListClass.filterL (fmap isHoleResultOK . snd)
     where
+        suffix = searchTerm ^? Lens.reversed . Lens._Cons . _1
+        injectMVal = Sugar.rBody . Sugar._BodyInject . Sugar.iMVal
+        isHoleResultOK holeRes =
+            case (suffix, holeRes ^. Sugar.holeResultConverted) of
+            (Just ':', val) | Lens.has (injectMVal . Lens._Nothing) val -> False
+            (Just '.', val) | Lens.has (injectMVal . Lens._Just) val -> False
+            _ -> True
         filterBySearchTerm
             | Text.null searchTerm = id
             | otherwise = filter nameMatch
         nameMatch group =
             any (insensitiveInfixAltOf definitePart) (group ^. groupSearchTerms)
         definitePart
-            | ":" `Text.isSuffixOf` searchTerm = Text.init searchTerm
+            | any (`Text.isSuffixOf` searchTerm) [":", "."] = Text.init searchTerm
             | otherwise = searchTerm

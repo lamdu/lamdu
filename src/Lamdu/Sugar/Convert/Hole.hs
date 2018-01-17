@@ -455,6 +455,9 @@ applyForms ::
     a -> Val (Infer.Payload, a) ->
     StateT Infer.Context (ListT (T m)) (Val (Infer.Payload, a))
 applyForms _ v@(Val _ V.BLam {}) = return v
+applyForms _ v@(Val pl0 (V.BInject (V.Inject tag (Val pl1 (V.BLeaf V.LHole))))) =
+    return (Val pl0 (V.BInject (V.Inject tag (Val pl1 (V.BLeaf V.LRecEmpty)))))
+    <|> return v
 applyForms empty val =
     case inferPl ^. Infer.plType of
     TVar tv

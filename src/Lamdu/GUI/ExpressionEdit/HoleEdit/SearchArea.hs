@@ -231,8 +231,10 @@ make options mOptionLiteral pl allowedTerms =
             <&> Lens.mapped . Menu.optionWidgets . Align.tValue . Widget.eventMapMaker . Lens.mapped %~
                 filterSearchTermEvents allowedTerms (ctx ^. SearchMenu.rSearchTerm)
 
-allowedSearchTermCommon :: Text -> Bool
-allowedSearchTermCommon searchTerm =
+type Suffix = Char
+
+allowedSearchTermCommon :: [Suffix] -> Text -> Bool
+allowedSearchTermCommon suffixes searchTerm =
     any (searchTerm &)
     [ Text.all (`elem` Chars.operator)
     , Text.all Char.isAlphaNum
@@ -241,4 +243,4 @@ allowedSearchTermCommon searchTerm =
     ]
     where
         inj (lastChar, revInit) =
-            lastChar == ':' && Text.all Char.isAlphaNum revInit
+            lastChar `elem` suffixes && Text.all Char.isAlphaNum revInit

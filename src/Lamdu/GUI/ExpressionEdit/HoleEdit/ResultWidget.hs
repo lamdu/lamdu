@@ -42,20 +42,14 @@ type T = Transaction
 -- result expr
 getSearchStringRemainder :: SearchMenu.ResultsContext -> Sugar.Expression name m a -> Text
 getSearchStringRemainder ctx holeResultConverted
-    -- A literal number dot suffix is its ambiguous remainder. if
-    -- another digit is input, the dot will become part of the number
-    | isA (Sugar._BodyLiteral . Sugar._LiteralNum) = ambigSuffix "."
-    -- Inject has a colon suffix (in expr) but one may want to type an
-    -- operator which starts with a colon, therefore the colon is part
-    -- of inject results but is a remainder for other results.
     | isA Sugar._BodyInject = ""
-    | otherwise = ambigSuffix ":"
+    | isSuffixed ":" = ":"
+    | isSuffixed "." = "."
+    | otherwise = ""
     where
+        isSuffixed suffix = Text.isSuffixOf suffix (ctx ^. SearchMenu.rSearchTerm)
         fragmentExpr = Sugar.rBody . Sugar._BodyFragment . Sugar.fExpr
         isA x = any (`Lens.has` holeResultConverted) [Sugar.rBody . x, fragmentExpr . Sugar.rBody . x]
-        ambigSuffix suffix
-            | Text.isSuffixOf suffix (ctx ^. SearchMenu.rSearchTerm) = suffix
-            | otherwise = ""
 
 setFocalAreaToFullSize :: WithTextPos (Widget a) -> WithTextPos (Widget a)
 setFocalAreaToFullSize =
