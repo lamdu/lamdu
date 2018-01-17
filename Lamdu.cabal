@@ -196,6 +196,7 @@ Executable lamdu
                   , Lamdu.GUI.ExpressionEdit.BuiltinEdit
                   , Lamdu.GUI.ExpressionEdit.CaseEdit
                   , Lamdu.GUI.ExpressionEdit.EventMap
+                  , Lamdu.GUI.ExpressionEdit.FragmentEdit
                   , Lamdu.GUI.ExpressionEdit.GetFieldEdit
                   , Lamdu.GUI.ExpressionEdit.GetVarEdit
                   , Lamdu.GUI.ExpressionEdit.GuardEdit
@@ -212,7 +213,6 @@ Executable lamdu
                   , Lamdu.GUI.ExpressionEdit.NomEdit
                   , Lamdu.GUI.ExpressionEdit.RecordEdit
                   , Lamdu.GUI.ExpressionEdit.TagEdit
-                  , Lamdu.GUI.ExpressionEdit.WrapperEdit
                   , Lamdu.GUI.ExpressionGui
                   , Lamdu.GUI.ExpressionGui.Annotation
                   , Lamdu.GUI.ExpressionGui.Monad
@@ -249,6 +249,7 @@ Executable lamdu
                   , Lamdu.Sugar.Convert.DefExpr.OutdatedDefs
                   , Lamdu.Sugar.Convert.Expression
                   , Lamdu.Sugar.Convert.Expression.Actions
+                  , Lamdu.Sugar.Convert.Fragment
                   , Lamdu.Sugar.Convert.GetField
                   , Lamdu.Sugar.Convert.GetVar
                   , Lamdu.Sugar.Convert.Guard
@@ -266,7 +267,6 @@ Executable lamdu
                   , Lamdu.Sugar.Convert.TId
                   , Lamdu.Sugar.Convert.Tag
                   , Lamdu.Sugar.Convert.Text
-                  , Lamdu.Sugar.Convert.Wrapper
                   , Lamdu.Sugar.EntityId
                   , Lamdu.Sugar.Internal
                   , Lamdu.Sugar.Internal.EntityId

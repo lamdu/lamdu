@@ -78,10 +78,10 @@ markAnnotationsToDisplay (Expression oldBody pl) =
         hole
         & BodyHole
         & (`Expression` plWith forceShowType)
-    BodyWrapper wrapper ->
-        wrapper
-        & wExpr . nonHoleAnn .~ forceShowTypeOrEval
-        & BodyWrapper
+    BodyFragment fragment ->
+        fragment
+        & fExpr . nonHoleAnn .~ forceShowTypeOrEval
+        & BodyFragment
         & (`Expression` plWith forceShowType)
     BodyCase cas ->
         cas
@@ -98,7 +98,7 @@ markAnnotationsToDisplay (Expression oldBody pl) =
         defPl = plWith T.showAnnotationWhenVerbose
         set ann = Expression newBody (plWith ann)
         newBody = oldBody <&> markAnnotationsToDisplay
-        nonHoleAnn = Lens.filtered (Lens.nullOf (rBody . SugarLens.bodyHoleOrWrapper)) . topLevelAnn
+        nonHoleAnn = Lens.filtered (Lens.nullOf (rBody . SugarLens.bodyUnfinished)) . topLevelAnn
         onCaseAlt a =
             a
             & rBody . _BodyLam . lamBinder . bBody . bbContent .

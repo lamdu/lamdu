@@ -188,19 +188,19 @@ toHole Hole{..} =
             , _holeOptionLiteral = _holeOptionLiteral <&> Lens.mapped . _2 %~ (>>= run1 . toHoleResult)
             }
 
-toWrapper ::
+toFragment ::
     MonadNaming m =>
     (a -> m b) ->
-    Wrapper (OldName m) (TM m) a ->
-    m (Wrapper (NewName m) (TM m) b)
-toWrapper expr Wrapper{..} =
+    Fragment (OldName m) (TM m) a ->
+    m (Fragment (NewName m) (TM m) b)
+toFragment expr Fragment{..} =
     do
         run <- opRun
-        newExpr <- expr _wExpr
-        pure Wrapper
-            { _wExpr = newExpr
-            , _wUnwrap = _wUnwrap
-            , _wOptions = _wOptions >>= run . traverse toHoleOption
+        newExpr <- expr _fExpr
+        pure Fragment
+            { _fExpr = newExpr
+            , _fAttach = _fAttach
+            , _fOptions = _fOptions >>= run . traverse toHoleOption
             }
 
 toBody ::
@@ -221,7 +221,7 @@ toBody expr = \case
     BodyGetVar       x -> x & toGetVar <&> BodyGetVar
     BodyLiteral      x -> x & BodyLiteral & pure
     BodyLam          x -> x & toLam expr <&> BodyLam
-    BodyWrapper      x -> x & toWrapper expr <&> BodyWrapper
+    BodyFragment     x -> x & toFragment expr <&> BodyFragment
     BodyPlaceHolder    -> return BodyPlaceHolder
     where
         toTId = tidName %%~ opGetName NominalName

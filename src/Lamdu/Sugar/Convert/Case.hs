@@ -126,5 +126,5 @@ convertAppliedCase funcS argS exprPl =
 simplifyCaseArg :: Monoid a => ExpressionU m a -> ExpressionU m a
 simplifyCaseArg argS =
     case argS ^. rBody of
-    BodyFromNom nom | Lens.nullOf (nVal . rBody . SugarLens.bodyHoleOrWrapper) nom -> nom ^. nVal
+    BodyFromNom nom | Lens.nullOf (nVal . rBody . SugarLens.bodyUnfinished) nom -> nom ^. nVal
     _ -> argS

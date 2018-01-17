@@ -2,7 +2,7 @@
 -- | The search area (search term + results) of a hole.
 -- When it is open it hovers over the space it takes when closed.
 --
--- For non-wrapper holes this is the whole hole.
+-- For non-fragments this is the whole hole.
 
 module Lamdu.GUI.ExpressionEdit.HoleEdit.SearchArea
     ( make, allowedSearchTermCommon
@@ -82,7 +82,7 @@ postProcessSugar minOpPrec expr =
     expr
     & AddParens.addWith minOpPrec
     <&> pl
-    & SugarLens.wrappedExprs . Sugar.plData . ExprGui.plShowAnnotation
+    & SugarLens.fragmentExprs . Sugar.plData . ExprGui.plShowAnnotation
     .~ ExprGui.alwaysShowAnnotations
     where
         pl (x, needParens, ()) =

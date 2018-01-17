@@ -43,13 +43,13 @@ score (Val pl body) =
 resultScore :: Val Infer.Payload -> HoleResultScore
 resultScore val =
     HoleResultScore
-    { _hrsNumHoleWrappers = numWrappers val
+    { _hrsNumFragments = numFragments val
     , _hrsScore = score val
     }
 
-numWrappers :: Val a -> Int
-numWrappers val =
-    sum (val ^.. Val.body . traverse <&> numWrappers) +
+numFragments :: Val a -> Int
+numFragments val =
+    sum (val ^.. Val.body . traverse <&> numFragments) +
     if Lens.has appliedHole val
     then 1
     else 0

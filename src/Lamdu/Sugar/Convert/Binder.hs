@@ -65,7 +65,7 @@ mkLetItemActions topLevelProp redex =
                 <* postProcess
                 <&> EntityId.ofValI
             , _laFloat = float
-            , _laWrap = DataOps.wrap topLevelProp <* postProcess <&> EntityId.ofValI
+            , _laDetach = DataOps.applyHoleTo topLevelProp <* postProcess <&> EntityId.ofValI
             }
 
 localNewExtractDestPos ::
@@ -211,7 +211,7 @@ useNormalLambda paramUUIDs binder =
     where
         forbiddenLightLamSubExprs :: Lens.Traversal' (Body name m a) ()
         forbiddenLightLamSubExprs =
-            Lens.failing SugarLens.bodyHoleOrWrapper
+            Lens.failing SugarLens.bodyUnfinished
             (_BodyLam . lamBinder . bParams . namedParams .
              Lens.united)
         namedParams :: Lens.Traversal' (BinderParams name m) ()
@@ -235,7 +235,7 @@ markLightParams paramUUIDs (Expression body pl) =
             n
             & pBinderMode .~ LightLambda
             & GetParam & BodyGetVar
-    BodyWrapper w -> w <&> markLightParams paramUUIDs & BodyWrapper
+    BodyFragment w -> w <&> markLightParams paramUUIDs & BodyFragment
     _ -> body <&> markLightParams paramUUIDs
     & (`Expression` pl)
 

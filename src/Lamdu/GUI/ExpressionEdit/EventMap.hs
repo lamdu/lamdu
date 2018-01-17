@@ -5,7 +5,7 @@ module Lamdu.GUI.ExpressionEdit.EventMap
     , ExprInfo(..), addWith
     , jumpHolesEventMap
     , extractCursor
-    , wrapEventMap
+    , detachEventMap
     ) where
 
 import qualified Control.Lens as Lens
@@ -116,8 +116,8 @@ actionsEventMap ::
     m (EventContext -> EventMap (f GuiState.Update))
 actionsEventMap options exprInfo =
     sequence
-    [ case exprInfoActions exprInfo ^. Sugar.wrap of
-      Sugar.WrapAction act -> wrapEventMap act
+    [ case exprInfoActions exprInfo ^. Sugar.detach of
+      Sugar.DetachAction act -> detachEventMap act
       _ -> return mempty
     , if exprInfoIsHoleResult exprInfo
         then return mempty
@@ -158,35 +158,35 @@ transformEventMap ::
     Applicative f =>
     Options -> ExprInfo f -> EventContext -> EventMap (f GuiState.Update)
 transformEventMap options exprInfo eventCtx =
-    case exprInfoActions exprInfo ^. Sugar.wrap of
-    Sugar.WrapAction wrap ->
+    case exprInfoActions exprInfo ^. Sugar.detach of
+    Sugar.DetachAction detach ->
         case addOperatorSetHoleState options of
         Just holeId -> pure holeId
-        Nothing -> wrap
-    Sugar.WrapperAlready holeId -> pure holeId
-    Sugar.WrappedAlready holeId -> pure holeId
+        Nothing -> detach
+    Sugar.FragmentAlready holeId -> pure holeId
+    Sugar.FragmentExprAlready holeId -> pure holeId
     <&> HoleWidgetIds.make <&> HoleWidgetIds.hidOpen
     & action
     where
-        action wrap =
+        action detach =
             transformSearchTerm (exprInfoMinOpPrec exprInfo) eventCtx
             <&> SearchMenu.enterWithSearchTerm
-            <&> (wrap <&>)
+            <&> (detach <&>)
 
-wrapEventMap ::
+detachEventMap ::
     (MonadReader env m, Config.HasConfig env, Functor f) =>
     f Sugar.EntityId -> m (EventMap (f GuiState.Update))
-wrapEventMap wrap =
+detachEventMap detach =
     Lens.view Config.config
     <&>
     \config ->
     E.keysEventMapMovesCursor (Config.wrapKeys config)
     (E.Doc ["Edit", "Modify"])
-    (wrap <&> HoleWidgetIds.make <&> HoleWidgetIds.hidOpen)
+    (detach <&> HoleWidgetIds.make <&> HoleWidgetIds.hidOpen)
     <>
     E.keysEventMap (Config.parenWrapKeys config)
-    (E.Doc ["Edit", "Wrap with hole"])
-    (void wrap)
+    (E.Doc ["Edit", "Detach"])
+    (void detach)
 
 replaceEventMap ::
     (MonadReader env m, Config.HasConfig env, Functor f) =>

@@ -10,7 +10,7 @@ module Lamdu.Sugar.Types.Binder
     -- Let
     , LetFloatResult(..), ExtractDestination(..)
     , LetActions(..)
-        , laSetToInner, laSetToHole, laFloat, laWrap
+        , laSetToInner, laSetToHole, laFloat, laDetach
     , Let(..)
         , lEntityId, lValue, lName, lUsages
         , lActions, lAnnotation, lBodyScope, lBody
@@ -151,7 +151,7 @@ data LetActions m = LetActions
     { _laSetToInner :: m ()
     , _laSetToHole :: m EntityId
     , _laFloat :: m LetFloatResult
-    , _laWrap :: m EntityId
+    , _laDetach :: m EntityId
     }
 
 -- This is a mapping from a parent scope to the inner scope in:

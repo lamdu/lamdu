@@ -3,7 +3,7 @@ module Lamdu.Sugar.Convert.Hole
     ( convert
       -- Used by Convert.GetVar:
     , fragmentVar
-      -- Used by Convert.Apply(wrapper hole):
+      -- Used by Convert.Fragment:
     , mkOptions
     , mkHoleOption, mkHoleOptionFromFragment, addSuggestedOptions
     , BaseExpr(..)
@@ -205,9 +205,9 @@ mkNominalOptions :: [(T.NominalId, N.Nominal)] -> [Val ()]
 mkNominalOptions nominals =
     do
         (tid, nominal) <- nominals
-        mkDirectWrappers tid ++ mkToNomInjections tid nominal
+        mkDirectNoms tid ++ mkToNomInjections tid nominal
     where
-        mkDirectWrappers tid =
+        mkDirectNoms tid =
             do
                 f <- [V.BFromNom, V.BToNom]
                 [ V.Nom tid P.hole & f & Val () ]
@@ -385,7 +385,7 @@ getLocalScopeGetVars sugarContext par
             ) <&> fst
         mkFieldParam tag = V.GetField var tag & V.BGetField & Val ()
 
-data IsFragment = Fragment | NotFragment
+data IsFragment = IsFragment | NotFragment
 type HoleResultVal m a = Val (Infer.Payload, (Maybe (ValI m), a))
 
 markNotFragment :: HoleResultVal n () -> HoleResultVal n IsFragment
@@ -398,7 +398,7 @@ fragmentVar = "HOLE FRAGMENT EXPR"
 replaceFragment :: Val (Input.Payload m IsFragment) -> Val (Input.Payload m ())
 replaceFragment (Val pl body) =
     case pl ^. Input.userData of
-    Fragment -> V.LVar fragmentVar & V.BLeaf
+    IsFragment -> V.LVar fragmentVar & V.BLeaf
     NotFragment -> body & traverse %~ replaceFragment
     & Val (void pl)
 
@@ -493,26 +493,26 @@ applyForms empty val =
     where
         inferPl = val ^. Val.payload . _1
 
-holeWrapIfNeeded ::
+detachValIfNeeded ::
     Monad m =>
     Type -> Val (Infer.Payload, (Maybe a, IsFragment)) ->
     StateT Infer.Context m (Val (Infer.Payload, (Maybe a, IsFragment)))
-holeWrapIfNeeded holeType val =
+detachValIfNeeded holeType val =
     do
         unifyResult <-
             unify holeType (val ^. Val.payload . _1 . Infer.plType) & liftInfer
         updated <- Update.inferredVal val & liftUpdate
         case unifyResult of
             Right{} -> return updated
-            Left{} -> holeWrap holeType updated & liftUpdate
+            Left{} -> detachVal holeType updated & liftUpdate
     where
         liftUpdate = State.gets . Update.run
         liftInfer = stateEitherSequence . Infer.run
 
-holeWrap ::
+detachVal ::
     Type -> Val (Infer.Payload, (Maybe a, IsFragment)) ->
     Update (Val (Infer.Payload, (Maybe a, IsFragment)))
-holeWrap resultType val =
+detachVal resultType val =
     update resultType <&> mk
     where
         mk updatedType =
@@ -524,8 +524,8 @@ holeWrap resultType val =
         funcType = TFun (inferPl ^. Infer.plType) resultType
         emptyPl = (Nothing, NotFragment)
 
-replaceEachUnwrappedHole :: Applicative f => (a -> f (Val a)) -> Val a -> [f (Val a)]
-replaceEachUnwrappedHole replaceHole =
+emplaceInHoles :: Applicative f => (a -> f (Val a)) -> Val a -> [f (Val a)]
+emplaceInHoles replaceHole =
     map fst . filter snd . (`runStateT` False) . go
     where
         go oldVal@(Val x body) =
@@ -565,7 +565,7 @@ holeResultsEmplaceFragment ::
     StateT Infer.Context (ListT m) (HoleResultVal n IsFragment)
 holeResultsEmplaceFragment rawFragmentExpr val =
     markNotFragment val
-    & replaceEachUnwrappedHole emplace
+    & emplaceInHoles emplace
     & ListClass.fromList
     & lift
     & join
@@ -589,7 +589,7 @@ holeResultsEmplaceFragment rawFragmentExpr val =
         fragmentExpr = rawFragmentExpr <&> onFragmentPayload
         onFragmentPayload pl =
             ( pl ^. Input.inferred
-            , (Just (pl ^. Input.stored . Property.pVal), Fragment)
+            , (Just (pl ^. Input.stored . Property.pVal), IsFragment)
             )
         fragmentType = rawFragmentExpr ^. Val.payload . Input.inferredType
 
@@ -600,7 +600,7 @@ mkHoleResultValFragment ::
     StateT Infer.Context (T m) (HoleResultVal m IsFragment)
 mkHoleResultValFragment exprPl val =
     val <&> onPl
-    & holeWrapIfNeeded (inferred ^. Infer.plType)
+    & detachValIfNeeded (inferred ^. Infer.plType)
     where
         inferred = exprPl ^. Input.inferred
         onPl (typ, mInputPl) =
@@ -608,7 +608,7 @@ mkHoleResultValFragment exprPl val =
             , case mInputPl of
               Nothing -> (Nothing, NotFragment)
               Just inputPl ->
-                (inputPl ^. Input.stored & Property.value & Just, Fragment)
+                (inputPl ^. Input.stored & Property.value & Just, IsFragment)
             )
 
 mkHoleResultVals ::
@@ -647,7 +647,7 @@ mkHoleResultVals frozenDeps mFragment exprPl base =
         post x =
             x
             & maybe (return . markNotFragment) holeResultsEmplaceFragment mFragment
-            >>= holeWrapIfNeeded (inferred ^. Infer.plType)
+            >>= detachValIfNeeded (inferred ^. Infer.plType)
 
 mkHoleResult ::
     Monad m =>

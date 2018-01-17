@@ -130,7 +130,7 @@ isUnappliedVar _ _ = False
 
 wrapUnappliedUsesOfVar :: Monad m => V.Var -> Val (ValIProperty m) -> T m ()
 wrapUnappliedUsesOfVar var =
-    SubExprs.onMatchingSubexprsWithPath (DataOps.wrap <&> void) (isUnappliedVar var)
+    SubExprs.onMatchingSubexprsWithPath (DataOps.applyHoleTo <&> void) (isUnappliedVar var)
 
 changeCallArgs ::
     Monad m =>
@@ -313,7 +313,7 @@ changeGetFieldTags param prevTag chosenTag val =
             & ExprIRef.writeValBody (val ^. Val.payload . Property.pVal)
         | otherwise -> return ()
     V.BLeaf (V.LVar v)
-        | v == param -> DataOps.wrap (val ^. Val.payload) & void
+        | v == param -> DataOps.applyHoleTo (val ^. Val.payload) & void
     b -> traverse_ (changeGetFieldTags param prevTag chosenTag) b
 
 setFieldParamTag ::
@@ -585,7 +585,7 @@ isParamAlwaysUsedWithGetField (V.Lam param body) =
             V.BGetField (V.GetField r _) -> go True r
             x -> all (go False) (x ^.. Lens.traverse)
 
--- Post process param add and delete actions to wrap lambda in hole.
+-- Post process param add and delete actions to detach lambda.
 -- This isn't done for all actions as some already perform this function.
 -- TODO: clean up responsibilities - make it clear why some actions already
 -- take care of wrapping and some don't.

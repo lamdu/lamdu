@@ -2,7 +2,7 @@
 module Lamdu.Sugar.Lens
     ( subExprPayloads, payloadsIndexedByPath
     , payloadsOf
-    , bodyHoleOrWrapper, holeAndWrapperPayloads, wrappedExprs
+    , bodyUnfinished, unfinishedExprPayloads, fragmentExprs
     , defSchemes
     , binderFuncParamActions
     , binderFuncParamAdds
@@ -58,15 +58,15 @@ payloadsOf body =
     where
         predicate idx _ = Lens.has (rBody . body) idx
 
-bodyHoleOrWrapper :: Lens.Traversal' (Body name m a) ()
-bodyHoleOrWrapper = Lens.failing (_BodyHole . Lens.united) (_BodyWrapper . Lens.united)
+bodyUnfinished :: Lens.Traversal' (Body name m a) ()
+bodyUnfinished = Lens.failing (_BodyHole . Lens.united) (_BodyFragment . Lens.united)
 
-holeAndWrapperPayloads ::
+unfinishedExprPayloads ::
     Lens.IndexedTraversal'
     (Expression name m ())
     (Expression name m a)
     (Payload m a)
-holeAndWrapperPayloads = payloadsOf bodyHoleOrWrapper
+unfinishedExprPayloads = payloadsOf bodyUnfinished
 
 subExprsOf ::
     Lens.Traversal' (Body name m (Expression name m ())) b ->
@@ -80,12 +80,12 @@ subExprsOf f =
         predicate (_:parent:_) _ = Lens.has (rBody . f) parent
         predicate _ _ = False
 
-wrappedExprs ::
+fragmentExprs ::
     Lens.IndexedTraversal'
     [Expression name m ()]
     (Expression name m a)
     (Payload m a)
-wrappedExprs = subExprsOf _BodyWrapper
+fragmentExprs = subExprsOf _BodyFragment
 
 defBodySchemes :: Lens.Traversal' (DefinitionBody name m expr) Scheme
 defBodySchemes f (DefinitionBodyBuiltin b) =

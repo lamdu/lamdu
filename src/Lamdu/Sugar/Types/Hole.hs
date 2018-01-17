@@ -5,7 +5,7 @@ module Lamdu.Sugar.Types.Hole
     , Literal(..), _LiteralNum, _LiteralBytes, _LiteralText
     , OptionLiteral
     , Hole(..), holeOptions, holeOptionLiteral
-    , HoleResultScore(..), hrsNumHoleWrappers, hrsScore
+    , HoleResultScore(..), hrsNumFragments, hrsScore
     , HoleResult(..)
         , holeResultConverted
         , holeResultPick
@@ -19,7 +19,7 @@ import           Lamdu.Calc.Val.Annotated (Val)
 import           Lamdu.Prelude
 
 data HoleResultScore = HoleResultScore
-    { _hrsNumHoleWrappers :: !Int
+    { _hrsNumFragments :: !Int
     , _hrsScore :: ![Int]
     } deriving (Eq, Ord)
 

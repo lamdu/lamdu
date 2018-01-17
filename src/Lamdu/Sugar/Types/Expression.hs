@@ -1,13 +1,13 @@
 {-# LANGUAGE NoImplicitPrelude, TemplateHaskell, DeriveTraversable #-}
 module Lamdu.Sugar.Types.Expression
-    ( WrapAction(..), _WrapperAlready, _WrappedAlready, _WrapAction
+    ( DetachAction(..), _FragmentAlready, _FragmentExprAlready, _DetachAction
     , Delete(..), _SetToHole, _Delete, _CannotDelete
     , Actions(..)
-        , wrap, delete, extract, mReplaceParent
+        , detach, delete, extract, mReplaceParent
     , Body(..)
         , _BodyLam, _BodyLabeledApply, _BodySimpleApply
         , _BodyGetVar, _BodyGetField, _BodyInject, _BodyHole
-        , _BodyLiteral, _BodyCase, _BodyRecord, _BodyWrapper
+        , _BodyLiteral, _BodyCase, _BodyRecord, _BodyFragment
         , _BodyFromNom, _BodyToNom, _BodyGuard
     , Payload(..), plEntityId, plAnnotation, plActions, plData
     , Expression(..), rBody, rPayload
@@ -32,8 +32,8 @@ module Lamdu.Sugar.Types.Expression
     , AnnotatedArg(..), aaTag, aaExpr, aaName
     , RelayedArg(..), raValue, raId, raActions
     , LabeledApply(..), aFunc, aSpecialArgs, aAnnotatedArgs, aRelayedArgs
-    , Wrapper(..), wExpr, wUnwrap, wOptions
-    , Unwrap(..), _UnwrapAction, _UnwrapTypeMismatch
+    , Fragment(..), fExpr, fAttach, fOptions
+    , Attach(..), _AttachAction, _AttachTypeMismatch
     , TId(..), tidName, tidTId
     , Lambda(..), lamBinder, lamMode
     , V.Apply(..), V.applyFunc, V.applyArg
@@ -50,10 +50,10 @@ import           Lamdu.Sugar.Types.Hole (Hole, HoleOption, Literal)
 
 import           Lamdu.Prelude
 
-data WrapAction m
-    = WrapperAlready EntityId -- I'm an apply-of-hole, no need to wrap
-    | WrappedAlready EntityId -- I'm an arg of apply-of-hole, no need to wrap
-    | WrapAction (m EntityId) -- Wrap me!
+data DetachAction m
+    = FragmentAlready EntityId -- I'm an apply-of-hole, no need to detach
+    | FragmentExprAlready EntityId -- I'm an arg of apply-of-hole, no need to detach
+    | DetachAction (m EntityId) -- Detach me
 
 data Delete m
     = SetToHole (m EntityId)
@@ -63,7 +63,7 @@ data Delete m
     | CannotDelete
 
 data Actions m = Actions
-    { _wrap :: WrapAction m
+    { _detach :: DetachAction m
     , _delete :: Delete m
     , _extract :: m ExtractDestination
     , _mReplaceParent :: Maybe (m EntityId)
@@ -195,16 +195,16 @@ data Lambda name m expr = Lambda
     , _lamBinder :: Binder name m expr
     } deriving (Functor, Foldable, Traversable)
 
-data Unwrap m
-    = UnwrapAction (m EntityId)
-    | UnwrapTypeMismatch
+data Attach m
+    = AttachAction (m EntityId)
+    | AttachTypeMismatch
 
 -- | An expression marked for transformation.
 -- Holds an expression to be transformed but acts like a hole.
-data Wrapper name m expr = Wrapper
-    { _wExpr :: expr
-    , _wUnwrap :: Unwrap m
-    , _wOptions :: m [HoleOption m (Expression name m ())]
+data Fragment name m expr = Fragment
+    { _fExpr :: expr
+    , _fAttach :: Attach m
+    , _fOptions :: m [HoleOption m (Expression name m ())]
     } deriving (Functor, Foldable, Traversable)
 
 data Body name m expr
@@ -221,7 +221,7 @@ data Body name m expr
     | BodyGetVar (GetVar name m)
     | BodyToNom (Nominal name (BinderBody name m expr))
     | BodyFromNom (Nominal name expr)
-    | BodyWrapper (Wrapper name m expr)
+    | BodyFragment (Fragment name m expr)
     | BodyPlaceHolder -- Used for hole results, shown as "★"
     deriving (Functor, Foldable, Traversable)
 
@@ -244,7 +244,7 @@ instance (Show name, Show expr) => Show (Body name m expr) where
     show BodyFromNom {} = "FromNom:TODO"
     show BodyToNom {} = "ToNom:TODO"
     show BodyPlaceHolder {} = "InjectedExpression"
-    show BodyWrapper {} = "Wrapper:TODO"
+    show BodyFragment {} = "Fragment:TODO"
 
 Lens.makeLenses ''Actions
 Lens.makeLenses ''AnnotatedArg
@@ -256,6 +256,7 @@ Lens.makeLenses ''Composite
 Lens.makeLenses ''CompositeAddItemResult
 Lens.makeLenses ''CompositeItem
 Lens.makeLenses ''Expression
+Lens.makeLenses ''Fragment
 Lens.makeLenses ''GetField
 Lens.makeLenses ''Guard
 Lens.makeLenses ''GuardElseIf
@@ -267,11 +268,10 @@ Lens.makeLenses ''OpenCompositeActions
 Lens.makeLenses ''Payload
 Lens.makeLenses ''RelayedArg
 Lens.makeLenses ''TId
-Lens.makeLenses ''Wrapper
+Lens.makePrisms ''Attach
 Lens.makePrisms ''Body
 Lens.makePrisms ''CaseKind
 Lens.makePrisms ''CompositeTail
 Lens.makePrisms ''Delete
 Lens.makePrisms ''Literal
-Lens.makePrisms ''Unwrap
-Lens.makePrisms ''WrapAction
+Lens.makePrisms ''DetachAction

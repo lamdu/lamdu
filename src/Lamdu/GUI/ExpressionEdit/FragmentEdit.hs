@@ -1,5 +1,5 @@
 {-# LANGUAGE NoImplicitPrelude, OverloadedStrings #-}
-module Lamdu.GUI.ExpressionEdit.WrapperEdit
+module Lamdu.GUI.ExpressionEdit.FragmentEdit
     ( make
     ) where
 
@@ -39,10 +39,10 @@ type T = Transaction
 
 make ::
     Monad m =>
-    Sugar.Wrapper (Name (T m)) (T m) (ExpressionN m ExprGui.Payload) ->
+    Sugar.Fragment (Name (T m)) (T m) (ExpressionN m ExprGui.Payload) ->
     Sugar.Payload (T m) ExprGui.Payload ->
     ExprGuiM m (ExpressionGui m)
-make wrapper pl =
+make fragment pl =
     do
         isSelected <- GuiState.isSubCursor ?? myId
         let mRemoveNextHoles
@@ -51,34 +51,34 @@ make wrapper pl =
         config <- Lens.view Config.config
         let enterEventMap =
                 E.keysEventMapMovesCursor (Config.enterSubexpressionKeys config)
-                (E.Doc ["Navigation", "Enter wrapper"]) (pure innerId)
+                (E.Doc ["Navigation", "Enter fragment"]) (pure innerId)
         let leaveEventMap =
                 E.keysEventMapMovesCursor (Config.leaveSubexpressionKeys config)
-                (E.Doc ["Navigation", "Go out to wrapper"]) (pure myId)
+                (E.Doc ["Navigation", "Leave fragment"]) (pure myId)
         let addFocusEvents
                 | isSelected = (enterEventMap <>) . E.filterChars (`notElem` Chars.operator)
                 | otherwise = (<> leaveEventMap)
-        argGui <-
-            wrapper
-            & Sugar.wExpr . Sugar.rPayload . Sugar.plData %~ mRemoveNextHoles
-            & makeArgEdit & GuiState.assignCursor myId innerId
+        fragmentExprGui <-
+            fragment
+            & Sugar.fExpr . Sugar.rPayload . Sugar.plData %~ mRemoveNextHoles
+            & makeFragmentExprEdit & GuiState.assignCursor myId innerId
             <&> Widget.widget . Widget.eventMapMaker . Lens.mapped %~ addFocusEvents
         hover <- Hover.hover
-        searchAreaGui <- SearchArea.make (wrapper ^. Sugar.wOptions) Nothing pl allowedWrapperSearchTerm
-        let f layoutMode arg
+        searchAreaGui <- SearchArea.make (fragment ^. Sugar.fOptions) Nothing pl allowedFragmentSearchTerm
+        let f layoutMode fragmentExpr
                 | isSelected
-                || Widget.isFocused (arg ^. Align.tValue) =
-                    arg & Align.tValue %~ Hover.hoverInPlaceOf options . Hover.anchor
+                || Widget.isFocused (fragmentExpr ^. Align.tValue) =
+                    fragmentExpr & Align.tValue %~ Hover.hoverInPlaceOf options . Hover.anchor
                 | otherwise =
-                    arg
+                    fragmentExpr
                     where
                         options =
-                            [ hoverArgument /-/ (searchArea Menu.Below <&> hover)
-                            , (searchArea Menu.Above <&> hover) /-/ hoverArgument
+                            [ hoverFragmentExpr /-/ (searchArea Menu.Below <&> hover)
+                            , (searchArea Menu.Above <&> hover) /-/ hoverFragmentExpr
                             ]
                             <&> (^. Align.tValue)
-                        hoverArgument =
-                            render argGui
+                        hoverFragmentExpr =
+                            render fragmentExprGui
                             & Align.tValue %~ setFocalArea
                             & Align.tValue %~ Hover.anchor
                         searchArea p =
@@ -91,19 +91,19 @@ make wrapper pl =
                                 & Widget.wState . Widget._StateFocused . Lens.mapped . Widget.fFocalAreas .~
                                     [Rect 0 (w ^. Widget.wSize)]
                             | otherwise = w
-        let unwrapEventMap =
-                case wrapper ^. Sugar.wUnwrap of
-                Sugar.UnwrapTypeMismatch -> mempty
-                Sugar.UnwrapAction unwrap ->
-                    unwrap <&> WidgetIds.fromEntityId
+        let attachEventMap =
+                case fragment ^. Sugar.fAttach of
+                Sugar.AttachTypeMismatch -> mempty
+                Sugar.AttachAction attach ->
+                    attach <&> WidgetIds.fromEntityId
                     & E.keysEventMapMovesCursor
                         (Config.delKeys config <> Config.holeUnwrapKeys (Config.hole config))
-                        (E.Doc ["Edit", "Unwrap"])
+                        (E.Doc ["Edit", "Attach"])
         ExprEventMap.add ExprEventMap.defaultOptions pl
-            <*> (maybeAddAnnotationPl pl ?? argGui <&> Responsive.render . Lens.imapped %@~ f)
-            <&> Widget.widget %~ Widget.weakerEvents unwrapEventMap
+            <*> (maybeAddAnnotationPl pl ?? fragmentExprGui <&> Responsive.render . Lens.imapped %@~ f)
+            <&> Widget.widget %~ Widget.weakerEvents attachEventMap
     where
-        innerId = wrapper ^. Sugar.wExpr . Sugar.rPayload & WidgetIds.fromExprPayload
+        innerId = fragment ^. Sugar.fExpr . Sugar.rPayload & WidgetIds.fromExprPayload
         myId = WidgetIds.fromExprPayload pl
         hideIfInHole x
             | ExprGui.isHoleResult pl =
@@ -112,26 +112,26 @@ make wrapper pl =
                 & Element.size .~ 0
             | otherwise = x
 
-makeArgEdit ::
+makeFragmentExprEdit ::
     Monad m =>
-    Sugar.Wrapper (Name (T m)) (T m) (ExpressionN m ExprGui.Payload) ->
+    Sugar.Fragment (Name (T m)) (T m) (ExpressionN m ExprGui.Payload) ->
     ExprGuiM m (ExpressionGui m)
-makeArgEdit wrapper =
+makeFragmentExprEdit fragment =
     do
         theme <- Lens.view Theme.theme
         let frameColor =
                 theme &
-                case wrapper ^. Sugar.wUnwrap of
-                Sugar.UnwrapAction {} -> Theme.typeIndicatorMatchColor
-                Sugar.UnwrapTypeMismatch {} -> Theme.typeIndicatorErrorColor
+                case fragment ^. Sugar.fAttach of
+                Sugar.AttachAction {} -> Theme.typeIndicatorMatchColor
+                Sugar.AttachTypeMismatch {} -> Theme.typeIndicatorErrorColor
         let frameWidth = Theme.typeIndicatorFrameWidth theme <&> realToFrac
-        argGui <- ExprGuiM.makeSubexpression (wrapper ^. Sugar.wExpr)
+        fragmentExprGui <- ExprGuiM.makeSubexpression (fragment ^. Sugar.fExpr)
         Momentu.addInnerFrame
             ?? frameColor ?? frameWidth
-            ?? Momentu.pad (frameWidth & _2 .~ 0) argGui
+            ?? Momentu.pad (frameWidth & _2 .~ 0) fragmentExprGui
 
-allowedWrapperSearchTerm :: Text -> Bool
-allowedWrapperSearchTerm searchTerm =
+allowedFragmentSearchTerm :: Text -> Bool
+allowedFragmentSearchTerm searchTerm =
     SearchArea.allowedSearchTermCommon searchTerm || isGetField searchTerm
     where
         isGetField t =

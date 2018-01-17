@@ -145,7 +145,7 @@ collectResults Config.Hole{holeResultCount} resultsM =
                 %~ (x :)
 
 isGoodResult :: Sugar.HoleResultScore -> Bool
-isGoodResult hrs = hrs ^. Sugar.hrsNumHoleWrappers == 0
+isGoodResult hrs = hrs ^. Sugar.hrsNumFragments == 0
 
 makeAll ::
     (MonadTransaction n m, MonadReader env m, Config.HasConfig env) =>

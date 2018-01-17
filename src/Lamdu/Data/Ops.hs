@@ -1,6 +1,6 @@
 {-# LANGUAGE NoImplicitPrelude, OverloadedStrings #-}
 module Lamdu.Data.Ops
-    ( newHole, wrap, setToWrapper
+    ( newHole, applyHoleTo, setToAppliedHole
     , replace, replaceWithHole, setToHole, lambdaWrap, redexWrap
     , redexWrapWithGivenParam
     , CompositeExtendResult(..)
@@ -34,16 +34,16 @@ import           Lamdu.Prelude
 
 type T = Transaction
 
-setToWrapper :: Monad m => ValI m -> ValIProperty m -> T m (ValI m)
-setToWrapper wrappedI destP =
+setToAppliedHole :: Monad m => ValI m -> ValIProperty m -> T m (ValI m)
+setToAppliedHole innerI destP =
     do
         newFuncI <- newHole
-        resI <- ExprIRef.newValBody . V.BApp $ V.Apply newFuncI wrappedI
+        resI <- ExprIRef.newValBody . V.BApp $ V.Apply newFuncI innerI
         Property.set destP resI
         return resI
 
-wrap :: Monad m => ValIProperty m -> T m (ValI m)
-wrap exprP =
+applyHoleTo :: Monad m => ValIProperty m -> T m (ValI m)
+applyHoleTo exprP =
     do
         newFuncI <- newHole
         applyI <- ExprIRef.newValBody . V.BApp . V.Apply newFuncI $ Property.value exprP

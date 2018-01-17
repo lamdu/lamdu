@@ -1,7 +1,7 @@
 {-# LANGUAGE NoImplicitPrelude #-}
--- | Convert wrapper holes
+-- | Convert applied holes to Fragments
 
-module Lamdu.Sugar.Convert.Wrapper
+module Lamdu.Sugar.Convert.Fragment
     ( convertAppliedHole
     ) where
 
@@ -92,25 +92,25 @@ convertAppliedHole (V.Apply funcI argI) argS exprPl =
                 ConvertHole.mkOptions (Just argI) exprPl
                 <&> Lens.mapped %~ mappend (mkAppliedHoleOptions sugarContext argI (argS <&> (^. pUserData)) exprPl)
                 <&> Lens.mapped %~ ConvertHole.addSuggestedOptions suggesteds
-            BodyWrapper Wrapper
-                { _wExpr =
+            BodyFragment Fragment
+                { _fExpr =
                       argS
-                      & rPayload . plActions . wrap .~ WrappedAlready storedEntityId
+                      & rPayload . plActions . detach .~ FragmentExprAlready storedEntityId
                       & rPayload . plActions . delete .~
                         SetToHole
                         ( DataOps.setToHole (exprPl ^. Input.stored) <* postProcess <&> EntityId.ofValI )
-                , _wUnwrap =
+                , _fAttach =
                       if isTypeMatch
                       then DataOps.replace (exprPl ^. Input.stored)
                            (argI ^. Val.payload . Input.stored . Property.pVal)
                            <* postProcess
                            <&> EntityId.ofValI
-                           & UnwrapAction
-                      else UnwrapTypeMismatch
-                , _wOptions = options
+                           & AttachAction
+                      else AttachTypeMismatch
+                , _fOptions = options
                 } & pure
             >>= addActions exprPl
             & lift
-            <&> rPayload . plActions . wrap .~ WrapperAlready storedEntityId
+            <&> rPayload . plActions . detach .~ FragmentAlready storedEntityId
     where
         storedEntityId = exprPl ^. Input.stored & Property.value & EntityId.ofValI

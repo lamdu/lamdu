@@ -33,7 +33,7 @@ makeLiteralTextEventMap hole =
         (_score, mkResult) <- Sugar.LiteralText (Identity "") & hole ^. Sugar.holeOptionLiteral
         result <- mkResult
         result ^. Sugar.holeResultPick
-        case result ^? Sugar.holeResultConverted . Sugar.rBody . Sugar._BodyWrapper . Sugar.wExpr of
+        case result ^? Sugar.holeResultConverted . Sugar.rBody . Sugar._BodyFragment . Sugar.fExpr of
             Just arg -> arg
             _ -> result ^. Sugar.holeResultConverted
             ^. Sugar.rPayload . Sugar.plEntityId

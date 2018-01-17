@@ -64,7 +64,7 @@ bodyShape = \case
         | nom ^. Sugar.nTId . Sugar.tidTId == Builtins.boolTid -> ["if"]
         | otherwise -> []
     Sugar.BodyHole {} -> []
-    Sugar.BodyWrapper {} -> []
+    Sugar.BodyFragment {} -> []
     Sugar.BodyPlaceHolder {} -> []
 
 bodyNames :: Monad m => Sugar.Body (Name (T m)) (T m) expr -> [Text]

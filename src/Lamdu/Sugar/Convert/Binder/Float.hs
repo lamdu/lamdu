@@ -178,16 +178,16 @@ processLet scopeInfo redex =
     [] -> sameLet (redex <&> (^. Input.stored)) & return
     [x] -> addLetParam x redex
     _ -> error "multiple osiVarsUnderPos not expected!?"
-    <* maybeWrapHole
+    <* maybeDetach
     where
         mRecursiveRef = scopeInfo ^. ConvertM.siRecursiveRef
         mDefI = mRecursiveRef ^? Lens._Just . ConvertM.rrDefI <&> ExprIRef.globalId
         isRecursiveDefRef var = mDefI == Just var
-        maybeWrapHole
+        maybeDetach
             | TV.null skolemsExitingScope = return ()
             | otherwise =
                 Load.readValAndAddProperties (redex ^. Redex.lam . V.lamResult . Val.payload . Input.stored)
-                >>= SubExprs.onGetVars (void . DataOps.wrap) (redex ^. Redex.lam . V.lamParamId)
+                >>= SubExprs.onGetVars (void . DataOps.applyHoleTo) (redex ^. Redex.lam . V.lamParamId)
         innerScope =
             redex ^. Redex.arg . Val.payload . Input.inferred . Infer.plScope
         usedLocalVars =

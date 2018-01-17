@@ -35,8 +35,8 @@ type T = Transaction
 
 data IsHoleArg = IsHoleArg | NotHoleArg deriving Eq
 
-holeWrapped :: Lens.Traversal' (Val a) (Val a)
-holeWrapped =
+argToHoleFunc :: Lens.Traversal' (Val a) (Val a)
+argToHoleFunc =
     ExprLens.valApply .
     Lens.filtered (Lens.has (V.applyFunc . ExprLens.valHole)) .
     V.applyArg
@@ -53,7 +53,7 @@ recursivelyFixExpr mFix =
             Just fix -> fix go
             Nothing -> recurse expr
         recurse val =
-            case val ^? holeWrapped of
+            case val ^? argToHoleFunc of
             Just arg -> go IsHoleArg arg
             Nothing -> traverse_ (go NotHoleArg) (val ^. Val.body)
 
@@ -62,22 +62,23 @@ changeFuncRes usedDefVar =
     recursivelyFixExpr mFix
     where
         mFix NotHoleArg (Val pl (V.BLeaf (V.LVar v)))
-            | v == usedDefVar = DataOps.wrap pl & void & const & Just
+            | v == usedDefVar = DataOps.applyHoleTo pl & void & const & Just
         mFix isHoleArg
             (Val pl (V.BApp (V.Apply (Val _ (V.BLeaf (V.LVar v))) arg)))
             | v == usedDefVar =
             Just $
             \go ->
             do
-                when (isHoleArg == NotHoleArg) (void (DataOps.wrap pl))
+                when (isHoleArg == NotHoleArg) (void (DataOps.applyHoleTo pl))
                 go NotHoleArg arg
         mFix _ _ = Nothing
 
-wrap :: Monad m => Val (ValIProperty m) -> T m ()
-wrap val
-    | Lens.has holeWrapped val
+-- | Only if hole not already applied to it
+applyHoleTo :: Monad m => Val (ValIProperty m) -> T m ()
+applyHoleTo val
+    | Lens.has argToHoleFunc val
     || Lens.has ExprLens.valHole val = return ()
-    | otherwise = val ^. Val.payload & DataOps.wrap & void
+    | otherwise = val ^. Val.payload & DataOps.applyHoleTo & void
 
 data RecordChange = RecordChange
     { fieldsAdded :: Set T.Tag
@@ -92,13 +93,13 @@ changeFuncArg change usedDefVar =
     recursivelyFixExpr mFix
     where
         mFix NotHoleArg (Val pl (V.BLeaf (V.LVar v)))
-            | v == usedDefVar = DataOps.wrap pl & void & const & Just
+            | v == usedDefVar = DataOps.applyHoleTo pl & void & const & Just
         mFix _ (Val _ (V.BApp (V.Apply (Val _ (V.BLeaf (V.LVar v))) arg)))
             | v == usedDefVar = fixArg change arg & Just
         mFix _ _ = Nothing
         fixArg ArgChange arg go =
             do
-                wrap arg
+                applyHoleTo arg
                 go IsHoleArg arg
         fixArg (ArgRecordChange recChange) arg go =
             ( if Set.null (fieldsRemoved recChange)
@@ -189,7 +190,7 @@ fixDefExpr prevType newType usedDefVar defExpr =
         prevArg <- prevType & schemeType %%~ (^? T._TFun . _1)
         newArg <- newType & schemeType %%~ (^? T._TFun . _1)
         changeFuncArg (argChangeType prevArg newArg) usedDefVar defExpr & return
-    & fromMaybe (SubExprs.onGetVars (DataOps.wrap <&> void) usedDefVar defExpr)
+    & fromMaybe (SubExprs.onGetVars (DataOps.applyHoleTo <&> void) usedDefVar defExpr)
 
 updateDefType ::
     Monad m =>

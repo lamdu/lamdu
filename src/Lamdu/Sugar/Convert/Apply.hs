@@ -22,10 +22,10 @@ import qualified Lamdu.Expr.UniqueId as UniqueId
 import qualified Lamdu.Infer as Infer
 import           Lamdu.Sugar.Convert.Case (convertAppliedCase)
 import           Lamdu.Sugar.Convert.Expression.Actions (addActions)
+import           Lamdu.Sugar.Convert.Fragment (convertAppliedHole)
 import qualified Lamdu.Sugar.Convert.Input as Input
 import           Lamdu.Sugar.Convert.Monad (ConvertM)
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
-import           Lamdu.Sugar.Convert.Wrapper (convertAppliedHole)
 import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import           Lamdu.Sugar.Types

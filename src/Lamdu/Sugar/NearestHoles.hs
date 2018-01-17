@@ -20,7 +20,7 @@ markStoredHoles ::
 markStoredHoles expr =
     expr
     <&> (,) False
-    & SugarLens.holeAndWrapperPayloads . Sugar.plData . _1 .~ True
+    & SugarLens.unfinishedExprPayloads . Sugar.plData . _1 .~ True
 
 data NearestHoles = NearestHoles
     { _prev :: Maybe Sugar.EntityId

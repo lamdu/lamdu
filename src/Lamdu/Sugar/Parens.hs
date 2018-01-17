@@ -118,7 +118,7 @@ precedenceOf =
     BodyLiteral x          -> (NeverParen, BodyLiteral x)
     BodyGetVar x           -> (NeverParen, BodyGetVar x)
     BodyHole x             -> (NeverParen, BodyHole x)
-    BodyWrapper x          -> mkUnambiguous BodyWrapper x
+    BodyFragment x          -> mkUnambiguous BodyFragment x
     BodyRecord x           -> mkUnambiguous BodyRecord x
     BodyCase x             -> mkUnambiguous BodyCase x
     BodyLam x              ->

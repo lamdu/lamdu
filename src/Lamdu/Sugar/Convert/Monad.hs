@@ -89,7 +89,7 @@ data Context m = Context
     , _scCodeAnchors :: Anchors.CodeAnchors m
     , _scScopeInfo :: ScopeInfo m
     , -- Check whether the definition is valid after an edit,
-      -- so that can hole-wrap bad edits.
+      -- so that can detach bad edits.
       _scPostProcessRoot :: T m PostProcessResult
     , -- The nominal types appearing in the converted expr and its subexpression
       _scNominalsMap :: Map T.NominalId Nominal
@@ -124,7 +124,7 @@ typeProtectedSetToVal =
                         Just result -> return result
                         Nothing ->
                             do
-                                res <- DataOps.setToWrapper valI dest
+                                res <- DataOps.setToAppliedHole valI dest
                                 _ <- checkOk
                                 return res
         return setToVal

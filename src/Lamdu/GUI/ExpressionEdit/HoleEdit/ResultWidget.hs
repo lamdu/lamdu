@@ -51,8 +51,8 @@ getSearchStringRemainder ctx holeResultConverted
     | isA Sugar._BodyInject = ""
     | otherwise = ambigSuffix ":"
     where
-        wrappedExpr = Sugar.rBody . Sugar._BodyWrapper . Sugar.wExpr
-        isA x = any (`Lens.has` holeResultConverted) [Sugar.rBody . x, wrappedExpr . Sugar.rBody . x]
+        fragmentExpr = Sugar.rBody . Sugar._BodyFragment . Sugar.fExpr
+        isA x = any (`Lens.has` holeResultConverted) [Sugar.rBody . x, fragmentExpr . Sugar.rBody . x]
         ambigSuffix suffix
             | Text.isSuffixOf suffix (ctx ^. SearchMenu.rSearchTerm) = suffix
             | otherwise = ""
@@ -131,7 +131,7 @@ make ctx resultId holeResult =
             & WidgetIds.fromEntityId
         mFirstHoleInside =
             holeResult ^?
-            Sugar.holeResultConverted . SugarLens.holeAndWrapperPayloads . Sugar.plEntityId
+            Sugar.holeResultConverted . SugarLens.unfinishedExprPayloads . Sugar.plEntityId
             <&> WidgetIds.fromEntityId
         pickResult =
             case mFirstHoleInside of

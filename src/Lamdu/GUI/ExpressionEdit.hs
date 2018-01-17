@@ -13,6 +13,7 @@ import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.TextView as TextView
 import qualified Lamdu.GUI.ExpressionEdit.ApplyEdit as ApplyEdit
 import qualified Lamdu.GUI.ExpressionEdit.CaseEdit as CaseEdit
+import qualified Lamdu.GUI.ExpressionEdit.FragmentEdit as FragmentEdit
 import qualified Lamdu.GUI.ExpressionEdit.GetFieldEdit as GetFieldEdit
 import qualified Lamdu.GUI.ExpressionEdit.GetVarEdit as GetVarEdit
 import qualified Lamdu.GUI.ExpressionEdit.GuardEdit as GuardEdit
@@ -22,10 +23,9 @@ import qualified Lamdu.GUI.ExpressionEdit.LambdaEdit as LambdaEdit
 import qualified Lamdu.GUI.ExpressionEdit.LiteralEdit as LiteralEdit
 import qualified Lamdu.GUI.ExpressionEdit.NomEdit as NomEdit
 import qualified Lamdu.GUI.ExpressionEdit.RecordEdit as RecordEdit
-import qualified Lamdu.GUI.ExpressionEdit.WrapperEdit as WrapperEdit
-import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExprGui
+import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Name (Name(..))
 import qualified Lamdu.Sugar.Types as Sugar
@@ -73,6 +73,6 @@ makeEditor body pl =
     Sugar.BodyGetVar       x -> GetVarEdit.make       x pl & r
     Sugar.BodyToNom        x -> NomEdit.makeToNom     x pl & r
     Sugar.BodyFromNom      x -> NomEdit.makeFromNom   x pl & r
-    Sugar.BodyWrapper      x -> WrapperEdit.make      x pl & r
+    Sugar.BodyFragment     x -> FragmentEdit.make     x pl & r
     where
         r = Reader.local (Element.animIdPrefix .~ Widget.toAnimId (WidgetIds.fromExprPayload pl))

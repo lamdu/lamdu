@@ -86,7 +86,7 @@ type SugarExpr m = ExpressionN m Payload
 nextHolesBefore :: Sugar.Expression name m Payload -> NearestHoles
 nextHolesBefore val =
     node ^. Sugar.rPayload . Sugar.plData . plNearestHoles
-    & if Lens.has (Sugar.rBody . SugarLens.bodyHoleOrWrapper) node
+    & if Lens.has (Sugar.rBody . SugarLens.bodyUnfinished) node
         then NearestHoles.next .~ Just (node ^. Sugar.rPayload . Sugar.plEntityId)
         else id
     where

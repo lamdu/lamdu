@@ -94,7 +94,7 @@ addToBody ::
     T m (Sugar.Body UUID (T m) (Sugar.Expression UUID (T m) a))
 addToBody (Sugar.BodyLabeledApply a) = addToLabeledApply a <&> Sugar.BodyLabeledApply
 addToBody (Sugar.BodyHole h) = h & Sugar.holeOptions %~ addToOptions & Sugar.BodyHole & pure
-addToBody (Sugar.BodyWrapper w) = w & Sugar.wOptions %~ addToOptions & Sugar.BodyWrapper & pure
+addToBody (Sugar.BodyFragment w) = w & Sugar.fOptions %~ addToOptions & Sugar.BodyFragment & pure
 addToBody b = pure b
 
 addToExpr ::
