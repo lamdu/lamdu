@@ -1,5 +1,5 @@
 {-# OPTIONS -fno-warn-orphans #-}
-{-# LANGUAGE NoImplicitPrelude, FlexibleInstances, MultiParamTypeClasses, TypeFamilies, FlexibleContexts, OverloadedStrings #-}
+{-# LANGUAGE NoImplicitPrelude, FlexibleInstances, MultiParamTypeClasses, TypeFamilies, FlexibleContexts, OverloadedStrings, UndecidableInstances #-}
 module GUI.Momentu.Widget.Instances
     ( sizedState, stateLayers, stateLens, enterResult
     , glueStates
@@ -74,16 +74,16 @@ instance Functor f => SizedElement (Widget (f Update)) where
                 & sBottom +~ nh - oh
             Vector2 ow oh = w ^. wSize
 
-instance Functor f => Glue (Widget (f Update)) View where
-    type Glued (Widget (f Update)) View = Widget (f Update)
+instance (Functor f, a ~ f Update) => Glue (Widget a) View where
+    type Glued (Widget a) View = Widget a
     glue = Glue.glueH $ \w v -> w & Element.setLayers <>~ v ^. View.vAnimLayers
 
-instance Functor f => Glue View (Widget (f Update)) where
-    type Glued View (Widget (f Update)) = Widget (f Update)
+instance (Functor f, a ~ f Update) => Glue View (Widget a) where
+    type Glued View (Widget a) = Widget a
     glue = Glue.glueH $ \v w -> w & Element.setLayers <>~ v ^. View.vAnimLayers
 
-instance Functor f => Glue (Widget (f Update)) (Widget (f Update)) where
-    type Glued (Widget (f Update)) (Widget (f Update)) = Widget (f Update)
+instance (Functor f, a ~ b, a ~ f Update) => Glue (Widget a) (Widget b) where
+    type Glued (Widget a) (Widget b) = Widget a
     glue orientation = Glue.glueH (glueStates orientation) orientation
 
 data NavDir = NavDir

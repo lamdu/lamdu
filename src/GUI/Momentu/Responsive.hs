@@ -109,7 +109,7 @@ instance ( GluesTo (WithTextPos a) (WithTextPos (Widget b)) (WithTextPos (Widget
         & adjustWidth orientation v
         & render . Lens.mapped %~ glue orientation v
 
-instance Functor f => Element (Responsive (f State.Update)) where
+instance (Functor f, a ~ f State.Update) => Element (Responsive a) where
     setLayers = Widget.widget . Element.setLayers
     hoverLayers = Widget.widget %~ Element.hoverLayers
     empty = Responsive (const Element.empty)
