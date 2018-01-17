@@ -55,7 +55,7 @@ bodyShape = \case
             _ -> []
     Sugar.BodyGuard {} -> ["if", ":"]
     Sugar.BodyInject (Sugar.Inject tag _) ->
-        [nameText (tag ^. Sugar.tagName) <> ":"]
+        (nameText (tag ^. Sugar.tagName) <>) <$> [":", "."]
     Sugar.BodyLiteral i -> [formatLiteral i]
     Sugar.BodyGetVar Sugar.GetParamsRecord {} -> ["Params"]
     Sugar.BodyGetVar {} -> []
