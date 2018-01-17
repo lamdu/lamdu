@@ -1,17 +1,16 @@
 digraph {
-    Tag                      [style=filled, fillcolor=yellow];
-    Def                      [style=filled, fillcolor=yellow, label="Definition"];
-    Var                      [style=filled, fillcolor=yellow, label="Variable"];
-    RecordField              [style=filled, fillcolor=yellow, label="Record field"];
+    Tag, Def, Var, Field, Alt [style=filled, fillcolor=yellow];
+    Def   [label="Definition"];
+    Var   [label="Variable"];
+    Field [label="Record field"];
+    Alt   [label="Sum constructor"];
     English, Hebrew, Spanish [style=filled, fillcolor=green];
+    GetDef [label="Get definition"];
+    GetParam [label="Get parameter"];
     Tag -> English, Spanish, Hebrew;
-    {
-        rank = same; RecordField; Tag;
-    }
-    RecordField -> Tag [arrowhead=none, penwidth=7];
-    Def, Var -> Tag;
+    Def, Field, Alt, GetParam -> Tag;
+    Var -> Tag [color=gray];
 
     GetDef -> Def;
-    GetVar -> Var;
-    GetDef, GetVar -> Tag [style=dashed];
+    GetParam -> Var;
 }
