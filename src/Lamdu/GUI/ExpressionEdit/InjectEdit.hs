@@ -12,6 +12,7 @@ import           GUI.Momentu.Glue ((/|/))
 import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.Responsive.Expression as ResponsiveExpr
 import qualified GUI.Momentu.Responsive.Options as Options
+import qualified GUI.Momentu.State as GuiState
 import           GUI.Momentu.View (View)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.TextView as TextView
@@ -47,11 +48,14 @@ makeNullaryInject tag pl =
     stdWrap pl <*>
     do
         dot <- injectIndicator "."
-        tag & Sugar.tagInfo . Sugar.tagInstance .~ pl ^. Sugar.plEntityId
-            & TagEdit.makeCaseTag nearestHoles
+        TagEdit.makeCaseTag nearestHoles tag
             <&> (/|/ dot)
             <&> Responsive.fromWithTextPos
+    & GuiState.assignCursor myId tagInstanceId
     where
+        myId = WidgetIds.fromExprPayload pl
+        tagInstanceId =
+            tag ^. Sugar.tagInfo . Sugar.tagInstance & WidgetIds.fromEntityId
         nearestHoles = pl ^. Sugar.plData . ExprGui.plNearestHoles
 
 makeInject ::
