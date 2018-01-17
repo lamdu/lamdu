@@ -65,7 +65,7 @@ bodyShape = \case
         | otherwise -> []
     Sugar.BodyHole {} -> []
     Sugar.BodyWrapper {} -> []
-    Sugar.BodyInjectedExpression {} -> []
+    Sugar.BodyPlaceHolder {} -> []
 
 bodyNames :: Monad m => Sugar.Body (Name (T m)) (T m) expr -> [Text]
 bodyNames =

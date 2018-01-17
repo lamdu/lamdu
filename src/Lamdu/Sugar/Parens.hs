@@ -114,7 +114,7 @@ precedenceOf ::
     (Classifier, Body name m a)
 precedenceOf =
     \case
-    BodyInjectedExpression -> (NeverParen, BodyInjectedExpression)
+    BodyPlaceHolder        -> (NeverParen, BodyPlaceHolder)
     BodyLiteral x          -> (NeverParen, BodyLiteral x)
     BodyGetVar x           -> (NeverParen, BodyGetVar x)
     BodyHole x             -> (NeverParen, BodyHole x)

@@ -222,7 +222,7 @@ toBody expr = \case
     BodyLiteral      x -> x & BodyLiteral & pure
     BodyLam          x -> x & toLam expr <&> BodyLam
     BodyWrapper      x -> x & toWrapper expr <&> BodyWrapper
-    BodyInjectedExpression -> return BodyInjectedExpression
+    BodyPlaceHolder    -> return BodyPlaceHolder
     where
         toTId = tidName %%~ opGetName NominalName
 

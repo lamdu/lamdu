@@ -37,9 +37,9 @@ markAnnotationsToDisplay ::
     Expression name m (T.ShowAnnotation, a)
 markAnnotationsToDisplay (Expression oldBody pl) =
     case newBody of
-    BodyInjectedExpression -> set T.neverShowAnnotations
+    BodyPlaceHolder -> set T.neverShowAnnotations
     BodyLiteral LiteralNum {} -> set T.neverShowAnnotations
-    BodyLiteral LiteralText {}-> set T.neverShowAnnotations
+    BodyLiteral LiteralText {} -> set T.neverShowAnnotations
     BodyLiteral LiteralBytes {} -> set dontShowEval
     BodyRecord _ -> set T.neverShowAnnotations
     BodyLam _ -> set T.neverShowAnnotations

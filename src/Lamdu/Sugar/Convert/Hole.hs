@@ -2,10 +2,10 @@
 module Lamdu.Sugar.Convert.Hole
     ( convert
       -- Used by Convert.GetVar:
-    , injectVar
+    , fragmentVar
       -- Used by Convert.Apply(wrapper hole):
     , mkOptions
-    , mkHoleOption, mkHoleOptionFromInjected, addSuggestedOptions
+    , mkHoleOption, mkHoleOptionFromFragment, addSuggestedOptions
     , BaseExpr(..)
     ) where
 
@@ -85,20 +85,20 @@ convert exprPl =
     >>= addActions exprPl
     <&> rPayload . plActions . delete .~ CannotDelete
 
-mkHoleOptionFromInjected ::
+mkHoleOptionFromFragment ::
     Monad m =>
     ConvertM.Context m ->
     Input.Payload m a ->
     Val (Type, Maybe (Input.Payload m a)) ->
     HoleOption (T m) (Expression UUID (T m) ())
-mkHoleOptionFromInjected sugarContext exprPl val =
+mkHoleOptionFromFragment sugarContext exprPl val =
     HoleOption
     { _hoVal = baseExpr
     , _hoSugaredBaseExpr = sugar sugarContext exprPl baseExpr
     , _hoResults =
         do
             (result, inferContext) <-
-                mkHoleResultValInjected exprPl val
+                mkHoleResultValFragment exprPl val
                 & (`runStateT` (sugarContext ^. ConvertM.scInferContext))
             let depsProp = sugarContext ^. ConvertM.scFrozenDeps
             newDeps <-
@@ -133,11 +133,11 @@ mkHoleOption ::
     Input.Payload m a ->
     BaseExpr ->
     HoleOption (T m) (Expression UUID (T m) ())
-mkHoleOption sugarContext mInjectedArg exprPl val =
+mkHoleOption sugarContext mFragment exprPl val =
     HoleOption
     { _hoVal = v
     , _hoSugaredBaseExpr = sugar sugarContext exprPl v
-    , _hoResults = mkHoleResults mInjectedArg sugarContext exprPl val
+    , _hoResults = mkHoleResults mFragment sugarContext exprPl val
     }
     where
         v = getBaseExprVal val
@@ -146,11 +146,11 @@ mkHoleSuggesteds ::
     Monad m =>
     ConvertM.Context m -> Maybe (Val (Input.Payload m a)) -> Input.Payload m a ->
     [HoleOption (T m) (Expression UUID (T m) ())]
-mkHoleSuggesteds sugarContext mInjectedArg exprPl =
+mkHoleSuggesteds sugarContext mFragment exprPl =
     exprPl ^. Input.inferred
     & Suggest.value
     <&> SuggestedExpr
-    <&> mkHoleOption sugarContext mInjectedArg exprPl
+    <&> mkHoleOption sugarContext mFragment exprPl
 
 addSuggestedOptions ::
     [HoleOption (T m) (Expression UUID (T m) ())] -> [HoleOption (T m) (Expression UUID (T m) ())] -> [HoleOption (T m) (Expression UUID (T m) ())]
@@ -224,7 +224,7 @@ mkOptions ::
     Monad m =>
     Maybe (Val (Input.Payload m a)) -> Input.Payload m a ->
     ConvertM m (T m [HoleOption (T m) (Expression UUID (T m) ())])
-mkOptions mInjectedArg exprPl =
+mkOptions mFragment exprPl =
     ConvertM.readContext
     <&>
     \sugarContext ->
@@ -244,8 +244,8 @@ mkOptions mInjectedArg exprPl =
               ]
             ]
             <&> SeedExpr
-            <&> mkHoleOption sugarContext mInjectedArg exprPl
-            & addSuggestedOptions (mkHoleSuggesteds sugarContext mInjectedArg exprPl)
+            <&> mkHoleOption sugarContext mFragment exprPl
+            & addSuggestedOptions (mkHoleSuggesteds sugarContext mFragment exprPl)
             & pure
 
 loadDeps :: Monad m => [V.Var] -> [T.NominalId] -> T m Infer.Dependencies
@@ -358,7 +358,7 @@ mkLiteralOptions exprPl =
             V.LLiteral prim & V.BLeaf & Val (T.TInst (prim ^. V.primType) mempty)
             where
                 prim = PrimVal.fromKnown v
-        convPl t = (Infer.Payload t Infer.emptyScope, (Nothing, NotInjected))
+        convPl t = (Infer.Payload t Infer.emptyScope, (Nothing, NotFragment))
         inferredType = exprPl ^. Input.inferred . Infer.plType
         textDep =
             mempty
@@ -385,27 +385,27 @@ getLocalScopeGetVars sugarContext par
             ) <&> fst
         mkFieldParam tag = V.GetField var tag & V.BGetField & Val ()
 
-data IsInjected = Injected | NotInjected
+data IsFragment = Fragment | NotFragment
 type HoleResultVal m a = Val (Infer.Payload, (Maybe (ValI m), a))
 
-markNotInjected :: HoleResultVal n () -> HoleResultVal n IsInjected
-markNotInjected val = val <&> _2 . _2 .~ NotInjected
+markNotFragment :: HoleResultVal n () -> HoleResultVal n IsFragment
+markNotFragment val = val <&> _2 . _2 .~ NotFragment
 
--- TODO: Unify type according to IsInjected, avoid magic var
-injectVar :: V.Var
-injectVar = "HOLE INJECT EXPR"
+-- TODO: Unify type according to IsFragment, avoid magic var
+fragmentVar :: V.Var
+fragmentVar = "HOLE FRAGMENT EXPR"
 
-replaceInjected :: Val (Input.Payload m IsInjected) -> Val (Input.Payload m ())
-replaceInjected (Val pl body) =
+replaceFragment :: Val (Input.Payload m IsFragment) -> Val (Input.Payload m ())
+replaceFragment (Val pl body) =
     case pl ^. Input.userData of
-    Injected -> V.LVar injectVar & V.BLeaf
-    NotInjected -> body & traverse %~ replaceInjected
+    Fragment -> V.LVar fragmentVar & V.BLeaf
+    NotFragment -> body & traverse %~ replaceFragment
     & Val (void pl)
 
 writeConvertTypeChecked ::
     Monad m =>
     ConvertM.Context m -> ValIProperty m ->
-    HoleResultVal m IsInjected ->
+    HoleResultVal m IsFragment ->
     T m (ExpressionU m ())
 writeConvertTypeChecked sugarContext holeStored inferredVal =
     do
@@ -416,7 +416,7 @@ writeConvertTypeChecked sugarContext holeStored inferredVal =
             <&> ExprIRef.addProperties (Property.set holeStored)
             <&> fmap snd . Input.preparePayloads . fmap toPayload
         Property.set holeStored (writtenExpr ^. Val.payload . _1 . Property.pVal)
-        replaceInjected (writtenExpr <&> snd)
+        replaceFragment (writtenExpr <&> snd)
             & ConvertM.convertSubexpression
             & ConvertM.run sugarContext
     where
@@ -495,8 +495,8 @@ applyForms empty val =
 
 holeWrapIfNeeded ::
     Monad m =>
-    Type -> Val (Infer.Payload, (Maybe a, IsInjected)) ->
-    StateT Infer.Context m (Val (Infer.Payload, (Maybe a, IsInjected)))
+    Type -> Val (Infer.Payload, (Maybe a, IsFragment)) ->
+    StateT Infer.Context m (Val (Infer.Payload, (Maybe a, IsFragment)))
 holeWrapIfNeeded holeType val =
     do
         unifyResult <-
@@ -510,8 +510,8 @@ holeWrapIfNeeded holeType val =
         liftInfer = stateEitherSequence . Infer.run
 
 holeWrap ::
-    Type -> Val (Infer.Payload, (Maybe a, IsInjected)) ->
-    Update (Val (Infer.Payload, (Maybe a, IsInjected)))
+    Type -> Val (Infer.Payload, (Maybe a, IsFragment)) ->
+    Update (Val (Infer.Payload, (Maybe a, IsFragment)))
 holeWrap resultType val =
     update resultType <&> mk
     where
@@ -522,7 +522,7 @@ holeWrap resultType val =
         inferPl = val ^. Val.payload . _1
         func = Val (plSameScope funcType, emptyPl) $ V.BLeaf V.LHole
         funcType = TFun (inferPl ^. Infer.plType) resultType
-        emptyPl = (Nothing, NotInjected)
+        emptyPl = (Nothing, NotFragment)
 
 replaceEachUnwrappedHole :: Applicative f => (a -> f (Val a)) -> Val a -> [f (Val a)]
 replaceEachUnwrappedHole replaceHole =
@@ -559,46 +559,46 @@ stateEitherSequence (StateT f) =
     Right (r, s1) -> return (Right r, s1)
     Left l -> return (Left l, s0)
 
-holeResultsInject ::
+holeResultsEmplaceFragment ::
     Monad m =>
     Val (Input.Payload n a) -> HoleResultVal n () ->
-    StateT Infer.Context (ListT m) (HoleResultVal n IsInjected)
-holeResultsInject injectedArg val =
-    markNotInjected val
-    & replaceEachUnwrappedHole inject
+    StateT Infer.Context (ListT m) (HoleResultVal n IsFragment)
+holeResultsEmplaceFragment rawFragmentExpr val =
+    markNotFragment val
+    & replaceEachUnwrappedHole emplace
     & ListClass.fromList
     & lift
     & join
     where
-        inject pl =
+        emplace pl =
             ListClass.fromList
             [ do
-                unify injectedType (fst pl ^. Infer.plType)
+                unify fragmentType (fst pl ^. Infer.plType)
                     & Infer.run
                     & mapStateT exceptToListT
-                return injected
+                return fragmentExpr
             , V.Apply
-                (Val (fst pl & Infer.plType %~ (`T.TFun` injectedType), (Nothing, NotInjected)) (V.BLeaf V.LHole))
-                injected
-                & V.BApp & Val (fst pl, (Nothing, NotInjected))
+                (Val (fst pl & Infer.plType %~ (`T.TFun` fragmentType), (Nothing, NotFragment)) (V.BLeaf V.LHole))
+                fragmentExpr
+                & V.BApp & Val (fst pl, (Nothing, NotFragment))
                 & return
             ]
             & lift
             & join
             & mapStateT (ListClass.take 1)
-        injected = injectedArg <&> onInjectedPayload
-        onInjectedPayload pl =
+        fragmentExpr = rawFragmentExpr <&> onFragmentPayload
+        onFragmentPayload pl =
             ( pl ^. Input.inferred
-            , (Just (pl ^. Input.stored . Property.pVal), Injected)
+            , (Just (pl ^. Input.stored . Property.pVal), Fragment)
             )
-        injectedType = injectedArg ^. Val.payload . Input.inferredType
+        fragmentType = rawFragmentExpr ^. Val.payload . Input.inferredType
 
-mkHoleResultValInjected ::
+mkHoleResultValFragment ::
     Monad m =>
     Input.Payload m dummy ->
     Val (Type, Maybe (Input.Payload m a)) ->
-    StateT Infer.Context (T m) (HoleResultVal m IsInjected)
-mkHoleResultValInjected exprPl val =
+    StateT Infer.Context (T m) (HoleResultVal m IsFragment)
+mkHoleResultValFragment exprPl val =
     val <&> onPl
     & holeWrapIfNeeded (inferred ^. Infer.plType)
     where
@@ -606,9 +606,9 @@ mkHoleResultValInjected exprPl val =
         onPl (typ, mInputPl) =
             ( inferred & Infer.plType .~ typ
             , case mInputPl of
-              Nothing -> (Nothing, NotInjected)
+              Nothing -> (Nothing, NotFragment)
               Just inputPl ->
-                (inputPl ^. Input.stored & Property.value & Just, Injected)
+                (inputPl ^. Input.stored & Property.value & Just, Fragment)
             )
 
 mkHoleResultVals ::
@@ -617,8 +617,8 @@ mkHoleResultVals ::
     Maybe (Val (Input.Payload m a)) ->
     Input.Payload m dummy ->
     BaseExpr ->
-    StateT Infer.Context (ListT (T m)) (Infer.Dependencies, HoleResultVal m IsInjected)
-mkHoleResultVals frozenDeps mInjectedArg exprPl base =
+    StateT Infer.Context (ListT (T m)) (Infer.Dependencies, HoleResultVal m IsFragment)
+mkHoleResultVals frozenDeps mFragment exprPl base =
     case base of
     SeedExpr seed ->
         do
@@ -646,13 +646,13 @@ mkHoleResultVals frozenDeps mInjectedArg exprPl base =
         inferred = exprPl ^. Input.inferred
         post x =
             x
-            & maybe (return . markNotInjected) holeResultsInject mInjectedArg
+            & maybe (return . markNotFragment) holeResultsEmplaceFragment mFragment
             >>= holeWrapIfNeeded (inferred ^. Infer.plType)
 
 mkHoleResult ::
     Monad m =>
     ConvertM.Context m -> Transaction m () ->
-    ValIProperty m -> HoleResultVal m IsInjected ->
+    ValIProperty m -> HoleResultVal m IsFragment ->
     T m (HoleResult (T m) (Expression UUID (T m) ()))
 mkHoleResult sugarContext updateDeps stored val =
     do
@@ -680,11 +680,11 @@ mkHoleResults ::
     ( HoleResultScore
     , T m (HoleResult (T m) (Expression UUID (T m) ()))
     )
-mkHoleResults mInjectedArg sugarContext exprPl base =
+mkHoleResults mFragment sugarContext exprPl base =
     do
         ((newDeps, val), inferContext) <-
             mkHoleResultVals (sugarContext ^. ConvertM.scFrozenDeps)
-            mInjectedArg exprPl base
+            mFragment exprPl base
             & (`runStateT` (sugarContext ^. ConvertM.scInferContext))
         let newSugarContext =
                 sugarContext

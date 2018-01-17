@@ -162,8 +162,8 @@ convert ::
     Monad m =>
     V.Var -> Input.Payload m a -> ConvertM m (ExpressionU m a)
 convert param exprPl
-    | param == ConvertHole.injectVar =
-        addActions exprPl BodyInjectedExpression
+    | param == ConvertHole.fragmentVar =
+        addActions exprPl BodyPlaceHolder
     | otherwise =
         do
             convertGlobal param exprPl & justToLeft

@@ -222,7 +222,7 @@ data Body name m expr
     | BodyToNom (Nominal name (BinderBody name m expr))
     | BodyFromNom (Nominal name expr)
     | BodyWrapper (Wrapper name m expr)
-    | BodyInjectedExpression -- Used for hole results
+    | BodyPlaceHolder -- Used for hole results, shown as "★"
     deriving (Functor, Foldable, Traversable)
 
 instance (Show name, Show expr) => Show (LabeledApply name m expr) where
@@ -243,7 +243,7 @@ instance (Show name, Show expr) => Show (Body name m expr) where
     show BodyGetVar {} = "GetVar:TODO"
     show BodyFromNom {} = "FromNom:TODO"
     show BodyToNom {} = "ToNom:TODO"
-    show BodyInjectedExpression {} = "InjectedExpression"
+    show BodyPlaceHolder {} = "InjectedExpression"
     show BodyWrapper {} = "Wrapper:TODO"
 
 Lens.makeLenses ''Actions

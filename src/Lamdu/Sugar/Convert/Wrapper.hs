@@ -61,7 +61,7 @@ mkAppliedHoleSuggesteds sugarContext argI exprPl =
     where
         onPl pl = (pl ^. Input.inferred, Just pl)
         onSuggestion (sugg, newInferCtx) =
-            ConvertHole.mkHoleOptionFromInjected
+            ConvertHole.mkHoleOptionFromFragment
             (sugarContext & ConvertM.scInferContext .~ newInferCtx)
             exprPl (sugg <&> _1 %~ (^. Infer.plType))
 
