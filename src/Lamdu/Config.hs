@@ -1,7 +1,7 @@
 {-# OPTIONS -O0 #-}
 {-# LANGUAGE NoImplicitPrelude, TemplateHaskell #-}
 module Lamdu.Config
-    ( Export(..), Pane(..), Hole(..)
+    ( Export(..), Pane(..), Completion(..)
     , Debug(..)
     , Eval(..)
     , LiteralText(..)
@@ -39,14 +39,14 @@ data Pane = Pane
     } deriving (Eq, Show)
 deriveJSON defaultOptions ''Pane
 
-data Hole = Hole
-    { holeJumpToNextKeys :: [MetaKey]
-    , holeJumpToPrevKeys :: [MetaKey]
-    , holeResultCount :: Int
-    , holeOpenKeys :: [MetaKey]
-    , holeCloseKeys :: [MetaKey]
+data Completion = Completion
+    { completionJumpToNextKeys :: [MetaKey]
+    , completionJumpToPrevKeys :: [MetaKey]
+    , completionResultCount :: Int
+    , completionOpenKeys :: [MetaKey]
+    , completionCloseKeys :: [MetaKey]
     } deriving (Eq, Show)
-deriveJSON defaultOptions ''Hole
+deriveJSON defaultOptions ''Completion
 
 data Eval = Eval
     { prevScopeKeys :: [MetaKey]
@@ -71,7 +71,7 @@ data Config = Config
     , export :: Export
     , pane :: Pane
     , versionControl :: VersionControl.Config
-    , hole :: Hole
+    , completion :: Completion
     , literalText :: LiteralText
     , eval :: Eval
     , debug :: Debug

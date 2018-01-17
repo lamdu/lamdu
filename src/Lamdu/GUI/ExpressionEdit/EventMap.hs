@@ -77,7 +77,7 @@ jumpHolesEventMap ::
     (MonadReader env m, Config.HasConfig env, Applicative f) =>
     NearestHoles -> m (EventMap (f GuiState.Update))
 jumpHolesEventMap hg =
-    Lens.view Config.config <&> Config.hole
+    Lens.view Config.config <&> Config.completion
     <&>
     \config ->
     let jumpEventMap keys dirStr lens =
@@ -88,9 +88,9 @@ jumpHolesEventMap hg =
                 & E.keysEventMapMovesCursor (keys config)
                     (E.Doc ["Navigation", "Jump to " <> dirStr <> " hole"])
     in
-    jumpEventMap Config.holeJumpToNextKeys "next" NearestHoles.next
+    jumpEventMap Config.completionJumpToNextKeys "next" NearestHoles.next
     <>
-    jumpEventMap Config.holeJumpToPrevKeys "previous" NearestHoles.prev
+    jumpEventMap Config.completionJumpToPrevKeys "previous" NearestHoles.prev
 
 extractCursor :: Sugar.ExtractDestination -> Widget.Id
 extractCursor (Sugar.ExtractToLet letId) =

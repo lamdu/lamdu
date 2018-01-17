@@ -57,12 +57,12 @@ import           Lamdu.Prelude
 
 type T = Transaction
 
-fdConfig :: Config.Hole -> FocusDelegator.Config
-fdConfig Config.Hole{holeOpenKeys, holeCloseKeys} = FocusDelegator.Config
-    { FocusDelegator.focusChildKeys = holeOpenKeys
-    , FocusDelegator.focusChildDoc = E.Doc ["Navigation", "Hole", "Open"]
-    , FocusDelegator.focusParentKeys = holeCloseKeys
-    , FocusDelegator.focusParentDoc = E.Doc ["Navigation", "Hole", "Close"]
+fdConfig :: Config.Completion -> FocusDelegator.Config
+fdConfig Config.Completion{completionOpenKeys, completionCloseKeys} = FocusDelegator.Config
+    { FocusDelegator.focusChildKeys = completionOpenKeys
+    , FocusDelegator.focusChildDoc = E.Doc ["Navigation", "Completion", "Open"]
+    , FocusDelegator.focusParentKeys = completionCloseKeys
+    , FocusDelegator.focusParentDoc = E.Doc ["Navigation", "Completion", "Close"]
     }
 
 makeRenderedResult ::
@@ -173,7 +173,7 @@ make options mOptionLiteral pl allowedTerms =
     do
         config <- Lens.view Config.config
         let fdWrap =
-                FocusDelegator.make ?? fdConfig (Config.hole config)
+                FocusDelegator.make ?? fdConfig (Config.completion config)
                 ?? FocusDelegator.FocusEntryParent ?? hidClosed widgetIds
                 <&> (Align.tValue %~)
         closedSearchTermGui <-

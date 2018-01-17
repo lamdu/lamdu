@@ -31,12 +31,12 @@
         "delBranchKeys"      : [ "Alt+O" ],
         "jumpToBranchesKeys" : [ "Cmd+F11" ]
     },
-    "hole": {
-        "holeJumpToNextKeys"  : [ "Tab" ],
-        "holeResultCount"     : 5,
-        "holeJumpToPrevKeys"  : [ "Shift+Tab" ],
-        "holeOpenKeys"        : [ "Space", "Enter" ],
-        "holeCloseKeys"       : [ "Escape", "Cmd+LeftBracket" ]
+    "completion": {
+        "completionJumpToNextKeys"  : [ "Tab" ],
+        "completionResultCount"     : 5,
+        "completionJumpToPrevKeys"  : [ "Shift+Tab" ],
+        "completionOpenKeys"        : [ "Space", "Enter" ],
+        "completionCloseKeys"       : [ "Escape", "Cmd+LeftBracket" ]
     },
     "literalText": {
         "literalTextStartEditingKeys" : [ "Enter", "Shift+Right" ],

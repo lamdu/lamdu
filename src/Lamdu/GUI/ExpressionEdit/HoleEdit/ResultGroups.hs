@@ -109,12 +109,12 @@ data GoodAndBad a = GoodAndBad { _good :: a, _bad :: a }
     deriving (Functor, Foldable, Traversable)
 Lens.makeLenses ''GoodAndBad
 
-collectResults :: Monad m => Config.Hole -> ListT m (ResultGroup f) -> m (Menu.OptionList (ResultGroup f))
-collectResults Config.Hole{holeResultCount} resultsM =
+collectResults :: Monad m => Config.Completion -> ListT m (ResultGroup f) -> m (Menu.OptionList (ResultGroup f))
+collectResults Config.Completion{completionResultCount} resultsM =
     do
         (tooFewGoodResults, moreResultsM) <-
             ListClass.scanl prependResult (GoodAndBad [] []) resultsM
-            & ListClass.splitWhenM (return . (>= holeResultCount) . length . _good)
+            & ListClass.splitWhenM (return . (>= completionResultCount) . length . _good)
 
         -- We need 2 of the moreResultsM:
         -- A. First is needed because it would be the first to have the correct
@@ -130,7 +130,7 @@ collectResults Config.Hole{holeResultCount} resultsM =
             & sortOn resultsListScore
             -- Re-split because now that we've added all the
             -- accumulated bad results we may have too many
-            & splitAt holeResultCount
+            & splitAt completionResultCount
             & _2 %~ not . null
             & uncurry Menu.OptionList
             & return
@@ -155,7 +155,7 @@ makeAll ::
     m (Menu.OptionList (ResultGroup (T n)))
 makeAll options mOptionLiteral ctx =
     do
-        config <- Lens.view Config.config <&> Config.hole
+        config <- Lens.view Config.config <&> Config.completion
         literalGroups <-
             (mOptionLiteral <&> makeLiteralGroups searchTerm) ^.. (Lens._Just . traverse)
             & sequenceA

@@ -127,7 +127,7 @@ makeOptions tag ctx
         do
             resultCount <-
                 Lens.view Config.config
-                <&> Config.hole <&> Config.holeResultCount
+                <&> Config.completion <&> Config.completionResultCount
             tag ^. Sugar.tagActions . Sugar.taOptions & transaction
                 <&> filter (Lens.anyOf (_1 . Name.form . Name._Stored . _1) (insensitiveInfixOf searchTerm))
                 <&> splitAt resultCount
