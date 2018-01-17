@@ -48,25 +48,17 @@ makeCommon ::
     ) =>
     Options.Disambiguators (T m GuiState.Update) ->
     Sugar.Tag (Name (T m)) (T m) ->
-    Maybe (T m Sugar.EntityId) ->
+    E.EventMap (T m GuiState.Update) ->
     NearestHoles -> WithTextPos View -> [ExpressionGui m] ->
     f (ExpressionGui m)
-makeCommon disamb tag mDelInject nearestHoles colonLabel valEdits =
-    do
-        config <- Lens.view Config.config
-        let delEventMap =
-                case mDelInject of
-                Nothing -> mempty
-                Just del ->
-                    del <&> WidgetIds.fromEntityId
-                    & E.keysEventMapMovesCursor (Config.delKeys config) (E.Doc ["Edit", "Delete"])
-        (Options.boxSpaced ?? disamb)
-            <*>
-            ( TagEdit.makeCaseTag nearestHoles tag
-                <&> (/|/ colonLabel)
-                <&> Lens.mapped %~ Widget.weakerEvents delEventMap
-                <&> Responsive.fromWithTextPos <&> (: valEdits)
-            )
+makeCommon disamb tag delEventMap nearestHoles colonLabel valEdits =
+    (Options.boxSpaced ?? disamb)
+    <*>
+    ( TagEdit.makeCaseTag nearestHoles tag
+        <&> (/|/ colonLabel)
+        <&> Lens.mapped %~ Widget.weakerEvents delEventMap
+        <&> Responsive.fromWithTextPos <&> (: valEdits)
+    )
 
 injectIndicator ::
     ( MonadReader env f, TextView.HasStyle env, HasTheme env
@@ -75,33 +67,55 @@ injectIndicator ::
 injectIndicator text =
     (Styled.grammarText ?? text) <*> Element.subAnimId ["injectIndicator"]
 
+makeNullaryInject ::
+    Monad m =>
+    Sugar.Tag (Name (T m)) (T m) -> Sugar.Payload (T m) ExprGui.Payload ->
+    ExprGuiM m (ExpressionGui m)
+makeNullaryInject tag pl =
+    do
+        dot <- injectIndicator "."
+        stdWrap pl
+            <*>
+            makeCommon
+            -- Give the tag widget the identity of the whole inject
+            Options.disambiguationNone
+            (tag & Sugar.tagInfo . Sugar.tagInstance .~ (pl ^. Sugar.plEntityId))
+            mempty (pl ^. Sugar.plData . ExprGui.plNearestHoles) dot []
+
+makeInject ::
+    Monad m =>
+    ExprGui.SugarExpr m ->
+    Sugar.Tag (Name (T m)) (T m) -> Sugar.Payload (T m) ExprGui.Payload ->
+    ExprGuiM m (ExpressionGui m)
+makeInject val tag pl =
+    do
+        disamb <-
+            if pl ^. Sugar.plData . ExprGui.plNeedParens
+            then ResponsiveExpr.disambiguators <*> Lens.view Element.animIdPrefix
+            else pure Options.disambiguationNone
+        arg <-
+            ExprGuiM.makeSubexpression val <&> (:[])
+        colon <- injectIndicator ":"
+        config <- Lens.view Config.config
+        let replaceParentEventMap =
+                -- Deleting the inject is replacing the whole expr
+                -- with the injected value "child"
+                case mReplaceParent of
+                Nothing -> mempty
+                Just replaceParent ->
+                    replaceParent <&> WidgetIds.fromEntityId
+                    & E.keysEventMapMovesCursor (Config.delKeys config) delDoc
+
+        stdWrapParentExpr pl
+            <*> makeCommon disamb tag replaceParentEventMap (ExprGui.nextHolesBefore val) colon arg
+    where
+        delDoc = E.Doc ["Edit", "Delete"]
+        mReplaceParent = val ^. Sugar.rPayload . Sugar.plActions . Sugar.mReplaceParent
+
+
 make ::
     Monad m =>
     Sugar.Inject (Name (T m)) (T m) (ExprGui.SugarExpr m) ->
     Sugar.Payload (T m) ExprGui.Payload ->
     ExprGuiM m (ExpressionGui m)
-make (Sugar.Inject tag mVal) pl =
-    case mVal of
-    Nothing ->
-        do
-            dot <- injectIndicator "."
-            stdWrap pl
-                <*>
-                makeCommon
-                -- Give the tag widget the identity of the whole inject
-                Options.disambiguationNone
-                (tag & Sugar.tagInfo . Sugar.tagInstance .~ (pl ^. Sugar.plEntityId))
-                Nothing (pl ^. Sugar.plData . ExprGui.plNearestHoles) dot []
-    Just val ->
-        do
-            disamb <-
-                if pl ^. Sugar.plData . ExprGui.plNeedParens
-                then ResponsiveExpr.disambiguators <*> Lens.view Element.animIdPrefix
-                else pure Options.disambiguationNone
-            arg <-
-                ExprGuiM.makeSubexpression val <&> (:[])
-            colon <- injectIndicator ":"
-            stdWrapParentExpr pl
-                <*> makeCommon disamb tag replaceParent (ExprGui.nextHolesBefore val) colon arg
-        where
-            replaceParent = val ^. Sugar.rPayload . Sugar.plActions . Sugar.mReplaceParent
+make (Sugar.Inject tag mVal) = maybe makeNullaryInject makeInject mVal tag
