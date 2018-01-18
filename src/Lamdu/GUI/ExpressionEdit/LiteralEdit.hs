@@ -52,6 +52,14 @@ mkEditEventMap valText setToHole =
     <&> SearchMenu.enterWithSearchTerm valText
     & E.keyPresses [ModKey mempty MetaKey.Key'Enter] (E.Doc ["Edit", "Value"])
 
+withStyle ::
+    (MonadReader env m, HasStyle env) =>
+    Lens.Getting TextEdit.Style Style TextEdit.Style -> m a -> m a
+withStyle whichStyle act =
+    do
+        style <- Lens.view Style.style <&> (^. whichStyle)
+        Reader.local (TextEdit.style .~ style) act
+
 genericEdit ::
     ( Monad m, Format a, MonadReader env f, HasStyle env, GuiState.HasCursor env
     ) =>
@@ -59,12 +67,10 @@ genericEdit ::
     Transaction.Property m a ->
     Sugar.Payload (T m) ExprGui.Payload -> f (ExpressionGui m)
 genericEdit whichStyle prop pl =
-    do
-        style <- Lens.view Style.style <&> (^. whichStyle)
-        TextView.makeFocusable ?? valText ?? myId
-            & Reader.local (TextEdit.style .~ style)
-            <&> Align.tValue %~ Widget.weakerEvents editEventMap
-            <&> Responsive.fromWithTextPos
+    TextView.makeFocusable ?? valText ?? myId
+    <&> Align.tValue %~ Widget.weakerEvents editEventMap
+    <&> Responsive.fromWithTextPos
+    & withStyle whichStyle
     where
         myId = WidgetIds.fromExprPayload pl
         editEventMap =
@@ -91,19 +97,17 @@ textEdit ::
 textEdit prop pl =
     do
         config <- Lens.view Config.config <&> Config.literalText
-        style <- Lens.view (Style.style . Style.styleText)
-        do
-            left <- TextView.makeLabel "“"
-            text <- TextEdits.make ?? empty ?? prop ?? innerId
-            right <-
-                TextView.makeLabel "„"
-                <&> Element.padToSizeAlign (text ^. Element.size & _1 .~ 0) 1
-            left /|/ text /|/ right & return
-            & Reader.local (TextEdit.style .~ style)
-            >>= Align.tValue %%~
+        left <- TextView.makeLabel "“"
+        text <- TextEdits.make ?? empty ?? prop ?? innerId
+        right <-
+            TextView.makeLabel "„"
+            <&> Element.padToSizeAlign (text ^. Element.size & _1 .~ 0) 1
+        left /|/ text /|/ right
+            & Align.tValue %%~
                 (FocusDelegator.make ?? fdConfig config
                 ?? FocusDelegator.FocusEntryParent
                 ?? myId ??)
+    & withStyle Style.styleText
     where
         empty = TextEdit.EmptyStrings "" ""
         innerId = WidgetIds.literalTextEditOf myId
