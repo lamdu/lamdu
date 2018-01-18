@@ -149,6 +149,7 @@ numEdit ::
     Sugar.Payload (T f) ExprGui.Payload ->
     m (WithTextPos (Widget (T f GuiState.Update)))
 numEdit prop pl =
+    (withFd ?? myId) <*>
     do
         (pos, text, remainderText) <-
             do
@@ -184,8 +185,7 @@ numEdit prop pl =
                 \keys ->
                 WidgetIds.fromEntityId nextEntry & pure
                 & E.keysEventMapMovesCursor keys (E.Doc ["Navigation", "Next entry"])
-        (withFd ?? myId) <*>
-            ( (TextEdit.make ?? empty ?? text ?? innerId)
+        ( (TextEdit.make ?? empty ?? text ?? innerId)
                 <&> Align.tValue . Widget.eventMapMaker . Lens.mapped %~
                     -- Avoid taking keys that don't belong to us,
                     -- so weakerEvents with them will work.
