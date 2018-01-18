@@ -105,6 +105,7 @@ makeNameRef myId nameRef maker =
                     nameRef ^. Sugar.nrGotoDefinition <&> WidgetIds.fromEntityId
         maker (nameRef ^. Sugar.nrName) nameId
             <&> Align.tValue %~ Widget.weakerEvents jumpToDefinitionEventMap
+    & Reader.local (Element.animIdPrefix .~ Widget.toAnimId nameId)
     & GuiState.assignCursor myId nameId
     where
         nameId = Widget.joinId myId ["name"]
