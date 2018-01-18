@@ -74,9 +74,12 @@ makeParamsRecord myId paramsRecordVar =
               ( fieldNames
                 & Lens.itraverse
                 (\i fieldName ->
-                    Widget.joinId myId ["params", SBS8.pack (show (i::Int))]
+                    let paramId = ["params", SBS8.pack (show (i :: Int))]
+                    in
+                    Widget.joinId myId paramId
                     & makeSimpleView fieldName <&> Responsive.fromWithTextPos
                     & Reader.local (TextView.color .~ Theme.parameterColor nameTheme)
+                    & Reader.local (Element.animIdPrefix %~ (<> paramId))
                 )
               )
             , TextView.makeLabel "}" <&> Responsive.fromTextView
