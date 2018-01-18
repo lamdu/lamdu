@@ -8,7 +8,6 @@ module Lamdu.GUI.NameEdit
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
 import           Data.Store.Property (Property(..))
-import           Data.Store.Transaction (Transaction)
 import qualified Data.Text as Text
 import           GUI.Momentu.Align (Aligned(..), WithTextPos(..))
 import qualified GUI.Momentu.Align as Align
@@ -34,8 +33,6 @@ import           Lamdu.Name (Name(..))
 import qualified Lamdu.Name as Name
 
 import           Lamdu.Prelude
-
-type T = Transaction
 
 disallowedNameChars :: String
 disallowedNameChars = "[]\\`()"
@@ -88,9 +85,9 @@ makeView name =
 
 -- | A name edit without the collision suffixes
 makeBareEdit ::
-    (Monad m, TextEdit.HasStyle env, GuiState.HasCursor env, MonadReader env f) =>
-    Name (T m) -> Widget.Id ->
-    f (WithTextPos (Widget (T m GuiState.Update)))
+    (MonadReader env m, TextEdit.HasStyle env, GuiState.HasCursor env, Applicative f) =>
+    Name f -> Widget.Id ->
+    m (WithTextPos (Widget (f GuiState.Update)))
 makeBareEdit (Name form setName) myId =
     TextEdits.makeWordEdit
     ?? TextEdit.EmptyStrings visibleName ""
@@ -102,11 +99,10 @@ makeBareEdit (Name form setName) myId =
         storedName = form ^. Name._Stored . _1
 
 make ::
-    ( Monad m
-    , MonadReader env f, TextEdit.HasStyle env, Element.HasAnimIdPrefix env
-    , HasTheme env, GuiState.HasCursor env
-    ) => Name (T m) -> Widget.Id ->
-    f (WithTextPos (Widget (T m GuiState.Update)))
+    ( MonadReader env m, TextEdit.HasStyle env, Element.HasAnimIdPrefix env
+    , HasTheme env, GuiState.HasCursor env, Applicative f
+    ) =>
+    Name f -> Widget.Id -> m (WithTextPos (Widget (f GuiState.Update)))
 make name myId =
     do
         mCollisionSuffix <- makeCollisionSuffixLabel mCollision
@@ -122,9 +118,8 @@ make name myId =
         (_visibleName, mCollision) = name ^. Name.form & Name.visible
 
 styleNameAtBinder ::
-    ( MonadReader env m
-    , Style.HasStyle env
-    ) => Name n -> Draw.Color -> m b -> m b
+    (MonadReader env m, Style.HasStyle env) =>
+    Name n -> Draw.Color -> m b -> m b
 styleNameAtBinder name color act =
     do
         style <- Lens.view Style.style
@@ -138,10 +133,10 @@ styleNameAtBinder name color act =
         act & Reader.local (TextEdit.style .~ textEditStyle)
 
 makeAtBinder ::
-    (Monad m, MonadReader env f, GuiState.HasCursor env, HasTheme env
-    , Element.HasAnimIdPrefix env, Style.HasStyle env
-    ) => Name (T m) -> Draw.Color -> Widget.Id ->
-    f (WithTextPos (Widget (T m GuiState.Update)))
+    ( MonadReader env m, GuiState.HasCursor env, HasTheme env
+    , Element.HasAnimIdPrefix env, Style.HasStyle env, Applicative f
+    ) =>
+    Name f -> Draw.Color -> Widget.Id -> m (WithTextPos (Widget (f GuiState.Update)))
 makeAtBinder name color myId =
     ( FocusDelegator.make ?? nameEditFDConfig
       ?? FocusDelegator.FocusEntryParent ?? myId

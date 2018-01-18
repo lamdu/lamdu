@@ -55,18 +55,18 @@ tagRenameId = (`Widget.joinId` ["rename"])
 tagViewId :: Widget.Id -> Widget.Id
 tagViewId = (`Widget.joinId` ["view"])
 
-setTagName :: Monad m => Sugar.Tag (Name (T m)) (T m) -> Text -> T m ()
+setTagName :: Applicative m => Sugar.Tag (Name m) m -> Text -> m ()
 setTagName tag name =
-    do
-        (tag ^. Sugar.tagName . Name.setName) name
-        (tag ^. Sugar.tagActions . Sugar.taSetPublished) (not (Text.null name))
+    (tag ^. Sugar.tagName . Name.setName) name
+    *>
+    (tag ^. Sugar.tagActions . Sugar.taSetPublished) (not (Text.null name))
 
 makeTagNameEdit ::
-    ( Monad m, MonadReader env f, HasConfig env, TextEdit.HasStyle env
-    , GuiState.HasCursor env
+    ( MonadReader env m, HasConfig env, TextEdit.HasStyle env
+    , GuiState.HasCursor env, Applicative f
     ) =>
-    NearestHoles -> Sugar.Tag (Name (T m)) (T m) ->
-    f (WithTextPos (Widget (T m GuiState.Update)))
+    NearestHoles -> Sugar.Tag (Name f) f ->
+    m (WithTextPos (Widget (f GuiState.Update)))
 makeTagNameEdit nearestHoles tag =
     do
         keys <- Lens.view Config.config <&> Config.menu <&> Menu.keysPickOptionAndGotoNext
@@ -75,7 +75,7 @@ makeTagNameEdit nearestHoles tag =
                 & maybe mempty
                   (E.keysEventMapMovesCursor keys
                    (E.Doc ["Navigation", "Jump to next hole"]) .
-                   return . WidgetIds.fromEntityId)
+                   pure . WidgetIds.fromEntityId)
         NameEdit.makeBareEdit
             (tag ^. Sugar.tagName & Name.setName .~ setTagName tag)
             (tagRenameId myId)
@@ -173,10 +173,10 @@ allowedSearchTerm = Text.all Char.isAlphaNum
 makeHoleSearchTerm ::
     ( MonadReader env m, GuiState.HasState env, HasConfig env, TextEdit.HasStyle env
     , HasTheme env, Element.HasAnimIdPrefix env, HasStdSpacing env, Hover.HasStyle env
-    , Monad f
+    , Applicative f
     ) =>
-    NearestHoles -> Sugar.Tag (Name (T f)) (T f) ->
-    m (WithTextPos (Widget (T f GuiState.Update)))
+    NearestHoles -> Sugar.Tag (Name f) f ->
+    m (WithTextPos (Widget (f GuiState.Update)))
 makeHoleSearchTerm nearestHoles tag =
     do
         searchTerm <- SearchMenu.readSearchTerm holeId
@@ -357,14 +357,13 @@ makeParamTag tag =
 
 -- | Unfocusable tag view (e.g: in apply args)
 makeArgTag ::
-    ( MonadReader env f, HasTheme env, TextView.HasStyle env
-    , Element.HasAnimIdPrefix env
-    ) => Name (T m) -> Sugar.EntityId -> f (WithTextPos View)
+    (MonadReader env m, HasTheme env, TextView.HasStyle env, Element.HasAnimIdPrefix env) =>
+    Name f -> Sugar.EntityId -> m (WithTextPos View)
 makeArgTag name tagInstance =
     do
         nameTheme <- Lens.view Theme.theme <&> Theme.name
         NameEdit.makeView (name ^. Name.form)
-            & Reader.local (Element.animIdPrefix .~ animId)
             & Reader.local (TextView.color .~ Theme.paramTagColor nameTheme)
+    & Reader.local (Element.animIdPrefix .~ animId)
     where
         animId = WidgetIds.fromEntityId tagInstance & Widget.toAnimId
