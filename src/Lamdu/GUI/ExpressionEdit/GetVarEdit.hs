@@ -16,6 +16,7 @@ import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Font (Underline(..))
 import           GUI.Momentu.Glue ((/-/))
 import qualified GUI.Momentu.Hover as Hover
+import           GUI.Momentu.Responsive (Responsive)
 import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.Responsive.Options as Options
 import qualified GUI.Momentu.State as GuiState
@@ -57,11 +58,11 @@ makeSimpleView (Name name _) myId =
     <*> NameEdit.makeView name
 
 makeParamsRecord ::
-    ( Monad m, MonadReader env f, HasTheme env, GuiState.HasCursor env
-    , TextView.HasStyle env, Element.HasAnimIdPrefix env
-    , Spacer.HasStdSpacing env
+    ( MonadReader env m, HasTheme env, GuiState.HasCursor env
+    , TextView.HasStyle env, Element.HasAnimIdPrefix env, Spacer.HasStdSpacing env
+    , Applicative f
     ) =>
-    Widget.Id -> Sugar.ParamsRecordVarRef (Name (T m)) -> f (ExpressionGui m)
+    Widget.Id -> Sugar.ParamsRecordVarRef (Name f) -> m (Responsive (f GuiState.Update))
 makeParamsRecord myId paramsRecordVar =
     do
         nameTheme <- Lens.view Theme.theme <&> Theme.name
@@ -106,27 +107,27 @@ makeNameRef myId nameRef maker =
         nameId = Widget.joinId myId ["name"]
 
 makeInlineEventMap ::
-    Monad m =>
-    Config -> Sugar.BinderVarInline (T m) ->
-    EventMap (T m GuiState.Update)
+    Applicative f =>
+    Config -> Sugar.BinderVarInline f ->
+    EventMap (f GuiState.Update)
 makeInlineEventMap config (Sugar.InlineVar inline) =
     inline <&> WidgetIds.fromEntityId
     & E.keysEventMapMovesCursor (Config.inlineKeys config)
       (E.Doc ["Edit", "Inline"])
 makeInlineEventMap config (Sugar.CannotInlineDueToUses (x:_)) =
-    WidgetIds.fromEntityId x & return
+    WidgetIds.fromEntityId x & pure
     & E.keysEventMapMovesCursor (Config.inlineKeys config)
       (E.Doc ["Navigation", "Jump to next use"])
 makeInlineEventMap _ _ = mempty
 
 definitionTypeChangeBox ::
-    ( Monad m, MonadReader env f, MonadTransaction n f
+    ( MonadReader env m, MonadTransaction n m
     , Element.HasAnimIdPrefix env, TextView.HasStyle env
     , Spacer.HasStdSpacing env, HasTheme env, GuiState.HasCursor env
-    , HasConfig env
+    , HasConfig env, Applicative f
     ) =>
-    Sugar.DefinitionOutdatedType (T m) -> Widget.Id ->
-    f (WithTextPos (Widget (T m GuiState.Update)))
+    Sugar.DefinitionOutdatedType f -> Widget.Id ->
+    m (WithTextPos (Widget (f GuiState.Update)))
 definitionTypeChangeBox info getVarId =
     do
         headerLabel <- TextView.makeLabel "Type was:"
@@ -140,7 +141,7 @@ definitionTypeChangeBox info getVarId =
         config <- Lens.view Config.config
         -- TODO: unify config's button press keys
         let keys = Config.newDefinitionButtonPressKeys (Config.pane config)
-        let update = (info ^. Sugar.defTypeUseCurrent) >> return getVarId
+        let update = getVarId <$ info ^. Sugar.defTypeUseCurrent
         headerLabel /-/ typeWhenUsed /-/ spacing /-/ sepLabel /-/ typeCurrent
             & Align.tValue %~ Widget.weakerEvents
             (E.keysEventMapMovesCursor keys
@@ -154,13 +155,14 @@ definitionTypeChangeBox info getVarId =
         animId = Widget.toAnimId myId
 
 processDefinitionWidget ::
-    ( Monad m, MonadReader env f, MonadTransaction n f, Spacer.HasStdSpacing env
+    ( MonadReader env m, MonadTransaction n m, Spacer.HasStdSpacing env
     , HasTheme env, Element.HasAnimIdPrefix env, HasConfig env
     , TextView.HasStyle env, GuiState.HasCursor env, Hover.HasStyle env
+    , Applicative f
     ) =>
-    Sugar.DefinitionForm (T m) -> Widget.Id ->
-    f (WithTextPos (Widget (T m GuiState.Update))) ->
-    f (WithTextPos (Widget (T m GuiState.Update)))
+    Sugar.DefinitionForm f -> Widget.Id ->
+    m (WithTextPos (Widget (f GuiState.Update))) ->
+    m (WithTextPos (Widget (f GuiState.Update)))
 processDefinitionWidget Sugar.DefUpToDate _myId mkLayout = mkLayout
 processDefinitionWidget Sugar.DefDeleted _myId mkLayout =
     (Styled.addDeletionDiagonal ?? 0.1)
@@ -180,7 +182,7 @@ processDefinitionWidget (Sugar.DefTypeChanged info) myId mkLayout =
                 ( Hover.hoverBeside Align.tValue ?? layout )
                 <*>
                 ( definitionTypeChangeBox info myId <&> (^. Align.tValue) )
-            else return layout
+            else pure layout
 
 makeGetBinder ::
     Monad m =>
