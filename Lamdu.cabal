@@ -202,7 +202,7 @@ Executable lamdu
                   , Lamdu.GUI.ExpressionEdit.GetVarEdit
                   , Lamdu.GUI.ExpressionEdit.GuardEdit
                   , Lamdu.GUI.ExpressionEdit.HoleEdit
-                  , Lamdu.GUI.ExpressionEdit.HoleEdit.LiteralText
+                  , Lamdu.GUI.ExpressionEdit.HoleEdit.Literal
                   , Lamdu.GUI.ExpressionEdit.HoleEdit.ResultGroups
                   , Lamdu.GUI.ExpressionEdit.HoleEdit.ResultWidget
                   , Lamdu.GUI.ExpressionEdit.HoleEdit.SearchArea

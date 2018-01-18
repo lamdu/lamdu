@@ -11,7 +11,7 @@ import qualified GUI.Momentu.State as GuiState
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Menu as Menu
 import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
-import           Lamdu.GUI.ExpressionEdit.HoleEdit.LiteralText (makeLiteralTextEventMap)
+import           Lamdu.GUI.ExpressionEdit.HoleEdit.Literal (makeLiteralEventMap)
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.SearchArea as SearchArea
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds (WidgetIds(..))
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds as HoleWidgetIds
@@ -59,7 +59,7 @@ make hole pl =
     <&> Widget.widget . Widget.eventMapMaker . Lens.mapped %~ (<> txtEventMap)
     & GuiState.assignCursor (hidHole widgetIds) (hidOpen widgetIds)
     where
-        txtEventMap = makeLiteralTextEventMap hole
+        txtEventMap = makeLiteralEventMap hole
         widgetIds = HoleWidgetIds.make (pl ^. Sugar.plEntityId)
         options =
             ExprEventMap.defaultOptions
