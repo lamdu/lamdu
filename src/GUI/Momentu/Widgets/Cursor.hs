@@ -9,6 +9,7 @@ module GUI.Momentu.Widgets.Cursor
     ) where
 
 import           Data.Vector.Vector2 (Vector2)
+import qualified Data.Vector.Vector2 as Vector2
 import qualified GUI.Momentu.Animation as Anim
 import           GUI.Momentu.Direction (Direction(..))
 import qualified GUI.Momentu.Element as Element
@@ -54,6 +55,16 @@ render Config{cursorColor} w =
                 , Widget._ePrevTextRemainder = mempty
                 }
             area = last (r ^. Widget.fFocalAreas)
+            frameWidth = 5
+            opacity = 0.5 * max 0 (1 - 40 * Vector2.uncurry (*) (area ^. Rect.size / w ^. Widget.wSize))
             cursorFrame =
-                Anim.backgroundColor ["cursor-background"] cursorColor (area ^. Rect.size)
+                ( Anim.backgroundColor ["cursor-background"] cursorColor (area ^. Rect.size - frameWidth * 2)
+                    & Anim.translate frameWidth
+                    & Anim.unitImages %~ Draw.tint (Draw.Color 1 1 1 opacity)
+                )
+                <>
+                ( Anim.emptyRectangle frameWidth (area ^. Rect.size) ["cursor-frame"]
+                    & Anim.unitImages %~ Draw.tint cursorColor
+                    & Anim.unitImages %~ Draw.tint (Draw.Color 1 1 1 (1 - opacity))
+                )
                 & Anim.translate (area ^. Rect.topLeft)
