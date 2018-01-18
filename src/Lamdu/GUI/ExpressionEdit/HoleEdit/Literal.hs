@@ -5,7 +5,6 @@ module Lamdu.GUI.ExpressionEdit.HoleEdit.Literal
     ) where
 
 import           Data.Functor.Identity (Identity(..))
-import           Data.Store.Transaction (Transaction)
 import           GUI.Momentu (MetaKey(..))
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
@@ -16,8 +15,6 @@ import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
 
-type T = Transaction
-
 toLiteralTextKeys :: [MetaKey]
 toLiteralTextKeys =
     [ MetaKey.shift MetaKey.Key'Apostrophe
@@ -25,9 +22,9 @@ toLiteralTextKeys =
     ]
 
 makeLiteralEventMap ::
-    Monad m =>
-    Sugar.Hole (T m) (Sugar.Expression name (T m) a) ->
-    EventMap (T m GuiState.Update)
+    Monad f =>
+    Sugar.Hole f (Sugar.Expression name f a) ->
+    EventMap (f GuiState.Update)
 makeLiteralEventMap hole =
     do
         (_score, mkResult) <- Sugar.LiteralText (Identity "") & hole ^. Sugar.holeOptionLiteral
