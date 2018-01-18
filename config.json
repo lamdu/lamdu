@@ -38,9 +38,9 @@
         "completionOpenKeys"        : [ "Space", "Enter" ],
         "completionCloseKeys"       : [ "Escape", "Cmd+LeftBracket" ]
     },
-    "literalText": {
-        "literalTextStartEditingKeys" : [ "Enter", "Shift+Right" ],
-        "literalTextStopEditingKeys"  : [ "Escape", "Shift+Left" ]
+    "literal": {
+        "literalStartEditingKeys" : [ "Enter", "Shift+Right" ],
+        "literalStopEditingKeys"  : [ "Escape", "Shift+Left" ]
     },
     "eval": {
         "prevScopeKeys": [ "Cmd+Up" ],

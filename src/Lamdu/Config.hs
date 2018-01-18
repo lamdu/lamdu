@@ -4,7 +4,7 @@ module Lamdu.Config
     ( Export(..), Pane(..), Completion(..)
     , Debug(..)
     , Eval(..)
-    , LiteralText(..)
+    , Literal(..)
     , Config(..)
     , HasConfig(..)
     , delKeys
@@ -54,11 +54,11 @@ data Eval = Eval
     } deriving (Eq, Show)
 deriveJSON defaultOptions ''Eval
 
-data LiteralText = LiteralText
-    { literalTextStartEditingKeys :: [MetaKey]
-    , literalTextStopEditingKeys :: [MetaKey]
+data Literal = Literal
+    { literalStartEditingKeys :: [MetaKey]
+    , literalStopEditingKeys :: [MetaKey]
     } deriving (Eq, Show)
-deriveJSON defaultOptions ''LiteralText
+deriveJSON defaultOptions ''Literal
 
 data Debug = Debug
     { debugShowFPS :: Bool
@@ -72,7 +72,7 @@ data Config = Config
     , pane :: Pane
     , versionControl :: VersionControl.Config
     , completion :: Completion
-    , literalText :: LiteralText
+    , literal :: Literal
     , eval :: Eval
     , debug :: Debug
     , menu :: Menu.Keys

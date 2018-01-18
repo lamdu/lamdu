@@ -79,13 +79,23 @@ genericEdit whichStyle prop pl =
             _ -> error "Cannot set literal to hole?!"
         valText = prop ^. Property.pVal & format
 
-fdConfig :: Config.LiteralText -> FocusDelegator.Config
-fdConfig conf = FocusDelegator.Config
-    { FocusDelegator.focusChildKeys = Config.literalTextStartEditingKeys conf
-    , FocusDelegator.focusChildDoc = E.Doc ["Edit", "Literal Text", "Start editing"]
-    , FocusDelegator.focusParentKeys = Config.literalTextStopEditingKeys conf
-    , FocusDelegator.focusParentDoc = E.Doc ["Edit", "Literal Text", "Stop editing"]
+fdConfig :: Config.Literal -> FocusDelegator.Config
+fdConfig conf =
+    FocusDelegator.Config
+    { FocusDelegator.focusChildKeys = Config.literalStartEditingKeys conf
+    , FocusDelegator.focusChildDoc = E.Doc ["Edit", "Literal", "Start editing"]
+    , FocusDelegator.focusParentKeys = Config.literalStopEditingKeys conf
+    , FocusDelegator.focusParentDoc = E.Doc ["Edit", "Literal", "Stop editing"]
     }
+
+withFd ::
+    (MonadReader env m, HasConfig env, GuiState.HasCursor env, Applicative f) =>
+    m (Widget.Id -> WithTextPos (Widget (f GuiState.Update)) -> WithTextPos (Widget (f GuiState.Update)))
+withFd =
+    do
+        config <- Lens.view Config.config <&> Config.literal
+        FocusDelegator.make ?? fdConfig config ?? FocusDelegator.FocusEntryParent
+    <&> Lens.mapped %~ (Align.tValue %~)
 
 textEdit ::
     ( Monad m, MonadReader env f, HasConfig env, HasStyle env
@@ -96,17 +106,12 @@ textEdit ::
     f (WithTextPos (Widget (T m GuiState.Update)))
 textEdit prop pl =
     do
-        config <- Lens.view Config.config <&> Config.literalText
         left <- TextView.makeLabel "“"
         text <- TextEdits.make ?? empty ?? prop ?? innerId
         right <-
             TextView.makeLabel "„"
             <&> Element.padToSizeAlign (text ^. Element.size & _1 .~ 0) 1
-        left /|/ text /|/ right
-            & Align.tValue %%~
-                (FocusDelegator.make ?? fdConfig config
-                ?? FocusDelegator.FocusEntryParent
-                ?? myId ??)
+        withFd ?? myId ?? left /|/ text /|/ right
     & withStyle Style.styleText
     where
         empty = TextEdit.EmptyStrings "" ""
