@@ -5,11 +5,12 @@ module Lamdu.GUI.ExpressionEdit.HoleEdit.Literal
     ) where
 
 import           Data.Functor.Identity (Identity(..))
-import           GUI.Momentu (MetaKey(..))
+import           GUI.Momentu (MetaKey(..), WidgetId)
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.MetaKey as MetaKey
 import qualified GUI.Momentu.State as GuiState
+import qualified Lamdu.CharClassification as Chars
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.Sugar.Types as Sugar
 
@@ -21,13 +22,14 @@ toLiteralTextKeys =
     , MetaKey MetaKey.noMods MetaKey.Key'Apostrophe
     ]
 
-makeLiteralEventMap ::
+makeLiteral ::
     Monad f =>
-    Sugar.Hole f (Sugar.Expression name f a) ->
-    EventMap (f GuiState.Update)
-makeLiteralEventMap hole =
+    Sugar.OptionLiteral f (Sugar.Expression name f a) ->
+    Sugar.Literal Identity ->
+    f WidgetId
+makeLiteral optionLiteral lit =
     do
-        (_score, mkResult) <- Sugar.LiteralText (Identity "") & hole ^. Sugar.holeOptionLiteral
+        (_score, mkResult) <- optionLiteral lit
         result <- mkResult
         result ^. Sugar.holeResultPick
         case result ^? Sugar.holeResultConverted . Sugar.rBody . Sugar._BodyFragment . Sugar.fExpr of
@@ -35,6 +37,16 @@ makeLiteralEventMap hole =
             _ -> result ^. Sugar.holeResultConverted
             ^. Sugar.rPayload . Sugar.plEntityId
             & WidgetIds.fromEntityId
-            & WidgetIds.literalTextEditOf
+            & WidgetIds.literalEditOf
             & pure
-    & E.keysEventMapMovesCursor toLiteralTextKeys (E.Doc ["Edit", "Create Text Literal"])
+
+makeLiteralEventMap ::
+    Monad f =>
+    Sugar.OptionLiteral f (Sugar.Expression name f a) ->
+    EventMap (f GuiState.Update)
+makeLiteralEventMap optionLiteral =
+    E.keysEventMapMovesCursor toLiteralTextKeys (E.Doc ["Edit", "Literal Text"])
+    (makeLiteral optionLiteral (Sugar.LiteralText (Identity "")))
+    <>
+    E.charGroup (Just "Digit") (E.Doc ["Edit", "Literal Number"]) Chars.digit
+    (fmap GuiState.updateCursor . makeLiteral optionLiteral . Sugar.LiteralNum . Identity . read . (: []))

@@ -5,7 +5,7 @@ module GUI.Momentu.Widgets.TextEdit
     , EmptyStrings(..), emptyFocusedString, emptyUnfocusedString
     , make
     , defaultStyle
-    , getCursor
+    , getCursor, encodeCursor
     ) where
 
 import qualified Control.Lens as Lens

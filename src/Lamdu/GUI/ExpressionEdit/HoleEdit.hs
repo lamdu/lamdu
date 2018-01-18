@@ -10,6 +10,7 @@ import qualified Data.Text as Text
 import qualified GUI.Momentu.State as GuiState
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Menu as Menu
+import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
 import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.Literal (makeLiteralEventMap)
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.SearchArea as SearchArea
@@ -52,14 +53,19 @@ make ::
     Sugar.Payload (T m) ExprGui.Payload ->
     ExprGuiM m (ExpressionGui m)
 make hole pl =
-    ExprEventMap.add options pl
-    <*> ( SearchArea.make (hole ^. Sugar.holeOptions)
-            (Just (hole ^. Sugar.holeOptionLiteral)) pl allowedHoleSearchTerm ?? Menu.AnyPlace
-        )
-    <&> Widget.widget . Widget.eventMapMaker . Lens.mapped %~ (<> txtEventMap)
-    & GuiState.assignCursor (hidHole widgetIds) (hidOpen widgetIds)
+    do
+        searchTerm <- SearchMenu.readSearchTerm searchMenuId
+        let litEventMap
+                | searchTerm == "" = makeLiteralEventMap (hole ^. Sugar.holeOptionLiteral)
+                | otherwise = mempty
+        ExprEventMap.add options pl
+            <*> ( SearchArea.make (hole ^. Sugar.holeOptions)
+                    (Just (hole ^. Sugar.holeOptionLiteral)) pl allowedHoleSearchTerm ?? Menu.AnyPlace
+                )
+            <&> Widget.widget . Widget.eventMapMaker . Lens.mapped %~ (litEventMap <>)
+    & GuiState.assignCursor (hidHole widgetIds) searchMenuId
     where
-        txtEventMap = makeLiteralEventMap hole
+        searchMenuId = hidOpen widgetIds
         widgetIds = HoleWidgetIds.make (pl ^. Sugar.plEntityId)
         options =
             ExprEventMap.defaultOptions

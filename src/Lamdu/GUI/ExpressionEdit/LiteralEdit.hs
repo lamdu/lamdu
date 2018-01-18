@@ -3,11 +3,13 @@ module Lamdu.GUI.ExpressionEdit.LiteralEdit
     ( make
     ) where
 
+import           Control.Applicative (liftA2)
 import           Control.Lens (LensLike')
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
 import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
+import qualified Data.Text as Text
 import           GUI.Momentu.Align (WithTextPos)
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Element as Element
@@ -21,6 +23,7 @@ import qualified GUI.Momentu.State as GuiState
 import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.FocusDelegator as FocusDelegator
+import qualified GUI.Momentu.Widgets.Menu as Menu
 import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
 import qualified GUI.Momentu.Widgets.TextEdit.Property as TextEdits
@@ -36,6 +39,7 @@ import           Lamdu.GUI.ExpressionGui.Wrap (stdWrap)
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Style (Style, HasStyle)
 import qualified Lamdu.Style as Style
+import qualified Lamdu.Sugar.NearestHoles as NearestHoles
 import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
@@ -47,7 +51,6 @@ mkEditEventMap ::
     Text -> T m Sugar.EntityId ->
     EventMap (T m GuiState.Update)
 mkEditEventMap valText setToHole =
-    -- TODO: literal edits rather than opening a hole..
     setToHole <&> HoleWidgetIds.make <&> HoleWidgetIds.hidOpen
     <&> SearchMenu.enterWithSearchTerm valText
     & E.keyPresses [ModKey mempty MetaKey.Key'Enter] (E.Doc ["Edit", "Value"])
@@ -79,35 +82,44 @@ genericEdit whichStyle prop pl =
             _ -> error "Cannot set literal to hole?!"
         valText = prop ^. Property.pVal & format
 
-fdConfig :: Config.Literal -> FocusDelegator.Config
-fdConfig conf =
+fdConfig :: (MonadReader env m, HasConfig env, Menu.HasConfig env) => m FocusDelegator.Config
+fdConfig =
+    (,)
+    <$> (Lens.view Config.config <&> Config.literal)
+    <*> (Lens.view Menu.config <&> Menu.configKeys)
+    <&>
+    \(litConf, menuKeys) ->
     FocusDelegator.Config
-    { FocusDelegator.focusChildKeys = Config.literalStartEditingKeys conf
+    { FocusDelegator.focusChildKeys = Config.literalStartEditingKeys litConf
     , FocusDelegator.focusChildDoc = E.Doc ["Edit", "Literal", "Start editing"]
-    , FocusDelegator.focusParentKeys = Config.literalStopEditingKeys conf
+    , FocusDelegator.focusParentKeys =
+        Config.literalStopEditingKeys litConf
+        -- The literal edit should behave like holes, in that the "pick option"
+        -- key goes to the resulting expr.
+        <> Menu.keysPickOption menuKeys
     , FocusDelegator.focusParentDoc = E.Doc ["Edit", "Literal", "Stop editing"]
     }
 
 withFd ::
-    (MonadReader env m, HasConfig env, GuiState.HasCursor env, Applicative f) =>
+    ( MonadReader env m, HasConfig env, GuiState.HasCursor env, Menu.HasConfig env
+    , Applicative f
+    ) =>
     m (Widget.Id -> WithTextPos (Widget (f GuiState.Update)) -> WithTextPos (Widget (f GuiState.Update)))
 withFd =
-    do
-        config <- Lens.view Config.config <&> Config.literal
-        FocusDelegator.make ?? fdConfig config ?? FocusDelegator.FocusEntryParent
+    (FocusDelegator.make <*> fdConfig ?? FocusDelegator.FocusEntryParent)
     <&> Lens.mapped %~ (Align.tValue %~)
 
 textEdit ::
-    ( Monad m, MonadReader env f, HasConfig env, HasStyle env
-    , Element.HasAnimIdPrefix env, GuiState.HasCursor env
+    ( MonadReader env m, HasConfig env, HasStyle env, Menu.HasConfig env
+    , Element.HasAnimIdPrefix env, GuiState.HasCursor env, Monad f
     ) =>
-    Transaction.Property m Text ->
-    Sugar.Payload (T m) ExprGui.Payload ->
-    f (WithTextPos (Widget (T m GuiState.Update)))
+    Transaction.Property f Text ->
+    Sugar.Payload (T f) ExprGui.Payload ->
+    m (WithTextPos (Widget (T f GuiState.Update)))
 textEdit prop pl =
     do
         left <- TextView.makeLabel "“"
-        text <- TextEdits.make ?? empty ?? prop ?? innerId
+        text <- TextEdits.make ?? empty ?? prop ?? WidgetIds.literalEditOf myId
         right <-
             TextView.makeLabel "„"
             <&> Element.padToSizeAlign (text ^. Element.size & _1 .~ 0) 1
@@ -115,8 +127,101 @@ textEdit prop pl =
     & withStyle Style.styleText
     where
         empty = TextEdit.EmptyStrings "" ""
-        innerId = WidgetIds.literalTextEditOf myId
         myId = WidgetIds.fromExprPayload pl
+
+parseNum :: Text -> Maybe Double
+parseNum newText
+    | Text.null newText = Just 0
+    | otherwise = tryParse newText
+
+expandedNumText :: Double -> Text
+expandedNumText val
+    | Text.any (== '.') baseText = baseText
+    | otherwise = baseText <> "."
+    where
+        baseText = format val
+
+numEdit ::
+    ( MonadReader env m, HasConfig env, HasStyle env, Menu.HasConfig env
+    , Element.HasAnimIdPrefix env, GuiState.HasCursor env, Monad f
+    ) =>
+    Transaction.Property f Double ->
+    Sugar.Payload (T f) ExprGui.Payload ->
+    m (WithTextPos (Widget (T f GuiState.Update)))
+numEdit prop pl =
+    do
+        (pos, text, remainderText) <-
+            do
+                cursor <- Lens.view GuiState.cursor
+                if cursor == innerId
+                    then
+                        let r = format curVal
+                        in pure (Text.length r, r, "")
+                    else
+                        TextEdit.getCursor ?? expandedText ?? innerId
+                        <&> fromMaybe 0
+                        <&> numState
+        let preEvent =
+                Widget.PreEvent
+                { Widget._pDesc = ""
+                , Widget._pAction = pure mempty
+                , Widget._pTextRemainder = remainderText
+                }
+        let negateEvent
+                -- '-' at last position should apply operator rather than negate
+                | pos /= Text.length text =
+                    GuiState.updateCursor (TextEdit.encodeCursor innerId (pos + round (signum curVal))) <$
+                    (prop ^. Property.pSet) (negate curVal)
+                    & const
+                    & E.charGroup Nothing (E.Doc ["Edit", "Literal", "Negate"]) "-"
+                | otherwise = mempty
+        nextEntryEvent <-
+            case pl ^. Sugar.plData . ExprGui.plNearestHoles . NearestHoles.next of
+            Nothing -> pure mempty
+            Just nextEntry ->
+                Lens.view Menu.config <&> Menu.configKeys <&> Menu.keysPickOptionAndGotoNext
+                <&>
+                \keys ->
+                WidgetIds.fromEntityId nextEntry & pure
+                & E.keysEventMapMovesCursor keys (E.Doc ["Navigation", "Next entry"])
+        (withFd ?? myId) <*>
+            ( (TextEdit.make ?? empty ?? text ?? innerId)
+                <&> Align.tValue . Widget.eventMapMaker . Lens.mapped %~
+                    -- Avoid taking keys that don't belong to us,
+                    -- so weakerEvents with them will work.
+                    E.filter (Lens.has Lens._Just . parseNum . fst)
+                <&> Align.tValue . Lens.mapped %~ event
+                <&> Align.tValue %~ Widget.strongerEvents (negateEvent <> delEvent <> nextEntryEvent)
+                <&> Align.tValue %~ Widget.addPreEventWith (liftA2 mappend) preEvent
+            )
+    & withStyle Style.styleNum
+    where
+        delEvent =
+            case pl ^. Sugar.plActions . Sugar.delete of
+            -- Allow to delete when number is zero.
+            Sugar.SetToHole action | curVal == 0 ->
+                action <&> HoleWidgetIds.make <&> HoleWidgetIds.hidOpen
+                <&> GuiState.updateCursor
+                & E.keyPresses [ModKey mempty MetaKey.Key'Backspace] (E.Doc ["Edit", "Value"])
+            _ -> mempty
+        expandedText = expandedNumText curVal
+        innerId = WidgetIds.literalEditOf myId
+        curVal = prop ^. Property.pVal
+        event (newText, update) =
+            case parseNum newText of
+            Nothing -> pure mempty
+            Just val ->
+                (if Text.null newText then mempty else update) <$
+                (prop ^. Property.pSet) val
+        empty = TextEdit.EmptyStrings "0" "0"
+        myId = WidgetIds.fromExprPayload pl
+        numState pos
+            | "." `Text.isSuffixOf` expandedText =
+                if pos == Text.length expandedText
+                then (pos, expandedText, ".")
+                else (pos, Text.init expandedText, "")
+            | otherwise =
+                (pos, expandedText, "")
 
 make ::
     Monad m =>
@@ -126,6 +231,6 @@ make lit pl =
     stdWrap pl
     <*>
     case lit of
-    Sugar.LiteralNum x -> genericEdit Style.styleNum x pl
+    Sugar.LiteralNum x -> numEdit x pl <&> Responsive.fromWithTextPos
     Sugar.LiteralBytes x -> genericEdit Style.styleBytes x pl
     Sugar.LiteralText x -> textEdit x pl <&> Responsive.fromWithTextPos

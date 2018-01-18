@@ -31,8 +31,8 @@ fromExprPayload pl = fromEntityId (pl ^. Sugar.plEntityId)
 nameEditOf :: Id -> Id
 nameEditOf = flip WidgetId.joinId ["name edit"]
 
-literalTextEditOf :: Id -> Id
-literalTextEditOf = flip WidgetId.joinId ["literal text edit"]
+literalEditOf :: Id -> Id
+literalEditOf = flip WidgetId.joinId ["literal edit"]
 
 fromUUID :: UUID -> Id
 fromUUID = fromBS . UUIDUtils.toSBS16
