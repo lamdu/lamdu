@@ -4,12 +4,14 @@ module Lamdu.GUI.ExpressionEdit.RecordEdit
     ) where
 
 import qualified Control.Lens as Lens
+import qualified Control.Monad.Reader as Reader
 import qualified Data.Char as Char
 import qualified Data.Text as Text
 import           Data.Store.Transaction (Transaction)
 import           Data.Vector.Vector2 (Vector2(..))
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Animation as Anim
+import           GUI.Momentu.Animation.Id (augmentId)
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
@@ -22,6 +24,7 @@ import qualified GUI.Momentu.View as View
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
+import qualified GUI.Momentu.Widgets.TextView as TextView
 import           Lamdu.Config (HasConfig)
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Config.Theme as Theme
@@ -109,7 +112,9 @@ make (Sugar.Composite fields recordTail addField) pl =
             Sugar.OpenComposite actions restExpr ->
                 openRecordEventMap actions restExpr
         stdWrapParentExpr pl
-            <*> makeRecord fields addFieldEventMap postProcess
+            <*> ( makeRecord fields addFieldEventMap postProcess
+                    <&> Widget.weakerEvents goToRecordEventMap
+                )
             <&> Widget.weakerEvents (addFieldEventMap <> tailEventMap)
     where
         postProcess =
@@ -117,6 +122,9 @@ make (Sugar.Composite fields recordTail addField) pl =
             Sugar.OpenComposite actions restExpr ->
                 makeOpenRecord actions restExpr
             _ -> pure
+        goToRecordEventMap =
+            WidgetIds.fromExprPayload pl & GuiState.updateCursor & pure & const
+            & E.charGroup Nothing (E.Doc ["Navigation", "Go to parent"]) "}"
 
 makeRecord ::
     Monad m =>
@@ -128,17 +136,33 @@ makeRecord fields addFieldEventMap postProcess =
     Styled.addValFrame <*>
     do
         opener <- Styled.grammarLabel "{"
-        closer <- Styled.grammarLabel "}"
         case fields of
-            [] -> Responsive.fromTextView closer & pure
+            [] -> Styled.grammarLabel "}" <&> Responsive.fromTextView
             _ ->
                 Responsive.taggedList
-                <*> ( mapM makeFieldRow fields
-                    <&> Lens.reversed . Lens.ix 0 . Responsive.tagPost .~ (closer <&> Widget.fromView)
-                    )
+                <*> (mapM makeFieldRow fields >>= addPostTags)
                 >>= postProcess
                 <&> Widget.weakerEvents addFieldEventMap
             <&> (opener /|/)
+
+addPostTags ::
+    ( MonadReader env m, Theme.HasTheme env, TextView.HasStyle env, Element.HasAnimIdPrefix env
+    , Functor f
+    ) =>
+    [Responsive.TaggedItem (f GuiState.Update)] -> m [Responsive.TaggedItem (f GuiState.Update)]
+addPostTags items =
+    items
+    & zipWith f [0 :: Int ..]
+    & sequenceA
+    where
+        f idx item =
+            Styled.grammarLabel txt
+            & Reader.local (Element.animIdPrefix %~ (`augmentId` idx))
+            <&> \label -> item & Responsive.tagPost .~ (label <&> Widget.fromView)
+            where
+                txt | idx < lastIdx = ","
+                    | otherwise = "}"
+        lastIdx = length items - 1
 
 makeFieldRow ::
     Monad m =>
