@@ -171,7 +171,7 @@ numEdit prop pl =
         let negateEvent
                 -- '-' at last position should apply operator rather than negate
                 | pos /= Text.length text =
-                    GuiState.updateCursor (TextEdit.encodeCursor innerId (pos + round (signum curVal))) <$
+                    setPos (pos + round (signum curVal)) <$
                     (prop ^. Property.pSet) (negate curVal)
                     & const
                     & E.charGroup Nothing (E.Doc ["Edit", "Literal", "Negate"]) "-"
@@ -190,24 +190,29 @@ numEdit prop pl =
                     -- Avoid taking keys that don't belong to us,
                     -- so weakerEvents with them will work.
                     E.filter (Lens.has Lens._Just . parseNum . fst)
-                <&> Align.tValue . Lens.mapped %~ event
+                <&> Align.tValue . Lens.mapped %~ event pos
                 <&> Align.tValue %~ Widget.strongerEvents (negateEvent <> nextEntryEvent)
                 <&> Align.tValue %~ Widget.addPreEventWith (liftA2 mappend) preEvent
             )
     & withStyle Style.styleNum
     where
+        setPos newPos =
+            TextEdit.encodeCursor innerId newPos & GuiState.updateCursor
         expandedText = expandedNumText curVal
         innerId = WidgetIds.literalEditOf myId
         curVal = prop ^. Property.pVal
-        event (newText, update)
+        event pos (newText, update)
             | Text.null newText =
                 pl ^? Sugar.plActions . Sugar.delete . Lens.failing Sugar._SetToHole Sugar._Delete
                 <&> fmap WidgetIds.fromEntityId <&> fmap GuiState.updateCursor
                 & fromMaybe mempty
             | otherwise =
-                case parseNum newText of
-                Nothing -> pure mempty
-                Just val -> update <$ (prop ^. Property.pSet) val
+                case (parseNum newText, curVal, pos) of
+                (Nothing, _, _) -> pure mempty
+                -- Converting "0" to "01" thus "1", the pos should
+                -- remain at 1:
+                (Just val, 0, 1) -> setPos 1 <$ Property.set prop val
+                (Just val, _, _) -> update   <$ Property.set prop val
         empty = TextEdit.EmptyStrings "0" "0"
         myId = WidgetIds.fromExprPayload pl
         numState pos
