@@ -97,6 +97,9 @@ fdConfig =
         -- The literal edit should behave like holes, in that the "pick option"
         -- key goes to the resulting expr.
         <> Menu.keysPickOption menuKeys
+        -- Only taken when the literal edit doesn't handle it by
+        -- jumping to next entry:
+        <> Menu.keysPickOptionAndGotoNext menuKeys
     , FocusDelegator.focusParentDoc = E.Doc ["Edit", "Literal", "Stop editing"]
     }
 
