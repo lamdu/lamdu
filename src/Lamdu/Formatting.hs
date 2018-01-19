@@ -44,7 +44,9 @@ instance Format ByteString where
 instance Format Double where
     tryParse searchTerm
         | "." `Text.isPrefixOf` searchTerm =
-              readMaybe ('0':Text.unpack searchTerm)
+            readMaybe ('0':Text.unpack searchTerm)
+        | "-." `Text.isPrefixOf` searchTerm =
+            tryParse (Text.tail searchTerm) <&> negate
         | otherwise =
             case reads (Text.unpack searchTerm) of
             [(val, "")] -> Just val

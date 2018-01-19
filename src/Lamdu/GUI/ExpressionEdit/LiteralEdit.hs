@@ -134,19 +134,12 @@ textEdit prop pl =
 
 parseNum :: Text -> Maybe Double
 parseNum newText
-    | Text.null newText = Just 0
+    | newText `elem` ["", "-", ".", "-."] = Just 0
     | otherwise = tryParse newText
-
-expandedNumText :: Double -> Text
-expandedNumText val
-    | Text.any (== '.') baseText = baseText
-    | otherwise = baseText <> "."
-    where
-        baseText = format val
 
 numEdit ::
     ( MonadReader env m, HasConfig env, HasStyle env, Menu.HasConfig env
-    , Element.HasAnimIdPrefix env, GuiState.HasCursor env, Monad f
+    , Element.HasAnimIdPrefix env, GuiState.HasState env, Monad f
     ) =>
     Transaction.Property f Double ->
     Sugar.Payload (T f) ExprGui.Payload ->
@@ -154,27 +147,23 @@ numEdit ::
 numEdit prop pl =
     (withFd ?? myId) <*>
     do
-        (pos, text, remainderText) <-
-            do
-                cursor <- Lens.view GuiState.cursor
-                if cursor == innerId
-                    then
-                        let r = format curVal
-                        in pure (Text.length r, r, "")
-                    else
-                        TextEdit.getCursor ?? expandedText ?? innerId
-                        <&> fromMaybe 0
-                        <&> numState
+        text <- GuiState.readWidgetState myId <&> fromMaybe (format (prop ^. Property.pVal))
         let preEvent =
                 Widget.PreEvent
                 { Widget._pDesc = ""
                 , Widget._pAction = pure mempty
-                , Widget._pTextRemainder = remainderText
+                , Widget._pTextRemainder = if "." `Text.isSuffixOf` text then "." else ""
                 }
+        pos <- TextEdit.getCursor ?? text ?? innerId <&> fromMaybe (Text.length text)
+        let negateText
+                | "-" `Text.isPrefixOf` text = Text.tail text
+                | otherwise = "-" <> text
         let negateEvent
                 -- '-' at last position should apply operator rather than negate
                 | pos /= Text.length text =
-                    setPos (pos + round (signum curVal)) <$
+                    setPos (pos + Text.length negateText - Text.length text)
+                    <> GuiState.updateWidgetState myId negateText
+                    <$
                     (prop ^. Property.pSet) (negate curVal)
                     & const
                     & E.charGroup Nothing (E.Doc ["Edit", "Literal", "Negate"]) "-"
@@ -188,51 +177,32 @@ numEdit prop pl =
                 \keys ->
                 WidgetIds.fromEntityId nextEntry & pure
                 & E.keysEventMapMovesCursor keys (E.Doc ["Navigation", "Next entry"])
+        let delEvent =
+                case pl ^? Sugar.plActions . Sugar.delete . Lens.failing Sugar._SetToHole Sugar._Delete of
+                -- Allow to delete when text is empty
+                Just action | Text.null text ->
+                    action <&> WidgetIds.fromEntityId <&> GuiState.updateCursor
+                    & E.keyPresses [ModKey mempty MetaKey.Key'Backspace] (E.Doc ["Edit", "Value"])
+                _ -> mempty
         ( (TextEdit.make ?? empty ?? text ?? innerId)
                 <&> Align.tValue . Widget.eventMapMaker . Lens.mapped %~
                     -- Avoid taking keys that don't belong to us,
                     -- so weakerEvents with them will work.
                     E.filter (Lens.has Lens._Just . parseNum . fst)
-                <&> Align.tValue . Lens.mapped %~ event pos
+                <&> Align.tValue . Lens.mapped %~ event
                 <&> Align.tValue %~ Widget.strongerEvents (negateEvent <> delEvent <> nextEntryEvent)
                 <&> Align.tValue %~ Widget.addPreEventWith (liftA2 mappend) preEvent
             )
     & withStyle Style.styleNum
     where
-        setPos newPos =
-            TextEdit.encodeCursor innerId newPos & GuiState.updateCursor
-        delEvent =
-            case pl ^? Sugar.plActions . Sugar.delete . Lens.failing Sugar._SetToHole Sugar._Delete of
-            -- Allow to delete when number is zero.
-            Just action | curVal == 0 ->
-                action <&> WidgetIds.fromEntityId <&> GuiState.updateCursor
-                & E.keyPresses [ModKey mempty MetaKey.Key'Backspace] (E.Doc ["Edit", "Value"])
-            _ -> mempty
-        expandedText = expandedNumText curVal
+        setPos newPos = TextEdit.encodeCursor innerId newPos & GuiState.updateCursor
         innerId = WidgetIds.literalEditOf myId
         curVal = prop ^. Property.pVal
-        event pos (newText, update)
-            | Text.null newText =
-                case pl ^. Sugar.plActions . Sugar.delete of
-                Sugar.SetToHole action ->
-                    action <&> WidgetIds.fromEntityId <&> GuiState.updateCursor
-                _ -> setPos 1 <$ Property.set prop 0
-            | otherwise =
-                case (parseNum newText, curVal, pos) of
-                (Nothing, _, _) -> pure mempty
-                -- Converting "0" to "01" thus "1", the pos should
-                -- remain at 1:
-                (Just val, 0, 1) | val /= 0 -> setPos 1 <$ Property.set prop val
-                (Just val, _, _) -> update <$ Property.set prop val
-        empty = TextEdit.EmptyStrings "0" "0"
+        event (newText, update) =
+            GuiState.updateWidgetState myId newText <> update <$
+            maybe (pure ()) (Property.set prop) (parseNum newText)
+        empty = TextEdit.EmptyStrings "0" ""
         myId = WidgetIds.fromExprPayload pl
-        numState pos
-            | "." `Text.isSuffixOf` expandedText =
-                if pos == Text.length expandedText
-                then (pos, expandedText, ".")
-                else (pos, Text.init expandedText, "")
-            | otherwise =
-                (pos, expandedText, "")
 
 make ::
     Monad m =>
