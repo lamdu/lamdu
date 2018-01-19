@@ -194,21 +194,29 @@ numEdit prop pl =
                     -- so weakerEvents with them will work.
                     E.filter (Lens.has Lens._Just . parseNum . fst)
                 <&> Align.tValue . Lens.mapped %~ event pos
-                <&> Align.tValue %~ Widget.strongerEvents (negateEvent <> nextEntryEvent)
+                <&> Align.tValue %~ Widget.strongerEvents (negateEvent <> delEvent <> nextEntryEvent)
                 <&> Align.tValue %~ Widget.addPreEventWith (liftA2 mappend) preEvent
             )
     & withStyle Style.styleNum
     where
         setPos newPos =
             TextEdit.encodeCursor innerId newPos & GuiState.updateCursor
+        delEvent =
+            case pl ^? Sugar.plActions . Sugar.delete . Lens.failing Sugar._SetToHole Sugar._Delete of
+            -- Allow to delete when number is zero.
+            Just action | curVal == 0 ->
+                action <&> WidgetIds.fromEntityId <&> GuiState.updateCursor
+                & E.keyPresses [ModKey mempty MetaKey.Key'Backspace] (E.Doc ["Edit", "Value"])
+            _ -> mempty
         expandedText = expandedNumText curVal
         innerId = WidgetIds.literalEditOf myId
         curVal = prop ^. Property.pVal
         event pos (newText, update)
             | Text.null newText =
-                pl ^? Sugar.plActions . Sugar.delete . Lens.failing Sugar._SetToHole Sugar._Delete
-                <&> fmap WidgetIds.fromEntityId <&> fmap GuiState.updateCursor
-                & fromMaybe mempty
+                case pl ^. Sugar.plActions . Sugar.delete of
+                Sugar.SetToHole action ->
+                    action <&> WidgetIds.fromEntityId <&> GuiState.updateCursor
+                _ -> setPos 1 <$ Property.set prop 0
             | otherwise =
                 case (parseNum newText, curVal, pos) of
                 (Nothing, _, _) -> pure mempty
