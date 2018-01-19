@@ -184,15 +184,14 @@ numEdit prop pl =
                     action <&> WidgetIds.fromEntityId <&> GuiState.updateCursor
                     & E.keyPresses [ModKey mempty MetaKey.Key'Backspace] (E.Doc ["Edit", "Value"])
                 _ -> mempty
-        ( (TextEdit.make ?? empty ?? text ?? innerId)
-                <&> Align.tValue . Widget.eventMapMaker . Lens.mapped %~
-                    -- Avoid taking keys that don't belong to us,
-                    -- so weakerEvents with them will work.
-                    E.filter (Lens.has Lens._Just . parseNum . fst)
-                <&> Align.tValue . Lens.mapped %~ event
-                <&> Align.tValue %~ Widget.strongerEvents (negateEvent <> delEvent <> nextEntryEvent)
-                <&> Align.tValue %~ Widget.addPreEventWith (liftA2 mappend) preEvent
-            )
+        TextEdit.make ?? empty ?? text ?? innerId
+            <&> Align.tValue . Widget.eventMapMaker . Lens.mapped %~
+                -- Avoid taking keys that don't belong to us,
+                -- so weakerEvents with them will work.
+                E.filter (Lens.has Lens._Just . parseNum . fst)
+            <&> Align.tValue . Lens.mapped %~ event
+            <&> Align.tValue %~ Widget.strongerEvents (negateEvent <> delEvent <> nextEntryEvent)
+            <&> Align.tValue %~ Widget.addPreEventWith (liftA2 mappend) preEvent
     & withStyle Style.styleNum
     where
         setPos newPos = TextEdit.encodeCursor innerId newPos & GuiState.updateCursor
