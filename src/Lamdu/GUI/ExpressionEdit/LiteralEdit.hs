@@ -222,8 +222,8 @@ numEdit prop pl =
                 (Nothing, _, _) -> pure mempty
                 -- Converting "0" to "01" thus "1", the pos should
                 -- remain at 1:
-                (Just val, 0, 1) -> setPos 1 <$ Property.set prop val
-                (Just val, _, _) -> update   <$ Property.set prop val
+                (Just val, 0, 1) | val /= 0 -> setPos 1 <$ Property.set prop val
+                (Just val, _, _) -> update <$ Property.set prop val
         empty = TextEdit.EmptyStrings "0" "0"
         myId = WidgetIds.fromExprPayload pl
         numState pos
