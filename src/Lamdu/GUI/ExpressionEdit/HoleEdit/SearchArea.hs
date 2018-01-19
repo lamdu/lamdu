@@ -134,8 +134,11 @@ makeInferredTypeAnnotation pl =
 
 -- Filter out events which should be taken by search term event map instead.
 filterSearchTermEvents :: (Text -> Bool) -> Text -> EventMap a -> EventMap a
-filterSearchTermEvents allowedTerms searchTerm =
-    E.filterChars (not . allowedTerms . (searchTerm <>) . Text.singleton)
+filterSearchTermEvents allowedTerms searchTerm
+    | Text.null searchTerm =
+        E.filterChars (`elem` Chars.operator)
+    | otherwise =
+        E.filterChars (not . allowedTerms . (searchTerm <>) . Text.singleton)
 
 makeSearchTerm ::
     ( MonadReader env m, HasTheme env, TextEdit.HasStyle env, GuiState.HasState env, Menu.HasConfig env
