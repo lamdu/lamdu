@@ -60,12 +60,13 @@ render Config{cursorColor, decay} w =
                 , Widget._ePrevTextRemainder = mempty
                 }
             area = last (r ^. Widget.fFocalAreas)
+            areaSize = area ^. Rect.width * area ^. Rect.height
             color =
                 case decay of
                 Nothing -> cursorColor
                 Just (Decay unit power) ->
                     cursorColor
-                    & Draw.alphaChannel //~ (area ^. Rect.height / unit) ** power
+                    & Draw.alphaChannel //~ (areaSize / unit**2) ** power
             cursorFrame =
                 Anim.coloredRectangle ["cursor"] color (area ^. Rect.size)
                 & Anim.translate (area ^. Rect.topLeft)
