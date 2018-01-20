@@ -93,7 +93,7 @@ mainLoopConfig config theme =
         }
     , cCursor =
         Cursor.Config
-        { cursorColor = Theme.cursorBGColor theme
+        { cursorColor = Theme.cursorColor theme
         }
     , cZoom = Config.zoom config
     }

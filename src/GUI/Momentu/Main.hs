@@ -188,7 +188,7 @@ virtualCursorImage (Just (State.VirtualCursor r)) debug =
     <&> \case
     Nothing -> mempty
     Just color ->
-        Anim.backgroundColor ["debug-virtual-cursor"] color
+        Anim.coloredRectangle ["debug-virtual-cursor"] color
         (r ^. Rect.size) & Anim.translate (r ^. Rect.topLeft)
 
 mainLoopWidget ::

@@ -55,5 +55,5 @@ render Config{cursorColor} w =
                 }
             area = last (r ^. Widget.fFocalAreas)
             cursorFrame =
-                Anim.backgroundColor ["cursor-background"] cursorColor (area ^. Rect.size)
+                Anim.coloredRectangle ["cursor"] cursorColor (area ^. Rect.size)
                 & Anim.translate (area ^. Rect.topLeft)

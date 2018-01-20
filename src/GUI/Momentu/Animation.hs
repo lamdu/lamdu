@@ -7,7 +7,7 @@ module GUI.Momentu.Animation
     , draw
     , mapIdentities
     , unitSquare, emptyRectangle
-    , backgroundColor
+    , coloredRectangle
     , translate, scale
     , singletonFrame
     , module GUI.Momentu.Animation.Id
@@ -93,8 +93,8 @@ emptyRectangle (Vector2 fX fY) totalSize@(Vector2 sX sY) animId =
             & (DrawUtils.scale size %%)
             & (DrawUtils.translate origin %%)
 
-backgroundColor :: AnimId -> Draw.Color -> Vector2 R -> Frame
-backgroundColor animId color size =
+coloredRectangle :: AnimId -> Draw.Color -> Vector2 R -> Frame
+coloredRectangle animId color size =
     unitSquare animId
     & unitImages %~ Draw.tint color
     & scale size
