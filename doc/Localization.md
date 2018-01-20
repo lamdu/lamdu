@@ -2,7 +2,7 @@
 
 Status: This document describes something we plan to do but have yet to implement.
 
-Currently all the function, type, and field names in Lamdu's standard library are in English.
+Currently all the syntax keywords and names in Lamdu's standard library are in English.
 
 In our vision, the exact same code could have names in several languages,
 and the standard library will be provided with names in many languages.
