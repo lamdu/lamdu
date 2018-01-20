@@ -1,7 +1,6 @@
 {-# LANGUAGE NoImplicitPrelude, TemplateHaskell, NamedFieldPuns, OverloadedStrings, DisambiguateRecordFields #-}
 module Lamdu.Style
-    ( help
-    , Style(..), makeStyle
+    ( Style(..), makeStyle
     , HasStyle(..)
     , mainLoopConfig
 
@@ -40,8 +39,8 @@ Lens.makeLenses ''Style
 
 class TextEdit.HasStyle env => HasStyle env where style :: Lens' env Style
 
-help :: Font -> [MetaKey] -> Theme.Help -> EventMapHelp.Config
-help font helpKeys theme =
+helpStyle :: Font -> [MetaKey] -> Theme.Help -> EventMapHelp.Config
+helpStyle font helpKeys theme =
     EventMapHelp.Config
     { EventMapHelp._configStyle =
         TextView.Style
@@ -83,8 +82,8 @@ makeStyle config fonts =
       textEdit (Theme.literalColor config) (Fonts.fontDefault fonts)
     }
 
-mainLoopConfig :: Config -> Theme -> MainLoop.Config
-mainLoopConfig config theme =
+mainLoopConfig :: Font -> Config -> Theme -> MainLoop.Config
+mainLoopConfig helpFont config theme =
     MainLoop.Config
     { cAnim =
         AnimConfig
@@ -96,4 +95,5 @@ mainLoopConfig config theme =
         { cursorColor = Theme.cursorColor theme
         }
     , cZoom = Config.zoom config
+    , cHelpStyle = helpStyle helpFont (Config.helpKeys config) (Theme.help theme)
     }

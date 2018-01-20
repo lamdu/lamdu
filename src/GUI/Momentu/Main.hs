@@ -43,6 +43,7 @@ data Config = Config
     { cAnim :: MainAnim.AnimConfig
     , cCursor :: Cursor.Config
     , cZoom :: Zoom.Config
+    , cHelpStyle :: EventMapHelp.Config
     }
 
 data EventResult a = EventResult
@@ -94,8 +95,7 @@ iorefStateStorage initialCursor =
 
 data Options = Options
     { tickHandler :: IO Bool
-    , getConfig :: IO Config
-    , getHelpStyle :: Zoom -> IO EventMapHelp.Config
+    , getConfig :: Zoom -> IO Config
     , stateStorage :: StateStorage
     , debug :: DebugOptions
     }
@@ -119,23 +119,22 @@ defaultOptions helpFontPath =
         return Options
             { tickHandler = pure False
             , getConfig =
-                return Config
-                { cAnim =
-                    MainAnim.AnimConfig
-                    { MainAnim.acTimePeriod = 0.11
-                    , MainAnim.acRemainingRatioInPeriod = 0.2
-                    }
-                , cCursor =
-                    Cursor.Config
-                    { Cursor.cursorColor = Draw.Color 0.5 0.5 1 0.5
-                    }
-                , cZoom = Zoom.defaultConfig
-                }
-            , getHelpStyle =
                 \zoom -> do
                     zoomFactor <- Zoom.getZoomFactor zoom
                     helpFont <- loadHelpFont (9 * zoomFactor)
-                    EventMapHelp.defaultConfig helpFont & return
+                    return Config
+                        { cAnim =
+                            MainAnim.AnimConfig
+                            { MainAnim.acTimePeriod = 0.11
+                            , MainAnim.acRemainingRatioInPeriod = 0.2
+                            }
+                        , cCursor =
+                            Cursor.Config
+                            { Cursor.cursorColor = Draw.Color 0.5 0.5 1 0.5
+                            }
+                        , cZoom = Zoom.defaultConfig
+                        , cHelpStyle = EventMapHelp.defaultConfig helpFont
+                        }
             , stateStorage = stateStorage_
             , debug = defaultDebugOptions
             }
@@ -200,16 +199,12 @@ mainLoopWidget win mkWidgetUnmemod options =
     do
         addHelp <- EventMapHelp.makeToggledHelpAdder EventMapHelp.HelpNotShown
         zoom <- Zoom.make win
-        let mkZoomEventMap =
-                do
-                    zoomConfig <- getConfig <&> cZoom
-                    Zoom.eventMap zoom zoomConfig <&> liftIO & return
         virtCursorRef <- newIORef Nothing
         let mkW =
                 memoIO $ \size ->
                 do
-                    zoomEventMap <- mkZoomEventMap
-                    helpStyle <- getHelpStyle zoom
+                    config <- getConfig zoom
+                    let zoomEventMap = cZoom config & Zoom.eventMap zoom <&> liftIO
                     s <- readState stateStorage_
                     mkWidgetUnmemod
                         Env
@@ -218,7 +213,7 @@ mainLoopWidget win mkWidgetUnmemod options =
                         , _eState = s
                         }
                         <&> Widget.eventMapMaker . Lens.mapped %~ (zoomEventMap <>)
-                        >>= addHelp helpStyle size
+                        >>= addHelp (cHelpStyle config) size
         mkWidgetRef <- mkW >>= newIORef
         let newWidget = mkW >>= writeIORef mkWidgetRef
         let renderWidget size =
@@ -226,10 +221,10 @@ mainLoopWidget win mkWidgetUnmemod options =
                     virtCursor <- readIORef virtCursorRef
                     vcursorimg <- virtualCursorImage virtCursor debug
                     Cursor.render
-                        <$> (getConfig <&> cCursor)
+                        <$> (getConfig zoom <&> cCursor)
                         <*> (readIORef mkWidgetRef >>= (size &))
                         <&> _1 <>~ vcursorimg
-        MainAnim.mainLoop win (fpsFont zoom) (getConfig <&> cAnim) $ \size -> MainAnim.Handlers
+        MainAnim.mainLoop win (fpsFont zoom) (getConfig zoom <&> cAnim) $ \size -> MainAnim.Handlers
             { MainAnim.tickHandler =
                 do
                     anyUpdate <- tickHandler
@@ -261,5 +256,5 @@ mainLoopWidget win mkWidgetUnmemod options =
     where
         stateStorage_ = stateStorage options
         getClipboard = GLFW.getClipboardString win <&> fmap Text.pack
-        Options{tickHandler, debug, getConfig, getHelpStyle} = options
+        Options{tickHandler, debug, getConfig} = options
         DebugOptions{fpsFont} = debug

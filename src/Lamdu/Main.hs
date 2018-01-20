@@ -309,9 +309,10 @@ mainLoop stateStorage subpixel win refreshScheduler configSampler iteration =
                     iteration fonts (sample ^. sConfig) (sample ^. sTheme) env
         M.mainLoopWidget win makeWidget MainLoop.Options
             { getConfig =
-                do
+                \zoom -> do
                     sample <- ConfigSampler.getSample configSampler
-                    Style.mainLoopConfig (sample ^. sConfig) (sample ^. sTheme)
+                    helpFont <- getFonts zoom sample <&> Font.fontHelp
+                    Style.mainLoopConfig helpFont (sample ^. sConfig) (sample ^. sTheme)
                         & return
             , tickHandler =
                 do
@@ -323,15 +324,6 @@ mainLoop stateStorage subpixel win refreshScheduler configSampler iteration =
                     if configChanged
                         then return True
                         else isRefreshScheduled refreshScheduler
-            , getHelpStyle =
-                \zoom ->
-                do
-                    sample <- ConfigSampler.getSample configSampler
-                    fonts <- getFonts zoom sample
-                    let helpKeys = sample ^. sConfig & Config.helpKeys
-                    let helpTheme = sample ^. sTheme & Theme.help
-                    Style.help (Font.fontHelp fonts) helpKeys helpTheme
-                        & return
             , stateStorage = stateStorage
             , debug = MainLoop.DebugOptions
                 { fpsFont =
