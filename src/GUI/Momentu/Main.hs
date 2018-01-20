@@ -131,6 +131,7 @@ defaultOptions helpFontPath =
                         , cCursor =
                             Cursor.Config
                             { Cursor.cursorColor = Draw.Color 0.5 0.5 1 0.5
+                            , Cursor.decay = Nothing
                             }
                         , cZoom = Zoom.defaultConfig
                         , cHelpStyle = EventMapHelp.defaultConfig helpFont

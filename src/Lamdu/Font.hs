@@ -3,6 +3,7 @@ module Lamdu.Font
     ( FontSize, Fonts(..)
     , LCDSubPixelEnabled(..), new
     , lfontDefault, lfontHelp, lfontLiteralText, lfontAutoName, lfontLiteralBytes, lfontBinders
+    , Font.height
     ) where
 
 import qualified Control.Exception as E

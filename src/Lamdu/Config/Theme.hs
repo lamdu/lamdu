@@ -98,6 +98,7 @@ data Theme = Theme
     , typeFrameBGColor :: Draw.Color
     , stdSpacing :: Vector2 Double -- as ratio of space character size
     , cursorColor :: Draw.Color
+    , cursorDecayExponent :: Draw.R
     , disabledColor :: Draw.Color
     , presentationChoiceScaleFactor :: Vector2 Double
     , evaluatedPathBGColor :: Draw.Color

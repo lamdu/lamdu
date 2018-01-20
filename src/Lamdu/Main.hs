@@ -311,8 +311,10 @@ mainLoop stateStorage subpixel win refreshScheduler configSampler iteration =
             { getConfig =
                 \zoom -> do
                     sample <- ConfigSampler.getSample configSampler
-                    helpFont <- getFonts zoom sample <&> Font.fontHelp
-                    Style.mainLoopConfig helpFont (sample ^. sConfig) (sample ^. sTheme)
+                    fonts <- getFonts zoom sample
+                    let height = fontDefault fonts & Font.height
+                    Style.mainLoopConfig height (Font.fontHelp fonts)
+                        (sample ^. sConfig) (sample ^. sTheme)
                         & return
             , tickHandler =
                 do

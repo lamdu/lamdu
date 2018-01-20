@@ -3,6 +3,7 @@
 
 module GUI.Momentu.Draw
     ( addInnerFrame, backgroundColor
+    , alphaChannel
     , Draw.line, Draw.convexPoly, Draw.sprite
     , Draw.tint
     , Draw.Color(..), Draw.R, Image
@@ -19,6 +20,9 @@ import           Graphics.DrawingCombinators.Utils ()
 import           Lamdu.Prelude
 
 type Image = Draw.Image ()
+
+alphaChannel :: Lens' Draw.Color R
+alphaChannel f (Draw.Color r g b a) = f a <&> Draw.Color r g b
 
 backgroundColor ::
     (MonadReader env m, Element.HasAnimIdPrefix env, Element a) =>

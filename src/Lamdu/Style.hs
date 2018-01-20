@@ -82,8 +82,8 @@ makeStyle config fonts =
       textEdit (Theme.literalColor config) (Fonts.fontDefault fonts)
     }
 
-mainLoopConfig :: Font -> Config -> Theme -> MainLoop.Config
-mainLoopConfig helpFont config theme =
+mainLoopConfig :: Draw.R -> Font -> Config -> Theme -> MainLoop.Config
+mainLoopConfig fontHeight helpFont config theme =
     MainLoop.Config
     { cAnim =
         AnimConfig
@@ -93,6 +93,10 @@ mainLoopConfig helpFont config theme =
     , cCursor =
         Cursor.Config
         { cursorColor = Theme.cursorColor theme
+        , Cursor.decay = Just Cursor.Decay
+            { Cursor.heightUnit = fontHeight
+            , Cursor.heightExponent = Theme.cursorDecayExponent theme
+            }
         }
     , cZoom = Config.zoom config
     , cHelpStyle = helpStyle helpFont (Config.helpKeys config) (Theme.help theme)
