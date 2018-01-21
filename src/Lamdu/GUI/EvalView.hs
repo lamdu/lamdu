@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, OverloadedStrings #-}
+{-# LANGUAGE NoImplicitPrelude, OverloadedStrings, FlexibleContexts #-}
 
 module Lamdu.GUI.EvalView
     ( make
@@ -216,11 +216,13 @@ makeInject typ inject =
     (_, RRecEmpty, _, _, _) -> makeTagView
     (T.TInst tid _, _, Just RecordComputed, Just head_, Just RFunc{})
         | tid == Builtins.streamTid ->
-        [ label "["
-        , makeInner head_ & Reader.local (Element.animIdPrefix <>~ ["head"])
-        , label ", …]"
-        ]
-        & sequence <&> hbox
+            do
+                o <- label "["
+                inner <- makeInner head_ & Reader.local (Element.animIdPrefix <>~ ["head"])
+                c <- label ", …]" <&> (^. Align.tValue)
+                o /|/ inner
+                    & Align.tValue %~ (hGlueAlign 1 ?? c)
+                    & pure
     _ ->
         do
             tag <- makeTagView
@@ -230,6 +232,7 @@ makeInject typ inject =
                 & Reader.local (Element.animIdPrefix <>~ ["val"])
             tag /|/ s /|/ i & pure
     where
+        hGlueAlign align l r = (Aligned align l /|/ Aligned align r) ^. Align.value
         makeTagView =
             inject ^. V.injectTag & makeTag
             & Reader.local (Element.animIdPrefix <>~ ["tag"])
