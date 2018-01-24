@@ -119,8 +119,9 @@ loadWorkArea theEvalResults theCodeAnchors =
     <&>
     \Sugar.WorkArea { _waPanes, _waRepl } ->
     Sugar.WorkArea
-    (_waPanes <&> Sugar.paneDefinition %~ traverseAddNearestHoles)
-    (_waRepl & exprAddNearestHoles)
+    { _waPanes = _waPanes <&> Sugar.paneDefinition %~ traverseAddNearestHoles
+    , _waRepl = _waRepl & exprAddNearestHoles
+    }
     & SugarLens.workAreaExpressions %~ postProcessExpr
 
 make ::
