@@ -73,7 +73,6 @@ class HasEvalResults env m where
 
 class HasExportActions env m where exportActions :: Lens' env (ExportActions m)
 
-
 toExprGuiMPayload ::
     ( AddParens.MinOpPrec, AddParens.NeedsParens
     , ( ExprGui.ShowAnnotation

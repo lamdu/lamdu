@@ -26,6 +26,7 @@ data Export = Export
     , exportKeys :: [MetaKey]
     , exportFancyKeys :: [MetaKey]
     , exportAllKeys :: [MetaKey]
+    , executeKeys :: [MetaKey]
     , importKeys :: [MetaKey]
     } deriving (Eq, Show)
 deriveJSON defaultOptions ''Export

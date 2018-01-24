@@ -2,7 +2,7 @@
 module Lamdu.Eval.Manager
     ( Evaluator
     , NewParams(..), new
-    , start, stop
+    , start, stop, executeReplIOProcess
     , getResults
     , runTransactionAndMaybeRestartEvaluator
     ) where
@@ -142,14 +142,21 @@ start evaluator =
         (evalActions evaluator) <&> Started
     >>= writeIORef (eEvaluatorRef evaluator)
 
+onEvaluator :: (Eval.Evaluator (ValI ViewM) -> IO ()) -> Evaluator -> IO ()
+onEvaluator action evaluator =
+    readIORef (eEvaluatorRef evaluator)
+    <&> startedEvaluator
+    >>= traverse_ action
+
 stop :: Evaluator -> IO ()
 stop evaluator =
     do
-        readIORef (eEvaluatorRef evaluator)
-            <&> startedEvaluator
-            >>= traverse_ Eval.stop
+        onEvaluator Eval.stop evaluator
         writeIORef (eEvaluatorRef evaluator) NotStarted
         writeIORef (eResultsRef evaluator) EvalResults.empty
+
+executeReplIOProcess :: Evaluator -> IO ()
+executeReplIOProcess = onEvaluator Eval.executeReplIOProcess
 
 sumDependency :: Eval.Dependencies (ValI m) -> Set UUID
 sumDependency (Eval.Dependencies subexprs globals) =

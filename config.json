@@ -15,6 +15,7 @@
         "exportKeys"      : [ "Alt+E" ],
         "exportFancyKeys" : [ "Alt+Shift+J" ],
         "exportAllKeys"   : [ "Alt+Shift+E" ],
+        "executeKeys"     : [ "Cmd+Alt+Shift+R" ],
         "importKeys"      : [ "Alt+I" ]
     },
     "pane": {

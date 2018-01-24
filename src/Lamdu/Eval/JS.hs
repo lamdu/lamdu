@@ -3,7 +3,7 @@
 module Lamdu.Eval.JS
     ( Evaluator
     , Actions(..), aLoadGlobal, aReportUpdatesAvailable, aCompleted
-    , start, stop
+    , start, stop, executeReplIOProcess
     , Dependencies(..), whilePaused
     , getResults
     ) where
@@ -47,7 +47,7 @@ import           Numeric (readHex)
 import qualified Paths.Utils as Paths
 import qualified Paths_Lamdu
 import           System.FilePath (splitFileName)
-import           System.IO (IOMode(..), Handle, hClose, hIsEOF, hPutStrLn, withFile)
+import           System.IO (IOMode(..), Handle, hClose, hIsEOF, hPutStrLn, hFlush, withFile)
 import qualified System.NodeJS.Path as NodeJS
 import qualified System.Process as Proc
 
@@ -74,6 +74,7 @@ instance Ord srcId => Monoid (Dependencies srcId) where
 
 data Evaluator srcId = Evaluator
     { stop :: IO ()
+    , executeReplIOProcess :: IO ()
     , eDeps :: MVar (Dependencies srcId)
     , eResultsRef :: IORef (EvalResults srcId)
     }
@@ -82,7 +83,7 @@ type Parse = State (IntMap (ER.Val ()))
 
 nodeRepl :: FilePath -> FilePath -> Proc.CreateProcess
 nodeRepl nodeExePath rtsPath =
-    (Proc.proc nodeExePath ["--harmony-tailcalls"])
+    (Proc.proc nodeExePath ["--interactive", "--harmony-tailcalls"])
     { Proc.cwd = Just rtsPath
     }
 
@@ -297,45 +298,53 @@ compilerActions toUUID depsMVar actions output =
                     , result
                     )
 
+stripInteractive :: ByteString -> ByteString
+stripInteractive line
+    | "> " `SBS.isPrefixOf` line = stripInteractive (SBS.drop 2 line)
+    | otherwise = SBS.dropWhile (`elem` irrelevant) line
+    where
+        irrelevant = SBS.unpack ". "
+
 asyncStart ::
     Ord srcId =>
     (srcId -> UUID) -> (UUID -> srcId) ->
-    MVar (Dependencies srcId) -> IORef (EvalResults srcId) ->
+    MVar (Dependencies srcId) -> MVar () -> IORef (EvalResults srcId) ->
     Def.Expr (Val srcId) -> Actions srcId ->
     IO ()
-asyncStart toUUID fromUUID depsMVar resultsRef val actions =
+asyncStart toUUID fromUUID depsMVar executeReplMVar resultsRef val actions =
     do
         nodeExePath <- NodeJS.path
         rtsPath <- Paths.get Paths_Lamdu.getDataFileName "js/rts.js" <&> fst . splitFileName
         withProcess (nodeRepl nodeExePath rtsPath) $
-            \(Just stdin, Just stdout, Nothing, handle) ->
+            \(Just stdin, Just stdout, Nothing, _handle) ->
             withCopyJSOutputTo (actions ^. aCopyJSOutputPath) $ \copyJSOutput ->
             do
                 let output line =
                         do
                             copyJSOutput line
                             hPutStrLn stdin line
-                val <&> Lens.mapped %~ Compiler.ValId . toUUID
-                    & Compiler.compile
-                        (compilerActions toUUID depsMVar actions output)
-                hClose stdin
                 let
                     processLines =
                         do
                             isEof <- hIsEOF stdout
                             unless isEof $
                                 do
-                                    line <- SBS.hGetLine stdout
+                                    line <- SBS.hGetLine stdout <&> stripInteractive
                                     case JsonStr.decode (lazifyBS line) of
-                                        Nothing -> "Failed to decode: " ++ show line & error
+                                        Nothing
+                                            | line `elem` ["'use strict'", "undefined", ""] -> processLines
+                                            | otherwise -> "Failed to decode: " ++ show line & error >> processLines
                                         Just obj ->
                                             do
                                                 processEvent fromUUID resultsRef obj
                                                 actions ^. aReportUpdatesAvailable
                                                 processLines
-                processLines
-                _ <- Proc.waitForProcess handle
-                return ()
+                _ <- forkIO processLines
+                val <&> Lens.mapped %~ Compiler.ValId . toUUID
+                    & Compiler.compile
+                        (compilerActions toUUID depsMVar actions output)
+                hFlush stdin
+                forever (takeMVar executeReplMVar >> output "(function() { repl(); })();" >> hFlush stdin)
 
 -- | Pause the evaluator, yielding all dependencies of evaluation so
 -- far. If any dependency changed, this evaluation is stale.
@@ -356,9 +365,11 @@ start toUUID fromUUID actions defExpr =
             , subExprDeps = defExpr ^.. Lens.folded . Lens.folded & Set.fromList
             }
         resultsRef <- newIORef ER.empty
-        tid <- asyncStart toUUID fromUUID depsMVar resultsRef defExpr actions & forkIO
+        executeReplMVar <- newEmptyMVar
+        tid <- asyncStart toUUID fromUUID depsMVar executeReplMVar resultsRef defExpr actions & forkIO
         return Evaluator
             { stop = killThread tid
+            , executeReplIOProcess = putMVar executeReplMVar ()
             , eDeps = depsMVar
             , eResultsRef = resultsRef
             }

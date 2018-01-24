@@ -148,13 +148,14 @@ settingsChangeHandler evaluator settings =
     _ -> EvalManager.stop evaluator
 
 exportActions ::
-    Config -> EvalResults (ValI DbLayout.ViewM) -> GUIMain.ExportActions DbLayout.ViewM
-exportActions config evalResults =
+    Config -> EvalResults (ValI DbLayout.ViewM) -> IO () -> GUIMain.ExportActions DbLayout.ViewM
+exportActions config evalResults executeIOProcess =
     GUIMain.ExportActions
     { GUIMain.exportReplActions =
         GUIMain.ExportRepl
         { GUIMain.exportRepl = fileExport Export.fileExportRepl
         , GUIMain.exportFancy = export (exportFancy evalResults)
+        , GUIMain.executeIOProcess = executeIOProcess
         }
     , GUIMain.exportAll = fileExport Export.fileExportAll
     , GUIMain.exportDef = fileExport . Export.fileExportDef
@@ -177,7 +178,7 @@ makeRootWidget fonts db settingsRef evaluator config theme mainLoopEnv =
         let env = Env
                 { _envEvalRes = evalResults
                 , _envExportActions =
-                    exportActions config (evalResults ^. current)
+                    exportActions config (evalResults ^. current) (EvalManager.executeReplIOProcess evaluator)
                 , _envConfig = config
                 , _envTheme = theme
                 , _envSettings = settings

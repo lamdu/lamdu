@@ -188,11 +188,13 @@ run :: Monad m => Actions m -> M m CodeGen -> m ()
 run actions act =
     runRWST
     (do
-        _ <- traverse ppOut topLevelDecls
+        traverse_ ppOut topLevelDecls
         act <&> codeGenExpression <&> varinit "repl" >>= ppOut
         JS.call (JS.var "rts" $. "logRepl") [JS.var "repl"] & JS.expr & ppOut
-        JS.assign (JS.var "module" `JS.ldot` "exports") (JS.var "repl")
-            & JS.expr & ppOut
+        [ [jsstmt|rts.logRepl(repl);|]
+          , -- This form avoids outputing repl's value in interactive mode
+            [jsstmt|(function() { module.exports = repl; })();|]
+            ] <&> void & traverse_ ppOut
     & unM
     )
     Env
