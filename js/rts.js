@@ -68,6 +68,10 @@ var encode = function() {
                 return value;
             }
             if (value.hasOwnProperty("cacheId")) {
+                if (value.cacheId == -1) {
+                    // Opaque value
+                    return {};
+                }
                 return { cachedVal: value.cacheId };
             }
             value.cacheId = cacheId++;
@@ -96,6 +100,10 @@ var toString = function (bytes) {
     // This is a nodejs only method to convert a UInt8Array to a string.
     // For the browser we'll need to augment this.
     return Buffer(bytes).toString();
+}
+
+var makeOpaque = function (obj) {
+    obj.cacheId = -1;
 }
 
 module.exports = {
@@ -278,14 +286,16 @@ module.exports = {
                 openTcpServer: function(x) {
                     return function() {
                         var server = require('net').Server((socket) => {
+                            makeOpaque(socket);
                             var dataHandler = x[connectionHandlerTag](socket)();
-                            socket.on('data', (data) => { dataHandler(data)(); } );
+                            socket.on('data', (data) => { dataHandler(new Uint8Array(data))(); } );
                         });
                         server.listen({
                             host: toString(x[hostTag]),
                             port: x[portTag],
                             exclusive: bool(x[exclusiveTag])
                         });
+                        makeOpaque(server);
                         return server;
                     }
                 },
