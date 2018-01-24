@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, RankNTypes, LambdaCase #-}
+{-# LANGUAGE NoImplicitPrelude, LambdaCase #-}
 module Lamdu.Eval.Manager
     ( Evaluator
     , NewParams(..), new
@@ -26,7 +26,6 @@ import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
 import           Data.UUID.Types (UUID)
 import           Lamdu.Calc.Val.Annotated (Val)
-import qualified Lamdu.Data.Anchors as Anchors
 import           Lamdu.Data.DbLayout (DbM, ViewM)
 import qualified Lamdu.Data.DbLayout as DbLayout
 import qualified Lamdu.Data.Definition as Def
@@ -107,16 +106,10 @@ loadDef ::
     IO (Def.Definition (Val (ExprIRef.ValIProperty ViewM)) (DefI ViewM))
 loadDef evaluator = runViewTransactionInIO (eDb evaluator) . Load.def
 
-readAssocName :: Evaluator -> UUID -> IO Text
-readAssocName evaluator uuid =
-    Transaction.getP (Anchors.assocNameRef uuid)
-    & runViewTransactionInIO (eDb evaluator)
-
 evalActions :: Evaluator -> Eval.Actions (ValI ViewM)
 evalActions evaluator =
     Eval.Actions
     { Eval._aLoadGlobal = loadGlobal
-    , Eval._aReadAssocName = readAssocName evaluator
     , Eval._aReportUpdatesAvailable = resultsUpdated (eParams evaluator)
     , Eval._aCompleted = \_ ->
           do

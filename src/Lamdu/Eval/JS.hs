@@ -1,8 +1,8 @@
-{-# LANGUAGE NoImplicitPrelude, OverloadedStrings, TemplateHaskell, GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE NoImplicitPrelude, OverloadedStrings, TemplateHaskell #-}
 -- | Run a process that evaluates given compiled
 module Lamdu.Eval.JS
     ( Evaluator
-    , Actions(..), aLoadGlobal, aReadAssocName, aReportUpdatesAvailable, aCompleted
+    , Actions(..), aLoadGlobal, aReportUpdatesAvailable, aCompleted
     , start, stop
     , Dependencies(..), whilePaused
     , getResults
@@ -57,9 +57,6 @@ import           Lamdu.Prelude
 
 data Actions srcId = Actions
     { _aLoadGlobal :: V.Var -> IO (Definition (Val srcId) ())
-    , -- TODO: This is currently not in use but remains here because
-      -- it *should* be used for readable JS output
-      _aReadAssocName :: UUID -> IO Text
     , _aReportUpdatesAvailable :: IO ()
     , _aCompleted :: Either E.SomeException (ER.Val srcId) -> IO ()
     , _aCopyJSOutputPath :: Maybe FilePath
