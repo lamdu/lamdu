@@ -312,9 +312,9 @@ asyncStart toUUID fromUUID depsMVar resultsRef val actions =
             withCopyJSOutputTo (actions ^. aCopyJSOutputPath) $ \copyJSOutput ->
             do
                 let output line =
-                      do
-                          copyJSOutput line
-                          hPutStrLn stdin line
+                        do
+                            copyJSOutput line
+                            hPutStrLn stdin line
                 val <&> Lens.mapped %~ Compiler.ValId . toUUID
                     & Compiler.compile
                         (compilerActions toUUID depsMVar actions output)
