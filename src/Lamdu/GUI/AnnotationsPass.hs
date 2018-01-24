@@ -4,6 +4,7 @@ module Lamdu.GUI.AnnotationsPass
     ) where
 
 import qualified Control.Lens as Lens
+import qualified Lamdu.Builtins.Anchors as Builtins
 import qualified Lamdu.GUI.ExpressionGui as T
 import qualified Lamdu.Sugar.Lens as SugarLens
 import           Lamdu.Sugar.Types
@@ -52,11 +53,14 @@ markAnnotationsToDisplay (Expression oldBody pl) =
     BodyGetVar (GetBinder BinderVarRef { _bvForm = GetLet }) ->
         set T.neverShowAnnotations
     BodyFromNom _ -> Expression (newBodyWith dontShowEval) defPl
-    BodyToNom (Nominal _ binder) ->
+    BodyToNom (Nominal tid binder) ->
         defPl
         & plData . _1 . T.showInEvalMode .~
-            binder ^. bbContent . SugarLens.binderContentExpr .
-            topLevelAnn . T.showInEvalMode
+            ( if tid ^. tidTId == Builtins.textTid
+                then T.EvalModeShowEval
+                else binder ^. bbContent . SugarLens.binderContentExpr .
+                        topLevelAnn . T.showInEvalMode
+            )
         & Expression (newBodyWith dontShowEval)
     BodyInject _ -> set dontShowEval
     BodyGetVar (GetParamsRecord _) -> set T.showAnnotationWhenVerbose
