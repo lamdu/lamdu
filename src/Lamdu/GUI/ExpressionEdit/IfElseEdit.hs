@@ -91,15 +91,15 @@ makeElseIf (Sugar.ElseIf scopes entityId cond res delete addLet) makeRest =
         -- TODO: cleaner way to write this?
         lookupMKey k m = k >>= (`Map.lookup` m)
 
-makeElse :: Monad m => Sugar.IfElse (T m) (ExprGui.SugarExpr m) -> ExprGuiM m (Row (ExpressionGui m))
-makeElse ifElse =
+makeElse :: Monad m => ExprGui.SugarExpr m -> ExprGuiM m (Row (ExpressionGui m))
+makeElse expr =
     ( Row elseAnimId
         <$> (Styled.grammarLabel "else" <&> Responsive.fromTextView)
         <*> (Styled.grammarLabel ": " & Reader.local (Element.animIdPrefix .~ elseAnimId) <&> Responsive.fromTextView)
-    ) <*> ExprGuiM.makeSubexpression (ifElse ^. Sugar.iElse)
+    ) <*> ExprGuiM.makeSubexpression expr
     where
         elseAnimId = Widget.toAnimId elseId
-        elseId = WidgetIds.fromExprPayload (ifElse ^. Sugar.iElse . Sugar.rPayload)
+        elseId = WidgetIds.fromExprPayload (expr ^. Sugar.rPayload)
 
 verticalRowRender ::
     ( Monad m, MonadReader env f, Spacer.HasStdSpacing env
@@ -153,7 +153,7 @@ make ifElse pl =
             <*>
             ( (:)
                 <$> makeIf
-                <*> foldr makeElseIf (makeElse ifElse <&> (:[])) (ifElse ^. Sugar.iElseIfs)
+                <*> foldr makeElseIf (makeElse (ifElse ^. Sugar.iElse) <&> (:[])) (ifElse ^. Sugar.iElseIfs)
             )
         )
     where
