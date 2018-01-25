@@ -18,7 +18,7 @@ module Lamdu.Sugar.Types.Expression
     , CaseArg(..), caVal, caToLambdaCase
     , CaseKind(..), _LambdaCase, _CaseWithArg
     , Case(..), cKind, cBody
-    , ElseIfContent(..), eiScopes, eiEntityId, eiIfThen, eiCondAddLet, eiElse
+    , ElseIfContent(..), eiScopes, eiEntityId, eiIfThen, eiCondAddLet, eiElse, eiNodeActions
     , Else(..), _SimpleElse, _ElseIf
     , IfThen(..), itIf, itThen, itDelete
     , IfElse(..), iIfThen, iElse
@@ -131,6 +131,7 @@ data ElseIfContent m expr = ElseIfContent
     , _eiIfThen :: IfThen m expr
     , _eiCondAddLet :: m EntityId
     , _eiElse :: Else m expr
+    , _eiNodeActions :: NodeActions m
     } deriving (Functor, Foldable, Traversable)
 
 data Else m expr = SimpleElse expr | ElseIf (ElseIfContent m expr)

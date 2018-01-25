@@ -78,7 +78,7 @@ makeElse (Sugar.SimpleElse expr) =
     where
         elseAnimId = Widget.toAnimId elseId
         elseId = WidgetIds.fromExprPayload (expr ^. Sugar.rPayload)
-makeElse (Sugar.ElseIf (Sugar.ElseIfContent scopes entityId ifThen addLet els)) =
+makeElse (Sugar.ElseIf (Sugar.ElseIfContent scopes entityId ifThen addLet els nodeActions)) =
     do
         mOuterScopeId <- ExprGuiM.readMScopeId
         let mInnerScope = lookupMKey <$> mOuterScopeId <*> scopes

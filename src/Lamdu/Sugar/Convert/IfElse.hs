@@ -54,6 +54,7 @@ convertIfElse setToVal caseBody =
                         , _eiIfThen = innerIfElse ^. iIfThen
                         , _eiCondAddLet = binder ^. bBody . bbAddOuterLet
                         , _eiElse = innerIfElse ^. iElse
+                        , _eiNodeActions = altFalseBinderExpr ^. rPayload . plActions
                         }
                         & makeRes
                         where
