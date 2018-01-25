@@ -150,18 +150,23 @@ convertBinderBody expr =
 makeBinder ::
     (Monad m, Monoid a) =>
     MkProperty m (Maybe BinderParamScopeId) ->
-    ConventionalParams m -> Val (Input.Payload m a) ->
+    ConventionalParams m -> Val (Input.Payload m a) -> Input.Payload m a ->
     ConvertM m (Binder UUID (T m) (ExpressionU m a))
-makeBinder chosenScopeProp params funcBody =
+makeBinder chosenScopeProp params funcBody pl =
     do
         binderBody <- convertBinderBody funcBody
+        nodeActions <- makeActions pl
         return Binder
             { _bParams = _cpParams params
             , _bChosenScopeProp = chosenScopeProp ^. mkProperty
             , _bLamId = cpMLamParam params ^? Lens._Just . _1
             , _bBody = binderBody
             , _bBodyScopes = cpScopes params
-            , _bActions = BinderActions (_cpAddFirstParam params)
+            , _bActions =
+                BinderActions
+                { _baAddFirstParam = _cpAddFirstParam params
+                , _baNodeActions = nodeActions
+                }
             }
     & ConvertM.local (ConvertM.scScopeInfo %~ addParams)
     where
@@ -183,7 +188,7 @@ convertLam lam exprPl =
         binder <-
             makeBinder
             (exprPl ^. Input.stored & Property.value & Anchors.assocScopeRef)
-            convParams (lam ^. V.lamResult)
+            convParams (lam ^. V.lamResult) exprPl
         let paramUUIDs =
                 binder ^.. bParams . _FieldParams . traverse . fpInfo . fpiTag . tagName
                 & Set.fromList
@@ -248,7 +253,7 @@ convertBinder ::
 convertBinder binderKind defUUID expr =
     do
         (mPresentationModeProp, convParams, funcBody) <- convertParams binderKind defUUID expr
-        makeBinder (Anchors.assocScopeRef defUUID) convParams funcBody
+        makeBinder (Anchors.assocScopeRef defUUID) convParams funcBody (expr ^. Val.payload)
             <&> (,) mPresentationModeProp
 
 convertDefinitionBinder ::

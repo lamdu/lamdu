@@ -323,8 +323,7 @@ make pMode lhsEventMap name color binder myId =
             pMode & sequenceA & transaction
             >>= traverse
                 (PresentationModeEdit.make presentationChoiceId (binder ^. Sugar.bParams))
-        jumpHolesEventMap <-
-            ExprEventMap.jumpHolesEventMap (binderContentNearestHoles body)
+        jumpHolesEventMap <- ExprEventMap.jumpHolesEventMap nearestHoles
         defNameEdit <-
             makeBinderNameEdit (binder ^. Sugar.bActions) rhsJumperEquals
             name color myId
@@ -340,6 +339,21 @@ make pMode lhsEventMap name color binder myId =
                 <&> Widget.strongerEvents rhsJumperEquals
                 <&> Just
         equals <- TextView.makeLabel "="
+        addWholeBinderActions <-
+            case mParamEdit of
+            Nothing ->
+                -- These are irrelevant when there are no params.
+                pure id
+            Just{} ->
+                (.)
+                <$> ExprEventMap.addWith ExprEventMap.defaultOptions
+                    ExprEventMap.ExprInfo
+                    { ExprEventMap.exprInfoActions = binder ^. Sugar.bActions . Sugar.baNodeActions
+                    , ExprEventMap.exprInfoNearestHoles = nearestHoles
+                    , ExprEventMap.exprInfoIsHoleResult = False
+                    , ExprEventMap.exprInfoMinOpPrec = 0
+                    }
+                <*> parentDelegator (Widget.joinId myId ["whole binder"])
         Options.boxSpaced ?? Options.disambiguationNone
             <&>
             (\hbox ->
@@ -348,6 +362,7 @@ make pMode lhsEventMap name color binder myId =
                 & Widget.weakerEvents lhsEventMap
             , bodyEdit
             ] )
+            <&> addWholeBinderActions
             <&> Widget.weakerEvents eventMap
     & Reader.local (Element.animIdPrefix .~ Widget.toAnimId myId)
     & case binder ^. Sugar.bLamId of
@@ -358,6 +373,7 @@ make pMode lhsEventMap name color binder myId =
         presentationChoiceId = Widget.joinId myId ["presentation"]
         body = binder ^. Sugar.bBody . Sugar.bbContent
         bodyId = body ^. SugarLens.binderContentEntityId & WidgetIds.fromEntityId
+        nearestHoles = binderContentNearestHoles body
 
 makeLetEdit ::
     Monad m =>
