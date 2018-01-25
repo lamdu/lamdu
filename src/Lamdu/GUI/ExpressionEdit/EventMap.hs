@@ -33,7 +33,7 @@ import           Lamdu.Prelude
 data ExprInfo f = ExprInfo
     { exprInfoIsHoleResult :: Bool
     , exprInfoNearestHoles :: NearestHoles
-    , exprInfoActions :: Sugar.Actions f
+    , exprInfoActions :: Sugar.NodeActions f
     , exprInfoMinOpPrec :: MinOpPrec
     }
 
@@ -100,7 +100,7 @@ extractCursor (Sugar.ExtractToDef defId) =
 
 extractEventMap ::
     (MonadReader env m, Config.HasConfig env, Functor f) =>
-    Sugar.Actions f -> m (EventMap (f GuiState.Update))
+    Sugar.NodeActions f -> m (EventMap (f GuiState.Update))
 extractEventMap actions =
     Lens.view Config.config <&> Config.extractKeys
     <&>

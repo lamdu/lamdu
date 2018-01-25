@@ -1,8 +1,6 @@
 {-# LANGUAGE NoImplicitPrelude, TemplateHaskell, DeriveTraversable #-}
 module Lamdu.Sugar.Types.Expression
-    ( DetachAction(..), _FragmentAlready, _FragmentExprAlready, _DetachAction
-    , Actions(..), detach, mSetToHole, extract, mReplaceParent
-    , Body(..)
+    ( Body(..)
         , _BodyLam, _BodyLabeledApply, _BodySimpleApply
         , _BodyGetVar, _BodyGetField, _BodyInject, _BodyHole
         , _BodyLiteral, _BodyCase, _BodyRecord, _BodyFragment
@@ -48,21 +46,9 @@ import           Lamdu.Sugar.Types.Hole (Hole, HoleOption, Literal)
 
 import           Lamdu.Prelude
 
-data DetachAction m
-    = FragmentAlready EntityId -- I'm an apply-of-hole, no need to detach
-    | FragmentExprAlready EntityId -- I'm an arg of apply-of-hole, no need to detach
-    | DetachAction (m EntityId) -- Detach me
-
-data Actions m = Actions
-    { _detach :: DetachAction m
-    , _mSetToHole :: Maybe (m EntityId) -- (Not available for holes)
-    , _extract :: m ExtractDestination
-    , _mReplaceParent :: Maybe (m EntityId)
-    }
-
 data Payload m a = Payload
     { _plAnnotation :: Annotation
-    , _plActions :: Actions m
+    , _plActions :: NodeActions m
     , _plEntityId :: EntityId
     , _plData :: a
     } deriving (Functor, Foldable, Traversable)
@@ -166,7 +152,7 @@ data AnnotatedArg name expr = AnnotatedArg
 data RelayedArg name m = RelayedArg
     { _raValue :: ParamRef name m
     , _raId :: EntityId
-    , _raActions :: Actions m
+    , _raActions :: NodeActions m
     }
 
 data LabeledApply name m expr = LabeledApply
@@ -237,7 +223,6 @@ instance (Show name, Show expr) => Show (Body name m expr) where
     show BodyPlaceHolder {} = "InjectedExpression"
     show BodyFragment {} = "Fragment:TODO"
 
-Lens.makeLenses ''Actions
 Lens.makeLenses ''AnnotatedArg
 Lens.makeLenses ''Body
 Lens.makeLenses ''Case
@@ -264,4 +249,3 @@ Lens.makePrisms ''Body
 Lens.makePrisms ''CaseKind
 Lens.makePrisms ''CompositeTail
 Lens.makePrisms ''Literal
-Lens.makePrisms ''DetachAction

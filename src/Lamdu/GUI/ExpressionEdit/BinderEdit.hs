@@ -438,17 +438,9 @@ makeBinderContentEdit ::
     ExprGuiM m (ExpressionGui m)
 makeBinderContentEdit (Sugar.BinderExpr binderBody) =
     ExprGuiM.makeSubexpression binderBody
-makeBinderContentEdit (Sugar.BinderLet l) =
+makeBinderContentEdit content@(Sugar.BinderLet l) =
     do
         config <- Lens.view Config.config
-        let eventMap =
-                mconcat
-                [ l ^. Sugar.lActions . Sugar.laSetToHole
-                    <&> WidgetIds.fromEntityId
-                    & E.keysEventMapMovesCursor (Config.delKeys config)
-                    (E.Doc ["Edit", "Delete let expression"])
-                , ExprEventMap.detachEventMap (l ^. Sugar.lActions . Sugar.laDetach) config
-                ]
         let moveToInnerEventMap =
                 body
                 ^? Sugar.bbContent . Sugar._BinderLet
@@ -458,8 +450,17 @@ makeBinderContentEdit (Sugar.BinderLet l) =
                 (E.Doc ["Edit", "Let clause", "Move inwards"]) . void)
         mOuterScopeId <- ExprGuiM.readMScopeId
         let letBodyScope = liftA2 lookupMKey mOuterScopeId (l ^. Sugar.lBodyScope)
-        parentDelegator letEntityId
-            <*> ( Responsive.vboxSpaced
+        ExprEventMap.addWith ExprEventMap.defaultOptions
+            ExprEventMap.ExprInfo
+            { ExprEventMap.exprInfoActions = l ^. Sugar.lActions . Sugar.laNodeActions
+            , ExprEventMap.exprInfoNearestHoles = binderContentNearestHoles content
+            , ExprEventMap.exprInfoIsHoleResult = False
+            , ExprEventMap.exprInfoMinOpPrec = 0
+            }
+            <*>
+            ( parentDelegator letEntityId
+                <*>
+                ( Responsive.vboxSpaced
                   <*>
                   sequence
                   [ makeLetEdit l <&> Widget.weakerEvents moveToInnerEventMap
@@ -467,7 +468,7 @@ makeBinderContentEdit (Sugar.BinderLet l) =
                     & ExprGuiM.withLocalMScopeId letBodyScope
                   ]
                 )
-            <&> Widget.weakerEvents eventMap
+            )
     where
         letEntityId = l ^. Sugar.lEntityId & WidgetIds.fromEntityId
         body = l ^. Sugar.lBody

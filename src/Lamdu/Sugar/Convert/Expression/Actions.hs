@@ -1,6 +1,6 @@
 {-# LANGUAGE NoImplicitPrelude #-}
 module Lamdu.Sugar.Convert.Expression.Actions
-    ( addActions, makeAnnotation
+    ( addActions, makeAnnotation, makeActions
     ) where
 
 import qualified Control.Lens as Lens
@@ -92,17 +92,17 @@ mkExtractToLet outerScope stored =
         extractPosI = Property.value outerScope
         oldStored = Property.value stored
 
-mkActions :: Monad m => Input.Payload m a -> ConvertM m (Actions (T m))
-mkActions exprPl =
+makeActions :: Monad m => Input.Payload m a -> ConvertM m (NodeActions (T m))
+makeActions exprPl =
     do
         ext <- mkExtract exprPl
         postProcess <- ConvertM.postProcess
-        Actions
+        pure NodeActions
             { _detach = DataOps.applyHoleTo stored <* postProcess <&> EntityId.ofValI & DetachAction
             , _mSetToHole = DataOps.setToHole stored <* postProcess <&> EntityId.ofValI & Just
             , _extract = ext
             , _mReplaceParent = Nothing
-            } & return
+            }
     where
         stored = exprPl ^. Input.stored
 
@@ -112,7 +112,7 @@ addActions ::
     ConvertM m (ExpressionU m a)
 addActions exprPl body =
     do
-        actions <- mkActions exprPl
+        actions <- makeActions exprPl
         ann <- makeAnnotation exprPl
         protectedSetToVal <- ConvertM.typeProtectedSetToVal
         let setToExpr srcPl =

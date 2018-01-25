@@ -25,7 +25,7 @@ import           Lamdu.Sugar.Convert.Binder.Params (ConventionalParams(..), conv
 import           Lamdu.Sugar.Convert.Binder.Redex (Redex(..))
 import qualified Lamdu.Sugar.Convert.Binder.Redex as Redex
 import           Lamdu.Sugar.Convert.Binder.Types (BinderKind(..))
-import           Lamdu.Sugar.Convert.Expression.Actions (addActions, makeAnnotation)
+import           Lamdu.Sugar.Convert.Expression.Actions (addActions, makeAnnotation, makeActions)
 import qualified Lamdu.Sugar.Convert.Input as Input
 import           Lamdu.Sugar.Convert.Monad (ConvertM, scScopeInfo, siLetItems)
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
@@ -46,27 +46,25 @@ lamParamToHole (V.Lam param body) =
 
 mkLetItemActions ::
     Monad m =>
-    ValIProperty m -> Redex (Input.Payload m a) ->
+    Input.Payload m a -> Redex (Input.Payload m a) ->
     ConvertM m (LetActions (T m))
-mkLetItemActions topLevelProp redex =
+mkLetItemActions topLevelPl redex =
     do
         float <- makeFloatLetToOuterScope (Property.set topLevelProp) redex
         postProcess <- ConvertM.postProcess
-        return
-            LetActions
+        nodeActions <- makeActions topLevelPl
+        pure LetActions
             { _laDelete =
                 do
                     lamParamToHole (redex ^. Redex.lam)
                     redex ^. Redex.lam . V.lamResult . Val.payload . Input.stored
                         & replaceWith topLevelProp & void
                 <* postProcess
-            , _laSetToHole =
-                DataOps.setToHole topLevelProp
-                <* postProcess
-                <&> EntityId.ofValI
             , _laFloat = float
-            , _laDetach = DataOps.applyHoleTo topLevelProp <* postProcess <&> EntityId.ofValI
+            , _laNodeActions = nodeActions
             }
+    where
+        topLevelProp = topLevelPl ^. Input.stored
 
 localNewExtractDestPos ::
     Val (Input.Payload m x) -> ConvertM m a -> ConvertM m a
@@ -97,7 +95,7 @@ convertRedex expr redex =
         (_pMode, value) <-
             convertBinder binderKind defUUID (redex ^. Redex.arg)
             & localNewExtractDestPos expr
-        actions <- mkLetItemActions (expr ^. Val.payload . Input.stored) redex
+        actions <- mkLetItemActions (expr ^. Val.payload) redex
         letBody <-
             convertBinderBody body
             & localNewExtractDestPos expr

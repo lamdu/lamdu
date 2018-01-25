@@ -7,10 +7,12 @@ module Lamdu.Sugar.Types.Binder
     , Tag(..), tagName, tagInfo, tagActions
     , TagInfo(..), tagVal, tagInstance
     , TagActions(..), taOptions, taChangeTag, taSetPublished, taReplaceWithNew
+    -- Node actions
+    , DetachAction(..), _FragmentAlready, _FragmentExprAlready, _DetachAction
+    , NodeActions(..), detach, mSetToHole, extract, mReplaceParent
     -- Let
     , LetFloatResult(..), ExtractDestination(..)
-    , LetActions(..)
-        , laDelete, laSetToHole, laFloat, laDetach
+    , LetActions(..), laDelete, laFloat, laNodeActions
     , Let(..)
         , lEntityId, lValue, lName, lUsages
         , lActions, lAnnotation, lBodyScope, lBody
@@ -147,11 +149,22 @@ data LetFloatResult = LetFloatResult
     , lfrMVarToTags :: Maybe VarToTags
     }
 
+data DetachAction m
+    = FragmentAlready EntityId -- I'm an apply-of-hole, no need to detach
+    | FragmentExprAlready EntityId -- I'm an arg of apply-of-hole, no need to detach
+    | DetachAction (m EntityId) -- Detach me
+
+data NodeActions m = NodeActions
+    { _detach :: DetachAction m
+    , _mSetToHole :: Maybe (m EntityId) -- (Not available for holes)
+    , _extract :: m ExtractDestination
+    , _mReplaceParent :: Maybe (m EntityId)
+    }
+
 data LetActions m = LetActions
     { _laDelete :: m ()
-    , _laSetToHole :: m EntityId
     , _laFloat :: m LetFloatResult
-    , _laDetach :: m EntityId
+    , _laNodeActions :: NodeActions m
     }
 
 -- This is a mapping from a parent scope to the inner scope in:
@@ -219,6 +232,7 @@ Lens.makeLenses ''FuncParam
 Lens.makeLenses ''FuncParamActions
 Lens.makeLenses ''Let
 Lens.makeLenses ''LetActions
+Lens.makeLenses ''NodeActions
 Lens.makeLenses ''NullParamActions
 Lens.makeLenses ''Tag
 Lens.makeLenses ''TagActions
@@ -226,6 +240,7 @@ Lens.makeLenses ''TagInfo
 Lens.makeLenses ''VarParamInfo
 Lens.makePrisms ''BinderContent
 Lens.makePrisms ''BinderParams
+Lens.makePrisms ''DetachAction
 
 -- Manual instances to work around GHC <=8.0.2 bug causing long compile times
 -- IIRC it was due to inlining recursions (TODO: find bug# / link).
