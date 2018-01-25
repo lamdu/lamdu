@@ -56,7 +56,10 @@ addToLabeledApply a =
             a ^. Sugar.aAnnotatedArgs
             <&> (\x -> (x ^. Sugar.aaTag . Sugar.tagVal, x))
             & Map.fromList
-        argExpr t = argsMap Map.! t ^. Sugar.aaExpr
+        argExpr t =
+            case Map.lookup t argsMap of
+            Nothing -> error "Arg not in args map"
+            Just x -> x ^. Sugar.aaExpr
         mkInfixArg arg other =
             arg
             & Sugar.rPayload . Sugar.plActions . Sugar.delete %~ addDel
