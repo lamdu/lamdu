@@ -131,8 +131,10 @@ actionsEventMap options exprInfo =
     <&> mappend (transformEventMap options exprInfo)
     where
         mkReplaceParent replaceKeys =
-            exprInfoActions exprInfo ^. Sugar.mReplaceParent <&> void
-            & maybe mempty (E.keysEventMap replaceKeys (E.Doc ["Edit", "Replace parent"]))
+            exprInfoActions exprInfo ^. Sugar.mReplaceParent
+            <&> E.keysEventMapMovesCursor replaceKeys (E.Doc ["Edit", "Replace parent"])
+                . fmap WidgetIds.fromEntityId
+            & fromMaybe mempty
 
 -- | Create the hole search term for new apply operators,
 -- given the extra search term chars from another hole.
