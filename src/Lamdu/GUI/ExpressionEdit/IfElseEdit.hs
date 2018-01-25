@@ -76,7 +76,7 @@ makeElse (Sugar.SimpleElse expr) =
     ) <*> ExprGuiM.makeSubexpression expr
     <&> pure
     where
-        elseAnimId = Widget.toAnimId elseId
+        elseAnimId = Widget.toAnimId elseId <> ["else"]
         elseId = WidgetIds.fromExprPayload (expr ^. Sugar.rPayload)
 makeElse (Sugar.ElseIf (Sugar.ElseIfContent scopes entityId ifThen addLet els _nodeActions)) =
     -- TODO: use nodeActions
