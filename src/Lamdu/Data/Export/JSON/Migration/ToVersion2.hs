@@ -31,7 +31,7 @@ migrateEntity (Aeson.Object obj) =
             case Vector.toList vals of
             [Aeson.String "Infix", Aeson.Number _prec] ->
                 obj
-                & Lens.at "defPresentationMode" .~ Just "Infix"
+                & Lens.at "defPresentationMode" ?~ "Infix"
                 & Right
             _ -> Left "malformed presenetation mode"
             & Just

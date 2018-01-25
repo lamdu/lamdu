@@ -71,8 +71,8 @@ mkLetItemActions topLevelProp redex =
 localNewExtractDestPos ::
     Val (Input.Payload m x) -> ConvertM m a -> ConvertM m a
 localNewExtractDestPos val =
-    ConvertM.scScopeInfo . ConvertM.siMOuter .~
-    Just ConvertM.OuterScopeInfo
+    ConvertM.scScopeInfo . ConvertM.siMOuter ?~
+    ConvertM.OuterScopeInfo
     { _osiPos = val ^. Val.payload . Input.stored
     , _osiScope = val ^. Val.payload . Input.inferred . Infer.plScope
     }

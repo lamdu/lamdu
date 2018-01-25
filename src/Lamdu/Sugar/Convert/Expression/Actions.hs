@@ -116,8 +116,7 @@ addActions exprPl body =
         ann <- makeAnnotation exprPl
         protectedSetToVal <- ConvertM.typeProtectedSetToVal
         let setToExpr srcPl =
-                plActions . mReplaceParent .~
-                Just
+                plActions . mReplaceParent ?~
                 (protectedSetToVal
                     (exprPl ^. Input.stored)
                     (srcPl ^. plData . pStored . Property.pVal)
