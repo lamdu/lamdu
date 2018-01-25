@@ -45,7 +45,7 @@ convertIfElse setToVal caseBody =
                 Just altFalseBinderExpr ->
                     case altFalseBinderExpr ^. rBody of
                     BodyIfElse innerIfElse ->
-                        ElseIf
+                        ElseIf ElseIfContent
                         { _eiScopes =
                             case binder ^. bBodyScopes of
                             SameAsParentScope -> error "lambda body should have scopes"
@@ -53,9 +53,9 @@ convertIfElse setToVal caseBody =
                         , _eiEntityId = altFalseBinderExpr ^. rPayload . plEntityId
                         , _eiIfThen = innerIfElse ^. iIfThen
                         , _eiCondAddLet = binder ^. bBody . bbAddOuterLet
+                        , _eiElse = innerIfElse ^. iElse
                         }
-                        : innerIfElse ^. iElseIfs
-                        & makeRes (innerIfElse ^. iElse)
+                        & makeRes
                         where
                             getScope [x] = x ^. bParamScopeId
                             getScope _ = error "if-else evaluated more than once in same scope?"
@@ -70,13 +70,14 @@ convertIfElse setToVal caseBody =
                     & rBody . _BodyHole . holeMDelete ?~ elseDel
                     & rBody . _BodyLam . lamBinder . bBody . bbContent . _BinderExpr
                         . rBody . _BodyHole . holeMDelete ?~ elseDel
-                    & (`makeRes` [])
+                    & SimpleElse
+                    & makeRes
                 elseDel = setToVal (delTarget altTrue) <&> EntityId.ofValI
                 delTarget alt =
                     alt ^? ciExpr . rBody . _BodyLam . lamBinder . bBody . bbContent . _BinderExpr
                     & fromMaybe (alt ^. ciExpr)
                     & (^. rPayload . plData . pStored . Property.pVal)
-                makeRes els elseIfs =
+                makeRes els =
                     IfElse
                     { _iIfThen =
                         IfThen
@@ -84,7 +85,6 @@ convertIfElse setToVal caseBody =
                         , _itThen = altTrue ^. ciExpr
                         , _itDelete = delTarget altFalse & setToVal <&> EntityId.ofValI
                         }
-                    , _iElseIfs = elseIfs
                     , _iElse = els
                     }
 

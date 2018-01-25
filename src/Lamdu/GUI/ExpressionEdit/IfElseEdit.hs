@@ -68,11 +68,17 @@ makeIfThen prefixLabel entityId ifThen =
     where
         indentAnimId = WidgetIds.fromEntityId entityId & Widget.toAnimId
 
-makeElseIf ::
-    Monad m =>
-    Sugar.ElseIf (T m) (ExprGui.SugarExpr m) ->
-    ExprGuiM m [Row (ExpressionGui m)] -> ExprGuiM m [Row (ExpressionGui m)]
-makeElseIf (Sugar.ElseIf scopes entityId ifThen addLet) makeRest =
+makeElse :: Monad m => Sugar.Else (T m) (ExprGui.SugarExpr m) -> ExprGuiM m [Row (ExpressionGui m)]
+makeElse (Sugar.SimpleElse expr) =
+    ( Row elseAnimId
+        <$> (Styled.grammarLabel "else" <&> Responsive.fromTextView)
+        <*> (Styled.grammarLabel ": " & Reader.local (Element.animIdPrefix .~ elseAnimId) <&> Responsive.fromTextView)
+    ) <*> ExprGuiM.makeSubexpression expr
+    <&> pure
+    where
+        elseAnimId = Widget.toAnimId elseId
+        elseId = WidgetIds.fromExprPayload (expr ^. Sugar.rPayload)
+makeElse (Sugar.ElseIf (Sugar.ElseIfContent scopes entityId ifThen addLet els)) =
     do
         mOuterScopeId <- ExprGuiM.readMScopeId
         let mInnerScope = lookupMKey <$> mOuterScopeId <*> scopes
@@ -85,22 +91,12 @@ makeElseIf (Sugar.ElseIf scopes entityId ifThen addLet) makeRest =
                 <&> Sugar.itIf %~ Widget.weakerEvents letEventMap
                 >>= makeIfThen elseLabel entityId
             )
-            <*>  makeRest
+            <*> makeElse els
             & Reader.local (Element.animIdPrefix .~ Widget.toAnimId (WidgetIds.fromEntityId entityId))
             & ExprGuiM.withLocalMScopeId mInnerScope
     where
         -- TODO: cleaner way to write this?
         lookupMKey k m = k >>= (`Map.lookup` m)
-
-makeElse :: Monad m => ExprGui.SugarExpr m -> ExprGuiM m (Row (ExpressionGui m))
-makeElse expr =
-    ( Row elseAnimId
-        <$> (Styled.grammarLabel "else" <&> Responsive.fromTextView)
-        <*> (Styled.grammarLabel ": " & Reader.local (Element.animIdPrefix .~ elseAnimId) <&> Responsive.fromTextView)
-    ) <*> ExprGuiM.makeSubexpression expr
-    where
-        elseAnimId = Widget.toAnimId elseId
-        elseId = WidgetIds.fromExprPayload (expr ^. Sugar.rPayload)
 
 verticalRowRender ::
     ( Monad m, MonadReader env f, Spacer.HasStdSpacing env
@@ -154,7 +150,7 @@ make ifElse pl =
             <*>
             ( (:)
                 <$> makeIf
-                <*> foldr makeElseIf (makeElse (ifElse ^. Sugar.iElse) <&> (:[])) (ifElse ^. Sugar.iElseIfs)
+                <*> makeElse (ifElse ^. Sugar.iElse)
             )
         )
     where

@@ -74,8 +74,7 @@ markAnnotationsToDisplay (Expression oldBody pl) =
     BodyIfElse i ->
         i
         & iIfThen . itThen %~ onCaseAlt
-        & iElseIfs . Lens.mapped . eiIfThen . itThen %~ onCaseAlt
-        & iElse %~ onCaseAlt
+        & iElse %~ onElse
         & BodyIfElse
         & (`Expression` defPl)
     BodyHole hole ->
@@ -108,3 +107,9 @@ markAnnotationsToDisplay (Expression oldBody pl) =
             & rBody . _BodyLam . lamBinder . bBody . bbContent .
               SugarLens.binderContentExpr . nonHoleAnn .~ T.neverShowAnnotations
             & topLevelAnn . T.funcApplyLimit .~ T.AtMostOneFuncApply
+        onElse (SimpleElse x) = onCaseAlt x & SimpleElse
+        onElse (ElseIf elseIf) =
+            elseIf
+            & eiIfThen . itThen %~ onCaseAlt
+            & eiElse %~ onElse
+            & ElseIf

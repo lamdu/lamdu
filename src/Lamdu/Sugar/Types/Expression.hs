@@ -18,9 +18,10 @@ module Lamdu.Sugar.Types.Expression
     , CaseArg(..), caVal, caToLambdaCase
     , CaseKind(..), _LambdaCase, _CaseWithArg
     , Case(..), cKind, cBody
-    , ElseIf(..), eiScopes, eiEntityId, eiIfThen, eiCondAddLet
+    , ElseIfContent(..), eiScopes, eiEntityId, eiIfThen, eiCondAddLet, eiElse
+    , Else(..), _SimpleElse, _ElseIf
     , IfThen(..), itIf, itThen, itDelete
-    , IfElse(..), iIfThen, iElseIfs, iElse
+    , IfElse(..), iIfThen, iElse
     , Nominal(..), nTId, nVal
     --
     , GetField(..), gfRecord, gfTag
@@ -124,17 +125,20 @@ data IfThen m expr = IfThen
     } deriving (Functor, Foldable, Traversable)
 
 -- An "elif <cond>: <then>" clause in an IfElse expression
-data ElseIf m expr = ElseIf
+data ElseIfContent m expr = ElseIfContent
     { _eiScopes :: ChildScopeMapping
     , _eiEntityId :: EntityId
     , _eiIfThen :: IfThen m expr
     , _eiCondAddLet :: m EntityId
+    , _eiElse :: Else m expr
     } deriving (Functor, Foldable, Traversable)
+
+data Else m expr = SimpleElse expr | ElseIf (ElseIfContent m expr)
+    deriving (Functor, Foldable, Traversable)
 
 data IfElse m expr = IfElse
     { _iIfThen :: IfThen m expr
-    , _iElseIfs :: [ElseIf m expr]
-    , _iElse :: expr
+    , _iElse :: Else m expr
     } deriving (Functor, Foldable, Traversable)
 
 data GetField name m expr = GetField
@@ -235,7 +239,7 @@ Lens.makeLenses ''ClosedCompositeActions
 Lens.makeLenses ''Composite
 Lens.makeLenses ''CompositeAddItemResult
 Lens.makeLenses ''CompositeItem
-Lens.makeLenses ''ElseIf
+Lens.makeLenses ''ElseIfContent
 Lens.makeLenses ''Expression
 Lens.makeLenses ''Fragment
 Lens.makeLenses ''GetField
@@ -253,4 +257,5 @@ Lens.makePrisms ''Attach
 Lens.makePrisms ''Body
 Lens.makePrisms ''CaseKind
 Lens.makePrisms ''CompositeTail
+Lens.makePrisms ''Else
 Lens.makePrisms ''Literal
