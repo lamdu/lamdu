@@ -58,8 +58,16 @@ payloadsOf body =
     where
         predicate idx _ = Lens.has (rBody . body) idx
 
+binderVarRefUnfinished :: Lens.Traversal' (BinderVarRef name m) ()
+binderVarRefUnfinished =
+    bvForm . _GetDefinition . Lens.failing _DefDeleted (_DefTypeChanged . Lens.united)
+
 bodyUnfinished :: Lens.Traversal' (Body name m a) ()
-bodyUnfinished = Lens.failing (_BodyHole . Lens.united) (_BodyFragment . Lens.united)
+bodyUnfinished =
+    _BodyHole . Lens.united
+    & Lens.failing (_BodyFragment . Lens.united)
+    & Lens.failing (_BodyGetVar . _GetBinder . binderVarRefUnfinished)
+    & Lens.failing (_BodyLabeledApply . aFunc . binderVarRefUnfinished)
 
 unfinishedExprPayloads ::
     Lens.IndexedTraversal'
