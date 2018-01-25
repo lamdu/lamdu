@@ -130,7 +130,7 @@ definitionTypeChangeBox ::
     , Spacer.HasStdSpacing env, HasTheme env, GuiState.HasCursor env
     , HasConfig env, Applicative f
     ) =>
-    Sugar.DefinitionOutdatedType (f ()) -> Widget.Id ->
+    Sugar.DefinitionOutdatedType (f Sugar.EntityId) -> Widget.Id ->
     m (WithTextPos (Widget (f GuiState.Update)))
 definitionTypeChangeBox info getVarId =
     do
@@ -145,7 +145,7 @@ definitionTypeChangeBox info getVarId =
         config <- Lens.view Config.config
         -- TODO: unify config's button press keys
         let keys = Config.newDefinitionButtonPressKeys (Config.pane config)
-        let update = getVarId <$ info ^. Sugar.defTypeUseCurrent
+        let update = info ^. Sugar.defTypeUseCurrent <&> WidgetIds.fromEntityId
         headerLabel /-/ typeWhenUsed /-/ spacing /-/ sepLabel /-/ typeCurrent
             & Align.tValue %~ Widget.weakerEvents
             (E.keysEventMapMovesCursor keys

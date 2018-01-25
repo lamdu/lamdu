@@ -45,7 +45,7 @@ instance Show (DefinitionOutdatedType m) where
         "(Used @type: " ++ show usedType ++ " now type: " ++ show newType ++ ")"
 
 data DefinitionForm m =
-    DefUpToDate | DefDeleted | DefTypeChanged (DefinitionOutdatedType (m ()))
+    DefUpToDate | DefDeleted | DefTypeChanged (DefinitionOutdatedType (m EntityId))
     deriving Show
 
 data BinderVarForm m = GetDefinition (DefinitionForm m) | GetLet deriving Show
