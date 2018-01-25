@@ -80,7 +80,7 @@ onNgMakeName onMakeName =
                     nameGen
                     { ngMakeName =
                         ngMakeName nameGen
-                        & Lens.mapped . Lens.mapped . _2 %~ go
+                        <&> Lens.mapped . _2 %~ go
                         & onMakeName result
                     , ngSplit =
                         ngSplit nameGen

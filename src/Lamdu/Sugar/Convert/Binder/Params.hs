@@ -83,7 +83,7 @@ mkStoredLam ::
     Input.Payload m a -> StoredLam m
 mkStoredLam lam pl =
     StoredLam
-    (lam & Lens.mapped . Lens.mapped %~ (^. Input.stored))
+    (lam <&> Lens.mapped %~ (^. Input.stored))
     (pl ^. Input.stored)
 
 newTag :: Monad m => T m T.Tag

@@ -22,3 +22,5 @@ infixr 4 .|.~, .&.~, <.|.~, <.&.~
 infix 4 .|.=, .&.=, <.|.=, <.&.=
 
 warn = a .~ Just b ==> a ?~ b
+warn = a & Control.Lens.mapped %~ b ==> a <&> b
+warn = a & Control.Lens.mapped . b %~ c ==> a <&> b %~ c
