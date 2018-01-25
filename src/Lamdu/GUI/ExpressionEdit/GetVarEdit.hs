@@ -130,7 +130,7 @@ definitionTypeChangeBox ::
     , Spacer.HasStdSpacing env, HasTheme env, GuiState.HasCursor env
     , HasConfig env, Applicative f
     ) =>
-    Sugar.DefinitionOutdatedType f -> Widget.Id ->
+    Sugar.DefinitionOutdatedType (f ()) -> Widget.Id ->
     m (WithTextPos (Widget (f GuiState.Update)))
 definitionTypeChangeBox info getVarId =
     do

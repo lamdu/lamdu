@@ -213,7 +213,7 @@ scan ::
     Monad m =>
     Def.Expr (Val (ValIProperty m)) -> (Def.Expr (ValI m) -> T m ()) ->
     T m PostProcessResult ->
-    T m (Map V.Var (DefinitionOutdatedType (T m)))
+    T m (Map V.Var (DefinitionOutdatedType (T m ())))
 scan defExpr setDefExpr typeCheck =
     defExpr ^. Def.exprFrozenDeps . Infer.depsGlobalTypes
     & Map.toList & mapM (uncurry scanDef) <&> mconcat

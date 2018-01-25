@@ -35,17 +35,17 @@ data ParamRef name m = ParamRef
     , _pBinderMode :: BinderMode
     }
 
-data DefinitionOutdatedType m = DefinitionOutdatedType
+data DefinitionOutdatedType a = DefinitionOutdatedType
     { _defTypeWhenUsed :: Scheme
     , _defTypeCurrent :: Scheme
-    , _defTypeUseCurrent :: m ()
-    }
+    , _defTypeUseCurrent :: a
+    } deriving (Functor, Foldable, Traversable)
 instance Show (DefinitionOutdatedType m) where
     show (DefinitionOutdatedType usedType newType _) =
         "(Used @type: " ++ show usedType ++ " now type: " ++ show newType ++ ")"
 
 data DefinitionForm m =
-    DefUpToDate | DefDeleted | DefTypeChanged (DefinitionOutdatedType m)
+    DefUpToDate | DefDeleted | DefTypeChanged (DefinitionOutdatedType (m ()))
     deriving Show
 
 data BinderVarForm m = GetDefinition (DefinitionForm m) | GetLet deriving Show

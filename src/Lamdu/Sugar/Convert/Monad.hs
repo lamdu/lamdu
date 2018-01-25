@@ -93,7 +93,7 @@ data Context m = Context
       _scPostProcessRoot :: T m PostProcessResult
     , -- The nominal types appearing in the converted expr and its subexpression
       _scNominalsMap :: Map T.NominalId Nominal
-    , _scOutdatedDefinitions :: Map V.Var (Sugar.DefinitionOutdatedType (T m))
+    , _scOutdatedDefinitions :: Map V.Var (Sugar.DefinitionOutdatedType (T m ()))
     , _scInlineableDefinitions :: Set V.Var
     , _scFrozenDeps :: Transaction.Property m Infer.Dependencies
     , scConvertSubexpression ::
