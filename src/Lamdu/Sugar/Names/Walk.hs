@@ -186,6 +186,7 @@ toHole Hole{..} =
         pure Hole
             { _holeOptions = _holeOptions >>= run0 . traverse toHoleOption
             , _holeOptionLiteral = _holeOptionLiteral <&> Lens.mapped . _2 %~ (>>= run1 . toHoleResult)
+            , _holeMDelete = _holeMDelete
             }
 
 toFragment ::

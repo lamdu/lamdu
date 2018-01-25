@@ -7,10 +7,12 @@ import qualified Control.Lens as Lens
 import qualified Data.Char as Char
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Text as Text
+import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.State as GuiState
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Menu as Menu
 import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
+import qualified Lamdu.Config as Config
 import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.Literal (makeLiteralEventMap)
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.SearchArea as SearchArea
@@ -19,6 +21,7 @@ import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds as HoleWidgetIds
 import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExprGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
+import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Name (Name)
 import qualified Lamdu.Sugar.Types as Sugar
 
@@ -55,12 +58,19 @@ make ::
 make hole pl =
     do
         searchTerm <- SearchMenu.readSearchTerm searchMenuId
-        let litEventMap
-                | searchTerm == "" = makeLiteralEventMap (hole ^. Sugar.holeOptionLiteral)
-                | otherwise = mempty
+        delKeys <- Lens.view Config.config <&> Config.delKeys
+        let (litEventMap, delEventMap)
+                | searchTerm == "" =
+                    ( makeLiteralEventMap (hole ^. Sugar.holeOptionLiteral)
+                    , hole ^. Sugar.holeMDelete
+                        <&> E.keysEventMapMovesCursor delKeys (E.Doc ["Edit", "Delete"]) . fmap WidgetIds.fromEntityId
+                        & fromMaybe mempty
+                    )
+                | otherwise = (mempty, mempty)
         ExprEventMap.add options pl
             <*> ( SearchArea.make (hole ^. Sugar.holeOptions)
                     (Just (hole ^. Sugar.holeOptionLiteral)) pl allowedHoleSearchTerm ?? Menu.AnyPlace
+                    <&> Widget.widget . Widget.eventMapMaker . Lens.mapped %~ (<> delEventMap)
                 )
             <&> Widget.widget . Widget.eventMapMaker . Lens.mapped %~ (litEventMap <>)
     & GuiState.assignCursor (hidHole widgetIds) searchMenuId

@@ -96,9 +96,8 @@ convertAppliedHole (V.Apply funcI argI) argS exprPl =
                 { _fExpr =
                       argS
                       & rPayload . plActions . detach .~ FragmentExprAlready storedEntityId
-                      & rPayload . plActions . delete .~
-                        SetToHole
-                        ( DataOps.setToHole (exprPl ^. Input.stored) <* postProcess <&> EntityId.ofValI )
+                      & rPayload . plActions . mSetToHole ?~
+                        (DataOps.setToHole (exprPl ^. Input.stored) <* postProcess <&> EntityId.ofValI)
                 , _fAttach =
                       if isTypeMatch
                       then DataOps.replace (exprPl ^. Input.stored)

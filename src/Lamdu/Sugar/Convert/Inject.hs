@@ -33,18 +33,13 @@ convert (V.Inject tag injected) exprPl =
                         >>= ExprIRef.writeValBody valI
                     typeProtect
                 <&> EntityId.ofValI
-        let maybeToNullary expr
-                | Lens.has (rBody . _BodyLiteral . _LiteralBytes) expr =
-                    -- HACK: Work around LiteralEdit relying on SetToHole action.
-                    expr
-                | otherwise = expr & rPayload . plActions . delete .~ Delete toNullary
         mInjectedS <-
             if Lens.has ExprLens.valRecEmpty injected
             then
                 pure Nothing
             else
                 ConvertM.convertSubexpression injected
-                <&> maybeToNullary
+                <&> rBody . _BodyHole . holeMDelete ?~ toNullary
                 <&> Just
         let setTag newTag =
                 do

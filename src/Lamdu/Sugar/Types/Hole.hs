@@ -4,7 +4,7 @@ module Lamdu.Sugar.Types.Hole
     ( HoleOption(..), hoVal, hoSugaredBaseExpr, hoResults
     , Literal(..), _LiteralNum, _LiteralBytes, _LiteralText
     , OptionLiteral
-    , Hole(..), holeOptions, holeOptionLiteral
+    , Hole(..), holeOptions, holeOptionLiteral, holeMDelete
     , HoleResultScore(..), hrsNumFragments, hrsScore
     , HoleResult(..)
         , holeResultConverted
@@ -15,6 +15,7 @@ import qualified Control.Lens as Lens
 import           Control.Monad.ListT (ListT)
 import           Data.Functor.Identity (Identity(..))
 import           Lamdu.Calc.Val.Annotated (Val)
+import           Lamdu.Sugar.Internal.EntityId (EntityId)
 
 import           Lamdu.Prelude
 
@@ -45,6 +46,9 @@ type OptionLiteral m resultExpr = Literal Identity -> m (HoleResultScore, m (Hol
 data Hole m resultExpr = Hole
     { _holeOptions :: m [HoleOption m resultExpr]
     , _holeOptionLiteral :: OptionLiteral m resultExpr
+    , -- Changes the structure around the hole to remove the hole.
+      -- For example (f _) becomes (f) or (2 + _) becomes 2
+      _holeMDelete :: Maybe (m EntityId)
     }
 
 Lens.makeLenses ''Hole

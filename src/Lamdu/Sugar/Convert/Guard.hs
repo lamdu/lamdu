@@ -69,13 +69,11 @@ convertGuard setToVal caseBody =
                 mAltFalseBinder = altFalse ^? ciExpr . rBody . _BodyLam . lamBinder
                 simpleIfElse =
                     altFalse ^. ciExpr
-                    & rPayload . plActions . delete %~ mkElseDel
+                    & rBody . _BodyHole . holeMDelete ?~ elseDel
                     & rBody . _BodyLam . lamBinder . bBody . bbContent . _BinderExpr
-                        . rPayload . plActions . delete %~ mkElseDel
+                        . rBody . _BodyHole . holeMDelete ?~ elseDel
                     & (`makeRes` [])
-                mkElseDel CannotDelete =
-                    delTarget altTrue & setToVal <&> EntityId.ofValI & Delete
-                mkElseDel x = x
+                elseDel = setToVal (delTarget altTrue) <&> EntityId.ofValI
                 delTarget alt =
                     alt ^? ciExpr . rBody . _BodyLam . lamBinder . bBody . bbContent . _BinderExpr
                     & fromMaybe (alt ^. ciExpr)

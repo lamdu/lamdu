@@ -81,9 +81,10 @@ convert exprPl =
     Hole
     <$> mkOptions Nothing exprPl
     <*> mkLiteralOptions exprPl
+    <*> pure Nothing
     <&> BodyHole
     >>= addActions exprPl
-    <&> rPayload . plActions . delete .~ CannotDelete
+    <&> rPayload . plActions . mSetToHole .~ Nothing
 
 mkHoleOptionFromFragment ::
     Monad m =>

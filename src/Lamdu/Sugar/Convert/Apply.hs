@@ -52,7 +52,7 @@ convert app@(V.Apply funcI argI) exprPl =
                                 EntityId.ofValI dst <$
                                 protectedSetToVal (exprPl ^. Input.stored) dst
                         funcS
-                            & rPayload . plActions . delete .~ SetToHole deleteAction
+                            & rPayload . plActions . mSetToHole ?~ deleteAction
                             & return
                         & fromMaybe funcS
                     , argS
@@ -131,14 +131,12 @@ convertPrefix ::
 convertPrefix funcS argS applyPl =
     do
         protectedSetToVal <- ConvertM.typeProtectedSetToVal
-        let addDel CannotDelete =
+        let del =
                 protectedSetToVal (applyPl ^. Input.stored)
                 (funcS ^. rPayload . plData . pStored & Property.value)
                 <&> EntityId.ofValI
-                & Delete
-            addDel x = x
         BodySimpleApply Apply
             { _applyFunc = funcS
-            , _applyArg = argS & rPayload . plActions . delete %~ addDel
+            , _applyArg = argS & rBody . _BodyHole . holeMDelete ?~ del
             }
             & addActions applyPl

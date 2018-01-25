@@ -1,9 +1,7 @@
 {-# LANGUAGE NoImplicitPrelude, TemplateHaskell, DeriveTraversable #-}
 module Lamdu.Sugar.Types.Expression
     ( DetachAction(..), _FragmentAlready, _FragmentExprAlready, _DetachAction
-    , Delete(..), _SetToHole, _Delete, _CannotDelete
-    , Actions(..)
-        , detach, delete, extract, mReplaceParent
+    , Actions(..), detach, mSetToHole, extract, mReplaceParent
     , Body(..)
         , _BodyLam, _BodyLabeledApply, _BodySimpleApply
         , _BodyGetVar, _BodyGetField, _BodyInject, _BodyHole
@@ -55,16 +53,9 @@ data DetachAction m
     | FragmentExprAlready EntityId -- I'm an arg of apply-of-hole, no need to detach
     | DetachAction (m EntityId) -- Detach me
 
-data Delete m
-    = SetToHole (m EntityId)
-    | -- Changes the structure around the hole to remove the hole.
-      -- For example (f _) becomes (f) or (2 + _) becomes 2
-      Delete (m EntityId)
-    | CannotDelete
-
 data Actions m = Actions
     { _detach :: DetachAction m
-    , _delete :: Delete m
+    , _mSetToHole :: Maybe (m EntityId) -- (Not available for holes)
     , _extract :: m ExtractDestination
     , _mReplaceParent :: Maybe (m EntityId)
     }
@@ -272,6 +263,5 @@ Lens.makePrisms ''Attach
 Lens.makePrisms ''Body
 Lens.makePrisms ''CaseKind
 Lens.makePrisms ''CompositeTail
-Lens.makePrisms ''Delete
 Lens.makePrisms ''Literal
 Lens.makePrisms ''DetachAction

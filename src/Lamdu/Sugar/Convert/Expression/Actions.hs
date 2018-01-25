@@ -99,7 +99,7 @@ mkActions exprPl =
         postProcess <- ConvertM.postProcess
         Actions
             { _detach = DataOps.applyHoleTo stored <* postProcess <&> EntityId.ofValI & DetachAction
-            , _delete = DataOps.setToHole stored <* postProcess <&> EntityId.ofValI & SetToHole
+            , _mSetToHole = DataOps.setToHole stored <* postProcess <&> EntityId.ofValI & Just
             , _extract = ext
             , _mReplaceParent = Nothing
             } & return

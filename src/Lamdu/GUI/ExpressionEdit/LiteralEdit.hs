@@ -77,8 +77,8 @@ genericEdit whichStyle prop pl =
     where
         myId = WidgetIds.fromExprPayload pl
         editEventMap =
-            case pl ^. Sugar.plActions . Sugar.delete of
-            Sugar.SetToHole action -> mkEditEventMap valText action
+            case pl ^. Sugar.plActions . Sugar.mSetToHole of
+            Just action -> mkEditEventMap valText action
             _ -> error "Cannot set literal to hole?!"
         valText = prop ^. Property.pVal & format
 
@@ -178,7 +178,7 @@ numEdit prop pl =
                 WidgetIds.fromEntityId nextEntry & pure
                 & E.keysEventMapMovesCursor keys (E.Doc ["Navigation", "Next entry"])
         let delEvent =
-                case pl ^? Sugar.plActions . Sugar.delete . Lens.failing Sugar._SetToHole Sugar._Delete of
+                case pl ^. Sugar.plActions . Sugar.mSetToHole of
                 -- Allow to delete when text is empty
                 Just action | Text.null text ->
                     action <&> WidgetIds.fromEntityId <&> GuiState.updateCursor

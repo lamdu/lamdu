@@ -126,7 +126,7 @@ actionsEventMap options exprInfo =
             [ extractEventMap (exprInfoActions exprInfo)
             , Lens.view Config.config <&> Config.replaceParentKeys <&> mkReplaceParent
             ] <&> mconcat
-    , replaceEventMap (exprInfoActions exprInfo)
+    , maybe (pure mempty) replaceEventMap (exprInfoActions exprInfo ^. Sugar.mSetToHole)
     ] <&> mconcat <&> const
     <&> mappend (transformEventMap options exprInfo)
     where
@@ -190,16 +190,10 @@ detachEventMap detach =
 
 replaceEventMap ::
     (MonadReader env m, Config.HasConfig env, Functor f) =>
-    Sugar.Actions f -> m (EventMap (f GuiState.Update))
-replaceEventMap actions =
+    f Sugar.EntityId-> m (EventMap (f GuiState.Update))
+replaceEventMap action =
     Lens.view Config.config
     <&>
     \config ->
-    let mk action =
-            action <&> WidgetIds.fromEntityId
-            & E.keysEventMapMovesCursor (Config.delKeys config) (E.Doc ["Edit", "Delete expression"])
-    in
-    case actions ^. Sugar.delete of
-    Sugar.SetToHole action -> mk action
-    Sugar.Delete action -> mk action
-    Sugar.CannotDelete -> mempty
+    action <&> WidgetIds.fromEntityId
+    & E.keysEventMapMovesCursor (Config.delKeys config) (E.Doc ["Edit", "Set to Hole"])
