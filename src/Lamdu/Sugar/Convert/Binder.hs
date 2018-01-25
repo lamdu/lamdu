@@ -54,7 +54,7 @@ mkLetItemActions topLevelProp redex =
         postProcess <- ConvertM.postProcess
         return
             LetActions
-            { _laSetToInner =
+            { _laDelete =
                 do
                     lamParamToHole (redex ^. Redex.lam)
                     redex ^. Redex.lam . V.lamResult . Val.payload . Input.stored

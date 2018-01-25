@@ -370,7 +370,7 @@ makeLetEdit item =
         let letColor = Theme.letColor (Theme.name theme)
         let actionsEventMap =
                 mconcat
-                [ bodyId <$ item ^. Sugar.lActions . Sugar.laSetToInner
+                [ bodyId <$ item ^. Sugar.lActions . Sugar.laDelete
                     & E.keysEventMapMovesCursor (Config.delKeys config)
                     (E.Doc ["Edit", "Let clause", "Delete"])
                 , item ^. Sugar.lActions . Sugar.laFloat

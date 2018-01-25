@@ -10,7 +10,7 @@ module Lamdu.Sugar.Types.Binder
     -- Let
     , LetFloatResult(..), ExtractDestination(..)
     , LetActions(..)
-        , laSetToInner, laSetToHole, laFloat, laDetach
+        , laDelete, laSetToHole, laFloat, laDetach
     , Let(..)
         , lEntityId, lValue, lName, lUsages
         , lActions, lAnnotation, lBodyScope, lBody
@@ -148,7 +148,7 @@ data LetFloatResult = LetFloatResult
     }
 
 data LetActions m = LetActions
-    { _laSetToInner :: m ()
+    { _laDelete :: m ()
     , _laSetToHole :: m EntityId
     , _laFloat :: m LetFloatResult
     , _laDetach :: m EntityId
