@@ -28,19 +28,16 @@ addToLabeledApply a =
                 a ^. Sugar.aFunc . Sugar.bvNameRef . Sugar.nrName
                 & Anchors.assocPresentationMode & Transaction.getP
             let (specialArgs, otherArgs) =
-                    case presentationMode of
-                    Sugar.Infix l r ->
+                    case traverse argExpr presentationMode of
+                    Just (Sugar.Infix (l, la) (r, ra)) ->
                         ( Sugar.Infix (mkInfixArg la ra) (mkInfixArg ra la)
                         , argsMap
                             & Map.delete l
                             & Map.delete r
                             & Map.elems
                         )
-                        where
-                            la = argExpr l
-                            ra = argExpr r
-                    Sugar.Object o ->
-                        ( Sugar.Object (argExpr o)
+                    Just (Sugar.Object (o, oa)) ->
+                        ( Sugar.Object oa
                         , Map.delete o argsMap & Map.elems
                         )
                     _ -> (Sugar.Verbose, a ^. Sugar.aAnnotatedArgs)
@@ -56,10 +53,7 @@ addToLabeledApply a =
             a ^. Sugar.aAnnotatedArgs
             <&> (\x -> (x ^. Sugar.aaTag . Sugar.tagVal, x))
             & Map.fromList
-        argExpr t =
-            case Map.lookup t argsMap of
-            Nothing -> error "Arg not in args map"
-            Just x -> x ^. Sugar.aaExpr
+        argExpr t = Map.lookup t argsMap <&> (^. Sugar.aaExpr) <&> (,) t
         mkInfixArg arg other =
             arg
             & Sugar.rPayload . Sugar.plActions . Sugar.delete %~ addDel
