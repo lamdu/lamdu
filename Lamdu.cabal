@@ -200,7 +200,7 @@ Executable lamdu
                   , Lamdu.GUI.ExpressionEdit.FragmentEdit
                   , Lamdu.GUI.ExpressionEdit.GetFieldEdit
                   , Lamdu.GUI.ExpressionEdit.GetVarEdit
-                  , Lamdu.GUI.ExpressionEdit.GuardEdit
+                  , Lamdu.GUI.ExpressionEdit.IfElseEdit
                   , Lamdu.GUI.ExpressionEdit.HoleEdit
                   , Lamdu.GUI.ExpressionEdit.HoleEdit.Literal
                   , Lamdu.GUI.ExpressionEdit.HoleEdit.ResultGroups
@@ -253,7 +253,7 @@ Executable lamdu
                   , Lamdu.Sugar.Convert.Fragment
                   , Lamdu.Sugar.Convert.GetField
                   , Lamdu.Sugar.Convert.GetVar
-                  , Lamdu.Sugar.Convert.Guard
+                  , Lamdu.Sugar.Convert.IfElse
                   , Lamdu.Sugar.Convert.Hole
                   , Lamdu.Sugar.Convert.Hole.ResultScore
                   , Lamdu.Sugar.Convert.Hole.Suggest

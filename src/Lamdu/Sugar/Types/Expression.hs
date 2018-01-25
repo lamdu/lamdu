@@ -4,7 +4,7 @@ module Lamdu.Sugar.Types.Expression
         , _BodyLam, _BodyLabeledApply, _BodySimpleApply
         , _BodyGetVar, _BodyGetField, _BodyInject, _BodyHole
         , _BodyLiteral, _BodyCase, _BodyRecord, _BodyFragment
-        , _BodyFromNom, _BodyToNom, _BodyGuard
+        , _BodyFromNom, _BodyToNom, _BodyIfElse
     , Payload(..), plEntityId, plAnnotation, plActions, plData
     , Expression(..), rBody, rPayload
     -- record:
@@ -18,8 +18,8 @@ module Lamdu.Sugar.Types.Expression
     , CaseArg(..), caVal, caToLambdaCase
     , CaseKind(..), _LambdaCase, _CaseWithArg
     , Case(..), cKind, cBody
-    , GuardElseIf(..), geScopes, geEntityId, geCond, geThen, geDelete, geCondAddLet
-    , Guard(..), gIf, gThen, gElseIfs, gElse, gDeleteIf
+    , ElseIf(..), eiScopes, eiEntityId, eiCond, eiThen, eiDelete, eiCondAddLet
+    , IfElse(..), iIf, iThen, iElseIfs, iElse, iDeleteIf
     , Nominal(..), nTId, nVal
     --
     , GetField(..), gfRecord, gfTag
@@ -115,22 +115,23 @@ data Case name m expr = Case
     } deriving (Functor, Foldable, Traversable)
 {- Composites end -}
 
-data GuardElseIf m expr = GuardElseIf
-    { _geScopes :: ChildScopeMapping
-    , _geEntityId :: EntityId
-    , _geCond :: expr
-    , _geThen :: expr
-    , _geDelete :: m EntityId
-    , _geCondAddLet :: m EntityId
+-- A "elif <cond>: <then>" clause in an IfElse expression
+data ElseIf m expr = ElseIf
+    { _eiScopes :: ChildScopeMapping
+    , _eiEntityId :: EntityId
+    , _eiCond :: expr
+    , _eiThen :: expr
+    , _eiDelete :: m EntityId
+    , _eiCondAddLet :: m EntityId
     } deriving (Functor, Foldable, Traversable)
 
-data Guard m expr = Guard
+data IfElse m expr = IfElse
     { -- "if" is different than "else if" in that it doesn't have a scope that it run in
-      _gIf :: expr
-    , _gThen :: expr
-    , _gElseIfs :: [GuardElseIf m expr]
-    , _gElse :: expr
-    , _gDeleteIf :: m EntityId
+      _iIf :: expr
+    , _iThen :: expr
+    , _iElseIfs :: [ElseIf m expr]
+    , _iElse :: expr
+    , _iDeleteIf :: m EntityId
     } deriving (Functor, Foldable, Traversable)
 
 data GetField name m expr = GetField
@@ -193,7 +194,7 @@ data Body name m expr
     | BodyRecord (Composite name m expr)
     | BodyGetField (GetField name m expr)
     | BodyCase (Case name m expr)
-    | BodyGuard (Guard m expr)
+    | BodyIfElse (IfElse m expr)
     | BodyInject (Inject name m expr)
     | BodyGetVar (GetVar name m)
     | BodyToNom (Nominal name (BinderBody name m expr))
@@ -215,7 +216,7 @@ instance (Show name, Show expr) => Show (Body name m expr) where
     show BodyRecord {} = "Record:TODO"
     show BodyGetField {} = "GetField:TODO"
     show BodyCase {} = "Case:TODO"
-    show BodyGuard {} = "If:TODO"
+    show BodyIfElse {} = "If:TODO"
     show BodyInject {} = "Inject:TODO"
     show BodyGetVar {} = "GetVar:TODO"
     show BodyFromNom {} = "FromNom:TODO"
@@ -231,11 +232,11 @@ Lens.makeLenses ''ClosedCompositeActions
 Lens.makeLenses ''Composite
 Lens.makeLenses ''CompositeAddItemResult
 Lens.makeLenses ''CompositeItem
+Lens.makeLenses ''ElseIf
 Lens.makeLenses ''Expression
 Lens.makeLenses ''Fragment
 Lens.makeLenses ''GetField
-Lens.makeLenses ''Guard
-Lens.makeLenses ''GuardElseIf
+Lens.makeLenses ''IfElse
 Lens.makeLenses ''Inject
 Lens.makeLenses ''LabeledApply
 Lens.makeLenses ''Lambda

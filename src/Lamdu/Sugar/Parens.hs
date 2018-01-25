@@ -54,11 +54,11 @@ mkUnambiguous ::
     sugar (Maybe MinOpPrec -> Precedence (Maybe Int) -> a) -> (Classifier, b)
 mkUnambiguous cons x = (NeverParen, cons (x ?? Just 0 ?? unambiguous))
 
-precedenceOfGuard ::
-    Guard m (Maybe MinOpPrec -> Precedence (Maybe Int) -> a) -> (Classifier, Guard m a)
-precedenceOfGuard (Guard if_ then_ elseIfs else_ _del) =
+precedenceOfIfElse ::
+    IfElse m (Maybe MinOpPrec -> Precedence (Maybe Int) -> a) -> (Classifier, IfElse m a)
+precedenceOfIfElse (IfElse if_ then_ elseIfs else_ _del) =
     ( ParenIf Never (IfGreater 1)
-    , Guard
+    , IfElse
         (if_ (Just 0) unambiguous)
         (then_ (Just 0) (Precedence (Just 0) Nothing)) -- then appears in end of first line
         (elseIfs <&> (\expr -> expr ?? Just 0 ?? unambiguous))
@@ -135,7 +135,7 @@ precedenceOf =
     BodyGetField x         -> rightSymbol 14 BodyGetField x
     BodySimpleApply x      -> precedenceOfPrefixApply x
     BodyLabeledApply x     -> precedenceOfLabeledApply x & _2 %~ BodyLabeledApply
-    BodyGuard x            -> precedenceOfGuard x & _2 %~ BodyGuard
+    BodyIfElse x           -> precedenceOfIfElse x & _2 %~ BodyIfElse
     where
         leftSymbol prec cons x =
             ( ParenIf Never (IfGreaterOrEqual prec)

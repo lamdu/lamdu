@@ -169,7 +169,7 @@ data LetActions m = LetActions
 
 -- This is a mapping from a parent scope to the inner scope in:
 -- * A redex lambda body (executed exactly once)
--- * Also used for guard-sugar where guard scopes are executed no more than once
+-- * Also used for if-else sugar where else-if scopes are executed no more than once
 type ChildScopeMapping = CurAndPrev (Map ER.ScopeId ER.ScopeId)
 
 data Let name m expr = Let

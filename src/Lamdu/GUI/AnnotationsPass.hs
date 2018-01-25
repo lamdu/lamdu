@@ -71,12 +71,12 @@ markAnnotationsToDisplay (Expression oldBody pl) =
         & BodySimpleApply
         & (`Expression` defPl)
     BodyLabeledApply _ -> set T.showAnnotationWhenVerbose
-    BodyGuard g ->
-        g
-        & gThen %~ onCaseAlt
-        & gElseIfs . Lens.mapped . geThen %~ onCaseAlt
-        & gElse %~ onCaseAlt
-        & BodyGuard
+    BodyIfElse i ->
+        i
+        & iThen %~ onCaseAlt
+        & iElseIfs . Lens.mapped . eiThen %~ onCaseAlt
+        & iElse %~ onCaseAlt
+        & BodyIfElse
         & (`Expression` defPl)
     BodyHole hole ->
         hole

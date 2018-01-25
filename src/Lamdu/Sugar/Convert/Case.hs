@@ -16,7 +16,7 @@ import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Expr.IRef as ExprIRef
 import           Lamdu.Sugar.Convert.Composite (convertCompositeItem, setTagOrder, makeAddItem)
 import           Lamdu.Sugar.Convert.Expression.Actions (addActions)
-import           Lamdu.Sugar.Convert.Guard (convertGuard)
+import           Lamdu.Sugar.Convert.IfElse (convertIfElse)
 import qualified Lamdu.Sugar.Convert.Input as Input
 import           Lamdu.Sugar.Convert.Monad (ConvertM)
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
@@ -118,8 +118,8 @@ convertAppliedCase funcS argS exprPl =
                         setTo (funcS ^. rPayload . plData . pStored . Property.pVal)
                         <&> EntityId.ofValI
                     }
-        convertGuard setTo appliedCaseB
-            & maybe (BodyCase appliedCaseB) BodyGuard
+        convertIfElse setTo appliedCaseB
+            & maybe (BodyCase appliedCaseB) BodyIfElse
             & addActions exprPl & lift
             <&> rPayload . plEntityId .~ funcS ^. rPayload . plEntityId
 

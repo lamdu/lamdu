@@ -1,5 +1,5 @@
 {-# LANGUAGE NoImplicitPrelude, OverloadedStrings, DeriveTraversable, TemplateHaskell #-}
-module Lamdu.GUI.ExpressionEdit.GuardEdit
+module Lamdu.GUI.ExpressionEdit.IfElseEdit
     ( make
     ) where
 
@@ -46,13 +46,13 @@ data Row a = Row
     } deriving (Functor, Foldable, Traversable)
 Lens.makeLenses ''Row
 
-makeGuardRow ::
+makeIfRow ::
     ( Monad m, MonadReader env f, HasTheme env, HasConfig env
     , TextView.HasStyle env, Element.HasAnimIdPrefix env
     ) =>
     T m Sugar.EntityId -> WithTextPos View -> Sugar.EntityId ->
     f (ExpressionGui m -> ExpressionGui m -> Row (ExpressionGui m))
-makeGuardRow delete prefixLabel entityId =
+makeIfRow delete prefixLabel entityId =
     do
         label <- Styled.grammarLabel "if "
         colon <- Styled.grammarLabel ": "
@@ -60,7 +60,7 @@ makeGuardRow delete prefixLabel entityId =
         config <- Lens.view Config.config
         let eventMap =
                 delete <&> WidgetIds.fromEntityId
-                & E.keysEventMapMovesCursor (Config.delKeys config) (E.Doc ["Edit", "Guard", "Delete"])
+                & E.keysEventMapMovesCursor (Config.delKeys config) (E.Doc ["Edit", "Delete"])
         return $
             \cond result ->
             Row indentAnimId keyword (Widget.weakerEvents eventMap (cond /|/ colon)) (Widget.weakerEvents eventMap result)
@@ -69,9 +69,9 @@ makeGuardRow delete prefixLabel entityId =
 
 makeElseIf ::
     Monad m =>
-    Sugar.GuardElseIf (T m) (ExprGui.SugarExpr m) ->
+    Sugar.ElseIf (T m) (ExprGui.SugarExpr m) ->
     ExprGuiM m [Row (ExpressionGui m)] -> ExprGuiM m [Row (ExpressionGui m)]
-makeElseIf (Sugar.GuardElseIf scopes entityId cond res delete addLet) makeRest =
+makeElseIf (Sugar.ElseIf scopes entityId cond res delete addLet) makeRest =
     do
         mOuterScopeId <- ExprGuiM.readMScopeId
         let mInnerScope = lookupMKey <$> mOuterScopeId <*> scopes
@@ -80,7 +80,7 @@ makeElseIf (Sugar.GuardElseIf scopes entityId cond res delete addLet) makeRest =
         letEventMap <- addLetEventMap addLet
         (:)
             <$>
-            ( makeGuardRow delete elseLabel entityId
+            ( makeIfRow delete elseLabel entityId
                 <*> (ExprGuiM.makeSubexpression cond <&> Widget.weakerEvents letEventMap)
                 <*> ExprGuiM.makeSubexpression res
             )
@@ -91,15 +91,15 @@ makeElseIf (Sugar.GuardElseIf scopes entityId cond res delete addLet) makeRest =
         -- TODO: cleaner way to write this?
         lookupMKey k m = k >>= (`Map.lookup` m)
 
-makeElse :: Monad m => Sugar.Guard (T m) (ExprGui.SugarExpr m) -> ExprGuiM m (Row (ExpressionGui m))
-makeElse guards =
+makeElse :: Monad m => Sugar.IfElse (T m) (ExprGui.SugarExpr m) -> ExprGuiM m (Row (ExpressionGui m))
+makeElse ifElse =
     ( Row elseAnimId
         <$> (Styled.grammarLabel "else" <&> Responsive.fromTextView)
         <*> (Styled.grammarLabel ": " & Reader.local (Element.animIdPrefix .~ elseAnimId) <&> Responsive.fromTextView)
-    ) <*> ExprGuiM.makeSubexpression (guards ^. Sugar.gElse)
+    ) <*> ExprGuiM.makeSubexpression (ifElse ^. Sugar.iElse)
     where
         elseAnimId = Widget.toAnimId elseId
-        elseId = WidgetIds.fromExprPayload (guards ^. Sugar.gElse . Sugar.rPayload)
+        elseId = WidgetIds.fromExprPayload (ifElse ^. Sugar.iElse . Sugar.rPayload)
 
 verticalRowRender ::
     ( Monad m, MonadReader env f, Spacer.HasStdSpacing env
@@ -144,20 +144,20 @@ renderRows =
 
 make ::
     Monad m =>
-    Sugar.Guard (T m) (ExprGui.SugarExpr m) ->
+    Sugar.IfElse (T m) (ExprGui.SugarExpr m) ->
     Sugar.Payload (T m) ExprGui.Payload ->
     ExprGuiM m (ExpressionGui m)
-make guards pl =
+make ifElse pl =
     stdWrapParentExpr pl
     <*> ( renderRows
             <*>
             ( (:)
                 <$> makeIf
-                <*> foldr makeElseIf (makeElse guards <&> (:[])) (guards ^. Sugar.gElseIfs)
+                <*> foldr makeElseIf (makeElse ifElse <&> (:[])) (ifElse ^. Sugar.iElseIfs)
             )
         )
     where
         makeIf =
-            makeGuardRow (guards ^. Sugar.gDeleteIf) Element.empty (pl ^. Sugar.plEntityId)
-            <*> ExprGuiM.makeSubexpression (guards ^. Sugar.gIf)
-            <*> ExprGuiM.makeSubexpression (guards ^. Sugar.gThen)
+            makeIfRow (ifElse ^. Sugar.iDeleteIf) Element.empty (pl ^. Sugar.plEntityId)
+            <*> ExprGuiM.makeSubexpression (ifElse ^. Sugar.iIf)
+            <*> ExprGuiM.makeSubexpression (ifElse ^. Sugar.iThen)

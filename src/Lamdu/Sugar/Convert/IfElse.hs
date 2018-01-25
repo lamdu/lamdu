@@ -1,6 +1,6 @@
 -- | "if" sugar/guards conversion
 {-# LANGUAGE NoImplicitPrelude #-}
-module Lamdu.Sugar.Convert.Guard (convertGuard) where
+module Lamdu.Sugar.Convert.IfElse (convertIfElse) where
 
 import qualified Control.Lens as Lens
 import qualified Data.Store.Property as Property
@@ -18,49 +18,49 @@ import           Lamdu.Prelude
 
 type T = Transaction
 
-convertGuard ::
+convertIfElse ::
     Functor m =>
     (ValI m -> T m (ValI m)) ->
     Case UUID (T m) (ExpressionU m a) ->
-    Maybe (Guard (T m) (ExpressionU m a))
-convertGuard setToVal caseBody =
+    Maybe (IfElse (T m) (ExpressionU m a))
+convertIfElse setToVal caseBody =
     do
         arg <- caseBody ^? cKind . _CaseWithArg . caVal
         case arg ^. rBody of
-            BodyFromNom nom | nom ^. nTId . tidTId == boolTid -> tryGuard (nom ^. nVal)
-            _ | arg ^? rPayload . plAnnotation . aInferredType . T._TInst . _1 == Just boolTid -> tryGuard arg
+            BodyFromNom nom | nom ^. nTId . tidTId == boolTid -> tryIfElse (nom ^. nVal)
+            _ | arg ^? rPayload . plAnnotation . aInferredType . T._TInst . _1 == Just boolTid -> tryIfElse arg
             _ -> Nothing
     where
-        tryGuard cond =
+        tryIfElse cond =
             case caseBody ^. cBody . cItems of
             [alt0, alt1]
-                | tagOf alt0 == trueTag && tagOf alt1 == falseTag -> convGuard cond alt0 alt1
-                | tagOf alt1 == trueTag && tagOf alt0 == falseTag -> convGuard cond alt1 alt0
+                | tagOf alt0 == trueTag && tagOf alt1 == falseTag -> convIfElse cond alt0 alt1
+                | tagOf alt1 == trueTag && tagOf alt0 == falseTag -> convIfElse cond alt1 alt0
             _ -> Nothing
         tagOf alt = alt ^. ciTag . tagInfo . tagVal
-        convGuard cond altTrue altFalse =
+        convIfElse cond altTrue altFalse =
             case mAltFalseBinder of
             Just binder ->
                 case binder ^? bBody . bbContent . _BinderExpr of
                 Just altFalseBinderExpr ->
                     case altFalseBinderExpr ^. rBody of
-                    BodyGuard innerGuard ->
-                        GuardElseIf
-                        { _geScopes =
+                    BodyIfElse innerIfElse ->
+                        ElseIf
+                        { _eiScopes =
                             case binder ^. bBodyScopes of
                             SameAsParentScope -> error "lambda body should have scopes"
                             BinderBodyScope x -> x <&> Lens.mapped %~ getScope
-                        , _geEntityId = altFalseBinderExpr ^. rPayload . plEntityId
-                        , _geCond = innerGuard ^. gIf
-                        , _geThen = innerGuard ^. gThen
-                        , _geDelete = innerGuard ^. gDeleteIf
-                        , _geCondAddLet = binder ^. bBody . bbAddOuterLet
+                        , _eiEntityId = altFalseBinderExpr ^. rPayload . plEntityId
+                        , _eiCond = innerIfElse ^. iIf
+                        , _eiThen = innerIfElse ^. iThen
+                        , _eiDelete = innerIfElse ^. iDeleteIf
+                        , _eiCondAddLet = binder ^. bBody . bbAddOuterLet
                         }
-                        : innerGuard ^. gElseIfs
-                        & makeRes (innerGuard ^. gElse)
+                        : innerIfElse ^. iElseIfs
+                        & makeRes (innerIfElse ^. iElse)
                         where
                             getScope [x] = x ^. bParamScopeId
-                            getScope _ = error "guard evaluated more than once in same scope?"
+                            getScope _ = error "if-else evaluated more than once in same scope?"
                     _ -> simpleIfElse
                 Nothing -> simpleIfElse
             Nothing -> simpleIfElse
@@ -79,11 +79,11 @@ convertGuard setToVal caseBody =
                     & fromMaybe (alt ^. ciExpr)
                     & (^. rPayload . plData . pStored . Property.pVal)
                 makeRes els elseIfs =
-                    Guard
-                    { _gIf = cond
-                    , _gThen = altTrue ^. ciExpr
-                    , _gElseIfs = elseIfs
-                    , _gElse = els
-                    , _gDeleteIf = delTarget altFalse & setToVal <&> EntityId.ofValI
+                    IfElse
+                    { _iIf = cond
+                    , _iThen = altTrue ^. ciExpr
+                    , _iElseIfs = elseIfs
+                    , _iElse = els
+                    , _iDeleteIf = delTarget altFalse & setToVal <&> EntityId.ofValI
                     }
 

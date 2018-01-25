@@ -53,7 +53,7 @@ bodyShape = \case
         case cas of
             Sugar.Case Sugar.LambdaCase (Sugar.Composite [] Sugar.ClosedComposite{} _) -> ["absurd"]
             _ -> []
-    Sugar.BodyGuard {} -> ["if", ":"]
+    Sugar.BodyIfElse {} -> ["if", ":"]
     Sugar.BodyInject (Sugar.Inject tag _) ->
         (nameText (tag ^. Sugar.tagName) <>) <$> [":", "."]
     Sugar.BodyLiteral i -> [formatLiteral i]

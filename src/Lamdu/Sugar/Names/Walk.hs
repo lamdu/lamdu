@@ -213,7 +213,7 @@ toBody expr = \case
     BodyInject       x -> x & traverse expr >>= iTag toTag <&> BodyInject
     BodyRecord       x -> x & traverse expr >>= (cItems . traverse . ciTag) toTag <&> BodyRecord
     BodyCase         x -> x & traverse expr >>= (cBody . cItems . traverse . ciTag) toTag <&> BodyCase
-    BodyGuard        x -> x & traverse expr <&> BodyGuard
+    BodyIfElse       x -> x & traverse expr <&> BodyIfElse
     BodySimpleApply  x -> x & traverse expr <&> BodySimpleApply
     BodyLabeledApply x -> x & toLabeledApply expr <&> BodyLabeledApply
     BodyHole         x -> x & toHole <&> BodyHole

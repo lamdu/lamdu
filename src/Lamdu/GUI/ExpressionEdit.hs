@@ -17,8 +17,8 @@ import qualified Lamdu.GUI.ExpressionEdit.Dotter as Dotter
 import qualified Lamdu.GUI.ExpressionEdit.FragmentEdit as FragmentEdit
 import qualified Lamdu.GUI.ExpressionEdit.GetFieldEdit as GetFieldEdit
 import qualified Lamdu.GUI.ExpressionEdit.GetVarEdit as GetVarEdit
-import qualified Lamdu.GUI.ExpressionEdit.GuardEdit as GuardEdit
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit as HoleEdit
+import qualified Lamdu.GUI.ExpressionEdit.IfElseEdit as IfElseEdit
 import qualified Lamdu.GUI.ExpressionEdit.InjectEdit as InjectEdit
 import qualified Lamdu.GUI.ExpressionEdit.LambdaEdit as LambdaEdit
 import qualified Lamdu.GUI.ExpressionEdit.LiteralEdit as LiteralEdit
@@ -68,7 +68,7 @@ makeEditor body pl =
     Sugar.BodyLiteral      x -> LiteralEdit.make      x pl & r
     Sugar.BodyRecord       x -> RecordEdit.make       x pl & r
     Sugar.BodyCase         x -> CaseEdit.make         x pl & r <&> d
-    Sugar.BodyGuard        x -> GuardEdit.make        x pl & r <&> d
+    Sugar.BodyIfElse       x -> IfElseEdit.make       x pl & r <&> d
     Sugar.BodyGetField     x -> GetFieldEdit.make     x pl & r <&> d
     Sugar.BodyInject       x -> InjectEdit.make       x pl & r
     Sugar.BodyGetVar       x -> GetVarEdit.make       x pl & r <&> d
