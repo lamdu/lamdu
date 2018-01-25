@@ -1,0 +1,1 @@
+hlint src/ --hint=tools/hlint-rules.hs

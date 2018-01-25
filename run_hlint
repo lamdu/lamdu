@@ -1,1 +1,0 @@
-hlint src/ --hint=hlint/lensfixities.hs --cpp-file=dist/build/autogen/cabal_macros.h
