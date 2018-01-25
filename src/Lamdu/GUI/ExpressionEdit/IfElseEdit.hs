@@ -46,24 +46,25 @@ data Row a = Row
     } deriving (Functor, Foldable, Traversable)
 Lens.makeLenses ''Row
 
-makeIfRow ::
+makeIfThen ::
     ( Monad m, MonadReader env f, HasTheme env, HasConfig env
     , TextView.HasStyle env, Element.HasAnimIdPrefix env
     ) =>
-    T m Sugar.EntityId -> WithTextPos View -> Sugar.EntityId ->
-    f (ExpressionGui m -> ExpressionGui m -> Row (ExpressionGui m))
-makeIfRow delete prefixLabel entityId =
+    WithTextPos View -> Sugar.EntityId -> Sugar.IfThen (T m) (ExpressionGui m) ->
+    f (Row (ExpressionGui m))
+makeIfThen prefixLabel entityId ifThen =
     do
         label <- Styled.grammarLabel "if "
         colon <- Styled.grammarLabel ": "
         let keyword = prefixLabel /|/ label & Responsive.fromTextView
         config <- Lens.view Config.config
         let eventMap =
-                delete <&> WidgetIds.fromEntityId
+                ifThen ^. Sugar.itDelete <&> WidgetIds.fromEntityId
                 & E.keysEventMapMovesCursor (Config.delKeys config) (E.Doc ["Edit", "Delete"])
-        return $
-            \cond result ->
-            Row indentAnimId keyword (Widget.weakerEvents eventMap (cond /|/ colon)) (Widget.weakerEvents eventMap result)
+        Row indentAnimId keyword
+            (Widget.weakerEvents eventMap ((ifThen ^. Sugar.itIf) /|/ colon))
+            (Widget.weakerEvents eventMap (ifThen ^. Sugar.itThen))
+            & pure
     where
         indentAnimId = WidgetIds.fromEntityId entityId & Widget.toAnimId
 
@@ -71,7 +72,7 @@ makeElseIf ::
     Monad m =>
     Sugar.ElseIf (T m) (ExprGui.SugarExpr m) ->
     ExprGuiM m [Row (ExpressionGui m)] -> ExprGuiM m [Row (ExpressionGui m)]
-makeElseIf (Sugar.ElseIf scopes entityId cond res delete addLet) makeRest =
+makeElseIf (Sugar.ElseIf scopes entityId ifThen addLet) makeRest =
     do
         mOuterScopeId <- ExprGuiM.readMScopeId
         let mInnerScope = lookupMKey <$> mOuterScopeId <*> scopes
@@ -80,9 +81,9 @@ makeElseIf (Sugar.ElseIf scopes entityId cond res delete addLet) makeRest =
         letEventMap <- addLetEventMap addLet
         (:)
             <$>
-            ( makeIfRow delete elseLabel entityId
-                <*> (ExprGuiM.makeSubexpression cond <&> Widget.weakerEvents letEventMap)
-                <*> ExprGuiM.makeSubexpression res
+            ( traverse ExprGuiM.makeSubexpression ifThen
+                <&> Sugar.itIf %~ Widget.weakerEvents letEventMap
+                >>= makeIfThen elseLabel entityId
             )
             <*>  makeRest
             & Reader.local (Element.animIdPrefix .~ Widget.toAnimId (WidgetIds.fromEntityId entityId))
@@ -158,6 +159,6 @@ make ifElse pl =
         )
     where
         makeIf =
-            makeIfRow (ifElse ^. Sugar.iDeleteIf) Element.empty (pl ^. Sugar.plEntityId)
-            <*> ExprGuiM.makeSubexpression (ifElse ^. Sugar.iIf)
-            <*> ExprGuiM.makeSubexpression (ifElse ^. Sugar.iThen)
+            ifElse ^. Sugar.iIfThen
+            & traverse ExprGuiM.makeSubexpression
+            >>= makeIfThen Element.empty (pl ^. Sugar.plEntityId)

@@ -73,8 +73,8 @@ markAnnotationsToDisplay (Expression oldBody pl) =
     BodyLabeledApply _ -> set T.showAnnotationWhenVerbose
     BodyIfElse i ->
         i
-        & iThen %~ onCaseAlt
-        & iElseIfs . Lens.mapped . eiThen %~ onCaseAlt
+        & iIfThen . itThen %~ onCaseAlt
+        & iElseIfs . Lens.mapped . eiIfThen . itThen %~ onCaseAlt
         & iElse %~ onCaseAlt
         & BodyIfElse
         & (`Expression` defPl)

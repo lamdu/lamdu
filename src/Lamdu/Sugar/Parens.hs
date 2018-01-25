@@ -56,14 +56,16 @@ mkUnambiguous cons x = (NeverParen, cons (x ?? Just 0 ?? unambiguous))
 
 precedenceOfIfElse ::
     IfElse m (Maybe MinOpPrec -> Precedence (Maybe Int) -> a) -> (Classifier, IfElse m a)
-precedenceOfIfElse (IfElse if_ then_ elseIfs else_ _del) =
+precedenceOfIfElse (IfElse (IfThen if_ then_ del) elseIfs else_) =
     ( ParenIf Never (IfGreater 1)
     , IfElse
-        (if_ (Just 0) unambiguous)
-        (then_ (Just 0) (Precedence (Just 0) Nothing)) -- then appears in end of first line
+        (IfThen
+            (if_ (Just 0) unambiguous)
+            (then_ (Just 0) (Precedence (Just 0) Nothing)) -- then appears in end of first line
+            del
+        )
         (elseIfs <&> (\expr -> expr ?? Just 0 ?? unambiguous))
         (else_ (Just 0) unambiguous)
-        _del
     )
 
 binderName :: Lens (BinderVarRef namea m) (BinderVarRef nameb m) namea nameb
