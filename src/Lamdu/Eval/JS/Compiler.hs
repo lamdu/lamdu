@@ -357,20 +357,13 @@ unitRedex :: [JSS.Statement ()] -> JSS.Expression ()
 unitRedex stmts = JS.lambda [] stmts `JS.call` []
 
 throwStr :: Text -> CodeGen
-throwStr str =
-    go [JS.throw (JS.string (Text.unpack str))]
-    where
-        go stmts =
-            CodeGen
-            { codeGenLamStmts = stmts
-            , codeGenExpression = unitRedex stmts
-            }
+throwStr str = codeGenFromLamStmts [JS.throw (JS.string (Text.unpack str))]
 
 codeGenFromLamStmts :: [JSS.Statement ()] -> CodeGen
 codeGenFromLamStmts stmts =
     CodeGen
     { codeGenLamStmts = stmts
-    , codeGenExpression = JS.lambda [] stmts `JS.call` []
+    , codeGenExpression = unitRedex stmts
     }
 
 codeGenFromExpr :: JSS.Expression () -> CodeGen
@@ -423,19 +416,14 @@ compileRecExtend x =
                 strTags <&> _1 %~ JS.propId . JS.ident . Text.unpack
                 & JS.object & codeGenFromExpr
             Just rest ->
-                CodeGen
-                { codeGenLamStmts = stmts
-                , codeGenExpression = unitRedex stmts
-                }
-                where
-                    stmts =
-                        varinit "rest"
-                        (JS.var "Object" $. "create" $$ codeGenExpression rest)
-                        : ( strTags
-                            <&> _1 %~ JS.ldot (JS.var "rest") . Text.unpack
-                            <&> uncurry JS.assign
-                            <&> JS.expr )
-                        ++ [JS.var "rest" & JS.returns]
+                varinit "rest"
+                (JS.var "Object" $. "create" $$ codeGenExpression rest)
+                : ( strTags
+                    <&> _1 %~ JS.ldot (JS.var "rest") . Text.unpack
+                    <&> uncurry JS.assign
+                    <&> JS.expr )
+                ++ [JS.var "rest" & JS.returns]
+                & codeGenFromLamStmts
             & return
 
 compileInject :: Monad m => V.Inject (Val ValId) -> M m CodeGen
