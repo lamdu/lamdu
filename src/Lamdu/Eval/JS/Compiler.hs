@@ -190,7 +190,6 @@ run actions act =
     (do
         traverse_ ppOut topLevelDecls
         act <&> codeGenExpression <&> varinit "repl" >>= ppOut
-        JS.call (JS.var "rts" $. "logRepl") [JS.var "repl"] & JS.expr & ppOut
         [ [jsstmt|rts.logRepl(repl);|]
           , -- This form avoids outputing repl's value in interactive mode
             [jsstmt|(function() { module.exports = repl; })();|]
