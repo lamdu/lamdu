@@ -407,24 +407,22 @@ compileRecExtend :: Monad m => V.RecExtend (Val ValId) -> M m CodeGen
 compileRecExtend x =
     do
         Flatten.Composite tags mRest <- Flatten.recExtend x & Lens.traverse compileVal
-        strTags <-
+        extends <-
             Map.toList tags
             <&> _2 %~ codeGenExpression
             & Lens.traversed . _1 %%~ tagString
+            <&> Lens.mapped . _1 %~ JS.propId . JS.ident . Text.unpack
+            <&> JS.object
         case mRest of
-            Nothing ->
-                strTags <&> _1 %~ JS.propId . JS.ident . Text.unpack
-                & JS.object & codeGenFromExpr
+            Nothing -> codeGenFromExpr extends
             Just rest ->
-                varinit "rest"
-                (JS.var "Object" $. "create" $$ codeGenExpression rest)
-                : ( strTags
-                    <&> _1 %~ JS.ldot (JS.var "rest") . Text.unpack
-                    <&> uncurry JS.assign
-                    <&> JS.expr )
-                ++ [JS.var "rest" & JS.returns]
-                & codeGenFromLamStmts
-            & return
+                codeGenFromLamStmts
+                [ varinit "x"
+                    ((JS.var "Object" $. "assign") `JS.call` [extends, codeGenExpression rest])
+                , JS.expr (JS.delete (JS.var "x" $. "cacheId"))
+                , JS.returns (JS.var "x")
+                ]
+            & pure
 
 compileInject :: Monad m => V.Inject (Val ValId) -> M m CodeGen
 compileInject (V.Inject tag dat) =
