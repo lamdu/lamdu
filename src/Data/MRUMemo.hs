@@ -11,9 +11,7 @@ import System.IO.Unsafe (unsafePerformIO)
 
 memoIO :: Eq a => (a -> IO b) -> IO (a -> IO b)
 memoIO act =
-    do
-        var <- newMVar Nothing
-        return $ memoized var
+    memoized <$> newMVar Nothing
     where
         memoized var key = modifyMVar var onMVar
             where

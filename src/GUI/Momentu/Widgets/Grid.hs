@@ -130,11 +130,11 @@ addNavEventmap keys navDests eMap =
             , movement "rightmost" (keysRightMost keys) rightMostCursor
             ] ^. Lens.traverse . Lens._Just
         movement dirName events f =
-            (EventMap.keyPresses
-              events
-              (EventMap.Doc ["Navigation", "Move", dirName]) .
-              (^. Widget.enterResultEvent)) <$>
             f navDests
+            <&> (^. Widget.enterResultEvent)
+            <&> EventMap.keyPresses
+                events
+                (EventMap.Doc ["Navigation", "Move", dirName])
 
 make ::
     (Traversable vert, Traversable horiz, Functor f) =>

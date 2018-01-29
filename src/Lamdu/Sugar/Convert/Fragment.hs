@@ -67,9 +67,10 @@ mkAppliedHoleSuggesteds sugarContext argI exprPl =
 
 checkTypeMatch :: Monad m => Type -> Type -> ConvertM m Bool
 checkTypeMatch x y =
-    do
-        inferContext <- (^. ConvertM.scInferContext) <$> ConvertM.readContext
-        return $ Lens.has Lens._Right $ evalStateT (Infer.run (unify x y)) inferContext
+    ConvertM.readContext
+    <&> (^. ConvertM.scInferContext)
+    <&> evalStateT (Infer.run (unify x y))
+    <&> Lens.has Lens._Right
 
 convertAppliedHole ::
     (Monad m, Monoid a) =>
