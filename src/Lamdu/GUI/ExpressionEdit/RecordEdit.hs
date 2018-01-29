@@ -112,9 +112,7 @@ make (Sugar.Composite fields recordTail addField) pl =
             Sugar.OpenComposite actions restExpr ->
                 openRecordEventMap actions restExpr
         stdWrapParentExpr pl
-            <*> ( makeRecord fields addFieldEventMap postProcess
-                    <&> Widget.weakerEvents goToRecordEventMap
-                )
+            <*> (makeRecord fields postProcess <&> Widget.weakerEvents goToRecordEventMap)
             <&> Widget.weakerEvents (addFieldEventMap <> tailEventMap)
     where
         postProcess =
@@ -129,10 +127,9 @@ make (Sugar.Composite fields recordTail addField) pl =
 makeRecord ::
     Monad m =>
     [Sugar.CompositeItem (Name (T m)) (T m) (ExprGui.SugarExpr m)] ->
-    EventMap (T m GuiState.Update) ->
     (ExpressionGui m -> ExprGuiM m (ExpressionGui m)) ->
     ExprGuiM m (ExpressionGui m)
-makeRecord fields addFieldEventMap postProcess =
+makeRecord fields postProcess =
     Styled.addValFrame <*>
     do
         opener <- Styled.grammarLabel "{"
@@ -142,7 +139,6 @@ makeRecord fields addFieldEventMap postProcess =
                 Responsive.taggedList
                 <*> (mapM makeFieldRow fields >>= addPostTags)
                 >>= postProcess
-                <&> Widget.weakerEvents addFieldEventMap
             <&> (opener /|/)
 
 addPostTags ::
