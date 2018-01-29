@@ -100,7 +100,7 @@ makeActions exprPl =
         pure NodeActions
             { _detach = DataOps.applyHoleTo stored <* postProcess <&> EntityId.ofValI & DetachAction
             , _mSetToHole = DataOps.setToHole stored <* postProcess <&> EntityId.ofValI & Just
-            , _extract = ext
+            , _extract = ext <&> (`ExtractFloatResult` Nothing)
             , _mReplaceParent = Nothing
             }
     where

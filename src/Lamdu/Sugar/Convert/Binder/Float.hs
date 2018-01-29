@@ -211,7 +211,7 @@ floatLetToOuterScope ::
     Monad m =>
     (ValI m -> T m ()) ->
     Redex (Input.Payload m a) -> ConvertM.Context m ->
-    T m LetFloatResult
+    T m ExtractFloatResult
 floatLetToOuterScope setTopLevel redex ctx =
     do
         redex ^. Redex.lam . V.lamResult . Val.payload . Input.stored . Property.pVal & setTopLevel
@@ -237,9 +237,9 @@ floatLetToOuterScope setTopLevel redex ctx =
                 EntityId.ofLambdaParam param <$
                 DataOps.redexWrapWithGivenParam param (nlIRef newLet) (outerScopeInfo ^. ConvertM.osiPos)
                 <&> ExtractToLet
-        return LetFloatResult
-            { lfrNewEntity = resultEntity
-            , lfrMVarToTags = nlMVarToTags newLet
+        return ExtractFloatResult
+            { efrNewEntity = resultEntity
+            , efrMVarToTags = nlMVarToTags newLet
             }
     where
         addRecursiveRefAsDep =
@@ -252,6 +252,6 @@ floatLetToOuterScope setTopLevel redex ctx =
 makeFloatLetToOuterScope ::
     Monad m =>
     (ValI m -> T m ()) -> Redex (Input.Payload m a) ->
-    ConvertM m (T m LetFloatResult)
+    ConvertM m (T m ExtractFloatResult)
 makeFloatLetToOuterScope setTopLevel redex =
     ConvertM.readContext <&> floatLetToOuterScope setTopLevel redex

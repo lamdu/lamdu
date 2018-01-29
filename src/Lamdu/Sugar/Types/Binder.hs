@@ -11,8 +11,9 @@ module Lamdu.Sugar.Types.Binder
     , DetachAction(..), _FragmentAlready, _FragmentExprAlready, _DetachAction
     , NodeActions(..), detach, mSetToHole, extract, mReplaceParent
     -- Let
-    , LetFloatResult(..), ExtractDestination(..)
-    , LetActions(..), laDelete, laFloat, laNodeActions
+    , ExtractFloatResult(..)
+    , ExtractDestination(..)
+    , LetActions(..), laDelete, laNodeActions
     , Let(..)
         , lEntityId, lValue, lName, lUsages
         , lActions, lAnnotation, lBodyScope, lBody
@@ -144,9 +145,10 @@ data ExtractDestination
     = ExtractToLet EntityId
     | ExtractToDef EntityId
 
-data LetFloatResult = LetFloatResult
-    { lfrNewEntity :: ExtractDestination
-    , lfrMVarToTags :: Maybe VarToTags
+-- TODO: Remove this and VarToTags once we complete the tags reform.
+data ExtractFloatResult = ExtractFloatResult
+    { efrNewEntity :: ExtractDestination
+    , efrMVarToTags :: Maybe VarToTags
     }
 
 data DetachAction m
@@ -157,13 +159,12 @@ data DetachAction m
 data NodeActions m = NodeActions
     { _detach :: DetachAction m
     , _mSetToHole :: Maybe (m EntityId) -- (Not available for holes)
-    , _extract :: m ExtractDestination
+    , _extract :: m ExtractFloatResult
     , _mReplaceParent :: Maybe (m EntityId)
     }
 
 data LetActions m = LetActions
     { _laDelete :: m ()
-    , _laFloat :: m LetFloatResult
     , _laNodeActions :: NodeActions m
     }
 

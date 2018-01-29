@@ -60,8 +60,7 @@ mkLetItemActions topLevelPl redex =
                     redex ^. Redex.lam . V.lamResult . Val.payload . Input.stored
                         & replaceWith topLevelProp & void
                 <* postProcess
-            , _laFloat = float
-            , _laNodeActions = nodeActions
+            , _laNodeActions = nodeActions & extract .~ float
             }
     where
         topLevelProp = topLevelPl ^. Input.stored

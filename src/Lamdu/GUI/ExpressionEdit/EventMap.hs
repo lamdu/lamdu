@@ -105,7 +105,7 @@ extractEventMap actions =
     Lens.view Config.config <&> Config.extractKeys
     <&>
     \k ->
-    actions ^. Sugar.extract <&> extractCursor
+    actions ^. Sugar.extract <&> extractCursor . Sugar.efrNewEntity
     & E.keysEventMapMovesCursor k doc
     where
         doc = E.Doc ["Edit", "Extract"]
