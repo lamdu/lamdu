@@ -13,10 +13,9 @@ module Lamdu.Sugar.Types.Binder
     -- Let
     , ExtractFloatResult(..)
     , ExtractDestination(..)
-    , LetActions(..), laDelete, laNodeActions
     , Let(..)
         , lEntityId, lValue, lName, lUsages
-        , lActions, lAnnotation, lBodyScope, lBody
+        , lDelete, lAnnotation, lBodyScope, lBody
     , ChildScopeMapping
     -- Binders
     , BinderMode(..)
@@ -163,11 +162,6 @@ data NodeActions m = NodeActions
     , _mReplaceParent :: Maybe (m EntityId)
     }
 
-data LetActions m = LetActions
-    { _laDelete :: m ()
-    , _laNodeActions :: NodeActions m
-    }
-
 -- This is a mapping from a parent scope to the inner scope in:
 -- * A redex lambda body (executed exactly once)
 -- * Also used for if-else sugar where else-if scopes are executed no more than once
@@ -179,7 +173,7 @@ data Let name m expr = Let
     , _lUsages :: [EntityId]
     , _lAnnotation :: Annotation
     , _lName :: name
-    , _lActions :: LetActions m
+    , _lDelete :: m ()
     , _lBodyScope :: ChildScopeMapping
     , _lBody :: BinderBody name m expr -- "let foo = bar in [[x]]"
     }
@@ -235,7 +229,6 @@ Lens.makeLenses ''FieldParamInfo
 Lens.makeLenses ''FuncParam
 Lens.makeLenses ''FuncParamActions
 Lens.makeLenses ''Let
-Lens.makeLenses ''LetActions
 Lens.makeLenses ''NodeActions
 Lens.makeLenses ''NullParamActions
 Lens.makeLenses ''Tag

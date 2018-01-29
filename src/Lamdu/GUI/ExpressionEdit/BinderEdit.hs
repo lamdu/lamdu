@@ -385,7 +385,7 @@ makeLetEdit item =
         theme <- Lens.view Theme.theme
         let letColor = Theme.letColor (Theme.name theme)
         let actionsEventMap =
-                bodyId <$ item ^. Sugar.lActions . Sugar.laDelete
+                bodyId <$ item ^. Sugar.lDelete
                 & E.keysEventMapMovesCursor (Config.delKeys config)
                 (E.Doc ["Edit", "Let clause", "Delete"])
         let usageEventMap =
@@ -453,7 +453,7 @@ makeBinderContentEdit content@(Sugar.BinderLet l) =
         let moveToInnerEventMap =
                 body
                 ^? Sugar.bbContent . Sugar._BinderLet
-                . Sugar.lActions . Sugar.laNodeActions . Sugar.extract
+                . Sugar.lValue . Sugar.bActions . Sugar.baNodeActions . Sugar.extract
                 & maybe mempty
                 (E.keysEventMap (Config.moveLetInwardKeys config)
                 (E.Doc ["Edit", "Let clause", "Move inwards"]) . void)
@@ -461,7 +461,7 @@ makeBinderContentEdit content@(Sugar.BinderLet l) =
         let letBodyScope = liftA2 lookupMKey mOuterScopeId (l ^. Sugar.lBodyScope)
         ExprEventMap.addWith ExprEventMap.defaultOptions
             ExprEventMap.ExprInfo
-            { ExprEventMap.exprInfoActions = l ^. Sugar.lActions . Sugar.laNodeActions
+            { ExprEventMap.exprInfoActions = l ^. Sugar.lValue . Sugar.bActions . Sugar.baNodeActions
             , ExprEventMap.exprInfoNearestHoles = binderContentNearestHoles content
             , ExprEventMap.exprInfoIsHoleResult = False
             , ExprEventMap.exprInfoMinOpPrec = 0
