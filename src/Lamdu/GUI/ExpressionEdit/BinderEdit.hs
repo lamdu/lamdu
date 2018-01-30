@@ -340,15 +340,13 @@ make pMode lhsEventMap name color binder myId =
                 <&> Just
         equals <- TextView.makeLabel "="
         addWholeBinderActions <-
-            case mParamEdit of
-            Nothing ->
-                -- These are irrelevant when there are no params.
-                pure id
-            Just{} ->
+            case binder ^. Sugar.bActions . Sugar.baMNodeActions of
+            Nothing -> pure id
+            Just nodeActions ->
                 (.)
                 <$> ExprEventMap.addWith ExprEventMap.defaultOptions
                     ExprEventMap.ExprInfo
-                    { ExprEventMap.exprInfoActions = binder ^. Sugar.bActions . Sugar.baNodeActions
+                    { ExprEventMap.exprInfoActions = nodeActions
                     , ExprEventMap.exprInfoNearestHoles = nearestHoles
                     , ExprEventMap.exprInfoIsHoleResult = False
                     , ExprEventMap.exprInfoMinOpPrec = 0

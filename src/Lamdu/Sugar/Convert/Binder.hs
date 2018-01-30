@@ -50,7 +50,6 @@ mkLetItemActions ::
     ConvertM m (LetActions (T m))
 mkLetItemActions topLevelPl redex =
     do
-        float <- makeFloatLetToOuterScope (Property.set topLevelProp) redex
         postProcess <- ConvertM.postProcess
         nodeActions <- makeActions topLevelPl
         pure LetActions
@@ -60,7 +59,7 @@ mkLetItemActions topLevelPl redex =
                     redex ^. Redex.lam . V.lamResult . Val.payload . Input.stored
                         & replaceWith topLevelProp & void
                 <* postProcess
-            , _laNodeActions = nodeActions & extract .~ float
+            , _laNodeActions = nodeActions
             }
     where
         topLevelProp = topLevelPl ^. Input.stored
@@ -99,12 +98,12 @@ convertRedex expr redex =
             convertBinderBody body
             & localNewExtractDestPos expr
             & ConvertM.local (scScopeInfo . siLetItems <>~
-                Map.singleton param
-                (makeInline (expr ^. Val.payload . Input.stored) redex))
+                Map.singleton param (makeInline stored redex))
         ann <- redex ^. Redex.arg . Val.payload & makeAnnotation
+        float <- makeFloatLetToOuterScope (Property.set stored) redex
         return Let
             { _lEntityId = defEntityId
-            , _lValue = value
+            , _lValue = value & bActions . baMNodeActions . Lens._Just . extract .~ float
             , _lActions = actions
             , _lName = UniqueId.toUUID param
             , _lAnnotation = ann
@@ -113,6 +112,7 @@ convertRedex expr redex =
             , _lUsages = redex ^. Redex.paramRefs
             }
     where
+        stored = expr ^. Val.payload . Input.stored
         binderKind =
             redex ^. Redex.lam
             <&> Lens.mapped %~ (^. Input.stored)
@@ -164,7 +164,7 @@ makeBinder chosenScopeProp params funcBody pl =
             , _bActions =
                 BinderActions
                 { _baAddFirstParam = _cpAddFirstParam params
-                , _baNodeActions = nodeActions
+                , _baMNodeActions = Just nodeActions
                 }
             }
     & ConvertM.local (ConvertM.scScopeInfo %~ addParams)
@@ -188,6 +188,7 @@ convertLam lam exprPl =
             makeBinder
             (exprPl ^. Input.stored & Property.value & Anchors.assocScopeRef)
             convParams (lam ^. V.lamResult) exprPl
+            <&> bActions . baMNodeActions .~ Nothing
         let paramUUIDs =
                 binder ^.. bParams . _FieldParams . traverse . fpInfo . fpiTag . tagName
                 & Set.fromList

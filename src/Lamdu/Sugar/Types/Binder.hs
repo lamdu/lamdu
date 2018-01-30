@@ -28,7 +28,7 @@ module Lamdu.Sugar.Types.Binder
     , FuncParam(..), fpInfo, fpAnnotation
     , Meta.SpecialArgs(..)
     , Meta.DefinitionState(..)
-    , BinderActions(..), baAddFirstParam, baNodeActions
+    , BinderActions(..), baAddFirstParam, baMNodeActions
     , NullParamActions(..), npDeleteLambda
     , BinderParams(..)
         , _BinderWithoutParams, _NullParam, _VarParam , _FieldParams
@@ -186,7 +186,7 @@ data Let name m expr = Let
 
 data BinderActions m = BinderActions
     { _baAddFirstParam :: m ParamAddResult
-    , _baNodeActions :: NodeActions m
+    , _baMNodeActions :: Maybe (NodeActions m)
     }
 
 data BinderParams name m
@@ -220,9 +220,7 @@ data Binder name m expr = Binder
     , _bParams :: BinderParams name m
     , _bLamId :: Maybe EntityId
     , _bBody :: BinderBody name m expr
-    , -- TODO: For Lambdas this is a duplication of their payload actions.
-      -- Consider refining the types to avoid this.
-      _bActions :: BinderActions m
+    , _bActions :: BinderActions m
     , -- The scope inside a lambda (if exists)
       _bBodyScopes :: BinderBodyScope
     }
