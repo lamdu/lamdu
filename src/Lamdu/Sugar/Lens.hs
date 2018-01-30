@@ -7,6 +7,7 @@ module Lamdu.Sugar.Lens
     , binderFuncParamActions
     , binderFuncParamAdds
     , binderFuncParamDeletes
+    , binderLetActions
     , binderContentExpr
     , binderContentEntityId
     , leftMostLeaf
@@ -111,6 +112,12 @@ binderFuncParamActions _ BinderWithoutParams = pure BinderWithoutParams
 binderFuncParamActions _ (NullParam a) = pure (NullParam a)
 binderFuncParamActions f (VarParam p) = (fpInfo . vpiActions) f p <&> VarParam
 binderFuncParamActions f (FieldParams ps) = (traverse . fpInfo . fpiActions) f ps <&> FieldParams
+
+binderLetActions ::
+    Lens.Traversal'
+    (Binder name m (Expression name m a))
+    (LetActions m)
+binderLetActions = bBody . bbContent . _BinderLet . lActions
 
 binderFuncParamAdds ::
     Lens.Traversal'

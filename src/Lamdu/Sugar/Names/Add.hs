@@ -441,6 +441,17 @@ fixParamDelResult _ = return ()
 fixExtractFloatResult :: Monad m => ExtractFloatResult -> T m ()
 fixExtractFloatResult = traverse_ fixVarToTags . efrMVarToTags
 
+postProcessAction :: Monad m => (a -> m ()) -> m a -> m a
+postProcessAction f action =
+    do
+        res <- action
+        () <- f res
+        return res
+
+fixNodeActions :: Monad m => NodeActions (T m) -> NodeActions (T m)
+fixNodeActions =
+    extract %~ postProcessAction fixExtractFloatResult
+
 -- mutual recursion fixBinder<->fixExpr
 
 fixBinder ::
@@ -451,7 +462,6 @@ fixBinder binder =
     binder
     & SugarLens.binderFuncParamAdds %~ postProcessAction fixParamAddResult
     & SugarLens.binderFuncParamDeletes %~ postProcessAction fixParamDelResult
-    & bActions . baNodeActions . extract %~ postProcessAction fixExtractFloatResult
     & bBody . bbContent %~ fixBinderContent
     where
         fixBinderContent x =
@@ -459,11 +469,7 @@ fixBinder binder =
             & _BinderExpr %~ fixExpr
             & _BinderLet . lValue %~ fixBinder
             & _BinderLet . lBody . bbContent %~ fixBinderContent
-        postProcessAction f action =
-            do
-                res <- action
-                () <- f res
-                return res
+            & _BinderLet . lActions . laNodeActions %~ fixNodeActions
 
 fixExpr :: Monad m => Expression name (T m) a -> Expression name (T m) a
 fixExpr expr =

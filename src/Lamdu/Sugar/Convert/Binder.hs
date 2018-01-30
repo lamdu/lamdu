@@ -44,6 +44,27 @@ lamParamToHole ::
 lamParamToHole (V.Lam param body) =
     SubExprs.getVarsToHole param (body <&> (^. Input.stored))
 
+mkLetItemActions ::
+    Monad m =>
+    Input.Payload m a -> Redex (Input.Payload m a) ->
+    ConvertM m (LetActions (T m))
+mkLetItemActions topLevelPl redex =
+    do
+        float <- makeFloatLetToOuterScope (Property.set topLevelProp) redex
+        postProcess <- ConvertM.postProcess
+        nodeActions <- makeActions topLevelPl
+        pure LetActions
+            { _laDelete =
+                do
+                    lamParamToHole (redex ^. Redex.lam)
+                    redex ^. Redex.lam . V.lamResult . Val.payload . Input.stored
+                        & replaceWith topLevelProp & void
+                <* postProcess
+            , _laNodeActions = nodeActions & extract .~ float
+            }
+    where
+        topLevelProp = topLevelPl ^. Input.stored
+
 localNewExtractDestPos ::
     Val (Input.Payload m x) -> ConvertM m a -> ConvertM m a
 localNewExtractDestPos val =
@@ -73,24 +94,18 @@ convertRedex expr redex =
         (_pMode, value) <-
             convertBinder binderKind defUUID (redex ^. Redex.arg)
             & localNewExtractDestPos expr
+        actions <- mkLetItemActions (expr ^. Val.payload) redex
         letBody <-
             convertBinderBody body
             & localNewExtractDestPos expr
             & ConvertM.local (scScopeInfo . siLetItems <>~
                 Map.singleton param
-                (makeInline stored redex))
+                (makeInline (expr ^. Val.payload . Input.stored) redex))
         ann <- redex ^. Redex.arg . Val.payload & makeAnnotation
-        float <- makeFloatLetToOuterScope (Property.set stored) redex
-        postProcess <- ConvertM.postProcess
         return Let
             { _lEntityId = defEntityId
-            , _lValue = value & bActions . baNodeActions . extract .~ float
-            , _lDelete =
-                do
-                    lamParamToHole (redex ^. Redex.lam)
-                    redex ^. Redex.lam . V.lamResult . Val.payload . Input.stored
-                        & replaceWith stored & void
-                <* postProcess
+            , _lValue = value
+            , _lActions = actions
             , _lName = UniqueId.toUUID param
             , _lAnnotation = ann
             , _lBodyScope = redex ^. Redex.bodyScope
@@ -98,7 +113,6 @@ convertRedex expr redex =
             , _lUsages = redex ^. Redex.paramRefs
             }
     where
-        stored = expr ^. Val.payload . Input.stored
         binderKind =
             redex ^. Redex.lam
             <&> Lens.mapped %~ (^. Input.stored)
