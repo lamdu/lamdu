@@ -101,7 +101,7 @@ convertRedex expr redex =
                 Map.singleton param (makeInline stored redex))
         ann <- redex ^. Redex.arg . Val.payload & makeAnnotation
         float <- makeFloatLetToOuterScope (Property.set stored) redex
-        return Let
+        pure Let
             { _lEntityId = defEntityId
             , _lValue = value & bActions . baMNodeActions . Lens._Just . extract .~ float
             , _lActions = actions
@@ -137,14 +137,14 @@ convertBinderBody ::
     Val (Input.Payload m a) ->
     ConvertM m (BinderBody UUID (T m) (ExpressionU m a))
 convertBinderBody expr =
-    do
-        content <- makeBinderContent expr
-        BinderBody
-            { _bbAddOuterLet =
-              expr ^. Val.payload . Input.stored
-              & DataOps.redexWrap <&> EntityId.ofLambdaParam
-            , _bbContent = content
-            } & return
+    makeBinderContent expr
+    <&>
+    \content ->
+    BinderBody
+    { _bbAddOuterLet =
+        expr ^. Val.payload . Input.stored & DataOps.redexWrap <&> EntityId.ofLambdaParam
+    , _bbContent = content
+    }
 
 makeBinder ::
     (Monad m, Monoid a) =>
