@@ -101,14 +101,29 @@ convertRedex expr redex =
                 Map.singleton param (makeInline stored redex))
         ann <- redex ^. Redex.arg . Val.payload & makeAnnotation
         float <- makeFloatLetToOuterScope (Property.set stored) redex
+        protectedSetToVal <- ConvertM.typeProtectedSetToVal
+        let fixValueNodeActions nodeActions =
+                nodeActions
+                & extract .~ float
+                & mReplaceParent ?~
+                    ( protectedSetToVal stored
+                        (redex ^. Redex.arg . Val.payload . Input.stored . Property.pVal)
+                        <&> EntityId.ofValI
+                    )
         pure Let
             { _lEntityId = defEntityId
-            , _lValue = value & bActions . baMNodeActions . Lens._Just . extract .~ float
+            , _lValue = value & bActions . baMNodeActions . Lens._Just %~ fixValueNodeActions
             , _lActions = actions
             , _lName = UniqueId.toUUID param
             , _lAnnotation = ann
             , _lBodyScope = redex ^. Redex.bodyScope
-            , _lBody = letBody
+            , _lBody =
+                letBody
+                & bbContent .
+                    Lens.failing
+                    (_BinderExpr . rPayload . plActions)
+                    (_BinderLet . lActions . laNodeActions) . mReplaceParent ?~
+                    (letBody ^. bbContent . SugarLens.binderContentEntityId <$ actions ^. laDelete)
             , _lUsages = redex ^. Redex.paramRefs
             }
     where
