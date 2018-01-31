@@ -21,7 +21,7 @@ import qualified Lamdu.Expr.UniqueId as UniqueId
 import qualified Lamdu.Infer as Infer
 import           Lamdu.Sugar.Convert.Binder.Float (makeFloatLetToOuterScope)
 import           Lamdu.Sugar.Convert.Binder.Inline (inlineLet)
-import           Lamdu.Sugar.Convert.Binder.Params (ConventionalParams(..), convertParams, convertLamParams)
+import           Lamdu.Sugar.Convert.Binder.Params (ConventionalParams(..), convertParams, convertLamParams, cpParams)
 import           Lamdu.Sugar.Convert.Binder.Redex (Redex(..))
 import qualified Lamdu.Sugar.Convert.Binder.Redex as Redex
 import           Lamdu.Sugar.Convert.Binder.Types (BinderKind(..))
@@ -170,6 +170,11 @@ makeBinder chosenScopeProp params funcBody pl =
     do
         binderBody <- convertBinderBody funcBody
         nodeActions <- makeActions pl
+        let mRemoveSetToHole
+                | Lens.has (cpParams . _BinderWithoutParams) params
+                && Lens.has (bbContent . _BinderExpr . rBody . _BodyHole) binderBody =
+                    mSetToHole .~ Nothing
+                | otherwise = id
         return Binder
             { _bParams = _cpParams params
             , _bChosenScopeProp = chosenScopeProp ^. mkProperty
@@ -179,7 +184,7 @@ makeBinder chosenScopeProp params funcBody pl =
             , _bActions =
                 BinderActions
                 { _baAddFirstParam = _cpAddFirstParam params
-                , _baMNodeActions = Just nodeActions
+                , _baMNodeActions = Just (mRemoveSetToHole nodeActions)
                 }
             }
     & ConvertM.local (ConvertM.scScopeInfo %~ addParams)
