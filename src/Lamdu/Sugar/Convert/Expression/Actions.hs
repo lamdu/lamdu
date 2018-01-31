@@ -106,6 +106,45 @@ makeActions exprPl =
     where
         stored = exprPl ^. Input.stored
 
+addChildReplaceParents ::
+    Monad m =>
+    ConvertM m (
+        ExprIRef.ValIProperty m ->
+        Body name (T m) (Expression name (T m) (ConvertPayload m a)) ->
+        Body name (T m) (Expression name (T m) (ConvertPayload m a))
+    )
+addChildReplaceParents =
+    ConvertM.typeProtectedSetToVal
+    <&>
+    \protectedSetToVal stored body ->
+    let setToExpr srcPl =
+            plActions . mReplaceParent ?~
+            (protectedSetToVal
+                stored
+                (srcPl ^. plData . pStored . Property.pVal)
+                <&> EntityId.ofValI)
+        fixFragmentReplaceParent child =
+            -- Replace-parent with fragment sets directly to fragment expression
+            case child ^. rBody of
+            BodyFragment fragment ->
+                child
+                & rPayload %~ setToExpr (fragment ^. fExpr . rPayload)
+            _ -> child
+        fixFragmentExprReplaceParent fragment =
+            -- Replace-parent of fragment expr without "attach"
+            -- available - replaces parent of fragment rather than
+            -- fragment itself (i.e: replaces grandparent).
+            case fragment ^. fAttach of
+            AttachAction{} -> fragment
+            AttachTypeMismatch ->
+                fragment
+                & fExpr . rPayload %~ setToExpr (fragment ^. fExpr . rPayload)
+    in
+    body
+    <&> rPayload %~ join setToExpr
+    <&> fixFragmentReplaceParent
+    <&> rBody . _BodyFragment %~ fixFragmentExprReplaceParent
+
 addActions ::
     Monad m =>
     Input.Payload m a -> Body UUID (T m) (ExpressionU m a) ->
@@ -114,36 +153,9 @@ addActions exprPl body =
     do
         actions <- makeActions exprPl
         ann <- makeAnnotation exprPl
-        protectedSetToVal <- ConvertM.typeProtectedSetToVal
-        let setToExpr srcPl =
-                plActions . mReplaceParent ?~
-                (protectedSetToVal
-                    (exprPl ^. Input.stored)
-                    (srcPl ^. plData . pStored . Property.pVal)
-                    <&> EntityId.ofValI)
-        let addReplaceParent innerPl = setToExpr innerPl innerPl
-        let fixFragmentReplaceParent child =
-                -- Replace-parent with fragment sets directly to fragment expression
-                case child ^. rBody of
-                BodyFragment fragment ->
-                    child
-                    & rPayload %~ setToExpr (fragment ^. fExpr . rPayload)
-                _ -> child
-        let fixFragmentExprReplaceParent fragment =
-                -- Replace-parent of fragment expr without "attach"
-                -- available - replaces parent of fragment rather than
-                -- fragment itself (i.e: replaces grandparent).
-                case fragment ^. fAttach of
-                AttachAction{} -> fragment
-                AttachTypeMismatch ->
-                    fragment
-                    & fExpr . rPayload %~ setToExpr (fragment ^. fExpr . rPayload)
-        return Expression
-            { _rBody =
-                body
-                <&> rPayload %~ addReplaceParent
-                <&> fixFragmentReplaceParent
-                <&> rBody . _BodyFragment %~ fixFragmentExprReplaceParent
+        addReplaceParents <- addChildReplaceParents
+        pure Expression
+            { _rBody = addReplaceParents (exprPl ^. Input.stored) body
             , _rPayload =
                 Payload
                 { _plEntityId = exprPl ^. Input.entityId
