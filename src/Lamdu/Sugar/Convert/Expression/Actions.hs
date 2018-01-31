@@ -126,24 +126,16 @@ addChildReplaceParents =
         fixFragmentReplaceParent child =
             -- Replace-parent with fragment sets directly to fragment expression
             case child ^. rBody of
-            BodyFragment fragment ->
-                child
-                & rPayload %~ setToExpr (fragment ^. fExpr . rPayload)
+            BodyFragment fragment -> child & rPayload %~ setToExpr (fragment ^. fExpr . rPayload)
             _ -> child
-        fixFragmentExprReplaceParent fragment =
-            -- Replace-parent of fragment expr without "attach"
-            -- available - replaces parent of fragment rather than
-            -- fragment itself (i.e: replaces grandparent).
-            case fragment ^. fAttach of
-            AttachAction{} -> fragment
-            AttachTypeMismatch ->
-                fragment
-                & fExpr . rPayload %~ setToExpr (fragment ^. fExpr . rPayload)
     in
     body
     <&> rPayload %~ join setToExpr
     <&> fixFragmentReplaceParent
-    <&> rBody . _BodyFragment %~ fixFragmentExprReplaceParent
+    -- Replace-parent of fragment expr without "attach" available -
+    -- replaces parent of fragment rather than fragment itself (i.e: replaces grandparent).
+    <&> rBody . _BodyFragment . Lens.filtered (Lens.has (fAttach . _AttachTypeMismatch)) .
+        fExpr . rPayload %~ join setToExpr
 
 addActions ::
     Monad m =>
