@@ -106,14 +106,14 @@ makeActions exprPl =
     where
         stored = exprPl ^. Input.stored
 
-addChildReplaceParents ::
+setChildReplaceParentActions ::
     Monad m =>
     ConvertM m (
         ExprIRef.ValIProperty m ->
         Body name (T m) (Expression name (T m) (ConvertPayload m a)) ->
         Body name (T m) (Expression name (T m) (ConvertPayload m a))
     )
-addChildReplaceParents =
+setChildReplaceParentActions =
     ConvertM.typeProtectedSetToVal
     <&>
     \protectedSetToVal stored body ->
@@ -149,7 +149,7 @@ addActions exprPl body =
     do
         actions <- makeActions exprPl
         ann <- makeAnnotation exprPl
-        addReplaceParents <- addChildReplaceParents
+        addReplaceParents <- setChildReplaceParentActions
         pure Expression
             { _rBody = addReplaceParents (exprPl ^. Input.stored) body
             , _rPayload =
