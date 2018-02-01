@@ -71,7 +71,7 @@ data VarToTags = VarToTags
 data ParamAddResult
     = ParamAddResultNewVar EntityId V.Var
     | ParamAddResultVarToTags VarToTags
-    | ParamAddResultNewTag TagInfo
+    | ParamAddResultNewTag EntityId
 
 data TagsToVar = TagsToVar
     { ttvReplacedTag :: TagInfo

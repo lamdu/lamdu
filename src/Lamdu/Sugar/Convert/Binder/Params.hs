@@ -172,10 +172,10 @@ addFieldParam mPresMode mkArg binderKind storedLam mkNewTags =
         let addFieldToCall argI =
                 do
                     newArg <- mkArg
-                    V.RecExtend (tagS ^. tagVal) newArg argI
+                    V.RecExtend tag newArg argI
                         & V.BRecExtend & ExprIRef.newValBody
         fixUsagesOfLamBinder addFieldToCall binderKind storedLam
-        return tagS
+        pure tagS
 
 mkCpScopesOfLam :: Input.Payload m a -> CurAndPrev (Map ER.ScopeId [BinderParamScopeId])
 mkCpScopesOfLam x =
@@ -272,6 +272,7 @@ fieldParamActions mPresMode binderKind tags fp storedLam =
         <&> fromMaybe (error "no param list?")
         <&> addTag
         >>= addFieldParam mPresMode DataOps.newHole binderKind storedLam
+        <&> (^. tagInstance)
         <&> ParamAddResultNewTag
     , _fpDelete = delFieldParamAndFixCalls binderKind tags fp storedLam
     , _fpMOrderBefore =
@@ -367,6 +368,7 @@ convertRecordParams mPresMode binderKind fieldParams lam@(V.Lam param _) pl =
         <&> fromMaybe (error "no params?")
         <&> flip (:)
         >>= addFieldParam mPresMode DataOps.newHole binderKind storedLam
+        <&> (^. tagInstance)
         <&> ParamAddResultNewTag
     , cpScopes = BinderBodyScope $ mkCpScopesOfLam pl
     , cpMLamParam = Just (pl ^. Input.entityId, param)

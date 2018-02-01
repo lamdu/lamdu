@@ -32,15 +32,11 @@ type T = Transaction
 chooseAddResultEntityId :: Sugar.ParamAddResult -> GuiState.Update
 chooseAddResultEntityId (Sugar.ParamAddResultVarToTags Sugar.VarToTags {..}) =
     vttNewTag ^. Sugar.tagInstance
-    & WidgetIds.fromEntityId
-    & WidgetIds.tagHoleId
-    & GuiState.updateCursor
+    & WidgetIds.fromEntityId & WidgetIds.tagHoleId & GuiState.updateCursor
 chooseAddResultEntityId (Sugar.ParamAddResultNewVar entityId _) =
     WidgetIds.fromEntityId entityId & WidgetIds.nameEditOf & GuiState.updateCursor
-chooseAddResultEntityId (Sugar.ParamAddResultNewTag newParamTag) =
-    newParamTag ^. Sugar.tagInstance
-    & WidgetIds.fromEntityId
-    & WidgetIds.tagHoleId & GuiState.updateCursor
+chooseAddResultEntityId (Sugar.ParamAddResultNewTag entityId) =
+    WidgetIds.fromEntityId entityId & WidgetIds.tagHoleId & GuiState.updateCursor
 
 eventMapAddFirstParam ::
     Functor m => Config -> T m Sugar.ParamAddResult ->
