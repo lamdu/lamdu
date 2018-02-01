@@ -86,8 +86,8 @@ mkStoredLam lam pl =
     (lam <&> Lens.mapped %~ (^. Input.stored))
     (pl ^. Input.stored)
 
-newTag :: Monad m => T m T.Tag
-newTag = GenIds.transaction GenIds.randomTag
+newRandomTag :: Monad m => T m T.Tag
+newRandomTag = GenIds.transaction GenIds.randomTag
 
 setParamList ::
     Monad m =>
@@ -160,7 +160,7 @@ addFieldParam ::
     T m TagInfo
 addFieldParam mPresMode mkArg binderKind storedLam mkNewTags =
     do
-        tag <- newTag
+        tag <- newRandomTag
         let tagS =
                 TagInfo
                 { _tagInstance =
@@ -468,8 +468,8 @@ convertToRecordParams ::
     T m VarToTags
 convertToRecordParams mkNewArg binderKind storedLam newParamPosition =
     do
-        tagForVar <- newTag
-        tagForNewVar <- newTag
+        tagForVar <- newRandomTag
+        tagForNewVar <- newRandomTag
         let
             varToTags =
                 VarToTags
