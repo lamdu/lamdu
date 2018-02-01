@@ -13,7 +13,8 @@ import           Lamdu.Prelude
 
 data Name = Name
     { collisionSuffixTextColor :: Draw.Color
-    , collisionSuffixBGColor :: Draw.Color
+    , tagCollisionSuffixBGColor :: Draw.Color
+    , textCollisionSuffixBGColor :: Draw.Color
     , collisionSuffixScaleFactor :: Vector2 Double
     , definitionColor :: Draw.Color
     , parameterColor :: Draw.Color

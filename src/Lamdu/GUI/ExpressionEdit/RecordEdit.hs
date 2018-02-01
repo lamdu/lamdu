@@ -35,6 +35,7 @@ import qualified Lamdu.GUI.ExpressionGui as ExprGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import           Lamdu.GUI.ExpressionGui.Wrap (stdWrap, stdWrapParentExpr)
+import qualified Lamdu.GUI.NameEdit as NameEdit
 import qualified Lamdu.GUI.Styled as Styled
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Name (Name(..))
@@ -175,7 +176,7 @@ makeAddFieldRow ::
     m (Responsive.TaggedItem (T f GuiState.Update))
 makeAddFieldRow addField pl =
     TagEdit.makeTagHoleEdit addField mkPickResult tagHoleId
-    & TagEdit.withNameColor Theme.recordTagColor
+    & NameEdit.withNameColor Theme.recordTagColor
     <&>
     \tagHole ->
     Responsive.TaggedItem

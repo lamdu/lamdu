@@ -45,7 +45,7 @@ convert (V.Inject tag injected) exprPl =
                 do
                     V.Inject newTag injectedI & V.BInject & ExprIRef.writeValBody valI
                     void typeProtect
-        convertTag tag mempty (EntityId.ofTag entityId) setTag
+        convertTag tag nameWithoutContext mempty (EntityId.ofTag entityId) setTag
             <&> (`Inject` mInjectedS) <&> BodyInject
     >>= addActions exprPl
     where

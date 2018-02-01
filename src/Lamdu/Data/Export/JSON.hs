@@ -89,10 +89,8 @@ withVisited l x act =
                 Lens.assign (Lens.cloneLens l . Lens.contains x) True
                 act
 
-readAssocName :: Monad m => ToUUID a => a -> T m (Maybe Text)
-readAssocName x =
-    Anchors.assocNameRef x & Transaction.getP
-    <&> \name -> name <$ (guard . not . Text.null) name
+readAssocTag :: Monad m => ToUUID a => a -> T m T.Tag
+readAssocTag x = Anchors.assocTag x & Transaction.getP
 
 tell :: Codec.Entity -> Export ()
 tell = Writer.tell . (: [])
@@ -101,7 +99,8 @@ exportTag :: T.Tag -> Export ()
 exportTag tag =
     do
         tagOrder <- Transaction.getP (Anchors.assocTagOrder tag) & trans
-        mName <- readAssocName tag & trans
+        name <- Transaction.getP (Anchors.assocTagNameRef tag) & trans
+        let mName = name <$ (guard . not . Text.null) name
         Codec.EntityTag tagOrder mName tag & tell
     & withVisited visitedTags tag
 
@@ -109,16 +108,16 @@ exportNominal :: T.NominalId -> Export ()
 exportNominal nomId =
     do
         nominal <- trans (Load.nominal nomId)
-        mName <- readAssocName nomId & trans
+        mName <- readAssocTag nomId & trans
         Codec.EntityNominal mName nomId nominal & tell
         & withVisited visitedNominals nomId
 
 exportSubexpr :: Val (ValI ViewM) -> Export ()
 exportSubexpr (Val lamI (V.BLam (V.Lam lamVar _))) =
     do
-        mName <- readAssocName lamVar & trans
+        tag <- readAssocTag lamVar & trans
         mParamList <- Transaction.getP (Anchors.assocFieldParamList lamI) & trans
-        Codec.EntityLamVar mParamList mName (valIToUUID lamI) lamVar & tell
+        Codec.EntityLamVar mParamList tag (valIToUUID lamI) lamVar & tell
 exportSubexpr _ = pure ()
 
 exportVal :: Val (ValI ViewM) -> Export ()
@@ -136,13 +135,13 @@ exportDef :: V.Var -> Export ()
 exportDef globalId =
     do
         presentationMode <- Transaction.getP (Anchors.assocPresentationMode globalId) & trans
-        mName <- readAssocName globalId & trans
+        tag <- readAssocTag globalId & trans
         def <-
             Load.def defI & trans
             <&> Definition.defBody . Lens.mapped . Lens.mapped %~ Property.value
         traverse_ exportVal (def ^. Definition.defBody)
         let def' = def & Definition.defBody . Lens.mapped . Lens.mapped %~ valIToUUID
-        (presentationMode, mName, globalId) <$ def' & Codec.EntityDef & tell
+        (presentationMode, tag, globalId) <$ def' & Codec.EntityDef & tell
     & withVisited visitedDefs globalId
     where
         defI = ExprIRef.defI globalId
@@ -195,9 +194,6 @@ export msg act exportPath =
             putStrLn $ "Exporting " ++ msg ++ " to " ++ show exportPath
             LBS.writeFile exportPath (AesonPretty.encodePretty json)
 
-setName :: ToUUID a => a -> Text -> T ViewM ()
-setName x = Transaction.setP (Anchors.assocNameRef x)
-
 writeValAt :: Monad m => Val (ValI m) -> T m (ValI m)
 writeValAt (Val valI body) =
     valI <$ (traverse writeValAt body >>= ExprIRef.writeValBody valI)
@@ -215,11 +211,11 @@ insertTo item setIRef =
     where
         iref = setIRef DbLayout.codeIRefs
 
-importDef :: Definition (Val UUID) (Meta.PresentationMode, Maybe Text, V.Var) -> T ViewM ()
-importDef (Definition defBody defScheme (presentationMode, mName, globalId)) =
+importDef :: Definition (Val UUID) (Meta.PresentationMode, T.Tag, V.Var) -> T ViewM ()
+importDef (Definition defBody defScheme (presentationMode, tag, globalId)) =
     do
         Transaction.setP (Anchors.assocPresentationMode globalId) presentationMode
-        traverse_ (setName globalId) mName
+        Transaction.setP (Anchors.assocTag globalId) tag
         bodyValI <- Lens.traverse writeValAtUUID defBody
         Definition bodyValI defScheme () & Transaction.writeIRef defI
         defI `insertTo` DbLayout.globals
@@ -235,21 +231,21 @@ importTag :: Codec.TagOrder -> Maybe Text -> T.Tag -> T ViewM ()
 importTag tagOrder mName tag =
     do
         Transaction.setP (Anchors.assocTagOrder tag) tagOrder
-        traverse_ (setName tag) mName
+        traverse_ (Transaction.setP (Anchors.assocTagNameRef tag)) mName
         tag `insertTo` DbLayout.tags
 
-importLamVar :: Maybe Meta.ParamList -> Maybe Text -> UUID -> V.Var -> T ViewM ()
-importLamVar paramList mName lamUUID var =
+importLamVar :: Maybe Meta.ParamList -> T.Tag -> UUID -> V.Var -> T ViewM ()
+importLamVar paramList tag lamUUID var =
     do
         Transaction.setP (Anchors.assocFieldParamList lamI) paramList
-        traverse_ (setName var) mName
+        Transaction.setP (Anchors.assocTag var) tag
     where
         lamI = IRef.unsafeFromUUID lamUUID & ExprIRef.ValI
 
-importNominal :: Maybe Text -> T.NominalId -> Nominal -> T ViewM ()
-importNominal mName nomId nominal =
+importNominal :: T.Tag -> T.NominalId -> Nominal -> T ViewM ()
+importNominal tag nomId nominal =
     do
-        traverse_ (setName nomId) mName
+        Transaction.setP (Anchors.assocTag nomId) tag
         Transaction.writeIRef (ExprIRef.nominalI nomId) nominal
         nomId `insertTo` DbLayout.tids
 
@@ -258,14 +254,13 @@ importOne (Codec.EntityDef def) = importDef def
 importOne (Codec.EntityRepl val) = importRepl val
 importOne (Codec.EntityTag tagOrder mName tag) = importTag tagOrder mName tag
 importOne (Codec.EntityNominal mName nomId nom) = importNominal mName nomId nom
-importOne (Codec.EntityLamVar paramList mName lamUUID var) =
-    importLamVar paramList mName lamUUID var
+importOne (Codec.EntityLamVar paramList tag lamUUID var) = importLamVar paramList tag lamUUID var
 importOne (Codec.EntitySchemaVersion _) =
     fail "Only one schemaVersion allowed in beginning of document"
 
 importEntities :: [Codec.Entity] -> T ViewM ()
 importEntities (Codec.EntitySchemaVersion ver : entities) =
-    if ver == 3
+    if ver == 4
     then mapM_ importOne entities
     else "Unsupported schema version: " ++ show ver & fail
 importEntities _ = "Missing schema version"  & fail

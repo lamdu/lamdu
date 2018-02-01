@@ -1,8 +1,7 @@
 {-# LANGUAGE NoImplicitPrelude, TemplateHaskell, DeriveTraversable #-}
 module Lamdu.Sugar.Types.GetVar
-    ( ParameterForm(..), _GetFieldParameter, _GetParameter
-    , NameRef(..), nrName, nrGotoDefinition
-    , ParamRef(..), pNameRef, pForm, pBinderMode
+    ( NameRef(..), nrName, nrGotoDefinition
+    , ParamRef(..), pNameRef, pBinderMode
     , BinderVarForm(..), _GetDefinition, _GetLet
     , DefinitionForm(..), _DefUpToDate, _DefDeleted, _DefTypeChanged
     , DefinitionOutdatedType(..), defTypeWhenUsed, defTypeCurrent, defTypeUseCurrent
@@ -22,9 +21,6 @@ import           Lamdu.Prelude
 
 data BinderMode = NormalBinder | LightLambda
 
-data ParameterForm = GetFieldParameter | GetParameter
-    deriving (Eq, Ord)
-
 data NameRef name m = NameRef
     { _nrName :: name
     , _nrGotoDefinition :: m EntityId
@@ -34,7 +30,6 @@ instance Show name => Show (NameRef name m) where
 
 data ParamRef name m = ParamRef
     { _pNameRef :: NameRef name m
-    , _pForm :: ParameterForm
     , _pBinderMode :: BinderMode
     }
 
@@ -86,4 +81,3 @@ Lens.makePrisms ''BinderVarForm
 Lens.makePrisms ''BinderVarInline
 Lens.makePrisms ''DefinitionForm
 Lens.makePrisms ''GetVar
-Lens.makePrisms ''ParameterForm

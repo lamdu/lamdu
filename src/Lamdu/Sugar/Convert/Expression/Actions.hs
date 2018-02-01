@@ -85,7 +85,7 @@ mkExtractToLet outerScope stored =
                     pure (newParam, lamI)
         V.Apply lamI oldStored & V.BApp & ExprIRef.newValBody
             >>= Property.set outerScope
-        EntityId.ofLambdaParam newParam & pure
+        EntityId.ofBinder newParam & pure
     where
         extractPosI = Property.value outerScope
         oldStored = Property.value stored
@@ -98,7 +98,7 @@ makeActions exprPl =
         pure NodeActions
             { _detach = DataOps.applyHoleTo stored <* postProcess <&> EntityId.ofValI & DetachAction
             , _mSetToHole = DataOps.setToHole stored <* postProcess <&> EntityId.ofValI & Just
-            , _extract = ext <&> (`ExtractFloatResult` Nothing)
+            , _extract = ext
             , _mReplaceParent = Nothing
             }
     where

@@ -5,9 +5,6 @@ module Lamdu.Sugar.Lens
     , bodyUnfinished, unfinishedExprPayloads, fragmentExprs
     , defSchemes
     , binderFuncParamActions
-    , binderFuncParamAdds
-    , binderFuncParamDeletes
-    , binderLetActions
     , binderContentExpr
     , binderContentEntityId
     , leftMostLeaf
@@ -112,29 +109,7 @@ binderFuncParamActions ::
     Lens.Traversal' (BinderParams name m) (FuncParamActions m)
 binderFuncParamActions _ BinderWithoutParams = pure BinderWithoutParams
 binderFuncParamActions _ (NullParam a) = pure (NullParam a)
-binderFuncParamActions f (VarParam p) = (fpInfo . vpiActions) f p <&> VarParam
-binderFuncParamActions f (FieldParams ps) = (traverse . fpInfo . fpiActions) f ps <&> FieldParams
-
-binderLetActions ::
-    Lens.Traversal'
-    (Binder name m (Expression name m a))
-    (LetActions m)
-binderLetActions = bBody . bbContent . _BinderLet . lActions
-
-binderFuncParamAdds ::
-    Lens.Traversal'
-    (Binder name m (Expression name m a))
-    (m ParamAddResult)
-binderFuncParamAdds f Binder{..} =
-    (\_bParams _bActions -> Binder{..})
-    <$> (_bParams & binderFuncParamActions . fpAddNext %%~ f)
-    <*> (_bActions & baAddFirstParam %%~ f)
-
-binderFuncParamDeletes ::
-    Lens.Traversal'
-    (Binder name m (Expression name m a))
-    (m ParamDelResult)
-binderFuncParamDeletes = bParams . binderFuncParamActions . fpDelete
+binderFuncParamActions f (Params ps) = (traverse . fpInfo . piActions) f ps <&> Params
 
 binderContentExpr :: Lens' (BinderContent name m a) a
 binderContentExpr f (BinderLet l) = l & lBody . bbContent . binderContentExpr %%~ f <&> BinderLet
@@ -166,8 +141,9 @@ binderContentTagNames :: Functor m => Lens.IndexedSetter' T.Tag (BinderContent n
 binderContentTagNames f (BinderExpr expr) =
     expressionTagNames f expr <&> BinderExpr
 binderContentTagNames f (BinderLet Let{..}) =
-    (\_lValue _lBody -> Let{..})
+    (\_lValue _lName _lBody -> Let{..})
     <$> binderTagNames f _lValue
+    <*> tagNames f _lName
     <*> (bbContent . binderContentTagNames) f _lBody
     <&> BinderLet
 
@@ -200,11 +176,14 @@ tagNames f Tag{..} =
 binderTagNames :: Functor m => Lens.IndexedSetter' T.Tag (Binder name m (Expression name m a)) name
 binderTagNames f Binder{..} =
     (\_bParams _bBody -> Binder{..})
-    <$> (_FieldParams . traverse . traverse . fpiTag . tagNames) f _bParams
+    <$> (_Params . traverse . traverse . piTag . tagNames) f _bParams
     <*> (bbContent . binderContentTagNames) f _bBody
 
 definitionTagNames :: Functor m => Lens.IndexedSetter' T.Tag (Definition name m (Expression name m a)) name
-definitionTagNames = drBody . _DefinitionBodyExpression . deContent . binderTagNames
+definitionTagNames f Definition{..} =
+    (\_drName _drBody -> Definition{..})
+    <$> tagNames f _drName
+    <*> (_DefinitionBodyExpression . deContent . binderTagNames) f _drBody
 
 compositeItemTagNames :: Functor m => Lens.IndexedSetter' T.Tag (CompositeItem name m (Expression name m a)) name
 compositeItemTagNames f CompositeItem{..} =

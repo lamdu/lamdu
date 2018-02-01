@@ -50,7 +50,7 @@ convertAddItem extendOp existingTags pl =
                 _ <- protectedSetToVal stored resultI
                 Transaction.setP (Anchors.assocTagOrder tag) (Set.size existingTags)
                 EntityId.ofValI newValI & pure
-        convertTagSelection existingTags (EntityId.ofTag (pl ^. Input.entityId)) addItem
+        convertTagSelection nameWithoutContext existingTags (EntityId.ofTag (pl ^. Input.entityId)) addItem
     where
         stored = pl ^. Input.stored
 
@@ -151,7 +151,7 @@ convertCompositeItem cons stored inst forbiddenTags exprS (tag, exprI, restI) =
                     protectedSetToVal stored valI & void
                 where
                     valI = stored ^. Property.pVal
-        tagS <- convertTag tag forbiddenTags (EntityId.ofTag inst) setTag
+        tagS <- convertTag tag nameWithoutContext forbiddenTags (EntityId.ofTag inst) setTag
         pure CompositeItem
             { _ciTag = tagS
             , _ciExpr = exprS

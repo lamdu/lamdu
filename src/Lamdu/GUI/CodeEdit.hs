@@ -113,7 +113,7 @@ fixTagPublished ::
     Monad m =>
     MkProperty m (Set T.Tag) -> T.Tag -> Name (T m) -> Name (T m)
 fixTagPublished publishedTags tag name =
-    name & Name.setName %~ onSetName
+    name & Name._Stored . _1 %~ onSetName
     where
         onSetName setName newName =
             setName newName *>
@@ -229,7 +229,7 @@ makeNewDefinitionEventMap cp =
             & DataOps.newPublicDefinitionWithPane cp
         DataOps.savePreJumpPosition cp curCursor
         pure newDefI
-    <&> WidgetIds.nameEditOf . WidgetIds.fromIRef
+    <&> WidgetIds.newDest . WidgetIds.fromIRef
     & E.keysEventMapMovesCursor newDefinitionKeys
         (E.Doc ["Edit", "New definition"])
 

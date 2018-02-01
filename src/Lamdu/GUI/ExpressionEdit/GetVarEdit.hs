@@ -53,7 +53,7 @@ makeSimpleView ::
     ) =>
     Name x -> Widget.Id ->
     m (WithTextPos (Widget (f GuiState.Update)))
-makeSimpleView (Name name _) myId =
+makeSimpleView name myId =
     (Widget.makeFocusableView ?? myId <&> (Align.tValue %~))
     <*> NameEdit.makeView name
 
@@ -217,15 +217,14 @@ makeGetParam ::
 makeGetParam param myId =
     do
         theme <- Lens.view Theme.theme
-        let paramColor = Theme.name theme & Theme.parameterColor
         case param ^. Sugar.pBinderMode of
             Sugar.LightLambda ->
                 makeSimpleView
                 <&> Lens.mapped %~ LightLambda.withUnderline theme
-                <&> Lens.mapped %~ NameEdit.styleNameAtBinder name paramColor
+                <&> Lens.mapped %~ NameEdit.styleNameAtBinder Theme.parameterColor name
             _ ->
                 makeSimpleView
-                <&> Lens.mapped %~ Reader.local (TextView.color .~ paramColor)
+            <&> Lens.mapped %~ NameEdit.withNameColor Theme.parameterColor
             & makeNameRef myId (param ^. Sugar.pNameRef)
     where
         name = param ^. Sugar.pNameRef . Sugar.nrName

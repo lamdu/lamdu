@@ -1,46 +1,51 @@
 -- | Name clash logic
 {-# LANGUAGE NoImplicitPrelude, TemplateHaskell #-}
 module Lamdu.Sugar.Names.Clash
-    ( AnnotatedName(..), niUUID, niDisambiguator, niNameType
+    ( AnnotatedName(..), anInternal, anDisambiguator, anNameType
+      , anTag
     , NameContext
-    , check
     , IsClash(..), isClash, isClashOf
     ) where
 
 import qualified Control.Lens as Lens
+import           Control.Monad (foldM)
 import qualified Data.Map as Map
 import           Data.Map.Utils (unionWithM)
-import           Data.UUID.Types (UUID)
+import qualified Lamdu.Calc.Type as T
+import           Lamdu.Sugar.Internal (InternalName(..), internalNameMatch, inTag)
 import           Lamdu.Sugar.Names.Walk (Disambiguator)
 import qualified Lamdu.Sugar.Names.Walk as Walk
 
 import           Lamdu.Prelude
 
+-- TODO: Simplify CollisionGroup
 type CollisionGroup = [Walk.NameType]
 
 collisionGroups :: [CollisionGroup]
 collisionGroups =
-    [ [ Walk.DefName, Walk.ParamName, Walk.FieldParamName ]
-    , [ Walk.TagName, Walk.FieldParamName ]
-    , [ Walk.NominalName ]
+    [ [ Walk.GlobalDef, Walk.TaggedVar ]
+    , [ Walk.TaggedNominal ]
     ]
 
 -- | Info about a single instance of use of a name:
 data AnnotatedName = AnnotatedName
-    { _niUUID :: !UUID
+    { _anInternal :: !InternalName
     , -- | Is the name used in a function application context? We consider
       -- the application as a disambiguator
-      _niDisambiguator :: !(Maybe Disambiguator)
-    , _niNameType :: !Walk.NameType
+      _anDisambiguator :: !(Maybe Disambiguator)
+    , _anNameType :: !Walk.NameType
     } deriving (Eq, Ord, Show)
 Lens.makeLenses ''AnnotatedName
 
+anTag :: Lens' AnnotatedName T.Tag
+anTag = anInternal . inTag
+
 data IsClash = Clash | NoClash NameContext
 
-data GroupNameContext = Ambiguous UUID | Disambiguated (Map Disambiguator UUID)
+data GroupNameContext = Ambiguous InternalName | Disambiguated (Map Disambiguator InternalName)
 
 -- A valid (non-clashing) context for a single name where multiple
--- UUIDs may coexist
+-- InternalNames may coexist
 type NameContext = Map CollisionGroup GroupNameContext
 
 isClash :: IsClash -> Bool
@@ -51,47 +56,40 @@ isClashOf :: AnnotatedName -> IsClash
 isClashOf = NoClash . nameContextOf
 
 -- Returns (Maybe NameContext) isomorphic to IsClash because of the
--- useful Applicative instance for Maybe (used in nameContextCombine)
+-- useful Applicative instance for Maybe (used in nameContextMatch)
 -- i.e: Nothing indicates a clash
 --      Just nameContext indicates a disambiguated name context
-groupNameContextCombine :: GroupNameContext -> GroupNameContext -> Maybe GroupNameContext
-groupNameContextCombine a b =
+groupNameContextMatch :: GroupNameContext -> GroupNameContext -> Maybe GroupNameContext
+groupNameContextMatch a b =
     case (a, b) of
-    (Ambiguous uuid, Disambiguated m) -> combineAD uuid m
-    (Disambiguated m, Ambiguous uuid) -> combineAD uuid m
-    (Ambiguous x, Ambiguous y)
-        | x == y -> Just (Ambiguous x)
-        | otherwise -> Nothing
-    (Disambiguated x, Disambiguated y)
-        | Map.intersectionWith (/=) x y & or -> Nothing
-        | otherwise -> x <> y & Disambiguated & Just
+    (Ambiguous internalName, Disambiguated m) -> matchAD internalName m
+    (Disambiguated m, Ambiguous internalName) -> matchAD internalName m
+    (Ambiguous x, Ambiguous y) -> internalNameMatch x y <&> Ambiguous
+    (Disambiguated x, Disambiguated y) ->
+        unionWithM internalNameMatch x y <&> Disambiguated
     where
-        combineAD uuid m
-            | m ^.. Lens.folded & filter (/= uuid) & null = Just (Ambiguous uuid)
-            | otherwise = Nothing
+        matchAD internalName m =
+            foldM internalNameMatch internalName m <&> Ambiguous
 
-nameContextCombine :: NameContext -> NameContext -> IsClash
-nameContextCombine x y = unionWithM groupNameContextCombine x y & maybe Clash NoClash
+nameContextMatch :: NameContext -> NameContext -> IsClash
+nameContextMatch x y = unionWithM groupNameContextMatch x y & maybe Clash NoClash
 
 groupNameContextOf :: AnnotatedName -> GroupNameContext
-groupNameContextOf (AnnotatedName uuid Nothing _) = Ambiguous uuid
-groupNameContextOf (AnnotatedName uuid (Just d) _) = Map.singleton d uuid & Disambiguated
+groupNameContextOf (AnnotatedName internalName Nothing _) = Ambiguous internalName
+groupNameContextOf (AnnotatedName internalName (Just d) _) = Map.singleton d internalName & Disambiguated
 
 nameContextOf :: AnnotatedName -> NameContext
 nameContextOf inst =
-    filter (inst ^. niNameType `elem`) collisionGroups
+    filter (inst ^. anNameType `elem`) collisionGroups
     <&> ((,) ?? ctx)
     & Map.fromList
     where
         ctx = groupNameContextOf inst
 
 instance Semigroup IsClash where
-    NoClash x <> NoClash y = nameContextCombine x y
+    NoClash x <> NoClash y = nameContextMatch x y
     _ <> _ = Clash
 
 instance Monoid IsClash where
     mempty = NoClash mempty
     mappend = (<>)
-
-check :: [AnnotatedName] -> IsClash
-check ns = ns <&> isClashOf & mconcat

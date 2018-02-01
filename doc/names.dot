@@ -1,5 +1,6 @@
 digraph {
-    Tag, Def, Var, Field, Alt [style=filled, fillcolor=yellow];
+    Tag, Def, Var, Field, Alt, TId [style=filled, fillcolor=yellow];
+    TId   [label="Nominal TId"];
     Def   [label="Definition"];
     Var   [label="Variable"];
     Field [label="Record field"];
@@ -8,7 +9,7 @@ digraph {
     GetDef [label="Get definition"];
     GetParam [label="Get parameter"];
     Tag -> English, Spanish, Hebrew;
-    Def, Field, Alt, GetParam -> Tag;
+    Def, Field, Alt, GetParam, TId -> Tag;
     Var -> Tag [color=gray];
 
     GetDef -> Def;

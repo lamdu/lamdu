@@ -109,7 +109,7 @@ make config theme rwtransaction rtransaction actions mkWidget =
         makeBranchNameEdit branch =
             do
                 nameProp <-
-                    Anchors.assocNameRef (Branch.uuid branch) ^. Transaction.mkProperty
+                    Anchors.assocBranchNameRef branch ^. Transaction.mkProperty
                     <&> Property.pSet . Lens.mapped %~ rwtransaction
                     & rtransaction
                 branchNameEdit <-

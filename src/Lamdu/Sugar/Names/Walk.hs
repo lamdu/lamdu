@@ -1,7 +1,9 @@
-{-# LANGUAGE LambdaCase, NoImplicitPrelude, FlexibleContexts, TypeFamilies, RecordWildCards, NamedFieldPuns #-}
+{-# LANGUAGE LambdaCase, NoImplicitPrelude, FlexibleContexts, TypeFamilies, RecordWildCards, NamedFieldPuns, TemplateHaskell #-}
 module Lamdu.Sugar.Names.Walk
     ( MonadNaming(..)
-    , NameType(..), FunctionSignature(..), Disambiguator
+    , NameType(..), _GlobalDef, _TaggedVar, _TaggedNominal, _Tag
+    , isLocal, isGlobal
+    , FunctionSignature(..), Disambiguator
     , NameConvertor, CPSNameConvertor
     , OldExpression, NewExpression
     , toWorkArea, toDef, toExpression, toBody
@@ -13,18 +15,36 @@ import           Lamdu.Calc.Type (Type)
 import qualified Lamdu.Calc.Type as T
 import           Lamdu.Sugar.Names.CPS (CPS(..), liftCPS)
 import qualified Lamdu.Sugar.Names.NameGen as NameGen
-import           Lamdu.Sugar.Types
+import qualified Lamdu.Sugar.Types as Sugar
+import           Lamdu.Sugar.Types hiding (Tag)
 import           Revision.Deltum.Transaction (Transaction)
 
 import           Lamdu.Prelude
 
 type T = Transaction
 
+-- TODO: Maybe remove "TaggedNominal", make it a disambiguation context?
+data NameType = GlobalDef | TaggedVar | TaggedNominal | Tag
+    deriving (Eq, Ord, Show)
+
+Lens.makePrisms ''NameType
+
+-- | Bound by a local binder. Used to determine which locals collide
+isLocal :: NameType -> Bool
+isLocal TaggedVar = True
+isLocal _ = False
+
+-- | Not bound by a local binder and not a tag
+--
+-- A context-less tag is not considered a global, because it is not an
+-- actual entity. Used to determine collisions of binder-less names
+isGlobal :: NameType -> Bool
+isGlobal GlobalDef = True
+isGlobal TaggedNominal = True
+isGlobal _ = False
+
 type CPSNameConvertor m = OldName m -> CPS m (NewName m)
 type NameConvertor m = OldName m -> m (NewName m)
-
-data NameType = DefName | TagName | NominalName | ParamName | FieldParamName
-    deriving (Eq, Ord, Show)
 
 data FunctionSignature = FunctionSignature
     { sSpecialArgs :: SpecialArgs ()
@@ -40,8 +60,7 @@ class (Monad m, Monad (SM m)) => MonadNaming m where
     type SM m :: * -> *
     opRun :: m (m a -> T (SM m) a)
 
-    opWithParamName :: ParameterForm -> NameGen.VarInfo -> CPSNameConvertor m
-    opWithLetName :: NameGen.VarInfo -> CPSNameConvertor m
+    opWithName :: NameGen.VarInfo -> NameType -> CPSNameConvertor m
     opGetName :: Maybe Disambiguator -> NameType -> NameConvertor m
 
 type TM m = T (SM m)
@@ -76,17 +95,11 @@ toParamRef ::
     MonadNaming m =>
     ParamRef (OldName m) p ->
     m (ParamRef (NewName m) p)
-toParamRef param =
-    (pNameRef . nrName) f param
-    where
-        f = case param ^. pForm of
-            GetParameter      -> ParamName
-            GetFieldParameter -> FieldParamName
-            & opGetName Nothing
+toParamRef = (pNameRef . nrName) (opGetName Nothing TaggedVar)
 
 binderVarType :: BinderVarForm t -> NameType
-binderVarType GetLet = ParamName
-binderVarType (GetDefinition _) = DefName
+binderVarType GetLet = TaggedVar
+binderVarType (GetDefinition _) = GlobalDef
 
 toBinderVarRef ::
     MonadNaming m =>
@@ -103,7 +116,7 @@ toGetVar ::
 toGetVar (GetParam x) = toParamRef x <&> GetParam
 toGetVar (GetBinder x) = toBinderVarRef x <&> GetBinder
 toGetVar (GetParamsRecord x) =
-    traverse (opGetName Nothing TagName) x <&> GetParamsRecord
+    traverse (opGetName Nothing Tag) x <&> GetParamsRecord
 
 toLet ::
     MonadNaming m => (a -> m b) ->
@@ -112,7 +125,7 @@ toLet ::
 toLet expr Let{..} =
     do
         (_lName, _lBody) <-
-            unCPS (opWithLetName (isFunctionType (_lAnnotation ^. aInferredType)) _lName)
+            unCPS (withTag TaggedVar (isFunctionType (_lAnnotation ^. aInferredType)) _lName)
             (toBinderBody expr _lBody)
         _lValue <- toBinder expr _lValue
         pure Let{..}
@@ -154,18 +167,28 @@ toTagSelection TagSelection{..} =
         run1 <- opRun
         pure TagSelection
             { _tsOptions =
-                _tsOptions >>= run0 . (traverse . toName) (opGetName Nothing TagName)
-            , _tsNewTag = _tsNewTag >>= run1 . _1 (opGetName Nothing TagName)
+                _tsOptions >>= run0 . (traverse . toName) (opGetName Nothing Tag)
+            , _tsNewTag = _tsNewTag >>= run1 . _1 (opGetName Nothing Tag)
             }
 
-toTag ::
+toTagOf ::
     MonadNaming m =>
-    Tag (OldName m) (TM m) ->
-    m (Tag (NewName m) (TM m))
-toTag (Tag info name actions) =
-    Tag info
-    <$> opGetName Nothing TagName name
+    NameType -> Sugar.Tag (OldName m) (TM m) ->
+    m (Sugar.Tag (NewName m) (TM m))
+toTagOf nameType (Sugar.Tag info name actions) =
+    Sugar.Tag info
+    <$> opGetName Nothing nameType name
     <*> toTagSelection actions
+
+withTag ::
+    MonadNaming m =>
+    NameType -> NameGen.VarInfo ->
+    Sugar.Tag (OldName m) (TM m) ->
+    CPS m (Sugar.Tag (NewName m) (TM m))
+withTag nameType varInfo (Sugar.Tag info name actions) =
+    Sugar.Tag info
+    <$> opWithName varInfo nameType name
+    <*> liftCPS (toTagSelection actions)
 
 toLabeledApply ::
     MonadNaming m =>
@@ -176,10 +199,10 @@ toLabeledApply expr app@LabeledApply{..} =
     LabeledApply
     <$>
     ( _aFunc & bvNameRef . nrName %%~
-        opGetName (Just (funcSignature app)) (binderVarType (_aFunc ^. bvForm))
+        opGetName (Just (funcSignature app)) TaggedVar
     )
     <*> pure _aSpecialArgs
-    <*> (traverse . aaName) (opGetName Nothing TagName) _aAnnotatedArgs
+    <*> (traverse . aaName) (opGetName Nothing Tag) _aAnnotatedArgs
     <*> (traverse . raValue) toParamRef _aRelayedArgs
     >>= traverse expr
 
@@ -219,7 +242,7 @@ toComposite ::
     m (Composite (NewName m) (TM m) b)
 toComposite expr Composite{..} =
     (\_cItems _cAddItem -> Composite{..})
-    <$> (traverse . ciTag) toTag _cItems
+    <$> (traverse . ciTag) (toTagOf Tag) _cItems
     <*> toTagSelection _cAddItem
     >>= traverse expr
 
@@ -251,7 +274,8 @@ toBody expr = \case
     BodyFragment     x -> x & toFragment expr <&> BodyFragment
     BodyPlaceHolder    -> pure BodyPlaceHolder
     where
-        toTId = tidName %%~ opGetName Nothing NominalName
+        toTag = toTagOf Tag
+        toTId = tidName %%~ opGetName Nothing TaggedNominal
 
 funcSignature :: LabeledApply name binderVar a -> FunctionSignature
 funcSignature apply =
@@ -263,14 +287,12 @@ funcSignature apply =
 toExpression :: MonadNaming m => OldExpression m a -> m (NewExpression m a)
 toExpression = rBody (toBody toExpression)
 
-withFieldParam ::
-    MonadNaming m => FuncParam (FieldParamInfo (OldName m) (TM m)) ->
-    CPS m (FuncParam (FieldParamInfo (NewName m) (TM m)))
-withFieldParam (FuncParam ann (FieldParamInfo (Tag info name tActions) fpActions)) =
-    Tag info
-    <$> opWithParamName GetFieldParameter varInfo name
-    <*> liftCPS (toTagSelection tActions)
-    <&> FieldParamInfo ?? fpActions
+withParam ::
+    MonadNaming m => FuncParam (ParamInfo (OldName m) (TM m)) ->
+    CPS m (FuncParam (ParamInfo (NewName m) (TM m)))
+withParam (FuncParam ann (ParamInfo tag fpActions)) =
+    withTag TaggedVar varInfo tag
+    <&> ParamInfo ?? fpActions
     <&> FuncParam ann
     where
         varInfo = ann ^. aInferredType & isFunctionType
@@ -281,12 +303,7 @@ withBinderParams ::
     CPS m (BinderParams (NewName m) (TM m))
 withBinderParams BinderWithoutParams = pure BinderWithoutParams
 withBinderParams (NullParam a) = pure (NullParam a)
-withBinderParams (VarParam fp) =
-    opWithParamName GetParameter (isFunctionType (fp ^. fpAnnotation . aInferredType))
-    (fp ^. fpInfo . vpiName)
-    <&> VarParam . \newName -> fp & fpInfo . vpiName .~ newName
-withBinderParams (FieldParams xs) =
-    traverse withFieldParam xs <&> FieldParams
+withBinderParams (Params xs) = traverse withParam xs <&> Params
 
 toDefinitionBody ::
     MonadNaming m => (a -> m b) ->
@@ -304,7 +321,9 @@ toDef ::
     m (Definition (NewName m) (TM m) b)
 toDef f Definition{..} =
     do
-        _drName <- opGetName Nothing DefName _drName
+        -- NOTE: A global def binding is not considered a binder, as
+        -- it exists everywhere, not just inside the binding
+        _drName <- toTagOf GlobalDef _drName
         _drBody <- toDefinitionBody f _drBody
         pure Definition{..}
 

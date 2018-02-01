@@ -14,7 +14,6 @@ import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Data.Ops.Subexprs as SubExprs
 import           Lamdu.Expr.IRef (DefI, ValIProperty)
 import qualified Lamdu.Expr.IRef as ExprIRef
-import qualified Lamdu.Expr.UniqueId as UniqueId
 import qualified Lamdu.Infer as Infer
 import           Lamdu.Sugar.Convert.Binder.Float (makeFloatLetToOuterScope)
 import           Lamdu.Sugar.Convert.Binder.Inline (inlineLet)
@@ -26,6 +25,7 @@ import           Lamdu.Sugar.Convert.Expression.Actions (addActions, makeAnnotat
 import qualified Lamdu.Sugar.Convert.Input as Input
 import           Lamdu.Sugar.Convert.Monad (ConvertM, scScopeInfo, siLetItems)
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
+import           Lamdu.Sugar.Convert.Tag (convertTaggedEntity)
 import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import qualified Lamdu.Sugar.Lens as SugarLens
@@ -89,6 +89,7 @@ convertRedex ::
     ConvertM m (Let InternalName (T m) (ExpressionU m a))
 convertRedex expr redex =
     do
+        tag <- convertTaggedEntity param
         (_pMode, value) <-
             convertBinder binderKind param (redex ^. Redex.arg)
             & localNewExtractDestPos expr
@@ -110,10 +111,10 @@ convertRedex expr redex =
                         <&> EntityId.ofValI
                     )
         pure Let
-            { _lEntityId = defEntityId
+            { _lEntityId = EntityId.ofBinder param
             , _lValue = value & bActions . baMNodeActions . Lens._Just %~ fixValueNodeActions
             , _lActions = actions
-            , _lName = UniqueId.toUUID param & InternalName
+            , _lName = tag
             , _lAnnotation = ann
             , _lBodyScope = redex ^. Redex.bodyScope
             , _lBody =
@@ -132,7 +133,6 @@ convertRedex expr redex =
             <&> Lens.mapped %~ (^. Input.stored)
             & BinderKindLet
         V.Lam param body = redex ^. Redex.lam
-        defEntityId = EntityId.ofLambdaParam param
 
 makeBinderContent ::
     (Monad m, Monoid a) =>
@@ -155,7 +155,7 @@ convertBinderBody expr =
     \content ->
     BinderBody
     { _bbAddOuterLet =
-        expr ^. Val.payload . Input.stored & DataOps.redexWrap <&> EntityId.ofLambdaParam
+        expr ^. Val.payload . Input.stored & DataOps.redexWrap <&> EntityId.ofBinder
     , _bbContent = content
     }
 
@@ -208,7 +208,7 @@ convertLam lam exprPl =
             convParams (lam ^. V.lamResult) exprPl
             <&> bActions . baMNodeActions .~ Nothing
         let paramNames =
-                binder ^.. bParams . _FieldParams . traverse . fpInfo . fpiTag . tagName
+                binder ^.. bParams . _Params . traverse . fpInfo . piTag . tagName
                 & Set.fromList
         let lambda
                 | useNormalLambda paramNames binder =
@@ -224,7 +224,7 @@ convertLam lam exprPl =
 useNormalLambda :: Set InternalName -> Binder InternalName (T m) (Expression InternalName (T m) a) -> Bool
 useNormalLambda paramNames binder =
     any (binder &)
-    [ Lens.hasn't (bParams . _FieldParams)
+    [ Lens.hasn't (bParams . _Params)
     , Lens.has (bBody . bbContent . _BinderLet)
     , Lens.has (bBody . Lens.traverse . SugarLens.payloadsOf forbiddenLightLamSubExprs)
     , not . allParamsUsed paramNames
@@ -233,10 +233,7 @@ useNormalLambda paramNames binder =
         forbiddenLightLamSubExprs :: Lens.Traversal' (Body name m a) ()
         forbiddenLightLamSubExprs =
             Lens.failing SugarLens.bodyUnfinished
-            (_BodyLam . lamBinder . bParams . namedParams .
-             Lens.united)
-        namedParams :: Lens.Traversal' (BinderParams name m) ()
-        namedParams = Lens.failing (_VarParam . Lens.united) (_FieldParams . Lens.united)
+            (_BodyLam . lamBinder . bParams . _Params . Lens.united)
 
 allParamsUsed :: Set InternalName -> Binder InternalName (T m) (Expression InternalName (T m) a) -> Bool
 allParamsUsed paramNames binder =

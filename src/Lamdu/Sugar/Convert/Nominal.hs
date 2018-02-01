@@ -18,10 +18,12 @@ import           Lamdu.Sugar.Types
 
 import           Lamdu.Prelude
 
-convertNom :: V.Nom expr -> Nominal InternalName expr
+convertNom :: Monad m => V.Nom expr -> ConvertM m (Nominal InternalName expr)
 convertNom (V.Nom tid val) =
+    ConvertTId.convert tid
+    <&> \tidS ->
     Nominal
-    { _nTId = ConvertTId.convert tid
+    { _nTId = tidS
     , _nVal = val
     }
 
@@ -31,7 +33,7 @@ convertFromNom ::
     ConvertM m (ExpressionU m a)
 convertFromNom nom pl =
     traverse ConvertM.convertSubexpression nom
-    <&> convertNom <&> BodyFromNom
+    >>= convertNom <&> BodyFromNom
     >>= addActions pl
 
 convertToNom ::
@@ -42,7 +44,7 @@ convertToNom nom pl =
     do
         ConvertText.text nom pl & justToLeft
         traverse ConvertBinder.convertBinderBody nom
-            <&> convertNom <&> BodyToNom
+            >>= convertNom <&> BodyToNom
             >>= addActions pl
             & lift
     & runMatcherT

@@ -52,7 +52,6 @@ extractEventMap ::
     Sugar.Expression name (T m) a -> [MetaKey] -> EventMap (T m GuiState.Update)
 extractEventMap replExpr keys =
     replExpr ^. Sugar.rPayload . Sugar.plActions . Sugar.extract
-    <&> Sugar.efrNewEntity
     <&> ExprEventMap.extractCursor
     & E.keysEventMapMovesCursor keys (E.Doc ["Edit", "Extract to definition"])
 

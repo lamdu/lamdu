@@ -93,10 +93,8 @@ jumpHolesEventMap hg =
     jumpEventMap Config.completionJumpToPrevKeys "previous" NearestHoles.prev
 
 extractCursor :: Sugar.ExtractDestination -> Widget.Id
-extractCursor (Sugar.ExtractToLet letId) =
-    WidgetIds.fromEntityId letId & WidgetIds.letBinderId
-extractCursor (Sugar.ExtractToDef defId) =
-    WidgetIds.nameEditOf (WidgetIds.fromEntityId defId)
+extractCursor (Sugar.ExtractToLet letId) = WidgetIds.fromEntityId letId & WidgetIds.letBinderId
+extractCursor (Sugar.ExtractToDef defId) = WidgetIds.fromEntityId defId
 
 extractEventMap ::
     (MonadReader env m, Config.HasConfig env, Functor f) =>
@@ -105,7 +103,7 @@ extractEventMap actions =
     Lens.view Config.config <&> Config.extractKeys
     <&>
     \k ->
-    actions ^. Sugar.extract <&> extractCursor . Sugar.efrNewEntity
+    actions ^. Sugar.extract <&> extractCursor
     & E.keysEventMapMovesCursor k doc
     where
         doc = E.Doc ["Edit", "Extract"]

@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, OverloadedStrings, RecordWildCards #-}
+{-# LANGUAGE NoImplicitPrelude, OverloadedStrings #-}
 module Lamdu.GUI.ParamEdit
     ( Info(..), make
     , eventMapAddFirstParam
@@ -29,31 +29,23 @@ import           Lamdu.Prelude
 
 type T = Transaction
 
-chooseAddResultEntityId :: Sugar.ParamAddResult -> GuiState.Update
-chooseAddResultEntityId (Sugar.ParamAddResultVarToTags Sugar.VarToTags {..}) =
-    vttNewTag ^. Sugar.tagInstance
-    & WidgetIds.fromEntityId & WidgetIds.tagHoleId & GuiState.updateCursor
-chooseAddResultEntityId (Sugar.ParamAddResultNewVar entityId _) =
-    WidgetIds.fromEntityId entityId & WidgetIds.nameEditOf & GuiState.updateCursor
-chooseAddResultEntityId (Sugar.ParamAddResultNewTag entityId) =
-    WidgetIds.fromEntityId entityId & WidgetIds.tagHoleId & GuiState.updateCursor
+enterNewParam :: Sugar.EntityId -> GuiState.Update
+enterNewParam = GuiState.updateCursor . WidgetIds.tagHoleId . WidgetIds.fromEntityId
 
 eventMapAddFirstParam ::
-    Functor m => Config -> T m Sugar.ParamAddResult ->
+    Functor m => Config -> T m Sugar.EntityId ->
     EventMap (T m GuiState.Update)
 eventMapAddFirstParam config addFirstParam =
     addFirstParam
-    <&> chooseAddResultEntityId
+    <&> enterNewParam
     & E.keyPresses (Config.addNextParamKeys config <&> toModKey)
         (E.Doc ["Edit", "Add parameter"])
 
 eventMapAddNextParam ::
-    Functor m =>
-    Config -> T m Sugar.ParamAddResult ->
-    EventMap (T m GuiState.Update)
+    Functor m => Config -> T m Sugar.EntityId -> EventMap (T m GuiState.Update)
 eventMapAddNextParam config fpAdd =
     fpAdd
-    <&> chooseAddResultEntityId
+    <&> enterNewParam
     & E.keyPresses (Config.addNextParamKeys config <&> toModKey)
         (E.Doc ["Edit", "Add next parameter"])
 
@@ -64,9 +56,7 @@ eventMapOrderParam keys docSuffix =
     E.keysEventMap keys (E.Doc ["Edit", "Parameter", "Move " <> docSuffix])
 
 eventParamDelEventMap ::
-    Monad m =>
-    m Sugar.ParamDelResult -> [MetaKey] -> Text -> Widget.Id ->
-    EventMap (m GuiState.Update)
+    Monad m => m () -> [MetaKey] -> Text -> Widget.Id -> EventMap (m GuiState.Update)
 eventParamDelEventMap fpDel keys docSuffix dstPosId =
     GuiState.updateCursor dstPosId <$ fpDel
     & E.keyPresses (keys <&> toModKey)
@@ -74,8 +64,8 @@ eventParamDelEventMap fpDel keys docSuffix dstPosId =
 
 data Info m = Info
     { iNameEdit :: WithTextPos (Widget (T m GuiState.Update))
-    , iDel :: T m Sugar.ParamDelResult
-    , iMAddNext :: Maybe (T m Sugar.ParamAddResult)
+    , iDel :: T m ()
+    , iMAddNext :: Maybe (T m Sugar.EntityId)
     , iMOrderBefore :: Maybe (T m ())
     , iMOrderAfter :: Maybe (T m ())
     , iId :: Widget.Id

@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, OverloadedStrings, LambdaCase #-}
+{-# LANGUAGE NoImplicitPrelude, LambdaCase #-}
 module Lamdu.Data.Ops
     ( newHole, applyHoleTo, setToAppliedHole
     , replace, replaceWithHole, setToHole, lambdaWrap, redexWrap
@@ -135,12 +135,10 @@ jumpBack codeAnchors =
     [] -> Nothing
     (j:js) -> j <$ setP (Anchors.preJumps codeAnchors) js & Just
 
-newDefinition ::
-    Monad m => Text -> PresentationMode -> Definition (ValI m) () -> T m (DefI m)
-newDefinition name presentationMode def =
+newDefinition :: Monad m => PresentationMode -> Definition (ValI m) () -> T m (DefI m)
+newDefinition presentationMode def =
     do
         newDef <- Transaction.newIRef def
-        setP (Anchors.assocNameRef newDef) name
         let defVar = ExprIRef.globalId newDef
         setP (Anchors.assocPresentationMode defVar) presentationMode
         pure newDef
@@ -160,7 +158,7 @@ newPublicDefinitionWithPane ::
     Anchors.CodeAnchors m -> Definition (ValI m) () -> T m (DefI m)
 newPublicDefinitionWithPane codeAnchors def =
     do
-        defI <- newDefinition "" Verbose def
+        defI <- newDefinition Verbose def
         modP (Anchors.globals codeAnchors) (Set.insert defI)
         newPane codeAnchors defI
         pure defI

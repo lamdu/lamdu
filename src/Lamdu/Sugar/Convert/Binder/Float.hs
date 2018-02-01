@@ -12,6 +12,7 @@ import qualified Lamdu.Calc.Type.Vars as TV
 import qualified Lamdu.Calc.Val as V
 import           Lamdu.Calc.Val.Annotated (Val(..))
 import qualified Lamdu.Calc.Val.Annotated as Val
+import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Data.Ops.Subexprs as SubExprs
@@ -32,7 +33,7 @@ import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import           Lamdu.Sugar.OrderTags (orderedClosedFlatComposite)
 import           Lamdu.Sugar.Types
 import qualified Revision.Deltum.Property as Property
-import           Revision.Deltum.Transaction (Transaction)
+import           Revision.Deltum.Transaction (Transaction, getP)
 import           Text.PrettyPrint.HughesPJClass (prettyShow)
 
 import           Lamdu.Prelude
@@ -65,9 +66,9 @@ moveToGlobalScope ctx param defExpr =
         PostProcess.GoodExpr <- ctx ^. ConvertM.scPostProcessRoot
         pure ()
 
-data NewLet m = NewLet
+-- TODO: Remove this
+newtype NewLet m = NewLet
     { nlIRef :: ValI m
-    , nlMVarToTags :: Maybe VarToTags
     }
 
 isVarAlwaysApplied :: V.Lam (Val a) -> Bool
@@ -80,7 +81,7 @@ isVarAlwaysApplied (V.Lam var body) =
 
 convertLetToLam ::
     Monad m => V.Var -> Redex (ValIProperty m) -> T m (NewLet m)
-convertLetToLam varToReplace redex =
+convertLetToLam var redex =
     do
         (newParam, newValI) <-
             Params.convertBinderToFunction mkArg
@@ -88,13 +89,10 @@ convertLetToLam varToReplace redex =
         let toNewParam prop =
                 V.LVar newParam & V.BLeaf &
                 ExprIRef.writeValBody (Property.value prop)
-        SubExprs.onGetVars toNewParam varToReplace (redex ^. Redex.arg)
-        pure NewLet
-            { nlIRef = newValI
-            , nlMVarToTags = Nothing
-            }
+        SubExprs.onGetVars toNewParam var (redex ^. Redex.arg)
+        NewLet newValI & pure
     where
-        mkArg = V.LVar varToReplace & V.BLeaf & ExprIRef.newValBody
+        mkArg = V.LVar var & V.BLeaf & ExprIRef.newValBody
 
 convertVarToGetFieldParam ::
     Monad m =>
@@ -111,41 +109,35 @@ convertVarToGetFieldParam oldVar paramTag (V.Lam lamVar lamBody) =
 convertLetParamToRecord ::
     Monad m =>
     V.Var -> V.Lam (Val (ValIProperty m)) -> Params.StoredLam m -> T m (NewLet m)
-convertLetParamToRecord varToReplace letLam storedLam =
+convertLetParamToRecord var letLam storedLam =
     do
-        vtt <-
-            Params.convertToRecordParams
-            mkNewArg (BinderKindLet letLam) storedLam Params.NewParamAfter
-        convertVarToGetFieldParam varToReplace (vttNewTag vtt ^. tagVal)
-            (storedLam ^. Params.slLam)
-        pure NewLet
-            { nlIRef = Params.slLambdaProp storedLam & Property.value
-            , nlMVarToTags = Just vtt
-            }
+        tagForVar <- Anchors.assocTag var & getP
+        _ <-
+            Params.convertToRecordParams mkNewArg (BinderKindLet letLam) storedLam
+            Params.NewParamAfter
+        convertVarToGetFieldParam var tagForVar (storedLam ^. Params.slLam)
+        Params.slLambdaProp storedLam & Property.value & NewLet & pure
     where
-        mkNewArg = V.LVar varToReplace & V.BLeaf & ExprIRef.newValBody
+        mkNewArg = V.LVar var & V.BLeaf & ExprIRef.newValBody
 
 addFieldToLetParamsRecord ::
     Monad m =>
     [T.Tag] -> V.Var -> V.Lam (Val (ValIProperty m)) -> Params.StoredLam m ->
     T m (NewLet m)
-addFieldToLetParamsRecord fieldTags varToReplace letLam storedLam =
+addFieldToLetParamsRecord fieldTags var letLam storedLam =
     do
         newParamTag <-
             Params.addFieldParam Nothing DataOps.genNewTag mkNewArg (BinderKindLet letLam) storedLam
             ((fieldTags ++) . pure)
-        convertVarToGetFieldParam varToReplace (newParamTag ^. tagVal)
+        convertVarToGetFieldParam var (newParamTag ^. tagVal)
             (storedLam ^. Params.slLam)
-        pure NewLet
-            { nlIRef = Params.slLambdaProp storedLam & Property.value
-            , nlMVarToTags = Nothing
-            }
+        Params.slLambdaProp storedLam & Property.value & NewLet & pure
     where
-        mkNewArg = V.LVar varToReplace & V.BLeaf & ExprIRef.newValBody
+        mkNewArg = V.LVar var & V.BLeaf & ExprIRef.newValBody
 
 addLetParam ::
     Monad m => V.Var -> Redex (Input.Payload m a) -> T m (NewLet m)
-addLetParam varToReplace redex =
+addLetParam var redex =
     case storedRedex ^. Redex.arg . Val.body of
     V.BLam lam | isVarAlwaysApplied (redex ^. Redex.lam) ->
         case redex ^. Redex.arg . Val.payload . Input.inferred . Infer.plType of
@@ -153,20 +145,16 @@ addLetParam varToReplace redex =
             | Just fields <- composite ^? orderedClosedFlatComposite
             , Params.isParamAlwaysUsedWithGetField lam ->
             addFieldToLetParamsRecord
-                (fields <&> fst) varToReplace (storedRedex ^. Redex.lam) storedLam
-        _ -> convertLetParamToRecord varToReplace (storedRedex ^. Redex.lam) storedLam
+                (fields <&> fst) var (storedRedex ^. Redex.lam) storedLam
+        _ -> convertLetParamToRecord var (storedRedex ^. Redex.lam) storedLam
         where
             storedLam = Params.StoredLam lam (storedRedex ^. Redex.arg . Val.payload)
-    _ -> convertLetToLam varToReplace storedRedex
+    _ -> convertLetToLam var storedRedex
     where
         storedRedex = redex <&> (^. Input.stored)
 
 sameLet :: Redex (ValIProperty m) -> NewLet m
-sameLet redex =
-    NewLet
-    { nlIRef = redex ^. Redex.arg . Val.payload & Property.value
-    , nlMVarToTags = Nothing
-    }
+sameLet redex = redex ^. Redex.arg . Val.payload & Property.value & NewLet
 
 ordNub :: Ord a => [a] -> [a]
 ordNub = Set.toList . Set.fromList
@@ -211,7 +199,7 @@ floatLetToOuterScope ::
     Monad m =>
     (ValI m -> T m ()) ->
     Redex (Input.Payload m a) -> ConvertM.Context m ->
-    T m ExtractFloatResult
+    T m ExtractDestination
 floatLetToOuterScope setTopLevel redex ctx =
     do
         redex ^. Redex.lam . V.lamResult . Val.payload . Input.stored . Property.pVal & setTopLevel
@@ -219,8 +207,7 @@ floatLetToOuterScope setTopLevel redex ctx =
             redex
             & Redex.lam . V.lamResult . Val.payload . Input.stored . Property.pSet .~ setTopLevel
             & processLet (ctx ^. ConvertM.scScopeInfo)
-        resultEntity <-
-            case ctx ^. ConvertM.scScopeInfo . ConvertM.siMOuter of
+        case ctx ^. ConvertM.scScopeInfo . ConvertM.siMOuter of
             Nothing ->
                 EntityId.ofIRef (ExprIRef.defI param) <$
                 moveToGlobalScope ctx param innerDefExpr
@@ -234,13 +221,9 @@ floatLetToOuterScope setTopLevel redex ctx =
                         & Definition.Expr (redex ^. Redex.arg)
                         & Definition.pruneDefExprDeps
             Just outerScopeInfo ->
-                EntityId.ofLambdaParam param <$
+                EntityId.ofBinder param <$
                 DataOps.redexWrapWithGivenParam param (nlIRef newLet) (outerScopeInfo ^. ConvertM.osiPos)
                 <&> ExtractToLet
-        pure ExtractFloatResult
-            { efrNewEntity = resultEntity
-            , efrMVarToTags = nlMVarToTags newLet
-            }
     where
         addRecursiveRefAsDep =
             case ctx ^. ConvertM.scScopeInfo . ConvertM.siRecursiveRef of
@@ -252,6 +235,6 @@ floatLetToOuterScope setTopLevel redex ctx =
 makeFloatLetToOuterScope ::
     Monad m =>
     (ValI m -> T m ()) -> Redex (Input.Payload m a) ->
-    ConvertM m (T m ExtractFloatResult)
+    ConvertM m (T m ExtractDestination)
 makeFloatLetToOuterScope setTopLevel redex =
     Lens.view id <&> floatLetToOuterScope setTopLevel redex

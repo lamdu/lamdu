@@ -66,6 +66,7 @@ migrateFromVersion db 0 =
             putStrLn "Migrating DB schema to version 1"
             Transaction.writeIRef dbSchemaVersion 1 & runDbTransaction db
             migrateFromVersion db 1
+migrateFromVersion _ ver | ver < curDbSchemaVersion = showIncompatibleDbMessage
 migrateFromVersion _ ver = fail ("Unexpected Lamdu DB version: " ++ show ver)
 
 migration :: DB -> IO ()
