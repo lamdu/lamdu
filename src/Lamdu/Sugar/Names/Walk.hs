@@ -148,16 +148,21 @@ toLam ::
     m (Lambda (NewName m) (TM m) b)
 toLam = lamBinder . toBinder
 
+toTagActions ::
+    MonadNaming m =>
+    TagActions (OldName m) (TM m) -> m (TagActions (NewName m) (TM m))
+toTagActions actions =
+    opRun <&>
+    \run -> actions & taOptions %~ (>>= run . (traverse . _1) (opGetName TagName))
+
 toTag ::
     MonadNaming m =>
     Tag (OldName m) (TM m) ->
     m (Tag (NewName m) (TM m))
 toTag (Tag info name actions) =
-    do
-        run <- opRun
-        Tag info
-            <$> opGetName TagName name
-            ?? (actions & taOptions %~ (>>= run . (traverse . _1) (opGetName TagName)))
+    Tag info
+    <$> opGetName TagName name
+    <*> toTagActions actions
 
 toLabeledApply ::
     MonadNaming m =>
@@ -243,14 +248,11 @@ withFieldParam ::
 withFieldParam (FuncParam ann (FieldParamInfo (Tag info name tActions) fpActions)) =
     Tag info
     <$> opWithParamName GetFieldParameter varInfo name
-    <*> newActions
+    <*> liftCPS (toTagActions tActions)
     <&> FieldParamInfo ?? fpActions
     <&> FuncParam ann
     where
         varInfo = ann ^. aInferredType & isFunctionType
-        newActions =
-            liftCPS opRun <&>
-            \run -> tActions & taOptions %~ (>>= run . (traverse . _1) (opGetName TagName))
 
 withBinderParams ::
     MonadNaming m =>
