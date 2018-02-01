@@ -5,8 +5,8 @@ module Lamdu.Sugar.Convert.Load
     ( assertInferSuccess
     , inferDef
     , inferCheckDef
+    , inferCheckDefExpr
     , inferDefExpr
-    , inferRecursive
     , loadInferPrepareInput
     , readValAndAddProperties
     ) where
@@ -23,7 +23,6 @@ import qualified Lamdu.Data.Definition as Definition
 import           Lamdu.Eval.Results (EvalResults, erExprValues, erAppliesOfLam)
 import           Lamdu.Expr.IRef (ValI, ValIProperty)
 import qualified Lamdu.Expr.IRef as ExprIRef
-import           Lamdu.Infer (Infer)
 import qualified Lamdu.Infer as Infer
 import qualified Lamdu.Infer.Error as Infer
 import qualified Lamdu.Infer.Trans as InferT
@@ -42,21 +41,20 @@ type T = Transaction
 assertInferSuccess :: Either Infer.Error a -> a
 assertInferSuccess = either (error . ("Type inference failed: " ++) . show . pPrint) id
 
-inferDefExpr :: Infer.Scope -> Definition.Expr (Val a) -> Infer (Val (Infer.Payload, a))
-inferDefExpr scope defExpr =
-    Infer.infer (defExpr ^. Definition.exprFrozenDeps)
-    scope (defExpr ^. Definition.expr)
-
-inferRecursive ::
-    Definition.Expr (Val a) -> V.Var -> Infer (Val (Infer.Payload, a))
-inferRecursive defExpr defId =
+inferDefExprWithRecursiveRef ::
+    Monad m =>
+    Definition.Expr (Val a) -> V.Var -> InferT.M m (Val (Infer.Payload, a))
+inferDefExprWithRecursiveRef defExpr defId =
     do
         defTv <- Infer.freshInferredVar Infer.emptyScope "r"
         let scope = Infer.insertTypeOf defId defTv Infer.emptyScope
-        inferredVal <- inferDefExpr scope defExpr
+        inferredVal <-
+            Infer.infer (defExpr ^. Definition.exprFrozenDeps) scope
+            (defExpr ^. Definition.expr)
         let inferredType = inferredVal ^. Val.payload . _1 . Infer.plType
         unify inferredType defTv
         Update.inferredVal inferredVal & Update.liftInfer
+    & InferT.liftInfer
 
 propEntityId :: Property f (ValI m) -> EntityId
 propEntityId = EntityId.ofValI . Property.value
@@ -116,8 +114,24 @@ inferDef ::
     V.Var ->
     T m (Either Infer.Error (Val (Input.Payload m [EntityId]), Infer.Context))
 inferDef results defExpr defVar =
-    inferRecursive defExpr defVar
+    inferDefExprWithRecursiveRef defExpr defVar
+    >>= loadInferPrepareInput results
+    & InferT.run
+
+inferDefExprHelper ::
+    Monad m => Definition.Expr (Val a) -> InferT.M m (Val (Infer.Payload, a))
+inferDefExprHelper defExpr =
+    Infer.infer (defExpr ^. Definition.exprFrozenDeps)
+    Infer.emptyScope (defExpr ^. Definition.expr)
     & InferT.liftInfer
+
+inferDefExpr ::
+    Monad m =>
+    CurAndPrev (EvalResults (ValI m)) ->
+    Definition.Expr (Val (ValIProperty m)) ->
+    T m (Either Infer.Error (Val (Input.Payload m [EntityId]), Infer.Context))
+inferDefExpr results defExpr =
+    inferDefExprHelper defExpr
     >>= loadInferPrepareInput results
     & InferT.run
 
@@ -126,7 +140,15 @@ inferCheckDef ::
     Definition.Expr (Val (ValI m)) -> V.Var ->
     T m (Either Infer.Error (Val (Infer.Payload, ValI m), Infer.Context))
 inferCheckDef defExpr defVar =
-    inferRecursive defExpr defVar
-    & InferT.liftInfer
+    inferDefExprWithRecursiveRef defExpr defVar
+    >>= ParamList.loadForLambdas
+    & InferT.run
+
+inferCheckDefExpr ::
+    Monad m =>
+    Definition.Expr (Val (ValI m)) ->
+    T m (Either Infer.Error (Val (Infer.Payload, ValI m), Infer.Context))
+inferCheckDefExpr defExpr =
+    inferDefExprHelper defExpr
     >>= ParamList.loadForLambdas
     & InferT.run

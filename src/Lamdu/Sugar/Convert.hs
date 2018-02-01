@@ -28,7 +28,6 @@ import qualified Lamdu.Expr.Lens as ExprLens
 import qualified Lamdu.Expr.Load as ExprLoad
 import qualified Lamdu.Expr.UniqueId as UniqueId
 import qualified Lamdu.Infer as Infer
-import qualified Lamdu.Infer.Trans as InferT
 import qualified Lamdu.Sugar.Convert.DefExpr as ConvertDefExpr
 import qualified Lamdu.Sugar.Convert.DefExpr.OutdatedDefs as OutdatedDefs
 import qualified Lamdu.Sugar.Convert.Expression as ConvertExpr
@@ -160,11 +159,7 @@ convertExpr evalRes cp prop =
     do
         defExpr <- ExprLoad.defExprProperty prop
         (valInferred, newInferContext) <-
-            Load.inferDefExpr Infer.emptyScope defExpr
-            & InferT.liftInfer
-            >>= Load.loadInferPrepareInput evalRes
-            & InferT.run
-            <&> Load.assertInferSuccess
+            Load.inferDefExpr evalRes defExpr <&> Load.assertInferSuccess
         nomsMap <- makeNominalsMap valInferred
         outdatedDefinitions <- OutdatedDefs.scan defExpr (Transaction.setP prop) (postProcessExpr prop)
         let context =

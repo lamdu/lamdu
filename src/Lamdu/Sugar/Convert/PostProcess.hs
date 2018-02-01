@@ -3,7 +3,6 @@ module Lamdu.Sugar.Convert.PostProcess
     ( PostProcessResult(..), postProcessDef, postProcessExpr
     ) where
 
-import           Control.Monad.Trans.State (StateT(..))
 import qualified Data.Store.Property as Property
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
@@ -56,10 +55,7 @@ postProcessExpr mkProp =
         -- TODO: This is code duplication with the above Load.inferDef
         -- & functions inside Load itself
         defExpr <- Definition.expr ExprIRef.readVal (prop ^. Property.pVal)
-        let inferred =
-                Load.inferDefExpr Infer.emptyScope defExpr
-                & Infer.run
-                & (`runStateT` Infer.initialContext)
+        inferred <- Load.inferCheckDefExpr defExpr
         case inferred of
             Left err -> BadExpr err & return
             Right _ ->
