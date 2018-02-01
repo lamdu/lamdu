@@ -11,7 +11,7 @@ module Lamdu.Sugar.Convert.Binder.Params
     ) where
 
 import qualified Control.Lens as Lens
-import           Control.Monad.Transaction (transaction)
+import           Control.Monad.Transaction (transaction, getP, setP)
 import           Data.CurAndPrev (CurAndPrev)
 import qualified Data.List as List
 import qualified Data.List.Utils as ListUtils
@@ -96,18 +96,18 @@ setParamList ::
 setParamList mPresMode paramListProp newParamList =
     do
         zip newParamList [0..] & mapM_ (uncurry setParamOrder)
-        Just newParamList & Transaction.setP paramListProp
+        Just newParamList & setP paramListProp
         case mPresMode of
             Nothing -> return ()
             Just presModeProp ->
                 do
-                    presMode <- Transaction.getP presModeProp
+                    presMode <- getP presModeProp
                     case presMode of
-                        Object f | [f] /= take 1 newParamList -> Transaction.setP presModeProp Verbose
-                        Infix f0 f1 | [f0, f1] /= take 2 newParamList -> Transaction.setP presModeProp Verbose
+                        Object f | [f] /= take 1 newParamList -> setP presModeProp Verbose
+                        Infix f0 f1 | [f0, f1] /= take 2 newParamList -> setP presModeProp Verbose
                         _ -> return ()
     where
-        setParamOrder = Transaction.setP . Anchors.assocTagOrder
+        setParamOrder = setP . Anchors.assocTagOrder
 
 isArgOfCallTo :: V.Var -> [Val ()] -> Bool
 isArgOfCallTo funcVar (cur : parent : _) =
@@ -237,7 +237,7 @@ delFieldParamAndFixCalls ::
     BinderKind m -> [T.Tag] -> FieldParam -> StoredLam m -> T m ParamDelResult
 delFieldParamAndFixCalls binderKind tags fp storedLam =
     do
-        Transaction.setP (slParamList storedLam) newTags
+        setP (slParamList storedLam) newTags
         getFieldParamsToHole tag (storedLam ^. slLam)
         mLastTag
             & traverse_ (getFieldParamsToParams (storedLam ^. slLam))
@@ -268,7 +268,7 @@ fieldParamActions ::
 fieldParamActions mPresMode binderKind tags fp storedLam =
     FuncParamActions
     { _fpAddNext =
-        Transaction.getP (slParamList storedLam)
+        getP (slParamList storedLam)
         <&> fromMaybe (error "no param list?")
         <&> addTag
         >>= addFieldParam mPresMode DataOps.newHole binderKind storedLam
@@ -363,7 +363,7 @@ convertRecordParams mPresMode binderKind fieldParams lam@(V.Lam param _) pl =
     , _cpParamInfos = fieldParams <&> mkFieldParamInfo & mconcat
     , _cpParams = FieldParams params
     , _cpAddFirstParam =
-        Transaction.getP (slParamList storedLam)
+        getP (slParamList storedLam)
         <&> fromMaybe (error "no params?")
         <&> flip (:)
         >>= addFieldParam mPresMode DataOps.newHole binderKind storedLam
@@ -639,7 +639,7 @@ convertNonEmptyParams mPresMode binderKind lambda lambdaPl =
                 }
         orderedType <-
             lambdaPl ^. Input.inferredType & orderType & transaction
-        presModeTags <- Lens._Just Transaction.getP mPresMode & transaction <&> mPresModeToTags
+        presModeTags <- Lens._Just getP mPresMode <&> mPresModeToTags
         let presModeOrder tag = takeWhile (/= tag) presModeTags & length
         case orderedType of
             T.TFun (T.TRecord composite) _
