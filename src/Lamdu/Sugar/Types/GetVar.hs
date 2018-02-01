@@ -8,6 +8,7 @@ module Lamdu.Sugar.Types.GetVar
     , DefinitionOutdatedType(..), defTypeWhenUsed, defTypeCurrent, defTypeUseCurrent
     , BinderVarInline(..), _InlineVar, _CannotInlineDueToUses, _CannotInline
     , BinderVarRef(..), bvNameRef, bvForm, bvInline
+    , BinderMode(..)
     , GetVar(..), _GetParam, _GetParamsRecord, _GetBinder
     , ParamsRecordVarRef(..), prvFieldNames
     ) where
@@ -15,9 +16,10 @@ module Lamdu.Sugar.Types.GetVar
 import qualified Control.Lens as Lens
 import           Lamdu.Calc.Type.Scheme (Scheme)
 import           Lamdu.Sugar.Internal.EntityId (EntityId)
-import           Lamdu.Sugar.Types.Binder
 
 import           Lamdu.Prelude
+
+data BinderMode = NormalBinder | LightLambda
 
 data ParameterForm = GetFieldParameter | GetParameter
     deriving (Eq, Ord)

@@ -43,7 +43,7 @@ import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Calc.Val as V
 import           Lamdu.Sugar.Internal.EntityId (EntityId)
 import           Lamdu.Sugar.Types.Binder
-import           Lamdu.Sugar.Types.GetVar (GetVar, BinderVarRef, ParamRef)
+import           Lamdu.Sugar.Types.GetVar (GetVar, BinderVarRef, ParamRef, BinderMode)
 import           Lamdu.Sugar.Types.Hole (Hole, HoleOption, Literal)
 
 import           Lamdu.Prelude

@@ -19,7 +19,6 @@ module Lamdu.Sugar.Types.Binder
         , lActions, lAnnotation, lBodyScope, lBody
     , ChildScopeMapping
     -- Binders
-    , BinderMode(..)
     , VarToTags(..), TagsToVar(..)
     , ParamDelResult(..), ParamAddResult(..)
     , FuncParamActions(..), fpAddNext, fpDelete, fpMOrderBefore, fpMOrderAfter
@@ -129,8 +128,6 @@ data Tag name m = Tag
     , _tagName :: name
     , _tagActions :: TagActions name m
     }
-
-data BinderMode = NormalBinder | LightLambda
 
 instance Show name => Show (VarParamInfo name m) where
     show VarParamInfo{..} =
