@@ -118,9 +118,9 @@ data TagInfo = TagInfo
 
 data TagActions name m = TagActions
     { _taOptions :: m [(name, T.Tag)]
-    , _taChangeTag :: T.Tag -> m TagInfo
+    , _taChangeTag :: T.Tag -> m EntityId
     , _taSetPublished :: Bool -> m ()
-    , _taReplaceWithNew :: m TagInfo
+    , _taReplaceWithNew :: m EntityId
     }
 
 data Tag name m = Tag

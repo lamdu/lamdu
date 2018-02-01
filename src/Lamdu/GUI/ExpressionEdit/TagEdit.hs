@@ -158,10 +158,9 @@ makeOptions tag ctx
             , Menu._oSubmenuWidgets = Menu.SubmenuEmpty
             }
             where
-                pickResult tagInfo =
+                pickResult entityId =
                     Menu.PickResult
-                    { Menu._pickDest =
-                        tagInfo ^. Sugar.tagInstance & WidgetIds.fromEntityId
+                    { Menu._pickDest = WidgetIds.fromEntityId entityId
                     , Menu._pickDestIsEntryPoint = False
                     }
                 optionWId = ctx ^. SearchMenu.rResultIdPrefix <> WidgetIds.hash t
@@ -271,7 +270,6 @@ makeTagEdit nearestHoles tag =
                 E.keysEventMapMovesCursor (Config.delKeys config)
                 (E.Doc ["Edit", "Tag", "Choose"])
                 (tag ^. Sugar.tagActions . Sugar.taReplaceWithNew
-                    <&> (^. Sugar.tagInstance)
                     <&> WidgetIds.fromEntityId
                     <&> WidgetIds.tagHoleId)
         nameView <-

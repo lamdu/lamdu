@@ -56,7 +56,7 @@ convertGetFieldNonParam (V.GetField recExpr tag) exprPl =
                     do
                         V.GetField recExprI newTag & V.BGetField & ExprIRef.writeValBody valI
                         _ <- protectedSetToVal recExprStored recExprI
-                        TagInfo inst newTag & pure
+                        pure inst -- TODO: This is the wrong entity id
             convertTag (TagInfo inst tag) mempty setTag
     <&> BodyGetField
     >>= addActions exprPl
