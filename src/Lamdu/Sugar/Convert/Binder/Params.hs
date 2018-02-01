@@ -649,19 +649,10 @@ convertNonEmptyParams mPresMode binderKind lambda lambdaPl =
                 , let myTags = fields <&> fst & Set.fromList
                 , let fieldParams = map makeFieldParam fields
                 -> if Set.null (tagsInOuterScope `Set.intersection` myTags)
-                      && Set.null (tagsInInnerScope `Set.intersection` myTags)
                    then convertRecordParams mPresMode binderKind fieldParams lambda lambdaPl
                    else
                        convertNonRecordParam binderKind lambda lambdaPl
                        <&> cpParamInfos <>~ (fieldParams & map mkCollidingInfo & mconcat)
-                where
-                    tagsInInnerScope =
-                        lambda ^.. V.lamResult . ExprLens.subExprs
-                        . Lens.filtered (Lens.has ExprLens.valAbs)
-                        . Val.payload
-                        . Input.inferredType . T._TFun . _1
-                        . T._TRecord . ExprLens.compositeFieldTags
-                        & Set.fromList
             _ -> convertNonRecordParam binderKind lambda lambdaPl
     where
         param = lambda ^. V.lamParamId
