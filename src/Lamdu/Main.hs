@@ -100,6 +100,7 @@ main =
             Opts.DeleteDb -> deleteDB lamduDir
             Opts.Undo n -> withDB (undoN n)
             Opts.Import path -> withDB (importPath path)
+            Opts.Export path -> withDB (exportToPath path)
             Opts.Editor opts -> withDB $ runEditor opts
     `E.catch` \e@E.SomeException{} -> do
     hPutStrLn stderr $ "Main exiting due to exception: " ++ show e
@@ -128,6 +129,13 @@ importPath path db =
     Export.fileImportAll path
     <&> VersionControl.runAction
     >>= DbLayout.runDbTransaction db
+
+exportToPath :: FilePath -> DB -> IO ()
+exportToPath path db =
+    Export.fileExportAll path
+    & VersionControl.runAction
+    & DbLayout.runDbTransaction db
+    & join
 
 createWindow :: String -> Opts.WindowMode -> IO M.Window
 createWindow title mode =
