@@ -8,7 +8,6 @@ import qualified Control.Lens as Lens
 import qualified Data.Store.Property as Property
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
-import           Data.UUID.Types (UUID)
 import qualified Lamdu.Calc.Type as T
 import           Lamdu.Calc.Val.Annotated (Val(..))
 import qualified Lamdu.Calc.Val.Annotated as Val
@@ -40,7 +39,7 @@ convertCompositeItem ::
     ExprIRef.ValIProperty m ->
     ExprIRef.ValI m ->
     EntityId -> T.Tag -> Val (Input.Payload m a) ->
-    ConvertM m (CompositeItem UUID (T m) (ExpressionU m a))
+    ConvertM m (CompositeItem InternalName (T m) (ExpressionU m a))
 convertCompositeItem cons stored restI inst tag expr =
     do
         exprS <- ConvertM.convertSubexpression expr

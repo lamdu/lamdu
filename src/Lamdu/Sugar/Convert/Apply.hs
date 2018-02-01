@@ -98,7 +98,7 @@ convertLabeled funcS argS exprPl =
         -- with at least 2 fields
         isLengthAtLeast 2 (record ^. cItems) & guard
         ctx <- lift ConvertM.readContext
-        let var = sBinderVar ^. bvNameRef . nrName & UniqueId.varOfUUID
+        let var = sBinderVar ^. bvNameRef . nrName . inUUID & UniqueId.varOfUUID
         let scope = exprPl ^. Input.inferred . Infer.plScope & Infer.scopeToTypeMap
         -- If it is an external (non-recursive) def (i.e: not in
         -- scope), make sure the def (frozen) type is inferred to have

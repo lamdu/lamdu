@@ -5,7 +5,6 @@ module Lamdu.Sugar.Convert.IfElse (convertIfElse) where
 import qualified Control.Lens as Lens
 import qualified Data.Store.Property as Property
 import           Data.Store.Transaction (Transaction)
-import           Data.UUID.Types (UUID)
 import           Lamdu.Builtins.Anchors (boolTid, trueTag, falseTag)
 import qualified Lamdu.Calc.Type as T
 import           Lamdu.Data.Anchors (bParamScopeId)
@@ -21,7 +20,7 @@ type T = Transaction
 convertIfElse ::
     Functor m =>
     (ValI m -> T m (ValI m)) ->
-    Case UUID (T m) (ExpressionU m a) ->
+    Case InternalName (T m) (ExpressionU m a) ->
     Maybe (IfElse (T m) (ExpressionU m a))
 convertIfElse setToVal caseBody =
     do

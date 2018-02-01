@@ -23,6 +23,7 @@ import qualified Data.Text as Text
 import           Data.UUID.Types (UUID)
 import           Lamdu.Data.Anchors (assocNameRef)
 import           Lamdu.Name
+import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Lens as SugarLens
 import           Lamdu.Sugar.Names.CPS (CPS(..))
 import           Lamdu.Sugar.Names.Clash (IsClash(..))
@@ -50,7 +51,7 @@ newtype Pass0LoadNames tm a = Pass0LoadNames { runPass0LoadNames :: T tm a }
     deriving (Functor, Applicative, Monad)
 
 instance Monad tm => MonadNaming (Pass0LoadNames tm) where
-    type OldName (Pass0LoadNames tm) = UUID
+    type OldName (Pass0LoadNames tm) = InternalName
     type NewName (Pass0LoadNames tm) = P0Name
     type SM (Pass0LoadNames tm) = tm
     opRun = pure runPass0LoadNames
@@ -58,13 +59,13 @@ instance Monad tm => MonadNaming (Pass0LoadNames tm) where
     opWithLetName _ = p0cpsNameConvertor
     opGetName _ = p0nameConvertor
 
-getP0Name :: Monad tm => UUID -> Pass0LoadNames tm P0Name
-getP0Name uuid =
+getP0Name :: Monad tm => InternalName -> Pass0LoadNames tm P0Name
+getP0Name internalName =
     Pass0LoadNames $ do
-        nameStr <- Transaction.getP $ assocNameRef uuid
+        nameStr <- assocNameRef (internalName ^. inUUID) & Transaction.getP
         pure P0Name
             { _mStoredName = if Text.null nameStr then Nothing else Just nameStr
-            , _mStoredUUID = uuid
+            , _mStoredUUID = internalName ^. inUUID
             }
 
 p0nameConvertor :: Monad tm => Walk.NameConvertor (Pass0LoadNames tm)
@@ -497,7 +498,7 @@ fixDef = drBody . _DefinitionBodyExpression . deContent %~ fixBinder
 
 addToWorkArea ::
     Monad tm =>
-    WorkArea UUID (T tm) a -> T tm (WorkArea (Name (T tm)) (T tm) a)
+    WorkArea InternalName (T tm) a -> T tm (WorkArea (Name (T tm)) (T tm) a)
 addToWorkArea workArea =
     workArea
     & waPanes . traverse . paneDefinition %~ fixDef

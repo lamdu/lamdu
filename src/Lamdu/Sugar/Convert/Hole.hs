@@ -32,7 +32,6 @@ import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
 import           Data.Text.Encoding (encodeUtf8)
 import qualified Data.UUID as UUID
-import           Data.UUID.Types (UUID)
 import qualified Lamdu.Builtins.Anchors as Builtins
 import qualified Lamdu.Builtins.PrimVal as PrimVal
 import           Lamdu.Calc.Type (Type(..))
@@ -91,7 +90,7 @@ mkHoleOptionFromFragment ::
     ConvertM.Context m ->
     Input.Payload m a ->
     Val (Type, Maybe (Input.Payload m a)) ->
-    HoleOption (T m) (Expression UUID (T m) ())
+    HoleOption (T m) (Expression InternalName (T m) ())
 mkHoleOptionFromFragment sugarContext exprPl val =
     HoleOption
     { _hoVal = baseExpr
@@ -133,7 +132,7 @@ mkHoleOption ::
     Maybe (Val (Input.Payload m a)) ->
     Input.Payload m a ->
     BaseExpr ->
-    HoleOption (T m) (Expression UUID (T m) ())
+    HoleOption (T m) (Expression InternalName (T m) ())
 mkHoleOption sugarContext mFragment exprPl val =
     HoleOption
     { _hoVal = v
@@ -146,7 +145,7 @@ mkHoleOption sugarContext mFragment exprPl val =
 mkHoleSuggesteds ::
     Monad m =>
     ConvertM.Context m -> Maybe (Val (Input.Payload m a)) -> Input.Payload m a ->
-    [HoleOption (T m) (Expression UUID (T m) ())]
+    [HoleOption (T m) (Expression InternalName (T m) ())]
 mkHoleSuggesteds sugarContext mFragment exprPl =
     exprPl ^. Input.inferred
     & Suggest.value
@@ -154,7 +153,7 @@ mkHoleSuggesteds sugarContext mFragment exprPl =
     <&> mkHoleOption sugarContext mFragment exprPl
 
 addSuggestedOptions ::
-    [HoleOption (T m) (Expression UUID (T m) ())] -> [HoleOption (T m) (Expression UUID (T m) ())] -> [HoleOption (T m) (Expression UUID (T m) ())]
+    [HoleOption (T m) (Expression InternalName (T m) ())] -> [HoleOption (T m) (Expression InternalName (T m) ())] -> [HoleOption (T m) (Expression InternalName (T m) ())]
 addSuggestedOptions suggesteds options
     | null nonTrivial = options
     | otherwise = nonTrivial ++ filter (not . equivalentToSuggested) options
@@ -224,7 +223,7 @@ mkNominalOptions nominals =
 mkOptions ::
     Monad m =>
     Maybe (Val (Input.Payload m a)) -> Input.Payload m a ->
-    ConvertM m (T m [HoleOption (T m) (Expression UUID (T m) ())])
+    ConvertM m (T m [HoleOption (T m) (Expression InternalName (T m) ())])
 mkOptions mFragment exprPl =
     ConvertM.readContext
     <&>
@@ -298,7 +297,7 @@ prepareUnstoredPayloads val =
 sugar ::
     (Monad m, Monoid a) =>
     ConvertM.Context m -> Input.Payload m dummy -> Val a ->
-    T m (Expression UUID (T m) a)
+    T m (Expression InternalName (T m) a)
 sugar sugarContext exprPl val =
     val
     <&> mkPayload
@@ -322,7 +321,7 @@ sugar sugarContext exprPl val =
 mkLiteralOptions ::
     Monad m =>
     Input.Payload m a ->
-    ConvertM m (Literal Identity -> T m (HoleResultScore, T m (HoleResult (T m) (Expression UUID (T m) ()))))
+    ConvertM m (Literal Identity -> T m (HoleResultScore, T m (HoleResult (T m) (Expression InternalName (T m) ()))))
 mkLiteralOptions exprPl =
     ConvertM.readContext
     <&>
@@ -657,7 +656,7 @@ mkHoleResult ::
     Monad m =>
     ConvertM.Context m -> Transaction m () ->
     ValIProperty m -> HoleResultVal m IsFragment ->
-    T m (HoleResult (T m) (Expression UUID (T m) ()))
+    T m (HoleResult (T m) (Expression InternalName (T m) ()))
 mkHoleResult sugarContext updateDeps stored val =
     do
         (fConverted, forkedChanges) <-
@@ -682,7 +681,7 @@ mkHoleResults ::
     BaseExpr ->
     ListT (T m)
     ( HoleResultScore
-    , T m (HoleResult (T m) (Expression UUID (T m) ()))
+    , T m (HoleResult (T m) (Expression InternalName (T m) ()))
     )
 mkHoleResults mFragment sugarContext exprPl base =
     do

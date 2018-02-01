@@ -11,7 +11,6 @@ import           Control.Monad.Trans.State (evalStateT, runStateT)
 import           Control.Monad.Transaction (transaction)
 import qualified Data.Store.Property as Property
 import           Data.Store.Transaction (Transaction)
-import           Data.UUID.Types (UUID)
 import           Lamdu.Calc.Type (Type)
 import qualified Lamdu.Calc.Val as V
 import           Lamdu.Calc.Val.Annotated (Val(..))
@@ -42,7 +41,7 @@ mkAppliedHoleOptions ::
     Val (Input.Payload m a) ->
     Expression name f a ->
     Input.Payload m a ->
-    [HoleOption (T m) (Expression UUID (T m) ())]
+    [HoleOption (T m) (Expression InternalName (T m) ())]
 mkAppliedHoleOptions sugarContext argI argS exprPl =
     [ P.app P.hole P.hole | Lens.nullOf (rBody . _BodyLam) argS ]
     <&> ConvertHole.SeedExpr
@@ -53,7 +52,7 @@ mkAppliedHoleSuggesteds ::
     ConvertM.Context m ->
     Val (Input.Payload m a) ->
     Input.Payload m a ->
-    T m [HoleOption (T m) (Expression UUID (T m) ())]
+    T m [HoleOption (T m) (Expression InternalName (T m) ())]
 mkAppliedHoleSuggesteds sugarContext argI exprPl =
     Suggest.valueConversion Load.nominal Nothing (argI <&> onPl)
     <&> (`runStateT` (sugarContext ^. ConvertM.scInferContext))

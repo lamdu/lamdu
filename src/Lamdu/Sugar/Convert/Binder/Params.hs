@@ -22,7 +22,6 @@ import           Data.Store.Property (Property)
 import qualified Data.Store.Property as Property
 import           Data.Store.Transaction (Transaction, MkProperty)
 import qualified Data.Store.Transaction as Transaction
-import           Data.UUID.Types (UUID)
 import           Lamdu.Calc.Type (Type)
 import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Calc.Val as V
@@ -44,6 +43,7 @@ import           Lamdu.Sugar.Convert.Monad (ConvertM)
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
 import           Lamdu.Sugar.Convert.ParamList (ParamList)
 import           Lamdu.Sugar.Convert.Tag (convertTag)
+import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import           Lamdu.Sugar.Lens as SugarLens
 import           Lamdu.Sugar.OrderTags (orderType, orderedClosedFlatComposite)
@@ -56,7 +56,7 @@ type T = Transaction
 data ConventionalParams m = ConventionalParams
     { cpTags :: Set T.Tag
     , _cpParamInfos :: Map T.Tag ConvertM.TagFieldParam
-    , _cpParams :: BinderParams UUID (T m)
+    , _cpParams :: BinderParams InternalName (T m)
     , _cpAddFirstParam :: T m ParamAddResult
     , cpScopes :: BinderBodyScope
     , cpMLamParam :: Maybe ({- lambda's -}EntityId, V.Var)
@@ -557,7 +557,7 @@ convertNonRecordParam binderKind lam@(V.Lam param _) lamExprPl =
                   <&> NullParam
             _ ->
                 VarParamInfo
-                { _vpiName = UniqueId.toUUID param
+                { _vpiName = UniqueId.toUUID param & InternalName
                 , _vpiActions = funcParamActions
                 , _vpiId = paramEntityId
                 } & mkFuncParam lamExprPl
@@ -711,7 +711,7 @@ convertEmptyParams binderKind val =
 
 convertParams ::
     Monad m =>
-    BinderKind m -> UUID -> Val (Input.Payload m a) ->
+    BinderKind m -> InternalName -> Val (Input.Payload m a) ->
     ConvertM m
     ( Maybe (MkProperty m PresentationMode)
     , ConventionalParams m
@@ -727,6 +727,6 @@ convertParams binderKind defUUID expr =
                 where
                     f convParams = (mPresMode convParams, convParams, lambda ^. V.lamResult)
                     mPresMode convParams = presMode <$ convParams ^? cpParams . _FieldParams
-                    presMode = Anchors.assocPresentationMode defUUID
+                    presMode = defUUID ^. inUUID & Anchors.assocPresentationMode
             _ -> return (Nothing, convertEmptyParams binderKind expr, expr)
             <&> _2 %~ postProcessActions postProcess

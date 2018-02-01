@@ -35,7 +35,7 @@ convertGetFieldParam (V.GetField recExpr tag) exprPl =
             guard $ param == ConvertM.tpiFromParameters paramInfo
             GetParam ParamRef
                 { _pNameRef = NameRef
-                  { _nrName = UniqueId.toUUID tag
+                  { _nrName = UniqueId.toUUID tag & InternalName
                   , _nrGotoDefinition = return (ConvertM.tpiJumpTo paramInfo)
                   }
                 , _pForm = GetFieldParameter

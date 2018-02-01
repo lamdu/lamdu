@@ -2,6 +2,7 @@
 
 module Lamdu.Sugar.Internal
     ( ConvertPayload(..), pStored, pUserData
+    , InternalName(..), inUUID
     , ExpressionU
     , replaceWith
     ) where
@@ -24,9 +25,11 @@ data ConvertPayload m a = ConvertPayload
     , _pUserData :: a
     } deriving (Functor, Foldable, Traversable)
 
-Lens.makeLenses ''ConvertPayload
+newtype InternalName = InternalName
+    { _inUUID :: UUID
+    } deriving (Eq, Ord)
 
-type ExpressionU m a = Expression UUID (T m) (ConvertPayload m a)
+type ExpressionU m a = Expression InternalName (T m) (ConvertPayload m a)
 
 replaceWith ::
     Monad m => ExprIRef.ValIProperty m -> ExprIRef.ValIProperty m ->
@@ -37,3 +40,6 @@ replaceWith parentP replacerP =
         return $ EntityId.ofValI replacerI
     where
         replacerI = Property.value replacerP
+
+Lens.makeLenses ''ConvertPayload
+Lens.makeLenses ''InternalName

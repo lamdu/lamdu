@@ -1,15 +1,18 @@
+{-# LANGUAGE NoImplicitPrelude #-}
 module Lamdu.Sugar.Convert.TId
     ( convert
     ) where
 
-import           Data.UUID.Types (UUID)
 import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Expr.UniqueId as UniqueId
+import           Lamdu.Sugar.Internal
 import           Lamdu.Sugar.Types
 
-convert :: T.NominalId -> TId UUID
+import           Lamdu.Prelude
+
+convert :: T.NominalId -> TId InternalName
 convert tid =
     TId
-    { _tidName = UniqueId.toUUID tid
+    { _tidName = UniqueId.toUUID tid & InternalName
     , _tidTId = tid
     }

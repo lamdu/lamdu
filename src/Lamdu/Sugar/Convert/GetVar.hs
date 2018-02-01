@@ -10,7 +10,6 @@ import           Data.Maybe.Utils (maybeToMPlus)
 import qualified Data.Store.Property as Property
 import           Data.Store.Transaction (Transaction)
 import qualified Control.Monad.Transaction as Transaction
-import           Data.UUID.Types (UUID)
 import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Calc.Type.Scheme as Scheme
 import qualified Lamdu.Calc.Val as V
@@ -73,7 +72,7 @@ inlineDef ctx globalId dest =
                 defExpr ^. Def.expr & EntityId.ofValI & return
 
 convertGlobal ::
-    Monad m => V.Var -> Input.Payload m a -> MaybeT (ConvertM m) (GetVar UUID (T m))
+    Monad m => V.Var -> Input.Payload m a -> MaybeT (ConvertM m) (GetVar InternalName (T m))
 convertGlobal param exprPl =
     do
         ctx <- lift ConvertM.readContext
@@ -94,7 +93,7 @@ convertGlobal param exprPl =
                     & maybe DefUpToDate DefTypeChanged
         GetBinder BinderVarRef
             { _bvNameRef = NameRef
-              { _nrName = UniqueId.toUUID defI
+              { _nrName = UniqueId.toUUID defI & InternalName
               , _nrGotoDefinition = jumpToDefI (ctx ^. ConvertM.scCodeAnchors) defI
               }
             , _bvForm = GetDefinition defForm
@@ -119,15 +118,15 @@ usesAround x xs =
     where
         (before, after) = break (== x) xs
 
-paramNameRef :: Monad m => V.Var -> NameRef UUID (T m)
+paramNameRef :: Monad m => V.Var -> NameRef InternalName (T m)
 paramNameRef param =
     NameRef
-    { _nrName = UniqueId.toUUID param
+    { _nrName = UniqueId.toUUID param & InternalName
     , _nrGotoDefinition = pure $ EntityId.ofLambdaParam param
     }
 
 convertGetLet ::
-    Monad m => V.Var -> Input.Payload m a -> MaybeT (ConvertM m) (GetVar UUID (T m))
+    Monad m => V.Var -> Input.Payload m a -> MaybeT (ConvertM m) (GetVar InternalName (T m))
 convertGetLet param exprPl =
     do
         inline <-
@@ -143,7 +142,7 @@ convertGetLet param exprPl =
             } & return
 
 convertParamsRecord ::
-    Monad m => V.Var -> Input.Payload m a -> MaybeT (ConvertM m) (GetVar UUID (T m))
+    Monad m => V.Var -> Input.Payload m a -> MaybeT (ConvertM m) (GetVar InternalName (T m))
 convertParamsRecord param exprPl =
     do
         lift ConvertM.readContext
@@ -156,7 +155,7 @@ convertParamsRecord param exprPl =
             { _prvFieldNames =
                 exprPl
                 ^.. Input.inferredType . T._TRecord . ExprLens.compositeFieldTags
-                <&> UniqueId.toUUID
+                <&> UniqueId.toUUID <&> InternalName
             } & return
 
 convert ::

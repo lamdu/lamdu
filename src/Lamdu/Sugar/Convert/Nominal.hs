@@ -4,7 +4,6 @@ module Lamdu.Sugar.Convert.Nominal
     ) where
 
 import           Control.Monad.Trans.Except.Utils (runMatcherT, justToLeft)
-import           Data.UUID.Types (UUID)
 import qualified Lamdu.Calc.Val as V
 import           Lamdu.Calc.Val.Annotated (Val(..))
 import qualified Lamdu.Sugar.Convert.Binder as ConvertBinder
@@ -19,7 +18,7 @@ import           Lamdu.Sugar.Types
 
 import           Lamdu.Prelude
 
-convertNom :: V.Nom expr -> Nominal UUID expr
+convertNom :: V.Nom expr -> Nominal InternalName expr
 convertNom (V.Nom tid val) =
     Nominal
     { _nTId = ConvertTId.convert tid
