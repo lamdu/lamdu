@@ -43,8 +43,8 @@ type StoredName = Text
 ---------- Pass 0 ------------
 ------------------------------
 data P0Name = P0Name
-    { _mStoredName :: Maybe StoredName
-    , _mStoredUUID :: UUID
+    { _p0StoredName :: Maybe StoredName
+    , _p0uuid :: UUID
     }
 
 newtype Pass0LoadNames tm a = Pass0LoadNames { runPass0LoadNames :: T tm a }
@@ -64,8 +64,8 @@ getP0Name internalName =
     Pass0LoadNames $ do
         nameStr <- assocNameRef (internalName ^. inUUID) & Transaction.getP
         pure P0Name
-            { _mStoredName = if Text.null nameStr then Nothing else Just nameStr
-            , _mStoredUUID = internalName ^. inUUID
+            { _p0StoredName = if Text.null nameStr then Nothing else Just nameStr
+            , _p0uuid = internalName ^. inUUID
             }
 
 p0nameConvertor :: Monad tm => Walk.NameConvertor (Pass0LoadNames tm)
@@ -231,8 +231,8 @@ pass1Result mDisambiguator nameType (P0Name mName uuid) =
         singleton nameText = nameUUIDMapSingleton nameText nameInstance
 
 p1nameConvertor :: Maybe Clash.Disambiguator -> Walk.NameType -> Walk.NameConvertor (Pass1PropagateUp tm)
-p1nameConvertor mDisambiguator nameType mStoredName =
-    runCPS (pass1Result mDisambiguator nameType mStoredName) (pure ()) <&> fst
+p1nameConvertor mDisambiguator nameType p0Name =
+    runCPS (pass1Result mDisambiguator nameType p0Name) (pure ()) <&> fst
 
 p1cpsNameConvertor :: Walk.NameType -> Walk.CPSNameConvertor (Pass1PropagateUp tm)
 p1cpsNameConvertor = pass1Result Nothing
