@@ -187,6 +187,9 @@ pass1Result mDisambiguator nameType (P0Name mName uuid) =
                 localNames newNamesBelow ^.. nameUUIDMap . Lens.ix name . Lens.folded
                 & Clash.check & Clash.isClash
         let mGivenName =
+                -- TODO: Once we ALWAYS have associated tags (except
+                -- for local single param lambda) via prevention of
+                -- invalid states, just use: `mGivenName = mName`
                 case (nameType, mName) of
                 (Walk.ParamName, Nothing) -> Nothing
                 (_, Just name) -> Just name
