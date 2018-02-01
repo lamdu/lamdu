@@ -80,8 +80,7 @@ assocTagOrder = Transaction.assocDataRefDef 0 "Order" . UniqueId.toUUID
 
 assocFieldParamList ::
     Monad m => ValI m -> Transaction.MkProperty m (Maybe ParamList)
-assocFieldParamList lambdaI =
-    Transaction.assocDataRef "field param list" $ UniqueId.toUUID lambdaI
+assocFieldParamList = Transaction.assocDataRef "field param list" . UniqueId.toUUID
 
 assocPresentationMode ::
     (UniqueId.ToUUID a, Monad m) =>
