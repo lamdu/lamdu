@@ -4,6 +4,7 @@ module Lamdu.Sugar.Convert.Tag
     ( convertTag
     ) where
 
+import qualified Control.Lens as Lens
 import qualified Data.Set as Set
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
@@ -25,7 +26,7 @@ type T = Transaction
 -- allowed, generating ordinary type errors
 convertTag :: Monad m => TagInfo -> Set T.Tag -> (T.Tag -> T m EntityId) -> ConvertM m (Tag InternalName (T m))
 convertTag info@(TagInfo _ tag) forbiddenTags setTag =
-    ConvertM.readContext <&> (^. ConvertM.scCodeAnchors) <&> Anchors.tags
+    Lens.view ConvertM.scCodeAnchors <&> Anchors.tags
     <&>
     \publishedTags ->
     Tag

@@ -254,4 +254,4 @@ makeFloatLetToOuterScope ::
     (ValI m -> T m ()) -> Redex (Input.Payload m a) ->
     ConvertM m (T m ExtractFloatResult)
 makeFloatLetToOuterScope setTopLevel redex =
-    ConvertM.readContext <&> floatLetToOuterScope setTopLevel redex
+    Lens.view id <&> floatLetToOuterScope setTopLevel redex

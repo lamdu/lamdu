@@ -11,6 +11,7 @@ import           Data.List.Utils (isLengthAtLeast)
 import qualified Data.Map as Map
 import           Data.Maybe.Utils (maybeToMPlus)
 import qualified Data.Set as Set
+import           Data.Store.Property (Property)
 import qualified Data.Store.Property as Property
 import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Calc.Type.FlatComposite as FlatComposite
@@ -66,11 +67,11 @@ noDuplicates x = length x == Set.size (Set.fromList x)
 
 validateDefParamsMatchArgs ::
     MonadPlus m =>
-    V.Var -> Composite name f1 expr -> ConvertM.Context f2 -> m ()
-validateDefParamsMatchArgs var record ctx =
+    V.Var -> Composite name f1 expr -> Property f2 Infer.Dependencies -> m ()
+validateDefParamsMatchArgs var record frozenDeps =
     do
         defArgs <-
-            ctx ^? ConvertM.scFrozenDeps . Property.pVal
+            frozenDeps ^? Property.pVal
                 . Infer.depsGlobalTypes . Lens.at var . Lens._Just
                 . schemeType . T._TFun . _1 . T._TRecord
             & maybeToMPlus
@@ -97,13 +98,13 @@ convertLabeled funcS argS exprPl =
         Lens.has (cTail . _ClosedComposite) record & guard
         -- with at least 2 fields
         isLengthAtLeast 2 (record ^. cItems) & guard
-        ctx <- lift ConvertM.readContext
+        frozenDeps <- Lens.view ConvertM.scFrozenDeps
         let var = sBinderVar ^. bvNameRef . nrName . inUUID & UniqueId.varOfUUID
         let scope = exprPl ^. Input.inferred . Infer.plScope & Infer.scopeToTypeMap
         -- If it is an external (non-recursive) def (i.e: not in
         -- scope), make sure the def (frozen) type is inferred to have
         -- closed record of same parameters
-        validateDefParamsMatchArgs var record ctx
+        validateDefParamsMatchArgs var record frozenDeps
             & unless (var `Map.member` scope)
         let getArg field =
                 AnnotatedArg

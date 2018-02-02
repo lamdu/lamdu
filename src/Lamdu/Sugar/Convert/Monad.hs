@@ -12,7 +12,7 @@ module Lamdu.Sugar.Convert.Monad
     , scOutdatedDefinitions, scFrozenDeps, scInlineableDefinitions
 
     , ConvertM(..), run
-    , readContext, local
+    , local
     , convertSubexpression
     , typeProtectedSetToVal, postProcess
     ) where
@@ -79,7 +79,7 @@ data ScopeInfo m = ScopeInfo
 Lens.makeLenses ''ScopeInfo
 
 newtype ConvertM m a = ConvertM (ReaderT (Context m) (T m) a)
-    deriving (Functor, Applicative, Monad)
+    deriving (Functor, Applicative, Monad, MonadReader (Context m))
 
 instance Monad m => MonadTransaction m (ConvertM m) where
     transaction = ConvertM . lift
@@ -116,7 +116,7 @@ typeProtectedSetToVal ::
     (ExprIRef.ValIProperty m -> ExprIRef.ValI m -> T m (ExprIRef.ValI m))
 typeProtectedSetToVal =
     do
-        checkOk <- readContext <&> (^. scPostProcessRoot)
+        checkOk <- Lens.view scPostProcessRoot
         let setToVal dest valI =
                 do
                     mResult <- DataOps.replace dest valI & typeProtect checkOk
@@ -130,19 +130,17 @@ typeProtectedSetToVal =
         return setToVal
 
 postProcess :: Monad m => ConvertM m (T m ())
-postProcess = readContext <&> (^. scPostProcessRoot) <&> void
+postProcess = Lens.view scPostProcessRoot <&> void
 
 run :: Context m -> ConvertM m a -> T m a
 run ctx (ConvertM action) = runReaderT action ctx
 
-readContext :: Monad m => ConvertM m (Context m)
-readContext = ConvertM Reader.ask
-
 local :: (Context m -> Context m) -> ConvertM m a -> ConvertM m a
 local f (ConvertM act) = ConvertM $ Reader.local f act
 
-convertSubexpression :: (Monad m, Monoid a) => Val (Input.Payload m a) -> ConvertM m (ExpressionU m a)
+convertSubexpression ::
+    (Monad m, Monoid a) => Val (Input.Payload m a) -> ConvertM m (ExpressionU m a)
 convertSubexpression exprI =
     do
-        convertSub <- scConvertSubexpression <$> readContext
+        convertSub <- Lens.view (Lens.to scConvertSubexpression)
         convertSub exprI

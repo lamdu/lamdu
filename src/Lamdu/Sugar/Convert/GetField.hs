@@ -28,7 +28,7 @@ convertGetFieldParam ::
     ConvertM m (Maybe (ExpressionU m b))
 convertGetFieldParam (V.GetField recExpr tag) exprPl =
     do
-        tagParamInfos <- ConvertM.readContext <&> (^. ConvertM.scScopeInfo . ConvertM.siTagParamInfos)
+        tagParamInfos <- Lens.view (ConvertM.scScopeInfo . ConvertM.siTagParamInfos)
         do
             paramInfo <- tagParamInfos ^? Lens.ix tag . ConvertM._TagFieldParam
             param <- recExpr ^? ExprLens.valVar

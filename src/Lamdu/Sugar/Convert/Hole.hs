@@ -225,7 +225,7 @@ mkOptions ::
     Maybe (Val (Input.Payload m a)) -> Input.Payload m a ->
     ConvertM m (T m [HoleOption (T m) (Expression InternalName (T m) ())])
 mkOptions mFragment exprPl =
-    ConvertM.readContext
+    Lens.view id
     <&>
     \sugarContext ->
     do
@@ -323,7 +323,7 @@ mkLiteralOptions ::
     Input.Payload m a ->
     ConvertM m (Literal Identity -> T m (HoleResultScore, T m (HoleResult (T m) (Expression InternalName (T m) ()))))
 mkLiteralOptions exprPl =
-    ConvertM.readContext
+    Lens.view id
     <&>
     \sugarContext ->
     let mkOption updateDeps val =

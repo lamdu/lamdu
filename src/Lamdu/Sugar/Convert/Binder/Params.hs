@@ -518,7 +518,7 @@ makeNonRecordParamActions binderKind storedLam =
 mkFuncParam :: Monad m => Input.Payload m a -> info -> ConvertM m (FuncParam info)
 mkFuncParam lamExprPl info =
     do
-        noms <- ConvertM.readContext <&> (^. ConvertM.scNominalsMap)
+        noms <- Lens.view ConvertM.scNominalsMap
         return FuncParam
             { _fpInfo = info
             , _fpAnnotation =
@@ -621,11 +621,10 @@ convertNonEmptyParams ::
     ConvertM m (ConventionalParams m)
 convertNonEmptyParams mPresMode binderKind lambda lambdaPl =
     do
-        ctx <- ConvertM.readContext
-        let tagsInOuterScope =
-                ctx ^. ConvertM.scScopeInfo . ConvertM.siTagParamInfos
-                & Map.keysSet
-        let noms = ctx ^. ConvertM.scNominalsMap
+        tagsInOuterScope <-
+            Lens.view (ConvertM.scScopeInfo . ConvertM.siTagParamInfos)
+            <&> Map.keysSet
+        noms <- Lens.view ConvertM.scNominalsMap
         let makeFieldParam (tag, typeExpr) =
                 FieldParam
                 { fpTag = tag

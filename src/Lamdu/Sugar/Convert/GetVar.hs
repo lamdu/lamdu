@@ -75,7 +75,7 @@ convertGlobal ::
     Monad m => V.Var -> Input.Payload m a -> MaybeT (ConvertM m) (GetVar InternalName (T m))
 convertGlobal param exprPl =
     do
-        ctx <- lift ConvertM.readContext
+        ctx <- Lens.view id
         let recursiveVar =
                 ctx ^? ConvertM.scScopeInfo . ConvertM.siRecursiveRef .
                 Lens._Just . ConvertM.rrDefI
@@ -130,8 +130,7 @@ convertGetLet ::
 convertGetLet param exprPl =
     do
         inline <-
-            lift ConvertM.readContext
-            <&> (^. ConvertM.scScopeInfo . ConvertM.siLetItems . Lens.at param)
+            Lens.view (ConvertM.scScopeInfo . ConvertM.siLetItems . Lens.at param)
             >>= maybeToMPlus
         GetBinder BinderVarRef
             { _bvNameRef = paramNameRef param
@@ -145,9 +144,8 @@ convertParamsRecord ::
     Monad m => V.Var -> Input.Payload m a -> MaybeT (ConvertM m) (GetVar InternalName (T m))
 convertParamsRecord param exprPl =
     do
-        lift ConvertM.readContext
-            <&> (^.. ConvertM.scScopeInfo . siTagParamInfos . Lens.traversed
-                . ConvertM._TagFieldParam)
+        Lens.view (ConvertM.scScopeInfo . siTagParamInfos)
+            <&> (^.. Lens.traversed . ConvertM._TagFieldParam)
             <&> map tpiFromParameters
             <&> elem param
             >>= guard

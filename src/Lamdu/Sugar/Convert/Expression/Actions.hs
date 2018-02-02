@@ -29,7 +29,7 @@ mkExtract ::
     Monad m => Input.Payload m a -> ConvertM m (T m ExtractDestination)
 mkExtract exprPl =
     do
-        ctx <- ConvertM.readContext
+        ctx <- Lens.view id
         case ctx ^. ConvertM.scScopeInfo . ConvertM.siMOuter of
             Nothing -> mkExtractToDef ctx exprPl <&> ExtractToDef
             Just outerScope ->
@@ -167,7 +167,7 @@ addActions exprPl body =
 makeAnnotation :: Monad m => Input.Payload m a -> ConvertM m Annotation
 makeAnnotation payload =
     do
-        ctx <- ConvertM.readContext
+        ctx <- Lens.view id
         let mk res =
                 do
                     Map.null res & not & guard

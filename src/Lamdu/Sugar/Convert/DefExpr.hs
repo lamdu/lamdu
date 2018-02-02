@@ -3,6 +3,7 @@ module Lamdu.Sugar.Convert.DefExpr
     ( convert
     ) where
 
+import qualified Control.Lens as Lens
 import           Data.Store.Transaction (Transaction, mkProperty)
 import           Lamdu.Calc.Type.Scheme (Scheme)
 import qualified Lamdu.Calc.Type.Scheme as Scheme
@@ -30,8 +31,7 @@ convert defType defExpr defI =
     do
         (presMode, content) <-
             ConvertBinder.convertDefinitionBinder defI (defExpr ^. Definition.expr)
-        sugarContext <- ConvertM.readContext
-        let inferContext = sugarContext ^. ConvertM.scInferContext
+        inferContext <- Lens.view ConvertM.scInferContext
         let inferredType =
                 defExpr ^. Definition.expr . Val.payload . Input.inferredType
                 & Infer.makeScheme inferContext
