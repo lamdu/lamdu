@@ -58,10 +58,8 @@ mkEditEventMap valText setToHole =
 withStyle ::
     (MonadReader env m, HasStyle env) =>
     Lens.Getting TextEdit.Style Style TextEdit.Style -> m a -> m a
-withStyle whichStyle act =
-    do
-        style <- Lens.view (Style.style . whichStyle)
-        Reader.local (TextEdit.style .~ style) act
+withStyle whichStyle =
+    Reader.local (\x -> x & TextEdit.style .~ x ^. Style.style . whichStyle)
 
 genericEdit ::
     ( Monad m, Format a, MonadReader env f, HasStyle env, GuiState.HasCursor env
