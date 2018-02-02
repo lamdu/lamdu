@@ -28,7 +28,7 @@ import           Lamdu.Config.Sampler (Sampler, sConfig, sTheme)
 import qualified Lamdu.Config.Sampler as ConfigSampler
 import           Lamdu.Config.Theme (Theme(..))
 import qualified Lamdu.Config.Theme as Theme
-import qualified Lamdu.Data.Db.Init as DbInit
+import qualified Lamdu.Data.Db as Db
 import qualified Lamdu.Data.Db.Layout as DbLayout
 import           Lamdu.Data.Export.Codejam (exportFancy)
 import qualified Lamdu.Data.Export.JSON as Export
@@ -95,7 +95,7 @@ main =
         setNumCapabilities =<< getNumProcessors
         Opts.Parsed{_pLamduDB,_pCommand} <- Opts.get
         lamduDir <- maybe getLamduDir return _pLamduDB
-        let withDB = DbInit.withDB lamduDir
+        let withDB = Db.withDB lamduDir
         case _pCommand of
             Opts.DeleteDb -> deleteDB lamduDir
             Opts.Undo n -> withDB (undoN n)

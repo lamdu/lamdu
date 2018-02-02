@@ -1,12 +1,10 @@
 -- | Initialize a database, populating it with "freshdb.json" if needed
 {-# LANGUAGE NoImplicitPrelude, OverloadedStrings #-}
 module Lamdu.Data.Db.Init
-    ( withDB
+    ( initFreshDb, updateMissingCursor
     ) where
 
-import           Control.Exception (onException)
 import           Data.Store.Db (DB)
-import qualified Data.Store.Db as Db
 import           Data.Store.Rev.Branch (Branch)
 import qualified Data.Store.Rev.Branch as Branch
 import           Data.Store.Rev.Version (Version)
@@ -22,8 +20,6 @@ import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified GUI.Momentu as M
 import qualified Paths.Utils as Paths
 import qualified Paths_Lamdu
-import qualified System.Directory as Directory
-import           System.FilePath ((</>))
 
 import           Lamdu.Prelude
 
@@ -78,23 +74,7 @@ updateMissingCursor =
         Transaction.writeIRef DbLayout.guiState (M.GUIState WidgetIds.defaultCursor mempty)
             & unless exists
 
-withDB :: FilePath -> (DB -> IO a) -> IO a
-withDB lamduDir body =
-    do
-        Directory.createDirectoryIfMissing False lamduDir
-        alreadyExist <- Directory.doesDirectoryExist dbPath
-        let options =
-                Db.defaultOptions
-                { Db.createIfMissing = not alreadyExist
-                , Db.errorIfExists = not alreadyExist
-                }
-        Db.withDB dbPath options $ \db ->
-            do
-                DbLayout.runDbTransaction db updateMissingCursor
-                Paths.get Paths_Lamdu.getDataFileName "freshdb.json"
-                    >>= fileImportAll >>= initDb db
-                    & (`onException` Directory.removeDirectoryRecursive dbPath)
-                    & unless alreadyExist
-                body db
-    where
-        dbPath = lamduDir </> "codeedit.db"
+initFreshDb :: DB -> IO ()
+initFreshDb db =
+    Paths.get Paths_Lamdu.getDataFileName "freshdb.json"
+    >>= fileImportAll >>= initDb db
