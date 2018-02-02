@@ -60,7 +60,7 @@ withStyle ::
     Lens.Getting TextEdit.Style Style TextEdit.Style -> m a -> m a
 withStyle whichStyle act =
     do
-        style <- Lens.view Style.style <&> (^. whichStyle)
+        style <- Lens.view (Style.style . whichStyle)
         Reader.local (TextEdit.style .~ style) act
 
 genericEdit ::
