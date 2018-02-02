@@ -1,5 +1,5 @@
 {-# LANGUAGE NoImplicitPrelude, OverloadedStrings, GeneralizedNewtypeDeriving #-}
-module Lamdu.Data.DbLayout
+module Lamdu.Data.Db.Layout
     ( DbM, runDbTransaction
     , ViewM, runViewTransaction
     , CodeAnchors, codeAnchors, codeIRefs

@@ -28,8 +28,8 @@ import           Lamdu.Config.Sampler (Sampler, sConfig, sTheme)
 import qualified Lamdu.Config.Sampler as ConfigSampler
 import           Lamdu.Config.Theme (Theme(..))
 import qualified Lamdu.Config.Theme as Theme
-import qualified Lamdu.Data.DbInit as DbInit
-import qualified Lamdu.Data.DbLayout as DbLayout
+import qualified Lamdu.Data.Db.Init as DbInit
+import qualified Lamdu.Data.Db.Layout as DbLayout
 import           Lamdu.Data.Export.Codejam (exportFancy)
 import qualified Lamdu.Data.Export.JSON as Export
 import qualified Lamdu.Eval.Manager as EvalManager

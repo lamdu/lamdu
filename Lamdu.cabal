@@ -161,8 +161,8 @@ Executable lamdu
                   , Lamdu.Config.Theme.Name
                   , Lamdu.Config.Theme.ValAnnotation
                   , Lamdu.Data.Anchors
-                  , Lamdu.Data.DbInit
-                  , Lamdu.Data.DbLayout
+                  , Lamdu.Data.Db.Init
+                  , Lamdu.Data.Db.Layout
                   , Lamdu.Data.Definition
                   , Lamdu.Data.Export.Codejam
                   , Lamdu.Data.Export.JSON

@@ -25,8 +25,8 @@ import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Config.Theme as Theme
-import           Lamdu.Data.DbLayout (DbM, ViewM)
-import qualified Lamdu.Data.DbLayout as DbLayout
+import           Lamdu.Data.Db.Layout (DbM, ViewM)
+import qualified Lamdu.Data.Db.Layout as DbLayout
 import qualified Lamdu.Eval.Results as Results
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.GUI.CodeEdit as CodeEdit

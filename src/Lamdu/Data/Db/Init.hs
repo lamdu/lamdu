@@ -1,6 +1,6 @@
 -- | Initialize a database, populating it with "freshdb.json" if needed
 {-# LANGUAGE NoImplicitPrelude, OverloadedStrings #-}
-module Lamdu.Data.DbInit
+module Lamdu.Data.Db.Init
     ( withDB
     ) where
 
@@ -14,7 +14,7 @@ import qualified Data.Store.Rev.Version as Version
 import qualified Data.Store.Rev.View as View
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
-import qualified Lamdu.Data.DbLayout as DbLayout
+import qualified Lamdu.Data.Db.Layout as DbLayout
 import           Lamdu.Data.Export.JSON (fileImportAll)
 import qualified Lamdu.Expr.UniqueId as UniqueId
 import qualified Lamdu.GUI.WidgetIdIRef as WidgetIdIRef

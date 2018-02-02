@@ -17,8 +17,8 @@ import           Data.Store.Transaction (Transaction, setP, getP, modP)
 import qualified Data.Store.Transaction as Transaction
 import           GUI.Momentu.State (GUIState)
 import qualified GUI.Momentu.State as GuiState
-import           Lamdu.Data.DbLayout (DbM)
-import qualified Lamdu.Data.DbLayout as DbLayout
+import           Lamdu.Data.Db.Layout (DbM)
+import qualified Lamdu.Data.Db.Layout as DbLayout
 import           Lamdu.VersionControl.Actions (Actions(Actions))
 import qualified Lamdu.VersionControl.Actions as Actions
 

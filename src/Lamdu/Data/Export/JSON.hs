@@ -31,8 +31,8 @@ import           Lamdu.Calc.Type.Nominal (Nominal)
 import qualified Lamdu.Calc.Val as V
 import           Lamdu.Calc.Val.Annotated (Val(..))
 import qualified Lamdu.Data.Anchors as Anchors
-import           Lamdu.Data.DbLayout (ViewM)
-import qualified Lamdu.Data.DbLayout as DbLayout
+import           Lamdu.Data.Db.Layout (ViewM)
+import qualified Lamdu.Data.Db.Layout as DbLayout
 import           Lamdu.Data.Definition (Definition(..))
 import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Data.Export.JSON.Codec as Codec

@@ -26,8 +26,8 @@ import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
 import           Data.UUID.Types (UUID)
 import           Lamdu.Calc.Val.Annotated (Val)
-import           Lamdu.Data.DbLayout (DbM, ViewM)
-import qualified Lamdu.Data.DbLayout as DbLayout
+import           Lamdu.Data.Db.Layout (DbM, ViewM)
+import qualified Lamdu.Data.Db.Layout as DbLayout
 import qualified Lamdu.Data.Definition as Def
 import qualified Lamdu.Eval.JS as Eval
 import           Lamdu.Eval.Results (EvalResults)
