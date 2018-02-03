@@ -7,6 +7,7 @@ import           Control.Exception (onException)
 import           Data.Store.Db (DB)
 import qualified Data.Store.Db as Db
 import qualified Lamdu.Data.Db.Init as DbInit
+import           Lamdu.Data.Db.Migration (updateMissingCursor)
 import qualified Lamdu.Data.Db.Layout as DbLayout
 import qualified System.Directory as Directory
 import           System.FilePath ((</>))
@@ -25,7 +26,7 @@ withDB lamduDir body =
                 }
         Db.withDB dbPath options $ \db ->
             do
-                DbLayout.runDbTransaction db DbInit.updateMissingCursor
+                DbLayout.runDbTransaction db updateMissingCursor
                 unless alreadyExist
                     (DbInit.initFreshDb db `onException` Directory.removeDirectoryRecursive dbPath)
                 body db

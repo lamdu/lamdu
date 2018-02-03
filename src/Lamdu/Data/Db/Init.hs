@@ -1,7 +1,7 @@
 -- | Initialize a database, populating it with "freshdb.json" if needed
 {-# LANGUAGE NoImplicitPrelude, OverloadedStrings #-}
 module Lamdu.Data.Db.Init
-    ( initFreshDb, updateMissingCursor
+    ( initFreshDb
     ) where
 
 import           Data.Store.Db (DB)
@@ -64,15 +64,6 @@ initDb db importAct =
         -- Prevent undo into the invalid empty revision
         newVer <- Branch.curVersion master
         Version.preventUndo newVer
-
--- | In commit 567ae4620f9222889a76a84936b9b09432a29698, the cursor
--- became a DB field. Easy to migrate from pre-cursor DB so do so:
-updateMissingCursor :: T DbLayout.DbM ()
-updateMissingCursor =
-    do
-        exists <- Transaction.irefExists DbLayout.guiState
-        Transaction.writeIRef DbLayout.guiState (M.GUIState WidgetIds.defaultCursor mempty)
-            & unless exists
 
 initFreshDb :: DB -> IO ()
 initFreshDb db =

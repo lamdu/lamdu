@@ -164,6 +164,7 @@ Executable lamdu
                   , Lamdu.Data.Db
                   , Lamdu.Data.Db.Init
                   , Lamdu.Data.Db.Layout
+                  , Lamdu.Data.Db.Migration
                   , Lamdu.Data.Definition
                   , Lamdu.Data.Export.Codejam
                   , Lamdu.Data.Export.JSON
