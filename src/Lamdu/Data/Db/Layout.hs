@@ -5,6 +5,7 @@ module Lamdu.Data.Db.Layout
     , CodeAnchors, codeAnchors, codeIRefs
     , RevisionProps, revisionProps, revisionIRefs
     , guiState
+    , dbSchemaVersion, curDbSchemaVersion
     , module Lamdu.Data.Anchors
     ) where
 
@@ -69,3 +70,9 @@ revisionProps = Anchors.onRevision Transaction.mkPropertyFromIRef revisionIRefs
 
 guiState :: IRef DbM GUIState
 guiState = IRef.anchor "guiState"
+
+dbSchemaVersion :: IRef DbM Int
+dbSchemaVersion = IRef.anchor "dbSchemaVersion"
+
+curDbSchemaVersion :: Int
+curDbSchemaVersion = 0

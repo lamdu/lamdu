@@ -7,8 +7,7 @@ import           Control.Exception (onException)
 import           Data.Store.Db (DB)
 import qualified Data.Store.Db as Db
 import qualified Lamdu.Data.Db.Init as DbInit
-import           Lamdu.Data.Db.Migration (updateMissingCursor)
-import qualified Lamdu.Data.Db.Layout as DbLayout
+import           Lamdu.Data.Db.Migration (migration)
 import qualified System.Directory as Directory
 import           System.FilePath ((</>))
 
@@ -24,11 +23,12 @@ withDB lamduDir body =
                 { Db.createIfMissing = not alreadyExist
                 , Db.errorIfExists = not alreadyExist
                 }
-        Db.withDB dbPath options $ \db ->
+        Db.withDB dbPath options $
+            \db ->
             do
-                DbLayout.runDbTransaction db updateMissingCursor
-                unless alreadyExist
-                    (DbInit.initFreshDb db `onException` Directory.removeDirectoryRecursive dbPath)
+                if alreadyExist
+                    then migration db
+                    else DbInit.initFreshDb db `onException` Directory.removeDirectoryRecursive dbPath
                 body db
     where
         dbPath = lamduDir </> "codeedit.db"

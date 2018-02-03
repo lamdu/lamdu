@@ -43,6 +43,7 @@ initDb db importAct =
         master <- newBranch "master" emptyVersion
         view <- View.new master
         Transaction.writeIRef DbLayout.guiState (M.GUIState WidgetIds.defaultCursor mempty)
+        Transaction.writeIRef DbLayout.dbSchemaVersion DbLayout.curDbSchemaVersion
         let writeRevAnchor f = Transaction.writeIRef (f DbLayout.revisionIRefs)
         writeRevAnchor DbLayout.view view
         writeRevAnchor DbLayout.branches [master]
