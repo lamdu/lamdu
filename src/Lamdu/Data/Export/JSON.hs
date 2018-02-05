@@ -171,18 +171,20 @@ fileExportDef :: V.Var -> FilePath -> T ViewM (IO ())
 fileExportDef globalId =
     export ("def: " ++ show globalId) (exportDef globalId)
 
-fileExportAll :: FilePath -> T ViewM (IO ())
-fileExportAll =
+exportAll :: Export ()
+exportAll =
     do
         exportSet DbLayout.globals (exportDef . ExprIRef.globalId)
         exportSet DbLayout.tags exportTag
         exportSet DbLayout.tids exportNominal
         exportRepl
-    & export "all"
     where
         exportSet indexIRef exportFunc =
             indexIRef DbLayout.codeIRefs & Transaction.readIRef & trans
             >>= traverse_ exportFunc
+
+fileExportAll :: FilePath -> T ViewM (IO ())
+fileExportAll = export "all" exportAll
 
 export :: String -> Export a -> FilePath -> T ViewM (IO ())
 export msg act exportPath =
