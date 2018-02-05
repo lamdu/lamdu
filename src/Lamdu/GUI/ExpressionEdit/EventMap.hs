@@ -6,6 +6,7 @@ module Lamdu.GUI.ExpressionEdit.EventMap
     , jumpHolesEventMap
     , extractCursor
     , detachEventMap
+    , allowedFragmentSearchTerm
     ) where
 
 import qualified Control.Lens as Lens
@@ -20,6 +21,7 @@ import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
 import qualified Lamdu.CharClassification as Chars
 import qualified Lamdu.Config as Config
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds as HoleWidgetIds
+import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.SearchArea as SearchArea
 import qualified Lamdu.GUI.ExpressionGui as ExprGui
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Precedence (Prec, precedence)
@@ -136,6 +138,15 @@ actionsEventMap options exprInfo =
                 . fmap WidgetIds.fromEntityId
             & fromMaybe mempty
 
+allowedFragmentSearchTerm :: Text -> Bool
+allowedFragmentSearchTerm searchTerm =
+    SearchArea.allowedSearchTermCommon ":" searchTerm || isGetField searchTerm
+    where
+        isGetField t =
+            case Text.uncons t of
+            Just (c, rest) -> c == '.' && Text.all Char.isAlphaNum rest
+            Nothing -> False
+
 -- | Create the hole search term for new apply operators,
 -- given the extra search term chars from another hole.
 transformSearchTerm :: Prec -> EventContext -> EventMap Text
@@ -145,8 +156,9 @@ transformSearchTerm minOpPrec eventCtx =
     <&> (searchStrRemainder <>)
     where
         transform c
-            | Char.isAlpha c = Text.singleton c & Just
-            | otherwise = Nothing
+            | c `elem` Chars.operator = Nothing
+            | otherwise =
+                Text.singleton c <$ guard (allowedFragmentSearchTerm (Text.singleton c))
         searchStrRemainder = eventCtx ^. Widget.ePrevTextRemainder
         ops =
             case Text.uncons searchStrRemainder of

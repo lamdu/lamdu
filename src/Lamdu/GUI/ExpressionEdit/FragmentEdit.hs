@@ -8,8 +8,6 @@ import           Lamdu.GUI.ExpressionGui (ExpressionGui, ExpressionN)
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import           Lamdu.Name (Name(..))
 import qualified Control.Lens as Lens
-import qualified Data.Char as Char
-import qualified Data.Text as Text
 import qualified GUI.Momentu as Momentu
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Element as Element
@@ -64,7 +62,8 @@ make fragment pl =
             & makeFragmentExprEdit & GuiState.assignCursor myId innerId
             <&> Widget.widget . Widget.eventMapMaker . Lens.mapped %~ addFocusEvents
         hover <- Hover.hover
-        searchAreaGui <- SearchArea.make (fragment ^. Sugar.fOptions) Nothing pl allowedFragmentSearchTerm
+        searchAreaGui <-
+            SearchArea.make (fragment ^. Sugar.fOptions) Nothing pl ExprEventMap.allowedFragmentSearchTerm
         let f layoutMode fragmentExpr
                 | isSelected
                 || Widget.isFocused (fragmentExpr ^. Align.tValue) =
@@ -129,12 +128,3 @@ makeFragmentExprEdit fragment =
         Momentu.addInnerFrame
             ?? frameColor ?? frameWidth
             ?? Momentu.pad (frameWidth & _2 .~ 0) fragmentExprGui
-
-allowedFragmentSearchTerm :: Text -> Bool
-allowedFragmentSearchTerm searchTerm =
-    SearchArea.allowedSearchTermCommon ":" searchTerm || isGetField searchTerm
-    where
-        isGetField t =
-            case Text.uncons t of
-            Just (c, rest) -> c == '.' && Text.all Char.isAlphaNum rest
-            Nothing -> False

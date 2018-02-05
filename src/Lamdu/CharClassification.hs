@@ -7,7 +7,7 @@ module Lamdu.CharClassification
 import Lamdu.Prelude
 
 operator :: String
-operator = "\\+-*/^=><&|%$:.!;?@~≥≤≠⋲"
+operator = "+-*/^=><&|%$:.!;?@~≥≤≠⋲"
 
 bracket :: String
 bracket = "()[]{}"

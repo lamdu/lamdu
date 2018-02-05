@@ -242,6 +242,7 @@ allowedSearchTermCommon suffixes searchTerm =
     [ Text.all (`elem` Chars.operator)
     , Text.all Char.isAlphaNum
     , (`Text.isPrefixOf` "{}")
+    , (== "\\")
     , Lens.has (Lens.reversed . Lens._Cons . Lens.filtered inj)
     ]
     where
