@@ -1,4 +1,5 @@
--- | Initialize a database, populating it with "freshdb.json" if needed
+-- | Check for DB version consistency and either migrate to current version
+-- or present instructions on how to do so.
 {-# LANGUAGE NoImplicitPrelude, OverloadedStrings #-}
 module Lamdu.Data.Db.Migration
     ( migration
