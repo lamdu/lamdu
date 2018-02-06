@@ -10,7 +10,7 @@ import qualified Control.Lens as Lens
 import           Control.Monad.IO.Class (MonadIO(..))
 import qualified Control.Monad.Reader as Reader
 import           Data.Function (on)
-import           Data.IORef (newIORef, readIORef, modifyIORef)
+import           Data.IORef (IORef, newIORef, readIORef, modifyIORef)
 import qualified Data.List as List
 import qualified Data.Map as Map
 import qualified Data.Tuple as Tuple
@@ -217,6 +217,46 @@ toggle HelpNotShown = HelpShown
 helpAnimId :: AnimId
 helpAnimId = ["help box"]
 
+addHelpView ::
+    (MonadIO f, Monoid a) =>
+    IsHelpShown -> Config -> Vector2 R ->
+    Widget.Focused (f a) -> Widget.Focused (f a)
+addHelpView showingHelp config size focus =
+    focus
+    & Widget.fLayers %~ addToBottomRight bgHelpView size
+    where
+        env = Env config ["help box"]
+        helpView =
+            env &
+            case showingHelp of
+            HelpNotShown -> makeTooltip (config ^. configOverlayDocKeys <&> toModKey)
+            HelpShown ->
+                make size
+                ( (focus ^. Widget.fEventMap)
+                    Widget.EventContext
+                    { Widget._eVirtualCursor = focus ^. Widget.fFocalAreas & last & State.VirtualCursor
+                    , Widget._ePrevTextRemainder = mempty
+                    }
+                )
+        bgHelpView =
+            helpView
+            & MDraw.backgroundColor helpAnimId (config ^. configBGColor)
+            & Element.tint (config ^. configTint)
+
+toggleEventMap ::
+    (MonadIO f, Monoid a) =>
+    IORef IsHelpShown -> IsHelpShown -> Config -> EventMap (f a)
+toggleEventMap showingHelpVar showingHelp config =
+    modifyIORef showingHelpVar toggle
+    & liftIO
+    & E.keysEventMap (config ^. configOverlayDocKeys)
+        (E.Doc ["Help", "Key Bindings", docStr])
+    where
+        docStr =
+            case showingHelp of
+            HelpNotShown -> "Show"
+            HelpShown -> "Hide"
+
 makeToggledHelpAdder ::
     MonadIO m =>
     IsHelpShown ->
@@ -232,39 +272,10 @@ makeToggledHelpAdder startValue =
     \case
     Widget.StateUnfocused {} -> fail "adding help to non-focused root widget!"
     Widget.StateFocused makeFocus ->
-        do
-            let env = Env config ["help box"]
-            showingHelp <- readIORef showingHelpVar
-            return makeFocus
-                <&> Lens.mapped %~
-                \focus ->
-                let (helpView, docStr) =
-                        case showingHelp of
-                        HelpNotShown ->
-                            ( makeTooltip (config ^. configOverlayDocKeys <&> toModKey) env
-                            , "Show"
-                            )
-                        HelpShown ->
-                            ( make size
-                                ( (focus ^. Widget.fEventMap)
-                                    Widget.EventContext
-                                    { Widget._eVirtualCursor = focus ^. Widget.fFocalAreas & last & State.VirtualCursor
-                                    , Widget._ePrevTextRemainder = mempty
-                                    }
-                                )
-                                env
-                            , "Hide"
-                            )
-                    toggleEventMap =
-                        E.keysEventMap (config ^. configOverlayDocKeys)
-                        (E.Doc ["Help", "Key Bindings", docStr]) $
-                        liftIO $ modifyIORef showingHelpVar toggle
-                    bgHelpView =
-                        helpView
-                        & MDraw.backgroundColor helpAnimId (config ^. configBGColor)
-                        & Element.tint (config ^. configTint)
-                in
-                focus
-                & Widget.fLayers %~ addToBottomRight bgHelpView size
-                & Widget.fEventMap . Lens.mapped %~ (toggleEventMap <>)
+        readIORef showingHelpVar
+        <&> (\showingHelp ->
+                makeFocus
+                <&> addHelpView showingHelp config size
+                <&> Widget.fEventMap . Lens.mapped %~ (toggleEventMap showingHelpVar showingHelp config <>)
+            )
         <&> Widget.StateFocused
