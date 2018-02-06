@@ -122,7 +122,7 @@ makeOptions tag ctx
             resultCount <-
                 Lens.view Config.config
                 <&> Config.completion <&> Config.completionResultCount
-            tag ^. Sugar.tagActions . Sugar.taOptions & transaction
+            tag ^. Sugar.tagSelection . Sugar.tsOptions & transaction
                 <&> filter (Lens.anyOf (_1 . Name.form . Name._Stored . _1) (insensitiveInfixOf searchTerm))
                 <&> splitAt resultCount
                 <&> _2 %~ not . null
@@ -144,7 +144,7 @@ makeOptions tag ctx
                 , Menu._rPick = Widget.PreEvent
                     { Widget._pDesc = "Pick"
                     , Widget._pAction =
-                        (tag ^. Sugar.tagActions . Sugar.taChangeTag) t
+                        (tag ^. Sugar.tagSelection . Sugar.tsSetTag) t
                         <&> pickResult
                     , Widget._pTextRemainder = ""
                     }
@@ -175,7 +175,7 @@ makeHoleSearchTerm nearestHoles tag =
         searchTerm <- SearchMenu.readSearchTerm holeId
         let newTag =
                 do
-                    (name, t) <- tag ^. Sugar.tagActions . Sugar.taNewTag
+                    (name, t) <- tag ^. Sugar.tagSelection . Sugar.tsNewTag
                     (name ^. Name.setName) searchTerm
                     t ^. Sugar.tagInstance & pure
         newTagEventMap <-

@@ -32,15 +32,15 @@ convertTag info@(TagInfo _ tag) forbiddenTags setTag =
     Tag
     { _tagInfo = info
     , _tagName = UniqueId.toUUID tag & InternalName
-    , _tagActions =
-        TagActions
-        { _taChangeTag = setTag
-        , _taOptions =
+    , _tagSelection =
+        TagSelection
+        { _tsSetTag = setTag
+        , _tsOptions =
             Transaction.getP publishedTags
             <&> (`Set.difference` forbiddenTags)
             <&> Set.toList
             <&> map toOption
-        , _taNewTag =
+        , _tsNewTag =
             do
                 newTag <- DataOps.genNewTag
                 entityId <- setTag newTag

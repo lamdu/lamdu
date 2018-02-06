@@ -116,7 +116,7 @@ fixTagPublished ::
 fixTagPublished publishedTags tag =
     tag
     & Sugar.tagName . Name.setName %~ onSetName (tag ^. Sugar.tagInfo)
-    & Sugar.tagActions . Sugar.taNewTag . Lens.mapped %~ onNewTag
+    & Sugar.tagSelection . Sugar.tsNewTag . Lens.mapped %~ onNewTag
     where
         onSetName info setName newName =
             setName newName *>

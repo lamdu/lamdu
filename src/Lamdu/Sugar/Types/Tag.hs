@@ -1,8 +1,8 @@
 {-# LANGUAGE NoImplicitPrelude, TemplateHaskell #-}
 module Lamdu.Sugar.Types.Tag
-    ( Tag(..), tagName, tagInfo, tagActions
+    ( Tag(..), tagName, tagInfo, tagSelection
     , TagInfo(..), tagVal, tagInstance
-    , TagActions(..), taOptions, taChangeTag, taNewTag
+    , TagSelection(..), tsOptions, tsSetTag, tsNewTag
     ) where
 
 import qualified Control.Lens as Lens
@@ -16,18 +16,18 @@ data TagInfo = TagInfo
     , _tagVal :: T.Tag
     } deriving (Eq, Ord, Show)
 
-data TagActions name m = TagActions
-    { _taOptions :: m [(name, T.Tag)]
-    , _taChangeTag :: T.Tag -> m EntityId
-    , _taNewTag :: m (name, TagInfo)
+data TagSelection name m = TagSelection
+    { _tsOptions :: m [(name, T.Tag)]
+    , _tsSetTag :: T.Tag -> m EntityId
+    , _tsNewTag :: m (name, TagInfo)
     }
 
 data Tag name m = Tag
     { _tagInfo :: TagInfo
     , _tagName :: name
-    , _tagActions :: TagActions name m
+    , _tagSelection :: TagSelection name m
     }
 
 Lens.makeLenses ''Tag
-Lens.makeLenses ''TagActions
 Lens.makeLenses ''TagInfo
+Lens.makeLenses ''TagSelection
