@@ -291,6 +291,7 @@ Executable lamdu
                   , Lamdu.Sugar.Types.Expression
                   , Lamdu.Sugar.Types.GetVar
                   , Lamdu.Sugar.Types.Hole
+                  , Lamdu.Sugar.Types.Tag
                   , Lamdu.Themes
                   , Lamdu.VersionControl
                   , Lamdu.VersionControl.Actions

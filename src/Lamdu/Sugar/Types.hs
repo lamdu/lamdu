@@ -25,6 +25,7 @@ import           Lamdu.Sugar.Types.Binder as Exported
 import           Lamdu.Sugar.Types.Expression as Exported
 import           Lamdu.Sugar.Types.GetVar as Exported
 import           Lamdu.Sugar.Types.Hole as Exported
+import           Lamdu.Sugar.Types.Tag as Exported
 
 import           Lamdu.Prelude
 

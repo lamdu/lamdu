@@ -3,10 +3,6 @@ module Lamdu.Sugar.Types.Binder
     ( -- Annotations
       EvaluationResult
     , Annotation(..), aInferredType, aMEvaluationResult
-    -- Tags
-    , Tag(..), tagName, tagInfo, tagActions
-    , TagInfo(..), tagVal, tagInstance
-    , TagActions(..), taOptions, taChangeTag, taSetPublished, taReplaceWithNew
     -- Node actions
     , DetachAction(..), _FragmentAlready, _FragmentExprAlready, _DetachAction
     , NodeActions(..), detach, mSetToHole, extract, mReplaceParent
@@ -44,12 +40,12 @@ import qualified Control.Lens as Lens
 import           Data.CurAndPrev (CurAndPrev)
 import           Data.Store.Property (Property)
 import           Lamdu.Calc.Type (Type)
-import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Calc.Val as V
 import           Lamdu.Data.Anchors (BinderParamScopeId(..), bParamScopeId)
 import qualified Lamdu.Data.Meta as Meta
 import qualified Lamdu.Eval.Results as ER
 import           Lamdu.Sugar.Internal.EntityId (EntityId)
+import           Lamdu.Sugar.Types.Tag
 
 import           Lamdu.Prelude
 
@@ -110,24 +106,6 @@ data FuncParam info = FuncParam
     { _fpAnnotation :: Annotation
     , _fpInfo :: info
     } deriving (Functor, Foldable, Traversable)
-
-data TagInfo = TagInfo
-    { _tagInstance :: EntityId -- Unique across different uses of a tag
-    , _tagVal :: T.Tag
-    } deriving (Eq, Ord, Show)
-
-data TagActions name m = TagActions
-    { _taOptions :: m [(name, T.Tag)]
-    , _taChangeTag :: T.Tag -> m EntityId
-    , _taSetPublished :: Bool -> m ()
-    , _taReplaceWithNew :: m EntityId
-    }
-
-data Tag name m = Tag
-    { _tagInfo :: TagInfo
-    , _tagName :: name
-    , _tagActions :: TagActions name m
-    }
 
 instance Show name => Show (VarParamInfo name m) where
     show VarParamInfo{..} =
@@ -233,9 +211,6 @@ Lens.makeLenses ''Let
 Lens.makeLenses ''LetActions
 Lens.makeLenses ''NodeActions
 Lens.makeLenses ''NullParamActions
-Lens.makeLenses ''Tag
-Lens.makeLenses ''TagActions
-Lens.makeLenses ''TagInfo
 Lens.makeLenses ''VarParamInfo
 Lens.makePrisms ''BinderContent
 Lens.makePrisms ''BinderParams
