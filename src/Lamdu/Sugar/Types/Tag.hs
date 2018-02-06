@@ -2,7 +2,7 @@
 module Lamdu.Sugar.Types.Tag
     ( Tag(..), tagName, tagInfo, tagActions
     , TagInfo(..), tagVal, tagInstance
-    , TagActions(..), taOptions, taChangeTag, taSetPublished, taReplaceWithNew
+    , TagActions(..), taOptions, taChangeTag, taSetPublished
     ) where
 
 import qualified Control.Lens as Lens
@@ -20,7 +20,6 @@ data TagActions name m = TagActions
     { _taOptions :: m [(name, T.Tag)]
     , _taChangeTag :: T.Tag -> m EntityId
     , _taSetPublished :: Bool -> m ()
-    , _taReplaceWithNew :: m EntityId
     }
 
 data Tag name m = Tag

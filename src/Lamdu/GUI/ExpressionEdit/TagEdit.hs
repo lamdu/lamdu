@@ -269,9 +269,7 @@ makeTagEdit nearestHoles tag =
                 <>
                 E.keysEventMapMovesCursor (Config.delKeys config)
                 (E.Doc ["Edit", "Tag", "Choose"])
-                (tag ^. Sugar.tagActions . Sugar.taReplaceWithNew
-                    <&> WidgetIds.fromEntityId
-                    <&> WidgetIds.tagHoleId)
+                (pure (WidgetIds.tagHoleId myId))
         nameView <-
             (Widget.makeFocusableView ?? viewId <&> fmap) <*>
             makeTagView tag

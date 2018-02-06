@@ -10,7 +10,6 @@ import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
 import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Data.Anchors as Anchors
-import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Expr.UniqueId as UniqueId
 import           Lamdu.Sugar.Convert.Monad (ConvertM)
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
@@ -45,7 +44,6 @@ convertTag info@(TagInfo _ tag) forbiddenTags setTag =
             Transaction.modP
             publishedTags
             ((if isPublished then Set.insert else Set.delete) tag)
-        , _taReplaceWithNew = DataOps.genNewTag >>= setTag
         }
     }
     where
