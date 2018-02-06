@@ -17,8 +17,8 @@ data TagInfo = TagInfo
     } deriving (Eq, Ord, Show)
 
 data TagSelection name m = TagSelection
-    { _tsOptions :: m [(name, T.Tag)]
-    , _tsSetTag :: T.Tag -> m EntityId
+    { _tsOptions :: m [(name, TagInfo)]
+    , _tsSetTag :: T.Tag -> m ()
     , _tsNewTag :: m (name, TagInfo)
     }
 

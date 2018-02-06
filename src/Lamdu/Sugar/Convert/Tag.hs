@@ -24,13 +24,16 @@ type T = Transaction
 -- forbiddenTags are sibling tags in the same record/funcParams/etc,
 -- NOT type-level constraints on tags. Violation of constraints is
 -- allowed, generating ordinary type errors
-convertTag :: Monad m => TagInfo -> Set T.Tag -> (T.Tag -> T m EntityId) -> ConvertM m (Tag InternalName (T m))
-convertTag info@(TagInfo _ tag) forbiddenTags setTag =
+convertTag ::
+    Monad m =>
+    T.Tag -> Set T.Tag -> (T.Tag -> EntityId) -> (T.Tag -> T m ()) ->
+    ConvertM m (Tag InternalName (T m))
+convertTag tag forbiddenTags mkInstance setTag =
     Lens.view ConvertM.scCodeAnchors <&> Anchors.tags
     <&>
     \publishedTags ->
     Tag
-    { _tagInfo = info
+    { _tagInfo = mkInfo tag
     , _tagName = UniqueId.toUUID tag & InternalName
     , _tagSelection =
         TagSelection
@@ -43,9 +46,10 @@ convertTag info@(TagInfo _ tag) forbiddenTags setTag =
         , _tsNewTag =
             do
                 newTag <- DataOps.genNewTag
-                entityId <- setTag newTag
-                pure (InternalName (UniqueId.toUUID newTag), TagInfo entityId newTag)
+                setTag newTag
+                pure (InternalName (UniqueId.toUUID newTag), mkInfo newTag)
         }
     }
     where
-        toOption x = (UniqueId.toUUID x & InternalName, x)
+        mkInfo t = TagInfo (mkInstance t) t
+        toOption x = (UniqueId.toUUID x & InternalName, mkInfo x)

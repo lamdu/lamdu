@@ -136,7 +136,7 @@ makeOptions tag ctx
             , Menu._oRender =
                 (Widget.makeFocusableView ?? optionWId <&> fmap)
                 <*> NameEdit.makeView (name ^. Name.form)
-                & Reader.local (Element.animIdPrefix .~ optionId)
+                & Reader.local (Element.animIdPrefix .~ Widget.toAnimId instanceId)
                 <&>
                 \widget ->
                 Menu.RenderedOption
@@ -144,21 +144,19 @@ makeOptions tag ctx
                 , Menu._rPick = Widget.PreEvent
                     { Widget._pDesc = "Pick"
                     , Widget._pAction =
-                        (tag ^. Sugar.tagSelection . Sugar.tsSetTag) t
-                        <&> pickResult
+                        Menu.PickResult
+                        { Menu._pickDest = t ^. Sugar.tagInstance & WidgetIds.fromEntityId
+                        , Menu._pickDestIsEntryPoint = False
+                        } <$
+                        (tag ^. Sugar.tagSelection . Sugar.tsSetTag) (t ^. Sugar.tagVal)
                     , Widget._pTextRemainder = ""
                     }
                 }
             , Menu._oSubmenuWidgets = Menu.SubmenuEmpty
             }
             where
-                pickResult entityId =
-                    Menu.PickResult
-                    { Menu._pickDest = WidgetIds.fromEntityId entityId
-                    , Menu._pickDestIsEntryPoint = False
-                    }
-                optionWId = ctx ^. SearchMenu.rResultIdPrefix <> WidgetIds.hash t
-                optionId = Widget.toAnimId optionWId
+                instanceId = t ^. Sugar.tagInstance & WidgetIds.fromEntityId
+                optionWId = ctx ^. SearchMenu.rResultIdPrefix <> instanceId
 
 allowedSearchTerm :: Text -> Bool
 allowedSearchTerm = Text.all Char.isAlphaNum

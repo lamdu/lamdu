@@ -45,12 +45,10 @@ convert (V.Inject tag injected) exprPl =
                 do
                     V.Inject newTag injectedI & V.BInject & ExprIRef.writeValBody valI
                     void typeProtect
-                    pure inst -- TODO: This is the wrong entity id
-        convertTag (TagInfo inst tag) mempty setTag
+        convertTag tag mempty (EntityId.ofTag entityId) setTag
             <&> (`Inject` mInjectedS) <&> BodyInject
     >>= addActions exprPl
     where
         entityId = exprPl ^. Input.entityId
-        inst = EntityId.ofInjectTag entityId
         valI = exprPl ^. Input.stored . Property.pVal
         injectedI = injected ^. Val.payload . Input.stored . Property.pVal

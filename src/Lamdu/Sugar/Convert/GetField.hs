@@ -55,13 +55,11 @@ convertGetFieldNonParam (V.GetField recExpr tag) exprPl =
             let setTag newTag =
                     do
                         V.GetField recExprI newTag & V.BGetField & ExprIRef.writeValBody valI
-                        _ <- protectedSetToVal recExprStored recExprI
-                        pure inst -- TODO: This is the wrong entity id
-            convertTag (TagInfo inst tag) mempty setTag
+                        protectedSetToVal recExprStored recExprI & void
+            convertTag tag mempty (EntityId.ofTag (exprPl ^. Input.entityId)) setTag
     <&> BodyGetField
     >>= addActions exprPl
     where
-        inst = exprPl ^. Input.entityId & EntityId.ofGetFieldTag
         valI = exprPl ^. Input.stored . Property.pVal
         recExprStored = recExpr ^. Val.payload . Input.stored
         recExprI = recExprStored ^. Property.pVal

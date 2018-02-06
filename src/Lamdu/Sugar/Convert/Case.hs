@@ -89,7 +89,7 @@ convert (V.Case tag val rest) exprPl = do
         convertCompositeItem
         (V.Case <&> Lens.mapped . Lens.mapped %~ V.BCase)
         (exprPl ^. Input.stored) (rest ^. Val.payload . plValI)
-        (EntityId.ofCaseTag (exprPl ^. Input.entityId)) tag val
+        (exprPl ^. Input.entityId) tag val
     restCase
         & cBody . cItems %~ (altS:)
         & cBody . cAddItem %~ (>>= setTagOrder (1 + length (restCase ^. cBody . cItems)))

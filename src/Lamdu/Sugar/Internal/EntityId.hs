@@ -1,18 +1,16 @@
-{-# LANGUAGE NoImplicitPrelude, GeneralizedNewtypeDeriving, OverloadedStrings #-}
+{-# LANGUAGE NoImplicitPrelude, GeneralizedNewtypeDeriving #-}
 module Lamdu.Sugar.Internal.EntityId
     ( EntityId
     , bs
     , ofValI, ofIRef
     , ofLambdaParam
     , ofLambdaTagParam
-    , ofInjectTag
-    , ofGetFieldTag
-    , ofRecExtendTag
-    , ofCaseTag
+    , ofTag
     , ofTId
     , randomizeExprAndParams
     ) where
 
+import           Data.Binary.Utils (encodeS)
 import           Data.Hashable (Hashable)
 import           Data.UUID.Types (UUID)
 import qualified Data.UUID.Utils as UUIDUtils
@@ -57,14 +55,5 @@ ofLambdaTagParam :: V.Var -> T.Tag -> EntityId
 ofLambdaTagParam v p =
     EntityId $ UUIDUtils.combine (UniqueId.toUUID v) (UniqueId.toUUID p)
 
-ofInjectTag :: EntityId -> EntityId
-ofInjectTag = augment "tag"
-
-ofGetFieldTag :: EntityId -> EntityId
-ofGetFieldTag = augment "tag"
-
-ofRecExtendTag :: EntityId -> EntityId
-ofRecExtendTag = augment "tag"
-
-ofCaseTag :: EntityId -> EntityId
-ofCaseTag = augment "tag"
+ofTag :: EntityId -> T.Tag -> EntityId
+ofTag entityId tag = augment (encodeS tag) entityId

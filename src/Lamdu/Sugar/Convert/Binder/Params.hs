@@ -320,7 +320,7 @@ changeGetFieldTags param prevTag chosenTag val =
 setFieldParamTag ::
     Monad m =>
     Maybe (MkProperty m PresentationMode) -> BinderKind m ->
-    StoredLam m -> [T.Tag] -> T.Tag -> ConvertM m (T.Tag -> T m EntityId)
+    StoredLam m -> [T.Tag] -> T.Tag -> ConvertM m (T.Tag -> T m ())
 setFieldParamTag mPresMode binderKind storedLam prevTagList prevTag =
     ConvertM.postProcess
     <&>
@@ -345,7 +345,6 @@ setFieldParamTag mPresMode binderKind storedLam prevTagList prevTag =
         fixUsagesOfLamBinder changeFieldToCall binderKind storedLam
         changeGetFieldTags (storedLam ^. slLam . V.lamParamId) prevTag chosenTag (storedLam ^. slLam . V.lamResult)
         postProcess
-        EntityId.ofLambdaTagParam (storedLam ^. slLam . V.lamParamId) chosenTag & pure
     where
         (tagsBefore, _:tagsAfter) = break (== prevTag) prevTagList
 
@@ -379,7 +378,7 @@ convertRecordParams mPresMode binderKind fieldParams lam@(V.Lam param _) pl =
         storedLam = mkStoredLam lam pl
         mkParam fp =
             setFieldParamTag mPresMode binderKind storedLam tagList tag
-            >>= convertTag (TagInfo (fpIdEntityId param fp) tag) (Set.delete tag (Set.fromList tagList))
+            >>= convertTag tag (Set.delete tag (Set.fromList tagList)) (EntityId.ofLambdaTagParam param)
             <&>
             \tagS ->
             FuncParam

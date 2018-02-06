@@ -67,7 +67,7 @@ convertExtend (V.RecExtend tag val rest) exprPl = do
         convertCompositeItem
         (V.RecExtend <&> Lens.mapped . Lens.mapped %~ V.BRecExtend)
         (exprPl ^. Input.stored) (rest ^. Val.payload . plValI)
-        (EntityId.ofRecExtendTag (exprPl ^. Input.entityId)) tag val
+        (exprPl ^. Input.entityId) tag val
     restRecord
         & cItems %~ (fieldS:)
         & cAddItem %~ (>>= setTagOrder (1 + length (restRecord ^. cItems)))

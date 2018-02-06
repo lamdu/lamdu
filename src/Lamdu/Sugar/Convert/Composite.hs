@@ -50,10 +50,9 @@ convertCompositeItem cons stored restI inst tag expr =
                     cons newTag (expr ^. Val.payload . Input.stored . Property.pVal) restI
                         & ExprIRef.writeValBody valI
                     protectedSetToVal stored valI & void
-                    pure inst -- TODO: This is the wrong entity id
                 where
                     valI = stored ^. Property.pVal
-        tagS <- convertTag (TagInfo inst tag) mempty setTag
+        tagS <- convertTag tag mempty (EntityId.ofTag inst) setTag
         return CompositeItem
             { _ciTag = tagS
             , _ciExpr = exprS
@@ -79,7 +78,7 @@ makeAddItem addItem stored =
             let resultEntity = EntityId.ofValI resultI
             return
                 CompositeAddItemResult
-                { _cairNewTag = TagInfo (EntityId.ofRecExtendTag resultEntity) tag
+                { _cairNewTag = TagInfo (EntityId.ofTag resultEntity tag) tag
                 , _cairNewVal = EntityId.ofValI newValI
                 , _cairItem = resultEntity
                 }
