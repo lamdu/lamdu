@@ -23,6 +23,7 @@ import qualified Lamdu.CharClassification as Chars
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
+import           Lamdu.GUI.ExpressionEdit.HoleEdit.AllowedSearchTerm (allowedFragmentSearchTerm)
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.SearchArea as SearchArea
 import qualified Lamdu.GUI.ExpressionGui as ExprGui
 import           Lamdu.GUI.ExpressionGui.Annotation (maybeAddAnnotationPl)
@@ -63,7 +64,7 @@ make fragment pl =
             <&> Widget.widget . Widget.eventMapMaker . Lens.mapped %~ addFocusEvents
         hover <- Hover.hover
         searchAreaGui <-
-            SearchArea.make (fragment ^. Sugar.fOptions) Nothing pl ExprEventMap.allowedFragmentSearchTerm
+            SearchArea.make (fragment ^. Sugar.fOptions) Nothing pl allowedFragmentSearchTerm
         let f layoutMode fragmentExpr
                 | isSelected
                 || Widget.isFocused (fragmentExpr ^. Align.tValue) =

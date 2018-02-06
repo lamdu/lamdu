@@ -5,13 +5,12 @@
 -- For non-fragments this is the whole hole.
 
 module Lamdu.GUI.ExpressionEdit.HoleEdit.SearchArea
-    ( make, allowedSearchTermCommon
+    ( make
     ) where
 
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
 import           Control.Monad.Transaction (MonadTransaction(..))
-import qualified Data.Char as Char
 import qualified Data.Monoid as Monoid
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Text as Text
@@ -233,18 +232,3 @@ make options mOptionLiteral pl allowedTerms =
             <&> Lens.mapped %~ makeResultOption pl ctx
             <&> Lens.mapped . Menu.optionWidgets . Align.tValue . Widget.eventMapMaker . Lens.mapped %~
                 filterSearchTermEvents allowedTerms (ctx ^. SearchMenu.rSearchTerm)
-
-type Suffix = Char
-
-allowedSearchTermCommon :: [Suffix] -> Text -> Bool
-allowedSearchTermCommon suffixes searchTerm =
-    any (searchTerm &)
-    [ Text.all (`elem` Chars.operator)
-    , Text.all Char.isAlphaNum
-    , (`Text.isPrefixOf` "{}")
-    , (== "\\")
-    , Lens.has (Lens.reversed . Lens._Cons . Lens.filtered inj)
-    ]
-    where
-        inj (lastChar, revInit) =
-            lastChar `elem` suffixes && Text.all Char.isAlphaNum revInit

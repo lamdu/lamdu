@@ -6,11 +6,9 @@ module Lamdu.GUI.ExpressionEdit.EventMap
     , jumpHolesEventMap
     , extractCursor
     , detachEventMap
-    , allowedFragmentSearchTerm
     ) where
 
 import qualified Control.Lens as Lens
-import qualified Data.Char as Char
 import qualified Data.Text as Text
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
@@ -21,7 +19,7 @@ import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
 import qualified Lamdu.CharClassification as Chars
 import qualified Lamdu.Config as Config
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds as HoleWidgetIds
-import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.SearchArea as SearchArea
+import           Lamdu.GUI.ExpressionEdit.HoleEdit.AllowedSearchTerm (allowedFragmentSearchTerm)
 import qualified Lamdu.GUI.ExpressionGui as ExprGui
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Precedence (Prec, precedence)
@@ -137,15 +135,6 @@ actionsEventMap options exprInfo =
             <&> E.keysEventMapMovesCursor replaceKeys (E.Doc ["Edit", "Replace parent"])
                 . fmap WidgetIds.fromEntityId
             & fromMaybe mempty
-
-allowedFragmentSearchTerm :: Text -> Bool
-allowedFragmentSearchTerm searchTerm =
-    SearchArea.allowedSearchTermCommon ":" searchTerm || isGetField searchTerm
-    where
-        isGetField t =
-            case Text.uncons t of
-            Just (c, rest) -> c == '.' && Text.all Char.isAlphaNum rest
-            Nothing -> False
 
 -- | Create the hole search term for new apply operators,
 -- given the extra search term chars from another hole.
