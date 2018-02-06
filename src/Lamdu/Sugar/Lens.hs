@@ -12,6 +12,7 @@ module Lamdu.Sugar.Lens
     , binderContentEntityId
     , leftMostLeaf
     , workAreaExpressions
+    , workAreaTags
     ) where
 
 import qualified Control.Lens as Lens
@@ -159,3 +160,54 @@ workAreaExpressions f (WorkArea panes repl) =
     WorkArea
     <$> (traverse . paneDefinition . traverse) f panes
     <*> f repl
+
+binderContentTags :: Lens.Traversal' (BinderContent name m (Expression name m a)) (Tag name m)
+binderContentTags f (BinderExpr expr) =
+    expressionTags f expr <&> BinderExpr
+binderContentTags f (BinderLet Let{..}) =
+    (\_lValue _lBody -> Let{..})
+    <$> binderTags f _lValue
+    <*> (bbContent . binderContentTags) f _lBody
+    <&> BinderLet
+
+binderTags :: Lens.Traversal' (Binder name m (Expression name m a)) (Tag name m)
+binderTags f Binder{..} =
+    (\_bParams _bBody -> Binder{..})
+    <$> (_FieldParams . traverse . traverse . fpiTag) f _bParams
+    <*> (bbContent . binderContentTags) f _bBody
+
+definitionTags :: Lens.Traversal' (Definition name m (Expression name m a)) (Tag name m)
+definitionTags = drBody . _DefinitionBodyExpression . deContent . binderTags
+
+compositeItemTags :: Lens.Traversal' (CompositeItem name m (Expression name m a)) (Tag name m)
+compositeItemTags f CompositeItem{..} =
+    (\_ciTag _ciExpr -> CompositeItem{..})
+    <$> f _ciTag
+    <*> expressionTags f _ciExpr
+
+compositeTags :: Lens.Traversal' (Composite name m (Expression name m a)) (Tag name m)
+compositeTags f Composite{..} =
+    (\_cItems _cTail -> Composite{..})
+    <$> (traverse . compositeItemTags) f _cItems
+    <*> (traverse . expressionTags) f _cTail
+
+exprBodyTags :: Lens.Traversal' (Body name m (Expression name m a)) (Tag name m)
+exprBodyTags f (BodyGetField (GetField r t)) =
+    GetField <$> expressionTags f r <*> f t <&> BodyGetField
+exprBodyTags f (BodyInject (Inject t v)) =
+    Inject <$> f t <*> (traverse . expressionTags) f v <&> BodyInject
+exprBodyTags f (BodyCase c) = (cBody . compositeTags) f c <&> BodyCase
+exprBodyTags f (BodyRecord r) = compositeTags f r <&> BodyRecord
+exprBodyTags f (BodyLam lam) = (lamBinder . binderTags) f lam <&> BodyLam
+exprBodyTags f x = (traverse . expressionTags) f x
+
+expressionTags :: Lens.Traversal' (Expression name m a) (Tag name m)
+expressionTags = rBody . exprBodyTags
+
+-- TODO: This traversal and with all its helper sub-traversals is somewhat tedious
+-- and bug-prone. Perhaps some more generic SYB solution is suitable instead.
+workAreaTags :: Lens.Traversal' (WorkArea name m a) (Tag name m)
+workAreaTags f (WorkArea panes repl) =
+    WorkArea
+    <$> (traverse . paneDefinition . definitionTags) f panes
+    <*> expressionTags f repl

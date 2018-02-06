@@ -55,12 +55,6 @@ tagRenameId = (`Widget.joinId` ["rename"])
 tagViewId :: Widget.Id -> Widget.Id
 tagViewId = (`Widget.joinId` ["view"])
 
-setTagName :: Applicative m => Sugar.Tag (Name m) m -> Text -> m ()
-setTagName tag name =
-    (tag ^. Sugar.tagName . Name.setName) name
-    *>
-    (tag ^. Sugar.tagActions . Sugar.taSetPublished) (not (Text.null name))
-
 makeTagNameEdit ::
     ( MonadReader env m, HasConfig env, TextEdit.HasStyle env
     , GuiState.HasCursor env, Applicative f
@@ -77,7 +71,7 @@ makeTagNameEdit nearestHoles tag =
                    (E.Doc ["Navigation", "Jump to next hole"]) .
                    pure . WidgetIds.fromEntityId)
         NameEdit.makeBareEdit
-            (tag ^. Sugar.tagName & Name.setName .~ setTagName tag)
+            (tag ^. Sugar.tagName & Name.setName .~ tag ^. Sugar.tagName . Name.setName)
             (tagRenameId myId)
             <&> Align.tValue . Widget.eventMapMaker . Lens.mapped %~ E.filterChars (/= ',')
             <&> Align.tValue %~ Widget.weakerEvents jumpNextEventMap
@@ -180,12 +174,12 @@ makeHoleSearchTerm nearestHoles tag =
     do
         searchTerm <- SearchMenu.readSearchTerm holeId
         setNameEventMap <-
-            tagId tag <$ setTagName tag searchTerm
+            tagId tag <$ setName searchTerm
             & makePickEventMap nearestHoles (E.Doc ["Edit", "Tag", "New"])
         let pickPreEvent =
                 Widget.PreEvent
                 { Widget._pDesc = "New tag"
-                , Widget._pAction = mempty <$ setTagName tag searchTerm
+                , Widget._pAction = mempty <$ setName searchTerm
                 , Widget._pTextRemainder = ""
                 }
         term <-
@@ -216,6 +210,7 @@ makeHoleSearchTerm nearestHoles tag =
             else pure term
     where
         holeId = WidgetIds.tagHoleId (tagId tag)
+        setName = tag ^. Sugar.tagName . Name.setName
 
 makeTagHoleEdit ::
     ( Monad m, MonadReader env f, MonadTransaction m f

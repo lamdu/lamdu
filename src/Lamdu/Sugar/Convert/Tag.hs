@@ -39,11 +39,6 @@ convertTag info@(TagInfo _ tag) forbiddenTags setTag =
             <&> (`Set.difference` forbiddenTags)
             <&> Set.toList
             <&> map toOption
-        , _taSetPublished =
-            \isPublished ->
-            Transaction.modP
-            publishedTags
-            ((if isPublished then Set.insert else Set.delete) tag)
         }
     }
     where

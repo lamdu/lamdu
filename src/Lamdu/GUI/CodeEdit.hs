@@ -11,6 +11,7 @@ import           Control.Monad.Transaction (MonadTransaction(..))
 import           Data.CurAndPrev (CurAndPrev(..))
 import           Data.Functor.Identity (Identity(..))
 import           Data.Orphans () -- Imported for Monoid (IO ()) instance
+import qualified Data.Set as Set
 import           Data.Store.Transaction (Transaction, MkProperty(..))
 import qualified Data.Store.Transaction as Transaction
 import qualified GUI.Momentu.Align as Align
@@ -25,6 +26,7 @@ import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
 import qualified GUI.Momentu.Widgets.TextView as TextView
+import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Calc.Type.Scheme as Scheme
 import qualified Lamdu.Calc.Val as V
 import           Lamdu.Config (config)
@@ -48,6 +50,7 @@ import qualified Lamdu.GUI.IOTrans as IOTrans
 import qualified Lamdu.GUI.ReplEdit as ReplEdit
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Name (Name)
+import qualified Lamdu.Name as Name
 import           Lamdu.Style (HasStyle)
 import qualified Lamdu.Sugar.Convert as SugarConvert
 import qualified Lamdu.Sugar.Lens as SugarLens
@@ -107,6 +110,18 @@ postProcessExpr ::
 postProcessExpr =
     fmap toExprGuiMPayload . AddParens.add . AnnotationsPass.markAnnotationsToDisplay
 
+fixTagPublished ::
+    Monad m =>
+    MkProperty m (Set T.Tag) -> Sugar.Tag (Name (T m)) (T m) -> Sugar.Tag (Name (T m)) (T m)
+fixTagPublished publishedTags tag =
+    tag
+    & Sugar.tagName . Name.setName %~ onSetName
+    where
+        onSetName setName newName =
+            setName newName *>
+            Transaction.modP publishedTags
+            ((if newName == "" then Set.delete else Set.insert) (tag ^. Sugar.tagInfo . Sugar.tagVal))
+
 loadWorkArea ::
     Monad m =>
     CurAndPrev (EvalResults (ValI m)) ->
@@ -115,6 +130,7 @@ loadWorkArea ::
 loadWorkArea theEvalResults theCodeAnchors =
     SugarConvert.loadWorkArea theEvalResults theCodeAnchors
     >>= AddNames.addToWorkArea
+    <&> SugarLens.workAreaTags %~ fixTagPublished (Anchors.tags theCodeAnchors)
     <&>
     \Sugar.WorkArea { _waPanes, _waRepl } ->
     Sugar.WorkArea
