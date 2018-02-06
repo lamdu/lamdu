@@ -166,26 +166,31 @@ allowedSearchTerm = Text.all Char.isAlphaNum
 makeHoleSearchTerm ::
     ( MonadReader env m, GuiState.HasState env, HasConfig env, TextEdit.HasStyle env
     , HasTheme env, Element.HasAnimIdPrefix env, HasStdSpacing env, Hover.HasStyle env
-    , Applicative f
+    , Monad f
     ) =>
     NearestHoles -> Sugar.Tag (Name f) f ->
     m (WithTextPos (Widget (f GuiState.Update)))
 makeHoleSearchTerm nearestHoles tag =
     do
         searchTerm <- SearchMenu.readSearchTerm holeId
-        setNameEventMap <-
-            tagId tag <$ setName searchTerm
+        let newTag =
+                do
+                    (name, t) <- tag ^. Sugar.tagActions . Sugar.taNewTag
+                    (name ^. Name.setName) searchTerm
+                    t ^. Sugar.tagInstance & pure
+        newTagEventMap <-
+            newTag <&> WidgetIds.fromEntityId
             & makePickEventMap nearestHoles (E.Doc ["Edit", "Tag", "New"])
         let pickPreEvent =
                 Widget.PreEvent
                 { Widget._pDesc = "New tag"
-                , Widget._pAction = mempty <$ setName searchTerm
+                , Widget._pAction = mempty <$ newTag
                 , Widget._pTextRemainder = ""
                 }
         term <-
             SearchMenu.basicSearchTermEdit holeId allowedSearchTerm
             <&> Align.tValue . Lens.mapped %~ pure
-            <&> Align.tValue %~ Widget.weakerEvents setNameEventMap
+            <&> Align.tValue %~ Widget.weakerEvents newTagEventMap
             <&> Align.tValue . Widget.wState . Widget._StateFocused .
                 Lens.mapped . Widget.fPreEvents %~ (Widget.PreEvents [pickPreEvent] <>)
         tooltip <- Lens.view theme <&> Theme.tooltip
@@ -210,7 +215,6 @@ makeHoleSearchTerm nearestHoles tag =
             else pure term
     where
         holeId = WidgetIds.tagHoleId (tagId tag)
-        setName = tag ^. Sugar.tagName . Name.setName
 
 makeTagHoleEdit ::
     ( Monad m, MonadReader env f, MonadTransaction m f

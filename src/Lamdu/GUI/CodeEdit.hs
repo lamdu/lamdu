@@ -115,12 +115,14 @@ fixTagPublished ::
     MkProperty m (Set T.Tag) -> Sugar.Tag (Name (T m)) (T m) -> Sugar.Tag (Name (T m)) (T m)
 fixTagPublished publishedTags tag =
     tag
-    & Sugar.tagName . Name.setName %~ onSetName
+    & Sugar.tagName . Name.setName %~ onSetName (tag ^. Sugar.tagInfo)
+    & Sugar.tagActions . Sugar.taNewTag . Lens.mapped %~ onNewTag
     where
-        onSetName setName newName =
+        onSetName info setName newName =
             setName newName *>
             Transaction.modP publishedTags
-            ((if newName == "" then Set.delete else Set.insert) (tag ^. Sugar.tagInfo . Sugar.tagVal))
+            ((if newName == "" then Set.delete else Set.insert) (info ^. Sugar.tagVal))
+        onNewTag (name, info) = (name & Name.setName %~ onSetName info, info)
 
 loadWorkArea ::
     Monad m =>

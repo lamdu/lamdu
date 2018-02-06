@@ -151,9 +151,15 @@ toLam = lamBinder . toBinder
 toTagActions ::
     MonadNaming m =>
     TagActions (OldName m) (TM m) -> m (TagActions (NewName m) (TM m))
-toTagActions actions =
-    opRun <&>
-    \run -> actions & taOptions %~ (>>= run . (traverse . _1) (opGetName TagName))
+toTagActions TagActions{..} =
+    do
+        run0 <- opRun
+        run1 <- opRun
+        pure TagActions
+            { _taOptions = _taOptions >>= run0 . (traverse . _1) (opGetName TagName)
+            , _taChangeTag = _taChangeTag
+            , _taNewTag = _taNewTag >>= run1 . _1 (opGetName TagName)
+            }
 
 toTag ::
     MonadNaming m =>
