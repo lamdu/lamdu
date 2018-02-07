@@ -147,16 +147,14 @@ makeOptions tag ctx
                         Menu.PickResult
                         { Menu._pickDest = instanceId
                         , Menu._pickDestIsEntryPoint = False
-                        } <$
-                        (tag ^. Sugar.tagSelection . Sugar.tsSetTag) (info ^. Sugar.tagVal)
+                        } <$ opt ^. Sugar.toPick
                     , Widget._pTextRemainder = ""
                     }
                 }
             , Menu._oSubmenuWidgets = Menu.SubmenuEmpty
             }
             where
-                info = opt ^. Sugar.toInfo
-                instanceId = info ^. Sugar.tagInstance & WidgetIds.fromEntityId
+                instanceId = opt ^. Sugar.toInfo . Sugar.tagInstance & WidgetIds.fromEntityId
                 optionWId = ctx ^. SearchMenu.rResultIdPrefix <> instanceId
 
 allowedSearchTerm :: Text -> Bool

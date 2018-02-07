@@ -37,8 +37,7 @@ convertTag tag forbiddenTags mkInstance setTag =
     , _tagName = UniqueId.toUUID tag & InternalName
     , _tagSelection =
         TagSelection
-        { _tsSetTag = setTag
-        , _tsOptions =
+        { _tsOptions =
             Transaction.getP publishedTags
             <&> (`Set.difference` forbiddenTags)
             <&> Set.toList
@@ -56,4 +55,5 @@ convertTag tag forbiddenTags mkInstance setTag =
             TagOption
             { _toName = UniqueId.toUUID x & InternalName
             , _toInfo = mkInfo x
+            , _toPick = setTag x
             }

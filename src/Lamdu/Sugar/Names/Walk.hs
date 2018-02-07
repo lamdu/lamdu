@@ -157,7 +157,6 @@ toTagSelection TagSelection{..} =
         run1 <- opRun
         pure TagSelection
             { _tsOptions = _tsOptions >>= run0 . (traverse . toName) (opGetName TagName)
-            , _tsSetTag = _tsSetTag
             , _tsNewTag = _tsNewTag >>= run1 . _1 (opGetName TagName)
             }
 
