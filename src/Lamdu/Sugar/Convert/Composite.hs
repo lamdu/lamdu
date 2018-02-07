@@ -53,7 +53,7 @@ convertCompositeItem cons stored restI inst tag expr =
                 where
                     valI = stored ^. Property.pVal
         tagS <- convertTag tag mempty (EntityId.ofTag inst) setTag
-        return CompositeItem
+        pure CompositeItem
             { _ciTag = tagS
             , _ciExpr = exprS
             , _ciDelete = delItem
@@ -61,24 +61,22 @@ convertCompositeItem cons stored restI inst tag expr =
 
 setTagOrder :: Monad m => Int -> CompositeAddItemResult -> T m CompositeAddItemResult
 setTagOrder i r =
-    do
-        Transaction.setP (Anchors.assocTagOrder (r ^. cairNewTag . tagVal)) i
-        return r
+    r <$ Transaction.setP (Anchors.assocTagOrder (r ^. cairNewTag . tagVal)) i
 
 makeAddItem :: Monad m =>
     (ExprIRef.ValI m -> T m (DataOps.CompositeExtendResult m)) ->
     ExprIRef.ValIProperty m ->
     ConvertM m (T m CompositeAddItemResult)
 makeAddItem addItem stored =
+    ConvertM.typeProtectedSetToVal
+    <&>
+    \protectedSetToVal ->
     do
-        protectedSetToVal <- ConvertM.typeProtectedSetToVal
-        do
-            DataOps.CompositeExtendResult tag newValI resultI <- addItem (stored ^. Property.pVal)
-            _ <- protectedSetToVal stored resultI
-            let resultEntity = EntityId.ofValI resultI
-            return
-                CompositeAddItemResult
-                { _cairNewTag = TagInfo (EntityId.ofTag resultEntity tag) tag
-                , _cairNewVal = EntityId.ofValI newValI
-                }
-            & return
+        DataOps.CompositeExtendResult tag newValI resultI <- addItem (stored ^. Property.pVal)
+        _ <- protectedSetToVal stored resultI
+        let resultEntity = EntityId.ofValI resultI
+        pure
+            CompositeAddItemResult
+            { _cairNewTag = TagInfo (EntityId.ofTag resultEntity tag) tag
+            , _cairNewVal = EntityId.ofValI newValI
+            }
