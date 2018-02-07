@@ -246,7 +246,7 @@ toBody expr = \case
     BodyLabeledApply x -> x & toLabeledApply expr <&> BodyLabeledApply
     BodyHole         x -> x & toHole <&> BodyHole
     BodyFromNom      x -> x & traverse expr >>= nTId toTId <&> BodyFromNom
-    -- BodyToNom        x -> x & traverse (toBinderBody expr) >>= nTId toTId <&> BodyToNom
+    BodyToNom        x -> x & traverse (toBinderBody expr) >>= nTId toTId <&> BodyToNom
     BodyGetVar       x -> x & toGetVar <&> BodyGetVar
     BodyLiteral      x -> x & BodyLiteral & pure
     BodyLam          x -> x & toLam expr <&> BodyLam
