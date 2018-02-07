@@ -62,7 +62,14 @@ convertExtend (V.RecExtend tag val rest) exprPl = do
                             >>= protectedSetToVal restStored
                             <&> EntityId.ofValI
                         }
-                return (Composite [] (OpenComposite actions restS) addField, id)
+                pure
+                    ( Composite
+                        { _cItems = []
+                        , _cTail = OpenComposite actions restS
+                        , _cAddItem = addField
+                        }
+                    , id
+                    )
     fieldS <-
         convertCompositeItem
         (V.RecExtend <&> Lens.mapped . Lens.mapped %~ V.BRecExtend)
