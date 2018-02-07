@@ -25,7 +25,11 @@ data TagOption name m = TagOption
 
 data TagSelection name m = TagSelection
     { _tsOptions :: m [TagOption name m]
-    , _tsNewTag :: m (name, TagInfo)
+    , -- Ideally tsNewTag would be an additional TagOption,
+      -- and this would also fix animation artifacts for picking new tags.
+      -- However that would require making a consistent new tag,
+      -- which would require either a new Data.Store feature or a Sugar cache.
+      _tsNewTag :: m (name, TagInfo)
     }
 
 data Tag name m = Tag
