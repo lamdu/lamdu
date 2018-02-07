@@ -1,7 +1,7 @@
 {-# LANGUAGE NoImplicitPrelude #-}
 
 module Lamdu.Sugar.Convert.Tag
-    ( convertTag
+    ( convertTag, convertTagSelection
     ) where
 
 import qualified Control.Lens as Lens

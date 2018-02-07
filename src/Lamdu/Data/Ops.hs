@@ -100,29 +100,26 @@ redexWrap exprP =
         return newParam
 
 data CompositeExtendResult m = CompositeExtendResult
-    { cerNewTag :: T.Tag
-    , cerNewVal :: ValI m
+    { cerNewVal :: ValI m
     , cerResult :: ValI m
     }
 
 genNewTag :: Monad m => T m T.Tag
 genNewTag = Transaction.newKey <&> fst . GenIds.randomTag . RandomUtils.genFromHashable
 
-recExtend :: Monad m => ValI m -> T m (CompositeExtendResult m)
-recExtend valI =
+recExtend :: Monad m => T.Tag -> ValI m -> T m (CompositeExtendResult m)
+recExtend tag valI =
     do
-        tag <- genNewTag
         newValueI <- newHole
         V.RecExtend tag newValueI valI & V.BRecExtend & ExprIRef.newValBody
-            <&> CompositeExtendResult tag newValueI
+            <&> CompositeExtendResult newValueI
 
-case_ :: Monad m => ValI m -> T m (CompositeExtendResult m)
-case_ tailI =
+case_ :: Monad m => T.Tag -> ValI m -> T m (CompositeExtendResult m)
+case_ tag tailI =
     do
-        tag <- genNewTag
         newValueI <- newHole
         V.Case tag newValueI tailI & V.BCase & ExprIRef.newValBody
-            <&> CompositeExtendResult tag newValueI
+            <&> CompositeExtendResult newValueI
 
 newPane :: Monad m => Anchors.CodeAnchors m -> DefI m -> T m ()
 newPane codeAnchors defI =

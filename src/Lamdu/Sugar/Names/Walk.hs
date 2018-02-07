@@ -219,8 +219,10 @@ toComposite ::
     (a -> m b) ->
     Composite (OldName m) (TM m) a ->
     m (Composite (NewName m) (TM m) b)
-toComposite expr c =
-    c & cItems . traverse . ciTag %%~ toTag
+toComposite expr Composite{..} =
+    (\_cItems _cAddItemWithTag -> Composite{..})
+    <$> (traverse . ciTag) toTag _cItems
+    <*> toTagSelection _cAddItemWithTag
     >>= traverse expr
 
 toCase ::
@@ -244,7 +246,7 @@ toBody expr = \case
     BodyLabeledApply x -> x & toLabeledApply expr <&> BodyLabeledApply
     BodyHole         x -> x & toHole <&> BodyHole
     BodyFromNom      x -> x & traverse expr >>= nTId toTId <&> BodyFromNom
-    BodyToNom        x -> x & traverse (toBinderBody expr) >>= nTId toTId <&> BodyToNom
+    -- BodyToNom        x -> x & traverse (toBinderBody expr) >>= nTId toTId <&> BodyToNom
     BodyGetVar       x -> x & toGetVar <&> BodyGetVar
     BodyLiteral      x -> x & BodyLiteral & pure
     BodyLam          x -> x & toLam expr <&> BodyLam

@@ -51,7 +51,7 @@ bodyShape = \case
     Sugar.BodyCase cas ->
         ["case", "of"] ++
         case cas of
-            Sugar.Case Sugar.LambdaCase (Sugar.Composite [] Sugar.ClosedComposite{} _) -> ["absurd"]
+            Sugar.Case Sugar.LambdaCase (Sugar.Composite [] Sugar.ClosedComposite{} _ _) -> ["absurd"]
             _ -> []
     Sugar.BodyIfElse {} -> ["if", ":"]
     Sugar.BodyInject (Sugar.Inject tag _) ->

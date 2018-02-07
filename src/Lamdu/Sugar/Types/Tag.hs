@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, TemplateHaskell #-}
+{-# LANGUAGE NoImplicitPrelude, TemplateHaskell, DeriveTraversable #-}
 module Lamdu.Sugar.Types.Tag
     ( Tag(..), tagName, tagInfo, tagSelection
     , TagInfo(..), tagVal, tagInstance
@@ -21,7 +21,7 @@ data TagOption name m a = TagOption
     { _toInfo :: TagInfo
     , _toName :: name
     , _toPick :: m a
-    }
+    } deriving (Functor, Foldable, Traversable)
 
 data TagSelection name m a = TagSelection
     { _tsOptions :: m [TagOption name m a]
@@ -30,7 +30,7 @@ data TagSelection name m a = TagSelection
       -- However that would require making a consistent new tag,
       -- which would require either a new Data.Store feature or a Sugar cache.
       _tsNewTag :: m (name, TagInfo, a)
-    }
+    } deriving Functor
 
 data Tag name m = Tag
     { _tagInfo :: TagInfo

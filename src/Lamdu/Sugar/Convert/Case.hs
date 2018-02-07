@@ -20,6 +20,7 @@ import           Lamdu.Sugar.Convert.IfElse (convertIfElse)
 import qualified Lamdu.Sugar.Convert.Input as Input
 import           Lamdu.Sugar.Convert.Monad (ConvertM)
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
+import           Lamdu.Sugar.Convert.Tag (convertTagSelection)
 import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import qualified Lamdu.Sugar.Lens as SugarLens
@@ -45,12 +46,16 @@ convertAbsurd exprPl =
                     <* postProcess
                     <&> EntityId.ofValI
                 }
+        addItemWithTag <-
+            convertTagSelection mempty (EntityId.ofTag (exprPl ^. Input.entityId)) addAlt
+            <&> Lens.mapped %~ (^. cairNewVal)
         BodyCase Case
             { _cKind = LambdaCase
             , _cBody = Composite
                 { _cItems = []
                 , _cTail = ClosedComposite actions
-                , _cAddItem = addAlt
+                , _cAddItem = DataOps.genNewTag >>= addAlt
+                , _cAddItemWithTag = addItemWithTag
                 }
             }
             & addActions exprPl
@@ -75,13 +80,17 @@ convert (V.Case tag val rest) exprPl = do
                             >>= protectedSetToVal restStored
                             <&> EntityId.ofValI
                         }
+                addItemWithTag <-
+                    convertTagSelection mempty (EntityId.ofTag (exprPl ^. Input.entityId)) addAlt
+                    <&> Lens.mapped %~ (^. cairNewVal)
                 return
                     ( Case
                         { _cKind = LambdaCase
                         , _cBody = Composite
                             { _cItems = []
                             , _cTail = OpenComposite actions restS
-                            , _cAddItem = addAlt
+                            , _cAddItem = DataOps.genNewTag >>= addAlt
+                            , _cAddItemWithTag = addItemWithTag
                             }
                         }
                     , id)

@@ -64,15 +64,15 @@ setTagOrder i r =
     r <$ Transaction.setP (Anchors.assocTagOrder (r ^. cairNewTag . tagVal)) i
 
 makeAddItem :: Monad m =>
-    (ExprIRef.ValI m -> T m (DataOps.CompositeExtendResult m)) ->
+    (T.Tag -> ExprIRef.ValI m -> T m (DataOps.CompositeExtendResult m)) ->
     ExprIRef.ValIProperty m ->
-    ConvertM m (T m CompositeAddItemResult)
+    ConvertM m (T.Tag -> T m CompositeAddItemResult)
 makeAddItem addItem stored =
     ConvertM.typeProtectedSetToVal
     <&>
-    \protectedSetToVal ->
+    \protectedSetToVal tag ->
     do
-        DataOps.CompositeExtendResult tag newValI resultI <- addItem (stored ^. Property.pVal)
+        DataOps.CompositeExtendResult newValI resultI <- addItem tag (stored ^. Property.pVal)
         _ <- protectedSetToVal stored resultI
         let resultEntity = EntityId.ofValI resultI
         pure

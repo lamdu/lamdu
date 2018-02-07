@@ -15,6 +15,7 @@ import           Lamdu.Sugar.Convert.Expression.Actions (addActions)
 import qualified Lamdu.Sugar.Convert.Input as Input
 import           Lamdu.Sugar.Convert.Monad (ConvertM)
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
+import           Lamdu.Sugar.Convert.Tag (convertTagSelection)
 import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import           Lamdu.Sugar.Types
@@ -36,10 +37,14 @@ convertEmpty exprPl =
                     <* postProcess
                     <&> EntityId.ofValI
                 }
+        addItemWithTag <-
+            convertTagSelection mempty (EntityId.ofTag (exprPl ^. Input.entityId)) addItem
+            <&> Lens.mapped %~ (^. cairNewVal)
         BodyRecord Composite
             { _cItems = []
             , _cTail = ClosedComposite actions
-            , _cAddItem = addItem
+            , _cAddItem = DataOps.genNewTag >>= addItem
+            , _cAddItemWithTag = addItemWithTag
             }
             & addActions exprPl
 
@@ -63,11 +68,15 @@ convertExtend (V.RecExtend tag val rest) exprPl = do
                             >>= protectedSetToVal restStored
                             <&> EntityId.ofValI
                         }
+                addItemWithTag <-
+                    convertTagSelection mempty (EntityId.ofTag (exprPl ^. Input.entityId)) addField
+                    <&> Lens.mapped %~ (^. cairNewVal)
                 pure
                     ( Composite
                         { _cItems = []
                         , _cTail = OpenComposite actions restS
-                        , _cAddItem = addField
+                        , _cAddItem = DataOps.genNewTag >>= addField
+                        , _cAddItemWithTag = addItemWithTag
                         }
                     , id
                     )

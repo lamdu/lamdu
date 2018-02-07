@@ -98,11 +98,11 @@ make ::
     Sugar.Composite (Name (T m)) (T m) (ExprGui.SugarExpr m) ->
     Sugar.Payload (T m) ExprGui.Payload ->
     ExprGuiM m (ExpressionGui m)
-make (Sugar.Composite [] Sugar.ClosedComposite{} addField) pl =
+make (Sugar.Composite [] Sugar.ClosedComposite{} addField _addFieldTodo) pl =
     -- Ignore the ClosedComposite actions - it only has the open
     -- action which is equivalent ot deletion on the unit record
     makeUnit addField pl
-make (Sugar.Composite fields recordTail addField) pl =
+make (Sugar.Composite fields recordTail addField _addFieldTodo) pl =
     do
         addFieldEventMap <- mkAddFieldEventMap addField
         tailEventMap <-

@@ -13,7 +13,7 @@ module Lamdu.Sugar.Types.Expression
     , OpenCompositeActions(..), openCompositeClose
     , CompositeTail(..), _OpenComposite, _ClosedComposite
     , CompositeAddItemResult(..), cairNewTag, cairNewVal
-    , Composite(..), cItems, cAddItem, cTail
+    , Composite(..), cItems, cAddItem, cAddItemWithTag, cTail
     -- case
     , CaseArg(..), caVal, caToLambdaCase
     , CaseKind(..), _LambdaCase, _CaseWithArg
@@ -99,6 +99,8 @@ data Composite name m expr = Composite
     { _cItems :: [CompositeItem name m expr]
     , _cTail :: CompositeTail m expr
     , _cAddItem :: m CompositeAddItemResult
+    , -- TODO: Once this works it should replace _cAddItem
+      _cAddItemWithTag :: TagSelection name m EntityId
     } deriving (Functor, Foldable, Traversable)
 
 data CaseArg m expr = CaseArg
