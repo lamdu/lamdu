@@ -29,25 +29,28 @@ convertTag ::
     T.Tag -> Set T.Tag -> (T.Tag -> EntityId) -> (T.Tag -> T m ()) ->
     ConvertM m (Tag InternalName (T m))
 convertTag tag forbiddenTags mkInstance setTag =
+    convertTagSelection forbiddenTags mkInstance setTag
+    <&> Tag (TagInfo (mkInstance tag) tag) (InternalName (UniqueId.toUUID tag))
+
+convertTagSelection ::
+    Monad m =>
+    Set T.Tag -> (T.Tag -> EntityId) -> (T.Tag -> T m ()) ->
+    ConvertM m (TagSelection InternalName (T m))
+convertTagSelection forbiddenTags mkInstance setTag =
     Lens.view ConvertM.scCodeAnchors <&> Anchors.tags
     <&>
     \publishedTags ->
-    Tag
-    { _tagInfo = mkInfo tag
-    , _tagName = UniqueId.toUUID tag & InternalName
-    , _tagSelection =
-        TagSelection
-        { _tsOptions =
-            Transaction.getP publishedTags
-            <&> (`Set.difference` forbiddenTags)
-            <&> Set.toList
-            <&> map toOption
-        , _tsNewTag =
-            do
-                newTag <- DataOps.genNewTag
-                setTag newTag
-                pure (InternalName (UniqueId.toUUID newTag), mkInfo newTag)
-        }
+    TagSelection
+    { _tsOptions =
+        Transaction.getP publishedTags
+        <&> (`Set.difference` forbiddenTags)
+        <&> Set.toList
+        <&> map toOption
+    , _tsNewTag =
+        do
+            newTag <- DataOps.genNewTag
+            setTag newTag
+            pure (InternalName (UniqueId.toUUID newTag), mkInfo newTag)
     }
     where
         mkInfo t = TagInfo (mkInstance t) t
