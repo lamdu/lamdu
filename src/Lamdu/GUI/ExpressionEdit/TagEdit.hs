@@ -172,7 +172,7 @@ makeHoleSearchTerm nearestHoles tag =
         searchTerm <- SearchMenu.readSearchTerm holeId
         let newTag =
                 do
-                    (name, t) <- tag ^. Sugar.tagSelection . Sugar.tsNewTag
+                    (name, t, ()) <- tag ^. Sugar.tagSelection . Sugar.tsNewTag
                     (name ^. Name.setName) searchTerm
                     t ^. Sugar.tagInstance & pure
         newTagEventMap <-

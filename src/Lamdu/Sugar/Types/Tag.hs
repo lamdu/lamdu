@@ -17,25 +17,25 @@ data TagInfo = TagInfo
     , _tagVal :: T.Tag
     } deriving (Eq, Ord, Show)
 
-data TagOption name m = TagOption
+data TagOption name m a = TagOption
     { _toInfo :: TagInfo
     , _toName :: name
-    , _toPick :: m ()
+    , _toPick :: m a
     }
 
-data TagSelection name m = TagSelection
-    { _tsOptions :: m [TagOption name m]
+data TagSelection name m a = TagSelection
+    { _tsOptions :: m [TagOption name m a]
     , -- Ideally tsNewTag would be an additional TagOption,
       -- and this would also fix animation artifacts for picking new tags.
       -- However that would require making a consistent new tag,
       -- which would require either a new Data.Store feature or a Sugar cache.
-      _tsNewTag :: m (name, TagInfo)
+      _tsNewTag :: m (name, TagInfo, a)
     }
 
 data Tag name m = Tag
     { _tagInfo :: TagInfo
     , _tagName :: name
-    , _tagSelection :: TagSelection name m
+    , _tagSelection :: TagSelection name m ()
     }
 
 Lens.makeLenses ''Tag

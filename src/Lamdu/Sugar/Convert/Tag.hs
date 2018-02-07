@@ -34,8 +34,8 @@ convertTag tag forbiddenTags mkInstance setTag =
 
 convertTagSelection ::
     Monad m =>
-    Set T.Tag -> (T.Tag -> EntityId) -> (T.Tag -> T m ()) ->
-    ConvertM m (TagSelection InternalName (T m))
+    Set T.Tag -> (T.Tag -> EntityId) -> (T.Tag -> T m a) ->
+    ConvertM m (TagSelection InternalName (T m) a)
 convertTagSelection forbiddenTags mkInstance setTag =
     Lens.view ConvertM.scCodeAnchors <&> Anchors.tags
     <&>
@@ -49,8 +49,7 @@ convertTagSelection forbiddenTags mkInstance setTag =
     , _tsNewTag =
         do
             newTag <- DataOps.genNewTag
-            setTag newTag
-            pure (InternalName (UniqueId.toUUID newTag), mkInfo newTag)
+            setTag newTag <&> (,,) (InternalName (UniqueId.toUUID newTag)) (mkInfo newTag)
     }
     where
         mkInfo t = TagInfo (mkInstance t) t

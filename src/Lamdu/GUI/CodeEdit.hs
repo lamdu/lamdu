@@ -122,7 +122,7 @@ fixTagPublished publishedTags tag =
             setName newName *>
             Transaction.modP publishedTags
             ((if newName == "" then Set.delete else Set.insert) (info ^. Sugar.tagVal))
-        onNewTag (name, info) = (name & Name.setName %~ onSetName info, info)
+        onNewTag (name, info, x) = (name & Name.setName %~ onSetName info, info, x)
 
 loadWorkArea ::
     Monad m =>

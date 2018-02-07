@@ -150,7 +150,7 @@ toLam = lamBinder . toBinder
 
 toTagSelection ::
     MonadNaming m =>
-    TagSelection (OldName m) (TM m) -> m (TagSelection (NewName m) (TM m))
+    TagSelection (OldName m) (TM m) a -> m (TagSelection (NewName m) (TM m) a)
 toTagSelection TagSelection{..} =
     do
         run0 <- opRun
