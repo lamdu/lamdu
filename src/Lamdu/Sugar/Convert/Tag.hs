@@ -52,4 +52,8 @@ convertTag tag forbiddenTags mkInstance setTag =
     }
     where
         mkInfo t = TagInfo (mkInstance t) t
-        toOption x = (UniqueId.toUUID x & InternalName, mkInfo x)
+        toOption x =
+            TagOption
+            { _toName = UniqueId.toUUID x & InternalName
+            , _toInfo = mkInfo x
+            }

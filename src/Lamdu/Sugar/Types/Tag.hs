@@ -3,6 +3,7 @@ module Lamdu.Sugar.Types.Tag
     ( Tag(..), tagName, tagInfo, tagSelection
     , TagInfo(..), tagVal, tagInstance
     , TagSelection(..), tsOptions, tsSetTag, tsNewTag
+    , TagOption(..), toInfo, toName
     ) where
 
 import qualified Control.Lens as Lens
@@ -16,8 +17,13 @@ data TagInfo = TagInfo
     , _tagVal :: T.Tag
     } deriving (Eq, Ord, Show)
 
+data TagOption name = TagOption
+    { _toInfo :: TagInfo
+    , _toName :: name
+    }
+
 data TagSelection name m = TagSelection
-    { _tsOptions :: m [(name, TagInfo)]
+    { _tsOptions :: m [TagOption name]
     , _tsSetTag :: T.Tag -> m ()
     , _tsNewTag :: m (name, TagInfo)
     }
@@ -30,4 +36,5 @@ data Tag name m = Tag
 
 Lens.makeLenses ''Tag
 Lens.makeLenses ''TagInfo
+Lens.makeLenses ''TagOption
 Lens.makeLenses ''TagSelection

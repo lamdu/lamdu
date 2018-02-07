@@ -123,19 +123,19 @@ makeOptions tag ctx
                 Lens.view Config.config
                 <&> Config.completion <&> Config.completionResultCount
             tag ^. Sugar.tagSelection . Sugar.tsOptions & transaction
-                <&> filter (Lens.anyOf (_1 . Name.form . Name._Stored . _1) (insensitiveInfixOf searchTerm))
+                <&> filter (Lens.anyOf (Sugar.toName . Name.form . Name._Stored . _1) (insensitiveInfixOf searchTerm))
                 <&> splitAt resultCount
                 <&> _2 %~ not . null
                 <&> uncurry Menu.OptionList
                 <&> fmap makeOption
     where
         searchTerm = ctx ^. SearchMenu.rSearchTerm
-        makeOption (name, t) =
+        makeOption opt =
             Menu.Option
             { Menu._oId = optionWId
             , Menu._oRender =
                 (Widget.makeFocusableView ?? optionWId <&> fmap)
-                <*> NameEdit.makeView (name ^. Name.form)
+                <*> NameEdit.makeView (opt ^. Sugar.toName . Name.form)
                 & Reader.local (Element.animIdPrefix .~ Widget.toAnimId instanceId)
                 <&>
                 \widget ->
@@ -148,14 +148,15 @@ makeOptions tag ctx
                         { Menu._pickDest = instanceId
                         , Menu._pickDestIsEntryPoint = False
                         } <$
-                        (tag ^. Sugar.tagSelection . Sugar.tsSetTag) (t ^. Sugar.tagVal)
+                        (tag ^. Sugar.tagSelection . Sugar.tsSetTag) (info ^. Sugar.tagVal)
                     , Widget._pTextRemainder = ""
                     }
                 }
             , Menu._oSubmenuWidgets = Menu.SubmenuEmpty
             }
             where
-                instanceId = t ^. Sugar.tagInstance & WidgetIds.fromEntityId
+                info = opt ^. Sugar.toInfo
+                instanceId = info ^. Sugar.tagInstance & WidgetIds.fromEntityId
                 optionWId = ctx ^. SearchMenu.rResultIdPrefix <> instanceId
 
 allowedSearchTerm :: Text -> Bool
