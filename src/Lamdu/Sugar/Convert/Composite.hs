@@ -80,6 +80,5 @@ makeAddItem addItem stored =
                 CompositeAddItemResult
                 { _cairNewTag = TagInfo (EntityId.ofTag resultEntity tag) tag
                 , _cairNewVal = EntityId.ofValI newValI
-                , _cairItem = resultEntity
                 }
             & return

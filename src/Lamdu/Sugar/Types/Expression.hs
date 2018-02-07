@@ -12,7 +12,7 @@ module Lamdu.Sugar.Types.Expression
     , ClosedCompositeActions(..), closedCompositeOpen
     , OpenCompositeActions(..), openCompositeClose
     , CompositeTail(..), _OpenComposite, _ClosedComposite
-    , CompositeAddItemResult(..), cairNewTag, cairNewVal, cairItem
+    , CompositeAddItemResult(..), cairNewTag, cairNewVal
     , Composite(..), cItems, cAddItem, cTail
     -- case
     , CaseArg(..), caVal, caToLambdaCase
@@ -93,7 +93,6 @@ data CompositeTail m expr
 data CompositeAddItemResult = CompositeAddItemResult
     { _cairNewTag :: TagInfo
     , _cairNewVal :: EntityId
-    , _cairItem :: EntityId
     }
 
 data Composite name m expr = Composite
