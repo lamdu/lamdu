@@ -214,6 +214,22 @@ toFragment expr Fragment{..} =
             , _fOptions = _fOptions >>= run . traverse toHoleOption
             }
 
+toComposite ::
+    MonadNaming m =>
+    (a -> m b) ->
+    Composite (OldName m) (TM m) a ->
+    m (Composite (NewName m) (TM m) b)
+toComposite expr c =
+    c & cItems . traverse . ciTag %%~ toTag
+    >>= traverse expr
+
+toCase ::
+    MonadNaming m =>
+    (a -> m b) ->
+    Case (OldName m) (TM m) a ->
+    m (Case (NewName m) (TM m) b)
+toCase expr (Case k c) = Case <$> traverse expr k <*> toComposite expr c
+
 toBody ::
     MonadNaming m => (a -> m b) ->
     Body (OldName m) (TM m) a ->
@@ -221,8 +237,8 @@ toBody ::
 toBody expr = \case
     BodyGetField     x -> x & traverse expr >>= gfTag toTag <&> BodyGetField
     BodyInject       x -> x & traverse expr >>= iTag toTag <&> BodyInject
-    BodyRecord       x -> x & traverse expr >>= (cItems . traverse . ciTag) toTag <&> BodyRecord
-    BodyCase         x -> x & traverse expr >>= (cBody . cItems . traverse . ciTag) toTag <&> BodyCase
+    BodyRecord       x -> x & toComposite expr <&> BodyRecord
+    BodyCase         x -> x & toCase expr <&> BodyCase
     BodyIfElse       x -> x & traverse expr <&> BodyIfElse
     BodySimpleApply  x -> x & traverse expr <&> BodySimpleApply
     BodyLabeledApply x -> x & toLabeledApply expr <&> BodyLabeledApply
