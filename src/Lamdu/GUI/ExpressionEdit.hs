@@ -41,7 +41,7 @@ make (Sugar.Expression body pl) =
     where
         exprHiddenEntityIds =
             List.delete (pl ^. Sugar.plEntityId)
-            (pl ^. Sugar.plData ^. ExprGui.plStoredEntityIds)
+            (pl ^. Sugar.plData . ExprGui.plStoredEntityIds)
         myId = WidgetIds.fromExprPayload pl
         assignCursor x =
             exprHiddenEntityIds <&> WidgetIds.fromEntityId

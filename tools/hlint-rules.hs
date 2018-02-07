@@ -1,3 +1,5 @@
+infixr 6 <>
+
 infixr 4 %%@~, <%@~, %%~, <+~, <*~, <-~, <//~, <^~, <^^~, <**~
 infix 4 %%@=, <%@=, %%=, <+=, <*=, <-=, <//=, <^=, <^^=, <**=
 infixr 2 <<~
@@ -21,6 +23,11 @@ infix 4 </>=, <</>=, <.>=, <<.>=
 infixr 4 .|.~, .&.~, <.|.~, <.&.~
 infix 4 .|.=, .&.=, <.|.=, <.&.=
 
+warn = a ^. b ^. c ==> a ^. b . c
+warn = a ^. b ^? c ==> a ^? b . c
+warn = a ^? b <&> (^. c) ==> a ^? b . c
+warn = a ^? b . _Just ==> a ^. b
+warn = fromJust (a ^? b) ==> a ^?! b
 warn = a .~ Just b ==> a ?~ b
 warn = a & Control.Lens.mapped %~ b ==> a <&> b
 warn = a & Control.Lens.mapped . b %~ c ==> a <&> b %~ c
