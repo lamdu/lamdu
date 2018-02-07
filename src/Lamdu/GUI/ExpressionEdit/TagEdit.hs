@@ -145,7 +145,7 @@ makeOptions tag ctx
                     { Widget._pDesc = "Pick"
                     , Widget._pAction =
                         Menu.PickResult
-                        { Menu._pickDest = t ^. Sugar.tagInstance & WidgetIds.fromEntityId
+                        { Menu._pickDest = instanceId
                         , Menu._pickDestIsEntryPoint = False
                         } <$
                         (tag ^. Sugar.tagSelection . Sugar.tsSetTag) (t ^. Sugar.tagVal)
