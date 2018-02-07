@@ -25,22 +25,23 @@ plValI :: Lens.Lens' (Input.Payload m a) (ExprIRef.ValI m)
 plValI = Input.stored . Property.pVal
 
 convertEmpty :: Monad m => Input.Payload m a -> ConvertM m (ExpressionU m a)
-convertEmpty exprPl = do
-    addItem <- exprPl ^. Input.stored & makeAddItem DataOps.recExtend
-    postProcess <- ConvertM.postProcess
-    let actions =
-            ClosedCompositeActions
-            { _closedCompositeOpen =
-                DataOps.replaceWithHole (exprPl ^. Input.stored)
-                <* postProcess
-                <&> EntityId.ofValI
+convertEmpty exprPl =
+    do
+        addItem <- exprPl ^. Input.stored & makeAddItem DataOps.recExtend
+        postProcess <- ConvertM.postProcess
+        let actions =
+                ClosedCompositeActions
+                { _closedCompositeOpen =
+                    DataOps.replaceWithHole (exprPl ^. Input.stored)
+                    <* postProcess
+                    <&> EntityId.ofValI
+                }
+        BodyRecord Composite
+            { _cItems = []
+            , _cTail = ClosedComposite actions
+            , _cAddItem = addItem
             }
-    BodyRecord Composite
-        { _cItems = []
-        , _cTail = ClosedComposite actions
-        , _cAddItem = addItem
-        }
-        & addActions exprPl
+            & addActions exprPl
 
 convertExtend ::
     (Monad m, Monoid a) => V.RecExtend (Val (Input.Payload m a)) ->
