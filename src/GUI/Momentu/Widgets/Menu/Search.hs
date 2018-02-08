@@ -153,16 +153,19 @@ make makeSearchTerm makeOptions annotation mNextEntry searchMenuId =
 
 -- Add events on search term to pick the first result.
 addPickFirstResultEvent ::
-    (MonadReader env m, Menu.HasConfig env, Applicative f) =>
-    Maybe Id ->
-    Maybe (Widget.PreEvent (f Menu.PickResult))->
+    (MonadReader env m, Menu.HasConfig env, HasState env, Applicative f) =>
+    Widget.Id -> Maybe Id -> Maybe (Widget.PreEvent (f Menu.PickResult))->
     m (Widget (f State.Update) -> Widget (f State.Update))
-addPickFirstResultEvent mNextEntry mPickFirst =
-    case mPickFirst of
-    Nothing -> emptyPickEventMap
-    Just pickFirst -> Menu.makePickEventMap mNextEntry ?? pickFirst
-    <&> Widget.weakerEvents
-    <&> (addPre .)
+addPickFirstResultEvent searchMenuId mNextEntry mPickFirst =
+    do
+        pickEventMap <-
+            case mPickFirst of
+            Nothing -> emptyPickEventMap
+            Just pickFirst -> Menu.makePickEventMap mNextEntry ?? pickFirst
+        searchTerm <- readSearchTerm searchMenuId
+        if Text.null searchTerm
+            then pure (Widget.weakerEvents pickEventMap)
+            else pure (addPre . Widget.weakerEvents pickEventMap)
     where
         addPre =
             Widget.wState . Widget._StateFocused . Lens.mapped .
