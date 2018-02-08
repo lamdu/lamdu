@@ -708,13 +708,13 @@ convertEmptyParams binderKind val =
 
 convertParams ::
     Monad m =>
-    BinderKind m -> InternalName -> Val (Input.Payload m a) ->
+    BinderKind m -> V.Var -> Val (Input.Payload m a) ->
     ConvertM m
     ( Maybe (MkProperty m PresentationMode)
     , ConventionalParams m
     , Val (Input.Payload m a)
     )
-convertParams binderKind defUUID expr =
+convertParams binderKind defVar expr =
     do
         postProcess <- ConvertM.postProcess
         case expr ^. Val.body of
@@ -724,6 +724,6 @@ convertParams binderKind defUUID expr =
                 where
                     f convParams = (mPresMode convParams, convParams, lambda ^. V.lamResult)
                     mPresMode convParams = presMode <$ convParams ^? cpParams . _FieldParams
-                    presMode = defUUID ^. inUUID & Anchors.assocPresentationMode
+                    presMode = Anchors.assocPresentationMode defVar
             _ -> pure (Nothing, convertEmptyParams binderKind expr, expr)
             <&> _2 %~ postProcessActions postProcess

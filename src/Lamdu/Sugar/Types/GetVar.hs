@@ -7,7 +7,7 @@ module Lamdu.Sugar.Types.GetVar
     , DefinitionForm(..), _DefUpToDate, _DefDeleted, _DefTypeChanged
     , DefinitionOutdatedType(..), defTypeWhenUsed, defTypeCurrent, defTypeUseCurrent
     , BinderVarInline(..), _InlineVar, _CannotInlineDueToUses, _CannotInline
-    , BinderVarRef(..), bvNameRef, bvForm, bvInline
+    , BinderVarRef(..), bvNameRef, bvForm, bvVar, bvInline
     , BinderMode(..)
     , GetVar(..), _GetParam, _GetParamsRecord, _GetBinder
     , ParamsRecordVarRef(..), prvFieldNames
@@ -15,6 +15,7 @@ module Lamdu.Sugar.Types.GetVar
 
 import qualified Control.Lens as Lens
 import           Lamdu.Calc.Type.Scheme (Scheme)
+import qualified Lamdu.Calc.Val as V
 import           Lamdu.Sugar.Internal.EntityId (EntityId)
 
 import           Lamdu.Prelude
@@ -60,11 +61,12 @@ data BinderVarInline m
 data BinderVarRef name m = BinderVarRef
     { _bvNameRef :: NameRef name m
     , _bvForm :: BinderVarForm m
+    , _bvVar :: V.Var
     , -- Just means it is stored and inlinable:
       _bvInline :: BinderVarInline m
     }
 instance Show name => Show (BinderVarRef name m) where
-    show (BinderVarRef nameRef form _) = "(BinderVar " ++ show nameRef ++ " (form=" ++ show form ++ "))"
+    show (BinderVarRef nameRef form _ _) = "(BinderVar " ++ show nameRef ++ " (form=" ++ show form ++ "))"
 
 newtype ParamsRecordVarRef name = ParamsRecordVarRef
     { _prvFieldNames :: [name]

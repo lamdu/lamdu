@@ -24,6 +24,7 @@ import qualified Data.Store.Transaction as Transaction
 import           GUI.Momentu.State (GUIState)
 import qualified GUI.Momentu.Widget.Id as WidgetId
 import qualified Lamdu.Calc.Type as T
+import qualified Lamdu.Calc.Val as V
 import qualified Lamdu.Data.Definition as Definition
 import           Lamdu.Data.Meta (DefinitionState(..), SpecialArgs(..), PresentationMode, ParamList)
 import           Lamdu.Eval.Results (ScopeId)
@@ -71,8 +72,7 @@ type RevisionProps m = Revision (MkProperty m) m
 assocNameRef :: (UniqueId.ToUUID a, Monad m) => a -> MkProperty m Text
 assocNameRef = Transaction.assocDataRefDef "" "Name" . UniqueId.toUUID
 
-assocScopeRef ::
-    (UniqueId.ToUUID a, Monad m) => a -> MkProperty m (Maybe BinderParamScopeId)
+assocScopeRef :: Monad m => V.Var -> MkProperty m (Maybe BinderParamScopeId)
 assocScopeRef = Transaction.assocDataRef "ScopeId" . UniqueId.toUUID
 
 assocTagOrder :: Monad m => T.Tag -> MkProperty m Int
@@ -82,9 +82,7 @@ assocFieldParamList ::
     Monad m => ValI m -> Transaction.MkProperty m (Maybe ParamList)
 assocFieldParamList = Transaction.assocDataRef "field param list" . UniqueId.toUUID
 
-assocPresentationMode ::
-    (UniqueId.ToUUID a, Monad m) =>
-    a -> Transaction.MkProperty m PresentationMode
+assocPresentationMode :: Monad m => V.Var -> Transaction.MkProperty m PresentationMode
 assocPresentationMode =
     Transaction.assocDataRefDef Verbose "PresentationMode" . UniqueId.toUUID
 

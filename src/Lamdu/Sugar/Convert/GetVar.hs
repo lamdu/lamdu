@@ -96,6 +96,7 @@ convertGlobal param exprPl =
               { _nrName = UniqueId.toUUID defI & InternalName
               , _nrGotoDefinition = jumpToDefI (ctx ^. ConvertM.scCodeAnchors) defI
               }
+            , _bvVar = param
             , _bvForm = GetDefinition defForm
             , _bvInline =
                 case defForm of
@@ -133,6 +134,7 @@ convertGetLet param exprPl =
     <&> \inline ->
     GetBinder BinderVarRef
     { _bvNameRef = paramNameRef param
+    , _bvVar = param
     , _bvForm = GetLet
     , _bvInline =
         inline

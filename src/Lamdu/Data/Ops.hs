@@ -142,7 +142,8 @@ newDefinition name presentationMode def =
     do
         newDef <- Transaction.newIRef def
         setP (Anchors.assocNameRef newDef) name
-        setP (Anchors.assocPresentationMode newDef) presentationMode
+        let defVar = ExprIRef.globalId newDef
+        setP (Anchors.assocPresentationMode defVar) presentationMode
         pure newDef
 
 -- Used when writing a definition into an identifier which was a variable.
