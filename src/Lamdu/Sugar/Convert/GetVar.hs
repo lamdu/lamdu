@@ -128,33 +128,33 @@ paramNameRef param =
 convertGetLet ::
     Monad m => V.Var -> Input.Payload m a -> MaybeT (ConvertM m) (GetVar InternalName (T m))
 convertGetLet param exprPl =
-    do
-        inline <-
-            Lens.view (ConvertM.scScopeInfo . ConvertM.siLetItems . Lens.at param)
-            >>= maybeToMPlus
-        GetBinder BinderVarRef
-            { _bvNameRef = paramNameRef param
-            , _bvForm = GetLet
-            , _bvInline =
-                inline
-                & _CannotInlineDueToUses %~ usesAround (exprPl ^. Input.entityId)
-            } & return
+    Lens.view (ConvertM.scScopeInfo . ConvertM.siLetItems . Lens.at param)
+    >>= maybeToMPlus
+    <&> \inline ->
+    GetBinder BinderVarRef
+    { _bvNameRef = paramNameRef param
+    , _bvForm = GetLet
+    , _bvInline =
+        inline
+        & _CannotInlineDueToUses %~ usesAround (exprPl ^. Input.entityId)
+    }
 
 convertParamsRecord ::
     Monad m => V.Var -> Input.Payload m a -> MaybeT (ConvertM m) (GetVar InternalName (T m))
 convertParamsRecord param exprPl =
-    do
-        Lens.view (ConvertM.scScopeInfo . siTagParamInfos)
+    GetParamsRecord ParamsRecordVarRef
+    { _prvFieldNames =
+        exprPl
+        ^.. Input.inferredType . T._TRecord . ExprLens.compositeFieldTags
+        <&> UniqueId.toUUID <&> InternalName
+    } <$ check
+    where
+        check =
+            Lens.view (ConvertM.scScopeInfo . siTagParamInfos)
             <&> (^.. Lens.traversed . ConvertM._TagFieldParam)
             <&> map tpiFromParameters
             <&> elem param
             >>= guard
-        GetParamsRecord ParamsRecordVarRef
-            { _prvFieldNames =
-                exprPl
-                ^.. Input.inferredType . T._TRecord . ExprLens.compositeFieldTags
-                <&> UniqueId.toUUID <&> InternalName
-            } & return
 
 convert ::
     Monad m =>

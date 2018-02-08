@@ -423,22 +423,21 @@ makeDeleteLambda ::
     Monad m => BinderKind m -> StoredLam m ->
     ConvertM m (T m ParamDelResult)
 makeDeleteLambda binderKind (StoredLam (V.Lam paramVar lamBodyStored) lambdaProp) =
+    ConvertM.typeProtectedSetToVal
+    <&> \protectedSetToVal ->
     do
-        protectedSetToVal <- ConvertM.typeProtectedSetToVal
-        return $
-            do
-                SubExprs.getVarsToHole paramVar lamBodyStored
-                case binderKind of
-                    BinderKindDef defI ->
-                        removeCallsToVar
-                        (ExprIRef.globalId defI) lamBodyStored
-                    BinderKindLet redexLam ->
-                        removeCallsToVar
-                        (redexLam ^. V.lamParamId) (redexLam ^. V.lamResult)
-                    BinderKindLambda -> return ()
-                let lamBodyI = Property.value (lamBodyStored ^. Val.payload)
-                _ <- protectedSetToVal lambdaProp lamBodyI
-                return ParamDelResultDelVar
+        SubExprs.getVarsToHole paramVar lamBodyStored
+        case binderKind of
+            BinderKindDef defI ->
+                removeCallsToVar
+                (ExprIRef.globalId defI) lamBodyStored
+            BinderKindLet redexLam ->
+                removeCallsToVar
+                (redexLam ^. V.lamParamId) (redexLam ^. V.lamResult)
+            BinderKindLambda -> return ()
+        let lamBodyI = Property.value (lamBodyStored ^. Val.payload)
+        _ <- protectedSetToVal lambdaProp lamBodyI
+        return ParamDelResultDelVar
 
 convertVarToGetField ::
     Monad m => T.Tag -> V.Var -> Val (Property (T m) (ValI m)) -> T m ()
@@ -516,25 +515,25 @@ makeNonRecordParamActions binderKind storedLam =
 
 mkFuncParam :: Monad m => Input.Payload m a -> info -> ConvertM m (FuncParam info)
 mkFuncParam lamExprPl info =
-    do
-        noms <- Lens.view ConvertM.scNominalsMap
-        return FuncParam
-            { _fpInfo = info
-            , _fpAnnotation =
-                Annotation
-                { _aInferredType = typ
-                , _aMEvaluationResult =
-                    lamExprPl ^. Input.evalResults
-                    <&> (^. Input.eAppliesOfLam)
-                    <&> \lamApplies ->
-                    do
-                        Map.null lamApplies & not & guard
-                        lamApplies ^..
-                            Lens.traversed . Lens.traversed & Map.fromList
-                            <&> ResultsProcess.addTypes noms typ
-                            & Just
-                }
-            }
+    Lens.view ConvertM.scNominalsMap
+    <&> \noms ->
+    FuncParam
+    { _fpInfo = info
+    , _fpAnnotation =
+        Annotation
+        { _aInferredType = typ
+        , _aMEvaluationResult =
+            lamExprPl ^. Input.evalResults
+            <&> (^. Input.eAppliesOfLam)
+            <&> \lamApplies ->
+            do
+                Map.null lamApplies & not & guard
+                lamApplies ^..
+                    Lens.traversed . Lens.traversed & Map.fromList
+                    <&> ResultsProcess.addTypes noms typ
+                    & Just
+        }
+    }
     where
         typ = lamParamType lamExprPl
 

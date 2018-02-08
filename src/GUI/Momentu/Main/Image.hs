@@ -45,9 +45,7 @@ instance Monoid EventResult where
 
 windowSize :: GLFW.Window -> IO Size
 windowSize win =
-    do
-        (x, y) <- GLFW.getFramebufferSize win
-        return $ fromIntegral <$> Vector2 x y
+    GLFW.getFramebufferSize win <&> uncurry Vector2 <&> fmap fromIntegral
 
 newtype FPS = FPS (IORef UTCTime)
 
@@ -97,9 +95,7 @@ mainLoop win imageHandlers =
         let handleEvent GLFWEvents.EventWindowClose = return ERQuit
             handleEvent GLFWEvents.EventWindowRefresh = return ERRefresh
             handleEvent (GLFWEvents.EventFrameBufferSize size) =
-                do
-                    writeIORef frameBufferSize (fromIntegral <$> size)
-                    return ERRefresh
+                ERRefresh <$ writeIORef frameBufferSize (fromIntegral <$> size)
             handleEvent event =
                 do
                     handlers <- readIORef drawnImageHandlers

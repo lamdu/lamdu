@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, OverloadedStrings #-}
+{-# LANGUAGE NoImplicitPrelude, OverloadedStrings, LambdaCase #-}
 module Lamdu.Data.Ops
     ( newHole, applyHoleTo, setToAppliedHole
     , replace, replaceWithHole, setToHole, lambdaWrap, redexWrap
@@ -54,10 +54,7 @@ newHole :: Monad m => T m (ValI m)
 newHole = ExprIRef.newValBody $ V.BLeaf V.LHole
 
 replace :: Monad m => ValIProperty m -> ValI m -> T m (ValI m)
-replace exprP newExprI =
-    do
-        Property.set exprP newExprI
-        return newExprI
+replace exprP newExprI = newExprI <$ Property.set exprP newExprI
 
 replaceWithHole :: Monad m => ValIProperty m -> T m (ValI m)
 replaceWithHole exprP = replace exprP =<< newHole
@@ -134,15 +131,10 @@ savePreJumpPosition codeAnchors pos = modP (Anchors.preJumps codeAnchors) $ (pos
 
 jumpBack :: Monad m => Anchors.CodeAnchors m -> T m (Maybe (T m WidgetId.Id))
 jumpBack codeAnchors =
-    do
-        preJumps <- getP (Anchors.preJumps codeAnchors)
-        return $
-            case preJumps of
-            [] -> Nothing
-            (j:js) ->
-                Just $ do
-                    setP (Anchors.preJumps codeAnchors) js
-                    return j
+    getP (Anchors.preJumps codeAnchors)
+    <&> \case
+    [] -> Nothing
+    (j:js) -> j <$ setP (Anchors.preJumps codeAnchors) js & Just
 
 newDefinition ::
     Monad m => Text -> PresentationMode -> Definition (ValI m) () -> T m (DefI m)

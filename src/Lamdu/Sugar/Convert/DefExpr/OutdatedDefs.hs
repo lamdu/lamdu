@@ -179,11 +179,10 @@ argChangeType prevArg newArg =
 fixDefExpr ::
     Monad m => Scheme -> Scheme -> V.Var -> Val (ValIProperty m) -> T m ()
 fixDefExpr prevType newType usedDefVar defExpr =
-    do
-        isPartSame (T._TFun . _1) prevType newType & guard
-        -- Function result changed (arg is the same).
-        changeFuncRes usedDefVar defExpr & return
-    <|>
+    ( -- Function result changed (arg is the same).
+        changeFuncRes usedDefVar defExpr <$
+        guard (isPartSame (T._TFun . _1) prevType newType)
+    ) <|>
     do
         isPartSame (T._TFun . _2) prevType newType & guard
         -- Function arg changed (result is the same).

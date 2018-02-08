@@ -221,9 +221,10 @@ resetRW (M act) =
 
 freshName :: Monad m => Text -> M m Text
 freshName prefix =
-    do
-        newId <- freshId <+= 1
-        prefix <> Text.pack (show newId) & return
+    freshId <+= 1
+    <&> show
+    <&> Text.pack
+    <&> (prefix <>)
     & M
 
 avoidReservedNames :: Text -> Text
@@ -535,11 +536,10 @@ maybeLogSubexprResult valId codeGen =
 
 logSubexprResult :: Monad m => ValId -> CodeGen -> M m CodeGen
 logSubexprResult valId codeGen =
-    do
-        RWS.tell LogUsed & M
-        JS.var "log" `JS.call` [jsValId valId, codeGenExpression codeGen]
-            & codeGenFromExpr
-            & return
+    codeGenFromExpr
+    (JS.var "log" `JS.call` [jsValId valId, codeGenExpression codeGen])
+    <$ RWS.tell LogUsed
+    & M
 
 compileAppliedFunc :: Monad m => Val ValId -> JSS.Expression () -> M m CodeGen
 compileAppliedFunc func arg' =
@@ -551,19 +551,20 @@ compileAppliedFunc func arg' =
                 <&> (varinit "x" arg' :)
                 <&> codeGenFromLamStmts
             (V.BLam (V.Lam v res), FastSilent) ->
-                do
-                    (vId, lamStmts) <- compileVal res <&> codeGenLamStmts & withLocalVar v
-                    return CodeGen
-                        { codeGenLamStmts = varinit vId arg' : lamStmts
-                        , codeGenExpression =
-                            -- Can't really optimize a redex in expr
-                            -- context, as at least 1 redex must be paid
-                            JS.lambda [vId] lamStmts $$ arg'
-                        }
+                compileVal res <&> codeGenLamStmts & withLocalVar v
+                <&> \(vId, lamStmts) ->
+                CodeGen
+                { codeGenLamStmts = varinit vId arg' : lamStmts
+                , codeGenExpression =
+                    -- Can't really optimize a redex in expr
+                    -- context, as at least 1 redex must be paid
+                    JS.lambda [vId] lamStmts $$ arg'
+                }
             _ ->
-                do
-                    func' <- compileVal func <&> codeGenExpression
-                    func' $$ arg' & codeGenFromExpr & return
+                compileVal func
+                <&> codeGenExpression
+                <&> ($$ arg')
+                <&> codeGenFromExpr
 
 compileLeaf :: Monad m => V.Leaf -> ValId -> M m CodeGen
 compileLeaf leaf valId =

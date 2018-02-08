@@ -5,6 +5,7 @@ module Data.MRUMemo
     ( memoIO, memoIOPure, memo
     ) where
 
+import Control.Lens.Operators ((<&>))
 import Control.Concurrent.MVar
 import Data.IORef
 import System.IO.Unsafe (unsafePerformIO)
@@ -19,10 +20,7 @@ memoIO act =
                     | oldKey == key = return (j, oldvalue)
                     | otherwise = callOrig
                 onMVar Nothing = callOrig
-                callOrig =
-                    do
-                        res <- act key
-                        return (Just (key, res), res)
+                callOrig = act key <&> \res -> (Just (key, res), res)
 
 -- | Memoize the given function with a single most-recently-used value
 memoIOPure
@@ -30,16 +28,16 @@ memoIOPure
     => (a -> b)           -- ^Function to memoize
     -> IO (a -> IO b)
 memoIOPure f =
-    do
-        lastResultRef <- newIORef Nothing
-        return $ \x -> atomicModifyIORef lastResultRef $ \m ->
-            let r = f x
-                callOrig = (Just (x, r), r)
-            in case m of
-                Nothing -> callOrig
-                Just (key, val)
-                    | key == x  -> (m, val)
-                    | otherwise -> callOrig
+    newIORef Nothing <&>
+    \lastResultRef x ->
+    atomicModifyIORef lastResultRef $ \m ->
+    let r = f x
+        callOrig = (Just (x, r), r)
+    in case m of
+        Nothing -> callOrig
+        Just (key, val)
+            | key == x  -> (m, val)
+            | otherwise -> callOrig
 
 -- | The pure version of 'memoIO'.
 memo

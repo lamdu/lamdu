@@ -550,10 +550,7 @@ emplaceInHoles replaceHole =
                                 , return $ pure oldVal
                                 ]
                         _ -> traverse go body <&> fmap (Val x) . sequenceA
-        replace x =
-            do
-                State.put True
-                return $ replaceHole x
+        replace x = replaceHole x <$ State.put True
 
 stateEitherSequence :: Monad m => StateT s (Either l) r -> StateT s m (Either l r)
 stateEitherSequence (StateT f) =
@@ -575,11 +572,9 @@ holeResultsEmplaceFragment rawFragmentExpr val =
     where
         emplace pl =
             ListClass.fromList
-            [ do
-                unify fragmentType (fst pl ^. Infer.plType)
-                    & Infer.run
-                    & mapStateT exceptToListT
-                return fragmentExpr
+            [ fragmentExpr
+              <$ (mapStateT exceptToListT . Infer.run . unify fragmentType)
+                  (fst pl ^. Infer.plType)
             , V.Apply
                 (Val (fst pl & Infer.plType %~ (`T.TFun` fragmentType), (Nothing, NotFragment)) (V.BLeaf V.LHole))
                 fragmentExpr
@@ -659,19 +654,17 @@ mkHoleResult ::
     T m (HoleResult (T m) (Expression InternalName (T m) ()))
 mkHoleResult sugarContext updateDeps stored val =
     do
-        (fConverted, forkedChanges) <-
-            Transaction.fork $
-            do
-                updateDeps
-                writeConvertTypeChecked sugarContext stored val
-        return
-            HoleResult
-            { _holeResultConverted = fConverted <&> (^. pUserData)
-            , _holeResultPick =
-                do
-                    Transaction.merge forkedChanges
-                    sugarContext ^. ConvertM.scPostProcessRoot & void
-            }
+        updateDeps
+        writeConvertTypeChecked sugarContext stored val
+    & Transaction.fork
+    <&> \(fConverted, forkedChanges) ->
+    HoleResult
+    { _holeResultConverted = fConverted <&> (^. pUserData)
+    , _holeResultPick =
+        do
+            Transaction.merge forkedChanges
+            sugarContext ^. ConvertM.scPostProcessRoot & void
+    }
 
 mkHoleResults ::
     Monad m =>
@@ -684,20 +677,18 @@ mkHoleResults ::
     , T m (HoleResult (T m) (Expression InternalName (T m) ()))
     )
 mkHoleResults mFragment sugarContext exprPl base =
-    do
-        ((newDeps, val), inferContext) <-
-            mkHoleResultVals (sugarContext ^. ConvertM.scFrozenDeps)
-            mFragment exprPl base
-            & (`runStateT` (sugarContext ^. ConvertM.scInferContext))
-        let newSugarContext =
-                sugarContext
-                & ConvertM.scInferContext .~ inferContext
-                & ConvertM.scFrozenDeps . Property.pVal .~ newDeps
-        let updateDeps = newDeps & sugarContext ^. ConvertM.scFrozenDeps . Property.pSet
-        return
-            ( resultScore (val <&> fst)
-            , mkHoleResult newSugarContext updateDeps (exprPl ^. Input.stored) val
-            )
+    mkHoleResultVals (sugarContext ^. ConvertM.scFrozenDeps)
+    mFragment exprPl base
+    & (`runStateT` (sugarContext ^. ConvertM.scInferContext))
+    <&> \((newDeps, val), inferContext) ->
+    let newSugarContext =
+            sugarContext
+            & ConvertM.scInferContext .~ inferContext
+            & ConvertM.scFrozenDeps . Property.pVal .~ newDeps
+        updateDeps = newDeps & sugarContext ^. ConvertM.scFrozenDeps . Property.pSet
+    in  ( resultScore (val <&> fst)
+        , mkHoleResult newSugarContext updateDeps (exprPl ^. Input.stored) val
+        )
 
 xorBS :: ByteString -> ByteString -> ByteString
 xorBS x y = SBS.pack $ SBS.zipWith xor x y

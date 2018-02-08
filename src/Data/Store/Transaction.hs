@@ -204,9 +204,8 @@ modP (MkProperty mkProp) f = do
     Property.pureModify prop f
 
 assocDataRef :: (Binary a, Monad m) => ByteString -> UUID -> MkProperty m (Maybe a)
-assocDataRef str uuid = MkProperty $ do
-    val <- lookup assocUUID
-    return $ Property.Property val set
+assocDataRef str uuid =
+    lookup assocUUID <&> (`Property.Property` set) & MkProperty
     where
         assocUUID = UUIDUtils.augment str uuid
         set Nothing = delete assocUUID

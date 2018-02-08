@@ -23,30 +23,28 @@ addToLabeledApply ::
 addToLabeledApply a =
     case a ^. Sugar.aSpecialArgs of
     Sugar.Verbose ->
-        do
-            presentationMode <-
-                a ^. Sugar.aFunc . Sugar.bvNameRef . Sugar.nrName . inUUID
-                & Anchors.assocPresentationMode & Transaction.getP
-            let (specialArgs, otherArgs) =
-                    case traverse argExpr presentationMode of
-                    Just (Sugar.Infix (l, la) (r, ra)) ->
-                        ( Sugar.Infix (mkInfixArg la ra) (mkInfixArg ra la)
-                        , argsMap
-                            & Map.delete l
-                            & Map.delete r
-                            & Map.elems
-                        )
-                    Just (Sugar.Object (o, oa)) ->
-                        ( Sugar.Object oa
-                        , Map.delete o argsMap & Map.elems
-                        )
-                    _ -> (Sugar.Verbose, a ^. Sugar.aAnnotatedArgs)
-            let (annotatedArgs, relayedArgs) = otherArgs <&> processArg & partitionEithers
-            a
-                & Sugar.aSpecialArgs .~ specialArgs
-                & Sugar.aAnnotatedArgs .~ annotatedArgs
-                & Sugar.aRelayedArgs .~ relayedArgs
-                & return
+        a ^. Sugar.aFunc . Sugar.bvNameRef . Sugar.nrName . inUUID
+        & Anchors.assocPresentationMode & Transaction.getP
+        <&> \presentationMode ->
+        let (specialArgs, otherArgs) =
+                case traverse argExpr presentationMode of
+                Just (Sugar.Infix (l, la) (r, ra)) ->
+                    ( Sugar.Infix (mkInfixArg la ra) (mkInfixArg ra la)
+                    , argsMap
+                        & Map.delete l
+                        & Map.delete r
+                        & Map.elems
+                    )
+                Just (Sugar.Object (o, oa)) ->
+                    ( Sugar.Object oa
+                    , Map.delete o argsMap & Map.elems
+                    )
+                _ -> (Sugar.Verbose, a ^. Sugar.aAnnotatedArgs)
+            (annotatedArgs, relayedArgs) = otherArgs <&> processArg & partitionEithers
+        in  a
+            & Sugar.aSpecialArgs .~ specialArgs
+            & Sugar.aAnnotatedArgs .~ annotatedArgs
+            & Sugar.aRelayedArgs .~ relayedArgs
     _ -> return a
     where
         argsMap =

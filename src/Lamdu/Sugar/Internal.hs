@@ -35,9 +35,7 @@ replaceWith ::
     Monad m => ExprIRef.ValIProperty m -> ExprIRef.ValIProperty m ->
     T m EntityId
 replaceWith parentP replacerP =
-    do
-        Property.set parentP replacerI
-        return $ EntityId.ofValI replacerI
+    EntityId.ofValI replacerI <$ Property.set parentP replacerI
     where
         replacerI = Property.value replacerP
 

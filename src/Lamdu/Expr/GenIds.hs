@@ -55,10 +55,7 @@ randomizeExpr gen (Val pl body) =
         newBody <- body & traverse %%~ randomizeSubexpr
         return $ Val (pl r) newBody
     where
-        randomizeSubexpr subExpr =
-            do
-                localGen <- state Random.split
-                return $ randomizeExpr localGen subExpr
+        randomizeSubexpr subExpr = state Random.split <&> (`randomizeExpr` subExpr)
 
 data NameGen par pl = NameGen
     { ngSplit :: (NameGen par pl, NameGen par pl)

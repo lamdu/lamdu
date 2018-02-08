@@ -208,14 +208,13 @@ loadPanes evalRes cp replEntityId =
         Property panes setPanes <- Anchors.panes cp ^. Transaction.mkProperty
         paneDefs <- mapM (loadAnnotatedDef Anchors.paneDef) panes
         let mkDelPane i =
-                do
-                    setPanes newPanes
-                    newPanes ^? Lens.ix i
+                entityId <$ setPanes newPanes
+                where
+                    entityId =
+                        newPanes ^? Lens.ix i
                         <|> newPanes ^? Lens.ix (i-1)
                         <&> (EntityId.ofIRef . Anchors.paneDef)
                         & fromMaybe replEntityId
-                        & return
-                where
                     newPanes = removeAt i panes
         let movePane oldIndex newIndex =
                 insertAt newIndex item (before ++ after)

@@ -115,19 +115,17 @@ typeProtectedSetToVal ::
     ConvertM m
     (ExprIRef.ValIProperty m -> ExprIRef.ValI m -> T m (ExprIRef.ValI m))
 typeProtectedSetToVal =
+    Lens.view scPostProcessRoot
+    <&> \checkOk dest valI ->
     do
-        checkOk <- Lens.view scPostProcessRoot
-        let setToVal dest valI =
+        mResult <- DataOps.replace dest valI & typeProtect checkOk
+        case mResult of
+            Just result -> pure result
+            Nothing ->
                 do
-                    mResult <- DataOps.replace dest valI & typeProtect checkOk
-                    case mResult of
-                        Just result -> return result
-                        Nothing ->
-                            do
-                                res <- DataOps.setToAppliedHole valI dest
-                                _ <- checkOk
-                                return res
-        return setToVal
+                    res <- DataOps.setToAppliedHole valI dest
+                    _ <- checkOk
+                    return res
 
 postProcess :: Monad m => ConvertM m (T m ())
 postProcess = Lens.view scPostProcessRoot <&> void

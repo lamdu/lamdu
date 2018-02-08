@@ -76,9 +76,9 @@ transaction view updates = do
         b <- branch view
         Branch.newVersion b changes
     where
-        makeChange (key, value) = do
-            prev <- lookupBS view key
-            return $ Change key prev value <$ guard (value /= prev)
+        makeChange (key, value) =
+            lookupBS view key <&> \prev ->
+            Change key prev value <$ guard (value /= prev)
 
 -- You get a store tagged however you like...
 store :: Monad m => View m -> Store (Transaction m)

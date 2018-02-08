@@ -95,9 +95,8 @@ writeValWithStoredSubexpressions expr =
                 Val (iref, pl) body <$
                 writeValBody iref bodyWithRefs
             Nothing ->
-                do
-                    exprI <- Transaction.newIRef bodyWithRefs
-                    return $ Val (ValI exprI, pl) body
+                Transaction.newIRef bodyWithRefs
+                <&> \exprI -> Val (ValI exprI, pl) body
     where
         (mIRef, pl) = expr ^. Val.payload
 

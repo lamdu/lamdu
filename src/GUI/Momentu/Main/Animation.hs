@@ -88,13 +88,12 @@ desiredFrameRate = 60
 
 initialAnimState :: IO AnimState
 initialAnimState =
-    do
-        curTime <- getCurrentTime
-        return AnimState
-            { _asCurSpeedHalfLife = 0
-            , _asCurTime = curTime
-            , _asState = Anim.initialState
-            }
+    getCurrentTime <&>
+    \curTime -> AnimState
+    { _asCurSpeedHalfLife = 0
+    , _asCurTime = curTime
+    , _asState = Anim.initialState
+    }
 
 waitForEvent :: TVar EventsData -> IO EventsData
 waitForEvent eventTVar =

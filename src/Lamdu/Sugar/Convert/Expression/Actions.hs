@@ -28,14 +28,13 @@ type T = Transaction
 mkExtract ::
     Monad m => Input.Payload m a -> ConvertM m (T m ExtractDestination)
 mkExtract exprPl =
-    do
-        ctx <- Lens.view id
-        case ctx ^. ConvertM.scScopeInfo . ConvertM.siMOuter of
-            Nothing -> mkExtractToDef ctx exprPl <&> ExtractToDef
-            Just outerScope ->
-                mkExtractToLet (outerScope ^. ConvertM.osiPos) (exprPl ^. Input.stored)
-                <&> ExtractToLet
-            & return
+    Lens.view id
+    <&> \ctx ->
+    case ctx ^. ConvertM.scScopeInfo . ConvertM.siMOuter of
+    Nothing -> mkExtractToDef ctx exprPl <&> ExtractToDef
+    Just outerScope ->
+        mkExtractToLet (outerScope ^. ConvertM.osiPos) (exprPl ^. Input.stored)
+        <&> ExtractToLet
 
 mkExtractToDef ::
     Monad m => ConvertM.Context m -> Input.Payload m a -> T m EntityId
@@ -166,16 +165,16 @@ addActions exprPl body =
 
 makeAnnotation :: Monad m => Input.Payload m a -> ConvertM m Annotation
 makeAnnotation payload =
-    do
-        ctx <- Lens.view id
-        let mk res =
-                do
-                    Map.null res & not & guard
-                    res <&> ResultsProcess.addTypes (ctx ^. ConvertM.scNominalsMap) typ & Just
-        Annotation
-            { _aInferredType = typ
-            , _aMEvaluationResult =
-                payload ^. Input.evalResults <&> (^. Input.eResults) <&> mk
-            } & return
+    Lens.view id
+    <&> \ctx ->
+    let mk res =
+            do
+                Map.null res & not & guard
+                res <&> ResultsProcess.addTypes (ctx ^. ConvertM.scNominalsMap) typ & Just
+    in  Annotation
+        { _aInferredType = typ
+        , _aMEvaluationResult =
+            payload ^. Input.evalResults <&> (^. Input.eResults) <&> mk
+        }
     where
         typ = payload ^. Input.inferredType

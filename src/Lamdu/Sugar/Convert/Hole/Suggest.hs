@@ -52,11 +52,9 @@ valueConversion ::
     (T.NominalId -> m Nominal) -> a ->
     Val (Payload, a) -> m (StateT Context [] (Val (Payload, a)))
 valueConversion loadNominal empty src =
-    do
-        nominals <-
-            loadNominalsForType loadNominal
-            (src ^. Val.payload . _1 . Infer.plType)
-        valueConversionH nominals empty src & return
+    loadNominalsForType loadNominal
+    (src ^. Val.payload . _1 . Infer.plType)
+    <&> \nominals -> valueConversionH nominals empty src
 
 valueConversionH ::
     Nominals -> a -> Val (Payload, a) ->
@@ -115,17 +113,15 @@ valueConversionNoSplit nominals empty src =
                 & Lens.traversed %~ flip (,) empty
             applied = V.Apply src arg & V.BApp & mkRes resType
     T.TSum composite | bodyNot V._BInject  ->
-        do
-            dstType <-
-                Infer.freshInferredVar srcScope "s"
-                & Infer.run
-                & mapStateT
-                    (either (error "Infer.freshInferredVar shouldn't fail")
-                    return)
-            suggestCaseWith composite (Payload dstType srcScope)
-                & Lens.traversed %~ flip (,) empty
-                & (`V.Apply` src) & V.BApp & mkRes dstType
-                & return
+        Infer.freshInferredVar srcScope "s"
+        & Infer.run
+        & mapStateT
+            (either (error "Infer.freshInferredVar shouldn't fail") return)
+        <&>
+        \dstType ->
+        suggestCaseWith composite (Payload dstType srcScope)
+        & Lens.traversed %~ flip (,) empty
+        & (`V.Apply` src) & V.BApp & mkRes dstType
     _ -> mzero
     where
         srcInferPl = src ^. Val.payload . _1

@@ -260,7 +260,7 @@ lookupAllCharHandler :: [AllCharsHandler t] -> Events.KeyEvent -> Maybe t
 lookupAllCharHandler allCharHandlers (Events.KeyEvent _k _scanCode keyState _modKeys mchar) =
     listToMaybe $
     do
-        ModKey.KeyState'Pressed <- return keyState
+        keyState == ModKey.KeyState'Pressed & guard
         char <- mchar ^.. Lens._Just
         AllCharsHandler _ handler <- allCharHandlers
         (handler ^. dhHandler) char ^.. Lens._Just

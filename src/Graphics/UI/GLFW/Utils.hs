@@ -31,16 +31,14 @@ createWindow title mMonitor (Vector2 w h) = do
     mWin <- GLFW.createWindow w h title mMonitor Nothing
     case mWin of
         Nothing -> fail "Open window failed"
-        Just win -> do
-            GLFW.makeContextCurrent $ Just win
-            return win
+        Just win -> win <$ GLFW.makeContextCurrent (Just win)
 
 getVideoModeSize :: GLFW.Monitor -> IO (Vector2 Int)
-getVideoModeSize monitor = do
-    videoMode <-
-        maybe (fail "GLFW: Can't get video mode of monitor") return =<<
-        GLFW.getVideoMode monitor
-    return $ Vector2 (GLFW.videoModeWidth videoMode) (GLFW.videoModeHeight videoMode)
+getVideoModeSize monitor =
+    GLFW.getVideoMode monitor
+    >>= maybe (fail "GLFW: Can't get video mode of monitor") pure
+    <&> \videoMode ->
+    Vector2 (GLFW.videoModeWidth videoMode) (GLFW.videoModeHeight videoMode)
 
 guessMonitor :: GLFW.Window -> IO GLFW.Monitor
 guessMonitor window =

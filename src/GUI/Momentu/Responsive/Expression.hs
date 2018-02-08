@@ -53,13 +53,10 @@ addParens ::
     (MonadReader env m, TextView.HasStyle env, Functor f) =>
     m (AnimId -> WithTextPos (Widget (f State.Update)) -> WithTextPos (Widget (f State.Update)))
 addParens =
-    do
-        textStyle <- Lens.view TextView.style
-        let f myId w =
-                paren "(" /|/ w /|/ paren ")"
-                where
-                    paren t = TextView.make textStyle t (myId ++ [encodeUtf8 t])
-        return f
+    Lens.view TextView.style
+    <&> \textStyle myId w ->
+    let paren t = TextView.make textStyle t (myId ++ [encodeUtf8 t])
+    in  paren "(" /|/ w /|/ paren ")"
 
 indent ::
     (MonadReader env m, HasStyle env, Spacer.HasStdSpacing env, Functor f) =>
@@ -89,16 +86,14 @@ indentBar =
     do
         s <- Lens.view style
         stdSpace <- Spacer.getSpaceSize <&> (^. _1)
-        let f height myId =
-                bar /|/ Spacer.make (Vector2 gapWidth 0)
-                where
-                    bar =
-                        Spacer.make (Vector2 barWidth height)
-                        & Draw.backgroundColor bgAnimId (indentBarColor s)
-                    barWidth = stdSpace * indentBarWidth s
-                    gapWidth = stdSpace * indentBarGap s
-                    bgAnimId = myId ++ ["("]
-        return f
+        return $ \height myId ->
+            let bar =
+                    Spacer.make (Vector2 barWidth height)
+                    & Draw.backgroundColor bgAnimId (indentBarColor s)
+                barWidth = stdSpace * indentBarWidth s
+                gapWidth = stdSpace * indentBarGap s
+                bgAnimId = myId ++ ["("]
+            in  bar /|/ Spacer.make (Vector2 gapWidth 0)
 
 boxSpacedDisambiguated ::
     (MonadReader env m, HasStyle env, Spacer.HasStdSpacing env, Functor f) =>

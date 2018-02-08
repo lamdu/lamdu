@@ -91,12 +91,8 @@ withVisited l x act =
 
 readAssocName :: Monad m => ToUUID a => a -> T m (Maybe Text)
 readAssocName x =
-    do
-        name <- Anchors.assocNameRef x & Transaction.getP
-        return $
-            if Text.null name
-            then Nothing
-            else Just name
+    Anchors.assocNameRef x & Transaction.getP
+    <&> \name -> name <$ (guard . not . Text.null) name
 
 tell :: Codec.Entity -> Export ()
 tell = Writer.tell . (: [])
@@ -204,9 +200,7 @@ setName x = Transaction.setP (Anchors.assocNameRef x)
 
 writeValAt :: Monad m => Val (ValI m) -> T m (ValI m)
 writeValAt (Val valI body) =
-    do
-        traverse writeValAt body >>= ExprIRef.writeValBody valI
-        return valI
+    valI <$ (traverse writeValAt body >>= ExprIRef.writeValBody valI)
 
 writeValAtUUID :: Monad m => Val UUID -> T m (ValI m)
 writeValAtUUID val = val <&> IRef.unsafeFromUUID <&> ExprIRef.ValI & writeValAt

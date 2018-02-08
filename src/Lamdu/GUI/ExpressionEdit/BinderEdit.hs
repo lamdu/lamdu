@@ -144,10 +144,10 @@ mkChosenScopeCursor binder =
             Sugar.SameAsParentScope ->
                 mOuterScopeId <&> fmap (trivialScopeCursor . Sugar.BinderParamScopeId) & return
             Sugar.BinderBodyScope binderBodyScope ->
-                do
-                    mChosenScope <- readBinderChosenScope binder & transaction
-                    liftA2 lookupMKey mOuterScopeId binderBodyScope
-                        <&> (>>= scopeCursor mChosenScope) & return
+                readBinderChosenScope binder & transaction
+                <&> \mChosenScope ->
+                liftA2 lookupMKey mOuterScopeId binderBodyScope
+                <&> (>>= scopeCursor mChosenScope)
 
 makeScopeEventMap ::
     Monad m =>

@@ -46,16 +46,15 @@ convert app@(V.Apply funcI argI) exprPl =
                 funcS <- ConvertM.convertSubexpression funcI & lift
                 protectedSetToVal <- lift ConvertM.typeProtectedSetToVal
                 return
-                    ( do
-                        Lens.has (rBody . _BodyHole) argS & guard
-                        let dst = argI ^. Val.payload . Input.stored . Property.pVal
-                        let deleteAction =
-                                EntityId.ofValI dst <$
-                                protectedSetToVal (exprPl ^. Input.stored) dst
-                        funcS
-                            & rPayload . plActions . mSetToHole ?~ deleteAction
-                            & return
-                        & fromMaybe funcS
+                    ( if Lens.has (rBody . _BodyHole) argS
+                      then
+                          let dst = argI ^. Val.payload . Input.stored . Property.pVal
+                              deleteAction =
+                                  EntityId.ofValI dst <$
+                                  protectedSetToVal (exprPl ^. Input.stored) dst
+                          in  funcS
+                              & rPayload . plActions . mSetToHole ?~ deleteAction
+                      else funcS
                     , argS
                     )
         justToLeft $ convertAppliedCase funcS argS exprPl

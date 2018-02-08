@@ -57,10 +57,11 @@ instance Monad m => MonadReader.MonadReader r (RWST r w s m) where
 instance (Monoid w, Monad m) => MonadWriter.MonadWriter w (RWST r w s m) where
     tell = tell
     listen = listen
-    pass (RWST act) = RWST $ \r w0 s0 ->
-        do
-            ((res, f), s1, w1) <- act r mempty s0
-            return (res, s1, w0 <> f w1)
+    pass (RWST act) =
+        RWST $ \r w0 s0 ->
+        act r mempty s0
+        <&> \((res, f), s1, w1) ->
+        (res, s1, w0 <> f w1)
 
 instance MonadTrans (RWST r w s) where
     lift act = RWST $ \_ w s -> act <&> (\res -> (res, s, w))

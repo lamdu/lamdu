@@ -33,15 +33,15 @@ postProcessDef defI =
                     case checked of
                         Left err -> BadExpr err & return
                         Right (inferredVal, inferContext) ->
-                            do
-                                def
-                                    & Definition.defType .~
-                                        Infer.makeScheme inferContext inferredType
-                                    & Definition.defBody . Definition._BodyExpr .
-                                        Definition.exprFrozenDeps .~
-                                        Definition.pruneDefExprDeps loaded
-                                    & Transaction.writeIRef defI
-                                return GoodExpr
+                            GoodExpr <$
+                            ( def
+                            & Definition.defType .~
+                                Infer.makeScheme inferContext inferredType
+                            & Definition.defBody . Definition._BodyExpr .
+                                Definition.exprFrozenDeps .~
+                                Definition.pruneDefExprDeps loaded
+                            & Transaction.writeIRef defI
+                            )
                             where
                                 inferredType = inferredVal ^. Val.payload . _1 . Infer.plType
 
@@ -59,9 +59,7 @@ postProcessExpr mkProp =
         case inferred of
             Left err -> BadExpr err & return
             Right _ ->
-                do
-                    Definition.exprFrozenDeps .~
-                        Definition.pruneDefExprDeps defExpr
-                        & Property.pureModify prop
-                    return GoodExpr
+                GoodExpr <$
+                Property.pureModify prop
+                (Definition.exprFrozenDeps .~ Definition.pruneDefExprDeps defExpr)
 

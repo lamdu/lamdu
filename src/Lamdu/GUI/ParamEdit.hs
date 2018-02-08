@@ -68,9 +68,7 @@ eventParamDelEventMap ::
     m Sugar.ParamDelResult -> [MetaKey] -> Text -> Widget.Id ->
     EventMap (m GuiState.Update)
 eventParamDelEventMap fpDel keys docSuffix dstPosId =
-    do
-        _ <- fpDel
-        GuiState.updateCursor dstPosId & return
+    GuiState.updateCursor dstPosId <$ fpDel
     & E.keyPresses (keys <&> toModKey)
         (E.Doc ["Edit", "Delete parameter" <> docSuffix])
 

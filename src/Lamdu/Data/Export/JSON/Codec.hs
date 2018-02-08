@@ -541,10 +541,8 @@ encodeNamedTag (tagOrder, mName, T.Tag ident) =
 
 decodeNamedTag :: Decoder (TagOrder, Maybe Text, T.Tag)
 decodeNamedTag json =
-    do
-        ((mName, tag), tagOrder) <-
-            withObject "tag" ?? json $ decodeNamed "tag" decodeTagOrder
-        return (tagOrder, mName, T.Tag tag)
+    withObject "tag" (decodeNamed "tag" decodeTagOrder) json
+    <&> \((mName, tag), tagOrder) -> (tagOrder, mName, T.Tag tag)
 
 encodeParamList :: Encoder Meta.ParamList
 encodeParamList = Aeson.toJSON . map encodeTagId
@@ -580,10 +578,9 @@ encodeNamedLamVar (mParamList, mName, lamI, V.Var ident) =
 decodeNamedLamVar ::
     Decoder (Maybe Meta.ParamList, Maybe Text, UUID, V.Var)
 decodeNamedLamVar json =
-    do
-        ((mName, ident), (lamI, mParamList)) <-
-            withObject "lam" ?? json $ decodeNamed "lamVar" decodeLam
-        return (mParamList, mName, lamI, V.Var ident)
+    withObject "lam" (decodeNamed "lamVar" decodeLam) json
+    <&> \((mName, ident), (lamI, mParamList)) ->
+    (mParamList, mName, lamI, V.Var ident)
 
 encodeNamedNominal :: Encoder ((Maybe Text, T.NominalId), Nominal)
 encodeNamedNominal ((mName, T.NominalId nomId), nom) =

@@ -171,7 +171,7 @@ parseObj obj =
     , obj .? "bytes" <&> parseBytes <&> return
     , obj .? "number" <&> read <&> fromDouble <&> return
     , obj .? "tag" <&> (`parseInject` (obj .? "data"))
-    , obj .? "func" <&> (\(Json.Number x) -> round x & ER.RFunc & ER.Val ()) <&> return
+    , obj .? "func" <&> (\(Json.Number x) -> round x & ER.RFunc & ER.Val () & pure)
     ] & fromMaybe (parseRecord obj)
 
 parseResult :: Json.Value -> Parse (ER.Val ())
@@ -284,19 +284,16 @@ compilerActions toUUID depsMVar actions output =
     where
         readGlobal f globalId =
             modifyMVar depsMVar $ \oldDeps ->
-            do
-                -- This happens inside the modifyMVar so
-                -- loads are under "lock" and not racy
-                def <- globalId & actions ^. aLoadGlobal
-                let (deps, result) = f def
-                return
-                    ( oldDeps <> deps <>
-                        Dependencies
-                        { subExprDeps = mempty
-                        , globalDeps = Set.singleton globalId
-                        }
-                    , result
-                    )
+            globalId & actions ^. aLoadGlobal
+            <&> f
+            <&> _1 %~ \deps ->
+            -- This happens inside the modifyMVar so
+            -- loads are under "lock" and not racy
+            oldDeps <> deps <>
+            Dependencies
+            { subExprDeps = mempty
+            , globalDeps = Set.singleton globalId
+            }
 
 stripInteractive :: ByteString -> ByteString
 stripInteractive line

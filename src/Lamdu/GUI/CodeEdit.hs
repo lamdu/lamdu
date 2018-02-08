@@ -222,22 +222,20 @@ makeNewDefinitionEventMap ::
     Anchors.CodeAnchors m ->
     n ([MetaKey] -> EventMap (T m GuiState.Update))
 makeNewDefinitionEventMap cp =
+    Lens.view GuiState.cursor <&>
+    \curCursor newDefinitionKeys ->
     do
-        curCursor <- Lens.view GuiState.cursor
-        let newDefinition =
-                do
-                    holeI <- DataOps.newHole
-                    newDefI <-
-                        Definition
-                        (Definition.BodyExpr (Definition.Expr holeI mempty))
-                        Scheme.any ()
-                        & DataOps.newPublicDefinitionWithPane cp
-                    DataOps.savePreJumpPosition cp curCursor
-                    return newDefI
-                <&> WidgetIds.nameEditOf . WidgetIds.fromIRef
-        return $ \newDefinitionKeys ->
-            E.keysEventMapMovesCursor newDefinitionKeys
-            (E.Doc ["Edit", "New definition"]) newDefinition
+        holeI <- DataOps.newHole
+        newDefI <-
+            Definition
+            (Definition.BodyExpr (Definition.Expr holeI mempty))
+            Scheme.any ()
+            & DataOps.newPublicDefinitionWithPane cp
+        DataOps.savePreJumpPosition cp curCursor
+        return newDefI
+    <&> WidgetIds.nameEditOf . WidgetIds.fromIRef
+    & E.keysEventMapMovesCursor newDefinitionKeys
+        (E.Doc ["Edit", "New definition"])
 
 makeNewDefinitionButton :: Monad m => ExprGuiM m (Widget (T m GuiState.Update))
 makeNewDefinitionButton =

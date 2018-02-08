@@ -59,10 +59,9 @@ mkExpanded ::
     f (Maybe (ExpressionGui m) -> Maybe (Widget (T m GuiState.Update)) ->
      [ExpressionGui m])
 mkExpanded =
-    do
-        labelEdit <- Styled.grammarLabel "→" <&> Responsive.fromTextView
-        return $ \mParamsEdit mScopeEdit ->
-            mkLhsEdits mParamsEdit mScopeEdit ++ [labelEdit]
+    Styled.grammarLabel "→" <&> Responsive.fromTextView
+    <&> \labelEdit mParamsEdit mScopeEdit ->
+    mkLhsEdits mParamsEdit mScopeEdit ++ [labelEdit]
 
 lamId :: Widget.Id -> Widget.Id
 lamId = (`Widget.joinId` ["lam"])
