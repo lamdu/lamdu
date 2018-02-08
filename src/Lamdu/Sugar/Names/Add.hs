@@ -61,12 +61,13 @@ instance Monad tm => MonadNaming (Pass0LoadNames tm) where
 
 getP0Name :: Monad tm => InternalName -> Pass0LoadNames tm P0Name
 getP0Name internalName =
-    Pass0LoadNames $ do
-        nameStr <- assocNameRef (internalName ^. inUUID) & Transaction.getP
-        pure P0Name
-            { _p0StoredName = if Text.null nameStr then Nothing else Just nameStr
-            , _p0uuid = internalName ^. inUUID
-            }
+    assocNameRef (internalName ^. inUUID) & Transaction.getP & Pass0LoadNames
+    <&>
+    \nameStr ->
+    P0Name
+    { _p0StoredName = if Text.null nameStr then Nothing else Just nameStr
+    , _p0uuid = internalName ^. inUUID
+    }
 
 p0nameConvertor :: Monad tm => Walk.NameConvertor (Pass0LoadNames tm)
 p0nameConvertor = getP0Name
