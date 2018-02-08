@@ -40,7 +40,7 @@ setToAppliedHole innerI destP =
         newFuncI <- newHole
         resI <- ExprIRef.newValBody . V.BApp $ V.Apply newFuncI innerI
         Property.set destP resI
-        return resI
+        pure resI
 
 applyHoleTo :: Monad m => ValIProperty m -> T m (ValI m)
 applyHoleTo exprP =
@@ -48,7 +48,7 @@ applyHoleTo exprP =
         newFuncI <- newHole
         applyI <- ExprIRef.newValBody . V.BApp . V.Apply newFuncI $ Property.value exprP
         Property.set exprP applyI
-        return applyI
+        pure applyI
 
 newHole :: Monad m => T m (ValI m)
 newHole = ExprIRef.newValBody $ V.BLeaf V.LHole
@@ -74,7 +74,7 @@ lambdaWrap exprP =
             Property.value exprP & V.Lam newParam & V.BLam
             & ExprIRef.newValBody
         Property.set exprP newExprI
-        return (newParam, newExprI)
+        pure (newParam, newExprI)
 
 redexWrapWithGivenParam :: Monad m => V.Var -> ValI m -> ValIProperty m -> T m (ValIProperty m)
 redexWrapWithGivenParam param newValueI exprP =
@@ -84,7 +84,7 @@ redexWrapWithGivenParam param newValueI exprP =
         Property.set exprP newApplyI
         Property (Property.value exprP)
             (ExprIRef.writeValBody newLambdaI . mkLam)
-            & return
+            & pure
     where
         mkLam = V.BLam . V.Lam param
 
@@ -94,7 +94,7 @@ redexWrap exprP =
         newValueI <- newHole
         newParam <- ExprIRef.newVar
         _ <- redexWrapWithGivenParam newParam newValueI exprP
-        return newParam
+        pure newParam
 
 data CompositeExtendResult m = CompositeExtendResult
     { cerNewVal :: ValI m
@@ -143,7 +143,7 @@ newDefinition name presentationMode def =
         newDef <- Transaction.newIRef def
         setP (Anchors.assocNameRef newDef) name
         setP (Anchors.assocPresentationMode newDef) presentationMode
-        return newDef
+        pure newDef
 
 -- Used when writing a definition into an identifier which was a variable.
 -- Used in float.
@@ -163,7 +163,7 @@ newPublicDefinitionWithPane codeAnchors def =
         defI <- newDefinition "" Verbose def
         modP (Anchors.globals codeAnchors) (Set.insert defI)
         newPane codeAnchors defI
-        return defI
+        pure defI
 
 newIdentityLambda :: Monad m => T m (V.Var, ValI m)
 newIdentityLambda =
@@ -171,4 +171,4 @@ newIdentityLambda =
         paramId <- ExprIRef.newVar
         getVar <- V.LVar paramId & V.BLeaf & ExprIRef.newValBody
         lamI <- V.Lam paramId getVar & V.BLam & ExprIRef.newValBody
-        return (paramId, lamI)
+        pure (paramId, lamI)

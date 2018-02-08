@@ -256,7 +256,7 @@ readName g act =
             <&> escapeName
             >>= \case
                 "" -> act
-                name -> return name
+                name -> pure name
         names . Lens.at name %%= \case
             Nothing -> (name, Just (Map.singleton uuid name))
             Just uuidMap ->
@@ -277,7 +277,7 @@ freshStoredName g prefix = readName g (freshName prefix)
 
 tagString :: Monad m => T.Tag -> M m Text
 tagString tag@(T.Tag ident) =
-    "tag" ++ identHex ident & Text.pack & return
+    "tag" ++ identHex ident & Text.pack & pure
     & readName tag
 
 tagIdent :: Monad m => T.Tag -> M m (JSS.Id ())
@@ -291,7 +291,7 @@ withLocalVar v act =
     do
         varName <- freshStoredName v "local_" <&> Text.unpack <&> JS.ident
         res <- local (envLocals . Lens.at v ?~ varName) act
-        return (varName, res)
+        pure (varName, res)
 
 compileDefExpr :: Monad m => Definition.Expr (Val ValId) -> M m CodeGen
 compileDefExpr (Definition.Expr val frozenDeps) =
@@ -303,7 +303,7 @@ compileGlobal globalId =
         def <- performAction (`readGlobal` globalId)
         globalTypes . Lens.at globalId ?= def ^. Definition.defType & M
         case def ^. Definition.defBody of
-            Definition.BodyBuiltin ffiName -> ffiCompile ffiName & return
+            Definition.BodyBuiltin ffiName -> ffiCompile ffiName & pure
             Definition.BodyExpr defExpr -> compileDefExpr defExpr <&> codeGenExpression
     & resetRW
 
@@ -314,7 +314,7 @@ compileGlobalVar var =
     where
         loadGlobal =
             Lens.use (globalVarNames . Lens.at var) & M
-            >>= maybe newGlobal return
+            >>= maybe newGlobal pure
             <&> JS.var
             <&> codeGenFromExpr
         newGlobal =
@@ -324,22 +324,22 @@ compileGlobalVar var =
                 compileGlobal var
                     <&> varinit varName
                     >>= ppOut
-                return varName
+                pure varName
         verifyType expectedType =
             do
                 scheme <-
                     Lens.use (globalTypes . Lens.at var) & M
-                    >>= maybe newGlobalType return
+                    >>= maybe newGlobalType pure
                 if Scheme.alphaEq scheme expectedType
                     then loadGlobal
                     else
-                        readName var (return "unnamed")
+                        readName var (pure "unnamed")
                         <&> ("Reached broken def: " <>) <&> throwStr
         newGlobalType =
             do
                 scheme <- performAction (`readGlobalType` var)
                 globalTypes . Lens.at var ?= scheme & M
-                return scheme
+                pure scheme
 
 compileLocalVar :: JSS.Id () -> CodeGen
 compileLocalVar = codeGenFromExpr . JS.var
@@ -347,7 +347,7 @@ compileLocalVar = codeGenFromExpr . JS.var
 compileVar :: Monad m => V.Var -> M m CodeGen
 compileVar v =
     Lens.view (envLocals . Lens.at v) & M
-    >>= maybe (compileGlobalVar v) (return . compileLocalVar)
+    >>= maybe (compileGlobalVar v) (pure . compileLocalVar)
 
 data CodeGen = CodeGen
     { codeGenLamStmts :: [JSS.Statement ()]
@@ -430,7 +430,7 @@ compileInject (V.Inject tag dat) =
     do
         tagStr <- tagString tag <&> Text.unpack <&> JS.string
         dat' <- compileVal dat
-        inject tagStr (codeGenExpression dat') & codeGenFromExpr & return
+        inject tagStr (codeGenExpression dat') & codeGenFromExpr & pure
 
 compileCase :: Monad m => V.Case (Val ValId) -> M m CodeGen
 compileCase = fmap codeGenFromExpr . lam "x" . compileCaseOnVar
@@ -444,12 +444,12 @@ compileCaseOnVar x scrutineeVar =
         defaultCase <-
             case mRestHandler of
             Nothing ->
-                return [JS.throw (JS.string "Unhandled case? This is a type error!")]
+                pure [JS.throw (JS.string "Unhandled case? This is a type error!")]
             Just restHandler ->
                 compileAppliedFunc restHandler scrutineeVar
                 <&> codeGenLamStmts
             <&> JS.defaultc
-        return [JS.switch (scrutineeVar $. "tag") (cases ++ [defaultCase])]
+        pure [JS.switch (scrutineeVar $. "tag") (cases ++ [defaultCase])]
     where
         Flatten.Composite tags mRestHandler = Flatten.case_ x
         makeCase (tagStr, handler) =
@@ -513,7 +513,7 @@ compileLambda (V.Lam v res) valId =
                         (JS.var varName)
                 fastLam <- compileRes & local (envMode .~ FastSilent) <&> mkLambda
                 (JS.var "rts" $. "wrap") `JS.call`
-                    [fastLam, JS.lambda [varName] (stmts ++ lamStmts)] & return
+                    [fastLam, JS.lambda [varName] (stmts ++ lamStmts)] & pure
             where
                 parentScopeDepth = loggingInfo ^. liScopeDepth
     <&> codeGenFromExpr
@@ -531,7 +531,7 @@ maybeLogSubexprResult :: Monad m => ValId -> CodeGen -> M m CodeGen
 maybeLogSubexprResult valId codeGen =
     Lens.view envMode & M
     >>= \case
-    FastSilent -> return codeGen
+    FastSilent -> pure codeGen
     SlowLogging _ -> logSubexprResult valId codeGen
 
 logSubexprResult :: Monad m => ValId -> CodeGen -> M m CodeGen
@@ -569,11 +569,11 @@ compileAppliedFunc func arg' =
 compileLeaf :: Monad m => V.Leaf -> ValId -> M m CodeGen
 compileLeaf leaf valId =
     case leaf of
-    V.LHole -> throwStr "Reached hole!" & return
-    V.LRecEmpty -> JS.object [] & codeGenFromExpr & return
-    V.LAbsurd -> throwStr "Reached absurd!" & return
+    V.LHole -> throwStr "Reached hole!" & pure
+    V.LRecEmpty -> JS.object [] & codeGenFromExpr & pure
+    V.LAbsurd -> throwStr "Reached absurd!" & pure
     V.LVar var -> compileVar var >>= maybeLogSubexprResult valId
-    V.LLiteral literal -> compileLiteral literal & return
+    V.LLiteral literal -> compileLiteral literal & pure
 
 compileToNom :: Monad m => V.Nom (Val ValId) -> ValId -> M m CodeGen
 compileToNom (V.Nom tId val) valId =
@@ -583,7 +583,7 @@ compileToNom (V.Nom tId val) valId =
         && all (< 128) (BS.unpack bytes) ->
             -- The JS is more readable with string constants
             JS.var "rts" $. "bytesFromAscii" $$ JS.string (Text.unpack (decodeUtf8 bytes))
-            & codeGenFromExpr & return
+            & codeGenFromExpr & pure
     _ -> compileVal val >>= maybeLogSubexprResult valId
 
 compileVal :: Monad m => Val ValId -> M m CodeGen

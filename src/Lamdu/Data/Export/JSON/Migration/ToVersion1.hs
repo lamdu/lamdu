@@ -95,20 +95,20 @@ convertBuiltin obj builtin =
     do
         bobj <-
             case builtin of
-            Aeson.Object x -> return x
+            Aeson.Object x -> pure x
             _ -> Left "builtin not an object"
         name <-
             case bobj ^. Lens.at "name" of
             Nothing -> Left "builtin with no name"
-            Just x -> return x
+            Just x -> Right x
         scheme <-
             case bobj ^. Lens.at "scheme" of
             Nothing -> Left "builin with no scheme"
-            Just x -> return x
+            Just x -> Right x
         obj
             & Lens.at "builtin" ?~ name
             & Lens.at "typ" ?~ scheme
-            & pure
+            & Right
 
 replDefExpr ::
     Map NominalId FrozenNominal -> Map DefId FrozenDef ->
@@ -142,8 +142,8 @@ schemeAny =
 
 fixScheme :: Aeson.Value -> Either Text Aeson.Value
 fixScheme (Aeson.String s)
-    | s == "NoExportedType" = return schemeAny
-fixScheme o@Aeson.Object{} = return o
+    | s == "NoExportedType" = Right schemeAny
+fixScheme o@Aeson.Object{} = Right o
 fixScheme _ = Left "Malformed scheme"
 
 migrateEntity ::

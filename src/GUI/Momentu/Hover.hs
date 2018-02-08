@@ -201,7 +201,7 @@ hoverInPlaceOf hoverOptions@(defaultOption:_) place
             do
                 x <- hoverOptions
                 mkFocused <- x ^.. anchored . Widget.wState . Widget._StateFocused
-                return (x, mkFocused)
+                pure (x, mkFocused)
         makeFocused surrounding =
             surrounding
             & Widget.sRight -~ sizeDiff ^. _1

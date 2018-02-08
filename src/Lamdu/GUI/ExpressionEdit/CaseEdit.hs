@@ -99,7 +99,7 @@ make (Sugar.Case mArg (Sugar.Composite alts caseTail addAlt _addAltTodo)) pl =
                 case caseTail of
                     Sugar.ClosedComposite actions ->
                         Widget.weakerEvents (closedCaseEventMap config actions) altsGui
-                        & return
+                        & pure
                     Sugar.OpenComposite actions rest ->
                         makeOpenCase actions rest (Widget.toAnimId myId) altsGui
         let addAltEventMap =
@@ -176,7 +176,7 @@ makeOpenCase actions rest animId altsGui =
             Styled.addValPadding
             <*> ExprGuiM.makeSubexpression rest
         config <- Lens.view Config.config
-        return $ altsGui & Responsive.render . Lens.imapped %@~
+        pure $ altsGui & Responsive.render . Lens.imapped %@~
             \layoutMode alts ->
             let restLayout =
                     layoutMode & restExpr ^. Responsive.render

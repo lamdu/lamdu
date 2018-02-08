@@ -69,7 +69,7 @@ inlineDef ctx globalId dest =
                     & Transaction.writeIRef defI
                 Transaction.setP (Anchors.assocDefinitionState defI) DeletedDefinition
                 _ <- ctx ^. ConvertM.scPostProcessRoot
-                defExpr ^. Def.expr & EntityId.ofValI & return
+                defExpr ^. Def.expr & EntityId.ofValI & pure
 
 convertGlobal ::
     Monad m => V.Var -> Input.Payload m a -> MaybeT (ConvertM m) (GetVar InternalName (T m))
@@ -104,7 +104,7 @@ convertGlobal param exprPl =
                         inlineDef ctx param (exprPl ^. Input.stored)
                         & InlineVar
                 _ -> CannotInline
-            } & return
+            } & pure
     where
         defI = ExprIRef.defI param
         notInScope =
@@ -167,7 +167,7 @@ convert param exprPl
             convertGlobal param exprPl & justToLeft
             convertGetLet param exprPl & justToLeft
             convertParamsRecord param exprPl & justToLeft
-            GetParam (ParamRef (paramNameRef param) GetParameter NormalBinder) & return
+            GetParam (ParamRef (paramNameRef param) GetParameter NormalBinder) & pure
         & runMatcherT
         <&> BodyGetVar
         >>= addActions exprPl

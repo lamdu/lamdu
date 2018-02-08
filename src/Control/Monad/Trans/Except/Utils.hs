@@ -15,7 +15,7 @@ runMatcherT :: Functor m => MatcherT m a -> m a
 runMatcherT = fmap uneither . runExceptT
 
 justToLeft :: Monad m => MaybeT m a -> ExceptT a m ()
-justToLeft = maybe (return ()) throwE <=< lift . runMaybeT
+justToLeft = maybe (pure ()) throwE <=< lift . runMaybeT
 
 uneither :: Either a a -> a
 uneither = either id id

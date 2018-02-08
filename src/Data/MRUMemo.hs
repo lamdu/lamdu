@@ -17,7 +17,7 @@ memoIO act =
         memoized var key = modifyMVar var onMVar
             where
                 onMVar j@(Just (oldKey, oldvalue))
-                    | oldKey == key = return (j, oldvalue)
+                    | oldKey == key = pure (j, oldvalue)
                     | otherwise = callOrig
                 onMVar Nothing = callOrig
                 callOrig = act key <&> \res -> (Just (key, res), res)

@@ -56,7 +56,7 @@ convertExtend (V.RecExtend tag val rest) exprPl = do
     (restRecord, modifyEntityId) <-
         case restS ^. rBody of
         BodyRecord r ->
-            return (r, const (restS ^. rPayload . plEntityId))
+            pure (r, const (restS ^. rPayload . plEntityId))
         _ ->
             do
                 addField <- makeAddItem DataOps.recExtend restStored

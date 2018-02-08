@@ -26,7 +26,7 @@ modify_ :: Monad m => Property m a -> (a -> m a) -> m ()
 modify_ (Property val setter) f = setter =<< f val
 
 pureModify :: Monad m => Property m a -> (a -> a) -> m ()
-pureModify prop = modify_ prop . (return .)
+pureModify prop = modify_ prop . (pure .)
 
 compose ::
     Monad m => (a -> b) -> (b -> m a) ->
@@ -36,7 +36,7 @@ compose aToB bToA (Property val setter) =
 
 pureCompose ::
     Monad m => (a -> b) -> (b -> a) -> Property m a -> Property m b
-pureCompose ab ba = compose ab (return . ba)
+pureCompose ab ba = compose ab (pure . ba)
 
 composeLens :: Lens' a b -> Property m a -> Property m b
 composeLens lens (Property val setter) =

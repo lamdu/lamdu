@@ -52,7 +52,7 @@ makeCollisionSuffixLabel ::
     ) => Name.Collision -> m (Maybe View)
 makeCollisionSuffixLabel mCollision =
     case mCollision of
-    Name.NoCollision -> return Nothing
+    Name.NoCollision -> pure Nothing
     Name.Collision suffix -> mk (Text.pack (show suffix))
     Name.UnknownCollision -> mk "?"
     where

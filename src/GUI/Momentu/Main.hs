@@ -52,7 +52,7 @@ data EventResult a = EventResult
     } deriving (Functor, Foldable, Traversable)
 
 instance Applicative EventResult where
-    pure x = EventResult { erExecuteInMainThread = return (), erVal = x }
+    pure x = EventResult { erExecuteInMainThread = pure (), erVal = x }
     EventResult am ar <*> EventResult bm br = EventResult (am >> bm) (ar br)
 
 newtype M a = M { _m :: IO (EventResult a) }
@@ -68,7 +68,7 @@ instance Monad M where
         do
             EventResult ax rx <- x ^. m
             EventResult af rf <- f rx ^. m
-            EventResult (ax >> af) rf & return
+            EventResult (ax >> af) rf & pure
         & M
 
 instance MonadIO M where
@@ -116,13 +116,13 @@ defaultOptions helpFontPath =
         -- Note that not every app is necessarily interactive and even uses a cursor,
         -- so an empty value might be fitting.
         stateStorage_ <- iorefStateStorage (Widget.Id [])
-        return Options
+        pure Options
             { tickHandler = pure False
             , getConfig =
                 \zoom -> do
                     zoomFactor <- Zoom.getZoomFactor zoom
                     helpFont <- loadHelpFont (9 * zoomFactor)
-                    return Config
+                    pure Config
                         { cAnim =
                             MainAnim.AnimConfig
                             { MainAnim.acTimePeriod = 0.11
@@ -173,7 +173,7 @@ lookupEvent getClipboard virtCursorRef mEnter mFocus event =
             virtCursorState <- readIORef virtCursorRef
             virtCursor <-
                 case virtCursorState of
-                Just x -> return x
+                Just x -> pure x
                 Nothing ->
                     res <$ writeIORef virtCursorRef (Just res)
                     where
@@ -230,9 +230,9 @@ mainLoopWidget win mkWidgetUnmemod options =
                 do
                     anyUpdate <- tickHandler
                     when anyUpdate newWidget
-                    return MainAnim.EventResult
+                    pure MainAnim.EventResult
                         { MainAnim.erUpdate = anyUpdate ^. Lens._Unwrapped
-                        , MainAnim.erExecuteInMainThread = return ()
+                        , MainAnim.erExecuteInMainThread = pure ()
                         }
             , MainAnim.eventHandler = \event ->
                 do
@@ -240,7 +240,7 @@ mainLoopWidget win mkWidgetUnmemod options =
                     mWidgetRes <- lookupEvent getClipboard virtCursorRef mEnter mFocus event
                     EventResult runInMainThread mRes <- sequenceA mWidgetRes ^. m
                     case mRes of
-                        Nothing -> return ()
+                        Nothing -> pure ()
                         Just res ->
                             do
                                 readState stateStorage_
@@ -248,7 +248,7 @@ mainLoopWidget win mkWidgetUnmemod options =
                                     >>= writeState stateStorage_
                                 writeIORef virtCursorRef (res ^. State.uVirtualCursor . Lens._Wrapped)
                                 newWidget
-                    return MainAnim.EventResult
+                    pure MainAnim.EventResult
                         { MainAnim.erUpdate = Lens.has Lens._Just mRes ^. Lens._Unwrapped
                         , MainAnim.erExecuteInMainThread = runInMainThread
                         }

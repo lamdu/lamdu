@@ -52,4 +52,4 @@ mkEventMap onSettingsChange config settingsRef =
             writeIORef settingsRef nextSettings
             onSettingsChange nextSettings
             & E.keysEventMap (Config.nextInfoModeKeys config) nextDoc
-            & return
+            & pure

@@ -54,10 +54,10 @@ new br@(Branch branchDataIRef) = do
     version <- Branch.curVersion br
     applyHistory view =<< Version.versionData version
     modifyViews branchDataIRef (view:)
-    return view
+    pure view
     where
         applyHistory view versionData = do
-            maybe (return ()) (applyHistory view <=< Version.versionData) . Version.parent $ versionData
+            maybe (pure ()) (applyHistory view <=< Version.versionData) . Version.parent $ versionData
             applyChangesToView view Change.newValue $ Version.changes versionData
 
 curVersion :: Monad m => View m -> Transaction m (Version m)

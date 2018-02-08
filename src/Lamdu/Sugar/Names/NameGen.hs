@@ -40,13 +40,13 @@ newName acceptName isFunc g =
     do
         name <- Lens.zoom names loop
         ngUsedNames %= Map.insert g name
-        return name
+        pure name
     where
         loop =
             do
                 name <- state (head &&& tail)
                 if acceptName name
-                    then return name
+                    then pure name
                     else loop
         names =
             case isFunc of

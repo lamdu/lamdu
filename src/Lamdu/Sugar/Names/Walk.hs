@@ -251,7 +251,7 @@ toBody expr = \case
     BodyLiteral      x -> x & BodyLiteral & pure
     BodyLam          x -> x & toLam expr <&> BodyLam
     BodyFragment     x -> x & toFragment expr <&> BodyFragment
-    BodyPlaceHolder    -> return BodyPlaceHolder
+    BodyPlaceHolder    -> pure BodyPlaceHolder
     where
         toTId = tidName %%~ opGetName NominalName
 

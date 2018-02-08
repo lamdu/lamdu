@@ -148,7 +148,7 @@ convertDefBody ::
 convertDefBody evalRes cp (Definition.Definition body defType defI) =
     case body of
     Definition.BodyExpr defExpr -> convertInferDefExpr evalRes cp defType defExpr defI
-    Definition.BodyBuiltin builtin -> convertDefIBuiltin defType builtin defI & return
+    Definition.BodyBuiltin builtin -> convertDefIBuiltin defType builtin defI & pure
 
 convertExpr ::
     Monad m =>
@@ -245,7 +245,7 @@ loadPanes evalRes cp replEntityId =
                         , _drDefI = ExprIRef.globalId defI
                         }
                         >>= OrderTags.orderDef
-                    return Pane
+                    pure Pane
                         { _paneDefinition = defS
                         , _paneClose = mkDelPane i
                         , _paneMoveDown = mkMMovePaneDown i
@@ -260,4 +260,4 @@ loadWorkArea evalRes cp =
     do
         repl <- loadRepl evalRes cp
         panes <- loadPanes evalRes cp (repl ^. rPayload . plEntityId)
-        WorkArea panes repl & return
+        WorkArea panes repl & pure

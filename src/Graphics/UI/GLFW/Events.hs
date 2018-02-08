@@ -166,7 +166,7 @@ eventLoop win eventsHandler =
                             do
                                 GLFW.pollEvents
                                 loop
-                        NextQuit -> return ()
+                        NextQuit -> pure ()
 
         setCallback GLFW.setCharCallback (addEvent . RawCharEvent)
         setCallback GLFW.setKeyCallback addKeyEvent

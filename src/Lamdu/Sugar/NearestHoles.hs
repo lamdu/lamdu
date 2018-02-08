@@ -70,6 +70,6 @@ setEntityId pl =
         when isStoredHole $ State.put $ Just $ pl ^. Sugar.plEntityId
         pl
             & Sugar.plData . _2 %~ ($ oldEntityId)
-            & return
+            & pure
     where
         isStoredHole = pl ^. Sugar.plData . _1

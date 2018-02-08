@@ -114,7 +114,7 @@ collectResults Config.Completion{completionResultCount} resultsM =
     do
         (tooFewGoodResults, moreResultsM) <-
             ListClass.scanl prependResult (GoodAndBad [] []) resultsM
-            & ListClass.splitWhenM (return . (>= completionResultCount) . length . _good)
+            & ListClass.splitWhenM (pure . (>= completionResultCount) . length . _good)
 
         -- We need 2 of the moreResultsM:
         -- A. First is needed because it would be the first to have the correct
@@ -133,7 +133,7 @@ collectResults Config.Completion{completionResultCount} resultsM =
             & splitAt completionResultCount
             & _2 %~ not . null
             & uncurry Menu.OptionList
-            & return
+            & pure
     where
         concatBothGoodAndBad goodAndBad = goodAndBad ^. Lens.folded
         resultsListScore x = (x ^. rgPreferred, x ^. rgMain . rScore & isGoodResult & not)

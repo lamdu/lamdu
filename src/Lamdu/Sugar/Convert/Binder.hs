@@ -174,7 +174,7 @@ makeBinder chosenScopeProp params funcBody pl =
                 && Lens.has (bbContent . _BinderExpr . rBody . _BodyHole) binderBody =
                     mSetToHole .~ Nothing
                 | otherwise = id
-        return Binder
+        pure Binder
             { _bParams = _cpParams params
             , _bChosenScopeProp = chosenScopeProp ^. mkProperty
             , _bLamId = cpMLamParam params ^? Lens._Just . _1

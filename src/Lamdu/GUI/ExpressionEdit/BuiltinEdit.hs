@@ -78,7 +78,7 @@ make def myId =
             makeNamePartEditor (Theme.foreignVarColor colors) name nameSetter
             (builtinFFIName myId)
         dot <- TextView.makeLabel "."
-        moduleName /|/ dot /|/ varName & return
+        moduleName /|/ dot /|/ varName & pure
     & GuiState.assignCursor myId (builtinFFIName myId)
     where
         Sugar.DefinitionBuiltin

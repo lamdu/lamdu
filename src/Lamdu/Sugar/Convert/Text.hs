@@ -36,7 +36,7 @@ text (V.Nom tid (Val litPl body)) toNomPl =
             case PrimVal.toKnown lit of
             PrimVal.Bytes utf8Bytes ->
                 case decodeUtf8' utf8Bytes of
-                Right txt -> return txt
+                Right txt -> pure txt
                 Left{} -> mzero
             _ -> mzero
         Property

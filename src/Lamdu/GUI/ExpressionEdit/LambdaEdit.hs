@@ -78,7 +78,7 @@ mkShrunk paramIds myId =
                 paramIds ^? Lens.traverse
                 & maybe mempty
                   (E.keysEventMapMovesCursor jumpKeys
-                   (E.Doc ["View", "Expand Lambda Params"]) . return .
+                   (E.Doc ["View", "Expand Lambda Params"]) . pure .
                    WidgetIds.fromEntityId)
         theme <- Lens.view Theme.theme
         lamLabel <-
@@ -86,7 +86,7 @@ mkShrunk paramIds myId =
             <*> Styled.grammarLabel "λ"
             <&> Responsive.fromWithTextPos
             & LightLambda.withUnderline theme
-        return $ \mScopeEdit ->
+        pure $ \mScopeEdit ->
             [ addScopeEdit mScopeEdit lamLabel
               & Widget.weakerEvents expandEventMap
             ]
@@ -109,7 +109,7 @@ mkLightLambda params myId =
         let shrinkKeys = [MetaKey noMods MetaKey.Key'Escape]
         let shrinkEventMap =
                 E.keysEventMapMovesCursor shrinkKeys
-                (E.Doc ["View", "Shrink Lambda Params"]) (return (lamId myId))
+                (E.Doc ["View", "Shrink Lambda Params"]) (pure (lamId myId))
         if isSelected
             then
                  mkExpanded
@@ -136,7 +136,7 @@ make lam pl =
             BinderEdit.makeParts funcApplyLimit binder (WidgetIds.fromEntityId bodyId) myId
         paramsAndLabelEdits <-
             case (lam ^. Sugar.lamMode, params) of
-            (_, Sugar.NullParam{}) -> mkLhsEdits mParamsEdit mScopeEdit & return
+            (_, Sugar.NullParam{}) -> mkLhsEdits mParamsEdit mScopeEdit & pure
             (Sugar.LightLambda, _) -> mkLightLambda params myId ?? mParamsEdit ?? mScopeEdit
             _ -> mkExpanded ?? mParamsEdit ?? mScopeEdit
         stdWrapParentExpr pl

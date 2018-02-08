@@ -86,7 +86,7 @@ format (MetaKey mods k) =
 
 instance Aeson.FromJSON MetaKey where
     parseJSON (Aeson.String s) =
-        parse s & maybe (fail ("invalid key " ++ Text.unpack s)) return
+        parse s & maybe (fail ("invalid key " ++ Text.unpack s)) pure
     parseJSON _ = fail "expected string"
 
 instance Aeson.ToJSON MetaKey where

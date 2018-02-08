@@ -175,7 +175,7 @@ instance Monad tm => MonadNaming (Pass1PropagateUp tm) where
     type OldName (Pass1PropagateUp tm) = P0Name
     type NewName (Pass1PropagateUp tm) = P1Name
     type SM (Pass1PropagateUp tm) = tm
-    opRun = pure (return . fst . runPass1PropagateUp)
+    opRun = pure (pure . fst . runPass1PropagateUp)
     opWithParamName GetFieldParameter _ = p1cpsNameConvertor Walk.FieldParamName
     opWithParamName GetParameter _ = p1cpsNameConvertor Walk.ParamName
     opWithLetName _ = p1cpsNameConvertor Walk.ParamName
@@ -350,7 +350,7 @@ instance Monad tm => MonadNaming (Pass2MakeNames tm) where
     type OldName (Pass2MakeNames tm) = P1Name
     type NewName (Pass2MakeNames tm) = Name (T tm)
     type SM (Pass2MakeNames tm) = tm
-    opRun = p2GetEnv <&> runPass2MakeNames <&> (return .)
+    opRun = p2GetEnv <&> runPass2MakeNames <&> (pure .)
     opWithParamName GetParameter varInfo = p2cpsNameConvertorLocal varInfo
     opWithParamName GetFieldParameter _ = p2cpsNameConvertorGlobal
     opWithLetName = p2cpsNameConvertorLocal
@@ -392,7 +392,7 @@ p2cpsNameConvertor (P1Name mStoredName inst _) nameMaker =
                 Nothing -> nameMaker oldEnv
                 & _1 %~ (`Name` setUuidName (inst ^. Clash.niUUID))
         res <- p2WithEnv (const newEnv) k
-        return (newName, res)
+        pure (newName, res)
 
 p2cpsNameConvertorGlobal :: Monad tm => Walk.CPSNameConvertor (Pass2MakeNames tm)
 p2cpsNameConvertorGlobal p1name =
@@ -431,13 +431,13 @@ fixVarToTags VarToTags {..} =
 
 fixParamAddResult :: Monad m => ParamAddResult -> T m ()
 fixParamAddResult (ParamAddResultVarToTags v) = fixVarToTags v
-fixParamAddResult _ = return ()
+fixParamAddResult _ = pure ()
 
 fixParamDelResult :: Monad m => ParamDelResult -> T m ()
 fixParamDelResult (ParamDelResultTagsToVar TagsToVar {..}) =
     Transaction.getP (assocNameRef (ttvReplacedTag ^. tagVal))
     >>= Transaction.setP (assocNameRef ttvReplacedByVar)
-fixParamDelResult _ = return ()
+fixParamDelResult _ = pure ()
 
 fixExtractFloatResult :: Monad m => ExtractFloatResult -> T m ()
 fixExtractFloatResult = traverse_ fixVarToTags . efrMVarToTags
@@ -446,8 +446,8 @@ postProcessAction :: Monad m => (a -> m ()) -> m a -> m a
 postProcessAction f action =
     do
         res <- action
-        () <- f res
-        return res
+        f res
+        pure res
 
 fixNodeActions :: Monad m => NodeActions (T m) -> NodeActions (T m)
 fixNodeActions =

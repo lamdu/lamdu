@@ -120,7 +120,7 @@ exportFancy evalResults =
                 <&> formatResult
                 & fromMaybe "<NO RESULT>"
         replJs <- compile repl <&> fromString
-        return $
+        pure $
             do
                 now <- getPOSIXTime <&> round
                 -- screenshot <- takeScreenshot <&> encodePng

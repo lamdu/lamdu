@@ -125,7 +125,7 @@ makeSubexpression expr =
     do
         maker <- Lens.view aMakeSubexpression & ExprGuiM
         maker expr
-    & advanceDepth (return . Responsive.fromTextView) animId
+    & advanceDepth (pure . Responsive.fromTextView) animId
     where
         animId = expr ^. Sugar.rPayload & WidgetIds.fromExprPayload & toAnimId
 

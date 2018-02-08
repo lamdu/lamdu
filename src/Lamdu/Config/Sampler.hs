@@ -49,7 +49,7 @@ withMTime configPath act =
     do
         (config, themePath, theme) <- act
         mtimesAfter <- traverse getModificationTime [configPath, themePath]
-        Sample mtimesAfter configPath config themePath theme & return
+        Sample mtimesAfter configPath config themePath theme & pure
 
 calcThemePath :: FilePath -> Text -> FilePath
 calcThemePath configPath theme =
@@ -61,12 +61,12 @@ load themeName configPath =
     do
         config <- readJson configPath
         theme <- readJson themePath
-        return (config, themePath, theme)
+        pure (config, themePath, theme)
     & withMTime configPath
     where
         readJson path =
             Aeson.eitherDecode' <$> LBS.readFile path
-            >>= either (fail . (msg path ++)) return
+            >>= either (fail . (msg path ++)) pure
         msg path = "Failed to parse config file contents at " ++ show path ++ ": "
         themePath = calcThemePath configPath themeName
 
@@ -76,7 +76,7 @@ maybeReload old newConfigPath =
         mtime <-
             traverse getModificationTime [old ^. sConfigPath, old ^. sThemePath]
         if mtime == sVersion old
-            then return old
+            then pure old
             else load theme newConfigPath
     where
         theme = old ^. sThemePath & takeFileName & dropExtension & Text.pack
@@ -95,8 +95,8 @@ new initialTheme =
                 threadDelay 300000
                 modifyMVar_ ref $ \old ->
                     (getConfigPath >>= maybeReload old)
-                    `E.catch` \E.SomeException {} -> return old
-        return Sampler
+                    `E.catch` \E.SomeException {} -> pure old
+        pure Sampler
             { _sThreadId = tid
             , getSample = readMVar ref
             , setTheme =

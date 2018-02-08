@@ -232,7 +232,7 @@ makeNewDefinitionEventMap cp =
             Scheme.any ()
             & DataOps.newPublicDefinitionWithPane cp
         DataOps.savePreJumpPosition cp curCursor
-        return newDefI
+        pure newDefI
     <&> WidgetIds.nameEditOf . WidgetIds.fromIRef
     & E.keysEventMapMovesCursor newDefinitionKeys
         (E.Doc ["Edit", "New definition"])
@@ -262,7 +262,7 @@ panesEventMap theExportActions theCodeAnchors =
         mJumpBack <-
             DataOps.jumpBack theCodeAnchors & transaction <&> fmap IOTrans.liftTrans
         newDefinitionEventMap <- makeNewDefinitionEventMap theCodeAnchors
-        return $ mconcat
+        pure $ mconcat
             [ newDefinitionEventMap (Config.newDefinitionKeys (Config.pane theConfig))
               <&> IOTrans.liftTrans
             , E.dropEventMap "Drag&drop JSON files"

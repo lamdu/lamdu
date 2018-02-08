@@ -53,7 +53,7 @@ newVersion version newChanges = do
 mostRecentAncestor ::
     Monad m => Version m -> Version m -> Transaction m (Version m)
 mostRecentAncestor aVersion bVersion
-    | aVersion == bVersion  = return aVersion
+    | aVersion == bVersion  = pure aVersion
     | otherwise             = do
         VersionData aDepth aMbParentRef _aChanges <- versionData aVersion
         VersionData bDepth bMbParentRef _bChanges <- versionData bVersion
@@ -68,15 +68,15 @@ mostRecentAncestor aVersion bVersion
             VersionData curDepth curMbParentRef _curChanges <- versionData version
             if curDepth > depthToReach
                 then upToDepth depthToReach =<< getParent curMbParentRef
-                else return version
-        getParent = maybe (fail "Non-0 depth must have a parent") return
+                else pure version
+        getParent = maybe (fail "Non-0 depth must have a parent") pure
 
 walkUp ::
     (Monad m, Monoid a) =>
     (VersionData m -> Transaction m a) ->
     Version m -> Version m -> Transaction m a
 walkUp onVersion topRef bottomRef
-    | bottomRef == topRef  = return mempty
+    | bottomRef == topRef  = pure mempty
     | otherwise            = do
         versionD <- versionData bottomRef
         result <- onVersion versionD
@@ -95,7 +95,7 @@ versionsBetween ::
 versionsBetween topRef = accumulateWalkUp []
     where
         accumulateWalkUp vs curRef
-            | topRef == curRef  = return vs
+            | topRef == curRef  = pure vs
             | otherwise         = do
                 versionD <- versionData curRef
                 maybe (fail "Invalid path given, hit top") (accumulateWalkUp (versionD:vs)) $

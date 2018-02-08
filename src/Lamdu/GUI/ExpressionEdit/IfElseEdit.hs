@@ -107,7 +107,7 @@ verticalRowRender =
     do
         indent <- ResponsiveExpr.indent
         vbox <- Responsive.vboxSpaced
-        return $
+        pure $
             \row ->
             vbox
             [ Options.box Options.disambiguationNone [row ^. rKeyword, row ^. rPredicate]
@@ -128,7 +128,7 @@ renderRows =
             prepareRows (x:xs) = x : (xs <&> spaceAbove)
         vert <- verticalRowRender
         vbox <- Responsive.vboxSpaced
-        return $
+        pure $
             \rows ->
             vbox (rows <&> vert)
             & Options.tryWideLayout Options.table (Compose (prepareRows rows))

@@ -52,7 +52,7 @@ moveToGlobalScope ctx param defExpr =
             Right (inferredVal, inferContext) ->
                 inferredVal ^. Val.payload . _1 . Infer.plType
                 & Infer.makeScheme inferContext
-                & return
+                & pure
         DataOps.newPublicDefinitionToIRef
             (ctx ^. ConvertM.scCodeAnchors)
             (Definition.Definition (Definition.BodyExpr defExpr) scheme ())
@@ -63,7 +63,7 @@ moveToGlobalScope ctx param defExpr =
         -- our type which may become generalized due to
         -- extraction/generalization of the inner type
         PostProcess.GoodExpr <- ctx ^. ConvertM.scPostProcessRoot
-        return ()
+        pure ()
 
 data NewLet m = NewLet
     { nlIRef :: ValI m
@@ -89,7 +89,7 @@ convertLetToLam varToReplace redex =
                 V.LVar newParam & V.BLeaf &
                 ExprIRef.writeValBody (Property.value prop)
         SubExprs.onGetVars toNewParam varToReplace (redex ^. Redex.arg)
-        return NewLet
+        pure NewLet
             { nlIRef = newValI
             , nlMVarToTags = Nothing
             }
@@ -118,7 +118,7 @@ convertLetParamToRecord varToReplace letLam storedLam =
             mkNewArg (BinderKindLet letLam) storedLam Params.NewParamAfter
         convertVarToGetFieldParam varToReplace (vttNewTag vtt ^. tagVal)
             (storedLam ^. Params.slLam)
-        return NewLet
+        pure NewLet
             { nlIRef = Params.slLambdaProp storedLam & Property.value
             , nlMVarToTags = Just vtt
             }
@@ -136,7 +136,7 @@ addFieldToLetParamsRecord fieldTags varToReplace letLam storedLam =
             ((fieldTags ++) . pure)
         convertVarToGetFieldParam varToReplace (newParamTag ^. tagVal)
             (storedLam ^. Params.slLam)
-        return NewLet
+        pure NewLet
             { nlIRef = Params.slLambdaProp storedLam & Property.value
             , nlMVarToTags = Nothing
             }
@@ -175,7 +175,7 @@ processLet ::
     Monad m => ConvertM.ScopeInfo f -> Redex (Input.Payload m a) -> T m (NewLet m)
 processLet scopeInfo redex =
     case varsExitingScope of
-    [] -> sameLet (redex <&> (^. Input.stored)) & return
+    [] -> sameLet (redex <&> (^. Input.stored)) & pure
     [x] -> addLetParam x redex
     _ -> error "multiple osiVarsUnderPos not expected!?"
     <* maybeDetach
@@ -184,7 +184,7 @@ processLet scopeInfo redex =
         mDefI = mRecursiveRef ^? Lens._Just . ConvertM.rrDefI <&> ExprIRef.globalId
         isRecursiveDefRef var = mDefI == Just var
         maybeDetach
-            | TV.null skolemsExitingScope = return ()
+            | TV.null skolemsExitingScope = pure ()
             | otherwise =
                 Load.readValAndAddProperties (redex ^. Redex.lam . V.lamResult . Val.payload . Input.stored)
                 >>= SubExprs.onGetVars (void . DataOps.applyHoleTo) (redex ^. Redex.lam . V.lamParamId)
@@ -237,7 +237,7 @@ floatLetToOuterScope setTopLevel redex ctx =
                 EntityId.ofLambdaParam param <$
                 DataOps.redexWrapWithGivenParam param (nlIRef newLet) (outerScopeInfo ^. ConvertM.osiPos)
                 <&> ExtractToLet
-        return ExtractFloatResult
+        pure ExtractFloatResult
             { efrNewEntity = resultEntity
             , efrMVarToTags = nlMVarToTags newLet
             }

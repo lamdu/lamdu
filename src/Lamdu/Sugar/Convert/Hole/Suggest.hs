@@ -34,7 +34,7 @@ loadNominalsForType loadNominal typ =
     go Map.empty (typ ^. ExprLens.typeTIds . Lens.to Set.singleton)
     where
         go res toLoad
-            | Set.null toLoad = return res
+            | Set.null toLoad = pure res
             | otherwise =
                 do
                     nominals <- Map.fromSet loadNominal toLoad & sequenceA
@@ -90,22 +90,22 @@ valueConversionNoSplit nominals empty src =
         do
             (_, resType) <-
                 Infer.inferFromNom nominals (V.Nom name ())
-                (\_ () -> return (srcType, ()))
+                (\_ () -> pure (srcType, ()))
                 srcScope
             updated <-
                 src & Lens.traversed . _1 . Infer.plType %%~ update
                 & Update.liftInfer
-            V.Nom name updated & V.BFromNom & mkRes resType & return
+            V.Nom name updated & V.BFromNom & mkRes resType & pure
         & Infer.run
         & mapStateT
-            (either (error "Infer of FromNom on non-opaque Nominal shouldn't fail") return)
+            (either (error "Infer of FromNom on non-opaque Nominal shouldn't fail") pure)
         >>= valueConversionNoSplit nominals empty
     T.TFun argType resType | bodyNot V._BLam ->
         if Lens.has (ExprLens.valLeafs . V._LHole) arg
             then
                 -- If the suggested argument has holes in it
                 -- then stop suggesting there to avoid "overwhelming"..
-                return applied
+                pure applied
             else valueConversionNoSplit nominals empty applied
         where
             arg =
@@ -116,7 +116,7 @@ valueConversionNoSplit nominals empty src =
         Infer.freshInferredVar srcScope "s"
         & Infer.run
         & mapStateT
-            (either (error "Infer.freshInferredVar shouldn't fail") return)
+            (either (error "Infer.freshInferredVar shouldn't fail") pure)
         <&>
         \dstType ->
         suggestCaseWith composite (Payload dstType srcScope)

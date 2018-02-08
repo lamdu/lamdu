@@ -94,7 +94,7 @@ run store (Transaction transaction) = do
         & (`runReaderT` Askable store mempty)
         & (`runStateT` mempty)
     storeAtomicWrite store $ Map.toList changes
-    return res
+    pure res
 
 newtype Changes = Changes ChangesMap
 
@@ -127,7 +127,7 @@ lookupBS uuid = do
         Nothing -> do
             store <- getStore
             liftInner $ storeLookup store uuid
-        Just res -> return res
+        Just res -> pure res
 
 insertBS :: Monad m => UUID -> ByteString -> Transaction m ()
 insertBS key = liftChangesMap . State.modify . Map.insert key . Just
@@ -149,7 +149,7 @@ uuidExists = fmap isJust . lookupBS
 
 readUUIDMb :: (Monad m, Binary a) => Transaction m a -> UUID -> Transaction m a
 readUUIDMb nothingCase uuid =
-    maybe nothingCase return =<< lookup uuid
+    maybe nothingCase pure =<< lookup uuid
 
 readUUID :: (Monad m, Binary a) => UUID -> Transaction m a
 readUUID uuid = readUUIDMb failure uuid
@@ -175,7 +175,7 @@ newIRef :: (Monad m, Binary a) => a -> Transaction m (IRef m a)
 newIRef val = do
     newUUID <- newKey
     insert newUUID val
-    return $ IRef.unsafeFromUUID newUUID
+    pure $ IRef.unsafeFromUUID newUUID
 
 ---------- Properties:
 

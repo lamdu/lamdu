@@ -33,7 +33,7 @@ newBranch name ver =
     do
         branch <- Branch.new ver
         setName (Branch.uuid branch) name
-        return branch
+        pure branch
 
 initDb :: DB -> T DbLayout.ViewM () -> IO ()
 initDb db importAct =

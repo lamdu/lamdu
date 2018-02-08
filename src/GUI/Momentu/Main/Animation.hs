@@ -73,7 +73,7 @@ data EventResult = EventResult
     }
 
 instance Monoid EventResult where
-    mempty = EventResult mempty (return ())
+    mempty = EventResult mempty (pure ())
     mappend (EventResult am ar) (EventResult bm br) =
         EventResult (mappend am bm) (ar >> br)
 
@@ -108,7 +108,7 @@ waitForEvent eventTVar =
             & edRefreshRequested .~ False
             & edReversedEvents .~ []
             & writeTVar eventTVar
-        return ed
+        pure ed
     & STM.atomically
 
 eventHandlerThread :: ThreadVars -> (Anim.Size -> Handlers) -> IO ()
@@ -123,7 +123,7 @@ eventHandlerThread tvars animHandlers =
         tickResult <-
             if ed ^. edHaveTicks
             then tickHandler handlers
-            else return mempty
+            else pure mempty
         let result = mconcat (tickResult : eventResults)
         mNewFrame <-
             if ed ^. edRefreshRequested || erUpdate result ^. Lens._Wrapped
@@ -134,7 +134,7 @@ eventHandlerThread tvars animHandlers =
                 -- Without this we may get nested STM.atomically errors.
                 >>= evaluate
                 <&> Just
-            else return Nothing
+            else pure Nothing
         mappend ToAnim
             { taEventResult = result
             , taMNewFrame = mNewFrame <&> (,) userEventTime
@@ -197,7 +197,7 @@ animThread getFpsFont tvars animStateRef getAnimationConfig win =
                         advanceAnimation (curTime `diffUTCTime` (animState ^. asCurTime)) Nothing animState
                     <&> asCurTime .~ curTime
                 _ <- Lens._Just (writeIORef animStateRef) mNewState
-                return mNewState
+                pure mNewState
 
 mainLoop :: GLFW.Window -> IO (Maybe Draw.Font) -> IO AnimConfig -> (Anim.Size -> Handlers) -> IO ()
 mainLoop win getFpsFont getAnimationConfig animHandlers =

@@ -124,7 +124,7 @@ parseRecord :: HashMap Text Json.Value -> Parse (ER.Val ())
 parseRecord obj =
     HashMap.toList obj & foldM step (ER.Val () ER.RRecEmpty)
     where
-        step r ("cacheId", _) = return r
+        step r ("cacheId", _) = pure r
         step r (k, v) =
             parseResult v
             <&> \pv ->
@@ -151,7 +151,7 @@ parseBytes _ = error "Bytes with non-array data"
 parseInject :: Text -> Maybe Json.Value -> Parse (ER.Val ())
 parseInject tag mData =
     case mData of
-    Nothing -> ER.Val () ER.RRecEmpty & return
+    Nothing -> ER.Val () ER.RRecEmpty & pure
     Just v -> parseResult v
     <&> \iv ->
     ER.RInject V.Inject
@@ -168,14 +168,14 @@ parseObj obj =
     [ obj .? "array"
       <&> \(Json.Array arr) ->
             Vec.toList arr & Lens.traversed %%~ parseResult <&> ER.RArray <&> ER.Val ()
-    , obj .? "bytes" <&> parseBytes <&> return
-    , obj .? "number" <&> read <&> fromDouble <&> return
+    , obj .? "bytes" <&> parseBytes <&> pure
+    , obj .? "number" <&> read <&> fromDouble <&> pure
     , obj .? "tag" <&> (`parseInject` (obj .? "data"))
     , obj .? "func" <&> (\(Json.Number x) -> round x & ER.RFunc & ER.Val () & pure)
     ] & fromMaybe (parseRecord obj)
 
 parseResult :: Json.Value -> Parse (ER.Val ())
-parseResult (Json.Number x) = realToFrac x & fromDouble & return
+parseResult (Json.Number x) = realToFrac x & fromDouble & pure
 parseResult (Json.Object obj) =
     case obj .? "cachedVal" of
     Just cacheId -> Lens.use (Lens.singular (Lens.ix cacheId))
@@ -183,9 +183,9 @@ parseResult (Json.Object obj) =
         do
             val <- parseObj obj
             case obj .? "cacheId" <|> obj .? "func" of
-                Nothing -> return ()
+                Nothing -> pure ()
                 Just cacheId -> Lens.at cacheId ?= val
-            return val
+            pure val
 parseResult x = "Unsupported encoded JS output: " ++ show x & fail
 
 fromDouble :: Double -> ER.Val ()
@@ -200,7 +200,7 @@ addVal ::
     )
 addVal fromUUID obj =
     case obj .? "result" of
-    Nothing -> return id
+    Nothing -> pure id
     Just result ->
         parseResult result
         <&> \pr ->
@@ -227,7 +227,7 @@ newScope fromUUID obj =
         let apply = Map.singleton (ScopeId parentScope) [(ScopeId scope, arg)]
         let addApply Nothing = Just apply
             addApply (Just x) = Just (Map.unionWith (++) x apply)
-        Map.alter addApply (fromUUID (parseUUID lamId)) & return
+        Map.alter addApply (fromUUID (parseUUID lamId)) & pure
     where
         Just parentScope = obj .? "parentScope"
         Just scope = obj .? "scope"
@@ -256,7 +256,7 @@ processEvent fromUUID resultsRef obj =
         Just event = obj .? "event"
 
 withCopyJSOutputTo :: Maybe FilePath -> ((String -> IO ()) -> IO a) -> IO a
-withCopyJSOutputTo Nothing f = f $ \_js -> return ()
+withCopyJSOutputTo Nothing f = f $ \_js -> pure ()
 withCopyJSOutputTo (Just path) f =
     withFile path WriteMode $ \outputFile -> f (hPutStrLn outputFile)
 
@@ -267,7 +267,7 @@ compilerActions ::
 compilerActions toUUID depsMVar actions output =
     Compiler.Actions
     { Compiler.readAssocName =
-        return . decodeUtf8 . Hex.encode . UUIDUtils.toSBS16
+        pure . decodeUtf8 . Hex.encode . UUIDUtils.toSBS16
     , Compiler.readGlobal =
         readGlobal $
         \def ->
@@ -364,7 +364,7 @@ start toUUID fromUUID actions defExpr =
         resultsRef <- newIORef ER.empty
         executeReplMVar <- newEmptyMVar
         tid <- asyncStart toUUID fromUUID depsMVar executeReplMVar resultsRef defExpr actions & forkIO
-        return Evaluator
+        pure Evaluator
             { stop = killThread tid
             , executeReplIOProcess = putMVar executeReplMVar ()
             , eDeps = depsMVar

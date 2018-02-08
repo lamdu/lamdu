@@ -43,7 +43,7 @@ deleteBranch :: View DbM -> [Branch DbM] -> Branch DbM -> TDB (Branch DbM)
 deleteBranch view branches branch = do
     setP (revProp DbLayout.branches) newBranches
     setCurrentBranch view newBranch
-    return newBranch
+    pure newBranch
     where
         newBranch = newBranches !! min (length newBranches - 1) index
         index =
@@ -56,7 +56,7 @@ makeBranch view = do
     newBranch <- Branch.new =<< View.curVersion view
     modP (revProp DbLayout.branches) (++ [newBranch])
     setCurrentBranch view newBranch
-    return newBranch
+    pure newBranch
 
 runAction :: TV a -> TDB a
 runAction action = do
@@ -79,9 +79,9 @@ runEvent preGuiState eventHandler = do
             preGuiState
                 & GuiState.update (eventResult ^. Lens.traversed)
                 & setP (codeProp DbLayout.postGuiState)
-        return (eventResult, isEmpty)
+        pure (eventResult, isEmpty)
     unless isEmpty $ setP (revProp DbLayout.redos) []
-    return eventResult
+    pure eventResult
 
 makeActions :: Transaction DbM (Actions DbM (Transaction DbM))
 makeActions = do
@@ -96,13 +96,13 @@ makeActions = do
             preGuiState <- toDb . getP $ codeProp DbLayout.preGuiState
             View.move view parentVersion
             modP (revProp DbLayout.redos) (curVersion :)
-            return preGuiState
+            pure preGuiState
         mkRedo [] = Nothing
         mkRedo (redo : redos) = Just $ do
             setP (revProp DbLayout.redos) redos
             View.move view redo
             toDb . getP $ codeProp DbLayout.postGuiState
-    return Actions
+    pure Actions
         { Actions.branches = branches
         , Actions.currentBranch = currentBranch
         , Actions.setCurrentBranch = setCurrentBranch view

@@ -146,7 +146,7 @@ makeLabeled apply pl =
     where
         addBox
             | isBoxed apply = mkBoxed apply (pl ^. Sugar.plData . ExprGui.plNearestHoles)
-            | otherwise = return
+            | otherwise = pure
         mParensId
             | needParens = Just (Widget.toAnimId myId)
             | otherwise = Nothing
@@ -196,14 +196,14 @@ mkBoxed apply nearestHoles funcRow =
     do
         argRows <-
             case apply ^. Sugar.aAnnotatedArgs of
-            [] -> return []
+            [] -> pure []
             xs ->
                 Responsive.taggedList
                 <*> traverse makeArgRow xs
                 <&> (:[])
         relayedArgs <-
             case apply ^. Sugar.aRelayedArgs of
-            [] -> return []
+            [] -> pure []
             args -> mkRelayedArgs nearestHoles args <&> (:[])
         Styled.addValFrame
             <*> (Responsive.vboxSpaced ?? (funcRow : argRows ++ relayedArgs))

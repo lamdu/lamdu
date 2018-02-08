@@ -94,7 +94,7 @@ main =
     do
         setNumCapabilities =<< getNumProcessors
         Opts.Parsed{_pLamduDB,_pCommand} <- Opts.get
-        lamduDir <- maybe getLamduDir return _pLamduDB
+        lamduDir <- maybe getLamduDir pure _pLamduDB
         let withDB = Db.withDB lamduDir
         case _pCommand of
             Opts.DeleteDb -> deleteDB lamduDir
@@ -141,7 +141,7 @@ createWindow title mode =
     do
         monitor <-
             M.getPrimaryMonitor
-            >>= maybe (fail "GLFW: Can't get primary monitor") return
+            >>= maybe (fail "GLFW: Can't get primary monitor") pure
         videoModeSize <- M.getVideoModeSize monitor
         let createWin = M.createWindow title
         case mode of
@@ -170,7 +170,7 @@ exportActions config evalResults executeIOProcess =
     }
     where
         Config.Export{exportPath} = Config.export config
-        export x = ioTrans # (x <&> (`MainLoop.EventResult` ()) & return)
+        export x = ioTrans # (x <&> (`MainLoop.EventResult` ()) & pure)
         fileExport exporter = exporter exportPath & export
         importAll path = ioTrans # (Export.fileImportAll path <&> fmap pure)
 
@@ -202,7 +202,7 @@ makeRootWidget fonts db settingsRef evaluator config theme mainLoopEnv =
 
 withMVarProtection :: a -> (MVar (Maybe a) -> IO b) -> IO b
 withMVarProtection val =
-    E.bracket (newMVar (Just val)) (\mvar -> modifyMVar_ mvar (\_ -> return Nothing))
+    E.bracket (newMVar (Just val)) (\mvar -> modifyMVar_ mvar (\_ -> pure Nothing))
 
 printGLVersion :: IO ()
 printGLVersion =
@@ -323,7 +323,7 @@ mainLoop stateStorage subpixel win refreshScheduler configSampler iteration =
                     let height = fontDefault fonts & Font.height
                     Style.mainLoopConfig height (Font.fontHelp fonts)
                         (sample ^. sConfig) (sample ^. sTheme)
-                        & return
+                        & pure
             , tickHandler =
                 do
                     sample <- ConfigSampler.getSample configSampler
@@ -332,7 +332,7 @@ mainLoop stateStorage subpixel win refreshScheduler configSampler iteration =
                         \lastVersionNum ->
                         (curVersionNum, lastVersionNum /= curVersionNum)
                     if configChanged
-                        then return True
+                        then pure True
                         else isRefreshScheduled refreshScheduler
             , stateStorage = stateStorage
             , debug = MainLoop.DebugOptions
@@ -365,18 +365,18 @@ mkWidgetWithFallback dbToIO env =
                 candidateWidget <- makeMainGui dbToIO env
                 (isValid, widget) <-
                     if M.isFocused candidateWidget
-                    then return (True, candidateWidget)
+                    then pure (True, candidateWidget)
                     else
                         env & M.cursor .~ WidgetIds.defaultCursor
                         & makeMainGui dbToIO
                         <&> (,) False
                 unless (M.isFocused widget) $
                     fail "Root cursor did not match"
-                return (isValid, widget)
+                pure (isValid, widget)
         unless isValid $ putStrLn $ "Invalid cursor: " ++ show (env ^. M.cursor)
         widget
             & M.backgroundColor (["background"] :: M.AnimId) (bgColor isValid theme)
-            & return
+            & pure
     where
         theme = env ^. envTheme
         bgColor False = Theme.invalidCursorBGColor

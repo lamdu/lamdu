@@ -75,4 +75,4 @@ make myId (Sugar.FieldParams params) prop =
                     & Text.pack
 make _ _ _ =
     -- This shouldn't happen?
-    return Element.empty
+    pure Element.empty

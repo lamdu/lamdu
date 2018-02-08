@@ -53,7 +53,7 @@ showIncompatibleDbMessage =
 
 migrateFromVersion :: DB -> Int -> IO ()
 migrateFromVersion _ ver | ver > curDbSchemaVersion = fail "DB from newer Lamdu version!"
-migrateFromVersion _ ver | ver == curDbSchemaVersion = return ()
+migrateFromVersion _ ver | ver == curDbSchemaVersion = pure ()
 migrateFromVersion db 0 =
     VersionControl.runAction verifyAll
     & runDbTransaction db

@@ -68,7 +68,7 @@ new params =
         ref <- newIORef NotStarted
         resultsRef <- newIORef EvalResults.empty
         cancelRef <- newIORef Nothing
-        return Evaluator
+        pure Evaluator
             { eParams = params
             , eEvaluatorRef = ref
             , eResultsRef = resultsRef
@@ -89,14 +89,14 @@ runViewTransactionInIO dbM trans =
 getLatestResults :: Evaluator -> IO (EvalResults (ValI ViewM))
 getLatestResults evaluator =
     readIORef (eEvaluatorRef evaluator) <&> startedEvaluator
-    >>= maybe (return EvalResults.empty) Eval.getResults
+    >>= maybe (pure EvalResults.empty) Eval.getResults
 
 getResults :: Evaluator -> IO (CurAndPrev (EvalResults (ValI ViewM)))
 getResults evaluator =
     do
         res <- getLatestResults evaluator
         prevResults <- readIORef (eResultsRef evaluator)
-        return CurAndPrev { _prev = prevResults, _current = res }
+        pure CurAndPrev { _prev = prevResults, _current = res }
 
 eDb :: Evaluator -> MVar (Maybe DB)
 eDb = dbMVar . eParams
@@ -183,10 +183,10 @@ runTransactionAndMaybeRestartEvaluator evaluator transaction =
                     let checkDependencyChange versionData =
                             Version.changes versionData
                             <&> Change.objectKey <&> (`Set.member` dependencies)
-                            <&> Monoid.Any & mconcat & return
+                            <&> Monoid.Any & mconcat & pure
                     Monoid.Any dependencyChanged <-
                         Version.walk checkDependencyChange checkDependencyChange oldVersion newVersion
-                    return (dependencyChanged, result)
+                    pure (dependencyChanged, result)
                 & runTrans
             when dependencyChanged $
                 do
@@ -195,7 +195,7 @@ runTransactionAndMaybeRestartEvaluator evaluator transaction =
                     setCancelTimer evaluator
                     atomicModifyIORef_ (eResultsRef evaluator) (const prevResults)
                     start evaluator
-            return result
+            pure result
     where
         runTrans trans =
             withDb (eDb evaluator) $ \db -> DbLayout.runDbTransaction db trans

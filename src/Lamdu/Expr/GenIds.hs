@@ -53,7 +53,7 @@ randomizeExpr gen (Val pl body) =
     do
         r <- state random
         newBody <- body & traverse %%~ randomizeSubexpr
-        return $ Val (pl r) newBody
+        Val (pl r) newBody & pure
     where
         randomizeSubexpr subExpr = state Random.split <&> (`randomizeExpr` subExpr)
 

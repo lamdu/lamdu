@@ -77,7 +77,7 @@ changeFuncRes usedDefVar =
 applyHoleTo :: Monad m => Val (ValIProperty m) -> T m ()
 applyHoleTo val
     | Lens.has argToHoleFunc val
-    || Lens.has ExprLens.valHole val = return ()
+    || Lens.has ExprLens.valHole val = pure ()
     | otherwise = val ^. Val.payload & DataOps.applyHoleTo & void
 
 data RecordChange = RecordChange
@@ -166,7 +166,7 @@ argChangeType prevArg newArg =
             , fieldsRemoved = Set.difference prevTags newTags
             , fieldsChanged = changedTags
             }
-            & return
+            & pure
     & fromMaybe ArgChange
     where
         fieldChange prevField newField
@@ -188,7 +188,7 @@ fixDefExpr prevType newType usedDefVar defExpr =
         -- Function arg changed (result is the same).
         prevArg <- prevType & schemeType %%~ (^? T._TFun . _1)
         newArg <- newType & schemeType %%~ (^? T._TFun . _1)
-        changeFuncArg (argChangeType prevArg newArg) usedDefVar defExpr & return
+        changeFuncArg (argChangeType prevArg newArg) usedDefVar defExpr & pure
     & fromMaybe (SubExprs.onGetVars (DataOps.applyHoleTo <&> void) usedDefVar defExpr)
 
 updateDefType ::
@@ -205,7 +205,7 @@ updateDefType prevType newType usedDefVar defExpr setDefExpr typeCheck =
             & setDefExpr
         x <- typeCheck
         case x of
-            GoodExpr -> return ()
+            GoodExpr -> pure ()
             BadExpr{} -> fixDefExpr prevType newType usedDefVar (defExpr ^. Def.expr)
 
 scan ::

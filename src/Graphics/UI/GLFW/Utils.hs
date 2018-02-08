@@ -44,10 +44,10 @@ guessMonitor :: GLFW.Window -> IO GLFW.Monitor
 guessMonitor window =
     GLFW.getWindowMonitor window
     >>= \case
-    Just monitor -> return monitor
+    Just monitor -> pure monitor
     Nothing ->
         GLFW.getPrimaryMonitor
-        >>= maybe (fail "Cannot get primary monitor") return
+        >>= maybe (fail "Cannot get primary monitor") pure
 
 stdPixelsPerInch :: Num a => Vector2 a
 stdPixelsPerInch = Vector2 96 96
@@ -64,14 +64,14 @@ getDisplayScale window =
                 monitorMM <- GLFW.getMonitorPhysicalSize monitor <&> uncurry Vector2
                 monitorUnits <- getVideoModeSize monitor
                 if monitorMM ^. _1 == 0 || monitorMM ^. _2 == 0
-                    then return stdPixelsPerMM
-                    else (monitorUnits <&> fromIntegral) / (monitorMM <&> fromIntegral) & return
+                    then pure stdPixelsPerMM
+                    else (monitorUnits <&> fromIntegral) / (monitorMM <&> fromIntegral) & pure
         pixelsPerUnit <-
             do
                 windowUnits <- GLFW.getWindowSize window <&> uncurry Vector2 <&> fmap fromIntegral
                 windowPixels <- GLFW.getFramebufferSize window <&> uncurry Vector2 <&> fmap fromIntegral
-                windowPixels / windowUnits & return
-        pixelsPerUnit * unitsPerMM / stdPixelsPerMM & return
+                windowPixels / windowUnits & pure
+        pixelsPerUnit * unitsPerMM / stdPixelsPerMM & pure
 
 charOfKey :: GLFW.Key -> Maybe Char
 charOfKey key =

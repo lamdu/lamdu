@@ -134,4 +134,4 @@ boxSpaced =
     do
         hSpace <- Spacer.stdHSpace <&> Widget.fromView <&> WithTextPos 0
         vSpace <- Spacer.stdVSpace <&> fromView
-        boxH (List.intersperse hSpace) (List.intersperse vSpace) & return
+        boxH (List.intersperse hSpace) (List.intersperse vSpace) & pure

@@ -36,7 +36,7 @@ convertGetFieldParam (V.GetField recExpr tag) exprPl =
             GetParam ParamRef
                 { _pNameRef = NameRef
                   { _nrName = UniqueId.toUUID tag & InternalName
-                  , _nrGotoDefinition = return (ConvertM.tpiJumpTo paramInfo)
+                  , _nrGotoDefinition = pure (ConvertM.tpiJumpTo paramInfo)
                   }
                 , _pForm = GetFieldParameter
                 , _pBinderMode = NormalBinder
@@ -71,4 +71,4 @@ convert ::
     ConvertM m (ExpressionU m a)
 convert getField exprPl =
     convertGetFieldParam getField exprPl
-    >>= maybe (convertGetFieldNonParam getField exprPl) return
+    >>= maybe (convertGetFieldNonParam getField exprPl) pure

@@ -74,7 +74,7 @@ makeInnerGui branchSelector =
                 & Scroll.focusAreaInto codeSize
                 & Element.size .~ codeSize
         scrollBox /-/ Element.hoverLayers branchSelector
-            & return
+            & pure
 
 make ::
     ( MainLoop.HasMainLoopEnv env

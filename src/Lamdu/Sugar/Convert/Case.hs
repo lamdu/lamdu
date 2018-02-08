@@ -68,7 +68,7 @@ convert (V.Case tag val rest) exprPl = do
     (restCase, modifyEntityId) <-
         case restS ^. rBody of
         BodyCase r | Lens.has (cKind . _LambdaCase) r ->
-            return (r, const (restS ^. rPayload . plEntityId))
+            pure (r, const (restS ^. rPayload . plEntityId))
         _ ->
             do
                 addAlt <- makeAddItem DataOps.case_ restStored
@@ -83,7 +83,7 @@ convert (V.Case tag val rest) exprPl = do
                 addItemWithTag <-
                     convertTagSelection mempty (EntityId.ofTag (exprPl ^. Input.entityId)) addAlt
                     <&> Lens.mapped %~ (^. cairNewVal)
-                return
+                pure
                     ( Case
                         { _cKind = LambdaCase
                         , _cBody = Composite

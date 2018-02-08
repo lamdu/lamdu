@@ -25,13 +25,13 @@ postProcessDef defI =
     do
         def <- Transaction.readIRef defI
         case def ^. Definition.defBody of
-            Definition.BodyBuiltin {} -> return GoodExpr
+            Definition.BodyBuiltin {} -> pure GoodExpr
             Definition.BodyExpr defExpr ->
                 do
                     loaded <- Definition.expr ExprIRef.readVal defExpr
                     checked <- Load.inferCheckDef loaded (ExprIRef.globalId defI)
                     case checked of
-                        Left err -> BadExpr err & return
+                        Left err -> BadExpr err & pure
                         Right (inferredVal, inferContext) ->
                             GoodExpr <$
                             ( def
@@ -57,7 +57,7 @@ postProcessExpr mkProp =
         defExpr <- Definition.expr ExprIRef.readVal (prop ^. Property.pVal)
         inferred <- Load.inferCheckDefExpr defExpr
         case inferred of
-            Left err -> BadExpr err & return
+            Left err -> BadExpr err & pure
             Right _ ->
                 GoodExpr <$
                 Property.pureModify prop

@@ -120,7 +120,7 @@ toEither :: AesonTypes.Parser a -> Either String a
 toEither parser = AesonTypes.parseEither (\() -> parser) ()
 
 fromEither :: Either String a -> AesonTypes.Parser a
-fromEither = either fail return
+fromEither = either fail pure
 
 decodeIdent :: Decoder Identifier
 decodeIdent json =
@@ -188,7 +188,7 @@ withObject msg act =
         unless (null unaccessed) $
             fail $ "Object " ++ LBS8.unpack (AesonPretty.encodePretty obj) ++
             " has ignored fields: " ++ show unaccessed
-        return res
+        pure res
 
 decodeSquashed ::
     (Aeson.FromJSON j, Monoid a) =>
@@ -220,7 +220,7 @@ decodeFlatComposite json =
           (encodedFields, encodedIdent) <- Aeson.parseJSON json
           fields <- decodeFields encodedFields
           tv <- decodeIdent encodedIdent <&> T.Var
-          FlatComposite fields (Just tv) & return
+          FlatComposite fields (Just tv) & pure
 
     , Aeson.parseJSON json
       >>= decodeFields
@@ -296,7 +296,7 @@ decodeTypeVars =
               let  getCs name = decodeConstraints name constraints <&> CompositeVarConstraints
               in   Constraints <$> getCs "recordTypeVars" <*> getCs "sumTypeVars"
             ) obj
-        return (tvs, decodedConstraints)
+        pure (tvs, decodedConstraints)
     where
         decodeForbiddenFields json =
             traverse decodeIdent json <&> map T.Tag <&> Set.fromList
@@ -317,7 +317,7 @@ decodeScheme =
     do
         (tvs, constraints) <- decodeSquashed "schemeBinders" decodeTypeVars obj
         typ <- obj .: "schemeType" >>= lift . decodeType
-        Scheme tvs constraints typ & return
+        Scheme tvs constraints typ & pure
 
 encodeLeaf :: V.Leaf -> AesonTypes.Object
 encodeLeaf =
@@ -353,7 +353,7 @@ decodeLeaf obj =
         leaf key val =
             obj .: key >>=
             \case
-            AesonTypes.Object x | HashMap.null x -> return val
+            AesonTypes.Object x | HashMap.null x -> pure val
             x -> fail ("bad val for leaf " ++ show x)
 
 encodeVal :: Encoder (Val UUID)
@@ -527,7 +527,7 @@ decodeDef =
         presentationMode <-
             obj .: "defPresentationMode" >>= lift . decodePresentationMode
         scheme <- obj .: "typ" >>= lift . decodeScheme
-        Definition body scheme (presentationMode, mName, V.Var globalId) & return
+        Definition body scheme (presentationMode, mName, V.Var globalId) & pure
 
 encodeTagOrder :: TagOrder -> Aeson.Object
 encodeTagOrder tagOrder = HashMap.fromList ["tagOrder" .= tagOrder]
@@ -568,7 +568,7 @@ decodeLam obj =
     do
         lamI <- obj .: "lamId"
         mParamList <- obj .: "lamFieldParams" >>= lift . decodeMaybe decodeParamList
-        return (lamI, mParamList)
+        pure (lamI, mParamList)
 
 encodeNamedLamVar ::
     Encoder (Maybe Meta.ParamList, Maybe Text, UUID, V.Var)

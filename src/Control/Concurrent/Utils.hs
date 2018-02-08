@@ -25,7 +25,7 @@ forwardSynchronuousExceptions :: IO a -> IO (IO a)
 forwardSynchronuousExceptions action =
     do
         selfId <- myThreadId
-        return $ action `ES.catch` \exc@E.SomeException{} ->
+        pure $ action `ES.catch` \exc@E.SomeException{} ->
             do
                 throwerThread <- myThreadId
                 show throwerThread ++ " forwarding exception to "

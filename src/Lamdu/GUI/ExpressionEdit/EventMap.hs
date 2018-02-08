@@ -118,9 +118,9 @@ actionsEventMap options exprInfo =
     sequence
     [ case exprInfoActions exprInfo ^. Sugar.detach of
       Sugar.DetachAction act -> detachEventMap act
-      _ -> return mempty
+      _ -> pure mempty
     , if exprInfoIsHoleResult exprInfo
-        then return mempty
+        then pure mempty
         else
             sequence
             [ extractEventMap (exprInfoActions exprInfo)

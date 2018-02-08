@@ -81,15 +81,15 @@ orderBody (Sugar.BodyLabeledApply a) = orderLabeledApply a <&> Sugar.BodyLabeled
 orderBody (Sugar.BodyCase c) = orderCase c <&> Sugar.BodyCase
 orderBody (Sugar.BodyHole a) = a & Sugar.holeOptions %~ orderHoleOptions & Sugar.BodyHole & pure
 orderBody (Sugar.BodyFragment a) = a & Sugar.fOptions %~ orderHoleOptions & Sugar.BodyFragment & pure
-orderBody x@Sugar.BodyIfElse{} = return x
-orderBody x@Sugar.BodySimpleApply{} = return x
-orderBody x@Sugar.BodyLiteral{} = return x
-orderBody x@Sugar.BodyGetField{} = return x
-orderBody x@Sugar.BodyGetVar{} = return x
-orderBody x@Sugar.BodyInject{} = return x
-orderBody x@Sugar.BodyToNom{} = return x
-orderBody x@Sugar.BodyFromNom{} = return x
-orderBody x@Sugar.BodyPlaceHolder{} = return x
+orderBody x@Sugar.BodyIfElse{} = pure x
+orderBody x@Sugar.BodySimpleApply{} = pure x
+orderBody x@Sugar.BodyLiteral{} = pure x
+orderBody x@Sugar.BodyGetField{} = pure x
+orderBody x@Sugar.BodyGetVar{} = pure x
+orderBody x@Sugar.BodyInject{} = pure x
+orderBody x@Sugar.BodyToNom{} = pure x
+orderBody x@Sugar.BodyFromNom{} = pure x
+orderBody x@Sugar.BodyPlaceHolder{} = pure x
 
 orderExpr :: Monad m => Order m (Sugar.Expression name (T m) a)
 orderExpr e =
@@ -102,7 +102,7 @@ orderBinder :: Monad m => Order m (Sugar.Binder name (T m) a)
 orderBinder =
     -- The ordering for binder params already occurs at the Binder's conversion,
     -- because it needs to be consistent with the presentation mode.
-    return
+    pure
 
 orderDef ::
     Monad m => Order m (Sugar.Definition name (T m) (Sugar.Expression name (T m) a))

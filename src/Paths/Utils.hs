@@ -14,4 +14,4 @@ get getDataFileName fileName =
         currentDir <- Directory.getCurrentDirectory
         let customPath = currentDir </> fileName
         exists <- Directory.doesFileExist customPath
-        if exists then return customPath else getDataFileName fileName
+        if exists then pure customPath else getDataFileName fileName

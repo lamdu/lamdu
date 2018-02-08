@@ -45,7 +45,7 @@ addToLabeledApply a =
             & Sugar.aSpecialArgs .~ specialArgs
             & Sugar.aAnnotatedArgs .~ annotatedArgs
             & Sugar.aRelayedArgs .~ relayedArgs
-    _ -> return a
+    _ -> pure a
     where
         argsMap =
             a ^. Sugar.aAnnotatedArgs
@@ -64,7 +64,7 @@ addToLabeledApply a =
                     { Sugar._raValue = param
                     , Sugar._raId = arg ^. Sugar.aaExpr . Sugar.rPayload . Sugar.plEntityId
                     , Sugar._raActions = arg ^. Sugar.aaExpr . Sugar.rPayload . Sugar.plActions
-                    } & return
+                    } & pure
             & fromMaybe (Left arg)
 
 addToHoleResult ::

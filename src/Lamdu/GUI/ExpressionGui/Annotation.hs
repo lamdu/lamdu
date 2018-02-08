@@ -94,7 +94,7 @@ applyWideAnnotationBehavior HoverWideAnnotation =
     do
         shrinker <- applyWideAnnotationBehavior ShrinkWideAnnotation
         addBg <- addAnnotationHoverBackground
-        return $
+        pure $
             \shrinkRatio layout ->
                 -- TODO: This is a buggy hover that ignores
                 -- Surrounding (and exits screen).
@@ -199,7 +199,7 @@ makeEvalView mNeighbours evalRes =
         evalView
             & Element.setLayers <>~ Element.translateLayers prevPos (prev ^. View.vAnimLayers)
             & Element.setLayers <>~ Element.translateLayers nextPos (next ^. View.vAnimLayers)
-            & return
+            & pure
 
 annotationSpacer ::
     (MonadReader env m, HasTheme env, TextView.HasStyle env) => m View
@@ -254,7 +254,7 @@ addEvaluationResult mNeigh resDisp wideBehavior =
     case (erdVal resDisp ^. ER.payload, erdVal resDisp ^. ER.body) of
     (T.TRecord T.CEmpty, _) ->
         Styled.addBgColor Theme.evaluatedPathBGColor <&> const
-    (_, ER.RFunc{}) -> return (flip const)
+    (_, ER.RFunc{}) -> pure (flip const)
     _ ->
         case wideBehavior of
         KeepWideTypeAnnotation -> ShrinkWideAnnotation
@@ -269,7 +269,7 @@ maybeAddAnnotationPl pl =
     do
         wideAnnotationBehavior <-
             if showAnnotation ^. ExprGui.showExpanded
-            then return KeepWideTypeAnnotation
+            then pure KeepWideTypeAnnotation
             else isExprSelected <&> wideAnnotationBehaviorFromSelected
         maybeAddAnnotation wideAnnotationBehavior
             showAnnotation
@@ -306,8 +306,8 @@ getAnnotationMode :: Monad m => EvalAnnotationOptions -> Sugar.Annotation -> Exp
 getAnnotationMode opt annotation =
     Lens.view (CESettings.settings . CESettings.sInfoMode)
     >>= \case
-    CESettings.None -> return AnnotationModeNone
-    CESettings.Types -> return AnnotationModeTypes
+    CESettings.None -> pure AnnotationModeNone
+    CESettings.Types -> pure AnnotationModeTypes
     CESettings.Evaluation ->
         ExprGuiM.readMScopeId <&> valOfScope annotation
         <&> maybe AnnotationModeNone (AnnotationModeEvaluation neighbourVals)

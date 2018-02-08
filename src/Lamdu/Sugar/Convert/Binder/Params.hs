@@ -98,14 +98,14 @@ setParamList mPresMode paramListProp newParamList =
         zip newParamList [0..] & mapM_ (uncurry setParamOrder)
         Just newParamList & setP paramListProp
         case mPresMode of
-            Nothing -> return ()
+            Nothing -> pure ()
             Just presModeProp ->
                 do
                     presMode <- getP presModeProp
                     case presMode of
                         Object f | [f] /= take 1 newParamList -> setP presModeProp Verbose
                         Infix f0 f1 | [f0, f1] /= take 2 newParamList -> setP presModeProp Verbose
-                        _ -> return ()
+                        _ -> pure ()
     where
         setParamOrder = setP . Anchors.assocTagOrder
 
@@ -151,7 +151,7 @@ fixUsagesOfLamBinder fixOp binderKind storedLam =
         changeCallArgs fixOp (storedLam ^. slLam . V.lamResult) (ExprIRef.globalId defI)
     BinderKindLet redexLam ->
         changeCallArgs fixOp (redexLam ^. V.lamResult) (redexLam ^. V.lamParamId)
-    BinderKindLambda -> return ()
+    BinderKindLambda -> pure ()
 
 addFieldParam ::
     Monad m =>
@@ -208,15 +208,15 @@ fixCallArgRemoveField tag argI =
         body <- ExprIRef.readValBody argI
         case body of
             V.BRecExtend (V.RecExtend t v restI)
-                | t == tag -> return restI
+                | t == tag -> pure restI
                 | otherwise ->
                     do
                         newRestI <- fixCallArgRemoveField tag restI
                         when (newRestI /= restI) $
                             ExprIRef.writeValBody argI $
                             V.BRecExtend $ V.RecExtend t v newRestI
-                        return argI
-            _ -> return argI
+                        pure argI
+            _ -> pure argI
 
 fixCallToSingleArg ::
     Monad m => T.Tag -> ValI m -> T m (ValI m)
@@ -225,9 +225,9 @@ fixCallToSingleArg tag argI =
         body <- ExprIRef.readValBody argI
         case body of
             V.BRecExtend (V.RecExtend t v restI)
-                | t == tag -> return v
+                | t == tag -> pure v
                 | otherwise -> fixCallToSingleArg tag restI
-            _ -> return argI
+            _ -> pure argI
 
 tagForLambdaTagParam :: V.Var -> T.Tag -> TagInfo
 tagForLambdaTagParam paramVar tag = TagInfo (EntityId.ofLambdaTagParam paramVar tag) tag
@@ -242,7 +242,7 @@ delFieldParamAndFixCalls binderKind tags fp storedLam =
         mLastTag
             & traverse_ (getFieldParamsToParams (storedLam ^. slLam))
         fixUsagesOfLamBinder fixRecurseArg binderKind storedLam
-        return delResult
+        pure delResult
     where
         paramVar = storedLam ^. slLam . V.lamParamId
         tag = fpTag fp
@@ -312,7 +312,7 @@ changeGetFieldTags param prevTag chosenTag val =
         | v == param && t == prevTag ->
             V.GetField (getVar ^. Val.payload . Property.pVal) chosenTag & V.BGetField
             & ExprIRef.writeValBody (val ^. Val.payload . Property.pVal)
-        | otherwise -> return ()
+        | otherwise -> pure ()
     V.BLeaf (V.LVar v)
         | v == param -> DataOps.applyHoleTo (val ^. Val.payload) & void
     b -> traverse_ (changeGetFieldTags param prevTag chosenTag) b
@@ -434,10 +434,10 @@ makeDeleteLambda binderKind (StoredLam (V.Lam paramVar lamBodyStored) lambdaProp
             BinderKindLet redexLam ->
                 removeCallsToVar
                 (redexLam ^. V.lamParamId) (redexLam ^. V.lamResult)
-            BinderKindLambda -> return ()
+            BinderKindLambda -> pure ()
         let lamBodyI = Property.value (lamBodyStored ^. Val.payload)
         _ <- protectedSetToVal lambdaProp lamBodyI
-        return ParamDelResultDelVar
+        pure ParamDelResultDelVar
 
 convertVarToGetField ::
     Monad m => T.Tag -> V.Var -> Val (Property (T m) (ValI m)) -> T m ()
@@ -485,7 +485,7 @@ convertToRecordParams mkNewArg binderKind storedLam newParamPosition =
             (storedLam ^. slLam . V.lamResult)
         fixUsagesOfLamBinder (wrapArgWithRecord mkNewArg varToTags)
             binderKind storedLam
-        return varToTags
+        pure varToTags
     where
         paramVar = storedLam ^. slLam . V.lamParamId
         paramList =
@@ -686,7 +686,7 @@ convertBinderToFunction mkArg binderKind val =
                 convertVarToCalls mkArg
                 (redexLam ^. V.lamParamId) (redexLam ^. V.lamResult)
             BinderKindLambda -> error "Lambda will never be an empty-params binder"
-        return
+        pure
             ( ParamAddResultNewVar (EntityId.ofLambdaParam newParam) newParam
             , newValI
             )
@@ -725,5 +725,5 @@ convertParams binderKind defUUID expr =
                     f convParams = (mPresMode convParams, convParams, lambda ^. V.lamResult)
                     mPresMode convParams = presMode <$ convParams ^? cpParams . _FieldParams
                     presMode = defUUID ^. inUUID & Anchors.assocPresentationMode
-            _ -> return (Nothing, convertEmptyParams binderKind expr, expr)
+            _ -> pure (Nothing, convertEmptyParams binderKind expr, expr)
             <&> _2 %~ postProcessActions postProcess

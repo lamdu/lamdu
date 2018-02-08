@@ -84,7 +84,7 @@ makeBuiltinDefinition def builtin =
         (nameEdit /|/ equals /|/ builtinEdit)
             /-/
             typeView
-            & return
+            & pure
     where
         name = def ^. Sugar.drName
         animId = myId & Widget.toAnimId
@@ -102,7 +102,7 @@ make lhsEventMap def =
         addDeletionDiagonal <-
             case defState of
             Sugar.DeletedDefinition -> Styled.addDeletionDiagonal ?? 0.02
-            Sugar.LiveDefinition -> return id
+            Sugar.LiveDefinition -> pure id
         defGui <-
             case def ^. Sugar.drBody of
             Sugar.DefinitionBodyExpression bodyExpr ->
@@ -112,13 +112,13 @@ make lhsEventMap def =
                 <&> Widget.weakerEvents lhsEventMap
             <&> addDeletionDiagonal
         case defState of
-            Sugar.LiveDefinition -> return defGui
+            Sugar.LiveDefinition -> pure defGui
             Sugar.DeletedDefinition ->
                 do
                     buttonGui <-
                         myId <$ Property.set defStateProp Sugar.LiveDefinition
                         & undeleteButton <&> Responsive.fromWithTextPos
-                    Responsive.vbox [defGui, buttonGui] & return
+                    Responsive.vbox [defGui, buttonGui] & pure
     & Reader.local (Element.animIdPrefix .~ Widget.toAnimId myId)
     where
         myId = def ^. Sugar.drEntityId & WidgetIds.fromEntityId

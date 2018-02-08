@@ -83,7 +83,7 @@ glDraw win (Vector2 winSizeX winSizeY) image =
         GL.ortho 0 winSizeX winSizeY 0 (-1) 1
         DrawUtils.clearRender image
         GLFW.swapBuffers win
-        return NextPoll
+        pure NextPoll
 
 mainLoop :: GLFW.Window -> (Size -> Handlers) -> IO ()
 mainLoop win imageHandlers =
@@ -92,15 +92,15 @@ mainLoop win imageHandlers =
         frameBufferSize <- newIORef initialSize
         drawnImageHandlers <- imageHandlers initialSize & newIORef
         fps <- newFPS
-        let handleEvent GLFWEvents.EventWindowClose = return ERQuit
-            handleEvent GLFWEvents.EventWindowRefresh = return ERRefresh
+        let handleEvent GLFWEvents.EventWindowClose = pure ERQuit
+            handleEvent GLFWEvents.EventWindowRefresh = pure ERRefresh
             handleEvent (GLFWEvents.EventFrameBufferSize size) =
                 ERRefresh <$ writeIORef frameBufferSize (fromIntegral <$> size)
             handleEvent event =
                 do
                     handlers <- readIORef drawnImageHandlers
                     eventHandler handlers event
-                    return ERNone
+                    pure ERNone
         let handleEvents events =
                 do
                     eventResult <- mconcat <$> traverse handleEvent events
@@ -114,9 +114,9 @@ mainLoop win imageHandlers =
                     let draw img =
                             glDraw win winSize (fpsImg <> img)
                     case eventResult of
-                        ERQuit -> return NextQuit
+                        ERQuit -> pure NextQuit
                         ERRefresh -> refresh handlers >>= draw
                         ERNone ->
                             update handlers >>=
-                            maybe (return NextWait) draw
+                            maybe (pure NextWait) draw
         eventLoop win handleEvents

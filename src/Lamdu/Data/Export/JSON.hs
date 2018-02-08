@@ -119,7 +119,7 @@ exportSubexpr (Val lamI (V.BLam (V.Lam lamVar _))) =
         mName <- readAssocName lamVar & trans
         mParamList <- Transaction.getP (Anchors.assocFieldParamList lamI) & trans
         Codec.EntityLamVar mParamList mName (valIToUUID lamI) lamVar & tell
-exportSubexpr _ = return ()
+exportSubexpr _ = pure ()
 
 exportVal :: Val (ValI ViewM) -> Export ()
 exportVal val =
@@ -275,7 +275,7 @@ fileImportAll importPath =
     do
         putStrLn $ "importing from: " ++ show importPath
         LBS.readFile importPath <&> Aeson.eitherDecode
-            >>= either fail return
+            >>= either fail pure
             >>= Migration.migrateAsNeeded
             <&> Aeson.fromJSON
             <&> \case

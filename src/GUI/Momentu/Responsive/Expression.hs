@@ -47,7 +47,7 @@ disambiguators =
     do
         h <- addParens
         v <- indent
-        Options.Disambiguators <$> h <*> v & return
+        Options.Disambiguators <$> h <*> v & pure
 
 addParens ::
     (MonadReader env m, TextView.HasStyle env, Functor f) =>
@@ -70,14 +70,14 @@ indent =
                 -~ bWidth
         makeBar <- indentBar
         let f myId w = makeBar (w ^. Element.height) myId /|/ w
-        return (\myId -> (Responsive.alignedWidget %~ f myId) . reduceWidth)
+        pure $ \myId -> (Responsive.alignedWidget %~ f myId) . reduceWidth
 
 totalBarWidth :: (MonadReader env m, HasStyle env, Spacer.HasStdSpacing env) => m Double
 totalBarWidth =
     do
         s <- Lens.view style
         stdSpace <- Spacer.getSpaceSize <&> (^. _1)
-        stdSpace * (indentBarWidth s + indentBarGap s) & return
+        stdSpace * (indentBarWidth s + indentBarGap s) & pure
 
 indentBar ::
     (MonadReader env m, HasStyle env, Spacer.HasStdSpacing env) =>
@@ -86,7 +86,7 @@ indentBar =
     do
         s <- Lens.view style
         stdSpace <- Spacer.getSpaceSize <&> (^. _1)
-        return $ \height myId ->
+        pure $ \height myId ->
             let bar =
                     Spacer.make (Vector2 barWidth height)
                     & Draw.backgroundColor bgAnimId (indentBarColor s)
@@ -107,4 +107,4 @@ boxSpacedMDisamb =
     do
         disamb <- disambiguators
         b <- Options.boxSpaced
-        return (b . maybe Options.disambiguationNone disamb)
+        pure (b . maybe Options.disambiguationNone disamb)

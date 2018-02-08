@@ -45,7 +45,7 @@ convert app@(V.Apply funcI argI) exprPl =
                 justToLeft $ convertAppliedHole app argS exprPl
                 funcS <- ConvertM.convertSubexpression funcI & lift
                 protectedSetToVal <- lift ConvertM.typeProtectedSetToVal
-                return
+                pure
                     ( if Lens.has (rBody . _BodyHole) argS
                       then
                           let dst = argI ^. Val.payload . Input.stored . Property.pVal

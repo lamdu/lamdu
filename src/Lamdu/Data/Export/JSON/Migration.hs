@@ -34,11 +34,11 @@ currentVersion :: Int
 currentVersion = length versionMigrations
 
 toIO :: Either Text a -> IO a
-toIO = either (fail . unpack) return
+toIO = either (fail . unpack) pure
 
 applyMigrations :: Aeson.Value -> Int -> IO Aeson.Value
 applyMigrations doc ver
-    | ver == currentVersion = return doc
+    | ver == currentVersion = pure doc
     | ver > currentVersion = "Cannot read docs of version: " ++ show ver & fail
     | otherwise =
         do

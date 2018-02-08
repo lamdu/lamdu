@@ -52,7 +52,7 @@ mkExtractToDef ctx exprPl =
             & Property.pureModify (ctx ^. ConvertM.scFrozenDeps)
         -- Remove the extracted deps
         ctx ^. ConvertM.scPostProcessRoot & void
-        EntityId.ofIRef newDefI & return
+        EntityId.ofIRef newDefI & pure
     where
         valI = exprPl ^. Input.stored . Property.pVal
         deps = ctx ^. ConvertM.scFrozenDeps . Property.pVal
@@ -82,10 +82,10 @@ mkExtractToLet outerScope stored =
                         & ExprIRef.newValBody
                     getVarI <- V.LVar newParam & V.BLeaf & ExprIRef.newValBody
                     Property.set stored getVarI
-                    return (newParam, lamI)
+                    pure (newParam, lamI)
         V.Apply lamI oldStored & V.BApp & ExprIRef.newValBody
             >>= Property.set outerScope
-        EntityId.ofLambdaParam newParam & return
+        EntityId.ofLambdaParam newParam & pure
     where
         extractPosI = Property.value outerScope
         oldStored = Property.value stored

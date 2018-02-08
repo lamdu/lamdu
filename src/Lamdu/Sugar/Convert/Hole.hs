@@ -109,11 +109,11 @@ mkHoleOptionFromFragment sugarContext exprPl val =
                     & ConvertM.scInferContext .~ inferContext
                     & ConvertM.scFrozenDeps . Property.pVal .~ newDeps
             let updateDeps = Property.set depsProp newDeps
-            return
+            pure
                 ( resultScore (result <&> fst)
                 , mkHoleResult newSugarContext updateDeps (exprPl ^. Input.stored) result
                 )
-        <&> return & ListClass.joinL
+        <&> pure & ListClass.joinL
     }
     where
         baseExpr = pruneExpr val
@@ -448,16 +448,16 @@ exceptTtoListT = ListClass.joinL . fmap (ListClass.fromList . (^.. Lens._Right))
 
 exceptToListT :: Monad m => Either t a -> ListT m a
 exceptToListT (Left _) = mempty
-exceptToListT (Right x) = return x
+exceptToListT (Right x) = pure x
 
 applyForms ::
     Monad m =>
     a -> Val (Infer.Payload, a) ->
     StateT Infer.Context (ListT (T m)) (Val (Infer.Payload, a))
-applyForms _ v@(Val _ V.BLam {}) = return v
+applyForms _ v@(Val _ V.BLam {}) = pure v
 applyForms _ v@(Val pl0 (V.BInject (V.Inject tag (Val pl1 (V.BLeaf V.LHole))))) =
-    return (Val pl0 (V.BInject (V.Inject tag (Val pl1 (V.BLeaf V.LRecEmpty)))))
-    <|> return v
+    pure (Val pl0 (V.BInject (V.Inject tag (Val pl1 (V.BLeaf V.LRecEmpty)))))
+    <|> pure v
 applyForms empty val =
     case inferPl ^. Infer.plType of
     TVar tv
@@ -466,27 +466,27 @@ applyForms empty val =
             , ExprLens.valGetField . V.getFieldRecord . ExprLens.valVar
             ] ->
             -- a variable that's compatible with a function type
-            return val <|>
+            pure val <|>
             do
                 arg <- freshVar "af"
                 res <- freshVar "af"
                 let varTyp = TFun arg res
                 unify varTyp (TVar tv)
                     & Infer.run & mapStateT assertSuccess
-                return $ Val (plSameScope res) $ V.BApp $ V.Apply val $
+                pure $ Val (plSameScope res) $ V.BApp $ V.Apply val $
                     Val (plSameScope arg) (V.BLeaf V.LHole)
         where
             assertSuccess (Left err) =
                 fail $
                 "Unify of a tv with function type should always succeed, but failed: " ++
                 prettyShow err
-            assertSuccess (Right x) = return x
+            assertSuccess (Right x) = pure x
             freshVar = Infer.run . Infer.freshInferredVar (inferPl ^. Infer.plScope)
             scope = inferPl ^. Infer.plScope
             plSameScope t = (Infer.Payload t scope, empty)
     TRecord{} | Lens.has ExprLens.valVar val ->
         -- A "params record" (or just a let item which is a record..)
-        return val
+        pure val
     _ ->
         val & Val.payload . _1 . Infer.plType %%~ orderType
         <&> Suggest.fillHoles empty
@@ -506,7 +506,7 @@ detachValIfNeeded holeType val =
             unify holeType (val ^. Val.payload . _1 . Infer.plType) & liftInfer
         updated <- Update.inferredVal val & liftUpdate
         case unifyResult of
-            Right{} -> return updated
+            Right{} -> pure updated
             Left{} -> detachVal holeType updated & liftUpdate
     where
         liftUpdate = State.gets . Update.run
@@ -535,19 +535,19 @@ emplaceInHoles replaceHole =
             do
                 alreadyReplaced <- State.get
                 if alreadyReplaced
-                    then return (pure oldVal)
+                    then pure (pure oldVal)
                     else
                         case body of
                         V.BLeaf V.LHole ->
                             join $ lift
                                 [ replace x
-                                , return $ pure oldVal
+                                , pure (pure oldVal)
                                 ]
                         V.BApp (V.Apply (Val f (V.BLeaf V.LHole)) arg@(Val _ (V.BLeaf V.LHole))) ->
                             join $ lift
                                 [ replace f
                                     <&> fmap (Val x . V.BApp . (`V.Apply` arg))
-                                , return $ pure oldVal
+                                , pure (pure oldVal)
                                 ]
                         _ -> traverse go body <&> fmap (Val x) . sequenceA
         replace x = replaceHole x <$ State.put True
@@ -555,9 +555,10 @@ emplaceInHoles replaceHole =
 stateEitherSequence :: Monad m => StateT s (Either l) r -> StateT s m (Either l r)
 stateEitherSequence (StateT f) =
     StateT $ \s0 ->
+    pure $
     case f s0 of
-    Right (r, s1) -> return (Right r, s1)
-    Left l -> return (Left l, s0)
+    Right (r, s1) -> (Right r, s1)
+    Left l -> (Left l, s0)
 
 holeResultsEmplaceFragment ::
     Monad m =>
@@ -579,7 +580,7 @@ holeResultsEmplaceFragment rawFragmentExpr val =
                 (Val (fst pl & Infer.plType %~ (`T.TFun` fragmentType), (Nothing, NotFragment)) (V.BLeaf V.LHole))
                 fragmentExpr
                 & V.BApp & Val (fst pl, (Nothing, NotFragment))
-                & return
+                & pure
             ]
             & lift
             & join
@@ -626,11 +627,11 @@ mkHoleResultVals frozenDeps mFragment exprPl base =
                     inferResult <-
                         Infer.infer seedDeps scope seed & InferT.liftInfer
                         <&> Lens.traversed . _2 %~ (,) Nothing
-                    return (seedDeps, inferResult)
+                    pure (seedDeps, inferResult)
                 & mapStateT exceptTtoListT
             form <- applyForms (Nothing, ()) inferResult
             newDeps <- loadNewDeps seedDeps scope form & lift & lift
-            return (newDeps, form)
+            pure (newDeps, form)
     SuggestedExpr sugg ->
         (,)
         <$> mapStateT exceptTtoListT (loadTheNewDeps sugg)
@@ -644,7 +645,7 @@ mkHoleResultVals frozenDeps mFragment exprPl base =
         inferred = exprPl ^. Input.inferred
         post x =
             x
-            & maybe (return . markNotFragment) holeResultsEmplaceFragment mFragment
+            & maybe (pure . markNotFragment) holeResultsEmplaceFragment mFragment
             >>= detachValIfNeeded (inferred ^. Infer.plType)
 
 mkHoleResult ::

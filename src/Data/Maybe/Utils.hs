@@ -10,7 +10,7 @@ unsafeUnjust _ (Just x) = x
 
 maybeToMPlus :: MonadPlus m => Maybe a -> m a
 maybeToMPlus Nothing = mzero
-maybeToMPlus (Just x) = return x
+maybeToMPlus (Just x) = pure x
 
 -- | Similar to Map's @unionWith@
 unionMaybeWith :: (a -> a -> a) -> Maybe a -> Maybe a -> Maybe a

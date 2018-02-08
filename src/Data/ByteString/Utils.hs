@@ -9,4 +9,4 @@ strictifyBS :: LBS.ByteString -> SBS.ByteString
 strictifyBS = SBS.concat . LBS.toChunks
 
 lazifyBS :: SBS.ByteString -> LBS.ByteString
-lazifyBS = LBS.fromChunks . return
+lazifyBS = LBS.fromChunks . pure

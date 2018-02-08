@@ -127,4 +127,4 @@ make config theme rwtransaction rtransaction actions mkWidget =
                             (E.Doc ["Branches", "Delete"])
                             (branchDelegatorId <$> deleteBranch actions branch)
                         | otherwise = mempty
-                return (branch, Widget.weakerEvents delEventMap branchNameEdit)
+                pure (branch, Widget.weakerEvents delEventMap branchNameEdit)

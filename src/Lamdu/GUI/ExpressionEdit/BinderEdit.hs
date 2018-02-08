@@ -142,7 +142,7 @@ mkChosenScopeCursor binder =
         mOuterScopeId <- ExprGuiM.readMScopeId
         case binder ^. Sugar.bBodyScopes of
             Sugar.SameAsParentScope ->
-                mOuterScopeId <&> fmap (trivialScopeCursor . Sugar.BinderParamScopeId) & return
+                mOuterScopeId <&> fmap (trivialScopeCursor . Sugar.BinderParamScopeId) & pure
             Sugar.BinderBodyScope binderBodyScope ->
                 readBinderChosenScope binder & transaction
                 <&> \mChosenScope ->
@@ -166,7 +166,7 @@ makeScopeEventMap prevKey nextKey cursor setter =
 
 blockEventMap :: Monad m => EventMap (m GuiState.Update)
 blockEventMap =
-    return mempty
+    pure mempty
     & E.keyPresses (dirKeys <&> toModKey)
     (E.Doc ["Navigation", "Move", "(blocked)"])
     where
@@ -202,7 +202,7 @@ makeScopeNavEdit binder myId curCursor =
                 <&> (,) (mkScopeEventMap
                          (Config.prevScopeKeys evalConfig)
                          (Config.nextScopeKeys evalConfig))
-            _ -> return (mempty, Nothing)
+            _ -> pure (mempty, Nothing)
     where
         mkScopeEventMap l r = makeScopeEventMap l r curCursor setScope
         leftKeys = [MetaKey noMods MetaKey.Key'Left]
@@ -233,7 +233,7 @@ makeMParamsEdit mScopeCursor isScopeNavFocused delVarBackwardsId myId nearestHol
       <&> Lens.traversed %~ (^. Sugar.bParamScopeId) . sBinderScope
       )
     >>= \case
-    [] -> return Nothing
+    [] -> pure Nothing
     paramEdits ->
         frame
         <*> (Options.boxSpaced ?? Options.disambiguationNone ?? paramEdits)
@@ -242,7 +242,7 @@ makeMParamsEdit mScopeCursor isScopeNavFocused delVarBackwardsId myId nearestHol
         frame =
             case params of
             Sugar.FieldParams{} -> Styled.addValFrame
-            _ -> return id
+            _ -> pure id
         mCurCursor =
             do
                 ScopeNavIsFocused == isScopeNavFocused & guard
@@ -277,7 +277,7 @@ makeParts funcApplyLimit binder delVarBackwardsId myId =
                     Lens.nullOf (Sugar.bParams . Sugar._NullParam) binder ||
                     Lens.has (Lens.traversed . Lens._Just) [sMPrevParamScope scope, sMNextParamScope scope]
                 Just scope
-            & maybe (return (mempty, Nothing)) (makeScopeNavEdit binder scopesNavId)
+            & maybe (pure (mempty, Nothing)) (makeScopeNavEdit binder scopesNavId)
         let isScopeNavFocused =
                 case mScopeNavEdit of
                 Just edit | Widget.isFocused edit -> ScopeNavIsFocused
@@ -287,7 +287,7 @@ makeParts funcApplyLimit binder delVarBackwardsId myId =
                 makeMParamsEdit mScopeCursor isScopeNavFocused delVarBackwardsId myId
                 (binderContentNearestHoles bodyContent) bodyId params
             rhs <- makeBinderBodyEdit body
-            Parts mParamsEdit mScopeNavEdit rhs scopeEventMap & return
+            Parts mParamsEdit mScopeNavEdit rhs scopeEventMap & pure
             & case mScopeNavEdit of
               Nothing -> GuiState.assignCursorPrefix scopesNavId (const destId)
               Just _ -> id
@@ -332,7 +332,7 @@ make pMode lhsEventMap name color binder myId =
             <&> Widget.weakerEvents jumpHolesEventMap
         mParamEdit <-
             case mParamsEdit of
-            Nothing -> return Nothing
+            Nothing -> pure Nothing
             Just paramsEdit ->
                 Responsive.vboxSpaced
                 ?? (paramsEdit : fmap Responsive.fromWidget mScopeEdit ^.. Lens._Just)
@@ -390,7 +390,7 @@ makeLetEdit item =
                 mconcat
                 [ E.keysEventMapMovesCursor (Config.inlineKeys config)
                   (E.Doc ["Navigation", "Jump to first use"])
-                  (return (WidgetIds.fromEntityId usage))
+                  (pure (WidgetIds.fromEntityId usage))
                 | usage <- take 1 (item ^. Sugar.lUsages)
                 ]
         let eventMap = mappend actionsEventMap usageEventMap
@@ -400,7 +400,7 @@ makeLetEdit item =
             make Nothing mempty (item ^. Sugar.lName) letColor binder letId
             <&> Widget.weakerEvents eventMap
             <&> Element.pad (Theme.letItemPadding theme <&> realToFrac)
-        letLabel /|/ space /|/ letEquation & return
+        letLabel /|/ space /|/ letEquation & pure
     & Reader.local (Element.animIdPrefix .~ Widget.toAnimId letId)
     where
         bodyId =
@@ -516,7 +516,7 @@ makeParamsEdit annotationOpts nearestHoles delVarBackwardsId lhsId rhsId params 
     do
         paramColor <- Lens.view Theme.theme <&> Theme.name <&> Theme.parameterColor
         case params of
-            Sugar.BinderWithoutParams -> return []
+            Sugar.BinderWithoutParams -> pure []
             Sugar.NullParam p ->
                 do
                     nullParamGui <-

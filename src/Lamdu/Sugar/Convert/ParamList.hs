@@ -65,13 +65,13 @@ loadForLambdas val =
             & Update.run & State.gets
     where
         loadLambdaParamList (Val _ V.BLam {}) pl = loadUnifyParamList pl
-        loadLambdaParamList _ _ = return ()
+        loadLambdaParamList _ _ = pure ()
 
         loadUnifyParamList pl =
             do
                 mParamList <- loadStored (iref pl) & InferT.liftInner
                 case mParamList of
-                    Nothing -> return ()
+                    Nothing -> pure ()
                     Just paramList ->
                         do
                             funcType <-

@@ -108,7 +108,7 @@ typeProtect checkOk act =
         ((result, isOk), changes) <- (,) <$> act <*> checkOk & Transaction.fork
         case isOk of
             GoodExpr -> Just result <$ Transaction.merge changes
-            BadExpr _ -> return Nothing
+            BadExpr _ -> pure Nothing
 
 typeProtectedSetToVal ::
     Monad m =>
@@ -125,7 +125,7 @@ typeProtectedSetToVal =
                 do
                     res <- DataOps.setToAppliedHole valI dest
                     _ <- checkOk
-                    return res
+                    pure res
 
 postProcess :: Monad m => ConvertM m (T m ())
 postProcess = Lens.view scPostProcessRoot <&> void
