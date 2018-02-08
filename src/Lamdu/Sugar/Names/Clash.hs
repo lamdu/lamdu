@@ -38,12 +38,6 @@ data NameInstance = NameInstance
 Lens.makeLenses ''NameInstance
 
 data IsClash = Clash | NoClash NameContext
-isClash :: IsClash -> Bool
-isClash Clash = True
-isClash NoClash {} = False
-
-isClashOf :: NameInstance -> IsClash
-isClashOf = NoClash . nameContextOf
 
 data GroupNameContext = Ambiguous UUID | Disambiguated (Map Disambiguator UUID)
 
@@ -51,6 +45,17 @@ data GroupNameContext = Ambiguous UUID | Disambiguated (Map Disambiguator UUID)
 -- UUIDs may coexist
 type NameContext = Map CollisionGroup GroupNameContext
 
+isClash :: IsClash -> Bool
+isClash Clash = True
+isClash NoClash {} = False
+
+isClashOf :: NameInstance -> IsClash
+isClashOf = NoClash . nameContextOf
+
+-- Returns (Maybe NameContext) isomorphic to IsClash because of the
+-- useful Applicative instance for Maybe (used in nameContextCombine)
+-- i.e: Nothing indicates a clash
+--      Just nameContext indicates a disambiguated name context
 groupNameContextCombine :: GroupNameContext -> GroupNameContext -> Maybe GroupNameContext
 groupNameContextCombine a b =
     case (a, b) of
@@ -67,8 +72,8 @@ groupNameContextCombine a b =
             | m ^.. Lens.folded & filter (/= uuid) & null = Just (Ambiguous uuid)
             | otherwise = Nothing
 
-nameContextCombine :: NameContext -> NameContext -> Maybe NameContext
-nameContextCombine = unionWithM groupNameContextCombine
+nameContextCombine :: NameContext -> NameContext -> IsClash
+nameContextCombine x y = unionWithM groupNameContextCombine x y & maybe Clash NoClash
 
 groupNameContextOf :: NameInstance -> GroupNameContext
 groupNameContextOf (NameInstance uuid Nothing _) = Ambiguous uuid
@@ -84,10 +89,7 @@ nameContextOf inst =
 
 instance Monoid IsClash where
     mempty = NoClash mempty
-    mappend (NoClash x) (NoClash y) =
-        case nameContextCombine x y of
-        Nothing -> Clash
-        Just ctx -> NoClash ctx
+    mappend (NoClash x) (NoClash y) = nameContextCombine x y
     mappend _ _ = Clash
 
 check :: [NameInstance] -> IsClash
