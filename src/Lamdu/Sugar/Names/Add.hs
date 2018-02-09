@@ -4,7 +4,7 @@ module Lamdu.Sugar.Names.Add
     ) where
 
 import qualified Control.Lens as Lens
-import           Control.Monad.Trans.FastWriter (Writer, runWriter)
+import           Control.Monad.Trans.FastWriter (Writer, runWriter, MonadWriter)
 import qualified Control.Monad.Trans.FastWriter as Writer
 import           Control.Monad.Trans.Reader (Reader, runReader)
 import qualified Control.Monad.Trans.Reader as Reader
@@ -143,11 +143,7 @@ data P1Name = P1Name
       p1NamesBelow :: NameUUIDMap
     }
 newtype Pass1PropagateUp (tm :: * -> *) a = Pass1PropagateUp (Writer P1Out a)
-    deriving (Functor, Applicative, Monad)
-p1Tell :: P1Out -> Pass1PropagateUp tm ()
-p1Tell = Pass1PropagateUp . Writer.tell
-p1Listen :: Pass1PropagateUp tm a -> Pass1PropagateUp tm (a, P1Out)
-p1Listen (Pass1PropagateUp act) = Pass1PropagateUp (Writer.listen act)
+    deriving (Functor, Applicative, Monad, MonadWriter P1Out)
 runPass1PropagateUp :: Pass1PropagateUp tm a -> (a, P1Out)
 runPass1PropagateUp (Pass1PropagateUp act) = runWriter act & _2 %~ p1PostProcess
 
@@ -169,7 +165,7 @@ p1PostProcess (P1Out names localCollisions) =
     P1Out names (localCollisions <> globalCollisions names)
 
 p1ListenNames :: Pass1PropagateUp tm a -> Pass1PropagateUp tm (a, NameUUIDMap)
-p1ListenNames act = p1Listen act <&> _2 %~ _p1Names
+p1ListenNames act = Writer.listen act <&> _2 %~ _p1Names
 
 instance Monad tm => MonadNaming (Pass1PropagateUp tm) where
     type OldName (Pass1PropagateUp tm) = P0Name
@@ -206,7 +202,7 @@ pass1Result mDisambiguator nameType (P0Name mName uuid) =
                 Just name
                     | isLocal nameType && checkLocalCollision name -> Set.singleton name
                 _ -> mempty
-        p1Tell P1Out { _p1Names = myNameUUIDMap, _p1Collisions = localCollisions }
+        Writer.tell P1Out { _p1Names = myNameUUIDMap, _p1Collisions = localCollisions }
         pure
             ( P1Name
                 { p1StoredName = mName

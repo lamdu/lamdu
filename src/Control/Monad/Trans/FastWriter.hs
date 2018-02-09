@@ -3,8 +3,8 @@
 
 module Control.Monad.Trans.FastWriter
     ( WriterT, runWriterT, writerT, execWriterT, evalWriterT
+    , Writer, runWriter, execWriter , evalWriter
     , module Control.Monad.Writer
-    , MonadWriter(..), runWriter, execWriter , evalWriter
     , mapWriter, mapWriterT
     ) where
 
