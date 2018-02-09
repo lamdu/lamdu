@@ -25,7 +25,7 @@ import           Lamdu.Data.Anchors (assocNameRef)
 import           Lamdu.Name
 import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Lens as SugarLens
-import           Lamdu.Sugar.Names.CPS (CPS(..))
+import           Lamdu.Sugar.Names.CPS (CPS(..), runcps)
 import           Lamdu.Sugar.Names.Clash (IsClash(..))
 import qualified Lamdu.Sugar.Names.Clash as Clash
 import           Lamdu.Sugar.Names.NameGen (NameGen)
@@ -176,7 +176,7 @@ instance Monad tm => MonadNaming (Pass1PropagateUp tm) where
     opWithParamName GetParameter _ = pass1Result Nothing Walk.ParamName
     opWithLetName _ = pass1Result Nothing Walk.ParamName
     opGetName mDisambiguator nameType p0Name =
-        runCPS (pass1Result mDisambiguator nameType p0Name) (pure ()) <&> fst
+        pass1Result mDisambiguator nameType p0Name & runcps
 
 unnamedStr :: Text
 unnamedStr = "Unnamed"
