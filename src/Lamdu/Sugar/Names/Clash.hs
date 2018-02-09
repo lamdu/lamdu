@@ -1,7 +1,7 @@
 -- | Name clash logic
 {-# LANGUAGE NoImplicitPrelude, TemplateHaskell #-}
 module Lamdu.Sugar.Names.Clash
-    ( NameInstance(..), niUUID, niDisambiguator, niNameType
+    ( AnnotatedName(..), niUUID, niDisambiguator, niNameType
     , NameContext
     , check
     , IsClash(..), isClash, isClashOf
@@ -26,14 +26,14 @@ collisionGroups =
     ]
 
 -- | Info about a single instance of use of a name:
-data NameInstance = NameInstance
+data AnnotatedName = AnnotatedName
     { _niUUID :: !UUID
     , -- | Is the name used in a function application context? We consider
       -- the application as a disambiguator
       _niDisambiguator :: !(Maybe Disambiguator)
     , _niNameType :: !Walk.NameType
     } deriving (Eq, Ord, Show)
-Lens.makeLenses ''NameInstance
+Lens.makeLenses ''AnnotatedName
 
 data IsClash = Clash | NoClash NameContext
 
@@ -47,7 +47,7 @@ isClash :: IsClash -> Bool
 isClash Clash = True
 isClash NoClash {} = False
 
-isClashOf :: NameInstance -> IsClash
+isClashOf :: AnnotatedName -> IsClash
 isClashOf = NoClash . nameContextOf
 
 -- Returns (Maybe NameContext) isomorphic to IsClash because of the
@@ -73,11 +73,11 @@ groupNameContextCombine a b =
 nameContextCombine :: NameContext -> NameContext -> IsClash
 nameContextCombine x y = unionWithM groupNameContextCombine x y & maybe Clash NoClash
 
-groupNameContextOf :: NameInstance -> GroupNameContext
-groupNameContextOf (NameInstance uuid Nothing _) = Ambiguous uuid
-groupNameContextOf (NameInstance uuid (Just d) _) = Map.singleton d uuid & Disambiguated
+groupNameContextOf :: AnnotatedName -> GroupNameContext
+groupNameContextOf (AnnotatedName uuid Nothing _) = Ambiguous uuid
+groupNameContextOf (AnnotatedName uuid (Just d) _) = Map.singleton d uuid & Disambiguated
 
-nameContextOf :: NameInstance -> NameContext
+nameContextOf :: AnnotatedName -> NameContext
 nameContextOf inst =
     filter (inst ^. niNameType `elem`) collisionGroups
     <&> ((,) ?? ctx)
@@ -90,5 +90,5 @@ instance Monoid IsClash where
     mappend (NoClash x) (NoClash y) = nameContextCombine x y
     mappend _ _ = Clash
 
-check :: [NameInstance] -> IsClash
+check :: [AnnotatedName] -> IsClash
 check ns = ns <&> isClashOf & mconcat

@@ -80,12 +80,12 @@ p0cpsNameConvertor uuid =
 ------------------------------
 
 -- Wrap the Map for a more sensible (recursive) Monoid instance
-newtype NameUUIDMap = NameUUIDMap { _nameUUIDMap :: Map Text (OrderedSet Clash.NameInstance) }
+newtype NameUUIDMap = NameUUIDMap { _nameUUIDMap :: Map Text (OrderedSet Clash.AnnotatedName) }
     deriving Show
 Lens.makeLenses ''NameUUIDMap
 
 type instance Lens.Index NameUUIDMap = Text
-type instance Lens.IxValue NameUUIDMap = OrderedSet Clash.NameInstance
+type instance Lens.IxValue NameUUIDMap = OrderedSet Clash.AnnotatedName
 
 instance Lens.Ixed NameUUIDMap where
     ix k f (NameUUIDMap m) = NameUUIDMap <$> Lens.ix k f m
@@ -99,7 +99,7 @@ instance Monoid NameUUIDMap where
     NameUUIDMap x `mappend` NameUUIDMap y =
         NameUUIDMap $ Map.unionWith (flip mappend) x y
 
-nameUUIDMapSingleton :: Text -> Clash.NameInstance -> NameUUIDMap
+nameUUIDMapSingleton :: Text -> Clash.AnnotatedName -> NameUUIDMap
 nameUUIDMapSingleton name nameInstance =
     OrderedSet.singleton nameInstance & Map.singleton name & NameUUIDMap
 
@@ -108,7 +108,7 @@ isLocal Walk.FieldParamName = True
 isLocal Walk.ParamName = True
 isLocal _ = False
 
-isLocalName :: Clash.NameInstance -> Bool
+isLocalName :: Clash.AnnotatedName -> Bool
 isLocalName = isLocal . (^. Clash.niNameType)
 
 removeEmpty :: NameUUIDMap -> NameUUIDMap
@@ -136,7 +136,7 @@ instance Monoid P1Out where
 
 data P1Name = P1Name
     { p1StoredName :: Maybe StoredName
-    , p1Instance :: Clash.NameInstance
+    , p1Instance :: Clash.AnnotatedName
     , -- | We keep the names below each node so we can check if an
       -- auto-generated name (in pass2) collides with any name in
       -- inner scopes (below)
@@ -219,7 +219,7 @@ pass1Result mDisambiguator nameType (P0Name mName uuid) =
             (_, Nothing) -> Just unnamedStr
             & maybe mempty singleton
         nameInstance =
-            Clash.NameInstance
+            Clash.AnnotatedName
             { _niUUID = uuid
             , _niDisambiguator = mDisambiguator
             , _niNameType = nameType
@@ -260,7 +260,7 @@ Lens.makeLenses ''P2Env
 -- Defs+Params can also be disambiguated if used exclusively in
 -- labeled apply contexts, and with differing signatures.
 
-uuidSuffixes :: OrderedSet Clash.NameInstance -> Map UUID Int
+uuidSuffixes :: OrderedSet Clash.AnnotatedName -> Map UUID Int
 uuidSuffixes nameInstances =
     nameInstances ^.. Lens.folded . Clash.niUUID
     & List.nub
@@ -312,7 +312,7 @@ runPass2MakeNamesInitial = runPass2MakeNames . initialP2Env
 setUuidName :: Monad tm => UUID -> StoredName -> T tm ()
 setUuidName = Transaction.setP . assocNameRef
 
-getCollision :: Text -> Clash.NameInstance -> P2Env -> Collision
+getCollision :: Text -> Clash.AnnotatedName -> P2Env -> Collision
 getCollision name inst env =
     case env ^. p2NameSuffixes . Lens.at (inst ^. Clash.niUUID) of
     Just suffix -> Collision suffix
@@ -329,7 +329,7 @@ getCollision name inst env =
                 -- we'll get:
                 UnknownCollision
 
-getCollisionEnv :: Text -> Clash.NameInstance -> P2Env -> (Collision, P2Env)
+getCollisionEnv :: Text -> Clash.AnnotatedName -> P2Env -> (Collision, P2Env)
 getCollisionEnv name inst env =
     ( getCollision name inst env
     , env & p2NamesAbove %~ Map.insertWith mappend name (Clash.isClashOf inst)
