@@ -37,6 +37,6 @@ extra-deps:
 - testing-feat-0.4.0.3
 - tagshare-0.0
 
-resolver: lts-10.0
+resolver: lts-10.5
 
 allow-newer: true
