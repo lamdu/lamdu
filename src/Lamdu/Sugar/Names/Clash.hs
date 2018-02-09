@@ -3,7 +3,6 @@
 module Lamdu.Sugar.Names.Clash
     ( NameInstance(..), niUUID, niDisambiguator, niNameType
     , NameContext
-    , Disambiguator
     , check
     , IsClash(..), isClash, isClashOf
     ) where
@@ -12,6 +11,7 @@ import qualified Control.Lens as Lens
 import qualified Data.Map as Map
 import           Data.Map.Utils (unionWithM)
 import           Data.UUID.Types (UUID)
+import           Lamdu.Sugar.Names.Walk (Disambiguator)
 import qualified Lamdu.Sugar.Names.Walk as Walk
 
 import           Lamdu.Prelude
@@ -24,8 +24,6 @@ collisionGroups =
     , [ Walk.TagName, Walk.FieldParamName ]
     , [ Walk.NominalName ]
     ]
-
-type Disambiguator = Walk.FunctionSignature
 
 -- | Info about a single instance of use of a name:
 data NameInstance = NameInstance

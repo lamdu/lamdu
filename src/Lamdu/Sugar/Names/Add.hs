@@ -30,7 +30,7 @@ import           Lamdu.Sugar.Names.Clash (IsClash(..))
 import qualified Lamdu.Sugar.Names.Clash as Clash
 import           Lamdu.Sugar.Names.NameGen (NameGen)
 import qualified Lamdu.Sugar.Names.NameGen as NameGen
-import           Lamdu.Sugar.Names.Walk (MonadNaming)
+import           Lamdu.Sugar.Names.Walk (MonadNaming, Disambiguator)
 import qualified Lamdu.Sugar.Names.Walk as Walk
 import           Lamdu.Sugar.Types
 
@@ -57,7 +57,7 @@ instance Monad tm => MonadNaming (Pass0LoadNames tm) where
     opRun = pure runPass0LoadNames
     opWithParamName _ _ = p0cpsNameConvertor
     opWithLetName _ = p0cpsNameConvertor
-    opGetName _ = p0nameConvertor
+    opGetName _ _ = p0nameConvertor
 
 getP0Name :: Monad tm => InternalName -> Pass0LoadNames tm P0Name
 getP0Name internalName =
@@ -172,17 +172,17 @@ instance Monad tm => MonadNaming (Pass1PropagateUp tm) where
     type NewName (Pass1PropagateUp tm) = P1Name
     type SM (Pass1PropagateUp tm) = tm
     opRun = pure (pure . fst . runPass1PropagateUp)
-    opWithParamName GetFieldParameter _ = p1cpsNameConvertor Walk.FieldParamName
-    opWithParamName GetParameter _ = p1cpsNameConvertor Walk.ParamName
-    opWithLetName _ = p1cpsNameConvertor Walk.ParamName
-    opGetName = p1nameConvertor Nothing
-    opGetAppliedFuncName = p1nameConvertor . Just
+    opWithParamName GetFieldParameter _ = pass1Result Nothing Walk.FieldParamName
+    opWithParamName GetParameter _ = pass1Result Nothing Walk.ParamName
+    opWithLetName _ = pass1Result Nothing Walk.ParamName
+    opGetName mDisambiguator nameType p0Name =
+        runCPS (pass1Result mDisambiguator nameType p0Name) (pure ()) <&> fst
 
 unnamedStr :: Text
 unnamedStr = "Unnamed"
 
 pass1Result ::
-    Maybe Clash.Disambiguator -> Walk.NameType -> P0Name ->
+    Maybe Disambiguator -> Walk.NameType -> P0Name ->
     CPS (Pass1PropagateUp tm) P1Name
 pass1Result mDisambiguator nameType (P0Name mName uuid) =
     CPS $ \inner ->
@@ -225,13 +225,6 @@ pass1Result mDisambiguator nameType (P0Name mName uuid) =
             , _niNameType = nameType
             }
         singleton nameText = nameUUIDMapSingleton nameText nameInstance
-
-p1nameConvertor :: Maybe Clash.Disambiguator -> Walk.NameType -> Walk.NameConvertor (Pass1PropagateUp tm)
-p1nameConvertor mDisambiguator nameType p0Name =
-    runCPS (pass1Result mDisambiguator nameType p0Name) (pure ()) <&> fst
-
-p1cpsNameConvertor :: Walk.NameType -> Walk.CPSNameConvertor (Pass1PropagateUp tm)
-p1cpsNameConvertor = pass1Result Nothing
 
 ------------------------------
 ---------- Pass 2 ------------
@@ -350,7 +343,7 @@ instance Monad tm => MonadNaming (Pass2MakeNames tm) where
     opWithParamName GetParameter varInfo = p2cpsNameConvertorLocal varInfo
     opWithParamName GetFieldParameter _ = p2cpsNameConvertorGlobal
     opWithLetName = p2cpsNameConvertorLocal
-    opGetName nameType =
+    opGetName _ nameType =
         case nameType of
         Walk.ParamName -> p2nameConvertorLocal
         _ -> p2nameConvertorGlobal

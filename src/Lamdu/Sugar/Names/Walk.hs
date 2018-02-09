@@ -1,7 +1,7 @@
 {-# LANGUAGE LambdaCase, NoImplicitPrelude, FlexibleContexts, TypeFamilies, RecordWildCards, NamedFieldPuns #-}
 module Lamdu.Sugar.Names.Walk
     ( MonadNaming(..)
-    , NameType(..), FunctionSignature(..)
+    , NameType(..), FunctionSignature(..), Disambiguator
     , NameConvertor, CPSNameConvertor
     , OldExpression, NewExpression
     , toWorkArea, toDef, toExpression, toBody
@@ -31,6 +31,8 @@ data FunctionSignature = FunctionSignature
     , sNormalArgs :: Set T.Tag
     } deriving (Eq, Ord, Show)
 
+type Disambiguator = FunctionSignature
+
 -- TODO: Rename MonadNameWalk
 class (Monad m, Monad (SM m)) => MonadNaming m where
     type OldName m
@@ -40,10 +42,7 @@ class (Monad m, Monad (SM m)) => MonadNaming m where
 
     opWithParamName :: ParameterForm -> NameGen.VarInfo -> CPSNameConvertor m
     opWithLetName :: NameGen.VarInfo -> CPSNameConvertor m
-    opGetName :: NameType -> NameConvertor m
-
-    opGetAppliedFuncName :: FunctionSignature -> NameType -> NameConvertor m
-    opGetAppliedFuncName _ = opGetName
+    opGetName :: Maybe Disambiguator -> NameType -> NameConvertor m
 
 type TM m = T (SM m)
 
@@ -83,7 +82,7 @@ toParamRef param =
         f = case param ^. pForm of
             GetParameter      -> ParamName
             GetFieldParameter -> FieldParamName
-            & opGetName
+            & opGetName Nothing
 
 binderVarType :: BinderVarForm t -> NameType
 binderVarType GetLet = ParamName
@@ -94,7 +93,8 @@ toBinderVarRef ::
     BinderVarRef (OldName m) p ->
     m (BinderVarRef (NewName m) p)
 toBinderVarRef binderVar =
-    (bvNameRef . nrName) (opGetName (binderVarType (binderVar ^. bvForm))) binderVar
+    (bvNameRef . nrName)
+    (opGetName Nothing (binderVarType (binderVar ^. bvForm))) binderVar
 
 toGetVar ::
     MonadNaming m =>
@@ -102,7 +102,8 @@ toGetVar ::
     m (GetVar (NewName m) p)
 toGetVar (GetParam x) = toParamRef x <&> GetParam
 toGetVar (GetBinder x) = toBinderVarRef x <&> GetBinder
-toGetVar (GetParamsRecord x) = traverse (opGetName TagName) x <&> GetParamsRecord
+toGetVar (GetParamsRecord x) =
+    traverse (opGetName Nothing TagName) x <&> GetParamsRecord
 
 toLet ::
     MonadNaming m => (a -> m b) ->
@@ -156,8 +157,9 @@ toTagSelection TagSelection{..} =
         run0 <- opRun
         run1 <- opRun
         pure TagSelection
-            { _tsOptions = _tsOptions >>= run0 . (traverse . toName) (opGetName TagName)
-            , _tsNewTag = _tsNewTag >>= run1 . _1 (opGetName TagName)
+            { _tsOptions =
+                _tsOptions >>= run0 . (traverse . toName) (opGetName Nothing TagName)
+            , _tsNewTag = _tsNewTag >>= run1 . _1 (opGetName Nothing TagName)
             }
 
 toTag ::
@@ -166,7 +168,7 @@ toTag ::
     m (Tag (NewName m) (TM m))
 toTag (Tag info name actions) =
     Tag info
-    <$> opGetName TagName name
+    <$> opGetName Nothing TagName name
     <*> toTagSelection actions
 
 toLabeledApply ::
@@ -178,10 +180,10 @@ toLabeledApply expr app@LabeledApply{..} =
     LabeledApply
     <$>
     ( _aFunc & bvNameRef . nrName %%~
-        opGetAppliedFuncName (funcSignature app) (binderVarType (_aFunc ^. bvForm))
+        opGetName (Just (funcSignature app)) (binderVarType (_aFunc ^. bvForm))
     )
     <*> pure _aSpecialArgs
-    <*> (traverse . aaName) (opGetName TagName) _aAnnotatedArgs
+    <*> (traverse . aaName) (opGetName Nothing TagName) _aAnnotatedArgs
     <*> (traverse . raValue) toParamRef _aRelayedArgs
     >>= traverse expr
 
@@ -253,7 +255,7 @@ toBody expr = \case
     BodyFragment     x -> x & toFragment expr <&> BodyFragment
     BodyPlaceHolder    -> pure BodyPlaceHolder
     where
-        toTId = tidName %%~ opGetName NominalName
+        toTId = tidName %%~ opGetName Nothing NominalName
 
 funcSignature :: LabeledApply name binderVar a -> FunctionSignature
 funcSignature apply =
@@ -306,7 +308,7 @@ toDef ::
     m (Definition (NewName m) (TM m) b)
 toDef f def@Definition {..} =
     do
-        name <- opGetName DefName _drName
+        name <- opGetName Nothing DefName _drName
         body <- toDefinitionBody f _drBody
         pure def { _drName = name, _drBody = body }
 

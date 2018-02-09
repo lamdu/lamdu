@@ -28,7 +28,7 @@ instance Monad m => MonadNaming (Collect name m) where
     opRun = pure (pure . fst . runCollect)
     opWithParamName _ _ = cpsTellName
     opWithLetName _ = cpsTellName
-    opGetName _ = tellName
+    opGetName _ _ = tellName
 
 tellName :: Walk.NameConvertor (Collect name m)
 tellName name = Collect (State.modify (name:))
