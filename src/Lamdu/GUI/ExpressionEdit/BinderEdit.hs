@@ -452,7 +452,7 @@ makeBinderContentEdit content@(Sugar.BinderLet l) =
                 body
                 ^? Sugar.bbContent . Sugar._BinderLet
                 . Sugar.lActions . Sugar.laNodeActions . Sugar.extract
-                & maybe mempty
+                & foldMap
                 (E.keysEventMap (Config.moveLetInwardKeys config)
                 (E.Doc ["Edit", "Let clause", "Move inwards"]) . void)
         mOuterScopeId <- ExprGuiM.readMScopeId

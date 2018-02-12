@@ -217,7 +217,7 @@ pass1Result mDisambiguator nameType (P0Name mName uuid) =
             (_, Just name) -> Just name
             (Walk.ParamName, Nothing) -> mempty
             (_, Nothing) -> Just unnamedStr
-            & maybe mempty singleton
+            & foldMap singleton
         nameInstance =
             Clash.AnnotatedName
             { _niUUID = uuid

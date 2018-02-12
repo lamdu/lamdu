@@ -76,7 +76,7 @@ mkShrunk paramIds myId =
         jumpKeys <- Lens.view Config.config <&> Config.jumpToDefinitionKeys
         let expandEventMap =
                 paramIds ^? Lens.traverse
-                & maybe mempty
+                & foldMap
                   (E.keysEventMapMovesCursor jumpKeys
                    (E.Doc ["View", "Expand Lambda Params"]) . pure .
                    WidgetIds.fromEntityId)

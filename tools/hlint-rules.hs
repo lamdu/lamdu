@@ -38,5 +38,6 @@ warn = fmap (^. a) Control.Monad.Reader.ask ==> Control.Lens.view a
 warn = Control.Lens.view a <&> (^. b) ==> Control.Lens.view (a . b)
 warn = pure a <&> b ==> pure (a b)
 warn = return a <&> b ==> return (a b)
+warn = maybe mempty ==> foldMap
 -- Lamdu style rules:
 warn = return ==> pure

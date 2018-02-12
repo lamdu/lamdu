@@ -42,14 +42,14 @@ undoEventMap ::
     EventMap (m GuiState.Update)
 undoEventMap config =
     E.keyPresses (VersionControl.undoKeys config <&> toModKey) (E.Doc ["Edit", "Undo"])
-    & maybe mempty
+    & foldMap
 
 redoEventMap ::
     VersionControl.Config -> Maybe (m GuiState.Update) ->
     EventMap (m GuiState.Update)
 redoEventMap config =
     E.keyPresses (VersionControl.redoKeys config <&> toModKey) (E.Doc ["Edit", "Redo"])
-    & maybe mempty
+    & foldMap
 
 globalEventMap ::
     Applicative f =>

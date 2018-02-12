@@ -62,7 +62,7 @@ render ::
 render font color mUnderline str =
     r
     & renderedText <>~
-        maybe mempty (drawUnderline font (r ^. renderedTextSize . bounding)) mUnderline
+        foldMap (drawUnderline font (r ^. renderedTextSize . bounding)) mUnderline
     where
         r = renderText font attrs str
         attrs =

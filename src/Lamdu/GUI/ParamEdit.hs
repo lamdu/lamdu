@@ -93,9 +93,9 @@ make annotationOpts prevId nextId param =
         let paramEventMap = mconcat
                 [ eventParamDelEventMap (iDel info) (Config.delForwardKeys config) "" nextId
                 , eventParamDelEventMap (iDel info) (Config.delBackwardKeys config) " backwards" prevId
-                , maybe mempty (eventMapAddNextParam config) (iMAddNext info)
-                , maybe mempty (eventMapOrderParam (Config.paramOrderBeforeKeys config) "before") (iMOrderBefore info)
-                , maybe mempty (eventMapOrderParam (Config.paramOrderAfterKeys config) "after") (iMOrderAfter info)
+                , foldMap (eventMapAddNextParam config) (iMAddNext info)
+                , foldMap (eventMapOrderParam (Config.paramOrderBeforeKeys config) "before") (iMOrderBefore info)
+                , foldMap (eventMapOrderParam (Config.paramOrderAfterKeys config) "after") (iMOrderAfter info)
                 ]
         wideAnnotationBehavior <-
             GuiState.isSubCursor ?? myId

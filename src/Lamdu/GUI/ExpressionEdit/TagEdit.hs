@@ -66,7 +66,7 @@ makeTagNameEdit nearestHoles tag =
         keys <- Lens.view Config.config <&> Config.menu <&> Menu.keysPickOptionAndGotoNext
         let jumpNextEventMap =
                 nearestHoles ^. NearestHoles.next
-                & maybe mempty
+                & foldMap
                   (E.keysEventMapMovesCursor keys
                    (E.Doc ["Navigation", "Jump to next hole"]) .
                    pure . WidgetIds.fromEntityId)

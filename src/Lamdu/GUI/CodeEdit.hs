@@ -191,11 +191,11 @@ makePaneEdit theExportActions pane =
                   & E.keysEventMapMovesCursor paneCloseKeys
                     (E.Doc ["View", "Pane", "Close"])
                 , pane ^. Sugar.paneMoveDown <&> IOTrans.liftTrans
-                  & maybe mempty
+                  & foldMap
                     (E.keysEventMap paneMoveDownKeys
                     (E.Doc ["View", "Pane", "Move down"]))
                 , pane ^. Sugar.paneMoveUp <&> IOTrans.liftTrans
-                  & maybe mempty
+                  & foldMap
                     (E.keysEventMap paneMoveUpKeys
                     (E.Doc ["View", "Pane", "Move up"]))
                 , exportDef theExportActions (pane ^. Sugar.paneDefinition . Sugar.drDefI)
@@ -267,7 +267,7 @@ panesEventMap theExportActions theCodeAnchors =
             , E.dropEventMap "Drag&drop JSON files"
               (E.Doc ["Collaboration", "Import JSON file"]) (Just . traverse_ importAll)
               <&> fmap (\() -> mempty)
-            , maybe mempty
+            , foldMap
               (E.keysEventMapMovesCursor (Config.previousCursorKeys theConfig)
                (E.Doc ["Navigation", "Go back"])) mJumpBack
             , E.keysEventMap exportAllKeys
