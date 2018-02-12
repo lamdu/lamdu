@@ -8,8 +8,8 @@ mkDerivation {
   version = "0.1.0.0";
   src = fetchgit {
     url = "https://github.com/lamdu/Algorithm-W-Step-By-Step";
-    sha256 = "15zk654b18lckcph5rahb0phrsk4fpbsd3wz6lhqyvnmcrsd3yih";
-    rev = "6eb15fb8eefffbeec460c3865da767b72cd7f787";
+    sha256 = "0gm9bwbkyyi1sgs7dyrxmlyqffr3aa3xca0bq4d654mxp23zf0fa";
+    rev = "776cc981293e4985cf4a1b4812b3aca2ba2ed156";
   };
   libraryHaskellDepends = [
     base base-compat binary bytestring containers deepseq
