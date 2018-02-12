@@ -126,7 +126,7 @@ addPreEventWith append preEvent =
     where
         onFocused f =
             f
-            & fPreEvents %~ (\(PreEvents events) -> PreEvents (preEvent:events))
+            & fPreEvents . _PreEvents %~ (preEvent :)
             & fEventMap %~ onMkEventMap
         onMkEventMap mk ctx =
             ctx
