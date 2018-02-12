@@ -1,6 +1,7 @@
 :set -isrc
 :set -itest
 :set -idist/build/autogen
+:set -idist/build/lamdu/autogen
 :set -Wall
 :set -odir=ghci-out
 :set -outputdir=ghci-out
