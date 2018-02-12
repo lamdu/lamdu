@@ -61,8 +61,7 @@ make (Sugar.Case mArg (Sugar.Composite alts caseTail addAlt _addAltTodo)) pl =
                 ) ^? Lens.traversed
         labelJumpHoleEventMap <-
             mExprAfterHeader <&> ExprGui.nextHolesBefore
-            & Lens._Just ExprEventMap.jumpHolesEventMap
-            <&> fromMaybe mempty
+            & maybe (pure mempty) ExprEventMap.jumpHolesEventMap
         let responsiveLabel text =
                 Styled.grammarLabel text <&> Responsive.fromTextView
         let headerLabel text =

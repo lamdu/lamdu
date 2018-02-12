@@ -63,9 +63,9 @@ make hole pl =
         let (litEventMap, delEventMap)
                 | searchTerm == "" =
                     ( makeLiteralEventMap (hole ^. Sugar.holeOptionLiteral)
-                    , hole ^. Sugar.holeMDelete
-                        <&> E.keysEventMapMovesCursor delKeys (E.Doc ["Edit", "Delete"]) . fmap WidgetIds.fromEntityId
-                        & fromMaybe mempty
+                    , foldMap
+                        (E.keysEventMapMovesCursor delKeys (E.Doc ["Edit", "Delete"]) . fmap WidgetIds.fromEntityId)
+                        (hole ^. Sugar.holeMDelete)
                     )
                 | otherwise = (mempty, mempty)
         ExprEventMap.add options pl
