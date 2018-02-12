@@ -1,5 +1,5 @@
 -- | A MonadTransaction mtl-style class for Transactions
-{-# LANGUAGE NoImplicitPrelude, MultiParamTypeClasses, FlexibleInstances, FunctionalDependencies, UndecidableInstances #-}
+{-# LANGUAGE MultiParamTypeClasses, FlexibleInstances, FunctionalDependencies, UndecidableInstances #-}
 
 module Control.Monad.Transaction
     ( MonadTransaction(..)
@@ -7,14 +7,16 @@ module Control.Monad.Transaction
     , getP, setP, readIRef, writeIRef
     ) where
 
+import           Control.Monad.Trans.Class (lift)
 import           Control.Monad.Trans.Maybe (MaybeT)
 import           Control.Monad.Trans.Reader (ReaderT)
 import           Control.Monad.Trans.State (StateT)
 import           Data.Binary (Binary)
-import           Lamdu.Prelude
 import           Revision.Deltum.IRef (IRef)
 import qualified Revision.Deltum.Transaction as Transaction
 import           Revision.Deltum.Transaction as X (Transaction, MkProperty(..))
+
+import           Prelude
 
 type T = Transaction
 

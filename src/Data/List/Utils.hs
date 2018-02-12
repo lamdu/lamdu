@@ -14,6 +14,8 @@ import           Data.Function (on)
 import           Data.List (groupBy, minimumBy)
 import           Data.Ord (comparing)
 
+import           Prelude
+
 rightPad :: Int -> a -> [a] -> [a]
 rightPad l x xs
     | len >= l = xs

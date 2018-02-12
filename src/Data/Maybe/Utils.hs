@@ -4,6 +4,8 @@ module Data.Maybe.Utils
 
 import Control.Monad (MonadPlus(..))
 
+import Prelude
+
 unsafeUnjust :: String -> Maybe a -> a
 unsafeUnjust msg Nothing = error ("unsafeUnjust: " ++ msg)
 unsafeUnjust _ (Just x) = x

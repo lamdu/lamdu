@@ -1,6 +1,5 @@
 -- | Event-loop for GLFW (instead of its native callbacks model).
 
-{-# LANGUAGE NoImplicitPrelude #-}
 module Graphics.UI.GLFW.Events
     ( eventLoop
     , Event(..), KeyEvent(..), MouseButtonEvent(..)
@@ -8,13 +7,14 @@ module Graphics.UI.GLFW.Events
     ) where
 
 import qualified Control.Exception as E
+import           Control.Monad (when)
 import           Data.IORef
 import           Data.IORef.Utils (atomicModifyIORef_)
 import           Data.Typeable (Typeable)
 import           Data.Vector.Vector2 (Vector2(..))
 import qualified Graphics.UI.GLFW as GLFW
 
-import           Lamdu.Prelude
+import           Prelude
 
 -- GLFWRawEvent is the reification of the callback information.
 -- It differs from Event in that in some cases events are grouped together

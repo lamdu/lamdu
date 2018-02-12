@@ -1,11 +1,10 @@
-{-# LANGUAGE NoImplicitPrelude, RankNTypes #-}
+{-# LANGUAGE RankNTypes #-}
 module Control.Lens.Utils
     ( tagged
     ) where
 
 import qualified Control.Lens as Lens
-
-import           Lamdu.Prelude
+import           Control.Lens.Operators
 
 {-# INLINE tagged #-}
 tagged :: Lens.Prism' tag () -> Lens.Prism' (a, tag) a

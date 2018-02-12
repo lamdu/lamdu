@@ -1,3 +1,4 @@
+{-# LANGUAGE NoImplicitPrelude #-}
 module GUI.Momentu.Animation.Id
     ( AnimId
     , augmentId

@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, DeriveTraversable, TemplateHaskell #-}
+{-# LANGUAGE DeriveTraversable, TemplateHaskell #-}
 
 module Data.CurAndPrev
     ( CurAndPrev(..), current, prev
@@ -8,8 +8,10 @@ module Data.CurAndPrev
 
 import           Control.Applicative (Alternative(..))
 import qualified Control.Lens as Lens
+import           Control.Lens.Operators
+import           Data.Semigroup (Semigroup(..))
 
-import           Lamdu.Prelude
+import           Prelude
 
 data CurAndPrev a = CurAndPrev
     { _current :: a

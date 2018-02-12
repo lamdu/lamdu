@@ -1,12 +1,11 @@
-{-# LANGUAGE NoImplicitPrelude #-}
-
 module Numeric.Utils (encodeHex, word8Hex) where
 
+import           Data.ByteString (ByteString)
 import qualified Data.ByteString as SBS
 import           Data.Word (Word8)
 import           Numeric (showHex)
 
-import           Lamdu.Prelude
+import           Prelude
 
 encodeHex :: ByteString -> String
 encodeHex = concatMap word8Hex . SBS.unpack

@@ -2,6 +2,8 @@
 
 #ifdef NO_CODE
 module Data.Aeson.Utils () where
+
+import Prelude
 #else
 module Data.Aeson.Utils
     ( removePrefix
@@ -10,6 +12,8 @@ module Data.Aeson.Utils
 
 import Data.Char (toLower)
 import Data.List (isPrefixOf)
+
+import Prelude
 
 decapitalize :: String -> String
 decapitalize [] = []

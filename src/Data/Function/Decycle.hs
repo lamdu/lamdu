@@ -4,6 +4,8 @@ import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import qualified Data.Set as Set
 
+import Prelude
+
 -- | A fix for functions that terminates recursive cycles
 decycleOn :: Ord b => (a -> b) -> (a -> Maybe (a -> res) -> res) -> a -> res
 decycleOn toOrd f =

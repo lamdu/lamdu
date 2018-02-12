@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, TemplateHaskell, DeriveFoldable, DeriveTraversable #-}
+{-# LANGUAGE TemplateHaskell, DeriveFoldable, DeriveTraversable #-}
 module Data.Set.Ordered
     ( OrderedSet
     , singleton
@@ -7,8 +7,10 @@ module Data.Set.Ordered
     ) where
 
 import qualified Control.Lens as Lens
-import qualified Lamdu.Prelude as Prelude
-import           Lamdu.Prelude hiding (filter, null)
+import           Control.Lens.Operators
+import           Data.Semigroup (Semigroup(..))
+import qualified Prelude as Prelude
+import           Prelude hiding (filter, null)
 
 newtype OrderedSet a = OrderedSet { _orderedSet :: [a] }
     deriving (Show, Eq, Ord, Functor, Foldable, Traversable)

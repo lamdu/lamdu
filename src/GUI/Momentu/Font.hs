@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell, DeriveTraversable, OverloadedStrings #-}
+{-# LANGUAGE NoImplicitPrelude, TemplateHaskell, DeriveTraversable, OverloadedStrings #-}
 -- | A font attached to its size
 
 module GUI.Momentu.Font

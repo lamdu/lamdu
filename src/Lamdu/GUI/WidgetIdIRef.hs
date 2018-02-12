@@ -2,6 +2,7 @@
 -- GUI sees. GUI shouldn't see IRefs directly at all
 
 -- This module is used to avoid a dependency on WidgetIds by tests
+{-# LANGUAGE NoImplicitPrelude #-}
 module Lamdu.GUI.WidgetIdIRef
     ( fromIRef
     ) where
@@ -12,6 +13,8 @@ import qualified Data.UUID.Types as UUID
 import           GUI.Momentu.Widget.Id (Id(..))
 import           Revision.Deltum.IRef (IRef)
 import qualified Revision.Deltum.IRef as IRef
+
+import           Lamdu.Prelude
 
 fromUUID :: UUID -> Id
 fromUUID = Id . (: []) . strictifyBS . UUID.toByteString

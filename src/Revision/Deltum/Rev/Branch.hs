@@ -1,3 +1,4 @@
+{-# LANGUAGE NoImplicitPrelude #-}
 module Revision.Deltum.Rev.Branch
     (Branch, uuid, new, move, curVersion, newVersion)
 where

@@ -14,6 +14,8 @@ import           Control.Monad (unless)
 import           Data.Vector.Vector2 (Vector2(..))
 import qualified Graphics.UI.GLFW as GLFW
 
+import           Prelude
+
 assert :: Monad m => String -> Bool -> m ()
 assert msg p = unless p (fail msg)
 

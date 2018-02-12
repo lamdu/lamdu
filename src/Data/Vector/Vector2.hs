@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, MultiParamTypeClasses, FlexibleInstances, TypeFamilies, DeriveGeneric #-}
+{-# LANGUAGE MultiParamTypeClasses, FlexibleInstances, TypeFamilies, DeriveGeneric #-}
 module Data.Vector.Vector2
     ( Vector2(Vector2)
     , curry, uncurry, sqrNorm
@@ -9,12 +9,15 @@ import           Control.Applicative (liftA2)
 import           Control.DeepSeq (NFData(..))
 import           Control.DeepSeq.Generics (genericRnf)
 import qualified Control.Lens as Lens
+import           Control.Lens.Operators
 import qualified Data.Aeson.Types as Aeson
 import           Data.Binary (Binary(..))
 import           Data.Monoid.Generic (def_mempty, def_mappend)
+import           Data.Semigroup (Semigroup((<>)))
 import qualified Data.Tuple as Tuple
+import           GHC.Generics (Generic)
 
-import           Lamdu.Prelude hiding (curry, uncurry)
+import           Prelude hiding (curry, uncurry)
 
 data Vector2 a = Vector2
     { _first :: !a

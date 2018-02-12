@@ -8,6 +8,8 @@ import qualified Control.Exception as E
 import           Control.Lens.Operators
 import           Control.Monad (void)
 
+import           Prelude
+
 forkIOUnmasked :: IO () -> IO ThreadId
 forkIOUnmasked action = forkIOWithUnmask $ \unmask -> unmask action
 

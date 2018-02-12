@@ -22,6 +22,8 @@ import qualified Control.Monad.Writer as MonadWriter
 import           Data.Functor.Identity (Identity(..))
 import           Data.Monoid ((<>))
 
+import           Prelude
+
 newtype RWST r w s m a = RWST { unRWST :: r -> w -> s -> m (a, s, w) }
     deriving Functor
 

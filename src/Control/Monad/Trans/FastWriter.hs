@@ -19,6 +19,8 @@ import Control.Monad.Trans.State.Strict (StateT(..))
 import Data.Functor.Identity (Identity(..))
 import Data.Monoid ((<>))
 
+import Prelude
+
 newtype WriterT w m a = WriterT { unWriterT :: StateT w m a }
     deriving (Functor, Applicative, Monad, MonadTrans, Alternative)
 

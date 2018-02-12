@@ -1,5 +1,6 @@
 -- Constant tag names which have special support in the runtime or the sugaring.
 -- Those which are supported in the runtime are repeated in JS in rts.js.
+{-# LANGUAGE NoImplicitPrelude #-}
 
 module Lamdu.Builtins.Anchors
     ( bytesTid, floatTid, streamTid, textTid, treeTid, arrayTid, boolTid, mutTid
@@ -11,6 +12,8 @@ import           Data.List.Utils (rightPad)
 import           Data.String (IsString(..))
 import           Lamdu.Calc.Type (Tag)
 import qualified Lamdu.Calc.Type as T
+
+import Lamdu.Prelude
 
 -- We want the translation to UUID and back to not be lossy, so we
 -- canonize to UUID format

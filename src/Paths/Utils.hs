@@ -1,4 +1,3 @@
-{-# LANGUAGE NoImplicitPrelude #-}
 module Paths.Utils
     ( get
     ) where
@@ -6,7 +5,7 @@ module Paths.Utils
 import qualified System.Directory as Directory
 import           System.FilePath ((</>))
 
-import           Lamdu.Prelude
+import           Prelude
 
 get :: (FilePath -> IO FilePath) -> FilePath -> IO FilePath
 get getDataFileName fileName =

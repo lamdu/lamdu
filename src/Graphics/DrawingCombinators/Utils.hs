@@ -1,5 +1,5 @@
 {-# OPTIONS -fno-warn-orphans #-}
-{-# LANGUAGE NoImplicitPrelude, TemplateHaskell, StandaloneDeriving, DeriveTraversable, DeriveGeneric, OverloadedStrings #-}
+{-# LANGUAGE TemplateHaskell, StandaloneDeriving, DeriveTraversable, DeriveGeneric, OverloadedStrings #-}
 module Graphics.DrawingCombinators.Utils
     ( Image
     , square
@@ -7,13 +7,15 @@ module Graphics.DrawingCombinators.Utils
     , Draw.clearRender
     ) where
 
+import           Control.Monad (void)
 import           Data.Aeson.TH (deriveJSON)
 import           Data.Aeson.Types (defaultOptions)
 import           Data.Vector.Vector2 (Vector2(..))
 import           Foreign.C.Types.Instances ()
+import           GHC.Generics (Generic)
 import qualified Graphics.DrawingCombinators as Draw
 
-import           Lamdu.Prelude
+import           Prelude
 
 type Image = Draw.Image ()
 

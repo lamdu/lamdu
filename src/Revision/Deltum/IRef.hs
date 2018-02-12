@@ -1,4 +1,4 @@
-{-# LANGUAGE GeneralizedNewtypeDeriving, KindSignatures #-}
+{-# LANGUAGE NoImplicitPrelude, GeneralizedNewtypeDeriving, KindSignatures #-}
 
 module Revision.Deltum.IRef
     ( IRef, uuid, unsafeFromUUID
@@ -10,8 +10,9 @@ import           Data.Binary (Binary(..))
 import qualified Data.ByteString.Char8 as SBS8
 import           Data.List.Utils (rightPad)
 import           Data.UUID.Types (UUID)
-
 import           Data.UUID.Utils (fromSBS16)
+
+import           Lamdu.Prelude
 
 newtype IRef (m :: * -> *) a = IRef
     { uuid :: UUID

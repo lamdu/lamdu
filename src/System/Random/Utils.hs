@@ -1,4 +1,3 @@
-{-# LANGUAGE NoImplicitPrelude #-}
 {-# OPTIONS -fno-warn-orphans #-}
 module System.Random.Utils
     ( randFunc, genFromHashable
@@ -8,7 +7,7 @@ import Data.Binary (Binary(..))
 import Data.Hashable (Hashable, hashWithSalt)
 import System.Random (Random, StdGen, mkStdGen, random)
 
-import Lamdu.Prelude
+import Prelude
 
 -- Yucky work-around for lack of Binary instance
 instance Binary StdGen where

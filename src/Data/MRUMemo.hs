@@ -10,6 +10,8 @@ import Control.Concurrent.MVar
 import Data.IORef
 import System.IO.Unsafe (unsafePerformIO)
 
+import Prelude
+
 memoIO :: Eq a => (a -> IO b) -> IO (a -> IO b)
 memoIO act =
     memoized <$> newMVar Nothing
