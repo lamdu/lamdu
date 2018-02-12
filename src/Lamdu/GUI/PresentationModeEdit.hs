@@ -59,7 +59,7 @@ make myId (Sugar.FieldParams params) prop =
                 (TextView.style . TextView.styleColor .~ Theme.presentationChoiceColor (Theme.codeForegroundColors theme))
         Choice.make ?? Property.set prop ?? pairs ?? cur
             ?? presentationModeChoiceConfig ?? myId
-            <&> Element.scale (realToFrac <$> Theme.presentationChoiceScaleFactor theme)
+            <&> Element.scale (Theme.presentationChoiceScaleFactor theme)
     where
         cur = Property.value prop
         paramTags = params ^.. traverse . Sugar.fpInfo . Sugar.fpiTag . Sugar.tagInfo . Sugar.tagVal

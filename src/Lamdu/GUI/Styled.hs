@@ -61,9 +61,7 @@ addBgColor getColor =
     Draw.backgroundColor <*> (Lens.view Theme.theme <&> getColor)
 
 addValPadding :: (MonadReader env m, Element a, HasTheme env) => m (a -> a)
-addValPadding =
-    Lens.view Theme.theme <&> Theme.valFramePadding <&> fmap realToFrac
-    <&> Element.pad
+addValPadding = Lens.view Theme.theme <&> Theme.valFramePadding <&> Element.pad
 
 addValFrame ::
     ( MonadReader env m, Element a, Element.HasAnimIdPrefix env, HasTheme env

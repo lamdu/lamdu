@@ -162,9 +162,9 @@ addFrame =
         animId <- Lens.view Element.animIdPrefix
         pure $ \gui ->
             gui
-            & Element.pad (bgPadding s <&> realToFrac)
+            & Element.pad (bgPadding s)
             & Draw.backgroundColor (animId <> ["hover bg"]) (bgColor s)
-            & Element.pad (framePadding s <&> realToFrac)
+            & Element.pad (framePadding s)
             & Draw.backgroundColor (animId <> ["hover frame"]) (frameColor s)
 
 hover ::

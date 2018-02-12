@@ -16,5 +16,5 @@ withUnderline ::
 withUnderline theme =
     Underline
     { _underlineColor = Theme.lightLambdaUnderlineColor (Theme.codeForegroundColors theme)
-    , _underlineWidth = realToFrac (Theme.underlineWidth theme)
+    , _underlineWidth = Theme.underlineWidth theme
     } & ExprGuiM.withLocalUnderline

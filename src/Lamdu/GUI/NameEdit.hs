@@ -63,7 +63,7 @@ makeCollisionSuffixLabel mCollision =
                     <*>
                     (TextView.makeLabel text
                      & Reader.local (TextView.color .~ Theme.collisionSuffixTextColor nameTheme)
-                     <&> Element.scale (realToFrac <$> Theme.collisionSuffixScaleFactor nameTheme))
+                     <&> Element.scale (Theme.collisionSuffixScaleFactor nameTheme))
             <&> (^. Align.tValue)
             <&> Just
 

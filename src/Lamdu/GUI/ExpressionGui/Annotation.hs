@@ -124,9 +124,9 @@ processAnnotationGui wideAnnotationBehavior =
             where
                 annotationWidth = annotation ^. Element.width
                 expansionLimit =
-                    Theme.valAnnotationWidthExpansionLimit th & realToFrac
+                    Theme.valAnnotationWidthExpansionLimit th
                 maxWidth = minWidth + expansionLimit
-                shrinkAtLeast = Theme.valAnnotationShrinkAtLeast th & realToFrac
+                shrinkAtLeast = Theme.valAnnotationShrinkAtLeast th
                 heightShrinkRatio =
                     Theme.valAnnotationMaxHeight th * stdSpacing ^. _2
                     / annotation ^. Element.height
@@ -181,8 +181,8 @@ makeEvalView mNeighbours evalRes =
                 & Reader.local (Element.animIdPrefix <>~ animIdSuffix res)
         let neighbourView n =
                 Lens._Just makeEvaluationResultViewBG n
-                <&> Lens.mapped %~ Element.scale (Theme.neighborsScaleFactor evalTheme <&> realToFrac)
-                <&> Lens.mapped %~ Element.pad (Theme.neighborsPadding evalTheme <&> realToFrac)
+                <&> Lens.mapped %~ Element.scale (Theme.neighborsScaleFactor evalTheme)
+                <&> Lens.mapped %~ Element.pad (Theme.neighborsPadding evalTheme)
                 <&> fromMaybe Element.empty
         (prev, next) <-
             case mNeighbours of

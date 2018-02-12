@@ -124,7 +124,7 @@ makeFragmentExprEdit fragment =
                 case fragment ^. Sugar.fAttach of
                 Sugar.AttachAction {} -> Theme.typeIndicatorMatchColor
                 Sugar.AttachTypeMismatch {} -> Theme.typeIndicatorErrorColor
-        let frameWidth = Theme.typeIndicatorFrameWidth theme <&> realToFrac
+        let frameWidth = Theme.typeIndicatorFrameWidth theme
         fragmentExprGui <- ExprGuiM.makeSubexpression (fragment ^. Sugar.fExpr)
         Momentu.addInnerFrame
             ?? frameColor ?? frameWidth

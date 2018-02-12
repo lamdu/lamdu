@@ -399,7 +399,7 @@ makeLetEdit item =
         letEquation <-
             make Nothing mempty (item ^. Sugar.lName) letColor binder letId
             <&> Widget.weakerEvents eventMap
-            <&> Element.pad (Theme.letItemPadding theme <&> realToFrac)
+            <&> Element.pad (Theme.letItemPadding theme)
         letLabel /|/ space /|/ letEquation & pure
     & Reader.local (Element.animIdPrefix .~ Widget.toAnimId letId)
     where

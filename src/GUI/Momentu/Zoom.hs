@@ -44,10 +44,10 @@ eventMap (Zoom ref) config =
     mconcat
     [ E.keysEventMap (enlargeKeys config)
         (E.Doc ["View", "Zoom", "Enlarge"]) $
-        modifyIORef ref (* realToFrac (enlargeFactor config))
+        modifyIORef ref (* enlargeFactor config)
     , E.keysEventMap (shrinkKeys config)
         (E.Doc ["View", "Zoom", "Shrink"]) $
-        modifyIORef ref (/ realToFrac (shrinkFactor config))
+        modifyIORef ref (/ shrinkFactor config)
     ]
 
 getZoomFactor :: Fractional a => Zoom -> IO a

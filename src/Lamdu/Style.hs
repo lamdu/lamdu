@@ -88,7 +88,7 @@ mainLoopConfig fontHeight helpFont config theme =
     { cAnim =
         AnimConfig
         { acTimePeriod = realToFrac (Theme.animationTimePeriodSec theme)
-        , acRemainingRatioInPeriod = realToFrac (Theme.animationRemainInPeriod theme)
+        , acRemainingRatioInPeriod = Theme.animationRemainInPeriod theme
         }
     , cCursor =
         Cursor.Config
