@@ -2,6 +2,6 @@
 :set -itest
 :set -idist/build/autogen
 :set -idist/build/lamdu/autogen
-:set -Wall -Wnoncanonical-monad-instances -Wsemigroup -Wincomplete-record-updates -Wredundant-constraints
+:set -Wall -Wincomplete-patterns -Wnoncanonical-monad-instances -Wsemigroup -Wincomplete-record-updates -Wredundant-constraints
 :set -odir=ghci-out
 :set -outputdir=ghci-out
