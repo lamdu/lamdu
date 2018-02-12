@@ -9,7 +9,7 @@ module Data.Set.Ordered
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Data.Semigroup (Semigroup(..))
-import qualified Prelude as Prelude
+import qualified Prelude
 import           Prelude hiding (filter, null)
 
 newtype OrderedSet a = OrderedSet { _orderedSet :: [a] }

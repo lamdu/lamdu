@@ -1,3 +1,4 @@
+{-# LANGUAGE NoImplicitPrelude #-}
 module Lamdu.Sugar.EntityId
     ( module Lamdu.Sugar.Internal.EntityId
     ) where

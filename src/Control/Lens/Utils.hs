@@ -6,6 +6,8 @@ module Control.Lens.Utils
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 
+import           Prelude
+
 {-# INLINE tagged #-}
 tagged :: Lens.Prism' tag () -> Lens.Prism' (a, tag) a
 tagged prism =

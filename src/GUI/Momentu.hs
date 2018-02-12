@@ -1,4 +1,4 @@
-{-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE NoImplicitPrelude, PatternSynonyms #-}
 -- | A convenience API module that re-exports the functionality in the Momentu library
 
 module GUI.Momentu
@@ -89,6 +89,8 @@ import           GUI.Momentu.Zoom (Zoom)
 import qualified GUI.Momentu.Zoom as Zoom
 import qualified Graphics.UI.GLFW as GLFW
 import qualified Graphics.UI.GLFW.Utils as GLFWUtils
+
+import           Lamdu.Prelude
 
 type MainLoopEnv = MainLoop.Env
 
