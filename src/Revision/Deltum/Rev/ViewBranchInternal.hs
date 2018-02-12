@@ -3,7 +3,7 @@
 -- | View and Branch have a cyclic dependency. This module
 -- | contains the parts of both that both may depend on, to avoid the
 -- | cycle.
-module Data.Store.Rev.ViewBranchInternal
+module Revision.Deltum.Rev.ViewBranchInternal
     ( ViewData(..), vdBranch
     , View(..)
     , BranchData(..), brVersion, brViews
@@ -14,14 +14,14 @@ where
 
 import qualified Control.Lens as Lens
 import           Data.Binary (Binary(..))
-import           Data.Store.IRef (IRef)
-import qualified Data.Store.IRef as IRef
-import           Data.Store.Rev.Change (Change)
-import qualified Data.Store.Rev.Change as Change
-import           Data.Store.Rev.Version (Version)
-import qualified Data.Store.Rev.Version as Version
-import           Data.Store.Transaction (Transaction)
-import qualified Data.Store.Transaction as Transaction
+import           Revision.Deltum.IRef (IRef)
+import qualified Revision.Deltum.IRef as IRef
+import           Revision.Deltum.Rev.Change (Change)
+import qualified Revision.Deltum.Rev.Change as Change
+import           Revision.Deltum.Rev.Version (Version)
+import qualified Revision.Deltum.Rev.Version as Version
+import           Revision.Deltum.Transaction (Transaction)
+import qualified Revision.Deltum.Transaction as Transaction
 import           Data.UUID.Types (UUID)
 import qualified Data.UUID.Utils as UUIDUtils
 

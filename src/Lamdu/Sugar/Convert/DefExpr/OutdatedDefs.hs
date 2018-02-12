@@ -9,9 +9,6 @@ import           Control.Monad (foldM)
 import qualified Data.Map as Map
 import qualified Data.Monoid as Monoid
 import qualified Data.Set as Set
-import qualified Data.Store.Property as Property
-import           Data.Store.Transaction (Transaction)
-import qualified Data.Store.Transaction as Transaction
 import           Lamdu.Calc.Type (Type)
 import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Calc.Type.FlatComposite as FlatComposite
@@ -28,6 +25,9 @@ import qualified Lamdu.Expr.Lens as ExprLens
 import qualified Lamdu.Infer as Infer
 import           Lamdu.Sugar.Convert.PostProcess (PostProcessResult(..))
 import           Lamdu.Sugar.Types (DefinitionOutdatedType(..))
+import qualified Revision.Deltum.Property as Property
+import           Revision.Deltum.Transaction (Transaction)
+import qualified Revision.Deltum.Transaction as Transaction
 
 import           Lamdu.Prelude
 

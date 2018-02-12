@@ -7,8 +7,6 @@ module Lamdu.GUI.PresentationModeEdit
 
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
-import           Data.Store.Property (Property)
-import qualified Data.Store.Property as Property
 import qualified Data.Text as Text
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Element as Element
@@ -24,6 +22,8 @@ import qualified GUI.Momentu.Widgets.TextView as TextView
 import           Lamdu.Config.Theme (HasTheme)
 import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.Sugar.Types as Sugar
+import           Revision.Deltum.Property (Property)
+import qualified Revision.Deltum.Property as Property
 
 import           Lamdu.Prelude
 

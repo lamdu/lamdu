@@ -11,10 +11,6 @@ import           Control.Monad.IO.Class (MonadIO(..))
 import           Data.CurAndPrev (current)
 import           Data.IORef
 import           Data.MRUMemo (memoIO)
-import           Data.Store.Db (DB)
-import           Data.Store.IRef (IRef)
-import           Data.Store.Transaction (Transaction)
-import qualified Data.Store.Transaction as Transaction
 import           GHC.Conc (setNumCapabilities, getNumProcessors)
 import           GHC.Stack (whoCreated)
 import qualified GUI.Momentu as M
@@ -47,6 +43,10 @@ import qualified Lamdu.Style as Style
 import           Lamdu.Themes (defaultTheme, themeSwitchEventMap)
 import qualified Lamdu.VersionControl as VersionControl
 import           Lamdu.VersionControl.Actions (mUndo)
+import           Revision.Deltum.Db (DB)
+import           Revision.Deltum.IRef (IRef)
+import           Revision.Deltum.Transaction (Transaction)
+import qualified Revision.Deltum.Transaction as Transaction
 import qualified System.Directory as Directory
 import           System.FilePath ((</>))
 import qualified System.FilePath as FilePath

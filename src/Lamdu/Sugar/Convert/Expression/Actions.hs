@@ -5,8 +5,6 @@ module Lamdu.Sugar.Convert.Expression.Actions
 
 import qualified Control.Lens as Lens
 import qualified Data.Map as Map
-import qualified Data.Store.Property as Property
-import           Data.Store.Transaction (Transaction)
 import qualified Lamdu.Calc.Val as V
 import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Data.Ops as DataOps
@@ -20,6 +18,8 @@ import           Lamdu.Sugar.Convert.PostProcess (PostProcessResult(..), postPro
 import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import           Lamdu.Sugar.Types
+import qualified Revision.Deltum.Property as Property
+import           Revision.Deltum.Transaction (Transaction)
 
 import           Lamdu.Prelude
 

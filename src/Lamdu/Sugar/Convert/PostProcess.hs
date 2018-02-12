@@ -3,9 +3,6 @@ module Lamdu.Sugar.Convert.PostProcess
     ( PostProcessResult(..), postProcessDef, postProcessExpr
     ) where
 
-import qualified Data.Store.Property as Property
-import           Data.Store.Transaction (Transaction)
-import qualified Data.Store.Transaction as Transaction
 import qualified Lamdu.Calc.Val.Annotated as Val
 import qualified Lamdu.Data.Definition as Definition
 import           Lamdu.Expr.IRef (DefI, ValI)
@@ -13,6 +10,9 @@ import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Infer as Infer
 import qualified Lamdu.Infer.Error as InferErr
 import qualified Lamdu.Sugar.Convert.Load as Load
+import qualified Revision.Deltum.Property as Property
+import           Revision.Deltum.Transaction (Transaction)
+import qualified Revision.Deltum.Transaction as Transaction
 
 import           Lamdu.Prelude
 

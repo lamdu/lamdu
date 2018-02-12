@@ -9,12 +9,12 @@ module Lamdu.Data.Ops.Subexprs
 
 
 import qualified Control.Lens as Lens
-import           Data.Store.Transaction (Transaction)
 import qualified Lamdu.Calc.Val as V
 import           Lamdu.Calc.Val.Annotated (Val(..))
 import qualified Lamdu.Data.Ops as DataOps
 import           Lamdu.Expr.IRef (ValIProperty)
 import qualified Lamdu.Expr.Lens as ExprLens
+import           Revision.Deltum.Transaction (Transaction)
 
 import           Lamdu.Prelude
 

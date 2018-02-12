@@ -7,7 +7,6 @@ module Lamdu.GUI.ExpressionGui.Wrap
 
 import           Control.Applicative (liftA2)
 import qualified Control.Lens as Lens
-import           Data.Store.Transaction (Transaction)
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Responsive (Responsive(..))
 import qualified GUI.Momentu.State as GuiState
@@ -23,6 +22,7 @@ import           Lamdu.GUI.ExpressionGui.Annotation (maybeAddAnnotationPl)
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.Sugar.Types as Sugar
+import           Revision.Deltum.Transaction (Transaction)
 
 import           Lamdu.Prelude
 

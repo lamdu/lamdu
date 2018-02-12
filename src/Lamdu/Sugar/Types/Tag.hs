@@ -28,7 +28,7 @@ data TagSelection name m a = TagSelection
     , -- Ideally tsNewTag would be an additional TagOption,
       -- and this would also fix animation artifacts for picking new tags.
       -- However that would require making a consistent new tag,
-      -- which would require either a new Data.Store feature or a Sugar cache.
+      -- which would require either a new Revision.Deltum feature or a Sugar cache.
       _tsNewTag :: m (name, TagInfo, a)
     } deriving Functor
 

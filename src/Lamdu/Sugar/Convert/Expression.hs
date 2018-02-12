@@ -4,9 +4,6 @@ module Lamdu.Sugar.Convert.Expression
     ) where
 
 import qualified Data.Set as Set
-import           Data.Store.Property (Property(..))
-import qualified Data.Store.Property as Property
-import qualified Data.Store.Transaction as Transaction
 import qualified Lamdu.Builtins.PrimVal as PrimVal
 import qualified Lamdu.Calc.Val as V
 import           Lamdu.Calc.Val.Annotated (Val(..))
@@ -27,6 +24,9 @@ import qualified Lamdu.Sugar.Convert.Record as ConvertRecord
 import           Lamdu.Sugar.Internal
 import           Lamdu.Sugar.Internal.EntityId (ofValI)
 import           Lamdu.Sugar.Types
+import           Revision.Deltum.Property (Property(..))
+import qualified Revision.Deltum.Property as Property
+import qualified Revision.Deltum.Transaction as Transaction
 
 import           Lamdu.Prelude
 

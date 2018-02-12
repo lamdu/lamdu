@@ -9,11 +9,11 @@ module Lamdu.Sugar.Internal
 
 import qualified Control.Lens as Lens
 import           Data.UUID.Types (UUID)
-import qualified Data.Store.Property as Property
-import           Data.Store.Transaction (Transaction)
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import           Lamdu.Sugar.Types
+import qualified Revision.Deltum.Property as Property
+import           Revision.Deltum.Transaction (Transaction)
 
 import           Lamdu.Prelude
 

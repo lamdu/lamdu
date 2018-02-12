@@ -4,7 +4,6 @@ module Lamdu.GUI.ExpressionEdit.LambdaEdit
     ) where
 
 import qualified Control.Lens as Lens
-import           Data.Store.Transaction (Transaction)
 import           GUI.Momentu.Align (WithTextPos(..))
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Element as Element
@@ -24,9 +23,9 @@ import qualified Lamdu.Config as Config
 import           Lamdu.Config.Theme (HasTheme)
 import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.GUI.ExpressionEdit.BinderEdit as BinderEdit
-import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExprGui
+import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import           Lamdu.GUI.ExpressionGui.Wrap (stdWrapParentExpr)
 import qualified Lamdu.GUI.LightLambda as LightLambda
 import qualified Lamdu.GUI.Styled as Styled
@@ -34,6 +33,7 @@ import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Name (Name(..))
 import qualified Lamdu.Sugar.Lens as SugarLens
 import qualified Lamdu.Sugar.Types as Sugar
+import           Revision.Deltum.Transaction (Transaction)
 
 import           Lamdu.Prelude
 

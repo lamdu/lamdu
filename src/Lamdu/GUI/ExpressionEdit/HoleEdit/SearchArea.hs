@@ -12,7 +12,6 @@ import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
 import           Control.Monad.Transaction (MonadTransaction(..))
 import qualified Data.Monoid as Monoid
-import           Data.Store.Transaction (Transaction)
 import qualified Data.Text as Text
 import           GUI.Momentu (View, (/-/))
 import           GUI.Momentu.Align (WithTextPos)
@@ -51,6 +50,7 @@ import qualified Lamdu.Sugar.Lens as SugarLens
 import qualified Lamdu.Sugar.NearestHoles as NearestHoles
 import qualified Lamdu.Sugar.Parens as AddParens
 import qualified Lamdu.Sugar.Types as Sugar
+import           Revision.Deltum.Transaction (Transaction)
 
 import           Lamdu.Prelude
 

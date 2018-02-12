@@ -3,10 +3,6 @@ module Lamdu.GUI.ExpressionEdit.FragmentEdit
     ( make
     ) where
 
-import           Data.Store.Transaction (Transaction)
-import           Lamdu.GUI.ExpressionGui (ExpressionGui, ExpressionN)
-import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
-import           Lamdu.Name (Name(..))
 import qualified Control.Lens as Lens
 import qualified GUI.Momentu as Momentu
 import qualified GUI.Momentu.Align as Align
@@ -25,12 +21,16 @@ import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.AllowedSearchTerm (allowedFragmentSearchTerm)
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.SearchArea as SearchArea
+import           Lamdu.GUI.ExpressionGui (ExpressionGui, ExpressionN)
 import qualified Lamdu.GUI.ExpressionGui as ExprGui
 import           Lamdu.GUI.ExpressionGui.Annotation (maybeAddAnnotationPl)
+import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
+import           Lamdu.Name (Name(..))
 import qualified Lamdu.Sugar.NearestHoles as NearestHoles
 import qualified Lamdu.Sugar.Types as Sugar
+import           Revision.Deltum.Transaction (Transaction)
 
 import           Lamdu.Prelude
 

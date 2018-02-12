@@ -6,11 +6,11 @@ module Lamdu.Sugar.PresentationModes
 import qualified Control.Lens as Lens
 import           Data.Either (partitionEithers)
 import qualified Data.Map as Map
-import           Data.Store.Transaction (Transaction)
-import qualified Data.Store.Transaction as Transaction
 import qualified Lamdu.Data.Anchors as Anchors
 import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Types as Sugar
+import           Revision.Deltum.Transaction (Transaction)
+import qualified Revision.Deltum.Transaction as Transaction
 
 import           Lamdu.Prelude
 

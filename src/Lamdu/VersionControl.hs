@@ -7,20 +7,20 @@ import qualified Control.Lens as Lens
 import           Data.List (elemIndex)
 import           Data.List.Utils (removeAt)
 import           Data.Maybe.Utils (unsafeUnjust)
-import           Data.Store.Rev.Branch (Branch)
-import qualified Data.Store.Rev.Branch as Branch
-import           Data.Store.Rev.Version (Version)
-import qualified Data.Store.Rev.Version as Version
-import           Data.Store.Rev.View (View)
-import qualified Data.Store.Rev.View as View
-import           Data.Store.Transaction (Transaction, setP, getP, modP)
-import qualified Data.Store.Transaction as Transaction
 import           GUI.Momentu.State (GUIState)
 import qualified GUI.Momentu.State as GuiState
 import           Lamdu.Data.Db.Layout (DbM)
 import qualified Lamdu.Data.Db.Layout as DbLayout
 import           Lamdu.VersionControl.Actions (Actions(Actions))
 import qualified Lamdu.VersionControl.Actions as Actions
+import           Revision.Deltum.Rev.Branch (Branch)
+import qualified Revision.Deltum.Rev.Branch as Branch
+import           Revision.Deltum.Rev.Version (Version)
+import qualified Revision.Deltum.Rev.Version as Version
+import           Revision.Deltum.Rev.View (View)
+import qualified Revision.Deltum.Rev.View as View
+import           Revision.Deltum.Transaction (Transaction, setP, getP, modP)
+import qualified Revision.Deltum.Transaction as Transaction
 
 import           Lamdu.Prelude
 

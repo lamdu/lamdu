@@ -13,17 +13,17 @@ import           Lamdu.Prelude
 
 import           Control.Monad.IO.Class (MonadIO)
 import           Data.ByteString.Char8 ()
-import           Data.Store.Db (DB)
-import qualified Data.Store.Db as Db
-import           Data.Store.IRef (IRef)
-import qualified Data.Store.IRef as IRef
-import           Data.Store.Rev.View (View)
-import qualified Data.Store.Rev.View as View
-import           Data.Store.Transaction (Transaction)
-import qualified Data.Store.Transaction as Transaction
 import           GUI.Momentu (GUIState)
 import           Lamdu.Data.Anchors (Code(..), Revision(..), assocNameRef)
 import qualified Lamdu.Data.Anchors as Anchors
+import           Revision.Deltum.Db (DB)
+import qualified Revision.Deltum.Db as Db
+import           Revision.Deltum.IRef (IRef)
+import qualified Revision.Deltum.IRef as IRef
+import           Revision.Deltum.Rev.View (View)
+import qualified Revision.Deltum.Rev.View as View
+import           Revision.Deltum.Transaction (Transaction)
+import qualified Revision.Deltum.Transaction as Transaction
 
 type T = Transaction
 

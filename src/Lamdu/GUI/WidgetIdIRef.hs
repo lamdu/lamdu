@@ -7,11 +7,11 @@ module Lamdu.GUI.WidgetIdIRef
     ) where
 
 import           Data.ByteString.Utils (strictifyBS)
-import           Data.Store.IRef (IRef)
-import qualified Data.Store.IRef as IRef
 import           Data.UUID.Types (UUID)
 import qualified Data.UUID.Types as UUID
 import           GUI.Momentu.Widget.Id (Id(..))
+import           Revision.Deltum.IRef (IRef)
+import qualified Revision.Deltum.IRef as IRef
 
 fromUUID :: UUID -> Id
 fromUUID = Id . (: []) . strictifyBS . UUID.toByteString

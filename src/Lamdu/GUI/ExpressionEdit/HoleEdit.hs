@@ -5,7 +5,6 @@ module Lamdu.GUI.ExpressionEdit.HoleEdit
 
 import qualified Control.Lens as Lens
 import qualified Data.Char as Char
-import           Data.Store.Transaction (Transaction)
 import qualified Data.Text as Text
 import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.State as GuiState
@@ -25,6 +24,7 @@ import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Name (Name)
 import qualified Lamdu.Sugar.Types as Sugar
+import           Revision.Deltum.Transaction (Transaction)
 
 import           Lamdu.Prelude
 

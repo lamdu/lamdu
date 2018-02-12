@@ -6,11 +6,10 @@ module Lamdu.GUI.TypeView
 
 import qualified Control.Lens as Lens
 import           Control.Monad (zipWithM)
-import           Control.Monad.Trans.Class (MonadTrans(..))
 import           Control.Monad.State (StateT, state, evalStateT)
+import           Control.Monad.Trans.Class (MonadTrans(..))
 import           Control.Monad.Transaction (MonadTransaction(..))
 import qualified Data.Map as Map
-import qualified Data.Store.Transaction as Transaction
 import qualified Data.Text as Text
 import           Data.Text.Encoding (decodeUtf8)
 import           Data.Vector.Vector2 (Vector2(..))
@@ -37,6 +36,7 @@ import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.GUI.Styled as Styled
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Sugar.OrderTags (orderedFlatComposite)
+import qualified Revision.Deltum.Transaction as Transaction
 import           System.Random (Random, random)
 import qualified System.Random as Random
 

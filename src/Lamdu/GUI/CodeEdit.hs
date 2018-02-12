@@ -12,8 +12,6 @@ import           Data.CurAndPrev (CurAndPrev(..))
 import           Data.Functor.Identity (Identity(..))
 import           Data.Orphans () -- Imported for Monoid (IO ()) instance
 import qualified Data.Set as Set
-import           Data.Store.Transaction (Transaction, MkProperty(..))
-import qualified Data.Store.Transaction as Transaction
 import qualified GUI.Momentu.Align as Align
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
@@ -58,6 +56,8 @@ import           Lamdu.Sugar.NearestHoles (NearestHoles)
 import qualified Lamdu.Sugar.NearestHoles as NearestHoles
 import qualified Lamdu.Sugar.Parens as AddParens
 import qualified Lamdu.Sugar.Types as Sugar
+import           Revision.Deltum.Transaction (Transaction, MkProperty(..))
+import qualified Revision.Deltum.Transaction as Transaction
 
 import           Lamdu.Prelude
 

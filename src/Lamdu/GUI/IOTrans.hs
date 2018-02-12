@@ -13,9 +13,9 @@ module Lamdu.GUI.IOTrans
 import           Control.Applicative (liftA2)
 import qualified Control.Lens as Lens
 import           Data.Orphans () -- Imported for Monoid (IO ()) instance
-import           Data.Store.Transaction (Transaction)
 import qualified GUI.Momentu.Main as Main
 import           Lamdu.Prelude
+import           Revision.Deltum.Transaction (Transaction)
 
 type T = Transaction
 

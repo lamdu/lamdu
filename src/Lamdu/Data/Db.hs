@@ -4,10 +4,10 @@ module Lamdu.Data.Db
     ) where
 
 import           Control.Exception (onException)
-import           Data.Store.Db (DB)
-import qualified Data.Store.Db as Db
 import qualified Lamdu.Data.Db.Init as DbInit
 import           Lamdu.Data.Db.Migration (migration)
+import           Revision.Deltum.Db (DB)
+import qualified Revision.Deltum.Db as Db
 import qualified System.Directory as Directory
 import           System.FilePath ((</>))
 

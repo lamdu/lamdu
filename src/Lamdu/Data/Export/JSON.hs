@@ -8,21 +8,16 @@ module Lamdu.Data.Export.JSON
     ) where
 
 import qualified Control.Lens as Lens
-import           Control.Monad.Trans.State (StateT)
-import qualified Control.Monad.Trans.State as State
 import           Control.Monad.Trans.FastWriter (WriterT, runWriterT)
 import qualified Control.Monad.Trans.FastWriter as Writer
+import           Control.Monad.Trans.State (StateT)
+import qualified Control.Monad.Trans.State as State
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.Encode.Pretty as AesonPretty
 import           Data.Binary (Binary)
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.List as List
 import qualified Data.Set as Set
-import           Data.Store.IRef (IRef)
-import qualified Data.Store.IRef as IRef
-import qualified Data.Store.Property as Property
-import           Data.Store.Transaction (Transaction)
-import qualified Data.Store.Transaction as Transaction
 import qualified Data.Text as Text
 import           Data.UUID.Types (UUID)
 import           Lamdu.Calc.Identifier (Identifier)
@@ -43,6 +38,11 @@ import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Lens as ExprLens
 import qualified Lamdu.Expr.Load as Load
 import           Lamdu.Expr.UniqueId (ToUUID)
+import           Revision.Deltum.IRef (IRef)
+import qualified Revision.Deltum.IRef as IRef
+import qualified Revision.Deltum.Property as Property
+import           Revision.Deltum.Transaction (Transaction)
+import qualified Revision.Deltum.Transaction as Transaction
 
 import           Lamdu.Prelude
 

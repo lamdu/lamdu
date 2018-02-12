@@ -1,15 +1,15 @@
-module Data.Store.Rev.Branch
+module Revision.Deltum.Rev.Branch
     (Branch, uuid, new, move, curVersion, newVersion)
 where
 
 import           Data.UUID.Types (UUID)
-import qualified Data.Store.IRef as IRef
-import           Data.Store.Rev.Change (Change)
-import           Data.Store.Rev.Version (Version)
-import qualified Data.Store.Rev.Version as Version
-import           Data.Store.Rev.ViewBranchInternal (BranchData(..), Branch(..), moveView, brVersion)
-import           Data.Store.Transaction (Transaction)
-import qualified Data.Store.Transaction as Transaction
+import qualified Revision.Deltum.IRef as IRef
+import           Revision.Deltum.Rev.Change (Change)
+import           Revision.Deltum.Rev.Version (Version)
+import qualified Revision.Deltum.Rev.Version as Version
+import           Revision.Deltum.Rev.ViewBranchInternal (BranchData(..), Branch(..), moveView, brVersion)
+import           Revision.Deltum.Transaction (Transaction)
+import qualified Revision.Deltum.Transaction as Transaction
 
 import           Lamdu.Prelude
 

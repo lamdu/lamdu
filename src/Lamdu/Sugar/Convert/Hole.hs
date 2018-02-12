@@ -26,10 +26,6 @@ import           Data.Functor.Identity (Identity(..))
 import qualified Data.List.Class as ListClass
 import qualified Data.Map as Map
 import qualified Data.Set as Set
-import qualified Data.Store.IRef as IRef
-import qualified Data.Store.Property as Property
-import           Data.Store.Transaction (Transaction)
-import qualified Data.Store.Transaction as Transaction
 import           Data.Text.Encoding (encodeUtf8)
 import qualified Data.UUID as UUID
 import qualified Lamdu.Builtins.Anchors as Builtins
@@ -64,6 +60,10 @@ import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import           Lamdu.Sugar.OrderTags (orderType)
 import           Lamdu.Sugar.Types
+import qualified Revision.Deltum.IRef as IRef
+import qualified Revision.Deltum.Property as Property
+import           Revision.Deltum.Transaction (Transaction)
+import qualified Revision.Deltum.Transaction as Transaction
 import           System.Random (random)
 import qualified System.Random as Random
 import           System.Random.Utils (genFromHashable)

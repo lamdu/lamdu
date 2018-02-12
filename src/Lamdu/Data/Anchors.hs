@@ -16,11 +16,6 @@ module Lamdu.Data.Anchors
 import qualified Control.Lens as Lens
 import           Data.Binary (Binary)
 import           Data.ByteString.Char8 ()
-import           Data.Store.Rev.Branch (Branch)
-import           Data.Store.Rev.Version (Version)
-import           Data.Store.Rev.View (View)
-import           Data.Store.Transaction (MkProperty(..))
-import qualified Data.Store.Transaction as Transaction
 import           GUI.Momentu.State (GUIState)
 import qualified GUI.Momentu.Widget.Id as WidgetId
 import qualified Lamdu.Calc.Type as T
@@ -30,6 +25,11 @@ import           Lamdu.Data.Meta (DefinitionState(..), SpecialArgs(..), Presenta
 import           Lamdu.Eval.Results (ScopeId)
 import           Lamdu.Expr.IRef (DefI, ValI)
 import qualified Lamdu.Expr.UniqueId as UniqueId
+import           Revision.Deltum.Rev.Branch (Branch)
+import           Revision.Deltum.Rev.Version (Version)
+import           Revision.Deltum.Rev.View (View)
+import           Revision.Deltum.Transaction (MkProperty(..))
+import qualified Revision.Deltum.Transaction as Transaction
 
 import           Lamdu.Prelude
 

@@ -38,7 +38,6 @@ module Lamdu.Sugar.Types.Binder
 
 import qualified Control.Lens as Lens
 import           Data.CurAndPrev (CurAndPrev)
-import           Data.Store.Property (Property)
 import           Lamdu.Calc.Type (Type)
 import qualified Lamdu.Calc.Val as V
 import           Lamdu.Data.Anchors (BinderParamScopeId(..), bParamScopeId)
@@ -46,6 +45,7 @@ import qualified Lamdu.Data.Meta as Meta
 import qualified Lamdu.Eval.Results as ER
 import           Lamdu.Sugar.Internal.EntityId (EntityId)
 import           Lamdu.Sugar.Types.Tag
+import           Revision.Deltum.Property (Property)
 
 import           Lamdu.Prelude
 

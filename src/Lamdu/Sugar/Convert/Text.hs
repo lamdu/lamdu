@@ -8,8 +8,6 @@ import           Control.Monad (mzero)
 import           Control.Monad.Trans.Maybe (MaybeT(..))
 import           Data.Maybe.Utils (maybeToMPlus)
 import           Data.Text.Encoding (decodeUtf8', encodeUtf8)
-import           Data.Store.Property (Property(..))
-import qualified Data.Store.Property as Property
 import qualified Lamdu.Builtins.Anchors as Builtins
 import qualified Lamdu.Builtins.PrimVal as PrimVal
 import qualified Lamdu.Calc.Val as V
@@ -21,6 +19,8 @@ import qualified Lamdu.Sugar.Convert.Input as Input
 import           Lamdu.Sugar.Convert.Monad (ConvertM)
 import           Lamdu.Sugar.Internal
 import           Lamdu.Sugar.Types
+import           Revision.Deltum.Property (Property(..))
+import qualified Revision.Deltum.Property as Property
 
 import           Lamdu.Prelude
 

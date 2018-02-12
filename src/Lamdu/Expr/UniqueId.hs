@@ -3,10 +3,6 @@ module Lamdu.Expr.UniqueId
     ( ToUUID(..), UniqueId(..), identifierOfUUID, varOfUUID
     ) where
 
-import           Data.Store.IRef (IRef)
-import qualified Data.Store.IRef as IRef
-import           Data.Store.Transaction (Transaction)
-import qualified Data.Store.Transaction as Transaction
 import           Data.UUID.Types (UUID)
 import qualified Data.UUID.Utils as UUIDUtils
 import           Lamdu.Calc.Identifier (Identifier(..))
@@ -14,6 +10,10 @@ import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Calc.Val as V
 import           Lamdu.Expr.IRef (ValI(..))
 import qualified Lamdu.Expr.IRef as ExprIRef
+import           Revision.Deltum.IRef (IRef)
+import qualified Revision.Deltum.IRef as IRef
+import           Revision.Deltum.Transaction (Transaction)
+import qualified Revision.Deltum.Transaction as Transaction
 
 import           Lamdu.Prelude
 

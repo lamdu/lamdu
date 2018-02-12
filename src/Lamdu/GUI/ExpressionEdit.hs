@@ -5,7 +5,6 @@ module Lamdu.GUI.ExpressionEdit
 
 import qualified Control.Monad.Reader as Reader
 import qualified Data.List as List
-import           Data.Store.Transaction (Transaction)
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.State as GuiState
@@ -30,6 +29,7 @@ import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Name (Name(..))
 import qualified Lamdu.Sugar.Types as Sugar
+import           Revision.Deltum.Transaction (Transaction)
 
 import           Lamdu.Prelude
 

@@ -19,12 +19,12 @@ import qualified Control.Monad.Trans.Reader as Reader
 import           Control.Monad.Trans.State (evalState, state, runState)
 import qualified Data.ByteString as BS
 import qualified Data.Map as Map
-import           Data.Store.Transaction (Transaction)
-import qualified Data.Store.Transaction as Transaction
 import           Lamdu.Calc.Identifier (Identifier(..))
 import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Calc.Val as V
 import           Lamdu.Calc.Val.Annotated (Val(..))
+import           Revision.Deltum.Transaction (Transaction)
+import qualified Revision.Deltum.Transaction as Transaction
 import           System.Random (Random, RandomGen, random)
 import qualified System.Random as Random
 import qualified System.Random.Utils as RandomUtils

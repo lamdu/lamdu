@@ -17,8 +17,6 @@ import           Data.Monoid.Generic (def_mempty, def_mappend)
 import qualified Data.Set as Set
 import           Data.Set.Ordered (OrderedSet)
 import qualified Data.Set.Ordered as OrderedSet
-import           Data.Store.Transaction (Transaction)
-import qualified Data.Store.Transaction as Transaction
 import qualified Data.Text as Text
 import           Data.UUID.Types (UUID)
 import           Lamdu.Data.Anchors (assocNameRef)
@@ -33,6 +31,8 @@ import qualified Lamdu.Sugar.Names.NameGen as NameGen
 import           Lamdu.Sugar.Names.Walk (MonadNaming, Disambiguator)
 import qualified Lamdu.Sugar.Names.Walk as Walk
 import           Lamdu.Sugar.Types
+import           Revision.Deltum.Transaction (Transaction)
+import qualified Revision.Deltum.Transaction as Transaction
 
 import           Lamdu.Prelude
 

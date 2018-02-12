@@ -1,22 +1,22 @@
 {-# LANGUAGE NoImplicitPrelude #-}
-module Data.Store.Rev.View
+module Revision.Deltum.Rev.View
     ( View, curVersion, branch, setBranch, move, new, store
     ) where
 
 import           Control.Monad ((<=<))
 import qualified Data.List as List
 import           Data.Maybe (catMaybes)
-import           Data.Store.IRef (IRef)
-import qualified Data.Store.Property as Property
-import           Data.Store.Rev.Branch (Branch)
-import qualified Data.Store.Rev.Branch as Branch
-import qualified Data.Store.Rev.Change as Change
-import           Data.Store.Rev.Change (Change(..))
-import           Data.Store.Rev.Version (Version)
-import qualified Data.Store.Rev.Version as Version
-import           Data.Store.Rev.ViewBranchInternal (BranchData, ViewData(..), View(..), Branch(..), moveView, makeViewKey, applyChangesToView, brViews, vdBranch)
-import           Data.Store.Transaction (Transaction, Store(..))
-import qualified Data.Store.Transaction as Transaction
+import           Revision.Deltum.IRef (IRef)
+import qualified Revision.Deltum.Property as Property
+import           Revision.Deltum.Rev.Branch (Branch)
+import qualified Revision.Deltum.Rev.Branch as Branch
+import qualified Revision.Deltum.Rev.Change as Change
+import           Revision.Deltum.Rev.Change (Change(..))
+import           Revision.Deltum.Rev.Version (Version)
+import qualified Revision.Deltum.Rev.Version as Version
+import           Revision.Deltum.Rev.ViewBranchInternal (BranchData, ViewData(..), View(..), Branch(..), moveView, makeViewKey, applyChangesToView, brViews, vdBranch)
+import           Revision.Deltum.Transaction (Transaction, Store(..))
+import qualified Revision.Deltum.Transaction as Transaction
 
 import           Lamdu.Prelude
 

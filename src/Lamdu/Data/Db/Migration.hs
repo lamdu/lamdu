@@ -11,13 +11,13 @@ module Lamdu.Data.Db.Migration
     ) where
 
 import           Control.Exception (try, SomeException(..))
-import           Data.Store.Db (DB)
-import qualified Data.Store.Transaction as Transaction
+import qualified GUI.Momentu as M
 import           Lamdu.Data.Db.Layout (runDbTransaction, dbSchemaVersion, curDbSchemaVersion, guiState)
-import qualified Lamdu.VersionControl as VersionControl
 import           Lamdu.Data.Export.JSON (verifyAll)
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
-import qualified GUI.Momentu as M
+import qualified Lamdu.VersionControl as VersionControl
+import           Revision.Deltum.Db (DB)
+import qualified Revision.Deltum.Transaction as Transaction
 
 import           Lamdu.Prelude
 

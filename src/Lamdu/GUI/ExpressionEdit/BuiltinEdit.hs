@@ -5,8 +5,6 @@ module Lamdu.GUI.ExpressionEdit.BuiltinEdit
 
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
-import           Data.Store.Property (Property(..))
-import           Data.Store.Transaction (Transaction)
 import qualified Data.Text as Text
 import           GUI.Momentu.Align (WithTextPos)
 import qualified GUI.Momentu.Align as Align
@@ -27,6 +25,8 @@ import           Lamdu.Config.Theme (HasTheme)
 import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Sugar.Types as Sugar
+import           Revision.Deltum.Property (Property(..))
+import           Revision.Deltum.Transaction (Transaction)
 
 import           Lamdu.Prelude
 

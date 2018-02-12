@@ -4,7 +4,6 @@ module Lamdu.GUI.ExpressionEdit.ApplyEdit
     ) where
 
 import qualified Control.Lens as Lens
-import           Data.Store.Transaction (Transaction)
 import           Data.Vector.Vector2 (Vector2(..))
 import           GUI.Momentu.Align (WithTextPos)
 import qualified GUI.Momentu.Align as Align
@@ -36,6 +35,7 @@ import           Lamdu.Name (Name(..))
 import qualified Lamdu.Name as Name
 import           Lamdu.Sugar.NearestHoles (NearestHoles)
 import qualified Lamdu.Sugar.Types as Sugar
+import           Revision.Deltum.Transaction (Transaction)
 
 import           Lamdu.Prelude
 

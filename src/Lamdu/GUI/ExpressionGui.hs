@@ -17,14 +17,14 @@ module Lamdu.GUI.ExpressionGui
     ) where
 
 import qualified Control.Lens as Lens
-import           Data.Store.Transaction (Transaction)
 import           GUI.Momentu.Responsive (Responsive(..))
 import qualified GUI.Momentu.State as GuiState
-import qualified Lamdu.Sugar.Lens as SugarLens
 import           Lamdu.Name (Name)
+import qualified Lamdu.Sugar.Lens as SugarLens
 import           Lamdu.Sugar.NearestHoles (NearestHoles)
 import qualified Lamdu.Sugar.NearestHoles as NearestHoles
 import qualified Lamdu.Sugar.Types as Sugar
+import           Revision.Deltum.Transaction (Transaction)
 
 import           Lamdu.Prelude
 

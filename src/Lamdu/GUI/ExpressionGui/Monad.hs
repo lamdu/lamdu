@@ -21,7 +21,6 @@ import qualified Control.Monad.Reader as Reader
 import qualified Control.Monad.Trans.Reader as ReaderT
 import           Control.Monad.Transaction (MonadTransaction(..))
 import           Data.CurAndPrev (CurAndPrev)
-import           Data.Store.Transaction (Transaction)
 import           Data.Vector.Vector2 (Vector2)
 import           GUI.Momentu.Align (WithTextPos)
 import           GUI.Momentu.Animation.Id (AnimId)
@@ -50,6 +49,7 @@ import qualified Lamdu.GUI.ExpressionGui as ExprGui
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Style (Style, HasStyle(..))
 import qualified Lamdu.Sugar.Types as Sugar
+import           Revision.Deltum.Transaction (Transaction)
 
 import           Lamdu.Prelude
 

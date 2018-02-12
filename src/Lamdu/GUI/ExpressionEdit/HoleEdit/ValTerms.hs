@@ -3,9 +3,6 @@ module Lamdu.GUI.ExpressionEdit.HoleEdit.ValTerms
     ( expr
     ) where
 
-import           Data.Store.Property (Property)
-import qualified Data.Store.Property as Property
-import           Data.Store.Transaction (Transaction)
 import qualified Data.Text as Text
 import qualified Lamdu.Builtins.Anchors as Builtins
 import           Lamdu.Formatting (Format(..))
@@ -15,6 +12,9 @@ import qualified Lamdu.Name as Name
 import qualified Lamdu.Sugar.Lens as SugarLens
 import qualified Lamdu.Sugar.Names.Get as NamesGet
 import qualified Lamdu.Sugar.Types as Sugar
+import           Revision.Deltum.Property (Property)
+import qualified Revision.Deltum.Property as Property
+import           Revision.Deltum.Transaction (Transaction)
 
 import           Lamdu.Prelude
 

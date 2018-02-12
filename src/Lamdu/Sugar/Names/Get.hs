@@ -5,11 +5,11 @@ module Lamdu.Sugar.Names.Get
 
 import           Control.Monad.Trans.State (State, runState)
 import qualified Control.Monad.Trans.State as State
-import           Data.Store.Transaction (Transaction)
 import           Lamdu.Sugar.Names.CPS (CPS(..))
 import           Lamdu.Sugar.Names.Walk (MonadNaming)
 import qualified Lamdu.Sugar.Names.Walk as Walk
 import           Lamdu.Sugar.Types
+import           Revision.Deltum.Transaction (Transaction)
 
 import           Lamdu.Prelude
 

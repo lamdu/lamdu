@@ -14,18 +14,18 @@ module Lamdu.Sugar.Types
     ) where
 
 import qualified Control.Lens as Lens
-import           Data.Store.Property (Property)
 import           Data.UUID.Types (UUID)
 import           Lamdu.Calc.Type.Scheme (Scheme)
 import qualified Lamdu.Calc.Val as V
-import qualified Lamdu.Data.Meta as Meta
 import qualified Lamdu.Data.Definition as Definition
+import qualified Lamdu.Data.Meta as Meta
 import           Lamdu.Sugar.Internal.EntityId (EntityId)
 import           Lamdu.Sugar.Types.Binder as Exported
 import           Lamdu.Sugar.Types.Expression as Exported
 import           Lamdu.Sugar.Types.GetVar as Exported
 import           Lamdu.Sugar.Types.Hole as Exported
 import           Lamdu.Sugar.Types.Tag as Exported
+import           Revision.Deltum.Property (Property)
 
 import           Lamdu.Prelude
 

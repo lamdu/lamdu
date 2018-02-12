@@ -11,8 +11,6 @@ import           Data.List.Utils (isLengthAtLeast)
 import qualified Data.Map as Map
 import           Data.Maybe.Utils (maybeToMPlus)
 import qualified Data.Set as Set
-import           Data.Store.Property (Property)
-import qualified Data.Store.Property as Property
 import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Calc.Type.FlatComposite as FlatComposite
 import           Lamdu.Calc.Type.Scheme (schemeType)
@@ -30,6 +28,8 @@ import qualified Lamdu.Sugar.Convert.Monad as ConvertM
 import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import           Lamdu.Sugar.Types
+import           Revision.Deltum.Property (Property)
+import qualified Revision.Deltum.Property as Property
 
 import           Lamdu.Prelude
 

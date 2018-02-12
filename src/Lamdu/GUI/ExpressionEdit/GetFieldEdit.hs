@@ -4,11 +4,10 @@ module Lamdu.GUI.ExpressionEdit.GetFieldEdit
     ) where
 
 import qualified Control.Lens as Lens
-import           Data.Store.Transaction (Transaction)
 import qualified GUI.Momentu.EventMap as E
-import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.Responsive.Options as Options
+import qualified GUI.Momentu.Widget as Widget
 import qualified Lamdu.Config as Config
 import qualified Lamdu.GUI.ExpressionEdit.TagEdit as TagEdit
 import           Lamdu.GUI.ExpressionGui (ExpressionGui)
@@ -20,6 +19,7 @@ import qualified Lamdu.GUI.Styled as Styled
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Name (Name(..))
 import qualified Lamdu.Sugar.Types as Sugar
+import           Revision.Deltum.Transaction (Transaction)
 
 import           Lamdu.Prelude
 

@@ -16,14 +16,6 @@ import           Data.IORef
 import           Data.IORef.Utils (atomicModifyIORef_)
 import qualified Data.Monoid as Monoid
 import qualified Data.Set as Set
-import           Data.Store.Db (DB)
-import           Data.Store.IRef (IRef)
-import qualified Data.Store.IRef as IRef
-import qualified Data.Store.Property as Property
-import qualified Data.Store.Rev.Change as Change
-import qualified Data.Store.Rev.Version as Version
-import           Data.Store.Transaction (Transaction)
-import qualified Data.Store.Transaction as Transaction
 import           Data.UUID.Types (UUID)
 import           Lamdu.Calc.Val.Annotated (Val)
 import           Lamdu.Data.Db.Layout (DbM, ViewM)
@@ -37,6 +29,14 @@ import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Load as Load
 import           Lamdu.VersionControl (getVersion)
 import qualified Lamdu.VersionControl as VersionControl
+import           Revision.Deltum.Db (DB)
+import           Revision.Deltum.IRef (IRef)
+import qualified Revision.Deltum.IRef as IRef
+import qualified Revision.Deltum.Property as Property
+import qualified Revision.Deltum.Rev.Change as Change
+import qualified Revision.Deltum.Rev.Version as Version
+import           Revision.Deltum.Transaction (Transaction)
+import qualified Revision.Deltum.Transaction as Transaction
 
 import           Lamdu.Prelude
 

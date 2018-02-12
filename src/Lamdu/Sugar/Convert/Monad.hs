@@ -21,8 +21,6 @@ import qualified Control.Lens as Lens
 import           Control.Monad.Trans.Reader (ReaderT, runReaderT)
 import qualified Control.Monad.Trans.Reader as Reader
 import           Control.Monad.Transaction (MonadTransaction(..))
-import           Data.Store.Transaction (Transaction)
-import qualified Data.Store.Transaction as Transaction
 import qualified Lamdu.Calc.Type as T
 import           Lamdu.Calc.Type.Nominal (Nominal(..))
 import           Lamdu.Calc.Type.Scheme (Scheme(..))
@@ -32,10 +30,12 @@ import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Infer as Infer
-import           Lamdu.Sugar.Convert.PostProcess (PostProcessResult(..))
 import qualified Lamdu.Sugar.Convert.Input as Input
+import           Lamdu.Sugar.Convert.PostProcess (PostProcessResult(..))
 import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Types as Sugar
+import           Revision.Deltum.Transaction (Transaction)
+import qualified Revision.Deltum.Transaction as Transaction
 
 import           Lamdu.Prelude
 

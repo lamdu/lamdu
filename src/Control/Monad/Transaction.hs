@@ -11,10 +11,10 @@ import           Control.Monad.Trans.Maybe (MaybeT)
 import           Control.Monad.Trans.Reader (ReaderT)
 import           Control.Monad.Trans.State (StateT)
 import           Data.Binary (Binary)
-import           Data.Store.IRef (IRef)
-import qualified Data.Store.Transaction as Transaction
-import           Data.Store.Transaction as X (Transaction, MkProperty(..))
 import           Lamdu.Prelude
+import           Revision.Deltum.IRef (IRef)
+import qualified Revision.Deltum.Transaction as Transaction
+import           Revision.Deltum.Transaction as X (Transaction, MkProperty(..))
 
 type T = Transaction
 

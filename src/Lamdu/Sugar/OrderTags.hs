@@ -9,17 +9,17 @@ import           Control.Lens.Utils (tagged)
 import           Control.Monad ((>=>))
 import           Data.List (sortOn)
 import qualified Data.Map as Map
-import           Data.Store.Transaction (Transaction)
-import qualified Data.Store.Transaction as Transaction
-import           Lamdu.Data.Anchors (assocTagOrder)
 import           Lamdu.Calc.Type (Type)
 import qualified Lamdu.Calc.Type as T
 import           Lamdu.Calc.Type.FlatComposite (FlatComposite(..))
 import qualified Lamdu.Calc.Type.FlatComposite as FlatComposite
 import qualified Lamdu.Calc.Type.Scheme as S
+import           Lamdu.Data.Anchors (assocTagOrder)
 import qualified Lamdu.Expr.Lens as ExprLens
 import qualified Lamdu.Sugar.Lens as SugarLens
 import qualified Lamdu.Sugar.Types as Sugar
+import           Revision.Deltum.Transaction (Transaction)
+import qualified Revision.Deltum.Transaction as Transaction
 
 import           Lamdu.Prelude
 

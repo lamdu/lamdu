@@ -7,7 +7,6 @@ module Lamdu.GUI.NameEdit
 
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
-import           Data.Store.Property (Property(..))
 import qualified Data.Text as Text
 import           GUI.Momentu.Align (Aligned(..), WithTextPos(..))
 import qualified GUI.Momentu.Align as Align
@@ -28,9 +27,10 @@ import qualified GUI.Momentu.Widgets.TextView as TextView
 import           Lamdu.Config.Theme (HasTheme(..))
 import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
-import qualified Lamdu.Style as Style
 import           Lamdu.Name (Name(..))
 import qualified Lamdu.Name as Name
+import qualified Lamdu.Style as Style
+import           Revision.Deltum.Property (Property(..))
 
 import           Lamdu.Prelude
 

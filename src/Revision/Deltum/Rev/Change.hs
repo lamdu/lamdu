@@ -1,5 +1,5 @@
 {-# LANGUAGE NoImplicitPrelude, DeriveGeneric #-}
-module Data.Store.Rev.Change (Key, Value, Change(..))
+module Revision.Deltum.Rev.Change (Key, Value, Change(..))
 where
 
 import Data.Binary (Binary)

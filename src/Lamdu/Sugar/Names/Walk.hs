@@ -9,12 +9,12 @@ module Lamdu.Sugar.Names.Walk
 
 import qualified Control.Lens as Lens
 import qualified Data.Set as Set
-import           Data.Store.Transaction (Transaction)
 import           Lamdu.Calc.Type (Type)
 import qualified Lamdu.Calc.Type as T
 import           Lamdu.Sugar.Names.CPS (CPS(..), liftCPS)
 import qualified Lamdu.Sugar.Names.NameGen as NameGen
 import           Lamdu.Sugar.Types
+import           Revision.Deltum.Transaction (Transaction)
 
 import           Lamdu.Prelude
 

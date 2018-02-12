@@ -1,6 +1,6 @@
 {-# LANGUAGE NoImplicitPrelude, GeneralizedNewtypeDeriving, RankNTypes, TemplateHaskell #-}
 
-module Data.Store.Transaction
+module Revision.Deltum.Transaction
     ( Transaction, run
     , Store(..), onStoreM
     , Changes, fork, merge
@@ -31,10 +31,10 @@ import qualified Data.Map as Map
 import           Data.Maybe (fromMaybe, isJust)
 import           Data.UUID.Types (UUID)
 import qualified Data.UUID.Utils as UUIDUtils
-import           Data.Store.IRef (IRef)
-import qualified Data.Store.IRef as IRef
-import qualified Data.Store.Property as Property
-import           Data.Store.Rev.Change (Key, Value)
+import           Revision.Deltum.IRef (IRef)
+import qualified Revision.Deltum.IRef as IRef
+import qualified Revision.Deltum.Property as Property
+import           Revision.Deltum.Rev.Change (Key, Value)
 
 import           Lamdu.Prelude hiding (lookup)
 

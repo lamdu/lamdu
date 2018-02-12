@@ -5,11 +5,6 @@ module Lamdu.GUI.VersionControl
 
 import qualified Control.Lens as Lens
 import qualified Data.List.Utils as ListUtils
-import qualified Data.Store.Property as Property
-import           Data.Store.Rev.Branch (Branch)
-import qualified Data.Store.Rev.Branch as Branch
-import           Data.Store.Transaction (Transaction)
-import qualified Data.Store.Transaction as Transaction
 import qualified GUI.Momentu.Align as Align
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
@@ -26,6 +21,11 @@ import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.GUI.VersionControl.Config as VersionControl
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.VersionControl.Actions (Actions(..))
+import qualified Revision.Deltum.Property as Property
+import           Revision.Deltum.Rev.Branch (Branch)
+import qualified Revision.Deltum.Rev.Branch as Branch
+import           Revision.Deltum.Transaction (Transaction)
+import qualified Revision.Deltum.Transaction as Transaction
 
 import           Lamdu.Prelude
 

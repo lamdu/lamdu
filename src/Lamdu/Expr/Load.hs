@@ -5,9 +5,6 @@ module Lamdu.Expr.Load
 
 import           Lamdu.Prelude
 
-import qualified Data.Store.Property as Property
-import           Data.Store.Transaction (Transaction)
-import qualified Data.Store.Transaction as Transaction
 import qualified Lamdu.Calc.Type as T
 import           Lamdu.Calc.Type.Nominal (Nominal)
 import           Lamdu.Calc.Val.Annotated (Val(..))
@@ -15,6 +12,9 @@ import           Lamdu.Data.Definition (Definition(..))
 import qualified Lamdu.Data.Definition as Definition
 import           Lamdu.Expr.IRef (DefI, ValI, ValIProperty)
 import qualified Lamdu.Expr.IRef as ExprIRef
+import qualified Revision.Deltum.Property as Property
+import           Revision.Deltum.Transaction (Transaction)
+import qualified Revision.Deltum.Transaction as Transaction
 
 type T = Transaction
 

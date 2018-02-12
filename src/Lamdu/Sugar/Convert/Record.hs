@@ -4,10 +4,9 @@ module Lamdu.Sugar.Convert.Record
     ) where
 
 import qualified Control.Lens as Lens
-import qualified Data.Store.Property as Property
 import qualified Lamdu.Calc.Val as V
-import qualified Lamdu.Calc.Val.Annotated as Val
 import           Lamdu.Calc.Val.Annotated (Val(..))
+import qualified Lamdu.Calc.Val.Annotated as Val
 import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Expr.IRef as ExprIRef
 import           Lamdu.Sugar.Convert.Composite (convertCompositeItem, setTagOrder, makeAddItem)
@@ -19,6 +18,7 @@ import           Lamdu.Sugar.Convert.Tag (convertTagSelection)
 import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import           Lamdu.Sugar.Types
+import qualified Revision.Deltum.Property as Property
 
 import           Lamdu.Prelude
 

@@ -1,5 +1,5 @@
 {-# LANGUAGE NoImplicitPrelude, GeneralizedNewtypeDeriving, DeriveGeneric #-}
-module Data.Store.Rev.Version
+module Revision.Deltum.Rev.Version
     ( VersionData, depth, parent, changes
     , preventUndo
     , Version, versionIRef, versionData
@@ -8,10 +8,10 @@ module Data.Store.Rev.Version
     ) where
 
 import           Data.Binary (Binary(..))
-import           Data.Store.IRef (IRef)
-import           Data.Store.Rev.Change (Change(..), Key, Value)
-import           Data.Store.Transaction (Transaction)
-import qualified Data.Store.Transaction as Transaction
+import           Revision.Deltum.IRef (IRef)
+import           Revision.Deltum.Rev.Change (Change(..), Key, Value)
+import           Revision.Deltum.Transaction (Transaction)
+import qualified Revision.Deltum.Transaction as Transaction
 
 import           Lamdu.Prelude
 

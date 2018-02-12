@@ -18,19 +18,19 @@ import           Control.DeepSeq (NFData)
 import qualified Control.Lens as Lens
 import           Data.Binary (Binary(..))
 import           Data.Function.Decycle (decycle)
-import           Data.Store.IRef (IRef)
-import qualified Data.Store.IRef as IRef
-import           Data.Store.Property (Property(..))
-import           Data.Store.Transaction (Transaction)
-import qualified Data.Store.Transaction as Transaction
 import qualified Data.UUID.Utils as UUIDUtils
-import           Lamdu.Data.Definition (Definition)
 import           Lamdu.Calc.Identifier (Identifier(..))
 import qualified Lamdu.Calc.Type as T
 import           Lamdu.Calc.Type.Nominal (Nominal)
 import qualified Lamdu.Calc.Val as V
 import           Lamdu.Calc.Val.Annotated (Val(..))
 import qualified Lamdu.Calc.Val.Annotated as Val
+import           Lamdu.Data.Definition (Definition)
+import           Revision.Deltum.IRef (IRef)
+import qualified Revision.Deltum.IRef as IRef
+import           Revision.Deltum.Property (Property(..))
+import           Revision.Deltum.Transaction (Transaction)
+import qualified Revision.Deltum.Transaction as Transaction
 
 import           Lamdu.Prelude
 

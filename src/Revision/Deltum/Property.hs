@@ -1,5 +1,5 @@
 {-# LANGUAGE NoImplicitPrelude, TemplateHaskell, Rank2Types #-}
-module Data.Store.Property
+module Revision.Deltum.Property
     ( Property(..), pVal, pSet, value, set
     , compose, pureCompose, composeLens
     , modify_, pureModify

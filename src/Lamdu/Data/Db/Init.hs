@@ -4,22 +4,22 @@ module Lamdu.Data.Db.Init
     ( initFreshDb
     ) where
 
-import           Data.Store.Db (DB)
-import           Data.Store.Rev.Branch (Branch)
-import qualified Data.Store.Rev.Branch as Branch
-import           Data.Store.Rev.Version (Version)
-import qualified Data.Store.Rev.Version as Version
-import qualified Data.Store.Rev.View as View
-import           Data.Store.Transaction (Transaction)
-import qualified Data.Store.Transaction as Transaction
+import qualified GUI.Momentu as M
 import qualified Lamdu.Data.Db.Layout as DbLayout
 import           Lamdu.Data.Export.JSON (fileImportAll)
 import qualified Lamdu.Expr.UniqueId as UniqueId
 import qualified Lamdu.GUI.WidgetIdIRef as WidgetIdIRef
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
-import qualified GUI.Momentu as M
 import qualified Paths.Utils as Paths
 import qualified Paths_Lamdu
+import           Revision.Deltum.Db (DB)
+import           Revision.Deltum.Rev.Branch (Branch)
+import qualified Revision.Deltum.Rev.Branch as Branch
+import           Revision.Deltum.Rev.Version (Version)
+import qualified Revision.Deltum.Rev.Version as Version
+import qualified Revision.Deltum.Rev.View as View
+import           Revision.Deltum.Transaction (Transaction)
+import qualified Revision.Deltum.Transaction as Transaction
 
 import           Lamdu.Prelude
 

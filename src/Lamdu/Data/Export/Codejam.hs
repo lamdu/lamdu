@@ -11,9 +11,6 @@ import           Control.Monad.Trans.FastWriter (execWriterT, tell)
 import qualified Data.Aeson.Encode.Pretty as AesonPretty
 import qualified Data.ByteString as SBS
 import qualified Data.ByteString.Lazy as LBS
-import qualified Data.Store.IRef as IRef
-import           Data.Store.Transaction (Transaction)
-import qualified Data.Store.Transaction as Transaction
 import           Data.String (IsString(..))
 import           Data.Time.Clock.POSIX (getPOSIXTime)
 import qualified Foreign as F
@@ -34,6 +31,9 @@ import           Lamdu.Expr.IRef (ValI)
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Paths.Utils as Paths
 import qualified Paths_Lamdu
+import qualified Revision.Deltum.IRef as IRef
+import           Revision.Deltum.Transaction (Transaction)
+import qualified Revision.Deltum.Transaction as Transaction
 
 import           Lamdu.Prelude
 

@@ -1,6 +1,6 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving, KindSignatures #-}
 
-module Data.Store.IRef
+module Revision.Deltum.IRef
     ( IRef, uuid, unsafeFromUUID
     , anchor
     ) where

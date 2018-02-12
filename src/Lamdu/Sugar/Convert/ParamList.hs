@@ -6,9 +6,6 @@ module Lamdu.Sugar.Convert.ParamList
 
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Trans.State as State
-import qualified Data.Store.Property as Property
-import           Data.Store.Transaction (Transaction)
-import qualified Data.Store.Transaction as Transaction
 import           Lamdu.Calc.Type (Type)
 import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Calc.Val as V
@@ -16,14 +13,17 @@ import           Lamdu.Calc.Val.Annotated (Val(..))
 import           Lamdu.Data.Anchors (assocFieldParamList)
 import           Lamdu.Data.Meta (ParamList)
 import qualified Lamdu.Expr.IRef as ExprIRef
-import qualified Lamdu.Infer.Trans as InferT
 import qualified Lamdu.Expr.Lens as ExprLens
 import           Lamdu.Infer (Infer)
 import qualified Lamdu.Infer as Infer
+import qualified Lamdu.Infer.Trans as InferT
 import           Lamdu.Infer.Unify (unify)
 import           Lamdu.Infer.Update (update)
 import qualified Lamdu.Infer.Update as Update
 import qualified Lamdu.Sugar.Convert.Input as Input
+import qualified Revision.Deltum.Property as Property
+import           Revision.Deltum.Transaction (Transaction)
+import qualified Revision.Deltum.Transaction as Transaction
 
 import           Lamdu.Prelude
 

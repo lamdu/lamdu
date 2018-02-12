@@ -4,7 +4,6 @@ module Lamdu.Sugar.Convert.DefExpr
     ) where
 
 import qualified Control.Lens as Lens
-import           Data.Store.Transaction (Transaction, mkProperty)
 import           Lamdu.Calc.Type.Scheme (Scheme)
 import qualified Lamdu.Calc.Type.Scheme as Scheme
 import           Lamdu.Calc.Val.Annotated (Val(..))
@@ -18,6 +17,7 @@ import           Lamdu.Sugar.Convert.Monad (ConvertM)
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
 import           Lamdu.Sugar.Internal
 import           Lamdu.Sugar.Types
+import           Revision.Deltum.Transaction (Transaction, mkProperty)
 
 import           Lamdu.Prelude
 

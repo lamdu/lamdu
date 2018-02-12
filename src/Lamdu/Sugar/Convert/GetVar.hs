@@ -6,10 +6,8 @@ module Lamdu.Sugar.Convert.GetVar
 import qualified Control.Lens as Lens
 import           Control.Monad.Trans.Except.Utils (runMatcherT, justToLeft)
 import           Control.Monad.Trans.Maybe (MaybeT)
-import           Data.Maybe.Utils (maybeToMPlus)
-import qualified Data.Store.Property as Property
-import           Data.Store.Transaction (Transaction)
 import qualified Control.Monad.Transaction as Transaction
+import           Data.Maybe.Utils (maybeToMPlus)
 import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Calc.Type.Scheme as Scheme
 import qualified Lamdu.Calc.Val as V
@@ -29,6 +27,8 @@ import qualified Lamdu.Sugar.Convert.Monad as ConvertM
 import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import           Lamdu.Sugar.Types
+import qualified Revision.Deltum.Property as Property
+import           Revision.Deltum.Transaction (Transaction)
 
 import           Lamdu.Prelude
 

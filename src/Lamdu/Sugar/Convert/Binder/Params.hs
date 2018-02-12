@@ -18,10 +18,6 @@ import qualified Data.List.Utils as ListUtils
 import qualified Data.Map as Map
 import           Data.Maybe.Utils (unsafeUnjust)
 import qualified Data.Set as Set
-import           Data.Store.Property (Property)
-import qualified Data.Store.Property as Property
-import           Data.Store.Transaction (Transaction, MkProperty)
-import qualified Data.Store.Transaction as Transaction
 import           Lamdu.Calc.Type (Type)
 import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Calc.Val as V
@@ -48,6 +44,10 @@ import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import           Lamdu.Sugar.Lens as SugarLens
 import           Lamdu.Sugar.OrderTags (orderType, orderedClosedFlatComposite)
 import           Lamdu.Sugar.Types
+import           Revision.Deltum.Property (Property)
+import qualified Revision.Deltum.Property as Property
+import           Revision.Deltum.Transaction (Transaction, MkProperty)
+import qualified Revision.Deltum.Transaction as Transaction
 
 import           Lamdu.Prelude
 

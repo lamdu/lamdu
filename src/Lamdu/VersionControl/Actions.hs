@@ -3,9 +3,9 @@ module Lamdu.VersionControl.Actions
     ( Actions(..), hoist
     ) where
 
-import           Control.Lens
-import           Data.Store.Rev.Branch (Branch)
-import           GUI.Momentu.State (GUIState)
+import Control.Lens
+import GUI.Momentu.State (GUIState)
+import Revision.Deltum.Rev.Branch (Branch)
 
 data Actions t m = Actions
     { branches :: [Branch t]

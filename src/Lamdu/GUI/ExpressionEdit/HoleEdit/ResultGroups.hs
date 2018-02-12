@@ -13,7 +13,6 @@ import           Data.Function (on)
 import           Data.Functor.Identity (Identity(..))
 import           Data.List (sortOn)
 import qualified Data.List.Class as ListClass
-import           Data.Store.Transaction (Transaction)
 import qualified Data.Text as Text
 import qualified GUI.Momentu.Widget.Id as WidgetId
 import qualified GUI.Momentu.Widgets.Menu as Menu
@@ -23,11 +22,12 @@ import           Lamdu.Calc.Val.Annotated (Val)
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Expr.Lens as ExprLens
 import           Lamdu.Formatting (Format(..))
-import           Lamdu.Name (Name)
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.ValTerms as ValTerms
 import           Lamdu.GUI.ExpressionGui (ExpressionN)
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
+import           Lamdu.Name (Name)
 import qualified Lamdu.Sugar.Types as Sugar
+import           Revision.Deltum.Transaction (Transaction)
 
 import           Lamdu.Prelude
 

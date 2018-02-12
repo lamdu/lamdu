@@ -9,8 +9,6 @@ import qualified Control.Lens as Lens
 import           Control.Monad.Trans.Maybe (MaybeT(..))
 import           Control.Monad.Trans.State (evalStateT, runStateT)
 import           Control.Monad.Transaction (transaction)
-import qualified Data.Store.Property as Property
-import           Data.Store.Transaction (Transaction)
 import           Lamdu.Calc.Type (Type)
 import qualified Lamdu.Calc.Val as V
 import           Lamdu.Calc.Val.Annotated (Val(..))
@@ -30,6 +28,8 @@ import qualified Lamdu.Sugar.Convert.Monad as ConvertM
 import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import           Lamdu.Sugar.Types
+import qualified Revision.Deltum.Property as Property
+import           Revision.Deltum.Transaction (Transaction)
 
 import           Lamdu.Prelude
 

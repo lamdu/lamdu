@@ -11,10 +11,6 @@ import qualified Data.List as List
 import           Data.List.Utils (insertAt, removeAt)
 import qualified Data.Map as Map
 import qualified Data.Set as Set
-import           Data.Store.Property (Property(..))
-import qualified Data.Store.Property as Property
-import           Data.Store.Transaction (Transaction, mkProperty)
-import qualified Data.Store.Transaction as Transaction
 import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Calc.Type.Nominal as N
 import           Lamdu.Calc.Type.Scheme (Scheme, schemeType)
@@ -33,14 +29,18 @@ import qualified Lamdu.Sugar.Convert.DefExpr.OutdatedDefs as OutdatedDefs
 import qualified Lamdu.Sugar.Convert.Expression as ConvertExpr
 import qualified Lamdu.Sugar.Convert.Input as Input
 import qualified Lamdu.Sugar.Convert.Load as Load
-import           Lamdu.Sugar.Convert.PostProcess (postProcessDef, postProcessExpr)
 import           Lamdu.Sugar.Convert.Monad (Context(..), ScopeInfo(..), RecursiveRef(..))
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
+import           Lamdu.Sugar.Convert.PostProcess (postProcessDef, postProcessExpr)
 import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import qualified Lamdu.Sugar.OrderTags as OrderTags
 import qualified Lamdu.Sugar.PresentationModes as PresentationModes
 import           Lamdu.Sugar.Types
+import           Revision.Deltum.Property (Property(..))
+import qualified Revision.Deltum.Property as Property
+import           Revision.Deltum.Transaction (Transaction, mkProperty)
+import qualified Revision.Deltum.Transaction as Transaction
 
 import           Lamdu.Prelude
 

@@ -5,7 +5,6 @@ module Lamdu.GUI.ExpressionEdit.HoleEdit.ResultWidget
     ) where
 
 import qualified Control.Lens as Lens
-import           Data.Store.Transaction (Transaction)
 import qualified Data.Text as Text
 import           GUI.Momentu (Widget, WithTextPos(..))
 import qualified GUI.Momentu.Align as Align
@@ -32,6 +31,7 @@ import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Name (Name(..))
 import qualified Lamdu.Sugar.Lens as SugarLens
 import qualified Lamdu.Sugar.Types as Sugar
+import           Revision.Deltum.Transaction (Transaction)
 
 import           Lamdu.Prelude
 

@@ -12,7 +12,6 @@ import qualified Control.Lens as Lens
 import           Control.Monad.Reader (ReaderT(..))
 import qualified Control.Monad.Reader as Reader
 import           Data.CurAndPrev (CurAndPrev)
-import           Data.Store.Transaction (Transaction)
 import           Data.Vector.Vector2 (Vector2(..))
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.EventMap as E
@@ -37,6 +36,7 @@ import qualified Lamdu.GUI.VersionControl as VersionControlGUI
 import qualified Lamdu.Style as Style
 import qualified Lamdu.VersionControl as VersionControl
 import qualified Lamdu.VersionControl.Actions as VersionControl.Actions
+import           Revision.Deltum.Transaction (Transaction)
 
 import           Lamdu.Prelude
 

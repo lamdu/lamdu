@@ -2,14 +2,14 @@
 -- functional data-store (for testing/etc)
 
 {-# LANGUAGE NoImplicitPrelude #-}
-module Data.Store.Map
+module Revision.Deltum.Map
     ( mapStore, runEmpty
     ) where
 
 import qualified Control.Lens as Lens
 import           Control.Monad.Trans.State (State, runState, state)
-import           Data.Store.Rev.Change (Key, Value)
-import           Data.Store.Transaction (Store(..))
+import           Revision.Deltum.Rev.Change (Key, Value)
+import           Revision.Deltum.Transaction (Store(..))
 import           System.Random (RandomGen, random)
 import qualified System.Random as Random
 

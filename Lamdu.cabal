@@ -92,15 +92,6 @@ Executable lamdu
                   , Data.Maybe.Utils
                   , Data.Monoid.Generic
                   , Data.Set.Ordered
-                  , Data.Store.Db
-                  , Data.Store.IRef
-                  , Data.Store.Property
-                  , Data.Store.Rev.Branch
-                  , Data.Store.Rev.Change
-                  , Data.Store.Rev.Version
-                  , Data.Store.Rev.View
-                  , Data.Store.Rev.ViewBranchInternal
-                  , Data.Store.Transaction
                   , Data.UUID.Utils
                   , Data.Vector.Vector2
                   , Foreign.C.Types.Instances
@@ -298,6 +289,15 @@ Executable lamdu
                   , Numeric.Utils
                   , Paths.Utils
                   , Paths_Lamdu
+                  , Revision.Deltum.Db
+                  , Revision.Deltum.IRef
+                  , Revision.Deltum.Property
+                  , Revision.Deltum.Rev.Branch
+                  , Revision.Deltum.Rev.Change
+                  , Revision.Deltum.Rev.Version
+                  , Revision.Deltum.Rev.View
+                  , Revision.Deltum.Rev.ViewBranchInternal
+                  , Revision.Deltum.Transaction
                   , System.Random.Utils
 
   ghc-options:         -O2 -Wall -Widentities -Wmissing-home-modules -Wincomplete-patterns -Wnoncanonical-monad-instances -Wsemigroup -Wincomplete-record-updates -Wredundant-constraints -threaded
