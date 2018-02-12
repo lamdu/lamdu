@@ -211,8 +211,7 @@ annotationSpacer =
 
 addAnnotationH ::
     ( Functor f, MonadReader env m, HasTheme env
-    , TextView.HasStyle env, Spacer.HasStdSpacing env
-    , Element.HasAnimIdPrefix env
+    , Spacer.HasStdSpacing env, Element.HasAnimIdPrefix env
     ) =>
     m (WithTextPos View) ->
     WideAnnotationBehavior ->

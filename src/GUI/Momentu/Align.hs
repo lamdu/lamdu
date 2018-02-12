@@ -71,8 +71,7 @@ instance ( SizedElement (Glued a b)
     glue o a b =
         glueHelper fst o (a ^. absAligned) (b ^. absAligned) ^. Lens.from absAligned
 
-instance ( SizedElement (Glued a b)
-         , SizedElement a
+instance ( SizedElement a
          , SizedElement b
          , Glue a b ) => Glue (WithTextPos a) (WithTextPos b) where
     type Glued (WithTextPos a) (WithTextPos b) = WithTextPos (Glued a b)

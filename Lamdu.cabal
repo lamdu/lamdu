@@ -300,7 +300,7 @@ Executable lamdu
                   , Paths_Lamdu
                   , System.Random.Utils
 
-  ghc-options:         -O2 -Wall -Wnoncanonical-monad-instances -Wincomplete-record-updates -threaded
+  ghc-options:         -O2 -Wall -Wnoncanonical-monad-instances -Wincomplete-record-updates -Wredundant-constraints -threaded
   -- ghc-options is prepended to ghc-prof-options
   ghc-prof-options:    -auto-all -caf-all -rtsopts
   main-is:             Lamdu/Main.hs

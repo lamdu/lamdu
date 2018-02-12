@@ -1,3 +1,7 @@
+-- Suppress wrong warning on default instance for default `cursor` method.
+-- TODO: Check if GHC bug reported on that.
+{-# OPTIONS_GHC -Wno-redundant-constraints  #-}
+
 {-# LANGUAGE NoImplicitPrelude, TemplateHaskell, DeriveGeneric, DefaultSignatures #-}
 
 module GUI.Momentu.State
@@ -70,7 +74,6 @@ class HasCursor env where
     cursor :: Lens' env Id
     default cursor :: HasState env => Lens' env Id
     cursor = state . sCursor
-
 
 subId :: (MonadReader env m, HasCursor env) => m (Id -> Maybe AnimId)
 subId = Lens.view cursor <&> flip Id.subId

@@ -481,7 +481,6 @@ makeBinderContentEdit content@(Sugar.BinderLet l) =
         body = l ^. Sugar.lBody
 
 namedParamEditInfo ::
-    Monad m =>
     Widget.Id -> Sugar.FuncParamActions (T m) ->
     WithTextPos (Widget (T m GuiState.Update)) ->
     ParamEdit.Info m

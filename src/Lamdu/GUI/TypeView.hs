@@ -102,9 +102,7 @@ makeTVar ::
 makeTVar (T.Var name) = showIdentifier name
 
 makeTFun ::
-    ( MonadReader env m, TextView.HasStyle env, HasTheme env
-    , Spacer.HasStdSpacing env, MonadTransaction n m
-    ) =>
+    (MonadReader env m, HasTheme env, Spacer.HasStdSpacing env, MonadTransaction n m) =>
     Prec -> Type -> Type -> M m (WithTextPos View)
 makeTFun parentPrecedence a b =
     case a of
@@ -119,10 +117,8 @@ makeTFun parentPrecedence a b =
     >>= parens parentPrecedence (Prec 0)
 
 makeTInst ::
-    ( MonadReader env m, TextView.HasStyle env, Spacer.HasStdSpacing env
-    , HasTheme env, MonadTransaction n m
-    ) => Prec -> T.NominalId -> Map T.ParamId Type ->
-    M m (WithTextPos View)
+    (MonadReader env m, Spacer.HasStdSpacing env, HasTheme env, MonadTransaction n m) =>
+    Prec -> T.NominalId -> Map T.ParamId Type -> M m (WithTextPos View)
 makeTInst parentPrecedence tid typeParams =
     do
         nameView <-
@@ -177,9 +173,8 @@ makeTag tag =
     >>= text
 
 makeField ::
-    ( MonadTransaction n m, MonadReader env m, TextView.HasStyle env
-    , HasTheme env, Spacer.HasStdSpacing env
-    ) => (T.Tag, Type) -> M m [Aligned View]
+    (MonadTransaction n m, MonadReader env m, HasTheme env, Spacer.HasStdSpacing env) =>
+    (T.Tag, Type) -> M m [Aligned View]
 makeField (tag, fieldType) =
     sequence
     [ makeTag tag <&> toAligned 1
@@ -188,9 +183,8 @@ makeField (tag, fieldType) =
     ]
 
 makeSumField ::
-    ( MonadReader env m, TextView.HasStyle env, Spacer.HasStdSpacing env
-    , MonadTransaction n m, HasTheme env
-    ) => (T.Tag, Type) -> M m [Aligned View]
+    (MonadReader env m, Spacer.HasStdSpacing env, MonadTransaction n m, HasTheme env) =>
+    (T.Tag, Type) -> M m [Aligned View]
 makeSumField (tag, T.TRecord T.CEmpty) =
     makeTag tag <&> toAligned 1 <&> (:[])
     -- ^ Nullary data constructor
@@ -238,15 +232,13 @@ makeComposite o c sepView mkField composite =
         (fields, extension) = composite ^. orderedFlatComposite
 
 splitMake ::
-    ( MonadReader env m, TextView.HasStyle env, HasTheme env
-    , Spacer.HasStdSpacing env, MonadTransaction n m
-    ) => Prec -> Type -> M m (WithTextPos View)
+    (MonadReader env m, HasTheme env, Spacer.HasStdSpacing env, MonadTransaction n m) =>
+    Prec -> Type -> M m (WithTextPos View)
 splitMake parentPrecedence typ = split $ makeInternal parentPrecedence typ
 
 makeInternal ::
-    ( MonadReader env m, TextView.HasStyle env, Spacer.HasStdSpacing env
-    , HasTheme env, MonadTransaction n m
-    ) => Prec -> Type -> M m (WithTextPos View)
+    (MonadReader env m, Spacer.HasStdSpacing env, HasTheme env, MonadTransaction n m) =>
+    Prec -> Type -> M m (WithTextPos View)
 makeInternal parentPrecedence typ =
     case typ of
     T.TVar var -> makeTVar var

@@ -82,7 +82,7 @@ validateDefParamsMatchArgs var record frozenDeps =
         guard (sFields == Map.keysSet (flatArgs ^. FlatComposite.fields))
 
 convertLabeled ::
-    (Monad m, Monoid a) =>
+    Monad m =>
     ExpressionU m a -> ExpressionU m a -> Input.Payload m a ->
     MaybeT (ConvertM m) (ExpressionU m a)
 convertLabeled funcS argS exprPl =

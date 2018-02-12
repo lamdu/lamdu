@@ -218,7 +218,6 @@ helpAnimId :: AnimId
 helpAnimId = ["help box"]
 
 addHelpView ::
-    (MonadIO f, Monoid a) =>
     IsHelpShown -> Config -> Vector2 R ->
     Widget.Focused (f a) -> Widget.Focused (f a)
 addHelpView showingHelp config size focus =

@@ -55,7 +55,7 @@ stdPixelsPerInch = Vector2 96 96
 stdPixelsPerMM :: Fractional a => Vector2 a
 stdPixelsPerMM = stdPixelsPerInch / 25.4
 
-getDisplayScale :: (Show a, Fractional a) => GLFW.Window -> IO (Vector2 a)
+getDisplayScale :: Fractional a => GLFW.Window -> IO (Vector2 a)
 getDisplayScale window =
     do
         monitor <- guessMonitor window

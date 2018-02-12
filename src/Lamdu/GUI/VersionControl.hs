@@ -38,7 +38,6 @@ branchNameFDConfig = FocusDelegator.Config
     }
 
 undoEventMap ::
-    Functor m =>
     VersionControl.Config -> Maybe (m GuiState.Update) ->
     EventMap (m GuiState.Update)
 undoEventMap config =
@@ -46,7 +45,6 @@ undoEventMap config =
     & maybe mempty
 
 redoEventMap ::
-    Functor m =>
     VersionControl.Config -> Maybe (m GuiState.Update) ->
     EventMap (m GuiState.Update)
 redoEventMap config =

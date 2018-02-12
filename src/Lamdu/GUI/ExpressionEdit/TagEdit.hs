@@ -110,7 +110,7 @@ makePickEventMap nearestHoles doc action =
             (WidgetIds.fromEntityId nextHole <$ action)
 
 makeOptions ::
-    ( Monad m, MonadTransaction m f, MonadReader env f, GuiState.HasCursor env
+    ( MonadTransaction m f, MonadReader env f, GuiState.HasCursor env
     , HasConfig env, HasTheme env, Element.HasAnimIdPrefix env, TextView.HasStyle env
     ) =>
     Sugar.Tag (Name n) (T m) -> SearchMenu.ResultsContext ->
@@ -214,7 +214,7 @@ makeHoleSearchTerm nearestHoles tag =
         holeId = WidgetIds.tagHoleId (tagId tag)
 
 makeTagHoleEdit ::
-    ( Monad m, MonadReader env f, MonadTransaction m f
+    ( MonadReader env f, MonadTransaction m f
     , GuiState.HasState env
     , HasConfig env, TextEdit.HasStyle env, Element.HasAnimIdPrefix env
     , HasTheme env, Hover.HasStyle env, Menu.HasConfig env, HasStdSpacing env
@@ -296,10 +296,10 @@ withNameColor nameColor act =
         Reader.local (TextView.color .~ color) act
 
 makeRecordTag ::
-    ( Monad m, MonadReader env f, MonadTransaction m f, HasTheme env
+    ( MonadReader env f, MonadTransaction m f, HasTheme env
     , HasConfig env, GuiState.HasState env
     , Element.HasAnimIdPrefix env, HasStdSpacing env
-    , TextEdit.HasStyle env, Hover.HasStyle env, HasTheme env, Menu.HasConfig env
+    , TextEdit.HasStyle env, Hover.HasStyle env, Menu.HasConfig env
     ) =>
     NearestHoles -> Sugar.Tag (Name (T m)) (T m) ->
     f (WithTextPos (Widget (T m GuiState.Update)))
@@ -308,9 +308,9 @@ makeRecordTag nearestHoles tag =
     & withNameColor Theme.recordTagColor
 
 makeCaseTag ::
-    ( Monad m, MonadReader env f, MonadTransaction m f, HasTheme env
+    ( MonadReader env f, MonadTransaction m f, HasTheme env
     , HasConfig env, GuiState.HasState env
-    , TextEdit.HasStyle env, Hover.HasStyle env, HasTheme env, Menu.HasConfig env
+    , TextEdit.HasStyle env, Hover.HasStyle env, Menu.HasConfig env
     , HasStdSpacing env, Element.HasAnimIdPrefix env
     ) =>
     NearestHoles -> Sugar.Tag (Name (T m)) (T m) ->

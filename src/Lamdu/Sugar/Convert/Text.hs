@@ -25,7 +25,7 @@ import           Lamdu.Sugar.Types
 import           Lamdu.Prelude
 
 text ::
-    (Monad m, Monoid a) =>
+    Monad m =>
     V.Nom (Val (Input.Payload m a)) -> Input.Payload m a ->
     MaybeT (ConvertM m) (ExpressionU m a)
 text (V.Nom tid (Val litPl body)) toNomPl =

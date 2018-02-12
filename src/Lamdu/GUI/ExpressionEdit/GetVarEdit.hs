@@ -59,7 +59,7 @@ makeSimpleView (Name name _) myId =
 
 makeParamsRecord ::
     ( MonadReader env m, HasTheme env, GuiState.HasCursor env
-    , TextView.HasStyle env, Element.HasAnimIdPrefix env, Spacer.HasStdSpacing env
+    , Element.HasAnimIdPrefix env, Spacer.HasStdSpacing env
     , Applicative f
     ) =>
     Widget.Id -> Sugar.ParamsRecordVarRef (Name f) -> m (Responsive (f GuiState.Update))
@@ -126,7 +126,7 @@ makeInlineEventMap _ _ = mempty
 
 definitionTypeChangeBox ::
     ( MonadReader env m, MonadTransaction n m
-    , Element.HasAnimIdPrefix env, TextView.HasStyle env
+    , Element.HasAnimIdPrefix env
     , Spacer.HasStdSpacing env, HasTheme env, GuiState.HasCursor env
     , HasConfig env, Applicative f
     ) =>
@@ -161,7 +161,7 @@ definitionTypeChangeBox info getVarId =
 processDefinitionWidget ::
     ( MonadReader env m, MonadTransaction n m, Spacer.HasStdSpacing env
     , HasTheme env, Element.HasAnimIdPrefix env, HasConfig env
-    , TextView.HasStyle env, GuiState.HasCursor env, Hover.HasStyle env
+    , GuiState.HasCursor env, Hover.HasStyle env
     , Applicative f
     ) =>
     Sugar.DefinitionForm f -> Widget.Id ->

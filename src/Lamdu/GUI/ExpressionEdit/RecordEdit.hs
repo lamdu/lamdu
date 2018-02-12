@@ -142,9 +142,7 @@ makeRecord fields postProcess =
             <&> (opener /|/)
 
 addPostTags ::
-    ( MonadReader env m, Theme.HasTheme env, TextView.HasStyle env, Element.HasAnimIdPrefix env
-    , Functor f
-    ) =>
+    (MonadReader env m, Theme.HasTheme env, TextView.HasStyle env, Element.HasAnimIdPrefix env) =>
     [Responsive.TaggedItem (f GuiState.Update)] -> m [Responsive.TaggedItem (f GuiState.Update)]
 addPostTags items =
     items

@@ -109,7 +109,7 @@ convert (V.Case tag val rest) exprPl = do
         restStored = rest ^. Val.payload . Input.stored
 
 convertAppliedCase ::
-    (Monad m, Monoid a) =>
+    Monad m =>
     ExpressionU m a -> ExpressionU m a -> Input.Payload m a ->
     MaybeT (ConvertM m) (ExpressionU m a)
 convertAppliedCase funcS argS exprPl =
@@ -132,7 +132,7 @@ convertAppliedCase funcS argS exprPl =
             & addActions exprPl & lift
             <&> rPayload . plEntityId .~ funcS ^. rPayload . plEntityId
 
-simplifyCaseArg :: Monoid a => ExpressionU m a -> ExpressionU m a
+simplifyCaseArg :: ExpressionU m a -> ExpressionU m a
 simplifyCaseArg argS =
     case argS ^. rBody of
     BodyFromNom nom | Lens.nullOf (nVal . rBody . SugarLens.bodyUnfinished) nom -> nom ^. nVal

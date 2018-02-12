@@ -24,7 +24,6 @@ import qualified GUI.Momentu.State as GuiState
 import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
-import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
 import qualified GUI.Momentu.Widgets.TextView as TextView
 import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Calc.Type.Scheme as Scheme
@@ -145,7 +144,7 @@ make ::
     ( MonadTransaction m n, MonadReader env n, Config.HasConfig env
     , Theme.HasTheme env, GuiState.HasState env
     , Spacer.HasStdSpacing env, HasEvalResults env m, HasExportActions env m
-    , HasSettings env, HasStyle env, TextEdit.HasStyle env
+    , HasSettings env, HasStyle env
     ) =>
     Anchors.CodeAnchors m -> Widget.R ->
     n (Widget (IOTrans m GuiState.Update))

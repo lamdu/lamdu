@@ -137,7 +137,7 @@ parseNum newText
 
 numEdit ::
     ( MonadReader env m, HasConfig env, HasStyle env, Menu.HasConfig env
-    , Element.HasAnimIdPrefix env, GuiState.HasState env, Monad f
+    , GuiState.HasState env, Monad f
     ) =>
     Transaction.Property f Double ->
     Sugar.Payload (T f) ExprGui.Payload ->

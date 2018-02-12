@@ -71,7 +71,7 @@ checkTypeMatch x y =
     <&> Lens.has Lens._Right
 
 convertAppliedHole ::
-    (Monad m, Monoid a) =>
+    Monad m =>
     V.Apply (Val (Input.Payload m a)) -> ExpressionU m a ->
     Input.Payload m a ->
     MaybeT (ConvertM m) (ExpressionU m a)
