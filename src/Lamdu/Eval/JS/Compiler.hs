@@ -84,11 +84,13 @@ data LogUsed
     = LogUnused
     | LogUsed
     deriving (Eq, Ord, Show)
+instance Semigroup LogUsed where
+    LogUsed <> _ = LogUsed
+    _ <> LogUsed = LogUsed
+    _ <> _ = LogUnused
 instance Monoid LogUsed where
     mempty = LogUnused
-    mappend LogUsed _ = LogUsed
-    mappend _ LogUsed = LogUsed
-    mappend _ _ = LogUnused
+    mappend = (<>)
 
 newtype M m a = M { unM :: RWST (Env m) LogUsed State m a }
     deriving (Functor, Applicative, Monad)

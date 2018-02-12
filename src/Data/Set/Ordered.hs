@@ -14,10 +14,11 @@ newtype OrderedSet a = OrderedSet { _orderedSet :: [a] }
     deriving (Show, Eq, Ord, Functor, Foldable, Traversable)
 Lens.makeLenses ''OrderedSet
 
+instance Eq a => Semigroup (OrderedSet a) where
+    OrderedSet xs <> OrderedSet ys = OrderedSet (xs ++ Prelude.filter (`notElem` xs) ys)
 instance Eq a => Monoid (OrderedSet a) where
     mempty = OrderedSet []
-    OrderedSet xs `mappend` OrderedSet ys =
-        OrderedSet $ xs ++ Prelude.filter (`notElem` xs) ys
+    mappend = (<>)
 
 singleton :: a -> OrderedSet a
 singleton = OrderedSet . (:[])

@@ -85,10 +85,13 @@ nameContextOf inst =
     where
         ctx = groupNameContextOf inst
 
+instance Semigroup IsClash where
+    NoClash x <> NoClash y = nameContextCombine x y
+    _ <> _ = Clash
+
 instance Monoid IsClash where
     mempty = NoClash mempty
-    mappend (NoClash x) (NoClash y) = nameContextCombine x y
-    mappend _ _ = Clash
+    mappend = (<>)
 
 check :: [AnnotatedName] -> IsClash
 check ns = ns <&> isClashOf & mconcat

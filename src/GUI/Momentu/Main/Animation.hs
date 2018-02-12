@@ -50,11 +50,12 @@ data ToAnim = ToAnim
     , taMNewFrame :: Maybe (UTCTime, Anim.Frame)
     }
 
+instance Semigroup ToAnim where
+    -- Newer ToAnim is on the left, taking it's new frame if exists.
+    ToAnim erA nfA <> ToAnim erB nfB = ToAnim (erA <> erB) (mplus nfA nfB)
 instance Monoid ToAnim where
     mempty = ToAnim mempty Nothing
-    -- Newer ToAnim is on the left, taking it's new frame if exists.
-    mappend (ToAnim erA nfA) (ToAnim erB nfB) =
-        ToAnim (erA <> erB) (mplus nfA nfB)
+    mappend = (<>)
 
 -- The threads communicate via these STM variables
 data ThreadVars = ThreadVars
@@ -72,10 +73,11 @@ data EventResult = EventResult
     , erExecuteInMainThread :: IO ()
     }
 
+instance Semigroup EventResult where
+    EventResult am ar <> EventResult bm br = EventResult (am <> bm) (ar >> br)
 instance Monoid EventResult where
     mempty = EventResult mempty (pure ())
-    mappend (EventResult am ar) (EventResult bm br) =
-        EventResult (mappend am bm) (ar >> br)
+    mappend = (<>)
 
 data Handlers = Handlers
     { tickHandler :: IO EventResult

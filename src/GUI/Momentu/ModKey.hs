@@ -18,12 +18,12 @@ import qualified System.Info as SysInfo
 
 import           Lamdu.Prelude
 
+instance Semigroup GLFW.ModifierKeys where
+    GLFW.ModifierKeys a0 b0 c0 d0 <> GLFW.ModifierKeys a1 b1 c1 d1 =
+        GLFW.ModifierKeys (a0||a1) (b0||b1) (c0||c1) (d0||d1)
 instance Monoid GLFW.ModifierKeys where
     mempty = GLFW.ModifierKeys False False False False
-    mappend
-        (GLFW.ModifierKeys a0 b0 c0 d0)
-        (GLFW.ModifierKeys a1 b1 c1 d1) =
-            GLFW.ModifierKeys (a0||a1) (b0||b1) (c0||c1) (d0||d1)
+    mappend = (<>)
 
 ctrlMods :: GLFW.ModifierKeys
 ctrlMods = mempty { GLFW.modifierKeysControl = True }

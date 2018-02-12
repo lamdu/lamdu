@@ -75,6 +75,9 @@ instance Applicative Vector2 where
     pure x = Vector2 x x
     Vector2 f g <*> Vector2 x y = Vector2 (f x) (g y)
 
+instance Semigroup a => Semigroup (Vector2 a) where
+    Vector2 x0 y0 <> Vector2 x1 y1 = Vector2 (x0 <> x1) (y0 <> y1)
+
 instance Monoid a => Monoid (Vector2 a) where
     mempty = def_mempty
     mappend = def_mappend

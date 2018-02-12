@@ -125,7 +125,7 @@ nextState movement (Just dest) state =
 unitX :: Draw.Image ()
 unitX =
     Draw.line (0, 0) (1, 1)
-    <> Draw.line (1, 0) (0, 1)
+    `mappend` Draw.line (1, 0) (0, 1)
     & void
 
 red :: Draw.Color

@@ -94,10 +94,12 @@ instance Lens.At NameUUIDMap where
     at k f (NameUUIDMap m) = NameUUIDMap <$> Lens.at k f m
     {-# INLINE at #-}
 
+instance Semigroup NameUUIDMap where
+    NameUUIDMap x <> NameUUIDMap y = NameUUIDMap (Map.unionWith (flip mappend) x y)
+
 instance Monoid NameUUIDMap where
     mempty = NameUUIDMap Map.empty
-    NameUUIDMap x `mappend` NameUUIDMap y =
-        NameUUIDMap $ Map.unionWith (flip mappend) x y
+    mappend = (<>)
 
 nameUUIDMapSingleton :: Text -> Clash.AnnotatedName -> NameUUIDMap
 nameUUIDMapSingleton name nameInstance =
@@ -130,9 +132,11 @@ data P1Out = P1Out
     { _p1Names :: NameUUIDMap
     , _p1Collisions :: Set Text
     } deriving (Generic)
+instance Semigroup P1Out where
+    (<>) = def_mappend
 instance Monoid P1Out where
     mempty = def_mempty
-    mappend = def_mappend
+    mappend = (<>)
 
 data P1Name = P1Name
     { p1StoredName :: Maybe StoredName

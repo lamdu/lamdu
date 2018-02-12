@@ -67,10 +67,11 @@ data Dependencies srcId = Dependencies
     { subExprDeps :: Set srcId
     , globalDeps :: Set V.Var
     }
+instance Ord srcId => Semigroup (Dependencies srcId) where
+    Dependencies x0 y0 <> Dependencies x1 y1 = Dependencies (x0 <> x1) (y0 <> y1)
 instance Ord srcId => Monoid (Dependencies srcId) where
     mempty = Dependencies mempty mempty
-    mappend (Dependencies x0 y0) (Dependencies x1 y1) =
-        Dependencies (x0 <> x1) (y0 <> y1)
+    mappend = (<>)
 
 data Evaluator srcId = Evaluator
     { stop :: IO ()

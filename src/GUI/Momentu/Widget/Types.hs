@@ -59,11 +59,14 @@ data PreEvents a
     | BlockEvents
     deriving Functor
 
+instance Semigroup (PreEvents a) where
+    BlockEvents <> _ = BlockEvents
+    _ <> BlockEvents = BlockEvents
+    PreEvents xs <> PreEvents ys = PreEvents (xs ++ ys)
+
 instance Monoid (PreEvents a) where
     mempty = PreEvents []
-    mappend BlockEvents _ = BlockEvents
-    mappend _ BlockEvents = BlockEvents
-    mappend (PreEvents xs) (PreEvents ys) = PreEvents (xs ++ ys)
+    mappend = (<>)
 
 data Focused a = Focused
     { -- When browsing sub-menus each selected menu is considered focal.

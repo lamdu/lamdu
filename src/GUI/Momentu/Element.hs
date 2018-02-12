@@ -25,14 +25,17 @@ import           Lamdu.Prelude
 newtype Layers = Layers { _layers :: [Anim.Frame] }
 Lens.makeLenses ''Layers
 
-instance Monoid Layers where
-    mempty = Layers []
-    mappend xs (Layers []) = xs
-    mappend (Layers []) ys = ys
-    mappend (Layers (x:xs)) (Layers (y:ys)) =
+instance Semigroup Layers where
+    xs <> Layers [] = xs
+    Layers [] <> ys = ys
+    Layers (x:xs) <> Layers (y:ys) =
         Layers (x<>y : rest ^. layers)
         where
             rest = Layers xs <> Layers ys
+
+instance Monoid Layers where
+    mempty = Layers []
+    mappend = (<>)
 
 addLayersAbove :: Layers -> Layers -> Layers
 addLayersAbove (Layers xs) (Layers ys) = Layers (ys ++ xs)

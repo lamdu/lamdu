@@ -128,9 +128,12 @@ emDocs f e =
 
 Lens.makeLenses ''EventMap
 
+instance Semigroup (EventMap a) where
+    (<>) = overrides
+
 instance Monoid (EventMap a) where
     mempty = EventMap mempty mempty mempty mempty
-    mappend = overrides
+    mappend = (<>)
 
 overrides :: EventMap a -> EventMap a -> EventMap a
 overrides

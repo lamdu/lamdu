@@ -248,7 +248,7 @@ instance Foldable (BinderContent name m) where
     foldMap f (BinderExpr expr) = f expr
 
 instance Foldable (Let name m) where
-    foldMap f l = foldMap f (l ^. lValue) <> foldMap f (l ^. lBody)
+    foldMap f l = foldMap f (l ^. lValue) `mappend` foldMap f (l ^. lBody)
 
 instance Traversable (Binder name m) where
     sequenceA = bBody sequenceA

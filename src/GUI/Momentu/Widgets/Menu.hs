@@ -210,10 +210,11 @@ layoutOption maxOptionWidth mNextEntry (optionId, rendered, submenu) =
                 else pure base
     & Reader.local (Element.animIdPrefix .~ Widget.toAnimId optionId)
 
+instance Semigroup (OptionList a) where
+    OptionList o0 t0 <> OptionList o1 t1 = OptionList (o0 <> o1) (t0 || t1)
 instance Monoid (OptionList a) where
     mempty = OptionList [] False
-    OptionList o0 t0 `mappend` OptionList o1 t1 =
-        OptionList (o0 <> o1) (t0 || t1)
+    mappend = (<>)
 
 makePickEventMap ::
     (MonadReader env m, HasConfig env, Applicative f) =>

@@ -56,7 +56,7 @@ import           Lamdu.Prelude
 type T = Transaction
 
 newtype StoredEntityIds = StoredEntityIds [Sugar.EntityId]
-    deriving (Monoid)
+    deriving (Semigroup, Monoid)
 
 data Askable m = Askable
     { _aState :: GUIState
@@ -75,6 +75,9 @@ data Askable m = Askable
 newtype ExprGuiM m a = ExprGuiM
     { _exprGuiM :: ReaderT (Askable m) (T m) a
     } deriving (Functor, Applicative, Monad, MonadReader (Askable m))
+
+instance (Monad m, Semigroup a) => Semigroup (ExprGuiM m a) where
+    (<>) = liftA2 (<>)
 
 instance (Monad m, Monoid a) => Monoid (ExprGuiM m a) where
     mempty = pure mempty

@@ -56,9 +56,11 @@ singletonFrame size animId =
     where
         singletonUnitImage image = Frame [Image animId image (Rect 0 1)]
 
+instance Semigroup Frame where
+    Frame m0 <> Frame m1 = Frame (m0 ++ m1)
 instance Monoid Frame where
     mempty = Frame mempty
-    mappend (Frame m0) (Frame m1) = Frame (m0 ++ m1)
+    mappend = (<>)
 
 draw :: Frame -> Draw.Image ()
 draw frame =

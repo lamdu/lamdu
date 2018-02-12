@@ -66,7 +66,7 @@ addHiddenEntities val sugared =
             | Set.member (node ^. Val.payload . Input.entityId) sugarChildren =
                 mempty
             | otherwise =
-                node ^. Val.payload . Input.userData <> mconcat (node ^.. Val.body . traverse <&> bodyData)
+                mconcat (node ^. Val.payload . Input.userData : (node ^.. Val.body . traverse <&> bodyData))
 
 convert :: (Monad m, Monoid a) => Val (Input.Payload m a) -> ConvertM m (ExpressionU m a)
 convert v =

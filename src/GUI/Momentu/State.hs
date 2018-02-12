@@ -48,9 +48,12 @@ data Update = Update
     } deriving Generic
 Lens.makeLenses ''Update
 
+instance Semigroup Update where
+    (<>) = def_mappend
+
 instance Monoid Update where
     mempty = def_mempty
-    mappend = def_mappend
+    mappend = (<>)
 
 updateCursor :: Id -> Update
 updateCursor c = mempty { _uCursor = Just c & Monoid.Last }

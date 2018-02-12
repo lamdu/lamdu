@@ -17,6 +17,8 @@ data CurAndPrev a = CurAndPrev
     } deriving (Functor, Foldable, Traversable, Show, Eq, Ord)
 Lens.makeLenses ''CurAndPrev
 
+instance Semigroup a => Semigroup (CurAndPrev a) where
+    CurAndPrev c0 p0 <> CurAndPrev c1 p1 = CurAndPrev (c0 <> c1) (p0 <> p1)
 instance Monoid a => Monoid (CurAndPrev a) where
     mempty = CurAndPrev mempty mempty
     mappend (CurAndPrev c0 p0) (CurAndPrev c1 p1) =

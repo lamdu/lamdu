@@ -39,9 +39,11 @@ data Handlers = Handlers
 data EventResult =
     ERNone | ERRefresh | ERQuit
     deriving (Eq, Ord, Show)
+instance Semigroup EventResult where
+    (<>) = max
 instance Monoid EventResult where
     mempty = ERNone
-    mappend = max
+    mappend = (<>)
 
 windowSize :: GLFW.Window -> IO Size
 windowSize win =
@@ -112,7 +114,7 @@ mainLoop win imageHandlers =
                         Nothing -> pure mempty
                         Just font -> updateFPS fps >>= renderFPS font win
                     let draw img =
-                            glDraw win winSize (fpsImg <> img)
+                            glDraw win winSize (fpsImg `mappend` img)
                     case eventResult of
                         ERQuit -> pure NextQuit
                         ERRefresh -> refresh handlers >>= draw
