@@ -111,8 +111,9 @@ make (Sugar.Composite fields recordTail addField _addFieldTodo) pl =
                 closedRecordEventMap actions
             Sugar.OpenComposite actions restExpr ->
                 openRecordEventMap actions restExpr
+        fieldGuis <- mapM makeFieldRow fields
         stdWrapParentExpr pl
-            <*> (makeRecord fields postProcess <&> Widget.weakerEvents goToRecordEventMap)
+            <*> (makeRecord fieldGuis postProcess <&> Widget.weakerEvents goToRecordEventMap)
             <&> Widget.weakerEvents (addFieldEventMap <> tailEventMap)
     where
         postProcess =
@@ -125,19 +126,21 @@ make (Sugar.Composite fields recordTail addField _addFieldTodo) pl =
             & E.charGroup Nothing (E.Doc ["Navigation", "Go to parent"]) "}"
 
 makeRecord ::
-    Monad m =>
-    [Sugar.CompositeItem (Name (T m)) (T m) (ExprGui.SugarExpr m)] ->
-    (ExpressionGui m -> ExprGuiM m (ExpressionGui m)) ->
-    ExprGuiM m (ExpressionGui m)
-makeRecord fields postProcess =
+    ( MonadReader env m, Theme.HasTheme env, Element.HasAnimIdPrefix env, Spacer.HasStdSpacing env
+    , Functor f
+    ) =>
+    [Responsive.TaggedItem (f GuiState.Update)] ->
+    (Responsive (f GuiState.Update) -> m (Responsive (f GuiState.Update))) ->
+    m (Responsive (f GuiState.Update))
+makeRecord fieldGuis postProcess =
     Styled.addValFrame <*>
     do
         opener <- Styled.grammarLabel "{"
-        case fields of
+        case fieldGuis of
             [] -> Styled.grammarLabel "}" <&> Responsive.fromTextView
             _ ->
                 Responsive.taggedList
-                <*> (mapM makeFieldRow fields >>= addPostTags)
+                <*> addPostTags fieldGuis
                 >>= postProcess
             <&> (opener /|/)
 
