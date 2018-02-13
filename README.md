@@ -83,7 +83,7 @@ requires [stack](https://github.com/commercialhaskell/stack/releases) (1.6.1 or 
 ```shell
 sudo dnf install -y gcc gcc-c++ gmp-devel libXrandr-devel libXi-devel
 sudo dnf install -y libXcursor-devel mesa-libGL-devel libGLU-devel
-sudo dnf install -y libXinerama-devel leveldb-devel glew-devel
+sudo dnf install -y libXinerama-devel leveldb-devel glew-devel zlib-devel
 git clone --recursive https://github.com/lamdu/lamdu
 cd lamdu
 stack setup
