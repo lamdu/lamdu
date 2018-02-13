@@ -3,7 +3,7 @@
 #ifdef NO_CODE
 module Data.Aeson.Utils () where
 
-import Prelude
+import Prelude ()
 #else
 module Data.Aeson.Utils
     ( removePrefix
