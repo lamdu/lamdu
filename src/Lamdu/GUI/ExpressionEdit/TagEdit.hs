@@ -113,16 +113,16 @@ makeOptions ::
     ( MonadTransaction m f, MonadReader env f, GuiState.HasCursor env
     , HasConfig env, HasTheme env, Element.HasAnimIdPrefix env, TextView.HasStyle env
     ) =>
-    Sugar.Tag (Name n) (T m) -> SearchMenu.ResultsContext ->
+    Sugar.TagSelection (Name (T m)) (T m) a -> SearchMenu.ResultsContext ->
     f (Menu.OptionList (Menu.Option f (T m)))
-makeOptions tag ctx
+makeOptions tagSelection ctx
     | Text.null searchTerm = pure mempty
     | otherwise =
         do
             resultCount <-
                 Lens.view Config.config
                 <&> Config.completion <&> Config.completionResultCount
-            tag ^. Sugar.tagSelection . Sugar.tsOptions & transaction
+            tagSelection ^. Sugar.tsOptions & transaction
                 <&> filter (Lens.anyOf (Sugar.toName . Name.form . Name._Stored . _1) (insensitiveInfixOf searchTerm))
                 <&> splitAt resultCount
                 <&> _2 %~ not . null
@@ -165,14 +165,14 @@ makeHoleSearchTerm ::
     , HasTheme env, Element.HasAnimIdPrefix env, HasStdSpacing env, Hover.HasStyle env
     , Monad f
     ) =>
-    NearestHoles -> Sugar.Tag (Name f) f ->
+    NearestHoles -> Sugar.TagSelection (Name f) f () -> Widget.Id ->
     m (WithTextPos (Widget (f GuiState.Update)))
-makeHoleSearchTerm nearestHoles tag =
+makeHoleSearchTerm nearestHoles tagSelection holeId =
     do
         searchTerm <- SearchMenu.readSearchTerm holeId
         let newTag =
                 do
-                    (name, t, ()) <- tag ^. Sugar.tagSelection . Sugar.tsNewTag
+                    (name, t, ()) <- tagSelection ^. Sugar.tsNewTag
                     (name ^. Name.setName) searchTerm
                     t ^. Sugar.tagInstance & pure
         newTagEventMap <-
@@ -210,8 +210,6 @@ makeHoleSearchTerm nearestHoles tag =
                     & Reader.local (TextView.color .~ Theme.tooltipFgColor tooltip)
                     & Reader.local (Element.animIdPrefix <>~ ["label"])
             else pure term
-    where
-        holeId = WidgetIds.tagHoleId (tagId tag)
 
 makeTagHoleEdit ::
     ( MonadReader env f, MonadTransaction m f
@@ -219,17 +217,17 @@ makeTagHoleEdit ::
     , HasConfig env, TextEdit.HasStyle env, Element.HasAnimIdPrefix env
     , HasTheme env, Hover.HasStyle env, Menu.HasConfig env, HasStdSpacing env
     ) =>
-    NearestHoles -> Sugar.Tag (Name (T m)) (T m) ->
+    NearestHoles -> Sugar.TagSelection (Name (T m)) (T m) () -> Widget.Id ->
     f (WithTextPos (Widget (T m GuiState.Update)))
-makeTagHoleEdit nearestHoles tag =
+makeTagHoleEdit nearestHoles tagSelection holeId =
     do
         searchTermEventMap <- SearchMenu.searchTermEditEventMap holeId allowedSearchTerm <&> fmap pure
-        SearchMenu.make (const (makeHoleSearchTerm nearestHoles tag)) (makeOptions tag) Element.empty
+        SearchMenu.make
+            (const (makeHoleSearchTerm nearestHoles tagSelection holeId))
+            (makeOptions tagSelection) Element.empty
             (nearestHoles ^. NearestHoles.next <&> WidgetIds.fromEntityId) holeId
             ?? Menu.AnyPlace
             <&> Align.tValue . Widget.eventMapMaker . Lens.mapped %~ (<> searchTermEventMap)
-    where
-        holeId = WidgetIds.tagHoleId (tagId tag)
 
 makeTagView ::
     ( MonadReader env m
@@ -277,7 +275,7 @@ makeTagEdit nearestHoles tag =
                 hover <*>
                 (makeTagNameEdit nearestHoles tag <&> (^. Align.tValue))
             else if isHole
-            then makeTagHoleEdit nearestHoles tag
+            then makeTagHoleEdit nearestHoles (tag ^. Sugar.tagSelection) (WidgetIds.tagHoleId (tagId tag))
             else pure nameView
         widget
             <&> Widget.weakerEvents jumpHolesEventMap
