@@ -132,16 +132,14 @@ makeRecord ::
     [Responsive.TaggedItem (f GuiState.Update)] ->
     (Responsive (f GuiState.Update) -> m (Responsive (f GuiState.Update))) ->
     m (Responsive (f GuiState.Update))
+makeRecord [] _ = error "makeRecord with no fields"
 makeRecord fieldGuis postProcess =
     Styled.addValFrame <*>
     do
         opener <- Styled.grammarLabel "{"
-        case fieldGuis of
-            [] -> Styled.grammarLabel "}" <&> Responsive.fromTextView
-            _ ->
-                Responsive.taggedList
-                <*> addPostTags fieldGuis
-                >>= postProcess
+        Responsive.taggedList
+            <*> addPostTags fieldGuis
+            >>= postProcess
             <&> (opener /|/)
 
 addPostTags ::
