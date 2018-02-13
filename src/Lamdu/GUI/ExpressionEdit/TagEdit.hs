@@ -93,9 +93,9 @@ tagId tag = tag ^. Sugar.tagInfo . Sugar.tagInstance & WidgetIds.fromEntityId
 
 makePickEventMap ::
     (Functor f, Config.HasConfig env, MonadReader env m) =>
-    NearestHoles -> E.Doc -> f Widget.Id ->
+    NearestHoles -> f Widget.Id ->
     m (EventMap (f GuiState.Update))
-makePickEventMap nearestHoles doc action =
+makePickEventMap nearestHoles action =
     Lens.view Config.config <&> Config.menu <&>
     \config ->
     let pickKeys = Menu.keysPickOption config
@@ -106,8 +106,11 @@ makePickEventMap nearestHoles doc action =
     Just nextHole ->
         E.keysEventMapMovesCursor pickKeys doc action
         <> E.keysEventMapMovesCursor jumpNextKeys
-            (doc & E.docStrs . Lens.reversed . Lens.ix 0 %~ (<> " and jump to next hole"))
+            (mkDoc "New and jump to next hole")
             (WidgetIds.fromEntityId nextHole <$ action)
+    where
+        doc = mkDoc "New"
+        mkDoc x = E.Doc ["Edit", "Tag", x]
 
 makeOptions ::
     ( MonadTransaction m f, MonadReader env f, GuiState.HasCursor env
@@ -182,7 +185,7 @@ makeHoleSearchTerm nearestHoles tagSelection holeId =
                     t ^. Sugar.tagInstance & pure
         newTagEventMap <-
             newTag <&> WidgetIds.fromEntityId
-            & makePickEventMap nearestHoles (E.Doc ["Edit", "Tag", "New"])
+            & makePickEventMap nearestHoles
         let pickPreEvent =
                 Widget.PreEvent
                 { Widget._pDesc = "New tag"
