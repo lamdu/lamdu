@@ -5,6 +5,7 @@ module Lamdu.GUI.ExpressionEdit.RecordEdit
 
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
+import           Control.Monad.Transaction (MonadTransaction(..))
 import qualified Data.Char as Char
 import qualified Data.Text as Text
 import           Data.Vector.Vector2 (Vector2(..))
@@ -21,6 +22,7 @@ import qualified GUI.Momentu.State as GuiState
 import           GUI.Momentu.View (View)
 import qualified GUI.Momentu.View as View
 import qualified GUI.Momentu.Widget as Widget
+import qualified GUI.Momentu.Widgets.Menu as Menu
 import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified GUI.Momentu.Widgets.TextView as TextView
@@ -46,48 +48,45 @@ type T = Transaction
 doc :: E.Subtitle -> E.Doc
 doc text = E.Doc ["Edit", "Record", text]
 
+addFieldId :: Widget.Id -> Widget.Id
+addFieldId = (`Widget.joinId` ["add field"])
+
 mkAddFieldEventMap ::
-    (MonadReader env m, HasConfig env, Functor f) =>
-    f Sugar.CompositeAddItemResult -> m (EventMap (f GuiState.Update))
-mkAddFieldEventMap addField =
+    (MonadReader env m, HasConfig env, Applicative f) =>
+    Widget.Id -> m (EventMap (f GuiState.Update))
+mkAddFieldEventMap myId =
     Lens.view Config.config <&> Config.recordAddFieldKeys
     <&>
     \keys ->
-    addField
-    <&> (^. Sugar.cairNewTag . Sugar.tagInstance)
-    <&> WidgetIds.fromEntityId
-    <&> WidgetIds.tagHoleId
+    addFieldId myId
+    & pure
     & E.keysEventMapMovesCursor keys (doc "Add Field")
 
-addFieldWithSearchTermEventMap ::
-    Functor f => f Sugar.CompositeAddItemResult -> EventMap (f GuiState.Update)
-addFieldWithSearchTermEventMap addField =
+addFieldWithSearchTermEventMap :: Applicative f => Widget.Id -> EventMap (f GuiState.Update)
+addFieldWithSearchTermEventMap myId =
     E.charEventMap "Character" (doc "Add Field") f
     where
         f c
             | Char.isAlpha c =
-                addField
-                <&> (^. Sugar.cairNewTag . Sugar.tagInstance)
-                <&> WidgetIds.fromEntityId
-                <&> WidgetIds.tagHoleId
-                <&> SearchMenu.enterWithSearchTerm (Text.singleton c)
+                addFieldId myId
+                & SearchMenu.enterWithSearchTerm (Text.singleton c)
+                & pure
                 & Just
             | otherwise = Nothing
 
 makeUnit ::
     (Monad m, Applicative f) =>
-    f Sugar.CompositeAddItemResult ->
     Sugar.Payload f ExprGui.Payload ->
     ExprGuiM m (Responsive (f GuiState.Update))
-makeUnit addField pl =
+makeUnit pl =
     do
         makeFocusable <- Widget.makeFocusableView ?? myId <&> (Align.tValue %~)
-        addFieldEventMap <- mkAddFieldEventMap addField
+        addFieldEventMap <- mkAddFieldEventMap myId
         stdWrap pl
             <*> ( (/|/) <$> Styled.grammarLabel "{" <*> Styled.grammarLabel "}"
                     <&> makeFocusable
                     <&> Align.tValue %~ Widget.weakerEvents
-                        (addFieldEventMap <> addFieldWithSearchTermEventMap addField)
+                        (addFieldEventMap <> addFieldWithSearchTermEventMap myId)
                     <&> Responsive.fromWithTextPos
                 )
     where
@@ -98,13 +97,19 @@ make ::
     Sugar.Composite (Name (T m)) (T m) (ExprGui.SugarExpr m) ->
     Sugar.Payload (T m) ExprGui.Payload ->
     ExprGuiM m (ExpressionGui m)
-make (Sugar.Composite [] Sugar.ClosedComposite{} addField _addFieldTodo) pl =
+make (Sugar.Composite [] Sugar.ClosedComposite{} _addFieldWithNewTag addField) pl =
     -- Ignore the ClosedComposite actions - it only has the open
     -- action which is equivalent ot deletion on the unit record
-    makeUnit addField pl
-make (Sugar.Composite fields recordTail addField _addFieldTodo) pl =
     do
-        addFieldEventMap <- mkAddFieldEventMap addField
+        isAddField <- GuiState.isSubCursor ?? addFieldId (WidgetIds.fromExprPayload pl)
+        if isAddField
+            then
+                stdWrapParentExpr pl
+                <*> (makeAddFieldRow addField pl <&> (:[]) >>= makeRecord pure)
+            else makeUnit pl
+make (Sugar.Composite fields recordTail _addFieldWithNewTag addField) pl =
+    do
+        addFieldEventMap <- mkAddFieldEventMap (WidgetIds.fromExprPayload pl)
         tailEventMap <-
             case recordTail of
             Sugar.ClosedComposite actions ->
@@ -112,8 +117,13 @@ make (Sugar.Composite fields recordTail addField _addFieldTodo) pl =
             Sugar.OpenComposite actions restExpr ->
                 openRecordEventMap actions restExpr
         fieldGuis <- mapM makeFieldRow fields
+        isAddField <- GuiState.isSubCursor ?? addFieldId (WidgetIds.fromExprPayload pl)
+        addFieldGuis <-
+            if isAddField
+            then makeAddFieldRow addField pl <&> (:[])
+            else pure []
         stdWrapParentExpr pl
-            <*> (makeRecord fieldGuis postProcess <&> Widget.weakerEvents goToRecordEventMap)
+            <*> (makeRecord postProcess (fieldGuis ++ addFieldGuis) <&> Widget.weakerEvents goToRecordEventMap)
             <&> Widget.weakerEvents (addFieldEventMap <> tailEventMap)
     where
         postProcess =
@@ -129,11 +139,11 @@ makeRecord ::
     ( MonadReader env m, Theme.HasTheme env, Element.HasAnimIdPrefix env, Spacer.HasStdSpacing env
     , Functor f
     ) =>
-    [Responsive.TaggedItem (f GuiState.Update)] ->
     (Responsive (f GuiState.Update) -> m (Responsive (f GuiState.Update))) ->
+    [Responsive.TaggedItem (f GuiState.Update)] ->
     m (Responsive (f GuiState.Update))
-makeRecord [] _ = error "makeRecord with no fields"
-makeRecord fieldGuis postProcess =
+makeRecord _ [] = error "makeRecord with no fields"
+makeRecord postProcess fieldGuis =
     Styled.addValFrame <*>
     do
         opener <- Styled.grammarLabel "{"
@@ -158,6 +168,30 @@ addPostTags items =
                 txt | idx < lastIdx = ","
                     | otherwise = "}"
         lastIdx = length items - 1
+
+makeAddFieldRow ::
+    (MonadReader env m, MonadTransaction f m, TagEdit.HasTagEditEnv env) =>
+    Sugar.TagSelection (Name (T f)) (T f) Sugar.EntityId -> Sugar.Payload (T f) ExprGui.Payload ->
+    m (Responsive.TaggedItem (T f GuiState.Update))
+makeAddFieldRow addField pl =
+    TagEdit.makeTagHoleEdit
+    (pl ^. Sugar.plData . ExprGui.plNearestHoles)
+    addField mkPickResult tagHoleId
+    & TagEdit.withNameColor Theme.recordTagColor
+    <&>
+    \tagHole ->
+    Responsive.TaggedItem
+    { Responsive._tagPre = tagHole
+    , Responsive._taggedItem = Element.empty
+    , Responsive._tagPost = Element.empty
+    }
+    where
+        tagHoleId = addFieldId (WidgetIds.fromExprPayload pl)
+        mkPickResult _ dst =
+            Menu.PickResult
+            { Menu._pickDest = WidgetIds.fromEntityId dst
+            , Menu._pickDestIsEntryPoint = True
+            }
 
 makeFieldRow ::
     Monad m =>
