@@ -174,9 +174,7 @@ makeAddFieldRow ::
     Sugar.TagSelection (Name (T f)) (T f) Sugar.EntityId -> Sugar.Payload (T f) ExprGui.Payload ->
     m (Responsive.TaggedItem (T f GuiState.Update))
 makeAddFieldRow addField pl =
-    TagEdit.makeTagHoleEdit
-    (pl ^. Sugar.plData . ExprGui.plNearestHoles)
-    addField mkPickResult tagHoleId
+    TagEdit.makeTagHoleEdit Nothing addField mkPickResult tagHoleId
     & TagEdit.withNameColor Theme.recordTagColor
     <&>
     \tagHole ->

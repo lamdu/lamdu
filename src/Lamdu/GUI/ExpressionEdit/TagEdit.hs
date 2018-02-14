@@ -95,24 +95,24 @@ tagId tag = tag ^. Sugar.tagInfo . Sugar.tagInstance & WidgetIds.fromEntityId
 
 makePickEventMap ::
     (Functor f, Config.HasConfig env, MonadReader env m) =>
-    NearestHoles -> f Menu.PickResult ->
+    Maybe Sugar.EntityId -> f Menu.PickResult ->
     m (EventMap (f GuiState.Update))
-makePickEventMap nearestHoles action =
+makePickEventMap mNextEntry action =
     Lens.view Config.config <&> Config.menu <&>
     \config ->
     let pickKeys = Menu.keysPickOption config
         jumpNextKeys = Menu.keysPickOptionAndGotoNext config
     in
-    case nearestHoles ^. NearestHoles.next of
+    case mNextEntry of
     Nothing -> E.keysEventMapMovesCursor (pickKeys <> jumpNextKeys) doc (action <&> (^. Menu.pickDest))
-    Just nextHole ->
+    Just nextEntry ->
         E.keysEventMapMovesCursor pickKeys doc (action <&> (^. Menu.pickDest))
         <> E.keysEventMapMovesCursor jumpNextKeys
-            (mkDoc "New and jump to next hole") (action <&> nextHoleDest)
+            (mkDoc "New and jump to next hole") (action <&> nextEntryDest)
         where
-            nextHoleDest pickDest
+            nextEntryDest pickDest
                 | pickDest ^. Menu.pickDestIsEntryPoint = pickDest ^. Menu.pickDest
-                | otherwise = WidgetIds.fromEntityId nextHole
+                | otherwise = WidgetIds.fromEntityId nextEntry
     where
         doc = mkDoc "New"
         mkDoc x = E.Doc ["Edit", "Tag", x]
@@ -175,11 +175,11 @@ type HasTagEditEnv env = (HasSearchTermEnv env, Menu.HasConfig env)
 
 makeHoleSearchTerm ::
     (MonadReader env m, Monad f, HasSearchTermEnv env) =>
-    NearestHoles ->
+    Maybe Sugar.EntityId ->
     Sugar.TagSelection (Name f) f a -> (Sugar.TagInfo -> a -> Menu.PickResult) ->
     Widget.Id ->
     m (WithTextPos (Widget (f GuiState.Update)))
-makeHoleSearchTerm nearestHoles tagSelection mkPickResult holeId =
+makeHoleSearchTerm mNextEntry tagSelection mkPickResult holeId =
     do
         searchTerm <- SearchMenu.readSearchTerm holeId
         let newTag =
@@ -187,7 +187,7 @@ makeHoleSearchTerm nearestHoles tagSelection mkPickResult holeId =
                     (name, t, selectResult) <- tagSelection ^. Sugar.tsNewTag
                     (name ^. Name.setName) searchTerm
                     mkPickResult t selectResult & pure
-        newTagEventMap <- makePickEventMap nearestHoles newTag
+        newTagEventMap <- makePickEventMap mNextEntry newTag
         let pickPreEvent =
                 Widget.PreEvent
                 { Widget._pDesc = "New tag"
@@ -223,17 +223,17 @@ makeHoleSearchTerm nearestHoles tagSelection mkPickResult holeId =
 
 makeTagHoleEdit ::
     (MonadReader env m, MonadTransaction f m, HasTagEditEnv env) =>
-    NearestHoles ->
+    Maybe Sugar.EntityId ->
     Sugar.TagSelection (Name (T f)) (T f) a -> (Sugar.TagInfo -> a -> Menu.PickResult) ->
     Widget.Id ->
     m (WithTextPos (Widget (T f GuiState.Update)))
-makeTagHoleEdit nearestHoles tagSelection mkPickResult holeId =
+makeTagHoleEdit mNextEntry tagSelection mkPickResult holeId =
     do
         searchTermEventMap <- SearchMenu.searchTermEditEventMap holeId allowedSearchTerm <&> fmap pure
         SearchMenu.make
-            (const (makeHoleSearchTerm nearestHoles tagSelection mkPickResult holeId))
+            (const (makeHoleSearchTerm mNextEntry tagSelection mkPickResult holeId))
             (makeOptions tagSelection mkPickResult) Element.empty
-            (nearestHoles ^. NearestHoles.next <&> WidgetIds.fromEntityId) holeId
+            (mNextEntry <&> WidgetIds.fromEntityId) holeId
             ?? Menu.AnyPlace
             <&> Align.tValue . Widget.eventMapMaker . Lens.mapped %~ (<> searchTermEventMap)
 
@@ -277,7 +277,7 @@ makeTagEdit nearestHoles tag =
                 hover <*>
                 (makeTagNameEdit nearestHoles tag <&> (^. Align.tValue))
             else if isHole
-            then makeTagHoleEdit nearestHoles (tag ^. Sugar.tagSelection) mkPickResult (WidgetIds.tagHoleId (tagId tag))
+            then makeTagHoleEdit (nearestHoles ^. NearestHoles.next) (tag ^. Sugar.tagSelection) mkPickResult (WidgetIds.tagHoleId (tagId tag))
             else pure nameView
         widget
             <&> Widget.weakerEvents jumpHolesEventMap
