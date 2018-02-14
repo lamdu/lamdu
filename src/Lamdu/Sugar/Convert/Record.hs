@@ -9,7 +9,7 @@ import           Lamdu.Calc.Val.Annotated (Val(..))
 import qualified Lamdu.Calc.Val.Annotated as Val
 import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Expr.IRef as ExprIRef
-import           Lamdu.Sugar.Convert.Composite (convertCompositeItem, makeAddItem)
+import           Lamdu.Sugar.Convert.Composite (convertCompositeItem, convertEmptyComposite, makeAddItem)
 import           Lamdu.Sugar.Convert.Expression.Actions (addActions)
 import qualified Lamdu.Sugar.Convert.Input as Input
 import           Lamdu.Sugar.Convert.Monad (ConvertM)
@@ -26,28 +26,10 @@ plValI :: Lens.Lens' (Input.Payload m a) (ExprIRef.ValI m)
 plValI = Input.stored . Property.pVal
 
 convertEmpty :: Monad m => Input.Payload m a -> ConvertM m (ExpressionU m a)
-convertEmpty exprPl =
-    do
-        actions <-
-            ConvertM.postProcess
-            <&>
-            \postProcess ->
-            ClosedCompositeActions
-            { _closedCompositeOpen =
-                DataOps.replaceWithHole (exprPl ^. Input.stored)
-                <* postProcess
-                <&> EntityId.ofValI
-            }
-        addItemWithTag <-
-            exprPl ^. Input.stored & makeAddItem DataOps.recExtend 0
-            >>= convertTagSelection mempty (EntityId.ofTag (exprPl ^. Input.entityId))
-            <&> Lens.mapped %~ (^. cairNewVal)
-        BodyRecord Composite
-            { _cItems = []
-            , _cTail = ClosedComposite actions
-            , _cAddItem = addItemWithTag
-            }
-            & addActions exprPl
+convertEmpty pl =
+    convertEmptyComposite DataOps.recExtend pl
+    <&> BodyRecord
+    >>= addActions pl
 
 convertExtend ::
     (Monad m, Monoid a) => V.RecExtend (Val (Input.Payload m a)) ->

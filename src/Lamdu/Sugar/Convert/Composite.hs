@@ -1,7 +1,7 @@
 {-# LANGUAGE NoImplicitPrelude #-}
 
 module Lamdu.Sugar.Convert.Composite
-    ( convertCompositeItem, makeAddItem
+    ( convertCompositeItem, makeAddItem, convertEmptyComposite
     ) where
 
 import qualified Control.Lens as Lens
@@ -14,7 +14,7 @@ import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Sugar.Convert.Input as Input
 import           Lamdu.Sugar.Convert.Monad (ConvertM)
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
-import           Lamdu.Sugar.Convert.Tag (convertTag)
+import           Lamdu.Sugar.Convert.Tag (convertTag, convertTagSelection)
 import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import           Lamdu.Sugar.Types
@@ -32,6 +32,33 @@ deleteItem ::
     ConvertM m (T m EntityId)
 deleteItem stored restI =
     ConvertM.typeProtectedSetToVal ?? stored ?? restI <&> Lens.mapped %~ EntityId.ofValI
+
+convertEmptyComposite ::
+    Monad m =>
+    (T.Tag -> ExprIRef.ValI m -> T m (DataOps.CompositeExtendResult m)) ->
+    Input.Payload m a ->
+    ConvertM m (Composite InternalName (T m) expr)
+convertEmptyComposite extendOp exprPl =
+    do
+        actions <-
+            ConvertM.postProcess
+            <&>
+            \postProcess ->
+            ClosedCompositeActions
+            { _closedCompositeOpen =
+                DataOps.replaceWithHole (exprPl ^. Input.stored)
+                <* postProcess
+                <&> EntityId.ofValI
+            }
+        addItem <-
+            exprPl ^. Input.stored & makeAddItem extendOp 0
+            >>= convertTagSelection mempty (EntityId.ofTag (exprPl ^. Input.entityId))
+            <&> Lens.mapped %~ (^. cairNewVal)
+        pure Composite
+            { _cItems = []
+            , _cTail = ClosedComposite actions
+            , _cAddItem = addItem
+            }
 
 convertCompositeItem ::
     (Monad m, Monoid a) =>

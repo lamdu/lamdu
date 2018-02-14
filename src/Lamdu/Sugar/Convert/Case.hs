@@ -13,7 +13,7 @@ import           Lamdu.Calc.Val.Annotated (Val(..))
 import qualified Lamdu.Calc.Val.Annotated as Val
 import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Expr.IRef as ExprIRef
-import           Lamdu.Sugar.Convert.Composite (convertCompositeItem, makeAddItem)
+import           Lamdu.Sugar.Convert.Composite (convertCompositeItem, makeAddItem, convertEmptyComposite)
 import           Lamdu.Sugar.Convert.Expression.Actions (addActions)
 import           Lamdu.Sugar.Convert.IfElse (convertIfElse)
 import qualified Lamdu.Sugar.Convert.Input as Input
@@ -35,31 +35,11 @@ plValI :: Lens.Lens' (Input.Payload m a) (ExprIRef.ValI m)
 plValI = Input.stored . Property.pVal
 
 convertAbsurd :: Monad m => Input.Payload m a -> ConvertM m (ExpressionU m a)
-convertAbsurd exprPl =
-    do
-        actions <-
-            ConvertM.postProcess
-            <&>
-            \postProcess ->
-            ClosedCompositeActions
-            { _closedCompositeOpen =
-                DataOps.replaceWithHole (exprPl ^. Input.stored)
-                <* postProcess
-                <&> EntityId.ofValI
-            }
-        addItemWithTag <-
-            exprPl ^. Input.stored & makeAddItem DataOps.case_ 0
-            >>= convertTagSelection mempty (EntityId.ofTag (exprPl ^. Input.entityId))
-            <&> Lens.mapped %~ (^. cairNewVal)
-        BodyCase Case
-            { _cKind = LambdaCase
-            , _cBody = Composite
-                { _cItems = []
-                , _cTail = ClosedComposite actions
-                , _cAddItem = addItemWithTag
-                }
-            }
-            & addActions exprPl
+convertAbsurd pl =
+    convertEmptyComposite DataOps.case_ pl
+    <&> Case LambdaCase
+    <&> BodyCase
+    >>= addActions pl
 
 convert ::
     (Monad m, Monoid a) => V.Case (Val (Input.Payload m a)) ->
