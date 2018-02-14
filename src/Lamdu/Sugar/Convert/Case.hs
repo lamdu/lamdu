@@ -13,7 +13,7 @@ import           Lamdu.Calc.Val.Annotated (Val(..))
 import qualified Lamdu.Calc.Val.Annotated as Val
 import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Expr.IRef as ExprIRef
-import           Lamdu.Sugar.Convert.Composite (convertCompositeItem, makeAddItem, convertEmptyComposite)
+import           Lamdu.Sugar.Convert.Composite (convertCompositeItem, makeAddItem, convertEmptyComposite, convertOpenCompositeActions)
 import           Lamdu.Sugar.Convert.Expression.Actions (addActions)
 import           Lamdu.Sugar.Convert.IfElse (convertIfElse)
 import qualified Lamdu.Sugar.Convert.Input as Input
@@ -52,16 +52,7 @@ convert (V.Case tag val rest) exprPl = do
             pure (r, const (restS ^. rPayload . plEntityId))
         _ ->
             do
-                actions <-
-                    ConvertM.typeProtectedSetToVal
-                    <&>
-                    \protectedSetToVal ->
-                    OpenCompositeActions
-                    { _openCompositeClose =
-                        ExprIRef.newValBody (V.BLeaf V.LAbsurd)
-                        >>= protectedSetToVal restStored
-                        <&> EntityId.ofValI
-                    }
+                actions <- convertOpenCompositeActions V.LAbsurd restStored
                 addItemWithTag <-
                     makeAddItem DataOps.case_ 1 restStored
                     >>= convertTagSelection mempty (EntityId.ofTag (exprPl ^. Input.entityId))
@@ -75,7 +66,8 @@ convert (V.Case tag val rest) exprPl = do
                             , _cAddItem = addItemWithTag
                             }
                         }
-                    , id)
+                    , id
+                    )
     altS <-
         convertCompositeItem
         (V.Case <&> Lens.mapped . Lens.mapped %~ V.BCase)

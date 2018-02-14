@@ -1,11 +1,12 @@
 {-# LANGUAGE NoImplicitPrelude #-}
 
 module Lamdu.Sugar.Convert.Composite
-    ( convertCompositeItem, makeAddItem, convertEmptyComposite
+    ( convertCompositeItem, makeAddItem, convertEmptyComposite, convertOpenCompositeActions
     ) where
 
 import qualified Control.Lens as Lens
 import qualified Lamdu.Calc.Type as T
+import qualified Lamdu.Calc.Val as V
 import           Lamdu.Calc.Val.Annotated (Val(..))
 import qualified Lamdu.Calc.Val.Annotated as Val
 import qualified Lamdu.Data.Anchors as Anchors
@@ -32,6 +33,19 @@ deleteItem ::
     ConvertM m (T m EntityId)
 deleteItem stored restI =
     ConvertM.typeProtectedSetToVal ?? stored ?? restI <&> Lens.mapped %~ EntityId.ofValI
+
+convertOpenCompositeActions ::
+    Monad m => V.Leaf -> ExprIRef.ValIProperty m -> ConvertM m (OpenCompositeActions (T m))
+convertOpenCompositeActions leaf stored =
+    ConvertM.typeProtectedSetToVal
+    <&>
+    \protectedSetToVal ->
+    OpenCompositeActions
+    { _openCompositeClose =
+        ExprIRef.newValBody (V.BLeaf leaf)
+        >>= protectedSetToVal stored
+        <&> EntityId.ofValI
+    }
 
 convertEmptyComposite ::
     Monad m =>

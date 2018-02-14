@@ -9,7 +9,7 @@ import           Lamdu.Calc.Val.Annotated (Val(..))
 import qualified Lamdu.Calc.Val.Annotated as Val
 import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Expr.IRef as ExprIRef
-import           Lamdu.Sugar.Convert.Composite (convertCompositeItem, convertEmptyComposite, makeAddItem)
+import           Lamdu.Sugar.Convert.Composite (convertCompositeItem, convertEmptyComposite, makeAddItem, convertOpenCompositeActions)
 import           Lamdu.Sugar.Convert.Expression.Actions (addActions)
 import qualified Lamdu.Sugar.Convert.Input as Input
 import           Lamdu.Sugar.Convert.Monad (ConvertM)
@@ -42,16 +42,7 @@ convertExtend (V.RecExtend tag val rest) exprPl = do
             pure (r, const (restS ^. rPayload . plEntityId))
         _ ->
             do
-                actions <-
-                    ConvertM.typeProtectedSetToVal
-                    <&>
-                    \protectedSetToVal ->
-                    OpenCompositeActions
-                    { _openCompositeClose =
-                        ExprIRef.newValBody (V.BLeaf V.LRecEmpty)
-                        >>= protectedSetToVal restStored
-                        <&> EntityId.ofValI
-                    }
+                actions <- convertOpenCompositeActions V.LRecEmpty restStored
                 addItem <-
                     makeAddItem DataOps.recExtend 1 restStored
                     >>= convertTagSelection mempty (EntityId.ofTag tagInstSource)
