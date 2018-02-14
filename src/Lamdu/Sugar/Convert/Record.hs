@@ -28,17 +28,19 @@ plValI = Input.stored . Property.pVal
 convertEmpty :: Monad m => Input.Payload m a -> ConvertM m (ExpressionU m a)
 convertEmpty exprPl =
     do
-        addItem <- exprPl ^. Input.stored & makeAddItem DataOps.recExtend 0
-        postProcess <- ConvertM.postProcess
-        let actions =
-                ClosedCompositeActions
-                { _closedCompositeOpen =
-                    DataOps.replaceWithHole (exprPl ^. Input.stored)
-                    <* postProcess
-                    <&> EntityId.ofValI
-                }
+        actions <-
+            ConvertM.postProcess
+            <&>
+            \postProcess ->
+            ClosedCompositeActions
+            { _closedCompositeOpen =
+                DataOps.replaceWithHole (exprPl ^. Input.stored)
+                <* postProcess
+                <&> EntityId.ofValI
+            }
         addItemWithTag <-
-            convertTagSelection mempty (EntityId.ofTag (exprPl ^. Input.entityId)) addItem
+            exprPl ^. Input.stored & makeAddItem DataOps.recExtend 0
+            >>= convertTagSelection mempty (EntityId.ofTag (exprPl ^. Input.entityId))
             <&> Lens.mapped %~ (^. cairNewVal)
         BodyRecord Composite
             { _cItems = []
@@ -58,23 +60,25 @@ convertExtend (V.RecExtend tag val rest) exprPl = do
             pure (r, const (restS ^. rPayload . plEntityId))
         _ ->
             do
-                addField <- makeAddItem DataOps.recExtend 1 restStored
-                protectedSetToVal <- ConvertM.typeProtectedSetToVal
-                let actions =
-                        OpenCompositeActions
-                        { _openCompositeClose =
-                            ExprIRef.newValBody (V.BLeaf V.LRecEmpty)
-                            >>= protectedSetToVal restStored
-                            <&> EntityId.ofValI
-                        }
-                addItemWithTag <-
-                    convertTagSelection mempty (EntityId.ofTag tagInstSource) addField
+                actions <-
+                    ConvertM.typeProtectedSetToVal
+                    <&>
+                    \protectedSetToVal ->
+                    OpenCompositeActions
+                    { _openCompositeClose =
+                        ExprIRef.newValBody (V.BLeaf V.LRecEmpty)
+                        >>= protectedSetToVal restStored
+                        <&> EntityId.ofValI
+                    }
+                addItem <-
+                    makeAddItem DataOps.recExtend 1 restStored
+                    >>= convertTagSelection mempty (EntityId.ofTag tagInstSource)
                     <&> Lens.mapped %~ (^. cairNewVal)
                 pure
                     ( Composite
                         { _cItems = []
                         , _cTail = OpenComposite actions restS
-                        , _cAddItem = addItemWithTag
+                        , _cAddItem = addItem
                         }
                     , id
                     )
