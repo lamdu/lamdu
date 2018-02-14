@@ -9,7 +9,7 @@ import           Lamdu.Calc.Val.Annotated (Val(..))
 import qualified Lamdu.Calc.Val.Annotated as Val
 import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Expr.IRef as ExprIRef
-import           Lamdu.Sugar.Convert.Composite (convertCompositeItem, setTagOrder, makeAddItem)
+import           Lamdu.Sugar.Convert.Composite (convertCompositeItem, makeAddItem)
 import           Lamdu.Sugar.Convert.Expression.Actions (addActions)
 import qualified Lamdu.Sugar.Convert.Input as Input
 import           Lamdu.Sugar.Convert.Monad (ConvertM)
@@ -28,7 +28,7 @@ plValI = Input.stored . Property.pVal
 convertEmpty :: Monad m => Input.Payload m a -> ConvertM m (ExpressionU m a)
 convertEmpty exprPl =
     do
-        addItem <- exprPl ^. Input.stored & makeAddItem DataOps.recExtend
+        addItem <- exprPl ^. Input.stored & makeAddItem DataOps.recExtend 0
         postProcess <- ConvertM.postProcess
         let actions =
                 ClosedCompositeActions
@@ -43,8 +43,7 @@ convertEmpty exprPl =
         BodyRecord Composite
             { _cItems = []
             , _cTail = ClosedComposite actions
-            , _cAddItem = DataOps.genNewTag >>= addItem
-            , _cAddItemWithTag = addItemWithTag
+            , _cAddItem = addItemWithTag
             }
             & addActions exprPl
 
@@ -59,7 +58,7 @@ convertExtend (V.RecExtend tag val rest) exprPl = do
             pure (r, const (restS ^. rPayload . plEntityId))
         _ ->
             do
-                addField <- makeAddItem DataOps.recExtend restStored
+                addField <- makeAddItem DataOps.recExtend 1 restStored
                 protectedSetToVal <- ConvertM.typeProtectedSetToVal
                 let actions =
                         OpenCompositeActions
@@ -75,8 +74,7 @@ convertExtend (V.RecExtend tag val rest) exprPl = do
                     ( Composite
                         { _cItems = []
                         , _cTail = OpenComposite actions restS
-                        , _cAddItem = DataOps.genNewTag >>= addField
-                        , _cAddItemWithTag = addItemWithTag
+                        , _cAddItem = addItemWithTag
                         }
                     , id
                     )
@@ -87,7 +85,6 @@ convertExtend (V.RecExtend tag val rest) exprPl = do
         tagInstSource tag val
     restRecord
         & cItems %~ (fieldS:)
-        & cAddItem %~ (>>= setTagOrder (1 + length (restRecord ^. cItems)))
         & BodyRecord
         & addActions exprPl
         <&> rPayload . plEntityId %~ modifyEntityId

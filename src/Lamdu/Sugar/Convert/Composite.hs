@@ -1,7 +1,7 @@
 {-# LANGUAGE NoImplicitPrelude #-}
 
 module Lamdu.Sugar.Convert.Composite
-    ( convertCompositeItem, setTagOrder, makeAddItem
+    ( convertCompositeItem, makeAddItem
     ) where
 
 import qualified Control.Lens as Lens
@@ -59,15 +59,11 @@ convertCompositeItem cons stored restI inst tag expr =
             , _ciDelete = delItem
             }
 
-setTagOrder :: Monad m => Int -> CompositeAddItemResult -> T m CompositeAddItemResult
-setTagOrder i r =
-    r <$ Transaction.setP (Anchors.assocTagOrder (r ^. cairNewTag . tagVal)) i
-
 makeAddItem :: Monad m =>
     (T.Tag -> ExprIRef.ValI m -> T m (DataOps.CompositeExtendResult m)) ->
-    ExprIRef.ValIProperty m ->
+    Int -> ExprIRef.ValIProperty m ->
     ConvertM m (T.Tag -> T m CompositeAddItemResult)
-makeAddItem addItem stored =
+makeAddItem addItem orderVal stored =
     ConvertM.typeProtectedSetToVal
     <&>
     \protectedSetToVal tag ->
@@ -75,6 +71,7 @@ makeAddItem addItem stored =
         DataOps.CompositeExtendResult newValI resultI <- addItem tag (stored ^. Property.pVal)
         _ <- protectedSetToVal stored resultI
         let resultEntity = EntityId.ofValI resultI
+        Transaction.setP (Anchors.assocTagOrder tag) orderVal
         pure
             CompositeAddItemResult
             { _cairNewTag = TagInfo (EntityId.ofTag resultEntity tag) tag

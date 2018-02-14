@@ -222,9 +222,9 @@ toComposite ::
     Composite (OldName m) (TM m) a ->
     m (Composite (NewName m) (TM m) b)
 toComposite expr Composite{..} =
-    (\_cItems _cAddItemWithTag -> Composite{..})
+    (\_cItems _cAddItem -> Composite{..})
     <$> (traverse . ciTag) toTag _cItems
-    <*> toTagSelection _cAddItemWithTag
+    <*> toTagSelection _cAddItem
     >>= traverse expr
 
 toCase ::

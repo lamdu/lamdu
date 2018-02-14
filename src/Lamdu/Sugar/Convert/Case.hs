@@ -13,7 +13,7 @@ import           Lamdu.Calc.Val.Annotated (Val(..))
 import qualified Lamdu.Calc.Val.Annotated as Val
 import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Expr.IRef as ExprIRef
-import           Lamdu.Sugar.Convert.Composite (convertCompositeItem, setTagOrder, makeAddItem)
+import           Lamdu.Sugar.Convert.Composite (convertCompositeItem, makeAddItem)
 import           Lamdu.Sugar.Convert.Expression.Actions (addActions)
 import           Lamdu.Sugar.Convert.IfElse (convertIfElse)
 import qualified Lamdu.Sugar.Convert.Input as Input
@@ -37,7 +37,7 @@ plValI = Input.stored . Property.pVal
 convertAbsurd :: Monad m => Input.Payload m a -> ConvertM m (ExpressionU m a)
 convertAbsurd exprPl =
     do
-        addAlt <- exprPl ^. Input.stored & makeAddItem DataOps.case_
+        addAlt <- exprPl ^. Input.stored & makeAddItem DataOps.case_ 0
         postProcess <- ConvertM.postProcess
         let actions =
                 ClosedCompositeActions
@@ -54,8 +54,7 @@ convertAbsurd exprPl =
             , _cBody = Composite
                 { _cItems = []
                 , _cTail = ClosedComposite actions
-                , _cAddItem = DataOps.genNewTag >>= addAlt
-                , _cAddItemWithTag = addItemWithTag
+                , _cAddItem = addItemWithTag
                 }
             }
             & addActions exprPl
@@ -71,7 +70,7 @@ convert (V.Case tag val rest) exprPl = do
             pure (r, const (restS ^. rPayload . plEntityId))
         _ ->
             do
-                addAlt <- makeAddItem DataOps.case_ restStored
+                addAlt <- makeAddItem DataOps.case_ 1 restStored
                 protectedSetToVal <- ConvertM.typeProtectedSetToVal
                 let actions =
                         OpenCompositeActions
@@ -89,8 +88,7 @@ convert (V.Case tag val rest) exprPl = do
                         , _cBody = Composite
                             { _cItems = []
                             , _cTail = OpenComposite actions restS
-                            , _cAddItem = DataOps.genNewTag >>= addAlt
-                            , _cAddItemWithTag = addItemWithTag
+                            , _cAddItem = addItemWithTag
                             }
                         }
                     , id)
@@ -101,7 +99,6 @@ convert (V.Case tag val rest) exprPl = do
         (exprPl ^. Input.entityId) tag val
     restCase
         & cBody . cItems %~ (altS:)
-        & cBody . cAddItem %~ (>>= setTagOrder (1 + length (restCase ^. cBody . cItems)))
         & BodyCase
         & addActions exprPl
         <&> rPayload . plEntityId %~ modifyEntityId
