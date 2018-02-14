@@ -111,17 +111,14 @@ postProcessExpr =
 
 fixTagPublished ::
     Monad m =>
-    MkProperty m (Set T.Tag) -> Sugar.Tag (Name (T m)) (T m) -> Sugar.Tag (Name (T m)) (T m)
-fixTagPublished publishedTags tag =
-    tag
-    & Sugar.tagName . Name.setName %~ onSetName (tag ^. Sugar.tagInfo)
-    & Sugar.tagSelection . Sugar.tsNewTag . Lens.mapped %~ onNewTag
+    MkProperty m (Set T.Tag) -> T.Tag -> Name (T m) -> Name (T m)
+fixTagPublished publishedTags tag name =
+    name & Name.setName %~ onSetName
     where
-        onSetName info setName newName =
+        onSetName setName newName =
             setName newName *>
             Transaction.modP publishedTags
-            ((if newName == "" then Set.delete else Set.insert) (info ^. Sugar.tagVal))
-        onNewTag (name, info, x) = (name & Name.setName %~ onSetName info, info, x)
+            ((if newName == "" then Set.delete else Set.insert) tag)
 
 loadWorkArea ::
     Monad m =>
@@ -131,7 +128,7 @@ loadWorkArea ::
 loadWorkArea theEvalResults theCodeAnchors =
     SugarConvert.loadWorkArea theEvalResults theCodeAnchors
     >>= AddNames.addToWorkArea
-    <&> SugarLens.workAreaTags %~ fixTagPublished (Anchors.tags theCodeAnchors)
+    <&> SugarLens.workAreaTagNames %@~ fixTagPublished (Anchors.tags theCodeAnchors)
     <&>
     \Sugar.WorkArea { _waPanes, _waRepl } ->
     Sugar.WorkArea
