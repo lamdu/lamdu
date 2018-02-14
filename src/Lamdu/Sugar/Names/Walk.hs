@@ -109,13 +109,13 @@ toLet ::
     MonadNaming m => (a -> m b) ->
     Let (OldName m) (TM m) a ->
     m (Let (NewName m) (TM m) b)
-toLet expr item@Let{..} =
+toLet expr Let{..} =
     do
-        (name, body) <-
-            unCPS (opWithLetName (isFunctionType (_lAnnotation ^. aInferredType)) _lName) $
-            toBinderBody expr _lBody
-        value <- toBinder expr _lValue
-        item { _lValue = value, _lName = name, _lBody = body } & pure
+        (_lName, _lBody) <-
+            unCPS (opWithLetName (isFunctionType (_lAnnotation ^. aInferredType)) _lName)
+            (toBinderBody expr _lBody)
+        _lValue <- toBinder expr _lValue
+        pure Let{..}
 
 toBinderContent ::
     MonadNaming m => (a -> m b) ->
@@ -134,14 +134,10 @@ toBinder ::
     MonadNaming m => (a -> m b) ->
     Binder (OldName m) (TM m) a ->
     m (Binder (NewName m) (TM m) b)
-toBinder expr binder@Binder{..} =
-    do
-        (params, body) <-
-            unCPS (withBinderParams _bParams) $ toBinderBody expr _bBody
-        binder
-            { _bParams = params
-            , _bBody = body
-            } & pure
+toBinder expr Binder{..} =
+    toBinderBody expr _bBody
+    & unCPS (withBinderParams _bParams)
+    <&> \(_bParams, _bBody) -> Binder{..}
 
 toLam ::
     MonadNaming m => (a -> m b) ->
@@ -306,11 +302,11 @@ toDef ::
     MonadNaming m => (a -> m b) ->
     Definition (OldName m) (TM m) a ->
     m (Definition (NewName m) (TM m) b)
-toDef f def@Definition {..} =
+toDef f Definition{..} =
     do
-        name <- opGetName Nothing DefName _drName
-        body <- toDefinitionBody f _drBody
-        pure def { _drName = name, _drBody = body }
+        _drName <- opGetName Nothing DefName _drName
+        _drBody <- toDefinitionBody f _drBody
+        pure Definition{..}
 
 toPane ::
     MonadNaming m =>
