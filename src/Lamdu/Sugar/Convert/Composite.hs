@@ -50,15 +50,9 @@ convertAddItem extendOp existingTags pl =
             do
                 DataOps.CompositeExtendResult newValI resultI <- extendOp tag (stored ^. Property.pVal)
                 _ <- protectedSetToVal stored resultI
-                let resultEntity = EntityId.ofValI resultI
                 Transaction.setP (Anchors.assocTagOrder tag) (Set.size existingTags)
-                pure
-                    CompositeAddItemResult
-                    { _cairNewTag = TagInfo (EntityId.ofTag resultEntity tag) tag
-                    , _cairNewVal = EntityId.ofValI newValI
-                    }
+                EntityId.ofValI newValI & pure
         convertTagSelection existingTags (EntityId.ofTag (pl ^. Input.entityId)) addItem
-    <&> Lens.mapped %~ (^. cairNewVal)
     where
         stored = pl ^. Input.stored
 
