@@ -33,42 +33,43 @@ convertEmpty pl =
 convertExtend ::
     (Monad m, Monoid a) => V.RecExtend (Val (Input.Payload m a)) ->
     Input.Payload m a -> ConvertM m (ExpressionU m a)
-convertExtend (V.RecExtend tag val rest) exprPl = do
-    restS <- ConvertM.convertSubexpression rest
-    (restRecord, modifyEntityId) <-
-        case restS ^. rBody of
-        BodyRecord r ->
-            convertAddItem DataOps.recExtend forbiddenTags exprPl
-            <&>
-            \addItem ->
-            ( r & cAddItem .~ addItem
-            , const (restS ^. rPayload . plEntityId)
-            )
-            where
-                forbiddenTags =
-                    tag : r ^.. cItems . traverse . ciTag . tagInfo . tagVal & Set.fromList
-        _ ->
-            do
-                actions <- convertOpenCompositeActions V.LRecEmpty restStored
-                addItem <- convertAddItem DataOps.recExtend (Set.singleton tag) exprPl
-                pure
-                    ( Composite
-                        { _cItems = []
-                        , _cTail = OpenComposite actions restS
-                        , _cAddItem = addItem
-                        }
-                    , id
-                    )
-    fieldS <-
-        convertCompositeItem
-        (V.RecExtend <&> Lens.mapped . Lens.mapped %~ V.BRecExtend)
-        (exprPl ^. Input.stored) (rest ^. Val.payload . plValI)
-        tagInstSource tag val
-    restRecord
-        & cItems %~ (fieldS:)
-        & BodyRecord
-        & addActions exprPl
-        <&> rPayload . plEntityId %~ modifyEntityId
+convertExtend (V.RecExtend tag val rest) exprPl =
+    do
+        restS <- ConvertM.convertSubexpression rest
+        (restRecord, modifyEntityId) <-
+            case restS ^. rBody of
+            BodyRecord r ->
+                convertAddItem DataOps.recExtend forbiddenTags exprPl
+                <&>
+                \addItem ->
+                ( r & cAddItem .~ addItem
+                , const (restS ^. rPayload . plEntityId)
+                )
+                where
+                    forbiddenTags =
+                        tag : r ^.. cItems . traverse . ciTag . tagInfo . tagVal & Set.fromList
+            _ ->
+                do
+                    actions <- convertOpenCompositeActions V.LRecEmpty restStored
+                    addItem <- convertAddItem DataOps.recExtend (Set.singleton tag) exprPl
+                    pure
+                        ( Composite
+                            { _cItems = []
+                            , _cTail = OpenComposite actions restS
+                            , _cAddItem = addItem
+                            }
+                        , id
+                        )
+        fieldS <-
+            convertCompositeItem
+            (V.RecExtend <&> Lens.mapped . Lens.mapped %~ V.BRecExtend)
+            (exprPl ^. Input.stored) (rest ^. Val.payload . plValI)
+            tagInstSource tag val
+        restRecord
+            & cItems %~ (fieldS:)
+            & BodyRecord
+            & addActions exprPl
+            <&> rPayload . plEntityId %~ modifyEntityId
     where
         restStored = rest ^. Val.payload . Input.stored
         -- Tag instance is based on extended expr,
