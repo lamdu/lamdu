@@ -8,13 +8,12 @@ module Lamdu.Sugar.Convert.Case
 import qualified Control.Lens as Lens
 import           Control.Monad.Trans.Maybe (MaybeT(..))
 import           Data.Maybe.Utils (maybeToMPlus)
-import qualified Data.Set as Set
 import qualified Lamdu.Calc.Val as V
 import           Lamdu.Calc.Val.Annotated (Val(..))
 import qualified Lamdu.Calc.Val.Annotated as Val
 import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Expr.IRef as ExprIRef
-import           Lamdu.Sugar.Convert.Composite (convertCompositeItem, convertEmptyComposite, convertOpenCompositeActions, convertAddItem)
+import           Lamdu.Sugar.Convert.Composite (convertEmptyComposite, convertCompositeExtend, convertOneItemOpenComposite)
 import           Lamdu.Sugar.Convert.Expression.Actions (addActions)
 import           Lamdu.Sugar.Convert.IfElse (convertIfElse)
 import qualified Lamdu.Sugar.Convert.Input as Input
@@ -44,48 +43,28 @@ convertAbsurd pl =
 convert ::
     (Monad m, Monoid a) => V.Case (Val (Input.Payload m a)) ->
     Input.Payload m a -> ConvertM m (ExpressionU m a)
-convert (V.Case tag val rest) exprPl =
+convert caseV exprPl =
     do
-        restS <- ConvertM.convertSubexpression rest
-        (restCase, modifyEntityId) <-
+        V.Case tag valS restS <- traverse ConvertM.convertSubexpression caseV
+        let caseP =
+                ( tag
+                , caseV ^. V.caseMatch . Val.payload . plValI
+                , caseV ^. V.caseMismatch . Val.payload
+                )
+        (modifyEntityId, cas_) <-
             case restS ^. rBody of
             BodyCase r | Lens.has (cKind . _LambdaCase) r ->
-                convertAddItem DataOps.case_ forbiddenTags exprPl
-                <&>
-                \addItem ->
-                ( r & cBody . cAddItem .~ addItem
-                , const (restS ^. rPayload . plEntityId)
-                )
-                where
-                    forbiddenTags =
-                        tag : r ^.. cBody . cItems . traverse . ciTag . tagInfo . tagVal & Set.fromList
+                r & cBody %%~ convertCompositeExtend mkCase DataOps.case_ valS exprPl caseP
+                <&> (,) (const (restS ^. rPayload . plEntityId))
             _ ->
-                do
-                    actions <- convertOpenCompositeActions V.LAbsurd restStored
-                    addItem <- convertAddItem DataOps.case_ (Set.singleton tag) exprPl
-                    pure
-                        ( Case
-                            { _cKind = LambdaCase
-                            , _cBody = Composite
-                                { _cItems = []
-                                , _cTail = OpenComposite actions restS
-                                , _cAddItem = addItem
-                                }
-                            }
-                        , id
-                        )
-        altS <-
-            convertCompositeItem
-            (V.Case <&> Lens.mapped . Lens.mapped %~ V.BCase)
-            (exprPl ^. Input.stored) (rest ^. Val.payload . plValI)
-            (exprPl ^. Input.entityId) tag val
-        restCase
-            & cBody . cItems %~ (altS:)
-            & BodyCase
+                convertOneItemOpenComposite V.LAbsurd mkCase DataOps.case_ valS restS exprPl caseP
+                <&> Case LambdaCase
+                <&> (,) id
+        BodyCase cas_
             & addActions exprPl
             <&> rPayload . plEntityId %~ modifyEntityId
     where
-        restStored = rest ^. Val.payload . Input.stored
+        mkCase t v r = V.Case t v r & V.BCase
 
 convertAppliedCase ::
     Monad m =>

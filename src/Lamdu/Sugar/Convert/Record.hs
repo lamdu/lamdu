@@ -4,13 +4,12 @@ module Lamdu.Sugar.Convert.Record
     ) where
 
 import qualified Control.Lens as Lens
-import qualified Data.Set as Set
 import qualified Lamdu.Calc.Val as V
 import           Lamdu.Calc.Val.Annotated (Val(..))
 import qualified Lamdu.Calc.Val.Annotated as Val
 import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Expr.IRef as ExprIRef
-import           Lamdu.Sugar.Convert.Composite (convertCompositeItem, convertEmptyComposite, convertAddItem, convertOpenCompositeActions)
+import           Lamdu.Sugar.Convert.Composite (convertEmptyComposite, convertCompositeExtend, convertOneItemOpenComposite)
 import           Lamdu.Sugar.Convert.Expression.Actions (addActions)
 import qualified Lamdu.Sugar.Convert.Input as Input
 import           Lamdu.Sugar.Convert.Monad (ConvertM)
@@ -33,46 +32,25 @@ convertEmpty pl =
 convertExtend ::
     (Monad m, Monoid a) => V.RecExtend (Val (Input.Payload m a)) ->
     Input.Payload m a -> ConvertM m (ExpressionU m a)
-convertExtend (V.RecExtend tag val rest) exprPl =
+convertExtend recExtend exprPl =
     do
-        restS <- ConvertM.convertSubexpression rest
-        (restRecord, modifyEntityId) <-
+        V.RecExtend tag valS restS <- traverse ConvertM.convertSubexpression recExtend
+        let recP =
+                ( tag
+                , recExtend ^. V.recFieldVal . Val.payload . plValI
+                , recExtend ^. V.recRest . Val.payload
+                )
+        (modifyEntityId, restRecord) <-
             case restS ^. rBody of
             BodyRecord r ->
-                convertAddItem DataOps.recExtend forbiddenTags exprPl
-                <&>
-                \addItem ->
-                ( r & cAddItem .~ addItem
-                , const (restS ^. rPayload . plEntityId)
-                )
-                where
-                    forbiddenTags =
-                        tag : r ^.. cItems . traverse . ciTag . tagInfo . tagVal & Set.fromList
+                convertCompositeExtend mkRecExtend DataOps.recExtend valS exprPl recP r
+                <&> (,) (const (restS ^. rPayload . plEntityId))
             _ ->
-                do
-                    actions <- convertOpenCompositeActions V.LRecEmpty restStored
-                    addItem <- convertAddItem DataOps.recExtend (Set.singleton tag) exprPl
-                    pure
-                        ( Composite
-                            { _cItems = []
-                            , _cTail = OpenComposite actions restS
-                            , _cAddItem = addItem
-                            }
-                        , id
-                        )
-        fieldS <-
-            convertCompositeItem
-            (V.RecExtend <&> Lens.mapped . Lens.mapped %~ V.BRecExtend)
-            (exprPl ^. Input.stored) (rest ^. Val.payload . plValI)
-            tagInstSource tag val
+                convertOneItemOpenComposite V.LRecEmpty mkRecExtend DataOps.recExtend valS restS exprPl recP
+                <&> (,) id
         restRecord
-            & cItems %~ (fieldS:)
             & BodyRecord
             & addActions exprPl
             <&> rPayload . plEntityId %~ modifyEntityId
     where
-        restStored = rest ^. Val.payload . Input.stored
-        -- Tag instance is based on extended expr,
-        -- because we need to know it when offering the selection of the new tag,
-        -- (before this rec-extend exists).
-        tagInstSource = rest ^. Val.payload . Input.entityId
+        mkRecExtend t v r = V.RecExtend t v r & V.BRecExtend

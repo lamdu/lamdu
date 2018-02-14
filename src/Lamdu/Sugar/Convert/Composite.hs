@@ -1,15 +1,13 @@
 {-# LANGUAGE NoImplicitPrelude #-}
 
 module Lamdu.Sugar.Convert.Composite
-    ( convertCompositeItem, convertEmptyComposite, convertOpenCompositeActions, convertAddItem
+    ( convertEmptyComposite, convertCompositeExtend, convertOneItemOpenComposite
     ) where
 
 import qualified Control.Lens as Lens
 import qualified Data.Set as Set
 import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Calc.Val as V
-import           Lamdu.Calc.Val.Annotated (Val(..))
-import qualified Lamdu.Calc.Val.Annotated as Val
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Expr.IRef as ExprIRef
@@ -56,6 +54,48 @@ convertAddItem extendOp existingTags pl =
     where
         stored = pl ^. Input.stored
 
+convertCompositeExtend ::
+    Monad m =>
+    (T.Tag -> ExprIRef.ValI m -> ExprIRef.ValI m -> ExprIRef.ValBody m) ->
+    (T.Tag -> ExprIRef.ValI m -> T m (DataOps.CompositeExtendResult m)) ->
+    expr ->
+    Input.Payload m a ->
+    (T.Tag, ExprIRef.ValI m, Input.Payload m a) ->
+    Composite InternalName (T m) expr ->
+    ConvertM m (Composite InternalName (T m) expr)
+convertCompositeExtend cons extendOp valS exprPl extendV restC =
+    do
+        itemS <-
+            convertCompositeItem cons (exprPl ^. Input.stored)
+            (extendV ^. _3 . Input.entityId) (Set.fromList restTags) valS
+            (extendV & _3 %~ (^. Input.stored . Property.pVal))
+        addItem <- convertAddItem extendOp (Set.fromList (extendV ^. _1 : restTags)) exprPl
+        restC
+            & cAddItem .~ addItem
+            & cItems %~ (itemS :)
+            & pure
+    where
+        restTags = restC ^.. cItems . traverse . ciTag . tagInfo . tagVal
+
+convertOneItemOpenComposite ::
+    Monad m =>
+    V.Leaf ->
+    (T.Tag -> ExprIRef.ValI m -> ExprIRef.ValI m -> ExprIRef.ValBody m) ->
+    (T.Tag -> ExprIRef.ValI m -> T m (DataOps.CompositeExtendResult m)) ->
+    expr -> expr ->
+    Input.Payload m a ->
+    (T.Tag, ExprIRef.ValI m, Input.Payload m a) ->
+    ConvertM m (Composite InternalName (T m) expr)
+convertOneItemOpenComposite leaf cons extendOp valS restS exprPl extendV =
+    Composite
+    <$> ( convertCompositeItem cons
+            (exprPl ^. Input.stored) (extendV ^. _3 . Input.entityId) mempty valS
+            (extendV & _3 %~ (^. Input.stored . Property.pVal))
+            <&> (:[])
+        )
+    <*> (convertOpenCompositeActions leaf (extendV ^. _3 . Input.stored) <&> (`OpenComposite` restS))
+    <*> convertAddItem extendOp (Set.singleton (extendV ^. _1)) exprPl
+
 convertOpenCompositeActions ::
     Monad m => V.Leaf -> ExprIRef.ValIProperty m -> ConvertM m (OpenCompositeActions (T m))
 convertOpenCompositeActions leaf stored =
@@ -94,25 +134,24 @@ convertEmptyComposite extendOp exprPl =
             }
 
 convertCompositeItem ::
-    (Monad m, Monoid a) =>
+    Monad m =>
     (T.Tag -> ExprIRef.ValI m -> ExprIRef.ValI m -> ExprIRef.ValBody m) ->
     ExprIRef.ValIProperty m ->
-    ExprIRef.ValI m ->
-    EntityId -> T.Tag -> Val (Input.Payload m a) ->
-    ConvertM m (CompositeItem InternalName (T m) (ExpressionU m a))
-convertCompositeItem cons stored restI inst tag expr =
+    EntityId -> Set T.Tag -> expr ->
+    -- Using tuple in place of shared RecExtend/Case structure (no such in lamdu-calculus)
+    (T.Tag, ExprIRef.ValI m, ExprIRef.ValI m) ->
+    ConvertM m (CompositeItem InternalName (T m) expr)
+convertCompositeItem cons stored inst forbiddenTags exprS (tag, exprI, restI) =
     do
-        exprS <- ConvertM.convertSubexpression expr
         delItem <- deleteItem stored restI
         protectedSetToVal <- ConvertM.typeProtectedSetToVal
         let setTag newTag =
                 do
-                    cons newTag (expr ^. Val.payload . Input.stored . Property.pVal) restI
-                        & ExprIRef.writeValBody valI
+                    cons newTag exprI restI & ExprIRef.writeValBody valI
                     protectedSetToVal stored valI & void
                 where
                     valI = stored ^. Property.pVal
-        tagS <- convertTag tag mempty (EntityId.ofTag inst) setTag
+        tagS <- convertTag tag forbiddenTags (EntityId.ofTag inst) setTag
         pure CompositeItem
             { _ciTag = tagS
             , _ciExpr = exprS
