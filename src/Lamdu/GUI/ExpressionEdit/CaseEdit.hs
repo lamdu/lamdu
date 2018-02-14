@@ -5,6 +5,7 @@ module Lamdu.GUI.ExpressionEdit.CaseEdit
 
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
+import           Control.Monad.Transaction (MonadTransaction(..))
 import           Data.Vector.Vector2 (Vector2(..))
 import qualified GUI.Momentu.Align as Align
 import           GUI.Momentu.Animation (AnimId)
@@ -19,6 +20,7 @@ import qualified GUI.Momentu.State as GuiState
 import           GUI.Momentu.View (View)
 import qualified GUI.Momentu.View as View
 import qualified GUI.Momentu.Widget as Widget
+import qualified GUI.Momentu.Widgets.Menu as Menu
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import           Lamdu.Calc.Type (Tag)
 import qualified Lamdu.Calc.Val as V
@@ -47,12 +49,15 @@ type T = Transaction
 doc :: E.Subtitle -> E.Doc
 doc text = E.Doc ["Edit", "Case", text]
 
+addAltId :: Widget.Id -> Widget.Id
+addAltId = (`Widget.joinId` ["add alt"])
+
 make ::
     Monad m =>
     Sugar.Case (Name (T m)) (T m) (ExprGui.SugarExpr m) ->
     Sugar.Payload (T m) ExprGui.Payload ->
     ExprGuiM m (ExpressionGui m)
-make (Sugar.Case mArg (Sugar.Composite alts caseTail addAlt _addAltTodo)) pl =
+make (Sugar.Case mArg (Sugar.Composite alts caseTail _addAltWithNewTag addAlt)) pl =
     do
         config <- Lens.view Config.config
         let mExprAfterHeader =
@@ -94,7 +99,7 @@ make (Sugar.Case mArg (Sugar.Composite alts caseTail addAlt _addAltTodo)) pl =
                         <&> (,) mTag
         altsGui <-
             do
-                altsGui <- makeAltsWidget mActiveTag alts altsId
+                altsGui <- makeAltsWidget mActiveTag alts addAlt altsId
                 case caseTail of
                     Sugar.ClosedComposite actions ->
                         Widget.weakerEvents (closedCaseEventMap config actions) altsGui
@@ -102,10 +107,8 @@ make (Sugar.Case mArg (Sugar.Composite alts caseTail addAlt _addAltTodo)) pl =
                     Sugar.OpenComposite actions rest ->
                         makeOpenCase actions rest (Widget.toAnimId myId) altsGui
         let addAltEventMap =
-                addAlt
-                <&> (^. Sugar.cairNewTag . Sugar.tagInstance)
-                <&> WidgetIds.fromEntityId
-                <&> WidgetIds.tagHoleId
+                addAltId altsId
+                & pure
                 & E.keysEventMapMovesCursor (Config.caseAddAltKeys config)
                     (doc "Add Alt")
         stdWrapParentExpr pl
@@ -149,13 +152,44 @@ makeAltsWidget ::
     Monad m =>
     Maybe Tag ->
     [Sugar.CompositeItem (Name (T m)) (T m) (Sugar.Expression (Name (T m)) (T m) ExprGui.Payload)] ->
-    Widget.Id -> ExprGuiM m (ExpressionGui m)
-makeAltsWidget _ [] altsId =
-    (Widget.makeFocusableView ?? Widget.joinId altsId ["Ø"] <&> (Align.tValue %~))
-    <*> Styled.grammarLabel "Ø"
-    <&> Responsive.fromWithTextPos
-makeAltsWidget mActiveTag alts _altsId =
-    Responsive.taggedList <*> mapM (makeAltRow mActiveTag) alts
+    Sugar.TagSelection (Name (T m)) (T m) Sugar.EntityId ->
+    Widget.Id ->
+    ExprGuiM m (ExpressionGui m)
+makeAltsWidget mActiveTag alts addAlt altsId =
+    do
+        existingAltWidgets <- traverse (makeAltRow mActiveTag) alts
+        newAlts <-
+            GuiState.isSubCursor ?? addAltId altsId
+            <&> guard
+            <&> Lens.mapped .~ makeAddAltRow addAlt (addAltId altsId)
+            >>= sequenceA
+        case existingAltWidgets ++ newAlts of
+            [] ->
+                (Widget.makeFocusableView ?? Widget.joinId altsId ["Ø"] <&> (Align.tValue %~))
+                <*> Styled.grammarLabel "Ø"
+                <&> Responsive.fromWithTextPos
+            altWidgtes -> Responsive.taggedList ?? altWidgtes
+
+makeAddAltRow ::
+    (MonadReader env m, MonadTransaction f m, TagEdit.HasTagEditEnv env) =>
+    Sugar.TagSelection (Name (T f)) (T f) Sugar.EntityId -> Widget.Id ->
+    m (Responsive.TaggedItem (T f GuiState.Update))
+makeAddAltRow addAlt myId =
+    TagEdit.makeTagHoleEdit Nothing addAlt mkPickResult myId
+    & TagEdit.withNameColor Theme.caseTagColor
+    <&>
+    \tagHole ->
+    Responsive.TaggedItem
+    { Responsive._tagPre = tagHole
+    , Responsive._taggedItem = Element.empty
+    , Responsive._tagPost = Element.empty
+    }
+    where
+        mkPickResult _ dst =
+            Menu.PickResult
+            { Menu._pickDest = WidgetIds.fromEntityId dst
+            , Menu._pickDestIsEntryPoint = True
+            }
 
 separationBar :: Theme.CodeForegroundColors -> Widget.R -> Anim.AnimId -> View
 separationBar theme width animId =
