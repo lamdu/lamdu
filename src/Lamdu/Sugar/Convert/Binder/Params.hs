@@ -675,7 +675,7 @@ convertVarToCalls mkArg var =
 convertBinderToFunction ::
     Monad m =>
     T m (ValI m) -> BinderKind m -> Val (ValIProperty m) ->
-    T m (ParamAddResult, ValI m)
+    T m (V.Var, ValI m)
 convertBinderToFunction mkArg binderKind val =
     do
         (newParam, newValI) <- DataOps.lambdaWrap (val ^. Val.payload)
@@ -686,10 +686,7 @@ convertBinderToFunction mkArg binderKind val =
                 convertVarToCalls mkArg
                 (redexLam ^. V.lamParamId) (redexLam ^. V.lamResult)
             BinderKindLambda -> error "Lambda will never be an empty-params binder"
-        pure
-            ( ParamAddResultNewVar (EntityId.ofLambdaParam newParam) newParam
-            , newValI
-            )
+        pure (newParam, newValI)
 
 convertEmptyParams ::
     Monad m => BinderKind m -> Val (Input.Payload m a) -> ConventionalParams m
@@ -701,7 +698,7 @@ convertEmptyParams binderKind val =
     , _cpAddFirstParam =
         val <&> (^. Input.stored)
         & convertBinderToFunction DataOps.newHole binderKind
-        <&> fst
+        <&> \(newParam, _) -> ParamAddResultNewVar (EntityId.ofLambdaParam newParam) newParam
     , cpScopes = SameAsParentScope
     , cpMLamParam = Nothing
     }

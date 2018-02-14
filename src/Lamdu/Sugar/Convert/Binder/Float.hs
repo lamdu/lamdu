@@ -82,7 +82,7 @@ convertLetToLam ::
     Monad m => V.Var -> Redex (ValIProperty m) -> T m (NewLet m)
 convertLetToLam varToReplace redex =
     do
-        (ParamAddResultNewVar _ newParam, newValI) <-
+        (newParam, newValI) <-
             Params.convertBinderToFunction mkArg
             (BinderKindLet (redex ^. Redex.lam)) (redex ^. Redex.arg)
         let toNewParam prop =
