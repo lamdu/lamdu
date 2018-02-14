@@ -69,7 +69,7 @@ convertExtend (V.RecExtend tag val rest) exprPl = do
                             <&> EntityId.ofValI
                         }
                 addItemWithTag <-
-                    convertTagSelection mempty (EntityId.ofTag (exprPl ^. Input.entityId)) addField
+                    convertTagSelection mempty (EntityId.ofTag tagInstSource) addField
                     <&> Lens.mapped %~ (^. cairNewVal)
                 pure
                     ( Composite
@@ -84,7 +84,7 @@ convertExtend (V.RecExtend tag val rest) exprPl = do
         convertCompositeItem
         (V.RecExtend <&> Lens.mapped . Lens.mapped %~ V.BRecExtend)
         (exprPl ^. Input.stored) (rest ^. Val.payload . plValI)
-        (exprPl ^. Input.entityId) tag val
+        tagInstSource tag val
     restRecord
         & cItems %~ (fieldS:)
         & cAddItem %~ (>>= setTagOrder (1 + length (restRecord ^. cItems)))
@@ -93,3 +93,7 @@ convertExtend (V.RecExtend tag val rest) exprPl = do
         <&> rPayload . plEntityId %~ modifyEntityId
     where
         restStored = rest ^. Val.payload . Input.stored
+        -- Tag instance is based on extended expr,
+        -- because we need to know it when offering the selection of the new tag,
+        -- (before this rec-extend exists).
+        tagInstSource = rest ^. Val.payload . Input.entityId
