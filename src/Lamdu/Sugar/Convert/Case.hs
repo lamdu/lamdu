@@ -8,18 +8,18 @@ module Lamdu.Sugar.Convert.Case
 import qualified Control.Lens as Lens
 import           Control.Monad.Trans.Maybe (MaybeT(..))
 import           Data.Maybe.Utils (maybeToMPlus)
+import qualified Data.Set as Set
 import qualified Lamdu.Calc.Val as V
 import           Lamdu.Calc.Val.Annotated (Val(..))
 import qualified Lamdu.Calc.Val.Annotated as Val
 import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Expr.IRef as ExprIRef
-import           Lamdu.Sugar.Convert.Composite (convertCompositeItem, makeAddItem, convertEmptyComposite, convertOpenCompositeActions)
+import           Lamdu.Sugar.Convert.Composite (convertCompositeItem, convertEmptyComposite, convertOpenCompositeActions, convertAddItem)
 import           Lamdu.Sugar.Convert.Expression.Actions (addActions)
 import           Lamdu.Sugar.Convert.IfElse (convertIfElse)
 import qualified Lamdu.Sugar.Convert.Input as Input
 import           Lamdu.Sugar.Convert.Monad (ConvertM)
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
-import           Lamdu.Sugar.Convert.Tag (convertTagSelection)
 import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import qualified Lamdu.Sugar.Lens as SugarLens
@@ -49,21 +49,26 @@ convert (V.Case tag val rest) exprPl = do
     (restCase, modifyEntityId) <-
         case restS ^. rBody of
         BodyCase r | Lens.has (cKind . _LambdaCase) r ->
-            pure (r, const (restS ^. rPayload . plEntityId))
+            convertAddItem DataOps.case_ forbiddenTags exprPl
+            <&>
+            \addItem ->
+            ( r & cBody . cAddItem .~ addItem
+            , const (restS ^. rPayload . plEntityId)
+            )
+            where
+                forbiddenTags =
+                    tag : r ^.. cBody . cItems . traverse . ciTag . tagInfo . tagVal & Set.fromList
         _ ->
             do
                 actions <- convertOpenCompositeActions V.LAbsurd restStored
-                addItemWithTag <-
-                    makeAddItem DataOps.case_ 1 restStored
-                    >>= convertTagSelection mempty (EntityId.ofTag (exprPl ^. Input.entityId))
-                    <&> Lens.mapped %~ (^. cairNewVal)
+                addItem <- convertAddItem DataOps.case_ (Set.singleton tag) exprPl
                 pure
                     ( Case
                         { _cKind = LambdaCase
                         , _cBody = Composite
                             { _cItems = []
                             , _cTail = OpenComposite actions restS
-                            , _cAddItem = addItemWithTag
+                            , _cAddItem = addItem
                             }
                         }
                     , id

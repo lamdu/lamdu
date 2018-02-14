@@ -1,10 +1,11 @@
 {-# LANGUAGE NoImplicitPrelude #-}
 
 module Lamdu.Sugar.Convert.Composite
-    ( convertCompositeItem, makeAddItem, convertEmptyComposite, convertOpenCompositeActions
+    ( convertCompositeItem, convertEmptyComposite, convertOpenCompositeActions, convertAddItem
     ) where
 
 import qualified Control.Lens as Lens
+import qualified Data.Set as Set
 import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Calc.Val as V
 import           Lamdu.Calc.Val.Annotated (Val(..))
@@ -33,6 +34,33 @@ deleteItem ::
     ConvertM m (T m EntityId)
 deleteItem stored restI =
     ConvertM.typeProtectedSetToVal ?? stored ?? restI <&> Lens.mapped %~ EntityId.ofValI
+
+convertAddItem ::
+    Monad m =>
+    (T.Tag -> ExprIRef.ValI m -> T m (DataOps.CompositeExtendResult m)) ->
+    Set T.Tag ->
+    Input.Payload m a ->
+    ConvertM m (TagSelection InternalName (T m) EntityId)
+convertAddItem extendOp existingTags pl =
+    do
+        addItem <-
+            ConvertM.typeProtectedSetToVal
+            <&>
+            \protectedSetToVal tag ->
+            do
+                DataOps.CompositeExtendResult newValI resultI <- extendOp tag (stored ^. Property.pVal)
+                _ <- protectedSetToVal stored resultI
+                let resultEntity = EntityId.ofValI resultI
+                Transaction.setP (Anchors.assocTagOrder tag) (Set.size existingTags)
+                pure
+                    CompositeAddItemResult
+                    { _cairNewTag = TagInfo (EntityId.ofTag resultEntity tag) tag
+                    , _cairNewVal = EntityId.ofValI newValI
+                    }
+        convertTagSelection existingTags (EntityId.ofTag (pl ^. Input.entityId)) addItem
+    <&> Lens.mapped %~ (^. cairNewVal)
+    where
+        stored = pl ^. Input.stored
 
 convertOpenCompositeActions ::
     Monad m => V.Leaf -> ExprIRef.ValIProperty m -> ConvertM m (OpenCompositeActions (T m))
@@ -64,10 +92,7 @@ convertEmptyComposite extendOp exprPl =
                 <* postProcess
                 <&> EntityId.ofValI
             }
-        addItem <-
-            exprPl ^. Input.stored & makeAddItem extendOp 0
-            >>= convertTagSelection mempty (EntityId.ofTag (exprPl ^. Input.entityId))
-            <&> Lens.mapped %~ (^. cairNewVal)
+        addItem <- convertAddItem extendOp mempty exprPl
         pure Composite
             { _cItems = []
             , _cTail = ClosedComposite actions
@@ -98,23 +123,4 @@ convertCompositeItem cons stored restI inst tag expr =
             { _ciTag = tagS
             , _ciExpr = exprS
             , _ciDelete = delItem
-            }
-
-makeAddItem :: Monad m =>
-    (T.Tag -> ExprIRef.ValI m -> T m (DataOps.CompositeExtendResult m)) ->
-    Int -> ExprIRef.ValIProperty m ->
-    ConvertM m (T.Tag -> T m CompositeAddItemResult)
-makeAddItem addItem orderVal stored =
-    ConvertM.typeProtectedSetToVal
-    <&>
-    \protectedSetToVal tag ->
-    do
-        DataOps.CompositeExtendResult newValI resultI <- addItem tag (stored ^. Property.pVal)
-        _ <- protectedSetToVal stored resultI
-        let resultEntity = EntityId.ofValI resultI
-        Transaction.setP (Anchors.assocTagOrder tag) orderVal
-        pure
-            CompositeAddItemResult
-            { _cairNewTag = TagInfo (EntityId.ofTag resultEntity tag) tag
-            , _cairNewVal = EntityId.ofValI newValI
             }
