@@ -171,23 +171,27 @@ binderContentTagNames f (BinderLet Let{..}) =
     <*> (bbContent . binderContentTagNames) f _lBody
     <&> BinderLet
 
-newTagNames :: Lens.IndexedTraversal' T.Tag (name, TagInfo, a) name
+newTagNames ::
+    Lens.IndexedTraversal T.Tag (name0, TagInfo, a) (name1, TagInfo, a) name0 name1
 newTagNames f (n, info, pl) =
     Lens.indexed f (info ^. tagVal) n
     <&> \x -> (x, info, pl)
 
-tagOptionNames :: Lens.IndexedTraversal' T.Tag (TagOption name m a) name
+tagOptionNames ::
+    Lens.IndexedTraversal T.Tag (TagOption name0 m a) (TagOption name1 m a) name0 name1
 tagOptionNames f TagOption{..} =
     Lens.indexed f (_toInfo ^. tagVal) _toName
     <&> \_toName -> TagOption{..}
 
-tagSelectionTagNames :: Functor m => Lens.IndexedSetter' T.Tag (TagSelection name m a) name
+tagSelectionTagNames ::
+    Functor m => Lens.IndexedSetter T.Tag (TagSelection name0 m a) (TagSelection name1 m a) name0 name1
 tagSelectionTagNames f TagSelection{..} =
     (\_tsOptions _tsNewTag -> TagSelection{..})
     <$> (Lens.mapped . traverse . tagOptionNames) f _tsOptions
     <*> (Lens.mapped . newTagNames) f _tsNewTag
 
-tagNames :: Functor m => Lens.IndexedSetter' T.Tag (Tag name m) name
+tagNames ::
+    Functor m => Lens.IndexedSetter T.Tag (Tag name0 m) (Tag name1 m) name0 name1
 tagNames f Tag{..} =
     (\_tagName _tagSelection -> Tag{..})
     <$> Lens.indexed f (_tagInfo ^. tagVal) _tagName
