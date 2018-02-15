@@ -43,9 +43,9 @@ showIncompatibleDbMessage :: IO ()
 showIncompatibleDbMessage =
     do
         concat
-            [ "Your Lamdu DB has been created by an old version of Lamdu"
+            [ "Your Lamdu DB has been created by an old version of Lamdu "
             , "which the current version is incompatible with.\n"
-            , "You can migrate your DB by following the instructions in doc/DbMigration.md,"
+            , "You can migrate your DB by following the instructions in doc/DbMigration.md, "
             , "or if clearing the data is an option simply just run \"lamdu deletedb\".\n"
             ]
             & putStrLn
