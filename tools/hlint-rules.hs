@@ -36,6 +36,8 @@ warn = Control.Monad.Reader.ask <&> (^. a) ==> Control.Lens.view a
 warn = (^. a) <$> Control.Monad.Reader.ask ==> Control.Lens.view a
 warn = fmap (^. a) Control.Monad.Reader.ask ==> Control.Lens.view a
 warn = Control.Lens.view a <&> (^. b) ==> Control.Lens.view (a . b)
+warn = a & b .~ a ^. b ==> a
+warn = a ^. b & c .~ a ^. b . c ==> a ^. b
 warn = pure a <&> b ==> pure (a b)
 warn = return a <&> b ==> return (a b)
 warn = maybe mempty ==> foldMap

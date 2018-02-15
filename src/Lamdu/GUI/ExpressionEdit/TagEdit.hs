@@ -72,9 +72,7 @@ makeTagNameEdit nearestHoles tag =
                   (E.keysEventMapMovesCursor keys
                    (E.Doc ["Navigation", "Jump to next hole"]) .
                    pure . WidgetIds.fromEntityId)
-        NameEdit.makeBareEdit
-            (tag ^. Sugar.tagName & Name.setName .~ tag ^. Sugar.tagName . Name.setName)
-            (tagRenameId myId)
+        NameEdit.makeBareEdit (tag ^. Sugar.tagName) (tagRenameId myId)
             <&> Align.tValue . Widget.eventMapMaker . Lens.mapped %~ E.filterChars (/= ',')
             <&> Align.tValue %~ Widget.weakerEvents jumpNextEventMap
             <&> Align.tValue %~ Widget.weakerEvents stopEditingEventMap
