@@ -311,17 +311,13 @@ getCollision name inst env =
     case env ^. p2NameSuffixes . Lens.at (inst ^. Clash.niUUID) of
     Just suffix -> Collision suffix
     Nothing ->
-        case env ^. p2NamesAbove . Lens.at name of
-        Nothing -> NoCollision
-        Just Clash -> UnknownCollision
-        Just noClash ->
-            case noClash <> Clash.isClashOf inst of
-            NoClash _ -> NoCollision
-            Clash ->
-                -- Once a collision, other non-colliding instances
-                -- also get a suffix, so we have no idea what suffix
-                -- we'll get:
-                UnknownCollision
+        case env ^. p2NamesAbove . Lens.ix name <> Clash.isClashOf inst of
+        NoClash{} -> NoCollision
+        Clash ->
+            -- Once a collision, other non-colliding instances
+            -- also get a suffix, so we have no idea what suffix
+            -- we'll get:
+            UnknownCollision
 
 getCollisionEnv :: Text -> Clash.AnnotatedName -> P2Env -> (Collision, P2Env)
 getCollisionEnv name inst env =
