@@ -1,4 +1,4 @@
-{-# LANGUAGE LambdaCase, NoImplicitPrelude, GeneralizedNewtypeDeriving, RecordWildCards, TypeFamilies, TemplateHaskell, DeriveGeneric, KindSignatures, NoMonomorphismRestriction, OverloadedStrings #-}
+{-# LANGUAGE NoImplicitPrelude, LambdaCase, GeneralizedNewtypeDeriving, RecordWildCards, TypeFamilies, TemplateHaskell, DeriveGeneric, NoMonomorphismRestriction, OverloadedStrings #-}
 module Lamdu.Sugar.Names.Add
     ( addToWorkArea
     ) where
