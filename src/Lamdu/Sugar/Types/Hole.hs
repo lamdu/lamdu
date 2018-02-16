@@ -49,7 +49,7 @@ data Hole m resultExpr = Hole
     , -- Changes the structure around the hole to remove the hole.
       -- For example (f _) becomes (f) or (2 + _) becomes 2
       _holeMDelete :: Maybe (m EntityId)
-    }
+    } deriving Functor
 
 Lens.makeLenses ''Hole
 Lens.makeLenses ''HoleOption
