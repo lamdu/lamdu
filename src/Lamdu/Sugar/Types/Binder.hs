@@ -157,7 +157,7 @@ data Let name m expr = Let
     , _lActions :: LetActions m
     , _lBodyScope :: ChildScopeMapping
     , _lBody :: BinderBody name m expr -- "let foo = bar in [[x]]"
-    }
+    } deriving (Functor, Foldable, Traversable)
 
 data BinderActions m = BinderActions
     { _baAddFirstParam :: m ParamAddResult
@@ -177,11 +177,12 @@ data BinderParams name m
 data BinderContent name m expr
     = BinderLet (Let name m expr)
     | BinderExpr expr
+    deriving (Functor, Foldable, Traversable)
 
 data BinderBody name m expr = BinderBody
     { _bbAddOuterLet :: m EntityId
     , _bbContent :: BinderContent name m expr
-    }
+    } deriving (Functor, Foldable, Traversable)
 
 data BinderBodyScope
     = SameAsParentScope
@@ -198,7 +199,7 @@ data Binder name m expr = Binder
     , _bActions :: BinderActions m
     , -- The scope inside a lambda (if exists)
       _bBodyScopes :: BinderBodyScope
-    }
+    } deriving (Functor, Foldable, Traversable)
 
 Lens.makeLenses ''Annotation
 Lens.makeLenses ''Binder
@@ -215,59 +216,3 @@ Lens.makeLenses ''VarParamInfo
 Lens.makePrisms ''BinderContent
 Lens.makePrisms ''BinderParams
 Lens.makePrisms ''DetachAction
-
--- Manual instances to work around GHC <=8.0.2 bug causing long compile times
--- IIRC it was due to inlining recursions (TODO: find bug# / link).
--- Can replace this with automatic derivations when the bug is fixed.
-
-instance Functor (Binder name m) where
-    fmap = (bBody . Lens.mapped %~)
-
-instance Functor (BinderBody name m) where
-    fmap = (bbContent . Lens.mapped %~)
-
-instance Functor (BinderContent name m) where
-    fmap f (BinderLet l) = l <&> f & BinderLet
-    fmap f (BinderExpr expr) = f expr & BinderExpr
-
-instance Functor (Let name m) where
-    fmap f l =
-        l
-        { _lValue = _lValue l <&> f
-        , _lBody = _lBody l <&> f
-        }
-
-instance Foldable (Binder name m) where
-    foldMap f x = foldMap f (x ^. bBody)
-
-instance Foldable (BinderBody name m) where
-    foldMap f x = foldMap f (x ^. bbContent)
-
-instance Foldable (BinderContent name m) where
-    foldMap f (BinderLet l) = foldMap f l
-    foldMap f (BinderExpr expr) = f expr
-
-instance Foldable (Let name m) where
-    foldMap f l = foldMap f (l ^. lValue) `mappend` foldMap f (l ^. lBody)
-
-instance Traversable (Binder name m) where
-    sequenceA = bBody sequenceA
-
-instance Traversable (BinderBody name m) where
-    sequenceA = bbContent sequenceA
-
-instance Traversable (BinderContent name m) where
-    sequenceA (BinderLet l) = sequenceA l <&> BinderLet
-    sequenceA (BinderExpr expr) = expr <&> BinderExpr
-
-instance Traversable (Let name m) where
-    sequenceA l =
-        f
-        <$> sequenceA (l ^. lValue)
-        <*> sequenceA (l ^. lBody)
-        where
-            f v b =
-                l
-                { _lValue = v
-                , _lBody = b
-                }
