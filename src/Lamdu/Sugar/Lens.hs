@@ -224,7 +224,11 @@ exprBodyTagNames f (BodyGetField (GetField r t)) =
     GetField <$> expressionTagNames f r <*> tagNames f t <&> BodyGetField
 exprBodyTagNames f (BodyInject (Inject t v)) =
     Inject <$> tagNames f t <*> (traverse . expressionTagNames) f v <&> BodyInject
-exprBodyTagNames f (BodyCase c) = (cBody . compositeTagNames) f c <&> BodyCase
+exprBodyTagNames f (BodyCase (Case k b)) =
+    Case
+    <$> (traverse . expressionTagNames) f k
+    <*> compositeTagNames f b
+    <&> BodyCase
 exprBodyTagNames f (BodyRecord r) = compositeTagNames f r <&> BodyRecord
 exprBodyTagNames f (BodyLam lam) = (lamBinder . binderTagNames) f lam <&> BodyLam
 exprBodyTagNames f x = (traverse . expressionTagNames) f x
