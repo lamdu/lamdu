@@ -137,7 +137,12 @@ workAreaExpressions f (WorkArea panes repl) =
     <$> (traverse . paneDefinition . traverse) f panes
     <*> f repl
 
-binderContentTagNames :: Functor m => Lens.IndexedSetter' T.Tag (BinderContent name m (Expression name m a)) name
+binderContentTagNames ::
+    Functor m =>
+    Lens.IndexedSetter T.Tag
+    (BinderContent name0 m (Expression name0 m a))
+    (BinderContent name1 m (Expression name1 m a))
+    name0 name1
 binderContentTagNames f (BinderExpr expr) =
     expressionTagNames f expr <&> BinderExpr
 binderContentTagNames f (BinderLet Let{..}) =
@@ -173,32 +178,124 @@ tagNames f Tag{..} =
     <$> Lens.indexed f (_tagInfo ^. tagVal) _tagName
     <*> tagSelectionTagNames f _tagSelection
 
-binderTagNames :: Functor m => Lens.IndexedSetter' T.Tag (Binder name m (Expression name m a)) name
+binderTagNames ::
+    Functor m =>
+    Lens.IndexedSetter T.Tag
+    (Binder name0 m (Expression name0 m a))
+    (Binder name1 m (Expression name1 m a))
+    name0 name1
 binderTagNames f Binder{..} =
     (\_bParams _bBody -> Binder{..})
     <$> (_Params . traverse . traverse . piTag . tagNames) f _bParams
     <*> (bbContent . binderContentTagNames) f _bBody
 
-definitionTagNames :: Functor m => Lens.IndexedSetter' T.Tag (Definition name m (Expression name m a)) name
+definitionTagNames ::
+    Functor m =>
+    Lens.IndexedSetter T.Tag
+    (Definition name0 m (Expression name0 m a))
+    (Definition name1 m (Expression name1 m a))
+    name0 name1
 definitionTagNames f Definition{..} =
     (\_drName _drBody -> Definition{..})
     <$> tagNames f _drName
     <*> (_DefinitionBodyExpression . deContent . binderTagNames) f _drBody
 
-compositeItemTagNames :: Functor m => Lens.IndexedSetter' T.Tag (CompositeItem name m (Expression name m a)) name
+compositeItemTagNames ::
+    Functor m =>
+    Lens.IndexedSetter T.Tag
+    (CompositeItem name0 m (Expression name0 m a))
+    (CompositeItem name1 m (Expression name1 m a))
+    name0 name1
 compositeItemTagNames f CompositeItem{..} =
     (\_ciTag _ciExpr -> CompositeItem{..})
     <$> tagNames f _ciTag
     <*> expressionTagNames f _ciExpr
 
-compositeTagNames :: Functor m => Lens.IndexedSetter' T.Tag (Composite name m (Expression name m a)) name
+compositeTagNames ::
+    Functor m =>
+    Lens.IndexedSetter T.Tag
+    (Composite name0 m (Expression name0 m a))
+    (Composite name1 m (Expression name1 m a))
+    name0 name1
 compositeTagNames f (Composite items t addItem) =
     Composite
     <$> (traverse . compositeItemTagNames) f items
     <*> (traverse . expressionTagNames) f t
     <*> tagSelectionTagNames f addItem
 
-exprBodyTagNames :: Functor m => Lens.IndexedSetter' T.Tag (Body name m (Expression name m a)) name
+-- TODO: Not all names have their T.Tag apparent
+-- Instead of the xTagNames traversal we should have the names-pass
+-- add a setName which properly registers/unregisters tags.
+hackTag :: String -> T.Tag
+hackTag msg = error (msg ++ "-HACK: some names aren't actually indexed by tag")
+
+binderVarRefTags ::
+    Lens.IndexedTraversal T.Tag
+    (BinderVarRef name0 m)
+    (BinderVarRef name1 m)
+    name0 name1
+binderVarRefTags f = (bvNameRef . nrName) (Lens.indexed f (hackTag "binderVarRefTags"))
+
+paramRefTagNames ::
+    Lens.IndexedTraversal T.Tag
+    (ParamRef name0 m) (ParamRef name1 m) name0 name1
+paramRefTagNames f = (pNameRef . nrName) (Lens.indexed f (hackTag "paramRefTagNames"))
+
+annotatedArgTagNames ::
+    Functor m =>
+    Lens.IndexedSetter T.Tag
+    (AnnotatedArg name0 (Expression name0 m a))
+    (AnnotatedArg name1 (Expression name1 m a))
+    name0 name1
+annotatedArgTagNames f AnnotatedArg{..} =
+    (\_aaName _aaExpr -> AnnotatedArg{..})
+    <$> Lens.indexed f (_aaTag ^. tagVal) _aaName
+    <*> expressionTagNames f _aaExpr
+
+labeledApplyTagNames ::
+    Functor m =>
+    Lens.IndexedSetter T.Tag
+    (LabeledApply name0 m (Expression name0 m a))
+    (LabeledApply name1 m (Expression name1 m a))
+    name0 name1
+labeledApplyTagNames f LabeledApply{..} =
+    LabeledApply
+    <$> binderVarRefTags f _aFunc
+    <*> (traverse . expressionTagNames) f _aSpecialArgs
+    <*> (traverse . annotatedArgTagNames) f _aAnnotatedArgs
+    <*> (traverse . raValue . paramRefTagNames) f _aRelayedArgs
+
+fragmentTagNames ::
+    Functor m =>
+    Lens.IndexedSetter T.Tag
+    (Fragment name0 m (Expression name0 m a))
+    (Fragment name1 m (Expression name1 m a))
+    name0 name1
+fragmentTagNames f Fragment{..} =
+    (\_fExpr _fOptions -> Fragment{..})
+    <$> expressionTagNames f _fExpr
+    <*> (Lens.mapped . traverse . Lens.mapped . expressionTagNames) f _fOptions
+
+nominalTagNames ::
+    (Applicative f, Lens.Indexable T.Tag p) =>
+    (p name0 (f name1) -> expr0 -> f expr1) ->
+    p name0 (f name1) -> Nominal name0 expr0 -> f (Nominal name1 expr1)
+nominalTagNames valTagNames f (Nominal tid val) =
+    Nominal
+    <$> tidName (Lens.indexed f (hackTag "nominalTagNames")) tid
+    <*> valTagNames f val
+
+getVarTags :: Lens.IndexedTraversal T.Tag (GetVar name0 m) (GetVar name1 m) name0 name1
+getVarTags f (GetParam p) = paramRefTagNames f p <&> GetParam
+getVarTags f (GetBinder b) = binderVarRefTags f b <&> GetBinder
+getVarTags f (GetParamsRecord r) = traverse (Lens.indexed f (hackTag "GetParamsRecord")) r <&> GetParamsRecord
+
+exprBodyTagNames ::
+    Functor m =>
+    Lens.IndexedSetter T.Tag
+    (Body name0 m (Expression name0 m a))
+    (Body name1 m (Expression name1 m a))
+    name0 name1
 exprBodyTagNames f (BodyGetField (GetField r t)) =
     GetField <$> expressionTagNames f r <*> tagNames f t <&> BodyGetField
 exprBodyTagNames f (BodyInject (Inject t v)) =
@@ -210,14 +307,31 @@ exprBodyTagNames f (BodyCase (Case k b)) =
     <&> BodyCase
 exprBodyTagNames f (BodyRecord r) = compositeTagNames f r <&> BodyRecord
 exprBodyTagNames f (BodyLam lam) = (lamBinder . binderTagNames) f lam <&> BodyLam
-exprBodyTagNames f x = (traverse . expressionTagNames) f x
+exprBodyTagNames f (BodyLabeledApply a) = labeledApplyTagNames f a <&> BodyLabeledApply
+exprBodyTagNames f (BodyFragment x) = fragmentTagNames f x <&> BodyFragment
+exprBodyTagNames f (BodyToNom n) = nominalTagNames (bbContent . binderContentTagNames) f n <&> BodyToNom
+exprBodyTagNames f (BodyFromNom n) = nominalTagNames expressionTagNames f n <&> BodyFromNom
+exprBodyTagNames f (BodyGetVar g) = getVarTags f g <&> BodyGetVar
+exprBodyTagNames f (BodyHole x) = (Lens.mapped . expressionTagNames) f x <&> BodyHole
+exprBodyTagNames f (BodySimpleApply x) = (traverse . expressionTagNames) f x <&> BodySimpleApply
+exprBodyTagNames f (BodyIfElse x) = (traverse . expressionTagNames) f x <&> BodyIfElse
+exprBodyTagNames _ (BodyLiteral x) = BodyLiteral x & pure
+exprBodyTagNames _ BodyPlaceHolder = pure BodyPlaceHolder
 
-expressionTagNames :: Functor m => Lens.IndexedSetter' T.Tag (Expression name m a) name
+expressionTagNames ::
+    Functor m =>
+    Lens.IndexedSetter T.Tag
+    (Expression name0 m a)
+    (Expression name1 m a)
+    name0 name1
 expressionTagNames = rBody . exprBodyTagNames
 
 -- TODO: This traversal and with all its helper sub-traversals is somewhat tedious
 -- and bug-prone. Perhaps some more generic SYB solution is suitable instead.
-workAreaTagNames :: Functor m => Lens.IndexedSetter' T.Tag (WorkArea name m a) name
+workAreaTagNames ::
+    Functor m =>
+    Lens.IndexedSetter T.Tag
+    (WorkArea name0 m a) (WorkArea name1 m a) name0 name1
 workAreaTagNames f (WorkArea panes repl) =
     WorkArea
     <$> (traverse . paneDefinition . definitionTagNames) f panes
