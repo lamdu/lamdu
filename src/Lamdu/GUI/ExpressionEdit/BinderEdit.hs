@@ -339,27 +339,26 @@ make pMode lhsEventMap name color binder myId =
                 <&> Widget.strongerEvents rhsJumperEquals
                 <&> Just
         equals <- TextView.makeLabel "="
+        wholeBinderSelected <- GuiState.isSubCursor ?? wholeBinderId
         addWholeBinderActions <-
             case binder ^. Sugar.bActions . Sugar.baMNodeActions of
-            Nothing -> pure id
-            Just nodeActions ->
-                (.)
-                <$> ExprEventMap.addWith ExprEventMap.defaultOptions
-                    ExprEventMap.ExprInfo
-                    { ExprEventMap.exprInfoActions = nodeActions
-                    , ExprEventMap.exprInfoNearestHoles = nearestHoles
-                    , ExprEventMap.exprInfoIsHoleResult = False
-                    , ExprEventMap.exprInfoMinOpPrec = 0
-                    }
-                <*> parentDelegator (Widget.joinId myId ["whole binder"])
-        Options.boxSpaced ?? Options.disambiguationNone
-            <&>
-            (\hbox ->
-            hbox
-            [ hbox (defNameEdit : (mParamEdit ^.. Lens._Just) ++ [Responsive.fromTextView equals])
-                & Widget.weakerEvents lhsEventMap
-            , bodyEdit
-            ] )
+            Just nodeActions | wholeBinderSelected ->
+                ExprEventMap.addWith ExprEventMap.defaultOptions
+                ExprEventMap.ExprInfo
+                { ExprEventMap.exprInfoActions = nodeActions
+                , ExprEventMap.exprInfoNearestHoles = nearestHoles
+                , ExprEventMap.exprInfoIsHoleResult = False
+                , ExprEventMap.exprInfoMinOpPrec = 0
+                }
+            _ -> pure id
+        let layoutWithBody hbox =
+                hbox
+                [ hbox (defNameEdit : (mParamEdit ^.. Lens._Just) ++ [Responsive.fromTextView equals])
+                    & Widget.weakerEvents lhsEventMap
+                , bodyEdit
+                ]
+        parentDelegator wholeBinderId
+            <*> (Options.boxSpaced ?? Options.disambiguationNone <&> layoutWithBody)
             <&> addWholeBinderActions
             <&> Widget.weakerEvents eventMap
     & Reader.local (Element.animIdPrefix .~ Widget.toAnimId myId)
@@ -368,6 +367,7 @@ make pMode lhsEventMap name color binder myId =
         Just lamId ->
             GuiState.assignCursorPrefix (WidgetIds.fromEntityId lamId) (const bodyId)
     where
+        wholeBinderId = Widget.joinId myId ["whole binder"]
         presentationChoiceId = Widget.joinId myId ["presentation"]
         body = binder ^. Sugar.bBody . Sugar.bbContent
         bodyId = body ^. SugarLens.binderContentEntityId & WidgetIds.fromEntityId
