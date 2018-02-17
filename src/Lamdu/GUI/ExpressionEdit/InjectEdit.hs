@@ -5,7 +5,6 @@ module Lamdu.GUI.ExpressionEdit.InjectEdit
 
 import qualified Control.Lens as Lens
 import           GUI.Momentu.Align (WithTextPos)
-import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Glue ((/|/))
@@ -22,7 +21,7 @@ import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExprGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
-import           Lamdu.GUI.ExpressionGui.Wrap (stdWrap, stdWrapParentExpr)
+import           Lamdu.GUI.ExpressionGui.Wrap (stdWrapParentExpr)
 import qualified Lamdu.GUI.Styled as Styled
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Name (Name(..))
@@ -45,14 +44,13 @@ makeNullaryInject ::
     Sugar.Tag (Name (T m)) (T m) -> Sugar.Payload (T m) ExprGui.Payload ->
     ExprGuiM m (ExpressionGui m)
 makeNullaryInject tag pl =
-    stdWrap pl <*>
+    stdWrapParentExpr pl <*>
     do
         dot <- injectIndicator "."
-        (Widget.makeFocusableView ?? myId <&> (Align.tValue %~))
-            <*> (TagEdit.makeCaseTagView tag <&> (/|/ dot))
+        TagEdit.makeCaseTag nearestHoles tag <&> (/|/ dot)
             <&> Responsive.fromWithTextPos
     where
-        myId = WidgetIds.fromExprPayload pl
+        nearestHoles = pl ^. Sugar.plData . ExprGui.plNearestHoles
 
 makeInject ::
     Monad m =>

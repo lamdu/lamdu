@@ -1,6 +1,6 @@
 {-# LANGUAGE NoImplicitPrelude, OverloadedStrings, FlexibleContexts, ConstraintKinds #-}
 module Lamdu.GUI.ExpressionEdit.TagEdit
-    ( makeRecordTag, makeCaseTag, makeCaseTagView
+    ( makeRecordTag, makeCaseTag
     , makeParamTag
     , makeArgTag
     , makeTagHoleEdit, withNameColor
@@ -313,11 +313,6 @@ makeCaseTag ::
 makeCaseTag nearestHoles tag =
     makeTagEdit nearestHoles tag
     & withNameColor Theme.caseTagColor
-
-makeCaseTagView ::
-    (MonadReader env m, TextView.HasStyle env, Element.HasAnimIdPrefix env, HasTheme env) =>
-    Sugar.Tag (Name g) h -> m (WithTextPos View)
-makeCaseTagView = withNameColor Theme.caseTagColor . makeTagView
 
 makeParamTag ::
     (MonadReader env m, MonadTransaction f m, HasTagEditEnv env) =>
