@@ -50,9 +50,9 @@ data Annotation = Annotation
     , _aMEvaluationResult :: CurAndPrev (Maybe EvaluationResult)
     } deriving Show
 
-data FuncParamActions m =
+data FuncParamActions name m =
     FuncParamActions
-    { _fpAddNext :: m EntityId
+    { _fpAddNext :: TagSelection name m EntityId
     , _fpDelete :: m ()
     , _fpMOrderBefore :: Maybe (m ())
     , _fpMOrderAfter :: Maybe (m ())
@@ -64,14 +64,13 @@ newtype NullParamActions m = NullParamActions
 
 data ParamInfo name m = ParamInfo
     { _piTag :: Tag name m
-    , _piActions :: FuncParamActions m
+    , _piActions :: FuncParamActions name m
     }
 
 data FuncParam info = FuncParam
     { _fpAnnotation :: Annotation
     , _fpInfo :: info
     } deriving (Functor, Foldable, Traversable)
-
 
 instance Show info => Show (FuncParam info) where
     show FuncParam{..} =

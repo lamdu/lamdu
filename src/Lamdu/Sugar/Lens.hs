@@ -106,7 +106,7 @@ defSchemes :: Lens.Traversal' (Definition name m expr) Scheme
 defSchemes = drBody . defBodySchemes
 
 binderFuncParamActions ::
-    Lens.Traversal' (BinderParams name m) (FuncParamActions m)
+    Lens.Traversal' (BinderParams name m) (FuncParamActions name m)
 binderFuncParamActions _ BinderWithoutParams = pure BinderWithoutParams
 binderFuncParamActions _ (NullParam a) = pure (NullParam a)
 binderFuncParamActions f (Params ps) = (traverse . fpInfo . piActions) f ps <&> Params
@@ -178,6 +178,17 @@ tagNames f Tag{..} =
     <$> Lens.indexed f (_tagInfo ^. tagVal) _tagName
     <*> tagSelectionTagNames f _tagSelection
 
+paramInfoTagNames ::
+    Functor m =>
+    Lens.IndexedSetter T.Tag
+    (ParamInfo name0 m)
+    (ParamInfo name1 m)
+    name0 name1
+paramInfoTagNames f (ParamInfo tag actions) =
+    ParamInfo
+    <$> tagNames f tag
+    <*> (fpAddNext . tagSelectionTagNames) f actions
+
 binderTagNames ::
     Functor m =>
     Lens.IndexedSetter T.Tag
@@ -186,7 +197,7 @@ binderTagNames ::
     name0 name1
 binderTagNames f Binder{..} =
     (\_bParams _bBody -> Binder{..})
-    <$> (_Params . traverse . traverse . piTag . tagNames) f _bParams
+    <$> (_Params . traverse . traverse . paramInfoTagNames) f _bParams
     <*> (bbContent . binderContentTagNames) f _bBody
 
 definitionTagNames ::

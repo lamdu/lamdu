@@ -15,13 +15,16 @@ import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.State as GuiState
 import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
+import qualified GUI.Momentu.Widgets.Menu as Menu
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
+import qualified Lamdu.GUI.ExpressionEdit.TagEdit as TagEdit
 import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExprGui
 import qualified Lamdu.GUI.ExpressionGui.Annotation as Annotation
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
+import           Lamdu.Name (Name)
 import qualified Lamdu.Sugar.Types as Sugar
 import           Revision.Deltum.Transaction (Transaction)
 
@@ -41,12 +44,14 @@ eventMapAddFirstParam config addFirstParam =
     & E.keyPresses (Config.addNextParamKeys config <&> toModKey)
         (E.Doc ["Edit", "Add parameter"])
 
+addParamId :: Widget.Id -> Widget.Id
+addParamId = (`Widget.joinId` ["add param"])
+
 eventMapAddNextParam ::
-    Functor m => Config -> T m Sugar.EntityId -> EventMap (T m GuiState.Update)
-eventMapAddNextParam config fpAdd =
-    fpAdd
-    <&> enterNewParam
-    & E.keyPresses (Config.addNextParamKeys config <&> toModKey)
+    Applicative f => Config -> Widget.Id -> EventMap (f GuiState.Update)
+eventMapAddNextParam config myId =
+    addParamId myId & pure
+    & E.keysEventMapMovesCursor (Config.addNextParamKeys config)
         (E.Doc ["Edit", "Add next parameter"])
 
 eventMapOrderParam ::
@@ -65,7 +70,7 @@ eventParamDelEventMap fpDel keys docSuffix dstPosId =
 data Info m = Info
     { iNameEdit :: WithTextPos (Widget (T m GuiState.Update))
     , iDel :: T m ()
-    , iMAddNext :: Maybe (T m Sugar.EntityId)
+    , iMAddNext :: Maybe (Sugar.TagSelection (Name (T m)) (T m) Sugar.EntityId)
     , iMOrderBefore :: Maybe (T m ())
     , iMOrderAfter :: Maybe (T m ())
     , iId :: Widget.Id
@@ -76,26 +81,46 @@ make ::
     Monad m =>
     Annotation.EvalAnnotationOptions ->
     Widget.Id -> Widget.Id ->
-    Sugar.FuncParam (Info m) -> ExprGuiM m (ExpressionGui m)
+    Sugar.FuncParam (Info m) -> ExprGuiM m [ExpressionGui m]
 make annotationOpts prevId nextId param =
     do
         config <- Lens.view Config.config
-        let paramEventMap = mconcat
+        let paramEventMap =
+                mconcat
                 [ eventParamDelEventMap (iDel info) (Config.delForwardKeys config) "" nextId
                 , eventParamDelEventMap (iDel info) (Config.delBackwardKeys config) " backwards" prevId
-                , foldMap (eventMapAddNextParam config) (iMAddNext info)
+                , (eventMapAddNextParam config myId <$ iMAddNext info) ^. Lens._Just
                 , foldMap (eventMapOrderParam (Config.paramOrderBeforeKeys config) "before") (iMOrderBefore info)
                 , foldMap (eventMapOrderParam (Config.paramOrderAfterKeys config) "after") (iMOrderAfter info)
                 ]
         wideAnnotationBehavior <-
             GuiState.isSubCursor ?? myId
             <&> Annotation.wideAnnotationBehaviorFromSelected
-        Annotation.maybeAddAnnotationWith annotationOpts
+        paramEdit <-
+            Annotation.maybeAddAnnotationWith annotationOpts
             wideAnnotationBehavior ExprGui.showAnnotationWhenVerbose
             (param ^. Sugar.fpAnnotation)
             ?? Responsive.fromWithTextPos (iNameEdit info)
             <&> Widget.weakerEvents paramEventMap
             & Reader.local (Element.animIdPrefix .~ Widget.toAnimId myId)
+        mAddParam <-
+            GuiState.isSubCursor ?? addId
+            <&> guard
+            <&> (>> iMAddNext info)
+        addParamEdits <-
+            case mAddParam of
+            Nothing -> pure []
+            Just addParam ->
+                TagEdit.makeTagHoleEdit addParam mkPickResult addId
+                <&> Responsive.fromWithTextPos
+                <&> (:[])
+        paramEdit : addParamEdits & pure
     where
+        mkPickResult tagInfo _ =
+            Menu.PickResult
+            { Menu._pickDest = tagInfo ^. Sugar.tagInstance & WidgetIds.fromEntityId
+            , Menu._pickNextEntryPoint = tagInfo ^. Sugar.tagInstance & WidgetIds.fromEntityId
+            }
         myId = iId info
+        addId = addParamId myId
         info = param ^. Sugar.fpInfo

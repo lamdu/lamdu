@@ -493,7 +493,7 @@ makeBinderContentEdit content@(Sugar.BinderLet l) =
         body = l ^. Sugar.lBody
 
 namedParamEditInfo ::
-    Widget.Id -> Sugar.FuncParamActions (T m) ->
+    Widget.Id -> Sugar.FuncParamActions (Name (T m)) (T m) ->
     WithTextPos (Widget (T m GuiState.Update)) ->
     ParamEdit.Info m
 namedParamEditInfo widgetId actions nameEdit =
@@ -550,9 +550,9 @@ makeParamsEdit annotationOpts nearestHoles delVarBackwardsId lhsId rhsId params 
         fromParamList delDestFirst delDestLast paramList =
             do
                 jumpHolesEventMap <- ExprEventMap.jumpHolesEventMap nearestHoles
-                let mkParam (prevId, nextId, param) =
-                        ParamEdit.make annotationOpts prevId nextId param
-                        <&> Widget.widget . Widget.eventMapMaker . Lens.mapped <>~ jumpHolesEventMap
                 withPrevNext delDestFirst delDestLast
                     (ParamEdit.iId . (^. Sugar.fpInfo)) paramList
-                    & traverse mkParam
+                    & traverse mkParam <&> concat
+                    <&> traverse . Widget.widget . Widget.eventMapMaker . Lens.mapped <>~ jumpHolesEventMap
+            where
+                mkParam (prevId, nextId, param) = ParamEdit.make annotationOpts prevId nextId param

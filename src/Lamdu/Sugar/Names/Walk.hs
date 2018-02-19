@@ -291,8 +291,9 @@ withParam ::
     MonadNaming m => FuncParam (ParamInfo (OldName m) (TM m)) ->
     CPS m (FuncParam (ParamInfo (NewName m) (TM m)))
 withParam (FuncParam ann (ParamInfo tag fpActions)) =
-    withTag TaggedVar varInfo tag
-    <&> ParamInfo ?? fpActions
+    ParamInfo
+    <$> withTag TaggedVar varInfo tag
+    <*> liftCPS (fpAddNext toTagSelection fpActions)
     <&> FuncParam ann
     where
         varInfo = ann ^. aInferredType & isFunctionType

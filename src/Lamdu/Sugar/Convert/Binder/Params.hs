@@ -36,7 +36,7 @@ import qualified Lamdu.Sugar.Convert.Input as Input
 import           Lamdu.Sugar.Convert.Monad (ConvertM)
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
 import           Lamdu.Sugar.Convert.ParamList (ParamList)
-import           Lamdu.Sugar.Convert.Tag (convertTag, convertTaggedEntity)
+import           Lamdu.Sugar.Convert.Tag (convertTag, convertTaggedEntity, convertTagSelection)
 import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import           Lamdu.Sugar.Lens as SugarLens
@@ -249,30 +249,42 @@ delFieldParamAndFixCalls binderKind tags fp storedLam =
 fieldParamActions ::
     Monad m =>
     Maybe (MkProperty m PresentationMode) ->
-    BinderKind m -> [T.Tag] -> FieldParam -> StoredLam m -> FuncParamActions (T m)
+    BinderKind m -> [T.Tag] -> FieldParam -> StoredLam m ->
+    ConvertM m (FuncParamActions InternalName (T m))
 fieldParamActions mPresMode binderKind tags fp storedLam =
-    FuncParamActions
-    { _fpAddNext =
-        getP (slParamList storedLam)
-        <&> fromMaybe (error "no param list?")
-        <&> flip (ListUtils.insertAt (length tagsBefore + 1))
-        >>= addFieldParam mPresMode DataOps.genNewTag DataOps.newHole binderKind storedLam
-        <&> (^. tagInstance)
-    , _fpDelete = delFieldParamAndFixCalls binderKind tags fp storedLam
-    , _fpMOrderBefore =
-        case tagsBefore of
-        [] -> Nothing
-        b ->
-            init b ++ (fpTag fp : last b : tagsAfter)
-            & setParamList mPresMode (slParamList storedLam) & Just
-    , _fpMOrderAfter =
-        case tagsAfter of
-        [] -> Nothing
-        (x:xs) ->
-            tagsBefore ++ (x : fpTag fp : xs)
-            & setParamList mPresMode (slParamList storedLam) & Just
-    }
+    do
+        postProcess <- ConvertM.postProcess
+        let addParamAfter newTag =
+                do
+                    -- Reread list for when both choosing param and adding new one
+                    -- using pre-events.
+                    getP (slParamList storedLam)
+                        <&> fromMaybe (error "no params?")
+                        <&> flip (ListUtils.insertAt (length tagsBefore + 1))
+                        >>= addFieldParam mPresMode (pure newTag) DataOps.newHole binderKind storedLam
+                    postProcess
+                    EntityId.ofTaggedEntity param newTag & pure
+        addNext <-
+            convertTagSelection (nameWithContext param)
+            (Set.fromList tags) (EntityId.ofTaggedEntity param) addParamAfter
+        pure FuncParamActions
+            { _fpAddNext = addNext
+            , _fpDelete = delFieldParamAndFixCalls binderKind tags fp storedLam
+            , _fpMOrderBefore =
+                case tagsBefore of
+                [] -> Nothing
+                b ->
+                    init b ++ (fpTag fp : last b : tagsAfter)
+                    & setParamList mPresMode (slParamList storedLam) & Just
+            , _fpMOrderAfter =
+                case tagsAfter of
+                [] -> Nothing
+                (x:xs) ->
+                    tagsBefore ++ (x : fpTag fp : xs)
+                    & setParamList mPresMode (slParamList storedLam) & Just
+            }
     where
+        param = storedLam ^. slLam . V.lamParamId
         (tagsBefore, _:tagsAfter) = break (== fpTag fp) tags
 
 fpIdEntityId :: V.Var -> FieldParam -> EntityId
@@ -356,29 +368,23 @@ convertRecordParams mPresMode binderKind fieldParams lam@(V.Lam param _) pl =
         mkParInfo fp = mkParamInfo param fp <&> ConvertM.TagFieldParam
         storedLam = mkStoredLam lam pl
         mkParam fp =
-            setFieldParamTag mPresMode binderKind storedLam tagList tag
-            >>= convertTag tag (nameWithContext param)
-                (Set.delete tag (Set.fromList tagList))
-                (EntityId.ofTaggedEntity param)
+            ParamInfo
+            <$> ( setFieldParamTag mPresMode binderKind storedLam tagList tag
+                    >>= convertTag tag (nameWithContext param)
+                        (Set.delete tag (Set.fromList tagList))
+                        (EntityId.ofTaggedEntity param)
+                )
+            <*> fieldParamActions mPresMode binderKind tags fp storedLam
             <&>
-            \tagS ->
-            FuncParam
-            { _fpInfo =
-                ParamInfo
-                { _piActions = fieldParamActions mPresMode binderKind tags fp storedLam
-                , _piTag = tagS
-                }
-            , _fpAnnotation =
-                Annotation
-                { _aInferredType = fpFieldType fp
-                , _aMEvaluationResult =
-                    fpValue fp <&>
-                    \x ->
-                    do
-                        Map.null x & not & guard
-                        x ^.. Lens.traversed . Lens.traversed
-                            & Map.fromList & Just
-                }
+            FuncParam Annotation
+            { _aInferredType = fpFieldType fp
+            , _aMEvaluationResult =
+                fpValue fp <&>
+                \x ->
+                do
+                    Map.null x & not & guard
+                    x ^.. Lens.traversed . Lens.traversed
+                        & Map.fromList & Just
             }
             where
                 tag = fpTag fp
@@ -440,16 +446,16 @@ data NewParamPosition = NewParamBefore | NewParamAfter
 
 convertToRecordParams ::
     Monad m =>
-    T m (ValI m) -> BinderKind m -> StoredLam m -> NewParamPosition ->
+    T m (ValI m) -> BinderKind m -> StoredLam m -> T m T.Tag -> NewParamPosition ->
     T m EntityId
-convertToRecordParams mkNewArg binderKind storedLam newParamPosition =
+convertToRecordParams mkNewArg binderKind storedLam mkNewParam newParamPosition =
     do
         oldParam <- Anchors.assocTag paramVar & getP
         -- the associated tag becomes an actual field in the new
         -- params record, remove the duplicate associated tag so that
         -- the params record is not named the same as the first param
         setP (Anchors.assocTag paramVar) Anchors.anonTag
-        newParam <- DataOps.genNewTag
+        newParam <- mkNewParam
         case newParamPosition of
             NewParamBefore -> [newParam, oldParam]
             NewParamAfter -> [oldParam, newParam]
@@ -471,18 +477,27 @@ lamParamType lamExprPl =
     lamExprPl ^? Input.inferredType . T._TFun . _1
 
 makeNonRecordParamActions ::
-    Monad m => BinderKind m -> StoredLam m -> ConvertM m (FuncParamActions (T m))
+    Monad m => BinderKind m -> StoredLam m -> ConvertM m (FuncParamActions InternalName (T m))
 makeNonRecordParamActions binderKind storedLam =
-    makeDeleteLambda binderKind storedLam
-    <&>
-    \del ->
-    FuncParamActions
-    { _fpAddNext =
-        convertToRecordParams DataOps.newHole binderKind storedLam NewParamAfter
-    , _fpDelete = del
-    , _fpMOrderBefore = Nothing
-    , _fpMOrderAfter = Nothing
-    }
+    do
+        del <- makeDeleteLambda binderKind storedLam
+        postProcess <- ConvertM.postProcess
+        let addParamAfter tag =
+                convertToRecordParams DataOps.newHole binderKind storedLam (pure tag) NewParamAfter
+                <* postProcess
+        oldParam <- Anchors.assocTag param & getP
+        addNext <-
+            convertTagSelection (nameWithContext param)
+            (Set.singleton oldParam) (EntityId.ofTaggedEntity param)
+            addParamAfter
+        pure FuncParamActions
+            { _fpAddNext = addNext
+            , _fpDelete = del
+            , _fpMOrderBefore = Nothing
+            , _fpMOrderAfter = Nothing
+            }
+    where
+        param = storedLam ^. slLam . V.lamParamId
 
 mkFuncParam :: Monad m => Input.Payload m a -> info -> ConvertM m (FuncParam info)
 mkFuncParam lamExprPl info =
@@ -540,7 +555,7 @@ convertNonRecordParam binderKind lam@(V.Lam param _) lamExprPl =
             , _cpParams = funcParam
             , _cpAddFirstParam =
                 convertToRecordParams DataOps.newHole
-                binderKind storedLam NewParamBefore
+                binderKind storedLam DataOps.genNewTag NewParamBefore
             , cpScopes = BinderBodyScope $ mkCpScopesOfLam lamExprPl
             , cpMLamParam = Just (lamExprPl ^. Input.entityId, param)
             }
@@ -566,7 +581,6 @@ postProcessActions ::
 postProcessActions post x =
     x
     & cpAddFirstParam %~ (<* post)
-    & cpParams . SugarLens.binderFuncParamActions . fpAddNext %~ (<* post)
     & if Lens.has (cpParams . _Params) x
         then cpParams . SugarLens.binderFuncParamActions . fpDelete %~ (<* post)
         else id
