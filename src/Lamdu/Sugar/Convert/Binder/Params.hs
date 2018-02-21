@@ -270,7 +270,7 @@ fieldParamActions mPresMode binderKind tags fp storedLam =
     { _fpAddNext =
         getP (slParamList storedLam)
         <&> fromMaybe (error "no param list?")
-        <&> addTag
+        <&> flip (ListUtils.insertAt (length tagsBefore + 1))
         >>= addFieldParam mPresMode DataOps.newHole binderKind storedLam
         <&> (^. tagInstance)
         <&> ParamAddResultNewTag
@@ -290,10 +290,6 @@ fieldParamActions mPresMode binderKind tags fp storedLam =
     }
     where
         (tagsBefore, _:tagsAfter) = break (== fpTag fp) tags
-        addTag readTags tag =
-            pre ++ tag : post
-            where
-                (pre, post) = splitAt (length tagsBefore + 1) readTags
 
 fpIdEntityId :: V.Var -> FieldParam -> EntityId
 fpIdEntityId param = EntityId.ofLambdaTagParam param . fpTag
