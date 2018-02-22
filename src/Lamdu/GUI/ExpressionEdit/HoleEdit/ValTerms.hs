@@ -130,6 +130,12 @@ allowedFragmentSearchTerm searchTerm =
 getSearchStringRemainder :: SearchMenu.ResultsContext -> Sugar.Expression name m a -> Text
 getSearchStringRemainder ctx holeResultConverted
     | isA Sugar._BodyInject = ""
+      -- NOTE: This is wrong for operator search terms like ".." which
+      -- should NOT have a remainder, but do. We might want to correct
+      -- that.  However, this does not cause any bug because search
+      -- string remainders are genreally ignored EXCEPT in
+      -- apply-operator, which does not occur when the search string
+      -- already is an operator.
     | isSuffixed ":" = ":"
     | isSuffixed "." = "."
     | otherwise = ""
