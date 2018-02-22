@@ -87,6 +87,7 @@ Executable lamdu
                   , Data.Function.Decycle
                   , Data.IORef.Utils
                   , Data.List.Utils
+                  , Data.MMap
                   , Data.MRUMemo
                   , Data.Map.Utils
                   , Data.Maybe.Utils
