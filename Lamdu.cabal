@@ -195,7 +195,6 @@ Executable lamdu
                   , Lamdu.GUI.ExpressionEdit.GetVarEdit
                   , Lamdu.GUI.ExpressionEdit.IfElseEdit
                   , Lamdu.GUI.ExpressionEdit.HoleEdit
-                  , Lamdu.GUI.ExpressionEdit.HoleEdit.AllowedSearchTerm
                   , Lamdu.GUI.ExpressionEdit.HoleEdit.Literal
                   , Lamdu.GUI.ExpressionEdit.HoleEdit.ResultGroups
                   , Lamdu.GUI.ExpressionEdit.HoleEdit.ResultWidget

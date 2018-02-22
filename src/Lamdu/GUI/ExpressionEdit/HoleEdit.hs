@@ -13,9 +13,9 @@ import qualified GUI.Momentu.Widgets.Menu as Menu
 import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
 import qualified Lamdu.Config as Config
 import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
-import           Lamdu.GUI.ExpressionEdit.HoleEdit.AllowedSearchTerm (allowedSearchTermCommon)
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.Literal (makeLiteralEventMap)
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.SearchArea as SearchArea
+import           Lamdu.GUI.ExpressionEdit.HoleEdit.ValTerms (allowedSearchTermCommon)
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds (WidgetIds(..))
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds as HoleWidgetIds
 import           Lamdu.GUI.ExpressionGui (ExpressionGui)

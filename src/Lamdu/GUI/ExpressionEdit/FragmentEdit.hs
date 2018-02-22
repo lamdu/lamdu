@@ -19,8 +19,8 @@ import qualified Lamdu.CharClassification as Chars
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
-import           Lamdu.GUI.ExpressionEdit.HoleEdit.AllowedSearchTerm (allowedFragmentSearchTerm)
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.SearchArea as SearchArea
+import           Lamdu.GUI.ExpressionEdit.HoleEdit.ValTerms (allowedFragmentSearchTerm)
 import           Lamdu.GUI.ExpressionGui (ExpressionGui, ExpressionN)
 import qualified Lamdu.GUI.ExpressionGui as ExprGui
 import           Lamdu.GUI.ExpressionGui.Annotation (maybeAddAnnotationPl)

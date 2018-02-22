@@ -18,8 +18,8 @@ import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
 import qualified Lamdu.CharClassification as Chars
 import qualified Lamdu.Config as Config
+import           Lamdu.GUI.ExpressionEdit.HoleEdit.ValTerms (allowedFragmentSearchTerm)
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds as HoleWidgetIds
-import           Lamdu.GUI.ExpressionEdit.HoleEdit.AllowedSearchTerm (allowedFragmentSearchTerm)
 import qualified Lamdu.GUI.ExpressionGui as ExprGui
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Precedence (Prec, precedence)
