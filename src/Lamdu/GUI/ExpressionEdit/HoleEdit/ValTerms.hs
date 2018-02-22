@@ -155,5 +155,6 @@ verifyInjectSuffix searchTerm val =
 -- depending on the val.
 definitePart :: Text -> Text
 definitePart searchTerm
-    | any (`Text.isSuffixOf` searchTerm) [":", "."] = Text.init searchTerm
+    | Text.any Char.isAlphaNum searchTerm
+    && any (`Text.isSuffixOf` searchTerm) [":", "."] = Text.init searchTerm
     | otherwise = searchTerm
