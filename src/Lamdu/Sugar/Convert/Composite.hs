@@ -14,7 +14,7 @@ import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Sugar.Convert.Input as Input
 import           Lamdu.Sugar.Convert.Monad (ConvertM)
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
-import           Lamdu.Sugar.Convert.Tag (convertTag, convertTagSelection)
+import           Lamdu.Sugar.Convert.Tag (convertTag, convertTagSelection, AllowAnonTag(..))
 import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import           Lamdu.Sugar.Types
@@ -50,7 +50,7 @@ convertAddItem extendOp existingTags pl =
                 _ <- protectedSetToVal stored resultI
                 Transaction.setP (Anchors.assocTagOrder tag) (Set.size existingTags)
                 EntityId.ofValI newValI & pure
-        convertTagSelection nameWithoutContext existingTags (EntityId.ofTag (pl ^. Input.entityId)) addItem
+        convertTagSelection nameWithoutContext existingTags RequireTag (EntityId.ofTag (pl ^. Input.entityId)) addItem
     where
         stored = pl ^. Input.stored
 

@@ -272,8 +272,7 @@ makeTagEditWith onView onPickNext nearestHoles tag =
                 (E.Doc ["Edit", "Tag", "Open"]) (pure (tagRenameId myId))
                 <>
                 E.keysEventMapMovesCursor (Config.delKeys config)
-                (E.Doc ["Edit", "Tag", "Choose"])
-                (pure (WidgetIds.tagHoleId myId))
+                (E.Doc ["Edit", "Tag", "Choose"]) delAction
         nameView <-
             (Widget.makeFocusableView ?? viewId <&> fmap) <*>
             makeTagView tag
@@ -301,6 +300,11 @@ makeTagEditWith onView onPickNext nearestHoles tag =
             , Menu._pickNextEntryPoint =
                 onPickNext (nearestHoles ^. NearestHoles.next) (tagInfo ^. Sugar.tagInstance)
             }
+        delAction =
+            case tag ^. Sugar.tagSelection . Sugar.tsAnon of
+            Nothing -> pure myId
+            Just setAnon -> setAnon <&> fst <&> WidgetIds.fromEntityId
+            <&> WidgetIds.tagHoleId
 
 makeRecordTag ::
     (MonadReader env m, MonadTransaction f m, HasTagEditEnv env) =>

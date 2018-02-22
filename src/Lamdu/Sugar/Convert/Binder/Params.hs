@@ -36,7 +36,7 @@ import qualified Lamdu.Sugar.Convert.Input as Input
 import           Lamdu.Sugar.Convert.Monad (ConvertM)
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
 import           Lamdu.Sugar.Convert.ParamList (ParamList)
-import           Lamdu.Sugar.Convert.Tag (convertTag, convertTaggedEntity, convertTagSelection)
+import           Lamdu.Sugar.Convert.Tag (convertTag, convertTaggedEntity, convertTagSelection, AllowAnonTag(..))
 import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import           Lamdu.Sugar.Lens as SugarLens
@@ -258,7 +258,8 @@ fieldParamActions mPresMode binderKind tags fp storedLam =
                 do
                     -- Reread list for when both choosing param and adding new one
                     -- using pre-events.
-                    getP (slParamList storedLam)
+                    _ <-
+                        getP (slParamList storedLam)
                         <&> fromMaybe (error "no params?")
                         <&> flip (ListUtils.insertAt (length tagsBefore + 1))
                         >>= addFieldParam mPresMode (pure newTag) DataOps.newHole binderKind storedLam
@@ -266,7 +267,7 @@ fieldParamActions mPresMode binderKind tags fp storedLam =
                     EntityId.ofTaggedEntity param newTag & pure
         addNext <-
             convertTagSelection (nameWithContext param)
-            (Set.fromList tags) (EntityId.ofTaggedEntity param) addParamAfter
+            (Set.fromList tags) RequireTag (EntityId.ofTaggedEntity param) addParamAfter
         pure FuncParamActions
             { _fpAddNext = addNext
             , _fpDelete = delFieldParamAndFixCalls binderKind tags fp storedLam
@@ -488,7 +489,7 @@ makeNonRecordParamActions binderKind storedLam =
         oldParam <- Anchors.assocTag param & getP
         addNext <-
             convertTagSelection (nameWithContext param)
-            (Set.singleton oldParam) (EntityId.ofTaggedEntity param)
+            (Set.singleton oldParam) RequireTag (EntityId.ofTaggedEntity param)
             addParamAfter
         pure FuncParamActions
             { _fpAddNext = addNext

@@ -161,11 +161,11 @@ toLam = lamBinder . toBinder
 toTagSelection ::
     MonadNaming m =>
     TagSelection (OldName m) (TM m) a -> m (TagSelection (NewName m) (TM m) a)
-toTagSelection TagSelection{..} =
+toTagSelection t@TagSelection{..} =
     do
         run0 <- opRun
         run1 <- opRun
-        pure TagSelection
+        pure t
             { _tsOptions =
                 _tsOptions >>= run0 . (traverse . toName) (opGetName Nothing Tag)
             , _tsNewTag = _tsNewTag >>= run1 . _1 (opGetName Nothing Tag)

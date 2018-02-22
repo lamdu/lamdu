@@ -2,6 +2,7 @@
 
 module Lamdu.Sugar.Convert.Tag
     ( convertTag, convertTagSelection, convertTaggedEntityWith, convertTaggedEntity
+    , AllowAnonTag(..)
     ) where
 
 import qualified Control.Lens as Lens
@@ -23,6 +24,8 @@ import           Lamdu.Prelude
 
 type T = Transaction
 
+data AllowAnonTag = AllowAnon | RequireTag
+
 publishedTagsGetter :: Monad m => ConvertM m (T m (Set T.Tag))
 publishedTagsGetter =
     Lens.view ConvertM.scCodeAnchors <&> Anchors.tags <&> Transaction.getP
@@ -37,31 +40,31 @@ convertTag ::
     ConvertM m (Tag name (T m))
 convertTag tag name forbiddenTags mkInstance setTag =
     publishedTagsGetter
-    <&> convertTagWith tag name forbiddenTags mkInstance setTag
+    <&> convertTagWith tag name forbiddenTags RequireTag mkInstance setTag
 
 convertTagWith ::
     Monad m =>
-    T.Tag -> (T.Tag -> name) -> Set T.Tag -> (T.Tag -> EntityId) ->
+    T.Tag -> (T.Tag -> name) -> Set T.Tag -> AllowAnonTag -> (T.Tag -> EntityId) ->
     (T.Tag -> T m ()) -> T m (Set T.Tag) ->
     Tag name (T m)
-convertTagWith tag name forbiddenTags mkInstance setTag getPublishedTags =
-    convertTagSelectionWith name forbiddenTags mkInstance setTag getPublishedTags
+convertTagWith tag name forbiddenTags allowAnon mkInstance setTag getPublishedTags =
+    convertTagSelectionWith name forbiddenTags allowAnon mkInstance setTag getPublishedTags
     & Tag (TagInfo (mkInstance tag) tag) (name tag)
 
 convertTagSelection ::
     Monad m =>
-    (T.Tag -> name) -> Set T.Tag -> (T.Tag -> EntityId) -> (T.Tag -> T m a) ->
+    (T.Tag -> name) -> Set T.Tag -> AllowAnonTag -> (T.Tag -> EntityId) -> (T.Tag -> T m a) ->
     ConvertM m (TagSelection name (T m) a)
-convertTagSelection name forbiddenTags mkInstance setTag =
+convertTagSelection name forbiddenTags allowAnon mkInstance setTag =
     publishedTagsGetter
-    <&> convertTagSelectionWith name forbiddenTags mkInstance setTag
+    <&> convertTagSelectionWith name forbiddenTags allowAnon mkInstance setTag
 
 convertTagSelectionWith ::
     Monad m =>
-    (T.Tag -> name) -> Set T.Tag -> (T.Tag -> EntityId) -> (T.Tag -> T m a) ->
+    (T.Tag -> name) -> Set T.Tag -> AllowAnonTag -> (T.Tag -> EntityId) -> (T.Tag -> T m a) ->
     T m (Set T.Tag) ->
     TagSelection name (T m) a
-convertTagSelectionWith name forbiddenTags mkInstance setTag getPublishedTags =
+convertTagSelectionWith name forbiddenTags allowAnon mkInstance setTag getPublishedTags =
     TagSelection
     { _tsOptions =
         getPublishedTags
@@ -72,6 +75,10 @@ convertTagSelectionWith name forbiddenTags mkInstance setTag getPublishedTags =
         do
             newTag <- DataOps.genNewTag
             setTag newTag <&> (,,) (name newTag) (mkInfo newTag)
+    , _tsAnon =
+        case allowAnon of
+        RequireTag -> Nothing
+        AllowAnon -> setTag Anchors.anonTag <&> (,) (mkInstance Anchors.anonTag) & Just
     }
     where
         mkInfo t = TagInfo (mkInstance t) t
@@ -90,7 +97,7 @@ convertTaggedEntityWith entity getPublishedTags =
     getP prop
     <&>
     \entityTag ->
-    convertTagWith entityTag (nameWithContext entity) mempty
+    convertTagWith entityTag (nameWithContext entity) mempty AllowAnon
     (EntityId.ofTaggedEntity entity) (setP prop) getPublishedTags
     where
         prop = Anchors.assocTag entity
