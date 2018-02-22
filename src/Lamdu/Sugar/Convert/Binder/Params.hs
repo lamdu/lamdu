@@ -260,7 +260,7 @@ fieldParamActions mPresMode binderKind tags fp storedLam =
             convertTagSelection (nameWithContext param)
             (Set.fromList tags) RequireTag (EntityId.ofTaggedEntity param) addParamAfter
         pure FuncParamActions
-            { _fpAddNext = addNext
+            { _fpAddNext = Just addNext
             , _fpDelete = delFieldParamAndFixCalls binderKind tags fp storedLam
             , _fpMOrderBefore =
                 case tagsBefore of
@@ -489,7 +489,7 @@ makeNonRecordParamActions binderKind storedLam =
             (Set.singleton oldParam) RequireTag (EntityId.ofTaggedEntity param)
             addParamAfter
         pure FuncParamActions
-            { _fpAddNext = addNext
+            { _fpAddNext = addNext <$ guard (oldParam /= Anchors.anonTag)
             , _fpDelete = del
             , _fpMOrderBefore = Nothing
             , _fpMOrderAfter = Nothing

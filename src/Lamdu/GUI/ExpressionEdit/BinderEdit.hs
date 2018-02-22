@@ -228,7 +228,7 @@ makeMParamsEdit mScopeCursor isScopeNavFocused delVarBackwardsId myId nearestHol
     do
         isPrepend <- GuiState.isSubCursor ?? prependId
         prependParamEdits <-
-            case binder ^. Sugar.bActions ^. Sugar.baAddFirstParam of
+            case binder ^. Sugar.bActions . Sugar.baAddFirstParam of
             Sugar.PrependParam selection | isPrepend ->
                 TagEdit.makeTagHoleEdit selection ParamEdit.mkParamPickResult prependId
                 & NameEdit.withNameColor Theme.parameterColor
@@ -511,7 +511,7 @@ namedParamEditInfo ::
 namedParamEditInfo widgetId actions nameEdit =
     ParamEdit.Info
     { ParamEdit.iNameEdit = nameEdit
-    , ParamEdit.iMAddNext = actions ^. Sugar.fpAddNext & Just
+    , ParamEdit.iMAddNext = actions ^. Sugar.fpAddNext
     , ParamEdit.iMOrderBefore = actions ^. Sugar.fpMOrderBefore
     , ParamEdit.iMOrderAfter = actions ^. Sugar.fpMOrderAfter
     , ParamEdit.iDel = actions ^. Sugar.fpDelete

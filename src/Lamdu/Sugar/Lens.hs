@@ -187,7 +187,7 @@ paramInfoTagNames ::
 paramInfoTagNames f (ParamInfo tag actions) =
     ParamInfo
     <$> tagNames f tag
-    <*> (fpAddNext . tagSelectionTagNames) f actions
+    <*> (fpAddNext . Lens._Just . tagSelectionTagNames) f actions
 
 binderTagNames ::
     Functor m =>

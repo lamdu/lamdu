@@ -53,7 +53,7 @@ data Annotation = Annotation
 
 data FuncParamActions name m =
     FuncParamActions
-    { _fpAddNext :: TagSelection name m ()
+    { _fpAddNext :: Maybe (TagSelection name m ())
     , _fpDelete :: m ()
     , _fpMOrderBefore :: Maybe (m ())
     , _fpMOrderAfter :: Maybe (m ())

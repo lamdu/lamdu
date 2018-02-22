@@ -299,7 +299,7 @@ withParam ::
 withParam (FuncParam ann (ParamInfo tag fpActions)) =
     ParamInfo
     <$> withTag TaggedVar varInfo tag
-    <*> liftCPS (fpAddNext toTagSelection fpActions)
+    <*> liftCPS ((fpAddNext . Lens._Just) toTagSelection fpActions)
     <&> FuncParam ann
     where
         varInfo = ann ^. aInferredType & isFunctionType
