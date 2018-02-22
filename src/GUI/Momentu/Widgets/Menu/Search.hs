@@ -90,7 +90,7 @@ basicSearchTermEdit searchMenuId allowedSearchTerm =
 
 assignCursor ::
     (MonadReader env m, HasState env) =>
-    Widget.Id -> [Widget.Id] -> m a -> m a
+    Id -> [Id] -> m a -> m a
 assignCursor searchMenuId resultIds action =
     do
         searchTerm <- readSearchTerm searchMenuId
@@ -118,7 +118,7 @@ assignCursor searchMenuId resultIds action =
     where
         sub x = State.isSubCursor ?? x
 
-enterWithSearchTerm :: Text -> Widget.Id -> State.Update
+enterWithSearchTerm :: Text -> Id -> State.Update
 enterWithSearchTerm searchTerm searchMenuId =
     State.updateCursor searchMenuId
     <> State.updateWidgetState searchMenuId searchTerm
@@ -154,7 +154,7 @@ make makeSearchTerm makeOptions annotation mNextEntry searchMenuId =
 -- Add events on search term to pick the first result.
 addPickFirstResultEvent ::
     (MonadReader env m, Menu.HasConfig env, HasState env, Applicative f) =>
-    Widget.Id -> Maybe Id -> Maybe (Widget.PreEvent (f Menu.PickResult))->
+    Id -> Maybe Id -> Maybe (Widget.PreEvent (f Menu.PickResult))->
     m (Widget (f State.Update) -> Widget (f State.Update))
 addPickFirstResultEvent searchMenuId mNextEntry mPickFirst =
     do
@@ -173,7 +173,7 @@ addPickFirstResultEvent searchMenuId mNextEntry mPickFirst =
 
 searchTermEditEventMap ::
     (MonadReader env m, HasState env) =>
-    Widget.Id -> (Text -> Bool) -> m (EventMap State.Update)
+    Id -> (Text -> Bool) -> m (EventMap State.Update)
 searchTermEditEventMap searchMenuId allowedTerms =
     readSearchTerm searchMenuId
     <&>
