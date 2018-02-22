@@ -1,11 +1,15 @@
 {-# LANGUAGE LambdaCase, NoImplicitPrelude, OverloadedStrings #-}
 module Lamdu.GUI.ExpressionEdit.HoleEdit.ValTerms
-    ( expr, allowedSearchTermCommon, allowedFragmentSearchTerm
+    ( expr
+    , allowedSearchTermCommon
+    , allowedFragmentSearchTerm
+    , getSearchStringRemainder
     ) where
 
 import qualified Control.Lens as Lens
 import qualified Data.Char as Char
 import qualified Data.Text as Text
+import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
 import qualified Lamdu.Builtins.Anchors as Builtins
 import qualified Lamdu.CharClassification as Chars
 import           Lamdu.Formatting (Format(..))
@@ -110,3 +114,17 @@ allowedFragmentSearchTerm searchTerm =
             case Text.uncons t of
             Just (c, rest) -> c == '.' && Text.all Char.isAlphaNum rest
             Nothing -> False
+
+-- | Given a hole result sugared expression, determine which part of
+-- the search term is a remainder and which belongs inside the hole
+-- result expr
+getSearchStringRemainder :: SearchMenu.ResultsContext -> Sugar.Expression name m a -> Text
+getSearchStringRemainder ctx holeResultConverted
+    | isA Sugar._BodyInject = ""
+    | isSuffixed ":" = ":"
+    | isSuffixed "." = "."
+    | otherwise = ""
+    where
+        isSuffixed suffix = Text.isSuffixOf suffix (ctx ^. SearchMenu.rSearchTerm)
+        fragmentExpr = Sugar.rBody . Sugar._BodyFragment . Sugar.fExpr
+        isA x = any (`Lens.has` holeResultConverted) [Sugar.rBody . x, fragmentExpr . Sugar.rBody . x]

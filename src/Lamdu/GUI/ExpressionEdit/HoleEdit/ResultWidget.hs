@@ -5,7 +5,6 @@ module Lamdu.GUI.ExpressionEdit.HoleEdit.ResultWidget
     ) where
 
 import qualified Control.Lens as Lens
-import qualified Data.Text as Text
 import           GUI.Momentu (Widget, WithTextPos(..))
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Element as Element
@@ -24,6 +23,7 @@ import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import           Lamdu.Config (HasConfig(..))
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Config.Theme as Theme
+import           Lamdu.GUI.ExpressionEdit.HoleEdit.ValTerms (getSearchStringRemainder)
 import qualified Lamdu.GUI.ExpressionGui as ExprGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
@@ -36,20 +36,6 @@ import           Revision.Deltum.Transaction (Transaction)
 import           Lamdu.Prelude
 
 type T = Transaction
-
--- | Given a hole result sugared expression, determine which part of
--- the search term is a remainder and which belongs inside the hole
--- result expr
-getSearchStringRemainder :: SearchMenu.ResultsContext -> Sugar.Expression name m a -> Text
-getSearchStringRemainder ctx holeResultConverted
-    | isA Sugar._BodyInject = ""
-    | isSuffixed ":" = ":"
-    | isSuffixed "." = "."
-    | otherwise = ""
-    where
-        isSuffixed suffix = Text.isSuffixOf suffix (ctx ^. SearchMenu.rSearchTerm)
-        fragmentExpr = Sugar.rBody . Sugar._BodyFragment . Sugar.fExpr
-        isA x = any (`Lens.has` holeResultConverted) [Sugar.rBody . x, fragmentExpr . Sugar.rBody . x]
 
 setFocalAreaToFullSize :: WithTextPos (Widget a) -> WithTextPos (Widget a)
 setFocalAreaToFullSize =
