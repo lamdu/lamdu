@@ -69,7 +69,7 @@ eventParamDelEventMap fpDel keys docSuffix dstPosId =
 data Info m = Info
     { iNameEdit :: WithTextPos (Widget (T m GuiState.Update))
     , iDel :: T m ()
-    , iMAddNext :: Maybe (Sugar.TagSelection (Name (T m)) (T m) Sugar.EntityId)
+    , iMAddNext :: Maybe (Sugar.TagSelection (Name (T m)) (T m) ())
     , iMOrderBefore :: Maybe (T m ())
     , iMOrderAfter :: Maybe (T m ())
     , iId :: Widget.Id
