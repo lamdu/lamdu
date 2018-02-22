@@ -1,9 +1,12 @@
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE LambdaCase, NoImplicitPrelude, OverloadedStrings #-}
 module Lamdu.GUI.ExpressionEdit.HoleEdit.ValTerms
     ( expr
     , allowedSearchTermCommon
     , allowedFragmentSearchTerm
     , getSearchStringRemainder
+    , verifyInjectSuffix
+    , definitePart
     ) where
 
 import qualified Control.Lens as Lens
@@ -61,6 +64,12 @@ bodyShape = \case
             Sugar.Case Sugar.LambdaCase (Sugar.Composite [] Sugar.ClosedComposite{} _) -> ["absurd"]
             _ -> []
     Sugar.BodyIfElse {} -> ["if", ":"]
+    -- An inject "base expr" can have various things in its val filled
+    -- in, so the result group based on it may have both nullary
+    -- inject (".") and value inject (":"). Thus, an inject must match
+    -- both.
+    -- So these terms are used to filter the whole group, and then
+    -- isExactMatch (see below) is used to filter each entry.
     Sugar.BodyInject (Sugar.Inject tag _) ->
         (nameText (tag ^. Sugar.tagName) <>) <$> [":", "."]
     Sugar.BodyLiteral i -> [formatLiteral i]
@@ -128,3 +137,23 @@ getSearchStringRemainder ctx holeResultConverted
         isSuffixed suffix = Text.isSuffixOf suffix (ctx ^. SearchMenu.rSearchTerm)
         fragmentExpr = Sugar.rBody . Sugar._BodyFragment . Sugar.fExpr
         isA x = any (`Lens.has` holeResultConverted) [Sugar.rBody . x, fragmentExpr . Sugar.rBody . x]
+
+injectMVal :: Lens.Traversal' (Sugar.Expression name m a) (Maybe (Sugar.Expression name m a))
+injectMVal = Sugar.rBody . Sugar._BodyInject . Sugar.iMVal
+
+verifyInjectSuffix :: Text -> Sugar.Expression name m a -> Bool
+verifyInjectSuffix searchTerm val =
+    case suffix of
+    Just ':' | Lens.has (injectMVal . Lens._Nothing) val -> False
+    Just '.' | Lens.has (injectMVal . Lens._Just) val -> False
+    _ -> True
+    where
+        suffix = searchTerm ^? Lens.reversed . Lens._Cons . _1
+
+-- | Returns the part of the search term that is DEFINITELY part of
+-- it. Some of the stripped suffix may be part of the search term,
+-- depending on the val.
+definitePart :: Text -> Text
+definitePart searchTerm
+    | any (`Text.isSuffixOf` searchTerm) [":", "."] = Text.init searchTerm
+    | otherwise = searchTerm
