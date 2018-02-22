@@ -447,16 +447,15 @@ data NewParamPosition = NewParamBefore | NewParamAfter
 
 convertToRecordParams ::
     Monad m =>
-    T m (ValI m) -> BinderKind m -> StoredLam m -> T m T.Tag -> NewParamPosition ->
+    T m (ValI m) -> BinderKind m -> StoredLam m -> NewParamPosition -> T.Tag ->
     T m EntityId
-convertToRecordParams mkNewArg binderKind storedLam mkNewParam newParamPosition =
+convertToRecordParams mkNewArg binderKind storedLam newParamPosition newParam =
     do
         oldParam <- Anchors.assocTag paramVar & getP
         -- the associated tag becomes an actual field in the new
         -- params record, remove the duplicate associated tag so that
         -- the params record is not named the same as the first param
         setP (Anchors.assocTag paramVar) Anchors.anonTag
-        newParam <- mkNewParam
         case newParamPosition of
             NewParamBefore -> [newParam, oldParam]
             NewParamAfter -> [oldParam, newParam]
@@ -484,7 +483,7 @@ makeNonRecordParamActions binderKind storedLam =
         del <- makeDeleteLambda binderKind storedLam
         postProcess <- ConvertM.postProcess
         let addParamAfter tag =
-                convertToRecordParams DataOps.newHole binderKind storedLam (pure tag) NewParamAfter
+                convertToRecordParams DataOps.newHole binderKind storedLam NewParamAfter tag
                 <* postProcess
         oldParam <- Anchors.assocTag param & getP
         addNext <-
@@ -555,8 +554,9 @@ convertNonRecordParam binderKind lam@(V.Lam param _) lamExprPl =
             , _cpParamInfos = Map.empty
             , _cpParams = funcParam
             , _cpAddFirstParam =
-                convertToRecordParams DataOps.newHole
-                binderKind storedLam DataOps.genNewTag NewParamBefore
+                DataOps.genNewTag
+                >>= convertToRecordParams DataOps.newHole binderKind storedLam
+                    NewParamBefore
             , cpScopes = BinderBodyScope $ mkCpScopesOfLam lamExprPl
             , cpMLamParam = Just (lamExprPl ^. Input.entityId, param)
             }
