@@ -101,11 +101,12 @@ makeWidget resultId holeResultConverted =
 
 make ::
     Monad m =>
+    Maybe Widget.Id ->
     SearchMenu.ResultsContext ->
     Widget.Id ->
     Sugar.HoleResult (T m) (Sugar.Expression (Name (T m)) (T m) ExprGui.Payload) ->
     ExprGuiM m (Menu.RenderedOption (T m))
-make ctx resultId holeResult =
+make mNextEntry ctx resultId holeResult =
     makeWidget resultId holeResultConverted
     & GuiState.assignCursor resultId (pickResult ^. Menu.pickDest)
     <&>
@@ -132,11 +133,11 @@ make ctx resultId holeResult =
             Nothing ->
                 Menu.PickResult
                 { Menu._pickDest = holeResultId
-                , Menu._pickDestIsEntryPoint = False
+                , Menu._pickNextEntryPoint = fromMaybe holeResultId mNextEntry
                 }
             Just innerEntryPoint ->
                 Menu.PickResult
                 { Menu._pickDest = innerEntryPoint
-                , Menu._pickDestIsEntryPoint = True
+                , Menu._pickNextEntryPoint = innerEntryPoint
                 }
         holeResultConverted = holeResult ^. Sugar.holeResultConverted

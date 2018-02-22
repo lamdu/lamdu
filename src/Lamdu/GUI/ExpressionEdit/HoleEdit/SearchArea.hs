@@ -74,7 +74,11 @@ makeRenderedResult pl ctx result =
     rHoleResult result
     & transaction
     <&> Lens.mapped %~ postProcessSugar (pl ^. Sugar.plData . ExprGui.plMinOpPrec)
-    >>= ResultWidget.make ctx (rId result)
+    >>= ResultWidget.make mNextEntry ctx (rId result)
+    where
+        mNextEntry =
+            pl ^. Sugar.plData . ExprGui.plNearestHoles . NearestHoles.next
+            <&> WidgetIds.fromEntityId
 
 postProcessSugar :: Int -> ExpressionN m () -> ExpressionN m ExprGui.Payload
 postProcessSugar minOpPrec expr =
@@ -143,19 +147,18 @@ makeSearchTerm ::
     ( MonadReader env m, HasTheme env, TextEdit.HasStyle env, GuiState.HasState env, Menu.HasConfig env
     , Applicative f
     ) =>
-    Maybe Widget.Id ->
     Widget.Id ->
     (Text -> Bool) ->
     Maybe (Widget.PreEvent (f Menu.PickResult)) ->
     m (WithTextPos (Widget (f GuiState.Update)))
-makeSearchTerm mNextEntry searchMenuId allowedSearchTerm mPickFirst =
+makeSearchTerm searchMenuId allowedSearchTerm mPickFirst =
     do
         isActive <- GuiState.isSubCursor ?? searchMenuId
         let bgColor
                 | isActive = Theme.holeActiveSearchTermBGColor
                 | otherwise = Theme.holeSearchTermBGColor
         theme <- Lens.view Theme.theme <&> Theme.hole
-        (SearchMenu.addPickFirstResultEvent searchMenuId mNextEntry mPickFirst <&> (Align.tValue %~))
+        (SearchMenu.addPickFirstResultEvent searchMenuId mPickFirst <&> (Align.tValue %~))
             <*> ( SearchMenu.basicSearchTermEdit searchMenuId allowedSearchTerm
                     <&> Align.tValue . Lens.mapped %~ pure
                 )
@@ -182,7 +185,7 @@ make options mOptionLiteral pl allowedTerms =
             maybeAddAnnotationPl pl
             <*>
             ( fdWrap
-                <*> makeSearchTerm Nothing searchMenuId allowedTerms Nothing <&> Responsive.fromWithTextPos
+                <*> makeSearchTerm searchMenuId allowedTerms Nothing <&> Responsive.fromWithTextPos
             )
         isActive <- HoleWidgetIds.isActive widgetIds
         searchTermEventMap <- SearchMenu.searchTermEditEventMap searchMenuId adhocAllowedTerms <&> fmap pure
@@ -202,8 +205,8 @@ make options mOptionLiteral pl allowedTerms =
                     -- it is harder to implement, so just wrap it
                     -- here
                     (fdWrap <&> (Lens.mapped %~))
-                        <*> SearchMenu.make (makeSearchTerm mNextEntry searchMenuId allowedTerms)
-                            makeOptions annotation mNextEntry searchMenuId
+                        <*> SearchMenu.make (makeSearchTerm searchMenuId allowedTerms)
+                            makeOptions annotation searchMenuId
                         <&> Lens.mapped . Align.tValue . Widget.eventMapMaker . Lens.mapped %~ (<> searchTermEventMap)
                         <&> Lens.mapped %~ inPlaceOfClosed . (^. Align.tValue)
             else
@@ -219,7 +222,6 @@ make options mOptionLiteral pl allowedTerms =
         widgetIds = pl ^. Sugar.plEntityId & HoleWidgetIds.make
         searchMenuId = hidOpen widgetIds
         isAHoleInHole = ExprGui.isHoleResult pl
-        mNextEntry = pl ^. Sugar.plData . ExprGui.plNearestHoles . NearestHoles.next <&> WidgetIds.fromEntityId
         adhocAllowedTerms txt
             | Text.length txt == 1 && Text.all (`elem` Chars.operator) txt =
                 -- Don't add first operator char,

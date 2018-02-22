@@ -174,7 +174,7 @@ makeAddFieldRow ::
     Sugar.TagSelection (Name (T f)) (T f) Sugar.EntityId -> Sugar.Payload (T f) ExprGui.Payload ->
     m (Responsive.TaggedItem (T f GuiState.Update))
 makeAddFieldRow addField pl =
-    TagEdit.makeTagHoleEdit Nothing addField mkPickResult tagHoleId
+    TagEdit.makeTagHoleEdit addField mkPickResult tagHoleId
     & TagEdit.withNameColor Theme.recordTagColor
     <&>
     \tagHole ->
@@ -188,7 +188,7 @@ makeAddFieldRow addField pl =
         mkPickResult _ dst =
             Menu.PickResult
             { Menu._pickDest = WidgetIds.fromEntityId dst
-            , Menu._pickDestIsEntryPoint = True
+            , Menu._pickNextEntryPoint = WidgetIds.fromEntityId dst
             }
 
 makeFieldRow ::

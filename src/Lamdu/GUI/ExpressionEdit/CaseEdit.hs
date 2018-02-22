@@ -175,7 +175,7 @@ makeAddAltRow ::
     Sugar.TagSelection (Name (T f)) (T f) Sugar.EntityId -> Widget.Id ->
     m (Responsive.TaggedItem (T f GuiState.Update))
 makeAddAltRow addAlt myId =
-    TagEdit.makeTagHoleEdit Nothing addAlt mkPickResult myId
+    TagEdit.makeTagHoleEdit addAlt mkPickResult myId
     & TagEdit.withNameColor Theme.caseTagColor
     <&>
     \tagHole ->
@@ -188,7 +188,7 @@ makeAddAltRow addAlt myId =
         mkPickResult _ dst =
             Menu.PickResult
             { Menu._pickDest = WidgetIds.fromEntityId dst
-            , Menu._pickDestIsEntryPoint = True
+            , Menu._pickNextEntryPoint = WidgetIds.fromEntityId dst
             }
 
 separationBar :: Theme.CodeForegroundColors -> Widget.R -> Anim.AnimId -> View

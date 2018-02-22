@@ -93,24 +93,17 @@ tagId tag = tag ^. Sugar.tagInfo . Sugar.tagInstance & WidgetIds.fromEntityId
 
 makePickEventMap ::
     (Functor f, Config.HasConfig env, MonadReader env m) =>
-    Maybe Sugar.EntityId -> f Menu.PickResult ->
+    f Menu.PickResult ->
     m (EventMap (f GuiState.Update))
-makePickEventMap mNextEntry action =
+makePickEventMap action =
     Lens.view Config.config <&> Config.menu <&>
     \config ->
     let pickKeys = Menu.keysPickOption config
         jumpNextKeys = Menu.keysPickOptionAndGotoNext config
     in
-    case mNextEntry of
-    Nothing -> E.keysEventMapMovesCursor (pickKeys <> jumpNextKeys) doc (action <&> (^. Menu.pickDest))
-    Just nextEntry ->
-        E.keysEventMapMovesCursor pickKeys doc (action <&> (^. Menu.pickDest))
-        <> E.keysEventMapMovesCursor jumpNextKeys
-            (mkDoc "New and jump to next hole") (action <&> nextEntryDest)
-        where
-            nextEntryDest pickDest
-                | pickDest ^. Menu.pickDestIsEntryPoint = pickDest ^. Menu.pickDest
-                | otherwise = WidgetIds.fromEntityId nextEntry
+    E.keysEventMapMovesCursor pickKeys doc (action <&> (^. Menu.pickDest))
+    <> E.keysEventMapMovesCursor jumpNextKeys
+        (mkDoc "New and jump to next hole") (action <&> (^. Menu.pickNextEntryPoint))
     where
         doc = mkDoc "New"
         mkDoc x = E.Doc ["Edit", "Tag", x]
@@ -173,11 +166,10 @@ type HasTagEditEnv env = (HasSearchTermEnv env, Menu.HasConfig env)
 
 makeHoleSearchTerm ::
     (MonadReader env m, Monad f, HasSearchTermEnv env) =>
-    Maybe Sugar.EntityId ->
     Sugar.TagSelection (Name f) f a -> (Sugar.TagInfo -> a -> Menu.PickResult) ->
     Widget.Id ->
     m (WithTextPos (Widget (f GuiState.Update)))
-makeHoleSearchTerm mNextEntry tagSelection mkPickResult holeId =
+makeHoleSearchTerm tagSelection mkPickResult holeId =
     do
         searchTerm <- SearchMenu.readSearchTerm holeId
         let newTag =
@@ -185,7 +177,7 @@ makeHoleSearchTerm mNextEntry tagSelection mkPickResult holeId =
                     (name, t, selectResult) <- tagSelection ^. Sugar.tsNewTag
                     (name ^. Name.setName) searchTerm
                     mkPickResult t selectResult & pure
-        newTagEventMap <- makePickEventMap mNextEntry newTag
+        newTagEventMap <- makePickEventMap newTag
         let pickPreEvent =
                 Widget.PreEvent
                 { Widget._pDesc = "New tag"
@@ -221,17 +213,15 @@ makeHoleSearchTerm mNextEntry tagSelection mkPickResult holeId =
 
 makeTagHoleEdit ::
     (MonadReader env m, MonadTransaction f m, HasTagEditEnv env) =>
-    Maybe Sugar.EntityId ->
     Sugar.TagSelection (Name (T f)) (T f) a -> (Sugar.TagInfo -> a -> Menu.PickResult) ->
     Widget.Id ->
     m (WithTextPos (Widget (T f GuiState.Update)))
-makeTagHoleEdit mNextEntry tagSelection mkPickResult holeId =
+makeTagHoleEdit tagSelection mkPickResult holeId =
     do
         searchTermEventMap <- SearchMenu.searchTermEditEventMap holeId allowedSearchTerm <&> fmap pure
         SearchMenu.make
-            (const (makeHoleSearchTerm mNextEntry tagSelection mkPickResult holeId))
-            (makeOptions tagSelection mkPickResult) Element.empty
-            (mNextEntry <&> WidgetIds.fromEntityId) holeId
+            (const (makeHoleSearchTerm tagSelection mkPickResult holeId))
+            (makeOptions tagSelection mkPickResult) Element.empty holeId
             ?? Menu.AnyPlace
             <&> Align.tValue . Widget.eventMapMaker . Lens.mapped %~ (<> searchTermEventMap)
 
@@ -275,7 +265,7 @@ makeTagEdit nearestHoles tag =
                 hover <*>
                 (makeTagNameEdit nearestHoles tag <&> (^. Align.tValue))
             else if isHole
-            then makeTagHoleEdit (nearestHoles ^. NearestHoles.next) (tag ^. Sugar.tagSelection) mkPickResult (WidgetIds.tagHoleId (tagId tag))
+            then makeTagHoleEdit (tag ^. Sugar.tagSelection) mkPickResult (WidgetIds.tagHoleId (tagId tag))
             else pure nameView
         widget
             <&> Widget.weakerEvents jumpHolesEventMap
@@ -287,7 +277,10 @@ makeTagEdit nearestHoles tag =
         mkPickResult tagInfo () =
             Menu.PickResult
             { Menu._pickDest = tagInfo ^. Sugar.tagInstance & WidgetIds.fromEntityId
-            , Menu._pickDestIsEntryPoint = False
+            , Menu._pickNextEntryPoint =
+                nearestHoles ^. NearestHoles.next
+                & fromMaybe (tagInfo ^. Sugar.tagInstance)
+                & WidgetIds.fromEntityId
             }
 
 withNameColor ::

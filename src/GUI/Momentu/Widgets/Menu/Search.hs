@@ -131,15 +131,15 @@ make ::
     (Maybe (Widget.PreEvent (f Menu.PickResult)) ->
      m (WithTextPos (Widget (f State.Update)))) ->
     (ResultsContext -> m (Menu.OptionList (Menu.Option m f))) ->
-    View -> Maybe Id -> Id ->
+    View -> Id ->
     m (Menu.Placement -> WithTextPos (Widget (f State.Update)))
-make makeSearchTerm makeOptions annotation mNextEntry searchMenuId =
+make makeSearchTerm makeOptions annotation searchMenuId =
     readSearchTerm searchMenuId <&> (`ResultsContext` resultsIdPrefix searchMenuId)
     >>= makeOptions
     >>=
     \options ->
     do
-        (mPickFirst, menu) <- Menu.make (annotation ^. Element.width) mNextEntry options
+        (mPickFirst, menu) <- Menu.make (annotation ^. Element.width) options
         mkHoverOptions <- Menu.hoverOptions
         let hoverMenu placement term =
                 Hover.hoverInPlaceOf (mkHoverOptions placement annotation menu a) a
@@ -154,14 +154,14 @@ make makeSearchTerm makeOptions annotation mNextEntry searchMenuId =
 -- Add events on search term to pick the first result.
 addPickFirstResultEvent ::
     (MonadReader env m, Menu.HasConfig env, HasState env, Applicative f) =>
-    Id -> Maybe Id -> Maybe (Widget.PreEvent (f Menu.PickResult))->
+    Id -> Maybe (Widget.PreEvent (f Menu.PickResult))->
     m (Widget (f State.Update) -> Widget (f State.Update))
-addPickFirstResultEvent searchMenuId mNextEntry mPickFirst =
+addPickFirstResultEvent searchMenuId mPickFirst =
     do
         pickEventMap <-
             case mPickFirst of
             Nothing -> emptyPickEventMap
-            Just pickFirst -> Menu.makePickEventMap mNextEntry ?? pickFirst
+            Just pickFirst -> Menu.makePickEventMap ?? pickFirst
         searchTerm <- readSearchTerm searchMenuId
         if Text.null searchTerm
             then pure (Widget.weakerEvents pickEventMap)
