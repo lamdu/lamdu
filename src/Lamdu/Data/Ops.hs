@@ -28,7 +28,6 @@ import           Revision.Deltum.Property (Property(..))
 import qualified Revision.Deltum.Property as Property
 import           Revision.Deltum.Transaction (Transaction, getP, setP, modP)
 import qualified Revision.Deltum.Transaction as Transaction
-import qualified System.Random.Utils as RandomUtils
 
 import           Lamdu.Prelude
 
@@ -102,7 +101,7 @@ data CompositeExtendResult m = CompositeExtendResult
     }
 
 genNewTag :: Monad m => T m T.Tag
-genNewTag = Transaction.newKey <&> fst . GenIds.randomTag . RandomUtils.genFromHashable
+genNewTag = GenIds.transaction GenIds.randomTag
 
 recExtend :: Monad m => T.Tag -> ValI m -> T m (CompositeExtendResult m)
 recExtend tag valI =

@@ -28,7 +28,6 @@ import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Data.Ops.Subexprs as SubExprs
 import qualified Lamdu.Eval.Results as ER
 import qualified Lamdu.Eval.Results.Process as ResultsProcess
-import qualified Lamdu.Expr.GenIds as GenIds
 import           Lamdu.Expr.IRef (ValI, ValIProperty)
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Lens as ExprLens
@@ -85,9 +84,6 @@ mkStoredLam lam pl =
     StoredLam
     (lam <&> Lens.mapped %~ (^. Input.stored))
     (pl ^. Input.stored)
-
-newRandomTag :: Monad m => T m T.Tag
-newRandomTag = GenIds.transaction GenIds.randomTag
 
 setParamList ::
     Monad m =>
@@ -160,7 +156,7 @@ addFieldParam ::
     T m TagInfo
 addFieldParam mPresMode mkArg binderKind storedLam mkNewTags =
     do
-        tag <- newRandomTag
+        tag <- DataOps.genNewTag
         let tagS =
                 TagInfo
                 { _tagInstance =
@@ -464,8 +460,8 @@ convertToRecordParams ::
     T m VarToTags
 convertToRecordParams mkNewArg binderKind storedLam newParamPosition =
     do
-        tagForVar <- newRandomTag
-        tagForNewVar <- newRandomTag
+        tagForVar <- DataOps.genNewTag
+        tagForNewVar <- DataOps.genNewTag
         let
             varToTags =
                 VarToTags
