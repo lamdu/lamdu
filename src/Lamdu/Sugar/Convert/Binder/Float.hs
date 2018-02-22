@@ -126,12 +126,10 @@ addFieldToLetParamsRecord ::
     T m (NewLet m)
 addFieldToLetParamsRecord fieldTags var letLam storedLam =
     do
-        newParamTag <-
-            DataOps.genNewTag
-            >>= Params.addFieldParam Nothing mkNewArg (BinderKindLet letLam)
-            storedLam ((fieldTags ++) . pure)
-        convertVarToGetFieldParam var (newParamTag ^. tagVal)
-            (storedLam ^. Params.slLam)
+        paramTag <- DataOps.genNewTag
+        Params.addFieldParam Nothing mkNewArg (BinderKindLet letLam) storedLam
+            ((fieldTags ++) . pure) paramTag
+        convertVarToGetFieldParam var paramTag (storedLam ^. Params.slLam)
         Params.slLambdaProp storedLam & Property.value & NewLet & pure
     where
         mkNewArg = V.LVar var & V.BLeaf & ExprIRef.newValBody

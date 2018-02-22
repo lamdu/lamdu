@@ -47,6 +47,7 @@ import qualified Lamdu.GUI.ExpressionGui.Annotation as Annotation
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import           Lamdu.GUI.ExpressionGui.Wrap (parentDelegator)
+import qualified Lamdu.GUI.NameEdit as NameEdit
 import qualified Lamdu.GUI.ParamEdit as ParamEdit
 import qualified Lamdu.GUI.PresentationModeEdit as PresentationModeEdit
 import qualified Lamdu.GUI.Styled as Styled
@@ -71,18 +72,17 @@ nonOperatorName _ = False
 
 makeBinderNameEdit ::
     Monad m =>
-    Sugar.BinderActions (T m) ->
+    Widget.Id -> Sugar.BinderActions (Name (T m)) (T m) ->
     EventMap (T m GuiState.Update) ->
     Sugar.Tag (Name (T m)) (T m) -> (Theme.Name -> Draw.Color) ->
     ExprGuiM m (WithTextPos (Widget (T m GuiState.Update)))
-makeBinderNameEdit binderActions rhsJumperEquals tag color =
+makeBinderNameEdit binderId binderActions rhsJumperEquals tag color =
     do
-        config <- Lens.view Config.config
+        addFirstParamEventMap <-
+            ParamEdit.eventMapAddFirstParam binderId (binderActions ^. Sugar.baAddFirstParam)
         TagEdit.makeBinderTagEdit color tag
             <&> jumpToRHSViaEquals
-            <&> Align.tValue %~ Widget.weakerEvents
-                (ParamEdit.eventMapAddFirstParam config
-                 (binderActions ^. Sugar.baAddFirstParam))
+            <&> Align.tValue %~ Widget.weakerEvents addFirstParamEventMap
     where
         jumpToRHSViaEquals
             | nonOperatorName (tag ^. Sugar.tagName) =
@@ -222,23 +222,35 @@ makeMParamsEdit ::
     Monad m =>
     CurAndPrev (Maybe ScopeCursor) -> IsScopeNavFocused ->
     Widget.Id -> Widget.Id ->
-    NearestHoles -> Widget.Id -> Sugar.BinderParams (Name (T m)) (T m) ->
+    NearestHoles -> Widget.Id -> Sugar.Binder (Name (T m)) (T m) a ->
     ExprGuiM m (Maybe (ExpressionGui m))
-makeMParamsEdit mScopeCursor isScopeNavFocused delVarBackwardsId myId nearestHoles bodyId params =
-    params
-    & makeParamsEdit annotationMode nearestHoles
-      delVarBackwardsId myId bodyId
-    & ExprGuiM.withLocalMScopeId
-      ( mScopeCursor
-      <&> Lens.traversed %~ (^. Sugar.bParamScopeId) . sBinderScope
-      )
-    >>= \case
-    [] -> pure Nothing
-    paramEdits ->
-        frame
-        <*> (Options.boxSpaced ?? Options.disambiguationNone ?? paramEdits)
-        <&> Just
+makeMParamsEdit mScopeCursor isScopeNavFocused delVarBackwardsId myId nearestHoles bodyId binder =
+    do
+        isPrepend <- GuiState.isSubCursor ?? prependId
+        prependParamEdits <-
+            case binder ^. Sugar.bActions ^. Sugar.baAddFirstParam of
+            Sugar.PrependParam selection | isPrepend ->
+                TagEdit.makeTagHoleEdit selection ParamEdit.mkParamPickResult prependId
+                & NameEdit.withNameColor Theme.parameterColor
+                <&> Responsive.fromWithTextPos
+                <&> (:[])
+            _ -> pure []
+        paramEdits <-
+            makeParamsEdit annotationMode nearestHoles
+            delVarBackwardsId myId bodyId params
+            & ExprGuiM.withLocalMScopeId
+                ( mScopeCursor
+                    <&> Lens.traversed %~ (^. Sugar.bParamScopeId) . sBinderScope
+                )
+        case prependParamEdits ++ paramEdits of
+            [] -> pure Nothing
+            edits ->
+                frame
+                <*> (Options.boxSpaced ?? Options.disambiguationNone ?? edits)
+                <&> Just
     where
+        prependId = TagEdit.addParamId myId
+        params = binder ^. Sugar.bParams
         frame =
             case params of
             Sugar.Params (_:_:_) -> Styled.addValFrame
@@ -285,7 +297,7 @@ makeParts funcApplyLimit binder delVarBackwardsId myId =
         do
             mParamsEdit <-
                 makeMParamsEdit mScopeCursor isScopeNavFocused delVarBackwardsId myId
-                (binderContentNearestHoles bodyContent) bodyId params
+                (binderContentNearestHoles bodyContent) bodyId binder
             rhs <- makeBinderBodyEdit body
             Parts mParamsEdit mScopeNavEdit rhs scopeEventMap & pure
             & case mScopeNavEdit of
@@ -343,7 +355,7 @@ make pMode lhsEventMap name color binder myId =
                 (PresentationModeEdit.make presentationChoiceId (binder ^. Sugar.bParams))
         jumpHolesEventMap <- ExprEventMap.jumpHolesEventMap nearestHoles
         defNameEdit <-
-            makeBinderNameEdit (binder ^. Sugar.bActions) rhsJumperEquals
+            makeBinderNameEdit myId (binder ^. Sugar.bActions) rhsJumperEquals
             name color
             <&> (/-/ fromMaybe Element.empty mPresentationEdit)
             <&> Responsive.fromWithTextPos

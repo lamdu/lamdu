@@ -196,9 +196,10 @@ binderTagNames ::
     (Binder name1 m (Expression name1 m a))
     name0 name1
 binderTagNames f Binder{..} =
-    (\_bParams _bBody -> Binder{..})
+    (\_bParams _bBody _bActions -> Binder{..})
     <$> (_Params . traverse . traverse . paramInfoTagNames) f _bParams
     <*> (bbContent . binderContentTagNames) f _bBody
+    <*> (baAddFirstParam . _PrependParam . tagSelectionTagNames) f _bActions
 
 definitionTagNames ::
     Functor m =>

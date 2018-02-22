@@ -21,6 +21,7 @@ module Lamdu.Sugar.Types.Binder
     , Meta.DefinitionState(..)
     , BinderActions(..), baAddFirstParam, baMNodeActions
     , NullParamActions(..), npDeleteLambda
+    , AddFirstParam(..), _AddInitialParam, _PrependParam, _NeedToPickTag
     , BinderParams(..), _BinderWithoutParams, _NullParam, _Params
     , BinderParamScopeId(..), bParamScopeId
     , BinderBody(..), bbAddOuterLet, bbContent
@@ -114,8 +115,15 @@ data Let name m expr = Let
     , _lBody :: BinderBody name m expr -- "let foo = bar in [[x]]"
     } deriving (Functor, Foldable, Traversable)
 
-data BinderActions m = BinderActions
-    { _baAddFirstParam :: m EntityId
+data AddFirstParam name m
+    = -- The inital param is created with anon-tag
+      AddInitialParam (m EntityId)
+    | PrependParam (TagSelection name m ())
+    | -- When the param has anon tag one can't add another one
+      NeedToPickTag
+
+data BinderActions name m = BinderActions
+    { _baAddFirstParam :: AddFirstParam name m
     , _baMNodeActions :: Maybe (NodeActions m)
     }
 
@@ -150,7 +158,7 @@ data Binder name m expr = Binder
     , _bParams :: BinderParams name m
     , _bLamId :: Maybe EntityId
     , _bBody :: BinderBody name m expr
-    , _bActions :: BinderActions m
+    , _bActions :: BinderActions name m
     , -- The scope inside a lambda (if exists)
       _bBodyScopes :: BinderBodyScope
     } deriving (Functor, Foldable, Traversable)
@@ -166,6 +174,7 @@ Lens.makeLenses ''LetActions
 Lens.makeLenses ''NodeActions
 Lens.makeLenses ''NullParamActions
 Lens.makeLenses ''ParamInfo
+Lens.makePrisms ''AddFirstParam
 Lens.makePrisms ''BinderContent
 Lens.makePrisms ''BinderParams
 Lens.makePrisms ''DetachAction

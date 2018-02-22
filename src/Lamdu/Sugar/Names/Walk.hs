@@ -143,14 +143,20 @@ toBinderBody ::
     m (BinderBody (NewName m) (TM m) b)
 toBinderBody expr = bbContent %%~ toBinderContent expr
 
+toBinderActions ::
+    MonadNaming m =>
+    BinderActions (OldName m) (TM m) ->
+    m (BinderActions (NewName m) (TM m))
+toBinderActions = (baAddFirstParam . _PrependParam) toTagSelection
+
 toBinder ::
     MonadNaming m => (a -> m b) ->
     Binder (OldName m) (TM m) a ->
     m (Binder (NewName m) (TM m) b)
 toBinder expr Binder{..} =
-    toBinderBody expr _bBody
-    & unCPS (withBinderParams _bParams)
-    <&> \(_bParams, _bBody) -> Binder{..}
+    (\(_bParams, _bBody) _bActions -> Binder{..})
+    <$> unCPS (withBinderParams _bParams) (toBinderBody expr _bBody)
+    <*> toBinderActions _bActions
 
 toLam ::
     MonadNaming m => (a -> m b) ->

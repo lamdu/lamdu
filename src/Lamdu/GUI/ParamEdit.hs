@@ -1,7 +1,7 @@
-{-# LANGUAGE NoImplicitPrelude, OverloadedStrings #-}
+{-# LANGUAGE NoImplicitPrelude, OverloadedStrings, LambdaCase #-}
 module Lamdu.GUI.ParamEdit
     ( Info(..), make
-    , eventMapAddFirstParam
+    , eventMapAddFirstParam, mkParamPickResult
     ) where
 
 import qualified Control.Lens as Lens
@@ -16,7 +16,7 @@ import qualified GUI.Momentu.State as GuiState
 import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Menu as Menu
-import           Lamdu.Config (Config)
+import           Lamdu.Config (Config, HasConfig(..))
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.GUI.ExpressionEdit.TagEdit as TagEdit
@@ -38,19 +38,27 @@ enterNewParam :: Sugar.EntityId -> GuiState.Update
 enterNewParam = GuiState.updateCursor . WidgetIds.tagHoleId . WidgetIds.fromEntityId
 
 eventMapAddFirstParam ::
-    Functor m => Config -> T m Sugar.EntityId ->
-    EventMap (T m GuiState.Update)
-eventMapAddFirstParam config addFirstParam =
-    addFirstParam
-    <&> enterNewParam
-    & E.keyPresses (Config.addNextParamKeys config <&> toModKey)
-        (E.Doc ["Edit", "Add parameter"])
+    (MonadReader env m, Applicative f, HasConfig env) =>
+    Widget.Id ->
+    Sugar.AddFirstParam name f ->
+    m (EventMap (f GuiState.Update))
+eventMapAddFirstParam binderId =
+    \case
+    Sugar.NeedToPickTag -> pure mempty
+    Sugar.PrependParam{} -> TagEdit.addParamId binderId & GuiState.updateCursor & pure & mk
+    Sugar.AddInitialParam x -> x <&> enterNewParam & mk
+    where
+        mk action =
+            Lens.view Config.config <&> Config.addNextParamKeys
+            <&>
+            \keys ->
+            E.keyPresses (keys <&> toModKey) (E.Doc ["Edit", "Add parameter"]) action
 
 eventMapAddNextParam ::
     Applicative f => Config -> Widget.Id -> EventMap (f GuiState.Update)
-eventMapAddNextParam config myId =
+eventMapAddNextParam conf myId =
     TagEdit.addParamId myId & pure
-    & E.keysEventMapMovesCursor (Config.addNextParamKeys config)
+    & E.keysEventMapMovesCursor (Config.addNextParamKeys conf)
         (E.Doc ["Edit", "Add next parameter"])
 
 eventMapOrderParam ::
@@ -75,6 +83,16 @@ data Info m = Info
     , iId :: Widget.Id
     }
 
+mkParamPickResult :: Sugar.TagInfo -> a -> Menu.PickResult
+mkParamPickResult tagInfo _ =
+    Menu.PickResult
+    { Menu._pickDest = tagInfo ^. Sugar.tagInstance & WidgetIds.fromEntityId
+    , Menu._pickNextEntryPoint =
+        tagInfo ^. Sugar.tagInstance
+        & WidgetIds.fromEntityId
+        & TagEdit.addParamId
+    }
+
 -- exported for use in definition sugaring.
 make ::
     Monad m =>
@@ -83,14 +101,14 @@ make ::
     Sugar.FuncParam (Info m) -> ExprGuiM m [ExpressionGui m]
 make annotationOpts prevId nextId param =
     do
-        config <- Lens.view Config.config
+        conf <- Lens.view Config.config
         let paramEventMap =
                 mconcat
-                [ eventParamDelEventMap (iDel info) (Config.delForwardKeys config) "" nextId
-                , eventParamDelEventMap (iDel info) (Config.delBackwardKeys config) " backwards" prevId
-                , (eventMapAddNextParam config myId <$ iMAddNext info) ^. Lens._Just
-                , foldMap (eventMapOrderParam (Config.paramOrderBeforeKeys config) "before") (iMOrderBefore info)
-                , foldMap (eventMapOrderParam (Config.paramOrderAfterKeys config) "after") (iMOrderAfter info)
+                [ eventParamDelEventMap (iDel info) (Config.delForwardKeys conf) "" nextId
+                , eventParamDelEventMap (iDel info) (Config.delBackwardKeys conf) " backwards" prevId
+                , (eventMapAddNextParam conf myId <$ iMAddNext info) ^. Lens._Just
+                , foldMap (eventMapOrderParam (Config.paramOrderBeforeKeys conf) "before") (iMOrderBefore info)
+                , foldMap (eventMapOrderParam (Config.paramOrderAfterKeys conf) "after") (iMOrderAfter info)
                 ]
         wideAnnotationBehavior <-
             GuiState.isSubCursor ?? myId
@@ -110,20 +128,12 @@ make annotationOpts prevId nextId param =
             case mAddParam of
             Nothing -> pure []
             Just addParam ->
-                TagEdit.makeTagHoleEdit addParam mkPickResult addId
+                TagEdit.makeTagHoleEdit addParam mkParamPickResult addId
                 & NameEdit.withNameColor Theme.parameterColor
                 <&> Responsive.fromWithTextPos
                 <&> (:[])
         paramEdit : addParamEdits & pure
     where
-        mkPickResult tagInfo _ =
-            Menu.PickResult
-            { Menu._pickDest = tagInfo ^. Sugar.tagInstance & WidgetIds.fromEntityId
-            , Menu._pickNextEntryPoint =
-                tagInfo ^. Sugar.tagInstance
-                & WidgetIds.fromEntityId
-                & TagEdit.addParamId
-            }
         myId = iId info
         addId = TagEdit.addParamId myId
         info = param ^. Sugar.fpInfo
