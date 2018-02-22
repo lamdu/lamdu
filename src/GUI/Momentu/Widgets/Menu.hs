@@ -225,7 +225,7 @@ makePickEventMap =
     E.keysEventMapMovesCursor (keysPickOptionAndGotoNext keys)
     (E.Doc [pick ^. Widget.pDesc <> ", Next entry"]) (pick ^. Widget.pAction <&> (^. pickNextEntryPoint))
     <>
-    E.keysEventMapMovesCursor (mappend keysPickOption keysPickOptionAndGotoNext keys)
+    E.keysEventMapMovesCursor (keysPickOption keys)
     (E.Doc [pick ^. Widget.pDesc]) (pick ^. Widget.pAction <&> (^. pickDest))
 
 addPickers ::

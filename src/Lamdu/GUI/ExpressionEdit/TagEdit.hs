@@ -1,7 +1,7 @@
 {-# LANGUAGE NoImplicitPrelude, OverloadedStrings, FlexibleContexts, ConstraintKinds #-}
 module Lamdu.GUI.ExpressionEdit.TagEdit
     ( makeRecordTag, makeCaseTag, makeTagView
-    , makeParamTag
+    , makeParamTag, addParamId
     , makeArgTag
     , makeTagHoleEdit
     , makeBinderTagEdit
@@ -246,17 +246,22 @@ makeTagEdit ::
     (MonadReader env m, MonadTransaction f m, HasTagEditEnv env) =>
     NearestHoles -> Sugar.Tag (Name (T f)) (T f) ->
     m (WithTextPos (Widget (T f GuiState.Update)))
-makeTagEdit = makeTagEditWith id
+makeTagEdit = makeTagEditWith id defaultOnPickNext
+
+defaultOnPickNext :: Maybe Sugar.EntityId -> Sugar.EntityId -> Widget.Id
+defaultOnPickNext mNextEntry pos = fromMaybe pos mNextEntry & WidgetIds.fromEntityId
 
 makeTagEditWith ::
     ( MonadReader env m, MonadReader env n, MonadTransaction f m
     , HasTagEditEnv env
     ) =>
     (n (WithTextPos (Widget (T f GuiState.Update))) ->
-     m (WithTextPos (Widget (T f GuiState.Update)))) -> NearestHoles ->
+     m (WithTextPos (Widget (T f GuiState.Update)))) ->
+    (Maybe Sugar.EntityId -> Sugar.EntityId -> Widget.Id) ->
+    NearestHoles ->
     Sugar.Tag (Name (T f)) (T f) ->
     m (WithTextPos (Widget (T f GuiState.Update)))
-makeTagEditWith onView nearestHoles tag =
+makeTagEditWith onView onPickNext nearestHoles tag =
     do
         jumpHolesEventMap <- ExprEventMap.jumpHolesEventMap nearestHoles
         isRenaming <- GuiState.isSubCursor ?? tagRenameId myId
@@ -294,9 +299,7 @@ makeTagEditWith onView nearestHoles tag =
             Menu.PickResult
             { Menu._pickDest = tagInfo ^. Sugar.tagInstance & WidgetIds.fromEntityId
             , Menu._pickNextEntryPoint =
-                nearestHoles ^. NearestHoles.next
-                & fromMaybe (tagInfo ^. Sugar.tagInstance)
-                & WidgetIds.fromEntityId
+                onPickNext (nearestHoles ^. NearestHoles.next) (tagInfo ^. Sugar.tagInstance)
             }
 
 makeRecordTag ::
@@ -315,26 +318,21 @@ makeCaseTag nearestHoles tag =
     makeTagEdit nearestHoles tag
     & NameEdit.withNameColor Theme.caseTagColor
 
+addParamId :: Widget.Id -> Widget.Id
+addParamId = (`Widget.joinId` ["add param"])
+
 makeLHSTag ::
     (MonadReader env m, MonadTransaction f m, HasTagEditEnv env, HasStyle env) =>
+    (Maybe Sugar.EntityId -> Sugar.EntityId -> Widget.Id) ->
     (Theme.Name -> Draw.Color) -> Sugar.Tag (Name (T f)) (T f) ->
     m (WithTextPos (Widget (T f GuiState.Update)))
-makeLHSTag color tag =
-    makeTagEditWith onView NearestHoles.none tag
+makeLHSTag onPickNext color tag =
+    makeTagEditWith onView onPickNext NearestHoles.none tag
     & NameEdit.withNameColor color
-    & Reader.local (Menu.config %~ removeGoNextKeys)
     where
         -- Apply the name style only when the tag is a view. If it is
         -- a tag hole, the name style (indicating auto-name) makes no sense
         onView = NameEdit.styleNameAtBinder color (tag ^. Sugar.tagName)
-        removeGoNextKeys c =
-            -- Would be nicer with lens but that would make the JSON format ugly..
-            c
-            { Menu.configKeys =
-                (Menu.configKeys c)
-                { Menu.keysPickOptionAndGotoNext = []
-                }
-            }
 
 makeParamTag ::
     ( MonadReader env f, HasTheme env, HasConfig env, HasStyle env
@@ -344,7 +342,10 @@ makeParamTag ::
     ) =>
     Sugar.Tag (Name (T m)) (T m) ->
     f (WithTextPos (Widget (T m GuiState.Update)))
-makeParamTag = makeLHSTag Theme.parameterColor
+makeParamTag =
+    makeLHSTag onPickNext Theme.parameterColor
+    where
+        onPickNext _ pos = WidgetIds.fromEntityId pos & addParamId
 
 -- | Unfocusable tag view (e.g: in apply args)
 makeArgTag ::
@@ -368,4 +369,15 @@ makeBinderTagEdit ::
     ) =>
     (Theme.Name -> Draw.Color) -> Sugar.Tag (Name (T f)) (T f) ->
     m (WithTextPos (Widget (T f GuiState.Update)))
-makeBinderTagEdit = makeLHSTag
+makeBinderTagEdit color tag =
+    makeLHSTag defaultOnPickNext color tag
+    & Reader.local (Menu.config %~ removeGoNextKeys)
+    where
+        removeGoNextKeys c =
+            -- Would be nicer with lens but that would make the JSON format ugly..
+            c
+            { Menu.configKeys =
+                (Menu.configKeys c)
+                { Menu.keysPickOptionAndGotoNext = []
+                }
+            }

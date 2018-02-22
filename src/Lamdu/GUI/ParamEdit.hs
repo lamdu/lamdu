@@ -18,11 +18,13 @@ import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Menu as Menu
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
+import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.GUI.ExpressionEdit.TagEdit as TagEdit
 import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExprGui
 import qualified Lamdu.GUI.ExpressionGui.Annotation as Annotation
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
+import qualified Lamdu.GUI.NameEdit as NameEdit
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Name (Name)
 import qualified Lamdu.Sugar.Types as Sugar
@@ -44,13 +46,10 @@ eventMapAddFirstParam config addFirstParam =
     & E.keyPresses (Config.addNextParamKeys config <&> toModKey)
         (E.Doc ["Edit", "Add parameter"])
 
-addParamId :: Widget.Id -> Widget.Id
-addParamId = (`Widget.joinId` ["add param"])
-
 eventMapAddNextParam ::
     Applicative f => Config -> Widget.Id -> EventMap (f GuiState.Update)
 eventMapAddNextParam config myId =
-    addParamId myId & pure
+    TagEdit.addParamId myId & pure
     & E.keysEventMapMovesCursor (Config.addNextParamKeys config)
         (E.Doc ["Edit", "Add next parameter"])
 
@@ -101,7 +100,7 @@ make annotationOpts prevId nextId param =
             wideAnnotationBehavior ExprGui.showAnnotationWhenVerbose
             (param ^. Sugar.fpAnnotation)
             ?? Responsive.fromWithTextPos (iNameEdit info)
-            <&> Widget.weakerEvents paramEventMap
+            <&> Widget.widget . Widget.eventMapMaker . Lens.mapped %~ (<> paramEventMap)
             & Reader.local (Element.animIdPrefix .~ Widget.toAnimId myId)
         mAddParam <-
             GuiState.isSubCursor ?? addId
@@ -112,6 +111,7 @@ make annotationOpts prevId nextId param =
             Nothing -> pure []
             Just addParam ->
                 TagEdit.makeTagHoleEdit addParam mkPickResult addId
+                & NameEdit.withNameColor Theme.parameterColor
                 <&> Responsive.fromWithTextPos
                 <&> (:[])
         paramEdit : addParamEdits & pure
@@ -119,8 +119,11 @@ make annotationOpts prevId nextId param =
         mkPickResult tagInfo _ =
             Menu.PickResult
             { Menu._pickDest = tagInfo ^. Sugar.tagInstance & WidgetIds.fromEntityId
-            , Menu._pickNextEntryPoint = tagInfo ^. Sugar.tagInstance & WidgetIds.fromEntityId
+            , Menu._pickNextEntryPoint =
+                tagInfo ^. Sugar.tagInstance
+                & WidgetIds.fromEntityId
+                & TagEdit.addParamId
             }
         myId = iId info
-        addId = addParamId myId
+        addId = TagEdit.addParamId myId
         info = param ^. Sugar.fpInfo
