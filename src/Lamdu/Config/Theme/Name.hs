@@ -20,6 +20,6 @@ data Name = Name
     , letColor :: Draw.Color
     , recordTagColor :: Draw.Color
     , caseTagColor :: Draw.Color
-    , paramTagColor :: Draw.Color
+    , argTagColor :: Draw.Color
     } deriving (Eq, Show)
 deriveJSON defaultOptions ''Name

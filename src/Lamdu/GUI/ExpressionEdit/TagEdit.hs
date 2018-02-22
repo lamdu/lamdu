@@ -333,7 +333,7 @@ makeArgTag name tagInstance =
     do
         nameTheme <- Lens.view Theme.theme <&> Theme.name
         NameEdit.makeView (name ^. Name.form)
-            & Reader.local (TextView.color .~ Theme.paramTagColor nameTheme)
+            & Reader.local (TextView.color .~ Theme.argTagColor nameTheme)
     & Reader.local (Element.animIdPrefix .~ animId)
     where
         animId = WidgetIds.fromEntityId tagInstance & Widget.toAnimId

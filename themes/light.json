@@ -79,7 +79,7 @@
         "collisionSuffixBGColor"     : [1.0, 0.7, 0.7, 1.0],
         "recordTagColor"             : [0.25, 0.25, 0.25, 1.0],
         "caseTagColor"               : [0.25, 0.5, 0.25, 1.0],
-        "paramTagColor"              : [0.35, 0.35, 0.35, 1.0]
+        "argTagColor"                : [0.35, 0.35, 0.35, 1.0]
     },
     "eval": {
         "staleResultTint"      : [0.5, 0.5, 0.5, 0.5],
