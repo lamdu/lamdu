@@ -132,7 +132,7 @@ addFieldToLetParamsRecord ::
 addFieldToLetParamsRecord fieldTags varToReplace letLam storedLam =
     do
         newParamTag <-
-            Params.addFieldParam Nothing mkNewArg (BinderKindLet letLam) storedLam
+            Params.addFieldParam Nothing DataOps.genNewTag mkNewArg (BinderKindLet letLam) storedLam
             ((fieldTags ++) . pure)
         convertVarToGetFieldParam varToReplace (newParamTag ^. tagVal)
             (storedLam ^. Params.slLam)

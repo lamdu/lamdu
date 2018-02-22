@@ -152,11 +152,11 @@ fixUsagesOfLamBinder fixOp binderKind storedLam =
 addFieldParam ::
     Monad m =>
     Maybe (MkProperty m PresentationMode) ->
-    T m (ValI m) -> BinderKind m -> StoredLam m -> (T.Tag -> ParamList) ->
+    T m T.Tag -> T m (ValI m) -> BinderKind m -> StoredLam m -> (T.Tag -> ParamList) ->
     T m TagInfo
-addFieldParam mPresMode mkArg binderKind storedLam mkNewTags =
+addFieldParam mPresMode genNewTag mkArg binderKind storedLam mkNewTags =
     do
-        tag <- DataOps.genNewTag
+        tag <- genNewTag
         let tagS =
                 TagInfo
                 { _tagInstance =
@@ -267,7 +267,7 @@ fieldParamActions mPresMode binderKind tags fp storedLam =
         getP (slParamList storedLam)
         <&> fromMaybe (error "no param list?")
         <&> flip (ListUtils.insertAt (length tagsBefore + 1))
-        >>= addFieldParam mPresMode DataOps.newHole binderKind storedLam
+        >>= addFieldParam mPresMode DataOps.genNewTag DataOps.newHole binderKind storedLam
         <&> (^. tagInstance)
         <&> ParamAddResultNewTag
     , _fpDelete = delFieldParamAndFixCalls binderKind tags fp storedLam
@@ -358,7 +358,7 @@ convertRecordParams mPresMode binderKind fieldParams lam@(V.Lam param _) pl =
         getP (slParamList storedLam)
         <&> fromMaybe (error "no params?")
         <&> flip (:)
-        >>= addFieldParam mPresMode DataOps.newHole binderKind storedLam
+        >>= addFieldParam mPresMode DataOps.genNewTag DataOps.newHole binderKind storedLam
         <&> (^. tagInstance)
         <&> ParamAddResultNewTag
     , cpScopes = BinderBodyScope $ mkCpScopesOfLam pl
