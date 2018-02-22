@@ -65,7 +65,7 @@ import           Lamdu.Prelude
 type T = Transaction
 
 nonOperatorName :: Name m -> Bool
-nonOperatorName (Name.Stored _ (Name.TagText x _) _) =
+nonOperatorName (Name.Stored (Name.StoredName _ (Name.TagText x _) _ _)) =
     nonEmptyAll (`notElem` Chars.operator) (Text.unpack x)
 nonOperatorName _ = False
 

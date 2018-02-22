@@ -113,7 +113,7 @@ fixTagPublished ::
     Monad m =>
     MkProperty m (Set T.Tag) -> T.Tag -> Name (T m) -> Name (T m)
 fixTagPublished publishedTags tag name =
-    name & Name._Stored . _1 %~ onSetName
+    name & Name._Stored . Name.snSet %~ onSetName
     where
         onSetName setName newName =
             setName newName *>

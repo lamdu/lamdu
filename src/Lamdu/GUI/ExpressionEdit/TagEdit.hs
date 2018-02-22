@@ -131,7 +131,7 @@ makeOptions tagSelection mkPickResult ctx
                 <&> uncurry Menu.OptionList
                 <&> fmap makeOption
     where
-        nameText = Sugar.toName . Name._Stored . _2 . Name.ttText
+        nameText = Sugar.toName . Name._Stored . Name.snDisplayText . Name.ttText
         searchTerm = ctx ^. SearchMenu.rSearchTerm
         makeOption opt =
             Menu.Option
@@ -178,7 +178,7 @@ makeHoleSearchTerm tagSelection mkPickResult holeId =
         let newTag =
                 do
                     (name, t, selectResult) <- tagSelection ^. Sugar.tsNewTag
-                    case name ^? Name._Stored . _1 of
+                    case name ^? Name._Stored . Name.snSet of
                         Nothing -> pure ()
                         Just setName -> setName searchTerm
                     mkPickResult t selectResult & pure
