@@ -14,6 +14,7 @@ module Lamdu.Sugar.Types.Binder
         , lActions, lAnnotation, lBodyScope, lBody
     , ChildScopeMapping
     -- Binders
+    , AddNextParam(..), _AddNext, _NeedToPickTagToAddNext
     , FuncParamActions(..), fpAddNext, fpDelete, fpMOrderBefore, fpMOrderAfter
     , ParamInfo(..), piActions, piTag
     , FuncParam(..), fpInfo, fpAnnotation
@@ -21,7 +22,7 @@ module Lamdu.Sugar.Types.Binder
     , Meta.DefinitionState(..)
     , BinderActions(..), baAddFirstParam, baMNodeActions
     , NullParamActions(..), npDeleteLambda
-    , AddFirstParam(..), _AddInitialParam, _PrependParam, _NeedToPickTag
+    , AddFirstParam(..), _AddInitialParam, _PrependParam, _NeedToPickTagToAddFirst
     , BinderParams(..), _BinderWithoutParams, _NullParam, _Params
     , BinderParamScopeId(..), bParamScopeId
     , BinderBody(..), bbAddOuterLet, bbContent
@@ -51,9 +52,15 @@ data Annotation = Annotation
     , _aMEvaluationResult :: CurAndPrev (Maybe EvaluationResult)
     } deriving Show
 
+data AddNextParam name m
+    = AddNext (TagSelection name m ())
+    | -- When the param has anon tag one can't add another one,
+      -- contains the EntityId of the param requiring tag.
+      NeedToPickTagToAddNext EntityId
+
 data FuncParamActions name m =
     FuncParamActions
-    { _fpAddNext :: Maybe (TagSelection name m ())
+    { _fpAddNext :: AddNextParam name m
     , _fpDelete :: m ()
     , _fpMOrderBefore :: Maybe (m ())
     , _fpMOrderAfter :: Maybe (m ())
@@ -121,7 +128,7 @@ data AddFirstParam name m
     | PrependParam (TagSelection name m ())
     | -- When the param has anon tag one can't add another one,
       -- contains the EntityId of the param requiring tag.
-      NeedToPickTag EntityId
+      NeedToPickTagToAddFirst EntityId
 
 data BinderActions name m = BinderActions
     { _baAddFirstParam :: AddFirstParam name m
@@ -176,6 +183,7 @@ Lens.makeLenses ''NodeActions
 Lens.makeLenses ''NullParamActions
 Lens.makeLenses ''ParamInfo
 Lens.makePrisms ''AddFirstParam
+Lens.makePrisms ''AddNextParam
 Lens.makePrisms ''BinderContent
 Lens.makePrisms ''BinderParams
 Lens.makePrisms ''DetachAction

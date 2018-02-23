@@ -511,7 +511,7 @@ namedParamEditInfo ::
 namedParamEditInfo widgetId actions nameEdit =
     ParamEdit.Info
     { ParamEdit.iNameEdit = nameEdit
-    , ParamEdit.iMAddNext = actions ^. Sugar.fpAddNext
+    , ParamEdit.iAddNext = actions ^. Sugar.fpAddNext & Just
     , ParamEdit.iMOrderBefore = actions ^. Sugar.fpMOrderBefore
     , ParamEdit.iMOrderAfter = actions ^. Sugar.fpMOrderAfter
     , ParamEdit.iDel = actions ^. Sugar.fpDelete
@@ -522,7 +522,7 @@ nullParamEditInfo :: Widget.Id -> WithTextPos (Widget (T m GuiState.Update)) -> 
 nullParamEditInfo widgetId nameEdit mActions =
     ParamEdit.Info
     { ParamEdit.iNameEdit = nameEdit
-    , ParamEdit.iMAddNext = Nothing
+    , ParamEdit.iAddNext = Nothing
     , ParamEdit.iMOrderBefore = Nothing
     , ParamEdit.iMOrderAfter = Nothing
     , ParamEdit.iDel = mActions ^. Sugar.npDeleteLambda

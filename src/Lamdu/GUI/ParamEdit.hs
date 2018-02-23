@@ -48,16 +48,22 @@ eventMapAddFirstParam binderId addFirst =
         enterParam = WidgetIds.tagHoleId . WidgetIds.fromEntityId
         (action, doc) =
             case addFirst of
-            Sugar.NeedToPickTag paramEntity -> (pure (enterParam paramEntity), "Name first parameter")
+            Sugar.NeedToPickTagToAddFirst x -> (pure (enterParam x), "Name first parameter")
             Sugar.PrependParam{} -> (pure (TagEdit.addParamId binderId), "Add parameter")
             Sugar.AddInitialParam x -> (x <&> enterParam, "Add parameter")
 
 eventMapAddNextParam ::
-    Applicative f => Config -> Widget.Id -> EventMap (f GuiState.Update)
-eventMapAddNextParam conf myId =
-    TagEdit.addParamId myId & pure
-    & E.keysEventMapMovesCursor (Config.addNextParamKeys conf)
-        (E.Doc ["Edit", "Add next parameter"])
+    Applicative f =>
+    Config -> Widget.Id -> Sugar.AddNextParam name f -> EventMap (f GuiState.Update)
+eventMapAddNextParam conf myId addNext =
+    E.keysEventMapMovesCursor (Config.addNextParamKeys conf)
+    (E.Doc ["Edit", doc]) (pure dst)
+    where
+        (dst, doc) =
+            case addNext of
+            Sugar.AddNext{} -> (TagEdit.addParamId myId, "Add next parameter")
+            Sugar.NeedToPickTagToAddNext x ->
+                (WidgetIds.tagHoleId (WidgetIds.fromEntityId x), "Name first parameter")
 
 eventMapOrderParam ::
     Monad m =>
@@ -75,7 +81,7 @@ eventParamDelEventMap fpDel keys docSuffix dstPosId =
 data Info m = Info
     { iNameEdit :: WithTextPos (Widget (T m GuiState.Update))
     , iDel :: T m ()
-    , iMAddNext :: Maybe (Sugar.TagSelection (Name (T m)) (T m) ())
+    , iAddNext :: Maybe (Sugar.AddNextParam (Name (T m)) (T m))
     , iMOrderBefore :: Maybe (T m ())
     , iMOrderAfter :: Maybe (T m ())
     , iId :: Widget.Id
@@ -104,7 +110,7 @@ make annotationOpts prevId nextId param =
                 mconcat
                 [ eventParamDelEventMap (iDel info) (Config.delForwardKeys conf) "" nextId
                 , eventParamDelEventMap (iDel info) (Config.delBackwardKeys conf) " backwards" prevId
-                , (eventMapAddNextParam conf myId <$ iMAddNext info) ^. Lens._Just
+                , foldMap (eventMapAddNextParam conf myId) (iAddNext info)
                 , foldMap (eventMapOrderParam (Config.paramOrderBeforeKeys conf) "before") (iMOrderBefore info)
                 , foldMap (eventMapOrderParam (Config.paramOrderAfterKeys conf) "after") (iMOrderAfter info)
                 ]
@@ -121,7 +127,7 @@ make annotationOpts prevId nextId param =
         mAddParam <-
             GuiState.isSubCursor ?? addId
             <&> guard
-            <&> (>> iMAddNext info)
+            <&> (>> (iAddNext info ^? Lens._Just . Sugar._AddNext))
         addParamEdits <-
             case mAddParam of
             Nothing -> pure []

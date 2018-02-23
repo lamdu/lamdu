@@ -260,7 +260,7 @@ fieldParamActions mPresMode binderKind tags fp storedLam =
             convertTagSelection (nameWithContext param)
             (Set.fromList tags) RequireTag (EntityId.ofTaggedEntity param) addParamAfter
         pure FuncParamActions
-            { _fpAddNext = Just addNext
+            { _fpAddNext = AddNext addNext
             , _fpDelete = delFieldParamAndFixCalls binderKind tags fp storedLam
             , _fpMOrderBefore =
                 case tagsBefore of
@@ -485,11 +485,15 @@ makeNonRecordParamActions binderKind storedLam =
                     postProcess
         oldParam <- Anchors.assocTag param & getP
         addNext <-
-            convertTagSelection (nameWithContext param)
-            (Set.singleton oldParam) RequireTag (EntityId.ofTaggedEntity param)
-            addParamAfter
+            if oldParam == Anchors.anonTag
+            then EntityId.ofTaggedEntity param oldParam & NeedToPickTagToAddNext & pure
+            else
+                convertTagSelection (nameWithContext param)
+                (Set.singleton oldParam) RequireTag (EntityId.ofTaggedEntity param)
+                addParamAfter
+                <&> AddNext
         pure FuncParamActions
-            { _fpAddNext = addNext <$ guard (oldParam /= Anchors.anonTag)
+            { _fpAddNext = addNext
             , _fpDelete = del
             , _fpMOrderBefore = Nothing
             , _fpMOrderAfter = Nothing
@@ -563,7 +567,7 @@ convertNonRecordParam binderKind lam@(V.Lam param _) lamExprPl =
             , _cpParams = funcParam
             , _cpAddFirstParam =
                 if oldParam == Anchors.anonTag
-                then NeedToPickTag (EntityId.ofTaggedEntity param oldParam)
+                then NeedToPickTagToAddFirst (EntityId.ofTaggedEntity param oldParam)
                 else PrependParam addFirstSelection
             , cpScopes = BinderBodyScope $ mkCpScopesOfLam lamExprPl
             , cpMLamParam = Just (lamExprPl ^. Input.entityId, param)
