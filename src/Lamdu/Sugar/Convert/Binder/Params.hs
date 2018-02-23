@@ -563,7 +563,7 @@ convertNonRecordParam binderKind lam@(V.Lam param _) lamExprPl =
             , _cpParams = funcParam
             , _cpAddFirstParam =
                 if oldParam == Anchors.anonTag
-                then NeedToPickTag
+                then NeedToPickTag (EntityId.ofTaggedEntity param oldParam)
                 else PrependParam addFirstSelection
             , cpScopes = BinderBodyScope $ mkCpScopesOfLam lamExprPl
             , cpMLamParam = Just (lamExprPl ^. Input.entityId, param)

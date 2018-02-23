@@ -119,8 +119,9 @@ data AddFirstParam name m
     = -- The inital param is created with anon-tag
       AddInitialParam (m EntityId)
     | PrependParam (TagSelection name m ())
-    | -- When the param has anon tag one can't add another one
-      NeedToPickTag
+    | -- When the param has anon tag one can't add another one,
+      -- contains the EntityId of the param requiring tag.
+      NeedToPickTag EntityId
 
 data BinderActions name m = BinderActions
     { _baAddFirstParam :: AddFirstParam name m

@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, OverloadedStrings, LambdaCase #-}
+{-# LANGUAGE NoImplicitPrelude, OverloadedStrings #-}
 module Lamdu.GUI.ParamEdit
     ( Info(..), make
     , eventMapAddFirstParam, mkParamPickResult
@@ -34,25 +34,23 @@ import           Lamdu.Prelude
 
 type T = Transaction
 
-enterNewParam :: Sugar.EntityId -> GuiState.Update
-enterNewParam = GuiState.updateCursor . WidgetIds.tagHoleId . WidgetIds.fromEntityId
-
 eventMapAddFirstParam ::
     (MonadReader env m, Applicative f, HasConfig env) =>
     Widget.Id ->
     Sugar.AddFirstParam name f ->
     m (EventMap (f GuiState.Update))
-eventMapAddFirstParam binderId =
-    \case
-    Sugar.NeedToPickTag -> pure mempty
-    Sugar.PrependParam{} -> TagEdit.addParamId binderId & GuiState.updateCursor & pure & mk
-    Sugar.AddInitialParam x -> x <&> enterNewParam & mk
+eventMapAddFirstParam binderId addFirst =
+    Lens.view Config.config <&> Config.addNextParamKeys
+    <&>
+    \keys ->
+    E.keysEventMapMovesCursor keys (E.Doc ["Edit", doc]) action
     where
-        mk action =
-            Lens.view Config.config <&> Config.addNextParamKeys
-            <&>
-            \keys ->
-            E.keyPresses (keys <&> toModKey) (E.Doc ["Edit", "Add parameter"]) action
+        enterParam = WidgetIds.tagHoleId . WidgetIds.fromEntityId
+        (action, doc) =
+            case addFirst of
+            Sugar.NeedToPickTag paramEntity -> (pure (enterParam paramEntity), "Name first parameter")
+            Sugar.PrependParam{} -> (pure (TagEdit.addParamId binderId), "Add parameter")
+            Sugar.AddInitialParam x -> (x <&> enterParam, "Add parameter")
 
 eventMapAddNextParam ::
     Applicative f => Config -> Widget.Id -> EventMap (f GuiState.Update)
