@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, LambdaCase, GeneralizedNewtypeDeriving, RecordWildCards, TypeFamilies, TemplateHaskell, DeriveGeneric, NoMonomorphismRestriction, OverloadedStrings #-}
+{-# LANGUAGE NoImplicitPrelude, GeneralizedNewtypeDeriving, RecordWildCards, TypeFamilies, TemplateHaskell, DeriveGeneric, NoMonomorphismRestriction, OverloadedStrings #-}
 module Lamdu.Sugar.Names.Add
     ( addToWorkArea
     ) where
@@ -33,7 +33,7 @@ import qualified Lamdu.Sugar.Names.NameGen as NameGen
 import           Lamdu.Sugar.Names.Walk (MonadNaming, Disambiguator)
 import qualified Lamdu.Sugar.Names.Walk as Walk
 import           Lamdu.Sugar.Types
-import           Revision.Deltum.Transaction (Transaction)
+import           Revision.Deltum.Transaction (Transaction, MkProperty, modP)
 
 import           Lamdu.Prelude hiding (Map)
 
@@ -244,8 +244,8 @@ toSuffixMap tagContexts =
         eachTag tag contexts = zipWith (item tag) [0..] (Set.toList contexts) & Map.fromList
         item tag idx uuid = (TaggedVarId uuid tag, idx)
 
-initialP2Env :: P1Out -> P2Env
-initialP2Env (P1Out p1tags p1contexts p1localCollisions p1texts) =
+initialP2Env :: MkProperty tm (Set T.Tag) -> P1Out -> P2Env tm
+initialP2Env publishedTags (P1Out p1tags p1contexts p1localCollisions p1texts) =
     P2Env
     { _p2NameGen = NameGen.initial
     , _p2TagTexts = tagTexts
@@ -256,6 +256,7 @@ initialP2Env (P1Out p1tags p1contexts p1localCollisions p1texts) =
     , _p2TagsAbove = globalTags
     , _p2TextsAbove = globalTags ^@.. Lens.itraversed <&> fst <&> lookupText & Set.fromList
     , _p2Tags = p1tags <&> tvIsClash
+    , _p2PublishedTags = publishedTags
     }
     where
         lookupText tag =
@@ -289,7 +290,7 @@ data TaggedVarId = TaggedVarId
     , _tvTag :: T.Tag   -- InternalName's tag
     } deriving (Eq, Ord)
 
-data P2Env = P2Env
+data P2Env tm = P2Env
     { _p2NameGen :: NameGen UUID -- Map anon name contexts to chosen auto-names
     , _p2TagTexts :: Map T.Tag TagText
     , _p2Texts :: Set DisplayText
@@ -307,15 +308,16 @@ data P2Env = P2Env
     , _p2Tags :: MMap T.Tag IsClash
         -- ^ All tags including locals from all inner scopes -- used to
         -- check collision of globals in hole results with everything.
+    , _p2PublishedTags :: MkProperty tm (Set T.Tag)
     }
 Lens.makeLenses ''P2Env
 
-newtype Pass2MakeNames (tm :: * -> *) a = Pass2MakeNames { runPass2MakeNames :: Reader P2Env a }
-    deriving (Functor, Applicative, Monad, MonadReader P2Env)
+newtype Pass2MakeNames (tm :: * -> *) a = Pass2MakeNames { runPass2MakeNames :: Reader (P2Env tm) a }
+    deriving (Functor, Applicative, Monad, MonadReader (P2Env tm))
 
-runPass2MakeNamesInitial :: P1Out -> Pass2MakeNames tm a -> a
-runPass2MakeNamesInitial p1out act =
-    initialP2Env p1out & (runReader . runPass2MakeNames) act
+runPass2MakeNamesInitial :: MkProperty tm (Set T.Tag) -> P1Out -> Pass2MakeNames tm a -> a
+runPass2MakeNamesInitial publishedTags p1out act =
+    initialP2Env publishedTags p1out & (runReader . runPass2MakeNames) act
 
 getCollision :: MMap T.Tag TagVal -> AnnotatedName -> Pass2MakeNames tm Collision
 getCollision tagsBelow aName =
@@ -368,15 +370,24 @@ getTagText tag text =
             | Set.member displayText (env ^. p2Texts) = UnknownCollision
             | otherwise = NoCollision
 
+mkSetName :: Monad tm => T.Tag -> Pass2MakeNames tm (Text -> Transaction tm ())
+mkSetName tag =
+    Lens.view p2PublishedTags
+    <&>
+    \publishedTags newName ->
+    do
+        setP (Anchors.assocTagNameRef tag) newName
+        modP publishedTags ((if newName == "" then Set.delete else Set.insert) tag)
+
 storedName :: Monad tm => MMap T.Tag TagVal -> AnnotatedName -> StoredText -> Pass2MakeNames tm (Name (T tm))
 storedName tagsBelow aName storedText =
-    StoredName setName
-    <$> getTagText tag storedText
+    StoredName
+    <$> mkSetName tag
+    <*> getTagText tag storedText
     <*> getCollision tagsBelow aName
     ?? unStoredText storedText
     <&> Stored
     where
-        setName = setP (Anchors.assocTagNameRef tag)
         tag = aName ^. Clash.anTag
 
 p2nameConvertor :: Monad tm => P1Name -> Pass2MakeNames tm (Name (T tm))
@@ -416,19 +427,20 @@ p2cpsNameConvertor varInfo (P1Name kName tagsBelow textsBelow) =
 
 runPasses ::
     Functor tm =>
+    MkProperty tm (Set T.Tag) ->
     (a -> Pass0LoadNames tm b) -> (b -> Pass1PropagateUp tm c) -> (c -> Pass2MakeNames tm d) ->
     a -> T tm d
-runPasses f0 f1 f2 =
+runPasses publishedTags f0 f1 f2 =
     fmap (pass2 . pass1) . pass0
     where
         pass0 = runPass0LoadNames . f0
         pass1 = runPass1PropagateUp . f1
-        pass2 (x, p1out) = f2 x & runPass2MakeNamesInitial p1out
+        pass2 (x, p1out) = f2 x & runPass2MakeNamesInitial publishedTags p1out
 
 addToWorkArea ::
     Monad tm =>
-    WorkArea InternalName (T tm) a -> T tm (WorkArea (Name (T tm)) (T tm) a)
-addToWorkArea =
-    runPasses f f f
+    MkProperty tm (Set T.Tag) -> WorkArea InternalName (T tm) a -> T tm (WorkArea (Name (T tm)) (T tm) a)
+addToWorkArea publishedTags =
+    runPasses publishedTags f f f
     where
         f = Walk.toWorkArea
