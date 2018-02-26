@@ -182,19 +182,25 @@ makeHoleSearchTerm tagSelection mkPickResult holeId =
                         Nothing -> pure ()
                         Just setName -> setName searchTerm
                     mkPickResult t selectResult & pure
-        newTagEventMap <- makePickEventMap newTag
-        let pickPreEvent =
-                Widget.PreEvent
-                { Widget._pDesc = "New tag"
-                , Widget._pAction = mempty <$ newTag
-                , Widget._pTextRemainder = ""
-                }
+        newTagEventMap <-
+            if Text.null searchTerm
+            then pure mempty
+            else makePickEventMap newTag
+        let pickPreEvents
+                | Text.null searchTerm = []
+                | otherwise =
+                    [ Widget.PreEvent
+                        { Widget._pDesc = "New tag"
+                        , Widget._pAction = mempty <$ newTag
+                        , Widget._pTextRemainder = ""
+                        }
+                    ]
         term <-
             SearchMenu.basicSearchTermEdit holeId allowedSearchTerm
             <&> Align.tValue . Lens.mapped %~ pure
             <&> Align.tValue %~ Widget.weakerEvents newTagEventMap
             <&> Align.tValue . Widget.wState . Widget._StateFocused .
-                Lens.mapped . Widget.fPreEvents %~ (Widget.PreEvents [pickPreEvent] <>)
+                Lens.mapped . Widget.fPreEvents %~ (Widget.PreEvents pickPreEvents <>)
         tooltip <- Lens.view theme <&> Theme.tooltip
         if not (Text.null searchTerm) && Widget.isFocused (term ^. Align.tValue)
             then
