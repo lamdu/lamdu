@@ -5,6 +5,7 @@ import qualified Control.Lens as Lens
 import qualified Crypto.Hash.SHA256 as SHA256
 import qualified Data.Aeson as Aeson
 import qualified Data.ByteString as SBS
+import qualified Data.Char as Char
 import qualified Data.Map as Map
 import qualified Data.Set as Set
 import           Data.String (IsString(..))
@@ -33,10 +34,13 @@ collectTags _ = Right mempty
 objToTransform :: Lens.Traversal' Aeson.Object Aeson.Value
 objToTransform = Lens.ix "lamId" `Lens.failing` Lens.ix "def" `Lens.failing` Lens.ix "nom"
 
+normalizeName :: Text -> Text
+normalizeName = Lens.ix 0 %~ Char.toLower
+
 collectNames :: Aeson.Value -> Either Text (Set Text)
 collectNames (Aeson.Object obj) | Lens.has objToTransform obj =
     case obj ^. Lens.at "name" of
-    Just (Aeson.String t) -> Set.singleton t & Right
+    Just (Aeson.String t) -> normalizeName t & Set.singleton & Right
     Just _ -> Left ("Object has non-string name" <> Text.pack (show obj))
     _ -> Right mempty
 collectNames _ = Right mempty
@@ -45,7 +49,7 @@ migrateEntity :: Map Text Text -> Aeson.Value -> Either Text Aeson.Value
 migrateEntity nameToTag (Aeson.Object obj) | Lens.has objToTransform obj =
     case obj ^. Lens.at "name" of
     Nothing -> Right "00000000000000000000000000000000"
-    Just (Aeson.String name) -> nameToTag ^. Lens.ix name & Right
+    Just (Aeson.String name) -> nameToTag ^. Lens.ix (normalizeName name) & Right
     Just{} -> Left "Non-text name!"
     <&>
     \tag ->

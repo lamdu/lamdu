@@ -8,6 +8,7 @@ import           Control.Monad (zipWithM)
 import           Control.Monad.State (StateT, state, evalStateT)
 import           Control.Monad.Trans.Class (MonadTrans(..))
 import           Control.Monad.Transaction (MonadTransaction(..), getP)
+import qualified Data.Char as Char
 import qualified Data.Map as Map
 import qualified Data.Text as Text
 import           Data.Text.Encoding (decodeUtf8)
@@ -120,7 +121,7 @@ makeTInst ::
 makeTInst parentPrecedence tid typeParams =
     do
         tag <- Anchors.assocTag tid & getP
-        nameView <- Anchors.assocTagNameRef tag & getP >>= text
+        nameView <- Anchors.assocTagNameRef tag & getP <&> Lens.ix 0 %~ Char.toUpper >>= text
         hspace <- Spacer.stdHSpace
         let afterName paramsView = nameView /|/ hspace /|/ paramsView
         let makeTypeParam (T.ParamId tParamId, arg) =
