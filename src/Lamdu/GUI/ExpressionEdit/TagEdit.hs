@@ -268,10 +268,14 @@ makeTagEditWith onView onPickNext nearestHoles tag =
         isHole <- GuiState.isSubCursor ?? WidgetIds.tagHoleId myId
         config <- Lens.view Config.config
         let eventMap =
-                E.keysEventMapMovesCursor (Config.jumpToDefinitionKeys config)
-                (E.Doc ["Edit", "Tag", "Open"]) (pure (tagRenameId myId))
+                ( case tag ^. Sugar.tagName of
+                    Name.Stored{} ->
+                        E.keysEventMapMovesCursor (Config.jumpToDefinitionKeys config)
+                        (E.Doc ["Edit", "Tag", "Rename tag"]) (pure (tagRenameId myId))
+                    _ -> mempty
+                )
                 <>
-                E.keysEventMapMovesCursor (Config.delKeys config)
+                E.keysEventMapMovesCursor (Config.delKeys config <> Config.jumpToDefinitionKeys config)
                 (E.Doc ["Edit", "Tag", "Choose"]) delAction
         nameView <-
             (Widget.makeFocusableView ?? viewId <&> fmap) <*>
