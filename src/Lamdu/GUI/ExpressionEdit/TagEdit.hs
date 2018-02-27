@@ -1,9 +1,10 @@
 {-# LANGUAGE NoImplicitPrelude, OverloadedStrings, FlexibleContexts, ConstraintKinds #-}
 module Lamdu.GUI.ExpressionEdit.TagEdit
-    ( makeRecordTag, makeCaseTag
-    , makeParamTag
+    ( makeRecordTag, makeCaseTag, makeTagView
+    , makeParamTag, addParamId
     , makeArgTag
-    , makeTagHoleEdit, withNameColor
+    , makeTagHoleEdit
+    , makeBinderTagEdit
     , HasTagEditEnv
     ) where
 
@@ -42,6 +43,7 @@ import qualified Lamdu.GUI.NameEdit as NameEdit
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Name (Name(..))
 import qualified Lamdu.Name as Name
+import           Lamdu.Style (HasStyle)
 import           Lamdu.Sugar.NearestHoles (NearestHoles)
 import qualified Lamdu.Sugar.NearestHoles as NearestHoles
 import qualified Lamdu.Sugar.Types as Sugar
@@ -61,9 +63,9 @@ makeTagNameEdit ::
     ( MonadReader env m, HasConfig env, TextEdit.HasStyle env
     , GuiState.HasCursor env, Applicative f
     ) =>
-    NearestHoles -> Sugar.Tag (Name f) f ->
+    NearestHoles -> Name.StoredName f -> Widget.Id ->
     m (WithTextPos (Widget (f GuiState.Update)))
-makeTagNameEdit nearestHoles tag =
+makeTagNameEdit nearestHoles storedName myId =
     do
         keys <- Lens.view Config.config <&> Config.menu <&> Menu.keysPickOptionAndGotoNext
         let jumpNextEventMap =
@@ -72,12 +74,11 @@ makeTagNameEdit nearestHoles tag =
                   (E.keysEventMapMovesCursor keys
                    (E.Doc ["Navigation", "Jump to next hole"]) .
                    pure . WidgetIds.fromEntityId)
-        NameEdit.makeBareEdit (tag ^. Sugar.tagName) (tagRenameId myId)
+        NameEdit.makeBareEdit storedName (tagRenameId myId)
             <&> Align.tValue . Widget.eventMapMaker . Lens.mapped %~ E.filterChars (/= ',')
             <&> Align.tValue %~ Widget.weakerEvents jumpNextEventMap
             <&> Align.tValue %~ Widget.weakerEvents stopEditingEventMap
     where
-        myId = WidgetIds.fromEntityId (tag ^. Sugar.tagInfo . Sugar.tagInstance)
         stopEditingEventMap =
             E.keysEventMapMovesCursor
             [ MetaKey noMods MetaKey.Key'Escape
@@ -123,19 +124,23 @@ makeOptions tagSelection mkPickResult ctx
                 Lens.view Config.config
                 <&> Config.completion <&> Config.completionResultCount
             tagSelection ^. Sugar.tsOptions & transaction
-                <&> filter (Lens.anyOf (Sugar.toName . Name.form . Name._Stored . _1) (insensitiveInfixOf searchTerm))
+                <&> filter (Lens.anyOf nameText isFit)
                 <&> splitAt resultCount
                 <&> _2 %~ not . null
                 <&> uncurry Menu.OptionList
                 <&> fmap makeOption
     where
+        isFit
+            | Text.length searchTerm == 1 = (==) searchTerm
+            | otherwise = insensitiveInfixOf searchTerm
+        nameText = Sugar.toName . Name._Stored . Name.snDisplayText . Name.ttText
         searchTerm = ctx ^. SearchMenu.rSearchTerm
         makeOption opt =
             Menu.Option
             { Menu._oId = optionWId
             , Menu._oRender =
                 (Widget.makeFocusableView ?? optionWId <&> fmap)
-                <*> NameEdit.makeView (opt ^. Sugar.toName . Name.form)
+                <*> NameEdit.makeView (opt ^. Sugar.toName)
                 & Reader.local (Element.animIdPrefix .~ Widget.toAnimId instanceId)
                 <&>
                 \widget ->
@@ -175,21 +180,29 @@ makeHoleSearchTerm tagSelection mkPickResult holeId =
         let newTag =
                 do
                     (name, t, selectResult) <- tagSelection ^. Sugar.tsNewTag
-                    (name ^. Name.setName) searchTerm
+                    case name ^? Name._Stored . Name.snSet of
+                        Nothing -> pure ()
+                        Just setName -> setName searchTerm
                     mkPickResult t selectResult & pure
-        newTagEventMap <- makePickEventMap newTag
-        let pickPreEvent =
-                Widget.PreEvent
-                { Widget._pDesc = "New tag"
-                , Widget._pAction = mempty <$ newTag
-                , Widget._pTextRemainder = ""
-                }
+        newTagEventMap <-
+            if Text.null searchTerm
+            then pure mempty
+            else makePickEventMap newTag
+        let pickPreEvents
+                | Text.null searchTerm = []
+                | otherwise =
+                    [ Widget.PreEvent
+                        { Widget._pDesc = "New tag"
+                        , Widget._pAction = mempty <$ newTag
+                        , Widget._pTextRemainder = ""
+                        }
+                    ]
         term <-
             SearchMenu.basicSearchTermEdit holeId allowedSearchTerm
             <&> Align.tValue . Lens.mapped %~ pure
             <&> Align.tValue %~ Widget.weakerEvents newTagEventMap
             <&> Align.tValue . Widget.wState . Widget._StateFocused .
-                Lens.mapped . Widget.fPreEvents %~ (Widget.PreEvents [pickPreEvent] <>)
+                Lens.mapped . Widget.fPreEvents %~ (Widget.PreEvents pickPreEvents <>)
         tooltip <- Lens.view theme <&> Theme.tooltip
         if not (Text.null searchTerm) && Widget.isFocused (term ^. Align.tValue)
             then
@@ -229,7 +242,7 @@ makeTagView ::
     (MonadReader env m, TextView.HasStyle env, Element.HasAnimIdPrefix env, HasTheme env) =>
     Sugar.Tag (Name f) g -> m (WithTextPos View)
 makeTagView tag =
-    NameEdit.makeView (tag ^. Sugar.tagName . Name.form)
+    NameEdit.makeView (tag ^. Sugar.tagName)
     & Reader.local (Element.animIdPrefix .~ animId)
     where
         animId =
@@ -241,32 +254,54 @@ makeTagEdit ::
     (MonadReader env m, MonadTransaction f m, HasTagEditEnv env) =>
     NearestHoles -> Sugar.Tag (Name (T f)) (T f) ->
     m (WithTextPos (Widget (T f GuiState.Update)))
-makeTagEdit nearestHoles tag =
+makeTagEdit = makeTagEditWith id defaultOnPickNext
+
+defaultOnPickNext :: Maybe Sugar.EntityId -> Sugar.EntityId -> Widget.Id
+defaultOnPickNext mNextEntry pos = fromMaybe pos mNextEntry & WidgetIds.fromEntityId
+
+makeTagEditWith ::
+    ( MonadReader env m, MonadReader env n, MonadTransaction f m
+    , HasTagEditEnv env
+    ) =>
+    (n (WithTextPos (Widget (T f GuiState.Update))) ->
+     m (WithTextPos (Widget (T f GuiState.Update)))) ->
+    (Maybe Sugar.EntityId -> Sugar.EntityId -> Widget.Id) ->
+    NearestHoles ->
+    Sugar.Tag (Name (T f)) (T f) ->
+    m (WithTextPos (Widget (T f GuiState.Update)))
+makeTagEditWith onView onPickNext nearestHoles tag =
     do
         jumpHolesEventMap <- ExprEventMap.jumpHolesEventMap nearestHoles
         isRenaming <- GuiState.isSubCursor ?? tagRenameId myId
+        let mRenamingStoredName
+                | isRenaming = tag ^? Sugar.tagName . Name._Stored
+                | otherwise = Nothing
         isHole <- GuiState.isSubCursor ?? WidgetIds.tagHoleId myId
         config <- Lens.view Config.config
         let eventMap =
-                E.keysEventMapMovesCursor (Config.jumpToDefinitionKeys config)
-                (E.Doc ["Edit", "Tag", "Open"]) (pure (tagRenameId myId))
+                ( case tag ^. Sugar.tagName of
+                    Name.Stored{} ->
+                        E.keysEventMapMovesCursor (Config.jumpToDefinitionKeys config)
+                        (E.Doc ["Edit", "Tag", "Rename tag"]) (pure (tagRenameId myId))
+                    _ -> mempty
+                )
                 <>
-                E.keysEventMapMovesCursor (Config.delKeys config)
-                (E.Doc ["Edit", "Tag", "Choose"])
-                (pure (WidgetIds.tagHoleId myId))
+                E.keysEventMapMovesCursor (Config.delKeys config <> Config.jumpToDefinitionKeys config)
+                (E.Doc ["Edit", "Tag", "Choose"]) delAction
         nameView <-
             (Widget.makeFocusableView ?? viewId <&> fmap) <*>
             makeTagView tag
             <&> Lens.mapped %~ Widget.weakerEvents eventMap
+            & onView
         let hover = Hover.hoverBeside Align.tValue ?? nameView
         widget <-
-            if isRenaming
-            then
+            case mRenamingStoredName of
+            Just storedName ->
                 hover <*>
-                (makeTagNameEdit nearestHoles tag <&> (^. Align.tValue))
-            else if isHole
-            then makeTagHoleEdit (tag ^. Sugar.tagSelection) mkPickResult (WidgetIds.tagHoleId (tagId tag))
-            else pure nameView
+                (makeTagNameEdit nearestHoles storedName myId <&> (^. Align.tValue))
+            Nothing
+                | isHole -> makeTagHoleEdit (tag ^. Sugar.tagSelection) mkPickResult (WidgetIds.tagHoleId (tagId tag))
+                | otherwise -> pure nameView
         widget
             <&> Widget.weakerEvents jumpHolesEventMap
             & pure
@@ -278,18 +313,13 @@ makeTagEdit nearestHoles tag =
             Menu.PickResult
             { Menu._pickDest = tagInfo ^. Sugar.tagInstance & WidgetIds.fromEntityId
             , Menu._pickNextEntryPoint =
-                nearestHoles ^. NearestHoles.next
-                & fromMaybe (tagInfo ^. Sugar.tagInstance)
-                & WidgetIds.fromEntityId
+                onPickNext (nearestHoles ^. NearestHoles.next) (tagInfo ^. Sugar.tagInstance)
             }
-
-withNameColor ::
-    (MonadReader env m, HasTheme env, TextView.HasStyle env) =>
-    (Theme.Name -> Draw.Color) -> m a -> m a
-withNameColor nameColor act =
-    do
-        color <- Lens.view Theme.theme <&> Theme.name <&> nameColor
-        Reader.local (TextView.color .~ color) act
+        delAction =
+            case tag ^. Sugar.tagSelection . Sugar.tsAnon of
+            Nothing -> pure myId
+            Just setAnon -> setAnon <&> fst <&> WidgetIds.fromEntityId
+            <&> WidgetIds.tagHoleId
 
 makeRecordTag ::
     (MonadReader env m, MonadTransaction f m, HasTagEditEnv env) =>
@@ -297,7 +327,7 @@ makeRecordTag ::
     m (WithTextPos (Widget (T f GuiState.Update)))
 makeRecordTag nearestHoles tag =
     makeTagEdit nearestHoles tag
-    & withNameColor Theme.recordTagColor
+    & NameEdit.withNameColor Theme.recordTagColor
 
 makeCaseTag ::
     (MonadReader env m, MonadTransaction f m, HasTagEditEnv env) =>
@@ -305,15 +335,61 @@ makeCaseTag ::
     m (WithTextPos (Widget (T f GuiState.Update)))
 makeCaseTag nearestHoles tag =
     makeTagEdit nearestHoles tag
-    & withNameColor Theme.caseTagColor
+    & NameEdit.withNameColor Theme.caseTagColor
+
+addParamId :: Widget.Id -> Widget.Id
+addParamId = (`Widget.joinId` ["add param"])
+
+makeLHSTag ::
+    (MonadReader env m, MonadTransaction f m, HasTagEditEnv env, HasStyle env) =>
+    (Maybe Sugar.EntityId -> Sugar.EntityId -> Widget.Id) ->
+    (Theme.Name -> Draw.Color) -> Sugar.Tag (Name (T f)) (T f) ->
+    m (WithTextPos (Widget (T f GuiState.Update)))
+makeLHSTag onPickNext color tag =
+    makeTagEditWith onView onPickNext NearestHoles.none tag
+    & NameEdit.withNameColor color
+    where
+        -- Apply the name style only when the tag is a view. If it is
+        -- a tag hole, the name style (indicating auto-name) makes no sense
+        onView = NameEdit.styleNameAtBinder color (tag ^. Sugar.tagName)
 
 makeParamTag ::
-    (MonadReader env m, MonadTransaction f m, HasTagEditEnv env) =>
-    Sugar.Tag (Name (T f)) (T f) ->
+    ( MonadReader env f, HasTheme env, HasConfig env, HasStyle env
+    , Hover.HasStyle env, Menu.HasConfig env
+    , GuiState.HasState env, Element.HasAnimIdPrefix env
+    , HasStdSpacing env, MonadTransaction m f
+    ) =>
+    Sugar.Tag (Name (T m)) (T m) ->
+    f (WithTextPos (Widget (T m GuiState.Update)))
+makeParamTag =
+    makeLHSTag onPickNext Theme.parameterColor
+    where
+        onPickNext _ pos = WidgetIds.fromEntityId pos & addParamId
+
+-- | Unfocusable tag view (e.g: in apply args)
+makeArgTag ::
+    (MonadReader env m, HasTheme env, TextView.HasStyle env, Element.HasAnimIdPrefix env) =>
+    Name f -> Sugar.EntityId -> m (WithTextPos View)
+makeArgTag name tagInstance =
+    do
+        nameTheme <- Lens.view Theme.theme <&> Theme.name
+        NameEdit.makeView name
+            & Reader.local (TextView.color .~ Theme.argTagColor nameTheme)
+    & Reader.local (Element.animIdPrefix .~ animId)
+    where
+        animId = WidgetIds.fromEntityId tagInstance & Widget.toAnimId
+
+makeBinderTagEdit ::
+    ( MonadReader env m, HasTheme env, HasStyle env, HasConfig env
+    , GuiState.HasState env
+    , Element.HasAnimIdPrefix env, HasStdSpacing env
+    , Hover.HasStyle env, Menu.HasConfig env
+    , MonadTransaction f m
+    ) =>
+    (Theme.Name -> Draw.Color) -> Sugar.Tag (Name (T f)) (T f) ->
     m (WithTextPos (Widget (T f GuiState.Update)))
-makeParamTag tag =
-    makeTagEdit NearestHoles.none tag
-    & withNameColor Theme.parameterColor
+makeBinderTagEdit color tag =
+    makeLHSTag defaultOnPickNext color tag
     & Reader.local (Menu.config %~ removeGoNextKeys)
     where
         removeGoNextKeys c =
@@ -324,16 +400,3 @@ makeParamTag tag =
                 { Menu.keysPickOptionAndGotoNext = []
                 }
             }
-
--- | Unfocusable tag view (e.g: in apply args)
-makeArgTag ::
-    (MonadReader env m, HasTheme env, TextView.HasStyle env, Element.HasAnimIdPrefix env) =>
-    Name f -> Sugar.EntityId -> m (WithTextPos View)
-makeArgTag name tagInstance =
-    do
-        nameTheme <- Lens.view Theme.theme <&> Theme.name
-        NameEdit.makeView (name ^. Name.form)
-            & Reader.local (TextView.color .~ Theme.argTagColor nameTheme)
-    & Reader.local (Element.animIdPrefix .~ animId)
-    where
-        animId = WidgetIds.fromEntityId tagInstance & Widget.toAnimId

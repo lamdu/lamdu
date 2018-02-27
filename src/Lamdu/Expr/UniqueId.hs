@@ -12,6 +12,8 @@ import           Lamdu.Expr.IRef (ValI(..))
 import qualified Lamdu.Expr.IRef as ExprIRef
 import           Revision.Deltum.IRef (IRef)
 import qualified Revision.Deltum.IRef as IRef
+import           Revision.Deltum.Rev.Branch (Branch)
+import qualified Revision.Deltum.Rev.Branch as Branch
 import           Revision.Deltum.Transaction (Transaction)
 import qualified Revision.Deltum.Transaction as Transaction
 
@@ -31,6 +33,7 @@ instance ToUUID T.NominalId where toUUID = toUUID . T.nomId
 instance ToUUID T.ParamId   where toUUID = toUUID . T.typeParamId
 instance ToUUID (IRef m a)  where toUUID = IRef.uuid
 instance ToUUID (ValI m)    where toUUID = toUUID . ExprIRef.unValI
+instance ToUUID (Branch m)  where toUUID = Branch.uuid
 
 -- TODO: Remove this when all code uses more descritive types than UUID
 instance ToUUID UUID  where toUUID = id

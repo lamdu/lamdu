@@ -14,7 +14,7 @@ import           Lamdu.Prelude
 import           Control.Monad.IO.Class (MonadIO)
 import           Data.ByteString.Char8 ()
 import           GUI.Momentu (GUIState)
-import           Lamdu.Data.Anchors (Code(..), Revision(..), assocNameRef)
+import           Lamdu.Data.Anchors (Code(..), Revision(..))
 import qualified Lamdu.Data.Anchors as Anchors
 import           Revision.Deltum.Db (DB)
 import qualified Revision.Deltum.Db as Db
@@ -75,4 +75,4 @@ dbSchemaVersion :: IRef DbM Int
 dbSchemaVersion = IRef.anchor "dbSchemaVersion"
 
 curDbSchemaVersion :: Int
-curDbSchemaVersion = 1
+curDbSchemaVersion = 2

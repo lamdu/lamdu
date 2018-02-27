@@ -3,15 +3,16 @@ module Lamdu.Sugar.Internal.EntityId
     ( EntityId
     , bs
     , ofValI, ofIRef
-    , ofLambdaParam
-    , ofLambdaTagParam
+    , ofBinder
     , ofTag
+    , ofTaggedEntity
     , ofTId
     , randomizeExprAndParams
     ) where
 
 import           Data.Binary.Utils (encodeS)
 import           Data.Hashable (Hashable)
+import           Revision.Deltum.IRef (IRef)
 import           Data.UUID.Types (UUID)
 import qualified Data.UUID.Utils as UUIDUtils
 import qualified Lamdu.Calc.Type as T
@@ -20,7 +21,7 @@ import           Lamdu.Calc.Val.Annotated (Val)
 import qualified Lamdu.Expr.GenIds as GenIds
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.UniqueId as UniqueId
-import           Revision.Deltum.IRef (IRef)
+
 import           System.Random (RandomGen)
 
 import           Lamdu.Prelude
@@ -48,12 +49,14 @@ ofValI = ofIRef . ExprIRef.unValI
 ofTId :: T.NominalId -> EntityId
 ofTId = EntityId . UniqueId.toUUID
 
-ofLambdaParam :: V.Var -> EntityId
-ofLambdaParam = EntityId . UniqueId.toUUID
+ofBinder :: V.Var -> EntityId
+ofBinder = EntityId . UniqueId.toUUID
 
-ofLambdaTagParam :: V.Var -> T.Tag -> EntityId
-ofLambdaTagParam v p =
+-- For tag instance entity id
+ofTaggedEntity :: UniqueId.ToUUID a => a -> T.Tag -> EntityId
+ofTaggedEntity v p =
     EntityId $ UUIDUtils.combine (UniqueId.toUUID v) (UniqueId.toUUID p)
 
+-- For tag instance entity id
 ofTag :: EntityId -> T.Tag -> EntityId
 ofTag entityId tag = augment (encodeS tag) entityId

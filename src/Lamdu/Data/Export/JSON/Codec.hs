@@ -31,6 +31,7 @@ import           Lamdu.Calc.Type.Scheme (Scheme(..))
 import           Lamdu.Calc.Type.Vars (TypeVars(..))
 import qualified Lamdu.Calc.Val as V
 import           Lamdu.Calc.Val.Annotated (Val(..))
+import qualified Lamdu.Data.Anchors as Anchors
 import           Lamdu.Data.Definition (Definition(..))
 import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Data.Meta as Meta
@@ -48,19 +49,18 @@ type TagOrder = Int
 data Entity
     = EntitySchemaVersion Int
     | EntityRepl (Definition.Expr (Val UUID))
-    | EntityDef (Definition (Val UUID) (Meta.PresentationMode, Maybe Text, V.Var))
+    | EntityDef (Definition (Val UUID) (Meta.PresentationMode, T.Tag, V.Var))
     | EntityTag TagOrder (Maybe Text) T.Tag
-    | EntityNominal (Maybe Text) T.NominalId Nominal
-    | EntityLamVar (Maybe Meta.ParamList) (Maybe Text) UUID V.Var
+    | EntityNominal T.Tag T.NominalId Nominal
+    | EntityLamVar (Maybe Meta.ParamList) T.Tag UUID V.Var
 
 instance AesonTypes.ToJSON Entity where
     toJSON (EntitySchemaVersion ver) = encodeSchemaVersion ver
     toJSON (EntityRepl val) = encodeRepl val
     toJSON (EntityDef def) = encodeDef def
     toJSON (EntityTag tagOrder mName tag) = encodeNamedTag (tagOrder, mName, tag)
-    toJSON (EntityNominal mName nomId nom) = encodeNamedNominal ((mName, nomId), nom)
-    toJSON (EntityLamVar mParamList mName lamI var) =
-        encodeNamedLamVar (mParamList, mName, lamI, var)
+    toJSON (EntityNominal tag nomId nom) = encodeTaggedNominal ((tag, nomId), nom)
+    toJSON (EntityLamVar mParamList tag lamI var) = encodeTaggedLamVar (mParamList, tag, lamI, var)
 
 instance AesonTypes.FromJSON Entity where
     parseJSON json =
@@ -68,8 +68,8 @@ instance AesonTypes.FromJSON Entity where
         [ decodeRepl json <&> EntityRepl
         , decodeDef json <&> EntityDef
         , decodeNamedTag json <&> uncurry3 EntityTag
-        , decodeNamedNominal json <&> \((mName, nomId), nom) -> EntityNominal mName nomId nom
-        , decodeNamedLamVar json <&> uncurry4 EntityLamVar
+        , decodeTaggedNominal json <&> \((tag, nomId), nom) -> EntityNominal tag nomId nom
+        , decodeTaggedLamVar json <&> uncurry4 EntityLamVar
         , decodeSchemaVersion json <&> EntitySchemaVersion
         ]
 
@@ -200,9 +200,12 @@ decodeSquashed name decode o =
     ]
 
 encodeTagId :: Encoder T.Tag
-encodeTagId (T.Tag ident) = encodeIdent ident
+encodeTagId tag
+    | tag == Anchors.anonTag = Aeson.Null
+    | otherwise = T.tagName tag & encodeIdent
 
 decodeTagId :: Decoder T.Tag
+decodeTagId Aeson.Null = pure Anchors.anonTag
 decodeTagId json = decodeIdent json <&> T.Tag
 
 encodeFlatComposite :: Encoder (FlatComposite p)
@@ -493,25 +496,26 @@ decodeNominal obj =
     <$> decodeSquashed "typeParams" (decodeIdentMap T.ParamId (fmap T.Var . decodeIdent)) obj
     <*> (obj .: "nomType" >>= lift . decodeNominalType)
 
-encodeNamed :: Text -> (a -> Aeson.Object) -> ((Maybe Text, Identifier), a) -> Aeson.Object
-encodeNamed idAttrName encoder ((mName, ident), x) =
+encodeTagged :: Text -> (a -> Aeson.Object) -> ((T.Tag, Identifier), a) -> Aeson.Object
+encodeTagged idAttrName encoder ((tag, ident), x) =
     encoder x
     & insertField idAttrName (encodeIdent ident)
-    & maybe id (insertField "name") mName
+    & insertField "tag" (encodeTagId tag)
 
-decodeNamed :: Text -> ExhaustiveDecoder a -> ExhaustiveDecoder ((Maybe Text, Identifier), a)
-decodeNamed idAttrName decoder obj =
+
+decodeTagged :: Text -> ExhaustiveDecoder a -> ExhaustiveDecoder ((T.Tag, Identifier), a)
+decodeTagged idAttrName decoder obj =
     (,)
     <$> ( (,)
-          <$> optional (obj .: "name")
+          <$> (obj .: "tag" >>= lift . decodeTagId)
           <*> (obj .: idAttrName >>= lift . decodeIdent)
         )
     <*> decoder obj
 
 encodeDef ::
-    Encoder (Definition (Val UUID) (Meta.PresentationMode, Maybe Text, V.Var))
-encodeDef (Definition body scheme (presentationMode, mName, V.Var globalId)) =
-    encodeNamed "def" encodeDefBody ((mName, globalId), body)
+    Encoder (Definition (Val UUID) (Meta.PresentationMode, T.Tag, V.Var))
+encodeDef (Definition body scheme (presentationMode, tag, V.Var globalId)) =
+    encodeTagged "def" encodeDefBody ((tag, globalId), body)
     & insertField "typ" (encodeScheme scheme)
     & insertField "defPresentationMode" (encodePresentationMode presentationMode)
     & Aeson.Object
@@ -519,15 +523,15 @@ encodeDef (Definition body scheme (presentationMode, mName, V.Var globalId)) =
 decodeDef ::
     Decoder
     (Definition (Val UUID)
-     (Meta.PresentationMode, Maybe Text, V.Var))
+     (Meta.PresentationMode, T.Tag, V.Var))
 decodeDef =
     withObject "def" $ \obj ->
     do
-        ((mName, globalId), body) <- decodeNamed "def" decodeDefBody obj
+        ((tag, globalId), body) <- decodeTagged "def" decodeDefBody obj
         presentationMode <-
             obj .: "defPresentationMode" >>= lift . decodePresentationMode
         scheme <- obj .: "typ" >>= lift . decodeScheme
-        Definition body scheme (presentationMode, mName, V.Var globalId) & pure
+        Definition body scheme (presentationMode, tag, V.Var globalId) & pure
 
 encodeTagOrder :: TagOrder -> Aeson.Object
 encodeTagOrder tagOrder = HashMap.fromList ["tagOrder" .= tagOrder]
@@ -537,12 +541,18 @@ decodeTagOrder obj = obj .: "tagOrder"
 
 encodeNamedTag :: Encoder (TagOrder, Maybe Text, T.Tag)
 encodeNamedTag (tagOrder, mName, T.Tag ident) =
-    encodeNamed "tag" encodeTagOrder ((mName, ident), tagOrder) & Aeson.Object
+    encodeTagOrder tagOrder
+    & insertField "tag" (encodeIdent ident)
+    & maybe id (insertField "name") mName
+    & Aeson.Object
 
 decodeNamedTag :: Decoder (TagOrder, Maybe Text, T.Tag)
-decodeNamedTag json =
-    withObject "tag" (decodeNamed "tag" decodeTagOrder) json
-    <&> \((mName, tag), tagOrder) -> (tagOrder, mName, T.Tag tag)
+decodeNamedTag =
+    withObject "tag" $ \obj ->
+    (,,)
+    <$> decodeTagOrder obj
+    <*> optional (obj .: "name")
+    <*> (obj .: "tag" >>= lift . decodeIdent <&> T.Tag)
 
 encodeParamList :: Encoder Meta.ParamList
 encodeParamList = Aeson.toJSON . map encodeTagId
@@ -570,25 +580,25 @@ decodeLam obj =
         mParamList <- obj .: "lamFieldParams" >>= lift . decodeMaybe decodeParamList
         pure (lamI, mParamList)
 
-encodeNamedLamVar ::
-    Encoder (Maybe Meta.ParamList, Maybe Text, UUID, V.Var)
-encodeNamedLamVar (mParamList, mName, lamI, V.Var ident) =
-    encodeNamed "lamVar" encodeLam ((mName, ident), (lamI, mParamList)) & Aeson.Object
+encodeTaggedLamVar ::
+    Encoder (Maybe Meta.ParamList, T.Tag, UUID, V.Var)
+encodeTaggedLamVar (mParamList, tag, lamI, V.Var ident) =
+    encodeTagged "lamVar" encodeLam ((tag, ident), (lamI, mParamList)) & Aeson.Object
 
-decodeNamedLamVar ::
-    Decoder (Maybe Meta.ParamList, Maybe Text, UUID, V.Var)
-decodeNamedLamVar json =
-    withObject "lam" (decodeNamed "lamVar" decodeLam) json
-    <&> \((mName, ident), (lamI, mParamList)) ->
-    (mParamList, mName, lamI, V.Var ident)
+decodeTaggedLamVar ::
+    Decoder (Maybe Meta.ParamList, T.Tag, UUID, V.Var)
+decodeTaggedLamVar json =
+    withObject "lam" (decodeTagged "lamVar" decodeLam) json
+    <&> \((tag, ident), (lamI, mParamList)) ->
+    (mParamList, tag, lamI, V.Var ident)
 
-encodeNamedNominal :: Encoder ((Maybe Text, T.NominalId), Nominal)
-encodeNamedNominal ((mName, T.NominalId nomId), nom) =
-    encodeNamed "nom" encodeNominal ((mName, nomId), nom) & Aeson.Object
+encodeTaggedNominal :: Encoder ((T.Tag, T.NominalId), Nominal)
+encodeTaggedNominal ((tag, T.NominalId nomId), nom) =
+    encodeTagged "nom" encodeNominal ((tag, nomId), nom) & Aeson.Object
 
-decodeNamedNominal :: Decoder ((Maybe Text, T.NominalId), Nominal)
-decodeNamedNominal json =
-    withObject "nom" (decodeNamed "nom" decodeNominal) json
+decodeTaggedNominal :: Decoder ((T.Tag, T.NominalId), Nominal)
+decodeTaggedNominal json =
+    withObject "nom" (decodeTagged "nom" decodeNominal) json
     <&> _1 . _2 %~ T.NominalId
 
 encodeSchemaVersion :: Encoder Int

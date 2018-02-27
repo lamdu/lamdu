@@ -9,7 +9,6 @@ import           Lamdu.Calc.Val.Annotated (Val(..))
 import qualified Lamdu.Calc.Val.Annotated as Val
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Lens as ExprLens
-import qualified Lamdu.Expr.UniqueId as UniqueId
 import           Lamdu.Sugar.Convert.Expression.Actions (addActions)
 import qualified Lamdu.Sugar.Convert.Input as Input
 import           Lamdu.Sugar.Convert.Monad (ConvertM)
@@ -35,10 +34,9 @@ convertGetFieldParam (V.GetField recExpr tag) exprPl =
             guard $ param == ConvertM.tpiFromParameters paramInfo
             GetParam ParamRef
                 { _pNameRef = NameRef
-                  { _nrName = UniqueId.toUUID tag & InternalName
-                  , _nrGotoDefinition = pure (ConvertM.tpiJumpTo paramInfo)
+                  { _nrName = nameWithContext param tag
+                  , _nrGotoDefinition = ConvertM.tpiJumpTo paramInfo & pure
                   }
-                , _pForm = GetFieldParameter
                 , _pBinderMode = NormalBinder
                 } & BodyGetVar & Just
             & Lens._Just %%~ addActions exprPl
@@ -56,7 +54,7 @@ convertGetFieldNonParam (V.GetField recExpr tag) exprPl =
                     do
                         V.GetField recExprI newTag & V.BGetField & ExprIRef.writeValBody valI
                         protectedSetToVal recExprStored recExprI & void
-            convertTag tag mempty (EntityId.ofTag (exprPl ^. Input.entityId)) setTag
+            convertTag tag nameWithoutContext mempty (EntityId.ofTag (exprPl ^. Input.entityId)) setTag
     <&> BodyGetField
     >>= addActions exprPl
     where

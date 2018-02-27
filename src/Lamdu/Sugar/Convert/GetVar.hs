@@ -6,6 +6,7 @@ module Lamdu.Sugar.Convert.GetVar
 import qualified Control.Lens as Lens
 import           Control.Monad.Trans.Except.Utils (runMatcherT, justToLeft)
 import           Control.Monad.Trans.Maybe (MaybeT)
+import           Control.Monad.Transaction (MonadTransaction, getP, setP)
 import qualified Control.Monad.Transaction as Transaction
 import           Data.Maybe.Utils (maybeToMPlus)
 import qualified Lamdu.Calc.Type as T
@@ -17,7 +18,6 @@ import qualified Lamdu.Data.Ops as DataOps
 import           Lamdu.Expr.IRef (DefI, ValIProperty)
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Lens as ExprLens
-import qualified Lamdu.Expr.UniqueId as UniqueId
 import qualified Lamdu.Infer as Infer
 import           Lamdu.Sugar.Convert.Expression.Actions (addActions)
 import qualified Lamdu.Sugar.Convert.Hole as ConvertHole
@@ -67,7 +67,7 @@ inlineDef ctx globalId dest =
                 def & Def.defBody .~ Def.BodyExpr (Def.Expr newDefExpr mempty)
                     & Def.defType .~ Scheme.any
                     & Transaction.writeIRef defI
-                Transaction.setP (Anchors.assocDefinitionState defI) DeletedDefinition
+                setP (Anchors.assocDefinitionState defI) DeletedDefinition
                 _ <- ctx ^. ConvertM.scPostProcessRoot
                 defExpr ^. Def.expr & EntityId.ofValI & pure
 
@@ -81,9 +81,7 @@ convertGlobal param exprPl =
                 Lens._Just . ConvertM.rrDefI
         let isRecursiveRef = recursiveVar == Just defI
         notInScope || isRecursiveRef & guard
-        lifeState <-
-            Anchors.assocDefinitionState defI
-            & Transaction.getP
+        lifeState <- Anchors.assocDefinitionState defI & getP
         let defForm =
                 case lifeState of
                 DeletedDefinition -> DefDeleted
@@ -91,9 +89,10 @@ convertGlobal param exprPl =
                     ctx ^. ConvertM.scOutdatedDefinitions . Lens.at param
                     <&> Lens.mapped . Lens.mapped .~ exprPl ^. Input.entityId
                     & maybe DefUpToDate DefTypeChanged
+        tag <- Anchors.assocTag param & getP
         GetBinder BinderVarRef
             { _bvNameRef = NameRef
-              { _nrName = UniqueId.toUUID defI & InternalName
+              { _nrName = nameWithContext param tag
               , _nrGotoDefinition = jumpToDefI (ctx ^. ConvertM.scCodeAnchors) defI
               }
             , _bvVar = param
@@ -119,27 +118,22 @@ usesAround x xs =
     where
         (before, after) = break (== x) xs
 
-paramNameRef :: Monad m => V.Var -> NameRef InternalName (T m)
-paramNameRef param =
-    NameRef
-    { _nrName = UniqueId.toUUID param & InternalName
-    , _nrGotoDefinition = pure $ EntityId.ofLambdaParam param
-    }
-
 convertGetLet ::
     Monad m => V.Var -> Input.Payload m a -> MaybeT (ConvertM m) (GetVar InternalName (T m))
 convertGetLet param exprPl =
-    Lens.view (ConvertM.scScopeInfo . ConvertM.siLetItems . Lens.at param)
-    >>= maybeToMPlus
-    <&> \inline ->
-    GetBinder BinderVarRef
-    { _bvNameRef = paramNameRef param
-    , _bvVar = param
-    , _bvForm = GetLet
-    , _bvInline =
-        inline
-        & _CannotInlineDueToUses %~ usesAround (exprPl ^. Input.entityId)
-    }
+    do
+        inline <-
+            Lens.view (ConvertM.scScopeInfo . ConvertM.siLetItems . Lens.at param)
+            >>= maybeToMPlus
+        nameRef <- convertLocalNameRef param
+        GetBinder BinderVarRef
+            { _bvNameRef = nameRef
+            , _bvVar = param
+            , _bvForm = GetLet
+            , _bvInline =
+                inline
+                & _CannotInlineDueToUses %~ usesAround (exprPl ^. Input.entityId)
+            } & pure
 
 convertParamsRecord ::
     Monad m => V.Var -> Input.Payload m a -> MaybeT (ConvertM m) (GetVar InternalName (T m))
@@ -148,7 +142,7 @@ convertParamsRecord param exprPl =
     { _prvFieldNames =
         exprPl
         ^.. Input.inferredType . T._TRecord . ExprLens.compositeFieldTags
-        <&> UniqueId.toUUID <&> InternalName
+        <&> nameWithContext param
     } <$ check
     where
         check =
@@ -157,6 +151,28 @@ convertParamsRecord param exprPl =
             <&> map tpiFromParameters
             <&> elem param
             >>= guard
+
+convertLocalNameRef ::
+    (Applicative f, MonadTransaction n m) =>
+    V.Var -> m (NameRef InternalName f)
+convertLocalNameRef param =
+    Anchors.assocTag param & getP
+    <&> \tag ->
+    NameRef
+    { _nrName = nameWithContext param tag
+    , _nrGotoDefinition = EntityId.ofTaggedEntity param tag & pure
+    }
+
+convertParam ::
+    (MonadTransaction u m, Applicative n) => V.Var -> m (GetVar InternalName n)
+convertParam param =
+    convertLocalNameRef param
+    <&>
+    \nameRef ->
+    GetParam ParamRef
+    { _pNameRef = nameRef
+    , _pBinderMode = NormalBinder
+    }
 
 convert ::
     Monad m =>
@@ -169,7 +185,7 @@ convert param exprPl
             convertGlobal param exprPl & justToLeft
             convertGetLet param exprPl & justToLeft
             convertParamsRecord param exprPl & justToLeft
-            GetParam (ParamRef (paramNameRef param) GetParameter NormalBinder) & pure
+            convertParam param & lift
         & runMatcherT
         <&> BodyGetVar
         >>= addActions exprPl

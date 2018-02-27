@@ -4,7 +4,9 @@ module Lamdu.Data.Anchors
     , Revision(..), onRevision
     , Pane(..)
     , CodeAnchors, RevisionProps
-    , assocNameRef
+    , assocBranchNameRef
+    , assocTagNameRef
+    , assocTag, anonTag
     , assocScopeRef
     , assocPresentationMode
     , assocDefinitionState
@@ -30,6 +32,7 @@ import           Revision.Deltum.Rev.Version (Version)
 import           Revision.Deltum.Rev.View (View)
 import           Revision.Deltum.Transaction (MkProperty(..))
 import qualified Revision.Deltum.Transaction as Transaction
+import           Data.UUID.Types (nil)
 
 import           Lamdu.Prelude
 
@@ -69,8 +72,17 @@ newtype BinderParamScopeId = BinderParamScopeId
 type CodeAnchors m = Code (MkProperty m) m
 type RevisionProps m = Revision (MkProperty m) m
 
-assocNameRef :: (UniqueId.ToUUID a, Monad m) => a -> MkProperty m Text
-assocNameRef = Transaction.assocDataRefDef "" "Name" . UniqueId.toUUID
+assocTagNameRef :: Monad m => T.Tag -> MkProperty m Text
+assocTagNameRef = Transaction.assocDataRefDef "" "Name" . UniqueId.toUUID
+
+assocBranchNameRef :: Monad m => Branch m -> MkProperty m Text
+assocBranchNameRef = Transaction.assocDataRefDef "" "Name" . UniqueId.toUUID
+
+anonTag :: T.Tag
+anonTag = UniqueId.identifierOfUUID nil & T.Tag
+
+assocTag :: (UniqueId.ToUUID a, Monad m) => a -> MkProperty m T.Tag
+assocTag = Transaction.assocDataRefDef anonTag "Tag" . UniqueId.toUUID
 
 assocScopeRef :: Monad m => V.Var -> MkProperty m (Maybe BinderParamScopeId)
 assocScopeRef = Transaction.assocDataRef "ScopeId" . UniqueId.toUUID

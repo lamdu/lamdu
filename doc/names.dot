@@ -1,16 +1,27 @@
 digraph {
-    Tag, Def, Var, Field, Alt [style=filled, fillcolor=yellow];
-    Def   [label="Definition"];
-    Var   [label="Variable"];
-    Field [label="Record field"];
-    Alt   [label="Sum constructor"];
+    subgraph cluster_getters {
+        style="invis";
+        GetDef;
+        Nominal;
+        GetParam;
+    }
+    GetDef                   [label="Get definition"];
+    GetParam                 [label="Get parameter"];
+    Nominal                  [label="Nominal"];
+    Tag, Def, Var, Composites, TId [style=filled, fillcolor=yellow];
+    TId                      [label="Type Id"];
+    Def                      [label="Definition"];
+    Var                      [label="Variable"];
+    Composites               [label="Composite types (records / variants)"];
     English, Hebrew, Spanish [style=filled, fillcolor=green];
-    GetDef [label="Get definition"];
-    GetParam [label="Get parameter"];
     Tag -> English, Spanish, Hebrew;
-    Def, Field, Alt, GetParam -> Tag;
-    Var -> Tag [color=gray];
+    Def, TId -> Tag;
+    Composites -> Tag [penwidth=0.5, arrowsize=0.75];
+    Composites -> Tag [penwidth=0.5, arrowsize=0.75];
+    Composites -> Tag [penwidth=0.5, arrowsize=0.75];
+    Var, GetParam -> Tag [color="#999999"];
 
     GetDef -> Def;
     GetParam -> Var;
+    Nominal -> TId;
 }

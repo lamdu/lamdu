@@ -47,7 +47,7 @@ data DefinitionBody name m expr
     deriving (Functor, Foldable, Traversable)
 
 data Definition name m expr = Definition
-    { _drName :: name
+    { _drName :: Tag name m
     , _drDefI :: V.Var
     , _drDefinitionState :: m (Property m Meta.DefinitionState)
     , _drEntityId :: EntityId

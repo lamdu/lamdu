@@ -50,7 +50,7 @@ make ::
     Sugar.BinderParams name m ->
     Property m Sugar.PresentationMode ->
     n (Widget (m GuiState.Update))
-make myId (Sugar.FieldParams params) prop =
+make myId (Sugar.Params params) prop =
     do
         theme <- Lens.view Theme.theme
         pairs <-
@@ -62,7 +62,7 @@ make myId (Sugar.FieldParams params) prop =
             <&> Element.scale (Theme.presentationChoiceScaleFactor theme)
     where
         cur = Property.value prop
-        paramTags = params ^.. traverse . Sugar.fpInfo . Sugar.fpiTag . Sugar.tagInfo . Sugar.tagVal
+        paramTags = params ^.. traverse . Sugar.fpInfo . Sugar.piTag . Sugar.tagInfo . Sugar.tagVal
         mkPair presentationMode =
             TextView.makeFocusableLabel text <&> (^. Align.tValue)
             <&> (,) presentationMode

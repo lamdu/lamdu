@@ -28,9 +28,6 @@ fromEntityId = fromBS . EntityId.bs
 fromExprPayload :: Sugar.Payload f a -> Id
 fromExprPayload pl = fromEntityId (pl ^. Sugar.plEntityId)
 
-nameEditOf :: Id -> Id
-nameEditOf = flip WidgetId.joinId ["name edit"]
-
 literalEditOf :: Id -> Id
 literalEditOf = flip WidgetId.joinId ["literal edit"]
 
@@ -57,3 +54,7 @@ tagHoleId = (`WidgetId.joinId` ["hole"])
 
 dotterId :: Id -> Id
 dotterId widgetId = widgetId `WidgetId.joinId` ["dotter"]
+
+-- Cursor dest for items first created
+newDest :: Id -> Id
+newDest = (`WidgetId.joinId` ["new"])

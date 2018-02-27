@@ -11,7 +11,6 @@ import           Control.Monad.Transaction (MonadTransaction(..))
 import           Data.CurAndPrev (CurAndPrev(..))
 import           Data.Functor.Identity (Identity(..))
 import           Data.Orphans () -- Imported for Monoid (IO ()) instance
-import qualified Data.Set as Set
 import qualified GUI.Momentu.Align as Align
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
@@ -23,7 +22,6 @@ import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified GUI.Momentu.Widgets.TextView as TextView
-import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Calc.Type.Scheme as Scheme
 import qualified Lamdu.Calc.Val as V
 import           Lamdu.Config (config)
@@ -47,7 +45,6 @@ import qualified Lamdu.GUI.IOTrans as IOTrans
 import qualified Lamdu.GUI.ReplEdit as ReplEdit
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Name (Name)
-import qualified Lamdu.Name as Name
 import           Lamdu.Style (HasStyle)
 import qualified Lamdu.Sugar.Convert as SugarConvert
 import qualified Lamdu.Sugar.Lens as SugarLens
@@ -109,17 +106,6 @@ postProcessExpr ::
 postProcessExpr =
     fmap toExprGuiMPayload . AddParens.add . AnnotationsPass.markAnnotationsToDisplay
 
-fixTagPublished ::
-    Monad m =>
-    MkProperty m (Set T.Tag) -> T.Tag -> Name (T m) -> Name (T m)
-fixTagPublished publishedTags tag name =
-    name & Name.setName %~ onSetName
-    where
-        onSetName setName newName =
-            setName newName *>
-            Transaction.modP publishedTags
-            ((if newName == "" then Set.delete else Set.insert) tag)
-
 loadWorkArea ::
     Monad m =>
     CurAndPrev (EvalResults (ValI m)) ->
@@ -127,8 +113,7 @@ loadWorkArea ::
     T m (Sugar.WorkArea (Name (T m)) (T m) ExprGui.Payload)
 loadWorkArea theEvalResults theCodeAnchors =
     SugarConvert.loadWorkArea theEvalResults theCodeAnchors
-    >>= AddNames.addToWorkArea
-    <&> SugarLens.workAreaTagNames %@~ fixTagPublished (Anchors.tags theCodeAnchors)
+    >>= AddNames.addToWorkArea (Anchors.tags theCodeAnchors)
     <&>
     \Sugar.WorkArea { _waPanes, _waRepl } ->
     Sugar.WorkArea
@@ -229,7 +214,7 @@ makeNewDefinitionEventMap cp =
             & DataOps.newPublicDefinitionWithPane cp
         DataOps.savePreJumpPosition cp curCursor
         pure newDefI
-    <&> WidgetIds.nameEditOf . WidgetIds.fromIRef
+    <&> WidgetIds.newDest . WidgetIds.fromIRef
     & E.keysEventMapMovesCursor newDefinitionKeys
         (E.Doc ["Edit", "New definition"])
 

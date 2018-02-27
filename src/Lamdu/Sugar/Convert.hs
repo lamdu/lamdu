@@ -22,7 +22,6 @@ import           Lamdu.Expr.IRef (DefI, ValI, ValIProperty)
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Lens as ExprLens
 import qualified Lamdu.Expr.Load as ExprLoad
-import qualified Lamdu.Expr.UniqueId as UniqueId
 import qualified Lamdu.Infer as Infer
 import qualified Lamdu.Sugar.Convert.DefExpr as ConvertDefExpr
 import qualified Lamdu.Sugar.Convert.DefExpr.OutdatedDefs as OutdatedDefs
@@ -32,6 +31,7 @@ import qualified Lamdu.Sugar.Convert.Load as Load
 import           Lamdu.Sugar.Convert.Monad (Context(..), ScopeInfo(..), RecursiveRef(..))
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
 import           Lamdu.Sugar.Convert.PostProcess (postProcessDef, postProcessExpr)
+import           Lamdu.Sugar.Convert.Tag (convertTaggedEntityWith)
 import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import qualified Lamdu.Sugar.OrderTags as OrderTags
@@ -235,14 +235,19 @@ loadPanes evalRes cp replEntityId =
                         & convertDefBody evalRes cp
                         <&> Lens.mapped . Lens.mapped %~ (^. pUserData)
                     let defI = def ^. Definition.defPayload & Anchors.paneDef
+                    let defVar = ExprIRef.globalId defI
+                    tag <-
+                        Anchors.tags cp
+                        & Transaction.getP
+                        & convertTaggedEntityWith defVar
                     defS <-
                         PresentationModes.addToDef Definition
                         { _drEntityId = EntityId.ofIRef defI
-                        , _drName = UniqueId.toUUID defI & InternalName
+                        , _drName = tag
                         , _drBody = bodyS
                         , _drDefinitionState =
                             Anchors.assocDefinitionState defI ^. mkProperty
-                        , _drDefI = ExprIRef.globalId defI
+                        , _drDefI = defVar
                         }
                         >>= OrderTags.orderDef
                     pure Pane

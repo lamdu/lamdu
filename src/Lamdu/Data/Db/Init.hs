@@ -5,9 +5,9 @@ module Lamdu.Data.Db.Init
     ) where
 
 import qualified GUI.Momentu as M
+import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Db.Layout as DbLayout
 import           Lamdu.Data.Export.JSON (fileImportAll)
-import qualified Lamdu.Expr.UniqueId as UniqueId
 import qualified Lamdu.GUI.WidgetIdIRef as WidgetIdIRef
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Paths.Utils as Paths
@@ -25,14 +25,14 @@ import           Lamdu.Prelude
 
 type T = Transaction
 
-setName :: (Monad m, UniqueId.ToUUID a) => a -> Text -> T m ()
-setName = Transaction.setP . DbLayout.assocNameRef
+setName :: (Monad m) => Branch m -> Text -> T m ()
+setName = Transaction.setP . Anchors.assocBranchNameRef
 
 newBranch :: Monad m => Text -> Version m -> T m (Branch m)
 newBranch name ver =
     do
         branch <- Branch.new ver
-        setName (Branch.uuid branch) name
+        setName branch name
         pure branch
 
 initDb :: DB -> T DbLayout.ViewM () -> IO ()

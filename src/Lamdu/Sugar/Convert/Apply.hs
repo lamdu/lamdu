@@ -17,7 +17,6 @@ import           Lamdu.Calc.Type.Scheme (schemeType)
 import qualified Lamdu.Calc.Val as V
 import           Lamdu.Calc.Val.Annotated (Val)
 import qualified Lamdu.Calc.Val.Annotated as Val
-import qualified Lamdu.Expr.UniqueId as UniqueId
 import qualified Lamdu.Infer as Infer
 import           Lamdu.Sugar.Convert.Case (convertAppliedCase)
 import           Lamdu.Sugar.Convert.Expression.Actions (addActions)
@@ -98,7 +97,7 @@ convertLabeled funcS argS exprPl =
         -- with at least 2 fields
         isLengthAtLeast 2 (record ^. cItems) & guard
         frozenDeps <- Lens.view ConvertM.scFrozenDeps
-        let var = sBinderVar ^. bvNameRef . nrName . inUUID & UniqueId.varOfUUID
+        let var = sBinderVar ^. bvVar
         let scope = exprPl ^. Input.inferred . Infer.plScope & Infer.scopeToTypeMap
         -- If it is an external (non-recursive) def (i.e: not in
         -- scope), make sure the def (frozen) type is inferred to have

@@ -149,10 +149,10 @@ To type the calculation above:
   reduces the menu options to just those that match.
   Cursor keys allow you to select from the menu.
   Hit **space** to chose your selected menu option.
-* Type "**`5`**" and press **space**.
-* Select the whole expression by pressing **shift+left** twice.
-* Type "**`/2`**" and press **space**.
-  Notice that Lamdu just automatically inserted the parentheses.
+* Type "**`5`**".
+* Select the whole expression by pressing **shift+left** until the whole REPL expression is selected.
+* Type "**`/2`**".
+  Notice that Lamdu automatically inserted the parentheses.
 
 Lamdu displays the evaluation of each expression, whether the whole or a subexpression.
 Such an automatic display is called an "annotation".
@@ -168,27 +168,32 @@ or to the `5`, and press **shift+left**.
 
 We have just expressed the golden ratio.
 To save it and give it a name, navigate to the `⋙` sign and press **return**.
-Press Ctrl-X to extract the code into a new definition.
-Notice the Ctrl-X took us away from the prompt and put us below it.
-Type "**`golden`**" and **escape** to stop renaming.
-You do not need to explicitly save - as Lamdu always saves the entire state.
+Press **return** to name the new definition.
+Type "**`golden`**" and **enter**.
+You do not need to explicitly save - as your Lamdu program is always saved.
 
 ### Creating a function
 
 *Note:* Ctrl-Z is undo.
 
-![Factorial function](https://i.imgur.com/9a5M5Jt.png)
+![Factorial function](https://i.imgur.com/vWjV8pc.png)
 
 To create the function above:
 
 * Navigate to the "New..." button and press **space**.
-* Lamdu spaces your code automatically.
-  If you type a space after the first "x" below, Lamdu will think you want to specify a second argument to the function.
 
-  The first equals sign after "fac" gets onto your screen without you typing it.
-  However, after "fac x", you may type the equals sign anyways, or skip over it with the right cursor key.
+Type **`factorial x=`**.
 
-Type "**`fac x=if x=0 1 x*f(x-1)`**"
+*Note:* Lamdu spaces your code automatically.
+
+When you press **space** at the left-hand-side of a definition, Lamdu
+adds a parameter to the function and does not add a "space" as it
+would in a normal text editor.
+
+  The equals sign after `factorial` appears without typing it because all definitions have one.
+  However, after `factorial x`, you may type an equals sign anyways, or skip over it with the right cursor key.
+
+Now type the body of the function: **`if x=0 1 x*fac(x-1)`**
 
 We've now written the function. Let's use it.
 
@@ -204,9 +209,6 @@ The `|` represents a [suspended computation](https://github.com/lamdu/lamdu/blob
 This function is recursive and invoked additional applications of itself.
 To navigate between these function applications,
 navigate to the arrows under the `x` parameter and press **right** or **left**.
-
-To rename any symbol, navigate to it, press **return** twice and edit the name.
-Note that all references are displayed with the updated name correctly.
 
 ## Further Exploration / Help Documentation
 

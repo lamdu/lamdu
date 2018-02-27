@@ -24,7 +24,6 @@ import qualified Lamdu.GUI.NameEdit as NameEdit
 import qualified Lamdu.GUI.Styled as Styled
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Name (Name(..))
-import qualified Lamdu.Name as Name
 import qualified Lamdu.Sugar.Types as Sugar
 import           Revision.Deltum.Transaction (Transaction)
 
@@ -38,7 +37,8 @@ mReplaceParent = Sugar.rPayload . Sugar.plActions . Sugar.mReplaceParent . Lens.
 makeToNom ::
     forall m.
     Monad m =>
-    Sugar.Nominal (Name (T m)) (Sugar.BinderBody (Name (T m)) (T m) (ExprGui.SugarExpr m)) ->
+    Sugar.Nominal (Name (T m))
+    (Sugar.BinderBody (Name (T m)) (T m) (ExprGui.SugarExpr m)) ->
     Sugar.Payload (T m) ExprGui.Payload ->
     ExprGuiM m (ExpressionGui m)
 makeToNom nom pl =
@@ -84,7 +84,7 @@ mkNomGui ordering nomStr str mDel pl (Sugar.Nominal tid val) =
                             label <- Styled.grammarLabel str
                             nameGui <-
                                 NameEdit.makeView
-                                (tid ^. Sugar.tidName . Name.form)
+                                (tid ^. Sugar.tidName)
                             Widget.makeFocusableView ?? nameId
                                 <&> (Align.tValue %~) ?? label /|/ nameGui
                         <&> Responsive.fromWithTextPos

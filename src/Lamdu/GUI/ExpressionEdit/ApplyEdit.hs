@@ -32,7 +32,6 @@ import           Lamdu.GUI.ExpressionGui.Wrap (stdWrapParentExpr)
 import qualified Lamdu.GUI.Styled as Styled
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Name (Name(..))
-import qualified Lamdu.Name as Name
 import           Lamdu.Sugar.NearestHoles (NearestHoles)
 import qualified Lamdu.Sugar.Types as Sugar
 import           Revision.Deltum.Transaction (Transaction)
@@ -84,7 +83,7 @@ makeInfixFuncName nearestHoles funcVar myId =
     makeFuncVar nearestHoles funcVar myId <&> mAddMarker
     where
         mAddMarker
-            | funcVar ^. Sugar.bvNameRef . Sugar.nrName . Name.form
+            | funcVar ^. Sugar.bvNameRef . Sugar.nrName
               & BinderEdit.nonOperatorName =
                 addInfixMarker myId
             | otherwise = id

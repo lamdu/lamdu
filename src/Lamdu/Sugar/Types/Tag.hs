@@ -2,7 +2,7 @@
 module Lamdu.Sugar.Types.Tag
     ( Tag(..), tagName, tagInfo, tagSelection
     , TagInfo(..), tagVal, tagInstance
-    , TagSelection(..), tsOptions, tsNewTag
+    , TagSelection(..), tsOptions, tsNewTag, tsAnon
     , TagOption(..), toInfo, toName, toPick
     ) where
 
@@ -30,6 +30,10 @@ data TagSelection name m a = TagSelection
       -- However that would require making a consistent new tag,
       -- which would require either a new Revision.Deltum feature or a Sugar cache.
       _tsNewTag :: m (name, TagInfo, a)
+    , -- In some cases, like let-items, single params,
+      -- the user does not have to choose a tag and can choose to have
+      -- an auto-generated name instead.
+      _tsAnon :: Maybe (m (EntityId, a))
     } deriving Functor
 
 data Tag name m = Tag

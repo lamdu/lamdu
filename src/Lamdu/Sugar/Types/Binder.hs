@@ -7,7 +7,6 @@ module Lamdu.Sugar.Types.Binder
     , DetachAction(..), _FragmentAlready, _FragmentExprAlready, _DetachAction
     , NodeActions(..), detach, mSetToHole, extract, mReplaceParent
     -- Let
-    , ExtractFloatResult(..)
     , ExtractDestination(..)
     , LetActions(..), laDelete, laNodeActions
     , Let(..)
@@ -15,18 +14,16 @@ module Lamdu.Sugar.Types.Binder
         , lActions, lAnnotation, lBodyScope, lBody
     , ChildScopeMapping
     -- Binders
-    , VarToTags(..), TagsToVar(..)
-    , ParamDelResult(..), ParamAddResult(..)
+    , AddNextParam(..), _AddNext, _NeedToPickTagToAddNext
     , FuncParamActions(..), fpAddNext, fpDelete, fpMOrderBefore, fpMOrderAfter
-    , VarParamInfo(..), vpiName, vpiActions, vpiId
-    , FieldParamInfo(..), fpiActions, fpiTag
+    , ParamInfo(..), piActions, piTag
     , FuncParam(..), fpInfo, fpAnnotation
     , Meta.SpecialArgs(..)
     , Meta.DefinitionState(..)
     , BinderActions(..), baAddFirstParam, baMNodeActions
     , NullParamActions(..), npDeleteLambda
-    , BinderParams(..)
-        , _BinderWithoutParams, _NullParam, _VarParam , _FieldParams
+    , AddFirstParam(..), _AddInitialParam, _PrependParam, _NeedToPickTagToAddFirst
+    , BinderParams(..), _BinderWithoutParams, _NullParam, _Params
     , BinderParamScopeId(..), bParamScopeId
     , BinderBody(..), bbAddOuterLet, bbContent
     , BinderContent(..), _BinderLet, _BinderExpr
@@ -39,7 +36,6 @@ module Lamdu.Sugar.Types.Binder
 import qualified Control.Lens as Lens
 import           Data.CurAndPrev (CurAndPrev)
 import           Lamdu.Calc.Type (Type)
-import qualified Lamdu.Calc.Val as V
 import           Lamdu.Data.Anchors (BinderParamScopeId(..), bParamScopeId)
 import qualified Lamdu.Data.Meta as Meta
 import qualified Lamdu.Eval.Results as ER
@@ -56,33 +52,16 @@ data Annotation = Annotation
     , _aMEvaluationResult :: CurAndPrev (Maybe EvaluationResult)
     } deriving Show
 
-data VarToTags = VarToTags
-    { vttReplacedVar :: V.Var
-      -- Since this is just a result of a transaction, no name is
-      -- actually needed in the Tags below
-    , vttReplacedByTag :: TagInfo
-    , vttNewTag :: TagInfo
-    }
+data AddNextParam name m
+    = AddNext (TagSelection name m ())
+    | -- When the param has anon tag one can't add another one,
+      -- contains the EntityId of the param requiring tag.
+      NeedToPickTagToAddNext EntityId
 
-data ParamAddResult
-    = ParamAddResultNewVar EntityId V.Var
-    | ParamAddResultVarToTags VarToTags
-    | ParamAddResultNewTag EntityId
-
-data TagsToVar = TagsToVar
-    { ttvReplacedTag :: TagInfo
-    , ttvReplacedByVar :: V.Var
-    }
-
-data ParamDelResult
-    = ParamDelResultDelVar
-    | ParamDelResultTagsToVar TagsToVar
-    | ParamDelResultDelTag
-
-data FuncParamActions m =
+data FuncParamActions name m =
     FuncParamActions
-    { _fpAddNext :: m ParamAddResult
-    , _fpDelete :: m ParamDelResult
+    { _fpAddNext :: AddNextParam name m
+    , _fpDelete :: m ()
     , _fpMOrderBefore :: Maybe (m ())
     , _fpMOrderAfter :: Maybe (m ())
     }
@@ -91,25 +70,15 @@ newtype NullParamActions m = NullParamActions
     { _npDeleteLambda :: m ()
     }
 
-data VarParamInfo name m = VarParamInfo
-    { _vpiName :: name
-    , _vpiId :: EntityId
-    , _vpiActions :: FuncParamActions m
-    }
-
-data FieldParamInfo name m = FieldParamInfo
-    { _fpiTag :: Tag name m
-    , _fpiActions :: FuncParamActions m
+data ParamInfo name m = ParamInfo
+    { _piTag :: Tag name m
+    , _piActions :: FuncParamActions name m
     }
 
 data FuncParam info = FuncParam
     { _fpAnnotation :: Annotation
     , _fpInfo :: info
     } deriving (Functor, Foldable, Traversable)
-
-instance Show name => Show (VarParamInfo name m) where
-    show VarParamInfo{..} =
-        "(VarParamInfo " ++ show _vpiName ++ ")"
 
 instance Show info => Show (FuncParam info) where
     show FuncParam{..} =
@@ -120,12 +89,6 @@ data ExtractDestination
     = ExtractToLet EntityId
     | ExtractToDef EntityId
 
--- TODO: Remove this and VarToTags once we complete the tags reform.
-data ExtractFloatResult = ExtractFloatResult
-    { efrNewEntity :: ExtractDestination
-    , efrMVarToTags :: Maybe VarToTags
-    }
-
 data DetachAction m
     = FragmentAlready EntityId -- I'm an apply-of-hole, no need to detach
     | FragmentExprAlready EntityId -- I'm an arg of apply-of-hole, no need to detach
@@ -134,7 +97,7 @@ data DetachAction m
 data NodeActions m = NodeActions
     { _detach :: DetachAction m
     , _mSetToHole :: Maybe (m EntityId) -- (Not available for holes)
-    , _extract :: m ExtractFloatResult
+    , _extract :: m ExtractDestination
     , _mReplaceParent :: Maybe (m EntityId)
     }
 
@@ -153,14 +116,22 @@ data Let name m expr = Let
     , _lEntityId :: EntityId
     , _lUsages :: [EntityId]
     , _lAnnotation :: Annotation
-    , _lName :: name
+    , _lName :: Tag name m
     , _lActions :: LetActions m
     , _lBodyScope :: ChildScopeMapping
     , _lBody :: BinderBody name m expr -- "let foo = bar in [[x]]"
     } deriving (Functor, Foldable, Traversable)
 
-data BinderActions m = BinderActions
-    { _baAddFirstParam :: m ParamAddResult
+data AddFirstParam name m
+    = -- The inital param is created with anon-tag
+      AddInitialParam (m EntityId)
+    | PrependParam (TagSelection name m ())
+    | -- When the param has anon tag one can't add another one,
+      -- contains the EntityId of the param requiring tag.
+      NeedToPickTagToAddFirst EntityId
+
+data BinderActions name m = BinderActions
+    { _baAddFirstParam :: AddFirstParam name m
     , _baMNodeActions :: Maybe (NodeActions m)
     }
 
@@ -171,8 +142,7 @@ data BinderParams name m
       -- to be the empty record.
       -- This is often used to represent "deferred execution"
       NullParam (FuncParam (NullParamActions m))
-    | VarParam (FuncParam (VarParamInfo name m))
-    | FieldParams [FuncParam (FieldParamInfo name m)]
+    | Params [FuncParam (ParamInfo name m)]
 
 data BinderContent name m expr
     = BinderLet (Let name m expr)
@@ -196,7 +166,7 @@ data Binder name m expr = Binder
     , _bParams :: BinderParams name m
     , _bLamId :: Maybe EntityId
     , _bBody :: BinderBody name m expr
-    , _bActions :: BinderActions m
+    , _bActions :: BinderActions name m
     , -- The scope inside a lambda (if exists)
       _bBodyScopes :: BinderBodyScope
     } deriving (Functor, Foldable, Traversable)
@@ -205,14 +175,15 @@ Lens.makeLenses ''Annotation
 Lens.makeLenses ''Binder
 Lens.makeLenses ''BinderActions
 Lens.makeLenses ''BinderBody
-Lens.makeLenses ''FieldParamInfo
 Lens.makeLenses ''FuncParam
 Lens.makeLenses ''FuncParamActions
 Lens.makeLenses ''Let
 Lens.makeLenses ''LetActions
 Lens.makeLenses ''NodeActions
 Lens.makeLenses ''NullParamActions
-Lens.makeLenses ''VarParamInfo
+Lens.makeLenses ''ParamInfo
+Lens.makePrisms ''AddFirstParam
+Lens.makePrisms ''AddNextParam
 Lens.makePrisms ''BinderContent
 Lens.makePrisms ''BinderParams
 Lens.makePrisms ''DetachAction

@@ -1,5 +1,4 @@
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE NoImplicitPrelude, GeneralizedNewtypeDeriving, OverloadedStrings, FlexibleInstances, MultiParamTypeClasses #-}
+{-# LANGUAGE NoImplicitPrelude, GeneralizedNewtypeDeriving, OverloadedStrings, FlexibleInstances, FlexibleContexts, MultiParamTypeClasses #-}
 module Lamdu.GUI.TypeView
     ( make
     ) where
@@ -8,7 +7,8 @@ import qualified Control.Lens as Lens
 import           Control.Monad (zipWithM)
 import           Control.Monad.State (StateT, state, evalStateT)
 import           Control.Monad.Trans.Class (MonadTrans(..))
-import           Control.Monad.Transaction (MonadTransaction(..))
+import           Control.Monad.Transaction (MonadTransaction(..), getP)
+import qualified Data.Char as Char
 import qualified Data.Map as Map
 import qualified Data.Text as Text
 import           Data.Text.Encoding (decodeUtf8)
@@ -36,7 +36,6 @@ import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.GUI.Styled as Styled
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Sugar.OrderTags (orderedFlatComposite)
-import qualified Revision.Deltum.Transaction as Transaction
 import           System.Random (Random, random)
 import qualified System.Random as Random
 
@@ -121,8 +120,8 @@ makeTInst ::
     Prec -> T.NominalId -> Map T.ParamId Type -> M m (WithTextPos View)
 makeTInst parentPrecedence tid typeParams =
     do
-        nameView <-
-            Anchors.assocNameRef tid & Transaction.getP & transaction >>= text
+        tag <- Anchors.assocTag tid & getP
+        nameView <- Anchors.assocTagNameRef tag & getP <&> Lens.ix 0 %~ Char.toUpper >>= text
         hspace <- Spacer.stdHSpace
         let afterName paramsView = nameView /|/ hspace /|/ paramsView
         let makeTypeParam (T.ParamId tParamId, arg) =
@@ -169,7 +168,7 @@ makeTag ::
     (MonadTransaction n m, MonadReader env m, TextView.HasStyle env) =>
     T.Tag -> M m (WithTextPos View)
 makeTag tag =
-    Anchors.assocNameRef tag & Transaction.getP & transaction
+    Anchors.assocTagNameRef tag & getP
     >>= text
 
 makeField ::

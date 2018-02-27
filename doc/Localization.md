@@ -1,15 +1,14 @@
 # Localization plan
 
-Status: This document describes something we plan to do but have yet to implement.
+Soon, in Lamdu, the same code could have names in several languages,
+and the standard library will be provided with multi-lingual names.
 
-Currently all the syntax keywords and names in Lamdu's standard library are in English.
-
-In our vision, the exact same code could have names in several languages,
-and the standard library will be provided with names in many languages.
-
-A `Tag` would have names in several languages stored.
-Users will set display language preferences and symbols would be displayed in the preferred
-language, or in a fallback language when the symbol doesn't have a name in the preferred one.
+Each `Tag` (see
+[lamdu-calculus](https://github.com/lamdu/lamdu-calculus/blob/master/README.md))
+has an associate name, soon it will have associated names for each
+language.  Users will set display language preferences and symbols
+would be displayed in the preferred language, or in a fallback
+language when the symbol doesn't have a name in the preferred one.
 
 ## Same name - different tags
 
@@ -38,7 +37,7 @@ Note that this will add an additional indirection between variables and their na
 ## Disambiguation
 
 When two tags have the same translation in the current language and
-are both displayed simultaneously, their associated tags will be used to
-disambiguate (where integers are currently used). When two different
-variables have the exact same `Tag`, or when two tags don't both have
-associated tags, integers will be used.
+are both displayed simultaneously, their associated tags will be used
+to disambiguate (where blue integers are currently used). When two
+different variables have the exact same `Tag`, or when two tags don't
+both have associated tags, integers will be used.

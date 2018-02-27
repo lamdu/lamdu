@@ -27,6 +27,7 @@ warn = a ^. b ^. c ==> a ^. b . c
 warn = a ^. b ^? c ==> a ^? b . c
 warn = a ^? b <&> (^. c) ==> a ^? b . c
 warn = a ^? b . _Just ==> a ^. b
+warn = Control.Lens.at a . _Just ==> Control.Lens.ix a
 warn = fromJust (a ^? b) ==> a ^?! b
 warn = a .~ Just b ==> a ?~ b
 warn = a & Control.Lens.mapped %~ b ==> a <&> b

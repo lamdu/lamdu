@@ -3,7 +3,6 @@ module Lamdu.GUI.DefinitionEdit
     ( make
     ) where
 
-import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
 import           Control.Monad.Transaction (transaction)
 import           GUI.Momentu.Align (WithTextPos)
@@ -24,10 +23,10 @@ import           Lamdu.Calc.Type.Scheme (Scheme(..), schemeType)
 import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.GUI.ExpressionEdit.BinderEdit as BinderEdit
 import qualified Lamdu.GUI.ExpressionEdit.BuiltinEdit as BuiltinEdit
+import qualified Lamdu.GUI.ExpressionEdit.TagEdit as TagEdit
 import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExprGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
-import qualified Lamdu.GUI.NameEdit as NameEdit
 import qualified Lamdu.GUI.Styled as Styled
 import qualified Lamdu.GUI.TypeView as TypeView
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
@@ -58,11 +57,9 @@ makeExprDefinition ::
     Sugar.DefinitionExpression (Name (T m)) (T m) (ExprGui.SugarExpr m) ->
     ExprGuiM m (ExpressionGui m)
 makeExprDefinition lhsEventMap def bodyExpr =
-    do
-        theme <- Lens.view Theme.theme
-        let defColor = Theme.definitionColor (Theme.name theme)
-        BinderEdit.make (bodyExpr ^. Sugar.dePresentationMode) lhsEventMap
-            (def ^. Sugar.drName) defColor (bodyExpr ^. Sugar.deContent) myId
+    BinderEdit.make (bodyExpr ^. Sugar.dePresentationMode) lhsEventMap
+    (def ^. Sugar.drName) Theme.definitionColor
+    (bodyExpr ^. Sugar.deContent) myId
     where
         entityId = def ^. Sugar.drEntityId
         myId = WidgetIds.fromEntityId entityId
@@ -74,8 +71,7 @@ makeBuiltinDefinition ::
     ExprGuiM m (WithTextPos (Widget (T m GuiState.Update)))
 makeBuiltinDefinition def builtin =
     do
-        defColor <- Lens.view Theme.theme <&> Theme.name <&> Theme.definitionColor
-        nameEdit <- NameEdit.makeAtBinder name defColor (Widget.joinId myId ["name"])
+        nameEdit <- TagEdit.makeBinderTagEdit Theme.definitionColor name
         equals <- TextView.makeLabel " = "
         builtinEdit <- BuiltinEdit.make builtin myId
         typeView <-

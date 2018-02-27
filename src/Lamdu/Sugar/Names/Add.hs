@@ -1,51 +1,59 @@
-{-# LANGUAGE NoImplicitPrelude, LambdaCase, GeneralizedNewtypeDeriving, RecordWildCards, TypeFamilies, TemplateHaskell, DeriveGeneric, NoMonomorphismRestriction, OverloadedStrings #-}
+{-# LANGUAGE NoImplicitPrelude, GeneralizedNewtypeDeriving, RecordWildCards, TypeFamilies, TemplateHaskell, DeriveGeneric, NoMonomorphismRestriction, OverloadedStrings #-}
 module Lamdu.Sugar.Names.Add
     ( addToWorkArea
     ) where
 
 import qualified Control.Lens as Lens
+import           Control.Monad.Reader (Reader, runReader, MonadReader(..))
+import qualified Control.Monad.Reader as Reader
+import           Control.Monad.State (runState, evalState)
 import           Control.Monad.Trans.FastWriter (Writer, runWriter, MonadWriter)
 import qualified Control.Monad.Trans.FastWriter as Writer
-import           Control.Monad.Trans.Reader (Reader, runReader)
-import qualified Control.Monad.Trans.Reader as Reader
-import           Control.Monad.Trans.State (runState, evalState)
+import           Control.Monad.Transaction (getP, setP)
 import qualified Data.Char as Char
-import           Data.List (partition)
-import qualified Data.List as List
+import           Data.Foldable (fold)
+import           Data.MMap (MMap(..), _MMap)
+import qualified Data.MMap as MMap
+import           Data.Map (Map)
 import qualified Data.Map as Map
+import           Data.Map.Utils (singleton, hasKey)
 import           Data.Monoid.Generic (def_mempty, def_mappend)
 import qualified Data.Set as Set
-import           Data.Set.Ordered (OrderedSet)
-import qualified Data.Set.Ordered as OrderedSet
-import qualified Data.Text as Text
+import qualified Data.Tuple as Tuple
 import           Data.UUID.Types (UUID)
-import           Lamdu.Data.Anchors (assocNameRef)
+import qualified Lamdu.Calc.Type as T
+import           Lamdu.Data.Anchors (assocTagNameRef, anonTag)
+import qualified Lamdu.Data.Anchors as Anchors
 import           Lamdu.Name
 import           Lamdu.Sugar.Internal
-import qualified Lamdu.Sugar.Lens as SugarLens
-import           Lamdu.Sugar.Names.CPS (CPS(..), runcps)
-import           Lamdu.Sugar.Names.Clash (IsClash(..))
+import           Lamdu.Sugar.Names.CPS (CPS(..), runcps, liftCPS)
+import           Lamdu.Sugar.Names.Clash (IsClash(..), AnnotatedName)
 import qualified Lamdu.Sugar.Names.Clash as Clash
 import           Lamdu.Sugar.Names.NameGen (NameGen)
 import qualified Lamdu.Sugar.Names.NameGen as NameGen
 import           Lamdu.Sugar.Names.Walk (MonadNaming, Disambiguator)
 import qualified Lamdu.Sugar.Names.Walk as Walk
 import           Lamdu.Sugar.Types
-import           Revision.Deltum.Transaction (Transaction)
-import qualified Revision.Deltum.Transaction as Transaction
+import           Revision.Deltum.Transaction (Transaction, MkProperty, modP)
 
-import           Lamdu.Prelude
+import           Lamdu.Prelude hiding (Map)
 
 type T = Transaction
-type StoredName = Text
+
+newtype StoredText = StoredText { unStoredText :: Text }
+    deriving (Eq, Ord)
+
+newtype DisplayText = DisplayText { unDisplayText :: Text }
+    deriving (Eq, Ord)
 
 ------------------------------
 ---------- Pass 0 ------------
 ------------------------------
 data P0Name = P0Name
-    { _p0StoredName :: Maybe StoredName
-    , _p0uuid :: UUID
+    { __p0TagName :: StoredText
+    , _p0InternalName :: InternalName
     }
+Lens.makeLenses ''P0Name
 
 newtype Pass0LoadNames tm a = Pass0LoadNames { runPass0LoadNames :: T tm a }
     deriving (Functor, Applicative, Monad)
@@ -55,218 +63,176 @@ instance Monad tm => MonadNaming (Pass0LoadNames tm) where
     type NewName (Pass0LoadNames tm) = P0Name
     type SM (Pass0LoadNames tm) = tm
     opRun = pure runPass0LoadNames
-    opWithParamName _ _ = p0cpsNameConvertor
-    opWithLetName _ = p0cpsNameConvertor
-    opGetName _ _ = p0nameConvertor
+    opWithName _ _ n = CPS $ \inner -> (,) <$> getP0Name n <*> inner
+    opGetName _ _ = getP0Name
 
 getP0Name :: Monad tm => InternalName -> Pass0LoadNames tm P0Name
 getP0Name internalName =
-    assocNameRef (internalName ^. inUUID) & Transaction.getP & Pass0LoadNames
-    <&>
-    \nameStr ->
-    P0Name
-    { _p0StoredName = if Text.null nameStr then Nothing else Just nameStr
-    , _p0uuid = internalName ^. inUUID
-    }
-
-p0nameConvertor :: Monad tm => Walk.NameConvertor (Pass0LoadNames tm)
-p0nameConvertor = getP0Name
-
-p0cpsNameConvertor :: Monad tm => Walk.CPSNameConvertor (Pass0LoadNames tm)
-p0cpsNameConvertor uuid =
-    CPS $ \k -> (,) <$> getP0Name uuid <*> k
+    assocTagNameRef (internalName ^. inTag) & getP & Pass0LoadNames
+    <&> StoredText
+    <&> (`P0Name` internalName)
 
 ------------------------------
 ---------- Pass 1 ------------
 ------------------------------
 
--- Wrap the Map for a more sensible (recursive) Monoid instance
-newtype NameUUIDMap = NameUUIDMap { _nameUUIDMap :: Map Text (OrderedSet Clash.AnnotatedName) }
-    deriving Show
-Lens.makeLenses ''NameUUIDMap
+data TagVal = TagVal
+    { tvAnyGlobal :: Bool
+    , tvIsClash :: IsClash
+    }
 
-instance Semigroup NameUUIDMap where
-    NameUUIDMap x <> NameUUIDMap y = NameUUIDMap (Map.unionWith (flip mappend) x y)
+instance Semigroup TagVal where
+    TagVal anyGlobal0 isClash0 <> TagVal anyGlobal1 isClash1 =
+        TagVal (anyGlobal0 || anyGlobal1) (isClash0 <> isClash1)
 
-instance Monoid NameUUIDMap where
-    mempty = NameUUIDMap Map.empty
+instance Monoid TagVal where
+    mempty = TagVal False mempty
     mappend = (<>)
 
-nameUUIDMapSingleton :: Text -> Clash.AnnotatedName -> NameUUIDMap
-nameUUIDMapSingleton name nameInstance =
-    OrderedSet.singleton nameInstance & Map.singleton name & NameUUIDMap
-
-isLocal :: Walk.NameType -> Bool
-isLocal Walk.FieldParamName = True
-isLocal Walk.ParamName = True
-isLocal _ = False
-
-isLocalName :: Clash.AnnotatedName -> Bool
-isLocalName = isLocal . (^. Clash.niNameType)
-
-removeEmpty :: NameUUIDMap -> NameUUIDMap
-removeEmpty = nameUUIDMap %~ Map.filter (not . OrderedSet.null)
-
-localNames :: NameUUIDMap -> NameUUIDMap
-localNames nameMap =
-    nameMap
-    & nameUUIDMap . Lens.mapped %~ OrderedSet.filter isLocalName
-    & removeEmpty
-
-globalNames :: NameUUIDMap -> NameUUIDMap
-globalNames nameMap =
-    nameMap
-    & nameUUIDMap . Lens.mapped %~ OrderedSet.filter (not . isLocalName)
-    & removeEmpty
+tagMapSingleton :: T.Tag -> AnnotatedName -> MMap T.Tag TagVal
+tagMapSingleton k v =
+    singleton k val & MMap
+    where
+        val =
+            TagVal
+            { tvAnyGlobal = v ^. Clash.anNameType & Walk.isGlobal
+            , tvIsClash = Clash.isClashOf v
+            }
 
 data P1Out = P1Out
-    { _p1Names :: NameUUIDMap
-    , _p1Collisions :: Set Text
+    { _p1Tags :: MMap T.Tag TagVal
+    , _p1Contexts :: MMap T.Tag (Set UUID)
+        -- ^ Needed to generate suffixes
+    , _p1LocalCollisions :: Set T.Tag
+        -- ^ Local (vs [Local|Global]) collisions
+    , _p1Texts :: MMap DisplayText (Set T.Tag)
     } deriving (Generic)
 instance Semigroup P1Out where
     (<>) = def_mappend
 instance Monoid P1Out where
     mempty = def_mempty
     mappend = (<>)
+Lens.makeLenses ''P1Out
+
+data P1KindedName = P1StoredName AnnotatedName StoredText | P1AnonName UUID
 
 data P1Name = P1Name
-    { p1StoredName :: Maybe StoredName
-    , p1Instance :: Clash.AnnotatedName
-    , -- | We keep the names below each node so we can check if an
-      -- auto-generated name (in pass2) collides with any name in
-      -- inner scopes (below)
-      p1NamesBelow :: NameUUIDMap
+    { p1KindedName :: P1KindedName
+    , p1TagsBelow :: MMap T.Tag TagVal
+        -- ^ Allow checking collisions for names hidden behind monadic
+        -- actions:
+    , p1TextsBelow :: MMap DisplayText (Set T.Tag)
+        -- ^ We keep the texts below each node so we can check if an
+        -- auto-generated name collides with any name in inner scopes
+        -- We only use the keys in this map, but we do not strip the
+        -- values so all p1TextsBelow can be shared
     }
 newtype Pass1PropagateUp (tm :: * -> *) a = Pass1PropagateUp (Writer P1Out a)
     deriving (Functor, Applicative, Monad, MonadWriter P1Out)
 runPass1PropagateUp :: Pass1PropagateUp tm a -> (a, P1Out)
-runPass1PropagateUp (Pass1PropagateUp act) = runWriter act & _2 %~ p1PostProcess
+runPass1PropagateUp (Pass1PropagateUp act) = runWriter act
 
-globalCollisions :: NameUUIDMap -> Set Text
-globalCollisions (NameUUIDMap names) =
-    Map.filter (namesClash . (^.. Lens.folded)) names & Map.keysSet
-    where
-        namesClash ns =
-            case Clash.check globals of
-            Clash -> True
-            noClash -> any (Clash.isClash . (noClash <>) . Clash.isClashOf) locals
-            where
-                (locals, globals) = partition isLocalName ns
-
--- | Compute the global collisions to form ALL collisions and yield
--- the global names only
-p1PostProcess :: P1Out -> P1Out
-p1PostProcess (P1Out names localCollisions) =
-    P1Out names (localCollisions <> globalCollisions names)
-
-p1ListenNames :: Pass1PropagateUp tm a -> Pass1PropagateUp tm (a, NameUUIDMap)
-p1ListenNames act = Writer.listen act <&> _2 %~ _p1Names
+tellSome :: MonadWriter w m => Lens.ASetter' w a -> a -> m ()
+tellSome l v = mempty & l .~ v & Writer.tell
 
 instance Monad tm => MonadNaming (Pass1PropagateUp tm) where
     type OldName (Pass1PropagateUp tm) = P0Name
     type NewName (Pass1PropagateUp tm) = P1Name
     type SM (Pass1PropagateUp tm) = tm
     opRun = pure (pure . fst . runPass1PropagateUp)
-    opWithParamName GetFieldParameter _ = pass1Result Nothing Walk.FieldParamName
-    opWithParamName GetParameter _ = pass1Result Nothing Walk.ParamName
-    opWithLetName _ = pass1Result Nothing Walk.ParamName
+    opWithName _ = p1Name Nothing
     opGetName mDisambiguator nameType p0Name =
-        pass1Result mDisambiguator nameType p0Name & runcps
+        p1Name mDisambiguator nameType p0Name & runcps
 
-unnamedStr :: Text
-unnamedStr = "Unnamed"
+p1Anon :: Maybe UUID -> CPS (Pass1PropagateUp tm) P1Name
+p1Anon ctx =
+    case ctx of
+    Nothing -> error "Anon tag with no context"
+    Just uuid ->
+        CPS (Writer.listen <&> Lens.mapped %~ Tuple.swap . (_2 %~ f))
+        where
+            f innerOut =
+                P1Name
+                { p1KindedName = P1AnonName uuid
+                , p1TagsBelow = innerOut ^. p1Tags
+                , p1TextsBelow = innerOut ^. p1Texts
+                }
 
-pass1Result ::
+displayOf :: StoredText -> DisplayText
+displayOf (StoredText text)
+    | Lens.has Lens._Empty text = DisplayText "(empty)"
+    | otherwise = DisplayText text
+
+p1Tagged ::
     Maybe Disambiguator -> Walk.NameType -> P0Name ->
     CPS (Pass1PropagateUp tm) P1Name
-pass1Result mDisambiguator nameType (P0Name mName uuid) =
+p1Tagged mDisambiguator nameType (P0Name storedText internalName) =
     CPS $ \inner ->
     do
-        (r, namesBelow) <- p1ListenNames inner
-        let newNamesBelow = myNameUUIDMap `mappend` namesBelow
-        let checkLocalCollision name =
-                localNames newNamesBelow ^.. nameUUIDMap . Lens.ix name . Lens.folded
-                & Clash.check & Clash.isClash
-        let mGivenName =
-                -- TODO: Once we ALWAYS have associated tags (except
-                -- for local single param lambda) via prevention of
-                -- invalid states, just use: `mGivenName = mName`
-                case (nameType, mName) of
-                (Walk.ParamName, Nothing) -> Nothing
-                (_, Just name) -> Just name
-                (_, _) -> Just unnamedStr
-        let localCollisions =
-                case mGivenName of
-                Just name
-                    | isLocal nameType && checkLocalCollision name -> Set.singleton name
-                _ -> mempty
-        Writer.tell P1Out { _p1Names = myNameUUIDMap, _p1Collisions = localCollisions }
+        (r, innerOut) <-
+            tellSome p1Tags (tagMapSingleton tag aName)
+            *> tellSome p1Texts (singleton displayText (Set.singleton tag))
+            *> inner
+            & Writer.listen
+        let tags = innerOut ^. p1Tags
+        when
+            ( Walk.isLocal nameType
+              && (Clash.isClash . tvIsClash) (tags ^. _MMap . Lens.ix tag)
+            ) (tellSome p1LocalCollisions (Set.singleton tag))
         pure
             ( P1Name
-                { p1StoredName = mName
-                , p1Instance = nameInstance
-                , p1NamesBelow = newNamesBelow
+                { p1KindedName = P1StoredName aName storedText
+                , p1TagsBelow = tags
+                , p1TextsBelow = innerOut ^. p1Texts
                 }
             , r
             )
     where
-        myNameUUIDMap =
-            case (nameType, mName) of
-            (_, Just name) -> Just name
-            (Walk.ParamName, Nothing) -> mempty
-            (_, Nothing) -> Just unnamedStr
-            & foldMap singleton
-        nameInstance =
+        tag = internalName ^. inTag
+        displayText = displayOf storedText
+        aName =
             Clash.AnnotatedName
-            { _niUUID = uuid
-            , _niDisambiguator = mDisambiguator
-            , _niNameType = nameType
+            { _anInternal = internalName
+            , _anDisambiguator = mDisambiguator
+            , _anNameType = nameType
             }
-        singleton nameText = nameUUIDMapSingleton nameText nameInstance
 
-------------------------------
----------- Pass 2 ------------
-------------------------------
+p1Name ::
+    Maybe Disambiguator -> Walk.NameType -> P0Name ->
+    CPS (Pass1PropagateUp tm) P1Name
+p1Name mDisambiguator nameType p0Name =
+    -- NOTE: We depend on the anonTag key in the map
+    liftCPS (traverse_ (tellSome p1Contexts . singleton tag . Set.singleton) ctx)
+    *> if tag == anonTag
+        then p1Anon ctx
+        else p1Tagged mDisambiguator nameType p0Name
+    where
+        InternalName ctx tag = p0Name ^. p0InternalName
 
-data P2Env = P2Env
-    { _p2NameGen :: NameGen UUID
-    , _p2NameSuffixes :: Map UUID Int
-    , -- | Names used in containing scopes (above) -- used to avoid
-      -- generating an automatic name that collides with a name above
-      -- and to generate "UnknownCollision" inside hole results
-      _p2NamesAbove :: Map Text IsClash
-    }
-Lens.makeLenses ''P2Env
+-------------------------------------
+---------- Pass1 -> Pass2 -----------
+-------------------------------------
 
--- | Textual Name ambiguity
---
--- In the visible grammar, there are different types of names (see
--- Walk.NameType):
--- DefName, TagName, NominalName, ParamName
---
--- Each type can collide with itself. Nominals can only collide with
--- themselves (due to their grammatic context being unique).
---
--- Definitions and tags cannot collide with each other but both
--- can collide with param names.
---
--- Hence, we check collisions in three groups:
--- * NominalIds
--- * Tags+FieldParams
--- * Defs+FieldParams+Vars
---
--- Defs+Params can also be disambiguated if used exclusively in
--- labeled apply contexts, and with differing signatures.
+tagText :: DisplayText -> Collision -> TagText
+tagText = TagText . unDisplayText
 
-uuidSuffixes :: OrderedSet Clash.AnnotatedName -> Map UUID Int
-uuidSuffixes nameInstances =
-    nameInstances ^.. Lens.folded . Clash.niUUID
-    & List.nub
-    & (zip ?? [0..])
-    & Map.fromList
+makeTagTexts :: MMap DisplayText (Set T.Tag) -> Map T.Tag TagText
+makeTagTexts p1texts =
+    p1texts
+    & Lens.imapped %@~ mkTagTexts
+    & fold
+    where
+        mkTagTexts text tags
+            | isCollidingName text tags =
+                zipWith (mkCollision text) [0..] (Set.toList tags) & Map.fromList
+            | otherwise =
+                Map.fromSet (const (tagText text NoCollision)) tags
+        mkCollision text idx tag = (tag, tagText text (Collision idx))
+        isCollidingName text tagsOfName =
+            isReserved text || Set.size tagsOfName > 1
 
-isReserved :: Text -> Bool
-isReserved name =
+isReserved :: DisplayText -> Bool
+isReserved (DisplayText name) =
     name `Set.member` reservedWords
     || (name ^? Lens.ix 0 <&> Char.isDigit & fromMaybe False)
     where
@@ -277,215 +243,236 @@ isReserved name =
             , "let"
             , "or"
             , "λ", "«", "»", "Ø", "|", ".", "→", "➾"
+            , "Unnamed"
             ]
 
+toSuffixMap :: MMap T.Tag (Set UUID) -> Map TaggedVarId CollisionSuffix
+toSuffixMap tagContexts =
+    tagContexts & Lens.imapped %@~ eachTag & (^.. Lens.folded) & mconcat
+    where
+        eachTag tag contexts = zipWith (item tag) [0..] (Set.toList contexts) & Map.fromList
+        item tag idx uuid = (TaggedVarId uuid tag, idx)
 
-initialP2Env :: P1Out -> P2Env
-initialP2Env (P1Out names collisions) =
+initialP2Env :: MkProperty tm (Set T.Tag) -> P1Out -> P2Env tm
+initialP2Env publishedTags (P1Out p1tags p1contexts p1localCollisions p1texts) =
     P2Env
     { _p2NameGen = NameGen.initial
-    , _p2NamesAbove =
-        globalNames names ^. nameUUIDMap <&> (^.. Lens.folded)
-        <&> Clash.check
-    , _p2NameSuffixes = names ^@.. nameUUIDMap . Lens.ifolded <&> f & mconcat
+    , _p2AnonSuffixes =
+        p1contexts ^.. Lens.ix anonTag . Lens.folded & (`zip` [0..])
+        & Map.fromList
+    , _p2TagTexts = tagTexts
+    , _p2Texts = MMap.keysSet p1texts
+    , _p2TagSuffixes =
+        localCollisionContexts <> globalCollisionContexts
+        & toSuffixMap
+    , _p2TagsAbove = globalTags
+    , _p2TextsAbove = globalTags ^@.. Lens.itraversed <&> fst <&> lookupText & Set.fromList
+    , _p2Tags = p1tags <&> tvIsClash
+    , _p2PublishedTags = publishedTags
     }
     where
-        f (name, insts)
-            | name `Set.member` collisions
-            || isReserved name = uuidSuffixes insts
-            | otherwise = mempty
+        lookupText tag =
+            tagTexts ^? Lens.ix tag . ttText
+            & fromMaybe (error "Cannot find global tag in tagTexts")
+            & DisplayText
+        tagTexts = makeTagTexts p1texts
+        -- TODO: Use OrderedSet for nice ordered suffixes
+        localCollisionContexts =
+            p1localCollisions & MMap.fromSet toContexts
+        globalCollisionContexts =
+            globalTags & MMap.filter Clash.isClash
+            & Lens.imapped %@~ \tag _ -> toContexts tag
+        toContexts k =
+            p1contexts ^. Lens.at k
+            & fromMaybe (error "No Contexts for clashing tag??")
+        globalTags = MMap.mapMaybe justGlobals p1tags
+        justGlobals (TagVal True isClash) = Just isClash
+        justGlobals (TagVal False _) = Nothing
 
-newtype Pass2MakeNames (tm :: * -> *) a = Pass2MakeNames (Reader P2Env a)
-    deriving (Functor, Applicative, Monad)
-runPass2MakeNames :: P2Env -> Pass2MakeNames tm a -> a
-runPass2MakeNames initial (Pass2MakeNames act) = runReader act initial
-p2GetEnv :: Pass2MakeNames tm P2Env
-p2GetEnv = Pass2MakeNames Reader.ask
-p2WithEnv :: (P2Env -> P2Env) -> Pass2MakeNames tm a -> Pass2MakeNames tm a
-p2WithEnv f (Pass2MakeNames act) = Pass2MakeNames $ Reader.local f act
 
-runPass2MakeNamesInitial :: P1Out -> Pass2MakeNames tm a -> a
-runPass2MakeNamesInitial = runPass2MakeNames . initialP2Env
+------------------------------
+---------- Pass 2 ------------
+------------------------------
+----- Add tag suffixes -------
+------------------------------
 
-setUuidName :: Monad tm => UUID -> StoredName -> T tm ()
-setUuidName = Transaction.setP . assocNameRef
+-- Like InternalName, but necessarily with a context and non-anonymous tag
+data TaggedVarId = TaggedVarId
+    { _tvCtx :: UUID -- InternalName's context
+    , _tvTag :: T.Tag   -- InternalName's tag
+    } deriving (Eq, Ord)
 
-getCollision :: Text -> Clash.AnnotatedName -> P2Env -> Collision
-getCollision name inst env =
-    case env ^. p2NameSuffixes . Lens.at (inst ^. Clash.niUUID) of
-    Just suffix -> Collision suffix
-    Nothing ->
-        case env ^. p2NamesAbove . Lens.ix name <> Clash.isClashOf inst of
-        NoClash{} -> NoCollision
-        Clash ->
-            -- Once a collision, other non-colliding instances
-            -- also get a suffix, so we have no idea what suffix
-            -- we'll get:
-            UnknownCollision
+data P2Env tm = P2Env
+    { _p2NameGen :: NameGen UUID -- Map anon name contexts to chosen auto-names
+    , _p2AnonSuffixes :: Map UUID CollisionSuffix
+        -- ^ Untagged global names (defs/nominals) are presented as
+        -- "Unnamed" with a collision suffix. This maps the contexts
+        -- (def/nominal ids) to the suffix
+    , _p2TagTexts :: Map T.Tag TagText
+    , _p2Texts :: Set DisplayText
+        -- ^ The set of all texts seen in P1 traversal (we do not see hole results)
+        -- This is used to identify textual collisions in hole result tags
+    , _p2TagSuffixes :: Map TaggedVarId CollisionSuffix
+        -- ^ When N (>1) different entities have the same tag in the
+        -- same scope, the tag gets a different suffix for each of its
+        -- entities
+    , _p2TagsAbove :: MMap T.Tag IsClash
+        -- ^ Tags used in containing scopes (above) -- used to
+        -- generate "UnknownCollision" inside hole results
+    , _p2TextsAbove :: Set DisplayText
+        -- ^ Used to prevent auto-names from re-using texts from above
+    , _p2Tags :: MMap T.Tag IsClash
+        -- ^ All tags including locals from all inner scopes -- used to
+        -- check collision of globals in hole results with everything.
+    , _p2PublishedTags :: MkProperty tm (Set T.Tag)
+    }
+Lens.makeLenses ''P2Env
 
-getCollisionEnv :: Text -> Clash.AnnotatedName -> P2Env -> (Collision, P2Env)
-getCollisionEnv name inst env =
-    ( getCollision name inst env
-    , env & p2NamesAbove %~ Map.insertWith mappend name (Clash.isClashOf inst)
-    )
+newtype Pass2MakeNames (tm :: * -> *) a = Pass2MakeNames { runPass2MakeNames :: Reader (P2Env tm) a }
+    deriving (Functor, Applicative, Monad, MonadReader (P2Env tm))
+
+runPass2MakeNamesInitial :: MkProperty tm (Set T.Tag) -> P1Out -> Pass2MakeNames tm a -> a
+runPass2MakeNamesInitial publishedTags p1out act =
+    initialP2Env publishedTags p1out & (runReader . runPass2MakeNames) act
+
+getCollision :: MMap T.Tag TagVal -> AnnotatedName -> Pass2MakeNames tm Collision
+getCollision tagsBelow aName =
+    case mCtx of
+    Nothing -> pure NoCollision -- simple tag has no tag collisions
+    Just ctx ->
+        Lens.view id
+        <&> \env ->
+        case env ^. p2TagSuffixes . Lens.at taggedVarId of
+        Just suffix -> Collision suffix
+        Nothing ->
+            -- In hole results, the collsions suffixes are not precomputed,
+            -- but rather computed here:
+            case tags ^. Lens.ix tag <> Clash.isClashOf aName of
+            NoClash{} -> NoCollision
+            Clash ->
+                -- Once a collision, other non-colliding instances
+                -- also get a suffix, so we have no idea what suffix
+                -- we'll get:
+                UnknownCollision
+            where
+                tags
+                    | isGlobal = env ^. p2Tags
+                    | otherwise =
+                          (tagsBelow <&> tvIsClash)
+                          <> (env ^. p2TagsAbove)
+        where
+            taggedVarId = TaggedVarId ctx tag
+    where
+        isGlobal = Lens.has (Clash.anNameType . Walk._GlobalDef) aName
+        InternalName mCtx tag = aName ^. Clash.anInternal
 
 instance Monad tm => MonadNaming (Pass2MakeNames tm) where
     type OldName (Pass2MakeNames tm) = P1Name
     type NewName (Pass2MakeNames tm) = Name (T tm)
     type SM (Pass2MakeNames tm) = tm
-    opRun = p2GetEnv <&> runPass2MakeNames <&> (pure .)
-    opWithParamName GetParameter varInfo = p2cpsNameConvertorLocal varInfo
-    opWithParamName GetFieldParameter _ = p2cpsNameConvertorGlobal
-    opWithLetName = p2cpsNameConvertorLocal
-    opGetName _ nameType =
-        case nameType of
-        Walk.ParamName -> p2nameConvertorLocal
-        _ -> p2nameConvertorGlobal
+    opRun = Lens.view id <&> flip (runReader . runPass2MakeNames) <&> (pure .)
+    opWithName varInfo _ = p2cpsNameConvertor varInfo
+    opGetName _ = p2nameConvertor
 
-p2nameConvertorLocal :: Monad m => P1Name -> Pass2MakeNames tm (Name (T m))
-p2nameConvertorLocal (P1Name mStoredName inst _) =
-    case mStoredName of
-        Just storedName ->
-            do
-                env <- p2GetEnv
-                Stored storedName (getCollision storedName inst env) & pure
-        Nothing ->
-            do
-                nameGen <- p2GetEnv <&> (^. p2NameGen)
-                let name = evalState (NameGen.existingName uuid) nameGen
-                AutoGenerated name & pure
-    <&> (`Name` setUuidName uuid)
+getTagText :: T.Tag -> StoredText -> Pass2MakeNames tm TagText
+getTagText tag text =
+    Lens.view id
+    <&> \env ->
+    env ^. p2TagTexts . Lens.at tag
+    & fromMaybe (TagText (unDisplayText displayText) (checkCollision env))
     where
-        uuid = inst ^. Clash.niUUID
+        displayText = displayOf text
+        checkCollision env
+            | Set.member displayText (env ^. p2Texts) = UnknownCollision
+            | otherwise = NoCollision
 
-p2cpsNameConvertor ::
-    Monad tm =>
-    P1Name ->
-    (P2Env -> (Form, P2Env)) ->
-    CPS (Pass2MakeNames tm) (Name (T tm))
-p2cpsNameConvertor (P1Name mStoredName inst _) nameMaker =
-    CPS $ \k ->
+mkSetName :: Monad tm => T.Tag -> Pass2MakeNames tm (Text -> Transaction tm ())
+mkSetName tag =
+    Lens.view p2PublishedTags
+    <&>
+    \publishedTags newName ->
     do
-        oldEnv <- p2GetEnv
-        let (newName, newEnv) =
-                case mStoredName of
-                Just storedName ->
-                    getCollisionEnv storedName inst oldEnv
-                    & _1 %~ Stored storedName
-                Nothing -> nameMaker oldEnv
-                & _1 %~ (`Name` setUuidName (inst ^. Clash.niUUID))
-        res <- p2WithEnv (const newEnv) k
-        pure (newName, res)
+        setP (Anchors.assocTagNameRef tag) newName
+        modP publishedTags ((if newName == "" then Set.delete else Set.insert) tag)
 
-p2cpsNameConvertorGlobal :: Monad tm => Walk.CPSNameConvertor (Pass2MakeNames tm)
-p2cpsNameConvertorGlobal p1name =
-    p2cpsNameConvertor p1name $
-    \env ->
-    getCollisionEnv unnamedStr (p1Instance p1name) env
-    & _1 %~ Unnamed
+storedName :: Monad tm => MMap T.Tag TagVal -> AnnotatedName -> StoredText -> Pass2MakeNames tm (Name (T tm))
+storedName tagsBelow aName storedText =
+    StoredName
+    <$> mkSetName tag
+    <*> getTagText tag storedText
+    <*> getCollision tagsBelow aName
+    ?? unStoredText storedText
+    <&> Stored
+    where
+        tag = aName ^. Clash.anTag
 
-p2cpsNameConvertorLocal ::
-    Monad tm => NameGen.VarInfo -> Walk.CPSNameConvertor (Pass2MakeNames tm)
-p2cpsNameConvertorLocal isFunction p1name =
-    p2cpsNameConvertor p1name $ \p2env ->
-    let accept name =
-            Lens.hasn't (nameUUIDMap . Lens.ix name) (localNames namesWithin)
-            && Lens.hasn't (p2NamesAbove . Lens.ix name) p2env
-    in  NameGen.newName accept isFunction (inst ^. Clash.niUUID)
+p2nameConvertor :: Monad tm => Walk.NameType -> P1Name -> Pass2MakeNames tm (Name (T tm))
+p2nameConvertor nameType (P1Name (P1StoredName aName text) tagsBelow _) =
+    storedName tagsBelow aName text
+    <&>
+    case nameType of
+    Walk.TaggedNominal -> _Stored . snDisplayText . ttText . Lens.ix 0 %~ Char.toUpper
+    _ -> id
+p2nameConvertor nameType (P1Name (P1AnonName uuid) _ _) =
+    case nameType of
+    Walk.Tag -> error "TODO: Refactor types to rule this out"
+    Walk.TaggedVar ->
+        Lens.view p2NameGen
+        <&> evalState (NameGen.existingName uuid)
         <&> AutoGenerated
-        & Lens.zoom p2NameGen
-        & (`runState` p2env)
+    Walk.TaggedNominal -> globalAnon
+    Walk.GlobalDef -> globalAnon
     where
-        P1Name _ inst namesWithin = p1name
+        globalAnon =
+            Lens.view (p2AnonSuffixes . Lens.at uuid)
+            <&> fromMaybe bugCollision <&> Unnamed
+        -- Holes results should never have unnamed subexprs, instead
+        -- of crashing, show -1 as the suffix
+        bugCollision = -1
 
-p2nameConvertorGlobal :: Monad tm => Walk.NameConvertor (Pass2MakeNames tm)
-p2nameConvertorGlobal (P1Name mStoredName inst _) =
-    p2GetEnv
-    <&> getCollision (fromMaybe unnamedStr mStoredName) inst
-    <&> mk
-    <&> (`Name` setUuidName (inst ^. Clash.niUUID))
-    where
-        mk = maybe Unnamed Stored mStoredName
-
-fixVarToTags :: Monad m => VarToTags -> T m ()
-fixVarToTags VarToTags {..} =
-    Transaction.getP (assocNameRef vttReplacedVar)
-    >>= Transaction.setP (assocNameRef (vttReplacedByTag ^. tagVal))
-
-fixParamAddResult :: Monad m => ParamAddResult -> T m ()
-fixParamAddResult (ParamAddResultVarToTags v) = fixVarToTags v
-fixParamAddResult _ = pure ()
-
-fixParamDelResult :: Monad m => ParamDelResult -> T m ()
-fixParamDelResult (ParamDelResultTagsToVar TagsToVar {..}) =
-    Transaction.getP (assocNameRef (ttvReplacedTag ^. tagVal))
-    >>= Transaction.setP (assocNameRef ttvReplacedByVar)
-fixParamDelResult _ = pure ()
-
-fixExtractFloatResult :: Monad m => ExtractFloatResult -> T m ()
-fixExtractFloatResult = traverse_ fixVarToTags . efrMVarToTags
-
-postProcessAction :: Monad m => (a -> m ()) -> m a -> m a
-postProcessAction f action =
+p2cpsNameConvertor :: Monad tm => NameGen.VarInfo -> Walk.CPSNameConvertor (Pass2MakeNames tm)
+p2cpsNameConvertor varInfo (P1Name kName tagsBelow textsBelow) =
+    CPS $ \inner ->
     do
-        res <- action
-        f res
-        pure res
-
-fixNodeActions :: Monad m => NodeActions (T m) -> NodeActions (T m)
-fixNodeActions =
-    extract %~ postProcessAction fixExtractFloatResult
-
--- mutual recursion fixBinder<->fixExpr
-
-fixBinder ::
-    Monad m =>
-    Binder name (T m) (Expression name (T m) a) ->
-    Binder name (T m) (Expression name (T m) a)
-fixBinder binder =
-    binder
-    & SugarLens.binderFuncParamAdds %~ postProcessAction fixParamAddResult
-    & SugarLens.binderFuncParamDeletes %~ postProcessAction fixParamDelResult
-    & bBody . bbContent %~ fixBinderContent
-    where
-        fixBinderContent x =
-            x
-            & _BinderExpr %~ fixExpr
-            & _BinderLet . lValue %~ fixBinder
-            & _BinderLet . lBody . bbContent %~ fixBinderContent
-            & _BinderLet . lActions . laNodeActions %~ fixNodeActions
-
-fixExpr :: Monad m => Expression name (T m) a -> Expression name (T m) a
-fixExpr expr =
-    expr & rBody %~ \case
-    BodyLam lam -> lam & lamBinder %~ fixBinder & BodyLam
-    body -> body <&> fixExpr
+        env0 <- Lens.view id
+        let accept autoText =
+                not (hasKey autoText textsBelow)
+                && Set.notMember autoText (env0 ^. p2TextsAbove)
+        (newNameForm, env1) <-
+            case kName of
+            P1StoredName aName text ->
+                storedName tagsBelow aName text
+                <&> flip (,) (env0 & p2TagsAbove . Lens.at tag <>~ Just isClash)
+                where
+                    isClash = Clash.isClashOf aName
+                    tag = aName ^. Clash.anTag
+            P1AnonName ctx ->
+                NameGen.newName (accept . DisplayText) varInfo ctx
+                <&> AutoGenerated
+                & Lens.zoom p2NameGen
+                & (`runState` env0)
+                & pure
+        let text = visible newNameForm ^. _1 . ttText & DisplayText
+        let env2 = env1 & p2TextsAbove %~ Set.insert text
+        res <- Reader.local (const env2) inner
+        pure (newNameForm, res)
 
 runPasses ::
     Functor tm =>
+    MkProperty tm (Set T.Tag) ->
     (a -> Pass0LoadNames tm b) -> (b -> Pass1PropagateUp tm c) -> (c -> Pass2MakeNames tm d) ->
     a -> T tm d
-runPasses f0 f1 f2 =
+runPasses publishedTags f0 f1 f2 =
     fmap (pass2 . pass1) . pass0
     where
         pass0 = runPass0LoadNames . f0
         pass1 = runPass1PropagateUp . f1
-        pass2 (x, p1out) =
-            f2 x & runPass2MakeNamesInitial p1out
-
-fixDef ::
-    Monad tm =>
-    Definition name (T tm) (Expression name (T tm) a) ->
-    Definition name (T tm) (Expression name (T tm) a)
-fixDef = drBody . _DefinitionBodyExpression . deContent %~ fixBinder
+        pass2 (x, p1out) = f2 x & runPass2MakeNamesInitial publishedTags p1out
 
 addToWorkArea ::
     Monad tm =>
-    WorkArea InternalName (T tm) a -> T tm (WorkArea (Name (T tm)) (T tm) a)
-addToWorkArea workArea =
-    workArea
-    & waPanes . traverse . paneDefinition %~ fixDef
-    & waRepl %~ fixExpr
-    & runPasses f f f
+    MkProperty tm (Set T.Tag) -> WorkArea InternalName (T tm) a -> T tm (WorkArea (Name (T tm)) (T tm) a)
+addToWorkArea publishedTags =
+    runPasses publishedTags f f f
     where
         f = Walk.toWorkArea
