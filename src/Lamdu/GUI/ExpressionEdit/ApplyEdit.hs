@@ -20,7 +20,7 @@ import qualified GUI.Momentu.State as GuiState
 import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
-import qualified Lamdu.GUI.ExpressionEdit.BinderEdit as BinderEdit
+import qualified Lamdu.CharClassification as Chars
 import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
 import qualified Lamdu.GUI.ExpressionEdit.GetVarEdit as GetVarEdit
 import qualified Lamdu.GUI.ExpressionEdit.TagEdit as TagEdit
@@ -32,6 +32,7 @@ import           Lamdu.GUI.ExpressionGui.Wrap (stdWrapParentExpr)
 import qualified Lamdu.GUI.Styled as Styled
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Name (Name(..))
+import qualified Lamdu.Name as Name
 import           Lamdu.Sugar.NearestHoles (NearestHoles)
 import qualified Lamdu.Sugar.Types as Sugar
 import           Revision.Deltum.Transaction (Transaction)
@@ -82,11 +83,12 @@ makeInfixFuncName ::
 makeInfixFuncName nearestHoles funcVar myId =
     makeFuncVar nearestHoles funcVar myId <&> mAddMarker
     where
+        nameText =
+            Name.visible (funcVar ^. Sugar.bvNameRef . Sugar.nrName)
+            ^. _1 . Name.ttText
         mAddMarker
-            | funcVar ^. Sugar.bvNameRef . Sugar.nrName
-              & BinderEdit.nonOperatorName =
-                addInfixMarker myId
-            | otherwise = id
+            | Lens.allOf Lens.each (`elem` Chars.operator) nameText = id
+            | otherwise = addInfixMarker myId
 
 isBoxed :: Sugar.LabeledApply name binderVar a -> Bool
 isBoxed apply =

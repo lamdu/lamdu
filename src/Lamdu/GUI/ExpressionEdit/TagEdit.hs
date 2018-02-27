@@ -34,6 +34,7 @@ import           GUI.Momentu.Widgets.Spacer (HasStdSpacing)
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
 import qualified GUI.Momentu.Widgets.TextView as TextView
+import qualified Lamdu.CharClassification as Chars
 import           Lamdu.Config (HasConfig)
 import qualified Lamdu.Config as Config
 import           Lamdu.Config.Theme (HasTheme(..))
@@ -159,7 +160,9 @@ makeOptions tagSelection mkPickResult ctx
                 optionWId = ctx ^. SearchMenu.rResultIdPrefix <> instanceId
 
 allowedSearchTerm :: Text -> Bool
-allowedSearchTerm = Text.all Char.isAlphaNum
+allowedSearchTerm x =
+    Text.all Char.isAlphaNum x
+    || Text.all (`elem` Chars.operator) x
 
 type HasSearchTermEnv env =
     ( HasTheme env, HasConfig env, GuiState.HasState env

@@ -4,7 +4,6 @@ module Lamdu.GUI.ExpressionEdit.BinderEdit
     , makeBinderBodyEdit
     , addLetEventMap
     , Parts(..), makeParts
-    , nonOperatorName
     ) where
 
 import           Control.Applicative ((<|>), liftA2)
@@ -13,9 +12,8 @@ import qualified Control.Monad.Reader as Reader
 import           Control.Monad.Transaction (transaction)
 import qualified Control.Monad.Transaction as Transaction
 import           Data.CurAndPrev (CurAndPrev, current, fallbackToPrev)
-import           Data.List.Utils (nonEmptyAll, withPrevNext)
+import           Data.List.Utils (withPrevNext)
 import qualified Data.Map as Map
-import qualified Data.Text as Text
 import           GUI.Momentu.Align (WithTextPos)
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Draw as Draw
@@ -34,7 +32,6 @@ import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified GUI.Momentu.Widgets.TextView as TextView
-import qualified Lamdu.CharClassification as Chars
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.Data.Meta as Meta
@@ -53,7 +50,6 @@ import qualified Lamdu.GUI.PresentationModeEdit as PresentationModeEdit
 import qualified Lamdu.GUI.Styled as Styled
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Name (Name(..))
-import qualified Lamdu.Name as Name
 import qualified Lamdu.Sugar.Lens as SugarLens
 import           Lamdu.Sugar.NearestHoles (NearestHoles)
 import qualified Lamdu.Sugar.Types as Sugar
@@ -65,11 +61,6 @@ import           Lamdu.Prelude
 
 type T = Transaction
 
-nonOperatorName :: Name m -> Bool
-nonOperatorName (Name.Stored (Name.StoredName _ (Name.TagText x _) _ _)) =
-    nonEmptyAll (`notElem` Chars.operator) (Text.unpack x)
-nonOperatorName _ = False
-
 makeBinderNameEdit ::
     Monad m =>
     Widget.Id -> Sugar.BinderActions (Name (T m)) (T m) ->
@@ -80,14 +71,9 @@ makeBinderNameEdit binderId binderActions rhsJumperEquals tag color =
     do
         addFirstParamEventMap <-
             ParamEdit.eventMapAddFirstParam binderId (binderActions ^. Sugar.baAddFirstParam)
+        let eventMap = rhsJumperEquals <> addFirstParamEventMap
         TagEdit.makeBinderTagEdit color tag
-            <&> jumpToRHSViaEquals
-            <&> Align.tValue %~ Widget.weakerEvents addFirstParamEventMap
-    where
-        jumpToRHSViaEquals
-            | nonOperatorName (tag ^. Sugar.tagName) =
-                Align.tValue %~ Widget.strongerEvents rhsJumperEquals
-            | otherwise = id
+            <&> Align.tValue %~ Widget.weakerEvents eventMap
 
 data Parts m = Parts
     { pMParamsEdit :: Maybe (ExpressionGui m)
@@ -344,7 +330,7 @@ make ::
     Sugar.Binder (Name (T m)) (T m) (ExprGui.SugarExpr m) ->
     Widget.Id ->
     ExprGuiM m (ExpressionGui m)
-make pMode lhsEventMap name color binder myId =
+make pMode lhsEventMap tag color binder myId =
     do
         Parts mParamsEdit mScopeEdit bodyEdit eventMap <-
             makeParts ExprGui.UnlimitedFuncApply binder myId myId
@@ -356,7 +342,7 @@ make pMode lhsEventMap name color binder myId =
         jumpHolesEventMap <- ExprEventMap.jumpHolesEventMap nearestHoles
         defNameEdit <-
             makeBinderNameEdit myId (binder ^. Sugar.bActions) rhsJumperEquals
-            name color
+            tag color
             <&> (/-/ fromMaybe Element.empty mPresentationEdit)
             <&> Responsive.fromWithTextPos
             <&> Widget.weakerEvents jumpHolesEventMap
@@ -393,7 +379,7 @@ make pMode lhsEventMap name color binder myId =
     & GuiState.assignCursor myId nameId
     where
         wholeBinderId = Widget.joinId myId ["whole binder"]
-        nameId = name ^. Sugar.tagInfo . Sugar.tagInstance & WidgetIds.fromEntityId
+        nameId = tag ^. Sugar.tagInfo . Sugar.tagInstance & WidgetIds.fromEntityId
         presentationChoiceId = Widget.joinId myId ["presentation"]
         body = binder ^. Sugar.bBody . Sugar.bbContent
         bodyId = body ^. SugarLens.binderContentEntityId & WidgetIds.fromEntityId

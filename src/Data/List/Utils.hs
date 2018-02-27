@@ -3,7 +3,6 @@ module Data.List.Utils
     , minimumOn
     , insertAt
     , removeAt
-    , nonEmptyAll
     , isLengthAtLeast
     , withPrevNext
     , rightPad
@@ -39,10 +38,6 @@ isLengthAtLeast :: Int -> [a] -> Bool
 isLengthAtLeast n
     | n <= 0 = const True
     | otherwise = Lens.has (Lens.ix (n-1))
-
-nonEmptyAll :: (a -> Bool) -> [a] -> Bool
-nonEmptyAll _ [] = False
-nonEmptyAll f xs = all f xs
 
 withPrevNext :: k -> k -> (a -> k) -> [a] -> [(k, k, a)]
 withPrevNext before after f list =
