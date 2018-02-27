@@ -237,7 +237,7 @@ isReserved (DisplayText name) =
             , "λ", "«", "»", "Ø", "|", ".", "→", "➾"
             ]
 
-toSuffixMap :: MMap T.Tag (Set UUID) -> Map TaggedVarId Int
+toSuffixMap :: MMap T.Tag (Set UUID) -> Map TaggedVarId CollisionSuffix
 toSuffixMap tagContexts =
     tagContexts & Lens.imapped %@~ eachTag & (^.. Lens.folded) & mconcat
     where
@@ -296,7 +296,7 @@ data P2Env tm = P2Env
     , _p2Texts :: Set DisplayText
         -- ^ The set of all texts seen in P1 traversal (we do not see hole results)
         -- This is used to identify textual collisions in hole result tags
-    , _p2TagSuffixes :: Map TaggedVarId Int
+    , _p2TagSuffixes :: Map TaggedVarId CollisionSuffix
         -- ^ When N (>1) different entities have the same tag in the
         -- same scope, the tag gets a different suffix for each of its
         -- entities

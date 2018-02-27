@@ -1,6 +1,6 @@
 {-# LANGUAGE NoImplicitPrelude, TemplateHaskell, OverloadedStrings #-}
 module Lamdu.Name
-    ( Stored
+    ( Stored, CollisionSuffix
     , Collision(..), _NoCollision, _Collision
     , visible
     , TagText(..), ttText, ttCollision
@@ -15,9 +15,11 @@ import           Lamdu.Prelude
 
 type Stored = Text
 
+type CollisionSuffix = Int
+
 data Collision
     = NoCollision
-    | Collision {-Disambiguator:-} Int
+    | Collision CollisionSuffix
     | UnknownCollision -- we have a collision but unknown suffix (inside hole result)
     deriving (Show)
 
