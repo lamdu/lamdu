@@ -313,7 +313,7 @@ maybeAddNodeActions ::
     m (Responsive (f GuiState.Update) -> Responsive (f GuiState.Update))
 maybeAddNodeActions partId nearestHoles nodeActions =
     do
-        isSelected <- GuiState.isSubCursor ?? partId
+        isSelected <- Lens.view GuiState.cursor <&> (== partId)
         if isSelected
             then
                 ExprEventMap.addWith ExprEventMap.defaultOptions
@@ -466,27 +466,22 @@ makeBinderContentEdit content@(Sugar.BinderLet l) =
                 & foldMap
                 (E.keysEventMap (Config.moveLetInwardKeys config)
                 (E.Doc ["Edit", "Let clause", "Move inwards"]) . void)
+        mAddNodeActions <-
+            maybeAddNodeActions letEntityId (binderContentNearestHoles content)
+            (l ^. Sugar.lActions . Sugar.laNodeActions)
         mOuterScopeId <- ExprGuiM.readMScopeId
         let letBodyScope = liftA2 lookupMKey mOuterScopeId (l ^. Sugar.lBodyScope)
-        ExprEventMap.addWith ExprEventMap.defaultOptions
-            ExprEventMap.ExprInfo
-            { ExprEventMap.exprInfoActions = l ^. Sugar.lActions . Sugar.laNodeActions
-            , ExprEventMap.exprInfoNearestHoles = binderContentNearestHoles content
-            , ExprEventMap.exprInfoIsHoleResult = False
-            , ExprEventMap.exprInfoMinOpPrec = 0
-            }
+        parentDelegator letEntityId
             <*>
-            ( parentDelegator letEntityId
+            ( Responsive.vboxSpaced
                 <*>
-                ( Responsive.vboxSpaced
-                  <*>
-                  sequence
-                  [ makeLetEdit l <&> Widget.weakerEvents moveToInnerEventMap
-                  , makeBinderBodyEdit body
-                    & ExprGuiM.withLocalMScopeId letBodyScope
-                  ]
-                )
+                sequence
+                [ makeLetEdit l <&> Widget.weakerEvents moveToInnerEventMap
+                , makeBinderBodyEdit body
+                & ExprGuiM.withLocalMScopeId letBodyScope
+                ]
             )
+            <&> mAddNodeActions
     where
         letEntityId = l ^. Sugar.lEntityId & WidgetIds.fromEntityId
         body = l ^. Sugar.lBody
