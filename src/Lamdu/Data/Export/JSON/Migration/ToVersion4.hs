@@ -48,14 +48,15 @@ collectNames _ = Right mempty
 migrateEntity :: Map Text Text -> Aeson.Value -> Either Text Aeson.Value
 migrateEntity nameToTag (Aeson.Object obj) | Lens.has objToTransform obj =
     case obj ^. Lens.at "name" of
-    Nothing -> Right "00000000000000000000000000000000"
-    Just (Aeson.String name) -> nameToTag ^. Lens.ix (normalizeName name) & Right
+    Nothing -> Right Aeson.Null
+    Just (Aeson.String name) ->
+        nameToTag ^. Lens.ix (normalizeName name) & Aeson.toJSON & Right
     Just{} -> Left "Non-text name!"
     <&>
     \tag ->
     obj
     & Lens.at "name" .~ Nothing
-    & Lens.at "tag" ?~ Aeson.toJSON tag
+    & Lens.at "tag" ?~ tag
     & Aeson.Object
 migrateEntity _ x@Aeson.Object{} = Right x
 migrateEntity _ _ = Left "Expecting object"

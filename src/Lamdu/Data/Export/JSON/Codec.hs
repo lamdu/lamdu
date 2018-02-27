@@ -31,6 +31,7 @@ import           Lamdu.Calc.Type.Scheme (Scheme(..))
 import           Lamdu.Calc.Type.Vars (TypeVars(..))
 import qualified Lamdu.Calc.Val as V
 import           Lamdu.Calc.Val.Annotated (Val(..))
+import qualified Lamdu.Data.Anchors as Anchors
 import           Lamdu.Data.Definition (Definition(..))
 import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Data.Meta as Meta
@@ -199,9 +200,12 @@ decodeSquashed name decode o =
     ]
 
 encodeTagId :: Encoder T.Tag
-encodeTagId (T.Tag ident) = encodeIdent ident
+encodeTagId tag
+    | tag == Anchors.anonTag = Aeson.Null
+    | otherwise = T.tagName tag & encodeIdent
 
 decodeTagId :: Decoder T.Tag
+decodeTagId Aeson.Null = pure Anchors.anonTag
 decodeTagId json = decodeIdent json <&> T.Tag
 
 encodeFlatComposite :: Encoder (FlatComposite p)
