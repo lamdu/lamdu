@@ -185,13 +185,16 @@ makeOptions tagSelection mkPickResult ctx
                 Lens.view Config.config
                 <&> Config.completion <&> Config.completionResultCount
             tagSelection ^. Sugar.tsOptions & transaction
-                <&> filter (Lens.anyOf nameText (insensitiveInfixOf searchTerm))
+                <&> filter (Lens.anyOf nameText isFit)
                 <&> splitAt resultCount
                 <&> _2 %~ not . null
                 <&> uncurry Menu.OptionList
                 <&> fmap makeOption
                 <&> addNewTagIfNullOptions tagSelection mkPickResult ctx
     where
+        isFit
+            | Text.length searchTerm == 1 = (==) searchTerm
+            | otherwise = insensitiveInfixOf searchTerm
         nameText = Sugar.toName . Name._Stored . Name.snDisplayText . Name.ttText
         searchTerm = ctx ^. SearchMenu.rSearchTerm
         makeOption opt =
