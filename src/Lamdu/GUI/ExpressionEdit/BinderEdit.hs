@@ -396,14 +396,20 @@ makeLetEdit item =
         theme <- Lens.view Theme.theme
         let letColor = Theme.letColor (Theme.name theme)
         let eventMap =
+                foldMap
+                ( E.keysEventMapMovesCursor (Config.extractKeys config)
+                    (E.Doc ["Edit", "Let clause", "Extract to outer scope"])
+                    . fmap (ExprEventMap.extractCursor . Sugar.efrNewEntity)
+                ) (item ^? Sugar.lValue . Sugar.bActions . Sugar.baMNodeActions . Lens._Just . Sugar.extract)
+                <>
                 E.keysEventMapMovesCursor (Config.delKeys config)
                 (E.Doc ["Edit", "Let clause", "Delete"])
                 (bodyId <$ item ^. Sugar.lActions . Sugar.laDelete)
                 <>
                 foldMap
                 ( E.keysEventMapMovesCursor (Config.inlineKeys config)
-                  (E.Doc ["Navigation", "Jump to first use"])
-                  . pure . WidgetIds.fromEntityId
+                    (E.Doc ["Navigation", "Jump to first use"])
+                    . pure . WidgetIds.fromEntityId
                 ) (item ^? Sugar.lUsages . Lens.ix 0)
         letLabel <- Styled.grammarLabel "let"
         space <- Spacer.stdHSpace
