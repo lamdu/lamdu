@@ -387,12 +387,11 @@ makeLetEdit item =
                 & E.keysEventMapMovesCursor (Config.delKeys config)
                 (E.Doc ["Edit", "Let clause", "Delete"])
         let usageEventMap =
-                mconcat
-                [ E.keysEventMapMovesCursor (Config.inlineKeys config)
-                  (E.Doc ["Navigation", "Jump to first use"])
-                  (pure (WidgetIds.fromEntityId usage))
-                | usage <- take 1 (item ^. Sugar.lUsages)
-                ]
+                foldMap
+                (E.keysEventMapMovesCursor (Config.inlineKeys config)
+                    (E.Doc ["Navigation", "Jump to first use"])
+                    . pure . WidgetIds.fromEntityId
+                ) (item ^? Sugar.lUsages . traverse)
         let eventMap = mappend actionsEventMap usageEventMap
         letLabel <- Styled.grammarLabel "let"
         space <- Spacer.stdHSpace

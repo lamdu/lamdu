@@ -43,3 +43,5 @@ warn = return a <&> b ==> return (a b)
 warn = maybe mempty ==> foldMap
 -- Lamdu style rules:
 warn = return ==> pure
+
+warn = mconcat [a | x <- take 1 b] ==> foldMap (\x -> a) (b ^? traverse)
