@@ -63,9 +63,9 @@ makeTagNameEdit ::
     ( MonadReader env m, HasConfig env, TextEdit.HasStyle env
     , GuiState.HasCursor env, Applicative f
     ) =>
-    NearestHoles -> Sugar.Tag (Name f) f ->
+    NearestHoles -> Name.StoredName f -> Widget.Id ->
     m (WithTextPos (Widget (f GuiState.Update)))
-makeTagNameEdit nearestHoles tag =
+makeTagNameEdit nearestHoles storedName myId =
     do
         keys <- Lens.view Config.config <&> Config.menu <&> Menu.keysPickOptionAndGotoNext
         let jumpNextEventMap =
@@ -74,12 +74,11 @@ makeTagNameEdit nearestHoles tag =
                   (E.keysEventMapMovesCursor keys
                    (E.Doc ["Navigation", "Jump to next hole"]) .
                    pure . WidgetIds.fromEntityId)
-        NameEdit.makeBareEdit (tag ^. Sugar.tagName) (tagRenameId myId)
+        NameEdit.makeBareEdit storedName (tagRenameId myId)
             <&> Align.tValue . Widget.eventMapMaker . Lens.mapped %~ E.filterChars (/= ',')
             <&> Align.tValue %~ Widget.weakerEvents jumpNextEventMap
             <&> Align.tValue %~ Widget.weakerEvents stopEditingEventMap
     where
-        myId = WidgetIds.fromEntityId (tag ^. Sugar.tagInfo . Sugar.tagInstance)
         stopEditingEventMap =
             E.keysEventMapMovesCursor
             [ MetaKey noMods MetaKey.Key'Escape
@@ -271,6 +270,9 @@ makeTagEditWith onView onPickNext nearestHoles tag =
     do
         jumpHolesEventMap <- ExprEventMap.jumpHolesEventMap nearestHoles
         isRenaming <- GuiState.isSubCursor ?? tagRenameId myId
+        let mRenamingStoredName
+                | isRenaming = tag ^? Sugar.tagName . Name._Stored
+                | otherwise = Nothing
         isHole <- GuiState.isSubCursor ?? WidgetIds.tagHoleId myId
         config <- Lens.view Config.config
         let eventMap =
@@ -290,13 +292,13 @@ makeTagEditWith onView onPickNext nearestHoles tag =
             & onView
         let hover = Hover.hoverBeside Align.tValue ?? nameView
         widget <-
-            if isRenaming
-            then
+            case mRenamingStoredName of
+            Just storedName ->
                 hover <*>
-                (makeTagNameEdit nearestHoles tag <&> (^. Align.tValue))
-            else if isHole
-            then makeTagHoleEdit (tag ^. Sugar.tagSelection) mkPickResult (WidgetIds.tagHoleId (tagId tag))
-            else pure nameView
+                (makeTagNameEdit nearestHoles storedName myId <&> (^. Align.tValue))
+            Nothing
+                | isHole -> makeTagHoleEdit (tag ^. Sugar.tagSelection) mkPickResult (WidgetIds.tagHoleId (tagId tag))
+                | otherwise -> pure nameView
         widget
             <&> Widget.weakerEvents jumpHolesEventMap
             & pure
