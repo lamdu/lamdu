@@ -26,6 +26,7 @@ import           GUI.Momentu.Glue ((/-/), (/|/))
 import qualified GUI.Momentu.Glue as Glue
 import           GUI.Momentu.MetaKey (MetaKey(..), noMods, toModKey)
 import qualified GUI.Momentu.MetaKey as MetaKey
+import           GUI.Momentu.Responsive (Responsive)
 import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.Responsive.Options as Options
 import qualified GUI.Momentu.State as GuiState
@@ -306,6 +307,25 @@ makeParts funcApplyLimit binder delVarBackwardsId myId =
         bodyId = bodyContent ^. SugarLens.binderContentEntityId & WidgetIds.fromEntityId
         scopesNavId = Widget.joinId myId ["scopesNav"]
 
+maybeAddNodeActions ::
+    (MonadReader env m, GuiState.HasCursor env, Config.HasConfig env, Applicative f) =>
+    Widget.Id -> NearestHoles -> Sugar.NodeActions f ->
+    m (Responsive (f GuiState.Update) -> Responsive (f GuiState.Update))
+maybeAddNodeActions partId nearestHoles nodeActions =
+    do
+        isSelected <- GuiState.isSubCursor ?? partId
+        if isSelected
+            then
+                ExprEventMap.addWith ExprEventMap.defaultOptions
+                ExprEventMap.ExprInfo
+                { ExprEventMap.exprInfoActions = nodeActions
+                , ExprEventMap.exprInfoNearestHoles = nearestHoles
+                , ExprEventMap.exprInfoIsHoleResult = False
+                , ExprEventMap.exprInfoMinOpPrec = 0
+                }
+            else
+                pure id
+
 make ::
     Monad m =>
     Maybe (T m (Property (T m) Meta.PresentationMode)) ->
@@ -339,18 +359,11 @@ make pMode lhsEventMap name color binder myId =
                 <&> Widget.strongerEvents rhsJumperEquals
                 <&> Just
         equals <- TextView.makeLabel "="
-        wholeBinderSelected <- GuiState.isSubCursor ?? wholeBinderId
         addWholeBinderActions <-
-            case binder ^. Sugar.bActions . Sugar.baMNodeActions of
-            Just nodeActions | wholeBinderSelected ->
-                ExprEventMap.addWith ExprEventMap.defaultOptions
-                ExprEventMap.ExprInfo
-                { ExprEventMap.exprInfoActions = nodeActions
-                , ExprEventMap.exprInfoNearestHoles = nearestHoles
-                , ExprEventMap.exprInfoIsHoleResult = False
-                , ExprEventMap.exprInfoMinOpPrec = 0
-                }
-            _ -> pure id
+            maybe
+            (pure id)
+            (maybeAddNodeActions wholeBinderId nearestHoles)
+            (binder ^. Sugar.bActions . Sugar.baMNodeActions)
         let layoutWithBody hbox =
                 hbox
                 [ hbox (defNameEdit : (mParamEdit ^.. Lens._Just) ++ [Responsive.fromTextView equals])
