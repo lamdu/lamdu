@@ -112,12 +112,6 @@ convertGlobal param exprPl =
             & Infer.scopeToTypeMap
             & Lens.has (Lens.at param . Lens._Nothing)
 
-usesAround :: Eq a => a -> [a] -> [a]
-usesAround x xs =
-    drop 1 after ++ before
-    where
-        (before, after) = break (== x) xs
-
 convertGetLet ::
     Monad m => V.Var -> Input.Payload m a -> MaybeT (ConvertM m) (GetVar InternalName (T m))
 convertGetLet param exprPl =
@@ -130,9 +124,7 @@ convertGetLet param exprPl =
             { _bvNameRef = nameRef
             , _bvVar = param
             , _bvForm = GetLet
-            , _bvInline =
-                inline
-                & _CannotInlineDueToUses %~ usesAround (exprPl ^. Input.entityId)
+            , _bvInline = inline (exprPl ^. Input.entityId)
             } & pure
 
 convertParamsRecord ::

@@ -119,7 +119,10 @@ makeInlineEventMap config (Sugar.CannotInlineDueToUses (x:_)) =
     WidgetIds.fromEntityId x & pure
     & E.keysEventMapMovesCursor (Config.inlineKeys config)
       (E.Doc ["Navigation", "Jump to next use"])
-makeInlineEventMap _ _ = mempty
+makeInlineEventMap config _ =
+    pure ()
+    & E.keysEventMap (Config.inlineKeys config)
+      (E.Doc ["Navigation", "Cannot inline"])
 
 definitionTypeChangeBox ::
     ( MonadReader env m, MonadTransaction n m

@@ -73,14 +73,19 @@ localNewExtractDestPos val =
     }
     & ConvertM.local
 
-makeInline :: Monad m => ValIProperty m -> Redex (Input.Payload m a) -> BinderVarInline (T m)
-makeInline stored redex =
-    case redex ^. Redex.paramRefs of
-    [_singleUsage] ->
+makeInline ::
+    Monad m =>
+    ValIProperty m -> Redex (Input.Payload m a) -> EntityId -> BinderVarInline (T m)
+makeInline stored redex useId
+    | Lens.has traverse otherUses = CannotInlineDueToUses (drop 1 after ++ before)
+    | otherwise =
         inlineLet stored (redex <&> (^. Input.stored) <&> Property.value)
         & InlineVar
-    [] -> CannotInline
-    uses -> CannotInlineDueToUses uses
+    where
+        otherUses = filter (/= useId) uses
+        uses = redex ^. Redex.paramRefs
+        (before, after) = break (== useId) uses
+
 
 convertRedex ::
     (Monad m, Monoid a) =>

@@ -69,13 +69,14 @@ cursorDest val =
 inlineLet ::
     Monad m => ValIProperty m -> Redex (ValI m) -> Transaction m EntityId
 inlineLet topLevelProp redex =
-    redex ^. Redex.lam . V.lamResult
-    <&> Just
-    & inlineLetH
-      (redex ^. Redex.lam . V.lamParamId)
-      (redex ^. Redex.arg <&> Just)
-    <&> flip (,) ()
-    & ExprIRef.writeValWithStoredSubexpressions
+    redex ^. Redex.lam . V.lamResult . Val.payload
+    & ExprIRef.readVal
+    <&> Lens.mapped %~ Just
+    <&> inlineLetH
+        (redex ^. Redex.lam . V.lamParamId)
+        (redex ^. Redex.arg <&> Just)
+    <&> Lens.mapped %~ flip (,) ()
+    >>= ExprIRef.writeValWithStoredSubexpressions
     <&> (^. Val.payload . _1)
     >>= Property.set topLevelProp
     <&> const (cursorDest (redex ^. Redex.arg <&> EntityId.ofValI))

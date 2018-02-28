@@ -68,7 +68,7 @@ data ScopeInfo m = ScopeInfo
     { _siTagParamInfos :: Map T.Tag TagFieldParam -- tag uuids
     , _siNullParams :: Set V.Var
     , -- Each let item potentially has an inline action
-      _siLetItems :: Map V.Var (Sugar.BinderVarInline (T m))
+      _siLetItems :: Map V.Var (Sugar.EntityId -> Sugar.BinderVarInline (T m))
       -- TODO: siTagParamInfos needs a reverse-lookup map too
     , -- Where "extract to let" goes:
       _siMOuter :: Maybe (OuterScopeInfo m)
