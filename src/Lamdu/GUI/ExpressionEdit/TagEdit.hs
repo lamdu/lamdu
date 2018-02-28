@@ -348,7 +348,14 @@ makeLHSTag ::
 makeLHSTag onPickNext color tag =
     makeTagEditWith onView onPickNext NearestHoles.none tag
     & NameEdit.withNameColor color
+    <&> Align.tValue %~ Widget.weakerEvents chooseEventMap
     where
+        chooseEventMap =
+            E.charEventMap "Character" (E.Doc ["Edit", "Tag", "Choose"]) chooseWithChar
+        chooseWithChar c =
+            pure (SearchMenu.enterWithSearchTerm (Text.singleton c) (WidgetIds.tagHoleId myId))
+            <$ guard (Char.isAlpha c)
+        myId = tag ^. Sugar.tagInfo . Sugar.tagInstance & WidgetIds.fromEntityId
         -- Apply the name style only when the tag is a view. If it is
         -- a tag hole, the name style (indicating auto-name) makes no sense
         onView = NameEdit.styleNameAtBinder color (tag ^. Sugar.tagName)
