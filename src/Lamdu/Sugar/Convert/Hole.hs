@@ -159,7 +159,7 @@ addSuggestedOptions suggesteds options
     | otherwise = nonTrivial ++ filter (not . equivalentToSuggested) options
     where
         equivalentToSuggested x =
-            any (Val.alphaEq (x ^. hoVal)) (nonTrivial ^.. Lens.traverse . hoVal)
+            any (Val.couldEq (x ^. hoVal)) (nonTrivial ^.. Lens.traverse . hoVal)
         nonTrivial = filter (Lens.nullOf (hoVal . ExprLens.valHole)) suggesteds
 
 isLiveGlobal :: Monad m => DefI m -> T m Bool
