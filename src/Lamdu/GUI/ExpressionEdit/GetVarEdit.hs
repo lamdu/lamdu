@@ -103,12 +103,9 @@ makeNameRef myId nameRef maker =
                 do
                     DataOps.savePreJumpPosition cp myId
                     nameRef ^. Sugar.nrGotoDefinition <&> WidgetIds.fromEntityId
-        maker (nameRef ^. Sugar.nrName) nameId
+        maker (nameRef ^. Sugar.nrName) myId
             <&> Align.tValue %~ Widget.weakerEvents jumpToDefinitionEventMap
-    & Reader.local (Element.animIdPrefix .~ Widget.toAnimId nameId)
-    & GuiState.assignCursor myId nameId
-    where
-        nameId = Widget.joinId myId ["name"]
+    & Reader.local (Element.animIdPrefix .~ Widget.toAnimId myId)
 
 makeInlineEventMap ::
     Applicative f =>
