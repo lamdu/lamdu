@@ -100,7 +100,7 @@ convertGlobal param exprPl =
             , _bvInline =
                 case defForm of
                 DefUpToDate
-                    | Lens.has (ConvertM.scInlineableDefinitions . Lens.ix param) ctx ->
+                    | (ctx ^. ConvertM.scInlineableDefinition) param (exprPl ^. Input.entityId) ->
                         inlineDef ctx param (exprPl ^. Input.stored)
                         & InlineVar
                 _ -> CannotInline

@@ -7,13 +7,13 @@ import           Control.Applicative ((<|>))
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Trans.State as State
 import           Data.CurAndPrev (CurAndPrev)
-import qualified Data.List as List
 import           Data.List.Utils (insertAt, removeAt)
 import qualified Data.Map as Map
 import qualified Data.Set as Set
 import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Calc.Type.Nominal as N
 import           Lamdu.Calc.Type.Scheme (Scheme, schemeType)
+import qualified Lamdu.Calc.Val as V
 import           Lamdu.Calc.Val.Annotated (Val(..))
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Definition as Definition
@@ -90,8 +90,11 @@ makeNominalsMap val =
                         Map.insert tid nom loaded & State.put
                         nom ^.. N.nomType . N._NominalType . schemeType & traverse_ loadForType
 
-nonRepeating :: Ord a => [a] -> [a]
-nonRepeating = concat . filter (null . tail) . List.group . List.sort
+canInlineDefinition :: Val (Input.Payload m [EntityId]) -> Set V.Var -> V.Var -> EntityId -> Bool
+canInlineDefinition defExpr recursiveVars var entityId =
+    Lens.nullOf (ExprLens.valGlobals recursiveVars . Lens.ifiltered f) defExpr
+    where
+        f pl v = v == var && entityId `notElem` pl ^. Input.userData
 
 convertInferDefExpr ::
     Monad m =>
@@ -120,9 +123,7 @@ convertInferDefExpr evalRes cp defType defExpr defI =
                         )
                 , _scPostProcessRoot = postProcessDef defI
                 , _scOutdatedDefinitions = outdatedDefinitions
-                , _scInlineableDefinitions =
-                    valInferred ^.. ExprLens.valGlobals (Set.singleton defVar)
-                    & nonRepeating & Set.fromList
+                , _scInlineableDefinition = canInlineDefinition valInferred (Set.singleton defVar)
                 , _scFrozenDeps =
                     Property (defExpr ^. Definition.exprFrozenDeps) setFrozenDeps
                 , scConvertSubexpression = ConvertExpr.convert
@@ -170,8 +171,7 @@ convertExpr evalRes cp prop =
                 , _scScopeInfo = emptyScopeInfo Nothing
                 , _scPostProcessRoot = postProcessExpr prop
                 , _scOutdatedDefinitions = outdatedDefinitions
-                , _scInlineableDefinitions =
-                    valInferred ^.. ExprLens.valGlobals mempty & nonRepeating & Set.fromList
+                , _scInlineableDefinition = canInlineDefinition valInferred mempty
                 , _scFrozenDeps =
                     Property (defExpr ^. Definition.exprFrozenDeps) setFrozenDeps
                 , scConvertSubexpression = ConvertExpr.convert
