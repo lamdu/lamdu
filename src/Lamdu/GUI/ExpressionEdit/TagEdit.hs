@@ -287,7 +287,7 @@ makeTagEditWith onView onPickNext nearestHoles tag =
                 )
                 <>
                 E.keysEventMapMovesCursor (Config.delKeys config <> Config.jumpToDefinitionKeys config)
-                (E.Doc ["Edit", "Tag", "Choose"]) delAction
+                (E.Doc ["Edit", "Tag", "Choose"]) chooseAction
         nameView <-
             (Widget.makeFocusableView ?? viewId <&> fmap) <*>
             makeTagView tag
@@ -315,7 +315,7 @@ makeTagEditWith onView onPickNext nearestHoles tag =
             , Menu._pickNextEntryPoint =
                 onPickNext (nearestHoles ^. NearestHoles.next) (tagInfo ^. Sugar.tagInstance)
             }
-        delAction =
+        chooseAction =
             case tag ^. Sugar.tagSelection . Sugar.tsAnon of
             Nothing -> pure myId
             Just setAnon -> setAnon <&> fst <&> WidgetIds.fromEntityId
