@@ -57,10 +57,15 @@ exprInfoFromPl pl =
     }
 
 add ::
-    (MonadReader env m, Config.HasConfig env, HasWidget w, Applicative f) =>
+    (MonadReader env m, Config.HasConfig env, HasWidget w, Applicative f, GuiState.HasCursor env) =>
     Options -> Sugar.Payload f ExprGui.Payload ->
     m (w (f GuiState.Update) -> w (f GuiState.Update))
-add options = addWith options . exprInfoFromPl
+add options pl =
+    do
+        isSelected <- GuiState.isSubCursor ?? WidgetIds.fromExprPayload pl
+        if isSelected
+            then addWith options (exprInfoFromPl pl)
+            else pure id
 
 addWith ::
     (MonadReader env m, Config.HasConfig env, HasWidget w, Applicative f) =>
