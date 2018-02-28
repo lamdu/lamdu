@@ -22,7 +22,7 @@ import           Lamdu.GUI.ExpressionEdit.HoleEdit.ValTerms (allowedFragmentSear
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds as HoleWidgetIds
 import qualified Lamdu.GUI.ExpressionGui as ExprGui
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
-import           Lamdu.Precedence (Prec, precedence)
+import           Lamdu.Precedence (precedence)
 import           Lamdu.Sugar.NearestHoles (NearestHoles)
 import qualified Lamdu.Sugar.NearestHoles as NearestHoles
 import           Lamdu.Sugar.Parens (MinOpPrec)
@@ -35,6 +35,7 @@ data ExprInfo f = ExprInfo
     , exprInfoNearestHoles :: NearestHoles
     , exprInfoActions :: Sugar.NodeActions f
     , exprInfoMinOpPrec :: MinOpPrec
+    , exprInfoIsSelected :: Bool
     }
 
 newtype Options = Options
@@ -47,25 +48,26 @@ defaultOptions =
     { addOperatorSetHoleState = Nothing
     }
 
-exprInfoFromPl :: Sugar.Payload f ExprGui.Payload -> ExprInfo f
+exprInfoFromPl ::
+    (MonadReader env m, GuiState.HasCursor env) =>
+    Sugar.Payload f ExprGui.Payload -> m (ExprInfo f)
 exprInfoFromPl pl =
+    GuiState.isSubCursor ?? WidgetIds.fromExprPayload pl
+    <&>
+    \isSelected ->
     ExprInfo
     { exprInfoIsHoleResult = ExprGui.isHoleResult pl
     , exprInfoNearestHoles = pl ^. Sugar.plData . ExprGui.plNearestHoles
     , exprInfoActions = pl ^. Sugar.plActions
     , exprInfoMinOpPrec = pl ^. Sugar.plData . ExprGui.plMinOpPrec
+    , exprInfoIsSelected = isSelected
     }
 
 add ::
     (MonadReader env m, Config.HasConfig env, HasWidget w, Applicative f, GuiState.HasCursor env) =>
     Options -> Sugar.Payload f ExprGui.Payload ->
     m (w (f GuiState.Update) -> w (f GuiState.Update))
-add options pl =
-    do
-        isSelected <- GuiState.isSubCursor ?? WidgetIds.fromExprPayload pl
-        if isSelected
-            then addWith options (exprInfoFromPl pl)
-            else pure id
+add options pl = exprInfoFromPl pl >>= addWith options
 
 addWith ::
     (MonadReader env m, Config.HasConfig env, HasWidget w, Applicative f) =>
@@ -141,16 +143,18 @@ actionsEventMap options exprInfo =
 
 -- | Create the hole search term for new apply operators,
 -- given the extra search term chars from another hole.
-transformSearchTerm :: Prec -> EventContext -> EventMap Text
-transformSearchTerm minOpPrec eventCtx =
+transformSearchTerm :: ExprInfo f -> EventContext -> EventMap Text
+transformSearchTerm exprInfo eventCtx =
     E.charGroup Nothing (E.Doc ["Edit", "Apply Operator"]) ops Text.singleton
     <> E.charEventMap "Character" (E.Doc ["Edit", "Transform"]) transform
     <&> (searchStrRemainder <>)
     where
-        transform c
-            | c `elem` Chars.operator = Nothing
-            | otherwise =
-                Text.singleton c <$ guard (allowedFragmentSearchTerm (Text.singleton c))
+        transform c =
+            do
+                guard (c `notElem` Chars.operator)
+                guard (exprInfoIsSelected exprInfo)
+                guard (allowedFragmentSearchTerm (Text.singleton c))
+                pure (Text.singleton c)
         searchStrRemainder = eventCtx ^. Widget.ePrevTextRemainder
         ops =
             case Text.uncons searchStrRemainder of
@@ -158,7 +162,7 @@ transformSearchTerm minOpPrec eventCtx =
             Just (firstOp, _)
                 | acceptOp firstOp -> Chars.operator
                 | otherwise -> mempty
-        acceptOp = (>= minOpPrec) . precedence
+        acceptOp = (>= exprInfoMinOpPrec exprInfo) . precedence
 
 transformEventMap ::
     Applicative f =>
@@ -175,7 +179,7 @@ transformEventMap options exprInfo eventCtx =
     & action
     where
         action detach =
-            transformSearchTerm (exprInfoMinOpPrec exprInfo) eventCtx
+            transformSearchTerm exprInfo eventCtx
             <&> SearchMenu.enterWithSearchTerm
             <&> (detach <&>)
 

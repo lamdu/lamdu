@@ -183,6 +183,7 @@ mkRelayedArgs nearestHoles args =
                 , exprInfoNearestHoles = nearestHoles
                 , exprInfoIsHoleResult = False
                 , exprInfoMinOpPrec = 0
+                , exprInfoIsSelected = True
                 } <&> (Align.tValue %~))
             <*> GetVarEdit.makeGetParam (arg ^. Sugar.raValue) (WidgetIds.fromEntityId (arg ^. Sugar.raId))
             <&> Responsive.fromWithTextPos

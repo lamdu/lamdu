@@ -318,6 +318,7 @@ maybeAddNodeActions partId nearestHoles nodeActions =
                 , ExprEventMap.exprInfoNearestHoles = nearestHoles
                 , ExprEventMap.exprInfoIsHoleResult = False
                 , ExprEventMap.exprInfoMinOpPrec = 0
+                , ExprEventMap.exprInfoIsSelected = True
                 }
             else
                 pure id
