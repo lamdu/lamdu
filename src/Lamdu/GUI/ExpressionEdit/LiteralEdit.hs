@@ -7,6 +7,7 @@ import           Control.Applicative (liftA2)
 import           Control.Lens (LensLike')
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
+import qualified Data.Char as Char
 import qualified Data.Text as Text
 import           GUI.Momentu.Align (WithTextPos)
 import qualified GUI.Momentu.Align as Align
@@ -181,6 +182,13 @@ numEdit prop pl =
                 Just action | Text.null text ->
                     E.keyPresses [ModKey mempty MetaKey.Key'Backspace] (E.Doc ["Edit", "Delete"])
                     (action <&> WidgetIds.fromEntityId <&> GuiState.updateCursor)
+                    <>
+                    E.charEventMap "Character" (E.Doc ["Edit", "Replace"]) holeWithChar
+                    where
+                        holeWithChar c =
+                            (action <&> HoleWidgetIds.make <&> HoleWidgetIds.hidOpen
+                                <&> SearchMenu.enterWithSearchTerm (Text.singleton c))
+                            <$ guard (Char.isAlpha c)
                 _ -> mempty
         TextEdit.make ?? empty ?? text ?? innerId
             <&> Align.tValue . Widget.eventMapMaker . Lens.mapped %~
