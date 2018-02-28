@@ -179,8 +179,8 @@ numEdit prop pl =
                 case pl ^. Sugar.plActions . Sugar.mSetToHole of
                 -- Allow to delete when text is empty
                 Just action | Text.null text ->
-                    action <&> WidgetIds.fromEntityId <&> GuiState.updateCursor
-                    & E.keyPresses [ModKey mempty MetaKey.Key'Backspace] (E.Doc ["Edit", "Value"])
+                    E.keyPresses [ModKey mempty MetaKey.Key'Backspace] (E.Doc ["Edit", "Delete"])
+                    (action <&> WidgetIds.fromEntityId <&> GuiState.updateCursor)
                 _ -> mempty
         TextEdit.make ?? empty ?? text ?? innerId
             <&> Align.tValue . Widget.eventMapMaker . Lens.mapped %~
