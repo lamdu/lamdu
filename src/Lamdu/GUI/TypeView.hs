@@ -169,6 +169,7 @@ makeTag ::
     T.Tag -> M m (WithTextPos View)
 makeTag tag =
     Anchors.assocTagNameRef tag & getP
+    <&> Lens.filtered Text.null .~ "(empty)"
     >>= text
 
 makeField ::

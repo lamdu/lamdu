@@ -70,7 +70,10 @@ label text =
     textView text & Reader.local (Element.animIdPrefix <>~ [encodeUtf8 text])
 
 makeTag :: Monad m => T.Tag -> ExprGuiM m (WithTextPos View)
-makeTag tag = Anchors.assocTagNameRef tag & Transaction.getP >>= textView
+makeTag tag =
+    Anchors.assocTagNameRef tag & Transaction.getP
+    <&> Lens.filtered Text.null .~ "(empty)"
+    >>= textView
 
 makeField :: Monad m => T.Tag -> Val Type -> ExprGuiM m [Aligned View]
 makeField tag val =
