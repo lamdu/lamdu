@@ -30,6 +30,7 @@ import qualified Lamdu.Calc.Val as V
 import           Lamdu.Calc.Val.Annotated (Val(..))
 import qualified Lamdu.Calc.Val.Annotated as Val
 import qualified Lamdu.Compiler.Flatten as Flatten
+import           Lamdu.Data.Anchors (anonTag)
 import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Expr.Lens as ExprLens
 import qualified Lamdu.Expr.UniqueId as UniqueId
@@ -49,7 +50,8 @@ data Mode = FastSilent | SlowLogging LoggingInfo
     deriving Show
 
 data Actions m = Actions
-    { readAssocName :: UUID -> m Text
+    { readAssocName :: T.Tag -> m Text
+    , readAssocTag :: UUID -> m T.Tag
     , readGlobal :: V.Var -> m (Definition.Definition (Val ValId) ())
     , readGlobalType :: V.Var -> m Scheme
     , output :: String -> m ()
@@ -252,27 +254,41 @@ replaceSpecialChars = concatMap replaceSpecial
 readName :: (UniqueId.ToUUID a, Monad m) => a -> M m Text -> M m Text
 readName g act =
     do
-        name <-
-            performAction (`readAssocName` uuid)
-            <&> avoidReservedNames
-            <&> escapeName
-            >>= \case
-                "" -> act
-                name -> pure name
-        names . Lens.at name %%= \case
-            Nothing -> (name, Just (Map.singleton uuid name))
-            Just uuidMap ->
-                uuidMap
-                & Lens.at uuid %%~
-                \case
-                Nothing -> (newName, Just newName)
-                    where
-                        newName = name <> Text.pack (show (Map.size uuidMap))
-                Just oldName -> (oldName, Just oldName)
-                <&> Just
-            & M
+        tag <- performAction (`readAssocTag` uuid)
+        if tag == anonTag
+            then act >>= generatedName uuid
+            else readTagName tag act
     where
         uuid = UniqueId.toUUID g
+
+generatedName :: Monad m => UUID -> Text -> M m Text
+generatedName uuid name =
+    names . Lens.at name %%=
+    \case
+    Nothing -> (name, Just (Map.singleton uuid name))
+    Just uuidMap ->
+        uuidMap
+        & Lens.at uuid %%~
+        \case
+        Nothing -> (newName, Just newName)
+            where
+                newName = name <> Text.pack (show (Map.size uuidMap))
+        Just oldName -> (oldName, Just oldName)
+        <&> Just
+    & M
+
+readTagName :: Monad m => T.Tag -> M m Text -> M m Text
+readTagName tag act =
+    do
+        name <-
+            performAction (`readAssocName` tag)
+            <&> avoidReservedNames
+            <&> escapeName
+            >>=
+            \case
+            "" -> act
+            name -> pure name
+        generatedName (UniqueId.toUUID tag) name
 
 freshStoredName :: (Monad m, UniqueId.ToUUID a) => a -> Text -> M m Text
 freshStoredName g prefix = readName g (freshName prefix)
@@ -280,7 +296,7 @@ freshStoredName g prefix = readName g (freshName prefix)
 tagString :: Monad m => T.Tag -> M m Text
 tagString tag@(T.Tag ident) =
     "tag" ++ identHex ident & Text.pack & pure
-    & readName tag
+    & readTagName tag
 
 tagIdent :: Monad m => T.Tag -> M m (JSS.Id ())
 tagIdent = fmap (JS.ident . Text.unpack) . tagString

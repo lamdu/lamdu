@@ -19,7 +19,6 @@ import qualified Data.Aeson as JsonStr
 import           Data.Aeson.Types ((.:))
 import qualified Data.Aeson.Types as Json
 import qualified Data.ByteString as SBS
-import qualified Data.ByteString.Base16 as Hex
 import           Data.ByteString.Utils (lazifyBS)
 import           Data.HashMap.Strict (HashMap)
 import qualified Data.HashMap.Strict as HashMap
@@ -27,17 +26,18 @@ import           Data.IORef
 import           Data.IntMap (IntMap)
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
+import           Data.String (IsString(..))
 import qualified Data.Text as Text
-import           Data.Text.Encoding (decodeUtf8)
 import           Data.UUID.Types (UUID)
 import qualified Data.UUID.Utils as UUIDUtils
 import qualified Data.Vector as Vec
 import           Data.Word (Word8)
 import qualified Lamdu.Builtins.PrimVal as PrimVal
-import           Lamdu.Calc.Identifier (Identifier(..))
+import           Lamdu.Calc.Identifier (Identifier(..), identHex)
 import           Lamdu.Calc.Type (Tag(..))
 import qualified Lamdu.Calc.Val as V
 import           Lamdu.Calc.Val.Annotated (Val)
+import           Lamdu.Data.Anchors (anonTag)
 import           Lamdu.Data.Definition (Definition)
 import qualified Lamdu.Data.Definition as Def
 import qualified Lamdu.Eval.JS.Compiler as Compiler
@@ -267,8 +267,8 @@ compilerActions ::
     Compiler.Actions IO
 compilerActions toUUID depsMVar actions output =
     Compiler.Actions
-    { Compiler.readAssocName =
-        pure . decodeUtf8 . Hex.encode . UUIDUtils.toSBS16
+    { Compiler.readAssocName = pure . fromString . identHex . tagName
+    , Compiler.readAssocTag = pure anonTag & const
     , Compiler.readGlobal =
         readGlobal $
         \def ->

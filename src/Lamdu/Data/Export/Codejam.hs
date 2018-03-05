@@ -81,11 +81,8 @@ compile val =
             Compiler.Actions
             { Compiler.output = tell . (:[])
             , Compiler.loggingMode = Compiler.FastSilent
-            , Compiler.readAssocName =
-                \entity ->
-                Anchors.assocTag entity & getP
-                >>= getP . Anchors.assocTagNameRef
-                & lift
+            , Compiler.readAssocTag = lift . getP . Anchors.assocTag
+            , Compiler.readAssocName = lift . getP . Anchors.assocTagNameRef
             , Compiler.readGlobal =
                 \globalId ->
                 ExprIRef.defI globalId & Transaction.readIRef
