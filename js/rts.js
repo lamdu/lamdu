@@ -229,53 +229,11 @@ module.exports = {
                 chmod: function(x) {
                     return function() { require('fs').chmodSync(toString(x[filePathTag]), x[modeTag]); };
                 },
-                close: function(fd) {
-                    return function() { require('fs').closeSync(fd); };
-                },
-                fchmod: function(x) {
-                    return function() { require('fs').fchmodSync(x[fileDescTag], x[modeTag]); };
-                },
-                fstat: function(fd) {
-                    return function() { return require('fs').fstatSync(fd); };
-                    // { dev: 66306,
-                    //   mode: 33188,
-                    //   nlink: 1,
-                    //   uid: 0,
-                    //   gid: 0,
-                    //   rdev: 0,
-                    //   blksize: 4096,
-                    //   ino: 7733458,
-                    //   size: 2243,
-                    //   blocks: 8,
-                    //   atime: 2016-06-02T11:35:58.456Z,
-                    //   mtime: 2016-05-02T22:06:47.124Z,
-                    //   ctime: 2016-05-02T22:06:47.132Z,
-                    // }
-                },
-                fsync: function(fd) {
-                    return function() { require('fs').fsyncSync(fd); };
-                },
-                ftruncate: function(x) {
-                    return function() { require('fs').ftruncateSync(x[fileDescTag], x[sizeTag]); };
-                },
                 link: function(x) {
                     return function() { require('fs').linkSync(toString(x[srcPathTag]), toString(x[dstPathTag])); };
                 },
-                lstat: function(path) {
-                    // see fstat for result example
-                    return function() { return require('fs').lstatSync(toString(path)); };
-                },
-                mkdir: function(path) {
-                    return function() { require('fs').mkdirSync(toString(path)); };
-                },
-                open: function(x) {
-                    return function() { return require('fs').openSync(toString(x[filePathTag]), x[flagsTag], x[modeTag]); };
-                },
                 readFile: function(path) {
                     return function() { return bytes(require('fs').readFileSync(toString(path))); };
-                },
-                readLink: function(path) {
-                    return function() { return bytes(require('fs').readlinkSync(toString(path), 'buffer')); };
                 },
                 appendFile: function(x) {
                     return function() { require('fs').appendFileSync(toString(x[filePathTag]), Buffer.from(x[dataTag])); };
