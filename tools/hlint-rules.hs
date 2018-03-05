@@ -42,6 +42,9 @@ warn = a ^. b & c .~ a ^. b . c ==> a ^. b
 warn = pure a <&> b ==> pure (a b)
 warn = return a <&> b ==> return (a b)
 warn = maybe mempty ==> foldMap
+warn = lift a >>= lift . b ==> a >>= b & lift
+warn = a & lift >>= lift . b ==> a >>= b & lift
+warn = a & lift <&> b >>= lift . c ==> a <&> b >>= c & lift
 -- Lamdu style rules:
 warn = return ==> pure
 
