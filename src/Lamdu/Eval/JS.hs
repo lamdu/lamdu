@@ -342,7 +342,7 @@ asyncStart toUUID fromUUID depsMVar executeReplMVar resultsRef val actions =
                     & Compiler.compile
                         (compilerActions toUUID depsMVar actions output)
                 hFlush stdin
-                forever (takeMVar executeReplMVar >> output "(function() { repl(); })();" >> hFlush stdin)
+                forever (takeMVar executeReplMVar >> output "repl(x => undefined);" >> hFlush stdin)
 
 -- | Pause the evaluator, yielding all dependencies of evaluation so
 -- far. If any dependency changed, this evaluation is stale.

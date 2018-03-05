@@ -109,7 +109,11 @@ var makeOpaque = function (obj) {
 };
 
 var mutFunc = function (inner) {
-    return function(x) { return function() { return inner(x); }; };
+    return function(x) {
+        return function(cont) {
+            return cont(inner(x));
+        };
+    };
 };
 
 module.exports = {
@@ -193,8 +197,12 @@ module.exports = {
         },
         Mut: {
             return: mutFunc(x => x),
-            bind: function(x) { return function () { return x[infixrTag](x[infixlTag]())(); }; },
-            run: function(st) { return st(); },
+            bind: function(x) {
+                return function (cont) {
+                    return x[infixlTag](res => x[infixrTag](res)(cont));
+                };
+            },
+            run: function(st) { return st(x => x); },
             Array: {
                 length: mutFunc(x => x.length),
                 read: mutFunc(x => x[objTag][x[indexTag]]),
@@ -205,9 +213,9 @@ module.exports = {
                     arr.length = Math.min(arr.length, x[stopTag]);
                     return {};
                 }),
-                new: function() { return []; },
+                new: cont => cont([]),
                 run: function(st) {
-                    var result = st();
+                    var result = st(x => x);
                     if (result.hasOwnProperty("cacheId")) {
                         delete result.cacheId;
                     }
@@ -234,8 +242,9 @@ module.exports = {
                 openTcpServer: mutFunc(x => {
                     var server = require('net').Server(socket => {
                         makeOpaque(socket);
-                        var dataHandler = x[connectionHandlerTag](socket)();
-                        socket.on('data', data => { dataHandler(new Uint8Array(data))(); } );
+                        x[connectionHandlerTag](socket)(dataHandler =>
+                            socket.on('data', data => { dataHandler(new Uint8Array(data))(x => null); } )
+                        );
                     });
                     server.listen({
                         host: toString(x[hostTag]),
@@ -245,7 +254,7 @@ module.exports = {
                     makeOpaque(server);
                     return server;
                 }),
-                closeTcpServer: mutFunc(server => server.close()),
+                closeTcpServer: mutFunc(server => { server.close(); return {}; } ),
                 socketSend: mutFunc(x => { x[socketTag].write(Buffer.from(x[dataTag])); return {}; })
             }
         }
