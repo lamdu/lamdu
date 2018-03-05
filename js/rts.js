@@ -1,8 +1,10 @@
+/* jshint node: true */
+/* jshint esversion: 6 */
 "use strict";
 
 process.stdout._handle.setBlocking(true);
 
-var conf = require('./rtsConfig.js')
+var conf = require('./rtsConfig.js');
 
 // Tag names must match those in Lamdu.Builtins.Anchors
 var trueTag = conf.builtinTagName('true');
@@ -32,7 +34,7 @@ var socketTag = conf.builtinTagName('socket');
 
 var bool = function (x) {
     return {tag: x ? trueTag : falseTag, data: {}};
-}
+};
 
 // Assumes "a" and "b" are of same type, and it is an object created by
 // Lamdu's JS backend - this need not work for all JS objects..
@@ -47,11 +49,11 @@ var isEqual = function (a, b) {
         if (p != 'cacheId' && !isEqual(a[p], b[p]))
             return false;
     return true;
-}
+};
 
 var bytes = function (list) {
     return new Uint8Array(list);
-}
+};
 
 var encode = function() {
     var cacheId = 0;
@@ -61,10 +63,10 @@ var encode = function() {
                 return {};
             }
             if (typeof value == "number" && !isFinite(value)) {
-                return { "number": String(value) }
+                return { "number": String(value) };
             }
-            if ((typeof value != "object" && typeof value != "function")
-                || key === "array" || key === "bytes") {
+            if ((typeof value != "object" && typeof value != "function") ||
+                key === "array" || key === "bytes") {
                 return value;
             }
             if (value.hasOwnProperty("cacheId")) {
@@ -100,31 +102,31 @@ var toString = function (bytes) {
     // This is a nodejs only method to convert a UInt8Array to a string.
     // For the browser we'll need to augment this.
     return Buffer(bytes).toString();
-}
+};
 
 var makeOpaque = function (obj) {
     obj.cacheId = -1;
-}
+};
 
 module.exports = {
     logRepl: conf.logRepl,
     logResult: function (scope, exprId, result) {
-        process.stdout.write(encode(
-            { event:"Result"
-              , scope:scope
-              , exprId:exprId
-              , result:result
+        process.stdout.write(encode({
+            event:"Result",
+            scope:scope,
+            exprId:exprId,
+            result:result
             }));
         process.stdout.write("\n");
         return result;
     },
     logNewScope: function (parentScope, scope, lamId, arg) {
-        process.stdout.write(encode(
-            { event:"NewScope"
-              , parentScope:parentScope
-              , scope:scope
-              , lamId:lamId
-              , arg:arg
+        process.stdout.write(encode({
+            event:"NewScope",
+            parentScope:parentScope,
+            scope:scope,
+            lamId:lamId,
+            arg:arg
             }));
         process.stdout.write("\n");
     },
@@ -140,7 +142,7 @@ module.exports = {
         };
         return function () {
             return callee.apply(this, arguments);
-        }
+        };
     },
     bytes: bytes,
     bytesFromAscii: function (str) {
@@ -187,19 +189,19 @@ module.exports = {
         },
         Mut: {
             return: function(x) { return function() { return x; }; },
-            bind: function(x) { return function () { return x[infixrTag](x[infixlTag]())(); } },
+            bind: function(x) { return function () { return x[infixrTag](x[infixlTag]())(); }; },
             run: function(st) { return st(); },
             Array: {
-                length: function (x) { return function() { return x.length; } },
-                read: function (x) { return function() { return x[objTag][x[indexTag]]; } },
-                write: function (x) { return function() { x[objTag][x[indexTag]] = x[valTag]; return {}; } },
-                append: function (x) { return function() { x[objTag].push(x[valTag]); return {}; } },
+                length: function (x) { return function() { return x.length; }; },
+                read: function (x) { return function() { return x[objTag][x[indexTag]]; }; },
+                write: function (x) { return function() { x[objTag][x[indexTag]] = x[valTag]; return {}; }; },
+                append: function (x) { return function() { x[objTag].push(x[valTag]); return {}; }; },
                 truncate: function (x) {
                     return function() {
-                        var arr = x[objTag]
+                        var arr = x[objTag];
                         arr.length = Math.min(arr.length, x[stopTag]);
                         return {};
-                    }
+                    };
                 },
                 new: function() { return []; },
                 run: function(st) {
@@ -211,9 +213,9 @@ module.exports = {
                 },
             },
             Ref: {
-                new: function (x) { return function() {return {val: x}; } },
-                read: function (x) { return function() {return x.val;} },
-                write: function (x) { return function() {x[objTag].val = x[valTag]; return {};} },
+                new: function (x) { return function() { return {val: x}; }; },
+                read: function (x) { return function() { return x.val; }; },
+                write: function (x) { return function() { x[objTag].val = x[valTag]; return {}; }; },
             },
         },
         IO: {
@@ -297,11 +299,11 @@ module.exports = {
                         });
                         makeOpaque(server);
                         return server;
-                    }
+                    };
                 },
-                closeTcpServer: function(server) { return function() { server.close(); } },
+                closeTcpServer: function(server) { return function() { server.close(); }; },
                 socketSend: function(x) {
-                    return function() { x[socketTag].write(Buffer.from(x[dataTag])); }
+                    return function() { x[socketTag].write(Buffer.from(x[dataTag])); };
                 }
             }
         }
