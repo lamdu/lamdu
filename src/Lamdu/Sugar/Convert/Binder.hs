@@ -227,13 +227,14 @@ convertLam lam exprPl =
             <&> rBody . Lens.mapped . rPayload . plActions . mReplaceParent . Lens._Just %~ (lamParamToHole lam >>)
 
 useNormalLambda :: Set InternalName -> Binder InternalName (T m) (Expression InternalName (T m) a) -> Bool
-useNormalLambda paramNames binder =
-    any (binder &)
-    [ Lens.hasn't (bParams . _Params)
-    , Lens.has (bBody . bbContent . _BinderLet)
-    , Lens.has (bBody . Lens.traverse . SugarLens.payloadsOf forbiddenLightLamSubExprs)
-    , not . allParamsUsed paramNames
-    ]
+useNormalLambda paramNames binder
+    | Set.size paramNames < 2 = True
+    | otherwise =
+        any (binder &)
+        [ Lens.has (bBody . bbContent . _BinderLet)
+        , Lens.has (bBody . Lens.traverse . SugarLens.payloadsOf forbiddenLightLamSubExprs)
+        , not . allParamsUsed paramNames
+        ]
     where
         forbiddenLightLamSubExprs :: Lens.Traversal' (Body name m a) ()
         forbiddenLightLamSubExprs =
