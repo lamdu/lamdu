@@ -255,9 +255,8 @@ readName :: (UniqueId.ToUUID a, Monad m) => a -> M m Text -> M m Text
 readName g act =
     do
         tag <- performAction (`readAssocTag` uuid)
-        if tag == anonTag
-            then act >>= generatedName uuid
-            else readTagName tag act
+        (if tag == anonTag then act else readTagName tag act)
+            >>= generatedName uuid
     where
         uuid = UniqueId.toUUID g
 
@@ -279,16 +278,13 @@ generatedName uuid name =
 
 readTagName :: Monad m => T.Tag -> M m Text -> M m Text
 readTagName tag act =
-    do
-        name <-
-            performAction (`readAssocName` tag)
-            <&> avoidReservedNames
-            <&> escapeName
-            >>=
-            \case
-            "" -> act
-            name -> pure name
-        generatedName (UniqueId.toUUID tag) name
+    performAction (`readAssocName` tag)
+    <&> avoidReservedNames
+    <&> escapeName
+    >>=
+    \case
+    "" -> act
+    name -> pure name
 
 freshStoredName :: (Monad m, UniqueId.ToUUID a) => a -> Text -> M m Text
 freshStoredName g prefix = readName g (freshName prefix)
@@ -297,6 +293,7 @@ tagString :: Monad m => T.Tag -> M m Text
 tagString tag@(T.Tag ident) =
     "tag" ++ identHex ident & Text.pack & pure
     & readTagName tag
+    >>= generatedName (UniqueId.toUUID tag)
 
 tagIdent :: Monad m => T.Tag -> M m (JSS.Id ())
 tagIdent = fmap (JS.ident . Text.unpack) . tagString
