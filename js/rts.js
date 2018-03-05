@@ -108,6 +108,10 @@ var makeOpaque = function (obj) {
     obj.cacheId = -1;
 };
 
+var mutFunc = function (inner) {
+    return function(x) { return function() { return inner(x); }; };
+};
+
 module.exports = {
     logRepl: conf.logRepl,
     logResult: function (scope, exprId, result) {
@@ -188,21 +192,19 @@ module.exports = {
             item: function (x) { return x[objTag][x[indexTag]]; },
         },
         Mut: {
-            return: function(x) { return function() { return x; }; },
+            return: mutFunc(x => x),
             bind: function(x) { return function () { return x[infixrTag](x[infixlTag]())(); }; },
             run: function(st) { return st(); },
             Array: {
-                length: function (x) { return function() { return x.length; }; },
-                read: function (x) { return function() { return x[objTag][x[indexTag]]; }; },
-                write: function (x) { return function() { x[objTag][x[indexTag]] = x[valTag]; return {}; }; },
-                append: function (x) { return function() { x[objTag].push(x[valTag]); return {}; }; },
-                truncate: function (x) {
-                    return function() {
-                        var arr = x[objTag];
-                        arr.length = Math.min(arr.length, x[stopTag]);
-                        return {};
-                    };
-                },
+                length: mutFunc(x => x.length),
+                read: mutFunc(x => x[objTag][x[indexTag]]),
+                write: mutFunc(x => { x[objTag][x[indexTag]] = x[valTag]; return {}; } ),
+                append: mutFunc(x => { x[objTag].push(x[valTag]); return {}; } ),
+                truncate: mutFunc(x => {
+                    var arr = x[objTag];
+                    arr.length = Math.min(arr.length, x[stopTag]);
+                    return {};
+                }),
                 new: function() { return []; },
                 run: function(st) {
                     var result = st();
@@ -213,57 +215,39 @@ module.exports = {
                 },
             },
             Ref: {
-                new: function (x) { return function() { return {val: x}; }; },
-                read: function (x) { return function() { return x.val; }; },
-                write: function (x) { return function() { x[objTag].val = x[valTag]; return {}; }; },
+                new: mutFunc(x => { return {val: x}; }),
+                read: mutFunc(x => x.val),
+                write: mutFunc(x => { x[objTag].val = x[valTag]; return {}; }),
             },
         },
         IO: {
             file: {
-                unlink: function(path) {
-                    return function() { require('fs').unlinkSync(toString(path)); };
-                },
-                rename: function(x) {
-                    return function() { require('fs').renameSync(toString(x[oldPathTag]), toString(x[newPathTag])); };
-                },
-                chmod: function(x) {
-                    return function() { require('fs').chmodSync(toString(x[filePathTag]), x[modeTag]); };
-                },
-                link: function(x) {
-                    return function() { require('fs').linkSync(toString(x[srcPathTag]), toString(x[dstPathTag])); };
-                },
-                readFile: function(path) {
-                    return function() { return bytes(require('fs').readFileSync(toString(path))); };
-                },
-                appendFile: function(x) {
-                    return function() { require('fs').appendFileSync(toString(x[filePathTag]), Buffer.from(x[dataTag])); };
-                },
-                writeFile: function(x) {
-                    return function() { require('fs').writeFileSync(toString(x[filePathTag]), Buffer.from(x[dataTag])); };
-                },
+                unlink: mutFunc(path => require('fs').unlinkSync(toString(path))),
+                rename: mutFunc(x => require('fs').renameSync(toString(x[oldPathTag]), toString(x[newPathTag]))),
+                chmod: mutFunc(x => require('fs').chmodSync(toString(x[filePathTag]), x[modeTag])),
+                link: mutFunc(x => require('fs').linkSync(toString(x[srcPathTag]), toString(x[dstPathTag]))),
+                readFile: mutFunc(path => bytes(require('fs').readFileSync(toString(path)))),
+                appendFile: mutFunc(x => require('fs').appendFileSync(toString(x[filePathTag]), Buffer.from(x[dataTag]))),
+                writeFile: mutFunc(x => require('fs').writeFileSync(toString(x[filePathTag]), Buffer.from(x[dataTag])))
             },
             network: {
-                openTcpServer: function(x) {
-                    return function() {
-                        var server = require('net').Server(socket => {
-                            makeOpaque(socket);
-                            var dataHandler = x[connectionHandlerTag](socket)();
-                            socket.on('data', data => { dataHandler(new Uint8Array(data))(); } );
-                        });
-                        server.listen({
-                            host: toString(x[hostTag]),
-                            port: x[portTag],
-                            exclusive: bool(x[exclusiveTag])
-                        });
-                        makeOpaque(server);
-                        return server;
-                    };
-                },
-                closeTcpServer: function(server) { return function() { server.close(); }; },
-                socketSend: function(x) {
-                    return function() { x[socketTag].write(Buffer.from(x[dataTag])); };
-                }
+                openTcpServer: mutFunc(x => {
+                    var server = require('net').Server(socket => {
+                        makeOpaque(socket);
+                        var dataHandler = x[connectionHandlerTag](socket)();
+                        socket.on('data', data => { dataHandler(new Uint8Array(data))(); } );
+                    });
+                    server.listen({
+                        host: toString(x[hostTag]),
+                        port: x[portTag],
+                        exclusive: bool(x[exclusiveTag])
+                    });
+                    makeOpaque(server);
+                    return server;
+                }),
+                closeTcpServer: mutFunc(server => server.close()),
+                socketSend: mutFunc(x => x[socketTag].write(Buffer.from(x[dataTag])))
             }
         }
-    },
+    }
 };
