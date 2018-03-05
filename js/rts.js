@@ -287,10 +287,10 @@ module.exports = {
             network: {
                 openTcpServer: function(x) {
                     return function() {
-                        var server = require('net').Server((socket) => {
+                        var server = require('net').Server(socket => {
                             makeOpaque(socket);
                             var dataHandler = x[connectionHandlerTag](socket)();
-                            socket.on('data', (data) => { dataHandler(new Uint8Array(data))(); } );
+                            socket.on('data', data => { dataHandler(new Uint8Array(data))(); } );
                         });
                         server.listen({
                             host: toString(x[hostTag]),
