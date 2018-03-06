@@ -28,9 +28,15 @@ var dstPathTag = conf.builtinTagName('dstPath');
 var flagsTag = conf.builtinTagName('flags');
 var hostTag = conf.builtinTagName('host');
 var portTag = conf.builtinTagName('port');
+var userTag = conf.builtinTagName('user');
+var passwordTag = conf.builtinTagName('password');
+var databaseTag = conf.builtinTagName('database');
+var fieldsTag = conf.builtinTagName('fields');
 var exclusiveTag = conf.builtinTagName('exclusive');
 var connectionHandlerTag = conf.builtinTagName('connectionHandler');
 var socketTag = conf.builtinTagName('socket');
+var errorTag = conf.builtinTagName('error');
+var successTag = conf.builtinTagName('success');
 
 var bool = function (x) {
     return {tag: x ? trueTag : falseTag, data: {}};
@@ -53,6 +59,14 @@ var isEqual = function (a, b) {
 
 var bytes = function (list) {
     return new Uint8Array(list);
+};
+
+var bytesFromAscii = function (str) {
+    var arr = new Uint8Array(str.length);
+    for (var i = 0; i < str.length; ++i) {
+        arr[i] = str.charCodeAt(i);
+    }
+    return arr;
 };
 
 var encode = function() {
@@ -166,13 +180,7 @@ module.exports = {
         };
     },
     bytes: bytes,
-    bytesFromAscii: function (str) {
-        var arr = new Uint8Array(str.length);
-        for (var i = 0; i < str.length; ++i) {
-            arr[i] = str.charCodeAt(i);
-        }
-        return arr;
-    },
+    bytesFromAscii: bytesFromAscii,
     builtins: {
         Prelude: {
             sqrt: Math.sqrt,
@@ -289,6 +297,53 @@ module.exports = {
                     return function (cont) {
                         x[socketTag].write(Buffer.from(x[dataTag]), null, cont);
                     };
+                }
+            },
+            database: {
+                postgres: {
+                    connect: function(x) {
+                        return function(cont) {
+                            var pg = require('pg');
+                            var client = new pg.Client({
+                                host: toString(x[hostTag]),
+                                port: x[portTag],
+                                user: toString(x[userTag]),
+                                password: toString(x[passwordTag])
+                            });
+                            makeOpaque(client);
+                            client.connect(err => {
+                                if (err) throw err;
+                                cont(client);
+                            });
+                        };
+                    },
+                    query: function(x) {
+                        return function(cont) {
+                            x[databaseTag].query(toString(x[objTag]), (err, resJs) => {
+                                if (err) {
+                                    cont({tag: errorTag, data: bytesFromAscii(err.message)});
+                                    return;
+                                }
+                                var fields = [];
+                                for (var i = 0; i < resJs.fields.length; ++i) {
+                                    fields.push(bytesFromAscii(resJs.fields[i].name));
+                                }
+                                var rows = [];
+                                for (i = 0; i < resJs.rows.length; ++i) {
+                                    var jsRow = resJs.rows[i];
+                                    var row = [];
+                                    for (var k = 0; k < resJs.fields.length; ++k) {
+                                        row.push(bytesFromAscii(String(jsRow[resJs.fields[k].name])));
+                                    }
+                                    rows.push(row);
+                                }
+                                var resLamdu = {};
+                                resLamdu[fieldsTag] = fields;
+                                resLamdu[dataTag] = rows;
+                                cont({tag: successTag, data: resLamdu});
+                            });
+                        };
+                    }
                 }
             }
         }
