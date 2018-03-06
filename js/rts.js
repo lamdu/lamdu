@@ -116,6 +116,19 @@ var mutFunc = function (inner) {
     };
 };
 
+// Create a parameterized Mut action which returns nothing (void),
+// from a call with a nodejs callback which may get an error.
+var mutVoidWithError = function (inner) {
+    return function(x) {
+        return function(cont) {
+            inner(x)(err => {
+                if (err) throw err;
+                cont({});
+            });
+        };
+    };
+};
+
 module.exports = {
     logRepl: conf.logRepl,
     logResult: function (scope, exprId, result) {
@@ -230,13 +243,26 @@ module.exports = {
         },
         IO: {
             file: {
-                unlink: mutFunc(path => require('fs').unlinkSync(toString(path))),
-                rename: mutFunc(x => require('fs').renameSync(toString(x[oldPathTag]), toString(x[newPathTag]))),
-                chmod: mutFunc(x => require('fs').chmodSync(toString(x[filePathTag]), x[modeTag])),
-                link: mutFunc(x => require('fs').linkSync(toString(x[srcPathTag]), toString(x[dstPathTag]))),
-                readFile: mutFunc(path => bytes(require('fs').readFileSync(toString(path)))),
-                appendFile: mutFunc(x => require('fs').appendFileSync(toString(x[filePathTag]), Buffer.from(x[dataTag]))),
-                writeFile: mutFunc(x => require('fs').writeFileSync(toString(x[filePathTag]), Buffer.from(x[dataTag])))
+                unlink: mutVoidWithError(path =>
+                    require('fs').unlink.bind(null, toString(path))),
+                rename: mutVoidWithError(x =>
+                    require('fs').rename.bind(null, toString(x[oldPathTag]), toString(x[newPathTag]))),
+                chmod: mutVoidWithError(x =>
+                    require('fs').chmod.bind(null, toString(x[filePathTag]), x[modeTag])),
+                link: mutVoidWithError(x =>
+                    require('fs').link.bind(null, toString(x[srcPathTag]), toString(x[dstPathTag]))),
+                readFile: function(path) {
+                    return function(cont) {
+                        require('fs').readFile(toString(path), (err, data) => {
+                            if (err) throw err;
+                            cont(bytes(data));
+                        });
+                    };
+                },
+                appendFile: mutVoidWithError(x =>
+                    require('fs').appendFile.bind(null, toString(x[filePathTag]), Buffer.from(x[dataTag]), null)),
+                writeFile: mutVoidWithError(x =>
+                    require('fs').writeFile.bind(null, toString(x[filePathTag]), Buffer.from(x[dataTag])), null),
             },
             network: {
                 openTcpServer: mutFunc(x => {
@@ -254,8 +280,16 @@ module.exports = {
                     makeOpaque(server);
                     return server;
                 }),
-                closeTcpServer: mutFunc(server => { server.close(); return {}; } ),
-                socketSend: mutFunc(x => { x[socketTag].write(Buffer.from(x[dataTag])); return {}; })
+                closeTcpServer: function (server) {
+                    return function (cont) {
+                        server.close(cont);
+                    };
+                },
+                socketSend: function (x) {
+                    return function (cont) {
+                        x[socketTag].write(Buffer.from(x[dataTag]), null, cont);
+                    };
+                }
             }
         }
     }
