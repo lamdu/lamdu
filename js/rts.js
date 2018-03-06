@@ -246,7 +246,7 @@ module.exports = {
                     return server;
                 }),
                 closeTcpServer: mutFunc(server => server.close()),
-                socketSend: mutFunc(x => x[socketTag].write(Buffer.from(x[dataTag])))
+                socketSend: mutFunc(x => { x[socketTag].write(Buffer.from(x[dataTag])); return {}; })
             }
         }
     }
