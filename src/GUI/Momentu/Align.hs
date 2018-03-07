@@ -3,6 +3,7 @@ module GUI.Momentu.Align
     ( Aligned(..), alignmentRatio, value
     , boxAlign, hboxAlign, vboxAlign
     , WithTextPos(..), textTop, tValue
+    , fromWithTextPos
     ) where
 
 import qualified Control.Lens as Lens
@@ -28,6 +29,9 @@ data WithTextPos a = WithTextPos
     , _tValue :: a
     } deriving (Functor, Foldable, Traversable)
 Lens.makeLenses ''WithTextPos
+
+fromWithTextPos :: SizedElement a => R -> WithTextPos a -> Aligned a
+fromWithTextPos x (WithTextPos y w) = Aligned (Vector2 x (y / w ^. Element.height)) w
 
 instance SizedElement a => Element (Aligned a) where
     setLayers = value . Element.setLayers

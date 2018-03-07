@@ -18,10 +18,10 @@ import qualified GUI.Momentu.Align as Align
 import           GUI.Momentu.Animation (AnimId)
 import qualified GUI.Momentu.Animation as Anim
 import qualified GUI.Momentu.Draw as MDraw
-import           GUI.Momentu.Element (Element, SizedElement)
+import           GUI.Momentu.Element (Element)
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.Glue ((/-/), (/|/), hbox)
-import           GUI.Momentu.View (R, View(..))
+import           GUI.Momentu.View (View(..))
 import qualified GUI.Momentu.View as View
 import qualified GUI.Momentu.Widget.Id as WidgetId
 import qualified GUI.Momentu.Widgets.GridView as GridView
@@ -129,9 +129,9 @@ makeTInst parentPrecedence tid typeParams =
                     paramIdView <- showIdentifier tParamId
                     typeView <- splitMake (Prec 0) arg
                     pure
-                        [ toAligned 1 paramIdView
+                        [ Align.fromWithTextPos 1 paramIdView
                         , Aligned 0.5 hspace
-                        , toAligned 0 typeView
+                        , Align.fromWithTextPos 0 typeView
                         ]
         case Map.toList typeParams of
             [] -> pure nameView
@@ -145,10 +145,6 @@ makeTInst parentPrecedence tid typeParams =
                 >>= (Styled.addValPadding ??)
                 >>= addTypeBG
                 <&> afterName
-
-toAligned :: SizedElement a => R -> WithTextPos a -> Aligned a
-toAligned x (WithTextPos y w) =
-    Aligned (Vector2 x (y / w ^. Element.height)) w
 
 addTypeBG :: (Element a, MonadReader env m, HasTheme env) => a -> M m a
 addTypeBG view =
@@ -177,16 +173,16 @@ makeField ::
     (T.Tag, Type) -> M m [Aligned View]
 makeField (tag, fieldType) =
     sequence
-    [ makeTag tag <&> toAligned 1
+    [ makeTag tag <&> Align.fromWithTextPos 1
     , Spacer.stdHSpace <&> Aligned 0.5
-    , splitMake (Prec 0) fieldType <&> toAligned 0
+    , splitMake (Prec 0) fieldType <&> Align.fromWithTextPos 0
     ]
 
 makeVariantField ::
     (MonadReader env m, Spacer.HasStdSpacing env, MonadTransaction n m, HasTheme env) =>
     (T.Tag, Type) -> M m [Aligned View]
 makeVariantField (tag, T.TRecord T.CEmpty) =
-    makeTag tag <&> toAligned 1 <&> (:[])
+    makeTag tag <&> Align.fromWithTextPos 1 <&> (:[])
     -- ^ Nullary data constructor
 makeVariantField (tag, fieldType) = makeField (tag, fieldType)
 
@@ -221,7 +217,7 @@ makeComposite o c sepView mkField composite =
                             View.unitSquare sqrId
                             & Element.scale (Vector2 barWidth 10)
                     sep <- sepView
-                    varView <- makeTVar var <&> toAligned 0
+                    varView <- makeTVar var <&> Align.fromWithTextPos 0
                     let lastLine = (sep /|/ varView) ^. Align.value
                     pure (Aligned 0.5 sqr /-/ Aligned 0.5 lastLine)
         (Aligned 0.5 fieldsView /-/ extView) ^. Align.value & Align.WithTextPos 0
@@ -246,7 +242,7 @@ makeInternal parentPrecedence typ =
     T.TInst typeId typeParams -> makeTInst parentPrecedence typeId typeParams
     T.TRecord composite -> makeComposite "{" "}" (pure Element.empty) makeField composite
     T.TVariant composite ->
-        [ makeComposite "+{" "}" (grammar "or: " <&> toAligned 0) makeVariantField composite
+        [ makeComposite "+{" "}" (grammar "or: " <&> Align.fromWithTextPos 0) makeVariantField composite
         ] & sequenceA
         <&> hbox
 
