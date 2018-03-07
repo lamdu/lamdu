@@ -102,7 +102,7 @@ assignCursor searchMenuId resultIds action =
                     -- so that operators pressed will set the search string
                     -- rather than apply on the first result.
                     searchTermEditId searchMenuId
-                | otherwise = head (resultIds ++ [searchTermEditId searchMenuId])
+                | otherwise = fromMaybe (searchTermEditId searchMenuId) (resultIds ^? traverse)
 
         -- Results appear and disappear when the search-string changes,
         -- but the cursor prefix signifies whether we should be on a result.

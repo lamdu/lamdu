@@ -45,6 +45,7 @@ warn = maybe mempty ==> foldMap
 warn = lift a >>= lift . b ==> a >>= b & lift
 warn = a & lift >>= lift . b ==> a >>= b & lift
 warn = a & lift <&> b >>= lift . c ==> a <&> b >>= c & lift
+warn = head (a ++ [b]) ==> fromMaybe b (a ^? traverse)
 -- Lamdu style rules:
 warn = return ==> pure
 
