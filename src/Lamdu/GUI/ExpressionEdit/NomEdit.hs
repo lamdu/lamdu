@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, OverloadedStrings, RankNTypes, NoMonomorphismRestriction #-}
+{-# LANGUAGE NoImplicitPrelude, OverloadedStrings, NoMonomorphismRestriction #-}
 module Lamdu.GUI.ExpressionEdit.NomEdit
     ( makeFromNom, makeToNom
     ) where
@@ -35,7 +35,6 @@ mReplaceParent :: Lens.Traversal' (Sugar.Expression name (T m) a) (T m Sugar.Ent
 mReplaceParent = Sugar.rPayload . Sugar.plActions . Sugar.mReplaceParent . Lens._Just
 
 makeToNom ::
-    forall m.
     Monad m =>
     Sugar.Nominal (Name (T m))
     (Sugar.BinderBody (Name (T m)) (T m) (ExprGui.SugarExpr m)) ->
@@ -61,7 +60,7 @@ makeFromNom nom pl =
 
 mkNomGui ::
     Monad m =>
-    (forall a. [a] -> [a]) ->
+    ([ExpressionGui m] -> [ExpressionGui m]) ->
     Text -> Text -> Maybe (T m Sugar.EntityId) ->
     Sugar.Payload (T m) ExprGui.Payload ->
     Sugar.Nominal (Name (T m)) (ExprGuiM m (ExpressionGui m)) ->
@@ -78,8 +77,8 @@ mkNomGui ordering nomStr str mDel pl (Sugar.Nominal tid val) =
         stdWrapParentExpr pl
             <*> ( (ResponsiveExpr.boxSpacedMDisamb ?? mParenInfo)
                     <*>
-                    ( ordering
-                        [
+                    ( sequence
+                    [
                         do
                             label <- Styled.grammarLabel str
                             nameGui <-
@@ -91,7 +90,7 @@ mkNomGui ordering nomStr str mDel pl (Sugar.Nominal tid val) =
                         & Reader.local (TextView.color .~ nomColor)
                         <&> Widget.weakerEvents eventMap
                     , val
-                    ] & sequence
+                    ] <&> ordering
                     )
                 )
     where
