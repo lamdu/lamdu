@@ -47,7 +47,7 @@ makeNullaryInject tag pl =
     stdWrapParentExpr pl <*>
     do
         dot <- injectIndicator "."
-        TagEdit.makeCaseTag nearestHoles tag <&> (/|/ dot)
+        TagEdit.makeVariantTag nearestHoles tag <&> (/|/ dot)
             <&> Responsive.fromWithTextPos
     where
         nearestHoles = pl ^. Sugar.plData . ExprGui.plNearestHoles
@@ -78,7 +78,7 @@ makeInject val tag pl =
 
         (Options.boxSpaced ?? disamb)
             <*>
-            ( TagEdit.makeCaseTag nearestHoles tag
+            ( TagEdit.makeVariantTag nearestHoles tag
                 <&> (/|/ colon)
                 <&> Lens.mapped %~ Widget.weakerEvents replaceParentEventMap
                 <&> Responsive.fromWithTextPos
