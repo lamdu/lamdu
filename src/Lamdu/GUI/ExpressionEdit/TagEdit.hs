@@ -137,7 +137,7 @@ makeNewTagPreEvent searchTerm tagSelection mkPickResult
         }
 
 addNewTagIfNullOptions ::
-    ( Monad m, MonadReader env f, GuiState.HasCursor env
+    ( Monad m, MonadReader env f, GuiState.HasCursor env, HasTheme env
     , TextView.HasStyle env, Element.HasAnimIdPrefix env
     ) =>
     Sugar.TagSelection (Name (T m)) (T m) a ->
@@ -155,9 +155,12 @@ addNewTagIfNullOptions tagSelection mkPickResult ctx optionList =
                     { Menu._oId = optionId
                     , Menu._oSubmenuWidgets = Menu.SubmenuEmpty
                     , Menu._oRender =
-                        (Widget.makeFocusableView ?? optionId <&> fmap)
-                        <*> TextView.makeLabel "Create new"
-                        <&> (`Menu.RenderedOption` preEvent)
+                        do
+                            color <- Lens.view theme <&> Theme.actionTextColor
+                            (Widget.makeFocusableView ?? optionId <&> fmap)
+                                <*> TextView.makeLabel "Create new"
+                                <&> (`Menu.RenderedOption` preEvent)
+                                & Reader.local (TextView.color .~ color)
                     }
                 ]
             , Menu._olIsTruncated = False
