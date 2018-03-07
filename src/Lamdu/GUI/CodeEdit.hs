@@ -225,7 +225,7 @@ makeNewDefinitionButton =
         newDefinitionEventMap <- makeNewDefinitionEventMap anchors
 
         Config.Pane{newDefinitionButtonPressKeys} <- Lens.view Config.config <&> Config.pane
-        color <- Lens.view Theme.theme <&> Theme.newDefinitionActionColor
+        color <- Lens.view Theme.theme <&> Theme.actionTextColor
 
         TextView.makeFocusableLabel "New..."
             & Reader.local (TextView.color .~ color)

@@ -80,7 +80,7 @@ data Theme = Theme
     , hover :: Hover.Style
     , tooltip :: ToolTip
     , codeForegroundColors :: CodeForegroundColors
-    , newDefinitionActionColor :: Draw.Color
+    , actionTextColor :: Draw.Color
     , topPadding :: Draw.R
     , maxEvalViewSize :: Int
     , versionControl :: VersionControl.Theme

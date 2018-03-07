@@ -20,7 +20,7 @@
     "presentationChoiceScaleFactor" : [0.5, 0.5],
     "invalidCursorBGColor"          : [0.4, 0.0, 0.0, 1.0],
     "topPadding"                    : 1.5,
-    "newDefinitionActionColor"      : [0, 0.7, 0, 1.0],
+    "actionTextColor"      : [0, 0.7, 0, 1.0],
     "codeForegroundColors": {
         "baseColor"                     : [0.0, 0.0, 0.0, 1.0],
         "grammarColor"                  : [0.1, 0.1, 0.2, 0.6],
