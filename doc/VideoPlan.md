@@ -42,10 +42,20 @@ There were a lot of minor improvements.
 These are the major visible stuff that changed:
 
 * Lamdu evaluates the code!
-* Lamdu is somewhat useful! At least we can use it for Project Euler and Google Code Jam problems :) Though there are still important stuff missing like creating new nominal types.
-* Automatic code layouting, which dynamically adapts according the window size and zoom level to avoid horizontal scroll!
-* The language and standard library are more mature due to using it. Instead of lists we have `Stream`. We also have `Array`s, `Text`, `Bytes`, `Tree`, and the `Mut` monad.
-* Solved the "blame-assignment" problem when a definition's type changes.
+
+* Lamdu is somewhat useful! At least we can use it for Project Euler
+  and Google Code Jam problems :) Though there are still important
+  stuff missing like creating new nominal types.
+
+* Automatic code layouting, which dynamically adapts according the
+  window size and zoom level to avoid horizontal scroll!
+
+* The language and standard library are more mature due to using
+  it. Instead of lists we have `Stream`. We also have `Array`s,
+  `Text`, `Bytes`, `Tree`, and the `Mut` monad.
+
+* Solved the "blame-assignment" problem when a definition's type
+  changes.
 
 **TODO: What else?**
 

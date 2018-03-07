@@ -24,8 +24,8 @@ Data-files:          fonts/DejaVuSans.ttf
                    , js/rts.js
                    , js/rtsConfig.js
 
-                   , doc/CodeJamReadMe.md
-                   , js/codeJamRtsConfig.js
+                   , doc/JsExportReadMe.md
+                   , js/jsExportRtsConfig.js
 
 Executable lamdu
   hs-Source-Dirs: src
@@ -158,7 +158,7 @@ Executable lamdu
                   , Lamdu.Data.Db.Layout
                   , Lamdu.Data.Db.Migration
                   , Lamdu.Data.Definition
-                  , Lamdu.Data.Export.Codejam
+                  , Lamdu.Data.Export.JS
                   , Lamdu.Data.Export.JSON
                   , Lamdu.Data.Export.JSON.Codec
                   , Lamdu.Data.Export.JSON.Migration

@@ -30,7 +30,7 @@ As we evolve Lamdu's data model, occasionally we also change the format of thing
 
 ### The interchange `.json` format
 
-Currently one may export and import code into Lamdu via `.json` files. These could hopefully be used as code submissions in programming competitions such as Google Code Jam (which Yair used Lamdu in), and are also a temporary mechanism allowing people to share code.
+Currently one may export and import code into Lamdu via `.json` files.
 
 Lamdu's standard library is also stored is such a file - `freshdb.json`.
 

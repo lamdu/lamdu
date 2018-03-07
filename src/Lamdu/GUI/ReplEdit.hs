@@ -65,7 +65,7 @@ replEventMap theConfig (ExportRepl exportRepl exportFancy executeRepl) replExpr 
     , E.keysEventMap exportKeys
       (E.Doc ["Collaboration", "Export repl to JSON file"]) exportRepl
     , E.keysEventMap exportFancyKeys
-      (E.Doc ["Collaboration", "Export repl for Codejam"]) exportFancy
+      (E.Doc ["Collaboration", "Export repl as JS"]) exportFancy
     , case replExpr ^. Sugar.rPayload . Sugar.plAnnotation . Sugar.aInferredType of
         T.TInst tid _
             | tid == Builtins.mutTid ->

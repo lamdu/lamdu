@@ -26,7 +26,7 @@ import           Lamdu.Config.Theme (Theme(..))
 import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.Data.Db as Db
 import qualified Lamdu.Data.Db.Layout as DbLayout
-import           Lamdu.Data.Export.Codejam (exportFancy)
+import           Lamdu.Data.Export.JS (exportFancy)
 import qualified Lamdu.Data.Export.JSON as Export
 import qualified Lamdu.Eval.Manager as EvalManager
 import           Lamdu.Eval.Results (EvalResults)

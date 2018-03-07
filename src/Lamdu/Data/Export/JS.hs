@@ -1,6 +1,6 @@
 {-# LANGUAGE NoImplicitPrelude, OverloadedStrings #-}
 
-module Lamdu.Data.Export.Codejam
+module Lamdu.Data.Export.JS
     ( exportFancy
     ) where
 
@@ -126,10 +126,10 @@ exportFancy evalResults =
                 now <- getPOSIXTime <&> round
                 -- screenshot <- takeScreenshot <&> encodePng
                 readme <-
-                    readDataFile "doc/CodeJamReadMe.md"
+                    readDataFile "doc/JSExportReadMe.md"
                     <&> removeReadmeMeta <&> fromString
                 rts <- readDataFile "js/rts.js" <&> fromString
-                rtsConf <- readDataFile "js/codeJamRtsConfig.js" <&> fromString
+                rtsConf <- readDataFile "js/jsExportRtsConfig.js" <&> fromString
                 let addFile archive (filename, contents) =
                         Zip.addEntryToArchive
                         (Zip.toEntry ("export/" ++ filename) now contents)
