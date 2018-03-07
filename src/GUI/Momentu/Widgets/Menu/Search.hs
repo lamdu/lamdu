@@ -65,23 +65,23 @@ readSearchTerm x = State.readWidgetState x <&> fromMaybe ""
 basicSearchTermEdit ::
     (MonadReader env m, TextEdit.HasStyle env, HasState env) =>
     Id -> (Text -> Bool) -> m (WithTextPos (Widget State.Update))
-basicSearchTermEdit searchMenuId allowedSearchTerm =
+basicSearchTermEdit myId allowedSearchTerm =
     do
-        searchTerm <- readSearchTerm searchMenuId
+        searchTerm <- readSearchTerm myId
         let onEvents (newSearchTerm, eventRes)
                 | newSearchTerm == searchTerm = eventRes
                 | otherwise =
                     eventRes
-                    <> State.updateWidgetState searchMenuId newSearchTerm
+                    <> State.updateWidgetState myId newSearchTerm
                     -- When first letter is typed in search term, jump to the
                     -- results, which will go to first result:
                     & ( if Text.null searchTerm
                         then
                             State.uCursor .~
-                            (Just (resultsIdPrefix searchMenuId) ^. Lens._Unwrapped)
+                            (Just (resultsIdPrefix myId) ^. Lens._Unwrapped)
                         else id
                     )
-        TextEdit.make ?? textEditNoEmpty ?? searchTerm ?? searchTermEditId searchMenuId
+        TextEdit.make ?? textEditNoEmpty ?? searchTerm ?? searchTermEditId myId
             <&> Align.tValue . Widget.eventMapMaker . Lens.mapped %~
                 E.filter (allowedSearchTerm . fst)
             <&> Align.tValue . Lens.mapped %~ onEvents
@@ -91,9 +91,9 @@ basicSearchTermEdit searchMenuId allowedSearchTerm =
 assignCursor ::
     (MonadReader env m, HasState env) =>
     Id -> [Id] -> m a -> m a
-assignCursor searchMenuId resultIds action =
+assignCursor myId resultIds action =
     do
-        searchTerm <- readSearchTerm searchMenuId
+        searchTerm <- readSearchTerm myId
         let destId
                 | Text.null searchTerm =
                     -- When entering a hole with an empty search string
@@ -101,27 +101,27 @@ assignCursor searchMenuId resultIds action =
                     -- cursor should be on the search-string and not on a result
                     -- so that operators pressed will set the search string
                     -- rather than apply on the first result.
-                    searchTermEditId searchMenuId
-                | otherwise = resultIds ^? Lens.traverse & fromMaybe (searchTermEditId searchMenuId)
+                    searchTermEditId myId
+                | otherwise = resultIds ^? Lens.traverse & fromMaybe (searchTermEditId myId)
 
         -- Results appear and disappear when the search-string changes,
         -- but the cursor prefix signifies whether we should be on a result.
         -- When that is the case but is not currently on any of the existing results
         -- the cursor will be sent to the default one.
-        shouldBeOnResult <- sub (resultsIdPrefix searchMenuId)
+        shouldBeOnResult <- sub (resultsIdPrefix myId)
         isOnResult <- traverse sub resultIds <&> or
 
         action
             & if shouldBeOnResult && not isOnResult
             then Reader.local (State.cursor .~ destId)
-            else State.assignCursor searchMenuId destId
+            else State.assignCursor myId destId
     where
         sub x = State.isSubCursor ?? x
 
 enterWithSearchTerm :: Text -> Id -> State.Update
-enterWithSearchTerm searchTerm searchMenuId =
-    State.updateCursor searchMenuId
-    <> State.updateWidgetState searchMenuId searchTerm
+enterWithSearchTerm searchTerm myId =
+    State.updateCursor myId
+    <> State.updateWidgetState myId searchTerm
 
 make ::
     ( MonadReader env m, HasState env, Menu.HasConfig env
@@ -133,8 +133,8 @@ make ::
     (ResultsContext -> m (Menu.OptionList (Menu.Option m f))) ->
     View -> Id ->
     m (Menu.Placement -> WithTextPos (Widget (f State.Update)))
-make makeSearchTerm makeOptions annotation searchMenuId =
-    readSearchTerm searchMenuId <&> (`ResultsContext` resultsIdPrefix searchMenuId)
+make makeSearchTerm makeOptions annotation myId =
+    readSearchTerm myId <&> (`ResultsContext` resultsIdPrefix myId)
     >>= makeOptions
     >>=
     \options ->
@@ -148,21 +148,21 @@ make makeSearchTerm makeOptions annotation searchMenuId =
         makeSearchTerm mPickFirst
             <&> \searchTermWidget placement ->
                 searchTermWidget <&> hoverMenu placement
-    & Reader.local (Element.animIdPrefix .~ toAnimId searchMenuId)
-    & assignCursor searchMenuId (options ^.. traverse . Menu.oId)
+    & Reader.local (Element.animIdPrefix .~ toAnimId myId)
+    & assignCursor myId (options ^.. traverse . Menu.oId)
 
 -- Add events on search term to pick the first result.
 addPickFirstResultEvent ::
     (MonadReader env m, Menu.HasConfig env, HasState env, Applicative f) =>
     Id -> Maybe (Widget.PreEvent (f Menu.PickResult))->
     m (Widget (f State.Update) -> Widget (f State.Update))
-addPickFirstResultEvent searchMenuId mPickFirst =
+addPickFirstResultEvent myId mPickFirst =
     do
         pickEventMap <-
             case mPickFirst of
             Nothing -> emptyPickEventMap
             Just pickFirst -> Menu.makePickEventMap ?? pickFirst
-        searchTerm <- readSearchTerm searchMenuId
+        searchTerm <- readSearchTerm myId
         if Text.null searchTerm
             then pure (Widget.weakerEvents pickEventMap)
             else pure (addPre . Widget.weakerEvents pickEventMap)
@@ -174,8 +174,8 @@ addPickFirstResultEvent searchMenuId mPickFirst =
 searchTermEditEventMap ::
     (MonadReader env m, HasState env) =>
     Id -> (Text -> Bool) -> m (EventMap State.Update)
-searchTermEditEventMap searchMenuId allowedTerms =
-    readSearchTerm searchMenuId
+searchTermEditEventMap myId allowedTerms =
+    readSearchTerm myId
     <&>
     \searchTerm ->
     let appendCharEventMap =
@@ -194,6 +194,6 @@ searchTermEditEventMap searchMenuId allowedTerms =
                     (doc "Delete backwards")
     in
     appendCharEventMap <> deleteCharEventMap
-    <&> State.updateWidgetState searchMenuId
+    <&> State.updateWidgetState myId
     where
         doc subtitle = E.Doc ["Edit", "Search Term", subtitle]
