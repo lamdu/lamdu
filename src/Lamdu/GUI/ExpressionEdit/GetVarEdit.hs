@@ -182,7 +182,7 @@ processDefinitionWidget (Sugar.DefTypeChanged info) myId mkLayout =
         layout <-
             ExprGuiM.withLocalUnderline Underline
                 { _underlineColor = Theme.typeIndicatorErrorColor theme
-                , _underlineWidth = Theme.underlineWidth theme
+                , _underlineWidth = Theme.wideUnderlineWidth theme
                 }
             mkLayout
         isSelected <- GuiState.isSubCursor ?? myId

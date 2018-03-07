@@ -4,7 +4,7 @@
     "stdSpacing": [1.0, 0.3],
     "baseTextSize": 16,
     "maxEvalViewSize": 32,
-    "underlineWidth": 0.15,
+    "wideUnderlineWidth": 0.15,
     "cursorColor": [0.5, 0.5, 1.0, 0.5],
     "cursorDecayExponent": 0.2,
     "evaluatedPathBGColor": [0.2, 1.0, 0.2, 0.2],
