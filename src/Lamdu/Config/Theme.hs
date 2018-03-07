@@ -81,6 +81,7 @@ data Theme = Theme
     , tooltip :: ToolTip
     , codeForegroundColors :: CodeForegroundColors
     , actionTextColor :: Draw.Color
+    , infoTextColor :: Draw.Color
     , typeTextColor :: Draw.Color
     , topPadding :: Draw.R
     , maxEvalViewSize :: Int

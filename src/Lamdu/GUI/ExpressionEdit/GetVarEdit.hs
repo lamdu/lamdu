@@ -24,6 +24,7 @@ import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Grid as Grid
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified GUI.Momentu.Widgets.TextView as TextView
+import qualified Graphics.DrawingCombinators as Draw
 import           Lamdu.Calc.Type.Scheme (schemeType)
 import           Lamdu.Config (Config, HasConfig)
 import qualified Lamdu.Config as Config
@@ -125,6 +126,10 @@ makeInlineEventMap config (Sugar.CannotInlineDueToUses (x:_)) =
       (E.Doc ["Navigation", "Jump to next use"])
 makeInlineEventMap _ _ = mempty
 
+withColor ::
+    (MonadReader env m, TextView.HasStyle env) => Draw.Color -> m a -> m a
+withColor color = Reader.local (TextView.color .~ color)
+
 actionable ::
     ( Element.HasAnimIdPrefix env, TextView.HasStyle env
     , GuiState.HasCursor env, HasConfig env, HasTheme env, Applicative f
@@ -139,7 +144,7 @@ actionable myId text doc action =
         let eventMap = E.keysEventMapMovesCursor actionKeys doc action
         (Widget.makeFocusableView ?? myId <&> (Align.tValue %~))
             <*> TextView.makeLabel text
-            & Reader.local (TextView.color .~ color)
+            & withColor color
             <&> Align.tValue %~ Widget.weakerEvents eventMap
 
 definitionTypeChangeBox ::
@@ -152,10 +157,12 @@ definitionTypeChangeBox ::
     m (WithTextPos (Widget (f GuiState.Update)))
 definitionTypeChangeBox info getVarId =
     do
+        infoColor <- Lens.view Theme.theme <&> Theme.infoTextColor
+        let infoLabel text = TextView.makeLabel text & withColor infoColor
         updateLabel <- actionable myId "Update" updateDoc update
-        toLabel <- TextView.makeLabel "to: "
+        toLabel <- infoLabel "to: "
 
-        oldTypeRow <- TextView.makeLabel "Type was: "
+        oldTypeRow <- infoLabel "Type was: "
         hspace <- Spacer.stdHSpace
         let newTypeRow = updateLabel /|/ hspace /|/ toLabel
 
