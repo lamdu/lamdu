@@ -155,11 +155,8 @@ addNewTagIfNullOptions tagSelection mkPickResult ctx optionList =
                     , Menu._oSubmenuWidgets = Menu.SubmenuEmpty
                     , Menu._oRender =
                         (Widget.makeFocusableView ?? optionId <&> fmap)
-                        <*> (TextView.makeLabel "Create new tag")
-                        <&> \label -> Menu.RenderedOption
-                        { Menu._rWidget = label
-                        , Menu._rPick = preEvent
-                        }
+                        <*> TextView.makeLabel "Create new tag"
+                        <&> (`Menu.RenderedOption` preEvent)
                     }
                 ]
             , Menu._olIsTruncated = False
