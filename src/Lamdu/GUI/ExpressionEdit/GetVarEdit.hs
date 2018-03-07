@@ -13,7 +13,7 @@ import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Font (Underline(..))
-import           GUI.Momentu.Glue ((/-/))
+import           GUI.Momentu.Glue ((/-/), (/|/))
 import qualified GUI.Momentu.Hover as Hover
 import           GUI.Momentu.Responsive (Responsive)
 import qualified GUI.Momentu.Responsive as Responsive
@@ -137,18 +137,21 @@ definitionTypeChangeBox info getVarId =
         headerLabel <- TextView.makeLabel "Type was:"
         typeWhenUsed <-
             mkTypeView "typeWhenUsed" (info ^. Sugar.defTypeWhenUsed)
-        spacing <- Spacer.stdVSpace
+        vspace <- Spacer.stdVSpace
+        hspace <- Spacer.stdHSpace
         color <- Lens.view Theme.theme <&> Theme.actionTextColor
-        sepLabel <-
+        toLabel <- TextView.makeLabel "to:"
+        updateLabel <-
             (Widget.makeFocusableView ?? myId <&> (Align.tValue %~))
-            <*> TextView.makeLabel "Update to:"
+            <*> TextView.makeLabel "Update"
             & Reader.local (TextView.color .~ color)
         typeCurrent <- mkTypeView "typeCurrent" (info ^. Sugar.defTypeCurrent)
         config <- Lens.view Config.config
         -- TODO: unify config's button press keys
         let keys = Config.newDefinitionButtonPressKeys (Config.pane config)
         let update = info ^. Sugar.defTypeUseCurrent <&> WidgetIds.fromEntityId
-        headerLabel /-/ typeWhenUsed /-/ spacing /-/ sepLabel /-/ typeCurrent
+        let updateTo = updateLabel /|/ hspace /|/ toLabel
+        headerLabel /-/ typeWhenUsed /-/ vspace /-/ updateTo /-/ typeCurrent
             & Align.tValue %~ Widget.weakerEvents
             (E.keysEventMapMovesCursor keys
                 (E.Doc ["Edit", "Update definition type"]) update)
