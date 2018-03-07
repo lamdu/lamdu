@@ -50,9 +50,8 @@ convertIfElse setToVal caseBody =
                             SameAsParentScope -> error "lambda body should have scopes"
                             BinderBodyScope x -> x <&> Lens.mapped %~ getScope
                         , _eiEntityId = altFalseBinderExpr ^. rPayload . plEntityId
-                        , _eiIfThen = innerIfElse ^. iIfThen
+                        , _eiContent = innerIfElse
                         , _eiCondAddLet = binder ^. bBody . bbAddOuterLet
-                        , _eiElse = innerIfElse ^. iElse
                         , _eiNodeActions = altFalseBinderExpr ^. rPayload . plActions
                         }
                         & makeRes

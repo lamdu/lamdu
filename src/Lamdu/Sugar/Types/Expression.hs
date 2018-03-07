@@ -17,7 +17,7 @@ module Lamdu.Sugar.Types.Expression
     , CaseArg(..), caVal, caToLambdaCase
     , CaseKind(..), _LambdaCase, _CaseWithArg
     , Case(..), cKind, cBody
-    , ElseIfContent(..), eiScopes, eiEntityId, eiIfThen, eiCondAddLet, eiElse, eiNodeActions
+    , ElseIfContent(..), eiScopes, eiEntityId, eiContent, eiCondAddLet, eiNodeActions
     , Else(..), _SimpleElse, _ElseIf
     , IfThen(..), itIf, itThen, itDelete
     , IfElse(..), iIfThen, iElse
@@ -118,13 +118,12 @@ data IfThen m expr = IfThen
     , _itDelete :: m EntityId
     } deriving (Functor, Foldable, Traversable)
 
--- An "elif <cond>: <then>" clause in an IfElse expression
+-- An "elif <cond>: <then>" clause in an IfElse expression and the subtree under it
 data ElseIfContent m expr = ElseIfContent
     { _eiScopes :: ChildScopeMapping
     , _eiEntityId :: EntityId
-    , _eiIfThen :: IfThen m expr
+    , _eiContent :: IfElse m expr
     , _eiCondAddLet :: m EntityId
-    , _eiElse :: Else m expr
     , _eiNodeActions :: NodeActions m
     } deriving (Functor, Foldable, Traversable)
 

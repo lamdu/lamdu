@@ -110,6 +110,6 @@ markAnnotationsToDisplay (Expression oldBody pl) =
         onElse (SimpleElse x) = onCaseAlt x & SimpleElse
         onElse (ElseIf elseIf) =
             elseIf
-            & eiIfThen . itThen %~ onCaseAlt
-            & eiElse %~ onElse
+            & eiContent . iIfThen . itThen %~ onCaseAlt
+            & eiContent . iElse %~ onElse
             & ElseIf

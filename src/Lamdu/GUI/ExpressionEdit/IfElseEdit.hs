@@ -78,7 +78,7 @@ makeElse (Sugar.SimpleElse expr) =
     where
         elseAnimId = Widget.toAnimId elseId <> ["else"]
         elseId = WidgetIds.fromExprPayload (expr ^. Sugar.rPayload)
-makeElse (Sugar.ElseIf (Sugar.ElseIfContent scopes entityId ifThen addLet els _nodeActions)) =
+makeElse (Sugar.ElseIf (Sugar.ElseIfContent scopes entityId content addLet _nodeActions)) =
     -- TODO: use nodeActions
     do
         mOuterScopeId <- ExprGuiM.readMScopeId
@@ -96,6 +96,7 @@ makeElse (Sugar.ElseIf (Sugar.ElseIfContent scopes entityId ifThen addLet els _n
             & Reader.local (Element.animIdPrefix .~ Widget.toAnimId (WidgetIds.fromEntityId entityId))
             & ExprGuiM.withLocalMScopeId mInnerScope
     where
+        Sugar.IfElse ifThen els = content
         -- TODO: cleaner way to write this?
         lookupMKey k m = k >>= (`Map.lookup` m)
 
