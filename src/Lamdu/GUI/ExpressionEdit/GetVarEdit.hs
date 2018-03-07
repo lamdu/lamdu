@@ -138,9 +138,11 @@ definitionTypeChangeBox info getVarId =
         typeWhenUsed <-
             mkTypeView "typeWhenUsed" (info ^. Sugar.defTypeWhenUsed)
         spacing <- Spacer.stdVSpace
+        color <- Lens.view Theme.theme <&> Theme.actionTextColor
         sepLabel <-
             (Widget.makeFocusableView ?? myId <&> (Align.tValue %~))
             <*> TextView.makeLabel "Update to:"
+            & Reader.local (TextView.color .~ color)
         typeCurrent <- mkTypeView "typeCurrent" (info ^. Sugar.defTypeCurrent)
         config <- Lens.view Config.config
         -- TODO: unify config's button press keys
