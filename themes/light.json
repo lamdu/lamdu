@@ -4,6 +4,7 @@
     "stdSpacing"                    : [1.0, 0.3],
     "baseTextSize"                  : 16,
     "maxEvalViewSize"               : 32,
+    "narrowUnderlineWidth"          : 0.03,
     "wideUnderlineWidth"            : 0.1,
     "cursorColor"                   : [0.25, 0.25, 0.75, 0.25],
     "cursorDecayExponent"           : 0.125,

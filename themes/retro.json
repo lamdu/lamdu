@@ -70,6 +70,7 @@
         "presentationChoiceColor": [0.4, 0.4, 0.4, 1.0]
     },
     "lightLambdaUnderlineColor": [1.0, 1.0, 1.0, 0.3],
+    "narrowUnderlineWidth": 0.05,
     "wideUnderlineWidth": 0.15,
     "eval": {
         "staleResultTint": [0.5, 0.5, 0.5, 0.5],

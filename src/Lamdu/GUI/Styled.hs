@@ -19,6 +19,7 @@ import qualified GUI.Momentu.Draw as Draw
 import           GUI.Momentu.Element (Element)
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.EventMap as E
+import qualified GUI.Momentu.Font as Font
 import qualified GUI.Momentu.State as GuiState
 import           GUI.Momentu.View (View)
 import           GUI.Momentu.Widget (Widget)
@@ -117,9 +118,16 @@ actionable ::
 actionable myId text doc action =
     do
         color <- Lens.view Theme.theme <&> Theme.actionTextColor
+        underlineWidth <- Lens.view Theme.theme <&> Theme.narrowUnderlineWidth
+        let underline =
+                Font.Underline
+                { Font._underlineColor = color
+                , Font._underlineWidth = underlineWidth
+                }
         actionKeys <- Lens.view Config.config <&> Config.actionKeys
         let eventMap = E.keysEventMapMovesCursor actionKeys doc action
         (Widget.makeFocusableView ?? myId <&> (Align.tValue %~))
             <*> TextView.makeLabel text
             & Reader.local (TextView.color .~ color)
+            & Reader.local (TextView.underline ?~ underline)
             <&> Align.tValue %~ Widget.weakerEvents eventMap
