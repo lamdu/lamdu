@@ -5,6 +5,7 @@ module Lamdu.GUI.TypeView
 
 import qualified Control.Lens as Lens
 import           Control.Monad (zipWithM)
+import qualified Control.Monad.Reader as Reader
 import           Control.Monad.State (StateT, state, evalStateT)
 import           Control.Monad.Trans.Class (MonadTrans(..))
 import           Control.Monad.Transaction (MonadTransaction(..), getP)
@@ -253,8 +254,10 @@ make ::
     Type -> m (WithTextPos View)
 make t =
     do
+        color <- Lens.view Theme.theme <&> Theme.typeTextColor
         prefix <- Lens.view Element.animIdPrefix
         makeInternal (Prec 0) t
             & runM
             & (`evalStateT` Random.mkStdGen 0)
             <&> Element.setLayers . Element.layers . Lens.mapped %~ Anim.mapIdentities (mappend prefix)
+            & Reader.local (TextView.color .~ color)

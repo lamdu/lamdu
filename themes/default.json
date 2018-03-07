@@ -21,6 +21,7 @@
     "invalidCursorBGColor": [0.4, 0.0, 0.0, 1.0],
     "topPadding": 1.5,
     "actionTextColor": [0.3, 1.0, 0.3, 1.0],
+    "typeTextColor": [0.35, 0.7, 0.7, 1.0],
     "codeForegroundColors": {
         "baseColor": [1.0, 1.0, 1.0, 1.0],
         "grammarColor": [0.8, 0.8, 0.9, 1.0],
