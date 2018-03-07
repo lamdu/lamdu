@@ -131,7 +131,7 @@ makeNewTagPreEvent searchTerm tagSelection mkPickResult
     | Text.null searchTerm = Nothing
     | otherwise =
         Just Widget.PreEvent
-        { Widget._pDesc = "New tag"
+        { Widget._pDesc = "New name"
         , Widget._pAction = makeNewTag searchTerm tagSelection mkPickResult
         , Widget._pTextRemainder = ""
         }
@@ -156,7 +156,7 @@ addNewTagIfNullOptions tagSelection mkPickResult ctx optionList =
                     , Menu._oSubmenuWidgets = Menu.SubmenuEmpty
                     , Menu._oRender =
                         (Widget.makeFocusableView ?? optionId <&> fmap)
-                        <*> TextView.makeLabel "Create new tag"
+                        <*> TextView.makeLabel "Create new"
                         <&> (`Menu.RenderedOption` preEvent)
                     }
                 ]
@@ -164,7 +164,7 @@ addNewTagIfNullOptions tagSelection mkPickResult ctx optionList =
             }
     _ -> optionList
     where
-        optionId = (ctx ^. SearchMenu.rResultIdPrefix) `Widget.joinId` ["Create new tag"]
+        optionId = (ctx ^. SearchMenu.rResultIdPrefix) `Widget.joinId` ["Create new"]
         searchTerm = ctx ^. SearchMenu.rSearchTerm
 
 makeOptions ::
@@ -259,7 +259,7 @@ makeHoleSearchTerm tagSelection mkPickResult holeId =
             then
                 do
                     newTagLabel <-
-                        (TextView.make ?? "(new tag)") <*> Element.subAnimId ["label"]
+                        (TextView.make ?? "(new)") <*> Element.subAnimId ["label"]
                     space <- Spacer.stdHSpace
                     hover <- Hover.hover
                     let anchor = fmap Hover.anchor
