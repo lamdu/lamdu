@@ -53,11 +53,11 @@ data Result m = Result
     }
 Lens.makeLenses ''Result
 
-data IsPreferred = Preferred | NotPreferred
+data IsExactMatch = ExactMatch | NotExactMatch
     deriving (Eq, Ord)
 
 data ResultGroup m = ResultGroup
-    { _rgPreferred :: IsPreferred -- Move to top of result list
+    { _rgExactMatch :: IsExactMatch -- Move to top of result list
     , _rgPrefixId :: WidgetId.Id
     , _rgMain :: Result m
     , _rgExtra :: [Result m]
@@ -74,7 +74,7 @@ mResultGroupOf ::
 mResultGroupOf _ [] = Nothing
 mResultGroupOf prefixId (x:xs) = Just
     ResultGroup
-    { _rgPreferred = NotPreferred
+    { _rgExactMatch = NotExactMatch
     , _rgPrefixId = prefixId
     , _rgMain = mkResult prefixId x
     , _rgExtra = zipWith mkExtra [(0::Int)..] xs
@@ -99,11 +99,11 @@ makeResultGroup ctx group =
     & ListClass.toList
     <&> sortOn fst
     <&> mResultGroupOf (ctx ^. SearchMenu.rResultIdPrefix <> (group ^. groupId))
-    <&> Lens.mapped %~ rgPreferred .~ toPreferred
+    <&> Lens.mapped %~ rgExactMatch .~ toExactMatch
     where
-        toPreferred
-            | [ctx ^. SearchMenu.rSearchTerm] == group ^. groupSearchTerms = Preferred
-            | otherwise = NotPreferred
+        toExactMatch
+            | [ctx ^. SearchMenu.rSearchTerm] == group ^. groupSearchTerms = ExactMatch
+            | otherwise = NotExactMatch
 
 data GoodAndBad a = GoodAndBad { _good :: a, _bad :: a }
     deriving (Functor, Foldable, Traversable)
@@ -136,11 +136,11 @@ collectResults Config.Completion{completionResultCount} resultsM =
             & pure
     where
         concatBothGoodAndBad goodAndBad = goodAndBad ^. Lens.folded
-        resultsListScore x = (x ^. rgPreferred, x ^. rgMain . rScore & isGoodResult & not)
+        resultsListScore x = (x ^. rgExactMatch, x ^. rgMain . rScore & isGoodResult & not)
         prependResult results x =
             results
-            & case (x ^. rgPreferred, x ^. rgMain . rScore & isGoodResult) of
-                (NotPreferred, False) -> bad
+            & case (x ^. rgExactMatch, x ^. rgMain . rScore & isGoodResult) of
+                (NotExactMatch, False) -> bad
                 _ -> good
                 %~ (x :)
 
