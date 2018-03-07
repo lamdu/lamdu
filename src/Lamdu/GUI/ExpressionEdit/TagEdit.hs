@@ -306,10 +306,16 @@ makeTagEdit ::
     (MonadReader env m, MonadTransaction f m, HasTagEditEnv env) =>
     NearestHoles -> Sugar.Tag (Name (T f)) (T f) ->
     m (WithTextPos (Widget (T f GuiState.Update)))
-makeTagEdit = makeTagEditWith id defaultOnPickNext
+makeTagEdit = makeTagEditWith id defaultOnPickNext <&> (fmap . fmap) snd
 
 defaultOnPickNext :: Maybe Sugar.EntityId -> Sugar.EntityId -> Widget.Id
 defaultOnPickNext mNextEntry pos = fromMaybe pos mNextEntry & WidgetIds.fromEntityId
+
+data TagEditType
+    = TagRename
+    | TagHole
+    | SimpleView
+    deriving (Eq)
 
 makeTagEditWith ::
     ( MonadReader env m, MonadReader env n, MonadTransaction f m
@@ -320,7 +326,7 @@ makeTagEditWith ::
     (Maybe Sugar.EntityId -> Sugar.EntityId -> Widget.Id) ->
     NearestHoles ->
     Sugar.Tag (Name (T f)) (T f) ->
-    m (WithTextPos (Widget (T f GuiState.Update)))
+    m (TagEditType, WithTextPos (Widget (T f GuiState.Update)))
 makeTagEditWith onView onPickNext nearestHoles tag =
     do
         jumpHolesEventMap <- ExprEventMap.jumpHolesEventMap nearestHoles
@@ -346,17 +352,18 @@ makeTagEditWith onView onPickNext nearestHoles tag =
             <&> Lens.mapped %~ Widget.weakerEvents eventMap
             & onView
         let hover = Hover.hoverBeside Align.tValue ?? nameView
-        widget <-
+        (tagEditType, widget) <-
             case mRenamingStoredName of
             Just storedName ->
                 hover <*>
                 (makeTagNameEdit nearestHoles storedName myId <&> (^. Align.tValue))
+                <&> (,) TagRename
             Nothing
-                | isHole -> makeTagHoleEdit (tag ^. Sugar.tagSelection) mkPickResult (WidgetIds.tagHoleId (tagId tag))
-                | otherwise -> pure nameView
-        widget
-            <&> Widget.weakerEvents jumpHolesEventMap
-            & pure
+                | isHole ->
+                    makeTagHoleEdit (tag ^. Sugar.tagSelection) mkPickResult (WidgetIds.tagHoleId (tagId tag))
+                    <&> (,) TagHole
+                | otherwise -> pure (SimpleView, nameView)
+        pure (tagEditType, widget <&> Widget.weakerEvents jumpHolesEventMap)
     & GuiState.assignCursor myId viewId
     where
         myId = tag ^. Sugar.tagInfo . Sugar.tagInstance & WidgetIds.fromEntityId
@@ -400,10 +407,15 @@ makeLHSTag ::
 makeLHSTag onPickNext color tag =
     do
         style <- Lens.view Style.style
-        makeTagEditWith onView onPickNext NearestHoles.none tag
+        (tagEditType, tagEdit) <-
+            makeTagEditWith onView onPickNext NearestHoles.none tag
             & NameEdit.withNameColor color
             & Reader.local (TextEdit.style .~ style ^. Style.styleNameAtBinder)
-    <&> Align.tValue %~ Widget.weakerEvents chooseEventMap
+        let eventMap =
+                case tagEditType of
+                SimpleView -> chooseEventMap
+                _ -> mempty
+        tagEdit <&> Widget.weakerEvents eventMap & pure
     where
         chooseEventMap =
             E.charEventMap "Character" (E.Doc ["Edit", "Tag", "Choose"]) chooseWithChar
