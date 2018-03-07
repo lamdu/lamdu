@@ -95,10 +95,10 @@ These are the terms of the language
   * `()` - Unit (Empty record)
   * `{ field : value, rest }` - "Record Extention". Adds a field to a record
   * `record.field` - Get field from a record
-* Sum types
-  * `alt: injected` - Inject a value to a sum-type
-  * `case λ of { alt: handler, rest }` - Pattern match a single sum-type constructor, "peeling off" the sum type
-  * `Ø` - The "absurd" (empty sum type) handler (used as "rest" in pattern match when no more cases remain to match)
+* Variants
+  * `alt: injected` - Inject a value to a variant type
+  * `case λ of { alt: handler, rest }` - Pattern match a single variant constructor, "peeling off" the variant type
+  * `Ø` - The "absurd" (empty variant type) handler (used as "rest" in pattern match when no more cases remain to match)
 * Nominal types
   * `«Nom value` - Wrap a value in a nominal type
   * `value »Nom` - Unwrap a value from a nominal type
@@ -132,12 +132,12 @@ Instead of anonymous tuples, Lamdu has structural records where each
 field is named but the type is not.
 One can create records "on the spot" anywhere without declarations.
 
-Instead of explicitly declared sum types (also called "variant types"
-or "tagged unions") Lamdu has structural sum types where each data
+Instead of explicitly declared variant types (also called "variant types"
+or "tagged unions") Lamdu has structural variant types where each data
 constructor is named but the type is not. These are also inferred from
 use.
 
-One can inject into a sum type "on the spot" or case-analyze a value
+One can inject into a variant type "on the spot" or case-analyze a value
 with no declarations.
 
 #### Lamdu's nominal types
@@ -266,7 +266,7 @@ an ordering priority which is used as a sorting key.
 
 The same is done for pattern matches / case-statements,
 which in the underlying calculus are similarly constructed by adding
-one sum-type handler at a time for each constructor.
+one variant-type handler at a time for each constructor.
 
 TODO: Open records, Open cases
 

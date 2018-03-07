@@ -112,7 +112,7 @@ valueConversionNoSplit nominals empty src =
                 valueNoSplit (Payload argType srcScope)
                 & Lens.traversed %~ flip (,) empty
             applied = V.Apply src arg & V.BApp & mkRes resType
-    T.TSum composite | bodyNot V._BInject  ->
+    T.TVariant composite | bodyNot V._BInject  ->
         Infer.freshInferredVar srcScope "s"
         & Infer.run
         & mapStateT
@@ -131,7 +131,7 @@ valueConversionNoSplit nominals empty src =
         bodyNot f = Lens.nullOf (Val.body . f) src
 
 value :: Payload -> [Val Payload]
-value pl@(Payload (T.TSum comp) scope) =
+value pl@(Payload (T.TVariant comp) scope) =
     case comp of
     T.CVar{} -> [V.BLeaf V.LHole]
     _ -> comp ^.. ExprLens.compositeFields <&> inject
@@ -144,7 +144,7 @@ value typ = [valueNoSplit typ]
 valueNoSplit :: Payload -> Val Payload
 valueNoSplit (Payload (T.TRecord composite) scope) =
     suggestRecordWith composite scope
-valueNoSplit (Payload (T.TFun (T.TSum composite) r) scope) =
+valueNoSplit (Payload (T.TFun (T.TVariant composite) r) scope) =
     suggestCaseWith composite (Payload r scope)
 valueNoSplit pl@(Payload typ scope) =
     case typ of
@@ -154,7 +154,7 @@ valueNoSplit pl@(Payload typ scope) =
     _ -> V.BLeaf V.LHole
     & Val pl
 
-suggestRecordWith :: T.Product -> Infer.Scope -> Val Payload
+suggestRecordWith :: T.Record -> Infer.Scope -> Val Payload
 suggestRecordWith recordType scope =
     case recordType of
     T.CVar{} -> V.BLeaf V.LHole
@@ -166,9 +166,9 @@ suggestRecordWith recordType scope =
         & V.BRecExtend
     & Val (Payload (T.TRecord recordType) scope)
 
-suggestCaseWith :: T.Sum -> Payload -> Val Payload
-suggestCaseWith sumType resultPl@(Payload resultType scope) =
-    case sumType of
+suggestCaseWith :: T.Variant -> Payload -> Val Payload
+suggestCaseWith variantType resultPl@(Payload resultType scope) =
+    case variantType of
     T.CVar{} -> V.BLeaf V.LHole
     T.CEmpty -> V.BLeaf V.LAbsurd
     T.CExtend tag fieldType rest ->
@@ -176,7 +176,7 @@ suggestCaseWith sumType resultPl@(Payload resultType scope) =
         (valueNoSplit (Payload (T.TFun fieldType resultType) scope))
         (suggestCaseWith rest resultPl)
         & V.BCase
-    & Val (Payload (T.TFun (T.TSum sumType) resultType) scope)
+    & Val (Payload (T.TFun (T.TVariant variantType) resultType) scope)
 
 fillHoles :: a -> Val (Payload, a) -> Val (Payload, a)
 fillHoles empty (Val pl (V.BLeaf V.LHole)) =

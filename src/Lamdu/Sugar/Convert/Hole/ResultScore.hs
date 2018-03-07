@@ -19,7 +19,7 @@ resultTypeScore :: Type -> [Int]
 resultTypeScore (TVar _) = [0]
 resultTypeScore (TInst _ p) = 1 : maximum ([] : map resultTypeScore (Map.elems p))
 resultTypeScore (TFun a r) = 2 : max (resultTypeScore a) (resultTypeScore r)
-resultTypeScore (TSum c) = 2 : compositeTypeScore c
+resultTypeScore (TVariant c) = 2 : compositeTypeScore c
 resultTypeScore (TRecord c) = 2 : compositeTypeScore c
 
 compositeTypeScore :: Composite t -> [Int]

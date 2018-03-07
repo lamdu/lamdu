@@ -215,7 +215,7 @@ mkNominalOptions nominals =
             do
                 (tag, _typ) <-
                     nominal ^..
-                    N.nomType . N._NominalType . schemeType . T._TSum .
+                    N.nomType . N._NominalType . schemeType . T._TVariant .
                     ExprLens.compositeFields
                 let inject = V.Inject tag P.hole & V.BInject & Val ()
                 [ inject & V.Nom tid & V.BToNom & Val () ]

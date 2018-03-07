@@ -50,7 +50,7 @@ orderType :: Monad m => Order m Type
 orderType t =
     t
     & T._TRecord %%~ orderComposite
-    >>= T._TSum %%~ orderComposite
+    >>= T._TVariant %%~ orderComposite
     >>= ExprLens.nextLayer orderType
 
 orderRecord :: Monad m => Order m (Sugar.Composite name (T f) a)

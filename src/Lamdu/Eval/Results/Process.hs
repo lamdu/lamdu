@@ -30,10 +30,10 @@ extractRecordTypeField tag typ =
               & FlatComposite.toComposite & T.TRecord
             )
 
-extractSumTypeField :: T.Tag -> T.Type -> Maybe T.Type
-extractSumTypeField tag typ =
+extractVariantTypeField :: T.Tag -> T.Type -> Maybe T.Type
+extractVariantTypeField tag typ =
     do
-        comp <- typ ^? T._TSum
+        comp <- typ ^? T._TVariant
         FlatComposite.fromComposite comp ^. FlatComposite.fields . Lens.at tag
 
 type AddTypes val res = (T.Type -> val -> res) -> T.Type -> Body res
@@ -62,7 +62,7 @@ addTypesRecExtend (V.RecExtend tag val rest) go typ =
 
 addTypesInject :: V.Inject val -> AddTypes val res
 addTypesInject (V.Inject tag val) go typ =
-    case extractSumTypeField tag typ of
+    case extractVariantTypeField tag typ of
     Nothing ->
         -- TODO: this is a work-around for a bug. HACK
         -- we currently don't know types for eval results of polymorphic values

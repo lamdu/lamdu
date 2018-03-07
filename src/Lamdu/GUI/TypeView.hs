@@ -182,13 +182,13 @@ makeField (tag, fieldType) =
     , splitMake (Prec 0) fieldType <&> toAligned 0
     ]
 
-makeSumField ::
+makeVariantField ::
     (MonadReader env m, Spacer.HasStdSpacing env, MonadTransaction n m, HasTheme env) =>
     (T.Tag, Type) -> M m [Aligned View]
-makeSumField (tag, T.TRecord T.CEmpty) =
+makeVariantField (tag, T.TRecord T.CEmpty) =
     makeTag tag <&> toAligned 1 <&> (:[])
     -- ^ Nullary data constructor
-makeSumField (tag, fieldType) = makeField (tag, fieldType)
+makeVariantField (tag, fieldType) = makeField (tag, fieldType)
 
 makeComposite ::
     (MonadReader env m, TextView.HasStyle env, HasTheme env) =>
@@ -245,8 +245,8 @@ makeInternal parentPrecedence typ =
     T.TFun a b -> makeTFun parentPrecedence a b
     T.TInst typeId typeParams -> makeTInst parentPrecedence typeId typeParams
     T.TRecord composite -> makeComposite "{" "}" (pure Element.empty) makeField composite
-    T.TSum composite ->
-        [ makeComposite "+{" "}" (grammar "or: " <&> toAligned 0) makeSumField composite
+    T.TVariant composite ->
+        [ makeComposite "+{" "}" (grammar "or: " <&> toAligned 0) makeVariantField composite
         ] & sequenceA
         <&> hbox
 

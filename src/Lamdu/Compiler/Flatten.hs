@@ -19,8 +19,8 @@ data Composite p a = Composite
     } deriving (Functor, Foldable, Traversable)
 Lens.makeLenses ''Composite
 
-type Case = Composite T.SumTag
-type Record = Composite T.ProductTag
+type Case = Composite T.VariantTag
+type Record = Composite T.RecordTag
 
 case_ :: V.Case (Val pl) -> Case (Val pl)
 case_ (V.Case tag handler r) =
