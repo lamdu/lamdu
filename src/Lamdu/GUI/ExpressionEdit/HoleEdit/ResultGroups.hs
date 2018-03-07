@@ -101,8 +101,10 @@ makeResultGroup ctx group =
     <&> mResultGroupOf (ctx ^. SearchMenu.rResultIdPrefix <> (group ^. groupId))
     <&> Lens.mapped %~ rgExactMatch .~ toExactMatch
     where
+        searchTerm = ctx ^. SearchMenu.rSearchTerm
         toExactMatch
-            | [ctx ^. SearchMenu.rSearchTerm] == group ^. groupSearchTerms = ExactMatch
+            | any (`elem` group ^. groupSearchTerms)
+              [searchTerm, ValTerms.definitePart searchTerm] = ExactMatch
             | otherwise = NotExactMatch
 
 data GoodAndBad a = GoodAndBad { _good :: a, _bad :: a }
