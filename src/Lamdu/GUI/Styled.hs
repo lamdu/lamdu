@@ -6,19 +6,25 @@ module Lamdu.GUI.Styled
     , addValBG, addBgColor
     , addValPadding, addValFrame
     , addDeletionDiagonal
+    , actionable
     ) where
 
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
 import           GUI.Momentu.Align (WithTextPos(..))
+import qualified GUI.Momentu.Align as Align
 import           GUI.Momentu.Animation (AnimId)
 import qualified GUI.Momentu.Animation as Anim
 import qualified GUI.Momentu.Draw as Draw
 import           GUI.Momentu.Element (Element)
 import qualified GUI.Momentu.Element as Element
+import qualified GUI.Momentu.EventMap as E
+import qualified GUI.Momentu.State as GuiState
 import           GUI.Momentu.View (View)
+import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.TextView as TextView
+import qualified Lamdu.Config as Config
 import           Lamdu.Config.Theme (Theme, HasTheme(..))
 import qualified Lamdu.Config.Theme as Theme
 
@@ -100,3 +106,20 @@ addDeletionDiagonal ::
     m (Widget.R -> a -> a)
 addDeletionDiagonal =
     addDiagonal <*> (Lens.view Theme.theme <&> Theme.typeIndicatorErrorColor)
+
+actionable ::
+    ( Element.HasAnimIdPrefix env, TextView.HasStyle env
+    , GuiState.HasCursor env, Config.HasConfig env, HasTheme env, Applicative f
+    , MonadReader env m
+    ) =>
+    Widget.Id -> Text -> E.Doc -> f Widget.Id ->
+    m (WithTextPos (Widget (f GuiState.Update)))
+actionable myId text doc action =
+    do
+        color <- Lens.view Theme.theme <&> Theme.actionTextColor
+        actionKeys <- Lens.view Config.config <&> Config.actionKeys
+        let eventMap = E.keysEventMapMovesCursor actionKeys doc action
+        (Widget.makeFocusableView ?? myId <&> (Align.tValue %~))
+            <*> TextView.makeLabel text
+            & Reader.local (TextView.color .~ color)
+            <&> Align.tValue %~ Widget.weakerEvents eventMap

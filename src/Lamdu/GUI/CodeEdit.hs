@@ -6,22 +6,20 @@ module Lamdu.GUI.CodeEdit
     ) where
 
 import qualified Control.Lens as Lens
-import qualified Control.Monad.Reader as Reader
 import           Control.Monad.Transaction (MonadTransaction(..))
 import           Data.CurAndPrev (CurAndPrev(..))
 import           Data.Functor.Identity (Identity(..))
 import           Data.Orphans () -- Imported for Monoid (IO ()) instance
 import qualified GUI.Momentu.Align as Align
+import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
-import           GUI.Momentu.MetaKey (MetaKey)
 import           GUI.Momentu.Responsive (Responsive)
 import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.State as GuiState
 import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
-import qualified GUI.Momentu.Widgets.TextView as TextView
 import qualified Lamdu.Calc.Type.Scheme as Scheme
 import qualified Lamdu.Calc.Val as V
 import           Lamdu.Config (config)
@@ -43,6 +41,7 @@ import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import           Lamdu.GUI.IOTrans (IOTrans)
 import qualified Lamdu.GUI.IOTrans as IOTrans
 import qualified Lamdu.GUI.ReplEdit as ReplEdit
+import qualified Lamdu.GUI.Styled as Styled
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Name (Name)
 import           Lamdu.Style (HasStyle)
@@ -198,39 +197,32 @@ makePaneEdit theExportActions pane =
             <&> Lens.mapped %~ IOTrans.liftTrans
             <&> Widget.weakerEvents paneEventMap
 
-makeNewDefinitionEventMap ::
-    (Monad m, MonadReader env n, GuiState.HasCursor env) =>
-    Anchors.CodeAnchors m ->
-    n ([MetaKey] -> EventMap (T m GuiState.Update))
-makeNewDefinitionEventMap cp =
-    Lens.view GuiState.cursor <&>
-    \curCursor newDefinitionKeys ->
+makeNewDefinition :: Monad m => ExprGuiM m (T m Widget.Id)
+makeNewDefinition =
     do
-        holeI <- DataOps.newHole
-        newDefI <-
-            Definition
-            (Definition.BodyExpr (Definition.Expr holeI mempty))
-            Scheme.any ()
-            & DataOps.newPublicDefinitionWithPane cp
-        DataOps.savePreJumpPosition cp curCursor
-        pure newDefI
-    <&> WidgetIds.newDest . WidgetIds.fromIRef
-    & E.keysEventMapMovesCursor newDefinitionKeys
-        (E.Doc ["Edit", "New definition"])
+        cp <- ExprGuiM.readCodeAnchors
+        curCursor <- Lens.view GuiState.cursor
+        pure $ do
+            holeI <- DataOps.newHole
+            newDefI <-
+                Definition
+                (Definition.BodyExpr (Definition.Expr holeI mempty))
+                Scheme.any ()
+                & DataOps.newPublicDefinitionWithPane cp
+            DataOps.savePreJumpPosition cp curCursor
+            pure newDefI
+            <&> WidgetIds.newDest . WidgetIds.fromIRef
+
+newDefinitionDoc :: E.Doc
+newDefinitionDoc = E.Doc ["Edit", "New definition"]
 
 makeNewDefinitionButton :: Monad m => ExprGuiM m (Widget (T m GuiState.Update))
 makeNewDefinitionButton =
     do
-        anchors <- ExprGuiM.readCodeAnchors
-        newDefinitionEventMap <- makeNewDefinitionEventMap anchors
-
-        actionKeys <- Lens.view Config.config <&> Config.actionKeys
-        color <- Lens.view Theme.theme <&> Theme.actionTextColor
-
-        TextView.makeFocusableLabel "New..."
-            & Reader.local (TextView.color .~ color)
+        newDefId <- Element.subAnimId ["New definition"] <&> Widget.Id
+        makeNewDefinition
+            >>= Styled.actionable newDefId "New..." newDefinitionDoc
             <&> (^. Align.tValue)
-            <&> Widget.weakerEvents (newDefinitionEventMap actionKeys)
 
 panesEventMap ::
     Monad m =>
@@ -242,10 +234,12 @@ panesEventMap theExportActions theCodeAnchors =
         let Config.Export{exportPath,importKeys,exportAllKeys} = Config.export theConfig
         mJumpBack <-
             DataOps.jumpBack theCodeAnchors & transaction <&> fmap IOTrans.liftTrans
-        newDefinitionEventMap <- makeNewDefinitionEventMap theCodeAnchors
+        newDefinitionEventMap <-
+            makeNewDefinition
+            <&> E.keysEventMapMovesCursor
+            (Config.newDefinitionKeys (Config.pane theConfig)) newDefinitionDoc
         pure $ mconcat
-            [ newDefinitionEventMap (Config.newDefinitionKeys (Config.pane theConfig))
-              <&> IOTrans.liftTrans
+            [ newDefinitionEventMap <&> IOTrans.liftTrans
             , E.dropEventMap "Drag&drop JSON files"
               (E.Doc ["Collaboration", "Import JSON file"]) (Just . traverse_ importAll)
               <&> fmap (\() -> mempty)
