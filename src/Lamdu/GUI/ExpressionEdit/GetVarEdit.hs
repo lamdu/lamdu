@@ -13,7 +13,7 @@ import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Font (Underline(..))
-import           GUI.Momentu.Glue ((/-/), (/|/))
+import           GUI.Momentu.Glue ((/|/))
 import qualified GUI.Momentu.Hover as Hover
 import           GUI.Momentu.Responsive (Responsive)
 import qualified GUI.Momentu.Responsive as Responsive
@@ -21,6 +21,7 @@ import qualified GUI.Momentu.Responsive.Options as Options
 import qualified GUI.Momentu.State as GuiState
 import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
+import qualified GUI.Momentu.Widgets.Grid as Grid
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified GUI.Momentu.Widgets.TextView as TextView
 import           Lamdu.Calc.Type.Scheme (schemeType)
@@ -151,23 +152,25 @@ definitionTypeChangeBox ::
     m (WithTextPos (Widget (f GuiState.Update)))
 definitionTypeChangeBox info getVarId =
     do
-        vspace <- Spacer.stdVSpace
+        updateLabel <- actionable myId "Update" updateDoc update
+        toLabel <- TextView.makeLabel "to: "
+
+        oldTypeRow <- TextView.makeLabel "Type was: "
         hspace <- Spacer.stdHSpace
-
-        headerLabel <- TextView.makeLabel "Type was:"
-
-        let update = info ^. Sugar.defTypeUseCurrent <&> WidgetIds.fromEntityId
-        let doc = E.Doc ["Edit", "Update definition type"]
-        updateLabel <- actionable myId "Update" doc update
-        toLabel <- TextView.makeLabel "to:"
+        let newTypeRow = updateLabel /|/ hspace /|/ toLabel
 
         oldTypeView <- mkTypeView "oldTypeView" (info ^. Sugar.defTypeWhenUsed)
         newTypeView <- mkTypeView "newTypeView" (info ^. Sugar.defTypeCurrent)
 
-        let updateTo = updateLabel /|/ hspace /|/ toLabel
-        headerLabel /-/ oldTypeView /-/ vspace /-/ updateTo /-/ newTypeView
-            & pure
+        Grid.make
+            [ [ Align.fromWithTextPos 0 (oldTypeRow <&> Widget.fromView)
+              , Align.fromWithTextPos 0 (oldTypeView <&> Widget.fromView) ]
+            , [ Align.fromWithTextPos 0 newTypeRow
+              , Align.fromWithTextPos 0 (newTypeView <&> Widget.fromView) ]
+            ] & snd & Align.WithTextPos 0 & pure
     where
+        update = info ^. Sugar.defTypeUseCurrent <&> WidgetIds.fromEntityId
+        updateDoc = E.Doc ["Edit", "Update definition type"]
         mkTypeView idSuffix scheme =
             TypeView.make (scheme ^. schemeType)
             & Reader.local (Element.animIdPrefix .~ animId ++ [idSuffix])
