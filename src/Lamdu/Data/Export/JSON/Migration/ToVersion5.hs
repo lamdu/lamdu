@@ -34,11 +34,11 @@ migrateVal (Aeson.Bool x) = Aeson.Bool x
 migrateVal Aeson.Null = Aeson.Null
 
 migrate :: Aeson.Value -> Either Text Aeson.Value
-migrate j@(Aeson.Array vals) =
+migrate (Aeson.Array vals) =
     case vals ^? Lens._Cons of
     Just (ver, rest)
         | ver == version 4 ->
-            Lens._Cons # (ver, rest <&> migrateVal) & Aeson.Array & Right
-        | otherwise -> Right j
+            Lens._Cons # (version 5, rest <&> migrateVal) & Aeson.Array & Right
+        | otherwise -> Left "Migration from unexpected version"
     _ -> Left "Array of at least 1 element required"
 migrate _ = Left "top-level should be array"
