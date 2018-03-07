@@ -293,7 +293,7 @@ makeInner (Val typ val) =
                     case decodeUtf8' x of
                     Right txt -> toText txt
                     Left{} -> toText x
-                  _ -> error "text not made of bytes"
+                  _ -> makeError (EvalTypeError "text not made of bytes")
                 | otherwise ->
                   case pv of
                   PrimVal.Bytes x -> toText x
