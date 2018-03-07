@@ -5,7 +5,7 @@ module Lamdu.Sugar.Types.Binder
     , Annotation(..), aInferredType, aMEvaluationResult
     -- Node actions
     , DetachAction(..), _FragmentAlready, _FragmentExprAlready, _DetachAction
-    , NodeActions(..), detach, mSetToHole, extract, mReplaceParent
+    , NodeActions(..), detach, mSetToHole, extract, mReplaceParent, wrapInRecord
     -- Let
     , ExtractDestination(..)
     , LetActions(..), laDelete, laNodeActions
@@ -94,16 +94,17 @@ data DetachAction m
     | FragmentExprAlready EntityId -- I'm an arg of apply-of-hole, no need to detach
     | DetachAction (m EntityId) -- Detach me
 
-data NodeActions m = NodeActions
+data NodeActions name m = NodeActions
     { _detach :: DetachAction m
     , _mSetToHole :: Maybe (m EntityId) -- (Not available for holes)
     , _extract :: m ExtractDestination
     , _mReplaceParent :: Maybe (m EntityId)
+    , _wrapInRecord :: TagSelection name m ()
     }
 
-data LetActions m = LetActions
+data LetActions name m = LetActions
     { _laDelete :: m ()
-    , _laNodeActions :: NodeActions m
+    , _laNodeActions :: NodeActions name m
     }
 
 -- This is a mapping from a parent scope to the inner scope in:
@@ -117,7 +118,7 @@ data Let name m expr = Let
     , _lUsages :: [EntityId]
     , _lAnnotation :: Annotation
     , _lName :: Tag name m
-    , _lActions :: LetActions m
+    , _lActions :: LetActions name m
     , _lBodyScope :: ChildScopeMapping
     , _lBody :: BinderBody name m expr -- "let foo = bar in [[x]]"
     } deriving (Functor, Foldable, Traversable)
@@ -132,7 +133,7 @@ data AddFirstParam name m
 
 data BinderActions name m = BinderActions
     { _baAddFirstParam :: AddFirstParam name m
-    , _baMNodeActions :: Maybe (NodeActions m)
+    , _baMNodeActions :: Maybe (NodeActions name m)
     }
 
 data BinderParams name m

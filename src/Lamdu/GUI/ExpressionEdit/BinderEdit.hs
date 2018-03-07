@@ -305,7 +305,7 @@ makeParts funcApplyLimit binder delVarBackwardsId myId =
 
 maybeAddNodeActions ::
     (MonadReader env m, GuiState.HasCursor env, Config.HasConfig env, Applicative f) =>
-    Widget.Id -> NearestHoles -> Sugar.NodeActions f ->
+    Widget.Id -> NearestHoles -> Sugar.NodeActions name f ->
     m (Responsive (f GuiState.Update) -> Responsive (f GuiState.Update))
 maybeAddNodeActions partId nearestHoles nodeActions =
     do

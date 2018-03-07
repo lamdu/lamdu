@@ -54,7 +54,7 @@ allowedHoleSearchTerm searchTerm =
 make ::
     Monad m =>
     Sugar.Hole (T m) (Sugar.Expression (Name (T m)) (T m) ()) ->
-    Sugar.Payload (T m) ExprGui.Payload ->
+    Sugar.Payload name (T m) ExprGui.Payload ->
     ExprGuiM m (ExpressionGui m)
 make hole pl =
     do

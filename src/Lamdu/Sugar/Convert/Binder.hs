@@ -46,7 +46,7 @@ lamParamToHole (V.Lam param body) =
 mkLetItemActions ::
     Monad m =>
     Input.Payload m a -> Redex (Input.Payload m a) ->
-    ConvertM m (LetActions (T m))
+    ConvertM m (LetActions InternalName (T m))
 mkLetItemActions topLevelPl redex =
     do
         postProcess <- ConvertM.postProcess

@@ -55,7 +55,7 @@ mkUnambiguous ::
 mkUnambiguous cons x = (NeverParen, cons (x ?? Just 0 ?? unambiguous))
 
 precedenceOfIfElse ::
-    IfElse m (Maybe MinOpPrec -> Precedence (Maybe Int) -> a) -> (Classifier, IfElse m a)
+    IfElse name m (Maybe MinOpPrec -> Precedence (Maybe Int) -> a) -> (Classifier, IfElse name m a)
 precedenceOfIfElse (IfElse (IfThen if_ then_ del) else_) =
     ( ParenIf Never (IfGreater 1)
     , IfElse

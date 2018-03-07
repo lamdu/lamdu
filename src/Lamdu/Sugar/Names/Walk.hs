@@ -118,6 +118,12 @@ toGetVar (GetBinder x) = toBinderVarRef x <&> GetBinder
 toGetVar (GetParamsRecord x) =
     traverse (opGetName Nothing Tag) x <&> GetParamsRecord
 
+toNodeActions ::
+    MonadNaming m =>
+    NodeActions (OldName m) (TM m) ->
+    m (NodeActions (NewName m) (TM m))
+toNodeActions = wrapInRecord toTagSelection
+
 toLet ::
     MonadNaming m => (a -> m b) ->
     Let (OldName m) (TM m) a ->
@@ -128,6 +134,7 @@ toLet expr Let{..} =
             unCPS (withTag TaggedVar (isFunctionType (_lAnnotation ^. aInferredType)) _lName)
             (toBinderBody expr _lBody)
         _lValue <- toBinder expr _lValue
+        _lActions <- laNodeActions toNodeActions _lActions
         pure Let{..}
 
 toBinderContent ::
@@ -147,7 +154,10 @@ toBinderActions ::
     MonadNaming m =>
     BinderActions (OldName m) (TM m) ->
     m (BinderActions (NewName m) (TM m))
-toBinderActions = (baAddFirstParam . _PrependParam) toTagSelection
+toBinderActions BinderActions{..} =
+    BinderActions
+    <$> _PrependParam toTagSelection _baAddFirstParam
+    <*> Lens._Just toNodeActions _baMNodeActions
 
 toBinder ::
     MonadNaming m => (a -> m b) ->
@@ -196,11 +206,20 @@ withTag nameType varInfo (Sugar.Tag info name actions) =
     <$> opWithName varInfo nameType name
     <*> liftCPS (toTagSelection actions)
 
+toRelayedArg ::
+    MonadNaming m =>
+    RelayedArg (OldName m) (TM m) ->
+    m (RelayedArg (NewName m) (TM m))
+toRelayedArg RelayedArg{..} =
+    (\_raValue _raActions -> RelayedArg{..})
+    <$> toParamRef _raValue
+    <*> toNodeActions _raActions
+
 toLabeledApply ::
     MonadNaming m =>
     (a -> m b) ->
-    LabeledApply (OldName m) p a ->
-    m (LabeledApply (NewName m) p b)
+    LabeledApply (OldName m) (TM m) a ->
+    m (LabeledApply (NewName m) (TM m) b)
 toLabeledApply expr app@LabeledApply{..} =
     LabeledApply
     <$>
@@ -209,7 +228,7 @@ toLabeledApply expr app@LabeledApply{..} =
     )
     <*> pure _aSpecialArgs
     <*> (traverse . aaName) (opGetName Nothing Tag) _aAnnotatedArgs
-    <*> (traverse . raValue) toParamRef _aRelayedArgs
+    <*> traverse toRelayedArg _aRelayedArgs
     >>= traverse expr
 
 toHole ::
@@ -259,6 +278,34 @@ toCase ::
     m (Case (NewName m) (TM m) b)
 toCase expr (Case k c) = Case <$> traverse expr k <*> toComposite expr c
 
+toElseIfContent ::
+    MonadNaming m =>
+    (a -> m b) ->
+    ElseIfContent (OldName m) (TM m) a ->
+    m (ElseIfContent (NewName m) (TM m) b)
+toElseIfContent expr ElseIfContent{..} =
+    (\_eiContent _eiNodeActions -> ElseIfContent{..})
+    <$> toIfElse expr _eiContent
+    <*> toNodeActions _eiNodeActions
+
+toElse ::
+    MonadNaming m =>
+    (a -> m b) ->
+    Else (OldName m) (TM m) a ->
+    m (Else (NewName m) (TM m) b)
+toElse expr (SimpleElse x) = expr x <&> SimpleElse
+toElse expr (ElseIf x) = toElseIfContent expr x <&> ElseIf
+
+toIfElse ::
+    MonadNaming m =>
+    (a -> m b) ->
+    IfElse (OldName m) (TM m) a ->
+    m (IfElse (NewName m) (TM m) b)
+toIfElse expr (IfElse ifThen els_) =
+    IfElse
+    <$> traverse expr ifThen
+    <*> toElse expr els_
+
 toBody ::
     MonadNaming m => (a -> m b) ->
     Body (OldName m) (TM m) a ->
@@ -268,7 +315,7 @@ toBody expr = \case
     BodyInject       x -> x & traverse expr >>= iTag toTag <&> BodyInject
     BodyRecord       x -> x & toComposite expr <&> BodyRecord
     BodyCase         x -> x & toCase expr <&> BodyCase
-    BodyIfElse       x -> x & traverse expr <&> BodyIfElse
+    BodyIfElse       x -> x & toIfElse expr <&> BodyIfElse
     BodySimpleApply  x -> x & traverse expr <&> BodySimpleApply
     BodyLabeledApply x -> x & toLabeledApply expr <&> BodyLabeledApply
     BodyHole         x -> x & toHole <&> BodyHole
@@ -291,7 +338,10 @@ funcSignature apply =
     }
 
 toExpression :: MonadNaming m => OldExpression m a -> m (NewExpression m a)
-toExpression = rBody (toBody toExpression)
+toExpression (Expression body pl) =
+    Expression
+    <$> toBody toExpression body
+    <*> plActions toNodeActions pl
 
 withParam ::
     MonadNaming m => FuncParam (ParamInfo (OldName m) (TM m)) ->

@@ -67,7 +67,7 @@ genericEdit ::
     ) =>
     LensLike' (Lens.Const TextEdit.Style) Style TextEdit.Style ->
     Transaction.Property m a ->
-    Sugar.Payload (T m) ExprGui.Payload -> f (ExpressionGui m)
+    Sugar.Payload name (T m) ExprGui.Payload -> f (ExpressionGui m)
 genericEdit whichStyle prop pl =
     TextView.makeFocusable ?? valText ?? myId
     <&> Align.tValue %~ Widget.weakerEvents editEventMap
@@ -116,7 +116,7 @@ textEdit ::
     , Element.HasAnimIdPrefix env, GuiState.HasCursor env, Monad f
     ) =>
     Transaction.Property f Text ->
-    Sugar.Payload (T f) ExprGui.Payload ->
+    Sugar.Payload name (T f) ExprGui.Payload ->
     m (WithTextPos (Widget (T f GuiState.Update)))
 textEdit prop pl =
     do
@@ -141,7 +141,7 @@ numEdit ::
     , GuiState.HasState env, Monad f
     ) =>
     Transaction.Property f Double ->
-    Sugar.Payload (T f) ExprGui.Payload ->
+    Sugar.Payload name (T f) ExprGui.Payload ->
     m (WithTextPos (Widget (T f GuiState.Update)))
 numEdit prop pl =
     (withFd ?? myId) <*>
@@ -211,7 +211,7 @@ numEdit prop pl =
 
 make ::
     Monad m =>
-    Sugar.Literal (Transaction.Property m) -> Sugar.Payload (T m) ExprGui.Payload ->
+    Sugar.Literal (Transaction.Property m) -> Sugar.Payload name (T m) ExprGui.Payload ->
     ExprGuiM m (ExpressionGui m)
 make lit pl =
     stdWrap pl

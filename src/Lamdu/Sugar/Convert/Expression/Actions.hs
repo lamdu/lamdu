@@ -15,6 +15,7 @@ import qualified Lamdu.Sugar.Convert.Input as Input
 import           Lamdu.Sugar.Convert.Monad (ConvertM)
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
 import           Lamdu.Sugar.Convert.PostProcess (PostProcessResult(..), postProcessDef)
+import           Lamdu.Sugar.Convert.Tag (convertTagSelection, AllowAnonTag(..))
 import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import           Lamdu.Sugar.Types
@@ -90,16 +91,34 @@ mkExtractToLet outerScope stored =
         extractPosI = Property.value outerScope
         oldStored = Property.value stored
 
-makeActions :: Monad m => Input.Payload m a -> ConvertM m (NodeActions (T m))
+mkWrapInRecord ::
+    Monad m => Input.Payload m a -> ConvertM m (TagSelection InternalName (Transaction m) ())
+mkWrapInRecord exprPl =
+    do
+        typeProtectedSetToVal <- ConvertM.typeProtectedSetToVal
+        let recWrap tag =
+                V.BLeaf V.LRecEmpty & ExprIRef.newValBody
+                >>= ExprIRef.newValBody . V.BRecExtend . V.RecExtend tag (stored ^. Property.pVal)
+                >>= typeProtectedSetToVal stored
+                & void
+        convertTagSelection nameWithoutContext mempty RequireTag tempMkEntityId recWrap
+    where
+        stored = exprPl ^. Input.stored
+        -- TODO: The entity-ids created here don't match the resulting entity ids of the record.
+        tempMkEntityId = EntityId.ofTaggedEntity (stored ^. Property.pVal)
+
+makeActions :: Monad m => Input.Payload m a -> ConvertM m (NodeActions InternalName (T m))
 makeActions exprPl =
     do
         ext <- mkExtract exprPl
+        wrapInRec <- mkWrapInRecord exprPl
         postProcess <- ConvertM.postProcess
         pure NodeActions
             { _detach = DataOps.applyHoleTo stored <* postProcess <&> EntityId.ofValI & DetachAction
             , _mSetToHole = DataOps.setToHole stored <* postProcess <&> EntityId.ofValI & Just
             , _extract = ext
             , _mReplaceParent = Nothing
+            , _wrapInRecord = wrapInRec
             }
     where
         stored = exprPl ^. Input.stored

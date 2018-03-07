@@ -21,7 +21,7 @@ convertIfElse ::
     Functor m =>
     (ValI m -> T m (ValI m)) ->
     Case InternalName (T m) (ExpressionU m a) ->
-    Maybe (IfElse (T m) (ExpressionU m a))
+    Maybe (IfElse InternalName (T m) (ExpressionU m a))
 convertIfElse setToVal caseBody =
     do
         arg <- caseBody ^? cKind . _CaseWithArg . caVal

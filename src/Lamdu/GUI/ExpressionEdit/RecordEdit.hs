@@ -77,7 +77,7 @@ addFieldWithSearchTermEventMap myId =
 
 makeUnit ::
     (Monad m, Applicative f) =>
-    Sugar.Payload f ExprGui.Payload ->
+    Sugar.Payload name f ExprGui.Payload ->
     ExprGuiM m (Responsive (f GuiState.Update))
 makeUnit pl =
     do
@@ -96,7 +96,7 @@ makeUnit pl =
 make ::
     Monad m =>
     Sugar.Composite (Name (T m)) (T m) (ExprGui.SugarExpr m) ->
-    Sugar.Payload (T m) ExprGui.Payload ->
+    Sugar.Payload name (T m) ExprGui.Payload ->
     ExprGuiM m (ExpressionGui m)
 make (Sugar.Composite [] Sugar.ClosedComposite{} addField) pl =
     -- Ignore the ClosedComposite actions - it only has the open
@@ -172,7 +172,7 @@ addPostTags items =
 
 makeAddFieldRow ::
     (MonadReader env m, MonadTransaction f m, TagEdit.HasTagEditEnv env) =>
-    Sugar.TagSelection (Name (T f)) (T f) Sugar.EntityId -> Sugar.Payload (T f) ExprGui.Payload ->
+    Sugar.TagSelection (Name (T f)) (T f) Sugar.EntityId -> Sugar.Payload name (T f) ExprGui.Payload ->
     m (Responsive.TaggedItem (T f GuiState.Update))
 makeAddFieldRow addField pl =
     TagEdit.makeTagHoleEdit addField mkPickResult tagHoleId

@@ -48,18 +48,18 @@ import           Revision.Deltum.Property (Property)
 
 import           Lamdu.Prelude
 
-data Payload m a = Payload
+data Payload name m a = Payload
     { _plAnnotation :: Annotation
-    , _plActions :: NodeActions m
+    , _plActions :: NodeActions name m
     , _plEntityId :: EntityId
     , _plData :: a
     } deriving (Functor, Foldable, Traversable)
-instance Show a => Show (Payload m a) where
+instance Show a => Show (Payload name m a) where
     show (Payload _ann _actions _entityId data_) = show data_
 
 data Expression name m a = Expression
     { _rBody :: Body name m (Expression name m a)
-    , _rPayload :: Payload m a
+    , _rPayload :: Payload name m a
     } deriving (Functor, Foldable, Traversable)
 instance (Show name, Show a) => Show (Expression name m a) where
     show (Expression body pl) = show body ++ "{" ++ show pl ++ "}"
@@ -119,20 +119,20 @@ data IfThen m expr = IfThen
     } deriving (Functor, Foldable, Traversable)
 
 -- An "elif <cond>: <then>" clause in an IfElse expression and the subtree under it
-data ElseIfContent m expr = ElseIfContent
+data ElseIfContent name m expr = ElseIfContent
     { _eiScopes :: ChildScopeMapping
     , _eiEntityId :: EntityId
-    , _eiContent :: IfElse m expr
+    , _eiContent :: IfElse name m expr
     , _eiCondAddLet :: m EntityId
-    , _eiNodeActions :: NodeActions m
+    , _eiNodeActions :: NodeActions name m
     } deriving (Functor, Foldable, Traversable)
 
-data Else m expr = SimpleElse expr | ElseIf (ElseIfContent m expr)
+data Else name m expr = SimpleElse expr | ElseIf (ElseIfContent name m expr)
     deriving (Functor, Foldable, Traversable)
 
-data IfElse m expr = IfElse
+data IfElse name m expr = IfElse
     { _iIfThen :: IfThen m expr
-    , _iElse :: Else m expr
+    , _iElse :: Else name m expr
     } deriving (Functor, Foldable, Traversable)
 
 data GetField name m expr = GetField
@@ -154,7 +154,7 @@ data AnnotatedArg name expr = AnnotatedArg
 data RelayedArg name m = RelayedArg
     { _raValue :: ParamRef name m
     , _raId :: EntityId
-    , _raActions :: NodeActions m
+    , _raActions :: NodeActions name m
     }
 
 data LabeledApply name m expr = LabeledApply
@@ -195,7 +195,7 @@ data Body name m expr
     | BodyRecord (Composite name m expr)
     | BodyGetField (GetField name m expr)
     | BodyCase (Case name m expr)
-    | BodyIfElse (IfElse m expr)
+    | BodyIfElse (IfElse name m expr)
     | BodyInject (Inject name m expr)
     | BodyGetVar (GetVar name m)
     | BodyToNom (Nominal name (BinderBody name m expr))

@@ -22,7 +22,7 @@ subExprPayloads ::
     (Expression name m ())
     (Expression name m a)
     (Expression name m b)
-    (Payload m a) (Payload m b)
+    (Payload name m a) (Payload name m b)
 subExprPayloads f val@(Expression body pl) =
     Expression
     <$> (Lens.traversed .> subExprPayloads) f body
@@ -33,7 +33,7 @@ payloadsIndexedByPath ::
     [Expression name m ()]
     (Expression name m a)
     (Expression name m b)
-    (Payload m a) (Payload m b)
+    (Payload name m a) (Payload name m b)
 payloadsIndexedByPath f =
     go []
     where
@@ -49,7 +49,7 @@ payloadsOf ::
     Lens.IndexedTraversal'
     (Expression name m ())
     (Expression name m b)
-    (Payload m b)
+    (Payload name m b)
 payloadsOf body =
     subExprPayloads . Lens.ifiltered predicate
     where
@@ -70,7 +70,7 @@ unfinishedExprPayloads ::
     Lens.IndexedTraversal'
     (Expression name m ())
     (Expression name m a)
-    (Payload m a)
+    (Payload name m a)
 unfinishedExprPayloads = payloadsOf bodyUnfinished
 
 subExprsOf ::
@@ -78,7 +78,7 @@ subExprsOf ::
     Lens.IndexedTraversal'
     [Expression name m ()]
     (Expression name m a)
-    (Payload m a)
+    (Payload name m a)
 subExprsOf f =
     payloadsIndexedByPath . Lens.ifiltered predicate
     where
@@ -89,7 +89,7 @@ fragmentExprs ::
     Lens.IndexedTraversal'
     [Expression name m ()]
     (Expression name m a)
-    (Payload m a)
+    (Payload name m a)
 fragmentExprs = subExprsOf _BodyFragment
 
 defBodySchemes :: Lens.Traversal' (DefinitionBody name m expr) Scheme

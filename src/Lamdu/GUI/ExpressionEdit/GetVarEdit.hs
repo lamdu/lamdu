@@ -232,7 +232,7 @@ makeGetParam param myId =
 make ::
     Monad m =>
     Sugar.GetVar (Name (T m)) (T m) ->
-    Sugar.Payload (T m) ExprGui.Payload ->
+    Sugar.Payload name (T m) ExprGui.Payload ->
     ExprGuiM m (ExpressionGui m)
 make getVar pl =
     stdWrap pl

@@ -66,7 +66,7 @@ fdConfig Config.Completion{completionOpenKeys, completionCloseKeys} = FocusDeleg
 
 makeRenderedResult ::
     Monad m =>
-    Sugar.Payload f ExprGui.Payload -> SearchMenu.ResultsContext -> Result (T m) ->
+    Sugar.Payload name f ExprGui.Payload -> SearchMenu.ResultsContext -> Result (T m) ->
     ExprGuiM m (Menu.RenderedOption (T m))
 makeRenderedResult pl ctx result =
     -- Warning: rHoleResult should be ran at most once!
@@ -99,7 +99,7 @@ postProcessSugar minOpPrec expr =
 
 makeResultOption ::
     Monad m =>
-    Sugar.Payload f ExprGui.Payload -> SearchMenu.ResultsContext -> ResultGroup (T m) ->
+    Sugar.Payload name f ExprGui.Payload -> SearchMenu.ResultsContext -> ResultGroup (T m) ->
     Menu.Option (ExprGuiM m) (T m)
 makeResultOption pl ctx results =
     Menu.Option
@@ -125,7 +125,7 @@ makeInferredTypeAnnotation ::
     ( MonadReader env m, Theme.HasTheme env, Element.HasAnimIdPrefix env
     , MonadTransaction n0 m, Spacer.HasStdSpacing env
     ) =>
-    Sugar.Payload m0 a0 -> m View
+    Sugar.Payload name m0 a0 -> m View
 makeInferredTypeAnnotation pl =
     Annotation.addAnnotationBackground
     <*> TypeView.make (pl ^. Sugar.plAnnotation . Sugar.aInferredType)
@@ -171,7 +171,7 @@ make ::
     Monad m =>
     T m [Sugar.HoleOption (T m) (ExpressionN m ())] ->
     Maybe (Sugar.OptionLiteral (T m) (ExpressionN m ())) ->
-    Sugar.Payload (T m) ExprGui.Payload ->
+    Sugar.Payload name (T m) ExprGui.Payload ->
     (Text -> Bool) ->
     ExprGuiM m (Menu.Placement -> ExpressionGui m)
 make options mOptionLiteral pl allowedTerms =

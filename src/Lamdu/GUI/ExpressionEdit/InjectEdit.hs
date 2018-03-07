@@ -41,7 +41,7 @@ injectIndicator text =
 
 makeNullaryInject ::
     Monad m =>
-    Sugar.Tag (Name (T m)) (T m) -> Sugar.Payload (T m) ExprGui.Payload ->
+    Sugar.Tag (Name (T m)) (T m) -> Sugar.Payload name (T m) ExprGui.Payload ->
     ExprGuiM m (ExpressionGui m)
 makeNullaryInject tag pl =
     stdWrapParentExpr pl <*>
@@ -55,7 +55,7 @@ makeNullaryInject tag pl =
 makeInject ::
     Monad m =>
     ExprGui.SugarExpr m ->
-    Sugar.Tag (Name (T m)) (T m) -> Sugar.Payload (T m) ExprGui.Payload ->
+    Sugar.Tag (Name (T m)) (T m) -> Sugar.Payload name (T m) ExprGui.Payload ->
     ExprGuiM m (ExpressionGui m)
 makeInject val tag pl =
     stdWrapParentExpr pl <*>
@@ -92,6 +92,6 @@ makeInject val tag pl =
 make ::
     Monad m =>
     Sugar.Inject (Name (T m)) (T m) (ExprGui.SugarExpr m) ->
-    Sugar.Payload (T m) ExprGui.Payload ->
+    Sugar.Payload name (T m) ExprGui.Payload ->
     ExprGuiM m (ExpressionGui m)
 make (Sugar.Inject tag mVal) = maybe makeNullaryInject makeInject mVal tag

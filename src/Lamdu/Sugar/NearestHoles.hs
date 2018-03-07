@@ -54,16 +54,16 @@ type M = State (Maybe Sugar.EntityId)
 
 passAll ::
     LensLike M s t
-    (Sugar.Payload f (Bool, Maybe Sugar.EntityId -> a))
-    (Sugar.Payload f (Bool, a)) -> s -> t
+    (Sugar.Payload name f (Bool, Maybe Sugar.EntityId -> a))
+    (Sugar.Payload name f (Bool, a)) -> s -> t
 passAll sugarPls s =
     s
     & sugarPls %%~ setEntityId
     & (`evalState` Nothing)
 
 setEntityId ::
-    Sugar.Payload f (Bool, Maybe Sugar.EntityId -> a) ->
-    M (Sugar.Payload f (Bool, a))
+    Sugar.Payload name f (Bool, Maybe Sugar.EntityId -> a) ->
+    M (Sugar.Payload name f (Bool, a))
 setEntityId pl =
     do
         oldEntityId <- State.get

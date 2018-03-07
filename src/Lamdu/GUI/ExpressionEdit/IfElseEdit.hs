@@ -68,7 +68,7 @@ makeIfThen prefixLabel entityId ifThen =
     where
         indentAnimId = WidgetIds.fromEntityId entityId & Widget.toAnimId
 
-makeElse :: Monad m => Sugar.Else (T m) (ExprGui.SugarExpr m) -> ExprGuiM m [Row (ExpressionGui m)]
+makeElse :: Monad m => Sugar.Else name (T m) (ExprGui.SugarExpr m) -> ExprGuiM m [Row (ExpressionGui m)]
 makeElse (Sugar.SimpleElse expr) =
     ( Row elseAnimId
         <$> (Styled.grammarLabel "else" <&> Responsive.fromTextView)
@@ -143,8 +143,8 @@ renderRows =
 
 make ::
     Monad m =>
-    Sugar.IfElse (T m) (ExprGui.SugarExpr m) ->
-    Sugar.Payload (T m) ExprGui.Payload ->
+    Sugar.IfElse name (T m) (ExprGui.SugarExpr m) ->
+    Sugar.Payload name (T m) ExprGui.Payload ->
     ExprGuiM m (ExpressionGui m)
 make ifElse pl =
     stdWrapParentExpr pl

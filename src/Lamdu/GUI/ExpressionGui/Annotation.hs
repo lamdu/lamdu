@@ -262,7 +262,7 @@ addEvaluationResult mNeigh resDisp wideBehavior =
 
 maybeAddAnnotationPl ::
     (Functor f, Monad m) =>
-    Sugar.Payload x ExprGui.Payload ->
+    Sugar.Payload name x ExprGui.Payload ->
     ExprGuiM m (Responsive (f GuiState.Update) -> Responsive (f GuiState.Update))
 maybeAddAnnotationPl pl =
     do
@@ -286,7 +286,7 @@ maybeAddAnnotationPl pl =
 
 evaluationResult ::
     Monad m =>
-    Sugar.Payload (T m) ExprGui.Payload -> ExprGuiM m (Maybe (ER.Val Type))
+    Sugar.Payload name (T m) ExprGui.Payload -> ExprGuiM m (Maybe (ER.Val Type))
 evaluationResult pl =
     ExprGuiM.readMScopeId
     <&> valOfScope (pl ^. Sugar.plAnnotation)
