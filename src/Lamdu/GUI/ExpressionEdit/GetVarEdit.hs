@@ -124,6 +124,23 @@ makeInlineEventMap config (Sugar.CannotInlineDueToUses (x:_)) =
       (E.Doc ["Navigation", "Jump to next use"])
 makeInlineEventMap _ _ = mempty
 
+actionable ::
+    ( Element.HasAnimIdPrefix env, TextView.HasStyle env
+    , GuiState.HasCursor env, HasConfig env, HasTheme env, Applicative f
+    , MonadReader env m
+    ) =>
+    Widget.Id -> Text -> E.Doc -> f Widget.Id ->
+    m (WithTextPos (Widget (f GuiState.Update)))
+actionable myId text doc action =
+    do
+        color <- Lens.view Theme.theme <&> Theme.actionTextColor
+        actionKeys <- Lens.view Config.config <&> Config.actionKeys
+        let eventMap = E.keysEventMapMovesCursor actionKeys doc action
+        (Widget.makeFocusableView ?? myId <&> (Align.tValue %~))
+            <*> TextView.makeLabel text
+            & Reader.local (TextView.color .~ color)
+            <&> Align.tValue %~ Widget.weakerEvents eventMap
+
 definitionTypeChangeBox ::
     ( MonadReader env m, MonadTransaction n m
     , Element.HasAnimIdPrefix env
@@ -134,25 +151,21 @@ definitionTypeChangeBox ::
     m (WithTextPos (Widget (f GuiState.Update)))
 definitionTypeChangeBox info getVarId =
     do
-        headerLabel <- TextView.makeLabel "Type was:"
-        typeWhenUsed <-
-            mkTypeView "typeWhenUsed" (info ^. Sugar.defTypeWhenUsed)
         vspace <- Spacer.stdVSpace
         hspace <- Spacer.stdHSpace
-        color <- Lens.view Theme.theme <&> Theme.actionTextColor
-        toLabel <- TextView.makeLabel "to:"
-        updateLabel <-
-            (Widget.makeFocusableView ?? myId <&> (Align.tValue %~))
-            <*> TextView.makeLabel "Update"
-            & Reader.local (TextView.color .~ color)
-        typeCurrent <- mkTypeView "typeCurrent" (info ^. Sugar.defTypeCurrent)
-        actionKeys <- Lens.view Config.config <&> Config.actionKeys
+
+        headerLabel <- TextView.makeLabel "Type was:"
+
         let update = info ^. Sugar.defTypeUseCurrent <&> WidgetIds.fromEntityId
+        let doc = E.Doc ["Edit", "Update definition type"]
+        updateLabel <- actionable myId "Update" doc update
+        toLabel <- TextView.makeLabel "to:"
+
+        oldTypeView <- mkTypeView "oldTypeView" (info ^. Sugar.defTypeWhenUsed)
+        newTypeView <- mkTypeView "newTypeView" (info ^. Sugar.defTypeCurrent)
+
         let updateTo = updateLabel /|/ hspace /|/ toLabel
-        headerLabel /-/ typeWhenUsed /-/ vspace /-/ updateTo /-/ typeCurrent
-            & Align.tValue %~ Widget.weakerEvents
-            (E.keysEventMapMovesCursor actionKeys
-                (E.Doc ["Edit", "Update definition type"]) update)
+        headerLabel /-/ oldTypeView /-/ vspace /-/ updateTo /-/ newTypeView
             & pure
     where
         mkTypeView idSuffix scheme =
