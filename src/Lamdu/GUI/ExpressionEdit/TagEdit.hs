@@ -110,11 +110,71 @@ makePickEventMap action =
         doc = mkDoc "New"
         mkDoc x = E.Doc ["Edit", "Tag", x]
 
+makeNewTag ::
+    Monad m =>
+    Text -> Sugar.TagSelection (Name m) m a ->
+    (Sugar.TagInfo -> a -> b) -> m b
+makeNewTag searchTerm tagSelection mkPickResult =
+    do
+        (name, t, selectResult) <- tagSelection ^. Sugar.tsNewTag
+        case name ^? Name._Stored . Name.snSet of
+            Nothing -> pure ()
+            Just setName -> setName searchTerm
+        mkPickResult t selectResult & pure
+
+makeNewTagPreEvent ::
+    Monad f =>
+    Text -> Sugar.TagSelection (Name f) f a ->
+    (Sugar.TagInfo -> a -> r) -> Maybe (Widget.PreEvent (f r))
+makeNewTagPreEvent searchTerm tagSelection mkPickResult
+    | Text.null searchTerm = Nothing
+    | otherwise =
+        Just Widget.PreEvent
+        { Widget._pDesc = "New tag"
+        , Widget._pAction = makeNewTag searchTerm tagSelection mkPickResult
+        , Widget._pTextRemainder = ""
+        }
+
+addNewTagIfNullOptions ::
+    ( Monad m, MonadReader env f, GuiState.HasCursor env
+    , TextView.HasStyle env, Element.HasAnimIdPrefix env
+    ) =>
+    Sugar.TagSelection (Name (T m)) (T m) a ->
+    (Sugar.TagInfo -> a -> Menu.PickResult) ->
+    SearchMenu.ResultsContext ->
+    Menu.OptionList (Menu.Option f (T m)) ->
+    Menu.OptionList (Menu.Option f (T m))
+addNewTagIfNullOptions tagSelection mkPickResult ctx optionList =
+    case makeNewTagPreEvent searchTerm tagSelection mkPickResult of
+    Just preEvent
+        | null (optionList ^. Menu.olOptions) ->
+            Menu.OptionList
+            { Menu._olOptions =
+                [ Menu.Option
+                    { Menu._oId = optionId
+                    , Menu._oSubmenuWidgets = Menu.SubmenuEmpty
+                    , Menu._oRender =
+                        (Widget.makeFocusableView ?? optionId <&> fmap)
+                        <*> (TextView.makeLabel "Create new tag")
+                        <&> \label -> Menu.RenderedOption
+                        { Menu._rWidget = label
+                        , Menu._rPick = preEvent
+                        }
+                    }
+                ]
+            , Menu._olIsTruncated = False
+            }
+    _ -> optionList
+    where
+        optionId = (ctx ^. SearchMenu.rResultIdPrefix) `Widget.joinId` ["Create new tag"]
+        searchTerm = ctx ^. SearchMenu.rSearchTerm
+
 makeOptions ::
     ( MonadTransaction m f, MonadReader env f, GuiState.HasCursor env
     , HasConfig env, HasTheme env, Element.HasAnimIdPrefix env, TextView.HasStyle env
     ) =>
-    Sugar.TagSelection (Name (T m)) (T m) a -> (Sugar.TagInfo -> a -> Menu.PickResult) ->
+    Sugar.TagSelection (Name (T m)) (T m) a ->
+    (Sugar.TagInfo -> a -> Menu.PickResult) ->
     SearchMenu.ResultsContext ->
     f (Menu.OptionList (Menu.Option f (T m)))
 makeOptions tagSelection mkPickResult ctx
@@ -130,6 +190,7 @@ makeOptions tagSelection mkPickResult ctx
                 <&> _2 %~ not . null
                 <&> uncurry Menu.OptionList
                 <&> fmap makeOption
+                <&> addNewTagIfNullOptions tagSelection mkPickResult ctx
     where
         nameText = Sugar.toName . Name._Stored . Name.snDisplayText . Name.ttText
         searchTerm = ctx ^. SearchMenu.rSearchTerm
@@ -171,43 +232,33 @@ type HasTagEditEnv env = (HasSearchTermEnv env, Menu.HasConfig env)
 
 makeHoleSearchTerm ::
     (MonadReader env m, Monad f, HasSearchTermEnv env) =>
-    Sugar.TagSelection (Name f) f a -> (Sugar.TagInfo -> a -> Menu.PickResult) ->
-    Widget.Id ->
+    Sugar.TagSelection (Name f) f a ->
+    (Sugar.TagInfo -> a -> Menu.PickResult) -> Widget.Id ->
     m (WithTextPos (Widget (f GuiState.Update)))
 makeHoleSearchTerm tagSelection mkPickResult holeId =
     do
         searchTerm <- SearchMenu.readSearchTerm holeId
-        let newTag =
-                do
-                    (name, t, selectResult) <- tagSelection ^. Sugar.tsNewTag
-                    case name ^? Name._Stored . Name.snSet of
-                        Nothing -> pure ()
-                        Just setName -> setName searchTerm
-                    mkPickResult t selectResult & pure
         newTagEventMap <-
             if Text.null searchTerm
             then pure mempty
-            else makePickEventMap newTag
-        let pickPreEvents
-                | Text.null searchTerm = []
-                | otherwise =
-                    [ Widget.PreEvent
-                        { Widget._pDesc = "New tag"
-                        , Widget._pAction = mempty <$ newTag
-                        , Widget._pTextRemainder = ""
-                        }
-                    ]
+            else makeNewTag searchTerm tagSelection mkPickResult & makePickEventMap
+        let newTagPreEvents =
+                makeNewTagPreEvent searchTerm tagSelection mkPickResult
+                ^.. Lens._Just
+                <&> fmap (mempty <$)
         term <-
             SearchMenu.basicSearchTermEdit holeId allowedSearchTerm
             <&> Align.tValue . Lens.mapped %~ pure
             <&> Align.tValue %~ Widget.weakerEvents newTagEventMap
             <&> Align.tValue . Widget.wState . Widget._StateFocused .
-                Lens.mapped . Widget.fPreEvents %~ (Widget.PreEvents pickPreEvents <>)
+                Lens.mapped . Widget.fPreEvents %~
+                (Widget.PreEvents newTagPreEvents <>)
         tooltip <- Lens.view theme <&> Theme.tooltip
         if not (Text.null searchTerm) && Widget.isFocused (term ^. Align.tValue)
             then
                 do
-                    newTagLabel <- (TextView.make ?? "(new tag)") <*> Element.subAnimId ["label"]
+                    newTagLabel <-
+                        (TextView.make ?? "(new tag)") <*> Element.subAnimId ["label"]
                     space <- Spacer.stdHSpace
                     hover <- Hover.hover
                     let anchor = fmap Hover.anchor

@@ -102,7 +102,9 @@ assignCursor myId resultIds action =
                     -- so that operators pressed will set the search string
                     -- rather than apply on the first result.
                     searchTermEditId myId
-                | otherwise = resultIds ^? Lens.traverse & fromMaybe (searchTermEditId myId)
+                | otherwise =
+                      resultIds ^? Lens.traverse
+                      & fromMaybe (Menu.noResultsId myId)
 
         -- Results appear and disappear when the search-string changes,
         -- but the cursor prefix signifies whether we should be on a result.
@@ -139,7 +141,7 @@ make makeSearchTerm makeOptions annotation myId =
     >>=
     \options ->
     do
-        (mPickFirst, menu) <- Menu.make (annotation ^. Element.width) options
+        (mPickFirst, menu) <- Menu.make myId (annotation ^. Element.width) options
         mkHoverOptions <- Menu.hoverOptions
         let hoverMenu placement term =
                 Hover.hoverInPlaceOf (mkHoverOptions placement annotation menu a) a

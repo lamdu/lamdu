@@ -10,6 +10,7 @@ module GUI.Momentu.Widgets.Menu
     , optionWidgets
     , Placement(..)
     , make, makeHovered, hoverOptions, makePickEventMap
+    , noResultsId
     ) where
 
 import           Control.Applicative (liftA2)
@@ -198,7 +199,9 @@ layoutOption maxOptionWidth (optionId, rendered, submenu) =
             if isSelected
                 then do
                     hover <- Hover.hover
-                    (_, submenus) <- action <&> (`OptionList` False) >>= make 0
+                    (_, submenus) <-
+                        action <&> (`OptionList` False)
+                        >>= make (optionId `Widget.joinId` ["submenu"]) 0
                     let anchored = base & Align.tValue %~ Hover.anchor
                     anchored
                         & Align.tValue %~
@@ -247,16 +250,23 @@ addPickers =
     & Widget.addPreEventWith (liftA2 mappend) preEvent
     & Widget.eventMapMaker . Lens.mapped %~ mappend (pickEventMap pick)
 
+noResultsId :: Widget.Id -> Widget.Id
+noResultsId = (`Widget.joinId` ["no results"])
+
 make ::
     ( MonadReader env m, TextView.HasStyle env, Hover.HasStyle env
     , Element.HasAnimIdPrefix env, HasConfig env, State.HasCursor env
     , Applicative f
     ) =>
-    Widget.R -> OptionList (Option m f) ->
+    Widget.Id -> Widget.R -> OptionList (Option m f) ->
     m (Maybe (Widget.PreEvent (f PickResult)), Hover.Ordered (Widget (f State.Update)))
-make minWidth options =
+make myId minWidth options =
     case options ^. olOptions of
-    [] -> makeNoResults <&> (^. Align.tValue) <&> Widget.fromView <&> pure <&> (,) Nothing
+    [] ->
+        (Widget.makeFocusableView ?? noResultsId myId)
+        <*> (makeNoResults <&> (^. Align.tValue))
+        <&> pure
+        <&> (,) Nothing
     opts@(_:_) ->
         do
             submenuSymbolWidth <-
@@ -357,13 +367,13 @@ makeHovered ::
     , TextView.HasStyle env, Element.HasAnimIdPrefix env
     , Hover.HasStyle env, MonadReader env m
     ) =>
-    View ->
+    Widget.Id -> View ->
     OptionList (Option m f) ->
     m (Placement -> Widget (f State.Update) -> Widget (f State.Update))
-makeHovered annotation options =
+makeHovered myId annotation options =
     do
         mkHoverOptions <- hoverOptions
-        (_, menu) <- make (annotation ^. Element.width) options
+        (_, menu) <- make myId (annotation ^. Element.width) options
         pure $
             \placement term ->
             let a = Hover.anchor term
