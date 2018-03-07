@@ -269,10 +269,10 @@ encodeTypeVars (TypeVars tvs rtvs stvs, Constraints recordConstraints variantCon
     concat
     [ encodeTVs "typeVars" tvs
     , encodeTVs "recordTypeVars" rtvs
-    , encodeTVs "variantTypeVars" stvs
+    , encodeTVs "sumTypeVars" stvs
     , encodeSquash null "constraints" Aeson.object
       (encodeConstraints "recordTypeVars" recordConstraints ++
-       encodeConstraints "variantTypeVars" variantConstraints)
+       encodeConstraints "sumTypeVars" variantConstraints)
     ] & Aeson.object
     where
         encodeConstraints name (CompositeVarConstraints constraints) =
@@ -292,12 +292,12 @@ decodeTypeVars =
             TypeVars
             <$> getTVs "typeVars"
             <*> getTVs "recordTypeVars"
-            <*> getTVs "variantTypeVars"
+            <*> getTVs "sumTypeVars"
         decodedConstraints <-
             decodeSquashed "constraints"
             ( withObject "constraints" $ \constraints ->
               let  getCs name = decodeConstraints name constraints <&> CompositeVarConstraints
-              in   Constraints <$> getCs "recordTypeVars" <*> getCs "variantTypeVars"
+              in   Constraints <$> getCs "recordTypeVars" <*> getCs "sumTypeVars"
             ) obj
         pure (tvs, decodedConstraints)
     where

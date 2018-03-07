@@ -5416,7 +5416,7 @@
                 }
             },
             "schemeBinders": {
-                "variantTypeVars": [
+                "sumTypeVars": [
                     "6f74686572"
                 ]
             }
@@ -6428,7 +6428,7 @@
                 }
             },
             "schemeBinders": {
-                "variantTypeVars": [
+                "sumTypeVars": [
                     "6f74686572"
                 ]
             }
@@ -8841,7 +8841,7 @@
                 }
             },
             "schemeBinders": {
-                "variantTypeVars": [
+                "sumTypeVars": [
                     "6f74686572"
                 ],
                 "typeVars": [
@@ -10060,7 +10060,7 @@
                 }
             },
             "schemeBinders": {
-                "variantTypeVars": [
+                "sumTypeVars": [
                     "6f74686572"
                 ]
             }
@@ -10883,7 +10883,7 @@
                 }
             },
             "schemeBinders": {
-                "variantTypeVars": [
+                "sumTypeVars": [
                     "6f74686572"
                 ]
             }
@@ -11467,7 +11467,7 @@
                 }
             },
             "schemeBinders": {
-                "variantTypeVars": [
+                "sumTypeVars": [
                     "6f74686572"
                 ]
             }
@@ -12668,7 +12668,7 @@
                 }
             },
             "schemeBinders": {
-                "variantTypeVars": [
+                "sumTypeVars": [
                     "6f74686572"
                 ]
             }
@@ -12980,7 +12980,7 @@
                 }
             },
             "schemeBinders": {
-                "variantTypeVars": [
+                "sumTypeVars": [
                     "6f74686572"
                 ]
             }
@@ -16864,7 +16864,7 @@
                 }
             },
             "schemeBinders": {
-                "variantTypeVars": [
+                "sumTypeVars": [
                     "6f74686572"
                 ]
             }
@@ -17503,7 +17503,7 @@
                 }
             },
             "schemeBinders": {
-                "variantTypeVars": [
+                "sumTypeVars": [
                     "6f74686572"
                 ]
             }
