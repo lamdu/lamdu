@@ -12,6 +12,7 @@ import qualified Lamdu.Data.Export.JSON.Migration.ToVersion1 as ToVersion1
 import qualified Lamdu.Data.Export.JSON.Migration.ToVersion2 as ToVersion2
 import qualified Lamdu.Data.Export.JSON.Migration.ToVersion3 as ToVersion3
 import qualified Lamdu.Data.Export.JSON.Migration.ToVersion4 as ToVersion4
+import qualified Lamdu.Data.Export.JSON.Migration.ToVersion5 as ToVersion5
 
 import           Lamdu.Prelude
 
@@ -29,7 +30,12 @@ getVersion _ = Left "Expecting top-level array"
 
 versionMigrations :: [Aeson.Value -> Either Text Aeson.Value]
 versionMigrations =
-    [ToVersion1.migrate, ToVersion2.migrate, ToVersion3.migrate, ToVersion4.migrate]
+    [ ToVersion1.migrate
+    , ToVersion2.migrate
+    , ToVersion3.migrate
+    , ToVersion4.migrate
+    , ToVersion5.migrate
+    ]
 
 currentVersion :: Int
 currentVersion = length versionMigrations

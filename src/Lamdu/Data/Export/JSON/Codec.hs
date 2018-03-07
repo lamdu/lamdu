@@ -241,7 +241,7 @@ decodeComposite = fmap FlatComposite.toComposite . decodeFlatComposite
 encodeType :: Encoder Type
 encodeType (T.TFun a b) = Aeson.object ["funcParam" .= encodeType a, "funcResult" .= encodeType b]
 encodeType (T.TRecord composite) = Aeson.object ["record" .= encodeComposite composite]
-encodeType (T.TVariant composite) = Aeson.object ["sum" .= encodeComposite composite]
+encodeType (T.TVariant composite) = Aeson.object ["variant" .= encodeComposite composite]
 encodeType (T.TVar (T.Var name)) = Aeson.object ["typeVar" .= encodeIdent name]
 encodeType (T.TInst tId params) =
     ("nomId" .= encodeIdent (T.nomId tId)) :
@@ -256,7 +256,7 @@ decodeType json =
         <$> (o .: "funcParam" >>= lift . decodeType)
         <*> (o .: "funcResult" >>= lift . decodeType)
     , o .: "record" >>= lift . decodeComposite <&> T.TRecord
-    , o .: "sum" >>= lift . decodeComposite <&> T.TVariant
+    , o .: "variant" >>= lift . decodeComposite <&> T.TVariant
     , o .: "typeVar" >>= lift . decodeIdent <&> T.Var <&> T.TVar
     , do
           nomId <- o .: "nomId" >>= lift . decodeIdent <&> T.NominalId
@@ -269,10 +269,10 @@ encodeTypeVars (TypeVars tvs rtvs stvs, Constraints recordConstraints variantCon
     concat
     [ encodeTVs "typeVars" tvs
     , encodeTVs "recordTypeVars" rtvs
-    , encodeTVs "sumTypeVars" stvs
+    , encodeTVs "variantTypeVars" stvs
     , encodeSquash null "constraints" Aeson.object
       (encodeConstraints "recordTypeVars" recordConstraints ++
-       encodeConstraints "sumTypeVars" variantConstraints)
+       encodeConstraints "variantTypeVars" variantConstraints)
     ] & Aeson.object
     where
         encodeConstraints name (CompositeVarConstraints constraints) =
@@ -292,12 +292,12 @@ decodeTypeVars =
             TypeVars
             <$> getTVs "typeVars"
             <*> getTVs "recordTypeVars"
-            <*> getTVs "sumTypeVars"
+            <*> getTVs "variantTypeVars"
         decodedConstraints <-
             decodeSquashed "constraints"
             ( withObject "constraints" $ \constraints ->
               let  getCs name = decodeConstraints name constraints <&> CompositeVarConstraints
-              in   Constraints <$> getCs "recordTypeVars" <*> getCs "sumTypeVars"
+              in   Constraints <$> getCs "recordTypeVars" <*> getCs "variantTypeVars"
             ) obj
         pure (tvs, decodedConstraints)
     where

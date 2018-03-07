@@ -1,0 +1,44 @@
+{-# LANGUAGE NoImplicitPrelude, OverloadedStrings #-}
+module Lamdu.Data.Export.JSON.Migration.ToVersion5 (migrate) where
+
+import qualified Control.Lens as Lens
+import qualified Data.Aeson as Aeson
+
+import           Lamdu.Prelude
+
+version :: Integer -> Aeson.Value
+version x =
+    mempty
+    & Lens.at "schemaVersion" ?~ Aeson.toJSON x
+    & Aeson.Object
+
+replaceKey :: Lens.At t => Lens.Index t -> Lens.Index t -> t -> t
+replaceKey pre post obj =
+    case obj ^. Lens.at pre of
+    Nothing -> obj
+    Just v ->
+        obj
+        & Lens.at pre .~ Nothing
+        & Lens.at post ?~ v
+
+migrateVal :: Aeson.Value -> Aeson.Value
+migrateVal (Aeson.Object obj) =
+    obj <&> migrateVal
+    & replaceKey "sum" "variant"
+    & replaceKey "sumTypeVars" "variantTypeVars"
+    & Aeson.Object
+migrateVal (Aeson.Array vals) = vals <&> migrateVal & Aeson.Array
+migrateVal (Aeson.String x) = Aeson.String x
+migrateVal (Aeson.Number x) = Aeson.Number x
+migrateVal (Aeson.Bool x) = Aeson.Bool x
+migrateVal Aeson.Null = Aeson.Null
+
+migrate :: Aeson.Value -> Either Text Aeson.Value
+migrate j@(Aeson.Array vals) =
+    case vals ^? Lens._Cons of
+    Just (ver, rest)
+        | ver == version 4 ->
+            Lens._Cons # (ver, rest <&> migrateVal) & Aeson.Array & Right
+        | otherwise -> Right j
+    _ -> Left "Array of at least 1 element required"
+migrate _ = Left "top-level should be array"
