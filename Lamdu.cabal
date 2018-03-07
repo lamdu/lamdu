@@ -303,7 +303,7 @@ Executable lamdu
 
   ghc-options:         -O2 -Wall -Widentities -Wimplicit-prelude -Wmissing-home-modules -Wincomplete-patterns -Wnoncanonical-monad-instances -Wsemigroup -Wincomplete-record-updates -Wredundant-constraints -threaded
   -- ghc-options is prepended to ghc-prof-options
-  ghc-prof-options:    -auto-all -caf-all -rtsopts
+  ghc-prof-options:    -fprof-auto -fprof-cafs -rtsopts
   main-is:             Lamdu/Main.hs
 
 source-repository head
