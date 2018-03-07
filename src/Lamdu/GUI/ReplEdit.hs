@@ -84,7 +84,7 @@ make ::
 make exportRepl replExpr =
     do
         theConfig <- Lens.view config
-        let buttonExtractKeys = Config.newDefinitionButtonPressKeys (Config.pane theConfig)
+        let buttonExtractKeys = Config.actionKeys theConfig
         (Options.boxSpaced ?? Options.disambiguationNone)
             <*>
             sequence

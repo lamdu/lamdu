@@ -146,14 +146,12 @@ definitionTypeChangeBox info getVarId =
             <*> TextView.makeLabel "Update"
             & Reader.local (TextView.color .~ color)
         typeCurrent <- mkTypeView "typeCurrent" (info ^. Sugar.defTypeCurrent)
-        config <- Lens.view Config.config
-        -- TODO: unify config's button press keys
-        let keys = Config.newDefinitionButtonPressKeys (Config.pane config)
+        actionKeys <- Lens.view Config.config <&> Config.actionKeys
         let update = info ^. Sugar.defTypeUseCurrent <&> WidgetIds.fromEntityId
         let updateTo = updateLabel /|/ hspace /|/ toLabel
         headerLabel /-/ typeWhenUsed /-/ vspace /-/ updateTo /-/ typeCurrent
             & Align.tValue %~ Widget.weakerEvents
-            (E.keysEventMapMovesCursor keys
+            (E.keysEventMapMovesCursor actionKeys
                 (E.Doc ["Edit", "Update definition type"]) update)
             & pure
     where

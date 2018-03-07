@@ -224,13 +224,13 @@ makeNewDefinitionButton =
         anchors <- ExprGuiM.readCodeAnchors
         newDefinitionEventMap <- makeNewDefinitionEventMap anchors
 
-        Config.Pane{newDefinitionButtonPressKeys} <- Lens.view Config.config <&> Config.pane
+        actionKeys <- Lens.view Config.config <&> Config.actionKeys
         color <- Lens.view Theme.theme <&> Theme.actionTextColor
 
         TextView.makeFocusableLabel "New..."
             & Reader.local (TextView.color .~ color)
             <&> (^. Align.tValue)
-            <&> Widget.weakerEvents (newDefinitionEventMap newDefinitionButtonPressKeys)
+            <&> Widget.weakerEvents (newDefinitionEventMap actionKeys)
 
 panesEventMap ::
     Monad m =>

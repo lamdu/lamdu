@@ -36,7 +36,6 @@ data Pane = Pane
     , paneMoveDownKeys :: [MetaKey]
     , paneMoveUpKeys :: [MetaKey]
     , newDefinitionKeys :: [MetaKey]
-    , newDefinitionButtonPressKeys :: [MetaKey]
     } deriving (Eq, Show)
 deriveJSON defaultOptions ''Pane
 
@@ -92,6 +91,7 @@ data Config = Config
     , jumpToDefinitionKeys :: [MetaKey]
     , delForwardKeys :: [MetaKey]
     , delBackwardKeys :: [MetaKey]
+    , actionKeys :: [MetaKey]
     , replaceParentKeys :: [MetaKey]
     , attachKeys :: [MetaKey]
     , detachKeys :: [MetaKey]

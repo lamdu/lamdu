@@ -20,7 +20,6 @@
     },
     "pane": {
         "newDefinitionKeys"            : [ "Alt+N", "Alt+L" ],
-        "newDefinitionButtonPressKeys" : [ "Space", "Enter" ],
         "paneCloseKeys"                : [ "Alt+W" ],
         "paneMoveUpKeys"               : [ "Alt+Up" ],
         "paneMoveDownKeys"             : [ "Alt+Down" ]
@@ -54,6 +53,7 @@
     "helpKeys": [ "F1", "Alt+H" ],
     "previousCursorKeys"       : [ "Alt+Left" ],
     "enterSubexpressionKeys"   : [ "Shift+Right" ],
+    "actionKeys"               : [ "Space", "Enter" ],
     "delBackwardKeys"          : [ "Backspace" ],
     "quitKeys"                 : [ "Cmd+Q" ],
     "changeThemeKeys"          : [ "Alt+T" ],
