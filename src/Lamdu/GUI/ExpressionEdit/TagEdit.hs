@@ -45,6 +45,7 @@ import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Name (Name(..))
 import qualified Lamdu.Name as Name
 import           Lamdu.Style (HasStyle)
+import qualified Lamdu.Style as Style
 import           Lamdu.Sugar.NearestHoles (NearestHoles)
 import qualified Lamdu.Sugar.NearestHoles as NearestHoles
 import qualified Lamdu.Sugar.Types as Sugar
@@ -397,8 +398,11 @@ makeLHSTag ::
     (Theme.Name -> Draw.Color) -> Sugar.Tag (Name (T f)) (T f) ->
     m (WithTextPos (Widget (T f GuiState.Update)))
 makeLHSTag onPickNext color tag =
-    makeTagEditWith onView onPickNext NearestHoles.none tag
-    & NameEdit.withNameColor color
+    do
+        style <- Lens.view Style.style
+        makeTagEditWith onView onPickNext NearestHoles.none tag
+            & NameEdit.withNameColor color
+            & Reader.local (TextEdit.style .~ style ^. Style.styleNameAtBinder)
     <&> Align.tValue %~ Widget.weakerEvents chooseEventMap
     where
         chooseEventMap =
