@@ -12,6 +12,7 @@ import qualified Data.ByteString.Char8 as BS8
 import           Data.Functor.Identity (Identity(..))
 import           Data.List (sortOn)
 import qualified Data.List.Class as ListClass
+import           Data.MRUMemo (memo)
 import qualified Data.Text as Text
 import qualified GUI.Momentu.Widget.Id as WidgetId
 import qualified GUI.Momentu.Widgets.Menu as Menu
@@ -238,12 +239,16 @@ unicodeAlts haystack =
         extras 'β' = ["beta"]
         extras _ = []
 
+{-# NOINLINE fuzzyMaker #-}
+fuzzyMaker :: [Text] -> Fuzzy.FuzzySet
+fuzzyMaker = memo Fuzzy.fuzzyMaker
+
 holeMatches :: Monad m => Text -> [Group m] -> [Group m]
 holeMatches searchTerm groups =
     Fuzzy.matches (ValTerms.definitePart searchTerm) fuzzy
     <&> groupResults %~ ListClass.filterL (fmap isHoleResultOK . snd)
     where
         searchTerms group = group ^. groupSearchTerms >>= unicodeAlts
-        fuzzy = Fuzzy.make searchTerms groups
+        fuzzy = Fuzzy.make fuzzyMaker searchTerms groups
         isHoleResultOK =
             ValTerms.verifyInjectSuffix searchTerm . (^. Sugar.holeResultConverted)

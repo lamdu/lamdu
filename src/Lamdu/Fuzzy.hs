@@ -1,7 +1,8 @@
 -- | A wrapper for the fuzzyset library that makes it a Fuzzy map
 {-# LANGUAGE NoImplicitPrelude #-}
 module Lamdu.Fuzzy
-    ( FuzzyMap, make, matches
+    ( FuzzySet, FuzzyMap, make, matches
+    , fuzzyMaker
     ) where
 
 import           Data.Function (on)
@@ -21,10 +22,13 @@ data FuzzyMap a = FuzzyMap
     , values :: Map Text (UniqueId, a)
     }
 
-make :: (a -> [Text]) -> [a] -> FuzzyMap a
-make f opts =
+fuzzyMaker :: [Text] -> FuzzySet
+fuzzyMaker = Fuzzy.fromList
+
+make :: ([Text] -> FuzzySet) -> (a -> [Text]) -> [a] -> FuzzyMap a
+make maker f opts =
     FuzzyMap
-    { fuzzySet = Map.keys vals & Fuzzy.fromList
+    { fuzzySet = Map.keys vals & maker
     , values = vals
     }
     where

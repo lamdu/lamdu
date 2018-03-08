@@ -12,7 +12,7 @@ import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
 import           Control.Monad.Transaction (MonadTransaction(..))
 import qualified Data.Char as Char
-import qualified Lamdu.Fuzzy as Fuzzy
+import           Data.MRUMemo (memo)
 import qualified Data.Text as Text
 import           GUI.Momentu.Align (WithTextPos)
 import qualified GUI.Momentu.Align as Align
@@ -40,6 +40,7 @@ import           Lamdu.Config (HasConfig)
 import qualified Lamdu.Config as Config
 import           Lamdu.Config.Theme (HasTheme(..))
 import qualified Lamdu.Config.Theme as Theme
+import qualified Lamdu.Fuzzy as Fuzzy
 import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
 import qualified Lamdu.GUI.NameView as NameView
 import qualified Lamdu.GUI.Styled as Styled
@@ -179,6 +180,10 @@ addNewTagIfNullOptions tagSelection mkPickResult ctx optionList =
 nameText :: Lens.Traversal' (Sugar.TagOption (Name f) m a) Text
 nameText = Sugar.toName . Name._Stored . Name.snDisplayText . Name.ttText
 
+{-# NOINLINE fuzzyMaker #-}
+fuzzyMaker :: [Text] -> Fuzzy.FuzzySet
+fuzzyMaker = memo Fuzzy.fuzzyMaker
+
 makeOptions ::
     ( MonadTransaction m f, MonadReader env f, GuiState.HasCursor env
     , HasConfig env, HasTheme env, Element.HasAnimIdPrefix env, TextView.HasStyle env
@@ -195,7 +200,7 @@ makeOptions tagSelection mkPickResult ctx
                 Lens.view Config.config
                 <&> Config.completion <&> Config.completionResultCount
             tagSelection ^. Sugar.tsOptions & transaction
-                <&> Fuzzy.make (^.. nameText)
+                <&> Fuzzy.make fuzzyMaker (^.. nameText)
                 <&> Fuzzy.matches searchTerm
                 <&> splitAt resultCount
                 <&> _2 %~ not . null
