@@ -69,13 +69,18 @@ trieMatch n (c:cs) t@(Fuzzy _ m) =
 
 distance :: Text -> Text -> [Int]
 distance rawX rawY =
-    [ if x == y then 0 else 1
-    , if x `Text.isPrefixOf` y then 0 else 1
-    , if x `Text.isInfixOf` y then 0 else 1
-    , EditDistance.restrictedDamerauLevenshteinDistance
+    concat
+    [ check (==)
+    , check Text.isPrefixOf
+    , check Text.isInfixOf
+    ] ++
+    [ EditDistance.restrictedDamerauLevenshteinDistance
       EditDistance.defaultEditCosts (Text.unpack x) (Text.unpack y)
     ]
     where
+        score True = 0
+        score False = 1
+        check f = map score [f rawX rawY, f x y]
         x = Text.toLower rawX
         y = Text.toLower rawY
 
