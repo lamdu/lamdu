@@ -33,6 +33,7 @@ import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
 import           GUI.Momentu.Widgets.Spacer (HasStdSpacing)
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
+import qualified GUI.Momentu.Widgets.TextEdit.Property as TextEdits
 import qualified GUI.Momentu.Widgets.TextView as TextView
 import qualified Lamdu.CharClassification as Chars
 import           Lamdu.Config (HasConfig)
@@ -50,6 +51,7 @@ import qualified Lamdu.Style as Style
 import           Lamdu.Sugar.NearestHoles (NearestHoles)
 import qualified Lamdu.Sugar.NearestHoles as NearestHoles
 import qualified Lamdu.Sugar.Types as Sugar
+import           Revision.Deltum.Property (Property(..))
 import           Revision.Deltum.Transaction (Transaction)
 
 import           Lamdu.Prelude
@@ -62,13 +64,16 @@ tagRenameId = (`Widget.joinId` ["rename"])
 tagViewId :: Widget.Id -> Widget.Id
 tagViewId = (`Widget.joinId` ["view"])
 
+disallowedNameChars :: String
+disallowedNameChars = ",[]\\`()"
+
 makeTagNameEdit ::
     ( MonadReader env m, HasConfig env, TextEdit.HasStyle env
     , GuiState.HasCursor env, Applicative f
     ) =>
     NearestHoles -> Name.StoredName f -> Widget.Id ->
     m (WithTextPos (Widget (f GuiState.Update)))
-makeTagNameEdit nearestHoles storedName myId =
+makeTagNameEdit nearestHoles (Name.StoredName setName tagText _tagCollision storedText) myId =
     do
         keys <- Lens.view Config.config <&> Config.menu <&> Menu.keysPickOptionAndGotoNext
         let jumpNextEventMap =
@@ -77,8 +82,11 @@ makeTagNameEdit nearestHoles storedName myId =
                   (E.keysEventMapMovesCursor keys
                    (E.Doc ["Navigation", "Jump to next hole"]) .
                    pure . WidgetIds.fromEntityId)
-        NameEdit.makeBareEdit storedName (tagRenameId myId)
-            <&> Align.tValue . Widget.eventMapMaker . Lens.mapped %~ E.filterChars (/= ',')
+        TextEdits.makeWordEdit
+            ?? TextEdit.EmptyStrings (tagText ^. Name.ttText) ""
+            ?? Property storedText setName
+            ?? tagRenameId myId
+            <&> Align.tValue . Widget.eventMapMaker . Lens.mapped %~ E.filterChars (`notElem`disallowedNameChars)
             <&> Align.tValue %~ Widget.weakerEvents jumpNextEventMap
             <&> Align.tValue %~ Widget.weakerEvents stopEditingEventMap
     where

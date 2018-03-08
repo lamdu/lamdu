@@ -1,7 +1,6 @@
 {-# LANGUAGE NoImplicitPrelude, OverloadedStrings #-}
 module Lamdu.GUI.NameEdit
     ( makeView
-    , makeBareEdit
     ) where
 
 import qualified Control.Lens as Lens
@@ -11,25 +10,15 @@ import           GUI.Momentu.Align (Aligned(..), WithTextPos(..))
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Draw as Draw
 import qualified GUI.Momentu.Element as Element
-import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Glue ((/|/))
-import qualified GUI.Momentu.State as GuiState
 import           GUI.Momentu.View (View)
-import           GUI.Momentu.Widget (Widget)
-import qualified GUI.Momentu.Widget as Widget
-import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
-import qualified GUI.Momentu.Widgets.TextEdit.Property as TextEdits
 import qualified GUI.Momentu.Widgets.TextView as TextView
 import           Lamdu.Config.Theme (HasTheme(..))
 import qualified Lamdu.Config.Theme as Theme
 import           Lamdu.Name (Name(..))
 import qualified Lamdu.Name as Name
-import           Revision.Deltum.Property (Property(..))
 
 import           Lamdu.Prelude
-
-disallowedNameChars :: String
-disallowedNameChars = "[]\\`()"
 
 -- TODO: This doesn't belong here
 makeCollisionSuffixLabel ::
@@ -73,17 +62,3 @@ makeView name =
             <&> (^. Align.value)
     where
         (Name.TagText visibleName textCollision, tagCollision) = Name.visible name
-
--- | A name edit without the collision suffixes
-makeBareEdit ::
-    ( Applicative f, MonadReader env m
-    , TextEdit.HasStyle env, GuiState.HasCursor env
-    ) =>
-    Name.StoredName f -> Widget.Id ->
-    m (WithTextPos (Widget (f GuiState.Update)))
-makeBareEdit (Name.StoredName setName tagText _tagCollision storedText) myId =
-    TextEdits.makeWordEdit
-    ?? TextEdit.EmptyStrings (tagText ^. Name.ttText) ""
-    ?? Property storedText setName
-    ?? myId
-    <&> Align.tValue . Widget.eventMapMaker . Lens.mapped %~ E.filterChars (`notElem` disallowedNameChars)
