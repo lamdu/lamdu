@@ -1,7 +1,7 @@
 {-# LANGUAGE NoImplicitPrelude #-}
 module Lamdu.Prelude
     ( module X
-    , traceId, trace, traceShowM, traceM
+    , traceId, traceIdVia, trace, traceShowM, traceM
     , todo
     ) where
 
@@ -27,6 +27,10 @@ import           Prelude.Compat as X
 {-# WARNING traceId "Leaving traces in the code" #-}
 traceId :: Show a => String -> a -> a
 traceId prefix x = Trace.trace (prefix ++ show x) x
+
+{-# WARNING traceIdVia "Leaving traces in the code" #-}
+traceIdVia :: Show b => (a -> b) -> String -> a -> a
+traceIdVia f prefix x = Trace.trace (prefix ++ show (f x)) x
 
 {-# WARNING trace "Leaving traces in the code" #-}
 trace :: String -> a -> a
