@@ -67,10 +67,17 @@ trieMatch n (c:cs) t@(Fuzzy _ m) =
     ++ [trieMatch (n-1) cs t | n > 0] -- <-- try skipping a char
     & mconcat
 
-distance :: Text -> Text -> Int
-distance x y =
-    EditDistance.restrictedDamerauLevenshteinDistance
-    EditDistance.defaultEditCosts (Text.unpack x) (Text.unpack y)
+distance :: Text -> Text -> [Int]
+distance rawX rawY =
+    [ if x == y then 0 else 1
+    , if x `Text.isPrefixOf` y then 0 else 1
+    , if x `Text.isInfixOf` y then 0 else 1
+    , EditDistance.restrictedDamerauLevenshteinDistance
+      EditDistance.defaultEditCosts (Text.unpack x) (Text.unpack y)
+    ]
+    where
+        x = Text.toLower rawX
+        y = Text.toLower rawY
 
 allowedSkips :: Int
 allowedSkips = 0

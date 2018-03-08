@@ -9,8 +9,9 @@ import qualified Control.Lens as Lens
 import           Control.Monad.ListT (ListT)
 import           Control.Monad.Transaction (MonadTransaction(..))
 import qualified Data.ByteString.Char8 as BS8
+import           Data.Function (on)
 import           Data.Functor.Identity (Identity(..))
-import           Data.List (sortOn)
+import           Data.List (sortOn, nubBy)
 import qualified Data.List.Class as ListClass
 import           Data.MRUMemo (memo)
 import qualified Data.Text as Text
@@ -22,6 +23,7 @@ import           Lamdu.Calc.Val.Annotated (Val)
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Expr.Lens as ExprLens
 import           Lamdu.Formatting (Format(..))
+import           Lamdu.Fuzzy (Fuzzy)
 import qualified Lamdu.Fuzzy as Fuzzy
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.ValTerms as ValTerms
 import           Lamdu.GUI.ExpressionGui (ExpressionN)
@@ -240,15 +242,20 @@ unicodeAlts haystack =
         extras _ = []
 
 {-# NOINLINE fuzzyMaker #-}
-fuzzyMaker :: [Text] -> Fuzzy.FuzzySet
-fuzzyMaker = memo Fuzzy.fuzzyMaker
+fuzzyMaker :: [(Text, Int)] -> Fuzzy (Set Int)
+fuzzyMaker = memo Fuzzy.make
 
 holeMatches :: Monad m => Text -> [Group m] -> [Group m]
 holeMatches searchTerm groups =
-    Fuzzy.matches (ValTerms.definitePart searchTerm) fuzzy
+    groups ^@.. Lens.ifolded
+    <&> (\(idx, group) -> searchTerms group <&> ((,) ?? (idx, group)))
+    & concat
+    & (Fuzzy.memoableMake fuzzyMaker ?? searchText)
+    & nubBy ((==) `on` fst)
+    <&> snd
     <&> groupResults %~ ListClass.filterL (fmap isHoleResultOK . snd)
     where
+        searchText = ValTerms.definitePart searchTerm
         searchTerms group = group ^. groupSearchTerms >>= unicodeAlts
-        fuzzy = Fuzzy.make fuzzyMaker searchTerms groups
         isHoleResultOK =
             ValTerms.verifyInjectSuffix searchTerm . (^. Sugar.holeResultConverted)
