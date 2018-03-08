@@ -2,6 +2,7 @@
 
 module GUI.Momentu.Main.Animation
     ( mainLoop, AnimConfig(..), Handlers(..), EventResult(..)
+    , wakeUp
     ) where
 
 import           Control.Concurrent (rtsSupportsBoundThreads)
@@ -113,6 +114,12 @@ waitForEvent eventTVar =
         pure ed
     & STM.atomically
 
+-- | Wake up the event handler thread, which will execute the tickHandler
+-- When the main loop is idle, we don't ecall tick events to get
+-- updates, so this is needed
+wakeUp :: IO ()
+wakeUp = GLFW.postEmptyEvent
+
 eventHandlerThread :: ThreadVars -> (Anim.Size -> Handlers) -> IO ()
 eventHandlerThread tvars animHandlers =
     forever $
@@ -145,7 +152,7 @@ eventHandlerThread tvars animHandlers =
             & STM.atomically
         -- In case main thread went to sleep (not knowing whether to anticipate
         -- a tick result), wake it up
-        when (Lens.has Lens._Just mNewFrame) GLFW.postEmptyEvent
+        when (Lens.has Lens._Just mNewFrame) wakeUp
 
 animThread ::
     IO (Maybe Draw.Font) ->
@@ -218,5 +225,5 @@ mainLoop win getFpsFont getAnimationConfig animHandlers =
             <*> newTVarIO mempty
         eventsThread <- forwardSynchronuousExceptions (eventHandlerThread tvars animHandlers)
         withForkedIO
-            (eventsThread `onException` GLFW.postEmptyEvent)
+            (eventsThread `onException` wakeUp)
             (animThread getFpsFont tvars animStateRef getAnimationConfig win)

@@ -262,7 +262,10 @@ newRefreshScheduler = newIORef False <&> RefreshScheduler
 isRefreshScheduled :: RefreshScheduler -> IO Bool
 isRefreshScheduled (RefreshScheduler ref) = atomicModifyIORef ref $ \r -> (False, r)
 scheduleRefresh :: RefreshScheduler -> IO ()
-scheduleRefresh (RefreshScheduler ref) = writeIORef ref True
+scheduleRefresh (RefreshScheduler ref) =
+    do
+        writeIORef ref True
+        MainLoop.wakeUp
 
 prependConfigPath :: ConfigSampler.Sample -> Fonts FilePath -> Fonts FilePath
 prependConfigPath sample =

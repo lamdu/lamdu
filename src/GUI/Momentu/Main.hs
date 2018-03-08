@@ -7,6 +7,7 @@ module GUI.Momentu.Main
     , DebugOptions(..), defaultDebugOptions
     , StateStorage(..)
     , Options(..), defaultOptions
+    , MainAnim.wakeUp
     , quitEventMap
     ) where
 
