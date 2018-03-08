@@ -20,7 +20,7 @@ import qualified Lamdu.GUI.ExpressionGui as ExprGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import           Lamdu.GUI.ExpressionGui.Wrap (stdWrapParentExpr)
-import qualified Lamdu.GUI.NameEdit as NameEdit
+import qualified Lamdu.GUI.NameView as NameView
 import qualified Lamdu.GUI.Styled as Styled
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Name (Name(..))
@@ -82,7 +82,7 @@ mkNomGui ordering nomStr str mDel pl (Sugar.Nominal tid val) =
                         do
                             label <- Styled.grammarLabel str
                             nameGui <-
-                                NameEdit.makeView
+                                NameView.make
                                 (tid ^. Sugar.tidName)
                             Widget.makeFocusableView ?? nameId
                                 <&> (Align.tValue %~) ?? label /|/ nameGui

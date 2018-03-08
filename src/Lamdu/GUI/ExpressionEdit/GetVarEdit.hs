@@ -36,7 +36,7 @@ import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import           Lamdu.GUI.ExpressionGui.Wrap (stdWrap)
 import qualified Lamdu.GUI.LightLambda as LightLambda
-import qualified Lamdu.GUI.NameEdit as NameEdit
+import qualified Lamdu.GUI.NameView as NameView
 import qualified Lamdu.GUI.Styled as Styled
 import qualified Lamdu.GUI.TypeView as TypeView
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
@@ -56,7 +56,7 @@ makeSimpleView ::
     m (WithTextPos (Widget (f GuiState.Update)))
 makeSimpleView name myId =
     (Widget.makeFocusableView ?? myId <&> (Align.tValue %~))
-    <*> NameEdit.makeView name
+    <*> NameView.make name
 
 makeParamsRecord ::
     ( MonadReader env m, HasTheme env, GuiState.HasCursor env

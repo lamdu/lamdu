@@ -217,7 +217,7 @@ Executable lamdu
                   , Lamdu.GUI.IOTrans
                   , Lamdu.GUI.LightLambda
                   , Lamdu.GUI.Main
-                  , Lamdu.GUI.NameEdit
+                  , Lamdu.GUI.NameView
                   , Lamdu.GUI.ParamEdit
                   , Lamdu.GUI.PresentationModeEdit
                   , Lamdu.GUI.ReplEdit

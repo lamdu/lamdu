@@ -41,7 +41,7 @@ import qualified Lamdu.Config as Config
 import           Lamdu.Config.Theme (HasTheme(..))
 import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
-import qualified Lamdu.GUI.NameEdit as NameEdit
+import qualified Lamdu.GUI.NameView as NameView
 import qualified Lamdu.GUI.Styled as Styled
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Name (Name(..))
@@ -212,7 +212,7 @@ makeOptions tagSelection mkPickResult ctx
             { Menu._oId = optionWId
             , Menu._oRender =
                 (Widget.makeFocusableView ?? optionWId <&> fmap)
-                <*> NameEdit.makeView (opt ^. Sugar.toName)
+                <*> NameView.make (opt ^. Sugar.toName)
                 & Reader.local (Element.animIdPrefix .~ Widget.toAnimId instanceId)
                 <&>
                 \widget ->
@@ -306,7 +306,7 @@ makeTagView ::
     (MonadReader env m, TextView.HasStyle env, Element.HasAnimIdPrefix env, HasTheme env) =>
     Sugar.Tag (Name f) g -> m (WithTextPos View)
 makeTagView tag =
-    NameEdit.makeView (tag ^. Sugar.tagName)
+    NameView.make (tag ^. Sugar.tagName)
     & Reader.local (Element.animIdPrefix .~ animId)
     where
         animId =
@@ -459,7 +459,7 @@ makeArgTag ::
 makeArgTag name tagInstance =
     do
         nameTheme <- Lens.view Theme.theme <&> Theme.name
-        NameEdit.makeView name
+        NameView.make name
             & Reader.local (TextView.color .~ Theme.argTagColor nameTheme)
     & Reader.local (Element.animIdPrefix .~ animId)
     where

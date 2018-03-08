@@ -1,6 +1,6 @@
 {-# LANGUAGE NoImplicitPrelude, OverloadedStrings #-}
-module Lamdu.GUI.NameEdit
-    ( makeView
+module Lamdu.GUI.NameView
+    ( make
     ) where
 
 import qualified Control.Lens as Lens
@@ -20,7 +20,6 @@ import qualified Lamdu.Name as Name
 
 import           Lamdu.Prelude
 
--- TODO: This doesn't belong here
 makeCollisionSuffixLabel ::
     ( TextView.HasStyle r, Element.HasAnimIdPrefix r, HasTheme r
     , MonadReader r m
@@ -42,11 +41,10 @@ makeCollisionSuffixLabel collisionColor mCollision =
             <&> (^. Align.tValue)
             <&> Just
 
--- TODO: This doesn't belong here
-makeView ::
+make ::
     (HasTheme r, Element.HasAnimIdPrefix r, TextView.HasStyle r, MonadReader r m) =>
     Name f -> m (WithTextPos View)
-makeView name =
+make name =
     do
         mTextSuffixLabel <-
             makeCollisionSuffixLabel Theme.textCollisionSuffixBGColor textCollision
