@@ -44,7 +44,7 @@ Executable lamdu
                   , deepseq-generics >= 0.1
                   , directory >= 1.0.1.1
                   , filepath >= 1.1
-                  , fuzzyset
+                  , edit-distance
                   , GLFW-b >= 1.4.8.0
                   , graphics-drawingcombinators >= 1.7.1
                   , hashable

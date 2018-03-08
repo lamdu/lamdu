@@ -40,6 +40,7 @@ import           Lamdu.Config (HasConfig)
 import qualified Lamdu.Config as Config
 import           Lamdu.Config.Theme (HasTheme(..))
 import qualified Lamdu.Config.Theme as Theme
+import           Lamdu.Fuzzy (Fuzzy)
 import qualified Lamdu.Fuzzy as Fuzzy
 import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
 import qualified Lamdu.GUI.NameView as NameView
@@ -181,8 +182,8 @@ nameText :: Lens.Traversal' (Sugar.TagOption (Name f) m a) Text
 nameText = Sugar.toName . Name._Stored . Name.snDisplayText . Name.ttText
 
 {-# NOINLINE fuzzyMaker #-}
-fuzzyMaker :: [Text] -> Fuzzy.FuzzySet
-fuzzyMaker = memo Fuzzy.fuzzyMaker
+fuzzyMaker :: [(Text, Int)] -> Fuzzy (Set Int)
+fuzzyMaker = memo Fuzzy.make
 
 makeOptions ::
     ( MonadTransaction m f, MonadReader env f, GuiState.HasCursor env
@@ -200,14 +201,15 @@ makeOptions tagSelection mkPickResult ctx
                 Lens.view Config.config
                 <&> Config.completion <&> Config.completionResultCount
             tagSelection ^. Sugar.tsOptions & transaction
-                <&> Fuzzy.make fuzzyMaker (^.. nameText)
-                <&> Fuzzy.matches searchTerm
+                <&> concatMap withText
+                <&> (Fuzzy.memoableMake fuzzyMaker ?? searchTerm)
                 <&> splitAt resultCount
                 <&> _2 %~ not . null
                 <&> uncurry Menu.OptionList
                 <&> fmap makeOption
                 <&> addNewTagIfNullOptions tagSelection mkPickResult ctx
     where
+        withText tagOption = tagOption ^.. nameText <&> ((,) ?? tagOption)
         searchTerm = ctx ^. SearchMenu.rSearchTerm
         makeOption opt =
             Menu.Option
