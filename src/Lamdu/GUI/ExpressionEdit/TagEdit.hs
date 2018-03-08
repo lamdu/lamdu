@@ -13,6 +13,9 @@ import qualified Control.Monad.Reader as Reader
 import           Control.Monad.Transaction (MonadTransaction(..))
 import qualified Data.Char as Char
 import           Data.Function (on)
+import           Data.FuzzySet (FuzzySet)
+import qualified Data.FuzzySet as Fuzzy
+import qualified Data.Map as Map
 import qualified Data.Text as Text
 import           GUI.Momentu.Align (WithTextPos)
 import qualified GUI.Momentu.Align as Align
@@ -179,6 +182,29 @@ addNewTagIfNullOptions tagSelection mkPickResult ctx optionList =
         optionId = (ctx ^. SearchMenu.rResultIdPrefix) `Widget.joinId` ["Create new"]
         searchTerm = ctx ^. SearchMenu.rSearchTerm
 
+nameText :: Lens.Traversal' (Sugar.TagOption (Name f) m a) Text
+nameText = Sugar.toName . Name._Stored . Name.snDisplayText . Name.ttText
+
+data FuzzyMap a = FuzzyMap
+    { fuzzySet :: FuzzySet
+    , values :: Map Text a
+    }
+
+fuzzyMap :: (a -> Text) -> [a] -> FuzzyMap a
+fuzzyMap f opts =
+    FuzzyMap
+    { fuzzySet = Map.keys vals & Fuzzy.fromList
+    , values = vals
+    }
+    where
+        vals = opts <&> join (,) <&> _1 %~ f & Map.fromList
+
+fuzzyMatches :: Text -> FuzzyMap a -> [a]
+fuzzyMatches text fuzzyMap =
+    Fuzzy.get (fuzzySet fuzzyMap) text <&> snd
+    <&> (`Map.lookup` values fuzzyMap)
+    <&> fromMaybe (error "Element in fuzzy set not inside fuzzy map")
+
 makeOptions ::
     ( MonadTransaction m f, MonadReader env f, GuiState.HasCursor env
     , HasConfig env, HasTheme env, Element.HasAnimIdPrefix env, TextView.HasStyle env
@@ -195,7 +221,8 @@ makeOptions tagSelection mkPickResult ctx
                 Lens.view Config.config
                 <&> Config.completion <&> Config.completionResultCount
             tagSelection ^. Sugar.tsOptions & transaction
-                <&> filter (Lens.anyOf nameText isFit)
+                <&> fuzzyMap (^. nameText)
+                <&> fuzzyMatches searchTerm
                 <&> splitAt resultCount
                 <&> _2 %~ not . null
                 <&> uncurry Menu.OptionList
@@ -205,7 +232,6 @@ makeOptions tagSelection mkPickResult ctx
         isFit
             | Text.length searchTerm == 1 = (==) searchTerm
             | otherwise = insensitiveInfixOf searchTerm
-        nameText = Sugar.toName . Name._Stored . Name.snDisplayText . Name.ttText
         searchTerm = ctx ^. SearchMenu.rSearchTerm
         makeOption opt =
             Menu.Option
