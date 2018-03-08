@@ -195,7 +195,7 @@ makeOptions tagSelection mkPickResult ctx
                 Lens.view Config.config
                 <&> Config.completion <&> Config.completionResultCount
             tagSelection ^. Sugar.tsOptions & transaction
-                <&> Fuzzy.make (^. nameText)
+                <&> Fuzzy.make (^.. nameText)
                 <&> Fuzzy.matches searchTerm
                 <&> splitAt resultCount
                 <&> _2 %~ not . null
