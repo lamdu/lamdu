@@ -12,10 +12,7 @@ import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
 import           Control.Monad.Transaction (MonadTransaction(..))
 import qualified Data.Char as Char
-import           Data.Function (on)
-import           Data.FuzzySet (FuzzySet)
-import qualified Data.FuzzySet as Fuzzy
-import qualified Data.Map as Map
+import qualified Lamdu.Fuzzy as Fuzzy
 import qualified Data.Text as Text
 import           GUI.Momentu.Align (WithTextPos)
 import qualified GUI.Momentu.Align as Align
@@ -100,9 +97,6 @@ makeTagNameEdit nearestHoles (Name.StoredName setName tagText _tagCollision stor
             ]
             (E.Doc ["Edit", "Tag", "Stop editing"]) (pure (tagViewId myId))
 
-insensitiveInfixOf :: Text -> Text -> Bool
-insensitiveInfixOf = Text.isInfixOf `on` Text.toLower
-
 tagId :: Sugar.Tag name m -> Widget.Id
 tagId tag = tag ^. Sugar.tagInfo . Sugar.tagInstance & WidgetIds.fromEntityId
 
@@ -185,26 +179,6 @@ addNewTagIfNullOptions tagSelection mkPickResult ctx optionList =
 nameText :: Lens.Traversal' (Sugar.TagOption (Name f) m a) Text
 nameText = Sugar.toName . Name._Stored . Name.snDisplayText . Name.ttText
 
-data FuzzyMap a = FuzzyMap
-    { fuzzySet :: FuzzySet
-    , values :: Map Text a
-    }
-
-fuzzyMap :: (a -> Text) -> [a] -> FuzzyMap a
-fuzzyMap f opts =
-    FuzzyMap
-    { fuzzySet = Map.keys vals & Fuzzy.fromList
-    , values = vals
-    }
-    where
-        vals = opts <&> join (,) <&> _1 %~ f & Map.fromList
-
-fuzzyMatches :: Text -> FuzzyMap a -> [a]
-fuzzyMatches text fuzzyMap =
-    Fuzzy.get (fuzzySet fuzzyMap) text <&> snd
-    <&> (`Map.lookup` values fuzzyMap)
-    <&> fromMaybe (error "Element in fuzzy set not inside fuzzy map")
-
 makeOptions ::
     ( MonadTransaction m f, MonadReader env f, GuiState.HasCursor env
     , HasConfig env, HasTheme env, Element.HasAnimIdPrefix env, TextView.HasStyle env
@@ -221,17 +195,14 @@ makeOptions tagSelection mkPickResult ctx
                 Lens.view Config.config
                 <&> Config.completion <&> Config.completionResultCount
             tagSelection ^. Sugar.tsOptions & transaction
-                <&> fuzzyMap (^. nameText)
-                <&> fuzzyMatches searchTerm
+                <&> Fuzzy.make (^. nameText)
+                <&> Fuzzy.matches searchTerm
                 <&> splitAt resultCount
                 <&> _2 %~ not . null
                 <&> uncurry Menu.OptionList
                 <&> fmap makeOption
                 <&> addNewTagIfNullOptions tagSelection mkPickResult ctx
     where
-        isFit
-            | Text.length searchTerm == 1 = (==) searchTerm
-            | otherwise = insensitiveInfixOf searchTerm
         searchTerm = ctx ^. SearchMenu.rSearchTerm
         makeOption opt =
             Menu.Option

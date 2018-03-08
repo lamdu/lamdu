@@ -182,6 +182,7 @@ Executable lamdu
                   , Lamdu.Expr.UniqueId
                   , Lamdu.Font
                   , Lamdu.Formatting
+                  , Lamdu.Fuzzy
                   , Lamdu.GUI.AnnotationsPass
                   , Lamdu.GUI.CodeEdit
                   , Lamdu.GUI.CodeEdit.Settings
