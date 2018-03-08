@@ -41,6 +41,7 @@ import           Lamdu.Config.Theme (HasTheme(..))
 import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
 import qualified Lamdu.GUI.NameEdit as NameEdit
+import qualified Lamdu.GUI.Styled as Styled
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Name (Name(..))
 import qualified Lamdu.Name as Name
@@ -389,7 +390,7 @@ makeRecordTag ::
     m (WithTextPos (Widget (T f GuiState.Update)))
 makeRecordTag nearestHoles tag =
     makeTagEdit nearestHoles tag
-    & NameEdit.withNameColor Theme.recordTagColor
+    & Styled.withColor (Theme.recordTagColor . Theme.name)
 
 makeVariantTag ::
     (MonadReader env m, MonadTransaction f m, HasTagEditEnv env) =>
@@ -397,7 +398,7 @@ makeVariantTag ::
     m (WithTextPos (Widget (T f GuiState.Update)))
 makeVariantTag nearestHoles tag =
     makeTagEdit nearestHoles tag
-    & NameEdit.withNameColor Theme.caseTagColor
+    & Styled.withColor (Theme.caseTagColor . Theme.name)
 
 addParamId :: Widget.Id -> Widget.Id
 addParamId = (`Widget.joinId` ["add param"])
@@ -412,7 +413,7 @@ makeLHSTag onPickNext color tag =
         style <- Lens.view Style.style
         (tagEditType, tagEdit) <-
             makeTagEditWith onView onPickNext NearestHoles.none tag
-            & NameEdit.withNameColor color
+            & Styled.withColor (color . Theme.name)
             & Reader.local (TextEdit.style .~ style ^. Style.styleNameAtBinder)
         let eventMap =
                 case tagEditType of

@@ -3,7 +3,6 @@ module Lamdu.GUI.NameEdit
     ( makeView
     , makeBareEdit
     , styleNameAtBinder
-    , withNameColor
     ) where
 
 import qualified Control.Lens as Lens
@@ -106,11 +105,3 @@ styleNameAtBinder nameColor name act =
                     Name.Stored {}        -> Style.styleNameAtBinder
                 & TextView.color .~ color
         act & Reader.local (TextEdit.style .~ textEditStyle)
-
-withNameColor ::
-    (MonadReader env m, HasTheme env, TextView.HasStyle env) =>
-    (Theme.Name -> Draw.Color) -> m a -> m a
-withNameColor nameColor act =
-    do
-        color <- Lens.view Theme.theme <&> Theme.name <&> nameColor
-        Reader.local (TextView.color .~ color) act

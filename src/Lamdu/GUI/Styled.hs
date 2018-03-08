@@ -7,6 +7,7 @@ module Lamdu.GUI.Styled
     , addValPadding, addValFrame
     , addDeletionDiagonal
     , actionable
+    , withColor
     ) where
 
 import qualified Control.Lens as Lens
@@ -107,6 +108,14 @@ addDeletionDiagonal ::
     m (Widget.R -> a -> a)
 addDeletionDiagonal =
     addDiagonal <*> (Lens.view Theme.theme <&> Theme.typeIndicatorErrorColor)
+
+withColor ::
+    (MonadReader env m, HasTheme env, TextView.HasStyle env) =>
+    (Theme -> Draw.Color) -> m a -> m a
+withColor nameColor act =
+    do
+        color <- Lens.view Theme.theme <&> nameColor
+        Reader.local (TextView.color .~ color) act
 
 actionable ::
     ( Element.HasAnimIdPrefix env, TextView.HasStyle env

@@ -229,7 +229,7 @@ makeGetParam param myId =
                 <&> Lens.mapped %~ NameEdit.styleNameAtBinder Theme.parameterColor name
             _ ->
                 makeSimpleView
-            <&> Lens.mapped %~ NameEdit.withNameColor Theme.parameterColor
+            <&> Lens.mapped %~ Styled.withColor (Theme.parameterColor . Theme.name)
             & makeNameRef myId (param ^. Sugar.pNameRef)
     where
         name = param ^. Sugar.pNameRef . Sugar.nrName

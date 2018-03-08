@@ -24,7 +24,7 @@ import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExprGui
 import qualified Lamdu.GUI.ExpressionGui.Annotation as Annotation
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
-import qualified Lamdu.GUI.NameEdit as NameEdit
+import qualified Lamdu.GUI.Styled as Styled
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Name (Name)
 import qualified Lamdu.Sugar.Types as Sugar
@@ -133,7 +133,7 @@ make annotationOpts prevId nextId param =
             Nothing -> pure []
             Just addParam ->
                 TagEdit.makeTagHoleEdit addParam mkParamPickResult addId
-                & NameEdit.withNameColor Theme.parameterColor
+                & Styled.withColor (Theme.parameterColor . Theme.name)
                 <&> Responsive.fromWithTextPos
                 <&> (:[])
         paramEdit : addParamEdits & pure
