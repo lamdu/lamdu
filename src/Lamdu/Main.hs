@@ -222,7 +222,9 @@ runEditor opts db =
     do
         -- Load config as early as possible, before we open any windows/etc
         themeRef <- newIORef defaultTheme
-        configSampler <- ConfigSampler.new defaultTheme
+        refreshScheduler <- newRefreshScheduler
+        let refresh = scheduleRefresh refreshScheduler
+        configSampler <- ConfigSampler.new (const refresh) defaultTheme
 
         M.withGLFW $ do
             win <-
@@ -230,12 +232,11 @@ runEditor opts db =
                 (opts ^. Opts.eoWindowTitle)
                 (opts ^. Opts.eoWindowMode)
             printGLVersion
-            refreshScheduler <- newRefreshScheduler
             withMVarProtection db $ \dbMVar ->
                 do
                     evaluator <-
                         EvalManager.new EvalManager.NewParams
-                        { EvalManager.resultsUpdated = scheduleRefresh refreshScheduler
+                        { EvalManager.resultsUpdated = refresh
                         , EvalManager.dbMVar = dbMVar
                         , EvalManager.copyJSOutputPath = opts ^. Opts.eoCopyJSOutputPath
                         }

@@ -70,19 +70,19 @@ load themeName configPath =
         msg path = "Failed to parse config file contents at " ++ show path ++ ": "
         themePath = calcThemePath configPath themeName
 
-maybeReload :: Sample -> FilePath -> IO Sample
+maybeReload :: Sample -> FilePath -> IO (Maybe Sample)
 maybeReload old newConfigPath =
     do
         mtime <-
             traverse getModificationTime [old ^. sConfigPath, old ^. sThemePath]
         if mtime == sVersion old
-            then pure old
-            else load theme newConfigPath
+            then pure Nothing
+            else load theme newConfigPath <&> Just
     where
         theme = old ^. sThemePath & takeFileName & dropExtension & Text.pack
 
-new :: Text -> IO Sampler
-new initialTheme =
+new :: (Sample -> IO ()) -> Text -> IO Sampler
+new sampleUpdated initialTheme =
     do
         ref <-
             getConfigPath
@@ -93,9 +93,13 @@ new initialTheme =
             forkIOUnmasked . forever $
             do
                 threadDelay 300000
-                modifyMVar_ ref $ \old ->
-                    (getConfigPath >>= maybeReload old)
-                    `E.catch` \E.SomeException {} -> pure old
+                let reloadResult old Nothing = (old, Nothing)
+                    reloadResult _ (Just newSample) = (newSample, Just newSample)
+                mNew <-
+                    modifyMVar ref $ \old ->
+                    (getConfigPath >>= maybeReload old <&> reloadResult old)
+                    `E.catch` \E.SomeException {} -> pure (old, Nothing)
+                traverse_ sampleUpdated mNew
         pure Sampler
             { _sThreadId = tid
             , getSample = readMVar ref
