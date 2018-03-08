@@ -429,7 +429,7 @@ makeLHSTag onPickNext color tag =
         myId = tag ^. Sugar.tagInfo . Sugar.tagInstance & WidgetIds.fromEntityId
         -- Apply the name style only when the tag is a view. If it is
         -- a tag hole, the name style (indicating auto-name) makes no sense
-        onView = NameEdit.styleNameAtBinder color (tag ^. Sugar.tagName)
+        onView = Styled.nameAtBinder color (tag ^. Sugar.tagName)
 
 makeParamTag ::
     ( MonadReader env f, HasTheme env, HasConfig env, HasStyle env

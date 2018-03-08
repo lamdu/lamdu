@@ -226,7 +226,7 @@ makeGetParam param myId =
             Sugar.LightLambda ->
                 makeSimpleView
                 <&> Lens.mapped %~ LightLambda.withUnderline theme
-                <&> Lens.mapped %~ NameEdit.styleNameAtBinder Theme.parameterColor name
+                <&> Lens.mapped %~ Styled.nameAtBinder Theme.parameterColor name
             _ ->
                 makeSimpleView
             <&> Lens.mapped %~ Styled.withColor (Theme.parameterColor . Theme.name)
