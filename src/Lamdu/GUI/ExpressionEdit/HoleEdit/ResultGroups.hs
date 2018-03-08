@@ -9,10 +9,10 @@ import qualified Control.Lens as Lens
 import           Control.Monad.ListT (ListT)
 import           Control.Monad.Transaction (MonadTransaction(..))
 import qualified Data.ByteString.Char8 as BS8
-import           Data.Function (on)
 import           Data.Functor.Identity (Identity(..))
 import           Data.List (sortOn)
 import qualified Data.List.Class as ListClass
+import           Data.MRUMemo (memo)
 import qualified Data.Text as Text
 import qualified GUI.Momentu.Widget.Id as WidgetId
 import qualified GUI.Momentu.Widgets.Menu as Menu
@@ -22,6 +22,7 @@ import           Lamdu.Calc.Val.Annotated (Val)
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Expr.Lens as ExprLens
 import           Lamdu.Formatting (Format(..))
+import qualified Lamdu.Fuzzy as Fuzzy
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.ValTerms as ValTerms
 import           Lamdu.GUI.ExpressionGui (ExpressionN)
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
@@ -223,15 +224,11 @@ makeLiteralGroups searchTerm optionLiteral =
     , tryBuildLiteral "Bytes" Sugar.LiteralBytes optionLiteral searchTerm
     ] ^.. Lens.traverse . Lens._Just
 
-insensitivePrefixOf :: Text -> Text -> Bool
-insensitivePrefixOf = Text.isPrefixOf `on` Text.toLower
-
-infixAltOf :: Text -> Text -> Bool
-infixAltOf needle haystack =
+unicodeAlts :: Text -> [Text]
+unicodeAlts haystack =
     mapM alts (Text.unpack haystack)
     <&> concat
     <&> Text.pack
-    & any (Text.isInfixOf needle)
     where
         alts x = [x] : extras x
         extras '≥' = [">="]
@@ -242,33 +239,16 @@ infixAltOf needle haystack =
         extras 'β' = ["beta"]
         extras _ = []
 
-insensitiveInfixAltOf :: Text -> Text -> Bool
-insensitiveInfixAltOf = infixAltOf `on` Text.toLower
-
-groupOrdering :: Text -> Group m -> [Bool]
-groupOrdering searchTerm group =
-    map not
-    [ null (group ^. groupSearchTerms)
-    , match (==)
-    , match Text.isPrefixOf
-    , match insensitivePrefixOf
-    , match Text.isInfixOf
-    ]
-    where
-        match f = any (f searchTerm) (group ^. groupSearchTerms)
+{-# NOINLINE fuzzyMaker #-}
+fuzzyMaker :: [Text] -> Fuzzy.FuzzySet
+fuzzyMaker = memo Fuzzy.fuzzyMaker
 
 holeMatches :: Monad m => Text -> [Group m] -> [Group m]
 holeMatches searchTerm groups =
-    groups
-    & filterBySearchTerm
-    & sortOn (groupOrdering (ValTerms.definitePart searchTerm))
+    Fuzzy.matches (ValTerms.definitePart searchTerm) fuzzy
     <&> groupResults %~ ListClass.filterL (fmap isHoleResultOK . snd)
     where
+        searchTerms group = group ^. groupSearchTerms >>= unicodeAlts
+        fuzzy = Fuzzy.make fuzzyMaker searchTerms groups
         isHoleResultOK =
             ValTerms.verifyInjectSuffix searchTerm . (^. Sugar.holeResultConverted)
-        filterBySearchTerm
-            | Text.null searchTerm = id
-            | otherwise = filter nameMatch
-        nameMatch group =
-            any (insensitiveInfixAltOf (ValTerms.definitePart searchTerm))
-            (group ^. groupSearchTerms)
