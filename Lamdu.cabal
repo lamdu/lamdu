@@ -27,7 +27,11 @@ Data-files:          fonts/DejaVuSans.ttf
                    , doc/JsExportReadMe.md
                    , js/jsExportRtsConfig.js
 
-Executable lamdu
+source-repository head
+  type: git
+  location: https://github.com/lamdu/lamdu.git
+
+Library
   hs-Source-Dirs: src
   Build-Depends:    AlgoW
                   , aeson >= 1.1
@@ -75,7 +79,7 @@ Executable lamdu
                   , zip-archive
                   , cryptohash-sha256
 
-  Other-modules:    Control.Concurrent.Utils
+  Exposed-modules:  Control.Concurrent.Utils
                   , Control.Lens.Utils
                   , Control.Monad.Trans.Except.Utils
                   , Control.Monad.Trans.FastRWS
@@ -267,8 +271,6 @@ Executable lamdu
                   , Lamdu.Sugar.Convert.Tag
                   , Lamdu.Sugar.Convert.Text
                   , Lamdu.Sugar.EntityId
-                  , Lamdu.Sugar.Internal
-                  , Lamdu.Sugar.Internal.EntityId
                   , Lamdu.Sugar.Parens
                   , Lamdu.Sugar.Lens
                   , Lamdu.Sugar.Names.Add
@@ -292,7 +294,6 @@ Executable lamdu
                   , Lamdu.VersionControl.Actions
                   , Numeric.Utils
                   , Paths.Utils
-                  , Paths_Lamdu
                   , Revision.Deltum.Db
                   , Revision.Deltum.IRef
                   , Revision.Deltum.Property
@@ -304,23 +305,23 @@ Executable lamdu
                   , Revision.Deltum.Transaction
                   , System.Random.Utils
 
-  ghc-options:         -O2 -Wall -Widentities -Wimplicit-prelude -Wmissing-home-modules -Wincomplete-patterns -Wnoncanonical-monad-instances -Wsemigroup -Wincomplete-record-updates -Wredundant-constraints -threaded
-  -- ghc-options is prepended to ghc-prof-options
-  ghc-prof-options:    -fprof-auto -fprof-cafs -rtsopts
-  main-is:             Lamdu/Main.hs
+  other-modules:    Lamdu.Sugar.Internal
+                  , Lamdu.Sugar.Internal.EntityId
+                  , Paths_Lamdu
 
-source-repository head
-  type: git
-  location: https://github.com/lamdu/lamdu.git
+  ghc-options:         -O2 -Wall -Widentities -Wimplicit-prelude -Wmissing-home-modules -Wincomplete-patterns -Wnoncanonical-monad-instances -Wsemigroup -Wincomplete-record-updates -Wredundant-constraints
+  ghc-prof-options:    -fprof-auto -fprof-cafs
+
+Executable lamdu
+  build-depends: Lamdu, base, directory, filepath, lens, OpenGL
+  main-is: src/Lamdu/Main.hs
+  ghc-options: -O2 -Wall -Widentities -Wimplicit-prelude -Wmissing-home-modules -Wincomplete-patterns -Wnoncanonical-monad-instances -Wsemigroup -Wincomplete-record-updates -Wredundant-constraints -threaded
+  ghc-prof-options: -fprof-auto -fprof-cafs -rtsopts
 
 Test-Suite TestJsonCodecMigration
   type: exitcode-stdio-1.0
-  hs-source-dirs: test, src
+  hs-source-dirs: test
   main-is: TestJsonCodecMigration.hs
-  ghc-options: -Wno-missing-home-modules
-  build-depends:
-    base, HUnit, test-framework, test-framework-hunit,
-    aeson, aeson-pretty, base-compat, base16-bytestring, binary, bytestring, containers,
-    cryptohash-sha256, deepseq, deepseq-generics, lens, leveldb-haskell, List, mtl, random,
-    safe-exceptions, text, transformers, unordered-containers, uuid, uuid-types, vector,
-    AlgoW, lamdu-calculus
+  build-depends: Lamdu, base, HUnit, test-framework, test-framework-hunit
+  ghc-options: -O2 -Wall -Widentities -Wimplicit-prelude -Wmissing-home-modules -Wincomplete-patterns -Wnoncanonical-monad-instances -Wsemigroup -Wincomplete-record-updates -Wredundant-constraints -threaded
+  ghc-prof-options: -fprof-auto -fprof-cafs -rtsopts
