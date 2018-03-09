@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, RankNTypes, ScopedTypeVariables #-}
+{-# LANGUAGE NoImplicitPrelude #-}
 module Lamdu.GUI.AnnotationsPass
     ( markAnnotationsToDisplay
     ) where
@@ -33,7 +33,6 @@ topLevelAnn :: Lens' (Expression name m (T.ShowAnnotation, a)) T.ShowAnnotation
 topLevelAnn = rPayload . plData . _1
 
 markAnnotationsToDisplay ::
-    forall name m a.
     Expression name m a ->
     Expression name m (T.ShowAnnotation, a)
 markAnnotationsToDisplay (Expression oldBody pl) =

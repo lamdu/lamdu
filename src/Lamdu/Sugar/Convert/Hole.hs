@@ -1,4 +1,4 @@
-{-# LANGUAGE LambdaCase, NoImplicitPrelude, ConstraintKinds, OverloadedStrings, RankNTypes #-}
+{-# LANGUAGE LambdaCase, NoImplicitPrelude, OverloadedStrings #-}
 module Lamdu.Sugar.Convert.Hole
     ( convert
       -- Used by Convert.GetVar:

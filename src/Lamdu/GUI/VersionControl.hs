@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, TypeOperators, OverloadedStrings, RankNTypes #-}
+{-# LANGUAGE NoImplicitPrelude, OverloadedStrings, RankNTypes #-}
 module Lamdu.GUI.VersionControl
     ( make
     ) where

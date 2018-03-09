@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, RankNTypes #-}
+{-# LANGUAGE NoImplicitPrelude #-}
 module Lamdu.Sugar.OrderTags
     ( orderDef, orderType, orderExpr
     , orderedFlatComposite, orderedClosedFlatComposite

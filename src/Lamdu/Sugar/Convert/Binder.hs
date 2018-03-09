@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, FlexibleContexts, TypeFamilies, RankNTypes, DisambiguateRecordFields #-}
+{-# LANGUAGE NoImplicitPrelude, DisambiguateRecordFields #-}
 module Lamdu.Sugar.Convert.Binder
     ( convertDefinitionBinder, convertLam, convertBinderBody
     ) where
