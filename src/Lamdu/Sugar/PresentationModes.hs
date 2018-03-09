@@ -8,6 +8,7 @@ import           Data.Either (partitionEithers)
 import qualified Data.Map as Map
 import qualified Lamdu.Data.Anchors as Anchors
 import           Lamdu.Sugar.Internal
+import qualified Lamdu.Sugar.Lens as SugarLens
 import qualified Lamdu.Sugar.Types as Sugar
 import           Revision.Deltum.Transaction (Transaction)
 import qualified Revision.Deltum.Transaction as Transaction
@@ -67,25 +68,16 @@ addToLabeledApply a =
                     } & pure
             & fromMaybe (Left arg)
 
-addToHoleResult ::
-    Monad m =>
-    Sugar.HoleResult (T m) (Sugar.Expression InternalName (T m) ()) ->
-    T m (Sugar.HoleResult (T m) (Sugar.Expression InternalName (T m) ()))
-addToHoleResult = Sugar.holeResultConverted %%~ addToExpr
-
-addToOptions ::
-    Monad m =>
-    T m [Sugar.HoleOption (T m) (Sugar.Expression InternalName (T m) ())] ->
-    T m [Sugar.HoleOption (T m) (Sugar.Expression InternalName (T m) ())]
-addToOptions = Lens.mapped . Lens.mapped . Sugar.hoResults . Lens.mapped . _2 %~ (>>= addToHoleResult)
-
 addToBody ::
     Monad m =>
     Sugar.Body InternalName (T m) (Sugar.Expression InternalName (T m) a) ->
     T m (Sugar.Body InternalName (T m) (Sugar.Expression InternalName (T m) a))
 addToBody (Sugar.BodyLabeledApply a) = addToLabeledApply a <&> Sugar.BodyLabeledApply
-addToBody (Sugar.BodyHole h) = h & Sugar.holeOptions %~ addToOptions & Sugar.BodyHole & pure
-addToBody (Sugar.BodyFragment w) = w & Sugar.fOptions %~ addToOptions & Sugar.BodyFragment & pure
+addToBody (Sugar.BodyHole h) = SugarLens.holeTransformExprs addToExpr h & Sugar.BodyHole & pure
+addToBody (Sugar.BodyFragment w) =
+    w
+    & Sugar.fOptions . Lens.mapped . Lens.mapped %~ SugarLens.holeOptionTransformExprs addToExpr
+    & Sugar.BodyFragment & pure
 addToBody b = pure b
 
 addToExpr ::

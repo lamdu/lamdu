@@ -13,6 +13,7 @@ import qualified Control.Lens as Lens
 import qualified Data.Set as Set
 import           Lamdu.Calc.Type (Type)
 import qualified Lamdu.Calc.Type as T
+import qualified Lamdu.Sugar.Lens as SugarLens
 import           Lamdu.Sugar.Names.CPS (CPS(..), liftCPS)
 import qualified Lamdu.Sugar.Names.NameGen as NameGen
 import qualified Lamdu.Sugar.Types as Sugar
@@ -71,25 +72,6 @@ type NewExpression m a = Expression (NewName m) (TM m) a
 isFunctionType :: Type -> NameGen.VarInfo
 isFunctionType T.TFun {} = NameGen.Function
 isFunctionType _ = NameGen.NormalVar
-
-toHoleResult ::
-    MonadNaming m =>
-    HoleResult (TM m) (Expression (OldName m) (TM m) ()) ->
-    m (HoleResult (TM m) (Expression (NewName m) (TM m) ()))
-toHoleResult = holeResultConverted toExpression
-
-toHoleOption ::
-    MonadNaming m =>
-    HoleOption (TM m) (Expression (OldName m) (TM m) ()) ->
-    m (HoleOption (TM m) (Expression (NewName m) (TM m) ()))
-toHoleOption option@HoleOption{..} =
-    do
-        run0 <- opRun
-        run1 <- opRun
-        pure option
-            { _hoSugaredBaseExpr = _hoSugaredBaseExpr >>= run0 . toExpression
-            , _hoResults = _hoResults <&> _2 %~ (>>= run1 . toHoleResult)
-            }
 
 toParamRef ::
     MonadNaming m =>
@@ -235,15 +217,11 @@ toHole ::
     MonadNaming m =>
     Hole (TM m) (Expression (OldName m) (TM m) ()) ->
     m (Hole (TM m) (Expression (NewName m) (TM m) ()))
-toHole Hole{..} =
-    do
-        run0 <- opRun
-        run1 <- opRun
-        pure Hole
-            { _holeOptions = _holeOptions >>= run0 . traverse toHoleOption
-            , _holeOptionLiteral = _holeOptionLiteral <&> Lens.mapped . _2 %~ (>>= run1 . toHoleResult)
-            , _holeMDelete = _holeMDelete
-            }
+toHole hole =
+    opRun
+    <&>
+    \run ->
+    SugarLens.holeTransformExprs (run . toExpression) hole
 
 toFragment ::
     MonadNaming m =>
@@ -257,7 +235,7 @@ toFragment expr Fragment{..} =
         pure Fragment
             { _fExpr = newExpr
             , _fAttach = _fAttach
-            , _fOptions = _fOptions >>= run . traverse toHoleOption
+            , _fOptions = _fOptions <&> Lens.mapped %~ SugarLens.holeOptionTransformExprs (run . toExpression)
             }
 
 toComposite ::

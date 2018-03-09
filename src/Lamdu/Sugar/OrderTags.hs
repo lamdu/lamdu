@@ -59,15 +59,6 @@ orderRecord = Sugar.cItems %%~ orderByTag (^. Sugar.ciTag . Sugar.tagInfo . Suga
 orderLabeledApply :: Monad m => Order m (Sugar.LabeledApply name binderVar a)
 orderLabeledApply = Sugar.aAnnotatedArgs %%~ orderByTag (^. Sugar.aaTag . Sugar.tagVal)
 
-orderHoleResult :: Monad m => Order m (Sugar.HoleResult (T m) (Sugar.Expression name (T m) ()))
-orderHoleResult = Sugar.holeResultConverted %%~ orderExpr
-
-orderHoleOptions ::
-    Monad m =>
-    T m [Sugar.HoleOption (T m) (Sugar.Expression name (T m) ())] ->
-    T m [Sugar.HoleOption (T m) (Sugar.Expression name (T m) ())]
-orderHoleOptions = Lens.mapped . traverse . Sugar.hoResults . Lens.mapped . Lens._2 %~ (>>= orderHoleResult)
-
 orderCase :: Monad m => Order m (Sugar.Case name (T m) a)
 orderCase = Sugar.cBody %%~ orderRecord
 
@@ -79,8 +70,12 @@ orderBody (Sugar.BodyLam l) = orderLam l <&> Sugar.BodyLam
 orderBody (Sugar.BodyRecord r) = orderRecord r <&> Sugar.BodyRecord
 orderBody (Sugar.BodyLabeledApply a) = orderLabeledApply a <&> Sugar.BodyLabeledApply
 orderBody (Sugar.BodyCase c) = orderCase c <&> Sugar.BodyCase
-orderBody (Sugar.BodyHole a) = a & Sugar.holeOptions %~ orderHoleOptions & Sugar.BodyHole & pure
-orderBody (Sugar.BodyFragment a) = a & Sugar.fOptions %~ orderHoleOptions & Sugar.BodyFragment & pure
+orderBody (Sugar.BodyHole a) = SugarLens.holeTransformExprs orderExpr a & Sugar.BodyHole & pure
+orderBody (Sugar.BodyFragment a) =
+    a
+    & Sugar.fOptions . Lens.mapped . Lens.mapped %~ SugarLens.holeOptionTransformExprs orderExpr
+    & Sugar.BodyFragment
+    & pure
 orderBody x@Sugar.BodyIfElse{} = pure x
 orderBody x@Sugar.BodySimpleApply{} = pure x
 orderBody x@Sugar.BodyLiteral{} = pure x

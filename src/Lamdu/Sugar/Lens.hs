@@ -9,6 +9,7 @@ module Lamdu.Sugar.Lens
     , binderContentEntityId
     , leftMostLeaf
     , workAreaExpressions
+    , holeTransformExprs, holeOptionTransformExprs
     ) where
 
 import qualified Control.Lens as Lens
@@ -134,3 +135,18 @@ workAreaExpressions f (WorkArea panes repl) =
     WorkArea
     <$> (traverse . paneDefinition . traverse) f panes
     <*> f repl
+
+holeOptionTransformExprs :: Monad m => (a -> m b) -> HoleOption m a -> HoleOption m b
+holeOptionTransformExprs onExpr option =
+    option
+    { _hoSugaredBaseExpr = option ^. hoSugaredBaseExpr >>= onExpr
+    , _hoResults = option ^. hoResults <&> Lens._2 %~ (>>= holeResultConverted onExpr)
+    }
+
+holeTransformExprs :: Monad m => (a -> m b) -> Hole m a -> Hole m b
+holeTransformExprs onExpr hole =
+    hole
+    { _holeOptions = hole ^. holeOptions <&> traverse %~ holeOptionTransformExprs onExpr
+    , _holeOptionLiteral =
+        hole ^. holeOptionLiteral <&> Lens.mapped . Lens._2 %~ (>>= holeResultConverted onExpr)
+    }
