@@ -7,7 +7,7 @@ module GUI.Momentu.Widget.Id
 import           Data.Binary (Binary)
 import           Data.List (intercalate)
 import           Data.List.Lens (prefixed)
-import           GUI.Momentu.Animation (AnimId)
+import           GUI.Momentu.Animation.Id (AnimId)
 import           Numeric.Utils (encodeHex)
 
 import           Lamdu.Prelude

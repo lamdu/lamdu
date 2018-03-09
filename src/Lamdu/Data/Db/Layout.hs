@@ -13,7 +13,7 @@ import           Lamdu.Prelude
 
 import           Control.Monad.IO.Class (MonadIO)
 import           Data.ByteString.Char8 ()
-import           GUI.Momentu (GUIState)
+import           GUI.Momentu.State (GUIState)
 import           Lamdu.Data.Anchors (Code(..), Revision(..))
 import qualified Lamdu.Data.Anchors as Anchors
 import           Revision.Deltum.Db (DB)

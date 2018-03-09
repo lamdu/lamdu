@@ -22,7 +22,7 @@ import           Data.ByteString.Utils (lazifyBS)
 import qualified Data.Map as Map
 import qualified Data.Monoid as Monoid
 import           Data.Monoid.Generic (def_mempty, def_mappend)
-import           GUI.Momentu.Animation (AnimId)
+import           GUI.Momentu.Animation.Id (AnimId)
 import           GUI.Momentu.Rect (Rect)
 import           GUI.Momentu.Widget.Id (Id(..))
 import qualified GUI.Momentu.Widget.Id as Id

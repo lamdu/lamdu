@@ -17,9 +17,10 @@ import qualified Control.Lens as Lens
 import           Data.Vector.Vector2 (Vector2(..))
 import qualified Data.Vector.Vector2 as Vector2
 import           Foreign.C.Types.Instances ()
-import           Graphics.DrawingCombinators (R)
 
 import           Lamdu.Prelude
+
+type R = Double
 
 data Rect = Rect
     { _topLeft :: !(Vector2 R)
