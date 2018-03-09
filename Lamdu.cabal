@@ -312,3 +312,15 @@ Executable lamdu
 source-repository head
   type: git
   location: https://github.com/lamdu/lamdu.git
+
+Test-Suite TestJsonCodecMigration
+  type: exitcode-stdio-1.0
+  hs-source-dirs: test, src
+  main-is: TestJsonCodecMigration.hs
+  ghc-options: -Wno-missing-home-modules
+  build-depends:
+    base, HUnit, test-framework, test-framework-hunit,
+    aeson, aeson-pretty, base-compat, base16-bytestring, binary, bytestring, containers,
+    cryptohash-sha256, deepseq, deepseq-generics, lens, leveldb-haskell, List, mtl, random,
+    safe-exceptions, text, transformers, unordered-containers, uuid, uuid-types, vector,
+    AlgoW, lamdu-calculus

@@ -1,0 +1,361 @@
+[
+    {
+        "tagOrder": 1,
+        "tag": "42493a66616c73650000000000000000",
+        "name": "False"
+    },
+    {
+        "tagOrder": 0,
+        "tag": "42493a696e6669786c00000000000000",
+        "name": "infixl"
+    },
+    {
+        "tagOrder": 1,
+        "tag": "42493a696e6669787200000000000000",
+        "name": "infixr"
+    },
+    {
+        "tagOrder": 0,
+        "tag": "42493a74727565000000000000000000",
+        "name": "True"
+    },
+    {
+        "nomType": {
+            "schemeType": {
+                "sum": {
+                    "42493a66616c73650000000000000000": {
+                        "record": {}
+                    },
+                    "42493a74727565000000000000000000": {
+                        "record": {}
+                    }
+                }
+            }
+        },
+        "nom": "426f6f6c000000000000000000000000",
+        "name": "Bool"
+    },
+    {
+        "lamId": "a7350652-846b-4361-8e27-d073002d3e47",
+        "name": "x",
+        "lamVar": "2ae46ac33bdd45509b3dde996a450917",
+        "lamFieldParams": null
+    },
+    {
+        "lamId": "ae750669-796d-49e3-a1df-c8fe6a728981",
+        "lamVar": "7cb351fcd8f93c38abb89db4eb5f7ff7",
+        "lamFieldParams": null
+    },
+    {
+        "lamId": "be303b9b-5205-4009-aa20-ade5770fd35b",
+        "lamVar": "c4fcbabcef919016bdc3d8f11a66130f",
+        "lamFieldParams": null
+    },
+    {
+        "defPresentationMode": [
+            "Infix",
+            4
+        ],
+        "builtin": {
+            "name": [
+                "Prelude",
+                "=="
+            ],
+            "scheme": {
+                "schemeType": {
+                    "funcParam": {
+                        "record": {
+                            "42493a696e6669786c00000000000000": {
+                                "typeVar": "61"
+                            },
+                            "42493a696e6669787200000000000000": {
+                                "typeVar": "61"
+                            }
+                        }
+                    },
+                    "funcResult": {
+                        "nomId": "426f6f6c000000000000000000000000"
+                    }
+                },
+                "schemeBinders": {
+                    "typeVars": [
+                        "61"
+                    ]
+                }
+            }
+        },
+        "name": "==",
+        "def": "0de3f3f9c1ce450590f76395c35fc113"
+    },
+    {
+        "defPresentationMode": [
+            "Infix",
+            6
+        ],
+        "builtin": {
+            "name": [
+                "Prelude",
+                "-"
+            ],
+            "scheme": {
+                "schemeType": {
+                    "funcParam": {
+                        "record": {
+                            "42493a696e6669786c00000000000000": {
+                                "nomId": "42493a666c6f61740000000000000000"
+                            },
+                            "42493a696e6669787200000000000000": {
+                                "nomId": "42493a666c6f61740000000000000000"
+                            }
+                        }
+                    },
+                    "funcResult": {
+                        "nomId": "42493a666c6f61740000000000000000"
+                    }
+                }
+            }
+        },
+        "name": "-",
+        "def": "106bbf2db4eb4ba0a4ac27214c5a162b"
+    },
+    {
+        "defPresentationMode": "Verbose",
+        "name": "factorial",
+        "def": "3b9d0a5e8f0d417d9320981fb2f41d58",
+        "typ": {
+            "schemeType": {
+                "funcParam": {
+                    "nomId": "42493a666c6f61740000000000000000"
+                },
+                "funcResult": {
+                    "nomId": "42493a666c6f61740000000000000000"
+                }
+            }
+        },
+        "val": {
+            "lamVar": "2ae46ac33bdd45509b3dde996a450917",
+            "id": "a7350652-846b-4361-8e27-d073002d3e47",
+            "lamBody": {
+                "applyFunc": {
+                    "caseRest": {
+                        "caseRest": {
+                            "id": "6ab993e4-287d-4286-83a0-723e630bfd2d",
+                            "absurd": {}
+                        },
+                        "caseHandler": {
+                            "lamVar": "7cb351fcd8f93c38abb89db4eb5f7ff7",
+                            "id": "ae750669-796d-49e3-a1df-c8fe6a728981",
+                            "lamBody": {
+                                "primBytes": "0101000000000000000700000000000010ffffffffffffffcc",
+                                "primId": "42493a666c6f61740000000000000000",
+                                "id": "8dc382d8-3ecd-44a2-b6e7-fd6bdc6fa157"
+                            }
+                        },
+                        "caseTag": "42493a74727565000000000000000000",
+                        "id": "120c58cd-e1ab-4b4a-aa08-bfeea8439956"
+                    },
+                    "caseHandler": {
+                        "lamVar": "c4fcbabcef919016bdc3d8f11a66130f",
+                        "id": "be303b9b-5205-4009-aa20-ade5770fd35b",
+                        "lamBody": {
+                            "applyFunc": {
+                                "var": "5a6cdaa2a63f4f12a18cead35e48b013",
+                                "id": "0c429ac0-42d4-40b4-9456-8eadd3e9689a"
+                            },
+                            "applyArg": {
+                                "extendVal": {
+                                    "var": "2ae46ac33bdd45509b3dde996a450917",
+                                    "id": "33b2c571-98d8-4418-b97a-c7b819ccdcc6"
+                                },
+                                "extendTag": "42493a696e6669786c00000000000000",
+                                "id": "2ca29273-46ee-45ae-8ef0-8fcb6c342af4",
+                                "extendRest": {
+                                    "extendVal": {
+                                        "applyFunc": {
+                                            "var": "3b9d0a5e8f0d417d9320981fb2f41d58",
+                                            "id": "116c064a-a292-444d-b808-1248bce64ee5"
+                                        },
+                                        "applyArg": {
+                                            "applyFunc": {
+                                                "var": "106bbf2db4eb4ba0a4ac27214c5a162b",
+                                                "id": "e440d728-c5cd-4f1b-a521-fa1e00a0c0ae"
+                                            },
+                                            "applyArg": {
+                                                "extendVal": {
+                                                    "var": "2ae46ac33bdd45509b3dde996a450917",
+                                                    "id": "31038ac1-664c-4d3a-a587-d955eaab305a"
+                                                },
+                                                "extendTag": "42493a696e6669786c00000000000000",
+                                                "id": "338b9265-7120-48fe-bf3f-76d85c11fe52",
+                                                "extendRest": {
+                                                    "extendVal": {
+                                                        "primBytes": "0101000000000000000700000000000010ffffffffffffffcc",
+                                                        "primId": "42493a666c6f61740000000000000000",
+                                                        "id": "a3f0e120-efa0-4990-a720-7135aed175ac"
+                                                    },
+                                                    "extendTag": "42493a696e6669787200000000000000",
+                                                    "id": "ceefe922-f604-456e-b50e-162a245eb4fd",
+                                                    "extendRest": {
+                                                        "recEmpty": {},
+                                                        "id": "12144384-d5cd-49d6-b398-0ca0bd32a462"
+                                                    }
+                                                }
+                                            },
+                                            "id": "2667366d-0788-4bd5-9b2c-3fb81cbdf570"
+                                        },
+                                        "id": "4618a1a5-62da-46e3-ba3e-94ed4b3578c9"
+                                    },
+                                    "extendTag": "42493a696e6669787200000000000000",
+                                    "id": "23fba627-ad26-463d-9bb3-9c4db837dea6",
+                                    "extendRest": {
+                                        "recEmpty": {},
+                                        "id": "562dac84-59a1-4be4-b7af-c7b4c79aaa58"
+                                    }
+                                }
+                            },
+                            "id": "2aa1a949-91c5-42fe-b2e0-766e3496f854"
+                        }
+                    },
+                    "caseTag": "42493a66616c73650000000000000000",
+                    "id": "33c675a8-8fad-4d65-acf8-a14809337ce6"
+                },
+                "applyArg": {
+                    "fromNomId": "426f6f6c000000000000000000000000",
+                    "id": "378507ca-44d0-4112-95f7-a496d6815ab9",
+                    "fromNomVal": {
+                        "applyFunc": {
+                            "var": "0de3f3f9c1ce450590f76395c35fc113",
+                            "id": "ff668eef-95da-421c-b501-a29c96abc364"
+                        },
+                        "applyArg": {
+                            "extendVal": {
+                                "var": "2ae46ac33bdd45509b3dde996a450917",
+                                "id": "3064ca7c-7fd0-47e2-9a2b-1dbccc7e0db4"
+                            },
+                            "extendTag": "42493a696e6669786c00000000000000",
+                            "id": "da60f901-d0f0-4202-887e-192430edfceb",
+                            "extendRest": {
+                                "extendVal": {
+                                    "primBytes": "00000000000000000000000000",
+                                    "primId": "42493a666c6f61740000000000000000",
+                                    "id": "21b4cc67-9899-441b-9a89-ee848c47fb05"
+                                },
+                                "extendTag": "42493a696e6669787200000000000000",
+                                "id": "af27603a-30a4-4317-8eb5-42353ba00cf0",
+                                "extendRest": {
+                                    "recEmpty": {},
+                                    "id": "3eedae10-2758-4e8a-bf39-3d1ba01ae064"
+                                }
+                            }
+                        },
+                        "id": "e6865048-e019-4520-ae8f-c3095727ba5e"
+                    }
+                },
+                "id": "b9fbed2c-3f40-4778-a045-73039d017d48"
+            }
+        },
+        "frozenDefTypes": {
+            "106bbf2db4eb4ba0a4ac27214c5a162b": {
+                "schemeType": {
+                    "funcParam": {
+                        "record": {
+                            "42493a696e6669786c00000000000000": {
+                                "nomId": "42493a666c6f61740000000000000000"
+                            },
+                            "42493a696e6669787200000000000000": {
+                                "nomId": "42493a666c6f61740000000000000000"
+                            }
+                        }
+                    },
+                    "funcResult": {
+                        "nomId": "42493a666c6f61740000000000000000"
+                    }
+                }
+            },
+            "0de3f3f9c1ce450590f76395c35fc113": {
+                "schemeType": {
+                    "funcParam": {
+                        "record": {
+                            "42493a696e6669786c00000000000000": {
+                                "typeVar": "61"
+                            },
+                            "42493a696e6669787200000000000000": {
+                                "typeVar": "61"
+                            }
+                        }
+                    },
+                    "funcResult": {
+                        "nomId": "426f6f6c000000000000000000000000"
+                    }
+                },
+                "schemeBinders": {
+                    "typeVars": [
+                        "61"
+                    ]
+                }
+            },
+            "5a6cdaa2a63f4f12a18cead35e48b013": {
+                "schemeType": {
+                    "funcParam": {
+                        "record": {
+                            "42493a696e6669786c00000000000000": {
+                                "nomId": "42493a666c6f61740000000000000000"
+                            },
+                            "42493a696e6669787200000000000000": {
+                                "nomId": "42493a666c6f61740000000000000000"
+                            }
+                        }
+                    },
+                    "funcResult": {
+                        "nomId": "42493a666c6f61740000000000000000"
+                    }
+                }
+            }
+        }
+    },
+    {
+        "defPresentationMode": [
+            "Infix",
+            7
+        ],
+        "builtin": {
+            "name": [
+                "Prelude",
+                "*"
+            ],
+            "scheme": {
+                "schemeType": {
+                    "funcParam": {
+                        "record": {
+                            "42493a696e6669786c00000000000000": {
+                                "nomId": "42493a666c6f61740000000000000000"
+                            },
+                            "42493a696e6669787200000000000000": {
+                                "nomId": "42493a666c6f61740000000000000000"
+                            }
+                        }
+                    },
+                    "funcResult": {
+                        "nomId": "42493a666c6f61740000000000000000"
+                    }
+                }
+            }
+        },
+        "name": "*",
+        "def": "5a6cdaa2a63f4f12a18cead35e48b013"
+    },
+    {
+        "repl": {
+            "applyFunc": {
+                "var": "3b9d0a5e8f0d417d9320981fb2f41d58",
+                "id": "a938b8f3-b57c-4925-8bdd-1743bf154c2c"
+            },
+            "applyArg": {
+                "primBytes": "0101000000000000000700000000000014ffffffffffffffce",
+                "primId": "42493a666c6f61740000000000000000",
+                "id": "02267cec-927b-44b0-83b8-cc960647d821"
+            },
+            "id": "cda4fa6a-35e3-4d7f-9e5a-d47466a11f3b"
+        }
+    }
+]
