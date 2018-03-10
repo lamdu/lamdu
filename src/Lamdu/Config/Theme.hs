@@ -84,6 +84,7 @@ data Theme = Theme
     , infoTextColor :: Draw.Color
     , typeTextColor :: Draw.Color
     , topPadding :: Draw.R
+    , statusBarBGColor :: Draw.Color
     , maxEvalViewSize :: Int
     , versionControl :: VersionControl.Theme
     , valAnnotation :: ValAnnotation

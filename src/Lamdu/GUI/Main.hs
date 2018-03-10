@@ -14,6 +14,7 @@ import qualified Control.Monad.Reader as Reader
 import           Data.CurAndPrev (CurAndPrev)
 import           Data.Vector.Vector2 (Vector2(..))
 import qualified GUI.Momentu.Align as Align
+import qualified GUI.Momentu.Draw as Draw
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Glue ((/-/), (/|/))
@@ -55,6 +56,7 @@ layout ::
     , GuiState.HasState env
     , Theme.HasTheme env
     , Config.HasConfig env
+    , Element.HasAnimIdPrefix env
     , CodeEdit.HasEvalResults env ViewM
     , CodeEdit.HasExportActions env ViewM
     ) =>
@@ -62,19 +64,25 @@ layout ::
     ReaderT env (T DbM) (Widget (IOTrans DbM GuiState.Update))
 layout branchChoice =
     do
+        theTheme <- Lens.view Theme.theme
         fullSize <- Lens.view (MainLoop.mainLoopEnv . MainLoop.eWindowSize)
         branchLabel <- TextView.make ?? "Branch: " ?? ["BranchHeader"]
-        let branchSelector = (branchLabel /|/ branchChoice) ^. Align.tValue
-        let codeSize = fullSize - Vector2 0 (branchSelector ^. Element.height)
+        let rawStatusBar =
+                (branchLabel /|/ branchChoice) ^. Align.tValue
+                & Element.width .~ fullSize ^. _1
+        statusBar <-
+            Draw.backgroundColor
+            ?? Theme.statusBarBGColor theTheme
+            ?? rawStatusBar
+        let codeSize = fullSize - Vector2 0 (statusBar ^. Element.height)
         state <- Lens.view GuiState.state
         codeEdit <-
             CodeEdit.make DbLayout.codeAnchors (codeSize ^. _1)
             & Reader.mapReaderT VersionControl.runAction
             <&> Lens.mapped . ioTrans . Lens.mapped %~ VersionControl.runEvent state
-        theTheme <- Lens.view Theme.theme
         topPadding <- Spacer.vspaceLines (Theme.topPadding theTheme)
         let scrollBox = Scroll.focusAreaInto codeSize codeEdit
-        branchSelector /-/ topPadding /-/ scrollBox & pure
+        statusBar /-/ topPadding /-/ scrollBox & pure
 
 make ::
     ( MainLoop.HasMainLoopEnv env
