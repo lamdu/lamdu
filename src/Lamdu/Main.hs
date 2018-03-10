@@ -36,7 +36,6 @@ import           Lamdu.Expr.IRef (ValI)
 import           Lamdu.Font (FontSize, Fonts(..))
 import qualified Lamdu.Font as Font
 import           Lamdu.GUI.CodeEdit.AnnotationMode (AnnotationMode(..))
-import qualified Lamdu.GUI.CodeEdit.AnnotationMode as AnnotationMode
 import           Lamdu.GUI.CodeEdit.Settings (Settings)
 import qualified Lamdu.GUI.CodeEdit.Settings as Settings
 import           Lamdu.GUI.IOTrans (ioTrans)
@@ -44,7 +43,6 @@ import qualified Lamdu.GUI.Main as GUIMain
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.Opts as Opts
 import qualified Lamdu.Style as Style
-import           Lamdu.Themes (defaultTheme, themeSwitchEventMap)
 import qualified Lamdu.VersionControl as VersionControl
 import           Lamdu.VersionControl.Actions (mUndo)
 import           Revision.Deltum.Db (DB)
@@ -180,8 +178,8 @@ exportActions config evalResults executeIOProcess =
 
 makeRootWidget ::
     Fonts M.Font -> DB -> EvalManager.Evaluator -> Config -> Theme ->
-    MainLoop.Env -> Property IO Settings -> IO (M.Widget (MainLoop.M M.Update))
-makeRootWidget fonts db evaluator config theme mainLoopEnv settingsProp =
+    MainLoop.Env -> Settings -> IO (M.Widget (MainLoop.M M.Update))
+makeRootWidget fonts db evaluator config theme mainLoopEnv settings =
     do
         evalResults <- EvalManager.getResults evaluator
         let env = Env
@@ -190,22 +188,16 @@ makeRootWidget fonts db evaluator config theme mainLoopEnv settingsProp =
                     exportActions config (evalResults ^. current) (EvalManager.executeReplIOProcess evaluator)
                 , _envConfig = config
                 , _envTheme = theme
-                , _envSettings = Property.value settingsProp
+                , _envSettings = settings
                 , _envStyle = Style.makeStyle (Theme.codeForegroundColors theme) fonts
                 , _envMainLoop = mainLoopEnv
                 }
         let dbToIO action =
-                case Property.value settingsProp ^. Settings.sAnnotationMode of
+                case settings ^. Settings.sAnnotationMode of
                 Evaluation ->
                     EvalManager.runTransactionAndMaybeRestartEvaluator evaluator action
                 _ -> DbLayout.runDbTransaction db action
         mkWidgetWithFallback dbToIO env
-            <&> M.weakerEvents (eventMap <&> liftIO)
-    where
-        annotationModeProp =
-            Property.composeLens Settings.sAnnotationMode settingsProp
-        eventMap =
-            AnnotationMode.switchEventMap config annotationModeProp <&> liftIO
 
 withMVarProtection :: a -> (MVar (Maybe a) -> IO b) -> IO b
 withMVarProtection val =
@@ -235,15 +227,28 @@ newSettingsProp evaluator =
         settingsChangeHandler evaluator Settings.initial
         readIORef settingsRef <&> (`Property` setSettings) & pure
 
+newEvaluator ::
+    IO () -> MVar (Maybe DB) -> Opts.EditorOpts -> IO EvalManager.Evaluator
+newEvaluator refresh dbMVar opts =
+    EvalManager.new EvalManager.NewParams
+    { EvalManager.resultsUpdated = refresh
+    , EvalManager.dbMVar = dbMVar
+    , EvalManager.copyJSOutputPath = opts ^. Opts.eoCopyJSOutputPath
+    }
+
 runEditor :: Opts.EditorOpts -> DB -> IO ()
 runEditor opts db =
     withMVarProtection db $ \dbMVar ->
     do
-        -- Load config as early as possible, before we open any windows/etc
-        themeRef <- newIORef defaultTheme
         refreshScheduler <- newRefreshScheduler
         let refresh = scheduleRefresh refreshScheduler
-        configSampler <- ConfigSampler.new (const refresh) defaultTheme
+
+        -- Load config as early as possible, before we open any windows/etc
+        evaluator <- newEvaluator refresh dbMVar opts
+        mkSettingsProp <- newSettingsProp evaluator
+        configSampler <-
+            mkSettingsProp <&> (^. Property.pVal . Settings.sSelectedTheme)
+            >>= ConfigSampler.new (const refresh)
 
         M.withGLFW $ do
             win <-
@@ -251,22 +256,14 @@ runEditor opts db =
                 (opts ^. Opts.eoWindowTitle)
                 (opts ^. Opts.eoWindowMode)
             printGLVersion
-            evaluator <-
-                EvalManager.new EvalManager.NewParams
-                { EvalManager.resultsUpdated = refresh
-                , EvalManager.dbMVar = dbMVar
-                , EvalManager.copyJSOutputPath = opts ^. Opts.eoCopyJSOutputPath
-                }
-            mkSettingsProp <- newSettingsProp evaluator
             mainLoop stateStorage subpixel win refreshScheduler configSampler $
                 \fonts config theme env ->
-                let themeKeys = Config.changeThemeKeys config
-                    themeEvents =
-                        themeSwitchEventMap themeKeys configSampler themeRef
-                        <&> liftIO
-                in  mkSettingsProp >>=
+                do
+                    settingsProp <- mkSettingsProp
+                    settingsEventMap <- Settings.eventMap configSampler settingsProp
                     makeRootWidget fonts db evaluator config theme env
-                    <&> M.weakerEvents themeEvents
+                        (Property.value settingsProp)
+                        <&> M.weakerEvents (settingsEventMap <&> liftIO)
     where
         stateStorage = stateStorageInIRef db DbLayout.guiState
         subpixel
