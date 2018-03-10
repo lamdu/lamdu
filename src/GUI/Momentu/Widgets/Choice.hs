@@ -36,19 +36,22 @@ data Config = Config
 data IsSelected = Selected | NotSelected
     deriving Eq
 
-toBox ::
-    Applicative f => Config -> Bool ->
-    Widget.Id -> [(IsSelected, f (), Widget (f State.Update))] ->
-    Widget (f State.Update)
-toBox config selfFocused myId childrenRecords =
-    childrenRecords
-    <&> applyAction
+makeInner ::
+    (Applicative f, Eq childId) =>
+    (Widget.Id -> Bool) ->
+    (FocusDelegator.Config -> FocusDelegator.FocusEntryTarget ->
+     Widget.Id -> Widget (f State.Update) -> fd) -> (childId -> f ()) ->
+    [(childId, Widget (f State.Update))] -> childId -> Config -> Widget.Id -> fd
+makeInner cursorOn fd choose children curChild config myId =
+    children <&> annotate
+    <&> prependEntryAction
     & filterVisible
     <&> colorize
     & Glue.box (cwcOrientation config)
+    & fd (cwcFDConfig config) FocusDelegator.FocusEntryParent myId
     where
         filterVisible
-            | anyChildFocused || (autoExpand && selfFocused) = id
+            | anyChildFocused || (autoExpand && cursorOn myId) = id
             | otherwise = filter ((== Selected) . fst)
         autoExpand = cwcExpandMode config & Lens.has _AutoExpand
         colorize (isSelected, widget)
@@ -60,7 +63,7 @@ toBox config selfFocused myId childrenRecords =
                         | isSelected == Selected ->
                             MDraw.backgroundColor (Widget.toAnimId myId) color
                     _ -> id
-        applyAction (isSelected, action, widget) =
+        prependEntryAction (isSelected, action, widget) =
             ( isSelected
             , widget
                 & Widget.wState . Widget._StateUnfocused . Widget.uMEnter
@@ -68,21 +71,12 @@ toBox config selfFocused myId childrenRecords =
                     %~ (action *>)
             )
         anyChildFocused =
-            childrenRecords
-            & Lens.orOf (Lens.traversed . _3 . Lens.to Widget.isFocused)
-
-makeInternal ::
-    (MonadReader env m, State.HasCursor env, Applicative f) =>
-    m (Config -> [(IsSelected, f (), Widget (f State.Update))] ->
-       Widget.Id -> Widget (f State.Update))
-makeInternal =
-    do
-        sub <- State.subId
-        fd <- FocusDelegator.make
-        pure $ \config children myId ->
-            let selfFocused = sub myId & Lens.has Lens._Just
-                childrenBox = toBox config selfFocused myId children
-            in  fd (cwcFDConfig config) FocusDelegator.FocusEntryParent myId childrenBox
+            Lens.orOf (Lens.traversed . _2 . Lens.to Widget.isFocused) children
+        annotate (item, widget) =
+            ( if item == curChild then Selected else NotSelected
+            , choose item
+            , widget
+            )
 
 make ::
     (Eq a, MonadReader env m, Applicative f, State.HasCursor env) =>
@@ -90,13 +84,7 @@ make ::
     ((a -> f ()) -> [(a, Widget (f State.Update))] -> a ->
      Config -> Widget.Id -> Widget (f State.Update))
 make =
-    makeInternal <&> f
-    where
-        f mk choose children curChild choiceConfig =
-            mk choiceConfig (children <&> annotate)
-            where
-                annotate (item, widget) =
-                    ( if item == curChild then Selected else NotSelected
-                    , choose item
-                    , widget
-                    )
+    do
+        cursorOn <- State.isSubCursor
+        fd <- FocusDelegator.make
+        makeInner cursorOn fd & pure
