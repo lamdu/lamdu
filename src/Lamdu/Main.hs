@@ -245,8 +245,9 @@ runEditor opts db =
                     settingsChangeHandler evaluator initialSettings
                     mainLoop stateStorage subpixel win refreshScheduler configSampler $
                         \fonts config theme env ->
-                        let themeEvents =
-                                themeSwitchEventMap (Config.changeThemeKeys config) configSampler themeRef
+                        let themeKeys = Config.changeThemeKeys config
+                            themeEvents =
+                                themeSwitchEventMap themeKeys configSampler themeRef
                                 <&> liftIO
                         in  makeRootWidget fonts db settingsRef evaluator
                             config theme env

@@ -2,8 +2,9 @@
 {-# LANGUAGE NoImplicitPrelude, DeriveTraversable #-}
 module Lamdu.Config.Sampler
     ( Sampler, new
-    , Sample(..), sConfigPath, sConfig, sThemePath, sTheme
-    , getSample, setTheme
+    , Sample(..), sConfigPath, sConfig
+    , sThemePath, sTheme, setTheme
+    , getSample
     ) where
 
 import           Control.Concurrent (threadDelay, ThreadId)

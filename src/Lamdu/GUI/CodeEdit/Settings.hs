@@ -45,8 +45,7 @@ mkEventMap onSettingsChange config settingsRef =
     do
         theSettings <- readIORef settingsRef
         let next = theSettings ^. sInfoMode & nextInfoMode
-        let nextDoc =
-                E.Doc ["View", "Subtext", "Show " <> Text.pack (show next)]
+        let nextDoc = E.Doc ["View", "Subtext", "Show " <> Text.pack (show next)]
         let nextSettings = theSettings & sInfoMode .~ next
         do
             writeIORef settingsRef nextSettings
