@@ -13,15 +13,17 @@ import           Control.Monad.Reader (ReaderT(..))
 import qualified Control.Monad.Reader as Reader
 import           Data.CurAndPrev (CurAndPrev)
 import           Data.Vector.Vector2 (Vector2(..))
+import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.EventMap as E
-import           GUI.Momentu.Glue ((/-/))
+import           GUI.Momentu.Glue ((/-/), (/|/))
 import qualified GUI.Momentu.Main as MainLoop
 import qualified GUI.Momentu.Scroll as Scroll
 import qualified GUI.Momentu.State as GuiState
 import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
+import qualified GUI.Momentu.Widgets.TextView as TextView
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Config.Theme as Theme
 import           Lamdu.Data.Db.Layout (DbM, ViewM)
@@ -58,25 +60,22 @@ layout ::
     E.EventMap (IOTrans DbM GuiState.Update) ->
     Widget (IOTrans DbM GuiState.Update) ->
     ReaderT env (T DbM) (Widget (IOTrans DbM GuiState.Update))
-layout vcEventMap branchSelector =
+layout vcEventMap branchChoice =
     do
         fullSize <- Lens.view (MainLoop.mainLoopEnv . MainLoop.eWindowSize)
+        branchLabel <- TextView.make ?? "Branch: " ?? ["BranchHeader"]
+        let branchSelector = (branchLabel /|/ branchChoice) ^. Align.tValue
         let codeSize = fullSize - Vector2 0 (branchSelector ^. Element.height)
         state <- Lens.view GuiState.state
         codeEdit <-
             CodeEdit.make DbLayout.codeAnchors (codeSize ^. _1)
             & Reader.mapReaderT VersionControl.runAction
-            <&> Lens.mapped . ioTrans . Lens.mapped %~
-                VersionControl.runEvent state
+            <&> Lens.mapped . ioTrans . Lens.mapped %~ VersionControl.runEvent state
             <&> Widget.weakerEvents vcEventMap
         theTheme <- Lens.view Theme.theme
         topPadding <- Spacer.vspaceLines (Theme.topPadding theTheme)
-        let scrollBox =
-                topPadding /-/ codeEdit
-                & Scroll.focusAreaInto codeSize
-                & Element.size .~ codeSize
-        scrollBox /-/ Element.hoverLayers branchSelector
-            & pure
+        let scrollBox = Scroll.focusAreaInto codeSize codeEdit
+        branchSelector /-/ topPadding /-/ scrollBox & pure
 
 make ::
     ( MainLoop.HasMainLoopEnv env
