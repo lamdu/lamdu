@@ -2,7 +2,6 @@
 
 module Main where
 
-import Test.HUnit
 import Test.Framework
 import Test.Framework.Providers.HUnit
 
