@@ -89,31 +89,35 @@ instance (Functor f, a ~ f State.Update) => SizedElement (AnchoredWidget a) wher
     size = anchored . Element.size
 
 instance (Functor f, a ~ f State.Update) => Glue (AnchoredWidget a) (Hover View) where
-    type Glued (AnchoredWidget a) (Hover View) = AnchoredWidget a
+    type Glued (AnchoredWidget a) (Hover View) =
+        Hover (AnchoredWidget a)
     glue o ow (Hover ov) =
-        Glue.glueH f o ow ov
+        Glue.glueH f o ow ov & Hover
         where
             f w v = w & Element.setLayers <>~ v ^. View.vAnimLayers
 
 instance (Functor f, a ~ f State.Update) => Glue (Hover View) (AnchoredWidget a) where
-    type Glued (Hover View) (AnchoredWidget a) = AnchoredWidget a
+    type Glued (Hover View) (AnchoredWidget a) =
+        Hover (AnchoredWidget a)
     glue o (Hover ov) =
-        Glue.glueH f o ov
+        Glue.glueH f o ov <&> Hover
         where
             f v w = w & Element.setLayers <>~ v ^. View.vAnimLayers
 
 instance (Functor f, a ~ f State.Update) => Glue (AnchoredWidget a) (Hover (Widget a)) where
-    type Glued (AnchoredWidget a) (Hover (Widget a)) = AnchoredWidget a
+    type Glued (AnchoredWidget a) (Hover (Widget a)) =
+        Hover (AnchoredWidget a)
     glue orientation ow0 (Hover ow1) =
-        Glue.glueH f orientation ow0 ow1
+        Glue.glueH f orientation ow0 ow1 & Hover
         where
             f (AnchoredWidget pos w0) w1 =
                 AnchoredWidget pos (Widget.glueStates orientation w0 w1)
 
 instance (Functor f, a ~ f State.Update) => Glue (Hover (Widget a)) (AnchoredWidget a) where
-    type Glued (Hover (Widget a)) (AnchoredWidget a) = AnchoredWidget a
+    type Glued (Hover (Widget a)) (AnchoredWidget a) =
+        Hover (AnchoredWidget a)
     glue orientation (Hover ow0) =
-        Glue.glueH f orientation ow0
+        Glue.glueH f orientation ow0 <&> Hover
         where
             f w0 (AnchoredWidget pos w1) =
                 AnchoredWidget pos (Widget.glueStates orientation w0 w1)
@@ -194,10 +198,10 @@ emplaceAt h place =
 -- it as such?
 hoverInPlaceOf ::
     Functor f =>
-    [AnchoredWidget (f State.Update)] ->
+    [Hover (AnchoredWidget (f State.Update))] ->
     AnchoredWidget (f State.Update) -> Widget (f State.Update)
 hoverInPlaceOf [] _ = error "no hover options!"
-hoverInPlaceOf hoverOptions@(defaultOption:_) place
+hoverInPlaceOf hoverOptions@(Hover defaultOption:_) place
     | null focusedOptions =
         defaultOption `emplaceAt` place
     | otherwise =
@@ -210,7 +214,7 @@ hoverInPlaceOf hoverOptions@(defaultOption:_) place
         -- All hovers *should* be same the - either focused or unfocused..
         focusedOptions =
             do
-                x <- hoverOptions
+                Hover x <- hoverOptions
                 mkFocused <- x ^.. anchored . Widget.wState . Widget._StateFocused
                 pure (x, mkFocused)
         makeFocused surrounding =
@@ -236,7 +240,7 @@ hoverInPlaceOf hoverOptions@(defaultOption:_) place
                 br = h ^. Element.size - place ^. Element.size - tl
 
 hoverBeside ::
-    ( GluesTo (Hover w) (AnchoredWidget (f State.Update)) (AnchoredWidget (f State.Update))
+    ( GluesTo (Hover w) (AnchoredWidget (f State.Update)) (Hover (AnchoredWidget (f State.Update)))
     , SizedElement w
     , Element.HasAnimIdPrefix env, HasStyle env, MonadReader env m
     , Functor f

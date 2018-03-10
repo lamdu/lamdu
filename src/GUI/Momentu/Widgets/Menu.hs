@@ -26,6 +26,7 @@ import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Glue ((/|/), (/-/))
 import qualified GUI.Momentu.Glue as Glue
+import           GUI.Momentu.Hover (Hover)
 import qualified GUI.Momentu.Hover as Hover
 import           GUI.Momentu.MetaKey (MetaKey)
 import qualified GUI.Momentu.MetaKey as MetaKey
@@ -316,7 +317,7 @@ hoverOptions ::
         View ->
         Hover.Ordered (Widget (f State.Update)) ->
         Hover.AnchoredWidget (f State.Update) ->
-        [Hover.AnchoredWidget (f State.Update)]
+        [Hover (Hover.AnchoredWidget (f State.Update))]
       )
 hoverOptions =
     Hover.hover <&>
