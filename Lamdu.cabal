@@ -189,6 +189,7 @@ Library
                   , Lamdu.Fuzzy
                   , Lamdu.GUI.AnnotationsPass
                   , Lamdu.GUI.CodeEdit
+                  , Lamdu.GUI.CodeEdit.AnnotationMode
                   , Lamdu.GUI.CodeEdit.Settings
                   , Lamdu.GUI.DefinitionEdit
                   , Lamdu.GUI.EvalView

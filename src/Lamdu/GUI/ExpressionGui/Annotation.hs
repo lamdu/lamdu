@@ -34,7 +34,8 @@ import qualified Lamdu.Calc.Type as T
 import           Lamdu.Config.Theme (HasTheme(..))
 import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.Eval.Results as ER
-import qualified Lamdu.GUI.CodeEdit.Settings as CESettings
+import qualified Lamdu.GUI.CodeEdit.AnnotationMode as AnnotationMode
+import qualified Lamdu.GUI.CodeEdit.Settings as Settings
 import qualified Lamdu.GUI.EvalView as EvalView
 import           Lamdu.GUI.ExpressionGui (ShowAnnotation(..), EvalModeShow(..))
 import qualified Lamdu.GUI.ExpressionGui as ExprGui
@@ -303,11 +304,11 @@ data AnnotationMode
 
 getAnnotationMode :: Monad m => EvalAnnotationOptions -> Sugar.Annotation -> ExprGuiM m AnnotationMode
 getAnnotationMode opt annotation =
-    Lens.view (CESettings.settings . CESettings.sAnnotationMode)
+    Lens.view (Settings.settings . Settings.sAnnotationMode)
     >>= \case
-    CESettings.None -> pure AnnotationModeNone
-    CESettings.Types -> pure AnnotationModeTypes
-    CESettings.Evaluation ->
+    AnnotationMode.None -> pure AnnotationModeNone
+    AnnotationMode.Types -> pure AnnotationModeTypes
+    AnnotationMode.Evaluation ->
         ExprGuiM.readMScopeId <&> valOfScope annotation
         <&> maybe AnnotationModeNone (AnnotationModeEvaluation neighbourVals)
     where

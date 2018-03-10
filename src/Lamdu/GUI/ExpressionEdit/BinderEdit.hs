@@ -35,6 +35,7 @@ import qualified GUI.Momentu.Widgets.TextView as TextView
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.Data.Meta as Meta
+import           Lamdu.GUI.CodeEdit.AnnotationMode (AnnotationMode(..))
 import qualified Lamdu.GUI.CodeEdit.Settings as CESettings
 import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
 import qualified Lamdu.GUI.ExpressionEdit.TagEdit as TagEdit
@@ -179,7 +180,7 @@ makeScopeNavEdit binder myId curCursor =
         evalConfig <- Lens.view Config.config <&> Config.eval
         Lens.view (CESettings.settings . CESettings.sAnnotationMode)
             >>= \case
-            CESettings.Evaluation ->
+            Evaluation ->
                 (Widget.makeFocusableView ?? myId)
                 <*> (mapM mkArrow scopes <&> Glue.hbox)
                 <&> Widget.weakerEvents (mkScopeEventMap leftKeys rightKeys `mappend` blockEventMap)

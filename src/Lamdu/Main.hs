@@ -33,7 +33,9 @@ import           Lamdu.Eval.Results (EvalResults)
 import           Lamdu.Expr.IRef (ValI)
 import           Lamdu.Font (FontSize, Fonts(..))
 import qualified Lamdu.Font as Font
-import           Lamdu.GUI.CodeEdit.Settings (Settings(..))
+import           Lamdu.GUI.CodeEdit.AnnotationMode (AnnotationMode(..))
+import qualified Lamdu.GUI.CodeEdit.AnnotationMode as AnnotationMode
+import           Lamdu.GUI.CodeEdit.Settings (Settings)
 import qualified Lamdu.GUI.CodeEdit.Settings as Settings
 import           Lamdu.GUI.IOTrans (ioTrans)
 import qualified Lamdu.GUI.Main as GUIMain
@@ -45,6 +47,8 @@ import qualified Lamdu.VersionControl as VersionControl
 import           Lamdu.VersionControl.Actions (mUndo)
 import           Revision.Deltum.Db (DB)
 import           Revision.Deltum.IRef (IRef)
+import           Revision.Deltum.Property (Property(..))
+import qualified Revision.Deltum.Property as Property
 import           Revision.Deltum.Transaction (Transaction)
 import qualified Revision.Deltum.Transaction as Transaction
 import qualified System.Directory as Directory
@@ -151,7 +155,7 @@ createWindow title mode =
 settingsChangeHandler :: EvalManager.Evaluator -> Settings -> IO ()
 settingsChangeHandler evaluator settings =
     case settings ^. Settings.sAnnotationMode of
-    Settings.Evaluation -> EvalManager.start evaluator
+    Evaluation -> EvalManager.start evaluator
     _ -> EvalManager.stop evaluator
 
 exportActions ::
@@ -175,30 +179,33 @@ exportActions config evalResults executeIOProcess =
         importAll path = ioTrans # (Export.fileImportAll path <&> fmap pure)
 
 makeRootWidget ::
-    Fonts M.Font -> DB -> IORef Settings -> EvalManager.Evaluator ->
-    Config -> Theme -> MainLoop.Env -> IO (M.Widget (MainLoop.M M.Update))
-makeRootWidget fonts db settingsRef evaluator config theme mainLoopEnv =
+    Fonts M.Font -> DB -> EvalManager.Evaluator -> Config -> Theme ->
+    MainLoop.Env -> Property IO Settings -> IO (M.Widget (MainLoop.M M.Update))
+makeRootWidget fonts db evaluator config theme mainLoopEnv settingsProp =
     do
-        eventMap <- Settings.mkEventMap (settingsChangeHandler evaluator) config settingsRef
         evalResults <- EvalManager.getResults evaluator
-        settings <- readIORef settingsRef
         let env = Env
                 { _envEvalRes = evalResults
                 , _envExportActions =
                     exportActions config (evalResults ^. current) (EvalManager.executeReplIOProcess evaluator)
                 , _envConfig = config
                 , _envTheme = theme
-                , _envSettings = settings
+                , _envSettings = Property.value settingsProp
                 , _envStyle = Style.makeStyle (Theme.codeForegroundColors theme) fonts
                 , _envMainLoop = mainLoopEnv
                 }
         let dbToIO action =
-                case settings ^. Settings.sAnnotationMode of
-                Settings.Evaluation ->
+                case Property.value settingsProp ^. Settings.sAnnotationMode of
+                Evaluation ->
                     EvalManager.runTransactionAndMaybeRestartEvaluator evaluator action
                 _ -> DbLayout.runDbTransaction db action
         mkWidgetWithFallback dbToIO env
             <&> M.weakerEvents (eventMap <&> liftIO)
+    where
+        annotationModeProp =
+            Property.composeLens Settings.sAnnotationMode settingsProp
+        eventMap =
+            AnnotationMode.switchEventMap config annotationModeProp <&> liftIO
 
 withMVarProtection :: a -> (MVar (Maybe a) -> IO b) -> IO b
 withMVarProtection val =
@@ -216,6 +223,17 @@ stateStorageInIRef db stateIRef =
     { readState = DbLayout.runDbTransaction db (Transaction.readIRef stateIRef)
     , writeState = DbLayout.runDbTransaction db . Transaction.writeIRef stateIRef
     }
+
+newSettingsProp :: EvalManager.Evaluator -> IO (IO (Property IO Settings))
+newSettingsProp evaluator =
+    do
+        settingsRef <- newIORef Settings.initial
+        let setSettings val =
+                do
+                    writeIORef settingsRef val
+                    settingsChangeHandler evaluator val
+        settingsChangeHandler evaluator Settings.initial
+        readIORef settingsRef <&> (`Property` setSettings) & pure
 
 runEditor :: Opts.EditorOpts -> DB -> IO ()
 runEditor opts db =
@@ -240,17 +258,15 @@ runEditor opts db =
                         , EvalManager.dbMVar = dbMVar
                         , EvalManager.copyJSOutputPath = opts ^. Opts.eoCopyJSOutputPath
                         }
-                    let initialSettings = Settings Settings.defaultAnnotationMode
-                    settingsRef <- newIORef initialSettings
-                    settingsChangeHandler evaluator initialSettings
+                    mkSettingsProp <- newSettingsProp evaluator
                     mainLoop stateStorage subpixel win refreshScheduler configSampler $
                         \fonts config theme env ->
                         let themeKeys = Config.changeThemeKeys config
                             themeEvents =
                                 themeSwitchEventMap themeKeys configSampler themeRef
                                 <&> liftIO
-                        in  makeRootWidget fonts db settingsRef evaluator
-                            config theme env
+                        in  mkSettingsProp >>=
+                            makeRootWidget fonts db evaluator config theme env
                             <&> M.weakerEvents themeEvents
     where
         stateStorage = stateStorageInIRef db DbLayout.guiState
