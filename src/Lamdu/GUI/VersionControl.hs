@@ -4,6 +4,7 @@ module Lamdu.GUI.VersionControl
     ) where
 
 import qualified Control.Lens as Lens
+import qualified Control.Monad.Reader as Reader
 import qualified Data.List.Utils as ListUtils
 import qualified Data.Property as Property
 import qualified GUI.Momentu.Align as Align
@@ -20,6 +21,7 @@ import qualified GUI.Momentu.Widgets.Choice as Choice
 import qualified GUI.Momentu.Widgets.FocusDelegator as FocusDelegator
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
 import qualified GUI.Momentu.Widgets.TextEdit.Property as TextEdits
+import qualified GUI.Momentu.Widgets.TextView as TextView
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.GUI.VersionControl.Config as VersionControl
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
@@ -67,8 +69,8 @@ eventMap config actions = mconcat
     , mRedo actions <&> fmap GuiState.fullUpdate & redoEventMap config
     ]
 
-choiceWidgetConfig :: VersionControl.Theme -> Choice.Config
-choiceWidgetConfig theme =
+choiceWidgetConfig :: Choice.Config
+choiceWidgetConfig =
     Choice.Config
     { Choice.cwcFDConfig =
         FocusDelegator.Config
@@ -77,7 +79,7 @@ choiceWidgetConfig theme =
         , FocusDelegator.focusParentKeys = [MetaKey noMods MetaKey.Key'Enter]
         , FocusDelegator.focusParentDoc = E.Doc ["Branches", "Choose selected"]
         }
-    , Choice.cwcExpandMode = VersionControl.selectedBranchColor theme & Choice.AutoExpand
+    , Choice.cwcExpandMode = Choice.ExplicitEntry
     , Choice.cwcOrientation = Choice.Vertical
     }
 
@@ -102,7 +104,7 @@ makeBranchSelector config theme rwtransaction rtransaction actions =
         branchNameEdits <- branches actions & traverse makeBranchNameEdit
         Choice.make ?? setCurrentBranch actions
             ?? branchNameEdits ?? currentBranch actions
-            ?? choiceWidgetConfig theme
+            ?? choiceWidgetConfig
             ?? WidgetIds.branchSelection
     where
         empty = TextEdit.EmptyStrings "unnamed branch" ""
@@ -126,3 +128,8 @@ makeBranchSelector config theme rwtransaction rtransaction actions =
                             (branchDelegatorId <$> deleteBranch actions branch)
                         | otherwise = mempty
                 pure (branch, Widget.weakerEvents delEventMap branchNameEdit)
+            & if branch == currentBranch actions
+                then
+                    Reader.local
+                    (TextView.color .~ VersionControl.selectedBranchColor theme)
+                else id

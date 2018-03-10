@@ -25,7 +25,7 @@ import           Lamdu.Prelude
 
 data ExpandMode
     -- Cursor is on expanded widget, need to show selected choice with a
-    -- color:
+    -- color: (TODO: Remove this?)
     = AutoExpand Draw.Color
     | ExplicitEntry
 Lens.makePrisms ''ExpandMode
