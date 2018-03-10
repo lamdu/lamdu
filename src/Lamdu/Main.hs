@@ -150,7 +150,7 @@ createWindow title mode =
 
 settingsChangeHandler :: EvalManager.Evaluator -> Settings -> IO ()
 settingsChangeHandler evaluator settings =
-    case settings ^. Settings.sInfoMode of
+    case settings ^. Settings.sAnnotationMode of
     Settings.Evaluation -> EvalManager.start evaluator
     _ -> EvalManager.stop evaluator
 
@@ -193,7 +193,7 @@ makeRootWidget fonts db settingsRef evaluator config theme mainLoopEnv =
                 , _envMainLoop = mainLoopEnv
                 }
         let dbToIO action =
-                case settings ^. Settings.sInfoMode of
+                case settings ^. Settings.sAnnotationMode of
                 Settings.Evaluation ->
                     EvalManager.runTransactionAndMaybeRestartEvaluator evaluator action
                 _ -> DbLayout.runDbTransaction db action
@@ -240,7 +240,7 @@ runEditor opts db =
                         , EvalManager.dbMVar = dbMVar
                         , EvalManager.copyJSOutputPath = opts ^. Opts.eoCopyJSOutputPath
                         }
-                    let initialSettings = Settings Settings.defaultInfoMode
+                    let initialSettings = Settings Settings.defaultAnnotationMode
                     settingsRef <- newIORef initialSettings
                     settingsChangeHandler evaluator initialSettings
                     mainLoop stateStorage subpixel win refreshScheduler configSampler $

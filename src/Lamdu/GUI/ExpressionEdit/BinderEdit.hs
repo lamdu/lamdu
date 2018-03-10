@@ -177,7 +177,7 @@ makeScopeNavEdit binder myId curCursor =
                     Just _ -> Theme.grammarColor (Theme.codeForegroundColors theme)
                 )
         evalConfig <- Lens.view Config.config <&> Config.eval
-        Lens.view (CESettings.settings . CESettings.sInfoMode)
+        Lens.view (CESettings.settings . CESettings.sAnnotationMode)
             >>= \case
             CESettings.Evaluation ->
                 (Widget.makeFocusableView ?? myId)

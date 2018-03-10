@@ -1,8 +1,8 @@
 {-# LANGUAGE NoImplicitPrelude, TemplateHaskell, OverloadedStrings #-}
 module Lamdu.GUI.CodeEdit.Settings
-    ( Settings(..), sInfoMode, InfoMode(..), defaultInfoMode
+    ( Settings(..), sAnnotationMode, AnnotationMode(..), defaultAnnotationMode
     , HasSettings(..)
-    , nextInfoMode
+    , nextAnnotationMode
     , mkEventMap
     ) where
 
@@ -17,14 +17,14 @@ import qualified Lamdu.Config as Config
 
 import           Lamdu.Prelude
 
-data InfoMode = Evaluation | Types | None
+data AnnotationMode = Evaluation | Types | None
     deriving (Eq, Ord, Show, Enum, Bounded)
 
-defaultInfoMode :: InfoMode
-defaultInfoMode = Evaluation
+defaultAnnotationMode :: AnnotationMode
+defaultAnnotationMode = Evaluation
 
 newtype Settings = Settings
-    { _sInfoMode :: InfoMode
+    { _sAnnotationMode :: AnnotationMode
     }
 Lens.makeLenses ''Settings
 
@@ -35,8 +35,8 @@ cyclicSucc x
     | x == maxBound = minBound
     | otherwise = succ x
 
-nextInfoMode :: InfoMode -> InfoMode
-nextInfoMode = cyclicSucc
+nextAnnotationMode :: AnnotationMode -> AnnotationMode
+nextAnnotationMode = cyclicSucc
 
 mkEventMap ::
     (Settings -> IO ()) -> Config -> IORef Settings ->
@@ -44,11 +44,11 @@ mkEventMap ::
 mkEventMap onSettingsChange config settingsRef =
     do
         theSettings <- readIORef settingsRef
-        let next = theSettings ^. sInfoMode & nextInfoMode
+        let next = theSettings ^. sAnnotationMode & nextAnnotationMode
         let nextDoc = E.Doc ["View", "Subtext", "Show " <> Text.pack (show next)]
-        let nextSettings = theSettings & sInfoMode .~ next
+        let nextSettings = theSettings & sAnnotationMode .~ next
         do
             writeIORef settingsRef nextSettings
             onSettingsChange nextSettings
-            & E.keysEventMap (Config.nextInfoModeKeys config) nextDoc
+            & E.keysEventMap (Config.nextAnnotationModeKeys config) nextDoc
             & pure

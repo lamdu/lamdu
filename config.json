@@ -69,7 +69,7 @@
     "extractKeys"              : [ "Cmd+X", "Alt+Up" ],
     "moveLetInwardKeys"        : [ "Alt+Down" ],
     "inlineKeys"               : [ "Cmd+V" ],
-    "nextInfoModeKeys"         : [ "F7" ],
+    "nextAnnotationModeKeys"   : [ "F7" ],
     "leaveSubexpressionKeys"   : [ "Shift+Left" ],
     "recordAddFieldKeys"       : [ "Cmd+A", "Comma" ],
     "caseAddAltKeys"           : [ "Cmd+A", "Comma" ],

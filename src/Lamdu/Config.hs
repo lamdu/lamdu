@@ -82,7 +82,7 @@ data Config = Config
     , helpKeys :: [MetaKey]
     , quitKeys :: [MetaKey]
     , changeThemeKeys :: [MetaKey]
-    , nextInfoModeKeys :: [MetaKey]
+    , nextAnnotationModeKeys :: [MetaKey]
     , previousCursorKeys :: [MetaKey]
 
     , addNextParamKeys :: [MetaKey]

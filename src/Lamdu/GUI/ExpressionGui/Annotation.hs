@@ -303,7 +303,7 @@ data AnnotationMode
 
 getAnnotationMode :: Monad m => EvalAnnotationOptions -> Sugar.Annotation -> ExprGuiM m AnnotationMode
 getAnnotationMode opt annotation =
-    Lens.view (CESettings.settings . CESettings.sInfoMode)
+    Lens.view (CESettings.settings . CESettings.sAnnotationMode)
     >>= \case
     CESettings.None -> pure AnnotationModeNone
     CESettings.Types -> pure AnnotationModeTypes
