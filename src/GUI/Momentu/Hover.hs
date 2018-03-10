@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, DeriveGeneric, TemplateHaskell, DeriveTraversable, FlexibleInstances, MultiParamTypeClasses, TypeFamilies, FlexibleContexts, OverloadedStrings, RankNTypes #-}
+{-# LANGUAGE NoImplicitPrelude, DeriveGeneric, TemplateHaskell, DeriveTraversable, FlexibleInstances, MultiParamTypeClasses, TypeFamilies, FlexibleContexts, OverloadedStrings, RankNTypes, UndecidableInstances #-}
 module GUI.Momentu.Hover
     ( Style(..)
     , Hover, hover, sequenceHover
@@ -69,7 +69,7 @@ instance SizedElement a => SizedElement (Hover a) where
 
 instance Widget.HasWidget AnchoredWidget where widget = anchored
 
-instance Functor f => Element (AnchoredWidget (f State.Update)) where
+instance (Functor f, a ~ f State.Update) => Element (AnchoredWidget a) where
     setLayers = anchored . Element.setLayers
     hoverLayers = anchored %~ Element.hoverLayers
     empty = AnchoredWidget 0 Element.empty
@@ -84,33 +84,33 @@ instance Functor f => Element (AnchoredWidget (f State.Update)) where
         , _anchored = Element.scale ratio w
         }
 
-instance Functor f => SizedElement (AnchoredWidget (f State.Update)) where
+instance (Functor f, a ~ f State.Update) => SizedElement (AnchoredWidget a) where
     size = anchored . Element.size
 
-instance Functor f => Glue (AnchoredWidget (f State.Update)) (Hover View) where
-    type Glued (AnchoredWidget (f State.Update)) (Hover View) = AnchoredWidget (f State.Update)
+instance (Functor f, a ~ f State.Update) => Glue (AnchoredWidget a) (Hover View) where
+    type Glued (AnchoredWidget a) (Hover View) = AnchoredWidget a
     glue o ow (Hover ov) =
         Glue.glueH f o ow ov
         where
             f w v = w & Element.setLayers <>~ v ^. View.vAnimLayers
 
-instance Functor f => Glue (Hover View) (AnchoredWidget (f State.Update)) where
-    type Glued (Hover View) (AnchoredWidget (f State.Update)) = AnchoredWidget (f State.Update)
+instance (Functor f, a ~ f State.Update) => Glue (Hover View) (AnchoredWidget a) where
+    type Glued (Hover View) (AnchoredWidget a) = AnchoredWidget a
     glue o (Hover ov) =
         Glue.glueH f o ov
         where
             f v w = w & Element.setLayers <>~ v ^. View.vAnimLayers
 
-instance Functor f => Glue (AnchoredWidget (f State.Update)) (Hover (Widget (f State.Update))) where
-    type Glued (AnchoredWidget (f State.Update)) (Hover (Widget (f State.Update))) = AnchoredWidget (f State.Update)
+instance (Functor f, a ~ f State.Update) => Glue (AnchoredWidget a) (Hover (Widget a)) where
+    type Glued (AnchoredWidget a) (Hover (Widget a)) = AnchoredWidget a
     glue orientation ow0 (Hover ow1) =
         Glue.glueH f orientation ow0 ow1
         where
             f (AnchoredWidget pos w0) w1 =
                 AnchoredWidget pos (Widget.glueStates orientation w0 w1)
 
-instance Functor f => Glue (Hover (Widget (f State.Update))) (AnchoredWidget (f State.Update)) where
-    type Glued (Hover (Widget (f State.Update))) (AnchoredWidget (f State.Update)) = AnchoredWidget (f State.Update)
+instance (Functor f, a ~ f State.Update) => Glue (Hover (Widget a)) (AnchoredWidget a) where
+    type Glued (Hover (Widget a)) (AnchoredWidget a) = AnchoredWidget a
     glue orientation (Hover ow0) =
         Glue.glueH f orientation ow0
         where
