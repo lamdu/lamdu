@@ -44,7 +44,7 @@ type T = Transaction
 
 type EvalResults = CurAndPrev (Results.EvalResults (ExprIRef.ValI ViewM))
 
-makeInnerGui ::
+layout ::
     ( MainLoop.HasMainLoopEnv env
     , Style.HasStyle env
     , Settings.HasSettings env
@@ -55,9 +55,10 @@ makeInnerGui ::
     , CodeEdit.HasEvalResults env ViewM
     , CodeEdit.HasExportActions env ViewM
     ) =>
+    E.EventMap (IOTrans DbM GuiState.Update) ->
     Widget (IOTrans DbM GuiState.Update) ->
     ReaderT env (T DbM) (Widget (IOTrans DbM GuiState.Update))
-makeInnerGui branchSelector =
+layout vcEventMap branchSelector =
     do
         fullSize <- Lens.view (MainLoop.mainLoopEnv . MainLoop.eWindowSize)
         let codeSize = fullSize - Vector2 0 (branchSelector ^. Element.height)
@@ -67,6 +68,7 @@ makeInnerGui branchSelector =
             & Reader.mapReaderT VersionControl.runAction
             <&> Lens.mapped . ioTrans . Lens.mapped %~
                 VersionControl.runEvent state
+            <&> Widget.weakerEvents vcEventMap
         theTheme <- Lens.view Theme.theme
         topPadding <- Spacer.vspaceLines (Theme.topPadding theTheme)
         let scrollBox =
@@ -93,10 +95,12 @@ make env =
         actions <-
             VersionControl.makeActions
             <&> VersionControl.Actions.hoist IOTrans.liftTrans
-        VersionControlGUI.make versionControlCfg versionControlThm
-            IOTrans.liftTrans lift actions makeInnerGui
-            & (`runReaderT` env)
+        let vcEventMap = VersionControlGUI.eventMap versionControlCfg actions
+        VersionControlGUI.makeBranchSelector versionControlCfg versionControlThm
+            IOTrans.liftTrans lift actions
+            >>= layout vcEventMap
             <&> Widget.eventMapMaker . Lens.mapped %~ (quitEventMap <>)
+            & (`runReaderT` env)
     where
         versionControlCfg = Config.versionControl (env ^. Config.config)
         versionControlThm = Theme.versionControl (env ^. Theme.theme)

@@ -1,6 +1,6 @@
 {-# LANGUAGE NoImplicitPrelude, OverloadedStrings, RankNTypes #-}
 module Lamdu.GUI.VersionControl
-    ( make
+    ( makeBranchSelector, eventMap
     ) where
 
 import qualified Control.Lens as Lens
@@ -51,11 +51,11 @@ redoEventMap config =
     E.keyPresses (VersionControl.redoKeys config <&> toModKey) (E.Doc ["Edit", "Redo"])
     & foldMap
 
-globalEventMap ::
+eventMap ::
     Applicative f =>
     VersionControl.Config -> Actions t f ->
     EventMap (f GuiState.Update)
-globalEventMap config actions = mconcat
+eventMap config actions = mconcat
     [ E.keysEventMapMovesCursor (VersionControl.makeBranchKeys config)
       (E.Doc ["Branches", "New"]) $ branchTextEditId <$> makeBranch actions
     , E.keysEventMapMovesCursor (VersionControl.jumpToBranchesKeys config)
@@ -85,25 +85,21 @@ branchDelegatorId = WidgetIds.fromUUID . Branch.uuid
 branchTextEditId :: Branch t -> Widget.Id
 branchTextEditId = (`Widget.joinId` ["textedit"]) . branchDelegatorId
 
-make ::
+makeBranchSelector ::
     (MonadReader env mr, GuiState.HasCursor env, TextEdit.HasStyle env,
      Applicative mw, Monad n) =>
     VersionControl.Config -> VersionControl.Theme ->
     (forall a. Transaction n a -> mw a) ->
     (forall a. Transaction n a -> mr a) ->
     Actions n mw ->
-    (Widget (mw GuiState.Update) -> mr (Widget (mw GuiState.Update))) ->
     mr (Widget (mw GuiState.Update))
-make config theme rwtransaction rtransaction actions mkWidget =
+makeBranchSelector config theme rwtransaction rtransaction actions =
     do
         branchNameEdits <- branches actions & traverse makeBranchNameEdit
-        branchSelector <-
-            Choice.make ?? setCurrentBranch actions
+        Choice.make ?? setCurrentBranch actions
             ?? branchNameEdits ?? currentBranch actions
             ?? choiceWidgetConfig theme
             ?? WidgetIds.branchSelection
-        mkWidget branchSelector
-            <&> Widget.eventMapMaker . Lens.mapped %~ (globalEventMap config actions <>)
     where
         empty = TextEdit.EmptyStrings "unnamed branch" ""
         makeBranchNameEdit branch =
