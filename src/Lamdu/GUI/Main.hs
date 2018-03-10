@@ -58,10 +58,9 @@ layout ::
     , CodeEdit.HasEvalResults env ViewM
     , CodeEdit.HasExportActions env ViewM
     ) =>
-    E.EventMap (IOTrans DbM GuiState.Update) ->
     Widget (IOTrans DbM GuiState.Update) ->
     ReaderT env (T DbM) (Widget (IOTrans DbM GuiState.Update))
-layout vcEventMap branchChoice =
+layout branchChoice =
     do
         fullSize <- Lens.view (MainLoop.mainLoopEnv . MainLoop.eWindowSize)
         branchLabel <- TextView.make ?? "Branch: " ?? ["BranchHeader"]
@@ -72,7 +71,6 @@ layout vcEventMap branchChoice =
             CodeEdit.make DbLayout.codeAnchors (codeSize ^. _1)
             & Reader.mapReaderT VersionControl.runAction
             <&> Lens.mapped . ioTrans . Lens.mapped %~ VersionControl.runEvent state
-            <&> Widget.weakerEvents vcEventMap
         theTheme <- Lens.view Theme.theme
         topPadding <- Spacer.vspaceLines (Theme.topPadding theTheme)
         let scrollBox = Scroll.focusAreaInto codeSize codeEdit
@@ -100,8 +98,8 @@ make env =
         let vcEventMap = VersionControlGUI.eventMap versionControlCfg actions
         VersionControlGUI.makeBranchSelector versionControlCfg versionControlThm
             IOTrans.liftTrans lift actions
-            >>= layout vcEventMap
-            <&> Widget.eventMapMaker . Lens.mapped %~ (quitEventMap <>)
+            >>= layout
+            <&> Widget.weakerEvents (quitEventMap <> vcEventMap)
             & (`runReaderT` env)
     where
         versionControlCfg = Config.versionControl (env ^. Config.config)
