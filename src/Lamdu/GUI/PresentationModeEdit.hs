@@ -13,6 +13,7 @@ import qualified Data.Text as Text
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.EventMap as E
+import qualified GUI.Momentu.Hover as Hover
 import           GUI.Momentu.MetaKey (MetaKey(..), noMods)
 import qualified GUI.Momentu.MetaKey as MetaKey
 import qualified GUI.Momentu.State as GuiState
@@ -45,6 +46,7 @@ presentationModeChoiceConfig = Choice.Config
 make ::
     ( Monad m, MonadReader env n, HasTheme env
     , Element.HasAnimIdPrefix env, TextView.HasStyle env, GuiState.HasCursor env
+    , Hover.HasStyle env
     ) =>
     Widget.Id ->
     Sugar.BinderParams name m ->

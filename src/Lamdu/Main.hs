@@ -16,6 +16,8 @@ import qualified Data.Property as Property
 import           GHC.Conc (setNumCapabilities, getNumProcessors)
 import           GHC.Stack (whoCreated)
 import qualified GUI.Momentu as M
+import           GUI.Momentu.Animation.Id (AnimId)
+import qualified GUI.Momentu.Hover as Hover
 import qualified GUI.Momentu.Main as MainLoop
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
@@ -67,6 +69,7 @@ data Env = Env
     , _envSettings :: Settings
     , _envStyle :: Style.Style
     , _envMainLoop :: MainLoop.Env
+    , _envAnimIdPrefix :: AnimId
     }
 Lens.makeLenses ''Env
 
@@ -82,6 +85,8 @@ instance TextEdit.HasStyle Env where style = envStyle . Style.styleBase
 instance TextView.HasStyle Env where style = TextEdit.style . TextView.style
 instance Theme.HasTheme Env where theme = envTheme
 instance Config.HasConfig Env where config = envConfig
+instance M.HasAnimIdPrefix Env where animIdPrefix = envAnimIdPrefix
+instance Hover.HasStyle Env where style = envTheme . Hover.style
 
 defaultFontPath :: ConfigSampler.Sample -> FilePath
 defaultFontPath sample =
@@ -192,6 +197,7 @@ makeRootWidget fonts db evaluator config theme mainLoopEnv settings =
                 , _envSettings = settings
                 , _envStyle = Style.makeStyle (Theme.codeForegroundColors theme) fonts
                 , _envMainLoop = mainLoopEnv
+                , _envAnimIdPrefix = mempty
                 }
         let dbToIO action =
                 case settings ^. Settings.sAnnotationMode of

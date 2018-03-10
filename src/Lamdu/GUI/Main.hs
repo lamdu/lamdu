@@ -17,6 +17,7 @@ import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Glue ((/-/), (/|/))
+import qualified GUI.Momentu.Hover as Hover
 import qualified GUI.Momentu.Main as MainLoop
 import qualified GUI.Momentu.Scroll as Scroll
 import qualified GUI.Momentu.State as GuiState
@@ -80,6 +81,8 @@ layout vcEventMap branchChoice =
 make ::
     ( MainLoop.HasMainLoopEnv env
     , Style.HasStyle env
+    , Hover.HasStyle env
+    , Element.HasAnimIdPrefix env
     , Config.HasConfig env
     , Spacer.HasStdSpacing env
     , Theme.HasTheme env

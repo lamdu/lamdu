@@ -10,8 +10,11 @@ module GUI.Momentu.Widgets.Choice
 
 import qualified Control.Lens as Lens
 import qualified GUI.Momentu.Draw as MDraw
+import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.Glue (Orientation(..))
 import qualified GUI.Momentu.Glue as Glue
+import           GUI.Momentu.Hover (Hover, AnchoredWidget)
+import qualified GUI.Momentu.Hover as Hover
 import qualified GUI.Momentu.State as State
 import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
@@ -36,55 +39,71 @@ data Config = Config
 data IsSelected = Selected | NotSelected
     deriving Eq
 
+type HoverFunc f =
+    AnchoredWidget (f State.Update) -> Hover (AnchoredWidget (f State.Update))
+
 makeInner ::
     (Applicative f, Eq childId) =>
-    (Widget.Id -> Bool) ->
+    HoverFunc f -> (Widget.Id -> Bool) ->
     (FocusDelegator.Config -> FocusDelegator.FocusEntryTarget ->
-     Widget.Id -> Widget (f State.Update) -> fd) -> (childId -> f ()) ->
-    [(childId, Widget (f State.Update))] -> childId -> Config -> Widget.Id -> fd
-makeInner cursorOn fd choose children curChild config myId =
-    children <&> annotate
-    <&> prependEntryAction
-    & filterVisible
-    <&> colorize
-    & Glue.box (cwcOrientation config)
-    & fd (cwcFDConfig config) FocusDelegator.FocusEntryParent myId
+     Widget.Id -> Widget (f State.Update) -> Widget (f State.Update)) -> (childId -> f ()) ->
+    [(childId, Widget (f State.Update))] -> childId -> Config -> Widget.Id ->
+    Widget (f State.Update)
+makeInner hover cursorOn fd choose children curChild config myId =
+    widget True
+    & if expanded
+    then hoverAsClosed
+    else id
     where
-        filterVisible
-            | anyChildFocused || (autoExpand && cursorOn myId) = id
+        hoverAsClosed open =
+            [hover (Hover.anchor open)]
+            `Hover.hoverInPlaceOf` Hover.anchor (widget False)
+        expanded = anyChildFocused || (autoExpand && cursorOn myId)
+        widget allowExpand =
+            children <&> annotate
+            <&> prependEntryAction
+            & filterVisible allowExpand
+            <&> colorize
+            & Glue.box (cwcOrientation config)
+            & fd (cwcFDConfig config) FocusDelegator.FocusEntryParent myId
+        filterVisible allowExpand
+            | allowExpand && expanded = id
             | otherwise = filter ((== Selected) . fst)
         autoExpand = cwcExpandMode config & Lens.has _AutoExpand
-        colorize (isSelected, widget)
-            | anyChildFocused = widget -- focus shows selection already
+        colorize (isSelected, w)
+            | anyChildFocused = w -- focus shows selection already
             | otherwise = -- need to show selection even as focus is elsewhere
-                widget
+                w
                 & case cwcExpandMode config of
                     AutoExpand color
                         | isSelected == Selected ->
                             MDraw.backgroundColor (Widget.toAnimId myId) color
                     _ -> id
-        prependEntryAction (isSelected, action, widget) =
+        prependEntryAction (isSelected, action, w) =
             ( isSelected
-            , widget
+            , w
                 & Widget.wState . Widget._StateUnfocused . Widget.uMEnter
                     . Lens._Just . Lens.mapped . Widget.enterResultEvent
                     %~ (action *>)
             )
         anyChildFocused =
             Lens.orOf (Lens.traversed . _2 . Lens.to Widget.isFocused) children
-        annotate (item, widget) =
+        annotate (item, w) =
             ( if item == curChild then Selected else NotSelected
             , choose item
-            , widget
+            , w
             )
 
 make ::
-    (Eq a, MonadReader env m, Applicative f, State.HasCursor env) =>
+    ( Eq a, MonadReader env m, Applicative f
+    , State.HasCursor env, Hover.HasStyle env, Element.HasAnimIdPrefix env
+    ) =>
     m
     ((a -> f ()) -> [(a, Widget (f State.Update))] -> a ->
      Config -> Widget.Id -> Widget (f State.Update))
 make =
     do
+        hover <- Hover.hover
         cursorOn <- State.isSubCursor
         fd <- FocusDelegator.make
-        makeInner cursorOn fd & pure
+        makeInner hover cursorOn fd & pure

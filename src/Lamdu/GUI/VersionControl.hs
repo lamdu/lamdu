@@ -7,8 +7,10 @@ import qualified Control.Lens as Lens
 import qualified Data.List.Utils as ListUtils
 import qualified Data.Property as Property
 import qualified GUI.Momentu.Align as Align
+import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
+import qualified GUI.Momentu.Hover as Hover
 import           GUI.Momentu.MetaKey (MetaKey(..), noMods, toModKey)
 import qualified GUI.Momentu.MetaKey as MetaKey
 import qualified GUI.Momentu.State as GuiState
@@ -86,8 +88,10 @@ branchTextEditId :: Branch t -> Widget.Id
 branchTextEditId = (`Widget.joinId` ["textedit"]) . branchDelegatorId
 
 makeBranchSelector ::
-    (MonadReader env mr, GuiState.HasCursor env, TextEdit.HasStyle env,
-     Applicative mw, Monad n) =>
+    ( MonadReader env mr, GuiState.HasCursor env, TextEdit.HasStyle env
+    , Applicative mw, Hover.HasStyle env, Element.HasAnimIdPrefix env
+    , Monad n
+    ) =>
     VersionControl.Config -> VersionControl.Theme ->
     (forall a. Transaction n a -> mw a) ->
     (forall a. Transaction n a -> mr a) ->
