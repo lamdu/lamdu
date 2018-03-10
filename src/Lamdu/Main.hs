@@ -237,6 +237,7 @@ newSettingsProp evaluator =
 
 runEditor :: Opts.EditorOpts -> DB -> IO ()
 runEditor opts db =
+    withMVarProtection db $ \dbMVar ->
     do
         -- Load config as early as possible, before we open any windows/etc
         themeRef <- newIORef defaultTheme
@@ -250,24 +251,22 @@ runEditor opts db =
                 (opts ^. Opts.eoWindowTitle)
                 (opts ^. Opts.eoWindowMode)
             printGLVersion
-            withMVarProtection db $ \dbMVar ->
-                do
-                    evaluator <-
-                        EvalManager.new EvalManager.NewParams
-                        { EvalManager.resultsUpdated = refresh
-                        , EvalManager.dbMVar = dbMVar
-                        , EvalManager.copyJSOutputPath = opts ^. Opts.eoCopyJSOutputPath
-                        }
-                    mkSettingsProp <- newSettingsProp evaluator
-                    mainLoop stateStorage subpixel win refreshScheduler configSampler $
-                        \fonts config theme env ->
-                        let themeKeys = Config.changeThemeKeys config
-                            themeEvents =
-                                themeSwitchEventMap themeKeys configSampler themeRef
-                                <&> liftIO
-                        in  mkSettingsProp >>=
-                            makeRootWidget fonts db evaluator config theme env
-                            <&> M.weakerEvents themeEvents
+            evaluator <-
+                EvalManager.new EvalManager.NewParams
+                { EvalManager.resultsUpdated = refresh
+                , EvalManager.dbMVar = dbMVar
+                , EvalManager.copyJSOutputPath = opts ^. Opts.eoCopyJSOutputPath
+                }
+            mkSettingsProp <- newSettingsProp evaluator
+            mainLoop stateStorage subpixel win refreshScheduler configSampler $
+                \fonts config theme env ->
+                let themeKeys = Config.changeThemeKeys config
+                    themeEvents =
+                        themeSwitchEventMap themeKeys configSampler themeRef
+                        <&> liftIO
+                in  mkSettingsProp >>=
+                    makeRootWidget fonts db evaluator config theme env
+                    <&> M.weakerEvents themeEvents
     where
         stateStorage = stateStorageInIRef db DbLayout.guiState
         subpixel
