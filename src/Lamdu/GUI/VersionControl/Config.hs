@@ -3,8 +3,8 @@ module Lamdu.GUI.VersionControl.Config
     ( Config(..), Theme(..)
     ) where
 
-import           Data.Aeson.Types (defaultOptions)
 import           Data.Aeson.TH (deriveJSON)
+import           Data.Aeson.Types (defaultOptions)
 import qualified GUI.Momentu.Draw as Draw
 import           GUI.Momentu.MetaKey (MetaKey)
 

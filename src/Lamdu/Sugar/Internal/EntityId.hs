@@ -12,7 +12,6 @@ module Lamdu.Sugar.Internal.EntityId
 
 import           Data.Binary.Utils (encodeS)
 import           Data.Hashable (Hashable)
-import           Revision.Deltum.IRef (IRef)
 import           Data.UUID.Types (UUID)
 import qualified Data.UUID.Utils as UUIDUtils
 import qualified Lamdu.Calc.Type as T
@@ -21,6 +20,7 @@ import           Lamdu.Calc.Val.Annotated (Val)
 import qualified Lamdu.Expr.GenIds as GenIds
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.UniqueId as UniqueId
+import           Revision.Deltum.IRef (IRef)
 
 import           System.Random (RandomGen)
 

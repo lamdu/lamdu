@@ -5,6 +5,7 @@ module Lamdu.Sugar.Convert.Binder.Inline
     ) where
 
 import qualified Control.Lens as Lens
+import qualified Data.Property as Property
 import qualified Lamdu.Calc.Val as V
 import           Lamdu.Calc.Val.Annotated (Val(..))
 import qualified Lamdu.Calc.Val.Annotated as Val
@@ -14,7 +15,6 @@ import           Lamdu.Sugar.Convert.Binder.Redex (Redex(..))
 import qualified Lamdu.Sugar.Convert.Binder.Redex as Redex
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import           Lamdu.Sugar.Types
-import qualified Revision.Deltum.Property as Property
 import           Revision.Deltum.Transaction (Transaction)
 
 import           Lamdu.Prelude

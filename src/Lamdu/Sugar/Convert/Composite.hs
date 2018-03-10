@@ -5,6 +5,7 @@ module Lamdu.Sugar.Convert.Composite
     ) where
 
 import qualified Control.Lens as Lens
+import qualified Data.Property as Property
 import qualified Data.Set as Set
 import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Calc.Val as V
@@ -18,7 +19,6 @@ import           Lamdu.Sugar.Convert.Tag (convertTag, convertTagSelection, Allow
 import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import           Lamdu.Sugar.Types
-import qualified Revision.Deltum.Property as Property
 import           Revision.Deltum.Transaction (Transaction)
 import qualified Revision.Deltum.Transaction as Transaction
 

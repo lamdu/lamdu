@@ -7,7 +7,7 @@ import Control.Lens
 import GUI.Momentu.State (GUIState)
 import Revision.Deltum.Rev.Branch (Branch)
 
-import           Lamdu.Prelude
+import Lamdu.Prelude
 
 data Actions t m = Actions
     { branches :: [Branch t]

@@ -14,6 +14,8 @@ import qualified Control.Monad.Transaction as Transaction
 import           Data.CurAndPrev (CurAndPrev, current, fallbackToPrev)
 import           Data.List.Utils (withPrevNext)
 import qualified Data.Map as Map
+import           Data.Property (Property)
+import qualified Data.Property as Property
 import           GUI.Momentu.Align (WithTextPos)
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Draw as Draw
@@ -53,8 +55,6 @@ import           Lamdu.Name (Name(..))
 import qualified Lamdu.Sugar.Lens as SugarLens
 import           Lamdu.Sugar.NearestHoles (NearestHoles)
 import qualified Lamdu.Sugar.Types as Sugar
-import           Revision.Deltum.Property (Property)
-import qualified Revision.Deltum.Property as Property
 import           Revision.Deltum.Transaction (Transaction, MkProperty(..))
 
 import           Lamdu.Prelude

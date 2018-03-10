@@ -14,6 +14,8 @@ module Lamdu.Data.Ops
     , newIdentityLambda
     ) where
 
+import           Data.Property (Property(..))
+import qualified Data.Property as Property
 import qualified Data.Set as Set
 import qualified GUI.Momentu.Widget.Id as WidgetId
 import qualified Lamdu.Calc.Type as T
@@ -24,8 +26,6 @@ import           Lamdu.Data.Meta (SpecialArgs(..), PresentationMode)
 import qualified Lamdu.Expr.GenIds as GenIds
 import           Lamdu.Expr.IRef (DefI, ValIProperty, ValI)
 import qualified Lamdu.Expr.IRef as ExprIRef
-import           Revision.Deltum.Property (Property(..))
-import qualified Revision.Deltum.Property as Property
 import           Revision.Deltum.Transaction (Transaction, getP, setP, modP)
 import qualified Revision.Deltum.Transaction as Transaction
 

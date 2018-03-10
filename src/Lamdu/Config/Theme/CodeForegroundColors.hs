@@ -4,8 +4,8 @@ module Lamdu.Config.Theme.CodeForegroundColors
     ( CodeForegroundColors(..)
     ) where
 
-import           Data.Aeson.Types (defaultOptions)
 import           Data.Aeson.TH (deriveJSON)
+import           Data.Aeson.Types (defaultOptions)
 import qualified GUI.Momentu.Draw as Draw
 
 import           Lamdu.Prelude

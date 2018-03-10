@@ -14,6 +14,7 @@ module Lamdu.Sugar.Types
     ) where
 
 import qualified Control.Lens as Lens
+import           Data.Property (Property)
 import           Data.UUID.Types (UUID)
 import           Lamdu.Calc.Type.Scheme (Scheme)
 import qualified Lamdu.Calc.Val as V
@@ -25,7 +26,6 @@ import           Lamdu.Sugar.Types.Expression as Exported
 import           Lamdu.Sugar.Types.GetVar as Exported
 import           Lamdu.Sugar.Types.Hole as Exported
 import           Lamdu.Sugar.Types.Tag as Exported
-import           Revision.Deltum.Property (Property)
 
 import           Lamdu.Prelude
 

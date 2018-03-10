@@ -18,6 +18,7 @@ import           Control.DeepSeq (NFData)
 import qualified Control.Lens as Lens
 import           Data.Binary (Binary(..))
 import           Data.Function.Decycle (decycle)
+import           Data.Property (Property(..))
 import qualified Data.UUID.Utils as UUIDUtils
 import           Lamdu.Calc.Identifier (Identifier(..))
 import qualified Lamdu.Calc.Type as T
@@ -28,7 +29,6 @@ import qualified Lamdu.Calc.Val.Annotated as Val
 import           Lamdu.Data.Definition (Definition)
 import           Revision.Deltum.IRef (IRef)
 import qualified Revision.Deltum.IRef as IRef
-import           Revision.Deltum.Property (Property(..))
 import           Revision.Deltum.Transaction (Transaction)
 import qualified Revision.Deltum.Transaction as Transaction
 

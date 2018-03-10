@@ -4,6 +4,7 @@ module Lamdu.Sugar.Convert.GetField
     ) where
 
 import qualified Control.Lens as Lens
+import qualified Data.Property as Property
 import qualified Lamdu.Calc.Val as V
 import           Lamdu.Calc.Val.Annotated (Val(..))
 import qualified Lamdu.Calc.Val.Annotated as Val
@@ -17,7 +18,6 @@ import           Lamdu.Sugar.Convert.Tag (convertTag)
 import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import           Lamdu.Sugar.Types
-import qualified Revision.Deltum.Property as Property
 
 import           Lamdu.Prelude
 

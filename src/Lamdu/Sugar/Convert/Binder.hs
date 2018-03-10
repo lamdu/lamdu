@@ -5,6 +5,7 @@ module Lamdu.Sugar.Convert.Binder
 
 import qualified Control.Lens as Lens
 import qualified Data.Map as Map
+import qualified Data.Property as Property
 import qualified Data.Set as Set
 import qualified Lamdu.Calc.Val as V
 import           Lamdu.Calc.Val.Annotated (Val(..))
@@ -30,7 +31,6 @@ import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import qualified Lamdu.Sugar.Lens as SugarLens
 import           Lamdu.Sugar.Types
-import qualified Revision.Deltum.Property as Property
 import           Revision.Deltum.Transaction (Transaction, MkProperty, mkProperty)
 
 import           Lamdu.Prelude

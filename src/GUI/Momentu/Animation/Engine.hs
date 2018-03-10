@@ -12,10 +12,10 @@ import qualified Data.Map as Map
 import           Data.Maybe (mapMaybe)
 import qualified Data.Set as Set
 import qualified Data.Vector.Vector2 as Vector2
-import qualified Graphics.DrawingCombinators as Draw
 import           GUI.Momentu.Animation (Image, iRect, iAnimId, iUnitImage, Frame(..), frameImages, images, R)
 import           GUI.Momentu.Rect (Rect(Rect))
 import qualified GUI.Momentu.Rect as Rect
+import qualified Graphics.DrawingCombinators as Draw
 
 import           Lamdu.Prelude
 

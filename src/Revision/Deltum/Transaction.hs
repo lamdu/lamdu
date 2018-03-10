@@ -29,11 +29,11 @@ import           Data.Binary (Binary)
 import           Data.Binary.Utils (encodeS, decodeS)
 import qualified Data.Map as Map
 import           Data.Maybe (fromMaybe, isJust)
+import qualified Data.Property as Property
 import           Data.UUID.Types (UUID)
 import qualified Data.UUID.Utils as UUIDUtils
 import           Revision.Deltum.IRef (IRef)
 import qualified Revision.Deltum.IRef as IRef
-import qualified Revision.Deltum.Property as Property
 import           Revision.Deltum.Rev.Change (Key, Value)
 
 import           Lamdu.Prelude hiding (lookup)

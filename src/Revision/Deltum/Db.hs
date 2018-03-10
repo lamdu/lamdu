@@ -8,11 +8,11 @@ module Revision.Deltum.Db
     ) where
 
 import           Data.ByteString.Utils (strictifyBS)
-import           Revision.Deltum.Transaction (Store(..))
 import           Data.UUID.Types (UUID)
 import qualified Data.UUID.Types as UUID
 import           Database.LevelDB.Base (DB)
 import qualified Database.LevelDB.Base as DB
+import           Revision.Deltum.Transaction (Store(..))
 import           System.Random (randomIO)
 
 import           Lamdu.Prelude hiding (lookup)

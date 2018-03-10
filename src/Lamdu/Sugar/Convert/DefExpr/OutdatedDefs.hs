@@ -8,6 +8,7 @@ import qualified Control.Lens as Lens
 import           Control.Monad (foldM)
 import qualified Data.Map as Map
 import qualified Data.Monoid as Monoid
+import qualified Data.Property as Property
 import qualified Data.Set as Set
 import           Lamdu.Calc.Type (Type)
 import qualified Lamdu.Calc.Type as T
@@ -25,7 +26,6 @@ import qualified Lamdu.Expr.Lens as ExprLens
 import qualified Lamdu.Infer as Infer
 import           Lamdu.Sugar.Convert.PostProcess (PostProcessResult(..))
 import           Lamdu.Sugar.Types (DefinitionOutdatedType(..))
-import qualified Revision.Deltum.Property as Property
 import           Revision.Deltum.Transaction (Transaction)
 import qualified Revision.Deltum.Transaction as Transaction
 

@@ -1,14 +1,16 @@
 {-# LANGUAGE NoImplicitPrelude, TemplateHaskell, Rank2Types #-}
-module Revision.Deltum.Property
+module Data.Property
     ( Property(..), pVal, pSet, value, set
     , compose, pureCompose, composeLens
     , modify_, pureModify
     ) where
 
+import           Control.Lens (Lens')
 import qualified Control.Lens as Lens
+import           Control.Lens.Operators
 import           Control.Monad ((<=<))
 
-import           Lamdu.Prelude
+import           Prelude
 
 data Property m a = Property
     { _pVal :: a

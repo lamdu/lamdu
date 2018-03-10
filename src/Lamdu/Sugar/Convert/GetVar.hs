@@ -9,6 +9,7 @@ import           Control.Monad.Trans.Maybe (MaybeT)
 import           Control.Monad.Transaction (MonadTransaction, getP, setP)
 import qualified Control.Monad.Transaction as Transaction
 import           Data.Maybe.Utils (maybeToMPlus)
+import qualified Data.Property as Property
 import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Calc.Type.Scheme as Scheme
 import qualified Lamdu.Calc.Val as V
@@ -27,7 +28,6 @@ import qualified Lamdu.Sugar.Convert.Monad as ConvertM
 import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import           Lamdu.Sugar.Types
-import qualified Revision.Deltum.Property as Property
 import           Revision.Deltum.Transaction (Transaction)
 
 import           Lamdu.Prelude

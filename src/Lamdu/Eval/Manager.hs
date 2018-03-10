@@ -15,6 +15,7 @@ import           Data.CurAndPrev (CurAndPrev(..))
 import           Data.IORef
 import           Data.IORef.Utils (atomicModifyIORef_)
 import qualified Data.Monoid as Monoid
+import qualified Data.Property as Property
 import qualified Data.Set as Set
 import           Data.UUID.Types (UUID)
 import           Lamdu.Calc.Val.Annotated (Val)
@@ -32,7 +33,6 @@ import qualified Lamdu.VersionControl as VersionControl
 import           Revision.Deltum.Db (DB)
 import           Revision.Deltum.IRef (IRef)
 import qualified Revision.Deltum.IRef as IRef
-import qualified Revision.Deltum.Property as Property
 import qualified Revision.Deltum.Rev.Change as Change
 import qualified Revision.Deltum.Rev.Version as Version
 import           Revision.Deltum.Transaction (Transaction)

@@ -4,8 +4,8 @@ module Graphics.UI.GLFW.Instances
     (
     ) where
 
-import Data.Aeson.Types (defaultOptions)
 import Data.Aeson.TH (deriveJSON)
+import Data.Aeson.Types (defaultOptions)
 import Graphics.UI.GLFW (Key(..), ModifierKeys(..))
 
 deriveJSON defaultOptions ''Key

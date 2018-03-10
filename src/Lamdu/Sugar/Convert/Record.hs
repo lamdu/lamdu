@@ -4,6 +4,7 @@ module Lamdu.Sugar.Convert.Record
     ) where
 
 import qualified Control.Lens as Lens
+import qualified Data.Property as Property
 import qualified Lamdu.Calc.Val as V
 import           Lamdu.Calc.Val.Annotated (Val(..))
 import qualified Lamdu.Calc.Val.Annotated as Val
@@ -16,7 +17,6 @@ import           Lamdu.Sugar.Convert.Monad (ConvertM)
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
 import           Lamdu.Sugar.Internal
 import           Lamdu.Sugar.Types
-import qualified Revision.Deltum.Property as Property
 
 import           Lamdu.Prelude
 

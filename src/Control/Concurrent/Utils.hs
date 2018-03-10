@@ -3,8 +3,8 @@ module Control.Concurrent.Utils
     ) where
 
 import           Control.Concurrent (ThreadId, forkIOWithUnmask, threadDelay, myThreadId)
-import qualified Control.Exception.Safe as ES
 import qualified Control.Exception as E
+import qualified Control.Exception.Safe as ES
 import           Control.Lens.Operators
 import           Control.Monad (void)
 

@@ -9,8 +9,8 @@ import           Data.List (transpose)
 import           Data.Vector.Vector2 (Vector2(..))
 import           GUI.Momentu.Align (Aligned(..))
 import qualified GUI.Momentu.Animation as Anim
-import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.Element (SizedElement)
+import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.Rect (Rect(..))
 import qualified GUI.Momentu.Rect as Rect
 import           GUI.Momentu.View (View(..))

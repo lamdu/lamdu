@@ -6,6 +6,7 @@ module Lamdu.Sugar.Convert.Binder.Float
 
 import qualified Control.Lens as Lens
 import qualified Data.Map as Map
+import qualified Data.Property as Property
 import qualified Data.Set as Set
 import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Calc.Type.Vars as TV
@@ -32,7 +33,6 @@ import qualified Lamdu.Sugar.Convert.PostProcess as PostProcess
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import           Lamdu.Sugar.OrderTags (orderedClosedFlatComposite)
 import           Lamdu.Sugar.Types
-import qualified Revision.Deltum.Property as Property
 import           Revision.Deltum.Transaction (Transaction, getP)
 import           Text.PrettyPrint.HughesPJClass (prettyShow)
 

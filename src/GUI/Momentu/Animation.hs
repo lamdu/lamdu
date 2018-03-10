@@ -15,12 +15,12 @@ module GUI.Momentu.Animation
 
 import qualified Control.Lens as Lens
 import           Data.Vector.Vector2 (Vector2(..))
-import           Graphics.DrawingCombinators (R, (%%))
-import qualified Graphics.DrawingCombinators as Draw
-import qualified Graphics.DrawingCombinators.Utils as DrawUtils
 import           GUI.Momentu.Animation.Id
 import           GUI.Momentu.Rect (Rect(Rect))
 import qualified GUI.Momentu.Rect as Rect
+import           Graphics.DrawingCombinators (R, (%%))
+import qualified Graphics.DrawingCombinators as Draw
+import qualified Graphics.DrawingCombinators.Utils as DrawUtils
 
 import           Lamdu.Prelude
 

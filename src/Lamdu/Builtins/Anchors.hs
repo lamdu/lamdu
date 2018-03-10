@@ -13,7 +13,7 @@ import           Data.String (IsString(..))
 import           Lamdu.Calc.Type (Tag)
 import qualified Lamdu.Calc.Type as T
 
-import Lamdu.Prelude
+import           Lamdu.Prelude
 
 -- We want the translation to UUID and back to not be lossy, so we
 -- canonize to UUID format

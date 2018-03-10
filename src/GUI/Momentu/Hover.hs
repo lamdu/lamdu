@@ -13,8 +13,8 @@ module GUI.Momentu.Hover
     ) where
 
 import qualified Control.Lens as Lens
-import           Data.Aeson.Types (defaultOptions)
 import           Data.Aeson.TH (deriveJSON)
+import           Data.Aeson.Types (defaultOptions)
 import           Data.List.Utils (minimumOn)
 import           Data.Vector.Vector2 (Vector2(..))
 import           GUI.Momentu.Align (Aligned(..), value)

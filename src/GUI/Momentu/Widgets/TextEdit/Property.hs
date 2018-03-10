@@ -6,6 +6,8 @@ module GUI.Momentu.Widgets.TextEdit.Property
     ) where
 
 import qualified Control.Lens as Lens
+import           Data.Property (Property)
+import qualified Data.Property as Property
 import           GUI.Momentu.Align (WithTextPos)
 import qualified GUI.Momentu.Align as Align
 import           GUI.Momentu.EventMap (EventMap)
@@ -16,8 +18,6 @@ import qualified GUI.Momentu.State as State
 import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
-import           Revision.Deltum.Property (Property)
-import qualified Revision.Deltum.Property as Property
 
 import           Lamdu.Prelude
 

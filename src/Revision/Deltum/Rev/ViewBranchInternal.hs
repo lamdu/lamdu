@@ -14,6 +14,8 @@ where
 
 import qualified Control.Lens as Lens
 import           Data.Binary (Binary(..))
+import           Data.UUID.Types (UUID)
+import qualified Data.UUID.Utils as UUIDUtils
 import           Revision.Deltum.IRef (IRef)
 import qualified Revision.Deltum.IRef as IRef
 import           Revision.Deltum.Rev.Change (Change)
@@ -22,8 +24,6 @@ import           Revision.Deltum.Rev.Version (Version)
 import qualified Revision.Deltum.Rev.Version as Version
 import           Revision.Deltum.Transaction (Transaction)
 import qualified Revision.Deltum.Transaction as Transaction
-import           Data.UUID.Types (UUID)
-import qualified Data.UUID.Utils as UUIDUtils
 
 import           Lamdu.Prelude
 

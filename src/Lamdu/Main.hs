@@ -11,6 +11,8 @@ import           Control.Monad.IO.Class (MonadIO(..))
 import           Data.CurAndPrev (current)
 import           Data.IORef
 import           Data.MRUMemo (memoIO)
+import           Data.Property (Property(..))
+import qualified Data.Property as Property
 import           GHC.Conc (setNumCapabilities, getNumProcessors)
 import           GHC.Stack (whoCreated)
 import qualified GUI.Momentu as M
@@ -47,8 +49,6 @@ import qualified Lamdu.VersionControl as VersionControl
 import           Lamdu.VersionControl.Actions (mUndo)
 import           Revision.Deltum.Db (DB)
 import           Revision.Deltum.IRef (IRef)
-import           Revision.Deltum.Property (Property(..))
-import qualified Revision.Deltum.Property as Property
 import           Revision.Deltum.Transaction (Transaction)
 import qualified Revision.Deltum.Transaction as Transaction
 import qualified System.Directory as Directory

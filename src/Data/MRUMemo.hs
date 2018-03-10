@@ -5,8 +5,8 @@ module Data.MRUMemo
     ( memoIO, memoIOPure, memo
     ) where
 
-import Control.Lens.Operators ((<&>))
 import Control.Concurrent.MVar
+import Control.Lens.Operators ((<&>))
 import Data.IORef
 import System.IO.Unsafe (unsafePerformIO)
 

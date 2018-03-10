@@ -9,6 +9,8 @@ import qualified Control.Monad.Trans.State as State
 import           Data.CurAndPrev (CurAndPrev)
 import           Data.List.Utils (insertAt, removeAt)
 import qualified Data.Map as Map
+import           Data.Property (Property(..))
+import qualified Data.Property as Property
 import qualified Data.Set as Set
 import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Calc.Type.Nominal as N
@@ -37,8 +39,6 @@ import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import qualified Lamdu.Sugar.OrderTags as OrderTags
 import qualified Lamdu.Sugar.PresentationModes as PresentationModes
 import           Lamdu.Sugar.Types
-import           Revision.Deltum.Property (Property(..))
-import qualified Revision.Deltum.Property as Property
 import           Revision.Deltum.Transaction (Transaction, mkProperty)
 import qualified Revision.Deltum.Transaction as Transaction
 

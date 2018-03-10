@@ -13,6 +13,8 @@ module Lamdu.Sugar.Convert.Load
 
 import qualified Control.Lens as Lens
 import           Data.CurAndPrev (CurAndPrev)
+import           Data.Property (Property)
+import qualified Data.Property as Property
 import qualified Lamdu.Calc.Val as V
 import           Lamdu.Calc.Val.Annotated (Val)
 import qualified Lamdu.Calc.Val.Annotated as Val
@@ -29,8 +31,6 @@ import qualified Lamdu.Sugar.Convert.Input as Input
 import qualified Lamdu.Sugar.Convert.ParamList as ParamList
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import           Lamdu.Sugar.Types (EntityId)
-import           Revision.Deltum.Property (Property)
-import qualified Revision.Deltum.Property as Property
 import           Revision.Deltum.Transaction (Transaction)
 import           Text.PrettyPrint.HughesPJClass (pPrint)
 

@@ -3,6 +3,7 @@
 module Lamdu.Sugar.Convert.IfElse (convertIfElse) where
 
 import qualified Control.Lens as Lens
+import qualified Data.Property as Property
 import           Lamdu.Builtins.Anchors (boolTid, trueTag, falseTag)
 import qualified Lamdu.Calc.Type as T
 import           Lamdu.Data.Anchors (bParamScopeId)
@@ -10,7 +11,6 @@ import           Lamdu.Expr.IRef (ValI)
 import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import           Lamdu.Sugar.Types
-import qualified Revision.Deltum.Property as Property
 import           Revision.Deltum.Transaction (Transaction)
 
 import           Lamdu.Prelude

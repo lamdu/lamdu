@@ -8,6 +8,7 @@ import           Control.Lens (LensLike')
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
 import qualified Data.Char as Char
+import qualified Data.Property as Property
 import qualified Data.Text as Text
 import           GUI.Momentu.Align (WithTextPos)
 import qualified GUI.Momentu.Align as Align
@@ -40,7 +41,6 @@ import           Lamdu.Style (Style, HasStyle)
 import qualified Lamdu.Style as Style
 import qualified Lamdu.Sugar.NearestHoles as NearestHoles
 import qualified Lamdu.Sugar.Types as Sugar
-import qualified Revision.Deltum.Property as Property
 import qualified Revision.Deltum.Transaction as Transaction
 
 import           Lamdu.Prelude

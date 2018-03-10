@@ -40,7 +40,7 @@ import qualified Lamdu.Expr.Load as Load
 import           Lamdu.Expr.UniqueId (ToUUID)
 import           Revision.Deltum.IRef (IRef)
 import qualified Revision.Deltum.IRef as IRef
-import qualified Revision.Deltum.Property as Property
+import qualified Data.Property as Property
 import           Revision.Deltum.Transaction (Transaction)
 import qualified Revision.Deltum.Transaction as Transaction
 

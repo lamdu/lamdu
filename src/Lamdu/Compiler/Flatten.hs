@@ -8,8 +8,8 @@ module Lamdu.Compiler.Flatten
 
 import qualified Control.Lens as Lens
 import qualified Lamdu.Calc.Type as T
-import           Lamdu.Calc.Val.Annotated (Val(..))
 import qualified Lamdu.Calc.Val as V
+import           Lamdu.Calc.Val.Annotated (Val(..))
 
 import           Lamdu.Prelude
 

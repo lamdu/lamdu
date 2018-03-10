@@ -6,7 +6,7 @@ module Lamdu.GUI.CodeEdit.AnnotationMode
     , switchEventMap
     ) where
 
-import           Revision.Deltum.Property (Property(..))
+import           Data.Property (Property(..))
 import qualified Data.Text as Text
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E

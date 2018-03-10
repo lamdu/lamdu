@@ -8,7 +8,7 @@ module Lamdu.Precedence
 import qualified Control.Lens as Lens
 import qualified Data.Map as Map
 
-import Lamdu.Prelude
+import           Lamdu.Prelude
 
 data Precedence a = Precedence
     { before :: a

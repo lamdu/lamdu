@@ -97,6 +97,7 @@ Library
                   , Data.Map.Utils
                   , Data.Maybe.Utils
                   , Data.Monoid.Generic
+                  , Data.Property
                   , Data.Set.Ordered
                   , Data.UUID.Utils
                   , Data.Vector.Vector2
@@ -297,7 +298,6 @@ Library
                   , Paths.Utils
                   , Revision.Deltum.Db
                   , Revision.Deltum.IRef
-                  , Revision.Deltum.Property
                   , Revision.Deltum.Rev.Branch
                   , Revision.Deltum.Rev.Change
                   , Revision.Deltum.Rev.Version

@@ -18,6 +18,7 @@ module Lamdu.Data.Anchors
 import qualified Control.Lens as Lens
 import           Data.Binary (Binary)
 import           Data.ByteString.Char8 ()
+import           Data.UUID.Types (nil)
 import           GUI.Momentu.State (GUIState)
 import qualified GUI.Momentu.Widget.Id as WidgetId
 import qualified Lamdu.Calc.Type as T
@@ -32,7 +33,6 @@ import           Revision.Deltum.Rev.Version (Version)
 import           Revision.Deltum.Rev.View (View)
 import           Revision.Deltum.Transaction (MkProperty(..))
 import qualified Revision.Deltum.Transaction as Transaction
-import           Data.UUID.Types (nil)
 
 import           Lamdu.Prelude
 

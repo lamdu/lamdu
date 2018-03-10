@@ -13,9 +13,9 @@ import Control.Lens.Operators
 import Control.Lens.Tuple
 import Control.Monad.IO.Class (MonadIO(..))
 import Control.Monad.State (MonadState(..), modify)
-import Control.Monad.Writer (MonadWriter(..), censor)
 import Control.Monad.Trans.Class (MonadTrans(..))
 import Control.Monad.Trans.State.Strict (StateT(..))
+import Control.Monad.Writer (MonadWriter(..), censor)
 import Data.Functor.Identity (Identity(..))
 import Data.Monoid ((<>))
 

@@ -8,6 +8,7 @@ module Lamdu.Sugar.Convert.Case
 import qualified Control.Lens as Lens
 import           Control.Monad.Trans.Maybe (MaybeT(..))
 import           Data.Maybe.Utils (maybeToMPlus)
+import qualified Data.Property as Property
 import qualified Lamdu.Calc.Val as V
 import           Lamdu.Calc.Val.Annotated (Val(..))
 import qualified Lamdu.Calc.Val.Annotated as Val
@@ -23,7 +24,6 @@ import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import qualified Lamdu.Sugar.Lens as SugarLens
 import           Lamdu.Sugar.Types
-import qualified Revision.Deltum.Property as Property
 
 import           Lamdu.Prelude
 

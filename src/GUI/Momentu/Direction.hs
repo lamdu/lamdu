@@ -3,10 +3,10 @@ module GUI.Momentu.Direction
     ( Direction(..), translate, scale
     ) where
 
-import           Data.Vector.Vector2 (Vector2(..))
-import           GUI.Momentu.Rect (R, Range, rangeStart)
+import Data.Vector.Vector2 (Vector2(..))
+import GUI.Momentu.Rect (R, Range, rangeStart)
 
-import           Lamdu.Prelude
+import Lamdu.Prelude
 
 -- RelativePos pos is relative to the top-left of the widget
 data Direction

@@ -6,12 +6,12 @@ module Revision.Deltum.Rev.View
 import           Control.Monad ((<=<))
 import qualified Data.List as List
 import           Data.Maybe (catMaybes)
+import qualified Data.Property as Property
 import           Revision.Deltum.IRef (IRef)
-import qualified Revision.Deltum.Property as Property
 import           Revision.Deltum.Rev.Branch (Branch)
 import qualified Revision.Deltum.Rev.Branch as Branch
-import qualified Revision.Deltum.Rev.Change as Change
 import           Revision.Deltum.Rev.Change (Change(..))
+import qualified Revision.Deltum.Rev.Change as Change
 import           Revision.Deltum.Rev.Version (Version)
 import qualified Revision.Deltum.Rev.Version as Version
 import           Revision.Deltum.Rev.ViewBranchInternal (BranchData, ViewData(..), View(..), Branch(..), moveView, makeViewKey, applyChangesToView, brViews, vdBranch)

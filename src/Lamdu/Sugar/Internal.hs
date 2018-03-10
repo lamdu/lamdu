@@ -10,13 +10,13 @@ module Lamdu.Sugar.Internal
     ) where
 
 import qualified Control.Lens as Lens
+import qualified Data.Property as Property
 import           Data.UUID.Types (UUID)
 import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.UniqueId as UniqueId
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import           Lamdu.Sugar.Types
-import qualified Revision.Deltum.Property as Property
 import           Revision.Deltum.Transaction (Transaction)
 
 import           Lamdu.Prelude

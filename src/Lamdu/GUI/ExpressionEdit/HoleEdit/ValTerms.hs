@@ -11,6 +11,8 @@ module Lamdu.GUI.ExpressionEdit.HoleEdit.ValTerms
 
 import qualified Control.Lens as Lens
 import qualified Data.Char as Char
+import           Data.Property (Property)
+import qualified Data.Property as Property
 import qualified Data.Text as Text
 import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
 import qualified Lamdu.Builtins.Anchors as Builtins
@@ -22,8 +24,6 @@ import qualified Lamdu.Name as Name
 import qualified Lamdu.Sugar.Lens as SugarLens
 import qualified Lamdu.Sugar.Names.Get as NamesGet
 import qualified Lamdu.Sugar.Types as Sugar
-import           Revision.Deltum.Property (Property)
-import qualified Revision.Deltum.Property as Property
 import           Revision.Deltum.Transaction (Transaction)
 
 import           Lamdu.Prelude
