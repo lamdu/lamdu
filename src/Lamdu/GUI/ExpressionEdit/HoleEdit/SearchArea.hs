@@ -191,7 +191,7 @@ make options mOptionLiteral pl allowedTerms =
         searchTermEventMap <- SearchMenu.searchTermEditEventMap searchMenuId adhocAllowedTerms <&> fmap pure
         let inPlaceOfClosed open =
                 closedSearchTermGui & Widget.widget %~
-                Hover.hoverInPlaceOf [Hover.anchor open] . Hover.anchor
+                (Hover.anchor open `Hover.emplaceAt`) . Hover.anchor
         if isActive && not isAHoleInHole
             then
                 do

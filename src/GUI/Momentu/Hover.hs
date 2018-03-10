@@ -10,6 +10,7 @@ module GUI.Momentu.Hover
     , hoverBesideOptionsAxis
     , Orientation(..)
     , hoverBeside
+    , emplaceAt
     ) where
 
 import qualified Control.Lens as Lens
@@ -178,6 +179,17 @@ hover =
 sequenceHover :: Functor f => Hover (f a) -> f (Hover a)
 sequenceHover (Hover x) = x <&> Hover
 
+emplaceAt ::
+    Functor f =>
+    AnchoredWidget (f State.Update) ->
+    AnchoredWidget (f State.Update) ->
+    Widget (f State.Update)
+emplaceAt h place =
+    Element.assymetricPad translation 0 (h ^. anchored)
+    & Element.size .~ place ^. Element.size
+    where
+        translation = place ^. anchorPoint - h ^. anchorPoint
+
 -- TODO: Second argument here is really only (anchorPoint,size), take
 -- it as such?
 hoverInPlaceOf ::
@@ -187,8 +199,7 @@ hoverInPlaceOf ::
 hoverInPlaceOf [] _ = error "no hover options!"
 hoverInPlaceOf hoverOptions@(defaultOption:_) place
     | null focusedOptions =
-        Element.assymetricPad (translation defaultOption) 0 (defaultOption ^. anchored)
-        & Element.size .~ place ^. Element.size
+        defaultOption `emplaceAt` place
     | otherwise =
         Widget
         { Widget._wSize = place ^. Element.size
