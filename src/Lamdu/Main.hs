@@ -17,6 +17,7 @@ import           GHC.Conc (setNumCapabilities, getNumProcessors)
 import           GHC.Stack (whoCreated)
 import qualified GUI.Momentu as M
 import qualified GUI.Momentu.Main as MainLoop
+import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
 import qualified GUI.Momentu.Widgets.TextView as TextView
 import qualified Graphics.Rendering.OpenGL.GL as GL
@@ -263,7 +264,7 @@ runEditor opts db =
                     settingsEventMap <- Settings.eventMap configSampler settingsProp
                     makeRootWidget fonts db evaluator config theme env
                         (Property.value settingsProp)
-                        <&> M.weakerEvents (settingsEventMap <&> liftIO)
+                        <&> Widget.eventMapMaker . Lens.mapped %~ (<> (settingsEventMap <&> liftIO))
     where
         stateStorage = stateStorageInIRef db DbLayout.guiState
         subpixel
