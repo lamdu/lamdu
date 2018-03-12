@@ -6,44 +6,44 @@
     "maxEvalViewSize"               : 32,
     "narrowUnderlineWidth"          : 0.03,
     "wideUnderlineWidth"            : 0.1,
-    "cursorColor"                   : [0.25, 0.25, 0.75, 0.25],
+    "cursorColor"                   : [0.35, 0.35, 0.7, 0.3],
     "cursorDecayExponent"           : 0.125,
-    "evaluatedPathBGColor"          : [0.0, 0.8, 0.0, 0.2],
+    "evaluatedPathBGColor"          : [0.25, 0.5, 0.25, 0.6],
     "valFrameBGColor"               : [0.0, 0.0, 0.0, 0.05],
-    "typeFrameBGColor"              : [0.2, 0.6, 0.8, 0.16],
-    "typeIndicatorFrameWidth"       : [2.0, 2.0],
-    "typeIndicatorErrorColor"       : [0.8, 0.0, 0.0, 1.0],
-    "typeIndicatorMatchColor"       : [0.5, 0.75, 0.5, 1.0],
-    "disabledColor"                 : [0.4, 0.4, 0.45, 0.5],
+    "typeFrameBGColor"              : [0.4, 0.6, 0.8, 0.3],
+    "typeIndicatorFrameWidth"       : [3.0, 3.0],
+    "typeIndicatorErrorColor"       : [0.8, 0.4, 0.4, 1.0],
+    "typeIndicatorMatchColor"       : [0.525, 0.75, 0.525, 1.0],
+    "disabledColor"                 : [0.4, 0.4, 0.4, 0.5],
     "valFramePadding"               : [7.0, 7.0],
     "letItemPadding"                : [5.0, 5.0],
     "backgroundColor"               : [1.0, 1.0, 1.0, 1.0],
     "presentationChoiceScaleFactor" : [0.5, 0.5],
-    "invalidCursorBGColor"          : [0.4, 0.0, 0.0, 1.0],
+    "invalidCursorBGColor"          : [0.4, 0.2, 0.2, 1.0],
     "topPadding"                    : 1.5,
-    "actionTextColor"               : [0, 0.7, 0, 1.0],
+    "actionTextColor"               : [0.3, 0.6, 0.3, 1.0],
     "infoTextColor"                 : [0.3, 0.3, 0.3, 1.0],
     "typeTextColor"                 : [0.25, 0.5, 0.5, 1.0],
     "codeForegroundColors": {
         "baseColor"                     : [0.0, 0.0, 0.0, 1.0],
         "grammarColor"                  : [0.1, 0.1, 0.2, 0.6],
-        "literalColor"                  : [0.0, 0.5, 0.0, 1.0],
+        "literalColor"                  : [0.25, 0.5, 0.25, 1.0],
         "nomColor"                      : [0.0, 0.0, 0.0, 0.5],
         "recordTailColor"               : [0.6, 0.6, 0.6, 1.0],
-        "caseTailColor"                 : [0.2, 0.6, 0.2, 1.0],
-        "foreignVarColor"               : [1.0, 0.65, 0.25, 1.0],
-        "foreignModuleColor"            : [1.0, 0.3, 0.35, 1.0],
+        "caseTailColor"                 : [0.42, 0.6, 0.42, 1.0],
+        "foreignVarColor"               : [0.8, 0.55, 0.4, 1.0],
+        "foreignModuleColor"            : [0.9, 0.45, 0.5, 1.0],
         "lightLambdaUnderlineColor"     : [0.0, 0.0, 0.0, 0.6],
         "presentationChoiceColor"       : [0.4, 0.4, 0.4, 1.0]
     },
     "tooltip": {
         "fgColor": [0.0, 0.0, 0.0, 1.0],
-        "bgColor": [1.0, 1.0, 0.8, 0.9]
+        "bgColor": [0.9, 0.9, 0.45, 0.9]
     },
     "hover": {
         "frameColor"                : [1.0, 1.0, 1.0, 1.0],
         "framePadding"              : [1.0, 1.0],
-        "bgColor"                   : [0.8, 0.9, 0.95, 1.0],
+        "bgColor"                   : [0.7, 0.95, 1.0, 1.0],
         "bgPadding"                 : [7.0, 7.0]
     },
     "fonts": {
@@ -55,10 +55,10 @@
         "fontLiteralBytes" : "fonts/DejaVuSansMono.ttf"
     },
     "help": {
-        "inputDocColor" : [0, 0.5, 0.5, 1.0],
+        "inputDocColor" : [0.2, 0.4, 0.4, 1.0],
         "textSize"      : 9,
         "textColor"     : [0, 0, 0, 1.0],
-        "bGColor"       : [1, 0.95, 0.8, 0.85],
+        "bGColor"       : [1, 0.85, 0.5, 0.85],
         "tint"          : [1.0, 1.0, 1.0, 1.0]
     },
     "versionControl": {
@@ -74,10 +74,10 @@
         "activeSearchTermBGColor"     : [0.8, 1.0, 0.7, 1.0]
     },
     "name": {
-        "parameterColor"             : [0.0, 0.4, 0.5, 1.0],
-        "letColor"                   : [0.25, 0.0, 0.5, 1.0],
-        "definitionColor"            : [0.5, 0.0, 0.5, 1.0],
-        "collisionSuffixTextColor"   : [0.5, 0.3, 0.0, 1.0],
+        "parameterColor"             : [0.25, 0.4, 0.5, 1.0],
+        "letColor"                   : [0.3, 0.25, 0.5, 1.0],
+        "definitionColor"            : [0.5, 0.25, 0.5, 1.0],
+        "collisionSuffixTextColor"   : [0, 0, 0, 1.0],
         "collisionSuffixScaleFactor" : [0.5, 0.5],
         "tagCollisionSuffixBGColor"  : [1.0, 0.7, 0.7, 1.0],
         "textCollisionSuffixBGColor" : [0.7, 0.7, 1.0, 1.0],
@@ -93,7 +93,7 @@
     "indent": {
         "indentBarWidth" : 1.5,
         "indentBarGap"   : 0.75,
-        "indentBarColor" : [0.0, 0.0, 1.0, 0.1]
+        "indentBarColor" : [0.5, 0.5, 1.0, 0.22]
     },
     "valAnnotation": {
         "spacing"             : 0.1,

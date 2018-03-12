@@ -323,6 +323,7 @@ Test-Suite Tests
   type: exitcode-stdio-1.0
   hs-source-dirs: test
   main-is: Tests.hs
-  build-depends: Lamdu, base, HUnit, test-framework, test-framework-hunit
+  other-modules: TestInstances
+  build-depends: Lamdu, base, HUnit, test-framework, test-framework-hunit, containers, filepath, lens, pretty
   ghc-options: -O2 -Wall -Widentities -Wimplicit-prelude -Wmissing-home-modules -Wincomplete-patterns -Wnoncanonical-monad-instances -Wsemigroup -Wincomplete-record-updates -Wredundant-constraints -threaded
   ghc-prof-options: -fprof-auto -fprof-cafs -rtsopts

@@ -5,6 +5,7 @@ module Lamdu.Config.Sampler
     , Sample(..), sConfigPath, sConfig
     , sThemePath, sTheme, setTheme
     , getSample
+    , readJson -- Exposed for test
     ) where
 
 import           Control.Concurrent (threadDelay, ThreadId)
@@ -65,11 +66,14 @@ load themeName configPath =
         pure (config, themePath, theme)
     & withMTime configPath
     where
-        readJson path =
-            Aeson.eitherDecode' <$> LBS.readFile path
-            >>= either (fail . (msg path ++)) pure
-        msg path = "Failed to parse config file contents at " ++ show path ++ ": "
         themePath = calcThemePath configPath themeName
+
+readJson :: Aeson.FromJSON a => FilePath -> IO a
+readJson path =
+    Aeson.eitherDecode' <$> LBS.readFile path
+    >>= either (fail . mappend msg) pure
+    where
+        msg = "Failed to parse config file contents at " ++ show path ++ ": "
 
 maybeReload :: Sample -> FilePath -> IO (Maybe Sample)
 maybeReload old newConfigPath =

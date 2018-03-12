@@ -1,1 +1,1 @@
-hlint src/ --hint=tools/hlint-rules.hs $@
+hlint src test --hint=tools/hlint-rules.hs $@
