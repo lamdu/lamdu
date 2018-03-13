@@ -180,6 +180,7 @@ makeFlatTreeView size pairs =
             & columns (size ^. _2) pairHeight
             <&> map toRow
             <&> GridView.make
+            <&> snd
         toRow (titleView, docView) = [Aligned 0 titleView, Aligned (Vector2 1 0) docView]
         pairHeight (titleView, docView) = (max `on` (^. Element.height)) titleView docView
 

@@ -70,10 +70,14 @@ makePlacements rows =
 
 --- Displays:
 
-make :: (Traversable horiz, Traversable vert) => vert (horiz (Aligned View)) -> View
+make ::
+    (Traversable horiz, Traversable vert) =>
+    vert (horiz (Aligned View)) ->
+    (vert (horiz (Aligned ())), View)
 make views =
-    makePlacements views
-    & _2 %~ (^. traverse . traverse . Lens.to translate)
-    & uncurry View
+    ( placements <&> Lens.mapped %~ void
+    , View size (placements ^. traverse . traverse . Lens.to translate)
+    )
     where
+        (size, placements) = makePlacements views
         translate (Aligned _ (rect, view)) = Element.translateLayers (rect ^. Rect.topLeft) (view ^. View.vAnimLayers)

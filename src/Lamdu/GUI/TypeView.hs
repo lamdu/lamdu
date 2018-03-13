@@ -142,7 +142,7 @@ makeTInst parentPrecedence tid typeParams =
                 >>= parens parentPrecedence (Prec 0)
             params ->
                 mapM makeTypeParam params
-                <&> GridView.make
+                <&> GridView.make <&> snd
                 >>= (Styled.addValPadding ??)
                 >>= addTypeBG
                 <&> afterName
@@ -199,7 +199,7 @@ makeComposite o c sepView mkField composite =
         rawFieldsView <-
             traverse mkField fields
             >>= zipWithM prepend (pure Element.empty : repeat sepView)
-            <&> GridView.make
+            <&> GridView.make <&> snd
         let openedFieldsView :: View
             openedFieldsView =
                 (Aligned 0 opener /|/ Aligned 0 rawFieldsView) ^. Align.value

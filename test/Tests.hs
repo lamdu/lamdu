@@ -13,6 +13,7 @@ import qualified Data.List.NonEmpty as NonEmpty
 import qualified Data.Map as Map
 import           Data.Vector.Vector2 (Vector2(..))
 import           GUI.Momentu.Align (Aligned(..))
+import qualified GUI.Momentu.Align as Align
 import           GUI.Momentu.Animation (R)
 import           GUI.Momentu.Draw (Color(..))
 import qualified GUI.Momentu.Element as Element
@@ -114,13 +115,14 @@ verifyDefs defs =
 propGridSensibleSize :: NonEmpty (NonEmpty (Aligned (Vector2 R))) -> Bool
 propGridSensibleSize viewConfs =
     size == grid ^. Element.size &&
-    isFinite (size ^. _1) && isFinite (size ^. _1) &&
+    isFinite (size ^. _1) && isFinite (size ^. _2) &&
     and ((>=) <$> size <*> minGridSize views) &&
-    Lens.allOf (traverse . traverse) goodPlacement placements
+    Lens.allOf (traverse . traverse) goodPlacement placements &&
+    Lens.allOf (traverse . traverse . Align.alignmentRatio . traverse) goodAlignment alignments
     where
         isFinite x = not (isNaN x || isInfinite x)
         views = viewsFromConf viewConfs
-        grid = GridView.make views
+        (alignments, grid) = GridView.make views
         (size, placements) = GridView.makePlacements views
         goodPlacement (Aligned alignment (place, view)) =
             vSize == place ^. Rect.size &&
@@ -147,7 +149,7 @@ viewsFromConf :: NonEmpty (NonEmpty (Aligned (Vector2 R))) -> NonEmpty (NonEmpty
 viewsFromConf viewConfs =
     viewConfs
     <&> onTail (take minRowTailLen)
-    <&> traverse . traverse %~ (`View` mempty)
+    <&> traverse . Align.value %~ (`View` mempty)
     where
         minRowTailLen = minimum (viewConfs ^.. traverse <&> NonEmpty.tail <&> length)
         onTail f (x :| xs) = x :| f xs

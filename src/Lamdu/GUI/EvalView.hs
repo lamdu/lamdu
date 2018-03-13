@@ -118,7 +118,7 @@ makeArray items =
                     header : rows <&> traverse %~ (^. Align.tValue)
                     <&> List.intersperse s
                     <&> traverse %~ Aligned 0.5
-                    & GridView.make & Align.WithTextPos 0
+                    & GridView.make & snd & Align.WithTextPos 0
             remainView <-
                 if null (drop tableCutoff pairs)
                 then pure Element.empty
@@ -186,7 +186,7 @@ makeRecExtend typ recExtend =
             cutoff = 4
     _ ->
         do
-            fieldsView <- mapM (uncurry makeField) fields <&> GridView.make
+            fieldsView <- mapM (uncurry makeField) fields <&> GridView.make <&> snd
             let barWidth
                     | null fields = 150
                     | otherwise = fieldsView ^. Element.width
