@@ -1,10 +1,9 @@
-{-# LANGUAGE NoImplicitPrelude, GeneralizedNewtypeDeriving, OverloadedStrings, FlexibleInstances, FlexibleContexts, MultiParamTypeClasses #-}
+{-# LANGUAGE NoImplicitPrelude, GeneralizedNewtypeDeriving, OverloadedStrings, FlexibleInstances, FlexibleContexts, MultiParamTypeClasses, TemplateHaskell, DeriveTraversable #-}
 module Lamdu.GUI.TypeView
     ( make
     ) where
 
 import qualified Control.Lens as Lens
-import           Control.Monad (zipWithM)
 import qualified Control.Monad.Reader as Reader
 import           Control.Monad.State (StateT, state, evalStateT)
 import           Control.Monad.Trans.Class (MonadTrans(..))
@@ -48,6 +47,26 @@ newtype M m a = M
     { runM :: StateT Random.StdGen m a
     } deriving
     (Functor, Applicative, Monad, MonadTrans, MonadTransaction n, MonadReader r)
+
+data CompositeRow a = CompositeRow
+    { _crPre :: a
+    , _crTag :: a
+    , _crSpace :: a
+    , _crVal :: a
+    , _crPost :: a
+    } deriving (Functor, Foldable, Traversable)
+
+Lens.makeLenses ''CompositeRow
+
+horizSetCompositeRow :: CompositeRow (WithTextPos View) -> CompositeRow (Aligned View)
+horizSetCompositeRow r =
+    CompositeRow
+    { _crPre = r ^. crPre & Align.fromWithTextPos 0
+    , _crTag = r ^. crTag & Align.fromWithTextPos 1
+    , _crSpace = r ^. crSpace & Align.fromWithTextPos 0.5
+    , _crVal = r ^. crVal & Align.fromWithTextPos 0
+    , _crPost = r ^. crPost & Align.fromWithTextPos 0
+    }
 
 rand :: (Random r, Monad m) => M m r
 rand = M $ state random
@@ -142,7 +161,8 @@ makeTInst parentPrecedence tid typeParams =
                 >>= parens parentPrecedence (Prec 0)
             params ->
                 mapM makeTypeParam params
-                <&> GridView.make <&> snd
+                <&> gridViewTopLeftAlign
+                <&> Align.toWithTextPos
                 >>= (Styled.addValPadding ??)
                 >>= addTypeBG
                 <&> afterName
@@ -171,40 +191,54 @@ makeTag tag =
 
 makeField ::
     (MonadTransaction n m, MonadReader env m, HasTheme env, Spacer.HasStdSpacing env) =>
-    (T.Tag, Type) -> M m [Aligned View]
+    (T.Tag, Type) -> M m (WithTextPos View, WithTextPos View)
 makeField (tag, fieldType) =
-    sequence
-    [ makeTag tag <&> Align.fromWithTextPos 1
-    , Spacer.stdHSpace <&> Aligned 0.5
-    , splitMake (Prec 0) fieldType <&> Align.fromWithTextPos 0
-    ]
+    (,)
+    <$> makeTag tag
+    <*> splitMake (Prec 0) fieldType
 
 makeVariantField ::
     (MonadReader env m, Spacer.HasStdSpacing env, MonadTransaction n m, HasTheme env) =>
-    (T.Tag, Type) -> M m [Aligned View]
+    (T.Tag, Type) -> M m (WithTextPos View, WithTextPos View)
 makeVariantField (tag, T.TRecord T.CEmpty) =
-    makeTag tag <&> Align.fromWithTextPos 1 <&> (:[])
+    makeTag tag <&> flip (,) Element.empty
     -- ^ Nullary data constructor
 makeVariantField (tag, fieldType) = makeField (tag, fieldType)
 
+gridViewTopLeftAlign ::
+    (Traversable vert, Traversable horiz) =>
+    vert (horiz (Aligned View)) -> Aligned View
+gridViewTopLeftAlign views =
+    alignPoints ^?! traverse . traverse & Align.value .~ view
+    where
+        (alignPoints, view) = GridView.make views
+
 makeComposite ::
-    (MonadReader env m, TextView.HasStyle env, HasTheme env) =>
+    (MonadReader env m, HasTheme env, Spacer.HasStdSpacing env) =>
     Text -> Text ->
-    M m (Aligned View) -> ((T.Tag, Type) -> M m [Aligned View]) -> T.Composite t -> M m (WithTextPos View)
-makeComposite _ _ _ _ T.CEmpty = makeEmptyComposite
-makeComposite o c sepView mkField composite =
+    M m (WithTextPos View) -> M m (WithTextPos View) ->
+    ((T.Tag, Type) -> M m (WithTextPos View, WithTextPos View)) ->
+    T.Composite t -> M m (WithTextPos View)
+makeComposite _ _ _ _ _ T.CEmpty = makeEmptyComposite
+makeComposite o c mkPre mkPost mkField composite =
     do
-        opener <- grammar o <&> (^. Align.tValue)
-        closer <- grammar c <&> (^. Align.tValue)
-        rawFieldsView <-
+        opener <- grammar o
+        closer <- grammar c
+        let toRow (t, v) =
+                CompositeRow mkPre (pure t) space (pure v) mkPost
+                where
+                    space
+                        | v ^. Align.tValue . Element.width == 0 = pure Element.empty
+                        | otherwise = Spacer.stdHSpace <&> WithTextPos 0
+        fieldsView <-
             traverse mkField fields
-            >>= zipWithM prepend (pure Element.empty : repeat sepView)
-            <&> GridView.make <&> snd
-        let openedFieldsView :: View
-            openedFieldsView =
-                (Aligned 0 opener /|/ Aligned 0 rawFieldsView) ^. Align.value
-        let fieldsView =
-                (Aligned 1 openedFieldsView /|/ Aligned 1 closer) ^. Align.value
+            <&> map toRow
+            <&> Lens.ix 0 . crPre .~ pure opener
+            <&> Lens.reversed . Lens.ix 0 . crPost .~ pure closer
+            >>= traverse sequenceA
+            <&> map horizSetCompositeRow
+            <&> gridViewTopLeftAlign
+            <&> Align.alignmentRatio . _1 .~ 0.5
         let barWidth
                 | null fields = 150
                 | otherwise = fieldsView ^. Element.width
@@ -217,15 +251,14 @@ makeComposite o c sepView mkField composite =
                     let sqr =
                             View.unitSquare sqrId
                             & Element.scale (Vector2 barWidth 10)
-                    sep <- sepView
-                    varView <- makeTVar var <&> Align.fromWithTextPos 0
-                    let lastLine = (sep /|/ varView) ^. Align.value
+                    varView <- makeTVar var
+                    pre <- mkPre
+                    let lastLine = (pre /|/ varView) ^. Align.tValue
                     pure (Aligned 0.5 sqr /-/ Aligned 0.5 lastLine)
-        (Aligned 0.5 fieldsView /-/ extView) ^. Align.value & Align.WithTextPos 0
+        fieldsView /-/ extView & Align.toWithTextPos
             & (Styled.addValPadding ??)
             >>= addTypeBG
     where
-        prepend sep field = (:) <$> sep ?? field
         (fields, extension) = composite ^. orderedFlatComposite
 
 splitMake ::
@@ -241,9 +274,9 @@ makeInternal parentPrecedence typ =
     T.TVar var -> makeTVar var
     T.TFun a b -> makeTFun parentPrecedence a b
     T.TInst typeId typeParams -> makeTInst parentPrecedence typeId typeParams
-    T.TRecord composite -> makeComposite "{" "}" (pure Element.empty) makeField composite
+    T.TRecord composite -> makeComposite "{" "}" (pure Element.empty) (grammar ",") makeField composite
     T.TVariant composite ->
-        makeComposite "+{" "}" (grammar "or: " <&> Align.fromWithTextPos 0) makeVariantField composite
+        makeComposite "+{" "}" (grammar "or: ") (pure Element.empty) makeVariantField composite
 
 make ::
     ( MonadReader env m, HasTheme env, Spacer.HasStdSpacing env
