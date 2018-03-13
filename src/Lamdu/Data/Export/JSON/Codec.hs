@@ -1,7 +1,8 @@
 -- | JSON encoder/decoder for Lamdu types
-{-# LANGUAGE NoImplicitPrelude, LambdaCase, OverloadedStrings, FlexibleContexts #-}
+{-# LANGUAGE NoImplicitPrelude, LambdaCase, OverloadedStrings, FlexibleContexts, TemplateHaskell #-}
 module Lamdu.Data.Export.JSON.Codec
-    ( TagOrder, Entity(..)
+    ( TagOrder
+    , Entity(..), _EntitySchemaVersion, _EntityRepl, _EntityDef, _EntityTag, _EntityNominal, _EntityLamVar
     ) where
 
 import           Control.Applicative (optional)
@@ -53,6 +54,7 @@ data Entity
     | EntityTag TagOrder (Maybe Text) T.Tag
     | EntityNominal T.Tag T.NominalId Nominal
     | EntityLamVar (Maybe Meta.ParamList) T.Tag UUID V.Var
+Lens.makePrisms ''Entity
 
 instance AesonTypes.ToJSON Entity where
     toJSON (EntitySchemaVersion ver) = encodeSchemaVersion ver
