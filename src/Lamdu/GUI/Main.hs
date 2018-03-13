@@ -12,7 +12,6 @@ import qualified Control.Lens as Lens
 import           Control.Monad.Reader (ReaderT(..))
 import qualified Control.Monad.Reader as Reader
 import           Data.CurAndPrev (CurAndPrev)
-import           Data.Vector.Vector2 (Vector2(..))
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Draw as Draw
 import qualified GUI.Momentu.Element as Element
@@ -74,15 +73,14 @@ layout branchChoice =
             Draw.backgroundColor
             ?? Theme.statusBarBGColor theTheme
             ?? rawStatusBar
-        let codeSize = fullSize - Vector2 0 (statusBar ^. Element.height)
         state <- Lens.view GuiState.state
         codeEdit <-
-            CodeEdit.make DbLayout.codeAnchors (codeSize ^. _1)
+            CodeEdit.make DbLayout.codeAnchors (fullSize ^. _1)
             & Reader.mapReaderT VersionControl.runAction
             <&> Lens.mapped . ioTrans . Lens.mapped %~ VersionControl.runEvent state
         topPadding <- Spacer.vspaceLines (Theme.topPadding theTheme)
-        let scrollBox = Scroll.focusAreaInto codeSize codeEdit
-        statusBar /-/ topPadding /-/ scrollBox & pure
+        statusBar /-/ topPadding /-/ codeEdit
+            & Scroll.focusAreaInto fullSize & pure
 
 make ::
     ( MainLoop.HasMainLoopEnv env
