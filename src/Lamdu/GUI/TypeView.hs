@@ -243,9 +243,7 @@ makeInternal parentPrecedence typ =
     T.TInst typeId typeParams -> makeTInst parentPrecedence typeId typeParams
     T.TRecord composite -> makeComposite "{" "}" (pure Element.empty) makeField composite
     T.TVariant composite ->
-        [ makeComposite "+{" "}" (grammar "or: " <&> Align.fromWithTextPos 0) makeVariantField composite
-        ] & sequenceA
-        <&> hbox
+        makeComposite "+{" "}" (grammar "or: " <&> Align.fromWithTextPos 0) makeVariantField composite
 
 make ::
     ( MonadReader env m, HasTheme env, Spacer.HasStdSpacing env
