@@ -8,8 +8,16 @@ import qualified Control.Lens as Lens
 import qualified Data.Aeson as Aeson
 import qualified Data.ByteString.Lazy as LBS
 import           Data.Data.Lens (template)
+import           Data.List.NonEmpty (NonEmpty(..))
+import qualified Data.List.NonEmpty as NonEmpty
 import qualified Data.Map as Map
+import           Data.Vector.Vector2 (Vector2(..))
+import           GUI.Momentu.Align (Aligned(..))
+import           GUI.Momentu.Animation (R)
 import           GUI.Momentu.Draw (Color(..))
+import qualified GUI.Momentu.Element as Element
+import           GUI.Momentu.View (View(..))
+import qualified GUI.Momentu.Widgets.GridView as GridView
 import           Lamdu.Calc.Identifier (identHex)
 import qualified Lamdu.Calc.Type.Scheme as Scheme
 import qualified Lamdu.Calc.Val as V
@@ -24,9 +32,10 @@ import           System.FilePath (takeFileName)
 import           Text.PrettyPrint.HughesPJClass (prettyShow)
 
 import           Lamdu.Prelude
-import           Test.HUnit
 import           Test.Framework
-import           Test.Framework.Providers.HUnit
+import           Test.Framework.Providers.HUnit (testCase)
+import           Test.Framework.Providers.QuickCheck2 (testProperty)
+import           Test.HUnit
 
 jsonCodecMigrationTest :: IO ()
 jsonCodecMigrationTest = JsonFormat.fileImportAll "test/old-codec-factorial.json" & void
@@ -101,10 +110,34 @@ verifyDefs defs =
             where
                 showVar = V.vvName var & identHex
 
+propGridSensibleSize :: NonEmpty (NonEmpty (Vector2 R, Vector2 R)) -> Bool
+propGridSensibleSize viewConfs =
+    grid ^. Element.width >= minWidth && grid ^. Element.height >= minHeight
+    where
+        minWidth = sum colWidths * 0.999 -- Due to float inaccuracies
+        minHeight = sum rowHeights * 0.999 -- Due to float inaccuracies
+        colWidths =
+            views <&> Lens.mapped %~ (^. Element.width)
+            & foldl1 (NonEmpty.zipWith max)
+        rowHeights = views <&> Lens.mapped %~ (^. Element.height) <&> maximum
+        views = viewsFromConf viewConfs
+        grid = GridView.make views
+
+viewsFromConf :: NonEmpty (NonEmpty (Vector2 R, Vector2 R)) -> NonEmpty (NonEmpty (Aligned View))
+viewsFromConf viewConfs =
+    viewConfs <&> onTail (take minRowTailLen) <&> Lens.mapped %~ mkView
+    where
+        minRowTailLen = minimum (viewConfs ^.. traverse <&> NonEmpty.tail <&> length)
+        mkView (al, sz) =
+            Aligned (al - (al <&> floor <&> (fromIntegral :: Integer -> R)))
+            (View sz mempty)
+        onTail f (x :| xs) = x :| f xs
+
 main :: IO ()
 main =
     defaultMainWithOpts
     [ testCase "json-codec-migration" jsonCodecMigrationTest
     , testCase "color-scheme" colorSchemeTest
     , testCase "no-broken-defs" verifyNoBrokenDefsTest
+    , testProperty "grid-sensible-size" propGridSensibleSize
     ] mempty

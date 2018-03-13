@@ -325,7 +325,7 @@ Test-Suite Tests
   main-is: Tests.hs
   other-modules: TestInstances
   build-depends:
-    base, HUnit, test-framework, test-framework-hunit,
+    base, HUnit, test-framework, test-framework-hunit, test-framework-quickcheck2, QuickCheck,
     Lamdu, AlgoW, lamdu-calculus,
     aeson, bytestring, containers, filepath, lens, pretty
   ghc-options: -O2 -Wall -Widentities -Wimplicit-prelude -Wmissing-home-modules -Wincomplete-patterns -Wnoncanonical-monad-instances -Wsemigroup -Wincomplete-record-updates -Wredundant-constraints -threaded

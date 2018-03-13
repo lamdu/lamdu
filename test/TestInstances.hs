@@ -1,10 +1,12 @@
 {-# OPTIONS -fno-warn-orphans #-}
-{-# LANGUAGE NoImplicitPrelude, StandaloneDeriving, DeriveDataTypeable, OverloadedStrings #-}
+{-# LANGUAGE NoImplicitPrelude, StandaloneDeriving, DeriveDataTypeable, OverloadedStrings, FlexibleInstances #-}
 
 module TestInstances () where
 
 import           Data.Data (Data)
+import           Data.List.NonEmpty (NonEmpty(..))
 import           Data.Vector.Vector2 (Vector2(..))
+import           GUI.Momentu.Animation (R)
 import           GUI.Momentu.Draw (Color(..))
 import qualified GUI.Momentu.Hover as Hover
 import qualified GUI.Momentu.Responsive.Expression as ResponsiveExpr
@@ -13,6 +15,7 @@ import           Lamdu.Config.Theme (Theme(..))
 import qualified Lamdu.Config.Theme as Theme
 import           Lamdu.Font (Fonts(..))
 import qualified Lamdu.GUI.VersionControl.Config as VcGuiConfig
+import           Test.QuickCheck (Arbitrary(..), getPositive, frequency)
 import           Text.PrettyPrint ((<+>))
 import           Text.PrettyPrint.HughesPJClass (Pretty(..))
 
@@ -40,3 +43,18 @@ instance Pretty Color where
         | otherwise = base <+> pPrint a
         where
             base = "Color" <+> pPrint r <+> pPrint g <+> pPrint b
+
+instance Arbitrary (Vector2 R) where
+    arbitrary =
+        Vector2 <$> comp <*> comp
+        where
+            comp =
+                frequency
+                [ (1, pure 0)
+                , (10, getPositive <$> arbitrary)
+                ]
+
+instance Arbitrary a => Arbitrary (NonEmpty a) where
+    arbitrary = (:|) <$> arbitrary <*> arbitrary
+    shrink (_ :| []) = []
+    shrink (x0 :| (x1 : xs)) = (x1 :| xs) : (shrink (x1 : xs) <&> (x0 :|))
