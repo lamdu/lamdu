@@ -64,10 +64,16 @@ makeInner ::
     Widget (f State.Update)
 makeInner hover cursorOn fd choose children curChild config myId =
     widget True
-    & if expanded
-    then hoverAsClosed
-    else id
+    & (if expanded then hoverAsClosed else id)
+    & axis .~ maxDim
     where
+        orientation = cwcOrientation config
+        axis :: Element.SizedElement a => Lens' a Widget.R
+        axis =
+            case orientation of
+            Vertical -> Element.width
+            Horizontal -> Element.height
+        maxDim = children <&> (^. _2 . axis) & maximum
         hoverAsClosed open =
             [hover (Hover.anchor open)]
             `Hover.hoverInPlaceOf` Hover.anchor (widget False)
@@ -77,7 +83,7 @@ makeInner hover cursorOn fd choose children curChild config myId =
             <&> prependEntryAction
             & filterVisible allowExpand
             <&> colorize
-            & Glue.box (cwcOrientation config)
+            & Glue.box orientation
             & fd (cwcFDConfig config) FocusDelegator.FocusEntryParent myId
         filterVisible allowExpand
             | allowExpand && expanded = id
