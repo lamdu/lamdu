@@ -270,7 +270,7 @@ runEditor opts db =
                     settingsEventMap <- Settings.eventMap configSampler settingsProp
                     makeRootWidget fonts db evaluator config theme env
                         (Property.value settingsProp)
-                        <&> Widget.eventMapMaker . Lens.mapped %~ (<> (settingsEventMap <&> liftIO))
+                        <&> Widget.weakerEventsWithoutPreevents (settingsEventMap <&> liftIO)
     where
         stateStorage = stateStorageInIRef db DbLayout.guiState
         subpixel

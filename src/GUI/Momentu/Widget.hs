@@ -23,6 +23,9 @@ module GUI.Momentu.Widget
     , enterFuncAddVirtualCursor
 
     -- Event maps:
+    , strongerEventsWithoutPreevents
+    , weakerEventsWithoutPreevents
+
     , strongerEvents
     , weakerEvents
     , weakerEventsWithContext
@@ -177,6 +180,16 @@ weakerEventsWithContext ::
     (Applicative f, Monoid a, HasWidget w) =>
     (EventContext -> EventMap (f a)) -> w (f a) -> w (f a)
 weakerEventsWithContext = addEventsWithContext (flip mappend)
+
+strongerEventsWithoutPreevents ::
+    HasWidget w => EventMap a -> w a -> w a
+strongerEventsWithoutPreevents eventMap =
+    widget . eventMapMaker . Lens.mapped %~ (eventMap <>)
+
+weakerEventsWithoutPreevents ::
+    HasWidget w => EventMap a -> w a -> w a
+weakerEventsWithoutPreevents eventMap =
+    widget . eventMapMaker . Lens.mapped %~ (<> eventMap)
 
 translateFocused ::
     Functor f =>
