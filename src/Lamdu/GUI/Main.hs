@@ -29,7 +29,6 @@ import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
 import qualified GUI.Momentu.Widgets.TextView as TextView
 import qualified Lamdu.Config as Config
-import qualified Lamdu.Config.Sampler as ConfigSampler
 import qualified Lamdu.Config.Theme as Theme
 import           Lamdu.Data.Db.Layout (DbM, ViewM)
 import qualified Lamdu.Data.Db.Layout as DbLayout
@@ -45,6 +44,7 @@ import qualified Lamdu.GUI.VersionControl.Config as VCConfig
 import           Lamdu.Settings (Settings)
 import qualified Lamdu.Settings as Settings
 import qualified Lamdu.Style as Style
+import qualified Lamdu.Themes as Themes
 import qualified Lamdu.VersionControl as VersionControl
 import qualified Lamdu.VersionControl.Actions as VCActions
 import           Revision.Deltum.Transaction (Transaction)
@@ -61,10 +61,10 @@ makeStatusBar ::
     , GuiState.HasCursor env, Element.HasAnimIdPrefix env
     , VCConfig.HasConfig env, VCConfig.HasTheme env, Spacer.HasStdSpacing env
     ) =>
-    Property IO Settings ->
+    [Themes.Selection] -> Property IO Settings ->
     Widget.R -> VCActions.Actions DbM (IOTrans DbM) ->
     m (Widget (IOTrans DbM GuiState.Update))
-makeStatusBar settingsProp width vcActions =
+makeStatusBar themeNames settingsProp width vcActions =
     do
         branchChoice <-
             VersionControlGUI.makeBranchSelector
@@ -75,7 +75,7 @@ makeStatusBar settingsProp width vcActions =
         let branchWidget = branchLabel /|/ branchChoice
 
         settings <-
-            SettingsWidget.forStatusBar settingsProp
+            SettingsWidget.forStatusBar themeNames settingsProp
             <&> Align.tValue %~ fmap IOTrans.liftIO
 
         theTheme <- Lens.view Theme.theme
@@ -100,13 +100,13 @@ layout ::
     , CodeEdit.HasExportActions env ViewM
     , VCConfig.HasConfig env, VCConfig.HasTheme env
     ) =>
-    Property IO Settings -> VCActions.Actions DbM (IOTrans DbM) ->
+    [Themes.Selection] -> Property IO Settings -> VCActions.Actions DbM (IOTrans DbM) ->
     ReaderT env (T DbM) (Widget (IOTrans DbM GuiState.Update))
-layout settingsProp vcActions =
+layout themeNames settingsProp vcActions =
     do
         theTheme <- Lens.view Theme.theme
         fullSize <- Lens.view (MainLoop.mainLoopEnv . MainLoop.eWindowSize)
-        statusBar <- makeStatusBar settingsProp (fullSize ^. _1) vcActions
+        statusBar <- makeStatusBar themeNames settingsProp (fullSize ^. _1) vcActions
         state <- Lens.view GuiState.state
         codeEdit <-
             CodeEdit.make DbLayout.codeAnchors (fullSize ^. _1)
@@ -130,21 +130,21 @@ make ::
     , CodeEdit.HasExportActions env ViewM
     , VCConfig.HasConfig env, VCConfig.HasTheme env
     ) =>
-    ConfigSampler.Sampler ->
-    Property IO Settings -> env -> T DbM (Widget (IOTrans DbM GuiState.Update))
-make configSampler settingsProp env =
+    [Themes.Selection] -> Property IO Settings -> env ->
+    T DbM (Widget (IOTrans DbM GuiState.Update))
+make themeNames settingsProp env =
     do
         vcActions <-
             VersionControl.makeActions
             <&> VCActions.hoist IOTrans.liftTrans
         let vcEventMap = VersionControlGUI.eventMap versionControlCfg vcActions
-        layout settingsProp vcActions
+        layout themeNames settingsProp vcActions
             <&> Widget.weakerEventsWithoutPreevents
                 (settingsEventMap <> quitEventMap <> vcEventMap)
             & (`runReaderT` env)
     where
         settingsEventMap =
-            SettingsWidget.eventMap configSampler settingsProp config
+            SettingsWidget.eventMap themeNames settingsProp config
             <&> IOTrans.liftIO
         config = env ^. Config.config
         versionControlCfg = Config.versionControl config

@@ -5,17 +5,16 @@ module Lamdu.GUI.Settings
      , eventMap
      ) where
 
-import           Data.Property (Property)
-import qualified Data.Property as Property
+import           Data.Property (Property, composeLens)
 import           GUI.Momentu.Align (WithTextPos(..))
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
+import           GUI.Momentu.Glue ((/|/))
 import qualified GUI.Momentu.Hover as Hover
 import qualified GUI.Momentu.State as GuiState
 import           GUI.Momentu.Widget (Widget)
-import qualified GUI.Momentu.Widgets.TextView as TextView
+import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified Lamdu.Config as Config
-import qualified Lamdu.Config.Sampler as ConfigSampler
 import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.GUI.CodeEdit.AnnotationMode.Widget as AnnotationModeWidget
 import qualified Lamdu.GUI.Themes as Themes
@@ -26,26 +25,31 @@ import           Lamdu.Prelude
 
 -- | For the status bar
 forStatusBar ::
-    ( MonadReader env m, TextView.HasStyle env, Element.HasAnimIdPrefix env
+    ( MonadReader env m, Element.HasAnimIdPrefix env
     , Applicative f, GuiState.HasCursor env, Hover.HasStyle env
-    , Theme.HasTheme env
+    , Theme.HasTheme env, Spacer.HasStdSpacing env
     ) =>
-    Property f Settings -> m (WithTextPos (Widget (f GuiState.Update)))
-forStatusBar prop =
-    AnnotationModeWidget.forStatusBar annotationModeProp
+    [Themes.Selection] -> Property f Settings -> m (WithTextPos (Widget (f GuiState.Update)))
+forStatusBar themeNames prop =
+    do
+        hspace <-
+            Spacer.getSpaceSize <&> (^. _1) <&> (* 5) <&> Spacer.makeHorizontal
+        annotationMode <- AnnotationModeWidget.forStatusBar annotationModeProp
+        theme <- Themes.widgetForStatusBar themeNames themeProp
+        annotationMode /|/ hspace /|/ theme & pure
     where
-        annotationModeProp = Property.composeLens Settings.sAnnotationMode prop
+        themeProp = composeLens Settings.sSelectedTheme prop
+        annotationModeProp = composeLens Settings.sAnnotationMode prop
 
 eventMap ::
     (MonadReader env m, Config.HasConfig env) =>
-    ConfigSampler.Sampler -> Property IO Settings ->
+    [Themes.Selection] -> Property IO Settings ->
     m (EventMap (IO GuiState.Update))
-eventMap configSampler settingsProp =
+eventMap themeNames prop =
     do
-        themeSwitch <- Themes.switchEventMap configSampler themeProp
+        themeSwitch <- Themes.switchEventMap themeNames themeProp
         switchAnnotationMode <- AnnotationModeWidget.switchEventMap annotationModeProp
         themeSwitch <> switchAnnotationMode & pure
     where
-        themeProp = Property.composeLens Settings.sSelectedTheme settingsProp
-        annotationModeProp =
-            Property.composeLens Settings.sAnnotationMode settingsProp
+        themeProp = composeLens Settings.sSelectedTheme prop
+        annotationModeProp = composeLens Settings.sAnnotationMode prop

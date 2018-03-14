@@ -42,9 +42,10 @@ import qualified Lamdu.GUI.Main as GUIMain
 import qualified Lamdu.GUI.VersionControl.Config as VCConfig
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.Opts as Opts
-import           Lamdu.Settings (Settings)
+import           Lamdu.Settings (Settings(..))
 import qualified Lamdu.Settings as Settings
 import qualified Lamdu.Style as Style
+import qualified Lamdu.Themes as Themes
 import qualified Lamdu.VersionControl as VersionControl
 import           Lamdu.VersionControl.Actions (mUndo)
 import           Revision.Deltum.Db (DB)
@@ -157,11 +158,13 @@ createWindow title mode =
             Opts.FullScreen         -> createWin (Just monitor) videoModeSize
             Opts.VideoModeSize      -> createWin Nothing videoModeSize
 
-settingsChangeHandler :: EvalManager.Evaluator -> Settings -> IO ()
-settingsChangeHandler evaluator settings =
-    case settings ^. Settings.sAnnotationMode of
-    Evaluation -> EvalManager.start evaluator
-    _ -> EvalManager.stop evaluator
+settingsChangeHandler :: Sampler -> EvalManager.Evaluator -> Settings -> IO ()
+settingsChangeHandler configSampler evaluator (Settings annotationMode theme) =
+    do
+        case annotationMode of
+            Evaluation -> EvalManager.start evaluator
+            _ -> EvalManager.stop evaluator
+        ConfigSampler.setTheme configSampler theme
 
 exportActions ::
     Config -> EvalResults (ValI DbLayout.ViewM) -> IO () -> GUIMain.ExportActions DbLayout.ViewM
@@ -185,9 +188,8 @@ exportActions config evalResults executeIOProcess =
 
 makeRootWidget ::
     Fonts M.Font -> DB -> EvalManager.Evaluator -> Config -> Theme ->
-    MainLoop.Env -> Sampler -> Property IO Settings ->
-    IO (M.Widget (MainLoop.M M.Update))
-makeRootWidget fonts db evaluator config theme mainLoopEnv sampler settingsProp =
+    MainLoop.Env -> Property IO Settings -> IO (M.Widget (MainLoop.M M.Update))
+makeRootWidget fonts db evaluator config theme mainLoopEnv settingsProp =
     do
         evalResults <- EvalManager.getResults evaluator
         let env = Env
@@ -206,7 +208,7 @@ makeRootWidget fonts db evaluator config theme mainLoopEnv sampler settingsProp 
                 Evaluation ->
                     EvalManager.runTransactionAndMaybeRestartEvaluator evaluator action
                 _ -> DbLayout.runDbTransaction db action
-        mkWidgetWithFallback sampler settingsProp dbToIO env
+        mkWidgetWithFallback settingsProp dbToIO env
 
 withMVarProtection :: a -> (MVar (Maybe a) -> IO b) -> IO b
 withMVarProtection val =
@@ -225,15 +227,16 @@ stateStorageInIRef db stateIRef =
     , writeState = DbLayout.runDbTransaction db . Transaction.writeIRef stateIRef
     }
 
-newSettingsProp :: EvalManager.Evaluator -> IO (IO (Property IO Settings))
-newSettingsProp evaluator =
+newSettingsProp ::
+    Settings -> Sampler -> EvalManager.Evaluator -> IO (IO (Property IO Settings))
+newSettingsProp initial configSampler evaluator =
     do
-        settingsRef <- newIORef Settings.initial
+        settingsRef <- newIORef initial
         let setSettings val =
                 do
                     writeIORef settingsRef val
-                    settingsChangeHandler evaluator val
-        settingsChangeHandler evaluator Settings.initial
+                    settingsChangeHandler configSampler evaluator val
+        settingsChangeHandler configSampler evaluator initial
         readIORef settingsRef <&> (`Property` setSettings) & pure
 
 newEvaluator ::
@@ -254,10 +257,10 @@ runEditor opts db =
 
         -- Load config as early as possible, before we open any windows/etc
         evaluator <- newEvaluator refresh dbMVar opts
-        mkSettingsProp <- newSettingsProp evaluator
+        let settingsVal = Settings.initial
         configSampler <-
-            mkSettingsProp <&> (^. Property.pVal . Settings.sSelectedTheme)
-            >>= ConfigSampler.new (const refresh)
+            ConfigSampler.new (const refresh) (settingsVal ^. Settings.sSelectedTheme)
+        mkSettingsProp <- newSettingsProp settingsVal configSampler evaluator
 
         M.withGLFW $ do
             win <-
@@ -267,7 +270,7 @@ runEditor opts db =
             printGLVersion
             mainLoop stateStorage subpixel win refreshScheduler configSampler $
                 \fonts config theme env ->
-                mkSettingsProp >>= makeRootWidget fonts db evaluator config theme env configSampler
+                mkSettingsProp >>= makeRootWidget fonts db evaluator config theme env
     where
         stateStorage = stateStorageInIRef db DbLayout.guiState
         subpixel
@@ -376,22 +379,23 @@ mainLoop stateStorage subpixel win refreshScheduler configSampler iteration =
             }
 
 mkWidgetWithFallback ::
-    Sampler -> Property IO Settings ->
+    Property IO Settings ->
     (forall a. T DbLayout.DbM a -> IO a) ->
     Env -> IO (M.Widget (MainLoop.M M.Update))
-mkWidgetWithFallback sampler settingsProp dbToIO env =
+mkWidgetWithFallback settingsProp dbToIO env =
     do
+        themeNames <- Themes.getNames
+        let tryMakeGui = makeMainGui themeNames settingsProp dbToIO
         (isValid, widget) <-
             dbToIO $
             do
-                candidateWidget <- makeMainGui sampler settingsProp dbToIO env
+                candidateWidget <- tryMakeGui env
                 (isValid, widget) <-
                     if M.isFocused candidateWidget
                     then pure (True, candidateWidget)
                     else
                         env & M.cursor .~ WidgetIds.defaultCursor
-                        & makeMainGui sampler settingsProp dbToIO
-                        <&> (,) False
+                        & tryMakeGui <&> (,) False
                 unless (M.isFocused widget) $
                     fail "Root cursor did not match"
                 pure (isValid, widget)
@@ -405,11 +409,11 @@ mkWidgetWithFallback sampler settingsProp dbToIO env =
         bgColor True = Theme.backgroundColor
 
 makeMainGui ::
-    Sampler -> Property IO Settings ->
+    [Themes.Selection] -> Property IO Settings ->
     (forall a. T DbLayout.DbM a -> IO a) ->
     Env -> T DbLayout.DbM (M.Widget (MainLoop.M M.Update))
-makeMainGui sampler settingsProp dbToIO env =
-    GUIMain.make sampler settingsProp env
+makeMainGui themeNames settingsProp dbToIO env =
+    GUIMain.make themeNames settingsProp env
     <&> Lens.mapped %~ \act ->
     act ^. ioTrans
     <&> dbToIO
