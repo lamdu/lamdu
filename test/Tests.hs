@@ -110,29 +110,33 @@ verifyDefs defs =
             where
                 showVar = V.vvName var & identHex
 
-propGridSensibleSize :: NonEmpty (NonEmpty (Vector2 R, Vector2 R)) -> Bool
+propGridSensibleSize :: NonEmpty (NonEmpty (Aligned (Vector2 R))) -> Bool
 propGridSensibleSize viewConfs =
     isFinite (grid ^. Element.width) && isFinite (grid ^. Element.height) &&
-    grid ^. Element.width >= minWidth && grid ^. Element.height >= minHeight
+    and ((>=) <$> (grid ^. Element.size) <*> minGridSize views)
     where
         isFinite x = not (isNaN x || isInfinite x)
-        minWidth = sum colWidths * 0.999 -- Due to float inaccuracies
-        minHeight = sum rowHeights * 0.999 -- Due to float inaccuracies
+        views = viewsFromConf viewConfs
+        grid = GridView.make views
+
+minGridSize ::
+    (Traversable vert, Element.SizedElement view) =>
+    vert (NonEmpty (Aligned view)) -> Vector2 R
+minGridSize views =
+    Vector2 (sum colWidths) (sum rowHeights) * 0.999 -- Due to float inaccuracies
+    where
         colWidths =
             views <&> Lens.mapped %~ (^. Element.width)
             & foldl1 (NonEmpty.zipWith max)
         rowHeights = views <&> Lens.mapped %~ (^. Element.height) <&> maximum
-        views = viewsFromConf viewConfs
-        grid = GridView.make views
 
-viewsFromConf :: NonEmpty (NonEmpty (Vector2 R, Vector2 R)) -> NonEmpty (NonEmpty (Aligned View))
+viewsFromConf :: NonEmpty (NonEmpty (Aligned (Vector2 R))) -> NonEmpty (NonEmpty (Aligned View))
 viewsFromConf viewConfs =
-    viewConfs <&> onTail (take minRowTailLen) <&> Lens.mapped %~ mkView
+    viewConfs
+    <&> onTail (take minRowTailLen)
+    <&> traverse . traverse %~ (`View` mempty)
     where
         minRowTailLen = minimum (viewConfs ^.. traverse <&> NonEmpty.tail <&> length)
-        mkView (al, sz) =
-            Aligned (al - (al <&> floor <&> (fromIntegral :: Integer -> R)))
-            (View sz mempty)
         onTail f (x :| xs) = x :| f xs
 
 main :: IO ()
@@ -142,4 +146,7 @@ main =
     , testCase "color-scheme" colorSchemeTest
     , testCase "no-broken-defs" verifyNoBrokenDefsTest
     , testProperty "grid-sensible-size" propGridSensibleSize
+        & plusTestOptions mempty
+        { topt_maximum_generated_tests = Just 1000
+        }
     ] mempty

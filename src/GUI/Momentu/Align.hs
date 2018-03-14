@@ -21,13 +21,13 @@ import           Lamdu.Prelude
 data Aligned a = Aligned
     { _alignmentRatio :: Vector2 R
     , _value :: a
-    } deriving (Functor, Foldable, Traversable)
+    } deriving (Functor, Foldable, Traversable, Show)
 Lens.makeLenses ''Aligned
 
 data WithTextPos a = WithTextPos
     { _textTop :: R
     , _tValue :: a
-    } deriving (Functor, Foldable, Traversable)
+    } deriving (Functor, Foldable, Traversable, Show)
 Lens.makeLenses ''WithTextPos
 
 fromWithTextPos :: SizedElement a => R -> WithTextPos a -> Aligned a
