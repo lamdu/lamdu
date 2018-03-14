@@ -45,7 +45,7 @@ grammarLabel ::
     ) => Text -> m (WithTextPos View)
 grammarLabel text =
     do
-        th <- Lens.view theme <&> Theme.codeForegroundColors
+        th <- Lens.view theme <&> Theme.textColors
         TextView.makeLabel text
             & Reader.local (TextView.color .~ Theme.grammarColor th)
 
@@ -56,7 +56,7 @@ grammarText ::
     ) => m (Text -> AnimId -> WithTextPos View)
 grammarText =
     do
-        th <- Lens.view theme <&> Theme.codeForegroundColors
+        th <- Lens.view theme <&> Theme.textColors
         TextView.make
             & Reader.local (TextView.color .~ Theme.grammarColor th)
 

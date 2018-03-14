@@ -209,7 +209,7 @@ makeFieldRow (Sugar.CompositeItem delete tag fieldExpr) =
             , Responsive._tagPost = Element.empty
             }
 
-separationBar :: Theme.CodeForegroundColors -> Widget.R -> Anim.AnimId -> View
+separationBar :: Theme.TextColors -> Widget.R -> Anim.AnimId -> View
 separationBar theme width animId =
     View.unitSquare (animId <> ["tailsep"])
     & Element.tint (Theme.recordTailColor theme)
@@ -232,7 +232,7 @@ makeOpenRecord (Sugar.OpenCompositeActions close) rest fieldsGui =
         let layout layoutMode fields =
                 fields
                 /-/
-                separationBar (Theme.codeForegroundColors theme) (max minWidth targetWidth) animId
+                separationBar (Theme.textColors theme) (max minWidth targetWidth) animId
                 /-/
                 vspace
                 /-/

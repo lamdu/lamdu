@@ -175,7 +175,7 @@ makeScopeNavEdit binder myId curCursor =
                 ( TextView.color .~
                     case mScopeId of
                     Nothing -> Theme.disabledColor theme
-                    Just _ -> Theme.grammarColor (Theme.codeForegroundColors theme)
+                    Just _ -> Theme.grammarColor (Theme.textColors theme)
                 )
         evalConfig <- Lens.view Config.config <&> Config.eval
         Lens.view (CESettings.settings . CESettings.sAnnotationMode)

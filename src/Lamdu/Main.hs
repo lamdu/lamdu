@@ -197,7 +197,7 @@ makeRootWidget fonts db evaluator config theme mainLoopEnv sampler settingsProp 
                 , _envConfig = config
                 , _envTheme = theme
                 , _envSettings = Property.value settingsProp
-                , _envStyle = Style.makeStyle (Theme.codeForegroundColors theme) fonts
+                , _envStyle = Style.makeStyle (Theme.textColors theme) fonts
                 , _envMainLoop = mainLoopEnv
                 , _envAnimIdPrefix = mempty
                 }

@@ -191,7 +191,7 @@ makeAddAltRow addAlt myId =
             , Menu._pickNextEntryPoint = WidgetIds.fromEntityId dst
             }
 
-separationBar :: Theme.CodeForegroundColors -> Widget.R -> Anim.AnimId -> View
+separationBar :: Theme.TextColors -> Widget.R -> Anim.AnimId -> View
 separationBar theme width animId =
     View.unitSquare (animId <> ["tailsep"])
     & Element.tint (Theme.caseTailColor theme)
@@ -219,7 +219,7 @@ makeOpenCase actions rest animId altsGui =
             in
             alts
             /-/
-            separationBar (Theme.codeForegroundColors theme) (max minWidth targetWidth) animId
+            separationBar (Theme.textColors theme) (max minWidth targetWidth) animId
             /-/
             vspace
             /-/

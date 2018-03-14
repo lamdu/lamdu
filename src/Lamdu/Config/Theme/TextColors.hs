@@ -1,7 +1,7 @@
 {-# LANGUAGE NoImplicitPrelude, TemplateHaskell #-}
 -- | The themes/ config format
-module Lamdu.Config.Theme.CodeForegroundColors
-    ( CodeForegroundColors(..)
+module Lamdu.Config.Theme.TextColors
+    ( TextColors(..)
     ) where
 
 import           Data.Aeson.TH (deriveJSON)
@@ -10,7 +10,7 @@ import qualified GUI.Momentu.Draw as Draw
 
 import           Lamdu.Prelude
 
-data CodeForegroundColors = CodeForegroundColors
+data TextColors = TextColors
     { baseColor :: Draw.Color
     , nomColor :: Draw.Color
     , literalColor :: Draw.Color
@@ -22,4 +22,4 @@ data CodeForegroundColors = CodeForegroundColors
     , foreignVarColor :: Draw.Color
     , presentationChoiceColor :: Draw.Color
     } deriving (Eq, Show)
-deriveJSON defaultOptions ''CodeForegroundColors
+deriveJSON defaultOptions ''TextColors

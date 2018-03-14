@@ -15,6 +15,6 @@ withUnderline ::
     (MonadReader env m, TextView.HasStyle env) => Theme -> m a -> m a
 withUnderline theme =
     Underline
-    { _underlineColor = Theme.lightLambdaUnderlineColor (Theme.codeForegroundColors theme)
+    { _underlineColor = Theme.lightLambdaUnderlineColor (Theme.textColors theme)
     , _underlineWidth = Theme.wideUnderlineWidth theme
     } & ExprGuiM.withLocalUnderline

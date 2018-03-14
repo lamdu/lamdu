@@ -29,7 +29,7 @@ deriving instance Data Hover.Style
 deriving instance Data Menu.Style
 deriving instance Data ResponsiveExpr.Style
 deriving instance Data Theme
-deriving instance Data Theme.CodeForegroundColors
+deriving instance Data Theme.TextColors
 deriving instance Data Theme.Eval
 deriving instance Data Theme.Help
 deriving instance Data Theme.Hole

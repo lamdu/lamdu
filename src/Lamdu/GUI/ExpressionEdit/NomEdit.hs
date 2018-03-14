@@ -67,7 +67,7 @@ mkNomGui ::
     ExprGuiM m (ExpressionGui m)
 mkNomGui ordering nomStr str mDel pl (Sugar.Nominal tid val) =
     do
-        nomColor <- Lens.view Theme.theme <&> Theme.codeForegroundColors <&> Theme.nomColor
+        nomColor <- Lens.view Theme.theme <&> Theme.textColors <&> Theme.nomColor
         config <- Lens.view Config.config
         let mkEventMap action =
                 action <&> WidgetIds.fromEntityId

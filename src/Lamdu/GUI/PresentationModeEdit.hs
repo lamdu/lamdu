@@ -58,7 +58,7 @@ make myId (Sugar.Params params) prop =
         pairs <-
             traverse mkPair [Sugar.Object (paramTags !! 0), Sugar.Verbose, Sugar.Infix (paramTags !! 0) (paramTags !! 1)]
             & Reader.local
-                (TextView.style . TextView.styleColor .~ Theme.presentationChoiceColor (Theme.codeForegroundColors theme))
+                (TextView.style . TextView.styleColor .~ Theme.presentationChoiceColor (Theme.textColors theme))
         Choice.make ?? Property.set prop ?? pairs ?? cur
             ?? presentationModeChoiceConfig ?? myId
             <&> Element.scale (Theme.presentationChoiceScaleFactor theme)
