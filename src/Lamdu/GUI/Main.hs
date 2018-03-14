@@ -11,6 +11,7 @@ module Lamdu.GUI.Main
 import qualified Control.Lens as Lens
 import           Control.Monad.Reader (ReaderT(..))
 import qualified Control.Monad.Reader as Reader
+import           Control.Monad.Transaction (MonadTransaction(..))
 import           Data.CurAndPrev (CurAndPrev)
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Draw as Draw
@@ -50,18 +51,19 @@ type T = Transaction
 type EvalResults = CurAndPrev (Results.EvalResults (ExprIRef.ValI ViewM))
 
 makeStatusBar ::
-    ( TextEdit.HasStyle env, Theme.HasTheme env, Hover.HasStyle env
+    ( MonadReader env m, MonadTransaction DbM m
+    , TextEdit.HasStyle env, Theme.HasTheme env, Hover.HasStyle env
     , GuiState.HasCursor env, Element.HasAnimIdPrefix env
     , VCConfig.HasConfig env, VCConfig.HasTheme env
     ) =>
     Widget.R -> VCActions.Actions DbM (IOTrans DbM) ->
-    ReaderT env (T DbM) (Widget (IOTrans DbM GuiState.Update))
+    m (Widget (IOTrans DbM GuiState.Update))
 makeStatusBar width vcActions =
     do
         theTheme <- Lens.view Theme.theme
         branchChoice <-
             VersionControlGUI.makeBranchSelector
-            IOTrans.liftTrans lift vcActions
+            IOTrans.liftTrans transaction vcActions
         branchLabel <- TextView.make ?? "Branch: " ?? ["BranchHeader"]
         let rawStatusBar =
                 (branchLabel /|/ branchChoice) ^. Align.tValue
