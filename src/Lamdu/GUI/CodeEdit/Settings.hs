@@ -21,6 +21,7 @@ import qualified Lamdu.Config as Config
 import qualified Lamdu.Config.Sampler as ConfigSampler
 import           Lamdu.GUI.CodeEdit.AnnotationMode (AnnotationMode)
 import qualified Lamdu.GUI.CodeEdit.AnnotationMode as AnnotationMode
+import qualified Lamdu.GUI.CodeEdit.AnnotationMode.Widget as AnnotationModeWidget
 import qualified Lamdu.Themes as Themes
 
 import           Lamdu.Prelude
@@ -45,7 +46,7 @@ statusWidget ::
     (MonadReader env m, TextView.HasStyle env, Element.HasAnimIdPrefix env) =>
     Property f Settings -> m (WithTextPos (Widget (f a)))
 statusWidget prop =
-    AnnotationMode.statusWidget annotationModeProp
+    AnnotationModeWidget.forStatusBar annotationModeProp
     where
         annotationModeProp = Property.composeLens sAnnotationMode prop
 
@@ -56,7 +57,7 @@ eventMap ::
 eventMap configSampler settingsProp =
     do
         themeSwitch <- Themes.switchEventMap configSampler themeProp
-        switchAnnotationMode <- AnnotationMode.switchEventMap annotationModeProp
+        switchAnnotationMode <- AnnotationModeWidget.switchEventMap annotationModeProp
         themeSwitch <> switchAnnotationMode & pure
     where
         themeProp = Property.composeLens sSelectedTheme settingsProp
