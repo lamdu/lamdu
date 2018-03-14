@@ -31,7 +31,12 @@ data WithTextPos a = WithTextPos
 Lens.makeLenses ''WithTextPos
 
 fromWithTextPos :: SizedElement a => R -> WithTextPos a -> Aligned a
-fromWithTextPos x (WithTextPos y w) = Aligned (Vector2 x (y / w ^. Element.height)) w
+fromWithTextPos x (WithTextPos y w) =
+    Aligned (Vector2 x yAlign) w
+    where
+        yAlign
+            | y == 0 = 0 -- Avoid division which might be by zero
+            | otherwise = y / w ^. Element.height
 
 toWithTextPos :: SizedElement a => Aligned a -> WithTextPos a
 toWithTextPos (Aligned (Vector2 _ yratio) w) = WithTextPos (yratio * w ^. Element.height) w
