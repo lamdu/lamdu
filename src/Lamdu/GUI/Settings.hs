@@ -18,9 +18,9 @@ import qualified Lamdu.Config as Config
 import qualified Lamdu.Config.Sampler as ConfigSampler
 import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.GUI.CodeEdit.AnnotationMode.Widget as AnnotationModeWidget
+import qualified Lamdu.GUI.Themes as Themes
 import           Lamdu.Settings (Settings)
 import qualified Lamdu.Settings as Settings
-import qualified Lamdu.Themes as Themes
 
 import           Lamdu.Prelude
 
