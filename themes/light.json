@@ -70,7 +70,7 @@
         "tint"          : [1.0, 1.0, 1.0, 1.0]
     },
     "versionControl": {
-        "selectedBranchColor" : [0.35, 0.5, 0.35, 1.0]
+        "selectedBranchColor" : [0, 0, 0, 1.0]
     },
     "menu": {
         "submenuSymbolColorUnselected"  : [0, 0, 0, 0.3],
