@@ -47,6 +47,23 @@ type T = Transaction
 
 type EvalResults = CurAndPrev (Results.EvalResults (ExprIRef.ValI ViewM))
 
+makeStatusBar ::
+    ( MonadReader env m, TextView.HasStyle env, Theme.HasTheme env
+    , Element.HasAnimIdPrefix env
+    ) =>
+    Widget.R -> Widget (IOTrans DbM GuiState.Update) ->
+    m (Widget (IOTrans DbM GuiState.Update))
+makeStatusBar width branchChoice =
+    do
+        branchLabel <- TextView.make ?? "Branch: " ?? ["BranchHeader"]
+        let rawStatusBar =
+                (branchLabel /|/ branchChoice) ^. Align.tValue
+                & Element.width .~ width
+        theTheme <- Lens.view Theme.theme
+        Draw.backgroundColor
+            ?? Theme.statusBarBGColor theTheme
+            ?? rawStatusBar
+
 layout ::
     ( MainLoop.HasMainLoopEnv env
     , Style.HasStyle env
@@ -65,14 +82,7 @@ layout branchChoice =
     do
         theTheme <- Lens.view Theme.theme
         fullSize <- Lens.view (MainLoop.mainLoopEnv . MainLoop.eWindowSize)
-        branchLabel <- TextView.make ?? "Branch: " ?? ["BranchHeader"]
-        let rawStatusBar =
-                (branchLabel /|/ branchChoice) ^. Align.tValue
-                & Element.width .~ fullSize ^. _1
-        statusBar <-
-            Draw.backgroundColor
-            ?? Theme.statusBarBGColor theTheme
-            ?? rawStatusBar
+        statusBar <- makeStatusBar (fullSize ^. _1) branchChoice
         state <- Lens.view GuiState.state
         codeEdit <-
             CodeEdit.make DbLayout.codeAnchors (fullSize ^. _1)
