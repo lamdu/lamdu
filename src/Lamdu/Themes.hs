@@ -1,7 +1,7 @@
 {-# LANGUAGE NoImplicitPrelude, OverloadedStrings #-}
 
 module Lamdu.Themes
-    ( initial, getFiles
+    ( Selection, initial, getFiles
     ) where
 
 import qualified Paths.Utils as Paths
@@ -11,6 +11,8 @@ import           System.FilePath ((</>))
 import qualified System.FilePath as FilePath
 
 import           Lamdu.Prelude
+
+type Selection = Text
 
 getFiles :: IO [FilePath]
 getFiles =
@@ -22,5 +24,5 @@ getFiles =
             <&> filter ((== ".json") . FilePath.takeExtension)
             <&> map (themesDir </>)
 
-initial :: Text
+initial :: Selection
 initial = "default"

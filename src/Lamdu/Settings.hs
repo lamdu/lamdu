@@ -15,7 +15,7 @@ import           Lamdu.Prelude
 
 data Settings = Settings
     { _sAnnotationMode :: AnnotationMode
-    , _sSelectedTheme :: Text
+    , _sSelectedTheme :: Themes.Selection
     }
 Lens.makeLenses ''Settings
 

@@ -21,7 +21,7 @@ import           Lamdu.Prelude
 
 switchEventMap ::
     (MonadReader env m, Config.HasConfig env) =>
-    Sampler -> Property IO Text -> m (EventMap (IO GuiState.Update))
+    Sampler -> Property IO Themes.Selection -> m (EventMap (IO GuiState.Update))
 switchEventMap configSampler (Property curTheme setTheme) =
     Lens.view Config.config
     <&> \config ->
