@@ -1,5 +1,5 @@
 #!runghc -isrc -idist/build/autogen
-{-# LANGUAGE LambdaCase, ScopedTypeVariables #-}
+{-# LANGUAGE LambdaCase, ScopedTypeVariables, NoImplicitPrelude #-}
 
 import           Control.Lens.Operators
 import qualified Data.Aeson as Aeson
@@ -11,6 +11,8 @@ import qualified Lamdu.Themes as Themes
 import qualified Paths.Utils as Paths
 import qualified Paths_Lamdu
 import           System.IO (hPutStrLn, stderr)
+
+import           Prelude
 
 validate :: forall t. Aeson.FromJSON t => Proxy t -> FilePath -> IO ()
 validate _ path =

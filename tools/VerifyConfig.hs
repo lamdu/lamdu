@@ -1,6 +1,6 @@
 -- | Verify config.json doesn't have any redundant fields (Aeson
 -- parses successfully even with redundant fields!)
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE OverloadedStrings, NoImplicitPrelude #-}
 module Main (main) where
 
 import           Control.Monad (unless)
@@ -9,6 +9,8 @@ import qualified Data.Aeson.Encode.Pretty as PP
 import qualified Data.ByteString.Lazy.Char8 as BSL
 import           Data.Monoid ((<>))
 import           Lamdu.Config (Config)
+
+import           Prelude
 
 main :: IO ()
 main = do
