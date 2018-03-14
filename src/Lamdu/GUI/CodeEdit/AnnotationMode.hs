@@ -6,12 +6,12 @@ module Lamdu.GUI.CodeEdit.AnnotationMode
     , switchEventMap
     ) where
 
+import qualified Control.Lens as Lens
 import           Data.Property (Property(..))
 import qualified Data.Text as Text
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.State as GuiState
-import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
 
 import           Lamdu.Prelude
@@ -31,9 +31,10 @@ nextAnnotationMode :: AnnotationMode -> AnnotationMode
 nextAnnotationMode = cyclicSucc
 
 switchEventMap ::
-    Functor f => Config -> Property f AnnotationMode ->
-    EventMap (f GuiState.Update)
-switchEventMap config (Property infoMode setAnnotationMode) =
+    (Functor f, MonadReader env m, Config.HasConfig env) =>
+    Property f AnnotationMode -> m (EventMap (f GuiState.Update))
+switchEventMap (Property infoMode setAnnotationMode) =
+    Lens.view Config.config <&> \config ->
     E.keysEventMap (Config.nextAnnotationModeKeys config) nextDoc
     (setAnnotationMode next)
     where

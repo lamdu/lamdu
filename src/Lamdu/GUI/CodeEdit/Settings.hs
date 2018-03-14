@@ -41,8 +41,7 @@ eventMap configSampler settingsProp =
     do
         config <- ConfigSampler.getSample configSampler <&> (^. ConfigSampler.sConfig)
         let themeSwitch = Themes.switchEventMap configSampler themeProp config
-        let switchAnnotationMode =
-                AnnotationMode.switchEventMap config annotationModeProp
+        let switchAnnotationMode = AnnotationMode.switchEventMap annotationModeProp config
         themeSwitch <> switchAnnotationMode & pure
     where
         themeProp = Property.composeLens sSelectedTheme settingsProp
