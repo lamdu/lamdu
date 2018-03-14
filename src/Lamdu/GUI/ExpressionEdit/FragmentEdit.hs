@@ -99,7 +99,7 @@ make fragment pl =
                     & E.keysEventMapMovesCursor
                         (Config.delKeys config <> Config.attachKeys config)
                         (E.Doc ["Edit", "Attach"])
-        ExprEventMap.add ExprEventMap.defaultOptions pl
+        ExprEventMap.add pl
             <*> (maybeAddAnnotationPl pl ?? fragmentExprGui <&> Responsive.render . Lens.imapped %@~ f)
             <&> Widget.widget %~ Widget.weakerEvents attachEventMap
     where

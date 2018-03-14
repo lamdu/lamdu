@@ -43,7 +43,7 @@ stdWrap ::
 stdWrap pl =
     maybeAddAnnotationPl pl
     <<< Dotter.with pl
-    <<< ExprEventMap.add ExprEventMap.defaultOptions pl
+    <<< ExprEventMap.add pl
     where
         (<<<) = liftA2 (.)
 
