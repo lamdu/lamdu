@@ -58,22 +58,29 @@ makeStatusBar ::
     , TextEdit.HasStyle env, Theme.HasTheme env, Hover.HasStyle env
     , GuiState.HasCursor env, Element.HasAnimIdPrefix env
     , VCConfig.HasConfig env, VCConfig.HasTheme env
+    , Spacer.HasStdSpacing env
     ) =>
+    Property IO Settings ->
     Widget.R -> VCActions.Actions DbM (IOTrans DbM) ->
     m (Widget (IOTrans DbM GuiState.Update))
-makeStatusBar width vcActions =
+makeStatusBar settingsProp width vcActions =
     do
-        theTheme <- Lens.view Theme.theme
         branchChoice <-
             VersionControlGUI.makeBranchSelector
             IOTrans.liftTrans transaction vcActions
-        branchLabel <- TextView.make ?? "Branch: " ?? ["BranchHeader"]
-        let rawStatusBar =
-                (branchLabel /|/ branchChoice) ^. Align.tValue
-                & Element.width .~ width
+        branchLabel <- TextView.make ?? "Branch " ?? ["BranchHeader"]
+        let branchWidget = branchLabel /|/ branchChoice
+
+        settings <-
+            Settings.statusWidget settingsProp
+            <&> Align.tValue %~ fmap IOTrans.liftIO
+
+        theTheme <- Lens.view Theme.theme
+        hspace <- Spacer.stdHSpace
         Draw.backgroundColor
             ?? Theme.statusBarBGColor theTheme
-            ?? rawStatusBar
+            ?? ((settings /|/ hspace /|/ branchWidget) ^. Align.tValue
+                & Element.width .~ width)
 
 layout ::
     ( MainLoop.HasMainLoopEnv env
@@ -89,13 +96,13 @@ layout ::
     , CodeEdit.HasExportActions env ViewM
     , VCConfig.HasConfig env, VCConfig.HasTheme env
     ) =>
-    VCActions.Actions DbM (IOTrans DbM) ->
+    Property IO Settings -> VCActions.Actions DbM (IOTrans DbM) ->
     ReaderT env (T DbM) (Widget (IOTrans DbM GuiState.Update))
-layout vcActions =
+layout settingsProp vcActions =
     do
         theTheme <- Lens.view Theme.theme
         fullSize <- Lens.view (MainLoop.mainLoopEnv . MainLoop.eWindowSize)
-        statusBar <- makeStatusBar (fullSize ^. _1) vcActions
+        statusBar <- makeStatusBar settingsProp (fullSize ^. _1) vcActions
         state <- Lens.view GuiState.state
         codeEdit <-
             CodeEdit.make DbLayout.codeAnchors (fullSize ^. _1)
@@ -127,14 +134,14 @@ make configSampler settingsProp env =
             VersionControl.makeActions
             <&> VCActions.hoist IOTrans.liftTrans
         let vcEventMap = VersionControlGUI.eventMap versionControlCfg vcActions
-        layout vcActions
+        layout settingsProp vcActions
             <&> Widget.weakerEventsWithoutPreevents
                 (settingsEventMap <> quitEventMap <> vcEventMap)
             & (`runReaderT` env)
     where
         settingsEventMap =
             Settings.eventMap configSampler settingsProp config
-            <&> Lens.mapped %~ pure . pure <&> IOTrans
+            <&> IOTrans.liftIO
         config = env ^. Config.config
         versionControlCfg = Config.versionControl config
         quitEventMap =

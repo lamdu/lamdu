@@ -7,7 +7,7 @@
 {-# LANGUAGE NoImplicitPrelude, TemplateHaskell, DeriveFunctor #-}
 
 module Lamdu.GUI.IOTrans
-    ( IOTrans(..), ioTrans, liftTrans
+    ( IOTrans(..), ioTrans, liftTrans, liftIO
     ) where
 
 import           Control.Applicative (liftA2)
@@ -29,3 +29,7 @@ instance Monad m => Applicative (IOTrans m) where
 
 liftTrans :: Functor m => T m a -> IOTrans m a
 liftTrans = IOTrans . pure . fmap pure
+
+-- | IOTrans is not a Monad, so it isn't a MonadTrans. But it can lift IO actions
+liftIO :: Monad m => IO a -> IOTrans m a
+liftIO = Lens.mapped %~ pure . pure <&> IOTrans

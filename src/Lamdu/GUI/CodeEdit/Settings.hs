@@ -3,6 +3,7 @@ module Lamdu.GUI.CodeEdit.Settings
     ( AnnotationMode(..)
     , Settings(..), sAnnotationMode, sSelectedTheme
     , HasSettings(..)
+    , statusWidget
     , eventMap
     , initial
     ) where
@@ -10,8 +11,12 @@ module Lamdu.GUI.CodeEdit.Settings
 import qualified Control.Lens as Lens
 import           Data.Property (Property)
 import qualified Data.Property as Property
+import           GUI.Momentu.Align (WithTextPos(..))
+import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.State as GuiState
+import           GUI.Momentu.Widget (Widget)
+import qualified GUI.Momentu.Widgets.TextView as TextView
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Config.Sampler as ConfigSampler
 import           Lamdu.GUI.CodeEdit.AnnotationMode (AnnotationMode)
@@ -34,6 +39,15 @@ initial =
     }
 
 class HasSettings env where settings :: Lens' env Settings
+
+-- | For the status bar
+statusWidget ::
+    (MonadReader env m, TextView.HasStyle env, Element.HasAnimIdPrefix env) =>
+    Property f Settings -> m (WithTextPos (Widget (f a)))
+statusWidget prop =
+    AnnotationMode.statusWidget annotationModeProp
+    where
+        annotationModeProp = Property.composeLens sAnnotationMode prop
 
 eventMap ::
     (MonadReader env m, Config.HasConfig env) =>
