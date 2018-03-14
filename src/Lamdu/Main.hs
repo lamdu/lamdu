@@ -7,7 +7,6 @@ import           Control.Concurrent.MVar
 import qualified Control.Exception as E
 import qualified Control.Lens as Lens
 import           Control.Monad (replicateM_)
-import           Control.Monad.IO.Class (MonadIO(..))
 import           Data.CurAndPrev (current)
 import           Data.IORef
 import           Data.MRUMemo (memoIO)
@@ -19,7 +18,6 @@ import qualified GUI.Momentu as M
 import           GUI.Momentu.Animation.Id (AnimId)
 import qualified GUI.Momentu.Hover as Hover
 import qualified GUI.Momentu.Main as MainLoop
-import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
 import qualified GUI.Momentu.Widgets.TextView as TextView
 import qualified Graphics.Rendering.OpenGL.GL as GL
@@ -187,8 +185,9 @@ exportActions config evalResults executeIOProcess =
 
 makeRootWidget ::
     Fonts M.Font -> DB -> EvalManager.Evaluator -> Config -> Theme ->
-    MainLoop.Env -> Settings -> IO (M.Widget (MainLoop.M M.Update))
-makeRootWidget fonts db evaluator config theme mainLoopEnv settings =
+    MainLoop.Env -> Sampler -> Property IO Settings ->
+    IO (M.Widget (MainLoop.M M.Update))
+makeRootWidget fonts db evaluator config theme mainLoopEnv sampler settingsProp =
     do
         evalResults <- EvalManager.getResults evaluator
         let env = Env
@@ -197,17 +196,17 @@ makeRootWidget fonts db evaluator config theme mainLoopEnv settings =
                     exportActions config (evalResults ^. current) (EvalManager.executeReplIOProcess evaluator)
                 , _envConfig = config
                 , _envTheme = theme
-                , _envSettings = settings
+                , _envSettings = Property.value settingsProp
                 , _envStyle = Style.makeStyle (Theme.codeForegroundColors theme) fonts
                 , _envMainLoop = mainLoopEnv
                 , _envAnimIdPrefix = mempty
                 }
         let dbToIO action =
-                case settings ^. Settings.sAnnotationMode of
+                case settingsProp ^. Property.pVal . Settings.sAnnotationMode of
                 Evaluation ->
                     EvalManager.runTransactionAndMaybeRestartEvaluator evaluator action
                 _ -> DbLayout.runDbTransaction db action
-        mkWidgetWithFallback dbToIO env
+        mkWidgetWithFallback sampler settingsProp dbToIO env
 
 withMVarProtection :: a -> (MVar (Maybe a) -> IO b) -> IO b
 withMVarProtection val =
@@ -268,12 +267,7 @@ runEditor opts db =
             printGLVersion
             mainLoop stateStorage subpixel win refreshScheduler configSampler $
                 \fonts config theme env ->
-                do
-                    settingsProp <- mkSettingsProp
-                    let settingsEventMap = Settings.eventMap configSampler settingsProp config
-                    makeRootWidget fonts db evaluator config theme env
-                        (Property.value settingsProp)
-                        <&> Widget.weakerEventsWithoutPreevents (settingsEventMap <&> liftIO)
+                mkSettingsProp >>= makeRootWidget fonts db evaluator config theme env configSampler
     where
         stateStorage = stateStorageInIRef db DbLayout.guiState
         subpixel
@@ -382,20 +376,21 @@ mainLoop stateStorage subpixel win refreshScheduler configSampler iteration =
             }
 
 mkWidgetWithFallback ::
+    Sampler -> Property IO Settings ->
     (forall a. T DbLayout.DbM a -> IO a) ->
     Env -> IO (M.Widget (MainLoop.M M.Update))
-mkWidgetWithFallback dbToIO env =
+mkWidgetWithFallback sampler settingsProp dbToIO env =
     do
         (isValid, widget) <-
             dbToIO $
             do
-                candidateWidget <- makeMainGui dbToIO env
+                candidateWidget <- makeMainGui sampler settingsProp dbToIO env
                 (isValid, widget) <-
                     if M.isFocused candidateWidget
                     then pure (True, candidateWidget)
                     else
                         env & M.cursor .~ WidgetIds.defaultCursor
-                        & makeMainGui dbToIO
+                        & makeMainGui sampler settingsProp dbToIO
                         <&> (,) False
                 unless (M.isFocused widget) $
                     fail "Root cursor did not match"
@@ -410,10 +405,11 @@ mkWidgetWithFallback dbToIO env =
         bgColor True = Theme.backgroundColor
 
 makeMainGui ::
+    Sampler -> Property IO Settings ->
     (forall a. T DbLayout.DbM a -> IO a) ->
     Env -> T DbLayout.DbM (M.Widget (MainLoop.M M.Update))
-makeMainGui dbToIO env =
-    GUIMain.make env
+makeMainGui sampler settingsProp dbToIO env =
+    GUIMain.make sampler settingsProp env
     <&> Lens.mapped %~ \act ->
     act ^. ioTrans
     <&> dbToIO

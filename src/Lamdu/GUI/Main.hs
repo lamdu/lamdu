@@ -13,6 +13,7 @@ import           Control.Monad.Reader (ReaderT(..))
 import qualified Control.Monad.Reader as Reader
 import           Control.Monad.Transaction (MonadTransaction(..))
 import           Data.CurAndPrev (CurAndPrev)
+import           Data.Property (Property)
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Draw as Draw
 import qualified GUI.Momentu.Element as Element
@@ -28,14 +29,16 @@ import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
 import qualified GUI.Momentu.Widgets.TextView as TextView
 import qualified Lamdu.Config as Config
+import qualified Lamdu.Config.Sampler as ConfigSampler
 import qualified Lamdu.Config.Theme as Theme
 import           Lamdu.Data.Db.Layout (DbM, ViewM)
 import qualified Lamdu.Data.Db.Layout as DbLayout
 import qualified Lamdu.Eval.Results as Results
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.GUI.CodeEdit as CodeEdit
+import           Lamdu.GUI.CodeEdit.Settings (Settings)
 import qualified Lamdu.GUI.CodeEdit.Settings as Settings
-import           Lamdu.GUI.IOTrans (IOTrans, ioTrans)
+import           Lamdu.GUI.IOTrans (IOTrans(..), ioTrans)
 import qualified Lamdu.GUI.IOTrans as IOTrans
 import qualified Lamdu.GUI.VersionControl as VersionControlGUI
 import qualified Lamdu.GUI.VersionControl.Config as VCConfig
@@ -116,18 +119,23 @@ make ::
     , CodeEdit.HasExportActions env ViewM
     , VCConfig.HasConfig env, VCConfig.HasTheme env
     ) =>
-    env -> T DbM (Widget (IOTrans DbM GuiState.Update))
-make env =
+    ConfigSampler.Sampler ->
+    Property IO Settings -> env -> T DbM (Widget (IOTrans DbM GuiState.Update))
+make configSampler settingsProp env =
     do
         vcActions <-
             VersionControl.makeActions
             <&> VCActions.hoist IOTrans.liftTrans
         let vcEventMap = VersionControlGUI.eventMap versionControlCfg vcActions
         layout vcActions
-            <&> Widget.weakerEventsWithoutPreevents (quitEventMap <> vcEventMap)
+            <&> Widget.weakerEventsWithoutPreevents
+                (settingsEventMap <> quitEventMap <> vcEventMap)
             & (`runReaderT` env)
     where
-        versionControlCfg = Config.versionControl (env ^. Config.config)
+        settingsEventMap =
+            Settings.eventMap configSampler settingsProp config
+            <&> Lens.mapped %~ pure . pure <&> IOTrans
+        config = env ^. Config.config
+        versionControlCfg = Config.versionControl config
         quitEventMap =
-            E.keysEventMap (Config.quitKeys (env ^. Config.config))
-            (E.Doc ["Quit"]) (error "Quit")
+            E.keysEventMap (Config.quitKeys config) (E.Doc ["Quit"]) (error "Quit")
