@@ -1,9 +1,9 @@
-{-# LANGUAGE NoImplicitPrelude, TemplateHaskell #-}
+{-# LANGUAGE NoImplicitPrelude, TemplateHaskell, OverloadedStrings #-}
 -- | A vertical-expand (combo-like) choice widget
 
 module GUI.Momentu.Widgets.Choice
     ( make
-    , Config(..)
+    , Config(..), defaultFdConfig
     , ExpandMode(..)
     , Orientation(..)
     ) where
@@ -11,10 +11,13 @@ module GUI.Momentu.Widgets.Choice
 import qualified Control.Lens as Lens
 import qualified GUI.Momentu.Draw as MDraw
 import qualified GUI.Momentu.Element as Element
+import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Glue (Orientation(..))
 import qualified GUI.Momentu.Glue as Glue
 import           GUI.Momentu.Hover (Hover, AnchoredWidget)
 import qualified GUI.Momentu.Hover as Hover
+import           GUI.Momentu.MetaKey (MetaKey(..), noMods)
+import qualified GUI.Momentu.MetaKey as MetaKey
 import qualified GUI.Momentu.State as State
 import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
@@ -29,6 +32,15 @@ data ExpandMode
     = AutoExpand Draw.Color
     | ExplicitEntry
 Lens.makePrisms ''ExpandMode
+
+defaultFdConfig :: E.Subtitle -> FocusDelegator.Config
+defaultFdConfig helpPrefix =
+    FocusDelegator.Config
+    { FocusDelegator.focusChildKeys = [MetaKey noMods MetaKey.Key'Enter]
+    , FocusDelegator.focusChildDoc = E.Doc [helpPrefix, "Select"]
+    , FocusDelegator.focusParentKeys = [MetaKey noMods MetaKey.Key'Enter]
+    , FocusDelegator.focusParentDoc = E.Doc [helpPrefix, "Choose selected"]
+    }
 
 data Config = Config
     { cwcFDConfig :: FocusDelegator.Config

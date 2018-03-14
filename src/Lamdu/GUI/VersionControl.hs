@@ -72,13 +72,7 @@ eventMap config actions = mconcat
 choiceWidgetConfig :: Choice.Config
 choiceWidgetConfig =
     Choice.Config
-    { Choice.cwcFDConfig =
-        FocusDelegator.Config
-        { FocusDelegator.focusChildKeys = [MetaKey noMods MetaKey.Key'Enter]
-        , FocusDelegator.focusChildDoc = E.Doc ["Branches", "Select"]
-        , FocusDelegator.focusParentKeys = [MetaKey noMods MetaKey.Key'Enter]
-        , FocusDelegator.focusParentDoc = E.Doc ["Branches", "Choose selected"]
-        }
+    { Choice.cwcFDConfig = Choice.defaultFdConfig "Branches"
     , Choice.cwcExpandMode = Choice.ExplicitEntry
     , Choice.cwcOrientation = Choice.Vertical
     }
