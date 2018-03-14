@@ -40,7 +40,7 @@ eventMap ::
 eventMap configSampler settingsProp =
     do
         config <- ConfigSampler.getSample configSampler <&> (^. ConfigSampler.sConfig)
-        themeSwitch <- Themes.switchEventMap configSampler themeProp
+        let themeSwitch = Themes.switchEventMap configSampler themeProp config
         let switchAnnotationMode =
                 AnnotationMode.switchEventMap config annotationModeProp
         themeSwitch <> switchAnnotationMode & pure

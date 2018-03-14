@@ -4,6 +4,7 @@ module Lamdu.Themes
     ( switchEventMap, initial, getFiles
     ) where
 
+import qualified Control.Lens as Lens
 import           Data.Property (Property(..))
 import qualified Data.Text as Text
 import           GUI.Momentu.EventMap (EventMap)
@@ -31,9 +32,10 @@ getFiles =
             <&> map (themesDir </>)
 
 switchEventMap ::
-    Sampler -> Property IO Text -> IO (EventMap (IO GuiState.Update))
+    (MonadReader env m, Config.HasConfig env) =>
+    Sampler -> Property IO Text -> m (EventMap (IO GuiState.Update))
 switchEventMap configSampler (Property curTheme setTheme) =
-    ConfigSampler.getSample configSampler <&> (^. ConfigSampler.sConfig)
+    Lens.view Config.config
     <&> \config ->
     let keys = Config.changeThemeKeys config
     in  do
