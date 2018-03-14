@@ -16,6 +16,7 @@ import           GUI.Momentu.Align (Aligned(..))
 import           GUI.Momentu.Animation (R)
 import           GUI.Momentu.Draw (Color(..))
 import qualified GUI.Momentu.Element as Element
+import qualified GUI.Momentu.Rect as Rect
 import           GUI.Momentu.View (View(..))
 import qualified GUI.Momentu.Widgets.GridView as GridView
 import           Lamdu.Calc.Identifier (identHex)
@@ -112,12 +113,24 @@ verifyDefs defs =
 
 propGridSensibleSize :: NonEmpty (NonEmpty (Aligned (Vector2 R))) -> Bool
 propGridSensibleSize viewConfs =
-    isFinite (grid ^. Element.width) && isFinite (grid ^. Element.height) &&
-    and ((>=) <$> (grid ^. Element.size) <*> minGridSize views)
+    size == grid ^. Element.size &&
+    isFinite (size ^. _1) && isFinite (size ^. _1) &&
+    and ((>=) <$> size <*> minGridSize views) &&
+    Lens.allOf (traverse . traverse) goodPlacement placements
     where
         isFinite x = not (isNaN x || isInfinite x)
         views = viewsFromConf viewConfs
         grid = GridView.make views
+        (size, placements) = GridView.makePlacements views
+        goodPlacement (Aligned alignment (place, view)) =
+            vSize == place ^. Rect.size &&
+            pos vSize && pos (place ^. Rect.topLeft) &&
+            and ((<=) <$> place ^. Rect.bottomRight <*> size * 1.001) &&
+            Lens.allOf traverse goodAlignment alignment
+            where
+                pos x = and ((<=) <$> 0 <*> x)
+                vSize = view ^. Element.size
+        goodAlignment x = isFinite x && 0 <= x && x <= 1
 
 minGridSize ::
     (Traversable vert, Element.SizedElement view) =>
