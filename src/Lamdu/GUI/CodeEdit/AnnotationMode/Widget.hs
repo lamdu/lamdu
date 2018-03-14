@@ -47,7 +47,7 @@ forStatusBar prop =
     do
         header <-
             TextView.makeLabel "Annotations "
-            & Styled.withColor (Theme.infoTextColor . Theme.textColors)
+            & Styled.withColor Theme.infoTextColor
         choices <- [minBound..maxBound] & traverse mkChoice
         choice <-
             Choice.make

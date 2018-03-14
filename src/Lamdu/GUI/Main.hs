@@ -71,7 +71,7 @@ makeStatusBar settingsProp width vcActions =
             IOTrans.liftTrans transaction vcActions
         branchLabel <-
             TextView.make ?? "Branch " ?? ["BranchHeader"]
-            & Styled.withColor (Theme.infoTextColor . Theme.textColors)
+            & Styled.withColor Theme.infoTextColor
         let branchWidget = branchLabel /|/ branchChoice
 
         settings <-

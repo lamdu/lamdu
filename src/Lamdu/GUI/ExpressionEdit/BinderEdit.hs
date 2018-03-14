@@ -217,7 +217,7 @@ makeMParamsEdit mScopeCursor isScopeNavFocused delVarBackwardsId myId nearestHol
             case binder ^. Sugar.bActions . Sugar.baAddFirstParam of
             Sugar.PrependParam selection | isPrepend ->
                 TagEdit.makeTagHoleEdit selection ParamEdit.mkParamPickResult prependId
-                & Styled.withColor (Theme.parameterColor . Theme.textColors)
+                & Styled.withColor Theme.parameterColor
                 <&> Responsive.fromWithTextPos
                 <&> (:[])
             _ -> pure []

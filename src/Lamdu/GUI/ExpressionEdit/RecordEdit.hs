@@ -175,7 +175,7 @@ makeAddFieldRow ::
     m (Responsive.TaggedItem (T f GuiState.Update))
 makeAddFieldRow addField pl =
     TagEdit.makeTagHoleEdit addField mkPickResult tagHoleId
-    & Styled.withColor (Theme.recordTagColor . Theme.textColors)
+    & Styled.withColor Theme.recordTagColor
     <&>
     \tagHole ->
     Responsive.TaggedItem

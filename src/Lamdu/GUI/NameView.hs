@@ -36,7 +36,7 @@ makeCollisionSuffixLabel collisionColor mCollision =
                 (Draw.backgroundColor ?? collisionColor nameTheme)
                     <*>
                     (TextView.makeLabel text
-                     & Styled.withColor (Theme.collisionSuffixTextColor . Theme.textColors)
+                     & Styled.withColor Theme.collisionSuffixTextColor
                      <&> Element.scale (Theme.collisionSuffixScaleFactor nameTheme))
             <&> (^. Align.tValue)
             <&> Just

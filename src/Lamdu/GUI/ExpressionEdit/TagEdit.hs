@@ -404,7 +404,7 @@ makeRecordTag ::
     m (WithTextPos (Widget (T f GuiState.Update)))
 makeRecordTag nearestHoles tag =
     makeTagEdit nearestHoles tag
-    & Styled.withColor (Theme.recordTagColor . Theme.textColors)
+    & Styled.withColor Theme.recordTagColor
 
 makeVariantTag ::
     (MonadReader env m, MonadTransaction f m, HasTagEditEnv env) =>
@@ -412,7 +412,7 @@ makeVariantTag ::
     m (WithTextPos (Widget (T f GuiState.Update)))
 makeVariantTag nearestHoles tag =
     makeTagEdit nearestHoles tag
-    & Styled.withColor (Theme.caseTagColor . Theme.textColors)
+    & Styled.withColor Theme.caseTagColor
 
 addParamId :: Widget.Id -> Widget.Id
 addParamId = (`Widget.joinId` ["add param"])
@@ -427,7 +427,7 @@ makeLHSTag onPickNext color tag =
         style <- Lens.view Style.style
         (tagEditType, tagEdit) <-
             makeTagEditWith onView onPickNext NearestHoles.none tag
-            & Styled.withColor (color . Theme.textColors)
+            & Styled.withColor color
             & Reader.local (TextEdit.style .~ style ^. Style.styleNameAtBinder)
         let eventMap =
                 case tagEditType of
@@ -464,7 +464,7 @@ makeArgTag ::
     Name f -> Sugar.EntityId -> m (WithTextPos View)
 makeArgTag name tagInstance =
     NameView.make name
-    & Styled.withColor (Theme.argTagColor . Theme.textColors)
+    & Styled.withColor Theme.argTagColor
     & Reader.local (Element.animIdPrefix .~ animId)
     where
         animId = WidgetIds.fromEntityId tagInstance & Widget.toAnimId

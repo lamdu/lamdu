@@ -116,10 +116,10 @@ addDeletionDiagonal =
 
 withColor ::
     (MonadReader env m, HasTheme env, TextView.HasStyle env) =>
-    (Theme -> Draw.Color) -> m a -> m a
-withColor nameColor act =
+    (Theme.TextColors -> Draw.Color) -> m a -> m a
+withColor textColor act =
     do
-        color <- Lens.view Theme.theme <&> nameColor
+        color <- Lens.view Theme.theme <&> Theme.textColors <&> textColor
         Reader.local (TextView.color .~ color) act
 
 actionable ::

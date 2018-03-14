@@ -78,7 +78,7 @@ makeParamsRecord myId paramsRecordVar =
                     in
                     Widget.joinId myId paramId
                     & makeSimpleView fieldName <&> Responsive.fromWithTextPos
-                    & Styled.withColor (Theme.parameterColor . Theme.textColors)
+                    & Styled.withColor Theme.parameterColor
                     & Reader.local (Element.animIdPrefix %~ (<> paramId))
                 )
               )
@@ -208,7 +208,7 @@ makeGetBinder binderVar myId =
                     , processDefinitionWidget defForm myId
                     )
         makeSimpleView
-            <&> Lens.mapped %~ Styled.withColor (color . Theme.textColors)
+            <&> Lens.mapped %~ Styled.withColor color
             & makeNameRef myId (binderVar ^. Sugar.bvNameRef)
             <&> Align.tValue %~ Widget.weakerEvents
                 (makeInlineEventMap config (binderVar ^. Sugar.bvInline))
@@ -228,7 +228,7 @@ makeGetParam param myId =
                 <&> Lens.mapped %~ Styled.nameAtBinder Theme.parameterColor name
             _ ->
                 makeSimpleView
-            <&> Lens.mapped %~ Styled.withColor (Theme.parameterColor . Theme.textColors)
+            <&> Lens.mapped %~ Styled.withColor Theme.parameterColor
             & makeNameRef myId (param ^. Sugar.pNameRef)
     where
         name = param ^. Sugar.pNameRef . Sugar.nrName

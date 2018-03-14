@@ -133,7 +133,7 @@ make annotationOpts prevId nextId param =
             Nothing -> pure []
             Just addParam ->
                 TagEdit.makeTagHoleEdit addParam mkParamPickResult addId
-                & Styled.withColor (Theme.parameterColor . Theme.textColors)
+                & Styled.withColor Theme.parameterColor
                 <&> Responsive.fromWithTextPos
                 <&> (:[])
         paramEdit : addParamEdits & pure
