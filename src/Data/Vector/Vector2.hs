@@ -1,4 +1,4 @@
-{-# LANGUAGE MultiParamTypeClasses, FlexibleInstances, TypeFamilies, DeriveGeneric, DeriveFunctor #-}
+{-# LANGUAGE MultiParamTypeClasses, FlexibleInstances, TypeFamilies, DeriveGeneric, DeriveTraversable #-}
 module Data.Vector.Vector2
     ( Vector2(Vector2)
     , curry, uncurry, sqrNorm
@@ -20,7 +20,7 @@ import           GHC.Generics (Generic)
 import           Prelude hiding (curry, uncurry)
 
 data Vector2 a = Vector2 !a !a
-    deriving (Generic, Eq, Ord, Show, Read, Functor)
+    deriving (Generic, Eq, Ord, Show, Read, Functor, Foldable, Traversable)
     -- Note the Ord instance is obviously not a mathematical one
     -- (Vectors aren't ordinals!). Useful to have in a binary search
     -- tree though.
