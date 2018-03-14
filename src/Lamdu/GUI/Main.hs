@@ -59,7 +59,7 @@ makeStatusBar ::
     ( MonadReader env m, MonadTransaction DbM m
     , TextEdit.HasStyle env, Theme.HasTheme env, Hover.HasStyle env
     , GuiState.HasCursor env, Element.HasAnimIdPrefix env
-    , VCConfig.HasConfig env, VCConfig.HasTheme env
+    , VCConfig.HasConfig env, VCConfig.HasTheme env, Spacer.HasStdSpacing env
     ) =>
     Property IO Settings ->
     Widget.R -> VCActions.Actions DbM (IOTrans DbM) ->
@@ -79,7 +79,8 @@ makeStatusBar settingsProp width vcActions =
             <&> Align.tValue %~ fmap IOTrans.liftIO
 
         theTheme <- Lens.view Theme.theme
-        let hspace = Spacer.makeHorizontal 50
+        hspace <-
+            Spacer.getSpaceSize <&> (^. _1) <&> (* 5) <&> Spacer.makeHorizontal
         Draw.backgroundColor
             ?? Theme.statusBarBGColor theTheme
             ?? ((settings /|/ hspace /|/ branchWidget) ^. Align.tValue
