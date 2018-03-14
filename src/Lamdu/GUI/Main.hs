@@ -105,7 +105,7 @@ make env =
         VersionControlGUI.makeBranchSelector versionControlCfg versionControlThm
             IOTrans.liftTrans lift actions
             >>= layout
-            <&> Widget.weakerEvents (quitEventMap <> vcEventMap)
+            <&> Widget.weakerEventsWithoutPreevents (quitEventMap <> vcEventMap)
             & (`runReaderT` env)
     where
         versionControlCfg = Config.versionControl (env ^. Config.config)
