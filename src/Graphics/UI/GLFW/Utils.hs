@@ -24,11 +24,12 @@ assert msg p = unless p (fail msg)
 printErrors :: GLFW.ErrorCallback
 printErrors err msg =
     do
-        let put = hPutStrLn stderr
         put $ unwords ["GLFW error:", show err, msg]
-        put $ "From: "
+        put "From: "
         currentCallStack >>= mapM_ (put . ("  "++))
         hFlush stderr
+    where
+        put = hPutStrLn stderr
 
 withGLFW :: IO a -> IO a
 withGLFW act =
