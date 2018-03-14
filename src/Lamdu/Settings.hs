@@ -1,5 +1,5 @@
 {-# LANGUAGE NoImplicitPrelude, TemplateHaskell, OverloadedStrings #-}
-module Lamdu.GUI.CodeEdit.Settings
+module Lamdu.Settings
     ( AnnotationMode(..)
     , Settings(..), sAnnotationMode, sSelectedTheme
     , HasSettings(..)

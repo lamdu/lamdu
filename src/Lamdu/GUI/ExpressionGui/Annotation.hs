@@ -35,7 +35,6 @@ import           Lamdu.Config.Theme (HasTheme(..))
 import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.Eval.Results as ER
 import qualified Lamdu.GUI.CodeEdit.AnnotationMode as AnnotationMode
-import qualified Lamdu.GUI.CodeEdit.Settings as Settings
 import qualified Lamdu.GUI.EvalView as EvalView
 import           Lamdu.GUI.ExpressionGui (ShowAnnotation(..), EvalModeShow(..))
 import qualified Lamdu.GUI.ExpressionGui as ExprGui
@@ -44,6 +43,7 @@ import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.Styled as Styled
 import qualified Lamdu.GUI.TypeView as TypeView
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
+import qualified Lamdu.Settings as Settings
 import qualified Lamdu.Sugar.Types as Sugar
 import           Revision.Deltum.Transaction (Transaction)
 

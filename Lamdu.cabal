@@ -192,8 +192,6 @@ Library
                   , Lamdu.GUI.CodeEdit
                   , Lamdu.GUI.CodeEdit.AnnotationMode
                   , Lamdu.GUI.CodeEdit.AnnotationMode.Widget
-                  , Lamdu.GUI.CodeEdit.Settings
-                  , Lamdu.GUI.CodeEdit.Settings.Widget
                   , Lamdu.GUI.DefinitionEdit
                   , Lamdu.GUI.EvalView
                   , Lamdu.GUI.ExpressionEdit
@@ -231,6 +229,7 @@ Library
                   , Lamdu.GUI.ParamEdit
                   , Lamdu.GUI.PresentationModeEdit
                   , Lamdu.GUI.ReplEdit
+                  , Lamdu.GUI.Settings
                   , Lamdu.GUI.Styled
                   , Lamdu.GUI.TypeView
                   , Lamdu.GUI.VersionControl
@@ -241,6 +240,7 @@ Library
                   , Lamdu.Opts
                   , Lamdu.Precedence
                   , Lamdu.Prelude
+                  , Lamdu.Settings
                   , Lamdu.Style
                   , Lamdu.Sugar.Convert
                   , Lamdu.Sugar.Convert.Apply

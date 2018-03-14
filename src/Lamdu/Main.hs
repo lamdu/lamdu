@@ -37,13 +37,13 @@ import           Lamdu.Expr.IRef (ValI)
 import           Lamdu.Font (FontSize, Fonts(..))
 import qualified Lamdu.Font as Font
 import           Lamdu.GUI.CodeEdit.AnnotationMode (AnnotationMode(..))
-import           Lamdu.GUI.CodeEdit.Settings (Settings)
-import qualified Lamdu.GUI.CodeEdit.Settings as Settings
 import           Lamdu.GUI.IOTrans (ioTrans)
 import qualified Lamdu.GUI.Main as GUIMain
 import qualified Lamdu.GUI.VersionControl.Config as VCConfig
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.Opts as Opts
+import           Lamdu.Settings (Settings)
+import qualified Lamdu.Settings as Settings
 import qualified Lamdu.Style as Style
 import qualified Lamdu.VersionControl as VersionControl
 import           Lamdu.VersionControl.Actions (mUndo)

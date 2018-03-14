@@ -38,7 +38,6 @@ import qualified Lamdu.Config as Config
 import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.Data.Meta as Meta
 import           Lamdu.GUI.CodeEdit.AnnotationMode (AnnotationMode(..))
-import qualified Lamdu.GUI.CodeEdit.Settings as CESettings
 import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
 import qualified Lamdu.GUI.ExpressionEdit.TagEdit as TagEdit
 import           Lamdu.GUI.ExpressionGui (ExpressionGui)
@@ -52,6 +51,7 @@ import qualified Lamdu.GUI.PresentationModeEdit as PresentationModeEdit
 import qualified Lamdu.GUI.Styled as Styled
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Name (Name(..))
+import qualified Lamdu.Settings as Settings
 import qualified Lamdu.Sugar.Lens as SugarLens
 import           Lamdu.Sugar.NearestHoles (NearestHoles)
 import qualified Lamdu.Sugar.Types as Sugar
@@ -178,7 +178,7 @@ makeScopeNavEdit binder myId curCursor =
                     Just _ -> Theme.grammarColor (Theme.textColors theme)
                 )
         evalConfig <- Lens.view Config.config <&> Config.eval
-        Lens.view (CESettings.settings . CESettings.sAnnotationMode)
+        Lens.view (Settings.settings . Settings.sAnnotationMode)
             >>= \case
             Evaluation ->
                 (Widget.makeFocusableView ?? myId)

@@ -1,6 +1,6 @@
 -- | Widget to edit the settings
 {-# LANGUAGE NoImplicitPrelude #-}
-module Lamdu.GUI.CodeEdit.Settings.Widget
+module Lamdu.GUI.Settings
      ( forStatusBar
      , eventMap
      ) where
@@ -18,8 +18,8 @@ import qualified Lamdu.Config as Config
 import qualified Lamdu.Config.Sampler as ConfigSampler
 import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.GUI.CodeEdit.AnnotationMode.Widget as AnnotationModeWidget
-import           Lamdu.GUI.CodeEdit.Settings (Settings)
-import qualified Lamdu.GUI.CodeEdit.Settings as Settings
+import           Lamdu.Settings (Settings)
+import qualified Lamdu.Settings as Settings
 import qualified Lamdu.Themes as Themes
 
 import           Lamdu.Prelude

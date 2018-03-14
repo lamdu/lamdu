@@ -32,7 +32,6 @@ import qualified Lamdu.Data.Ops as DataOps
 import           Lamdu.Eval.Results (EvalResults)
 import           Lamdu.Expr.IRef (ValI)
 import qualified Lamdu.GUI.AnnotationsPass as AnnotationsPass
-import           Lamdu.GUI.CodeEdit.Settings (HasSettings)
 import qualified Lamdu.GUI.DefinitionEdit as DefinitionEdit
 import qualified Lamdu.GUI.ExpressionEdit as ExpressionEdit
 import qualified Lamdu.GUI.ExpressionGui as ExprGui
@@ -44,6 +43,7 @@ import qualified Lamdu.GUI.ReplEdit as ReplEdit
 import qualified Lamdu.GUI.Styled as Styled
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Name (Name)
+import           Lamdu.Settings (HasSettings)
 import           Lamdu.Style (HasStyle)
 import qualified Lamdu.Sugar.Convert as SugarConvert
 import qualified Lamdu.Sugar.Lens as SugarLens
