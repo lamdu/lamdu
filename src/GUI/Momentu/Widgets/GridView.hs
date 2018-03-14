@@ -55,8 +55,9 @@ makePlacements rows =
             ( colSizes
               & traverseList %~ zipWith alignPos colPos
             )
+        alignMult = totalSize <&> \x -> if x == 0 then 1 else 1 / x
         itemResult alignY alignX (itemSize, (Vector2 preX preY, _), a) =
-            Aligned (Vector2 alignX alignY / totalSize)
+            Aligned (Vector2 alignX alignY * alignMult)
             (Rect (Vector2 (alignX - preX) (alignY - preY)) itemSize, a)
         posRowsList = toList posRows <&> toList
         colSizes = posRowsList & transpose <&> groupSize _1 . fmap (^. _2)
