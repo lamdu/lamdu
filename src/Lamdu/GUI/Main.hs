@@ -38,6 +38,7 @@ import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.GUI.CodeEdit as CodeEdit
 import           Lamdu.GUI.CodeEdit.Settings (Settings)
 import qualified Lamdu.GUI.CodeEdit.Settings as Settings
+import qualified Lamdu.GUI.CodeEdit.Settings.Widget as SettingsWidget
 import           Lamdu.GUI.IOTrans (IOTrans(..), ioTrans)
 import qualified Lamdu.GUI.IOTrans as IOTrans
 import qualified Lamdu.GUI.VersionControl as VersionControlGUI
@@ -72,7 +73,7 @@ makeStatusBar settingsProp width vcActions =
         let branchWidget = branchLabel /|/ branchChoice
 
         settings <-
-            Settings.statusWidget settingsProp
+            SettingsWidget.forStatusBar settingsProp
             <&> Align.tValue %~ fmap IOTrans.liftIO
 
         theTheme <- Lens.view Theme.theme
@@ -140,7 +141,7 @@ make configSampler settingsProp env =
             & (`runReaderT` env)
     where
         settingsEventMap =
-            Settings.eventMap configSampler settingsProp config
+            SettingsWidget.eventMap configSampler settingsProp config
             <&> IOTrans.liftIO
         config = env ^. Config.config
         versionControlCfg = Config.versionControl config

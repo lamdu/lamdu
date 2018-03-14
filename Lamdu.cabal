@@ -193,6 +193,7 @@ Library
                   , Lamdu.GUI.CodeEdit.AnnotationMode
                   , Lamdu.GUI.CodeEdit.AnnotationMode.Widget
                   , Lamdu.GUI.CodeEdit.Settings
+                  , Lamdu.GUI.CodeEdit.Settings.Widget
                   , Lamdu.GUI.DefinitionEdit
                   , Lamdu.GUI.EvalView
                   , Lamdu.GUI.ExpressionEdit
