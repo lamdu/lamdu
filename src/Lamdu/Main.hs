@@ -3,6 +3,7 @@ module Main
     ( main
     ) where
 
+import           Control.Concurrent (myThreadId)
 import           Control.Concurrent.MVar
 import qualified Control.Exception as E
 import qualified Control.Lens as Lens
@@ -55,9 +56,9 @@ import qualified Revision.Deltum.Transaction as Transaction
 import qualified System.Directory as Directory
 import           System.FilePath ((</>))
 import qualified System.FilePath as FilePath
-import           System.IO (hPutStrLn, stderr)
+import           System.IO (hFlush, hPutStrLn, stderr)
 
-import           Lamdu.Prelude
+import           Lamdu.Prelude hiding (log)
 
 type T = Transaction
 
@@ -243,6 +244,13 @@ newEvaluator refresh dbMVar opts =
     , EvalManager.copyJSOutputPath = opts ^. Opts.eoCopyJSOutputPath
     }
 
+log :: String -> IO ()
+log msg =
+    do
+        tid <- myThreadId
+        hPutStrLn stderr (show tid ++ ": " ++ msg)
+        hFlush stderr
+
 runEditor :: Opts.EditorOpts -> DB -> IO ()
 runEditor opts db =
     withMVarProtection db $ \dbMVar ->
@@ -257,7 +265,8 @@ runEditor opts db =
             mkSettingsProp <&> (^. Property.pVal . Settings.sSelectedTheme)
             >>= ConfigSampler.new (const refresh)
 
-        M.withGLFW $ do
+        E.bracket_ (log "starting GLFW") (log "tore down GLFW") $
+            M.withGLFW $ E.bracket_ (log "started GLFW") (log "tearing down GLFW") $ do
             win <-
                 createWindow
                 (opts ^. Opts.eoWindowTitle)

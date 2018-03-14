@@ -7,20 +7,29 @@ module Graphics.UI.GLFW.Utils
     , charOfKey
     ) where
 
+import           Control.Concurrent (myThreadId)
 import           Control.Exception (bracket_)
 import           Control.Lens.Operators
 import           Control.Lens.Tuple
 import           Control.Monad (unless)
 import           Data.Vector.Vector2 (Vector2(..))
 import qualified Graphics.UI.GLFW as GLFW
+import           System.IO (hFlush, stderr, hPutStrLn)
 
-import           Prelude
+import           Prelude hiding (log)
+
+log :: String -> IO ()
+log msg =
+    do
+        tid <- myThreadId
+        hPutStrLn stderr (show tid ++ ": " ++ msg)
+        hFlush stderr
 
 assert :: Monad m => String -> Bool -> m ()
 assert msg p = unless p (fail msg)
 
 printErrors :: GLFW.ErrorCallback
-printErrors err msg = putStrLn $ unwords ["GLFW error:", show err, msg]
+printErrors err msg = log $ unwords ["GLFW error:", show err, msg]
 
 withGLFW :: IO a -> IO a
 withGLFW act =
