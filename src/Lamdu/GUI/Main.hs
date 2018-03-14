@@ -24,6 +24,7 @@ import qualified GUI.Momentu.State as GuiState
 import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
+import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
 import qualified GUI.Momentu.Widgets.TextView as TextView
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Config.Theme as Theme
@@ -38,7 +39,7 @@ import qualified Lamdu.GUI.IOTrans as IOTrans
 import qualified Lamdu.GUI.VersionControl as VersionControlGUI
 import qualified Lamdu.Style as Style
 import qualified Lamdu.VersionControl as VersionControl
-import qualified Lamdu.VersionControl.Actions as VersionControl.Actions
+import qualified Lamdu.VersionControl.Actions as VCActions
 import           Revision.Deltum.Transaction (Transaction)
 
 import           Lamdu.Prelude
@@ -48,18 +49,25 @@ type T = Transaction
 type EvalResults = CurAndPrev (Results.EvalResults (ExprIRef.ValI ViewM))
 
 makeStatusBar ::
-    ( MonadReader env m, TextView.HasStyle env, Theme.HasTheme env
-    , Element.HasAnimIdPrefix env
+    ( TextEdit.HasStyle env, Theme.HasTheme env
+    , Config.HasConfig env, Hover.HasStyle env
+    , GuiState.HasCursor env, Element.HasAnimIdPrefix env
     ) =>
-    Widget.R -> Widget (IOTrans DbM GuiState.Update) ->
-    m (Widget (IOTrans DbM GuiState.Update))
-makeStatusBar width branchChoice =
+    Widget.R -> VCActions.Actions DbM (IOTrans DbM) ->
+    ReaderT env (T DbM) (Widget (IOTrans DbM GuiState.Update))
+makeStatusBar width vcActions =
     do
+        theConfig <- Lens.view Config.config
+        theTheme <- Lens.view Theme.theme
+        let versionControlThm = Theme.versionControl theTheme
+        let versionControlCfg = Config.versionControl theConfig
+        branchChoice <-
+            VersionControlGUI.makeBranchSelector versionControlCfg versionControlThm
+            IOTrans.liftTrans lift vcActions
         branchLabel <- TextView.make ?? "Branch: " ?? ["BranchHeader"]
         let rawStatusBar =
                 (branchLabel /|/ branchChoice) ^. Align.tValue
                 & Element.width .~ width
-        theTheme <- Lens.view Theme.theme
         Draw.backgroundColor
             ?? Theme.statusBarBGColor theTheme
             ?? rawStatusBar
@@ -67,6 +75,7 @@ makeStatusBar width branchChoice =
 layout ::
     ( MainLoop.HasMainLoopEnv env
     , Style.HasStyle env
+    , Hover.HasStyle env
     , Settings.HasSettings env
     , Spacer.HasStdSpacing env
     , GuiState.HasState env
@@ -76,13 +85,13 @@ layout ::
     , CodeEdit.HasEvalResults env ViewM
     , CodeEdit.HasExportActions env ViewM
     ) =>
-    Widget (IOTrans DbM GuiState.Update) ->
+    VCActions.Actions DbM (IOTrans DbM) ->
     ReaderT env (T DbM) (Widget (IOTrans DbM GuiState.Update))
-layout branchChoice =
+layout vcActions =
     do
         theTheme <- Lens.view Theme.theme
         fullSize <- Lens.view (MainLoop.mainLoopEnv . MainLoop.eWindowSize)
-        statusBar <- makeStatusBar (fullSize ^. _1) branchChoice
+        statusBar <- makeStatusBar (fullSize ^. _1) vcActions
         state <- Lens.view GuiState.state
         codeEdit <-
             CodeEdit.make DbLayout.codeAnchors (fullSize ^. _1)
@@ -108,18 +117,15 @@ make ::
     env -> T DbM (Widget (IOTrans DbM GuiState.Update))
 make env =
     do
-        actions <-
+        vcActions <-
             VersionControl.makeActions
-            <&> VersionControl.Actions.hoist IOTrans.liftTrans
-        let vcEventMap = VersionControlGUI.eventMap versionControlCfg actions
-        VersionControlGUI.makeBranchSelector versionControlCfg versionControlThm
-            IOTrans.liftTrans lift actions
-            >>= layout
+            <&> VCActions.hoist IOTrans.liftTrans
+        let vcEventMap = VersionControlGUI.eventMap versionControlCfg vcActions
+        layout vcActions
             <&> Widget.weakerEventsWithoutPreevents (quitEventMap <> vcEventMap)
             & (`runReaderT` env)
     where
         versionControlCfg = Config.versionControl (env ^. Config.config)
-        versionControlThm = Theme.versionControl (env ^. Theme.theme)
         quitEventMap =
             E.keysEventMap (Config.quitKeys (env ^. Config.config))
             (E.Doc ["Quit"]) (error "Quit")
