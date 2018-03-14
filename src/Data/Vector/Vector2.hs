@@ -1,4 +1,4 @@
-{-# LANGUAGE MultiParamTypeClasses, FlexibleInstances, TypeFamilies, DeriveGeneric #-}
+{-# LANGUAGE MultiParamTypeClasses, FlexibleInstances, TypeFamilies, DeriveGeneric, DeriveFunctor #-}
 module Data.Vector.Vector2
     ( Vector2(Vector2)
     , curry, uncurry, sqrNorm
@@ -20,7 +20,7 @@ import           GHC.Generics (Generic)
 import           Prelude hiding (curry, uncurry)
 
 data Vector2 a = Vector2 !a !a
-    deriving (Generic, Eq, Ord, Show, Read)
+    deriving (Generic, Eq, Ord, Show, Read, Functor)
     -- Note the Ord instance is obviously not a mathematical one
     -- (Vectors aren't ordinals!). Useful to have in a binary search
     -- tree though.
@@ -70,8 +70,6 @@ uncurry f (Vector2 x y) = f x y
 sqrNorm :: Num a => Vector2 a -> a
 sqrNorm = uncurry (+) . (^ (2::Int))
 
-instance Functor Vector2 where
-    fmap f (Vector2 x y) = Vector2 (f x) (f y)
 instance Applicative Vector2 where
     pure x = Vector2 x x
     Vector2 f g <*> Vector2 x y = Vector2 (f x) (g y)
