@@ -112,8 +112,10 @@ verifyDefs defs =
 
 propGridSensibleSize :: NonEmpty (NonEmpty (Vector2 R, Vector2 R)) -> Bool
 propGridSensibleSize viewConfs =
+    isFinite (grid ^. Element.width) && isFinite (grid ^. Element.height) &&
     grid ^. Element.width >= minWidth && grid ^. Element.height >= minHeight
     where
+        isFinite x = not (isNaN x || isInfinite x)
         minWidth = sum colWidths * 0.999 -- Due to float inaccuracies
         minHeight = sum rowHeights * 0.999 -- Due to float inaccuracies
         colWidths =
