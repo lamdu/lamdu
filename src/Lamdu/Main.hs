@@ -43,6 +43,7 @@ import           Lamdu.GUI.CodeEdit.Settings (Settings)
 import qualified Lamdu.GUI.CodeEdit.Settings as Settings
 import           Lamdu.GUI.IOTrans (ioTrans)
 import qualified Lamdu.GUI.Main as GUIMain
+import qualified Lamdu.GUI.VersionControl.Config as VCConfig
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.Opts as Opts
 import qualified Lamdu.Style as Style
@@ -87,6 +88,8 @@ instance Theme.HasTheme Env where theme = envTheme
 instance Config.HasConfig Env where config = envConfig
 instance M.HasAnimIdPrefix Env where animIdPrefix = envAnimIdPrefix
 instance Hover.HasStyle Env where style = envTheme . Hover.style
+instance VCConfig.HasTheme Env where theme = envTheme . Theme.themeVersionControl
+instance VCConfig.HasConfig Env where config = envConfig . Config.configVersionControl
 
 defaultFontPath :: ConfigSampler.Sample -> FilePath
 defaultFontPath sample =

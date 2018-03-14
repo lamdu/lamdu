@@ -4,7 +4,7 @@
 module Lamdu.Config.Theme
     ( module Exported
     , Help(..), Hole(..), Eval(..), ToolTip(..)
-    , Theme(..), themeStdSpacing, themeMenu
+    , Theme(..), themeStdSpacing, themeMenu, themeVersionControl
     , HasTheme(..)
     ) where
 
@@ -120,3 +120,6 @@ instance Hover.HasStyle Theme where style f t = f (hover t) <&> \x -> t { hover 
 
 themeMenu :: Lens' Theme Menu.Style
 themeMenu f t = f (menu t) <&> \x -> t { menu = x }
+
+themeVersionControl :: Lens' Theme VersionControl.Theme
+themeVersionControl f t = f (versionControl t) <&> \x -> t { versionControl = x }

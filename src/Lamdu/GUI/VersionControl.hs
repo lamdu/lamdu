@@ -92,14 +92,14 @@ branchTextEditId = (`Widget.joinId` ["textedit"]) . branchDelegatorId
 makeBranchSelector ::
     ( MonadReader env mr, GuiState.HasCursor env, TextEdit.HasStyle env
     , Applicative mw, Hover.HasStyle env, Element.HasAnimIdPrefix env
+    , VersionControl.HasConfig env, VersionControl.HasTheme env
     , Monad n
     ) =>
-    VersionControl.Config -> VersionControl.Theme ->
     (forall a. Transaction n a -> mw a) ->
     (forall a. Transaction n a -> mr a) ->
     Actions n mw ->
     mr (Widget (mw GuiState.Update))
-makeBranchSelector config theme rwtransaction rtransaction actions =
+makeBranchSelector rwtransaction rtransaction actions =
     do
         branchNameEdits <- branches actions & traverse makeBranchNameEdit
         Choice.make ?? setCurrentBranch actions
@@ -120,6 +120,7 @@ makeBranchSelector config theme rwtransaction rtransaction actions =
                     ) <*>
                     ( TextEdits.makeLineEdit ?? empty ?? nameProp ?? branchTextEditId branch
                       <&> (^. Align.tValue) )
+                config <- Lens.view VersionControl.config
                 let delEventMap
                         | ListUtils.isLengthAtLeast 2 (branches actions) =
                             E.keysEventMapMovesCursor
@@ -128,8 +129,11 @@ makeBranchSelector config theme rwtransaction rtransaction actions =
                             (branchDelegatorId <$> deleteBranch actions branch)
                         | otherwise = mempty
                 pure (branch, Widget.weakerEvents delEventMap branchNameEdit)
-            & if branch == currentBranch actions
-                then
-                    Reader.local
-                    (TextView.color .~ VersionControl.selectedBranchColor theme)
-                else id
+                & if branch == currentBranch actions
+                    then
+                        Reader.local $
+                        \env ->
+                        env &
+                        TextView.color .~
+                        VersionControl.selectedBranchColor (env ^. VersionControl.theme)
+                    else id

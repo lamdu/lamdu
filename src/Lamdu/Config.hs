@@ -9,6 +9,7 @@ module Lamdu.Config
     , HasConfig(..)
     , delKeys
     , configMenu
+    , configVersionControl
     ) where
 
 import qualified Control.Lens as Lens
@@ -123,3 +124,6 @@ delKeys = sequence [Lens.view config <&> delForwardKeys, Lens.view config <&> de
 
 configMenu :: Lens' Config Menu.Keys
 configMenu f c = menu c & f <&> \menu' -> c { menu = menu' }
+
+configVersionControl :: Lens' Config VersionControl.Config
+configVersionControl f c = versionControl c & f <&> \versionControl' -> c { versionControl = versionControl' }

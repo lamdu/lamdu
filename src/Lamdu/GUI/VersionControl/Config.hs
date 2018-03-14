@@ -1,6 +1,7 @@
 {-# LANGUAGE NoImplicitPrelude, TemplateHaskell #-}
 module Lamdu.GUI.VersionControl.Config
-    ( Config(..), Theme(..)
+    ( Config(..), HasConfig(..)
+    , Theme(..), HasTheme(..)
     ) where
 
 import           Data.Aeson.TH (deriveJSON)
@@ -23,3 +24,6 @@ newtype Theme = Theme
     { selectedBranchColor :: Draw.Color
     } deriving (Eq, Show)
 deriveJSON defaultOptions ''Theme
+
+class HasConfig env where config :: Lens' env Config
+class HasTheme env where theme :: Lens' env Theme

@@ -37,6 +37,7 @@ import qualified Lamdu.GUI.CodeEdit.Settings as Settings
 import           Lamdu.GUI.IOTrans (IOTrans, ioTrans)
 import qualified Lamdu.GUI.IOTrans as IOTrans
 import qualified Lamdu.GUI.VersionControl as VersionControlGUI
+import qualified Lamdu.GUI.VersionControl.Config as VCConfig
 import qualified Lamdu.Style as Style
 import qualified Lamdu.VersionControl as VersionControl
 import qualified Lamdu.VersionControl.Actions as VCActions
@@ -49,20 +50,17 @@ type T = Transaction
 type EvalResults = CurAndPrev (Results.EvalResults (ExprIRef.ValI ViewM))
 
 makeStatusBar ::
-    ( TextEdit.HasStyle env, Theme.HasTheme env
-    , Config.HasConfig env, Hover.HasStyle env
+    ( TextEdit.HasStyle env, Theme.HasTheme env, Hover.HasStyle env
     , GuiState.HasCursor env, Element.HasAnimIdPrefix env
+    , VCConfig.HasConfig env, VCConfig.HasTheme env
     ) =>
     Widget.R -> VCActions.Actions DbM (IOTrans DbM) ->
     ReaderT env (T DbM) (Widget (IOTrans DbM GuiState.Update))
 makeStatusBar width vcActions =
     do
-        theConfig <- Lens.view Config.config
         theTheme <- Lens.view Theme.theme
-        let versionControlThm = Theme.versionControl theTheme
-        let versionControlCfg = Config.versionControl theConfig
         branchChoice <-
-            VersionControlGUI.makeBranchSelector versionControlCfg versionControlThm
+            VersionControlGUI.makeBranchSelector
             IOTrans.liftTrans lift vcActions
         branchLabel <- TextView.make ?? "Branch: " ?? ["BranchHeader"]
         let rawStatusBar =
@@ -84,6 +82,7 @@ layout ::
     , Element.HasAnimIdPrefix env
     , CodeEdit.HasEvalResults env ViewM
     , CodeEdit.HasExportActions env ViewM
+    , VCConfig.HasConfig env, VCConfig.HasTheme env
     ) =>
     VCActions.Actions DbM (IOTrans DbM) ->
     ReaderT env (T DbM) (Widget (IOTrans DbM GuiState.Update))
@@ -113,6 +112,7 @@ make ::
     , GuiState.HasState env
     , CodeEdit.HasEvalResults env ViewM
     , CodeEdit.HasExportActions env ViewM
+    , VCConfig.HasConfig env, VCConfig.HasTheme env
     ) =>
     env -> T DbM (Widget (IOTrans DbM GuiState.Update))
 make env =
