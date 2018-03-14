@@ -12,6 +12,7 @@ import           Data.Property (Property)
 import qualified Data.Property as Property
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.State as GuiState
+import qualified Lamdu.Config as Config
 import qualified Lamdu.Config.Sampler as ConfigSampler
 import           Lamdu.GUI.CodeEdit.AnnotationMode (AnnotationMode)
 import qualified Lamdu.GUI.CodeEdit.AnnotationMode as AnnotationMode
@@ -35,13 +36,13 @@ initial =
 class HasSettings env where settings :: Lens' env Settings
 
 eventMap ::
+    (MonadReader env m, Config.HasConfig env) =>
     ConfigSampler.Sampler -> Property IO Settings ->
-    IO (EventMap (IO GuiState.Update))
+    m (EventMap (IO GuiState.Update))
 eventMap configSampler settingsProp =
     do
-        config <- ConfigSampler.getSample configSampler <&> (^. ConfigSampler.sConfig)
-        let themeSwitch = Themes.switchEventMap configSampler themeProp config
-        let switchAnnotationMode = AnnotationMode.switchEventMap annotationModeProp config
+        themeSwitch <- Themes.switchEventMap configSampler themeProp
+        switchAnnotationMode <- AnnotationMode.switchEventMap annotationModeProp
         themeSwitch <> switchAnnotationMode & pure
     where
         themeProp = Property.composeLens sSelectedTheme settingsProp

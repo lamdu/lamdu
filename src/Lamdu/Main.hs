@@ -270,7 +270,7 @@ runEditor opts db =
                 \fonts config theme env ->
                 do
                     settingsProp <- mkSettingsProp
-                    settingsEventMap <- Settings.eventMap configSampler settingsProp
+                    let settingsEventMap = Settings.eventMap configSampler settingsProp config
                     makeRootWidget fonts db evaluator config theme env
                         (Property.value settingsProp)
                         <&> Widget.weakerEventsWithoutPreevents (settingsEventMap <&> liftIO)
