@@ -122,7 +122,7 @@ actionsEventMap ::
 actionsEventMap options exprInfo =
     sequence
     [ case exprInfoActions exprInfo ^. Sugar.detach of
-      Sugar.DetachAction act -> detachEventMap act
+      Sugar.DetachAction act | exprInfoIsSelected exprInfo -> detachEventMap act
       _ -> pure mempty
     , if exprInfoIsHoleResult exprInfo
         then pure mempty
@@ -146,13 +146,16 @@ actionsEventMap options exprInfo =
 transformSearchTerm :: ExprInfo name f -> EventContext -> EventMap Text
 transformSearchTerm exprInfo eventCtx =
     E.charGroup Nothing (E.Doc ["Edit", "Apply Operator"]) ops Text.singleton
-    <> E.charEventMap "Character" (E.Doc ["Edit", "Transform"]) transform
+    <> maybeTransformEventMap
     <&> (searchStrRemainder <>)
     where
+        maybeTransformEventMap
+            | exprInfoIsSelected exprInfo =
+                E.charEventMap "Character" (E.Doc ["Edit", "Transform"]) transform
+            | otherwise = mempty
         transform c =
             do
                 guard (c `notElem` Chars.operator)
-                guard (exprInfoIsSelected exprInfo)
                 guard (allowedFragmentSearchTerm (Text.singleton c))
                 pure (Text.singleton c)
         searchStrRemainder = eventCtx ^. Widget.ePrevTextRemainder
