@@ -7,7 +7,7 @@ import qualified Data.ByteString.Lazy as LBS
 import           Data.Proxy (Proxy(..))
 import           Lamdu.Config (Config)
 import           Lamdu.Config.Theme (Theme)
-import           Lamdu.Themes (getThemeFiles)
+import qualified Lamdu.Themes as Themes
 import qualified Paths.Utils as Paths
 import qualified Paths_Lamdu
 import           System.IO (hPutStrLn, stderr)
@@ -24,4 +24,4 @@ main :: IO [()]
 main = do
     configPath <- Paths.get Paths_Lamdu.getDataFileName "config.json"
     validate (Proxy :: Proxy Config) configPath
-    getThemeFiles >>= traverse (validate (Proxy :: Proxy Theme))
+    Themes.getFiles >>= traverse (validate (Proxy :: Proxy Theme))
