@@ -16,6 +16,7 @@ import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widgets.TextView as TextView
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Config.Sampler as ConfigSampler
+import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.GUI.CodeEdit.AnnotationMode.Widget as AnnotationModeWidget
 import           Lamdu.GUI.CodeEdit.Settings (Settings)
 import qualified Lamdu.GUI.CodeEdit.Settings as Settings
@@ -27,6 +28,7 @@ import           Lamdu.Prelude
 forStatusBar ::
     ( MonadReader env m, TextView.HasStyle env, Element.HasAnimIdPrefix env
     , Applicative f, GuiState.HasCursor env, Hover.HasStyle env
+    , Theme.HasTheme env
     ) =>
     Property f Settings -> m (WithTextPos (Widget (f GuiState.Update)))
 forStatusBar prop =

@@ -41,6 +41,7 @@ import qualified Lamdu.GUI.CodeEdit.Settings as Settings
 import qualified Lamdu.GUI.CodeEdit.Settings.Widget as SettingsWidget
 import           Lamdu.GUI.IOTrans (IOTrans(..), ioTrans)
 import qualified Lamdu.GUI.IOTrans as IOTrans
+import qualified Lamdu.GUI.Styled as Styled
 import qualified Lamdu.GUI.VersionControl as VersionControlGUI
 import qualified Lamdu.GUI.VersionControl.Config as VCConfig
 import qualified Lamdu.Style as Style
@@ -69,7 +70,9 @@ makeStatusBar settingsProp width vcActions =
         branchChoice <-
             VersionControlGUI.makeBranchSelector
             IOTrans.liftTrans transaction vcActions
-        branchLabel <- TextView.make ?? "Branch " ?? ["BranchHeader"]
+        branchLabel <-
+            TextView.make ?? "Branch " ?? ["BranchHeader"]
+            & Styled.withColor (Theme.infoTextColor . Theme.textColors)
         let branchWidget = branchLabel /|/ branchChoice
 
         settings <-

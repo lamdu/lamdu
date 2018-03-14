@@ -22,8 +22,10 @@ import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Choice as Choice
 import qualified GUI.Momentu.Widgets.TextView as TextView
 import qualified Lamdu.Config as Config
+import qualified Lamdu.Config.Theme as Theme
 import           Lamdu.GUI.CodeEdit.AnnotationMode (AnnotationMode(..))
 import qualified Lamdu.GUI.CodeEdit.AnnotationMode as AnnotationMode
+import qualified Lamdu.GUI.Styled as Styled
 
 import           Lamdu.Prelude
 
@@ -36,14 +38,16 @@ choiceConfig = Choice.Config
 
 forStatusBar ::
     ( MonadReader env m, TextView.HasStyle env, Element.HasAnimIdPrefix env
-    , GuiState.HasCursor env, Hover.HasStyle env
+    , GuiState.HasCursor env, Hover.HasStyle env, Theme.HasTheme env
     , Applicative f
     ) =>
     Property f AnnotationMode ->
     m (WithTextPos (Widget (f GuiState.Update)))
 forStatusBar prop =
     do
-        header <- TextView.makeLabel "Annotations "
+        header <-
+            TextView.makeLabel "Annotations "
+            & Styled.withColor (Theme.infoTextColor . Theme.textColors)
         choices <- [minBound..maxBound] & traverse mkChoice
         choice <-
             Choice.make
