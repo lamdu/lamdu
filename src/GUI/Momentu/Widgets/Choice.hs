@@ -3,7 +3,8 @@
 
 module GUI.Momentu.Widgets.Choice
     ( make
-    , Config(..), defaultFdConfig
+    , defaultFdConfig
+    , Config(..), defaultConfig
     , ExpandMode(..)
     , Orientation(..)
     ) where
@@ -46,6 +47,14 @@ data Config = Config
     { cwcFDConfig :: FocusDelegator.Config
     , cwcOrientation :: Orientation
     , cwcExpandMode :: ExpandMode
+    }
+
+defaultConfig :: E.Subtitle -> Config
+defaultConfig helpPrefix =
+    Config
+    { cwcFDConfig = defaultFdConfig helpPrefix
+    , cwcOrientation = Vertical
+    , cwcExpandMode = ExplicitEntry
     }
 
 data IsSelected = Selected | NotSelected

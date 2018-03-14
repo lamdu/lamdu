@@ -29,13 +29,6 @@ import qualified Lamdu.GUI.Styled as Styled
 
 import           Lamdu.Prelude
 
-choiceConfig :: Choice.Config
-choiceConfig = Choice.Config
-    { Choice.cwcFDConfig = Choice.defaultFdConfig "Annotation Mode"
-    , Choice.cwcOrientation = Choice.Vertical
-    , Choice.cwcExpandMode = Choice.ExplicitEntry
-    }
-
 forStatusBar ::
     ( MonadReader env m, TextView.HasStyle env, Element.HasAnimIdPrefix env
     , GuiState.HasCursor env, Hover.HasStyle env, Theme.HasTheme env
@@ -51,7 +44,8 @@ forStatusBar prop =
         choices <- [minBound..maxBound] & traverse mkChoice
         choice <-
             Choice.make
-            ?? Property.set prop ?? choices ?? cur ?? choiceConfig ?? myId
+            ?? Property.set prop ?? choices ?? cur
+            ?? Choice.defaultConfig "Annotation Mode" ?? myId
             <&> WithTextPos 0 -- TODO: Choice should maintain the WithTextPos
         header /|/ choice & pure
     where

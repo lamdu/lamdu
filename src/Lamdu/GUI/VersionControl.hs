@@ -69,14 +69,6 @@ eventMap config actions = mconcat
     , mRedo actions <&> fmap GuiState.fullUpdate & redoEventMap config
     ]
 
-choiceWidgetConfig :: Choice.Config
-choiceWidgetConfig =
-    Choice.Config
-    { Choice.cwcFDConfig = Choice.defaultFdConfig "Branches"
-    , Choice.cwcExpandMode = Choice.ExplicitEntry
-    , Choice.cwcOrientation = Choice.Vertical
-    }
-
 branchDelegatorId :: Branch t -> Widget.Id
 branchDelegatorId = WidgetIds.fromUUID . Branch.uuid
 
@@ -98,7 +90,7 @@ makeBranchSelector rwtransaction rtransaction actions =
         branchNameEdits <- branches actions & traverse makeBranchNameEdit
         Choice.make ?? setCurrentBranch actions
             ?? branchNameEdits ?? currentBranch actions
-            ?? choiceWidgetConfig
+            ?? Choice.defaultConfig "Branches"
             ?? WidgetIds.branchSelection
     where
         empty = TextEdit.EmptyStrings "unnamed branch" ""

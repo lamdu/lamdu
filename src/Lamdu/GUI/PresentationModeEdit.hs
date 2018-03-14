@@ -12,34 +12,17 @@ import qualified Data.Property as Property
 import qualified Data.Text as Text
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Element as Element
-import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.Hover as Hover
-import           GUI.Momentu.MetaKey (MetaKey(..), noMods)
-import qualified GUI.Momentu.MetaKey as MetaKey
 import qualified GUI.Momentu.State as GuiState
 import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Choice as Choice
-import qualified GUI.Momentu.Widgets.FocusDelegator as FocusDelegator
 import qualified GUI.Momentu.Widgets.TextView as TextView
 import           Lamdu.Config.Theme (HasTheme)
 import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
-
-presentationModeChoiceConfig :: Choice.Config
-presentationModeChoiceConfig = Choice.Config
-    { Choice.cwcFDConfig =
-        FocusDelegator.Config
-        { FocusDelegator.focusChildKeys = [MetaKey noMods MetaKey.Key'Enter]
-        , FocusDelegator.focusChildDoc = E.Doc ["Presentation Mode", "Select"]
-        , FocusDelegator.focusParentKeys = [MetaKey noMods MetaKey.Key'Enter]
-        , FocusDelegator.focusParentDoc = E.Doc ["Presentation Mode", "Choose selected"]
-        }
-    , Choice.cwcOrientation = Choice.Vertical
-    , Choice.cwcExpandMode = Choice.ExplicitEntry
-    }
 
 {-# ANN make ("HLint: ignore Use head"::String) #-}
 
@@ -60,7 +43,7 @@ make myId (Sugar.Params params) prop =
             & Reader.local
                 (TextView.style . TextView.styleColor .~ Theme.presentationChoiceColor (Theme.textColors theme))
         Choice.make ?? Property.set prop ?? pairs ?? cur
-            ?? presentationModeChoiceConfig ?? myId
+            ?? Choice.defaultConfig "Presentation Mode" ?? myId
             <&> Element.scale (Theme.presentationChoiceScaleFactor theme)
     where
         cur = Property.value prop

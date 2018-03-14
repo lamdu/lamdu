@@ -71,7 +71,7 @@ makeWidget choiceRef getFont mainEnv =
         let choiceWidget =
                 Choice.make env (liftIO . writeIORef choiceRef)
                 (map makeChoice colors) choice
-                choiceConfig (M.WidgetId [])
+                (Choice.defaultConfig "Color") (M.WidgetId [])
         let Just color = lookup choice colors
         let box =
                 M.unitSquare ["square"]
@@ -80,17 +80,3 @@ makeWidget choiceRef getFont mainEnv =
         box `M.above` choiceWidget
             & M.weakerEvents M.quitEventMap
             & return
-
-choiceConfig :: Choice.Config
-choiceConfig =
-    Choice.Config
-    { cwcFDConfig =
-        FocusDelegator.Config
-        { focusChildKeys = [M.MetaKey M.noMods M.Key'Enter]
-        , focusChildDoc = M.Doc ["Color", "Select"]
-        , focusParentKeys = [M.MetaKey M.noMods M.Key'Enter]
-        , focusParentDoc = M.Doc ["Color", "Choose selected"]
-        }
-    , cwcOrientation = Choice.Vertical
-    , cwcExpandMode = Choice.ExplicitEntry
-    }
