@@ -148,10 +148,10 @@ actionable myId text doc action =
 
 nameAtBinder ::
     (MonadReader env m, HasTheme env, Style.HasStyle env) =>
-    (Theme.Name -> Draw.Color) -> Name n -> m b -> m b
+    (Theme.TextColors -> Draw.Color) -> Name n -> m b -> m b
 nameAtBinder nameColor name act =
     do
-        color <- Lens.view theme <&> Theme.name <&> nameColor
+        color <- Lens.view theme <&> Theme.textColors <&> nameColor
         style <- Lens.view Style.style
         let textEditStyle =
                 style

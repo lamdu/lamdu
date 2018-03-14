@@ -4,7 +4,6 @@ module Lamdu.GUI.NameView
     ) where
 
 import qualified Control.Lens as Lens
-import qualified Control.Monad.Reader as Reader
 import qualified Data.Text as Text
 import           GUI.Momentu.Align (Aligned(..), WithTextPos(..))
 import qualified GUI.Momentu.Align as Align
@@ -15,6 +14,7 @@ import           GUI.Momentu.View (View)
 import qualified GUI.Momentu.Widgets.TextView as TextView
 import           Lamdu.Config.Theme (HasTheme(..))
 import qualified Lamdu.Config.Theme as Theme
+import qualified Lamdu.GUI.Styled as Styled
 import           Lamdu.Name (Name(..))
 import qualified Lamdu.Name as Name
 
@@ -36,7 +36,7 @@ makeCollisionSuffixLabel collisionColor mCollision =
                 (Draw.backgroundColor ?? collisionColor nameTheme)
                     <*>
                     (TextView.makeLabel text
-                     & Reader.local (TextView.color .~ Theme.collisionSuffixTextColor nameTheme)
+                     & Styled.withColor (Theme.collisionSuffixTextColor . Theme.textColors)
                      <&> Element.scale (Theme.collisionSuffixScaleFactor nameTheme))
             <&> (^. Align.tValue)
             <&> Just

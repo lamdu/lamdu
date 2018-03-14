@@ -24,5 +24,13 @@ data TextColors = TextColors
     , actionTextColor :: Draw.Color
     , infoTextColor :: Draw.Color
     , typeTextColor :: Draw.Color
+    -- Names:
+    , collisionSuffixTextColor :: Draw.Color
+    , definitionColor :: Draw.Color
+    , parameterColor :: Draw.Color
+    , letColor :: Draw.Color
+    , recordTagColor :: Draw.Color
+    , caseTagColor :: Draw.Color
+    , argTagColor :: Draw.Color
     } deriving (Eq, Show)
 deriveJSON defaultOptions ''TextColors

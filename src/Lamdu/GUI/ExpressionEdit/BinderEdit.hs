@@ -65,7 +65,7 @@ makeBinderNameEdit ::
     Monad m =>
     Widget.Id -> Sugar.BinderActions (Name (T m)) (T m) ->
     EventMap (T m GuiState.Update) ->
-    Sugar.Tag (Name (T m)) (T m) -> (Theme.Name -> Draw.Color) ->
+    Sugar.Tag (Name (T m)) (T m) -> (Theme.TextColors -> Draw.Color) ->
     ExprGuiM m (WithTextPos (Widget (T m GuiState.Update)))
 makeBinderNameEdit binderId binderActions rhsJumperEquals tag color =
     do
@@ -217,7 +217,7 @@ makeMParamsEdit mScopeCursor isScopeNavFocused delVarBackwardsId myId nearestHol
             case binder ^. Sugar.bActions . Sugar.baAddFirstParam of
             Sugar.PrependParam selection | isPrepend ->
                 TagEdit.makeTagHoleEdit selection ParamEdit.mkParamPickResult prependId
-                & Styled.withColor (Theme.parameterColor . Theme.name)
+                & Styled.withColor (Theme.parameterColor . Theme.textColors)
                 <&> Responsive.fromWithTextPos
                 <&> (:[])
             _ -> pure []
@@ -327,7 +327,7 @@ make ::
     Monad m =>
     Maybe (T m (Property (T m) Meta.PresentationMode)) ->
     EventMap (T m GuiState.Update) ->
-    Sugar.Tag (Name (T m)) (T m) -> (Theme.Name -> Draw.Color) ->
+    Sugar.Tag (Name (T m)) (T m) -> (Theme.TextColors -> Draw.Color) ->
     Sugar.Binder (Name (T m)) (T m) (ExprGui.SugarExpr m) ->
     Widget.Id ->
     ExprGuiM m (ExpressionGui m)

@@ -44,16 +44,9 @@
         "activeSearchTermBGColor": [0.5, 1.0, 0.5, 1.0]
     },
     "name": {
-        "parameterColor": [0.5, 1.0, 1.0, 1.0],
-        "letColor": [0.5, 0.5, 1.0, 1.0],
-        "definitionColor": [1.0, 0.5, 1.0, 1.0],
-        "collisionSuffixTextColor": [1.0, 1.0, 1.0, 1.0],
         "collisionSuffixScaleFactor": [1.0, 1.0],
         "tagCollisionSuffixBGColor": [1.0, 0.0, 0.0, 1.0],
-        "textCollisionSuffixBGColor": [0.0, 0.0, 1.0, 1.0],
-        "recordTagColor": [1.0, 1.0, 1.0, 1.0],
-        "caseTagColor": [0.5, 1.0, 0.5, 1.0],
-        "argTagColor": [0.5, 0.5, 0.5, 1.0]
+        "textCollisionSuffixBGColor": [0.0, 0.0, 1.0, 1.0]
     },
     "textColors": {
         "actionTextColor": [0.5, 1.0, 0.5, 1.0],
@@ -68,7 +61,14 @@
         "lightLambdaUnderlineColor": [1.0, 1.0, 1.0, 0.5],
         "foreignModuleColor": [1.0, 0, 0, 1.0],
         "foreignVarColor": [1.0, 0.5, 0, 1.0],
-        "presentationChoiceColor": [0.5, 0.5, 0.5, 1.0]
+        "presentationChoiceColor": [0.5, 0.5, 0.5, 1.0],
+        "parameterColor": [0.5, 1.0, 1.0, 1.0],
+        "letColor": [0.5, 0.5, 1.0, 1.0],
+        "definitionColor": [1.0, 0.5, 1.0, 1.0],
+        "collisionSuffixTextColor": [1.0, 1.0, 1.0, 1.0],
+        "recordTagColor": [1.0, 1.0, 1.0, 1.0],
+        "caseTagColor": [0.5, 1.0, 0.5, 1.0],
+        "argTagColor": [0.5, 0.5, 0.5, 1.0]
     },
     "lightLambdaUnderlineColor": [1.0, 1.0, 1.0, 0.5],
     "narrowUnderlineWidth": 0.05,

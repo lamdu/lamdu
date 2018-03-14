@@ -66,7 +66,6 @@ makeParamsRecord ::
     Widget.Id -> Sugar.ParamsRecordVarRef (Name f) -> m (Responsive (f GuiState.Update))
 makeParamsRecord myId paramsRecordVar =
     do
-        nameTheme <- Lens.view Theme.theme <&> Theme.name
         respondToCursor <- Widget.respondToCursorPrefix ?? myId
         sequence
             [ TextView.makeLabel "Params {" <&> Responsive.fromTextView
@@ -79,7 +78,7 @@ makeParamsRecord myId paramsRecordVar =
                     in
                     Widget.joinId myId paramId
                     & makeSimpleView fieldName <&> Responsive.fromWithTextPos
-                    & Reader.local (TextView.color .~ Theme.parameterColor nameTheme)
+                    & Styled.withColor (Theme.parameterColor . Theme.textColors)
                     & Reader.local (Element.animIdPrefix %~ (<> paramId))
                 )
               )
@@ -201,16 +200,15 @@ makeGetBinder ::
 makeGetBinder binderVar myId =
     do
         config <- Lens.view Config.config
-        nameTheme <- Lens.view Theme.theme <&> Theme.name
         let (color, processDef) =
                 case binderVar ^. Sugar.bvForm of
-                Sugar.GetLet -> (Theme.letColor nameTheme, id)
+                Sugar.GetLet -> (Theme.letColor, id)
                 Sugar.GetDefinition defForm ->
-                    ( Theme.definitionColor nameTheme
+                    ( Theme.definitionColor
                     , processDefinitionWidget defForm myId
                     )
         makeSimpleView
-            <&> Lens.mapped %~ Reader.local (TextView.color .~ color)
+            <&> Lens.mapped %~ Styled.withColor (color . Theme.textColors)
             & makeNameRef myId (binderVar ^. Sugar.bvNameRef)
             <&> Align.tValue %~ Widget.weakerEvents
                 (makeInlineEventMap config (binderVar ^. Sugar.bvInline))
@@ -230,7 +228,7 @@ makeGetParam param myId =
                 <&> Lens.mapped %~ Styled.nameAtBinder Theme.parameterColor name
             _ ->
                 makeSimpleView
-            <&> Lens.mapped %~ Styled.withColor (Theme.parameterColor . Theme.name)
+            <&> Lens.mapped %~ Styled.withColor (Theme.parameterColor . Theme.textColors)
             & makeNameRef myId (param ^. Sugar.pNameRef)
     where
         name = param ^. Sugar.pNameRef . Sugar.nrName

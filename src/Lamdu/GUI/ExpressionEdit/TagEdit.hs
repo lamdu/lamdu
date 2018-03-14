@@ -404,7 +404,7 @@ makeRecordTag ::
     m (WithTextPos (Widget (T f GuiState.Update)))
 makeRecordTag nearestHoles tag =
     makeTagEdit nearestHoles tag
-    & Styled.withColor (Theme.recordTagColor . Theme.name)
+    & Styled.withColor (Theme.recordTagColor . Theme.textColors)
 
 makeVariantTag ::
     (MonadReader env m, MonadTransaction f m, HasTagEditEnv env) =>
@@ -412,7 +412,7 @@ makeVariantTag ::
     m (WithTextPos (Widget (T f GuiState.Update)))
 makeVariantTag nearestHoles tag =
     makeTagEdit nearestHoles tag
-    & Styled.withColor (Theme.caseTagColor . Theme.name)
+    & Styled.withColor (Theme.caseTagColor . Theme.textColors)
 
 addParamId :: Widget.Id -> Widget.Id
 addParamId = (`Widget.joinId` ["add param"])
@@ -420,14 +420,14 @@ addParamId = (`Widget.joinId` ["add param"])
 makeLHSTag ::
     (MonadReader env m, MonadTransaction f m, HasTagEditEnv env, HasStyle env) =>
     (Maybe Sugar.EntityId -> Sugar.EntityId -> Widget.Id) ->
-    (Theme.Name -> Draw.Color) -> Sugar.Tag (Name (T f)) (T f) ->
+    (Theme.TextColors -> Draw.Color) -> Sugar.Tag (Name (T f)) (T f) ->
     m (WithTextPos (Widget (T f GuiState.Update)))
 makeLHSTag onPickNext color tag =
     do
         style <- Lens.view Style.style
         (tagEditType, tagEdit) <-
             makeTagEditWith onView onPickNext NearestHoles.none tag
-            & Styled.withColor (color . Theme.name)
+            & Styled.withColor (color . Theme.textColors)
             & Reader.local (TextEdit.style .~ style ^. Style.styleNameAtBinder)
         let eventMap =
                 case tagEditType of
@@ -463,10 +463,8 @@ makeArgTag ::
     (MonadReader env m, HasTheme env, TextView.HasStyle env, Element.HasAnimIdPrefix env) =>
     Name f -> Sugar.EntityId -> m (WithTextPos View)
 makeArgTag name tagInstance =
-    do
-        nameTheme <- Lens.view Theme.theme <&> Theme.name
-        NameView.make name
-            & Reader.local (TextView.color .~ Theme.argTagColor nameTheme)
+    NameView.make name
+    & Styled.withColor (Theme.argTagColor . Theme.textColors)
     & Reader.local (Element.animIdPrefix .~ animId)
     where
         animId = WidgetIds.fromEntityId tagInstance & Widget.toAnimId
@@ -478,7 +476,7 @@ makeBinderTagEdit ::
     , Hover.HasStyle env, Menu.HasConfig env
     , MonadTransaction f m
     ) =>
-    (Theme.Name -> Draw.Color) -> Sugar.Tag (Name (T f)) (T f) ->
+    (Theme.TextColors -> Draw.Color) -> Sugar.Tag (Name (T f)) (T f) ->
     m (WithTextPos (Widget (T f GuiState.Update)))
 makeBinderTagEdit color tag =
     makeLHSTag defaultOnPickNext color tag

@@ -35,7 +35,14 @@
         "lightLambdaUnderlineColor": [1.0, 1.0, 1.0, 0.3],
         "foreignModuleColor": [1.0, 0.5, 0.6, 1.0],
         "foreignVarColor": [1.0, 0.65, 0.5, 1.0],
-        "presentationChoiceColor": [0.4, 0.4, 0.4, 1.0]
+        "presentationChoiceColor": [0.4, 0.4, 0.4, 1.0],
+        "parameterColor": [0.5, 0.9, 1.0, 1.0],
+        "letColor": [0.75, 0.5, 1.0, 1.0],
+        "definitionColor": [1.0, 0.5, 1.0, 1.0],
+        "collisionSuffixTextColor": [1.0, 0.8, 0.5, 1.0],
+        "recordTagColor": [0.75, 0.75, 0.75, 1.0],
+        "caseTagColor": [0.35, 0.7, 0.4, 1.0],
+        "argTagColor": [0.65, 0.65, 0.65, 1.0]
     },
     "tooltip": {
         "fgColor": [0.35, 0.6, 0.7, 1.0],
@@ -75,16 +82,9 @@
         "activeSearchTermBGColor": [0.3, 0.5, 0.25, 1.0]
     },
     "name": {
-        "parameterColor": [0.5, 0.9, 1.0, 1.0],
-        "letColor": [0.75, 0.5, 1.0, 1.0],
-        "definitionColor": [1.0, 0.5, 1.0, 1.0],
-        "collisionSuffixTextColor": [1.0, 0.8, 0.5, 1.0],
         "collisionSuffixScaleFactor": [0.5, 0.5],
         "tagCollisionSuffixBGColor": [0.7, 0.35, 0.35, 1.0],
-        "textCollisionSuffixBGColor": [0.35, 0.35, 0.7, 1.0],
-        "recordTagColor": [0.75, 0.75, 0.75, 1.0],
-        "caseTagColor": [0.35, 0.7, 0.4, 1.0],
-        "argTagColor": [0.65, 0.65, 0.65, 1.0]
+        "textCollisionSuffixBGColor": [0.35, 0.35, 0.7, 1.0]
     },
     "eval": {
         "staleResultTint": [0.5, 0.5, 0.5, 0.5],

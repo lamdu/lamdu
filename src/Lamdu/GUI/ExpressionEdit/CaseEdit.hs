@@ -176,7 +176,7 @@ makeAddAltRow ::
     m (Responsive.TaggedItem (T f GuiState.Update))
 makeAddAltRow addAlt myId =
     TagEdit.makeTagHoleEdit addAlt mkPickResult myId
-    & Styled.withColor (Theme.caseTagColor . Theme.name)
+    & Styled.withColor (Theme.caseTagColor . Theme.textColors)
     <&>
     \tagHole ->
     Responsive.TaggedItem
