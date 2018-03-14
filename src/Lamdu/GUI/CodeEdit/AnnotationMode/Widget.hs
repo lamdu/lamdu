@@ -15,9 +15,11 @@ import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Glue ((/|/))
+import qualified GUI.Momentu.Hover as Hover
 import qualified GUI.Momentu.State as GuiState
 import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
+import qualified GUI.Momentu.Widgets.Choice as Choice
 import qualified GUI.Momentu.Widgets.TextView as TextView
 import qualified Lamdu.Config as Config
 import           Lamdu.GUI.CodeEdit.AnnotationMode (AnnotationMode(..))
@@ -25,17 +27,36 @@ import qualified Lamdu.GUI.CodeEdit.AnnotationMode as AnnotationMode
 
 import           Lamdu.Prelude
 
+choiceConfig :: Choice.Config
+choiceConfig = Choice.Config
+    { Choice.cwcFDConfig = Choice.defaultFdConfig "Annotation Mode"
+    , Choice.cwcOrientation = Choice.Vertical
+    , Choice.cwcExpandMode = Choice.ExplicitEntry
+    }
+
 forStatusBar ::
-    (MonadReader env m, TextView.HasStyle env, Element.HasAnimIdPrefix env) =>
+    ( MonadReader env m, TextView.HasStyle env, Element.HasAnimIdPrefix env
+    , GuiState.HasCursor env, Hover.HasStyle env
+    , Applicative f
+    ) =>
     Property f AnnotationMode ->
-    m (WithTextPos (Widget a))
+    m (WithTextPos (Widget (f GuiState.Update)))
 forStatusBar prop =
-    (/|/)
-    <$> TextView.makeLabel "Annotation "
-    <*> TextView.makeLabel (Text.pack (show v))
-    <&> Align.tValue %~ Widget.fromView
+    do
+        header <- TextView.makeLabel "Annotations "
+        choices <- [minBound..maxBound] & traverse mkChoice
+        choice <-
+            Choice.make
+            ?? Property.set prop ?? choices ?? cur ?? choiceConfig ?? myId
+            <&> WithTextPos 0 -- TODO: Choice should maintain the WithTextPos
+        header /|/ choice & pure
     where
-        v = Property.value prop
+        myId = Widget.Id ["Annotations Mode Choice"]
+        mkChoice aMode =
+            TextView.makeFocusableLabel (Text.pack (show aMode))
+            <&> (^. Align.tValue)
+            <&> (,) aMode
+        cur = Property.value prop
 
 switchEventMap ::
     (Functor f, MonadReader env m, Config.HasConfig env) =>

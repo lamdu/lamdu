@@ -10,6 +10,7 @@ import qualified Data.Property as Property
 import           GUI.Momentu.Align (WithTextPos(..))
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
+import qualified GUI.Momentu.Hover as Hover
 import qualified GUI.Momentu.State as GuiState
 import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widgets.TextView as TextView
@@ -24,8 +25,10 @@ import           Lamdu.Prelude
 
 -- | For the status bar
 forStatusBar ::
-    (MonadReader env m, TextView.HasStyle env, Element.HasAnimIdPrefix env) =>
-    Property f Settings -> m (WithTextPos (Widget (f a)))
+    ( MonadReader env m, TextView.HasStyle env, Element.HasAnimIdPrefix env
+    , Applicative f, GuiState.HasCursor env, Hover.HasStyle env
+    ) =>
+    Property f Settings -> m (WithTextPos (Widget (f GuiState.Update)))
 forStatusBar prop =
     AnnotationModeWidget.forStatusBar annotationModeProp
     where

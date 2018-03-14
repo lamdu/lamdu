@@ -58,7 +58,8 @@ makeInner ::
     (Applicative f, Eq childId) =>
     HoverFunc f -> (Widget.Id -> Bool) ->
     (FocusDelegator.Config -> FocusDelegator.FocusEntryTarget ->
-     Widget.Id -> Widget (f State.Update) -> Widget (f State.Update)) -> (childId -> f ()) ->
+     Widget.Id -> Widget (f State.Update) -> Widget (f State.Update)) ->
+    (childId -> f ()) ->
     [(childId, Widget (f State.Update))] -> childId -> Config -> Widget.Id ->
     Widget (f State.Update)
 makeInner hover cursorOn fd choose children curChild config myId =
