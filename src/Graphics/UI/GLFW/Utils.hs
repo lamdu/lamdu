@@ -12,7 +12,9 @@ import           Control.Lens.Operators
 import           Control.Lens.Tuple
 import           Control.Monad (unless)
 import           Data.Vector.Vector2 (Vector2(..))
+import           GHC.Stack (currentCallStack)
 import qualified Graphics.UI.GLFW as GLFW
+import           System.IO (hPutStrLn, hFlush, stderr)
 
 import           Prelude
 
@@ -20,13 +22,20 @@ assert :: Monad m => String -> Bool -> m ()
 assert msg p = unless p (fail msg)
 
 printErrors :: GLFW.ErrorCallback
-printErrors err msg = putStrLn $ unwords ["GLFW error:", show err, msg]
+printErrors err msg =
+    do
+        let put = hPutStrLn stderr
+        put $ unwords ["GLFW error:", show err, msg]
+        put $ "From: "
+        currentCallStack >>= mapM_ (put . ("  "++))
+        hFlush stderr
 
 withGLFW :: IO a -> IO a
 withGLFW act =
+    bracket_ (GLFW.init >>= assert "initialize failed") GLFW.terminate $
     do
         GLFW.setErrorCallback (Just printErrors)
-        bracket_ (GLFW.init >>= assert "initialize failed") GLFW.terminate act
+        act
 
 createWindow :: String -> Maybe GLFW.Monitor -> Vector2 Int -> IO GLFW.Window
 createWindow title mMonitor (Vector2 w h) = do
