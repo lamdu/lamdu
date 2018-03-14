@@ -21,5 +21,8 @@ data TextColors = TextColors
     , foreignModuleColor :: Draw.Color
     , foreignVarColor :: Draw.Color
     , presentationChoiceColor :: Draw.Color
+    , actionTextColor :: Draw.Color
+    , infoTextColor :: Draw.Color
+    , typeTextColor :: Draw.Color
     } deriving (Eq, Show)
 deriveJSON defaultOptions ''TextColors

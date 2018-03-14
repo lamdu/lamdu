@@ -285,7 +285,7 @@ make ::
     Type -> m (WithTextPos View)
 make t =
     do
-        color <- Lens.view Theme.theme <&> Theme.typeTextColor
+        color <- Lens.view Theme.theme <&> Theme.textColors <&> Theme.typeTextColor
         prefix <- Lens.view Element.animIdPrefix
         makeInternal (Prec 0) t
             & runM

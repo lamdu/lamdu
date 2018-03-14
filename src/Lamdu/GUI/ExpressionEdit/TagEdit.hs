@@ -164,7 +164,9 @@ addNewTagIfNullOptions tagSelection mkPickResult ctx optionList =
                     , Menu._oSubmenuWidgets = Menu.SubmenuEmpty
                     , Menu._oRender =
                         do
-                            color <- Lens.view theme <&> Theme.actionTextColor
+                            color <-
+                                Lens.view theme <&> Theme.textColors
+                                <&> Theme.actionTextColor
                             (Widget.makeFocusableView ?? optionId <&> fmap)
                                 <*> TextView.makeLabel "Create new"
                                 <&> (`Menu.RenderedOption` preEvent)

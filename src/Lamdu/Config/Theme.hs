@@ -80,9 +80,6 @@ data Theme = Theme
     , hover :: Hover.Style
     , tooltip :: ToolTip
     , textColors :: TextColors
-    , actionTextColor :: Draw.Color
-    , infoTextColor :: Draw.Color
-    , typeTextColor :: Draw.Color
     , topPadding :: Draw.R
     , statusBarBGColor :: Draw.Color
     , maxEvalViewSize :: Int

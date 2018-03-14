@@ -135,7 +135,8 @@ definitionTypeChangeBox ::
     m (WithTextPos (Widget (f GuiState.Update)))
 definitionTypeChangeBox info getVarId =
     do
-        infoColor <- Lens.view Theme.theme <&> Theme.infoTextColor
+        infoColor <-
+            Lens.view Theme.theme <&> Theme.textColors <&> Theme.infoTextColor
         let infoLabel text =
                 TextView.makeLabel text & Reader.local (TextView.color .~ infoColor)
         updateLabel <- Styled.actionable myId "Update" updateDoc update

@@ -131,7 +131,7 @@ actionable ::
     m (WithTextPos (Widget (f GuiState.Update)))
 actionable myId text doc action =
     do
-        color <- Lens.view Theme.theme <&> Theme.actionTextColor
+        color <- Lens.view Theme.theme <&> Theme.textColors <&> Theme.actionTextColor
         underlineWidth <- Lens.view Theme.theme <&> Theme.narrowUnderlineWidth
         let underline =
                 Font.Underline

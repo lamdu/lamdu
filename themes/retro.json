@@ -31,9 +31,6 @@
         "bGColor": [0, 0, 0, 0.5],
         "tint": [1.0, 1.0, 1.0, 1.0]
     },
-    "actionTextColor": [0.5, 1.0, 0.5, 1.0],
-    "infoTextColor": [1.0, 1.0, 1.0, 1.0],
-    "typeTextColor": [0.5, 1.0, 1.0, 1.0],
     "versionControl": {
         "selectedBranchColor": [0.5, 1.0, 0.5, 1.0]
     },
@@ -59,6 +56,9 @@
         "argTagColor": [0.5, 0.5, 0.5, 1.0]
     },
     "textColors": {
+        "actionTextColor": [0.5, 1.0, 0.5, 1.0],
+        "infoTextColor": [1.0, 1.0, 1.0, 1.0],
+        "typeTextColor": [0.5, 1.0, 1.0, 1.0],
         "baseColor": [1.0, 1.0, 1.0, 1.0],
         "grammarColor": [1.0, 1.0, 1.0, 1.0],
         "literalColor": [0.5, 1.0, 0.5, 1.0],
