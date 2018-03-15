@@ -307,6 +307,7 @@ module.exports = {
                             var client = new pg.Client({
                                 host: toString(x[hostTag]),
                                 port: x[portTag],
+                                database: toString(x[databaseTag]),
                                 user: toString(x[userTag]),
                                 password: toString(x[passwordTag])
                             });
