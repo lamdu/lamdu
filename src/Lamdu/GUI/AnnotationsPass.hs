@@ -51,7 +51,7 @@ markAnnotationsToDisplay (Expression oldBody pl) =
         set T.showAnnotationWhenVerbose
     BodyGetVar (GetBinder BinderVarRef { _bvForm = GetLet }) ->
         set T.neverShowAnnotations
-    BodyFromNom _ -> Expression (newBodyWith dontShowEval) defPl
+    BodyFromNom _ -> set dontShowEval
     BodyToNom (Nominal tid binder) ->
         defPl
         & plData . _1 . T.showInEvalMode .~
