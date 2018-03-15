@@ -11,14 +11,11 @@ module Lamdu.GUI.Main
 import qualified Control.Lens as Lens
 import           Control.Monad.Reader (ReaderT(..))
 import qualified Control.Monad.Reader as Reader
-import           Control.Monad.Transaction (MonadTransaction(..))
 import           Data.CurAndPrev (CurAndPrev)
 import           Data.Property (Property)
-import qualified GUI.Momentu.Align as Align
-import qualified GUI.Momentu.Draw as Draw
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.EventMap as E
-import           GUI.Momentu.Glue ((/-/), (/|/))
+import           GUI.Momentu.Glue ((/-/))
 import qualified GUI.Momentu.Hover as Hover
 import qualified GUI.Momentu.Main as MainLoop
 import qualified GUI.Momentu.Scroll as Scroll
@@ -26,8 +23,6 @@ import qualified GUI.Momentu.State as GuiState
 import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
-import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
-import qualified GUI.Momentu.Widgets.TextView as TextView
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Config.Theme as Theme
 import           Lamdu.Data.Db.Layout (DbM, ViewM)
@@ -38,7 +33,7 @@ import qualified Lamdu.GUI.CodeEdit as CodeEdit
 import           Lamdu.GUI.IOTrans (IOTrans(..), ioTrans)
 import qualified Lamdu.GUI.IOTrans as IOTrans
 import qualified Lamdu.GUI.Settings as SettingsWidget
-import qualified Lamdu.GUI.Styled as Styled
+import qualified Lamdu.GUI.StatusBar as StatusBar
 import qualified Lamdu.GUI.VersionControl as VersionControlGUI
 import qualified Lamdu.GUI.VersionControl.Config as VCConfig
 import           Lamdu.Settings (Settings)
@@ -54,37 +49,6 @@ import           Lamdu.Prelude
 type T = Transaction
 
 type EvalResults = CurAndPrev (Results.EvalResults (ExprIRef.ValI ViewM))
-
-makeStatusBar ::
-    ( MonadReader env m, MonadTransaction DbM m
-    , TextEdit.HasStyle env, Theme.HasTheme env, Hover.HasStyle env
-    , GuiState.HasCursor env, Element.HasAnimIdPrefix env
-    , VCConfig.HasConfig env, VCConfig.HasTheme env, Spacer.HasStdSpacing env
-    ) =>
-    [Themes.Selection] -> Property IO Settings ->
-    Widget.R -> VCActions.Actions DbM (IOTrans DbM) ->
-    m (Widget (IOTrans DbM GuiState.Update))
-makeStatusBar themeNames settingsProp width vcActions =
-    do
-        branchChoice <-
-            VersionControlGUI.makeBranchSelector
-            IOTrans.liftTrans transaction vcActions
-        branchLabel <-
-            TextView.make ?? "Branch " ?? ["BranchHeader"]
-            & Styled.withColor Theme.infoTextColor
-        let branchWidget = branchLabel /|/ branchChoice
-
-        settings <-
-            SettingsWidget.forStatusBar themeNames settingsProp
-            <&> Align.tValue %~ fmap IOTrans.liftIO
-
-        theTheme <- Lens.view Theme.theme
-        hspace <-
-            Spacer.getSpaceSize <&> (^. _1) <&> (* 5) <&> Spacer.makeHorizontal
-        Draw.backgroundColor
-            ?? Theme.statusBarBGColor theTheme
-            ?? ((settings /|/ hspace /|/ branchWidget) ^. Align.tValue
-                & Element.width .~ width)
 
 layout ::
     ( MainLoop.HasMainLoopEnv env
@@ -106,7 +70,7 @@ layout themeNames settingsProp vcActions =
     do
         theTheme <- Lens.view Theme.theme
         fullSize <- Lens.view (MainLoop.mainLoopEnv . MainLoop.eWindowSize)
-        statusBar <- makeStatusBar themeNames settingsProp (fullSize ^. _1) vcActions
+        statusBar <- StatusBar.make themeNames settingsProp (fullSize ^. _1) vcActions
         state <- Lens.view GuiState.state
         codeEdit <-
             CodeEdit.make DbLayout.codeAnchors (fullSize ^. _1)
