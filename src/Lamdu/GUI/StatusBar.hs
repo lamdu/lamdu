@@ -58,6 +58,6 @@ make themeNames settingsProp width vcActions =
         hspace <-
             Spacer.getSpaceSize <&> (^. _1) <&> (* 5) <&> Spacer.makeHorizontal
         Draw.backgroundColor
-            ?? Theme.statusBarBGColor theTheme
+            ?? Theme.statusBarBGColor (Theme.statusBar theTheme)
             ?? ((settings /|/ hspace /|/ branchWidget) ^. Align.tValue
                 & Element.width .~ width)

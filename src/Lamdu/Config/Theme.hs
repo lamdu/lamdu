@@ -3,7 +3,7 @@
 -- | The themes/ config format
 module Lamdu.Config.Theme
     ( module Exported
-    , Help(..), Hole(..), Eval(..), ToolTip(..)
+    , Help(..), Hole(..), Eval(..), ToolTip(..), StatusBar(..)
     , Theme(..), stdSpacing, menu, versionControl
     , HasTheme(..)
     ) where
@@ -15,6 +15,7 @@ import           Data.Aeson.Utils (decapitalize, removePrefix, removeOptionalUnd
 import           Data.Aeson.TH (deriveJSON)
 import qualified Data.Aeson.Types as Aeson
 import           Data.Vector.Vector2 (Vector2)
+import qualified Data.Char as Char
 import qualified GUI.Momentu.Hover as Hover
 import qualified GUI.Momentu.Responsive.Expression as Expression
 import qualified GUI.Momentu.Widgets.Menu as Menu
@@ -68,6 +69,20 @@ deriveJSON Aeson.defaultOptions
 #endif
     ''ToolTip
 
+data StatusBar = StatusBar
+    { statusBarBGColor :: Draw.Color
+    } deriving (Eq, Show)
+deriveJSON Aeson.defaultOptions
+#ifndef NO_CODE
+    {Aeson.fieldLabelModifier =
+     \name ->
+     name
+     & removePrefix "statusBar"
+     & Lens.taking 2 traverse %~ Char.toLower
+    }
+#endif
+    ''StatusBar
+
 data Theme = Theme
     { fonts :: Fonts FilePath
     , baseTextSize :: FontSize
@@ -82,7 +97,7 @@ data Theme = Theme
     , tooltip :: ToolTip
     , textColors :: TextColors
     , topPadding :: Draw.R
-    , statusBarBGColor :: Draw.Color
+    , statusBar :: StatusBar
     , maxEvalViewSize :: Int
     , _versionControl :: VersionControl.Theme
     , valAnnotation :: ValAnnotation

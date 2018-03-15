@@ -13,7 +13,9 @@
     "baseTextSize": 16,
     "maxEvalViewSize": 32,
     "topPadding": 1,
-    "statusBarBGColor": [0.0, 0.0, 0.0, 1.0],
+    "statusBar": {
+        "bgColor": [0.0, 0.0, 0.0, 1.0]
+    },
     "hover": {
         "framePadding": [1, 1],
         "frameColor": [0, 0, 0, 1],
