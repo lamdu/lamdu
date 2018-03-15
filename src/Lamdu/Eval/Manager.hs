@@ -133,12 +133,16 @@ startBG =
 
 start :: Evaluator -> IO ()
 start evaluator =
-    Transaction.readIRef replIRef
-    >>= traverse ExprIRef.readVal
-    & runViewTransactionInIO (eDb evaluator)
-    >>= startBG
-        (evalActions evaluator) <&> Started
-    >>= writeIORef (eEvaluatorRef evaluator)
+    readIORef (eEvaluatorRef evaluator)
+    >>= \case
+    Started {} -> pure () -- already started
+    NotStarted ->
+        Transaction.readIRef replIRef
+        >>= traverse ExprIRef.readVal
+        & runViewTransactionInIO (eDb evaluator)
+        >>= startBG
+            (evalActions evaluator) <&> Started
+        >>= writeIORef (eEvaluatorRef evaluator)
 
 onEvaluator :: (Eval.Evaluator (ValI ViewM) -> IO ()) -> Evaluator -> IO ()
 onEvaluator action evaluator =
