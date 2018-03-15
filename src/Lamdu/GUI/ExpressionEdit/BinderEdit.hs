@@ -170,7 +170,6 @@ makeScopeNavEdit binder myId curCursor =
         theme <- Lens.view Theme.theme
         let mkArrow (txt, mScopeId) =
                 TextView.makeLabel txt
-                <&> (^. Align.tValue)
                 & Reader.local
                 ( TextView.color .~
                     case mScopeId of
@@ -182,7 +181,7 @@ makeScopeNavEdit binder myId curCursor =
             >>= \case
             Evaluation ->
                 (Widget.makeFocusableView ?? myId)
-                <*> (mapM mkArrow scopes <&> Glue.hbox)
+                <*> (mapM mkArrow scopes <&> Glue.hbox <&> (^. Align.tValue))
                 <&> Widget.weakerEvents (mkScopeEventMap leftKeys rightKeys `mappend` blockEventMap)
                 <&> Just
                 <&> (,) (mkScopeEventMap
