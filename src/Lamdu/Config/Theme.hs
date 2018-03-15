@@ -18,8 +18,9 @@ import           Data.Vector.Vector2 (Vector2)
 import qualified GUI.Momentu.Hover as Hover
 import qualified GUI.Momentu.Responsive.Expression as Expression
 import qualified GUI.Momentu.Widgets.Menu as Menu
-import           Lamdu.Config.Theme.TextColors as Exported (TextColors(..))
+import qualified Graphics.DrawingCombinators as Draw
 import           Lamdu.Config.Theme.Name as Exported (Name(..))
+import           Lamdu.Config.Theme.TextColors as Exported (TextColors(..))
 import           Lamdu.Config.Theme.ValAnnotation as Exported (ValAnnotation(..))
 import           Lamdu.Font (FontSize, Fonts)
 import qualified Lamdu.GUI.VersionControl.Config as VersionControl
