@@ -22,22 +22,22 @@ import           Text.PrettyPrint.HughesPJClass (Pretty(..))
 
 import           Lamdu.Prelude
 
-deriving instance Data a => Data (Fonts a)
-deriving instance Data a => Data (Vector2 a)
 deriving instance Data Color
 deriving instance Data Hover.Style
 deriving instance Data Menu.Style
 deriving instance Data ResponsiveExpr.Style
 deriving instance Data Theme
-deriving instance Data Theme.TextColors
 deriving instance Data Theme.Eval
 deriving instance Data Theme.Help
 deriving instance Data Theme.Hole
 deriving instance Data Theme.Name
 deriving instance Data Theme.StatusBar
+deriving instance Data Theme.TextColors
 deriving instance Data Theme.ToolTip
 deriving instance Data Theme.ValAnnotation
 deriving instance Data VcGuiConfig.Theme
+deriving instance Data a => Data (Fonts a)
+deriving instance Data a => Data (Vector2 a)
 
 instance Pretty Color where
     pPrint (Color r g b a)
