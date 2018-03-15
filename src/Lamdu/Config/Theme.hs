@@ -4,12 +4,13 @@
 module Lamdu.Config.Theme
     ( module Exported
     , Help(..), Hole(..), Eval(..), ToolTip(..)
-    , Theme(..), themeStdSpacing, themeMenu, themeVersionControl
+    , Theme(..), stdSpacing, menu, versionControl
     , HasTheme(..)
     ) where
 
+import qualified Control.Lens as Lens
 #ifndef NO_CODE
-import           Data.Aeson.Utils (decapitalize, removePrefix)
+import           Data.Aeson.Utils (decapitalize, removePrefix, removeOptionalUnderscore)
 #endif
 import           Data.Aeson.TH (deriveJSON)
 import qualified Data.Aeson.Types as Aeson
@@ -74,18 +75,18 @@ data Theme = Theme
     , animationRemainInPeriod :: Double
     , help :: Help
     , hole :: Hole
-    , menu :: Menu.Style
+    , _menu :: Menu.Style
     , name :: Name
     , eval :: Eval
-    , hover :: Hover.Style
+    , _hover :: Hover.Style
     , tooltip :: ToolTip
     , textColors :: TextColors
     , topPadding :: Draw.R
     , statusBarBGColor :: Draw.Color
     , maxEvalViewSize :: Int
-    , versionControl :: VersionControl.Theme
+    , _versionControl :: VersionControl.Theme
     , valAnnotation :: ValAnnotation
-    , indent :: Expression.Style
+    , _indent :: Expression.Style
     , backgroundColor :: Draw.Color
     , invalidCursorBGColor :: Draw.Color
     , typeIndicatorErrorColor :: Draw.Color
@@ -97,26 +98,23 @@ data Theme = Theme
     , valFrameBGColor :: Draw.Color
     , valFramePadding :: Vector2 Double
     , typeFrameBGColor :: Draw.Color
-    , stdSpacing :: Vector2 Double -- as ratio of space character size
+    , _stdSpacing :: Vector2 Double -- as ratio of space character size
     , cursorColor :: Draw.Color
     , cursorDecayExponent :: Draw.R
     , disabledColor :: Draw.Color
     , presentationChoiceScaleFactor :: Vector2 Double
     , evaluatedPathBGColor :: Draw.Color
     } deriving (Eq, Show)
-deriveJSON Aeson.defaultOptions ''Theme
+deriveJSON Aeson.defaultOptions
+#ifndef NO_CODE
+    {Aeson.fieldLabelModifier = removeOptionalUnderscore}
+#endif
+    ''Theme
+
+Lens.makeLenses ''Theme
 
 class HasTheme env where theme :: Lens' env Theme
 instance HasTheme Theme where theme = id
 
-themeStdSpacing :: Lens' Theme (Vector2 Double)
-themeStdSpacing f t = stdSpacing t & f <&> \new -> t { stdSpacing = new }
-
-instance Expression.HasStyle Theme where style f t = f (indent t) <&> \x -> t { indent = x }
-instance Hover.HasStyle Theme where style f t = f (hover t) <&> \x -> t { hover = x }
-
-themeMenu :: Lens' Theme Menu.Style
-themeMenu f t = f (menu t) <&> \x -> t { menu = x }
-
-themeVersionControl :: Lens' Theme VersionControl.Theme
-themeVersionControl f t = f (versionControl t) <&> \x -> t { versionControl = x }
+instance Expression.HasStyle Theme where style = indent
+instance Hover.HasStyle Theme where style = hover

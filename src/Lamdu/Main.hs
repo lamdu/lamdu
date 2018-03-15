@@ -78,7 +78,7 @@ instance GUIMain.HasEvalResults Env DbLayout.ViewM where evalResults = envEvalRe
 instance Settings.HasSettings Env where settings = envSettings
 instance Style.HasStyle Env where style = envStyle
 instance MainLoop.HasMainLoopEnv Env where mainLoopEnv = envMainLoop
-instance M.HasStdSpacing Env where stdSpacing = Theme.theme . Theme.themeStdSpacing
+instance M.HasStdSpacing Env where stdSpacing = Theme.theme . Theme.stdSpacing
 instance M.HasCursor Env
 instance M.HasState Env where state = envMainLoop . M.state
 instance TextEdit.HasStyle Env where style = envStyle . Style.styleBase
@@ -87,8 +87,8 @@ instance Theme.HasTheme Env where theme = envTheme
 instance Config.HasConfig Env where config = envConfig
 instance M.HasAnimIdPrefix Env where animIdPrefix = envAnimIdPrefix
 instance Hover.HasStyle Env where style = envTheme . Hover.style
-instance VCConfig.HasTheme Env where theme = envTheme . Theme.themeVersionControl
-instance VCConfig.HasConfig Env where config = envConfig . Config.configVersionControl
+instance VCConfig.HasTheme Env where theme = envTheme . Theme.versionControl
+instance VCConfig.HasConfig Env where config = envConfig . Config.versionControl
 
 defaultFontPath :: ConfigSampler.Sample -> FilePath
 defaultFontPath sample =

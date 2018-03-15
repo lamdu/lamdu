@@ -111,6 +111,6 @@ make themeNames settingsProp env =
             SettingsWidget.eventMap themeNames settingsProp config
             <&> IOTrans.liftIO
         config = env ^. Config.config
-        versionControlCfg = Config.versionControl config
+        versionControlCfg = config ^. Config.versionControl
         quitEventMap =
             E.keysEventMap (Config.quitKeys config) (E.Doc ["Quit"]) (error "Quit")

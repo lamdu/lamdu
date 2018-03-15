@@ -100,14 +100,14 @@ instance ResponsiveExpr.HasStyle (Askable m) where style = aTheme . ResponsiveEx
 instance Menu.HasConfig (Askable m) where
     config f askable =
         f Menu.Config
-        { Menu.configKeys = askable ^. aConfig & Config.menu
-        , Menu.configStyle = askable ^. aTheme & Theme.menu
+        { Menu.configKeys = askable ^. aConfig . Config.menu
+        , Menu.configStyle = askable ^. aTheme . Theme.menu
         }
         <&>
         \menuConfig ->
         askable
-        & aTheme . Theme.themeMenu .~ Menu.configStyle menuConfig
-        & aConfig . Config.configMenu .~ Menu.configKeys menuConfig
+        & aTheme . Theme.menu .~ Menu.configStyle menuConfig
+        & aConfig . Config.menu .~ Menu.configKeys menuConfig
 instance Hover.HasStyle (Askable m) where style = aTheme . Hover.style
 instance HasStyle (Askable m) where style = aStyle
 instance HasSettings (Askable m) where settings = aSettings

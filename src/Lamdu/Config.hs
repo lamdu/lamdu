@@ -1,5 +1,5 @@
 {-# OPTIONS -O0 #-}
-{-# LANGUAGE NoImplicitPrelude, TemplateHaskell #-}
+{-# LANGUAGE NoImplicitPrelude, TemplateHaskell, CPP #-}
 module Lamdu.Config
     ( Export(..), Pane(..), Completion(..)
     , Debug(..)
@@ -8,13 +8,16 @@ module Lamdu.Config
     , Config(..)
     , HasConfig(..)
     , delKeys
-    , configMenu
-    , configVersionControl
+    , menu
+    , versionControl
     ) where
 
 import qualified Control.Lens as Lens
+#ifndef NO_CODE
+import           Data.Aeson.Utils (removeOptionalUnderscore)
+#endif
 import           Data.Aeson.TH (deriveJSON)
-import           Data.Aeson.Types (defaultOptions)
+import qualified Data.Aeson.Types as Aeson
 import           GUI.Momentu.MetaKey (MetaKey)
 import qualified GUI.Momentu.Widgets.Menu as Menu
 import qualified GUI.Momentu.Zoom as Zoom
@@ -30,7 +33,7 @@ data Export = Export
     , executeKeys :: [MetaKey]
     , importKeys :: [MetaKey]
     } deriving (Eq, Show)
-deriveJSON defaultOptions ''Export
+deriveJSON Aeson.defaultOptions ''Export
 
 data Pane = Pane
     { paneCloseKeys :: [MetaKey]
@@ -38,7 +41,7 @@ data Pane = Pane
     , paneMoveUpKeys :: [MetaKey]
     , newDefinitionKeys :: [MetaKey]
     } deriving (Eq, Show)
-deriveJSON defaultOptions ''Pane
+deriveJSON Aeson.defaultOptions ''Pane
 
 data Completion = Completion
     { completionJumpToNextKeys :: [MetaKey]
@@ -47,36 +50,36 @@ data Completion = Completion
     , completionOpenKeys :: [MetaKey]
     , completionCloseKeys :: [MetaKey]
     } deriving (Eq, Show)
-deriveJSON defaultOptions ''Completion
+deriveJSON Aeson.defaultOptions ''Completion
 
 data Eval = Eval
     { prevScopeKeys :: [MetaKey]
     , nextScopeKeys :: [MetaKey]
     } deriving (Eq, Show)
-deriveJSON defaultOptions ''Eval
+deriveJSON Aeson.defaultOptions ''Eval
 
 data Literal = Literal
     { literalStartEditingKeys :: [MetaKey]
     , literalStopEditingKeys :: [MetaKey]
     } deriving (Eq, Show)
-deriveJSON defaultOptions ''Literal
+deriveJSON Aeson.defaultOptions ''Literal
 
 data Debug = Debug
     { debugShowFPS :: Bool
     , virtualCursorShown :: Bool
     } deriving (Eq, Show)
-deriveJSON defaultOptions ''Debug
+deriveJSON Aeson.defaultOptions ''Debug
 
 data Config = Config
     { zoom :: Zoom.Config
     , export :: Export
     , pane :: Pane
-    , versionControl :: VersionControl.Config
+    , _versionControl :: VersionControl.Config
     , completion :: Completion
     , literal :: Literal
     , eval :: Eval
     , debug :: Debug
-    , menu :: Menu.Keys
+    , _menu :: Menu.Keys
 
     , maxExprDepth :: Int
 
@@ -114,16 +117,16 @@ data Config = Config
     , caseOpenKeys :: [MetaKey]
     , caseAddAltKeys :: [MetaKey]
     } deriving (Eq, Show)
-deriveJSON defaultOptions ''Config
+deriveJSON Aeson.defaultOptions
+#ifndef NO_CODE
+    {Aeson.fieldLabelModifier = removeOptionalUnderscore}
+#endif
+    ''Config
+
+Lens.makeLenses ''Config
 
 class HasConfig env where config :: Lens' env Config
 instance HasConfig Config where config = id
 
 delKeys :: (MonadReader env m, HasConfig env) => m [MetaKey]
 delKeys = sequence [Lens.view config <&> delForwardKeys, Lens.view config <&> delBackwardKeys] <&> mconcat
-
-configMenu :: Lens' Config Menu.Keys
-configMenu f c = menu c & f <&> \menu' -> c { menu = menu' }
-
-configVersionControl :: Lens' Config VersionControl.Config
-configVersionControl f c = versionControl c & f <&> \versionControl' -> c { versionControl = versionControl' }

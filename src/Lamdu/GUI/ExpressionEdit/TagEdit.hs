@@ -77,7 +77,7 @@ makeTagNameEdit ::
     m (WithTextPos (Widget (f GuiState.Update)))
 makeTagNameEdit nearestHoles (Name.StoredName setName tagText _tagCollision storedText) myId =
     do
-        keys <- Lens.view Config.config <&> Config.menu <&> Menu.keysPickOptionAndGotoNext
+        keys <- Lens.view (Config.config . Config.menu) <&> Menu.keysPickOptionAndGotoNext
         let jumpNextEventMap =
                 nearestHoles ^. NearestHoles.next
                 & foldMap
@@ -107,7 +107,7 @@ makePickEventMap ::
     f Menu.PickResult ->
     m (EventMap (f GuiState.Update))
 makePickEventMap action =
-    Lens.view Config.config <&> Config.menu <&>
+    Lens.view (Config.config . Config.menu) <&>
     \config ->
     let pickKeys = Menu.keysPickOption config
         jumpNextKeys = Menu.keysPickOptionAndGotoNext config
