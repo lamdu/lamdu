@@ -85,14 +85,15 @@ takesFocus enterFunc =
     widget %~
     \w ->
         let rect = Rect 0 (w ^. Element.size)
-        in
-        w
-        & wState . _StateUnfocused . uMEnter ?~
-        ( enterFunc
-            <&> Lens.mapped %~ State.updateCursor
-            <&> EnterResult rect 0
-            & enterFuncAddVirtualCursor rect
-        )
+            enter =
+                enterFunc
+                <&> Lens.mapped %~ State.updateCursor
+                <&> EnterResult rect 0
+                & enterFuncAddVirtualCursor rect
+        in  w
+            & wState . _StateFocused . Lens.mapped . fMEnterPoint ?~
+                enter . Direction.Point
+            & wState . _StateUnfocused . uMEnter ?~ enter
 
 enterFuncAddVirtualCursor ::
     Functor f =>
