@@ -39,7 +39,7 @@ defaultFdConfig helpPrefix =
     FocusDelegator.Config
     { FocusDelegator.focusChildKeys = [MetaKey noMods MetaKey.Key'Enter]
     , FocusDelegator.focusChildDoc = E.Doc [helpPrefix, "Select"]
-    , FocusDelegator.focusParentKeys = [MetaKey noMods MetaKey.Key'Enter]
+    , FocusDelegator.focusParentKeys = [MetaKey.Key'Enter, MetaKey.Key'Escape] <&> MetaKey noMods
     , FocusDelegator.focusParentDoc = E.Doc [helpPrefix, "Choose selected"]
     }
 
