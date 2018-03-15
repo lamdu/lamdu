@@ -17,6 +17,7 @@ import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.GUI.CodeEdit.AnnotationMode.Widget as AnnotationModeWidget
+import qualified Lamdu.GUI.StatusBar.Common as StatusBar
 import qualified Lamdu.GUI.Themes as Themes
 import           Lamdu.Settings (Settings)
 import qualified Lamdu.Settings as Settings
@@ -32,8 +33,7 @@ forStatusBar ::
     [Themes.Selection] -> Property f Settings -> m (WithTextPos (Widget (f GuiState.Update)))
 forStatusBar themeNames prop =
     do
-        hspace <-
-            Spacer.getSpaceSize <&> (^. _1) <&> (* 5) <&> Spacer.makeHorizontal
+        hspace <- StatusBar.hspacer
         annotationMode <- AnnotationModeWidget.forStatusBar annotationModeProp
         theme <- Themes.widgetForStatusBar themeNames themeProp
         annotationMode /|/ hspace /|/ theme & pure

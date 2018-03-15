@@ -22,6 +22,7 @@ import qualified Lamdu.Config.Theme as Theme
 import           Lamdu.GUI.IOTrans (IOTrans(..))
 import qualified Lamdu.GUI.IOTrans as IOTrans
 import qualified Lamdu.GUI.Settings as SettingsWidget
+import qualified Lamdu.GUI.StatusBar.Common as StatusBar
 import qualified Lamdu.GUI.Styled as Styled
 import qualified Lamdu.GUI.VersionControl as VersionControlGUI
 import qualified Lamdu.GUI.VersionControl.Config as VCConfig
@@ -55,8 +56,7 @@ make themeNames settingsProp width vcActions =
             <&> Align.tValue %~ fmap IOTrans.liftIO
 
         theTheme <- Lens.view Theme.theme
-        hspace <-
-            Spacer.getSpaceSize <&> (^. _1) <&> (* 5) <&> Spacer.makeHorizontal
+        hspace <- StatusBar.hspacer
         Draw.backgroundColor
             ?? Theme.statusBarBGColor (Theme.statusBar theTheme)
             ?? ((settings /|/ hspace /|/ branchWidget) ^. Align.tValue

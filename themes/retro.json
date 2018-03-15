@@ -14,7 +14,8 @@
     "maxEvalViewSize": 32,
     "topPadding": 1,
     "statusBar": {
-        "bgColor": [0.0, 0.0, 0.0, 1.0]
+        "bgColor": [0.0, 0.0, 0.0, 1.0],
+        "hspaces": 2
     },
     "hover": {
         "framePadding": [1, 1],

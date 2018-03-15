@@ -231,6 +231,7 @@ Library
                   , Lamdu.GUI.ReplEdit
                   , Lamdu.GUI.Settings
                   , Lamdu.GUI.StatusBar
+                  , Lamdu.GUI.StatusBar.Common
                   , Lamdu.GUI.Styled
                   , Lamdu.GUI.Themes
                   , Lamdu.GUI.TypeView

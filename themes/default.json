@@ -22,7 +22,8 @@
     "invalidCursorBGColor": [0.4, 0.2, 0.2, 1.0],
     "topPadding": 0.5,
     "statusBar": {
-        "bgColor": [0.175, 0.35, 0.3, 1.0]
+        "bgColor": [0.175, 0.35, 0.3, 1.0],
+        "hspaces": 5
     },
     "textColors": {
         "actionTextColor": [0.5, 1.0, 0.5, 1.0],

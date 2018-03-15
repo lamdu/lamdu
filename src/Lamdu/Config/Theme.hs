@@ -71,6 +71,7 @@ deriveJSON Aeson.defaultOptions
 
 data StatusBar = StatusBar
     { statusBarBGColor :: Draw.Color
+    , statusBarHSpaces :: Double
     } deriving (Eq, Show)
 deriveJSON Aeson.defaultOptions
 #ifndef NO_CODE
