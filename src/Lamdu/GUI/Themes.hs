@@ -38,8 +38,7 @@ switchEventMap themeNames (Property curTheme setTheme) =
     <&> \config ->
     let keys = Config.changeThemeKeys config
         newTheme = dropWhile (/= curTheme) themeNames ++ themeNames & tail & head
-    in  do
-            setTheme newTheme
+    in  setTheme newTheme
         & E.keysEventMap keys (E.Doc ["Theme", "Switch"])
 
 widgetForStatusBar ::
