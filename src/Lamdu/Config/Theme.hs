@@ -15,7 +15,9 @@ import           Data.Aeson.Utils (decapitalize, removePrefix, removeOptionalUnd
 import           Data.Aeson.TH (deriveJSON)
 import qualified Data.Aeson.Types as Aeson
 import           Data.Vector.Vector2 (Vector2)
+#ifndef NO_CODE
 import qualified Data.Char as Char
+#endif
 import qualified GUI.Momentu.Hover as Hover
 import qualified GUI.Momentu.Responsive.Expression as Expression
 import qualified GUI.Momentu.Widgets.Menu as Menu
