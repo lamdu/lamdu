@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, LambdaCase #-}
+{-# LANGUAGE NoImplicitPrelude, LambdaCase, TemplateHaskell #-}
 module Lamdu.Eval.Manager
     ( Evaluator
     , NewParams(..), new
@@ -44,9 +44,7 @@ type T = Transaction
 
 data BGEvaluator = NotStarted | Started (Eval.Evaluator (ValI ViewM))
 
-startedEvaluator :: BGEvaluator -> Maybe (Eval.Evaluator (ValI ViewM))
-startedEvaluator NotStarted = Nothing
-startedEvaluator (Started eval) = Just eval
+Lens.makePrisms ''BGEvaluator
 
 data NewParams = NewParams
     { resultsUpdated :: IO ()
@@ -88,7 +86,7 @@ runViewTransactionInIO dbM trans =
 
 getLatestResults :: Evaluator -> IO (EvalResults (ValI ViewM))
 getLatestResults evaluator =
-    readIORef (eEvaluatorRef evaluator) <&> startedEvaluator
+    readIORef (eEvaluatorRef evaluator) <&> (^? _Started)
     >>= maybe (pure EvalResults.empty) Eval.getResults
 
 getResults :: Evaluator -> IO (CurAndPrev (EvalResults (ValI ViewM)))
@@ -145,7 +143,7 @@ start evaluator =
 onEvaluator :: (Eval.Evaluator (ValI ViewM) -> IO ()) -> Evaluator -> IO ()
 onEvaluator action evaluator =
     readIORef (eEvaluatorRef evaluator)
-    <&> startedEvaluator
+    <&> (^? _Started)
     >>= traverse_ action
 
 stop :: Evaluator -> IO ()
