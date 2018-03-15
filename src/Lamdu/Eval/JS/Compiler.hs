@@ -171,16 +171,21 @@ isReservedName name =
     , "scopeId_"
     ]
 
-topLevelDecls :: [JSS.Statement ()]
-topLevelDecls =
+topLevelDecls :: Mode -> [JSS.Statement ()]
+topLevelDecls mode =
     ( [ [jsstmt|"use strict";|]
-      , [jsstmt|var scopeId_0 = 0;|]
-      , [jsstmt|var scopeCounter = 1;|]
       , [jsstmt|var rts = require('./rts.js');|]
       ] <&> void
     ) ++
-    [ declLog 0
-    ]
+    case mode of
+    FastSilent -> []
+    SlowLogging{} ->
+        ( [ [jsstmt|var scopeId_0 = 0;|]
+          , [jsstmt|var scopeCounter = 1;|]
+          ] <&> void
+        ) ++
+        [ declLog 0
+        ]
 
 loggingEnabled :: Mode
 loggingEnabled = SlowLogging LoggingInfo { _liScopeDepth = 0 }
@@ -192,7 +197,7 @@ run :: Monad m => Actions m -> M m CodeGen -> m ()
 run actions act =
     runRWST
     (do
-        traverse_ ppOut topLevelDecls
+        traverse_ ppOut (topLevelDecls (loggingMode actions))
         act <&> codeGenExpression <&> varinit "repl" >>= ppOut
         [ [jsstmt|rts.logRepl(repl);|]
           , -- This form avoids outputing repl's value in interactive mode
