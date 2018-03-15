@@ -91,8 +91,8 @@ takesFocus enterFunc =
                 <&> EnterResult rect 0
                 & enterFuncAddVirtualCursor rect
         in  w
-            & wState . _StateFocused . Lens.mapped . fMEnterPoint ?~
-                enter . Direction.Point
+            & wState . _StateFocused . Lens.mapped . fMEnterPoint %~
+                Just . fromMaybe (enter . Direction.Point)
             & wState . _StateUnfocused . uMEnter ?~ enter
 
 enterFuncAddVirtualCursor ::
