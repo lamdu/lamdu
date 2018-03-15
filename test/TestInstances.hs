@@ -34,6 +34,7 @@ deriving instance Data Theme.Eval
 deriving instance Data Theme.Help
 deriving instance Data Theme.Hole
 deriving instance Data Theme.Name
+deriving instance Data Theme.StatusBar
 deriving instance Data Theme.ToolTip
 deriving instance Data Theme.ValAnnotation
 deriving instance Data VcGuiConfig.Theme
