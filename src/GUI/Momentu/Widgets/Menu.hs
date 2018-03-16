@@ -370,13 +370,15 @@ makeHovered ::
     ) =>
     Widget.Id -> View ->
     OptionList (Option m f) ->
-    m (Placement -> Widget (f State.Update) -> Widget (f State.Update))
+    m
+    ( Maybe (Widget.PreEvent (f PickResult))
+    , Placement -> Widget (f State.Update) -> Widget (f State.Update)
+    )
 makeHovered myId annotation options =
     do
         mkHoverOptions <- hoverOptions
-        (_, menu) <- make myId (annotation ^. Element.width) options
-        pure $
-            \placement term ->
-            let a = Hover.anchor term
-            in  a
-                & Hover.hoverInPlaceOf (mkHoverOptions placement annotation menu a)
+        make myId (annotation ^. Element.width) options
+            <&> _2 %~ \menu placement term ->
+                let a = Hover.anchor term
+                in  a
+                    & Hover.hoverInPlaceOf (mkHoverOptions placement annotation menu a)

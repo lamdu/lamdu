@@ -141,15 +141,10 @@ make makeSearchTerm makeOptions annotation myId =
     >>=
     \options ->
     do
-        (mPickFirst, menu) <- Menu.make myId (annotation ^. Element.width) options
-        mkHoverOptions <- Menu.hoverOptions
-        let hoverMenu placement term =
-                Hover.hoverInPlaceOf (mkHoverOptions placement annotation menu a) a
-                where
-                    a = Hover.anchor term
+        (mPickFirst, makeMenu) <- Menu.makeHovered myId annotation options
         makeSearchTerm mPickFirst
             <&> \searchTermWidget placement ->
-                searchTermWidget <&> hoverMenu placement
+                searchTermWidget <&> makeMenu placement
     & Reader.local (Element.animIdPrefix .~ toAnimId myId)
     & assignCursor myId (options ^.. traverse . Menu.oId)
 
