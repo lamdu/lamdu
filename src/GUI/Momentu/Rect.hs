@@ -8,6 +8,7 @@ module GUI.Momentu.Rect
     , bottomRight
     , center, centeredSize
     , distances, sqrDistance
+    , isWithin
     ) where
 
 import           Control.DeepSeq (NFData(..))
@@ -115,3 +116,10 @@ distances r1 r2 =
 
 sqrDistance :: Rect -> Rect -> R
 sqrDistance r1 r2 = Vector2.sqrNorm (distances r1 r2)
+
+isWithin :: Vector2 R -> Rect -> Bool
+isWithin v r =
+    inside <$> v - r ^. topLeft <*> r ^. size
+    & and
+    where
+        inside x l = 0 <= x && x < l
