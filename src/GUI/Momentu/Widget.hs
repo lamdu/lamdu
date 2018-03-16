@@ -38,6 +38,7 @@ module GUI.Momentu.Widget
     , padToSizeAlign
 
     , makeFocusableView
+    , makeFocusableWidget
 
     , respondToCursorPrefix
     , respondToCursorBy
@@ -251,9 +252,15 @@ makeSubId suffix = Lens.view Element.animIdPrefix <&> (++ suffix) <&> Id
 makeFocusableView ::
     (MonadReader env m, HasCursor env, Applicative f) =>
     m (Id -> View -> Widget (f Update))
-makeFocusableView =
+makeFocusableView = makeFocusableWidget <&> Lens.mapped . Lens.argument %~ fromView
+
+-- TODO: Describe why makeFocusableView is to be usually preferred
+makeFocusableWidget ::
+    (MonadReader env m, HasCursor env, Applicative f) =>
+    m (Id -> Widget (f Update) -> Widget (f Update))
+makeFocusableWidget =
     respondToCursorPrefix
-    <&> \respond myIdPrefix view ->
-    fromView view
+    <&> \respond myIdPrefix w ->
+    w
     & respond myIdPrefix
     & takesFocus (const (pure myIdPrefix))
