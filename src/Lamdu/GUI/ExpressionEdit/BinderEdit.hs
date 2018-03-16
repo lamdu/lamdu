@@ -1,4 +1,4 @@
-{-# LANGUAGE NamedFieldPuns, NoImplicitPrelude, OverloadedStrings, LambdaCase, FlexibleContexts #-}
+{-# LANGUAGE NamedFieldPuns, NoImplicitPrelude, OverloadedStrings, LambdaCase, FlexibleContexts, NoMonomorphismRestriction #-}
 module Lamdu.GUI.ExpressionEdit.BinderEdit
     ( make
     , makeBinderBodyEdit
@@ -18,6 +18,7 @@ import           Data.Property (Property)
 import qualified Data.Property as Property
 import           GUI.Momentu.Align (WithTextPos)
 import qualified GUI.Momentu.Align as Align
+import qualified GUI.Momentu.Direction as Direction
 import qualified GUI.Momentu.Draw as Draw
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
@@ -26,6 +27,8 @@ import           GUI.Momentu.Glue ((/-/), (/|/))
 import qualified GUI.Momentu.Glue as Glue
 import           GUI.Momentu.MetaKey (MetaKey(..), noMods, toModKey)
 import qualified GUI.Momentu.MetaKey as MetaKey
+import           GUI.Momentu.Rect (Rect(Rect))
+import qualified GUI.Momentu.Rect as Rect
 import           GUI.Momentu.Responsive (Responsive)
 import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.Responsive.Options as Options
@@ -158,6 +161,37 @@ blockEventMap =
     where
         dirKeys = [MetaKey.Key'Left, MetaKey.Key'Right] <&> MetaKey noMods
 
+makeScopeNavArrow ::
+    ( MonadReader env m, Theme.HasTheme env, TextView.HasStyle env
+    , Element.HasAnimIdPrefix env, Monad f, Monoid a
+    ) =>
+    (w -> T f a) -> Text -> Maybe w -> m (WithTextPos (Widget (T f a)))
+makeScopeNavArrow setScope arrowText mScopeId =
+    do
+        theme <- Lens.view Theme.theme
+        TextView.makeLabel arrowText
+            <&> Align.tValue %~ Widget.fromView
+            <&> Align.tValue %~
+                Widget.sizedState <. Widget._StateUnfocused . Widget.uMEnter
+                .@~ mEnter
+            & Reader.local
+            ( TextView.color .~
+                case mScopeId of
+                Nothing -> Theme.disabledColor theme
+                Just _ -> Theme.grammarColor (Theme.textColors theme)
+            )
+    where
+        mEnter size =
+            mScopeId
+            <&> setScope
+            <&> validate
+            where
+                r = Rect 0 size
+                res = Widget.EnterResult r 0
+                validate action (Direction.Point point)
+                    | point `Rect.isWithin` r = res action
+                validate _ _ = res mempty
+
 makeScopeNavEdit ::
     Monad m =>
     Sugar.Binder name (T m) expr -> Widget.Id -> ScopeCursor ->
@@ -167,21 +201,14 @@ makeScopeNavEdit ::
     )
 makeScopeNavEdit binder myId curCursor =
     do
-        theme <- Lens.view Theme.theme
-        let mkArrow (txt, mScopeId) =
-                TextView.makeLabel txt
-                & Reader.local
-                ( TextView.color .~
-                    case mScopeId of
-                    Nothing -> Theme.disabledColor theme
-                    Just _ -> Theme.grammarColor (Theme.textColors theme)
-                )
         evalConfig <- Lens.view Config.config <&> Config.eval
         Lens.view (Settings.settings . Settings.sAnnotationMode)
             >>= \case
             Evaluation ->
-                (Widget.makeFocusableView ?? myId)
-                <*> (mapM mkArrow scopes <&> Glue.hbox <&> (^. Align.tValue))
+                (Widget.makeFocusableWidget ?? myId)
+                <*> ( mapM (uncurry (makeScopeNavArrow setScope)) scopes
+                        <&> Glue.hbox <&> (^. Align.tValue)
+                    )
                 <&> Widget.weakerEvents (mkScopeEventMap leftKeys rightKeys `mappend` blockEventMap)
                 <&> Just
                 <&> (,) (mkScopeEventMap
@@ -192,13 +219,15 @@ makeScopeNavEdit binder myId curCursor =
         mkScopeEventMap l r = makeScopeEventMap l r curCursor setScope
         leftKeys = [MetaKey noMods MetaKey.Key'Left]
         rightKeys = [MetaKey noMods MetaKey.Key'Right]
+        setScope =
+            (mempty <$) .
+            Transaction.setP (MkProperty (binder ^. Sugar.bChosenScopeProp)) . Just
         scopes :: [(Text, Maybe Sugar.BinderParamScopeId)]
         scopes =
             [ ("◀", sMPrevParamScope curCursor)
             , (" ", Nothing)
             , ("▶", sMNextParamScope curCursor)
             ]
-        setScope = Transaction.setP (MkProperty (binder ^. Sugar.bChosenScopeProp)) . Just
 
 data IsScopeNavFocused = ScopeNavIsFocused | ScopeNavNotFocused
     deriving (Eq, Ord)
