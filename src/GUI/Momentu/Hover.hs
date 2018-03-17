@@ -175,10 +175,7 @@ addFrame =
 hover ::
     (MonadReader env m, Element a, HasStyle env, Element.HasAnimIdPrefix env) =>
     m (a -> Hover a)
-hover =
-    do
-        frame <- addFrame
-        pure (Hover . Element.hoverLayers . frame)
+hover = addFrame <&> ((Hover . Element.hoverLayers) .)
 
 sequenceHover :: Functor f => Hover (f a) -> f (Hover a)
 sequenceHover (Hover x) = x <&> Hover

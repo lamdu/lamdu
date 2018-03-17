@@ -105,22 +105,18 @@ drawText ::
     (MonadReader env m, HasStyle env) =>
     m (Text -> RenderedText (AnimId -> Anim.Frame))
 drawText =
-    do
-        s <- Lens.view style
-        pure $ \text -> nestedFrame s ("text" :: Text, fontRender s text)
+    Lens.view style <&> \s text -> nestedFrame s ("text" :: Text, fontRender s text)
 
 make ::
     (MonadReader env m, HasStyle env) =>
     m (Text -> AnimId -> WithTextPos View)
 make =
-    do
-        draw <- drawText
-        pure $ \text animId ->
-            let RenderedText textSize frame = draw text
-            in  WithTextPos
-                { _textTop = 0
-                , _tValue = View.make (textSize ^. bounding) (frame animId)
-                }
+    drawText <&> \draw text animId ->
+    let RenderedText textSize frame = draw text
+    in  WithTextPos
+        { _textTop = 0
+        , _tValue = View.make (textSize ^. bounding) (frame animId)
+        }
 
 makeLabel ::
     (MonadReader env m, HasStyle env, Element.HasAnimIdPrefix env) =>
