@@ -25,19 +25,21 @@ asyncThrowTo threadId exc = E.throwTo threadId exc & forkIOUnmasked & void
 
 forwardSynchronuousExceptions :: IO a -> IO (IO a)
 forwardSynchronuousExceptions action =
+    myThreadId
+    <&>
+    \selfId ->
+    action `ES.catch`
+    \exc@E.SomeException{} ->
     do
-        selfId <- myThreadId
-        pure $ action `ES.catch` \exc@E.SomeException{} ->
-            do
-                throwerThread <- myThreadId
-                show throwerThread ++ " forwarding exception to "
-                    ++ show selfId ++ ":"
-                    & putStrLn
-                print exc
-                    `E.catch` \E.SomeException{} ->
-                     "Failed to resolve exception string" & putStrLn
-                asyncThrowTo selfId exc
-                E.throwIO E.ThreadKilled
+        throwerThread <- myThreadId
+        show throwerThread ++ " forwarding exception to "
+            ++ show selfId ++ ":"
+            & putStrLn
+        print exc
+            `E.catch` \E.SomeException{} ->
+                "Failed to resolve exception string" & putStrLn
+        asyncThrowTo selfId exc
+        E.throwIO E.ThreadKilled
 
 withForkedIO :: IO () -> IO a -> IO a
 withForkedIO action =

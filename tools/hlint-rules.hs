@@ -49,5 +49,6 @@ warn = head (a ++ [b]) ==> fromMaybe b (a ^? traverse)
 warn = [a] & sequenceA ==> a <&> (:[])
 -- Lamdu style rules:
 warn = return ==> pure
+warn = do { a <- b; pure c } ==> b <&> \a -> c
 
 warn = mconcat [a | x <- take 1 b] ==> foldMap (\x -> a) (b ^? traverse)
