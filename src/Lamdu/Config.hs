@@ -5,7 +5,7 @@ module Lamdu.Config where
 import qualified Control.Lens as Lens
 #ifndef NO_CODE
 import           Data.Aeson.Utils
-    ( removeOptionalUnderscore, removeOptionalPrefix, removePrefix, decapitalize )
+    ( removeOptionalPrefix, removePrefix, decapitalize )
 #endif
 import           Data.Aeson.TH (deriveJSON)
 import qualified Data.Aeson.Types as Aeson
@@ -26,7 +26,7 @@ data Export = Export
     } deriving (Eq, Show)
 deriveJSON Aeson.defaultOptions
 #ifndef NO_CODE
-    {Aeson.fieldLabelModifier = removeOptionalUnderscore}
+    {Aeson.fieldLabelModifier = removeOptionalPrefix "_"}
 #endif
     ''Export
 
@@ -40,7 +40,7 @@ data Pane = Pane
     } deriving (Eq, Show)
 deriveJSON Aeson.defaultOptions
 #ifndef NO_CODE
-    {Aeson.fieldLabelModifier = decapitalize . removeOptionalPrefix "pane" . removeOptionalUnderscore}
+    {Aeson.fieldLabelModifier = decapitalize . removeOptionalPrefix "pane" . removeOptionalPrefix "_"}
 #endif
     ''Pane
 
@@ -55,7 +55,7 @@ data Completion = Completion
     } deriving (Eq, Show)
 deriveJSON Aeson.defaultOptions
 #ifndef NO_CODE
-    {Aeson.fieldLabelModifier = decapitalize . removePrefix "completion" . removeOptionalUnderscore}
+    {Aeson.fieldLabelModifier = decapitalize . removePrefix "_completion"}
 #endif
     ''Completion
 
@@ -67,7 +67,7 @@ data Eval = Eval
     } deriving (Eq, Show)
 deriveJSON Aeson.defaultOptions
 #ifndef NO_CODE
-    {Aeson.fieldLabelModifier = removeOptionalUnderscore}
+    {Aeson.fieldLabelModifier = removeOptionalPrefix "_"}
 #endif
     ''Eval
 
@@ -79,7 +79,7 @@ data Literal = Literal
     } deriving (Eq, Show)
 deriveJSON Aeson.defaultOptions
 #ifndef NO_CODE
-    {Aeson.fieldLabelModifier = decapitalize . removePrefix "literal" . removeOptionalUnderscore}
+    {Aeson.fieldLabelModifier = decapitalize . removePrefix "_literal"}
 #endif
     ''Literal
 
@@ -91,7 +91,7 @@ data Debug = Debug
     } deriving (Eq, Show)
 deriveJSON Aeson.defaultOptions
 #ifndef NO_CODE
-    {Aeson.fieldLabelModifier = decapitalize . removeOptionalPrefix "debug" . removeOptionalUnderscore}
+    {Aeson.fieldLabelModifier = decapitalize . removeOptionalPrefix "debug" . removeOptionalPrefix "_"}
 #endif
     ''Debug
 
@@ -146,7 +146,7 @@ data Config = Config
     } deriving (Eq, Show)
 deriveJSON Aeson.defaultOptions
 #ifndef NO_CODE
-    {Aeson.fieldLabelModifier = removeOptionalUnderscore}
+    {Aeson.fieldLabelModifier = removeOptionalPrefix "_"}
 #endif
     ''Config
 

@@ -10,7 +10,7 @@ module Lamdu.Config.Theme
 
 import qualified Control.Lens as Lens
 #ifndef NO_CODE
-import           Data.Aeson.Utils (decapitalize, removePrefix, removeOptionalUnderscore)
+import           Data.Aeson.Utils (decapitalize, removePrefix, removeOptionalPrefix)
 #endif
 import           Data.Aeson.TH (deriveJSON)
 import qualified Data.Aeson.Types as Aeson
@@ -125,7 +125,7 @@ data Theme = Theme
     } deriving (Eq, Show)
 deriveJSON Aeson.defaultOptions
 #ifndef NO_CODE
-    {Aeson.fieldLabelModifier = removeOptionalUnderscore}
+    {Aeson.fieldLabelModifier = removeOptionalPrefix "_"}
 #endif
     ''Theme
 
