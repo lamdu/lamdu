@@ -82,7 +82,7 @@ table ::
     WideLayoutOption (Compose t0 t1) (f State.Update)
 table =
     WideLayoutOption
-    { _wContexts = Lens.reindexed (const LayoutClear) (Lens._Wrapped . Lens.traversed . Lens.traversed)
+    { _wContexts = Lens.reindexed (const LayoutClear) Lens.traversed
     , _wLayout = const layout
     }
     where
