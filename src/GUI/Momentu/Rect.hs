@@ -7,7 +7,8 @@ module GUI.Momentu.Rect
     , width, height
     , bottomRight
     , center, centeredSize
-    , distances, rangeDistance, sqrDistance
+    , distances, rangeDistance
+    , sqrDistance, sqrPointDistance
     , isWithin
     ) where
 
@@ -122,6 +123,9 @@ rangeDistance range0 range1  =
 
 sqrDistance :: Rect -> Rect -> R
 sqrDistance r1 r2 = Vector2.sqrNorm (distances r1 r2)
+
+sqrPointDistance :: Vector2 R -> Rect -> R
+sqrPointDistance p r = Vector2.sqrNorm (distances (Rect p 0) r)
 
 isWithin :: Vector2 R -> Rect -> Bool
 isWithin v r =

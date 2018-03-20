@@ -13,7 +13,6 @@ import           Control.Lens (LensLike)
 import qualified Control.Lens as Lens
 import           Data.Maybe.Utils (unionMaybeWith)
 import           Data.Vector.Vector2 (Vector2(..))
-import qualified Data.Vector.Vector2 as Vector2
 import           GUI.Momentu.Animation (R, Size)
 import qualified GUI.Momentu.Animation as Anim
 import           GUI.Momentu.Direction (Direction)
@@ -97,7 +96,7 @@ glueStates ::
     Orientation -> Widget (f Update) -> Widget (f Update) -> Widget (f Update)
 glueStates orientation w0 w1 =
     w0
-    & wState .~ combineStates orientation dirPrev dirNext (w0 ^. wSize) (w0 ^. wState) (w1 ^. wState)
+    & wState .~ combineStates orientation dirPrev dirNext (w0 ^. wState) (w1 ^. wState)
     where
         (dirPrev, dirNext) =
             case orientation of
@@ -112,14 +111,14 @@ glueStates orientation w0 w1 =
 
 combineStates ::
     Functor f =>
-    Orientation -> NavDir -> NavDir -> Size ->
+    Orientation -> NavDir -> NavDir ->
     State (f Update) -> State (f Update) -> State (f Update)
-combineStates _ _ _ _ StateFocused{} StateFocused{} = error "joining two focused widgets!!"
-combineStates o _ _ sz (StateUnfocused u0) (StateUnfocused u1) =
+combineStates _ _ _ StateFocused{} StateFocused{} = error "joining two focused widgets!!"
+combineStates o _ _ (StateUnfocused u0) (StateUnfocused u1) =
     Unfocused e (u0 ^. uLayers <> u1 ^. uLayers) & StateUnfocused
     where
-        e = unionMaybeWith (combineEnters o sz) (u0 ^. uMEnter) (u1 ^. uMEnter)
-combineStates orientation _ nextDir _ (StateFocused f) (StateUnfocused u) =
+        e = unionMaybeWith (combineEnters o) (u0 ^. uMEnter) (u1 ^. uMEnter)
+combineStates orientation _ nextDir (StateFocused f) (StateUnfocused u) =
     f
     <&> fMEnterPoint %~ unionMaybeWith combineEnterPoints (u ^. uMEnter <&> (. Direction.Point))
     <&> fEventMap . Lens.imapped %@~ addEvents
@@ -138,53 +137,49 @@ combineStates orientation _ nextDir _ (StateFocused f) (StateUnfocused u) =
                 ^. enterResultEvent
                 & EventMap.keyPresses (dirKeys nextDir <&> ModKey mempty) (EventMap.Doc ["Navigation", "Move", dirName nextDir])
             & flip mappend
-combineStates orientation dirPrev dirNext sz (StateUnfocused u) (StateFocused f) =
-    combineStates orientation dirNext dirPrev sz (StateFocused f) (StateUnfocused u)
+combineStates orientation dirPrev dirNext (StateUnfocused u) (StateFocused f) =
+    combineStates orientation dirNext dirPrev (StateFocused f) (StateUnfocused u)
 
 combineEnters ::
-    Orientation -> Size ->
+    Orientation ->
     (Direction -> EnterResult a) -> (Direction -> EnterResult a) ->
     Direction -> EnterResult a
-combineEnters o sz e0 e1 dir = chooseEnter o sz dir (e0 dir) (e1 dir)
+combineEnters o e0 e1 dir = chooseEnter o dir (e0 dir) (e1 dir)
 
 combineEnterPoints ::
     (Vector2 R -> EnterResult a) -> (Vector2 R -> EnterResult a) ->
     Vector2 R -> EnterResult a
-combineEnterPoints e0 e1 p = closer Vector2.sqrNorm (Rect p 0) (e0 p) (e1 p)
+combineEnterPoints e0 e1 p = closerGeometric p (e0 p) (e1 p)
 
-closer ::
-    (Vector2 R -> R) -> Rect -> EnterResult a -> EnterResult a -> EnterResult a
-closer axis r r0 r1
-    | axis (Rect.distances r (r0 ^. enterResultRect)) <=
-      axis (Rect.distances r (r1 ^. enterResultRect)) = r0
+closerGeometric :: Vector2 R -> EnterResult a -> EnterResult a -> EnterResult a
+closerGeometric p r0 r1
+    | Rect.sqrPointDistance p (r0 ^. enterResultRect) <=
+      Rect.sqrPointDistance p (r1 ^. enterResultRect) = r0
     | otherwise = r1
 
-chooseEnter :: Orientation -> Size -> Direction -> EnterResult a -> EnterResult a -> EnterResult a
-chooseEnter _          _ Direction.Outside   r0 _  = r0 -- left-biased
-chooseEnter _          _ (Direction.Point p) r0 r1 =
-    closer Vector2.sqrNorm (Rect p 0) r0 r1
-chooseEnter Horizontal _ Direction.FromLeft{}  r0 _  = r0
-chooseEnter Vertical   _ Direction.FromAbove{} r0 _  = r0
-chooseEnter Horizontal _ Direction.FromRight{} _  r1 = r1
-chooseEnter Vertical   _ Direction.FromBelow{} _  r1 = r1
-chooseEnter Horizontal _ (Direction.FromAbove r) r0 r1 =
-    closer (^. _1) topBarrier r0 r1
-    where
-        topBarrier = Rect 0 0 & Rect.horizontalRange .~ r
-chooseEnter Horizontal sz (Direction.FromBelow r) r0 r1 =
-    closer (^. _1) bottomBarrier r0 r1
-    where
-        bottomBarrier =
-            Rect 0 0 & Rect.top .~ sz ^. _2 & Rect.horizontalRange .~ r
-chooseEnter Vertical _ (Direction.FromLeft r) r0 r1 =
-    closer (^. _2) leftBarrier r0 r1
-    where
-        leftBarrier = Rect 0 0 & Rect.verticalRange .~ r
-chooseEnter Vertical sz (Direction.FromRight r) r0 r1 =
-    closer (^. _2) rightBarrier r0 r1
-    where
-        rightBarrier =
-            Rect 0 0 & Rect.left .~ sz ^. _1 & Rect.verticalRange .~ r
+closer ::
+    Lens.ALens' Rect (Rect.Range R) -> Rect.Range R ->
+    EnterResult a -> EnterResult a -> EnterResult a
+closer axis r r0 r1
+    | Rect.rangeDistance r (r0 ^# enterResultRect . axis) <=
+      Rect.rangeDistance r (r1 ^# enterResultRect . axis) = r0
+    | otherwise = r1
+
+chooseEnter :: Orientation -> Direction -> EnterResult a -> EnterResult a -> EnterResult a
+chooseEnter _          Direction.Outside   r0 _  = r0 -- left-biased
+chooseEnter _          (Direction.Point p) r0 r1 = closerGeometric p r0 r1
+chooseEnter Horizontal Direction.FromLeft{}  r0 _  = r0
+chooseEnter Vertical   Direction.FromAbove{} r0 _  = r0
+chooseEnter Horizontal Direction.FromRight{} _  r1 = r1
+chooseEnter Vertical   Direction.FromBelow{} _  r1 = r1
+chooseEnter Horizontal (Direction.FromAbove r) r0 r1 =
+    closer Rect.horizontalRange r r0 r1
+chooseEnter Horizontal (Direction.FromBelow r) r0 r1 =
+    closer Rect.horizontalRange r r0 r1
+chooseEnter Vertical (Direction.FromLeft r) r0 r1 =
+    closer Rect.verticalRange r r0 r1
+chooseEnter Vertical (Direction.FromRight r) r0 r1 =
+    closer Rect.verticalRange r r0 r1
 
 stateLayers :: Lens.Setter' (State a) Element.Layers
 stateLayers = stateLens uLayers (Lens.mapped . fLayers)
