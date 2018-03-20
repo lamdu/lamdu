@@ -15,7 +15,6 @@ import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.State as GuiState
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Menu as Menu
-import qualified Lamdu.CharClassification as Chars
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
@@ -48,20 +47,10 @@ make fragment pl =
                 | isSelected = ExprGui.plNearestHoles .~ NearestHoles.none
                 | otherwise = id
         config <- Lens.view Config.config
-        let enterEventMap =
-                E.keysEventMapMovesCursor (Config.enterSubexpressionKeys config)
-                (E.Doc ["Navigation", "Enter fragment"]) (pure innerId)
-        let leaveEventMap =
-                E.keysEventMapMovesCursor (Config.leaveSubexpressionKeys config)
-                (E.Doc ["Navigation", "Leave fragment"]) (pure myId)
-        let addFocusEvents
-                | isSelected = (enterEventMap <>)
-                | otherwise = (<> leaveEventMap)
         fragmentExprGui <-
             fragment
             & Sugar.fExpr . Sugar.rPayload . Sugar.plData %~ mRemoveNextHoles
             & makeFragmentExprEdit & GuiState.assignCursor myId innerId
-            <&> Widget.widget . Widget.eventMapMaker . Lens.mapped %~ addFocusEvents
         hover <- Hover.hover
         searchAreaGui <-
             SearchArea.make (fragment ^. Sugar.fOptions) Nothing pl allowedFragmentSearchTerm
