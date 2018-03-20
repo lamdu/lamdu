@@ -73,7 +73,6 @@
         "caseTagColor": [0.5, 1.0, 0.5, 1.0],
         "argTagColor": [0.5, 0.5, 0.5, 1.0]
     },
-    "lightLambdaUnderlineColor": [1.0, 1.0, 1.0, 0.5],
     "narrowUnderlineWidth": 0.05,
     "wideUnderlineWidth": 0.15,
     "eval": {

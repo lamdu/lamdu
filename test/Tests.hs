@@ -4,11 +4,15 @@ import           TestInstances ()
 
 import qualified Control.Lens as Lens
 import qualified Data.Aeson as Aeson
+import qualified Data.Aeson.Diff as AesonDiff
+import qualified Data.Aeson.Encode.Pretty as AesonPretty
 import qualified Data.ByteString.Lazy as LBS
+import qualified Data.ByteString.Lazy.Char8 as LBSChar
 import           Data.Data.Lens (template)
 import           Data.List.NonEmpty (NonEmpty(..))
 import qualified Data.List.NonEmpty as NonEmpty
 import qualified Data.Map as Map
+import           Data.Proxy (Proxy(..), asProxyTypeOf)
 import           Data.Vector.Vector2 (Vector2(..))
 import           GUI.Momentu.Align (Aligned(..))
 import qualified GUI.Momentu.Align as Align
@@ -183,14 +187,33 @@ verticalDisambigTest =
             Options.disambiguationNone
             & Options.disambVert .~ Element.assymetricPad (Vector2 0.5 0) 0
 
+verifyJson :: (Aeson.FromJSON t, Aeson.ToJSON t) => Proxy t -> FilePath -> IO ()
+verifyJson proxy jsonPath =
+    do
+        configPath <- Paths.getDataFileName jsonPath
+        json <-
+            LBS.readFile configPath <&> Aeson.eitherDecode >>=
+            \case
+            Left err ->
+                do
+                    assertString ("Failed to load " <> configPath <> ": " <> err)
+                    fail "Test failure"
+            Right x -> pure x
+        case Aeson.fromJSON json <&> (`asProxyTypeOf` proxy) of
+            Aeson.Error msg -> assertString ("Failed decoding " <> configPath <> " from json: " <> msg)
+            Aeson.Success val
+                | rejson == json -> pure ()
+                | otherwise ->
+                    assertString ("json " <> configPath <> " contains unexpected data:\n" <>
+                        LBSChar.unpack (AesonPretty.encodePretty (Aeson.toJSON (AesonDiff.diff rejson json))))
+                where
+                    rejson = Aeson.toJSON val
+
 configParseTest :: IO ()
 configParseTest =
     do
-        configPath <- Paths.getDataFileName "config.json"
-        res <- LBS.readFile configPath <&> Aeson.eitherDecode'
-        case res :: Either String Config of
-            Left err -> assertString ("Failed to load " <> configPath <> ": " <> err)
-            Right{} -> pure ()
+        verifyJson (Proxy :: Proxy Config) "config.json"
+        Themes.getFiles >>= traverse_ (verifyJson (Proxy :: Proxy Theme))
 
 main :: IO ()
 main =
