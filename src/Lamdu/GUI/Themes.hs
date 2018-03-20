@@ -1,5 +1,5 @@
 -- | GUI choice of themes
-{-# LANGUAGE NoImplicitPrelude, OverloadedStrings #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 module Lamdu.GUI.Themes
     ( switchEventMap

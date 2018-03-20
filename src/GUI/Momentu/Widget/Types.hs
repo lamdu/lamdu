@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, TemplateHaskell, DeriveFunctor #-}
+{-# LANGUAGE TemplateHaskell #-}
 module GUI.Momentu.Widget.Types
     ( Widget(..), wState, wSize
     , State(..), _StateFocused, _StateUnfocused

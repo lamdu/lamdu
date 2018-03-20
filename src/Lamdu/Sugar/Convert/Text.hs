@@ -1,5 +1,4 @@
 -- | Convert Text ToNoms to their own sugar construct
-{-# LANGUAGE NoImplicitPrelude #-}
 module Lamdu.Sugar.Convert.Text
      ( text
      ) where

@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, OverloadedStrings #-}
+{-# LANGUAGE OverloadedStrings #-}
 module Lamdu.Builtins.PrimVal
     ( KnownPrim(..)
     , fromKnown, toKnown

@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, TemplateHaskell, OverloadedStrings #-}
+{-# LANGUAGE TemplateHaskell, OverloadedStrings #-}
 module Lamdu.Sugar.Names.NameGen
     ( NameGen, initial
     , VarInfo(..), existingName, newName

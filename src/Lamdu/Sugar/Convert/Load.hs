@@ -1,6 +1,5 @@
 -- | Load & infer expressions for sugar processing
 -- (unify with stored ParamLists, recursion support)
-{-# LANGUAGE NoImplicitPrelude #-}
 module Lamdu.Sugar.Convert.Load
     ( assertInferSuccess
     , inferDef

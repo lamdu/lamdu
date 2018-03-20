@@ -1,5 +1,4 @@
 -- | Migrate any older version to current
-{-# LANGUAGE OverloadedStrings, NoImplicitPrelude #-}
 module Lamdu.Data.Export.JSON.Migration
     ( migrateAsNeeded
     , currentVersion

@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, Rank2Types, OverloadedStrings, DeriveGeneric, TemplateHaskell, GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE Rank2Types, TemplateHaskell, GeneralizedNewtypeDeriving #-}
 module Lamdu.Data.Anchors
     ( Code(..), onCode
     , Revision(..), onRevision

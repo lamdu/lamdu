@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, DeriveFunctor, RankNTypes #-}
+{-# LANGUAGE RankNTypes #-}
 module Lamdu.Sugar.Names.CPS
     ( CPS(..), runcps
     , liftCPS

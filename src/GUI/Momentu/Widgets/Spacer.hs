@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, OverloadedStrings #-}
+{-# LANGUAGE OverloadedStrings #-}
 module GUI.Momentu.Widgets.Spacer
     ( make
     , makeHorizontal, makeVertical

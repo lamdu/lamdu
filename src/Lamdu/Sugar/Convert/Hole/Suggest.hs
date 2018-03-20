@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, OverloadedStrings #-}
+{-# LANGUAGE OverloadedStrings #-}
 module Lamdu.Sugar.Convert.Hole.Suggest
     ( value
     , valueConversion

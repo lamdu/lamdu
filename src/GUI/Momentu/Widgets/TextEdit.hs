@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, OverloadedStrings, TemplateHaskell, ViewPatterns, LambdaCase, NamedFieldPuns #-}
+{-# LANGUAGE TemplateHaskell, ViewPatterns, NamedFieldPuns #-}
 module GUI.Momentu.Widgets.TextEdit
     ( Style(..), sCursorColor, sCursorWidth, sTextViewStyle
     , HasStyle(..)

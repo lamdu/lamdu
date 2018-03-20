@@ -1,6 +1,6 @@
 -- | Cross platform ModKey.
 
-{-# LANGUAGE NoImplicitPrelude, OverloadedStrings, TemplateHaskell #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 module GUI.Momentu.MetaKey
     ( ModifierKeys(..), cmdOn, altOn, shiftOn, metaOn

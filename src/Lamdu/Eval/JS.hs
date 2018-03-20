@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, OverloadedStrings, TemplateHaskell #-}
+{-# LANGUAGE TemplateHaskell #-}
 -- | Run a process that evaluates given compiled
 module Lamdu.Eval.JS
     ( Evaluator

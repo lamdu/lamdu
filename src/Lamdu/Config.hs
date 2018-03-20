@@ -1,5 +1,5 @@
 {-# OPTIONS -O0 #-}
-{-# LANGUAGE NoImplicitPrelude, TemplateHaskell, CPP #-}
+{-# LANGUAGE TemplateHaskell, CPP #-}
 module Lamdu.Config
     ( Export(..), Pane(..), Completion(..)
     , Debug(..)

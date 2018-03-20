@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, TemplateHaskell, CPP #-}
+{-# LANGUAGE TemplateHaskell, CPP #-}
 -- | The themes/ config format
 module Lamdu.Config.Theme.ValAnnotation
     ( ValAnnotation(..)

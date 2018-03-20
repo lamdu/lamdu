@@ -1,4 +1,3 @@
-{-# LANGUAGE NoImplicitPrelude #-}
 module Lamdu.Prelude
     ( module X
     , traceId, traceIdVia, trace, traceShowM, traceM

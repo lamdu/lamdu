@@ -1,5 +1,3 @@
-{-# LANGUAGE NoImplicitPrelude #-}
-
 module Revision.Deltum.Db
     ( DB, DB.withDB, DB.defaultOptions, DB.Options(..)
     , lookup

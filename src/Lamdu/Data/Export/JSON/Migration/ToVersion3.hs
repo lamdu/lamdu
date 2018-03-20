@@ -6,7 +6,7 @@
 --        and "Infix" with {"Infix": [<TAG>, <TAG>]}
 --    (presentation modes now mention the special tags)
 
-{-# LANGUAGE NoImplicitPrelude, OverloadedStrings #-}
+{-# LANGUAGE OverloadedStrings #-}
 module Lamdu.Data.Export.JSON.Migration.ToVersion3 (migrate) where
 
 import qualified Control.Lens as Lens

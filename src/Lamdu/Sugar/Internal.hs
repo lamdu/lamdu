@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, DeriveTraversable, TemplateHaskell #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 module Lamdu.Sugar.Internal
     ( ConvertPayload(..), pStored, pUserData

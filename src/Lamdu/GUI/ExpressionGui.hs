@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, TemplateHaskell #-}
+{-# LANGUAGE TemplateHaskell #-}
 module Lamdu.GUI.ExpressionGui
     ( ExpressionGui
     , SugarExpr

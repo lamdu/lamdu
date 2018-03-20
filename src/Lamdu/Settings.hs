@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, TemplateHaskell, OverloadedStrings #-}
+{-# LANGUAGE TemplateHaskell, OverloadedStrings #-}
 module Lamdu.Settings
     ( AnnotationMode(..)
     , Settings(..), sAnnotationMode, sSelectedTheme

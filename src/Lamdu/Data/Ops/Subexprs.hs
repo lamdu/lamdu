@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, RankNTypes #-}
+{-# LANGUAGE RankNTypes #-}
 module Lamdu.Data.Ops.Subexprs
     ( onMatchingSubexprs
     , onMatchingSubexprsWithPath

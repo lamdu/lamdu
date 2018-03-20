@@ -1,4 +1,4 @@
-{-# LANGUAGE MultiParamTypeClasses, FlexibleInstances, TypeFamilies, DeriveGeneric, DeriveTraversable #-}
+{-# LANGUAGE MultiParamTypeClasses, FlexibleInstances, TypeFamilies #-}
 module Data.Vector.Vector2
     ( Vector2(Vector2)
     , curry, uncurry, sqrNorm

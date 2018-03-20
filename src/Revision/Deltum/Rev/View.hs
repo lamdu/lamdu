@@ -1,4 +1,3 @@
-{-# LANGUAGE NoImplicitPrelude #-}
 module Revision.Deltum.Rev.View
     ( View, curVersion, branch, setBranch, move, new, store
     ) where

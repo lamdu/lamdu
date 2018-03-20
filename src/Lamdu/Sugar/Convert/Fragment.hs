@@ -1,4 +1,3 @@
-{-# LANGUAGE NoImplicitPrelude #-}
 -- | Convert applied holes to Fragments
 
 module Lamdu.Sugar.Convert.Fragment

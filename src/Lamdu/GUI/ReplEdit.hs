@@ -1,5 +1,5 @@
 -- | REPL Edit
-{-# LANGUAGE NoImplicitPrelude, NamedFieldPuns, DisambiguateRecordFields, OverloadedStrings #-}
+{-# LANGUAGE NamedFieldPuns, DisambiguateRecordFields, OverloadedStrings #-}
 module Lamdu.GUI.ReplEdit
     ( ExportRepl(..), make
     ) where

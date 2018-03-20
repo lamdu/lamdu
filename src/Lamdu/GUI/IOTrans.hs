@@ -4,7 +4,7 @@
 -- C. A final *main-thread* IO action (allowed to depend on B) (e.g:
 --    to write a JSON file)
 
-{-# LANGUAGE NoImplicitPrelude, TemplateHaskell, DeriveFunctor #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 module Lamdu.GUI.IOTrans
     ( IOTrans(..), ioTrans, liftTrans, liftIO

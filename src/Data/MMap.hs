@@ -1,5 +1,5 @@
 -- | A Data.Map wrapper with saner Semigroup/Monoid instances
-{-# LANGUAGE TemplateHaskell, GeneralizedNewtypeDeriving, TypeFamilies, DeriveTraversable, FlexibleInstances, MultiParamTypeClasses #-}
+{-# LANGUAGE TemplateHaskell, GeneralizedNewtypeDeriving, TypeFamilies, FlexibleInstances, MultiParamTypeClasses #-}
 module Data.MMap
     ( MMap(..), _MMap
     , fromList

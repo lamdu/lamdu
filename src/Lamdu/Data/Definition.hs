@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, DeriveGeneric, DeriveTraversable, TemplateHaskell, OverloadedStrings #-}
+{-# LANGUAGE TemplateHaskell, OverloadedStrings #-}
 module Lamdu.Data.Definition
     ( FFIName(..)
     , Expr(..), expr, exprFrozenDeps, exprTags

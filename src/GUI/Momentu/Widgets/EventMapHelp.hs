@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, OverloadedStrings, DeriveFunctor, DeriveTraversable, TemplateHaskell, LambdaCase, TypeFamilies #-}
+{-# LANGUAGE TemplateHaskell, TypeFamilies #-}
 module GUI.Momentu.Widgets.EventMapHelp
     ( make
     , IsHelpShown(..)

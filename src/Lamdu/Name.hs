@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, TemplateHaskell, OverloadedStrings #-}
+{-# LANGUAGE TemplateHaskell, OverloadedStrings #-}
 module Lamdu.Name
     ( Stored, CollisionSuffix
     , Collision(..), _NoCollision, _Collision

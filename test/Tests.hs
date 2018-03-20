@@ -1,5 +1,3 @@
-{-# LANGUAGE NoImplicitPrelude, LambdaCase #-}
-
 module Main where
 
 import           TestInstances ()

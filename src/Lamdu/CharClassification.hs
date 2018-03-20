@@ -1,4 +1,3 @@
-{-# LANGUAGE NoImplicitPrelude #-}
 
 module Lamdu.CharClassification
     ( operator, bracket, digit, hexDigit

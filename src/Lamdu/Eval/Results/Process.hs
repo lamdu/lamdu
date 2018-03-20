@@ -1,4 +1,3 @@
-{-# LANGUAGE NoImplicitPrelude, LambdaCase #-}
 module Lamdu.Eval.Results.Process
     ( addTypes
     ) where

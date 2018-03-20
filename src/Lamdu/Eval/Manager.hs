@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, LambdaCase, TemplateHaskell #-}
+{-# LANGUAGE TemplateHaskell #-}
 module Lamdu.Eval.Manager
     ( Evaluator
     , NewParams(..), new

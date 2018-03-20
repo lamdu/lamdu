@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, OverloadedStrings #-}
+{-# LANGUAGE OverloadedStrings #-}
 -- | Choice widget for presentation mode
 
 module Lamdu.GUI.PresentationModeEdit

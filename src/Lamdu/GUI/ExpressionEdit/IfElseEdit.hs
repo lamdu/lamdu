@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, OverloadedStrings, DeriveTraversable, TemplateHaskell #-}
+{-# LANGUAGE TemplateHaskell #-}
 module Lamdu.GUI.ExpressionEdit.IfElseEdit
     ( make
     ) where

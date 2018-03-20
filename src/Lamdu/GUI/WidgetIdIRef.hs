@@ -2,7 +2,6 @@
 -- GUI sees. GUI shouldn't see IRefs directly at all
 
 -- This module is used to avoid a dependency on WidgetIds by tests
-{-# LANGUAGE NoImplicitPrelude #-}
 module Lamdu.GUI.WidgetIdIRef
     ( fromIRef
     ) where

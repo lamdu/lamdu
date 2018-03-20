@@ -1,5 +1,5 @@
 -- | The Lamdu status bar
-{-# LANGUAGE NoImplicitPrelude, OverloadedStrings, FlexibleContexts #-}
+{-# LANGUAGE FlexibleContexts #-}
 module Lamdu.GUI.StatusBar
     ( make
     ) where

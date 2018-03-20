@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, TemplateHaskell, DeriveTraversable #-}
+{-# LANGUAGE TemplateHaskell #-}
 module Lamdu.Sugar.Types.Expression
     ( Body(..)
         , _BodyLam, _BodyLabeledApply, _BodySimpleApply

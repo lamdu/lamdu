@@ -1,4 +1,3 @@
-{-# LANGUAGE NoImplicitPrelude, DeriveFunctor #-}
 module Lamdu.Precedence
     ( Precedence(..)
     , HasPrecedence(..)

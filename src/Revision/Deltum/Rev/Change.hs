@@ -1,4 +1,3 @@
-{-# LANGUAGE NoImplicitPrelude, DeriveGeneric #-}
 module Revision.Deltum.Rev.Change (Key, Value, Change(..))
 where
 

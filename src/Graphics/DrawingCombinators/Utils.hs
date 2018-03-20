@@ -1,5 +1,5 @@
 {-# OPTIONS -fno-warn-orphans #-}
-{-# LANGUAGE TemplateHaskell, StandaloneDeriving, DeriveTraversable, DeriveGeneric, OverloadedStrings #-}
+{-# LANGUAGE TemplateHaskell, StandaloneDeriving, OverloadedStrings #-}
 module Graphics.DrawingCombinators.Utils
     ( Image
     , square

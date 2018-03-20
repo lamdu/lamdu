@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, TemplateHaskell #-}
+{-# LANGUAGE TemplateHaskell #-}
 module Lamdu.GUI.VersionControl.Config
     ( Config(..), HasConfig(..)
     , Theme(..), HasTheme(..)

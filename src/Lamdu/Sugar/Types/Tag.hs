@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, TemplateHaskell, DeriveTraversable #-}
+{-# LANGUAGE TemplateHaskell #-}
 module Lamdu.Sugar.Types.Tag
     ( Tag(..), tagName, tagInfo, tagSelection
     , TagInfo(..), tagVal, tagInstance

@@ -1,4 +1,3 @@
-{-# LANGUAGE NoImplicitPrelude #-}
 module Lamdu.Sugar.Convert.Inject
     ( convert
     ) where

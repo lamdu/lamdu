@@ -1,4 +1,3 @@
-{-# LANGUAGE NoImplicitPrelude, DeriveTraversable #-}
 module GUI.Momentu.Widgets.StdKeys (DirKeys(..), stdDirKeys) where
 
 import qualified GUI.Momentu.MetaKey as MetaKey

@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell, DeriveTraversable, NoImplicitPrelude, NamedFieldPuns, OverloadedStrings, LambdaCase #-}
+{-# LANGUAGE TemplateHaskell, NamedFieldPuns #-}
 module GUI.Momentu.Main
     ( mainLoopWidget
     , Config(..), EventResult(..), M(..), m

@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, DeriveGeneric, DeriveTraversable, TemplateHaskell #-}
+{-# LANGUAGE TemplateHaskell #-}
 module Lamdu.Data.Meta
     ( DefinitionState(..)
     , SpecialArgs(..), PresentationMode

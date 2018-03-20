@@ -33,6 +33,7 @@ source-repository head
 
 Library
   hs-Source-Dirs: src
+  extensions: NoImplicitPrelude, OverloadedStrings, PartialTypeSignatures, LambdaCase, DeriveTraversable, DeriveGeneric
   Build-Depends:    AlgoW
                   , aeson >= 1.1
                   , aeson-pretty
@@ -319,13 +320,15 @@ Library
   ghc-prof-options:    -fprof-auto -fprof-cafs
 
 Executable lamdu
-  build-depends: Lamdu, base, directory, filepath, lens, OpenGL
   main-is: src/Lamdu/Main.hs
+  extensions: NoImplicitPrelude, OverloadedStrings, PartialTypeSignatures, LambdaCase, DeriveTraversable, DeriveGeneric
+  build-depends: Lamdu, base, directory, filepath, lens, OpenGL
   ghc-options: -O2 -Wall -Widentities -Wimplicit-prelude -Wmissing-home-modules -Wincomplete-patterns -Wnoncanonical-monad-instances -Wsemigroup -Wincomplete-record-updates -Wredundant-constraints -threaded
   ghc-prof-options: -fprof-auto -fprof-cafs -rtsopts
 
 Test-Suite Tests
   type: exitcode-stdio-1.0
+  extensions: NoImplicitPrelude, OverloadedStrings, PartialTypeSignatures, LambdaCase, DeriveTraversable, DeriveGeneric
   hs-source-dirs: test
   main-is: Tests.hs
   other-modules: TestInstances

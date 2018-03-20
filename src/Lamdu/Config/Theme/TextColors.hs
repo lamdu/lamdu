@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, TemplateHaskell #-}
+{-# LANGUAGE TemplateHaskell #-}
 -- | The themes/ config format
 module Lamdu.Config.Theme.TextColors
     ( TextColors(..)

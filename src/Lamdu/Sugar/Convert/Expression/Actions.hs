@@ -1,4 +1,3 @@
-{-# LANGUAGE NoImplicitPrelude #-}
 module Lamdu.Sugar.Convert.Expression.Actions
     ( addActions, makeAnnotation, makeActions
     ) where

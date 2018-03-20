@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, TemplateHaskell #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 module GUI.Momentu.Responsive.Options
     ( WideLayoutOption(..), wContexts, wLayout

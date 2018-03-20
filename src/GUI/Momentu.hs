@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, PatternSynonyms #-}
+{-# LANGUAGE PatternSynonyms #-}
 -- | A convenience API module that re-exports the functionality in the Momentu library
 
 module GUI.Momentu

@@ -1,5 +1,5 @@
 #!runghc -isrc -idist/build/autogen
-{-# LANGUAGE LambdaCase, ScopedTypeVariables, NoImplicitPrelude #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 import           Control.Lens.Operators
 import qualified Data.Aeson as Aeson

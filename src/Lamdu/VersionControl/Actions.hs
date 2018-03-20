@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, RankNTypes #-}
+{-# LANGUAGE RankNTypes #-}
 module Lamdu.VersionControl.Actions
     ( Actions(..), hoist
     ) where

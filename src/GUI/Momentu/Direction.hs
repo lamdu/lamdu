@@ -1,4 +1,3 @@
-{-# LANGUAGE NoImplicitPrelude #-}
 module GUI.Momentu.Direction
     ( Direction(..), translate, scale
     ) where

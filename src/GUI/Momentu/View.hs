@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, TemplateHaskell, MultiParamTypeClasses, TypeFamilies #-}
+{-# LANGUAGE TemplateHaskell, MultiParamTypeClasses, TypeFamilies #-}
 module GUI.Momentu.View
     ( View(..), vSize, vAnimLayers, make
     , animFrames

@@ -5,7 +5,6 @@
 -- 2. Replace ["Infix",?] with "Infix"
 --    (precedence is now decided by the operator char instead)
 
-{-# LANGUAGE NoImplicitPrelude, OverloadedStrings, LambdaCase #-}
 module Lamdu.Data.Export.JSON.Migration.ToVersion2 (migrate) where
 
 import qualified Control.Lens as Lens

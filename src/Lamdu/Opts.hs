@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, TemplateHaskell, FlexibleContexts, RecordWildCards #-}
+{-# LANGUAGE TemplateHaskell, FlexibleContexts, RecordWildCards #-}
 module Lamdu.Opts
     ( EditorOpts(..), eoWindowMode, eoCopyJSOutputPath, eoWindowTitle, eoSubpixelEnabled
     , Command(..), _DeleteDb, _Undo, _Editor

@@ -1,4 +1,3 @@
-{-# LANGUAGE NoImplicitPrelude #-}
 module Lamdu.Sugar.Convert.Nominal
     ( convertFromNom, convertToNom
     ) where

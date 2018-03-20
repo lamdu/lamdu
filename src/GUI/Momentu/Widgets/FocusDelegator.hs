@@ -1,4 +1,3 @@
-{-# LANGUAGE NoImplicitPrelude #-}
 module GUI.Momentu.Widgets.FocusDelegator
     ( FocusEntryTarget(..)
     , Config(..)

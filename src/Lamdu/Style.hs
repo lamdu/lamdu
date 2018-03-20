@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, TemplateHaskell, NamedFieldPuns, OverloadedStrings, DisambiguateRecordFields #-}
+{-# LANGUAGE TemplateHaskell, NamedFieldPuns, DisambiguateRecordFields #-}
 module Lamdu.Style
     ( Style(..), makeStyle
     , HasStyle(..)

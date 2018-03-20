@@ -1,4 +1,3 @@
-{-# LANGUAGE NoImplicitPrelude, LambdaCase #-}
 module Lamdu.Data.Ops
     ( newHole, applyHoleTo, setToAppliedHole
     , replace, replaceWithHole, setToHole, lambdaWrap, redexWrap

@@ -1,6 +1,5 @@
 -- | TextEdit creation functions that are based on Property instead of
 -- events yielding new texts
-{-# LANGUAGE NoImplicitPrelude #-}
 module GUI.Momentu.Widgets.TextEdit.Property
     ( make, makeLineEdit, makeWordEdit
     ) where

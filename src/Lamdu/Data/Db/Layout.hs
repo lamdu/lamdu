@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, OverloadedStrings, GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 module Lamdu.Data.Db.Layout
     ( DbM, runDbTransaction
     , ViewM, runViewTransaction

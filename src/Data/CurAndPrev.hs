@@ -1,4 +1,4 @@
-{-# LANGUAGE DeriveTraversable, TemplateHaskell #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 module Data.CurAndPrev
     ( CurAndPrev(..), current, prev

@@ -1,5 +1,4 @@
 -- | Widget to edit the settings
-{-# LANGUAGE NoImplicitPrelude #-}
 module Lamdu.GUI.Settings
      ( forStatusBar
      , eventMap

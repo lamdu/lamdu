@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, TemplateHaskell, DeriveTraversable, RecordWildCards #-}
+{-# LANGUAGE TemplateHaskell, RecordWildCards #-}
 module Lamdu.Sugar.Types.Binder
     ( -- Annotations
       EvaluationResult

@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, GeneralizedNewtypeDeriving, OverloadedStrings, FlexibleInstances, FlexibleContexts, MultiParamTypeClasses, TemplateHaskell, DeriveTraversable #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving, FlexibleInstances, FlexibleContexts, MultiParamTypeClasses, TemplateHaskell #-}
 module Lamdu.GUI.TypeView
     ( make
     ) where

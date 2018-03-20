@@ -3,8 +3,6 @@
 --
 -- The higher level GUI.Momentu.MainLoop builds upon this main-loop.
 
-{-# LANGUAGE NoImplicitPrelude, LambdaCase #-}
-
 module GUI.Momentu.Main.Image
     ( mainLoop, Handlers(..)
     , windowSize

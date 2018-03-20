@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, OverloadedStrings #-}
+{-# LANGUAGE OverloadedStrings #-}
 module Lamdu.GUI.WidgetIds
     ( module Lamdu.GUI.WidgetIds
     , module Lamdu.GUI.WidgetIdIRef

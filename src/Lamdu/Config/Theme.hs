@@ -1,5 +1,5 @@
 {-# OPTIONS -O0 #-}
-{-# LANGUAGE NoImplicitPrelude, TemplateHaskell, CPP #-}
+{-# LANGUAGE TemplateHaskell, CPP #-}
 -- | The themes/ config format
 module Lamdu.Config.Theme
     ( module Exported

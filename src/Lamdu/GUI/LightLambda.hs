@@ -1,4 +1,3 @@
-{-# LANGUAGE NoImplicitPrelude #-}
 module Lamdu.GUI.LightLambda
     ( withUnderline
     ) where

@@ -5,7 +5,6 @@
 -- * 0 (or none): any db schemas prior to defining the schema versions.
 -- * 1: The schema version at 2018.02.05, like version 0 but verified.
 
-{-# LANGUAGE NoImplicitPrelude, OverloadedStrings, LambdaCase #-}
 module Lamdu.Data.Db.Migration
     ( migration
     ) where

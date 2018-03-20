@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, NamedFieldPuns, OverloadedStrings #-}
+{-# LANGUAGE NamedFieldPuns, OverloadedStrings #-}
 module Lamdu.Sugar.Convert.Apply
     ( convert
     ) where

@@ -1,4 +1,3 @@
-{-# LANGUAGE NoImplicitPrelude #-}
 module Lamdu.VersionControl
     ( makeActions, runAction, runEvent, getVersion
     ) where

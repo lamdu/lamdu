@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, OverloadedStrings, DisambiguateRecordFields #-}
+{-# LANGUAGE DisambiguateRecordFields #-}
 module Lamdu.GUI.ExpressionEdit.ApplyEdit
     ( makeSimple, makeLabeled
     ) where

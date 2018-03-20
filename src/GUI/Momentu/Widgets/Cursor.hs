@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, OverloadedStrings, NamedFieldPuns #-}
+{-# LANGUAGE NamedFieldPuns #-}
 
 -- | Render a widget and add a cursor to its frame (according to its focus area).
 -- (This is only actually used in GUI.Momentu.Main)

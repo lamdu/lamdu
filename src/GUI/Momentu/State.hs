@@ -2,7 +2,7 @@
 -- TODO: Check if GHC bug reported on that.
 {-# OPTIONS_GHC -Wno-redundant-constraints  #-}
 
-{-# LANGUAGE NoImplicitPrelude, TemplateHaskell, DeriveGeneric, DefaultSignatures #-}
+{-# LANGUAGE TemplateHaskell, DefaultSignatures #-}
 
 module GUI.Momentu.State
     ( VirtualCursor(..), vcRect

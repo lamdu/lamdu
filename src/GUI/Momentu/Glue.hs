@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, TypeFamilies, MultiParamTypeClasses, ConstraintKinds #-}
+{-# LANGUAGE TypeFamilies, MultiParamTypeClasses, ConstraintKinds #-}
 module GUI.Momentu.Glue
     ( Glue(..), GluesTo
     , (/|/), (/-/)

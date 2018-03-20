@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, OverloadedStrings, RankNTypes #-}
+{-# LANGUAGE RankNTypes #-}
 module Lamdu.GUI.VersionControl
     ( makeBranchSelector, eventMap
     ) where

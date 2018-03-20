@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, OverloadedStrings, DeriveTraversable, FlexibleContexts, DisambiguateRecordFields #-}
+{-# LANGUAGE FlexibleContexts, DisambiguateRecordFields #-}
 module GUI.Momentu.Widgets.Grid
     ( make, makeWithKeys
     , Keys(..), stdKeys

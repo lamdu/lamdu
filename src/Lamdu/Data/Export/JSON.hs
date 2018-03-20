@@ -1,5 +1,5 @@
 -- | Import/Export JSON support
-{-# LANGUAGE NoImplicitPrelude, TemplateHaskell, OverloadedStrings, FlexibleContexts, LambdaCase #-}
+{-# LANGUAGE TemplateHaskell, FlexibleContexts #-}
 module Lamdu.Data.Export.JSON
     ( fileExportRepl, jsonExportRepl
     , fileExportAll, verifyAll

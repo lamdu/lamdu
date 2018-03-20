@@ -1,4 +1,3 @@
-{-# LANGUAGE NoImplicitPrelude #-}
 -- TODO: Split/rename to more generic (non-sugar) modules
 module Lamdu.Expr.GenIds
     ( randomizeExprAndParams

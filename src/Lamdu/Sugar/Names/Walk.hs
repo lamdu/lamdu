@@ -1,4 +1,4 @@
-{-# LANGUAGE LambdaCase, NoImplicitPrelude, FlexibleContexts, TypeFamilies, RecordWildCards, NamedFieldPuns, TemplateHaskell #-}
+{-# LANGUAGE FlexibleContexts, TypeFamilies, RecordWildCards, NamedFieldPuns, TemplateHaskell #-}
 module Lamdu.Sugar.Names.Walk
     ( MonadNaming(..)
     , NameType(..), _GlobalDef, _TaggedVar, _TaggedNominal, _Tag

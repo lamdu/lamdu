@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, TemplateHaskell, Rank2Types #-}
+{-# LANGUAGE TemplateHaskell, Rank2Types #-}
 module Data.Property
     ( Property(..), pVal, pSet, value, set
     , compose, pureCompose, composeLens

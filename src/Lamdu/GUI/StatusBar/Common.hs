@@ -1,5 +1,4 @@
 -- | Common utilities for status bar widgets
-{-# LANGUAGE NoImplicitPrelude #-}
 module Lamdu.GUI.StatusBar.Common
     ( hspacer
     ) where

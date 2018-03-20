@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, GeneralizedNewtypeDeriving, KindSignatures #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving, KindSignatures #-}
 
 module Revision.Deltum.IRef
     ( IRef, uuid, unsafeFromUUID

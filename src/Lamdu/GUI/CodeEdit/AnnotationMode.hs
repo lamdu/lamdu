@@ -1,5 +1,4 @@
 -- | AnnotationMode for the subtext(annotations)
-{-# LANGUAGE NoImplicitPrelude #-}
 module Lamdu.GUI.CodeEdit.AnnotationMode
     ( AnnotationMode(..)
     , initial

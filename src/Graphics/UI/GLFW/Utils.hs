@@ -1,4 +1,3 @@
-{-# LANGUAGE LambdaCase #-}
 module Graphics.UI.GLFW.Utils
     ( withGLFW
     , createWindow

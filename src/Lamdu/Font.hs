@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, TemplateHaskell, DeriveGeneric, DeriveTraversable #-}
+{-# LANGUAGE TemplateHaskell #-}
 module Lamdu.Font
     ( FontSize, Fonts(..)
     , LCDSubPixelEnabled(..), new

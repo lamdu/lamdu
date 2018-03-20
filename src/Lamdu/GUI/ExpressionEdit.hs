@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, OverloadedStrings, TypeFamilies #-}
+{-# LANGUAGE TypeFamilies #-}
 module Lamdu.GUI.ExpressionEdit
     ( make
     ) where

@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, TemplateHaskell, DeriveTraversable #-}
+{-# LANGUAGE TemplateHaskell #-}
 module Lamdu.Sugar.Types.GetVar
     ( NameRef(..), nrName, nrGotoDefinition
     , ParamRef(..), pNameRef, pBinderMode

@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell, DeriveFoldable, DeriveTraversable #-}
+{-# LANGUAGE TemplateHaskell #-}
 module Data.Set.Ordered
     ( OrderedSet
     , singleton

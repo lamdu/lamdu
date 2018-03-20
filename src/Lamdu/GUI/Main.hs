@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, OverloadedStrings, FlexibleContexts #-}
+{-# LANGUAGE FlexibleContexts #-}
 module Lamdu.GUI.Main
     ( make
     , CodeEdit.ExportRepl(..)

@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, DeriveGeneric, TemplateHaskell #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 module GUI.Momentu.Animation
     ( R, Size

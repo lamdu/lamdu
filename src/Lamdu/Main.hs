@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, TemplateHaskell, OverloadedStrings, Rank2Types, DisambiguateRecordFields, NamedFieldPuns, MultiParamTypeClasses, LambdaCase #-}
+{-# LANGUAGE TemplateHaskell, Rank2Types, DisambiguateRecordFields, NamedFieldPuns, MultiParamTypeClasses #-}
 module Main
     ( main
     ) where

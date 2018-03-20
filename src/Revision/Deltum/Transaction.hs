@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, GeneralizedNewtypeDeriving, RankNTypes, TemplateHaskell #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving, RankNTypes, TemplateHaskell #-}
 
 module Revision.Deltum.Transaction
     ( Transaction, run

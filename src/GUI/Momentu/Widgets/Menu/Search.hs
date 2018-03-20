@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, OverloadedStrings, TemplateHaskell #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 module GUI.Momentu.Widgets.Menu.Search
     ( emptyPickEventMap
