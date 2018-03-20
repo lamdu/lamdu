@@ -24,12 +24,14 @@ import qualified GUI.Momentu.Widgets.GridView as GridView
 import           Lamdu.Calc.Identifier (identHex)
 import qualified Lamdu.Calc.Type.Scheme as Scheme
 import qualified Lamdu.Calc.Val as V
+import           Lamdu.Config (Config)
 import qualified Lamdu.Config.Sampler as ConfigSampler
 import           Lamdu.Config.Theme (Theme)
 import qualified Lamdu.Data.Export.JSON as JsonFormat
 import qualified Lamdu.Data.Export.JSON.Codec as JsonCodec
 import qualified Lamdu.Data.Definition as Def
 import qualified Lamdu.Infer as Infer
+import qualified Lamdu.Paths as Paths
 import qualified Lamdu.Themes as Themes
 import           System.FilePath (takeFileName)
 import           Text.PrettyPrint.HughesPJClass (prettyShow)
@@ -181,6 +183,15 @@ verticalDisambigTest =
             Options.disambiguationNone
             & Options.disambVert .~ Element.assymetricPad (Vector2 0.5 0) 0
 
+configParseTest :: IO ()
+configParseTest =
+    do
+        configPath <- Paths.getDataFileName "config.json"
+        res <- LBS.readFile configPath <&> Aeson.eitherDecode'
+        case res :: Either String Config of
+            Left err -> assertString ("Failed to load " <> configPath <> ": " <> err)
+            Right{} -> pure ()
+
 main :: IO ()
 main =
     defaultMainWithOpts
@@ -188,6 +199,7 @@ main =
     , testCase "color-scheme" colorSchemeTest
     , testCase "no-broken-defs" verifyNoBrokenDefsTest
     , testCase "vertical-disambguation" verticalDisambigTest
+    , testCase "config-parses" configParseTest
     , testProperty "grid-sensible-size" propGridSensibleSize
         & plusTestOptions mempty
         { topt_maximum_generated_tests = Just 1000
