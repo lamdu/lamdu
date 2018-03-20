@@ -4,7 +4,6 @@ module GUI.Momentu.Widgets.Grid
     , Keys(..), stdKeys
     ) where
 
-import           Control.Applicative (liftA2)
 import qualified Control.Lens as Lens
 import           Control.Monad (msum)
 import           Data.Foldable (toList)
@@ -19,6 +18,7 @@ import           GUI.Momentu.Direction (Direction(..))
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as EventMap
+import           GUI.Momentu.Glue (Orientation(..))
 import           GUI.Momentu.MetaKey (MetaKey(..), noMods)
 import qualified GUI.Momentu.MetaKey as MetaKey
 import           GUI.Momentu.ModKey (ModKey)
@@ -27,18 +27,13 @@ import qualified GUI.Momentu.Rect as Rect
 import qualified GUI.Momentu.State as State
 import           GUI.Momentu.Widget (R, Widget(Widget))
 import qualified GUI.Momentu.Widget as Widget
+import qualified GUI.Momentu.Widget.Instances as WidgetGlue
 import qualified GUI.Momentu.Widgets.GridView as GridView
 import           GUI.Momentu.Widgets.StdKeys (DirKeys(..), stdDirKeys)
 
 import           Lamdu.Prelude
 
 type Cursor = Vector2 Int
-
-length2d :: (Foldable vert, Foldable horiz) => vert (horiz a) -> Vector2 Int
-length2d xs = Vector2 (foldl' max 0 (toList xs <&> length)) (length xs)
-
-capCursor :: Vector2 Int -> Vector2 Int -> Vector2 Int
-capCursor size = fmap (max 0) . liftA2 min (subtract 1 <$> size)
 
 data NavDests a = NavDests
     { leftOfCursor
@@ -56,21 +51,26 @@ mkNavDests ::
     Cursor -> State.VirtualCursor ->
     [[Maybe (Direction -> Widget.EnterResult (f State.Update))]] ->
     NavDests (f State.Update)
-mkNavDests cursor@(Vector2 cursorX cursorY) virtCursor mEnterss =
+mkNavDests (Vector2 cursorX cursorY) virtCursor rows =
     NavDests
-    { leftOfCursor    = take cursorX curRow    & reverse & enterHoriz FromRight
-    , aboveCursor     = take cursorY curColumn & reverse & enterVert  FromBelow
-    , rightOfCursor   = drop (cursorX+1) curRow          & enterHoriz FromLeft
-    , belowCursor     = drop (cursorY+1) curColumn       & enterVert  FromAbove
+    { leftOfCursor    = reverse colsLeft  & enterHoriz FromRight
+    , aboveCursor     = reverse rowsAbove & enterVert  FromBelow
+    , rightOfCursor   = colsRight         & enterHoriz FromLeft
+    , belowCursor     = rowsBelow         & enterVert  FromAbove
 
-    , topCursor       = take (min 1 cursorY) curColumn                & enterVert  FromAbove
-    , leftMostCursor  = take (min 1 cursorX) curRow                   & enterHoriz FromLeft
-    , bottomCursor    = drop (cursorY+1) curColumn & reverse & take 1 & enterVert  FromBelow
-    , rightMostCursor = drop (cursorX+1) curRow    & reverse & take 1 & enterHoriz FromRight
+    , topCursor       = take 1 rowsAbove           & enterVert  FromAbove
+    , leftMostCursor  = take 1 colsLeft            & enterHoriz FromLeft
+    , bottomCursor    = reverse rowsBelow & take 1 & enterVert  FromBelow
+    , rightMostCursor = reverse colsRight & take 1 & enterHoriz FromRight
     }
     where
-        enterHoriz = enterFrom Rect.verticalRange
-        enterVert  = enterFrom Rect.horizontalRange
+        columns = transpose rows
+        colsLeft = take cursorX columns
+        colsRight = drop (cursorX+1) columns
+        rowsAbove = take cursorY rows
+        rowsBelow = drop (cursorY+1) rows
+        enterHoriz = enterFrom Vertical Rect.verticalRange
+        enterVert  = enterFrom Horizontal Rect.horizontalRange
         setVirt axis enterResult =
             enterResult
             & Widget.enterResultEvent . Lens.mapped . State.uVirtualCursor . Lens._Wrapped ?~
@@ -78,13 +78,13 @@ mkNavDests cursor@(Vector2 cursorX cursorY) virtCursor mEnterss =
                 & Lens.cloneLens axis .~ prevArea ^. Lens.cloneLens axis
                 & State.VirtualCursor
             )
-        curRow = fromMaybe [] $ mEnterss ^? Lens.ix cappedY
-        curColumn = fromMaybe [] $ transpose mEnterss ^? Lens.ix cappedX
-        Vector2 cappedX cappedY = capCursor size cursor
-        size = length2d mEnterss
         prevArea = virtCursor ^. State.vcRect
-        enterFrom axis cons mEnters =
-            mEnters & msum ?? cons (prevArea ^# axis) <&> setVirt axis
+        enterFrom orientation axis cons lns =
+            lns
+            <&> foldl' (WidgetGlue.combineMEnters orientation) Nothing
+            & msum
+            ?? cons (prevArea ^# axis)
+            <&> setVirt axis
 
 data Keys key = Keys
     { keysDir :: DirKeys key
