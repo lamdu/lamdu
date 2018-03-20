@@ -69,10 +69,8 @@ mkNavDests cursor@(Vector2 cursorX cursorY) virtCursor mEnterss =
     , rightMostCursor = drop (cursorX+1) curRow    & reverse & take 1 & enterHoriz FromRight
     }
     where
-        enterHoriz cons x = enterFrom (cons (prevArea ^. Rect.verticalRange  )) x <&> setHVirt
-        enterVert  cons x = enterFrom (cons (prevArea ^. Rect.horizontalRange)) x <&> setVVirt
-        setHVirt = setVirt Rect.verticalRange
-        setVVirt = setVirt Rect.horizontalRange
+        enterHoriz = enterFrom Rect.verticalRange
+        enterVert  = enterFrom Rect.horizontalRange
         setVirt axis enterResult =
             enterResult
             & Widget.enterResultEvent . Lens.mapped . State.uVirtualCursor . Lens._Wrapped ?~
@@ -85,7 +83,8 @@ mkNavDests cursor@(Vector2 cursorX cursorY) virtCursor mEnterss =
         Vector2 cappedX cappedY = capCursor size cursor
         size = length2d mEnterss
         prevArea = virtCursor ^. State.vcRect
-        enterFrom dir mEnters = mEnters & msum ?? dir
+        enterFrom axis cons mEnters =
+            mEnters & msum ?? cons (prevArea ^# axis) <&> setVirt axis
 
 data Keys key = Keys
     { keysDir :: DirKeys key
