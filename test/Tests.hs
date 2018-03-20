@@ -16,7 +16,10 @@ import           GUI.Momentu.Animation (R)
 import           GUI.Momentu.Draw (Color(..))
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.Rect as Rect
+import qualified GUI.Momentu.Responsive as Responsive
+import qualified GUI.Momentu.Responsive.Options as Options
 import           GUI.Momentu.View (View(..))
+import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.GridView as GridView
 import           Lamdu.Calc.Identifier (identHex)
 import qualified Lamdu.Calc.Type.Scheme as Scheme
@@ -152,12 +155,39 @@ viewsFromConf viewConfs =
         minRowTailLen = minimum (viewConfs ^.. traverse <&> NonEmpty.tail <&> length)
         onTail f (x :| xs) = x :| f xs
 
+verticalDisambigTest :: IO ()
+verticalDisambigTest =
+    do
+        check Responsive.LayoutClear (Vector2 1 2)
+        check Responsive.LayoutVertical (Vector2 1.5 2)
+    where
+        check ctx expect
+            | size == expect = pure ()
+            | otherwise =
+                assertString ("unexpected size " <> show size <> ", expected " <> show expect)
+            where
+                size = rendered ^. Align.tValue . Widget.wSize
+                rendered =
+                    (box ^. Responsive.render)
+                    Responsive.LayoutParams
+                    { Responsive._layoutMode = Responsive.LayoutNarrow 1.9
+                    , Responsive._layoutContext = ctx
+                    }
+                box =
+                    Options.box disambig [unitItem, unitItem]
+                    <&> (<>[]) -- to avoid ambiguous type var
+        unitItem = Element.assymetricPad 0 1 Element.empty
+        disambig =
+            Options.disambiguationNone
+            & Options.disambVert .~ Element.assymetricPad (Vector2 0.5 0) 0
+
 main :: IO ()
 main =
     defaultMainWithOpts
     [ testCase "json-codec-migration" jsonCodecMigrationTest
     , testCase "color-scheme" colorSchemeTest
     , testCase "no-broken-defs" verifyNoBrokenDefsTest
+    , testCase "vertical-disambguation" verticalDisambigTest
     , testProperty "grid-sensible-size" propGridSensibleSize
         & plusTestOptions mempty
         { topt_maximum_generated_tests = Just 1000
