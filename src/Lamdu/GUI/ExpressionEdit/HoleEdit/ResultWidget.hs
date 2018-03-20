@@ -50,10 +50,10 @@ removeUnwanted =
     \c ->
     concat
     [ Config.delKeys c
-    , Config.enterSubexpressionKeys c
-    , Config.leaveSubexpressionKeys c
+    , c ^. Config.enterSubexpressionKeys
+    , c ^. Config.leaveSubexpressionKeys
+    , c ^. Config.letAddItemKeys
     , Grid.stdKeys ^.. Lens.folded
-    , Config.letAddItemKeys c
     ]
     <&> MetaKey.toModKey
     <&> E.KeyEvent MetaKey.KeyState'Pressed

@@ -34,10 +34,9 @@ switchEventMap ::
     [Text] -> Property IO Themes.Selection ->
     m (EventMap (IO GuiState.Update))
 switchEventMap themeNames (Property curTheme setTheme) =
-    Lens.view Config.config
-    <&> \config ->
-    let keys = Config.changeThemeKeys config
-        newTheme = dropWhile (/= curTheme) themeNames ++ themeNames & tail & head
+    Lens.view (Config.config . Config.changeThemeKeys)
+    <&> \keys ->
+    let newTheme = dropWhile (/= curTheme) themeNames ++ themeNames & tail & head
     in  setTheme newTheme
         & E.keysEventMap keys (E.Doc ["Theme", "Switch"])
 

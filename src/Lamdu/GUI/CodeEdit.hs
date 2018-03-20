@@ -169,15 +169,15 @@ makePaneEdit theExportActions pane =
         let paneEventMap =
                 [ pane ^. Sugar.paneClose & IOTrans.liftTrans
                   <&> WidgetIds.fromEntityId
-                  & E.keysEventMapMovesCursor paneCloseKeys
+                  & E.keysEventMapMovesCursor (paneConfig ^. Config.paneCloseKeys)
                     (E.Doc ["View", "Pane", "Close"])
                 , pane ^. Sugar.paneMoveDown <&> IOTrans.liftTrans
                   & foldMap
-                    (E.keysEventMap paneMoveDownKeys
+                    (E.keysEventMap (paneConfig ^. Config.paneMoveDownKeys)
                     (E.Doc ["View", "Pane", "Move down"]))
                 , pane ^. Sugar.paneMoveUp <&> IOTrans.liftTrans
                   & foldMap
-                    (E.keysEventMap paneMoveUpKeys
+                    (E.keysEventMap (paneConfig ^. Config.paneMoveUpKeys)
                     (E.Doc ["View", "Pane", "Move up"]))
                 , exportDef theExportActions (pane ^. Sugar.paneDefinition . Sugar.drDefI)
                   & E.keysEventMap exportKeys
@@ -191,8 +191,8 @@ makePaneEdit theExportActions pane =
                 <&> WidgetIds.fromEntityId
                 & E.keysEventMapMovesCursor (Config.delKeys theConfig)
                     (E.Doc ["Edit", "Definition", "Delete"])
-            Config.Pane{paneCloseKeys, paneMoveDownKeys, paneMoveUpKeys} = Config.pane theConfig
-            exportKeys = Config.exportKeys (Config.export theConfig)
+            paneConfig = theConfig ^. Config.pane
+            exportKeys = theConfig ^. Config.export . Config.exportKeys
         DefinitionEdit.make lhsEventMap (pane ^. Sugar.paneDefinition)
             <&> Lens.mapped %~ IOTrans.liftTrans
             <&> Widget.weakerEvents paneEventMap
@@ -231,25 +231,25 @@ panesEventMap ::
 panesEventMap theExportActions theCodeAnchors =
     do
         theConfig <- Lens.view config
-        let Config.Export{exportPath,importKeys,exportAllKeys} = Config.export theConfig
+        let exportConfig = theConfig ^. Config.export
         mJumpBack <-
             DataOps.jumpBack theCodeAnchors & transaction <&> fmap IOTrans.liftTrans
         newDefinitionEventMap <-
             makeNewDefinition
             <&> E.keysEventMapMovesCursor
-            (Config.newDefinitionKeys (Config.pane theConfig)) newDefinitionDoc
+            (theConfig ^. Config.pane . Config.newDefinitionKeys) newDefinitionDoc
         pure $ mconcat
             [ newDefinitionEventMap <&> IOTrans.liftTrans
             , E.dropEventMap "Drag&drop JSON files"
               (E.Doc ["Collaboration", "Import JSON file"]) (Just . traverse_ importAll)
               <&> fmap (\() -> mempty)
             , foldMap
-              (E.keysEventMapMovesCursor (Config.previousCursorKeys theConfig)
+              (E.keysEventMapMovesCursor (theConfig ^. Config.previousCursorKeys)
                (E.Doc ["Navigation", "Go back"])) mJumpBack
-            , E.keysEventMap exportAllKeys
+            , E.keysEventMap (exportConfig ^. Config.exportAllKeys)
               (E.Doc ["Collaboration", "Export everything to JSON file"]) exportAll
-            , importAll exportPath
-              & E.keysEventMap importKeys
+            , importAll (exportConfig ^. Config.exportPath)
+              & E.keysEventMap (exportConfig ^. Config.importKeys)
                 (E.Doc ["Collaboration", "Import repl from JSON file"])
             ]
     where

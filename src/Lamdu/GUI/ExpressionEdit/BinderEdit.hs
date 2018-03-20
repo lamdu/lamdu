@@ -201,7 +201,7 @@ makeScopeNavEdit ::
     )
 makeScopeNavEdit binder myId curCursor =
     do
-        evalConfig <- Lens.view Config.config <&> Config.eval
+        evalConfig <- Lens.view (Config.config . Config.eval)
         Lens.view (Settings.settings . Settings.sAnnotationMode)
             >>= \case
             Evaluation ->
@@ -212,8 +212,8 @@ makeScopeNavEdit binder myId curCursor =
                 <&> Widget.weakerEvents (mkScopeEventMap leftKeys rightKeys `mappend` blockEventMap)
                 <&> Just
                 <&> (,) (mkScopeEventMap
-                         (Config.prevScopeKeys evalConfig)
-                         (Config.nextScopeKeys evalConfig))
+                         (evalConfig ^. Config.prevScopeKeys)
+                         (evalConfig ^. Config.nextScopeKeys))
             _ -> pure (mempty, Nothing)
     where
         mkScopeEventMap l r = makeScopeEventMap l r curCursor setScope
@@ -424,7 +424,7 @@ makeLetEdit item =
         theme <- Lens.view Theme.theme
         let eventMap =
                 foldMap
-                ( E.keysEventMapMovesCursor (Config.extractKeys config)
+                ( E.keysEventMapMovesCursor (config ^. Config.extractKeys)
                     (E.Doc ["Edit", "Let clause", "Extract to outer scope"])
                     . fmap ExprEventMap.extractCursor
                 ) (item ^? Sugar.lValue . Sugar.bActions . Sugar.baMNodeActions . Lens._Just . Sugar.extract)
@@ -434,7 +434,7 @@ makeLetEdit item =
                 (bodyId <$ item ^. Sugar.lActions . Sugar.laDelete)
                 <>
                 foldMap
-                ( E.keysEventMapMovesCursor (Config.inlineKeys config)
+                ( E.keysEventMapMovesCursor (config ^. Config.inlineKeys)
                     (E.Doc ["Navigation", "Jump to first use"])
                     . pure . WidgetIds.fromEntityId
                 ) (item ^? Sugar.lUsages . Lens.ix 0)
@@ -470,7 +470,7 @@ addLetEventMap addLet =
         savePos <- ExprGuiM.mkPrejumpPosSaver
         savePos >> addLet
             <&> WidgetIds.fromEntityId <&> WidgetIds.letBinderId
-            & E.keysEventMapMovesCursor (Config.letAddItemKeys config)
+            & E.keysEventMapMovesCursor (config ^. Config.letAddItemKeys)
                 (E.Doc ["Edit", "Let clause", "Add"])
             & pure
 
@@ -497,7 +497,7 @@ makeBinderContentEdit content@(Sugar.BinderLet l) =
                 ^? Sugar.bbContent . Sugar._BinderLet
                 . Sugar.lActions . Sugar.laNodeActions . Sugar.extract
                 & foldMap
-                (E.keysEventMap (Config.moveLetInwardKeys config)
+                (E.keysEventMap (config ^. Config.moveLetInwardKeys)
                 (E.Doc ["Edit", "Let clause", "Move inwards"]) . void)
         mAddNodeActions <-
             maybeAddNodeActions letEntityId (binderContentNearestHoles content)

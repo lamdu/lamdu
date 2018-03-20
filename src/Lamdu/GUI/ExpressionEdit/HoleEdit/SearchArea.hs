@@ -57,10 +57,10 @@ import           Lamdu.Prelude
 type T = Transaction
 
 fdConfig :: Config.Completion -> FocusDelegator.Config
-fdConfig Config.Completion{completionOpenKeys, completionCloseKeys} = FocusDelegator.Config
-    { FocusDelegator.focusChildKeys = completionOpenKeys
+fdConfig config = FocusDelegator.Config
+    { FocusDelegator.focusChildKeys = config ^. Config.completionOpenKeys
     , FocusDelegator.focusChildDoc = E.Doc ["Navigation", "Completion", "Open"]
-    , FocusDelegator.focusParentKeys = completionCloseKeys
+    , FocusDelegator.focusParentKeys = config ^. Config.completionCloseKeys
     , FocusDelegator.focusParentDoc = E.Doc ["Navigation", "Completion", "Close"]
     }
 
@@ -178,7 +178,7 @@ make options mOptionLiteral pl allowedTerms =
     do
         config <- Lens.view Config.config
         let fdWrap =
-                FocusDelegator.make ?? fdConfig (Config.completion config)
+                FocusDelegator.make ?? fdConfig (config ^. Config.completion)
                 ?? FocusDelegator.FocusEntryParent ?? hidClosed widgetIds
                 <&> (Align.tValue %~)
         closedSearchTermGui <-

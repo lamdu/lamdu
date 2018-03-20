@@ -40,7 +40,7 @@ eventMapAddFirstParam ::
     Sugar.AddFirstParam name f ->
     m (EventMap (f GuiState.Update))
 eventMapAddFirstParam binderId addFirst =
-    Lens.view Config.config <&> Config.addNextParamKeys
+    Lens.view (Config.config . Config.addNextParamKeys)
     <&>
     \keys ->
     E.keysEventMapMovesCursor keys (E.Doc ["Edit", doc]) action
@@ -56,7 +56,7 @@ eventMapAddNextParam ::
     Applicative f =>
     Config -> Widget.Id -> Sugar.AddNextParam name f -> EventMap (f GuiState.Update)
 eventMapAddNextParam conf myId addNext =
-    E.keysEventMapMovesCursor (Config.addNextParamKeys conf)
+    E.keysEventMapMovesCursor (conf ^. Config.addNextParamKeys)
     (E.Doc ["Edit", doc]) (pure dst)
     where
         (dst, doc) =
@@ -108,11 +108,11 @@ make annotationOpts prevId nextId param =
         conf <- Lens.view Config.config
         let paramEventMap =
                 mconcat
-                [ eventParamDelEventMap (iDel info) (Config.delForwardKeys conf) "" nextId
-                , eventParamDelEventMap (iDel info) (Config.delBackwardKeys conf) " backwards" prevId
+                [ eventParamDelEventMap (iDel info) (conf ^. Config.delForwardKeys) "" nextId
+                , eventParamDelEventMap (iDel info) (conf ^. Config.delBackwardKeys) " backwards" prevId
                 , foldMap (eventMapAddNextParam conf myId) (iAddNext info)
-                , foldMap (eventMapOrderParam (Config.paramOrderBeforeKeys conf) "before") (iMOrderBefore info)
-                , foldMap (eventMapOrderParam (Config.paramOrderAfterKeys conf) "after") (iMOrderAfter info)
+                , foldMap (eventMapOrderParam (conf ^. Config.paramOrderBeforeKeys) "before") (iMOrderBefore info)
+                , foldMap (eventMapOrderParam (conf ^. Config.paramOrderAfterKeys) "after") (iMOrderAfter info)
                 ]
         wideAnnotationBehavior <-
             GuiState.isSubCursor ?? myId

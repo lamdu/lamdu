@@ -177,7 +177,7 @@ run makeSubexpr theCodeAnchors (ExprGuiM action) =
             , _aSettings = theSettings
             , _aMakeSubexpression = makeSubexpr
             , _aCodeAnchors = theCodeAnchors
-            , _aDepthLeft = Config.maxExprDepth theConfig
+            , _aDepthLeft = theConfig ^. Config.maxExprDepth
             , _aMScopeId = Just topLevelScopeId & pure
             , _aStyle = theStyle
             } & transaction

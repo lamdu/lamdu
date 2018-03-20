@@ -138,7 +138,7 @@ actionable myId text doc action =
                 { Font._underlineColor = color
                 , Font._underlineWidth = underlineWidth
                 }
-        actionKeys <- Lens.view Config.config <&> Config.actionKeys
+        actionKeys <- Lens.view (Config.config . Config.actionKeys)
         let eventMap = E.keysEventMapMovesCursor actionKeys doc action
         (Widget.makeFocusableView ?? myId <&> (Align.tValue %~))
             <*> TextView.makeLabel text

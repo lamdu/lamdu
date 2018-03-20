@@ -98,7 +98,8 @@ makeNameRef myId nameRef maker =
         config <- Lens.view Config.config
         let jumpToDefinitionEventMap =
                 E.keysEventMapMovesCursor
-                (Config.jumpToDefinitionKeys config ++ Config.extractKeys config)
+                (config ^. Config.jumpToDefinitionKeys ++
+                 config ^. Config.extractKeys)
                 (E.Doc ["Navigation", "Jump to definition"]) $
                 do
                     DataOps.savePreJumpPosition cp myId
@@ -116,11 +117,11 @@ makeInlineEventMap ::
     EventMap (f GuiState.Update)
 makeInlineEventMap config (Sugar.InlineVar inline) =
     inline <&> WidgetIds.fromEntityId
-    & E.keysEventMapMovesCursor (Config.inlineKeys config)
+    & E.keysEventMapMovesCursor (config ^. Config.inlineKeys)
       (E.Doc ["Edit", "Inline"])
 makeInlineEventMap config (Sugar.CannotInlineDueToUses (x:_)) =
     WidgetIds.fromEntityId x & pure
-    & E.keysEventMapMovesCursor (Config.inlineKeys config)
+    & E.keysEventMapMovesCursor (config ^. Config.inlineKeys)
       (E.Doc ["Navigation", "Jump to next use"])
 makeInlineEventMap _ _ = mempty
 

@@ -73,7 +73,7 @@ mkShrunk ::
     f (Maybe (Widget (T m GuiState.Update)) -> [ExpressionGui m])
 mkShrunk paramIds myId =
     do
-        jumpKeys <- Lens.view Config.config <&> Config.jumpToDefinitionKeys
+        jumpKeys <- Lens.view (Config.config . Config.jumpToDefinitionKeys)
         let expandEventMap =
                 paramIds ^? Lens.traverse
                 & foldMap

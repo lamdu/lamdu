@@ -90,7 +90,7 @@ jumpHolesEventMap ::
     (MonadReader env m, Config.HasConfig env, Applicative f) =>
     NearestHoles -> m (EventMap (f GuiState.Update))
 jumpHolesEventMap hg =
-    Lens.view Config.config <&> Config.completion
+    Lens.view (Config.config . Config.completion)
     <&>
     \config ->
     let jumpEventMap keys dirStr lens =
@@ -98,7 +98,7 @@ jumpHolesEventMap hg =
             Nothing -> mempty
             Just dest ->
                 WidgetIds.fromEntityId dest & pure
-                & E.keysEventMapMovesCursor (keys config)
+                & E.keysEventMapMovesCursor (config ^. keys)
                     (E.Doc ["Navigation", "Jump to " <> dirStr <> " hole"])
     in
     jumpEventMap Config.completionJumpToNextKeys "next" NearestHoles.next
@@ -113,7 +113,7 @@ extractEventMap ::
     (MonadReader env m, Config.HasConfig env, Functor f) =>
     Sugar.NodeActions name f -> m (EventMap (f GuiState.Update))
 extractEventMap actions =
-    Lens.view Config.config <&> Config.extractKeys
+    Lens.view (Config.config . Config.extractKeys)
     <&>
     \k ->
     actions ^. Sugar.extract <&> extractCursor
@@ -135,7 +135,7 @@ actionsEventMap exprInfo =
         else
             sequence
             [ extractEventMap (exprInfoActions exprInfo)
-            , Lens.view Config.config <&> Config.replaceParentKeys <&> mkReplaceParent
+            , Lens.view (Config.config . Config.replaceParentKeys) <&> mkReplaceParent
             ] <&> mconcat
     , maybe (pure mempty) replaceEventMap (exprInfoActions exprInfo ^. Sugar.mSetToHole)
     ] <&> mconcat <&> const
@@ -195,11 +195,11 @@ detachEventMap detach =
     Lens.view Config.config
     <&>
     \config ->
-    E.keysEventMapMovesCursor (Config.detachKeys config)
+    E.keysEventMapMovesCursor (config ^. Config.detachKeys)
     (E.Doc ["Edit", "Modify"])
     (detach <&> HoleWidgetIds.make <&> HoleWidgetIds.hidOpen)
     <>
-    E.keysEventMap (Config.parenDetachKeys config)
+    E.keysEventMap (config ^. Config.parenDetachKeys)
     (E.Doc ["Edit", "Detach"])
     (void detach)
 

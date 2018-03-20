@@ -109,7 +109,7 @@ make (Sugar.Case mArg (Sugar.Composite alts caseTail addAlt)) pl =
         let addAltEventMap =
                 addAltId altsId
                 & pure
-                & E.keysEventMapMovesCursor (Config.caseAddAltKeys config)
+                & E.keysEventMapMovesCursor (config ^. Config.caseAddAltKeys)
                     (doc "Add Alt")
         stdWrapParentExpr pl
             <*> (Styled.addValFrame <*> (Responsive.vboxSpaced ?? [header, altsGui]))
@@ -239,7 +239,7 @@ closedCaseEventMap ::
     EventMap (T m GuiState.Update)
 closedCaseEventMap config (Sugar.ClosedCompositeActions open) =
     open <&> WidgetIds.fromEntityId
-    & E.keysEventMapMovesCursor (Config.caseOpenKeys config) (doc "Open")
+    & E.keysEventMapMovesCursor (config ^. Config.caseOpenKeys) (doc "Open")
 
 caseDelEventMap ::
     Monad m =>

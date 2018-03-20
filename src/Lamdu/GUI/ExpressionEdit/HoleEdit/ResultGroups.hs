@@ -115,11 +115,11 @@ data GoodAndBad a = GoodAndBad { _good :: a, _bad :: a }
 Lens.makeLenses ''GoodAndBad
 
 collectResults :: Monad m => Config.Completion -> ListT m (ResultGroup f) -> m (Menu.OptionList (ResultGroup f))
-collectResults Config.Completion{completionResultCount} resultsM =
+collectResults config resultsM =
     do
         (tooFewGoodResults, moreResultsM) <-
             ListClass.scanl prependResult (GoodAndBad [] []) resultsM
-            & ListClass.splitWhenM (pure . (>= completionResultCount) . length . _good)
+            & ListClass.splitWhenM (pure . (>= resCount) . length . _good)
 
         -- We need 2 of the moreResultsM:
         -- A. First is needed because it would be the first to have the correct
@@ -135,11 +135,12 @@ collectResults Config.Completion{completionResultCount} resultsM =
             & sortOn resultsListScore
             -- Re-split because now that we've added all the
             -- accumulated bad results we may have too many
-            & splitAt completionResultCount
+            & splitAt resCount
             & _2 %~ not . null
             & uncurry Menu.OptionList
             & pure
     where
+        resCount = config ^. Config.completionResultCount
         concatBothGoodAndBad goodAndBad = goodAndBad ^. Lens.folded
         resultsListScore x = (x ^. rgExactMatch, x ^. rgMain . rScore & isGoodResult & not)
         prependResult results x =
@@ -160,7 +161,7 @@ makeAll ::
     m (Menu.OptionList (ResultGroup (T n)))
 makeAll options mOptionLiteral ctx =
     do
-        config <- Lens.view Config.config <&> Config.completion
+        config <- Lens.view (Config.config . Config.completion)
         literalGroups <-
             (mOptionLiteral <&> makeLiteralGroups searchTerm) ^.. (Lens._Just . traverse)
             & sequenceA

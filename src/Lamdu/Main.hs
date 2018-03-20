@@ -181,7 +181,7 @@ exportActions config evalResults executeIOProcess =
     , GUIMain.importAll = importAll
     }
     where
-        Config.Export{exportPath} = Config.export config
+        exportPath = config ^. Config.export . Config.exportPath
         export x = ioTrans # (x <&> (`MainLoop.EventResult` ()) & pure)
         fileExport exporter = exporter exportPath & export
         importAll path = ioTrans # (Export.fileImportAll path <&> fmap pure)
@@ -364,14 +364,12 @@ mainLoop stateStorage subpixel win refreshScheduler configSampler iteration =
                   \zoom ->
                   do
                       sample <- ConfigSampler.getSample configSampler
-                      if sample ^. sConfig & Config.debug & Config.debugShowFPS
+                      if sample ^. sConfig . Config.debug . Config.debugShowFPS
                           then getFonts zoom sample <&> fontDefault <&> Just
                           else pure Nothing
                 , virtualCursorColor =
                     ConfigSampler.getSample configSampler
-                    <&> (^. sConfig)
-                    <&> Config.debug
-                    <&> Config.virtualCursorShown
+                    <&> (^. sConfig . Config.debug . Config.virtualCursorShown)
                     <&> \case
                         False -> Nothing
                         True -> Just (M.Color 1 1 0 0.5)

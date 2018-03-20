@@ -113,4 +113,4 @@ make themeNames settingsProp env =
         config = env ^. Config.config
         versionControlCfg = config ^. Config.versionControl
         quitEventMap =
-            E.keysEventMap (Config.quitKeys config) (E.Doc ["Quit"]) (error "Quit")
+            E.keysEventMap (config ^. Config.quitKeys) (E.Doc ["Quit"]) (error "Quit")

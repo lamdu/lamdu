@@ -192,8 +192,8 @@ makeOptions tagSelection mkPickResult ctx
     | otherwise =
         do
             resultCount <-
-                Lens.view Config.config
-                <&> Config.completion <&> Config.completionResultCount
+                Lens.view
+                (Config.config . Config.completion . Config.completionResultCount)
             results <-
                 tagSelection ^. Sugar.tsOptions & transaction
                 <&> concatMap withText
@@ -358,12 +358,13 @@ makeTagEditWith onView onPickNext nearestHoles tag =
         let eventMap =
                 ( case tag ^. Sugar.tagName of
                     Name.Stored{} ->
-                        E.keysEventMapMovesCursor (Config.jumpToDefinitionKeys config)
+                        E.keysEventMapMovesCursor (config ^. Config.jumpToDefinitionKeys)
                         (E.Doc ["Edit", "Tag", "Rename tag"]) (pure (tagRenameId myId))
                     _ -> mempty
                 )
                 <>
-                E.keysEventMapMovesCursor (Config.delKeys config <> Config.jumpToDefinitionKeys config)
+                E.keysEventMapMovesCursor
+                (Config.delKeys config <> config ^. Config.jumpToDefinitionKeys)
                 (E.Doc ["Edit", "Tag", "Choose"]) chooseAction
         nameView <-
             (Widget.makeFocusableView ?? viewId <&> fmap) <*>

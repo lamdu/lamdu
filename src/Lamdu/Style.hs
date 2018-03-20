@@ -98,6 +98,6 @@ mainLoopConfig fontHeight helpFont config theme =
             , Cursor.heightExponent = Theme.cursorDecayExponent theme
             }
         }
-    , cZoom = Config.zoom config
-    , cHelpStyle = helpStyle helpFont (Config.helpKeys config) (Theme.help theme)
+    , cZoom = config ^. Config.zoom
+    , cHelpStyle = helpStyle helpFont (config ^. Config.helpKeys) (Theme.help theme)
     }

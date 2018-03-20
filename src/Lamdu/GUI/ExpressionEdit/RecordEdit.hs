@@ -55,7 +55,7 @@ mkAddFieldEventMap ::
     (MonadReader env m, HasConfig env, Applicative f) =>
     Widget.Id -> m (EventMap (f GuiState.Update))
 mkAddFieldEventMap myId =
-    Lens.view Config.config <&> Config.recordAddFieldKeys
+    Lens.view (Config.config . Config.recordAddFieldKeys)
     <&>
     \keys ->
     addFieldId myId
@@ -252,7 +252,7 @@ openRecordEventMap ::
     m (EventMap (f GuiState.Update))
 openRecordEventMap (Sugar.OpenCompositeActions close) restExpr
     | isHole restExpr =
-        Lens.view Config.config <&> Config.recordCloseKeys
+        Lens.view (Config.config . Config.recordCloseKeys)
         <&>
         \keys ->
         close <&> WidgetIds.fromEntityId
@@ -265,7 +265,7 @@ closedRecordEventMap ::
     (MonadReader env m, HasConfig env, Functor f) =>
     Sugar.ClosedCompositeActions f -> m (EventMap (f GuiState.Update))
 closedRecordEventMap (Sugar.ClosedCompositeActions open) =
-    Lens.view Config.config <&> Config.recordOpenKeys
+    Lens.view (Config.config . Config.recordOpenKeys)
     <&>
     \keys ->
     open <&> WidgetIds.fromEntityId

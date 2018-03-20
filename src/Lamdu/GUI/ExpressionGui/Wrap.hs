@@ -30,9 +30,9 @@ type T = Transaction
 
 parentExprFDConfig :: Config -> FocusDelegator.Config
 parentExprFDConfig config = FocusDelegator.Config
-    { FocusDelegator.focusChildKeys = Config.enterSubexpressionKeys config
+    { FocusDelegator.focusChildKeys = config ^. Config.enterSubexpressionKeys
     , FocusDelegator.focusChildDoc = E.Doc ["Navigation", "Enter subexpression"]
-    , FocusDelegator.focusParentKeys = Config.leaveSubexpressionKeys config
+    , FocusDelegator.focusParentKeys = config ^. Config.leaveSubexpressionKeys
     , FocusDelegator.focusParentDoc = E.Doc ["Navigation", "Leave subexpression"]
     }
 

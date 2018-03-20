@@ -60,9 +60,8 @@ switchEventMap ::
     (Functor f, MonadReader env m, Config.HasConfig env) =>
     Property f AnnotationMode -> m (EventMap (f GuiState.Update))
 switchEventMap (Property infoMode setAnnotationMode) =
-    Lens.view Config.config <&> \config ->
-    E.keysEventMap (Config.nextAnnotationModeKeys config) nextDoc
-    (setAnnotationMode next)
+    Lens.view (Config.config . Config.nextAnnotationModeKeys) <&>
+    \keys -> E.keysEventMap keys nextDoc (setAnnotationMode next)
     where
         next = AnnotationMode.next infoMode
         nextDoc = E.Doc ["View", "Subtext", "Show " <> Text.pack (show next)]

@@ -84,15 +84,15 @@ genericEdit whichStyle prop pl =
 fdConfig :: (MonadReader env m, HasConfig env, Menu.HasConfig env) => m FocusDelegator.Config
 fdConfig =
     (,)
-    <$> (Lens.view Config.config <&> Config.literal)
+    <$> Lens.view (Config.config . Config.literal)
     <*> (Lens.view Menu.config <&> Menu.configKeys)
     <&>
     \(litConf, menuKeys) ->
     FocusDelegator.Config
-    { FocusDelegator.focusChildKeys = Config.literalStartEditingKeys litConf
+    { FocusDelegator.focusChildKeys = litConf ^. Config.literalStartEditingKeys
     , FocusDelegator.focusChildDoc = E.Doc ["Edit", "Literal", "Start editing"]
     , FocusDelegator.focusParentKeys =
-        Config.literalStopEditingKeys litConf
+        litConf ^. Config.literalStopEditingKeys
         -- The literal edit should behave like holes, in that the "pick option"
         -- key goes to the resulting expr.
         <> Menu.keysPickOption menuKeys
