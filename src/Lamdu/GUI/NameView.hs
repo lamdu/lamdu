@@ -1,3 +1,4 @@
+{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE OverloadedStrings #-}
 module Lamdu.GUI.NameView
     ( make
@@ -23,7 +24,7 @@ import           Lamdu.Prelude
 makeCollisionSuffixLabel ::
     ( TextView.HasStyle r, Element.HasAnimIdPrefix r, HasTheme r
     , MonadReader r m
-    ) => (Theme.Name -> Draw.Color) -> Name.Collision -> m (Maybe View)
+    ) => Lens.ALens' Theme.Name Draw.Color -> Name.Collision -> m (Maybe View)
 makeCollisionSuffixLabel collisionColor mCollision =
     case mCollision of
     Name.NoCollision -> pure Nothing
@@ -33,11 +34,11 @@ makeCollisionSuffixLabel collisionColor mCollision =
         mk text =
             do
                 nameTheme <- Lens.view theme <&> Theme.name
-                (Draw.backgroundColor ?? collisionColor nameTheme)
+                (Draw.backgroundColor ?? nameTheme ^# collisionColor)
                     <*>
                     (TextView.makeLabel text
                      & Styled.withColor Theme.collisionSuffixTextColor
-                     <&> Element.scale (Theme.collisionSuffixScaleFactor nameTheme))
+                     <&> Element.scale (nameTheme ^. Theme.collisionSuffixScaleFactor))
             <&> (^. Align.tValue)
             <&> Just
 
