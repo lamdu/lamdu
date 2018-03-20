@@ -20,7 +20,7 @@ import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.Glue as Glue
 import           GUI.Momentu.Responsive
     ( Responsive(..), LayoutParams(..), LayoutMode(..), LayoutDisambiguationContext(..)
-    , render, vbox, fromView
+    , render, vbox, fromView, vertLayoutMaybeDisambiguate
     )
 import qualified GUI.Momentu.State as State
 import           GUI.Momentu.Widget (Widget)
@@ -118,6 +118,7 @@ boxH ::
     Responsive (f State.Update)
 boxH onHGuis onVGuis disamb guis =
     vbox (onVGuis guis)
+    & vertLayoutMaybeDisambiguate (disamb ^. disambVert)
     & tryWideLayout (hbox (disamb ^. disambHoriz) onHGuis) guis
 
 box ::
