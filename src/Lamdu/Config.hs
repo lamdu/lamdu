@@ -4,7 +4,8 @@ module Lamdu.Config where
 
 import qualified Control.Lens as Lens
 #ifndef NO_CODE
-import           Data.Aeson.Utils (removeOptionalUnderscore)
+import           Data.Aeson.Utils
+    ( removeOptionalUnderscore, removeOptionalPrefix, removePrefix, decapitalize )
 #endif
 import           Data.Aeson.TH (deriveJSON)
 import qualified Data.Aeson.Types as Aeson
@@ -39,7 +40,7 @@ data Pane = Pane
     } deriving (Eq, Show)
 deriveJSON Aeson.defaultOptions
 #ifndef NO_CODE
-    {Aeson.fieldLabelModifier = removeOptionalUnderscore}
+    {Aeson.fieldLabelModifier = decapitalize . removeOptionalPrefix "pane" . removeOptionalUnderscore}
 #endif
     ''Pane
 
@@ -54,7 +55,7 @@ data Completion = Completion
     } deriving (Eq, Show)
 deriveJSON Aeson.defaultOptions
 #ifndef NO_CODE
-    {Aeson.fieldLabelModifier = removeOptionalUnderscore}
+    {Aeson.fieldLabelModifier = decapitalize . removePrefix "completion" . removeOptionalUnderscore}
 #endif
     ''Completion
 
@@ -78,7 +79,7 @@ data Literal = Literal
     } deriving (Eq, Show)
 deriveJSON Aeson.defaultOptions
 #ifndef NO_CODE
-    {Aeson.fieldLabelModifier = removeOptionalUnderscore}
+    {Aeson.fieldLabelModifier = decapitalize . removePrefix "literal" . removeOptionalUnderscore}
 #endif
     ''Literal
 
@@ -90,7 +91,7 @@ data Debug = Debug
     } deriving (Eq, Show)
 deriveJSON Aeson.defaultOptions
 #ifndef NO_CODE
-    {Aeson.fieldLabelModifier = removeOptionalUnderscore}
+    {Aeson.fieldLabelModifier = decapitalize . removeOptionalPrefix "debug" . removeOptionalUnderscore}
 #endif
     ''Debug
 

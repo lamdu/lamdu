@@ -11,7 +11,7 @@ module Data.Aeson.Utils () where
 import Prelude ()
 #else
 module Data.Aeson.Utils
-    ( removePrefix, removeOptionalUnderscore
+    ( removePrefix, removeOptionalUnderscore, removeOptionalPrefix
     , decapitalize
     ) where
 
@@ -28,6 +28,11 @@ removePrefix :: (Show a, Eq a) => [a] -> [a] -> [a]
 removePrefix prefix str
     | prefix `isPrefixOf` str = drop (length prefix) str
     | otherwise = error ("removePrefix " ++ show prefix ++ " on " ++ show str)
+
+removeOptionalPrefix :: Eq a => [a] -> [a] -> [a]
+removeOptionalPrefix prefix str
+    | prefix `isPrefixOf` str = drop (length prefix) str
+    | otherwise = str
 
 removeOptionalUnderscore :: String -> String
 removeOptionalUnderscore ('_':xs) = xs

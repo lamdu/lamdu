@@ -1,7 +1,7 @@
 {
     "maxExprDepth": 40,
     "debug": {
-        "debugShowFPS": false,
+        "showFPS": false,
         "virtualCursorShown": false
     },
     "zoom": {
@@ -19,10 +19,10 @@
         "importKeys"      : [ "Alt+I" ]
     },
     "pane": {
-        "newDefinitionKeys"            : [ "Alt+N", "Alt+L" ],
-        "paneCloseKeys"                : [ "Alt+W" ],
-        "paneMoveUpKeys"               : [ "Alt+Up" ],
-        "paneMoveDownKeys"             : [ "Alt+Down" ]
+        "newDefinitionKeys" : [ "Alt+N", "Alt+L" ],
+        "closeKeys"         : [ "Alt+W" ],
+        "moveUpKeys"        : [ "Alt+Up" ],
+        "moveDownKeys"      : [ "Alt+Down" ]
     },
     "versionControl": {
         "undoKeys"           : [ "Cmd+Z" ],
@@ -32,15 +32,15 @@
         "jumpToBranchesKeys" : [ "Cmd+F11" ]
     },
     "completion": {
-        "completionJumpToNextKeys"  : [ "Tab" ],
-        "completionResultCount"     : 5,
-        "completionJumpToPrevKeys"  : [ "Shift+Tab" ],
-        "completionOpenKeys"        : [ "Space", "Enter" ],
-        "completionCloseKeys"       : [ "Escape", "Cmd+LeftBracket" ]
+        "jumpToNextKeys"  : [ "Tab" ],
+        "resultCount"     : 5,
+        "jumpToPrevKeys"  : [ "Shift+Tab" ],
+        "openKeys"        : [ "Space", "Enter" ],
+        "closeKeys"       : [ "Escape", "Cmd+LeftBracket" ]
     },
     "literal": {
-        "literalStartEditingKeys" : [ "Enter", "Shift+Right" ],
-        "literalStopEditingKeys"  : [ "Escape", "Shift+Left" ]
+        "startEditingKeys" : [ "Enter", "Shift+Right" ],
+        "stopEditingKeys"  : [ "Escape", "Shift+Left" ]
     },
     "eval": {
         "prevScopeKeys": [ "Cmd+Up" ],
