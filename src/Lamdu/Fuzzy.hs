@@ -1,7 +1,8 @@
 -- | A wrapper for the fuzzyset library that makes it a Fuzzy map
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TemplateHaskell, OverloadedStrings #-}
 module Lamdu.Fuzzy
     ( Fuzzy, make, matches
+    , Distance(..), isFuzzy, distanceInts
     , memoableMake
     ) where
 
@@ -67,17 +68,30 @@ trieMatch n (c:cs) t@(Fuzzy _ m) =
     ++ [trieMatch (n-1) cs t | n > 0] -- <-- try skipping a char
     & mconcat
 
-distance :: Text -> Text -> [Int]
+data Distance = Distance
+    { _isFuzzy :: Bool
+    , _distanceInts :: [Int]
+    } deriving (Eq, Ord)
+
+Lens.makeLenses ''Distance
+
+distance :: Text -> Text -> Distance
 distance rawX rawY =
-    concat
-    [ check (==)
-    , check Text.isPrefixOf
-    , check Text.isInfixOf
-    ] ++
-    [ EditDistance.restrictedDamerauLevenshteinDistance
-      EditDistance.defaultEditCosts (Text.unpack x) (Text.unpack y)
-    ]
+    Distance
+    { _isFuzzy = all (== 1) nonFuzzyScores
+    , _distanceInts =
+        nonFuzzyScores ++
+        [ EditDistance.restrictedDamerauLevenshteinDistance
+          EditDistance.defaultEditCosts (Text.unpack x) (Text.unpack y)
+        ]
+    }
     where
+        nonFuzzyScores =
+            concat
+            [ check (==)
+            , check Text.isPrefixOf
+            , check Text.isInfixOf
+            ]
         score True = 0
         score False = 1
         check f = map score [f rawX rawY, f x y]
@@ -91,19 +105,20 @@ matches :: Monoid a => Text -> Fuzzy a -> MMap Text a
 matches = trieMatch allowedSkips . Text.unpack
 
 memoableMake ::
-    ([(Text, Int)] -> Fuzzy (Set Int)) -> [(Text, a)] -> Text -> [a]
+    ([(Text, Int)] -> Fuzzy (Set Int)) -> [(Text, a)] -> Text -> [(Distance, a)]
 memoableMake memoMake pairs =
     -- Keep as explicit lambda syntax (not in LHS) for
     -- performance/sharing reasons (where clauses do not depend on
     -- last Text param)
     \text ->
     matches text f ^@.. Lens.ifolded
-    & sortOn (distance text . fst)
-    <&> snd
-    <&> Set.toList
-    <&> map (v !)
-    & concat
+    <&> _1 %~ distance text
+    & sortOn fst
+    >>= flatten
+    <&> _2 %~ (v !)
     where
+        -- Use const cause lower scores are better, use those for dups
+        flatten (dist, indices) = Set.toList indices <&> (,) dist
         f =
             pairs ^@.. Lens.ifolded
             <&> (\(idx, (text, _)) -> (text, idx))

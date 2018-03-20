@@ -251,6 +251,7 @@ holeMatches searchTerm groups =
     <&> (\(idx, group) -> searchTerms group <&> ((,) ?? (idx, group)))
     & concat
     & (Fuzzy.memoableMake fuzzyMaker ?? searchText)
+    <&> snd
     & nubBy ((==) `on` fst)
     <&> snd
     <&> groupResults %~ ListClass.filterL (fmap isHoleResultOK . snd)

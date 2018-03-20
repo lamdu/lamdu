@@ -144,38 +144,30 @@ makeNewTagPreEvent searchTerm tagSelection mkPickResult
         , Widget._pTextRemainder = ""
         }
 
-addNewTagIfNullOptions ::
+addNewTag ::
     ( Monad m, MonadReader env f, GuiState.HasCursor env, HasTheme env
     , TextView.HasStyle env, Element.HasAnimIdPrefix env
     ) =>
     Sugar.TagSelection (Name (T m)) (T m) a ->
     (Sugar.TagInfo -> a -> Menu.PickResult) ->
     SearchMenu.ResultsContext ->
-    Menu.OptionList (Menu.Option f (T m)) ->
-    Menu.OptionList (Menu.Option f (T m))
-addNewTagIfNullOptions tagSelection mkPickResult ctx optionList =
-    case makeNewTagPreEvent searchTerm tagSelection mkPickResult of
-    Just preEvent
-        | null (optionList ^. Menu.olOptions) ->
-            Menu.OptionList
-            { Menu._olOptions =
-                [ Menu.Option
-                    { Menu._oId = optionId
-                    , Menu._oSubmenuWidgets = Menu.SubmenuEmpty
-                    , Menu._oRender =
-                        do
-                            color <-
-                                Lens.view theme <&> Theme.textColors
-                                <&> Theme.actionTextColor
-                            (Widget.makeFocusableView ?? optionId <&> fmap)
-                                <*> TextView.makeLabel "Create new"
-                                <&> (`Menu.RenderedOption` preEvent)
-                                & Reader.local (TextView.color .~ color)
-                    }
-                ]
-            , Menu._olIsTruncated = False
-            }
-    _ -> optionList
+    Maybe (Menu.Option f _)
+addNewTag tagSelection mkPickResult ctx =
+    makeNewTagPreEvent searchTerm tagSelection mkPickResult
+    <&> \preEvent ->
+    Menu.Option
+    { Menu._oId = optionId
+    , Menu._oSubmenuWidgets = Menu.SubmenuEmpty
+    , Menu._oRender =
+        do
+            color <-
+                Lens.view theme <&> Theme.textColors
+                <&> Theme.actionTextColor
+            (Widget.makeFocusableView ?? optionId <&> fmap)
+                <*> TextView.makeLabel "Create new"
+                <&> (`Menu.RenderedOption` preEvent)
+                & Reader.local (TextView.color .~ color)
+    }
     where
         optionId = (ctx ^. SearchMenu.rResultIdPrefix) `Widget.joinId` ["Create new"]
         searchTerm = ctx ^. SearchMenu.rSearchTerm
@@ -202,14 +194,23 @@ makeOptions tagSelection mkPickResult ctx
             resultCount <-
                 Lens.view Config.config
                 <&> Config.completion <&> Config.completionResultCount
-            tagSelection ^. Sugar.tsOptions & transaction
+            results <-
+                tagSelection ^. Sugar.tsOptions & transaction
                 <&> concatMap withText
                 <&> (Fuzzy.memoableMake fuzzyMaker ?? searchTerm)
-                <&> splitAt resultCount
-                <&> _2 %~ not . null
-                <&> uncurry Menu.OptionList
-                <&> fmap makeOption
-                <&> addNewTagIfNullOptions tagSelection mkPickResult ctx
+            let nonFuzzyResults =
+                    results ^? Lens.ix 0 . Lens._1 . Fuzzy.isFuzzy
+                    & maybe False not
+            let maybeAddNewTagOption
+                    | nonFuzzyResults = id
+                    | otherwise = maybe id (:) (addNewTag tagSelection mkPickResult ctx)
+            results <&> snd
+                & splitAt resultCount
+                & _2 %~ not . null
+                & uncurry Menu.OptionList
+                <&> makeOption
+                & Menu.olOptions %~ maybeAddNewTagOption
+                & pure
     where
         withText tagOption = tagOption ^.. nameText <&> ((,) ?? tagOption)
         searchTerm = ctx ^. SearchMenu.rSearchTerm
