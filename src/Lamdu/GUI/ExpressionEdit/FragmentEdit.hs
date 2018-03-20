@@ -55,7 +55,7 @@ make fragment pl =
                 E.keysEventMapMovesCursor (Config.leaveSubexpressionKeys config)
                 (E.Doc ["Navigation", "Leave fragment"]) (pure myId)
         let addFocusEvents
-                | isSelected = (enterEventMap <>) . E.filterChars (`notElem` Chars.operator)
+                | isSelected = (enterEventMap <>)
                 | otherwise = (<> leaveEventMap)
         fragmentExprGui <-
             fragment
