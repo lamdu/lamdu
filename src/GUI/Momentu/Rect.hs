@@ -1,13 +1,13 @@
 {-# LANGUAGE NoImplicitPrelude, DeriveGeneric, TemplateHaskell, DeriveTraversable #-}
 module GUI.Momentu.Rect
     ( R, Rect(..), topLeft, size
-    , Range(..), rangeStart, rangeSize
+    , Range(..), rangeStart, rangeSize, rangeStop
     , topLeftAndSize, verticalRange, horizontalRange
     , left, top, right, bottom
     , width, height
     , bottomRight
     , center, centeredSize
-    , distances, sqrDistance
+    , distances, rangeDistance, sqrDistance
     , isWithin
     ) where
 
@@ -42,6 +42,9 @@ data Range a = Range
 
 Lens.makeLenses ''Range
 
+rangeStop :: Num a => Lens' (Range a) a
+rangeStop f (Range start sz) =
+    f (start + sz) <&> subtract start <&> Range start
 
 {-# INLINE verticalRange #-}
 verticalRange :: Lens' Rect (Range R)
@@ -104,15 +107,18 @@ height = size . _2
 -- rects
 distances :: Rect -> Rect -> Vector2 R
 distances r1 r2 =
-    max
-    <$> tl2 - br1
-    <*> tl1 - br2
-    <&> max 0
+    Vector2
+    (rangeDistance (r1 ^. horizontalRange) (r2 ^. horizontalRange))
+    (rangeDistance (r1 ^. verticalRange) (r2 ^. verticalRange))
+
+rangeDistance :: (Num a, Ord a) => Range a -> Range a -> a
+rangeDistance range0 range1  =
+    max (l1 - r0) (l0 - r1) & max 0
     where
-        tl1 = r1 ^. topLeft
-        tl2 = r2 ^. topLeft
-        br1 = r1 ^. bottomRight
-        br2 = r2 ^. bottomRight
+        l0 = range0 ^. rangeStart
+        r0 = range0 ^. rangeStop
+        l1 = range1 ^. rangeStart
+        r1 = range1 ^. rangeStop
 
 sqrDistance :: Rect -> Rect -> R
 sqrDistance r1 r2 = Vector2.sqrNorm (distances r1 r2)
