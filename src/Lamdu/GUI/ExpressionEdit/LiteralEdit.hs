@@ -133,6 +133,7 @@ textEdit prop pl =
 
 parseNum :: Text -> Maybe Double
 parseNum newText
+    | newText /= Text.strip newText = Nothing
     | newText `elem` ["", "-", ".", "-."] = Just 0
     | otherwise = tryParse newText
 
