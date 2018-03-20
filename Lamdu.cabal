@@ -242,6 +242,7 @@ Library
                   , Lamdu.GUI.WidgetIds
                   , Lamdu.Infer.Trans
                   , Lamdu.Opts
+                  , Lamdu.Paths
                   , Lamdu.Precedence
                   , Lamdu.Prelude
                   , Lamdu.Settings

@@ -10,8 +10,7 @@ import qualified Lamdu.Data.Db.Layout as DbLayout
 import           Lamdu.Data.Export.JSON (fileImportAll)
 import qualified Lamdu.GUI.WidgetIdIRef as WidgetIdIRef
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
-import qualified Paths.Utils as Paths
-import qualified Paths_Lamdu
+import qualified Lamdu.Paths as Paths
 import           Revision.Deltum.Db (DB)
 import           Revision.Deltum.Rev.Branch (Branch)
 import qualified Revision.Deltum.Rev.Branch as Branch
@@ -68,5 +67,5 @@ initDb db importAct =
 
 initFreshDb :: DB -> IO ()
 initFreshDb db =
-    Paths.get Paths_Lamdu.getDataFileName "freshdb.json"
+    Paths.getDataFileName "freshdb.json"
     >>= fileImportAll >>= initDb db

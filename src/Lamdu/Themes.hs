@@ -5,8 +5,7 @@ module Lamdu.Themes
     ) where
 
 import qualified Data.Text as Text
-import qualified Paths.Utils as Paths
-import qualified Paths_Lamdu
+import qualified Lamdu.Paths as Paths
 import qualified System.Directory as Directory
 import           System.FilePath ((</>))
 import qualified System.FilePath as FilePath
@@ -19,7 +18,7 @@ getFiles :: IO [FilePath]
 getFiles =
     do
         themesDir <-
-            Paths.get Paths_Lamdu.getDataFileName "config.json"
+            Paths.getDataFileName "config.json"
             <&> FilePath.takeDirectory <&> (</> "themes")
         Directory.getDirectoryContents themesDir
             <&> filter ((== ".json") . FilePath.takeExtension)

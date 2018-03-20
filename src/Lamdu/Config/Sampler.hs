@@ -18,8 +18,7 @@ import qualified Data.Text as Text
 import           Data.Time.Clock (UTCTime)
 import           Lamdu.Config (Config)
 import           Lamdu.Config.Theme (Theme)
-import qualified Paths.Utils as Paths
-import qualified Paths_Lamdu
+import qualified Lamdu.Paths as Paths
 import           System.Directory (getModificationTime)
 import           System.FilePath (takeDirectory, takeFileName, dropExtension, (</>))
 
@@ -116,4 +115,4 @@ new sampleUpdated initialTheme =
                 >>= putMVar ref
             }
     where
-        getConfigPath = Paths.get Paths_Lamdu.getDataFileName "config.json"
+        getConfigPath = Paths.getDataFileName "config.json"

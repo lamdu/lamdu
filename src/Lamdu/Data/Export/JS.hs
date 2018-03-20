@@ -30,8 +30,7 @@ import           Lamdu.Eval.Results (EvalResults)
 import qualified Lamdu.Eval.Results as EV
 import           Lamdu.Expr.IRef (ValI)
 import qualified Lamdu.Expr.IRef as ExprIRef
-import qualified Paths.Utils as Paths
-import qualified Paths_Lamdu
+import qualified Lamdu.Paths as Paths
 import qualified Revision.Deltum.IRef as IRef
 import           Revision.Deltum.Transaction (Transaction)
 import qualified Revision.Deltum.Transaction as Transaction
@@ -106,7 +105,7 @@ formatResult (EV.Val _ b) =
     _ -> "<TODO: Format result>"
 
 readDataFile :: FilePath -> IO String
-readDataFile path = Paths.get Paths_Lamdu.getDataFileName path >>= readFile
+readDataFile path = Paths.getDataFileName path >>= readFile
 
 exportFancy :: EvalResults (ValI ViewM) -> T ViewM (IO ())
 exportFancy evalResults =
