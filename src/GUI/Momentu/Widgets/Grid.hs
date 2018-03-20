@@ -213,13 +213,11 @@ groupSortOn f = groupOn f . sortOn f
 combineMEnters ::
     [[Maybe (Direction -> Widget.EnterResult a)]] ->
     Maybe (Direction -> Widget.EnterResult a)
-combineMEnters children =
-    chooseClosest childEnters
+combineMEnters children
+    | null childEnters = Nothing
+    | otherwise = Just byDirection
     where
-        childEnters = children ^@.. each2d . Lens._Just
-
-        chooseClosest [] = Nothing
-        chooseClosest _ = Just byDirection
+        childEnters = children ^@.. each2d <. Lens._Just
 
         byDirection dir =
             filteredByEdge edge <&> (dir &) & minimumOn score
@@ -253,12 +251,10 @@ combineMEnters children =
                     FromLeft{}  -> Vector2 (-1) 0
                     FromRight{} -> Vector2 1 0
 
+        -- | Take only the first/last enterable row/column
         filteredByEdge =
             memo $ \(Vector2 hEdge vEdge) ->
-            map snd .
-            safeHead . groupSortOn ((* (-hEdge)) . (^._1._1)) .
-            safeHead . groupSortOn ((* (-vEdge)) . (^._1._2)) $
             childEnters
-
-safeHead :: Monoid a => [a] -> a
-safeHead = mconcat . take 1
+            & groupSortOn ((* (-vEdge)) . (^._1._2)) & (^. Lens.ix 0)
+            & groupSortOn ((* (-hEdge)) . (^._1._1)) & (^. Lens.ix 0)
+            <&> snd
