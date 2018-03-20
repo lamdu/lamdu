@@ -21,7 +21,7 @@ import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.TextView as TextView
 import           Lamdu.Calc.Type.Scheme (Scheme(..), schemeType)
-import qualified Lamdu.Config.Theme as Theme
+import qualified Lamdu.Config.Theme.TextColors as TextColors
 import qualified Lamdu.GUI.ExpressionEdit.BinderEdit as BinderEdit
 import qualified Lamdu.GUI.ExpressionEdit.BuiltinEdit as BuiltinEdit
 import qualified Lamdu.GUI.ExpressionEdit.TagEdit as TagEdit
@@ -58,7 +58,7 @@ makeExprDefinition ::
     ExprGuiM m (ExpressionGui m)
 makeExprDefinition lhsEventMap def bodyExpr =
     BinderEdit.make (bodyExpr ^. Sugar.dePresentationMode) lhsEventMap
-    (def ^. Sugar.drName) Theme.definitionColor
+    (def ^. Sugar.drName) TextColors.definitionColor
     (bodyExpr ^. Sugar.deContent) myId
     where
         entityId = def ^. Sugar.drEntityId
@@ -71,7 +71,7 @@ makeBuiltinDefinition ::
     ExprGuiM m (WithTextPos (Widget (T m GuiState.Update)))
 makeBuiltinDefinition def builtin =
     do
-        nameEdit <- TagEdit.makeBinderTagEdit Theme.definitionColor name
+        nameEdit <- TagEdit.makeBinderTagEdit TextColors.definitionColor name
         equals <- TextView.makeLabel " = "
         builtinEdit <- BuiltinEdit.make builtin myId
         typeView <-

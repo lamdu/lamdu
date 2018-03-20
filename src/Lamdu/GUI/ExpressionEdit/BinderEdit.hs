@@ -39,6 +39,8 @@ import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified GUI.Momentu.Widgets.TextView as TextView
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Config.Theme as Theme
+import           Lamdu.Config.Theme.TextColors (TextColors)
+import qualified Lamdu.Config.Theme.TextColors as TextColors
 import qualified Lamdu.Data.Meta as Meta
 import           Lamdu.GUI.CodeEdit.AnnotationMode (AnnotationMode(..))
 import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
@@ -68,7 +70,7 @@ makeBinderNameEdit ::
     Monad m =>
     Widget.Id -> Sugar.BinderActions (Name (T m)) (T m) ->
     EventMap (T m GuiState.Update) ->
-    Sugar.Tag (Name (T m)) (T m) -> (Theme.TextColors -> Draw.Color) ->
+    Sugar.Tag (Name (T m)) (T m) -> (TextColors -> Draw.Color) ->
     ExprGuiM m (WithTextPos (Widget (T m GuiState.Update)))
 makeBinderNameEdit binderId binderActions rhsJumperEquals tag color =
     do
@@ -178,7 +180,7 @@ makeScopeNavArrow setScope arrowText mScopeId =
             ( TextView.color .~
                 case mScopeId of
                 Nothing -> Theme.disabledColor theme
-                Just _ -> Theme.grammarColor (Theme.textColors theme)
+                Just _ -> TextColors.grammarColor (Theme.textColors theme)
             )
     where
         mEnter size =
@@ -245,7 +247,7 @@ makeMParamsEdit mScopeCursor isScopeNavFocused delVarBackwardsId myId nearestHol
             case binder ^. Sugar.bActions . Sugar.baAddFirstParam of
             Sugar.PrependParam selection | isPrepend ->
                 TagEdit.makeTagHoleEdit selection ParamEdit.mkParamPickResult prependId
-                & Styled.withColor Theme.parameterColor
+                & Styled.withColor TextColors.parameterColor
                 <&> Responsive.fromWithTextPos
                 <&> (:[])
             _ -> pure []
@@ -355,7 +357,7 @@ make ::
     Monad m =>
     Maybe (T m (Property (T m) Meta.PresentationMode)) ->
     EventMap (T m GuiState.Update) ->
-    Sugar.Tag (Name (T m)) (T m) -> (Theme.TextColors -> Draw.Color) ->
+    Sugar.Tag (Name (T m)) (T m) -> (TextColors -> Draw.Color) ->
     Sugar.Binder (Name (T m)) (T m) (ExprGui.SugarExpr m) ->
     Widget.Id ->
     ExprGuiM m (ExpressionGui m)
@@ -441,7 +443,7 @@ makeLetEdit item =
         letLabel <- Styled.grammarLabel "let"
         space <- Spacer.stdHSpace
         letEquation <-
-            make Nothing mempty (item ^. Sugar.lName) Theme.letColor binder letId
+            make Nothing mempty (item ^. Sugar.lName) TextColors.letColor binder letId
             <&> Widget.weakerEvents eventMap
             <&> Element.pad (Theme.letItemPadding theme)
         letLabel /|/ space /|/ letEquation & pure

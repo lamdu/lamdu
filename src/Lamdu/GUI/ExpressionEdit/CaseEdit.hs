@@ -27,6 +27,8 @@ import qualified Lamdu.Calc.Val as V
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Config.Theme as Theme
+import           Lamdu.Config.Theme.TextColors (TextColors)
+import qualified Lamdu.Config.Theme.TextColors as TextColors
 import qualified Lamdu.Eval.Results as ER
 import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
 import qualified Lamdu.GUI.ExpressionEdit.TagEdit as TagEdit
@@ -176,7 +178,7 @@ makeAddAltRow ::
     m (Responsive.TaggedItem (T f GuiState.Update))
 makeAddAltRow addAlt myId =
     TagEdit.makeTagHoleEdit addAlt mkPickResult myId
-    & Styled.withColor Theme.caseTagColor
+    & Styled.withColor TextColors.caseTagColor
     <&>
     \tagHole ->
     Responsive.TaggedItem
@@ -191,10 +193,10 @@ makeAddAltRow addAlt myId =
             , Menu._pickNextEntryPoint = WidgetIds.fromEntityId dst
             }
 
-separationBar :: Theme.TextColors -> Widget.R -> Anim.AnimId -> View
+separationBar :: TextColors -> Widget.R -> Anim.AnimId -> View
 separationBar theme width animId =
     View.unitSquare (animId <> ["tailsep"])
-    & Element.tint (Theme.caseTailColor theme)
+    & Element.tint (TextColors.caseTailColor theme)
     & Element.scale (Vector2 width 10)
 
 makeOpenCase ::

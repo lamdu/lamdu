@@ -23,6 +23,7 @@ import qualified GUI.Momentu.Widgets.Choice as Choice
 import qualified GUI.Momentu.Widgets.TextView as TextView
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Config.Theme as Theme
+import qualified Lamdu.Config.Theme.TextColors as TextColors
 import           Lamdu.GUI.CodeEdit.AnnotationMode (AnnotationMode(..))
 import qualified Lamdu.GUI.CodeEdit.AnnotationMode as AnnotationMode
 import qualified Lamdu.GUI.Styled as Styled
@@ -40,7 +41,7 @@ forStatusBar prop =
     do
         header <-
             TextView.makeLabel "Annotations "
-            & Styled.withColor Theme.infoTextColor
+            & Styled.withColor TextColors.infoTextColor
         choices <- [minBound..maxBound] & traverse mkChoice
         choice <-
             Choice.make

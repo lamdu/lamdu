@@ -24,6 +24,7 @@ import qualified GUI.Momentu.Widgets.Choice as Choice
 import qualified GUI.Momentu.Widgets.TextView as TextView
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Config.Theme as Theme
+import qualified Lamdu.Config.Theme.TextColors as TextColors
 import qualified Lamdu.GUI.Styled as Styled
 import qualified Lamdu.Themes as Themes
 
@@ -52,7 +53,7 @@ widgetForStatusBar themeNames prop =
     do
         header <-
             TextView.makeLabel "Theme "
-            & Styled.withColor Theme.infoTextColor
+            & Styled.withColor TextColors.infoTextColor
         choices <- themeNames & traverse mkChoice
         choice <-
             Choice.make

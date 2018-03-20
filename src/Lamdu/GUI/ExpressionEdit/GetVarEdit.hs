@@ -29,6 +29,7 @@ import           Lamdu.Config (Config, HasConfig)
 import qualified Lamdu.Config as Config
 import           Lamdu.Config.Theme (HasTheme)
 import qualified Lamdu.Config.Theme as Theme
+import qualified Lamdu.Config.Theme.TextColors as TextColors
 import qualified Lamdu.Data.Ops as DataOps
 import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExprGui
@@ -78,7 +79,7 @@ makeParamsRecord myId paramsRecordVar =
                     in
                     Widget.joinId myId paramId
                     & makeSimpleView fieldName <&> Responsive.fromWithTextPos
-                    & Styled.withColor Theme.parameterColor
+                    & Styled.withColor TextColors.parameterColor
                     & Reader.local (Element.animIdPrefix %~ (<> paramId))
                 )
               )
@@ -136,7 +137,7 @@ definitionTypeChangeBox ::
 definitionTypeChangeBox info getVarId =
     do
         infoColor <-
-            Lens.view Theme.theme <&> Theme.textColors <&> Theme.infoTextColor
+            Lens.view Theme.theme <&> Theme.textColors <&> TextColors.infoTextColor
         let infoLabel text =
                 TextView.makeLabel text & Reader.local (TextView.color .~ infoColor)
         updateLabel <- Styled.actionable myId "Update" updateDoc update
@@ -203,9 +204,9 @@ makeGetBinder binderVar myId =
         config <- Lens.view Config.config
         let (color, processDef) =
                 case binderVar ^. Sugar.bvForm of
-                Sugar.GetLet -> (Theme.letColor, id)
+                Sugar.GetLet -> (TextColors.letColor, id)
                 Sugar.GetDefinition defForm ->
-                    ( Theme.definitionColor
+                    ( TextColors.definitionColor
                     , processDefinitionWidget defForm myId
                     )
         makeSimpleView
@@ -226,10 +227,10 @@ makeGetParam param myId =
             Sugar.LightLambda ->
                 makeSimpleView
                 <&> Lens.mapped %~ LightLambda.withUnderline theme
-                <&> Lens.mapped %~ Styled.nameAtBinder Theme.parameterColor name
+                <&> Lens.mapped %~ Styled.nameAtBinder TextColors.parameterColor name
             _ ->
                 makeSimpleView
-            <&> Lens.mapped %~ Styled.withColor Theme.parameterColor
+            <&> Lens.mapped %~ Styled.withColor TextColors.parameterColor
             & makeNameRef myId (param ^. Sugar.pNameRef)
     where
         name = param ^. Sugar.pNameRef . Sugar.nrName

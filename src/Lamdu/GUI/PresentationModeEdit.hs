@@ -20,6 +20,7 @@ import qualified GUI.Momentu.Widgets.Choice as Choice
 import qualified GUI.Momentu.Widgets.TextView as TextView
 import           Lamdu.Config.Theme (HasTheme)
 import qualified Lamdu.Config.Theme as Theme
+import qualified Lamdu.Config.Theme.TextColors as TextColors
 import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
@@ -41,7 +42,7 @@ make myId (Sugar.Params params) prop =
         pairs <-
             traverse mkPair [Sugar.Object (paramTags !! 0), Sugar.Verbose, Sugar.Infix (paramTags !! 0) (paramTags !! 1)]
             & Reader.local
-                (TextView.style . TextView.styleColor .~ Theme.presentationChoiceColor (Theme.textColors theme))
+                (TextView.style . TextView.styleColor .~ TextColors.presentationChoiceColor (Theme.textColors theme))
         Choice.make ?? Property.set prop ?? pairs ?? cur
             ?? Choice.defaultConfig "Presentation Mode" ?? myId
             <&> Element.scale (Theme.presentationChoiceScaleFactor theme)

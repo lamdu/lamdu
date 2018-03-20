@@ -41,6 +41,8 @@ import           Lamdu.Config (HasConfig)
 import qualified Lamdu.Config as Config
 import           Lamdu.Config.Theme (HasTheme(..))
 import qualified Lamdu.Config.Theme as Theme
+import           Lamdu.Config.Theme.TextColors (TextColors)
+import qualified Lamdu.Config.Theme.TextColors as TextColors
 import           Lamdu.Fuzzy (Fuzzy)
 import qualified Lamdu.Fuzzy as Fuzzy
 import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
@@ -162,7 +164,7 @@ addNewTag tagSelection mkPickResult ctx =
         do
             color <-
                 Lens.view theme <&> Theme.textColors
-                <&> Theme.actionTextColor
+                <&> TextColors.actionTextColor
             (Widget.makeFocusableView ?? optionId <&> fmap)
                 <*> TextView.makeLabel "Create new"
                 <&> (`Menu.RenderedOption` preEvent)
@@ -406,7 +408,7 @@ makeRecordTag ::
     m (WithTextPos (Widget (T f GuiState.Update)))
 makeRecordTag nearestHoles tag =
     makeTagEdit nearestHoles tag
-    & Styled.withColor Theme.recordTagColor
+    & Styled.withColor TextColors.recordTagColor
 
 makeVariantTag ::
     (MonadReader env m, MonadTransaction f m, HasTagEditEnv env) =>
@@ -414,7 +416,7 @@ makeVariantTag ::
     m (WithTextPos (Widget (T f GuiState.Update)))
 makeVariantTag nearestHoles tag =
     makeTagEdit nearestHoles tag
-    & Styled.withColor Theme.caseTagColor
+    & Styled.withColor TextColors.caseTagColor
 
 addParamId :: Widget.Id -> Widget.Id
 addParamId = (`Widget.joinId` ["add param"])
@@ -422,7 +424,7 @@ addParamId = (`Widget.joinId` ["add param"])
 makeLHSTag ::
     (MonadReader env m, MonadTransaction f m, HasTagEditEnv env, HasStyle env) =>
     (Maybe Sugar.EntityId -> Sugar.EntityId -> Widget.Id) ->
-    (Theme.TextColors -> Draw.Color) -> Sugar.Tag (Name (T f)) (T f) ->
+    (TextColors -> Draw.Color) -> Sugar.Tag (Name (T f)) (T f) ->
     m (WithTextPos (Widget (T f GuiState.Update)))
 makeLHSTag onPickNext color tag =
     do
@@ -456,7 +458,7 @@ makeParamTag ::
     Sugar.Tag (Name (T m)) (T m) ->
     f (WithTextPos (Widget (T m GuiState.Update)))
 makeParamTag =
-    makeLHSTag onPickNext Theme.parameterColor
+    makeLHSTag onPickNext TextColors.parameterColor
     where
         onPickNext _ pos = WidgetIds.fromEntityId pos & addParamId
 
@@ -466,7 +468,7 @@ makeArgTag ::
     Name f -> Sugar.EntityId -> m (WithTextPos View)
 makeArgTag name tagInstance =
     NameView.make name
-    & Styled.withColor Theme.argTagColor
+    & Styled.withColor TextColors.argTagColor
     & Reader.local (Element.animIdPrefix .~ animId)
     where
         animId = WidgetIds.fromEntityId tagInstance & Widget.toAnimId
@@ -478,7 +480,7 @@ makeBinderTagEdit ::
     , Hover.HasStyle env, Menu.HasConfig env
     , MonadTransaction f m
     ) =>
-    (Theme.TextColors -> Draw.Color) -> Sugar.Tag (Name (T f)) (T f) ->
+    (TextColors -> Draw.Color) -> Sugar.Tag (Name (T f)) (T f) ->
     m (WithTextPos (Widget (T f GuiState.Update)))
 makeBinderTagEdit color tag =
     makeLHSTag defaultOnPickNext color tag

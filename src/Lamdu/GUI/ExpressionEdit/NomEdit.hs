@@ -14,6 +14,7 @@ import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.TextView as TextView
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Config.Theme as Theme
+import qualified Lamdu.Config.Theme.TextColors as TextColors
 import qualified Lamdu.GUI.ExpressionEdit.BinderEdit as BinderEdit
 import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExprGui
@@ -67,7 +68,7 @@ mkNomGui ::
     ExprGuiM m (ExpressionGui m)
 mkNomGui ordering nomStr str mDel pl (Sugar.Nominal tid val) =
     do
-        nomColor <- Lens.view Theme.theme <&> Theme.textColors <&> Theme.nomColor
+        nomColor <- Lens.view Theme.theme <&> Theme.textColors <&> TextColors.nomColor
         config <- Lens.view Config.config
         let mkEventMap action =
                 action <&> WidgetIds.fromEntityId

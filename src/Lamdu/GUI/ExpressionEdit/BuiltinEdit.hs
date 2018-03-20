@@ -24,6 +24,7 @@ import qualified GUI.Momentu.Widgets.TextEdit.Property as TextEdits
 import qualified GUI.Momentu.Widgets.TextView as TextView
 import           Lamdu.Config.Theme (HasTheme)
 import qualified Lamdu.Config.Theme as Theme
+import qualified Lamdu.Config.Theme.TextColors as TextColors
 import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Sugar.Types as Sugar
 import           Revision.Deltum.Transaction (Transaction)
@@ -72,10 +73,10 @@ make def myId =
     do
         colors <- Lens.view Theme.theme <&> Theme.textColors
         moduleName <-
-            makeNamePartEditor (Theme.foreignModuleColor colors)
+            makeNamePartEditor (TextColors.foreignModuleColor colors)
             modulePathStr modulePathSetter (builtinFFIPath myId)
         varName <-
-            makeNamePartEditor (Theme.foreignVarColor colors) name nameSetter
+            makeNamePartEditor (TextColors.foreignVarColor colors) name nameSetter
             (builtinFFIName myId)
         dot <- TextView.makeLabel "."
         moduleName /|/ dot /|/ varName & pure

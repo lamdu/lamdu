@@ -31,6 +31,8 @@ import qualified GUI.Momentu.Widgets.TextView as TextView
 import qualified Lamdu.Config as Config
 import           Lamdu.Config.Theme (Theme, HasTheme(..))
 import qualified Lamdu.Config.Theme as Theme
+import           Lamdu.Config.Theme.TextColors (TextColors)
+import qualified Lamdu.Config.Theme.TextColors as TextColors
 import           Lamdu.Name (Name(..))
 import qualified Lamdu.Name as Name
 import qualified Lamdu.Style as Style
@@ -47,7 +49,7 @@ grammarLabel text =
     do
         th <- Lens.view theme <&> Theme.textColors
         TextView.makeLabel text
-            & Reader.local (TextView.color .~ Theme.grammarColor th)
+            & Reader.local (TextView.color .~ TextColors.grammarColor th)
 
 grammarText ::
     ( MonadReader env m
@@ -58,7 +60,7 @@ grammarText =
     do
         th <- Lens.view theme <&> Theme.textColors
         TextView.make
-            & Reader.local (TextView.color .~ Theme.grammarColor th)
+            & Reader.local (TextView.color .~ TextColors.grammarColor th)
 
 addValBG ::
     ( MonadReader env m, Element a
@@ -116,7 +118,7 @@ addDeletionDiagonal =
 
 withColor ::
     (MonadReader env m, HasTheme env, TextView.HasStyle env) =>
-    (Theme.TextColors -> Draw.Color) -> m a -> m a
+    (TextColors -> Draw.Color) -> m a -> m a
 withColor textColor act =
     do
         color <- Lens.view Theme.theme <&> Theme.textColors <&> textColor
@@ -131,7 +133,7 @@ actionable ::
     m (WithTextPos (Widget (f GuiState.Update)))
 actionable myId text doc action =
     do
-        color <- Lens.view Theme.theme <&> Theme.textColors <&> Theme.actionTextColor
+        color <- Lens.view Theme.theme <&> Theme.textColors <&> TextColors.actionTextColor
         underlineWidth <- Lens.view Theme.theme <&> Theme.narrowUnderlineWidth
         let underline =
                 Font.Underline
@@ -148,7 +150,7 @@ actionable myId text doc action =
 
 nameAtBinder ::
     (MonadReader env m, HasTheme env, Style.HasStyle env) =>
-    (Theme.TextColors -> Draw.Color) -> Name n -> m b -> m b
+    (TextColors -> Draw.Color) -> Name n -> m b -> m b
 nameAtBinder nameColor name act =
     do
         color <- Lens.view theme <&> Theme.textColors <&> nameColor

@@ -15,6 +15,8 @@ import           GUI.Momentu.View (View)
 import qualified GUI.Momentu.Widgets.TextView as TextView
 import           Lamdu.Config.Theme (HasTheme(..))
 import qualified Lamdu.Config.Theme as Theme
+import qualified Lamdu.Config.Theme.Name as NameTheme
+import qualified Lamdu.Config.Theme.TextColors as TextColors
 import qualified Lamdu.GUI.Styled as Styled
 import           Lamdu.Name (Name(..))
 import qualified Lamdu.Name as Name
@@ -24,7 +26,7 @@ import           Lamdu.Prelude
 makeCollisionSuffixLabel ::
     ( TextView.HasStyle r, Element.HasAnimIdPrefix r, HasTheme r
     , MonadReader r m
-    ) => Lens.ALens' Theme.Name Draw.Color -> Name.Collision -> m (Maybe View)
+    ) => Lens.ALens' NameTheme.Name Draw.Color -> Name.Collision -> m (Maybe View)
 makeCollisionSuffixLabel collisionColor mCollision =
     case mCollision of
     Name.NoCollision -> pure Nothing
@@ -37,8 +39,8 @@ makeCollisionSuffixLabel collisionColor mCollision =
                 (Draw.backgroundColor ?? nameTheme ^# collisionColor)
                     <*>
                     (TextView.makeLabel text
-                     & Styled.withColor Theme.collisionSuffixTextColor
-                     <&> Element.scale (nameTheme ^. Theme.collisionSuffixScaleFactor))
+                     & Styled.withColor TextColors.collisionSuffixTextColor
+                     <&> Element.scale (nameTheme ^. NameTheme.collisionSuffixScaleFactor))
             <&> (^. Align.tValue)
             <&> Just
 
@@ -48,10 +50,10 @@ make ::
 make name =
     do
         mTextSuffixLabel <-
-            makeCollisionSuffixLabel Theme.textCollisionSuffixBGColor textCollision
+            makeCollisionSuffixLabel NameTheme.textCollisionSuffixBGColor textCollision
             <&> Lens._Just %~ Aligned 0.5
         mTagSuffixLabel <-
-            makeCollisionSuffixLabel Theme.tagCollisionSuffixBGColor tagCollision
+            makeCollisionSuffixLabel NameTheme.tagCollisionSuffixBGColor tagCollision
             <&> Lens._Just %~ Aligned 0.5
         animId <- Element.subAnimId ["name"]
         TextView.make ?? visibleName ?? animId

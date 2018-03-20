@@ -29,6 +29,8 @@ import qualified GUI.Momentu.Widgets.TextView as TextView
 import           Lamdu.Config (HasConfig)
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Config.Theme as Theme
+import           Lamdu.Config.Theme.TextColors (TextColors)
+import qualified Lamdu.Config.Theme.TextColors as TextColors
 import qualified Lamdu.GUI.ExpressionEdit.TagEdit as TagEdit
 import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExprGui
@@ -175,7 +177,7 @@ makeAddFieldRow ::
     m (Responsive.TaggedItem (T f GuiState.Update))
 makeAddFieldRow addField pl =
     TagEdit.makeTagHoleEdit addField mkPickResult tagHoleId
-    & Styled.withColor Theme.recordTagColor
+    & Styled.withColor TextColors.recordTagColor
     <&>
     \tagHole ->
     Responsive.TaggedItem
@@ -209,10 +211,10 @@ makeFieldRow (Sugar.CompositeItem delete tag fieldExpr) =
             , Responsive._tagPost = Element.empty
             }
 
-separationBar :: Theme.TextColors -> Widget.R -> Anim.AnimId -> View
+separationBar :: TextColors -> Widget.R -> Anim.AnimId -> View
 separationBar theme width animId =
     View.unitSquare (animId <> ["tailsep"])
-    & Element.tint (Theme.recordTailColor theme)
+    & Element.tint (TextColors.recordTailColor theme)
     & Element.scale (Vector2 width 10)
 
 makeOpenRecord ::

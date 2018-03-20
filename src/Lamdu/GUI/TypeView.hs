@@ -32,6 +32,7 @@ import           Lamdu.Calc.Type (Type)
 import qualified Lamdu.Calc.Type as T
 import           Lamdu.Config.Theme (HasTheme)
 import qualified Lamdu.Config.Theme as Theme
+import qualified Lamdu.Config.Theme.TextColors as TextColors
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.GUI.Styled as Styled
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
@@ -285,7 +286,7 @@ make ::
     Type -> m (WithTextPos View)
 make t =
     do
-        color <- Lens.view Theme.theme <&> Theme.textColors <&> Theme.typeTextColor
+        color <- Lens.view Theme.theme <&> Theme.textColors <&> TextColors.typeTextColor
         prefix <- Lens.view Element.animIdPrefix
         makeInternal (Prec 0) t
             & runM

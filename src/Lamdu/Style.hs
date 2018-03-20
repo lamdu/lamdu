@@ -22,6 +22,8 @@ import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
 import           Lamdu.Config.Theme (Theme)
 import qualified Lamdu.Config.Theme as Theme
+import           Lamdu.Config.Theme.TextColors (TextColors(..))
+import qualified Lamdu.Config.Theme.TextColors as TextColors
 import           Lamdu.Font (Fonts(..))
 import qualified Lamdu.Font as Fonts
 
@@ -65,21 +67,21 @@ textEdit color font =
     , TextView._styleUnderline = Nothing
     }
 
-makeStyle :: Theme.TextColors -> Fonts Font -> Style
+makeStyle :: TextColors -> Fonts Font -> Style
 makeStyle config fonts =
     Style
     { _styleBase =
-      textEdit (Theme.baseColor config) (Fonts.fontDefault fonts)
+      textEdit (TextColors.baseColor config) (Fonts.fontDefault fonts)
     , _styleAutoNameOrigin =
-      textEdit (Theme.baseColor config) (Fonts.fontAutoName fonts)
+      textEdit (TextColors.baseColor config) (Fonts.fontAutoName fonts)
     , _styleNameAtBinder =
-      textEdit (Theme.baseColor config) (Fonts.fontBinders fonts)
+      textEdit (TextColors.baseColor config) (Fonts.fontBinders fonts)
     , _styleBytes =
-      textEdit (Theme.literalColor config) (Fonts.fontLiteralBytes fonts)
+      textEdit (TextColors.literalColor config) (Fonts.fontLiteralBytes fonts)
     , _styleText =
-      textEdit (Theme.literalColor config) (Fonts.fontLiteralText fonts)
+      textEdit (TextColors.literalColor config) (Fonts.fontLiteralText fonts)
     , _styleNum =
-      textEdit (Theme.literalColor config) (Fonts.fontDefault fonts)
+      textEdit (TextColors.literalColor config) (Fonts.fontDefault fonts)
     }
 
 mainLoopConfig :: Draw.R -> Font -> Config -> Theme -> MainLoop.Config

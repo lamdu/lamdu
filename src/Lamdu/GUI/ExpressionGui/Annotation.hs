@@ -33,6 +33,8 @@ import           Lamdu.Calc.Type (Type)
 import qualified Lamdu.Calc.Type as T
 import           Lamdu.Config.Theme (HasTheme(..))
 import qualified Lamdu.Config.Theme as Theme
+import           Lamdu.Config.Theme.ValAnnotation (ValAnnotation)
+import qualified Lamdu.Config.Theme.ValAnnotation as ValAnnotation
 import qualified Lamdu.Eval.Results as ER
 import qualified Lamdu.GUI.CodeEdit.AnnotationMode as AnnotationMode
 import qualified Lamdu.GUI.EvalView as EvalView
@@ -53,7 +55,7 @@ type T = Transaction
 
 addAnnotationBackgroundH ::
     (MonadReader env m, HasTheme env, Element a, Element.HasAnimIdPrefix env) =>
-    (Theme.ValAnnotation -> Draw.Color) -> m (a -> a)
+    (ValAnnotation -> Draw.Color) -> m (a -> a)
 addAnnotationBackgroundH getColor =
     do
         t <- Lens.view theme
@@ -63,11 +65,11 @@ addAnnotationBackgroundH getColor =
 addAnnotationBackground ::
     (MonadReader env m, HasTheme env, Element a, Element.HasAnimIdPrefix env) =>
     m (a -> a)
-addAnnotationBackground = addAnnotationBackgroundH Theme.valAnnotationBGColor
+addAnnotationBackground = addAnnotationBackgroundH ValAnnotation.valAnnotationBGColor
 
 addAnnotationHoverBackground ::
     (MonadReader env m, HasTheme env, Element a, Element.HasAnimIdPrefix env) => m (a -> a)
-addAnnotationHoverBackground = addAnnotationBackgroundH Theme.valAnnotationHoverBGColor
+addAnnotationHoverBackground = addAnnotationBackgroundH ValAnnotation.valAnnotationHoverBGColor
 
 data WideAnnotationBehavior
     = ShrinkWideAnnotation
@@ -125,11 +127,11 @@ processAnnotationGui wideAnnotationBehavior =
             where
                 annotationWidth = annotation ^. Element.width
                 expansionLimit =
-                    Theme.valAnnotationWidthExpansionLimit th
+                    ValAnnotation.valAnnotationWidthExpansionLimit th
                 maxWidth = minWidth + expansionLimit
-                shrinkAtLeast = Theme.valAnnotationShrinkAtLeast th
+                shrinkAtLeast = ValAnnotation.valAnnotationShrinkAtLeast th
                 heightShrinkRatio =
-                    Theme.valAnnotationMaxHeight th * stdSpacing ^. _2
+                    ValAnnotation.valAnnotationMaxHeight th * stdSpacing ^. _2
                     / annotation ^. Element.height
                 shrinkRatio =
                     annotationWidth - shrinkAtLeast & min maxWidth & max minWidth
@@ -207,7 +209,7 @@ annotationSpacer ::
 annotationSpacer =
     Lens.view Theme.theme
     <&> Theme.valAnnotation
-    <&> Theme.valAnnotationSpacing
+    <&> ValAnnotation.valAnnotationSpacing
     >>= Spacer.vspaceLines
 
 addAnnotationH ::

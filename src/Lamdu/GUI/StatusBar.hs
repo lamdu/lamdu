@@ -19,6 +19,7 @@ import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
 import qualified GUI.Momentu.Widgets.TextView as TextView
 import qualified Lamdu.Config.Theme as Theme
+import qualified Lamdu.Config.Theme.TextColors as TextColors
 import           Lamdu.GUI.IOTrans (IOTrans(..))
 import qualified Lamdu.GUI.IOTrans as IOTrans
 import qualified Lamdu.GUI.Settings as SettingsWidget
@@ -48,7 +49,7 @@ make themeNames settingsProp width vcActions =
             IOTrans.liftTrans transaction vcActions
         branchLabel <-
             TextView.make ?? "Branch " ?? ["BranchHeader"]
-            & Styled.withColor Theme.infoTextColor
+            & Styled.withColor TextColors.infoTextColor
         let branchWidget = branchLabel /|/ branchChoice
 
         settings <-
