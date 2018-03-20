@@ -5,7 +5,7 @@ module GUI.Momentu.Widget.Instances
     , glueStates
     , translateFocusedGeneric, translateUpdate
     , translate, fromView
-    , combineEnterPoints
+    , combineEnterPoints, combineMEnters
     , eventMapMaker
     ) where
 
@@ -117,7 +117,7 @@ combineStates _ _ _ StateFocused{} StateFocused{} = error "joining two focused w
 combineStates o _ _ (StateUnfocused u0) (StateUnfocused u1) =
     Unfocused e (u0 ^. uLayers <> u1 ^. uLayers) & StateUnfocused
     where
-        e = unionMaybeWith (combineEnters o) (u0 ^. uMEnter) (u1 ^. uMEnter)
+        e = combineMEnters o (u0 ^. uMEnter) (u1 ^. uMEnter)
 combineStates orientation _ nextDir (StateFocused f) (StateUnfocused u) =
     f
     <&> fMEnterPoint %~ unionMaybeWith combineEnterPoints (u ^. uMEnter <&> (. Direction.Point))
@@ -139,6 +139,13 @@ combineStates orientation _ nextDir (StateFocused f) (StateUnfocused u) =
             & flip mappend
 combineStates orientation dirPrev dirNext (StateUnfocused u) (StateFocused f) =
     combineStates orientation dirNext dirPrev (StateFocused f) (StateUnfocused u)
+
+combineMEnters ::
+    Orientation ->
+    Maybe (Direction -> EnterResult a) ->
+    Maybe (Direction -> EnterResult a) ->
+    Maybe (Direction -> EnterResult a)
+combineMEnters = unionMaybeWith . combineEnters
 
 combineEnters ::
     Orientation ->
