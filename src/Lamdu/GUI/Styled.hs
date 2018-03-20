@@ -45,22 +45,14 @@ grammarLabel ::
     , TextView.HasStyle env
     , Element.HasAnimIdPrefix env
     ) => Text -> m (WithTextPos View)
-grammarLabel text =
-    do
-        th <- Lens.view theme <&> Theme.textColors
-        TextView.makeLabel text
-            & Reader.local (TextView.color .~ TextColors.grammarColor th)
+grammarLabel text = TextView.makeLabel text & withColor TextColors.grammarColor
 
 grammarText ::
     ( MonadReader env m
     , HasTheme env
     , TextView.HasStyle env
     ) => m (Text -> AnimId -> WithTextPos View)
-grammarText =
-    do
-        th <- Lens.view theme <&> Theme.textColors
-        TextView.make
-            & Reader.local (TextView.color .~ TextColors.grammarColor th)
+grammarText = TextView.make & withColor TextColors.grammarColor
 
 addValBG ::
     ( MonadReader env m, Element a
