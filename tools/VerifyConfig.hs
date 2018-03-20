@@ -1,3 +1,4 @@
+#!runghc -isrc -idist/build/autogen -XDeriveGeneric -XDeriveTraversable -XLambdaCase -XOverloadedStrings -XNoImplicitPrelude
 -- | Verify config.json doesn't have any redundant fields (Aeson
 -- parses successfully even with redundant fields!)
 {-# LANGUAGE OverloadedStrings, NoImplicitPrelude #-}

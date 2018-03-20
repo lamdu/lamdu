@@ -1,4 +1,4 @@
-#!runghc -isrc -idist/build/autogen
+#!runghc -isrc -idist/build/autogen -XDeriveGeneric -XDeriveTraversable -XLambdaCase -XOverloadedStrings -XNoImplicitPrelude
 {-# LANGUAGE ScopedTypeVariables #-}
 
 import           Control.Lens.Operators
