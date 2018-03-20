@@ -151,7 +151,7 @@ addNewTag ::
     Sugar.TagSelection (Name (T m)) (T m) a ->
     (Sugar.TagInfo -> a -> Menu.PickResult) ->
     SearchMenu.ResultsContext ->
-    Maybe (Menu.Option f _)
+    Maybe (Menu.Option f (T m))
 addNewTag tagSelection mkPickResult ctx =
     makeNewTagPreEvent searchTerm tagSelection mkPickResult
     <&> \preEvent ->
