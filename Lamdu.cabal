@@ -336,6 +336,6 @@ Test-Suite Tests
   build-depends:
     base, HUnit, test-framework, test-framework-hunit, test-framework-quickcheck2, QuickCheck, aeson-diff,
     Lamdu, AlgoW, lamdu-calculus,
-    aeson, bytestring, containers, filepath, lens, aeson-pretty, pretty
+    aeson, bytestring, containers, filepath, lens, aeson-pretty, pretty, text
   ghc-options: -O2 -Wall -Widentities -Wimplicit-prelude -Wmissing-home-modules -Wincomplete-patterns -Wnoncanonical-monad-instances -Wsemigroup -Wincomplete-record-updates -Wredundant-constraints -threaded
   ghc-prof-options: -fprof-auto -fprof-cafs -rtsopts

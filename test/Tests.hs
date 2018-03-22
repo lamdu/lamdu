@@ -3,15 +3,20 @@ module Main where
 import           TestInstances ()
 
 import qualified Control.Lens as Lens
+import           Control.Monad (zipWithM_)
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.Diff as AesonDiff
 import qualified Data.Aeson.Encode.Pretty as AesonPretty
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.ByteString.Lazy.Char8 as LBSChar
+import qualified Data.Char as Char
 import           Data.Data.Lens (template)
+import qualified Data.Text as Text
+import           Data.List (sort)
 import           Data.List.NonEmpty (NonEmpty(..))
 import qualified Data.List.NonEmpty as NonEmpty
 import qualified Data.Map as Map
+import qualified Data.Set as Set
 import           Data.Proxy (Proxy(..), asProxyTypeOf)
 import           Data.Vector.Vector2 (Vector2(..))
 import           GUI.Momentu.Align (Aligned(..))
@@ -87,6 +92,35 @@ verifyTheme filename =
                 && elem a [0, 0.05, 0.1, 0.5, 1.0] = pure ()
             | otherwise =
                 assertString ("Bad retro color in theme " ++ filename ++ ": " ++ show col)
+
+verifyTagsTest :: IO ()
+verifyTagsTest =
+    readFreshDb
+    <&> (^.. traverse . JsonCodec._EntityTag . Lens._2 . Lens._Just)
+    >>= verifyTagNames
+
+verifyTagNames :: [Text] -> IO ()
+verifyTagNames names =
+    zipWithM_ verifyPair sorted (tail sorted)
+    where
+        sorted = sort names
+        verifyPair x y
+            | x == y = assertString ("duplicate tag name:" <> show x)
+            | Text.length x == 1 = pure ()
+            | Set.member x prefixesWhitelist = pure ()
+            | Text.isPrefixOf x y && suffix /= "s" && Lens.anyOf (Lens.ix 0) Char.isLower suffix =
+                assertString ("inconsistent abbreviation detected: " <> show x <> ", " <> show y)
+            | otherwise = pure ()
+            where
+                suffix = Text.drop (Text.length x) y
+
+prefixesWhitelist :: Set Text
+prefixesWhitelist =
+    Set.fromList
+    [ "connect" -- prefix of "connection"
+    , "data" -- prefix of "database"
+    , "not" -- prefix of "nothing"
+    ]
 
 verifyNoBrokenDefsTest :: IO ()
 verifyNoBrokenDefsTest =
@@ -228,6 +262,7 @@ main =
     , testCase "no-broken-defs" verifyNoBrokenDefsTest
     , testCase "vertical-disambguation" verticalDisambigTest
     , testCase "config-parses" configParseTest
+    , testCase "sensible-tags" verifyTagsTest
     , testProperty "grid-sensible-size" propGridSensibleSize
         & plusTestOptions mempty
         { topt_maximum_generated_tests = Just 1000
