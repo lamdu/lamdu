@@ -1,0 +1,29 @@
+- group:
+    name: lamdu-style
+    enabled: true
+    imports:
+    - package base
+    rules:
+    - hint: {lhs: return, rhs: pure}
+
+- group:
+    name: generalise-for-conciseness
+    enabled: true
+
+# extend existing group
+- group:
+    name: lens
+    rules:
+    - warn: {lhs: "a ^? b <&> (^. c)", rhs: "a ^? (b . c)"}
+    - warn: {lhs: "a ^? (b . _Just)", rhs: "a ^. b"}
+    - warn: {lhs: "Control.Lens.at a . _Just", rhs: "Control.Lens.ix a"}
+    - warn: {lhs: "a & (b .~ (a ^. b))", rhs: "a"}
+    - warn: {lhs: "(a ^. b) & (c .~ (a ^. (b . c)))", rhs: "a ^. b"}
+    - warn: {lhs: "head (a ++ [b])", rhs: "fromMaybe b (a ^? traverse)"}
+    - warn: {lhs: "mconcat [a | x <- take 1 b]", rhs: "foldMap (\\x -> a) (b ^? traverse)"}
+    # standard rules using lens operators & and <&>
+    - warn: {lhs: "pure a <&> b", rhs: "pure (a b)"}
+    - warn: {lhs: "lift a >>= lift . b", rhs: "a >>= b & lift"}
+    - warn: {lhs: "a & lift <&> b >>= lift . c", rhs: "a <&> b >>= c & lift"}
+    - warn: {lhs: "[a] & sequenceA", rhs: "a <&> pure"}
+    - warn: {lhs: "do { a <- b; pure c }", rhs: b <&> \a -> c}
