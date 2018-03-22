@@ -14,6 +14,9 @@ import qualified GUI.Momentu.Responsive.Expression as ResponsiveExpr
 import qualified GUI.Momentu.Widgets.Menu as Menu
 import           Lamdu.Config.Theme (Theme(..))
 import qualified Lamdu.Config.Theme as Theme
+import           Lamdu.Config.Theme.Name as Theme
+import           Lamdu.Config.Theme.TextColors as Theme
+import           Lamdu.Config.Theme.ValAnnotation as Theme
 import           Lamdu.Font (Fonts(..))
 import qualified Lamdu.GUI.VersionControl.Config as VcGuiConfig
 import           Test.QuickCheck (Arbitrary(..), choose, getPositive, frequency)
