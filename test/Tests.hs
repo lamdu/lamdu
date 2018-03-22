@@ -90,15 +90,20 @@ verifyTheme filename =
 
 verifyNoBrokenDefsTest :: IO ()
 verifyNoBrokenDefsTest =
+    readFreshDb
+    <&> (^.. traverse . JsonCodec._EntityDef)
+    <&> traverse . Def.defPayload %~ (^. Lens._3)
+    >>= verifyDefs
+
+readFreshDb :: IO [JsonCodec.Entity]
+readFreshDb =
     LBS.readFile "freshdb.json" <&> Aeson.eitherDecode
     >>= either fail pure
     <&> Aeson.fromJSON
-    >>= \case
-        Aeson.Error str -> fail str
-        Aeson.Success x ->
-            x >>= (^.. JsonCodec._EntityDef)
-            <&> Def.defPayload %~ (^. Lens._3)
-            & verifyDefs
+    >>=
+    \case
+    Aeson.Error str -> fail str
+    Aeson.Success x -> pure x
 
 verifyDefs :: [Def.Definition v V.Var] -> IO ()
 verifyDefs defs =
