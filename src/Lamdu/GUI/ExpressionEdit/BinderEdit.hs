@@ -342,7 +342,7 @@ maybeAddNodeActions partId nearestHoles nodeActions =
         isSelected <- Lens.view GuiState.cursor <&> (== partId)
         if isSelected
             then
-                ExprEventMap.addWith
+                ExprEventMap.addWith ExprEventMap.defaultOptions
                 ExprEventMap.ExprInfo
                 { ExprEventMap.exprInfoActions = nodeActions
                 , ExprEventMap.exprInfoNearestHoles = nearestHoles

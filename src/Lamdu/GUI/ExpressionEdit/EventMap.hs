@@ -1,8 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Lamdu.GUI.ExpressionEdit.EventMap
     ( add
-    , addWithEventMap
-    , addWithoutTransform
+    , Options(..), defaultOptions
     , ExprInfo(..), addWith
     , jumpHolesEventMap
     , extractCursor
@@ -39,6 +38,16 @@ data ExprInfo name f = ExprInfo
     , exprInfoIsSelected :: Bool
     }
 
+newtype Options = Options
+    { addOperatorSetHoleState :: Maybe Sugar.EntityId
+    }
+
+defaultOptions :: Options
+defaultOptions =
+    Options
+    { addOperatorSetHoleState = Nothing
+    }
+
 exprInfoFromPl ::
     (MonadReader env m, GuiState.HasCursor env) =>
     Sugar.Payload name f ExprGui.Payload -> m (ExprInfo name f)
@@ -56,34 +65,19 @@ exprInfoFromPl pl =
 
 add ::
     (MonadReader env m, Config.HasConfig env, HasWidget w, Applicative f, GuiState.HasCursor env) =>
-    Sugar.Payload name f ExprGui.Payload ->
+    Options -> Sugar.Payload name f ExprGui.Payload ->
     m (w (f GuiState.Update) -> w (f GuiState.Update))
-add pl = exprInfoFromPl pl >>= addWith
+add options pl = exprInfoFromPl pl >>= addWith options
 
 addWith ::
     (MonadReader env m, Config.HasConfig env, HasWidget w, Applicative f) =>
-    ExprInfo name f -> m (w (f GuiState.Update) -> w (f GuiState.Update))
-addWith exprInfo =
-    addWithEventMap (transformEventMap exprInfo) exprInfo
-
-addWithoutTransform ::
-    ( MonadReader env m, GuiState.HasCursor env, Config.HasConfig env
-    , HasWidget w, Applicative f
-    ) =>
-    Sugar.Payload name f ExprGui.Payload ->
-    m (w (f GuiState.Update) -> w (f GuiState.Update))
-addWithoutTransform pl = exprInfoFromPl pl >>= addWithEventMap mempty
-
-addWithEventMap ::
-    (MonadReader env m, Config.HasConfig env, HasWidget w, Applicative f) =>
-    (EventContext -> EventMap (f GuiState.Update)) -> ExprInfo name f ->
-    m (w (f GuiState.Update) -> w (f GuiState.Update))
-addWithEventMap eventMap exprInfo =
+    Options -> ExprInfo name f -> m (w (f GuiState.Update) -> w (f GuiState.Update))
+addWith options exprInfo =
     do
-        actions <- actionsEventMap exprInfo
+        actions <- actionsEventMap options exprInfo
         nav <- jumpHolesEventMap (exprInfoNearestHoles exprInfo)
         (widget . Widget.eventMapMaker . Lens.mapped <>~ nav)
-            . Widget.weakerEventsWithContext (eventMap <> actions)
+            . Widget.weakerEventsWithContext actions
             & pure
 
 jumpHolesEventMap ::
@@ -123,9 +117,9 @@ extractEventMap actions =
 
 actionsEventMap ::
     (MonadReader env m, Config.HasConfig env, Applicative f) =>
-    ExprInfo name f ->
+    Options -> ExprInfo name f ->
     m (EventContext -> EventMap (f GuiState.Update))
-actionsEventMap exprInfo =
+actionsEventMap options exprInfo =
     sequence
     [ case exprInfoActions exprInfo ^. Sugar.detach of
       Sugar.DetachAction act | exprInfoIsSelected exprInfo -> detachEventMap act
@@ -139,6 +133,7 @@ actionsEventMap exprInfo =
             ] <&> mconcat
     , maybe (pure mempty) replaceEventMap (exprInfoActions exprInfo ^. Sugar.mSetToHole)
     ] <&> mconcat <&> const
+    <&> mappend (transformEventMap options exprInfo)
     where
         mkReplaceParent replaceKeys =
             exprInfoActions exprInfo ^. Sugar.mReplaceParent
@@ -174,10 +169,13 @@ transformSearchTerm exprInfo eventCtx =
 
 transformEventMap ::
     Applicative f =>
-    ExprInfo name f -> EventContext -> EventMap (f GuiState.Update)
-transformEventMap exprInfo eventCtx =
+    Options -> ExprInfo name f -> EventContext -> EventMap (f GuiState.Update)
+transformEventMap options exprInfo eventCtx =
     case exprInfoActions exprInfo ^. Sugar.detach of
-    Sugar.DetachAction detach -> detach
+    Sugar.DetachAction detach ->
+        case addOperatorSetHoleState options of
+        Just holeId -> pure holeId
+        Nothing -> detach
     Sugar.FragmentAlready holeId -> pure holeId
     Sugar.FragmentExprAlready holeId -> pure holeId
     <&> HoleWidgetIds.make <&> HoleWidgetIds.hidOpen

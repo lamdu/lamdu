@@ -177,7 +177,7 @@ mkRelayedArgs nearestHoles args =
         Options.boxSpaced ?? Options.disambiguationNone ?? collapsed : argEdits
     where
         makeArgEdit arg =
-            ( ExprEventMap.addWith
+            ( ExprEventMap.addWith ExprEventMap.defaultOptions
                 ExprEventMap.ExprInfo
                 { exprInfoActions = arg ^. Sugar.raActions
                 , exprInfoNearestHoles = nearestHoles

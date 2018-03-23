@@ -68,7 +68,7 @@ make hole pl =
                         (hole ^. Sugar.holeMDelete)
                     )
                 | otherwise = (mempty, mempty)
-        ExprEventMap.addWithoutTransform pl
+        ExprEventMap.add options pl
             <*> ( SearchArea.make (hole ^. Sugar.holeOptions)
                     (Just (hole ^. Sugar.holeOptionLiteral)) pl allowedHoleSearchTerm ?? Menu.AnyPlace
                     <&> Widget.widget . Widget.eventMapMaker . Lens.mapped %~ (<> delEventMap)
@@ -78,3 +78,7 @@ make hole pl =
     where
         searchMenuId = hidOpen widgetIds
         widgetIds = HoleWidgetIds.make (pl ^. Sugar.plEntityId)
+        options =
+            ExprEventMap.defaultOptions
+            { ExprEventMap.addOperatorSetHoleState = Just (pl ^. Sugar.plEntityId)
+            }
