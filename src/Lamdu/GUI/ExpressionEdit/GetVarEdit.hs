@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Lamdu.GUI.ExpressionEdit.GetVarEdit
-    ( make, makeGetBinder, makeGetParam
+    ( make, makeGetBinder, makeNoActions
     ) where
 
 import qualified Control.Lens as Lens
@@ -235,14 +235,12 @@ makeGetParam param myId =
     where
         name = param ^. Sugar.pNameRef . Sugar.nrName
 
-make ::
+makeNoActions ::
     Monad m =>
     Sugar.GetVar (Name (T m)) (T m) ->
-    Sugar.Payload name (T m) ExprGui.Payload ->
+    Widget.Id ->
     ExprGuiM m (ExpressionGui m)
-make getVar pl =
-    stdWrap pl
-    <*>
+makeNoActions getVar myId =
     case getVar of
     Sugar.GetBinder binderVar ->
         makeGetBinder binderVar myId <&> Responsive.fromWithTextPos
@@ -250,5 +248,11 @@ make getVar pl =
         makeParamsRecord myId paramsRecordVar
     Sugar.GetParam param ->
         makeGetParam param myId <&> Responsive.fromWithTextPos
-    where
-        myId = WidgetIds.fromExprPayload pl
+
+make ::
+    Monad m =>
+    Sugar.GetVar (Name (T m)) (T m) ->
+    Sugar.Payload name (T m) ExprGui.Payload ->
+    ExprGuiM m (ExpressionGui m)
+make getVar pl =
+    stdWrap pl <*> makeNoActions getVar (WidgetIds.fromExprPayload pl)

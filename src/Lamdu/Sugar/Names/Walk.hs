@@ -194,7 +194,7 @@ toRelayedArg ::
     m (RelayedArg (NewName m) (TM m))
 toRelayedArg RelayedArg{..} =
     (\_raValue _raActions -> RelayedArg{..})
-    <$> toParamRef _raValue
+    <$> toGetVar _raValue
     <*> toNodeActions _raActions
 
 toLabeledApply ::

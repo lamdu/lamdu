@@ -177,16 +177,15 @@ mkRelayedArgs nearestHoles args =
         Options.boxSpaced ?? Options.disambiguationNone ?? collapsed : argEdits
     where
         makeArgEdit arg =
-            ( ExprEventMap.addWith ExprEventMap.defaultOptions
-                ExprEventMap.ExprInfo
-                { exprInfoActions = arg ^. Sugar.raActions
-                , exprInfoNearestHoles = nearestHoles
-                , exprInfoIsHoleResult = False
-                , exprInfoMinOpPrec = 0
-                , exprInfoIsSelected = True
-                } <&> (Align.tValue %~))
-            <*> GetVarEdit.makeGetParam (arg ^. Sugar.raValue) (WidgetIds.fromEntityId (arg ^. Sugar.raId))
-            <&> Responsive.fromWithTextPos
+            ExprEventMap.addWith ExprEventMap.defaultOptions
+            ExprEventMap.ExprInfo
+            { exprInfoActions = arg ^. Sugar.raActions
+            , exprInfoNearestHoles = nearestHoles
+            , exprInfoIsHoleResult = False
+            , exprInfoMinOpPrec = 0
+            , exprInfoIsSelected = True
+            }
+            <*> GetVarEdit.makeNoActions (arg ^. Sugar.raValue) (WidgetIds.fromEntityId (arg ^. Sugar.raId))
 
 mkBoxed ::
     Monad m =>

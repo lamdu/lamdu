@@ -58,10 +58,10 @@ addToLabeledApply a =
                 other ^. Sugar.rPayload . Sugar.plActions . Sugar.mReplaceParent
         processArg arg =
             do
-                param <- arg ^? Sugar.aaExpr . Sugar.rBody . Sugar._BodyGetVar . Sugar._GetParam
-                _ <- internalNameMatch (param ^. Sugar.pNameRef . Sugar.nrName) (arg ^. Sugar.aaName)
+                getVar <- arg ^? Sugar.aaExpr . Sugar.rBody . Sugar._BodyGetVar
+                _ <- traverse_ (internalNameMatch (arg ^. Sugar.aaName)) (getVar ^.. SugarLens.getVarNames)
                 Right Sugar.RelayedArg
-                    { Sugar._raValue = param
+                    { Sugar._raValue = getVar
                     , Sugar._raId = arg ^. Sugar.aaExpr . Sugar.rPayload . Sugar.plEntityId
                     , Sugar._raActions = arg ^. Sugar.aaExpr . Sugar.rPayload . Sugar.plActions
                     } & pure
