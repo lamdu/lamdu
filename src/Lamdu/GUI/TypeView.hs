@@ -210,7 +210,9 @@ gridViewTopLeftAlign ::
     (Traversable vert, Traversable horiz) =>
     vert (horiz (Aligned View)) -> Aligned View
 gridViewTopLeftAlign views =
-    alignPoints ^?! traverse . traverse & Align.value .~ view
+    case alignPoints ^? traverse . traverse of
+    Nothing -> Aligned 0 view
+    Just x -> x & Align.value .~ view
     where
         (alignPoints, view) = GridView.make views
 
