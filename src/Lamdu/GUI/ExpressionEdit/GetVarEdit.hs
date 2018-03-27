@@ -30,7 +30,6 @@ import qualified Lamdu.Config as Config
 import           Lamdu.Config.Theme (HasTheme)
 import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.Config.Theme.TextColors as TextColors
-import qualified Lamdu.Data.Ops as DataOps
 import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExprGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
@@ -95,7 +94,7 @@ makeNameRef ::
     ExprGuiM m (WithTextPos (Widget (T m GuiState.Update)))
 makeNameRef myId nameRef maker =
     do
-        cp <- ExprGuiM.readCodeAnchors
+        savePrecursor <- ExprGuiM.mkPrejumpPosSaver
         config <- Lens.view Config.config
         let jumpToDefinitionEventMap =
                 E.keysEventMapMovesCursor
@@ -103,7 +102,7 @@ makeNameRef myId nameRef maker =
                  config ^. Config.extractKeys)
                 (E.Doc ["Navigation", "Jump to definition"]) $
                 do
-                    DataOps.savePreJumpPosition cp myId
+                    savePrecursor
                     nameRef ^. Sugar.nrGotoDefinition <&> WidgetIds.fromEntityId
         maker (nameRef ^. Sugar.nrName) nameId
             <&> Align.tValue %~ Widget.weakerEvents jumpToDefinitionEventMap

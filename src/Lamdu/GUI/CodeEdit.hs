@@ -205,8 +205,8 @@ makePaneEdit theExportActions pane =
 makeNewDefinition :: Monad m => ExprGuiM m (T m Widget.Id)
 makeNewDefinition =
     do
+        savePrecursor <- ExprGuiM.mkPrejumpPosSaver
         cp <- ExprGuiM.readCodeAnchors
-        curCursor <- Lens.view GuiState.cursor
         pure $ do
             holeI <- DataOps.newHole
             newDefI <-
@@ -214,7 +214,7 @@ makeNewDefinition =
                 (Definition.BodyExpr (Definition.Expr holeI mempty))
                 Scheme.any ()
                 & DataOps.newPublicDefinitionWithPane cp
-            DataOps.savePreJumpPosition cp curCursor
+            savePrecursor
             pure newDefI
             <&> WidgetIds.newDest . WidgetIds.fromIRef
 
