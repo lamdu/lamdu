@@ -60,7 +60,7 @@ import qualified Lamdu.Settings as Settings
 import qualified Lamdu.Sugar.Lens as SugarLens
 import           Lamdu.Sugar.NearestHoles (NearestHoles)
 import qualified Lamdu.Sugar.Types as Sugar
-import           Revision.Deltum.Transaction (Transaction, MkProperty(..))
+import           Revision.Deltum.Transaction (Transaction)
 
 import           Lamdu.Prelude
 
@@ -223,7 +223,7 @@ makeScopeNavEdit binder myId curCursor =
         rightKeys = [MetaKey noMods MetaKey.Key'Right]
         setScope =
             (mempty <$) .
-            Transaction.setP (MkProperty (binder ^. Sugar.bChosenScopeProp)) . Just
+            Transaction.setP (Property.MkProperty (binder ^. Sugar.bChosenScopeProp)) . Just
         scopes :: [(Text, Maybe Sugar.BinderParamScopeId)]
         scopes =
             [ ("◀", sMPrevParamScope curCursor)

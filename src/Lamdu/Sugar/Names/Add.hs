@@ -18,6 +18,7 @@ import           Data.Map (Map)
 import qualified Data.Map as Map
 import           Data.Map.Utils (singleton, hasKey)
 import           Data.Monoid.Generic (def_mempty, def_mappend)
+import qualified Data.Property as Property
 import qualified Data.Set as Set
 import qualified Data.Tuple as Tuple
 import           Data.UUID.Types (UUID)
@@ -34,7 +35,7 @@ import qualified Lamdu.Sugar.Names.NameGen as NameGen
 import           Lamdu.Sugar.Names.Walk (MonadNaming, Disambiguator)
 import qualified Lamdu.Sugar.Names.Walk as Walk
 import           Lamdu.Sugar.Types
-import           Revision.Deltum.Transaction (Transaction, MkProperty, modP)
+import           Revision.Deltum.Transaction (Transaction, MkProperty)
 
 import           Lamdu.Prelude hiding (Map)
 
@@ -393,7 +394,7 @@ mkSetName tag =
     \publishedTags newName ->
     do
         setP (Anchors.assocTagNameRef tag) newName
-        modP publishedTags ((if newName == "" then Set.delete else Set.insert) tag)
+        Property.modP publishedTags ((if newName == "" then Set.delete else Set.insert) tag)
 
 storedName :: Monad tm => MMap T.Tag TagVal -> AnnotatedName -> StoredText -> Pass2MakeNames tm (Name (T tm))
 storedName tagsBelow aName storedText =

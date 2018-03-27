@@ -31,7 +31,7 @@ import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import qualified Lamdu.Sugar.Lens as SugarLens
 import           Lamdu.Sugar.Types
-import           Revision.Deltum.Transaction (Transaction, MkProperty, mkProperty)
+import           Revision.Deltum.Transaction (Transaction, MkProperty)
 
 import           Lamdu.Prelude
 
@@ -180,7 +180,7 @@ makeBinder chosenScopeProp params funcBody pl =
                 | otherwise = id
         pure Binder
             { _bParams = _cpParams params
-            , _bChosenScopeProp = chosenScopeProp ^. mkProperty
+            , _bChosenScopeProp = chosenScopeProp ^. Property.mkProperty
             , _bLamId = cpMLamParam params ^? Lens._Just . _1
             , _bBody = binderBody
             , _bBodyScopes = cpScopes params

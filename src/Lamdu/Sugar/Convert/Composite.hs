@@ -19,7 +19,6 @@ import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import           Lamdu.Sugar.Types
 import           Revision.Deltum.Transaction (Transaction)
-import qualified Revision.Deltum.Transaction as Transaction
 
 import           Lamdu.Prelude
 
@@ -47,7 +46,7 @@ convertAddItem extendOp existingTags pl =
             do
                 DataOps.CompositeExtendResult newValI resultI <- extendOp tag (stored ^. Property.pVal)
                 _ <- protectedSetToVal stored resultI
-                Transaction.setP (Anchors.assocTagOrder tag) (Set.size existingTags)
+                Property.setP (Anchors.assocTagOrder tag) (Set.size existingTags)
                 EntityId.ofValI newValI & pure
         convertTagSelection nameWithoutContext existingTags RequireTag (EntityId.ofTag (pl ^. Input.entityId)) addItem
     where

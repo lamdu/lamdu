@@ -50,7 +50,7 @@ postProcessExpr ::
     T m PostProcessResult
 postProcessExpr mkProp =
     do
-        prop <- mkProp ^. Transaction.mkProperty
+        prop <- mkProp ^. Property.mkProperty
         -- TODO: This is code duplication with the above Load.inferDef
         -- & functions inside Load itself
         defExpr <- Definition.expr ExprIRef.readVal (prop ^. Property.pVal)

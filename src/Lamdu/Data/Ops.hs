@@ -25,7 +25,7 @@ import           Lamdu.Data.Meta (SpecialArgs(..), PresentationMode)
 import qualified Lamdu.Expr.GenIds as GenIds
 import           Lamdu.Expr.IRef (DefI, ValIProperty, ValI)
 import qualified Lamdu.Expr.IRef as ExprIRef
-import           Revision.Deltum.Transaction (Transaction, getP, setP, modP)
+import           Revision.Deltum.Transaction (Transaction)
 import qualified Revision.Deltum.Transaction as Transaction
 
 import           Lamdu.Prelude
@@ -120,26 +120,26 @@ newPane :: Monad m => Anchors.CodeAnchors m -> DefI m -> T m ()
 newPane codeAnchors defI =
     do
         let panesProp = Anchors.panes codeAnchors
-        panes <- getP panesProp
+        panes <- Property.getP panesProp
         when (defI `notElem` map Anchors.paneDef panes) $
-            setP panesProp $ panes ++ [Anchors.Pane defI]
+            Property.setP panesProp $ panes ++ [Anchors.Pane defI]
 
 savePreJumpPosition :: Monad m => Anchors.CodeAnchors m -> WidgetId.Id -> T m ()
-savePreJumpPosition codeAnchors pos = modP (Anchors.preJumps codeAnchors) $ (pos :) . take 19
+savePreJumpPosition codeAnchors pos = Property.modP (Anchors.preJumps codeAnchors) $ (pos :) . take 19
 
 jumpBack :: Monad m => Anchors.CodeAnchors m -> T m (Maybe (T m WidgetId.Id))
 jumpBack codeAnchors =
-    getP (Anchors.preJumps codeAnchors)
+    Property.getP (Anchors.preJumps codeAnchors)
     <&> \case
     [] -> Nothing
-    (j:js) -> j <$ setP (Anchors.preJumps codeAnchors) js & Just
+    (j:js) -> j <$ Property.setP (Anchors.preJumps codeAnchors) js & Just
 
 newDefinition :: Monad m => PresentationMode -> Definition (ValI m) () -> T m (DefI m)
 newDefinition presentationMode def =
     do
         newDef <- Transaction.newIRef def
         let defVar = ExprIRef.globalId newDef
-        setP (Anchors.assocPresentationMode defVar) presentationMode
+        Property.setP (Anchors.assocPresentationMode defVar) presentationMode
         pure newDef
 
 -- Used when writing a definition into an identifier which was a variable.
@@ -149,7 +149,7 @@ newPublicDefinitionToIRef ::
 newPublicDefinitionToIRef codeAnchors def defI =
     do
         Transaction.writeIRef defI def
-        modP (Anchors.globals codeAnchors) (Set.insert defI)
+        Property.modP (Anchors.globals codeAnchors) (Set.insert defI)
         newPane codeAnchors defI
 
 newPublicDefinitionWithPane ::
@@ -158,7 +158,7 @@ newPublicDefinitionWithPane ::
 newPublicDefinitionWithPane codeAnchors def =
     do
         defI <- newDefinition Verbose def
-        modP (Anchors.globals codeAnchors) (Set.insert defI)
+        Property.modP (Anchors.globals codeAnchors) (Set.insert defI)
         newPane codeAnchors defI
         pure defI
 

@@ -4,6 +4,7 @@ module Lamdu.Data.Db.Init
     ( initFreshDb
     ) where
 
+import qualified Data.Property as Property
 import qualified GUI.Momentu as M
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Db.Layout as DbLayout
@@ -24,8 +25,8 @@ import           Lamdu.Prelude
 
 type T = Transaction
 
-setName :: (Monad m) => Branch m -> Text -> T m ()
-setName = Transaction.setP . Anchors.assocBranchNameRef
+setName :: Monad m => Branch m -> Text -> T m ()
+setName = Property.setP . Anchors.assocBranchNameRef
 
 newBranch :: Monad m => Text -> Version m -> T m (Branch m)
 newBranch name ver =

@@ -3,6 +3,9 @@ module Data.Property
     ( Property(..), pVal, pSet, value, set
     , compose, pureCompose, composeLens
     , modify_, pureModify
+
+    , MkProperty(..), mkProperty
+    , getP, setP, modP
     ) where
 
 import           Control.Lens (Lens')
@@ -43,3 +46,22 @@ pureCompose ab ba = compose ab (pure . ba)
 composeLens :: Lens' a b -> Property m a -> Property m b
 composeLens lens (Property val setter) =
     Property (val ^. lens) (setter . flip (lens .~) val)
+
+-- MkProperty:
+
+newtype MkProperty m a = MkProperty { _mkProperty :: m (Property m a) }
+Lens.makeLenses ''MkProperty
+
+getP :: Monad m => MkProperty m a -> m a
+getP = fmap value . (^. mkProperty)
+
+setP :: Monad m => MkProperty m a -> a -> m ()
+setP (MkProperty mkProp) val = do
+    prop <- mkProp
+    set prop val
+
+modP :: Monad m => MkProperty m a -> (a -> a) -> m ()
+modP (MkProperty mkProp) f = do
+    prop <- mkProp
+    pureModify prop f
+

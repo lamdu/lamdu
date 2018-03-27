@@ -33,7 +33,7 @@ import qualified Lamdu.Sugar.Convert.PostProcess as PostProcess
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import           Lamdu.Sugar.OrderTags (orderedClosedFlatComposite)
 import           Lamdu.Sugar.Types
-import           Revision.Deltum.Transaction (Transaction, getP)
+import           Revision.Deltum.Transaction (Transaction)
 import           Text.PrettyPrint.HughesPJClass (prettyShow)
 
 import           Lamdu.Prelude
@@ -111,7 +111,7 @@ convertLetParamToRecord ::
     V.Var -> V.Lam (Val (ValIProperty m)) -> Params.StoredLam m -> T m (NewLet m)
 convertLetParamToRecord var letLam storedLam =
     do
-        tagForVar <- Anchors.assocTag var & getP
+        tagForVar <- Anchors.assocTag var & Property.getP
         DataOps.genNewTag
             >>= Params.convertToRecordParams mkNewArg (BinderKindLet letLam)
                 storedLam Params.NewParamAfter

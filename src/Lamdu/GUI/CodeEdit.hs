@@ -10,6 +10,7 @@ import           Control.Monad.Transaction (MonadTransaction(..))
 import           Data.CurAndPrev (CurAndPrev(..))
 import           Data.Functor.Identity (Identity(..))
 import           Data.Orphans () -- Imported for Monoid (IO ()) instance
+import qualified Data.Property as Property
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
@@ -54,8 +55,7 @@ import           Lamdu.Sugar.NearestHoles (NearestHoles)
 import qualified Lamdu.Sugar.NearestHoles as NearestHoles
 import qualified Lamdu.Sugar.Parens as AddParens
 import qualified Lamdu.Sugar.Types as Sugar
-import           Revision.Deltum.Transaction (Transaction, MkProperty(..))
-import qualified Revision.Deltum.Transaction as Transaction
+import           Revision.Deltum.Transaction (Transaction)
 
 import           Lamdu.Prelude
 
@@ -189,7 +189,8 @@ makePaneEdit theExportActions pane =
                 ] & mconcat
             lhsEventMap =
                 do
-                    Transaction.setP (pane ^. Sugar.paneDefinition . Sugar.drDefinitionState & MkProperty)
+                    Property.setP
+                        (pane ^. Sugar.paneDefinition . Sugar.drDefinitionState & Property.MkProperty)
                         Sugar.DeletedDefinition
                     pane ^. Sugar.paneClose
                 <&> WidgetIds.fromEntityId

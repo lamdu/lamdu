@@ -38,7 +38,7 @@ import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import qualified Lamdu.Sugar.OrderTags as OrderTags
 import qualified Lamdu.Sugar.PresentationModes as PresentationModes
 import           Lamdu.Sugar.Types
-import           Revision.Deltum.Transaction (Transaction, mkProperty)
+import           Revision.Deltum.Transaction (Transaction)
 import qualified Revision.Deltum.Transaction as Transaction
 
 import           Lamdu.Prelude
@@ -161,7 +161,7 @@ convertExpr evalRes cp prop =
         (valInferred, newInferContext) <-
             Load.inferDefExpr evalRes defExpr <&> Load.assertInferSuccess
         nomsMap <- makeNominalsMap valInferred
-        outdatedDefinitions <- OutdatedDefs.scan defExpr (Transaction.setP prop) (postProcessExpr prop)
+        outdatedDefinitions <- OutdatedDefs.scan defExpr (Property.setP prop) (postProcessExpr prop)
         let context =
                 Context
                 { _scInferContext = newInferContext
@@ -178,7 +178,7 @@ convertExpr evalRes cp prop =
         ConvertM.convertSubexpression valInferred & ConvertM.run context
     where
         setFrozenDeps deps =
-            prop ^. Transaction.mkProperty
+            prop ^. Property.mkProperty
             >>= (`Property.pureModify` (Definition.exprFrozenDeps .~ deps))
 
 loadRepl ::
@@ -204,7 +204,7 @@ loadPanes ::
     T m [Pane InternalName (T m) [EntityId]]
 loadPanes evalRes cp replEntityId =
     do
-        Property panes setPanes <- Anchors.panes cp ^. Transaction.mkProperty
+        Property panes setPanes <- Anchors.panes cp ^. Property.mkProperty
         paneDefs <- mapM (loadAnnotatedDef Anchors.paneDef) panes
         let mkDelPane i =
                 entityId <$ setPanes newPanes
@@ -237,7 +237,7 @@ loadPanes evalRes cp replEntityId =
                     let defVar = ExprIRef.globalId defI
                     tag <-
                         Anchors.tags cp
-                        & Transaction.getP
+                        & Property.getP
                         & convertTaggedEntityWith defVar
                     defS <-
                         PresentationModes.addToDef Definition
@@ -245,7 +245,7 @@ loadPanes evalRes cp replEntityId =
                         , _drName = tag
                         , _drBody = bodyS
                         , _drDefinitionState =
-                            Anchors.assocDefinitionState defI ^. mkProperty
+                            Anchors.assocDefinitionState defI ^. Property.mkProperty
                         , _drDefI = defVar
                         }
                         >>= OrderTags.orderDef

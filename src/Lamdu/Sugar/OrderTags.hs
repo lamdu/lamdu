@@ -8,6 +8,7 @@ import           Control.Lens.Utils (tagged)
 import           Control.Monad ((>=>))
 import           Data.List (sortOn)
 import qualified Data.Map as Map
+import qualified Data.Property as Property
 import           Lamdu.Calc.Type (Type)
 import qualified Lamdu.Calc.Type as T
 import           Lamdu.Calc.Type.FlatComposite (FlatComposite(..))
@@ -18,7 +19,6 @@ import qualified Lamdu.Expr.Lens as ExprLens
 import qualified Lamdu.Sugar.Lens as SugarLens
 import qualified Lamdu.Sugar.Types as Sugar
 import           Revision.Deltum.Transaction (Transaction)
-import qualified Revision.Deltum.Transaction as Transaction
 
 import           Lamdu.Prelude
 
@@ -32,7 +32,7 @@ orderByTag toTag =
         loadOrder x =
             toTag x
             & assocTagOrder
-            & Transaction.getP
+            & Property.getP
             <&> (,) x
 
 orderComposite :: Monad m => Order m (T.Composite p)

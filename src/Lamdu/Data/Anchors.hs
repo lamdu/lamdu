@@ -31,7 +31,7 @@ import qualified Lamdu.Expr.UniqueId as UniqueId
 import           Revision.Deltum.Rev.Branch (Branch)
 import           Revision.Deltum.Rev.Version (Version)
 import           Revision.Deltum.Rev.View (View)
-import           Revision.Deltum.Transaction (MkProperty(..))
+import           Revision.Deltum.Transaction (MkProperty)
 import qualified Revision.Deltum.Transaction as Transaction
 
 import           Lamdu.Prelude

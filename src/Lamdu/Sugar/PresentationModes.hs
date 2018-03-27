@@ -5,12 +5,12 @@ module Lamdu.Sugar.PresentationModes
 import qualified Control.Lens as Lens
 import           Data.Either (partitionEithers)
 import qualified Data.Map as Map
+import qualified Data.Property as Property
 import qualified Lamdu.Data.Anchors as Anchors
 import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Lens as SugarLens
 import qualified Lamdu.Sugar.Types as Sugar
 import           Revision.Deltum.Transaction (Transaction)
-import qualified Revision.Deltum.Transaction as Transaction
 
 import           Lamdu.Prelude
 
@@ -24,7 +24,7 @@ addToLabeledApply a =
     case a ^. Sugar.aSpecialArgs of
     Sugar.Verbose ->
         a ^. Sugar.aFunc . Sugar.bvVar
-        & Anchors.assocPresentationMode & Transaction.getP
+        & Anchors.assocPresentationMode & Property.getP
         <&> \presentationMode ->
         let (specialArgs, otherArgs) =
                 case traverse argExpr presentationMode of

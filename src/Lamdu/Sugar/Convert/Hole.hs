@@ -164,7 +164,7 @@ addSuggestedOptions suggesteds options
 isLiveGlobal :: Monad m => DefI m -> T m Bool
 isLiveGlobal defI =
     Anchors.assocDefinitionState defI
-    & Transaction.getP
+    & Property.getP
     <&> (== LiveDefinition)
 
 getListing ::
@@ -173,7 +173,7 @@ getListing ::
     ConvertM.Context f -> Transaction m [a]
 getListing anchor sugarContext =
     sugarContext ^. ConvertM.scCodeAnchors
-    & anchor & Transaction.getP <&> Set.toList
+    & anchor & Property.getP <&> Set.toList
 
 getNominals :: Monad m => ConvertM.Context m -> T m [(T.NominalId, N.Nominal)]
 getNominals sugarContext =

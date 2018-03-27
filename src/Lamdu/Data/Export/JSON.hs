@@ -90,7 +90,7 @@ withVisited l x act =
                 act
 
 readAssocTag :: Monad m => ToUUID a => a -> T m T.Tag
-readAssocTag x = Anchors.assocTag x & Transaction.getP
+readAssocTag x = Anchors.assocTag x & Property.getP
 
 tell :: Codec.Entity -> Export ()
 tell = Writer.tell . (: [])
@@ -98,8 +98,8 @@ tell = Writer.tell . (: [])
 exportTag :: T.Tag -> Export ()
 exportTag tag =
     do
-        tagOrder <- Transaction.getP (Anchors.assocTagOrder tag) & trans
-        name <- Transaction.getP (Anchors.assocTagNameRef tag) & trans
+        tagOrder <- Property.getP (Anchors.assocTagOrder tag) & trans
+        name <- Property.getP (Anchors.assocTagNameRef tag) & trans
         let mName = name <$ (guard . not . Text.null) name
         Codec.EntityTag tagOrder mName tag & tell
     & withVisited visitedTags tag
@@ -116,7 +116,7 @@ exportSubexpr :: Val (ValI ViewM) -> Export ()
 exportSubexpr (Val lamI (V.BLam (V.Lam lamVar _))) =
     do
         tag <- readAssocTag lamVar & trans
-        mParamList <- Transaction.getP (Anchors.assocFieldParamList lamI) & trans
+        mParamList <- Property.getP (Anchors.assocFieldParamList lamI) & trans
         Codec.EntityLamVar mParamList tag (valIToUUID lamI) lamVar & tell
 exportSubexpr _ = pure ()
 
@@ -134,7 +134,7 @@ valIToUUID = IRef.uuid . ExprIRef.unValI
 exportDef :: V.Var -> Export ()
 exportDef globalId =
     do
-        presentationMode <- Transaction.getP (Anchors.assocPresentationMode globalId) & trans
+        presentationMode <- Property.getP (Anchors.assocPresentationMode globalId) & trans
         tag <- readAssocTag globalId & trans
         def <-
             Load.def defI & trans
@@ -214,8 +214,8 @@ insertTo item setIRef =
 importDef :: Definition (Val UUID) (Meta.PresentationMode, T.Tag, V.Var) -> T ViewM ()
 importDef (Definition defBody defScheme (presentationMode, tag, globalId)) =
     do
-        Transaction.setP (Anchors.assocPresentationMode globalId) presentationMode
-        Transaction.setP (Anchors.assocTag globalId) tag
+        Property.setP (Anchors.assocPresentationMode globalId) presentationMode
+        Property.setP (Anchors.assocTag globalId) tag
         bodyValI <- Lens.traverse writeValAtUUID defBody
         Definition bodyValI defScheme () & Transaction.writeIRef defI
         defI `insertTo` DbLayout.globals
@@ -230,22 +230,22 @@ importRepl defExpr =
 importTag :: Codec.TagOrder -> Maybe Text -> T.Tag -> T ViewM ()
 importTag tagOrder mName tag =
     do
-        Transaction.setP (Anchors.assocTagOrder tag) tagOrder
-        traverse_ (Transaction.setP (Anchors.assocTagNameRef tag)) mName
+        Property.setP (Anchors.assocTagOrder tag) tagOrder
+        traverse_ (Property.setP (Anchors.assocTagNameRef tag)) mName
         tag `insertTo` DbLayout.tags
 
 importLamVar :: Maybe Meta.ParamList -> T.Tag -> UUID -> V.Var -> T ViewM ()
 importLamVar paramList tag lamUUID var =
     do
-        Transaction.setP (Anchors.assocFieldParamList lamI) paramList
-        Transaction.setP (Anchors.assocTag var) tag
+        Property.setP (Anchors.assocFieldParamList lamI) paramList
+        Property.setP (Anchors.assocTag var) tag
     where
         lamI = IRef.unsafeFromUUID lamUUID & ExprIRef.ValI
 
 importNominal :: T.Tag -> T.NominalId -> Nominal -> T ViewM ()
 importNominal tag nomId nominal =
     do
-        Transaction.setP (Anchors.assocTag nomId) tag
+        Property.setP (Anchors.assocTag nomId) tag
         Transaction.writeIRef (ExprIRef.nominalI nomId) nominal
         nomId `insertTo` DbLayout.tids
 

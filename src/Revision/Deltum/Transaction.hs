@@ -12,10 +12,9 @@ module Revision.Deltum.Transaction
     , irefExists
     , newIRef, newKey
     , assocDataRef, assocDataRefDef
-    , Property
+    , MkProperty, Property
     , fromIRef
-    , MkProperty(..), mkProperty, mkPropertyFromIRef
-    , getP, setP, modP
+    , mkPropertyFromIRef
     )
 where
 
@@ -181,33 +180,18 @@ newIRef val = do
 
 ---------- Properties:
 
+type MkProperty m = Property.MkProperty (Transaction m)
 type Property m = Property.Property (Transaction m)
 
 fromIRef :: (Monad m, Binary a) => IRef m a -> Transaction m (Property m a)
 fromIRef iref = flip Property.Property (writeIRef iref) <$> readIRef iref
 
-newtype MkProperty m a = MkProperty { _mkProperty :: Transaction m (Property m a) }
-Lens.makeLenses ''MkProperty
-
 mkPropertyFromIRef :: (Monad m, Binary a) => IRef m a -> MkProperty m a
-mkPropertyFromIRef = MkProperty . fromIRef
-
-getP :: Monad m => MkProperty m a -> Transaction m a
-getP = fmap Property.value . (^. mkProperty)
-
-setP :: Monad m => MkProperty m a -> a -> Transaction m ()
-setP (MkProperty mkProp) val = do
-    prop <- mkProp
-    Property.set prop val
-
-modP :: Monad m => MkProperty m a -> (a -> a) -> Transaction m ()
-modP (MkProperty mkProp) f = do
-    prop <- mkProp
-    Property.pureModify prop f
+mkPropertyFromIRef = Property.MkProperty . fromIRef
 
 assocDataRef :: (Binary a, Monad m) => ByteString -> UUID -> MkProperty m (Maybe a)
 assocDataRef str uuid =
-    lookup assocUUID <&> (`Property.Property` set) & MkProperty
+    lookup assocUUID <&> (`Property.Property` set) & Property.MkProperty
     where
         assocUUID = UUIDUtils.augment str uuid
         set Nothing = delete assocUUID
@@ -216,7 +200,7 @@ assocDataRef str uuid =
 assocDataRefDef :: (Eq a, Binary a, Monad m) => a -> ByteString -> UUID -> MkProperty m a
 assocDataRefDef def str uuid =
     assocDataRef str uuid
-    & mkProperty . Lens.mapped %~ Property.pureCompose (fromMaybe def) f
+    & Property.mkProperty . Lens.mapped %~ Property.pureCompose (fromMaybe def) f
     where
         f x
             | x == def = Nothing

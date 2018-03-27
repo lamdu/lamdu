@@ -29,7 +29,6 @@ import           Lamdu.VersionControl.Actions (Actions(..))
 import           Revision.Deltum.Rev.Branch (Branch)
 import qualified Revision.Deltum.Rev.Branch as Branch
 import           Revision.Deltum.Transaction (Transaction)
-import qualified Revision.Deltum.Transaction as Transaction
 
 import           Lamdu.Prelude
 
@@ -97,7 +96,7 @@ makeBranchSelector rwtransaction rtransaction actions =
         makeBranchNameEdit branch =
             do
                 nameProp <-
-                    Anchors.assocBranchNameRef branch ^. Transaction.mkProperty
+                    Anchors.assocBranchNameRef branch ^. Property.mkProperty
                     <&> Property.pSet . Lens.mapped %~ rwtransaction
                     & rtransaction
                 branchNameEdit <-

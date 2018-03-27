@@ -23,7 +23,6 @@ import           Lamdu.Infer.Update (update)
 import qualified Lamdu.Infer.Update as Update
 import qualified Lamdu.Sugar.Convert.Input as Input
 import           Revision.Deltum.Transaction (Transaction)
-import qualified Revision.Deltum.Transaction as Transaction
 
 import           Lamdu.Prelude
 
@@ -45,7 +44,7 @@ instance Monad m => ParamListPayload (Infer.Payload, ExprIRef.ValI m) where
     inferPl = _1
 
 loadStored :: Monad m => ExprIRef.ValI m -> T m (Maybe ParamList)
-loadStored = Transaction.getP . assocFieldParamList
+loadStored = Property.getP . assocFieldParamList
 
 mkFuncType :: Infer.Scope -> ParamList -> Infer Type
 mkFuncType scope paramList =

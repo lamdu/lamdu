@@ -37,12 +37,12 @@ defExprProperty ::
     T m (Definition.Expr (Val (ValIProperty m)))
 defExprProperty mkProp =
     do
-        loaded <- mkProp ^. Transaction.mkProperty <&> Property.value
+        loaded <- mkProp ^. Property.mkProperty <&> Property.value
         defExpr setExpr loaded
     where
         setExpr e =
             do
-                prop <- mkProp ^. Transaction.mkProperty
+                prop <- mkProp ^. Property.mkProperty
                 prop ^. Property.pVal
                     & Definition.expr .~ e
                     & Property.set prop

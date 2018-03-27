@@ -12,9 +12,10 @@ import           Control.Monad.Trans.Maybe (MaybeT)
 import           Control.Monad.Trans.Reader (ReaderT)
 import           Control.Monad.Trans.State (StateT)
 import           Data.Binary (Binary)
+import qualified Data.Property as Property
 import           Revision.Deltum.IRef (IRef)
 import qualified Revision.Deltum.Transaction as Transaction
-import           Revision.Deltum.Transaction as X (Transaction, MkProperty(..))
+import           Revision.Deltum.Transaction as X (Transaction)
 
 import           Prelude
 
@@ -30,11 +31,11 @@ instance MonadTransaction n m => MonadTransaction n (MaybeT    m) where transact
 instance MonadTransaction n m => MonadTransaction n (StateT  s m) where transaction = lift . transaction
 instance MonadTransaction n m => MonadTransaction n (ReaderT r m) where transaction = lift . transaction
 
-getP :: MonadTransaction n m => Transaction.MkProperty n a -> m a
-getP = transaction . Transaction.getP
+getP :: MonadTransaction n m => Property.MkProperty (T n) a -> m a
+getP = transaction . Property.getP
 
-setP :: MonadTransaction n m => Transaction.MkProperty n a -> a -> m ()
-setP prop = transaction . Transaction.setP prop
+setP :: MonadTransaction n m => Property.MkProperty (T n) a -> a -> m ()
+setP prop = transaction . Property.setP prop
 
 readIRef :: (Binary a, MonadTransaction n m) => IRef n a -> m a
 readIRef = transaction . Transaction.readIRef

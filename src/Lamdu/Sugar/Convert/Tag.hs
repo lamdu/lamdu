@@ -6,6 +6,7 @@ module Lamdu.Sugar.Convert.Tag
 
 import qualified Control.Lens as Lens
 import           Control.Monad.Transaction (MonadTransaction, getP, setP)
+import qualified Data.Property as Property
 import qualified Data.Set as Set
 import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Data.Anchors as Anchors
@@ -17,7 +18,6 @@ import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import           Lamdu.Sugar.Types
 import           Revision.Deltum.Transaction (Transaction)
-import qualified Revision.Deltum.Transaction as Transaction
 
 import           Lamdu.Prelude
 
@@ -27,7 +27,7 @@ data AllowAnonTag = AllowAnon | RequireTag
 
 publishedTagsGetter :: Monad m => ConvertM m (T m (Set T.Tag))
 publishedTagsGetter =
-    Lens.view ConvertM.scCodeAnchors <&> Anchors.tags <&> Transaction.getP
+    Lens.view ConvertM.scCodeAnchors <&> Anchors.tags <&> Property.getP
 
 -- forbiddenTags are sibling tags in the same record/funcParams/etc,
 -- NOT type-level constraints on tags. Violation of constraints is

@@ -6,6 +6,7 @@ import qualified Control.Lens as Lens
 import           Data.List (elemIndex)
 import           Data.List.Utils (removeAt)
 import           Data.Maybe.Utils (unsafeUnjust)
+import qualified Data.Property as Property
 import           GUI.Momentu.State (GUIState)
 import qualified GUI.Momentu.State as GuiState
 import           Lamdu.Data.Db.Layout (DbM)
@@ -18,7 +19,7 @@ import           Revision.Deltum.Rev.Version (Version)
 import qualified Revision.Deltum.Rev.Version as Version
 import           Revision.Deltum.Rev.View (View)
 import qualified Revision.Deltum.Rev.View as View
-import           Revision.Deltum.Transaction (Transaction, setP, getP, modP)
+import           Revision.Deltum.Transaction (Transaction)
 import qualified Revision.Deltum.Transaction as Transaction
 
 import           Lamdu.Prelude
@@ -35,12 +36,12 @@ codeProp x = x DbLayout.codeAnchors
 
 setCurrentBranch :: View DbM -> Branch DbM -> TDB ()
 setCurrentBranch view branch = do
-    setP (revProp DbLayout.currentBranch) branch
+    Property.setP (revProp DbLayout.currentBranch) branch
     View.setBranch view branch
 
 deleteBranch :: View DbM -> [Branch DbM] -> Branch DbM -> TDB (Branch DbM)
 deleteBranch view branches branch = do
-    setP (revProp DbLayout.branches) newBranches
+    Property.setP (revProp DbLayout.branches) newBranches
     setCurrentBranch view newBranch
     pure newBranch
     where
@@ -53,19 +54,19 @@ deleteBranch view branches branch = do
 makeBranch :: View DbM -> TDB (Branch DbM)
 makeBranch view = do
     newBranch <- Branch.new =<< View.curVersion view
-    modP (revProp DbLayout.branches) (++ [newBranch])
+    Property.modP (revProp DbLayout.branches) (++ [newBranch])
     setCurrentBranch view newBranch
     pure newBranch
 
 runAction :: TV a -> TDB a
 runAction action = do
-    view <- getP $ revProp DbLayout.view
+    view <- Property.getP $ revProp DbLayout.view
     DbLayout.runViewTransaction view action
 
 getVersion :: TDB (Version DbM)
 getVersion =
     do
-        currentBranch <- getP $ revProp DbLayout.currentBranch
+        currentBranch <- Property.getP $ revProp DbLayout.currentBranch
         Branch.curVersion currentBranch
 
 runEvent :: Traversable t => GUIState -> TV (t GuiState.Update) -> TDB (t GuiState.Update)
@@ -74,33 +75,33 @@ runEvent preGuiState eventHandler = do
         eventResult <- eventHandler
         isEmpty <- Transaction.isEmpty
         unless isEmpty $ do
-            setP (codeProp DbLayout.preGuiState) preGuiState
+            Property.setP (codeProp DbLayout.preGuiState) preGuiState
             preGuiState
                 & GuiState.update (eventResult ^. Lens.traversed)
-                & setP (codeProp DbLayout.postGuiState)
+                & Property.setP (codeProp DbLayout.postGuiState)
         pure (eventResult, isEmpty)
-    unless isEmpty $ setP (revProp DbLayout.redos) []
+    unless isEmpty $ Property.setP (revProp DbLayout.redos) []
     pure eventResult
 
 makeActions :: Transaction DbM (Actions DbM (Transaction DbM))
 makeActions = do
-    view <- getP $ revProp DbLayout.view
-    branches <- getP $ revProp DbLayout.branches
-    currentBranch <- getP $ revProp DbLayout.currentBranch
+    view <- Property.getP $ revProp DbLayout.view
+    branches <- Property.getP $ revProp DbLayout.branches
+    currentBranch <- Property.getP $ revProp DbLayout.currentBranch
     curVersion <- View.curVersion view
     curVersionData <- Version.versionData curVersion
-    allRedos <- getP $ revProp DbLayout.redos
+    allRedos <- Property.getP $ revProp DbLayout.redos
     let toDb = DbLayout.runViewTransaction view
         undo parentVersion = do
-            preGuiState <- toDb . getP $ codeProp DbLayout.preGuiState
+            preGuiState <- toDb . Property.getP $ codeProp DbLayout.preGuiState
             View.move view parentVersion
-            modP (revProp DbLayout.redos) (curVersion :)
+            Property.modP (revProp DbLayout.redos) (curVersion :)
             pure preGuiState
         mkRedo [] = Nothing
         mkRedo (redo : redos) = Just $ do
-            setP (revProp DbLayout.redos) redos
+            Property.setP (revProp DbLayout.redos) redos
             View.move view redo
-            toDb . getP $ codeProp DbLayout.postGuiState
+            toDb . Property.getP $ codeProp DbLayout.postGuiState
     pure Actions
         { Actions.branches = branches
         , Actions.currentBranch = currentBranch
