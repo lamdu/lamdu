@@ -20,7 +20,7 @@ import           Lamdu.Config (Config, config)
 import qualified Lamdu.Config as Config
 import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
 import qualified Lamdu.GUI.ExpressionGui as ExprGui
-import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
+import           Lamdu.GUI.ExpressionGui.Monad (MonadExprGui, TM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import           Lamdu.GUI.IOTrans (IOTrans(..))
 import qualified Lamdu.GUI.IOTrans as IOTrans
@@ -70,10 +70,10 @@ replEventMap theConfig (ExportRepl exportRepl exportFancy _execRepl) replExpr =
         exportConfig = theConfig ^. Config.export
 
 make ::
-    Monad m =>
-    ExportRepl m ->
-    ExprGui.SugarExpr m ->
-    ExprGuiM m (Responsive (IOTrans m GuiState.Update))
+    MonadExprGui m =>
+    ExportRepl (TM m) ->
+    ExprGui.SugarExpr (TM m) ->
+    m (Responsive (IOTrans (TM m) GuiState.Update))
 make exportRepl replExpr =
     do
         theConfig <- Lens.view config
