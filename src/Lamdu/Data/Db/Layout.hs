@@ -64,7 +64,7 @@ revisionIRefs = Revision
     , view = IRef.anchor "view"
     }
 
-type GuiAnchors = Anchors.GuiAnchors ViewM
+type GuiAnchors = Anchors.GuiAnchors (T ViewM)
 type CodeAnchors = Anchors.CodeAnchors ViewM
 type RevisionProps = Anchors.RevisionProps DbM
 

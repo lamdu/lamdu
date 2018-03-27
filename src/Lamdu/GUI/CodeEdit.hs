@@ -129,7 +129,7 @@ make ::
     , Spacer.HasStdSpacing env, HasEvalResults env m, HasExportActions env m
     , HasSettings env, HasStyle env
     ) =>
-    Anchors.CodeAnchors m -> Anchors.GuiAnchors m -> Widget.R ->
+    Anchors.CodeAnchors m -> Anchors.GuiAnchors (T m) -> Widget.R ->
     n (Widget (IOTrans m GuiState.Update))
 make cp gp width =
     do
@@ -227,7 +227,7 @@ makeNewDefinitionButton cp =
             >>= Styled.actionable newDefId "New..." newDefinitionDoc
             <&> (^. Align.tValue)
 
-jumpBack :: Monad m => Anchors.GuiAnchors m -> T m (Maybe (T m Widget.Id))
+jumpBack :: Monad m => Anchors.GuiAnchors (T m) -> T m (Maybe (T m Widget.Id))
 jumpBack gp =
     Property.getP (Anchors.preJumps gp)
     <&> \case
@@ -236,8 +236,8 @@ jumpBack gp =
 
 panesEventMap ::
     Monad m =>
-    ExportActions m -> Anchors.CodeAnchors m -> Anchors.GuiAnchors m -> T.Type ->
-    ExprGuiM m (EventMap (IOTrans m GuiState.Update))
+    ExportActions m -> Anchors.CodeAnchors m -> Anchors.GuiAnchors (T m) ->
+    T.Type -> ExprGuiM m (EventMap (IOTrans m GuiState.Update))
 panesEventMap theExportActions cp gp replType =
     do
         theConfig <- Lens.view config
