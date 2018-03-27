@@ -21,6 +21,7 @@ import qualified Control.Lens as Lens
 import           Control.Monad.Trans.Reader (ReaderT, runReaderT)
 import qualified Control.Monad.Trans.Reader as Reader
 import           Control.Monad.Transaction (MonadTransaction(..))
+import           Data.Property (Property)
 import qualified Lamdu.Calc.Type as T
 import           Lamdu.Calc.Type.Nominal (Nominal(..))
 import           Lamdu.Calc.Type.Scheme (Scheme(..))
@@ -95,7 +96,7 @@ data Context m = Context
       _scNominalsMap :: Map T.NominalId Nominal
     , _scOutdatedDefinitions :: Map V.Var (Sugar.DefinitionOutdatedType (T m ()))
     , _scInlineableDefinition :: V.Var -> Sugar.EntityId -> Bool
-    , _scFrozenDeps :: Transaction.Property m Infer.Dependencies
+    , _scFrozenDeps :: Property (T m) Infer.Dependencies
     , scConvertSubexpression ::
         forall a. Monoid a => Val (Input.Payload m a) -> ConvertM m (ExpressionU m a)
     }

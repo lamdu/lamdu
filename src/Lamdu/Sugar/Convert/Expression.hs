@@ -26,13 +26,15 @@ import qualified Lamdu.Sugar.Convert.Record as ConvertRecord
 import           Lamdu.Sugar.Internal
 import           Lamdu.Sugar.Internal.EntityId (ofValI)
 import           Lamdu.Sugar.Types
-import qualified Revision.Deltum.Transaction as Transaction
+import           Revision.Deltum.Transaction (Transaction)
 
 import           Lamdu.Prelude
 
+type T = Transaction
+
 convertLiteralCommon ::
     Monad m =>
-    (Transaction.Property m a -> Literal (Transaction.Property m)) ->
+    (Property (T m) a -> Literal (Property (T m))) ->
     (a -> PrimVal.KnownPrim) -> a ->
     Input.Payload m b -> ConvertM m (ExpressionU m b)
 convertLiteralCommon mkLit mkBody val exprPl =

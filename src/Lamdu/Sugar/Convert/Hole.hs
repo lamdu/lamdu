@@ -25,7 +25,7 @@ import           Data.CurAndPrev (CurAndPrev(..))
 import           Data.Functor.Identity (Identity(..))
 import qualified Data.List.Class as ListClass
 import qualified Data.Map as Map
-import           Data.Property (MkProperty)
+import           Data.Property (Property, MkProperty)
 import qualified Data.Property as Property
 import qualified Data.Set as Set
 import           Data.Text.Encoding (encodeUtf8)
@@ -612,7 +612,7 @@ mkHoleResultValFragment exprPl val =
 
 mkHoleResultVals ::
     Monad m =>
-    Transaction.Property m Infer.Dependencies ->
+    Property (T m) Infer.Dependencies ->
     Maybe (Val (Input.Payload m a)) ->
     Input.Payload m dummy ->
     BaseExpr ->

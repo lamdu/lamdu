@@ -12,7 +12,6 @@ module Revision.Deltum.Transaction
     , irefExists
     , newIRef, newKey
     , assocDataRef, assocDataRefDef
-    , Property
     , fromIRef
     , mkPropertyFromIRef
     )
@@ -28,7 +27,7 @@ import           Data.Binary (Binary)
 import           Data.Binary.Utils (encodeS, decodeS)
 import qualified Data.Map as Map
 import           Data.Maybe (fromMaybe, isJust)
-import           Data.Property (MkProperty)
+import           Data.Property (Property, MkProperty)
 import qualified Data.Property as Property
 import           Data.UUID.Types (UUID)
 import qualified Data.UUID.Utils as UUIDUtils
@@ -181,9 +180,7 @@ newIRef val = do
 
 ---------- Properties:
 
-type Property m = Property.Property (Transaction m)
-
-fromIRef :: (Monad m, Binary a) => IRef m a -> Transaction m (Property m a)
+fromIRef :: (Monad m, Binary a) => IRef m a -> Transaction m (Property (Transaction m) a)
 fromIRef iref = flip Property.Property (writeIRef iref) <$> readIRef iref
 
 mkPropertyFromIRef :: (Monad m, Binary a) => IRef m a -> MkProperty (Transaction m) a

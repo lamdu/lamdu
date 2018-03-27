@@ -8,6 +8,7 @@ import           Control.Lens (LensLike')
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
 import qualified Data.Char as Char
+import           Data.Property (Property)
 import qualified Data.Property as Property
 import qualified Data.Text as Text
 import           GUI.Momentu.Align (WithTextPos)
@@ -66,7 +67,7 @@ genericEdit ::
     ( Monad m, Format a, MonadReader env f, HasStyle env, GuiState.HasCursor env
     ) =>
     LensLike' (Lens.Const TextEdit.Style) Style TextEdit.Style ->
-    Transaction.Property m a ->
+    Property (T m) a ->
     Sugar.Payload name (T m) ExprGui.Payload -> f (ExpressionGui m)
 genericEdit whichStyle prop pl =
     TextView.makeFocusable ?? valText ?? myId
@@ -115,7 +116,7 @@ textEdit ::
     ( MonadReader env m, HasConfig env, HasStyle env, Menu.HasConfig env
     , Element.HasAnimIdPrefix env, GuiState.HasCursor env, Monad f
     ) =>
-    Transaction.Property f Text ->
+    Property (T f) Text ->
     Sugar.Payload name (T f) ExprGui.Payload ->
     m (WithTextPos (Widget (T f GuiState.Update)))
 textEdit prop pl =
@@ -141,7 +142,7 @@ numEdit ::
     ( MonadReader env m, HasConfig env, HasStyle env, Menu.HasConfig env
     , GuiState.HasState env, Monad f
     ) =>
-    Transaction.Property f Double ->
+    Property (T f) Double ->
     Sugar.Payload name (T f) ExprGui.Payload ->
     m (WithTextPos (Widget (T f GuiState.Update)))
 numEdit prop pl =
@@ -212,7 +213,7 @@ numEdit prop pl =
 
 make ::
     Monad m =>
-    Sugar.Literal (Transaction.Property m) -> Sugar.Payload name (T m) ExprGui.Payload ->
+    Sugar.Literal (Property (T m)) -> Sugar.Payload name (T m) ExprGui.Payload ->
     ExprGuiM m (ExpressionGui m)
 make lit pl =
     stdWrap pl
