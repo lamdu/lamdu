@@ -292,8 +292,8 @@ makeHoleSearchTerm tagSelection mkPickResult holeId =
                     anchor term
                         <&> Hover.hoverInPlaceOf hoverOptions
                         & pure
-                    & Reader.local (Hover.backgroundColor .~ Theme.tooltipBgColor tooltip)
-                    & Reader.local (TextView.color .~ Theme.tooltipFgColor tooltip)
+                    & Reader.local (Hover.backgroundColor .~ tooltip ^. Theme.tooltipBgColor)
+                    & Reader.local (TextView.color .~ tooltip ^. Theme.tooltipFgColor)
                     & Reader.local (Element.animIdPrefix <>~ ["label"])
             else pure term
 
