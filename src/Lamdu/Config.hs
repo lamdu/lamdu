@@ -26,7 +26,7 @@ data Export = Export
     } deriving (Eq, Show)
 deriveJSON Aeson.defaultOptions
 #ifndef NO_CODE
-    {Aeson.fieldLabelModifier = removeOptionalPrefix "_"}
+    {Aeson.fieldLabelModifier = removePrefix "_"}
 #endif
     ''Export
 
@@ -40,7 +40,7 @@ data Pane = Pane
     } deriving (Eq, Show)
 deriveJSON Aeson.defaultOptions
 #ifndef NO_CODE
-    {Aeson.fieldLabelModifier = decapitalize . removeOptionalPrefix "pane" . removeOptionalPrefix "_"}
+    {Aeson.fieldLabelModifier = decapitalize . removeOptionalPrefix "pane" . removePrefix "_"}
 #endif
     ''Pane
 
@@ -67,7 +67,7 @@ data Eval = Eval
     } deriving (Eq, Show)
 deriveJSON Aeson.defaultOptions
 #ifndef NO_CODE
-    {Aeson.fieldLabelModifier = removeOptionalPrefix "_"}
+    {Aeson.fieldLabelModifier = removePrefix "_"}
 #endif
     ''Eval
 
@@ -91,7 +91,7 @@ data Debug = Debug
     } deriving (Eq, Show)
 deriveJSON Aeson.defaultOptions
 #ifndef NO_CODE
-    {Aeson.fieldLabelModifier = decapitalize . removeOptionalPrefix "debug" . removeOptionalPrefix "_"}
+    {Aeson.fieldLabelModifier = decapitalize . removeOptionalPrefix "debug" . removePrefix "_"}
 #endif
     ''Debug
 
@@ -146,7 +146,7 @@ data Config = Config
     } deriving (Eq, Show)
 deriveJSON Aeson.defaultOptions
 #ifndef NO_CODE
-    {Aeson.fieldLabelModifier = removeOptionalPrefix "_"}
+    {Aeson.fieldLabelModifier = removePrefix "_"}
 #endif
     ''Config
 
