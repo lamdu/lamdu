@@ -17,7 +17,7 @@ import qualified Data.List as List
 import qualified Data.List.Utils as ListUtils
 import qualified Data.Map as Map
 import           Data.Maybe.Utils (unsafeUnjust)
-import           Data.Property (Property)
+import           Data.Property (Property, MkProperty)
 import qualified Data.Property as Property
 import qualified Data.Set as Set
 import           Lamdu.Calc.Type (Type)
@@ -44,8 +44,7 @@ import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import           Lamdu.Sugar.Lens as SugarLens
 import           Lamdu.Sugar.OrderTags (orderType, orderedClosedFlatComposite)
 import           Lamdu.Sugar.Types
-import           Revision.Deltum.Transaction (Transaction, MkProperty)
-import qualified Revision.Deltum.Transaction as Transaction
+import           Revision.Deltum.Transaction (Transaction)
 
 import           Lamdu.Prelude
 
@@ -73,7 +72,7 @@ data StoredLam m = StoredLam
     }
 Lens.makeLenses ''StoredLam
 
-slParamList :: Monad m => StoredLam m -> Transaction.MkProperty m (Maybe ParamList)
+slParamList :: Monad m => StoredLam m -> MkProperty (T m) (Maybe ParamList)
 slParamList = Anchors.assocFieldParamList . Property.value . slLambdaProp
 
 mkStoredLam ::
@@ -86,8 +85,8 @@ mkStoredLam lam pl =
 
 setParamList ::
     Monad m =>
-    Maybe (MkProperty m PresentationMode) ->
-    MkProperty m (Maybe [T.Tag]) -> [T.Tag] -> T m ()
+    Maybe (MkProperty (T m) PresentationMode) ->
+    MkProperty (T m) (Maybe [T.Tag]) -> [T.Tag] -> T m ()
 setParamList mPresMode paramListProp newParamList =
     do
         zip newParamList [0..] & mapM_ (uncurry setParamOrder)
@@ -150,7 +149,7 @@ fixUsagesOfLamBinder fixOp binderKind storedLam =
 
 addFieldParam ::
     Monad m =>
-    Maybe (MkProperty m PresentationMode) ->
+    Maybe (MkProperty (T m) PresentationMode) ->
     T m (ValI m) -> BinderKind m -> StoredLam m -> (T.Tag -> ParamList) -> T.Tag ->
     T m ()
 addFieldParam mPresMode mkArg binderKind storedLam mkNewTags tag =
@@ -240,7 +239,7 @@ delFieldParamAndFixCalls binderKind tags fp storedLam =
 
 fieldParamActions ::
     Monad m =>
-    Maybe (MkProperty m PresentationMode) ->
+    Maybe (MkProperty (T m) PresentationMode) ->
     BinderKind m -> [T.Tag] -> FieldParam -> StoredLam m ->
     ConvertM m (FuncParamActions InternalName (T m))
 fieldParamActions mPresMode binderKind tags fp storedLam =
@@ -303,7 +302,7 @@ changeGetFieldTags param prevTag chosenTag val =
 
 setFieldParamTag ::
     Monad m =>
-    Maybe (MkProperty m PresentationMode) -> BinderKind m ->
+    Maybe (MkProperty (T m) PresentationMode) -> BinderKind m ->
     StoredLam m -> [T.Tag] -> T.Tag -> ConvertM m (T.Tag -> T m ())
 setFieldParamTag mPresMode binderKind storedLam prevTagList prevTag =
     ConvertM.postProcess
@@ -334,7 +333,7 @@ setFieldParamTag mPresMode binderKind storedLam prevTagList prevTag =
 
 convertRecordParams ::
     Monad m =>
-    Maybe (MkProperty m PresentationMode) ->
+    Maybe (MkProperty (T m) PresentationMode) ->
     BinderKind m -> [FieldParam] ->
     V.Lam (Val (Input.Payload m a)) -> Input.Payload m a ->
     ConvertM m (ConventionalParams m)
@@ -611,7 +610,7 @@ convertLamParams lambda lambdaPl =
 
 convertNonEmptyParams ::
     Monad m =>
-    Maybe (MkProperty m PresentationMode) ->
+    Maybe (MkProperty (T m) PresentationMode) ->
     BinderKind m -> V.Lam (Val (Input.Payload m a)) -> Input.Payload m a ->
     ConvertM m (ConventionalParams m)
 convertNonEmptyParams mPresMode binderKind lambda lambdaPl =
@@ -712,7 +711,7 @@ convertParams ::
     Monad m =>
     BinderKind m -> V.Var -> Val (Input.Payload m a) ->
     ConvertM m
-    ( Maybe (MkProperty m PresentationMode)
+    ( Maybe (MkProperty (T m) PresentationMode)
     , ConventionalParams m
     , Val (Input.Payload m a)
     )

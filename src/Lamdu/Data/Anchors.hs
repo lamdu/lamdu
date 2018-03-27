@@ -18,6 +18,7 @@ module Lamdu.Data.Anchors
 import qualified Control.Lens as Lens
 import           Data.Binary (Binary)
 import           Data.ByteString.Char8 ()
+import           Data.Property (MkProperty)
 import           Data.UUID.Types (nil)
 import           GUI.Momentu.State (GUIState)
 import qualified GUI.Momentu.Widget.Id as WidgetId
@@ -31,10 +32,12 @@ import qualified Lamdu.Expr.UniqueId as UniqueId
 import           Revision.Deltum.Rev.Branch (Branch)
 import           Revision.Deltum.Rev.Version (Version)
 import           Revision.Deltum.Rev.View (View)
-import           Revision.Deltum.Transaction (MkProperty)
+import           Revision.Deltum.Transaction (Transaction)
 import qualified Revision.Deltum.Transaction as Transaction
 
 import           Lamdu.Prelude
+
+type T = Transaction
 
 newtype Pane m = Pane
     { paneDef :: DefI m
@@ -69,36 +72,36 @@ newtype BinderParamScopeId = BinderParamScopeId
     { _bParamScopeId :: ScopeId
     } deriving (Eq, Ord, Binary)
 
-type CodeAnchors m = Code (MkProperty m) m
-type RevisionProps m = Revision (MkProperty m) m
+type CodeAnchors m = Code (MkProperty (T m)) m
+type RevisionProps m = Revision (MkProperty (T m)) m
 
-assocTagNameRef :: Monad m => T.Tag -> MkProperty m Text
+assocTagNameRef :: Monad m => T.Tag -> MkProperty (T m) Text
 assocTagNameRef = Transaction.assocDataRefDef "" "Name" . UniqueId.toUUID
 
-assocBranchNameRef :: Monad m => Branch m -> MkProperty m Text
+assocBranchNameRef :: Monad m => Branch m -> MkProperty (T m) Text
 assocBranchNameRef = Transaction.assocDataRefDef "" "Name" . UniqueId.toUUID
 
 anonTag :: T.Tag
 anonTag = UniqueId.identifierOfUUID nil & T.Tag
 
-assocTag :: (UniqueId.ToUUID a, Monad m) => a -> MkProperty m T.Tag
+assocTag :: (UniqueId.ToUUID a, Monad m) => a -> MkProperty (T m) T.Tag
 assocTag = Transaction.assocDataRefDef anonTag "Tag" . UniqueId.toUUID
 
-assocScopeRef :: Monad m => V.Var -> MkProperty m (Maybe BinderParamScopeId)
+assocScopeRef :: Monad m => V.Var -> MkProperty (T m) (Maybe BinderParamScopeId)
 assocScopeRef = Transaction.assocDataRef "ScopeId" . UniqueId.toUUID
 
-assocTagOrder :: Monad m => T.Tag -> MkProperty m Int
+assocTagOrder :: Monad m => T.Tag -> MkProperty (T m) Int
 assocTagOrder = Transaction.assocDataRefDef 0 "Order" . UniqueId.toUUID
 
 assocFieldParamList ::
-    Monad m => ValI m -> Transaction.MkProperty m (Maybe ParamList)
+    Monad m => ValI m -> MkProperty (T m) (Maybe ParamList)
 assocFieldParamList = Transaction.assocDataRef "field param list" . UniqueId.toUUID
 
-assocPresentationMode :: Monad m => V.Var -> Transaction.MkProperty m PresentationMode
+assocPresentationMode :: Monad m => V.Var -> MkProperty (T m) PresentationMode
 assocPresentationMode =
     Transaction.assocDataRefDef Verbose "PresentationMode" . UniqueId.toUUID
 
-assocDefinitionState :: Monad m => DefI m -> Transaction.MkProperty m DefinitionState
+assocDefinitionState :: Monad m => DefI m -> MkProperty (T m) DefinitionState
 assocDefinitionState =
     Transaction.assocDataRefDef LiveDefinition "DefinitionState" . UniqueId.toUUID
 

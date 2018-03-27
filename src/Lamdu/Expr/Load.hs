@@ -33,7 +33,7 @@ defExpr setExpr loaded = loaded & Definition.expr %%~ expr setExpr
 
 defExprProperty ::
     Monad m =>
-    Transaction.MkProperty m (Definition.Expr (ValI m)) ->
+    Property.MkProperty (T m) (Definition.Expr (ValI m)) ->
     T m (Definition.Expr (Val (ValIProperty m)))
 defExprProperty mkProp =
     do

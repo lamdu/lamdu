@@ -5,6 +5,7 @@ module Lamdu.Sugar.Convert.Binder
 
 import qualified Control.Lens as Lens
 import qualified Data.Map as Map
+import           Data.Property (MkProperty)
 import qualified Data.Property as Property
 import qualified Data.Set as Set
 import qualified Lamdu.Calc.Val as V
@@ -31,7 +32,7 @@ import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import qualified Lamdu.Sugar.Lens as SugarLens
 import           Lamdu.Sugar.Types
-import           Revision.Deltum.Transaction (Transaction, MkProperty)
+import           Revision.Deltum.Transaction (Transaction)
 
 import           Lamdu.Prelude
 
@@ -166,7 +167,7 @@ convertBinderBody expr =
 
 makeBinder ::
     (Monad m, Monoid a) =>
-    MkProperty m (Maybe BinderParamScopeId) ->
+    MkProperty (T m) (Maybe BinderParamScopeId) ->
     ConventionalParams m -> Val (Input.Payload m a) -> Input.Payload m a ->
     ConvertM m (Binder InternalName (T m) (ExpressionU m a))
 makeBinder chosenScopeProp params funcBody pl =
@@ -268,7 +269,7 @@ convertBinder ::
     (Monad m, Monoid a) =>
     BinderKind m -> V.Var -> Val (Input.Payload m a) ->
     ConvertM m
-    ( Maybe (MkProperty m PresentationMode)
+    ( Maybe (MkProperty (T m) PresentationMode)
     , Binder InternalName (T m) (ExpressionU m a)
     )
 convertBinder binderKind defVar expr =
@@ -283,7 +284,7 @@ convertDefinitionBinder ::
     (Monad m, Monoid a) =>
     DefI m -> Val (Input.Payload m a) ->
     ConvertM m
-    ( Maybe (MkProperty m PresentationMode)
+    ( Maybe (MkProperty (T m) PresentationMode)
     , Binder InternalName (T m) (ExpressionU m a)
     )
 convertDefinitionBinder defI =

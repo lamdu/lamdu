@@ -8,7 +8,7 @@ import qualified Control.Monad.Trans.State as State
 import           Data.CurAndPrev (CurAndPrev)
 import           Data.List.Utils (insertAt, removeAt)
 import qualified Data.Map as Map
-import           Data.Property (Property(..))
+import           Data.Property (Property(Property), MkProperty)
 import qualified Data.Property as Property
 import qualified Data.Set as Set
 import qualified Lamdu.Calc.Type as T
@@ -153,7 +153,7 @@ convertDefBody evalRes cp (Definition.Definition body defType defI) =
 convertExpr ::
     Monad m =>
     CurAndPrev (EvalResults (ValI m)) -> Anchors.CodeAnchors m ->
-    Transaction.MkProperty m (Definition.Expr (ValI m)) ->
+    MkProperty (T m) (Definition.Expr (ValI m)) ->
     T m (ExpressionU m [EntityId])
 convertExpr evalRes cp prop =
     do

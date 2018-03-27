@@ -25,6 +25,7 @@ import           Data.CurAndPrev (CurAndPrev(..))
 import           Data.Functor.Identity (Identity(..))
 import qualified Data.List.Class as ListClass
 import qualified Data.Map as Map
+import           Data.Property (MkProperty)
 import qualified Data.Property as Property
 import qualified Data.Set as Set
 import           Data.Text.Encoding (encodeUtf8)
@@ -169,8 +170,8 @@ isLiveGlobal defI =
 
 getListing ::
     Monad m =>
-    (Anchors.CodeAnchors f -> Transaction.MkProperty m (Set a)) ->
-    ConvertM.Context f -> Transaction m [a]
+    (Anchors.CodeAnchors f -> MkProperty (T m) (Set a)) ->
+    ConvertM.Context f -> T m [a]
 getListing anchor sugarContext =
     sugarContext ^. ConvertM.scCodeAnchors
     & anchor & Property.getP <&> Set.toList
@@ -649,7 +650,7 @@ mkHoleResultVals frozenDeps mFragment exprPl base =
 
 mkHoleResult ::
     Monad m =>
-    ConvertM.Context m -> Transaction m () ->
+    ConvertM.Context m -> T m () ->
     ValIProperty m -> HoleResultVal m IsFragment ->
     T m (HoleResult (T m) (Expression InternalName (T m) ()))
 mkHoleResult sugarContext updateDeps stored val =

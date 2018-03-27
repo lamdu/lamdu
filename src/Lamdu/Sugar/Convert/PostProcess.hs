@@ -2,6 +2,7 @@ module Lamdu.Sugar.Convert.PostProcess
     ( PostProcessResult(..), postProcessDef, postProcessExpr
     ) where
 
+import           Data.Property (MkProperty)
 import qualified Data.Property as Property
 import qualified Lamdu.Calc.Val.Annotated as Val
 import qualified Lamdu.Data.Definition as Definition
@@ -46,7 +47,7 @@ postProcessDef defI =
 
 postProcessExpr ::
     Monad m =>
-    Transaction.MkProperty m (Definition.Expr (ValI m)) ->
+    MkProperty (T m) (Definition.Expr (ValI m)) ->
     T m PostProcessResult
 postProcessExpr mkProp =
     do
