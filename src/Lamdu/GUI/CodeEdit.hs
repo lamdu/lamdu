@@ -112,9 +112,9 @@ loadWorkArea ::
     CurAndPrev (EvalResults (ValI m)) ->
     Anchors.CodeAnchors m ->
     T m (Sugar.WorkArea (Name (T m)) (T m) ExprGui.Payload)
-loadWorkArea theEvalResults theCodeAnchors =
-    SugarConvert.loadWorkArea theEvalResults theCodeAnchors
-    >>= AddNames.addToWorkArea (Anchors.tags theCodeAnchors)
+loadWorkArea theEvalResults cp =
+    SugarConvert.loadWorkArea theEvalResults cp
+    >>= AddNames.addToWorkArea (Anchors.tags cp)
     <&>
     \Sugar.WorkArea { _waPanes, _waRepl } ->
     Sugar.WorkArea
@@ -129,15 +129,13 @@ make ::
     , Spacer.HasStdSpacing env, HasEvalResults env m, HasExportActions env m
     , HasSettings env, HasStyle env
     ) =>
-    Anchors.CodeAnchors m -> Widget.R ->
+    Anchors.CodeAnchors m -> Anchors.GuiAnchors m -> Widget.R ->
     n (Widget (IOTrans m GuiState.Update))
-make cp width =
+make cp gp width =
     do
         theEvalResults <- Lens.view evalResults
         theExportActions <- Lens.view exportActions
-        workArea <-
-            loadWorkArea theEvalResults cp
-            & transaction
+        workArea <- loadWorkArea theEvalResults cp & transaction
         do
             replGui <-
                 ReplEdit.make (exportReplActions theExportActions)
@@ -147,12 +145,12 @@ make cp width =
                 & traverse (makePaneEdit theExportActions)
             newDefinitionButton <- makeNewDefinitionButton cp <&> fmap IOTrans.liftTrans <&> Responsive.fromWidget
             eventMap <-
-                panesEventMap theExportActions cp
+                panesEventMap theExportActions cp gp
                 (workArea ^. Sugar.waRepl . Sugar.rPayload . Sugar.plAnnotation . Sugar.aInferredType)
             Responsive.vboxSpaced
                 ?? (replGui : panesEdits ++ [newDefinitionButton])
                 <&> Widget.widget . Widget.eventMapMaker . Lens.mapped %~ (<> eventMap)
-            & ExprGuiM.run ExpressionEdit.make cp
+            & ExprGuiM.run ExpressionEdit.make gp
             <&> render
             <&> (^. Align.tValue)
     where
@@ -229,22 +227,22 @@ makeNewDefinitionButton cp =
             >>= Styled.actionable newDefId "New..." newDefinitionDoc
             <&> (^. Align.tValue)
 
-jumpBack :: Monad m => Anchors.CodeAnchors m -> T m (Maybe (T m Widget.Id))
-jumpBack codeAnchors =
-    Property.getP (Anchors.preJumps codeAnchors)
+jumpBack :: Monad m => Anchors.GuiAnchors m -> T m (Maybe (T m Widget.Id))
+jumpBack gp =
+    Property.getP (Anchors.preJumps gp)
     <&> \case
     [] -> Nothing
-    (j:js) -> j <$ Property.setP (Anchors.preJumps codeAnchors) js & Just
+    (j:js) -> j <$ Property.setP (Anchors.preJumps gp) js & Just
 
 panesEventMap ::
     Monad m =>
-    ExportActions m -> Anchors.CodeAnchors m -> T.Type ->
+    ExportActions m -> Anchors.CodeAnchors m -> Anchors.GuiAnchors m -> T.Type ->
     ExprGuiM m (EventMap (IOTrans m GuiState.Update))
-panesEventMap theExportActions cp replType =
+panesEventMap theExportActions cp gp replType =
     do
         theConfig <- Lens.view config
         let exportConfig = theConfig ^. Config.export
-        mJumpBack <- jumpBack cp & transaction <&> fmap IOTrans.liftTrans
+        mJumpBack <- jumpBack gp & transaction <&> fmap IOTrans.liftTrans
         newDefinitionEventMap <-
             makeNewDefinition cp
             <&> E.keysEventMapMovesCursor

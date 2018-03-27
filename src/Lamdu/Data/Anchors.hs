@@ -1,9 +1,10 @@
 {-# LANGUAGE Rank2Types, TemplateHaskell, GeneralizedNewtypeDeriving #-}
 module Lamdu.Data.Anchors
-    ( Code(..), onCode
+    ( Gui(..), onGui
+    , Code(..), onCode
     , Revision(..), onRevision
     , Pane(..)
-    , CodeAnchors, RevisionProps
+    , GuiAnchors, CodeAnchors, RevisionProps
     , assocBranchNameRef
     , assocTagNameRef
     , assocTag, anonTag
@@ -44,19 +45,23 @@ newtype Pane m = Pane
     } deriving (Eq, Ord, Show, Generic)
 instance Binary (Pane m)
 
+data Gui f = Gui
+    { preJumps :: f [WidgetId.Id]
+    , preGuiState :: f GUIState
+    , postGuiState :: f GUIState
+    }
+onGui :: (forall a. Binary a => f a -> g a) -> Gui f -> Gui g
+onGui f (Gui x0 x1 x2) = Gui (f x0) (f x1) (f x2)
+
 data Code f m = Code
     { repl :: f (Definition.Expr (ValI m))
     , panes :: f [Pane m]
     , globals :: f (Set (DefI m))
-    , preJumps :: f [WidgetId.Id]
-    , preGuiState :: f GUIState
-    , postGuiState :: f GUIState
     , tags :: f (Set T.Tag)
     , tids :: f (Set T.NominalId)
     }
 onCode :: (forall a. Binary a => f a -> g a) -> Code f m -> Code g m
-onCode f (Code x0 x1 x2 x3 x4 x5 x6 x7) =
-    Code (f x0) (f x1) (f x2) (f x3) (f x4) (f x5) (f x6) (f x7)
+onCode f (Code x0 x1 x2 x3 x4) = Code (f x0) (f x1) (f x2) (f x3) (f x4)
 
 data Revision f m = Revision
     { branches :: f [Branch m]
@@ -72,6 +77,7 @@ newtype BinderParamScopeId = BinderParamScopeId
     { _bParamScopeId :: ScopeId
     } deriving (Eq, Ord, Binary)
 
+type GuiAnchors m = Gui (MkProperty (T m))
 type CodeAnchors m = Code (MkProperty (T m)) m
 type RevisionProps m = Revision (MkProperty (T m)) m
 

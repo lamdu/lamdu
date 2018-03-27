@@ -31,8 +31,8 @@ type TV = Transaction DbLayout.ViewM
 revProp :: (DbLayout.RevisionProps -> a) -> a
 revProp x = x DbLayout.revisionProps
 
-codeProp :: (DbLayout.CodeAnchors -> a) -> a
-codeProp x = x DbLayout.codeAnchors
+guiProp :: (DbLayout.GuiAnchors -> a) -> a
+guiProp x = x DbLayout.guiAnchors
 
 setCurrentBranch :: View DbM -> Branch DbM -> TDB ()
 setCurrentBranch view branch = do
@@ -75,10 +75,10 @@ runEvent preGuiState eventHandler = do
         eventResult <- eventHandler
         isEmpty <- Transaction.isEmpty
         unless isEmpty $ do
-            Property.setP (codeProp DbLayout.preGuiState) preGuiState
+            Property.setP (guiProp DbLayout.preGuiState) preGuiState
             preGuiState
                 & GuiState.update (eventResult ^. Lens.traversed)
-                & Property.setP (codeProp DbLayout.postGuiState)
+                & Property.setP (guiProp DbLayout.postGuiState)
         pure (eventResult, isEmpty)
     unless isEmpty $ Property.setP (revProp DbLayout.redos) []
     pure eventResult
@@ -93,7 +93,7 @@ makeActions = do
     allRedos <- Property.getP $ revProp DbLayout.redos
     let toDb = DbLayout.runViewTransaction view
         undo parentVersion = do
-            preGuiState <- toDb . Property.getP $ codeProp DbLayout.preGuiState
+            preGuiState <- toDb . Property.getP $ guiProp DbLayout.preGuiState
             View.move view parentVersion
             Property.modP (revProp DbLayout.redos) (curVersion :)
             pure preGuiState
@@ -101,7 +101,7 @@ makeActions = do
         mkRedo (redo : redos) = Just $ do
             Property.setP (revProp DbLayout.redos) redos
             View.move view redo
-            toDb . Property.getP $ codeProp DbLayout.postGuiState
+            toDb . Property.getP $ guiProp DbLayout.postGuiState
     pure Actions
         { Actions.branches = branches
         , Actions.currentBranch = currentBranch

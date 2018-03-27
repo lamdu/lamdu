@@ -73,7 +73,7 @@ layout themeNames settingsProp vcActions =
         statusBar <- StatusBar.make themeNames settingsProp (fullSize ^. _1) vcActions
         state <- Lens.view GuiState.state
         codeEdit <-
-            CodeEdit.make DbLayout.codeAnchors (fullSize ^. _1)
+            CodeEdit.make DbLayout.codeAnchors DbLayout.guiAnchors (fullSize ^. _1)
             & Reader.mapReaderT VersionControl.runAction
             <&> Lens.mapped . ioTrans . Lens.mapped %~ VersionControl.runEvent state
         topPadding <- Spacer.vspaceLines (theTheme ^. Theme.topPadding)

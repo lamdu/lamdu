@@ -66,7 +66,7 @@ data Askable m = Askable
     , _aConfig :: Config
     , _aTheme :: Theme
     , _aMakeSubexpression :: ExprGui.SugarExpr (T (TM m)) -> m (ExpressionGui (T (TM m)))
-    , _aCodeAnchors :: Anchors.CodeAnchors (TM m)
+    , _aGuiAnchors :: Anchors.GuiAnchors (TM m)
     , _aDepthLeft :: Int
     , _aMScopeId :: CurAndPrev (Maybe ScopeId)
     , _aStyle :: Style
@@ -104,15 +104,15 @@ instance Hover.HasStyle (Askable m) where style = aTheme . Hover.style
 instance HasStyle (Askable m) where style = aStyle
 instance HasSettings (Askable m) where settings = aSettings
 
-readCodeAnchors :: MonadExprGui m => m (Anchors.CodeAnchors (TM m))
-readCodeAnchors = Lens.view aCodeAnchors
+readGuiAnchors :: MonadExprGui m => m (Anchors.GuiAnchors (TM m))
+readGuiAnchors = Lens.view aGuiAnchors
 
-savePreJumpPosition :: Monad m => Anchors.CodeAnchors m -> WidgetId.Id -> T m ()
-savePreJumpPosition codeAnchors pos = Property.modP (Anchors.preJumps codeAnchors) $ (pos :) . take 19
+savePreJumpPosition :: Monad m => Anchors.GuiAnchors m -> WidgetId.Id -> T m ()
+savePreJumpPosition guiAnchors pos = Property.modP (Anchors.preJumps guiAnchors) $ (pos :) . take 19
 
 mkPrejumpPosSaver :: MonadExprGui m => m (T (TM m) ())
 mkPrejumpPosSaver =
-    savePreJumpPosition <$> readCodeAnchors <*> Lens.view GuiState.cursor
+    savePreJumpPosition <$> readGuiAnchors <*> Lens.view GuiState.cursor
 
 resetDepth :: MonadExprGui m => Int -> m r -> m r
 resetDepth depth = Reader.local (aDepthLeft .~ depth)
@@ -163,10 +163,10 @@ run ::
     , HasSettings env, HasStyle env
     ) =>
     (ExprGui.SugarExpr (T m) -> ExprGuiM m (ExpressionGui (T m))) ->
-    Anchors.CodeAnchors m ->
+    Anchors.GuiAnchors m ->
     ExprGuiM m a ->
     n a
-run makeSubexpr theCodeAnchors (ExprGuiM action) =
+run makeSubexpr theGuiAnchors (ExprGuiM action) =
     do
         theSettings <- Lens.view settings
         theStyle <- Lens.view style
@@ -185,7 +185,7 @@ run makeSubexpr theCodeAnchors (ExprGuiM action) =
             , _aTheme = theTheme
             , _aSettings = theSettings
             , _aMakeSubexpression = makeSubexpr
-            , _aCodeAnchors = theCodeAnchors
+            , _aGuiAnchors = theGuiAnchors
             , _aDepthLeft = theConfig ^. Config.maxExprDepth
             , _aMScopeId = Just topLevelScopeId & pure
             , _aStyle = theStyle

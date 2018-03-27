@@ -2,6 +2,7 @@
 module Lamdu.Data.Db.Layout
     ( DbM, runDbTransaction
     , ViewM, runViewTransaction
+    , GuiAnchors, guiAnchors, guiIRefs
     , CodeAnchors, codeAnchors, codeIRefs
     , RevisionProps, revisionProps, revisionIRefs
     , guiState
@@ -14,7 +15,7 @@ import           Lamdu.Prelude
 import           Control.Monad.IO.Class (MonadIO)
 import           Data.ByteString.Char8 ()
 import           GUI.Momentu.State (GUIState)
-import           Lamdu.Data.Anchors (Code(..), Revision(..))
+import           Lamdu.Data.Anchors (Gui(..), Code(..), Revision(..))
 import qualified Lamdu.Data.Anchors as Anchors
 import           Revision.Deltum.Db (DB)
 import qualified Revision.Deltum.Db as Db
@@ -44,11 +45,15 @@ codeIRefs = Code
     { repl = IRef.anchor "repl"
     , panes = IRef.anchor "panes"
     , globals = IRef.anchor "globals"
-    , preJumps = IRef.anchor "prejumps"
-    , preGuiState = IRef.anchor "preguistate"
-    , postGuiState = IRef.anchor "postguistate"
     , tags = IRef.anchor "tags"
     , tids = IRef.anchor "tids"
+    }
+
+guiIRefs :: Gui (IRef ViewM)
+guiIRefs = Gui
+    { preJumps = IRef.anchor "prejumps"
+    , preGuiState = IRef.anchor "preguistate"
+    , postGuiState = IRef.anchor "postguistate"
     }
 
 revisionIRefs :: Revision (IRef DbM) DbM
@@ -59,8 +64,12 @@ revisionIRefs = Revision
     , view = IRef.anchor "view"
     }
 
+type GuiAnchors = Anchors.GuiAnchors ViewM
 type CodeAnchors = Anchors.CodeAnchors ViewM
 type RevisionProps = Anchors.RevisionProps DbM
+
+guiAnchors :: GuiAnchors
+guiAnchors = Anchors.onGui Transaction.mkPropertyFromIRef guiIRefs
 
 codeAnchors :: CodeAnchors
 codeAnchors = Anchors.onCode Transaction.mkPropertyFromIRef codeIRefs

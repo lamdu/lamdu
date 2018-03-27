@@ -54,13 +54,14 @@ initDb db importAct =
         DbLayout.runViewTransaction view $
             do
                 let writeCodeAnchor f = Transaction.writeIRef (f DbLayout.codeIRefs)
+                let writeGuiAnchor f = Transaction.writeIRef (f DbLayout.guiIRefs)
                 writeCodeAnchor DbLayout.globals mempty
                 writeCodeAnchor DbLayout.panes mempty
-                writeCodeAnchor DbLayout.preJumps []
-                writeCodeAnchor DbLayout.preGuiState initGuiState
-                writeCodeAnchor DbLayout.postGuiState initGuiState
                 writeCodeAnchor DbLayout.tids mempty
                 writeCodeAnchor DbLayout.tags mempty
+                writeGuiAnchor DbLayout.preJumps []
+                writeGuiAnchor DbLayout.preGuiState initGuiState
+                writeGuiAnchor DbLayout.postGuiState initGuiState
                 importAct
         -- Prevent undo into the invalid empty revision
         newVer <- Branch.curVersion master
