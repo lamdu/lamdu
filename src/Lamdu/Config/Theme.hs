@@ -3,7 +3,7 @@
 -- | The themes/ config format
 module Lamdu.Config.Theme
     ( Help(..), helpTextSize, helpTextColor, helpInputDocColor, helpBGColor, helpTint
-    , Hole(..)
+    , Hole(..), holeResultPadding, holeSearchTermBGColor, holeActiveSearchTermBGColor
     , Eval(..), ToolTip(..), StatusBar(..)
     , Theme(..), stdSpacing, menu, versionControl
     , HasTheme(..)
@@ -47,15 +47,17 @@ deriveJSON Aeson.defaultOptions
 Lens.makeLenses ''Help
 
 data Hole = Hole
-    { holeResultPadding :: Vector2 Double
-    , holeSearchTermBGColor :: Draw.Color
-    , holeActiveSearchTermBGColor :: Draw.Color
+    { _holeResultPadding :: Vector2 Double
+    , _holeSearchTermBGColor :: Draw.Color
+    , _holeActiveSearchTermBGColor :: Draw.Color
     } deriving (Eq, Show)
 deriveJSON Aeson.defaultOptions
 #ifndef NO_CODE
-    {Aeson.fieldLabelModifier = decapitalize . removePrefix "hole"}
+    {Aeson.fieldLabelModifier = decapitalize . removePrefix "_hole"}
 #endif
     ''Hole
+
+Lens.makeLenses ''Hole
 
 data Eval = Eval
     { neighborsScaleFactor :: Vector2 Double

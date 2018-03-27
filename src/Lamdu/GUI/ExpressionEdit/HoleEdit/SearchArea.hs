@@ -164,7 +164,7 @@ makeSearchTerm searchMenuId allowedSearchTerm mPickFirst =
                 )
             <&> Draw.backgroundColor
                 (Widget.toAnimId searchMenuId <> ["hover background"])
-                (bgColor theme)
+                (theme ^. bgColor)
 
 -- Has a typeView under the search term
 make ::
