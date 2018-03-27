@@ -1,4 +1,4 @@
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE OverloadedStrings, TemplateHaskell, FlexibleContexts #-}
 module Lamdu.Sugar.Convert.Hole.Suggest
     ( value
     , valueConversion
@@ -7,6 +7,8 @@ module Lamdu.Sugar.Convert.Hole.Suggest
 
 import qualified Control.Lens as Lens
 import           Control.Monad (mzero)
+import qualified Control.Monad.Reader as Reader
+import           Control.Monad.Trans.Reader (ReaderT(..))
 import           Control.Monad.Trans.State (StateT(..), mapStateT)
 import qualified Data.Map as Map
 import qualified Data.Set as Set
@@ -25,6 +27,19 @@ import           Lamdu.Infer.Update (update)
 import qualified Lamdu.Infer.Update as Update
 
 import           Lamdu.Prelude
+
+-- Used internally to not over-suggest.
+-- To avoid suggesting a record in a record.
+newtype Options = Options
+    { _avoidRecord :: Bool
+    }
+Lens.makeLenses ''Options
+
+emptyOptions :: Options
+emptyOptions =
+    Options
+    { _avoidRecord = False
+    }
 
 type Nominals = Map T.NominalId Nominal
 
@@ -53,17 +68,21 @@ valueConversion ::
 valueConversion loadNominal empty src =
     loadNominalsForType loadNominal
     (src ^. Val.payload . _1 . Infer.plType)
-    <&> \nominals -> valueConversionH nominals empty src
+    <&>
+    \nominals ->
+    runReaderT (valueConversionH nominals empty src) emptyOptions
+
+type SuggestM = ReaderT Options (StateT Context [])
 
 valueConversionH ::
     Nominals -> a -> Val (Payload, a) ->
-    StateT Context [] (Val (Payload, a))
+    SuggestM (Val (Payload, a))
 valueConversionH nominals empty src =
     case srcInferPl ^. Infer.plType of
     T.TRecord composite
         | Lens.nullOf (Val.body . V._BRecExtend) src ->
         composite ^.. ExprLens.compositeFields
-        <&> getField & lift
+        <&> getField & lift & lift
         & prependOpt src
         where
             getField (tag, typ) =
@@ -73,12 +92,11 @@ valueConversionH nominals empty src =
     where
         srcInferPl = src ^. Val.payload . _1
 
-prependOpt :: a -> StateT s [] a -> StateT s [] a
-prependOpt opt = Lens._Wrapped . Lens.imapped %@~ (:) . (,) opt
+prependOpt :: a -> SuggestM a -> SuggestM a
+prependOpt opt = Lens._Wrapped . Lens.mapped . Lens._Wrapped . Lens.imapped %@~ (:) . (,) opt
 
 valueConversionNoSplit ::
-    Nominals -> a -> Val (Payload, a) ->
-    StateT Context [] (Val (Payload, a))
+    Nominals -> a -> Val (Payload, a) -> SuggestM (Val (Payload, a))
 valueConversionNoSplit nominals empty src =
     prependOpt src $
     case srcType of
@@ -98,29 +116,31 @@ valueConversionNoSplit nominals empty src =
         & Infer.run
         & mapStateT
             (either (error "Infer of FromNom on non-opaque Nominal shouldn't fail") pure)
+        & lift
         >>= valueConversionNoSplit nominals empty
     T.TFun argType resType | bodyNot V._BLam ->
-        if Lens.has (ExprLens.valLeafs . V._LHole) arg
-            then
-                -- If the suggested argument has holes in it
-                -- then stop suggesting there to avoid "overwhelming"..
-                pure applied
-            else valueConversionNoSplit nominals empty applied
-        where
-            arg =
+        do
+            arg <-
                 valueNoSplit (Payload argType srcScope)
-                & Lens.traversed %~ flip (,) empty
-            applied = V.Apply src arg & V.BApp & mkRes resType
-    T.TVariant composite | bodyNot V._BInject  ->
-        Infer.freshInferredVar srcScope "s"
-        & Infer.run
-        & mapStateT
-            (either (error "Infer.freshInferredVar shouldn't fail") pure)
-        <&>
-        \dstType ->
-        suggestCaseWith composite (Payload dstType srcScope)
-        & Lens.traversed %~ flip (,) empty
-        & (`V.Apply` src) & V.BApp & mkRes dstType
+                <&> Lens.traversed %~ flip (,) empty
+            let applied = V.Apply src arg & V.BApp & mkRes resType
+            if Lens.has (ExprLens.valLeafs . V._LHole) arg
+                then
+                    -- If the suggested argument has holes in it
+                    -- then stop suggesting there to avoid "overwhelming"..
+                    pure applied
+                else valueConversionNoSplit nominals empty applied
+    T.TVariant composite | bodyNot V._BInject ->
+        do
+            dstType <-
+                Infer.freshInferredVar srcScope "s"
+                & Infer.run
+                & mapStateT
+                    (either (error "Infer.freshInferredVar shouldn't fail") pure)
+                & lift
+            suggestCaseWith composite (Payload dstType srcScope)
+                <&> Lens.traversed %~ flip (,) empty
+                <&> (`V.Apply` src) <&> V.BApp <&> mkRes dstType
     _ -> mzero
     where
         srcInferPl = src ^. Val.payload . _1
@@ -137,10 +157,10 @@ value pl@(Payload (T.TVariant comp) scope) =
     <&> Val pl
     where
         inject (tag, innerTyp) =
-            valueNoSplit (Payload innerTyp scope) & V.Inject tag & V.BInject
-value typ = [valueNoSplit typ]
+            valueNoSplit (Payload innerTyp scope) emptyOptions & V.Inject tag & V.BInject
+value typ = [valueNoSplit typ emptyOptions]
 
-valueNoSplit :: Payload -> Val Payload
+valueNoSplit :: MonadReader Options m => Payload -> m (Val Payload)
 valueNoSplit (Payload (T.TRecord composite) scope) =
     suggestRecordWith composite scope
 valueNoSplit (Payload (T.TFun (T.TVariant composite) r) scope) =
@@ -149,37 +169,42 @@ valueNoSplit pl@(Payload typ scope) =
     case typ of
     T.TFun _ r ->
         -- TODO: add var to the scope?
-        valueNoSplit (Payload r scope) & V.Lam "var" & V.BLam
-    _ -> V.BLeaf V.LHole
-    & Val pl
+        valueNoSplit (Payload r scope) <&> V.Lam "var" <&> V.BLam
+    _ -> V.BLeaf V.LHole & pure
+    <&> Val pl
 
-suggestRecordWith :: T.Record -> Infer.Scope -> Val Payload
+suggestRecordWith :: MonadReader Options m => T.Record -> Infer.Scope -> m (Val Payload)
 suggestRecordWith recordType scope =
     case recordType of
-    T.CVar{} -> V.BLeaf V.LHole
-    T.CEmpty -> V.BLeaf V.LRecEmpty
+    T.CVar{} -> V.BLeaf V.LHole & pure
+    T.CEmpty -> V.BLeaf V.LRecEmpty & pure
     T.CExtend f t r ->
-        V.RecExtend f
-        (valueNoSplit (Payload t scope))
-        (suggestRecordWith r scope)
-        & V.BRecExtend
-    & Val (Payload (T.TRecord recordType) scope)
+        do
+            noRec <- Lens.view avoidRecord
+            if noRec
+                then V.BLeaf V.LHole & pure
+                else
+                    V.RecExtend f
+                    <$> Reader.local (avoidRecord .~ True) (valueNoSplit (Payload t scope))
+                    <*> suggestRecordWith r scope
+                    <&> V.BRecExtend
+    <&> Val (Payload (T.TRecord recordType) scope)
 
-suggestCaseWith :: T.Variant -> Payload -> Val Payload
+suggestCaseWith :: MonadReader Options m => T.Variant -> Payload -> m (Val Payload)
 suggestCaseWith variantType resultPl@(Payload resultType scope) =
     case variantType of
-    T.CVar{} -> V.BLeaf V.LHole
-    T.CEmpty -> V.BLeaf V.LAbsurd
+    T.CVar{} -> V.BLeaf V.LHole & pure
+    T.CEmpty -> V.BLeaf V.LAbsurd & pure
     T.CExtend tag fieldType rest ->
         V.Case tag
-        (valueNoSplit (Payload (T.TFun fieldType resultType) scope))
-        (suggestCaseWith rest resultPl)
-        & V.BCase
-    & Val (Payload (T.TFun (T.TVariant variantType) resultType) scope)
+        <$> valueNoSplit (Payload (T.TFun fieldType resultType) scope)
+        <*> suggestCaseWith rest resultPl
+        <&> V.BCase
+    <&> Val (Payload (T.TFun (T.TVariant variantType) resultType) scope)
 
 fillHoles :: a -> Val (Payload, a) -> Val (Payload, a)
 fillHoles empty (Val pl (V.BLeaf V.LHole)) =
-    valueNoSplit (pl ^. _1) <&> flip (,) empty & Val.payload . _2 .~ (pl ^. _2)
+    valueNoSplit (pl ^. _1) emptyOptions <&> flip (,) empty & Val.payload . _2 .~ (pl ^. _2)
 fillHoles empty (Val pl (V.BApp (V.Apply func arg))) =
     -- Dont fill in holes inside apply funcs. This may create redexes..
     fillHoles empty arg & V.Apply func & V.BApp & Val pl
