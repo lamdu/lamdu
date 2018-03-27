@@ -19,6 +19,7 @@ import           Control.Monad.Reader (ReaderT(..))
 import qualified Control.Monad.Reader as Reader
 import           Control.Monad.Transaction (MonadTransaction(..))
 import           Data.CurAndPrev (CurAndPrev)
+import qualified Data.Property as Property
 import           Data.Vector.Vector2 (Vector2)
 import           GUI.Momentu.Align (WithTextPos)
 import           GUI.Momentu.Animation.Id (AnimId)
@@ -30,6 +31,7 @@ import           GUI.Momentu.State (GUIState(..))
 import qualified GUI.Momentu.State as GuiState
 import           GUI.Momentu.View (View)
 import           GUI.Momentu.Widget.Id (toAnimId)
+import qualified GUI.Momentu.Widget.Id as WidgetId
 import qualified GUI.Momentu.Widgets.Menu as Menu
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
@@ -39,7 +41,6 @@ import qualified Lamdu.Config as Config
 import           Lamdu.Config.Theme (Theme, HasTheme)
 import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.Data.Anchors as Anchors
-import qualified Lamdu.Data.Ops as DataOps
 import           Lamdu.Eval.Results (ScopeId, topLevelScopeId)
 import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExprGui
@@ -106,9 +107,12 @@ instance HasSettings (Askable m) where settings = aSettings
 readCodeAnchors :: MonadExprGui m => m (Anchors.CodeAnchors (TM m))
 readCodeAnchors = Lens.view aCodeAnchors
 
+savePreJumpPosition :: Monad m => Anchors.CodeAnchors m -> WidgetId.Id -> T m ()
+savePreJumpPosition codeAnchors pos = Property.modP (Anchors.preJumps codeAnchors) $ (pos :) . take 19
+
 mkPrejumpPosSaver :: MonadExprGui m => m (T (TM m) ())
 mkPrejumpPosSaver =
-    DataOps.savePreJumpPosition <$> readCodeAnchors <*> Lens.view GuiState.cursor
+    savePreJumpPosition <$> readCodeAnchors <*> Lens.view GuiState.cursor
 
 resetDepth :: MonadExprGui m => Int -> m r -> m r
 resetDepth depth = Reader.local (aDepthLeft .~ depth)

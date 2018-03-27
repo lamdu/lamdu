@@ -8,7 +8,6 @@ module Lamdu.Data.Ops
     , genNewTag
     , newPublicDefinitionWithPane
     , newPublicDefinitionToIRef
-    , savePreJumpPosition, jumpBack
     , newPane
     , newIdentityLambda
     ) where
@@ -16,7 +15,6 @@ module Lamdu.Data.Ops
 import           Data.Property (Property(..))
 import qualified Data.Property as Property
 import qualified Data.Set as Set
-import qualified GUI.Momentu.Widget.Id as WidgetId
 import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Calc.Val as V
 import qualified Lamdu.Data.Anchors as Anchors
@@ -123,16 +121,6 @@ newPane codeAnchors defI =
         panes <- Property.getP panesProp
         when (defI `notElem` map Anchors.paneDef panes) $
             Property.setP panesProp $ panes ++ [Anchors.Pane defI]
-
-savePreJumpPosition :: Monad m => Anchors.CodeAnchors m -> WidgetId.Id -> T m ()
-savePreJumpPosition codeAnchors pos = Property.modP (Anchors.preJumps codeAnchors) $ (pos :) . take 19
-
-jumpBack :: Monad m => Anchors.CodeAnchors m -> T m (Maybe (T m WidgetId.Id))
-jumpBack codeAnchors =
-    Property.getP (Anchors.preJumps codeAnchors)
-    <&> \case
-    [] -> Nothing
-    (j:js) -> j <$ Property.setP (Anchors.preJumps codeAnchors) js & Just
 
 newDefinition :: Monad m => PresentationMode -> Definition (ValI m) () -> T m (DefI m)
 newDefinition presentationMode def =

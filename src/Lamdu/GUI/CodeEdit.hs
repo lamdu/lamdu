@@ -229,6 +229,13 @@ makeNewDefinitionButton cp =
             >>= Styled.actionable newDefId "New..." newDefinitionDoc
             <&> (^. Align.tValue)
 
+jumpBack :: Monad m => Anchors.CodeAnchors m -> T m (Maybe (T m Widget.Id))
+jumpBack codeAnchors =
+    Property.getP (Anchors.preJumps codeAnchors)
+    <&> \case
+    [] -> Nothing
+    (j:js) -> j <$ Property.setP (Anchors.preJumps codeAnchors) js & Just
+
 panesEventMap ::
     Monad m =>
     ExportActions m -> Anchors.CodeAnchors m -> T.Type ->
@@ -237,8 +244,7 @@ panesEventMap theExportActions cp replType =
     do
         theConfig <- Lens.view config
         let exportConfig = theConfig ^. Config.export
-        mJumpBack <-
-            DataOps.jumpBack cp & transaction <&> fmap IOTrans.liftTrans
+        mJumpBack <- jumpBack cp & transaction <&> fmap IOTrans.liftTrans
         newDefinitionEventMap <-
             makeNewDefinition cp
             <&> E.keysEventMapMovesCursor
