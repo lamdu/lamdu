@@ -69,26 +69,28 @@ Lens.makeLenses ''Askable
 newtype Transaction m a =
     Transaction (ReaderT (Askable m) (StateT ChangesMap m) a)
     deriving (Functor, Applicative, Monad)
-liftAskable :: ReaderT (Askable m) (StateT ChangesMap m) a -> Transaction m a
-liftAskable = Transaction
-liftChangesMap :: Monad m => StateT ChangesMap m a -> Transaction m a
-liftChangesMap = liftAskable . lift
-liftInner :: Monad m => m a -> Transaction m a
-liftInner = Transaction . lift . lift
-
 instance (Monad m, Semigroup a) => Semigroup (Transaction m a) where
     (<>) = liftA2 (<>)
 instance (Monad m, Monoid a) => Monoid (Transaction m a) where
     mempty = pure mempty
     mappend = liftA2 mappend
 
-getStore :: Monad m => Transaction m (Store m)
+type T = Transaction
+
+liftAskable :: ReaderT (Askable m) (StateT ChangesMap m) a -> T m a
+liftAskable = Transaction
+liftChangesMap :: Monad m => StateT ChangesMap m a -> T m a
+liftChangesMap = liftAskable . lift
+liftInner :: Monad m => m a -> T m a
+liftInner = Transaction . lift . lift
+
+getStore :: Monad m => T m (Store m)
 getStore = Lens.view aStore & liftAskable
 
-getBase :: Monad m => Transaction m ChangesMap
+getBase :: Monad m => T m ChangesMap
 getBase = Lens.view aBase & liftAskable
 
-run :: Monad m => Store m -> Transaction m a -> m a
+run :: Monad m => Store m -> T m a -> m a
 run store (Transaction transaction) = do
     (res, changes) <-
         transaction
@@ -102,7 +104,7 @@ newtype Changes = Changes ChangesMap
 -- | Fork the given transaction into its own space.  Unless the
 -- transaction is later "merged" into the main transaction, its
 -- changes will not be committed anywhere.
-fork :: Monad m => Transaction m a -> Transaction m (a, Changes)
+fork :: Monad m => T m a -> T m (a, Changes)
 fork (Transaction discardableTrans) = do
     changes <- liftChangesMap State.get
     -- Map.union is left-biased, so changes correctly override base:
@@ -113,14 +115,14 @@ fork (Transaction discardableTrans) = do
         & liftInner
         <&> _2 %~ Changes
 
-merge :: Monad m => Changes -> Transaction m ()
+merge :: Monad m => Changes -> T m ()
 merge (Changes changes) =
     liftChangesMap . State.modify $ Map.union changes
 
-isEmpty :: Monad m => Transaction m Bool
+isEmpty :: Monad m => T m Bool
 isEmpty = liftChangesMap (State.gets Map.null)
 
-lookupBS :: Monad m => UUID -> Transaction m (Maybe Value)
+lookupBS :: Monad m => UUID -> T m (Maybe Value)
 lookupBS uuid = do
     base <- getBase
     changes <- liftChangesMap State.get
@@ -130,49 +132,49 @@ lookupBS uuid = do
             liftInner $ storeLookup store uuid
         Just res -> pure res
 
-insertBS :: Monad m => UUID -> ByteString -> Transaction m ()
+insertBS :: Monad m => UUID -> ByteString -> T m ()
 insertBS key = liftChangesMap . State.modify . Map.insert key . Just
 
-delete :: Monad m => UUID -> Transaction m ()
+delete :: Monad m => UUID -> T m ()
 delete key = liftChangesMap . State.modify . Map.insert key $ Nothing
 
-lookup :: (Monad m, Binary a) => UUID -> Transaction m (Maybe a)
+lookup :: (Monad m, Binary a) => UUID -> T m (Maybe a)
 lookup = (fmap . fmap) decodeS . lookupBS
 
-insert :: (Monad m, Binary a) => UUID -> a -> Transaction m ()
+insert :: (Monad m, Binary a) => UUID -> a -> T m ()
 insert key = insertBS key . encodeS
 
-writeUUID :: (Monad m, Binary a) => UUID -> a -> Transaction m ()
+writeUUID :: (Monad m, Binary a) => UUID -> a -> T m ()
 writeUUID = insert
 
-uuidExists :: Monad m => UUID -> Transaction m Bool
+uuidExists :: Monad m => UUID -> T m Bool
 uuidExists = fmap isJust . lookupBS
 
-readUUIDMb :: (Monad m, Binary a) => Transaction m a -> UUID -> Transaction m a
+readUUIDMb :: (Monad m, Binary a) => T m a -> UUID -> T m a
 readUUIDMb nothingCase uuid =
     maybe nothingCase pure =<< lookup uuid
 
-readUUID :: (Monad m, Binary a) => UUID -> Transaction m a
+readUUID :: (Monad m, Binary a) => UUID -> T m a
 readUUID uuid = readUUIDMb failure uuid
     where
         failure = fail $ "Inexistent uuid: " ++ show uuid ++ " referenced"
 
-deleteIRef :: Monad m => IRef m a -> Transaction m ()
+deleteIRef :: Monad m => IRef m a -> T m ()
 deleteIRef = delete . IRef.uuid
 
-readIRef :: (Monad m, Binary a) => IRef m a -> Transaction m a
+readIRef :: (Monad m, Binary a) => IRef m a -> T m a
 readIRef = readUUID . IRef.uuid
 
-irefExists :: Monad m => IRef m a -> Transaction m Bool
+irefExists :: Monad m => IRef m a -> T m Bool
 irefExists = uuidExists . IRef.uuid
 
-writeIRef :: (Monad m, Binary a) => IRef m a -> a -> Transaction m ()
+writeIRef :: (Monad m, Binary a) => IRef m a -> a -> T m ()
 writeIRef = writeUUID . IRef.uuid
 
-newKey :: Monad m => Transaction m Key
+newKey :: Monad m => T m Key
 newKey = liftInner . storeNewKey =<< getStore
 
-newIRef :: (Monad m, Binary a) => a -> Transaction m (IRef m a)
+newIRef :: (Monad m, Binary a) => a -> T m (IRef m a)
 newIRef val = do
     newUUID <- newKey
     insert newUUID val
@@ -180,13 +182,13 @@ newIRef val = do
 
 ---------- Properties:
 
-fromIRef :: (Monad m, Binary a) => IRef m a -> Transaction m (Property (Transaction m) a)
+fromIRef :: (Monad m, Binary a) => IRef m a -> T m (Property (T m) a)
 fromIRef iref = flip Property.Property (writeIRef iref) <$> readIRef iref
 
-mkPropertyFromIRef :: (Monad m, Binary a) => IRef m a -> MkProperty (Transaction m) a
+mkPropertyFromIRef :: (Monad m, Binary a) => IRef m a -> MkProperty (T m) a
 mkPropertyFromIRef = Property.MkProperty . fromIRef
 
-assocDataRef :: (Binary a, Monad m) => ByteString -> UUID -> MkProperty (Transaction m) (Maybe a)
+assocDataRef :: (Binary a, Monad m) => ByteString -> UUID -> MkProperty (T m) (Maybe a)
 assocDataRef str uuid =
     lookup assocUUID <&> (`Property.Property` set) & Property.MkProperty
     where
@@ -195,7 +197,7 @@ assocDataRef str uuid =
         set (Just x) = writeUUID assocUUID x
 
 assocDataRefDef ::
-    (Eq a, Binary a, Monad m) => a -> ByteString -> UUID -> MkProperty (Transaction m) a
+    (Eq a, Binary a, Monad m) => a -> ByteString -> UUID -> MkProperty (T m) a
 assocDataRefDef def str uuid =
     assocDataRef str uuid
     & Property.mkProperty . Lens.mapped %~ Property.pureCompose (fromMaybe def) f

@@ -25,24 +25,26 @@ data VersionData m = VersionData
     } deriving (Eq, Ord, Read, Show, Generic)
 instance Binary (VersionData m)
 
-makeInitialVersion :: Monad m => [(Key, Value)] -> Transaction m (Version m)
+type T = Transaction
+
+makeInitialVersion :: Monad m => [(Key, Value)] -> T m (Version m)
 makeInitialVersion initialValues = fmap Version . Transaction.newIRef . VersionData 0 Nothing $ map makeChange initialValues
     where
         makeChange (key, value) = Change key Nothing (Just value)
 
-versionData :: Monad m => Version m -> Transaction m (VersionData m)
+versionData :: Monad m => Version m -> T m (VersionData m)
 versionData = Transaction.readIRef . versionIRef
 
 -- TODO: This is a hack. Used to prevent undo into initial empty
 -- version. Can instead explicitly make a version when running a
 -- "view" transaction
-preventUndo :: Monad m => Version m -> Transaction m ()
+preventUndo :: Monad m => Version m -> T m ()
 preventUndo version = do
     ver <- versionData version
     Transaction.writeIRef (versionIRef version)
         ver { parent = Nothing }
 
-newVersion :: Monad m => Version m -> [Change] -> Transaction m (Version m)
+newVersion :: Monad m => Version m -> [Change] -> T m (Version m)
 newVersion version newChanges = do
     parentDepth <- fmap depth . versionData $ version
     fmap Version .
@@ -51,7 +53,7 @@ newVersion version newChanges = do
         newChanges
 
 mostRecentAncestor ::
-    Monad m => Version m -> Version m -> Transaction m (Version m)
+    Monad m => Version m -> Version m -> T m (Version m)
 mostRecentAncestor aVersion bVersion
     | aVersion == bVersion  = pure aVersion
     | otherwise             = do
@@ -73,8 +75,8 @@ mostRecentAncestor aVersion bVersion
 
 walkUp ::
     (Monad m, Monoid a) =>
-    (VersionData m -> Transaction m a) ->
-    Version m -> Version m -> Transaction m a
+    (VersionData m -> T m a) ->
+    Version m -> Version m -> T m a
 walkUp onVersion topRef bottomRef
     | bottomRef == topRef  = pure mempty
     | otherwise            = do
@@ -91,7 +93,7 @@ walkUp onVersion topRef bottomRef
 -- and accumulating a reverse list)
 versionsBetween ::
     Monad m => Version m -> Version m ->
-    Transaction m [VersionData m]
+    T m [VersionData m]
 versionsBetween topRef = accumulateWalkUp []
     where
         accumulateWalkUp vs curRef
@@ -103,9 +105,9 @@ versionsBetween topRef = accumulateWalkUp []
 
 walk ::
     (Monad m, Monoid a) =>
-    (VersionData m -> Transaction m a) ->
-    (VersionData m -> Transaction m a) ->
-    Version m -> Version m -> Transaction m a
+    (VersionData m -> T m a) ->
+    (VersionData m -> T m a) ->
+    Version m -> Version m -> T m a
 walk applyBackward applyForward srcVersion destVersion =
         do
                 mraIRef <- mostRecentAncestor srcVersion destVersion
@@ -116,7 +118,7 @@ walk applyBackward applyForward srcVersion destVersion =
 -- Implement in terms of versionsBetween
 walkDown ::
     (Monad m, Monoid a) =>
-    (VersionData m -> Transaction m a) ->
-    Version m -> Version m -> Transaction m a
+    (VersionData m -> T m a) ->
+    Version m -> Version m -> T m a
 walkDown onVersion topRef bottomRef =
     fmap mconcat . traverse onVersion =<< versionsBetween topRef bottomRef

@@ -30,8 +30,9 @@ import qualified System.Random.Utils as RandomUtils
 
 import           Lamdu.Prelude
 
-transaction :: Monad m =>
-    (Random.StdGen -> (a, Random.StdGen)) -> Transaction m a
+type T = Transaction
+
+transaction :: Monad m => (Random.StdGen -> (a, Random.StdGen)) -> T m a
 transaction f = Transaction.newKey <&> fst . f . RandomUtils.genFromHashable
 
 randomIdentifier :: RandomGen g => g -> (Identifier, g)

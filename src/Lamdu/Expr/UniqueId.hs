@@ -18,6 +18,8 @@ import qualified Revision.Deltum.Transaction as Transaction
 
 import           Lamdu.Prelude
 
+type T = Transaction
+
 identifierOfUUID :: UUID -> Identifier
 identifierOfUUID = Identifier . UUIDUtils.toSBS16
 
@@ -37,11 +39,11 @@ instance ToUUID (Branch m)  where toUUID = Branch.uuid
 -- TODO: Remove this when all code uses more descritive types than UUID
 instance ToUUID UUID  where toUUID = id
 
-mkNew :: Monad m => (Identifier -> a) -> Transaction m a
+mkNew :: Monad m => (Identifier -> a) -> T m a
 mkNew f = f . identifierOfUUID <$> Transaction.newKey
 
 -- NOTE: No other code in Lamdu should be creating var or tag ids!
-class ToUUID a => UniqueId a     where new :: Monad m => Transaction m a
+class ToUUID a => UniqueId a     where new :: Monad m => T m a
 instance          UniqueId V.Var where new = mkNew V.Var
 instance          UniqueId T.Tag where new = mkNew T.Tag
 instance          UniqueId T.NominalId  where new = mkNew T.NominalId

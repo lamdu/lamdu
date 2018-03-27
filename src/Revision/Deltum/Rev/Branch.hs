@@ -13,10 +13,12 @@ import qualified Revision.Deltum.Transaction as Transaction
 
 import           Lamdu.Prelude
 
+type T = Transaction
+
 uuid :: Branch t -> UUID
 uuid = IRef.uuid . unBranch
 
-move :: Monad m => Branch m -> Version m -> Transaction m ()
+move :: Monad m => Branch m -> Version m -> T m ()
 move (Branch dataIRef) destVersion = do
     BranchData srcVersion views <- Transaction.readIRef dataIRef
     traverse_ (moveToDest srcVersion) views
@@ -24,15 +26,15 @@ move (Branch dataIRef) destVersion = do
     where
         moveToDest srcVersion view = moveView view srcVersion destVersion
 
-curVersion :: Monad m => Branch m -> Transaction m (Version m)
+curVersion :: Monad m => Branch m -> T m (Version m)
 curVersion (Branch dataIRef) = (^. brVersion) `fmap` Transaction.readIRef dataIRef
 
 -- | A Branch is a mutable version ptr
-new :: Monad m => Version m -> Transaction m (Branch m)
+new :: Monad m => Version m -> T m (Branch m)
 new version = Branch `fmap`
                             Transaction.newIRef (BranchData version [])
 
-newVersion :: Monad m => Branch m -> [Change] -> Transaction m ()
+newVersion :: Monad m => Branch m -> [Change] -> T m ()
 newVersion branch changes = do
     version <- curVersion branch
     move branch =<< Version.newVersion version changes

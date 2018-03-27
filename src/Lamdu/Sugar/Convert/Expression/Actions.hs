@@ -91,7 +91,7 @@ mkExtractToLet outerScope stored =
         oldStored = Property.value stored
 
 mkWrapInRecord ::
-    Monad m => Input.Payload m a -> ConvertM m (TagSelection InternalName (Transaction m) ())
+    Monad m => Input.Payload m a -> ConvertM m (TagSelection InternalName (T m) ())
 mkWrapInRecord exprPl =
     do
         typeProtectedSetToVal <- ConvertM.typeProtectedSetToVal

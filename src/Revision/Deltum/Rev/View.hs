@@ -23,10 +23,12 @@ import           Lamdu.Prelude
 -- | "current-version" values. This serves as a "cache" which is
 -- | redundant to the lists of changes stored in the version graph.
 
-lookupBS :: Monad m => View m -> Change.Key -> Transaction m (Maybe Change.Value)
+type T = Transaction
+
+lookupBS :: Monad m => View m -> Change.Key -> T m (Maybe Change.Value)
 lookupBS view = Transaction.lookupBS . makeViewKey view
 
-setBranch :: Monad m => View m -> Branch m -> Transaction m ()
+setBranch :: Monad m => View m -> Branch m -> T m ()
 setBranch view@(View viewDataIRef) newBranch@(Branch newBranchDataIRef) = do
     branchRef <-
         Property.composeLens vdBranch <$>
@@ -42,12 +44,12 @@ setBranch view@(View viewDataIRef) newBranch@(Branch newBranchDataIRef) = do
 modifyViews
     :: Monad m
     => IRef m (BranchData m)
-    -> ([View m] -> [View m]) -> Transaction m ()
+    -> ([View m] -> [View m]) -> T m ()
 modifyViews iref f = do
     prop <- Transaction.fromIRef iref
     Property.pureModify (Property.composeLens brViews prop) f
 
-new :: Monad m => Branch m -> Transaction m (View m)
+new :: Monad m => Branch m -> T m (View m)
 new br@(Branch branchDataIRef) = do
     view <- View `fmap` Transaction.newIRef (ViewData br)
     version <- Branch.curVersion br
@@ -59,16 +61,16 @@ new br@(Branch branchDataIRef) = do
             maybe (pure ()) (applyHistory view <=< Version.versionData) . Version.parent $ versionData
             applyChangesToView view Change.newValue $ Version.changes versionData
 
-curVersion :: Monad m => View m -> Transaction m (Version m)
+curVersion :: Monad m => View m -> T m (Version m)
 curVersion = Branch.curVersion <=< branch
 
-move :: Monad m => View m -> Version m -> Transaction m ()
+move :: Monad m => View m -> Version m -> T m ()
 move view version = (`Branch.move` version) =<< branch view
 
-branch :: Monad m => View m -> Transaction m (Branch m)
+branch :: Monad m => View m -> T m (Branch m)
 branch (View iref) = (^. vdBranch) <$> Transaction.readIRef iref
 
-transaction :: Monad m => View m -> [(Change.Key, Maybe Change.Value)] -> Transaction m ()
+transaction :: Monad m => View m -> [(Change.Key, Maybe Change.Value)] -> T m ()
 transaction view updates = do
     changes <- catMaybes <$> traverse makeChange updates
     unless (null changes) $ do
@@ -80,7 +82,7 @@ transaction view updates = do
             Change key prev value <$ guard (value /= prev)
 
 -- You get a store tagged however you like...
-store :: Monad m => View m -> Store (Transaction m)
+store :: Monad m => View m -> Store (T m)
 store view =
     Store
     { storeNewKey = Transaction.newKey

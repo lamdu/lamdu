@@ -18,6 +18,8 @@ import           Revision.Deltum.Transaction (Transaction)
 
 import           Lamdu.Prelude
 
+type T = Transaction
+
 redexes :: Val a -> ([(V.Var, Val a)], Val a)
 redexes (Val _ (V.BApp (V.Apply (Val _ (V.BLam lam)) arg))) =
     redexes (lam ^. V.lamResult)
@@ -66,7 +68,7 @@ cursorDest val =
     & (^. _2 . Val.payload)
 
 inlineLet ::
-    Monad m => ValIProperty m -> Redex (ValI m) -> Transaction m EntityId
+    Monad m => ValIProperty m -> Redex (ValI m) -> T m EntityId
 inlineLet topLevelProp redex =
     redex ^. Redex.lam . V.lamResult . Val.payload
     & ExprIRef.readVal

@@ -47,9 +47,11 @@ newtype ViewData m = ViewData { _vdBranch :: Branch m }
 Lens.makeLenses ''BranchData
 Lens.makeLenses ''ViewData
 
+type T = Transaction
+
 -- | moveView must be given the correct source of the movement
 -- | or it will result in undefined results!
-moveView :: Monad m => View m -> Version m -> Version m -> Transaction m ()
+moveView :: Monad m => View m -> Version m -> Version m -> T m ()
 moveView vm =
     Version.walk applyBackward applyForward
     where
@@ -62,7 +64,7 @@ makeViewKey (View iref) = UUIDUtils.combine . IRef.uuid $ iref
 
 applyChangesToView ::
     Monad m => View m -> (Change -> Maybe Change.Value) ->
-    [Change] -> Transaction m ()
+    [Change] -> T m ()
 applyChangesToView vm changeDir = traverse_ applyChange
     where
         applyChange change =
