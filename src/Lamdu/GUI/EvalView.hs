@@ -6,6 +6,7 @@ module Lamdu.GUI.EvalView
 
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
+import           Control.Monad.Transaction (MonadTransaction)
 import qualified Control.Monad.Transaction as Transaction
 import qualified Data.Binary.Utils as BinUtils
 import qualified Data.List as List
@@ -36,7 +37,7 @@ import qualified Lamdu.Data.Anchors as Anchors
 import           Lamdu.Eval.Results (EvalError(..), Val(..), Body(..))
 import qualified Lamdu.Eval.Results as ER
 import           Lamdu.Formatting (Format(..))
-import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
+import           Lamdu.GUI.ExpressionGui.Monad (MonadExprGui)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 
 import           Lamdu.Prelude
@@ -69,13 +70,16 @@ label ::
 label text =
     textView text & Reader.local (Element.animIdPrefix <>~ [encodeUtf8 text])
 
-makeTag :: Monad m => T.Tag -> ExprGuiM m (WithTextPos View)
+makeTag ::
+    ( MonadReader env m, Element.HasAnimIdPrefix env, TextView.HasStyle env
+    , MonadTransaction n m
+    ) => T.Tag -> m (WithTextPos View)
 makeTag tag =
     Anchors.assocTagNameRef tag & Transaction.getP
     <&> Lens.filtered Text.null .~ "(empty)"
     >>= textView
 
-makeField :: Monad m => T.Tag -> Val Type -> ExprGuiM m [Aligned View]
+makeField :: MonadExprGui m => T.Tag -> Val Type -> m [Aligned View]
 makeField tag val =
     do
         tagView <- makeTag tag & Reader.local (Element.animIdPrefix <>~ ["tag"])
@@ -91,7 +95,9 @@ makeField tag val =
         toAligned x (WithTextPos y w) =
             Aligned (Vector2 x (y / w ^. Element.height)) w
 
-makeError :: Monad m => EvalError -> ExprGuiM m (WithTextPos View)
+makeError ::
+    ( MonadReader env m, Element.HasAnimIdPrefix env, TextView.HasStyle env
+    ) => EvalError -> m (WithTextPos View)
 makeError err =
     textView msg & Reader.local (Element.animIdPrefix <>~ ["error"])
     where
@@ -106,7 +112,7 @@ arrayCutoff = 10
 tableCutoff :: Int
 tableCutoff = 6
 
-makeArray :: Monad m => [Val Type] -> ExprGuiM m (WithTextPos View)
+makeArray :: MonadExprGui m => [Val Type] -> m (WithTextPos View)
 makeArray items =
     case sequence (items <&> (^? ER.body . ER._RRecExtend)) <&> Lens.mapped %~ extractFields of
     Just pairs@(x:_:_) | all (== RecordComputed) (pairs ^.. traverse . _2) ->
@@ -157,7 +163,7 @@ makeArray items =
             <&> hbox
             & Reader.local (Element.animIdPrefix %~ (Anim.augmentId ?? (idx :: Int)))
 
-makeRecExtend :: Monad m => Type -> V.RecExtend (Val Type) -> ExprGuiM m (WithTextPos View)
+makeRecExtend :: MonadExprGui m => Type -> V.RecExtend (Val Type) -> m (WithTextPos View)
 makeRecExtend typ recExtend =
     case
         ( typ, recStatus
@@ -207,7 +213,7 @@ makeRecExtend typ recExtend =
     where
         (fields, recStatus) = extractFields recExtend
 
-makeInject :: Monad m => Type -> V.Inject (Val Type) -> ExprGuiM m (WithTextPos View)
+makeInject :: MonadExprGui m => Type -> V.Inject (Val Type) -> m (WithTextPos View)
 makeInject typ inject =
     case
         ( typ
@@ -253,7 +259,7 @@ depthCounts v =
     <&> sum
     & (1 :)
 
-make :: Monad m => Val Type -> ExprGuiM m (WithTextPos View)
+make :: MonadExprGui m => Val Type -> m (WithTextPos View)
 make v =
     do
         maxEvalViewSize <- Lens.view Theme.theme <&> Theme.maxEvalViewSize
@@ -276,7 +282,7 @@ fixSize view =
             & Anim.iUnitImage %~
             (DrawUtils.scale (image ^. Anim.iRect . Rect.size / view ^. Element.size) %%)
 
-makeInner :: Monad m => Val Type -> ExprGuiM m (WithTextPos View)
+makeInner :: MonadExprGui m => Val Type -> m (WithTextPos View)
 makeInner (Val typ val) =
     do
         animId <- Lens.view Element.animIdPrefix
