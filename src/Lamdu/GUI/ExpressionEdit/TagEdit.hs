@@ -161,13 +161,10 @@ addNewTag tagSelection mkPickResult ctx =
     { Menu._oId = optionId
     , Menu._oSubmenuWidgets = Menu.SubmenuEmpty
     , Menu._oRender =
-        do
-            color <-
-                Lens.view (theme . Theme.textColors) <&> TextColors.actionTextColor
-            (Widget.makeFocusableView ?? optionId <&> fmap)
-                <*> TextView.makeLabel "Create new"
-                <&> (`Menu.RenderedOption` preEvent)
-                & Reader.local (TextView.color .~ color)
+        (Widget.makeFocusableView ?? optionId <&> fmap)
+        <*> TextView.makeLabel "Create new"
+        <&> (`Menu.RenderedOption` preEvent)
+        & Styled.withColor TextColors.actionTextColor
     }
     where
         optionId = (ctx ^. SearchMenu.rResultIdPrefix) `Widget.joinId` ["Create new"]
